@@ -1,0 +1,50 @@
+# Forked from https://github.com/containerd/nerdctl/blob/v0.8.1/.github/workflows/release.yml
+# Apache License 2.0
+
+name: Release
+on:
+  push:
+    tags:
+      - 'v*'
+      - 'test-action-release-*'
+env:
+  GO111MODULE: on
+jobs:
+  release:
+    runs-on: ubuntu-20.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/setup-go@v2
+        with:
+          go-version: 1.16.x
+      - uses: actions/checkout@v2
+      - name: "Compile binaries"
+        run: make artifacts
+      - name: "SHA256SUMS"
+        run: |
+          ( cd _artifacts; sha256sum *.tar.gz ) | tee /tmp/SHA256SUMS
+          mv /tmp/SHA256SUMS _artifacts/SHA256SUMS
+      - name: "The sha256sum of the SHA256SUMS file"
+        run: (cd _artifacts; sha256sum SHA256SUMS)
+      - name: "Prepare the release note"
+        run: |
+          tag="${GITHUB_REF##*/}"
+          shasha=$(sha256sum _artifacts/SHA256SUMS | awk '{print $1}')
+          cat <<-EOF | tee /tmp/release-note.txt
+          ${tag}
+
+          (Changes to be documented)
+          - - -
+          The binaries were built automatically on GitHub Actions.
+          The build log is available for 90 days: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          The sha256sum of the SHA256SUMS file itself is \`${shasha}\` .
+          EOF
+      - name: "Create release"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${GITHUB_REF##*/}"
+          asset_flags=()
+          for f in _artifacts/*; do asset_flags+=("-a" "$f"); done
+          hub release create "${asset_flags[@]}" -F /tmp/release-note.txt --draft "${tag}"

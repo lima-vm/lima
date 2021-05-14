@@ -1,0 +1,16 @@
+arch: "x86_64"
+images:
+  - location: "https://download.fedoraproject.org/pub/fedora/linux/releases/34/Cloud/x86_64/images/Fedora-Cloud-Base-34-1.2.x86_64.qcow2"
+    arch: "x86_64"
+mounts:
+  - location: "~"
+    writable: false
+  - location: "/tmp/lima"
+    writable: true
+ssh:
+  # localPort is changed from 60022 to avoid conflicting with the default.
+  # (TODO: assign localPort automatically)
+  localPort: 60024
+
+firmware:
+  legacyBIOS: true

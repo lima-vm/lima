@@ -1,0 +1,67 @@
+# Arch: "default", "x86_64", "aarch64".
+# "default" corresponds to the host architecture.
+arch: "default"
+
+# An image must be Ubuntu, and must support cloud-init.
+# Debian and Fedora may also work, too, but untested.
+# Default: none (must be specified)
+images:
+  # Try to use a local image first.
+  - location: "~/Downloads/hirsute-server-cloudimg-amd64.img"
+    arch: "x86_64"
+  - location: "~/Downloads/hirsute-server-cloudimg-arm64.img"
+    arch: "aarch64"
+
+  # Download the file from the internet when the local file is missing.
+  - location: "https://cloud-images.ubuntu.com/hirsute/current/hirsute-server-cloudimg-amd64.img"
+    arch: "x86_64"
+  - location: "https://cloud-images.ubuntu.com/hirsute/current/hirsute-server-cloudimg-arm64.img"
+    arch: "aarch64"
+
+# CPUs: if you see performance issues, try limiting cpus to 1.
+# Default: 4
+cpus: 4
+
+# Memory size
+# Default: "4GiB"
+memory: "4GiB"
+
+# Disk size
+# Default: "100GiB"
+disk: "100GiB"
+
+# Expose host directories to the guest
+# Default: none
+mounts:
+  - location: "~"
+    # CAUTION: `writable` SHOULD be false for the home directory.
+    # Setting `writable` to true is possible, but untested and dangerous.
+    writable: false
+  - location: "/tmp/lima"
+    writable: true
+
+ssh:
+  # A localhost port of the host. Forwarded to port 22 of the guest.
+  # Currently, this port number has to be specified manually.
+  # Default: none
+  localPort: 60022
+
+firmware:
+  # Use legacy BIOS instead of UEFI.
+  # Default: false
+  legacyBIOS: false
+
+#UNIMPLEMENTED| provision:
+#UNIMPLEMENTED|   # `system` is executed with the root privilege
+#UNIMPLEMENTED|   system: |
+#UNIMPLEMENTED|     #!/bin/bash
+#UNIMPLEMENTED|     set -eux -o pipefail
+#UNIMPLEMENTED|     export DEBIAN_FRONTEND=noninteractive
+#UNIMPLEMENTED|     apt-get install -y vim
+#UNIMPLEMENTED|   # `user` is executed without the root privilege
+#UNIMPLEMENTED|   user: |
+#UNIMPLEMENTED|     #!/bin/bash
+#UNIMPLEMENTED|     set -eux -o pipefail
+#UNIMPLEMENTED|     cat <<EOF > ~/.vimrc
+#UNIMPLEMENTED|     set number
+#UNIMPLEMENTED|     EOF

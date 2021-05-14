@@ -1,0 +1,14 @@
+images:
+  - location: "https://cloud-images.ubuntu.com/hirsute/current/hirsute-server-cloudimg-amd64.img"
+    arch: "x86_64"
+  - location: "https://cloud-images.ubuntu.com/hirsute/current/hirsute-server-cloudimg-arm64.img"
+    arch: "aarch64"
+mounts:
+  - location: "~"
+    writable: false
+  - location: "/tmp/lima"
+    writable: true
+ssh:
+  # localPort is changed from 60022 to avoid conflicting with the default.
+  # (TODO: assign localPort automatically)
+  localPort: 60023

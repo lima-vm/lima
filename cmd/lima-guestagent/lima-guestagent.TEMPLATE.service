@@ -1,0 +1,10 @@
+[Unit]
+Description=lima-guestagent
+
+[Service]
+ExecStart={{.Binary}} daemon
+Type=simple
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

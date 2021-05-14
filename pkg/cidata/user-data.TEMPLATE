@@ -1,0 +1,109 @@
+#cloud-config
+# vim:syntax=yaml
+
+growpart:
+  mode: auto
+  devices: ['/']
+
+users:
+  - name: "{{.User}}"
+    uid: "{{.UID}}"
+    homedir: "/home/{{.User}}.linux"
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    lock_passwd: true
+    ssh-authorized-keys:
+{{range $val := .SSHPubKeys}}
+      - {{$val}}
+{{end}}
+
+write_files:
+ - content: |
+      #!/bin/bash
+      set -eux -o pipefail
+
+      # Enable rootless containers
+      if [ ! -e "/etc/systemd/system/user@.service.d/lima.conf" ]; then
+        mkdir -p "/etc/systemd/system/user@.service.d"
+        cat >"/etc/systemd/system/user@.service.d/lima.conf"  <<EOF
+      [Service]
+      Delegate=yes
+      EOF
+      fi
+      systemctl daemon-reload
+
+      sysctl_conf="/etc/sysctl.d/99-lima.conf"
+      if [ ! -e "${sysctl_conf}" ]; then
+        if [ -e "/proc/sys/kernel/unprivileged_userns_clone" ]; then
+          echo "kernel.unprivileged_userns_clone=1" >> "${sysctl_conf}"
+        fi
+        echo "net.ipv4.ping_group_range = 0 2147483647" >> "${sysctl_conf}"
+        echo "net.ipv4.ip_unprivileged_port_start=0" >> "${sysctl_conf}"
+        sysctl --system
+      fi
+
+      # Do additional setup for the user
+      for f in /etc/subuid /etc/subgid; do
+        grep -qw "{{.User}}" $f || echo "{{.User}}:100000:65536" >> $f
+      done
+      loginctl enable-linger "{{.User}}"
+
+      # Create mount points
+      {{range $val := .Mounts}}
+      mkdir -p "{{$val}}"
+      chown "{{$.User}}" "{{$val}}" || true
+      {{end}}
+
+      # Install or update the guestagent binary
+      mkdir -p -m 600 /mnt/lima-cidata
+      mount -t iso9660 -o ro /dev/disk/by-label/cidata /mnt/lima-cidata
+      install -m 755 /mnt/lima-cidata/lima-guestagent /usr/local/bin/lima-guestagent
+      umount /mnt/lima-cidata
+
+      # Launch the guestagent service
+      until [ -e "/run/user/{{.UID}}/systemd/private" ]; do sleep 3; done
+      sudo -iu "{{.User}}" "XDG_RUNTIME_DIR=/run/user/{{.UID}}" lima-guestagent install-systemd
+   owner: root:root
+   # We do not use per-once.
+   path: /var/lib/cloud/scripts/per-boot/00-base.boot.sh
+   permissions: '0755'
+ - content: |
+      #!/bin/bash
+      set -eux -o pipefail
+      # Install minimum dependencies
+      if command -v apt-get 2>&1 >/dev/null; then
+        export DEBIAN_FRONTEND=noninteractive
+        apt-get update
+        apt-get install -y sshfs uidmap
+      elif command -v dnf 2>&1 >/dev/null; then
+        dnf install -y fuse-sshfs shadow-utils
+      fi
+   owner: root:root
+   path: /var/lib/cloud/scripts/per-boot/10-install-packages.boot.sh
+   permissions: '0755'
+ - content: |
+      #!/bin/bash
+      set -eux -o pipefail
+      modprobe tap || true
+      if [ ! -e "/home/{{.User}}.linux/.config/containerd/config.toml" ]; then
+        mkdir -p "/home/{{.User}}.linux/.config/containerd"
+        cat >"/home/{{.User}}.linux/.config/containerd/config.toml" <<EOF
+        [proxy_plugins]
+          [proxy_plugins."stargz"]
+                type = "snapshot"
+        address = "/run/user/{{.UID}}/containerd-stargz-grpc/containerd-stargz-grpc.sock"
+      EOF
+        chown -R "{{.User}}" "/home/{{.User}}.linux/.config"
+      fi
+      if [ ! -x /usr/local/bin/nerdctl -a "$(uname -m)" = "x86_64" ]; then
+        curl -fsSL https://github.com/containerd/nerdctl/releases/download/v0.8.1/nerdctl-full-0.8.1-linux-amd64.tar.gz | tar Cxz /usr/local
+        until [ -e "/run/user/{{.UID}}/systemd/private" ]; do sleep 3; done
+        sudo -iu "{{.User}}" "XDG_RUNTIME_DIR=/run/user/{{.UID}}" containerd-rootless-setuptool.sh install
+        sudo -iu "{{.User}}" "XDG_RUNTIME_DIR=/run/user/{{.UID}}" containerd-rootless-setuptool.sh install-buildkit
+        sudo -iu "{{.User}}" "XDG_RUNTIME_DIR=/run/user/{{.UID}}" containerd-rootless-setuptool.sh install-stargz
+      else
+        echo "TODO: install containerd for aarch64 (https://github.com/containerd/nerdctl/issues/191)"
+      fi
+   owner: root:root
+   path: /var/lib/cloud/scripts/per-boot/20-install-containerd.boot.sh
+   permissions: '0755'
