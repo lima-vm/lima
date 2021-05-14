@@ -2,8 +2,8 @@
 # "default" corresponds to the host architecture.
 arch: "default"
 
-# An image must be Ubuntu, and must support cloud-init.
-# Debian and Fedora may also work, too, but untested.
+# An image must support systemd and cloud-init.
+# Ubuntu and Fedora are known to work.
 # Default: none (must be specified)
 images:
   # Try to use a local image first.
