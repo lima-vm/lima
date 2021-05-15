@@ -214,6 +214,26 @@ See [Getting started](#getting-started).
 ### "Port forwarding does not work"
 Privileged ports (0-1023) cannot be forwarded. e.g., you have to use 8080, not 80.
 
+### error "field SSHPubKeys must be set"
+
+Make sure you have a ssh keypair in `~/.ssh`. To create:
+```
+ssh-keygen -q -t rsa -N '' -f ~/.ssh/id_rsa <<<n 2>&1 >/dev/null
+```
+
+### error "hostkeys_foreach failed: No such file or directory"
+Make sure you have a ssh `known_hosts` file:
+```
+touch ~/.ssh/known_hosts
+```
+
+### error "failed to execute script ssh: [...] Permission denied (publickey)"
+If you have a `~/.ssh/config` with a username overwrite for all hosts, exclude `127.0.0.1` from it. Example:
+```
+Host * !127.0.0.1
+        User root
+```
+
 ### "Hints for debugging other problems?"
 - Inspect logs:
   - `limactl --debug start`
