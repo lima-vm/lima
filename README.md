@@ -66,6 +66,7 @@ For the usage of containerd and nerdctl (contaiNERD ctl), visit https://github.c
 
 ## Getting started
 ### Requirements (Intel Mac)
+- coreutils (for `realpath` command) (`brew install coreutils`)
 - QEMU (`brew install qemu`)
 
 - Run the following commands to enable `--accel=hvf`:
@@ -90,6 +91,7 @@ codesign -s - --entitlements entitlements.xml --force /usr/local/bin/qemu-system
 
 ### Requirements (ARM Mac)
 
+- coreutils (for `realpath` command) (`brew install coreutils`)
 - QEMU with `--accel=hvf` support, see https://gist.github.com/citruz/9896cd6fb63288ac95f81716756cb9aa
 
 > **NOTE**
