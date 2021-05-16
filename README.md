@@ -70,16 +70,13 @@ For the usage of containerd and nerdctl (contaiNERD ctl), visit https://github.c
 - QEMU (`brew install qemu`)
 
 - Run the following commands to enable `--accel=hvf`:
+
 ```bash
 cat >entitlements.xml <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <!-- for OS X 10.10 - macOS 10.15 -->
-    <key>com.apple.vm.hypervisor</key>
-    <true/>
-    <!-- for macOS 11 and later -->
     <key>com.apple.security.hypervisor</key>
     <true/>
 </dict>
@@ -88,6 +85,14 @@ EOF
 
 codesign -s - --entitlements entitlements.xml --force /usr/local/bin/qemu-system-x86_64
 ```
+
+Note: **Only** on macOS versions **before** 10.15.7 you might need to add this entitlement in addition:
+
+```
+    <key>com.apple.vm.hypervisor</key>
+    <true/>
+```
+
 
 ### Requirements (ARM Mac)
 
@@ -235,6 +240,10 @@ If you have a `~/.ssh/config` with a username overwrite for all hosts, exclude `
 Host * !127.0.0.1
         User root
 ```
+
+### error "killed -9"
+- make sure qemu is codesigned, see [Getting started](#getting-started).
+- if you are on macOS 10.15.7 or 11.0 or later make sure the entitlement `com.apple.vm.hypervisor` is **not** added. It only works on older macOS versions. You can clear the codesigning with `codesign --remove-signature /usr/local/bin/qemu-system-x86_64` and [start over](#getting-started).
 
 ### "Hints for debugging other problems?"
 - Inspect logs:
