@@ -25,6 +25,13 @@ Lima can be considered as a some sort of unofficial "macOS subsystem for Linux",
 
 Related project: [sshocker (ssh with file sharing and port forwarding)](https://github.com/AkihiroSuda/sshocker)
 
+This project is unrelated to [The Lima driver project (driver for ARM Mali GPUs)](https://gitlab.freedesktop.org/lima).
+
+## Motivation
+
+The goal of Lima is to promote [containerd](https://containerd.io) including [nerdctl (contaiNERD ctl)](https://github.com/containerd/nerdctl)
+to Mac users, but Lima can be used for non-container applications as well.
+
 ## Examples
 
 ### uname
@@ -60,7 +67,7 @@ $ lima nerdctl run -d --name nginx -p 127.0.0.1:8080:80 nginx:alpine
 http://127.0.0.1:8080 is accessible from both macOS and Linux.
 
 > **NOTE**
-> Privileged ports (0-1023) cannot be forwarded
+> Privileged ports (1-1023) cannot be forwarded
 
 For the usage of containerd and nerdctl (contaiNERD ctl), visit https://github.com/containerd/containerd and https://github.com/containerd/nerdctl.
 
@@ -151,7 +158,7 @@ The current default spec:
 ## How it works
 
 - Hypervisor: QEMU with HVF accelerator
-- Filesystem sharing: [reverse sshfs](https://github.com/AkihiroSuda/sshocker/blob/v0.1.0/pkg/reversesshfs/reversesshfs.go)
+- Filesystem sharing: [reverse sshfs](https://github.com/AkihiroSuda/sshocker/blob/v0.1.0/pkg/reversesshfs/reversesshfs.go) (planned to be replaced with 9p soon)
 - Port forwarding: `ssh -L`, automated by watching `/proc/net/tcp` in the guest
 
 ## Developer guide
@@ -173,17 +180,18 @@ The current default spec:
 - VirtFS to replace the current reverse sshfs (work has to be done on QEMU repo)
 - [vsock](https://github.com/apple/darwin-xnu/blob/xnu-7195.81.3/bsd/man/man4/vsock.4) to replace SSH (work has to be done on QEMU repo)
 
-## FAQs
-### "What's my login password?"
+## FAQs & Troubleshooting
+### Generic
+#### "What's my login password?"
 Password is disabled and locked by default.
 You have to use `limactl shell bash` (or `lima bash`) to open a shell.
 
 Alternatively, you may also directly ssh into the guest: `ssh -p 60022 -o NoHostAuthenticationForLocalhost=yes 127.0.0.1`.
 
-### "Does Lima work on ARM Mac?"
+#### "Does Lima work on ARM Mac?"
 Yes, it should work, but not tested on ARM.
 
-### "Can I run non-Ubuntu guests?"
+#### "Can I run non-Ubuntu guests?"
 Fedora is also known to work, see [`./examples/fedora.yaml`](./examples/fedora.yaml).
 This file can be loaded with `limactl start ./examples/fedora.yaml`.
 
@@ -198,52 +206,55 @@ An image has to satisfy the following requirements:
   - `newuidmap` and `newgidmap`
 - `apt-get` or `dnf` (if you want to contribute support for another package manager, run `git grep apt-get` to find out where to modify)
 
-### "Can I run other container engines such as Podman?"
+#### "Can I run other container engines such as Podman?"
 Yes, if you install it.
 
 containerd can be stopped with `systemctl --user disable --now containerd`.
 
-### "Can I run Lima with a remote Linux machine?"
+#### "Can I run Lima with a remote Linux machine?"
 Lima itself does not support connecting to a remote Linux machine, but [sshocker](https://github.com/AkihiroSuda/sshocker),
 the predecessor or Lima, provides similar features for remote Linux machines.
 
 e.g., run `sshocker -v /Users/foo:/home/foo/mnt -p 8080:80 <USER>@<HOST>` to expose `/Users/foo` to the remote machine as `/home/foo/mnt`,
 and forward `localhost:8080` to the port 80 of the remote machine.
 
-### "QEMU crashes with `HV_ERROR`"
+### QEMU
+#### "QEMU crashes with `HV_ERROR`"
 You have to add `com.apple.security.hypervisor` entitlement to `qemu-system-x86_64` binary.
 See [Getting started](#getting-started).
 
-### "QEMU is slow"
+#### "QEMU is slow"
 - Make sure that HVF is enabled with `com.apple.security.hypervisor` entitlement. See [Getting started](#getting-started).
 - Emulating non-native machines (ARM-on-Intel, Intel-on-ARM) is slow by design.
 
-### "Port forwarding does not work"
-Privileged ports (0-1023) cannot be forwarded. e.g., you have to use 8080, not 80.
+#### error "killed -9"
+- make sure qemu is codesigned, see [Getting started](#getting-started).
+- if you are on macOS 10.15.7 or 11.0 or later make sure the entitlement `com.apple.vm.hypervisor` is **not** added. It only works on older macOS versions. You can clear the codesigning with `codesign --remove-signature /usr/local/bin/qemu-system-x86_64` and [start over](#getting-started).
 
-### error "field SSHPubKeys must be set"
+
+### SSH
+#### "Port forwarding does not work"
+Privileged ports (1-1023) cannot be forwarded. e.g., you have to use 8080, not 80.
+
+#### error "field SSHPubKeys must be set"
 
 Make sure you have a ssh keypair in `~/.ssh`. To create:
 ```
 ssh-keygen -q -t rsa -N '' -f ~/.ssh/id_rsa <<<n 2>&1 >/dev/null
 ```
 
-### error "hostkeys_foreach failed: No such file or directory"
+#### error "hostkeys_foreach failed: No such file or directory"
 Make sure you have a ssh `known_hosts` file:
 ```
 touch ~/.ssh/known_hosts
 ```
 
-### error "failed to execute script ssh: [...] Permission denied (publickey)"
+#### error "failed to execute script ssh: [...] Permission denied (publickey)"
 If you have a `~/.ssh/config` with a username overwrite for all hosts, exclude `127.0.0.1` from it. Example:
 ```
 Host * !127.0.0.1
         User root
 ```
-
-### error "killed -9"
-- make sure qemu is codesigned, see [Getting started](#getting-started).
-- if you are on macOS 10.15.7 or 11.0 or later make sure the entitlement `com.apple.vm.hypervisor` is **not** added. It only works on older macOS versions. You can clear the codesigning with `codesign --remove-signature /usr/local/bin/qemu-system-x86_64` and [start over](#getting-started).
 
 ### "Hints for debugging other problems?"
 - Inspect logs:
