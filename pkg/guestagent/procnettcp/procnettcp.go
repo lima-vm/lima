@@ -112,7 +112,7 @@ func ParseAddress(s string) (net.IP, uint16, error) {
 	case 8, 32:
 	default:
 		return nil, 0, errors.Errorf("unparsable address %q, expected length of %q to be 8 or 32, got %d",
-			s, len(split[0]), l)
+			s, split[0], l)
 	}
 
 	ipBytes := make([]byte, len(split[0])/2) // 4 bytes (8 chars) or 16 bytes (32 chars)
