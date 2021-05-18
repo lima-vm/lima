@@ -1,4 +1,4 @@
-# Lima: Linux-on-Mac ("macOS subsystem for Linux", "containerd for Mac")
+# Ligma: Linux/Gnu-on-Mac ("macOS subsystem for Linux", "containerd for Mac")
 
 Lima launches Linux virtual machines on macOS, with automatic file sharing, port forwarding,
 and [containerd](https://containerd.io).
