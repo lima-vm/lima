@@ -103,7 +103,7 @@ func Cmdline(cfg Config) (string, []string, error) {
 		args = append(args, "-machine", "q35,accel="+accel)
 	case limayaml.AARCH64:
 		args = append(args, "-cpu", "cortex-a72")
-		args = append(args, "-machine", "virt,accel="+accel)
+		args = append(args, "-machine", "virt,accel="+accel+",highmem=off")
 	}
 
 	// SMP
