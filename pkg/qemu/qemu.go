@@ -119,9 +119,8 @@ func Cmdline(cfg Config) (string, []string, error) {
 
 	// Firmware
 	if !y.Firmware.LegacyBIOS {
-		firmware := filepath.Join(exe,
-			fmt.Sprintf("../../share/qemu/edk2-%s-code.fd", y.Arch))
-		if _, err := os.Stat(firmware); err != nil {
+		firmware, err := getFirmware(exe, y.Arch)
+		if err != nil {
 			return "", nil, err
 		}
 		args = append(args, "-drive", fmt.Sprintf("if=pflash,format=raw,readonly,file=%s", firmware))
@@ -179,7 +178,42 @@ func getAccel(arch limayaml.Arch) string {
 			return "hvf"
 		case "linux":
 			return "kvm"
+		case "netbsd":
+			return "nvmm" // untested
+		case "windows":
+			return "whpx" // untested
 		}
 	}
 	return "tcg"
+}
+
+func getFirmware(qemuExe string, arch limayaml.Arch) (string, error) {
+	binDir := filepath.Dir(qemuExe)  // "/usr/local/bin"
+	localDir := filepath.Dir(binDir) // "/usr/local"
+
+	candidates := []string{
+		filepath.Join(localDir, fmt.Sprintf("share/qemu/edk2-%s-code.fd", arch)), // macOS (homebrew)
+	}
+
+	switch arch {
+	case limayaml.X8664:
+		// Debian package "ovmf"
+		candidates = append(candidates, "/usr/share/OVMF/OVMF_CODE.fd")
+	case limayaml.AARCH64:
+		// Debian package "qemu-efi-aarch64"
+		candidates = append(candidates, "/usr/share/qemu-efi-aarch64/QEMU_EFI.fd")
+	}
+
+	logrus.Debugf("firmware candidates = %v", candidates)
+
+	for _, f := range candidates {
+		if _, err := os.Stat(f); err == nil {
+			return f, nil
+		}
+	}
+
+	if arch == limayaml.X8664 {
+		return "", errors.Errorf("could not find firmware for %q (hint: try setting `firmware.legacyBIOS` to `true`)", qemuExe)
+	}
+	return "", errors.Errorf("could not find firmware for %q", qemuExe)
 }

@@ -1,7 +1,9 @@
 package limayaml
 
 import (
+	"fmt"
 	"os"
+	"os/user"
 	"path/filepath"
 	"strings"
 
@@ -52,6 +54,13 @@ func ValidateRaw(y LimaYAML) error {
 		return errors.Wrapf(err, "field `memory` has an invalid value")
 	}
 
+	u, err := user.Current()
+	if err != nil {
+		return errors.Wrap(err, "internal error (not an error of YAML)")
+	}
+	// reservedHome is the home directory defined in "cidata.iso:/user-data"
+	reservedHome := fmt.Sprintf("/home/%s.linux", u.Username)
+
 	for i, f := range y.Mounts {
 		if !filepath.IsAbs(f.Location) && !strings.HasPrefix(f.Location, "~") {
 			return errors.Errorf("field `mounts[%d].location` must be an absolute path, got %q",
@@ -65,6 +74,8 @@ func ValidateRaw(y LimaYAML) error {
 		switch loc {
 		case "/", "/bin", "/dev", "/etc", "/home", "/opt", "/sbin", "/tmp", "/usr", "/var":
 			return errors.Errorf("field `mounts[%d].location` must not be a system path such as /etc or /usr", i)
+		case reservedHome:
+			return errors.Errorf("field `mounts[%d].location` is internally reserved", i)
 		}
 
 		st, err := os.Stat(loc)

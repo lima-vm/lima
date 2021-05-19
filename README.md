@@ -1,9 +1,11 @@
-# Lima: Linux-on-Mac ("macOS subsystem for Linux", "containerd for Mac")
+# Lima: Linux virtual machines (on macOS, in most cases)
 
-Lima launches Linux virtual machines on macOS, with automatic file sharing, port forwarding,
-and [containerd](https://containerd.io).
+Lima launches Linux virtual machines with automatic file sharing, port forwarding, and [containerd](https://containerd.io).
 
 Lima can be considered as a some sort of unofficial "macOS subsystem for Linux", or "containerd for Mac".
+
+Lima is expected to be used on macOS hosts, but can be used on Linux hosts as well.
+It may work on NetBSD and Windows hosts as well.
 
 ✅ Automatic file sharing
 
@@ -19,9 +21,9 @@ Lima can be considered as a some sort of unofficial "macOS subsystem for Linux",
 
 ✅ Intel on ARM   (untested)
 
-✅ Ubuntu
+✅ Ubuntu guest
 
-✅ Fedora
+✅ Fedora guest
 
 Related project: [sshocker (ssh with file sharing and port forwarding)](https://github.com/AkihiroSuda/sshocker)
 
@@ -175,7 +177,7 @@ The current default spec:
 - Performance optimization
 - Homebrew
 - More guest distros
-- Linux on Windows/Linux/BSD
+- Windows hosts
 - GUI with system tray icon (Qt or Electron, for portability)
 - VirtFS to replace the current reverse sshfs (work has to be done on QEMU repo)
 - [vsock](https://github.com/apple/darwin-xnu/blob/xnu-7195.81.3/bsd/man/man4/vsock.4) to replace SSH (work has to be done on QEMU repo)

@@ -6,7 +6,7 @@ require (
 	github.com/AkihiroSuda/sshocker v0.1.1-0.20210510144941-56aa3c7472b0
 	github.com/alessio/shellescape v1.4.1
 	github.com/containerd/containerd v1.5.0
-	github.com/cyphar/filepath-securejoin v0.2.2
+	github.com/diskfs/go-diskfs v1.1.2-0.20210512141858-8a6b8b88d14a
 	github.com/docker/go-units v0.4.0
 	github.com/gorilla/mux v1.8.0
 	github.com/hashicorp/go-multierror v1.1.1
