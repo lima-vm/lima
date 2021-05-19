@@ -9,7 +9,6 @@ import (
 
 	"github.com/AkihiroSuda/lima/pkg/cidata"
 	"github.com/AkihiroSuda/lima/pkg/hostagent"
-	"github.com/AkihiroSuda/lima/pkg/iso9660util"
 	"github.com/AkihiroSuda/lima/pkg/limayaml"
 	"github.com/AkihiroSuda/lima/pkg/qemu"
 	"github.com/pkg/errors"
@@ -17,11 +16,8 @@ import (
 )
 
 func Start(ctx context.Context, instName, instDir string, y *limayaml.LimaYAML) error {
-	cidataISO, err := cidata.GenerateISO9660(instName, y)
-	if err != nil {
-		return err
-	}
-	if err := iso9660util.Write(filepath.Join(instDir, "cidata.iso"), cidataISO); err != nil {
+	cidataISOPath := filepath.Join(instDir, "cidata.iso")
+	if err := cidata.GenerateISO9660(cidataISOPath, instName, y); err != nil {
 		return err
 	}
 	qCfg := qemu.Config{

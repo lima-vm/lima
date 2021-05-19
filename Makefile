@@ -47,7 +47,7 @@ _output/share/lima/lima-guestagent.Linux-aarch64:
 .PHONY: install
 install:
 	cp -av _output/* /usr/local/
-	if [ ! -e /usr/local/bin/nerdctl ]; then ln -sf nerdctl.lima /usr/local/bin/nerdctl; fi
+	if [[ $(shell uname -s ) != Linux && ! -e /usr/local/bin/nerdctl ]]; then ln -sf nerdctl.lima /usr/local/bin/nerdctl; fi
 
 .PHONY: clean
 clean:
@@ -60,3 +60,7 @@ artifacts:
 	$(TAR) -C _output/ -czvf _artifacts/lima-$(VERSION_TRIMMED)-Darwin-x86_64.tar.gz ./
 	GOOS=darwin GOARCH=arm64 make clean binaries
 	$(TAR) -C _output -czvf _artifacts/lima-$(VERSION_TRIMMED)-Darwin-arm64.tar.gz ./
+	GOOS=linux GOARCH=amd64 make clean binaries
+	$(TAR) -C _output/ -czvf _artifacts/lima-$(VERSION_TRIMMED)-Linux-x86_64.tar.gz ./
+	GOOS=linux GOARCH=arm64 make clean binaries
+	$(TAR) -C _output/ -czvf _artifacts/lima-$(VERSION_TRIMMED)-Linux-aarch64.tar.gz ./

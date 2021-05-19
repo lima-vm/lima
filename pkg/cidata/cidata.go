@@ -1,6 +1,8 @@
 package cidata
 
 import (
+	"bytes"
+	"io"
 	"io/fs"
 	"os"
 	"os/user"
@@ -14,17 +16,17 @@ import (
 	"github.com/pkg/errors"
 )
 
-func GenerateISO9660(name string, y *limayaml.LimaYAML) (*iso9660util.ISO9660, error) {
+func GenerateISO9660(isoPath, name string, y *limayaml.LimaYAML) error {
 	if err := limayaml.ValidateRaw(*y); err != nil {
-		return nil, err
+		return err
 	}
 	u, err := user.Current()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	uid, err := strconv.Atoi(u.Uid)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	args := TemplateArgs{
 		Name: name,
@@ -38,60 +40,64 @@ func GenerateISO9660(name string, y *limayaml.LimaYAML) (*iso9660util.ISO9660, e
 	for _, f := range y.Mounts {
 		expanded, err := localpathutil.Expand(f.Location)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		args.Mounts = append(args.Mounts, expanded)
 	}
 
 	if err := ValidateTemplateArgs(args); err != nil {
-		return nil, err
+		return err
 	}
 
-	userData, err := GenerateUserData(args)
-	if err != nil {
-		return nil, err
+	var layout []iso9660util.Entry
+
+	if userData, err := GenerateUserData(args); err != nil {
+		return err
+	} else {
+		layout = append(layout, iso9660util.Entry{
+			Path:   "user-data",
+			Reader: bytes.NewReader(userData),
+		})
 	}
 
-	metaData, err := GenerateMetaData(args)
-	if err != nil {
-		return nil, err
+	if metaData, err := GenerateMetaData(args); err != nil {
+		return err
+	} else {
+		layout = append(layout, iso9660util.Entry{
+			Path:   "meta-data",
+			Reader: bytes.NewReader(metaData),
+		})
 	}
 
-	guestAgentBinaryPath, err := GuestAgentBinaryPath(y.Arch)
-	if err != nil {
-		return nil, err
+	if guestAgentBinary, err := GuestAgentBinary(y.Arch); err != nil {
+		return err
+	} else {
+		defer guestAgentBinary.Close()
+		layout = append(layout, iso9660util.Entry{
+			Path:   "lima-guestagent",
+			Reader: guestAgentBinary,
+		})
 	}
 
-	iso9660 := &iso9660util.ISO9660{
-		Name: "cidata",
-		FilesFromContent: map[string]string{
-			"user-data": string(userData),
-			"meta-data": string(metaData),
-		},
-		FilesFromHostFilePath: map[string]string{
-			"lima-guestagent": guestAgentBinaryPath,
-		},
-	}
-
-	return iso9660, nil
+	return iso9660util.Write(isoPath, "cidata", layout)
 }
 
-func GuestAgentBinaryPath(arch string) (string, error) {
+func GuestAgentBinary(arch string) (io.ReadCloser, error) {
 	if arch == "" {
-		return "", errors.New("arch must be set")
+		return nil, errors.New("arch must be set")
 	}
 	self, err := os.Executable()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	selfSt, err := os.Stat(self)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	if selfSt.Mode()&fs.ModeSymlink != 0 {
 		self, err = os.Readlink(self)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 	}
 
@@ -109,14 +115,14 @@ func GuestAgentBinaryPath(arch string) (string, error) {
 		filepath.Join(selfDirDir, "share/lima/lima-guestagent.Linux-"+arch),
 		// TODO: support custom path
 	}
-	for _, f := range candidates {
-		if _, err := os.Stat(f); err == nil {
+	for _, candidate := range candidates {
+		if f, err := os.Open(candidate); err == nil {
 			return f, nil
 		} else if !errors.Is(err, os.ErrNotExist) {
-			return "", err
+			return nil, err
 		}
 	}
 
-	return "", errors.Errorf("failed to find \"lima-guestagent.Linux-%s\" binary for %q, attempted %v",
+	return nil, errors.Errorf("failed to find \"lima-guestagent.Linux-%s\" binary for %q, attempted %v",
 		arch, self, candidates)
 }
