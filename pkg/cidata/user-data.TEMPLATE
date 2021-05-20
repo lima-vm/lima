@@ -95,14 +95,17 @@ write_files:
       EOF
         chown -R "{{.User}}" "/home/{{.User}}.linux/.config"
       fi
-      if [ ! -x /usr/local/bin/nerdctl -a "$(uname -m)" = "x86_64" ]; then
-        curl -fsSL https://github.com/containerd/nerdctl/releases/download/v0.8.1/nerdctl-full-0.8.1-linux-amd64.tar.gz | tar Cxz /usr/local
+      if [ ! -x /usr/local/bin/nerdctl ]; then
+        version="0.8.2"
+        goarch="amd64"
+        if [ "$(uname -m )" = "aarch64 "]; then
+          goarch="arm64"
+        fi
+        curl -fsSL https://github.com/containerd/nerdctl/releases/download/v${version}/nerdctl-full-${version}-linux-${goarch}.tar.gz | tar Cxz /usr/local
         until [ -e "/run/user/{{.UID}}/systemd/private" ]; do sleep 3; done
         sudo -iu "{{.User}}" "XDG_RUNTIME_DIR=/run/user/{{.UID}}" containerd-rootless-setuptool.sh install
         sudo -iu "{{.User}}" "XDG_RUNTIME_DIR=/run/user/{{.UID}}" containerd-rootless-setuptool.sh install-buildkit
         sudo -iu "{{.User}}" "XDG_RUNTIME_DIR=/run/user/{{.UID}}" containerd-rootless-setuptool.sh install-stargz
-      else
-        echo "TODO: install containerd for aarch64 (https://github.com/containerd/nerdctl/issues/191)"
       fi
    owner: root:root
    path: /var/lib/cloud/scripts/per-boot/20-install-containerd.boot.sh
