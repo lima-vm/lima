@@ -23,10 +23,10 @@ func FillDefault(y *LimaYAML) {
 
 func resolveArch(s string) Arch {
 	if s == "" || s == "default" {
-		if runtime.GOOS == "amd64" {
-			return AARCH64
-		} else {
+		if runtime.GOARCH == "amd64" {
 			return X8664
+		} else {
+			return AARCH64
 		}
 	}
 	return s
