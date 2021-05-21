@@ -127,10 +127,10 @@ func Cmdline(cfg Config) (string, []string, error) {
 	} else if y.Arch != limayaml.X8664 {
 		logrus.Warnf("field `firmware.legacyBIOS` is not supported for architecture %q, ignoring", y.Arch)
 	}
+	args = append(args, "-boot", "order=c,splash-time=0,menu=on")
 
 	// Root disk
 	args = append(args, "-drive", fmt.Sprintf("file=%s,if=virtio", filepath.Join(cfg.InstanceDir, "diffdisk")))
-	args = append(args, "-boot", "c")
 
 	// cloud-init
 	args = append(args, "-cdrom", filepath.Join(cfg.InstanceDir, "cidata.iso"))
