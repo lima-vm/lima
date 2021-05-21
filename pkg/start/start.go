@@ -35,7 +35,7 @@ func Start(ctx context.Context, instName, instDir string, y *limayaml.LimaYAML) 
 	qCmd := exec.CommandContext(ctx, qExe, qArgs...)
 	qCmd.Stdout = os.Stdout
 	qCmd.Stderr = os.Stderr
-	logrus.Info("Starting QEMU")
+	logrus.Infof("Starting QEMU (hint: to watch the boot progress, see %q)", filepath.Join(instDir, "serial.log"))
 	logrus.Debugf("qCmd.Args: %v", qCmd.Args)
 	if err := qCmd.Start(); err != nil {
 		return err

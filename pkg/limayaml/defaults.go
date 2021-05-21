@@ -19,6 +19,10 @@ func FillDefault(y *LimaYAML) {
 	if y.Disk == "" {
 		y.Disk = "100GiB"
 	}
+
+	if y.Video.Display == "" {
+		y.Video.Display = "none"
+	}
 }
 
 func resolveArch(s string) Arch {

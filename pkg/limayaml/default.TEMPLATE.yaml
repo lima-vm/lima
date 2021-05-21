@@ -51,6 +51,13 @@ firmware:
   # Default: false
   legacyBIOS: false
 
+video:
+  # QEMU display, e.g., "none", "cocoa", "sdl".
+  # As of QEMU v5.2, enabling this is known to have negative impact
+  # on performance on macOS hosts: https://gitlab.com/qemu-project/qemu/-/issues/334
+  # Default: "none"
+  display: "none"
+
 #UNIMPLEMENTED| provision:
 #UNIMPLEMENTED|   # `system` is executed with the root privilege
 #UNIMPLEMENTED|   system: |
