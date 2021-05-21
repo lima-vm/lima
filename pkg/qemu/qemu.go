@@ -144,7 +144,10 @@ func Cmdline(cfg Config) (string, []string, error) {
 	// virtio-rng-pci acceralates starting up the OS, according to https://wiki.gentoo.org/wiki/QEMU/Options
 	args = append(args, "-device", "virtio-rng-pci")
 
-	// Misc devices
+	// Graphics
+	if y.Video.Display != "" {
+		args = append(args, "-display", y.Video.Display)
+	}
 	switch y.Arch {
 	case limayaml.X8664:
 		args = append(args, "-device", "virtio-vga")
@@ -157,7 +160,22 @@ func Cmdline(cfg Config) (string, []string, error) {
 		args = append(args, "-device", "usb-kbd")
 		args = append(args, "-device", "usb-mouse")
 	}
+
+	// Parallel
 	args = append(args, "-parallel", "none")
+
+	// Serial
+	serialSock := filepath.Join(cfg.InstanceDir, "serial.sock")
+	if err := os.RemoveAll(serialSock); err != nil {
+		return "", nil, err
+	}
+	serialLog := filepath.Join(cfg.InstanceDir, "serial.log")
+	if err := os.RemoveAll(serialLog); err != nil {
+		return "", nil, err
+	}
+	const serialChardev = "char-serial"
+	args = append(args, "-chardev", fmt.Sprintf("socket,id=%s,path=%s,server,nowait,logfile=%s", serialChardev, serialSock, serialLog))
+	args = append(args, "-serial", "chardev:"+serialChardev)
 
 	// We also want to enable vsock and virtfs here, but QEMU does not support vsock and virtfs for macOS hosts
 

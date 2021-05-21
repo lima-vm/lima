@@ -11,3 +11,5 @@ An instance directory contains the following files:
 - `qemu-pid`: PID of the QEMU
 - `ssh.sock`: SSH control master socket
 - `ga.sock`: Forwarded to `/run/user/$UID/lima-guestagent.sock`
+- `serial.log`: QEMU serial log, for debugging
+- `serial.sock`: QEMU serial socket, for debugging (Usage: `socat -,echo=0,icanon=0 unix-connect:serial.sock`)

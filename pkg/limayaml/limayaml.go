@@ -9,6 +9,7 @@ type LimaYAML struct {
 	Mounts   []Mount  `yaml:"mounts,omitempty"`
 	SSH      SSH      `yaml:"ssh,omitempty"` // REQUIRED (FIXME)
 	Firmware Firmware `yaml:"firmware,omitempty"`
+	Video    Video    `yaml:"video,omitempty"`
 }
 
 type Arch = string
@@ -36,4 +37,9 @@ type Firmware struct {
 	// LegacyBIOS disables UEFI if set.
 	// LegacyBIOS is ignored for aarch64.
 	LegacyBIOS bool `yaml:"legacyBIOS,omitempty"`
+}
+
+type Video struct {
+	// Display is a QEMU display string
+	Display string `yaml:"display,omitempty"`
 }

@@ -261,6 +261,7 @@ Host * !127.0.0.1
 ### "Hints for debugging other problems?"
 - Inspect logs:
   - `limactl --debug start`
+  - `$HOME/.lima/<INSTANCE>/serial.log`
   - `/var/log/cloud-init-output.log` (inside the guest)
   - `/var/log/cloud-init.log` (inside the guest)
 - Make sure that you aren't mixing up tabs and spaces in the YAML.
