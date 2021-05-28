@@ -1,10 +1,5 @@
 #!/bin/sh
 set -eu
 : "${LIMA_INSTANCE:=default}"
-LIMA="$(realpath "$0")"
-LIMA_BINDIR="$(dirname "$LIMA")"
-LIMACTL="${LIMA_BINDIR}/limactl"
-if [ -d "$LIMACTL" ]; then
-  LIMACTL="limactl"
-fi
+: "${LIMACTL:=limactl}"
 exec "$LIMACTL" shell "$LIMA_INSTANCE" "$@"

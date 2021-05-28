@@ -75,10 +75,19 @@ For the usage of containerd and nerdctl (contaiNERD ctl), visit https://github.c
 
 ## Getting started
 ### Requirements (Intel Mac)
-- coreutils (for `realpath` command) (`brew install coreutils`)
-- QEMU (`brew install qemu`)
+- QEMU v6.0.0 or later (`brew install qemu`)
 
-- Run the following commands to enable `--accel=hvf`:
+
+<details>
+<summary>
+Signing the binary (not needed for recent version of QEMU and macOS, in most cases)
+</summary>
+
+<p>
+
+If you have installed QEMU v6.0.0 or later on macOS 11, your binary should have been already automatically signed to enable HVF acceleration.
+
+However, if you see `HV_ERROR`, you might need to sign the binary manually.
 
 ```bash
 cat >entitlements.xml <<EOF
@@ -102,10 +111,11 @@ Note: **Only** on macOS versions **before** 10.15.7 you might need to add this e
     <true/>
 ```
 
+</p>
+</details>
 
 ### Requirements (ARM Mac)
 
-- coreutils (for `realpath` command) (`brew install coreutils`)
 - QEMU with `--accel=hvf` support, see https://gist.github.com/citruz/9896cd6fb63288ac95f81716756cb9aa
 
 > **NOTE**
