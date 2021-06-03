@@ -96,7 +96,7 @@ write_files:
         chown -R "{{.User}}" "/home/{{.User}}.linux/.config"
       fi
       if [ ! -x /usr/local/bin/nerdctl ]; then
-        version="0.8.2"
+        version="0.8.3"
         goarch="amd64"
         if [ "$(uname -m )" = "aarch64 "]; then
           goarch="arm64"
