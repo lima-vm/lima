@@ -58,17 +58,19 @@ video:
   # Default: "none"
   display: "none"
 
-#UNIMPLEMENTED| provision:
-#UNIMPLEMENTED|   # `system` is executed with the root privilege
-#UNIMPLEMENTED|   system: |
-#UNIMPLEMENTED|     #!/bin/bash
-#UNIMPLEMENTED|     set -eux -o pipefail
-#UNIMPLEMENTED|     export DEBIAN_FRONTEND=noninteractive
-#UNIMPLEMENTED|     apt-get install -y vim
-#UNIMPLEMENTED|   # `user` is executed without the root privilege
-#UNIMPLEMENTED|   user: |
-#UNIMPLEMENTED|     #!/bin/bash
-#UNIMPLEMENTED|     set -eux -o pipefail
-#UNIMPLEMENTED|     cat <<EOF > ~/.vimrc
-#UNIMPLEMENTED|     set number
-#UNIMPLEMENTED|     EOF
+# provision:
+#   # `system` is executed with the root privilege
+#   - mode: system
+#     script: |
+#       #!/bin/bash
+#       set -eux -o pipefail
+#       export DEBIAN_FRONTEND=noninteractive
+#       apt-get install -y vim
+#   # `user` is executed without the root privilege
+#   - mode: user
+#     script: |
+#       #!/bin/bash
+#       set -eux -o pipefail
+#       cat <<EOF > ~/.vimrc
+#       set number
+#       EOF

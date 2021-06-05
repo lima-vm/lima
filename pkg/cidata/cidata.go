@@ -29,9 +29,10 @@ func GenerateISO9660(isoPath, name string, y *limayaml.LimaYAML) error {
 		return err
 	}
 	args := TemplateArgs{
-		Name: name,
-		User: u.Username,
-		UID:  uid,
+		Name:      name,
+		User:      u.Username,
+		UID:       uid,
+		Provision: y.Provision,
 	}
 	for _, f := range sshutil.DefaultPubKeys() {
 		args.SSHPubKeys = append(args.SSHPubKeys, f.Content)

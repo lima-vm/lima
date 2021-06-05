@@ -4,6 +4,8 @@ import (
 	_ "embed"
 	"path/filepath"
 
+	"github.com/AkihiroSuda/lima/pkg/limayaml"
+
 	"github.com/AkihiroSuda/lima/pkg/templateutil"
 	"github.com/containerd/containerd/identifiers"
 	"github.com/pkg/errors"
@@ -22,6 +24,7 @@ type TemplateArgs struct {
 	UID        int
 	SSHPubKeys []string
 	Mounts     []string // abs path, accessible by the User
+	Provision  []limayaml.Provision
 }
 
 func ValidateTemplateArgs(args TemplateArgs) error {

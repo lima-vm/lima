@@ -19,9 +19,14 @@ func FillDefault(y *LimaYAML) {
 	if y.Disk == "" {
 		y.Disk = "100GiB"
 	}
-
 	if y.Video.Display == "" {
 		y.Video.Display = "none"
+	}
+	for i := range y.Provision {
+		provision := &y.Provision[i]
+		if provision.Mode == "" {
+			provision.Mode = ProvisionModeSystem
+		}
 	}
 }
 

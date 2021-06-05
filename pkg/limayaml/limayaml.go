@@ -1,15 +1,16 @@
 package limayaml
 
 type LimaYAML struct {
-	Arch     Arch     `yaml:"arch,omitempty"`
-	Images   []Image  `yaml:"images"` // REQUIRED
-	CPUs     int      `yaml:"cpus,omitempty"`
-	Memory   string   `yaml:"memory,omitempty"` // go-units.RAMInBytes
-	Disk     string   `yaml:"disk,omitempty"`   // go-units.RAMInBytes
-	Mounts   []Mount  `yaml:"mounts,omitempty"`
-	SSH      SSH      `yaml:"ssh,omitempty"` // REQUIRED (FIXME)
-	Firmware Firmware `yaml:"firmware,omitempty"`
-	Video    Video    `yaml:"video,omitempty"`
+	Arch      Arch        `yaml:"arch,omitempty"`
+	Images    []Image     `yaml:"images"` // REQUIRED
+	CPUs      int         `yaml:"cpus,omitempty"`
+	Memory    string      `yaml:"memory,omitempty"` // go-units.RAMInBytes
+	Disk      string      `yaml:"disk,omitempty"`   // go-units.RAMInBytes
+	Mounts    []Mount     `yaml:"mounts,omitempty"`
+	SSH       SSH         `yaml:"ssh,omitempty"` // REQUIRED (FIXME)
+	Firmware  Firmware    `yaml:"firmware,omitempty"`
+	Video     Video       `yaml:"video,omitempty"`
+	Provision []Provision `yaml:"provision,omitempty"`
 }
 
 type Arch = string
@@ -42,4 +43,16 @@ type Firmware struct {
 type Video struct {
 	// Display is a QEMU display string
 	Display string `yaml:"display,omitempty"`
+}
+
+type ProvisionMode = string
+
+const (
+	ProvisionModeSystem ProvisionMode = "system"
+	ProvisionModeUser   ProvisionMode = "user"
+)
+
+type Provision struct {
+	Mode   ProvisionMode `yaml:"mode"` // default: "system"
+	Script string        `yaml:"script"`
 }

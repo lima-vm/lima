@@ -13,9 +13,9 @@ users:
     sudo: ALL=(ALL) NOPASSWD:ALL
     lock_passwd: true
     ssh-authorized-keys:
-{{range $val := .SSHPubKeys}}
+    {{- range $val := .SSHPubKeys}}
       - {{$val}}
-{{end}}
+    {{- end}}
 
 write_files:
  - content: |
@@ -49,10 +49,10 @@ write_files:
       loginctl enable-linger "{{.User}}"
 
       # Create mount points
-      {{range $val := .Mounts}}
+      {{- range $val := .Mounts}}
       mkdir -p "{{$val}}"
       chown "{{$.User}}" "{{$val}}" || true
-      {{end}}
+      {{- end}}
 
       # Install or update the guestagent binary
       mkdir -p -m 600 /mnt/lima-cidata
@@ -110,3 +110,26 @@ write_files:
    owner: root:root
    path: /var/lib/cloud/scripts/per-boot/20-install-containerd.boot.sh
    permissions: '0755'
+{{- if .Provision}}
+ - content: |
+      #!/bin/bash
+      set -eu -o pipefail
+      {{- range $i, $val := .Provision}}
+      {{- $script := printf "/var/lib/lima-guestagent/provision-%02d-%s" $i $val.Mode}}
+      {{- if eq $val.Mode "system"}}
+      {{$script}}
+      {{- else}}
+      until [ -e "/run/user/{{.UID}}/systemd/private" ]; do sleep 3; done
+      sudo -iu "{{.User}}" "XDG_RUNTIME_DIR=/run/user/{{.UID}}" {{$script}}
+      {{- end}}
+      {{- end}}
+   owner: root:root
+   path: /var/lib/cloud/scripts/per-boot/30-execute-provision-scripts.boot.sh
+   permissions: '0755'
+{{- end}}
+{{- range $i, $val := .Provision}}
+ - content: {{printf "%q" $val.Script}}
+   owner: root:root
+   path: {{printf "/var/lib/lima-guestagent/provision-%02d-%s" $i $val.Mode}}
+   permissions: '0755'
+{{- end}}
