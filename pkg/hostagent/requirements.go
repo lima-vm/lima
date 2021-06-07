@@ -54,8 +54,9 @@ type requirement struct {
 	debugHint   string
 }
 
-var essentialRequirements = []requirement{
-	{
+func (a *HostAgent) essentialRequirements() []requirement {
+	req := make([]requirement, 0)
+	req = append(req, requirement{
 		description: "ssh",
 		script: `#!/bin/bash
 true
@@ -64,23 +65,25 @@ true
 Make sure that the YAML field "ssh.localPort" is not used by other processes on the host.
 If any private key under ~/.ssh is protected with a passphrase, you need to have ssh-agent to be running.
 `,
-	},
-	{
-		description: "sshfs binary to be installed",
-		script: `#!/bin/bash
+	})
+	if len(a.y.Mounts) > 0 {
+		req = append(req, requirement{
+			description: "sshfs binary to be installed",
+			script: `#!/bin/bash
 set -eux -o pipefail
 if ! timeout 30s bash -c "until command -v sshfs; do sleep 3; done"; then
 	echo >&2 "sshfs is not installed yet"
 	exit 1
 fi
 `,
-		debugHint: `The sshfs binary was not installed in the guest.
+			debugHint: `The sshfs binary was not installed in the guest.
 Make sure that you are using an officially supported image.
 Also see "/var/log/cloud-init-output.log" in the guest.
 A possible workaround is to run "apt-get install sshfs" in the guest.
 `,
-	},
-	{
+		})
+	}
+	req = append(req, requirement{
 		description: "the guest agent to be running",
 		script: `#!/bin/bash
 set -eux -o pipefail
@@ -95,22 +98,27 @@ Make sure that you are using an officially supported image.
 Also see "/var/log/cloud-init-output.log" in the guest.
 A possible workaround is to run "lima-guestagent install-systemd" in the guest.
 `,
-	},
+	})
+	return req
 }
 
-var optionalRequirements = []requirement{
-	{
-		description: "containerd binaries to be installed",
-		script: `#!/bin/bash
+func (a *HostAgent) optionalRequirements() []requirement {
+	req := make([]requirement, 0)
+	if *a.y.Containerd.System || *a.y.Containerd.User {
+		req = append(req, requirement{
+			description: "containerd binaries to be installed",
+			script: `#!/bin/bash
 set -eux -o pipefail
 if ! timeout 30s bash -c "until command -v nerdctl; do sleep 3; done"; then
 	echo >&2 "nerdctl is not installed yet"
 	exit 1
 fi
 `,
-		debugHint: `The nerdctl binary was not installed in the guest.
+			debugHint: `The nerdctl binary was not installed in the guest.
 Make sure that you are using an officially supported image.
 Also see "/var/log/cloud-init-output.log" in the guest.
 `,
-	},
+		})
+	}
+	return req
 }

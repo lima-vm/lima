@@ -22,6 +22,7 @@ write_files:
       #!/bin/bash
       set -eux -o pipefail
 
+      {{- if .Containerd.User}}
       # Enable rootless containers
       if [ ! -e "/etc/systemd/system/user@.service.d/lima.conf" ]; then
         mkdir -p "/etc/systemd/system/user@.service.d"
@@ -47,6 +48,7 @@ write_files:
         grep -qw "{{.User}}" $f || echo "{{.User}}:100000:65536" >> $f
       done
       loginctl enable-linger "{{.User}}"
+      {{- end}}
 
       # Create mount points
       {{- range $val := .Mounts}}
@@ -67,6 +69,7 @@ write_files:
    # We do not use per-once.
    path: /var/lib/cloud/scripts/per-boot/00-base.boot.sh
    permissions: '0755'
+ {{- if or .Mounts .Containerd.User}}
  - content: |
       #!/bin/bash
       set -eux -o pipefail
@@ -74,16 +77,42 @@ write_files:
       if command -v apt-get 2>&1 >/dev/null; then
         export DEBIAN_FRONTEND=noninteractive
         apt-get update
-        apt-get install -y sshfs uidmap
+        {{- if .Mounts}}
+        apt-get install -y sshfs
+        {{- end }}
+        {{- if .Containerd.User}}
+        apt-get install -y uidmap
+        {{- end }}
       elif command -v dnf 2>&1 >/dev/null; then
-        dnf install -y fuse-sshfs shadow-utils
+        : {{/* make sure the "elif" block is never empty */}}
+        {{- if .Mounts}}
+        dnf install -y fuse-sshfs
+        {{- end}}
+        {{- if .Containerd.User}}
+        dnf install -y shadow-utils
+        {{- end}}
       fi
    owner: root:root
    path: /var/lib/cloud/scripts/per-boot/10-install-packages.boot.sh
    permissions: '0755'
+{{- end}}
+{{- if or .Containerd.System .Containerd.User}}
  - content: |
       #!/bin/bash
       set -eux -o pipefail
+      if [ ! -x /usr/local/bin/nerdctl ]; then
+        version="0.8.3"
+        goarch="amd64"
+        if [ "$(uname -m )" = "aarch64 "]; then
+          goarch="arm64"
+        fi
+        curl -fsSL https://github.com/containerd/nerdctl/releases/download/v${version}/nerdctl-full-${version}-linux-${goarch}.tar.gz | tar Cxz /usr/local
+      fi
+      {{- if .Containerd.System}}
+      systemctl enable containerd
+      systemctl start containerd
+      {{- end}}
+      {{- if .Containerd.User}}
       modprobe tap || true
       if [ ! -e "/home/{{.User}}.linux/.config/containerd/config.toml" ]; then
         mkdir -p "/home/{{.User}}.linux/.config/containerd"
@@ -95,21 +124,17 @@ write_files:
       EOF
         chown -R "{{.User}}" "/home/{{.User}}.linux/.config"
       fi
-      if [ ! -x /usr/local/bin/nerdctl ]; then
-        version="0.8.3"
-        goarch="amd64"
-        if [ "$(uname -m )" = "aarch64 "]; then
-          goarch="arm64"
-        fi
-        curl -fsSL https://github.com/containerd/nerdctl/releases/download/v${version}/nerdctl-full-${version}-linux-${goarch}.tar.gz | tar Cxz /usr/local
+      if [ ! -e "/home/{{.User}}}}.linux/.config/systemd/user/containerd.service" ]; then
         until [ -e "/run/user/{{.UID}}/systemd/private" ]; do sleep 3; done
         sudo -iu "{{.User}}" "XDG_RUNTIME_DIR=/run/user/{{.UID}}" containerd-rootless-setuptool.sh install
         sudo -iu "{{.User}}" "XDG_RUNTIME_DIR=/run/user/{{.UID}}" containerd-rootless-setuptool.sh install-buildkit
         sudo -iu "{{.User}}" "XDG_RUNTIME_DIR=/run/user/{{.UID}}" containerd-rootless-setuptool.sh install-stargz
       fi
+      {{- end}}
    owner: root:root
    path: /var/lib/cloud/scripts/per-boot/20-install-containerd.boot.sh
    permissions: '0755'
+{{- end}}
 {{- if .Provision}}
  - content: |
       #!/bin/bash

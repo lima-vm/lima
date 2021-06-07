@@ -18,6 +18,10 @@ var (
 	metaDataTemplate string
 )
 
+type Containerd struct {
+	System bool
+	User   bool
+}
 type TemplateArgs struct {
 	Name       string // instance name
 	User       string // user name
@@ -25,6 +29,7 @@ type TemplateArgs struct {
 	SSHPubKeys []string
 	Mounts     []string // abs path, accessible by the User
 	Provision  []limayaml.Provision
+	Containerd Containerd
 }
 
 func ValidateTemplateArgs(args TemplateArgs) error {

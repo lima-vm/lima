@@ -28,6 +28,12 @@ func FillDefault(y *LimaYAML) {
 			provision.Mode = ProvisionModeSystem
 		}
 	}
+	if y.Containerd.System == nil {
+		y.Containerd.System = &[]bool{false}[0]
+	}
+	if y.Containerd.User == nil {
+		y.Containerd.User = &[]bool{true}[0]
+	}
 }
 
 func resolveArch(s string) Arch {
