@@ -59,10 +59,10 @@ video:
   display: "none"
 
 containerd:
-  # Enable system-wide containerd (systemctl enable containerd)
+  # Enable system-wide (aka rootful)  containerd and its dependencies (BuildKit, Stargz Snapshotter)
   # Default: false
   system: false
-  # Enable user-scoped containerd (systemctl --user enable containerd)
+  # Enable user-scoped (aka rootless) containerd and its dependencies
   # Default: true
   user: true
 
