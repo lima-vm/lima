@@ -4,6 +4,8 @@ import (
 	_ "embed"
 	"path/filepath"
 
+	"github.com/AkihiroSuda/lima/pkg/limayaml"
+
 	"github.com/AkihiroSuda/lima/pkg/templateutil"
 	"github.com/containerd/containerd/identifiers"
 	"github.com/pkg/errors"
@@ -16,12 +18,18 @@ var (
 	metaDataTemplate string
 )
 
+type Containerd struct {
+	System bool
+	User   bool
+}
 type TemplateArgs struct {
 	Name       string // instance name
 	User       string // user name
 	UID        int
 	SSHPubKeys []string
 	Mounts     []string // abs path, accessible by the User
+	Provision  []limayaml.Provision
+	Containerd Containerd
 }
 
 func ValidateTemplateArgs(args TemplateArgs) error {

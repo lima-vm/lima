@@ -103,5 +103,21 @@ func ValidateRaw(y LimaYAML) error {
 
 	// y.Firmware.LegacyBIOS is ignored for aarch64, but not a fatal error.
 
+	for i, p := range y.Provision {
+		switch p.Mode {
+		case ProvisionModeSystem, ProvisionModeUser:
+		default:
+			return errors.Errorf("field `provision[%d].mode` must be either %q or %q",
+					i, ProvisionModeSystem, ProvisionModeUser)
+		}
+	}
+	for i, p := range y.Probes {
+		switch p.Mode {
+		case ProbeModeReadiness:
+		default:
+			return errors.Errorf("field `probe[%d].mode` can only be %q",
+				i, ProbeModeReadiness)
+		}
+	}
 	return nil
 }

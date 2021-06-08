@@ -58,17 +58,44 @@ video:
   # Default: "none"
   display: "none"
 
-#UNIMPLEMENTED| provision:
-#UNIMPLEMENTED|   # `system` is executed with the root privilege
-#UNIMPLEMENTED|   system: |
-#UNIMPLEMENTED|     #!/bin/bash
-#UNIMPLEMENTED|     set -eux -o pipefail
-#UNIMPLEMENTED|     export DEBIAN_FRONTEND=noninteractive
-#UNIMPLEMENTED|     apt-get install -y vim
-#UNIMPLEMENTED|   # `user` is executed without the root privilege
-#UNIMPLEMENTED|   user: |
-#UNIMPLEMENTED|     #!/bin/bash
-#UNIMPLEMENTED|     set -eux -o pipefail
-#UNIMPLEMENTED|     cat <<EOF > ~/.vimrc
-#UNIMPLEMENTED|     set number
-#UNIMPLEMENTED|     EOF
+containerd:
+  # Enable system-wide containerd (systemctl enable containerd)
+  # Default: false
+  system: false
+  # Enable user-scoped containerd (systemctl --user enable containerd)
+  # Default: true
+  user: true
+
+# Provisioning scripts need to be idempotent because they might be called
+# multiple times, e.g. when the host VM is being restarted.
+# provision:
+#   # `system` is executed with the root privilege
+#   - mode: system
+#     script: |
+#       #!/bin/bash
+#       set -eux -o pipefail
+#       export DEBIAN_FRONTEND=noninteractive
+#       apt-get install -y vim
+#   # `user` is executed without the root privilege
+#   - mode: user
+#     script: |
+#       #!/bin/bash
+#       set -eux -o pipefail
+#       cat <<EOF > ~/.vimrc
+#       set number
+#       EOF
+
+# probes:
+#  # Only `readiness` probes are supported right now.
+#  - mode: readiness
+#    description: vim to be installed
+#    script: |
+#       #!/bin/bash
+#       set -eux -o pipefail
+#       if ! timeout 30s bash -c "until command -v vim; do sleep 3; done"; then
+#         echo >&2 "vim is not installed yet"
+#         exit 1
+#       fi
+#    hint: |
+#      vim was not installed in the guest. Make sure the package system is working correctly.
+#      Also see "/var/log/cloud-init-output.log" in the guest.

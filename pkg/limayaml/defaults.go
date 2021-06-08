@@ -1,6 +1,9 @@
 package limayaml
 
-import "runtime"
+import (
+	"fmt"
+	"runtime"
+)
 
 func FillDefault(y *LimaYAML) {
 	y.Arch = resolveArch(y.Arch)
@@ -19,9 +22,29 @@ func FillDefault(y *LimaYAML) {
 	if y.Disk == "" {
 		y.Disk = "100GiB"
 	}
-
 	if y.Video.Display == "" {
 		y.Video.Display = "none"
+	}
+	for i := range y.Provision {
+		provision := &y.Provision[i]
+		if provision.Mode == "" {
+			provision.Mode = ProvisionModeSystem
+		}
+	}
+	if y.Containerd.System == nil {
+		y.Containerd.System = &[]bool{false}[0]
+	}
+	if y.Containerd.User == nil {
+		y.Containerd.User = &[]bool{true}[0]
+	}
+	for i := range y.Probes {
+		probe := &y.Probes[i]
+		if probe.Mode == "" {
+			probe.Mode = ProbeModeReadiness
+		}
+		if probe.Description == "" {
+			probe.Description = fmt.Sprintf("user probe %d/%d", i+1, len(y.Probes))
+		}
 	}
 }
 
