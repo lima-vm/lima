@@ -111,6 +111,13 @@ func ValidateRaw(y LimaYAML) error {
 					i, ProvisionModeSystem, ProvisionModeUser)
 		}
 	}
-
+	for i, p := range y.Probes {
+		switch p.Mode {
+		case ProbeModeReadiness:
+		default:
+			return errors.Errorf("field `probe[%d].mode` can only be %q",
+				i, ProbeModeReadiness)
+		}
+	}
 	return nil
 }

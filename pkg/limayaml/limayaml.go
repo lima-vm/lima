@@ -12,6 +12,7 @@ type LimaYAML struct {
 	Video      Video       `yaml:"video,omitempty"`
 	Provision  []Provision `yaml:"provision,omitempty"`
 	Containerd Containerd  `yaml:"containerd,omitempty"`
+	Probes     []Probe     `yaml:"probes,omitempty"`
 }
 
 type Arch = string
@@ -61,4 +62,17 @@ type Provision struct {
 type Containerd struct {
 	System *bool `yaml:"system,omitempty"`
 	User   *bool `yaml:"user,omitempty"`
+}
+
+type ProbeMode = string
+
+const (
+	ProbeModeReadiness ProbeMode = "readiness"
+)
+
+type Probe struct {
+	Mode        ProbeMode // default: "readiness"
+	Description string
+	Script      string
+	Hint        string
 }

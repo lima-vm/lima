@@ -1,6 +1,9 @@
 package limayaml
 
-import "runtime"
+import (
+	"fmt"
+	"runtime"
+)
 
 func FillDefault(y *LimaYAML) {
 	y.Arch = resolveArch(y.Arch)
@@ -33,6 +36,15 @@ func FillDefault(y *LimaYAML) {
 	}
 	if y.Containerd.User == nil {
 		y.Containerd.User = &[]bool{true}[0]
+	}
+	for i := range y.Probes {
+		probe := &y.Probes[i]
+		if probe.Mode == "" {
+			probe.Mode = ProbeModeReadiness
+		}
+		if probe.Description == "" {
+			probe.Description = fmt.Sprintf("user probe %d/%d", i+1, len(y.Probes))
+		}
 	}
 }
 

@@ -2,6 +2,7 @@ package hostagent
 
 import (
 	"context"
+	"github.com/AkihiroSuda/lima/pkg/limayaml"
 	"time"
 
 	"github.com/AkihiroSuda/sshocker/pkg/ssh"
@@ -119,6 +120,15 @@ Make sure that you are using an officially supported image.
 Also see "/var/log/cloud-init-output.log" in the guest.
 `,
 		})
+	}
+	for _, probe := range a.y.Probes {
+		if probe.Mode == limayaml.ProbeModeReadiness {
+			req = append(req, requirement{
+				description: probe.Description,
+				script:      probe.Script,
+				debugHint:   probe.Hint,
+			})
+		}
 	}
 	return req
 }

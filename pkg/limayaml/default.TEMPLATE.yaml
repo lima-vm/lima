@@ -85,3 +85,17 @@ containerd:
 #       set number
 #       EOF
 
+# probes:
+#  # Only `readiness` probes are supported right now.
+#  - mode: readiness
+#    description: vim to be installed
+#    script: |
+#       #!/bin/bash
+#       set -eux -o pipefail
+#       if ! timeout 30s bash -c "until command -v vim; do sleep 3; done"; then
+#         echo >&2 "vim is not installed yet"
+#         exit 1
+#       fi
+#    hint: |
+#      vim was not installed in the guest. Make sure the package system is working correctly.
+#      Also see "/var/log/cloud-init-output.log" in the guest.
