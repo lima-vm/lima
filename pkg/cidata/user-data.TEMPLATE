@@ -103,7 +103,7 @@ write_files:
       if [ ! -x /usr/local/bin/nerdctl ]; then
         version="0.8.3"
         goarch="amd64"
-        if [ "$(uname -m )" = "aarch64 "]; then
+        if [ "$(uname -m )" = "aarch64" ]; then
           goarch="arm64"
         fi
         curl -fsSL https://github.com/containerd/nerdctl/releases/download/v${version}/nerdctl-full-${version}-linux-${goarch}.tar.gz | tar Cxz /usr/local
