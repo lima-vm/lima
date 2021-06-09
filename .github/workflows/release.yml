@@ -34,6 +34,19 @@ jobs:
           ${tag}
 
           (Changes to be documented)
+
+          ## Usage
+          Terminal 1:
+          ```console
+          [macOS]$ limactl start
+          ```
+
+          Terminal 2:
+          ```console
+          [macOS]$ lima uname
+          Linux
+          ```
+
           - - -
           The binaries were built automatically on GitHub Actions.
           The build log is available for 90 days: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
