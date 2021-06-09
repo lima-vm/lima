@@ -103,24 +103,31 @@ write_files:
       if [ ! -x /usr/local/bin/nerdctl ]; then
         version="0.8.3"
         goarch="amd64"
-        if [ "$(uname -m )" = "aarch64 "]; then
+        if [ "$(uname -m )" = "aarch64" ]; then
           goarch="arm64"
         fi
         curl -fsSL https://github.com/containerd/nerdctl/releases/download/v${version}/nerdctl-full-${version}-linux-${goarch}.tar.gz | tar Cxz /usr/local
       fi
       {{- if .Containerd.System}}
-      systemctl enable containerd
-      systemctl start containerd
+      cat >"/etc/containerd/config.toml" <<EOF
+        version = 2
+        [proxy_plugins]
+          [proxy_plugins."stargz"]
+            type = "snapshot"
+            address = "/run/containerd-stargz-grpc/containerd-stargz-grpc.sock"
+      EOF
+      systemctl enable --now containerd buildkit stargz-snapshotter
       {{- end}}
       {{- if .Containerd.User}}
       modprobe tap || true
       if [ ! -e "/home/{{.User}}.linux/.config/containerd/config.toml" ]; then
         mkdir -p "/home/{{.User}}.linux/.config/containerd"
         cat >"/home/{{.User}}.linux/.config/containerd/config.toml" <<EOF
+        version = 2
         [proxy_plugins]
           [proxy_plugins."stargz"]
-                type = "snapshot"
-        address = "/run/user/{{.UID}}/containerd-stargz-grpc/containerd-stargz-grpc.sock"
+            type = "snapshot"
+            address = "/run/user/{{.UID}}/containerd-stargz-grpc/containerd-stargz-grpc.sock"
       EOF
         chown -R "{{.User}}" "/home/{{.User}}.linux/.config"
       fi
