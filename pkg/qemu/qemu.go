@@ -7,10 +7,9 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
-	"strings"
 
+	"github.com/AkihiroSuda/lima/pkg/downloader"
 	"github.com/AkihiroSuda/lima/pkg/limayaml"
-	"github.com/AkihiroSuda/lima/pkg/localpathutil"
 	"github.com/docker/go-units"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -31,10 +30,6 @@ func EnsureDisk(cfg Config) error {
 
 	baseDisk := filepath.Join(cfg.InstanceDir, "basedisk")
 	if _, err := os.Stat(baseDisk); errors.Is(err, os.ErrNotExist) {
-		baseDiskTmp := filepath.Join(cfg.InstanceDir, "basedisk.tmp")
-		if err := os.RemoveAll(baseDiskTmp); err != nil {
-			return err
-		}
 		var ensuredBaseDisk bool
 		errs := make([]error, len(cfg.LimaYAML.Images))
 		for i, f := range cfg.LimaYAML.Images {
@@ -42,24 +37,19 @@ func EnsureDisk(cfg Config) error {
 				errs[i] = fmt.Errorf("unsupported arch: %q", f.Arch)
 				continue
 			}
-			url := f.Location
-			if !strings.Contains(url, "://") {
-				expanded, err := localpathutil.Expand(url)
-				if err != nil {
-					return err
-				}
-				url = "file://" + expanded
-			}
-			cmd := exec.Command("curl", "-fSL", "-o", baseDiskTmp, url)
-			cmd.Stdout = os.Stdout
-			cmd.Stderr = os.Stderr
-			logrus.Infof("Attempting to download the image from %q", url)
-			if err := cmd.Run(); err != nil {
-				errs[i] = errors.Wrapf(err, "failed to run %v", cmd.Args)
+			logrus.Infof("Attempting to download the image from %q", f.Location)
+			res, err := downloader.Download(baseDisk, f.Location, downloader.WithCache())
+			if err != nil {
+				errs[i] = errors.Wrapf(err, "failed to download %q", f.Location)
 				continue
 			}
-			if err := os.Rename(baseDiskTmp, baseDisk); err != nil {
-				return err
+			switch res.Status {
+			case downloader.StatusDownloaded:
+				logrus.Infof("Downloaded image from %q", f.Location)
+			case downloader.StatusUsedCache:
+				logrus.Infof("Using cache %q", res.CachePath)
+			default:
+				logrus.Warnf("Unexpected result from downloader.Download(): %+v", res)
 			}
 			ensuredBaseDisk = true
 			break

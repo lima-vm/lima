@@ -13,3 +13,11 @@ An instance directory contains the following files:
 - `ga.sock`: Forwarded to `/run/user/$UID/lima-guestagent.sock`
 - `serial.log`: QEMU serial log, for debugging
 - `serial.sock`: QEMU serial socket, for debugging (Usage: `socat -,echo=0,icanon=0 unix-connect:serial.sock`)
+
+
+## Cache directory (`~/Library/Caches/lima/download/by-url-sha256/<SHA256_OF_URL>`)
+
+The directory contains the following files:
+
+- `url`: raw url text, without "\n"
+- `data`: data
