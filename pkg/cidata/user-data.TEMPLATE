@@ -101,12 +101,10 @@ write_files:
       #!/bin/bash
       set -eux -o pipefail
       if [ ! -x /usr/local/bin/nerdctl ]; then
-        version="0.8.3"
-        goarch="amd64"
-        if [ "$(uname -m )" = "aarch64" ]; then
-          goarch="arm64"
-        fi
-        curl -fsSL https://github.com/containerd/nerdctl/releases/download/v${version}/nerdctl-full-${version}-linux-${goarch}.tar.gz | tar Cxz /usr/local
+        mkdir -p -m 600 /mnt/lima-cidata
+        mount -t iso9660 -o ro /dev/disk/by-label/cidata /mnt/lima-cidata
+        tar Cxzf /usr/local /mnt/lima-cidata/nerdctl-full.tgz
+        umount /mnt/lima-cidata
       fi
       {{- if .Containerd.System}}
       cat >"/etc/containerd/config.toml" <<EOF

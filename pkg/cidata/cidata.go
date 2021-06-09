@@ -2,19 +2,25 @@ package cidata
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"io/fs"
+	"io/ioutil"
 	"os"
 	"os/user"
 	"path/filepath"
 	"strconv"
 
+	"github.com/AkihiroSuda/lima/pkg/downloader"
 	"github.com/AkihiroSuda/lima/pkg/iso9660util"
 	"github.com/AkihiroSuda/lima/pkg/limayaml"
 	"github.com/AkihiroSuda/lima/pkg/localpathutil"
 	"github.com/AkihiroSuda/lima/pkg/sshutil"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
+
+const NerdctlVersion = "0.8.3"
 
 func GenerateISO9660(isoPath, name string, y *limayaml.LimaYAML) error {
 	if err := limayaml.ValidateRaw(*y); err != nil {
@@ -78,6 +84,50 @@ func GenerateISO9660(isoPath, name string, y *limayaml.LimaYAML) error {
 		layout = append(layout, iso9660util.Entry{
 			Path:   "lima-guestagent",
 			Reader: guestAgentBinary,
+		})
+	}
+
+	if args.Containerd.System || args.Containerd.User {
+		var nftgzBase string
+		switch y.Arch {
+		case limayaml.X8664:
+			nftgzBase = fmt.Sprintf("nerdctl-full-%s-linux-amd64.tar.gz", NerdctlVersion)
+		case limayaml.AARCH64:
+			nftgzBase = fmt.Sprintf("nerdctl-full-%s-linux-arm64.tar.gz", NerdctlVersion)
+		default:
+			return errors.Errorf("unexpected arch %q", y.Arch)
+		}
+		td, err := ioutil.TempDir("", "lima-download-nerdctl")
+		if err != nil {
+			return err
+		}
+		defer os.RemoveAll(td)
+		nftgzLocal := filepath.Join(td, nftgzBase)
+		nftgzURL := fmt.Sprintf("https://github.com/containerd/nerdctl/releases/download/v%s/%s",
+			NerdctlVersion, nftgzBase)
+		logrus.Infof("Downloading %q", nftgzURL)
+		res, err := downloader.Download(nftgzLocal, nftgzURL, downloader.WithCache())
+		if err != nil {
+			return errors.Wrapf(err, "failed to download %q", nftgzURL)
+		}
+		switch res.Status {
+		case downloader.StatusDownloaded:
+			logrus.Infof("Downloaded %q", nftgzBase)
+		case downloader.StatusUsedCache:
+			logrus.Infof("Using cache %q", res.CachePath)
+		default:
+			logrus.Warnf("Unexpected result from downloader.Download(): %+v", res)
+		}
+		// TODO: verify sha256
+		nftgzR, err := os.Open(nftgzLocal)
+		if err != nil {
+			return err
+		}
+		defer nftgzR.Close()
+		layout = append(layout, iso9660util.Entry{
+			// ISO9660 requires len(Path) <= 30
+			Path:   "nerdctl-full.tgz",
+			Reader: nftgzR,
 		})
 	}
 
