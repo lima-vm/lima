@@ -37,15 +37,15 @@ jobs:
 
           ## Usage
           Terminal 1:
-          ```console
+          \`\`\`console
           [macOS]$ limactl start
-          ```
+          \`\`\`
 
           Terminal 2:
-          ```console
+          \`\`\`console
           [macOS]$ lima uname
           Linux
-          ```
+          \`\`\`
 
           - - -
           The binaries were built automatically on GitHub Actions.
