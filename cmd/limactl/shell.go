@@ -26,19 +26,6 @@ var shellCommand = &cli.Command{
 		&cli.StringFlag{
 			Name:  "workdir",
 			Usage: "working directory",
-			Value: func() string {
-				wd, err := os.Getwd()
-				if err != nil {
-					logrus.WithError(err).Warn("failed to get the current directory")
-					home, err := os.UserHomeDir()
-					if err != nil {
-						logrus.WithError(err).Warn("failed to get the home directory")
-						return "/"
-					}
-					return home
-				}
-				return wd
-			}(),
 		},
 	},
 	Action:       shellAction,
@@ -60,22 +47,40 @@ func shellAction(clicontext *cli.Context) error {
 			strings.Join(clicontext.Args().Slice()[2:], " "))
 	}
 
-	hostHome, err := os.UserHomeDir()
-	if err != nil {
-		return err
-	}
-
-	script := fmt.Sprintf(" cd %q || cd %q ; exec bash --login", clicontext.String("workdir"), hostHome)
-	if clicontext.NArg() > 1 {
-		script += fmt.Sprintf(" -c %q", shellescape.QuoteCommand(clicontext.Args().Tail()))
-	}
-
 	y, instDir, err := store.LoadYAMLByInstanceName(instName)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return errors.Errorf("instance %q does not exist, run `limactl start %s` to create a new instance", instName, instName)
 		}
 		return err
+	}
+
+	// Buildup changeDirCmd to "cd workDir || cd currentDir || cd homeDir"
+	var changeDirCmd string
+	workDir := clicontext.String("workdir")
+	if workDir == "" {
+		changeDirCmd = "false"
+	} else {
+		changeDirCmd = fmt.Sprintf("cd %q", workDir)
+	}
+	if len(y.Mounts) > 0 {
+		currentDir, err := os.Getwd()
+		if err == nil {
+			changeDirCmd = fmt.Sprintf("%s || cd %q", changeDirCmd, currentDir)
+		} else {
+			logrus.WithError(err).Warn("failed to get the current directory")
+		}
+		homeDir, err := os.UserHomeDir()
+		if err == nil {
+			changeDirCmd = fmt.Sprintf("%s || cd %q", changeDirCmd, homeDir)
+		} else {
+			logrus.WithError(err).Warn("failed to get the home directory")
+		}
+	}
+
+	script := fmt.Sprintf(" %s ; exec bash --login", changeDirCmd)
+	if clicontext.NArg() > 1 {
+		script += fmt.Sprintf(" -c %q", shellescape.QuoteCommand(clicontext.Args().Tail()))
 	}
 
 	arg0, err := exec.LookPath("ssh")
