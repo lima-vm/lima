@@ -55,30 +55,38 @@ func shellAction(clicontext *cli.Context) error {
 		return err
 	}
 
-	// Buildup changeDirCmd to "cd workDir || cd currentDir || cd homeDir"
+	// When workDir is explicitly set, the shell MUST have workDir as the cwd, or exit with an error.
+	//
+	// changeDirCmd := "cd workDir || exit 1"                  if workDir != ""
+	//              := "cd hostCurrentDir || cd hostHomeDir"   if workDir == ""
 	var changeDirCmd string
-	workDir := clicontext.String("workdir")
-	if workDir == "" {
-		changeDirCmd = "false"
-	} else {
-		changeDirCmd = fmt.Sprintf("cd %q", workDir)
-	}
-	if len(y.Mounts) > 0 {
-		currentDir, err := os.Getwd()
+	if workDir := clicontext.String("workdir"); workDir != "" {
+		changeDirCmd = fmt.Sprintf("cd %q || exit 1", workDir)
+		// FIXME: check whether y.Mounts contains the home, not just len > 0
+	} else if len(y.Mounts) > 0 {
+		hostCurrentDir, err := os.Getwd()
 		if err == nil {
-			changeDirCmd = fmt.Sprintf("%s || cd %q", changeDirCmd, currentDir)
+			changeDirCmd = fmt.Sprintf("cd %q", hostCurrentDir)
 		} else {
+			changeDirCmd = "false"
 			logrus.WithError(err).Warn("failed to get the current directory")
 		}
-		homeDir, err := os.UserHomeDir()
+		hostHomeDir, err := os.UserHomeDir()
 		if err == nil {
-			changeDirCmd = fmt.Sprintf("%s || cd %q", changeDirCmd, homeDir)
+			changeDirCmd = fmt.Sprintf("%s || cd %q", changeDirCmd, hostHomeDir)
 		} else {
 			logrus.WithError(err).Warn("failed to get the home directory")
 		}
+	} else {
+		logrus.Debug("the host home does not seem mounted, so the guest shell will have a different cwd")
 	}
 
-	script := fmt.Sprintf(" %s ; exec bash --login", changeDirCmd)
+	if changeDirCmd == "" {
+		changeDirCmd = "false"
+	}
+	logrus.Debugf("changeDirCmd=%q", changeDirCmd)
+
+	script := fmt.Sprintf("%s ; exec bash --login", changeDirCmd)
 	if clicontext.NArg() > 1 {
 		script += fmt.Sprintf(" -c %q", shellescape.QuoteCommand(clicontext.Args().Tail()))
 	}
