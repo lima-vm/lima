@@ -1,3 +1,7 @@
+[[⬇️ **Download]**](https://github.com/AkihiroSuda/lima/releases)
+[[📖**Getting started]**](#getting-started)
+[[❓**FAQs & Troubleshooting]**](#faqs--troubleshooting)
+
 # Lima: Linux virtual machines (on macOS, in most cases)
 
 Lima launches Linux virtual machines with automatic file sharing, port forwarding, and [containerd](https://containerd.io).
@@ -172,6 +176,31 @@ The current default spec:
 - [vsock](https://github.com/apple/darwin-xnu/blob/xnu-7195.81.3/bsd/man/man4/vsock.4) to replace SSH (work has to be done on QEMU repo)
 
 ## FAQs & Troubleshooting
+<!-- doctoc: https://github.com/thlorenz/doctoc -->
+
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+### Generic
+
+- [Generic](#generic)
+  - ["What's my login password?"](#whats-my-login-password)
+  - ["Does Lima work on ARM Mac?"](#does-lima-work-on-arm-mac)
+  - ["Can I run non-Ubuntu guests?"](#can-i-run-non-ubuntu-guests)
+  - ["Can I run other container engines such as Podman?"](#can-i-run-other-container-engines-such-as-podman)
+  - ["Can I run Lima with a remote Linux machine?"](#can-i-run-lima-with-a-remote-linux-machine)
+  - ["Advantages compared to Docker for Mac?"](#advantages-compared-to-docker-for-mac)
+- [QEMU](#qemu)
+  - ["QEMU crashes with `HV_ERROR`"](#qemu-crashes-with-hv_error)
+  - ["QEMU is slow"](#qemu-is-slow)
+  - [error "killed -9"](#error-killed--9)
+- [SSH](#ssh)
+  - ["Port forwarding does not work"](#port-forwarding-does-not-work)
+  - [error "field SSHPubKeys must be set"](#error-field-sshpubkeys-must-be-set)
+  - [error "hostkeys_foreach failed: No such file or directory"](#error-hostkeys_foreach-failed-no-such-file-or-directory)
+  - [error "failed to execute script ssh: [...] Permission denied (publickey)"](#error-failed-to-execute-script-ssh--permission-denied-publickey)
+- ["Hints for debugging other problems?"](#hints-for-debugging-other-problems)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 ### Generic
 #### "What's my login password?"
 Password is disabled and locked by default.
