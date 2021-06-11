@@ -92,6 +92,12 @@ write_files:
         dnf install -y shadow-utils
         {{- end}}
       fi
+      # Modify /etc/fuse.conf to allow "-o allow_root"
+      {{- if .Mounts }}
+      if ! grep -q "^user_allow_other" /etc/fuse.conf ; then
+        echo "user_allow_other" >> /etc/fuse.conf
+      fi
+      {{- end}}
    owner: root:root
    path: /var/lib/cloud/scripts/per-boot/10-install-packages.boot.sh
    permissions: '0755'

@@ -2,9 +2,9 @@ package hostagent
 
 import (
 	"context"
-	"github.com/AkihiroSuda/lima/pkg/limayaml"
 	"time"
 
+	"github.com/AkihiroSuda/lima/pkg/limayaml"
 	"github.com/AkihiroSuda/sshocker/pkg/ssh"
 	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
@@ -83,6 +83,18 @@ Also see "/var/log/cloud-init-output.log" in the guest.
 A possible workaround is to run "apt-get install sshfs" in the guest.
 `,
 		})
+		req = append(req, requirement{
+			description: "/etc/fuse.conf to contain \"user_allow_other\"",
+			script: `#!/bin/bash
+set -eux -o pipefail
+if ! timeout 30s bash -c "until grep -q ^user_allow_other /etc/fuse.conf; do sleep 3; done"; then
+	echo >&2 "/etc/fuse.conf is not updated to contain \"user_allow_other\""
+	exit 1
+fi
+`,
+			debugHint: `Append "user_allow_other" to /etc/fuse.conf in the guest`,
+		})
+
 	}
 	req = append(req, requirement{
 		description: "the guest agent to be running",
