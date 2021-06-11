@@ -17,9 +17,9 @@ It may work on NetBSD and Windows hosts as well.
 
 ✅ ARM on Intel
 
-✅ ARM on ARM     (untested)
+✅ ARM on ARM
 
-✅ Intel on ARM   (untested)
+✅ Intel on ARM
 
 ✅ Ubuntu guest
 
@@ -77,49 +77,12 @@ For the usage of containerd and nerdctl (contaiNERD ctl), visit https://github.c
 ### Requirements (Intel Mac)
 - QEMU v6.0.0 or later (`brew install qemu`)
 
-
-<details>
-<summary>
-Signing the binary (not needed for recent version of QEMU and macOS, in most cases)
-</summary>
-
-<p>
-
-If you have installed QEMU v6.0.0 or later on macOS 11, your binary should have been already automatically signed to enable HVF acceleration.
-
-However, if you see `HV_ERROR`, you might need to sign the binary manually.
-
-```bash
-cat >entitlements.xml <<EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>com.apple.security.hypervisor</key>
-    <true/>
-</dict>
-</plist>
-EOF
-
-codesign -s - --entitlements entitlements.xml --force /usr/local/bin/qemu-system-x86_64
-```
-
-Note: **Only** on macOS versions **before** 10.15.7 you might need to add this entitlement in addition:
-
-```
-    <key>com.apple.vm.hypervisor</key>
-    <true/>
-```
-
-</p>
-</details>
-
 ### Requirements (ARM Mac)
 
-- QEMU with `--accel=hvf` support, see https://gist.github.com/citruz/9896cd6fb63288ac95f81716756cb9aa
+- QEMU with `--accel=hvf` support, see https://gist.github.com/nrjdalal/e70249bb5d2e9d844cc203fd11f74c55
 
 > **NOTE**
-> Lima is not tested on ARM Mac.
+> Lima is not regularly tested on ARM Mac.
 
 ### Install
 
@@ -129,6 +92,22 @@ and extract it under `/usr/local` (or somewhere else).
 To install from the source, run `make && make install`.
 
 ### Usage
+
+Terminal 1:
+```console
+[macOS]$ limactl start
+...
+INFO[0029] READY. Run `lima` to open the shell.
+```
+
+Terminal 2:
+```console
+[macOS]$ lima uname
+Linux
+```
+
+Detailed usage:
+
 - Run `limactl start <INSTANCE>` to start the Linux instance.
   The default instance name is "default".
   Lima automatically opens an editor (`vi`) for reviewing and modifying the configuration.
@@ -183,13 +162,13 @@ The current default spec:
 
 ### Help wanted
 :pray:
-- Test on ARM Mac
+- [Test on ARM Mac](https://github.com/AkihiroSuda/lima/issues/42)
 - Performance optimization
-- Homebrew
+- [Homebrew](https://github.com/AkihiroSuda/lima/issues/37)
 - More guest distros
 - Windows hosts
 - GUI with system tray icon (Qt or Electron, for portability)
-- VirtFS to replace the current reverse sshfs (work has to be done on QEMU repo)
+- [VirtFS to replace the current reverse sshfs (work has to be done on QEMU repo)](https://github.com/NixOS/nixpkgs/pull/122420)
 - [vsock](https://github.com/apple/darwin-xnu/blob/xnu-7195.81.3/bsd/man/man4/vsock.4) to replace SSH (work has to be done on QEMU repo)
 
 ## FAQs & Troubleshooting
@@ -201,7 +180,7 @@ You have to use `limactl shell bash` (or `lima bash`) to open a shell.
 Alternatively, you may also directly ssh into the guest: `ssh -p 60022 -o NoHostAuthenticationForLocalhost=yes 127.0.0.1`.
 
 #### "Does Lima work on ARM Mac?"
-Yes, it should work, but not tested on ARM.
+Yes, it should work, but not regularly tested on ARM.
 
 #### "Can I run non-Ubuntu guests?"
 Fedora is also known to work, see [`./examples/fedora.yaml`](./examples/fedora.yaml).
@@ -229,17 +208,49 @@ the predecessor or Lima, provides similar features for remote Linux machines.
 e.g., run `sshocker -v /Users/foo:/home/foo/mnt -p 8080:80 <USER>@<HOST>` to expose `/Users/foo` to the remote machine as `/home/foo/mnt`,
 and forward `localhost:8080` to the port 80 of the remote machine.
 
+#### "Advantages compared to Docker for Mac?"
+Lima is free software (Apache License 2.0), while Docker for Mac is not.
+Their [EULA](https://www.docker.com/legal/docker-software-end-user-license-agreement) even prohibits disclosure of benchmarking result.
+
+On the other hand, [Moby](https://github.com/moby/moby), aka Docker for Linux, is free software, but Moby/Docker lacks several novel features of containerd, such as:
+- [On-demand image pulling (aka lazy-pulling, eStargz)](https://github.com/containerd/nerdctl/blob/master/docs/stargz.md)
+- [Running an encrypted container](https://github.com/containerd/nerdctl/blob/master/docs/ocicrypt.md)
+- Importing and exporting [local OCI archives](https://github.com/opencontainers/image-spec/blob/master/image-layout.md)
+
 ### QEMU
 #### "QEMU crashes with `HV_ERROR`"
-You have to add `com.apple.security.hypervisor` entitlement to `qemu-system-x86_64` binary.
-See [Getting started](#getting-started).
+If you have installed QEMU v6.0.0 or later on macOS 11 via homebrew, your QEMU binary should have been already automatically signed to enable HVF acceleration.
+
+However, if you see `HV_ERROR`, you might need to sign the binary manually.
+
+```bash
+cat >entitlements.xml <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>com.apple.security.hypervisor</key>
+    <true/>
+</dict>
+</plist>
+EOF
+
+codesign -s - --entitlements entitlements.xml --force /usr/local/bin/qemu-system-x86_64
+```
+
+Note: **Only** on macOS versions **before** 10.15.7 you might need to add this entitlement in addition:
+
+```
+    <key>com.apple.vm.hypervisor</key>
+    <true/>
+```
 
 #### "QEMU is slow"
-- Make sure that HVF is enabled with `com.apple.security.hypervisor` entitlement. See [Getting started](#getting-started).
+- Make sure that HVF is enabled with `com.apple.security.hypervisor` entitlement. See ["QEMU crashes with `HV_ERROR`"](#qemu-crashes-with-hv_error).
 - Emulating non-native machines (ARM-on-Intel, Intel-on-ARM) is slow by design.
 
 #### error "killed -9"
-- make sure qemu is codesigned, see [Getting started](#getting-started).
+- make sure qemu is codesigned, See ["QEMU crashes with `HV_ERROR`"](#qemu-crashes-with-hv_error).
 - if you are on macOS 10.15.7 or 11.0 or later make sure the entitlement `com.apple.vm.hypervisor` is **not** added. It only works on older macOS versions. You can clear the codesigning with `codesign --remove-signature /usr/local/bin/qemu-system-x86_64` and [start over](#getting-started).
 
 
