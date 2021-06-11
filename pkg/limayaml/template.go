@@ -4,5 +4,5 @@ import (
 	_ "embed"
 )
 
-//go:embed default.TEMPLATE.yaml
+//go:embed default.yaml
 var DefaultTemplate []byte

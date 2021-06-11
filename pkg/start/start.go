@@ -64,7 +64,11 @@ func Start(ctx context.Context, instName, instDir string, y *limayaml.LimaYAML) 
 		}
 	}()
 	if err := hAgent.Run(ctx); err == nil {
-		logrus.Info("READY. Run `lima bash` to open the shell.")
+		shellCmd := fmt.Sprintf("limactl shell %s", instName)
+		if instName == "default" {
+			shellCmd = "lima"
+		}
+		logrus.Infof("READY. Run `%s` to open the shell.", shellCmd)
 	} else {
 		logrus.WithError(err).Warn("DEGRADED. The VM seems running, but file sharing and port forwarding may not work.")
 	}

@@ -16,9 +16,8 @@ import (
 )
 
 var daemonCommand = &cli.Command{
-	Name:      "daemon",
-	Usage:     "run the daemon",
-	ArgsUsage: "[SOCKET]",
+	Name:  "daemon",
+	Usage: "run the daemon",
 	Flags: []cli.Flag{
 		&cli.StringFlag{
 			Name:  "socket",

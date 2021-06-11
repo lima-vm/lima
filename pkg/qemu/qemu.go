@@ -171,7 +171,7 @@ func Cmdline(cfg Config) (string, []string, error) {
 
 	// QEMU process
 	args = append(args, "-name", "lima-"+cfg.Name)
-	args = append(args, "-pidfile", filepath.Join(cfg.InstanceDir, "qemu-pid"))
+	args = append(args, "-pidfile", filepath.Join(cfg.InstanceDir, "qemu.pid"))
 
 	return exe, args, nil
 }
