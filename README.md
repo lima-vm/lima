@@ -211,7 +211,6 @@ An image has to satisfy the following requirements:
 - systemd
 - cloud-init
 - The following binaries to be preinstalled:
-  - `curl`
   - `sudo`
 - The following binaries to be preinstalled, or installable via the package manager:
   - `sshfs`
