@@ -19,6 +19,75 @@ users:
 
 write_files:
  - content: |
+      #!/sbin/openrc-run
+      supervisor=supervise-daemon
+
+      name="lima-guestagent"
+      description="Forward ports to the lima-hostagent"
+
+      export XDG_RUNTIME_DIR="/run/user/{{.UID}}"
+      command=/usr/local/bin/lima-guestagent
+      command_args="daemon"
+      command_background=true
+      command_user="{{.User}}:{{.User}}"
+      pidfile="${XDG_RUNTIME_DIR}/lima-guestagent.pid"
+   owner: root:root
+   path: /var/lib/lima-guestagent/lima-guestagent.openrc
+   permissions: '0755'
+ - content: |
+      #!/bin/sh
+      # This script prepares Alpine for lima; there is nothing in here for other distros
+      test -f /etc/alpine-release || exit
+
+      # Since we are on Alpine, we can now assume /bin/sh is /bin/ash
+      set -eux -o pipefail
+
+      # Redirect bash to ash (built with CONFIG_ASH_BASH_COMPAT) and hope for the best :)
+      # (it does support `set -o pipefail`, but not `[[`)
+      # /bin/bash can't be a symlink because /bin/ash is a symlink to /bin/busybox
+      cat >/bin/bash <<'EOF'
+      #!/bin/sh
+      exec /bin/ash "$@"
+      EOF
+      chmod +x /bin/bash
+
+      # Configure apk repos
+      branch=edge
+      VERSION_ID=$(awk -F= '$1=="VERSION_ID" {print $2}' /etc/os-release)
+      case $VERSION_ID in
+      *_alpha*|*_beta*) branch=edge;;
+      *.*.*) branch=v${VERSION_ID%.*};;
+      esac
+
+      for repo in main community; do
+        url="https://dl-cdn.alpinelinux.org/alpine/${branch}/${repo}"
+        if ! grep -q "^${url}$" /etc/apk/repositories; then
+          echo "${url}" >> /etc/apk/repositories
+        fi
+      done
+
+      # Alpine doesn't use PAM so we need to explicitly allow public key auth
+      usermod -p '*' ""{{.User}}""
+
+      # Alpine disables TCP forwarding, which is needed by the lima-guestagent
+      sed -i 's/AllowTcpForwarding no/AllowTcpForwarding yes/g' /etc/ssh/sshd_config
+      rc-service sshd reload
+
+      # Create directory for the lima-guestagent socket (normally done by systemd)
+      mkdir -p /run/user/{{.UID}}
+      chown "{{.User}}" /run/user/{{.UID}}
+      chmod 700 /run/user/{{.UID}}
+
+      # Install the openrc lima-guestagent service script
+      mv /var/lib/lima-guestagent/lima-guestagent.openrc /etc/init.d/lima-guestagent
+
+      # `limactl stop` tells acpid to powerdown
+      rc-update add acpid
+      rc-service acpid start
+   owner: root:root
+   path: /var/lib/cloud/scripts/per-boot/00-alpine-prep.boot.sh
+   permissions: '0755'
+ - content: |
       #!/bin/bash
       set -eux -o pipefail
 
@@ -81,11 +150,16 @@ write_files:
       umount /mnt/lima-cidata
 
       # Launch the guestagent service
-      until [ -e "/run/user/{{.UID}}/systemd/private" ]; do sleep 3; done
-      sudo -iu "{{.User}}" "XDG_RUNTIME_DIR=/run/user/{{.UID}}" lima-guestagent install-systemd
+      if [ -f /etc/alpine-release ]; then
+        rc-update add lima-guestagent default
+        rc-service lima-guestagent start
+      else
+        until [ -e "/run/user/{{.UID}}/systemd/private" ]; do sleep 3; done
+        sudo -iu "{{.User}}" "XDG_RUNTIME_DIR=/run/user/{{.UID}}" lima-guestagent install-systemd
+      fi
    owner: root:root
    # We do not use per-once.
-   path: /var/lib/cloud/scripts/per-boot/00-base.boot.sh
+   path: /var/lib/cloud/scripts/per-boot/10-base.boot.sh
    permissions: '0755'
  {{- if or .Mounts .Containerd.System .Containerd.User }}
  - content: |
@@ -119,6 +193,15 @@ write_files:
           ln -s fusermount3 /usr/bin/fusermount
         fi
         {{- end}}
+      elif command -v apk 2>&1 >/dev/null; then
+        : {{/* make sure the "elif" block is never empty */}}
+        {{- if .Mounts}}
+        if ! command -v sshfs 2>&1 >/dev/null; then
+          apk update
+          apk add sshfs
+        fi
+        modprobe fuse
+        {{- end}}
       fi
       # Modify /etc/fuse.conf to allow "-o allow_root"
       {{- if .Mounts }}
@@ -127,7 +210,7 @@ write_files:
       fi
       {{- end}}
    owner: root:root
-   path: /var/lib/cloud/scripts/per-boot/10-install-packages.boot.sh
+   path: /var/lib/cloud/scripts/per-boot/20-install-packages.boot.sh
    permissions: '0755'
 {{- end}}
 {{- if or .Containerd.System .Containerd.User}}
@@ -191,7 +274,7 @@ write_files:
       fi
       {{- end}}
    owner: root:root
-   path: /var/lib/cloud/scripts/per-boot/20-install-containerd.boot.sh
+   path: /var/lib/cloud/scripts/per-boot/30-install-containerd.boot.sh
    permissions: '0755'
 {{- end}}
 {{- if .Provision}}
@@ -208,7 +291,7 @@ write_files:
       {{- end}}
       {{- end}}
    owner: root:root
-   path: /var/lib/cloud/scripts/per-boot/30-execute-provision-scripts.boot.sh
+   path: /var/lib/cloud/scripts/per-boot/40-execute-provision-scripts.boot.sh
    permissions: '0755'
 {{- end}}
 {{- range $i, $val := .Provision}}
