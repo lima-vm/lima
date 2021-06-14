@@ -97,15 +97,11 @@ To install from the source, run `make && make install`.
 
 ### Usage
 
-Terminal 1:
 ```console
 [macOS]$ limactl start
 ...
 INFO[0029] READY. Run `lima` to open the shell.
-```
 
-Terminal 2:
-```console
 [macOS]$ lima uname
 Linux
 ```
@@ -118,12 +114,14 @@ Detailed usage:
   Wait until "READY" to be printed on the host terminal.
 
 - Run `limactl shell <INSTANCE> <COMMAND>` to launch `<COMMAND>` on Linux.
-  For the "default" instance, this command can be shortened as just `lima <COMMAND>`.
+  For the "default" instance, this command can be shortened as `lima <COMMAND>`.
   The `lima` command also accepts the instance name as the environment variable `$LIMA_INSTANCE`.
 
-- Run `limactl ls` to show the instances.
+- Run `limactl list [--json]` to show the instances.
 
-- Run `limactl delete <INSTANCE>` to delete the instance.
+- Run `limactl stop [--force] <INSTANCE>` to stop the instance.
+
+- Run `limactl delete [--force] <INSTANCE>` to delete the instance.
 
 - To enable bash completion, add `source <(limactl completion bash)` to `~/.bash_profile`.
 

@@ -20,7 +20,7 @@ func main() {
 func newApp() *cli.App {
 	app := cli.NewApp()
 	app.Name = "limactl"
-	app.Usage = `Lima: Linux-on-Mac ("macOS subsystem for Linux", "containerd for Mac")`
+	app.Usage = "Lima: Linux virtual machines"
 	app.UseShortOptionHandling = true
 	app.EnableBashCompletion = true
 	app.BashComplete = appBashComplete
@@ -42,12 +42,13 @@ func newApp() *cli.App {
 	}
 	app.Commands = []*cli.Command{
 		startCommand,
-		// TODO: add stopCommand (stops an instance without deletion)
+		stopCommand,
 		shellCommand,
-		lsCommand,
+		listCommand,
 		deleteCommand,
 		pruneCommand,
 		completionCommand,
+		hostagentCommand, // hidden
 	}
 	return app
 }

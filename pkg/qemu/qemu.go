@@ -169,6 +169,15 @@ func Cmdline(cfg Config) (string, []string, error) {
 
 	// We also want to enable vsock and virtfs here, but QEMU does not support vsock and virtfs for macOS hosts
 
+	// QMP
+	qmpSock := filepath.Join(cfg.InstanceDir, "qmp.sock")
+	if err := os.RemoveAll(qmpSock); err != nil {
+		return "", nil, err
+	}
+	const qmpChardev = "char-qmp"
+	args = append(args, "-chardev", fmt.Sprintf("socket,id=%s,path=%s,server,nowait", qmpChardev, qmpSock))
+	args = append(args, "-qmp", "chardev:"+qmpChardev)
+
 	// QEMU process
 	args = append(args, "-name", "lima-"+cfg.Name)
 	args = append(args, "-pidfile", filepath.Join(cfg.InstanceDir, "qemu.pid"))

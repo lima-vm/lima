@@ -41,7 +41,12 @@ func GenerateISO9660(isoPath, name string, y *limayaml.LimaYAML) error {
 		Provision:  y.Provision,
 		Containerd: Containerd{System: *y.Containerd.System, User: *y.Containerd.User},
 	}
-	for _, f := range sshutil.DefaultPubKeys() {
+
+	pubKeys := sshutil.DefaultPubKeys()
+	if len(pubKeys) == 0 {
+		return errors.New("no SSH key was found, run `ssh-keygen`")
+	}
+	for _, f := range pubKeys {
 		args.SSHPubKeys = append(args.SSHPubKeys, f.Content)
 	}
 
