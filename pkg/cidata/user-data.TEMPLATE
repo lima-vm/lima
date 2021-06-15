@@ -113,6 +113,7 @@ write_files:
         umount /mnt/lima-cidata
       fi
       {{- if .Containerd.System}}
+      mkdir -p /etc/containerd
       cat >"/etc/containerd/config.toml" <<EOF
         version = 2
         [proxy_plugins]
