@@ -88,6 +88,8 @@ jobs:
           echo "this file was created on macOS" > ~/foo
           lima cat ~/foo
           limactl stop default
+      - name: Validate examples
+        run: limactl validate examples/*.yaml
 
   artifacts:
     name: Artifacts

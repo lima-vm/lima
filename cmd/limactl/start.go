@@ -52,7 +52,10 @@ func loadOrCreateInstance(clicontext *cli.Context) (*store.Instance, error) {
 	)
 
 	if argSeemsYAMLPath(arg) {
-		instName = instNameFromYAMLPath(arg)
+		instName, err = instNameFromYAMLPath(arg)
+		if err != nil {
+			return nil, err
+		}
 		logrus.Debugf("interpreting argument %q as a file path for instance %q", arg, instName)
 		yBytes, err = os.ReadFile(arg)
 		if err != nil {
@@ -183,17 +186,14 @@ func argSeemsYAMLPath(arg string) bool {
 	return strings.HasSuffix(lower, ".yml") || strings.HasSuffix(lower, ".yaml")
 }
 
-func instNameFromYAMLPath(yamlPath string) string {
+func instNameFromYAMLPath(yamlPath string) (string, error) {
 	s := strings.ToLower(filepath.Base(yamlPath))
 	s = strings.TrimSuffix(strings.TrimSuffix(s, ".yml"), ".yaml")
 	s = strings.ReplaceAll(s, ".", "-")
 	if err := identifiers.Validate(s); err != nil {
-		logrus.WithField("candidate", s).WithError(err).
-			Warnf("failed to determine the name of the new instance from file path %q, using the default name %q",
-				yamlPath, DefaultInstanceName)
-		return DefaultInstanceName
+		return "", errors.Wrapf(err, "filename %q is invalid", yamlPath)
 	}
-	return s
+	return s, nil
 }
 
 func startBashComplete(clicontext *cli.Context) {

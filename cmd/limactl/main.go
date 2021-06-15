@@ -46,6 +46,7 @@ func newApp() *cli.App {
 		shellCommand,
 		listCommand,
 		deleteCommand,
+		validateCommand,
 		pruneCommand,
 		completionCommand,
 		hostagentCommand, // hidden
