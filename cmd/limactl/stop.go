@@ -10,6 +10,7 @@ import (
 
 	hostagentapi "github.com/AkihiroSuda/lima/pkg/hostagent/api"
 	"github.com/AkihiroSuda/lima/pkg/store"
+	"github.com/AkihiroSuda/lima/pkg/store/filenames"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -83,8 +84,8 @@ func waitForHostAgentTermination(ctx context.Context, inst *store.Instance) erro
 		return false
 	}
 
-	haStdoutPath := filepath.Join(inst.Dir, "ha.stdout.log")
-	haStderrPath := filepath.Join(inst.Dir, "ha.stderr.log")
+	haStdoutPath := filepath.Join(inst.Dir, filenames.HostAgentStdoutLog)
+	haStderrPath := filepath.Join(inst.Dir, filenames.HostAgentStderrLog)
 
 	if err := hostagentapi.WatchEvents(ctx2, haStdoutPath, haStderrPath, onEvent); err != nil {
 		return err

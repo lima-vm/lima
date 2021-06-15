@@ -2,4 +2,18 @@
 set -eu
 : "${LIMA_INSTANCE:=default}"
 : "${LIMACTL:=limactl}"
+
+if [ "$#" -eq 1 ]; then
+  if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+    base="$(basename "$0")"
+    echo "Usage: ${base} [COMMAND...]"
+    echo
+    echo "${base} is an alias for \"${LIMACTL} shell ${LIMA_INSTANCE}\"."
+    echo "The instance name (\"${LIMA_INSTANCE}\") can be changed by specifying \$LIMA_INSTANCE."
+    echo
+    echo "See \`${LIMACTL} shell --help\` for further information."
+    exit 0
+  fi
+fi
+
 exec "$LIMACTL" shell "$LIMA_INSTANCE" "$@"

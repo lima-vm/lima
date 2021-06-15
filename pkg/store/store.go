@@ -9,12 +9,8 @@ import (
 	"github.com/containerd/containerd/identifiers"
 )
 
-const (
-	// DotLima is a directory that appears under the home directory.
-	DotLima = ".lima"
-	// YAMLFileName appears under an instance dir.
-	YAMLFileName = "lima.yaml"
-)
+// DotLima is a directory that appears under the home directory.
+const DotLima = ".lima"
 
 // LimaDir returns the abstract path of `~/.lima`.
 //
@@ -64,14 +60,6 @@ func InstanceDir(name string) (string, error) {
 	return dir, nil
 }
 
-// InstanceNameFromInstanceDir extracts the instance name
-// from the path of the instance directory.
-// e.g. "foo" for "/Users/somebody/.lima/foo".
-func InstanceNameFromInstanceDir(s string) (string, error) {
-	base := filepath.Base(s)
-	return base, identifiers.Validate(base)
-}
-
 // LoadYAMLByFilePath loads and validates the yaml.
 func LoadYAMLByFilePath(filePath string) (*limayaml.LimaYAML, error) {
 	if _, err := os.Stat(filePath); err != nil {
@@ -89,29 +77,4 @@ func LoadYAMLByFilePath(filePath string) (*limayaml.LimaYAML, error) {
 		return nil, err
 	}
 	return y, nil
-}
-
-// YAMLFilePathByInstanceName returns the yaml file path but does not
-// check whether it exists.
-func YAMLFilePathByInstanceName(instName string) (string, string, error) {
-	instDir, err := InstanceDir(instName)
-	if err != nil {
-		return "", instDir, err
-	}
-	instYAMLPath := filepath.Join(instDir, YAMLFileName)
-	return instYAMLPath, instDir, nil
-}
-
-// LoadYAMLByInstanceName loads and validates the yaml.
-// LoadYAMLByInstanceName may return os.ErrNotExist
-func LoadYAMLByInstanceName(instName string) (*limayaml.LimaYAML, string, error) {
-	instYAMLPath, instDir, err := YAMLFilePathByInstanceName(instName)
-	if err != nil {
-		return nil, "", err
-	}
-	y, err := LoadYAMLByFilePath(instYAMLPath)
-	if err != nil {
-		return nil, "", err
-	}
-	return y, instDir, nil
 }

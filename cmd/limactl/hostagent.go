@@ -13,7 +13,7 @@ import (
 var hostagentCommand = &cli.Command{
 	Name:      "hostagent",
 	Usage:     "DO NOT EXECUTE MANUALLY",
-	ArgsUsage: "NAME",
+	ArgsUsage: "INSTANCE",
 	Hidden:    true,
 	Flags: []cli.Flag{
 		&cli.StringFlag{

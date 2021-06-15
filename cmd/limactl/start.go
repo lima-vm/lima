@@ -11,6 +11,7 @@ import (
 	"github.com/AkihiroSuda/lima/pkg/limayaml"
 	"github.com/AkihiroSuda/lima/pkg/start"
 	"github.com/AkihiroSuda/lima/pkg/store"
+	"github.com/AkihiroSuda/lima/pkg/store/filenames"
 	"github.com/containerd/containerd/identifiers"
 	"github.com/mattn/go-isatty"
 	"github.com/norouter/norouter/cmd/norouter/editorcmd"
@@ -22,7 +23,7 @@ import (
 var startCommand = &cli.Command{
 	Name:      "start",
 	Usage:     fmt.Sprintf("Start an instance of Lima. If the instance does not exist, open an editor for creating new one, with name %q", DefaultInstanceName),
-	ArgsUsage: "[flags] NAME|FILE.yaml",
+	ArgsUsage: "NAME|FILE.yaml",
 	Flags: []cli.Flag{
 		&cli.BoolFlag{
 			Name:  "tty",
@@ -34,9 +35,9 @@ var startCommand = &cli.Command{
 	BashComplete: startBashComplete,
 }
 
-func loadOrCreateYAML(clicontext *cli.Context) (y *limayaml.LimaYAML, instDir string, err error) {
+func loadOrCreateInstance(clicontext *cli.Context) (*store.Instance, error) {
 	if clicontext.NArg() > 1 {
-		return nil, "", errors.Errorf("too many arguments")
+		return nil, errors.Errorf("too many arguments")
 	}
 
 	arg := clicontext.Args().First()
@@ -44,76 +45,78 @@ func loadOrCreateYAML(clicontext *cli.Context) (y *limayaml.LimaYAML, instDir st
 		arg = DefaultInstanceName
 	}
 
-	yBytes := limayaml.DefaultTemplate
-	var instName string
+	var (
+		instName string
+		yBytes   = limayaml.DefaultTemplate
+		err      error
+	)
 
 	if argSeemsYAMLPath(arg) {
 		instName = instNameFromYAMLPath(arg)
 		logrus.Debugf("interpreting argument %q as a file path for instance %q", arg, instName)
 		yBytes, err = os.ReadFile(arg)
 		if err != nil {
-			return nil, "", err
+			return nil, err
 		}
 	} else {
 		instName = arg
 		logrus.Debugf("interpreting argument %q as an instance name %q", arg, instName)
-		if err = identifiers.Validate(instName); err != nil {
-			return nil, "", errors.Wrapf(err, "argument must be either an instance name or a YAML file path, got %q", instName)
+		if err := identifiers.Validate(instName); err != nil {
+			return nil, errors.Wrapf(err, "argument must be either an instance name or a YAML file path, got %q", instName)
 		}
-		y, instDir, err = store.LoadYAMLByInstanceName(instName)
-		if err == nil {
+		if inst, err := store.Inspect(instName); err == nil {
 			logrus.Infof("Using the existing instance %q", instName)
-			return y, instDir, nil
+			return inst, nil
 		} else {
 			if !errors.Is(err, os.ErrNotExist) {
-				return nil, "", err
+				return nil, err
 			}
 		}
 	}
 	// create a new instance from the template
-	instDir, err = store.InstanceDir(instName)
+	instDir, err := store.InstanceDir(instName)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 
 	if _, err := os.Stat(instDir); !errors.Is(err, os.ErrNotExist) {
-		return nil, "", errors.Errorf("instance %q already exists (%q)", instName, instDir)
+		return nil, errors.Errorf("instance %q already exists (%q)", instName, instDir)
 	}
 
 	if clicontext.Bool("tty") {
 		yBytes, err = openEditor(clicontext, instName, yBytes)
 		if err != nil {
-			return nil, "", err
+			return nil, err
 		}
 		if len(yBytes) == 0 {
 			logrus.Info("Aborting, as requested by saving the file with empty content")
 			os.Exit(0)
-			return nil, "", errors.New("should not reach here")
+			return nil, errors.New("should not reach here")
 		}
 	} else {
 		logrus.Info("Terminal is not available, proceeding without opening an editor")
 	}
-	y, err = limayaml.Load(yBytes)
+	y, err := limayaml.Load(yBytes)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 	if err := limayaml.Validate(*y); err != nil {
 		if !clicontext.Bool("tty") {
-			return nil, "", err
+			return nil, err
 		}
 		rejectedYAML := "lima.REJECTED.yaml"
 		if writeErr := os.WriteFile(rejectedYAML, yBytes, 0644); writeErr != nil {
-			return nil, "", errors.Wrapf(err, "the YAML is invalid, attempted to save the buffer as %q but failed: %v", rejectedYAML, writeErr)
+			return nil, errors.Wrapf(err, "the YAML is invalid, attempted to save the buffer as %q but failed: %v", rejectedYAML, writeErr)
 		}
-		return nil, "", errors.Wrapf(err, "the YAML is invalid, saved the buffer as %q", rejectedYAML)
+		return nil, errors.Wrapf(err, "the YAML is invalid, saved the buffer as %q", rejectedYAML)
 	}
 	if err := os.MkdirAll(instDir, 0700); err != nil {
-		return nil, "", err
+		return nil, err
 	}
-	if err := os.WriteFile(filepath.Join(instDir, store.YAMLFileName), yBytes, 0644); err != nil {
-		return nil, "", err
+	if err := os.WriteFile(filepath.Join(instDir, filenames.LimaYAML), yBytes, 0644); err != nil {
+		return nil, err
 	}
-	return y, instDir, nil
+	return store.Inspect(instName)
 }
 
 // openEditor opens an editor, and returns the content (not path) of the modified yaml.
@@ -164,16 +167,12 @@ func openEditor(clicontext *cli.Context, name string, initialContent []byte) ([]
 }
 
 func startAction(clicontext *cli.Context) error {
-	y, instDir, err := loadOrCreateYAML(clicontext)
-	if err != nil {
-		return err
-	}
-	instName, err := store.InstanceNameFromInstanceDir(instDir)
+	inst, err := loadOrCreateInstance(clicontext)
 	if err != nil {
 		return err
 	}
 	ctx := clicontext.Context
-	return start.Start(ctx, instName, instDir, y)
+	return start.Start(ctx, inst)
 }
 
 func argSeemsYAMLPath(arg string) bool {

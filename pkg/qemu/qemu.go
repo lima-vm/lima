@@ -10,6 +10,7 @@ import (
 
 	"github.com/AkihiroSuda/lima/pkg/downloader"
 	"github.com/AkihiroSuda/lima/pkg/limayaml"
+	"github.com/AkihiroSuda/lima/pkg/store/filenames"
 	"github.com/docker/go-units"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -22,13 +23,13 @@ type Config struct {
 }
 
 func EnsureDisk(cfg Config) error {
-	diffDisk := filepath.Join(cfg.InstanceDir, "diffdisk")
+	diffDisk := filepath.Join(cfg.InstanceDir, filenames.DiffDisk)
 	if _, err := os.Stat(diffDisk); err == nil || !errors.Is(err, os.ErrNotExist) {
 		// disk is already ensured
 		return err
 	}
 
-	baseDisk := filepath.Join(cfg.InstanceDir, "basedisk")
+	baseDisk := filepath.Join(cfg.InstanceDir, filenames.BaseDisk)
 	if _, err := os.Stat(baseDisk); errors.Is(err, os.ErrNotExist) {
 		var ensuredBaseDisk bool
 		errs := make([]error, len(cfg.LimaYAML.Images))
@@ -120,10 +121,10 @@ func Cmdline(cfg Config) (string, []string, error) {
 	args = append(args, "-boot", "order=c,splash-time=0,menu=on")
 
 	// Root disk
-	args = append(args, "-drive", fmt.Sprintf("file=%s,if=virtio", filepath.Join(cfg.InstanceDir, "diffdisk")))
+	args = append(args, "-drive", fmt.Sprintf("file=%s,if=virtio", filepath.Join(cfg.InstanceDir, filenames.DiffDisk)))
 
 	// cloud-init
-	args = append(args, "-cdrom", filepath.Join(cfg.InstanceDir, "cidata.iso"))
+	args = append(args, "-cdrom", filepath.Join(cfg.InstanceDir, filenames.CIDataISO))
 
 	// Network
 	// CIDR is intentionally hardcoded to 192.168.5.0/24, as each of QEMU has its own independent slirp network.
@@ -155,11 +156,11 @@ func Cmdline(cfg Config) (string, []string, error) {
 	args = append(args, "-parallel", "none")
 
 	// Serial
-	serialSock := filepath.Join(cfg.InstanceDir, "serial.sock")
+	serialSock := filepath.Join(cfg.InstanceDir, filenames.SerialSock)
 	if err := os.RemoveAll(serialSock); err != nil {
 		return "", nil, err
 	}
-	serialLog := filepath.Join(cfg.InstanceDir, "serial.log")
+	serialLog := filepath.Join(cfg.InstanceDir, filenames.SerialLog)
 	if err := os.RemoveAll(serialLog); err != nil {
 		return "", nil, err
 	}
@@ -170,7 +171,7 @@ func Cmdline(cfg Config) (string, []string, error) {
 	// We also want to enable vsock and virtfs here, but QEMU does not support vsock and virtfs for macOS hosts
 
 	// QMP
-	qmpSock := filepath.Join(cfg.InstanceDir, "qmp.sock")
+	qmpSock := filepath.Join(cfg.InstanceDir, filenames.QMPSock)
 	if err := os.RemoveAll(qmpSock); err != nil {
 		return "", nil, err
 	}
@@ -180,7 +181,7 @@ func Cmdline(cfg Config) (string, []string, error) {
 
 	// QEMU process
 	args = append(args, "-name", "lima-"+cfg.Name)
-	args = append(args, "-pidfile", filepath.Join(cfg.InstanceDir, "qemu.pid"))
+	args = append(args, "-pidfile", filepath.Join(cfg.InstanceDir, filenames.QemuPID))
 
 	return exe, args, nil
 }
