@@ -8,7 +8,6 @@ import (
 	"github.com/AkihiroSuda/sshocker/pkg/ssh"
 	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 )
 
 func (a *HostAgent) waitForRequirements(ctx context.Context, label string, requirements []requirement) error {
@@ -21,10 +20,10 @@ func (a *HostAgent) waitForRequirements(ctx context.Context, label string, requi
 	for i, req := range requirements {
 	retryLoop:
 		for j := 0; j < retries; j++ {
-			logrus.Infof("Waiting for the %s requirement %d of %d: %q", label, i+1, len(requirements), req.description)
+			a.l.Infof("Waiting for the %s requirement %d of %d: %q", label, i+1, len(requirements), req.description)
 			err := a.waitForRequirement(ctx, req)
 			if err == nil {
-				logrus.Infof("The %s requirement %d of %d is satisfied", label, i+1, len(requirements))
+				a.l.Infof("The %s requirement %d of %d is satisfied", label, i+1, len(requirements))
 				break retryLoop
 			}
 			if j == retries-1 {
@@ -40,9 +39,9 @@ func (a *HostAgent) waitForRequirements(ctx context.Context, label string, requi
 }
 
 func (a *HostAgent) waitForRequirement(ctx context.Context, r requirement) error {
-	logrus.Debugf("executing script %q", r.description)
+	a.l.Debugf("executing script %q", r.description)
 	stdout, stderr, err := ssh.ExecuteScript("127.0.0.1", a.y.SSH.LocalPort, a.sshConfig, r.script, r.description)
-	logrus.Debugf("stdout=%q, stderr=%q, err=%v", stdout, stderr, err)
+	a.l.Debugf("stdout=%q, stderr=%q, err=%v", stdout, stderr, err)
 	if err != nil {
 		return errors.Wrapf(err, "stdout=%q, stderr=%q", stdout, stderr)
 	}

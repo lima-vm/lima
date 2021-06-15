@@ -47,11 +47,18 @@ func shellAction(clicontext *cli.Context) error {
 			strings.Join(clicontext.Args().Slice()[2:], " "))
 	}
 
-	y, instDir, err := store.LoadYAMLByInstanceName(instName)
+	inst, err := store.Inspect(instName)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return errors.Errorf("instance %q does not exist, run `limactl start %s` to create a new instance", instName, instName)
 		}
+		return err
+	}
+	if inst.Status == store.StatusStopped {
+		return errors.Errorf("instance %q is stopped, run `limactl start %s` to start the instance", instName, instName)
+	}
+	y, _, err := store.LoadYAMLByInstanceName(instName)
+	if err != nil {
 		return err
 	}
 
@@ -96,7 +103,7 @@ func shellAction(clicontext *cli.Context) error {
 		return err
 	}
 
-	args, err := sshutil.SSHArgs(instDir)
+	args, err := sshutil.SSHArgs(inst.Dir)
 	if err != nil {
 		return err
 	}
@@ -106,7 +113,7 @@ func shellAction(clicontext *cli.Context) error {
 	}
 	args = append(args, []string{
 		"-q",
-		"-p", strconv.Itoa(y.SSH.LocalPort),
+		"-p", strconv.Itoa(inst.SSHLocalPort),
 		"127.0.0.1",
 		"--",
 		script,

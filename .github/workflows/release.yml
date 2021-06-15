@@ -36,15 +36,11 @@ jobs:
           (Changes to be documented)
 
           ## Usage
-          Terminal 1:
           \`\`\`console
           [macOS]$ limactl start
           ...
           INFO[0029] READY. Run `lima` to open the shell.
-          \`\`\`
 
-          Terminal 2:
-          \`\`\`console
           [macOS]$ lima uname
           Linux
           \`\`\`

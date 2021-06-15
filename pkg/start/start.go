@@ -6,16 +6,17 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"time"
 
 	"github.com/AkihiroSuda/lima/pkg/cidata"
-	"github.com/AkihiroSuda/lima/pkg/hostagent"
+	hostagentapi "github.com/AkihiroSuda/lima/pkg/hostagent/api"
 	"github.com/AkihiroSuda/lima/pkg/limayaml"
 	"github.com/AkihiroSuda/lima/pkg/qemu"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
-func Start(ctx context.Context, instName, instDir string, y *limayaml.LimaYAML) error {
+func ensureDisk(ctx context.Context, instName, instDir string, y *limayaml.LimaYAML) error {
 	cidataISOPath := filepath.Join(instDir, "cidata.iso")
 	if err := cidata.GenerateISO9660(cidataISOPath, instName, y); err != nil {
 		return err
@@ -28,50 +29,127 @@ func Start(ctx context.Context, instName, instDir string, y *limayaml.LimaYAML) 
 	if err := qemu.EnsureDisk(qCfg); err != nil {
 		return err
 	}
-	qExe, qArgs, err := qemu.Cmdline(qCfg)
+
+	return nil
+}
+
+func Start(ctx context.Context, instName, instDir string, y *limayaml.LimaYAML) error {
+	haPIDPath := filepath.Join(instDir, "ha.pid")
+	if _, err := os.Stat(haPIDPath); !errors.Is(err, os.ErrNotExist) {
+		return errors.Errorf("instance %q seems running (hint: remove %q if the instance is not actually running)", instName, haPIDPath)
+	}
+
+	if err := ensureDisk(ctx, instName, instDir, y); err != nil {
+		return err
+	}
+
+	self, err := os.Executable()
 	if err != nil {
 		return err
 	}
-	qCmd := exec.CommandContext(ctx, qExe, qArgs...)
-	qCmd.Stdout = os.Stdout
-	qCmd.Stderr = os.Stderr
-	logrus.Infof("Starting QEMU (hint: to watch the boot progress, see %q)", filepath.Join(instDir, "serial.log"))
-	logrus.Debugf("qCmd.Args: %v", qCmd.Args)
-	if err := qCmd.Start(); err != nil {
+	haStdoutPath := filepath.Join(instDir, "ha.stdout.log")
+	haStderrPath := filepath.Join(instDir, "ha.stderr.log")
+	if err := os.RemoveAll(haStdoutPath); err != nil {
 		return err
 	}
-	defer func() {
-		_ = qCmd.Process.Kill()
-	}()
+	if err := os.RemoveAll(haStderrPath); err != nil {
+		return err
+	}
+	haStdoutW, err := os.Create(haStdoutPath)
+	if err != nil {
+		return err
+	}
+	// no defer haStdoutW.Close()
+	haStderrW, err := os.Create(haStderrPath)
+	if err != nil {
+		return err
+	}
+	// no defer haStderrW.Close()
 
-	sshFixCmd := exec.Command("ssh-keygen",
-		"-R", fmt.Sprintf("[127.0.0.1]:%d", y.SSH.LocalPort),
-		"-R", fmt.Sprintf("[localhost]:%d", y.SSH.LocalPort),
+	haCmd := exec.CommandContext(ctx, self,
+		"hostagent",
+		"--pidfile", haPIDPath,
+		instName)
+	haCmd.Stdout = haStdoutW
+	haCmd.Stderr = haStderrW
+
+	if err := haCmd.Start(); err != nil {
+		return err
+	}
+
+	if err := waitHostAgentStart(ctx, haPIDPath, haStderrPath); err != nil {
+		return err
+	}
+
+	return watchHostAgentEvents(ctx, instName, haStdoutPath, haStderrPath)
+	// leave the hostagent process running
+}
+
+func waitHostAgentStart(ctx context.Context, haPIDPath, haStderrPath string) error {
+	begin := time.Now()
+	deadlineDuration := 5 * time.Second
+	deadline := begin.Add(deadlineDuration)
+	for {
+		if _, err := os.Stat(haPIDPath); !errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+		if time.Now().After(deadline) {
+			return errors.Errorf("hostagent (%q) did not start up in %v (hint: see %q)", haPIDPath, deadlineDuration, haStderrPath)
+		}
+	}
+}
+
+func watchHostAgentEvents(ctx context.Context, instName, haStdoutPath, haStderrPath string) error {
+	ctx2, cancel := context.WithTimeout(ctx, 10*time.Minute)
+	defer cancel()
+
+	var (
+		printedSSHLocalPort  bool
+		receivedRunningEvent bool
+		err                  error
 	)
+	onEvent := func(ev hostagentapi.Event) bool {
+		if !printedSSHLocalPort && ev.Status.SSHLocalPort != 0 {
+			logrus.Infof("SSH Local Port: %d", ev.Status.SSHLocalPort)
+			printedSSHLocalPort = true
+		}
 
-	if out, err := sshFixCmd.CombinedOutput(); err != nil {
-		return errors.Wrapf(err, "failed to run %v: %q", sshFixCmd.Args, string(out))
+		if len(ev.Status.Errors) > 0 {
+			logrus.Errorf("%+v", ev.Status.Errors)
+		}
+		if ev.Status.Exiting {
+			err = errors.Errorf("exiting, status=%+v (hint: see %q)", ev.Status, haStderrPath)
+			return true
+		} else if ev.Status.Running {
+			receivedRunningEvent = true
+			if ev.Status.Degraded {
+				logrus.Warnf("DEGRADED. The VM seems running, but file sharing and port forwarding may not work. (hint: see %q)", haStderrPath)
+				err = errors.Errorf("degraded, status=%+v", ev.Status)
+				return true
+			}
+
+			shellCmd := fmt.Sprintf("limactl shell %s", instName)
+			if instName == "default" {
+				shellCmd = "lima"
+			}
+			logrus.Infof("READY. Run `%s` to open the shell.", shellCmd)
+			err = nil
+			return true
+		}
+		return false
 	}
-	logrus.Infof("SSH: 127.0.0.1:%d", y.SSH.LocalPort)
 
-	hAgent, err := hostagent.New(y, instDir)
+	if xerr := hostagentapi.WatchEvents(ctx2, haStdoutPath, haStderrPath, onEvent); xerr != nil {
+		return xerr
+	}
+
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if cErr := hAgent.Close(); cErr != nil {
-			logrus.WithError(cErr).Warn("An error during shutting down the host agent")
-		}
-	}()
-	if err := hAgent.Run(ctx); err == nil {
-		shellCmd := fmt.Sprintf("limactl shell %s", instName)
-		if instName == "default" {
-			shellCmd = "lima"
-		}
-		logrus.Infof("READY. Run `%s` to open the shell.", shellCmd)
-	} else {
-		logrus.WithError(err).Warn("DEGRADED. The VM seems running, but file sharing and port forwarding may not work.")
+
+	if !receivedRunningEvent {
+		return errors.New("did not receive an event with the \"running\" status")
 	}
-	// TODO: daemonize the host process here
-	return qCmd.Wait()
+
+	return nil
 }
