@@ -135,11 +135,7 @@ func watchHostAgentEvents(ctx context.Context, instName, haStdoutPath, haStderrP
 				return true
 			}
 
-			shellCmd := fmt.Sprintf("limactl shell %s", instName)
-			if instName == "default" {
-				shellCmd = "lima"
-			}
-			logrus.Infof("READY. Run `%s` to open the shell.", shellCmd)
+			logrus.Infof("READY. Run `%s` to open the shell.", LimactlShellCmd(instName))
 			err = nil
 			return true
 		}
@@ -159,4 +155,12 @@ func watchHostAgentEvents(ctx context.Context, instName, haStdoutPath, haStderrP
 	}
 
 	return nil
+}
+
+func LimactlShellCmd(instName string) string {
+	shellCmd := fmt.Sprintf("limactl shell %s", instName)
+	if instName == "default" {
+		shellCmd = "lima"
+	}
+	return shellCmd
 }

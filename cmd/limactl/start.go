@@ -174,6 +174,17 @@ func startAction(clicontext *cli.Context) error {
 	if err != nil {
 		return err
 	}
+	switch inst.Status {
+	case store.StatusRunning:
+		logrus.Infof("The instance %q is already running. Run `%s` to open the shell.",
+			inst.Name, start.LimactlShellCmd(inst.Name))
+		// Not an error
+		return nil
+	case store.StatusStopped:
+		// NOP
+	default:
+		logrus.Warnf("expected status %q, got %q", store.StatusStopped, inst.Status)
+	}
 	ctx := clicontext.Context
 	return start.Start(ctx, inst)
 }
