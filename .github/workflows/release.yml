@@ -39,7 +39,7 @@ jobs:
           \`\`\`console
           [macOS]$ limactl start
           ...
-          INFO[0029] READY. Run `lima` to open the shell.
+          INFO[0029] READY. Run \`lima\` to open the shell.
 
           [macOS]$ lima uname
           Linux
