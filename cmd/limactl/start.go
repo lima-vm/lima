@@ -23,7 +23,7 @@ import (
 var startCommand = &cli.Command{
 	Name:      "start",
 	Usage:     fmt.Sprintf("Start an instance of Lima. If the instance does not exist, open an editor for creating new one, with name %q", DefaultInstanceName),
-	ArgsUsage: "[flags] NAME|FILE.yaml",
+	ArgsUsage: "NAME|FILE.yaml",
 	Flags: []cli.Flag{
 		&cli.BoolFlag{
 			Name:  "tty",

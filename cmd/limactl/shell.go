@@ -19,8 +19,8 @@ import (
 var shellCommand = &cli.Command{
 	Name:      "shell",
 	Usage:     "Execute shell in Lima",
-	ArgsUsage: "[flags] INSTANCE [COMMAND...]",
-	Description: "`lima` command is provided as an alias for `limactl shell $LIMA_INSTANCE`. $LIMA_INSTANCE defaults to " + DefaultInstanceName + ".\n" +
+	ArgsUsage: "INSTANCE [COMMAND...]",
+	Description: "`lima` command is provided as an alias for `limactl shell $LIMA_INSTANCE`. $LIMA_INSTANCE defaults to \"" + DefaultInstanceName + "\".\n" +
 		"Hint: try --debug to show the detailed logs, if it seems hanging (mostly due to some SSH issue).",
 	Flags: []cli.Flag{
 		&cli.StringFlag{
