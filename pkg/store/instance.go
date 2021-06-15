@@ -30,14 +30,28 @@ type Instance struct {
 	Errors       []error       `json:"errors,omitempty"`
 }
 
-// Inspect returns err only when the instance does not exist.
+func (inst *Instance) LoadYAML() (*limayaml.LimaYAML, error) {
+	if inst.Dir == "" {
+		return nil, errors.New("inst.Dir is empty")
+	}
+	yamlPath := filepath.Join(inst.Dir, YAMLFileName)
+	return LoadYAMLByFilePath(yamlPath)
+}
+
+// Inspect returns err only when the instance does not exist (os.ErrNotExist).
 // Other errors are returned as *Instance.Errors
 func Inspect(instName string) (*Instance, error) {
 	inst := &Instance{
 		Name:   instName,
 		Status: StatusUnknown,
 	}
-	y, instDir, err := LoadYAMLByInstanceName(instName)
+	// InstanceDir validates the instName but does not check whether the instance exists
+	instDir, err := InstanceDir(instName)
+	if err != nil {
+		return nil, err
+	}
+	yamlPath := filepath.Join(instDir, YAMLFileName)
+	y, err := LoadYAMLByFilePath(yamlPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return nil, err

@@ -56,14 +56,19 @@ func New(instName string, stdout, stderr io.Writer, sigintCh chan os.Signal) (*H
 		Level:     logrus.DebugLevel,
 	}
 
-	y, instDir, err := store.LoadYAMLByInstanceName(instName)
+	inst, err := store.Inspect(instName)
+	if err != nil {
+		return nil, err
+	}
+
+	y, err := inst.LoadYAML()
 	if err != nil {
 		return nil, err
 	}
 
 	qCfg := qemu.Config{
 		Name:        instName,
-		InstanceDir: instDir,
+		InstanceDir: inst.Dir,
 		LimaYAML:    y,
 	}
 	qExe, qArgs, err := qemu.Cmdline(qCfg)
@@ -71,7 +76,7 @@ func New(instName string, stdout, stderr io.Writer, sigintCh chan os.Signal) (*H
 		return nil, err
 	}
 
-	sshArgs, err := sshutil.SSHArgs(instDir)
+	sshArgs, err := sshutil.SSHArgs(inst.Dir)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +87,7 @@ func New(instName string, stdout, stderr io.Writer, sigintCh chan os.Signal) (*H
 	a := &HostAgent{
 		l:             l,
 		y:             y,
-		instDir:       instDir,
+		instDir:       inst.Dir,
 		sshConfig:     sshConfig,
 		portForwarder: newPortForwarder(l, sshConfig, y.SSH.LocalPort),
 		qExe:          qExe,

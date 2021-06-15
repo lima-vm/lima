@@ -57,7 +57,7 @@ func shellAction(clicontext *cli.Context) error {
 	if inst.Status == store.StatusStopped {
 		return errors.Errorf("instance %q is stopped, run `limactl start %s` to start the instance", instName, instName)
 	}
-	y, _, err := store.LoadYAMLByInstanceName(instName)
+	y, err := inst.LoadYAML()
 	if err != nil {
 		return err
 	}
