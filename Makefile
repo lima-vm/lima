@@ -52,6 +52,10 @@ install:
 	cp -av _output/* /usr/local/
 	if [[ $(shell uname -s ) != Linux && ! -e /usr/local/bin/nerdctl ]]; then ln -sf nerdctl.lima /usr/local/bin/nerdctl; fi
 
+.PHONY: uninstall
+uninstall:
+	rm -rf /usr/local/bin/{lima,limactl,nerdctl.lima} /usr/local/share/lima /usr/local/share/doc/lima
+
 .PHONY: clean
 clean:
 	rm -rf _output
