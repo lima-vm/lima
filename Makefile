@@ -19,6 +19,9 @@ binaries: \
 	_output/bin/nerdctl.lima \
 	_output/share/lima/lima-guestagent.Linux-x86_64 \
 	_output/share/lima/lima-guestagent.Linux-aarch64
+	mkdir -p _output/share/doc/lima
+	cp -aL README.md LICENSE docs examples _output/share/doc/lima
+	echo $(VERSION) > _output/share/doc/lima/VERSION
 
 .PHONY: _output/bin/lima
 _output/bin/lima:
