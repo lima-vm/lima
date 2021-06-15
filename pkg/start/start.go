@@ -13,12 +13,13 @@ import (
 	"github.com/AkihiroSuda/lima/pkg/limayaml"
 	"github.com/AkihiroSuda/lima/pkg/qemu"
 	"github.com/AkihiroSuda/lima/pkg/store"
+	"github.com/AkihiroSuda/lima/pkg/store/filenames"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
 func ensureDisk(ctx context.Context, instName, instDir string, y *limayaml.LimaYAML) error {
-	cidataISOPath := filepath.Join(instDir, "cidata.iso")
+	cidataISOPath := filepath.Join(instDir, filenames.CIDataISO)
 	if err := cidata.GenerateISO9660(cidataISOPath, instName, y); err != nil {
 		return err
 	}
@@ -35,7 +36,7 @@ func ensureDisk(ctx context.Context, instName, instDir string, y *limayaml.LimaY
 }
 
 func Start(ctx context.Context, inst *store.Instance) error {
-	haPIDPath := filepath.Join(inst.Dir, "ha.pid")
+	haPIDPath := filepath.Join(inst.Dir, filenames.HostAgentPID)
 	if _, err := os.Stat(haPIDPath); !errors.Is(err, os.ErrNotExist) {
 		return errors.Errorf("instance %q seems running (hint: remove %q if the instance is not actually running)", inst.Name, haPIDPath)
 	}
@@ -53,8 +54,8 @@ func Start(ctx context.Context, inst *store.Instance) error {
 	if err != nil {
 		return err
 	}
-	haStdoutPath := filepath.Join(inst.Dir, "ha.stdout.log")
-	haStderrPath := filepath.Join(inst.Dir, "ha.stderr.log")
+	haStdoutPath := filepath.Join(inst.Dir, filenames.HostAgentStdoutLog)
+	haStderrPath := filepath.Join(inst.Dir, filenames.HostAgentStderrLog)
 	if err := os.RemoveAll(haStdoutPath); err != nil {
 		return err
 	}

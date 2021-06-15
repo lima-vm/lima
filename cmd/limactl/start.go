@@ -11,6 +11,7 @@ import (
 	"github.com/AkihiroSuda/lima/pkg/limayaml"
 	"github.com/AkihiroSuda/lima/pkg/start"
 	"github.com/AkihiroSuda/lima/pkg/store"
+	"github.com/AkihiroSuda/lima/pkg/store/filenames"
 	"github.com/containerd/containerd/identifiers"
 	"github.com/mattn/go-isatty"
 	"github.com/norouter/norouter/cmd/norouter/editorcmd"
@@ -112,7 +113,7 @@ func loadOrCreateInstance(clicontext *cli.Context) (*store.Instance, error) {
 	if err := os.MkdirAll(instDir, 0700); err != nil {
 		return nil, err
 	}
-	if err := os.WriteFile(filepath.Join(instDir, store.YAMLFileName), yBytes, 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(instDir, filenames.LimaYAML), yBytes, 0644); err != nil {
 		return nil, err
 	}
 	return store.Inspect(instName)

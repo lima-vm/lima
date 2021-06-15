@@ -20,6 +20,7 @@ import (
 	"github.com/AkihiroSuda/lima/pkg/qemu"
 	"github.com/AkihiroSuda/lima/pkg/sshutil"
 	"github.com/AkihiroSuda/lima/pkg/store"
+	"github.com/AkihiroSuda/lima/pkg/store/filenames"
 	"github.com/AkihiroSuda/sshocker/pkg/ssh"
 	"github.com/digitalocean/go-qemu/qmp"
 	"github.com/digitalocean/go-qemu/qmp/raw"
@@ -139,7 +140,7 @@ func (a *HostAgent) Run(ctx context.Context) error {
 	}
 	defer logPipeRoutine(a.l, qStderr, "qemu[stderr]")
 
-	a.l.Infof("Starting QEMU (hint: to watch the boot progress, see %q)", filepath.Join(a.instDir, "serial.log"))
+	a.l.Infof("Starting QEMU (hint: to watch the boot progress, see %q)", filepath.Join(a.instDir, filenames.SerialLog))
 	a.l.Debugf("qCmd.Args: %v", qCmd.Args)
 	if err := qCmd.Start(); err != nil {
 		return err
@@ -193,7 +194,7 @@ func (a *HostAgent) Run(ctx context.Context) error {
 
 func (a *HostAgent) shutdownQEMU(ctx context.Context, timeout time.Duration, qCmd *exec.Cmd, qWaitCh <-chan error) error {
 	a.l.Info("Shutting down QEMU with ACPI")
-	qmpSockPath := filepath.Join(a.instDir, "qmp.sock")
+	qmpSockPath := filepath.Join(a.instDir, filenames.QMPSock)
 	qmpClient, err := qmp.NewSocketMonitor("unix", qmpSockPath, 5*time.Second)
 	if err != nil {
 		a.l.WithError(err).Warnf("failed to open the QMP socket %q, forcibly killing QEMU", qmpSockPath)
@@ -227,7 +228,7 @@ func (a *HostAgent) killQEMU(ctx context.Context, timeout time.Duration, qCmd *e
 	}
 	qWaitErr := <-qWaitCh
 	a.l.WithError(qWaitErr).Info("QEMU has exited, after killing forcibly")
-	qemuPIDPath := filepath.Join(a.instDir, "qemu.pid")
+	qemuPIDPath := filepath.Join(a.instDir, filenames.QemuPID)
 	_ = os.RemoveAll(qemuPIDPath)
 	return qWaitErr
 }
@@ -279,7 +280,7 @@ func (a *HostAgent) close() error {
 func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 	// TODO: use vSock (when QEMU for macOS gets support for vSock)
 
-	localUnix := filepath.Join(a.instDir, "ga.sock")
+	localUnix := filepath.Join(a.instDir, filenames.GuestAgentSock)
 	// guest should have same UID as the host (specified in cidata)
 	remoteUnix := fmt.Sprintf("/run/user/%d/lima-guestagent.sock", os.Getuid())
 

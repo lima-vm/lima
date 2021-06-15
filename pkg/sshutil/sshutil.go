@@ -6,6 +6,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/AkihiroSuda/lima/pkg/store/filenames"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -46,7 +47,7 @@ func DefaultPubKeys() []PubKey {
 }
 
 func SSHArgs(instDir string) ([]string, error) {
-	controlSock := filepath.Join(instDir, "ssh.sock")
+	controlSock := filepath.Join(instDir, filenames.SSHSock)
 	maxSockLen := 104
 	if runtime.GOOS == "linux" {
 		maxSockLen = 108

@@ -9,12 +9,8 @@ import (
 	"github.com/containerd/containerd/identifiers"
 )
 
-const (
-	// DotLima is a directory that appears under the home directory.
-	DotLima = ".lima"
-	// YAMLFileName appears under an instance dir.
-	YAMLFileName = "lima.yaml"
-)
+// DotLima is a directory that appears under the home directory.
+const DotLima = ".lima"
 
 // LimaDir returns the abstract path of `~/.lima`.
 //

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/AkihiroSuda/lima/pkg/limayaml"
+	"github.com/AkihiroSuda/lima/pkg/store/filenames"
 )
 
 type Status = string
@@ -34,7 +35,7 @@ func (inst *Instance) LoadYAML() (*limayaml.LimaYAML, error) {
 	if inst.Dir == "" {
 		return nil, errors.New("inst.Dir is empty")
 	}
-	yamlPath := filepath.Join(inst.Dir, YAMLFileName)
+	yamlPath := filepath.Join(inst.Dir, filenames.LimaYAML)
 	return LoadYAMLByFilePath(yamlPath)
 }
 
@@ -50,7 +51,7 @@ func Inspect(instName string) (*Instance, error) {
 	if err != nil {
 		return nil, err
 	}
-	yamlPath := filepath.Join(instDir, YAMLFileName)
+	yamlPath := filepath.Join(instDir, filenames.LimaYAML)
 	y, err := LoadYAMLByFilePath(yamlPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
@@ -63,13 +64,13 @@ func Inspect(instName string) (*Instance, error) {
 	inst.Arch = y.Arch
 	inst.SSHLocalPort = y.SSH.LocalPort
 
-	inst.HostAgentPID, err = readPIDFile(filepath.Join(instDir, "ha.pid"))
+	inst.HostAgentPID, err = readPIDFile(filepath.Join(instDir, filenames.HostAgentPID))
 	if err != nil {
 		inst.Status = StatusBroken
 		inst.Errors = append(inst.Errors, err)
 	}
 
-	inst.QemuPID, err = readPIDFile(filepath.Join(instDir, "qemu.pid"))
+	inst.QemuPID, err = readPIDFile(filepath.Join(instDir, filenames.QemuPID))
 	if err != nil {
 		inst.Status = StatusBroken
 		inst.Errors = append(inst.Errors, err)
