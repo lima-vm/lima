@@ -19,6 +19,75 @@ users:
 
 write_files:
  - content: |
+      #!/bin/sh
+      # This script pretends that /bin/ash can be used as /bin/bash, so all following
+      # cloud-init scripts can use `#!/bin/bash` and `set -o pipefail`.
+      test -f /etc/alpine-release || exit 0
+
+      # Redirect bash to ash (built with CONFIG_ASH_BASH_COMPAT) and hope for the best :)
+      # It does support `set -o pipefail`, but not `[[`.
+      # /bin/bash can't be a symlink because /bin/ash is a symlink to /bin/busybox
+      cat >/bin/bash <<'EOF'
+      #!/bin/sh
+      exec /bin/ash "$@"
+      EOF
+      chmod +x /bin/bash
+   owner: root:root
+   path: /var/lib/cloud/scripts/per-boot/00-alpine-ash-as-bash.boot.sh
+   permissions: '0755'
+ - content: |
+      #!/bin/bash
+      set -eux -o pipefail
+
+      # Restrict the rest of this script to Alpine until it has been tested with other distros
+      test -f /etc/alpine-release || exit 0
+
+      # Data directories that should be persisted across reboots
+      DATADIRS="/home /usr/local /etc/containerd /var/lib/containerd"
+
+      # When running from RAM try to move persistent data to data-volume
+      # FIXME: the test for tmpfs mounts is probably Alpine-specific
+      if [ "$(awk '$2 == "/" {print $3}' /proc/mounts)" == "tmpfs" ]; then
+        mkdir -p /mnt/data
+        if [ -e /dev/disk/by-label/data-volume ]; then
+          mount -t ext4 /dev/disk/by-label/data-volume /mnt/data
+        else
+          # Find an unpartitioned disk and create data-volume
+          DISKS=$(lsblk --list --noheadings --output name,type | awk '$2 == "disk" {print $1}')
+          for DISK in ${DISKS}; do
+            IN_USE=false
+            # Looking for a disk that is not mounted or partitioned
+            for PART in $(awk '/^\/dev\// {gsub("/dev/", ""); print $1}' /proc/mounts); do
+              if [ "${DISK}" == "${PART}" -o -e /sys/block/${DISK}/${PART} ]; then
+                IN_USE=true
+                break
+              fi
+            done
+            if [ "${IN_USE}" == "false" ]; then
+              echo 'type=83' | sfdisk --label dos /dev/${DISK}
+              PART=$(lsblk --list /dev/${DISK} --noheadings --output name,type | awk '$2 == "part" {print $1}')
+              mkfs.ext4 -L data-volume /dev/${PART}
+              mount -t ext4 /dev/disk/by-label/data-volume /mnt/data
+              for DIR in ${DATADIRS}; do
+                DEST="/mnt/data$(dirname ${DIR})"
+                mkdir -p ${DIR} ${DEST}
+                mv ${DIR} ${DEST}
+              done
+              break
+            fi
+          done
+        fi
+        for DIR in ${DATADIRS}; do
+          if [ -d /mnt/data${DIR} ]; then
+            [ -e ${DIR} ] && rm -rf ${DIR}
+            ln -s /mnt/data${DIR} ${DIR}
+          fi
+        done
+      fi
+   owner: root:root
+   path: /var/lib/cloud/scripts/per-boot/05-persistent-data-volume.boot.sh
+   permissions: '0755'
+ - content: |
       #!/sbin/openrc-run
       supervisor=supervise-daemon
 
@@ -35,34 +104,24 @@ write_files:
    path: /var/lib/lima-guestagent/lima-guestagent.openrc
    permissions: '0755'
  - content: |
-      #!/bin/sh
-      # This script prepares Alpine for lima; there is nothing in here for other distros
-      test -f /etc/alpine-release || exit
-
-      # Since we are on Alpine, we can now assume /bin/sh is /bin/ash
+      #!/bin/bash
       set -eux -o pipefail
 
-      # Redirect bash to ash (built with CONFIG_ASH_BASH_COMPAT) and hope for the best :)
-      # (it does support `set -o pipefail`, but not `[[`)
-      # /bin/bash can't be a symlink because /bin/ash is a symlink to /bin/busybox
-      cat >/bin/bash <<'EOF'
-      #!/bin/sh
-      exec /bin/ash "$@"
-      EOF
-      chmod +x /bin/bash
+      # This script prepares Alpine for lima; there is nothing in here for other distros
+      test -f /etc/alpine-release || exit 0
 
       # Configure apk repos
-      branch=edge
+      BRANCH=edge
       VERSION_ID=$(awk -F= '$1=="VERSION_ID" {print $2}' /etc/os-release)
-      case $VERSION_ID in
-      *_alpha*|*_beta*) branch=edge;;
-      *.*.*) branch=v${VERSION_ID%.*};;
+      case ${VERSION_ID} in
+      *_alpha*|*_beta*) BRANCH=edge;;
+      *.*.*) BRANCH=v${VERSION_ID%.*};;
       esac
 
-      for repo in main community; do
-        url="https://dl-cdn.alpinelinux.org/alpine/${branch}/${repo}"
-        if ! grep -q "^${url}$" /etc/apk/repositories; then
-          echo "${url}" >> /etc/apk/repositories
+      for REPO in main community; do
+        URL="https://dl-cdn.alpinelinux.org/alpine/${BRANCH}/${REPO}"
+        if ! grep -q "^${URL}$" /etc/apk/repositories; then
+          echo "${URL}" >> /etc/apk/repositories
         fi
       done
 
@@ -85,7 +144,7 @@ write_files:
       rc-update add acpid
       rc-service acpid start
    owner: root:root
-   path: /var/lib/cloud/scripts/per-boot/00-alpine-prep.boot.sh
+   path: /var/lib/cloud/scripts/per-boot/10-alpine-prep.boot.sh
    permissions: '0755'
  - content: |
       #!/bin/bash
@@ -159,7 +218,7 @@ write_files:
       fi
    owner: root:root
    # We do not use per-once.
-   path: /var/lib/cloud/scripts/per-boot/10-base.boot.sh
+   path: /var/lib/cloud/scripts/per-boot/20-base.boot.sh
    permissions: '0755'
  {{- if or .Mounts .Containerd.System .Containerd.User }}
  - content: |
@@ -210,7 +269,7 @@ write_files:
       fi
       {{- end}}
    owner: root:root
-   path: /var/lib/cloud/scripts/per-boot/20-install-packages.boot.sh
+   path: /var/lib/cloud/scripts/per-boot/30-install-packages.boot.sh
    permissions: '0755'
 {{- end}}
 {{- if or .Containerd.System .Containerd.User}}
@@ -274,7 +333,7 @@ write_files:
       fi
       {{- end}}
    owner: root:root
-   path: /var/lib/cloud/scripts/per-boot/30-install-containerd.boot.sh
+   path: /var/lib/cloud/scripts/per-boot/40-install-containerd.boot.sh
    permissions: '0755'
 {{- end}}
 {{- if .Provision}}
@@ -291,7 +350,7 @@ write_files:
       {{- end}}
       {{- end}}
    owner: root:root
-   path: /var/lib/cloud/scripts/per-boot/40-execute-provision-scripts.boot.sh
+   path: /var/lib/cloud/scripts/per-boot/50-execute-provision-scripts.boot.sh
    permissions: '0755'
 {{- end}}
 {{- range $i, $val := .Provision}}
