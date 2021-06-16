@@ -25,9 +25,7 @@ It may work on NetBSD and Windows hosts as well.
 
 ✅ Intel on ARM
 
-✅ Ubuntu guest
-
-✅ Fedora guest
+✅ Various guest Linux distributions: Ubuntu, Debian, Fedora, ...
 
 Related project: [sshocker (ssh with file sharing and port forwarding)](https://github.com/AkihiroSuda/sshocker)
 

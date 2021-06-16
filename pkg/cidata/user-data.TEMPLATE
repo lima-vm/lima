@@ -23,7 +23,22 @@ write_files:
       set -eux -o pipefail
 
       {{- if .Containerd.User}}
-      # Enable rootless containers
+      # Set up env
+      for f in .profile .bashrc; do
+        if ! grep -q "# Lima BEGIN" "/home/{{.User}}.linux/$f"; then
+          cat >>"/home/{{.User}}.linux/$f" <<EOF
+      # Lima BEGIN
+      # Make sure iptables and mount.fuse3 are available
+      PATH="$PATH:/usr/sbin:/sbin"
+      # fuse-overlayfs is the most stable snapshotter for rootless
+      CONTAINERD_SNAPSHOTTER="fuse-overlayfs"
+      export PATH CONTAINERD_SNAPSHOTTER
+      # Lima END
+      EOF
+          chown "{{.User}}" "/home/{{.User}}.linux/$f"
+        fi
+      done
+      # Enable cgroup delegation (only meaningful on cgroup v2)
       if [ ! -e "/etc/systemd/system/user@.service.d/lima.conf" ]; then
         mkdir -p "/etc/systemd/system/user@.service.d"
         cat >"/etc/systemd/system/user@.service.d/lima.conf"  <<EOF
@@ -33,6 +48,7 @@ write_files:
       fi
       systemctl daemon-reload
 
+      # Set up sysctl
       sysctl_conf="/etc/sysctl.d/99-lima.conf"
       if [ ! -e "${sysctl_conf}" ]; then
         if [ -e "/proc/sys/kernel/unprivileged_userns_clone" ]; then
@@ -43,10 +59,12 @@ write_files:
         sysctl --system
       fi
 
-      # Do additional setup for the user
+      # Set up subuid
       for f in /etc/subuid /etc/subgid; do
         grep -qw "{{.User}}" $f || echo "{{.User}}:100000:65536" >> $f
       done
+
+      # Start systemd session
       loginctl enable-linger "{{.User}}"
       {{- end}}
 
@@ -69,7 +87,7 @@ write_files:
    # We do not use per-once.
    path: /var/lib/cloud/scripts/per-boot/00-base.boot.sh
    permissions: '0755'
- {{- if or .Mounts .Containerd.User}}
+ {{- if or .Mounts .Containerd.System .Containerd.User }}
  - content: |
       #!/bin/bash
       set -eux -o pipefail
@@ -80,16 +98,26 @@ write_files:
         {{- if .Mounts}}
         apt-get install -y sshfs
         {{- end }}
+        {{- if or .Containerd.System .Containerd.User }}
+        apt-get install -y iptables
+        {{- end }}
         {{- if .Containerd.User}}
-        apt-get install -y uidmap
+        apt-get install -y uidmap fuse3 dbus-user-session
         {{- end }}
       elif command -v dnf 2>&1 >/dev/null; then
         : {{/* make sure the "elif" block is never empty */}}
         {{- if .Mounts}}
         dnf install -y fuse-sshfs
         {{- end}}
+        {{- if or .Containerd.System .Containerd.User }}
+        dnf install -y iptables
+        {{- end }}
         {{- if .Containerd.User}}
-        dnf install -y shadow-utils
+        dnf install -y shadow-utils fuse3
+        if [ ! -f /usr/bin/fusermount ]; then
+          # Workaround for https://github.com/containerd/stargz-snapshotter/issues/340
+          ln -s fusermount3 /usr/bin/fusermount
+        fi
         {{- end}}
       fi
       # Modify /etc/fuse.conf to allow "-o allow_root"
@@ -130,17 +158,36 @@ write_files:
         cat >"/home/{{.User}}.linux/.config/containerd/config.toml" <<EOF
         version = 2
         [proxy_plugins]
+          [proxy_plugins."fuse-overlayfs"]
+            type = "snapshot"
+            address = "/run/user/{{.UID}}/containerd-fuse-overlayfs.sock"
           [proxy_plugins."stargz"]
             type = "snapshot"
             address = "/run/user/{{.UID}}/containerd-stargz-grpc/containerd-stargz-grpc.sock"
       EOF
         chown -R "{{.User}}" "/home/{{.User}}.linux/.config"
       fi
+      selinux=
+      if command -v selinuxenabled 2>&1 >/dev/null && selinuxenabled; then
+        selinux=1
+      fi
       if [ ! -e "/home/{{.User}}}}.linux/.config/systemd/user/containerd.service" ]; then
         until [ -e "/run/user/{{.UID}}/systemd/private" ]; do sleep 3; done
+        if [ -n "$selinux" ]; then
+          echo "Temporarily disabling SELinux, during installing containerd units"
+          setenforce 0
+        fi
+        sudo -iu "{{.User}}" "XDG_RUNTIME_DIR=/run/user/{{.UID}}" systemctl --user enable --now dbus
         sudo -iu "{{.User}}" "XDG_RUNTIME_DIR=/run/user/{{.UID}}" containerd-rootless-setuptool.sh install
         sudo -iu "{{.User}}" "XDG_RUNTIME_DIR=/run/user/{{.UID}}" containerd-rootless-setuptool.sh install-buildkit
-        sudo -iu "{{.User}}" "XDG_RUNTIME_DIR=/run/user/{{.UID}}" containerd-rootless-setuptool.sh install-stargz
+        sudo -iu "{{.User}}" "XDG_RUNTIME_DIR=/run/user/{{.UID}}" containerd-rootless-setuptool.sh install-fuse-overlayfs
+        if ! sudo -iu "{{.User}}" "XDG_RUNTIME_DIR=/run/user/{{.UID}}" containerd-rootless-setuptool.sh install-stargz; then
+          echo >&2 "WARNING: rootless stargz does not seem supported on this host (kernel older than 5.11?)"
+        fi
+        if [ -n "$selinux" ]; then
+          echo "Restoring SELinux"
+          setenforce 1
+        fi
       fi
       {{- end}}
    owner: root:root

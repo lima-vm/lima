@@ -1,0 +1,14 @@
+images:
+  - location: "https://cloud.debian.org/images/cloud/bullseye/daily/20210608-662/debian-11-generic-amd64-daily-20210608-662.qcow2"
+    arch: "x86_64"
+  - location: "https://cloud.debian.org/images/cloud/bullseye/daily/20210608-662/debian-11-generic-arm64-daily-20210608-662.qcow2"
+    arch: "aarch64"
+mounts:
+  - location: "~"
+    writable: false
+  - location: "/tmp/lima"
+    writable: true
+ssh:
+  # localPort is changed from 60022 to avoid conflicting with the default.
+  # (TODO: assign localPort automatically)
+  localPort: 60030
