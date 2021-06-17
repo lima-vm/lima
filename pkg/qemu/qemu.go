@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	"github.com/AkihiroSuda/lima/pkg/downloader"
+	"github.com/AkihiroSuda/lima/pkg/iso9660util"
 	"github.com/AkihiroSuda/lima/pkg/limayaml"
 	"github.com/AkihiroSuda/lima/pkg/store/filenames"
 	"github.com/docker/go-units"
@@ -60,15 +61,20 @@ func EnsureDisk(cfg Config) error {
 				len(cfg.LimaYAML.Images), errs)
 		}
 	}
-	diskSize, err := units.RAMInBytes(cfg.LimaYAML.Disk)
+	diskSize, _ := units.RAMInBytes(cfg.LimaYAML.Disk)
+	if diskSize == 0 {
+		return nil
+	}
+	isBaseDiskISO, err := iso9660util.IsISO9660(baseDisk)
 	if err != nil {
 		return err
 	}
-	cmd := exec.Command("qemu-img", "create",
-		"-f", "qcow2",
-		"-b", baseDisk,
-		diffDisk,
-		strconv.Itoa(int(diskSize)))
+	args := []string{"create", "-f", "qcow2"}
+	if !isBaseDiskISO {
+		args = append(args, "-b", baseDisk)
+	}
+	args = append(args, diffDisk, strconv.Itoa(int(diskSize)))
+	cmd := exec.Command("qemu-img", args...)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return errors.Wrapf(err, "failed to run %v: %q", cmd.Args, string(out))
 	}
@@ -118,11 +124,24 @@ func Cmdline(cfg Config) (string, []string, error) {
 	} else if y.Arch != limayaml.X8664 {
 		logrus.Warnf("field `firmware.legacyBIOS` is not supported for architecture %q, ignoring", y.Arch)
 	}
-	args = append(args, "-boot", "order=c,splash-time=0,menu=on")
 
-	// Root disk
-	args = append(args, "-drive", fmt.Sprintf("file=%s,if=virtio", filepath.Join(cfg.InstanceDir, filenames.DiffDisk)))
-
+	baseDisk := filepath.Join(cfg.InstanceDir, filenames.BaseDisk)
+	diffDisk := filepath.Join(cfg.InstanceDir, filenames.DiffDisk)
+	isBaseDiskCDROM, err := iso9660util.IsISO9660(baseDisk)
+	if err != nil {
+		return "", nil, err
+	}
+	if isBaseDiskCDROM {
+		args = append(args, "-boot", "order=d,splash-time=0,menu=on")
+		args = append(args, "-drive", fmt.Sprintf("file=%s,media=cdrom,readonly=on", baseDisk))
+	} else {
+		args = append(args, "-boot", "order=c,splash-time=0,menu=on")
+	}
+	if diskSize, _ := units.RAMInBytes(cfg.LimaYAML.Disk); diskSize > 0 {
+		args = append(args, "-drive", fmt.Sprintf("file=%s,if=virtio", diffDisk))
+	} else if !isBaseDiskCDROM {
+		args = append(args, "-drive", fmt.Sprintf("file=%s,if=virtio", baseDisk))
+	}
 	// cloud-init
 	args = append(args, "-cdrom", filepath.Join(cfg.InstanceDir, filenames.CIDataISO))
 

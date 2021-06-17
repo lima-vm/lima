@@ -60,3 +60,18 @@ func WriteFile(fs filesystem.FileSystem, path string, r io.Reader) (int64, error
 	defer f.Close()
 	return io.Copy(f, r)
 }
+
+func IsISO9660(imagePath string) (bool, error) {
+	imageFile, err := os.Open(imagePath)
+	if err != nil {
+		return false, err
+	}
+	defer imageFile.Close()
+
+	fileInfo, err := imageFile.Stat()
+	if err != nil {
+		return false, err
+	}
+	_, err = iso9660.Read(imageFile, fileInfo.Size(), 0, 0)
+	return err == nil, nil
+}
