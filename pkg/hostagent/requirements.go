@@ -26,6 +26,12 @@ func (a *HostAgent) waitForRequirements(ctx context.Context, label string, requi
 				a.l.Infof("The %s requirement %d of %d is satisfied", label, i+1, len(requirements))
 				break retryLoop
 			}
+			if req.fatal {
+				a.l.Infof("No further %s requirements will be checked", label)
+				return multierror.Append(mErr,
+					errors.Wrapf(err, "failed to satisfy the %s requirement %d of %d %q: %s; skipping further checks",
+						label, i+1, len(requirements), req.description, req.debugHint))
+			}
 			if j == retries-1 {
 				mErr = multierror.Append(mErr,
 					errors.Wrapf(err, "failed to satisfy the %s requirement %d of %d %q: %s",
@@ -52,6 +58,7 @@ type requirement struct {
 	description string
 	script      string
 	debugHint   string
+	fatal       bool
 }
 
 func (a *HostAgent) essentialRequirements() []requirement {
@@ -117,20 +124,37 @@ A possible workaround is to run "lima-guestagent install-systemd" in the guest.
 func (a *HostAgent) optionalRequirements() []requirement {
 	req := make([]requirement, 0)
 	if *a.y.Containerd.System || *a.y.Containerd.User {
-		req = append(req, requirement{
-			description: "containerd binaries to be installed",
-			script: `#!/bin/bash
+		req = append(req,
+			requirement{
+				description: "systemd must be available",
+				fatal:       true,
+				script: `#!/bin/bash
+set -eux -o pipefail
+if ! command -v systemctl 2>&1 >/dev/null; then
+    echo >&2 "systemd is not available on this OS"
+    exit 1
+fi
+`,
+				debugHint: `systemd is required to run containerd, but does not seem to be available.
+Make sure that you use an image that supports systemd. If you do not want to run
+containerd, please make sure that both 'container.system' and 'containerd.user'
+are set to 'false' in the config file.
+`,
+			},
+			requirement{
+				description: "containerd binaries to be installed",
+				script: `#!/bin/bash
 set -eux -o pipefail
 if ! timeout 30s bash -c "until command -v nerdctl; do sleep 3; done"; then
 	echo >&2 "nerdctl is not installed yet"
 	exit 1
 fi
 `,
-			debugHint: `The nerdctl binary was not installed in the guest.
+				debugHint: `The nerdctl binary was not installed in the guest.
 Make sure that you are using an officially supported image.
 Also see "/var/log/cloud-init-output.log" in the guest.
 `,
-		})
+			})
 	}
 	for _, probe := range a.y.Probes {
 		if probe.Mode == limayaml.ProbeModeReadiness {

@@ -146,11 +146,14 @@ write_files:
    owner: root:root
    path: /var/lib/cloud/scripts/per-boot/10-alpine-prep.boot.sh
    permissions: '0755'
+ {{- if .Containerd.User}}
  - content: |
       #!/bin/bash
       set -eux -o pipefail
 
-      {{- if .Containerd.User}}
+      # This script does not work unless systemd is available
+      command -v systemctl 2>&1 >/dev/null || exit 0
+
       # Set up env
       for f in .profile .bashrc; do
         if ! grep -q "# Lima BEGIN" "/home/{{.User}}.linux/$f"; then
@@ -194,7 +197,14 @@ write_files:
 
       # Start systemd session
       loginctl enable-linger "{{.User}}"
-      {{- end}}
+   owner: root:root
+   # We do not use per-once.
+   path: /var/lib/cloud/scripts/per-boot/20-rootless-base.boot.sh
+   permissions: '0755'
+ {{- end}}
+ - content: |
+      #!/bin/bash
+      set -eux -o pipefail
 
       # Create mount points
       {{- range $val := .Mounts}}
@@ -218,12 +228,13 @@ write_files:
       fi
    owner: root:root
    # We do not use per-once.
-   path: /var/lib/cloud/scripts/per-boot/20-base.boot.sh
+   path: /var/lib/cloud/scripts/per-boot/25-guestagent-base.boot.sh
    permissions: '0755'
  {{- if or .Mounts .Containerd.System .Containerd.User }}
  - content: |
       #!/bin/bash
       set -eux -o pipefail
+
       # Install minimum dependencies
       if command -v apt-get 2>&1 >/dev/null; then
         export DEBIAN_FRONTEND=noninteractive
@@ -276,6 +287,10 @@ write_files:
  - content: |
       #!/bin/bash
       set -eux -o pipefail
+
+      # This script does not work unless systemd is available
+      command -v systemctl 2>&1 >/dev/null || exit 0
+
       if [ ! -x /usr/local/bin/nerdctl ]; then
         mkdir -p -m 600 /mnt/lima-cidata
         mount -t iso9660 -o ro /dev/disk/by-label/cidata /mnt/lima-cidata
