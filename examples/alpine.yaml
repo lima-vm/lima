@@ -1,0 +1,21 @@
+images:
+- location: https://github.com/rancher-sandbox/alpine-lima/releases/download/v0.0.1/alpine-lima-ci-3.13.5-x86_64.iso
+  arch: "x86_64"
+
+mounts:
+- location: "~"
+  writable: false
+- location: "/tmp/lima"
+  writable: true
+
+ssh:
+  # localPort is changed from 60022 to avoid conflicting with the default.
+  # (TODO: assign localPort automatically)
+  localPort: 60020
+
+firmware:
+  legacyBIOS: true
+
+containerd:
+  system: false
+  user: false

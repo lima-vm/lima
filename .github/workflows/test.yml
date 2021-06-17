@@ -52,7 +52,7 @@ jobs:
     timeout-minutes: 40
     strategy:
       matrix:
-        example: [examples/default.yaml, examples/debian.yaml, examples/fedora.yaml]
+        example: [default.yaml, alpine.yaml, debian.yaml, fedora.yaml]
     steps:
       - uses: actions/setup-go@v2
         with:
@@ -81,11 +81,11 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/Library/Caches/lima/download
-          key: ${{ runner.os }}-${{ matrix.example }}
+          key: ${{ runner.os }}-examples/${{ matrix.example }}
       - name: Test
         env:
           EXAMPLE: ${{ matrix.example }}
-        run: ./hack/test-example.sh $EXAMPLE
+        run: ./hack/test-example.sh examples/$EXAMPLE
 
   artifacts:
     name: Artifacts

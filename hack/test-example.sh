@@ -32,6 +32,11 @@ limactl validate "$FILE"
 declare -A CHECKS=(["systemd"]="1" ["systemd-strict"]="1" ["mount-home"]="1" ["containerd-user"]="1")
 
 case "$NAME" in
+"alpine")
+	WARNING "Alpine does not support systemd"
+	CHECKS["systemd"]=
+	CHECKS["containerd-user"]=
+	;;
 "k3s")
 	ERROR "File \"$FILE\" is not testable with this script"
 	exit 1
