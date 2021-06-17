@@ -79,6 +79,15 @@ For the usage of containerd and nerdctl (contaiNERD ctl), visit https://github.c
 ### Requirements (Intel Mac)
 - QEMU v6.0.0 or later (`brew install qemu`)
 
+NOTE: libslirp v4.6.0 used by QEMU is known to be [broken](https://gitlab.freedesktop.org/slirp/libslirp/-/issues/48).
+If you have libslirp v4.6.0 in `/usr/local/Cellar/libslirp`, you have to downgrade it to v4.5.0:
+
+```console
+brew uninstall --ignore-dependencies libslirp
+wget https://raw.githubusercontent.com/Homebrew/homebrew-core/f2a53ffe2362d2a7e55fd1a8a9bc71c1ec15bb00/Formula/libslirp.rb
+brew install ./libslirp.rb
+```
+
 ### Requirements (ARM Mac)
 
 - QEMU with `--accel=hvf` support, see https://gist.github.com/nrjdalal/e70249bb5d2e9d844cc203fd11f74c55
@@ -191,6 +200,7 @@ The current default spec:
   - [error "killed -9"](#error-killed--9)
 - [SSH](#ssh)
   - ["Port forwarding does not work"](#port-forwarding-does-not-work)
+  - [stuck on "Waiting for the essential requirement 1 of X: "ssh"](#stuck-on-waiting-for-the-essential-requirement-1-of-x-ssh)
   - [error "field SSHPubKeys must be set"](#error-field-sshpubkeys-must-be-set)
   - [error "hostkeys_foreach failed: No such file or directory"](#error-hostkeys_foreach-failed-no-such-file-or-directory)
   - [error "failed to execute script ssh: [...] Permission denied (publickey)"](#error-failed-to-execute-script-ssh--permission-denied-publickey)
@@ -282,6 +292,17 @@ Note: **Only** on macOS versions **before** 10.15.7 you might need to add this e
 ### SSH
 #### "Port forwarding does not work"
 Privileged ports (1-1023) cannot be forwarded. e.g., you have to use 8080, not 80.
+
+#### stuck on "Waiting for the essential requirement 1 of X: "ssh"
+
+libslirp v4.6.0 used by QEMU is known to be [broken](https://gitlab.freedesktop.org/slirp/libslirp/-/issues/48).
+If you have libslirp v4.6.0 in `/usr/local/Cellar/libslirp`, you have to downgrade it to v4.5.0:
+
+```console
+brew uninstall --ignore-dependencies libslirp
+wget https://raw.githubusercontent.com/Homebrew/homebrew-core/f2a53ffe2362d2a7e55fd1a8a9bc71c1ec15bb00/Formula/libslirp.rb
+brew install ./libslirp.rb
+```
 
 #### error "field SSHPubKeys must be set"
 
