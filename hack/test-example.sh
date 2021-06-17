@@ -58,9 +58,9 @@ INFO "Starting \"$NAME\" from \"$FILE\""
 trap 'limactl delete -f $NAME' EXIT
 set -x
 if ! limactl start --tty=false "$FILE"; then
-  ERROR "Failed to start \"$NAME\""
-  tail "$HOME/.lima/${NAME}"/*.log
-  exit 1
+	ERROR "Failed to start \"$NAME\""
+	tail "$HOME/.lima/${NAME}"/*.log
+	exit 1
 fi
 
 limactl shell "$NAME" uname -a
@@ -102,8 +102,10 @@ if [[ -n "${CHECKS["containerd-user"]}" ]]; then
 	INFO "Run a nginx container with port forwarding 127.0.0.1:8080"
 	set -x
 	limactl shell "$NAME" nerdctl info
-	limactl shell "$NAME" sh -ec "nerdctl pull nginx:alpine >/dev/null"
-	limactl shell "$NAME" nerdctl run -d --name nginx -p 127.0.0.1:8080:80 nginx:alpine
+	# Use GHCR to avoid hitting Docker Hub rate limit
+	nginx_image="ghcr.io/stargz-containers/nginx:1.19-alpine-org"
+	limactl shell "$NAME" sh -ec "nerdctl pull ${nginx_image} >/dev/null"
+	limactl shell "$NAME" nerdctl run -d --name nginx -p 127.0.0.1:8080:80 ${nginx_image}
 
 	timeout 3m bash -euxc "until curl -f --retry 30 --retry-connrefused http://127.0.0.1:8080; do sleep 3; done"
 
