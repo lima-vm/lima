@@ -29,7 +29,13 @@ NAME="$(basename -s .yaml "$FILE")"
 INFO "Validating \"$FILE\""
 limactl validate "$FILE"
 
-declare -A CHECKS=(["systemd"]="1" ["systemd-strict"]="1" ["mount-home"]="1" ["containerd-user"]="1")
+declare -A CHECKS=(
+	["systemd"]="1"
+	["systemd-strict"]="1"
+	["mount-home"]="1"
+	["containerd-user"]="1"
+	["restart"]="1"
+)
 
 case "$NAME" in
 "alpine")
@@ -93,7 +99,7 @@ if [[ -n "${CHECKS["mount-home"]}" ]]; then
 	got="$(limactl shell "$NAME" cat "$hometmp/random")"
 	INFO "$hometmp/random: expected=${expected}, got=${got}"
 	if [ "$got" != "$expected" ]; then
-		ERROR"Home directory is not shared?"
+		ERROR "Home directory is not shared?"
 		exit 1
 	fi
 fi
@@ -111,6 +117,22 @@ if [[ -n "${CHECKS["containerd-user"]}" ]]; then
 
 	limactl shell "$NAME" nerdctl rm -f nginx
 	set +x
+fi
+
+if [[ -n "${CHECKS["restart"]}" ]]; then
+	INFO "Create file in the guest home directory and verify that it still exists after a restart"
+	limactl shell "$NAME" sh -c 'touch $HOME/sweet-home'
+
+	INFO "Stopping \"$NAME\""
+	limactl stop "$NAME"
+
+	INFO "Restarting \"$NAME\""
+	limactl start "$NAME"
+
+	if ! limactl shell "$NAME" sh -c 'test -f $HOME/sweet-home'; then
+		ERROR "Guest home directory does not persist across restarts"
+		exit 1
+	fi
 fi
 
 INFO "Stopping \"$NAME\""
