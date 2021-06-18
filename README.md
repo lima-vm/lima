@@ -86,6 +86,7 @@ If you have libslirp v4.6.0 in `/usr/local/Cellar/libslirp`, you have to downgra
 brew uninstall --ignore-dependencies libslirp
 wget https://raw.githubusercontent.com/Homebrew/homebrew-core/f2a53ffe2362d2a7e55fd1a8a9bc71c1ec15bb00/Formula/libslirp.rb
 brew install ./libslirp.rb
+brew pin libslirp
 ```
 
 ### Requirements (ARM Mac)
@@ -302,6 +303,7 @@ If you have libslirp v4.6.0 in `/usr/local/Cellar/libslirp`, you have to downgra
 brew uninstall --ignore-dependencies libslirp
 wget https://raw.githubusercontent.com/Homebrew/homebrew-core/f2a53ffe2362d2a7e55fd1a8a9bc71c1ec15bb00/Formula/libslirp.rb
 brew install ./libslirp.rb
+brew pin libslirp
 ```
 
 #### error "field SSHPubKeys must be set"
