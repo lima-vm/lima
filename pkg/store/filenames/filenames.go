@@ -18,3 +18,10 @@ const (
 	HostAgentStdoutLog = "ha.stdout.log"
 	HostAgentStderrLog = "ha.stderr.log"
 )
+
+// LongestSock is the longest socket name.
+// On macOS, the full path of the socket can be at most 104 characters.
+// See unix(4).
+//
+// On Linux, the max length is 108.
+const LongestSock = SerialSock

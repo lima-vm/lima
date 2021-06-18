@@ -1,6 +1,15 @@
 # Internal data structure
 
-## Instance directory (`~/.lima/<INSTANCE>`)
+## Lima home directory (`${LIMA_HOME}`)
+
+Defaults to `~/.lima`.
+
+Note that we intentionally avoid using `~/Library/Application Support/Lima` on macOS.
+
+We use `~/.lima` so that we can have enough space for the length of the socket path,
+which can be only 104 characters on macOS.
+
+### Instance directory (`${LIMA_HOME}/<INSTANCE>`)
 
 An instance directory contains the following files:
 
@@ -31,9 +40,21 @@ Host agent:
 - `ha.stdout.log`: hostagent stdout (JSON lines, see `pkg/hostagent/api.Events`)
 - `ha.stderr.log`: hostagent stderr (human-readable messages)
 
-## Cache directory (`~/Library/Caches/lima/download/by-url-sha256/<SHA256_OF_URL>`)
+## Lima cache directory (`~/Library/Caches/lima`)
+
+Currently hard-coded to `~/Library/Caches/lima` on macOS.
+
+### Download cache (`~/Library/Caches/lima/download/by-url-sha256/<SHA256_OF_URL>`)
 
 The directory contains the following files:
 
 - `url`: raw url text, without "\n"
 - `data`: data
+
+## Environment variables
+
+- `$LIMA_HOME`: The "Lima home directory" (see above).
+  - Default : `~/.lima`
+
+- `$LIMA_INSTANCE`: `lima ...` is expanded to `limactl shell ${LIMA_INSTANCE} ...`.
+  - Default : `default`

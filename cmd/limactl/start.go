@@ -82,10 +82,10 @@ func loadOrCreateInstance(clicontext *cli.Context) (*store.Instance, error) {
 		return nil, err
 	}
 
-	// all socket names should be 6 characters or less
-	maxSockName := filepath.Join(instDir, "serial.sock")
-	if len(maxSockName) >= 104 {
-		return nil, errors.Errorf("Instance name %q too long: %q must be less than 104 characers, but is %d",
+	// the full path of the socket name can be at most 104 chars.
+	maxSockName := filepath.Join(instDir, filenames.LongestSock)
+	if len(maxSockName) > 104 {
+		return nil, errors.Errorf("instance name %q too long: %q can be at most 104 characers, but is %d",
 			instName, maxSockName, len(maxSockName))
 	}
 	if _, err := os.Stat(instDir); !errors.Is(err, os.ErrNotExist) {
