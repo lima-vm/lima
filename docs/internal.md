@@ -7,7 +7,7 @@ Defaults to `~/.lima`.
 Note that we intentionally avoid using `~/Library/Application Support/Lima` on macOS.
 
 We use `~/.lima` so that we can have enough space for the length of the socket path,
-which can be only 104 characters on macOS.
+which must be less than 104 characters on macOS.
 
 ### Instance directory (`${LIMA_HOME}/<INSTANCE>`)
 

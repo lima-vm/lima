@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/AkihiroSuda/lima/pkg/limayaml"
+	"github.com/AkihiroSuda/lima/pkg/osutil"
 	"github.com/AkihiroSuda/lima/pkg/start"
 	"github.com/AkihiroSuda/lima/pkg/store"
 	"github.com/AkihiroSuda/lima/pkg/store/filenames"
@@ -82,11 +83,11 @@ func loadOrCreateInstance(clicontext *cli.Context) (*store.Instance, error) {
 		return nil, err
 	}
 
-	// the full path of the socket name can be at most 104 chars.
+	// the full path of the socket name must be less than UNIX_PATH_MAX chars.
 	maxSockName := filepath.Join(instDir, filenames.LongestSock)
-	if len(maxSockName) > 104 {
-		return nil, errors.Errorf("instance name %q too long: %q can be at most 104 characers, but is %d",
-			instName, maxSockName, len(maxSockName))
+	if len(maxSockName) >= osutil.UnixPathMax {
+		return nil, errors.Errorf("instance name %q too long: %q must be less than UNIX_PATH_MAX=%d characers, but is %d",
+			instName, maxSockName, osutil.UnixPathMax, len(maxSockName))
 	}
 	if _, err := os.Stat(instDir); !errors.Is(err, os.ErrNotExist) {
 		return nil, errors.Errorf("instance %q already exists (%q)", instName, instDir)

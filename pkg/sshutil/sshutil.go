@@ -3,9 +3,9 @@ package sshutil
 import (
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 
+	"github.com/AkihiroSuda/lima/pkg/osutil"
 	"github.com/AkihiroSuda/lima/pkg/store/filenames"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -48,16 +48,8 @@ func DefaultPubKeys() []PubKey {
 
 func SSHArgs(instDir string) ([]string, error) {
 	controlSock := filepath.Join(instDir, filenames.SSHSock)
-	maxSockLen := 104
-	if runtime.GOOS == "linux" {
-		maxSockLen = 108
-	}
-	if len(controlSock) >= maxSockLen {
-		// If the instDir was under `~/Library/Application Support/Lima`,
-		// we could only have 54 chars for the user name and the inst name at maximum:
-		// len("/Users/32charsXXXXXXXXXXXXXXXXXXXXXXXXX/Library/Application Support/Lima/22charsXXXXXXXXXXXXXXX/ssh.sock") = 104
-		// So we do not use `~/Library/Application Support`.
-		return nil, errors.Errorf("socket path %q is too long: > UNIX_PATH_MAX=%d", controlSock, maxSockLen)
+	if len(controlSock) >= osutil.UnixPathMax {
+		return nil, errors.Errorf("socket path %q is too long: >= UNIX_PATH_MAX=%d", controlSock, osutil.UnixPathMax)
 	}
 	args := []string{
 		"-o", "ControlMaster=auto",
