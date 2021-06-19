@@ -79,16 +79,6 @@ For the usage of containerd and nerdctl (contaiNERD ctl), visit https://github.c
 ### Requirements (Intel Mac)
 - QEMU v6.0.0 or later (`brew install qemu`)
 
-NOTE: libslirp v4.6.0 used by QEMU is known to be [broken](https://gitlab.freedesktop.org/slirp/libslirp/-/issues/48).
-If you have libslirp v4.6.0 in `/usr/local/Cellar/libslirp`, you have to downgrade it to v4.5.0:
-
-```console
-brew uninstall --ignore-dependencies libslirp
-wget https://raw.githubusercontent.com/Homebrew/homebrew-core/f2a53ffe2362d2a7e55fd1a8a9bc71c1ec15bb00/Formula/libslirp.rb
-brew install ./libslirp.rb
-brew pin libslirp
-```
-
 ### Requirements (ARM Mac)
 
 - QEMU with `--accel=hvf` support, see https://gist.github.com/nrjdalal/e70249bb5d2e9d844cc203fd11f74c55
@@ -297,14 +287,7 @@ Privileged ports (1-1023) cannot be forwarded. e.g., you have to use 8080, not 8
 #### stuck on "Waiting for the essential requirement 1 of X: "ssh"
 
 libslirp v4.6.0 used by QEMU is known to be [broken](https://gitlab.freedesktop.org/slirp/libslirp/-/issues/48).
-If you have libslirp v4.6.0 in `/usr/local/Cellar/libslirp`, you have to downgrade it to v4.5.0:
-
-```console
-brew uninstall --ignore-dependencies libslirp
-wget https://raw.githubusercontent.com/Homebrew/homebrew-core/f2a53ffe2362d2a7e55fd1a8a9bc71c1ec15bb00/Formula/libslirp.rb
-brew install ./libslirp.rb
-brew pin libslirp
-```
+If you have libslirp v4.6.0 in `/usr/local/Cellar/libslirp`, you have to upgrade it to v4.6.1 or later (`brew upgrade`).
 
 #### error "field SSHPubKeys must be set"
 

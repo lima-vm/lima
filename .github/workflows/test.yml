@@ -64,15 +64,6 @@ jobs:
         run: make
       - name: Install
         run: make install
-      - name: Install libslirp v4.5.0 explicitly (v4.6.0 is broken)
-        # Workaround until https://gitlab.freedesktop.org/slirp/libslirp/-/issues/48 gets fixed
-        # and packaged in homebrew
-        run: |
-          cd /tmp
-          wget https://raw.githubusercontent.com/Homebrew/homebrew-core/f2a53ffe2362d2a7e55fd1a8a9bc71c1ec15bb00/Formula/libslirp.rb
-          brew install ./libslirp.rb
-          brew pin libslirp
-          rm -f libslirp.rb
       - name: Install test dependencies
         # QEMU:      required by Lima itself
         # bash:      required by test-example.sh (OS version of bash is too old)
