@@ -32,11 +32,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y shellcheck
-      - name: Run shellcheck (ignore SC2086)
-        # TODO: do not ignore SC2086
-        # SC2086: "Double quote to prevent globbing and word splitting."
-        # https://github.com/koalaman/shellcheck/wiki/SC2086
-        run: find . -name '*.sh' | xargs shellcheck -e SC2086
+      - name: Run shellcheck
+        run: find . -name '*.sh' | xargs shellcheck
 
   shfmt:
     runs-on: ubuntu-20.04

@@ -23,29 +23,29 @@ if [ "$(awk '$2 == "/" {print $3}' /proc/mounts)" == "tmpfs" ]; then
 			# Looking for a disk that is not mounted or partitioned
 			# shellcheck disable=SC2013
 			for PART in $(awk '/^\/dev\// {gsub("/dev/", ""); print $1}' /proc/mounts); do
-				if [ "${DISK}" == "${PART}" ] || [ -e /sys/block/${DISK}/${PART} ]; then
+				if [ "${DISK}" == "${PART}" ] || [ -e /sys/block/"${DISK}"/"${PART}" ]; then
 					IN_USE=true
 					break
 				fi
 			done
 			if [ "${IN_USE}" == "false" ]; then
-				echo 'type=83' | sfdisk --label dos /dev/${DISK}
-				PART=$(lsblk --list /dev/${DISK} --noheadings --output name,type | awk '$2 == "part" {print $1}')
-				mkfs.ext4 -L data-volume /dev/${PART}
+				echo 'type=83' | sfdisk --label dos /dev/"${DISK}"
+				PART=$(lsblk --list /dev/"${DISK}" --noheadings --output name,type | awk '$2 == "part" {print $1}')
+				mkfs.ext4 -L data-volume /dev/"${PART}"
 				mount -t ext4 /dev/disk/by-label/data-volume /mnt/data
 				for DIR in ${DATADIRS}; do
-					DEST="/mnt/data$(dirname ${DIR})"
-					mkdir -p ${DIR} ${DEST}
-					mv ${DIR} ${DEST}
+					DEST="/mnt/data$(dirname "${DIR}")"
+					mkdir -p "${DIR}" "${DEST}"
+					mv "${DIR}" "${DEST}"
 				done
 				break
 			fi
 		done
 	fi
 	for DIR in ${DATADIRS}; do
-		if [ -d /mnt/data${DIR} ]; then
-			[ -e ${DIR} ] && rm -rf ${DIR}
-			ln -s /mnt/data${DIR} ${DIR}
+		if [ -d /mnt/data"${DIR}" ]; then
+			[ -e "${DIR}" ] && rm -rf "${DIR}"
+			ln -s /mnt/data"${DIR}" "${DIR}"
 		fi
 	done
 fi
