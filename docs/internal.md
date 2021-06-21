@@ -17,7 +17,7 @@ Metadata:
 - `lima.yaml`: the YAML
 
 cloud-init:
-- `cidata.iso`: cloud-init ISO9660 image. See [`cidata.iso`](#cidata-iso).
+- `cidata.iso`: cloud-init ISO9660 image. See [`cidata.iso`](#cidataiso).
 
 disk:
 - `basedisk`: the base image

@@ -25,7 +25,7 @@ It may work on NetBSD and Windows hosts as well.
 
 ✅ Intel on ARM
 
-✅ Various guest Linux distributions: Ubuntu, Debian, Fedora, ...
+✅ Various guest Linux distributions: [Ubuntu](./examples/ubuntu.yaml), [Debian](./examples/debian.yaml), [Fedora](./examples/fedora.yaml), [Alpine](./examples/alpine.yaml), ...
 
 Related project: [sshocker (ssh with file sharing and port forwarding)](https://github.com/AkihiroSuda/sshocker)
 
@@ -209,18 +209,18 @@ Alternatively, you may also directly ssh into the guest: `ssh -p 60022 -o NoHost
 Yes, it should work, but not regularly tested on ARM.
 
 #### "Can I run non-Ubuntu guests?"
-Fedora is also known to work, see [`./examples/fedora.yaml`](./examples/fedora.yaml).
-This file can be loaded with `limactl start ./examples/fedora.yaml`.
+Debian, Fedora, and Alpine are also known to work.
+See [`./examples/`](./examples/).
 
 An image has to satisfy the following requirements:
-- systemd
+- systemd or OpenRC
 - cloud-init
 - The following binaries to be preinstalled:
   - `sudo`
 - The following binaries to be preinstalled, or installable via the package manager:
   - `sshfs`
   - `newuidmap` and `newgidmap`
-- `apt-get` or `dnf` (if you want to contribute support for another package manager, run `git grep apt-get` to find out where to modify)
+- `apt-get`, `dnf`, or `apk` (if you want to contribute support for another package manager, run `git grep apt-get` to find out where to modify)
 
 #### "Can I run other container engines such as Podman?"
 Yes, if you install it.
