@@ -121,6 +121,7 @@ fi
 
 if [[ -n "${CHECKS["restart"]}" ]]; then
 	INFO "Create file in the guest home directory and verify that it still exists after a restart"
+	# shellcheck disable=SC2016
 	limactl shell "$NAME" sh -c 'touch $HOME/sweet-home'
 
 	INFO "Stopping \"$NAME\""
@@ -129,6 +130,7 @@ if [[ -n "${CHECKS["restart"]}" ]]; then
 	INFO "Restarting \"$NAME\""
 	limactl start "$NAME"
 
+	# shellcheck disable=SC2016
 	if ! limactl shell "$NAME" sh -c 'test -f $HOME/sweet-home'; then
 		ERROR "Guest home directory does not persist across restarts"
 		exit 1
