@@ -21,9 +21,7 @@ write_files:
  - content: |
       #!/bin/sh
       set -eu
-      # TODO: rename lima-cidata.boot to lima-cidata,
-      # after deduplicating it in 25-guestagent-base-boot.sh
-      LIMA_CIDATA_MNT="/mnt/lima-cidata.boot"
+      LIMA_CIDATA_MNT="/mnt/lima-cidata"
       LIMA_CIDATA_DEV="/dev/disk/by-label/cidata"
       mkdir -p -m 700 "${LIMA_CIDATA_MNT}"
       mount -o ro,mode=0700,dmode=0700,overriderockperm,exec,uid=0 "${LIMA_CIDATA_DEV}" "${LIMA_CIDATA_MNT}"

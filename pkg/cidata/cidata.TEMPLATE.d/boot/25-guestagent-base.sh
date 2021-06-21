@@ -8,10 +8,7 @@ chown "{{$.User}}" "{{$val}}" || true
 {{- end}}
 
 # Install or update the guestagent binary
-mkdir -p -m 600 /mnt/lima-cidata
-mount -t iso9660 -o ro /dev/disk/by-label/cidata /mnt/lima-cidata
-install -m 755 /mnt/lima-cidata/lima-guestagent /usr/local/bin/lima-guestagent
-umount /mnt/lima-cidata
+install -m 755 "${LIMA_CIDATA_MNT}"/lima-guestagent /usr/local/bin/lima-guestagent
 
 # Launch the guestagent service
 if [ -f /etc/alpine-release ]; then

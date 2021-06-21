@@ -5,10 +5,7 @@ set -eux -o pipefail
 command -v systemctl 2>&1 >/dev/null || exit 0
 
 if [ ! -x /usr/local/bin/nerdctl ]; then
-  mkdir -p -m 600 /mnt/lima-cidata
-  mount -t iso9660 -o ro /dev/disk/by-label/cidata /mnt/lima-cidata
-  tar Cxzf /usr/local /mnt/lima-cidata/nerdctl-full.tgz
-  umount /mnt/lima-cidata
+  tar Cxzf /usr/local "${LIMA_CIDATA_MNT}"/nerdctl-full.tgz
 fi
 {{- if .Containerd.System}}
 mkdir -p /etc/containerd
