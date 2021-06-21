@@ -19,7 +19,6 @@ if command -v apt-get >/dev/null 2>&1; then
 		if ! command -v sshfs >/dev/null 2>&1; then
 			apt-get install -y sshfs
 		fi
-		update_fuse_conf
 	fi
 	if [ "${LIMA_CIDATA_CONTAINERD_SYSTEM}" = 1 ] || [ "${LIMA_CIDATA_CONTAINERD_USER}" = 1 ]; then
 		if [ ! -e /usr/sbin/iptables ]; then
@@ -36,7 +35,6 @@ elif command -v dnf >/dev/null 2>&1; then
 		if ! command -v sshfs >/dev/null 2>&1; then
 			dnf install -y fuse-sshfs
 		fi
-		update_fuse_conf
 	fi
 	if [ "${LIMA_CIDATA_CONTAINERD_SYSTEM}" = 1 ] || [ "${LIMA_CIDATA_CONTAINERD_USER}" = 1 ]; then
 		if [ ! -e /usr/sbin/iptables ]; then
@@ -58,7 +56,10 @@ elif command -v apk >/dev/null 2>&1; then
 			apk update
 			apk add sshfs
 		fi
-		update_fuse_conf
 		modprobe fuse
 	fi
 fi
+
+# update_fuse_conf has to be called after installing all the packages,
+# otherwise apt-get fails with conflict
+update_fuse_conf
