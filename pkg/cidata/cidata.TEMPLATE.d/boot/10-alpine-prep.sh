@@ -32,7 +32,21 @@ chown "{{.User}}" /run/user/{{.UID}}
 chmod 700 /run/user/{{.UID}}
 
 # Install the openrc lima-guestagent service script
-mv /var/lib/lima-guestagent/lima-guestagent.openrc /etc/init.d/lima-guestagent
+cat >/etc/init.d/lima-guestagent <<'EOF'
+#!/sbin/openrc-run
+supervisor=supervise-daemon
+
+name="lima-guestagent"
+description="Forward ports to the lima-hostagent"
+
+export XDG_RUNTIME_DIR="/run/user/{{.UID}}"
+command=/usr/local/bin/lima-guestagent
+command_args="daemon"
+command_background=true
+command_user="{{.User}}:{{.User}}"
+pidfile="${XDG_RUNTIME_DIR}/lima-guestagent.pid"
+EOF
+chmod 755 /etc/init.d/lima-guestagent
 
 # mount /sys/fs/cgroup
 rc-service cgroups start

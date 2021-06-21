@@ -38,23 +38,6 @@ write_files:
    owner: root:root
    path: /var/lib/cloud/scripts/per-boot/00-lima.boot.sh
    permissions: '0755'
-# TODO: embed lima-guestagent.openrc in 10-alpine-prep.boot.sh
- - content: |
-      #!/sbin/openrc-run
-      supervisor=supervise-daemon
-
-      name="lima-guestagent"
-      description="Forward ports to the lima-hostagent"
-
-      export XDG_RUNTIME_DIR="/run/user/{{.UID}}"
-      command=/usr/local/bin/lima-guestagent
-      command_args="daemon"
-      command_background=true
-      command_user="{{.User}}:{{.User}}"
-      pidfile="${XDG_RUNTIME_DIR}/lima-guestagent.pid"
-   owner: root:root
-   path: /var/lib/lima-guestagent/lima-guestagent.openrc
-   permissions: '0755'
 {{- if .Provision}}
 # TODO: move Provision scripts to ISO
  - content: |
