@@ -1,12 +1,12 @@
 #!/bin/sh
 set -eu
 
-INFO(){
-  echo "LIMA| $*"
+INFO() {
+	echo "LIMA| $*"
 }
 
-WARNING(){
-  echo "LIMA| WARNING: $*"
+WARNING() {
+	echo "LIMA| WARNING: $*"
 }
 
 # shellcheck disable=SC2163

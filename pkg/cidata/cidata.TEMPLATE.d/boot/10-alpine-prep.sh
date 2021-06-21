@@ -8,15 +8,15 @@ test -f /etc/alpine-release || exit 0
 BRANCH=edge
 VERSION_ID=$(awk -F= '$1=="VERSION_ID" {print $2}' /etc/os-release)
 case ${VERSION_ID} in
-*_alpha*|*_beta*) BRANCH=edge;;
-*.*.*) BRANCH=v${VERSION_ID%.*};;
+*_alpha* | *_beta*) BRANCH=edge ;;
+*.*.*) BRANCH=v${VERSION_ID%.*} ;;
 esac
 
 for REPO in main community; do
-  URL="https://dl-cdn.alpinelinux.org/alpine/${BRANCH}/${REPO}"
-  if ! grep -q "^${URL}$" /etc/apk/repositories; then
-    echo "${URL}" >> /etc/apk/repositories
-  fi
+	URL="https://dl-cdn.alpinelinux.org/alpine/${BRANCH}/${REPO}"
+	if ! grep -q "^${URL}$" /etc/apk/repositories; then
+		echo "${URL}" >>/etc/apk/repositories
+	fi
 done
 
 # Alpine doesn't use PAM so we need to explicitly allow public key auth

@@ -13,7 +13,7 @@ function ERROR() {
 	echo >&2 "TEST| [ERROR] $*"
 }
 
-if [[ "${BASH_VERSINFO:-0}" -lt 4 ]]; then
+if [[ ${BASH_VERSINFO:-0} -lt 4 ]]; then
 	ERROR "Bash version is too old: ${BASH_VERSION}"
 	exit 1
 fi
@@ -74,13 +74,13 @@ limactl shell "$NAME" uname -a
 limactl shell "$NAME" cat /etc/os-release
 set +x
 
-if [[ -n "${CHECKS["systemd"]}" ]]; then
+if [[ -n ${CHECKS["systemd"]} ]]; then
 	set -x
 	if ! limactl shell "$NAME" systemctl is-system-running --wait; then
-		ERROR "\"systemctl is-system-running\" failed"
+		ERROR '"systemctl is-system-running" failed'
 		limactl shell "$NAME" systemctl
-		if [[ -z "${CHECKS["systemd-strict"]}" ]]; then
-			INFO "Ignoring \"systemctl is-system-running\" failure"
+		if [[ -z ${CHECKS["systemd-strict"]} ]]; then
+			INFO 'Ignoring "systemctl is-system-running" failure'
 		else
 			exit 1
 		fi
@@ -88,7 +88,7 @@ if [[ -n "${CHECKS["systemd"]}" ]]; then
 	set +x
 fi
 
-if [[ -n "${CHECKS["mount-home"]}" ]]; then
+if [[ -n ${CHECKS["mount-home"]} ]]; then
 	hometmp="$HOME/lima-test-tmp"
 	INFO "Testing home access (\"$hometmp\")"
 	rm -rf "$hometmp"
@@ -104,7 +104,7 @@ if [[ -n "${CHECKS["mount-home"]}" ]]; then
 	fi
 fi
 
-if [[ -n "${CHECKS["containerd-user"]}" ]]; then
+if [[ -n ${CHECKS["containerd-user"]} ]]; then
 	INFO "Run a nginx container with port forwarding 127.0.0.1:8080"
 	set -x
 	limactl shell "$NAME" nerdctl info
@@ -119,7 +119,7 @@ if [[ -n "${CHECKS["containerd-user"]}" ]]; then
 	set +x
 fi
 
-if [[ -n "${CHECKS["restart"]}" ]]; then
+if [[ -n ${CHECKS["restart"]} ]]; then
 	INFO "Create file in the guest home directory and verify that it still exists after a restart"
 	# shellcheck disable=SC2016
 	limactl shell "$NAME" sh -c 'touch $HOME/sweet-home'
