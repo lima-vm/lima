@@ -9,6 +9,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/AkihiroSuda/lima/pkg/downloader"
 	"github.com/AkihiroSuda/lima/pkg/iso9660util"
@@ -37,7 +38,6 @@ func GenerateISO9660(isoPath, name string, y *limayaml.LimaYAML) error {
 		Name:       name,
 		User:       u.Username,
 		UID:        uid,
-		Provision:  y.Provision,
 		Containerd: Containerd{System: *y.Containerd.System, User: *y.Containerd.User},
 	}
 
@@ -64,6 +64,18 @@ func GenerateISO9660(isoPath, name string, y *limayaml.LimaYAML) error {
 	layout, err := ExecuteTemplate(args)
 	if err != nil {
 		return err
+	}
+
+	for i, f := range y.Provision {
+		switch f.Mode {
+		case limayaml.ProvisionModeSystem, limayaml.ProvisionModeUser:
+			layout = append(layout, iso9660util.Entry{
+				Path:   fmt.Sprintf("provision.%s/%08d", f.Mode, i),
+				Reader: strings.NewReader(f.Script),
+			})
+		default:
+			return errors.Errorf("unknown provision mode %q", f.Mode)
+		}
 	}
 
 	if guestAgentBinary, err := GuestAgentBinary(y.Arch); err != nil {
