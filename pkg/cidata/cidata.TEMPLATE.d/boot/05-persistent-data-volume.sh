@@ -1,4 +1,6 @@
 #!/bin/bash
+# bash is used for enabling `set -o pipefail`.
+# NOTE: On Alpine, /bin/bash is ash with ASH_BASH_COMPAT, not GNU bash
 set -eux -o pipefail
 
 # Restrict the rest of this script to Alpine until it has been tested with other distros

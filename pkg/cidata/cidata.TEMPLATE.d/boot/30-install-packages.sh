@@ -1,9 +1,10 @@
-#!/bin/bash
-set -eux -o pipefail
+#!/bin/sh
+set -eux
 
 # Install minimum dependencies
 if command -v apt-get 2>&1 >/dev/null; then
-  export DEBIAN_FRONTEND=noninteractive
+  DEBIAN_FRONTEND=noninteractive
+  export DEBIAN_FRONTEND
   apt-get update
   if [ "${LIMA_CIDATA_MOUNTS}" -gt 0 ]; then
     apt-get install -y sshfs

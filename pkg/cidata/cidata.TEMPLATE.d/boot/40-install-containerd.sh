@@ -1,5 +1,5 @@
-#!/bin/bash
-set -eux -o pipefail
+#!/bin/sh
+set -eux
 
 
 if [ "${LIMA_CIDATA_CONTAINERD_SYSTEM}" != 1 ] && [ "${LIMA_CIDATA_CONTAINERD_USER}" != 1 ]; then

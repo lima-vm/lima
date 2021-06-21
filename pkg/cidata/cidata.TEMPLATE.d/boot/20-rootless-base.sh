@@ -1,5 +1,5 @@
-#!/bin/bash
-set -eux -o pipefail
+#!/bin/sh
+set -eux
 
 # This script does not work unless systemd is available
 command -v systemctl 2>&1 >/dev/null || exit 0
