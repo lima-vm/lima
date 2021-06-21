@@ -1,6 +1,7 @@
 package cidata
 
 import (
+	"io/ioutil"
 	"testing"
 
 	"gotest.tools/v3/assert"
@@ -19,11 +20,12 @@ func TestTemplate(t *testing.T) {
 			"/Users/dummy/lima",
 		},
 	}
-	userData, err := GenerateUserData(args)
+	layout, err := ExecuteTemplate(args)
 	assert.NilError(t, err)
-	t.Log(string(userData))
-
-	metaData, err := GenerateMetaData(args)
-	assert.NilError(t, err)
-	t.Log(string(metaData))
+	for _, f := range layout {
+		t.Logf("=== %q ===", f.Path)
+		b, err := ioutil.ReadAll(f.Reader)
+		assert.NilError(t, err)
+		t.Log(string(b))
+	}
 }

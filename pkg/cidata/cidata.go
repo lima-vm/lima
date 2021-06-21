@@ -1,7 +1,6 @@
 package cidata
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"io/fs"
@@ -62,24 +61,9 @@ func GenerateISO9660(isoPath, name string, y *limayaml.LimaYAML) error {
 		return err
 	}
 
-	var layout []iso9660util.Entry
-
-	if userData, err := GenerateUserData(args); err != nil {
+	layout, err := ExecuteTemplate(args)
+	if err != nil {
 		return err
-	} else {
-		layout = append(layout, iso9660util.Entry{
-			Path:   "user-data",
-			Reader: bytes.NewReader(userData),
-		})
-	}
-
-	if metaData, err := GenerateMetaData(args); err != nil {
-		return err
-	} else {
-		layout = append(layout, iso9660util.Entry{
-			Path:   "meta-data",
-			Reader: bytes.NewReader(metaData),
-		})
 	}
 
 	if guestAgentBinary, err := GuestAgentBinary(y.Arch); err != nil {

@@ -1,0 +1,83 @@
+#cloud-config
+# vim:syntax=yaml
+
+growpart:
+  mode: auto
+  devices: ['/']
+
+users:
+  - name: "{{.User}}"
+    uid: "{{.UID}}"
+    homedir: "/home/{{.User}}.linux"
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    lock_passwd: true
+    ssh-authorized-keys:
+    {{- range $val := .SSHPubKeys}}
+      - {{$val}}
+    {{- end}}
+
+write_files:
+ - content: |
+      #!/bin/sh
+      set -eu
+      # TODO: rename lima-cidata.boot to lima-cidata,
+      # after deduplicating it in 25-guestagent-base-boot.sh
+      LIMA_CIDATA_MNT="/mnt/lima-cidata.boot"
+      LIMA_CIDATA_DEV="/dev/disk/by-label/cidata"
+      mkdir -p -m 700 "${LIMA_CIDATA_MNT}"
+      mount -o ro,mode=0700,dmode=0700,overriderockperm,exec,uid=0 "${LIMA_CIDATA_DEV}" "${LIMA_CIDATA_MNT}"
+      export LIMA_CIDATA_MNT
+      CODE=0
+      for f in "${LIMA_CIDATA_MNT}"/boot/*; do
+        echo "Executing $f"
+        if ! "$f"; then
+          echo "Failed to execute $f"
+          CODE=1
+        fi
+      done
+      exit "$CODE"
+   owner: root:root
+   path: /var/lib/cloud/scripts/per-boot/00-lima.boot.sh
+   permissions: '0755'
+# TODO: embed lima-guestagent.openrc in 10-alpine-prep.boot.sh
+ - content: |
+      #!/sbin/openrc-run
+      supervisor=supervise-daemon
+
+      name="lima-guestagent"
+      description="Forward ports to the lima-hostagent"
+
+      export XDG_RUNTIME_DIR="/run/user/{{.UID}}"
+      command=/usr/local/bin/lima-guestagent
+      command_args="daemon"
+      command_background=true
+      command_user="{{.User}}:{{.User}}"
+      pidfile="${XDG_RUNTIME_DIR}/lima-guestagent.pid"
+   owner: root:root
+   path: /var/lib/lima-guestagent/lima-guestagent.openrc
+   permissions: '0755'
+{{- if .Provision}}
+# TODO: move Provision scripts to ISO
+ - content: |
+      #!/bin/bash
+      set -eu -o pipefail
+      {{- range $i, $val := .Provision}}
+      {{- $script := printf "/var/lib/lima-guestagent/provision-%02d-%s" $i $val.Mode}}
+      {{- if eq $val.Mode "system"}}
+      {{$script}}
+      {{- else}}
+      until [ -e "/run/user/{{.UID}}/systemd/private" ]; do sleep 3; done
+      sudo -iu "{{.User}}" "XDG_RUNTIME_DIR=/run/user/{{.UID}}" {{$script}}
+      {{- end}}
+      {{- end}}
+   owner: root:root
+   path: /var/lib/cloud/scripts/per-boot/50-execute-provision-scripts.boot.sh
+   permissions: '0755'
+{{- end}}
+{{- range $i, $val := .Provision}}
+ - content: {{printf "%q" $val.Script}}
+   owner: root:root
+   path: {{printf "/var/lib/lima-guestagent/provision-%02d-%s" $i $val.Mode}}
+   permissions: '0755'
+{{- end}}
