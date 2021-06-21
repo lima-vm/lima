@@ -6,8 +6,8 @@ command -v systemctl 2>&1 >/dev/null || exit 0
 
 # Set up env
 for f in .profile .bashrc; do
-  if ! grep -q "# Lima BEGIN" "/home/{{.User}}.linux/$f"; then
-    cat >>"/home/{{.User}}.linux/$f" <<EOF
+  if ! grep -q "# Lima BEGIN" "/home/${LIMA_CIDATA_USER}.linux/$f"; then
+    cat >>"/home/${LIMA_CIDATA_USER}.linux/$f" <<EOF
 # Lima BEGIN
 # Make sure iptables and mount.fuse3 are available
 PATH="$PATH:/usr/sbin:/sbin"
@@ -16,7 +16,7 @@ CONTAINERD_SNAPSHOTTER="fuse-overlayfs"
 export PATH CONTAINERD_SNAPSHOTTER
 # Lima END
 EOF
-    chown "{{.User}}" "/home/{{.User}}.linux/$f"
+    chown "${LIMA_CIDATA_USER}" "/home/${LIMA_CIDATA_USER}.linux/$f"
   fi
 done
 # Enable cgroup delegation (only meaningful on cgroup v2)
@@ -42,8 +42,8 @@ fi
 
 # Set up subuid
 for f in /etc/subuid /etc/subgid; do
-  grep -qw "{{.User}}" $f || echo "{{.User}}:100000:65536" >> $f
+  grep -qw "${LIMA_CIDATA_USER}" $f || echo "${LIMA_CIDATA_USER}:100000:65536" >> $f
 done
 
 # Start systemd session
-loginctl enable-linger "{{.User}}"
+loginctl enable-linger "${LIMA_CIDATA_USER}"

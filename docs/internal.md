@@ -64,6 +64,7 @@ The directory contains the following files:
 
 - `user-data`: [Cloud-init user-data](https://cloudinit.readthedocs.io/en/latest/topics/format.html)
 - `meta-data`: [Cloud-init meta-data](https://cloudinit.readthedocs.io/en/latest/topics/instancedata.html)
+- `lima.env`: the environment variables
 - `lima-guestagent`: Lima guest agent binary
 - `nerdctl-full.tgz`: [`nerdctl-full-<VERSION>-linux-<ARCH>.tar.gz`](https://github.com/containerd/nerdctl/releases)
 - `boot/*`: Boot scripts
@@ -77,3 +78,9 @@ The volume label is "cidata", as defined by [cloud-init NoCloud](https://cloudin
 
 ### Environment variables
 - `LIMA_CIDATA_MNT`: the mount point of the disk. `/mnt/lima-cidata`.
+- `LIMA_CIDATA_USER`: the user name string
+- `LIMA_CIDATA_UID`: the numeric UID
+- `LIMA_CIDATA_MOUNTS`: the number of the Lima mounts
+- `LIMA_CIDATA_MOUNTS_%d_MOUNTPOINT`: the N-th mount point of Lima mounts (N=0, 1, ...)
+- `LIMA_CIDATA_CONTAINERD_USER`: set to "1" if rootless containerd to be set up
+- `LIMA_CIDATA_CONTAINERD_SYSTEM`: set to "1" if system-wide containerd to be set up

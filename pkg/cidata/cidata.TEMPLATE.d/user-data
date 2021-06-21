@@ -20,12 +20,13 @@ users:
 write_files:
  - content: |
       #!/bin/sh
-      set -eu
+      set -eux
       LIMA_CIDATA_MNT="/mnt/lima-cidata"
       LIMA_CIDATA_DEV="/dev/disk/by-label/cidata"
       mkdir -p -m 700 "${LIMA_CIDATA_MNT}"
       mount -o ro,mode=0700,dmode=0700,overriderockperm,exec,uid=0 "${LIMA_CIDATA_DEV}" "${LIMA_CIDATA_MNT}"
       export LIMA_CIDATA_MNT
+      while read line ; do export "$line"; done <"${LIMA_CIDATA_MNT}"/lima.env
       CODE=0
       for f in "${LIMA_CIDATA_MNT}"/boot/*; do
         echo "Executing $f"
@@ -44,11 +45,11 @@ write_files:
         done
       fi
       if [ -d "${LIMA_CIDATA_MNT}"/provision.user ]; then
-        until [ -e "/run/user/{{.UID}}/systemd/private" ]; do sleep 3; done
+        until [ -e "/run/user/${LIMA_CIDATA_UID}}/systemd/private" ]; do sleep 3; done
         for f in "${LIMA_CIDATA_MNT}"/provision.user/*; do
-          echo "Executing $f (as user {{.User}})"
-          if ! sudo -iu "{{.User}}" "XDG_RUNTIME_DIR=/run/user/{{.UID}}" "$f"; then
-            echo "Failed to execute $f (as user {{.User}})"
+          echo "Executing $f (as user ${LIMA_CIDATA_USER})"
+          if ! sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "$f"; then
+            echo "Failed to execute $f (as user ${LIMA_CIDATA_USER})"
             CODE=1
           fi
         done
