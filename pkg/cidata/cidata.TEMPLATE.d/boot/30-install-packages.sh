@@ -16,26 +16,38 @@ if command -v apt-get >/dev/null 2>&1; then
 	export DEBIAN_FRONTEND
 	apt-get update
 	if [ "${LIMA_CIDATA_MOUNTS}" -gt 0 ]; then
-		apt-get install -y sshfs
+		if ! command -v sshfs >/dev/null 2>&1; then
+			apt-get install -y sshfs
+		fi
 		update_fuse_conf
 	fi
 	if [ "${LIMA_CIDATA_CONTAINERD_SYSTEM}" = 1 ] || [ "${LIMA_CIDATA_CONTAINERD_USER}" = 1 ]; then
-		apt-get install -y iptables
+		if [ ! -e /usr/sbin/iptables ]; then
+			apt-get install -y iptables
+		fi
 	fi
 	if [ "${LIMA_CIDATA_CONTAINERD_USER}" = 1 ]; then
-		apt-get install -y uidmap fuse3 dbus-user-session
+		if ! command -v newuidmap >/dev/null 2>&1; then
+			apt-get install -y uidmap fuse3 dbus-user-session
+		fi
 	fi
 elif command -v dnf >/dev/null 2>&1; then
 	if [ "${LIMA_CIDATA_MOUNTS}" -gt 0 ]; then
-		dnf install -y fuse-sshfs
+		if ! command -v sshfs >/dev/null 2>&1; then
+			dnf install -y fuse-sshfs
+		fi
 		update_fuse_conf
 	fi
 	if [ "${LIMA_CIDATA_CONTAINERD_SYSTEM}" = 1 ] || [ "${LIMA_CIDATA_CONTAINERD_USER}" = 1 ]; then
-		dnf install -y iptables
+		if [ ! -e /usr/sbin/iptables ]; then
+			dnf install -y iptables
+		fi
 	fi
 	if [ "${LIMA_CIDATA_CONTAINERD_USER}" = 1 ]; then
-		dnf install -y shadow-utils fuse3
-		if [ ! -f /usr/bin/fusermount ]; then
+		if ! command -v newuidmap >/dev/null 2>&1; then
+			dnf install -y shadow-utils fuse3
+		fi
+		if [ ! -e /usr/bin/fusermount ]; then
 			# Workaround for https://github.com/containerd/stargz-snapshotter/issues/340
 			ln -s fusermount3 /usr/bin/fusermount
 		fi
