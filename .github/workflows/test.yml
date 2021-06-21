@@ -21,6 +21,23 @@ jobs:
           version: v1.35
           args: --verbose
 
+  shellcheck:
+    runs-on: ubuntu-20.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+      - name: Install shellcheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+      - name: Run shellcheck (ignore SC2086)
+        # TODO: do not ignore SC2086
+        # SC2086: "Double quote to prevent globbing and word splitting."
+        # https://github.com/koalaman/shellcheck/wiki/SC2086
+        run: find . -name '*.sh' | xargs shellcheck -e SC2086
+
   basic:
     name: Basic tests
     runs-on: ${{ matrix.os }}
