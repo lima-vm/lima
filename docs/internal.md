@@ -67,7 +67,8 @@ The directory contains the following files:
 - `lima.env`: the environment variables
 - `lima-guestagent`: Lima guest agent binary
 - `nerdctl-full.tgz`: [`nerdctl-full-<VERSION>-linux-<ARCH>.tar.gz`](https://github.com/containerd/nerdctl/releases)
-- `boot/*`: Boot scripts
+- `boot.sh`: Boot script
+- `boot/*`: Boot script modules
 - `provision.system/*`: Custom provision scripts (system)
 - `provision.user/*`: Custom provision scripts (user)
 
