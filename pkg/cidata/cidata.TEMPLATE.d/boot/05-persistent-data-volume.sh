@@ -22,7 +22,7 @@ if [ "$(awk '$2 == "/" {print $3}' /proc/mounts)" == "tmpfs" ]; then
       IN_USE=false
       # Looking for a disk that is not mounted or partitioned
       for PART in $(awk '/^\/dev\// {gsub("/dev/", ""); print $1}' /proc/mounts); do
-        if [ "${DISK}" == "${PART}" -o -e /sys/block/${DISK}/${PART} ]; then
+        if [ "${DISK}" == "${PART}" ] || [ -e /sys/block/${DISK}/${PART} ]; then
           IN_USE=true
           break
         fi
