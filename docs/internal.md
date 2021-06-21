@@ -17,7 +17,7 @@ Metadata:
 - `lima.yaml`: the YAML
 
 cloud-init:
-- `cidata.iso`: cloud-init ISO9660 image. (`user-data`, `meta-data`, `lima-guestagent.Linux-<ARCH>`)
+- `cidata.iso`: cloud-init ISO9660 image. See [`cidata.iso`](#cidata-iso).
 
 disk:
 - `basedisk`: the base image
@@ -58,3 +58,30 @@ The directory contains the following files:
 
 - `$LIMA_INSTANCE`: `lima ...` is expanded to `limactl shell ${LIMA_INSTANCE} ...`.
   - Default : `default`
+
+## `cidata.iso`
+`cidata.iso` contains the following files:
+
+- `user-data`: [Cloud-init user-data](https://cloudinit.readthedocs.io/en/latest/topics/format.html)
+- `meta-data`: [Cloud-init meta-data](https://cloudinit.readthedocs.io/en/latest/topics/instancedata.html)
+- `lima.env`: the environment variables
+- `lima-guestagent`: Lima guest agent binary
+- `nerdctl-full.tgz`: [`nerdctl-full-<VERSION>-linux-<ARCH>.tar.gz`](https://github.com/containerd/nerdctl/releases)
+- `boot.sh`: Boot script
+- `boot/*`: Boot script modules
+- `provision.system/*`: Custom provision scripts (system)
+- `provision.user/*`: Custom provision scripts (user)
+
+Max file name length = 30
+
+### Volume label
+The volume label is "cidata", as defined by [cloud-init NoCloud](https://cloudinit.readthedocs.io/en/latest/topics/datasources/nocloud.html).
+
+### Environment variables
+- `LIMA_CIDATA_MNT`: the mount point of the disk. `/mnt/lima-cidata`.
+- `LIMA_CIDATA_USER`: the user name string
+- `LIMA_CIDATA_UID`: the numeric UID
+- `LIMA_CIDATA_MOUNTS`: the number of the Lima mounts
+- `LIMA_CIDATA_MOUNTS_%d_MOUNTPOINT`: the N-th mount point of Lima mounts (N=0, 1, ...)
+- `LIMA_CIDATA_CONTAINERD_USER`: set to "1" if rootless containerd to be set up
+- `LIMA_CIDATA_CONTAINERD_SYSTEM`: set to "1" if system-wide containerd to be set up

@@ -1,0 +1,32 @@
+#cloud-config
+# vim:syntax=yaml
+
+growpart:
+  mode: auto
+  devices: ['/']
+
+users:
+  - name: "{{.User}}"
+    uid: "{{.UID}}"
+    homedir: "/home/{{.User}}.linux"
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    lock_passwd: true
+    ssh-authorized-keys:
+    {{- range $val := .SSHPubKeys}}
+      - {{$val}}
+    {{- end}}
+
+write_files:
+ - content: |
+      #!/bin/sh
+      set -eux
+      LIMA_CIDATA_MNT="/mnt/lima-cidata"
+      LIMA_CIDATA_DEV="/dev/disk/by-label/cidata"
+      mkdir -p -m 700 "${LIMA_CIDATA_MNT}"
+      mount -o ro,mode=0700,dmode=0700,overriderockperm,exec,uid=0 "${LIMA_CIDATA_DEV}" "${LIMA_CIDATA_MNT}"
+      export LIMA_CIDATA_MNT
+      exec "${LIMA_CIDATA_MNT}"/boot.sh
+   owner: root:root
+   path: /var/lib/cloud/scripts/per-boot/00-lima.boot.sh
+   permissions: '0755'
