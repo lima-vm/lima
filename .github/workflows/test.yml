@@ -21,6 +21,35 @@ jobs:
           version: v1.35
           args: --verbose
 
+  shellcheck:
+    runs-on: ubuntu-20.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+      - name: Install shellcheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+      - name: Run shellcheck
+        run: find . -name '*.sh' | xargs shellcheck
+
+  shfmt:
+    runs-on: ubuntu-20.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/setup-go@v2
+        with:
+          go-version: 1.16.x
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+      - name: Install shfmt
+        run: GO111MODULE=on go get mvdan.cc/sh/v3/cmd/shfmt
+      - name: Run shfmt
+        run: find . -name '*.sh' | xargs shfmt -s -d
+
   basic:
     name: Basic tests
     runs-on: ${{ matrix.os }}
