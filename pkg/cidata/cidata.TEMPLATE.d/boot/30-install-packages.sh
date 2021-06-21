@@ -11,7 +11,7 @@ update_fuse_conf(){
 }
 
 # Install minimum dependencies
-if command -v apt-get 2>&1 >/dev/null; then
+if command -v apt-get >/dev/null 2>&1; then
   DEBIAN_FRONTEND=noninteractive
   export DEBIAN_FRONTEND
   apt-get update
@@ -25,7 +25,7 @@ if command -v apt-get 2>&1 >/dev/null; then
   if [ "${LIMA_CIDATA_CONTAINERD_USER}" = 1 ]; then
     apt-get install -y uidmap fuse3 dbus-user-session
   fi
-elif command -v dnf 2>&1 >/dev/null; then
+elif command -v dnf >/dev/null 2>&1; then
   if [ "${LIMA_CIDATA_MOUNTS}" -gt 0 ]; then
     dnf install -y fuse-sshfs
     update_fuse_conf
@@ -40,9 +40,9 @@ elif command -v dnf 2>&1 >/dev/null; then
       ln -s fusermount3 /usr/bin/fusermount
     fi
   fi
-elif command -v apk 2>&1 >/dev/null; then
+elif command -v apk >/dev/null 2>&1; then
   if [ "${LIMA_CIDATA_MOUNTS}" -gt 0 ]; then
-    if ! command -v sshfs 2>&1 >/dev/null; then
+    if ! command -v sshfs >/dev/null 2>&1; then
       apk update
       apk add sshfs
     fi

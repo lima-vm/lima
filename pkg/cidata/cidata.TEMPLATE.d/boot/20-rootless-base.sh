@@ -2,7 +2,7 @@
 set -eux
 
 # This script does not work unless systemd is available
-command -v systemctl 2>&1 >/dev/null || exit 0
+command -v systemctl >/dev/null 2>&1 || exit 0
 
 # Set up env
 for f in .profile .bashrc; do

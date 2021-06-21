@@ -7,7 +7,7 @@ if [ "${LIMA_CIDATA_CONTAINERD_SYSTEM}" != 1 ] && [ "${LIMA_CIDATA_CONTAINERD_US
 fi
 
 # This script does not work unless systemd is available
-command -v systemctl 2>&1 >/dev/null || exit 0
+command -v systemctl >/dev/null 2>&1 || exit 0
 
 if [ ! -x /usr/local/bin/nerdctl ]; then
   tar Cxzf /usr/local "${LIMA_CIDATA_MNT}"/nerdctl-full.tgz
@@ -42,7 +42,7 @@ EOF
   chown -R "${LIMA_CIDATA_USER}" "/home/${LIMA_CIDATA_USER}.linux/.config"
   fi
   selinux=
-  if command -v selinuxenabled 2>&1 >/dev/null && selinuxenabled; then
+  if command -v selinuxenabled >/dev/null 2>&1 && selinuxenabled; then
     selinux=1
   fi
   if [ ! -e "/home/${LIMA_CIDATA_USER}}}.linux/.config/systemd/user/containerd.service" ]; then
