@@ -8,6 +8,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const epsilon = 1 * time.Second
+
 // PropagateJSON propagates JSONFormatter lines.
 //
 // PanicLevel and FatalLevel are converted to ErrorLevel.
@@ -24,7 +26,7 @@ func PropagateJSON(logger *logrus.Logger, jsonLine []byte, header string, begin 
 	if err := json.Unmarshal(jsonLine, &j); err != nil {
 		goto fallback
 	}
-	if !j.Time.IsZero() && !begin.IsZero() && begin.After(j.Time) {
+	if !j.Time.IsZero() && !begin.IsZero() && begin.After(j.Time.Add(epsilon)) {
 		return
 	}
 	lv, err = logrus.ParseLevel(j.Level)
