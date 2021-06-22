@@ -65,9 +65,6 @@ func InstanceDir(name string) (string, error) {
 
 // LoadYAMLByFilePath loads and validates the yaml.
 func LoadYAMLByFilePath(filePath string) (*limayaml.LimaYAML, error) {
-	if _, err := os.Stat(filePath); err != nil {
-		return nil, err
-	}
 	yContent, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, err
