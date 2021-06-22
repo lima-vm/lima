@@ -13,6 +13,7 @@ import (
 	"github.com/AkihiroSuda/lima/pkg/start"
 	"github.com/AkihiroSuda/lima/pkg/store"
 	"github.com/AkihiroSuda/lima/pkg/store/filenames"
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/containerd/containerd/identifiers"
 	"github.com/mattn/go-isatty"
 	"github.com/norouter/norouter/cmd/norouter/editorcmd"
@@ -94,14 +95,21 @@ func loadOrCreateInstance(clicontext *cli.Context) (*store.Instance, error) {
 	}
 
 	if clicontext.Bool("tty") {
-		yBytes, err = openEditor(clicontext, instName, yBytes)
+		answerOpenEditor, err := askWhetherToOpenEditor(instName)
 		if err != nil {
-			return nil, err
+			logrus.WithError(err).Warn("Failed to open TUI")
+			answerOpenEditor = false
 		}
-		if len(yBytes) == 0 {
-			logrus.Info("Aborting, as requested by saving the file with empty content")
-			os.Exit(0)
-			return nil, errors.New("should not reach here")
+		if answerOpenEditor {
+			yBytes, err = openEditor(clicontext, instName, yBytes)
+			if err != nil {
+				return nil, err
+			}
+			if len(yBytes) == 0 {
+				logrus.Info("Aborting, as requested by saving the file with empty content")
+				os.Exit(0)
+				return nil, errors.New("should not reach here")
+			}
 		}
 	} else {
 		logrus.Info("Terminal is not available, proceeding without opening an editor")
@@ -127,6 +135,32 @@ func loadOrCreateInstance(clicontext *cli.Context) (*store.Instance, error) {
 		return nil, err
 	}
 	return store.Inspect(instName)
+}
+
+func askWhetherToOpenEditor(name string) (bool, error) {
+	var ans string
+	prompt := &survey.Select{
+		Message: fmt.Sprintf("Creating an instance %q", name),
+		Options: []string{
+			"Proceed with the default configuration",
+			"Open an editor to override the configuration",
+			"Exit",
+		},
+	}
+	if err := survey.AskOne(prompt, &ans); err != nil {
+		return false, err
+	}
+	switch ans {
+	case prompt.Options[0]:
+		return false, nil
+	case prompt.Options[1]:
+		return true, nil
+	case prompt.Options[2]:
+		os.Exit(0)
+		return false, errors.New("should not reach here")
+	default:
+		return false, errors.Errorf("unexpected answer %q", ans)
+	}
 }
 
 // openEditor opens an editor, and returns the content (not path) of the modified yaml.
