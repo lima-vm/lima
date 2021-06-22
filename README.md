@@ -9,7 +9,6 @@ Lima launches Linux virtual machines with automatic file sharing, port forwardin
 Lima can be considered as a some sort of unofficial "macOS subsystem for Linux", or "containerd for Mac".
 
 Lima is expected to be used on macOS hosts, but can be used on Linux hosts as well.
-It may work on NetBSD and Windows hosts as well.
 
 ✅ Automatic file sharing
 
