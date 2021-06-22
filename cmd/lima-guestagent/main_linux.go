@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"os"
 	"strings"
 
@@ -31,14 +30,10 @@ func newApp() *cli.App {
 		if clicontext.Bool("debug") {
 			logrus.SetLevel(logrus.DebugLevel)
 		}
-		if os.Geteuid() == 0 {
-			return errors.New("must not run as the root")
-		}
 		return nil
 	}
 	app.Commands = []*cli.Command{
 		daemonCommand,
-		installSystemdCommand,
 	}
 	return app
 }

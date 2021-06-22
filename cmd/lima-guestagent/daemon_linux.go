@@ -5,7 +5,8 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"path/filepath"
+	"os/user"
+	"strconv"
 	"time"
 
 	"github.com/AkihiroSuda/lima/pkg/guestagent"
@@ -22,13 +23,11 @@ var daemonCommand = &cli.Command{
 		&cli.StringFlag{
 			Name:  "socket",
 			Usage: "socket",
-			Value: func() string {
-				if xrd := os.Getenv("XDG_RUNTIME_DIR"); xrd != "" {
-					return filepath.Join(xrd, "lima-guestagent.sock")
-				}
-				logrus.Warn("$XDG_RUNTIME_DIR is not set, cannot determine the socket name")
-				return ""
-			}(),
+			Value: "/run/lima-guestagent.sock",
+		},
+		&cli.StringFlag{
+			Name:  "socket-owner",
+			Usage: "socket owner user",
 		},
 		&cli.DurationFlag{
 			Name:  "tick",
@@ -47,9 +46,6 @@ func daemonAction(clicontext *cli.Context) error {
 	tick := clicontext.Duration("tick")
 	if tick == 0 {
 		return errors.New("tick must be specified")
-	}
-	if os.Geteuid() == 0 {
-		return errors.New("must not run as the root")
 	}
 	logrus.Infof("event tick: %v", tick)
 
@@ -75,6 +71,23 @@ func daemonAction(clicontext *cli.Context) error {
 	l, err := net.Listen("unix", socket)
 	if err != nil {
 		return err
+	}
+	if socketOwner := clicontext.String("socket-owner"); socketOwner != "" {
+		u, err := user.Lookup(socketOwner)
+		if err != nil {
+			return err
+		}
+		uid, err := strconv.Atoi(u.Uid)
+		if err != nil {
+			return err
+		}
+		gid, err := strconv.Atoi(u.Gid)
+		if err != nil {
+			return err
+		}
+		if err := os.Chown(socket, uid, gid); err != nil {
+			return err
+		}
 	}
 	logrus.Infof("serving the guest agent on %q", socket)
 	return srv.Serve(l)

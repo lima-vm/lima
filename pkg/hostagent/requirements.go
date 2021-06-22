@@ -106,16 +106,15 @@ fi
 		description: "the guest agent to be running",
 		script: `#!/bin/bash
 set -eux -o pipefail
-sock="/run/user/$(id -u)/lima-guestagent.sock"
+sock="/run/lima-guestagent.sock"
 if ! timeout 30s bash -c "until [ -S \"${sock}\" ]; do sleep 3; done"; then
 	echo >&2 "lima-guestagent is not installed yet"
 	exit 1
 fi
 `,
-		debugHint: `The guest agent (/run/user/$UID/lima-guestagent.sock) does not seem running.
+		debugHint: `The guest agent (/run/lima-guestagent.sock) does not seem running.
 Make sure that you are using an officially supported image.
 Also see "/var/log/cloud-init-output.log" in the guest.
-A possible workaround is to run "lima-guestagent install-systemd" in the guest.
 `,
 	})
 	return req

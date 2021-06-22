@@ -281,8 +281,7 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 	// TODO: use vSock (when QEMU for macOS gets support for vSock)
 
 	localUnix := filepath.Join(a.instDir, filenames.GuestAgentSock)
-	// guest should have same UID as the host (specified in cidata)
-	remoteUnix := fmt.Sprintf("/run/user/%d/lima-guestagent.sock", os.Getuid())
+	const remoteUnix = "/run/lima-guestagent.sock"
 
 	for {
 		if !isGuestAgentSocketAccessible(ctx, localUnix) {
