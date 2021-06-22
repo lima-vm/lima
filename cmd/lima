@@ -13,6 +13,8 @@ if [ "$#" -eq 1 ]; then
     echo
     echo "See \`${LIMACTL} shell --help\` for further information."
     exit 0
+  elif [ "$1" = "-v" ] || [ "$1" = "--version" ]; then
+    exec "$LIMACTL" "$@"
   fi
 fi
 
