@@ -80,6 +80,8 @@ func Start(ctx context.Context, inst *store.Instance) error {
 	haCmd.Stdout = haStdoutW
 	haCmd.Stderr = haStderrW
 
+	begin := time.Now() // used for logrus propagation
+
 	if err := haCmd.Start(); err != nil {
 		return err
 	}
@@ -88,7 +90,7 @@ func Start(ctx context.Context, inst *store.Instance) error {
 		return err
 	}
 
-	return watchHostAgentEvents(ctx, inst.Name, haStdoutPath, haStderrPath)
+	return watchHostAgentEvents(ctx, inst.Name, haStdoutPath, haStderrPath, begin)
 	// leave the hostagent process running
 }
 
@@ -106,7 +108,7 @@ func waitHostAgentStart(ctx context.Context, haPIDPath, haStderrPath string) err
 	}
 }
 
-func watchHostAgentEvents(ctx context.Context, instName, haStdoutPath, haStderrPath string) error {
+func watchHostAgentEvents(ctx context.Context, instName, haStdoutPath, haStderrPath string, begin time.Time) error {
 	ctx2, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 
@@ -142,7 +144,7 @@ func watchHostAgentEvents(ctx context.Context, instName, haStdoutPath, haStderrP
 		return false
 	}
 
-	if xerr := hostagentapi.WatchEvents(ctx2, haStdoutPath, haStderrPath, onEvent); xerr != nil {
+	if xerr := hostagentapi.WatchEvents(ctx2, haStdoutPath, haStderrPath, begin, onEvent); xerr != nil {
 		return xerr
 	}
 

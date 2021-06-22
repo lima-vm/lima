@@ -59,16 +59,17 @@ func stopInstanceGracefully(inst *store.Instance) error {
 		return errors.Errorf("expected status %q, got %q", store.StatusRunning, inst.Status)
 	}
 
+	begin := time.Now() // used for logrus propagation
 	logrus.Infof("Sending SIGINT to hostagent process %d", inst.HostAgentPID)
 	if err := syscall.Kill(inst.HostAgentPID, syscall.SIGINT); err != nil {
 		logrus.Error(err)
 	}
 
 	logrus.Info("Waiting for the host agent and the qemu processes to shut down")
-	return waitForHostAgentTermination(context.TODO(), inst)
+	return waitForHostAgentTermination(context.TODO(), inst, begin)
 }
 
-func waitForHostAgentTermination(ctx context.Context, inst *store.Instance) error {
+func waitForHostAgentTermination(ctx context.Context, inst *store.Instance, begin time.Time) error {
 	ctx2, cancel := context.WithTimeout(ctx, 3*time.Minute)
 	defer cancel()
 
@@ -87,7 +88,7 @@ func waitForHostAgentTermination(ctx context.Context, inst *store.Instance) erro
 	haStdoutPath := filepath.Join(inst.Dir, filenames.HostAgentStdoutLog)
 	haStderrPath := filepath.Join(inst.Dir, filenames.HostAgentStderrLog)
 
-	if err := hostagentapi.WatchEvents(ctx2, haStdoutPath, haStderrPath, onEvent); err != nil {
+	if err := hostagentapi.WatchEvents(ctx2, haStdoutPath, haStderrPath, begin, onEvent); err != nil {
 		return err
 	}
 
