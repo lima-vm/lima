@@ -1,4 +1,3 @@
-[[⬇️ **Download]**](https://github.com/AkihiroSuda/lima/releases)
 [[📖**Getting started]**](#getting-started)
 [[❓**FAQs & Troubleshooting]**](#faqs--troubleshooting)
 
@@ -75,22 +74,32 @@ http://127.0.0.1:8080 is accessible from both macOS and Linux.
 For the usage of containerd and nerdctl (contaiNERD ctl), visit https://github.com/containerd/containerd and https://github.com/containerd/nerdctl.
 
 ## Getting started
-### Requirements (Intel Mac)
-- QEMU v6.0.0 or later (`brew install qemu`)
+### Installation
 
-### Requirements (ARM Mac)
+[Homebrew package](https://github.com/Homebrew/homebrew-core/blob/master/Formula/lima.rb) is available for Intel Mac.
 
-- QEMU with `--accel=hvf` support, see https://gist.github.com/nrjdalal/e70249bb5d2e9d844cc203fd11f74c55
+```console
+$ brew install lima
+```
+
+<details>
+<summary>Manual installation steps (required for ARM Mac)</summary>
+<p>
+
+- Install recent version of QEMU. v6.0.0 or later is recommended.
+
+- On ARM hosts, QEMU has to be patched for enabling `--accel=hvf` support. See https://gist.github.com/nrjdalal/e70249bb5d2e9d844cc203fd11f74c55
+
+- Download the binary archive of Lima from https://github.com/AkihiroSuda/lima/releases ,
+and extract it under `/usr/local` (or somewhere else).
+
+- To install Lima from the source, run `make && make install`.
 
 > **NOTE**
 > Lima is not regularly tested on ARM Mac.
 
-### Install
-
-Download the binary archive from https://github.com/AkihiroSuda/lima/releases ,
-and extract it under `/usr/local` (or somewhere else).
-
-To install from the source, run `make && make install`.
+</p>
+</details>
 
 ### Usage
 
@@ -163,7 +172,6 @@ The current default spec:
 :pray:
 - [Test on ARM Mac](https://github.com/AkihiroSuda/lima/issues/42)
 - Performance optimization
-- [Homebrew](https://github.com/AkihiroSuda/lima/issues/37)
 - More guest distros
 - Windows hosts
 - GUI with system tray icon (Qt or Electron, for portability)
