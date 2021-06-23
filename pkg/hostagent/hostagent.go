@@ -159,12 +159,9 @@ func (a *HostAgent) Run(ctx context.Context) error {
 	}
 	stBooting := stBase
 	a.emitEvent(ctx, hostagentapi.Event{Status: stBooting})
-	sshFixCmd := exec.Command("ssh-keygen",
-		"-R", fmt.Sprintf("[127.0.0.1]:%d", sshLocalPort),
-		"-R", fmt.Sprintf("[localhost]:%d", sshLocalPort),
-	)
-	if out, err := sshFixCmd.CombinedOutput(); err != nil {
-		return errors.Wrapf(err, "failed to run %v: %q", sshFixCmd.Args, string(out))
+	if err := sshutil.RemoveKnownHostEntries(sshLocalPort); err != nil {
+		a.l.WithError(err).Error("couldn't remove existing localhost host keys")
+		return err
 	}
 
 	go func() {
