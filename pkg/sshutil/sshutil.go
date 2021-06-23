@@ -1,7 +1,9 @@
 package sshutil
 
 import (
+	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -44,6 +46,25 @@ func DefaultPubKeys() []PubKey {
 		res = append(res, entry)
 	}
 	return res
+}
+
+func RemoveKnownHostEntries(sshLocalPort int) error {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+	// `ssh-keygen -R` will return a non-0 status when ~/.ssh/known_hosts doesn't exist
+	if _, err := os.Stat(filepath.Join(homeDir, ".ssh/known_hosts")); errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	sshFixCmd := exec.Command("ssh-keygen",
+		"-R", fmt.Sprintf("[127.0.0.1]:%d", sshLocalPort),
+		"-R", fmt.Sprintf("[localhost]:%d", sshLocalPort),
+	)
+	if out, err := sshFixCmd.CombinedOutput(); err != nil {
+		return errors.Wrapf(err, "failed to run %v: %q", sshFixCmd.Args, string(out))
+	}
+	return nil
 }
 
 func SSHArgs(instDir string) ([]string, error) {
