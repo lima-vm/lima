@@ -45,7 +45,7 @@ my $repo_root = dirname($FindBin::Bin);
 for my $example (@ARGV) {
     my $config = "$repo_root/examples/$example.yaml", ;
     die "Config $config not found" unless -f $config;
-    system("limactl delete -f $example") if -f "$ENV{HOME}/.lima/$example";
+    system("limactl delete -f $example") if -d "$ENV{HOME}/.lima/$example";
     system("limactl start --tty=false $config");
     system("limactl shell $example uname");
     system("limactl stop $example");
