@@ -7,12 +7,14 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 
 	"github.com/AkihiroSuda/lima/pkg/downloader"
 	"github.com/AkihiroSuda/lima/pkg/iso9660util"
 	"github.com/AkihiroSuda/lima/pkg/limayaml"
 	"github.com/AkihiroSuda/lima/pkg/store/filenames"
 	"github.com/docker/go-units"
+	"github.com/mattn/go-shellwords"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -83,12 +85,10 @@ func EnsureDisk(cfg Config) error {
 
 func Cmdline(cfg Config) (string, []string, error) {
 	y := cfg.LimaYAML
-	exeBase := "qemu-system-" + y.Arch
-	exe, err := exec.LookPath(exeBase)
+	exe, args, err := getExe(y.Arch)
 	if err != nil {
 		return "", nil, err
 	}
-	var args []string
 
 	// Architecture
 	accel := getAccel(y.Arch)
@@ -202,6 +202,27 @@ func Cmdline(cfg Config) (string, []string, error) {
 	args = append(args, "-name", "lima-"+cfg.Name)
 	args = append(args, "-pidfile", filepath.Join(cfg.InstanceDir, filenames.QemuPID))
 
+	return exe, args, nil
+}
+
+func getExe(arch limayaml.Arch) (string, []string, error) {
+	exeBase := "qemu-system-" + arch
+	var args []string
+	envK := "QEMU_SYSTEM_" + strings.ToUpper(arch)
+	if envV := os.Getenv(envK); envV != "" {
+		ss, err := shellwords.Parse(envV)
+		if err != nil {
+			return "", nil, errors.Wrapf(err, "failed to parse %s value %q", envK, envV)
+		}
+		exeBase, args = ss[0], ss[1:]
+		if len(args) != 0 {
+			logrus.Warnf("Specifying args (%v) via $%s is supported only for debugging!", args, envK)
+		}
+	}
+	exe, err := exec.LookPath(exeBase)
+	if err != nil {
+		return "", nil, err
+	}
 	return exe, args, nil
 }
 
