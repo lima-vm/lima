@@ -83,6 +83,50 @@ func EnsureDisk(cfg Config) error {
 	return nil
 }
 
+func argValue(args []string, key string) (string, bool) {
+	if !strings.HasPrefix(key, "-") {
+		panic(errors.Errorf("got unexpected key %q", key))
+	}
+	for i, s := range args {
+		if s == key {
+			if i == len(args)-1 {
+				return "", true
+			}
+			value := args[i+1]
+			if strings.HasPrefix(value, "-") {
+				return "", true
+			}
+			return value, true
+		}
+	}
+	return "", false
+}
+
+// appendArgsIfNoConflict can be used for: -cpu, -machine, -m, -boot ...
+// appendArgsIfNoConflict cannot be used for: -drive, -cdrom, ...
+func appendArgsIfNoConflict(args []string, k, v string) []string {
+	if !strings.HasPrefix(k, "-") {
+		panic(errors.Errorf("got unexpected key %q", k))
+	}
+	switch k {
+	case "-drive", "-cdrom", "-chardev", "-blockdev", "-netdev", "-device":
+		panic(errors.Errorf("appendArgsIfNoConflict() must not be called with k=%q", k))
+	}
+
+	if v == "" {
+		if _, ok := argValue(args, k); ok {
+			return args
+		}
+		return append(args, k)
+	}
+
+	if origV, ok := argValue(args, k); ok {
+		logrus.Warnf("Not adding QEMU argument %q %q, as it conflicts with %q %q", k, v, k, origV)
+		return args
+	}
+	return append(args, k, v)
+}
+
 func Cmdline(cfg Config) (string, []string, error) {
 	y := cfg.LimaYAML
 	exe, args, err := getExe(y.Arch)
@@ -96,15 +140,15 @@ func Cmdline(cfg Config) (string, []string, error) {
 	case limayaml.X8664:
 		// NOTE: "-cpu host" seems to cause kernel panic
 		// (MacBookPro 2020, Intel(R) Core(TM) i7-1068NG7 CPU @ 2.30GHz, macOS 11.3, Ubuntu 21.04)
-		args = append(args, "-cpu", "Haswell-v4")
-		args = append(args, "-machine", "q35,accel="+accel)
+		args = appendArgsIfNoConflict(args, "-cpu", "Haswell-v4")
+		args = appendArgsIfNoConflict(args, "-machine", "q35,accel="+accel)
 	case limayaml.AARCH64:
-		args = append(args, "-cpu", "cortex-a72")
-		args = append(args, "-machine", "virt,accel="+accel+",highmem=off")
+		args = appendArgsIfNoConflict(args, "-cpu", "cortex-a72")
+		args = appendArgsIfNoConflict(args, "-machine", "virt,accel="+accel+",highmem=off")
 	}
 
 	// SMP
-	args = append(args, "-smp",
+	args = appendArgsIfNoConflict(args, "-smp",
 		fmt.Sprintf("%d,sockets=1,cores=%d,threads=1", y.CPUs, y.CPUs))
 
 	// Memory
@@ -112,7 +156,7 @@ func Cmdline(cfg Config) (string, []string, error) {
 	if err != nil {
 		return "", nil, err
 	}
-	args = append(args, "-m", strconv.Itoa(int(memBytes>>20)))
+	args = appendArgsIfNoConflict(args, "-m", strconv.Itoa(int(memBytes>>20)))
 
 	// Firmware
 	if !y.Firmware.LegacyBIOS {
@@ -132,10 +176,10 @@ func Cmdline(cfg Config) (string, []string, error) {
 		return "", nil, err
 	}
 	if isBaseDiskCDROM {
-		args = append(args, "-boot", "order=d,splash-time=0,menu=on")
+		args = appendArgsIfNoConflict(args, "-boot", "order=d,splash-time=0,menu=on")
 		args = append(args, "-drive", fmt.Sprintf("file=%s,media=cdrom,readonly=on", baseDisk))
 	} else {
-		args = append(args, "-boot", "order=c,splash-time=0,menu=on")
+		args = appendArgsIfNoConflict(args, "-boot", "order=c,splash-time=0,menu=on")
 	}
 	if diskSize, _ := units.RAMInBytes(cfg.LimaYAML.Disk); diskSize > 0 {
 		args = append(args, "-drive", fmt.Sprintf("file=%s,if=virtio", diffDisk))
@@ -156,7 +200,7 @@ func Cmdline(cfg Config) (string, []string, error) {
 
 	// Graphics
 	if y.Video.Display != "" {
-		args = append(args, "-display", y.Video.Display)
+		args = appendArgsIfNoConflict(args, "-display", y.Video.Display)
 	}
 	switch y.Arch {
 	case limayaml.X8664:
