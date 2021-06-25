@@ -59,6 +59,12 @@ The directory contains the following files:
 - `$LIMA_INSTANCE`: `lima ...` is expanded to `limactl shell ${LIMA_INSTANCE} ...`.
   - Default : `default`
 
+- `$QEMU_SYSTEM_X86_64`: path of `qemu-system-x86_64`
+  - Default: `qemu-system-x86_64` in `$PATH`
+
+- `$QEMU_SYSTEM_AARCH64`: path of `qemu-system-aarch64`
+  - Default: `qemu-system-aarch64` in `$PATH`
+
 ## `cidata.iso`
 `cidata.iso` contains the following files:
 
