@@ -133,12 +133,12 @@ func (a *HostAgent) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer logPipeRoutine(a.l, qStdout, "qemu[stdout]")
+	go logPipeRoutine(a.l, qStdout, "qemu[stdout]")
 	qStderr, err := qCmd.StderrPipe()
 	if err != nil {
 		return err
 	}
-	defer logPipeRoutine(a.l, qStderr, "qemu[stderr]")
+	go logPipeRoutine(a.l, qStderr, "qemu[stderr]")
 
 	a.l.Infof("Starting QEMU (hint: to watch the boot progress, see %q)", filepath.Join(a.instDir, filenames.SerialLog))
 	a.l.Debugf("qCmd.Args: %v", qCmd.Args)
