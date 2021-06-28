@@ -9,6 +9,19 @@ Note that we intentionally avoid using `~/Library/Application Support/Lima` on m
 We use `~/.lima` so that we can have enough space for the length of the socket path,
 which must be less than 104 characters on macOS.
 
+### Config directory (`${LIMA_HOME}/_config`)
+
+The config directory contains global lima settings that apply to all instances.
+
+User identity:
+
+Lima creates a default identity and uses its public key as the authorized key
+to access all lima instances. In addition lima will also configure all public
+keys from `~/.ssh/*.pub` as well, so the user can use the ssh endpoint without
+having to specify an identity explicitly.
+- `user`: private key
+- `user.pub`: public key
+
 ### Instance directory (`${LIMA_HOME}/<INSTANCE>`)
 
 An instance directory contains the following files:
