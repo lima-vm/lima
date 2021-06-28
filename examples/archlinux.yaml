@@ -1,5 +1,6 @@
 arch: "x86_64"
 images:
+  # Hint: run `limactl prune` to invalidate the "LATEST" cache
   - location: "https://linuximages.de/openstack/arch/arch-openstack-LATEST-image-bootstrap.qcow2"
     arch: "x86_64"
 mounts:

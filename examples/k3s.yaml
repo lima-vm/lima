@@ -10,8 +10,11 @@
 # lima-k3s   Ready    control-plane,master   69s   v1.21.1+k3s1
 
 images:
-- location: "https://cloud-images.ubuntu.com/hirsute/current/hirsute-server-cloudimg-amd64.img"
-  arch: "x86_64"
+  # Hint: run `limactl prune` to invalidate the "current" cache
+  - location: "https://cloud-images.ubuntu.com/hirsute/current/hirsute-server-cloudimg-amd64.img"
+    arch: "x86_64"
+  - location: "https://cloud-images.ubuntu.com/hirsute/current/hirsute-server-cloudimg-arm64.img"
+    arch: "aarch64"
 
 # Mounts are disabled in this example, but can be enabled optionally.
 mounts: []
