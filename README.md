@@ -23,7 +23,7 @@ Lima is expected to be used on macOS hosts, but can be used on Linux hosts as we
 
 ✅ Intel on ARM
 
-✅ Various guest Linux distributions: [Ubuntu](./examples/ubuntu.yaml), [Debian](./examples/debian.yaml), [Fedora](./examples/fedora.yaml), [Alpine](./examples/alpine.yaml), ...
+✅ Various guest Linux distributions: [Ubuntu](./examples/ubuntu.yaml), [Debian](./examples/debian.yaml), [Fedora](./examples/fedora.yaml), [Alpine](./examples/alpine.yaml), [Arch Linux](./examples/archlinux.yaml)...
 
 Related project: [sshocker (ssh with file sharing and port forwarding)](https://github.com/AkihiroSuda/sshocker)
 
@@ -216,7 +216,7 @@ Alternatively, you may also directly ssh into the guest: `ssh -p 60022 -o NoHost
 Yes, it should work, but not regularly tested on ARM.
 
 #### "Can I run non-Ubuntu guests?"
-Debian, Fedora, and Alpine are also known to work.
+Debian, Fedora, Alpine, and Arch Linux are also known to work.
 See [`./examples/`](./examples/).
 
 An image has to satisfy the following requirements:
@@ -227,7 +227,7 @@ An image has to satisfy the following requirements:
 - The following binaries to be preinstalled, or installable via the package manager:
   - `sshfs`
   - `newuidmap` and `newgidmap`
-- `apt-get`, `dnf`, or `apk` (if you want to contribute support for another package manager, run `git grep apt-get` to find out where to modify)
+- `apt-get`, `dnf`, `apk`, or `pacman` (if you want to contribute support for another package manager, run `git grep apt-get` to find out where to modify)
 
 #### "Can I run other container engines such as Podman?"
 Yes, if you install it.
