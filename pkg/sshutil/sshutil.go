@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
 	"strings"
 
@@ -68,11 +69,16 @@ func RemoveKnownHostEntries(sshLocalPort int) error {
 }
 
 func SSHArgs(instDir string) ([]string, error) {
+	u, err := user.Current()
+	if err != nil {
+		return nil, err
+	}
 	controlSock := filepath.Join(instDir, filenames.SSHSock)
 	if len(controlSock) >= osutil.UnixPathMax {
 		return nil, errors.Errorf("socket path %q is too long: >= UNIX_PATH_MAX=%d", controlSock, osutil.UnixPathMax)
 	}
 	args := []string{
+		"-l", u.Username, // guest and host have the same username, but we should specify the username explicitly (#85)
 		"-o", "ControlMaster=auto",
 		"-o", "ControlPath=" + controlSock,
 		"-o", "ControlPersist=5m",
