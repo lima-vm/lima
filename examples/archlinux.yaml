@@ -1,0 +1,15 @@
+arch: "x86_64"
+images:
+  - location: "https://linuximages.de/openstack/arch/arch-openstack-LATEST-image-bootstrap.qcow2"
+    arch: "x86_64"
+mounts:
+  - location: "~"
+    writable: false
+  - location: "/tmp/lima"
+    writable: true
+ssh:
+  # localPort is changed from 60022 to avoid conflicting with the default.
+  # (TODO: assign localPort automatically)
+  localPort: 60050
+firmware:
+  legacyBIOS: true

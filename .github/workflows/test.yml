@@ -81,7 +81,7 @@ jobs:
     timeout-minutes: 40
     strategy:
       matrix:
-        example: [default.yaml, alpine.yaml, debian.yaml, fedora.yaml]
+        example: [default.yaml, alpine.yaml, debian.yaml, fedora.yaml, archlinux.yaml]
     steps:
       - uses: actions/setup-go@v2
         with:

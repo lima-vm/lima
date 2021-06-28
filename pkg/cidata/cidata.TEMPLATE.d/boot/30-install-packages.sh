@@ -50,6 +50,13 @@ elif command -v dnf >/dev/null 2>&1; then
 			ln -s fusermount3 /usr/bin/fusermount
 		fi
 	fi
+elif command -v pacman >/dev/null 2>&1; then
+	if [ "${LIMA_CIDATA_MOUNTS}" -gt 0 ]; then
+		if ! command -v sshfs >/dev/null 2>&1; then
+			pacman -Syu --noconfirm sshfs
+		fi
+	fi
+	# other dependencies are preinstalled on Arch Linux (https://linuximages.de/openstack/arch/)
 elif command -v apk >/dev/null 2>&1; then
 	if [ "${LIMA_CIDATA_MOUNTS}" -gt 0 ]; then
 		if ! command -v sshfs >/dev/null 2>&1; then
