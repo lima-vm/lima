@@ -44,6 +44,7 @@ func newApp() *cli.App {
 		startCommand,
 		stopCommand,
 		shellCommand,
+		copyCommand,
 		listCommand,
 		deleteCommand,
 		validateCommand,

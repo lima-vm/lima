@@ -74,6 +74,19 @@ limactl shell "$NAME" uname -a
 limactl shell "$NAME" cat /etc/os-release
 set +x
 
+INFO "Testing limactl copy command"
+tmpfile="$HOME/lima-hostname"
+rm -f "$tmpfile"
+limactl cp "$NAME":/etc/hostname "$tmpfile"
+trap 'rm -f $tmpfile' EXIT
+expected="$(limactl shell "$NAME" cat /etc/hostname)"
+got="$(cat "$tmpfile")"
+INFO "/etc/hostname: expected=${expected}, got=${got}"
+if [ "$got" != "$expected" ]; then
+	ERROR "copy command did not fetch the file"
+	exit 1
+fi
+
 if [[ -n ${CHECKS["systemd"]} ]]; then
 	set -x
 	if ! limactl shell "$NAME" systemctl is-system-running --wait; then
