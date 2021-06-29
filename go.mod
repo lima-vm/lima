@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/AkihiroSuda/sshocker v0.1.1-0.20210510144941-56aa3c7472b0
-	github.com/AlecAivazis/survey/v2 v2.2.12
+	github.com/AlecAivazis/survey/v2 v2.2.13
 	github.com/alessio/shellescape v1.4.1
 	github.com/containerd/containerd v1.5.2
 	github.com/containerd/continuity v0.1.0
