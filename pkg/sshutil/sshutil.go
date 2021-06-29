@@ -124,8 +124,31 @@ func SSHArgs(instDir string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	args := []string{
-		"-i", privateKeyPath,
+	args := []string{"-i", privateKeyPath}
+
+	// Append all private keys corresponding to ~/.ssh/*.pub to keep old instances workin
+	// that had been created before lima started using an internal identity.
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, err
+	}
+	files, err := filepath.Glob(filepath.Join(homeDir, ".ssh/*.pub"))
+	if err != nil {
+		panic(err) // Only possible error is ErrBadPattern, so this should be unreachable.
+	}
+	for _, f := range files {
+		if !strings.HasSuffix(f, ".pub") {
+			panic(errors.Errorf("unexpected ssh public key filename %q", f))
+		}
+		privateKeyPath := strings.TrimSuffix(f, ".pub")
+		_, err = os.Stat(privateKeyPath)
+		if err != nil {
+			return nil, err
+		}
+		args = append(args, "-i", privateKeyPath)
+	}
+
+	args = append(args,
 		"-l", u.Username, // guest and host have the same username, but we should specify the username explicitly (#85)
 		"-o", "ControlMaster=auto",
 		"-o", "ControlPath=" + controlSock,
@@ -136,6 +159,6 @@ func SSHArgs(instDir string) ([]string, error) {
 		"-o", "PreferredAuthentications=publickey",
 		"-o", "Compression=no",
 		"-o", "BatchMode=yes",
-	}
+	)
 	return args, nil
 }
