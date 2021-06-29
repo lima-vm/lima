@@ -1,6 +1,7 @@
 package store
 
 import (
+	"github.com/AkihiroSuda/lima/pkg/store/filenames"
 	"os"
 	"path/filepath"
 	"strings"
@@ -27,6 +28,15 @@ func LimaDir() (string, error) {
 		dir = filepath.Join(homeDir, DotLima)
 	}
 	return dir, nil
+}
+
+// LimaConfigDir returns the path of the config directory, $LIMA_HOME/_config.
+func LimaConfigDir() (string, error) {
+	limaDir, err := LimaDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(limaDir, filenames.ConfigDir), nil
 }
 
 // Instances returns the names of the instances under LimaDir.

@@ -1,7 +1,24 @@
-// Package filenames defines the names of the files that appear under an instance dir.
+// Package filenames defines the names of the files that appear under an instance dir
+// or inside the config directory.
 //
 // See docs/internal.md .
 package filenames
+
+// Instance names starting with an underscore are reserved for lima internal usage
+
+const (
+	ConfigDir = "_config"
+	CacheDir  = "_cache" // not yet implemented
+)
+
+// Filenames used inside the ConfigDir
+
+const (
+	UserPrivateKey = "user"
+	UserPublicKey  = UserPrivateKey + ".pub"
+)
+
+// Filenames that may appear under an instance directory
 
 const (
 	LimaYAML           = "lima.yaml"
