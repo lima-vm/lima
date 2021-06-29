@@ -106,15 +106,7 @@ func RemoveKnownHostEntries(sshLocalPort int) error {
 	return nil
 }
 
-func SSHArgs(instDir string) ([]string, error) {
-	u, err := user.Current()
-	if err != nil {
-		return nil, err
-	}
-	controlSock := filepath.Join(instDir, filenames.SSHSock)
-	if len(controlSock) >= osutil.UnixPathMax {
-		return nil, errors.Errorf("socket path %q is too long: >= UNIX_PATH_MAX=%d", controlSock, osutil.UnixPathMax)
-	}
+func CommonArgs() ([]string, error) {
 	configDir, err := store.LimaConfigDir()
 	if err != nil {
 		return nil, err
@@ -149,16 +141,34 @@ func SSHArgs(instDir string) ([]string, error) {
 	}
 
 	args = append(args,
-		"-l", u.Username, // guest and host have the same username, but we should specify the username explicitly (#85)
-		"-o", "ControlMaster=auto",
-		"-o", "ControlPath=" + controlSock,
-		"-o", "ControlPersist=5m",
 		"-o", "StrictHostKeyChecking=no",
 		"-o", "NoHostAuthenticationForLocalhost=yes",
 		"-o", "GSSAPIAuthentication=no",
 		"-o", "PreferredAuthentications=publickey",
 		"-o", "Compression=no",
 		"-o", "BatchMode=yes",
+	)
+	return args, nil
+}
+
+func SSHArgs(instDir string) ([]string, error) {
+	controlSock := filepath.Join(instDir, filenames.SSHSock)
+	if len(controlSock) >= osutil.UnixPathMax {
+		return nil, errors.Errorf("socket path %q is too long: >= UNIX_PATH_MAX=%d", controlSock, osutil.UnixPathMax)
+	}
+	u, err := user.Current()
+	if err != nil {
+		return nil, err
+	}
+	args, err := CommonArgs()
+	if err != nil {
+		return nil, err
+	}
+	args = append(args,
+		"-l", u.Username, // guest and host have the same username, but we should specify the username explicitly (#85)
+		"-o", "ControlMaster=auto",
+		"-o", "ControlPath="+controlSock,
+		"-o", "ControlPersist=5m",
 	)
 	return args, nil
 }
