@@ -23,7 +23,7 @@ Lima is expected to be used on macOS hosts, but can be used on Linux hosts as we
 
 ✅ Intel on ARM
 
-✅ Various guest Linux distributions: [Ubuntu](./examples/ubuntu.yaml), [Debian](./examples/debian.yaml), [Fedora](./examples/fedora.yaml), [Alpine](./examples/alpine.yaml), [Arch Linux](./examples/archlinux.yaml)...
+✅ Various guest Linux distributions: [Ubuntu](./examples/ubuntu.yaml), [Debian](./examples/debian.yaml), [Fedora](./examples/fedora.yaml), [Alpine](./examples/alpine.yaml), [Arch Linux](./examples/archlinux.yaml), [openSUSE](./examples/opensuse.yaml)...
 
 Related project: [sshocker (ssh with file sharing and port forwarding)](https://github.com/AkihiroSuda/sshocker)
 
@@ -123,6 +123,8 @@ Detailed usage:
   For the "default" instance, this command can be shortened as `lima <COMMAND>`.
   The `lima` command also accepts the instance name as the environment variable `$LIMA_INSTANCE`.
 
+- Run `limactl copy <SOURCE> ... <TARGET>` to copy files between instances, or between instances and the host. Use `<INSTANCE>:<FILENAME>` to specify a source or target inside an instance.
+
 - Run `limactl list [--json]` to show the instances.
 
 - Run `limactl stop [--force] <INSTANCE>` to stop the instance.
@@ -199,9 +201,6 @@ The current default spec:
 - [SSH](#ssh)
   - ["Port forwarding does not work"](#port-forwarding-does-not-work)
   - [stuck on "Waiting for the essential requirement 1 of X: "ssh"](#stuck-on-waiting-for-the-essential-requirement-1-of-x-ssh)
-  - [error "field SSHPubKeys must be set"](#error-field-sshpubkeys-must-be-set)
-  - [error "hostkeys_foreach failed: No such file or directory"](#error-hostkeys_foreach-failed-no-such-file-or-directory)
-  - [error "failed to execute script ssh: [...] Permission denied (publickey)"](#error-failed-to-execute-script-ssh--permission-denied-publickey)
 - ["Hints for debugging other problems?"](#hints-for-debugging-other-problems)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
@@ -210,13 +209,13 @@ The current default spec:
 Password is disabled and locked by default.
 You have to use `limactl shell bash` (or `lima bash`) to open a shell.
 
-Alternatively, you may also directly ssh into the guest: `ssh -p 60022 -o NoHostAuthenticationForLocalhost=yes 127.0.0.1`.
+Alternatively, you may also directly ssh into the guest: `ssh -p 60022 -i ~/.lima/_config/user -o NoHostAuthenticationForLocalhost=yes 127.0.0.1`.
 
 #### "Does Lima work on ARM Mac?"
 Yes, it should work, but not regularly tested on ARM.
 
 #### "Can I run non-Ubuntu guests?"
-Debian, Fedora, Alpine, and Arch Linux are also known to work.
+Debian, Fedora, Alpine, Arch Linux, and openSUSE are also known to work.
 See [`./examples/`](./examples/).
 
 An image has to satisfy the following requirements:
@@ -227,7 +226,7 @@ An image has to satisfy the following requirements:
 - The following binaries to be preinstalled, or installable via the package manager:
   - `sshfs`
   - `newuidmap` and `newgidmap`
-- `apt-get`, `dnf`, `apk`, or `pacman` (if you want to contribute support for another package manager, run `git grep apt-get` to find out where to modify)
+- `apt-get`, `dnf`, `apk`, `pacman`, or `zypper` (if you want to contribute support for another package manager, run `git grep apt-get` to find out where to modify)
 
 #### "Can I run other container engines such as Podman?"
 Yes, if you install it.
@@ -295,26 +294,6 @@ Privileged ports (1-1023) cannot be forwarded. e.g., you have to use 8080, not 8
 
 libslirp v4.6.0 used by QEMU is known to be [broken](https://gitlab.freedesktop.org/slirp/libslirp/-/issues/48).
 If you have libslirp v4.6.0 in `/usr/local/Cellar/libslirp`, you have to upgrade it to v4.6.1 or later (`brew upgrade`).
-
-#### error "field SSHPubKeys must be set"
-
-Make sure you have a ssh keypair in `~/.ssh`. To create:
-```
-ssh-keygen -q -t rsa -N '' -f ~/.ssh/id_rsa <<<n 2>&1 >/dev/null
-```
-
-#### error "hostkeys_foreach failed: No such file or directory"
-Make sure you have a ssh `known_hosts` file:
-```
-touch ~/.ssh/known_hosts
-```
-
-#### error "failed to execute script ssh: [...] Permission denied (publickey)"
-If you have a `~/.ssh/config` with a username overwrite for all hosts, exclude `127.0.0.1` from it. Example:
-```
-Host * !127.0.0.1
-        User root
-```
 
 ### "Hints for debugging other problems?"
 - Inspect logs:
