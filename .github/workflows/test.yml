@@ -81,7 +81,9 @@ jobs:
     timeout-minutes: 40
     strategy:
       matrix:
-        example: [default.yaml, alpine.yaml, debian.yaml, fedora.yaml, archlinux.yaml, opensuse.yaml]
+        # GHA macOS is slow and flaky, so we only test "default.yaml" here.
+        # Other yamls are tested on Linux instances of Cirrus.
+        example: [default.yaml]
     steps:
       - uses: actions/setup-go@v2
         with:

@@ -1,0 +1,44 @@
+---
+# We use Cirrus for most of integration tests, because macOS instances of GHA
+# are too slow and flaky, and Linux instances of GHA do not support KVM.
+
+# yamllint disable rule:line-length
+task:
+  timeout_in: 30m
+  # We can't use macOS instances of Cirrus because of lack of support for nested VMs.
+  # (sysctl machdep.cpu.features lacks "VMX" flag)
+  container:
+    image: ubuntu:21.04
+    kvm: true
+    cpu: 2
+    memory: 8G
+  env:
+    DEBIAN_FRONTEND: noninteractive
+    # yamllint disable rule:key-duplicates
+    matrix:
+      # default.yaml is tested on GHA macOS, so we skip default.yaml here
+      EXAMPLE: alpine.yaml
+      EXAMPLE: debian.yaml
+      EXAMPLE: fedora.yaml
+      EXAMPLE: archlinux.yaml
+      EXAMPLE: opensuse.yaml
+  info_script:
+    - uname -a
+    - df -T
+    - ls -l /dev/kvm
+    - cat /proc/cpuinfo
+  install_deps_script:
+    - apt-get update
+    - apt-get install -y --no-install-recommends ca-certificates curl git golang openssh-client make ovmf sudo qemu-system-x86 qemu-utils
+  go_cache:
+    fingerprint_script: uname -s ; cat go.sum
+    folder: $GOPATH/pkg/mod
+  build_script: make
+  install_script: make install
+  prepare_user_script:
+    - groupadd -g $(stat -c '%g' /dev/kvm) kvm
+    - useradd -m -G kvm testuser
+  lima_cache:
+    fingerprint_script: uname -s ; cat examples/$EXAMPLE
+    folder: /home/testuser/.cache/lima
+  test_script: sudo -iu testuser $(pwd)/hack/test-example.sh $(pwd)/examples/$EXAMPLE
