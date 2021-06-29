@@ -57,6 +57,22 @@ elif command -v pacman >/dev/null 2>&1; then
 		fi
 	fi
 	# other dependencies are preinstalled on Arch Linux (https://linuximages.de/openstack/arch/)
+elif command -v zypper >/dev/null 2>&1; then
+	if [ "${LIMA_CIDATA_MOUNTS}" -gt 0 ]; then
+		if ! command -v sshfs >/dev/null 2>&1; then
+			zypper install -y sshfs
+		fi
+	fi
+	if [ "${LIMA_CIDATA_CONTAINERD_SYSTEM}" = 1 ] || [ "${LIMA_CIDATA_CONTAINERD_USER}" = 1 ]; then
+		if [ ! -e /usr/sbin/iptables ]; then
+			zypper install -y iptables
+		fi
+	fi
+	if [ "${LIMA_CIDATA_CONTAINERD_USER}" = 1 ]; then
+		if ! command -v mount.fuse3 >/dev/null 2>&1; then
+			zypper install -y fuse3
+		fi
+	fi
 elif command -v apk >/dev/null 2>&1; then
 	if [ "${LIMA_CIDATA_MOUNTS}" -gt 0 ]; then
 		if ! command -v sshfs >/dev/null 2>&1; then
