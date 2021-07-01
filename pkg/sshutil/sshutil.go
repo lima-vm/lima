@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/AkihiroSuda/lima/pkg/lockutil"
 	"github.com/AkihiroSuda/lima/pkg/osutil"
 	"github.com/AkihiroSuda/lima/pkg/store"
 	"github.com/AkihiroSuda/lima/pkg/store/filenames"
@@ -51,11 +52,16 @@ func DefaultPubKeys() ([]PubKey, error) {
 		if err := os.MkdirAll(configDir, 0700); err != nil {
 			return nil, errors.Wrapf(err, "could not create %q directory", configDir)
 		}
-		keygenCmd := exec.Command("ssh-keygen", "-t", "ed25519", "-q", "-N", "", "-f",
-			filepath.Join(configDir, filenames.UserPrivateKey))
-		logrus.Debugf("executing %v", keygenCmd.Args)
-		if out, err := keygenCmd.CombinedOutput(); err != nil {
-			return nil, errors.Wrapf(err, "failed to run %v: %q", keygenCmd.Args, string(out))
+		if err := lockutil.WithDirLock(configDir, func() error {
+			keygenCmd := exec.Command("ssh-keygen", "-t", "ed25519", "-q", "-N", "", "-f",
+				filepath.Join(configDir, filenames.UserPrivateKey))
+			logrus.Debugf("executing %v", keygenCmd.Args)
+			if out, err := keygenCmd.CombinedOutput(); err != nil {
+				return errors.Wrapf(err, "failed to run %v: %q", keygenCmd.Args, string(out))
+			}
+			return nil
+		}); err != nil {
+			return nil, err
 		}
 	}
 	entry, err := readPublicKey(filepath.Join(configDir, filenames.UserPublicKey))
