@@ -41,4 +41,5 @@ task:
   lima_cache:
     fingerprint_script: uname -s ; cat examples/$EXAMPLE
     folder: /home/testuser/.cache/lima
+  lima_cache_fix_perm_script: chown -R testuser.testuser /home/testuser
   test_script: sudo -iu testuser $(pwd)/hack/test-example.sh $(pwd)/examples/$EXAMPLE
