@@ -1,5 +1,7 @@
+# This example requires Lima v0.5.0 or later
 images:
-  - location: https://download.opensuse.org/distribution/leap/15.3/appliances/openSUSE-Leap-15.3-JeOS.x86_64-15.3-OpenStack-Cloud-Build9.108.qcow2
+  # Hint: run `limactl prune` to invalidate the "Current" cache
+  - location: https://download.opensuse.org/distribution/leap/15.3/appliances/openSUSE-Leap-15.3-JeOS.x86_64-15.3-OpenStack-Cloud-Current.qcow2
     arch: "x86_64"
   # No aarch64 OpenStack build found :(
 mounts:

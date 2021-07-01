@@ -66,6 +66,8 @@ set -x
 if ! limactl start --tty=false "$FILE"; then
 	ERROR "Failed to start \"$NAME\""
 	tail "$HOME/.lima/${NAME}"/*.log
+	limactl shell "$NAME" systemctl status || true
+	limactl shell "$NAME" cat /var/log/cloud-init-output.log || true
 	exit 1
 fi
 

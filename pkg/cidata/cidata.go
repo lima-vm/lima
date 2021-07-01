@@ -20,7 +20,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const NerdctlVersion = "0.9.0"
+const NerdctlVersion = "0.10.0"
 
 func GenerateISO9660(isoPath, name string, y *limayaml.LimaYAML) error {
 	if err := limayaml.ValidateRaw(*y); err != nil {

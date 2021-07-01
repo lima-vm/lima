@@ -1,7 +1,7 @@
+# This example requires Lima v0.5.0 or later
 arch: "x86_64"
 images:
-  # Hint: run `limactl prune` to invalidate the "LATEST" cache
-  - location: "https://linuximages.de/openstack/arch/arch-openstack-LATEST-image-bootstrap.qcow2"
+  - location: "https://gitlab.archlinux.org/archlinux/arch-boxes/-/jobs/27546/artifacts/raw/output/Arch-Linux-x86_64-cloudimg-20210630.27546.qcow2"
     arch: "x86_64"
 mounts:
   - location: "~"
