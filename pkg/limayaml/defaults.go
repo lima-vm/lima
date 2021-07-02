@@ -25,6 +25,9 @@ func FillDefault(y *LimaYAML) {
 	if y.Video.Display == "" {
 		y.Video.Display = "none"
 	}
+	if y.SSH.LoadDotSSHPubKeys == nil {
+		y.SSH.LoadDotSSHPubKeys = &[]bool{true}[0]
+	}
 	for i := range y.Provision {
 		provision := &y.Provision[i]
 		if provision.Mode == "" {

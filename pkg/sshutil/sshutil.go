@@ -35,10 +35,11 @@ func readPublicKey(f string) (PubKey, error) {
 }
 
 // DefaultPubKeys returns the public key from $LIMA_HOME/_config/user.pub.
-// The key will be created if it does not yet exist. All public keys
-// ~/.ssh/*.pub will be appended to make the VM accessible without specifying
-// and identity explicitly.
-func DefaultPubKeys() ([]PubKey, error) {
+// The key will be created if it does not yet exist.
+//
+// When loadDotSSH is true, ~/.ssh/*.pub will be appended to make the VM accessible without specifying
+// an identity explicitly.
+func DefaultPubKeys(loadDotSSH bool) ([]PubKey, error) {
 	// Read $LIMA_HOME/_config/user.pub
 	configDir, err := store.LimaConfigDir()
 	if err != nil {
@@ -69,6 +70,10 @@ func DefaultPubKeys() ([]PubKey, error) {
 		return nil, err
 	}
 	res := []PubKey{entry}
+
+	if !loadDotSSH {
+		return res, nil
+	}
 
 	// Append all of ~/.ssh/*.pub
 	homeDir, err := os.UserHomeDir()
@@ -112,7 +117,7 @@ func RemoveKnownHostEntries(sshLocalPort int) error {
 	return nil
 }
 
-func CommonArgs() ([]string, error) {
+func CommonArgs(useDotSSH bool) ([]string, error) {
 	configDir, err := store.LimaConfigDir()
 	if err != nil {
 		return nil, err
@@ -126,24 +131,26 @@ func CommonArgs() ([]string, error) {
 
 	// Append all private keys corresponding to ~/.ssh/*.pub to keep old instances workin
 	// that had been created before lima started using an internal identity.
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return nil, err
-	}
-	files, err := filepath.Glob(filepath.Join(homeDir, ".ssh/*.pub"))
-	if err != nil {
-		panic(err) // Only possible error is ErrBadPattern, so this should be unreachable.
-	}
-	for _, f := range files {
-		if !strings.HasSuffix(f, ".pub") {
-			panic(errors.Errorf("unexpected ssh public key filename %q", f))
-		}
-		privateKeyPath := strings.TrimSuffix(f, ".pub")
-		_, err = os.Stat(privateKeyPath)
+	if useDotSSH {
+		homeDir, err := os.UserHomeDir()
 		if err != nil {
 			return nil, err
 		}
-		args = append(args, "-i", privateKeyPath)
+		files, err := filepath.Glob(filepath.Join(homeDir, ".ssh/*.pub"))
+		if err != nil {
+			panic(err) // Only possible error is ErrBadPattern, so this should be unreachable.
+		}
+		for _, f := range files {
+			if !strings.HasSuffix(f, ".pub") {
+				panic(errors.Errorf("unexpected ssh public key filename %q", f))
+			}
+			privateKeyPath := strings.TrimSuffix(f, ".pub")
+			_, err = os.Stat(privateKeyPath)
+			if err != nil {
+				return nil, err
+			}
+			args = append(args, "-i", privateKeyPath)
+		}
 	}
 
 	args = append(args,
@@ -157,7 +164,7 @@ func CommonArgs() ([]string, error) {
 	return args, nil
 }
 
-func SSHArgs(instDir string) ([]string, error) {
+func SSHArgs(instDir string, useDotSSH bool) ([]string, error) {
 	controlSock := filepath.Join(instDir, filenames.SSHSock)
 	if len(controlSock) >= osutil.UnixPathMax {
 		return nil, errors.Errorf("socket path %q is too long: >= UNIX_PATH_MAX=%d", controlSock, osutil.UnixPathMax)
@@ -166,7 +173,7 @@ func SSHArgs(instDir string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	args, err := CommonArgs()
+	args, err := CommonArgs(useDotSSH)
 	if err != nil {
 		return nil, err
 	}

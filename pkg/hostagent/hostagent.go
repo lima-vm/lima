@@ -66,6 +66,7 @@ func New(instName string, stdout, stderr io.Writer, sigintCh chan os.Signal) (*H
 	if err != nil {
 		return nil, err
 	}
+	// y is loaded with FillDefault() already, so no need to care about nil pointers.
 
 	qCfg := qemu.Config{
 		Name:        instName,
@@ -77,7 +78,7 @@ func New(instName string, stdout, stderr io.Writer, sigintCh chan os.Signal) (*H
 		return nil, err
 	}
 
-	sshArgs, err := sshutil.SSHArgs(inst.Dir)
+	sshArgs, err := sshutil.SSHArgs(inst.Dir, *y.SSH.LoadDotSSHPubKeys)
 	if err != nil {
 		return nil, err
 	}
