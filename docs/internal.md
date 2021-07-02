@@ -63,6 +63,8 @@ The directory contains the following files:
 
 - `url`: raw url text, without "\n"
 - `data`: data
+- `<ALGO>.digest`: digest of the data, in OCI format.
+   e.g., file name `sha256.digest`, with content `sha256:5ba3d476707d510fe3ca3928e9cda5d0b4ce527d42b343404c92d563f82ba967`
 
 ## Environment variables
 

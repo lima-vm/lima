@@ -40,6 +40,14 @@ func ValidateRaw(y LimaYAML) error {
 		default:
 			return errors.Errorf("field `images.arch` must be %q or %q, got %q", X8664, AARCH64, f.Arch)
 		}
+		if f.Digest != "" {
+			if !f.Digest.Algorithm().Available() {
+				return errors.Errorf("field `images[%d].digest` refers to an unavailable digest algorithm", i)
+			}
+			if err := f.Digest.Validate(); err != nil {
+				return errors.Wrapf(err, "field `images[%d].digest` is invalid: %s", i, f.Digest.String())
+			}
+		}
 	}
 
 	if y.CPUs == 0 {
@@ -108,7 +116,7 @@ func ValidateRaw(y LimaYAML) error {
 		case ProvisionModeSystem, ProvisionModeUser:
 		default:
 			return errors.Errorf("field `provision[%d].mode` must be either %q or %q",
-					i, ProvisionModeSystem, ProvisionModeUser)
+				i, ProvisionModeSystem, ProvisionModeUser)
 		}
 	}
 	for i, p := range y.Probes {

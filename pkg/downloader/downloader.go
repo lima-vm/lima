@@ -3,13 +3,19 @@ package downloader
 import (
 	"crypto/sha256"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/AkihiroSuda/lima/pkg/localpathutil"
+	"github.com/cheggaaa/pb/v3"
 	"github.com/containerd/continuity/fs"
+	"github.com/mattn/go-isatty"
+	"github.com/opencontainers/go-digest"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -24,12 +30,14 @@ const (
 )
 
 type Result struct {
-	Status    Status
-	CachePath string // "/Users/foo/Library/Caches/lima/download/by-url-sha256/<SHA256_OF_URL>/data"
+	Status          Status
+	CachePath       string // "/Users/foo/Library/Caches/lima/download/by-url-sha256/<SHA256_OF_URL>/data"
+	ValidatedDigest bool
 }
 
 type options struct {
-	cacheDir string // default: empty (disables caching)
+	cacheDir       string // default: empty (disables caching)
+	expectedDigest digest.Digest
 }
 
 type Opt func(*options) error
@@ -55,6 +63,31 @@ func WithCacheDir(cacheDir string) Opt {
 	}
 }
 
+// WithExpectedDigest is used to validate the downloaded file against the expected digest.
+//
+// The digest is not verified in the following cases:
+// - The digest was not specified.
+// - The file already exists in the local target path.
+//
+// When the `data` file exists in the cache dir with `digest.<ALGO>` file,
+// the digest is verified by comparing the content of `digest.<ALGO>` with the expected
+// digest string. So, the actual digest of the `data` file is not computed.
+func WithExpectedDigest(expectedDigest digest.Digest) Opt {
+	return func(o *options) error {
+		if expectedDigest != "" {
+			if !expectedDigest.Algorithm().Available() {
+				return errors.Errorf("expected digest algorithm %q is not available", expectedDigest.Algorithm())
+			}
+			if err := expectedDigest.Validate(); err != nil {
+				return err
+			}
+		}
+
+		o.expectedDigest = expectedDigest
+		return nil
+	}
+}
+
 func Download(local, remote string, opts ...Opt) (*Result, error) {
 	var o options
 	for _, f := range opts {
@@ -67,9 +100,10 @@ func Download(local, remote string, opts ...Opt) (*Result, error) {
 		return nil, err
 	}
 	if _, err := os.Stat(localPath); err == nil {
-		logrus.Debugf("file %q already exists, skipping downloading from %q", localPath, remote)
+		logrus.Debugf("file %q already exists, skipping downloading from %q (and skipping digest validation)", localPath, remote)
 		res := &Result{
-			Status: StatusSkipped,
+			Status:          StatusSkipped,
+			ValidatedDigest: false,
 		}
 		return res, nil
 	} else if !errors.Is(err, os.ErrNotExist) {
@@ -82,35 +116,58 @@ func Download(local, remote string, opts ...Opt) (*Result, error) {
 	}
 
 	if isLocal(remote) {
-		if err := copyLocal(localPath, remote); err != nil {
+		if err := copyLocal(localPath, remote, o.expectedDigest); err != nil {
 			return nil, err
 		}
 		res := &Result{
-			Status: StatusDownloaded,
+			Status:          StatusDownloaded,
+			ValidatedDigest: o.expectedDigest != "",
 		}
 		return res, nil
 	}
 
 	if o.cacheDir == "" {
-		if err := downloadHTTP(localPath, remote); err != nil {
+		if err := downloadHTTP(localPath, remote, o.expectedDigest); err != nil {
 			return nil, err
 		}
 		res := &Result{
-			Status: StatusDownloaded,
+			Status:          StatusDownloaded,
+			ValidatedDigest: o.expectedDigest != "",
 		}
 		return res, nil
 	}
 
 	shad := filepath.Join(o.cacheDir, "download", "by-url-sha256", fmt.Sprintf("%x", sha256.Sum256([]byte(remote))))
 	shadData := filepath.Join(shad, "data")
+	shadDigest := ""
+	if o.expectedDigest != "" {
+		algo := o.expectedDigest.Algorithm().String()
+		if strings.Contains(algo, "/") || strings.Contains(algo, "\\") {
+			return nil, errors.Errorf("invalid digest algorithm %q", algo)
+		}
+		shadDigest = filepath.Join(shad, algo+".digest")
+	}
 	if _, err := os.Stat(shadData); err == nil {
 		logrus.Debugf("file %q is cached as %q", localPath, shadData)
-		if err := copyLocal(localPath, shadData); err != nil {
-			return nil, err
+		if shadDigestB, err := os.ReadFile(shadDigest); err == nil {
+			logrus.Debugf("Comparing digest %q with the cached digest file %q, not computing the actual digest of %q",
+				o.expectedDigest, shadDigest, shadData)
+			shadDigestS := strings.TrimSpace(string(shadDigestB))
+			if o.expectedDigest.String() != shadDigestS {
+				return nil, errors.Errorf("expected digest %q does not match the cached digest %q", o.expectedDigest.String(), shadDigestS)
+			}
+			if err := copyLocal(localPath, shadData, ""); err != nil {
+				return nil, err
+			}
+		} else {
+			if err := copyLocal(localPath, shadData, o.expectedDigest); err != nil {
+				return nil, err
+			}
 		}
 		res := &Result{
-			Status:    StatusUsedCache,
-			CachePath: shadData,
+			Status:          StatusUsedCache,
+			CachePath:       shadData,
+			ValidatedDigest: o.expectedDigest != "",
 		}
 		return res, nil
 	}
@@ -124,16 +181,22 @@ func Download(local, remote string, opts ...Opt) (*Result, error) {
 	if err := os.WriteFile(shadURL, []byte(remote), 0644); err != nil {
 		return nil, err
 	}
-	if err := downloadHTTP(shadData, remote); err != nil {
+	if err := downloadHTTP(shadData, remote, o.expectedDigest); err != nil {
 		return nil, err
 	}
-	if err := copyLocal(localPath, shadData); err != nil {
+	// no need to pass the digest to copyLocal(), as we already verified the digest
+	if err := copyLocal(localPath, shadData, ""); err != nil {
 		return nil, err
 	}
-
+	if shadDigest != "" && o.expectedDigest != "" {
+		if err := ioutil.WriteFile(shadDigest, []byte(o.expectedDigest.String()), 0644); err != nil {
+			return nil, err
+		}
+	}
 	res := &Result{
-		Status:    StatusDownloaded,
-		CachePath: shadData,
+		Status:          StatusDownloaded,
+		CachePath:       shadData,
+		ValidatedDigest: o.expectedDigest != "",
 	}
 	return res, nil
 }
@@ -156,7 +219,10 @@ func localPath(s string) (string, error) {
 	return localpathutil.Expand(s)
 }
 
-func copyLocal(dst, src string) error {
+func copyLocal(dst, src string, expectedDigest digest.Digest) error {
+	if err := validateLocalFileDigest(src, expectedDigest); err != nil {
+		return err
+	}
 	srcPath, err := localPath(src)
 	if err != nil {
 		return err
@@ -168,18 +234,107 @@ func copyLocal(dst, src string) error {
 	return fs.CopyFile(dstPath, srcPath)
 }
 
-func downloadHTTP(localPath, url string) error {
+func validateLocalFileDigest(localPath string, expectedDigest digest.Digest) error {
+	if expectedDigest == "" {
+		return nil
+	}
+	logrus.Debugf("verifying digest of local file %q (%s)", localPath, expectedDigest)
+	algo := expectedDigest.Algorithm()
+	if !algo.Available() {
+		return errors.Errorf("expected digest algorithm %q is not available", algo)
+	}
+	r, err := os.Open(localPath)
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+	actualDigest, err := algo.FromReader(r)
+	if err != nil {
+		return err
+	}
+	if actualDigest != expectedDigest {
+		return errors.Errorf("expected digest %q, got %q", expectedDigest, actualDigest)
+	}
+	return nil
+}
+
+func createBar(size int64) (*pb.ProgressBar, error) {
+	bar := pb.New64(size)
+
+	bar.Set(pb.Bytes, true)
+	if isatty.IsTerminal(os.Stdout.Fd()) {
+		bar.SetTemplateString(`{{counters . }} {{bar . | green }} {{percent .}} {{speed . "%s/s"}}`)
+		bar.SetRefreshRate(200 * time.Millisecond)
+	} else {
+		bar.Set(pb.Terminal, false)
+		bar.Set(pb.ReturnSymbol, "\n")
+		bar.SetTemplateString(`{{counters . }} ({{percent .}}) {{speed . "%s/s"}}`)
+		bar.SetRefreshRate(5 * time.Second)
+	}
+	bar.SetWidth(80)
+	if err := bar.Err(); err != nil {
+		return nil, err
+	}
+
+	return bar, nil
+}
+
+func downloadHTTP(localPath, url string, expectedDigest digest.Digest) error {
 	logrus.Debugf("downloading %q into %q", url, localPath)
 	localPathTmp := localPath + ".tmp"
 	if err := os.RemoveAll(localPathTmp); err != nil {
 		return err
 	}
-	// use curl for printing progress
-	cmd := exec.Command("curl", "-fSL", "-o", localPathTmp, url)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		return errors.Wrapf(err, "failed to run %v", cmd.Args)
+	fileWriter, err := os.Create(localPathTmp)
+	if err != nil {
+		return err
+	}
+	defer fileWriter.Close()
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return errors.Errorf("expected HTTP status %d, got %s", http.StatusOK, resp.Status)
+	}
+	bar, err := createBar(resp.ContentLength)
+	if err != nil {
+		return err
+	}
+
+	writers := []io.Writer{fileWriter}
+	var digester digest.Digester
+	if expectedDigest != "" {
+		algo := expectedDigest.Algorithm()
+		if !algo.Available() {
+			return errors.Errorf("unsupported digest algorithm %q", algo)
+		}
+		digester = algo.Digester()
+		hasher := digester.Hash()
+		writers = append(writers, hasher)
+	}
+	multiWriter := io.MultiWriter(writers...)
+
+	bar.Start()
+	if _, err := io.Copy(multiWriter, bar.NewProxyReader(resp.Body)); err != nil {
+		return err
+	}
+	bar.Finish()
+
+	if digester != nil {
+		actualDigest := digester.Digest()
+		if actualDigest != expectedDigest {
+			return errors.Errorf("expected digest %q, got %q", expectedDigest, actualDigest)
+		}
+	}
+
+	if err := fileWriter.Sync(); err != nil {
+		return err
+	}
+	if err := fileWriter.Close(); err != nil {
+		return err
 	}
 	if err := os.RemoveAll(localPath); err != nil {
 		return err
@@ -187,5 +342,6 @@ func downloadHTTP(localPath, url string) error {
 	if err := os.Rename(localPathTmp, localPath); err != nil {
 		return err
 	}
+
 	return nil
 }

@@ -2,6 +2,7 @@ arch: "x86_64"
 images:
   - location: "https://download.fedoraproject.org/pub/fedora/linux/releases/34/Cloud/x86_64/images/Fedora-Cloud-Base-34-1.2.x86_64.qcow2"
     arch: "x86_64"
+    digest: "sha256:b9b621b26725ba95442d9a56cbaa054784e0779a9522ec6eafff07c6e6f717ea"
 mounts:
   - location: "~"
     writable: false
