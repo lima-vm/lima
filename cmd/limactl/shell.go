@@ -103,7 +103,7 @@ func shellAction(clicontext *cli.Context) error {
 		return err
 	}
 
-	args, err := sshutil.SSHArgs(inst.Dir)
+	args, err := sshutil.SSHArgs(inst.Dir, *y.SSH.LoadDotSSHPubKeys)
 	if err != nil {
 		return err
 	}

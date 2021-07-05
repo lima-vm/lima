@@ -41,7 +41,7 @@ func GenerateISO9660(isoPath, name string, y *limayaml.LimaYAML) error {
 		Containerd: Containerd{System: *y.Containerd.System, User: *y.Containerd.User},
 	}
 
-	pubKeys, err := sshutil.DefaultPubKeys()
+	pubKeys, err := sshutil.DefaultPubKeys(*y.SSH.LoadDotSSHPubKeys)
 	if err != nil {
 		return err
 	}

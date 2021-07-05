@@ -34,6 +34,10 @@ type Mount struct {
 
 type SSH struct {
 	LocalPort int `yaml:"localPort,omitempty"` // REQUIRED (FIXME: auto assign)
+
+	// LoadDotSSHPubKeys loads ~/.ssh/*.pub in addition to $LIMA_HOME/_config/user.pub .
+	// Default: true
+	LoadDotSSHPubKeys *bool `yaml:"loadDotSSHPubKeys,omitempty"`
 }
 
 type Firmware struct {
@@ -60,8 +64,8 @@ type Provision struct {
 }
 
 type Containerd struct {
-	System *bool `yaml:"system,omitempty"`
-	User   *bool `yaml:"user,omitempty"`
+	System *bool `yaml:"system,omitempty"` // default: false
+	User   *bool `yaml:"user,omitempty"`   // default: true
 }
 
 type ProbeMode = string
