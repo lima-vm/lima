@@ -60,14 +60,22 @@ if limactl ls -q | grep -q "$NAME"; then
 	exit 1
 fi
 
+function diagnose() {
+	NAME="$1"
+	set -x +e
+	tail "$HOME/.lima/${NAME}"/*.log
+	limactl shell "$NAME" systemctl status
+	limactl shell "$NAME" systemctl
+	limactl shell "$NAME" sudo cat /var/log/cloud-init-output.log
+	set +x -e
+}
+
 INFO "Starting \"$NAME\" from \"$FILE\""
 trap 'limactl delete -f $NAME' EXIT
 set -x
 if ! limactl start --tty=false "$FILE"; then
 	ERROR "Failed to start \"$NAME\""
-	tail "$HOME/.lima/${NAME}"/*.log
-	limactl shell "$NAME" systemctl status || true
-	limactl shell "$NAME" cat /var/log/cloud-init-output.log || true
+	diagnose "$NAME"
 	exit 1
 fi
 
@@ -93,7 +101,7 @@ if [[ -n ${CHECKS["systemd"]} ]]; then
 	set -x
 	if ! limactl shell "$NAME" systemctl is-system-running --wait; then
 		ERROR '"systemctl is-system-running" failed'
-		limactl shell "$NAME" systemctl
+		diagnose "$NAME"
 		if [[ -z ${CHECKS["systemd-strict"]} ]]; then
 			INFO 'Ignoring "systemctl is-system-running" failure'
 		else
