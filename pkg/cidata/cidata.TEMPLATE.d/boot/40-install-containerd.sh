@@ -25,8 +25,6 @@ EOF
 fi
 
 if [ "${LIMA_CIDATA_CONTAINERD_USER}" = 1 ]; then
-	modprobe tap || true
-	modprobe ip_tables || true
 	if [ ! -e "/home/${LIMA_CIDATA_USER}.linux/.config/containerd/config.toml" ]; then
 		mkdir -p "/home/${LIMA_CIDATA_USER}.linux/.config/containerd"
 		cat >"/home/${LIMA_CIDATA_USER}.linux/.config/containerd/config.toml" <<EOF
