@@ -79,7 +79,6 @@ elif command -v apk >/dev/null 2>&1; then
 			apk update
 			apk add sshfs
 		fi
-		modprobe fuse
 	fi
 fi
 
