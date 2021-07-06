@@ -201,6 +201,7 @@ The current default spec:
 - [SSH](#ssh)
   - ["Port forwarding does not work"](#port-forwarding-does-not-work)
   - [stuck on "Waiting for the essential requirement 1 of X: "ssh"](#stuck-on-waiting-for-the-essential-requirement-1-of-x-ssh)
+  - ["permission denied" for `limactl cp` command](#permission-denied-for-limactl-cp-command)
 - ["Hints for debugging other problems?"](#hints-for-debugging-other-problems)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
@@ -294,6 +295,14 @@ Privileged ports (1-1023) cannot be forwarded. e.g., you have to use 8080, not 8
 
 libslirp v4.6.0 used by QEMU is known to be [broken](https://gitlab.freedesktop.org/slirp/libslirp/-/issues/48).
 If you have libslirp v4.6.0 in `/usr/local/Cellar/libslirp`, you have to upgrade it to v4.6.1 or later (`brew upgrade`).
+
+#### "permission denied" for `limactl cp` command
+
+The `copy` command only works for instances that have been created by lima 0.5.0 or later. You can manually install the required identity on older instances with (replace `INSTANCE` with actual instance name):
+
+```console
+< ~/.lima/_config/user.pub limactl shell INSTANCE sh -c 'tee -a ~/.ssh/authorized_keys'
+```
 
 ### "Hints for debugging other problems?"
 - Inspect logs:
