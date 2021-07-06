@@ -160,6 +160,8 @@ func CommonArgs(useDotSSH bool) ([]string, error) {
 		"-o", "PreferredAuthentications=publickey",
 		"-o", "Compression=no",
 		"-o", "BatchMode=yes",
+		"-o", "IdentitiesOnly=yes",
+		"-F", "/dev/null",
 	)
 	return args, nil
 }
