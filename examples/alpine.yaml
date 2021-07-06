@@ -1,6 +1,7 @@
 images:
 - location: https://github.com/rancher-sandbox/alpine-lima/releases/download/v0.0.1/alpine-lima-ci-3.13.5-x86_64.iso
   arch: "x86_64"
+  digest: "sha512:2c715f1fdc79f5e71f245ebebe6c4248237104dcbb0ecb27cda7da2850546ddb1da324e192fbe9243955b3e88b32339277a59b92d370fa1ffddcff3400b6222b"
 
 mounts:
 - location: "~"

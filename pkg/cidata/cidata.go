@@ -16,11 +16,21 @@ import (
 	"github.com/AkihiroSuda/lima/pkg/limayaml"
 	"github.com/AkihiroSuda/lima/pkg/localpathutil"
 	"github.com/AkihiroSuda/lima/pkg/sshutil"
+	"github.com/opencontainers/go-digest"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
-const NerdctlVersion = "0.10.0"
+const (
+	NerdctlVersion = "0.10.0"
+)
+
+var (
+	NerdctlFullDigests = map[limayaml.Arch]digest.Digest{
+		limayaml.X8664:   "sha256:5ba3d476707d510fe3ca3928e9cda5d0b4ce527d42b343404c92d563f82ba967",
+		limayaml.AARCH64: "sha256:91eb715c5f734bd6d2ec6c198c103ed96ef25c80c95850ed5f4477d68f30dd62",
+	}
+)
 
 func GenerateISO9660(isoPath, name string, y *limayaml.LimaYAML) error {
 	if err := limayaml.ValidateRaw(*y); err != nil {
@@ -109,11 +119,13 @@ func GenerateISO9660(isoPath, name string, y *limayaml.LimaYAML) error {
 		nftgzLocal := filepath.Join(td, nftgzBase)
 		nftgzURL := fmt.Sprintf("https://github.com/containerd/nerdctl/releases/download/v%s/%s",
 			NerdctlVersion, nftgzBase)
-		logrus.Infof("Downloading %q", nftgzURL)
-		res, err := downloader.Download(nftgzLocal, nftgzURL, downloader.WithCache())
+		nftgzDigest := NerdctlFullDigests[y.Arch]
+		logrus.Infof("Downloading %q (%s)", nftgzURL, nftgzDigest)
+		res, err := downloader.Download(nftgzLocal, nftgzURL, downloader.WithCache(), downloader.WithExpectedDigest(nftgzDigest))
 		if err != nil {
 			return errors.Wrapf(err, "failed to download %q", nftgzURL)
 		}
+		logrus.Debugf("res.ValidatedDigest=%v", res.ValidatedDigest)
 		switch res.Status {
 		case downloader.StatusDownloaded:
 			logrus.Infof("Downloaded %q", nftgzBase)
@@ -122,7 +134,7 @@ func GenerateISO9660(isoPath, name string, y *limayaml.LimaYAML) error {
 		default:
 			logrus.Warnf("Unexpected result from downloader.Download(): %+v", res)
 		}
-		// TODO: verify sha256
+
 		nftgzR, err := os.Open(nftgzLocal)
 		if err != nil {
 			return err

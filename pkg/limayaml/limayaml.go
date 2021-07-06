@@ -1,8 +1,10 @@
 package limayaml
 
+import "github.com/opencontainers/go-digest"
+
 type LimaYAML struct {
 	Arch       Arch        `yaml:"arch,omitempty"`
-	Images     []Image     `yaml:"images"` // REQUIRED
+	Images     []File      `yaml:"images"` // REQUIRED
 	CPUs       int         `yaml:"cpus,omitempty"`
 	Memory     string      `yaml:"memory,omitempty"` // go-units.RAMInBytes
 	Disk       string      `yaml:"disk,omitempty"`   // go-units.RAMInBytes
@@ -22,9 +24,10 @@ const (
 	AARCH64 Arch = "aarch64"
 )
 
-type Image struct {
-	Location string `yaml:"location"` // REQUIRED
-	Arch     string `yaml:"arch,omitempty"`
+type File struct {
+	Location string        `yaml:"location"` // REQUIRED
+	Arch     Arch          `yaml:"arch,omitempty"`
+	Digest   digest.Digest `yaml:"digest,omitempty"`
 }
 
 type Mount struct {

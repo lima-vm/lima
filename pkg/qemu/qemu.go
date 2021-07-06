@@ -42,11 +42,15 @@ func EnsureDisk(cfg Config) error {
 				continue
 			}
 			logrus.Infof("Attempting to download the image from %q", f.Location)
-			res, err := downloader.Download(baseDisk, f.Location, downloader.WithCache())
+			res, err := downloader.Download(baseDisk, f.Location,
+				downloader.WithCache(),
+				downloader.WithExpectedDigest(f.Digest),
+			)
 			if err != nil {
 				errs[i] = errors.Wrapf(err, "failed to download %q", f.Location)
 				continue
 			}
+			logrus.Debugf("res.ValidatedDigest=%v", res.ValidatedDigest)
 			switch res.Status {
 			case downloader.StatusDownloaded:
 				logrus.Infof("Downloaded image from %q", f.Location)
