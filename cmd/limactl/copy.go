@@ -36,7 +36,7 @@ func copyAction(clicontext *cli.Context) error {
 		return err
 	}
 
-	const useDotSSH = true
+	const useDotSSH = false
 	args, err := sshutil.CommonArgs(useDotSSH)
 	if err != nil {
 		return err
