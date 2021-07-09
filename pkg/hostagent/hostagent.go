@@ -91,7 +91,7 @@ func New(instName string, stdout, stderr io.Writer, sigintCh chan os.Signal) (*H
 		y:             y,
 		instDir:       inst.Dir,
 		sshConfig:     sshConfig,
-		portForwarder: newPortForwarder(l, sshConfig, y.SSH.LocalPort),
+		portForwarder: newPortForwarder(l, sshConfig, y.SSH.LocalPort, y.Ports),
 		qExe:          qExe,
 		qArgs:         qArgs,
 		sigintCh:      sigintCh,

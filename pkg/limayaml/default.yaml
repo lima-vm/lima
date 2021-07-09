@@ -73,6 +73,24 @@ containerd:
   # Default: true
   user: true
 
+# port forwarding rules.
+# By default guest ports are forwarded to the same port on the 127.0.0.1 interface on the host.
+# ports:
+
+#   - guestPort: 443
+#     hostIP: "0.0.0.0" # overrides the default value "127.0.0.1"
+#   # default: hostPort: 443
+#   # default: guestIP: "127.0.0.1" (only valid value right now)
+#   # default: proto: "tcp" (only valid value right now)
+
+#   - guestPortRange: [4000, 4999]
+#     hostIP:  "0.0.0.0" # overrides the default value "127.0.0.1"
+#   # default: hostPortRange: [4000, 4999] (must specify same number of ports as guestPortRange)
+
+#   - guestPort: 80
+#     hostPort: 8080 # overrides the default value 80
+
+
 # Provisioning scripts need to be idempotent because they might be called
 # multiple times, e.g. when the host VM is being restarted.
 # provision:

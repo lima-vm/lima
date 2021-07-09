@@ -2,9 +2,11 @@ package hostagent
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
 	"github.com/AkihiroSuda/lima/pkg/guestagent/api"
+	"github.com/AkihiroSuda/lima/pkg/limayaml"
 	"github.com/AkihiroSuda/sshocker/pkg/ssh"
 	"github.com/sirupsen/logrus"
 )
@@ -14,17 +16,32 @@ type portForwarder struct {
 	sshConfig   *ssh.SSHConfig
 	sshHostPort int
 	tcp         map[int]struct{} // key: int (NOTE: this might be inconsistent with the actual status of SSH master)
+	ports       []limayaml.Port
 }
 
 const sshGuestPort = 22
 
-func newPortForwarder(l *logrus.Logger, sshConfig *ssh.SSHConfig, sshHostPort int) *portForwarder {
+func newPortForwarder(l *logrus.Logger, sshConfig *ssh.SSHConfig, sshHostPort int, ports []limayaml.Port) *portForwarder {
 	return &portForwarder{
 		l:           l,
 		sshConfig:   sshConfig,
 		sshHostPort: sshHostPort,
 		tcp:         make(map[int]struct{}),
+		ports:       ports,
 	}
+}
+
+func (pf *portForwarder) forwardingAddresses(guestPort int) (string, string) {
+	for _, port := range pf.ports {
+		if port.GuestPortRange[0] <= guestPort && guestPort <= port.GuestPortRange[1] {
+			guestAddr := fmt.Sprintf("%s:%d", port.GuestIP, guestPort)
+			offset := port.HostPortRange[0] - port.GuestPortRange[0]
+			hostAddr := fmt.Sprintf("%s:%d", port.HostIP, guestPort + offset)
+			return guestAddr, hostAddr
+		}
+	}
+	addr := "127.0.0.1:" + strconv.Itoa(guestPort)
+	return addr, addr
 }
 
 func (pf *portForwarder) OnEvent(ctx context.Context, ev api.Event) {
@@ -42,9 +59,10 @@ func (pf *portForwarder) OnEvent(ctx context.Context, ev api.Event) {
 		}
 		// pf.tcp might be inconsistent with the actual state of the SSH master,
 		// so we always attempt to cancel forwarding, even when f.Port is not tracked in pf.tcp.
-		pf.l.Infof("Stopping forwarding TCP port %d", f.Port)
+		guestAddr, hostAddr := pf.forwardingAddresses(f.Port)
+		pf.l.Infof("Stopping forwarding TCP from %s to %s", guestAddr, hostAddr)
 		verbCancel := true
-		if err := forwardSSH(ctx, pf.sshConfig, pf.sshHostPort, "127.0.0.1:"+strconv.Itoa(f.Port), "127.0.0.1:"+strconv.Itoa(f.Port), verbCancel); err != nil {
+		if err := forwardSSH(ctx, pf.sshConfig, pf.sshHostPort, hostAddr, guestAddr, verbCancel); err != nil {
 			if _, ok := pf.tcp[f.Port]; ok {
 				pf.l.WithError(err).Warnf("failed to stop forwarding TCP port %d", f.Port)
 			} else {
@@ -57,8 +75,9 @@ func (pf *portForwarder) OnEvent(ctx context.Context, ev api.Event) {
 		if ignore(f) {
 			continue
 		}
-		pf.l.Infof("Forwarding TCP port %d", f.Port)
-		if err := forwardSSH(ctx, pf.sshConfig, pf.sshHostPort, "127.0.0.1:"+strconv.Itoa(f.Port), "127.0.0.1:"+strconv.Itoa(f.Port), false); err != nil {
+		guestAddr, hostAddr := pf.forwardingAddresses(f.Port)
+		pf.l.Infof("Forwarding TCP from %s to %s", guestAddr, hostAddr)
+		if err := forwardSSH(ctx, pf.sshConfig, pf.sshHostPort, hostAddr, guestAddr, false); err != nil {
 			pf.l.WithError(err).Warnf("failed to setting up forward TCP port %d (negligible if already forwarded)", f.Port)
 		} else {
 			pf.tcp[f.Port] = struct{}{}

@@ -15,6 +15,7 @@ type LimaYAML struct {
 	Provision  []Provision `yaml:"provision,omitempty"`
 	Containerd Containerd  `yaml:"containerd,omitempty"`
 	Probes     []Probe     `yaml:"probes,omitempty"`
+	Ports      []Port      `yaml:"ports,omitempty"`
 }
 
 type Arch = string
@@ -82,4 +83,20 @@ type Probe struct {
 	Description string
 	Script      string
 	Hint        string
+}
+
+type Proto = string
+
+const (
+	TCP Proto = "tcp"
+)
+
+type Port struct {
+	GuestIP        string `yaml:"guestIP,omitempty"`
+	GuestPort      int    `yaml:"guestPort,omitempty"`
+	GuestPortRange [2]int `yaml:"guestPortRange,omitempty"`
+	HostIP         string `yaml:"hostIP,omitempty"`
+	HostPort       int    `yaml:"hostPort,omitempty"`
+	HostPortRange  [2]int `yaml:"hostPortRange,omitempty"`
+	Proto          Proto  `yaml:"proto,omitempty"`
 }
