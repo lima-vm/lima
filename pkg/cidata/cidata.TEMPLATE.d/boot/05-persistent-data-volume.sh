@@ -44,8 +44,8 @@ if [ "$(awk '$2 == "/" {print $3}' /proc/mounts)" == "tmpfs" ]; then
 	fi
 	for DIR in ${DATADIRS}; do
 		if [ -d /mnt/data"${DIR}" ]; then
-			[ -e "${DIR}" ] && rm -rf "${DIR}"
-			ln -s /mnt/data"${DIR}" "${DIR}"
+			mkdir -p "${DIR}"
+			mount --bind /mnt/data"${DIR}" "${DIR}"
 		fi
 	done
 fi
