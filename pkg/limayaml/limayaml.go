@@ -99,4 +99,5 @@ type Port struct {
 	HostPort       int    `yaml:"hostPort,omitempty"`
 	HostPortRange  [2]int `yaml:"hostPortRange,omitempty"`
 	Proto          Proto  `yaml:"proto,omitempty"`
+	Ignore         bool   `yaml:"ignore,omitempty"`
 }

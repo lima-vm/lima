@@ -31,35 +31,30 @@ func newPortForwarder(l *logrus.Logger, sshConfig *ssh.SSHConfig, sshHostPort in
 	}
 }
 
-func (pf *portForwarder) forwardingAddresses(guestPort int) (string, string) {
+func (pf *portForwarder) forwardingAddresses(guest api.IPPort) (string, string) {
 	for _, port := range pf.ports {
-		if port.GuestPortRange[0] <= guestPort && guestPort <= port.GuestPortRange[1] {
-			guestAddr := fmt.Sprintf("%s:%d", port.GuestIP, guestPort)
+		if port.GuestPortRange[0] <= guest.Port && guest.Port <= port.GuestPortRange[1] {
+			guestAddr := fmt.Sprintf("%s:%d", port.GuestIP, guest.Port)
+			if port.Ignore {
+				return guestAddr, ""
+			}
 			offset := port.HostPortRange[0] - port.GuestPortRange[0]
-			hostAddr := fmt.Sprintf("%s:%d", port.HostIP, guestPort + offset)
+			hostAddr := fmt.Sprintf("%s:%d", port.HostIP, guest.Port + offset)
 			return guestAddr, hostAddr
 		}
 	}
-	addr := "127.0.0.1:" + strconv.Itoa(guestPort)
+	addr := "127.0.0.1:" + strconv.Itoa(guest.Port)
 	return addr, addr
 }
 
 func (pf *portForwarder) OnEvent(ctx context.Context, ev api.Event) {
-	ignore := func(x api.IPPort) bool {
-		switch x.Port {
-		case sshGuestPort, pf.sshHostPort:
-			return true
-		default:
-			return false
-		}
-	}
 	for _, f := range ev.LocalPortsRemoved {
-		if ignore(f) {
-			continue
-		}
 		// pf.tcp might be inconsistent with the actual state of the SSH master,
 		// so we always attempt to cancel forwarding, even when f.Port is not tracked in pf.tcp.
-		guestAddr, hostAddr := pf.forwardingAddresses(f.Port)
+		guestAddr, hostAddr := pf.forwardingAddresses(f)
+		if hostAddr == "" {
+			continue
+		}
 		pf.l.Infof("Stopping forwarding TCP from %s to %s", guestAddr, hostAddr)
 		verbCancel := true
 		if err := forwardSSH(ctx, pf.sshConfig, pf.sshHostPort, hostAddr, guestAddr, verbCancel); err != nil {
@@ -72,10 +67,11 @@ func (pf *portForwarder) OnEvent(ctx context.Context, ev api.Event) {
 		delete(pf.tcp, f.Port)
 	}
 	for _, f := range ev.LocalPortsAdded {
-		if ignore(f) {
+		guestAddr, hostAddr := pf.forwardingAddresses(f)
+		if hostAddr == "" {
+			pf.l.Infof("Not forwarding TCP from %s", guestAddr)
 			continue
 		}
-		guestAddr, hostAddr := pf.forwardingAddresses(f.Port)
 		pf.l.Infof("Forwarding TCP from %s to %s", guestAddr, hostAddr)
 		if err := forwardSSH(ctx, pf.sshConfig, pf.sshHostPort, hostAddr, guestAddr, false); err != nil {
 			pf.l.WithError(err).Warnf("failed to setting up forward TCP port %d (negligible if already forwarded)", f.Port)

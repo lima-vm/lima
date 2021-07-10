@@ -90,6 +90,8 @@ containerd:
 #   - guestPort: 80
 #     hostPort: 8080 # overrides the default value 80
 
+#   - guestPort: 8888
+#     ignore: true (don't forward this port)
 
 # Provisioning scripts need to be idempotent because they might be called
 # multiple times, e.g. when the host VM is being restarted.

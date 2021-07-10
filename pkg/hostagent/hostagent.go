@@ -86,12 +86,17 @@ func New(instName string, stdout, stderr io.Writer, sigintCh chan os.Signal) (*H
 		AdditionalArgs: sshArgs,
 	}
 
+	ports := make([]limayaml.Port, 0, 2+len(y.Ports))
+	ports = append(ports, limayaml.Port{GuestPort: sshGuestPort, Ignore: true})
+	ports = append(ports, limayaml.Port{GuestPort: y.SSH.LocalPort, Ignore: true})
+	ports = append(ports, y.Ports...)
+
 	a := &HostAgent{
 		l:             l,
 		y:             y,
 		instDir:       inst.Dir,
 		sshConfig:     sshConfig,
-		portForwarder: newPortForwarder(l, sshConfig, y.SSH.LocalPort, y.Ports),
+		portForwarder: newPortForwarder(l, sshConfig, y.SSH.LocalPort, ports),
 		qExe:          qExe,
 		qArgs:         qArgs,
 		sigintCh:      sigintCh,
