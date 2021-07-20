@@ -22,13 +22,13 @@ import (
 )
 
 const (
-	NerdctlVersion = "0.10.0"
+	NerdctlVersion = "0.11.0"
 )
 
 var (
 	NerdctlFullDigests = map[limayaml.Arch]digest.Digest{
-		limayaml.X8664:   "sha256:5ba3d476707d510fe3ca3928e9cda5d0b4ce527d42b343404c92d563f82ba967",
-		limayaml.AARCH64: "sha256:91eb715c5f734bd6d2ec6c198c103ed96ef25c80c95850ed5f4477d68f30dd62",
+		limayaml.X8664:   "sha256:a491a3129beddf2feb41a8ea9dcd0d3e4c9cb36c3a21046675e425f4b3daa5a9",
+		limayaml.AARCH64: "sha256:865d8648e2378e10dc2311f5a373fd0b85cbb6c03d2adafb1ca752d0e1267649",
 	}
 )
 
