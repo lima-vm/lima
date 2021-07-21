@@ -34,6 +34,10 @@ const (
 	HostAgentPID       = "ha.pid"
 	HostAgentStdoutLog = "ha.stdout.log"
 	HostAgentStderrLog = "ha.stderr.log"
+	Samba              = "samba.tmp"
+	SambaCredentials   = "samba.tmp/credentials"
+	SambaSMBConf       = "samba.tmp/smb.conf"
+	SambaState         = "samba.tmp/state"
 )
 
 // LongestSock is the longest socket name.

@@ -88,6 +88,8 @@ $ brew install lima
 
 - Install recent version of QEMU. v6.0.0 or later is recommended.
 
+- Install Samba's `smbd` binary as `/usr/local/sbin/samba-dot-org-smbd`. No need to launch as a daemon. Do not confuse Samba's `smbd` with Apple's `smbd`.
+
 - On ARM hosts, QEMU has to be patched for enabling `--accel=hvf` support. See https://gist.github.com/nrjdalal/e70249bb5d2e9d844cc203fd11f74c55
 
 - Download the binary archive of Lima from https://github.com/AkihiroSuda/lima/releases ,

@@ -12,6 +12,7 @@ import (
 	"github.com/AkihiroSuda/lima/pkg/downloader"
 	"github.com/AkihiroSuda/lima/pkg/iso9660util"
 	"github.com/AkihiroSuda/lima/pkg/limayaml"
+	"github.com/AkihiroSuda/lima/pkg/samba"
 	"github.com/AkihiroSuda/lima/pkg/store/filenames"
 	"github.com/docker/go-units"
 	"github.com/mattn/go-shellwords"
@@ -193,11 +194,19 @@ func Cmdline(cfg Config) (string, []string, error) {
 	// cloud-init
 	args = append(args, "-cdrom", filepath.Join(cfg.InstanceDir, filenames.CIDataISO))
 
+	smb, err := samba.New(cfg.InstanceDir, y.Mounts)
+	if err != nil {
+		return "", nil, err
+	}
+
 	// Network
-	// CIDR is intentionally hardcoded to 192.168.5.0/24, as each of QEMU has its own independent slirp network.
-	// TODO: enable bridge (with sudo?)
+	// - CIDR is intentionally hardcoded to 192.168.5.0/24, as each of QEMU has its own independent slirp network.
+	// - Samba address 192.168.5.4:445 is accessible from the guest, but hidden from the host
+
+	// TODO: support vmnet.framework with vde (https://github.com/AkihiroSuda/vde_vmnet)
 	args = append(args, "-net", "nic,model=virtio")
-	args = append(args, "-net", fmt.Sprintf("user,net=192.168.5.0/24,hostfwd=tcp:127.0.0.1:%d-:22", y.SSH.LocalPort))
+	args = append(args, "-net", fmt.Sprintf("user,net=192.168.5.0/24,hostfwd=tcp:127.0.0.1:%d-:22,guestfwd=tcp:192.168.5.4:445-cmd:%s -l %s --debuglevel=4 -s %s",
+		y.SSH.LocalPort, smb.SMBD, smb.StateDir, smb.SMBConf))
 
 	// virtio-rng-pci acceralates starting up the OS, according to https://wiki.gentoo.org/wiki/QEMU/Options
 	args = append(args, "-device", "virtio-rng-pci")

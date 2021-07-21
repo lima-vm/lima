@@ -42,6 +42,11 @@ QEMU:
 - `serial.log`: QEMU serial log, for debugging
 - `serial.sock`: QEMU serial socket, for debugging (Usage: `socat -,echo=0,icanon=0 unix-connect:serial.sock`)
 
+Samba:
+- `samba.tmp/credentials`: credentials for `mount -t cifs -o credentials=<CREDENTIALS>`
+- `samba.tmp/smb.conf`: smb.conf
+- `samba.tmp/state`: samba state dir, including `smbpasswd`
+
 SSH:
 - `ssh.sock`: SSH control master socket
 
@@ -106,3 +111,13 @@ The volume label is "cidata", as defined by [cloud-init NoCloud](https://cloudin
 - `LIMA_CIDATA_MOUNTS_%d_MOUNTPOINT`: the N-th mount point of Lima mounts (N=0, 1, ...)
 - `LIMA_CIDATA_CONTAINERD_USER`: set to "1" if rootless containerd to be set up
 - `LIMA_CIDATA_CONTAINERD_SYSTEM`: set to "1" if system-wide containerd to be set up
+
+- - -
+
+# File sharing
+
+Starting with Lima v0.6.0, file sharing is implemented using Samba-over-Stdio.
+
+Samba is accessible from the guest via TCP/IP, but not accessible from the host.
+
+TODO: explain why not (reverse-)SSHFS, why not NFS, why not 9P, ...

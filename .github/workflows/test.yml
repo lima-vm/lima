@@ -97,9 +97,10 @@ jobs:
         run: make install
       - name: Install test dependencies
         # QEMU:      required by Lima itself
+        # samba:     required by Lima itself
         # bash:      required by test-example.sh (OS version of bash is too old)
         # coreutils: required by test-example.sh for the "timeout" command
-        run: brew install qemu bash coreutils
+        run: brew install qemu samba bash coreutils
       - name: Prepare ssh
         run: |
           if [ -e ~/.ssh/id_rsa ]; then
