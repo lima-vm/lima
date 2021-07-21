@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/lima-vm/lima/pkg/limayaml"
+	"github.com/lima-vm/lima/pkg/localpathutil"
 	"github.com/lima-vm/sshocker/pkg/ssh"
 )
 
@@ -71,33 +72,35 @@ If any private key under ~/.ssh is protected with a passphrase, you need to have
 	})
 	if len(a.y.Mounts) > 0 {
 		req = append(req, requirement{
-			description: "sshfs binary to be installed",
+			description: "/sbin/mount.cifs to be installed",
 			script: `#!/bin/bash
 set -eux -o pipefail
-if ! timeout 30s bash -c "until command -v sshfs; do sleep 3; done"; then
-	echo >&2 "sshfs is not installed yet"
-	exit 1
-fi
+ls -l /sbin/mount.cifs
 `,
-			debugHint: `The sshfs binary was not installed in the guest.
-Make sure that you are using an officially supported image.
-Also see "/var/log/cloud-init-output.log" in the guest.
-A possible workaround is to run "apt-get install sshfs" in the guest.
-`,
+			debugHint: "/sbin/mount.cifs does not seem installed. See \"/var/log/cloud-init-output.log\" in the guest.",
 		})
-		req = append(req, requirement{
-			description: "/etc/fuse.conf to contain \"user_allow_other\"",
-			script: `#!/bin/bash
-set -eux -o pipefail
-if ! timeout 30s bash -c "until grep -q ^user_allow_other /etc/fuse.conf; do sleep 3; done"; then
-	echo >&2 "/etc/fuse.conf is not updated to contain \"user_allow_other\""
-	exit 1
-fi
-`,
-			debugHint: `Append "user_allow_other" to /etc/fuse.conf in the guest`,
-		})
-
 	}
+
+	for i, m := range a.y.Mounts {
+		locationExpanded, err := localpathutil.Expand(m.Location)
+		if err != nil {
+			panic(err) // should have been already validated
+		}
+		description := fmt.Sprintf("directory %s to be mounted (writable: %v)", locationExpanded, m.Writable)
+		if i == 0 {
+			description += " [May take 5-10 seconds]"
+		}
+		req = append(req, requirement{
+			description: description,
+			script: fmt.Sprintf(`#!/bin/bash
+set -eux -o pipefail
+# FIXME: not robust
+grep %q /proc/mounts
+`, locationExpanded),
+			debugHint: fmt.Sprintf("The directory %q does not seem mounted. See \"/var/log/cloud-init-output.log\" in the guest.", locationExpanded),
+		})
+	}
+
 	req = append(req, requirement{
 		description: "the guest agent to be running",
 		script: `#!/bin/bash

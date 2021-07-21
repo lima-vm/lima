@@ -103,6 +103,14 @@ On ARM hosts, a [patched](https://patchwork.kernel.org/series/548227/mbox/) vers
 
 The patch is not merged into the QEMU upstream yet as of QEMU v6.1.0, but already included in [the Homebrew package of QEMU](https://github.com/Homebrew/homebrew-core/commit/5e8eb547) since `6.1.0_1` bottle.
 
+#### Install Samba
+Samba 4.15 or later is recommended.
+
+On macOS hosts, the binary name of `smbd` has to be `/usr/local/sbin/samba-dot-org-smbd`
+to avoid conflicting with Apple's `/usr/sbin/smbd`.
+
+No need to launch Samba as a daemon.
+
 #### Install Lima
 
 - Download the binary archive of Lima from https://github.com/lima-vm/lima/releases ,
@@ -179,7 +187,7 @@ The current default spec:
 ## How it works
 
 - Hypervisor: QEMU with HVF accelerator
-- Filesystem sharing: [reverse sshfs](https://github.com/lima-vm/sshocker/blob/v0.2.0/pkg/reversesshfs/reversesshfs.go) (planned to be replaced with 9p soon)
+- Filesystem sharing: Samba
 - Port forwarding: `ssh -L`, automated by watching `/proc/net/tcp` in the guest
 
 ## Developer guide
@@ -197,7 +205,7 @@ The current default spec:
 - More guest distros
 - Windows hosts
 - GUI with system tray icon (Qt or Electron, for portability)
-- [VirtFS to replace the current reverse sshfs (work has to be done on QEMU repo)](https://github.com/NixOS/nixpkgs/pull/122420)
+- [VirtFS to replace Samba (work has to be done on QEMU repo)](https://github.com/NixOS/nixpkgs/pull/122420)
 - [vsock](https://github.com/apple/darwin-xnu/blob/xnu-7195.81.3/bsd/man/man4/vsock.4) to replace SSH (work has to be done on QEMU repo)
 
 ## FAQs & Troubleshooting
@@ -344,6 +352,7 @@ See [`./docs/network.md`](./docs/network.md).
 - Inspect logs:
   - `limactl --debug start`
   - `$HOME/.lima/<INSTANCE>/serial.log`
+  - `$HOME/.lima/<INSTANCE>/samba.tmp/state/log.*`
   - `/var/log/cloud-init-output.log` (inside the guest)
   - `/var/log/cloud-init.log` (inside the guest)
 - Make sure that you aren't mixing up tabs and spaces in the YAML.

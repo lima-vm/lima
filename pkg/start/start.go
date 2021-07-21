@@ -13,6 +13,7 @@ import (
 	hostagentapi "github.com/lima-vm/lima/pkg/hostagent/api"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/qemu"
+	"github.com/lima-vm/lima/pkg/samba"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/sirupsen/logrus"
@@ -45,6 +46,10 @@ func Start(ctx context.Context, inst *store.Instance) error {
 		return err
 	}
 
+	if err := samba.InitConfig(inst.Dir, y.Mounts); err != nil {
+		return fmt.Errorf("failed to initialize samba: %w", err)
+	}
+
 	if err := ensureDisk(ctx, inst.Name, inst.Dir, y); err != nil {
 		return err
 	}
@@ -72,10 +77,16 @@ func Start(ctx context.Context, inst *store.Instance) error {
 	}
 	// no defer haStderrW.Close()
 
+	var debugFlags []string
+	if logrus.GetLevel() >= logrus.DebugLevel {
+		debugFlags = append(debugFlags, "--debug")
+	}
+
 	haCmd := exec.CommandContext(ctx, self,
-		"hostagent",
-		"--pidfile", haPIDPath,
-		inst.Name)
+		append(debugFlags, []string{
+			"hostagent",
+			"--pidfile", haPIDPath,
+			inst.Name}...)...)
 	haCmd.Stdout = haStdoutW
 	haCmd.Stderr = haStderrW
 

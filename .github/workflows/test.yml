@@ -109,6 +109,7 @@ jobs:
         run: make install
       - name: Install test dependencies
         # QEMU:      required by Lima itself
+        # samba:     required by Lima itself
         # bash:      required by test-example.sh (OS version of bash is too old)
         # coreutils: required by test-example.sh for the "timeout" command
         run: |
@@ -117,7 +118,7 @@ jobs:
           # breaking upgrades to latest python@3.9
           rm -f /usr/local/bin/2to3
           time brew update
-          time brew install qemu bash coreutils
+          time brew install qemu samba bash coreutils
           time brew upgrade
       - name: Install vde_switch and vde_vmnet
         if: matrix.example == 'vmnet.yaml'

@@ -28,19 +28,21 @@ type Network struct {
 	Interface  string
 }
 type TemplateArgs struct {
-	Name         string // instance name
-	IID          string // instance id
-	User         string // user name
-	UID          int
-	SSHPubKeys   []string
-	Mounts       []string // abs path, accessible by the User
-	Containerd   Containerd
-	Networks     []Network
-	SlirpNICName string
-	SlirpGateway string
-	SlirpDNS     string
-	Env          map[string]string
-	DNSAddresses []string
+	Name            string // instance name
+	IID             string // instance id
+	User            string // user name
+	UID             int
+	SSHPubKeys      []string
+	Mounts          []string // abs path, accessible by the User
+	MountsWritable  []bool
+	Containerd      Containerd
+	Networks        []Network
+	SlirpNICName    string
+	SlirpGateway    string
+	SlirpDNS        string
+	SlirpFileServer string
+	Env             map[string]string
+	DNSAddresses    []string
 }
 
 func ValidateTemplateArgs(args TemplateArgs) error {
@@ -63,6 +65,9 @@ func ValidateTemplateArgs(args TemplateArgs) error {
 		if !filepath.IsAbs(f) {
 			return fmt.Errorf("field mounts[%d] must be absolute, got %q", i, f)
 		}
+	}
+	if len(args.Mounts) != len(args.MountsWritable) {
+		return fmt.Errorf("len(args.Mounts) is %d while len(args.MountsWritable) is %d", len(args.Mounts), len(args.MountsWritable))
 	}
 	return nil
 }

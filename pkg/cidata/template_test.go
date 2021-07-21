@@ -19,6 +19,10 @@ func TestTemplate(t *testing.T) {
 			"/Users/dummy",
 			"/Users/dummy/lima",
 		},
+		MountsWritable: []bool{
+			false,
+			true,
+		},
 	}
 	layout, err := ExecuteTemplate(args)
 	assert.NilError(t, err)

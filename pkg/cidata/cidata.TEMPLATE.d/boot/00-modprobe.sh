@@ -4,6 +4,8 @@
 
 set -eu
 for f in \
+	qemu_fw_cfg \
+	cifs nls_utf8 cmac md4 \
 	fuse \
 	tun tap \
 	bridge veth \

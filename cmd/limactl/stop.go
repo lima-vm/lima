@@ -122,7 +122,7 @@ func stopInstanceForcibly(inst *store.Instance) {
 		logrus.Info("The host agent process seems already stopped")
 	}
 
-	logrus.Infof("Removing *.pid *.sock under %q", inst.Dir)
+	logrus.Infof("Removing *.pid *.sock *.tmp under %q", inst.Dir)
 	fi, err := os.ReadDir(inst.Dir)
 	if err != nil {
 		logrus.Error(err)
@@ -130,9 +130,9 @@ func stopInstanceForcibly(inst *store.Instance) {
 	}
 	for _, f := range fi {
 		path := filepath.Join(inst.Dir, f.Name())
-		if strings.HasSuffix(path, ".pid") || strings.HasSuffix(path, ".sock") {
+		if strings.HasSuffix(path, ".pid") || strings.HasSuffix(path, ".sock") || strings.HasSuffix(path, ".tmp") {
 			logrus.Infof("Removing %q", path)
-			if err := os.Remove(path); err != nil {
+			if err := os.RemoveAll(path); err != nil {
 				logrus.Error(err)
 			}
 		}

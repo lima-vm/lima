@@ -17,8 +17,9 @@ import (
 	"github.com/lima-vm/lima/pkg/iso9660util"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/networks"
-	"github.com/lima-vm/lima/pkg/qemu/const"
+	qemu "github.com/lima-vm/lima/pkg/qemu/const"
 	"github.com/lima-vm/lima/pkg/qemu/imgutil"
+	"github.com/lima-vm/lima/pkg/samba"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/mattn/go-shellwords"
 	"github.com/sirupsen/logrus"
@@ -175,6 +176,9 @@ func inspectFeatures(exe string) (*features, error) {
 	return &f, nil
 }
 
+// Cmdline generates QEMU cmdline
+//
+// FIXME: split the function
 func Cmdline(cfg Config) (string, []string, error) {
 	y := cfg.LimaYAML
 	exe, args, err := getExe(y.Arch)
@@ -256,9 +260,27 @@ func Cmdline(cfg Config) (string, []string, error) {
 	// cloud-init
 	args = append(args, "-cdrom", filepath.Join(cfg.InstanceDir, filenames.CIDataISO))
 
+	// fw_cfg
+	sambaCredentials := filepath.Join(cfg.InstanceDir, filenames.SambaCredentials)
+	args = append(args, "-fw_cfg", "name=opt/io.github.lima-vm.lima.samba-credentials,file="+sambaCredentials)
+
 	// Network
-	args = append(args, "-netdev", fmt.Sprintf("user,id=net0,net=%s,dhcpstart=%s,hostfwd=tcp:127.0.0.1:%d-:22",
-		qemu.SlirpNetwork, qemu.SlirpIPAddress, y.SSH.LocalPort))
+	smbdBinary, err := samba.SMBDBinary()
+	if err != nil {
+		return "", nil, err
+	}
+
+	sambaState := filepath.Join(cfg.InstanceDir, filenames.SambaState)
+	sambaSMBConf := filepath.Join(cfg.InstanceDir, filenames.SambaSMBConf)
+	smbdDebugLevel := 0
+	if logrus.GetLevel() >= logrus.DebugLevel {
+		// the debug level must not be >= 5 (contaminates stdout with debug log)
+		smbdDebugLevel = 4
+	}
+
+	// SlirpFileServer address is only accessible from the guest, not from the host
+	args = append(args, "-netdev", fmt.Sprintf("user,id=net0,net=%s,dhcpstart=%s,hostfwd=tcp:127.0.0.1:%d-:22,guestfwd=tcp:%s:445-cmd:%s -l %s --debuglevel=%d -s %s",
+		qemu.SlirpNetwork, qemu.SlirpIPAddress, y.SSH.LocalPort, qemu.SlirpFileServer, smbdBinary, sambaState, smbdDebugLevel, sambaSMBConf))
 	args = append(args, "-device", "virtio-net-pci,netdev=net0,mac="+limayaml.MACAddress(cfg.InstanceDir))
 	if len(y.Networks) > 0 && !strings.Contains(string(features.NetdevHelp), "vde") {
 		return "", nil, fmt.Errorf("netdev \"vde\" is not supported by %s ( Hint: recompile QEMU with `configure --enable-vde` )", exe)

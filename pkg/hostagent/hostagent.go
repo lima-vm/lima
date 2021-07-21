@@ -22,6 +22,7 @@ import (
 	hostagentapi "github.com/lima-vm/lima/pkg/hostagent/api"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/qemu"
+	"github.com/lima-vm/lima/pkg/samba/getaddrinfoworkaround"
 	"github.com/lima-vm/lima/pkg/sshutil"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
@@ -143,6 +144,25 @@ func (a *HostAgent) Run(ctx context.Context) error {
 		a.emitEvent(ctx, exitingEv)
 	}()
 
+	if sambaNeedsGetAddrInfoWorkaround, err := getaddrinfoworkaround.Needed(); err != nil {
+		a.l.WithError(err).Warnf("could not detect whether getaddrinfoworkaround is needed, assuming not needed (Samba may become slow)")
+	} else {
+		a.l.Debugf("samba needs getaddrinfoworkaround=%v", sambaNeedsGetAddrInfoWorkaround)
+		if sambaNeedsGetAddrInfoWorkaround {
+			workaround := getaddrinfoworkaround.New()
+			defer func() {
+				a.l.Debug("shutting down getaddrinfoworkaround")
+				if wcErr := workaround.Close(); wcErr != nil {
+					a.l.WithError(wcErr).Warnf("failed to shut down getaddrinfoworkaround")
+				}
+			}()
+			a.l.Debug("starting getaddrinfoworkaround")
+			if err := workaround.Start(); err != nil {
+				a.l.WithError(err).Warnf("failed to start getaddrinfoworkaround")
+			}
+		}
+	}
+
 	qCmd := exec.CommandContext(ctx, a.qExe, a.qArgs...)
 	qStdout, err := qCmd.StdoutPipe()
 	if err != nil {
@@ -253,19 +273,6 @@ func (a *HostAgent) startHostAgentRoutines(ctx context.Context) error {
 	if err := a.waitForRequirements(ctx, "essential", a.essentialRequirements()); err != nil {
 		mErr = multierror.Append(mErr, err)
 	}
-	mounts, err := a.setupMounts(ctx)
-	if err != nil {
-		mErr = multierror.Append(mErr, err)
-	}
-	a.onClose = append(a.onClose, func() error {
-		var unmountMErr error
-		for _, m := range mounts {
-			if unmountErr := m.close(); unmountErr != nil {
-				unmountMErr = multierror.Append(unmountMErr, unmountErr)
-			}
-		}
-		return unmountMErr
-	})
 	go a.watchGuestAgentEvents(ctx)
 	if err := a.waitForRequirements(ctx, "optional", a.optionalRequirements()); err != nil {
 		mErr = multierror.Append(mErr, err)

@@ -86,6 +86,7 @@ function diagnose() {
 	NAME="$1"
 	set -x +e
 	tail "$HOME/.lima/${NAME}"/*.log
+	tail "$HOME/.lima/${NAME}/samba.tmp/state"/log.*
 	limactl shell "$NAME" systemctl status
 	limactl shell "$NAME" systemctl
 	limactl shell "$NAME" sudo cat /var/log/cloud-init-output.log

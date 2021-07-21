@@ -17,7 +17,7 @@ import (
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/localpathutil"
 	"github.com/lima-vm/lima/pkg/osutil"
-	"github.com/lima-vm/lima/pkg/qemu/const"
+	qemu "github.com/lima-vm/lima/pkg/qemu/const"
 	"github.com/lima-vm/lima/pkg/sshutil"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/opencontainers/go-digest"
@@ -90,13 +90,14 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML) error {
 		return err
 	}
 	args := TemplateArgs{
-		Name:         name,
-		User:         u.Username,
-		UID:          uid,
-		Containerd:   Containerd{System: *y.Containerd.System, User: *y.Containerd.User},
-		SlirpNICName: qemu.SlirpNICName,
-		SlirpGateway: qemu.SlirpGateway,
-		SlirpDNS:     qemu.SlirpDNS,
+		Name:            name,
+		User:            u.Username,
+		UID:             uid,
+		Containerd:      Containerd{System: *y.Containerd.System, User: *y.Containerd.User},
+		SlirpNICName:    qemu.SlirpNICName,
+		SlirpGateway:    qemu.SlirpGateway,
+		SlirpDNS:        qemu.SlirpDNS,
+		SlirpFileServer: qemu.SlirpFileServer,
 	}
 
 	// change instance id on every boot so network config will be processed again
@@ -119,6 +120,7 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML) error {
 			return err
 		}
 		args.Mounts = append(args.Mounts, expanded)
+		args.MountsWritable = append(args.MountsWritable, f.Writable)
 	}
 
 	slirpMACAddress := limayaml.MACAddress(instDir)
@@ -146,11 +148,13 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML) error {
 		return err
 	}
 
+	// Initialize the layout
 	layout, err := ExecuteTemplate(args)
 	if err != nil {
 		return err
 	}
 
+	// Inject provision scripts
 	for i, f := range y.Provision {
 		switch f.Mode {
 		case limayaml.ProvisionModeSystem, limayaml.ProvisionModeUser:
@@ -163,6 +167,7 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML) error {
 		}
 	}
 
+	// Inject the guest agent binary
 	if guestAgentBinary, err := GuestAgentBinary(y.Arch); err != nil {
 		return err
 	} else {
@@ -173,6 +178,7 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML) error {
 		})
 	}
 
+	// Inject the nerdctl binary
 	if args.Containerd.System || args.Containerd.User {
 		var nftgzBase string
 		switch y.Arch {

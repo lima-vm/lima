@@ -32,3 +32,6 @@ rc-service cgroups start
 # `limactl stop` tells acpid to powerdown
 rc-update add acpid
 rc-service acpid start
+
+# enable networking explicitly here for apk
+rc-service networking start
