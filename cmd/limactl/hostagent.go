@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"os"
 	"os/signal"
 	"strconv"
@@ -45,12 +46,31 @@ func hostagentAction(clicontext *cli.Context) error {
 	sigintCh := make(chan os.Signal, 1)
 	signal.Notify(sigintCh, os.Interrupt)
 
-	stdout := clicontext.App.Writer
-	stderr := clicontext.App.ErrWriter
+	stdout := &syncWriter{w: clicontext.App.Writer}
+	stderr := &syncWriter{w: clicontext.App.ErrWriter}
 
 	ha, err := hostagent.New(instName, stdout, stderr, sigintCh)
 	if err != nil {
 		return err
 	}
 	return ha.Run(clicontext.Context)
+}
+
+// syncer is implemented by *os.File
+type syncer interface {
+	Sync() error
+}
+
+type syncWriter struct {
+	w io.Writer
+}
+
+func (w *syncWriter) Write(p []byte) (int, error) {
+	written, err := w.w.Write(p)
+	if err == nil {
+		if s, ok := w.w.(syncer); ok {
+			_ = s.Sync()
+		}
+	}
+	return written, err
 }
