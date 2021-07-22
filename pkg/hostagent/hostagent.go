@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -86,17 +87,25 @@ func New(instName string, stdout, stderr io.Writer, sigintCh chan os.Signal) (*H
 		AdditionalArgs: sshArgs,
 	}
 
-	ports := make([]limayaml.Port, 0, 2+len(y.Ports))
-	ports = append(ports, limayaml.Port{GuestPort: sshGuestPort, Ignore: true})
-	ports = append(ports, limayaml.Port{GuestPort: y.SSH.LocalPort, Ignore: true})
-	ports = append(ports, y.Ports...)
+	rules := make([]limayaml.PortForward, 0, 3+len(y.PortForwards))
+	// Block ports 22 and sshLocalPort on all IPs
+	for _, port := range []int{sshGuestPort, y.SSH.LocalPort} {
+		rule := limayaml.PortForward{GuestIP: net.IPv4zero, GuestPort: port, Ignore: true}
+		limayaml.FillPortForwardDefaults(&rule)
+		rules = append(rules, rule)
+	}
+	rules = append(rules, y.PortForwards...)
+	// Default forwards for all non-privileged ports from "127.0.0.1" and "::1"
+	rule := limayaml.PortForward{GuestIP: guestagentapi.IPv4loopback1}
+	limayaml.FillPortForwardDefaults(&rule)
+	rules = append(rules, rule)
 
 	a := &HostAgent{
 		l:             l,
 		y:             y,
 		instDir:       inst.Dir,
 		sshConfig:     sshConfig,
-		portForwarder: newPortForwarder(l, sshConfig, y.SSH.LocalPort, ports),
+		portForwarder: newPortForwarder(l, sshConfig, y.SSH.LocalPort, rules),
 		qExe:          qExe,
 		qArgs:         qArgs,
 		sigintCh:      sigintCh,

@@ -120,50 +120,44 @@ func ValidateRaw(y LimaYAML) error {
 				i, ProbeModeReadiness)
 		}
 	}
-	for i, port := range y.Ports {
-		field := fmt.Sprintf("ports[%d]", i)
-		if port.GuestIP != "127.0.0.1" {
-			return errors.Errorf("field `%s.guestIP` must be \"127.0.0.1\"", field)
-		}
-		if port.HostIP != "127.0.0.1" && port.HostIP != "0.0.0.0" {
-			return errors.Errorf("field `%s.hostIP` must be either \"127.0.0.1\" or \"0.0.0.0\"", field)
-		}
-		if port.GuestPort != 0 {
-			if port.GuestPort != port.GuestPortRange[0] {
+	for i, rule := range y.PortForwards {
+		field := fmt.Sprintf("portForwards[%d]", i)
+		if rule.GuestPort != 0 {
+			if rule.GuestPort != rule.GuestPortRange[0] {
 				return errors.Errorf("field `%s.guestPort` must match field `%s.guestPortRange[0]`", field, field)
 			}
 			// redundant validation to make sure the error contains the correct field name
-			if err := validatePort(field+".guestPort", port.GuestPort); err != nil {
+			if err := validatePort(field+".guestPort", rule.GuestPort); err != nil {
 				return err
 			}
 		}
-		if port.HostPort != 0 {
-			if port.HostPort != port.HostPortRange[0] {
+		if rule.HostPort != 0 {
+			if rule.HostPort != rule.HostPortRange[0] {
 				return errors.Errorf("field `%s.hostPort` must match field `%s.hostPortRange[0]`", field, field)
 			}
 			// redundant validation to make sure the error contains the correct field name
-			if err := validatePort(field+".hostPort", port.HostPort); err != nil {
+			if err := validatePort(field+".hostPort", rule.HostPort); err != nil {
 				return err
 			}
 		}
 		for j := 0; j < 2; j++ {
-			if err := validatePort(fmt.Sprintf("%s.guestPortRange[%d]", field, j), port.GuestPortRange[j]); err != nil {
+			if err := validatePort(fmt.Sprintf("%s.guestPortRange[%d]", field, j), rule.GuestPortRange[j]); err != nil {
 				return err
 			}
-			if err := validatePort(fmt.Sprintf("%s.hostPortRange[%d]", field, j), port.HostPortRange[j]); err != nil {
+			if err := validatePort(fmt.Sprintf("%s.hostPortRange[%d]", field, j), rule.HostPortRange[j]); err != nil {
 				return err
 			}
 		}
-		if port.GuestPortRange[0] > port.GuestPortRange[1] {
+		if rule.GuestPortRange[0] > rule.GuestPortRange[1] {
 			return errors.Errorf("field `%s.guestPortRange[1]` must be greater than or equal to field `%s.guestPortRange[0]`", field, field)
 		}
-		if port.HostPortRange[0] > port.HostPortRange[1] {
+		if rule.HostPortRange[0] > rule.HostPortRange[1] {
 			return errors.Errorf("field `%s.hostPortRange[1]` must be greater than or equal to field `%s.hostPortRange[0]`", field, field)
 		}
-		if port.GuestPortRange[1] - port.GuestPortRange[0] != port.HostPortRange[1] - port.HostPortRange[0] {
+		if rule.GuestPortRange[1] - rule.GuestPortRange[0] != rule.HostPortRange[1] - rule.HostPortRange[0] {
 			return errors.Errorf("field `%s.hostPortRange` must specify the same number of ports as field `%s.guestPortRange`", field, field)
 		}
-		if port.Proto != TCP {
+		if rule.Proto != TCP {
 			return errors.Errorf("field `%s.proto` must be %q", field, TCP)
 		}
 		// Not validating that the various GuestPortRanges and HostPortRanges are not overlapping. Rules will be
