@@ -98,15 +98,8 @@ func ValidateRaw(y LimaYAML) error {
 		}
 	}
 
-	switch {
-	case y.SSH.LocalPort < 0:
-		return errors.New("field `ssh.localPort` must be > 0")
-	case y.SSH.LocalPort == 0:
-		return errors.New("field `ssh.localPort` must be set, e.g, 60022 (FIXME: support automatic port assignment)")
-	case y.SSH.LocalPort == 22:
-		return errors.New("field `ssh.localPort` must not be 22")
-	case y.SSH.LocalPort > 65535:
-		return errors.New("field `ssh.localPort` must be < 65535")
+	if err := validatePort("ssh.localPort", y.SSH.LocalPort); err != nil {
+		return err
 	}
 
 	// y.Firmware.LegacyBIOS is ignored for aarch64, but not a fatal error.
@@ -126,6 +119,63 @@ func ValidateRaw(y LimaYAML) error {
 			return errors.Errorf("field `probe[%d].mode` can only be %q",
 				i, ProbeModeReadiness)
 		}
+	}
+	for i, rule := range y.PortForwards {
+		field := fmt.Sprintf("portForwards[%d]", i)
+		if rule.GuestPort != 0 {
+			if rule.GuestPort != rule.GuestPortRange[0] {
+				return errors.Errorf("field `%s.guestPort` must match field `%s.guestPortRange[0]`", field, field)
+			}
+			// redundant validation to make sure the error contains the correct field name
+			if err := validatePort(field+".guestPort", rule.GuestPort); err != nil {
+				return err
+			}
+		}
+		if rule.HostPort != 0 {
+			if rule.HostPort != rule.HostPortRange[0] {
+				return errors.Errorf("field `%s.hostPort` must match field `%s.hostPortRange[0]`", field, field)
+			}
+			// redundant validation to make sure the error contains the correct field name
+			if err := validatePort(field+".hostPort", rule.HostPort); err != nil {
+				return err
+			}
+		}
+		for j := 0; j < 2; j++ {
+			if err := validatePort(fmt.Sprintf("%s.guestPortRange[%d]", field, j), rule.GuestPortRange[j]); err != nil {
+				return err
+			}
+			if err := validatePort(fmt.Sprintf("%s.hostPortRange[%d]", field, j), rule.HostPortRange[j]); err != nil {
+				return err
+			}
+		}
+		if rule.GuestPortRange[0] > rule.GuestPortRange[1] {
+			return errors.Errorf("field `%s.guestPortRange[1]` must be greater than or equal to field `%s.guestPortRange[0]`", field, field)
+		}
+		if rule.HostPortRange[0] > rule.HostPortRange[1] {
+			return errors.Errorf("field `%s.hostPortRange[1]` must be greater than or equal to field `%s.hostPortRange[0]`", field, field)
+		}
+		if rule.GuestPortRange[1] - rule.GuestPortRange[0] != rule.HostPortRange[1] - rule.HostPortRange[0] {
+			return errors.Errorf("field `%s.hostPortRange` must specify the same number of ports as field `%s.guestPortRange`", field, field)
+		}
+		if rule.Proto != TCP {
+			return errors.Errorf("field `%s.proto` must be %q", field, TCP)
+		}
+		// Not validating that the various GuestPortRanges and HostPortRanges are not overlapping. Rules will be
+		// processed sequentially and the first matching rule for a guest port determines forwarding behavior.
+	}
+	return nil
+}
+
+func validatePort(field string, port int) error {
+	switch {
+	case port < 0:
+		return errors.Errorf("field `%s` must be > 0", field)
+	case port == 0:
+		return errors.Errorf("field `%s` must be set", field)
+	case port == 22:
+		return errors.Errorf("field `%s` must not be 22", field)
+	case port > 65535:
+		return errors.Errorf("field `%s` must be < 65536", field)
 	}
 	return nil
 }

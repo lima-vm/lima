@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -eu -o pipefail
 
+scriptdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 function INFO() {
 	echo "TEST| [INFO] $*"
 }
@@ -35,6 +37,7 @@ declare -A CHECKS=(
 	["mount-home"]="1"
 	["containerd-user"]="1"
 	["restart"]="1"
+	["port-forwards"]="1"
 )
 
 case "$NAME" in
@@ -58,6 +61,18 @@ esac
 if limactl ls -q | grep -q "$NAME"; then
 	ERROR "Instance $NAME already exists"
 	exit 1
+fi
+
+if [[ -n ${CHECKS["port-forwards"]} ]]; then
+	tmpconfig="$HOME/lime-config-tmp"
+	mkdir -p "${tmpconfig}"
+	trap 'rm -rf $tmpconfig' EXIT
+	tmpfile="${tmpconfig}/${NAME}.yaml"
+	cp "$FILE" "${tmpfile}"
+	FILE="${tmpfile}"
+	INFO "Setup port forwarding rules for testing in \"${FILE}\""
+	"${scriptdir}/test-port-forwarding.pl" "${FILE}"
+	limactl validate "$FILE"
 fi
 
 function diagnose() {
@@ -142,6 +157,25 @@ if [[ -n ${CHECKS["containerd-user"]} ]]; then
 	set +x
 fi
 
+if [[ -n ${CHECKS["port-forwards"]} ]]; then
+	INFO "Testing port forwarding rules using netcat"
+	set -x
+	if [ "${NAME}" = "archlinux" ]; then
+		limactl shell "$NAME" sudo pacman -Syu --noconfirm openbsd-netcat
+	fi
+	if [ "${NAME}" = "debian" ]; then
+		limactl shell "$NAME" sudo apt-get install -y netcat
+	fi
+	if [ "${NAME}" = "fedora" ]; then
+		limactl shell "$NAME" sudo dnf install -y nc
+	fi
+	if [ "${NAME}" = "opensuse" ]; then
+		limactl shell "$NAME" sudo zypper in -y netcat-openbsd
+	fi
+	"${scriptdir}/test-port-forwarding.pl" "${NAME}"
+	set +x
+fi
+
 if [[ -n ${CHECKS["restart"]} ]]; then
 	INFO "Create file in the guest home directory and verify that it still exists after a restart"
 	# shellcheck disable=SC2016
@@ -149,6 +183,7 @@ if [[ -n ${CHECKS["restart"]} ]]; then
 
 	INFO "Stopping \"$NAME\""
 	limactl stop "$NAME"
+	sleep 3
 
 	INFO "Restarting \"$NAME\""
 	limactl start "$NAME"
@@ -162,6 +197,7 @@ fi
 
 INFO "Stopping \"$NAME\""
 limactl stop "$NAME"
+sleep 3
 
 INFO "Deleting \"$NAME\""
 limactl delete "$NAME"

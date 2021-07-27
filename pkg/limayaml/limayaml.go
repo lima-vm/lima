@@ -1,20 +1,25 @@
 package limayaml
 
-import "github.com/opencontainers/go-digest"
+import (
+	"net"
+
+	"github.com/opencontainers/go-digest"
+)
 
 type LimaYAML struct {
-	Arch       Arch        `yaml:"arch,omitempty"`
-	Images     []File      `yaml:"images"` // REQUIRED
-	CPUs       int         `yaml:"cpus,omitempty"`
-	Memory     string      `yaml:"memory,omitempty"` // go-units.RAMInBytes
-	Disk       string      `yaml:"disk,omitempty"`   // go-units.RAMInBytes
-	Mounts     []Mount     `yaml:"mounts,omitempty"`
-	SSH        SSH         `yaml:"ssh,omitempty"` // REQUIRED (FIXME)
-	Firmware   Firmware    `yaml:"firmware,omitempty"`
-	Video      Video       `yaml:"video,omitempty"`
-	Provision  []Provision `yaml:"provision,omitempty"`
-	Containerd Containerd  `yaml:"containerd,omitempty"`
-	Probes     []Probe     `yaml:"probes,omitempty"`
+	Arch         Arch          `yaml:"arch,omitempty"`
+	Images       []File        `yaml:"images"` // REQUIRED
+	CPUs         int           `yaml:"cpus,omitempty"`
+	Memory       string        `yaml:"memory,omitempty"` // go-units.RAMInBytes
+	Disk         string        `yaml:"disk,omitempty"`   // go-units.RAMInBytes
+	Mounts       []Mount       `yaml:"mounts,omitempty"`
+	SSH          SSH           `yaml:"ssh,omitempty"` // REQUIRED (FIXME)
+	Firmware     Firmware      `yaml:"firmware,omitempty"`
+	Video        Video         `yaml:"video,omitempty"`
+	Provision    []Provision   `yaml:"provision,omitempty"`
+	Containerd   Containerd    `yaml:"containerd,omitempty"`
+	Probes       []Probe       `yaml:"probes,omitempty"`
+	PortForwards []PortForward `yaml:"portForwards,omitempty"`
 }
 
 type Arch = string
@@ -82,4 +87,21 @@ type Probe struct {
 	Description string
 	Script      string
 	Hint        string
+}
+
+type Proto = string
+
+const (
+	TCP Proto = "tcp"
+)
+
+type PortForward struct {
+	GuestIP        net.IP `yaml:"guestIP,omitempty"`
+	GuestPort      int    `yaml:"guestPort,omitempty"`
+	GuestPortRange [2]int `yaml:"guestPortRange,omitempty"`
+	HostIP         net.IP `yaml:"hostIP,omitempty"`
+	HostPort       int    `yaml:"hostPort,omitempty"`
+	HostPortRange  [2]int `yaml:"hostPortRange,omitempty"`
+	Proto          Proto  `yaml:"proto,omitempty"`
+	Ignore         bool   `yaml:"ignore,omitempty"`
 }

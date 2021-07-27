@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
-	"net"
 	"reflect"
 	"time"
 
@@ -116,18 +115,13 @@ func (a *agent) LocalPorts(ctx context.Context) ([]api.IPPort, error) {
 		return res, err
 	}
 
-	ipv4Loopback1 := net.ParseIP("127.0.0.1")
 	for _, f := range tcpParsed {
 		switch f.Kind {
 		case procnettcp.TCP, procnettcp.TCP6:
 		default:
 			continue
 		}
-		isListen := f.State == procnettcp.TCPListen
-		// We do NOT use net.IP.IsLoopback() here, because we want to exclude addresses like 127.0.0.53 here.
-		isLocal := f.IP.Equal(net.IPv4zero) || f.IP.Equal(net.IPv6zero) ||
-			f.IP.Equal(ipv4Loopback1) || f.IP.Equal(net.IPv6loopback)
-		if isListen && isLocal {
+		if f.State == procnettcp.TCPListen {
 			res = append(res,
 				api.IPPort{
 					IP:   f.IP,
