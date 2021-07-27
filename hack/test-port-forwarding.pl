@@ -15,6 +15,7 @@
 use strict;
 use warnings;
 
+use Config qw(%Config);
 use IO::Handle qw();
 use Socket qw(inet_ntoa);
 use Sys::Hostname qw(hostname);
@@ -76,7 +77,10 @@ while (<DATA>) {
     /^(forward|ignore):\s+([0-9.:]+)\s+(\d+)(?:\s+→)?(?:\s+([0-9.:]+)(?:\s+(\d+))?)?/;
     die "Cannot parse test '$_'" unless $1;
     my %test; @test{qw(mode guest_ip guest_port host_ip host_port)} = ($1, $2, $3, $4, $5);
-
+    if ($test{mode} eq "forward" && $test{host_port} < 1024 && $Config{osname} ne "darwin") {
+        printf "🚧 Not supported on $Config{osname}: # $_\n";
+        next;
+    }
     $test{host_ip} ||= "127.0.0.1";
     $test{host_port} ||= $test{guest_port};
 
