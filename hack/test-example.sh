@@ -64,7 +64,7 @@ if limactl ls -q | grep -q "$NAME"; then
 fi
 
 if [[ -n ${CHECKS["port-forwards"]} ]]; then
-	tmpconfig="$HOME/lime-config-tmp"
+	tmpconfig="$HOME/lima-config-tmp"
 	mkdir -p "${tmpconfig}"
 	trap 'rm -rf $tmpconfig' EXIT
 	tmpfile="${tmpconfig}/${NAME}.yaml"
