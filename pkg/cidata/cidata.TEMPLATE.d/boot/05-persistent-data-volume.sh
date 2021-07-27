@@ -7,7 +7,7 @@ set -eux -o pipefail
 test -f /etc/alpine-release || exit 0
 
 # Data directories that should be persisted across reboots
-DATADIRS="/etc/ssh /home /usr/local /etc/containerd /var/lib/containerd"
+DATADIRS="/etc/containerd /etc/ssh /home /tmp /usr/local /var/lib"
 
 # When running from RAM try to move persistent data to data-volume
 # FIXME: the test for tmpfs mounts is probably Alpine-specific
