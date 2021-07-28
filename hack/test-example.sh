@@ -3,6 +3,13 @@ set -eu -o pipefail
 
 scriptdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+cleanup_cmd=""
+trap 'eval ${cleanup_cmd}' EXIT
+function defer {
+	[ -n "${cleanup_cmd}" ] && cleanup_cmd="${cleanup_cmd}; "
+	cleanup_cmd="${cleanup_cmd}$1"
+}
+
 function INFO() {
 	echo "TEST| [INFO] $*"
 }
@@ -66,7 +73,7 @@ fi
 if [[ -n ${CHECKS["port-forwards"]} ]]; then
 	tmpconfig="$HOME/lima-config-tmp"
 	mkdir -p "${tmpconfig}"
-	trap 'rm -rf $tmpconfig' EXIT
+	defer "rm -rf \"$tmpconfig\""
 	tmpfile="${tmpconfig}/${NAME}.yaml"
 	cp "$FILE" "${tmpfile}"
 	FILE="${tmpfile}"
@@ -86,7 +93,7 @@ function diagnose() {
 }
 
 INFO "Starting \"$NAME\" from \"$FILE\""
-trap 'limactl delete -f $NAME' EXIT
+defer "limactl delete -f \"$NAME\""
 set -x
 if ! limactl start --tty=false "$FILE"; then
 	ERROR "Failed to start \"$NAME\""
@@ -103,7 +110,7 @@ INFO "Testing limactl copy command"
 tmpfile="$HOME/lima-hostname"
 rm -f "$tmpfile"
 limactl cp "$NAME":/etc/hostname "$tmpfile"
-trap 'rm -f $tmpfile' EXIT
+defer "rm -f \"$tmpfile\""
 expected="$(limactl shell "$NAME" cat /etc/hostname)"
 got="$(cat "$tmpfile")"
 INFO "/etc/hostname: expected=${expected}, got=${got}"
@@ -131,7 +138,7 @@ if [[ -n ${CHECKS["mount-home"]} ]]; then
 	INFO "Testing home access (\"$hometmp\")"
 	rm -rf "$hometmp"
 	mkdir -p "$hometmp"
-	trap 'rm -rf $hometmp' EXIT
+	defer "rm -rf \"$hometmp\""
 	echo "random-content-${RANDOM}" >"$hometmp/random"
 	expected="$(cat "$hometmp/random")"
 	got="$(limactl shell "$NAME" cat "$hometmp/random")"
