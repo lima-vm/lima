@@ -7,7 +7,7 @@ require (
 	github.com/AlecAivazis/survey/v2 v2.2.15
 	github.com/alessio/shellescape v1.4.1
 	github.com/cheggaaa/pb/v3 v3.0.8
-	github.com/containerd/containerd v1.5.4
+	github.com/containerd/containerd v1.5.5
 	github.com/containerd/continuity v0.1.0
 	github.com/digitalocean/go-qemu v0.0.0-20210326154740-ac9e0b687001
 	github.com/diskfs/go-diskfs v1.2.0
