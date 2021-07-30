@@ -2,6 +2,7 @@ package limayaml
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -162,6 +163,35 @@ func ValidateRaw(y LimaYAML) error {
 		}
 		// Not validating that the various GuestPortRanges and HostPortRanges are not overlapping. Rules will be
 		// processed sequentially and the first matching rule for a guest port determines forwarding behavior.
+	}
+	if y.Network.VDE.URL != "" {
+		fieldRef := "field `network.vde.url`"
+		// The field is called VDE.URL in anticipation of QEMU upgrading VDE2 to VDEplug4,
+		// but right now the only valid value is a path to the vde_switch socket directory.
+		fi, err := os.Stat(y.Network.VDE.URL)
+		if err != nil {
+			return errors.Wrapf(err, "%s %q failed stat", fieldRef, y.Network.VDE.URL)
+		}
+		if !fi.IsDir() {
+			return errors.Wrapf(err, "%s %q is not a directory", fieldRef, y.Network.VDE.URL)
+		}
+		ctlSocket := filepath.Join(y.Network.VDE.URL, "ctl")
+		fi, err = os.Stat(ctlSocket)
+		if err != nil {
+			return errors.Wrapf(err, "%s control socket %q failed stat", fieldRef, ctlSocket)
+		}
+		if fi.Mode() & os.ModeSocket == 0 {
+			return errors.Errorf("%s file %q is not a UNIX socket", fieldRef, ctlSocket)
+		}
+	}
+	if y.Network.VDE.MACAddress != "" {
+		hw, err := net.ParseMAC(y.Network.VDE.MACAddress)
+		if err != nil {
+			return errors.Wrap(err,"field `vmnet.mac` invalid")
+		}
+		if len(hw) != 6 {
+			return errors.Errorf("field `vmnet.mac` must be a 48 bit (6 bytes) MAC address; actual length of %q is %d bytes", y.Network.VDE.MACAddress, len(hw))
+		}
 	}
 	return nil
 }

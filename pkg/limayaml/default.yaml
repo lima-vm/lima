@@ -31,6 +31,19 @@ memory: "4GiB"
 # Default: "100GiB"
 disk: "100GiB"
 
+network:
+  # The instance can get a routable IP address from the vmnet framework using
+  # https://github.com/AkihiroSuda/vde_vmnet. Both vde_switch and vde_vmnet
+  # daemons must be running before the instance is started. The interface type
+  # (host, shared, or bridged) is configured in vde_vmnet and not lima.
+  vde:
+    # vde_switch socket directory, normally /var/run/vde.ctl
+    # Default: "" (vmnet is not being used)
+    url: ""
+    # MAC address of the instance; lima will pick one based on the instance name,
+    # so DHCP assigned ip addresses should remain constant over instance restarts.
+    macAddress: ""
+
 # Expose host directories to the guest
 # Default: none
 mounts:
