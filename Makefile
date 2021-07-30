@@ -1,5 +1,6 @@
 # Files are installed under $(DESTDIR)/$(PREFIX)
 PREFIX ?= /usr/local
+DEST := $(shell echo "$(DESTDIR)/$(PREFIX)" | sed 's:///*:/:g; s://*$$::')
 
 GO ?= go
 
@@ -52,17 +53,19 @@ _output/share/lima/lima-guestagent.Linux-aarch64:
 
 .PHONY: install
 install:
-	cp -av _output/* "$(DESTDIR)/$(PREFIX)/"
-	if [[ $(shell uname -s ) != Linux && ! -e "$(DESTDIR)/$(PREFIX)/bin/nerdctl" ]]; then ln -sf nerdctl.lima "$(DESTDIR)/$(PREFIX)/bin/nerdctl"; fi
+	mkdir -p "$(DEST)"
+	cp -av _output/* "$(DEST)"
+	if [[ $(shell uname -s ) != Linux && ! -e "$(DEST)/bin/nerdctl" ]]; then ln -sf nerdctl.lima "$(DEST)/bin/nerdctl"; fi
 
 .PHONY: uninstall
 uninstall:
+	@test -f "$(DEST)/bin/lima" || (echo "lima not found in $(DEST) prefix"; exit 1)
 	rm -rf \
-		"$(DESTDIR)/$(PREFIX)/bin/lima" \
-		"$(DESTDIR)/$(PREFIX)/bin/limactl" \
-		"$(DESTDIR)/$(PREFIX)/bin/nerdctl.lima" \
-		"$(DESTDIR)/$(PREFIX)/share/lima" "$(DESTDIR)/$(PREFIX)/share/doc/lima"
-	# TODO: remove $(DESTDIR)/$(PREFIX)/bin/nerdctl only when it is a symlink to nerdctl.lima
+		"$(DEST)/bin/lima" \
+		"$(DEST)/bin/limactl" \
+		"$(DEST)/bin/nerdctl.lima" \
+		"$(DEST)/share/lima" "$(DEST)/share/doc/lima"
+	# TODO: remove $(DEST)/bin/nerdctl only when it is a symlink to nerdctl.lima
 
 .PHONY: clean
 clean:
