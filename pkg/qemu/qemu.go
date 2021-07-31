@@ -133,10 +133,14 @@ func appendArgsIfNoConflict(args []string, k, v string) []string {
 	return append(args, k, v)
 }
 
-func macAddress(cfg Config) string {
-	addr := cfg.LimaYAML.Network.VDE.MACAddress
+const (
+	SlirpMACAddress = "22:11:11:11:11:11"
+)
+
+func MACAddress(instanceDir string, y *limayaml.LimaYAML) string {
+	addr := y.Network.VDE.MACAddress
 	if addr == "" {
-		sha := sha256.Sum256([]byte(cfg.InstanceDir))
+		sha := sha256.Sum256([]byte(instanceDir))
 		// According to https://gitlab.com/wireshark/wireshark/-/blob/master/manuf
 		// no well-known MAC addresses start with 0x22.
 		hw := append(net.HardwareAddr{0x22}, sha[0:5]...)
@@ -209,12 +213,12 @@ func Cmdline(cfg Config) (string, []string, error) {
 
 	// Network
 	if y.Network.VDE.URL != "" {
-		args = append(args, "-device", fmt.Sprintf("virtio-net-pci,netdev=net0,mac=%s", macAddress(cfg)))
 		args = append(args, "-netdev", fmt.Sprintf("vde,id=net0,sock=%s", y.Network.VDE.URL))
+		args = append(args, "-device", fmt.Sprintf("virtio-net-pci,netdev=net0,mac=%s", MACAddress(cfg.InstanceDir, y)))
 	}
 	// CIDR is intentionally hardcoded to 192.168.5.0/24, as each of QEMU has its own independent slirp network.
-	args = append(args, "-device", "virtio-net-pci,netdev=net1")
 	args = append(args, "-netdev", fmt.Sprintf("user,id=net1,net=192.168.5.0/24,hostfwd=tcp:127.0.0.1:%d-:22", y.SSH.LocalPort))
+	args = append(args, "-device", "virtio-net-pci,netdev=net1,mac="+SlirpMACAddress)
 
 	// virtio-rng-pci acceralates starting up the OS, according to https://wiki.gentoo.org/wiki/QEMU/Options
 	args = append(args, "-device", "virtio-rng-pci")

@@ -19,8 +19,7 @@ import (
 )
 
 func ensureDisk(ctx context.Context, instName, instDir string, y *limayaml.LimaYAML) error {
-	cidataISOPath := filepath.Join(instDir, filenames.CIDataISO)
-	if err := cidata.GenerateISO9660(cidataISOPath, instName, y); err != nil {
+	if err := cidata.GenerateISO9660(instDir, instName, y); err != nil {
 		return err
 	}
 	qCfg := qemu.Config{

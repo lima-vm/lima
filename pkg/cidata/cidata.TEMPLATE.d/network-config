@@ -1,0 +1,9 @@
+version: 2
+ethernets:
+  {{- range $i, $addr := .MACAddresses}}
+  eth{{$i}}:
+    match:
+      macaddress: '{{$addr}}'
+    dhcp4: true
+    set-name: eth{{$i}}
+  {{- end }}
