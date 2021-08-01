@@ -1,9 +1,9 @@
 version: 2
 ethernets:
-  {{- range $i, $addr := .MACAddresses}}
-  eth{{$i}}:
+  {{- range $nw := .Networks}}
+  {{$nw.Name}}:
     match:
-      macaddress: '{{$addr}}'
+      macaddress: '{{$nw.MACAddress}}'
     dhcp4: true
-    set-name: eth{{$i}}
+    set-name: {{$nw.Name}}
   {{- end }}

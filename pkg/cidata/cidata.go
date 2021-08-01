@@ -35,7 +35,7 @@ var (
 )
 
 func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML) error {
-	if err := limayaml.ValidateRaw(*y); err != nil {
+	if err := limayaml.Validate(*y); err != nil {
 		return err
 	}
 	u, err := user.Current()
@@ -72,9 +72,9 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML) error {
 		args.Mounts = append(args.Mounts, expanded)
 	}
 
-	args.MACAddresses = append(args.MACAddresses, qemu.SlirpMACAddress)
-	if y.Network.VDE.URL != "" {
-		args.MACAddresses = append(args.MACAddresses, qemu.MACAddress(instDir, y))
+	args.Networks = append(args.Networks, Network{MACAddress: qemu.SlirpMACAddress, Name: "eth0"})
+	for _, vde := range y.Network.VDE {
+		args.Networks = append(args.Networks, Network{MACAddress: vde.MACAddress, Name: vde.Name})
 	}
 
 	if err := ValidateTemplateArgs(args); err != nil {

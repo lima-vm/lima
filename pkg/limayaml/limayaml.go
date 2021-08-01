@@ -108,9 +108,10 @@ type PortForward struct {
 }
 
 type Network struct {
-	VDE VDE `yaml:"vde,omitempty"`
+	VDE []VDE `yaml:"vde,omitempty"`
 }
 type VDE struct {
 	URL        string `yaml:"url,omitempty"`
 	MACAddress string `yaml:"macAddress,omitempty"`
+	Name       string `yaml:"name,omitempty"`
 }

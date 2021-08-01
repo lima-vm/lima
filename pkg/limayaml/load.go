@@ -7,11 +7,11 @@ import (
 // Load loads the yaml and fulfills unspecified fields with the default values.
 //
 // Load does not validate. Use Validate for validation.
-func Load(b []byte) (*LimaYAML, error) {
+func Load(b []byte, filePath string) (*LimaYAML, error) {
 	var y LimaYAML
 	if err := yaml.Unmarshal(b, &y); err != nil {
 		return nil, err
 	}
-	FillDefault(&y)
+	FillDefault(&y, filePath)
 	return &y, nil
 }

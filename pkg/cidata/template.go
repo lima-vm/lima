@@ -23,14 +23,18 @@ type Containerd struct {
 	System bool
 	User   bool
 }
+type Network struct {
+	MACAddress string
+	Name       string
+}
 type TemplateArgs struct {
-	Name         string // instance name
-	User         string // user name
-	UID          int
-	SSHPubKeys   []string
-	Mounts       []string // abs path, accessible by the User
-	Containerd   Containerd
-	MACAddresses []string
+	Name       string // instance name
+	User       string // user name
+	UID        int
+	SSHPubKeys []string
+	Mounts     []string // abs path, accessible by the User
+	Containerd Containerd
+	Networks   []Network
 }
 
 func ValidateTemplateArgs(args TemplateArgs) error {

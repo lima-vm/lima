@@ -14,11 +14,6 @@ import (
 )
 
 func Validate(y LimaYAML) error {
-	FillDefault(&y)
-	return ValidateRaw(y)
-}
-
-func ValidateRaw(y LimaYAML) error {
 	switch y.Arch {
 	case X8664, AARCH64:
 	default:
@@ -155,7 +150,7 @@ func ValidateRaw(y LimaYAML) error {
 		if rule.HostPortRange[0] > rule.HostPortRange[1] {
 			return errors.Errorf("field `%s.hostPortRange[1]` must be greater than or equal to field `%s.hostPortRange[0]`", field, field)
 		}
-		if rule.GuestPortRange[1] - rule.GuestPortRange[0] != rule.HostPortRange[1] - rule.HostPortRange[0] {
+		if rule.GuestPortRange[1]-rule.GuestPortRange[0] != rule.HostPortRange[1]-rule.HostPortRange[0] {
 			return errors.Errorf("field `%s.hostPortRange` must specify the same number of ports as field `%s.guestPortRange`", field, field)
 		}
 		if rule.Proto != TCP {
@@ -164,33 +159,36 @@ func ValidateRaw(y LimaYAML) error {
 		// Not validating that the various GuestPortRanges and HostPortRanges are not overlapping. Rules will be
 		// processed sequentially and the first matching rule for a guest port determines forwarding behavior.
 	}
-	if y.Network.VDE.URL != "" {
-		fieldRef := "field `network.vde.url`"
+	for i, vde := range y.Network.VDE {
+		field := fmt.Sprintf("network.vde[%d]", i)
+		if vde.URL == "" {
+			return errors.Errorf("field `%s.url` must not be empty", field)
+		}
 		// The field is called VDE.URL in anticipation of QEMU upgrading VDE2 to VDEplug4,
 		// but right now the only valid value is a path to the vde_switch socket directory.
-		fi, err := os.Stat(y.Network.VDE.URL)
+		fi, err := os.Stat(vde.URL)
 		if err != nil {
-			return errors.Wrapf(err, "%s %q failed stat", fieldRef, y.Network.VDE.URL)
+			return errors.Wrapf(err, "field `%s.url` %q failed stat", field, vde.URL)
 		}
 		if !fi.IsDir() {
-			return errors.Wrapf(err, "%s %q is not a directory", fieldRef, y.Network.VDE.URL)
+			return errors.Wrapf(err, "field `%s.url` %q is not a directory", field, vde.URL)
 		}
-		ctlSocket := filepath.Join(y.Network.VDE.URL, "ctl")
+		ctlSocket := filepath.Join(vde.URL, "ctl")
 		fi, err = os.Stat(ctlSocket)
 		if err != nil {
-			return errors.Wrapf(err, "%s control socket %q failed stat", fieldRef, ctlSocket)
+			return errors.Wrapf(err, "field `%s.url` control socket %q failed stat", field, ctlSocket)
 		}
-		if fi.Mode() & os.ModeSocket == 0 {
-			return errors.Errorf("%s file %q is not a UNIX socket", fieldRef, ctlSocket)
+		if fi.Mode()&os.ModeSocket == 0 {
+			return errors.Errorf("field `%s.url` file %q is not a UNIX socket", field, ctlSocket)
 		}
-	}
-	if y.Network.VDE.MACAddress != "" {
-		hw, err := net.ParseMAC(y.Network.VDE.MACAddress)
-		if err != nil {
-			return errors.Wrap(err,"field `vmnet.mac` invalid")
-		}
-		if len(hw) != 6 {
-			return errors.Errorf("field `vmnet.mac` must be a 48 bit (6 bytes) MAC address; actual length of %q is %d bytes", y.Network.VDE.MACAddress, len(hw))
+		if vde.MACAddress != "" {
+			hw, err := net.ParseMAC(vde.MACAddress)
+			if err != nil {
+				return errors.Wrap(err, "field `vmnet.mac` invalid")
+			}
+			if len(hw) != 6 {
+				return errors.Errorf("field `%s.macAddress` must be a 48 bit (6 bytes) MAC address; actual length of %q is %d bytes", field, vde.MACAddress, len(hw))
+			}
 		}
 	}
 	return nil

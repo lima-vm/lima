@@ -114,7 +114,9 @@ func loadOrCreateInstance(clicontext *cli.Context) (*store.Instance, error) {
 	} else {
 		logrus.Info("Terminal is not available, proceeding without opening an editor")
 	}
-	y, err := limayaml.Load(yBytes)
+	// limayaml.Load() needs to pass the store file path to limayaml.FillDefault() to calculate default MAC addresses
+	filePath := filepath.Join(instDir, filenames.LimaYAML)
+	y, err := limayaml.Load(yBytes, filePath)
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +133,7 @@ func loadOrCreateInstance(clicontext *cli.Context) (*store.Instance, error) {
 	if err := os.MkdirAll(instDir, 0700); err != nil {
 		return nil, err
 	}
-	if err := os.WriteFile(filepath.Join(instDir, filenames.LimaYAML), yBytes, 0644); err != nil {
+	if err := os.WriteFile(filePath, yBytes, 0644); err != nil {
 		return nil, err
 	}
 	return store.Inspect(instName)
