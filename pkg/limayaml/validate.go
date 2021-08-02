@@ -194,10 +194,10 @@ func Validate(y LimaYAML) error {
 		}
 		// FillDefault() will make sure that vde.Name is not the empty string
 		if len(vde.Name) >= 16 {
-			return errors.Errorf("field `%s.be less than 16 bytes, but is %d bytes: %q", field, len(vde.Name), vde.Name)
+			return errors.Errorf("field `%s.name` must be less than 16 bytes, but is %d bytes: %q", field, len(vde.Name), vde.Name)
 		}
 		if strings.ContainsAny(vde.Name, " \t\n/") {
-			return errors.Errorf("field `%s.be must not contain whitespace or slashes", field)
+			return errors.Errorf("field `%s.name` must not contain whitespace or slashes", field)
 		}
 		if vde.Name == qemuconst.SlirpNICName {
 			return errors.Errorf("field `%s.name` must not be set to %q because it is reserved for slirp", field, qemuconst.SlirpNICName)
