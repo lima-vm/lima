@@ -12,7 +12,6 @@ import (
 	"github.com/AkihiroSuda/lima/pkg/downloader"
 	"github.com/AkihiroSuda/lima/pkg/iso9660util"
 	"github.com/AkihiroSuda/lima/pkg/limayaml"
-	"github.com/AkihiroSuda/lima/pkg/qemu/qemuconst"
 	"github.com/AkihiroSuda/lima/pkg/store/filenames"
 	"github.com/docker/go-units"
 	"github.com/mattn/go-shellwords"
@@ -131,7 +130,6 @@ func appendArgsIfNoConflict(args []string, k, v string) []string {
 	}
 	return append(args, k, v)
 }
-
 func Cmdline(cfg Config) (string, []string, error) {
 	y := cfg.LimaYAML
 	exe, args, err := getExe(y.Arch)
@@ -197,7 +195,7 @@ func Cmdline(cfg Config) (string, []string, error) {
 	// Network
 	// CIDR is intentionally hardcoded to 192.168.5.0/24, as each of QEMU has its own independent slirp network.
 	args = append(args, "-netdev", fmt.Sprintf("user,id=net0,net=192.168.5.0/24,hostfwd=tcp:127.0.0.1:%d-:22", y.SSH.LocalPort))
-	args = append(args, "-device", "virtio-net-pci,netdev=net0,mac="+qemuconst.SlirpMACAddress)
+	args = append(args, "-device", "virtio-net-pci,netdev=net0,mac="+limayaml.MACAddress(cfg.InstanceDir))
 	for i, vde := range y.Network.VDE {
 		args = append(args, "-netdev", fmt.Sprintf("vde,id=net%d,sock=%s", i+1, vde.URL))
 		args = append(args, "-device", fmt.Sprintf("virtio-net-pci,netdev=net%d,mac=%s", i+1, vde.MACAddress))

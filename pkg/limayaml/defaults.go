@@ -10,6 +10,15 @@ import (
 	"github.com/AkihiroSuda/lima/pkg/guestagent/api"
 )
 
+func MACAddress(uniqueID string) string {
+	// TODO: combine the uniqueID with the host machineID to create a globally unique hash
+	sha := sha256.Sum256([]byte(uniqueID))
+	// According to https://gitlab.com/wireshark/wireshark/-/blob/master/manuf
+	// no well-known MAC addresses start with 0x22.
+	hw := append(net.HardwareAddr{0x22}, sha[0:5]...)
+	return hw.String()
+}
+
 func FillDefault(y *LimaYAML, filePath string) {
 	y.Arch = resolveArch(y.Arch)
 	for i := range y.Images {
@@ -62,12 +71,7 @@ func FillDefault(y *LimaYAML, filePath string) {
 		vde := &y.Network.VDE[i]
 		if vde.MACAddress == "" {
 			// every interface in every limayaml file must get its own unique MAC address
-			uniqueID := fmt.Sprintf("%s#%d", filePath, i)
-			sha := sha256.Sum256([]byte(uniqueID))
-			// According to https://gitlab.com/wireshark/wireshark/-/blob/master/manuf
-			// no well-known MAC addresses start with 0x22.
-			hw := append(net.HardwareAddr{0x22}, sha[0:5]...)
-			vde.MACAddress = hw.String()
+			vde.MACAddress = MACAddress(fmt.Sprintf("%s#%d", filePath, i))
 		}
 		if vde.Name == "" {
 			vde.Name = "vde" + strconv.Itoa(i)
