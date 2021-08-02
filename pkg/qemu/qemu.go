@@ -130,11 +130,6 @@ func appendArgsIfNoConflict(args []string, k, v string) []string {
 	}
 	return append(args, k, v)
 }
-
-const (
-	SlirpMACAddress = "22:11:11:11:11:11"
-)
-
 func Cmdline(cfg Config) (string, []string, error) {
 	y := cfg.LimaYAML
 	exe, args, err := getExe(y.Arch)
@@ -200,10 +195,10 @@ func Cmdline(cfg Config) (string, []string, error) {
 	// Network
 	// CIDR is intentionally hardcoded to 192.168.5.0/24, as each of QEMU has its own independent slirp network.
 	args = append(args, "-netdev", fmt.Sprintf("user,id=net0,net=192.168.5.0/24,hostfwd=tcp:127.0.0.1:%d-:22", y.SSH.LocalPort))
-	args = append(args, "-device", "virtio-net-pci,netdev=net0,mac="+SlirpMACAddress)
+	args = append(args, "-device", "virtio-net-pci,netdev=net0,mac="+limayaml.MACAddress(cfg.InstanceDir))
 	for i, vde := range y.Network.VDE {
-			args = append(args, "-netdev", fmt.Sprintf("vde,id=net%d,sock=%s", i+1, vde.URL))
-			args = append(args, "-device", fmt.Sprintf("virtio-net-pci,netdev=net%d,mac=%s", i+1, vde.MACAddress))
+		args = append(args, "-netdev", fmt.Sprintf("vde,id=net%d,sock=%s", i+1, vde.URL))
+		args = append(args, "-device", fmt.Sprintf("virtio-net-pci,netdev=net%d,mac=%s", i+1, vde.MACAddress))
 	}
 
 	// virtio-rng-pci accelerates starting up the OS, according to https://wiki.gentoo.org/wiki/QEMU/Options

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/AkihiroSuda/lima/pkg/localpathutil"
+	"github.com/AkihiroSuda/lima/pkg/qemu/qemuconst"
 	"github.com/docker/go-units"
 	"github.com/pkg/errors"
 )
@@ -159,6 +160,7 @@ func Validate(y LimaYAML) error {
 		// Not validating that the various GuestPortRanges and HostPortRanges are not overlapping. Rules will be
 		// processed sequentially and the first matching rule for a guest port determines forwarding behavior.
 	}
+	networkName := make(map[string]int)
 	for i, vde := range y.Network.VDE {
 		field := fmt.Sprintf("network.vde[%d]", i)
 		if vde.URL == "" {
@@ -190,6 +192,20 @@ func Validate(y LimaYAML) error {
 				return errors.Errorf("field `%s.macAddress` must be a 48 bit (6 bytes) MAC address; actual length of %q is %d bytes", field, vde.MACAddress, len(hw))
 			}
 		}
+		// FillDefault() will make sure that vde.Name is not the empty string
+		if len(vde.Name) >= 16 {
+			return errors.Errorf("field `%s.be less than 16 bytes, but is %d bytes: %q", field, len(vde.Name), vde.Name)
+		}
+		if strings.ContainsAny(vde.Name, " \t\n/") {
+			return errors.Errorf("field `%s.be must not contain whitespace or slashes", field)
+		}
+		if vde.Name == qemuconst.SlirpNICName {
+			return errors.Errorf("field `%s.name` must not be set to %q because it is reserved for slirp", field, qemuconst.SlirpNICName)
+		}
+		if prev, ok := networkName[vde.Name]; ok {
+			return errors.Errorf("field `%s.name` value %q has already been used by field `network.vde[%d].name`", field, vde.Name, prev)
+		}
+		networkName[vde.Name] = i
 	}
 	return nil
 }

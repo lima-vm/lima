@@ -15,7 +15,7 @@ import (
 	"github.com/AkihiroSuda/lima/pkg/iso9660util"
 	"github.com/AkihiroSuda/lima/pkg/limayaml"
 	"github.com/AkihiroSuda/lima/pkg/localpathutil"
-	"github.com/AkihiroSuda/lima/pkg/qemu"
+	"github.com/AkihiroSuda/lima/pkg/qemu/qemuconst"
 	"github.com/AkihiroSuda/lima/pkg/sshutil"
 	"github.com/AkihiroSuda/lima/pkg/store/filenames"
 	"github.com/opencontainers/go-digest"
@@ -72,7 +72,8 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML) error {
 		args.Mounts = append(args.Mounts, expanded)
 	}
 
-	args.Networks = append(args.Networks, Network{MACAddress: qemu.SlirpMACAddress, Name: "eth0"})
+	slirpMACAddress := limayaml.MACAddress(instDir)
+	args.Networks = append(args.Networks, Network{MACAddress: slirpMACAddress, Name: qemuconst.SlirpNICName})
 	for _, vde := range y.Network.VDE {
 		args.Networks = append(args.Networks, Network{MACAddress: vde.MACAddress, Name: vde.Name})
 	}
