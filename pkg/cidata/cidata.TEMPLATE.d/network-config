@@ -1,0 +1,9 @@
+version: 2
+ethernets:
+  {{- range $nw := .Networks}}
+  {{$nw.Name}}:
+    match:
+      macaddress: '{{$nw.MACAddress}}'
+    dhcp4: true
+    set-name: {{$nw.Name}}
+  {{- end }}

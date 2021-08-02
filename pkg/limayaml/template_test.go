@@ -7,7 +7,7 @@ import (
 )
 
 func TestDefaultTemplateYAML(t *testing.T) {
-	_, err := Load(DefaultTemplate)
+	_, err := Load(DefaultTemplate, "does-not-exist")
 	assert.NilError(t, err)
 	// Do not call Validate(y) here, as it fails when `~/lima` is missing
 }

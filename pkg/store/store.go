@@ -79,7 +79,7 @@ func LoadYAMLByFilePath(filePath string) (*limayaml.LimaYAML, error) {
 	if err != nil {
 		return nil, err
 	}
-	y, err := limayaml.Load(yContent)
+	y, err := limayaml.Load(yContent, filePath)
 	if err != nil {
 		return nil, err
 	}

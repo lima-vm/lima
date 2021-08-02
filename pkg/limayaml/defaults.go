@@ -1,13 +1,16 @@
 package limayaml
 
 import (
+	"crypto/sha256"
 	"fmt"
+	"net"
 	"runtime"
+	"strconv"
 
 	"github.com/AkihiroSuda/lima/pkg/guestagent/api"
 )
 
-func FillDefault(y *LimaYAML) {
+func FillDefault(y *LimaYAML, filePath string) {
 	y.Arch = resolveArch(y.Arch)
 	for i := range y.Images {
 		img := &y.Images[i]
@@ -54,6 +57,21 @@ func FillDefault(y *LimaYAML) {
 	for i := range y.PortForwards {
 		FillPortForwardDefaults(&y.PortForwards[i])
 		// After defaults processing the singular HostPort and GuestPort values should not be used again.
+	}
+	for i := range y.Network.VDE {
+		vde := &y.Network.VDE[i]
+		if vde.MACAddress == "" {
+			// every interface in every limayaml file must get its own unique MAC address
+			uniqueID := fmt.Sprintf("%s#%d", filePath, i)
+			sha := sha256.Sum256([]byte(uniqueID))
+			// According to https://gitlab.com/wireshark/wireshark/-/blob/master/manuf
+			// no well-known MAC addresses start with 0x22.
+			hw := append(net.HardwareAddr{0x22}, sha[0:5]...)
+			vde.MACAddress = hw.String()
+		}
+		if vde.Name == "" {
+			vde.Name = "vde" + strconv.Itoa(i)
+		}
 	}
 }
 

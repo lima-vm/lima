@@ -15,7 +15,9 @@ import (
 	"github.com/AkihiroSuda/lima/pkg/iso9660util"
 	"github.com/AkihiroSuda/lima/pkg/limayaml"
 	"github.com/AkihiroSuda/lima/pkg/localpathutil"
+	"github.com/AkihiroSuda/lima/pkg/qemu"
 	"github.com/AkihiroSuda/lima/pkg/sshutil"
+	"github.com/AkihiroSuda/lima/pkg/store/filenames"
 	"github.com/opencontainers/go-digest"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -32,8 +34,8 @@ var (
 	}
 )
 
-func GenerateISO9660(isoPath, name string, y *limayaml.LimaYAML) error {
-	if err := limayaml.ValidateRaw(*y); err != nil {
+func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML) error {
+	if err := limayaml.Validate(*y); err != nil {
 		return err
 	}
 	u, err := user.Current()
@@ -68,6 +70,11 @@ func GenerateISO9660(isoPath, name string, y *limayaml.LimaYAML) error {
 			return err
 		}
 		args.Mounts = append(args.Mounts, expanded)
+	}
+
+	args.Networks = append(args.Networks, Network{MACAddress: qemu.SlirpMACAddress, Name: "eth0"})
+	for _, vde := range y.Network.VDE {
+		args.Networks = append(args.Networks, Network{MACAddress: vde.MACAddress, Name: vde.Name})
 	}
 
 	if err := ValidateTemplateArgs(args); err != nil {
@@ -147,7 +154,7 @@ func GenerateISO9660(isoPath, name string, y *limayaml.LimaYAML) error {
 		})
 	}
 
-	return iso9660util.Write(isoPath, "cidata", layout)
+	return iso9660util.Write(filepath.Join(instDir, filenames.CIDataISO), "cidata", layout)
 }
 
 func GuestAgentBinary(arch string) (io.ReadCloser, error) {

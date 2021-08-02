@@ -20,6 +20,7 @@ type LimaYAML struct {
 	Containerd   Containerd    `yaml:"containerd,omitempty"`
 	Probes       []Probe       `yaml:"probes,omitempty"`
 	PortForwards []PortForward `yaml:"portForwards,omitempty"`
+	Network      Network       `yaml:"network,omitempty"`
 }
 
 type Arch = string
@@ -104,4 +105,13 @@ type PortForward struct {
 	HostPortRange  [2]int `yaml:"hostPortRange,omitempty"`
 	Proto          Proto  `yaml:"proto,omitempty"`
 	Ignore         bool   `yaml:"ignore,omitempty"`
+}
+
+type Network struct {
+	VDE []VDE `yaml:"vde,omitempty"`
+}
+type VDE struct {
+	URL        string `yaml:"url,omitempty"`
+	MACAddress string `yaml:"macAddress,omitempty"`
+	Name       string `yaml:"name,omitempty"`
 }
