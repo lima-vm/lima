@@ -202,6 +202,8 @@ The current default spec:
   - ["Port forwarding does not work"](#port-forwarding-does-not-work)
   - [stuck on "Waiting for the essential requirement 1 of X: "ssh"](#stuck-on-waiting-for-the-essential-requirement-1-of-x-ssh)
   - ["permission denied" for `limactl cp` command](#permission-denied-for-limactl-cp-command)
+- [Networking](#networking)
+  - ["Cannot access the guest IP 192.168.5.15 from the host"](#cannot-access-the-guest-ip-192168515-from-the-host)
 - ["Hints for debugging other problems?"](#hints-for-debugging-other-problems)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
@@ -303,6 +305,15 @@ The `copy` command only works for instances that have been created by lima 0.5.0
 ```console
 < ~/.lima/_config/user.pub limactl shell INSTANCE sh -c 'tee -a ~/.ssh/authorized_keys'
 ```
+
+### Networking
+#### "Cannot access the guest IP 192.168.5.15 from the host"
+
+The default guest IP 192.168.5.15 is not accessible from the host and other guests.
+
+To add another IP address that is accessible from the host and other virtual machines, enable [`vde_vmnet`](https://github.com/lima-vm/vde_vmnet).
+
+See [`./docs/network.md`](./docs/network.md).
 
 ### "Hints for debugging other problems?"
 - Inspect logs:

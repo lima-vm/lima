@@ -85,6 +85,7 @@ The directory contains the following files:
 
 - `user-data`: [Cloud-init user-data](https://cloudinit.readthedocs.io/en/latest/topics/format.html)
 - `meta-data`: [Cloud-init meta-data](https://cloudinit.readthedocs.io/en/latest/topics/instancedata.html)
+- `network-config`: [Cloud-init Networking Config Version 2](https://cloudinit.readthedocs.io/en/latest/topics/network-config-format-v2.html)
 - `lima.env`: the environment variables
 - `lima-guestagent`: Lima guest agent binary
 - `nerdctl-full.tgz`: [`nerdctl-full-<VERSION>-linux-<ARCH>.tar.gz`](https://github.com/containerd/nerdctl/releases)
