@@ -160,8 +160,17 @@ func Validate(y LimaYAML) error {
 		// Not validating that the various GuestPortRanges and HostPortRanges are not overlapping. Rules will be
 		// processed sequentially and the first matching rule for a guest port determines forwarding behavior.
 	}
+
+	if err := validateNetwork(y.Network); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func validateNetwork(yNetwork Network) error {
 	networkName := make(map[string]int)
-	for i, vde := range y.Network.VDE {
+	for i, vde := range yNetwork.VDE {
 		field := fmt.Sprintf("network.vde[%d]", i)
 		if vde.URL == "" {
 			return errors.Errorf("field `%s.url` must not be empty", field)
