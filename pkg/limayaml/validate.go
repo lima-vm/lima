@@ -186,16 +186,28 @@ func validateNetwork(yNetwork Network) error {
 			if err != nil {
 				return errors.Wrapf(err, "field `%s.url` %q failed stat", field, vdeSwitch)
 			}
-			if !fi.IsDir() {
-				return errors.Wrapf(err, "field `%s.url` %q is not a directory", field, vdeSwitch)
-			}
-			ctlSocket := filepath.Join(vdeSwitch, "ctl")
-			fi, err = os.Stat(ctlSocket)
-			if err != nil {
-				return errors.Wrapf(err, "field `%s.url` control socket %q failed stat", field, ctlSocket)
-			}
-			if fi.Mode()&os.ModeSocket == 0 {
-				return errors.Errorf("field `%s.url` file %q is not a UNIX socket", field, ctlSocket)
+			if fi.IsDir() {
+				/* Switch mode (vdeSwitch is dir, port != 65535) */
+				ctlSocket := filepath.Join(vdeSwitch, "ctl")
+				fi, err = os.Stat(ctlSocket)
+				if err != nil {
+					return errors.Wrapf(err, "field `%s.url` control socket %q failed stat", field, ctlSocket)
+				}
+				if fi.Mode()&os.ModeSocket == 0 {
+					return errors.Errorf("field `%s.url` file %q is not a UNIX socket", field, ctlSocket)
+				}
+				if vde.SwitchPort == 65535 {
+					return errors.Errorf("field `%s.url` points to a non-PTP switch, so the port number must not be 65535", field)
+				}
+			} else {
+				/* PTP mode (vdeSwitch is socket, port == 65535) */
+				if fi.Mode()&os.ModeSocket == 0 {
+					return errors.Errorf("field `%s.url` %q is not a directory nor a UNIX socket", field, vdeSwitch)
+				}
+				if vde.SwitchPort != 65535 {
+					return errors.Errorf("field `%s.url` points to a PTP (switchless) socket %q, so the port number has to be 65535 (got %d)",
+						field, vdeSwitch, vde.SwitchPort)
+				}
 			}
 		} else if runtime.GOOS != "linux" {
 			logrus.Warnf("field `%s.url` is unlikely to work for %s (unless libvdeplug4 has been ported to %s and is installed)",

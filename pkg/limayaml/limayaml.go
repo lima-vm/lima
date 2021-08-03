@@ -112,6 +112,7 @@ type Network struct {
 }
 type VDE struct {
 	URL        string `yaml:"url,omitempty"`
+	SwitchPort uint16 `yaml:"switchPort,omitempty"` // VDE Switch port, not TCP/UDP port
 	MACAddress string `yaml:"macAddress,omitempty"`
 	Name       string `yaml:"name,omitempty"`
 }

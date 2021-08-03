@@ -127,6 +127,9 @@ network:
   vde:
     # url points to the vde_switch socket directory, optionally with vde:// prefix
     # - url: "vde:///var/run/vde.ctl"
+    #   # VDE Switch port number (not TCP/UDP port number). Set to 65535 for PTP mode.
+    #   # Default: 0
+    #   switchPort: 0
     #   # MAC address of the instance; lima will pick one based on the instance name,
     #   # so DHCP assigned ip addresses should remain constant over instance restarts.
     #   macAddress: ""
