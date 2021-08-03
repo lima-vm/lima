@@ -20,4 +20,4 @@ network:
   # daemons must be running before the instance is started. The interface type
   # (host, shared, or bridged) is configured in vde_vmnet and not lima.
   vde:
-    - url: "/var/run/vde.ctl"
+    - url: "vde:///var/run/vde.ctl"

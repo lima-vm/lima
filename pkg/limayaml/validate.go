@@ -6,12 +6,14 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/AkihiroSuda/lima/pkg/localpathutil"
 	"github.com/AkihiroSuda/lima/pkg/qemu/qemuconst"
 	"github.com/docker/go-units"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 func Validate(y LimaYAML) error {
@@ -176,21 +178,28 @@ func validateNetwork(yNetwork Network) error {
 			return errors.Errorf("field `%s.url` must not be empty", field)
 		}
 		// The field is called VDE.URL in anticipation of QEMU upgrading VDE2 to VDEplug4,
-		// but right now the only valid value is a path to the vde_switch socket directory.
-		fi, err := os.Stat(vde.URL)
-		if err != nil {
-			return errors.Wrapf(err, "field `%s.url` %q failed stat", field, vde.URL)
-		}
-		if !fi.IsDir() {
-			return errors.Wrapf(err, "field `%s.url` %q is not a directory", field, vde.URL)
-		}
-		ctlSocket := filepath.Join(vde.URL, "ctl")
-		fi, err = os.Stat(ctlSocket)
-		if err != nil {
-			return errors.Wrapf(err, "field `%s.url` control socket %q failed stat", field, ctlSocket)
-		}
-		if fi.Mode()&os.ModeSocket == 0 {
-			return errors.Errorf("field `%s.url` file %q is not a UNIX socket", field, ctlSocket)
+		// but right now the only valid value on macOS is a path to the vde_switch socket directory,
+		// optionally with vde:// prefix.
+		if !strings.Contains(vde.URL, "://") || strings.HasPrefix(vde.URL, "vde://") {
+			vdeSwitch := strings.TrimPrefix(vde.URL, "vde://")
+			fi, err := os.Stat(vdeSwitch)
+			if err != nil {
+				return errors.Wrapf(err, "field `%s.url` %q failed stat", field, vdeSwitch)
+			}
+			if !fi.IsDir() {
+				return errors.Wrapf(err, "field `%s.url` %q is not a directory", field, vdeSwitch)
+			}
+			ctlSocket := filepath.Join(vdeSwitch, "ctl")
+			fi, err = os.Stat(ctlSocket)
+			if err != nil {
+				return errors.Wrapf(err, "field `%s.url` control socket %q failed stat", field, ctlSocket)
+			}
+			if fi.Mode()&os.ModeSocket == 0 {
+				return errors.Errorf("field `%s.url` file %q is not a UNIX socket", field, ctlSocket)
+			}
+		} else if runtime.GOOS != "linux" {
+			logrus.Warnf("field `%s.url` is unlikely to work for %s (unless libvdeplug4 has been ported to %s and is installed)",
+				field, runtime.GOOS, runtime.GOOS)
 		}
 		if vde.MACAddress != "" {
 			hw, err := net.ParseMAC(vde.MACAddress)

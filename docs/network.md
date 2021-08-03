@@ -34,8 +34,8 @@ network:
   # daemons must be running before the instance is started. The interface type
   # (host, shared, or bridged) is configured in vde_vmnet and not lima.
   vde:
-    # url points to the vde_switch socket directory
-    - url: "/var/run/vde.ctl"
+    # url points to the vde_switch socket directory, optionally with vde:// prefix
+    - url: "vde:///var/run/vde.ctl"
       # MAC address of the instance; lima will pick one based on the instance name,
       # so DHCP assigned ip addresses should remain constant over instance restarts.
       macAddress: ""
