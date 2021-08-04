@@ -37,8 +37,8 @@ cloud.google.com/go/storage v1.10.0/go.mod h1:FLPqc6j+Ki4BU591ie1oL6qBQGu2Bl/tZ9
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
 github.com/AkihiroSuda/sshocker v0.1.1-0.20210510144941-56aa3c7472b0 h1:3wgWVUj7BBfqekwj8muvFjGsLEo0Qga6FHhKL1yitEY=
 github.com/AkihiroSuda/sshocker v0.1.1-0.20210510144941-56aa3c7472b0/go.mod h1:85HSbV+AEm8Q/sbrx69Q4GQ9MT9OccwnH0ITcOWfO3Q=
-github.com/AlecAivazis/survey/v2 v2.2.15 h1:6UNMnk+YGegYFiPfdTOyZDIN+m08x2nGnqOn15BWcEQ=
-github.com/AlecAivazis/survey/v2 v2.2.15/go.mod h1:TH2kPCDU3Kqq7pLbnCWwZXDBjnhZtmsCle5EiYDJ2fg=
+github.com/AlecAivazis/survey/v2 v2.2.16 h1:KJ4fLFqY/NfR5OaFLcf4pThxrlV2YCHGCnCHAKLsJ+U=
+github.com/AlecAivazis/survey/v2 v2.2.16/go.mod h1:TH2kPCDU3Kqq7pLbnCWwZXDBjnhZtmsCle5EiYDJ2fg=
 github.com/Azure/azure-sdk-for-go v16.2.1+incompatible/go.mod h1:9XXNKU+eRnpl9moKnB4QOLf1HestfXbmab5FXxiDBjc=
 github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78/go.mod h1:LmzpDX56iTiv29bbRTIsUNlaFfuhWRQBWjQdVyAevI8=
 github.com/Azure/go-autorest v10.8.1+incompatible/go.mod h1:r+4oMnoxhatjLLJ6zxSWATqVooLgysK6ZNox3g/xq24=
