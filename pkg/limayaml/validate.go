@@ -174,43 +174,43 @@ func validateNetwork(yNetwork Network) error {
 	networkName := make(map[string]int)
 	for i, vde := range yNetwork.VDE {
 		field := fmt.Sprintf("network.vde[%d]", i)
-		if vde.URL == "" {
-			return errors.Errorf("field `%s.url` must not be empty", field)
+		if vde.VNL == "" {
+			return errors.Errorf("field `%s.vnl` must not be empty", field)
 		}
-		// The field is called VDE.URL in anticipation of QEMU upgrading VDE2 to VDEplug4,
+		// The field is called VDE.VNL in anticipation of QEMU upgrading VDE2 to VDEplug4,
 		// but right now the only valid value on macOS is a path to the vde_switch socket directory,
 		// optionally with vde:// prefix.
-		if !strings.Contains(vde.URL, "://") || strings.HasPrefix(vde.URL, "vde://") {
-			vdeSwitch := strings.TrimPrefix(vde.URL, "vde://")
+		if !strings.Contains(vde.VNL, "://") || strings.HasPrefix(vde.VNL, "vde://") {
+			vdeSwitch := strings.TrimPrefix(vde.VNL, "vde://")
 			fi, err := os.Stat(vdeSwitch)
 			if err != nil {
-				return errors.Wrapf(err, "field `%s.url` %q failed stat", field, vdeSwitch)
+				return errors.Wrapf(err, "field `%s.vnl` %q failed stat", field, vdeSwitch)
 			}
 			if fi.IsDir() {
 				/* Switch mode (vdeSwitch is dir, port != 65535) */
 				ctlSocket := filepath.Join(vdeSwitch, "ctl")
 				fi, err = os.Stat(ctlSocket)
 				if err != nil {
-					return errors.Wrapf(err, "field `%s.url` control socket %q failed stat", field, ctlSocket)
+					return errors.Wrapf(err, "field `%s.vnl` control socket %q failed stat", field, ctlSocket)
 				}
 				if fi.Mode()&os.ModeSocket == 0 {
-					return errors.Errorf("field `%s.url` file %q is not a UNIX socket", field, ctlSocket)
+					return errors.Errorf("field `%s.vnl` file %q is not a UNIX socket", field, ctlSocket)
 				}
 				if vde.SwitchPort == 65535 {
-					return errors.Errorf("field `%s.url` points to a non-PTP switch, so the port number must not be 65535", field)
+					return errors.Errorf("field `%s.vnl` points to a non-PTP switch, so the port number must not be 65535", field)
 				}
 			} else {
 				/* PTP mode (vdeSwitch is socket, port == 65535) */
 				if fi.Mode()&os.ModeSocket == 0 {
-					return errors.Errorf("field `%s.url` %q is not a directory nor a UNIX socket", field, vdeSwitch)
+					return errors.Errorf("field `%s.vnl` %q is not a directory nor a UNIX socket", field, vdeSwitch)
 				}
 				if vde.SwitchPort != 65535 {
-					return errors.Errorf("field `%s.url` points to a PTP (switchless) socket %q, so the port number has to be 65535 (got %d)",
+					return errors.Errorf("field `%s.vnl` points to a PTP (switchless) socket %q, so the port number has to be 65535 (got %d)",
 						field, vdeSwitch, vde.SwitchPort)
 				}
 			}
 		} else if runtime.GOOS != "linux" {
-			logrus.Warnf("field `%s.url` is unlikely to work for %s (unless libvdeplug4 has been ported to %s and is installed)",
+			logrus.Warnf("field `%s.vnl` is unlikely to work for %s (unless libvdeplug4 has been ported to %s and is installed)",
 				field, runtime.GOOS, runtime.GOOS)
 		}
 		if vde.MACAddress != "" {

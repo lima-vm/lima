@@ -197,10 +197,10 @@ func Cmdline(cfg Config) (string, []string, error) {
 	args = append(args, "-netdev", fmt.Sprintf("user,id=net0,net=192.168.5.0/24,hostfwd=tcp:127.0.0.1:%d-:22", y.SSH.LocalPort))
 	args = append(args, "-device", "virtio-net-pci,netdev=net0,mac="+limayaml.MACAddress(cfg.InstanceDir))
 	for i, vde := range y.Network.VDE {
-		// VDE4 accepts URL such as vde:///var/run/vde.ctl as well as file path such as /var/run/vde.ctl .
+		// VDE4 accepts VNL like vde:///var/run/vde.ctl as well as file path like /var/run/vde.ctl .
 		// VDE2 only accepts the latter form.
 		// VDE2 supports macOS but VDE4 does not yet, so we trim vde:// prefix here for VDE2 compatibility.
-		vdeSock := strings.TrimPrefix(vde.URL, "vde://")
+		vdeSock := strings.TrimPrefix(vde.VNL, "vde://")
 		args = append(args, "-netdev", fmt.Sprintf("vde,id=net%d,sock=%s", i+1, vdeSock))
 		args = append(args, "-device", fmt.Sprintf("virtio-net-pci,netdev=net%d,mac=%s", i+1, vde.MACAddress))
 	}

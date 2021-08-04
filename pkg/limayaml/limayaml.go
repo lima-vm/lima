@@ -111,7 +111,9 @@ type Network struct {
 	VDE []VDE `yaml:"vde,omitempty"`
 }
 type VDE struct {
-	URL        string `yaml:"url,omitempty"`
+	// VNL is a Virtual Network Locator (https://github.com/rd235/vdeplug4/commit/089984200f447abb0e825eb45548b781ba1ebccd).
+	// On macOS, only VDE2-compatible form (optionally with vde:// prefix) is supported.
+	VNL        string `yaml:"vnl,omitempty"`
 	SwitchPort uint16 `yaml:"switchPort,omitempty"` // VDE Switch port, not TCP/UDP port
 	MACAddress string `yaml:"macAddress,omitempty"`
 	Name       string `yaml:"name,omitempty"`
