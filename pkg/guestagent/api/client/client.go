@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/AkihiroSuda/lima/pkg/guestagent/api"
-	"github.com/AkihiroSuda/lima/pkg/httpclientutil"
+	"github.com/lima-vm/lima/pkg/guestagent/api"
+	"github.com/lima-vm/lima/pkg/httpclientutil"
 )
 
 type GuestAgentClient interface {

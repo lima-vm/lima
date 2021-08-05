@@ -7,8 +7,8 @@ import (
 	"os/user"
 	"strings"
 
-	"github.com/AkihiroSuda/lima/pkg/sshutil"
-	"github.com/AkihiroSuda/lima/pkg/store"
+	"github.com/lima-vm/lima/pkg/sshutil"
+	"github.com/lima-vm/lima/pkg/store"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"

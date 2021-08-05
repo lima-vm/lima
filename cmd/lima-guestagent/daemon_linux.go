@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/AkihiroSuda/lima/pkg/guestagent"
-	"github.com/AkihiroSuda/lima/pkg/guestagent/api/server"
+	"github.com/lima-vm/lima/pkg/guestagent"
+	"github.com/lima-vm/lima/pkg/guestagent/api/server"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"

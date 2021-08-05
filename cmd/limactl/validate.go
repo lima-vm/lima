@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/AkihiroSuda/lima/pkg/store"
+	"github.com/lima-vm/lima/pkg/store"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"

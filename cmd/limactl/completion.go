@@ -21,7 +21,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/AkihiroSuda/lima/pkg/store"
+	"github.com/lima-vm/lima/pkg/store"
 	"github.com/urfave/cli/v2"
 )
 

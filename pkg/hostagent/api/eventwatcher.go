@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/AkihiroSuda/lima/pkg/logrusutil"
+	"github.com/lima-vm/lima/pkg/logrusutil"
 	"github.com/nxadm/tail"
 	"github.com/sirupsen/logrus"
 )

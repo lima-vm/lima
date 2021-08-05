@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/AkihiroSuda/lima/pkg/templateutil"
+	"github.com/lima-vm/lima/pkg/templateutil"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )

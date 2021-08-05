@@ -6,7 +6,7 @@ GO ?= go
 
 TAR ?= tar
 
-PACKAGE := github.com/AkihiroSuda/lima
+PACKAGE := github.com/lima-vm/lima
 
 VERSION=$(shell git describe --match 'v[0-9]*' --dirty='.m' --always --tags)
 VERSION_TRIMMED := $(VERSION:v%=%)

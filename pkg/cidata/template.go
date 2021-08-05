@@ -7,10 +7,10 @@ import (
 	"io/fs"
 	"path/filepath"
 
-	"github.com/AkihiroSuda/lima/pkg/iso9660util"
+	"github.com/lima-vm/lima/pkg/iso9660util"
 
-	"github.com/AkihiroSuda/lima/pkg/templateutil"
 	"github.com/containerd/containerd/identifiers"
+	"github.com/lima-vm/lima/pkg/templateutil"
 	"github.com/pkg/errors"
 )
 

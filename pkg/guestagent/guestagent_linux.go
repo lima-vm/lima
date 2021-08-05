@@ -7,8 +7,8 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/AkihiroSuda/lima/pkg/guestagent/api"
-	"github.com/AkihiroSuda/lima/pkg/guestagent/procnettcp"
+	"github.com/lima-vm/lima/pkg/guestagent/api"
+	"github.com/lima-vm/lima/pkg/guestagent/procnettcp"
 	"github.com/sirupsen/logrus"
 	"github.com/yalue/native_endian"
 )

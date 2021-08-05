@@ -9,9 +9,9 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/AkihiroSuda/lima/pkg/localpathutil"
-	"github.com/AkihiroSuda/lima/pkg/qemu/qemuconst"
 	"github.com/docker/go-units"
+	"github.com/lima-vm/lima/pkg/localpathutil"
+	"github.com/lima-vm/lima/pkg/qemu/qemuconst"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
