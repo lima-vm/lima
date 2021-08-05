@@ -47,10 +47,11 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML) error {
 		return err
 	}
 	args := TemplateArgs{
-		Name:       name,
-		User:       u.Username,
-		UID:        uid,
-		Containerd: Containerd{System: *y.Containerd.System, User: *y.Containerd.User},
+		Name:         name,
+		User:         u.Username,
+		UID:          uid,
+		Containerd:   Containerd{System: *y.Containerd.System, User: *y.Containerd.User},
+		SlirpGateway: qemuconst.SlirpGateway,
 	}
 
 	pubKeys, err := sshutil.DefaultPubKeys(*y.SSH.LoadDotSSHPubKeys)

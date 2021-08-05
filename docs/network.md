@@ -6,15 +6,15 @@ By default Lima only enables the user-mode networking aka "slirp".
 
 ### Guest IP (192.168.5.15)
 
-The guest IP address is typically set to 192.168.5.15.
+The guest IP address is set to `192.168.5.15`.
 
 This IP address is not accessible from the host by design.
 
-Use `vde_vmnet` to allow accessing the guest IP from the host and other guests.
+Use [vde_vmnet](https://github.com/lima-vm/vde_vmnet) to allow accessing the guest IP from the host and other guests.
 
 ### Host IP (192.168.5.2)
 
-The loopback addresses of the host is accessible from the guest as 192.168.5.2.
+The loopback addresses of the host is `192.168.5.2` and is accessible from the guest as `host.lima.internal`.
 
 ### DNS (192.168.5.3)
 
