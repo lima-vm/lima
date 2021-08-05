@@ -8,10 +8,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/AkihiroSuda/lima/pkg/lockutil"
-	"github.com/AkihiroSuda/lima/pkg/osutil"
-	"github.com/AkihiroSuda/lima/pkg/store"
-	"github.com/AkihiroSuda/lima/pkg/store/filenames"
+	"github.com/lima-vm/lima/pkg/lockutil"
+	"github.com/lima-vm/lima/pkg/osutil"
+	"github.com/lima-vm/lima/pkg/store"
+	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )

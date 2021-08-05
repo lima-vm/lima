@@ -90,7 +90,7 @@ $ brew install lima
 
 - On ARM hosts, QEMU has to be patched for enabling `--accel=hvf` support. See https://gist.github.com/nrjdalal/e70249bb5d2e9d844cc203fd11f74c55
 
-- Download the binary archive of Lima from https://github.com/AkihiroSuda/lima/releases ,
+- Download the binary archive of Lima from https://github.com/lima-vm/lima/releases ,
 and extract it under `/usr/local` (or somewhere else).
 
 - To install Lima from the source, run `make && make install`.
@@ -172,7 +172,7 @@ The current default spec:
 
 ### Help wanted
 :pray:
-- [Test on ARM Mac](https://github.com/AkihiroSuda/lima/issues/42)
+- [Test on ARM Mac](https://github.com/lima-vm/lima/issues/42)
 - Performance optimization
 - More guest distros
 - Windows hosts

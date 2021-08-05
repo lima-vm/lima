@@ -8,12 +8,12 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/AkihiroSuda/lima/pkg/cidata"
-	hostagentapi "github.com/AkihiroSuda/lima/pkg/hostagent/api"
-	"github.com/AkihiroSuda/lima/pkg/limayaml"
-	"github.com/AkihiroSuda/lima/pkg/qemu"
-	"github.com/AkihiroSuda/lima/pkg/store"
-	"github.com/AkihiroSuda/lima/pkg/store/filenames"
+	"github.com/lima-vm/lima/pkg/cidata"
+	hostagentapi "github.com/lima-vm/lima/pkg/hostagent/api"
+	"github.com/lima-vm/lima/pkg/limayaml"
+	"github.com/lima-vm/lima/pkg/qemu"
+	"github.com/lima-vm/lima/pkg/store"
+	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )

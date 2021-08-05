@@ -8,9 +8,9 @@ import (
 	"syscall"
 	"time"
 
-	hostagentapi "github.com/AkihiroSuda/lima/pkg/hostagent/api"
-	"github.com/AkihiroSuda/lima/pkg/store"
-	"github.com/AkihiroSuda/lima/pkg/store/filenames"
+	hostagentapi "github.com/lima-vm/lima/pkg/hostagent/api"
+	"github.com/lima-vm/lima/pkg/store"
+	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"

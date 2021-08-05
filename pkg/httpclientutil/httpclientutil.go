@@ -13,7 +13,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/AkihiroSuda/lima/pkg/guestagent/api"
+	"github.com/lima-vm/lima/pkg/guestagent/api"
 	"github.com/pkg/errors"
 )
 

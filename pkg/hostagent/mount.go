@@ -4,10 +4,10 @@ import (
 	"context"
 	"os"
 
-	"github.com/AkihiroSuda/lima/pkg/limayaml"
-	"github.com/AkihiroSuda/lima/pkg/localpathutil"
 	"github.com/AkihiroSuda/sshocker/pkg/reversesshfs"
 	"github.com/hashicorp/go-multierror"
+	"github.com/lima-vm/lima/pkg/limayaml"
+	"github.com/lima-vm/lima/pkg/localpathutil"
 	"github.com/pkg/errors"
 )
 

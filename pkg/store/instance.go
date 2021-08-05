@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/AkihiroSuda/lima/pkg/limayaml"
-	"github.com/AkihiroSuda/lima/pkg/store/filenames"
+	"github.com/lima-vm/lima/pkg/limayaml"
+	"github.com/lima-vm/lima/pkg/store/filenames"
 )
 
 type Status = string

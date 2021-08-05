@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/AkihiroSuda/lima/pkg/version"
+	"github.com/lima-vm/lima/pkg/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )

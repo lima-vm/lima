@@ -6,7 +6,7 @@ import (
 	"os/signal"
 	"strconv"
 
-	"github.com/AkihiroSuda/lima/pkg/hostagent"
+	"github.com/lima-vm/lima/pkg/hostagent"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 )

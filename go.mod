@@ -1,4 +1,4 @@
-module github.com/AkihiroSuda/lima
+module github.com/lima-vm/lima
 
 go 1.16
 

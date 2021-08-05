@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/AkihiroSuda/lima/pkg/localpathutil"
 	"github.com/cheggaaa/pb/v3"
 	"github.com/containerd/continuity/fs"
+	"github.com/lima-vm/lima/pkg/localpathutil"
 	"github.com/mattn/go-isatty"
 	"github.com/opencontainers/go-digest"
 	"github.com/pkg/errors"

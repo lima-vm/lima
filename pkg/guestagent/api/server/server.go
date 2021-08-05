@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/AkihiroSuda/lima/pkg/guestagent"
-	"github.com/AkihiroSuda/lima/pkg/guestagent/api"
 	"github.com/gorilla/mux"
+	"github.com/lima-vm/lima/pkg/guestagent"
+	"github.com/lima-vm/lima/pkg/guestagent/api"
 	"github.com/sirupsen/logrus"
 )
 

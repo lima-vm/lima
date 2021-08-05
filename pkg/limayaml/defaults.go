@@ -7,8 +7,8 @@ import (
 	"runtime"
 	"strconv"
 
-	"github.com/AkihiroSuda/lima/pkg/guestagent/api"
-	"github.com/AkihiroSuda/lima/pkg/osutil"
+	"github.com/lima-vm/lima/pkg/guestagent/api"
+	"github.com/lima-vm/lima/pkg/osutil"
 )
 
 func MACAddress(uniqueID string) string {

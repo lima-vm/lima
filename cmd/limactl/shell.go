@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/AkihiroSuda/lima/pkg/sshutil"
-	"github.com/AkihiroSuda/lima/pkg/store"
 	"github.com/alessio/shellescape"
+	"github.com/lima-vm/lima/pkg/sshutil"
+	"github.com/lima-vm/lima/pkg/store"
 	"github.com/mattn/go-isatty"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
