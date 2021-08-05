@@ -1,3 +1,7 @@
+# ===================================================================== #
+# BASIC CONFIGURATION
+# ===================================================================== #
+
 # Arch: "default", "x86_64", "aarch64".
 # "default" corresponds to the host architecture.
 arch: "default"
@@ -31,20 +35,6 @@ memory: "4GiB"
 # Default: "100GiB"
 disk: "100GiB"
 
-network:
-  # The instance can get routable IP addresses from the vmnet framework using
-  # https://github.com/AkihiroSuda/vde_vmnet. Both vde_switch and vde_vmnet
-  # daemons must be running before the instance is started. The interface type
-  # (host, shared, or bridged) is configured in vde_vmnet and not lima.
-  vde:
-    # url points to the vde_switch socket directory
-    # - url: "/var/run/vde.ctl"
-    #   # MAC address of the instance; lima will pick one based on the instance name,
-    #   # so DHCP assigned ip addresses should remain constant over instance restarts.
-    #   macAddress: ""
-    #   # Interface name, defaults to "vde0", "vde1", etc.
-    #   name: ""
-
 # Expose host directories to the guest
 # Default: none
 mounts:
@@ -67,17 +57,9 @@ ssh:
   # Default: true
   loadDotSSHPubKeys: true
 
-firmware:
-  # Use legacy BIOS instead of UEFI.
-  # Default: false
-  legacyBIOS: false
-
-video:
-  # QEMU display, e.g., "none", "cocoa", "sdl".
-  # As of QEMU v5.2, enabling this is known to have negative impact
-  # on performance on macOS hosts: https://gitlab.com/qemu-project/qemu/-/issues/334
-  # Default: "none"
-  display: "none"
+# ===================================================================== #
+# ADVANCED CONFIGURATION
+# ===================================================================== #
 
 containerd:
   # Enable system-wide (aka rootful)  containerd and its dependencies (BuildKit, Stargz Snapshotter)
@@ -86,32 +68,6 @@ containerd:
   # Enable user-scoped (aka rootless) containerd and its dependencies
   # Default: true
   user: true
-
-# Port forwarding rules. Forwarding between ports 22 and ssh.localPort cannot be overridden.
-# Rules are checked sequentially until the first one matches.
-# portForwards:
-#   - guestPort: 443
-#     hostIP: "0.0.0.0" # overrides the default value "127.0.0.1"; allows privileged port forwarding
-#   # default: hostPort: 443 (same as guestPort)
-#   # default: guestIP: "127.0.0.1" (also matches bind addresses "0.0.0.0", "::", and "::1")
-#   # default: proto: "tcp" (only valid value right now)
-#   - guestPortRange: [4000, 4999]
-#     hostIP:  "0.0.0.0" # overrides the default value "127.0.0.1"
-#   # default: hostPortRange: [4000, 4999] (must specify same number of ports as guestPortRange)
-#   - guestPort: 80
-#     hostPort: 8080 # overrides the default value 80
-#   - guestIP: "127.0.0.2" # overrides the default value "127.0.0.1"
-#     hostIP: "127.0.0.2" # overrides the default value "127.0.0.1"
-#   # default: guestPortRange: [1024, 65535]
-#   # default: hostPortRange: [1024, 65535]
-#   - guestPort: 8888
-#     ignore: true (don't forward this port)
-#   # Lima internally appends this fallback rule at the end:
-#   - guestIP: "127.0.0.1"
-#     guestPortRange: [1024, 65535]
-#     hostIP: "127.0.0.1"
-#     hostPortRange: [1024, 65535]
-#   # Any port still not matched by a rule will not be forwarded (ignored)
 
 # Provisioning scripts need to be idempotent because they might be called
 # multiple times, e.g. when the host VM is being restarted.
@@ -146,3 +102,68 @@ containerd:
 #    hint: |
 #      vim was not installed in the guest. Make sure the package system is working correctly.
 #      Also see "/var/log/cloud-init-output.log" in the guest.
+
+# ===================================================================== #
+# FURTHER ADVANCED CONFIGURATION
+# ===================================================================== #
+
+firmware:
+  # Use legacy BIOS instead of UEFI.
+  # Default: false
+  legacyBIOS: false
+
+video:
+  # QEMU display, e.g., "none", "cocoa", "sdl".
+  # As of QEMU v5.2, enabling this is known to have negative impact
+  # on performance on macOS hosts: https://gitlab.com/qemu-project/qemu/-/issues/334
+  # Default: "none"
+  display: "none"
+
+network:
+  # The instance can get routable IP addresses from the vmnet framework using
+  # https://github.com/lima-vm/vde_vmnet. Both vde_switch and vde_vmnet
+  # daemons must be running before the instance is started. The interface type
+  # (host, shared, or bridged) is configured in vde_vmnet and not lima.
+  vde:
+    # vnl (virtual network locator) points to the vde_switch socket directory,
+    # optionally with vde:// prefix
+    # - vnl: "vde:///var/run/vde.ctl"
+    #   # VDE Switch port number (not TCP/UDP port number). Set to 65535 for PTP mode.
+    #   # Default: 0
+    #   switchPort: 0
+    #   # MAC address of the instance; lima will pick one based on the instance name,
+    #   # so DHCP assigned ip addresses should remain constant over instance restarts.
+    #   macAddress: ""
+    #   # Interface name, defaults to "vde0", "vde1", etc.
+    #   name: ""
+
+# Port forwarding rules. Forwarding between ports 22 and ssh.localPort cannot be overridden.
+# Rules are checked sequentially until the first one matches.
+# portForwards:
+#   - guestPort: 443
+#     hostIP: "0.0.0.0" # overrides the default value "127.0.0.1"; allows privileged port forwarding
+#   # default: hostPort: 443 (same as guestPort)
+#   # default: guestIP: "127.0.0.1" (also matches bind addresses "0.0.0.0", "::", and "::1")
+#   # default: proto: "tcp" (only valid value right now)
+#   - guestPortRange: [4000, 4999]
+#     hostIP:  "0.0.0.0" # overrides the default value "127.0.0.1"
+#   # default: hostPortRange: [4000, 4999] (must specify same number of ports as guestPortRange)
+#   - guestPort: 80
+#     hostPort: 8080 # overrides the default value 80
+#   - guestIP: "127.0.0.2" # overrides the default value "127.0.0.1"
+#     hostIP: "127.0.0.2" # overrides the default value "127.0.0.1"
+#   # default: guestPortRange: [1024, 65535]
+#   # default: hostPortRange: [1024, 65535]
+#   - guestPort: 8888
+#     ignore: true (don't forward this port)
+#   # Lima internally appends this fallback rule at the end:
+#   - guestIP: "127.0.0.1"
+#     guestPortRange: [1024, 65535]
+#     hostIP: "127.0.0.1"
+#     hostPortRange: [1024, 65535]
+#   # Any port still not matched by a rule will not be forwarded (ignored)
+
+# ===================================================================== #
+# END OF TEMPLATE
+# ===================================================================== #
+

@@ -70,8 +70,8 @@ jobs:
         run: make
       - name: Install
         run: sudo make install
-      - name: Validate examples
-        run: limactl validate ./examples/*.yaml
+      - name: Validate examples (except vmnet.yaml)
+        run: find examples -name '*.yaml' | grep -v 'vmnet.yaml' | xargs limactl validate
       - name: Uninstall
         run: sudo make uninstall
 
@@ -81,9 +81,9 @@ jobs:
     timeout-minutes: 40
     strategy:
       matrix:
-        # GHA macOS is slow and flaky, so we only test "default.yaml" here.
+        # GHA macOS is slow and flaky, so we only test a few YAMLS here.
         # Other yamls are tested on Linux instances of Cirrus.
-        example: [default.yaml]
+        example: [default.yaml, vmnet.yaml]
     steps:
       - uses: actions/setup-go@v2
         with:
@@ -100,6 +100,16 @@ jobs:
         # bash:      required by test-example.sh (OS version of bash is too old)
         # coreutils: required by test-example.sh for the "timeout" command
         run: brew install qemu bash coreutils
+      - name: Install vde_vmnet
+        if: matrix.example == 'vmnet.yaml'
+        env:
+          VDE_VMNET_VERSION: v0.4.0
+        run: |
+          git clone https://github.com/lima-vm/vde_vmnet
+          cd vde_vmnet
+          git checkout $VDE_VMNET_VERSION
+          make
+          sudo make install
       - name: Prepare ssh
         run: |
           if [ -e ~/.ssh/id_rsa ]; then

@@ -8,14 +8,19 @@ import (
 	"strconv"
 
 	"github.com/AkihiroSuda/lima/pkg/guestagent/api"
+	"github.com/AkihiroSuda/lima/pkg/osutil"
 )
 
 func MACAddress(uniqueID string) string {
-	// TODO: combine the uniqueID with the host machineID to create a globally unique hash
-	sha := sha256.Sum256([]byte(uniqueID))
-	// According to https://gitlab.com/wireshark/wireshark/-/blob/master/manuf
-	// no well-known MAC addresses start with 0x22.
-	hw := append(net.HardwareAddr{0x22}, sha[0:5]...)
+	sha := sha256.Sum256([]byte(osutil.MachineID() + uniqueID))
+	// "5" is the magic number in the Lima ecosystem.
+	// (Visit https://en.wiktionary.org/wiki/lima and Command-F "five")
+	//
+	// But the second hex number is changed to 2 to satisfy the convention for
+	// local MAC addresses (https://en.wikipedia.org/wiki/MAC_address#Ranges_of_group_and_locally_administered_addresses)
+	//
+	// See also https://gitlab.com/wireshark/wireshark/-/blob/master/manuf to confirm the uniqueness of this prefix.
+	hw := append(net.HardwareAddr{0x52, 0x55, 0x55}, sha[0:3]...)
 	return hw.String()
 }
 

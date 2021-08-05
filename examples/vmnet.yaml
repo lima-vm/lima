@@ -1,0 +1,23 @@
+images:
+  # Hint: run `limactl prune` to invalidate the "current" cache
+  - location: "https://cloud-images.ubuntu.com/hirsute/current/hirsute-server-cloudimg-amd64.img"
+    arch: "x86_64"
+  - location: "https://cloud-images.ubuntu.com/hirsute/current/hirsute-server-cloudimg-arm64.img"
+    arch: "aarch64"
+mounts:
+  - location: "~"
+    writable: false
+  - location: "/tmp/lima"
+    writable: true
+ssh:
+  # localPort is changed from 60022 to avoid conflicting with the default.
+  # (TODO: assign localPort automatically)
+  localPort: 60105
+
+network:
+  # The instance can get routable IP addresses from the vmnet framework using
+  # https://github.com/lima-vm/vde_vmnet. Both vde_switch and vde_vmnet
+  # daemons must be running before the instance is started. The interface type
+  # (host, shared, or bridged) is configured in vde_vmnet and not lima.
+  vde:
+    - vnl: "vde:///var/run/vde.ctl"
