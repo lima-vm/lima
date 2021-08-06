@@ -21,8 +21,8 @@ binaries: \
 	_output/bin/lima \
 	_output/bin/limactl \
 	_output/bin/nerdctl.lima \
-	_output/share/lima/lima-guestagent.Linux-x86_64 \
-	_output/share/lima/lima-guestagent.Linux-aarch64
+	_output/share/lima/lima-guestagent.Linux-x86_64.gz \
+	_output/share/lima/lima-guestagent.Linux-aarch64.gz
 	mkdir -p _output/share/doc/lima
 	cp -aL README.md LICENSE docs examples _output/share/doc/lima
 	echo $(VERSION) > _output/share/doc/lima/VERSION
@@ -41,15 +41,17 @@ _output/bin/nerdctl.lima:
 _output/bin/limactl:
 	$(GO_BUILD) -o $@ ./cmd/limactl
 
-.PHONY: _output/share/lima/lima-guestagent.Linux-x86_64
-_output/share/lima/lima-guestagent.Linux-x86_64:
-	GOOS=linux GOARCH=amd64 $(GO_BUILD) -o $@ ./cmd/lima-guestagent
-	chmod 644 $@
+.PHONY: _output/share/lima/lima-guestagent.Linux-x86_64.gz
+_output/share/lima/lima-guestagent.Linux-x86_64.gz:
+	GOOS=linux GOARCH=amd64 $(GO_BUILD) -o $(basename $@) ./cmd/lima-guestagent
+	# Compress binary to let Homebrew ignore "Binaries built for a non-native architecture" check.
+	gzip -1fn $(basename $@)
 
-.PHONY: _output/share/lima/lima-guestagent.Linux-aarch64
-_output/share/lima/lima-guestagent.Linux-aarch64:
-	GOOS=linux GOARCH=arm64 $(GO_BUILD) -o $@ ./cmd/lima-guestagent
-	chmod 644 $@
+.PHONY: _output/share/lima/lima-guestagent.Linux-aarch64.gz
+_output/share/lima/lima-guestagent.Linux-aarch64.gz:
+	GOOS=linux GOARCH=arm64 $(GO_BUILD) -o $(basename $@) ./cmd/lima-guestagent
+	# Compress binary to let Homebrew ignore "Binaries built for a non-native architecture" check.
+	gzip -1fn $(basename $@)
 
 .PHONY: install
 install:

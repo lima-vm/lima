@@ -1,6 +1,7 @@
 package cidata
 
 import (
+	"compress/gzip"
 	"fmt"
 	"io"
 	"io/fs"
@@ -100,9 +101,14 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML) error {
 		}
 	}
 
-	if guestAgentBinary, err := GuestAgentBinary(y.Arch); err != nil {
+	if guestAgentGZ, err := GuestAgentGZ(y.Arch); err != nil {
 		return err
 	} else {
+		defer guestAgentGZ.Close()
+		guestAgentBinary, err := gzip.NewReader(guestAgentGZ)
+		if err != nil {
+			return err
+		}
 		defer guestAgentBinary.Close()
 		layout = append(layout, iso9660util.Entry{
 			Path:   "lima-guestagent",
@@ -159,7 +165,9 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML) error {
 	return iso9660util.Write(filepath.Join(instDir, filenames.CIDataISO), "cidata", layout)
 }
 
-func GuestAgentBinary(arch string) (io.ReadCloser, error) {
+// GuestAgentGZ returns a reader for a gzipped guest agent binary.
+// The binary is gzipped to let Homebrew ignore "Binaries built for a non-native architecture" check.
+func GuestAgentGZ(arch string) (io.ReadCloser, error) {
 	if arch == "" {
 		return nil, errors.New("arch must be set")
 	}
@@ -181,18 +189,18 @@ func GuestAgentBinary(arch string) (io.ReadCloser, error) {
 	// self:  /usr/local/bin/limactl
 	selfDir := filepath.Dir(self)
 	selfDirDir := filepath.Dir(selfDir)
-	candidates := []string{
+	gzCandidates := []string{
 		// candidate 0:
 		// - self:  /Applications/Lima.app/Contents/MacOS/limactl
-		// - agent: /Applications/Lima.app/Contents/MacOS/lima-guestagent.Linux-x86_64
-		filepath.Join(selfDir, "lima-guestagent.Linux-"+arch),
+		// - agent: /Applications/Lima.app/Contents/MacOS/lima-guestagent.Linux-x86_64.gz
+		filepath.Join(selfDir, "lima-guestagent.Linux-"+arch+".gz"),
 		// candidate 1:
 		// - self:  /usr/local/bin/limactl
-		// - agent: /usr/local/share/lima/lima-guestagent.Linux-x86_64
-		filepath.Join(selfDirDir, "share/lima/lima-guestagent.Linux-"+arch),
+		// - agent: /usr/local/share/lima/lima-guestagent.Linux-x86_64.gz
+		filepath.Join(selfDirDir, "share/lima/lima-guestagent.Linux-"+arch+".gz"),
 		// TODO: support custom path
 	}
-	for _, candidate := range candidates {
+	for _, candidate := range gzCandidates {
 		if f, err := os.Open(candidate); err == nil {
 			return f, nil
 		} else if !errors.Is(err, os.ErrNotExist) {
@@ -200,6 +208,6 @@ func GuestAgentBinary(arch string) (io.ReadCloser, error) {
 		}
 	}
 
-	return nil, errors.Errorf("failed to find \"lima-guestagent.Linux-%s\" binary for %q, attempted %v",
-		arch, self, candidates)
+	return nil, errors.Errorf("failed to find \"lima-guestagent.Linux-%s.gz\" binary for %q, attempted %v",
+		arch, self, gzCandidates)
 }
