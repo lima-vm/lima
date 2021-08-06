@@ -179,31 +179,31 @@ func validateNetwork(yNetwork Network) error {
 		// optionally with vde:// prefix.
 		if !strings.Contains(vde.VNL, "://") || strings.HasPrefix(vde.VNL, "vde://") {
 			vdeSwitch := strings.TrimPrefix(vde.VNL, "vde://")
-			fi, err := os.Stat(vdeSwitch)
-			if err != nil {
-				return fmt.Errorf("field `%s.vnl` %q failed stat: %w", field, vdeSwitch, err)
-			}
-			if fi.IsDir() {
-				/* Switch mode (vdeSwitch is dir, port != 65535) */
-				ctlSocket := filepath.Join(vdeSwitch, "ctl")
-				fi, err = os.Stat(ctlSocket)
-				if err != nil {
-					return fmt.Errorf("field `%s.vnl` control socket %q failed stat: %w", field, ctlSocket, err)
-				}
-				if fi.Mode()&os.ModeSocket == 0 {
-					return fmt.Errorf("field `%s.vnl` file %q is not a UNIX socket", field, ctlSocket)
-				}
-				if vde.SwitchPort == 65535 {
-					return fmt.Errorf("field `%s.vnl` points to a non-PTP switch, so the port number must not be 65535", field)
-				}
+			if fi, err := os.Stat(vdeSwitch); err != nil {
+				// negligible when the instance is stopped
+				logrus.WithError(err).Debugf("field `%s.vnl` %q failed stat", field, vdeSwitch)
 			} else {
-				/* PTP mode (vdeSwitch is socket, port == 65535) */
-				if fi.Mode()&os.ModeSocket == 0 {
-					return fmt.Errorf("field `%s.vnl` %q is not a directory nor a UNIX socket", field, vdeSwitch)
-				}
-				if vde.SwitchPort != 65535 {
-					return fmt.Errorf("field `%s.vnl` points to a PTP (switchless) socket %q, so the port number has to be 65535 (got %d)",
-						field, vdeSwitch, vde.SwitchPort)
+				if fi.IsDir() {
+					/* Switch mode (vdeSwitch is dir, port != 65535) */
+					ctlSocket := filepath.Join(vdeSwitch, "ctl")
+					// ErrNotExist during os.Stat(ctlSocket) can be ignored. ctlSocket does not need to exist until actually starting the VM
+					if fi, err = os.Stat(ctlSocket); err == nil {
+						if fi.Mode()&os.ModeSocket == 0 {
+							return fmt.Errorf("field `%s.vnl` file %q is not a UNIX socket", field, ctlSocket)
+						}
+					}
+					if vde.SwitchPort == 65535 {
+						return fmt.Errorf("field `%s.vnl` points to a non-PTP switch, so the port number must not be 65535", field)
+					}
+				} else {
+					/* PTP mode (vdeSwitch is socket, port == 65535) */
+					if fi.Mode()&os.ModeSocket == 0 {
+						return fmt.Errorf("field `%s.vnl` %q is not a directory nor a UNIX socket", field, vdeSwitch)
+					}
+					if vde.SwitchPort != 65535 {
+						return fmt.Errorf("field `%s.vnl` points to a PTP (switchless) socket %q, so the port number has to be 65535 (got %d)",
+							field, vdeSwitch, vde.SwitchPort)
+					}
 				}
 			}
 		} else if runtime.GOOS != "linux" {

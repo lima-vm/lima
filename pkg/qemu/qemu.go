@@ -207,6 +207,11 @@ func Cmdline(cfg Config) (string, []string, error) {
 		// VDE2 only accepts the latter form.
 		// VDE2 supports macOS but VDE4 does not yet, so we trim vde:// prefix here for VDE2 compatibility.
 		vdeSock := strings.TrimPrefix(vde.VNL, "vde://")
+		if !strings.Contains(vdeSock, "://") {
+			if _, err := os.Stat(vdeSock); err != nil {
+				return "", nil, fmt.Errorf("cannot use VNL %q: %w", vde.VNL, err)
+			}
+		}
 		args = append(args, "-netdev", fmt.Sprintf("vde,id=net%d,sock=%s", i+1, vdeSock))
 		args = append(args, "-device", fmt.Sprintf("virtio-net-pci,netdev=net%d,mac=%s", i+1, vde.MACAddress))
 	}
