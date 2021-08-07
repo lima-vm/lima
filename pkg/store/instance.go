@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/store/filenames"
@@ -93,7 +94,8 @@ func Inspect(instName string) (*Instance, error) {
 	return inst, nil
 }
 
-// readPIDFile returns 0 if the PID file does not exist
+// readPIDFile returns 0 if the PID file does not exist or the process has already terminated
+// (in which case the PID file will be removed).
 func readPIDFile(path string) (int, error) {
 	b, err := os.ReadFile(path)
 	if err != nil {
@@ -102,5 +104,21 @@ func readPIDFile(path string) (int, error) {
 		}
 		return 0, err
 	}
-	return strconv.Atoi(strings.TrimSpace(string(b)))
+	pid, err := strconv.Atoi(strings.TrimSpace(string(b)))
+	if err != nil {
+		return 0, err
+	}
+	proc, err := os.FindProcess(pid)
+	if err != nil {
+		return 0, err
+	}
+	err = proc.Signal(syscall.Signal(0))
+	if err != nil {
+		if errors.Is(err, os.ErrProcessDone) {
+			os.Remove(path)
+			return 0, nil
+		}
+		return 0, err
+	}
+	return pid, nil
 }
