@@ -322,4 +322,3 @@ See [`./docs/network.md`](./docs/network.md).
   - `/var/log/cloud-init-output.log` (inside the guest)
   - `/var/log/cloud-init.log` (inside the guest)
 - Make sure that you aren't mixing up tabs and spaces in the YAML.
-- If you have passphrases for any private key under `~/.ssh`, you will need to have `ssh-agent` running.
