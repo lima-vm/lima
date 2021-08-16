@@ -155,6 +155,7 @@ func CommonArgs(useDotSSH bool) ([]string, error) {
 
 	args = append(args,
 		"-o", "StrictHostKeyChecking=no",
+		"-o", "UserKnownHostsFile=/dev/null",
 		"-o", "NoHostAuthenticationForLocalhost=yes",
 		"-o", "GSSAPIAuthentication=no",
 		"-o", "PreferredAuthentications=publickey",
