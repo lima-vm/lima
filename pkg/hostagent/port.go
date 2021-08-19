@@ -4,7 +4,7 @@ import (
 	"context"
 	"net"
 
-	"github.com/AkihiroSuda/sshocker/pkg/ssh"
+	"github.com/lima-vm/sshocker/pkg/ssh"
 	"github.com/lima-vm/lima/pkg/guestagent/api"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/sirupsen/logrus"

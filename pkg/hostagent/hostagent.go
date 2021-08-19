@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/AkihiroSuda/sshocker/pkg/ssh"
+	"github.com/lima-vm/sshocker/pkg/ssh"
 	"github.com/digitalocean/go-qemu/qmp"
 	"github.com/digitalocean/go-qemu/qmp/raw"
 	"github.com/hashicorp/go-multierror"

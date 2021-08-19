@@ -3,7 +3,6 @@ module github.com/lima-vm/lima
 go 1.16
 
 require (
-	github.com/AkihiroSuda/sshocker v0.1.1-0.20210510144941-56aa3c7472b0
 	github.com/AlecAivazis/survey/v2 v2.2.16
 	github.com/alessio/shellescape v1.4.1
 	github.com/cheggaaa/pb/v3 v3.0.8
@@ -14,6 +13,7 @@ require (
 	github.com/docker/go-units v0.4.0
 	github.com/gorilla/mux v1.8.0
 	github.com/hashicorp/go-multierror v1.1.1
+	github.com/lima-vm/sshocker v0.2.0
 	github.com/mattn/go-isatty v0.0.13
 	github.com/mattn/go-shellwords v1.0.12
 	github.com/norouter/norouter v0.6.3
@@ -23,7 +23,7 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/urfave/cli/v2 v2.3.0
 	github.com/yalue/native_endian v1.0.1
-	golang.org/x/sys v0.0.0-20210809222454-d867a43fc93e
+	golang.org/x/sys v0.0.0-20210818153620-00dd8d7831e7
 	gopkg.in/yaml.v2 v2.4.0
 	gotest.tools/v3 v3.0.3
 )

@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/AkihiroSuda/sshocker/pkg/ssh"
+	"github.com/lima-vm/sshocker/pkg/ssh"
 	"github.com/hashicorp/go-multierror"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/pkg/errors"

@@ -25,7 +25,7 @@ Lima is expected to be used on macOS hosts, but can be used on Linux hosts as we
 
 ✅ Various guest Linux distributions: [Ubuntu](./examples/ubuntu.yaml), [Debian](./examples/debian.yaml), [Fedora](./examples/fedora.yaml), [Alpine](./examples/alpine.yaml), [Arch Linux](./examples/archlinux.yaml), [openSUSE](./examples/opensuse.yaml)...
 
-Related project: [sshocker (ssh with file sharing and port forwarding)](https://github.com/AkihiroSuda/sshocker)
+Related project: [sshocker (ssh with file sharing and port forwarding)](https://github.com/lima-vm/sshocker)
 
 This project is unrelated to [The Lima driver project (driver for ARM Mali GPUs)](https://gitlab.freedesktop.org/lima).
 
@@ -159,7 +159,7 @@ The current default spec:
 ## How it works
 
 - Hypervisor: QEMU with HVF accelerator
-- Filesystem sharing: [reverse sshfs](https://github.com/AkihiroSuda/sshocker/blob/v0.1.0/pkg/reversesshfs/reversesshfs.go) (planned to be replaced with 9p soon)
+- Filesystem sharing: [reverse sshfs](https://github.com/lima-vm/sshocker/blob/v0.2.0/pkg/reversesshfs/reversesshfs.go) (planned to be replaced with 9p soon)
 - Port forwarding: `ssh -L`, automated by watching `/proc/net/tcp` in the guest
 
 ## Developer guide
@@ -237,7 +237,7 @@ Yes, if you install it.
 containerd can be stopped with `systemctl --user disable --now containerd`.
 
 #### "Can I run Lima with a remote Linux machine?"
-Lima itself does not support connecting to a remote Linux machine, but [sshocker](https://github.com/AkihiroSuda/sshocker),
+Lima itself does not support connecting to a remote Linux machine, but [sshocker](https://github.com/lima-vm/sshocker),
 the predecessor or Lima, provides similar features for remote Linux machines.
 
 e.g., run `sshocker -v /Users/foo:/home/foo/mnt -p 8080:80 <USER>@<HOST>` to expose `/Users/foo` to the remote machine as `/home/foo/mnt`,
