@@ -4,7 +4,7 @@ import (
 	"context"
 	"os"
 
-	"github.com/AkihiroSuda/sshocker/pkg/reversesshfs"
+	"github.com/lima-vm/sshocker/pkg/reversesshfs"
 	"github.com/hashicorp/go-multierror"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/localpathutil"
