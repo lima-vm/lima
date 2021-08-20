@@ -174,10 +174,6 @@ func (a *HostAgent) Run(ctx context.Context) error {
 	}
 	stBooting := stBase
 	a.emitEvent(ctx, hostagentapi.Event{Status: stBooting})
-	if err := sshutil.RemoveKnownHostEntries(sshLocalPort); err != nil {
-		a.l.WithError(err).Error("couldn't remove existing localhost host keys")
-		return err
-	}
 
 	go func() {
 		stRunning := stBase
