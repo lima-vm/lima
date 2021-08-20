@@ -77,8 +77,16 @@ my %resign;
 for my $file (keys %deps) {
     my $copy = $file =~ s|^$install_dir|/tmp/$dist|r;
     system("mkdir -p " . dirname($copy));
-    system("cp -R $file $copy");
-    next if -l $file;
+    if ($file =~ m|^$install_dir/bin/|) {
+        # symlinks in the bin directory are replaced by the target file because in
+        # macOS Monterey @executable_path refers to the symlink target and not the
+        # symlink location itself, breaking the dylib lookup.
+        system("cp $file $copy");
+    }
+    else {
+        system("cp -R $file $copy");
+        next if -l $file;
+    }
     next unless qx(file $copy) =~ /Mach-O/;
 
     open(my $fh, "otool -L $file |") or die "Failed to run 'otool -L $file': $!";
@@ -125,7 +133,11 @@ sub record {
         my $segment = shift @segments;
         my $name = "$filename/$segment";
         my $link = readlink $name;
-        if (defined $link) {
+        # symlinks in the bin directory are replaced by the target, and the symlinks are not
+        # recorded (see above). However, at least "share/qemu" needs to remain a symlink to
+        # "../Cellar/qemu/6.0.0/share/qemu" so qemu will still find its data files. Therefore
+        # symlinks are still recorded for all other files.
+        if (defined $link && $name !~ m|^$install_dir/bin/|) {
             # Record the symlink itself with the link target as the comment
             $deps{$name} = "→ $link";
             if ($link =~ m|^/|) {
