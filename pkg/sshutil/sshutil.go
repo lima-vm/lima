@@ -1,7 +1,6 @@
 package sshutil
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
 	"os/user"
@@ -98,25 +97,6 @@ func DefaultPubKeys(loadDotSSH bool) ([]PubKey, error) {
 	return res, nil
 }
 
-func RemoveKnownHostEntries(sshLocalPort int) error {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return err
-	}
-	// `ssh-keygen -R` will return a non-0 status when ~/.ssh/known_hosts doesn't exist
-	if _, err := os.Stat(filepath.Join(homeDir, ".ssh/known_hosts")); errors.Is(err, os.ErrNotExist) {
-		return nil
-	}
-	sshFixCmd := exec.Command("ssh-keygen",
-		"-R", fmt.Sprintf("[127.0.0.1]:%d", sshLocalPort),
-		"-R", fmt.Sprintf("[localhost]:%d", sshLocalPort),
-	)
-	if out, err := sshFixCmd.CombinedOutput(); err != nil {
-		return errors.Wrapf(err, "failed to run %v: %q", sshFixCmd.Args, string(out))
-	}
-	return nil
-}
-
 func CommonArgs(useDotSSH bool) ([]string, error) {
 	configDir, err := store.LimaConfigDir()
 	if err != nil {
@@ -155,6 +135,7 @@ func CommonArgs(useDotSSH bool) ([]string, error) {
 
 	args = append(args,
 		"-o", "StrictHostKeyChecking=no",
+		"-o", "UserKnownHostsFile=/dev/null",
 		"-o", "NoHostAuthenticationForLocalhost=yes",
 		"-o", "GSSAPIAuthentication=no",
 		"-o", "PreferredAuthentications=publickey",
