@@ -1,13 +1,13 @@
 package store
 
 import (
-	"github.com/lima-vm/lima/pkg/store/filenames"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/containerd/containerd/identifiers"
 	"github.com/lima-vm/lima/pkg/limayaml"
+	"github.com/lima-vm/lima/pkg/store/filenames"
 )
 
 // DotLima is a directory that appears under the home directory.

@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,7 +13,6 @@ import (
 	hostagentapi "github.com/lima-vm/lima/pkg/hostagent/api"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -33,7 +34,7 @@ var stopCommand = &cli.Command{
 
 func stopAction(clicontext *cli.Context) error {
 	if clicontext.NArg() > 1 {
-		return errors.Errorf("too many arguments")
+		return fmt.Errorf("too many arguments")
 	}
 
 	instName := clicontext.Args().First()
@@ -56,7 +57,7 @@ func stopAction(clicontext *cli.Context) error {
 
 func stopInstanceGracefully(inst *store.Instance) error {
 	if inst.Status != store.StatusRunning {
-		return errors.Errorf("expected status %q, got %q", store.StatusRunning, inst.Status)
+		return fmt.Errorf("expected status %q, got %q", store.StatusRunning, inst.Status)
 	}
 
 	begin := time.Now() // used for logrus propagation

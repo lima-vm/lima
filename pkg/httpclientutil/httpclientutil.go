@@ -6,6 +6,7 @@ package httpclientutil
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -14,7 +15,6 @@ import (
 	"os"
 
 	"github.com/lima-vm/lima/pkg/guestagent/api"
-	"github.com/pkg/errors"
 )
 
 // NewHTTPClientWithSocketPath creates a client.
@@ -61,7 +61,7 @@ func readAtMost(r io.Reader, maxBytes int) ([]byte, error) {
 		return b, err
 	}
 	if lr.N == 0 {
-		return b, errors.Errorf("expected at most %d bytes, got more", maxBytes)
+		return b, fmt.Errorf("expected at most %d bytes, got more", maxBytes)
 	}
 	return b, nil
 }

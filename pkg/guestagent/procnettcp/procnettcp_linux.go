@@ -1,9 +1,8 @@
 package procnettcp
 
 import (
+	"errors"
 	"os"
-
-	"github.com/pkg/errors"
 )
 
 // ParseFiles parses /proc/net/{tcp, tcp6}

@@ -3,7 +3,8 @@ package cidata
 import (
 	"bytes"
 	"embed"
-	_ "embed"
+	"errors"
+	"fmt"
 	"io/fs"
 	"path/filepath"
 
@@ -11,7 +12,6 @@ import (
 
 	"github.com/containerd/containerd/identifiers"
 	"github.com/lima-vm/lima/pkg/templateutil"
-	"github.com/pkg/errors"
 )
 
 //go:embed cidata.TEMPLATE.d
@@ -56,7 +56,7 @@ func ValidateTemplateArgs(args TemplateArgs) error {
 	}
 	for i, f := range args.Mounts {
 		if !filepath.IsAbs(f) {
-			return errors.Errorf("field mounts[%d] must be absolute, got %q", i, f)
+			return fmt.Errorf("field mounts[%d] must be absolute, got %q", i, f)
 		}
 	}
 	return nil
@@ -81,7 +81,7 @@ func ExecuteTemplate(args TemplateArgs) ([]iso9660util.Entry, error) {
 			return nil
 		}
 		if !d.Type().IsRegular() {
-			return errors.Errorf("got non-regular file %q", path)
+			return fmt.Errorf("got non-regular file %q", path)
 		}
 		templateB, err := fs.ReadFile(fsys, path)
 		if err != nil {

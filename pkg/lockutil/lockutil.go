@@ -18,9 +18,9 @@
 package lockutil
 
 import (
+	"fmt"
 	"os"
 
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
@@ -32,7 +32,7 @@ func WithDirLock(dir string, fn func() error) error {
 	}
 	defer dirFile.Close()
 	if err := Flock(dirFile, unix.LOCK_EX); err != nil {
-		return errors.Wrapf(err, "failed to lock %q", dir)
+		return fmt.Errorf("failed to lock %q: %w", dir, err)
 	}
 	defer func() {
 		if err := Flock(dirFile, unix.LOCK_UN); err != nil {

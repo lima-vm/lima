@@ -2,6 +2,7 @@ package downloader
 
 import (
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -16,7 +17,6 @@ import (
 	"github.com/lima-vm/lima/pkg/localpathutil"
 	"github.com/mattn/go-isatty"
 	"github.com/opencontainers/go-digest"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -76,7 +76,7 @@ func WithExpectedDigest(expectedDigest digest.Digest) Opt {
 	return func(o *options) error {
 		if expectedDigest != "" {
 			if !expectedDigest.Algorithm().Available() {
-				return errors.Errorf("expected digest algorithm %q is not available", expectedDigest.Algorithm())
+				return fmt.Errorf("expected digest algorithm %q is not available", expectedDigest.Algorithm())
 			}
 			if err := expectedDigest.Validate(); err != nil {
 				return err
@@ -143,7 +143,7 @@ func Download(local, remote string, opts ...Opt) (*Result, error) {
 	if o.expectedDigest != "" {
 		algo := o.expectedDigest.Algorithm().String()
 		if strings.Contains(algo, "/") || strings.Contains(algo, "\\") {
-			return nil, errors.Errorf("invalid digest algorithm %q", algo)
+			return nil, fmt.Errorf("invalid digest algorithm %q", algo)
 		}
 		shadDigest = filepath.Join(shad, algo+".digest")
 	}
@@ -154,7 +154,7 @@ func Download(local, remote string, opts ...Opt) (*Result, error) {
 				o.expectedDigest, shadDigest, shadData)
 			shadDigestS := strings.TrimSpace(string(shadDigestB))
 			if o.expectedDigest.String() != shadDigestS {
-				return nil, errors.Errorf("expected digest %q does not match the cached digest %q", o.expectedDigest.String(), shadDigestS)
+				return nil, fmt.Errorf("expected digest %q does not match the cached digest %q", o.expectedDigest.String(), shadDigestS)
 			}
 			if err := copyLocal(localPath, shadData, ""); err != nil {
 				return nil, err
@@ -207,12 +207,12 @@ func isLocal(s string) bool {
 
 func localPath(s string) (string, error) {
 	if !isLocal(s) {
-		return "", errors.Errorf("got non-local path: %q", s)
+		return "", fmt.Errorf("got non-local path: %q", s)
 	}
 	if strings.HasPrefix(s, "file://") {
 		res := strings.TrimPrefix(s, "file://")
 		if !filepath.IsAbs(res) {
-			return "", errors.Errorf("got non-absolute path %q", res)
+			return "", fmt.Errorf("got non-absolute path %q", res)
 		}
 		return res, nil
 	}
@@ -241,7 +241,7 @@ func validateLocalFileDigest(localPath string, expectedDigest digest.Digest) err
 	logrus.Debugf("verifying digest of local file %q (%s)", localPath, expectedDigest)
 	algo := expectedDigest.Algorithm()
 	if !algo.Available() {
-		return errors.Errorf("expected digest algorithm %q is not available", algo)
+		return fmt.Errorf("expected digest algorithm %q is not available", algo)
 	}
 	r, err := os.Open(localPath)
 	if err != nil {
@@ -253,7 +253,7 @@ func validateLocalFileDigest(localPath string, expectedDigest digest.Digest) err
 		return err
 	}
 	if actualDigest != expectedDigest {
-		return errors.Errorf("expected digest %q, got %q", expectedDigest, actualDigest)
+		return fmt.Errorf("expected digest %q, got %q", expectedDigest, actualDigest)
 	}
 	return nil
 }
@@ -297,7 +297,7 @@ func downloadHTTP(localPath, url string, expectedDigest digest.Digest) error {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return errors.Errorf("expected HTTP status %d, got %s", http.StatusOK, resp.Status)
+		return fmt.Errorf("expected HTTP status %d, got %s", http.StatusOK, resp.Status)
 	}
 	bar, err := createBar(resp.ContentLength)
 	if err != nil {
@@ -309,7 +309,7 @@ func downloadHTTP(localPath, url string, expectedDigest digest.Digest) error {
 	if expectedDigest != "" {
 		algo := expectedDigest.Algorithm()
 		if !algo.Available() {
-			return errors.Errorf("unsupported digest algorithm %q", algo)
+			return fmt.Errorf("unsupported digest algorithm %q", algo)
 		}
 		digester = algo.Digester()
 		hasher := digester.Hash()
@@ -326,7 +326,7 @@ func downloadHTTP(localPath, url string, expectedDigest digest.Digest) error {
 	if digester != nil {
 		actualDigest := digester.Digest()
 		if actualDigest != expectedDigest {
-			return errors.Errorf("expected digest %q, got %q", expectedDigest, actualDigest)
+			return fmt.Errorf("expected digest %q, got %q", expectedDigest, actualDigest)
 		}
 	}
 

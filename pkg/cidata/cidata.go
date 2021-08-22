@@ -1,6 +1,7 @@
 package cidata
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -19,7 +20,6 @@ import (
 	"github.com/lima-vm/lima/pkg/sshutil"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/opencontainers/go-digest"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -96,7 +96,7 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML) error {
 				Reader: strings.NewReader(f.Script),
 			})
 		default:
-			return errors.Errorf("unknown provision mode %q", f.Mode)
+			return fmt.Errorf("unknown provision mode %q", f.Mode)
 		}
 	}
 
@@ -118,7 +118,7 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML) error {
 		case limayaml.AARCH64:
 			nftgzBase = fmt.Sprintf("nerdctl-full-%s-linux-arm64.tar.gz", NerdctlVersion)
 		default:
-			return errors.Errorf("unexpected arch %q", y.Arch)
+			return fmt.Errorf("unexpected arch %q", y.Arch)
 		}
 		td, err := ioutil.TempDir("", "lima-download-nerdctl")
 		if err != nil {
@@ -132,7 +132,7 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML) error {
 		logrus.Infof("Downloading %q (%s)", nftgzURL, nftgzDigest)
 		res, err := downloader.Download(nftgzLocal, nftgzURL, downloader.WithCache(), downloader.WithExpectedDigest(nftgzDigest))
 		if err != nil {
-			return errors.Wrapf(err, "failed to download %q", nftgzURL)
+			return fmt.Errorf("failed to download %q: %w", nftgzURL, err)
 		}
 		logrus.Debugf("res.ValidatedDigest=%v", res.ValidatedDigest)
 		switch res.Status {
@@ -200,6 +200,6 @@ func GuestAgentBinary(arch string) (io.ReadCloser, error) {
 		}
 	}
 
-	return nil, errors.Errorf("failed to find \"lima-guestagent.Linux-%s\" binary for %q, attempted %v",
+	return nil, fmt.Errorf("failed to find \"lima-guestagent.Linux-%s\" binary for %q, attempted %v",
 		arch, self, candidates)
 }

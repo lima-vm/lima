@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -17,7 +18,6 @@ import (
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/mattn/go-isatty"
 	"github.com/norouter/norouter/cmd/norouter/editorcmd"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -39,7 +39,7 @@ var startCommand = &cli.Command{
 
 func loadOrCreateInstance(clicontext *cli.Context) (*store.Instance, error) {
 	if clicontext.NArg() > 1 {
-		return nil, errors.Errorf("too many arguments")
+		return nil, fmt.Errorf("too many arguments")
 	}
 
 	arg := clicontext.Args().First()
@@ -67,7 +67,7 @@ func loadOrCreateInstance(clicontext *cli.Context) (*store.Instance, error) {
 		instName = arg
 		logrus.Debugf("interpreting argument %q as an instance name %q", arg, instName)
 		if err := identifiers.Validate(instName); err != nil {
-			return nil, errors.Wrapf(err, "argument must be either an instance name or a YAML file path, got %q", instName)
+			return nil, fmt.Errorf("argument must be either an instance name or a YAML file path, got %q: %w", instName, err)
 		}
 		if inst, err := store.Inspect(instName); err == nil {
 			logrus.Infof("Using the existing instance %q", instName)
@@ -87,11 +87,11 @@ func loadOrCreateInstance(clicontext *cli.Context) (*store.Instance, error) {
 	// the full path of the socket name must be less than UNIX_PATH_MAX chars.
 	maxSockName := filepath.Join(instDir, filenames.LongestSock)
 	if len(maxSockName) >= osutil.UnixPathMax {
-		return nil, errors.Errorf("instance name %q too long: %q must be less than UNIX_PATH_MAX=%d characers, but is %d",
+		return nil, fmt.Errorf("instance name %q too long: %q must be less than UNIX_PATH_MAX=%d characers, but is %d",
 			instName, maxSockName, osutil.UnixPathMax, len(maxSockName))
 	}
 	if _, err := os.Stat(instDir); !errors.Is(err, os.ErrNotExist) {
-		return nil, errors.Errorf("instance %q already exists (%q)", instName, instDir)
+		return nil, fmt.Errorf("instance %q already exists (%q)", instName, instDir)
 	}
 
 	if clicontext.Bool("tty") {
@@ -126,9 +126,9 @@ func loadOrCreateInstance(clicontext *cli.Context) (*store.Instance, error) {
 		}
 		rejectedYAML := "lima.REJECTED.yaml"
 		if writeErr := os.WriteFile(rejectedYAML, yBytes, 0644); writeErr != nil {
-			return nil, errors.Wrapf(err, "the YAML is invalid, attempted to save the buffer as %q but failed: %v", rejectedYAML, writeErr)
+			return nil, fmt.Errorf("the YAML is invalid, attempted to save the buffer as %q but failed: %v: %w", rejectedYAML, writeErr, err)
 		}
-		return nil, errors.Wrapf(err, "the YAML is invalid, saved the buffer as %q", rejectedYAML)
+		return nil, fmt.Errorf("the YAML is invalid, saved the buffer as %q: %w", rejectedYAML, err)
 	}
 	if err := os.MkdirAll(instDir, 0700); err != nil {
 		return nil, err
@@ -161,7 +161,7 @@ func askWhetherToOpenEditor(name string) (bool, error) {
 		os.Exit(0)
 		return false, errors.New("should not reach here")
 	default:
-		return false, errors.Errorf("unexpected answer %q", ans)
+		return false, fmt.Errorf("unexpected answer %q", ans)
 	}
 }
 
@@ -198,7 +198,7 @@ func openEditor(clicontext *cli.Context, name string, initialContent []byte) ([]
 	editorCmd.Stderr = os.Stderr
 	logrus.Debugf("opening editor %q for a file %q", editor, tmpYAMLPath)
 	if err := editorCmd.Run(); err != nil {
-		return nil, errors.Wrapf(err, "could not execute editor %q for a file %q", editor, tmpYAMLPath)
+		return nil, fmt.Errorf("could not execute editor %q for a file %q: %w", editor, tmpYAMLPath, err)
 	}
 	b, err := os.ReadFile(tmpYAMLPath)
 	if err != nil {
@@ -245,7 +245,7 @@ func instNameFromYAMLPath(yamlPath string) (string, error) {
 	s = strings.TrimSuffix(strings.TrimSuffix(s, ".yml"), ".yaml")
 	s = strings.ReplaceAll(s, ".", "-")
 	if err := identifiers.Validate(s); err != nil {
-		return "", errors.Wrapf(err, "filename %q is invalid", yamlPath)
+		return "", fmt.Errorf("filename %q is invalid: %w", yamlPath, err)
 	}
 	return s, nil
 }
