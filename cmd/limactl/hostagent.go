@@ -1,13 +1,14 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"io"
 	"os"
 	"os/signal"
 	"strconv"
 
 	"github.com/lima-vm/lima/pkg/hostagent"
-	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 )
 
@@ -29,7 +30,7 @@ var hostagentCommand = &cli.Command{
 func hostagentAction(clicontext *cli.Context) error {
 	if pidfile := clicontext.String("pidfile"); pidfile != "" {
 		if _, err := os.Stat(pidfile); !errors.Is(err, os.ErrNotExist) {
-			return errors.Errorf("pidfile %q already exists", pidfile)
+			return fmt.Errorf("pidfile %q already exists", pidfile)
 		}
 		if err := os.WriteFile(pidfile, []byte(strconv.Itoa(os.Getpid())+"\n"), 0644); err != nil {
 			return err
@@ -38,7 +39,7 @@ func hostagentAction(clicontext *cli.Context) error {
 	}
 
 	if clicontext.NArg() != 1 {
-		return errors.Errorf("requires exactly 1 argument")
+		return fmt.Errorf("requires exactly 1 argument")
 	}
 
 	instName := clicontext.Args().First()

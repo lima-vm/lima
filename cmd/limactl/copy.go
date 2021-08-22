@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -9,7 +10,6 @@ import (
 
 	"github.com/lima-vm/lima/pkg/sshutil"
 	"github.com/lima-vm/lima/pkg/store"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -25,7 +25,7 @@ var copyCommand = &cli.Command{
 
 func copyAction(clicontext *cli.Context) error {
 	if clicontext.NArg() < 2 {
-		return errors.Errorf("requires at least 2 arguments: SOURCE DEST")
+		return fmt.Errorf("requires at least 2 arguments: SOURCE DEST")
 	}
 	arg0, err := exec.LookPath("scp")
 	if err != nil {
@@ -52,16 +52,16 @@ func copyAction(clicontext *cli.Context) error {
 			inst, err := store.Inspect(instName)
 			if err != nil {
 				if errors.Is(err, os.ErrNotExist) {
-					return errors.Errorf("instance %q does not exist, run `limactl start %s` to create a new instance", instName, instName)
+					return fmt.Errorf("instance %q does not exist, run `limactl start %s` to create a new instance", instName, instName)
 				}
 				return err
 			}
 			if inst.Status == store.StatusStopped {
-				return errors.Errorf("instance %q is stopped, run `limactl start %s` to start the instance", instName, instName)
+				return fmt.Errorf("instance %q is stopped, run `limactl start %s` to start the instance", instName, instName)
 			}
 			args = append(args, fmt.Sprintf("scp://%s@127.0.0.1:%d/%s", u.Username, inst.SSHLocalPort, path[1]))
 		default:
-			return errors.Errorf("Path %q contains multiple colons", arg)
+			return fmt.Errorf("Path %q contains multiple colons", arg)
 		}
 	}
 	cmd := exec.Command(arg0, args...)

@@ -14,7 +14,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/lima-vm/sshocker/pkg/ssh"
 	"github.com/digitalocean/go-qemu/qmp"
 	"github.com/digitalocean/go-qemu/qmp/raw"
 	"github.com/hashicorp/go-multierror"
@@ -26,7 +25,8 @@ import (
 	"github.com/lima-vm/lima/pkg/sshutil"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
-	"github.com/pkg/errors"
+	"github.com/lima-vm/sshocker/pkg/ssh"
+
 	"github.com/sirupsen/logrus"
 )
 
@@ -167,7 +167,7 @@ func (a *HostAgent) Run(ctx context.Context) error {
 
 	sshLocalPort := a.y.SSH.LocalPort // TODO: support dynamic port
 	if sshLocalPort < 0 {
-		return errors.Errorf("invalid ssh local port %d", sshLocalPort)
+		return fmt.Errorf("invalid ssh local port %d", sshLocalPort)
 	}
 	stBase := hostagentapi.Status{
 		SSHLocalPort: sshLocalPort,
@@ -375,7 +375,7 @@ func forwardSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, 
 	)
 	cmd := exec.CommandContext(ctx, sshConfig.Binary(), args...)
 	if out, err := cmd.Output(); err != nil {
-		return errors.Wrapf(err, "failed to run %v: %q", cmd.Args, string(out))
+		return fmt.Errorf("failed to run %v: %q: %w", cmd.Args, string(out), err)
 	}
 	return nil
 }

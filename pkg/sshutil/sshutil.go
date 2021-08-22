@@ -1,6 +1,8 @@
 package sshutil
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"os/user"
@@ -11,7 +13,6 @@ import (
 	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -28,7 +29,7 @@ func readPublicKey(f string) (PubKey, error) {
 	if err == nil {
 		entry.Content = strings.TrimSpace(string(content))
 	} else {
-		err = errors.Wrapf(err, "failed to read ssh public key %q", f)
+		err = fmt.Errorf("failed to read ssh public key %q: %w", f, err)
 	}
 	return entry, err
 }
@@ -50,14 +51,14 @@ func DefaultPubKeys(loadDotSSH bool) ([]PubKey, error) {
 			return nil, err
 		}
 		if err := os.MkdirAll(configDir, 0700); err != nil {
-			return nil, errors.Wrapf(err, "could not create %q directory", configDir)
+			return nil, fmt.Errorf("could not create %q directory: %w", configDir, err)
 		}
 		if err := lockutil.WithDirLock(configDir, func() error {
 			keygenCmd := exec.Command("ssh-keygen", "-t", "ed25519", "-q", "-N", "", "-f",
 				filepath.Join(configDir, filenames.UserPrivateKey))
 			logrus.Debugf("executing %v", keygenCmd.Args)
 			if out, err := keygenCmd.CombinedOutput(); err != nil {
-				return errors.Wrapf(err, "failed to run %v: %q", keygenCmd.Args, string(out))
+				return fmt.Errorf("failed to run %v: %q: %w", keygenCmd.Args, string(out), err)
 			}
 			return nil
 		}); err != nil {
@@ -85,7 +86,7 @@ func DefaultPubKeys(loadDotSSH bool) ([]PubKey, error) {
 	}
 	for _, f := range files {
 		if !strings.HasSuffix(f, ".pub") {
-			panic(errors.Errorf("unexpected ssh public key filename %q", f))
+			panic(fmt.Errorf("unexpected ssh public key filename %q", f))
 		}
 		entry, err := readPublicKey(f)
 		if err == nil {
@@ -122,7 +123,7 @@ func CommonArgs(useDotSSH bool) ([]string, error) {
 		}
 		for _, f := range files {
 			if !strings.HasSuffix(f, ".pub") {
-				panic(errors.Errorf("unexpected ssh public key filename %q", f))
+				panic(fmt.Errorf("unexpected ssh public key filename %q", f))
 			}
 			privateKeyPath := strings.TrimSuffix(f, ".pub")
 			_, err = os.Stat(privateKeyPath)
@@ -150,7 +151,7 @@ func CommonArgs(useDotSSH bool) ([]string, error) {
 func SSHArgs(instDir string, useDotSSH bool) ([]string, error) {
 	controlSock := filepath.Join(instDir, filenames.SSHSock)
 	if len(controlSock) >= osutil.UnixPathMax {
-		return nil, errors.Errorf("socket path %q is too long: >= UNIX_PATH_MAX=%d", controlSock, osutil.UnixPathMax)
+		return nil, fmt.Errorf("socket path %q is too long: >= UNIX_PATH_MAX=%d", controlSock, osutil.UnixPathMax)
 	}
 	u, err := user.Current()
 	if err != nil {

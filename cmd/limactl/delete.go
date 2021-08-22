@@ -1,10 +1,11 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"os"
 
 	"github.com/lima-vm/lima/pkg/store"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -27,7 +28,7 @@ var deleteCommand = &cli.Command{
 
 func deleteAction(clicontext *cli.Context) error {
 	if clicontext.NArg() == 0 {
-		return errors.Errorf("requires at least 1 argument")
+		return fmt.Errorf("requires at least 1 argument")
 	}
 	force := clicontext.Bool("force")
 	for _, instName := range clicontext.Args().Slice() {
@@ -40,7 +41,7 @@ func deleteAction(clicontext *cli.Context) error {
 			return err
 		}
 		if err := deleteInstance(inst, force); err != nil {
-			return errors.Wrapf(err, "failed to delete instance %q", instName)
+			return fmt.Errorf("failed to delete instance %q: %w", instName, err)
 		}
 		logrus.Infof("Deleted %q (%q)", instName, inst.Dir)
 	}
@@ -49,13 +50,13 @@ func deleteAction(clicontext *cli.Context) error {
 
 func deleteInstance(inst *store.Instance, force bool) error {
 	if !force && inst.Status != store.StatusStopped {
-		return errors.Errorf("expected status %q, got %q", store.StatusStopped, inst.Status)
+		return fmt.Errorf("expected status %q, got %q", store.StatusStopped, inst.Status)
 	}
 
 	stopInstanceForcibly(inst)
 
 	if err := os.RemoveAll(inst.Dir); err != nil {
-		return errors.Wrapf(err, "failed to remove %q", inst.Dir)
+		return fmt.Errorf("failed to remove %q: %w", inst.Dir, err)
 	}
 	return nil
 }

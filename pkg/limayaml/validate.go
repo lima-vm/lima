@@ -9,10 +9,11 @@ import (
 	"runtime"
 	"strings"
 
+	"errors"
+
 	"github.com/docker/go-units"
 	"github.com/lima-vm/lima/pkg/localpathutil"
 	"github.com/lima-vm/lima/pkg/qemu/qemuconst"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -20,7 +21,7 @@ func Validate(y LimaYAML) error {
 	switch y.Arch {
 	case X8664, AARCH64:
 	default:
-		return errors.Errorf("field `arch` must be %q or %q , got %q", X8664, AARCH64, y.Arch)
+		return fmt.Errorf("field `arch` must be %q or %q , got %q", X8664, AARCH64, y.Arch)
 	}
 
 	if len(y.Images) == 0 {
@@ -29,22 +30,21 @@ func Validate(y LimaYAML) error {
 	for i, f := range y.Images {
 		if !strings.Contains(f.Location, "://") {
 			if _, err := localpathutil.Expand(f.Location); err != nil {
-				return errors.Wrapf(err, "field `images[%d].location` refers to an invalid local file path: %q",
-					i, f.Location)
+				return fmt.Errorf("field `images[%d].location` refers to an invalid local file path: %q: %w", i, f.Location, err)
 			}
 			// f.Location does NOT need to be accessible, so we do NOT check os.Stat(f.Location)
 		}
 		switch f.Arch {
 		case X8664, AARCH64:
 		default:
-			return errors.Errorf("field `images.arch` must be %q or %q, got %q", X8664, AARCH64, f.Arch)
+			return fmt.Errorf("field `images.arch` must be %q or %q, got %q", X8664, AARCH64, f.Arch)
 		}
 		if f.Digest != "" {
 			if !f.Digest.Algorithm().Available() {
-				return errors.Errorf("field `images[%d].digest` refers to an unavailable digest algorithm", i)
+				return fmt.Errorf("field `images[%d].digest` refers to an unavailable digest algorithm", i)
 			}
 			if err := f.Digest.Validate(); err != nil {
-				return errors.Wrapf(err, "field `images[%d].digest` is invalid: %s", i, f.Digest.String())
+				return fmt.Errorf("field `images[%d].digest` is invalid: %s: %w", i, f.Digest.String(), err)
 			}
 		}
 	}
@@ -54,46 +54,43 @@ func Validate(y LimaYAML) error {
 	}
 
 	if _, err := units.RAMInBytes(y.Memory); err != nil {
-		return errors.Wrapf(err, "field `memory` has an invalid value")
+		return fmt.Errorf("field `memory` has an invalid value: %w", err)
 	}
 
 	if _, err := units.RAMInBytes(y.Disk); err != nil {
-		return errors.Wrapf(err, "field `memory` has an invalid value")
+		return fmt.Errorf("field `memory` has an invalid value: %w", err)
 	}
 
 	u, err := user.Current()
 	if err != nil {
-		return errors.Wrap(err, "internal error (not an error of YAML)")
+		return fmt.Errorf("internal error (not an error of YAML): %w", err)
 	}
 	// reservedHome is the home directory defined in "cidata.iso:/user-data"
 	reservedHome := fmt.Sprintf("/home/%s.linux", u.Username)
 
 	for i, f := range y.Mounts {
 		if !filepath.IsAbs(f.Location) && !strings.HasPrefix(f.Location, "~") {
-			return errors.Errorf("field `mounts[%d].location` must be an absolute path, got %q",
+			return fmt.Errorf("field `mounts[%d].location` must be an absolute path, got %q",
 				i, f.Location)
 		}
 		loc, err := localpathutil.Expand(f.Location)
 		if err != nil {
-			return errors.Wrapf(err, "field `mounts[%d].location` refers to an unexpandable path: %q",
-				i, f.Location)
+			return fmt.Errorf("field `mounts[%d].location` refers to an unexpandable path: %q: %w", i, f.Location, err)
 		}
 		switch loc {
 		case "/", "/bin", "/dev", "/etc", "/home", "/opt", "/sbin", "/tmp", "/usr", "/var":
-			return errors.Errorf("field `mounts[%d].location` must not be a system path such as /etc or /usr", i)
+			return fmt.Errorf("field `mounts[%d].location` must not be a system path such as /etc or /usr", i)
 		case reservedHome:
-			return errors.Errorf("field `mounts[%d].location` is internally reserved", i)
+			return fmt.Errorf("field `mounts[%d].location` is internally reserved", i)
 		}
 
 		st, err := os.Stat(loc)
 		if err != nil {
 			if !errors.Is(err, os.ErrNotExist) {
-				return errors.Wrapf(err, "field `mounts[%d].location` refers to an inaccessible path: %q",
-					i, f.Location)
+				return fmt.Errorf("field `mounts[%d].location` refers to an inaccessible path: %q: %w", i, f.Location, err)
 			}
 		} else if !st.IsDir() {
-			return errors.Wrapf(err, "field `mounts[%d].location` refers to a non-directory path: %q",
-				i, f.Location)
+			return fmt.Errorf("field `mounts[%d].location` refers to a non-directory path: %q: %w", i, f.Location, err)
 		}
 	}
 
@@ -107,7 +104,7 @@ func Validate(y LimaYAML) error {
 		switch p.Mode {
 		case ProvisionModeSystem, ProvisionModeUser:
 		default:
-			return errors.Errorf("field `provision[%d].mode` must be either %q or %q",
+			return fmt.Errorf("field `provision[%d].mode` must be either %q or %q",
 				i, ProvisionModeSystem, ProvisionModeUser)
 		}
 	}
@@ -115,7 +112,7 @@ func Validate(y LimaYAML) error {
 		switch p.Mode {
 		case ProbeModeReadiness:
 		default:
-			return errors.Errorf("field `probe[%d].mode` can only be %q",
+			return fmt.Errorf("field `probe[%d].mode` can only be %q",
 				i, ProbeModeReadiness)
 		}
 	}
@@ -123,7 +120,7 @@ func Validate(y LimaYAML) error {
 		field := fmt.Sprintf("portForwards[%d]", i)
 		if rule.GuestPort != 0 {
 			if rule.GuestPort != rule.GuestPortRange[0] {
-				return errors.Errorf("field `%s.guestPort` must match field `%s.guestPortRange[0]`", field, field)
+				return fmt.Errorf("field `%s.guestPort` must match field `%s.guestPortRange[0]`", field, field)
 			}
 			// redundant validation to make sure the error contains the correct field name
 			if err := validatePort(field+".guestPort", rule.GuestPort); err != nil {
@@ -132,7 +129,7 @@ func Validate(y LimaYAML) error {
 		}
 		if rule.HostPort != 0 {
 			if rule.HostPort != rule.HostPortRange[0] {
-				return errors.Errorf("field `%s.hostPort` must match field `%s.hostPortRange[0]`", field, field)
+				return fmt.Errorf("field `%s.hostPort` must match field `%s.hostPortRange[0]`", field, field)
 			}
 			// redundant validation to make sure the error contains the correct field name
 			if err := validatePort(field+".hostPort", rule.HostPort); err != nil {
@@ -148,16 +145,16 @@ func Validate(y LimaYAML) error {
 			}
 		}
 		if rule.GuestPortRange[0] > rule.GuestPortRange[1] {
-			return errors.Errorf("field `%s.guestPortRange[1]` must be greater than or equal to field `%s.guestPortRange[0]`", field, field)
+			return fmt.Errorf("field `%s.guestPortRange[1]` must be greater than or equal to field `%s.guestPortRange[0]`", field, field)
 		}
 		if rule.HostPortRange[0] > rule.HostPortRange[1] {
-			return errors.Errorf("field `%s.hostPortRange[1]` must be greater than or equal to field `%s.hostPortRange[0]`", field, field)
+			return fmt.Errorf("field `%s.hostPortRange[1]` must be greater than or equal to field `%s.hostPortRange[0]`", field, field)
 		}
 		if rule.GuestPortRange[1]-rule.GuestPortRange[0] != rule.HostPortRange[1]-rule.HostPortRange[0] {
-			return errors.Errorf("field `%s.hostPortRange` must specify the same number of ports as field `%s.guestPortRange`", field, field)
+			return fmt.Errorf("field `%s.hostPortRange` must specify the same number of ports as field `%s.guestPortRange`", field, field)
 		}
 		if rule.Proto != TCP {
-			return errors.Errorf("field `%s.proto` must be %q", field, TCP)
+			return fmt.Errorf("field `%s.proto` must be %q", field, TCP)
 		}
 		// Not validating that the various GuestPortRanges and HostPortRanges are not overlapping. Rules will be
 		// processed sequentially and the first matching rule for a guest port determines forwarding behavior.
@@ -175,7 +172,7 @@ func validateNetwork(yNetwork Network) error {
 	for i, vde := range yNetwork.VDE {
 		field := fmt.Sprintf("network.vde[%d]", i)
 		if vde.VNL == "" {
-			return errors.Errorf("field `%s.vnl` must not be empty", field)
+			return fmt.Errorf("field `%s.vnl` must not be empty", field)
 		}
 		// The field is called VDE.VNL in anticipation of QEMU upgrading VDE2 to VDEplug4,
 		// but right now the only valid value on macOS is a path to the vde_switch socket directory,
@@ -184,28 +181,28 @@ func validateNetwork(yNetwork Network) error {
 			vdeSwitch := strings.TrimPrefix(vde.VNL, "vde://")
 			fi, err := os.Stat(vdeSwitch)
 			if err != nil {
-				return errors.Wrapf(err, "field `%s.vnl` %q failed stat", field, vdeSwitch)
+				return fmt.Errorf("field `%s.vnl` %q failed stat: %w", field, vdeSwitch, err)
 			}
 			if fi.IsDir() {
 				/* Switch mode (vdeSwitch is dir, port != 65535) */
 				ctlSocket := filepath.Join(vdeSwitch, "ctl")
 				fi, err = os.Stat(ctlSocket)
 				if err != nil {
-					return errors.Wrapf(err, "field `%s.vnl` control socket %q failed stat", field, ctlSocket)
+					return fmt.Errorf("field `%s.vnl` control socket %q failed stat: %w", field, ctlSocket, err)
 				}
 				if fi.Mode()&os.ModeSocket == 0 {
-					return errors.Errorf("field `%s.vnl` file %q is not a UNIX socket", field, ctlSocket)
+					return fmt.Errorf("field `%s.vnl` file %q is not a UNIX socket", field, ctlSocket)
 				}
 				if vde.SwitchPort == 65535 {
-					return errors.Errorf("field `%s.vnl` points to a non-PTP switch, so the port number must not be 65535", field)
+					return fmt.Errorf("field `%s.vnl` points to a non-PTP switch, so the port number must not be 65535", field)
 				}
 			} else {
 				/* PTP mode (vdeSwitch is socket, port == 65535) */
 				if fi.Mode()&os.ModeSocket == 0 {
-					return errors.Errorf("field `%s.vnl` %q is not a directory nor a UNIX socket", field, vdeSwitch)
+					return fmt.Errorf("field `%s.vnl` %q is not a directory nor a UNIX socket", field, vdeSwitch)
 				}
 				if vde.SwitchPort != 65535 {
-					return errors.Errorf("field `%s.vnl` points to a PTP (switchless) socket %q, so the port number has to be 65535 (got %d)",
+					return fmt.Errorf("field `%s.vnl` points to a PTP (switchless) socket %q, so the port number has to be 65535 (got %d)",
 						field, vdeSwitch, vde.SwitchPort)
 				}
 			}
@@ -216,24 +213,24 @@ func validateNetwork(yNetwork Network) error {
 		if vde.MACAddress != "" {
 			hw, err := net.ParseMAC(vde.MACAddress)
 			if err != nil {
-				return errors.Wrap(err, "field `vmnet.mac` invalid")
+				return fmt.Errorf("field `vmnet.mac` invalid: %w", err)
 			}
 			if len(hw) != 6 {
-				return errors.Errorf("field `%s.macAddress` must be a 48 bit (6 bytes) MAC address; actual length of %q is %d bytes", field, vde.MACAddress, len(hw))
+				return fmt.Errorf("field `%s.macAddress` must be a 48 bit (6 bytes) MAC address; actual length of %q is %d bytes", field, vde.MACAddress, len(hw))
 			}
 		}
 		// FillDefault() will make sure that vde.Name is not the empty string
 		if len(vde.Name) >= 16 {
-			return errors.Errorf("field `%s.name` must be less than 16 bytes, but is %d bytes: %q", field, len(vde.Name), vde.Name)
+			return fmt.Errorf("field `%s.name` must be less than 16 bytes, but is %d bytes: %q", field, len(vde.Name), vde.Name)
 		}
 		if strings.ContainsAny(vde.Name, " \t\n/") {
-			return errors.Errorf("field `%s.name` must not contain whitespace or slashes", field)
+			return fmt.Errorf("field `%s.name` must not contain whitespace or slashes", field)
 		}
 		if vde.Name == qemuconst.SlirpNICName {
-			return errors.Errorf("field `%s.name` must not be set to %q because it is reserved for slirp", field, qemuconst.SlirpNICName)
+			return fmt.Errorf("field `%s.name` must not be set to %q because it is reserved for slirp", field, qemuconst.SlirpNICName)
 		}
 		if prev, ok := networkName[vde.Name]; ok {
-			return errors.Errorf("field `%s.name` value %q has already been used by field `network.vde[%d].name`", field, vde.Name, prev)
+			return fmt.Errorf("field `%s.name` value %q has already been used by field `network.vde[%d].name`", field, vde.Name, prev)
 		}
 		networkName[vde.Name] = i
 	}
@@ -243,13 +240,13 @@ func validateNetwork(yNetwork Network) error {
 func validatePort(field string, port int) error {
 	switch {
 	case port < 0:
-		return errors.Errorf("field `%s` must be > 0", field)
+		return fmt.Errorf("field `%s` must be > 0", field)
 	case port == 0:
-		return errors.Errorf("field `%s` must be set", field)
+		return fmt.Errorf("field `%s` must be set", field)
 	case port == 22:
-		return errors.Errorf("field `%s` must not be 22", field)
+		return fmt.Errorf("field `%s` must not be 22", field)
 	case port > 65535:
-		return errors.Errorf("field `%s` must be < 65536", field)
+		return fmt.Errorf("field `%s` must be < 65536", field)
 	}
 	return nil
 }

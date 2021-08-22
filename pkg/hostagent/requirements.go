@@ -2,12 +2,12 @@ package hostagent
 
 import (
 	"context"
+	"fmt"
 	"time"
 
-	"github.com/lima-vm/sshocker/pkg/ssh"
 	"github.com/hashicorp/go-multierror"
 	"github.com/lima-vm/lima/pkg/limayaml"
-	"github.com/pkg/errors"
+	"github.com/lima-vm/sshocker/pkg/ssh"
 )
 
 func (a *HostAgent) waitForRequirements(ctx context.Context, label string, requirements []requirement) error {
@@ -28,14 +28,10 @@ func (a *HostAgent) waitForRequirements(ctx context.Context, label string, requi
 			}
 			if req.fatal {
 				a.l.Infof("No further %s requirements will be checked", label)
-				return multierror.Append(mErr,
-					errors.Wrapf(err, "failed to satisfy the %s requirement %d of %d %q: %s; skipping further checks",
-						label, i+1, len(requirements), req.description, req.debugHint))
+				return multierror.Append(mErr, fmt.Errorf("failed to satisfy the %s requirement %d of %d %q: %s; skipping further checks: %w", label, i+1, len(requirements), req.description, req.debugHint, err))
 			}
 			if j == retries-1 {
-				mErr = multierror.Append(mErr,
-					errors.Wrapf(err, "failed to satisfy the %s requirement %d of %d %q: %s",
-						label, i+1, len(requirements), req.description, req.debugHint))
+				mErr = multierror.Append(mErr, fmt.Errorf("failed to satisfy the %s requirement %d of %d %q: %s: %w", label, i+1, len(requirements), req.description, req.debugHint, err))
 				break retryLoop
 			}
 			time.Sleep(10 * time.Second)
@@ -49,7 +45,7 @@ func (a *HostAgent) waitForRequirement(ctx context.Context, r requirement) error
 	stdout, stderr, err := ssh.ExecuteScript("127.0.0.1", a.y.SSH.LocalPort, a.sshConfig, r.script, r.description)
 	a.l.Debugf("stdout=%q, stderr=%q, err=%v", stdout, stderr, err)
 	if err != nil {
-		return errors.Wrapf(err, "stdout=%q, stderr=%q", stdout, stderr)
+		return fmt.Errorf("stdout=%q, stderr=%q: %w", stdout, stderr, err)
 	}
 	return nil
 }

@@ -2,13 +2,13 @@ package hostagent
 
 import (
 	"context"
+	"fmt"
 	"os"
 
-	"github.com/lima-vm/sshocker/pkg/reversesshfs"
 	"github.com/hashicorp/go-multierror"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/localpathutil"
-	"github.com/pkg/errors"
+	"github.com/lima-vm/sshocker/pkg/reversesshfs"
 )
 
 type mount struct {
@@ -51,14 +51,14 @@ func (a *HostAgent) setupMount(ctx context.Context, m limayaml.Mount) (*mount, e
 		SSHFSAdditionalArgs: []string{"-o", "allow_root"},
 	}
 	if err := rsf.Prepare(); err != nil {
-		return nil, errors.Wrapf(err, "failed to prepare reverse sshfs for %q", expanded)
+		return nil, fmt.Errorf("failed to prepare reverse sshfs for %q: %w", expanded, err)
 	}
 	if err := rsf.Start(); err != nil {
 		a.l.WithError(err).Warnf("failed to mount reverse sshfs for %q, retrying with `-o nonempty`", expanded)
 		// NOTE: nonempty is not supported for libfuse3: https://github.com/canonical/multipass/issues/1381
 		rsf.SSHFSAdditionalArgs = []string{"-o", "nonempty"}
 		if err := rsf.Start(); err != nil {
-			return nil, errors.Wrapf(err, "failed to mount reverse sshfs for %q", expanded)
+			return nil, fmt.Errorf("failed to mount reverse sshfs for %q: %w", expanded, err)
 		}
 	}
 
@@ -66,7 +66,7 @@ func (a *HostAgent) setupMount(ctx context.Context, m limayaml.Mount) (*mount, e
 		close: func() error {
 			a.l.Infof("Unmounting %q", expanded)
 			if closeErr := rsf.Close(); closeErr != nil {
-				return errors.Wrapf(err, "failed to unmount reverse sshfs for %q", expanded)
+				return fmt.Errorf("failed to unmount reverse sshfs for %q: %w", expanded, err)
 			}
 			return nil
 		},

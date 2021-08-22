@@ -1,6 +1,7 @@
 package qemu
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -16,7 +17,6 @@ import (
 	"github.com/lima-vm/lima/pkg/qemu/qemuconst"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/mattn/go-shellwords"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -48,7 +48,7 @@ func EnsureDisk(cfg Config) error {
 				downloader.WithExpectedDigest(f.Digest),
 			)
 			if err != nil {
-				errs[i] = errors.Wrapf(err, "failed to download %q", f.Location)
+				errs[i] = fmt.Errorf("failed to download %q: %w", f.Location, err)
 				continue
 			}
 			logrus.Debugf("res.ValidatedDigest=%v", res.ValidatedDigest)
@@ -64,7 +64,7 @@ func EnsureDisk(cfg Config) error {
 			break
 		}
 		if !ensuredBaseDisk {
-			return errors.Errorf("failed to download the image, attempted %d candidates, errors=%v",
+			return fmt.Errorf("failed to download the image, attempted %d candidates, errors=%v",
 				len(cfg.LimaYAML.Images), errs)
 		}
 	}
@@ -83,14 +83,14 @@ func EnsureDisk(cfg Config) error {
 	args = append(args, diffDisk, strconv.Itoa(int(diskSize)))
 	cmd := exec.Command("qemu-img", args...)
 	if out, err := cmd.CombinedOutput(); err != nil {
-		return errors.Wrapf(err, "failed to run %v: %q", cmd.Args, string(out))
+		return fmt.Errorf("failed to run %v: %q: %w", cmd.Args, string(out), err)
 	}
 	return nil
 }
 
 func argValue(args []string, key string) (string, bool) {
 	if !strings.HasPrefix(key, "-") {
-		panic(errors.Errorf("got unexpected key %q", key))
+		panic(fmt.Errorf("got unexpected key %q", key))
 	}
 	for i, s := range args {
 		if s == key {
@@ -111,11 +111,11 @@ func argValue(args []string, key string) (string, bool) {
 // appendArgsIfNoConflict cannot be used for: -drive, -cdrom, ...
 func appendArgsIfNoConflict(args []string, k, v string) []string {
 	if !strings.HasPrefix(k, "-") {
-		panic(errors.Errorf("got unexpected key %q", k))
+		panic(fmt.Errorf("got unexpected key %q", k))
 	}
 	switch k {
 	case "-drive", "-cdrom", "-chardev", "-blockdev", "-netdev", "-device":
-		panic(errors.Errorf("appendArgsIfNoConflict() must not be called with k=%q", k))
+		panic(fmt.Errorf("appendArgsIfNoConflict() must not be called with k=%q", k))
 	}
 
 	if v == "" {
@@ -267,7 +267,7 @@ func getExe(arch limayaml.Arch) (string, []string, error) {
 	if envV := os.Getenv(envK); envV != "" {
 		ss, err := shellwords.Parse(envV)
 		if err != nil {
-			return "", nil, errors.Wrapf(err, "failed to parse %s value %q", envK, envV)
+			return "", nil, fmt.Errorf("failed to parse %s value %q: %w", envK, envV, err)
 		}
 		exeBase, args = ss[0], ss[1:]
 		if len(args) != 0 {
@@ -326,7 +326,7 @@ func getFirmware(qemuExe string, arch limayaml.Arch) (string, error) {
 	}
 
 	if arch == limayaml.X8664 {
-		return "", errors.Errorf("could not find firmware for %q (hint: try setting `firmware.legacyBIOS` to `true`)", qemuExe)
+		return "", fmt.Errorf("could not find firmware for %q (hint: try setting `firmware.legacyBIOS` to `true`)", qemuExe)
 	}
-	return "", errors.Errorf("could not find firmware for %q", qemuExe)
+	return "", fmt.Errorf("could not find firmware for %q", qemuExe)
 }

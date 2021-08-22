@@ -2,6 +2,7 @@ package start
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -14,7 +15,6 @@ import (
 	"github.com/lima-vm/lima/pkg/qemu"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -37,7 +37,7 @@ func ensureDisk(ctx context.Context, instName, instDir string, y *limayaml.LimaY
 func Start(ctx context.Context, inst *store.Instance) error {
 	haPIDPath := filepath.Join(inst.Dir, filenames.HostAgentPID)
 	if _, err := os.Stat(haPIDPath); !errors.Is(err, os.ErrNotExist) {
-		return errors.Errorf("instance %q seems running (hint: remove %q if the instance is not actually running)", inst.Name, haPIDPath)
+		return fmt.Errorf("instance %q seems running (hint: remove %q if the instance is not actually running)", inst.Name, haPIDPath)
 	}
 
 	y, err := inst.LoadYAML()
@@ -102,7 +102,7 @@ func waitHostAgentStart(ctx context.Context, haPIDPath, haStderrPath string) err
 			return nil
 		}
 		if time.Now().After(deadline) {
-			return errors.Errorf("hostagent (%q) did not start up in %v (hint: see %q)", haPIDPath, deadlineDuration, haStderrPath)
+			return fmt.Errorf("hostagent (%q) did not start up in %v (hint: see %q)", haPIDPath, deadlineDuration, haStderrPath)
 		}
 	}
 }
@@ -126,13 +126,13 @@ func watchHostAgentEvents(ctx context.Context, instName, haStdoutPath, haStderrP
 			logrus.Errorf("%+v", ev.Status.Errors)
 		}
 		if ev.Status.Exiting {
-			err = errors.Errorf("exiting, status=%+v (hint: see %q)", ev.Status, haStderrPath)
+			err = fmt.Errorf("exiting, status=%+v (hint: see %q)", ev.Status, haStderrPath)
 			return true
 		} else if ev.Status.Running {
 			receivedRunningEvent = true
 			if ev.Status.Degraded {
 				logrus.Warnf("DEGRADED. The VM seems running, but file sharing and port forwarding may not work. (hint: see %q)", haStderrPath)
-				err = errors.Errorf("degraded, status=%+v", ev.Status)
+				err = fmt.Errorf("degraded, status=%+v", ev.Status)
 				return true
 			}
 

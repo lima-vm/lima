@@ -1,11 +1,11 @@
 package localpathutil
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/pkg/errors"
 )
 
 // Expand expands a path like "~", "~/", "~/foo".
@@ -27,7 +27,7 @@ func Expand(orig string) (string, error) {
 			s = strings.Replace(s, "~", homeDir, 1)
 		} else {
 			// Paths like "~foo/bar" are unsupported.
-			return "", errors.Errorf("unexpandable path %q", orig)
+			return "", fmt.Errorf("unexpandable path %q", orig)
 		}
 	}
 	return filepath.Abs(s)
