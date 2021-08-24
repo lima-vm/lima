@@ -1,6 +1,7 @@
 package qemu
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -136,6 +137,42 @@ func appendArgsIfNoConflict(args []string, k, v string) []string {
 	}
 	return append(args, k, v)
 }
+
+type features struct {
+	// NetdevHelp is the output of `qemu-system-x86_64 -accel help`
+	// e.g. "Accelerators supported in QEMU binary:\ntcg\nhax\nhvf\n"
+	// Not machine-readable, but checking strings.Contains() should be fine.
+	AccelHelp []byte
+	// NetdevHelp is the output of `qemu-system-x86_64 -netdev help`
+	// e.g. "Available netdev backend types:\nsocket\nhubport\ntap\nuser\nvde\nbridge\vhost-user\n"
+	// Not machine-readable, but checking strings.Contains() should be fine.
+	NetdevHelp []byte
+}
+
+func inspectFeatures(exe string) (*features, error) {
+	var (
+		f      features
+		stdout bytes.Buffer
+		stderr bytes.Buffer
+	)
+	cmd := exec.Command(exe, "-M", "none", "-accel", "help")
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf("failed to run %v: stdout=%q, stderr=%q", cmd.Args, stdout.String(), stderr.String())
+	}
+	f.AccelHelp = stdout.Bytes()
+
+	cmd = exec.Command(exe, "-M", "none", "-netdev", "help")
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf("failed to run %v: stdout=%q, stderr=%q", cmd.Args, stdout.String(), stderr.String())
+	}
+	f.NetdevHelp = stdout.Bytes()
+	return &f, nil
+}
+
 func Cmdline(cfg Config) (string, []string, error) {
 	y := cfg.LimaYAML
 	exe, args, err := getExe(y.Arch)
@@ -143,8 +180,21 @@ func Cmdline(cfg Config) (string, []string, error) {
 		return "", nil, err
 	}
 
+	features, err := inspectFeatures(exe)
+	if err != nil {
+		return "", nil, err
+	}
+
 	// Architecture
 	accel := getAccel(y.Arch)
+	if !strings.Contains(string(features.AccelHelp), accel) {
+		errStr := fmt.Sprintf("accelerator %q is not supported by %s", accel, exe)
+		if accel == "hvf" && y.Arch == limayaml.AARCH64 {
+			errStr += " ( Hint: as of August 2021, qemu-system-aarch64 on ARM Mac needs to be patched for enabling hvf accelerator,"
+			errStr += " see https://gist.github.com/nrjdalal/e70249bb5d2e9d844cc203fd11f74c55 )"
+		}
+		return "", nil, errors.New(errStr)
+	}
 	switch y.Arch {
 	case limayaml.X8664:
 		// NOTE: "-cpu host" seems to cause kernel panic
@@ -202,6 +252,9 @@ func Cmdline(cfg Config) (string, []string, error) {
 	args = append(args, "-netdev", fmt.Sprintf("user,id=net0,net=%s,dhcpstart=%s,hostfwd=tcp:127.0.0.1:%d-:22",
 		qemuconst.SlirpNetwork, qemuconst.SlirpIPAddress, y.SSH.LocalPort))
 	args = append(args, "-device", "virtio-net-pci,netdev=net0,mac="+limayaml.MACAddress(cfg.InstanceDir))
+	if len(y.Network.VDE) > 0 && !strings.Contains(string(features.NetdevHelp), "vde") {
+		return "", nil, fmt.Errorf("netdev \"vde\" is not supported by %s ( Hint: recompile QEMU with `configure --enable-vde` )", exe)
+	}
 	for i, vde := range y.Network.VDE {
 		// VDE4 accepts VNL like vde:///var/run/vde.ctl as well as file path like /var/run/vde.ctl .
 		// VDE2 only accepts the latter form.
