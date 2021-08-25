@@ -164,7 +164,7 @@ func SSHArgs(instDir string, useDotSSH bool) ([]string, error) {
 	args = append(args,
 		"-l", u.Username, // guest and host have the same username, but we should specify the username explicitly (#85)
 		"-o", "ControlMaster=auto",
-		"-o", "ControlPath="+controlSock,
+		"-o", fmt.Sprintf("ControlPath=\"%s\"", controlSock),
 		"-o", "ControlPersist=5m",
 	)
 	return args, nil
