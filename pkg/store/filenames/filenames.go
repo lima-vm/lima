@@ -41,4 +41,7 @@ const (
 // See unix(4).
 //
 // On Linux, the full path must be less than 108 characters.
-const LongestSock = SerialSock
+//
+// ssh appends 16 bytes of random characters when it first creates the socket:
+// https://github.com/openssh/openssh-portable/blob/V_8_7_P1/mux.c#L1271-L1285
+const LongestSock = SSHSock + ".1234567890123456"
