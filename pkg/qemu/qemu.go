@@ -14,6 +14,7 @@ import (
 	"github.com/lima-vm/lima/pkg/downloader"
 	"github.com/lima-vm/lima/pkg/iso9660util"
 	"github.com/lima-vm/lima/pkg/limayaml"
+	"github.com/lima-vm/lima/pkg/qemu/imgutil"
 	"github.com/lima-vm/lima/pkg/qemu/qemuconst"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/mattn/go-shellwords"
@@ -78,7 +79,11 @@ func EnsureDisk(cfg Config) error {
 	}
 	args := []string{"create", "-f", "qcow2"}
 	if !isBaseDiskISO {
-		args = append(args, "-F", "qcow2", "-b", baseDisk)
+		baseDiskFormat, err := imgutil.DetectFormat(baseDisk)
+		if err != nil {
+			return err
+		}
+		args = append(args, "-F", baseDiskFormat, "-b", baseDisk)
 	}
 	args = append(args, diffDisk, strconv.Itoa(int(diskSize)))
 	cmd := exec.Command("qemu-img", args...)
