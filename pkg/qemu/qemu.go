@@ -78,7 +78,7 @@ func EnsureDisk(cfg Config) error {
 	}
 	args := []string{"create", "-f", "qcow2"}
 	if !isBaseDiskISO {
-		args = append(args, "-b", baseDisk)
+		args = append(args, "-F", "qcow2", "-b", baseDisk)
 	}
 	args = append(args, diffDisk, strconv.Itoa(int(diskSize)))
 	cmd := exec.Command("qemu-img", args...)
