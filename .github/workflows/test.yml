@@ -99,7 +99,10 @@ jobs:
         # QEMU:      required by Lima itself
         # bash:      required by test-example.sh (OS version of bash is too old)
         # coreutils: required by test-example.sh for the "timeout" command
-        run: brew install qemu bash coreutils
+        run: |
+          time brew update
+          time brew install qemu bash coreutils
+          time brew upgrade
       - name: Install vde_vmnet
         if: matrix.example == 'vmnet.yaml'
         env:
