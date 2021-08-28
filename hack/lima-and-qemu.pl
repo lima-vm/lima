@@ -29,10 +29,19 @@ use FindBin qw();
 #
 # It shows the following binaries from /usr/local are called:
 
+my %deps;
 my $install_dir = "/usr/local";
 record("$install_dir/bin/limactl");
 record("$install_dir/bin/qemu-img");
 record("$install_dir/bin/qemu-system-x86_64");
+
+# qemu 6.1.0 doesn't use the symlink to access data files anymore
+# but we need to include it because we replace the symlinks in
+# /usr/local/bin with the actual files, so data file references need
+# to resolve relative to that location too.
+my $name = "$install_dir/share/qemu";
+# Don't call record($name) because we only want the link, not the whole target directory
+$deps{$name} = "→ " . readlink($name);
 
 # Capture any library and datafiles access with opensnoop
 my $opensnoop = "/tmp/opensnoop.log";
@@ -64,7 +73,6 @@ while (<$fh>) {
     record($_);
 }
 
-my %deps;
 print "$_ $deps{$_}\n" for sort keys %deps;
 print "\n";
 
