@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -263,6 +264,16 @@ func Cmdline(cfg Config) (string, []string, error) {
 		if !strings.Contains(vdeSock, "://") {
 			if _, err := os.Stat(vdeSock); err != nil {
 				return "", nil, fmt.Errorf("cannot use VNL %q: %w", vde.VNL, err)
+			}
+			// vdeSock is a directory, unless vde.SwitchPort == 65535 (PTP)
+			actualSocket := filepath.Join(vdeSock, "ctl")
+			if vde.SwitchPort == 65535 { // PTP
+				actualSocket = vdeSock
+			}
+			if st, err := os.Stat(actualSocket); err != nil {
+				return "", nil, fmt.Errorf("cannot use VNL %q: failed to stat %q: %w", vde.VNL, actualSocket, err)
+			} else if st.Mode()&fs.ModeSocket == 0 {
+				return "", nil, fmt.Errorf("cannot use VNL %q: %q is not a socket: %w", vde.VNL, actualSocket, err)
 			}
 		}
 		args = append(args, "-netdev", fmt.Sprintf("vde,id=net%d,sock=%s", i+1, vdeSock))
