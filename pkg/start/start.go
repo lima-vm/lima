@@ -89,8 +89,26 @@ func Start(ctx context.Context, inst *store.Instance) error {
 		return err
 	}
 
-	return watchHostAgentEvents(ctx, inst.Name, haStdoutPath, haStderrPath, begin)
-	// leave the hostagent process running
+	watchErrCh := make(chan error)
+	go func() {
+		watchErrCh <- watchHostAgentEvents(ctx, inst.Name, haStdoutPath, haStderrPath, begin)
+		close(watchErrCh)
+	}()
+	waitErrCh := make(chan error)
+	go func() {
+		waitErrCh <- haCmd.Wait()
+		close(waitErrCh)
+	}()
+
+	select {
+	case watchErr := <-watchErrCh:
+		// watchErr can be nil
+		return watchErr
+		// leave the hostagent process running
+	case waitErr := <-waitErrCh:
+		// waitErr should not be nil
+		return fmt.Errorf("host agent process has exited: %w", waitErr)
+	}
 }
 
 func waitHostAgentStart(ctx context.Context, haPIDPath, haStderrPath string) error {
