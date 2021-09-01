@@ -103,16 +103,33 @@ jobs:
           time brew update
           time brew install qemu bash coreutils
           time brew upgrade
-      - name: Install vde_vmnet
+      - name: Install vde_switch and vde_vmnet
         if: matrix.example == 'vmnet.yaml'
         env:
-          VDE_VMNET_VERSION: v0.4.0
+          # 2021-08-31
+          VDE2_VERSION: 50964c3fb0776e82f8bd1ecdc527683966f3d52c
+          # 2021-09-01
+          VDE_VMNET_VERSION: v0.5.0
         run: |
-          git clone https://github.com/lima-vm/vde_vmnet
-          cd vde_vmnet
-          git checkout $VDE_VMNET_VERSION
-          make
-          sudo make install
+          (
+            brew install autoconf automake
+          )
+          (
+            git clone https://github.com/virtualsquare/vde-2
+            cd vde-2
+            git checkout $VDE2_VERSION
+            autoreconf -fis
+            ./configure --prefix=/opt/vde
+            make
+            sudo make install
+          )
+          (
+            git clone https://github.com/lima-vm/vde_vmnet
+            cd vde_vmnet
+            git checkout $VDE_VMNET_VERSION
+            make PREFIX=/opt/vde
+            sudo make PREFIX=/opt/vde install
+          )
       - name: Prepare ssh
         run: |
           if [ -e ~/.ssh/id_rsa ]; then
