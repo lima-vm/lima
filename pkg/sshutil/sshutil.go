@@ -3,6 +3,7 @@ package sshutil
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"os/user"
@@ -110,7 +111,7 @@ func CommonArgs(useDotSSH bool) ([]string, error) {
 	}
 	args := []string{"-i", privateKeyPath}
 
-	// Append all private keys corresponding to ~/.ssh/*.pub to keep old instances workin
+	// Append all private keys corresponding to ~/.ssh/*.pub to keep old instances working
 	// that had been created before lima started using an internal identity.
 	if useDotSSH {
 		homeDir, err := os.UserHomeDir()
@@ -127,7 +128,16 @@ func CommonArgs(useDotSSH bool) ([]string, error) {
 			}
 			privateKeyPath := strings.TrimSuffix(f, ".pub")
 			_, err = os.Stat(privateKeyPath)
+			if errors.Is(err, fs.ErrNotExist) {
+				// Skip .pub files without a matching private key. This is reasonably common,
+				// due to major projects like Vault recommending the ${name}-cert.pub format
+				// for SSH certificate files.
+				//
+				// e.g. https://www.vaultproject.io/docs/secrets/ssh/signed-ssh-certificates
+				continue
+			}
 			if err != nil {
+				// Fail on permission-related and other path errors
 				return nil, err
 			}
 			args = append(args, "-i", privateKeyPath)
