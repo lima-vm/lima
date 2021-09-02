@@ -41,10 +41,7 @@ func shellAction(clicontext *cli.Context) error {
 	switch clicontext.Args().Get(1) {
 	case "start", "delete", "shell":
 		// `lima start` (alias of `limactl $LIMA_INSTANCE start`) is probably a typo of `limactl start`
-		logrus.Warnf("Perhaps you meant `limactl %s %s %s`?",
-			clicontext.Args().Get(1),
-			clicontext.Args().First(),
-			strings.Join(clicontext.Args().Slice()[2:], " "))
+		logrus.Warnf("Perhaps you meant `limactl %s`?", strings.Join(clicontext.Args().Slice()[1:], " "))
 	}
 
 	inst, err := store.Inspect(instName)
