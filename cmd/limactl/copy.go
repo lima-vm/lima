@@ -36,12 +36,8 @@ func copyAction(clicontext *cli.Context) error {
 		return err
 	}
 
-	const useDotSSH = false
-	args, err := sshutil.CommonArgs(useDotSSH)
-	if err != nil {
-		return err
-	}
-	args = append(args, "-3", "--")
+	instDirs := make(map[string]string)
+	args := []string{"-3", "--"}
 	for _, arg := range clicontext.Args().Slice() {
 		path := strings.Split(arg, ":")
 		switch len(path) {
@@ -60,15 +56,33 @@ func copyAction(clicontext *cli.Context) error {
 				return fmt.Errorf("instance %q is stopped, run `limactl start %s` to start the instance", instName, instName)
 			}
 			args = append(args, fmt.Sprintf("scp://%s@127.0.0.1:%d/%s", u.Username, inst.SSHLocalPort, path[1]))
+			instDirs[instName] = inst.Dir
 		default:
 			return fmt.Errorf("Path %q contains multiple colons", arg)
 		}
 	}
-	cmd := exec.Command(arg0, args...)
+
+	sshArgs := []string{}
+	if len(instDirs) == 1 {
+		for _, instDir := range instDirs {
+			sshArgs, err = sshutil.SSHArgs(instDir, false)
+			if err != nil {
+				return err
+			}
+		}
+	} else {
+		// Copying among multiple hosts; we can't pass in host-specific options.
+		sshArgs, err = sshutil.CommonArgs(false)
+		if err != nil {
+			return err
+		}
+	}
+
+	cmd := exec.Command(arg0, append(sshArgs, args...)...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	logrus.Debugf("executing scp (may take a long)): %+v", cmd.Args)
+	logrus.Debugf("executing scp (may take a long time)): %+v", cmd.Args)
 
 	// TODO: use syscall.Exec directly (results in losing tty?)
 	return cmd.Run()
