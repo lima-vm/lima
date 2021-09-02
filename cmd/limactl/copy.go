@@ -64,6 +64,9 @@ func copyAction(clicontext *cli.Context) error {
 
 	sshArgs := []string{}
 	if len(instDirs) == 1 {
+		// Only one (instance) host is involved; we can use the instance-specific
+		// arguments such as ControlPath.  This is preferred as we can multiplex
+		// sessions without re-authenticating (MaxSessions permitting).
 		for _, instDir := range instDirs {
 			sshArgs, err = sshutil.SSHArgs(instDir, false)
 			if err != nil {
