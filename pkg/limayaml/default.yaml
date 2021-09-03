@@ -57,6 +57,8 @@ ssh:
   # Default: true
   loadDotSSHPubKeys: true
 
+
+
 # ===================================================================== #
 # ADVANCED CONFIGURATION
 # ===================================================================== #
@@ -162,6 +164,10 @@ network:
 #     hostIP: "127.0.0.1"
 #     hostPortRange: [1024, 65535]
 #   # Any port still not matched by a rule will not be forwarded (ignored)
+
+# # extra environment variables that will be loaded into the VM at start up
+# env:
+#   KEY: value
 
 # ===================================================================== #
 # END OF TEMPLATE

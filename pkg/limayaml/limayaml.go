@@ -7,20 +7,21 @@ import (
 )
 
 type LimaYAML struct {
-	Arch         Arch          `yaml:"arch,omitempty"`
-	Images       []File        `yaml:"images"` // REQUIRED
-	CPUs         int           `yaml:"cpus,omitempty"`
-	Memory       string        `yaml:"memory,omitempty"` // go-units.RAMInBytes
-	Disk         string        `yaml:"disk,omitempty"`   // go-units.RAMInBytes
-	Mounts       []Mount       `yaml:"mounts,omitempty"`
-	SSH          SSH           `yaml:"ssh,omitempty"` // REQUIRED (FIXME)
-	Firmware     Firmware      `yaml:"firmware,omitempty"`
-	Video        Video         `yaml:"video,omitempty"`
-	Provision    []Provision   `yaml:"provision,omitempty"`
-	Containerd   Containerd    `yaml:"containerd,omitempty"`
-	Probes       []Probe       `yaml:"probes,omitempty"`
-	PortForwards []PortForward `yaml:"portForwards,omitempty"`
-	Network      Network       `yaml:"network,omitempty"`
+	Arch         Arch               `yaml:"arch,omitempty"`
+	Images       []File             `yaml:"images"` // REQUIRED
+	CPUs         int                `yaml:"cpus,omitempty"`
+	Memory       string             `yaml:"memory,omitempty"` // go-units.RAMInBytes
+	Disk         string             `yaml:"disk,omitempty"`   // go-units.RAMInBytes
+	Mounts       []Mount            `yaml:"mounts,omitempty"`
+	SSH          SSH                `yaml:"ssh,omitempty"` // REQUIRED (FIXME)
+	Firmware     Firmware           `yaml:"firmware,omitempty"`
+	Video        Video              `yaml:"video,omitempty"`
+	Provision    []Provision        `yaml:"provision,omitempty"`
+	Containerd   Containerd         `yaml:"containerd,omitempty"`
+	Probes       []Probe            `yaml:"probes,omitempty"`
+	PortForwards []PortForward      `yaml:"portForwards,omitempty"`
+	Network      Network            `yaml:"network,omitempty"`
+	Env          map[string]*string `yaml:"env,omitempty"`
 }
 
 type Arch = string

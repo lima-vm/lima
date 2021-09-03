@@ -52,6 +52,7 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML) error {
 		UID:          uid,
 		Containerd:   Containerd{System: *y.Containerd.System, User: *y.Containerd.User},
 		SlirpGateway: qemuconst.SlirpGateway,
+		Env:          y.Env,
 	}
 
 	pubKeys, err := sshutil.DefaultPubKeys(*y.SSH.LoadDotSSHPubKeys)
