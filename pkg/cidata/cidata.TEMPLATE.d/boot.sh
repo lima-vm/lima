@@ -32,14 +32,19 @@ if [ -d "${LIMA_CIDATA_MNT}"/provision.system ]; then
 	done
 fi
 
+USER_SCRIPT="/home/${LIMA_CIDATA_USER}.linux/.lime-user-script"
 if [ -d "${LIMA_CIDATA_MNT}"/provision.user ]; then
-	until [ -e "/run/user/${LIMA_CIDATA_UID}}/systemd/private" ]; do sleep 3; done
+	until [ -e "/run/user/${LIMA_CIDATA_UID}/systemd/private" ]; do sleep 3; done
 	for f in "${LIMA_CIDATA_MNT}"/provision.user/*; do
 		INFO "Executing $f (as user ${LIMA_CIDATA_USER})"
-		if ! sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "$f"; then
+		cp "$f" "${USER_SCRIPT}"
+		chown "${LIMA_CIDATA_USER}" "${USER_SCRIPT}"
+		chmod 755 "${USER_SCRIPT}"
+		if ! sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "${USER_SCRIPT}"; then
 			WARNING "Failed to execute $f (as user ${LIMA_CIDATA_USER})"
 			CODE=1
 		fi
+		rm "${USER_SCRIPT}"
 	done
 fi
 
