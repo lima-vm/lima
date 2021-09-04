@@ -16,6 +16,7 @@ import (
 	"github.com/lima-vm/lima/pkg/iso9660util"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/localpathutil"
+	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/qemu/qemuconst"
 	"github.com/lima-vm/lima/pkg/sshutil"
 	"github.com/lima-vm/lima/pkg/store/filenames"
@@ -51,6 +52,7 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML) error {
 		User:         u.Username,
 		UID:          uid,
 		Containerd:   Containerd{System: *y.Containerd.System, User: *y.Containerd.User},
+		SlirpNICName: qemuconst.SlirpNICName,
 		SlirpGateway: qemuconst.SlirpGateway,
 		Env:          y.Env,
 	}
@@ -78,6 +80,11 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML) error {
 	args.Networks = append(args.Networks, Network{MACAddress: slirpMACAddress, Name: qemuconst.SlirpNICName})
 	for _, vde := range y.Network.VDE {
 		args.Networks = append(args.Networks, Network{MACAddress: vde.MACAddress, Name: vde.Name})
+	}
+
+	args.DNSAddresses, err = osutil.DNSAddresses()
+	if err != nil {
+		return err
 	}
 
 	if err := ValidateTemplateArgs(args); err != nil {
