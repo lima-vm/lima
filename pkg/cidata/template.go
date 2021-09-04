@@ -35,8 +35,10 @@ type TemplateArgs struct {
 	Mounts       []string // abs path, accessible by the User
 	Containerd   Containerd
 	Networks     []Network
+	SlirpNICName string
 	SlirpGateway string
 	Env          map[string]*string
+	DNSAddresses []string
 }
 
 func ValidateTemplateArgs(args TemplateArgs) error {
