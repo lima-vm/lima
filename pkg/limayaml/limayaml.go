@@ -21,7 +21,7 @@ type LimaYAML struct {
 	Probes       []Probe            `yaml:"probes,omitempty"`
 	PortForwards []PortForward      `yaml:"portForwards,omitempty"`
 	Network      Network            `yaml:"network,omitempty"`
-	Env          map[string]*string `yaml:"env,omitempty"`
+	Env          map[string]*string `yaml:"env,omitempty"` // EXPERIMENAL, see default.yaml
 }
 
 type Arch = string
