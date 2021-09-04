@@ -36,6 +36,7 @@ type TemplateArgs struct {
 	Containerd   Containerd
 	Networks     []Network
 	SlirpGateway string
+	Env          map[string]*string
 }
 
 func ValidateTemplateArgs(args TemplateArgs) error {
