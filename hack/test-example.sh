@@ -162,6 +162,25 @@ if [[ -n ${CHECKS["containerd-user"]} ]]; then
 
 	limactl shell "$NAME" nerdctl rm -f nginx
 	set +x
+	if [[ -n ${CHECKS["mount-home"]} ]]; then
+		hometmp="$HOME/lima-nerdctl-test-tmp"
+		# test for https://github.com/lima-vm/lima/issues/187
+		INFO "Testing home bind mount (\"$hometmp\")"
+		rm -rf "$hometmp"
+		mkdir -p "$hometmp"
+		defer "rm -rf \"$hometmp\""
+		set -x
+		limactl shell "$NAME" nerdctl pull alpine
+		echo "random-content-${RANDOM}" >"$hometmp/random"
+		expected="$(cat "$hometmp/random")"
+		got="$(limactl shell "$NAME" nerdctl run --rm -v "$hometmp/random":/mnt/foo alpine cat /mnt/foo)"
+		INFO "$hometmp/random: expected=${expected}, got=${got}"
+		if [ "$got" != "$expected" ]; then
+			ERROR "Home directory is not shared?"
+			exit 1
+		fi
+		set +x
+	fi
 fi
 
 if [[ -n ${CHECKS["port-forwards"]} ]]; then
