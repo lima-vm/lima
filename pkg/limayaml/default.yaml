@@ -165,7 +165,10 @@ network:
 #     hostPortRange: [1024, 65535]
 #   # Any port still not matched by a rule will not be forwarded (ignored)
 
-# # extra environment variables that will be loaded into the VM at start up
+# Extra environment variables that will be loaded into the VM at start up.
+# These variables are currently only consumed by internal init scripts, not by the user shell.
+# This field is experimental and may change in a future release of Lima.
+# https://github.com/lima-vm/lima/pull/200
 # env:
 #   KEY: value
 
