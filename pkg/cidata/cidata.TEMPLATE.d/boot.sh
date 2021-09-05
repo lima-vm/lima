@@ -10,7 +10,12 @@ WARNING() {
 }
 
 # shellcheck disable=SC2163
-while read -r line; do export "$line"; done <"${LIMA_CIDATA_MNT}"/lima.env
+while read -r line; do 
+	echo "export $line" >> /etc/profile.d/lima.sh
+done <"${LIMA_CIDATA_MNT}"/lima.env
+
+chmod 775 /etc/profile.d/lima.sh
+. /etc/profile.d/lima.sh
 
 CODE=0
 
