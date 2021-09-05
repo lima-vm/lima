@@ -100,6 +100,10 @@ jobs:
         # bash:      required by test-example.sh (OS version of bash is too old)
         # coreutils: required by test-example.sh for the "timeout" command
         run: |
+          set -x
+          # Github runners seem to symlink to python2.7 version of 2to3,
+          # breaking upgrades to latest python@3.9
+          rm -f /usr/local/bin/2to3
           time brew update
           time brew install qemu bash coreutils
           time brew upgrade
