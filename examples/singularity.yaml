@@ -1,0 +1,38 @@
+# Example to use Singularity instead of containerd & nerdctl
+# $ limactl start ./singularity.yaml
+# $ limactl shell singularity singularity run -u -B $HOME:$HOME docker://alpine
+
+# Fedora 34 provides Singularity 3.8.1 in the default dnf.
+# Ubuntu 21.04 does not seem to provide Singularity in the default apt.
+images:
+  - location: "https://download.fedoraproject.org/pub/fedora/linux/releases/34/Cloud/x86_64/images/Fedora-Cloud-Base-34-1.2.x86_64.qcow2"
+    arch: "x86_64"
+    digest: "sha256:b9b621b26725ba95442d9a56cbaa054784e0779a9522ec6eafff07c6e6f717ea"
+firmware:
+  legacyBIOS: true
+mounts:
+  - location: "~"
+    writable: false
+  - location: "/tmp/lima"
+    writable: true
+ssh:
+  localPort: 62045
+containerd:
+  system: false
+  user: false
+provision:
+  - mode: system
+    script: |
+      #!/bin/bash
+      set -eux -o pipefail
+      command -v singularity >/dev/null 2>&1 && exit 0
+      dnf install -y singularity
+probes:
+  - script: |
+      #!/bin/bash
+      set -eux -o pipefail
+      if ! timeout 30s bash -c "until command -v singularity >/dev/null 2>&1; do sleep 3; done"; then
+        echo >&2 "singularity is not installed yet"
+        exit 1
+      fi
+    hint: See "/var/log/cloud-init-output.log". in the guest

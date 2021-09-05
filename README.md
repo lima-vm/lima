@@ -13,7 +13,7 @@ Lima is expected to be used on macOS hosts, but can be used on Linux hosts as we
 
 ✅ Automatic port forwarding
 
-✅ Built-in support for [containerd](https://containerd.io)
+✅ Built-in support for [containerd](https://containerd.io) ([Other container engines can be used too](./examples))
 
 ✅ Intel on Intel
 
@@ -191,7 +191,7 @@ The current default spec:
   - ["What's my login password?"](#whats-my-login-password)
   - ["Does Lima work on ARM Mac?"](#does-lima-work-on-arm-mac)
   - ["Can I run non-Ubuntu guests?"](#can-i-run-non-ubuntu-guests)
-  - ["Can I run other container engines such as Podman?"](#can-i-run-other-container-engines-such-as-podman)
+  - ["Can I run other container engines such as Docker and Podman?"](#can-i-run-other-container-engines-such-as-docker-and-podman)
   - ["Can I run Lima with a remote Linux machine?"](#can-i-run-lima-with-a-remote-linux-machine)
   - ["Advantages compared to Docker for Mac?"](#advantages-compared-to-docker-for-mac)
 - [QEMU](#qemu)
@@ -231,10 +231,15 @@ An image has to satisfy the following requirements:
   - `newuidmap` and `newgidmap`
 - `apt-get`, `dnf`, `apk`, `pacman`, or `zypper` (if you want to contribute support for another package manager, run `git grep apt-get` to find out where to modify)
 
-#### "Can I run other container engines such as Podman?"
-Yes, if you install it.
+#### "Can I run other container engines such as Docker and Podman?"
+Yes, any container engine should work with Lima.
 
-containerd can be stopped with `systemctl --user disable --now containerd`.
+See examples:
+- [`./examples/docker.yaml`](./examples/docker.yaml)
+- [`./examples/podman.yaml`](./examples/podman.yaml)
+- [`./examples/singularity.yaml`](./examples/singularity.yaml)
+
+The default Ubuntu image also contains LXD. Run`lima sudo lxc init` to set up LXD.
 
 #### "Can I run Lima with a remote Linux machine?"
 Lima itself does not support connecting to a remote Linux machine, but [sshocker](https://github.com/lima-vm/sshocker),
