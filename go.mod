@@ -13,7 +13,7 @@ require (
 	github.com/docker/go-units v0.4.0
 	github.com/gorilla/mux v1.8.0
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/lima-vm/sshocker v0.2.1
+	github.com/lima-vm/sshocker v0.2.2
 	github.com/mattn/go-isatty v0.0.13
 	github.com/mattn/go-shellwords v1.0.12
 	github.com/norouter/norouter v0.6.4
@@ -42,7 +42,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.12 // indirect
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/pkg/sftp v1.12.0 // indirect; Must be v1.12.0. `df` seems to hang with v1.13.0 (https://github.com/pkg/sftp/issues/466)
+	github.com/pkg/sftp v1.13.3 // indirect; Must be v1.12.0. `df` seems to hang with v1.13.0 (https://github.com/pkg/sftp/issues/466)
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/russross/blackfriday/v2 v2.0.1 // indirect
 	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
