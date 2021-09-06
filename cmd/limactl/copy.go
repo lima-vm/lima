@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"os/user"
 	"strings"
 
+	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/sshutil"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/sirupsen/logrus"
@@ -31,7 +31,7 @@ func copyAction(clicontext *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	u, err := user.Current()
+	u, err := osutil.LimaUser(false)
 	if err != nil {
 		return err
 	}

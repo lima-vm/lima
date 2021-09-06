@@ -7,7 +7,6 @@ import (
 	"io/fs"
 	"io/ioutil"
 	"os"
-	"os/user"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -39,7 +38,7 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML) error {
 	if err := limayaml.Validate(*y); err != nil {
 		return err
 	}
-	u, err := user.Current()
+	u, err := osutil.LimaUser(true)
 	if err != nil {
 		return err
 	}

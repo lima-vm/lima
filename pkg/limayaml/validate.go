@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"os/user"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/docker/go-units"
 	"github.com/lima-vm/lima/pkg/localpathutil"
+	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/qemu/qemuconst"
 	"github.com/sirupsen/logrus"
 )
@@ -61,7 +61,7 @@ func Validate(y LimaYAML) error {
 		return fmt.Errorf("field `memory` has an invalid value: %w", err)
 	}
 
-	u, err := user.Current()
+	u, err := osutil.LimaUser(false)
 	if err != nil {
 		return fmt.Errorf("internal error (not an error of YAML): %w", err)
 	}
