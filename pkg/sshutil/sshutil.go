@@ -6,7 +6,6 @@ import (
 	"io/fs"
 	"os"
 	"os/exec"
-	"os/user"
 	"path/filepath"
 	"strings"
 
@@ -163,7 +162,7 @@ func SSHArgs(instDir string, useDotSSH bool) ([]string, error) {
 	if len(controlSock) >= osutil.UnixPathMax {
 		return nil, fmt.Errorf("socket path %q is too long: >= UNIX_PATH_MAX=%d", controlSock, osutil.UnixPathMax)
 	}
-	u, err := user.Current()
+	u, err := osutil.LimaUser(false)
 	if err != nil {
 		return nil, err
 	}
