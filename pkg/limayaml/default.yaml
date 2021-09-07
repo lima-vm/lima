@@ -172,6 +172,15 @@ network:
 # env:
 #   KEY: value
 
+# Explicitly set DNS addresses for qemu user-mode networking. By default qemu picks *one*
+# nameserver from the host config and forwards all queries to this server. On macOS
+# Lima adds the nameservers configured for the "en0" interface to the list. In case this
+# still doesn't work (e.g. VPN setups), the servers can be specified here explicitly.
+# If nameservers are specified here, then the "en0" configuration will be ignored.
+# dns:
+# - 1.1.1.1
+# - 1.0.0.1
+
 # ===================================================================== #
 # END OF TEMPLATE
 # ===================================================================== #
