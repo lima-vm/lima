@@ -86,9 +86,29 @@ $ brew install lima
 <summary>Manual installation steps (required for ARM Mac)</summary>
 <p>
 
-- Install recent version of QEMU. v6.0.0 or later is recommended.
+#### Install QEMU
 
-- On ARM hosts, QEMU has to be patched for enabling `--accel=hvf` support. See https://gist.github.com/nrjdalal/e70249bb5d2e9d844cc203fd11f74c55
+Install recent version of QEMU. v6.1.0 or later is recommended.
+
+On ARM hosts, a [patched](http://patchwork.ozlabs.org/project/qemu-devel/list/?series=244786) version of QEMU has to be installed
+for enabling `-accel hvf` support:
+```console
+$ brew install simnalamburt/x/qemu-hvf
+```
+
+Make sure that the result of `qemu-system-aarch64 -accel help` contains "hvf":
+```console
+$ qemu-system-aarch64 -accel help
+Accelerators supported in QEMU binary:
+tcg
+hvf
+```
+
+See https://github.com/simnalamburt/homebrew-x for the further information of the `simnalamburt/x/qemu-hvf` tap.
+
+<!-- There is also another tap [`knazarov/qemu-virgl/qemu-virgl`](https://github.com/knazarov/homebrew-qemu-virgl), but slightly older. -->
+
+#### Install Lima
 
 - Download the binary archive of Lima from https://github.com/lima-vm/lima/releases ,
 and extract it under `/usr/local` (or somewhere else).
