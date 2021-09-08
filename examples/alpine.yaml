@@ -1,7 +1,7 @@
 images:
-- location: https://github.com/lima-vm/alpine-lima/releases/download/v0.1.3/alpine-lima-std-3.13.5-x86_64.iso
+- location: https://github.com/lima-vm/alpine-lima/releases/download/v0.1.4/alpine-lima-std-3.13.5-x86_64.iso
   arch: "x86_64"
-  digest: "sha512:b2d2d2e4d9d15113b94e6f45ec46bb752fed639f062c52a87f065561e441fa2b271e53ce37e30add0a9ac287c0b65e66110c3fa79b2150b3da788559d139717a"
+  digest: "sha512:ef627d902645744ab9f62cfe9f741f84c9d544b36da113aef9410489db8d2430b9c37581c5958b4d7fc64dfb5267f4147a376a747cca053c8c43c65fc68474e0"
 
 mounts:
 - location: "~"
