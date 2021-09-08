@@ -30,3 +30,17 @@ write_files:
    owner: root:root
    path: /var/lib/cloud/scripts/per-boot/00-lima.boot.sh
    permissions: '0755'
+
+{{- if .DNSAddresses }}
+# This has no effect on systems using systemd-resolved, but is used
+# on e.g. Alpine to set up /etc/resolv.conf on first boot.
+
+manage_resolv_conf: true
+
+resolv_conf:
+  nameservers:
+  {{- range $ns := $.DNSAddresses }}
+  - {{$ns}}
+  {{- end }}
+  - {{.SlirpDNS}}
+{{- end }}

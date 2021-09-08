@@ -53,6 +53,7 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML) error {
 		Containerd:   Containerd{System: *y.Containerd.System, User: *y.Containerd.User},
 		SlirpNICName: qemuconst.SlirpNICName,
 		SlirpGateway: qemuconst.SlirpGateway,
+		SlirpDNS:     qemuconst.SlirpDNS,
 		Env:          y.Env,
 	}
 
