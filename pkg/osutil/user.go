@@ -27,8 +27,8 @@ func LimaUser(warn bool) (*user.User, error) {
 			if err := identifiers.Validate(cache.u.Username); err != nil {
 				cache.warning = fmt.Sprintf("local user %q is not a valid Linux username: %v; using %q username instead",
 					cache.u.Username, err, fallbackUser)
+				cache.u.Username = fallbackUser
 			}
-			cache.u.Username = fallbackUser
 		}
 	})
 	if warn && cache.warning != "" {
