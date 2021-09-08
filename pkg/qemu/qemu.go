@@ -198,12 +198,18 @@ func Cmdline(cfg Config) (string, []string, error) {
 	}
 	switch y.Arch {
 	case limayaml.X8664:
-		// NOTE: "-cpu host" seems to cause kernel panic
-		// (MacBookPro 2020, Intel(R) Core(TM) i7-1068NG7 CPU @ 2.30GHz, macOS 11.3, Ubuntu 21.04)
-		args = appendArgsIfNoConflict(args, "-cpu", "Haswell-v4")
+		cpu := "Haswell-v4"
+		if isNativeArch(y.Arch) {
+			cpu = "host"
+		}
+		args = appendArgsIfNoConflict(args, "-cpu", cpu)
 		args = appendArgsIfNoConflict(args, "-machine", "q35,accel="+accel)
 	case limayaml.AARCH64:
-		args = appendArgsIfNoConflict(args, "-cpu", "cortex-a72")
+		cpu := "cortex-a72"
+		if isNativeArch(y.Arch) {
+			cpu = "host"
+		}
+		args = appendArgsIfNoConflict(args, "-cpu", cpu)
 		args = appendArgsIfNoConflict(args, "-machine", "virt,accel="+accel+",highmem=off")
 	}
 
@@ -355,11 +361,14 @@ func getExe(arch limayaml.Arch) (string, []string, error) {
 	return exe, args, nil
 }
 
-func getAccel(arch limayaml.Arch) string {
+func isNativeArch(arch limayaml.Arch) bool {
 	nativeX8664 := arch == limayaml.X8664 && runtime.GOARCH == "amd64"
 	nativeAARCH64 := arch == limayaml.AARCH64 && runtime.GOARCH == "arm64"
-	native := nativeX8664 || nativeAARCH64
-	if native {
+	return nativeX8664 || nativeAARCH64
+}
+
+func getAccel(arch limayaml.Arch) string {
+	if isNativeArch(arch) {
 		switch runtime.GOOS {
 		case "darwin":
 			return "hvf"
