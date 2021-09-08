@@ -90,7 +90,11 @@ func DefaultPubKeys(loadDotSSH bool) ([]PubKey, error) {
 		}
 		entry, err := readPublicKey(f)
 		if err == nil {
-			res = append(res, entry)
+			if strings.ContainsRune(entry.Content, '\n') || !strings.HasPrefix(entry.Content, "ssh-") {
+				logrus.Warnf("public key %q doesn't seem to be in ssh format", entry.Filename)
+			} else {
+				res = append(res, entry)
+			}
 		} else if !errors.Is(err, os.ErrNotExist) {
 			return nil, err
 		}
