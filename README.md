@@ -34,6 +34,11 @@ This project is unrelated to [The Lima driver project (driver for ARM Mali GPUs)
 The goal of Lima is to promote [containerd](https://containerd.io) including [nerdctl (contaiNERD ctl)](https://github.com/containerd/nerdctl)
 to Mac users, but Lima can be used for non-container applications as well.
 
+## Adopters
+
+- [Rancher Desktop](https://rancherdesktop.io/): Kubernetes and container management to the desktop
+- [Colima](https://github.com/abiosoft/colima): Docker (and Kubernetes) on macOS with minimal setup
+
 ## Examples
 
 ### uname
