@@ -14,7 +14,7 @@ users:
     lock_passwd: true
     ssh-authorized-keys:
     {{- range $val := .SSHPubKeys}}
-      - {{$val}}
+      - "{{$val}}"
     {{- end}}
 
 write_files:
