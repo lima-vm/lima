@@ -149,8 +149,7 @@ See [`./pkg/limayaml/default.yaml`](./pkg/limayaml/default.yaml).
 
 The current default spec:
 - OS: Ubuntu 21.04 (Hirsute Hippo)
-- CPU (x86\_64): Haswell v4, 4 cores
-- CPU (aarch64): Cortex A72, 4 cores
+- CPU: 4 cores
 - Memory: 4 GiB
 - Disk: 100 GiB
 - Mounts: `~` (read-only), `/tmp/lima` (writable)
