@@ -81,9 +81,15 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML) error {
 		args.Networks = append(args.Networks, Network{MACAddress: vde.MACAddress, Name: vde.Name})
 	}
 
-	args.DNSAddresses, err = osutil.DNSAddresses()
-	if err != nil {
-		return err
+	if len(y.DNS) > 0 {
+		for _, addr := range y.DNS {
+			args.DNSAddresses = append(args.DNSAddresses, addr.String())
+		}
+	} else {
+		args.DNSAddresses, err = osutil.DNSAddresses()
+		if err != nil {
+			return err
+		}
 	}
 
 	if err := ValidateTemplateArgs(args); err != nil {

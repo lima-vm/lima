@@ -22,6 +22,7 @@ type LimaYAML struct {
 	PortForwards []PortForward      `yaml:"portForwards,omitempty"`
 	Network      Network            `yaml:"network,omitempty"`
 	Env          map[string]*string `yaml:"env,omitempty"` // EXPERIMENAL, see default.yaml
+	DNS          []net.IP           `yaml:"dns,omitempty"`
 }
 
 type Arch = string
