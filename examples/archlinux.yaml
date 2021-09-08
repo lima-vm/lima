@@ -2,11 +2,9 @@
 arch: "x86_64"
 images:
   # NOTE: the image is periodically rotated, if you face 404, see https://mirror.pkgbuild.com/images/ to find the latest image.
-  #
-  # Skip v20210801.30574 as systemd 249 has a regression: https://github.com/lima-vm/lima/pull/136#issuecomment-890790894
-  - location: "https://mirror.pkgbuild.com/images/v20210619.26314/Arch-Linux-x86_64-cloudimg-20210619.26314.qcow2"
+  - location: "https://mirror.pkgbuild.com/images/v20210906.33805/Arch-Linux-x86_64-cloudimg-20210906.0.qcow2"
     arch: "x86_64"
-    digest: "sha256:d132d607fe4e97260b5a759f39cb11856bbf0dbb0ccaf8c65c6444b0ec22c545"
+    digest: "sha256:f9f63648d7863413883466daffcb2fcb5195264fc98c8e6eb0182bd368e32002"
 mounts:
   - location: "~"
     writable: false
