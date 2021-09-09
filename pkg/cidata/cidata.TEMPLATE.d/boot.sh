@@ -12,6 +12,14 @@ WARNING() {
 # shellcheck disable=SC2163
 while read -r line; do export "$line"; done <"${LIMA_CIDATA_MNT}"/lima.env
 
+sed -i '/#LIMA-START/,/#LIMA-END/d' /etc/environment
+cat "${LIMA_CIDATA_MNT}/lima.environment" >>/etc/environment
+
+# shellcheck disable=SC2163
+while read -r line; do
+	[ "$(expr "$line" : '#')" -eq 0 ] && export "$line"
+done <"${LIMA_CIDATA_MNT}"/lima.environment
+
 CODE=0
 
 for f in "${LIMA_CIDATA_MNT}"/boot/*; do
