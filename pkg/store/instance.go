@@ -3,7 +3,6 @@ package store
 import (
 	"errors"
 	"github.com/lima-vm/lima/pkg/limayaml"
-	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"os"
 	"path/filepath"
@@ -63,12 +62,11 @@ func Inspect(instName string) (*Instance, error) {
 	}
 	inst.Dir = instDir
 	inst.Arch = y.Arch
-	if *y.SSH.AutoPort {
-		inst.SSHLocalPort = osutil.CheckOrGetFreePort(y.SSH.LocalPort)
-	} else {
-		inst.SSHLocalPort = y.SSH.LocalPort
-	}
-
+	inst.SSHLocalPort = y.SSH.LocalPort
+	// TODO
+	//if y.SSH.LocalPort == 0 {
+	//
+	//}
 	inst.HostAgentPID, err = readPIDFile(filepath.Join(instDir, filenames.HostAgentPID))
 	if err != nil {
 		inst.Status = StatusBroken

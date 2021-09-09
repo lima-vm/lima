@@ -14,7 +14,7 @@ func TestCheckOrGetFreePort(t *testing.T) {
 
 	testCases := []testCase{
 		{
-			// 默认macOS 53端口被占用
+			// By default, macOS 53  are already used
 			port:       53,
 			expectedOK: false,
 		},

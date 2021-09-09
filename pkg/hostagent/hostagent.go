@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/lima-vm/lima/pkg/osutil"
 	"io"
 	"net"
 	"os"
@@ -165,9 +166,9 @@ func (a *HostAgent) Run(ctx context.Context) error {
 		qWaitCh <- qCmd.Wait()
 	}()
 
-	sshLocalPort := a.y.SSH.LocalPort // TODO: support dynamic port
-	if sshLocalPort < 0 {
-		return fmt.Errorf("invalid ssh local port %d", sshLocalPort)
+	sshLocalPort := a.y.SSH.LocalPort
+	if sshLocalPort == 0 {
+		sshLocalPort = osutil.CheckOrGetFreePort()
 	}
 	stBase := hostagentapi.Status{
 		SSHLocalPort: sshLocalPort,

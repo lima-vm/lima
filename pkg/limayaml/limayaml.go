@@ -44,10 +44,8 @@ type Mount struct {
 }
 
 type SSH struct {
-	LocalPort int `yaml:"localPort,omitempty"` // REQUIRED (FIXME: auto assign)
-	// AutoPort:  will check default port available, not available get new freeport
-	// Default: true
-	AutoPort *bool `yaml:"autoPort,omitempty"`
+	LocalPort int `yaml:"localPort,omitempty"` // REQUIRED
+
 	// LoadDotSSHPubKeys loads ~/.ssh/*.pub in addition to $LIMA_HOME/_config/user.pub .
 	// Default: true
 	LoadDotSSHPubKeys *bool `yaml:"loadDotSSHPubKeys,omitempty"`

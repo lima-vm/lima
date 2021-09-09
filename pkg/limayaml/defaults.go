@@ -44,9 +44,6 @@ func FillDefault(y *LimaYAML, filePath string) {
 	if y.Video.Display == "" {
 		y.Video.Display = "none"
 	}
-	if y.SSH.AutoPort == nil {
-		y.SSH.AutoPort = BoolPtr(true)
-	}
 	if y.SSH.LoadDotSSHPubKeys == nil {
 		y.SSH.LoadDotSSHPubKeys = &[]bool{true}[0]
 	}
@@ -127,5 +124,3 @@ func resolveArch(s string) Arch {
 	return s
 }
 
-// BoolPtr bool ptr
-func BoolPtr(p bool) *bool { return &p }

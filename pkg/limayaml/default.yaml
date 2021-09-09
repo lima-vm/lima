@@ -50,7 +50,6 @@ ssh:
   # Currently, this port number has to be specified manually.
   # Default: none
   localPort: 60022
-  autoPort: true
   # Load ~/.ssh/*.pub in addition to $LIMA_HOME/_config/user.pub .
   # This option is useful when you want to use other SSH-based
   # applications such as rsync with the Lima instance.

@@ -132,8 +132,8 @@ func loadOrCreateInstance(clicontext *cli.Context) (*store.Instance, error) {
 	if err := os.MkdirAll(instDir, 0700); err != nil {
 		return nil, err
 	}
-	if *y.SSH.AutoPort {
-		y.SSH.LocalPort = osutil.CheckOrGetFreePort(y.SSH.LocalPort)
+	if y.SSH.LocalPort == 0 {
+		y.SSH.LocalPort = osutil.CheckOrGetFreePort()
 		yBytes, err = limayaml.ReLoad(y)
 		if err != nil {
 			return nil, err
