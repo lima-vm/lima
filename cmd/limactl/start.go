@@ -3,12 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"strings"
-
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/containerd/containerd/identifiers"
 	"github.com/lima-vm/lima/pkg/limayaml"
@@ -20,6 +14,11 @@ import (
 	"github.com/norouter/norouter/cmd/norouter/editorcmd"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
+	"io/ioutil"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
 )
 
 var startCommand = &cli.Command{
@@ -132,6 +131,13 @@ func loadOrCreateInstance(clicontext *cli.Context) (*store.Instance, error) {
 	}
 	if err := os.MkdirAll(instDir, 0700); err != nil {
 		return nil, err
+	}
+	if *y.SSH.AutoPort {
+		y.SSH.LocalPort = osutil.CheckOrGetFreePort(y.SSH.LocalPort)
+		yBytes, err = limayaml.ReLoad(y)
+		if err != nil {
+			return nil, err
+		}
 	}
 	if err := os.WriteFile(filePath, yBytes, 0644); err != nil {
 		return nil, err

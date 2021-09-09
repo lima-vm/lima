@@ -15,3 +15,7 @@ func Load(b []byte, filePath string) (*LimaYAML, error) {
 	FillDefault(&y, filePath)
 	return &y, nil
 }
+
+func ReLoad(y *LimaYAML) ([]byte, error) {
+	return yaml.Marshal(y)
+}
