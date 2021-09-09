@@ -13,12 +13,12 @@ WARNING() {
 while read -r line; do export "$line"; done <"${LIMA_CIDATA_MNT}"/lima.env
 
 sed -i '/#LIMA-START/,/#LIMA-END/d' /etc/environment
-cat "${LIMA_CIDATA_MNT}/lima.environment" >>/etc/environment
+cat "${LIMA_CIDATA_MNT}/etc_environment" >>/etc/environment
 
 # shellcheck disable=SC2163
 while read -r line; do
 	[ "$(expr "$line" : '#')" -eq 0 ] && export "$line"
-done <"${LIMA_CIDATA_MNT}"/lima.environment
+done <"${LIMA_CIDATA_MNT}"/etc_environment
 
 CODE=0
 
@@ -40,7 +40,7 @@ if [ -d "${LIMA_CIDATA_MNT}"/provision.system ]; then
 	done
 fi
 
-USER_SCRIPT="/home/${LIMA_CIDATA_USER}.linux/.lime-user-script"
+USER_SCRIPT="/home/${LIMA_CIDATA_USER}.linux/.lima-user-script"
 if [ -d "${LIMA_CIDATA_MNT}"/provision.user ]; then
 	if [ ! -f /etc/alpine-release ]; then
 		until [ -e "/run/user/${LIMA_CIDATA_UID}/systemd/private" ]; do sleep 3; done
