@@ -42,7 +42,9 @@ fi
 
 USER_SCRIPT="/home/${LIMA_CIDATA_USER}.linux/.lime-user-script"
 if [ -d "${LIMA_CIDATA_MNT}"/provision.user ]; then
-	until [ -e "/run/user/${LIMA_CIDATA_UID}/systemd/private" ]; do sleep 3; done
+	if [ ! -f /etc/alpine-release ]; then
+		until [ -e "/run/user/${LIMA_CIDATA_UID}/systemd/private" ]; do sleep 3; done
+	fi
 	for f in "${LIMA_CIDATA_MNT}"/provision.user/*; do
 		INFO "Executing $f (as user ${LIMA_CIDATA_USER})"
 		cp "$f" "${USER_SCRIPT}"
