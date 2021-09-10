@@ -149,8 +149,17 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		// required for showing the shell prompt: https://stackoverflow.com/a/626574
 		sshArgs = append(sshArgs, "-t")
 	}
+
+	debug, err := cmd.Flags().GetBool("debug")
+	if err != nil {
+		return err
+	}
+	if debug {
+		sshArgs = append(sshArgs, "-v")
+	} else {
+		sshArgs = append(sshArgs, "-q")
+	}
 	sshArgs = append(sshArgs, []string{
-		"-q",
 		"-p", strconv.Itoa(inst.SSHLocalPort),
 		"127.0.0.1",
 		"--",
