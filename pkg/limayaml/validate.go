@@ -13,7 +13,7 @@ import (
 	"github.com/docker/go-units"
 	"github.com/lima-vm/lima/pkg/localpathutil"
 	"github.com/lima-vm/lima/pkg/osutil"
-	"github.com/lima-vm/lima/pkg/qemu/qemuconst"
+	"github.com/lima-vm/lima/pkg/qemu/const"
 	"github.com/sirupsen/logrus"
 )
 
@@ -246,8 +246,8 @@ func validateNetwork(y LimaYAML) error {
 		if strings.ContainsAny(nw.Interface, " \t\n/") {
 			return fmt.Errorf("field `%s.interface` must not contain whitespace or slashes", field)
 		}
-		if nw.Interface == qemuconst.SlirpNICName {
-			return fmt.Errorf("field `%s.interface` must not be set to %q because it is reserved for slirp", field, qemuconst.SlirpNICName)
+		if nw.Interface == qemu.SlirpNICName {
+			return fmt.Errorf("field `%s.interface` must not be set to %q because it is reserved for slirp", field, qemu.SlirpNICName)
 		}
 		if prev, ok := interfaceName[nw.Interface]; ok {
 			return fmt.Errorf("field `%s.interface` value %q has already been used by field `network.vde[%d].name`", field, nw.Interface, prev)

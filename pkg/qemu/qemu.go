@@ -17,8 +17,8 @@ import (
 	"github.com/lima-vm/lima/pkg/iso9660util"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/networks"
+	"github.com/lima-vm/lima/pkg/qemu/const"
 	"github.com/lima-vm/lima/pkg/qemu/imgutil"
-	"github.com/lima-vm/lima/pkg/qemu/qemuconst"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/mattn/go-shellwords"
 	"github.com/sirupsen/logrus"
@@ -258,7 +258,7 @@ func Cmdline(cfg Config) (string, []string, error) {
 
 	// Network
 	args = append(args, "-netdev", fmt.Sprintf("user,id=net0,net=%s,dhcpstart=%s,hostfwd=tcp:127.0.0.1:%d-:22",
-		qemuconst.SlirpNetwork, qemuconst.SlirpIPAddress, y.SSH.LocalPort))
+		qemu.SlirpNetwork, qemu.SlirpIPAddress, y.SSH.LocalPort))
 	args = append(args, "-device", "virtio-net-pci,netdev=net0,mac="+limayaml.MACAddress(cfg.InstanceDir))
 	usingVDE := false
 	for _, nw := range y.Networks {
