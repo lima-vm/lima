@@ -16,6 +16,7 @@ import (
 	"github.com/lima-vm/lima/pkg/downloader"
 	"github.com/lima-vm/lima/pkg/iso9660util"
 	"github.com/lima-vm/lima/pkg/limayaml"
+	"github.com/lima-vm/lima/pkg/networks"
 	"github.com/lima-vm/lima/pkg/qemu/imgutil"
 	"github.com/lima-vm/lima/pkg/qemu/qemuconst"
 	"github.com/lima-vm/lima/pkg/store/filenames"
@@ -263,10 +264,15 @@ func Cmdline(cfg Config) (string, []string, error) {
 		return "", nil, fmt.Errorf("netdev \"vde\" is not supported by %s ( Hint: recompile QEMU with `configure --enable-vde` )", exe)
 	}
 	for i, vde := range y.Network.VDE {
+		// Replace internal lima:// network name with proper socket path
+		vdeSock, err := networks.VDESock(vde.VNL)
+		if err != nil {
+			return "", nil, err
+		}
 		// VDE4 accepts VNL like vde:///var/run/vde.ctl as well as file path like /var/run/vde.ctl .
 		// VDE2 only accepts the latter form.
 		// VDE2 supports macOS but VDE4 does not yet, so we trim vde:// prefix here for VDE2 compatibility.
-		vdeSock := strings.TrimPrefix(vde.VNL, "vde://")
+		vdeSock = strings.TrimPrefix(vdeSock, "vde://")
 		if !strings.Contains(vdeSock, "://") {
 			if _, err := os.Stat(vdeSock); err != nil {
 				return "", nil, fmt.Errorf("cannot use VNL %q: %w", vde.VNL, err)

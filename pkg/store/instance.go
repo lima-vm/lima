@@ -22,14 +22,15 @@ const (
 )
 
 type Instance struct {
-	Name         string        `json:"name"`
-	Status       Status        `json:"status"`
-	Dir          string        `json:"dir"`
-	Arch         limayaml.Arch `json:"arch"`
-	SSHLocalPort int           `json:"sshLocalPort,omitempty"`
-	HostAgentPID int           `json:"hostAgentPID,omitempty"`
-	QemuPID      int           `json:"qemuPID,omitempty"`
-	Errors       []error       `json:"errors,omitempty"`
+	Name         string           `json:"name"`
+	Status       Status           `json:"status"`
+	Dir          string           `json:"dir"`
+	Arch         limayaml.Arch    `json:"arch"`
+	Network      limayaml.Network `json:"network,omitempty"`
+	SSHLocalPort int              `json:"sshLocalPort,omitempty"`
+	HostAgentPID int              `json:"hostAgentPID,omitempty"`
+	QemuPID      int              `json:"qemuPID,omitempty"`
+	Errors       []error          `json:"errors,omitempty"`
 }
 
 func (inst *Instance) LoadYAML() (*limayaml.LimaYAML, error) {
@@ -63,15 +64,16 @@ func Inspect(instName string) (*Instance, error) {
 	}
 	inst.Dir = instDir
 	inst.Arch = y.Arch
+	inst.Network = y.Network
 	inst.SSHLocalPort = y.SSH.LocalPort
 
-	inst.HostAgentPID, err = readPIDFile(filepath.Join(instDir, filenames.HostAgentPID))
+	inst.HostAgentPID, err = ReadPIDFile(filepath.Join(instDir, filenames.HostAgentPID))
 	if err != nil {
 		inst.Status = StatusBroken
 		inst.Errors = append(inst.Errors, err)
 	}
 
-	inst.QemuPID, err = readPIDFile(filepath.Join(instDir, filenames.QemuPID))
+	inst.QemuPID, err = ReadPIDFile(filepath.Join(instDir, filenames.QemuPID))
 	if err != nil {
 		inst.Status = StatusBroken
 		inst.Errors = append(inst.Errors, err)
@@ -94,9 +96,9 @@ func Inspect(instName string) (*Instance, error) {
 	return inst, nil
 }
 
-// readPIDFile returns 0 if the PID file does not exist or the process has already terminated
+// ReadPIDFile returns 0 if the PID file does not exist or the process has already terminated
 // (in which case the PID file will be removed).
-func readPIDFile(path string) (int, error) {
+func ReadPIDFile(path string) (int, error) {
 	b, err := os.ReadFile(path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
@@ -118,7 +120,11 @@ func readPIDFile(path string) (int, error) {
 			os.Remove(path)
 			return 0, nil
 		}
-		return 0, err
+		// We may not have permission to send the signal (e.g. to network daemon running as root).
+		// But if we get a permissions error, it means the process is still running.
+		if !errors.Is(err, os.ErrPermission) {
+			return 0, err
+		}
 	}
 	return pid, nil
 }

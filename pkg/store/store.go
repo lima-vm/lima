@@ -39,6 +39,15 @@ func LimaConfigDir() (string, error) {
 	return filepath.Join(limaDir, filenames.ConfigDir), nil
 }
 
+// LimaNetworksDir returns the path of the networks log directory, $LIMA_HOME/_networks.
+func LimaNetworksDir() (string, error) {
+	limaDir, err := LimaDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(limaDir, filenames.NetworksDir), nil
+}
+
 // Instances returns the names of the instances under LimaDir.
 func Instances() ([]string, error) {
 	limaDir, err := LimaDir()

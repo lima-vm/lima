@@ -12,6 +12,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/containerd/containerd/identifiers"
 	"github.com/lima-vm/lima/pkg/limayaml"
+	"github.com/lima-vm/lima/pkg/networks"
 	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/start"
 	"github.com/lima-vm/lima/pkg/store"
@@ -228,6 +229,10 @@ func startAction(cmd *cobra.Command, args []string) error {
 		logrus.Warnf("expected status %q, got %q", store.StatusStopped, inst.Status)
 	}
 	ctx := cmd.Context()
+	err = networks.Reconcile(ctx, inst.Name)
+	if err != nil {
+		return err
+	}
 	return start.Start(ctx, inst)
 }
 

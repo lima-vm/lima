@@ -177,7 +177,14 @@ func validateNetwork(yNetwork Network) error {
 		// The field is called VDE.VNL in anticipation of QEMU upgrading VDE2 to VDEplug4,
 		// but right now the only valid value on macOS is a path to the vde_switch socket directory,
 		// optionally with vde:// prefix.
-		if !strings.Contains(vde.VNL, "://") || strings.HasPrefix(vde.VNL, "vde://") {
+		// TODO: use networks.LimaSchema after solving circular dependency
+		if strings.HasPrefix(vde.VNL, "lima://") {
+			// TODO: validate network names? Problem is we can't use "networks" or "store" packages here...
+			//name := strings.TrimPrefix(vde.VNL, networks.LimaScheme)
+			//if _, ok := networkConfig.Networks[name]; !ok {
+			//	return fmt.Errorf("field `%s.vnl` references undefined network %q", field, name)
+			//}
+		} else if !strings.Contains(vde.VNL, "://") || strings.HasPrefix(vde.VNL, "vde://") {
 			vdeSwitch := strings.TrimPrefix(vde.VNL, "vde://")
 			if fi, err := os.Stat(vdeSwitch); err != nil {
 				// negligible when the instance is stopped
