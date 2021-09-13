@@ -3,16 +3,18 @@ package main
 import (
 	"errors"
 	"fmt"
+	"runtime"
+
 	"github.com/lima-vm/lima/pkg/networks"
 	"github.com/spf13/cobra"
 )
 
 func newSudoersCommand() *cobra.Command {
 	sudoersCommand := &cobra.Command{
-		Use:               "sudoers [SUDOERSFILE]",
-		Short:             "Generate /etc/sudoers.d/lima file.",
-		Args:              cobra.MaximumNArgs(1),
-		RunE:              sudoersAction,
+		Use:   "sudoers [SUDOERSFILE]",
+		Short: "Generate /etc/sudoers.d/lima file.",
+		Args:  cobra.MaximumNArgs(1),
+		RunE:  sudoersAction,
 	}
 	sudoersCommand.Flags().Bool("check", false,
 		"check that the sudoers file is up-to-date with $LIMA_HOME/_config/networks.yaml")
@@ -20,11 +22,14 @@ func newSudoersCommand() *cobra.Command {
 }
 
 func sudoersAction(cmd *cobra.Command, args []string) error {
+	if runtime.GOOS != "darwin" {
+		return errors.New("sudoers command is only supported on macOS right now")
+	}
 	check, err := cmd.Flags().GetBool("check")
 	if err != nil {
 		return err
 	}
-	if check	{
+	if check {
 		var file string
 		switch len(args) {
 		case 0:

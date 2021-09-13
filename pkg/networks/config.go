@@ -7,6 +7,7 @@ import (
 	"gopkg.in/yaml.v2"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sync"
 
 	"github.com/lima-vm/lima/pkg/store"
@@ -60,8 +61,11 @@ func load() {
 
 // Config returns the network config from the _config/networks.yaml file.
 func Config() (NetworksConfig, error) {
-	load()
-	return cache.config, cache.err
+	if runtime.GOOS == "darwin" {
+		load()
+		return cache.config, cache.err
+	}
+	return NetworksConfig{}, errors.New("networks.yaml configuration is only supported on macOS right now")
 }
 
 func VDESock(name string) (string, error) {

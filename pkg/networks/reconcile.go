@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 	"sync"
 
@@ -14,6 +15,9 @@ import (
 )
 
 func Reconcile(ctx context.Context, newInst string) error {
+	if runtime.GOOS != "darwin" {
+		return nil
+	}
 	config, err := Config()
 	if err != nil {
 		return err

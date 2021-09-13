@@ -179,6 +179,9 @@ func validateNetwork(y LimaYAML) error {
 	for i, nw := range y.Networks {
 		field := fmt.Sprintf("networks[%d]", i)
 		if nw.Lima != "" {
+			if runtime.GOOS != "darwin" {
+				return fmt.Errorf("field `%s.lima` is only supported on macOS right now", field)
+			}
 			if nw.VNL != "" {
 				return fmt.Errorf("field `%s.lima` and field `%s.vnl` are mutually exclusive", field, field)
 			}
