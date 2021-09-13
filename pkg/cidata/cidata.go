@@ -77,9 +77,9 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML) error {
 	}
 
 	slirpMACAddress := limayaml.MACAddress(instDir)
-	args.Networks = append(args.Networks, Network{MACAddress: slirpMACAddress, Name: qemuconst.SlirpNICName})
-	for _, vde := range y.Network.VDE {
-		args.Networks = append(args.Networks, Network{MACAddress: vde.MACAddress, Name: vde.Name})
+	args.Networks = append(args.Networks, Network{MACAddress: slirpMACAddress, Interface: qemuconst.SlirpNICName})
+	for _, nw := range y.Networks {
+		args.Networks = append(args.Networks, Network{MACAddress: nw.MACAddress, Interface: nw.Interface})
 	}
 
 	if len(y.DNS) > 0 {

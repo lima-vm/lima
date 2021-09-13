@@ -22,15 +22,15 @@ const (
 )
 
 type Instance struct {
-	Name         string           `json:"name"`
-	Status       Status           `json:"status"`
-	Dir          string           `json:"dir"`
-	Arch         limayaml.Arch    `json:"arch"`
-	Network      limayaml.Network `json:"network,omitempty"`
-	SSHLocalPort int              `json:"sshLocalPort,omitempty"`
-	HostAgentPID int              `json:"hostAgentPID,omitempty"`
-	QemuPID      int              `json:"qemuPID,omitempty"`
-	Errors       []error          `json:"errors,omitempty"`
+	Name         string             `json:"name"`
+	Status       Status             `json:"status"`
+	Dir          string             `json:"dir"`
+	Arch         limayaml.Arch      `json:"arch"`
+	Networks     []limayaml.Network `json:"network,omitempty"`
+	SSHLocalPort int                `json:"sshLocalPort,omitempty"`
+	HostAgentPID int                `json:"hostAgentPID,omitempty"`
+	QemuPID      int                `json:"qemuPID,omitempty"`
+	Errors       []error            `json:"errors,omitempty"`
 }
 
 func (inst *Instance) LoadYAML() (*limayaml.LimaYAML, error) {
@@ -64,7 +64,7 @@ func Inspect(instName string) (*Instance, error) {
 	}
 	inst.Dir = instDir
 	inst.Arch = y.Arch
-	inst.Network = y.Network
+	inst.Networks = y.Networks
 	inst.SSHLocalPort = y.SSH.LocalPort
 
 	inst.HostAgentPID, err = ReadPIDFile(filepath.Join(instDir, filenames.HostAgentPID))

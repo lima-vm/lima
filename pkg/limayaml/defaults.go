@@ -72,14 +72,27 @@ func FillDefault(y *LimaYAML, filePath string) {
 		FillPortForwardDefaults(&y.PortForwards[i])
 		// After defaults processing the singular HostPort and GuestPort values should not be used again.
 	}
-	for i := range y.Network.VDE {
-		vde := &y.Network.VDE[i]
-		if vde.MACAddress == "" {
-			// every interface in every limayaml file must get its own unique MAC address
-			vde.MACAddress = MACAddress(fmt.Sprintf("%s#%d", filePath, i))
+
+	if len(y.Network.VDEDeprecated) > 0 && len(y.Networks) == 0 {
+		for _, vde := range y.Network.VDEDeprecated {
+			network := Network{
+				Interface: vde.Name,
+				MACAddress: vde.MACAddress,
+				SwitchPort: vde.SwitchPort,
+				VNL: vde.VNL,
+			}
+			y.Networks = append(y.Networks, network)
 		}
-		if vde.Name == "" {
-			vde.Name = "vde" + strconv.Itoa(i)
+		y.Network.migrated = true
+	}
+	for i := range y.Networks {
+		nw := &y.Networks[i]
+		if nw.MACAddress == "" {
+			// every interface in every limayaml file must get its own unique MAC address
+			nw.MACAddress = MACAddress(fmt.Sprintf("%s#%d", filePath, i))
+		}
+		if nw.Interface == "" {
+			nw.Interface = "lima" + strconv.Itoa(i)
 		}
 	}
 }

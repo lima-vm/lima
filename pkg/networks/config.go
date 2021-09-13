@@ -7,7 +7,6 @@ import (
 	"gopkg.in/yaml.v2"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 
 	"github.com/lima-vm/lima/pkg/store"
@@ -66,16 +65,12 @@ func Config() (NetworksConfig, error) {
 }
 
 func VDESock(name string) (string, error) {
-	if strings.HasPrefix(name, LimaScheme) {
-		load()
-		if cache.err != nil {
-			return "", cache.err
-		}
-		name = strings.TrimPrefix(name, LimaScheme)
-		if err := cache.config.Check(name); err != nil {
-			return "", err
-		}
-		return cache.config.VDESock(name), nil
+	load()
+	if cache.err != nil {
+		return "", cache.err
 	}
-	return name, nil
+	if err := cache.config.Check(name); err != nil {
+		return "", err
+	}
+	return cache.config.VDESock(name), nil
 }

@@ -25,7 +25,7 @@ type Containerd struct {
 }
 type Network struct {
 	MACAddress string
-	Name       string
+	Interface  string
 }
 type TemplateArgs struct {
 	Name         string // instance name

@@ -34,15 +34,15 @@ func Reconcile(ctx context.Context, newInst string) error {
 		if instance.Status != store.StatusRunning && instName != newInst {
 			continue
 		}
-		for _, vde := range instance.Network.VDE {
-			if strings.HasPrefix(vde.VNL, LimaScheme) {
-				name := strings.TrimPrefix(vde.VNL, LimaScheme)
-				if _, ok := config.Networks[name]; !ok {
-					logrus.Errorf("network %q (used by instance %q) is missing from networks.yaml", name, instName)
-					continue
-				}
-				activeNetwork[name] = true
+		for _, nw := range instance.Networks {
+			if nw.Lima == "" {
+				continue
 			}
+			if _, ok := config.Networks[nw.Lima]; !ok {
+				logrus.Errorf("network %q (used by instance %q) is missing from networks.yaml", nw.Lima, instName)
+				continue
+			}
+			activeNetwork[nw.Lima] = true
 		}
 	}
 	for name := range config.Networks {

@@ -20,8 +20,9 @@ type LimaYAML struct {
 	Containerd   Containerd         `yaml:"containerd,omitempty"`
 	Probes       []Probe            `yaml:"probes,omitempty"`
 	PortForwards []PortForward      `yaml:"portForwards,omitempty"`
-	Network      Network            `yaml:"network,omitempty"`
-	Env          map[string]*string `yaml:"env,omitempty"` // EXPERIMENAL, see default.yaml
+	Networks     []Network          `yaml:"networks,omitempty"`
+	Network      NetworkDeprecated  `yaml:"network,omitempty"` // DEPRECATED, use `networks` instead
+	Env          map[string]*string `yaml:"env,omitempty"`     // EXPERIMENAL, see default.yaml
 	DNS          []net.IP           `yaml:"dns,omitempty"`
 }
 
@@ -110,11 +111,28 @@ type PortForward struct {
 }
 
 type Network struct {
-	VDE []VDE `yaml:"vde,omitempty"`
-}
-type VDE struct {
+	// `Lima` and `VNL` are mutually exclusive; exactly one is required
+	Lima string `yaml:"lima,omitempty"`
 	// VNL is a Virtual Network Locator (https://github.com/rd235/vdeplug4/commit/089984200f447abb0e825eb45548b781ba1ebccd).
 	// On macOS, only VDE2-compatible form (optionally with vde:// prefix) is supported.
+	VNL        string `yaml:"vnl,omitempty"`
+	SwitchPort uint16 `yaml:"switchPort,omitempty"` // VDE Switch port, not TCP/UDP port (only used by VDE networking)
+	MACAddress string `yaml:"macAddress,omitempty"`
+	Interface  string `yaml:"interface,omitempty"`
+}
+
+// DEPRECATED types below
+
+// Types have been renamed to turn all references to the old names into compiler errors,
+// and to avoid accidental usage in new code.
+
+type NetworkDeprecated struct {
+	VDEDeprecated []VDEDeprecated `yaml:"vde,omitempty"`
+	// migrate will be true when `network.VDE` has been copied to `networks` by FillDefaults()
+	migrated bool
+}
+
+type VDEDeprecated struct {
 	VNL        string `yaml:"vnl,omitempty"`
 	SwitchPort uint16 `yaml:"switchPort,omitempty"` // VDE Switch port, not TCP/UDP port
 	MACAddress string `yaml:"macAddress,omitempty"`
