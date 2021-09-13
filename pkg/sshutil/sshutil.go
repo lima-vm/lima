@@ -11,7 +11,7 @@ import (
 
 	"github.com/lima-vm/lima/pkg/lockutil"
 	"github.com/lima-vm/lima/pkg/osutil"
-	"github.com/lima-vm/lima/pkg/store"
+	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/sirupsen/logrus"
 )
@@ -41,7 +41,7 @@ func readPublicKey(f string) (PubKey, error) {
 // an identity explicitly.
 func DefaultPubKeys(loadDotSSH bool) ([]PubKey, error) {
 	// Read $LIMA_HOME/_config/user.pub
-	configDir, err := store.LimaConfigDir()
+	configDir, err := dirnames.LimaConfigDir()
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +103,7 @@ func DefaultPubKeys(loadDotSSH bool) ([]PubKey, error) {
 }
 
 func CommonArgs(useDotSSH bool) ([]string, error) {
-	configDir, err := store.LimaConfigDir()
+	configDir, err := dirnames.LimaConfigDir()
 	if err != nil {
 		return nil, err
 	}

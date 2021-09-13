@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/lima-vm/lima/pkg/store"
+	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/version"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -41,7 +41,7 @@ func newApp() *cobra.Command {
 		}
 		// Make sure either $HOME or $LIMA_HOME is defined, so we don't need
 		// to check for errors later
-		if _, err := store.LimaDir(); err != nil {
+		if _, err := dirnames.LimaDir(); err != nil {
 			return err
 		}
 		return nil

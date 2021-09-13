@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	"github.com/lima-vm/lima/pkg/store"
+	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/sirupsen/logrus"
 )
 
@@ -84,7 +85,7 @@ func (config *NetworksConfig) startDaemon(ctx context.Context, name, daemon stri
 		return err
 	}
 
-	networksDir, _ := store.LimaNetworksDir()
+	networksDir, _ := dirnames.LimaNetworksDir()
 	if err := os.MkdirAll(networksDir, 0755); err != nil {
 		return err
 	}

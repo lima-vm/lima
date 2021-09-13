@@ -10,7 +10,7 @@ import (
 	"runtime"
 	"sync"
 
-	"github.com/lima-vm/lima/pkg/store"
+	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 )
 
@@ -27,7 +27,7 @@ var cache struct {
 func load() {
 	cache.Do(func() {
 		var configDir string
-		configDir, cache.err = store.LimaConfigDir()
+		configDir, cache.err = dirnames.LimaConfigDir()
 		if cache.err != nil {
 			return
 		}

@@ -2,7 +2,7 @@ package networks
 
 import (
 	"fmt"
-	"github.com/lima-vm/lima/pkg/store"
+	"github.com/lima-vm/lima/pkg/store/dirnames"
 )
 
 const (
@@ -29,7 +29,7 @@ func (config *NetworksConfig) PIDFile(name, daemon string) string {
 }
 
 func (config *NetworksConfig) LogFile(name, daemon, stream string) string {
-	networksDir, _ := store.LimaNetworksDir()
+	networksDir, _ := dirnames.LimaNetworksDir()
 	return fmt.Sprintf("%s/%s_%s.%s.log", networksDir, name, daemon, stream)
 }
 
