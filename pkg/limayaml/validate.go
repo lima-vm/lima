@@ -2,6 +2,7 @@ package limayaml
 
 import (
 	"fmt"
+	"github.com/lima-vm/lima/pkg/networks"
 	"net"
 	"os"
 	"path/filepath"
@@ -188,7 +189,13 @@ func validateNetwork(y LimaYAML) error {
 			if nw.SwitchPort != 0 {
 				return fmt.Errorf("field `%s.switchPort` cannot be used with field `%s.lima`", field, field)
 			}
-			// TODO: validate network name (we can't use networks and store packages right now)
+			config, err := networks.Config()
+			if err != nil {
+				return err
+			}
+			if config.Check(nw.Lima) != nil {
+				return fmt.Errorf("field `%s.lima` references network %q which is not defined in networks.yaml", field, nw.Lima)
+			}
 		} else {
 			if nw.VNL == "" {
 				return fmt.Errorf("field `%s.lima` or field `%s.vnl` must be set", field, field)

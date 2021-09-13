@@ -11,7 +11,7 @@ import (
 	"time"
 
 	hostagentapi "github.com/lima-vm/lima/pkg/hostagent/api"
-	"github.com/lima-vm/lima/pkg/networks"
+	"github.com/lima-vm/lima/pkg/networks/reconcile"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/sirupsen/logrus"
