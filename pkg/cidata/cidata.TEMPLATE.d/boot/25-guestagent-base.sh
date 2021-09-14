@@ -1,4 +1,5 @@
 #!/bin/sh
+
 set -eux
 
 # Create mount points
@@ -7,7 +8,8 @@ for f in $(seq 0 $((LIMA_CIDATA_MOUNTS - 1))); do
 	mountpointvar="LIMA_CIDATA_MOUNTS_${f}_MOUNTPOINT"
 	mountpoint="$(eval echo \$"$mountpointvar")"
 	mkdir -p "${mountpoint}"
-	chown "${LIMA_CIDATA_USER}" "${mountpoint}"
+	gid=$(id -g "${LIMA_CIDATA_USER}")
+	chown "${LIMA_CIDATA_UID}:${gid}" "${mountpoint}"
 done
 
 # Install or update the guestagent binary
@@ -17,7 +19,8 @@ install -m 755 "${LIMA_CIDATA_MNT}"/lima-guestagent /usr/local/bin/lima-guestage
 if [ -f /etc/alpine-release ]; then
 	# Create directory for the lima-guestagent socket (normally done by systemd)
 	mkdir -p /run/user/"${LIMA_CIDATA_UID}"
-	chown "${LIMA_CIDATA_USER}" /run/user/"${LIMA_CIDATA_UID}"
+	gid=$(id -g "${LIMA_CIDATA_USER}")
+	chown "${LIMA_CIDATA_UID}:${gid}" /run/user/"${LIMA_CIDATA_UID}"
 	chmod 700 /run/user/"${LIMA_CIDATA_UID}"
 	# Install the openrc lima-guestagent service script
 	cat >/etc/init.d/lima-guestagent <<'EOF'
