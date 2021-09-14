@@ -33,6 +33,9 @@ func daemonAction(cmd *cobra.Command, args []string) error {
 	if tick == 0 {
 		return errors.New("tick must be specified")
 	}
+	if os.Geteuid() != 0 {
+		return errors.New("must run as the root")
+	}
 	logrus.Infof("event tick: %v", tick)
 
 	newTicker := func() (<-chan time.Time, func()) {

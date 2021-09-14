@@ -35,6 +35,5 @@ EOF
 	rc-update add lima-guestagent default
 	rc-service lima-guestagent start
 else
-	until [ -e "/run" ]; do sleep 3; done
 	sudo lima-guestagent install-systemd
 fi
