@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/lima-vm/lima/pkg/guestagent/api"
+	"github.com/lima-vm/lima/pkg/guestagent/iptables"
 	"github.com/lima-vm/lima/pkg/guestagent/procnettcp"
 	"github.com/sirupsen/logrus"
 	"github.com/yalue/native_endian"
@@ -129,6 +130,28 @@ func (a *agent) LocalPorts(ctx context.Context) ([]api.IPPort, error) {
 				})
 		}
 	}
+
+	ipts, err := iptables.GetPorts()
+	if err != nil {
+		return res, err
+	}
+	for _, ipt := range ipts {
+		// Make sure the port isn't already listed from procnettcp
+		found := false
+		for _, re := range res {
+			if re.Port == ipt.Port {
+				found = true
+			}
+		}
+		if !found {
+			res = append(res,
+				api.IPPort{
+					IP:   ipt.IP,
+					Port: ipt.Port,
+				})
+		}
+	}
+
 	return res, nil
 }
 

@@ -1,8 +1,6 @@
 package main
 
 import (
-	"errors"
-	"os"
 	"strings"
 
 	"github.com/lima-vm/lima/pkg/version"
@@ -27,9 +25,6 @@ func newApp() *cobra.Command {
 		debug, _ := cmd.Flags().GetBool("debug")
 		if debug {
 			logrus.SetLevel(logrus.DebugLevel)
-		}
-		if os.Geteuid() == 0 {
-			return errors.New("must not run as the root")
 		}
 		return nil
 	}

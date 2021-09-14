@@ -5,7 +5,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -21,28 +20,18 @@ func newDaemonCommand() *cobra.Command {
 		Short: "run the daemon",
 		RunE:  daemonAction,
 	}
-	daemonCommand.Flags().String("socket", socketDefaultValue(), "the unix socket to listen on")
 	daemonCommand.Flags().Duration("tick", 3*time.Second, "tick for polling events")
 	return daemonCommand
 }
 
 func daemonAction(cmd *cobra.Command, args []string) error {
-	socket, err := cmd.Flags().GetString("socket")
-	if err != nil {
-		return err
-	}
-	if socket == "" {
-		return errors.New("socket must be specified")
-	}
+	socket := "/run/lima-guestagent.sock"
 	tick, err := cmd.Flags().GetDuration("tick")
 	if err != nil {
 		return err
 	}
 	if tick == 0 {
 		return errors.New("tick must be specified")
-	}
-	if os.Geteuid() == 0 {
-		return errors.New("must not run as the root")
 	}
 	logrus.Infof("event tick: %v", tick)
 
@@ -69,14 +58,9 @@ func daemonAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	if err := os.Chmod(socket, 0777); err != nil {
+		return err
+	}
 	logrus.Infof("serving the guest agent on %q", socket)
 	return srv.Serve(l)
-}
-
-func socketDefaultValue() string {
-	if xrd := os.Getenv("XDG_RUNTIME_DIR"); xrd != "" {
-		return filepath.Join(xrd, "lima-guestagent.sock")
-	}
-	logrus.Warn("$XDG_RUNTIME_DIR is not set, cannot determine the socket name")
-	return ""
 }
