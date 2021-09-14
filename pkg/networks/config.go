@@ -56,6 +56,7 @@ func load() {
 		if cache.err != nil {
 			cache.err = fmt.Errorf("cannot parse %q: %w", configFile, cache.err)
 		}
+		cache.err = cache.config.validate()
 	})
 }
 

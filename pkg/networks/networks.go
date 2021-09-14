@@ -16,7 +16,7 @@ type Paths struct {
 	VDESwitch string `yaml:"vdeSwitch"`
 	VDEVMNet  string `yaml:"vdeVMNet"`
 	VarRun    string `yaml:"varRun"`
-	Sudoers   string `yaml:"sudoers"`
+	Sudoers   string `yaml:"sudoers,omitempty"`
 }
 
 const (
