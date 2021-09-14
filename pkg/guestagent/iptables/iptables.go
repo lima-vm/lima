@@ -17,7 +17,7 @@ type Entry struct {
 
 // This regex can detect a line in the iptables added by portmap to do the
 // forwarding. The following two are examples of lines (notice that one has the
-// destinateion IP and the other does not):
+// destination IP and the other does not):
 //    -A CNI-DN-2e2f8d5b91929ef9fc152 -d 127.0.0.1/32 -p tcp -m tcp --dport 8081 -j DNAT --to-destination 10.4.0.7:80
 //    -A CNI-DN-04579c7bb67f4c3f6cca0 -p tcp -m tcp --dport 8082 -j DNAT --to-destination 10.4.0.10:80
 // The -A on the front is to amend the rule that was already created. portmap
@@ -27,7 +27,7 @@ type Entry struct {
 // ipv4 IP address. We need to detect this IP.
 // --dport is the destination port. We need to detect this port
 // -j DNAT this tells us it's the line doing the port forwarding.
-var findPortRegex = regexp.MustCompile(`.*-A\W+CNI-DN-\w*\W+(?:-d ((?:\b25[0-5]|\b2[0-4][0-9]|\b[01]?[0-9][0-9]?)(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}))?(?:/\d+\W+)?-p.*--dport (\d+) -j DNAT`)
+var findPortRegex = regexp.MustCompile(`-A\s+CNI-DN-\w*\s+(?:-d ((?:\b25[0-5]|\b2[0-4][0-9]|\b[01]?[0-9][0-9]?)(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}))?(?:/32\s+)?-p .*--dport (\d+) -j DNAT`)
 
 func GetPorts() ([]Entry, error) {
 	// TODO: add support for ipv6
