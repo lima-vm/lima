@@ -13,7 +13,6 @@ for f in $(seq 0 $((LIMA_CIDATA_MOUNTS - 1))); do
 done
 
 # Install or update the guestagent binary
-rm -f /usr/local/bin/lima-guestagent
 install -m 755 "${LIMA_CIDATA_MNT}"/lima-guestagent /usr/local/bin/lima-guestagent
 
 # Launch the guestagent service
@@ -36,5 +35,8 @@ EOF
 	rc-update add lima-guestagent default
 	rc-service lima-guestagent start
 else
+	# Remove legacy systemd service
+	rm -f "/home/${LIMA_CIDATA_USER}.linux/.config/systemd/user/lima-guestagent.service"
+
 	sudo lima-guestagent install-systemd
 fi
