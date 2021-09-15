@@ -13,6 +13,7 @@ for f in $(seq 0 $((LIMA_CIDATA_MOUNTS - 1))); do
 done
 
 # Install or update the guestagent binary
+rm -f /usr/local/bin/lima-guestagent
 install -m 755 "${LIMA_CIDATA_MNT}"/lima-guestagent /usr/local/bin/lima-guestagent
 
 # Launch the guestagent service
