@@ -2,7 +2,6 @@ package limayaml
 
 import (
 	"fmt"
-	"github.com/lima-vm/lima/pkg/networks"
 	"net"
 	"os"
 	"path/filepath"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/docker/go-units"
 	"github.com/lima-vm/lima/pkg/localpathutil"
+	"github.com/lima-vm/lima/pkg/networks"
 	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/qemu/const"
 	"github.com/sirupsen/logrus"

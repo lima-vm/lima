@@ -46,10 +46,17 @@ func sudoersAction(cmd *cobra.Command, args []string) error {
 		default:
 			return errors.New("can check only a single sudoers file")
 		}
-		if err := networks.CheckSudoers(file); err != nil {
+		config, err := networks.Config()
+		if err != nil {
 			return err
 		}
-		fmt.Printf("%q is up-to-date\n", file)
+		if err := config.Validate(); err != nil {
+			return err
+		}
+		if err := config.VerifySudoAccess(file); err != nil {
+			return err
+		}
+		fmt.Printf("%q is up-to-date (or sudo doesn't require a password)\n", file)
 		return nil
 	}
 	sudoers, err := networks.Sudoers()

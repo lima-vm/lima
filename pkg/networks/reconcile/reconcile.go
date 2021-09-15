@@ -122,29 +122,31 @@ func startDaemon(config *networks.NetworksConfig, ctx context.Context, name, dae
 	return nil
 }
 
-var sudoersCheck struct {
+var validation struct {
 	sync.Once
 	err error
 }
 
-func checkSudoers(config *networks.NetworksConfig) error {
-	sudoersCheck.Do(func() {
-		if config.Paths.Sudoers != "" {
-			sudoersCheck.err = networks.CheckSudoers(config.Paths.Sudoers)
+func validateConfig(config *networks.NetworksConfig) error {
+	validation.Do(func() {
+		// make sure all config.Paths.* are secure
+		validation.err = config.Validate()
+		if validation.err == nil {
+			validation.err = config.VerifySudoAccess(config.Paths.Sudoers)
 		}
 	})
-	return sudoersCheck.err
+	return validation.err
 }
 
 func startNetwork(config *networks.NetworksConfig, ctx context.Context, name string) error {
 	logrus.Debugf("Make sure %q network is running", name)
+	if err := validateConfig(config); err != nil {
+		return err
+	}
 	for _, daemon := range []string{networks.Switch, networks.VMNet} {
 		pid, _ := store.ReadPIDFile(config.PIDFile(name, daemon))
 		if pid == 0 {
 			logrus.Infof("Starting %s daemon for %q network", daemon, name)
-			if err := checkSudoers(config); err != nil {
-				return err
-			}
 			if err := startDaemon(config, ctx, name, daemon); err != nil {
 				return err
 			}
@@ -155,11 +157,13 @@ func startNetwork(config *networks.NetworksConfig, ctx context.Context, name str
 
 func stopNetwork(config *networks.NetworksConfig, name string) error {
 	logrus.Debugf("Make sure %q network is stopped", name)
+	// Don't call validateConfig() until we actually need to stop a daemon because
+	// stopNetwork() may be called even when the vde daemons are not installed.
 	for _, daemon := range []string{networks.VMNet, networks.Switch} {
 		pid, _ := store.ReadPIDFile(config.PIDFile(name, daemon))
 		if pid != 0 {
 			logrus.Infof("Stopping %s daemon for %q network", daemon, name)
-			if err := checkSudoers(config); err != nil {
+			if err := validateConfig(config); err != nil {
 				return err
 			}
 			err := sudo(config.DaemonUser(daemon), config.DaemonGroup(daemon), config.StopCmd(name, daemon))

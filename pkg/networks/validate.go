@@ -11,7 +11,7 @@ import (
 	"syscall"
 )
 
-func (config *NetworksConfig) validate() error {
+func (config *NetworksConfig) Validate() error {
 	// validate all paths.* values
 	paths := reflect.ValueOf(&config.Paths).Elem()
 	for i := 0; i < paths.NumField(); i++ {
@@ -31,7 +31,7 @@ func (config *NetworksConfig) validate() error {
 			if name == "sudoers" && errors.Is(err, os.ErrNotExist) {
 				continue
 			}
-			return fmt.Errorf("network.yaml field `paths.%s` error: %w", name, err)
+			return fmt.Errorf("networks.yaml field `paths.%s` error: %w", name, err)
 		}
 	}
 	// TODO: validate network definitions

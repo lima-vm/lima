@@ -4,7 +4,6 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
-	"gopkg.in/yaml.v2"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/store/filenames"
+	"gopkg.in/yaml.v2"
 )
 
 //go:embed networks.yaml
@@ -56,7 +56,6 @@ func load() {
 		if cache.err != nil {
 			cache.err = fmt.Errorf("cannot parse %q: %w", configFile, cache.err)
 		}
-		cache.err = cache.config.validate()
 	})
 }
 

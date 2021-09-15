@@ -9,7 +9,7 @@ paths:
   vdeSwitch: /opt/vde/bin/vde_switch
   vdeVMNet: /opt/vde/bin/vde_vmnet
   varRun: /private/var/run/lima
-  sudoers: /etc/sudoers.d/lima
+  sudoers: /private/etc/sudoers.d/lima
 
 group: staff
 
