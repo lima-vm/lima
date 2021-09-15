@@ -115,9 +115,8 @@ and extract it under `/usr/local` (or somewhere else). For instance:
 
 ```bash
 brew install jq
-sudo -i
-VERSION=$(wget -cq https://api.github.com/repos/lima-vm/lima/releases/latest -O - | jq -r .tag_name )
-wget -q https://github.com/lima-vm/lima/releases/download/$VERSION/lima-${VERSION:1}-`uname`-`uname -m`.tar.gz -O - | tar -xzC /usr/local
+VERSION=$(curl -fsSL https://api.github.com/repos/lima-vm/lima/releases/latest | jq -r .tag_name)
+curl -fsSL https://github.com/lima-vm/lima/releases/download/${VERSION}/lima-${VERSION:1}-$(uname -s)-$(uname -m).tar.gz | tar Cxzvm /usr/local
 ```
 
 - To install Lima from the source, run `make && make install`.
