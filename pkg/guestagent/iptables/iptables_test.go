@@ -84,10 +84,10 @@ func TestParsePortsFromRules(t *testing.T) {
 		t.Fatalf("expected 2 ports parsed from iptables but parsed %d", l)
 	}
 
-	if res[0].IP.String() != "127.0.0.1" || res[0].Port != 8082 {
-		t.Errorf("expected port 8082 on IP 127.0.0.1 but go port %d on IP %s", res[0].Port, res[0].IP.String())
+	if res[0].IP.String() != "127.0.0.1" || res[0].Port != 8082 || res[0].TCP != true {
+		t.Errorf("expected port 8082 on IP 127.0.0.1 with TCP true but go port %d on IP %s with TCP %t", res[0].Port, res[0].IP.String(), res[0].TCP)
 	}
-	if res[1].IP.String() != "127.0.0.1" || res[1].Port != 8081 {
-		t.Errorf("expected port 8081 on IP 127.0.0.1 but go port %d on IP %s", res[1].Port, res[1].IP.String())
+	if res[1].IP.String() != "127.0.0.1" || res[1].Port != 8081 || res[1].TCP != true {
+		t.Errorf("expected port 8081 on IP 127.0.0.1 with TCP true but go port %d on IP %s with TCP %t", res[1].Port, res[1].IP.String(), res[1].TCP)
 	}
 }

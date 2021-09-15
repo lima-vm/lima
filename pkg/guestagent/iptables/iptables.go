@@ -8,9 +8,11 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Entry struct {
+	TCP  bool
 	IP   net.IP
 	Port int
 }
@@ -27,7 +29,7 @@ type Entry struct {
 // ipv4 IP address. We need to detect this IP.
 // --dport is the destination port. We need to detect this port
 // -j DNAT this tells us it's the line doing the port forwarding.
-var findPortRegex = regexp.MustCompile(`-A\s+CNI-DN-\w*\s+(?:-d ((?:\b25[0-5]|\b2[0-4][0-9]|\b[01]?[0-9][0-9]?)(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}))?(?:/32\s+)?-p .*--dport (\d+) -j DNAT`)
+var findPortRegex = regexp.MustCompile(`-A\s+CNI-DN-\w*\s+(?:-d ((?:\b25[0-5]|\b2[0-4][0-9]|\b[01]?[0-9][0-9]?)(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}))?(?:/32\s+)?-p (tcp)?.*--dport (\d+) -j DNAT`)
 
 func GetPorts() ([]Entry, error) {
 	// TODO: add support for ipv6
@@ -50,17 +52,27 @@ func GetPorts() ([]Entry, error) {
 		return nil, err
 	}
 
-	return parsePortsFromRules(res)
+	pts, err := parsePortsFromRules(res)
+	if err != nil {
+		return nil, err
+	}
+
+	return checkPortsOpen(pts)
 }
 
 func parsePortsFromRules(rules []string) ([]Entry, error) {
 	var entries []Entry
 	for _, rule := range rules {
 		if found := findPortRegex.FindStringSubmatch(rule); found != nil {
-			if len(found) == 3 {
-				port, err := strconv.Atoi(found[2])
+			if len(found) == 4 {
+				port, err := strconv.Atoi(found[3])
 				if err != nil {
 					return nil, err
+				}
+
+				istcp := false
+				if found[2] == "tcp" {
+					istcp = true
 				}
 
 				// if the IP is blank the port forwarding the portforwarding,
@@ -73,6 +85,7 @@ func parsePortsFromRules(rules []string) ([]Entry, error) {
 				ent := Entry{
 					IP:   net.ParseIP(ip),
 					Port: port,
+					TCP:  istcp,
 				}
 				entries = append(entries, ent)
 			}
@@ -108,4 +121,21 @@ func listNATRules(pth string) ([]string, error) {
 	}
 
 	return rules, nil
+}
+
+func checkPortsOpen(pts []Entry) ([]Entry, error) {
+	var entries []Entry
+	for _, pt := range pts {
+		if pt.TCP {
+			conn, err := net.DialTimeout("tcp", net.JoinHostPort(pt.IP.String(), strconv.Itoa(pt.Port)), time.Second)
+			if err == nil && conn != nil {
+				conn.Close()
+				entries = append(entries, pt)
+			}
+		} else {
+			entries = append(entries, pt)
+		}
+	}
+
+	return entries, nil
 }
