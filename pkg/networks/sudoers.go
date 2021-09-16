@@ -31,12 +31,11 @@ func Sudoers() (string, error) {
 		sb.WriteRune('\n')
 		sb.WriteString(fmt.Sprintf("# Manage %q network daemons\n", name))
 		for _, daemon := range []string{Switch, VMNet} {
-			prefix := strings.ToUpper(name + "_" + daemon)
 			sb.WriteRune('\n')
-			sb.WriteString(fmt.Sprintf("Cmnd_Alias %s_START = %s\n", prefix, config.StartCmd(name, daemon)))
-			sb.WriteString(fmt.Sprintf("Cmnd_Alias %s_STOP = %s\n", prefix, config.StopCmd(name, daemon)))
-			sb.WriteString(fmt.Sprintf("%%%s ALL=(%s:%s) NOPASSWD:NOSETENV: %s_START, %s_STOP\n",
-				config.Group, config.DaemonUser(daemon), config.DaemonGroup(daemon), prefix, prefix))
+			sb.WriteString(fmt.Sprintf("%%%s ALL=(%s:%s) NOPASSWD:NOSETENV: \\\n",
+				config.Group, config.DaemonUser(daemon), config.DaemonGroup(daemon)))
+			sb.WriteString(fmt.Sprintf("    %s, \\\n", config.StartCmd(name, daemon)))
+			sb.WriteString(fmt.Sprintf("    %s\n", config.StopCmd(name, daemon)))
 		}
 	}
 	return sb.String(), nil
