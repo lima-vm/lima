@@ -47,8 +47,8 @@ func (a *HostAgent) setupMount(ctx context.Context, m limayaml.Mount) (*mount, e
 		Port:       a.y.SSH.LocalPort,
 		RemotePath: expanded,
 		Readonly:   !m.Writable,
-		// NOTE: allow_root requires "user_allow_other" in /etc/fuse.conf
-		SSHFSAdditionalArgs: []string{"-o", "allow_root"},
+		// NOTE: allow_other requires "user_allow_other" in /etc/fuse.conf
+		SSHFSAdditionalArgs: []string{"-o", "allow_other"},
 	}
 	if err := rsf.Prepare(); err != nil {
 		return nil, fmt.Errorf("failed to prepare reverse sshfs for %q: %w", expanded, err)
