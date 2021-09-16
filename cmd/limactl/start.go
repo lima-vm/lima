@@ -19,32 +19,27 @@ import (
 	"github.com/mattn/go-isatty"
 	"github.com/norouter/norouter/cmd/norouter/editorcmd"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
+	"github.com/spf13/cobra"
 )
 
-var startCommand = &cli.Command{
-	Name:      "start",
-	Usage:     fmt.Sprintf("Start an instance of Lima. If the instance does not exist, open an editor for creating new one, with name %q", DefaultInstanceName),
-	ArgsUsage: "NAME|FILE.yaml",
-	Flags: []cli.Flag{
-		&cli.BoolFlag{
-			Name:  "tty",
-			Usage: "enable TUI interactions such as opening an editor, defaults to true when stdout is a terminal",
-			Value: isatty.IsTerminal(os.Stdout.Fd()),
-		},
-	},
-	Action:       startAction,
-	BashComplete: startBashComplete,
+func newStartCommand() *cobra.Command {
+	var startCommand = &cobra.Command{
+		Use:               "start NAME|FILE.yaml",
+		Short:             fmt.Sprintf("Start an instance of Lima. If the instance does not exist, open an editor for creating new one, with name %q", DefaultInstanceName),
+		Args:              cobra.MaximumNArgs(1),
+		ValidArgsFunction: startBashComplete,
+		RunE:              startAction,
+	}
+	startCommand.Flags().Bool("tty", isatty.IsTerminal(os.Stdout.Fd()), "enable TUI interactions such as opening an editor, defaults to true when stdout is a terminal")
+	return startCommand
 }
 
-func loadOrCreateInstance(clicontext *cli.Context) (*store.Instance, error) {
-	if clicontext.NArg() > 1 {
-		return nil, fmt.Errorf("too many arguments")
-	}
-
-	arg := clicontext.Args().First()
-	if arg == "" {
+func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, error) {
+	var arg string
+	if len(args) == 0 {
 		arg = DefaultInstanceName
+	} else {
+		arg = args[0]
 	}
 
 	var (
@@ -94,14 +89,18 @@ func loadOrCreateInstance(clicontext *cli.Context) (*store.Instance, error) {
 		return nil, fmt.Errorf("instance %q already exists (%q)", instName, instDir)
 	}
 
-	if clicontext.Bool("tty") {
+	tty, err := cmd.Flags().GetBool("tty")
+	if err != nil {
+		return nil, err
+	}
+	if tty {
 		answerOpenEditor, err := askWhetherToOpenEditor(instName)
 		if err != nil {
 			logrus.WithError(err).Warn("Failed to open TUI")
 			answerOpenEditor = false
 		}
 		if answerOpenEditor {
-			yBytes, err = openEditor(clicontext, instName, yBytes)
+			yBytes, err = openEditor(cmd, instName, yBytes)
 			if err != nil {
 				return nil, err
 			}
@@ -121,7 +120,7 @@ func loadOrCreateInstance(clicontext *cli.Context) (*store.Instance, error) {
 		return nil, err
 	}
 	if err := limayaml.Validate(*y); err != nil {
-		if !clicontext.Bool("tty") {
+		if !tty {
 			return nil, err
 		}
 		rejectedYAML := "lima.REJECTED.yaml"
@@ -168,7 +167,7 @@ func askWhetherToOpenEditor(name string) (bool, error) {
 // openEditor opens an editor, and returns the content (not path) of the modified yaml.
 //
 // openEditor returns nil when the file was saved as an empty file, optionally with whitespaces.
-func openEditor(clicontext *cli.Context, name string, initialContent []byte) ([]byte, error) {
+func openEditor(cmd *cobra.Command, name string, initialContent []byte) ([]byte, error) {
 	editor := editorcmd.Detect()
 	if editor == "" {
 		return nil, errors.New("could not detect a text editor binary, try setting $EDITOR")
@@ -212,8 +211,8 @@ func openEditor(clicontext *cli.Context, name string, initialContent []byte) ([]
 	return []byte(modifiedExclHdr), nil
 }
 
-func startAction(clicontext *cli.Context) error {
-	inst, err := loadOrCreateInstance(clicontext)
+func startAction(cmd *cobra.Command, args []string) error {
+	inst, err := loadOrCreateInstance(cmd, args)
 	if err != nil {
 		return err
 	}
@@ -228,7 +227,7 @@ func startAction(clicontext *cli.Context) error {
 	default:
 		logrus.Warnf("expected status %q, got %q", store.StatusStopped, inst.Status)
 	}
-	ctx := clicontext.Context
+	ctx := cmd.Context()
 	return start.Start(ctx, inst)
 }
 
@@ -250,6 +249,7 @@ func instNameFromYAMLPath(yamlPath string) (string, error) {
 	return s, nil
 }
 
-func startBashComplete(clicontext *cli.Context) {
-	bashCompleteInstanceNames(clicontext)
+func startBashComplete(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	instances, _ := bashCompleteInstanceNames(cmd)
+	return instances, cobra.ShellCompDirectiveDefault
 }

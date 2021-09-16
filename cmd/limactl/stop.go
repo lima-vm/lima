@@ -14,30 +14,24 @@ import (
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
+	"github.com/spf13/cobra"
 )
 
-var stopCommand = &cli.Command{
-	Name:      "stop",
-	Usage:     "Stop an instance",
-	ArgsUsage: "INSTANCE [INSTANCE, ...]",
-	Flags: []cli.Flag{
-		&cli.BoolFlag{
-			Name:    "force",
-			Aliases: []string{"f"},
-			Usage:   "forcibly kill the processes",
-		},
-	},
-	Action:       stopAction,
-	BashComplete: stopBashComplete,
-}
-
-func stopAction(clicontext *cli.Context) error {
-	if clicontext.NArg() > 1 {
-		return fmt.Errorf("too many arguments")
+func newStopCommand() *cobra.Command {
+	var stopCmd = &cobra.Command{
+		Use:               "stop INSTANCE",
+		Short:             "Stop an instance",
+		Args:              cobra.ExactArgs(1),
+		RunE:              stopAction,
+		ValidArgsFunction: stopBashComplete,
 	}
 
-	instName := clicontext.Args().First()
+	stopCmd.Flags().BoolP("force", "f", false, "force stop the instance")
+	return stopCmd
+}
+
+func stopAction(cmd *cobra.Command, args []string) error {
+	instName := args[0]
 	if instName == "" {
 		instName = DefaultInstanceName
 	}
@@ -47,7 +41,11 @@ func stopAction(clicontext *cli.Context) error {
 		return err
 	}
 
-	if clicontext.Bool("force") {
+	force, err := cmd.Flags().GetBool("force")
+	if err != nil {
+		return err
+	}
+	if force {
 		stopInstanceForcibly(inst)
 		return nil
 	}
@@ -136,6 +134,6 @@ func stopInstanceForcibly(inst *store.Instance) {
 	}
 }
 
-func stopBashComplete(clicontext *cli.Context) {
-	bashCompleteInstanceNames(clicontext)
+func stopBashComplete(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return bashCompleteInstanceNames(cmd)
 }

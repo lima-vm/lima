@@ -10,16 +10,19 @@ import (
 
 	"github.com/lima-vm/lima/pkg/templateutil"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
+	"github.com/spf13/cobra"
 )
 
-var installSystemdCommand = &cli.Command{
-	Name:   "install-systemd",
-	Usage:  "install a systemd unit (user)",
-	Action: installSystemdAction,
+func newInstallSystemdCommand() *cobra.Command {
+	var installSystemdCommand = &cobra.Command{
+		Use:   "install-systemd",
+		Short: "install a systemd unit (user)",
+		RunE:  installSystemdAction,
+	}
+	return installSystemdCommand
 }
 
-func installSystemdAction(clicontext *cli.Context) error {
+func installSystemdAction(cmd *cobra.Command, args []string) error {
 	unit, err := generateSystemdUnit()
 	if err != nil {
 		return err

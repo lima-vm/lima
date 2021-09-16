@@ -11,22 +11,30 @@ import (
 	"github.com/lima-vm/lima/pkg/sshutil"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
+	"github.com/spf13/cobra"
 )
 
-var copyCommand = &cli.Command{
-	Name:        "copy",
-	Aliases:     []string{"cp"},
-	Usage:       "Copy files between host and guest",
-	Description: "Prefix guest filenames with the instance name and a colon.\nExample: limactl copy default:/etc/os-release .",
-	ArgsUsage:   "SOURCE ... TARGET",
-	Action:      copyAction,
+var copyHelp = `Copy files between host and guest
+
+Prefix guest filenames with the instance name and a colon.
+
+Example: limactl copy default:/etc/os-release .
+`
+
+func newCopyCommand() *cobra.Command {
+	var copyCommand = &cobra.Command{
+		Use:     "copy SOURCE ... TARGET",
+		Aliases: []string{"cp"},
+		Short:   "Copy files between host and guest",
+		Long:    copyHelp,
+		Args:    cobra.MinimumNArgs(2),
+		RunE:    copyAction,
+	}
+
+	return copyCommand
 }
 
-func copyAction(clicontext *cli.Context) error {
-	if clicontext.NArg() < 2 {
-		return fmt.Errorf("requires at least 2 arguments: SOURCE DEST")
-	}
+func copyAction(cmd *cobra.Command, args []string) error {
 	arg0, err := exec.LookPath("scp")
 	if err != nil {
 		return err
@@ -37,12 +45,20 @@ func copyAction(clicontext *cli.Context) error {
 	}
 
 	instDirs := make(map[string]string)
-	args := []string{"-3", "--"}
-	for _, arg := range clicontext.Args().Slice() {
+	scpArgs := []string{}
+	debug, err := cmd.Flags().GetBool("debug")
+	if err != nil {
+		return err
+	}
+	if debug {
+		scpArgs = append(scpArgs, "-v")
+	}
+	scpArgs = append(scpArgs, "-3", "--")
+	for _, arg := range args {
 		path := strings.Split(arg, ":")
 		switch len(path) {
 		case 1:
-			args = append(args, arg)
+			scpArgs = append(scpArgs, arg)
 		case 2:
 			instName := path[0]
 			inst, err := store.Inspect(instName)
@@ -55,10 +71,10 @@ func copyAction(clicontext *cli.Context) error {
 			if inst.Status == store.StatusStopped {
 				return fmt.Errorf("instance %q is stopped, run `limactl start %s` to start the instance", instName, instName)
 			}
-			args = append(args, fmt.Sprintf("scp://%s@127.0.0.1:%d/%s", u.Username, inst.SSHLocalPort, path[1]))
+			scpArgs = append(scpArgs, fmt.Sprintf("scp://%s@127.0.0.1:%d/%s", u.Username, inst.SSHLocalPort, path[1]))
 			instDirs[instName] = inst.Dir
 		default:
-			return fmt.Errorf("Path %q contains multiple colons", arg)
+			return fmt.Errorf("path %q contains multiple colons", arg)
 		}
 	}
 
@@ -81,12 +97,12 @@ func copyAction(clicontext *cli.Context) error {
 		}
 	}
 
-	cmd := exec.Command(arg0, append(sshArgs, args...)...)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	logrus.Debugf("executing scp (may take a long time)): %+v", cmd.Args)
+	sshCmd := exec.Command(arg0, append(sshArgs, scpArgs...)...)
+	sshCmd.Stdin = cmd.InOrStdin()
+	sshCmd.Stdout = cmd.OutOrStdout()
+	sshCmd.Stderr = cmd.ErrOrStderr()
+	logrus.Debugf("executing scp (may take a long time)): %+v", sshCmd.Args)
 
 	// TODO: use syscall.Exec directly (results in losing tty?)
-	return cmd.Run()
+	return sshCmd.Run()
 }
