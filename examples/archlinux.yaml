@@ -2,9 +2,9 @@
 arch: "x86_64"
 images:
   # NOTE: the image is periodically rotated, if you face 404, see https://mirror.pkgbuild.com/images/ to find the latest image.
-  - location: "https://mirror.pkgbuild.com/images/v20210906.33805/Arch-Linux-x86_64-cloudimg-20210906.0.qcow2"
+  - location: "https://mirror.pkgbuild.com/images/v20210915.34349/Arch-Linux-x86_64-cloudimg-20210915.0.qcow2"
     arch: "x86_64"
-    digest: "sha256:f9f63648d7863413883466daffcb2fcb5195264fc98c8e6eb0182bd368e32002"
+    digest: "sha256:de8de860fec1efbae75418948f5bc7873ca53a2f4c31b0e9306facc94fffd5a8"
 mounts:
   - location: "~"
     writable: false
