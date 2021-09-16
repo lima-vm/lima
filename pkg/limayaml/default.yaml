@@ -35,7 +35,7 @@ memory: "4GiB"
 # Default: "100GiB"
 disk: "100GiB"
 
-# Expose host directories to the guest
+# Expose host directories to the guest, the mount point might be accessible from all UIDs in the guest
 # Default: none
 mounts:
   - location: "~"
