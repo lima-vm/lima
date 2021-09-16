@@ -8,34 +8,36 @@ import (
 
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
+	"github.com/spf13/cobra"
 )
 
-var listCommand = &cli.Command{
-	Name:    "list",
-	Aliases: []string{"ls"},
-	Usage:   "List instances of Lima.",
-	Flags: []cli.Flag{
-		&cli.BoolFlag{
-			Name:  "json",
-			Usage: "JSONify output",
-		},
-		&cli.BoolFlag{
-			Name:    "quiet",
-			Aliases: []string{"q"},
-			Usage:   "Only show names",
-		},
-	},
-
-	Action: listAction,
-}
-
-func listAction(clicontext *cli.Context) error {
-	if clicontext.NArg() > 0 {
-		return errors.New("too many arguments")
+func newListCommand() *cobra.Command {
+	listCommand := &cobra.Command{
+		Use:               "list",
+		Aliases:           []string{"ls"},
+		Short:             "List instances of Lima.",
+		Args:              cobra.NoArgs,
+		RunE:              listAction,
+		ValidArgsFunction: cobra.NoFileCompletions,
 	}
 
-	if clicontext.Bool("quiet") && clicontext.Bool("json") {
+	listCommand.Flags().Bool("json", false, "JSONify output")
+	listCommand.Flags().BoolP("quiet", "q", false, "Only show names")
+
+	return listCommand
+}
+
+func listAction(cmd *cobra.Command, args []string) error {
+	quiet, err := cmd.Flags().GetBool("quiet")
+	if err != nil {
+		return err
+	}
+	jsonFormat, err := cmd.Flags().GetBool("json")
+	if err != nil {
+		return err
+	}
+
+	if quiet && jsonFormat {
 		return errors.New("option --quiet conflicts with --json")
 	}
 
@@ -44,14 +46,14 @@ func listAction(clicontext *cli.Context) error {
 		return err
 	}
 
-	if clicontext.Bool("quiet") {
+	if quiet {
 		for _, instName := range instances {
-			fmt.Fprintln(clicontext.App.Writer, instName)
+			fmt.Fprintln(cmd.OutOrStdout(), instName)
 		}
 		return nil
 	}
 
-	if clicontext.Bool("json") {
+	if jsonFormat {
 		for _, instName := range instances {
 			inst, err := store.Inspect(instName)
 			if err != nil {
@@ -62,12 +64,12 @@ func listAction(clicontext *cli.Context) error {
 			if err != nil {
 				return err
 			}
-			fmt.Fprintln(clicontext.App.Writer, string(b))
+			fmt.Fprintln(cmd.OutOrStdout(), string(b))
 		}
 		return nil
 	}
 
-	w := tabwriter.NewWriter(clicontext.App.Writer, 4, 8, 4, ' ', 0)
+	w := tabwriter.NewWriter(cmd.OutOrStdout(), 4, 8, 4, ' ', 0)
 	fmt.Fprintln(w, "NAME\tSTATUS\tSSH\tARCH\tDIR")
 
 	if len(instances) == 0 {

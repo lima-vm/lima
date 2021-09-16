@@ -5,16 +5,21 @@ import (
 	"path/filepath"
 
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
+	"github.com/spf13/cobra"
 )
 
-var pruneCommand = &cli.Command{
-	Name:   "prune",
-	Usage:  "Prune garbage objects",
-	Action: pruneAction,
+func newPruneCommand() *cobra.Command {
+	pruneCommand := &cobra.Command{
+		Use:               "prune",
+		Short:             "Prune garbage objects",
+		Args:              cobra.NoArgs,
+		RunE:              pruneAction,
+		ValidArgsFunction: cobra.NoFileCompletions,
+	}
+	return pruneCommand
 }
 
-func pruneAction(clicontext *cli.Context) error {
+func pruneAction(cmd *cobra.Command, args []string) error {
 	ucd, err := os.UserCacheDir()
 	if err != nil {
 		return err

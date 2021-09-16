@@ -9,26 +9,27 @@ import (
 	"strconv"
 
 	"github.com/lima-vm/lima/pkg/hostagent"
-	"github.com/urfave/cli/v2"
+	"github.com/spf13/cobra"
 )
 
-var hostagentCommand = &cli.Command{
-	Name:      "hostagent",
-	Usage:     "DO NOT EXECUTE MANUALLY",
-	ArgsUsage: "INSTANCE",
-	Hidden:    true,
-	Flags: []cli.Flag{
-		&cli.StringFlag{
-			Name:  "pidfile",
-			Usage: "PID file",
-		},
-	},
-
-	Action: hostagentAction,
+func newHostagentCommand() *cobra.Command {
+	var hostagentCommand = &cobra.Command{
+		Use:    "hostagent INSTANCE",
+		Short:  "run hostagent",
+		Args:   cobra.ExactArgs(1),
+		RunE:   hostagentAction,
+		Hidden: true,
+	}
+	hostagentCommand.Flags().StringP("pidfile", "p", "", "write pid to file")
+	return hostagentCommand
 }
 
-func hostagentAction(clicontext *cli.Context) error {
-	if pidfile := clicontext.String("pidfile"); pidfile != "" {
+func hostagentAction(cmd *cobra.Command, args []string) error {
+	pidfile, err := cmd.Flags().GetString("pidfile")
+	if err != nil {
+		return err
+	}
+	if pidfile != "" {
 		if _, err := os.Stat(pidfile); !errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("pidfile %q already exists", pidfile)
 		}
@@ -38,23 +39,19 @@ func hostagentAction(clicontext *cli.Context) error {
 		defer os.RemoveAll(pidfile)
 	}
 
-	if clicontext.NArg() != 1 {
-		return fmt.Errorf("requires exactly 1 argument")
-	}
-
-	instName := clicontext.Args().First()
+	instName := args[0]
 
 	sigintCh := make(chan os.Signal, 1)
 	signal.Notify(sigintCh, os.Interrupt)
 
-	stdout := &syncWriter{w: clicontext.App.Writer}
-	stderr := &syncWriter{w: clicontext.App.ErrWriter}
+	stdout := &syncWriter{w: cmd.OutOrStdout()}
+	stderr := &syncWriter{w: cmd.ErrOrStderr()}
 
 	ha, err := hostagent.New(instName, stdout, stderr, sigintCh)
 	if err != nil {
 		return err
 	}
-	return ha.Run(clicontext.Context)
+	return ha.Run(cmd.Context())
 }
 
 // syncer is implemented by *os.File

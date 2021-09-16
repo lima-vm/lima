@@ -12,39 +12,32 @@ import (
 	"github.com/lima-vm/lima/pkg/guestagent"
 	"github.com/lima-vm/lima/pkg/guestagent/api/server"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
+	"github.com/spf13/cobra"
 )
 
-var daemonCommand = &cli.Command{
-	Name:  "daemon",
-	Usage: "run the daemon",
-	Flags: []cli.Flag{
-		&cli.StringFlag{
-			Name:  "socket",
-			Usage: "socket",
-			Value: func() string {
-				if xrd := os.Getenv("XDG_RUNTIME_DIR"); xrd != "" {
-					return filepath.Join(xrd, "lima-guestagent.sock")
-				}
-				logrus.Warn("$XDG_RUNTIME_DIR is not set, cannot determine the socket name")
-				return ""
-			}(),
-		},
-		&cli.DurationFlag{
-			Name:  "tick",
-			Usage: "tick for polling events",
-			Value: 3 * time.Second,
-		},
-	},
-	Action: daemonAction,
+func newDaemonCommand() *cobra.Command {
+	daemonCommand := &cobra.Command{
+		Use:   "daemon",
+		Short: "run the daemon",
+		RunE:  daemonAction,
+	}
+	daemonCommand.Flags().String("socket", socketDefaultValue(), "the unix socket to listen on")
+	daemonCommand.Flags().Duration("tick", 3*time.Second, "tick for polling events")
+	return daemonCommand
 }
 
-func daemonAction(clicontext *cli.Context) error {
-	socket := clicontext.String("socket")
+func daemonAction(cmd *cobra.Command, args []string) error {
+	socket, err := cmd.Flags().GetString("socket")
+	if err != nil {
+		return err
+	}
 	if socket == "" {
 		return errors.New("socket must be specified")
 	}
-	tick := clicontext.Duration("tick")
+	tick, err := cmd.Flags().GetDuration("tick")
+	if err != nil {
+		return err
+	}
 	if tick == 0 {
 		return errors.New("tick must be specified")
 	}
@@ -68,7 +61,7 @@ func daemonAction(clicontext *cli.Context) error {
 	r := mux.NewRouter()
 	server.AddRoutes(r, backend)
 	srv := &http.Server{Handler: r}
-	err := os.RemoveAll(socket)
+	err = os.RemoveAll(socket)
 	if err != nil {
 		return err
 	}
@@ -78,4 +71,12 @@ func daemonAction(clicontext *cli.Context) error {
 	}
 	logrus.Infof("serving the guest agent on %q", socket)
 	return srv.Serve(l)
+}
+
+func socketDefaultValue() string {
+	if xrd := os.Getenv("XDG_RUNTIME_DIR"); xrd != "" {
+		return filepath.Join(xrd, "lima-guestagent.sock")
+	}
+	logrus.Warn("$XDG_RUNTIME_DIR is not set, cannot determine the socket name")
+	return ""
 }

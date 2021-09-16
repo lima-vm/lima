@@ -2,37 +2,37 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"strings"
 
 	"github.com/lima-vm/lima/pkg/version"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
+	"github.com/spf13/cobra"
+)
+
+const (
+	DefaultInstanceName = "default"
 )
 
 func main() {
-	if err := newApp().Run(os.Args); err != nil {
+	if err := newApp().Execute(); err != nil {
+		handleExitCoder(err)
 		logrus.Fatal(err)
 	}
 }
 
-func newApp() *cli.App {
-	app := cli.NewApp()
-	app.Name = "limactl"
-	app.Usage = "Lima: Linux virtual machines"
-	app.UseShortOptionHandling = true
-	app.EnableBashCompletion = true
-	app.BashComplete = appBashComplete
-	app.Version = strings.TrimPrefix(version.Version, "v")
-	app.Flags = []cli.Flag{
-		&cli.BoolFlag{
-			Name:  "debug",
-			Usage: "debug mode",
-		},
+func newApp() *cobra.Command {
+	var rootCmd = &cobra.Command{
+		Use:           "limactl",
+		Short:         "Lima: Linux virtual machines",
+		Version:       strings.TrimPrefix(version.Version, "v"),
+		SilenceUsage:  true,
+		SilenceErrors: true,
 	}
-	app.Before = func(clicontext *cli.Context) error {
-		if clicontext.Bool("debug") {
+	rootCmd.PersistentFlags().Bool("debug", false, "debug mode")
+	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+		debug, _ := cmd.Flags().GetBool("debug")
+		if debug {
 			logrus.SetLevel(logrus.DebugLevel)
 		}
 		if os.Geteuid() == 0 {
@@ -40,29 +40,32 @@ func newApp() *cli.App {
 		}
 		return nil
 	}
-	app.Commands = []*cli.Command{
-		startCommand,
-		stopCommand,
-		shellCommand,
-		copyCommand,
-		listCommand,
-		deleteCommand,
-		validateCommand,
-		pruneCommand,
-		completionCommand,
-		hostagentCommand, // hidden
-	}
-	return app
+	rootCmd.AddCommand(
+		newStartCommand(),
+		newStopCommand(),
+		newShellCommand(),
+		newCopyCommand(),
+		newListCommand(),
+		newDeleteCommand(),
+		newValidateCommand(),
+		newPruneCommand(),
+		newHostagentCommand(),
+	)
+	return rootCmd
 }
 
-const (
-	DefaultInstanceName = "default"
-)
+type ExitCoder interface {
+	error
+	ExitCode() int
+}
 
-func appBashComplete(clicontext *cli.Context) {
-	w := clicontext.App.Writer
-	cli.DefaultAppComplete(clicontext)
-	for _, subcomm := range clicontext.App.Commands {
-		fmt.Fprintln(w, subcomm.Name)
+func handleExitCoder(err error) {
+	if err == nil {
+		return
+	}
+
+	if exitErr, ok := err.(ExitCoder); ok {
+		os.Exit(exitErr.ExitCode())
+		return
 	}
 }
