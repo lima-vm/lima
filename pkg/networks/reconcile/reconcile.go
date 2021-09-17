@@ -113,6 +113,9 @@ func startDaemon(config *networks.NetworksConfig, ctx context.Context, name, dae
 	args := []string{"--user", config.DaemonUser(daemon), "--group", config.DaemonGroup(daemon), "--non-interactive"}
 	args = append(args, strings.Split(config.StartCmd(name, daemon), " ")...)
 	cmd := exec.CommandContext(ctx, "sudo", args...)
+	// set directory to a path the daemon user has read access to because vde_switch calls getcwd() which
+	// can fail when called from directories like ~/Downloads, which has 700 permissions
+	cmd.Dir = config.Paths.VarRun
 	cmd.Stdout = stdoutW
 	cmd.Stderr = stderrW
 	logrus.Debugf("Starting %q daemon for %q network: %v", daemon, name, cmd.Args)
