@@ -27,10 +27,7 @@ func installSystemdAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	unitPath, err := systemdUnitPath()
-	if err != nil {
-		return err
-	}
+	unitPath := "/etc/systemd/system/lima-guestagent.service"
 	if _, err := os.Stat(unitPath); !errors.Is(err, os.ErrNotExist) {
 		logrus.Infof("File %q already exists, overwriting", unitPath)
 	} else {
@@ -48,7 +45,7 @@ func installSystemdAction(cmd *cobra.Command, args []string) error {
 		{"enable", "--now", "lima-guestagent.service"},
 	}
 	for _, args := range argss {
-		cmd := exec.Command("systemctl", append([]string{"--user"}, args...)...)
+		cmd := exec.Command("systemctl", append([]string{"--system"}, args...)...)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		logrus.Infof("Executing: %s", strings.Join(cmd.Args, " "))
@@ -58,15 +55,6 @@ func installSystemdAction(cmd *cobra.Command, args []string) error {
 	}
 	logrus.Info("Done")
 	return nil
-}
-
-func systemdUnitPath() (string, error) {
-	configDir, err := os.UserConfigDir()
-	if err != nil {
-		return "", err
-	}
-	unitPath := filepath.Join(configDir, "systemd/user/lima-guestagent.service")
-	return unitPath, nil
 }
 
 //go:embed lima-guestagent.TEMPLATE.service

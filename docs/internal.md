@@ -46,7 +46,7 @@ SSH:
 - `ssh.sock`: SSH control master socket
 
 Guest agent:
-- `ga.sock`: Forwarded to `/run/user/$UID/lima-guestagent.sock` in the guest, via SSH
+- `ga.sock`: Forwarded to `/run/lima-guestagent.sock` in the guest, via SSH
 
 Host agent:
 - `ha.pid`: hostagent PID
