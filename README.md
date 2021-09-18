@@ -36,8 +36,9 @@ to Mac users, but Lima can be used for non-container applications as well.
 
 ## Adopters
 
-- [Rancher Desktop](https://rancherdesktop.io/): Kubernetes and container management to the desktop
 - [Colima](https://github.com/abiosoft/colima): Docker (and Kubernetes) on macOS with minimal setup
+- [Lima xbar plugin](https://github.com/unixorn/lima-xbar-plugin) - [xbar](https://xbarapp.com/) plugin to start/stop VMs from the menu bar and see their running status.
+- [Rancher Desktop](https://rancherdesktop.io/): Kubernetes and container management to the desktop
 
 ## Examples
 
