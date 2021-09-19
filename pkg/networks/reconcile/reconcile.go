@@ -9,6 +9,8 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"syscall"
+	"time"
 
 	"github.com/lima-vm/lima/pkg/networks"
 	"github.com/lima-vm/lima/pkg/store"
@@ -24,12 +26,10 @@ func Reconcile(ctx context.Context, newInst string) error {
 	if err != nil {
 		return err
 	}
-
 	instances, err := store.Instances()
 	if err != nil {
 		return err
 	}
-
 	activeNetwork := make(map[string]bool, 3)
 	for _, instName := range instances {
 		instance, err := store.Inspect(instName)
@@ -80,16 +80,49 @@ func sudo(user, group, command string) error {
 	return nil
 }
 
-func startDaemon(config *networks.NetworksConfig, ctx context.Context, name, daemon string) error {
+func makeVarRun(config *networks.NetworksConfig) error {
 	err := sudo("root", "wheel", config.MkdirCmd())
 	if err != nil {
 		return err
 	}
 
-	networksDir, _ := dirnames.LimaNetworksDir()
+	// Check that VarRun is daemon-group writable. If we don't report it here, the error would only be visible
+	// in the vde_switch daemon log. This has not been checked by networks.Validate() because only the VarRun
+	// directory itself needs to be daemon-group writable, any parents just need to be daemon-group executable.
+	fi, err := os.Stat(config.Paths.VarRun)
+	if err != nil {
+		return err
+	}
+	stat, ok := fi.Sys().(*syscall.Stat_t)
+	if !ok {
+		// should never happen
+		return fmt.Errorf("could not retrieve stat buffer for %q", config.Paths.VarRun)
+	}
+	if fi.Mode()&020 == 0 || stat.Gid != networks.DaemonGID {
+		return fmt.Errorf("%q doesn't seem to be writable by the daemon (gid:%d) group",
+			config.Paths.VarRun, networks.DaemonGID)
+	}
+	return nil
+}
+
+func startDaemon(config *networks.NetworksConfig, ctx context.Context, name, daemon string) error {
+	if err := makeVarRun(config); err != nil {
+		return err
+	}
+	networksDir, err := dirnames.LimaNetworksDir()
+	if err != nil {
+		return err
+	}
 	if err := os.MkdirAll(networksDir, 0755); err != nil {
 		return err
 	}
+
+	args := []string{"--user", config.DaemonUser(daemon), "--group", config.DaemonGroup(daemon), "--non-interactive"}
+	args = append(args, strings.Split(config.StartCmd(name, daemon), " ")...)
+	cmd := exec.CommandContext(ctx, "sudo", args...)
+	// set directory to a path the daemon user has read access to because vde_switch calls getcwd() which
+	// can fail when called from directories like ~/Downloads, which has 700 permissions
+	cmd.Dir = config.Paths.VarRun
 
 	stdoutPath := config.LogFile(name, daemon, "stdout")
 	stderrPath := config.LogFile(name, daemon, "stderr")
@@ -99,25 +132,16 @@ func startDaemon(config *networks.NetworksConfig, ctx context.Context, name, dae
 	if err := os.RemoveAll(stderrPath); err != nil {
 		return err
 	}
-	stdoutW, err := os.Create(stdoutPath)
-	if err != nil {
-		return err
-	}
-	// no defer stdoutW.Close()
-	stderrW, err := os.Create(stderrPath)
-	if err != nil {
-		return err
-	}
-	// no defer stderrW.Close()
 
-	args := []string{"--user", config.DaemonUser(daemon), "--group", config.DaemonGroup(daemon), "--non-interactive"}
-	args = append(args, strings.Split(config.StartCmd(name, daemon), " ")...)
-	cmd := exec.CommandContext(ctx, "sudo", args...)
-	// set directory to a path the daemon user has read access to because vde_switch calls getcwd() which
-	// can fail when called from directories like ~/Downloads, which has 700 permissions
-	cmd.Dir = config.Paths.VarRun
-	cmd.Stdout = stdoutW
-	cmd.Stderr = stderrW
+	cmd.Stdout, err = os.Create(stdoutPath)
+	if err != nil {
+		return err
+	}
+	cmd.Stderr, err = os.Create(stderrPath)
+	if err != nil {
+		return err
+	}
+
 	logrus.Debugf("Starting %q daemon for %q network: %v", daemon, name, cmd.Args)
 	if err := cmd.Start(); err != nil {
 		return err
@@ -174,7 +198,20 @@ func stopNetwork(config *networks.NetworksConfig, name string) error {
 				return err
 			}
 		}
-		// TODO: wait for VMNet to terminate before stopping Switch, otherwise the socket may not get deleted
+		// wait for VMNet to terminate (up to 5s) before stopping Switch, otherwise the socket may not get deleted
+		if daemon == networks.VMNet {
+			startWaiting := time.Now()
+			for {
+				if pid, _ := store.ReadPIDFile(config.PIDFile(name, daemon)); pid == 0 {
+					break
+				}
+				if time.Since(startWaiting) > 5 * time.Second {
+					logrus.Infof("%q daemon for %q network still running after 5 seconds", daemon, name)
+					break
+				}
+				time.Sleep(500 * time.Millisecond)
+			}
+		}
 	}
 	return nil
 }

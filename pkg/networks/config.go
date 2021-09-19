@@ -23,20 +23,28 @@ var cache struct {
 	err    error
 }
 
-// load() loads the _config/networks.yaml file.
-func load() {
+func ConfigFile() (string, error) {
+	configDir, err := dirnames.LimaConfigDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(configDir, filenames.NetworksConfig), nil
+}
+
+// loadCache loads the _config/networks.yaml file into the cache.
+func loadCache() {
 	cache.Do(func() {
-		var configDir string
-		configDir, cache.err = dirnames.LimaConfigDir()
+		var configFile string
+		configFile, cache.err = ConfigFile()
 		if cache.err != nil {
 			return
 		}
-		configFile := filepath.Join(configDir, filenames.NetworksConfig)
 		_, cache.err = os.Stat(configFile)
 		if cache.err != nil {
 			if !errors.Is(cache.err, os.ErrNotExist) {
 				return
 			}
+			configDir := filepath.Dir(configFile)
 			cache.err = os.MkdirAll(configDir, 0700)
 			if cache.err != nil {
 				cache.err = fmt.Errorf("could not create %q directory: %w", configDir, cache.err)
@@ -61,15 +69,15 @@ func load() {
 
 // Config returns the network config from the _config/networks.yaml file.
 func Config() (NetworksConfig, error) {
-	if runtime.GOOS == "darwin" {
-		load()
-		return cache.config, cache.err
+	if runtime.GOOS != "darwin" {
+		return NetworksConfig{}, errors.New("networks.yaml configuration is only supported on macOS right now")
 	}
-	return NetworksConfig{}, errors.New("networks.yaml configuration is only supported on macOS right now")
+	loadCache()
+	return cache.config, cache.err
 }
 
 func VDESock(name string) (string, error) {
-	load()
+	loadCache()
 	if cache.err != nil {
 		return "", cache.err
 	}
