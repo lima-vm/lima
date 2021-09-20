@@ -18,7 +18,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func Validate(y LimaYAML) error {
+func Validate(y LimaYAML, warn bool) error {
 	switch y.Arch {
 	case X8664, AARCH64:
 	default:
@@ -161,17 +161,18 @@ func Validate(y LimaYAML) error {
 		// processed sequentially and the first matching rule for a guest port determines forwarding behavior.
 	}
 
-	if err := validateNetwork(y); err != nil {
+	if err := validateNetwork(y, warn); err != nil {
 		return err
 	}
-
 	return nil
 }
 
-func validateNetwork(y LimaYAML) error {
+func validateNetwork(y LimaYAML, warn bool) error {
 	if len(y.Network.VDEDeprecated) > 0 {
 		if y.Network.migrated {
-			logrus.Warnf("field `network.VDE` is deprecated; please use `networks` instead")
+			if warn {
+				logrus.Warnf("field `network.VDE` is deprecated; please use `networks` instead")
+			}
 		} else {
 			return fmt.Errorf("you cannot use deprecated field `network.VDE` together with replacement field `networks`")
 		}
@@ -233,8 +234,10 @@ func validateNetwork(y LimaYAML) error {
 					}
 				}
 			} else if runtime.GOOS != "linux" {
-				logrus.Warnf("field `%s.vnl` is unlikely to work for %s (unless libvdeplug4 has been ported to %s and is installed)",
-					field, runtime.GOOS, runtime.GOOS)
+				if warn {
+					logrus.Warnf("field `%s.vnl` is unlikely to work for %s (unless libvdeplug4 has been ported to %s and is installed)",
+						field, runtime.GOOS, runtime.GOOS)
+				}
 			}
 		}
 		if nw.MACAddress != "" {

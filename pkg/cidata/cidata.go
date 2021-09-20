@@ -35,7 +35,7 @@ var (
 )
 
 func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML) error {
-	if err := limayaml.Validate(*y); err != nil {
+	if err := limayaml.Validate(*y, false); err != nil {
 		return err
 	}
 	u, err := osutil.LimaUser(true)

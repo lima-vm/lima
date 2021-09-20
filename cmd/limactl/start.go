@@ -120,7 +120,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 	if err != nil {
 		return nil, err
 	}
-	if err := limayaml.Validate(*y); err != nil {
+	if err := limayaml.Validate(*y, true); err != nil {
 		if !tty {
 			return nil, err
 		}
