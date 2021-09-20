@@ -2,9 +2,13 @@
 # installed where only root can modify/replace it. This means also none of the
 # parent directories should be writable by the user.
 #
-# The var_run directory also must not be writable by the user because it will
+# The varRun directory also must not be writable by the user because it will
 # include the vde_vmnet pid files. Those will be terminated via sudo, so replacing
-# the pid files would allow killing of arbitrary privileged processes.
+# the pid files would allow killing of arbitrary privileged processes. varRun
+# however MUST be writable by the daemon user.
+#
+# None of the paths segments may be symlinks, why it has to be /private/var
+# instead of /var etc.
 paths:
   vdeSwitch: /opt/vde/bin/vde_switch
   vdeVMNet: /opt/vde/bin/vde_vmnet
