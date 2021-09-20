@@ -260,13 +260,7 @@ func Cmdline(cfg Config) (string, []string, error) {
 	args = append(args, "-netdev", fmt.Sprintf("user,id=net0,net=%s,dhcpstart=%s,hostfwd=tcp:127.0.0.1:%d-:22",
 		qemu.SlirpNetwork, qemu.SlirpIPAddress, y.SSH.LocalPort))
 	args = append(args, "-device", "virtio-net-pci,netdev=net0,mac="+limayaml.MACAddress(cfg.InstanceDir))
-	usingVDE := false
-	for _, nw := range y.Networks {
-		if nw.VNL != "" {
-			usingVDE = true
-		}
-	}
-	if usingVDE && !strings.Contains(string(features.NetdevHelp), "vde") {
+	if len(y.Networks) > 0 && !strings.Contains(string(features.NetdevHelp), "vde") {
 		return "", nil, fmt.Errorf("netdev \"vde\" is not supported by %s ( Hint: recompile QEMU with `configure --enable-vde` )", exe)
 	}
 	for i, nw := range y.Networks {

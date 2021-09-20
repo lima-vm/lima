@@ -45,7 +45,7 @@ func loadCache() {
 				return
 			}
 			configDir := filepath.Dir(configFile)
-			cache.err = os.MkdirAll(configDir, 0700)
+			cache.err = os.MkdirAll(configDir, 0755)
 			if cache.err != nil {
 				cache.err = fmt.Errorf("could not create %q directory: %w", configDir, cache.err)
 				return

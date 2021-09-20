@@ -42,13 +42,16 @@ func sudoersAction(cmd *cobra.Command, args []string) error {
 }
 
 func verifySudoAccess(args []string) error {
+	config, err := networks.Config()
+	if err != nil {
+		return err
+	}
+	if err := config.Validate(); err != nil {
+		return err
+	}
 	var file string
 	switch len(args) {
 	case 0:
-		config, err := networks.Config()
-		if err != nil {
-			return err
-		}
 		file = config.Paths.Sudoers
 		if file == "" {
 			configFile, _ := networks.ConfigFile()
@@ -58,13 +61,6 @@ func verifySudoAccess(args []string) error {
 		file = args[0]
 	default:
 		return errors.New("can check only a single sudoers file")
-	}
-	config, err := networks.Config()
-	if err != nil {
-		return err
-	}
-	if err := config.Validate(); err != nil {
-		return err
 	}
 	if err := config.VerifySudoAccess(file); err != nil {
 		return err
