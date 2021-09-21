@@ -2,6 +2,7 @@ package networks
 
 import (
 	"fmt"
+	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 )
 
@@ -33,24 +34,21 @@ func (config *NetworksConfig) LogFile(name, daemon, stream string) string {
 	return fmt.Sprintf("%s/%s_%s.%s.log", networksDir, name, daemon, stream)
 }
 
-func (config *NetworksConfig) DaemonUser(daemon string) string {
+func (config *NetworksConfig) User(daemon string) (osutil.User, error) {
 	switch daemon {
 	case Switch:
-		return "daemon"
+		user, err := osutil.LookupUser("daemon")
+		if err != nil {
+			return user, err
+		}
+		group, err := osutil.LookupGroup(config.Group)
+		user.Group = group.Name
+		user.Gid = group.Gid
+		return user, err
 	case VMNet:
-		return "root"
+		return osutil.LookupUser("root")
 	}
-	panic("daemonuser")
-}
-
-func (config *NetworksConfig) DaemonGroup(daemon string) string {
-	switch daemon {
-	case Switch:
-		return config.Group
-	case VMNet:
-		return "wheel"
-	}
-	panic("daemongroup")
+	return osutil.User{}, fmt.Errorf("daemon %q not defined", daemon)
 }
 
 func (config *NetworksConfig) MkdirCmd() string {

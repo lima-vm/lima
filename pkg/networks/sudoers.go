@@ -31,9 +31,13 @@ func Sudoers() (string, error) {
 		sb.WriteRune('\n')
 		sb.WriteString(fmt.Sprintf("# Manage %q network daemons\n", name))
 		for _, daemon := range []string{Switch, VMNet} {
+			user, err := config.User(daemon)
+			if err != nil {
+				return "", err
+			}
 			sb.WriteRune('\n')
 			sb.WriteString(fmt.Sprintf("%%%s ALL=(%s:%s) NOPASSWD:NOSETENV: \\\n",
-				config.Group, config.DaemonUser(daemon), config.DaemonGroup(daemon)))
+				config.Group, user.User, user.Group))
 			sb.WriteString(fmt.Sprintf("    %s, \\\n", config.StartCmd(name, daemon)))
 			sb.WriteString(fmt.Sprintf("    %s\n", config.StopCmd(name, daemon)))
 		}
@@ -50,8 +54,11 @@ func (config *NetworksConfig) passwordLessSudo() error {
 	// Verify that user/groups for both daemons work without a password, e.g.
 	// %admin ALL = (ALL:ALL) NOPASSWD: ALL
 	for _, daemon := range []string{Switch, VMNet} {
-		cmd = exec.Command("sudo", "--user", config.DaemonUser(daemon),
-			"--group", config.DaemonGroup(daemon), "--non-interactive", "true")
+		user, err := config.User(daemon)
+		if err != nil {
+			return err
+		}
+		cmd = exec.Command("sudo", "--user", user.User, "--group", user.Group, "--non-interactive", "true")
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("failed to run %v: %w", cmd.Args, err)
 		}

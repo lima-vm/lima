@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/lima-vm/lima/pkg/networks"
+	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/sirupsen/logrus"
@@ -98,9 +99,13 @@ func makeVarRun(config *networks.NetworksConfig) error {
 		// should never happen
 		return fmt.Errorf("could not retrieve stat buffer for %q", config.Paths.VarRun)
 	}
-	if fi.Mode()&020 == 0 || stat.Gid != networks.DaemonGID {
+	daemon, err := osutil.LookupUser("daemon")
+	if err != nil {
+		return err
+	}
+	if fi.Mode()&020 == 0 || stat.Gid != daemon.Gid {
 		return fmt.Errorf("%q doesn't seem to be writable by the daemon (gid:%d) group",
-			config.Paths.VarRun, networks.DaemonGID)
+			config.Paths.VarRun, daemon.Gid)
 	}
 	return nil
 }
@@ -116,8 +121,12 @@ func startDaemon(config *networks.NetworksConfig, ctx context.Context, name, dae
 	if err := os.MkdirAll(networksDir, 0755); err != nil {
 		return err
 	}
+	user, err := config.User(daemon)
+	if err != nil {
+		return err
+	}
 
-	args := []string{"--user", config.DaemonUser(daemon), "--group", config.DaemonGroup(daemon), "--non-interactive"}
+	args := []string{"--user", user.User, "--group", user.Group, "--non-interactive"}
 	args = append(args, strings.Split(config.StartCmd(name, daemon), " ")...)
 	cmd := exec.CommandContext(ctx, "sudo", args...)
 	// set directory to a path the daemon user has read access to because vde_switch calls getcwd() which
@@ -193,7 +202,11 @@ func stopNetwork(config *networks.NetworksConfig, name string) error {
 			if err := validateConfig(config); err != nil {
 				return err
 			}
-			err := sudo(config.DaemonUser(daemon), config.DaemonGroup(daemon), config.StopCmd(name, daemon))
+			user, err := config.User(daemon)
+			if err != nil {
+				return err
+			}
+			err = sudo(user.User, user.Group, config.StopCmd(name, daemon))
 			if err != nil {
 				return err
 			}
