@@ -50,6 +50,18 @@ jobs:
       - name: Run shfmt
         run: find . -name '*.sh' | xargs shfmt -s -d
 
+  check-hyperlinks:
+    name: Check links in README.md
+    runs-on: ubuntu-20.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+      - uses: docker://dkhamsing/awesome_bot:latest
+        with:
+          args: /github/workspace/README.md --allow-dupe --allow-redirect --request-delay 1 --white-list https://img.shields.io,http://127.0.0.1:8080,https://github.com/lima-vm/lima/releases/download
+
   basic:
     name: Basic tests
     runs-on: ${{ matrix.os }}
