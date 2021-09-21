@@ -14,10 +14,9 @@ ssh:
   # (TODO: assign localPort automatically)
   localPort: 60105
 
-network:
+networks:
   # The instance can get routable IP addresses from the vmnet framework using
-  # https://github.com/lima-vm/vde_vmnet. Both vde_switch and vde_vmnet
-  # daemons must be running before the instance is started. The interface type
-  # (host, shared, or bridged) is configured in vde_vmnet and not lima.
-  vde:
-    - vnl: "vde:///var/run/vde.ctl"
+  # https://github.com/lima-vm/vde_vmnet. Available networks are defined in
+  # $LIMA_HOME/_config/networks.yaml. Supported network types are "host",
+  # "shared", or "bridged".
+- lima: shared
