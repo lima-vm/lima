@@ -17,6 +17,12 @@ import (
 //go:embed networks.yaml
 var defaultConfig []byte
 
+func DefaultConfig() (NetworksConfig, error) {
+	var config NetworksConfig
+	err := yaml.Unmarshal(defaultConfig, &config)
+	return config, err
+}
+
 var cache struct {
 	sync.Once
 	config NetworksConfig
