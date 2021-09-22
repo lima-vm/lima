@@ -11,6 +11,7 @@ import (
 	"time"
 
 	hostagentapi "github.com/lima-vm/lima/pkg/hostagent/api"
+	"github.com/lima-vm/lima/pkg/networks/reconcile"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/sirupsen/logrus"
@@ -47,10 +48,14 @@ func stopAction(cmd *cobra.Command, args []string) error {
 	}
 	if force {
 		stopInstanceForcibly(inst)
-		return nil
+	} else {
+		err = stopInstanceGracefully(inst)
 	}
-
-	return stopInstanceGracefully(inst)
+	// TODO: should we also reconcile networks if graceful stop returned an error?
+	if err == nil {
+		err = networks.Reconcile(cmd.Context(), "")
+	}
+	return err
 }
 
 func stopInstanceGracefully(inst *store.Instance) error {

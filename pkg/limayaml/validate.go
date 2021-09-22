@@ -12,12 +12,13 @@ import (
 
 	"github.com/docker/go-units"
 	"github.com/lima-vm/lima/pkg/localpathutil"
+	"github.com/lima-vm/lima/pkg/networks"
 	"github.com/lima-vm/lima/pkg/osutil"
-	"github.com/lima-vm/lima/pkg/qemu/qemuconst"
+	"github.com/lima-vm/lima/pkg/qemu/const"
 	"github.com/sirupsen/logrus"
 )
 
-func Validate(y LimaYAML) error {
+func Validate(y LimaYAML, warn bool) error {
 	switch y.Arch {
 	case X8664, AARCH64:
 	default:
@@ -160,79 +161,108 @@ func Validate(y LimaYAML) error {
 		// processed sequentially and the first matching rule for a guest port determines forwarding behavior.
 	}
 
-	if err := validateNetwork(y.Network); err != nil {
+	if err := validateNetwork(y, warn); err != nil {
 		return err
 	}
-
 	return nil
 }
 
-func validateNetwork(yNetwork Network) error {
-	networkName := make(map[string]int)
-	for i, vde := range yNetwork.VDE {
-		field := fmt.Sprintf("network.vde[%d]", i)
-		if vde.VNL == "" {
-			return fmt.Errorf("field `%s.vnl` must not be empty", field)
+func validateNetwork(y LimaYAML, warn bool) error {
+	if len(y.Network.VDEDeprecated) > 0 {
+		if y.Network.migrated {
+			if warn {
+				logrus.Warnf("field `network.VDE` is deprecated; please use `networks` instead")
+			}
+		} else {
+			return fmt.Errorf("you cannot use deprecated field `network.VDE` together with replacement field `networks`")
 		}
-		// The field is called VDE.VNL in anticipation of QEMU upgrading VDE2 to VDEplug4,
-		// but right now the only valid value on macOS is a path to the vde_switch socket directory,
-		// optionally with vde:// prefix.
-		if !strings.Contains(vde.VNL, "://") || strings.HasPrefix(vde.VNL, "vde://") {
-			vdeSwitch := strings.TrimPrefix(vde.VNL, "vde://")
-			if fi, err := os.Stat(vdeSwitch); err != nil {
-				// negligible when the instance is stopped
-				logrus.WithError(err).Debugf("field `%s.vnl` %q failed stat", field, vdeSwitch)
-			} else {
-				if fi.IsDir() {
-					/* Switch mode (vdeSwitch is dir, port != 65535) */
-					ctlSocket := filepath.Join(vdeSwitch, "ctl")
-					// ErrNotExist during os.Stat(ctlSocket) can be ignored. ctlSocket does not need to exist until actually starting the VM
-					if fi, err = os.Stat(ctlSocket); err == nil {
+	}
+	interfaceName := make(map[string]int)
+	for i, nw := range y.Networks {
+		field := fmt.Sprintf("networks[%d]", i)
+		if nw.Lima != "" {
+			if runtime.GOOS != "darwin" {
+				return fmt.Errorf("field `%s.lima` is only supported on macOS right now", field)
+			}
+			if nw.VNL != "" {
+				return fmt.Errorf("field `%s.lima` and field `%s.vnl` are mutually exclusive", field, field)
+			}
+			if nw.SwitchPort != 0 {
+				return fmt.Errorf("field `%s.switchPort` cannot be used with field `%s.lima`", field, field)
+			}
+			config, err := networks.Config()
+			if err != nil {
+				return err
+			}
+			if config.Check(nw.Lima) != nil {
+				return fmt.Errorf("field `%s.lima` references network %q which is not defined in networks.yaml", field, nw.Lima)
+			}
+		} else {
+			if nw.VNL == "" {
+				return fmt.Errorf("field `%s.lima` or field `%s.vnl` must be set", field, field)
+			}
+			// The field is called VDE.VNL in anticipation of QEMU upgrading VDE2 to VDEplug4,
+			// but right now the only valid value on macOS is a path to the vde_switch socket directory,
+			// optionally with vde:// prefix.
+			if !strings.Contains(nw.VNL, "://") || strings.HasPrefix(nw.VNL, "vde://") {
+				vdeSwitch := strings.TrimPrefix(nw.VNL, "vde://")
+				if fi, err := os.Stat(vdeSwitch); err != nil {
+					// negligible when the instance is stopped
+					logrus.WithError(err).Debugf("field `%s.vnl` %q failed stat", field, vdeSwitch)
+				} else {
+					if fi.IsDir() {
+						/* Switch mode (vdeSwitch is dir, port != 65535) */
+						ctlSocket := filepath.Join(vdeSwitch, "ctl")
+						// ErrNotExist during os.Stat(ctlSocket) can be ignored. ctlSocket does not need to exist until actually starting the VM
+						if fi, err = os.Stat(ctlSocket); err == nil {
+							if fi.Mode()&os.ModeSocket == 0 {
+								return fmt.Errorf("field `%s.vnl` file %q is not a UNIX socket", field, ctlSocket)
+							}
+						}
+						if nw.SwitchPort == 65535 {
+							return fmt.Errorf("field `%s.vnl` points to a non-PTP switch, so the port number must not be 65535", field)
+						}
+					} else {
+						/* PTP mode (vdeSwitch is socket, port == 65535) */
 						if fi.Mode()&os.ModeSocket == 0 {
-							return fmt.Errorf("field `%s.vnl` file %q is not a UNIX socket", field, ctlSocket)
+							return fmt.Errorf("field `%s.vnl` %q is not a directory nor a UNIX socket", field, vdeSwitch)
+						}
+						if nw.SwitchPort != 65535 {
+							return fmt.Errorf("field `%s.vnl` points to a PTP (switchless) socket %q, so the port number has to be 65535 (got %d)",
+								field, vdeSwitch, nw.SwitchPort)
 						}
 					}
-					if vde.SwitchPort == 65535 {
-						return fmt.Errorf("field `%s.vnl` points to a non-PTP switch, so the port number must not be 65535", field)
-					}
-				} else {
-					/* PTP mode (vdeSwitch is socket, port == 65535) */
-					if fi.Mode()&os.ModeSocket == 0 {
-						return fmt.Errorf("field `%s.vnl` %q is not a directory nor a UNIX socket", field, vdeSwitch)
-					}
-					if vde.SwitchPort != 65535 {
-						return fmt.Errorf("field `%s.vnl` points to a PTP (switchless) socket %q, so the port number has to be 65535 (got %d)",
-							field, vdeSwitch, vde.SwitchPort)
-					}
+				}
+			} else if runtime.GOOS != "linux" {
+				if warn {
+					logrus.Warnf("field `%s.vnl` is unlikely to work for %s (unless libvdeplug4 has been ported to %s and is installed)",
+						field, runtime.GOOS, runtime.GOOS)
 				}
 			}
-		} else if runtime.GOOS != "linux" {
-			logrus.Warnf("field `%s.vnl` is unlikely to work for %s (unless libvdeplug4 has been ported to %s and is installed)",
-				field, runtime.GOOS, runtime.GOOS)
 		}
-		if vde.MACAddress != "" {
-			hw, err := net.ParseMAC(vde.MACAddress)
+		if nw.MACAddress != "" {
+			hw, err := net.ParseMAC(nw.MACAddress)
 			if err != nil {
 				return fmt.Errorf("field `vmnet.mac` invalid: %w", err)
 			}
 			if len(hw) != 6 {
-				return fmt.Errorf("field `%s.macAddress` must be a 48 bit (6 bytes) MAC address; actual length of %q is %d bytes", field, vde.MACAddress, len(hw))
+				return fmt.Errorf("field `%s.macAddress` must be a 48 bit (6 bytes) MAC address; actual length of %q is %d bytes", field, nw.MACAddress, len(hw))
 			}
 		}
-		// FillDefault() will make sure that vde.Name is not the empty string
-		if len(vde.Name) >= 16 {
-			return fmt.Errorf("field `%s.name` must be less than 16 bytes, but is %d bytes: %q", field, len(vde.Name), vde.Name)
+		// FillDefault() will make sure that nw.Interface is not the empty string
+		if len(nw.Interface) >= 16 {
+			return fmt.Errorf("field `%s.interface` must be less than 16 bytes, but is %d bytes: %q", field, len(nw.Interface), nw.Interface)
 		}
-		if strings.ContainsAny(vde.Name, " \t\n/") {
-			return fmt.Errorf("field `%s.name` must not contain whitespace or slashes", field)
+		if strings.ContainsAny(nw.Interface, " \t\n/") {
+			return fmt.Errorf("field `%s.interface` must not contain whitespace or slashes", field)
 		}
-		if vde.Name == qemuconst.SlirpNICName {
-			return fmt.Errorf("field `%s.name` must not be set to %q because it is reserved for slirp", field, qemuconst.SlirpNICName)
+		if nw.Interface == qemu.SlirpNICName {
+			return fmt.Errorf("field `%s.interface` must not be set to %q because it is reserved for slirp", field, qemu.SlirpNICName)
 		}
-		if prev, ok := networkName[vde.Name]; ok {
-			return fmt.Errorf("field `%s.name` value %q has already been used by field `network.vde[%d].name`", field, vde.Name, prev)
+		if prev, ok := interfaceName[nw.Interface]; ok {
+			return fmt.Errorf("field `%s.interface` value %q has already been used by field `network.vde[%d].name`", field, nw.Interface, prev)
 		}
-		networkName[vde.Name] = i
+		interfaceName[nw.Interface] = i
 	}
 	return nil
 }

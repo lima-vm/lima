@@ -12,6 +12,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/containerd/containerd/identifiers"
 	"github.com/lima-vm/lima/pkg/limayaml"
+	"github.com/lima-vm/lima/pkg/networks/reconcile"
 	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/start"
 	"github.com/lima-vm/lima/pkg/store"
@@ -119,7 +120,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 	if err != nil {
 		return nil, err
 	}
-	if err := limayaml.Validate(*y); err != nil {
+	if err := limayaml.Validate(*y, true); err != nil {
 		if !tty {
 			return nil, err
 		}
@@ -216,6 +217,9 @@ func startAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	if len(inst.Errors) > 0 {
+		return fmt.Errorf("errors inspecting instance: %+v", inst.Errors)
+	}
 	switch inst.Status {
 	case store.StatusRunning:
 		logrus.Infof("The instance %q is already running. Run `%s` to open the shell.",
@@ -228,6 +232,10 @@ func startAction(cmd *cobra.Command, args []string) error {
 		logrus.Warnf("expected status %q, got %q", store.StatusStopped, inst.Status)
 	}
 	ctx := cmd.Context()
+	err = networks.Reconcile(ctx, inst.Name)
+	if err != nil {
+		return err
+	}
 	return start.Start(ctx, inst)
 }
 

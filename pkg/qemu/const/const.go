@@ -1,4 +1,4 @@
-package qemuconst
+package qemu
 
 const (
 	SlirpNICName = "eth0"

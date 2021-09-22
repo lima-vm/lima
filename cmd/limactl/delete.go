@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/lima-vm/lima/pkg/networks/reconcile"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -42,7 +43,7 @@ func deleteAction(cmd *cobra.Command, args []string) error {
 		}
 		logrus.Infof("Deleted %q (%q)", instName, inst.Dir)
 	}
-	return nil
+	return networks.Reconcile(cmd.Context(), "")
 }
 
 func deleteInstance(inst *store.Instance, force bool) error {

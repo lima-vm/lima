@@ -146,6 +146,9 @@ jobs:
             make PREFIX=/opt/vde
             sudo make PREFIX=/opt/vde install
           )
+          (
+            limactl sudoers | sudo tee /etc/sudoers.d/lima
+          )
       - name: Prepare ssh
         run: |
           if [ -e ~/.ssh/id_rsa ]; then

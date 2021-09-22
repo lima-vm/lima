@@ -121,23 +121,34 @@ video:
   # Default: "none"
   display: "none"
 
-network:
-  # The instance can get routable IP addresses from the vmnet framework using
-  # https://github.com/lima-vm/vde_vmnet. Both vde_switch and vde_vmnet
-  # daemons must be running before the instance is started. The interface type
-  # (host, shared, or bridged) is configured in vde_vmnet and not lima.
-  vde:
-    # vnl (virtual network locator) points to the vde_switch socket directory,
-    # optionally with vde:// prefix
-    # - vnl: "vde:///var/run/vde.ctl"
-    #   # VDE Switch port number (not TCP/UDP port number). Set to 65535 for PTP mode.
-    #   # Default: 0
-    #   switchPort: 0
-    #   # MAC address of the instance; lima will pick one based on the instance name,
-    #   # so DHCP assigned ip addresses should remain constant over instance restarts.
-    #   macAddress: ""
-    #   # Interface name, defaults to "vde0", "vde1", etc.
-    #   name: ""
+# The instance can get routable IP addresses from the vmnet framework using
+# https://github.com/lima-vm/vde_vmnet.
+networks:
+  # Lima can manage daemons for networks defined in $LIMA_HOME/_config/networks.yaml
+  # automatically. Both vde_switch and vde_vmnet binaries must be installed into
+  # secure locations only alterable by the "root" user.
+  # - lima: shared
+  #   # MAC address of the instance; lima will pick one based on the instance name,
+  #   # so DHCP assigned ip addresses should remain constant over instance restarts.
+  #   macAddress: ""
+  #   # Interface name, defaults to "lima0", "lima1", etc.
+  #   interface: ""
+  #
+  # Lima can also connect to "unmanaged" vde networks addressed by "vnl". This
+  # means that the daemons will not be controlled by Lima, but must be started
+  # before the instance.  The interface type (host, shared, or bridged) is
+  # configured in vde_vmnet and not in lima.
+  # vnl (virtual network locator) points to the vde_switch socket directory,
+  # optionally with vde:// prefix
+  # - vnl: "vde:///var/run/vde.ctl"
+  #   # VDE Switch port number (not TCP/UDP port number). Set to 65535 for PTP mode.
+  #   # Default: 0
+  #   switchPort: 0
+  #   # MAC address of the instance; lima will pick one based on the instance name,
+  #   # so DHCP assigned ip addresses should remain constant over instance restarts.
+  #   macAddress: ""
+  #   # Interface name, defaults to "lima0", "lima1", etc.
+  #   interface: ""
 
 # Port forwarding rules. Forwarding between ports 22 and ssh.localPort cannot be overridden.
 # Rules are checked sequentially until the first one matches.

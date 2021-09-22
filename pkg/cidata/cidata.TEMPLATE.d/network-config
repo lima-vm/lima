@@ -1,12 +1,12 @@
 version: 2
 ethernets:
   {{- range $nw := .Networks}}
-  {{$nw.Name}}:
+  {{$nw.Interface}}:
     match:
       macaddress: '{{$nw.MACAddress}}'
     dhcp4: true
-    set-name: {{$nw.Name}}
-    {{- if and (eq $nw.Name $.SlirpNICName) (gt (len $.DNSAddresses) 0) }}
+    set-name: {{$nw.Interface}}
+    {{- if and (eq $nw.Interface $.SlirpNICName) (gt (len $.DNSAddresses) 0) }}
     nameservers:
       addresses:
       {{- range $ns := $.DNSAddresses }}

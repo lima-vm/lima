@@ -16,7 +16,7 @@ import (
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/localpathutil"
 	"github.com/lima-vm/lima/pkg/osutil"
-	"github.com/lima-vm/lima/pkg/qemu/qemuconst"
+	"github.com/lima-vm/lima/pkg/qemu/const"
 	"github.com/lima-vm/lima/pkg/sshutil"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/opencontainers/go-digest"
@@ -35,7 +35,7 @@ var (
 )
 
 func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML) error {
-	if err := limayaml.Validate(*y); err != nil {
+	if err := limayaml.Validate(*y, false); err != nil {
 		return err
 	}
 	u, err := osutil.LimaUser(true)
@@ -51,9 +51,9 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML) error {
 		User:         u.Username,
 		UID:          uid,
 		Containerd:   Containerd{System: *y.Containerd.System, User: *y.Containerd.User},
-		SlirpNICName: qemuconst.SlirpNICName,
-		SlirpGateway: qemuconst.SlirpGateway,
-		SlirpDNS:     qemuconst.SlirpDNS,
+		SlirpNICName: qemu.SlirpNICName,
+		SlirpGateway: qemu.SlirpGateway,
+		SlirpDNS:     qemu.SlirpDNS,
 		Env:          y.Env,
 	}
 
@@ -77,9 +77,9 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML) error {
 	}
 
 	slirpMACAddress := limayaml.MACAddress(instDir)
-	args.Networks = append(args.Networks, Network{MACAddress: slirpMACAddress, Name: qemuconst.SlirpNICName})
-	for _, vde := range y.Network.VDE {
-		args.Networks = append(args.Networks, Network{MACAddress: vde.MACAddress, Name: vde.Name})
+	args.Networks = append(args.Networks, Network{MACAddress: slirpMACAddress, Interface: qemu.SlirpNICName})
+	for _, nw := range y.Networks {
+		args.Networks = append(args.Networks, Network{MACAddress: nw.MACAddress, Interface: nw.Interface})
 	}
 
 	if len(y.DNS) > 0 {

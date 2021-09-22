@@ -5,8 +5,68 @@ import (
 	"github.com/sirupsen/logrus"
 	"os/user"
 	"regexp"
+	"strconv"
 	"sync"
 )
+
+type User struct {
+	User  string
+	Uid   uint32
+	Group string
+	Gid   uint32
+}
+
+type Group struct {
+	Name string
+	Gid   uint32
+}
+
+var users map[string]User
+var groups map[string]Group
+
+func LookupUser(name string) (User, error) {
+	if users == nil {
+		users = make(map[string]User)
+	}
+	if _, ok := users[name]; !ok {
+		u, err := user.Lookup(name)
+		if err != nil {
+			return User{}, err
+		}
+		g, err := user.LookupGroupId(u.Gid)
+		if err != nil {
+			return User{}, err
+		}
+		uid, err := strconv.ParseUint(u.Uid, 10, 32)
+		if err != nil {
+			return User{}, err
+		}
+		gid, err := strconv.ParseUint(u.Gid, 10, 32)
+		if err != nil {
+			return User{}, err
+		}
+		users[name] = User{User: u.Username, Uid: uint32(uid), Group: g.Name, Gid: uint32(gid)}
+	}
+	return users[name], nil
+}
+
+func LookupGroup(name string) (Group, error) {
+	if groups == nil {
+		groups = make(map[string]Group)
+	}
+	if _, ok := groups[name]; !ok {
+		g, err := user.LookupGroup(name)
+		if err != nil {
+			return Group{}, err
+		}
+		gid, err := strconv.ParseUint(g.Gid, 10, 32)
+		if err != nil {
+			return Group{}, err
+		}
+		groups[name] = Group{Name: g.Name, Gid: uint32(gid)}
+	}
+	return groups[name], nil
+}
 
 const (
 	fallbackUser = "lima"
