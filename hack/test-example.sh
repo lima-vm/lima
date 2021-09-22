@@ -170,10 +170,11 @@ if [[ -n ${CHECKS["containerd-user"]} ]]; then
 		mkdir -p "$hometmp"
 		defer "rm -rf \"$hometmp\""
 		set -x
-		limactl shell "$NAME" nerdctl pull alpine
+		alpine_image="ghcr.io/containerd/alpine:3.14.0"
+		limactl shell "$NAME" nerdctl pull ${alpine_image}
 		echo "random-content-${RANDOM}" >"$hometmp/random"
 		expected="$(cat "$hometmp/random")"
-		got="$(limactl shell "$NAME" nerdctl run --rm -v "$hometmp/random":/mnt/foo alpine cat /mnt/foo)"
+		got="$(limactl shell "$NAME" nerdctl run --rm -v "$hometmp/random":/mnt/foo ${alpine_image} cat /mnt/foo)"
 		INFO "$hometmp/random: expected=${expected}, got=${got}"
 		if [ "$got" != "$expected" ]; then
 			ERROR "Home directory is not shared?"
