@@ -2,10 +2,6 @@ package networks
 
 import "net"
 
-const (
-	LimaScheme = "lima://"
-)
-
 type NetworksConfig struct {
 	Paths    Paths              `yaml:"paths"`
 	Group    string             `yaml:"group,omitempty"` // default: "staff"
