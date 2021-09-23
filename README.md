@@ -85,37 +85,23 @@ For the usage of containerd and nerdctl (contaiNERD ctl), visit https://github.c
 ## Getting started
 ### Installation
 
-[Homebrew package](https://github.com/Homebrew/homebrew-core/blob/master/Formula/lima.rb) is available for Intel Mac.
+[Homebrew package](https://github.com/Homebrew/homebrew-core/blob/master/Formula/lima.rb) is available.
 
 ```console
 $ brew install lima
 ```
 
 <details>
-<summary>Manual installation steps (required for ARM Mac)</summary>
+<summary>Manual installation steps</summary>
 <p>
 
 #### Install QEMU
 
 Install recent version of QEMU. v6.1.0 or later is recommended.
 
-On ARM hosts, a [patched](http://patchwork.ozlabs.org/project/qemu-devel/list/?series=244786) version of QEMU has to be installed
-for enabling `-accel hvf` support:
-```console
-$ brew install simnalamburt/x/qemu-hvf
-```
+On ARM hosts, a [patched](https://patchwork.kernel.org/series/548227/mbox/) version of QEMU has to be installed for enabling `-accel hvf` support.
 
-Make sure that the result of `qemu-system-aarch64 -accel help` contains "hvf":
-```console
-$ qemu-system-aarch64 -accel help
-Accelerators supported in QEMU binary:
-tcg
-hvf
-```
-
-See https://github.com/simnalamburt/homebrew-x for the further information of the `simnalamburt/x/qemu-hvf` tap.
-
-<!-- There is also another tap [`knazarov/qemu-virgl/qemu-virgl`](https://github.com/knazarov/homebrew-qemu-virgl), but slightly older. -->
+The patch is not merged into the QEMU upstream yet as of QEMU v6.1.0, but already included in [the Homebrew package of QEMU](https://github.com/Homebrew/homebrew-core/commit/5e8eb547) since `6.1.0_1` bottle.
 
 #### Install Lima
 
@@ -131,7 +117,7 @@ curl -fsSL https://github.com/lima-vm/lima/releases/download/${VERSION}/lima-${V
 - To install Lima from the source, run `make && make install`.
 
 > **NOTE**
-> Lima is not regularly tested on ARM Mac.
+> Lima is not regularly tested on ARM Mac (due to lack of CI).
 
 </p>
 </details>
@@ -249,7 +235,7 @@ You have to use `limactl shell bash` (or `lima bash`) to open a shell.
 Alternatively, you may also directly ssh into the guest: `ssh -p 60022 -i ~/.lima/_config/user -o NoHostAuthenticationForLocalhost=yes 127.0.0.1`.
 
 #### "Does Lima work on ARM Mac?"
-Yes, it should work, but not regularly tested on ARM.
+Yes, it should work, but not regularly tested on ARM (due to lack of CI).
 
 #### "Can I run non-Ubuntu guests?"
 Debian, Fedora, Alpine, Arch Linux, and openSUSE are also known to work.
