@@ -1,3 +1,6 @@
+# Example to enable vmnet.framework
+# This example requires Lima v0.7.0 or later.
+# Older versions of Lima were using a different syntax for supporting vmnet.framework.
 images:
   # Hint: run `limactl prune` to invalidate the "current" cache
   - location: "https://cloud-images.ubuntu.com/hirsute/current/hirsute-server-cloudimg-amd64.img"
