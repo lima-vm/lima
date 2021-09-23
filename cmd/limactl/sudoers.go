@@ -3,6 +3,8 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"runtime"
 
 	"github.com/lima-vm/lima/pkg/networks"
@@ -10,9 +12,16 @@ import (
 )
 
 func newSudoersCommand() *cobra.Command {
+	networksMD := "$PREFIX/share/doc/lima/docs/network.md"
+	if exe, err := os.Executable(); err == nil {
+		binDir := filepath.Dir(exe)
+		prefixDir := filepath.Dir(binDir)
+		networksMD = filepath.Join(prefixDir, "share/doc/lima/docs/network.md")
+	}
 	sudoersCommand := &cobra.Command{
 		Use:   "sudoers [SUDOERSFILE]",
-		Short: "Generate /etc/sudoers.d/lima file.",
+		Short: "Generate /etc/sudoers.d/lima file for enabling vmnet.framework support",
+		Long:  fmt.Sprintf("Generate /etc/sudoers.d/lima file for enabling vmnet.framework support.\nSee %s for the usage.", networksMD),
 		Args:  cobra.MaximumNArgs(1),
 		RunE:  sudoersAction,
 	}
