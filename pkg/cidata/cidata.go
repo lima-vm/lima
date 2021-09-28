@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/lima-vm/lima/pkg/downloader"
 	"github.com/lima-vm/lima/pkg/iso9660util"
@@ -56,6 +57,9 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML) error {
 		SlirpDNS:     qemu.SlirpDNS,
 		Env:          y.Env,
 	}
+
+	// change instance id on every boot so network config will be processed again
+	args.IID = fmt.Sprintf("iid-%d", time.Now().Unix())
 
 	pubKeys, err := sshutil.DefaultPubKeys(*y.SSH.LoadDotSSHPubKeys)
 	if err != nil {
