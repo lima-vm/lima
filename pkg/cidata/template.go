@@ -29,6 +29,7 @@ type Network struct {
 }
 type TemplateArgs struct {
 	Name         string // instance name
+	IID          string // instance id
 	User         string // user name
 	UID          int
 	SSHPubKeys   []string
