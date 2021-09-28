@@ -231,7 +231,7 @@ func Cmdline(cfg Config) (string, []string, error) {
 		if err != nil {
 			return "", nil, err
 		}
-		args = append(args, "-drive", fmt.Sprintf("if=pflash,format=raw,readonly,file=%s", firmware))
+		args = append(args, "-drive", fmt.Sprintf("if=pflash,format=raw,readonly=on,file=%s", firmware))
 	} else if y.Arch != limayaml.X8664 {
 		logrus.Warnf("field `firmware.legacyBIOS` is not supported for architecture %q, ignoring", y.Arch)
 	}
@@ -330,7 +330,7 @@ func Cmdline(cfg Config) (string, []string, error) {
 		return "", nil, err
 	}
 	const serialChardev = "char-serial"
-	args = append(args, "-chardev", fmt.Sprintf("socket,id=%s,path=%s,server,nowait,logfile=%s", serialChardev, serialSock, serialLog))
+	args = append(args, "-chardev", fmt.Sprintf("socket,id=%s,path=%s,server=on,wait=off,logfile=%s", serialChardev, serialSock, serialLog))
 	args = append(args, "-serial", "chardev:"+serialChardev)
 
 	// We also want to enable vsock and virtfs here, but QEMU does not support vsock and virtfs for macOS hosts
@@ -341,7 +341,7 @@ func Cmdline(cfg Config) (string, []string, error) {
 		return "", nil, err
 	}
 	const qmpChardev = "char-qmp"
-	args = append(args, "-chardev", fmt.Sprintf("socket,id=%s,path=%s,server,nowait", qmpChardev, qmpSock))
+	args = append(args, "-chardev", fmt.Sprintf("socket,id=%s,path=%s,server=on,wait=off", qmpChardev, qmpSock))
 	args = append(args, "-qmp", "chardev:"+qmpChardev)
 
 	// QEMU process
