@@ -34,6 +34,48 @@ var (
 	}
 )
 
+func setupEnv(y *limayaml.LimaYAML) (map[string]string, error) {
+	// Start with the proxy variables from the system settings.
+	env, err := osutil.ProxySettings()
+	if err != nil {
+		return env, err
+	}
+	// env.* settings from lima.yaml override system settings without giving a warning
+	for name, value := range y.Env {
+		env[name] = value
+	}
+	// Current process environment setting override both system settings and env.*
+	lowerVars := []string{"ftp_proxy", "http_proxy", "https_proxy", "no_proxy"}
+	upperVars := make([]string, len(lowerVars))
+	for i, name := range lowerVars {
+		upperVars[i] = strings.ToUpper(name)
+	}
+	for _, name := range append(lowerVars, upperVars...) {
+		if value, ok := os.LookupEnv(name); ok {
+			if _, ok := env[name]; ok && value != env[name] {
+				logrus.Infof("Overriding %q value %q with %q from limactl process environment",
+					name, env[name], value)
+			}
+			env[name] = value
+		}
+	}
+	// Make sure uppercase variants have the same value as lowercase ones.
+	// If both are set, the lowercase variant value takes precedence.
+	for _, lowerName := range lowerVars {
+		upperName := strings.ToUpper(lowerName)
+		if _, ok := env[lowerName]; ok {
+			if _, ok := env[upperName]; ok && env[lowerName] != env[upperName] {
+				logrus.Warnf("Changing %q value from %q to %q to match %q",
+					upperName, env[upperName], env[lowerName], lowerName)
+			}
+			env[upperName] = env[lowerName]
+		} else if _, ok := env[upperName]; ok {
+			env[lowerName] = env[upperName]
+		}
+	}
+	return env, nil
+}
+
 func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML) error {
 	if err := limayaml.Validate(*y, false); err != nil {
 		return err
@@ -54,7 +96,6 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML) error {
 		SlirpNICName: qemu.SlirpNICName,
 		SlirpGateway: qemu.SlirpGateway,
 		SlirpDNS:     qemu.SlirpDNS,
-		Env:          y.Env,
 	}
 
 	pubKeys, err := sshutil.DefaultPubKeys(*y.SSH.LoadDotSSHPubKeys)
@@ -82,6 +123,10 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML) error {
 		args.Networks = append(args.Networks, Network{MACAddress: nw.MACAddress, Interface: nw.Interface})
 	}
 
+	args.Env, err = setupEnv(y)
+	if err != nil {
+		return err
+	}
 	if len(y.DNS) > 0 {
 		for _, addr := range y.DNS {
 			args.DNSAddresses = append(args.DNSAddresses, addr.String())
