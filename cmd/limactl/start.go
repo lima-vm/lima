@@ -3,9 +3,13 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -25,7 +29,7 @@ import (
 
 func newStartCommand() *cobra.Command {
 	var startCommand = &cobra.Command{
-		Use:               "start NAME|FILE.yaml",
+		Use:               "start NAME|FILE.yaml|URL",
 		Short:             fmt.Sprintf("Start an instance of Lima. If the instance does not exist, open an editor for creating new one, with name %q", DefaultInstanceName),
 		Args:              cobra.MaximumNArgs(1),
 		ValidArgsFunction: startBashComplete,
@@ -49,7 +53,22 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 		err      error
 	)
 
-	if argSeemsYAMLPath(arg) {
+	if argSeemsHTTPURL(arg) {
+		instName, err = instNameFromHTTPURL(arg)
+		if err != nil {
+			return nil, err
+		}
+		logrus.Debugf("interpreting argument %q as a http url for instance %q", arg, instName)
+		resp, err := http.Get(arg)
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
+		yBytes, err = io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+	} else if argSeemsYAMLPath(arg) {
 		instName, err = instNameFromYAMLPath(arg)
 		if err != nil {
 			return nil, err
@@ -239,12 +258,31 @@ func startAction(cmd *cobra.Command, args []string) error {
 	return start.Start(ctx, inst)
 }
 
+func argSeemsHTTPURL(arg string) bool {
+	u, err := url.Parse(arg)
+	if err != nil {
+		return false
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return false
+	}
+	return true
+}
+
 func argSeemsYAMLPath(arg string) bool {
 	if strings.Contains(arg, "/") {
 		return true
 	}
 	lower := strings.ToLower(arg)
 	return strings.HasSuffix(lower, ".yml") || strings.HasSuffix(lower, ".yaml")
+}
+
+func instNameFromHTTPURL(httpURL string) (string, error) {
+	u, err := url.Parse(httpURL)
+	if err != nil {
+		return "", err
+	}
+	return instNameFromYAMLPath(path.Base(u.Path))
 }
 
 func instNameFromYAMLPath(yamlPath string) (string, error) {
