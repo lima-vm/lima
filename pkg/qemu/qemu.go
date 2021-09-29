@@ -231,7 +231,7 @@ func Cmdline(cfg Config) (string, []string, error) {
 		if err != nil {
 			return "", nil, err
 		}
-		args = append(args, "-drive", fmt.Sprintf("if=pflash,format=raw,readonly,file=%s", firmware))
+		args = append(args, "-drive", fmt.Sprintf("if=pflash,format=raw,readonly=on,file=%s", firmware))
 	} else if y.Arch != limayaml.X8664 {
 		logrus.Warnf("field `firmware.legacyBIOS` is not supported for architecture %q, ignoring", y.Arch)
 	}
