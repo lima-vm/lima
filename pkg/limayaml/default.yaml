@@ -177,9 +177,10 @@ networks:
 #   # Any port still not matched by a rule will not be forwarded (ignored)
 
 # Extra environment variables that will be loaded into the VM at start up.
-# These variables are currently only consumed by internal init scripts, not by the user shell.
-# This field is experimental and may change in a future release of Lima.
-# https://github.com/lima-vm/lima/pull/200
+# These variables are consumed by internal init scripts, and also added
+# to /etc/environment.
+# If you set any of "ftp_proxy", "http_proxy", "https_proxy", or "no_proxy", then
+# Lima will automatically set an uppercase variant to the same value as well.
 # env:
 #   KEY: value
 

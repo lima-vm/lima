@@ -7,23 +7,23 @@ import (
 )
 
 type LimaYAML struct {
-	Arch         Arch               `yaml:"arch,omitempty"`
-	Images       []File             `yaml:"images"` // REQUIRED
-	CPUs         int                `yaml:"cpus,omitempty"`
-	Memory       string             `yaml:"memory,omitempty"` // go-units.RAMInBytes
-	Disk         string             `yaml:"disk,omitempty"`   // go-units.RAMInBytes
-	Mounts       []Mount            `yaml:"mounts,omitempty"`
-	SSH          SSH                `yaml:"ssh,omitempty"` // REQUIRED (FIXME)
-	Firmware     Firmware           `yaml:"firmware,omitempty"`
-	Video        Video              `yaml:"video,omitempty"`
-	Provision    []Provision        `yaml:"provision,omitempty"`
-	Containerd   Containerd         `yaml:"containerd,omitempty"`
-	Probes       []Probe            `yaml:"probes,omitempty"`
-	PortForwards []PortForward      `yaml:"portForwards,omitempty"`
-	Networks     []Network          `yaml:"networks,omitempty"`
-	Network      NetworkDeprecated  `yaml:"network,omitempty"` // DEPRECATED, use `networks` instead
-	Env          map[string]*string `yaml:"env,omitempty"`     // EXPERIMENAL, see default.yaml
-	DNS          []net.IP           `yaml:"dns,omitempty"`
+	Arch         Arch              `yaml:"arch,omitempty"`
+	Images       []File            `yaml:"images"` // REQUIRED
+	CPUs         int               `yaml:"cpus,omitempty"`
+	Memory       string            `yaml:"memory,omitempty"` // go-units.RAMInBytes
+	Disk         string            `yaml:"disk,omitempty"`   // go-units.RAMInBytes
+	Mounts       []Mount           `yaml:"mounts,omitempty"`
+	SSH          SSH               `yaml:"ssh,omitempty"` // REQUIRED (FIXME)
+	Firmware     Firmware          `yaml:"firmware,omitempty"`
+	Video        Video             `yaml:"video,omitempty"`
+	Provision    []Provision       `yaml:"provision,omitempty"`
+	Containerd   Containerd        `yaml:"containerd,omitempty"`
+	Probes       []Probe           `yaml:"probes,omitempty"`
+	PortForwards []PortForward     `yaml:"portForwards,omitempty"`
+	Networks     []Network         `yaml:"networks,omitempty"`
+	Network      NetworkDeprecated `yaml:"network,omitempty"` // DEPRECATED, use `networks` instead
+	Env          map[string]string `yaml:"env,omitempty"`
+	DNS          []net.IP          `yaml:"dns,omitempty"`
 }
 
 type Arch = string

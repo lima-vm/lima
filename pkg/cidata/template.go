@@ -39,7 +39,7 @@ type TemplateArgs struct {
 	SlirpNICName string
 	SlirpGateway string
 	SlirpDNS     string
-	Env          map[string]*string
+	Env          map[string]string
 	DNSAddresses []string
 }
 
