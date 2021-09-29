@@ -31,10 +31,17 @@ func newCopyCommand() *cobra.Command {
 		RunE:    copyAction,
 	}
 
+	copyCommand.Flags().BoolP("recursive", "r", false, "copy directories recursively")
+
 	return copyCommand
 }
 
 func copyAction(cmd *cobra.Command, args []string) error {
+	recursive, err := cmd.Flags().GetBool("recursive")
+	if err != nil {
+		return err
+	}
+
 	arg0, err := exec.LookPath("scp")
 	if err != nil {
 		return err
@@ -43,7 +50,6 @@ func copyAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-
 	instDirs := make(map[string]string)
 	scpArgs := []string{}
 	debug, err := cmd.Flags().GetBool("debug")
@@ -52,6 +58,9 @@ func copyAction(cmd *cobra.Command, args []string) error {
 	}
 	if debug {
 		scpArgs = append(scpArgs, "-v")
+	}
+	if recursive {
+		scpArgs = append(scpArgs, "-r")
 	}
 	scpArgs = append(scpArgs, "-3", "--")
 	for _, arg := range args {
