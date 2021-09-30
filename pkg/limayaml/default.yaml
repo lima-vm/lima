@@ -71,7 +71,7 @@ containerd:
   # Default: true
   user: true
 #  # Override containerd archive
-#  # Default: hard-coded URL with hard-coded digest
+#  # Default: hard-coded URL with hard-coded digest (see the output of `limactl info | jq .defaultTemplate.containerd.archives`)
 #  archives:
 #    - location: "~/Downloads/nerdctl-full-X.Y.Z-linux-amd64.tar.gz"
 #      arch: "x86_64"
