@@ -14,7 +14,7 @@ import (
 	"github.com/lima-vm/lima/pkg/localpathutil"
 	"github.com/lima-vm/lima/pkg/networks"
 	"github.com/lima-vm/lima/pkg/osutil"
-	"github.com/lima-vm/lima/pkg/qemu/const"
+	qemu "github.com/lima-vm/lima/pkg/qemu/const"
 	"github.com/sirupsen/logrus"
 )
 
@@ -108,6 +108,10 @@ func Validate(y LimaYAML, warn bool) error {
 			return fmt.Errorf("field `provision[%d].mode` must be either %q or %q",
 				i, ProvisionModeSystem, ProvisionModeUser)
 		}
+	}
+	needsContainerdArchives := (y.Containerd.User != nil && *y.Containerd.User) || (y.Containerd.System != nil && *y.Containerd.System)
+	if needsContainerdArchives && len(y.Containerd.Archives) == 0 {
+		return fmt.Errorf("field `containerd.archives` must be provided")
 	}
 	for i, p := range y.Probes {
 		switch p.Mode {

@@ -17,22 +17,10 @@ import (
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/localpathutil"
 	"github.com/lima-vm/lima/pkg/osutil"
-	"github.com/lima-vm/lima/pkg/qemu/const"
+	qemu "github.com/lima-vm/lima/pkg/qemu/const"
 	"github.com/lima-vm/lima/pkg/sshutil"
 	"github.com/lima-vm/lima/pkg/store/filenames"
-	"github.com/opencontainers/go-digest"
 	"github.com/sirupsen/logrus"
-)
-
-const (
-	NerdctlVersion = "0.12.0"
-)
-
-var (
-	NerdctlFullDigests = map[limayaml.Arch]digest.Digest{
-		limayaml.X8664:   "sha256:7789800cfdd19fa9eccadb5e4a911e4ba759799ad9ec0b7929c983b9d149bc98",
-		limayaml.AARCH64: "sha256:ebb05e22ac6a3c25ac88ca4f747feed89bfae8e447a626d0fedf3b4f40ac3303",
-	}
 )
 
 func setupEnv(y *limayaml.LimaYAML) (map[string]string, error) {
@@ -177,33 +165,32 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML) error {
 	}
 
 	if args.Containerd.System || args.Containerd.User {
-		var nftgzBase string
-		switch y.Arch {
-		case limayaml.X8664:
-			nftgzBase = fmt.Sprintf("nerdctl-full-%s-linux-amd64.tar.gz", NerdctlVersion)
-		case limayaml.AARCH64:
-			nftgzBase = fmt.Sprintf("nerdctl-full-%s-linux-arm64.tar.gz", NerdctlVersion)
-		default:
-			return fmt.Errorf("unexpected arch %q", y.Arch)
+		var nftgz *limayaml.File
+		for i := range y.Containerd.Archives {
+			f := &y.Containerd.Archives[i]
+			if f.Arch != y.Arch {
+				continue
+			}
+			nftgz = f
+		}
+		if nftgz == nil {
+			return fmt.Errorf("no containerd archive was provided for arch %q", y.Arch)
 		}
 		td, err := ioutil.TempDir("", "lima-download-nerdctl")
 		if err != nil {
 			return err
 		}
 		defer os.RemoveAll(td)
-		nftgzLocal := filepath.Join(td, nftgzBase)
-		nftgzURL := fmt.Sprintf("https://github.com/containerd/nerdctl/releases/download/v%s/%s",
-			NerdctlVersion, nftgzBase)
-		nftgzDigest := NerdctlFullDigests[y.Arch]
-		logrus.Infof("Downloading %q (%s)", nftgzURL, nftgzDigest)
-		res, err := downloader.Download(nftgzLocal, nftgzURL, downloader.WithCache(), downloader.WithExpectedDigest(nftgzDigest))
+		nftgzLocal := filepath.Join(td, "nerdctl-full.tgz")
+		logrus.Infof("Downloading %q (%s)", nftgz.Location, nftgz.Digest)
+		res, err := downloader.Download(nftgzLocal, nftgz.Location, downloader.WithCache(), downloader.WithExpectedDigest(nftgz.Digest))
 		if err != nil {
-			return fmt.Errorf("failed to download %q: %w", nftgzURL, err)
+			return fmt.Errorf("failed to download %q: %w", nftgz.Location, err)
 		}
 		logrus.Debugf("res.ValidatedDigest=%v", res.ValidatedDigest)
 		switch res.Status {
 		case downloader.StatusDownloaded:
-			logrus.Infof("Downloaded %q", nftgzBase)
+			logrus.Infof("Downloaded %q", nftgz.Location)
 		case downloader.StatusUsedCache:
 			logrus.Infof("Using cache %q", res.CachePath)
 		default:

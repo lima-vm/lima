@@ -77,8 +77,9 @@ type Provision struct {
 }
 
 type Containerd struct {
-	System *bool `yaml:"system,omitempty"` // default: false
-	User   *bool `yaml:"user,omitempty"`   // default: true
+	System   *bool  `yaml:"system,omitempty"`   // default: false
+	User     *bool  `yaml:"user,omitempty"`     // default: true
+	Archives []File `yaml:"archives,omitempty"` // default: see defaultContainerdArchives
 }
 
 type ProbeMode = string
