@@ -56,7 +56,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 	const yBytesLimit = 4 * 1024 * 1024 // 4MiB
 
 	if argSeemsHTTPURL(arg) {
-		instName, err = instNameFromHTTPURL(arg)
+		instName, err = instNameFromURL(arg)
 		if err != nil {
 			return nil, err
 		}
@@ -67,6 +67,21 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 		}
 		defer resp.Body.Close()
 		yBytes, err = readAtMaximum(resp.Body, yBytesLimit)
+		if err != nil {
+			return nil, err
+		}
+	} else if argSeemsFileURL(arg) {
+		instName, err = instNameFromURL(arg)
+		if err != nil {
+			return nil, err
+		}
+		logrus.Debugf("interpreting argument %q as a file url for instance %q", arg, instName)
+		r, err := os.Open(strings.TrimPrefix(arg, "file://"))
+		if err != nil {
+			return nil, err
+		}
+		defer r.Close()
+		yBytes, err = readAtMaximum(r, yBytesLimit)
 		if err != nil {
 			return nil, err
 		}
@@ -276,6 +291,14 @@ func argSeemsHTTPURL(arg string) bool {
 	return true
 }
 
+func argSeemsFileURL(arg string) bool {
+	u, err := url.Parse(arg)
+	if err != nil {
+		return false
+	}
+	return u.Scheme == "file"
+}
+
 func argSeemsYAMLPath(arg string) bool {
 	if strings.Contains(arg, "/") {
 		return true
@@ -284,8 +307,8 @@ func argSeemsYAMLPath(arg string) bool {
 	return strings.HasSuffix(lower, ".yml") || strings.HasSuffix(lower, ".yaml")
 }
 
-func instNameFromHTTPURL(httpURL string) (string, error) {
-	u, err := url.Parse(httpURL)
+func instNameFromURL(urlStr string) (string, error) {
+	u, err := url.Parse(urlStr)
 	if err != nil {
 		return "", err
 	}
