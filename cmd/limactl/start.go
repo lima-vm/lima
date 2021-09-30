@@ -16,7 +16,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/containerd/containerd/identifiers"
 	"github.com/lima-vm/lima/pkg/limayaml"
-	"github.com/lima-vm/lima/pkg/networks/reconcile"
+	networks "github.com/lima-vm/lima/pkg/networks/reconcile"
 	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/start"
 	"github.com/lima-vm/lima/pkg/store"
@@ -53,6 +53,8 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 		err      error
 	)
 
+	const yBytesLimit = 4 * 1024 * 1024 // 4MiB
+
 	if argSeemsHTTPURL(arg) {
 		instName, err = instNameFromHTTPURL(arg)
 		if err != nil {
@@ -64,7 +66,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 			return nil, err
 		}
 		defer resp.Body.Close()
-		yBytes, err = io.ReadAll(resp.Body)
+		yBytes, err = readAtMaximum(resp.Body, yBytesLimit)
 		if err != nil {
 			return nil, err
 		}
@@ -74,7 +76,12 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 			return nil, err
 		}
 		logrus.Debugf("interpreting argument %q as a file path for instance %q", arg, instName)
-		yBytes, err = os.ReadFile(arg)
+		r, err := os.Open(arg)
+		if err != nil {
+			return nil, err
+		}
+		defer r.Close()
+		yBytes, err = readAtMaximum(r, yBytesLimit)
 		if err != nil {
 			return nil, err
 		}
@@ -298,4 +305,18 @@ func instNameFromYAMLPath(yamlPath string) (string, error) {
 func startBashComplete(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 	instances, _ := bashCompleteInstanceNames(cmd)
 	return instances, cobra.ShellCompDirectiveDefault
+}
+
+func readAtMaximum(r io.Reader, n int64) ([]byte, error) {
+	lr := &io.LimitedReader{
+		R: r,
+		N: n,
+	}
+	b, err := io.ReadAll(lr)
+	if err != nil {
+		if errors.Is(err, io.EOF) && lr.N <= 0 {
+			err = fmt.Errorf("exceeded the limit (%d bytes): %w", n, err)
+		}
+	}
+	return b, err
 }
