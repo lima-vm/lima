@@ -46,7 +46,10 @@ func daemonAction(cmd *cobra.Command, args []string) error {
 		return ticker.C, ticker.Stop
 	}
 
-	agent := guestagent.New(newTicker)
+	agent, err := guestagent.New(newTicker, tick*20)
+	if err != nil {
+		return err
+	}
 	backend := &server.Backend{
 		Agent: agent,
 	}

@@ -11,6 +11,7 @@ require (
 	github.com/digitalocean/go-qemu v0.0.0-20210326154740-ac9e0b687001
 	github.com/diskfs/go-diskfs v1.2.0
 	github.com/docker/go-units v0.4.0
+	github.com/elastic/go-libaudit/v2 v2.2.0
 	github.com/gorilla/mux v1.8.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/lima-vm/sshocker v0.2.2

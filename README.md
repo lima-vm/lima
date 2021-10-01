@@ -180,7 +180,7 @@ The current default spec:
 
 - Hypervisor: QEMU with HVF accelerator
 - Filesystem sharing: [reverse sshfs](https://github.com/lima-vm/sshocker/blob/v0.2.0/pkg/reversesshfs/reversesshfs.go) (planned to be replaced with 9p soon)
-- Port forwarding: `ssh -L`, automated by watching `/proc/net/tcp` in the guest
+- Port forwarding: `ssh -L`, automated by watching `/proc/net/tcp` and `iptables` events in the guest
 
 ## Developer guide
 
