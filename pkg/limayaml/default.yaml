@@ -171,15 +171,15 @@ networks:
 #     hostPort: 8080 # overrides the default value 80
 #   - guestIP: "127.0.0.2" # overrides the default value "127.0.0.1"
 #     hostIP: "127.0.0.2" # overrides the default value "127.0.0.1"
-#   # default: guestPortRange: [1024, 65535]
-#   # default: hostPortRange: [1024, 65535]
+#   # default: guestPortRange: [1, 65535]
+#   # default: hostPortRange: [1, 65535]
 #   - guestPort: 8888
 #     ignore: true (don't forward this port)
 #   # Lima internally appends this fallback rule at the end:
 #   - guestIP: "127.0.0.1"
-#     guestPortRange: [1024, 65535]
+#     guestPortRange: [1, 65535]
 #     hostIP: "127.0.0.1"
-#     hostPortRange: [1024, 65535]
+#     hostPortRange: [1, 65535]
 #   # Any port still not matched by a rule will not be forwarded (ignored)
 
 # Extra environment variables that will be loaded into the VM at start up.
