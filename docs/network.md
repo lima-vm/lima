@@ -20,6 +20,14 @@ The loopback addresses of the host is `192.168.5.2` and is accessible from the g
 
 The DNS.
 
+If `useHostResolver` in `lima.yaml` is true, then the hostagent is going to run a DNS server over udp, using the same socket number as `ssh.localPort`. This server does a local lookup using the native host resolver, so will deal correctly with VPN configurations and split-DNS setups, as well a mDNS (for this the hostagent has to be compiled with `CGO_ENABLED=1`).
+
+This udp port is then forwarded via iptables rules to `192.168.5.3:53`, overriding the DNS provided by QEMU via slirp.
+
+During initial cloud-init bootstrap, `iptables` may not yet be installed. In that case the repo server is determined using the slirp DNS. After `iptables` has been installed, the forwarding rule is applied, switching over to the hostagent DNS.
+
+If `useHostResoler` is false, then DNS servers can be configured manually in `lima.yaml` via the `dns` setting. If that list is empty, then Lima will either use the slirp DNS (on Linux), or the nameservers from the `en0` host interface (on macOS).
+
 ## `vde_vmnet` (192.168.105.0/24)
 
 [`vde_vmnet`](https://github.com/lima-vm/vde_vmnet) is required for adding another guest IP that is accessible from

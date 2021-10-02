@@ -184,6 +184,14 @@ networks:
 # env:
 #   KEY: value
 
+# The host agent implements a DNS server that looks up host names on the host
+# using the local system resolver. This means changing VPN and network settings
+# are reflected automatically into the guest, including conditional forward,
+# and mDNS lookup:
+# Default: true
+useHostResolver: true
+
+# If useHostResolver is false, then the following rules apply for configuring dns:
 # Explicitly set DNS addresses for qemu user-mode networking. By default qemu picks *one*
 # nameserver from the host config and forwards all queries to this server. On macOS
 # Lima adds the nameservers configured for the "en0" interface to the list. In case this

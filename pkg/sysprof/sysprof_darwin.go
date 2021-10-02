@@ -16,7 +16,8 @@ var (
 
 func NetworkData() ([]NetworkDataType, error) {
 	networkDataOnce.Do(func() {
-		jsonBytes, networkDataError := SystemProfiler("SPNetworkDataType")
+		var jsonBytes []byte
+		jsonBytes, networkDataError = SystemProfiler("SPNetworkDataType")
 		if networkDataError == nil {
 			networkDataError = json.Unmarshal(jsonBytes, &networkDataCached)
 		}

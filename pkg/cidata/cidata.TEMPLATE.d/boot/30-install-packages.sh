@@ -10,6 +10,14 @@ update_fuse_conf() {
 	fi
 }
 
+INSTALL_IPTABLES=0
+if [ "${LIMA_CIDATA_CONTAINERD_SYSTEM}" = 1 ] || [ "${LIMA_CIDATA_CONTAINERD_USER}" = 1 ]; then
+	INSTALL_IPTABLES=1
+fi
+if [ "${LIMA_CIDATA_UDP_DNS_LOCAL_PORT}" -ne 0 ]; then
+	INSTALL_IPTABLES=1
+fi
+
 # Install minimum dependencies
 if command -v apt-get >/dev/null 2>&1; then
 	DEBIAN_FRONTEND=noninteractive
@@ -20,7 +28,7 @@ if command -v apt-get >/dev/null 2>&1; then
 			apt-get install -y sshfs
 		fi
 	fi
-	if [ "${LIMA_CIDATA_CONTAINERD_SYSTEM}" = 1 ] || [ "${LIMA_CIDATA_CONTAINERD_USER}" = 1 ]; then
+	if [ "${INSTALL_IPTABLES}" = 1 ]; then
 		if [ ! -e /usr/sbin/iptables ]; then
 			apt-get install -y iptables
 		fi
@@ -36,7 +44,7 @@ elif command -v dnf >/dev/null 2>&1; then
 			dnf install -y fuse-sshfs
 		fi
 	fi
-	if [ "${LIMA_CIDATA_CONTAINERD_SYSTEM}" = 1 ] || [ "${LIMA_CIDATA_CONTAINERD_USER}" = 1 ]; then
+	if [ "${INSTALL_IPTABLES}" = 1 ]; then
 		if [ ! -e /usr/sbin/iptables ]; then
 			dnf install -y iptables
 		fi
@@ -63,7 +71,7 @@ elif command -v zypper >/dev/null 2>&1; then
 			zypper install -y sshfs
 		fi
 	fi
-	if [ "${LIMA_CIDATA_CONTAINERD_SYSTEM}" = 1 ] || [ "${LIMA_CIDATA_CONTAINERD_USER}" = 1 ]; then
+	if [ "${INSTALL_IPTABLES}" = 1 ]; then
 		if [ ! -e /usr/sbin/iptables ]; then
 			zypper install -y iptables
 		fi
@@ -80,6 +88,17 @@ elif command -v apk >/dev/null 2>&1; then
 			apk add sshfs
 		fi
 	fi
+	if [ "${INSTALL_IPTABLES}" = 1 ]; then
+		if ! command -v iptables >/dev/null 2>&1; then
+			apk update
+			apk add iptables
+		fi
+	fi
+fi
+
+if [ -n "${LIMA_CIDATA_UDP_DNS_LOCAL_PORT}" ] && [ "${LIMA_CIDATA_UDP_DNS_LOCAL_PORT}" -ne 0 ]; then
+	# Try to setup iptables rule again, in case we just installed iptables
+	"${LIMA_CIDATA_MNT}/boot/07-host-dns-setup.sh"
 fi
 
 # update_fuse_conf has to be called after installing all the packages,

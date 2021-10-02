@@ -109,3 +109,5 @@ The volume label is "cidata", as defined by [cloud-init NoCloud](https://cloudin
 - `LIMA_CIDATA_CONTAINERD_USER`: set to "1" if rootless containerd to be set up
 - `LIMA_CIDATA_CONTAINERD_SYSTEM`: set to "1" if system-wide containerd to be set up
 - `LIMA_CIDATA_SLIRP_GATEWAY`: set to the IP address of the host on the SLIRP network. `192.168.5.2`.
+- `LIMA_CIDATA_SLIRP_DNS`: set to the IP address of the DNS on the SLIRP network. `192.168.5.3`.
+- `LIMA_CIDATA_UDP_DNS_LOCAL_PORT`: set to the udp port number of the hostagent dns server (or 0 when not enabled).

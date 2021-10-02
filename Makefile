@@ -11,7 +11,7 @@ PACKAGE := github.com/lima-vm/lima
 VERSION=$(shell git describe --match 'v[0-9]*' --dirty='.m' --always --tags)
 VERSION_TRIMMED := $(VERSION:v%=%)
 
-GO_BUILD := CGO_ENABLED=0 $(GO) build -ldflags="-s -w -X $(PACKAGE)/pkg/version.Version=$(VERSION)"
+GO_BUILD := $(GO) build -ldflags="-s -w -X $(PACKAGE)/pkg/version.Version=$(VERSION)"
 
 .PHONY: all
 all: binaries
@@ -39,16 +39,18 @@ _output/bin/nerdctl.lima:
 
 .PHONY: _output/bin/limactl
 _output/bin/limactl:
-	$(GO_BUILD) -o $@ ./cmd/limactl
+	# The hostagent must be compiled with CGO_ENABLED=1 so that net.LookupIP() in the DNS server
+	# calls the native resolver library and not the simplistic version in the Go library.
+	CGO_ENABLED=1 $(GO_BUILD) -o $@ ./cmd/limactl
 
 .PHONY: _output/share/lima/lima-guestagent.Linux-x86_64
 _output/share/lima/lima-guestagent.Linux-x86_64:
-	GOOS=linux GOARCH=amd64 $(GO_BUILD) -o $@ ./cmd/lima-guestagent
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 $(GO_BUILD) -o $@ ./cmd/lima-guestagent
 	chmod 644 $@
 
 .PHONY: _output/share/lima/lima-guestagent.Linux-aarch64
 _output/share/lima/lima-guestagent.Linux-aarch64:
-	GOOS=linux GOARCH=arm64 $(GO_BUILD) -o $@ ./cmd/lima-guestagent
+	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 $(GO_BUILD) -o $@ ./cmd/lima-guestagent
 	chmod 644 $@
 
 .PHONY: install

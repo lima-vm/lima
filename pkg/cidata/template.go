@@ -28,19 +28,20 @@ type Network struct {
 	Interface  string
 }
 type TemplateArgs struct {
-	Name         string // instance name
-	IID          string // instance id
-	User         string // user name
-	UID          int
-	SSHPubKeys   []string
-	Mounts       []string // abs path, accessible by the User
-	Containerd   Containerd
-	Networks     []Network
-	SlirpNICName string
-	SlirpGateway string
-	SlirpDNS     string
-	Env          map[string]string
-	DNSAddresses []string
+	Name            string // instance name
+	IID             string // instance id
+	User            string // user name
+	UID             int
+	SSHPubKeys      []string
+	Mounts          []string // abs path, accessible by the User
+	Containerd      Containerd
+	Networks        []Network
+	SlirpNICName    string
+	SlirpGateway    string
+	SlirpDNS        string
+	UDPDNSLocalPort int
+	Env             map[string]string
+	DNSAddresses    []string
 }
 
 func ValidateTemplateArgs(args TemplateArgs) error {

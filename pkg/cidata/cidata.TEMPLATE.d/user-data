@@ -42,5 +42,4 @@ resolv_conf:
   {{- range $ns := $.DNSAddresses }}
   - {{$ns}}
   {{- end }}
-  - {{.SlirpDNS}}
 {{- end }}
