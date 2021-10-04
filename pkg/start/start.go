@@ -72,10 +72,16 @@ func Start(ctx context.Context, inst *store.Instance) error {
 	}
 	// no defer haStderrW.Close()
 
-	haCmd := exec.CommandContext(ctx, self,
+	var args []string
+	if logrus.GetLevel() >= logrus.DebugLevel {
+		args = append(args, "--debug")
+	}
+	args = append(args,
 		"hostagent",
 		"--pidfile", haPIDPath,
 		inst.Name)
+	haCmd := exec.CommandContext(ctx, self, args...)
+
 	haCmd.Stdout = haStdoutW
 	haCmd.Stderr = haStderrW
 
