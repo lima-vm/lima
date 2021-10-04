@@ -12,7 +12,9 @@ WARNING() {
 # shellcheck disable=SC2163
 while read -r line; do export "$line"; done <"${LIMA_CIDATA_MNT}"/lima.env
 
-sed -i '/#LIMA-START/,/#LIMA-END/d' /etc/environment
+if [ -e /etc/environment ]; then
+	sed -i '/#LIMA-START/,/#LIMA-END/d' /etc/environment
+fi
 cat "${LIMA_CIDATA_MNT}/etc_environment" >>/etc/environment
 
 # shellcheck disable=SC2163
