@@ -2,7 +2,9 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/lima-vm/lima/pkg/store/dirnames"
@@ -23,10 +25,30 @@ func main() {
 }
 
 func newApp() *cobra.Command {
+	examplesDir := "$PREFIX/share/doc/lima/examples"
+	if exe, err := os.Executable(); err == nil {
+		binDir := filepath.Dir(exe)
+		prefixDir := filepath.Dir(binDir)
+		examplesDir = filepath.Join(prefixDir, "share/doc/lima/examples")
+	}
+
 	var rootCmd = &cobra.Command{
-		Use:           "limactl",
-		Short:         "Lima: Linux virtual machines",
-		Version:       strings.TrimPrefix(version.Version, "v"),
+		Use:     "limactl",
+		Short:   "Lima: Linux virtual machines",
+		Version: strings.TrimPrefix(version.Version, "v"),
+		Example: fmt.Sprintf(`  Start the default instance:
+  $ limactl start
+
+  Open a shell:
+  $ lima
+
+  Run a container:
+  $ lima nerdctl run -d --name nginx -p 8080:80 nginx:alpine
+
+  Stop the default instance:
+  $ limactl stop
+
+  See also example YAMLs: %s`, examplesDir),
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
