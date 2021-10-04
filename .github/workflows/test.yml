@@ -167,10 +167,9 @@ jobs:
           EXAMPLE: ${{ matrix.example }}
         run: ./hack/test-example.sh examples/$EXAMPLE
 
-  artifacts:
-    name: Artifacts
-    # the release pipeline uses Linux, so we Linux here as well
-    runs-on: ubuntu-20.04
+  artifacts-darwin:
+    name: Artifacts Darwin
+    runs-on: macos-11
     timeout-minutes: 20
     steps:
       - uses: actions/setup-go@v2
@@ -179,5 +178,23 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
-      - name: Make artifacts
-        run: make artifacts
+      - name: Make darwin artifacts
+        run: make artifacts-darwin
+
+  artifacts-linux:
+    name: Artifacts Linux
+    runs-on: ubuntu-20.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/setup-go@v2
+        with:
+          go-version: 1.17.x
+      - name: Install gcc-aarch64-linux-gnu
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+      - name: Make linux artifacts
+        run: make artifacts-linux

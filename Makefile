@@ -73,14 +73,18 @@ uninstall:
 clean:
 	rm -rf _output
 
-.PHONY: artifacts
-artifacts:
+.PHONY: artifacts-darwin
+artifacts-darwin:
 	mkdir -p _artifacts
 	GOOS=darwin GOARCH=amd64 make clean binaries
 	$(TAR) -C _output/ -czvf _artifacts/lima-$(VERSION_TRIMMED)-Darwin-x86_64.tar.gz ./
 	GOOS=darwin GOARCH=arm64 make clean binaries
 	$(TAR) -C _output -czvf _artifacts/lima-$(VERSION_TRIMMED)-Darwin-arm64.tar.gz ./
+
+.PHONY: artifacts-linux
+artifacts-linux:
+	mkdir -p _artifacts
 	GOOS=linux GOARCH=amd64 make clean binaries
 	$(TAR) -C _output/ -czvf _artifacts/lima-$(VERSION_TRIMMED)-Linux-x86_64.tar.gz ./
-	GOOS=linux GOARCH=arm64 make clean binaries
+	GOOS=linux GOARCH=arm64 CC=aarch64-linux-gnu-gcc make clean binaries
 	$(TAR) -C _output/ -czvf _artifacts/lima-$(VERSION_TRIMMED)-Linux-aarch64.tar.gz ./
