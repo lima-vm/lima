@@ -4,11 +4,16 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
 
+	"github.com/gorilla/mux"
 	"github.com/lima-vm/lima/pkg/hostagent"
+	"github.com/lima-vm/lima/pkg/hostagent/api/server"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -21,6 +26,7 @@ func newHostagentCommand() *cobra.Command {
 		Hidden: true,
 	}
 	hostagentCommand.Flags().StringP("pidfile", "p", "", "write pid to file")
+	hostagentCommand.Flags().String("socket", "", "hostagent socket")
 	return hostagentCommand
 }
 
@@ -38,6 +44,13 @@ func hostagentAction(cmd *cobra.Command, args []string) error {
 		}
 		defer os.RemoveAll(pidfile)
 	}
+	socket, err := cmd.Flags().GetString("socket")
+	if err != nil {
+		return err
+	}
+	if socket == "" {
+		return fmt.Errorf("socket must be specified (limactl version mismatch?)")
+	}
 
 	instName := args[0]
 
@@ -51,6 +64,28 @@ func hostagentAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+
+	backend := &server.Backend{
+		Agent: ha,
+	}
+	r := mux.NewRouter()
+	server.AddRoutes(r, backend)
+	srv := &http.Server{Handler: r}
+	err = os.RemoveAll(socket)
+	if err != nil {
+		return err
+	}
+	l, err := net.Listen("unix", socket)
+	if err != nil {
+		return err
+	}
+	go func() {
+		defer os.RemoveAll(socket)
+		defer srv.Close()
+		if serveErr := srv.Serve(l); serveErr != nil {
+			logrus.WithError(serveErr).Warn("hostagent API server exited with an error")
+		}
+	}()
 	return ha.Run(cmd.Context())
 }
 

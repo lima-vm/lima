@@ -1,13 +1,17 @@
 package store
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
+	hostagentclient "github.com/lima-vm/lima/pkg/hostagent/api/client"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 )
@@ -65,12 +69,31 @@ func Inspect(instName string) (*Instance, error) {
 	inst.Dir = instDir
 	inst.Arch = y.Arch
 	inst.Networks = y.Networks
-	inst.SSHLocalPort = y.SSH.LocalPort
+	inst.SSHLocalPort = y.SSH.LocalPort // maybe 0
 
 	inst.HostAgentPID, err = ReadPIDFile(filepath.Join(instDir, filenames.HostAgentPID))
 	if err != nil {
 		inst.Status = StatusBroken
 		inst.Errors = append(inst.Errors, err)
+	}
+
+	if inst.HostAgentPID != 0 {
+		haSock := filepath.Join(instDir, filenames.HostAgentSock)
+		haClient, err := hostagentclient.NewHostAgentClient(haSock)
+		if err != nil {
+			inst.Status = StatusBroken
+			inst.Errors = append(inst.Errors, fmt.Errorf("failed to connect to %q: %w", haSock, err))
+		} else {
+			ctx, cancel := context.WithTimeout(context.TODO(), 3*time.Second)
+			defer cancel()
+			info, err := haClient.Info(ctx)
+			if err != nil {
+				inst.Status = StatusBroken
+				inst.Errors = append(inst.Errors, fmt.Errorf("failed to get Info from %q: %w", haSock, err))
+			} else {
+				inst.SSHLocalPort = info.SSHLocalPort
+			}
+		}
 	}
 
 	inst.QemuPID, err = ReadPIDFile(filepath.Join(instDir, filenames.QemuPID))

@@ -112,7 +112,7 @@ func (a *HostAgent) StartDNS() (*dns.Server, error) {
 	if err != nil {
 		panic(err)
 	}
-	addr := fmt.Sprintf("127.0.0.1:%d", a.y.SSH.LocalPort)
+	addr := fmt.Sprintf("127.0.0.1:%d", a.udpDNSLocalPort)
 	server := &dns.Server{Net: "udp", Addr: addr, Handler: h}
 	go func() {
 		if e := server.ListenAndServe(); e != nil {

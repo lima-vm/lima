@@ -17,8 +17,10 @@ import (
 	"github.com/digitalocean/go-qemu/qmp"
 	"github.com/digitalocean/go-qemu/qmp/raw"
 	"github.com/hashicorp/go-multierror"
+	"github.com/lima-vm/lima/pkg/cidata"
 	guestagentapi "github.com/lima-vm/lima/pkg/guestagent/api"
 	guestagentclient "github.com/lima-vm/lima/pkg/guestagent/api/client"
+	hostagentapi "github.com/lima-vm/lima/pkg/hostagent/api"
 	"github.com/lima-vm/lima/pkg/hostagent/events"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/qemu"
@@ -30,12 +32,14 @@ import (
 )
 
 type HostAgent struct {
-	l             *logrus.Logger
-	y             *limayaml.LimaYAML
-	instDir       string
-	sshConfig     *ssh.SSHConfig
-	portForwarder *portForwarder
-	onClose       []func() error // LIFO
+	l               *logrus.Logger
+	y               *limayaml.LimaYAML
+	sshLocalPort    int
+	udpDNSLocalPort int
+	instDir         string
+	sshConfig       *ssh.SSHConfig
+	portForwarder   *portForwarder
+	onClose         []func() error // LIFO
 
 	qExe     string
 	qArgs    []string
@@ -68,10 +72,28 @@ func New(instName string, stdout, stderr io.Writer, sigintCh chan os.Signal) (*H
 	}
 	// y is loaded with FillDefault() already, so no need to care about nil pointers.
 
+	sshLocalPort, err := determineSSHLocalPort(y, instName)
+	if err != nil {
+		return nil, err
+	}
+
+	var udpDNSLocalPort int
+	if *y.UseHostResolver {
+		udpDNSLocalPort, err = findFreeUDPLocalPort()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if err := cidata.GenerateISO9660(inst.Dir, instName, y, udpDNSLocalPort); err != nil {
+		return nil, err
+	}
+
 	qCfg := qemu.Config{
-		Name:        instName,
-		InstanceDir: inst.Dir,
-		LimaYAML:    y,
+		Name:         instName,
+		InstanceDir:  inst.Dir,
+		LimaYAML:     y,
+		SSHLocalPort: sshLocalPort,
 	}
 	qExe, qArgs, err := qemu.Cmdline(qCfg)
 	if err != nil {
@@ -88,7 +110,7 @@ func New(instName string, stdout, stderr io.Writer, sigintCh chan os.Signal) (*H
 
 	rules := make([]limayaml.PortForward, 0, 3+len(y.PortForwards))
 	// Block ports 22 and sshLocalPort on all IPs
-	for _, port := range []int{sshGuestPort, y.SSH.LocalPort} {
+	for _, port := range []int{sshGuestPort, sshLocalPort} {
 		rule := limayaml.PortForward{GuestIP: net.IPv4zero, GuestPort: port, Ignore: true}
 		limayaml.FillPortForwardDefaults(&rule)
 		rules = append(rules, rule)
@@ -100,17 +122,83 @@ func New(instName string, stdout, stderr io.Writer, sigintCh chan os.Signal) (*H
 	rules = append(rules, rule)
 
 	a := &HostAgent{
-		l:             l,
-		y:             y,
-		instDir:       inst.Dir,
-		sshConfig:     sshConfig,
-		portForwarder: newPortForwarder(l, sshConfig, y.SSH.LocalPort, rules),
-		qExe:          qExe,
-		qArgs:         qArgs,
-		sigintCh:      sigintCh,
-		eventEnc:      json.NewEncoder(stdout),
+		l:               l,
+		y:               y,
+		sshLocalPort:    sshLocalPort,
+		udpDNSLocalPort: udpDNSLocalPort,
+		instDir:         inst.Dir,
+		sshConfig:       sshConfig,
+		portForwarder:   newPortForwarder(l, sshConfig, sshLocalPort, rules),
+		qExe:            qExe,
+		qArgs:           qArgs,
+		sigintCh:        sigintCh,
+		eventEnc:        json.NewEncoder(stdout),
 	}
 	return a, nil
+}
+
+func determineSSHLocalPort(y *limayaml.LimaYAML, instName string) (int, error) {
+	if y.SSH.LocalPort > 0 {
+		return y.SSH.LocalPort, nil
+	}
+	if y.SSH.LocalPort < 0 {
+		return 0, fmt.Errorf("invalid ssh local port %d", y.SSH.LocalPort)
+	}
+	switch instName {
+	case "default":
+		// use hard-coded value for "default" instance, for backward compatibility
+		return 60022, nil
+	default:
+		sshLocalPort, err := findFreeTCPLocalPort()
+		if err != nil {
+			return 0, fmt.Errorf("failed to find a free port, try setting `ssh.localPort` manually: %w", err)
+		}
+		return sshLocalPort, nil
+	}
+}
+
+func findFreeTCPLocalPort() (int, error) {
+	lAddr0, err := net.ResolveTCPAddr("tcp4", "127.0.0.1:0")
+	if err != nil {
+		return 0, err
+	}
+	l, err := net.ListenTCP("tcp4", lAddr0)
+	if err != nil {
+		return 0, err
+	}
+	defer l.Close()
+	lAddr := l.Addr()
+	lTCPAddr, ok := lAddr.(*net.TCPAddr)
+	if !ok {
+		return 0, fmt.Errorf("expected *net.TCPAddr, got %v", lAddr)
+	}
+	port := lTCPAddr.Port
+	if port <= 0 {
+		return 0, fmt.Errorf("unexpected port %d", port)
+	}
+	return port, nil
+}
+
+func findFreeUDPLocalPort() (int, error) {
+	lAddr0, err := net.ResolveUDPAddr("udp4", "127.0.0.1:0")
+	if err != nil {
+		return 0, err
+	}
+	l, err := net.ListenUDP("udp4", lAddr0)
+	if err != nil {
+		return 0, err
+	}
+	defer l.Close()
+	lAddr := l.LocalAddr()
+	lUDPAddr, ok := lAddr.(*net.UDPAddr)
+	if !ok {
+		return 0, fmt.Errorf("expected *net.UDPAddr, got %v", lAddr)
+	}
+	port := lUDPAddr.Port
+	if port <= 0 {
+		return 0, fmt.Errorf("unexpected port %d", port)
+	}
+	return port, nil
 }
 
 func (a *HostAgent) emitEvent(ctx context.Context, ev events.Event) {
@@ -172,12 +260,8 @@ func (a *HostAgent) Run(ctx context.Context) error {
 		qWaitCh <- qCmd.Wait()
 	}()
 
-	sshLocalPort := a.y.SSH.LocalPort // TODO: support dynamic port
-	if sshLocalPort < 0 {
-		return fmt.Errorf("invalid ssh local port %d", sshLocalPort)
-	}
 	stBase := events.Status{
-		SSHLocalPort: sshLocalPort,
+		SSHLocalPort: a.sshLocalPort,
 	}
 	stBooting := stBase
 	a.emitEvent(ctx, events.Event{Status: stBooting})
@@ -205,6 +289,12 @@ func (a *HostAgent) Run(ctx context.Context) error {
 			return qWaitErr
 		}
 	}
+}
+func (a *HostAgent) Info(ctx context.Context) (*hostagentapi.Info, error) {
+	info := &hostagentapi.Info{
+		SSHLocalPort: a.sshLocalPort,
+	}
+	return info, nil
 }
 
 func (a *HostAgent) shutdownQEMU(ctx context.Context, timeout time.Duration, qCmd *exec.Cmd, qWaitCh <-chan error) error {
@@ -251,7 +341,7 @@ func (a *HostAgent) killQEMU(ctx context.Context, timeout time.Duration, qCmd *e
 func (a *HostAgent) startHostAgentRoutines(ctx context.Context) error {
 	a.onClose = append(a.onClose, func() error {
 		a.l.Debugf("shutting down the SSH master")
-		if exitMasterErr := ssh.ExitMaster("127.0.0.1", a.y.SSH.LocalPort, a.sshConfig); exitMasterErr != nil {
+		if exitMasterErr := ssh.ExitMaster("127.0.0.1", a.sshLocalPort, a.sshConfig); exitMasterErr != nil {
 			a.l.WithError(exitMasterErr).Warn("failed to exit SSH master")
 		}
 		return nil
@@ -305,7 +395,7 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 				a.l.WithError(err).Warnf("failed to clean up %q (host) before setting up forwarding", localUnix)
 			}
 			a.l.Infof("Forwarding %q (guest) to %q (host)", remoteUnix, localUnix)
-			if err := forwardSSH(ctx, a.sshConfig, a.y.SSH.LocalPort, localUnix, remoteUnix, false); err != nil {
+			if err := forwardSSH(ctx, a.sshConfig, a.sshLocalPort, localUnix, remoteUnix, false); err != nil {
 				a.l.WithError(err).Warnf("failed to setting up forward from %q (guest) to %q (host)", remoteUnix, localUnix)
 			}
 		}
@@ -316,7 +406,7 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 		case <-ctx.Done():
 			a.l.Infof("Stopping forwarding %q to %q", remoteUnix, localUnix)
 			verbCancel := true
-			if err := forwardSSH(ctx, a.sshConfig, a.y.SSH.LocalPort, localUnix, remoteUnix, verbCancel); err != nil {
+			if err := forwardSSH(ctx, a.sshConfig, a.sshLocalPort, localUnix, remoteUnix, verbCancel); err != nil {
 				a.l.WithError(err).Warnf("failed to stop forwarding %q (remote) to %q (local)", remoteUnix, localUnix)
 			}
 			if err := os.RemoveAll(localUnix); err != nil {

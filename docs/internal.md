@@ -50,6 +50,7 @@ Guest agent:
 
 Host agent:
 - `ha.pid`: hostagent PID
+- `ha.sock`: hostagent REST API
 - `ha.stdout.log`: hostagent stdout (JSON lines, see `pkg/hostagent/events.Event`)
 - `ha.stderr.log`: hostagent stderr (human-readable messages)
 

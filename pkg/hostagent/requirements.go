@@ -42,7 +42,7 @@ func (a *HostAgent) waitForRequirements(ctx context.Context, label string, requi
 
 func (a *HostAgent) waitForRequirement(ctx context.Context, r requirement) error {
 	a.l.Debugf("executing script %q", r.description)
-	stdout, stderr, err := ssh.ExecuteScript("127.0.0.1", a.y.SSH.LocalPort, a.sshConfig, r.script, r.description)
+	stdout, stderr, err := ssh.ExecuteScript("127.0.0.1", a.sshLocalPort, a.sshConfig, r.script, r.description)
 	a.l.Debugf("stdout=%q, stderr=%q, err=%v", stdout, stderr, err)
 	if err != nil {
 		return fmt.Errorf("stdout=%q, stderr=%q: %w", stdout, stderr, err)

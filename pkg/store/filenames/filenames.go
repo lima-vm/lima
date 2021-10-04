@@ -8,7 +8,7 @@ package filenames
 
 const (
 	ConfigDir   = "_config"
-	CacheDir    = "_cache" // not yet implemented
+	CacheDir    = "_cache"    // not yet implemented
 	NetworksDir = "_networks" // network log files are stored here
 )
 
@@ -34,6 +34,7 @@ const (
 	SSHSock            = "ssh.sock"
 	GuestAgentSock     = "ga.sock"
 	HostAgentPID       = "ha.pid"
+	HostAgentSock      = "ha.sock"
 	HostAgentStdoutLog = "ha.stdout.log"
 	HostAgentStderrLog = "ha.stderr.log"
 )

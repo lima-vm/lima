@@ -1,3 +1,4 @@
+# This example requires Lima v0.7.0 or later
 images:
   - location: "https://cloud.debian.org/images/cloud/bullseye/daily/20211005-786/debian-11-generic-amd64-daily-20211005-786.qcow2"
     arch: "x86_64"
@@ -10,7 +11,3 @@ mounts:
     writable: false
   - location: "/tmp/lima"
     writable: true
-ssh:
-  # localPort is changed from 60022 to avoid conflicting with the default.
-  # (TODO: assign localPort automatically)
-  localPort: 60030

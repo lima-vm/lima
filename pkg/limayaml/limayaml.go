@@ -46,7 +46,7 @@ type Mount struct {
 }
 
 type SSH struct {
-	LocalPort int `yaml:"localPort,omitempty" json:"localPort,omitempty"` // REQUIRED (FIXME: auto assign)
+	LocalPort int `yaml:"localPort,omitempty" json:"localPort,omitempty"`
 
 	// LoadDotSSHPubKeys loads ~/.ssh/*.pub in addition to $LIMA_HOME/_config/user.pub .
 	// Default: true

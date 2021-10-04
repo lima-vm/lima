@@ -17,7 +17,7 @@ import (
 	"github.com/lima-vm/lima/pkg/iso9660util"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/networks"
-	"github.com/lima-vm/lima/pkg/qemu/const"
+	qemu "github.com/lima-vm/lima/pkg/qemu/const"
 	"github.com/lima-vm/lima/pkg/qemu/imgutil"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/mattn/go-shellwords"
@@ -25,9 +25,10 @@ import (
 )
 
 type Config struct {
-	Name        string
-	InstanceDir string
-	LimaYAML    *limayaml.LimaYAML
+	Name         string
+	InstanceDir  string
+	LimaYAML     *limayaml.LimaYAML
+	SSHLocalPort int
 }
 
 func EnsureDisk(cfg Config) error {
@@ -258,7 +259,7 @@ func Cmdline(cfg Config) (string, []string, error) {
 
 	// Network
 	args = append(args, "-netdev", fmt.Sprintf("user,id=net0,net=%s,dhcpstart=%s,hostfwd=tcp:127.0.0.1:%d-:22",
-		qemu.SlirpNetwork, qemu.SlirpIPAddress, y.SSH.LocalPort))
+		qemu.SlirpNetwork, qemu.SlirpIPAddress, cfg.SSHLocalPort))
 	args = append(args, "-device", "virtio-net-pci,netdev=net0,mac="+limayaml.MACAddress(cfg.InstanceDir))
 	if len(y.Networks) > 0 && !strings.Contains(string(features.NetdevHelp), "vde") {
 		return "", nil, fmt.Errorf("netdev \"vde\" is not supported by %s ( Hint: recompile QEMU with `configure --enable-vde` )", exe)

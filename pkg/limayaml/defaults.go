@@ -63,6 +63,7 @@ func FillDefault(y *LimaYAML, filePath string) {
 	if y.Video.Display == "" {
 		y.Video.Display = "none"
 	}
+	// y.SSH.LocalPort is not filled here (filled by the hostagent)
 	if y.SSH.LoadDotSSHPubKeys == nil {
 		y.SSH.LoadDotSSHPubKeys = &[]bool{true}[0]
 	}

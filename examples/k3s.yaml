@@ -8,6 +8,8 @@
 # $ kubectl get no
 # NAME       STATUS   ROLES                  AGE   VERSION
 # lima-k3s   Ready    control-plane,master   69s   v1.21.1+k3s1
+#
+# This example requires Lima v0.7.0 or later.
 
 images:
   # Hint: run `limactl prune` to invalidate the "current" cache
@@ -18,9 +20,6 @@ images:
 
 # Mounts are disabled in this example, but can be enabled optionally.
 mounts: []
-
-ssh:
-  localPort: 60022
 
 # containerd is managed by k3s, not by Lima, so the values are set to false here.
 containerd:
