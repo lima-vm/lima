@@ -16,7 +16,7 @@ done
 install -m 755 "${LIMA_CIDATA_MNT}"/lima-guestagent /usr/local/bin/lima-guestagent
 
 # Launch the guestagent service
-if [ -f /etc/alpine-release ]; then
+if [ -f /sbin/openrc-init ]; then
 	# Install the openrc lima-guestagent service script
 	cat >/etc/init.d/lima-guestagent <<'EOF'
 #!/sbin/openrc-run

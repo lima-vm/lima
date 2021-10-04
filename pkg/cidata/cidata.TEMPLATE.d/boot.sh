@@ -42,7 +42,7 @@ fi
 
 USER_SCRIPT="/home/${LIMA_CIDATA_USER}.linux/.lima-user-script"
 if [ -d "${LIMA_CIDATA_MNT}"/provision.user ]; then
-	if [ ! -f /etc/alpine-release ]; then
+	if [ ! -f /sbin/openrc-init ]; then
 		until [ -e "/run/user/${LIMA_CIDATA_UID}/systemd/private" ]; do sleep 3; done
 	fi
 	for f in "${LIMA_CIDATA_MNT}"/provision.user/*; do
