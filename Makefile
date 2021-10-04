@@ -55,7 +55,7 @@ _output/share/lima/lima-guestagent.Linux-aarch64:
 install:
 	mkdir -p "$(DEST)"
 	cp -av _output/* "$(DEST)"
-	if [[ $(shell uname -s ) != Linux && ! -e "$(DEST)/bin/nerdctl" ]]; then ln -sf nerdctl.lima "$(DEST)/bin/nerdctl"; fi
+	if [ "$(shell uname -s )" != "Linux" -a ! -e "$(DEST)/bin/nerdctl" ]; then ln -sf nerdctl.lima "$(DEST)/bin/nerdctl"; fi
 
 .PHONY: uninstall
 uninstall:
