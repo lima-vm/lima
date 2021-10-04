@@ -10,8 +10,8 @@ import (
 	"syscall"
 	"time"
 
-	hostagentapi "github.com/lima-vm/lima/pkg/hostagent/api"
-	"github.com/lima-vm/lima/pkg/networks/reconcile"
+	hostagentevents "github.com/lima-vm/lima/pkg/hostagent/events"
+	networks "github.com/lima-vm/lima/pkg/networks/reconcile"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/sirupsen/logrus"
@@ -78,7 +78,7 @@ func waitForHostAgentTermination(ctx context.Context, inst *store.Instance, begi
 	defer cancel()
 
 	var receivedExitingEvent bool
-	onEvent := func(ev hostagentapi.Event) bool {
+	onEvent := func(ev hostagentevents.Event) bool {
 		if len(ev.Status.Errors) > 0 {
 			logrus.Errorf("%+v", ev.Status.Errors)
 		}
@@ -92,7 +92,7 @@ func waitForHostAgentTermination(ctx context.Context, inst *store.Instance, begi
 	haStdoutPath := filepath.Join(inst.Dir, filenames.HostAgentStdoutLog)
 	haStderrPath := filepath.Join(inst.Dir, filenames.HostAgentStderrLog)
 
-	if err := hostagentapi.WatchEvents(ctx2, haStdoutPath, haStderrPath, begin, onEvent); err != nil {
+	if err := hostagentevents.Watch(ctx2, haStdoutPath, haStderrPath, begin, onEvent); err != nil {
 		return err
 	}
 
