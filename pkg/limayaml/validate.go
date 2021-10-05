@@ -165,7 +165,7 @@ func Validate(y LimaYAML, warn bool) error {
 		// processed sequentially and the first matching rule for a guest port determines forwarding behavior.
 	}
 
-	if *y.UseHostResolver && len(y.DNS) > 0 {
+	if y.UseHostResolver != nil && *y.UseHostResolver && len(y.DNS) > 0 {
 		return fmt.Errorf("field `dns` must be empty when field `useHostResolver` is true")
 	}
 
