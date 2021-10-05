@@ -11,6 +11,25 @@ import (
 	"github.com/lima-vm/lima/pkg/osutil"
 )
 
+func defaultContainerdArchives() []File {
+	const nerdctlVersion = "0.12.0"
+	location := func(goarch string) string {
+		return "https://github.com/containerd/nerdctl/releases/download/v" + nerdctlVersion + "/nerdctl-full-" + nerdctlVersion + "-linux-" + goarch + ".tar.gz"
+	}
+	return []File{
+		{
+			Location: location("amd64"),
+			Arch:     X8664,
+			Digest:   "sha256:7789800cfdd19fa9eccadb5e4a911e4ba759799ad9ec0b7929c983b9d149bc98",
+		},
+		{
+			Location: location("arm64"),
+			Arch:     AARCH64,
+			Digest:   "sha256:ebb05e22ac6a3c25ac88ca4f747feed89bfae8e447a626d0fedf3b4f40ac3303",
+		},
+	}
+}
+
 func MACAddress(uniqueID string) string {
 	sha := sha256.Sum256([]byte(osutil.MachineID() + uniqueID))
 	// "5" is the magic number in the Lima ecosystem.
@@ -59,6 +78,15 @@ func FillDefault(y *LimaYAML, filePath string) {
 	if y.Containerd.User == nil {
 		y.Containerd.User = &[]bool{true}[0]
 	}
+	if len(y.Containerd.Archives) == 0 {
+		y.Containerd.Archives = defaultContainerdArchives()
+	}
+	for i := range y.Containerd.Archives {
+		f := &y.Containerd.Archives[i]
+		if f.Arch == "" {
+			f.Arch = y.Arch
+		}
+	}
 	for i := range y.Probes {
 		probe := &y.Probes[i]
 		if probe.Mode == "" {
@@ -79,10 +107,10 @@ func FillDefault(y *LimaYAML, filePath string) {
 	if len(y.Network.VDEDeprecated) > 0 && len(y.Networks) == 0 {
 		for _, vde := range y.Network.VDEDeprecated {
 			network := Network{
-				Interface: vde.Name,
+				Interface:  vde.Name,
 				MACAddress: vde.MACAddress,
 				SwitchPort: vde.SwitchPort,
-				VNL: vde.VNL,
+				VNL:        vde.VNL,
 			}
 			y.Networks = append(y.Networks, network)
 		}

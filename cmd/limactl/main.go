@@ -79,6 +79,7 @@ func newApp() *cobra.Command {
 		newSudoersCommand(),
 		newPruneCommand(),
 		newHostagentCommand(),
+		newInfoCommand(),
 	)
 	return rootCmd
 }

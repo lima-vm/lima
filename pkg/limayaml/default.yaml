@@ -70,6 +70,12 @@ containerd:
   # Enable user-scoped (aka rootless) containerd and its dependencies
   # Default: true
   user: true
+#  # Override containerd archive
+#  # Default: hard-coded URL with hard-coded digest (see the output of `limactl info | jq .defaultTemplate.containerd.archives`)
+#  archives:
+#    - location: "~/Downloads/nerdctl-full-X.Y.Z-linux-amd64.tar.gz"
+#      arch: "x86_64"
+#      digest: "sha256:..."
 
 # Provisioning scripts need to be idempotent because they might be called
 # multiple times, e.g. when the host VM is being restarted.

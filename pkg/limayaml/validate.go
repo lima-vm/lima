@@ -14,7 +14,7 @@ import (
 	"github.com/lima-vm/lima/pkg/localpathutil"
 	"github.com/lima-vm/lima/pkg/networks"
 	"github.com/lima-vm/lima/pkg/osutil"
-	"github.com/lima-vm/lima/pkg/qemu/const"
+	qemu "github.com/lima-vm/lima/pkg/qemu/const"
 	"github.com/sirupsen/logrus"
 )
 
@@ -109,6 +109,10 @@ func Validate(y LimaYAML, warn bool) error {
 				i, ProvisionModeSystem, ProvisionModeUser)
 		}
 	}
+	needsContainerdArchives := (y.Containerd.User != nil && *y.Containerd.User) || (y.Containerd.System != nil && *y.Containerd.System)
+	if needsContainerdArchives && len(y.Containerd.Archives) == 0 {
+		return fmt.Errorf("field `containerd.archives` must be provided")
+	}
 	for i, p := range y.Probes {
 		switch p.Mode {
 		case ProbeModeReadiness:
@@ -161,7 +165,7 @@ func Validate(y LimaYAML, warn bool) error {
 		// processed sequentially and the first matching rule for a guest port determines forwarding behavior.
 	}
 
-	if *y.UseHostResolver && len(y.DNS) > 0 {
+	if y.UseHostResolver != nil && *y.UseHostResolver && len(y.DNS) > 0 {
 		return fmt.Errorf("field `dns` must be empty when field `useHostResolver` is true")
 	}
 
