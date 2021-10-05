@@ -143,6 +143,14 @@ func (a *HostAgent) Run(ctx context.Context) error {
 		a.emitEvent(ctx, exitingEv)
 	}()
 
+	if *a.y.UseHostResolver {
+		dnsServer, err := a.StartDNS()
+		if err != nil {
+			return fmt.Errorf("cannot start DNS server: %w", err)
+		}
+		defer func() { _ = dnsServer.Shutdown() }()
+	}
+
 	qCmd := exec.CommandContext(ctx, a.qExe, a.qArgs...)
 	qStdout, err := qCmd.StdoutPipe()
 	if err != nil {

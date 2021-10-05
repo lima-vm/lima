@@ -72,6 +72,9 @@ func FillDefault(y *LimaYAML, filePath string) {
 		FillPortForwardDefaults(&y.PortForwards[i])
 		// After defaults processing the singular HostPort and GuestPort values should not be used again.
 	}
+	if y.UseHostResolver == nil {
+		y.UseHostResolver = &[]bool{true}[0]
+	}
 
 	if len(y.Network.VDEDeprecated) > 0 && len(y.Networks) == 0 {
 		for _, vde := range y.Network.VDEDeprecated {

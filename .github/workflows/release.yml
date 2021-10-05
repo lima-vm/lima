@@ -10,13 +10,40 @@ on:
 env:
   GO111MODULE: on
 jobs:
-  release:
-    runs-on: ubuntu-20.04
+  artifacts-darwin:
+    name: Artifacts Darwin
+    runs-on: macos-11
     timeout-minutes: 20
     steps:
       - uses: actions/setup-go@v2
         with:
           go-version: 1.17.x
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+      - name: Make darwin artifacts
+        run: make artifacts-darwin
+      - name: "Upload artifacts"
+        uses: actions/upload-artifact@v2
+        with:
+          name: artifacts-darwin
+          path: _artifact/
+  release:
+    runs-on: ubuntu-20.04
+    needs: artifacts-darwin
+    timeout-minutes: 20
+    steps:
+      - uses: actions/download-artifact@v2
+        with:
+          name: artifacts-darwin
+          path: _artifact/
+      - uses: actions/setup-go@v2
+        with:
+          go-version: 1.17.x
+      - name: Install gcc-aarch64-linux-gnu
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
       - uses: actions/checkout@v2
       - name: "Compile binaries"
         run: make artifacts
