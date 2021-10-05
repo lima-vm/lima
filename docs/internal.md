@@ -50,7 +50,7 @@ Guest agent:
 
 Host agent:
 - `ha.pid`: hostagent PID
-- `ha.stdout.log`: hostagent stdout (JSON lines, see `pkg/hostagent/api.Events`)
+- `ha.stdout.log`: hostagent stdout (JSON lines, see `pkg/hostagent/events.Event`)
 - `ha.stderr.log`: hostagent stderr (human-readable messages)
 
 ## Lima cache directory (`~/Library/Caches/lima`)

@@ -19,7 +19,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	guestagentapi "github.com/lima-vm/lima/pkg/guestagent/api"
 	guestagentclient "github.com/lima-vm/lima/pkg/guestagent/api/client"
-	hostagentapi "github.com/lima-vm/lima/pkg/hostagent/api"
+	"github.com/lima-vm/lima/pkg/hostagent/events"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/qemu"
 	"github.com/lima-vm/lima/pkg/sshutil"
@@ -114,7 +114,7 @@ func New(instName string, stdout, stderr io.Writer, sigintCh chan os.Signal) (*H
 	return a, nil
 }
 
-func (a *HostAgent) emitEvent(ctx context.Context, ev hostagentapi.Event) {
+func (a *HostAgent) emitEvent(ctx context.Context, ev events.Event) {
 	a.eventEncMu.Lock()
 	defer a.eventEncMu.Unlock()
 	if ev.Time.IsZero() {
@@ -135,8 +135,8 @@ func logPipeRoutine(l *logrus.Logger, r io.Reader, header string) {
 
 func (a *HostAgent) Run(ctx context.Context) error {
 	defer func() {
-		exitingEv := hostagentapi.Event{
-			Status: hostagentapi.Status{
+		exitingEv := events.Event{
+			Status: events.Status{
 				Exiting: true,
 			},
 		}
@@ -177,11 +177,11 @@ func (a *HostAgent) Run(ctx context.Context) error {
 	if sshLocalPort < 0 {
 		return fmt.Errorf("invalid ssh local port %d", sshLocalPort)
 	}
-	stBase := hostagentapi.Status{
+	stBase := events.Status{
 		SSHLocalPort: sshLocalPort,
 	}
 	stBooting := stBase
-	a.emitEvent(ctx, hostagentapi.Event{Status: stBooting})
+	a.emitEvent(ctx, events.Event{Status: stBooting})
 
 	go func() {
 		stRunning := stBase
@@ -190,7 +190,7 @@ func (a *HostAgent) Run(ctx context.Context) error {
 			stRunning.Errors = append(stRunning.Errors, haErr.Error())
 		}
 		stRunning.Running = true
-		a.emitEvent(ctx, hostagentapi.Event{Status: stRunning})
+		a.emitEvent(ctx, events.Event{Status: stRunning})
 	}()
 
 	for {

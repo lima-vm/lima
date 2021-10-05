@@ -1,4 +1,4 @@
-package api
+package events
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func WatchEvents(ctx context.Context, haStdoutPath, haStderrPath string, begin time.Time, onEvent func(Event) bool) error {
+func Watch(ctx context.Context, haStdoutPath, haStderrPath string, begin time.Time, onEvent func(Event) bool) error {
 	haStdoutTail, err := tail.TailFile(haStdoutPath,
 		tail.Config{
 			Follow:    true,

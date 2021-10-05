@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/lima-vm/lima/pkg/cidata"
-	hostagentapi "github.com/lima-vm/lima/pkg/hostagent/api"
+	hostagentevents "github.com/lima-vm/lima/pkg/hostagent/events"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/qemu"
 	"github.com/lima-vm/lima/pkg/store"
@@ -72,10 +72,16 @@ func Start(ctx context.Context, inst *store.Instance) error {
 	}
 	// no defer haStderrW.Close()
 
-	haCmd := exec.CommandContext(ctx, self,
+	var args []string
+	if logrus.GetLevel() >= logrus.DebugLevel {
+		args = append(args, "--debug")
+	}
+	args = append(args,
 		"hostagent",
 		"--pidfile", haPIDPath,
 		inst.Name)
+	haCmd := exec.CommandContext(ctx, self, args...)
+
 	haCmd.Stdout = haStdoutW
 	haCmd.Stderr = haStderrW
 
@@ -134,7 +140,7 @@ func watchHostAgentEvents(ctx context.Context, instName, haStdoutPath, haStderrP
 		receivedRunningEvent bool
 		err                  error
 	)
-	onEvent := func(ev hostagentapi.Event) bool {
+	onEvent := func(ev hostagentevents.Event) bool {
 		if !printedSSHLocalPort && ev.Status.SSHLocalPort != 0 {
 			logrus.Infof("SSH Local Port: %d", ev.Status.SSHLocalPort)
 			printedSSHLocalPort = true
@@ -161,7 +167,7 @@ func watchHostAgentEvents(ctx context.Context, instName, haStdoutPath, haStderrP
 		return false
 	}
 
-	if xerr := hostagentapi.WatchEvents(ctx2, haStdoutPath, haStderrPath, begin, onEvent); xerr != nil {
+	if xerr := hostagentevents.Watch(ctx2, haStdoutPath, haStderrPath, begin, onEvent); xerr != nil {
 		return xerr
 	}
 
