@@ -90,7 +90,7 @@ jobs:
   integration:
     name: Integration tests
     runs-on: macos-11
-    timeout-minutes: 40
+    timeout-minutes: 60
     strategy:
       matrix:
         # GHA macOS is slow and flaky, so we only test a few YAMLS here.
@@ -163,9 +163,12 @@ jobs:
           path: ~/Library/Caches/lima/download
           key: ${{ runner.os }}-examples/${{ matrix.example }}
       - name: Test
-        env:
-          EXAMPLE: ${{ matrix.example }}
-        run: ./hack/test-example.sh examples/$EXAMPLE
+        uses: nick-invision/retry@v2
+        with:
+          timeout_minutes: 15
+          retry_on: error
+          max_attempts: 3
+          command: ./hack/test-example.sh examples/${{ matrix.example }}
 
   artifacts-darwin:
     name: Artifacts Darwin
