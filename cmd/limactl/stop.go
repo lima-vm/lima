@@ -22,7 +22,7 @@ func newStopCommand() *cobra.Command {
 	var stopCmd = &cobra.Command{
 		Use:               "stop INSTANCE",
 		Short:             "Stop an instance",
-		Args:              cobra.ExactArgs(1),
+		Args:              cobra.MaximumNArgs(1),
 		RunE:              stopAction,
 		ValidArgsFunction: stopBashComplete,
 	}
@@ -32,9 +32,9 @@ func newStopCommand() *cobra.Command {
 }
 
 func stopAction(cmd *cobra.Command, args []string) error {
-	instName := args[0]
-	if instName == "" {
-		instName = DefaultInstanceName
+	instName := DefaultInstanceName
+	if len(args) > 0 {
+		instName = args[0]
 	}
 
 	inst, err := store.Inspect(instName)
