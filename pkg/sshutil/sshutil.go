@@ -158,6 +158,18 @@ func CommonArgs(useDotSSH bool) ([]string, error) {
 		"-o", "IdentitiesOnly=yes",
 		"-F", "/dev/null",
 	)
+
+	// By default, `ssh` choose chacha20-poly1305@openssh.com, even when AES accelerator is available.
+	// (OpenSSH_8.1p1, macOS 11.6, MacBookPro 2020, Core i7-1068NG7)
+	//
+	// We prioritize AES algorithms when AES accelerator is available.
+	if aesAccelerated {
+		logrus.Debugf("AES accelerator seems available, prioritizing aes128-gcm@openssh.com and aes256-gcm@openssh.com")
+		args = append(args, "-o", "Ciphers=^aes128-gcm@openssh.com,aes256-gcm@openssh.com")
+	} else {
+		logrus.Debugf("AES accelerator does not seem available, prioritizing chacha20-poly1305@openssh.com")
+		args = append(args, "-o", "Ciphers=^chacha20-poly1305@openssh.com")
+	}
 	return args, nil
 }
 
@@ -182,3 +194,8 @@ func SSHArgs(instDir string, useDotSSH bool) ([]string, error) {
 	)
 	return args, nil
 }
+
+// aesAccelerated is set to true when AES acceleration is available.
+//
+// Available on almost all modern Intel/AMD processors.
+var aesAccelerated = detectAESAcceleration()
