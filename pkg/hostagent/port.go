@@ -68,7 +68,7 @@ func (pf *portForwarder) OnEvent(ctx context.Context, ev api.Event) {
 		}
 		pf.l.Infof("Stopping forwarding TCP from %s to %s", remote, local)
 		verbCancel := true
-		if err := forwardSSH(ctx, pf.sshConfig, pf.sshHostPort, local, remote, verbCancel); err != nil {
+		if err := forwardTCP(ctx, pf.l, pf.sshConfig, pf.sshHostPort, local, remote, verbCancel); err != nil {
 			if _, ok := pf.tcp[f.Port]; ok {
 				pf.l.WithError(err).Warnf("failed to stop forwarding TCP port %d", f.Port)
 			} else {
@@ -84,7 +84,7 @@ func (pf *portForwarder) OnEvent(ctx context.Context, ev api.Event) {
 			continue
 		}
 		pf.l.Infof("Forwarding TCP from %s to %s", remote, local)
-		if err := forwardSSH(ctx, pf.sshConfig, pf.sshHostPort, local, remote, false); err != nil {
+		if err := forwardTCP(ctx, pf.l, pf.sshConfig, pf.sshHostPort, local, remote, false); err != nil {
 			pf.l.WithError(err).Warnf("failed to set up forwarding TCP port %d (negligible if already forwarded)", f.Port)
 		} else {
 			pf.tcp[f.Port] = struct{}{}

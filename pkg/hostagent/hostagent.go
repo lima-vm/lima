@@ -26,7 +26,6 @@ import (
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/lima-vm/sshocker/pkg/ssh"
-
 	"github.com/sirupsen/logrus"
 )
 

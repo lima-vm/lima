@@ -140,7 +140,7 @@ func FillPortForwardDefaults(rule *PortForward) {
 	}
 	if rule.GuestPortRange[0] == 0 && rule.GuestPortRange[1] == 0 {
 		if rule.GuestPort == 0 {
-			rule.GuestPortRange[0] = 1024
+			rule.GuestPortRange[0] = 1
 			rule.GuestPortRange[1] = 65535
 		} else {
 			rule.GuestPortRange[0] = rule.GuestPort

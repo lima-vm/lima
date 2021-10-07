@@ -77,9 +77,6 @@ $ lima nerdctl run -d --name nginx -p 127.0.0.1:8080:80 nginx:alpine
 
 http://127.0.0.1:8080 is accessible from both macOS and Linux.
 
-> **NOTE**
-> Privileged ports (1-1023) cannot be forwarded
-
 For the usage of containerd and nerdctl (contaiNERD ctl), visit https://github.com/containerd/containerd and https://github.com/containerd/nerdctl.
 
 ## Getting started
@@ -318,7 +315,11 @@ Note: **Only** on macOS versions **before** 10.15.7 you might need to add this e
 
 ### SSH
 #### "Port forwarding does not work"
-Privileged ports (1-1023) cannot be forwarded. e.g., you have to use 8080, not 80.
+Prior to Lima v0.7.0, Lima did not support forwarding privileged ports (1-1023). e.g., you had to use 8080, not 80.
+
+Lima v0.7.0 and later supports forwarding privileged ports on macOS hosts.
+
+On Linux hosts, you might have to set sysctl value `net.ipv4.ip_unprivileged_port_start=0`.
 
 #### stuck on "Waiting for the essential requirement 1 of X: "ssh"
 
