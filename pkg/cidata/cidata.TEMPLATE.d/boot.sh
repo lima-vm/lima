@@ -12,17 +12,16 @@ WARNING() {
 # shellcheck disable=SC2163
 while read -r line; do export "$line"; done <"${LIMA_CIDATA_MNT}"/lima.env
 
-if [ -e /etc/environment ]; then
-	sed -i '/#LIMA-START/,/#LIMA-END/d' /etc/environment
-fi
-cat "${LIMA_CIDATA_MNT}/etc_environment" >>/etc/environment
-
 # shellcheck disable=SC2163
 while read -r line; do
 	[ "$(expr "$line" : '#')" -eq 0 ] && export "$line"
 done <"${LIMA_CIDATA_MNT}"/etc_environment
 
 CODE=0
+
+# Don't make any changes to /etc or /var/lib until the boot/* scripts have run
+# because they might move the directories to /mnt/data on first boot, so changes
+# made on restart would be lost.
 
 for f in "${LIMA_CIDATA_MNT}"/boot/*; do
 	INFO "Executing $f"
@@ -31,6 +30,11 @@ for f in "${LIMA_CIDATA_MNT}"/boot/*; do
 		CODE=1
 	fi
 done
+
+if [ -e /etc/environment ]; then
+	sed -i '/#LIMA-START/,/#LIMA-END/d' /etc/environment
+fi
+cat "${LIMA_CIDATA_MNT}/etc_environment" >>/etc/environment
 
 if [ -d "${LIMA_CIDATA_MNT}"/provision.system ]; then
 	for f in "${LIMA_CIDATA_MNT}"/provision.system/*; do
