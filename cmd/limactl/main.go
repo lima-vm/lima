@@ -80,6 +80,7 @@ func newApp() *cobra.Command {
 		newPruneCommand(),
 		newHostagentCommand(),
 		newInfoCommand(),
+		newCompletionCmd(),
 	)
 	return rootCmd
 }
