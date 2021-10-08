@@ -27,7 +27,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: artifacts-darwin
-          path: _artifact/
+          path: _artifacts/
   release:
     runs-on: ubuntu-20.04
     needs: artifacts-darwin
@@ -36,7 +36,7 @@ jobs:
       - uses: actions/download-artifact@v2
         with:
           name: artifacts-darwin
-          path: _artifact/
+          path: _artifacts/
       - uses: actions/setup-go@v2
         with:
           go-version: 1.17.x
