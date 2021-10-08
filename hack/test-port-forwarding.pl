@@ -245,11 +245,9 @@ portForwards:
   # forward: ::        3032 → ipv4 2032
   # forward: ::1       3033 → ipv4 2033
 
-# Forwarding privileged ports to 127.0.0.1 does not work yet
 - guestPortRange: [300, 309]
 
-  # Hostagent will try to setup forward, but ssh will fail to bind to port
-  # skip: 127.0.0.1 300 → 127.0.0.1 300
+  # forward: 127.0.0.1 300 → 127.0.0.1 300
 
 - guestPortRange: [310, 319]
   hostIP: 0.0.0.0
