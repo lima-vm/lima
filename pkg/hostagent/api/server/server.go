@@ -6,14 +6,12 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/lima-vm/lima/pkg/guestagent"
-	"github.com/lima-vm/lima/pkg/guestagent/api"
+	"github.com/lima-vm/lima/pkg/hostagent"
 	"github.com/lima-vm/lima/pkg/httputil"
-	"github.com/sirupsen/logrus"
 )
 
 type Backend struct {
-	Agent guestagent.Agent
+	Agent *hostagent.HostAgent
 }
 
 func (b *Backend) onError(w http.ResponseWriter, r *http.Request, err error, ec int) {
@@ -48,36 +46,7 @@ func (b *Backend) GetInfo(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(m)
 }
 
-// GetEvents is the handler for GET /v{N}/events.
-func (b *Backend) GetEvents(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	flusher, ok := w.(http.Flusher)
-	if !ok {
-		panic("http.ResponseWriter has to implement http.Flusher")
-	}
-
-	w.Header().Set("Content-Type", "application/x-ndjson")
-	w.WriteHeader(http.StatusOK)
-	flusher.Flush()
-
-	ch := make(chan api.Event)
-	go b.Agent.Events(ctx, ch)
-
-	enc := json.NewEncoder(w)
-	for ev := range ch {
-		if err := enc.Encode(ev); err != nil {
-			logrus.Warn(err)
-			return
-		}
-		flusher.Flush()
-	}
-}
-
 func AddRoutes(r *mux.Router, b *Backend) {
 	v1 := r.PathPrefix("/v1").Subrouter()
 	v1.Path("/info").Methods("GET").HandlerFunc(b.GetInfo)
-	v1.Path("/events").Methods("GET").HandlerFunc(b.GetEvents)
 }

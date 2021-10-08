@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/lima-vm/lima/pkg/cidata"
 	hostagentevents "github.com/lima-vm/lima/pkg/hostagent/events"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/qemu"
@@ -19,9 +18,6 @@ import (
 )
 
 func ensureDisk(ctx context.Context, instName, instDir string, y *limayaml.LimaYAML) error {
-	if err := cidata.GenerateISO9660(instDir, instName, y); err != nil {
-		return err
-	}
 	qCfg := qemu.Config{
 		Name:        instName,
 		InstanceDir: instDir,
@@ -39,6 +35,8 @@ func Start(ctx context.Context, inst *store.Instance) error {
 	if _, err := os.Stat(haPIDPath); !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("instance %q seems running (hint: remove %q if the instance is not actually running)", inst.Name, haPIDPath)
 	}
+
+	haSockPath := filepath.Join(inst.Dir, filenames.HostAgentSock)
 
 	y, err := inst.LoadYAML()
 	if err != nil {
@@ -79,6 +77,7 @@ func Start(ctx context.Context, inst *store.Instance) error {
 	args = append(args,
 		"hostagent",
 		"--pidfile", haPIDPath,
+		"--socket", haSockPath,
 		inst.Name)
 	haCmd := exec.CommandContext(ctx, self, args...)
 

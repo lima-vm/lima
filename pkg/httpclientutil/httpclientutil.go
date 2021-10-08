@@ -14,7 +14,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/lima-vm/lima/pkg/guestagent/api"
+	"github.com/lima-vm/lima/pkg/httputil"
 )
 
 // NewHTTPClientWithSocketPath creates a client.
@@ -78,11 +78,11 @@ type HTTPStatusError struct {
 }
 
 // Error implements error.
-// If e.Body is a marshalled string of api.ErrorJSON, Error returns ErrorJSON.Message .
+// If e.Body is a marshalled string of httputil.ErrorJSON, Error returns ErrorJSON.Message .
 // Otherwise Error returns a human-readable string that contains e.StatusCode and e.Body.
 func (e *HTTPStatusError) Error() string {
 	if e.Body != "" && len(e.Body) < HTTPStatusErrorBodyMaxLength {
-		var ej api.ErrorJSON
+		var ej httputil.ErrorJSON
 		if json.Unmarshal([]byte(e.Body), &ej) == nil {
 			return ej.Message
 		}

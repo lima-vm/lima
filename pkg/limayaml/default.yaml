@@ -47,9 +47,8 @@ mounts:
 
 ssh:
   # A localhost port of the host. Forwarded to port 22 of the guest.
-  # Currently, this port number has to be specified manually.
-  # Default: none
-  localPort: 60022
+  # Default: 0 (automatically assigned to a free port)
+  localPort: 0
   # Load ~/.ssh/*.pub in addition to $LIMA_HOME/_config/user.pub .
   # This option is useful when you want to use other SSH-based
   # applications such as rsync with the Lima instance.

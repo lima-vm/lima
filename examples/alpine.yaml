@@ -1,3 +1,4 @@
+# This example requires Lima v0.7.0 or later.
 images:
 - location: https://github.com/lima-vm/alpine-lima/releases/download/v0.1.8/alpine-lima-std-3.13.5-x86_64.iso
   arch: "x86_64"
@@ -8,11 +9,6 @@ mounts:
   writable: false
 - location: "/tmp/lima"
   writable: true
-
-ssh:
-  # localPort is changed from 60022 to avoid conflicting with the default.
-  # (TODO: assign localPort automatically)
-  localPort: 60020
 
 firmware:
   legacyBIOS: true

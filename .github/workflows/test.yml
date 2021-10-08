@@ -90,7 +90,7 @@ jobs:
   integration:
     name: Integration tests
     runs-on: macos-11
-    timeout-minutes: 60
+    timeout-minutes: 120
     strategy:
       matrix:
         # GHA macOS is slow and flaky, so we only test a few YAMLS here.
@@ -165,7 +165,7 @@ jobs:
       - name: Test
         uses: nick-invision/retry@v2
         with:
-          timeout_minutes: 15
+          timeout_minutes: 30
           retry_on: error
           max_attempts: 3
           command: ./hack/test-example.sh examples/${{ matrix.example }}

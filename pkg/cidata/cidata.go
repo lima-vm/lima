@@ -65,7 +65,7 @@ func setupEnv(y *limayaml.LimaYAML) (map[string]string, error) {
 	return env, nil
 }
 
-func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML) error {
+func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort int) error {
 	if err := limayaml.Validate(*y, false); err != nil {
 		return err
 	}
@@ -78,13 +78,13 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML) error {
 		return err
 	}
 	args := TemplateArgs{
-		Name:            name,
-		User:            u.Username,
-		UID:             uid,
-		Containerd:      Containerd{System: *y.Containerd.System, User: *y.Containerd.User},
-		SlirpNICName:    qemu.SlirpNICName,
-		SlirpGateway:    qemu.SlirpGateway,
-		SlirpDNS:        qemu.SlirpDNS,
+		Name:         name,
+		User:         u.Username,
+		UID:          uid,
+		Containerd:   Containerd{System: *y.Containerd.System, User: *y.Containerd.User},
+		SlirpNICName: qemu.SlirpNICName,
+		SlirpGateway: qemu.SlirpGateway,
+		SlirpDNS:     qemu.SlirpDNS,
 	}
 
 	// change instance id on every boot so network config will be processed again
@@ -120,7 +120,7 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML) error {
 		return err
 	}
 	if *y.UseHostResolver {
-		args.UDPDNSLocalPort = y.SSH.LocalPort
+		args.UDPDNSLocalPort = udpDNSLocalPort
 		args.DNSAddresses = append(args.DNSAddresses, qemu.SlirpDNS)
 	} else if len(y.DNS) > 0 {
 		for _, addr := range y.DNS {

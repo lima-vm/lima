@@ -95,8 +95,10 @@ func Validate(y LimaYAML, warn bool) error {
 		}
 	}
 
-	if err := validatePort("ssh.localPort", y.SSH.LocalPort); err != nil {
-		return err
+	if y.SSH.LocalPort != 0 {
+		if err := validatePort("ssh.localPort", y.SSH.LocalPort); err != nil {
+			return err
+		}
 	}
 
 	// y.Firmware.LegacyBIOS is ignored for aarch64, but not a fatal error.

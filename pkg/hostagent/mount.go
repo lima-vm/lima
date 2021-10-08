@@ -44,7 +44,7 @@ func (a *HostAgent) setupMount(ctx context.Context, m limayaml.Mount) (*mount, e
 		SSHConfig:  a.sshConfig,
 		LocalPath:  expanded,
 		Host:       "127.0.0.1",
-		Port:       a.y.SSH.LocalPort,
+		Port:       a.sshLocalPort,
 		RemotePath: expanded,
 		Readonly:   !m.Writable,
 		// NOTE: allow_other requires "user_allow_other" in /etc/fuse.conf
