@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/docker/go-units"
 	hostagentclient "github.com/lima-vm/lima/pkg/hostagent/api/client"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/store/filenames"
@@ -30,6 +31,9 @@ type Instance struct {
 	Status       Status             `json:"status"`
 	Dir          string             `json:"dir"`
 	Arch         limayaml.Arch      `json:"arch"`
+	CPUs         int                `json:"cpus,omitempty"`
+	Memory       int64              `json:"memory,omitempty"` // bytes
+	Disk         int64              `json:"disk,omitempty"`   // bytes
 	Networks     []limayaml.Network `json:"network,omitempty"`
 	SSHLocalPort int                `json:"sshLocalPort,omitempty"`
 	HostAgentPID int                `json:"hostAgentPID,omitempty"`
@@ -68,6 +72,15 @@ func Inspect(instName string) (*Instance, error) {
 	}
 	inst.Dir = instDir
 	inst.Arch = y.Arch
+	inst.CPUs = y.CPUs
+	memory, err := units.RAMInBytes(y.Memory)
+	if err == nil {
+		inst.Memory = memory
+	}
+	disk, err := units.RAMInBytes(y.Disk)
+	if err == nil {
+		inst.Disk = disk
+	}
 	inst.Networks = y.Networks
 	inst.SSHLocalPort = y.SSH.LocalPort // maybe 0
 
