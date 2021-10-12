@@ -1,9 +1,11 @@
 # This example requires Lima v0.7.0 or later.
-arch: "x86_64"
 images:
   - location: "https://download.fedoraproject.org/pub/fedora/linux/releases/34/Cloud/x86_64/images/Fedora-Cloud-Base-34-1.2.x86_64.qcow2"
     arch: "x86_64"
     digest: "sha256:b9b621b26725ba95442d9a56cbaa054784e0779a9522ec6eafff07c6e6f717ea"
+  - location: "https://download.fedoraproject.org/pub/fedora/linux/releases/34/Cloud/aarch64/images/Fedora-Cloud-Base-34-1.2.aarch64.qcow2"
+    arch: "aarch64"
+    digest: "sha256:141f16f52bfbe159947267658a0dbfbbe96fd5b988a95d1271f9c9ed61156da2"
 mounts:
   - location: "~"
     writable: false
