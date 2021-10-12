@@ -67,7 +67,7 @@ files under /Users on macOS filesystem are readable from Linux
 $ lima sh -c 'echo "/tmp/lima is writable from both macOS and Linux" > /tmp/lima/another-file'
 
 $ cat /tmp/lima/another-file
-/tmp/lima is writable from both macOS and Linux"
+/tmp/lima is writable from both macOS and Linux
 ```
 
 ### Running containerd containers (compatible with Docker containers)
