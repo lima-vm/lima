@@ -102,13 +102,22 @@ func DefaultPubKeys(loadDotSSH bool) ([]PubKey, error) {
 	return res, nil
 }
 
-func CommonArgs(useDotSSH bool) ([]string, error) {
+// PrivateKeyPath returns the path to the private key
+func PrivateKeyPath() (string, error) {
 	configDir, err := dirnames.LimaConfigDir()
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	privateKeyPath := filepath.Join(configDir, filenames.UserPrivateKey)
 	_, err = os.Stat(privateKeyPath)
+	if err != nil {
+		return "", err
+	}
+	return privateKeyPath, nil
+}
+
+func CommonArgs(useDotSSH bool) ([]string, error) {
+	privateKeyPath, err := PrivateKeyPath()
 	if err != nil {
 		return nil, err
 	}

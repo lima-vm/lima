@@ -14,6 +14,7 @@ import (
 	"github.com/docker/go-units"
 	hostagentclient "github.com/lima-vm/lima/pkg/hostagent/api/client"
 	"github.com/lima-vm/lima/pkg/limayaml"
+	"github.com/lima-vm/lima/pkg/sshutil"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 )
 
@@ -27,18 +28,19 @@ const (
 )
 
 type Instance struct {
-	Name         string             `json:"name"`
-	Status       Status             `json:"status"`
-	Dir          string             `json:"dir"`
-	Arch         limayaml.Arch      `json:"arch"`
-	CPUs         int                `json:"cpus,omitempty"`
-	Memory       int64              `json:"memory,omitempty"` // bytes
-	Disk         int64              `json:"disk,omitempty"`   // bytes
-	Networks     []limayaml.Network `json:"network,omitempty"`
-	SSHLocalPort int                `json:"sshLocalPort,omitempty"`
-	HostAgentPID int                `json:"hostAgentPID,omitempty"`
-	QemuPID      int                `json:"qemuPID,omitempty"`
-	Errors       []error            `json:"errors,omitempty"`
+	Name            string             `json:"name"`
+	Status          Status             `json:"status"`
+	Dir             string             `json:"dir"`
+	Arch            limayaml.Arch      `json:"arch"`
+	CPUs            int                `json:"cpus,omitempty"`
+	Memory          int64              `json:"memory,omitempty"` // bytes
+	Disk            int64              `json:"disk,omitempty"`   // bytes
+	Networks        []limayaml.Network `json:"network,omitempty"`
+	SSHLocalPort    int                `json:"sshLocalPort,omitempty"`
+	SSHIdentityFile string             `json:"sshIdentityFile,omitempty"`
+	HostAgentPID    int                `json:"hostAgentPID,omitempty"`
+	QemuPID         int                `json:"qemuPID,omitempty"`
+	Errors          []error            `json:"errors,omitempty"`
 }
 
 func (inst *Instance) LoadYAML() (*limayaml.LimaYAML, error) {
@@ -83,6 +85,11 @@ func Inspect(instName string) (*Instance, error) {
 	}
 	inst.Networks = y.Networks
 	inst.SSHLocalPort = y.SSH.LocalPort // maybe 0
+
+	identity, err := sshutil.PrivateKeyPath()
+	if err == nil {
+		inst.SSHIdentityFile = identity
+	}
 
 	inst.HostAgentPID, err = ReadPIDFile(filepath.Join(instDir, filenames.HostAgentPID))
 	if err != nil {
