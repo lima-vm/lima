@@ -235,14 +235,17 @@ func Cmdline(cfg Config) (string, []string, error) {
 	args = appendArgsIfNoConflict(args, "-m", strconv.Itoa(int(memBytes>>20)))
 
 	// Firmware
-	if !y.Firmware.LegacyBIOS {
+	legacyBIOS := y.Firmware.LegacyBIOS
+	if legacyBIOS && y.Arch != limayaml.X8664 {
+		logrus.Warnf("field `firmware.legacyBIOS` is not supported for architecture %q, ignoring", y.Arch)
+		legacyBIOS = false
+	}
+	if !legacyBIOS {
 		firmware, err := getFirmware(exe, y.Arch)
 		if err != nil {
 			return "", nil, err
 		}
 		args = append(args, "-drive", fmt.Sprintf("if=pflash,format=raw,readonly=on,file=%s", firmware))
-	} else if y.Arch != limayaml.X8664 {
-		logrus.Warnf("field `firmware.legacyBIOS` is not supported for architecture %q, ignoring", y.Arch)
 	}
 
 	baseDisk := filepath.Join(cfg.InstanceDir, filenames.BaseDisk)
