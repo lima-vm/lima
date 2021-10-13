@@ -10,7 +10,7 @@ for f in .profile .bashrc; do
 		cat >>"/home/${LIMA_CIDATA_USER}.linux/$f" <<EOF
 # Lima BEGIN
 # Make sure iptables and mount.fuse3 are available
-PATH="$PATH:/usr/sbin:/sbin"
+PATH="\$PATH:/usr/sbin:/sbin"
 # fuse-overlayfs is the most stable snapshotter for rootless
 CONTAINERD_SNAPSHOTTER="fuse-overlayfs"
 export PATH CONTAINERD_SNAPSHOTTER
