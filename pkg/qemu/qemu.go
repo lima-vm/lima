@@ -422,6 +422,8 @@ func getFirmware(qemuExe string, arch limayaml.Arch) (string, error) {
 		candidates = append(candidates, "/usr/share/qemu/ovmf-x86_64-code.bin")
 	case limayaml.AARCH64:
 		// Debian package "qemu-efi-aarch64"
+		candidates = append(candidates, "/usr/share/AAVMF/AAVMF_CODE.fd")
+		// Debian package "qemu-efi-aarch64" (unpadded, backwards compatibility)
 		candidates = append(candidates, "/usr/share/qemu-efi-aarch64/QEMU_EFI.fd")
 	}
 
