@@ -16,7 +16,7 @@ func newDeleteCommand() *cobra.Command {
 		Use:               "delete INSTANCE [INSTANCE, ...]",
 		Aliases:           []string{"remove", "rm"},
 		Short:             "Delete an instance of Lima.",
-		Args:              cobra.MinimumNArgs(1),
+		Args:              cobra.MinimumNArgs(0),
 		RunE:              deleteAction,
 		ValidArgsFunction: deleteBashComplete,
 	}
@@ -25,6 +25,9 @@ func newDeleteCommand() *cobra.Command {
 }
 
 func deleteAction(cmd *cobra.Command, args []string) error {
+	if len(args) == 0 {
+		args = append(args, DefaultInstanceName)
+	}
 	force, err := cmd.Flags().GetBool("force")
 	if err != nil {
 		return err
