@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/sshocker/pkg/ssh"
+	"github.com/sirupsen/logrus"
 )
 
 func (a *HostAgent) waitForRequirements(ctx context.Context, label string, requirements []requirement) error {
@@ -20,14 +21,14 @@ func (a *HostAgent) waitForRequirements(ctx context.Context, label string, requi
 	for i, req := range requirements {
 	retryLoop:
 		for j := 0; j < retries; j++ {
-			a.l.Infof("Waiting for the %s requirement %d of %d: %q", label, i+1, len(requirements), req.description)
+			logrus.Infof("Waiting for the %s requirement %d of %d: %q", label, i+1, len(requirements), req.description)
 			err := a.waitForRequirement(ctx, req)
 			if err == nil {
-				a.l.Infof("The %s requirement %d of %d is satisfied", label, i+1, len(requirements))
+				logrus.Infof("The %s requirement %d of %d is satisfied", label, i+1, len(requirements))
 				break retryLoop
 			}
 			if req.fatal {
-				a.l.Infof("No further %s requirements will be checked", label)
+				logrus.Infof("No further %s requirements will be checked", label)
 				return multierror.Append(mErr, fmt.Errorf("failed to satisfy the %s requirement %d of %d %q: %s; skipping further checks: %w", label, i+1, len(requirements), req.description, req.debugHint, err))
 			}
 			if j == retries-1 {
@@ -41,9 +42,9 @@ func (a *HostAgent) waitForRequirements(ctx context.Context, label string, requi
 }
 
 func (a *HostAgent) waitForRequirement(ctx context.Context, r requirement) error {
-	a.l.Debugf("executing script %q", r.description)
+	logrus.Debugf("executing script %q", r.description)
 	stdout, stderr, err := ssh.ExecuteScript("127.0.0.1", a.sshLocalPort, a.sshConfig, r.script, r.description)
-	a.l.Debugf("stdout=%q, stderr=%q, err=%v", stdout, stderr, err)
+	logrus.Debugf("stdout=%q, stderr=%q, err=%v", stdout, stderr, err)
 	if err != nil {
 		return fmt.Errorf("stdout=%q, stderr=%q: %w", stdout, stderr, err)
 	}
