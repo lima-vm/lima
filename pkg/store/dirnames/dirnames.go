@@ -1,8 +1,10 @@
 package dirnames
 
 import (
-	"path/filepath"
+	"errors"
+	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/lima-vm/lima/pkg/store/filenames"
 )
@@ -24,7 +26,14 @@ func LimaDir() (string, error) {
 		}
 		dir = filepath.Join(homeDir, DotLima)
 	}
-	return dir, nil
+	if _, err := os.Stat(dir); errors.Is(err, os.ErrNotExist) {
+		return dir, nil
+	}
+	realdir, err := filepath.EvalSymlinks(dir)
+	if err != nil {
+		return "", fmt.Errorf("cannot evaluate symlinks in %q: %w", dir, err)
+	}
+	return realdir, nil
 }
 
 // LimaConfigDir returns the path of the config directory, $LIMA_HOME/_config.
