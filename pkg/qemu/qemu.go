@@ -235,14 +235,17 @@ func Cmdline(cfg Config) (string, []string, error) {
 	args = appendArgsIfNoConflict(args, "-m", strconv.Itoa(int(memBytes>>20)))
 
 	// Firmware
-	if !y.Firmware.LegacyBIOS {
+	legacyBIOS := y.Firmware.LegacyBIOS
+	if legacyBIOS && y.Arch != limayaml.X8664 {
+		logrus.Warnf("field `firmware.legacyBIOS` is not supported for architecture %q, ignoring", y.Arch)
+		legacyBIOS = false
+	}
+	if !legacyBIOS {
 		firmware, err := getFirmware(exe, y.Arch)
 		if err != nil {
 			return "", nil, err
 		}
 		args = append(args, "-drive", fmt.Sprintf("if=pflash,format=raw,readonly=on,file=%s", firmware))
-	} else if y.Arch != limayaml.X8664 {
-		logrus.Warnf("field `firmware.legacyBIOS` is not supported for architecture %q, ignoring", y.Arch)
 	}
 
 	baseDisk := filepath.Join(cfg.InstanceDir, filenames.BaseDisk)
@@ -419,6 +422,8 @@ func getFirmware(qemuExe string, arch limayaml.Arch) (string, error) {
 		candidates = append(candidates, "/usr/share/qemu/ovmf-x86_64-code.bin")
 	case limayaml.AARCH64:
 		// Debian package "qemu-efi-aarch64"
+		candidates = append(candidates, "/usr/share/AAVMF/AAVMF_CODE.fd")
+		// Debian package "qemu-efi-aarch64" (unpadded, backwards compatibility)
 		candidates = append(candidates, "/usr/share/qemu-efi-aarch64/QEMU_EFI.fd")
 	}
 
