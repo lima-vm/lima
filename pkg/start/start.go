@@ -47,7 +47,7 @@ func ensureNerdctlArchiveCache(y *limayaml.LimaYAML) (string, error) {
 			errs[i] = fmt.Errorf("unsupported arch: %q", f.Arch)
 			continue
 		}
-		logrus.Infof("Attempting to download the nerdctl archive from %q", f.Location)
+		logrus.WithField("digest", f.Digest).Infof("Attempting to download the nerdctl archive from %q", f.Location)
 		res, err := downloader.Download("", f.Location, downloader.WithCache(), downloader.WithExpectedDigest(f.Digest))
 		if err != nil {
 			errs[i] = fmt.Errorf("failed to download %q: %w", f.Location, err)

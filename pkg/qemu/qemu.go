@@ -47,7 +47,7 @@ func EnsureDisk(cfg Config) error {
 				errs[i] = fmt.Errorf("unsupported arch: %q", f.Arch)
 				continue
 			}
-			logrus.Infof("Attempting to download the image from %q", f.Location)
+			logrus.WithField("digest", f.Digest).Infof("Attempting to download the image from %q", f.Location)
 			res, err := downloader.Download(baseDisk, f.Location,
 				downloader.WithCache(),
 				downloader.WithExpectedDigest(f.Digest),
