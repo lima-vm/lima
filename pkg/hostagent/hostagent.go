@@ -32,7 +32,6 @@ import (
 )
 
 type HostAgent struct {
-	l               *logrus.Logger
 	y               *limayaml.LimaYAML
 	sshLocalPort    int
 	udpDNSLocalPort int
@@ -52,15 +51,7 @@ type HostAgent struct {
 // New creates the HostAgent.
 //
 // stdout is for emitting JSON lines of Events.
-// stderr is for printing human-readable logs.
-func New(instName string, stdout, stderr io.Writer, sigintCh chan os.Signal) (*HostAgent, error) {
-	l := &logrus.Logger{
-		Out:       stderr,
-		Formatter: new(logrus.JSONFormatter),
-		Hooks:     make(logrus.LevelHooks),
-		Level:     logrus.DebugLevel,
-	}
-
+func New(instName string, stdout io.Writer, sigintCh chan os.Signal) (*HostAgent, error) {
 	inst, err := store.Inspect(instName)
 	if err != nil {
 		return nil, err
@@ -122,13 +113,12 @@ func New(instName string, stdout, stderr io.Writer, sigintCh chan os.Signal) (*H
 	rules = append(rules, rule)
 
 	a := &HostAgent{
-		l:               l,
 		y:               y,
 		sshLocalPort:    sshLocalPort,
 		udpDNSLocalPort: udpDNSLocalPort,
 		instDir:         inst.Dir,
 		sshConfig:       sshConfig,
-		portForwarder:   newPortForwarder(l, sshConfig, sshLocalPort, rules),
+		portForwarder:   newPortForwarder(sshConfig, sshLocalPort, rules),
 		qExe:            qExe,
 		qArgs:           qArgs,
 		sigintCh:        sigintCh,
@@ -208,15 +198,15 @@ func (a *HostAgent) emitEvent(ctx context.Context, ev events.Event) {
 		ev.Time = time.Now()
 	}
 	if err := a.eventEnc.Encode(ev); err != nil {
-		a.l.WithField("event", ev).WithError(err).Error("failed to emit an event")
+		logrus.WithField("event", ev).WithError(err).Error("failed to emit an event")
 	}
 }
 
-func logPipeRoutine(l *logrus.Logger, r io.Reader, header string) {
+func logPipeRoutine(r io.Reader, header string) {
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
 		line := scanner.Text()
-		l.Debugf("%s: %s", header, line)
+		logrus.Debugf("%s: %s", header, line)
 	}
 }
 
@@ -243,15 +233,15 @@ func (a *HostAgent) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	go logPipeRoutine(a.l, qStdout, "qemu[stdout]")
+	go logPipeRoutine(qStdout, "qemu[stdout]")
 	qStderr, err := qCmd.StderrPipe()
 	if err != nil {
 		return err
 	}
-	go logPipeRoutine(a.l, qStderr, "qemu[stderr]")
+	go logPipeRoutine(qStderr, "qemu[stderr]")
 
-	a.l.Infof("Starting QEMU (hint: to watch the boot progress, see %q)", filepath.Join(a.instDir, filenames.SerialLog))
-	a.l.Debugf("qCmd.Args: %v", qCmd.Args)
+	logrus.Infof("Starting QEMU (hint: to watch the boot progress, see %q)", filepath.Join(a.instDir, filenames.SerialLog))
+	logrus.Debugf("qCmd.Args: %v", qCmd.Args)
 	if err := qCmd.Start(); err != nil {
 		return err
 	}
@@ -279,13 +269,13 @@ func (a *HostAgent) Run(ctx context.Context) error {
 	for {
 		select {
 		case <-a.sigintCh:
-			a.l.Info("Received SIGINT, shutting down the host agent")
+			logrus.Info("Received SIGINT, shutting down the host agent")
 			if closeErr := a.close(); closeErr != nil {
-				a.l.WithError(closeErr).Warn("an error during shutting down the host agent")
+				logrus.WithError(closeErr).Warn("an error during shutting down the host agent")
 			}
 			return a.shutdownQEMU(ctx, 3*time.Minute, qCmd, qWaitCh)
 		case qWaitErr := <-qWaitCh:
-			a.l.WithError(qWaitErr).Info("QEMU has exited")
+			logrus.WithError(qWaitErr).Info("QEMU has exited")
 			return qWaitErr
 		}
 	}
@@ -298,41 +288,41 @@ func (a *HostAgent) Info(ctx context.Context) (*hostagentapi.Info, error) {
 }
 
 func (a *HostAgent) shutdownQEMU(ctx context.Context, timeout time.Duration, qCmd *exec.Cmd, qWaitCh <-chan error) error {
-	a.l.Info("Shutting down QEMU with ACPI")
+	logrus.Info("Shutting down QEMU with ACPI")
 	qmpSockPath := filepath.Join(a.instDir, filenames.QMPSock)
 	qmpClient, err := qmp.NewSocketMonitor("unix", qmpSockPath, 5*time.Second)
 	if err != nil {
-		a.l.WithError(err).Warnf("failed to open the QMP socket %q, forcibly killing QEMU", qmpSockPath)
+		logrus.WithError(err).Warnf("failed to open the QMP socket %q, forcibly killing QEMU", qmpSockPath)
 		return a.killQEMU(ctx, timeout, qCmd, qWaitCh)
 	}
 	if err := qmpClient.Connect(); err != nil {
-		a.l.WithError(err).Warnf("failed to connect to the QMP socket %q, forcibly killing QEMU", qmpSockPath)
+		logrus.WithError(err).Warnf("failed to connect to the QMP socket %q, forcibly killing QEMU", qmpSockPath)
 		return a.killQEMU(ctx, timeout, qCmd, qWaitCh)
 	}
 	defer func() { _ = qmpClient.Disconnect() }()
 	rawClient := raw.NewMonitor(qmpClient)
-	a.l.Info("Sending QMP system_powerdown command")
+	logrus.Info("Sending QMP system_powerdown command")
 	if err := rawClient.SystemPowerdown(); err != nil {
-		a.l.WithError(err).Warnf("failed to send system_powerdown command via the QMP socket %q, forcibly killing QEMU", qmpSockPath)
+		logrus.WithError(err).Warnf("failed to send system_powerdown command via the QMP socket %q, forcibly killing QEMU", qmpSockPath)
 		return a.killQEMU(ctx, timeout, qCmd, qWaitCh)
 	}
 	deadline := time.After(timeout)
 	select {
 	case qWaitErr := <-qWaitCh:
-		a.l.WithError(qWaitErr).Info("QEMU has exited")
+		logrus.WithError(qWaitErr).Info("QEMU has exited")
 		return qWaitErr
 	case <-deadline:
 	}
-	a.l.Warnf("QEMU did not exit in %v, forcibly killing QEMU", timeout)
+	logrus.Warnf("QEMU did not exit in %v, forcibly killing QEMU", timeout)
 	return a.killQEMU(ctx, timeout, qCmd, qWaitCh)
 }
 
 func (a *HostAgent) killQEMU(ctx context.Context, timeout time.Duration, qCmd *exec.Cmd, qWaitCh <-chan error) error {
 	if killErr := qCmd.Process.Kill(); killErr != nil {
-		a.l.WithError(killErr).Warn("failed to kill QEMU")
+		logrus.WithError(killErr).Warn("failed to kill QEMU")
 	}
 	qWaitErr := <-qWaitCh
-	a.l.WithError(qWaitErr).Info("QEMU has exited, after killing forcibly")
+	logrus.WithError(qWaitErr).Info("QEMU has exited, after killing forcibly")
 	qemuPIDPath := filepath.Join(a.instDir, filenames.QemuPID)
 	_ = os.RemoveAll(qemuPIDPath)
 	return qWaitErr
@@ -340,9 +330,9 @@ func (a *HostAgent) killQEMU(ctx context.Context, timeout time.Duration, qCmd *e
 
 func (a *HostAgent) startHostAgentRoutines(ctx context.Context) error {
 	a.onClose = append(a.onClose, func() error {
-		a.l.Debugf("shutting down the SSH master")
+		logrus.Debugf("shutting down the SSH master")
 		if exitMasterErr := ssh.ExitMaster("127.0.0.1", a.sshLocalPort, a.sshConfig); exitMasterErr != nil {
-			a.l.WithError(exitMasterErr).Warn("failed to exit SSH master")
+			logrus.WithError(exitMasterErr).Warn("failed to exit SSH master")
 		}
 		return nil
 	})
@@ -371,7 +361,7 @@ func (a *HostAgent) startHostAgentRoutines(ctx context.Context) error {
 }
 
 func (a *HostAgent) close() error {
-	a.l.Infof("Shutting down the host agent")
+	logrus.Infof("Shutting down the host agent")
 	var mErr error
 	for i := len(a.onClose) - 1; i >= 0; i-- {
 		f := a.onClose[i]
@@ -392,25 +382,25 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 	for {
 		if !isGuestAgentSocketAccessible(ctx, localUnix) {
 			if err := os.RemoveAll(localUnix); err != nil {
-				a.l.WithError(err).Warnf("failed to clean up %q (host) before setting up forwarding", localUnix)
+				logrus.WithError(err).Warnf("failed to clean up %q (host) before setting up forwarding", localUnix)
 			}
-			a.l.Infof("Forwarding %q (guest) to %q (host)", remoteUnix, localUnix)
+			logrus.Infof("Forwarding %q (guest) to %q (host)", remoteUnix, localUnix)
 			if err := forwardSSH(ctx, a.sshConfig, a.sshLocalPort, localUnix, remoteUnix, false); err != nil {
-				a.l.WithError(err).Warnf("failed to setting up forward from %q (guest) to %q (host)", remoteUnix, localUnix)
+				logrus.WithError(err).Warnf("failed to setting up forward from %q (guest) to %q (host)", remoteUnix, localUnix)
 			}
 		}
 		if err := a.processGuestAgentEvents(ctx, localUnix); err != nil {
-			a.l.WithError(err).Warn("connection to the guest agent was closed unexpectedly")
+			logrus.WithError(err).Warn("connection to the guest agent was closed unexpectedly")
 		}
 		select {
 		case <-ctx.Done():
-			a.l.Infof("Stopping forwarding %q to %q", remoteUnix, localUnix)
+			logrus.Infof("Stopping forwarding %q to %q", remoteUnix, localUnix)
 			verbCancel := true
 			if err := forwardSSH(ctx, a.sshConfig, a.sshLocalPort, localUnix, remoteUnix, verbCancel); err != nil {
-				a.l.WithError(err).Warnf("failed to stop forwarding %q (remote) to %q (local)", remoteUnix, localUnix)
+				logrus.WithError(err).Warnf("failed to stop forwarding %q (remote) to %q (local)", remoteUnix, localUnix)
 			}
 			if err := os.RemoveAll(localUnix); err != nil {
-				a.l.WithError(err).Warnf("failed to clean up %q (host) after stopping forwarding", localUnix)
+				logrus.WithError(err).Warnf("failed to clean up %q (host) after stopping forwarding", localUnix)
 			}
 			return
 		case <-time.After(10 * time.Second):
@@ -438,12 +428,12 @@ func (a *HostAgent) processGuestAgentEvents(ctx context.Context, localUnix strin
 		return err
 	}
 
-	a.l.Debugf("guest agent info: %+v", info)
+	logrus.Debugf("guest agent info: %+v", info)
 
 	onEvent := func(ev guestagentapi.Event) {
-		a.l.Debugf("guest agent event: %+v", ev)
+		logrus.Debugf("guest agent event: %+v", ev)
 		for _, f := range ev.Errors {
-			a.l.Warnf("received error from the guest: %q", f)
+			logrus.Warnf("received error from the guest: %q", f)
 		}
 		a.portForwarder.OnEvent(ctx, ev)
 	}

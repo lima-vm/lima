@@ -60,7 +60,8 @@ func hostagentAction(cmd *cobra.Command, args []string) error {
 	stdout := &syncWriter{w: cmd.OutOrStdout()}
 	stderr := &syncWriter{w: cmd.ErrOrStderr()}
 
-	ha, err := hostagent.New(instName, stdout, stderr, sigintCh)
+	initLogrus(stderr)
+	ha, err := hostagent.New(instName, stdout, sigintCh)
 	if err != nil {
 		return err
 	}
@@ -106,4 +107,11 @@ func (w *syncWriter) Write(p []byte) (int, error) {
 		}
 	}
 	return written, err
+}
+
+func initLogrus(stderr io.Writer) {
+	logrus.SetOutput(stderr)
+	// JSON logs are parsed in pkg/hostagent/events.Watcher()
+	logrus.SetFormatter(new(logrus.JSONFormatter))
+	logrus.SetLevel(logrus.DebugLevel)
 }
