@@ -132,7 +132,7 @@ func Download(local, remote string, opts ...Opt) (*Result, error) {
 		}
 	}
 
-	if isLocal(remote) {
+	if IsLocal(remote) {
 		if err := copyLocal(localPath, remote, o.expectedDigest); err != nil {
 			return nil, err
 		}
@@ -218,7 +218,7 @@ func Download(local, remote string, opts ...Opt) (*Result, error) {
 	return res, nil
 }
 
-func isLocal(s string) bool {
+func IsLocal(s string) bool {
 	return !strings.Contains(s, "://") || strings.HasPrefix(s, "file://")
 }
 
@@ -230,7 +230,7 @@ func canonicalLocalPath(s string) (string, error) {
 	if s == "" {
 		return "", fmt.Errorf("got empty path")
 	}
-	if !isLocal(s) {
+	if !IsLocal(s) {
 		return "", fmt.Errorf("got non-local path: %q", s)
 	}
 	if strings.HasPrefix(s, "file://") {

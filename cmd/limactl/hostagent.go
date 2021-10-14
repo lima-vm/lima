@@ -27,6 +27,7 @@ func newHostagentCommand() *cobra.Command {
 	}
 	hostagentCommand.Flags().StringP("pidfile", "p", "", "write pid to file")
 	hostagentCommand.Flags().String("socket", "", "hostagent socket")
+	hostagentCommand.Flags().String("nerdctl-archive", "", "local file path (not URL) of nerdctl-full-VERSION-linux-GOARCH.tar.gz")
 	return hostagentCommand
 }
 
@@ -61,7 +62,15 @@ func hostagentAction(cmd *cobra.Command, args []string) error {
 	stderr := &syncWriter{w: cmd.ErrOrStderr()}
 
 	initLogrus(stderr)
-	ha, err := hostagent.New(instName, stdout, sigintCh)
+	var opts []hostagent.Opt
+	nerdctlArchive, err := cmd.Flags().GetString("nerdctl-archive")
+	if err != nil {
+		return err
+	}
+	if nerdctlArchive != "" {
+		opts = append(opts, hostagent.WithNerdctlArchive(nerdctlArchive))
+	}
+	ha, err := hostagent.New(instName, stdout, sigintCh, opts...)
 	if err != nil {
 		return err
 	}

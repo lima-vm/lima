@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/lima-vm/lima/pkg/downloader"
 	hostagentevents "github.com/lima-vm/lima/pkg/hostagent/events"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/qemu"
@@ -30,6 +31,49 @@ func ensureDisk(ctx context.Context, instName, instDir string, y *limayaml.LimaY
 	return nil
 }
 
+// ensureNerdctlArchiveCache prefetches the nerdctl-full-VERSION-linux-GOARCH.tar.gz archive
+// into the cache before launching the hostagent process, so that we can show the progress in tty.
+// https://github.com/lima-vm/lima/issues/326
+func ensureNerdctlArchiveCache(y *limayaml.LimaYAML) (string, error) {
+	if !*y.Containerd.System && !*y.Containerd.User {
+		// nerdctl archive is not needed
+		return "", nil
+	}
+
+	errs := make([]error, len(y.Containerd.Archives))
+	for i := range y.Containerd.Archives {
+		f := &y.Containerd.Archives[i]
+		if f.Arch != y.Arch {
+			errs[i] = fmt.Errorf("unsupported arch: %q", f.Arch)
+			continue
+		}
+		logrus.Infof("Attempting to download the nerdctl archive from %q", f.Location)
+		res, err := downloader.Download("", f.Location, downloader.WithCache(), downloader.WithExpectedDigest(f.Digest))
+		if err != nil {
+			errs[i] = fmt.Errorf("failed to download %q: %w", f.Location, err)
+			continue
+		}
+		switch res.Status {
+		case downloader.StatusDownloaded:
+			logrus.Infof("Downloaded the nerdctl archive from %q", f.Location)
+		case downloader.StatusUsedCache:
+			logrus.Infof("Using cache %q", res.CachePath)
+		default:
+			logrus.Warnf("Unexpected result from downloader.Download(): %+v", res)
+		}
+		if res.CachePath == "" {
+			if downloader.IsLocal(f.Location) {
+				return f.Location, nil
+			}
+			return "", fmt.Errorf("cache did not contain %q", f.Location)
+		}
+		return res.CachePath, nil
+	}
+
+	return "", fmt.Errorf("failed to download the nerdctl archive, attempted %d candidates, errors=%v",
+		len(y.Containerd.Archives), errs)
+}
+
 func Start(ctx context.Context, inst *store.Instance) error {
 	haPIDPath := filepath.Join(inst.Dir, filenames.HostAgentPID)
 	if _, err := os.Stat(haPIDPath); !errors.Is(err, os.ErrNotExist) {
@@ -44,6 +88,10 @@ func Start(ctx context.Context, inst *store.Instance) error {
 	}
 
 	if err := ensureDisk(ctx, inst.Name, inst.Dir, y); err != nil {
+		return err
+	}
+	nerdctlArchiveCache, err := ensureNerdctlArchiveCache(y)
+	if err != nil {
 		return err
 	}
 
@@ -77,8 +125,11 @@ func Start(ctx context.Context, inst *store.Instance) error {
 	args = append(args,
 		"hostagent",
 		"--pidfile", haPIDPath,
-		"--socket", haSockPath,
-		inst.Name)
+		"--socket", haSockPath)
+	if nerdctlArchiveCache != "" {
+		args = append(args, "--nerdctl-archive", nerdctlArchiveCache)
+	}
+	args = append(args, inst.Name)
 	haCmd := exec.CommandContext(ctx, self, args...)
 
 	haCmd.Stdout = haStdoutW

@@ -5,14 +5,12 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/lima-vm/lima/pkg/downloader"
 	"github.com/lima-vm/lima/pkg/iso9660util"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/localpathutil"
@@ -65,7 +63,7 @@ func setupEnv(y *limayaml.LimaYAML) (map[string]string, error) {
 	return env, nil
 }
 
-func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort int) error {
+func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort int, nerdctlArchive string) error {
 	if err := limayaml.Validate(*y, false); err != nil {
 		return err
 	}
@@ -164,40 +162,8 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 		})
 	}
 
-	if args.Containerd.System || args.Containerd.User {
-		var nftgz *limayaml.File
-		for i := range y.Containerd.Archives {
-			f := &y.Containerd.Archives[i]
-			if f.Arch != y.Arch {
-				continue
-			}
-			nftgz = f
-		}
-		if nftgz == nil {
-			return fmt.Errorf("no containerd archive was provided for arch %q", y.Arch)
-		}
-		td, err := ioutil.TempDir("", "lima-download-nerdctl")
-		if err != nil {
-			return err
-		}
-		defer os.RemoveAll(td)
-		nftgzLocal := filepath.Join(td, "nerdctl-full.tgz")
-		logrus.Infof("Downloading %q (%s)", nftgz.Location, nftgz.Digest)
-		res, err := downloader.Download(nftgzLocal, nftgz.Location, downloader.WithCache(), downloader.WithExpectedDigest(nftgz.Digest))
-		if err != nil {
-			return fmt.Errorf("failed to download %q: %w", nftgz.Location, err)
-		}
-		logrus.Debugf("res.ValidatedDigest=%v", res.ValidatedDigest)
-		switch res.Status {
-		case downloader.StatusDownloaded:
-			logrus.Infof("Downloaded %q", nftgz.Location)
-		case downloader.StatusUsedCache:
-			logrus.Infof("Using cache %q", res.CachePath)
-		default:
-			logrus.Warnf("Unexpected result from downloader.Download(): %+v", res)
-		}
-
-		nftgzR, err := os.Open(nftgzLocal)
+	if nerdctlArchive != "" {
+		nftgzR, err := os.Open(nerdctlArchive)
 		if err != nil {
 			return err
 		}
