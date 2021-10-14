@@ -165,14 +165,22 @@ func inspectFeatures(exe string) (*features, error) {
 		return nil, fmt.Errorf("failed to run %v: stdout=%q, stderr=%q", cmd.Args, stdout.String(), stderr.String())
 	}
 	f.AccelHelp = stdout.Bytes()
+	// on older versions qemu will write "help" output to stderr
+	if len(f.AccelHelp) == 0 {
+		f.AccelHelp = stderr.Bytes()
+	}
 
 	cmd = exec.Command(exe, "-M", "none", "-netdev", "help")
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("failed to run %v: stdout=%q, stderr=%q", cmd.Args, stdout.String(), stderr.String())
+		logrus.Warnf("failed to run %v: stdout=%q, stderr=%q", cmd.Args, stdout.String(), stderr.String())
+	} else {
+		f.NetdevHelp = stdout.Bytes()
+		if len(f.NetdevHelp) == 0 {
+			f.NetdevHelp = stderr.Bytes()
+		}
 	}
-	f.NetdevHelp = stdout.Bytes()
 	return &f, nil
 }
 
