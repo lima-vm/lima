@@ -13,9 +13,9 @@
 
 images:
   # Hint: run `limactl prune` to invalidate the "current" cache
-  - location: "https://cloud-images.ubuntu.com/hirsute/current/hirsute-server-cloudimg-amd64.img"
+  - location: "https://cloud-images.ubuntu.com/impish/current/impish-server-cloudimg-amd64.img"
     arch: "x86_64"
-  - location: "https://cloud-images.ubuntu.com/hirsute/current/hirsute-server-cloudimg-arm64.img"
+  - location: "https://cloud-images.ubuntu.com/impish/current/impish-server-cloudimg-arm64.img"
     arch: "aarch64"
 
 # Mounts are disabled in this example, but can be enabled optionally.

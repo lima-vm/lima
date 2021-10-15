@@ -14,7 +14,6 @@
 # $ docker ...
 
 images:
-  # Image is set to impish (21.10) ahead of its GA, to pick up the newer version of podman dpkg
   # Hint: run `limactl prune` to invalidate the "current" cache
   - location: "https://cloud-images.ubuntu.com/impish/current/impish-server-cloudimg-amd64.img"
     arch: "x86_64"
