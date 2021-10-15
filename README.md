@@ -168,7 +168,7 @@ Especially, the following data might be easily lost:
 See [`./pkg/limayaml/default.yaml`](./pkg/limayaml/default.yaml).
 
 The current default spec:
-- OS: Ubuntu 21.04 (Hirsute Hippo)
+- OS: Ubuntu 21.10 (Impish Indri)
 - CPU: 4 cores
 - Memory: 4 GiB
 - Disk: 100 GiB

@@ -14,6 +14,7 @@
 
 images:
   # Hint: run `limactl prune` to invalidate the "current" cache
+  # TODO: update from hirsute (21.04) to impish (21.10) when https://get.docker.com supports impish
   - location: "https://cloud-images.ubuntu.com/hirsute/current/hirsute-server-cloudimg-amd64.img"
     arch: "x86_64"
   - location: "https://cloud-images.ubuntu.com/hirsute/current/hirsute-server-cloudimg-arm64.img"
