@@ -48,10 +48,29 @@ type HostAgent struct {
 	eventEncMu sync.Mutex
 }
 
+type options struct {
+	nerdctlArchive string // local path, not URL
+}
+
+type Opt func(*options) error
+
+func WithNerdctlArchive(s string) Opt {
+	return func(o *options) error {
+		o.nerdctlArchive = s
+		return nil
+	}
+}
+
 // New creates the HostAgent.
 //
 // stdout is for emitting JSON lines of Events.
-func New(instName string, stdout io.Writer, sigintCh chan os.Signal) (*HostAgent, error) {
+func New(instName string, stdout io.Writer, sigintCh chan os.Signal, opts ...Opt) (*HostAgent, error) {
+	var o options
+	for _, f := range opts {
+		if err := f(&o); err != nil {
+			return nil, err
+		}
+	}
 	inst, err := store.Inspect(instName)
 	if err != nil {
 		return nil, err
@@ -76,7 +95,7 @@ func New(instName string, stdout io.Writer, sigintCh chan os.Signal) (*HostAgent
 		}
 	}
 
-	if err := cidata.GenerateISO9660(inst.Dir, instName, y, udpDNSLocalPort); err != nil {
+	if err := cidata.GenerateISO9660(inst.Dir, instName, y, udpDNSLocalPort, o.nerdctlArchive); err != nil {
 		return nil, err
 	}
 

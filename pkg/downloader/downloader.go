@@ -88,6 +88,15 @@ func WithExpectedDigest(expectedDigest digest.Digest) Opt {
 	}
 }
 
+// Download downloads the remote resource into the local path.
+//
+// Download caches the remote resource if WithCache or WithCacheDir option is specified.
+// Local files are not cached.
+//
+// When the local path already exists, Download returns Result with StatusSkipped.
+// (So, the local path cannot be set to /dev/null for "caching only" mode.)
+//
+// The local path can be an empty string for "caching only" mode.
 func Download(local, remote string, opts ...Opt) (*Result, error) {
 	var o options
 	for _, f := range opts {
@@ -95,27 +104,35 @@ func Download(local, remote string, opts ...Opt) (*Result, error) {
 			return nil, err
 		}
 	}
-	localPath, err := localPath(local)
-	if err != nil {
-		return nil, err
-	}
-	if _, err := os.Stat(localPath); err == nil {
-		logrus.Debugf("file %q already exists, skipping downloading from %q (and skipping digest validation)", localPath, remote)
-		res := &Result{
-			Status:          StatusSkipped,
-			ValidatedDigest: false,
+	var localPath string
+	if local == "" {
+		if o.cacheDir == "" {
+			return nil, fmt.Errorf("caching-only mode requires the cache directory to be specified")
 		}
-		return res, nil
-	} else if !errors.Is(err, os.ErrNotExist) {
-		return nil, err
+	} else {
+		var err error
+		localPath, err = canonicalLocalPath(local)
+		if err != nil {
+			return nil, err
+		}
+		if _, err := os.Stat(localPath); err == nil {
+			logrus.Debugf("file %q already exists, skipping downloading from %q (and skipping digest validation)", localPath, remote)
+			res := &Result{
+				Status:          StatusSkipped,
+				ValidatedDigest: false,
+			}
+			return res, nil
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return nil, err
+		}
+
+		localPathDir := filepath.Dir(localPath)
+		if err := os.MkdirAll(localPathDir, 0755); err != nil {
+			return nil, err
+		}
 	}
 
-	localPathDir := filepath.Dir(localPath)
-	if err := os.MkdirAll(localPathDir, 0755); err != nil {
-		return nil, err
-	}
-
-	if isLocal(remote) {
+	if IsLocal(remote) {
 		if err := copyLocal(localPath, remote, o.expectedDigest); err != nil {
 			return nil, err
 		}
@@ -201,12 +218,19 @@ func Download(local, remote string, opts ...Opt) (*Result, error) {
 	return res, nil
 }
 
-func isLocal(s string) bool {
+func IsLocal(s string) bool {
 	return !strings.Contains(s, "://") || strings.HasPrefix(s, "file://")
 }
 
-func localPath(s string) (string, error) {
-	if !isLocal(s) {
+// canonicalLocalPath canonicalizes the local path string.
+// - Make sure the file has no scheme, or the `file://` scheme
+// - If it has the `file://` scheme, strip the scheme and make sure the filename is absolute
+// - Expand a leading `~`, or convert relative to absolute name
+func canonicalLocalPath(s string) (string, error) {
+	if s == "" {
+		return "", fmt.Errorf("got empty path")
+	}
+	if !IsLocal(s) {
 		return "", fmt.Errorf("got non-local path: %q", s)
 	}
 	if strings.HasPrefix(s, "file://") {
@@ -223,11 +247,15 @@ func copyLocal(dst, src string, expectedDigest digest.Digest) error {
 	if err := validateLocalFileDigest(src, expectedDigest); err != nil {
 		return err
 	}
-	srcPath, err := localPath(src)
+	srcPath, err := canonicalLocalPath(src)
 	if err != nil {
 		return err
 	}
-	dstPath, err := localPath(dst)
+	if dst == "" {
+		// empty dst means caching-only mode
+		return nil
+	}
+	dstPath, err := canonicalLocalPath(dst)
 	if err != nil {
 		return err
 	}
@@ -235,6 +263,9 @@ func copyLocal(dst, src string, expectedDigest digest.Digest) error {
 }
 
 func validateLocalFileDigest(localPath string, expectedDigest digest.Digest) error {
+	if localPath == "" {
+		return fmt.Errorf("validateLocalFileDigest: got empty localPath")
+	}
 	if expectedDigest == "" {
 		return nil
 	}
@@ -280,6 +311,9 @@ func createBar(size int64) (*pb.ProgressBar, error) {
 }
 
 func downloadHTTP(localPath, url string, expectedDigest digest.Digest) error {
+	if localPath == "" {
+		return fmt.Errorf("downloadHTTP: got empty localPath")
+	}
 	logrus.Debugf("downloading %q into %q", url, localPath)
 	localPathTmp := localPath + ".tmp"
 	if err := os.RemoveAll(localPathTmp); err != nil {
