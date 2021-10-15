@@ -87,24 +87,25 @@ func copyAction(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	sshArgs := []string{}
+	var sshOpts []string
 	if len(instDirs) == 1 {
 		// Only one (instance) host is involved; we can use the instance-specific
 		// arguments such as ControlPath.  This is preferred as we can multiplex
 		// sessions without re-authenticating (MaxSessions permitting).
 		for _, instDir := range instDirs {
-			sshArgs, err = sshutil.SSHArgs(instDir, false)
+			sshOpts, err = sshutil.SSHOpts(instDir, false)
 			if err != nil {
 				return err
 			}
 		}
 	} else {
 		// Copying among multiple hosts; we can't pass in host-specific options.
-		sshArgs, err = sshutil.CommonArgs(false)
+		sshOpts, err = sshutil.CommonOpts(false)
 		if err != nil {
 			return err
 		}
 	}
+	sshArgs := sshutil.SSHArgsFromOpts(sshOpts)
 
 	sshCmd := exec.Command(arg0, append(sshArgs, scpArgs...)...)
 	sshCmd.Stdin = cmd.InOrStdin()

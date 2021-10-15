@@ -110,12 +110,12 @@ func New(instName string, stdout io.Writer, sigintCh chan os.Signal, opts ...Opt
 		return nil, err
 	}
 
-	sshArgs, err := sshutil.SSHArgs(inst.Dir, *y.SSH.LoadDotSSHPubKeys)
+	sshOpts, err := sshutil.SSHOpts(inst.Dir, *y.SSH.LoadDotSSHPubKeys)
 	if err != nil {
 		return nil, err
 	}
 	sshConfig := &ssh.SSHConfig{
-		AdditionalArgs: sshArgs,
+		AdditionalArgs: sshutil.SSHArgsFromOpts(sshOpts),
 	}
 
 	rules := make([]limayaml.PortForward, 0, 3+len(y.PortForwards))
