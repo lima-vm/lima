@@ -63,7 +63,7 @@ func setupEnv(y *limayaml.LimaYAML) (map[string]string, error) {
 	return env, nil
 }
 
-func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort int, nerdctlArchive string) error {
+func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort int, nerdctlArchive string) error {
 	if err := limayaml.Validate(*y, false); err != nil {
 		return err
 	}
@@ -119,6 +119,7 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 	}
 	if *y.UseHostResolver {
 		args.UDPDNSLocalPort = udpDNSLocalPort
+		args.TCPDNSLocalPort = tcpDNSLocalPort
 		args.DNSAddresses = append(args.DNSAddresses, qemu.SlirpDNS)
 	} else if len(y.DNS) > 0 {
 		for _, addr := range y.DNS {

@@ -14,7 +14,7 @@ INSTALL_IPTABLES=0
 if [ "${LIMA_CIDATA_CONTAINERD_SYSTEM}" = 1 ] || [ "${LIMA_CIDATA_CONTAINERD_USER}" = 1 ]; then
 	INSTALL_IPTABLES=1
 fi
-if [ "${LIMA_CIDATA_UDP_DNS_LOCAL_PORT}" -ne 0 ]; then
+if [ "${LIMA_CIDATA_UDP_DNS_LOCAL_PORT}" -ne 0 ] || [ "${LIMA_CIDATA_TCP_DNS_LOCAL_PORT}" -ne 0 ]; then
 	INSTALL_IPTABLES=1
 fi
 
@@ -96,7 +96,14 @@ elif command -v apk >/dev/null 2>&1; then
 	fi
 fi
 
+SETUP_DNS=0
 if [ -n "${LIMA_CIDATA_UDP_DNS_LOCAL_PORT}" ] && [ "${LIMA_CIDATA_UDP_DNS_LOCAL_PORT}" -ne 0 ]; then
+	SETUP_DNS=1
+fi
+if [ -n "${LIMA_CIDATA_TCP_DNS_LOCAL_PORT}" ] && [ "${LIMA_CIDATA_TCP_DNS_LOCAL_PORT}" -ne 0 ]; then
+	SETUP_DNS=1
+fi
+if [ "${SETUP_DNS}" = 1 ]; then
 	# Try to setup iptables rule again, in case we just installed iptables
 	"${LIMA_CIDATA_MNT}/boot/07-host-dns-setup.sh"
 fi

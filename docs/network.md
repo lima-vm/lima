@@ -20,9 +20,23 @@ The loopback addresses of the host is `192.168.5.2` and is accessible from the g
 
 The DNS.
 
-If `useHostResolver` in `lima.yaml` is true, then the hostagent is going to run a DNS server over udp, using the same socket number as `ssh.localPort`. This server does a local lookup using the native host resolver, so will deal correctly with VPN configurations and split-DNS setups, as well a mDNS (for this the hostagent has to be compiled with `CGO_ENABLED=1`).
+If `useHostResolver` in `lima.yaml` is true, then the hostagent is going to run a DNS server over tcp and udp - each on a separate randomly selected free port. This server does a local lookup using the native host resolver, so it will deal correctly with VPN configurations and split-DNS setups, as well as mDNS, local `/etc/hosts` etc. For this the hostagent has to be compiled with `CGO_ENABLED=1` as default Go resolver is [broken](https://github.com/golang/go/issues/12524).
 
-This udp port is then forwarded via iptables rules to `192.168.5.3:53`, overriding the DNS provided by QEMU via slirp.
+These tcp and udp ports are then forwarded via iptables rules to `192.168.5.3:53`, overriding the DNS provided by QEMU via slirp.
+
+Currently following request types are supported:
+
+- A
+- AAAA
+- CNAME
+- TXT
+- NS
+- MX
+- SRV
+
+For all other queries hostagent will redirect the query to the nameservers specified in `/etc/resolv.conf` (or, if that fails - to `8.8.8.8` and `1.1.1.1`).
+
+DNS over tcp is rarely used. It is usually only used either when user explicitly requires it, or when request+response can't fit into a single UDP packet (most likely in case of DNSSEC), or in the case of certain management operations such as domain transfers. Neither DNSSEC nor management operations are currently supported by a hostagent, but on the off chance that the response may contain an unusually long list of records - hostagent will also listen for the tcp traffic.
 
 During initial cloud-init bootstrap, `iptables` may not yet be installed. In that case the repo server is determined using the slirp DNS. After `iptables` has been installed, the forwarding rule is applied, switching over to the hostagent DNS.
 
