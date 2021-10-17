@@ -120,7 +120,7 @@ firmware:
   legacyBIOS: false
 
 video:
-  # QEMU display, e.g., "none", "cocoa", "sdl".
+  # QEMU display, e.g., "none", "cocoa", "sdl", "gtk".
   # As of QEMU v5.2, enabling this is known to have negative impact
   # on performance on macOS hosts: https://gitlab.com/qemu-project/qemu/-/issues/334
   # Default: "none"
