@@ -1,0 +1,15 @@
+# This example requires Lima v0.7.0 or later.
+images:
+  - location: "https://cloud.centos.org/centos/8/x86_64/images/CentOS-8-GenericCloud-8.4.2105-20210603.0.x86_64.qcow2"
+    arch: "x86_64"
+    digest: "sha256:3510fc7deb3e1939dbf3fe6f65a02ab1efcc763480bc352e4c06eca2e4f7c2a2"
+  - location: "https://cloud.centos.org/centos/8/aarch64/images/CentOS-8-GenericCloud-8.4.2105-20210603.0.aarch64.qcow2"
+    arch: "aarch64"
+    digest: "sha256:8029d9ec018c54dc48f02d01200002b36ba69c6c6ea58334857eb172ab32e5d7"
+mounts:
+  - location: "~"
+    writable: false
+  - location: "/tmp/lima"
+    writable: true
+firmware:
+  legacyBIOS: true
