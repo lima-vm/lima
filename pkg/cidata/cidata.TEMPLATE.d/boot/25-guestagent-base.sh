@@ -38,5 +38,5 @@ else
 	# Remove legacy systemd service
 	rm -f "/home/${LIMA_CIDATA_USER}.linux/.config/systemd/user/lima-guestagent.service"
 
-	sudo lima-guestagent install-systemd
+	sudo /usr/local/bin/lima-guestagent install-systemd
 fi
