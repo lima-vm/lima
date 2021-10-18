@@ -41,7 +41,11 @@ if command -v apt-get >/dev/null 2>&1; then
 elif command -v dnf >/dev/null 2>&1; then
 	if [ "${LIMA_CIDATA_MOUNTS}" -gt 0 ]; then
 		if ! command -v sshfs >/dev/null 2>&1; then
-			dnf install -y fuse-sshfs
+			if grep -q "release 8" /etc/system-release; then
+				dnf install --enablerepo powertools -y fuse-sshfs
+			else
+				dnf install -y fuse-sshfs
+			fi
 		fi
 	fi
 	if [ "${INSTALL_IPTABLES}" = 1 ]; then
