@@ -118,10 +118,11 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	sshArgs, err := sshutil.SSHArgs(inst.Dir, *y.SSH.LoadDotSSHPubKeys)
+	sshOpts, err := sshutil.SSHOpts(inst.Dir, *y.SSH.LoadDotSSHPubKeys)
 	if err != nil {
 		return err
 	}
+	sshArgs := sshutil.SSHArgsFromOpts(sshOpts)
 	if isatty.IsTerminal(os.Stdout.Fd()) {
 		// required for showing the shell prompt: https://stackoverflow.com/a/626574
 		sshArgs = append(sshArgs, "-t")

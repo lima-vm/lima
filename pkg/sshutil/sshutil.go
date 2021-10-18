@@ -115,7 +115,12 @@ var sshInfo struct {
 	openSSHVersion semver.Version
 }
 
-func CommonArgs(useDotSSH bool) ([]string, error) {
+// CommonOpts returns ssh option key-value pairs like {"IdentityFile=/path/to/id_foo"}.
+// The result may contain different values with the same key.
+//
+// The result always contains the IdentityFile option.
+// The result never contains the Port option.
+func CommonOpts(useDotSSH bool) ([]string, error) {
 	configDir, err := dirnames.LimaConfigDir()
 	if err != nil {
 		return nil, err
@@ -125,7 +130,7 @@ func CommonArgs(useDotSSH bool) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	args := []string{"-i", privateKeyPath}
+	opts := []string{"IdentityFile=\"" + privateKeyPath + "\""}
 
 	// Append all private keys corresponding to ~/.ssh/*.pub to keep old instances working
 	// that had been created before lima started using an internal identity.
@@ -156,20 +161,19 @@ func CommonArgs(useDotSSH bool) ([]string, error) {
 				// Fail on permission-related and other path errors
 				return nil, err
 			}
-			args = append(args, "-i", privateKeyPath)
+			opts = append(opts, "IdentityFile=\""+privateKeyPath+"\"")
 		}
 	}
 
-	args = append(args,
-		"-o", "StrictHostKeyChecking=no",
-		"-o", "UserKnownHostsFile=/dev/null",
-		"-o", "NoHostAuthenticationForLocalhost=yes",
-		"-o", "GSSAPIAuthentication=no",
-		"-o", "PreferredAuthentications=publickey",
-		"-o", "Compression=no",
-		"-o", "BatchMode=yes",
-		"-o", "IdentitiesOnly=yes",
-		"-F", "/dev/null",
+	opts = append(opts,
+		"StrictHostKeyChecking=no",
+		"UserKnownHostsFile=/dev/null",
+		"NoHostAuthenticationForLocalhost=yes",
+		"GSSAPIAuthentication=no",
+		"PreferredAuthentications=publickey",
+		"Compression=no",
+		"BatchMode=yes",
+		"IdentitiesOnly=yes",
 	)
 
 	sshInfo.Do(func() {
@@ -185,16 +189,17 @@ func CommonArgs(useDotSSH bool) ([]string, error) {
 		// We prioritize AES algorithms when AES accelerator is available.
 		if sshInfo.aesAccelerated {
 			logrus.Debugf("AES accelerator seems available, prioritizing aes128-gcm@openssh.com and aes256-gcm@openssh.com")
-			args = append(args, "-o", "Ciphers=^aes128-gcm@openssh.com,aes256-gcm@openssh.com")
+			opts = append(opts, "Ciphers=\"^aes128-gcm@openssh.com,aes256-gcm@openssh.com\"")
 		} else {
 			logrus.Debugf("AES accelerator does not seem available, prioritizing chacha20-poly1305@openssh.com")
-			args = append(args, "-o", "Ciphers=^chacha20-poly1305@openssh.com")
+			opts = append(opts, "Ciphers=\"^chacha20-poly1305@openssh.com\"")
 		}
 	}
-	return args, nil
+	return opts, nil
 }
 
-func SSHArgs(instDir string, useDotSSH bool) ([]string, error) {
+// SSHOpts adds the following options to CommonOptions: User, ControlMaster, ControlPath, ControlPersist
+func SSHOpts(instDir string, useDotSSH bool) ([]string, error) {
 	controlSock := filepath.Join(instDir, filenames.SSHSock)
 	if len(controlSock) >= osutil.UnixPathMax {
 		return nil, fmt.Errorf("socket path %q is too long: >= UNIX_PATH_MAX=%d", controlSock, osutil.UnixPathMax)
@@ -203,17 +208,27 @@ func SSHArgs(instDir string, useDotSSH bool) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	args, err := CommonArgs(useDotSSH)
+	opts, err := CommonOpts(useDotSSH)
 	if err != nil {
 		return nil, err
 	}
-	args = append(args,
-		"-o", fmt.Sprintf("User=%s", u.Username), // guest and host have the same username, but we should specify the username explicitly (#85)
-		"-o", "ControlMaster=auto",
-		"-o", fmt.Sprintf("ControlPath=\"%s\"", controlSock),
-		"-o", "ControlPersist=5m",
+	opts = append(opts,
+		fmt.Sprintf("User=%s", u.Username), // guest and host have the same username, but we should specify the username explicitly (#85)
+		"ControlMaster=auto",
+		fmt.Sprintf("ControlPath=\"%s\"", controlSock),
+		"ControlPersist=5m",
 	)
-	return args, nil
+	return opts, nil
+}
+
+// SSHArgsFromOpts returns ssh args from opts.
+// The result always contains {"-F", "/dev/null} in additon to {"-o", "KEY=VALUE", ...}.
+func SSHArgsFromOpts(opts []string) []string {
+	args := []string{"-F", "/dev/null"}
+	for _, o := range opts {
+		args = append(args, "-o", o)
+	}
+	return args
 }
 
 func detectOpenSSHVersion() semver.Version {
