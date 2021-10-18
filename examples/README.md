@@ -13,9 +13,12 @@ Distro:
 Container engines:
 - [`docker.yaml`](./docker.yaml): Docker
 - [`podman.yaml`](./podman.yaml): Podman
-- [`k3s.yaml`](./k3s.yaml): k3s
 - [`singularity.yaml`](./singularity.yaml): Singularity
 - LXD is installed in the default Ubuntu template, so there is no `lxd.yaml`
+
+Container orchestration:
+- [`k8s.yaml`](./k8s.yaml): Kubernetes via kubeadm
+- [`k3s.yaml`](./k3s.yaml): Kubernetes via k3s
 
 Others:
 - [`vmnet.yaml`](./vmnet.yaml): enable [`vmnet.framework`](../docs/network.md)
