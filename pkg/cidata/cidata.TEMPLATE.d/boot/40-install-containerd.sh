@@ -50,10 +50,10 @@ EOF
 			setenforce 0
 		fi
 		sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" systemctl --user enable --now dbus
-		sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" containerd-rootless-setuptool.sh install
-		sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" containerd-rootless-setuptool.sh install-buildkit
-		sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" containerd-rootless-setuptool.sh install-fuse-overlayfs
-		if ! sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" containerd-rootless-setuptool.sh install-stargz; then
+		sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "PATH=${PATH}" containerd-rootless-setuptool.sh install
+		sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "PATH=${PATH}" containerd-rootless-setuptool.sh install-buildkit
+		sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "PATH=${PATH}" containerd-rootless-setuptool.sh install-fuse-overlayfs
+		if ! sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "PATH=${PATH}" containerd-rootless-setuptool.sh install-stargz; then
 			echo >&2 "WARNING: rootless stargz does not seem supported on this host (kernel older than 5.11?)"
 		fi
 		if [ -n "$selinux" ]; then
