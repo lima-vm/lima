@@ -51,7 +51,10 @@ elif command -v dnf >/dev/null 2>&1; then
 	fi
 	if [ "${LIMA_CIDATA_CONTAINERD_USER}" = 1 ]; then
 		if ! command -v newuidmap >/dev/null 2>&1; then
-			dnf install -y shadow-utils fuse3
+			dnf install -y shadow-utils
+		fi
+		if ! command -v mount.fuse3 >/dev/null 2>&1; then
+			dnf install -y fuse3
 		fi
 		if [ ! -e /usr/bin/fusermount ]; then
 			# Workaround for https://github.com/containerd/stargz-snapshotter/issues/340
