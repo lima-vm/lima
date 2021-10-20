@@ -1,4 +1,8 @@
 # This example requires Lima v0.7.0 or later.
+
+# Hint: If QEMU crashes with error "vmx_write_mem: mmu_gva_to_gpa XXXXXXXXXXXXXXXX failed" on Intel Mac,
+# try setting environment variable QEMU_SYSTEM_X86_64="qemu-system-x86_64 -cpu Haswell-v4"
+# https://bugs.launchpad.net/qemu/+bug/1838390
 images:
   - location: "https://cloud.centos.org/centos/8/x86_64/images/CentOS-8-GenericCloud-8.4.2105-20210603.0.x86_64.qcow2"
     arch: "x86_64"
