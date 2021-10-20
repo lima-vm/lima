@@ -46,4 +46,5 @@ for f in /etc/subuid /etc/subgid; do
 done
 
 # Start systemd session
+systemctl start systemd-logind.service
 loginctl enable-linger "${LIMA_CIDATA_USER}"
