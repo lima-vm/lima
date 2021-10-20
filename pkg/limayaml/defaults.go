@@ -104,6 +104,9 @@ func FillDefault(y *LimaYAML, filePath string) {
 	if y.UseHostResolver == nil {
 		y.UseHostResolver = &[]bool{true}[0]
 	}
+	if y.PropagateProxyEnv == nil {
+		y.PropagateProxyEnv = &[]bool{true}[0]
+	}
 
 	if len(y.Network.VDEDeprecated) > 0 && len(y.Networks) == 0 {
 		for _, vde := range y.Network.VDEDeprecated {
