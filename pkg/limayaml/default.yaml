@@ -189,6 +189,14 @@ networks:
 # env:
 #   KEY: value
 
+# Lima will override the proxy environment variables with values from the current process
+# environment (the environment in effect when you run `limactl start`). It will automatically
+# replace the strings "localhost" and "127.0.0.1" with the host gateway address from inside
+# the VM, so it stays routable. Use of the process environment can be disabled by setting
+# propagateProxyEnv to false.
+# Default: true
+propagateProxyEnv: true
+
 # The host agent implements a DNS server that looks up host names on the host
 # using the local system resolver. This means changing VPN and network settings
 # are reflected automatically into the guest, including conditional forward,

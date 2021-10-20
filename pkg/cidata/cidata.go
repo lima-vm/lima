@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -37,8 +38,27 @@ func setupEnv(y *limayaml.LimaYAML) (map[string]string, error) {
 	for i, name := range lowerVars {
 		upperVars[i] = strings.ToUpper(name)
 	}
-	for _, name := range append(lowerVars, upperVars...) {
-		if value, ok := os.LookupEnv(name); ok {
+	if *y.PropagateProxyEnv {
+		localhostRegexes := []*regexp.Regexp{
+			regexp.MustCompile(`\blocalhost\b`),
+			regexp.MustCompile(`\b127.0.0.1\b`),
+		}
+		for _, name := range append(lowerVars, upperVars...) {
+			value, ok := os.LookupEnv(name)
+			if !ok {
+				continue
+			}
+			// Replace "localhost" in proxy settings with the gateway address
+			if name != "no_proxy" && name != "NO_PROXY" {
+				newValue := value
+				for _, re := range localhostRegexes {
+					newValue = re.ReplaceAllString(newValue, qemu.SlirpGateway)
+				}
+				if value != newValue {
+					logrus.Infof("Replacing %q value %q with %q", name, value, newValue)
+					value = newValue
+				}
+			}
 			if _, ok := env[name]; ok && value != env[name] {
 				logrus.Infof("Overriding %q value %q with %q from limactl process environment",
 					name, env[name], value)
