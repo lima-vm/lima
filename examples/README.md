@@ -7,6 +7,7 @@ Distro:
 - [`archlinux.yaml`](./archlinux.yaml): Arch Linux
 - [`debian.yaml`](./debian.yaml): Debian GNU/Linux
 - [`fedora.yaml`](./fedora.yaml): Fedora
+- [`centos.yaml`](./centos.yaml): CentOS Linux
 - [`opensuse.yaml`](./opensuse.yaml): openSUSE Leap
 - [`ubuntu.yaml`](./ubuntu.yaml): Ubuntu (same as `default.yaml` but without bogus YAML lines)
 
