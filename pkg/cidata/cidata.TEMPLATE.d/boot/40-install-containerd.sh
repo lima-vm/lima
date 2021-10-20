@@ -53,8 +53,12 @@ EOF
 		sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "PATH=${PATH}" containerd-rootless-setuptool.sh install
 		sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "PATH=${PATH}" containerd-rootless-setuptool.sh install-buildkit
 		sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "PATH=${PATH}" containerd-rootless-setuptool.sh install-fuse-overlayfs
-		if ! sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "PATH=${PATH}" containerd-rootless-setuptool.sh install-stargz; then
-			echo >&2 "WARNING: rootless stargz does not seem supported on this host (kernel older than 5.11?)"
+		if grep -q "release 8" /etc/system-release; then
+			echo >&2 "WARNING: the guest seems EL8-compatible OS. Skipping installing rootless stargz"
+		else
+			if ! sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "PATH=${PATH}" containerd-rootless-setuptool.sh install-stargz; then
+				echo >&2 "WARNING: rootless stargz does not seem supported on this host (kernel older than 5.11?)"
+			fi
 		fi
 		if [ -n "$selinux" ]; then
 			echo "Restoring SELinux"
