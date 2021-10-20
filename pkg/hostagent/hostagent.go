@@ -35,6 +35,7 @@ type HostAgent struct {
 	y               *limayaml.LimaYAML
 	sshLocalPort    int
 	udpDNSLocalPort int
+	tcpDNSLocalPort int
 	instDir         string
 	sshConfig       *ssh.SSHConfig
 	portForwarder   *portForwarder
@@ -87,15 +88,19 @@ func New(instName string, stdout io.Writer, sigintCh chan os.Signal, opts ...Opt
 		return nil, err
 	}
 
-	var udpDNSLocalPort int
+	var udpDNSLocalPort, tcpDNSLocalPort int
 	if *y.UseHostResolver {
 		udpDNSLocalPort, err = findFreeUDPLocalPort()
 		if err != nil {
 			return nil, err
 		}
+		tcpDNSLocalPort, err = findFreeTCPLocalPort()
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	if err := cidata.GenerateISO9660(inst.Dir, instName, y, udpDNSLocalPort, o.nerdctlArchive); err != nil {
+	if err := cidata.GenerateISO9660(inst.Dir, instName, y, udpDNSLocalPort, tcpDNSLocalPort, o.nerdctlArchive); err != nil {
 		return nil, err
 	}
 
@@ -135,6 +140,7 @@ func New(instName string, stdout io.Writer, sigintCh chan os.Signal, opts ...Opt
 		y:               y,
 		sshLocalPort:    sshLocalPort,
 		udpDNSLocalPort: udpDNSLocalPort,
+		tcpDNSLocalPort: tcpDNSLocalPort,
 		instDir:         inst.Dir,
 		sshConfig:       sshConfig,
 		portForwarder:   newPortForwarder(sshConfig, sshLocalPort, rules),
@@ -244,7 +250,7 @@ func (a *HostAgent) Run(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("cannot start DNS server: %w", err)
 		}
-		defer func() { _ = dnsServer.Shutdown() }()
+		defer dnsServer.Shutdown()
 	}
 
 	qCmd := exec.CommandContext(ctx, a.qExe, a.qArgs...)

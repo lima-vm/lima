@@ -16,6 +16,20 @@ type Handler struct {
 	clients      []*dns.Client
 }
 
+type Server struct {
+	udp *dns.Server
+	tcp *dns.Server
+}
+
+func (s *Server) Shutdown() {
+	if s.udp != nil {
+		_ = s.udp.Shutdown()
+	}
+	if s.tcp != nil {
+		_ = s.tcp.Shutdown()
+	}
+}
+
 func newStaticClientConfig(ips []net.IP) (*dns.ClientConfig, error) {
 	s := ``
 	for _, ip := range ips {
@@ -52,25 +66,109 @@ func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
 		handled bool
 	)
 	reply.SetReply(req)
-	for _, q := range reply.Question {
+	for _, q := range req.Question {
+		hdr := dns.RR_Header{
+			Name:   q.Name,
+			Rrtype: q.Qtype,
+			Class:  q.Qclass,
+			Ttl:    5,
+		}
 		switch q.Qtype {
-		case dns.TypeA:
+		case dns.TypeCNAME, dns.TypeA, dns.TypeAAAA:
+			cname, err := net.LookupCNAME(q.Name)
+			if err != nil {
+				break
+			}
+			if cname != "" && cname != q.Name {
+				hdr.Rrtype = dns.TypeCNAME
+				a := &dns.CNAME{
+					Hdr:    hdr,
+					Target: cname,
+				}
+				reply.Answer = append(reply.Answer, a)
+				handled = true
+			}
+			if q.Qtype == dns.TypeCNAME {
+				break
+			}
+			hdr.Name = cname
 			addrs, err := net.LookupIP(q.Name)
 			if err == nil && len(addrs) > 0 {
 				for _, ip := range addrs {
-					if ip.To4() != nil {
-						a := &dns.A{
-							Hdr: dns.RR_Header{
-								Name:   q.Name,
-								Rrtype: dns.TypeA,
-								Class:  dns.ClassINET,
-							},
-							A: ip.To4(),
+					var a dns.RR
+					ipv6 := ip.To4() == nil
+					if q.Qtype == dns.TypeA && !ipv6 {
+						hdr.Rrtype = dns.TypeA
+						a = &dns.A{
+							Hdr: hdr,
+							A:   ip.To4(),
+						}
+					} else if q.Qtype == dns.TypeAAAA && ipv6 {
+						hdr.Rrtype = dns.TypeAAAA
+						a = &dns.AAAA{
+							Hdr:  hdr,
+							AAAA: ip.To16(),
+						}
+					} else {
+						continue
+					}
+					reply.Answer = append(reply.Answer, a)
+					handled = true
+				}
+			}
+		case dns.TypeTXT:
+			txt, err := net.LookupTXT(q.Name)
+			if err == nil && len(txt) > 0 {
+				a := &dns.TXT{
+					Hdr: hdr,
+					Txt: txt,
+				}
+				reply.Answer = append(reply.Answer, a)
+				handled = true
+			}
+		case dns.TypeNS:
+			ns, err := net.LookupNS(q.Name)
+			if err == nil && len(ns) > 0 {
+				for _, s := range ns {
+					if s.Host != "" {
+						a := &dns.NS{
+							Hdr: hdr,
+							Ns:  s.Host,
 						}
 						reply.Answer = append(reply.Answer, a)
 						handled = true
-						break
 					}
+				}
+			}
+		case dns.TypeMX:
+			mx, err := net.LookupMX(q.Name)
+			if err == nil && len(mx) > 0 {
+				for _, s := range mx {
+					if s.Host != "" {
+						a := &dns.MX{
+							Hdr:        hdr,
+							Mx:         s.Host,
+							Preference: s.Pref,
+						}
+						reply.Answer = append(reply.Answer, a)
+						handled = true
+					}
+				}
+			}
+		case dns.TypeSRV:
+			_, addrs, err := net.LookupSRV("", "", q.Name)
+			if err == nil {
+				hdr.Rrtype = dns.TypeSRV
+				for _, addr := range addrs {
+					a := &dns.SRV{
+						Hdr:      hdr,
+						Target:   addr.Target,
+						Port:     addr.Port,
+						Priority: addr.Priority,
+						Weight:   addr.Weight,
+					}
+					reply.Answer = append(reply.Answer, a)
+					handled = true
 				}
 			}
 		}
@@ -107,17 +205,31 @@ func (h *Handler) ServeDNS(w dns.ResponseWriter, req *dns.Msg) {
 	}
 }
 
-func (a *HostAgent) StartDNS() (*dns.Server, error) {
+func (a *HostAgent) StartDNS() (*Server, error) {
 	h, err := newHandler()
 	if err != nil {
 		panic(err)
 	}
-	addr := fmt.Sprintf("127.0.0.1:%d", a.udpDNSLocalPort)
-	server := &dns.Server{Net: "udp", Addr: addr, Handler: h}
-	go func() {
-		if e := server.ListenAndServe(); e != nil {
-			panic(e)
-		}
-	}()
+	server := &Server{}
+	if a.udpDNSLocalPort > 0 {
+		addr := fmt.Sprintf("127.0.0.1:%d", a.udpDNSLocalPort)
+		s := &dns.Server{Net: "udp", Addr: addr, Handler: h}
+		server.udp = s
+		go func() {
+			if e := s.ListenAndServe(); e != nil {
+				panic(e)
+			}
+		}()
+	}
+	if a.tcpDNSLocalPort > 0 {
+		addr := fmt.Sprintf("127.0.0.1:%d", a.tcpDNSLocalPort)
+		s := &dns.Server{Net: "tcp", Addr: addr, Handler: h}
+		server.tcp = s
+		go func() {
+			if e := s.ListenAndServe(); e != nil {
+				panic(e)
+			}
+		}()
+	}
 	return server, nil
 }
