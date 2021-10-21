@@ -5,7 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
+	"strings"
 	"sync"
+
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -31,6 +34,10 @@ func SystemProfiler(dataType string) ([]byte, error) {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
+		if strings.HasPrefix(stderr.String(), "Usage: system_profiler") {
+			logrus.Warn("Can't fetch system_profiler data; maybe OS is older than macOS Catalina 10.15")
+			return []byte("{}"), nil
+		}
 		return nil, fmt.Errorf("failed to run %v: stdout=%q, stderr=%q: %w",
 			cmd.Args, stdout.String(), stderr.String(), err)
 	}
