@@ -231,6 +231,18 @@ func SSHArgsFromOpts(opts []string) []string {
 	return args
 }
 
+func ParseOpenSSHVersion(version []byte) *semver.Version {
+	regex := regexp.MustCompile(`^OpenSSH_(\d+\.\d+)(?:p(\d+))?\b`)
+	matches := regex.FindSubmatch(version)
+	if len(matches) == 3 {
+		if len(matches[2]) == 0 {
+			matches[2] = []byte("0")
+		}
+		return semver.New(fmt.Sprintf("%s.%s", matches[1], matches[2]))
+	}
+	return &semver.Version{}
+}
+
 func detectOpenSSHVersion() semver.Version {
 	var (
 		v      semver.Version
@@ -241,15 +253,8 @@ func detectOpenSSHVersion() semver.Version {
 	if err := cmd.Run(); err != nil {
 		logrus.Warnf("failed to run %v: stderr=%q", cmd.Args, stderr.String())
 	} else {
-		regex := regexp.MustCompile(`^OpenSSH_(\d+\.\d+)(?:p(\d+))?\b`)
-		matches := regex.FindSubmatch(stderr.Bytes())
-		if len(matches) == 3 {
-			if len(matches[2]) == 0 {
-				matches[2] = []byte("0")
-			}
-			v = *semver.New(fmt.Sprintf("%s.%s", matches[1], matches[2]))
-		}
+		v = *ParseOpenSSHVersion(stderr.Bytes())
+		logrus.Debugf("OpenSSH version %s detected", v)
 	}
-	logrus.Debugf("OpenSSH version %s detected", v)
 	return v
 }
