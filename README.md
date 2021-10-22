@@ -23,7 +23,7 @@ Lima is expected to be used on macOS hosts, but can be used on Linux hosts as we
 
 ✅ Intel on ARM
 
-✅ Various guest Linux distributions: [Ubuntu](./examples/ubuntu.yaml), [Debian](./examples/debian.yaml), [Fedora](./examples/fedora.yaml), [Alpine](./examples/alpine.yaml), [Arch Linux](./examples/archlinux.yaml), [openSUSE](./examples/opensuse.yaml), [CentOS](./examples/centos.yaml)...
+✅ Various guest Linux distributions: [Alpine](./examples/alpine.yaml), [Arch Linux](./examples/archlinux.yaml), [CentOS](./examples/centos.yaml), [Debian](./examples/debian.yaml), [Fedora](./examples/fedora.yaml), [openSUSE](./examples/opensuse.yaml), [Ubuntu](./examples/ubuntu.yaml) (default), ...
 
 Related project: [sshocker (ssh with file sharing and port forwarding)](https://github.com/lima-vm/sshocker)
 
@@ -240,7 +240,7 @@ Alternatively, you may also directly ssh into the guest: `ssh -p 60022 -i ~/.lim
 Yes, it should work, but not regularly tested on ARM (due to lack of CI).
 
 #### "Can I run non-Ubuntu guests?"
-Debian, Fedora, Alpine, Arch Linux, openSUSE, and CentOS are also known to work.
+Alpine, Arch Linux, CentOS, Debian, Fedora, and openSUSE are also known to work.
 See [`./examples/`](./examples/).
 
 An image has to satisfy the following requirements:
@@ -256,12 +256,14 @@ An image has to satisfy the following requirements:
 #### "Can I run other container engines such as Docker and Podman? What about Kubernetes?"
 Yes, any container engine should work with Lima.
 
-See examples:
+Container runtime examples:
 - [`./examples/docker.yaml`](./examples/docker.yaml): Docker
 - [`./examples/podman.yaml`](./examples/podman.yaml): Podman
 - [`./examples/singularity.yaml`](./examples/singularity.yaml): Singularity
-- [`./examples/k8s.yaml`](./examples/k8s.yaml): Kubernetes (kubeadm)
+
+Container orchestrator examples:
 - [`./examples/k3s.yaml`](./examples/k3s.yaml): Kubernetes (k3s)
+- [`./examples/k8s.yaml`](./examples/k8s.yaml): Kubernetes (kubeadm)
 - [`./examples/nomad.yaml`](./examples/nomad.yaml): Nomad
 
 The default Ubuntu image also contains LXD. Run`lima sudo lxc init` to set up LXD.
