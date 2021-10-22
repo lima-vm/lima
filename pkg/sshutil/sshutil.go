@@ -199,7 +199,7 @@ func CommonOpts(useDotSSH bool) ([]string, error) {
 }
 
 // SSHOpts adds the following options to CommonOptions: User, ControlMaster, ControlPath, ControlPersist
-func SSHOpts(instDir string, useDotSSH bool) ([]string, error) {
+func SSHOpts(instDir string, useDotSSH, forwardAgent bool) ([]string, error) {
 	controlSock := filepath.Join(instDir, filenames.SSHSock)
 	if len(controlSock) >= osutil.UnixPathMax {
 		return nil, fmt.Errorf("socket path %q is too long: >= UNIX_PATH_MAX=%d", controlSock, osutil.UnixPathMax)
@@ -218,6 +218,9 @@ func SSHOpts(instDir string, useDotSSH bool) ([]string, error) {
 		fmt.Sprintf("ControlPath=\"%s\"", controlSock),
 		"ControlPersist=5m",
 	)
+	if forwardAgent {
+		opts = append(opts, "ForwardAgent=yes")
+	}
 	return opts, nil
 }
 

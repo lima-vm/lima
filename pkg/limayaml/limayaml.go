@@ -50,8 +50,8 @@ type SSH struct {
 	LocalPort int `yaml:"localPort,omitempty" json:"localPort,omitempty"`
 
 	// LoadDotSSHPubKeys loads ~/.ssh/*.pub in addition to $LIMA_HOME/_config/user.pub .
-	// Default: true
-	LoadDotSSHPubKeys *bool `yaml:"loadDotSSHPubKeys,omitempty" json:"loadDotSSHPubKeys,omitempty"`
+	LoadDotSSHPubKeys *bool `yaml:"loadDotSSHPubKeys,omitempty" json:"loadDotSSHPubKeys,omitempty"` // default: true
+	ForwardAgent      *bool `yaml:"forwardAgent,omitempty" json:"forwardAgent,omitempty"`           // default: false
 }
 
 type Firmware struct {

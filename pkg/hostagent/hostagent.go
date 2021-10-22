@@ -115,7 +115,7 @@ func New(instName string, stdout io.Writer, sigintCh chan os.Signal, opts ...Opt
 		return nil, err
 	}
 
-	sshOpts, err := sshutil.SSHOpts(inst.Dir, *y.SSH.LoadDotSSHPubKeys)
+	sshOpts, err := sshutil.SSHOpts(inst.Dir, *y.SSH.LoadDotSSHPubKeys, *y.SSH.ForwardAgent)
 	if err != nil {
 		return nil, err
 	}
