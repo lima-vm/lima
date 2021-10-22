@@ -9,7 +9,7 @@ Distro:
 - [`fedora.yaml`](./fedora.yaml): Fedora
 - [`centos.yaml`](./centos.yaml): CentOS Linux
 - [`opensuse.yaml`](./opensuse.yaml): openSUSE Leap
-- [`ubuntu.yaml`](./ubuntu.yaml): Ubuntu (same as `default.yaml` but without bogus YAML lines)
+- [`ubuntu.yaml`](./ubuntu.yaml): Ubuntu (same as `default.yaml` but without extra YAML lines)
 
 Container engines:
 - [`docker.yaml`](./docker.yaml): Docker
