@@ -20,6 +20,7 @@ Container engines:
 Container orchestration:
 - [`k8s.yaml`](./k8s.yaml): Kubernetes via kubeadm
 - [`k3s.yaml`](./k3s.yaml): Kubernetes via k3s
+- [`nomad.yaml`](./nomad.yaml): Nomad
 
 Others:
 - [`vmnet.yaml`](./vmnet.yaml): enable [`vmnet.framework`](../docs/network.md)

@@ -1,0 +1,71 @@
+# Deploy nomad with containerd
+# $ limactl start ./nomad.yaml
+# $ limactl shell nomad nomad
+#
+# See <http://localhost:4646>
+#
+# More examples can be found at:
+# https://github.com/Roblox/nomad-driver-containerd/tree/master/example
+
+# This example requires Lima v0.7.0 or later.
+images:
+  # Image is set to focal (20.04 LTS) for long-term stability
+  # Hint: run `limactl prune` to invalidate the "current" cache
+  - location: "https://cloud-images.ubuntu.com/focal/current/focal-server-cloudimg-amd64.img"
+    arch: "x86_64"
+  - location: "https://cloud-images.ubuntu.com/focal/current/focal-server-cloudimg-arm64.img"
+    arch: "aarch64"
+mounts:
+  - location: "~"
+    writable: false
+  - location: "/tmp/lima"
+    writable: true
+containerd:
+  system: true
+  user: false
+# See https://learn.hashicorp.com/tutorials/nomad/get-started-install
+provision:
+  - mode: system
+    script: |
+      #!/bin/sh
+      command -v nomad >/dev/null 2>&1 && exit 0
+      curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
+      echo "deb https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+      apt-get update
+      apt-get install -y nomad consul golang-cfssl
+      sed -e '/^client/a \ \ cni_path = "/usr/local/libexec/cni"\n\ \ cni_config_dir = "/etc/cni/net.d"' -i /etc/nomad.d/nomad.hcl
+      # install containerd-driver
+      DRIVER_VERSION=0.9.2
+      case $(uname -m) in
+        amd64|x86_64)
+          curl -sSL -o containerd-driver https://github.com/Roblox/nomad-driver-containerd/releases/download/v${DRIVER_VERSION}/containerd-driver
+          ;;
+        arm64|aarch64)
+          curl -sSL -o containerd-driver https://github.com/Roblox/nomad-driver-containerd/releases/download/v${DRIVER_VERSION}/containerd-driver-arm64
+          ;;
+      esac
+      sudo install -D containerd-driver /opt/nomad/data/plugins/containerd-driver
+      cat <<EOF | sudo tee -a /etc/nomad.d/nomad.hcl
+
+      plugin "containerd-driver" {
+        config {
+            enabled = true
+            containerd_runtime = "io.containerd.runc.v2"
+            stats_interval = "5s"
+        }
+      }
+      EOF
+      systemctl enable --now nomad consul
+  - mode: user
+    script: |
+      #!/bin/sh
+      nomad -autocomplete-install
+probes:
+  - script: |
+      #!/bin/bash
+      set -eux -o pipefail
+      if ! timeout 30s bash -c "until command -v nomad >/dev/null 2>&1; do sleep 3; done"; then
+        echo >&2 "nomad is not installed yet"
+        exit 1
+      fi
+    hint: See "/var/log/cloud-init-output.log". in the guest
