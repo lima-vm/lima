@@ -67,6 +67,9 @@ func FillDefault(y *LimaYAML, filePath string) {
 	if y.SSH.LoadDotSSHPubKeys == nil {
 		y.SSH.LoadDotSSHPubKeys = &[]bool{true}[0]
 	}
+	if y.SSH.ForwardAgent == nil {
+		y.SSH.ForwardAgent = &[]bool{false}[0]
+	}
 	for i := range y.Provision {
 		provision := &y.Provision[i]
 		if provision.Mode == "" {

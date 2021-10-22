@@ -118,7 +118,7 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	sshOpts, err := sshutil.SSHOpts(inst.Dir, *y.SSH.LoadDotSSHPubKeys)
+	sshOpts, err := sshutil.SSHOpts(inst.Dir, *y.SSH.LoadDotSSHPubKeys, *y.SSH.ForwardAgent)
 	if err != nil {
 		return err
 	}

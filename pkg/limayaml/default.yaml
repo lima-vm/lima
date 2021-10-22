@@ -55,6 +55,9 @@ ssh:
   # If you have an insecure key under ~/.ssh, do not use this option.
   # Default: true
   loadDotSSHPubKeys: true
+  # Forward ssh agent into the instance.
+  # Default: false
+  forwardAgent: false
 
 
 
