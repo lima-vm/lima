@@ -23,7 +23,7 @@ Lima is expected to be used on macOS hosts, but can be used on Linux hosts as we
 
 ✅ Intel on ARM
 
-✅ Various guest Linux distributions: [Ubuntu](./examples/ubuntu.yaml), [Debian](./examples/debian.yaml), [Fedora](./examples/fedora.yaml), [Alpine](./examples/alpine.yaml), [Arch Linux](./examples/archlinux.yaml), [openSUSE](./examples/opensuse.yaml)...
+✅ Various guest Linux distributions: [Alpine](./examples/alpine.yaml), [Arch Linux](./examples/archlinux.yaml), [CentOS](./examples/centos.yaml), [Debian](./examples/debian.yaml), [Fedora](./examples/fedora.yaml), [openSUSE](./examples/opensuse.yaml), [Ubuntu](./examples/ubuntu.yaml) (default), ...
 
 Related project: [sshocker (ssh with file sharing and port forwarding)](https://github.com/lima-vm/sshocker)
 
@@ -40,8 +40,9 @@ Container environments:
 - [Rancher Desktop](https://rancherdesktop.io/): Kubernetes and container management to the desktop
 - [Colima](https://github.com/abiosoft/colima): Docker (and Kubernetes) on macOS with minimal setup
 
-Misc:
-- [Lima xbar plugin](https://github.com/unixorn/lima-xbar-plugin) - [xbar](https://xbarapp.com/) plugin to start/stop VMs from the menu bar and see their running status.
+GUI:
+- [Lima xbar plugin](https://github.com/unixorn/lima-xbar-plugin): [xbar](https://xbarapp.com/) plugin to start/stop VMs from the menu bar and see their running status.
+- [lima-gui](https://github.com/afbjorklund/lima-gui): Qt GUI for Lima
 
 ## Examples
 
@@ -96,7 +97,7 @@ $ brew install lima
 
 Install recent version of QEMU. v6.1.0 or later is recommended.
 
-On ARM hosts, a [patched](https://patchwork.kernel.org/series/548227/mbox/) version of QEMU has to be installed for enabling `-accel hvf` support.
+On ARM Mac hosts, a [patched](https://patchwork.kernel.org/series/548227/mbox/) version of QEMU has to be installed for enabling `-accel hvf` support.
 
 The patch was merged into the master branch on [2021-09-21](https://github.com/qemu/qemu/commit/81ceb36b9) and will be included in QEMU v6.2.0.
 
@@ -153,6 +154,8 @@ Detailed usage:
 
 - To enable bash completion, add `source <(limactl completion bash)` to `~/.bash_profile`.
 
+- To enable zsh completion, see `limactl completion zsh --help`
+
 ### :warning: CAUTION: make sure to back up your data
 Lima may have bugs that result in loss of data.
 
@@ -178,7 +181,7 @@ The current default spec:
 ## How it works
 
 - Hypervisor: QEMU with HVF accelerator
-- Filesystem sharing: [reverse sshfs](https://github.com/lima-vm/sshocker/blob/v0.2.0/pkg/reversesshfs/reversesshfs.go) (planned to be replaced with 9p soon)
+- Filesystem sharing: [reverse sshfs](https://github.com/lima-vm/sshocker/blob/v0.2.0/pkg/reversesshfs/reversesshfs.go) (likely to be replaced with 9p or Samba in future)
 - Port forwarding: `ssh -L`, automated by watching `/proc/net/tcp` and `iptables` events in the guest
 
 ## Developer guide
@@ -195,7 +198,6 @@ The current default spec:
 - Performance optimization
 - More guest distros
 - Windows hosts
-- GUI with system tray icon (Qt or Electron, for portability)
 - [VirtFS to replace the current reverse sshfs (work has to be done on QEMU repo)](https://github.com/NixOS/nixpkgs/pull/122420)
 - [vsock](https://github.com/apple/darwin-xnu/blob/xnu-7195.81.3/bsd/man/man4/vsock.4) to replace SSH (work has to be done on QEMU repo)
 
@@ -210,13 +212,14 @@ The current default spec:
   - ["What's my login password?"](#whats-my-login-password)
   - ["Does Lima work on ARM Mac?"](#does-lima-work-on-arm-mac)
   - ["Can I run non-Ubuntu guests?"](#can-i-run-non-ubuntu-guests)
-  - ["Can I run other container engines such as Docker and Podman?"](#can-i-run-other-container-engines-such-as-docker-and-podman)
+  - ["Can I run other container engines such as Docker and Podman? What about Kubernetes?"](#can-i-run-other-container-engines-such-as-docker-and-podman-what-about-kubernetes)
   - ["Can I run Lima with a remote Linux machine?"](#can-i-run-lima-with-a-remote-linux-machine)
   - ["Advantages compared to Docker for Mac?"](#advantages-compared-to-docker-for-mac)
 - [QEMU](#qemu)
   - ["QEMU crashes with `HV_ERROR`"](#qemu-crashes-with-hv_error)
   - ["QEMU is slow"](#qemu-is-slow)
   - [error "killed -9"](#error-killed--9)
+  - ["QEMU crashes with `vmx_write_mem: mmu_gva_to_gpa XXXXXXXXXXXXXXXX failed`"](#qemu-crashes-with-vmx_write_mem-mmu_gva_to_gpa-xxxxxxxxxxxxxxxx-failed)
 - [SSH](#ssh)
   - ["Port forwarding does not work"](#port-forwarding-does-not-work)
   - [stuck on "Waiting for the essential requirement 1 of X: "ssh"](#stuck-on-waiting-for-the-essential-requirement-1-of-x-ssh)
@@ -237,7 +240,7 @@ Alternatively, you may also directly ssh into the guest: `ssh -p 60022 -i ~/.lim
 Yes, it should work, but not regularly tested on ARM (due to lack of CI).
 
 #### "Can I run non-Ubuntu guests?"
-Debian, Fedora, Alpine, Arch Linux, and openSUSE are also known to work.
+Alpine, Arch Linux, CentOS, Debian, Fedora, and openSUSE are also known to work.
 See [`./examples/`](./examples/).
 
 An image has to satisfy the following requirements:
@@ -250,15 +253,24 @@ An image has to satisfy the following requirements:
   - `newuidmap` and `newgidmap`
 - `apt-get`, `dnf`, `apk`, `pacman`, or `zypper` (if you want to contribute support for another package manager, run `git grep apt-get` to find out where to modify)
 
-#### "Can I run other container engines such as Docker and Podman?"
+#### "Can I run other container engines such as Docker and Podman? What about Kubernetes?"
 Yes, any container engine should work with Lima.
 
-See examples:
-- [`./examples/docker.yaml`](./examples/docker.yaml)
-- [`./examples/podman.yaml`](./examples/podman.yaml)
-- [`./examples/singularity.yaml`](./examples/singularity.yaml)
+Container runtime examples:
+- [`./examples/docker.yaml`](./examples/docker.yaml): Docker
+- [`./examples/podman.yaml`](./examples/podman.yaml): Podman
+- [`./examples/singularity.yaml`](./examples/singularity.yaml): Singularity
+
+Container orchestrator examples:
+- [`./examples/k3s.yaml`](./examples/k3s.yaml): Kubernetes (k3s)
+- [`./examples/k8s.yaml`](./examples/k8s.yaml): Kubernetes (kubeadm)
+- [`./examples/nomad.yaml`](./examples/nomad.yaml): Nomad
 
 The default Ubuntu image also contains LXD. Run`lima sudo lxc init` to set up LXD.
+
+See also third party containerd projects based on Lima:
+- [Rancher Desktop](https://rancherdesktop.io/): Kubernetes and container management to the desktop
+- [Colima](https://github.com/abiosoft/colima): Docker (and Kubernetes) on macOS with minimal setup
 
 #### "Can I run Lima with a remote Linux machine?"
 Lima itself does not support connecting to a remote Linux machine, but [sshocker](https://github.com/lima-vm/sshocker),
@@ -312,6 +324,11 @@ Note: **Only** on macOS versions **before** 10.15.7 you might need to add this e
 - make sure qemu is codesigned, See ["QEMU crashes with `HV_ERROR`"](#qemu-crashes-with-hv_error).
 - if you are on macOS 10.15.7 or 11.0 or later make sure the entitlement `com.apple.vm.hypervisor` is **not** added. It only works on older macOS versions. You can clear the codesigning with `codesign --remove-signature /usr/local/bin/qemu-system-x86_64` and [start over](#getting-started).
 
+#### "QEMU crashes with `vmx_write_mem: mmu_gva_to_gpa XXXXXXXXXXXXXXXX failed`"
+This error is known to happen when running an image of RHEL8-compatible distribution such as CentOS 8 on Intel Mac.
+A workaround is to set environment variable `QEMU_SYSTEM_X86_64="qemu-system-x86_64 -cpu Haswell-v4"`.
+
+https://bugs.launchpad.net/qemu/+bug/1838390
 
 ### SSH
 #### "Port forwarding does not work"

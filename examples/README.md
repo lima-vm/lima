@@ -5,11 +5,11 @@ Default: [`default.yaml`](../pkg/limayaml/default.yaml) (Ubuntu, with containerd
 Distro:
 - [`alpine.yaml`](./alpine.yaml): Alpine Linux
 - [`archlinux.yaml`](./archlinux.yaml): Arch Linux
+- [`centos.yaml`](./centos.yaml): CentOS Linux
 - [`debian.yaml`](./debian.yaml): Debian GNU/Linux
 - [`fedora.yaml`](./fedora.yaml): Fedora
-- [`centos.yaml`](./centos.yaml): CentOS Linux
 - [`opensuse.yaml`](./opensuse.yaml): openSUSE Leap
-- [`ubuntu.yaml`](./ubuntu.yaml): Ubuntu (same as `default.yaml` but without bogus YAML lines)
+- [`ubuntu.yaml`](./ubuntu.yaml): Ubuntu (same as `default.yaml` but without extra YAML lines)
 
 Container engines:
 - [`docker.yaml`](./docker.yaml): Docker
@@ -18,8 +18,8 @@ Container engines:
 - LXD is installed in the default Ubuntu template, so there is no `lxd.yaml`
 
 Container orchestration:
-- [`k8s.yaml`](./k8s.yaml): Kubernetes via kubeadm
 - [`k3s.yaml`](./k3s.yaml): Kubernetes via k3s
+- [`k8s.yaml`](./k8s.yaml): Kubernetes via kubeadm
 - [`nomad.yaml`](./nomad.yaml): Nomad
 
 Others:
