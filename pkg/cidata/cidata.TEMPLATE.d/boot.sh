@@ -19,9 +19,9 @@ done <"${LIMA_CIDATA_MNT}"/etc_environment
 
 CODE=0
 
-# Don't make any changes to /etc or /var/lib until the boot/* scripts have run
-# because they might move the directories to /mnt/data on first boot, so changes
-# made on restart would be lost.
+# Don't make any changes to /etc or /var/lib until boot/05-persistent-data-volume.sh
+# has run because it might move the directories to /mnt/data on first boot. In that
+# case changes made on restart would be lost.
 
 for f in "${LIMA_CIDATA_MNT}"/boot/*; do
 	INFO "Executing $f"
@@ -30,11 +30,6 @@ for f in "${LIMA_CIDATA_MNT}"/boot/*; do
 		CODE=1
 	fi
 done
-
-if [ -e /etc/environment ]; then
-	sed -i '/#LIMA-START/,/#LIMA-END/d' /etc/environment
-fi
-cat "${LIMA_CIDATA_MNT}/etc_environment" >>/etc/environment
 
 if [ -d "${LIMA_CIDATA_MNT}"/provision.system ]; then
 	for f in "${LIMA_CIDATA_MNT}"/provision.system/*; do

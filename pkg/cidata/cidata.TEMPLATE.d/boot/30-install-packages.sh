@@ -112,7 +112,7 @@ if [ -n "${LIMA_CIDATA_TCP_DNS_LOCAL_PORT}" ] && [ "${LIMA_CIDATA_TCP_DNS_LOCAL_
 fi
 if [ "${SETUP_DNS}" = 1 ]; then
 	# Try to setup iptables rule again, in case we just installed iptables
-	"${LIMA_CIDATA_MNT}/boot/07-host-dns-setup.sh"
+	"${LIMA_CIDATA_MNT}/boot/09-host-dns-setup.sh"
 fi
 
 # update_fuse_conf has to be called after installing all the packages,
