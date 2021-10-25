@@ -53,4 +53,3 @@ func LimaNetworksDir() (string, error) {
 	}
 	return filepath.Join(limaDir, filenames.NetworksDir), nil
 }
-

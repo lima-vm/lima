@@ -1,7 +1,7 @@
 package cidata
 
 import (
-	"io/ioutil"
+	"io"
 	"testing"
 
 	"gotest.tools/v3/assert"
@@ -24,7 +24,7 @@ func TestTemplate(t *testing.T) {
 	assert.NilError(t, err)
 	for _, f := range layout {
 		t.Logf("=== %q ===", f.Path)
-		b, err := ioutil.ReadAll(f.Reader)
+		b, err := io.ReadAll(f.Reader)
 		assert.NilError(t, err)
 		t.Log(string(b))
 	}

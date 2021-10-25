@@ -2,11 +2,12 @@ package osutil
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"os/user"
 	"regexp"
 	"strconv"
 	"sync"
+
+	"github.com/sirupsen/logrus"
 )
 
 type User struct {
@@ -18,7 +19,7 @@ type User struct {
 
 type Group struct {
 	Name string
-	Gid   uint32
+	Gid  uint32
 }
 
 var users map[string]User

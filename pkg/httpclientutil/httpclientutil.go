@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -56,7 +55,7 @@ func readAtMost(r io.Reader, maxBytes int) ([]byte, error) {
 		R: r,
 		N: int64(maxBytes),
 	}
-	b, err := ioutil.ReadAll(lr)
+	b, err := io.ReadAll(lr)
 	if err != nil {
 		return b, err
 	}

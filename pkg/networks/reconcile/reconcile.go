@@ -218,7 +218,7 @@ func stopNetwork(config *networks.NetworksConfig, name string) error {
 				if pid, _ := store.ReadPIDFile(config.PIDFile(name, daemon)); pid == 0 {
 					break
 				}
-				if time.Since(startWaiting) > 5 * time.Second {
+				if time.Since(startWaiting) > 5*time.Second {
 					logrus.Infof("%q daemon for %q network still running after 5 seconds", daemon, name)
 					break
 				}

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -206,7 +205,7 @@ func Download(local, remote string, opts ...Opt) (*Result, error) {
 		return nil, err
 	}
 	if shadDigest != "" && o.expectedDigest != "" {
-		if err := ioutil.WriteFile(shadDigest, []byte(o.expectedDigest.String()), 0644); err != nil {
+		if err := os.WriteFile(shadDigest, []byte(o.expectedDigest.String()), 0644); err != nil {
 			return nil, err
 		}
 	}
