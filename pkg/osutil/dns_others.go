@@ -9,5 +9,5 @@ func DNSAddresses() ([]string, error) {
 }
 
 func ProxySettings() (map[string]string, error) {
-		return make(map[string]string), nil
+	return make(map[string]string), nil
 }

@@ -2,6 +2,7 @@ package networks
 
 import (
 	"fmt"
+
 	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 )

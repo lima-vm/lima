@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -214,7 +213,7 @@ func openEditor(cmd *cobra.Command, name string, initialContent []byte) ([]byte,
 	if editor == "" {
 		return nil, errors.New("could not detect a text editor binary, try setting $EDITOR")
 	}
-	tmpYAMLFile, err := ioutil.TempFile("", "lima-editor-")
+	tmpYAMLFile, err := os.CreateTemp("", "lima-editor-")
 	if err != nil {
 		return nil, err
 	}
@@ -226,7 +225,7 @@ func openEditor(cmd *cobra.Command, name string, initialContent []byte) ([]byte,
 	}
 	hdr += "# - To cancel starting Lima, just save this file as an empty file.\n"
 	hdr += "\n"
-	if err := ioutil.WriteFile(tmpYAMLPath,
+	if err := os.WriteFile(tmpYAMLPath,
 		append([]byte(hdr), initialContent...),
 		0o600); err != nil {
 		return nil, err

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/lima-vm/lima/pkg/networks/reconcile"
+	networks "github.com/lima-vm/lima/pkg/networks/reconcile"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
