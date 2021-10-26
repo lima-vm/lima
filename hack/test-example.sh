@@ -92,6 +92,8 @@ function diagnose() {
 	set +x -e
 }
 
+export ftp_proxy=http://localhost:2121
+
 INFO "Starting \"$NAME\" from \"$FILE\""
 defer "limactl delete -f \"$NAME\""
 set -x
@@ -105,6 +107,17 @@ limactl shell "$NAME" uname -a
 
 limactl shell "$NAME" cat /etc/os-release
 set +x
+
+INFO "Testing proxy settings are imported"
+got=$(limactl shell "$NAME" env | grep FTP_PROXY)
+# Expected: FTP_PROXY is set in addition to ftp_proxy, localhost is replaced
+# by the gateway address, and the value is set immediately without a restart
+expected="FTP_PROXY=http://192.168.5.2:2121"
+INFO "FTP_PROXY: expected=${expected} got=${got}"
+if [ "$got" != "$expected" ]; then
+	ERROR "proxy environment variable not set to correct value"
+	exit 1
+fi
 
 INFO "Testing limactl copy command"
 tmpfile="$HOME/lima-hostname"
@@ -212,8 +225,18 @@ if [[ -n ${CHECKS["restart"]} ]]; then
 	limactl stop "$NAME"
 	sleep 3
 
+	export ftp_proxy=my.proxy:8021
 	INFO "Restarting \"$NAME\""
 	limactl start "$NAME"
+
+	INFO "Make sure proxy setting is updated"
+	got=$(limactl shell "$NAME" env | grep FTP_PROXY)
+	expected="FTP_PROXY=my.proxy:8021"
+	INFO "FTP_PROXY: expected=${expected} got=${got}"
+	if [ "$got" != "$expected" ]; then
+		ERROR "proxy environment variable not set to correct value"
+		exit 1
+	fi
 
 	# shellcheck disable=SC2016
 	if ! limactl shell "$NAME" sh -c 'test -f $HOME/sweet-home'; then
