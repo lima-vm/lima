@@ -1,0 +1,155 @@
+#   Copyright The containerd Authors.
+
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+
+#       http://www.apache.org/licenses/LICENSE-2.0
+
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
+# -----------------------------------------------------------------------------
+# From https://github.com/containerd/nerdctl/blob/v0.12.1/.golangci.yml
+# -----------------------------------------------------------------------------
+---
+run:
+  concurrency: 6
+  deadline: 5m
+linters:
+  disable-all: true
+  enable:
+    - deadcode
+    - depguard
+    - gofmt
+    - goimports
+    - govet
+    - ineffassign
+    - misspell
+    - nakedret
+    # - prealloc
+    - structcheck
+    - typecheck
+    - varcheck
+    # - asciicheck
+    # - bodyclose
+    # - dogsled
+    # - dupl
+    # - errcheck
+    # - errorlint
+    # - exhaustive
+    # - exhaustivestruct
+    # - exportloopref
+    # - funlen
+    # - gci
+    # - gochecknoglobals
+    # - gochecknoinits
+    # - gocognit
+    # - goconst
+    # - gocritic
+    # - gocyclo
+    # - godot
+    # - godox
+    # - goerr113
+    # - gofumpt
+    # - goheader
+    # - golint
+    # - gomnd
+    # - gomodguard
+    # - goprintffuncname
+    # - gosec (gas)
+    # - gosimple (megacheck)
+    # - interfacer
+    # - lll
+    # - maligned
+    # - nestif
+    # - nlreturn
+    # - noctx
+    # - nolintlint
+    # - rowserrcheck
+    # - scopelint
+    # - sqlclosecheck
+    # - staticcheck
+    # - stylecheck
+    # - testpackage
+    # - tparallel
+    # - unconvert
+    # - unparam
+    # - unused
+    # - whitespace
+    # - wrapcheck
+    # - wsl
+linters-settings:
+  gocritic:
+    enabled-checks:
+      # Diagnostic
+      - appendAssign
+      - argOrder
+      - badCond
+      - caseOrder
+      - codegenComment
+      - commentedOutCode
+      - deprecatedComment
+      - dupArg
+      - dupBranchBody
+      - dupCase
+      - dupSubExpr
+      - exitAfterDefer
+      - flagDeref
+      - flagName
+      - nilValReturn
+      - offBy1
+      - sloppyReassign
+      - weakCond
+      - octalLiteral
+
+      # Performance
+      - appendCombine
+      - equalFold
+      - hugeParam
+      - indexAlloc
+      - rangeExprCopy
+      - rangeValCopy
+
+      # Style
+      - assignOp
+      - boolExprSimplify
+      - captLocal
+      - commentFormatting
+      - commentedOutImport
+      - defaultCaseOrder
+      - docStub
+      - elseif
+      - emptyFallthrough
+      - emptyStringTest
+      - hexLiteral
+      - ifElseChain
+      - methodExprCall
+      - regexpMust
+      - singleCaseSwitch
+      - sloppyLen
+      - stringXbytes
+      - switchTrue
+      - typeAssertChain
+      - typeSwitchVar
+      - underef
+      - unlabelStmt
+      - unlambda
+      - unslice
+      - valSwap
+      - wrapperFunc
+      - yodaStyleExpr
+
+      # Opinionated
+      - builtinShadow
+      - importShadow
+      - initClause
+      - nestingReduce
+      - paramTypeCombine
+      - ptrToRefParam
+      - typeUnparen
+      - unnamedResult
+      - unnecessaryBlock
