@@ -13,6 +13,7 @@ import (
 	"github.com/lima-vm/lima/pkg/guestagent/api"
 	"github.com/lima-vm/lima/pkg/guestagent/iptables"
 	"github.com/lima-vm/lima/pkg/guestagent/procnettcp"
+	"github.com/lima-vm/lima/pkg/guestagent/procnetunix"
 	"github.com/sirupsen/logrus"
 	"github.com/yalue/native_endian"
 )
@@ -90,7 +91,8 @@ func (a *agent) setWorthCheckingIPTablesRoutine(auditClient *libaudit.AuditClien
 }
 
 type eventState struct {
-	ports []api.IPPort
+	ports   []api.IPPort
+	sockets []string
 }
 
 func comparePorts(old, neww []api.IPPort) (added, removed []api.IPPort) {
@@ -120,6 +122,30 @@ func comparePorts(old, neww []api.IPPort) (added, removed []api.IPPort) {
 	return
 }
 
+func compareSockets(old, neww []string) (added, removed []string) {
+	mRaw := make(map[string]string, len(old))
+	mStillExist := make(map[string]bool, len(old))
+
+	for _, k := range old {
+		mStillExist[k] = false
+	}
+	for _, k := range neww {
+		if _, ok := mStillExist[k]; !ok {
+			added = append(added, k)
+		}
+		mStillExist[k] = true
+	}
+
+	for k, stillExist := range mStillExist {
+		if !stillExist {
+			if x, ok := mRaw[k]; ok {
+				removed = append(removed, x)
+			}
+		}
+	}
+	return
+}
+
 func (a *agent) collectEvent(ctx context.Context, st eventState) (api.Event, eventState) {
 	var (
 		ev  api.Event
@@ -133,6 +159,15 @@ func (a *agent) collectEvent(ctx context.Context, st eventState) (api.Event, eve
 		return ev, newSt
 	}
 	ev.LocalPortsAdded, ev.LocalPortsRemoved = comparePorts(st.ports, newSt.ports)
+
+	newSt.sockets, err = a.LocalSockets(ctx)
+	if err != nil {
+		ev.Errors = append(ev.Errors, err.Error())
+		ev.Time = time.Now()
+		return ev, newSt
+	}
+	ev.LocalSocketsAdded, ev.LocalSocketsRemoved = compareSockets(st.sockets, newSt.sockets)
+
 	ev.Time = time.Now()
 	return ev, newSt
 }
@@ -242,5 +277,23 @@ func (a *agent) Info(ctx context.Context) (*api.Info, error) {
 	if err != nil {
 		return nil, err
 	}
+	info.LocalSockets, err = a.LocalSockets(ctx)
+	if err != nil {
+		return nil, err
+	}
 	return &info, nil
+}
+
+func (a *agent) LocalSockets(ctx context.Context) ([]string, error) {
+	var res []string
+	parsed, err := procnetunix.ParseFile()
+	if err == nil {
+		for _, f := range parsed {
+			switch f.State {
+			case procnetunix.StateUnconnected, procnetunix.StateConnecting, procnetunix.StateConnected:
+				res = append(res, f.Path)
+			}
+		}
+	}
+	return res, err
 }
