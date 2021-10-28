@@ -182,12 +182,14 @@ networks:
 #   - guestPort: 8888
 #     ignore: true (don't forward this port)
 #
-#   - guestSocket: /var/run/socket
+#   - guestSocket: "/run/user/{{.UID}}/my.sock"
 #     hostSocket: mysocket
-#   # hostSocket will be "$LIMA_HOME/$INSTANCE/sock/mysocket"
+#   # "guestSocket" can include these template variables: {{.Home}}, {{.UID}}, and {{.User}}.
+#   # "hostSocket" can include {{.LimaHome}}, {{.Instance}}, {{.Home}}, {{.UID}}, and {{.User}}.
+#   # Relative "hostSocket" will be based of "{{.LimaHome}}/{{.Instance}}/sock/".
 #   # Sockets can also be forwarded to ports and vice versa, but not to/from a range of ports.
-#   # Forwarding requires the lima user to have rw access to the guestsocket,
-#   # and the local user rwx access to the directory of the hostsocket.
+#   # Forwarding requires the lima user to have rw access to the "guestsocket",
+#   # and the local user rwx access to the directory of the "hostsocket".
 #
 #   # Lima internally appends this fallback rule at the end:
 #   - guestIP: "127.0.0.1"
