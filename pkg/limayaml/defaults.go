@@ -4,12 +4,16 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"net"
+	"os"
+	osuser "os/user"
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 
 	"github.com/lima-vm/lima/pkg/guestagent/api"
 	"github.com/lima-vm/lima/pkg/osutil"
+	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 )
 
@@ -165,8 +169,24 @@ func FillPortForwardDefaults(rule *PortForward, instDir string) {
 			rule.HostPortRange[1] = rule.HostPort
 		}
 	}
-	if rule.HostSocket != "" && !filepath.IsAbs(rule.HostSocket) {
-		rule.HostSocket = filepath.Join(instDir, filenames.SocketDir, rule.HostSocket)
+	if rule.GuestSocket != "" {
+		user, _ := osutil.LimaUser(false)
+		home := fmt.Sprintf("/home/%s.linux", user.Username)
+		rule.GuestSocket = strings.Replace(rule.GuestSocket, "${HOME}", home, -1)
+		rule.GuestSocket = strings.Replace(rule.GuestSocket, "${UID}", user.Uid, -1)
+		rule.GuestSocket = strings.Replace(rule.GuestSocket, "${USER}", user.Username, -1)
+	}
+	if rule.HostSocket != "" {
+		user, _ := osuser.Current()
+		home, _ := os.UserHomeDir()
+		limaHome, _ := dirnames.LimaDir()
+		rule.HostSocket = strings.Replace(rule.HostSocket, "${LIMA_HOME}", limaHome, -1)
+		rule.HostSocket = strings.Replace(rule.HostSocket, "${HOME}", home, -1)
+		rule.HostSocket = strings.Replace(rule.HostSocket, "${UID}", user.Uid, -1)
+		rule.HostSocket = strings.Replace(rule.HostSocket, "${USER}", user.Username, -1)
+		if !filepath.IsAbs(rule.HostSocket) {
+			rule.HostSocket = filepath.Join(instDir, filenames.SocketDir, rule.HostSocket)
+		}
 	}
 }
 
