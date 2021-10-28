@@ -106,9 +106,11 @@ type PortForward struct {
 	GuestIP        net.IP `yaml:"guestIP,omitempty" json:"guestIP,omitempty"`
 	GuestPort      int    `yaml:"guestPort,omitempty" json:"guestPort,omitempty"`
 	GuestPortRange [2]int `yaml:"guestPortRange,omitempty" json:"guestPortRange,omitempty"`
+	GuestSocket    string `yaml:"guestSocket,omitempty" json:"guestSocket,omitempty"`
 	HostIP         net.IP `yaml:"hostIP,omitempty" json:"hostIP,omitempty"`
 	HostPort       int    `yaml:"hostPort,omitempty" json:"hostPort,omitempty"`
 	HostPortRange  [2]int `yaml:"hostPortRange,omitempty" json:"hostPortRange,omitempty"`
+	HostSocket     string `yaml:"hostSocket,omitempty" json:"hostSocket,omitempty"`
 	Proto          Proto  `yaml:"proto,omitempty" json:"proto,omitempty"`
 	Ignore         bool   `yaml:"ignore,omitempty" json:"ignore,omitempty"`
 }

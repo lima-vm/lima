@@ -37,6 +37,9 @@ const (
 	HostAgentSock      = "ha.sock"
 	HostAgentStdoutLog = "ha.stdout.log"
 	HostAgentStderrLog = "ha.stderr.log"
+
+	// SocketDir is the default location for forwarded sockets with a relative paths in HostSocket
+	SocketDir = "sock"
 )
 
 // LongestSock is the longest socket name.

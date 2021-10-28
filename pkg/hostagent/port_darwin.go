@@ -7,7 +7,9 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
+	"github.com/lima-vm/lima/pkg/guestagent/api"
 	"github.com/lima-vm/sshocker/pkg/ssh"
 	"github.com/norouter/norouter/pkg/agent/bicopy"
 	"github.com/sirupsen/logrus"
@@ -15,6 +17,9 @@ import (
 
 // forwardTCP is not thread-safe
 func forwardTCP(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, remote string, cancel bool) error {
+	if strings.HasPrefix(local, "/") {
+		return forwardSSH(ctx, sshConfig, port, local, remote, cancel)
+	}
 	localIPStr, localPortStr, err := net.SplitHostPort(local)
 	if err != nil {
 		return err
@@ -25,7 +30,7 @@ func forwardTCP(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, 
 		return err
 	}
 
-	if !net.ParseIP("127.0.0.1").Equal(localIP) || localPort >= 1024 {
+	if localIP.Equal(api.IPv4loopback1) || localPort >= 1024 {
 		return forwardSSH(ctx, sshConfig, port, local, remote, cancel)
 	}
 

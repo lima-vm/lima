@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -127,13 +128,13 @@ func New(instName string, stdout io.Writer, sigintCh chan os.Signal, opts ...Opt
 	// Block ports 22 and sshLocalPort on all IPs
 	for _, port := range []int{sshGuestPort, sshLocalPort} {
 		rule := limayaml.PortForward{GuestIP: net.IPv4zero, GuestPort: port, Ignore: true}
-		limayaml.FillPortForwardDefaults(&rule)
+		limayaml.FillPortForwardDefaults(&rule, inst.Dir)
 		rules = append(rules, rule)
 	}
 	rules = append(rules, y.PortForwards...)
 	// Default forwards for all non-privileged ports from "127.0.0.1" and "::1"
 	rule := limayaml.PortForward{GuestIP: guestagentapi.IPv4loopback1}
-	limayaml.FillPortForwardDefaults(&rule)
+	limayaml.FillPortForwardDefaults(&rule, inst.Dir)
 	rules = append(rules, rule)
 
 	a := &HostAgent{
@@ -485,6 +486,17 @@ func forwardSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, 
 		"127.0.0.1",
 		"--",
 	)
+	if strings.HasPrefix(local, "/") {
+		switch verb {
+		case "forward":
+			if err := os.MkdirAll(filepath.Dir(local), 0750); err != nil {
+				return fmt.Errorf("can't create directory for local socket %q: %w", local, err)
+			}
+			_ = os.Remove(local)
+		case "cancel":
+			defer os.Remove(local)
+		}
+	}
 	cmd := exec.CommandContext(ctx, sshConfig.Binary(), args...)
 	if out, err := cmd.Output(); err != nil {
 		return fmt.Errorf("failed to run %v: %q: %w", cmd.Args, string(out), err)
