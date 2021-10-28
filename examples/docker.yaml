@@ -63,3 +63,6 @@ probes:
         exit 1
       fi
     hint: See "/var/log/cloud-init-output.log". in the guest
+portForwards:
+  - guestSocket: /run/user/${UID}/docker.sock
+    hostSocket: ${HOME}/docker.sock
