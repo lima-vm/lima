@@ -2,13 +2,7 @@
 # $ limactl start ./docker.yaml
 # $ limactl shell docker docker run -it -v $HOME:$HOME --rm alpine
 
-# Hint: To allow `docker` CLI on the host to connect to the Docker daemon running inside the guest,
-# add `NoHostAuthenticationForLocalhost yes` in ~/.ssh/config , and then run the following commands:
-# $ export DOCKER_HOST=ssh://localhost:60006
-# $ docker ...
-
-# If ssh:// ... does not work, try the following commands:
-# $ ssh -f -N -p 60006 -i ~/.lima/_config/user -o NoHostAuthenticationForLocalhost=yes -L $HOME/docker.sock:/run/user/$(id -u)/docker.sock 127.0.0.1
+# To run `docker` on the host (assumes docker-cli is installed):
 # $ export DOCKER_HOST=unix://$HOME/docker.sock
 # $ docker ...
 
@@ -63,3 +57,6 @@ probes:
         exit 1
       fi
     hint: See "/var/log/cloud-init-output.log". in the guest
+portForwards:
+  - guestSocket: "/run/user/{{.UID}}/docker.sock"
+    hostSocket: "{{.Home}}/docker.sock"
