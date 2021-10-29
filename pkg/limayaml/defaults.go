@@ -4,11 +4,13 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"net"
+	"path/filepath"
 	"runtime"
 	"strconv"
 
 	"github.com/lima-vm/lima/pkg/guestagent/api"
 	"github.com/lima-vm/lima/pkg/osutil"
+	"github.com/lima-vm/lima/pkg/store/filenames"
 )
 
 func defaultContainerdArchives() []File {
@@ -100,8 +102,9 @@ func FillDefault(y *LimaYAML, filePath string) {
 			probe.Description = fmt.Sprintf("user probe %d/%d", i+1, len(y.Probes))
 		}
 	}
+	instDir := filepath.Dir(filePath)
 	for i := range y.PortForwards {
-		FillPortForwardDefaults(&y.PortForwards[i])
+		FillPortForwardDefaults(&y.PortForwards[i], instDir)
 		// After defaults processing the singular HostPort and GuestPort values should not be used again.
 	}
 	if y.UseHostResolver == nil {
@@ -135,7 +138,7 @@ func FillDefault(y *LimaYAML, filePath string) {
 	}
 }
 
-func FillPortForwardDefaults(rule *PortForward) {
+func FillPortForwardDefaults(rule *PortForward, instDir string) {
 	if rule.Proto == "" {
 		rule.Proto = TCP
 	}
@@ -161,6 +164,9 @@ func FillPortForwardDefaults(rule *PortForward) {
 			rule.HostPortRange[0] = rule.HostPort
 			rule.HostPortRange[1] = rule.HostPort
 		}
+	}
+	if rule.HostSocket != "" && !filepath.IsAbs(rule.HostSocket) {
+		rule.HostSocket = filepath.Join(instDir, filenames.SocketDir, rule.HostSocket)
 	}
 }
 
