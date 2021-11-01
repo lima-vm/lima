@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -282,9 +283,10 @@ func (a *HostAgent) Run(ctx context.Context) error {
 	stBooting := stBase
 	a.emitEvent(ctx, events.Event{Status: stBooting})
 
+	ctxHA, cancelHA := context.WithCancel(ctx)
 	go func() {
 		stRunning := stBase
-		if haErr := a.startHostAgentRoutines(ctx); haErr != nil {
+		if haErr := a.startHostAgentRoutines(ctxHA); haErr != nil {
 			stRunning.Degraded = true
 			stRunning.Errors = append(stRunning.Errors, haErr.Error())
 		}
@@ -296,12 +298,15 @@ func (a *HostAgent) Run(ctx context.Context) error {
 		select {
 		case <-a.sigintCh:
 			logrus.Info("Received SIGINT, shutting down the host agent")
+			cancelHA()
 			if closeErr := a.close(); closeErr != nil {
 				logrus.WithError(closeErr).Warn("an error during shutting down the host agent")
 			}
 			return a.shutdownQEMU(ctx, 3*time.Minute, qCmd, qWaitCh)
 		case qWaitErr := <-qWaitCh:
 			logrus.WithError(qWaitErr).Info("QEMU has exited")
+			// lint insists that we need to call cancelHA() on all possible codepaths
+			cancelHA()
 			return qWaitErr
 		}
 	}
@@ -419,10 +424,14 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 		for _, rule := range a.y.PortForwards {
 			if rule.GuestSocket != "" {
 				local := hostAddress(rule, guestagentapi.IPPort{})
-				if err := forwardSSH(ctx, a.sshConfig, a.sshLocalPort, local, rule.GuestSocket, verbCancel); err != nil {
+				// using ctx.Background() because ctx has already been cancelled
+				if err := forwardSSH(context.Background(), a.sshConfig, a.sshLocalPort, local, rule.GuestSocket, verbCancel); err != nil {
 					mErr = multierror.Append(mErr, err)
 				}
 			}
+		}
+		if err := forwardSSH(context.Background(), a.sshConfig, a.sshLocalPort, localUnix, remoteUnix, verbCancel); err != nil {
+			mErr = multierror.Append(mErr, err)
 		}
 		return mErr
 	})
@@ -432,11 +441,12 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 			_ = forwardSSH(ctx, a.sshConfig, a.sshLocalPort, localUnix, remoteUnix, verbForward)
 		}
 		if err := a.processGuestAgentEvents(ctx, localUnix); err != nil {
-			logrus.WithError(err).Warn("connection to the guest agent was closed unexpectedly")
+			if !errors.Is(err, context.Canceled) {
+				logrus.WithError(err).Warn("connection to the guest agent was closed unexpectedly")
+			}
 		}
 		select {
 		case <-ctx.Done():
-			_ = forwardSSH(ctx, a.sshConfig, a.sshLocalPort, localUnix, remoteUnix, verbCancel)
 			return
 		case <-time.After(10 * time.Second):
 		}
