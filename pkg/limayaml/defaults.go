@@ -1,14 +1,22 @@
 package limayaml
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"fmt"
 	"net"
+	"os"
+	osuser "os/user"
+	"path/filepath"
 	"runtime"
 	"strconv"
+	"text/template"
 
 	"github.com/lima-vm/lima/pkg/guestagent/api"
 	"github.com/lima-vm/lima/pkg/osutil"
+	"github.com/lima-vm/lima/pkg/store/dirnames"
+	"github.com/lima-vm/lima/pkg/store/filenames"
+	"github.com/sirupsen/logrus"
 )
 
 func defaultContainerdArchives() []File {
@@ -100,8 +108,9 @@ func FillDefault(y *LimaYAML, filePath string) {
 			probe.Description = fmt.Sprintf("user probe %d/%d", i+1, len(y.Probes))
 		}
 	}
+	instDir := filepath.Dir(filePath)
 	for i := range y.PortForwards {
-		FillPortForwardDefaults(&y.PortForwards[i])
+		FillPortForwardDefaults(&y.PortForwards[i], instDir)
 		// After defaults processing the singular HostPort and GuestPort values should not be used again.
 	}
 	if y.UseHostResolver == nil {
@@ -135,7 +144,7 @@ func FillDefault(y *LimaYAML, filePath string) {
 	}
 }
 
-func FillPortForwardDefaults(rule *PortForward) {
+func FillPortForwardDefaults(rule *PortForward, instDir string) {
 	if rule.Proto == "" {
 		rule.Proto = TCP
 	}
@@ -160,6 +169,47 @@ func FillPortForwardDefaults(rule *PortForward) {
 		} else {
 			rule.HostPortRange[0] = rule.HostPort
 			rule.HostPortRange[1] = rule.HostPort
+		}
+	}
+	if rule.GuestSocket != "" {
+		tmpl, err := template.New("").Parse(rule.GuestSocket)
+		if err == nil {
+			user, _ := osutil.LimaUser(false)
+			data := map[string]string{
+				"Home": fmt.Sprintf("/home/%s.linux", user.Username),
+				"UID":  user.Uid,
+				"User": user.Username,
+			}
+			var out bytes.Buffer
+			if err := tmpl.Execute(&out, data); err == nil {
+				rule.GuestSocket = out.String()
+			} else {
+				logrus.WithError(err).Warnf("Couldn't process guestSocket %q as a template", rule.GuestSocket)
+			}
+		}
+	}
+	if rule.HostSocket != "" {
+		tmpl, err := template.New("").Parse(rule.HostSocket)
+		if err == nil {
+			user, _ := osuser.Current()
+			home, _ := os.UserHomeDir()
+			limaHome, _ := dirnames.LimaDir()
+			data := map[string]string{
+				"Home":     home,
+				"Instance": filepath.Base(instDir),
+				"LimaHome": limaHome,
+				"UID":      user.Uid,
+				"User":     user.Username,
+			}
+			var out bytes.Buffer
+			if err := tmpl.Execute(&out, data); err == nil {
+				rule.HostSocket = out.String()
+			} else {
+				logrus.WithError(err).Warnf("Couldn't process hostSocket %q as a template", rule.HostSocket)
+			}
+		}
+		if !filepath.IsAbs(rule.HostSocket) {
+			rule.HostSocket = filepath.Join(instDir, filenames.SocketDir, rule.HostSocket)
 		}
 	}
 }

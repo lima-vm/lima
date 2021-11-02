@@ -13,7 +13,6 @@ import (
 type portForwarder struct {
 	sshConfig   *ssh.SSHConfig
 	sshHostPort int
-	tcp         map[int]struct{} // key: int (NOTE: this might be inconsistent with the actual status of SSH master)
 	rules       []limayaml.PortForward
 }
 
@@ -23,13 +22,29 @@ func newPortForwarder(sshConfig *ssh.SSHConfig, sshHostPort int, rules []limayam
 	return &portForwarder{
 		sshConfig:   sshConfig,
 		sshHostPort: sshHostPort,
-		tcp:         make(map[int]struct{}),
 		rules:       rules,
 	}
 }
 
+func hostAddress(rule limayaml.PortForward, guest api.IPPort) string {
+	if rule.HostSocket != "" {
+		return rule.HostSocket
+	}
+	host := api.IPPort{IP: rule.HostIP}
+	if guest.Port == 0 {
+		// guest is a socket
+		host.Port = rule.HostPort
+	} else {
+		host.Port = guest.Port + rule.HostPortRange[0] - rule.GuestPortRange[0]
+	}
+	return host.String()
+}
+
 func (pf *portForwarder) forwardingAddresses(guest api.IPPort) (string, string) {
 	for _, rule := range pf.rules {
+		if rule.GuestSocket != "" {
+			continue
+		}
 		if guest.Port < rule.GuestPortRange[0] || guest.Port > rule.GuestPortRange[1] {
 			continue
 		}
@@ -47,33 +62,21 @@ func (pf *portForwarder) forwardingAddresses(guest api.IPPort) (string, string) 
 			}
 			break
 		}
-		host := api.IPPort{
-			IP:   rule.HostIP,
-			Port: guest.Port + rule.HostPortRange[0] - rule.GuestPortRange[0],
-		}
-		return host.String(), guest.String()
+		return hostAddress(rule, guest), guest.String()
 	}
 	return "", guest.String()
 }
 
 func (pf *portForwarder) OnEvent(ctx context.Context, ev api.Event) {
 	for _, f := range ev.LocalPortsRemoved {
-		// pf.tcp might be inconsistent with the actual state of the SSH master,
-		// so we always attempt to cancel forwarding, even when f.Port is not tracked in pf.tcp.
 		local, remote := pf.forwardingAddresses(f)
 		if local == "" {
 			continue
 		}
 		logrus.Infof("Stopping forwarding TCP from %s to %s", remote, local)
-		verbCancel := true
 		if err := forwardTCP(ctx, pf.sshConfig, pf.sshHostPort, local, remote, verbCancel); err != nil {
-			if _, ok := pf.tcp[f.Port]; ok {
-				logrus.WithError(err).Warnf("failed to stop forwarding TCP port %d", f.Port)
-			} else {
-				logrus.WithError(err).Debugf("failed to stop forwarding TCP port %d (negligible)", f.Port)
-			}
+			logrus.WithError(err).Warnf("failed to stop forwarding tcp port %d", f.Port)
 		}
-		delete(pf.tcp, f.Port)
 	}
 	for _, f := range ev.LocalPortsAdded {
 		local, remote := pf.forwardingAddresses(f)
@@ -82,10 +85,8 @@ func (pf *portForwarder) OnEvent(ctx context.Context, ev api.Event) {
 			continue
 		}
 		logrus.Infof("Forwarding TCP from %s to %s", remote, local)
-		if err := forwardTCP(ctx, pf.sshConfig, pf.sshHostPort, local, remote, false); err != nil {
-			logrus.WithError(err).Warnf("failed to set up forwarding TCP port %d (negligible if already forwarded)", f.Port)
-		} else {
-			pf.tcp[f.Port] = struct{}{}
+		if err := forwardTCP(ctx, pf.sshConfig, pf.sshHostPort, local, remote, verbForward); err != nil {
+			logrus.WithError(err).Warnf("failed to set up forwarding tcp port %d (negligible if already forwarded)", f.Port)
 		}
 	}
 }

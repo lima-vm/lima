@@ -126,6 +126,9 @@ func Validate(y LimaYAML, warn bool) error {
 	for i, rule := range y.PortForwards {
 		field := fmt.Sprintf("portForwards[%d]", i)
 		if rule.GuestPort != 0 {
+			if rule.GuestSocket != "" {
+				return fmt.Errorf("field `%s.guestPort` must be 0 when field `%s.guestSocket` is set", field, field)
+			}
 			if rule.GuestPort != rule.GuestPortRange[0] {
 				return fmt.Errorf("field `%s.guestPort` must match field `%s.guestPortRange[0]`", field, field)
 			}
@@ -135,6 +138,9 @@ func Validate(y LimaYAML, warn bool) error {
 			}
 		}
 		if rule.HostPort != 0 {
+			if rule.HostSocket != "" {
+				return fmt.Errorf("field `%s.hostPort` must be 0 when field `%s.hostSocket` is set", field, field)
+			}
 			if rule.HostPort != rule.HostPortRange[0] {
 				return fmt.Errorf("field `%s.hostPort` must match field `%s.hostPortRange[0]`", field, field)
 			}
@@ -159,6 +165,27 @@ func Validate(y LimaYAML, warn bool) error {
 		}
 		if rule.GuestPortRange[1]-rule.GuestPortRange[0] != rule.HostPortRange[1]-rule.HostPortRange[0] {
 			return fmt.Errorf("field `%s.hostPortRange` must specify the same number of ports as field `%s.guestPortRange`", field, field)
+		}
+		if rule.GuestSocket != "" {
+			if !filepath.IsAbs(rule.GuestSocket) {
+				return fmt.Errorf("field `%s.guestSocket` must be an absolute path", field)
+			}
+			if rule.HostSocket == "" && rule.HostPortRange[1]-rule.HostPortRange[0] > 0 {
+				return fmt.Errorf("field `%s.guestSocket` can only be mapped to a single port or socket. not a range", field)
+			}
+		}
+		if rule.HostSocket != "" {
+			if !filepath.IsAbs(rule.HostSocket) {
+				// should be unreachable because FillDefault() will prepend the instance directory to relative names
+				return fmt.Errorf("field `%s.hostSocket` must be an absolute path", field)
+			}
+			if rule.GuestSocket == "" && rule.GuestPortRange[1]-rule.GuestPortRange[0] > 0 {
+				return fmt.Errorf("field `%s.hostSocket` can only be mapped from a single port or socket. not a range", field)
+			}
+		}
+		if len(rule.HostSocket) >= osutil.UnixPathMax {
+			return fmt.Errorf("field `%s.hostSocket` must be less than UNIX_PATH_MAX=%d characers, but is %d",
+				field, osutil.UnixPathMax, len(rule.HostSocket))
 		}
 		if rule.Proto != TCP {
 			return fmt.Errorf("field `%s.proto` must be %q", field, TCP)
