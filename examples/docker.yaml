@@ -38,11 +38,12 @@ provision:
       curl -fsSL https://get.docker.com | sh
       # NOTE: you may remove the lines below, if you prefer to use rootful docker, not rootless
       systemctl disable --now docker
-      apt-get install -y uidmap
+      apt-get install -y uidmap dbus-user-session
   - mode: user
     script: |
       #!/bin/bash
       set -eux -o pipefail
+      systemctl --user start dbus
       dockerd-rootless-setuptool.sh install
       docker context use rootless
 probes:
