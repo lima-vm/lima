@@ -1,15 +1,13 @@
 # This example requires Lima v0.7.0 or later.
 images:
-  - location: "https://download.fedoraproject.org/pub/fedora/linux/releases/34/Cloud/x86_64/images/Fedora-Cloud-Base-34-1.2.x86_64.qcow2"
+  - location: "https://download.fedoraproject.org/pub/fedora/linux/releases/35/Cloud/x86_64/images/Fedora-Cloud-Base-35-1.2.x86_64.qcow2"
     arch: "x86_64"
-    digest: "sha256:b9b621b26725ba95442d9a56cbaa054784e0779a9522ec6eafff07c6e6f717ea"
-  - location: "https://download.fedoraproject.org/pub/fedora/linux/releases/34/Cloud/aarch64/images/Fedora-Cloud-Base-34-1.2.aarch64.qcow2"
+    digest: "sha256:fe84502779b3477284a8d4c86731f642ca10dd3984d2b5eccdf82630a9ca2de6"
+  - location: "https://download.fedoraproject.org/pub/fedora/linux/releases/35/Cloud/aarch64/images/Fedora-Cloud-Base-35-1.2.aarch64.qcow2"
     arch: "aarch64"
-    digest: "sha256:141f16f52bfbe159947267658a0dbfbbe96fd5b988a95d1271f9c9ed61156da2"
+    digest: "sha256:c71f2e6ce75b516d565e2c297ea9994c69b946cb3eaa0a4bbea400dbd6f59ae6"
 mounts:
   - location: "~"
     writable: false
   - location: "/tmp/lima"
     writable: true
-firmware:
-  legacyBIOS: true
