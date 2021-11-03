@@ -60,16 +60,33 @@ type requirement struct {
 
 func (a *HostAgent) essentialRequirements() []requirement {
 	req := make([]requirement, 0)
-	req = append(req, requirement{
-		description: "ssh",
-		script: `#!/bin/bash
+	req = append(req,
+		requirement{
+			description: "ssh",
+			script: `#!/bin/bash
 true
 `,
-		debugHint: `Failed to SSH into the guest.
+			debugHint: `Failed to SSH into the guest.
 Make sure that the YAML field "ssh.localPort" is not used by other processes on the host.
 If any private key under ~/.ssh is protected with a passphrase, you need to have ssh-agent to be running.
 `,
-	})
+		},
+		requirement{
+			description: "user session is ready for ssh",
+			script: `#!/bin/bash
+set -eux -o pipefail
+if ! timeout 30s bash -c "until sudo diff -q /run/lima-ssh-ready /mnt/lima-cidata/meta-data 2>/dev/null; do sleep 3; done"; then
+	echo >&2 "not ready to start persistent ssh session"
+	exit 1
+fi
+`,
+			debugHint: `The boot sequence will terminate any existing user session after updating
+/etc/environment to make sure the session includes the new values.
+Terminating the session will break the persistent SSH tunnel, so
+it must not be created until the session reset is done.
+`,
+		})
+
 	if len(a.y.Mounts) > 0 {
 		req = append(req, requirement{
 			description: "sshfs binary to be installed",
@@ -162,5 +179,25 @@ Also see "/var/log/cloud-init-output.log" in the guest.
 			})
 		}
 	}
+	return req
+}
+
+func (a *HostAgent) finalRequirements() []requirement {
+	req := make([]requirement, 0)
+	req = append(req,
+		requirement{
+			description: "boot scripts must have finished",
+			script: `#!/bin/bash
+set -eux -o pipefail
+if ! timeout 30s bash -c "until sudo diff -q /run/lima-boot-done /mnt/lima-cidata/meta-data 2>/dev/null; do sleep 3; done"; then
+	echo >&2 "boot scripts have not finished"
+	exit 1
+fi
+`,
+			debugHint: `All boot scripts, provisioning scripts, and readiness probes must
+finish before the instance is considered "ready".
+Check "/var/log/cloud-init-output.log" in the guest to see where the process is blocked!
+`,
+		})
 	return req
 }

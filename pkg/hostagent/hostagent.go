@@ -388,6 +388,9 @@ func (a *HostAgent) startHostAgentRoutines(ctx context.Context) error {
 	if err := a.waitForRequirements(ctx, "optional", a.optionalRequirements()); err != nil {
 		mErr = multierror.Append(mErr, err)
 	}
+	if err := a.waitForRequirements(ctx, "final", a.finalRequirements()); err != nil {
+		mErr = multierror.Append(mErr, err)
+	}
 	return mErr
 }
 
