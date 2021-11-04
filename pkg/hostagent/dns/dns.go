@@ -1,6 +1,6 @@
 // This file has been adapted from https://github.com/norouter/norouter/blob/v0.6.4/pkg/agent/dns/dns.go
 
-package hostagent
+package dns
 
 import (
 	"fmt"
@@ -10,6 +10,10 @@ import (
 	"github.com/miekg/dns"
 	"github.com/sirupsen/logrus"
 )
+
+// Truncate for avoiding "Parse error" from `busybox nslookup`
+// https://github.com/lima-vm/lima/issues/380
+const truncateSize = 512
 
 type Handler struct {
 	clientConfig *dns.ClientConfig
@@ -174,6 +178,7 @@ func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
 		}
 	}
 	if handled {
+		reply.Truncate(truncateSize)
 		_ = w.WriteMsg(&reply)
 		return
 	}
@@ -186,6 +191,7 @@ func (h *Handler) handleDefault(w dns.ResponseWriter, req *dns.Msg) {
 			addr := fmt.Sprintf("%s:%s", srv, h.clientConfig.Port)
 			reply, _, err := client.Exchange(req, addr)
 			if err == nil {
+				reply.Truncate(truncateSize)
 				_ = w.WriteMsg(reply)
 				return
 			}
@@ -193,6 +199,7 @@ func (h *Handler) handleDefault(w dns.ResponseWriter, req *dns.Msg) {
 	}
 	var reply dns.Msg
 	reply.SetReply(req)
+	reply.Truncate(truncateSize)
 	_ = w.WriteMsg(&reply)
 }
 
@@ -205,14 +212,14 @@ func (h *Handler) ServeDNS(w dns.ResponseWriter, req *dns.Msg) {
 	}
 }
 
-func (a *HostAgent) StartDNS() (*Server, error) {
+func Start(udpLocalPort, tcpLocalPort int) (*Server, error) {
 	h, err := newHandler()
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	server := &Server{}
-	if a.udpDNSLocalPort > 0 {
-		addr := fmt.Sprintf("127.0.0.1:%d", a.udpDNSLocalPort)
+	if udpLocalPort > 0 {
+		addr := fmt.Sprintf("127.0.0.1:%d", udpLocalPort)
 		s := &dns.Server{Net: "udp", Addr: addr, Handler: h}
 		server.udp = s
 		go func() {
@@ -221,8 +228,8 @@ func (a *HostAgent) StartDNS() (*Server, error) {
 			}
 		}()
 	}
-	if a.tcpDNSLocalPort > 0 {
-		addr := fmt.Sprintf("127.0.0.1:%d", a.tcpDNSLocalPort)
+	if tcpLocalPort > 0 {
+		addr := fmt.Sprintf("127.0.0.1:%d", tcpLocalPort)
 		s := &dns.Server{Net: "tcp", Addr: addr, Handler: h}
 		server.tcp = s
 		go func() {
