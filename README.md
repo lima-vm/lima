@@ -17,11 +17,11 @@ Lima is expected to be used on macOS hosts, but can be used on Linux hosts as we
 
 ✅ Intel on Intel
 
-✅ ARM on Intel
+✅ [ARM on Intel](./docs/multi-arch.md)
 
 ✅ ARM on ARM
 
-✅ Intel on ARM
+✅ [Intel on ARM](./docs/multi-arch.md)
 
 ✅ Various guest Linux distributions: [Alpine](./examples/alpine.yaml), [Arch Linux](./examples/archlinux.yaml), [CentOS](./examples/centos.yaml), [Debian](./examples/debian.yaml), [Fedora](./examples/fedora.yaml), [openSUSE](./examples/opensuse.yaml), [Ubuntu](./examples/ubuntu.yaml) (default), ...
 
@@ -57,6 +57,8 @@ Linux lima-default 5.11.0-16-generic #17-Ubuntu SMP Wed Apr 14 20:12:43 UTC 2021
 $ LIMA_INSTANCE=arm lima uname -a
 Linux lima-arm 5.11.0-16-generic #17-Ubuntu SMP Wed Apr 14 20:10:16 UTC 2021 aarch64 aarch64 aarch64 GNU/Linux
 ```
+
+See [`./docs/multi-arch.md`](./docs/multi-arch.md) for Intel-on-ARM and ARM-on-Intel .
 
 ### Sharing files across macOS and Linux
 ```console
@@ -318,7 +320,7 @@ Note: **Only** on macOS versions **before** 10.15.7 you might need to add this e
 
 #### "QEMU is slow"
 - Make sure that HVF is enabled with `com.apple.security.hypervisor` entitlement. See ["QEMU crashes with `HV_ERROR`"](#qemu-crashes-with-hv_error).
-- Emulating non-native machines (ARM-on-Intel, Intel-on-ARM) is slow by design.
+- Emulating non-native machines (ARM-on-Intel, Intel-on-ARM) is slow by design. See [`docs/multi-arch.md`](./docs/multi-arch.md) for a workaround.
 
 #### error "killed -9"
 - make sure qemu is codesigned, See ["QEMU crashes with `HV_ERROR`"](#qemu-crashes-with-hv_error).
