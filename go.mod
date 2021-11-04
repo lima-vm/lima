@@ -24,7 +24,7 @@ require (
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.2.1
-	github.com/yalue/native_endian v1.0.1
+	github.com/yalue/native_endian v1.0.2
 	golang.org/x/sys v0.0.0-20210818153620-00dd8d7831e7
 	gopkg.in/yaml.v2 v2.4.0
 	gotest.tools/v3 v3.0.3
