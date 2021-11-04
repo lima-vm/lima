@@ -1,8 +1,11 @@
 # This example requires Lima v0.7.0 or later.
 images:
-- location: https://github.com/lima-vm/alpine-lima/releases/download/v0.1.8/alpine-lima-std-3.13.5-x86_64.iso
+- location: https://github.com/lima-vm/alpine-lima/releases/download/v0.2.0/alpine-lima-std-3.13.5-x86_64.iso
   arch: "x86_64"
-  digest: "sha512:8185d679a11527f804a9b6d3c05c4b7299f9b3a297381b490d713a9e3d25c5e6b818be6da7a4c45191a2a5bd6cef7083fe04f70454c8466e7d4ceda1b81ee379"
+  digest: "sha512:ee16d99fcdd6eeceeb628782afe7f7d38d572b56f20b8a6ed72c34a27307f3e20f2cdac3981a6c293dfa10994ac3c4a37c64f9bb4da75ad24b258bb1d11cd5be"
+- location: https://github.com/lima-vm/alpine-lima/releases/download/v0.2.0/alpine-lima-std-3.13.5-aarch64.iso
+  arch: "aarch64"
+  digest: "sha512:a123b06337f11f35529a7a09d381d7ef1d8bb2068c197a968aefa6bef0ecc3f7accdeb0edb81796336bb5763f8eb081b6523fb764900bfcb06cd5721d594532d"
 
 mounts:
 - location: "~"
