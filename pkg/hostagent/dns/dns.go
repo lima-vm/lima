@@ -11,6 +11,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Truncate for avoiding "Parse error" from `busybox nslookup`
+// https://github.com/lima-vm/lima/issues/380
+const truncateSize = 512
+
 type Handler struct {
 	clientConfig *dns.ClientConfig
 	clients      []*dns.Client
@@ -174,6 +178,7 @@ func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
 		}
 	}
 	if handled {
+		reply.Truncate(truncateSize)
 		_ = w.WriteMsg(&reply)
 		return
 	}
@@ -186,6 +191,7 @@ func (h *Handler) handleDefault(w dns.ResponseWriter, req *dns.Msg) {
 			addr := fmt.Sprintf("%s:%s", srv, h.clientConfig.Port)
 			reply, _, err := client.Exchange(req, addr)
 			if err == nil {
+				reply.Truncate(truncateSize)
 				_ = w.WriteMsg(reply)
 				return
 			}
@@ -193,6 +199,7 @@ func (h *Handler) handleDefault(w dns.ResponseWriter, req *dns.Msg) {
 	}
 	var reply dns.Msg
 	reply.SetReply(req)
+	reply.Truncate(truncateSize)
 	_ = w.WriteMsg(&reply)
 }
 
