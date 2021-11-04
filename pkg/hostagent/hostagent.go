@@ -23,6 +23,7 @@ import (
 	guestagentapi "github.com/lima-vm/lima/pkg/guestagent/api"
 	guestagentclient "github.com/lima-vm/lima/pkg/guestagent/api/client"
 	hostagentapi "github.com/lima-vm/lima/pkg/hostagent/api"
+	"github.com/lima-vm/lima/pkg/hostagent/dns"
 	"github.com/lima-vm/lima/pkg/hostagent/events"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/qemu"
@@ -248,7 +249,7 @@ func (a *HostAgent) Run(ctx context.Context) error {
 	}()
 
 	if *a.y.UseHostResolver {
-		dnsServer, err := a.StartDNS()
+		dnsServer, err := dns.Start(a.udpDNSLocalPort, a.tcpDNSLocalPort)
 		if err != nil {
 			return fmt.Errorf("cannot start DNS server: %w", err)
 		}

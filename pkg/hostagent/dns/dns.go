@@ -1,6 +1,6 @@
 // This file has been adapted from https://github.com/norouter/norouter/blob/v0.6.4/pkg/agent/dns/dns.go
 
-package hostagent
+package dns
 
 import (
 	"fmt"
@@ -205,14 +205,14 @@ func (h *Handler) ServeDNS(w dns.ResponseWriter, req *dns.Msg) {
 	}
 }
 
-func (a *HostAgent) StartDNS() (*Server, error) {
+func Start(udpLocalPort, tcpLocalPort int) (*Server, error) {
 	h, err := newHandler()
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	server := &Server{}
-	if a.udpDNSLocalPort > 0 {
-		addr := fmt.Sprintf("127.0.0.1:%d", a.udpDNSLocalPort)
+	if udpLocalPort > 0 {
+		addr := fmt.Sprintf("127.0.0.1:%d", udpLocalPort)
 		s := &dns.Server{Net: "udp", Addr: addr, Handler: h}
 		server.udp = s
 		go func() {
@@ -221,8 +221,8 @@ func (a *HostAgent) StartDNS() (*Server, error) {
 			}
 		}()
 	}
-	if a.tcpDNSLocalPort > 0 {
-		addr := fmt.Sprintf("127.0.0.1:%d", a.tcpDNSLocalPort)
+	if tcpLocalPort > 0 {
+		addr := fmt.Sprintf("127.0.0.1:%d", tcpLocalPort)
 		s := &dns.Server{Net: "tcp", Addr: addr, Handler: h}
 		server.tcp = s
 		go func() {
