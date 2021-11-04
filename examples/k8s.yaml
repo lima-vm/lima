@@ -1,6 +1,13 @@
-# Example to use Kubernetes instead of nerdctl
-# $ limactl start ./k8s.yaml
-# $ limactl shell k8s kubectl
+# Deploy kubernetes via kubeadm.
+
+# It can be accessed from the host by exporting the kubeconfig file;
+# the ports are already forwarded automatically by lima:
+#
+# $ export KUBECONFIG=$PWD/kubeconfig.yaml
+# $ limactl shell k8s sudo cat /etc/kubernetes/admin.conf | sed -e 's/192.168.5.15/127.0.0.1/' >$KUBECONFIG
+# $ kubectl get no
+# NAME       STATUS   ROLES                  AGE   VERSION
+# lima-k8s   Ready    control-plane,master   44s   v1.22.3
 
 # This example requires Lima v0.7.0 or later.
 images:
@@ -62,7 +69,7 @@ provision:
       test -e /etc/kubernetes/admin.conf && exit 0
       export KUBECONFIG=/etc/kubernetes/admin.conf
       # Initializing your control-plane node
-      kubeadm init --cri-socket=/run/containerd/containerd.sock --pod-network-cidr=10.244.0.0/16
+      kubeadm init --cri-socket=/run/containerd/containerd.sock --pod-network-cidr=10.244.0.0/16 --apiserver-cert-extra-sans 127.0.0.1
       # Installing a Pod network add-on
       kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/v0.14.0/Documentation/kube-flannel.yml
       # Control plane node isolation
@@ -72,7 +79,7 @@ provision:
       #!/bin/bash
       set -eux -o pipefail
       mkdir -p $HOME/.kube
-      sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+      sudo cp -f /etc/kubernetes/admin.conf $HOME/.kube/config
       sudo chown $(id -u):$(id -g) $HOME/.kube/config
 probes:
   - script: |
@@ -82,14 +89,17 @@ probes:
         echo >&2 "kubectl is not installed yet"
         exit 1
       fi
-    hint: See "/var/log/cloud-init-output.log". in the guest
+    hint: |
+      See "/var/log/cloud-init-output.log". in the guest
   - script: |
       #!/bin/bash
       set -eux -o pipefail
-      if ! timeout 300s bash -c "until test -e /etc/kubernetes/admin.conf >/dev/null 2>&1; do sleep 3; done"; then
-        echo >&2 "/etc/kubernetes/admin.conf is not there yet"
+      if ! timeout 300s bash -c "until test -f /etc/kubernetes/admin.conf; do sleep 3; done"; then
+        echo >&2 "k8s is not running yet"
         exit 1
       fi
+    hint: |
+      The k8s kubeconfig file has not yet been created.
   - script: |
       #!/bin/bash
       set -eux -o pipefail
