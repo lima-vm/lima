@@ -181,8 +181,8 @@ func CommonOpts(useDotSSH bool) ([]string, error) {
 		sshInfo.openSSHVersion = detectOpenSSHVersion()
 	})
 
-	// Only OpenSSH version 8.0 and later support adding ciphers to the front of the default set
-	if !sshInfo.openSSHVersion.LessThan(*semver.New("8.0.0")) {
+	// Only OpenSSH version 8.1 and later support adding ciphers to the front of the default set
+	if !sshInfo.openSSHVersion.LessThan(*semver.New("8.1.0")) {
 		// By default, `ssh` choose chacha20-poly1305@openssh.com, even when AES accelerator is available.
 		// (OpenSSH_8.1p1, macOS 11.6, MacBookPro 2020, Core i7-1068NG7)
 		//
