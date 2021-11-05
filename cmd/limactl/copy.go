@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/coreos/go-semver/semver"
 	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/sshutil"
 	"github.com/lima-vm/lima/pkg/store"
@@ -51,18 +52,22 @@ func copyAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	instDirs := make(map[string]string)
+	scpFlags := []string{}
 	scpArgs := []string{}
 	debug, err := cmd.Flags().GetBool("debug")
 	if err != nil {
 		return err
 	}
 	if debug {
-		scpArgs = append(scpArgs, "-v")
+		scpFlags = append(scpFlags, "-v")
 	}
 	if recursive {
-		scpArgs = append(scpArgs, "-r")
+		scpFlags = append(scpFlags, "-r")
 	}
-	scpArgs = append(scpArgs, "-3", "--")
+	legacySSH := false
+	if sshutil.DetectOpenSSHVersion().LessThan(*semver.New("8.0.0")) {
+		legacySSH = true
+	}
 	for _, arg := range args {
 		path := strings.Split(arg, ":")
 		switch len(path) {
@@ -80,12 +85,22 @@ func copyAction(cmd *cobra.Command, args []string) error {
 			if inst.Status == store.StatusStopped {
 				return fmt.Errorf("instance %q is stopped, run `limactl start %s` to start the instance", instName, instName)
 			}
-			scpArgs = append(scpArgs, fmt.Sprintf("scp://%s@127.0.0.1:%d/%s", u.Username, inst.SSHLocalPort, path[1]))
+			if legacySSH {
+				scpFlags = append(scpFlags, "-P", fmt.Sprintf("%d", inst.SSHLocalPort))
+				scpArgs = append(scpArgs, fmt.Sprintf("%s@127.0.0.1:%s", u.Username, path[1]))
+			} else {
+				scpArgs = append(scpArgs, fmt.Sprintf("scp://%s@127.0.0.1:%d/%s", u.Username, inst.SSHLocalPort, path[1]))
+			}
 			instDirs[instName] = inst.Dir
 		default:
 			return fmt.Errorf("path %q contains multiple colons", arg)
 		}
 	}
+	if legacySSH && len(instDirs) > 1 {
+		return fmt.Errorf("More than one (instance) host is involved in this command, this is only supported for openSSH v8.0 or higher")
+	}
+	scpFlags = append(scpFlags, "-3", "--")
+	scpArgs = append(scpFlags, scpArgs...)
 
 	var sshOpts []string
 	if len(instDirs) == 1 {
