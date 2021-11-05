@@ -2,6 +2,8 @@ package sshutil
 
 import (
 	"bytes"
+	"encoding/base64"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -94,7 +96,7 @@ func DefaultPubKeys(loadDotSSH bool) ([]PubKey, error) {
 		}
 		entry, err := readPublicKey(f)
 		if err == nil {
-			if strings.ContainsRune(entry.Content, '\n') || !strings.HasPrefix(entry.Content, "ssh-") {
+			if !detectValidPublicKey(entry.Content) {
 				logrus.Warnf("public key %q doesn't seem to be in ssh format", entry.Filename)
 			} else {
 				res = append(res, entry)
@@ -260,4 +262,29 @@ func detectOpenSSHVersion() semver.Version {
 		logrus.Debugf("OpenSSH version %s detected", v)
 	}
 	return v
+}
+
+// detectValidPublicKey returns whether content represent a public key.
+// OpenSSH public key format have the structure of '<algorithm> <key> <comment>'.
+// By checking 'algorithm' with signature format identifier in 'key' part,
+// this function may report false positive but provide better compatibility.
+func detectValidPublicKey(content string) bool {
+	if strings.ContainsRune(content, '\n') {
+		return false
+	}
+	var spaced = strings.SplitN(content, " ", 3)
+	if len(spaced) < 2 {
+		return false
+	}
+	var algo, base64Key = spaced[0], spaced[1]
+	var decodedKey, err = base64.StdEncoding.DecodeString(base64Key)
+	if err != nil || len(decodedKey) < 4 {
+		return false
+	}
+	var sigLength = binary.BigEndian.Uint32(decodedKey)
+	if uint32(len(decodedKey)) < sigLength {
+		return false
+	}
+	var sigFormat = string(decodedKey[4 : 4+sigLength])
+	return algo == sigFormat
 }
