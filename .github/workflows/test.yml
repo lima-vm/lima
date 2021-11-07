@@ -21,6 +21,16 @@ jobs:
           version: v1.42.1
           args: --verbose
 
+  yamllint:
+    runs-on: ubuntu-20.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+      - name: Run yamllint
+        run: yamllint .
+
   shellcheck:
     runs-on: ubuntu-20.04
     timeout-minutes: 20
