@@ -35,7 +35,7 @@ provision:
       command -v podman >/dev/null 2>&1 && exit 0
       export DEBIAN_FRONTEND=noninteractive
       apt-get update
-      apt-get install -y podman
+      apt-get install -y podman crun
   - mode: user
     script: |
       #!/bin/bash
