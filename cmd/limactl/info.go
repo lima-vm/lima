@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/lima-vm/lima/pkg/limayaml"
+	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/version"
 	"github.com/spf13/cobra"
 )
@@ -22,6 +23,7 @@ func newInfoCommand() *cobra.Command {
 type Info struct {
 	Version         string             `json:"version"`
 	DefaultTemplate *limayaml.LimaYAML `json:"defaultTemplate"`
+	LimaHome        string             `json:"limaHome"`
 	// TODO: add diagnostic info of QEMU
 }
 
@@ -33,6 +35,10 @@ func infoAction(cmd *cobra.Command, args []string) error {
 	info := &Info{
 		Version:         version.Version,
 		DefaultTemplate: y,
+	}
+	info.LimaHome, err = dirnames.LimaDir()
+	if err != nil {
+		return err
 	}
 	j, err := json.MarshalIndent(info, "", "    ")
 	if err != nil {
