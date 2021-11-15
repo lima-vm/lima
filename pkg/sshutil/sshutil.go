@@ -180,7 +180,7 @@ func CommonOpts(useDotSSH bool) ([]string, error) {
 
 	sshInfo.Do(func() {
 		sshInfo.aesAccelerated = detectAESAcceleration()
-		sshInfo.openSSHVersion = detectOpenSSHVersion()
+		sshInfo.openSSHVersion = DetectOpenSSHVersion()
 	})
 
 	// Only OpenSSH version 8.1 and later support adding ciphers to the front of the default set
@@ -248,7 +248,7 @@ func ParseOpenSSHVersion(version []byte) *semver.Version {
 	return &semver.Version{}
 }
 
-func detectOpenSSHVersion() semver.Version {
+func DetectOpenSSHVersion() semver.Version {
 	var (
 		v      semver.Version
 		stderr bytes.Buffer
