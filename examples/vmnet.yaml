@@ -17,4 +17,4 @@ networks:
   # https://github.com/lima-vm/vde_vmnet. Available networks are defined in
   # $LIMA_HOME/_config/networks.yaml. Supported network types are "host",
   # "shared", or "bridged".
-- lima: shared
+  - lima: shared

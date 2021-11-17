@@ -69,6 +69,10 @@ uninstall:
 		"$(DEST)/share/lima" "$(DEST)/share/doc/lima"
 	# TODO: remove $(DEST)/bin/nerdctl only when it is a symlink to nerdctl.lima
 
+.PHONY: lint
+lint:
+	yamllint .
+
 .PHONY: clean
 clean:
 	rm -rf _output
