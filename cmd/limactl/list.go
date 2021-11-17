@@ -14,18 +14,28 @@ import (
 
 func newListCommand() *cobra.Command {
 	listCommand := &cobra.Command{
-		Use:               "list",
+		Use:               "list [flags] [INSTANCE]...",
 		Aliases:           []string{"ls"},
 		Short:             "List instances of Lima.",
-		Args:              cobra.NoArgs,
+		Args:              cobra.ArbitraryArgs,
 		RunE:              listAction,
-		ValidArgsFunction: cobra.NoFileCompletions,
+		ValidArgsFunction: listBashComplete,
 	}
 
 	listCommand.Flags().Bool("json", false, "JSONify output")
 	listCommand.Flags().BoolP("quiet", "q", false, "Only show names")
 
 	return listCommand
+}
+
+func instanceMatches(arg string, instances []string) []string {
+	matches := []string{}
+	for _, instance := range instances {
+		if instance == arg {
+			matches = append(matches, instance)
+		}
+	}
+	return matches
 }
 
 func listAction(cmd *cobra.Command, args []string) error {
@@ -42,9 +52,23 @@ func listAction(cmd *cobra.Command, args []string) error {
 		return errors.New("option --quiet conflicts with --json")
 	}
 
-	instances, err := store.Instances()
+	allinstances, err := store.Instances()
 	if err != nil {
 		return err
+	}
+
+	instances := []string{}
+	if len(args) > 0 {
+		for _, arg := range args {
+			matches := instanceMatches(arg, allinstances)
+			if len(matches) > 0 {
+				instances = append(instances, matches...)
+			} else {
+				logrus.Warnf("No instance matching %v found.", arg)
+			}
+		}
+	} else {
+		instances = allinstances
 	}
 
 	if quiet {
@@ -73,7 +97,7 @@ func listAction(cmd *cobra.Command, args []string) error {
 	w := tabwriter.NewWriter(cmd.OutOrStdout(), 4, 8, 4, ' ', 0)
 	fmt.Fprintln(w, "NAME\tSTATUS\tSSH\tARCH\tCPUS\tMEMORY\tDISK\tDIR")
 
-	if len(instances) == 0 {
+	if len(allinstances) == 0 {
 		logrus.Warn("No instance found. Run `limactl start` to create an instance.")
 	}
 
@@ -99,4 +123,8 @@ func listAction(cmd *cobra.Command, args []string) error {
 	}
 
 	return w.Flush()
+}
+
+func listBashComplete(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return bashCompleteInstanceNames(cmd)
 }
