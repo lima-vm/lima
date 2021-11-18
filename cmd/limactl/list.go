@@ -4,13 +4,26 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
+	"strings"
 	"text/tabwriter"
+	"text/template"
 
 	"github.com/docker/go-units"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
+
+func instanceFields() []string {
+	fields := []string{}
+	var instance store.Instance
+	t := reflect.TypeOf(instance)
+	for i := 0; i < t.NumField(); i++ {
+		fields = append(fields, t.Field(i).Name)
+	}
+	return fields
+}
 
 func newListCommand() *cobra.Command {
 	listCommand := &cobra.Command{
@@ -22,6 +35,8 @@ func newListCommand() *cobra.Command {
 		ValidArgsFunction: listBashComplete,
 	}
 
+	listCommand.Flags().StringP("format", "f", "", "Format the output using the given Go template")
+	listCommand.Flags().Bool("list-fields", false, "List fields available for format")
 	listCommand.Flags().Bool("json", false, "JSONify output")
 	listCommand.Flags().BoolP("quiet", "q", false, "Only show names")
 
@@ -43,13 +58,34 @@ func listAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	goFormat, err := cmd.Flags().GetString("format")
+	if err != nil {
+		return err
+	}
+	listFields, err := cmd.Flags().GetBool("list-fields")
+	if err != nil {
+		return err
+	}
 	jsonFormat, err := cmd.Flags().GetBool("json")
 	if err != nil {
 		return err
 	}
 
+	if goFormat != "" && listFields {
+		return errors.New("option --format conflicts with --list-fields")
+	}
+	if jsonFormat && listFields {
+		return errors.New("option --json conflicts with --list-fields")
+	}
+	if listFields {
+		fmt.Println(strings.Join(instanceFields(), "\n"))
+		return nil
+	}
 	if quiet && jsonFormat {
 		return errors.New("option --quiet conflicts with --json")
+	}
+	if goFormat != "" && jsonFormat {
+		return errors.New("option --format conflicts with --json")
 	}
 
 	allinstances, err := store.Instances()
@@ -78,6 +114,25 @@ func listAction(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
+	if goFormat != "" {
+		tmpl, err := template.New("format").Parse(goFormat)
+		if err != nil {
+			return err
+		}
+		for _, instName := range instances {
+			inst, err := store.Inspect(instName)
+			if err != nil {
+				logrus.WithError(err).Errorf("instance %q does not exist?", instName)
+				continue
+			}
+			err = tmpl.Execute(cmd.OutOrStdout(), inst)
+			if err != nil {
+				return err
+			}
+			fmt.Fprintln(cmd.OutOrStdout())
+		}
+		return nil
+	}
 	if jsonFormat {
 		for _, instName := range instances {
 			inst, err := store.Inspect(instName)
