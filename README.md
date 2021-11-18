@@ -137,10 +137,11 @@ Linux
 
 Detailed usage:
 
-- Run `limactl start <INSTANCE>` to start the Linux instance.
+- Run `limactl start <INSTANCE> [--tty=false]` to start the Linux instance.
   The default instance name is "default".
   Lima automatically opens an editor (`vi`) for reviewing and modifying the configuration.
   Wait until "READY" to be printed on the host terminal.
+  `--tty=false` disables the interactive prompt to open an editor.
 
 - Run `limactl shell <INSTANCE> <COMMAND>` to launch `<COMMAND>` on Linux.
   For the "default" instance, this command can be shortened as `lima <COMMAND>`.
