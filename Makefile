@@ -71,6 +71,7 @@ uninstall:
 
 .PHONY: lint
 lint:
+	golangci-lint run ./...
 	yamllint .
 
 .PHONY: clean
