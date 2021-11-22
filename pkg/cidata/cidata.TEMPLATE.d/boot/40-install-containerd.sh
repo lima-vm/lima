@@ -10,6 +10,10 @@ command -v systemctl >/dev/null 2>&1 || exit 0
 
 if [ ! -x /usr/local/bin/nerdctl ]; then
 	tar Cxzf /usr/local "${LIMA_CIDATA_MNT}"/nerdctl-full.tgz
+
+	mkdir -p /etc/bash_completion.d
+	nerdctl completion bash >/etc/bash_completion.d/nerdctl
+	# TODO: enable zsh completion too
 fi
 
 if [ "${LIMA_CIDATA_CONTAINERD_SYSTEM}" = 1 ]; then
