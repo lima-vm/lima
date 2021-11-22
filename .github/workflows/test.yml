@@ -132,8 +132,8 @@ jobs:
       - name: Install vde_switch and vde_vmnet
         if: matrix.example == 'vmnet.yaml'
         env:
-          # 2021-08-31
-          VDE2_VERSION: 50964c3fb0776e82f8bd1ecdc527683966f3d52c
+          # 2021-09-21
+          VDE2_VERSION: 534a09453f956f8f545ba4fe37413be1a139314d
           # 2021-09-15
           VDE_VMNET_VERSION: v0.5.1
         run: |
@@ -145,7 +145,7 @@ jobs:
             cd vde-2
             git checkout $VDE2_VERSION
             autoreconf -fis
-            ./configure --prefix=/opt/vde
+            ./configure --prefix=/opt/vde --disable-python
             make
             sudo make install
           )
