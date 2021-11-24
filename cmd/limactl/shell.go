@@ -127,6 +127,10 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		// required for showing the shell prompt: https://stackoverflow.com/a/626574
 		sshArgs = append(sshArgs, "-t")
 	}
+	if _, present := os.LookupEnv("COLORTERM"); present {
+		// SendEnv config is cumulative, with already existing options in ssh_config
+		sshArgs = append(sshArgs, "-o", "SendEnv=\"COLORTERM\"")
+	}
 	sshArgs = append(sshArgs, []string{
 		"-q",
 		"-p", strconv.Itoa(inst.SSHLocalPort),
