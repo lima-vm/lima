@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 	"text/tabwriter"
 	"text/template"
@@ -78,7 +79,9 @@ func listAction(cmd *cobra.Command, args []string) error {
 		return errors.New("option --json conflicts with --list-fields")
 	}
 	if listFields {
-		fmt.Println(strings.Join(instanceFields(), "\n"))
+		fields := instanceFields()
+		sort.Strings(fields)
+		fmt.Println(strings.Join(fields, "\n"))
 		return nil
 	}
 	if quiet && jsonFormat {
