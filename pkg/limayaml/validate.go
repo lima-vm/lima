@@ -177,7 +177,7 @@ func Validate(y LimaYAML, warn bool) error {
 		if rule.HostSocket != "" {
 			if !filepath.IsAbs(rule.HostSocket) {
 				// should be unreachable because FillDefault() will prepend the instance directory to relative names
-				return fmt.Errorf("field `%s.hostSocket` must be an absolute path", field)
+				return fmt.Errorf("field `%s.hostSocket` must be an absolute path, but is %q", field, rule.HostSocket)
 			}
 			if rule.GuestSocket == "" && rule.GuestPortRange[1]-rule.GuestPortRange[0] > 0 {
 				return fmt.Errorf("field `%s.hostSocket` can only be mapped from a single port or socket. not a range", field)
