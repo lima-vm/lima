@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"reflect"
 	"sort"
 	"strings"
@@ -12,18 +13,52 @@ import (
 
 	"github.com/docker/go-units"
 	"github.com/lima-vm/lima/pkg/store"
+	"github.com/lima-vm/lima/pkg/store/dirnames"
+	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
-func instanceFields() []string {
-	fields := []string{}
-	var instance store.Instance
-	t := reflect.TypeOf(instance)
-	for i := 0; i < t.NumField(); i++ {
-		fields = append(fields, t.Field(i).Name)
+type formatData struct {
+	store.Instance
+	LimaHome     string
+	InstanceDir  string
+	IdentityFile string
+}
+
+func addGlobalFields(inst *store.Instance) (formatData, error) {
+	var data formatData
+	data.Instance = *inst
+	// Add IdentityFile
+	configDir, err := dirnames.LimaConfigDir()
+	if err != nil {
+		return formatData{}, err
 	}
-	return fields
+	data.IdentityFile = filepath.Join(configDir, filenames.UserPrivateKey)
+	// Add LimaHome
+	data.LimaHome, err = dirnames.LimaDir()
+	if err != nil {
+		return formatData{}, err
+	}
+	data.InstanceDir = filepath.Join(data.LimaHome, inst.Name)
+	return data, nil
+}
+
+func fieldNames() []string {
+	names := []string{}
+	var data formatData
+	t := reflect.TypeOf(data)
+	for i := 0; i < t.NumField(); i++ {
+		f := t.Field(i)
+		if f.Anonymous {
+			for j := 0; j < f.Type.NumField(); j++ {
+				names = append(names, f.Type.Field(j).Name)
+			}
+		} else {
+			names = append(names, t.Field(i).Name)
+		}
+	}
+	return names
 }
 
 func newListCommand() *cobra.Command {
@@ -79,9 +114,9 @@ func listAction(cmd *cobra.Command, args []string) error {
 		return errors.New("option --json conflicts with --list-fields")
 	}
 	if listFields {
-		fields := instanceFields()
-		sort.Strings(fields)
-		fmt.Println(strings.Join(fields, "\n"))
+		names := fieldNames()
+		sort.Strings(names)
+		fmt.Println(strings.Join(names, "\n"))
 		return nil
 	}
 	if quiet && jsonFormat {
@@ -128,7 +163,12 @@ func listAction(cmd *cobra.Command, args []string) error {
 				logrus.WithError(err).Errorf("instance %q does not exist?", instName)
 				continue
 			}
-			err = tmpl.Execute(cmd.OutOrStdout(), inst)
+			data, err := addGlobalFields(inst)
+			if err != nil {
+				logrus.WithError(err).Error("Cannot add global fields to instance data")
+				continue
+			}
+			err = tmpl.Execute(cmd.OutOrStdout(), data)
 			if err != nil {
 				return err
 			}
