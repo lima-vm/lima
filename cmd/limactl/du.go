@@ -5,8 +5,11 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/docker/go-units"
+	"github.com/lima-vm/lima/pkg/store"
+	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -19,11 +22,78 @@ func newDiskUsageCommand() *cobra.Command {
 		RunE:              diskUsageAction,
 		ValidArgsFunction: cobra.NoFileCompletions,
 	}
+	diskUsageCommand.Flags().Bool("cache", false, "Show cache usage")
 	return diskUsageCommand
 }
 
 func diskUsageAction(cmd *cobra.Command, args []string) error {
-	return showCache()
+	cache, err := cmd.Flags().GetBool("cache")
+	if err != nil {
+		return err
+	}
+
+	if !cache {
+		return showHome()
+	} else {
+		return showCache()
+	}
+}
+
+var total int64
+
+func showHome() error {
+	homeDir, err := dirnames.LimaDir()
+	if err != nil {
+		return err
+	}
+	logrus.Infof("Lima home dir %s", homeDir)
+	total = 0
+	instances, err := store.Instances()
+	if err != nil {
+		return err
+	}
+	for _, instance := range instances {
+		if err = showInstance(instance); err != nil {
+			return err
+		}
+	}
+	logrus.Infof("%s", units.HumanSize(float64(total)))
+	return nil
+}
+
+var instance int64
+
+func showInstance(name string) error {
+	dir, err := store.InstanceDir(name)
+	if err != nil {
+		return err
+	}
+	instance = 0
+	err = filepath.WalkDir(dir, showInstanceDir)
+	if err != nil {
+		return err
+	}
+	logrus.Infof("%s %s", name, units.HumanSize(float64(instance)))
+	total += instance
+	return nil
+}
+
+func showInstanceDir(path string, d fs.DirEntry, err error) error {
+	if d.IsDir() {
+		return nil
+	}
+	if strings.HasSuffix(d.Name(), ".sock") {
+		return nil
+	}
+	info, err := d.Info()
+	if err != nil {
+		logrus.Warnf("%s", err)
+		return nil
+	}
+	size := info.Size()
+	fmt.Printf("%d\t%s\n", size/1024, path)
+	instance += size
+	return nil
 }
 
 var cache int64
