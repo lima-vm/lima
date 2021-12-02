@@ -44,6 +44,15 @@ func InstanceDir(name string) (string, error) {
 	return dir, nil
 }
 
+// LoadYAML loads the yaml.
+func LoadYAML(b []byte) (*limayaml.LimaYAML, error) {
+	y, err := limayaml.Load(b, "")
+	if err != nil {
+		return nil, err
+	}
+	return y, nil
+}
+
 // LoadYAMLByFilePath loads and validates the yaml.
 func LoadYAMLByFilePath(filePath string) (*limayaml.LimaYAML, error) {
 	yContent, err := os.ReadFile(filePath)
@@ -58,4 +67,29 @@ func LoadYAMLByFilePath(filePath string) (*limayaml.LimaYAML, error) {
 		return nil, err
 	}
 	return y, nil
+}
+
+// SaveYAML saves the yaml.
+func SaveYAML(y *limayaml.LimaYAML) ([]byte, error) {
+	b, err := limayaml.Save(y)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+// SaveYAMLByFilePath validates and saves the yaml.
+func SaveYAMLByFilePath(y *limayaml.LimaYAML, filePath string) ([]byte, error) {
+	if err := limayaml.Validate(*y, false); err != nil {
+		return nil, err
+	}
+	b, err := limayaml.Save(y)
+	if err != nil {
+		return nil, err
+	}
+	err = os.WriteFile(filePath, b, 0644)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
