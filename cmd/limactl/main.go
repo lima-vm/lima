@@ -77,6 +77,7 @@ func newApp() *cobra.Command {
 		newDeleteCommand(),
 		newValidateCommand(),
 		newSudoersCommand(),
+		newDiskUsageCommand(),
 		newPruneCommand(),
 		newHostagentCommand(),
 		newInfoCommand(),
