@@ -5,10 +5,10 @@ Default: [`default.yaml`](../pkg/limayaml/default.yaml) (Ubuntu, with containerd
 Distro:
 - [`alpine.yaml`](./alpine.yaml): Alpine Linux
 - [`archlinux.yaml`](./archlinux.yaml): Arch Linux
-- [`centos.yaml`](./centos.yaml): CentOS Linux
 - [`debian.yaml`](./debian.yaml): Debian GNU/Linux
 - [`fedora.yaml`](./fedora.yaml): Fedora
 - [`opensuse.yaml`](./opensuse.yaml): openSUSE Leap
+- [`rocky.yaml`](./rocky.yaml): Rocky Linux
 - [`ubuntu.yaml`](./ubuntu.yaml): Ubuntu (same as `default.yaml` but without extra YAML lines)
 
 Container engines:
