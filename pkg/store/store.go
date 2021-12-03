@@ -46,11 +46,16 @@ func InstanceDir(name string) (string, error) {
 
 // LoadYAMLByFilePath loads and validates the yaml.
 func LoadYAMLByFilePath(filePath string) (*limayaml.LimaYAML, error) {
-	yContent, err := os.ReadFile(filePath)
+	// We need to use the absolute path because it may be used to determine hostSocket locations.
+	absPath, err := filepath.Abs(filePath)
 	if err != nil {
 		return nil, err
 	}
-	y, err := limayaml.Load(yContent, filePath)
+	yContent, err := os.ReadFile(absPath)
+	if err != nil {
+		return nil, err
+	}
+	y, err := limayaml.Load(yContent, absPath)
 	if err != nil {
 		return nil, err
 	}

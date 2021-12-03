@@ -195,11 +195,14 @@ func FillPortForwardDefaults(rule *PortForward, instDir string) {
 			home, _ := os.UserHomeDir()
 			limaHome, _ := dirnames.LimaDir()
 			data := map[string]string{
-				"Home":     home,
-				"Instance": filepath.Base(instDir),
-				"LimaHome": limaHome,
-				"UID":      user.Uid,
-				"User":     user.Username,
+				"Home":        home,
+				"InstanceDir": instDir,
+				"Name":        filepath.Base(instDir),
+				"UID":         user.Uid,
+				"User":        user.Username,
+
+				"Instance": filepath.Base(instDir), // DEPRECATED, use `{{.Name}}`
+				"LimaHome": limaHome,               // DEPRECATED, (use `InstanceDir` instead of `{{.LimaHome}}/{{.Instance}}`
 			}
 			var out bytes.Buffer
 			if err := tmpl.Execute(&out, data); err == nil {
