@@ -73,6 +73,8 @@ uninstall:
 lint:
 	golangci-lint run ./...
 	yamllint .
+	find . -name '*.sh' | xargs shellcheck
+	find . -name '*.sh' | xargs shfmt -s -d
 
 .PHONY: clean
 clean:
