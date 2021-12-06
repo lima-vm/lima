@@ -23,7 +23,7 @@ Lima is expected to be used on macOS hosts, but can be used on Linux hosts as we
 
 ✅ [Intel on ARM](./docs/multi-arch.md)
 
-✅ Various guest Linux distributions: [Alpine](./examples/alpine.yaml), [Arch Linux](./examples/archlinux.yaml), [CentOS](./examples/centos.yaml), [Debian](./examples/debian.yaml), [Fedora](./examples/fedora.yaml), [openSUSE](./examples/opensuse.yaml), [Ubuntu](./examples/ubuntu.yaml) (default), ...
+✅ Various guest Linux distributions: [Alpine](./examples/alpine.yaml), [Arch Linux](./examples/archlinux.yaml), [Debian](./examples/debian.yaml), [Fedora](./examples/fedora.yaml), [openSUSE](./examples/opensuse.yaml), [Rocky](./examples/rocky.yaml), [Ubuntu](./examples/ubuntu.yaml) (default), ...
 
 Related project: [sshocker (ssh with file sharing and port forwarding)](https://github.com/lima-vm/sshocker)
 
@@ -243,7 +243,7 @@ Alternatively, you may also directly ssh into the guest: `ssh -p 60022 -i ~/.lim
 Yes, it should work, but not regularly tested on ARM (due to lack of CI).
 
 #### "Can I run non-Ubuntu guests?"
-Alpine, Arch Linux, CentOS, Debian, Fedora, and openSUSE are also known to work.
+Alpine, Arch Linux, Debian, Fedora, openSUSE, and Rocky are also known to work.
 See [`./examples/`](./examples/).
 
 An image has to satisfy the following requirements:
@@ -328,7 +328,7 @@ Note: **Only** on macOS versions **before** 10.15.7 you might need to add this e
 - if you are on macOS 10.15.7 or 11.0 or later make sure the entitlement `com.apple.vm.hypervisor` is **not** added. It only works on older macOS versions. You can clear the codesigning with `codesign --remove-signature /usr/local/bin/qemu-system-x86_64` and [start over](#getting-started).
 
 #### "QEMU crashes with `vmx_write_mem: mmu_gva_to_gpa XXXXXXXXXXXXXXXX failed`"
-This error is known to happen when running an image of RHEL8-compatible distribution such as CentOS 8 on Intel Mac.
+This error is known to happen when running an image of RHEL8-compatible distribution such as Rocky Linux 8.x on Intel Mac.
 A workaround is to set environment variable `QEMU_SYSTEM_X86_64="qemu-system-x86_64 -cpu Haswell-v4"`.
 
 https://bugs.launchpad.net/qemu/+bug/1838390
