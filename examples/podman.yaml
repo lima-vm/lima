@@ -1,13 +1,13 @@
 # Example to use Podman instead of containerd & nerdctl
 # $ limactl start ./podman.yaml
-# $ limactl shell podman podman run -it --rm -v $HOME:$HOME:ro docker.io/library/alpine
+# $ limactl shell podman podman run -it -v $HOME:$HOME --rm docker.io/library/alpine
 
-# Hint: To allow `podman` CLI on the host to connect to the Podman daemon running inside the guest, run the following commands:
-# $ export CONTAINER_HOST=$(limactl list docker --format 'unix://{{.InstanceDir}}/sock/podman.sock')
-# $ podman ...
+# To run `podman` on the host (assumes podman-remote is installed):
+# $ export CONTAINER_HOST=$(limactl list podman --format 'unix://{{.InstanceDir}}/sock/podman.sock')
+# $ podman --remote ...
 
-# Hint: To allow `docker` CLI on the host to connect to the Podman daemon running inside the guest, run the following commands:
-# $ export DOCKER_HOST=$(limactl list docker --format 'unix://{{.InstanceDir}}/sock/podman.sock')
+# To run `docker` on the host (assumes docker-cli is installed):
+# $ export DOCKER_HOST=$(limactl list podman --format 'unix://{{.InstanceDir}}/sock/podman.sock')
 # $ docker ...
 
 # This example requires Lima v0.7.3 or later
