@@ -22,7 +22,6 @@ import (
 type formatData struct {
 	store.Instance
 	LimaHome     string
-	InstanceDir  string
 	IdentityFile string
 }
 
@@ -40,7 +39,6 @@ func addGlobalFields(inst *store.Instance) (formatData, error) {
 	if err != nil {
 		return formatData{}, err
 	}
-	data.InstanceDir = filepath.Join(data.LimaHome, inst.Name)
 	return data, nil
 }
 
