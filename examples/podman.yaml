@@ -3,11 +3,11 @@
 # $ limactl shell podman podman run -it -v $HOME:$HOME --rm docker.io/library/alpine
 
 # To run `podman` on the host (assumes podman-remote is installed):
-# $ export CONTAINER_HOST=$(limactl list podman --format 'unix://{{.InstanceDir}}/sock/podman.sock')
+# $ export CONTAINER_HOST=$(limactl list podman --format 'unix://{{.Dir}}/sock/podman.sock')
 # $ podman --remote ...
 
 # To run `docker` on the host (assumes docker-cli is installed):
-# $ export DOCKER_HOST=$(limactl list podman --format 'unix://{{.InstanceDir}}/sock/podman.sock')
+# $ export DOCKER_HOST=$(limactl list podman --format 'unix://{{.Dir}}/sock/podman.sock')
 # $ docker ...
 
 # This example requires Lima v0.7.3 or later
@@ -52,4 +52,4 @@ probes:
     hint: See "/var/log/cloud-init-output.log". in the guest
 portForwards:
   - guestSocket: "/run/user/{{.UID}}/podman/podman.sock"
-    hostSocket: "{{.InstanceDir}}/sock/podman.sock"
+    hostSocket: "{{.Dir}}/sock/podman.sock"

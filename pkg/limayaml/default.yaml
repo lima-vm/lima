@@ -183,8 +183,8 @@ networks:
 #   - guestSocket: "/run/user/{{.UID}}/my.sock"
 #     hostSocket: mysocket
 #   # "guestSocket" can include these template variables: {{.Home}}, {{.UID}}, and {{.User}}.
-#   # "hostSocket" can include {{.Home}}, {{.InstanceDir}}, {{.Name}}, {{.UID}}, and {{.User}}.
-#   # Put sockets into "{{.InstanceDir}}/sock" to avoid collision with Lima internal sockets!
+#   # "hostSocket" can include {{.Home}}, {{.Dir}}, {{.Name}}, {{.UID}}, and {{.User}}.
+#   # Put sockets into "{{.Dir}}/sock" to avoid collision with Lima internal sockets!
 #   # Sockets can also be forwarded to ports and vice versa, but not to/from a range of ports.
 #   # Forwarding requires the lima user to have rw access to the "guestsocket",
 #   # and the local user rwx access to the directory of the "hostsocket".
