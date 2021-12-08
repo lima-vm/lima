@@ -197,7 +197,6 @@ The current default spec:
 
 ### Help wanted
 :pray:
-- [Test on ARM Mac](https://github.com/lima-vm/lima/issues/42)
 - Performance optimization
 - More guest distros
 - Windows hosts
