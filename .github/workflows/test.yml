@@ -134,8 +134,8 @@ jobs:
         env:
           # 2021-09-21
           VDE2_VERSION: 534a09453f956f8f545ba4fe37413be1a139314d
-          # 2021-09-15
-          VDE_VMNET_VERSION: v0.5.1
+          # 2021-12-08
+          VDE_VMNET_VERSION: v0.5.2
         run: |
           (
             brew install autoconf automake
