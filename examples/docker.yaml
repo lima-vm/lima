@@ -6,7 +6,7 @@
 # $ export DOCKER_HOST=$(limactl list docker --format 'unix://{{.Dir}}/sock/docker.sock')
 # $ docker ...
 
-# This example requires Lima v0.7.3 or later
+# This example requires Lima v0.7.5 or later
 images:
   # Hint: run `limactl prune` to invalidate the "current" cache
   - location: "https://cloud-images.ubuntu.com/impish/current/impish-server-cloudimg-amd64.img"
