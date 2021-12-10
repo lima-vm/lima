@@ -173,7 +173,7 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 		}
 	}
 
-	if guestAgentBinary, err := GuestAgentBinary(y.Arch); err != nil {
+	if guestAgentBinary, err := GuestAgentBinary(*y.Arch); err != nil {
 		return err
 	} else {
 		defer guestAgentBinary.Close()

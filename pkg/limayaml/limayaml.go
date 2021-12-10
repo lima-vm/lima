@@ -7,11 +7,11 @@ import (
 )
 
 type LimaYAML struct {
-	Arch              Arch              `yaml:"arch,omitempty" json:"arch,omitempty"`
+	Arch              *Arch             `yaml:"arch,omitempty" json:"arch,omitempty"`
 	Images            []File            `yaml:"images" json:"images"` // REQUIRED
-	CPUs              int               `yaml:"cpus,omitempty" json:"cpus,omitempty"`
-	Memory            string            `yaml:"memory,omitempty" json:"memory,omitempty"` // go-units.RAMInBytes
-	Disk              string            `yaml:"disk,omitempty" json:"disk,omitempty"`     // go-units.RAMInBytes
+	CPUs              *int              `yaml:"cpus,omitempty" json:"cpus,omitempty"`
+	Memory            *string           `yaml:"memory,omitempty" json:"memory,omitempty"` // go-units.RAMInBytes
+	Disk              *string           `yaml:"disk,omitempty" json:"disk,omitempty"`     // go-units.RAMInBytes
 	Mounts            []Mount           `yaml:"mounts,omitempty" json:"mounts,omitempty"`
 	SSH               SSH               `yaml:"ssh,omitempty" json:"ssh,omitempty"` // REQUIRED (FIXME)
 	Firmware          Firmware          `yaml:"firmware,omitempty" json:"firmware,omitempty"`
@@ -47,7 +47,7 @@ type Mount struct {
 }
 
 type SSH struct {
-	LocalPort int `yaml:"localPort,omitempty" json:"localPort,omitempty"`
+	LocalPort *int `yaml:"localPort,omitempty" json:"localPort,omitempty"`
 
 	// LoadDotSSHPubKeys loads ~/.ssh/*.pub in addition to $LIMA_HOME/_config/user.pub .
 	LoadDotSSHPubKeys *bool `yaml:"loadDotSSHPubKeys,omitempty" json:"loadDotSSHPubKeys,omitempty"` // default: true
@@ -57,12 +57,12 @@ type SSH struct {
 type Firmware struct {
 	// LegacyBIOS disables UEFI if set.
 	// LegacyBIOS is ignored for aarch64.
-	LegacyBIOS bool `yaml:"legacyBIOS,omitempty" json:"legacyBIOS,omitempty"`
+	LegacyBIOS *bool `yaml:"legacyBIOS,omitempty" json:"legacyBIOS,omitempty"`
 }
 
 type Video struct {
 	// Display is a QEMU display string
-	Display string `yaml:"display,omitempty" json:"display,omitempty"`
+	Display *string `yaml:"display,omitempty" json:"display,omitempty"`
 }
 
 type ProvisionMode = string

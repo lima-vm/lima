@@ -156,10 +156,10 @@ func New(instName string, stdout io.Writer, sigintCh chan os.Signal, opts ...Opt
 }
 
 func determineSSHLocalPort(y *limayaml.LimaYAML, instName string) (int, error) {
-	if y.SSH.LocalPort > 0 {
-		return y.SSH.LocalPort, nil
+	if *y.SSH.LocalPort > 0 {
+		return *y.SSH.LocalPort, nil
 	}
-	if y.SSH.LocalPort < 0 {
+	if *y.SSH.LocalPort < 0 {
 		return 0, fmt.Errorf("invalid ssh local port %d", y.SSH.LocalPort)
 	}
 	switch instName {

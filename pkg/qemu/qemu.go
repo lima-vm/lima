@@ -43,7 +43,7 @@ func EnsureDisk(cfg Config) error {
 		var ensuredBaseDisk bool
 		errs := make([]error, len(cfg.LimaYAML.Images))
 		for i, f := range cfg.LimaYAML.Images {
-			if f.Arch != cfg.LimaYAML.Arch {
+			if f.Arch != *cfg.LimaYAML.Arch {
 				errs[i] = fmt.Errorf("unsupported arch: %q", f.Arch)
 				continue
 			}
@@ -73,7 +73,7 @@ func EnsureDisk(cfg Config) error {
 				len(cfg.LimaYAML.Images), errs)
 		}
 	}
-	diskSize, _ := units.RAMInBytes(cfg.LimaYAML.Disk)
+	diskSize, _ := units.RAMInBytes(*cfg.LimaYAML.Disk)
 	if diskSize == 0 {
 		return nil
 	}
@@ -186,7 +186,7 @@ func inspectFeatures(exe string) (*features, error) {
 
 func Cmdline(cfg Config) (string, []string, error) {
 	y := cfg.LimaYAML
-	exe, args, err := getExe(y.Arch)
+	exe, args, err := getExe(*y.Arch)
 	if err != nil {
 		return "", nil, err
 	}
@@ -197,26 +197,26 @@ func Cmdline(cfg Config) (string, []string, error) {
 	}
 
 	// Architecture
-	accel := getAccel(y.Arch)
+	accel := getAccel(*y.Arch)
 	if !strings.Contains(string(features.AccelHelp), accel) {
 		errStr := fmt.Sprintf("accelerator %q is not supported by %s", accel, exe)
-		if accel == "hvf" && y.Arch == limayaml.AARCH64 {
+		if accel == "hvf" && *y.Arch == limayaml.AARCH64 {
 			errStr += " ( Hint: as of August 2021, qemu-system-aarch64 on ARM Mac needs to be patched for enabling hvf accelerator,"
 			errStr += " see https://gist.github.com/nrjdalal/e70249bb5d2e9d844cc203fd11f74c55 )"
 		}
 		return "", nil, errors.New(errStr)
 	}
-	switch y.Arch {
+	switch *y.Arch {
 	case limayaml.X8664:
 		cpu := "Haswell-v4"
-		if isNativeArch(y.Arch) {
+		if isNativeArch(*y.Arch) {
 			cpu = "host"
 		}
 		args = appendArgsIfNoConflict(args, "-cpu", cpu)
 		args = appendArgsIfNoConflict(args, "-machine", "q35,accel="+accel)
 	case limayaml.AARCH64:
 		cpu := "cortex-a72"
-		if isNativeArch(y.Arch) {
+		if isNativeArch(*y.Arch) {
 			cpu = "host"
 		}
 		args = appendArgsIfNoConflict(args, "-cpu", cpu)
@@ -225,23 +225,23 @@ func Cmdline(cfg Config) (string, []string, error) {
 
 	// SMP
 	args = appendArgsIfNoConflict(args, "-smp",
-		fmt.Sprintf("%d,sockets=1,cores=%d,threads=1", y.CPUs, y.CPUs))
+		fmt.Sprintf("%d,sockets=1,cores=%d,threads=1", *y.CPUs, *y.CPUs))
 
 	// Memory
-	memBytes, err := units.RAMInBytes(y.Memory)
+	memBytes, err := units.RAMInBytes(*y.Memory)
 	if err != nil {
 		return "", nil, err
 	}
 	args = appendArgsIfNoConflict(args, "-m", strconv.Itoa(int(memBytes>>20)))
 
 	// Firmware
-	legacyBIOS := y.Firmware.LegacyBIOS
-	if legacyBIOS && y.Arch != limayaml.X8664 {
-		logrus.Warnf("field `firmware.legacyBIOS` is not supported for architecture %q, ignoring", y.Arch)
+	legacyBIOS := *y.Firmware.LegacyBIOS
+	if legacyBIOS && *y.Arch != limayaml.X8664 {
+		logrus.Warnf("field `firmware.legacyBIOS` is not supported for architecture %q, ignoring", *y.Arch)
 		legacyBIOS = false
 	}
 	if !legacyBIOS {
-		firmware, err := getFirmware(exe, y.Arch)
+		firmware, err := getFirmware(exe, *y.Arch)
 		if err != nil {
 			return "", nil, err
 		}
@@ -260,7 +260,7 @@ func Cmdline(cfg Config) (string, []string, error) {
 	} else {
 		args = appendArgsIfNoConflict(args, "-boot", "order=c,splash-time=0,menu=on")
 	}
-	if diskSize, _ := units.RAMInBytes(cfg.LimaYAML.Disk); diskSize > 0 {
+	if diskSize, _ := units.RAMInBytes(*cfg.LimaYAML.Disk); diskSize > 0 {
 		args = append(args, "-drive", fmt.Sprintf("file=%s,if=virtio", diffDisk))
 	} else if !isBaseDiskCDROM {
 		args = append(args, "-drive", fmt.Sprintf("file=%s,if=virtio", baseDisk))
@@ -313,10 +313,10 @@ func Cmdline(cfg Config) (string, []string, error) {
 	args = append(args, "-device", "virtio-rng-pci")
 
 	// Graphics
-	if y.Video.Display != "" {
-		args = appendArgsIfNoConflict(args, "-display", y.Video.Display)
+	if *y.Video.Display != "" {
+		args = appendArgsIfNoConflict(args, "-display", *y.Video.Display)
 	}
-	switch y.Arch {
+	switch *y.Arch {
 	case limayaml.X8664:
 		args = append(args, "-device", "virtio-vga")
 		args = append(args, "-device", "virtio-keyboard-pci")

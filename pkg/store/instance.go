@@ -71,18 +71,18 @@ func Inspect(instName string) (*Instance, error) {
 		return inst, nil
 	}
 	inst.Dir = instDir
-	inst.Arch = y.Arch
-	inst.CPUs = y.CPUs
-	memory, err := units.RAMInBytes(y.Memory)
+	inst.Arch = *y.Arch
+	inst.CPUs = *y.CPUs
+	memory, err := units.RAMInBytes(*y.Memory)
 	if err == nil {
 		inst.Memory = memory
 	}
-	disk, err := units.RAMInBytes(y.Disk)
+	disk, err := units.RAMInBytes(*y.Disk)
 	if err == nil {
 		inst.Disk = disk
 	}
 	inst.Networks = y.Networks
-	inst.SSHLocalPort = y.SSH.LocalPort // maybe 0
+	inst.SSHLocalPort = *y.SSH.LocalPort // maybe 0
 
 	inst.HostAgentPID, err = ReadPIDFile(filepath.Join(instDir, filenames.HostAgentPID))
 	if err != nil {
@@ -153,7 +153,7 @@ func ReadPIDFile(path string) (int, error) {
 	err = proc.Signal(syscall.Signal(0))
 	if err != nil {
 		if errors.Is(err, os.ErrProcessDone) {
-			os.Remove(path)
+			_ = os.Remove(path)
 			return 0, nil
 		}
 		// We may not have permission to send the signal (e.g. to network daemon running as root).

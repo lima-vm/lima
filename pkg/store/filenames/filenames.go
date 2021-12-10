@@ -18,6 +18,8 @@ const (
 	UserPrivateKey = "user"
 	UserPublicKey  = UserPrivateKey + ".pub"
 	NetworksConfig = "networks.yaml"
+	Default        = "default.yaml"
+	Override       = "override.yaml"
 )
 
 // Filenames that may appear under an instance directory
