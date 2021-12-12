@@ -199,6 +199,7 @@ networks:
 # Message. Information to be shown to the user, given as a Go template for the instance.
 # The same template variables as for listing instances can be used, for example {{.Dir}}.
 # You can view the complete list of variables using `limactl list --list-fields` command.
+# It also includes {{.HostOS}} and {{.HostArch}} vars, for the runtime GOOS and GOARCH.
 # message: |
 #   This will be shown to the user.
 

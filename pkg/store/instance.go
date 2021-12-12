@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
@@ -170,6 +171,8 @@ func ReadPIDFile(path string) (int, error) {
 
 type FormatData struct {
 	Instance
+	HostOS       string
+	HostArch     string
 	LimaHome     string
 	IdentityFile string
 }
@@ -177,6 +180,10 @@ type FormatData struct {
 func AddGlobalFields(inst *Instance) (FormatData, error) {
 	var data FormatData
 	data.Instance = *inst
+	// Add HostOS
+	data.HostOS = runtime.GOOS
+	// Add HostArch
+	data.HostArch = runtime.GOARCH
 	// Add IdentityFile
 	configDir, err := dirnames.LimaConfigDir()
 	if err != nil {
