@@ -20,6 +20,7 @@ type LimaYAML struct {
 	Containerd        Containerd        `yaml:"containerd,omitempty" json:"containerd,omitempty"`
 	Probes            []Probe           `yaml:"probes,omitempty" json:"probes,omitempty"`
 	PortForwards      []PortForward     `yaml:"portForwards,omitempty" json:"portForwards,omitempty"`
+	Message           string            `yaml:"message,omitempty" json:"message,omitempty"`
 	Networks          []Network         `yaml:"networks,omitempty" json:"networks,omitempty"`
 	Network           NetworkDeprecated `yaml:"network,omitempty" json:"network,omitempty"` // DEPRECATED, use `networks` instead
 	Env               map[string]string `yaml:"env,omitempty" json:"env,omitempty"`

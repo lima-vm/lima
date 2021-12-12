@@ -53,3 +53,7 @@ probes:
 portForwards:
   - guestSocket: "/run/user/{{.UID}}/podman/podman.sock"
     hostSocket: "{{.Dir}}/sock/podman.sock"
+message: |
+  To run `podman` on the host (assumes podman-remote is installed):
+  $ export CONTAINER_HOST=unix://{{.Dir}}/sock/podman.sock
+  $ podman --remote ...

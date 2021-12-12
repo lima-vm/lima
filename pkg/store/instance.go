@@ -35,6 +35,7 @@ type Instance struct {
 	CPUs         int                `json:"cpus,omitempty"`
 	Memory       int64              `json:"memory,omitempty"` // bytes
 	Disk         int64              `json:"disk,omitempty"`   // bytes
+	Message      string             `json:"message,omitempty"`
 	Networks     []limayaml.Network `json:"network,omitempty"`
 	SSHLocalPort int                `json:"sshLocalPort,omitempty"`
 	HostAgentPID int                `json:"hostAgentPID,omitempty"`
@@ -82,6 +83,7 @@ func Inspect(instName string) (*Instance, error) {
 	if err == nil {
 		inst.Disk = disk
 	}
+	inst.Message = y.Message
 	inst.Networks = y.Networks
 	inst.SSHLocalPort = *y.SSH.LocalPort // maybe 0
 

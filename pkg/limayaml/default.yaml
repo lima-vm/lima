@@ -196,6 +196,12 @@ networks:
 #     hostPortRange: [1, 65535]
 #   # Any port still not matched by a rule will not be forwarded (ignored)
 
+# Message. Information to be shown to the user, given as a Go template for the instance.
+# The same template variables as for listing instances can be used, for example {{.Dir}}.
+# You can view the complete list of variables using `limactl list --list-fields` command.
+# message: |
+#   This will be shown to the user.
+
 # Extra environment variables that will be loaded into the VM at start up.
 # These variables are consumed by internal init scripts, and also added
 # to /etc/environment.

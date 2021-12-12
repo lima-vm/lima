@@ -66,3 +66,7 @@ probes:
 portForwards:
   - guestSocket: "/run/user/{{.UID}}/docker.sock"
     hostSocket: "{{.Dir}}/sock/docker.sock"
+message: |
+  To run `docker` on the host (assumes docker-cli is installed):
+  $ export DOCKER_HOST=unix://{{.Dir}}/sock/docker.sock
+  $ docker ...
