@@ -14,6 +14,7 @@ import (
 	"github.com/docker/go-units"
 	hostagentclient "github.com/lima-vm/lima/pkg/hostagent/api/client"
 	"github.com/lima-vm/lima/pkg/limayaml"
+	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 )
 
@@ -163,4 +164,27 @@ func ReadPIDFile(path string) (int, error) {
 		}
 	}
 	return pid, nil
+}
+
+type FormatData struct {
+	Instance
+	LimaHome     string
+	IdentityFile string
+}
+
+func AddGlobalFields(inst *Instance) (FormatData, error) {
+	var data FormatData
+	data.Instance = *inst
+	// Add IdentityFile
+	configDir, err := dirnames.LimaConfigDir()
+	if err != nil {
+		return FormatData{}, err
+	}
+	data.IdentityFile = filepath.Join(configDir, filenames.UserPrivateKey)
+	// Add LimaHome
+	data.LimaHome, err = dirnames.LimaDir()
+	if err != nil {
+		return FormatData{}, err
+	}
+	return data, nil
 }
