@@ -43,7 +43,7 @@ func ensureNerdctlArchiveCache(y *limayaml.LimaYAML) (string, error) {
 	errs := make([]error, len(y.Containerd.Archives))
 	for i := range y.Containerd.Archives {
 		f := &y.Containerd.Archives[i]
-		if f.Arch != y.Arch {
+		if f.Arch != *y.Arch {
 			errs[i] = fmt.Errorf("unsupported arch: %q", f.Arch)
 			continue
 		}

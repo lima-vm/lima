@@ -230,5 +230,45 @@ useHostResolver: true
 # - 1.0.0.1
 
 # ===================================================================== #
+# GLOBAL DEFAULTS AND OVERRIDES
+# ===================================================================== #
+
+# The builtin defaults can be changed globally by creating a $LIMA_HOME/_config/default.yaml
+# file. It will be used by ALL instances under the same $LIMA_HOME, and it
+# will be applied on each `limactl start`, so can affect instance restarts.
+
+# A similar mechanism is $LIMA_HOME/_config/override.yaml, which will take
+# precedence even over the settings in an instances lima.yaml file.
+# It too applies to ALL instances under the same $LIMA_HOME, and is applied
+# on each restart. It can be used to globally override settings, e.g. make
+# the mount of the home directory writable.
+
+# On each instance start the config settings are determined: If a value is
+# not set in `lima.yaml`, then the `default.yaml` is used. If that file
+# doesn't exist, or the value is not defined in the file, then the buildin
+# default is used. If `override.yaml` exists and defines the value, then
+# it overrides whatever has been choosen so far.
+
+# For slices (e.g. `mounts`, `provision`) and maps (`env`) the entries are
+# combined instead of replacing each other. Slices are produced from override
+# settings, followed by lima.yaml, followed by defaults.yaml (but NOT from
+# builtin defaults). Maps are produced starting with defaults.yaml values,
+# overwriting with lima.yaml ones, overwriting with override.yaml.
+
+# Exceptions:
+# - `dns` will use the list from the highest priority file; they are not
+#   combined. If override.yaml defines a list of `dns` entries, then the
+#   settings in default.yaml and lima.yaml are ignored.
+#
+# - `mounts` will update the `writable` setting when 2 entries have the
+#   same `location` value. For this reason they are processed in the opposite
+#   order: starting with default, followed by lima, and then override.
+#
+# -`networks` will replace lower priority entries with the same `interface`
+#   name with higher priority definitions. This does not apply if the
+#  `interface` field is empty. `networks` are therefore also processed
+#  in lowest to highest priority order.
+
+# ===================================================================== #
 # END OF TEMPLATE
 # ===================================================================== #

@@ -19,10 +19,10 @@ import (
 )
 
 func Validate(y LimaYAML, warn bool) error {
-	switch y.Arch {
+	switch *y.Arch {
 	case X8664, AARCH64:
 	default:
-		return fmt.Errorf("field `arch` must be %q or %q , got %q", X8664, AARCH64, y.Arch)
+		return fmt.Errorf("field `arch` must be %q or %q , got %q", X8664, AARCH64, *y.Arch)
 	}
 
 	if len(y.Images) == 0 {
@@ -50,15 +50,15 @@ func Validate(y LimaYAML, warn bool) error {
 		}
 	}
 
-	if y.CPUs == 0 {
+	if *y.CPUs == 0 {
 		return errors.New("field `cpus` must be set")
 	}
 
-	if _, err := units.RAMInBytes(y.Memory); err != nil {
+	if _, err := units.RAMInBytes(*y.Memory); err != nil {
 		return fmt.Errorf("field `memory` has an invalid value: %w", err)
 	}
 
-	if _, err := units.RAMInBytes(y.Disk); err != nil {
+	if _, err := units.RAMInBytes(*y.Disk); err != nil {
 		return fmt.Errorf("field `memory` has an invalid value: %w", err)
 	}
 
@@ -95,8 +95,8 @@ func Validate(y LimaYAML, warn bool) error {
 		}
 	}
 
-	if y.SSH.LocalPort != 0 {
-		if err := validatePort("ssh.localPort", y.SSH.LocalPort); err != nil {
+	if *y.SSH.LocalPort != 0 {
+		if err := validatePort("ssh.localPort", *y.SSH.LocalPort); err != nil {
 			return err
 		}
 	}
@@ -297,7 +297,7 @@ func validateNetwork(y LimaYAML, warn bool) error {
 			return fmt.Errorf("field `%s.interface` must not be set to %q because it is reserved for slirp", field, qemu.SlirpNICName)
 		}
 		if prev, ok := interfaceName[nw.Interface]; ok {
-			return fmt.Errorf("field `%s.interface` value %q has already been used by field `network.vde[%d].name`", field, nw.Interface, prev)
+			return fmt.Errorf("field `%s.interface` value %q has already been used by field `networks[%d].interface`", field, nw.Interface, prev)
 		}
 		interfaceName[nw.Interface] = i
 	}
