@@ -15,17 +15,17 @@ type DNS struct {
 }
 
 type Proxies struct {
-	ExceptionList []string `json:"ExceptionList"` // default: ["*.local", "169.254/16"]
-	FTPEnable     string   `json:"FTPEnable"`
-	FTPPort       int      `json:"FTPPort"`
-	FTPProxy      string   `json:"FTPProxy"`
-	FTPUser       string   `json:"FTPUser"`
-	HTTPEnable    string   `json:"HTTPEnable"`
-	HTTPPort      int      `json:"HTTPPort"`
-	HTTPProxy     string   `json:"HTTPProxy"`
-	HTTPUser      string   `json:"HTTPUser"`
-	HTTPSEnable   string   `json:"HTTPSEnable"`
-	HTTPSPort     int      `json:"HTTPSPort"`
-	HTTPSProxy    string   `json:"HTTPSProxy"`
-	HTTPSUser     string   `json:"HTTPSUser"`
+	ExceptionList []string    `json:"ExceptionList"` // default: ["*.local", "169.254/16"]
+	FTPEnable     string      `json:"FTPEnable"`
+	FTPPort       interface{} `json:"FTPPort"`
+	FTPProxy      string      `json:"FTPProxy"`
+	FTPUser       string      `json:"FTPUser"`
+	HTTPEnable    string      `json:"HTTPEnable"`
+	HTTPPort      interface{} `json:"HTTPPort"`
+	HTTPProxy     string      `json:"HTTPProxy"`
+	HTTPUser      string      `json:"HTTPUser"`
+	HTTPSEnable   string      `json:"HTTPSEnable"`
+	HTTPSPort     interface{} `json:"HTTPSPort"`
+	HTTPSProxy    string      `json:"HTTPSProxy"`
+	HTTPSUser     string      `json:"HTTPSUser"`
 }
