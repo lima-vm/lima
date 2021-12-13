@@ -183,7 +183,7 @@ func AddGlobalFields(inst *Instance) (FormatData, error) {
 	// Add HostOS
 	data.HostOS = runtime.GOOS
 	// Add HostArch
-	data.HostArch = runtime.GOARCH
+	data.HostArch = limayaml.NewArch(runtime.GOARCH)
 	// Add IdentityFile
 	configDir, err := dirnames.LimaConfigDir()
 	if err != nil {

@@ -71,7 +71,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 	if o.Arch != nil {
 		y.Arch = o.Arch
 	}
-	y.Arch = pointer.String(resolveArch(y.Arch))
+	y.Arch = pointer.String(ResolveArch(y.Arch))
 
 	y.Images = append(append(o.Images, y.Images...), d.Images...)
 	for i := range y.Images {
@@ -400,13 +400,21 @@ func FillPortForwardDefaults(rule *PortForward, instDir string) {
 	}
 }
 
-func resolveArch(s *string) Arch {
+func NewArch(arch string) Arch {
+	switch arch {
+	case "amd64":
+		return X8664
+	case "arm64":
+		return AARCH64
+	default:
+		logrus.Warnf("Unknown arch: %s", arch)
+		return arch
+	}
+}
+
+func ResolveArch(s *string) Arch {
 	if s == nil || *s == "" || *s == "default" {
-		if runtime.GOARCH == "amd64" {
-			return X8664
-		} else {
-			return AARCH64
-		}
+		return NewArch(runtime.GOARCH)
 	}
 	return *s
 }
