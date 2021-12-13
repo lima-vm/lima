@@ -29,12 +29,14 @@ func DNSAddresses() ([]string, error) {
 	return addresses, nil
 }
 
-func proxyURL(proxy string, port int) string {
+func proxyURL(proxy string, port interface{}) string {
 	if !strings.Contains(proxy, "://") {
 		proxy = "http://" + proxy
 	}
-	if port != 0 {
-		proxy = fmt.Sprintf("%s:%d", proxy, port)
+	if portNumber, ok := port.(float64); ok && portNumber != 0 {
+		proxy = fmt.Sprintf("%s:%.0f", proxy, portNumber)
+	} else if portString, ok := port.(string); ok && portString != "" {
+		proxy = fmt.Sprintf("%s:%s", proxy, portString)
 	}
 	return proxy
 }
