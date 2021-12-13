@@ -132,8 +132,8 @@ jobs:
       - name: Install vde_switch and vde_vmnet
         if: matrix.example == 'vmnet.yaml'
         env:
-          # 2021-09-21
-          VDE2_VERSION: 534a09453f956f8f545ba4fe37413be1a139314d
+          # 2021-12-12
+          VDE2_VERSION: 74278b9b7cf816f0356181f387012fdeb6d65b52
           # 2021-12-08
           VDE_VMNET_VERSION: v0.5.2
         run: |
