@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"path/filepath"
 	"reflect"
 	"sort"
 	"strings"
@@ -13,38 +12,13 @@ import (
 
 	"github.com/docker/go-units"
 	"github.com/lima-vm/lima/pkg/store"
-	"github.com/lima-vm/lima/pkg/store/dirnames"
-	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
-type formatData struct {
-	store.Instance
-	LimaHome     string
-	IdentityFile string
-}
-
-func addGlobalFields(inst *store.Instance) (formatData, error) {
-	var data formatData
-	data.Instance = *inst
-	// Add IdentityFile
-	configDir, err := dirnames.LimaConfigDir()
-	if err != nil {
-		return formatData{}, err
-	}
-	data.IdentityFile = filepath.Join(configDir, filenames.UserPrivateKey)
-	// Add LimaHome
-	data.LimaHome, err = dirnames.LimaDir()
-	if err != nil {
-		return formatData{}, err
-	}
-	return data, nil
-}
-
 func fieldNames() []string {
 	names := []string{}
-	var data formatData
+	var data store.FormatData
 	t := reflect.TypeOf(data)
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)
@@ -161,7 +135,7 @@ func listAction(cmd *cobra.Command, args []string) error {
 				logrus.WithError(err).Errorf("instance %q does not exist?", instName)
 				continue
 			}
-			data, err := addGlobalFields(inst)
+			data, err := store.AddGlobalFields(inst)
 			if err != nil {
 				logrus.WithError(err).Error("Cannot add global fields to instance data")
 				continue

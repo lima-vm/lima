@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
@@ -14,6 +15,7 @@ import (
 	"github.com/docker/go-units"
 	hostagentclient "github.com/lima-vm/lima/pkg/hostagent/api/client"
 	"github.com/lima-vm/lima/pkg/limayaml"
+	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 )
 
@@ -34,6 +36,7 @@ type Instance struct {
 	CPUs         int                `json:"cpus,omitempty"`
 	Memory       int64              `json:"memory,omitempty"` // bytes
 	Disk         int64              `json:"disk,omitempty"`   // bytes
+	Message      string             `json:"message,omitempty"`
 	Networks     []limayaml.Network `json:"network,omitempty"`
 	SSHLocalPort int                `json:"sshLocalPort,omitempty"`
 	HostAgentPID int                `json:"hostAgentPID,omitempty"`
@@ -81,6 +84,7 @@ func Inspect(instName string) (*Instance, error) {
 	if err == nil {
 		inst.Disk = disk
 	}
+	inst.Message = y.Message
 	inst.Networks = y.Networks
 	inst.SSHLocalPort = *y.SSH.LocalPort // maybe 0
 
@@ -163,4 +167,33 @@ func ReadPIDFile(path string) (int, error) {
 		}
 	}
 	return pid, nil
+}
+
+type FormatData struct {
+	Instance
+	HostOS       string
+	HostArch     string
+	LimaHome     string
+	IdentityFile string
+}
+
+func AddGlobalFields(inst *Instance) (FormatData, error) {
+	var data FormatData
+	data.Instance = *inst
+	// Add HostOS
+	data.HostOS = runtime.GOOS
+	// Add HostArch
+	data.HostArch = limayaml.NewArch(runtime.GOARCH)
+	// Add IdentityFile
+	configDir, err := dirnames.LimaConfigDir()
+	if err != nil {
+		return FormatData{}, err
+	}
+	data.IdentityFile = filepath.Join(configDir, filenames.UserPrivateKey)
+	// Add LimaHome
+	data.LimaHome, err = dirnames.LimaDir()
+	if err != nil {
+		return FormatData{}, err
+	}
+	return data, nil
 }

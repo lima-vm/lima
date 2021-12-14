@@ -1,12 +1,15 @@
 package start
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"text/template"
 	"time"
 
 	"github.com/lima-vm/lima/pkg/downloader"
@@ -147,7 +150,7 @@ func Start(ctx context.Context, inst *store.Instance) error {
 
 	watchErrCh := make(chan error)
 	go func() {
-		watchErrCh <- watchHostAgentEvents(ctx, inst.Name, haStdoutPath, haStderrPath, begin)
+		watchErrCh <- watchHostAgentEvents(ctx, inst, haStdoutPath, haStderrPath, begin)
 		close(watchErrCh)
 	}()
 	waitErrCh := make(chan error)
@@ -181,7 +184,7 @@ func waitHostAgentStart(ctx context.Context, haPIDPath, haStderrPath string) err
 	}
 }
 
-func watchHostAgentEvents(ctx context.Context, instName, haStdoutPath, haStderrPath string, begin time.Time) error {
+func watchHostAgentEvents(ctx context.Context, inst *store.Instance, haStdoutPath, haStderrPath string, begin time.Time) error {
 	ctx2, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 
@@ -210,7 +213,8 @@ func watchHostAgentEvents(ctx context.Context, instName, haStdoutPath, haStderrP
 				return true
 			}
 
-			logrus.Infof("READY. Run `%s` to open the shell.", LimactlShellCmd(instName))
+			logrus.Infof("READY. Run `%s` to open the shell.", LimactlShellCmd(inst.Name))
+			ShowMessage(inst)
 			err = nil
 			return true
 		}
@@ -238,4 +242,30 @@ func LimactlShellCmd(instName string) string {
 		shellCmd = "lima"
 	}
 	return shellCmd
+}
+
+func ShowMessage(inst *store.Instance) error {
+	if inst.Message == "" {
+		return nil
+	}
+	t, err := template.New("message").Parse(inst.Message)
+	if err != nil {
+		return err
+	}
+	data, err := store.AddGlobalFields(inst)
+	if err != nil {
+		return err
+	}
+	var b bytes.Buffer
+	if err := t.Execute(&b, data); err != nil {
+		return err
+	}
+	scanner := bufio.NewScanner(&b)
+	for scanner.Scan() {
+		logrus.Info(scanner.Text())
+	}
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+	return nil
 }
