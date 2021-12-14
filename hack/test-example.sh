@@ -168,7 +168,7 @@ if [[ -n ${CHECKS["containerd-user"]} ]]; then
 	limactl shell "$NAME" nerdctl info
 	# Use GHCR to avoid hitting Docker Hub rate limit
 	nginx_image="ghcr.io/stargz-containers/nginx:1.19-alpine-org"
-	limactl shell "$NAME" sh -ec "nerdctl pull ${nginx_image} >/dev/null"
+	limactl shell "$NAME" nerdctl pull --quiet ${nginx_image}
 	limactl shell "$NAME" nerdctl run -d --name nginx -p 127.0.0.1:8080:80 ${nginx_image}
 
 	timeout 3m bash -euxc "until curl -f --retry 30 --retry-connrefused http://127.0.0.1:8080; do sleep 3; done"
@@ -184,7 +184,7 @@ if [[ -n ${CHECKS["containerd-user"]} ]]; then
 		defer "rm -rf \"$hometmp\""
 		set -x
 		alpine_image="ghcr.io/containerd/alpine:3.14.0"
-		limactl shell "$NAME" nerdctl pull ${alpine_image}
+		limactl shell "$NAME" nerdctl pull --quiet ${alpine_image}
 		echo "random-content-${RANDOM}" >"$hometmp/random"
 		expected="$(cat "$hometmp/random")"
 		got="$(limactl shell "$NAME" nerdctl run --rm -v "$hometmp/random":/mnt/foo ${alpine_image} cat /mnt/foo)"
