@@ -97,13 +97,7 @@ brew install lima
 
 #### Install QEMU
 
-Install recent version of QEMU. v6.1.0 or later is recommended.
-
-On ARM Mac hosts, a [patched](https://patchwork.kernel.org/series/548227/mbox/) version of QEMU has to be installed for enabling `-accel hvf` support.
-
-The patch was merged into the master branch on [2021-09-21](https://github.com/qemu/qemu/commit/81ceb36b9) and will be included in QEMU v6.2.0.
-
-The patch is already cherry-picked in [the Homebrew package of QEMU](https://github.com/Homebrew/homebrew-core/commit/5e8eb547) since `6.1.0_1` bottle.
+Install recent version of QEMU. v6.2.0 or later is recommended.
 
 #### Install Lima
 
