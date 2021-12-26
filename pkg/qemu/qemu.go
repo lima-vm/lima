@@ -324,9 +324,9 @@ func Cmdline(cfg Config) (string, []string, error) {
 	default:
 		// QEMU does not seem to support virtio-vga for aarch64
 		args = append(args, "-vga", "none", "-device", "ramfb")
-		args = append(args, "-device", "usb-ehci")
-		args = append(args, "-device", "usb-kbd")
-		args = append(args, "-device", "usb-mouse")
+		args = append(args, "-device", "qemu-xhci,id=usb-bus")
+		args = append(args, "-device", "usb-kbd,bus=usb-bus.0")
+		args = append(args, "-device", "usb-mouse,bus=usb-bus.0")
 	}
 
 	// Parallel
