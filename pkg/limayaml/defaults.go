@@ -298,6 +298,9 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 	location := make(map[string]int)
 	for _, mount := range append(append(d.Mounts, y.Mounts...), o.Mounts...) {
 		if i, ok := location[mount.Location]; ok {
+			if mount.SSHFS.FollowSymlinks != nil {
+				mounts[i].SSHFS.FollowSymlinks = mount.SSHFS.FollowSymlinks
+			}
 			mounts[i].Writable = mount.Writable
 		} else {
 			location[mount.Location] = len(mounts)
@@ -305,6 +308,13 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		}
 	}
 	y.Mounts = mounts
+
+	for i := range y.Mounts {
+		mount := &y.Mounts[i]
+		if mount.SSHFS.FollowSymlinks == nil {
+			mount.SSHFS.FollowSymlinks = pointer.Bool(false)
+		}
+	}
 
 	// Note: DNS lists are not combined; highest priority setting is picked
 	if len(y.DNS) == 0 {

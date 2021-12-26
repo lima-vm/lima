@@ -45,6 +45,11 @@ type File struct {
 type Mount struct {
 	Location string `yaml:"location" json:"location"` // REQUIRED
 	Writable bool   `yaml:"writable,omitempty" json:"writable,omitempty"`
+	SSHFS    SSHFS  `yaml:"sshfs,omitempty" json:"sshfs,omitempty"`
+}
+
+type SSHFS struct {
+	FollowSymlinks *bool `yaml:"followSymlinks,omitempty" json:"followSymlinks,omitempty"`
 }
 
 type SSH struct {
