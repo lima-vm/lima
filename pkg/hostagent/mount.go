@@ -49,7 +49,7 @@ func (a *HostAgent) setupMount(ctx context.Context, m limayaml.Mount) (*mount, e
 		RemotePath: expanded,
 		Readonly:   !m.Writable,
 		// NOTE: allow_other requires "user_allow_other" in /etc/fuse.conf
-		SSHFSAdditionalArgs: []string{"-o", "allow_other"},
+		SSHFSAdditionalArgs: []string{"-o", "allow_other,follow_symlinks"},
 	}
 	if err := rsf.Prepare(); err != nil {
 		return nil, fmt.Errorf("failed to prepare reverse sshfs for %q: %w", expanded, err)
