@@ -116,6 +116,7 @@ func TestFillDefault(t *testing.T) {
 
 	expect := builtin
 	expect.Mounts = y.Mounts
+	expect.Mounts[0].Writable = pointer.Bool(false)
 	expect.Mounts[0].SSHFS.FollowSymlinks = pointer.Bool(false)
 	// Only missing Mounts field is Writable, and the default value is also the null value: false
 
@@ -191,7 +192,7 @@ func TestFillDefault(t *testing.T) {
 		Mounts: []Mount{
 			{
 				Location: "/var/log",
-				Writable: false,
+				Writable: pointer.Bool(false),
 			},
 		},
 		Provision: []Provision{
@@ -303,7 +304,7 @@ func TestFillDefault(t *testing.T) {
 		Mounts: []Mount{
 			{
 				Location: "/var/log",
-				Writable: true,
+				Writable: pointer.Bool(true),
 				SSHFS:    SSHFS{FollowSymlinks: pointer.Bool(true)},
 			},
 		},
@@ -360,7 +361,7 @@ func TestFillDefault(t *testing.T) {
 
 	// o.Mounts just makes d.Mounts[0] writable because the Location matches
 	expect.Mounts = append(d.Mounts, y.Mounts...)
-	expect.Mounts[0].Writable = true
+	expect.Mounts[0].Writable = pointer.Bool(true)
 	expect.Mounts[0].SSHFS.FollowSymlinks = pointer.Bool(true)
 
 	// o.Networks[1] is overriding the d.Networks[0].Lima entry for the "def0" interface
