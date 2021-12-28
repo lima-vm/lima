@@ -208,12 +208,24 @@ func Cmdline(cfg Config) (string, []string, error) {
 	}
 	switch *y.Arch {
 	case limayaml.X8664:
-		cpu := "Haswell-v4"
+		cpu := "qemu64"
 		if isNativeArch(*y.Arch) {
 			cpu = "host"
 		}
 		args = appendArgsIfNoConflict(args, "-cpu", cpu)
-		args = appendArgsIfNoConflict(args, "-machine", "q35,accel="+accel)
+		if isNativeArch(*y.Arch) {
+			args = appendArgsIfNoConflict(args, "-machine", "q35,accel="+accel)
+		} else {
+			// use q35 machine with vmware io port disabled.
+			args = appendArgsIfNoConflict(args, "-machine", "q35,vmport=off")
+			// use tcg accelerator with multi threading with 512MB translation block size
+			// https://qemu-project.gitlab.io/qemu/devel/multi-thread-tcg.html?highlight=tcg
+			// https://qemu-project.gitlab.io/qemu/system/invocation.html?highlight=tcg%20opts
+			// this will make sure each vCPU will be backed by 1 host user thread.
+			args = appendArgsIfNoConflict(args, "-accel", "tcg,thread=multi,tb-size=512")
+			// This will disable CPU S3 state.
+			args = append(args, "-global", "ICH9-LPC.disable_s3=1")
+		}
 	case limayaml.AARCH64:
 		cpu := "cortex-a72"
 		if isNativeArch(*y.Arch) {
