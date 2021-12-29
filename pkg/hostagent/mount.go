@@ -52,7 +52,7 @@ func (a *HostAgent) setupMount(ctx context.Context, m limayaml.Mount) (*mount, e
 		Host:                "127.0.0.1",
 		Port:                a.sshLocalPort,
 		RemotePath:          expanded,
-		Readonly:            !m.Writable,
+		Readonly:            !(*m.Writable),
 		SSHFSAdditionalArgs: []string{"-o", sshfsOptions},
 	}
 	if err := rsf.Prepare(); err != nil {

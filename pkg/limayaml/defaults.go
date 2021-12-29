@@ -301,7 +301,9 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 			if mount.SSHFS.FollowSymlinks != nil {
 				mounts[i].SSHFS.FollowSymlinks = mount.SSHFS.FollowSymlinks
 			}
-			mounts[i].Writable = mount.Writable
+			if mount.Writable != nil {
+				mounts[i].Writable = mount.Writable
+			}
 		} else {
 			location[mount.Location] = len(mounts)
 			mounts = append(mounts, mount)
@@ -313,6 +315,9 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		mount := &y.Mounts[i]
 		if mount.SSHFS.FollowSymlinks == nil {
 			mount.SSHFS.FollowSymlinks = pointer.Bool(false)
+		}
+		if mount.Writable == nil {
+			mount.Writable = pointer.Bool(false)
 		}
 	}
 
