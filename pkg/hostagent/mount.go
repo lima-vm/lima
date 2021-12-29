@@ -40,16 +40,20 @@ func (a *HostAgent) setupMount(ctx context.Context, m limayaml.Mount) (*mount, e
 	if err := os.MkdirAll(expanded, 0755); err != nil {
 		return nil, err
 	}
+	// NOTE: allow_other requires "user_allow_other" in /etc/fuse.conf
+	sshfsOptions := "allow_other"
+	if *m.SSHFS.FollowSymlinks {
+		sshfsOptions = sshfsOptions + ",follow_symlinks"
+	}
 	logrus.Infof("Mounting %q", expanded)
 	rsf := &reversesshfs.ReverseSSHFS{
-		SSHConfig:  a.sshConfig,
-		LocalPath:  expanded,
-		Host:       "127.0.0.1",
-		Port:       a.sshLocalPort,
-		RemotePath: expanded,
-		Readonly:   !m.Writable,
-		// NOTE: allow_other requires "user_allow_other" in /etc/fuse.conf
-		SSHFSAdditionalArgs: []string{"-o", "allow_other"},
+		SSHConfig:           a.sshConfig,
+		LocalPath:           expanded,
+		Host:                "127.0.0.1",
+		Port:                a.sshLocalPort,
+		RemotePath:          expanded,
+		Readonly:            !m.Writable,
+		SSHFSAdditionalArgs: []string{"-o", sshfsOptions},
 	}
 	if err := rsf.Prepare(); err != nil {
 		return nil, fmt.Errorf("failed to prepare reverse sshfs for %q: %w", expanded, err)

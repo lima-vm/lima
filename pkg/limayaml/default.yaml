@@ -42,8 +42,17 @@ mounts:
     # CAUTION: `writable` SHOULD be false for the home directory.
     # Setting `writable` to true is possible, but untested and dangerous.
     writable: false
+    # SSHFS has an optional flag called 'follow_symlinks'. This allows mounts
+    # to be properly resolved in the guest os and allow for access to the
+    # contents of the symlnk. This defaults to false if not supplied. As a result,
+    # symlinked files & folders on the Host system will look and feel like regular
+    # files directories in the Guest OS.
+    sshfs:
+      followSymlinks: false
   - location: "/tmp/lima"
     writable: true
+    sshfs:
+      followSymlinks: false
 
 ssh:
   # A localhost port of the host. Forwarded to port 22 of the guest.
