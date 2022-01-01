@@ -217,6 +217,15 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		// After defaults processing the singular HostPort and GuestPort values should not be used again.
 	}
 
+	y.ConfigFiles = append(append(o.ConfigFiles, y.ConfigFiles...), d.ConfigFiles...)
+	for i := range y.ConfigFiles {
+		file := &y.ConfigFiles[i]
+		if file.Mode == "" {
+			file.Mode = ProvisionModeSystem
+		}
+		FillConfigFileDefaults(&y.ConfigFiles[i], instDir)
+	}
+
 	if y.UseHostResolver == nil {
 		y.UseHostResolver = d.UseHostResolver
 	}
@@ -385,6 +394,23 @@ func FillPortForwardDefaults(rule *PortForward, instDir string) {
 		if !filepath.IsAbs(rule.HostSocket) {
 			rule.HostSocket = filepath.Join(instDir, filenames.SocketDir, rule.HostSocket)
 		}
+	}
+}
+
+func FillConfigFileDefaults(rule *ConfigFile, instDir string) {
+	if rule.GuestConfig != "" {
+		file, err := expandGuestTemplate(rule.GuestConfig, instDir)
+		if err != nil {
+			logrus.WithError(err).Warnf("Couldn't process guestConfig %q as a template", rule.GuestConfig)
+		}
+		rule.GuestConfig = file
+	}
+	if rule.HostConfig != "" {
+		file, err := expandHostTemplate(rule.HostConfig, instDir)
+		if err != nil {
+			logrus.WithError(err).Warnf("Couldn't process hostSocket %q as a template", rule.HostConfig)
+		}
+		rule.HostConfig = file
 	}
 }
 

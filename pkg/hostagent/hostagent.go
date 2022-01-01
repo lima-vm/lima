@@ -385,6 +385,9 @@ func (a *HostAgent) startHostAgentRoutines(ctx context.Context) error {
 		}
 		return unmountMErr
 	})
+	if err := a.copyConfigFiles(ctx); err != nil {
+		mErr = multierror.Append(mErr, err)
+	}
 	go a.watchGuestAgentEvents(ctx)
 	if err := a.waitForRequirements(ctx, "optional", a.optionalRequirements()); err != nil {
 		mErr = multierror.Append(mErr, err)

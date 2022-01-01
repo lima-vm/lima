@@ -79,6 +79,8 @@ func TestFillDefault(t *testing.T) {
 		Proto:          TCP,
 	}
 
+	defaultConfigFile := ConfigFile{}
+
 	// ------------------------------------------------------------------------------------
 	// Builtin defaults are set when y is (mostly) empty
 
@@ -107,6 +109,12 @@ func TestFillDefault(t *testing.T) {
 			{
 				GuestSocket: "{{.Home}} | {{.UID}} | {{.User}}",
 				HostSocket:  "{{.Home}} | {{.Dir}} | {{.Name}} | {{.UID}} | {{.User}}",
+			},
+		},
+		ConfigFiles: []ConfigFile{
+			{
+				GuestConfig: "{{.Home}} | {{.UID}} | {{.User}}",
+				HostConfig:  "{{.Home}} | {{.Dir}} | {{.Name}} | {{.UID}} | {{.User}}",
 			},
 		},
 		Env: map[string]string{
@@ -138,6 +146,9 @@ func TestFillDefault(t *testing.T) {
 		defaultPortForward,
 		defaultPortForward,
 	}
+	expect.ConfigFiles = []ConfigFile{
+		defaultConfigFile,
+	}
 	// Setting GuestPort and HostPort for DeepEqual(), but they are not supposed to be used
 	// after FillDefault() has been called and the ...PortRange fields have been set.
 	expect.PortForwards[1].GuestPort = 80
@@ -151,6 +162,10 @@ func TestFillDefault(t *testing.T) {
 
 	expect.PortForwards[3].GuestSocket = fmt.Sprintf("%s | %s | %s", guestHome, user.Uid, user.Username)
 	expect.PortForwards[3].HostSocket = fmt.Sprintf("%s | %s | %s | %s | %s", hostHome, instDir, instName, user.Uid, user.Username)
+
+	expect.ConfigFiles[0].Mode = ProvisionModeSystem
+	expect.ConfigFiles[0].GuestConfig = fmt.Sprintf("%s | %s | %s", guestHome, user.Uid, user.Username)
+	expect.ConfigFiles[0].HostConfig = fmt.Sprintf("%s | %s | %s | %s | %s", hostHome, instDir, instName, user.Uid, user.Username)
 
 	expect.Env = y.Env
 
@@ -344,6 +359,11 @@ func TestFillDefault(t *testing.T) {
 			HostPortRange:  [2]int{8080, 8080},
 			Proto:          TCP,
 		}},
+		ConfigFiles: []ConfigFile{{
+			Mode:        ProvisionModeSystem,
+			GuestConfig: "/foo",
+			HostConfig:  "/bar",
+		}},
 		Env: map[string]string{
 			"TWO":   "deux",
 			"THREE": "trois",
@@ -357,6 +377,7 @@ func TestFillDefault(t *testing.T) {
 	expect.Provision = append(append(o.Provision, y.Provision...), d.Provision...)
 	expect.Probes = append(append(o.Probes, y.Probes...), d.Probes...)
 	expect.PortForwards = append(append(o.PortForwards, y.PortForwards...), d.PortForwards...)
+	expect.ConfigFiles = append(append(o.ConfigFiles, y.ConfigFiles...), d.ConfigFiles...)
 	expect.Containerd.Archives = append(append(o.Containerd.Archives, y.Containerd.Archives...), d.Containerd.Archives...)
 
 	// o.Mounts just makes d.Mounts[0] writable because the Location matches

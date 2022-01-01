@@ -194,6 +194,22 @@ func Validate(y LimaYAML, warn bool) error {
 		// processed sequentially and the first matching rule for a guest port determines forwarding behavior.
 	}
 
+	for i, rule := range y.ConfigFiles {
+		field := fmt.Sprintf("configFiles[%d]", i)
+		switch rule.Mode {
+		case ProvisionModeSystem, ProvisionModeUser:
+		default:
+			return fmt.Errorf("field `provision[%d].mode` must be either %q or %q",
+				i, ProvisionModeSystem, ProvisionModeUser)
+		}
+		if !filepath.IsAbs(rule.GuestConfig) {
+			return fmt.Errorf("field `%s.guestConfig` must be an absolute path, but is %q", field, rule.GuestConfig)
+		}
+		if !filepath.IsAbs(rule.HostConfig) {
+			return fmt.Errorf("field `%s.hostConfig` must be an absolute path, but is %q", field, rule.HostConfig)
+		}
+	}
+
 	if y.UseHostResolver != nil && *y.UseHostResolver && len(y.DNS) > 0 {
 		return fmt.Errorf("field `dns` must be empty when field `useHostResolver` is true")
 	}

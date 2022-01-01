@@ -1,17 +1,10 @@
 # Deploy kubernetes via kubeadm.
 # $ limactl start ./k8s.yaml
-# $ limactl shell k8s sudo kubectl
-
-# It can be accessed from the host by exporting the kubeconfig file;
-# the ports are already forwarded automatically by lima:
-#
-# $ export KUBECONFIG=$PWD/kubeconfig.yaml
-# $ limactl shell k8s sudo cat /etc/kubernetes/admin.conf >$KUBECONFIG
-# $ kubectl get no
+# $ limactl shell k8s sudo kubectl get no
 # NAME       STATUS   ROLES                  AGE   VERSION
 # lima-k8s   Ready    control-plane,master   44s   v1.22.3
 
-# This example requires Lima v0.7.0 or later.
+# This example requires Lima v0.9.0 or later.
 images:
   # Image is set to focal (20.04 LTS) for long-term stability
   # Hint: run `limactl prune` to invalidate the "current" cache
@@ -102,3 +95,10 @@ probes:
         echo >&2 "kubernetes cluster is not up and running yet"
         exit 1
       fi
+configFiles:
+  - guestConfig: "/etc/kubernetes/admin.conf"
+    hostConfig: "{{.Dir}}/conf/kubeconfig.yaml"
+message: |
+  To run `kubectl` on the host (assumes kubectl is installed):
+  $ export KUBECONFIG={{.Dir}}/conf/kubeconfig.yaml
+  $ kubectl

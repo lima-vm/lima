@@ -20,6 +20,7 @@ type LimaYAML struct {
 	Containerd        Containerd        `yaml:"containerd,omitempty" json:"containerd,omitempty"`
 	Probes            []Probe           `yaml:"probes,omitempty" json:"probes,omitempty"`
 	PortForwards      []PortForward     `yaml:"portForwards,omitempty" json:"portForwards,omitempty"`
+	ConfigFiles       []ConfigFile      `yaml:"configFiles,omitempty" json:"configFiles,omitempty"`
 	Message           string            `yaml:"message,omitempty" json:"message,omitempty"`
 	Networks          []Network         `yaml:"networks,omitempty" json:"networks,omitempty"`
 	Network           NetworkDeprecated `yaml:"network,omitempty" json:"network,omitempty"` // DEPRECATED, use `networks` instead
@@ -119,6 +120,12 @@ type PortForward struct {
 	HostSocket     string `yaml:"hostSocket,omitempty" json:"hostSocket,omitempty"`
 	Proto          Proto  `yaml:"proto,omitempty" json:"proto,omitempty"`
 	Ignore         bool   `yaml:"ignore,omitempty" json:"ignore,omitempty"`
+}
+
+type ConfigFile struct {
+	Mode        ProvisionMode `yaml:"mode" json:"mode"` // default: "system"
+	GuestConfig string        `yaml:"guestConfig" json:"guestConfig"`
+	HostConfig  string        `yaml:"hostConfig" json:"hostConfig"`
 }
 
 type Network struct {

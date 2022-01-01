@@ -210,6 +210,18 @@ networks:
 #     hostPortRange: [1, 65535]
 #   # Any port still not matched by a rule will not be forwarded (ignored)
 
+# Extra config files
+# configFiles:
+#   # `system` is copied with the root privilege
+#   - mode: system
+#   # `user` is copied without the root privilege
+#   - mode: user
+#
+#   - guestConfig: "/etc/config.file"
+#   - hostConfig: "{{.Dir}}/conf/config.file"
+#   # "guestConfig" can include these template variables: {{.Home}}, {{.UID}}, and {{.User}}.
+#   # "hostConfig" can include {{.Home}}, {{.Dir}}, {{.Name}}, {{.UID}}, and {{.User}}.
+
 # Message. Information to be shown to the user, given as a Go template for the instance.
 # The same template variables as for listing instances can be used, for example {{.Dir}}.
 # You can view the complete list of variables using `limactl list --list-fields` command.
