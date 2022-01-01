@@ -370,49 +370,67 @@ func FillPortForwardDefaults(rule *PortForward, instDir string) {
 		}
 	}
 	if rule.GuestSocket != "" {
-		tmpl, err := template.New("").Parse(rule.GuestSocket)
-		if err == nil {
-			user, _ := osutil.LimaUser(false)
-			data := map[string]string{
-				"Home": fmt.Sprintf("/home/%s.linux", user.Username),
-				"UID":  user.Uid,
-				"User": user.Username,
-			}
-			var out bytes.Buffer
-			if err := tmpl.Execute(&out, data); err == nil {
-				rule.GuestSocket = out.String()
-			} else {
-				logrus.WithError(err).Warnf("Couldn't process guestSocket %q as a template", rule.GuestSocket)
-			}
+		sock, err := expandGuestTemplate(rule.GuestSocket, instDir)
+		if err != nil {
+			logrus.WithError(err).Warnf("Couldn't process guestSocket %q as a template", rule.GuestSocket)
 		}
+		rule.GuestSocket = sock
 	}
 	if rule.HostSocket != "" {
-		tmpl, err := template.New("").Parse(rule.HostSocket)
-		if err == nil {
-			user, _ := osuser.Current()
-			home, _ := os.UserHomeDir()
-			limaHome, _ := dirnames.LimaDir()
-			data := map[string]string{
-				"Dir":  instDir,
-				"Home": home,
-				"Name": filepath.Base(instDir),
-				"UID":  user.Uid,
-				"User": user.Username,
-
-				"Instance": filepath.Base(instDir), // DEPRECATED, use `{{.Name}}`
-				"LimaHome": limaHome,               // DEPRECATED, (use `Dir` instead of `{{.LimaHome}}/{{.Instance}}`
-			}
-			var out bytes.Buffer
-			if err := tmpl.Execute(&out, data); err == nil {
-				rule.HostSocket = out.String()
-			} else {
-				logrus.WithError(err).Warnf("Couldn't process hostSocket %q as a template", rule.HostSocket)
-			}
+		sock, err := expandHostTemplate(rule.HostSocket, instDir)
+		if err != nil {
+			logrus.WithError(err).Warnf("Couldn't process hostSocket %q as a template", rule.HostSocket)
 		}
+		rule.HostSocket = sock
 		if !filepath.IsAbs(rule.HostSocket) {
 			rule.HostSocket = filepath.Join(instDir, filenames.SocketDir, rule.HostSocket)
 		}
 	}
+}
+
+func expandGuestTemplate(guestTemplate string, instDir string) (string, error) {
+	tmpl, err := template.New("").Parse(guestTemplate)
+	if err == nil {
+		user, _ := osutil.LimaUser(false)
+		data := map[string]string{
+			"Home": fmt.Sprintf("/home/%s.linux", user.Username),
+			"UID":  user.Uid,
+			"User": user.Username,
+		}
+		var out bytes.Buffer
+		if err := tmpl.Execute(&out, data); err == nil {
+			return out.String(), nil
+		} else {
+			return guestTemplate, err
+		}
+	}
+	return guestTemplate, err
+}
+
+func expandHostTemplate(hostTemplate string, instDir string) (string, error) {
+	tmpl, err := template.New("").Parse(hostTemplate)
+	if err == nil {
+		user, _ := osuser.Current()
+		home, _ := os.UserHomeDir()
+		limaHome, _ := dirnames.LimaDir()
+		data := map[string]string{
+			"Dir":  instDir,
+			"Home": home,
+			"Name": filepath.Base(instDir),
+			"UID":  user.Uid,
+			"User": user.Username,
+
+			"Instance": filepath.Base(instDir), // DEPRECATED, use `{{.Name}}`
+			"LimaHome": limaHome,               // DEPRECATED, (use `Dir` instead of `{{.LimaHome}}/{{.Instance}}`
+		}
+		var out bytes.Buffer
+		if err := tmpl.Execute(&out, data); err == nil {
+			return out.String(), nil
+		} else {
+			return hostTemplate, err
+		}
+	}
+	return hostTemplate, err
 }
 
 func NewArch(arch string) Arch {
