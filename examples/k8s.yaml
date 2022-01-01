@@ -4,7 +4,7 @@
 # the ports are already forwarded automatically by lima:
 #
 # $ export KUBECONFIG=$PWD/kubeconfig.yaml
-# $ limactl shell k8s sudo cat /etc/kubernetes/admin.conf | sed -e 's/192.168.5.15/127.0.0.1/' >$KUBECONFIG
+# $ limactl shell k8s sudo cat /etc/kubernetes/admin.conf >$KUBECONFIG
 # $ kubectl get no
 # NAME       STATUS   ROLES                  AGE   VERSION
 # lima-k8s   Ready    control-plane,master   44s   v1.22.3
@@ -73,6 +73,7 @@ provision:
     kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/v0.14.0/Documentation/kube-flannel.yml
     # Control plane node isolation
     kubectl taint nodes --all node-role.kubernetes.io/master-
+    sed -e "s/${LIMA_CIDATA_SLIRP_IP_ADDRESS:-192.168.5.15}/127.0.0.1/" -i $KUBECONFIG
 - mode: user
   script: |
     #!/bin/bash
