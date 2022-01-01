@@ -39,31 +39,31 @@ func setupEnv(y *limayaml.LimaYAML) (map[string]string, error) {
 		upperVars[i] = strings.ToUpper(name)
 	}
 	if *y.PropagateProxyEnv {
-		localhostRegexes := []*regexp.Regexp{
-			regexp.MustCompile(`\blocalhost\b`),
-			regexp.MustCompile(`\b127.0.0.1\b`),
-		}
 		for _, name := range append(lowerVars, upperVars...) {
-			value, ok := os.LookupEnv(name)
-			if !ok {
-				continue
-			}
-			// Replace "localhost" in proxy settings with the gateway address
-			if name != "no_proxy" && name != "NO_PROXY" {
-				newValue := value
-				for _, re := range localhostRegexes {
-					newValue = re.ReplaceAllString(newValue, qemu.SlirpGateway)
+			if value, ok := os.LookupEnv(name); ok {
+				if _, ok := env[name]; ok && value != env[name] {
+					logrus.Infof("Overriding %q value %q with %q from limactl process environment",
+						name, env[name], value)
 				}
-				if value != newValue {
-					logrus.Infof("Replacing %q value %q with %q", name, value, newValue)
-					value = newValue
-				}
+				env[name] = value
 			}
-			if _, ok := env[name]; ok && value != env[name] {
-				logrus.Infof("Overriding %q value %q with %q from limactl process environment",
-					name, env[name], value)
+		}
+	}
+	// Replace "localhost" in proxy settings with the gateway address
+	localhostRegexes := []*regexp.Regexp{
+		regexp.MustCompile(`\blocalhost\b`),
+		regexp.MustCompile(`\b127.0.0.1\b`),
+	}
+	for _, name := range append(lowerVars, upperVars...) {
+		value, ok := env[name]
+		if ok && !strings.EqualFold(name, "no_proxy") {
+			for _, re := range localhostRegexes {
+				value = re.ReplaceAllString(value, qemu.SlirpGateway)
 			}
-			env[name] = value
+			if value != env[name] {
+				logrus.Infof("Replacing %q value %q with %q", name, env[name], value)
+				env[name] = value
+			}
 		}
 	}
 	// Make sure uppercase variants have the same value as lowercase ones.
