@@ -2,9 +2,13 @@
 # BASIC CONFIGURATION
 # ===================================================================== #
 
+# Default values are specified by `null` instead of the builtin default value,
+# so they can be overridden by the default.yaml mechanism documented at the
+# end of this file.
+
 # Arch: "default", "x86_64", "aarch64".
-# "default" corresponds to the host architecture.
-arch: "default"
+# Default: "default" (corresponds to the host architecture)
+arch: null
 
 # An image must support systemd and cloud-init.
 # Ubuntu and Fedora are known to work.
@@ -25,34 +29,35 @@ images:
 
 # CPUs: if you see performance issues, try limiting cpus to 1.
 # Default: 4
-cpus: 4
+cpus: null
 
 # Memory size
 # Default: "4GiB"
-memory: "4GiB"
+memory: null
 
 # Disk size
 # Default: "100GiB"
-disk: "100GiB"
+disk: null
 
 # Expose host directories to the guest, the mount point might be accessible from all UIDs in the guest
-# Default: none
+# Default: null
 mounts:
   - location: "~"
     # CAUTION: `writable` SHOULD be false for the home directory.
     # Setting `writable` to true is possible, but untested and dangerous.
-    writable: false
+    # Default: false
+    writable: null
     # SSHFS has an optional flag called 'follow_symlinks'. This allows mounts
     # to be properly resolved in the guest os and allow for access to the
-    # contents of the symlnk. This defaults to false if not supplied. As a result,
-    # symlinked files & folders on the Host system will look and feel like regular
-    # files directories in the Guest OS.
+    # contents of the symlink. As a result, symlinked files & folders on the Host
+    # system will look and feel like regular files directories in the Guest OS.
     sshfs:
-      followSymlinks: false
+      # Default: false
+      followSymlinks: null
   - location: "/tmp/lima"
     writable: true
     sshfs:
-      followSymlinks: false
+      followSymlinks: null
 
 ssh:
   # A localhost port of the host. Forwarded to port 22 of the guest.
@@ -63,10 +68,10 @@ ssh:
   # applications such as rsync with the Lima instance.
   # If you have an insecure key under ~/.ssh, do not use this option.
   # Default: true
-  loadDotSSHPubKeys: true
+  loadDotSSHPubKeys: null
   # Forward ssh agent into the instance.
   # Default: false
-  forwardAgent: false
+  forwardAgent: null
 
 # ===================================================================== #
 # ADVANCED CONFIGURATION
@@ -75,10 +80,10 @@ ssh:
 containerd:
   # Enable system-wide (aka rootful)  containerd and its dependencies (BuildKit, Stargz Snapshotter)
   # Default: false
-  system: false
+  system: null
   # Enable user-scoped (aka rootless) containerd and its dependencies
   # Default: true
-  user: true
+  user: null
 #  # Override containerd archive
 #  # Default: hard-coded URL with hard-coded digest (see the output of `limactl info | jq .defaultTemplate.containerd.archives`)
 #  archives:
@@ -127,14 +132,14 @@ containerd:
 firmware:
   # Use legacy BIOS instead of UEFI.
   # Default: false
-  legacyBIOS: false
+  legacyBIOS: null
 
 video:
   # QEMU display, e.g., "none", "cocoa", "sdl", "gtk".
   # As of QEMU v5.2, enabling this is known to have negative impact
   # on performance on macOS hosts: https://gitlab.com/qemu-project/qemu/-/issues/334
   # Default: "none"
-  display: "none"
+  display: null
 
 # The instance can get routable IP addresses from the vmnet framework using
 # https://github.com/lima-vm/vde_vmnet.
@@ -226,14 +231,14 @@ networks:
 # the VM, so it stays routable. Use of the process environment can be disabled by setting
 # propagateProxyEnv to false.
 # Default: true
-propagateProxyEnv: true
+propagateProxyEnv: null
 
 # The host agent implements a DNS server that looks up host names on the host
 # using the local system resolver. This means changing VPN and network settings
 # are reflected automatically into the guest, including conditional forward,
 # and mDNS lookup:
 # Default: true
-useHostResolver: true
+useHostResolver: null
 
 # If useHostResolver is false, then the following rules apply for configuring dns:
 # Explicitly set DNS addresses for qemu user-mode networking. By default qemu picks *one*

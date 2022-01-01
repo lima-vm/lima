@@ -9,7 +9,6 @@ images:
 
 mounts:
 - location: "~"
-  writable: false
 - location: "/tmp/lima"
   writable: true
 

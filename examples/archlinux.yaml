@@ -7,7 +7,6 @@ images:
     digest: "sha256:90fb8ea170be6fcfff0821b7544ccc8c3c1282fd0d08fcc0432a72552b929999"
 mounts:
   - location: "~"
-    writable: false
   - location: "/tmp/lima"
     writable: true
 firmware:
