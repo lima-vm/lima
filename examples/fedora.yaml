@@ -8,6 +8,5 @@ images:
     digest: "sha256:c71f2e6ce75b516d565e2c297ea9994c69b946cb3eaa0a4bbea400dbd6f59ae6"
 mounts:
   - location: "~"
-    writable: false
   - location: "/tmp/lima"
     writable: true

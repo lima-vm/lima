@@ -6,6 +6,5 @@ images:
   # No aarch64 OpenStack build found :(
 mounts:
   - location: "~"
-    writable: false
   - location: "/tmp/lima"
     writable: true
