@@ -12,44 +12,44 @@
 
 # This example requires Lima v0.8.0 or later
 images:
-  # Hint: run `limactl prune` to invalidate the "current" cache
-  - location: "https://cloud-images.ubuntu.com/impish/current/impish-server-cloudimg-amd64.img"
-    arch: "x86_64"
-  - location: "https://cloud-images.ubuntu.com/impish/current/impish-server-cloudimg-arm64.img"
-    arch: "aarch64"
+# Hint: run `limactl prune` to invalidate the "current" cache
+- location: "https://cloud-images.ubuntu.com/impish/current/impish-server-cloudimg-amd64.img"
+  arch: "x86_64"
+- location: "https://cloud-images.ubuntu.com/impish/current/impish-server-cloudimg-arm64.img"
+  arch: "aarch64"
 mounts:
-  - location: "~"
-  - location: "/tmp/lima"
-    writable: true
+- location: "~"
+- location: "/tmp/lima"
+  writable: true
 containerd:
   system: false
   user: false
 provision:
-  - mode: system
-    script: |
-      #!/bin/bash
-      set -eux -o pipefail
-      command -v podman >/dev/null 2>&1 && exit 0
-      export DEBIAN_FRONTEND=noninteractive
-      apt-get update
-      apt-get install -y podman crun
-  - mode: user
-    script: |
-      #!/bin/bash
-      set -eux -o pipefail
-      systemctl --user enable --now podman.socket
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    command -v podman >/dev/null 2>&1 && exit 0
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update
+    apt-get install -y podman crun
+- mode: user
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    systemctl --user enable --now podman.socket
 probes:
-  - script: |
-      #!/bin/bash
-      set -eux -o pipefail
-      if ! timeout 30s bash -c "until command -v podman >/dev/null 2>&1; do sleep 3; done"; then
-        echo >&2 "podman is not installed yet"
-        exit 1
-      fi
-    hint: See "/var/log/cloud-init-output.log". in the guest
+- script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    if ! timeout 30s bash -c "until command -v podman >/dev/null 2>&1; do sleep 3; done"; then
+      echo >&2 "podman is not installed yet"
+      exit 1
+    fi
+  hint: See "/var/log/cloud-init-output.log". in the guest
 portForwards:
-  - guestSocket: "/run/user/{{.UID}}/podman/podman.sock"
-    hostSocket: "{{.Dir}}/sock/podman.sock"
+- guestSocket: "/run/user/{{.UID}}/podman/podman.sock"
+  hostSocket: "{{.Dir}}/sock/podman.sock"
 message: |
   To run `podman` on the host (assumes podman-remote is installed):
   $ export CONTAINER_HOST=unix://{{.Dir}}/sock/podman.sock

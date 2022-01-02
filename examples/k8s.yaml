@@ -11,12 +11,12 @@
 
 # This example requires Lima v0.7.0 or later.
 images:
-  # Image is set to focal (20.04 LTS) for long-term stability
-  # Hint: run `limactl prune` to invalidate the "current" cache
-  - location: "https://cloud-images.ubuntu.com/focal/current/focal-server-cloudimg-amd64.img"
-    arch: "x86_64"
-  - location: "https://cloud-images.ubuntu.com/focal/current/focal-server-cloudimg-arm64.img"
-    arch: "aarch64"
+# Image is set to focal (20.04 LTS) for long-term stability
+# Hint: run `limactl prune` to invalidate the "current" cache
+- location: "https://cloud-images.ubuntu.com/focal/current/focal-server-cloudimg-amd64.img"
+  arch: "x86_64"
+- location: "https://cloud-images.ubuntu.com/focal/current/focal-server-cloudimg-arm64.img"
+  arch: "aarch64"
 # Mounts are disabled in this example, but can be enabled optionally.
 mounts: []
 containerd:
@@ -24,83 +24,83 @@ containerd:
   user: false
 # See https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/
 provision:
-  - mode: system
-    script: |
-      #!/bin/bash
-      set -eux -o pipefail
-      command -v kubectl  >/dev/null 2>&1 && exit 0
-      # Installing kubeadm on your hosts
-      cat <<EOF | sudo tee /etc/modules-load.d/containerd.conf
-      overlay
-      br_netfilter
-      EOF
-      modprobe overlay
-      modprobe br_netfilter
-      cat <<EOF | sudo tee /etc/sysctl.d/99-kubernetes-cri.conf
-      net.bridge.bridge-nf-call-iptables  = 1
-      net.ipv4.ip_forward                 = 1
-      net.bridge.bridge-nf-call-ip6tables = 1
-      EOF
-      sysctl --system
-      export DEBIAN_FRONTEND=noninteractive
-      apt-get update
-      apt-get install -y apt-transport-https ca-certificates curl
-      curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg
-      echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
-      apt-get update
-      # cri-tools
-      apt-get install -y cri-tools
-      cat  <<EOF | sudo tee /etc/crictl.yaml
-      runtime-endpoint: unix:///run/containerd/containerd.sock
-      image-endpoint: unix:///run/containerd/containerd.sock
-      EOF
-      # cni-plugins
-      apt-get install -y kubernetes-cni
-      rm -f /etc/cni/net.d/*.conf*
-      apt-get install -y kubelet kubeadm kubectl && apt-mark hold kubelet kubeadm kubectl
-      systemctl enable --now kubelet
-  - mode: system
-    script: |
-      #!/bin/bash
-      set -eux -o pipefail
-      test -e /etc/kubernetes/admin.conf && exit 0
-      export KUBECONFIG=/etc/kubernetes/admin.conf
-      # Initializing your control-plane node
-      kubeadm init --cri-socket=/run/containerd/containerd.sock --pod-network-cidr=10.244.0.0/16 --apiserver-cert-extra-sans 127.0.0.1
-      # Installing a Pod network add-on
-      kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/v0.14.0/Documentation/kube-flannel.yml
-      # Control plane node isolation
-      kubectl taint nodes --all node-role.kubernetes.io/master-
-  - mode: user
-    script: |
-      #!/bin/bash
-      set -eux -o pipefail
-      mkdir -p $HOME/.kube
-      sudo cp -f /etc/kubernetes/admin.conf $HOME/.kube/config
-      sudo chown $(id -u):$(id -g) $HOME/.kube/config
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    command -v kubectl  >/dev/null 2>&1 && exit 0
+    # Installing kubeadm on your hosts
+    cat <<EOF | sudo tee /etc/modules-load.d/containerd.conf
+    overlay
+    br_netfilter
+    EOF
+    modprobe overlay
+    modprobe br_netfilter
+    cat <<EOF | sudo tee /etc/sysctl.d/99-kubernetes-cri.conf
+    net.bridge.bridge-nf-call-iptables  = 1
+    net.ipv4.ip_forward                 = 1
+    net.bridge.bridge-nf-call-ip6tables = 1
+    EOF
+    sysctl --system
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update
+    apt-get install -y apt-transport-https ca-certificates curl
+    curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg
+    echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+    apt-get update
+    # cri-tools
+    apt-get install -y cri-tools
+    cat  <<EOF | sudo tee /etc/crictl.yaml
+    runtime-endpoint: unix:///run/containerd/containerd.sock
+    image-endpoint: unix:///run/containerd/containerd.sock
+    EOF
+    # cni-plugins
+    apt-get install -y kubernetes-cni
+    rm -f /etc/cni/net.d/*.conf*
+    apt-get install -y kubelet kubeadm kubectl && apt-mark hold kubelet kubeadm kubectl
+    systemctl enable --now kubelet
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    test -e /etc/kubernetes/admin.conf && exit 0
+    export KUBECONFIG=/etc/kubernetes/admin.conf
+    # Initializing your control-plane node
+    kubeadm init --cri-socket=/run/containerd/containerd.sock --pod-network-cidr=10.244.0.0/16 --apiserver-cert-extra-sans 127.0.0.1
+    # Installing a Pod network add-on
+    kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/v0.14.0/Documentation/kube-flannel.yml
+    # Control plane node isolation
+    kubectl taint nodes --all node-role.kubernetes.io/master-
+- mode: user
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    mkdir -p $HOME/.kube
+    sudo cp -f /etc/kubernetes/admin.conf $HOME/.kube/config
+    sudo chown $(id -u):$(id -g) $HOME/.kube/config
 probes:
-  - script: |
-      #!/bin/bash
-      set -eux -o pipefail
-      if ! timeout 30s bash -c "until command -v kubectl >/dev/null 2>&1; do sleep 3; done"; then
-        echo >&2 "kubectl is not installed yet"
-        exit 1
-      fi
-    hint: |
-      See "/var/log/cloud-init-output.log". in the guest
-  - script: |
-      #!/bin/bash
-      set -eux -o pipefail
-      if ! timeout 300s bash -c "until test -f /etc/kubernetes/admin.conf; do sleep 3; done"; then
-        echo >&2 "k8s is not running yet"
-        exit 1
-      fi
-    hint: |
-      The k8s kubeconfig file has not yet been created.
-  - script: |
-      #!/bin/bash
-      set -eux -o pipefail
-      if ! timeout 300s bash -c "until kubectl version >/dev/null 2>&1; do sleep 3; done"; then
-        echo >&2 "kubernetes cluster is not up and running yet"
-        exit 1
-      fi
+- script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    if ! timeout 30s bash -c "until command -v kubectl >/dev/null 2>&1; do sleep 3; done"; then
+      echo >&2 "kubectl is not installed yet"
+      exit 1
+    fi
+  hint: |
+    See "/var/log/cloud-init-output.log". in the guest
+- script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    if ! timeout 300s bash -c "until test -f /etc/kubernetes/admin.conf; do sleep 3; done"; then
+      echo >&2 "k8s is not running yet"
+      exit 1
+    fi
+  hint: |
+    The k8s kubeconfig file has not yet been created.
+- script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    if ! timeout 300s bash -c "until kubectl version >/dev/null 2>&1; do sleep 3; done"; then
+      echo >&2 "kubernetes cluster is not up and running yet"
+      exit 1
+    fi

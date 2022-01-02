@@ -1,13 +1,13 @@
 # This example requires Lima v0.7.0 or later
 arch: "x86_64"
 images:
-  # NOTE: the image is periodically rotated, if you face 404, see https://mirror.pkgbuild.com/images/ to find the latest image.
-  - location: "https://mirror.pkgbuild.com/images/v20211201.40458/Arch-Linux-x86_64-cloudimg-20211201.40458.qcow2"
-    arch: "x86_64"
-    digest: "sha256:90fb8ea170be6fcfff0821b7544ccc8c3c1282fd0d08fcc0432a72552b929999"
+# NOTE: the image is periodically rotated, if you face 404, see https://mirror.pkgbuild.com/images/ to find the latest image.
+- location: "https://mirror.pkgbuild.com/images/v20211201.40458/Arch-Linux-x86_64-cloudimg-20211201.40458.qcow2"
+  arch: "x86_64"
+  digest: "sha256:90fb8ea170be6fcfff0821b7544ccc8c3c1282fd0d08fcc0432a72552b929999"
 mounts:
-  - location: "~"
-  - location: "/tmp/lima"
-    writable: true
+- location: "~"
+- location: "/tmp/lima"
+  writable: true
 firmware:
   legacyBIOS: true

@@ -23,21 +23,21 @@ task:
       EXAMPLE: archlinux.yaml
       EXAMPLE: opensuse.yaml
   info_script:
-    - uname -a
-    - df -T
-    - ls -l /dev/kvm
-    - cat /proc/cpuinfo
+  - uname -a
+  - df -T
+  - ls -l /dev/kvm
+  - cat /proc/cpuinfo
   install_deps_script:
-    - apt-get update
-    - apt-get install -y --no-install-recommends ca-certificates curl git golang openssh-client make netcat ovmf sudo qemu-system-x86 qemu-utils
+  - apt-get update
+  - apt-get install -y --no-install-recommends ca-certificates curl git golang openssh-client make netcat ovmf sudo qemu-system-x86 qemu-utils
   go_cache:
     fingerprint_script: uname -s ; cat go.sum
     folder: $GOPATH/pkg/mod
   build_script: make
   install_script: make install
   prepare_user_script:
-    - groupadd -g $(stat -c '%g' /dev/kvm) kvm
-    - useradd -m -G kvm testuser
+  - groupadd -g $(stat -c '%g' /dev/kvm) kvm
+  - useradd -m -G kvm testuser
   lima_cache:
     fingerprint_script: uname -s ; cat examples/$EXAMPLE
     folder: /home/testuser/.cache/lima
