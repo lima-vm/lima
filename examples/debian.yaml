@@ -1,11 +1,11 @@
 # This example requires Lima v0.7.0 or later
 images:
-  - location: "https://cloud.debian.org/images/cloud/bullseye/daily/20211203-845/debian-11-generic-amd64-daily-20211203-845.qcow2"
+  - location: "https://cloud.debian.org/images/cloud/bullseye/daily/20220102-875/debian-11-generic-amd64-daily-20220102-875.qcow2"
     arch: "x86_64"
-    digest: "sha512:796b26b84d12f147c3037c2444c35c6d0e0d5e2c39e1584b20724de46ee16617c356ec386b20b0d79ea3437ad9fa77a7fa84a6773c5cad0011a4dfacb3273f94"
-  - location: "https://cloud.debian.org/images/cloud/bullseye/daily/20211203-845/debian-11-generic-arm64-daily-20211203-845.qcow2"
+    digest: "sha512:3810dda9397bcf22f31c0aba5631186ad6169aab0b470961fc02664305c85bce7ce5c194d3e426777e9436a260f0241ad091f92f795e2bfc27c5be45b489f94e"
+  - location: "https://cloud.debian.org/images/cloud/bullseye/daily/20220102-875/debian-11-generic-arm64-daily-20220102-875.qcow2"
     arch: "aarch64"
-    digest: "sha512:920f0397911017bebf0df5972450beb041813825cc5820d6ae5a351c00d1c25fb93955abd85f0444e5bf04ac00b19e77bfc4352c6f4c5aad2ddd50a071f842de"
+    digest: "sha512:dffa62e9f9a9543644fd99a835d8d3e9a56e8614689c38100da61bd57c6d3d1b230401286f5fe9594a3efc70e4c29671a135a744e7d2051592f0dd797c00f5c8"
 mounts:
   - location: "~"
   - location: "/tmp/lima"
