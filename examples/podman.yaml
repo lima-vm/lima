@@ -21,8 +21,6 @@ mounts:
   - location: "~"
   - location: "/tmp/lima"
     writable: true
-ssh:
-  localPort: 60906
 containerd:
   system: false
   user: false

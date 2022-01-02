@@ -17,12 +17,6 @@ mounts:
   - location: "~"
   - location: "/tmp/lima"
     writable: true
-ssh:
-  localPort: 60006
-  # Load ~/.ssh/*.pub in addition to $LIMA_HOME/_config/user.pub , for allowing DOCKER_HOST=ssh:// .
-  # This option is enabled by default.
-  # If you have an insecure key under ~/.ssh, do not use this option.
-  loadDotSSHPubKeys: true
 # containerd is managed by Docker, not by Lima, so the values are set to false here.
 containerd:
   system: false
