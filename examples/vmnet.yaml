@@ -2,18 +2,18 @@
 # This example requires Lima v0.7.0 or later.
 # Older versions of Lima were using a different syntax for supporting vmnet.framework.
 images:
-  # Hint: run `limactl prune` to invalidate the "current" cache
-  - location: "https://cloud-images.ubuntu.com/impish/current/impish-server-cloudimg-amd64.img"
-    arch: "x86_64"
-  - location: "https://cloud-images.ubuntu.com/impish/current/impish-server-cloudimg-arm64.img"
-    arch: "aarch64"
+# Hint: run `limactl prune` to invalidate the "current" cache
+- location: "https://cloud-images.ubuntu.com/impish/current/impish-server-cloudimg-amd64.img"
+  arch: "x86_64"
+- location: "https://cloud-images.ubuntu.com/impish/current/impish-server-cloudimg-arm64.img"
+  arch: "aarch64"
 mounts:
-  - location: "~"
-  - location: "/tmp/lima"
-    writable: true
+- location: "~"
+- location: "/tmp/lima"
+  writable: true
 networks:
-  # The instance can get routable IP addresses from the vmnet framework using
-  # https://github.com/lima-vm/vde_vmnet. Available networks are defined in
-  # $LIMA_HOME/_config/networks.yaml. Supported network types are "host",
-  # "shared", or "bridged".
-  - lima: shared
+# The instance can get routable IP addresses from the vmnet framework using
+# https://github.com/lima-vm/vde_vmnet. Available networks are defined in
+# $LIMA_HOME/_config/networks.yaml. Supported network types are "host",
+# "shared", or "bridged".
+- lima: shared

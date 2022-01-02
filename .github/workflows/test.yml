@@ -3,8 +3,8 @@ name: test
 on:
   push:
     branches:
-      - master
-      - 'release/**'
+    - master
+    - 'release/**'
   pull_request:
 
 jobs:
@@ -12,65 +12,65 @@ jobs:
     runs-on: ubuntu-20.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 1
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v2
-        with:
-          version: v1.42.1
-          args: --verbose
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 1
+    - name: golangci-lint
+      uses: golangci/golangci-lint-action@v2
+      with:
+        version: v1.42.1
+        args: --verbose
 
   yamllint:
     runs-on: ubuntu-20.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 1
-      - name: Run yamllint
-        run: yamllint .
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 1
+    - name: Run yamllint
+      run: yamllint .
 
   shellcheck:
     runs-on: ubuntu-20.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 1
-      - name: Install shellcheck
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y shellcheck
-      - name: Run shellcheck
-        run: find . -name '*.sh' | xargs shellcheck
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 1
+    - name: Install shellcheck
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y shellcheck
+    - name: Run shellcheck
+      run: find . -name '*.sh' | xargs shellcheck
 
   shfmt:
     runs-on: ubuntu-20.04
     timeout-minutes: 20
     steps:
-      - uses: actions/setup-go@v2
-        with:
-          go-version: 1.17.x
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 1
-      - name: Install shfmt
-        run: GO111MODULE=on go get mvdan.cc/sh/v3/cmd/shfmt
-      - name: Run shfmt
-        run: find . -name '*.sh' | xargs shfmt -s -d
+    - uses: actions/setup-go@v2
+      with:
+        go-version: 1.17.x
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 1
+    - name: Install shfmt
+      run: GO111MODULE=on go get mvdan.cc/sh/v3/cmd/shfmt
+    - name: Run shfmt
+      run: find . -name '*.sh' | xargs shfmt -s -d
 
   check-hyperlinks:
     name: Check links in README.md
     runs-on: ubuntu-20.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 1
-      - uses: docker://dkhamsing/awesome_bot:latest
-        with:
-          args: /github/workspace/README.md --allow-dupe --allow-redirect --request-delay 1 --white-list https://img.shields.io,http://127.0.0.1:8080,https://github.com/lima-vm/lima/releases/download
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 1
+    - uses: docker://dkhamsing/awesome_bot:latest
+      with:
+        args: /github/workspace/README.md --allow-dupe --allow-redirect --request-delay 1 --white-list https://img.shields.io,http://127.0.0.1:8080,https://github.com/lima-vm/lima/releases/download
 
   basic:
     name: Basic tests
@@ -80,22 +80,22 @@ jobs:
         os: [macos-11, ubuntu-20.04]
     timeout-minutes: 20
     steps:
-      - uses: actions/setup-go@v2
-        with:
-          go-version: 1.17.x
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 1
-      - name: Unit tests
-        run: go test -v ./...
-      - name: Make
-        run: make
-      - name: Install
-        run: sudo make install
-      - name: Validate examples (except vmnet.yaml)
-        run: find examples -name '*.yaml' | grep -v 'vmnet.yaml' | xargs limactl validate
-      - name: Uninstall
-        run: sudo make uninstall
+    - uses: actions/setup-go@v2
+      with:
+        go-version: 1.17.x
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 1
+    - name: Unit tests
+      run: go test -v ./...
+    - name: Make
+      run: make
+    - name: Install
+      run: sudo make install
+    - name: Validate examples (except vmnet.yaml)
+      run: find examples -name '*.yaml' | grep -v 'vmnet.yaml' | xargs limactl validate
+    - name: Uninstall
+      run: sudo make uninstall
 
   integration:
     name: Integration tests
@@ -107,107 +107,107 @@ jobs:
         # Other yamls are tested on Linux instances of Cirrus.
         example: [default.yaml, vmnet.yaml]
     steps:
-      - uses: actions/setup-go@v2
-        with:
-          go-version: 1.17.x
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 1
-      - name: Make
-        run: make
-      - name: Install
-        run: make install
-      - name: Install test dependencies
-        # QEMU:      required by Lima itself
-        # bash:      required by test-example.sh (OS version of bash is too old)
-        # coreutils: required by test-example.sh for the "timeout" command
-        run: |
-          set -x
-          # Github runners seem to symlink to python2.7 version of 2to3,
-          # breaking upgrades to latest python@3.9
-          rm -f /usr/local/bin/2to3
-          time brew update
-          time brew install qemu bash coreutils
-          time brew upgrade
-      - name: Install vde_switch and vde_vmnet
-        if: matrix.example == 'vmnet.yaml'
-        env:
-          # 2021-12-12
-          VDE2_VERSION: 74278b9b7cf816f0356181f387012fdeb6d65b52
-          # 2021-12-08
-          VDE_VMNET_VERSION: v0.5.2
-        run: |
-          (
-            brew install autoconf automake
-          )
-          (
-            git clone https://github.com/virtualsquare/vde-2
-            cd vde-2
-            git checkout $VDE2_VERSION
-            autoreconf -fis
-            ./configure --prefix=/opt/vde --disable-python
-            make
-            sudo make install
-          )
-          (
-            git clone https://github.com/lima-vm/vde_vmnet
-            cd vde_vmnet
-            git checkout $VDE_VMNET_VERSION
-            make PREFIX=/opt/vde
-            sudo make PREFIX=/opt/vde install
-          )
-          (
-            limactl sudoers | sudo tee /etc/sudoers.d/lima
-          )
-      - name: Prepare ssh
-        run: |
-          if [ -e ~/.ssh/id_rsa ]; then
-            echo "~/.ssh/id_rsa already exists"
-          else
-            echo "Generating ~/.ssh/id_rsa"
-            ssh-keygen -b 2048 -t rsa -f ~/.ssh/id_rsa -q -N ""
-          fi
-      - name: Cache ~/Library/Caches/lima/download
-        uses: actions/cache@v2
-        with:
-          path: ~/Library/Caches/lima/download
-          key: ${{ runner.os }}-examples/${{ matrix.example }}
-      - name: Test
-        uses: nick-invision/retry@v2
-        with:
-          timeout_minutes: 30
-          retry_on: error
-          max_attempts: 3
-          command: ./hack/test-example.sh examples/${{ matrix.example }}
+    - uses: actions/setup-go@v2
+      with:
+        go-version: 1.17.x
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 1
+    - name: Make
+      run: make
+    - name: Install
+      run: make install
+    - name: Install test dependencies
+      # QEMU:      required by Lima itself
+      # bash:      required by test-example.sh (OS version of bash is too old)
+      # coreutils: required by test-example.sh for the "timeout" command
+      run: |
+        set -x
+        # Github runners seem to symlink to python2.7 version of 2to3,
+        # breaking upgrades to latest python@3.9
+        rm -f /usr/local/bin/2to3
+        time brew update
+        time brew install qemu bash coreutils
+        time brew upgrade
+    - name: Install vde_switch and vde_vmnet
+      if: matrix.example == 'vmnet.yaml'
+      env:
+        # 2021-12-12
+        VDE2_VERSION: 74278b9b7cf816f0356181f387012fdeb6d65b52
+        # 2021-12-08
+        VDE_VMNET_VERSION: v0.5.2
+      run: |
+        (
+          brew install autoconf automake
+        )
+        (
+          git clone https://github.com/virtualsquare/vde-2
+          cd vde-2
+          git checkout $VDE2_VERSION
+          autoreconf -fis
+          ./configure --prefix=/opt/vde --disable-python
+          make
+          sudo make install
+        )
+        (
+          git clone https://github.com/lima-vm/vde_vmnet
+          cd vde_vmnet
+          git checkout $VDE_VMNET_VERSION
+          make PREFIX=/opt/vde
+          sudo make PREFIX=/opt/vde install
+        )
+        (
+          limactl sudoers | sudo tee /etc/sudoers.d/lima
+        )
+    - name: Prepare ssh
+      run: |
+        if [ -e ~/.ssh/id_rsa ]; then
+          echo "~/.ssh/id_rsa already exists"
+        else
+          echo "Generating ~/.ssh/id_rsa"
+          ssh-keygen -b 2048 -t rsa -f ~/.ssh/id_rsa -q -N ""
+        fi
+    - name: Cache ~/Library/Caches/lima/download
+      uses: actions/cache@v2
+      with:
+        path: ~/Library/Caches/lima/download
+        key: ${{ runner.os }}-examples/${{ matrix.example }}
+    - name: Test
+      uses: nick-invision/retry@v2
+      with:
+        timeout_minutes: 30
+        retry_on: error
+        max_attempts: 3
+        command: ./hack/test-example.sh examples/${{ matrix.example }}
 
   artifacts-darwin:
     name: Artifacts Darwin
     runs-on: macos-11
     timeout-minutes: 20
     steps:
-      - uses: actions/setup-go@v2
-        with:
-          go-version: 1.17.x
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 1
-      - name: Make darwin artifacts
-        run: make artifacts-darwin
+    - uses: actions/setup-go@v2
+      with:
+        go-version: 1.17.x
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 1
+    - name: Make darwin artifacts
+      run: make artifacts-darwin
 
   artifacts-linux:
     name: Artifacts Linux
     runs-on: ubuntu-20.04
     timeout-minutes: 20
     steps:
-      - uses: actions/setup-go@v2
-        with:
-          go-version: 1.17.x
-      - name: Install gcc-aarch64-linux-gnu
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 1
-      - name: Make linux artifacts
-        run: make artifacts-linux
+    - uses: actions/setup-go@v2
+      with:
+        go-version: 1.17.x
+    - name: Install gcc-aarch64-linux-gnu
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-aarch64-linux-gnu
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 1
+    - name: Make linux artifacts
+      run: make artifacts-linux

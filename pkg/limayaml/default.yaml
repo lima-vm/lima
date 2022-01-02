@@ -14,18 +14,18 @@ arch: null
 # Ubuntu and Fedora are known to work.
 # Default: none (must be specified)
 images:
-  # Try to use a local image first.
-  - location: "~/Downloads/impish-server-cloudimg-amd64.img"
-    arch: "x86_64"
-  - location: "~/Downloads/impish-server-cloudimg-arm64.img"
-    arch: "aarch64"
+# Try to use a local image first.
+- location: "~/Downloads/impish-server-cloudimg-amd64.img"
+  arch: "x86_64"
+- location: "~/Downloads/impish-server-cloudimg-arm64.img"
+  arch: "aarch64"
 
-  # Download the file from the internet when the local file is missing.
-  # Hint: run `limactl prune` to invalidate the "current" cache
-  - location: "https://cloud-images.ubuntu.com/impish/current/impish-server-cloudimg-amd64.img"
-    arch: "x86_64"
-  - location: "https://cloud-images.ubuntu.com/impish/current/impish-server-cloudimg-arm64.img"
-    arch: "aarch64"
+# Download the file from the internet when the local file is missing.
+# Hint: run `limactl prune` to invalidate the "current" cache
+- location: "https://cloud-images.ubuntu.com/impish/current/impish-server-cloudimg-amd64.img"
+  arch: "x86_64"
+- location: "https://cloud-images.ubuntu.com/impish/current/impish-server-cloudimg-arm64.img"
+  arch: "aarch64"
 
 # CPUs: if you see performance issues, try limiting cpus to 1.
 # Default: 4
@@ -42,22 +42,22 @@ disk: null
 # Expose host directories to the guest, the mount point might be accessible from all UIDs in the guest
 # Default: null
 mounts:
-  - location: "~"
-    # CAUTION: `writable` SHOULD be false for the home directory.
-    # Setting `writable` to true is possible, but untested and dangerous.
+- location: "~"
+  # CAUTION: `writable` SHOULD be false for the home directory.
+  # Setting `writable` to true is possible, but untested and dangerous.
+  # Default: false
+  writable: null
+  # SSHFS has an optional flag called 'follow_symlinks'. This allows mounts
+  # to be properly resolved in the guest os and allow for access to the
+  # contents of the symlink. As a result, symlinked files & folders on the Host
+  # system will look and feel like regular files directories in the Guest OS.
+  sshfs:
     # Default: false
-    writable: null
-    # SSHFS has an optional flag called 'follow_symlinks'. This allows mounts
-    # to be properly resolved in the guest os and allow for access to the
-    # contents of the symlink. As a result, symlinked files & folders on the Host
-    # system will look and feel like regular files directories in the Guest OS.
-    sshfs:
-      # Default: false
-      followSymlinks: null
-  - location: "/tmp/lima"
-    writable: true
-    sshfs:
-      followSymlinks: null
+    followSymlinks: null
+- location: "/tmp/lima"
+  writable: true
+  sshfs:
+    followSymlinks: null
 
 ssh:
   # A localhost port of the host. Forwarded to port 22 of the guest.
@@ -87,43 +87,43 @@ containerd:
 #  # Override containerd archive
 #  # Default: hard-coded URL with hard-coded digest (see the output of `limactl info | jq .defaultTemplate.containerd.archives`)
 #  archives:
-#    - location: "~/Downloads/nerdctl-full-X.Y.Z-linux-amd64.tar.gz"
-#      arch: "x86_64"
-#      digest: "sha256:..."
+#  - location: "~/Downloads/nerdctl-full-X.Y.Z-linux-amd64.tar.gz"
+#    arch: "x86_64"
+#    digest: "sha256:..."
 
 # Provisioning scripts need to be idempotent because they might be called
 # multiple times, e.g. when the host VM is being restarted.
 # provision:
-#   # `system` is executed with the root privilege
-#   - mode: system
-#     script: |
-#       #!/bin/bash
-#       set -eux -o pipefail
-#       export DEBIAN_FRONTEND=noninteractive
-#       apt-get install -y vim
-#   # `user` is executed without the root privilege
-#   - mode: user
-#     script: |
-#       #!/bin/bash
-#       set -eux -o pipefail
-#       cat <<EOF > ~/.vimrc
-#       set number
-#       EOF
+# # `system` is executed with the root privilege
+# - mode: system
+#   script: |
+#     #!/bin/bash
+#     set -eux -o pipefail
+#     export DEBIAN_FRONTEND=noninteractive
+#     apt-get install -y vim
+# # `user` is executed without the root privilege
+# - mode: user
+#   script: |
+#     #!/bin/bash
+#     set -eux -o pipefail
+#     cat <<EOF > ~/.vimrc
+#     set number
+#     EOF
 
 # probes:
-#  # Only `readiness` probes are supported right now.
-#  - mode: readiness
-#    description: vim to be installed
-#    script: |
-#       #!/bin/bash
-#       set -eux -o pipefail
-#       if ! timeout 30s bash -c "until command -v vim; do sleep 3; done"; then
-#         echo >&2 "vim is not installed yet"
-#         exit 1
-#       fi
-#    hint: |
-#      vim was not installed in the guest. Make sure the package system is working correctly.
-#      Also see "/var/log/cloud-init-output.log" in the guest.
+# # Only `readiness` probes are supported right now.
+# - mode: readiness
+#   description: vim to be installed
+#   script: |
+#      #!/bin/bash
+#      set -eux -o pipefail
+#      if ! timeout 30s bash -c "until command -v vim; do sleep 3; done"; then
+#        echo >&2 "vim is not installed yet"
+#        exit 1
+#      fi
+#   hint: |
+#     vim was not installed in the guest. Make sure the package system is working correctly.
+#     Also see "/var/log/cloud-init-output.log" in the guest.
 
 # ===================================================================== #
 # FURTHER ADVANCED CONFIGURATION
@@ -144,71 +144,71 @@ video:
 # The instance can get routable IP addresses from the vmnet framework using
 # https://github.com/lima-vm/vde_vmnet.
 networks:
-  # Lima can manage daemons for networks defined in $LIMA_HOME/_config/networks.yaml
-  # automatically. Both vde_switch and vde_vmnet binaries must be installed into
-  # secure locations only alterable by the "root" user.
-  # - lima: shared
-  #   # MAC address of the instance; lima will pick one based on the instance name,
-  #   # so DHCP assigned ip addresses should remain constant over instance restarts.
-  #   macAddress: ""
-  #   # Interface name, defaults to "lima0", "lima1", etc.
-  #   interface: ""
-  #
-  # Lima can also connect to "unmanaged" vde networks addressed by "vnl". This
-  # means that the daemons will not be controlled by Lima, but must be started
-  # before the instance.  The interface type (host, shared, or bridged) is
-  # configured in vde_vmnet and not in lima.
-  # vnl (virtual network locator) points to the vde_switch socket directory,
-  # optionally with vde:// prefix
-  # - vnl: "vde:///var/run/vde.ctl"
-  #   # VDE Switch port number (not TCP/UDP port number). Set to 65535 for PTP mode.
-  #   # Default: 0
-  #   switchPort: 0
-  #   # MAC address of the instance; lima will pick one based on the instance name,
-  #   # so DHCP assigned ip addresses should remain constant over instance restarts.
-  #   macAddress: ""
-  #   # Interface name, defaults to "lima0", "lima1", etc.
-  #   interface: ""
+# Lima can manage daemons for networks defined in $LIMA_HOME/_config/networks.yaml
+# automatically. Both vde_switch and vde_vmnet binaries must be installed into
+# secure locations only alterable by the "root" user.
+# - lima: shared
+#   # MAC address of the instance; lima will pick one based on the instance name,
+#   # so DHCP assigned ip addresses should remain constant over instance restarts.
+#   macAddress: ""
+#   # Interface name, defaults to "lima0", "lima1", etc.
+#   interface: ""
+#
+# Lima can also connect to "unmanaged" vde networks addressed by "vnl". This
+# means that the daemons will not be controlled by Lima, but must be started
+# before the instance.  The interface type (host, shared, or bridged) is
+# configured in vde_vmnet and not in lima.
+# vnl (virtual network locator) points to the vde_switch socket directory,
+# optionally with vde:// prefix
+# - vnl: "vde:///var/run/vde.ctl"
+#   # VDE Switch port number (not TCP/UDP port number). Set to 65535 for PTP mode.
+#   # Default: 0
+#   switchPort: 0
+#   # MAC address of the instance; lima will pick one based on the instance name,
+#   # so DHCP assigned ip addresses should remain constant over instance restarts.
+#   macAddress: ""
+#   # Interface name, defaults to "lima0", "lima1", etc.
+#   interface: ""
 
 # Port forwarding rules. Forwarding between ports 22 and ssh.localPort cannot be overridden.
 # Rules are checked sequentially until the first one matches.
 # portForwards:
-#   - guestPort: 443
-#     hostIP: "0.0.0.0" # overrides the default value "127.0.0.1"; allows privileged port forwarding
-#   # default: hostPort: 443 (same as guestPort)
-#   # default: guestIP: "127.0.0.1" (also matches bind addresses "0.0.0.0", "::", and "::1")
-#   # default: proto: "tcp" (only valid value right now)
+# - guestPort: 443
+#   hostIP: "0.0.0.0" # overrides the default value "127.0.0.1"; allows privileged port forwarding
+# # default: hostPort: 443 (same as guestPort)
+# # default: guestIP: "127.0.0.1" (also matches bind addresses "0.0.0.0", "::", and "::1")
+# # default: proto: "tcp" (only valid value right now)
 #
-#   - guestPortRange: [4000, 4999]
-#     hostIP:  "0.0.0.0" # overrides the default value "127.0.0.1"
-#   # default: hostPortRange: [4000, 4999] (must specify same number of ports as guestPortRange)
+# - guestPortRange: [4000, 4999]
+#   hostIP:  "0.0.0.0" # overrides the default value "127.0.0.1"
+# # default: hostPortRange: [4000, 4999] (must specify same number of ports as guestPortRange)
 #
-#   - guestPort: 80
-#     hostPort: 8080 # overrides the default value 80
+# - guestPort: 80
+#   hostPort: 8080 # overrides the default value 80
 #
-#   - guestIP: "127.0.0.2" # overrides the default value "127.0.0.1"
-#     hostIP: "127.0.0.2" # overrides the default value "127.0.0.1"
-#   # default: guestPortRange: [1, 65535]
-#   # default: hostPortRange: [1, 65535]
+# - guestIP: "127.0.0.2" # overrides the default value "127.0.0.1"
+#   hostIP: "127.0.0.2" # overrides the default value "127.0.0.1"
+# # default: guestPortRange: [1, 65535]
+# # default: hostPortRange: [1, 65535]
 #
-#   - guestPort: 8888
-#     ignore: true (don't forward this port)
+# - guestPort: 8888
+#   ignore: true (don't forward this port)
 #
-#   - guestSocket: "/run/user/{{.UID}}/my.sock"
-#     hostSocket: mysocket
-#   # "guestSocket" can include these template variables: {{.Home}}, {{.UID}}, and {{.User}}.
-#   # "hostSocket" can include {{.Home}}, {{.Dir}}, {{.Name}}, {{.UID}}, and {{.User}}.
-#   # Put sockets into "{{.Dir}}/sock" to avoid collision with Lima internal sockets!
-#   # Sockets can also be forwarded to ports and vice versa, but not to/from a range of ports.
-#   # Forwarding requires the lima user to have rw access to the "guestsocket",
-#   # and the local user rwx access to the directory of the "hostsocket".
+# - guestSocket: "/run/user/{{.UID}}/my.sock"
+#   hostSocket: mysocket
+# # "guestSocket" can include these template variables: {{.Home}}, {{.UID}}, and {{.User}}.
+# # "hostSocket" can include {{.Home}}, {{.Dir}}, {{.Name}}, {{.UID}}, and {{.User}}.
+# # Put sockets into "{{.Dir}}/sock" to avoid collision with Lima internal sockets!
+# # Sockets can also be forwarded to ports and vice versa, but not to/from a range of ports.
+# # Forwarding requires the lima user to have rw access to the "guestsocket",
+# # and the local user rwx access to the directory of the "hostsocket".
 #
-#   # Lima internally appends this fallback rule at the end:
-#   - guestIP: "127.0.0.1"
-#     guestPortRange: [1, 65535]
-#     hostIP: "127.0.0.1"
-#     hostPortRange: [1, 65535]
-#   # Any port still not matched by a rule will not be forwarded (ignored)
+# # Lima internally appends this fallback rule at the end:
+# - guestIP: "127.0.0.1"
+#   guestPortRange: [1, 65535]
+#   hostIP: "127.0.0.1"
+#   hostPortRange: [1, 65535]
+# # Any port still not matched by a rule will not be forwarded (ignored)
 
 # Message. Information to be shown to the user, given as a Go template for the instance.
 # The same template variables as for listing instances can be used, for example {{.Dir}}.

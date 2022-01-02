@@ -4,7 +4,7 @@ extends: default
 
 rules:
   indentation:
-    indent-sequences: consistent
+    indent-sequences: false
   truthy:
     allowed-values: ['true', 'false', 'on', 'off']
   comments-indentation: disable
