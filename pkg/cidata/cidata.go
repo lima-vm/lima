@@ -96,13 +96,14 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 		return err
 	}
 	args := TemplateArgs{
-		Name:         name,
-		User:         u.Username,
-		UID:          uid,
-		Containerd:   Containerd{System: *y.Containerd.System, User: *y.Containerd.User},
-		SlirpNICName: qemu.SlirpNICName,
-		SlirpGateway: qemu.SlirpGateway,
-		SlirpDNS:     qemu.SlirpDNS,
+		Name:           name,
+		User:           u.Username,
+		UID:            uid,
+		Containerd:     Containerd{System: *y.Containerd.System, User: *y.Containerd.User},
+		SlirpNICName:   qemu.SlirpNICName,
+		SlirpGateway:   qemu.SlirpGateway,
+		SlirpDNS:       qemu.SlirpDNS,
+		SlirpIPAddress: qemu.SlirpIPAddress,
 	}
 
 	// change instance id on every boot so network config will be processed again
