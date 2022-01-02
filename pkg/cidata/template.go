@@ -39,6 +39,7 @@ type TemplateArgs struct {
 	SlirpNICName    string
 	SlirpGateway    string
 	SlirpDNS        string
+	SlirpIPAddress  string
 	UDPDNSLocalPort int
 	TCPDNSLocalPort int
 	Env             map[string]string
