@@ -67,7 +67,7 @@ uninstall:
 		"$(DEST)/bin/limactl" \
 		"$(DEST)/bin/nerdctl.lima" \
 		"$(DEST)/share/lima" "$(DEST)/share/doc/lima"
-		if [ "$$(readlink "$(DEST)/bin/nerdctl")" = "nerdctl.lima" ]; then rm "$(DEST)/bin/nerdctl"; fi
+	if [ "$$(readlink "$(DEST)/bin/nerdctl")" = "nerdctl.lima" ]; then rm "$(DEST)/bin/nerdctl"; fi
 
 .PHONY: lint
 lint:
