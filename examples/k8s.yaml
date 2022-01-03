@@ -65,6 +65,8 @@ provision:
     set -eux -o pipefail
     test -e /etc/kubernetes/admin.conf && exit 0
     export KUBECONFIG=/etc/kubernetes/admin.conf
+    kubeadm config images list
+    kubeadm config images pull
     # Initializing your control-plane node
     kubeadm init --cri-socket=/run/containerd/containerd.sock --pod-network-cidr=10.244.0.0/16 --apiserver-cert-extra-sans 127.0.0.1
     # Installing a Pod network add-on
