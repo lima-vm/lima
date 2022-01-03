@@ -4,7 +4,7 @@ import "net"
 
 type NetworksConfig struct {
 	Paths    Paths              `yaml:"paths"`
-	Group    string             `yaml:"group,omitempty"` // default: "staff"
+	Group    string             `yaml:"group,omitempty"` // default: "everyone"
 	Networks map[string]Network `yaml:"networks"`
 }
 
