@@ -50,6 +50,10 @@ func TestLogFile(t *testing.T) {
 func TestUser(t *testing.T) {
 	config, err := DefaultConfig()
 	assert.NilError(t, err)
+	if runtime.GOOS != "darwin" && config.Group == "everyone" {
+		// The "everyone" group is a specific macOS feature to include non-local accounts.
+		config.Group = "staff"
+	}
 
 	user, err := config.User(Switch)
 	assert.NilError(t, err)
@@ -85,14 +89,14 @@ func TestStartCmd(t *testing.T) {
 
 	cmd := config.StartCmd("shared", Switch)
 	assert.Equal(t, cmd, "/opt/vde/bin/vde_switch --pidfile=/private/var/run/lima/shared_switch.pid "+
-		"--sock=/private/var/run/lima/shared.ctl --group=staff --dirmode=0770 --nostdin")
+		"--sock=/private/var/run/lima/shared.ctl --group=everyone --dirmode=0770 --nostdin")
 
 	cmd = config.StartCmd("shared", VMNet)
-	assert.Equal(t, cmd, "/opt/vde/bin/vde_vmnet --pidfile=/private/var/run/lima/shared_vmnet.pid --vde-group=staff --vmnet-mode=shared "+
+	assert.Equal(t, cmd, "/opt/vde/bin/vde_vmnet --pidfile=/private/var/run/lima/shared_vmnet.pid --vde-group=everyone --vmnet-mode=shared "+
 		"--vmnet-gateway=192.168.105.1 --vmnet-dhcp-end=192.168.105.254 --vmnet-mask=255.255.255.0 /private/var/run/lima/shared.ctl")
 
 	cmd = config.StartCmd("bridged", VMNet)
-	assert.Equal(t, cmd, "/opt/vde/bin/vde_vmnet --pidfile=/private/var/run/lima/bridged_vmnet.pid --vde-group=staff --vmnet-mode=bridged "+
+	assert.Equal(t, cmd, "/opt/vde/bin/vde_vmnet --pidfile=/private/var/run/lima/bridged_vmnet.pid --vde-group=everyone --vmnet-mode=bridged "+
 		"--vmnet-interface=en0 /private/var/run/lima/bridged.ctl")
 }
 

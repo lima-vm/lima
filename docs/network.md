@@ -91,7 +91,7 @@ paths:
   varRun: /private/var/run/lima
   sudoers: /private/etc/sudoers.d/lima
 
-group: staff
+group: everyone
 
 networks:
   shared:
