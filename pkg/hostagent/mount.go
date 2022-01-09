@@ -3,8 +3,9 @@ package hostagent
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/go-multierror"
 	"os"
+
+	"github.com/hashicorp/go-multierror"
 
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/localpathutil"
