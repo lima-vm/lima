@@ -106,3 +106,9 @@ probes:
       echo >&2 "kubernetes cluster is not up and running yet"
       exit 1
     fi
+message: |
+  To run `kubectl` on the host (assumes kubectl is installed):
+  $ mkdir -p "{{.Dir}}/conf"
+  $ export KUBECONFIG="{{.Dir}}/conf/kubeconfig.yaml"
+  $ limactl shell {{.Name}} sudo cat /etc/kubernetes/admin.conf >$KUBECONFIG
+  $ kubectl ...
