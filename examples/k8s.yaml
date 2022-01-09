@@ -78,7 +78,8 @@ provision:
     sed -e "s/${LIMA_CIDATA_SLIRP_IP_ADDRESS:-192.168.5.15}/127.0.0.1/" -i $KUBECONFIG
     mkdir -p ${HOME:-/root}/.kube && cp -f $KUBECONFIG ${HOME:-/root}/.kube/config
 probes:
-- script: |
+- description: "kubectl to be installed"
+  script: |
     #!/bin/bash
     set -eux -o pipefail
     if ! timeout 30s bash -c "until command -v kubectl >/dev/null 2>&1; do sleep 3; done"; then
@@ -87,7 +88,8 @@ probes:
     fi
   hint: |
     See "/var/log/cloud-init-output.log". in the guest
-- script: |
+- description: "kubeadm to be completed"
+  script: |
     #!/bin/bash
     set -eux -o pipefail
     if ! timeout 300s bash -c "until test -f /etc/kubernetes/admin.conf; do sleep 3; done"; then
@@ -96,10 +98,11 @@ probes:
     fi
   hint: |
     The k8s kubeconfig file has not yet been created.
-- script: |
+- description: "kubernetes cluster to be running"
+  script: |
     #!/bin/bash
     set -eux -o pipefail
-    if ! timeout 300s bash -c "until kubectl version >/dev/null 2>&1; do sleep 3; done"; then
+    if ! timeout 300s bash -c "until sudo kubectl version >/dev/null 2>&1; do sleep 3; done"; then
       echo >&2 "kubernetes cluster is not up and running yet"
       exit 1
     fi
