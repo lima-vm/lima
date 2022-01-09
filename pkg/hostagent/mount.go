@@ -3,9 +3,9 @@ package hostagent
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/go-multierror"
 	"os"
 
-	"github.com/hashicorp/go-multierror"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/localpathutil"
 	"github.com/lima-vm/sshocker/pkg/reversesshfs"
@@ -41,7 +41,7 @@ func (a *HostAgent) setupMount(ctx context.Context, m limayaml.Mount) (*mount, e
 		return nil, err
 	}
 	// NOTE: allow_other requires "user_allow_other" in /etc/fuse.conf
-	sshfsOptions := "allow_other"
+	sshfsOptions := "allow_other,cache=no"
 	if *m.SSHFS.FollowSymlinks {
 		sshfsOptions = sshfsOptions + ",follow_symlinks"
 	}
