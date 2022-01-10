@@ -5,6 +5,24 @@ if [ "${LIMA_CIDATA_CONTAINERD_SYSTEM}" != 1 ] && [ "${LIMA_CIDATA_CONTAINERD_US
 	exit 0
 fi
 
+if [ "${LIMA_CIDATA_CONTAINERD_SYSTEM}" = 1 ] && [ -f /etc/alpine-release ]; then
+	# need to use the containerd packages from alpine, because the
+	# installation from nerdctl requires glibc (alpine uses musl)
+	apk add runc containerd cni-plugins
+	rc-update add containerd default
+	rc-service containerd start
+
+	# no buildkit package in alpine yet, but the installation from
+	# nerdctl is statically linked (but misses an openrc script)
+	tar -xz -C /usr/local -f "${LIMA_CIDATA_MNT}"/nerdctl-full.tgz bin/buildctl bin/buildkitd
+	nohup buildkitd --oci-worker=false --containerd-worker=true >/var/log/buildkitd.log 2>&1 &
+
+	# alpine uses busybox, so the "tar" syntax is somewhat different
+	# don't need the rootless files, since they only work in systemd
+	tar -xz -C /usr/local -f "${LIMA_CIDATA_MNT}"/nerdctl-full.tgz bin/nerdctl
+	exit 0
+fi
+
 # This script does not work unless systemd is available
 command -v systemctl >/dev/null 2>&1 || exit 0
 

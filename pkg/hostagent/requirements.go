@@ -137,7 +137,7 @@ A possible workaround is to run "lima-guestagent install-systemd" in the guest.
 
 func (a *HostAgent) optionalRequirements() []requirement {
 	req := make([]requirement, 0)
-	if *a.y.Containerd.System || *a.y.Containerd.User {
+	if *a.y.Containerd.User {
 		req = append(req,
 			requirement{
 				description: "systemd must be available",
@@ -149,10 +149,10 @@ if ! command -v systemctl 2>&1 >/dev/null; then
     exit 1
 fi
 `,
-				debugHint: `systemd is required to run containerd, but does not seem to be available.
+				debugHint: `systemd is required to run containerd rootless, but does not seem to be available.
 Make sure that you use an image that supports systemd. If you do not want to run
-containerd, please make sure that both 'container.system' and 'containerd.user'
-are set to 'false' in the config file.
+containerd, please make sure that 'containerd.user' is set to 'false' in the
+config file.
 `,
 			},
 			requirement{
