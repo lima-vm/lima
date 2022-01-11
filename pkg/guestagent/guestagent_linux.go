@@ -13,6 +13,7 @@ import (
 	"github.com/lima-vm/lima/pkg/guestagent/api"
 	"github.com/lima-vm/lima/pkg/guestagent/iptables"
 	"github.com/lima-vm/lima/pkg/guestagent/procnettcp"
+	"github.com/lima-vm/lima/pkg/guestagent/timesync"
 	"github.com/sirupsen/logrus"
 	"github.com/yalue/native_endian"
 )
@@ -37,6 +38,7 @@ func New(newTicker func() (<-chan time.Time, func()), iptablesIdle time.Duration
 	}
 
 	go a.setWorthCheckingIPTablesRoutine(auditClient, iptablesIdle)
+	go a.fixSystemTimeSkew()
 	return a, nil
 }
 
@@ -243,4 +245,32 @@ func (a *agent) Info(ctx context.Context) (*api.Info, error) {
 		return nil, err
 	}
 	return &info, nil
+}
+
+const deltaLimit = 2 * time.Second
+
+func (a *agent) fixSystemTimeSkew() {
+	for {
+		ticker := time.NewTicker(10 * time.Second)
+		for now := range ticker.C {
+			rtc, err := timesync.GetRTCTime()
+			if err != nil {
+				logrus.Warnf("fixSystemTimeSkew: lookup error: %s", err.Error())
+				continue
+			}
+			d := rtc.Sub(now)
+			logrus.Debugf("fixSystemTimeSkew: rtc=%s systime=%s delta=%s",
+				rtc.Format(time.RFC3339), now.Format(time.RFC3339), d)
+			if d > deltaLimit || d < -deltaLimit {
+				err = timesync.SetSystemTime(rtc)
+				if err != nil {
+					logrus.Warnf("fixSystemTimeSkew: set system clock error: %s", err.Error())
+					continue
+				}
+				logrus.Infof("fixSystemTimeSkew: system time synchronized with rtc")
+				break
+			}
+		}
+		ticker.Stop()
+	}
 }
