@@ -250,26 +250,27 @@ func (a *agent) Info(ctx context.Context) (*api.Info, error) {
 const deltaLimit = 2 * time.Second
 
 func (a *agent) fixSystemTimeSkew() {
-	ticker := time.NewTicker(10 * time.Second)
-	defer ticker.Stop()
-	for now := range ticker.C {
-		rtc, err := timesync.GetRTCTime()
-		if err != nil {
-			logrus.Warnf("fixSystemTimeSkew: lookup error: %s", err.Error())
-			continue
-		}
-		d := rtc.Sub(now)
-		logrus.Debugf("fixSystemTimeSkew: rtc=%s systime=%s delta=%s",
-			rtc.Format(time.RFC3339), now.Format(time.RFC3339), d)
-		if d > deltaLimit || d < -deltaLimit {
-			err = timesync.SetSystemTime(rtc)
+	for {
+		ticker := time.NewTicker(10 * time.Second)
+		for now := range ticker.C {
+			rtc, err := timesync.GetRTCTime()
 			if err != nil {
-				logrus.Warnf("fixSystemTimeSkew: set system clock error: %s", err.Error())
+				logrus.Warnf("fixSystemTimeSkew: lookup error: %s", err.Error())
 				continue
 			}
-			logrus.Infof("fixSystemTimeSkew: system time synchronized with rtc")
-			break
+			d := rtc.Sub(now)
+			logrus.Debugf("fixSystemTimeSkew: rtc=%s systime=%s delta=%s",
+				rtc.Format(time.RFC3339), now.Format(time.RFC3339), d)
+			if d > deltaLimit || d < -deltaLimit {
+				err = timesync.SetSystemTime(rtc)
+				if err != nil {
+					logrus.Warnf("fixSystemTimeSkew: set system clock error: %s", err.Error())
+					continue
+				}
+				logrus.Infof("fixSystemTimeSkew: system time synchronized with rtc")
+				break
+			}
 		}
+		ticker.Stop()
 	}
-	go a.fixSystemTimeSkew()
 }
