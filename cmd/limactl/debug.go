@@ -27,22 +27,27 @@ func newDebugDNSCommand() *cobra.Command {
 		Args:  cobra.RangeArgs(1, 2),
 		RunE:  debugDNSAction,
 	}
+	cmd.Flags().BoolP("ipv6", "6", false, "lookup IPv6 addresses too")
 	return cmd
 }
 
 func debugDNSAction(cmd *cobra.Command, args []string) error {
+	ipv6, err := cmd.Flags().GetBool("ipv6")
+	if err != nil {
+		return err
+	}
 	udpLocalPort, err := strconv.Atoi(args[0])
 	if err != nil {
 		return err
 	}
 	tcpLocalPort := 0
-	if len(args) > 2 {
+	if len(args) > 1 {
 		tcpLocalPort, err = strconv.Atoi(args[1])
 		if err != nil {
 			return err
 		}
 	}
-	srv, err := dns.Start(udpLocalPort, tcpLocalPort)
+	srv, err := dns.Start(udpLocalPort, tcpLocalPort, ipv6)
 	if err != nil {
 		return err
 	}

@@ -138,7 +138,7 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 	if err != nil {
 		return err
 	}
-	if *y.UseHostResolver {
+	if *y.HostResolver.Enabled {
 		args.UDPDNSLocalPort = udpDNSLocalPort
 		args.TCPDNSLocalPort = tcpDNSLocalPort
 		args.DNSAddresses = append(args.DNSAddresses, qemu.SlirpDNS)

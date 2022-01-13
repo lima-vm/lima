@@ -18,6 +18,7 @@ const truncateSize = 512
 type Handler struct {
 	clientConfig *dns.ClientConfig
 	clients      []*dns.Client
+	IPv6         bool
 }
 
 type Server struct {
@@ -43,7 +44,7 @@ func newStaticClientConfig(ips []net.IP) (*dns.ClientConfig, error) {
 	return dns.ClientConfigFromReader(r)
 }
 
-func newHandler() (dns.Handler, error) {
+func newHandler(IPv6 bool) (dns.Handler, error) {
 	cc, err := dns.ClientConfigFromFile("/etc/resolv.conf")
 	if err != nil {
 		fallbackIPs := []net.IP{net.ParseIP("8.8.8.8"), net.ParseIP("1.1.1.1")}
@@ -60,6 +61,7 @@ func newHandler() (dns.Handler, error) {
 	h := &Handler{
 		clientConfig: cc,
 		clients:      clients,
+		IPv6:         IPv6,
 	}
 	return h, nil
 }
@@ -78,7 +80,12 @@ func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
 			Ttl:    5,
 		}
 		switch q.Qtype {
-		case dns.TypeCNAME, dns.TypeA, dns.TypeAAAA:
+		case dns.TypeAAAA:
+			if !h.IPv6 {
+				break
+			}
+			fallthrough
+		case dns.TypeCNAME, dns.TypeA:
 			cname, err := net.LookupCNAME(q.Name)
 			if err != nil {
 				break
@@ -212,8 +219,8 @@ func (h *Handler) ServeDNS(w dns.ResponseWriter, req *dns.Msg) {
 	}
 }
 
-func Start(udpLocalPort, tcpLocalPort int) (*Server, error) {
-	h, err := newHandler()
+func Start(udpLocalPort, tcpLocalPort int, IPv6 bool) (*Server, error) {
+	h, err := newHandler(IPv6)
 	if err != nil {
 		return nil, err
 	}

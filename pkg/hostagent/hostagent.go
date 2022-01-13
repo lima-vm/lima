@@ -92,7 +92,7 @@ func New(instName string, stdout io.Writer, sigintCh chan os.Signal, opts ...Opt
 	}
 
 	var udpDNSLocalPort, tcpDNSLocalPort int
-	if *y.UseHostResolver {
+	if *y.HostResolver.Enabled {
 		udpDNSLocalPort, err = findFreeUDPLocalPort()
 		if err != nil {
 			return nil, err
@@ -248,8 +248,8 @@ func (a *HostAgent) Run(ctx context.Context) error {
 		a.emitEvent(ctx, exitingEv)
 	}()
 
-	if *a.y.UseHostResolver {
-		dnsServer, err := dns.Start(a.udpDNSLocalPort, a.tcpDNSLocalPort)
+	if *a.y.HostResolver.Enabled {
+		dnsServer, err := dns.Start(a.udpDNSLocalPort, a.tcpDNSLocalPort, *a.y.HostResolver.IPv6)
 		if err != nil {
 			return fmt.Errorf("cannot start DNS server: %w", err)
 		}
