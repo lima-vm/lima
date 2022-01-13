@@ -25,7 +25,8 @@ type LimaYAML struct {
 	Network           NetworkDeprecated `yaml:"network,omitempty" json:"network,omitempty"` // DEPRECATED, use `networks` instead
 	Env               map[string]string `yaml:"env,omitempty" json:"env,omitempty"`
 	DNS               []net.IP          `yaml:"dns,omitempty" json:"dns,omitempty"`
-	UseHostResolver   *bool             `yaml:"useHostResolver,omitempty" json:"useHostResolver,omitempty"`
+	HostResolver      HostResolver      `yaml:"hostResolver,omitempty" json:"hostResolver,omitempty"`
+	UseHostResolver   *bool             `yaml:"useHostResolver,omitempty" json:"useHostResolver,omitempty"` // DEPRECATED, use `HostResolver.Enabled` instead
 	PropagateProxyEnv *bool             `yaml:"propagateProxyEnv,omitempty" json:"propagateProxyEnv,omitempty"`
 }
 
@@ -130,6 +131,11 @@ type Network struct {
 	SwitchPort uint16 `yaml:"switchPort,omitempty" json:"switchPort,omitempty"` // VDE Switch port, not TCP/UDP port (only used by VDE networking)
 	MACAddress string `yaml:"macAddress,omitempty" json:"macAddress,omitempty"`
 	Interface  string `yaml:"interface,omitempty" json:"interface,omitempty"`
+}
+
+type HostResolver struct {
+	Enabled *bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
+	IPv6    *bool `yaml:"ipv6,omitempty" json:"ipv6,omitempty"`
 }
 
 // DEPRECATED types below

@@ -236,9 +236,14 @@ propagateProxyEnv: null
 # The host agent implements a DNS server that looks up host names on the host
 # using the local system resolver. This means changing VPN and network settings
 # are reflected automatically into the guest, including conditional forward,
-# and mDNS lookup:
-# Default: true
-useHostResolver: null
+# and mDNS lookup. By default only IPv4 addresses will be returned. IPv6 addresses
+# can only work when using a vmnet network interface and the host has working
+# IPv6 configured as well.
+hostResolver:
+  # Default: true
+  enabled: null
+  # Default: false
+  ipv6: null
 
 # If useHostResolver is false, then the following rules apply for configuring dns:
 # Explicitly set DNS addresses for qemu user-mode networking. By default qemu picks *one*

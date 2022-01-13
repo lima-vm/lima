@@ -217,14 +217,36 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		// After defaults processing the singular HostPort and GuestPort values should not be used again.
 	}
 
-	if y.UseHostResolver == nil {
-		y.UseHostResolver = d.UseHostResolver
+	// If both `useHostResolved` and `HostResolver.Enabled` are defined in the same config,
+	// then the deprecated `useHostResolved` setting is silently ignored.
+	if y.HostResolver.Enabled == nil {
+		y.HostResolver.Enabled = y.UseHostResolver
 	}
-	if o.UseHostResolver != nil {
-		y.UseHostResolver = o.UseHostResolver
+	if d.HostResolver.Enabled == nil {
+		d.HostResolver.Enabled = d.UseHostResolver
 	}
-	if y.UseHostResolver == nil {
-		y.UseHostResolver = pointer.Bool(true)
+	if o.HostResolver.Enabled == nil {
+		o.HostResolver.Enabled = o.UseHostResolver
+	}
+
+	if y.HostResolver.Enabled == nil {
+		y.HostResolver.Enabled = d.HostResolver.Enabled
+	}
+	if o.HostResolver.Enabled != nil {
+		y.HostResolver.Enabled = o.HostResolver.Enabled
+	}
+	if y.HostResolver.Enabled == nil {
+		y.HostResolver.Enabled = pointer.Bool(true)
+	}
+
+	if y.HostResolver.IPv6 == nil {
+		y.HostResolver.IPv6 = d.HostResolver.IPv6
+	}
+	if o.HostResolver.IPv6 != nil {
+		y.HostResolver.IPv6 = o.HostResolver.IPv6
+	}
+	if y.HostResolver.IPv6 == nil {
+		y.HostResolver.IPv6 = pointer.Bool(false)
 	}
 
 	if y.PropagateProxyEnv == nil {

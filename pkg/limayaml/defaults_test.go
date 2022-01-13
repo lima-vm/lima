@@ -67,7 +67,10 @@ func TestFillDefault(t *testing.T) {
 		Video: Video{
 			Display: pointer.String("none"),
 		},
-		UseHostResolver:   pointer.Bool(true),
+		HostResolver: HostResolver{
+			Enabled: pointer.Bool(true),
+			IPv6:    pointer.Bool(false),
+		},
 		PropagateProxyEnv: pointer.Bool(true),
 	}
 
@@ -186,7 +189,10 @@ func TestFillDefault(t *testing.T) {
 		Video: Video{
 			Display: pointer.String("cocoa"),
 		},
-		UseHostResolver:   pointer.Bool(false),
+		HostResolver: HostResolver{
+			Enabled: pointer.Bool(false),
+			IPv6:    pointer.Bool(true),
+		},
 		PropagateProxyEnv: pointer.Bool(false),
 
 		Mounts: []Mount{
@@ -298,7 +304,10 @@ func TestFillDefault(t *testing.T) {
 		Video: Video{
 			Display: pointer.String("cocoa"),
 		},
-		UseHostResolver:   pointer.Bool(false),
+		HostResolver: HostResolver{
+			Enabled: pointer.Bool(false),
+			IPv6:    pointer.Bool(false),
+		},
 		PropagateProxyEnv: pointer.Bool(false),
 
 		Mounts: []Mount{
