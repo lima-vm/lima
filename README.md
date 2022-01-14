@@ -78,6 +78,8 @@ $ cat /tmp/lima/another-file
 $ lima nerdctl run -d --name nginx -p 127.0.0.1:8080:80 nginx:alpine
 ```
 
+> You don't need to run "lima nerdctl" everytime, instead you can use special shortcut called "nerdctl.lima" to do the same thing. By default, it'll be installed along with the lima, so, you don't need to do anything extra. There will be a symlink called nerdctl pointing to nerdctl.lima. This is only created when there is no nerdctl entry in the directory already though. It worths to mention that this is created only via make install. Not included in Homebrew/MacPorts/nix packages.
+
 http://127.0.0.1:8080 is accessible from both macOS and Linux.
 
 For the usage of containerd and nerdctl (contaiNERD ctl), visit https://github.com/containerd/containerd and https://github.com/containerd/nerdctl.
