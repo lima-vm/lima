@@ -29,7 +29,7 @@ require (
 	github.com/yalue/native_endian v1.0.2
 	golang.org/x/sys v0.0.0-20211205182925-97ca703d548d
 	gopkg.in/yaml.v2 v2.4.0
-	gotest.tools/v3 v3.0.3
+	gotest.tools/v3 v3.1.0
 )
 
 require (
