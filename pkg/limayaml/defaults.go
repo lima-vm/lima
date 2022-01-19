@@ -320,6 +320,9 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 	location := make(map[string]int)
 	for _, mount := range append(append(d.Mounts, y.Mounts...), o.Mounts...) {
 		if i, ok := location[mount.Location]; ok {
+			if mount.SSHFS.Cache != nil {
+				mounts[i].SSHFS.Cache = mount.SSHFS.Cache
+			}
 			if mount.SSHFS.FollowSymlinks != nil {
 				mounts[i].SSHFS.FollowSymlinks = mount.SSHFS.FollowSymlinks
 			}
@@ -335,6 +338,9 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 
 	for i := range y.Mounts {
 		mount := &y.Mounts[i]
+		if mount.SSHFS.Cache == nil {
+			mount.SSHFS.Cache = pointer.Bool(false)
+		}
 		if mount.SSHFS.FollowSymlinks == nil {
 			mount.SSHFS.FollowSymlinks = pointer.Bool(false)
 		}
