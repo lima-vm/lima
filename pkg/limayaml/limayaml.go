@@ -50,6 +50,7 @@ type Mount struct {
 }
 
 type SSHFS struct {
+	Cache          *bool `yaml:"cache,omitempty" json:"cache,omitempty"`
 	FollowSymlinks *bool `yaml:"followSymlinks,omitempty" json:"followSymlinks,omitempty"`
 }
 

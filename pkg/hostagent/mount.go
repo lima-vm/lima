@@ -42,7 +42,10 @@ func (a *HostAgent) setupMount(ctx context.Context, m limayaml.Mount) (*mount, e
 		return nil, err
 	}
 	// NOTE: allow_other requires "user_allow_other" in /etc/fuse.conf
-	sshfsOptions := "allow_other,cache=no"
+	sshfsOptions := "allow_other"
+	if !*m.SSHFS.Cache {
+		sshfsOptions = sshfsOptions + ",cache=no"
+	}
 	if *m.SSHFS.FollowSymlinks {
 		sshfsOptions = sshfsOptions + ",follow_symlinks"
 	}
