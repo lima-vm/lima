@@ -68,7 +68,7 @@ elif command -v dnf >/dev/null 2>&1; then
 elif command -v pacman >/dev/null 2>&1; then
 	if [ "${LIMA_CIDATA_MOUNTS}" -gt 0 ]; then
 		if ! command -v sshfs >/dev/null 2>&1; then
-			pacman -Syu --noconfirm sshfs
+			pacman -Sy --noconfirm sshfs
 		fi
 	fi
 	# other dependencies are preinstalled on Arch Linux (https://linuximages.de/openstack/arch/)
