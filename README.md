@@ -3,9 +3,9 @@
 
 # Lima: Linux virtual machines (on macOS, in most cases)
 
-Lima launches Linux virtual machines with automatic file sharing, port forwarding, and [containerd](https://containerd.io).
+Lima launches Linux virtual machines with automatic file sharing and port forwarding (similar to WSL2), and [containerd](https://containerd.io).
 
-Lima can be considered as a some sort of unofficial "macOS subsystem for Linux", or "containerd for Mac".
+Lima can be considered as a some sort of unofficial "containerd for Mac".
 
 Lima is expected to be used on macOS hosts, but can be used on Linux hosts as well.
 
