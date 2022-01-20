@@ -40,7 +40,7 @@ DNS over tcp is rarely used. It is usually only used either when user explicitly
 
 During initial cloud-init bootstrap, `iptables` may not yet be installed. In that case the repo server is determined using the slirp DNS. After `iptables` has been installed, the forwarding rule is applied, switching over to the hostagent DNS.
 
-If `useHostResoler` is false, then DNS servers can be configured manually in `lima.yaml` via the `dns` setting. If that list is empty, then Lima will either use the slirp DNS (on Linux), or the nameservers from the `en0` host interface (on macOS).
+If `useHostResoler` is false, then DNS servers can be configured manually in `lima.yaml` via the `dns` setting. If that list is empty, then Lima will either use the slirp DNS (on Linux), or the nameservers from the first host interface in service order that has an assigned IPv4 address (on macOS).
 
 ## `vde_vmnet` (192.168.105.0/24)
 

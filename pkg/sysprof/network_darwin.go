@@ -7,11 +7,16 @@ type SPNetworkDataType struct {
 type NetworkDataType struct {
 	DNS       DNS     `json:"DNS"`
 	Interface string  `json:"interface"`
+	IPv4      IPv4    `json:"IPv4,omitempty"`
 	Proxies   Proxies `json:"Proxies"`
 }
 
 type DNS struct {
 	ServerAddresses []string `json:"ServerAddresses"`
+}
+
+type IPv4 struct {
+	Addresses []string `json:"Addresses,omitempty"`
 }
 
 type Proxies struct {

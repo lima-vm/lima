@@ -252,9 +252,10 @@ hostResolver:
 # If useHostResolver is false, then the following rules apply for configuring dns:
 # Explicitly set DNS addresses for qemu user-mode networking. By default qemu picks *one*
 # nameserver from the host config and forwards all queries to this server. On macOS
-# Lima adds the nameservers configured for the "en0" interface to the list. In case this
-# still doesn't work (e.g. VPN setups), the servers can be specified here explicitly.
-# If nameservers are specified here, then the "en0" configuration will be ignored.
+# Lima adds the nameservers configured for the first host interface in service order,
+# that has an IPv4 address, to the list. In case this still doesn't work (e.g. VPN
+# setups), the servers can be specified here explicitly. If nameservers are specified
+# here, then the configuration from network preferences will be ignored.
 # dns:
 # - 1.1.1.1
 # - 1.0.0.1

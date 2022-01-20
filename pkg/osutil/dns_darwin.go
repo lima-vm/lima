@@ -14,16 +14,13 @@ func DNSAddresses() ([]string, error) {
 	}
 	var addresses []string
 	if len(nwData) > 0 {
-		// Return DNS addresses from en0 interface
+		// Return DNS addresses from the first interface that has an IPv4 address.
+		// The networks are in service order already.
 		for _, nw := range nwData {
-			if nw.Interface == "en0" {
+			if len(nw.IPv4.Addresses) > 0 {
 				addresses = nw.DNS.ServerAddresses
 				break
 			}
-		}
-		// In case "en0" is not found, use the addresses of the first interface
-		if len(addresses) == 0 {
-			addresses = nwData[0].DNS.ServerAddresses
 		}
 	}
 	return addresses, nil
@@ -48,10 +45,11 @@ func ProxySettings() (map[string]string, error) {
 	}
 	env := make(map[string]string)
 	if len(nwData) > 0 {
-		// In case "en0" is not found, use the proxies of the first interface
-		proxies := nwData[0].Proxies
+		// Return proxy settings from the first interface that has an IPv4 address.
+		// The networks are in service order already.
+		var proxies sysprof.Proxies
 		for _, nw := range nwData {
-			if nw.Interface == "en0" {
+			if len(nw.IPv4.Addresses) > 0 {
 				proxies = nw.Proxies
 				break
 			}
