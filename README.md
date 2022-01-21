@@ -151,6 +151,8 @@ Detailed usage:
 
 - Run `limactl delete [--force] <INSTANCE>` to delete the instance.
 
+- Run `limactl edit <INSTANCE>` to edit the instance.
+
 - To enable bash completion, add `source <(limactl completion bash)` to `~/.bash_profile`.
 
 - To enable zsh completion, see `limactl completion zsh --help`
