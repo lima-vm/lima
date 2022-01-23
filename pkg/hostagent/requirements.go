@@ -137,6 +137,25 @@ A possible workaround is to run "lima-guestagent install-systemd" in the guest.
 
 func (a *HostAgent) optionalRequirements() []requirement {
 	req := make([]requirement, 0)
+	if *a.y.Containerd.System {
+		req = append(req,
+			requirement{
+				description: "systemd or alpine must be available",
+				fatal:       true,
+				script: `#!/bin/bash
+set -eux -o pipefail
+if ! command -v systemctl 2>&1 >/dev/null -a ! test -f /etc/alpine-release; then
+    echo >&2 "systemd or alpine is not available on this OS"
+    exit 1
+fi
+`,
+				debugHint: `systemd or alpine is required to run containerd, but does not seem to be available.
+Make sure that you use alpine or an image that supports systemd. If you do not
+want to run containerd, please make sure that 'containerd.system' is set to 'false'
+in the config file.
+`,
+			})
+	}
 	if *a.y.Containerd.User {
 		req = append(req,
 			requirement{
@@ -154,7 +173,10 @@ Make sure that you use an image that supports systemd. If you do not want to run
 containerd, please make sure that 'containerd.user' is set to 'false' in the
 config file.
 `,
-			},
+			})
+	}
+	if *a.y.Containerd.System || *a.y.Containerd.User {
+		req = append(req,
 			requirement{
 				description: "containerd binaries to be installed",
 				script: `#!/bin/bash
