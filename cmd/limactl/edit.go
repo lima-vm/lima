@@ -7,7 +7,10 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/lima-vm/lima/pkg/limayaml"
+	networks "github.com/lima-vm/lima/pkg/networks/reconcile"
+	"github.com/lima-vm/lima/pkg/start"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/sirupsen/logrus"
@@ -40,12 +43,16 @@ func editAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	if inst.Status == store.StatusRunning {
+		return errors.New("Cannot edit a running instance")
+	}
+
 	filePath := filepath.Join(inst.Dir, filenames.LimaYAML)
 	yContent, err := os.ReadFile(filePath)
 	if err != nil {
 		return err
 	}
-	hdr := fmt.Sprintf("# Please edit the folling configuration for Lima instance %q\n", instName)
+	hdr := fmt.Sprintf("# Please edit the following configuration for Lima instance %q\n", instName)
 	hdr += "# and an empty file will abort the edit.\n"
 	hdr += "\n"
 	yBytes, err := openEditor(cmd, instName, yContent, hdr)
@@ -75,8 +82,33 @@ func editAction(cmd *cobra.Command, args []string) error {
 	if err := os.WriteFile(filePath, yBytes, 0644); err != nil {
 		return err
 	}
-	logrus.Infof("Instance %q edited, you need restart instance to apply it", instName)
-	return nil
+	logrus.Infof("Instance %q configuration edited", instName)
+
+	startNow, err := askWhetherToStart()
+	if err != nil {
+		return err
+	}
+	if !startNow {
+		return nil
+	}
+	ctx := cmd.Context()
+	err = networks.Reconcile(ctx, inst.Name)
+	if err != nil {
+		return err
+	}
+	return start.Start(ctx, inst)
+}
+
+func askWhetherToStart() (bool, error) {
+	ans := true
+	prompt := &survey.Confirm{
+		Message: "Do you want to start the instance now? ",
+		Default: true,
+	}
+	if err := survey.AskOne(prompt, &ans); err != nil {
+		return false, err
+	}
+	return ans, nil
 }
 
 func editBashComplete(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
