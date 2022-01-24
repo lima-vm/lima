@@ -1,0 +1,7 @@
+blank_issues_enabled: true
+contact_links:
+- name: Ask a question (GitHub Discussions)
+  url: https://github.com/lima-vm/lima/discussions
+- name: Chat with Lima users and developers
+  url: https://slack.rancher.io/
+  about: Rancher Users slack has `#lima` channel, colocated with `#rancher-desktop` channel (Lima is not a Rancher project)

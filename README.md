@@ -34,7 +34,8 @@ This project is unrelated to [The Lima driver project (driver for ARM Mali GPUs)
 The goal of Lima is to promote [containerd](https://containerd.io) including [nerdctl (contaiNERD ctl)](https://github.com/containerd/nerdctl)
 to Mac users, but Lima can be used for non-container applications as well.
 
-## Adopters
+## Community
+### Adopters
 
 Container environments:
 - [Rancher Desktop](https://rancherdesktop.io/): Kubernetes and container management to the desktop
@@ -43,6 +44,12 @@ Container environments:
 GUI:
 - [Lima xbar plugin](https://github.com/unixorn/lima-xbar-plugin): [xbar](https://xbarapp.com/) plugin to start/stop VMs from the menu bar and see their running status.
 - [lima-gui](https://github.com/afbjorklund/lima-gui): Qt GUI for Lima
+
+### Communication channels
+- [GitHub Discussions](https://github.com/lima-vm/lima/discussions)
+- `#lima` channel, colocated with `#rancher-desktop` channel in Rancher Users Slack (Lima is not a Rancher project)
+  - New account: https://slack.rancher.io/
+  - Login: https://rancher-users.slack.com/
 
 ## Examples
 
