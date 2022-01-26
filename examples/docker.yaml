@@ -60,6 +60,9 @@ portForwards:
 - guestSocket: "/run/user/{{.UID}}/docker.sock"
   hostSocket: "{{.Dir}}/sock/docker.sock"
 message: |
-  To run `docker` on the host (assumes docker-cli is installed):
-  $ export DOCKER_HOST=unix://{{.Dir}}/sock/docker.sock
-  $ docker ...
+  To run `docker` on the host (assumes docker-cli is installed), run the following commands:
+  ------
+  docker context create lima --docker "host=unix://{{.Dir}}/sock/docker.sock"
+  docker context use lima
+  docker run hello-world
+  ------
