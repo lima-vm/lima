@@ -30,7 +30,7 @@ Consider using [Fast mode](#fast-mode) whenever possible.
 
 ## [Fast mode: Intel containers on ARM VM on ARM Host / ARM containers on Intel VM on Intel Host](#fast-mode)
 
-This mode is significantly faster but often sacrifies compatibility.
+This mode is significantly faster but often sacrifices compatibility.
 
 Fast mode requires Lima v0.7.3 (nerdctl v0.13.0) or later.
 
