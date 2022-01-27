@@ -276,9 +276,9 @@ hostResolver:
 
 # On each instance start the config settings are determined: If a value is
 # not set in `lima.yaml`, then the `default.yaml` is used. If that file
-# doesn't exist, or the value is not defined in the file, then the buildin
+# doesn't exist, or the value is not defined in the file, then the builtin
 # default is used. If `override.yaml` exists and defines the value, then
-# it overrides whatever has been choosen so far.
+# it overrides whatever has been chosen so far.
 
 # For slices (e.g. `mounts`, `provision`) and maps (`env`) the entries are
 # combined instead of replacing each other. Slices are produced from override

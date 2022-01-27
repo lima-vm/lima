@@ -58,7 +58,7 @@ case "$NAME" in
 	exit 1
 	;;
 "fedora")
-	WARNING "Relaxing systemd tests for fedora (For avoiding CI faillure)"
+	WARNING "Relaxing systemd tests for fedora (For avoiding CI failure)"
 	# CI failure:
 	# ● run-r2b459797f5b04262bfa79984077a65c7.service                                       loaded failed failed    /usr/bin/systemctl start man-db-cache-update
 	CHECKS["systemd-strict"]=

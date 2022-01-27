@@ -123,7 +123,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 	// the full path of the socket name must be less than UNIX_PATH_MAX chars.
 	maxSockName := filepath.Join(instDir, filenames.LongestSock)
 	if len(maxSockName) >= osutil.UnixPathMax {
-		return nil, fmt.Errorf("instance name %q too long: %q must be less than UNIX_PATH_MAX=%d characers, but is %d",
+		return nil, fmt.Errorf("instance name %q too long: %q must be less than UNIX_PATH_MAX=%d characters, but is %d",
 			instName, maxSockName, osutil.UnixPathMax, len(maxSockName))
 	}
 	if _, err := os.Stat(instDir); !errors.Is(err, os.ErrNotExist) {

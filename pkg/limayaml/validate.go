@@ -184,7 +184,7 @@ func Validate(y LimaYAML, warn bool) error {
 			}
 		}
 		if len(rule.HostSocket) >= osutil.UnixPathMax {
-			return fmt.Errorf("field `%s.hostSocket` must be less than UNIX_PATH_MAX=%d characers, but is %d",
+			return fmt.Errorf("field `%s.hostSocket` must be less than UNIX_PATH_MAX=%d characters, but is %d",
 				field, osutil.UnixPathMax, len(rule.HostSocket))
 		}
 		if rule.Proto != TCP {
