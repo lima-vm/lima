@@ -141,7 +141,13 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 			answerOpenEditor = false
 		}
 		if answerOpenEditor {
-			yBytes, err = openEditor(cmd, instName, yBytes)
+			hdr := fmt.Sprintf("# Review and modify the following configuration for Lima instance %q.\n", instName)
+			if instName == DefaultInstanceName {
+				hdr += "# - In most cases, you do not need to modify this file.\n"
+			}
+			hdr += "# - To cancel starting Lima, just save this file as an empty file.\n"
+			hdr += "\n"
+			yBytes, err = openEditor(cmd, instName, yBytes, hdr)
 			if err != nil {
 				return nil, err
 			}
@@ -208,7 +214,7 @@ func askWhetherToOpenEditor(name string) (bool, error) {
 // openEditor opens an editor, and returns the content (not path) of the modified yaml.
 //
 // openEditor returns nil when the file was saved as an empty file, optionally with whitespaces.
-func openEditor(cmd *cobra.Command, name string, initialContent []byte) ([]byte, error) {
+func openEditor(cmd *cobra.Command, name string, content []byte, hdr string) ([]byte, error) {
 	editor := editorcmd.Detect()
 	if editor == "" {
 		return nil, errors.New("could not detect a text editor binary, try setting $EDITOR")
@@ -219,14 +225,8 @@ func openEditor(cmd *cobra.Command, name string, initialContent []byte) ([]byte,
 	}
 	tmpYAMLPath := tmpYAMLFile.Name()
 	defer os.RemoveAll(tmpYAMLPath)
-	hdr := fmt.Sprintf("# Review and modify the following configuration for Lima instance %q.\n", name)
-	if name == DefaultInstanceName {
-		hdr += "# - In most cases, you do not need to modify this file.\n"
-	}
-	hdr += "# - To cancel starting Lima, just save this file as an empty file.\n"
-	hdr += "\n"
 	if err := os.WriteFile(tmpYAMLPath,
-		append([]byte(hdr), initialContent...),
+		append([]byte(hdr), content...),
 		0o600); err != nil {
 		return nil, err
 	}
