@@ -339,7 +339,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 	for i := range y.Mounts {
 		mount := &y.Mounts[i]
 		if mount.SSHFS.Cache == nil {
-			mount.SSHFS.Cache = pointer.Bool(false)
+			mount.SSHFS.Cache = pointer.Bool(true)
 		}
 		if mount.SSHFS.FollowSymlinks == nil {
 			mount.SSHFS.FollowSymlinks = pointer.Bool(false)

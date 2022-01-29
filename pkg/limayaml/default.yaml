@@ -50,7 +50,9 @@ mounts:
   sshfs:
     # Enabling the SSHFS cache will increase performance of the mounted filesystem, at
     # the cost of potentially not reflecting changes made on the host in a timely manner.
-    # Default: false
+    # Warning: It looks like PHP filesystem access does not work correctly when
+    # the cache is disabled.
+    # Default: true
     cache: null
     # SSHFS has an optional flag called 'follow_symlinks'. This allows mounts
     # to be properly resolved in the guest os and allow for access to the
