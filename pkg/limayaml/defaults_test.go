@@ -120,7 +120,7 @@ func TestFillDefault(t *testing.T) {
 	expect := builtin
 	expect.Mounts = y.Mounts
 	expect.Mounts[0].Writable = pointer.Bool(false)
-	expect.Mounts[0].SSHFS.Cache = pointer.Bool(false)
+	expect.Mounts[0].SSHFS.Cache = pointer.Bool(true)
 	expect.Mounts[0].SSHFS.FollowSymlinks = pointer.Bool(false)
 	// Only missing Mounts field is Writable, and the default value is also the null value: false
 
@@ -244,7 +244,7 @@ func TestFillDefault(t *testing.T) {
 	expect = d
 	// Also verify that archive arch is filled in
 	expect.Containerd.Archives[0].Arch = *d.Arch
-	expect.Mounts[0].SSHFS.Cache = pointer.Bool(false)
+	expect.Mounts[0].SSHFS.Cache = pointer.Bool(true)
 	expect.Mounts[0].SSHFS.FollowSymlinks = pointer.Bool(false)
 
 	y = LimaYAML{}
@@ -317,7 +317,7 @@ func TestFillDefault(t *testing.T) {
 				Location: "/var/log",
 				Writable: pointer.Bool(true),
 				SSHFS: SSHFS{
-					Cache:          pointer.Bool(true),
+					Cache:          pointer.Bool(false),
 					FollowSymlinks: pointer.Bool(true),
 				},
 			},
@@ -376,7 +376,7 @@ func TestFillDefault(t *testing.T) {
 	// o.Mounts just makes d.Mounts[0] writable because the Location matches
 	expect.Mounts = append(d.Mounts, y.Mounts...)
 	expect.Mounts[0].Writable = pointer.Bool(true)
-	expect.Mounts[0].SSHFS.Cache = pointer.Bool(true)
+	expect.Mounts[0].SSHFS.Cache = pointer.Bool(false)
 	expect.Mounts[0].SSHFS.FollowSymlinks = pointer.Bool(true)
 
 	// o.Networks[1] is overriding the d.Networks[0].Lima entry for the "def0" interface
