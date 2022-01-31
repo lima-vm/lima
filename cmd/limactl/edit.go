@@ -55,6 +55,7 @@ func editAction(cmd *cobra.Command, args []string) error {
 	hdr := fmt.Sprintf("# Please edit the following configuration for Lima instance %q\n", instName)
 	hdr += "# and an empty file will abort the edit.\n"
 	hdr += "\n"
+	hdr += generateEditorWarningHeader()
 	yBytes, err := openEditor(cmd, instName, yContent, hdr)
 	if err != nil {
 		return err

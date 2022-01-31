@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -19,6 +20,7 @@ import (
 	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/start"
 	"github.com/lima-vm/lima/pkg/store"
+	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/mattn/go-isatty"
 	"github.com/norouter/norouter/cmd/norouter/editorcmd"
@@ -147,6 +149,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 			}
 			hdr += "# - To cancel starting Lima, just save this file as an empty file.\n"
 			hdr += "\n"
+			hdr += generateEditorWarningHeader()
 			yBytes, err = openEditor(cmd, instName, yBytes, hdr)
 			if err != nil {
 				return nil, err
@@ -209,6 +212,40 @@ func askWhetherToOpenEditor(name string) (bool, error) {
 	default:
 		return false, fmt.Errorf("unexpected answer %q", ans)
 	}
+}
+
+func generateEditorWarningHeader() string {
+	var s string
+	configDir, err := dirnames.LimaConfigDir()
+	if err != nil {
+		s += "# WARNING: failed to load the config dir\n"
+		s += "\n"
+		return s
+	}
+
+	re := regexp.MustCompile(`(?m)^`)
+	repl := []byte("# ")
+
+	defaultPath := filepath.Join(configDir, filenames.Default)
+	if b, err := os.ReadFile(defaultPath); err == nil {
+		s += "# WARNING: " + defaultPath + "includes the following settings,\n"
+		s += "# which is applied before applying this YAML:\n"
+		s += "# -----------\n"
+		s += string(re.ReplaceAll(b, repl)) + "\n"
+		s += "# -----------\n"
+		s += "\n"
+	}
+
+	overridePath := filepath.Join(configDir, filenames.Override)
+	if b, err := os.ReadFile(overridePath); err == nil {
+		s += "# WARNING: " + overridePath + "includes the following settings,\n"
+		s += "# which will take precedence over anything configured in this YAML:\n"
+		s += "# -----------\n"
+		s += string(re.ReplaceAll(b, repl)) + "\n"
+		s += "# -----------\n"
+		s += "\n"
+	}
+	return s
 }
 
 // openEditor opens an editor, and returns the content (not path) of the modified yaml.
