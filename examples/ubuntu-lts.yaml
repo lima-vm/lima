@@ -1,3 +1,5 @@
+# Ubuntu 20.04 LTS (Focal Fossa)
+
 # This example requires Lima v0.7.0 or later.
 images:
 # Hint: run `limactl prune` to invalidate the "current" cache
