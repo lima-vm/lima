@@ -142,7 +142,7 @@ func appendArgsIfNoConflict(args []string, k, v string) []string {
 }
 
 type features struct {
-	// NetdevHelp is the output of `qemu-system-x86_64 -accel help`
+	// AccelHelp is the output of `qemu-system-x86_64 -accel help`
 	// e.g. "Accelerators supported in QEMU binary:\ntcg\nhax\nhvf\n"
 	// Not machine-readable, but checking strings.Contains() should be fine.
 	AccelHelp []byte
