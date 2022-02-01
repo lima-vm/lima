@@ -6,7 +6,7 @@ if grep -q "COLORTERM" /etc/ssh/sshd_config; then
 fi
 
 # accept any incoming COLORTERM environment variable
-sed -i 's/^AcceptEnv LANG LC_\*$/AcceptEnv COLORTERM LANG LC_*/' /etc/ssh/sshd_config
+sed -i 's/^AcceptEnv LANG LC_\*$/AcceptEnv COLORTERM TERMTHEME LANG LC_*/' /etc/ssh/sshd_config
 if [ -f /sbin/openrc-init ]; then
 	rc-service --ifstarted sshd reload
 elif command -v systemctl >/dev/null 2>&1; then

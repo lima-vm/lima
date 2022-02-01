@@ -12,6 +12,7 @@ import (
 	"github.com/lima-vm/lima/pkg/sshutil"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/mattn/go-isatty"
+	"github.com/muesli/termenv"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -131,6 +132,17 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		// SendEnv config is cumulative, with already existing options in ssh_config
 		sshArgs = append(sshArgs, "-o", "SendEnv=\"COLORTERM\"")
 	}
+	sshEnv := os.Environ()
+	// check if color is desired, and if using a dark background theme
+	// Supports environment variables NO_COLOR <https://no-color.org/>
+	// and CLICOLOR/CLICOLOR_FORCE <https://bixense.com/clicolors/>
+	// otherwise leave it up to the Linux distribution of the instance
+	if termColor() {
+		theme := termTheme()
+		logrus.Debugf("Terminal Background Theme=%s", theme)
+		sshEnv = append(sshEnv, fmt.Sprintf("TERMTHEME=%s", theme))
+		sshArgs = append(sshArgs, "-o", "SendEnv=\"TERMTHEME\"")
+	}
 	sshArgs = append(sshArgs, []string{
 		"-q",
 		"-p", strconv.Itoa(inst.SSHLocalPort),
@@ -139,6 +151,7 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		script,
 	}...)
 	sshCmd := exec.Command(arg0, sshArgs...)
+	sshCmd.Env = sshEnv
 	sshCmd.Stdin = os.Stdin
 	sshCmd.Stdout = os.Stdout
 	sshCmd.Stderr = os.Stderr
@@ -150,4 +163,22 @@ func shellAction(cmd *cobra.Command, args []string) error {
 
 func shellBashComplete(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 	return bashCompleteInstanceNames(cmd)
+}
+
+func termColor() bool {
+	profile := termenv.EnvColorProfile()
+	if profile == termenv.Ascii {
+		return false
+	} else {
+		return true
+	}
+}
+
+func termTheme() string {
+	dark := termenv.HasDarkBackground()
+	if dark {
+		return "Dark"
+	} else {
+		return "Light"
+	}
 }
