@@ -1,5 +1,6 @@
-[[📖**Getting started]**](#getting-started)
+[[📖**Getting started**]](#getting-started)
 [[❓**FAQs & Troubleshooting]**](#faqs--troubleshooting)
+[[🇯🇵**日本語README**]](./README.ja.md)
 
 # Lima: Linux virtual machines (on macOS, in most cases)
 
