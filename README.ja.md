@@ -1,4 +1,4 @@
-This is an *unofficial* translation of [`README.md` (revision fce1b2fad8, 2022-01-28)](./https://github.com/lima-vm/lima/blob/fce1b2fad85762d72d2e4d37e4ab211f570fa2d1/README.md).
+This is an *unofficial* translation of [`README.md` (revision fce1b2fad8, 2022-01-28)](https://github.com/lima-vm/lima/blob/fce1b2fad85762d72d2e4d37e4ab211f570fa2d1/README.md).
 
 [[📖**始める**]](#始める)
 [[❓**FAQとトラブルシューティング]**](#FAQとトラブルシューティング)
