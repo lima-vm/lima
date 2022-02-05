@@ -3,6 +3,7 @@
 Default: [`default.yaml`](../pkg/limayaml/default.yaml) (Ubuntu, with containerd/nerdctl)
 
 Distro:
+- [`almalinux.yaml`](./almalinux.yaml): AlmaLinux
 - [`alpine.yaml`](./alpine.yaml): Alpine Linux
 - [`archlinux.yaml`](./archlinux.yaml): Arch Linux
 - [`debian.yaml`](./debian.yaml): Debian GNU/Linux
