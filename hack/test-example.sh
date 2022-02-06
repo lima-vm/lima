@@ -132,6 +132,12 @@ if [ "$got" != "$expected" ]; then
 	exit 1
 fi
 
+INFO "Testing limactl command with escaped characters"
+limactl shell "$NAME" bash -c "$(echo -e '\n\techo foo\n\techo bar')"
+
+INFO "Testing limactl command with quotes"
+limactl shell "$NAME" bash -c "echo 'foo \"bar\"'"
+
 if [[ -n ${CHECKS["systemd"]} ]]; then
 	set -x
 	if ! limactl shell "$NAME" systemctl is-system-running --wait; then
