@@ -110,7 +110,10 @@ func shellAction(cmd *cobra.Command, args []string) error {
 
 	script := fmt.Sprintf("%s ; exec bash --login", changeDirCmd)
 	if len(args) > 1 {
-		script += fmt.Sprintf(" -c %q", shellescape.QuoteCommand(args[1:]))
+		script += fmt.Sprintf(
+			" -c %s",
+			shellescape.Quote(shellescape.QuoteCommand(args[1:])),
+		)
 	}
 
 	arg0, err := exec.LookPath("ssh")
