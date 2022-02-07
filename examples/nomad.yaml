@@ -32,7 +32,7 @@ provision:
     apt-get install -y nomad consul golang-cfssl
     sed -e '/^client/a \ \ cni_path = "/usr/local/libexec/cni"\n\ \ cni_config_dir = "/etc/cni/net.d"' -i /etc/nomad.d/nomad.hcl
     # install containerd-driver
-    DRIVER_VERSION=0.9.2
+    DRIVER_VERSION=0.9.3
     case $(uname -m) in
       amd64|x86_64)
         curl -sSL -o containerd-driver https://github.com/Roblox/nomad-driver-containerd/releases/download/v${DRIVER_VERSION}/containerd-driver
