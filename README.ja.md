@@ -1,4 +1,4 @@
-This is an *unofficial* translation of [`README.md` (revision fce1b2fad8, 2022-01-28)](https://github.com/lima-vm/lima/blob/fce1b2fad85762d72d2e4d37e4ab211f570fa2d1/README.md).
+This is an *unofficial* translation of [`README.md` (revision 4c7376a, 2022-Feb-05)](https://github.com/lima-vm/lima/blob/4c7376a9a7ac54514611a39ea720eb9798bfe973/README.md).
 
 [[📖**始める**]](#始める)
 [[❓**FAQとトラブルシューティング]**](#FAQとトラブルシューティング)
@@ -25,7 +25,7 @@ LimaはmacOSホストで使用されることを想定していますが、Linux
 
 ✅ [ARMマシン上でのIntel仮想マシン](./docs/multi-arch.md)
 
-✅ 様々なゲストLinuxディストリビューション: [Alpine](./examples/alpine.yaml),[Arch Linux](./examples/archlinux.yaml), [Debian](./examples/debian.yaml),[Fedora](./examples/fedora.yaml), [openSUSE](./examples/opensuse.yaml),[Rocky](./examples/rocky.yaml), [Ubuntu](./examples/ubuntu.yaml) (デフォルト), ...
+✅ 様々なゲストLinuxディストリビューション: [AlmaLinux](./examples/almalinux.yaml), [Alpine](./examples/alpine.yaml),[Arch Linux](./examples/archlinux.yaml), [Debian](./examples/debian.yaml),[Fedora](./examples/fedora.yaml), [openSUSE](./examples/opensuse.yaml),[Rocky](./examples/rocky.yaml), [Ubuntu](./examples/ubuntu.yaml) (デフォルト), ...
 
 関連するプロジェクト: [sshocker (ファイル共有とポートフォワードがついたSSH)](https://github.com/lima-vm/sshocker)
 
@@ -242,7 +242,7 @@ Limaにはデータの喪失を引き起こすバグが含まれているかも�
 はい。動くでしょう。ただ、ARM Macでの定期的なテストはなされていません(CIがないため)。
 
 #### "Ubuntu以外のゲストを動かすことはできますか？"
-Alpine, Arch Linux, Debian, Fedora, openSUSE, Rocky が動くことが知られています。[`./examples/`](./examples/)を見てください。
+AlmaLinux, Alpine, Arch Linux, Debian, Fedora, openSUSE, Rocky が動くことが知られています。[`./examples/`](./examples/)を見てください。
 
 イメージは次の要件を満たす必要があります。
 - systemdまたはOpenRC
