@@ -16,7 +16,8 @@ task:
     DEBIAN_FRONTEND: noninteractive
     # yamllint disable rule:key-duplicates
     matrix:
-      # default.yaml is tested on GHA macOS, so we skip default.yaml here
+      # We only test "Tier 1" yamls. See examples/README.md for the list of the "Tier 1" yamls.
+      # default.yaml and vmnet.yaml are tested on GHA macOS.
       EXAMPLE: alpine.yaml
       EXAMPLE: debian.yaml
       EXAMPLE: fedora.yaml
