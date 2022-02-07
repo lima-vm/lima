@@ -1,11 +1,11 @@
 # This example requires Lima v0.7.0 or later.
 images:
-- location: https://github.com/lima-vm/alpine-lima/releases/download/v0.2.2/alpine-lima-std-3.14.3-x86_64.iso
+- location: https://github.com/lima-vm/alpine-lima/releases/download/v0.2.6/alpine-lima-std-3.14.3-x86_64.iso
   arch: "x86_64"
-  digest: "sha512:573964991fb135aac18e44c444c1c924cd6110d4c823e887451e134adbecd7abb98bb84d22872cec1c9ed5b2cd9d87f664817adb15938ca3a69a9a2c70d66837"
-- location: https://github.com/lima-vm/alpine-lima/releases/download/v0.2.2/alpine-lima-std-3.14.3-aarch64.iso
+  digest: "sha512:0f5f1947733b1ac426edf43909bba44cb7a948030701d25fa3661feadb13af26896d3ab962b1e8ba986e6ad2f8e3169a07a3f56f3ed47f090680f2b57b0427ae"
+- location: https://github.com/lima-vm/alpine-lima/releases/download/v0.2.6/alpine-lima-std-3.14.3-aarch64.iso
   arch: "aarch64"
-  digest: "sha512:6ff651023fbc4ec56c437124392d29cfa8eb8fe6d34c0e797b85b21734a6629aec38226c298f475b9ed63bef7664d49ba1bd5adc667c621efd7aa43e7020cc27"
+  digest: "sha512:d29c48b7214a4752a96403f68a7740f4adc04517e1c4430d73fcfb57a82071911beeacd3aa3daaaab589c373f09bf5b25e4b71cd4784f7c6855b39e7798c087e"
 
 mounts:
 - location: "~"
@@ -15,6 +15,8 @@ mounts:
 firmware:
   legacyBIOS: true
 
+# The built-in containerd installer does not support Alpine currently.
+# Hint: use the "rd" ISO instead of the "std" ISO to enable containerd: https://github.com/lima-vm/alpine-lima/releases/
 containerd:
   system: false
   user: false
