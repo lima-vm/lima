@@ -83,6 +83,8 @@ func newApp() *cobra.Command {
 		newShowSSHCommand(),
 		newDebugCommand(),
 		newEditCommand(),
+		newSuspendCommand(),
+		newResumeCommand(),
 	)
 	return rootCmd
 }

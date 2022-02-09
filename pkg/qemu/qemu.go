@@ -11,7 +11,10 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/digitalocean/go-qemu/qmp"
+	"github.com/digitalocean/go-qemu/qmp/raw"
 	"github.com/docker/go-units"
 	"github.com/lima-vm/lima/pkg/downloader"
 	"github.com/lima-vm/lima/pkg/iso9660util"
@@ -95,6 +98,73 @@ func EnsureDisk(cfg Config) error {
 		return fmt.Errorf("failed to run %v: %q: %w", cmd.Args, string(out), err)
 	}
 	return nil
+}
+
+func newQmpClient(cfg Config) (*qmp.SocketMonitor, error) {
+	qmpSock := filepath.Join(cfg.InstanceDir, filenames.QMPSock)
+	qmpClient, err := qmp.NewSocketMonitor("unix", qmpSock, 5*time.Second)
+	if err != nil {
+		return nil, err
+	}
+	return qmpClient, nil
+}
+
+func Stop(cfg Config) error {
+	qmpClient, err := newQmpClient(cfg)
+	if err != nil {
+		return err
+	}
+	if err := qmpClient.Connect(); err != nil {
+		return err
+	}
+	defer func() { _ = qmpClient.Disconnect() }()
+	rawClient := raw.NewMonitor(qmpClient)
+	logrus.Info("Sending QMP stop command")
+	return rawClient.Stop()
+}
+
+func Cont(cfg Config) error {
+	qmpClient, err := newQmpClient(cfg)
+	if err != nil {
+		return err
+	}
+	if err := qmpClient.Connect(); err != nil {
+		return err
+	}
+	defer func() { _ = qmpClient.Disconnect() }()
+	rawClient := raw.NewMonitor(qmpClient)
+	logrus.Info("Sending QMP cont command")
+	return rawClient.Cont()
+}
+
+type StatusInfo struct {
+	raw.StatusInfo
+}
+
+func QueryStatus(cfg Config) (*StatusInfo, error) {
+	qmpClient, err := newQmpClient(cfg)
+	if err != nil {
+		return nil, err
+	}
+	if err := qmpClient.Connect(); err != nil {
+		return nil, err
+	}
+	defer func() { _ = qmpClient.Disconnect() }()
+	rawClient := raw.NewMonitor(qmpClient)
+	logrus.Debug("Sending QMP query-status command")
+	status, err := rawClient.QueryStatus()
+	if err != nil {
+		return nil, err
+	}
+	return &StatusInfo{status}, nil
+}
+
+func IsPaused(info *StatusInfo) bool {
+	return info.Status == raw.RunStatePaused
+}
+
+func IsRunning(info *StatusInfo) bool {
+	return info.Status == raw.RunStateRunning
 }
 
 func argValue(args []string, key string) (string, bool) {
