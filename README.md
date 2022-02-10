@@ -234,6 +234,8 @@ The current default spec:
   - ["permission denied" for `limactl cp` command](#permission-denied-for-limactl-cp-command)
 - [Networking](#networking)
   - ["Cannot access the guest IP 192.168.5.15 from the host"](#cannot-access-the-guest-ip-192168515-from-the-host)
+- [External projects](#external-projects)
+  - ["I am using Rancher Desktop. How to deal with the underlying Lima?"](#i-am-using-rancher-desktop-how-to-deal-with-the-underlying-lima)
 - ["Hints for debugging other problems?"](#hints-for-debugging-other-problems)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
@@ -367,6 +369,31 @@ The default guest IP 192.168.5.15 is not accessible from the host and other gues
 To add another IP address that is accessible from the host and other virtual machines, enable [`vde_vmnet`](https://github.com/lima-vm/vde_vmnet).
 
 See [`./docs/network.md`](./docs/network.md).
+
+### External projects
+#### "I am using Rancher Desktop. How to deal with the underlying Lima?"
+
+On macOS hosts, Rancher Desktop (as of v1.0) launches Lima with the following configuration:
+
+- `$LIMA_HOME` directory: `$HOME/Library/Application Support/rancher-desktop/lima`
+- `limactl` binary: `/Applications/Rancher Desktop.app/Contents/Resources/resources/darwin/lima/bin/limactl`
+- Lima instance name: `0`
+
+To open a shell, run the following command:
+
+```shell
+LIMA_HOME="$HOME/Library/Application Support/rancher-desktop/lima" "/Applications/Rancher Desktop.app/Contents/Resources/resources/darwin/lima/bin/limactl" shell 0
+```
+
+On Linux hosts, try the following command:
+```shell
+LIMA_HOME="$HOME/.local/share/rancher-desktop/lima" /opt/rancher-desktop/resources/resources/linux/lima/bin/limactl shell 0
+```
+
+If you have installed Rancher Desktop as an AppImage:
+```shell
+LIMA_HOME="$HOME/.local/share/rancher-desktop/lima" "$(ls -d /tmp/.mount_ranche*/opt/rancher-desktop/resources/resources/linux/lima/bin)/limactl" shell 0
+```
 
 ### "Hints for debugging other problems?"
 - Inspect logs:
