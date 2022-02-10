@@ -47,10 +47,11 @@ func TestFillDefault(t *testing.T) {
 
 	// Builtin default values
 	builtin := LimaYAML{
-		Arch:   pointer.String(arch),
-		CPUs:   pointer.Int(4),
-		Memory: pointer.String("4GiB"),
-		Disk:   pointer.String("100GiB"),
+		Arch:    pointer.String(arch),
+		CPUType: pointer.String("host"),
+		CPUs:    pointer.Int(4),
+		Memory:  pointer.String("4GiB"),
+		Disk:    pointer.String("100GiB"),
 		Containerd: Containerd{
 			System:   pointer.Bool(false),
 			User:     pointer.Bool(true),
@@ -168,10 +169,11 @@ func TestFillDefault(t *testing.T) {
 
 	// Choose values that are different from the "builtin" defaults
 	d = LimaYAML{
-		Arch:   pointer.String("unknown"),
-		CPUs:   pointer.Int(7),
-		Memory: pointer.String("5GiB"),
-		Disk:   pointer.String("105GiB"),
+		Arch:    pointer.String("unknown"),
+		CPUType: pointer.String("host"),
+		CPUs:    pointer.Int(7),
+		Memory:  pointer.String("5GiB"),
+		Disk:    pointer.String("105GiB"),
 		Containerd: Containerd{
 			System: pointer.Bool(true),
 			User:   pointer.Bool(false),
@@ -280,10 +282,11 @@ func TestFillDefault(t *testing.T) {
 	// User-provided overrides should override user-provided config settings
 
 	o = LimaYAML{
-		Arch:   pointer.String(arch),
-		CPUs:   pointer.Int(12),
-		Memory: pointer.String("7GiB"),
-		Disk:   pointer.String("117GiB"),
+		Arch:    pointer.String(arch),
+		CPUType: pointer.String("host"),
+		CPUs:    pointer.Int(12),
+		Memory:  pointer.String("7GiB"),
+		Disk:    pointer.String("117GiB"),
 		Containerd: Containerd{
 			System: pointer.Bool(true),
 			User:   pointer.Bool(false),

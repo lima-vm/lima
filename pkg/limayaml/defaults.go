@@ -81,6 +81,24 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		}
 	}
 
+	if y.CPUType == nil {
+		y.CPUType = d.CPUType
+	}
+	if o.CPUType != nil {
+		y.CPUType = o.CPUType
+	}
+	if y.CPUType == nil || *y.CPUType == "" {
+		if IsNativeArch(*y.Arch) {
+			y.CPUType = pointer.String("host")
+		} else if *y.Arch == X8664 {
+			// Intel on ARM
+			y.CPUType = pointer.String("qemu64")
+		} else {
+			// ARM on Intel
+			y.CPUType = pointer.String("cortex-a72")
+		}
+	}
+
 	if y.CPUs == nil {
 		y.CPUs = d.CPUs
 	}
@@ -460,4 +478,10 @@ func ResolveArch(s *string) Arch {
 		return NewArch(runtime.GOARCH)
 	}
 	return *s
+}
+
+func IsNativeArch(arch Arch) bool {
+	nativeX8664 := arch == X8664 && runtime.GOARCH == "amd64"
+	nativeAARCH64 := arch == AARCH64 && runtime.GOARCH == "arm64"
+	return nativeX8664 || nativeAARCH64
 }
