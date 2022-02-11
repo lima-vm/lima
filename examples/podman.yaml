@@ -51,6 +51,9 @@ portForwards:
 - guestSocket: "/run/user/{{.UID}}/podman/podman.sock"
   hostSocket: "{{.Dir}}/sock/podman.sock"
 message: |
-  To run `podman` on the host (assumes podman-remote is installed):
-  $ export CONTAINER_HOST=unix://{{.Dir}}/sock/podman.sock
-  $ podman{{if eq .HostOS "linux"}} --remote{{end}} ...
+  To run `podman` on the host (assumes podman-remote is installed), run the following commands:
+  ------
+  podman system connection add lima "unix://{{.Dir}}/sock/podman.sock"
+  podman system connection default lima
+  podman{{if eq .HostOS "linux"}} --remote{{end}} run quay.io/podman/hello
+  ------
