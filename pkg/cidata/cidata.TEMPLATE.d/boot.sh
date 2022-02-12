@@ -14,7 +14,15 @@ while read -r line; do export "$line"; done <"${LIMA_CIDATA_MNT}"/lima.env
 
 # shellcheck disable=SC2163
 while read -r line; do
-	[ "$(expr "$line" : '#')" -eq 0 ] && export "$line"
+	# pam_env implementation:
+	# - '#' is treated the same as newline; terminates value
+	# - skip leading tabs and spaces
+	# - skip leading "export " prefix (only single space)
+	# - skip leading quote ('\'' or '"') on the value side
+	# - skip trailing quote only if leading quote has been skipped;
+	#   quotes don't need to match; trailing quote may be omitted
+	line="$(echo "$line" | sed -E "s/^[ \\t]*(export )?//; s/#.*//; s/(^[^=]+=)[\"'](.*[^\"'])?[\"']?$/\1\2/")"
+	[ -n "$line" ] && export "$line"
 done <"${LIMA_CIDATA_MNT}"/etc_environment
 
 CODE=0
