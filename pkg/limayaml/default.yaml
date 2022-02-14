@@ -29,8 +29,8 @@ images:
 
 # Specify QEMU CPU emulation, e.g., "host", "qemu64", "Haswell".
 # You can see what options are available for host emulation with: `qemu-system-$(arch) -cpu help`.
-# And set of instructions is supported, like: "qemu64,+ssse3".
-# Default: "host" (native arch) or "qemu64" (Intel on ARM) or "cortex-a72" (ARM on Intel)
+# Setting of instructions is supported like this: "qemu64,+ssse3".
+# Default: "host" (native arch), "qemu64" (Intel on ARM), or "cortex-a72" (ARM on Intel)
 cpuType: null
 
 # CPUs: if you see performance issues, try limiting cpus to 1.
