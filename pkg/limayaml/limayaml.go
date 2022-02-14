@@ -9,6 +9,7 @@ import (
 type LimaYAML struct {
 	Arch              *Arch             `yaml:"arch,omitempty" json:"arch,omitempty"`
 	Images            []File            `yaml:"images" json:"images"` // REQUIRED
+	CPUType           *string           `yaml:"cpuType,omitempty" json:"cpuType,omitempty"`
 	CPUs              *int              `yaml:"cpus,omitempty" json:"cpus,omitempty"`
 	Memory            *string           `yaml:"memory,omitempty" json:"memory,omitempty"` // go-units.RAMInBytes
 	Disk              *string           `yaml:"disk,omitempty" json:"disk,omitempty"`     // go-units.RAMInBytes

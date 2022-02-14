@@ -206,16 +206,12 @@ func Cmdline(cfg Config) (string, []string, error) {
 		}
 		return "", nil, errors.New(errStr)
 	}
+
+	cpu := *y.CPUType
+	args = appendArgsIfNoConflict(args, "-cpu", cpu)
 	switch *y.Arch {
 	case limayaml.X8664:
-		cpu := "qemu64"
-		if isNativeArch(*y.Arch) {
-			cpu = "host"
-		}
-		args = appendArgsIfNoConflict(args, "-cpu", cpu)
-		if isNativeArch(*y.Arch) {
-			args = appendArgsIfNoConflict(args, "-machine", "q35,accel="+accel)
-		} else {
+		if strings.HasPrefix(cpu, "qemu64") {
 			// use q35 machine with vmware io port disabled.
 			args = appendArgsIfNoConflict(args, "-machine", "q35,vmport=off")
 			// use tcg accelerator with multi threading with 512MB translation block size
@@ -225,13 +221,10 @@ func Cmdline(cfg Config) (string, []string, error) {
 			args = appendArgsIfNoConflict(args, "-accel", "tcg,thread=multi,tb-size=512")
 			// This will disable CPU S3 state.
 			args = append(args, "-global", "ICH9-LPC.disable_s3=1")
+		} else {
+			args = appendArgsIfNoConflict(args, "-machine", "q35,accel="+accel)
 		}
 	case limayaml.AARCH64:
-		cpu := "cortex-a72"
-		if isNativeArch(*y.Arch) {
-			cpu = "host"
-		}
-		args = appendArgsIfNoConflict(args, "-cpu", cpu)
 		args = appendArgsIfNoConflict(args, "-machine", "virt,accel="+accel+",highmem=off")
 	}
 
@@ -396,14 +389,8 @@ func getExe(arch limayaml.Arch) (string, []string, error) {
 	return exe, args, nil
 }
 
-func isNativeArch(arch limayaml.Arch) bool {
-	nativeX8664 := arch == limayaml.X8664 && runtime.GOARCH == "amd64"
-	nativeAARCH64 := arch == limayaml.AARCH64 && runtime.GOARCH == "arm64"
-	return nativeX8664 || nativeAARCH64
-}
-
 func getAccel(arch limayaml.Arch) string {
-	if isNativeArch(arch) {
+	if limayaml.IsNativeArch(arch) {
 		switch runtime.GOOS {
 		case "darwin":
 			return "hvf"

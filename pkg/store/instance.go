@@ -33,6 +33,7 @@ type Instance struct {
 	Status       Status             `json:"status"`
 	Dir          string             `json:"dir"`
 	Arch         limayaml.Arch      `json:"arch"`
+	CPUType      string             `json:"cpuType"`
 	CPUs         int                `json:"cpus,omitempty"`
 	Memory       int64              `json:"memory,omitempty"` // bytes
 	Disk         int64              `json:"disk,omitempty"`   // bytes
@@ -75,6 +76,7 @@ func Inspect(instName string) (*Instance, error) {
 	}
 	inst.Dir = instDir
 	inst.Arch = *y.Arch
+	inst.CPUType = *y.CPUType
 	inst.CPUs = *y.CPUs
 	memory, err := units.RAMInBytes(*y.Memory)
 	if err == nil {

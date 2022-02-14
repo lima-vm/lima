@@ -50,6 +50,10 @@ func Validate(y LimaYAML, warn bool) error {
 		}
 	}
 
+	if *y.CPUType == "" {
+		return fmt.Errorf("field `cpuType` must be set")
+	}
+
 	if *y.CPUs == 0 {
 		return errors.New("field `cpus` must be set")
 	}
