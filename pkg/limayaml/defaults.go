@@ -92,6 +92,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 			y.CPUType = pointer.String("host")
 		} else if *y.Arch == X8664 {
 			// Intel on ARM
+			// Since https://github.com/lima-vm/lima/pull/494, we use qemu64 cpu for better emulation of x86_64.
 			y.CPUType = pointer.String("qemu64")
 		} else {
 			// ARM on Intel
