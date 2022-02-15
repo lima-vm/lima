@@ -82,6 +82,7 @@ func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
 		switch q.Qtype {
 		case dns.TypeAAAA:
 			if !h.IPv6 {
+				handled = true
 				break
 			}
 			fallthrough
