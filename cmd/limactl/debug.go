@@ -47,7 +47,7 @@ func debugDNSAction(cmd *cobra.Command, args []string) error {
 			return err
 		}
 	}
-	srv, err := dns.Start(udpLocalPort, tcpLocalPort, ipv6)
+	srv, err := dns.Start(udpLocalPort, tcpLocalPort, ipv6, map[string]string{})
 	if err != nil {
 		return err
 	}

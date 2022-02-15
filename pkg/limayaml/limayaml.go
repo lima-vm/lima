@@ -136,8 +136,9 @@ type Network struct {
 }
 
 type HostResolver struct {
-	Enabled *bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
-	IPv6    *bool `yaml:"ipv6,omitempty" json:"ipv6,omitempty"`
+	Enabled *bool             `yaml:"enabled,omitempty" json:"enabled,omitempty"`
+	IPv6    *bool             `yaml:"ipv6,omitempty" json:"ipv6,omitempty"`
+	Hosts   map[string]string `yaml:"hosts,omitempty" json:"hosts,omitempty"`
 }
 
 // DEPRECATED types below

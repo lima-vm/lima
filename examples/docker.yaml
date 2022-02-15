@@ -23,6 +23,10 @@ containerd:
   user: false
 provision:
 - mode: system
+  # This script defines the host.docker.internal hostname when hostResolver is disabled.
+  # It is also needed for lima 0.8.2 and earlier, which does not support hostResolver.hosts.
+  # Names defined in /etc/hosts inside the VM are not resolved inside containers when
+  # using the hostResolver; use hostResolver.hosts instead (requires lima 0.8.3 or later).
   script: |
     #!/bin/sh
     sed -i 's/host.lima.internal.*/host.lima.internal host.docker.internal/' /etc/hosts
@@ -56,6 +60,11 @@ probes:
       exit 1
     fi
   hint: See "/var/log/cloud-init-output.log". in the guest
+hostResolver:
+  # hostResolver.hosts requires lima 0.8.3 or later. Names defined here will also
+  # resolve inside containers, and not just inside the VM itself.
+  hosts:
+    host.docker.internal: host.lima.internal
 portForwards:
 - guestSocket: "/run/user/{{.UID}}/docker.sock"
   hostSocket: "{{.Dir}}/sock/docker.sock"

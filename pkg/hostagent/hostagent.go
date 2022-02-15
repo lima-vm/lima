@@ -27,6 +27,7 @@ import (
 	"github.com/lima-vm/lima/pkg/hostagent/events"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/qemu"
+	qemuconst "github.com/lima-vm/lima/pkg/qemu/const"
 	"github.com/lima-vm/lima/pkg/sshutil"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
@@ -249,7 +250,9 @@ func (a *HostAgent) Run(ctx context.Context) error {
 	}()
 
 	if *a.y.HostResolver.Enabled {
-		dnsServer, err := dns.Start(a.udpDNSLocalPort, a.tcpDNSLocalPort, *a.y.HostResolver.IPv6)
+		hosts := a.y.HostResolver.Hosts
+		hosts["host.lima.internal."] = qemuconst.SlirpGateway
+		dnsServer, err := dns.Start(a.udpDNSLocalPort, a.tcpDNSLocalPort, *a.y.HostResolver.IPv6, hosts)
 		if err != nil {
 			return fmt.Errorf("cannot start DNS server: %w", err)
 		}

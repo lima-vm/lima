@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"text/template"
 
 	"github.com/lima-vm/lima/pkg/guestagent/api"
@@ -179,6 +180,19 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 	if y.SSH.ForwardAgent == nil {
 		y.SSH.ForwardAgent = pointer.Bool(false)
 	}
+
+	hosts := make(map[string]string)
+	// Values can be either names or IP addresses. Name values are canonicalized in the hostResolver.
+	for k, v := range d.HostResolver.Hosts {
+		hosts[Cname(k)] = v
+	}
+	for k, v := range y.HostResolver.Hosts {
+		hosts[Cname(k)] = v
+	}
+	for k, v := range o.HostResolver.Hosts {
+		hosts[Cname(k)] = v
+	}
+	y.HostResolver.Hosts = hosts
 
 	y.Provision = append(append(o.Provision, y.Provision...), d.Provision...)
 	for i := range y.Provision {
@@ -485,4 +499,12 @@ func IsNativeArch(arch Arch) bool {
 	nativeX8664 := arch == X8664 && runtime.GOARCH == "amd64"
 	nativeAARCH64 := arch == AARCH64 && runtime.GOARCH == "arm64"
 	return nativeX8664 || nativeAARCH64
+}
+
+func Cname(host string) string {
+	host = strings.ToLower(host)
+	if !strings.HasSuffix(host, ".") {
+		host += "."
+	}
+	return host
 }

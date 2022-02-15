@@ -7,6 +7,7 @@ import (
 	"net"
 	"strings"
 
+	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/miekg/dns"
 	"github.com/sirupsen/logrus"
 )
@@ -19,6 +20,8 @@ type Handler struct {
 	clientConfig *dns.ClientConfig
 	clients      []*dns.Client
 	IPv6         bool
+	cname        map[string]string
+	ip           map[string]net.IP
 }
 
 type Server struct {
@@ -44,7 +47,7 @@ func newStaticClientConfig(ips []net.IP) (*dns.ClientConfig, error) {
 	return dns.ClientConfigFromReader(r)
 }
 
-func newHandler(IPv6 bool) (dns.Handler, error) {
+func newHandler(IPv6 bool, hosts map[string]string) (dns.Handler, error) {
 	cc, err := dns.ClientConfigFromFile("/etc/resolv.conf")
 	if err != nil {
 		fallbackIPs := []net.IP{net.ParseIP("8.8.8.8"), net.ParseIP("1.1.1.1")}
@@ -62,6 +65,15 @@ func newHandler(IPv6 bool) (dns.Handler, error) {
 		clientConfig: cc,
 		clients:      clients,
 		IPv6:         IPv6,
+		cname:        make(map[string]string),
+		ip:           make(map[string]net.IP),
+	}
+	for host, address := range hosts {
+		if ip := net.ParseIP(address); ip != nil {
+			h.ip[host] = ip
+		} else {
+			h.cname[host] = limayaml.Cname(address)
+		}
 	}
 	return h, nil
 }
@@ -87,9 +99,26 @@ func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
 			}
 			fallthrough
 		case dns.TypeCNAME, dns.TypeA:
-			cname, err := net.LookupCNAME(q.Name)
-			if err != nil {
+			cname := q.Name
+			seen := make(map[string]bool)
+			for {
+				// break cyclic definition
+				if seen[cname] {
+					break
+				}
+				if _, ok := h.cname[cname]; ok {
+					seen[cname] = true
+					cname = h.cname[cname]
+					continue
+				}
 				break
+			}
+			var err error
+			if _, ok := h.ip[cname]; !ok {
+				cname, err = net.LookupCNAME(cname)
+				if err != nil {
+					break
+				}
 			}
 			if cname != "" && cname != q.Name {
 				hdr.Rrtype = dns.TypeCNAME
@@ -104,7 +133,13 @@ func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
 				break
 			}
 			hdr.Name = cname
-			addrs, err := net.LookupIP(q.Name)
+			var addrs []net.IP
+			if _, ok := h.ip[cname]; ok {
+				addrs = []net.IP{h.ip[cname]}
+				err = nil
+			} else {
+				addrs, err = net.LookupIP(cname)
+			}
 			if err == nil && len(addrs) > 0 {
 				for _, ip := range addrs {
 					var a dns.RR
@@ -220,8 +255,8 @@ func (h *Handler) ServeDNS(w dns.ResponseWriter, req *dns.Msg) {
 	}
 }
 
-func Start(udpLocalPort, tcpLocalPort int, IPv6 bool) (*Server, error) {
-	h, err := newHandler(IPv6)
+func Start(udpLocalPort, tcpLocalPort int, IPv6 bool, hosts map[string]string) (*Server, error) {
+	h, err := newHandler(IPv6, hosts)
 	if err != nil {
 		return nil, err
 	}
