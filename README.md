@@ -271,6 +271,9 @@ Container runtime examples:
 - [`./examples/podman.yaml`](./examples/podman.yaml): Podman
 - [`./examples/singularity.yaml`](./examples/singularity.yaml): Singularity
 
+Container image builder examples:
+- [`./examples/buildkit.yaml`](./examples/buildkit.yaml): BuildKit
+
 Container orchestrator examples:
 - [`./examples/k3s.yaml`](./examples/k3s.yaml): Kubernetes (k3s)
 - [`./examples/k8s.yaml`](./examples/k8s.yaml): Kubernetes (kubeadm)

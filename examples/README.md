@@ -21,6 +21,9 @@ Container engines:
 - [`singularity.yaml`](./singularity.yaml): Singularity
 - LXD is installed in the default Ubuntu template, so there is no `lxd.yaml`
 
+Container image builders:
+- [`buildkit.yaml`](./buildkit.yaml): BuildKit
+
 Container orchestration:
 - [`k3s.yaml`](./k3s.yaml): Kubernetes via k3s
 - [`k8s.yaml`](./k8s.yaml): Kubernetes via kubeadm
