@@ -10,7 +10,6 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -214,6 +213,26 @@ func askWhetherToOpenEditor(name string) (bool, error) {
 	}
 }
 
+func fileWarning(filename string) string {
+	b, err := os.ReadFile(filename)
+	if err != nil || len(b) == 0 {
+		return ""
+	}
+	s := "# WARNING: " + filename + " includes the following settings,\n"
+	s += "# which are applied before applying this YAML:\n"
+	s += "# -----------\n"
+	for _, line := range strings.Split(strings.TrimSuffix(string(b), "\n"), "\n") {
+		s += "#"
+		if len(line) > 0 {
+			s += " " + line
+		}
+		s += "\n"
+	}
+	s += "# -----------\n"
+	s += "\n"
+	return s
+}
+
 func generateEditorWarningHeader() string {
 	var s string
 	configDir, err := dirnames.LimaConfigDir()
@@ -223,28 +242,8 @@ func generateEditorWarningHeader() string {
 		return s
 	}
 
-	re := regexp.MustCompile(`(?m)^`)
-	repl := []byte("# ")
-
-	defaultPath := filepath.Join(configDir, filenames.Default)
-	if b, err := os.ReadFile(defaultPath); err == nil {
-		s += "# WARNING: " + defaultPath + "includes the following settings,\n"
-		s += "# which is applied before applying this YAML:\n"
-		s += "# -----------\n"
-		s += string(re.ReplaceAll(b, repl)) + "\n"
-		s += "# -----------\n"
-		s += "\n"
-	}
-
-	overridePath := filepath.Join(configDir, filenames.Override)
-	if b, err := os.ReadFile(overridePath); err == nil {
-		s += "# WARNING: " + overridePath + "includes the following settings,\n"
-		s += "# which will take precedence over anything configured in this YAML:\n"
-		s += "# -----------\n"
-		s += string(re.ReplaceAll(b, repl)) + "\n"
-		s += "# -----------\n"
-		s += "\n"
-	}
+	s += fileWarning(filepath.Join(configDir, filenames.Default))
+	s += fileWarning(filepath.Join(configDir, filenames.Override))
 	return s
 }
 
