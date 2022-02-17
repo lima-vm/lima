@@ -47,11 +47,14 @@ func TestFillDefault(t *testing.T) {
 
 	// Builtin default values
 	builtin := LimaYAML{
-		Arch:    pointer.String(arch),
-		CPUType: pointer.String("host"),
-		CPUs:    pointer.Int(4),
-		Memory:  pointer.String("4GiB"),
-		Disk:    pointer.String("100GiB"),
+		Arch: pointer.String(arch),
+		CPUType: map[Arch]string{
+			AARCH64: "cortex-a72",
+			X8664:   "qemu64",
+		},
+		CPUs:   pointer.Int(4),
+		Memory: pointer.String("4GiB"),
+		Disk:   pointer.String("100GiB"),
 		Containerd: Containerd{
 			System:   pointer.Bool(false),
 			User:     pointer.Bool(true),
@@ -74,6 +77,7 @@ func TestFillDefault(t *testing.T) {
 		},
 		PropagateProxyEnv: pointer.Bool(true),
 	}
+	builtin.CPUType[arch] = "host"
 
 	defaultPortForward := PortForward{
 		GuestIP:        api.IPv4loopback1,
@@ -169,11 +173,14 @@ func TestFillDefault(t *testing.T) {
 
 	// Choose values that are different from the "builtin" defaults
 	d = LimaYAML{
-		Arch:    pointer.String("unknown"),
-		CPUType: pointer.String("host"),
-		CPUs:    pointer.Int(7),
-		Memory:  pointer.String("5GiB"),
-		Disk:    pointer.String("105GiB"),
+		Arch: pointer.String("unknown"),
+		CPUType: map[Arch]string{
+			AARCH64: "arm64",
+			X8664:   "amd64",
+		},
+		CPUs:   pointer.Int(7),
+		Memory: pointer.String("5GiB"),
+		Disk:   pointer.String("105GiB"),
 		Containerd: Containerd{
 			System: pointer.Bool(true),
 			User:   pointer.Bool(false),
@@ -282,11 +289,14 @@ func TestFillDefault(t *testing.T) {
 	// User-provided overrides should override user-provided config settings
 
 	o = LimaYAML{
-		Arch:    pointer.String(arch),
-		CPUType: pointer.String("host"),
-		CPUs:    pointer.Int(12),
-		Memory:  pointer.String("7GiB"),
-		Disk:    pointer.String("117GiB"),
+		Arch: pointer.String(arch),
+		CPUType: map[Arch]string{
+			AARCH64: "uber-arm",
+			X8664:   "pentium",
+		},
+		CPUs:   pointer.Int(12),
+		Memory: pointer.String("7GiB"),
+		Disk:   pointer.String("117GiB"),
 		Containerd: Containerd{
 			System: pointer.Bool(true),
 			User:   pointer.Bool(false),
