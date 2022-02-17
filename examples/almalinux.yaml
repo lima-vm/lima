@@ -1,8 +1,5 @@
-# This example requires Lima v0.7.0 or later.
+# This example requires Lima v0.8.3 or later.
 
-# Hint: If QEMU crashes with error "vmx_write_mem: mmu_gva_to_gpa XXXXXXXXXXXXXXXX failed" on Intel Mac,
-# try setting environment variable QEMU_SYSTEM_X86_64="qemu-system-x86_64 -cpu Haswell-v4"
-# https://bugs.launchpad.net/qemu/+bug/1838390
 images:
 - location: "http://repo.almalinux.org/almalinux/8.5/cloud/x86_64/images/AlmaLinux-8-GenericCloud-latest.x86_64.qcow2"
   arch: "x86_64"
@@ -16,3 +13,7 @@ mounts:
   writable: true
 firmware:
   legacyBIOS: true
+cpuType:
+  # Workaround for "vmx_write_mem: mmu_gva_to_gpa XXXXXXXXXXXXXXXX failed" on Intel Mac
+  # https://bugs.launchpad.net/qemu/+bug/1838390
+  x86_64: "Haswell-v4"
