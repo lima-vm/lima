@@ -207,7 +207,7 @@ func Cmdline(cfg Config) (string, []string, error) {
 		return "", nil, errors.New(errStr)
 	}
 
-	cpu := *y.CPUType
+	cpu := y.CPUType[*y.Arch]
 	args = appendArgsIfNoConflict(args, "-cpu", cpu)
 	switch *y.Arch {
 	case limayaml.X8664:

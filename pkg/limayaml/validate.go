@@ -50,8 +50,13 @@ func Validate(y LimaYAML, warn bool) error {
 		}
 	}
 
-	if *y.CPUType == "" {
-		return fmt.Errorf("field `cpuType` must be set")
+	for arch := range y.CPUType {
+		switch arch {
+		case AARCH64, X8664:
+			// these are the only supported architectures
+		default:
+			return fmt.Errorf("field `cpuType` uses unsupported arch %q", arch)
+		}
 	}
 
 	if *y.CPUs == 0 {

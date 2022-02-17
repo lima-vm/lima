@@ -27,12 +27,6 @@ images:
 - location: "https://cloud-images.ubuntu.com/impish/current/impish-server-cloudimg-arm64.img"
   arch: "aarch64"
 
-# Specify QEMU CPU emulation, e.g., "host", "qemu64", "Haswell".
-# You can see what options are available for host emulation with: `qemu-system-$(arch) -cpu help`.
-# Setting of instructions is supported like this: "qemu64,+ssse3".
-# Default: "host" (native arch), "qemu64" (Intel on ARM), or "cortex-a72" (ARM on Intel)
-cpuType: null
-
 # CPUs: if you see performance issues, try limiting cpus to 1.
 # Default: 4
 cpus: null
@@ -140,6 +134,15 @@ containerd:
 # ===================================================================== #
 # FURTHER ADVANCED CONFIGURATION
 # ===================================================================== #
+
+# Specify desired QEMU CPU type for each arch.
+# You can see what options are available for host emulation with: `qemu-system-$(arch) -cpu help`.
+# Setting of instructions is supported like this: "qemu64,+ssse3".
+cpuType:
+  # Default: "cortex-a72" (or "host" when running on arm64)
+  aarch64: null
+  # Default: "qemu64" (or "host" when running on amd64)
+  x86_64: null
 
 firmware:
   # Use legacy BIOS instead of UEFI.

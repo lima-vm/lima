@@ -76,7 +76,8 @@ func Inspect(instName string) (*Instance, error) {
 	}
 	inst.Dir = instDir
 	inst.Arch = *y.Arch
-	inst.CPUType = *y.CPUType
+	inst.CPUType = y.CPUType[*y.Arch]
+
 	inst.CPUs = *y.CPUs
 	memory, err := units.RAMInBytes(*y.Memory)
 	if err == nil {

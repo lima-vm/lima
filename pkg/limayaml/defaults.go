@@ -81,24 +81,32 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		}
 	}
 
-	if y.CPUType == nil {
-		y.CPUType = d.CPUType
+	cpuType := map[Arch]string{
+		AARCH64: "cortex-a72",
+		// Since https://github.com/lima-vm/lima/pull/494, we use qemu64 cpu for better emulation of x86_64.
+		X8664: "qemu64",
 	}
-	if o.CPUType != nil {
-		y.CPUType = o.CPUType
-	}
-	if y.CPUType == nil || *y.CPUType == "" {
-		if IsNativeArch(*y.Arch) {
-			y.CPUType = pointer.String("host")
-		} else if *y.Arch == X8664 {
-			// Intel on ARM
-			// Since https://github.com/lima-vm/lima/pull/494, we use qemu64 cpu for better emulation of x86_64.
-			y.CPUType = pointer.String("qemu64")
-		} else {
-			// ARM on Intel
-			y.CPUType = pointer.String("cortex-a72")
+	for arch := range cpuType {
+		if IsNativeArch(arch) {
+			cpuType[arch] = "host"
 		}
 	}
+	for k, v := range d.CPUType {
+		if len(v) > 0 {
+			cpuType[k] = v
+		}
+	}
+	for k, v := range y.CPUType {
+		if len(v) > 0 {
+			cpuType[k] = v
+		}
+	}
+	for k, v := range o.CPUType {
+		if len(v) > 0 {
+			cpuType[k] = v
+		}
+	}
+	y.CPUType = cpuType
 
 	if y.CPUs == nil {
 		y.CPUs = d.CPUs
