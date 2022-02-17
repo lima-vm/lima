@@ -292,3 +292,15 @@ portForwards:
   # forward: 0.0.0.0      4033 → ipv4 4033
   # forward: ::           4034 → ipv4 4034
   # forward: ::1          4035 → ipv4 4035
+
+- guestIPMustBeZero: true
+  guestPortRange: [4040, 4049]
+
+- guestIP: "0.0.0.0"
+  guestPortRange: [4040, 4049]
+  ignore: true
+
+  # forward: 0.0.0.0        4040 → 127.0.0.1 4040
+  # forward: ::             4041 → 127.0.0.1 4041
+  # ignore:  127.0.0.1      4043 → 127.0.0.1 4043
+  # ignore:  192.168.5.15   4044 → 127.0.0.1 4044

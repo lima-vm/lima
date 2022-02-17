@@ -209,6 +209,11 @@ networks:
 # - guestPort: 8888
 #   ignore: true (don't forward this port)
 #
+# - guestPort: 7443
+#   guestIP: "0.0.0.0"       # Will match *any* interface
+#   guestIPMustBeZero: true  # Restrict matching to 0.0.0.0 binds only
+#   hostIP: "0.0.0.0"        # Forwards to 0.0.0.0, exposing it externally
+#
 # - guestSocket: "/run/user/{{.UID}}/my.sock"
 #   hostSocket: mysocket
 # # "guestSocket" can include these template variables: {{.Home}}, {{.UID}}, and {{.User}}.

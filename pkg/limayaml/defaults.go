@@ -402,7 +402,11 @@ func FillPortForwardDefaults(rule *PortForward, instDir string) {
 		rule.Proto = TCP
 	}
 	if rule.GuestIP == nil {
-		rule.GuestIP = api.IPv4loopback1
+		if rule.GuestIPMustBeZero {
+			rule.GuestIP = net.IPv4zero
+		} else {
+			rule.GuestIP = api.IPv4loopback1
+		}
 	}
 	if rule.HostIP == nil {
 		rule.HostIP = api.IPv4loopback1
