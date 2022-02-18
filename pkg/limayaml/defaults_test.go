@@ -93,6 +93,11 @@ func TestFillDefault(t *testing.T) {
 	// All these slices and maps are empty in "builtin". Add minimal entries here to see that
 	// their values are retained and defaults for their fields are applied correctly.
 	y = LimaYAML{
+		HostResolver: HostResolver{
+			Hosts: map[string]string{
+				"MY.Host": "host.lima.internal",
+			},
+		},
 		Mounts: []Mount{
 			{Location: "/tmp"},
 		},
@@ -123,6 +128,10 @@ func TestFillDefault(t *testing.T) {
 	}
 
 	expect := builtin
+	expect.HostResolver.Hosts = map[string]string{
+		"my.host.": "host.lima.internal",
+	}
+
 	expect.Mounts = y.Mounts
 	expect.Mounts[0].Writable = pointer.Bool(false)
 	expect.Mounts[0].SSHFS.Cache = pointer.Bool(true)
@@ -202,6 +211,9 @@ func TestFillDefault(t *testing.T) {
 		HostResolver: HostResolver{
 			Enabled: pointer.Bool(false),
 			IPv6:    pointer.Bool(true),
+			Hosts: map[string]string{
+				"default": "localhost",
+			},
 		},
 		PropagateProxyEnv: pointer.Bool(false),
 
@@ -255,6 +267,9 @@ func TestFillDefault(t *testing.T) {
 	expect.Containerd.Archives[0].Arch = *d.Arch
 	expect.Mounts[0].SSHFS.Cache = pointer.Bool(true)
 	expect.Mounts[0].SSHFS.FollowSymlinks = pointer.Bool(false)
+	expect.HostResolver.Hosts = map[string]string{
+		"default.": d.HostResolver.Hosts["default"],
+	}
 
 	y = LimaYAML{}
 	FillDefault(&y, &d, &LimaYAML{}, filePath)
@@ -276,6 +291,8 @@ func TestFillDefault(t *testing.T) {
 	// Mounts and Networks start with lowest priority first, so higher priority entries can overwrite
 	expect.Mounts = append(d.Mounts, y.Mounts...)
 	expect.Networks = append(d.Networks, y.Networks...)
+
+	expect.HostResolver.Hosts["default."] = d.HostResolver.Hosts["default"]
 
 	// d.DNS will be ignored, and not appended to y.DNS
 
@@ -322,6 +339,9 @@ func TestFillDefault(t *testing.T) {
 		HostResolver: HostResolver{
 			Enabled: pointer.Bool(false),
 			IPv6:    pointer.Bool(false),
+			Hosts: map[string]string{
+				"override.": "underflow",
+			},
 		},
 		PropagateProxyEnv: pointer.Bool(false),
 
@@ -385,6 +405,9 @@ func TestFillDefault(t *testing.T) {
 	expect.Probes = append(append(o.Probes, y.Probes...), d.Probes...)
 	expect.PortForwards = append(append(o.PortForwards, y.PortForwards...), d.PortForwards...)
 	expect.Containerd.Archives = append(append(o.Containerd.Archives, y.Containerd.Archives...), d.Containerd.Archives...)
+
+	expect.HostResolver.Hosts["default."] = d.HostResolver.Hosts["default"]
+	expect.HostResolver.Hosts["my.host."] = d.HostResolver.Hosts["host.lima.internal"]
 
 	// o.Mounts just makes d.Mounts[0] writable because the Location matches
 	expect.Mounts = append(d.Mounts, y.Mounts...)

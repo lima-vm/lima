@@ -27,6 +27,7 @@ import (
 	"github.com/lima-vm/lima/pkg/hostagent/events"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/qemu"
+	qemuconst "github.com/lima-vm/lima/pkg/qemu/const"
 	"github.com/lima-vm/lima/pkg/sshutil"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
@@ -40,6 +41,7 @@ type HostAgent struct {
 	udpDNSLocalPort int
 	tcpDNSLocalPort int
 	instDir         string
+	instName        string
 	sshConfig       *ssh.SSHConfig
 	portForwarder   *portForwarder
 	onClose         []func() error // LIFO
@@ -145,6 +147,7 @@ func New(instName string, stdout io.Writer, sigintCh chan os.Signal, opts ...Opt
 		udpDNSLocalPort: udpDNSLocalPort,
 		tcpDNSLocalPort: tcpDNSLocalPort,
 		instDir:         inst.Dir,
+		instName:        instName,
 		sshConfig:       sshConfig,
 		portForwarder:   newPortForwarder(sshConfig, sshLocalPort, rules),
 		qExe:            qExe,
@@ -249,7 +252,10 @@ func (a *HostAgent) Run(ctx context.Context) error {
 	}()
 
 	if *a.y.HostResolver.Enabled {
-		dnsServer, err := dns.Start(a.udpDNSLocalPort, a.tcpDNSLocalPort, *a.y.HostResolver.IPv6)
+		hosts := a.y.HostResolver.Hosts
+		hosts["host.lima.internal."] = qemuconst.SlirpGateway
+		hosts[fmt.Sprintf("lima-%s.", a.instName)] = qemuconst.SlirpIPAddress
+		dnsServer, err := dns.Start(a.udpDNSLocalPort, a.tcpDNSLocalPort, *a.y.HostResolver.IPv6, hosts)
 		if err != nil {
 			return fmt.Errorf("cannot start DNS server: %w", err)
 		}

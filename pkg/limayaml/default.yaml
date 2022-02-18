@@ -264,6 +264,12 @@ hostResolver:
   enabled: null
   # Default: false
   ipv6: null
+  # Static names can be defined here as an alternative to adding them to the hosts /etc/hosts.
+  # Values can be either other hostnames, or IP addresses. The host.lima.internal name is
+  # predefined to specify the gateway address to the host.
+  hosts:
+    # guest.name: 127.1.1.1
+    # host.name: host.lima.internal
 
 # If useHostResolver is false, then the following rules apply for configuring dns:
 # Explicitly set DNS addresses for qemu user-mode networking. By default qemu picks *one*
