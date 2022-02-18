@@ -52,7 +52,9 @@ func (pf *portForwarder) forwardingAddresses(guest api.IPPort) (string, string) 
 		case guest.IP.IsUnspecified():
 		case guest.IP.Equal(rule.GuestIP):
 		case guest.IP.Equal(net.IPv6loopback) && rule.GuestIP.Equal(api.IPv4loopback1):
-		case rule.GuestIP.IsUnspecified():
+		case rule.GuestIP.IsUnspecified() && !rule.GuestIPMustBeZero:
+			// When GuestIPMustBeZero is true, then 0.0.0.0 must be an exact match, which is already
+			// handled above by the guest.IP.IsUnspecified() condition.
 		default:
 			continue
 		}
