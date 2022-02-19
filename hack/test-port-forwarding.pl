@@ -25,6 +25,12 @@ my $instance = shift;
 my $ipv4 = inet_ntoa(scalar gethostbyname(hostname())) or die;
 my $ipv6 = ""; # todo
 
+# macOS Github runners seem to use "localhost" as the hostname
+if ($ipv4 eq "127.0.0.1" && $Config{osname} eq "darwin") {
+    $ipv4 = qx(system_profiler SPNetworkDataType -json | jq -r 'first(.SPNetworkDataType[] | select(.ip_address) | .ip_address) | first');
+    chomp $ipv4;
+}
+
 # If $instance is a filename, add our portForwards to it to enable testing
 if (-f $instance) {
     open(my $fh, "+< $instance") or die "Can't open $instance for read/write: $!";
