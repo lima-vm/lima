@@ -30,7 +30,7 @@ task:
   - cat /proc/cpuinfo
   install_deps_script:
   - apt-get update
-  - apt-get install -y --no-install-recommends ca-certificates curl git golang openssh-client make netcat ovmf sudo qemu-system-x86 qemu-utils
+  - apt-get install -y --no-install-recommends ca-certificates curl git golang jq openssh-client make netcat ovmf sudo qemu-system-x86 qemu-utils
   go_cache:
     fingerprint_script: uname -s ; cat go.sum
     folder: $GOPATH/pkg/mod
