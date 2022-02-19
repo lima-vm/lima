@@ -25,6 +25,9 @@ func Instances() ([]string, error) {
 		if strings.HasPrefix(f.Name(), ".") || strings.HasPrefix(f.Name(), "_") {
 			continue
 		}
+		if !f.IsDir() {
+			continue
+		}
 		names = append(names, f.Name())
 	}
 	return names, nil
