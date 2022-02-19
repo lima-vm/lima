@@ -75,12 +75,10 @@ func parsePortsFromRules(rules []string) ([]Entry, error) {
 					istcp = true
 				}
 
-				// if the IP is blank the port forwarding the portforwarding,
-				// which gets information from this, will skip it. When no IP
-				// is present localhost will work.
+				// When no IP is present the rule applies to all interfaces.
 				ip := found[1]
 				if ip == "" {
-					ip = "127.0.0.1"
+					ip = "0.0.0.0"
 				}
 				ent := Entry{
 					IP:   net.ParseIP(ip),
