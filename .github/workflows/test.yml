@@ -105,7 +105,7 @@ jobs:
       matrix:
         # GHA macOS is slow and flaky, so we only test a few YAMLS here.
         # Other yamls are tested on Linux instances of Cirrus.
-        example: [default.yaml, vmnet.yaml]
+        example: [default.yaml, alpine.yaml, vmnet.yaml]
     steps:
     - uses: actions/setup-go@v2
       with:
@@ -121,7 +121,6 @@ jobs:
       # QEMU:      required by Lima itself
       # bash:      required by test-example.sh (OS version of bash is too old)
       # coreutils: required by test-example.sh for the "timeout" command
-      # These would need to be added to run the alpine.yaml config on the macOS runner:
       # curl:      required by test-example.sh to download nerdctl for alpine
       # jq:        required by test-example.sh to determine download URL for nerdctl
       run: |
@@ -130,7 +129,7 @@ jobs:
         # breaking upgrades to latest python@3.9
         rm -f /usr/local/bin/2to3
         time brew update
-        time brew install qemu bash coreutils
+        time brew install qemu bash coreutils curl jq
         time brew upgrade
     - name: Install vde_switch and vde_vmnet
       if: matrix.example == 'vmnet.yaml'
