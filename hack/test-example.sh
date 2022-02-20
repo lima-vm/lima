@@ -168,12 +168,14 @@ if [[ -n ${CHECKS["mount-home"]} ]]; then
 	fi
 fi
 
+# Use GHCR to avoid hitting Docker Hub rate limit
+nginx_image="ghcr.io/stargz-containers/nginx:1.19-alpine-org"
+alpine_image="ghcr.io/containerd/alpine:3.14.0"
+
 if [[ -n ${CHECKS["containerd-user"]} ]]; then
 	INFO "Run a nginx container with port forwarding 127.0.0.1:8080"
 	set -x
 	limactl shell "$NAME" nerdctl info
-	# Use GHCR to avoid hitting Docker Hub rate limit
-	nginx_image="ghcr.io/stargz-containers/nginx:1.19-alpine-org"
 	limactl shell "$NAME" nerdctl pull --quiet ${nginx_image}
 	limactl shell "$NAME" nerdctl run -d --name nginx -p 127.0.0.1:8080:80 ${nginx_image}
 
@@ -189,7 +191,6 @@ if [[ -n ${CHECKS["containerd-user"]} ]]; then
 		mkdir -p "$hometmp"
 		defer "rm -rf \"$hometmp\""
 		set -x
-		alpine_image="ghcr.io/containerd/alpine:3.14.0"
 		limactl shell "$NAME" nerdctl pull --quiet ${alpine_image}
 		echo "random-content-${RANDOM}" >"$hometmp/random"
 		expected="$(cat "$hometmp/random")"
@@ -219,6 +220,34 @@ if [[ -n ${CHECKS["port-forwards"]} ]]; then
 		limactl shell "$NAME" sudo zypper in -y netcat-openbsd
 	fi
 	"${scriptdir}/test-port-forwarding.pl" "${NAME}"
+
+	if [[ -n ${CHECKS["containerd-user"]} || ${NAME} == "alpine" ]]; then
+		INFO "Testing that 'nerdctl run' binds to 0.0.0.0 by default and is forwarded to the host"
+		if [ "$(uname)" = "Darwin" ]; then
+			# macOS runners seem to use `localhost` as the hostname, so the perl lookup just returns `127.0.0.1`
+			hostip=$(system_profiler SPNetworkDataType -json | jq -r 'first(.SPNetworkDataType[] | select(.ip_address) | .ip_address) | first')
+		else
+			hostip=$(perl -MSocket -MSys::Hostname -E 'say inet_ntoa(scalar gethostbyname(hostname()))')
+		fi
+		if [ -n "${hostip}" ]; then
+			sudo=""
+			if [ "${NAME}" = "alpine" ]; then
+				arch=$(limactl info | jq -r .defaultTemplate.arch)
+				nerdctl=$(limactl info | jq -r ".defaultTemplate.containerd.archives[] | select(.arch==\"$arch\").location")
+				curl -Lso nerdctl-full.tgz "${nerdctl}"
+				limactl shell "$NAME" sudo apk add containerd
+				limactl shell "$NAME" sudo rc-service containerd start
+				limactl shell "$NAME" sudo tar xzf "${PWD}/nerdctl-full.tgz" -C /usr/local
+				rm nerdctl-full.tgz
+				sudo="sudo"
+			fi
+			limactl shell "$NAME" $sudo nerdctl info
+			limactl shell "$NAME" $sudo nerdctl pull --quiet ${nginx_image}
+			limactl shell "$NAME" $sudo nerdctl run -d --name nginx -p 8888:80 ${nginx_image}
+
+			timeout 3m bash -euxc "until curl -f --retry 30 --retry-connrefused http://${hostip}:8888; do sleep 3; done"
+		fi
+	fi
 	set +x
 fi
 

@@ -310,3 +310,10 @@ portForwards:
   # forward: ::             4041 → 127.0.0.1 4041
   # ignore:  127.0.0.1      4043 → 127.0.0.1 4043
   # ignore:  192.168.5.15   4044 → 127.0.0.1 4044
+
+# This rule exist to test `nerdctl run` binding to 0.0.0.0 by default,
+# and making sure it gets forwarded to the external host IP.
+# The actual test code is in test-example.sh in the "port-forwarding" block.
+- guestIPMustBeZero: true
+  guestPort: 8888
+  hostIP: 0.0.0.0

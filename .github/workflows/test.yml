@@ -121,6 +121,9 @@ jobs:
       # QEMU:      required by Lima itself
       # bash:      required by test-example.sh (OS version of bash is too old)
       # coreutils: required by test-example.sh for the "timeout" command
+      # These would need to be added to run the alpine.yaml config on the macOS runner:
+      # curl:      required by test-example.sh to download nerdctl for alpine
+      # jq:        required by test-example.sh to determine download URL for nerdctl
       run: |
         set -x
         # Github runners seem to symlink to python2.7 version of 2to3,
