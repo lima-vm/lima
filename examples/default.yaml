@@ -1,1 +1,327 @@
-../pkg/limayaml/default.yaml
+# ===================================================================== #
+# BASIC CONFIGURATION
+# ===================================================================== #
+
+# Default values are specified by `null` instead of the builtin default value,
+# so they can be overridden by the default.yaml mechanism documented at the
+# end of this file.
+
+# Arch: "default", "x86_64", "aarch64".
+# Default: "default" (corresponds to the host architecture)
+arch: null
+
+# An image must support systemd and cloud-init.
+# Ubuntu and Fedora are known to work.
+# Default: none (must be specified)
+images:
+# Try to use a local image first.
+- location: "~/Downloads/impish-server-cloudimg-amd64.img"
+  arch: "x86_64"
+- location: "~/Downloads/impish-server-cloudimg-arm64.img"
+  arch: "aarch64"
+
+# Download the file from the internet when the local file is missing.
+# Hint: run `limactl prune` to invalidate the "current" cache
+- location: "https://cloud-images.ubuntu.com/impish/current/impish-server-cloudimg-amd64.img"
+  arch: "x86_64"
+- location: "https://cloud-images.ubuntu.com/impish/current/impish-server-cloudimg-arm64.img"
+  arch: "aarch64"
+
+# CPUs: if you see performance issues, try limiting cpus to 1.
+# Default: 4
+cpus: null
+
+# Memory size
+# Default: "4GiB"
+memory: null
+
+# Disk size
+# Default: "100GiB"
+disk: null
+
+# Expose host directories to the guest, the mount point might be accessible from all UIDs in the guest
+# Default: null
+mounts:
+- location: "~"
+  # CAUTION: `writable` SHOULD be false for the home directory.
+  # Setting `writable` to true is possible, but untested and dangerous.
+  # Default: false
+  writable: null
+  sshfs:
+    # Enabling the SSHFS cache will increase performance of the mounted filesystem, at
+    # the cost of potentially not reflecting changes made on the host in a timely manner.
+    # Warning: It looks like PHP filesystem access does not work correctly when
+    # the cache is disabled.
+    # Default: true
+    cache: null
+    # SSHFS has an optional flag called 'follow_symlinks'. This allows mounts
+    # to be properly resolved in the guest os and allow for access to the
+    # contents of the symlink. As a result, symlinked files & folders on the Host
+    # system will look and feel like regular files directories in the Guest OS.
+    # Default: false
+    followSymlinks: null
+- location: "/tmp/lima"
+  writable: true
+  sshfs:
+    followSymlinks: null
+
+ssh:
+  # A localhost port of the host. Forwarded to port 22 of the guest.
+  # Default: 0 (automatically assigned to a free port)
+  localPort: 0
+  # Load ~/.ssh/*.pub in addition to $LIMA_HOME/_config/user.pub .
+  # This option is useful when you want to use other SSH-based
+  # applications such as rsync with the Lima instance.
+  # If you have an insecure key under ~/.ssh, do not use this option.
+  # Default: true
+  loadDotSSHPubKeys: null
+  # Forward ssh agent into the instance.
+  # Default: false
+  forwardAgent: null
+
+# ===================================================================== #
+# ADVANCED CONFIGURATION
+# ===================================================================== #
+
+containerd:
+  # Enable system-wide (aka rootful)  containerd and its dependencies (BuildKit, Stargz Snapshotter)
+  # Default: false
+  system: null
+  # Enable user-scoped (aka rootless) containerd and its dependencies
+  # Default: true
+  user: null
+#  # Override containerd archive
+#  # Default: hard-coded URL with hard-coded digest (see the output of `limactl info | jq .defaultTemplate.containerd.archives`)
+#  archives:
+#  - location: "~/Downloads/nerdctl-full-X.Y.Z-linux-amd64.tar.gz"
+#    arch: "x86_64"
+#    digest: "sha256:..."
+
+# Provisioning scripts need to be idempotent because they might be called
+# multiple times, e.g. when the host VM is being restarted.
+# provision:
+# # `system` is executed with the root privilege
+# - mode: system
+#   script: |
+#     #!/bin/bash
+#     set -eux -o pipefail
+#     export DEBIAN_FRONTEND=noninteractive
+#     apt-get install -y vim
+# # `user` is executed without the root privilege
+# - mode: user
+#   script: |
+#     #!/bin/bash
+#     set -eux -o pipefail
+#     cat <<EOF > ~/.vimrc
+#     set number
+#     EOF
+
+# probes:
+# # Only `readiness` probes are supported right now.
+# - mode: readiness
+#   description: vim to be installed
+#   script: |
+#      #!/bin/bash
+#      set -eux -o pipefail
+#      if ! timeout 30s bash -c "until command -v vim; do sleep 3; done"; then
+#        echo >&2 "vim is not installed yet"
+#        exit 1
+#      fi
+#   hint: |
+#     vim was not installed in the guest. Make sure the package system is working correctly.
+#     Also see "/var/log/cloud-init-output.log" in the guest.
+
+# ===================================================================== #
+# FURTHER ADVANCED CONFIGURATION
+# ===================================================================== #
+
+# Specify desired QEMU CPU type for each arch.
+# You can see what options are available for host emulation with: `qemu-system-$(arch) -cpu help`.
+# Setting of instructions is supported like this: "qemu64,+ssse3".
+cpuType:
+  # Default: "cortex-a72" (or "host" when running on arm64)
+  aarch64: null
+  # Default: "qemu64" (or "host" when running on amd64)
+  x86_64: null
+
+firmware:
+  # Use legacy BIOS instead of UEFI.
+  # Default: false
+  legacyBIOS: null
+
+video:
+  # QEMU display, e.g., "none", "cocoa", "sdl", "gtk".
+  # As of QEMU v5.2, enabling this is known to have negative impact
+  # on performance on macOS hosts: https://gitlab.com/qemu-project/qemu/-/issues/334
+  # Default: "none"
+  display: null
+
+# The instance can get routable IP addresses from the vmnet framework using
+# https://github.com/lima-vm/vde_vmnet.
+networks:
+# Lima can manage daemons for networks defined in $LIMA_HOME/_config/networks.yaml
+# automatically. Both vde_switch and vde_vmnet binaries must be installed into
+# secure locations only alterable by the "root" user.
+# - lima: shared
+#   # MAC address of the instance; lima will pick one based on the instance name,
+#   # so DHCP assigned ip addresses should remain constant over instance restarts.
+#   macAddress: ""
+#   # Interface name, defaults to "lima0", "lima1", etc.
+#   interface: ""
+#
+# Lima can also connect to "unmanaged" vde networks addressed by "vnl". This
+# means that the daemons will not be controlled by Lima, but must be started
+# before the instance.  The interface type (host, shared, or bridged) is
+# configured in vde_vmnet and not in lima.
+# vnl (virtual network locator) points to the vde_switch socket directory,
+# optionally with vde:// prefix
+# - vnl: "vde:///var/run/vde.ctl"
+#   # VDE Switch port number (not TCP/UDP port number). Set to 65535 for PTP mode.
+#   # Default: 0
+#   switchPort: 0
+#   # MAC address of the instance; lima will pick one based on the instance name,
+#   # so DHCP assigned ip addresses should remain constant over instance restarts.
+#   macAddress: ""
+#   # Interface name, defaults to "lima0", "lima1", etc.
+#   interface: ""
+
+# Port forwarding rules. Forwarding between ports 22 and ssh.localPort cannot be overridden.
+# Rules are checked sequentially until the first one matches.
+# portForwards:
+# - guestPort: 443
+#   hostIP: "0.0.0.0" # overrides the default value "127.0.0.1"; allows privileged port forwarding
+# # default: hostPort: 443 (same as guestPort)
+# # default: guestIP: "127.0.0.1" (also matches bind addresses "0.0.0.0", "::", and "::1")
+# # default: proto: "tcp" (only valid value right now)
+#
+# - guestPortRange: [4000, 4999]
+#   hostIP:  "0.0.0.0" # overrides the default value "127.0.0.1"
+# # default: hostPortRange: [4000, 4999] (must specify same number of ports as guestPortRange)
+#
+# - guestPort: 80
+#   hostPort: 8080 # overrides the default value 80
+#
+# - guestIP: "127.0.0.2" # overrides the default value "127.0.0.1"
+#   hostIP: "127.0.0.2" # overrides the default value "127.0.0.1"
+# # default: guestPortRange: [1, 65535]
+# # default: hostPortRange: [1, 65535]
+#
+# - guestPort: 8888
+#   ignore: true (don't forward this port)
+#
+# - guestPort: 7443
+#   guestIP: "0.0.0.0"       # Will match *any* interface
+#   guestIPMustBeZero: true  # Restrict matching to 0.0.0.0 binds only
+#   hostIP: "0.0.0.0"        # Forwards to 0.0.0.0, exposing it externally
+#
+# - guestSocket: "/run/user/{{.UID}}/my.sock"
+#   hostSocket: mysocket
+# # "guestSocket" can include these template variables: {{.Home}}, {{.UID}}, and {{.User}}.
+# # "hostSocket" can include {{.Home}}, {{.Dir}}, {{.Name}}, {{.UID}}, and {{.User}}.
+# # Put sockets into "{{.Dir}}/sock" to avoid collision with Lima internal sockets!
+# # Sockets can also be forwarded to ports and vice versa, but not to/from a range of ports.
+# # Forwarding requires the lima user to have rw access to the "guestsocket",
+# # and the local user rwx access to the directory of the "hostsocket".
+#
+# # Lima internally appends this fallback rule at the end:
+# - guestIP: "127.0.0.1"
+#   guestPortRange: [1, 65535]
+#   hostIP: "127.0.0.1"
+#   hostPortRange: [1, 65535]
+# # Any port still not matched by a rule will not be forwarded (ignored)
+
+# Message. Information to be shown to the user, given as a Go template for the instance.
+# The same template variables as for listing instances can be used, for example {{.Dir}}.
+# You can view the complete list of variables using `limactl list --list-fields` command.
+# It also includes {{.HostOS}} and {{.HostArch}} vars, for the runtime GOOS and GOARCH.
+# message: |
+#   This will be shown to the user.
+
+# Extra environment variables that will be loaded into the VM at start up.
+# These variables are consumed by internal init scripts, and also added
+# to /etc/environment.
+# If you set any of "ftp_proxy", "http_proxy", "https_proxy", or "no_proxy", then
+# Lima will automatically set an uppercase variant to the same value as well.
+# env:
+#   KEY: value
+
+# Lima will override the proxy environment variables with values from the current process
+# environment (the environment in effect when you run `limactl start`). It will automatically
+# replace the strings "localhost" and "127.0.0.1" with the host gateway address from inside
+# the VM, so it stays routable. Use of the process environment can be disabled by setting
+# propagateProxyEnv to false.
+# Default: true
+propagateProxyEnv: null
+
+# The host agent implements a DNS server that looks up host names on the host
+# using the local system resolver. This means changing VPN and network settings
+# are reflected automatically into the guest, including conditional forward,
+# and mDNS lookup. By default only IPv4 addresses will be returned. IPv6 addresses
+# can only work when using a vmnet network interface and the host has working
+# IPv6 configured as well.
+hostResolver:
+  # Default: true
+  enabled: null
+  # Default: false
+  ipv6: null
+  # Static names can be defined here as an alternative to adding them to the hosts /etc/hosts.
+  # Values can be either other hostnames, or IP addresses. The host.lima.internal name is
+  # predefined to specify the gateway address to the host.
+  hosts:
+    # guest.name: 127.1.1.1
+    # host.name: host.lima.internal
+
+# If useHostResolver is false, then the following rules apply for configuring dns:
+# Explicitly set DNS addresses for qemu user-mode networking. By default qemu picks *one*
+# nameserver from the host config and forwards all queries to this server. On macOS
+# Lima adds the nameservers configured for the first host interface in service order,
+# that has an IPv4 address, to the list. In case this still doesn't work (e.g. VPN
+# setups), the servers can be specified here explicitly. If nameservers are specified
+# here, then the configuration from network preferences will be ignored.
+# dns:
+# - 1.1.1.1
+# - 1.0.0.1
+
+# ===================================================================== #
+# GLOBAL DEFAULTS AND OVERRIDES
+# ===================================================================== #
+
+# The builtin defaults can be changed globally by creating a $LIMA_HOME/_config/default.yaml
+# file. It will be used by ALL instances under the same $LIMA_HOME, and it
+# will be applied on each `limactl start`, so can affect instance restarts.
+
+# A similar mechanism is $LIMA_HOME/_config/override.yaml, which will take
+# precedence even over the settings in an instances lima.yaml file.
+# It too applies to ALL instances under the same $LIMA_HOME, and is applied
+# on each restart. It can be used to globally override settings, e.g. make
+# the mount of the home directory writable.
+
+# On each instance start the config settings are determined: If a value is
+# not set in `lima.yaml`, then the `default.yaml` is used. If that file
+# doesn't exist, or the value is not defined in the file, then the builtin
+# default is used. If `override.yaml` exists and defines the value, then
+# it overrides whatever has been chosen so far.
+
+# For slices (e.g. `mounts`, `provision`) and maps (`env`) the entries are
+# combined instead of replacing each other. Slices are produced from override
+# settings, followed by lima.yaml, followed by defaults.yaml (but NOT from
+# builtin defaults). Maps are produced starting with defaults.yaml values,
+# overwriting with lima.yaml ones, overwriting with override.yaml.
+
+# Exceptions:
+# - `dns` will use the list from the highest priority file; they are not
+#   combined. If override.yaml defines a list of `dns` entries, then the
+#   settings in default.yaml and lima.yaml are ignored.
+#
+# - `mounts` will update the `writable` setting when 2 entries have the
+#   same `location` value. For this reason they are processed in the opposite
+#   order: starting with default, followed by lima, and then override.
+#
+# -`networks` will replace lower priority entries with the same `interface`
+#   name with higher priority definitions. This does not apply if the
+#  `interface` field is empty. `networks` are therefore also processed
+#  in lowest to highest priority order.
+
+# ===================================================================== #
+# END OF TEMPLATE
+# ===================================================================== #

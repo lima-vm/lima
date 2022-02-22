@@ -2,7 +2,7 @@
 
 ⭐ = ["Tier 1"](#tier-1)
 
-Default: [`default.yaml`](../pkg/limayaml/default.yaml) (⭐Ubuntu, with containerd/nerdctl)
+Default: [`default.yaml`](./default.yaml) (⭐Ubuntu, with containerd/nerdctl)
 
 Distro:
 - [`almalinux.yaml`](./almalinux.yaml): AlmaLinux

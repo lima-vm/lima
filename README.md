@@ -177,7 +177,7 @@ Especially, the following data might be easily lost:
 
 ### Configuration
 
-See [`./pkg/limayaml/default.yaml`](./pkg/limayaml/default.yaml).
+See [`./examples/default.yaml`](./examples/default.yaml).
 
 The current default spec:
 - OS: Ubuntu 21.10 (Impish Indri)

@@ -23,8 +23,10 @@ binaries: \
 	_output/bin/nerdctl.lima \
 	_output/share/lima/lima-guestagent.Linux-x86_64 \
 	_output/share/lima/lima-guestagent.Linux-aarch64
+	cp -aL examples _output/share/lima
 	mkdir -p _output/share/doc/lima
-	cp -aL README.md LICENSE docs examples _output/share/doc/lima
+	cp -aL README.md LICENSE docs _output/share/doc/lima
+	ln -sf ../../lima/examples _output/share/doc/lima
 	echo $(VERSION) > _output/share/doc/lima/VERSION
 
 .PHONY: _output/bin/lima
@@ -56,7 +58,8 @@ _output/share/lima/lima-guestagent.Linux-aarch64:
 .PHONY: install
 install:
 	mkdir -p "$(DEST)"
-	cp -av _output/* "$(DEST)"
+	# Use tar rather than cp, for better symlink handling
+	( cd _output && tar c * | tar Cxv "$(DEST)" )
 	if [ "$(shell uname -s )" != "Linux" -a ! -e "$(DEST)/bin/nerdctl" ]; then ln -sf nerdctl.lima "$(DEST)/bin/nerdctl"; fi
 
 .PHONY: uninstall

@@ -28,7 +28,11 @@ type Info struct {
 }
 
 func infoAction(cmd *cobra.Command, args []string) error {
-	y, err := limayaml.Load(limayaml.DefaultTemplate, "")
+	b, err := readDefaultTemplate()
+	if err != nil {
+		return err
+	}
+	y, err := limayaml.Load(b, "")
 	if err != nil {
 		return err
 	}

@@ -21,6 +21,7 @@ import (
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/store/filenames"
+	"github.com/lima-vm/lima/pkg/usrlocalsharelima"
 	"github.com/mattn/go-isatty"
 	"github.com/norouter/norouter/cmd/norouter/editorcmd"
 	"github.com/sirupsen/logrus"
@@ -39,6 +40,15 @@ func newStartCommand() *cobra.Command {
 	return startCommand
 }
 
+func readDefaultTemplate() ([]byte, error) {
+	dir, err := usrlocalsharelima.Dir()
+	if err != nil {
+		return nil, err
+	}
+	defaultYAMLPath := filepath.Join(dir, "examples", "default.yaml")
+	return os.ReadFile(defaultYAMLPath)
+}
+
 func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, error) {
 	var arg string
 	if len(args) == 0 {
@@ -47,11 +57,12 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 		arg = args[0]
 	}
 
-	var (
-		instName string
-		yBytes   = limayaml.DefaultTemplate
-		err      error
-	)
+	yBytes, err := readDefaultTemplate()
+	if err != nil {
+		return nil, err
+	}
+
+	var instName string
 
 	const yBytesLimit = 4 * 1024 * 1024 // 4MiB
 
