@@ -30,23 +30,44 @@ import (
 
 func newStartCommand() *cobra.Command {
 	var startCommand = &cobra.Command{
-		Use:               "start NAME|FILE.yaml|URL",
+		Use: "start NAME|FILE.yaml|URL",
+		Example: `
+Create an instance "default" (if not created yet) from the default Ubuntu template, and start it:
+$ limactl start
+
+Create an instance "default" from a template "docker":
+$ limactl start --name=default template://docker
+
+Create an instance "default" from a local file:
+$ limactl start --name=default /usr/local/share/lima/examples/fedora.yaml
+
+Create an instance "default" from a remote URL (use carefully, with a trustable source):
+$ limactl start --name=default https://raw.githubusercontent.com/lima-vm/lima/master/examples/alpine.yaml
+`,
 		Short:             "Start an instance of Lima",
 		Args:              cobra.MaximumNArgs(1),
 		ValidArgsFunction: startBashComplete,
 		RunE:              startAction,
 	}
 	startCommand.Flags().Bool("tty", isatty.IsTerminal(os.Stdout.Fd()), "enable TUI interactions such as opening an editor, defaults to true when stdout is a terminal")
+	startCommand.Flags().String("name", "", "override the instance name")
 	return startCommand
 }
 
-func readDefaultTemplate() ([]byte, error) {
+func readTemplate(name string) ([]byte, error) {
 	dir, err := usrlocalsharelima.Dir()
 	if err != nil {
 		return nil, err
 	}
-	defaultYAMLPath := filepath.Join(dir, "examples", "default.yaml")
+	if strings.Contains(name, string(os.PathSeparator)) {
+		return nil, fmt.Errorf("invalid template name %q", name)
+	}
+	defaultYAMLPath := filepath.Join(dir, "examples", name+".yaml")
 	return os.ReadFile(defaultYAMLPath)
+}
+
+func readDefaultTemplate() ([]byte, error) {
+	return readTemplate("default")
 }
 
 func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, error) {
@@ -61,12 +82,28 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 		st  = &creatorState{}
 		err error
 	)
+	st.instName, err = cmd.Flags().GetString("name")
+	if err != nil {
+		return nil, err
+	}
 	const yBytesLimit = 4 * 1024 * 1024 // 4MiB
 
-	if argSeemsHTTPURL(arg) {
-		st.instName, err = instNameFromURL(arg)
+	if ok, u := argSeemsTemplateURL(arg); ok {
+		templateName := u.Host
+		logrus.Debugf("interpreting argument %q as a template name %q", arg, templateName)
+		if st.instName == "" {
+			st.instName = templateName
+		}
+		st.yBytes, err = readTemplate(templateName)
 		if err != nil {
 			return nil, err
+		}
+	} else if argSeemsHTTPURL(arg) {
+		if st.instName == "" {
+			st.instName, err = instNameFromURL(arg)
+			if err != nil {
+				return nil, err
+			}
 		}
 		logrus.Debugf("interpreting argument %q as a http url for instance %q", arg, st.instName)
 		resp, err := http.Get(arg)
@@ -79,9 +116,11 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 			return nil, err
 		}
 	} else if argSeemsFileURL(arg) {
-		st.instName, err = instNameFromURL(arg)
-		if err != nil {
-			return nil, err
+		if st.instName == "" {
+			st.instName, err = instNameFromURL(arg)
+			if err != nil {
+				return nil, err
+			}
 		}
 		logrus.Debugf("interpreting argument %q as a file url for instance %q", arg, st.instName)
 		r, err := os.Open(strings.TrimPrefix(arg, "file://"))
@@ -94,9 +133,11 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 			return nil, err
 		}
 	} else if argSeemsYAMLPath(arg) {
-		st.instName, err = instNameFromYAMLPath(arg)
-		if err != nil {
-			return nil, err
+		if st.instName == "" {
+			st.instName, err = instNameFromYAMLPath(arg)
+			if err != nil {
+				return nil, err
+			}
 		}
 		logrus.Debugf("interpreting argument %q as a file path for instance %q", arg, st.instName)
 		r, err := os.Open(arg)
@@ -109,10 +150,13 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 			return nil, err
 		}
 	} else {
+		logrus.Debugf("interpreting argument %q as an instance name", arg)
+		if st.instName != "" && st.instName != arg {
+			return nil, fmt.Errorf("instance name %q and CLI flag --name=%q cannot be specified together", arg, st.instName)
+		}
 		st.instName = arg
-		logrus.Debugf("interpreting argument %q as an instance name %q", arg, st.instName)
 		if err := identifiers.Validate(st.instName); err != nil {
-			return nil, fmt.Errorf("argument must be either an instance name or a YAML file path, got %q: %w", st.instName, err)
+			return nil, fmt.Errorf("argument must be either an instance name, a YAML file path, or a URL, got %q: %w", st.instName, err)
 		}
 		if inst, err := store.Inspect(st.instName); err == nil {
 			logrus.Infof("Using the existing instance %q", st.instName)
@@ -120,6 +164,10 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 		} else {
 			if !errors.Is(err, os.ErrNotExist) {
 				return nil, err
+			}
+			if st.instName != DefaultInstanceName {
+				logrus.Infof("Creating an instance %q from template://default (Not from template://%s)", st.instName, st.instName)
+				logrus.Warnf("This form is deprecated. Use `limactl start --name=%s template://default` instead", st.instName)
 			}
 			// Read the default template for creating a new instance
 			st.yBytes, err = readDefaultTemplate()
@@ -402,6 +450,14 @@ func startAction(cmd *cobra.Command, args []string) error {
 	return start.Start(ctx, inst)
 }
 
+func argSeemsTemplateURL(arg string) (bool, *url.URL) {
+	u, err := url.Parse(arg)
+	if err != nil {
+		return false, u
+	}
+	return u.Scheme == "template", u
+}
+
 func argSeemsHTTPURL(arg string) bool {
 	u, err := url.Parse(arg)
 	if err != nil {
@@ -448,8 +504,13 @@ func instNameFromYAMLPath(yamlPath string) (string, error) {
 }
 
 func startBashComplete(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	instances, _ := bashCompleteInstanceNames(cmd)
-	return instances, cobra.ShellCompDirectiveDefault
+	comp, _ := bashCompleteInstanceNames(cmd)
+	if templates, err := listTemplateYAMLs(); err == nil {
+		for _, f := range templates {
+			comp = append(comp, "template://"+f.Name)
+		}
+	}
+	return comp, cobra.ShellCompDirectiveDefault
 }
 
 func readAtMaximum(r io.Reader, n int64) ([]byte, error) {
