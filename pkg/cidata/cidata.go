@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -19,6 +18,7 @@ import (
 	qemu "github.com/lima-vm/lima/pkg/qemu/const"
 	"github.com/lima-vm/lima/pkg/sshutil"
 	"github.com/lima-vm/lima/pkg/store/filenames"
+	"github.com/lima-vm/lima/pkg/usrlocalsharelima"
 	"github.com/sirupsen/logrus"
 )
 
@@ -204,43 +204,10 @@ func GuestAgentBinary(arch string) (io.ReadCloser, error) {
 	if arch == "" {
 		return nil, errors.New("arch must be set")
 	}
-	self, err := os.Executable()
+	dir, err := usrlocalsharelima.Dir()
 	if err != nil {
 		return nil, err
 	}
-	selfSt, err := os.Stat(self)
-	if err != nil {
-		return nil, err
-	}
-	if selfSt.Mode()&fs.ModeSymlink != 0 {
-		self, err = os.Readlink(self)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// self:  /usr/local/bin/limactl
-	selfDir := filepath.Dir(self)
-	selfDirDir := filepath.Dir(selfDir)
-	candidates := []string{
-		// candidate 0:
-		// - self:  /Applications/Lima.app/Contents/MacOS/limactl
-		// - agent: /Applications/Lima.app/Contents/MacOS/lima-guestagent.Linux-x86_64
-		filepath.Join(selfDir, "lima-guestagent.Linux-"+arch),
-		// candidate 1:
-		// - self:  /usr/local/bin/limactl
-		// - agent: /usr/local/share/lima/lima-guestagent.Linux-x86_64
-		filepath.Join(selfDirDir, "share/lima/lima-guestagent.Linux-"+arch),
-		// TODO: support custom path
-	}
-	for _, candidate := range candidates {
-		if f, err := os.Open(candidate); err == nil {
-			return f, nil
-		} else if !errors.Is(err, os.ErrNotExist) {
-			return nil, err
-		}
-	}
-
-	return nil, fmt.Errorf("failed to find \"lima-guestagent.Linux-%s\" binary for %q, attempted %v",
-		arch, self, candidates)
+	gaPath := filepath.Join(dir, "lima-guestagent.Linux-"+arch)
+	return os.Open(gaPath)
 }
