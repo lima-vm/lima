@@ -56,7 +56,7 @@ func editAction(cmd *cobra.Command, args []string) error {
 	hdr += "# and an empty file will abort the edit.\n"
 	hdr += "\n"
 	hdr += generateEditorWarningHeader()
-	yBytes, err := openEditor(cmd, instName, yContent, hdr)
+	yBytes, err := openEditor(instName, yContent, hdr)
 	if err != nil {
 		return err
 	}
