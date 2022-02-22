@@ -370,6 +370,19 @@ To add another IP address that is accessible from the host and other virtual mac
 
 See [`./docs/network.md`](./docs/network.md).
 
+#### Ping shows duplicate packets and massive response times
+
+Lima uses QEMU's SLIRP networking which does not support `ping` out of the box:
+
+```
+$ ping google.com
+PING google.com (172.217.165.14): 56 data bytes
+64 bytes from 172.217.165.14: seq=0 ttl=42 time=2395159.646 ms
+64 bytes from 172.217.165.14: seq=0 ttl=42 time=2396160.798 ms (DUP!)
+```
+
+For more details, see [Documentation/Networking](https://wiki.qemu.org/Documentation/Networking#User_Networking_.28SLIRP.29).
+
 ### External projects
 #### "I am using Rancher Desktop. How to deal with the underlying Lima?"
 
