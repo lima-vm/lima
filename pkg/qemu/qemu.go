@@ -480,6 +480,15 @@ func Cmdline(cfg Config) (string, []string, error) {
 	args = append(args, "-netdev", fmt.Sprintf("user,id=net0,net=%s,dhcpstart=%s,hostfwd=tcp:127.0.0.1:%d-:22",
 		networks.SlirpNetwork, networks.SlirpIPAddress, cfg.SSHLocalPort))
 	args = append(args, "-device", "virtio-net-pci,netdev=net0,mac="+limayaml.MACAddress(cfg.InstanceDir))
+	if y.SocketPort != nil && *y.SocketPort != 0 {
+		port := *y.SocketPort
+		if y.SocketMain != nil && *y.SocketMain == true {
+			args = append(args, "-netdev", fmt.Sprintf("socket,id=net1,listen=127.0.0.1:%d", port))
+		} else {
+			args = append(args, "-netdev", fmt.Sprintf("socket,id=net1,connect=127.0.0.1:%d", port))
+		}
+		args = append(args, "-device", "virtio-net-pci,netdev=net1,mac="+limayaml.MACAddress(cfg.InstanceDir+strconv.Itoa(port)))
+	}
 	for i, nw := range y.Networks {
 		var vdeSock string
 		if nw.Lima != "" {

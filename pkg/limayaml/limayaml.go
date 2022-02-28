@@ -26,6 +26,8 @@ type LimaYAML struct {
 	PortForwards    []PortForward   `yaml:"portForwards,omitempty" json:"portForwards,omitempty"`
 	CopyToHost      []CopyToHost    `yaml:"copyToHost,omitempty" json:"copyToHost,omitempty"`
 	Message         string          `yaml:"message,omitempty" json:"message,omitempty"`
+	SocketPort      *int            `yaml:"socketPort,omitempty" json:"socketPort,omitempty"`
+	SocketMain      *bool           `yaml:"socketMain,omitempty" json:"socketMain,omitempty"`
 	Networks        []Network       `yaml:"networks,omitempty" json:"networks,omitempty"`
 	// `network` was deprecated in Lima v0.7.0, removed in Lima v0.14.0. Use `networks` instead.
 	Env          map[string]string `yaml:"env,omitempty" json:"env,omitempty"`
