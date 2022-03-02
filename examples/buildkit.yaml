@@ -1,0 +1,25 @@
+# Example to use BuildKit
+# $ limactl start ./buildkit.yaml
+
+# To run `buildkit` on the host (assumes buildctl is installed):
+# $ export BUILDKIT_HOST=$(limactl list buildkit --format 'unix://{{.Dir}}/sock/buildkitd.sock')
+# $ buildctl debug workers
+message: |
+ To run `buildkit` on the host (assumes buildctl is installed), run the following commands:
+ -------
+ export BUILDKIT_HOST="unix://{{.Dir}}/sock/buildkitd.sock"
+ buildctl debug workers
+ -------
+images:
+- location: "https://cloud-images.ubuntu.com/impish/current/impish-server-cloudimg-amd64.img"
+  arch: "x86_64"
+- location: "https://cloud-images.ubuntu.com/impish/current/impish-server-cloudimg-arm64.img"
+  arch: "aarch64"
+
+containerd:
+  system: false
+  user: true
+
+portForwards:
+- guestSocket: "/run/user/{{.UID}}/buildkit/buildkitd.sock"
+  hostSocket: "{{.Dir}}/sock/buildkitd.sock"
