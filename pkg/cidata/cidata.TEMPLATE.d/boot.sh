@@ -25,6 +25,9 @@ while read -r line; do
 	[ -n "$line" ] && export "$line"
 done <"${LIMA_CIDATA_MNT}"/etc_environment
 
+PATH="${LIMA_CIDATA_MNT}"/util:"${PATH}"
+export PATH
+
 CODE=0
 
 # Don't make any changes to /etc or /var/lib until boot/05-persistent-data-volume.sh

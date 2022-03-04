@@ -11,9 +11,18 @@ for f in .profile .bashrc; do
 # Lima BEGIN
 # Make sure iptables and mount.fuse3 are available
 PATH="\$PATH:/usr/sbin:/sbin"
-# fuse-overlayfs is the most stable snapshotter for rootless
+export PATH
+EOF
+		if compare_version.sh "$(uname -r)" -lt "5.13"; then
+			cat >>"/home/${LIMA_CIDATA_USER}.linux/$f" <<EOF
+# fuse-overlayfs is the most stable snapshotter for rootless, on kernel < 5.13
+# https://github.com/lima-vm/lima/issues/383
+# https://rootlesscontaine.rs/how-it-works/overlayfs/
 CONTAINERD_SNAPSHOTTER="fuse-overlayfs"
-export PATH CONTAINERD_SNAPSHOTTER
+export CONTAINERD_SNAPSHOTTER
+EOF
+		fi
+		cat >>"/home/${LIMA_CIDATA_USER}.linux/$f" <<EOF
 # Lima END
 EOF
 		chown "${LIMA_CIDATA_USER}" "/home/${LIMA_CIDATA_USER}.linux/$f"
