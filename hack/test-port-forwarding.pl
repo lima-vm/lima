@@ -22,7 +22,9 @@ use Sys::Hostname qw(hostname);
 
 my $instance = shift;
 
-my $ipv4 = inet_ntoa(scalar gethostbyname(hostname())) or die;
+my $addr = scalar gethostbyname(hostname());
+# If hostname address cannot be determines, use localhost to trigger fallback to system_profiler lookup
+my $ipv4 = length $addr ? inet_ntoa($addr) : "127.0.0.1";
 my $ipv6 = ""; # todo
 
 # macOS Github runners seem to use "localhost" as the hostname
