@@ -17,7 +17,7 @@ GO_BUILD := $(GO) build -ldflags="-s -w -X $(PACKAGE)/pkg/version.Version=$(VERS
 all: binaries
 
 .PHONY: binaries
-binaries: \
+binaries: clean \
 	_output/bin/lima \
 	_output/bin/limactl \
 	_output/bin/nerdctl.lima \
@@ -56,7 +56,7 @@ _output/share/lima/lima-guestagent.Linux-aarch64:
 	chmod 644 $@
 
 .PHONY: install
-install:
+install: uninstall
 	mkdir -p "$(DEST)"
 	# Use tar rather than cp, for better symlink handling
 	( cd _output && tar c * | tar Cxv "$(DEST)" )
