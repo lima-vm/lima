@@ -64,7 +64,7 @@ install:
 
 .PHONY: uninstall
 uninstall:
-	@test -f "$(DEST)/bin/lima" || (echo "lima not found in $(DEST) prefix"; exit 1)
+	@test -f "$(DEST)/bin/lima" || echo "lima not found in $(DEST) prefix"
 	rm -rf \
 		"$(DEST)/bin/lima" \
 		"$(DEST)/bin/limactl" \
