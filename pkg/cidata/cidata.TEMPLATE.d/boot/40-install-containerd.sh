@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 set -eux
 
 if [ "${LIMA_CIDATA_CONTAINERD_SYSTEM}" != 1 ] && [ "${LIMA_CIDATA_CONTAINERD_USER}" != 1 ]; then
@@ -8,13 +8,30 @@ fi
 # This script does not work unless systemd is available
 command -v systemctl >/dev/null 2>&1 || exit 0
 
-if [ ! -x /usr/local/bin/nerdctl ]; then
+# Extract bin/nerdctl and compare whether it is newer than the current /usr/local/bin/nerdctl (if already exists).
+# Takes 4-5 seconds. (FIXME: optimize)
+tmp_extract_nerdctl="$(mktemp -d)"
+tar Cxzf "${tmp_extract_nerdctl}" "${LIMA_CIDATA_MNT}"/nerdctl-full.tgz bin/nerdctl
+
+if [ ! -f /usr/local/bin/nerdctl ] || [[ "${tmp_extract_nerdctl}"/bin/nerdctl -nt /usr/local/bin/nerdctl ]]; then
+	if [ -f /usr/local/bin/nerdctl ]; then
+		(
+			set +e
+			echo "Upgrading existing nerdctl"
+			echo "- Old: $(/usr/local/bin/nerdctl --version)"
+			echo "- New: $("${tmp_extract_nerdctl}"/bin/nerdctl --version)"
+			systemctl disable --now containerd buildkit stargz-snapshotter
+			sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "PATH=${PATH}" containerd-rootless-setuptool.sh uninstall
+		)
+	fi
 	tar Cxzf /usr/local "${LIMA_CIDATA_MNT}"/nerdctl-full.tgz
 
 	mkdir -p /etc/bash_completion.d
 	nerdctl completion bash >/etc/bash_completion.d/nerdctl
 	# TODO: enable zsh completion too
 fi
+
+rm -rf "${tmp_extract_nerdctl}"
 
 if [ "${LIMA_CIDATA_CONTAINERD_SYSTEM}" = 1 ]; then
 	mkdir -p /etc/containerd
