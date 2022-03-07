@@ -32,16 +32,19 @@ func newStartCommand() *cobra.Command {
 	var startCommand = &cobra.Command{
 		Use: "start NAME|FILE.yaml|URL",
 		Example: `
-Create an instance "default" (if not created yet) from the default Ubuntu template, and start it:
+To create an instance "default" (if not created yet) from the default Ubuntu template, and start it:
 $ limactl start
 
-Create an instance "default" from a template "docker":
+To create an instance "default" from a template "docker":
 $ limactl start --name=default template://docker
 
-Create an instance "default" from a local file:
+To see the template list:
+$ limactl start --list-templates
+
+To create an instance "default" from a local file:
 $ limactl start --name=default /usr/local/share/lima/examples/fedora.yaml
 
-Create an instance "default" from a remote URL (use carefully, with a trustable source):
+To create an instance "default" from a remote URL (use carefully, with a trustable source):
 $ limactl start --name=default https://raw.githubusercontent.com/lima-vm/lima/master/examples/alpine.yaml
 `,
 		Short:             "Start an instance of Lima",
@@ -51,6 +54,7 @@ $ limactl start --name=default https://raw.githubusercontent.com/lima-vm/lima/ma
 	}
 	startCommand.Flags().Bool("tty", isatty.IsTerminal(os.Stdout.Fd()), "enable TUI interactions such as opening an editor, defaults to true when stdout is a terminal")
 	startCommand.Flags().String("name", "", "override the instance name")
+	startCommand.Flags().Bool("list-templates", false, "list available templates and exit")
 	return startCommand
 }
 
@@ -424,6 +428,18 @@ func openEditor(name string, content []byte, hdr string) ([]byte, error) {
 }
 
 func startAction(cmd *cobra.Command, args []string) error {
+	if listTemplates, err := cmd.Flags().GetBool("list-templates"); err != nil {
+		return err
+	} else if listTemplates {
+		if templates, err := listTemplateYAMLs(); err == nil {
+			w := cmd.OutOrStdout()
+			for _, f := range templates {
+				fmt.Fprintln(w, f.Name)
+			}
+			return nil
+		}
+	}
+
 	inst, err := loadOrCreateInstance(cmd, args)
 	if err != nil {
 		return err

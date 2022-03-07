@@ -147,16 +147,19 @@ Detailed usage:
   `--tty=false` disables the interactive prompt to open an editor.
 
 ```
-Create an instance "default" (if not created yet) from the default Ubuntu template, and start it:
+To create an instance "default" (if not created yet) from the default Ubuntu template, and start it:
 $ limactl start
 
-Create an instance "default" from a template "docker":
+To create an instance "default" from a template "docker":
 $ limactl start --name=default template://docker
 
-Create an instance "default" from a local file:
+To see the template list:
+$ limactl start --list-templates
+
+To create an instance "default" from a local file:
 $ limactl start --name=default /usr/local/share/lima/examples/fedora.yaml
 
-Create an instance "default" from a remote URL (use carefully, with a trustable source):
+To create an instance "default" from a remote URL (use carefully, with a trustable source):
 $ limactl start --name=default https://raw.githubusercontent.com/lima-vm/lima/master/examples/alpine.yaml
 ```
 NOTE: `limactl start template://TEMPLATE` requires Lima v0.9.0 or later.
