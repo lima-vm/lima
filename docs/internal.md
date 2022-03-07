@@ -92,6 +92,7 @@ The directory contains the following files:
 - `nerdctl-full.tgz`: [`nerdctl-full-<VERSION>-linux-<ARCH>.tar.gz`](https://github.com/containerd/nerdctl/releases)
 - `boot.sh`: Boot script
 - `boot/*`: Boot script modules
+- `util/*`: Utility command scripts, executed in the boot script modules
 - `provision.system/*`: Custom provision scripts (system)
 - `provision.user/*`: Custom provision scripts (user)
 - `etc_environment`: Environment variables to be added to `/etc/environment` (also loaded during `boot.sh`)
