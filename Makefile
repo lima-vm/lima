@@ -25,7 +25,7 @@ binaries: clean \
 	_output/share/lima/lima-guestagent.Linux-aarch64
 	cp -aL examples _output/share/lima
 	mkdir -p _output/share/doc/lima
-	cp -aL README.md LICENSE docs _output/share/doc/lima
+	cp -aL *.md LICENSE docs _output/share/doc/lima
 	ln -sf ../../lima/examples _output/share/doc/lima
 	echo $(VERSION) > _output/share/doc/lima/VERSION
 
