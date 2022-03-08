@@ -1,0 +1,99 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+autonumber
+
+actor User
+participant limactl
+participant "lima hostagent"
+participant qemu
+participant "guest os"
+participant "lima guestagent"
+participant nerdctl
+
+== start ==
+
+User -> limactl: start
+activate limactl
+limactl -> "lima hostagent": launch host agent
+activate "lima hostagent"
+deactivate limactl
+"lima hostagent" -> "lima hostagent": find free ports
+"lima hostagent" -> "lima hostagent": generate cloud-init data & CD-ROM image
+"lima hostagent" -> "lima hostagent": generate QEMU command line
+"lima hostagent" -> "lima hostagent": set up port forwarding
+"lima hostagent" -> qemu: start
+activate qemu
+qemu -> "guest os": boot
+activate "guest os"
+"guest os" -> "guest os": run setup commands from CD-ROM
+"guest os" -> "lima guestagent": start
+activate "lima guestagent"
+"lima hostagent" -> "guest os": set up sshfs mounts
+"lima hostagent" -> "guest os": set up socket forwarding with SSH
+loop periodically
+"lima guestagent" -> "guest os": read /proc/net/tcp* and iptables
+end loop
+loop periodically
+"lima hostagent" -> "lima guestagent": connect to guest agent (query info)
+"lima guestagent" -> "lima hostagent": IP/port pairs (from /proc/net/tcp* and iptables)
+"lima hostagent" -> "lima guestagent": subscribe to port add/remove events
+"lima guestagent" -> "lima hostagent": (ongoing) return port add/remove events
+end loop
+"lima hostagent" -> "guest os": query for requirements/boot status/readiness probes
+
+== command execution ==
+
+User -> limactl: shell "command"
+activate limactl
+limactl -> "guest os": ssh "command"
+"guest os" -> limactl: command output
+limactl -> User: command output
+deactivate limactl
+
+== nerdctl run ==
+
+User -> limactl: "nerdctl run"
+activate limactl
+limactl -> "guest os": ssh "nerdctl run"
+"guest os" -> nerdctl: run container
+activate nerdctl
+loop periodically
+"lima guestagent" -> "guest os": read /proc/net/tcp* and iptables
+end loop
+loop periodically
+"lima hostagent" -> "lima guestagent": query events
+"lima guestagent" -> "lima hostagent": return port add/remove events
+"lima hostagent" -> "lima hostagent": set up new port forwarding
+end loop
+nerdctl -> nerdctl: container exits
+nerdctl -> limactl: container output
+deactivate nerdctl
+limactl -> User: container output
+deactivate limactl
+loop periodically
+"lima guestagent" -> "guest os": read /proc/net/tcp* and iptables
+end loop
+loop periodically
+"lima hostagent" -> "lima guestagent": query events
+"lima guestagent" -> "lima hostagent": return port add/remove events
+"lima hostagent" -> "lima hostagent": remove old port forwarding
+end loop
+
+== stop ==
+
+User -> limactl: stop
+activate limactl
+limactl -> "lima hostagent": SIGINT
+"lima hostagent" -> qemu: ACPI shutdown
+qemu -> "guest os": ACPI shutdown
+"guest os" -> "lima guestagent": SIGTERM
+deactivate "lima guestagent"
+deactivate "guest os"
+"lima hostagent" -> "lima hostagent": wait up to 3 minutes for shutdown
+deactivate qemu
+"lima hostagent" -> limactl: emit exit event
+deactivate "lima hostagent"
+limactl -> User: stopped
+deactivate limactl
+@enduml
