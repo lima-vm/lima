@@ -1,0 +1,18 @@
+# Oracle image licence: https://www.oracle.com/downloads/licenses/oracle-linux-license.html
+# Image source: https://yum.oracle.com/oracle-linux-templates.html
+arch: "x86_64"
+
+images:
+- location: "https://yum.oracle.com/templates/OracleLinux/OL8/u5/x86_64/OL8U5_x86_64-olvm-b113.qcow2"
+  arch: "x86_64"
+  digest: "sha256:550db4100b38825d1778f23f8c457f3fc971d96be1326fb512a5e607032b2a24"
+mounts:
+- location: "~"
+- location: "/tmp/lima"
+  writable: true
+firmware:
+  legacyBIOS: true
+cpuType:
+  # Workaround for "vmx_write_mem: mmu_gva_to_gpa XXXXXXXXXXXXXXXX failed" on Intel Mac
+  # https://bugs.launchpad.net/qemu/+bug/1838390
+  x86_64: "Haswell-v4"
