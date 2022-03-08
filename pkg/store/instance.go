@@ -15,6 +15,7 @@ import (
 	"github.com/docker/go-units"
 	hostagentclient "github.com/lima-vm/lima/pkg/hostagent/api/client"
 	"github.com/lima-vm/lima/pkg/limayaml"
+	"github.com/lima-vm/lima/pkg/qemu"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 )
@@ -26,6 +27,7 @@ const (
 	StatusBroken  Status = "Broken"
 	StatusStopped Status = "Stopped"
 	StatusRunning Status = "Running"
+	StatusPaused  Status = "Paused"
 )
 
 type Instance struct {
@@ -122,9 +124,27 @@ func Inspect(instName string) (*Instance, error) {
 		inst.Errors = append(inst.Errors, err)
 	}
 
+	instStatus := StatusUnknown
+	if inst.QemuPID != 0 {
+		qCfg := qemu.Config{
+			Name:        inst.Name,
+			InstanceDir: inst.Dir,
+			LimaYAML:    y,
+		}
+		status, err := qemu.QueryStatus(qCfg)
+		if err == nil {
+			if qemu.IsPaused(status) {
+				instStatus = StatusPaused
+			}
+			if qemu.IsRunning(status) {
+				instStatus = StatusRunning
+			}
+		}
+	}
+
 	if inst.Status == StatusUnknown {
 		if inst.HostAgentPID > 0 && inst.QemuPID > 0 {
-			inst.Status = StatusRunning
+			inst.Status = instStatus
 		} else if inst.HostAgentPID == 0 && inst.QemuPID == 0 {
 			inst.Status = StatusStopped
 		} else if inst.HostAgentPID > 0 && inst.QemuPID == 0 {

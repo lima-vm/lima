@@ -159,6 +159,10 @@ Detailed usage:
 
 - Run `limactl delete [--force] <INSTANCE>` to delete the instance.
 
+- Run `limactl suspend <INSTANCE>` to pause the instance.
+
+- Run `limactl resume <INSTANCE>` to unpause the instance.
+
 - Run `limactl edit <INSTANCE>` to edit the instance.
 
 - To enable bash completion, add `source <(limactl completion bash)` to `~/.bash_profile`.
