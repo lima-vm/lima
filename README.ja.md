@@ -1,4 +1,4 @@
-This is an *unofficial* translation of [`README.md` (revision 4c7376a, 2022-Feb-05)](https://github.com/lima-vm/lima/blob/4c7376a9a7ac54514611a39ea720eb9798bfe973/README.md).
+This is an *unofficial* translation of [`README.md` (revision 616cd115, 2022-Mar-09)](https://github.com/lima-vm/lima/blob/616cd11589b01eb17366419c88db0cfd5c76acb1/README.md).
 
 [[📖**始める**]](#始める)
 [[❓**FAQとトラブルシューティング]**](#FAQとトラブルシューティング)
@@ -25,7 +25,7 @@ LimaはmacOSホストで使用されることを想定していますが、Linux
 
 ✅ [ARMマシン上でのIntel仮想マシン](./docs/multi-arch.md)
 
-✅ 様々なゲストLinuxディストリビューション: [AlmaLinux](./examples/almalinux.yaml), [Alpine](./examples/alpine.yaml),[Arch Linux](./examples/archlinux.yaml), [Debian](./examples/debian.yaml),[Fedora](./examples/fedora.yaml), [openSUSE](./examples/opensuse.yaml),[Rocky](./examples/rocky.yaml), [Ubuntu](./examples/ubuntu.yaml) (デフォルト), ...
+✅ 様々なゲストLinuxディストリビューション: [AlmaLinux](./examples/almalinux.yaml), [Alpine](./examples/alpine.yaml),[Arch Linux](./examples/archlinux.yaml), [Debian](./examples/debian.yaml),[Fedora](./examples/fedora.yaml), [openSUSE](./examples/opensuse.yaml), [Oracle Linux](./examples/oraclelinux.yaml), [Rocky](./examples/rocky.yaml), [Ubuntu](./examples/ubuntu.yaml) (デフォルト), ...
 
 関連するプロジェクト: [sshocker (ファイル共有とポートフォワードがついたSSH)](https://github.com/lima-vm/sshocker)
 
@@ -229,6 +229,9 @@ Limaにはデータの喪失を引き起こすバグが含まれているかも�
   - [`limactl cp`コマンドで"Permission denied"](#limactl-cp%E3%82%B3%E3%83%9E%E3%83%B3%E3%83%89%E3%81%A7permission-denied)
 - [ネットワーク](#%E3%83%8D%E3%83%83%E3%83%88%E3%83%AF%E3%83%BC%E3%82%AF)
   - ["ホストからゲストのIP 192.168.5.15にアクセスできない"](#%E3%83%9B%E3%82%B9%E3%83%88%E3%81%8B%E3%82%89%E3%82%B2%E3%82%B9%E3%83%88%E3%81%AEip-192168515%E3%81%AB%E3%82%A2%E3%82%AF%E3%82%BB%E3%82%B9%E3%81%A7%E3%81%8D%E3%81%AA%E3%81%84)
+  - [Pingのパケットが重複してたり応答が極めて遅かったりする](#ping%E3%81%AE%E3%83%91%E3%82%B1%E3%83%83%E3%83%88%E3%81%8C%E9%87%8D%E8%A4%87%E3%81%97%E3%81%A6%E3%81%9F%E3%82%8A%E5%BF%9C%E7%AD%94%E3%81%8C%E6%A5%B5%E3%82%81%E3%81%A6%E9%81%85%E3%81%8B%E3%81%A3%E3%81%9F%E3%82%8A%E3%81%99%E3%82%8B)
+- [外部プロジェクト](#%E5%A4%96%E9%83%A8%E3%83%97%E3%83%AD%E3%82%B8%E3%82%A7%E3%82%AF%E3%83%88)
+  - ["Rancher Desktopを使っています。内蔵されているLimaを弄るにはどうすればよいですか。"](#rancher-desktop%E3%82%92%E4%BD%BF%E3%81%A3%E3%81%A6%E3%81%84%E3%81%BE%E3%81%99%E5%86%85%E8%94%B5%E3%81%95%E3%82%8C%E3%81%A6%E3%81%84%E3%82%8Blima%E3%82%92%E5%BC%84%E3%82%8B%E3%81%AB%E3%81%AF%E3%81%A9%E3%81%86%E3%81%99%E3%82%8C%E3%81%B0%E3%82%88%E3%81%84%E3%81%A7%E3%81%99%E3%81%8B)
 - ["ほかの問題をデバッグするためのヒントは？"](#%E3%81%BB%E3%81%8B%E3%81%AE%E5%95%8F%E9%A1%8C%E3%82%92%E3%83%87%E3%83%90%E3%83%83%E3%82%B0%E3%81%99%E3%82%8B%E3%81%9F%E3%82%81%E3%81%AE%E3%83%92%E3%83%B3%E3%83%88%E3%81%AF)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
@@ -242,7 +245,7 @@ Limaにはデータの喪失を引き起こすバグが含まれているかも�
 はい。動くでしょう。ただ、ARM Macでの定期的なテストはなされていません(CIがないため)。
 
 #### "Ubuntu以外のゲストを動かすことはできますか？"
-AlmaLinux, Alpine, Arch Linux, Debian, Fedora, openSUSE, Rocky が動くことが知られています。[`./examples/`](./examples/)を見てください。
+AlmaLinux, Alpine, Arch Linux, Debian, Fedora, openSUSE, Oracle Linux, Rocky が動くことが知られています。[`./examples/`](./examples/)を見てください。
 
 イメージは次の要件を満たす必要があります。
 - systemdまたはOpenRC
@@ -263,6 +266,9 @@ AlmaLinux, Alpine, Arch Linux, Debian, Fedora, openSUSE, Rocky が動くこと�
 - [`./examples/docker.yaml`](./examples/docker.yaml): Docker
 - [`./examples/podman.yaml`](./examples/podman.yaml): Podman
 - [`./examples/singularity.yaml`](./examples/singularity.yaml): Singularity
+
+コンテナイメージビルダの例:
+- [`./examples/buildkit.yaml`](./examples/buildkit.yaml): BuildKit
 
 コンテナオーケストレータの例:
 - [`./examples/k3s.yaml`](./examples/k3s.yaml): Kubernetes (k3s)
@@ -358,6 +364,44 @@ QEMUが使うlibslirp v4.6.0 は[壊れている](https://gitlab.freedesktop.org
 ホストや他の仮想マシンからアクセス可能な別のIPアドレスを追加するためには、[`vde_vmnet`](https://github.com/lima-vm/vde_vmnet)を有効にしてください。
 
 [`./docs/network.md`](./docs/network.md)を参照してください。
+
+#### Pingのパケットが重複してたり応答が極めて遅かったりする
+
+LimaはQEMUのSLIRPネットワークを使うので`ping`はそのままでは動きません:
+
+```
+$ ping google.com
+PING google.com (172.217.165.14): 56 data bytes
+64 bytes from 172.217.165.14: seq=0 ttl=42 time=2395159.646 ms
+64 bytes from 172.217.165.14: seq=0 ttl=42 time=2396160.798 ms (DUP!)
+```
+
+詳しくは, [Documentation/Networking](https://wiki.qemu.org/Documentation/Networking#User_Networking_.28SLIRP.29)をご覧ください。
+
+### 外部プロジェクト
+#### "Rancher Desktopを使っています。内蔵されているLimaを弄るにはどうすればよいですか。"
+
+macOSホストでは, Rancher Desktop (v1.0現在)はLimaを以下の設定で起動します:
+
+- `$LIMA_HOME` ディレクトリ: `$HOME/Library/Application Support/rancher-desktop/lima`
+- `limactl` バイナリ: `/Applications/Rancher Desktop.app/Contents/Resources/resources/darwin/lima/bin/limactl`
+- Lima インスタンス名: `0`
+
+シェルを開くには、次のコマンドを実行します:
+
+```shell
+LIMA_HOME="$HOME/Library/Application Support/rancher-desktop/lima" "/Applications/Rancher Desktop.app/Contents/Resources/resources/darwin/lima/bin/limactl" shell 0
+```
+
+Linuxホストでは次のコマンドを試してみてください:
+```shell
+LIMA_HOME="$HOME/.local/share/rancher-desktop/lima" /opt/rancher-desktop/resources/resources/linux/lima/bin/limactl shell 0
+```
+
+Rancher DesktopをAppImageとしてインストールした場合は:
+```shell
+LIMA_HOME="$HOME/.local/share/rancher-desktop/lima" "$(ls -d /tmp/.mount_ranche*/opt/rancher-desktop/resources/resources/linux/lima/bin)/limactl" shell 0
+```
 
 ### "ほかの問題をデバッグするためのヒントは？"
 - ログを調査する:

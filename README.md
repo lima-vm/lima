@@ -1,6 +1,7 @@
+Translations: [日本語(Japanese)](README.ja.md)
+
 [[📖**Getting started**]](#getting-started)
 [[❓**FAQs & Troubleshooting]**](#faqs--troubleshooting)
-[[🇯🇵**日本語README**]](./README.ja.md)
 
 # Lima: Linux virtual machines (on macOS, in most cases)
 
@@ -24,7 +25,7 @@ Lima is expected to be used on macOS hosts, but can be used on Linux hosts as we
 
 ✅ [Intel on ARM](./docs/multi-arch.md)
 
-✅ Various guest Linux distributions: [AlmaLinux](./examples/almalinux.yaml), [Alpine](./examples/alpine.yaml), [Arch Linux](./examples/archlinux.yaml), [Debian](./examples/debian.yaml), [Fedora](./examples/fedora.yaml), [openSUSE](./examples/opensuse.yaml), [Rocky](./examples/rocky.yaml), [Ubuntu](./examples/ubuntu.yaml) (default), ...
+✅ Various guest Linux distributions: [AlmaLinux](./examples/almalinux.yaml), [Alpine](./examples/alpine.yaml), [Arch Linux](./examples/archlinux.yaml), [Debian](./examples/debian.yaml), [Fedora](./examples/fedora.yaml), [openSUSE](./examples/opensuse.yaml), [Oracle Linux](./examples/oraclelinux.yaml), [Rocky](./examples/rocky.yaml), [Ubuntu](./examples/ubuntu.yaml) (default), ...
 
 Related project: [sshocker (ssh with file sharing and port forwarding)](https://github.com/lima-vm/sshocker)
 
@@ -234,6 +235,7 @@ The current default spec:
   - ["permission denied" for `limactl cp` command](#permission-denied-for-limactl-cp-command)
 - [Networking](#networking)
   - ["Cannot access the guest IP 192.168.5.15 from the host"](#cannot-access-the-guest-ip-192168515-from-the-host)
+  - [Ping shows duplicate packets and massive response times](#ping-shows-duplicate-packets-and-massive-response-times)
 - [External projects](#external-projects)
   - ["I am using Rancher Desktop. How to deal with the underlying Lima?"](#i-am-using-rancher-desktop-how-to-deal-with-the-underlying-lima)
 - ["Hints for debugging other problems?"](#hints-for-debugging-other-problems)
@@ -250,7 +252,7 @@ Alternatively, you may also directly ssh into the guest: `ssh -p 60022 -i ~/.lim
 Yes, it should work, but not regularly tested on ARM (due to lack of CI).
 
 #### "Can I run non-Ubuntu guests?"
-AlmaLinux, Alpine, Arch Linux, Debian, Fedora, openSUSE, and Rocky are also known to work.
+AlmaLinux, Alpine, Arch Linux, Debian, Fedora, openSUSE, Oracle Linux, and Rocky are also known to work.
 See [`./examples/`](./examples/).
 
 An image has to satisfy the following requirements:
