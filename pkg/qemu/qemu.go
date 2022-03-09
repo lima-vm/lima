@@ -199,12 +199,7 @@ func Cmdline(cfg Config) (string, []string, error) {
 	// Architecture
 	accel := getAccel(*y.Arch)
 	if !strings.Contains(string(features.AccelHelp), accel) {
-		errStr := fmt.Sprintf("accelerator %q is not supported by %s", accel, exe)
-		if accel == "hvf" && *y.Arch == limayaml.AARCH64 {
-			errStr += " ( Hint: as of August 2021, qemu-system-aarch64 on ARM Mac needs to be patched for enabling hvf accelerator,"
-			errStr += " see https://gist.github.com/nrjdalal/e70249bb5d2e9d844cc203fd11f74c55 )"
-		}
-		return "", nil, errors.New(errStr)
+		return "", nil, fmt.Errorf("accelerator %q is not supported by %s", accel, exe)
 	}
 
 	cpu := y.CPUType[*y.Arch]
