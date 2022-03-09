@@ -2,30 +2,8 @@
 set -eu -o pipefail
 
 scriptdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-cleanup_cmd=""
-trap 'eval ${cleanup_cmd}' EXIT
-function defer {
-	[ -n "${cleanup_cmd}" ] && cleanup_cmd="${cleanup_cmd}; "
-	cleanup_cmd="${cleanup_cmd}$1"
-}
-
-function INFO() {
-	echo "TEST| [INFO] $*"
-}
-
-function WARNING() {
-	echo >&2 "TEST| [WARNING] $*"
-}
-
-function ERROR() {
-	echo >&2 "TEST| [ERROR] $*"
-}
-
-if [[ ${BASH_VERSINFO:-0} -lt 4 ]]; then
-	ERROR "Bash version is too old: ${BASH_VERSION}"
-	exit 1
-fi
+# shellcheck source=common.inc.sh
+source "${scriptdir}/common.inc.sh"
 
 if [ "$#" -ne 1 ]; then
 	ERROR "Usage: $0 FILE.yaml"
@@ -153,19 +131,7 @@ if [[ -n ${CHECKS["systemd"]} ]]; then
 fi
 
 if [[ -n ${CHECKS["mount-home"]} ]]; then
-	hometmp="$HOME/lima-test-tmp"
-	INFO "Testing home access (\"$hometmp\")"
-	rm -rf "$hometmp"
-	mkdir -p "$hometmp"
-	defer "rm -rf \"$hometmp\""
-	echo "random-content-${RANDOM}" >"$hometmp/random"
-	expected="$(cat "$hometmp/random")"
-	got="$(limactl shell "$NAME" cat "$hometmp/random")"
-	INFO "$hometmp/random: expected=${expected}, got=${got}"
-	if [ "$got" != "$expected" ]; then
-		ERROR "Home directory is not shared?"
-		exit 1
-	fi
+	"${scriptdir}"/test-mount-home.sh "$NAME"
 fi
 
 # Use GHCR to avoid hitting Docker Hub rate limit

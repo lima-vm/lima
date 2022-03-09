@@ -140,6 +140,35 @@ jobs:
     # GHA macOS is slow and flaky, so we only test a few YAMLS here.
     # Other yamls are tested on Linux instances of Cirrus.
 
+  upgrade:
+    name: "Upgrade test"
+    runs-on: macos-11
+    timeout-minutes: 120
+    strategy:
+      matrix:
+        oldver: ["v0.8.0"]
+    steps:
+    - uses: actions/setup-go@v2
+      with:
+        go-version: 1.17.x
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    - name: Install test dependencies
+      run: brew install qemu bash coreutils
+    - name: Cache ~/Library/Caches/lima/download
+      uses: actions/cache@v2
+      with:
+        path: ~/Library/Caches/lima/download
+        key: ${{ runner.os }}-upgrade-${{ matrix.oldver }}
+    - name: Test
+      uses: nick-invision/retry@v2
+      with:
+        timeout_minutes: 30
+        retry_on: error
+        max_attempts: 3
+        command: ./hack/test-upgrade.sh ${{ matrix.oldver }} ${{ github.sha }}
+
   artifacts-darwin:
     name: Artifacts Darwin
     runs-on: macos-11
