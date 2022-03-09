@@ -235,6 +235,7 @@ The current default spec:
   - ["permission denied" for `limactl cp` command](#permission-denied-for-limactl-cp-command)
 - [Networking](#networking)
   - ["Cannot access the guest IP 192.168.5.15 from the host"](#cannot-access-the-guest-ip-192168515-from-the-host)
+  - [Ping shows duplicate packets and massive response times](#ping-shows-duplicate-packets-and-massive-response-times)
 - [External projects](#external-projects)
   - ["I am using Rancher Desktop. How to deal with the underlying Lima?"](#i-am-using-rancher-desktop-how-to-deal-with-the-underlying-lima)
 - ["Hints for debugging other problems?"](#hints-for-debugging-other-problems)
