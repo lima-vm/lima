@@ -24,7 +24,7 @@ Lima is expected to be used on macOS hosts, but can be used on Linux hosts as we
 
 ✅ [Intel on ARM](./docs/multi-arch.md)
 
-✅ Various guest Linux distributions: [AlmaLinux](./examples/almalinux.yaml), [Alpine](./examples/alpine.yaml), [Arch Linux](./examples/archlinux.yaml), [Debian](./examples/debian.yaml), [Fedora](./examples/fedora.yaml), [openSUSE](./examples/opensuse.yaml), [Rocky](./examples/rocky.yaml), [Ubuntu](./examples/ubuntu.yaml) (default), ...
+✅ Various guest Linux distributions: [AlmaLinux](./examples/almalinux.yaml), [Alpine](./examples/alpine.yaml), [Arch Linux](./examples/archlinux.yaml), [Debian](./examples/debian.yaml), [Fedora](./examples/fedora.yaml), [openSUSE](./examples/opensuse.yaml), [Oracle Linux](./examples/oraclelinux.yaml), [Rocky](./examples/rocky.yaml), [Ubuntu](./examples/ubuntu.yaml) (default), ...
 
 Related project: [sshocker (ssh with file sharing and port forwarding)](https://github.com/lima-vm/sshocker)
 
@@ -250,7 +250,7 @@ Alternatively, you may also directly ssh into the guest: `ssh -p 60022 -i ~/.lim
 Yes, it should work, but not regularly tested on ARM (due to lack of CI).
 
 #### "Can I run non-Ubuntu guests?"
-AlmaLinux, Alpine, Arch Linux, Debian, Fedora, openSUSE, and Rocky are also known to work.
+AlmaLinux, Alpine, Arch Linux, Debian, Fedora, openSUSE, Oracle Linux, and Rocky are also known to work.
 See [`./examples/`](./examples/).
 
 An image has to satisfy the following requirements:
