@@ -150,6 +150,10 @@ type features struct {
 	// e.g. "Available netdev backend types:\nsocket\nhubport\ntap\nuser\nvde\nbridge\vhost-user\n"
 	// Not machine-readable, but checking strings.Contains() should be fine.
 	NetdevHelp []byte
+	// MachineHelp is the output of `qemu-system-x86_64 -machine help`
+	// e.g. "Supported machines are:\nakita...\n...virt-6.2...\n...virt-7.0...\n...\n"
+	// Not machine-readable, but checking strings.Contains() should be fine.
+	MachineHelp []byte
 }
 
 func inspectFeatures(exe string) (*features, error) {
@@ -181,6 +185,19 @@ func inspectFeatures(exe string) (*features, error) {
 			f.NetdevHelp = stderr.Bytes()
 		}
 	}
+
+	cmd = exec.Command(exe, "-machine", "help")
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		logrus.Warnf("failed to run %v: stdout=%q, stderr=%q", cmd.Args, stdout.String(), stderr.String())
+	} else {
+		f.MachineHelp = stdout.Bytes()
+		if len(f.MachineHelp) == 0 {
+			f.MachineHelp = stderr.Bytes()
+		}
+	}
+
 	return &f, nil
 }
 
@@ -220,7 +237,15 @@ func Cmdline(cfg Config) (string, []string, error) {
 			args = appendArgsIfNoConflict(args, "-machine", "q35,accel="+accel)
 		}
 	case limayaml.AARCH64:
-		args = appendArgsIfNoConflict(args, "-machine", "virt,accel="+accel+",highmem=off")
+		machine := "virt,accel=" + accel
+		// QEMU >= 7.0 requires highmem=off NOT to be set, otherwise fails with "Addressing limited to 32 bits, but memory exceeds it by 1073741824 bytes"
+		// QEMU <  7.0 requires highmem=off to be set, otherwise fails with "VCPU supports less PA bits (36) than requested by the memory map (40)"
+		// https://github.com/lima-vm/lima/issues/680
+		// https://github.com/lima-vm/lima/pull/24
+		if !strings.Contains(string(features.MachineHelp), "virt-7.0") {
+			machine += ",highmem=off"
+		}
+		args = appendArgsIfNoConflict(args, "-machine", machine)
 	}
 
 	// SMP
