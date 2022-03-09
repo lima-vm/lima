@@ -10,14 +10,6 @@ update_fuse_conf() {
 	fi
 }
 
-dnf_install() {
-	if grep -q "Oracle Linux Server release 8" /etc/system-release; then
-		dnf install --repo ol8_baseos_latest --repo ol8_codeready_builder "$@"
-	else
-		dnf install "$@"
-	fi
-}
-
 INSTALL_IPTABLES=0
 if [ "${LIMA_CIDATA_CONTAINERD_SYSTEM}" = 1 ] || [ "${LIMA_CIDATA_CONTAINERD_USER}" = 1 ]; then
 	INSTALL_IPTABLES=1
@@ -28,89 +20,93 @@ fi
 
 # Install minimum dependencies
 if command -v apt-get >/dev/null 2>&1; then
-	DEBIAN_FRONTEND=noninteractive
-	export DEBIAN_FRONTEND
-	apt-get update
-	if [ "${LIMA_CIDATA_MOUNTS}" -gt 0 ]; then
-		if ! command -v sshfs >/dev/null 2>&1; then
-			apt-get install -y sshfs
-		fi
+	pkgs=""
+	if [ "${LIMA_CIDATA_MOUNTS}" -gt 0 ] && ! command -v sshfs >/dev/null 2>&1; then
+		pkgs="${pkgs} sshfs"
 	fi
-	if [ "${INSTALL_IPTABLES}" = 1 ]; then
-		if [ ! -e /usr/sbin/iptables ]; then
-			apt-get install -y iptables
-		fi
+	if [ "${INSTALL_IPTABLES}" = 1 ] && [ ! -e /usr/sbin/iptables ]; then
+		pkgs="${pkgs} iptables"
 	fi
-	if [ "${LIMA_CIDATA_CONTAINERD_USER}" = 1 ]; then
-		if ! command -v newuidmap >/dev/null 2>&1; then
-			apt-get install -y uidmap fuse3 dbus-user-session
-		fi
+	if [ "${LIMA_CIDATA_CONTAINERD_USER}" = 1 ] && ! command -v newuidmap >/dev/null 2>&1; then
+		pkgs="${pkgs} uidmap fuse3 dbus-user-session"
+	fi
+	if [ -n "${pkgs}" ]; then
+		DEBIAN_FRONTEND=noninteractive
+		export DEBIAN_FRONTEND
+		apt-get update
+		# shellcheck disable=SC2086
+		apt-get install -y --no-upgrade --no-install-recommends -q ${pkgs}
 	fi
 elif command -v dnf >/dev/null 2>&1; then
+	pkgs=""
 	if ! command -v tar >/dev/null 2>&1; then
-		dnf_install -y tar
+		pkgs="${pkgs} tar"
 	fi
-	if [ "${LIMA_CIDATA_MOUNTS}" -gt 0 ]; then
-		if ! command -v sshfs >/dev/null 2>&1; then
-			if grep -q "release 8" /etc/system-release && grep -qv "^Oracle" /etc/system-release; then
-				dnf_install --enablerepo powertools -y fuse-sshfs
-			else
-				dnf_install -y fuse-sshfs
-			fi
-		fi
+	if [ "${LIMA_CIDATA_MOUNTS}" -gt 0 ] && ! command -v sshfs >/dev/null 2>&1; then
+		pkgs="${pkgs} fuse-sshfs"
 	fi
-	if [ "${INSTALL_IPTABLES}" = 1 ]; then
-		if [ ! -e /usr/sbin/iptables ]; then
-			dnf_install -y iptables
-		fi
+	if [ "${INSTALL_IPTABLES}" = 1 ] && [ ! -e /usr/sbin/iptables ]; then
+		pkgs="${pkgs} iptables"
 	fi
 	if [ "${LIMA_CIDATA_CONTAINERD_USER}" = 1 ]; then
 		if ! command -v newuidmap >/dev/null 2>&1; then
-			dnf_install -y shadow-utils
+			pkgs="${pkgs} shadow-utils"
 		fi
 		if ! command -v mount.fuse3 >/dev/null 2>&1; then
-			dnf_install -y fuse3
+			pkgs="${pkgs} fuse3"
 		fi
-		if [ ! -e /usr/bin/fusermount ]; then
-			# Workaround for https://github.com/containerd/stargz-snapshotter/issues/340
-			ln -s fusermount3 /usr/bin/fusermount
+	fi
+	if [ -n "${pkgs}" ]; then
+		dnf_install_flags="-y --setopt=install_weak_deps=False"
+		if grep -q "Oracle Linux Server release 8" /etc/system-release; then
+			dnf_install_flags="${dnf_install_flags} --enablerepo ol8_baseos_latest --enablerepo ol8_codeready_builder"
+		elif grep -q "release 8" /etc/system-release; then
+			dnf_install_flags="${dnf_install_flags} --enablerepo powertools"
 		fi
+		# shellcheck disable=SC2086
+		dnf install ${dnf_install_flags} ${pkgs}
+	fi
+	if [ "${LIMA_CIDATA_CONTAINERD_USER}" = 1 ] && [ ! -e /usr/bin/fusermount ]; then
+		# Workaround for https://github.com/containerd/stargz-snapshotter/issues/340
+		ln -s fusermount3 /usr/bin/fusermount
 	fi
 elif command -v pacman >/dev/null 2>&1; then
-	if [ "${LIMA_CIDATA_MOUNTS}" -gt 0 ]; then
-		if ! command -v sshfs >/dev/null 2>&1; then
-			pacman -Sy --noconfirm sshfs
-		fi
+	pkgs=""
+	if [ "${LIMA_CIDATA_MOUNTS}" -gt 0 ] && ! command -v sshfs >/dev/null 2>&1; then
+		pkgs="${pkgs} sshfs"
 	fi
-	# other dependencies are preinstalled on Arch Linux (https://linuximages.de/openstack/arch/)
+	# other dependencies are preinstalled on Arch Linux
+	if [ -n "${pkgs}" ]; then
+		# shellcheck disable=SC2086
+		pacman -Sy --noconfirm ${pkgs}
+	fi
 elif command -v zypper >/dev/null 2>&1; then
-	if [ "${LIMA_CIDATA_MOUNTS}" -gt 0 ]; then
-		if ! command -v sshfs >/dev/null 2>&1; then
-			zypper install -y sshfs
-		fi
+	pkgs=""
+	if [ "${LIMA_CIDATA_MOUNTS}" -gt 0 ] && ! command -v sshfs >/dev/null 2>&1; then
+		pkgs="${pkgs} sshfs"
 	fi
-	if [ "${INSTALL_IPTABLES}" = 1 ]; then
-		if [ ! -e /usr/sbin/iptables ]; then
-			zypper install -y iptables
-		fi
+	if [ "${INSTALL_IPTABLES}" = 1 ] && [ ! -e /usr/sbin/iptables ]; then
+		pkgs="${pkgs} iptables"
 	fi
-	if [ "${LIMA_CIDATA_CONTAINERD_USER}" = 1 ]; then
-		if ! command -v mount.fuse3 >/dev/null 2>&1; then
-			zypper install -y fuse3
-		fi
+	if [ "${LIMA_CIDATA_CONTAINERD_USER}" = 1 ] && ! command -v mount.fuse3 >/dev/null 2>&1; then
+		pkgs="${pkgs} fuse3"
+	fi
+	if [ -n "${pkgs}" ]; then
+		# shellcheck disable=SC2086
+		zypper --non-interactive install -y --no-recommends ${pkgs}
 	fi
 elif command -v apk >/dev/null 2>&1; then
-	if [ "${LIMA_CIDATA_MOUNTS}" -gt 0 ]; then
-		if ! command -v sshfs >/dev/null 2>&1; then
-			apk update
-			apk add sshfs
-		fi
+	pkgs=""
+	if [ "${LIMA_CIDATA_MOUNTS}" -gt 0 ] && ! command -v sshfs >/dev/null 2>&1; then
+		pkgs="${pkgs} sshfs"
 	fi
-	if [ "${INSTALL_IPTABLES}" = 1 ]; then
-		if ! command -v iptables >/dev/null 2>&1; then
-			apk update
-			apk add iptables
-		fi
+	if [ "${INSTALL_IPTABLES}" = 1 ] && ! command -v iptables >/dev/null 2>&1; then
+		pkgs="${pkgs} iptables"
+	fi
+	if [ -n "${pkgs}" ]; then
+		apk update
+		# shellcheck disable=SC2086
+		apk add ${pkgs}
 	fi
 fi
 
