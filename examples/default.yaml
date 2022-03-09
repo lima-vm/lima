@@ -2,17 +2,16 @@
 # BASIC CONFIGURATION
 # ===================================================================== #
 
-# Default values are specified by `null` instead of the builtin default value,
-# so they can be overridden by the default.yaml mechanism documented at the
-# end of this file.
+# Default values in this YAML file are specified by `null` instead of Lima's "builtin default" values,
+# so they can be overridden by the $LIMA_HOME/_config/default.yaml mechanism documented at the end of this file.
 
 # Arch: "default", "x86_64", "aarch64".
-# Default: "default" (corresponds to the host architecture)
+# 🟢 Builtin default: "default" (corresponds to the host architecture)
 arch: null
 
-# An image must support systemd and cloud-init.
-# Ubuntu and Fedora are known to work.
-# Default: none (must be specified)
+# OpenStack-compatible disk image.
+# 🟢 Builtin default: null (must be specified)
+# 🔵 This file: Ubuntu 21.10 Impish Indri images
 images:
 # Try to use a local image first.
 - location: "~/Downloads/impish-server-cloudimg-amd64.img"
@@ -28,55 +27,58 @@ images:
   arch: "aarch64"
 
 # CPUs: if you see performance issues, try limiting cpus to 1.
-# Default: 4
+# 🟢 Builtin default: 4
 cpus: null
 
 # Memory size
-# Default: "4GiB"
+# 🟢 Builtin default: "4GiB"
 memory: null
 
 # Disk size
-# Default: "100GiB"
+# 🟢 Builtin default: "100GiB"
 disk: null
 
 # Expose host directories to the guest, the mount point might be accessible from all UIDs in the guest
-# Default: null
+# 🟢 Builtin default: null (Mount nothing)
+# 🔵 This file: Mount the home as read-only, /tmp/lima as writable
 mounts:
 - location: "~"
   # CAUTION: `writable` SHOULD be false for the home directory.
   # Setting `writable` to true is possible, but untested and dangerous.
-  # Default: false
+  # 🟢 Builtin default: false
   writable: null
   sshfs:
     # Enabling the SSHFS cache will increase performance of the mounted filesystem, at
     # the cost of potentially not reflecting changes made on the host in a timely manner.
     # Warning: It looks like PHP filesystem access does not work correctly when
     # the cache is disabled.
-    # Default: true
+    # 🟢 Builtin default: true
     cache: null
     # SSHFS has an optional flag called 'follow_symlinks'. This allows mounts
     # to be properly resolved in the guest os and allow for access to the
     # contents of the symlink. As a result, symlinked files & folders on the Host
     # system will look and feel like regular files directories in the Guest OS.
-    # Default: false
+    # 🟢 Builtin default: false
     followSymlinks: null
 - location: "/tmp/lima"
+  # 🟢 Builtin default: false
+  # 🔵 This file: true (only for "/tmp/lima")
   writable: true
-  sshfs:
-    followSymlinks: null
 
 ssh:
   # A localhost port of the host. Forwarded to port 22 of the guest.
-  # Default: 0 (automatically assigned to a free port)
+  # 🟢 Builtin default: 0 (automatically assigned to a free port)
+  # NOTE: when the instance name is "default", the builtin default value is set to
+  # 60022 for backward compatibility.
   localPort: 0
   # Load ~/.ssh/*.pub in addition to $LIMA_HOME/_config/user.pub .
   # This option is useful when you want to use other SSH-based
   # applications such as rsync with the Lima instance.
   # If you have an insecure key under ~/.ssh, do not use this option.
-  # Default: true
+  # 🟢 Builtin default: true
   loadDotSSHPubKeys: null
   # Forward ssh agent into the instance.
-  # Default: false
+  # 🟢 Builtin default: false
   forwardAgent: null
 
 # ===================================================================== #
@@ -85,13 +87,13 @@ ssh:
 
 containerd:
   # Enable system-wide (aka rootful)  containerd and its dependencies (BuildKit, Stargz Snapshotter)
-  # Default: false
+  # 🟢 Builtin default: false
   system: null
   # Enable user-scoped (aka rootless) containerd and its dependencies
-  # Default: true
+  # 🟢 Builtin default: true
   user: null
 #  # Override containerd archive
-#  # Default: hard-coded URL with hard-coded digest (see the output of `limactl info | jq .defaultTemplate.containerd.archives`)
+#  # 🟢 Builtin default: hard-coded URL with hard-coded digest (see the output of `limactl info | jq .defaultTemplate.containerd.archives`)
 #  archives:
 #  - location: "~/Downloads/nerdctl-full-X.Y.Z-linux-amd64.tar.gz"
 #    arch: "x86_64"
@@ -99,6 +101,7 @@ containerd:
 
 # Provisioning scripts need to be idempotent because they might be called
 # multiple times, e.g. when the host VM is being restarted.
+# 🟢 Builtin default: null
 # provision:
 # # `system` is executed with the root privilege
 # - mode: system
@@ -116,6 +119,8 @@ containerd:
 #     set number
 #     EOF
 
+# Probe scripts to check readiness.
+# 🟢 Builtin default: null
 # probes:
 # # Only `readiness` probes are supported right now.
 # - mode: readiness
@@ -139,25 +144,26 @@ containerd:
 # You can see what options are available for host emulation with: `qemu-system-$(arch) -cpu help`.
 # Setting of instructions is supported like this: "qemu64,+ssse3".
 cpuType:
-  # Default: "cortex-a72" (or "host" when running on arm64)
+  # 🟢 Builtin default: "cortex-a72" (or "host" when running on aarch64 host)
   aarch64: null
-  # Default: "qemu64" (or "host" when running on amd64)
+  # 🟢 Builtin default: "qemu64" (or "host" when running on x86_64 host)
   x86_64: null
 
 firmware:
-  # Use legacy BIOS instead of UEFI.
-  # Default: false
+  # Use legacy BIOS instead of UEFI. Ignored for aarch64.
+  # 🟢 Builtin default: false
   legacyBIOS: null
 
 video:
   # QEMU display, e.g., "none", "cocoa", "sdl", "gtk".
-  # As of QEMU v5.2, enabling this is known to have negative impact
+  # As of QEMU v6.2, enabling this is known to have negative impact
   # on performance on macOS hosts: https://gitlab.com/qemu-project/qemu/-/issues/334
-  # Default: "none"
+  # 🟢 Builtin default: "none"
   display: null
 
 # The instance can get routable IP addresses from the vmnet framework using
 # https://github.com/lima-vm/vde_vmnet.
+# 🟢 Builtin default: null
 networks:
 # Lima can manage daemons for networks defined in $LIMA_HOME/_config/networks.yaml
 # automatically. Both vde_switch and vde_vmnet binaries must be installed into
@@ -177,7 +183,7 @@ networks:
 # optionally with vde:// prefix
 # - vnl: "vde:///var/run/vde.ctl"
 #   # VDE Switch port number (not TCP/UDP port number). Set to 65535 for PTP mode.
-#   # Default: 0
+#   # Builtin default: 0
 #   switchPort: 0
 #   # MAC address of the instance; lima will pick one based on the instance name,
 #   # so DHCP assigned ip addresses should remain constant over instance restarts.
@@ -234,6 +240,7 @@ networks:
 # The same template variables as for listing instances can be used, for example {{.Dir}}.
 # You can view the complete list of variables using `limactl list --list-fields` command.
 # It also includes {{.HostOS}} and {{.HostArch}} vars, for the runtime GOOS and GOARCH.
+# 🟢 Builtin default: null
 # message: |
 #   This will be shown to the user.
 
@@ -242,6 +249,7 @@ networks:
 # to /etc/environment.
 # If you set any of "ftp_proxy", "http_proxy", "https_proxy", or "no_proxy", then
 # Lima will automatically set an uppercase variant to the same value as well.
+# 🟢 Builtin default: null
 # env:
 #   KEY: value
 
@@ -250,7 +258,7 @@ networks:
 # replace the strings "localhost" and "127.0.0.1" with the host gateway address from inside
 # the VM, so it stays routable. Use of the process environment can be disabled by setting
 # propagateProxyEnv to false.
-# Default: true
+# 🟢 Builtn default: true
 propagateProxyEnv: null
 
 # The host agent implements a DNS server that looks up host names on the host
@@ -260,13 +268,14 @@ propagateProxyEnv: null
 # can only work when using a vmnet network interface and the host has working
 # IPv6 configured as well.
 hostResolver:
-  # Default: true
+  # 🟢 Builtin default: true
   enabled: null
-  # Default: false
+  # 🟢 Builtin default: false
   ipv6: null
   # Static names can be defined here as an alternative to adding them to the hosts /etc/hosts.
   # Values can be either other hostnames, or IP addresses. The host.lima.internal name is
   # predefined to specify the gateway address to the host.
+  # 🟢 Builtin default: null
   hosts:
     # guest.name: 127.1.1.1
     # host.name: host.lima.internal
@@ -278,6 +287,7 @@ hostResolver:
 # that has an IPv4 address, to the list. In case this still doesn't work (e.g. VPN
 # setups), the servers can be specified here explicitly. If nameservers are specified
 # here, then the configuration from network preferences will be ignored.
+# 🟢 Builtin default: null
 # dns:
 # - 1.1.1.1
 # - 1.0.0.1
