@@ -11,6 +11,7 @@ Distro:
 - [`debian.yaml`](./debian.yaml): ⭐Debian GNU/Linux
 - [`fedora.yaml`](./fedora.yaml): ⭐Fedora
 - [`opensuse.yaml`](./opensuse.yaml): ⭐openSUSE Leap
+- [`oraclelinux.yaml`](./oraclelinux.yaml): Oracle Linux
 - [`rocky.yaml`](./rocky.yaml): Rocky Linux
 - [`ubuntu.yaml`](./ubuntu.yaml): Ubuntu (same as `default.yaml` but without extra YAML lines)
 - [`ubuntu-lts.yaml`](./ubuntu-lts.yaml): Ubuntu LTS (same as `ubuntu.yaml` but pinned to an LTS version)

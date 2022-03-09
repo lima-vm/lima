@@ -10,6 +10,14 @@ update_fuse_conf() {
 	fi
 }
 
+dnf_install() {
+	if grep -q "Oracle Linux Server release 8" /etc/system-release; then
+		dnf install --repo ol8_baseos_latest --repo ol8_codeready_builder "$@"
+	else
+		dnf install "$@"
+	fi
+}
+
 INSTALL_IPTABLES=0
 if [ "${LIMA_CIDATA_CONTAINERD_SYSTEM}" = 1 ] || [ "${LIMA_CIDATA_CONTAINERD_USER}" = 1 ]; then
 	INSTALL_IPTABLES=1
@@ -39,26 +47,29 @@ if command -v apt-get >/dev/null 2>&1; then
 		fi
 	fi
 elif command -v dnf >/dev/null 2>&1; then
+	if ! command -v tar >/dev/null 2>&1; then
+		dnf_install -y tar
+	fi
 	if [ "${LIMA_CIDATA_MOUNTS}" -gt 0 ]; then
 		if ! command -v sshfs >/dev/null 2>&1; then
-			if grep -q "release 8" /etc/system-release; then
-				dnf install --enablerepo powertools -y fuse-sshfs
+			if grep -q "release 8" /etc/system-release && grep -qv "^Oracle" /etc/system-release; then
+				dnf_install --enablerepo powertools -y fuse-sshfs
 			else
-				dnf install -y fuse-sshfs
+				dnf_install -y fuse-sshfs
 			fi
 		fi
 	fi
 	if [ "${INSTALL_IPTABLES}" = 1 ]; then
 		if [ ! -e /usr/sbin/iptables ]; then
-			dnf install -y iptables
+			dnf_install -y iptables
 		fi
 	fi
 	if [ "${LIMA_CIDATA_CONTAINERD_USER}" = 1 ]; then
 		if ! command -v newuidmap >/dev/null 2>&1; then
-			dnf install -y shadow-utils
+			dnf_install -y shadow-utils
 		fi
 		if ! command -v mount.fuse3 >/dev/null 2>&1; then
-			dnf install -y fuse3
+			dnf_install -y fuse3
 		fi
 		if [ ! -e /usr/bin/fusermount ]; then
 			# Workaround for https://github.com/containerd/stargz-snapshotter/issues/340
