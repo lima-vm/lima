@@ -140,46 +140,73 @@ INFO[0029] READY. Run `lima` to open the shell.
 Linux
 ```
 
-Detailed usage:
+### Command reference
 
-- Run `limactl start <INSTANCE> [--tty=false]` to start the Linux instance.
-  The default instance name is "default".
-  Wait until "READY" to be printed on the host terminal.
-  `--tty=false` disables the interactive prompt to open an editor.
+#### `limactl start`
+`limactl start [--name=NAME] [--tty=false] <template://TEMPLATE>`: start the Linux instance
 
-```
-To create an instance "default" (if not created yet) from the default Ubuntu template, and start it:
+```console
 $ limactl start
+? Creating an instance "default"  [Use arrows to move, type to filter]
+> Proceed with the current configuration
+  Open an editor to review or modify the current configuration
+  Choose another example (docker, podman, archlinux, fedora, ...)
+  Exit
+...
+INFO[0029] READY. Run `lima` to open the shell.
+```
 
+Choose `Proceed with the current configuration`, and wait until "READY" to be printed on the host terminal.
+For automation,  `--tty=false` flag can be used for disabling the interactive user interface.
+
+##### Advanced usage
 To create an instance "default" from a template "docker":
+```console
 $ limactl start --name=default template://docker
+```
+
+> NOTE: `limactl start template://TEMPLATE` requires Lima v0.9.0 or later.
+> Older releases require `limactl start /usr/local/share/doc/lima/examples/TEMPLATE.yaml` instead.
 
 To see the template list:
+```console
 $ limactl start --list-templates
+```
 
 To create an instance "default" from a local file:
+```console
 $ limactl start --name=default /usr/local/share/lima/examples/fedora.yaml
+```
 
 To create an instance "default" from a remote URL (use carefully, with a trustable source):
+```console
 $ limactl start --name=default https://raw.githubusercontent.com/lima-vm/lima/master/examples/alpine.yaml
 ```
-NOTE: `limactl start template://TEMPLATE` requires Lima v0.9.0 or later.
-Older releases require `limactl start /usr/local/share/doc/lima/examples/TEMPLATE.yaml` instead.
 
-- Run `limactl shell <INSTANCE> <COMMAND>` to launch `<COMMAND>` on Linux.
-  For the "default" instance, this command can be shortened as `lima <COMMAND>`.
-  The `lima` command also accepts the instance name as the environment variable `$LIMA_INSTANCE`.
+#### `limactl shell`
+`limactl shell <INSTANCE> <COMMAND>`: launch `<COMMAND>` on Linux.
 
-- Run `limactl copy <SOURCE> ... <TARGET>` to copy files between instances, or between instances and the host. Use `<INSTANCE>:<FILENAME>` to specify a source or target inside an instance.
+For the "default" instance, this command can be shortened as `lima <COMMAND>`.
+The `lima` command also accepts the instance name as the environment variable `$LIMA_INSTANCE`.
 
-- Run `limactl list [--json]` to show the instances.
+#### `limactl copy`
+`limactl copy <SOURCE> ... <TARGET>`: copy files between instances, or between instances and the host
 
-- Run `limactl stop [--force] <INSTANCE>` to stop the instance.
+Use `<INSTANCE>:<FILENAME>` to specify a source or target inside an instance.
 
-- Run `limactl delete [--force] <INSTANCE>` to delete the instance.
+#### `limactl list`
+`limactl list [--json]`: show the instances
 
-- Run `limactl edit <INSTANCE>` to edit the instance.
+#### `limactl stop`
+`limactl stop [--force] <INSTANCE>`: stop the instance
 
+#### `limactl delete`
+`limactl delete [--force] <INSTANCE>`: delete the instance
+
+#### `limactl edit`
+`limactl edit <INSTANCE>`: edit the instance
+
+#### `limactl completion`
 - To enable bash completion, add `source <(limactl completion bash)` to `~/.bash_profile`.
 
 - To enable zsh completion, see `limactl completion zsh --help`
