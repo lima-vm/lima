@@ -144,9 +144,27 @@ Detailed usage:
 
 - Run `limactl start <INSTANCE> [--tty=false]` to start the Linux instance.
   The default instance name is "default".
-  Lima automatically opens an editor (`vi`) for reviewing and modifying the configuration.
   Wait until "READY" to be printed on the host terminal.
   `--tty=false` disables the interactive prompt to open an editor.
+
+```
+To create an instance "default" (if not created yet) from the default Ubuntu template, and start it:
+$ limactl start
+
+To create an instance "default" from a template "docker":
+$ limactl start --name=default template://docker
+
+To see the template list:
+$ limactl start --list-templates
+
+To create an instance "default" from a local file:
+$ limactl start --name=default /usr/local/share/lima/examples/fedora.yaml
+
+To create an instance "default" from a remote URL (use carefully, with a trustable source):
+$ limactl start --name=default https://raw.githubusercontent.com/lima-vm/lima/master/examples/alpine.yaml
+```
+NOTE: `limactl start template://TEMPLATE` requires Lima v0.9.0 or later.
+Older releases require `limactl start /usr/local/share/doc/lima/examples/TEMPLATE.yaml` instead.
 
 - Run `limactl shell <INSTANCE> <COMMAND>` to launch `<COMMAND>` on Linux.
   For the "default" instance, this command can be shortened as `lima <COMMAND>`.
@@ -178,7 +196,7 @@ Especially, the following data might be easily lost:
 
 ### Configuration
 
-See [`./pkg/limayaml/default.yaml`](./pkg/limayaml/default.yaml).
+See [`./examples/default.yaml`](./examples/default.yaml).
 
 The current default spec:
 - OS: Ubuntu 21.10 (Impish Indri)

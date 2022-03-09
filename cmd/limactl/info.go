@@ -20,21 +20,35 @@ func newInfoCommand() *cobra.Command {
 	return infoCommand
 }
 
+type TemplateYAML struct {
+	Name     string `json:"name"`
+	Location string `json:"location"`
+}
+
 type Info struct {
 	Version         string             `json:"version"`
+	Templates       []TemplateYAML     `json:"templates"`
 	DefaultTemplate *limayaml.LimaYAML `json:"defaultTemplate"`
 	LimaHome        string             `json:"limaHome"`
 	// TODO: add diagnostic info of QEMU
 }
 
 func infoAction(cmd *cobra.Command, args []string) error {
-	y, err := limayaml.Load(limayaml.DefaultTemplate, "")
+	b, err := readDefaultTemplate()
+	if err != nil {
+		return err
+	}
+	y, err := limayaml.Load(b, "")
 	if err != nil {
 		return err
 	}
 	info := &Info{
 		Version:         version.Version,
 		DefaultTemplate: y,
+	}
+	info.Templates, err = listTemplateYAMLs()
+	if err != nil {
+		return err
 	}
 	info.LimaHome, err = dirnames.LimaDir()
 	if err != nil {

@@ -17,14 +17,16 @@ GO_BUILD := $(GO) build -ldflags="-s -w -X $(PACKAGE)/pkg/version.Version=$(VERS
 all: binaries
 
 .PHONY: binaries
-binaries: \
+binaries: clean \
 	_output/bin/lima \
 	_output/bin/limactl \
 	_output/bin/nerdctl.lima \
 	_output/share/lima/lima-guestagent.Linux-x86_64 \
 	_output/share/lima/lima-guestagent.Linux-aarch64
+	cp -aL examples _output/share/lima
 	mkdir -p _output/share/doc/lima
-	cp -aL README.md LICENSE docs examples _output/share/doc/lima
+	cp -aL *.md LICENSE docs _output/share/doc/lima
+	ln -sf ../../lima/examples _output/share/doc/lima
 	echo $(VERSION) > _output/share/doc/lima/VERSION
 
 .PHONY: _output/bin/lima
@@ -54,14 +56,15 @@ _output/share/lima/lima-guestagent.Linux-aarch64:
 	chmod 644 $@
 
 .PHONY: install
-install:
+install: uninstall
 	mkdir -p "$(DEST)"
-	cp -av _output/* "$(DEST)"
+	# Use tar rather than cp, for better symlink handling
+	( cd _output && tar c * | tar Cxv "$(DEST)" )
 	if [ "$(shell uname -s )" != "Linux" -a ! -e "$(DEST)/bin/nerdctl" ]; then ln -sf nerdctl.lima "$(DEST)/bin/nerdctl"; fi
 
 .PHONY: uninstall
 uninstall:
-	@test -f "$(DEST)/bin/lima" || (echo "lima not found in $(DEST) prefix"; exit 1)
+	@test -f "$(DEST)/bin/lima" || echo "lima not found in $(DEST) prefix"
 	rm -rf \
 		"$(DEST)/bin/lima" \
 		"$(DEST)/bin/limactl" \
