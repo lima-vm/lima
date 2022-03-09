@@ -1,3 +1,4 @@
+# This example requires Lima v0.9.0 or later.
 # Oracle image licence: https://www.oracle.com/downloads/licenses/oracle-linux-license.html
 # Image source: https://yum.oracle.com/oracle-linux-templates.html
 arch: "x86_64"
