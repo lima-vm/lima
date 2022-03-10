@@ -8,84 +8,38 @@ on:
   pull_request:
 
 jobs:
-  golangci-lint:
+  basic:
+    name: "Lints & Unit tests"
     runs-on: ubuntu-20.04
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
+    - uses: actions/setup-go@v2
+      with:
+        go-version: 1.17.x
     - uses: actions/checkout@v2
       with:
         fetch-depth: 1
-    - name: golangci-lint
+    - name: Run golangci-lint
       uses: golangci/golangci-lint-action@v2
       with:
         version: v1.42.1
         args: --verbose
-
-  yamllint:
-    runs-on: ubuntu-20.04
-    timeout-minutes: 20
-    steps:
-    - uses: actions/checkout@v2
-      with:
-        fetch-depth: 1
     - name: Run yamllint
       run: yamllint .
-
-  shellcheck:
-    runs-on: ubuntu-20.04
-    timeout-minutes: 20
-    steps:
-    - uses: actions/checkout@v2
-      with:
-        fetch-depth: 1
     - name: Install shellcheck
       run: |
         sudo apt-get update
         sudo apt-get install -y shellcheck
     - name: Run shellcheck
       run: find . -name '*.sh' | xargs shellcheck
-
-  shfmt:
-    runs-on: ubuntu-20.04
-    timeout-minutes: 20
-    steps:
-    - uses: actions/setup-go@v2
-      with:
-        go-version: 1.17.x
-    - uses: actions/checkout@v2
-      with:
-        fetch-depth: 1
     - name: Install shfmt
       run: GO111MODULE=on go get mvdan.cc/sh/v3/cmd/shfmt
     - name: Run shfmt
       run: find . -name '*.sh' | xargs shfmt -s -d
-
-  check-hyperlinks:
-    name: Check links in README.md
-    runs-on: ubuntu-20.04
-    timeout-minutes: 20
-    steps:
-    - uses: actions/checkout@v2
-      with:
-        fetch-depth: 1
-    - uses: docker://dkhamsing/awesome_bot:latest
+    - name: Check hyperlinks
+      uses: docker://dkhamsing/awesome_bot:latest
       with:
         args: /github/workspace/README.md --allow-dupe --allow-redirect --request-delay 1 --white-list https://img.shields.io,http://127.0.0.1:8080,https://github.com/lima-vm/lima/releases/download
-
-  basic:
-    name: Basic tests
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [macos-11, ubuntu-20.04]
-    timeout-minutes: 20
-    steps:
-    - uses: actions/setup-go@v2
-      with:
-        go-version: 1.17.x
-    - uses: actions/checkout@v2
-      with:
-        fetch-depth: 1
     - name: Unit tests
       run: go test -v ./...
     - name: Make
@@ -101,11 +55,6 @@ jobs:
     name: Integration tests
     runs-on: macos-11
     timeout-minutes: 120
-    strategy:
-      matrix:
-        # GHA macOS is slow and flaky, so we only test a few YAMLS here.
-        # Other yamls are tested on Linux instances of Cirrus.
-        example: [default.yaml, alpine.yaml, vmnet.yaml]
     steps:
     - uses: actions/setup-go@v2
       with:
@@ -113,6 +62,8 @@ jobs:
     - uses: actions/checkout@v2
       with:
         fetch-depth: 1
+    - name: Unit tests
+      run: go test -v ./...
     - name: Make
       run: make
     - name: Install
@@ -132,7 +83,6 @@ jobs:
         time brew install qemu bash coreutils curl jq
         time brew upgrade
     - name: Install vde_switch and vde_vmnet
-      if: matrix.example == 'vmnet.yaml'
       env:
         # 2021-12-12
         VDE2_VERSION: 74278b9b7cf816f0356181f387012fdeb6d65b52
@@ -161,26 +111,34 @@ jobs:
         (
           limactl sudoers | sudo tee /etc/sudoers.d/lima
         )
-    - name: Prepare ssh
-      run: |
-        if [ -e ~/.ssh/id_rsa ]; then
-          echo "~/.ssh/id_rsa already exists"
-        else
-          echo "Generating ~/.ssh/id_rsa"
-          ssh-keygen -b 2048 -t rsa -f ~/.ssh/id_rsa -q -N ""
-        fi
     - name: Cache ~/Library/Caches/lima/download
       uses: actions/cache@v2
       with:
         path: ~/Library/Caches/lima/download
-        key: ${{ runner.os }}-examples/${{ matrix.example }}
-    - name: Test
+        key: ${{ runner.os }}-integration
+    - name: "Test default.yaml"
       uses: nick-invision/retry@v2
       with:
         timeout_minutes: 30
         retry_on: error
         max_attempts: 3
-        command: ./hack/test-example.sh examples/${{ matrix.example }}
+        command: ./hack/test-example.sh examples/default.yaml
+    - name: "Test alpine.yaml"
+      uses: nick-invision/retry@v2
+      with:
+        timeout_minutes: 30
+        retry_on: error
+        max_attempts: 3
+        command: ./hack/test-example.sh examples/alpine.yaml
+    - name: "Test vmnet.yaml"
+      uses: nick-invision/retry@v2
+      with:
+        timeout_minutes: 30
+        retry_on: error
+        max_attempts: 3
+        command: ./hack/test-example.sh examples/vmnet.yaml
+    # GHA macOS is slow and flaky, so we only test a few YAMLS here.
+    # Other yamls are tested on Linux instances of Cirrus.
 
   artifacts-darwin:
     name: Artifacts Darwin
