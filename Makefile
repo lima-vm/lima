@@ -3,8 +3,8 @@ PREFIX ?= /usr/local
 DEST := $(shell echo "$(DESTDIR)/$(PREFIX)" | sed 's:///*:/:g; s://*$$::')
 
 GO ?= go
-
 TAR ?= tar
+PLANTUML ?= plantuml # may also be "java -jar plantuml.jar" if installed elsewhere
 
 PACKAGE := github.com/lima-vm/lima
 
@@ -54,6 +54,11 @@ _output/share/lima/lima-guestagent.Linux-x86_64:
 _output/share/lima/lima-guestagent.Linux-aarch64:
 	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 $(GO_BUILD) -o $@ ./cmd/lima-guestagent
 	chmod 644 $@
+
+.PHONY: diagrams
+diagrams: docs/lima-sequence-diagram.png
+docs/lima-sequence-diagram.png: docs/lima-sequence-diagram.puml
+	$(PLANTUML) ./docs/lima-sequence-diagram.puml
 
 .PHONY: install
 install: uninstall

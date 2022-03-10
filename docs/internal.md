@@ -116,3 +116,9 @@ The volume label is "cidata", as defined by [cloud-init NoCloud](https://cloudin
 - `LIMA_CIDATA_SLIRP_IP_ADDRESS`: set to the IP address of the guest on the SLIRP network. `192.168.5.15`.
 - `LIMA_CIDATA_UDP_DNS_LOCAL_PORT`: set to the udp port number of the hostagent dns server (or 0 when not enabled).
 - `LIMA_CIDATA_TCP_DNS_LOCAL_PORT`: set to the tcp port number of the hostagent dns server (or 0 when not enabled).
+
+# VM lifecycle
+
+![](./lima-sequence-diagram.png)
+
+(based on Lima 0.8.3)
