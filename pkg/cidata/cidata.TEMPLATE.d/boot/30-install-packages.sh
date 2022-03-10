@@ -59,7 +59,8 @@ elif command -v dnf >/dev/null 2>&1; then
 	if [ -n "${pkgs}" ]; then
 		dnf_install_flags="-y --setopt=install_weak_deps=False"
 		if grep -q "Oracle Linux Server release 8" /etc/system-release; then
-			dnf_install_flags="${dnf_install_flags} --enablerepo ol8_baseos_latest --enablerepo ol8_codeready_builder"
+			# repo flag instead of enable repo to reduce metadata syncing on slow Oracle repos
+			dnf_install_flags="${dnf_install_flags} --repo ol8_baseos_latest --repo ol8_codeready_builder"
 		elif grep -q "release 8" /etc/system-release; then
 			dnf_install_flags="${dnf_install_flags} --enablerepo powertools"
 		fi
