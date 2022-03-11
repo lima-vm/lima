@@ -54,10 +54,46 @@ provision:
     apt-get install -y cri-tools
     cat  <<EOF | sudo tee /etc/crictl.yaml
     runtime-endpoint: unix:///run/containerd/containerd.sock
-    image-endpoint: unix:///run/containerd/containerd.sock
     EOF
     # cni-plugins
     apt-get install -y kubernetes-cni
+    mkdir -p /etc/cni/net.d
+    cat << EOF | tee /etc/cni/net.d/10-containerd-net.conflist
+    {
+      "cniVersion": "0.4.0",
+      "name": "containerd-net",
+      "plugins": [
+        {
+          "type": "bridge",
+          "bridge": "cni0",
+          "isGateway": true,
+          "ipMasq": true,
+          "promiscMode": true,
+          "ipam": {
+            "type": "host-local",
+            "ranges": [
+              [{
+                "subnet": "10.88.0.0/16"
+              }],
+              [{
+                "subnet": "2001:4860:4860::/64"
+              }]
+            ],
+            "routes": [
+              { "dst": "0.0.0.0/0" },
+              { "dst": "::/0" }
+            ]
+          }
+        },
+        {
+          "type": "portmap",
+          "capabilities": {"portMappings": true}
+        }
+      ]
+    }
+    EOF
+    # To use flannel, delete the default CNI network
+    # To use containerd-net, comment this and below
     rm -f /etc/cni/net.d/*.conf*
     apt-get install -y kubelet kubeadm kubectl && apt-mark hold kubelet kubeadm kubectl
     systemctl enable --now kubelet
