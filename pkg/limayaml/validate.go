@@ -102,12 +102,22 @@ func Validate(y LimaYAML, warn bool) error {
 		} else if !st.IsDir() {
 			return fmt.Errorf("field `mounts[%d].location` refers to a non-directory path: %q: %w", i, f.Location, err)
 		}
+
+		if _, err := units.RAMInBytes(*f.NineP.Msize); err != nil {
+			return fmt.Errorf("field `msize` has an invalid value: %w", err)
+		}
 	}
 
 	if *y.SSH.LocalPort != 0 {
 		if err := validatePort("ssh.localPort", *y.SSH.LocalPort); err != nil {
 			return err
 		}
+	}
+
+	switch *y.MountType {
+	case REVSSHFS, NINEP:
+	default:
+		return fmt.Errorf("field `mountType` must be %q or %q , got %q", REVSSHFS, NINEP, *y.MountType)
 	}
 
 	// y.Firmware.LegacyBIOS is ignored for aarch64, but not a fatal error.

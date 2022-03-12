@@ -2,15 +2,17 @@
 
 set -eux
 
-# Create mount points
-# NOTE: Busybox sh does not support `for ((i=0;i<$N;i++))` form
-for f in $(seq 0 $((LIMA_CIDATA_MOUNTS - 1))); do
-	mountpointvar="LIMA_CIDATA_MOUNTS_${f}_MOUNTPOINT"
-	mountpoint="$(eval echo \$"$mountpointvar")"
-	mkdir -p "${mountpoint}"
-	gid=$(id -g "${LIMA_CIDATA_USER}")
-	chown "${LIMA_CIDATA_UID}:${gid}" "${mountpoint}"
-done
+if [ "${LIMA_CIDATA_MOUNTTYPE}" != "9p" ]; then
+	# Create mount points
+	# NOTE: Busybox sh does not support `for ((i=0;i<$N;i++))` form
+	for f in $(seq 0 $((LIMA_CIDATA_MOUNTS - 1))); do
+		mountpointvar="LIMA_CIDATA_MOUNTS_${f}_MOUNTPOINT"
+		mountpoint="$(eval echo \$"$mountpointvar")"
+		mkdir -p "${mountpoint}"
+		gid=$(id -g "${LIMA_CIDATA_USER}")
+		chown "${LIMA_CIDATA_UID}:${gid}" "${mountpoint}"
+	done
+fi
 
 # Install or update the guestagent binary
 install -m 755 "${LIMA_CIDATA_MNT}"/lima-guestagent /usr/local/bin/lima-guestagent

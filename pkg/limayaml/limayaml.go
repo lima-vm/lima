@@ -14,6 +14,7 @@ type LimaYAML struct {
 	Memory            *string           `yaml:"memory,omitempty" json:"memory,omitempty"` // go-units.RAMInBytes
 	Disk              *string           `yaml:"disk,omitempty" json:"disk,omitempty"`     // go-units.RAMInBytes
 	Mounts            []Mount           `yaml:"mounts,omitempty" json:"mounts,omitempty"`
+	MountType         *MountType        `yaml:"mountType,omitempty" json:"mountType,omitempty"`
 	SSH               SSH               `yaml:"ssh,omitempty" json:"ssh,omitempty"` // REQUIRED (FIXME)
 	Firmware          Firmware          `yaml:"firmware,omitempty" json:"firmware,omitempty"`
 	Video             Video             `yaml:"video,omitempty" json:"video,omitempty"`
@@ -32,10 +33,14 @@ type LimaYAML struct {
 }
 
 type Arch = string
+type MountType = string
 
 const (
 	X8664   Arch = "x86_64"
 	AARCH64 Arch = "aarch64"
+
+	REVSSHFS MountType = "reverse-sshfs"
+	NINEP    MountType = "9p"
 )
 
 type File struct {
@@ -48,11 +53,19 @@ type Mount struct {
 	Location string `yaml:"location" json:"location"` // REQUIRED
 	Writable *bool  `yaml:"writable,omitempty" json:"writable,omitempty"`
 	SSHFS    SSHFS  `yaml:"sshfs,omitempty" json:"sshfs,omitempty"`
+	NineP    NineP  `yaml:"9p,omitempty" json:"9p,omitempty"`
 }
 
 type SSHFS struct {
 	Cache          *bool `yaml:"cache,omitempty" json:"cache,omitempty"`
 	FollowSymlinks *bool `yaml:"followSymlinks,omitempty" json:"followSymlinks,omitempty"`
+}
+
+type NineP struct {
+	SecurityModel   *string `yaml:"securityModel,omitempty" json:"securityModel,omitempty"`
+	ProtocolVersion *string `yaml:"protocolVersion,omitempty" json:"protocolVersion,omitempty"`
+	Msize           *string `yaml:"msize,omitempty" json:"msize,omitempty"`
+	Cache           *string `yaml:"cache,omitempty" json:"cache,omitempty"`
 }
 
 type SSH struct {

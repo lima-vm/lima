@@ -5,6 +5,15 @@ growpart:
   mode: auto
   devices: ['/']
 
+{{- if eq .MountType "9p" }}
+{{- if .Mounts }}
+mounts:
+  {{- range $m := $.Mounts}}
+- [{{$m.Tag}}, {{$m.Target}}, {{$m.Type}}, "{{$m.Options}}", "0", "0"]
+  {{- end }}
+{{- end }}
+{{- end }}
+
 users:
   - name: "{{.User}}"
     uid: "{{.UID}}"

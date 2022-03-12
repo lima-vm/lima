@@ -2,6 +2,7 @@ package cidata
 
 import (
 	"io"
+	"strings"
 	"testing"
 
 	"gotest.tools/v3/assert"
@@ -15,10 +16,11 @@ func TestTemplate(t *testing.T) {
 		SSHPubKeys: []string{
 			"ssh-rsa dummy foo@example.com",
 		},
-		Mounts: []string{
-			"/Users/dummy",
-			"/Users/dummy/lima",
+		Mounts: []Mount{
+			{Target: "/Users/dummy"},
+			{Target: "/Users/dummy/lima"},
 		},
+		MountType: "reverse-sshfs",
 	}
 	layout, err := ExecuteTemplate(args)
 	assert.NilError(t, err)
@@ -27,5 +29,37 @@ func TestTemplate(t *testing.T) {
 		b, err := io.ReadAll(f.Reader)
 		assert.NilError(t, err)
 		t.Log(string(b))
+		if f.Path == "user-data" {
+			// mounted later
+			assert.Assert(t, !strings.Contains(string(b), "mounts:"))
+		}
+	}
+}
+
+func TestTemplate9p(t *testing.T) {
+	args := TemplateArgs{
+		Name: "default",
+		User: "foo",
+		UID:  501,
+		SSHPubKeys: []string{
+			"ssh-rsa dummy foo@example.com",
+		},
+		Mounts: []Mount{
+			{Tag: "mount0", Target: "/Users/dummy", Type: "9p", Options: "ro,trans=virtio"},
+			{Tag: "mount1", Target: "/Users/dummy/lima", Type: "9p", Options: "rw,trans=virtio"},
+		},
+		MountType: "9p",
+	}
+	layout, err := ExecuteTemplate(args)
+	assert.NilError(t, err)
+	for _, f := range layout {
+		t.Logf("=== %q ===", f.Path)
+		b, err := io.ReadAll(f.Reader)
+		assert.NilError(t, err)
+		t.Log(string(b))
+		if f.Path == "user-data" {
+			// mounted at boot
+			assert.Assert(t, strings.Contains(string(b), "mounts:"))
+		}
 	}
 }

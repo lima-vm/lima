@@ -115,6 +115,13 @@ jobs:
         retry_on: error
         max_attempts: 3
         command: ./hack/test-example.sh examples/alpine.yaml
+    - name: "Test experimental-9p.yaml"
+      uses: nick-invision/retry@v2
+      with:
+        timeout_minutes: 30
+        retry_on: error
+        max_attempts: 3
+        command: ./hack/test-example.sh examples/experimental-9p.yaml
     - name: "Test vmnet.yaml"
       uses: nick-invision/retry@v2
       with:

@@ -266,7 +266,6 @@ The current default spec:
 - Performance optimization
 - More guest distros
 - Windows hosts
-- [VirtFS to replace the current reverse sshfs (work has to be done on QEMU repo)](https://github.com/NixOS/nixpkgs/pull/122420)
 - [vsock](https://github.com/apple/darwin-xnu/blob/xnu-7195.81.3/bsd/man/man4/vsock.4) to replace SSH (work has to be done on QEMU repo)
 
 ## FAQs & Troubleshooting
