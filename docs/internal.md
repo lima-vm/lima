@@ -119,6 +119,6 @@ The volume label is "cidata", as defined by [cloud-init NoCloud](https://cloudin
 
 # VM lifecycle
 
-![](./lima-sequence-diagram.png)
+![](./images/lima-sequence-diagram.png)
 
 (based on Lima 0.8.3)
