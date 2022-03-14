@@ -120,7 +120,7 @@ and extract it under `/usr/local` (or somewhere else). For instance:
 ```bash
 brew install jq
 VERSION=$(curl -fsSL https://api.github.com/repos/lima-vm/lima/releases/latest | jq -r .tag_name)
-curl -fsSL https://github.com/lima-vm/lima/releases/download/${VERSION}/lima-${VERSION:1}-$(uname -s)-$(uname -m).tar.gz | tar Cxzvm /usr/local
+curl -fsSL "https://github.com/lima-vm/lima/releases/download/${VERSION}/lima-${VERSION:1}-$(uname -s)-$(uname -m).tar.gz" | tar Cxzvm /usr/local
 ```
 
 - To install Lima from the source, run `make && make install`.
