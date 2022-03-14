@@ -9,8 +9,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
-	"strings"
 	"text/template"
 	"time"
 
@@ -150,8 +148,6 @@ func Start(ctx context.Context, inst *store.Instance) error {
 		return err
 	}
 
-	showUbuntuMarch2022Warning(inst) // remove when Ubuntu fixes https://github.com/lima-vm/lima/issues/712
-
 	watchErrCh := make(chan error)
 	go func() {
 		watchErrCh <- watchHostAgentEvents(ctx, inst, haStdoutPath, haStderrPath, begin)
@@ -274,61 +270,4 @@ func ShowMessage(inst *store.Instance) error {
 		return err
 	}
 	return nil
-}
-
-// showUbuntuMarch2022Warning shows warning for https://github.com/lima-vm/lima/issues/712
-func showUbuntuMarch2022Warning(inst *store.Instance) {
-	if runtime.GOARCH != "arm64" {
-		return
-	}
-	if unlikelyUbuntu(inst.Name) {
-		return
-	}
-	display := "sdl"
-	if runtime.GOOS == "darwin" {
-		display = "cocoa"
-	}
-	s := fmt.Sprintf(`
-============ ⚠️  March 2022 update of Ubuntu does not work on ARM ⚠️  ============
-Ubuntu kernel 5.13.0-35.40 (5.4.0-103.117 for 20.04 LTS) released in March 2022
-is not bootable on ARM hosts.
-(EFI stub: ERROR: FIRMWARE BUG: kernel image not aligned on 64k boundary
-
-Until the issue gets resolved, it is HIGHLY RECOMMENDED to run the following
-command in the Ubuntu shell (NOT the host shell) to avoid upgrading the kernel:
-
-------------------------------------------------------------
-sudo apt-mark hold linux-image-$(uname -r)
-------------------------------------------------------------
-
-If your kernel was already upgraded and the VM does not boot, try running Lima
-with the following environment variable to show the QEMU video display:
-
-------------------------------------------------------------
-export QEMU_SYSTEM_AARCH64="qemu-system-aarch64 -display %s"
-------------------------------------------------------------
-
-After the display is shown, press the Esc key several times to show the GRUB
-prompt for choosing an older kernel.
-
-To receive updates about this issue, subscribe to the following issue tickets:
-- https://github.com/lima-vm/lima/issues/712
-- https://bugs.launchpad.net/ubuntu/+source/grub2/+bug/1947046
-
-If you are not using Ubuntu, you can ignore this warning message.
-============ ⚠️  March 2022 update of Ubuntu does not work on ARM ⚠️  ============
-`, display)
-	logrus.Warn(s)
-}
-
-func unlikelyUbuntu(instName string) bool {
-	dict := []string{
-		"alma", "alpine", "archlinux", "centos", "debian", "fedora", "red", "rhel", "suse", "oracle", "rocky",
-	}
-	for _, f := range dict {
-		if strings.Contains(instName, f) {
-			return true
-		}
-	}
-	return false
 }
