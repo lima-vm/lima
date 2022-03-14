@@ -201,6 +201,47 @@ func inspectFeatures(exe string) (*features, error) {
 	return &f, nil
 }
 
+// showDarwinARM64HVFQEMU620Warning shows a warning on M1 macOS when QEMU is older than 6.2.0_1.
+//
+// See:
+// - https://gitlab.com/qemu-project/qemu/-/issues/899
+// - https://github.com/Homebrew/homebrew-core/pull/96743
+// - https://github.com/lima-vm/lima/issues/712
+func showDarwinARM64HVFQEMU620Warning(exe, accel string, features *features) {
+	if runtime.GOOS != "darwin" {
+		return
+	}
+	if runtime.GOARCH != "arm64" {
+		return
+	}
+	if accel != "hvf" {
+		return
+	}
+	if strings.Contains(string(features.MachineHelp), "virt-7.0") {
+		// QEMU 7.0.0 or later
+		return
+	}
+	if exeFull, err := exec.LookPath(exe); err == nil {
+		if exeResolved, err2 := filepath.EvalSymlinks(exeFull); err2 == nil {
+			if strings.Contains(exeResolved, "Cellar/qemu/6.2.0_") {
+				// Homebrew's QEMU 6.2.0_1 or later
+				return
+			}
+		}
+	}
+	w := "This version of QEMU might not be able to boot recent Linux guests on M1 macOS hosts."
+	if _, err := exec.LookPath("brew"); err == nil {
+		w += "Run `brew upgrade` and make sure your QEMU version is 6.2.0_1 or later."
+	} else {
+		w += `Reinstall QEMU with the following commits (included in QEMU 7.0.0):
+- https://github.com/qemu/qemu/commit/ad99f64f "hvf: arm: Use macros for sysreg shift/masking"
+- https://github.com/qemu/qemu/commit/7f6c295c "hvf: arm: Handle unknown ID registers as RES0"
+`
+		w += "See https://github.com/Homebrew/homebrew-core/pull/96743 for the further information."
+	}
+	logrus.Warn(w)
+}
+
 func Cmdline(cfg Config) (string, []string, error) {
 	y := cfg.LimaYAML
 	exe, args, err := getExe(*y.Arch)
@@ -218,6 +259,7 @@ func Cmdline(cfg Config) (string, []string, error) {
 	if !strings.Contains(string(features.AccelHelp), accel) {
 		return "", nil, fmt.Errorf("accelerator %q is not supported by %s", accel, exe)
 	}
+	showDarwinARM64HVFQEMU620Warning(exe, accel, features)
 
 	cpu := y.CPUType[*y.Arch]
 	args = appendArgsIfNoConflict(args, "-cpu", cpu)

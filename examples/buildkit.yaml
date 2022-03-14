@@ -12,7 +12,6 @@ message: |
  -------
 images:
 # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
-# ⚠️ release-20220309 is known to be broken on aarch64: https://github.com/lima-vm/lima/issues/712
 - location: "https://cloud-images.ubuntu.com/releases/21.10/release-20220201/ubuntu-21.10-server-cloudimg-amd64.img"
   arch: "x86_64"
   digest: "sha256:73fe1785c60edeb506f191affff0440abcc2de02420bb70865d51d0ff9b28223"

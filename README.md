@@ -110,7 +110,16 @@ brew install lima
 
 #### Install QEMU
 
-Install recent version of QEMU. v6.2.0 or later is recommended.
+Install recent version of QEMU.
+
+On M1 macOS, [Homebrew's QEMU `6.2.0_1`](https://github.com/Homebrew/homebrew-core/pull/96743) or later is recommended.
+
+If you are not using Homebrew, make sure to include the following commits to boot recent Linux guests:
+- https://github.com/qemu/qemu/commit/ad99f64f `hvf: arm: Use macros for sysreg shift/masking`
+- https://github.com/qemu/qemu/commit/7f6c295c `hvf: arm: Handle unknown ID registers as RES0`
+
+These commits are planned to be included in the upstream QEMU 7.0.0 (ETA: April 2022).
+See https://github.com/Homebrew/homebrew-core/pull/96743 for the further information.
 
 #### Install Lima
 
@@ -402,8 +411,12 @@ On Linux hosts, you might have to set sysctl value `net.ipv4.ip_unprivileged_por
 
 #### stuck on "Waiting for the essential requirement 1 of X: "ssh"
 
-libslirp v4.6.0 used by QEMU is known to be [broken](https://gitlab.freedesktop.org/slirp/libslirp/-/issues/48).
-If you have libslirp v4.6.0 in `/usr/local/Cellar/libslirp`, you have to upgrade it to v4.6.1 or later (`brew upgrade`).
+On M1 macOS, QEMU needs to be [Homebrew's QEMU `6.2.0_1`](https://github.com/Homebrew/homebrew-core/pull/96743) or later to run recent Linux guests.
+Run `brew upgrade` to upgrade QEMU.
+
+If you are not using Homebrew, see the "Manual installation steps" in the [Installation](#installation) section.
+
+See also `serial.log` in `~/.lima/<INSTANCE>` for debugging.
 
 #### "permission denied" for `limactl cp` command
 
