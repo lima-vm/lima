@@ -91,11 +91,19 @@ func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
 			Class:  q.Qclass,
 			Ttl:    5,
 		}
-		switch q.Qtype {
+		qtype := q.Qtype
+		switch qtype {
 		case dns.TypeAAAA:
 			if !h.IPv6 {
-				handled = true
-				break
+				// A "correct" answer would be to set `handled = true` and return a NODATA response.
+				// Unfortunately some older resolvers use a slow random source to set the transaction id.
+				// This creates a problem on M1 computers, which are too fast for that implementation:
+				// Both the A and AAAA queries might end up with the same id. Returning NODATA for AAAA
+				// is faster, so would arrive first, and be treated as the response to the A query.
+				// To avoid this, we will treat an AAAA query as an A query when IPv6 has been disabled.
+				// This way it is either a valid response for an A query, or the A records will be discarded
+				// by a genuine AAAA query, resulting in the desired NODATA response.
+				qtype = dns.TypeA
 			}
 			fallthrough
 		case dns.TypeCNAME, dns.TypeA:
@@ -129,7 +137,7 @@ func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
 				reply.Answer = append(reply.Answer, a)
 				handled = true
 			}
-			if q.Qtype == dns.TypeCNAME {
+			if qtype == dns.TypeCNAME {
 				break
 			}
 			hdr.Name = cname
@@ -144,13 +152,13 @@ func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
 				for _, ip := range addrs {
 					var a dns.RR
 					ipv6 := ip.To4() == nil
-					if q.Qtype == dns.TypeA && !ipv6 {
+					if qtype == dns.TypeA && !ipv6 {
 						hdr.Rrtype = dns.TypeA
 						a = &dns.A{
 							Hdr: hdr,
 							A:   ip.To4(),
 						}
-					} else if q.Qtype == dns.TypeAAAA && ipv6 {
+					} else if qtype == dns.TypeAAAA && ipv6 {
 						hdr.Rrtype = dns.TypeAAAA
 						a = &dns.AAAA{
 							Hdr:  hdr,
