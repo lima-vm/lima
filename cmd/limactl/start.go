@@ -448,20 +448,25 @@ func startAction(cmd *cobra.Command, args []string) error {
 	if len(inst.Errors) > 0 {
 		return fmt.Errorf("errors inspecting instance: %+v", inst.Errors)
 	}
+	recreate, err := cmd.Flags().GetBool("recreate")
+	if err != nil {
+		return err
+	}
 	switch inst.Status {
 	case store.StatusRunning:
-		logrus.Infof("The instance %q is already running. Run `%s` to open the shell.",
-			inst.Name, start.LimactlShellCmd(inst.Name))
-		// Not an error
-		return nil
+		if recreate {
+			logrus.Infof("The instance %q is already running, will recreate it.", inst.Name)
+			stopInstanceForcibly(inst)
+		} else {
+			logrus.Infof("The instance %q is already running. Run `%s` to open the shell.",
+				inst.Name, start.LimactlShellCmd(inst.Name))
+			// Not an error
+			return nil
+		}
 	case store.StatusStopped:
 		// NOP
 	default:
 		logrus.Warnf("expected status %q, got %q", store.StatusStopped, inst.Status)
-	}
-	recreate, err := cmd.Flags().GetBool("recreate")
-	if err != nil {
-		return err
 	}
 	if recreate {
 		fi, err := os.ReadDir(inst.Dir)

@@ -194,7 +194,7 @@ To create an instance "default" from a remote URL (use carefully, with a trustab
 $ limactl start --name=default https://raw.githubusercontent.com/lima-vm/lima/master/examples/alpine.yaml
 ```
 
-To recreate an existing instance:
+To destroy an instance and recreate it with identical settings (resets the content of the instance):
 ```console
 $ limactl start --recreate
 ```
