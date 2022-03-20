@@ -55,6 +55,7 @@ $ limactl start --name=default https://raw.githubusercontent.com/lima-vm/lima/ma
 	startCommand.Flags().Bool("tty", isatty.IsTerminal(os.Stdout.Fd()), "enable TUI interactions such as opening an editor, defaults to true when stdout is a terminal")
 	startCommand.Flags().String("name", "", "override the instance name")
 	startCommand.Flags().Bool("list-templates", false, "list available templates and exit")
+	startCommand.Flags().Bool("recreate", false, "recreate the instance")
 	return startCommand
 }
 
@@ -457,6 +458,25 @@ func startAction(cmd *cobra.Command, args []string) error {
 		// NOP
 	default:
 		logrus.Warnf("expected status %q, got %q", store.StatusStopped, inst.Status)
+	}
+	recreate, err := cmd.Flags().GetBool("recreate")
+	if err != nil {
+		return err
+	}
+	if recreate {
+		fi, err := os.ReadDir(inst.Dir)
+		if err != nil {
+			return err
+		}
+		for _, f := range fi {
+			path := filepath.Join(inst.Dir, f.Name())
+			if !strings.HasSuffix(path, ".yaml") && !strings.HasSuffix(path, ".yml") {
+				logrus.Infof("Removing %q", path)
+				if err := os.Remove(path); err != nil {
+					logrus.Error(err)
+				}
+			}
+		}
 	}
 	ctx := cmd.Context()
 	err = networks.Reconcile(ctx, inst.Name)

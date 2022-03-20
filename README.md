@@ -154,7 +154,7 @@ Linux
 ### Command reference
 
 #### `limactl start`
-`limactl start [--name=NAME] [--tty=false] <template://TEMPLATE>`: start the Linux instance
+`limactl start [--name=NAME] [--tty=false] [--recreate=false] <template://TEMPLATE>`: start the Linux instance
 
 ```console
 $ limactl start
@@ -192,6 +192,11 @@ $ limactl start --name=default /usr/local/share/lima/examples/fedora.yaml
 To create an instance "default" from a remote URL (use carefully, with a trustable source):
 ```console
 $ limactl start --name=default https://raw.githubusercontent.com/lima-vm/lima/master/examples/alpine.yaml
+```
+
+To recreate an existing instance:
+```console
+$ limactl start --recreate
 ```
 
 #### `limactl shell`
