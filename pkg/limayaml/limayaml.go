@@ -66,7 +66,8 @@ type SSH struct {
 type Firmware struct {
 	// LegacyBIOS disables UEFI if set.
 	// LegacyBIOS is ignored for aarch64.
-	LegacyBIOS *bool `yaml:"legacyBIOS,omitempty" json:"legacyBIOS,omitempty"`
+	LegacyBIOS *bool   `yaml:"legacyBIOS,omitempty" json:"legacyBIOS,omitempty"`
+	Accel      *string `yaml:"accel,omitempty" json:"accel,omitempty"`
 }
 
 type Video struct {
