@@ -84,28 +84,13 @@ jobs:
         time brew upgrade
     - name: Install vde_switch and vde_vmnet
       env:
-        # 2021-12-12
-        VDE2_VERSION: 74278b9b7cf816f0356181f387012fdeb6d65b52
-        # 2021-12-08
-        VDE_VMNET_VERSION: v0.5.2
+        VDE_VMNET_VERSION: v0.6.0
       run: |
         (
           brew install autoconf automake
-        )
-        (
-          git clone https://github.com/virtualsquare/vde-2
-          cd vde-2
-          git checkout $VDE2_VERSION
-          autoreconf -fis
-          ./configure --prefix=/opt/vde --disable-python
-          make
-          sudo make install
-        )
-        (
           git clone https://github.com/lima-vm/vde_vmnet
           cd vde_vmnet
           git checkout $VDE_VMNET_VERSION
-          make PREFIX=/opt/vde
           sudo make PREFIX=/opt/vde install
         )
         (
