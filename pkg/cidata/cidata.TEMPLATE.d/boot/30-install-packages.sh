@@ -71,6 +71,35 @@ elif command -v dnf >/dev/null 2>&1; then
 		# Workaround for https://github.com/containerd/stargz-snapshotter/issues/340
 		ln -s fusermount3 /usr/bin/fusermount
 	fi
+elif command -v yum >/dev/null 2>&1; then
+	echo "DEPRECATED: CentOS7 and others RHEL-like version 7 are unsupported and might be removed or stop to work in future lima releases"
+	pkgs=""
+	yum_install_flags="-y"
+	if ! rpm -ql epel-release >/dev/null 2>&1; then
+		yum install ${yum_install_flags} epel-release
+	fi
+	if ! command -v tar >/dev/null 2>&1; then
+		pkgs="${pkgs} tar"
+	fi
+	if [ "${LIMA_CIDATA_MOUNTS}" -gt 0 ] && ! command -v sshfs >/dev/null 2>&1; then
+		pkgs="${pkgs} fuse-sshfs"
+	fi
+	if [ "${INSTALL_IPTABLES}" = 1 ] && [ ! -e /usr/sbin/iptables ]; then
+		pkgs="${pkgs} iptables"
+	fi
+	if [ "${LIMA_CIDATA_CONTAINERD_USER}" = 1 ]; then
+		if ! command -v newuidmap >/dev/null 2>&1; then
+			pkgs="${pkgs} shadow-utils"
+		fi
+		if ! command -v mount.fuse3 >/dev/null 2>&1; then
+			pkgs="${pkgs} fuse3"
+		fi
+	fi
+	if [ -n "${pkgs}" ]; then
+		# shellcheck disable=SC2086
+		yum install ${yum_install_flags} ${pkgs}
+		yum-config-manager --disable epel >/dev/null 2>&1
+	fi
 elif command -v pacman >/dev/null 2>&1; then
 	pkgs=""
 	if [ "${LIMA_CIDATA_MOUNTS}" -gt 0 ] && ! command -v sshfs >/dev/null 2>&1; then

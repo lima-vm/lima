@@ -33,6 +33,7 @@ Container orchestration:
 
 Others:
 - [`vmnet.yaml`](./vmnet.yaml): ⭐enable [`vmnet.framework`](../docs/network.md)
+- [`deprecated/centos-7.yaml`](./deprecated/centos-7.yaml): [deprecated] CentOS 7
 
 ## Tier 1
 
