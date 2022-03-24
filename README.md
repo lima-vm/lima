@@ -134,9 +134,6 @@ curl -fsSL "https://github.com/lima-vm/lima/releases/download/${VERSION}/lima-${
 
 - To install Lima from the source, run `make && make install`.
 
-> **NOTE**
-> Lima is not regularly tested on ARM Mac (due to lack of CI).
-
 </p>
 </details>
 
@@ -266,6 +263,12 @@ The current default spec:
 - [VirtFS to replace the current reverse sshfs (work has to be done on QEMU repo)](https://github.com/NixOS/nixpkgs/pull/122420)
 - [vsock](https://github.com/apple/darwin-xnu/blob/xnu-7195.81.3/bsd/man/man4/vsock.4) to replace SSH (work has to be done on QEMU repo)
 
+## Acknowledgement
+
+[![MacStadium](https://uploads-ssl.webflow.com/5ac3c046c82724970fc60918/5c019d917bba312af7553b49_MacStadium-developerlogo.png)](https://www.macstadium.com/opensource)
+
+Thanks to [MacStadium](https://www.macstadium.com/opensource) for providing a test environment.
+
 ## FAQs & Troubleshooting
 <!-- doctoc: https://github.com/thlorenz/doctoc -->
 
@@ -305,7 +308,7 @@ You have to use `limactl shell bash` (or `lima bash`) to open a shell.
 Alternatively, you may also directly ssh into the guest: `ssh -p 60022 -i ~/.lima/_config/user -o NoHostAuthenticationForLocalhost=yes 127.0.0.1`.
 
 #### "Does Lima work on ARM Mac?"
-Yes, it should work, but not regularly tested on ARM (due to lack of CI).
+Yes
 
 #### "Can I run non-Ubuntu guests?"
 AlmaLinux, Alpine, Arch Linux, Debian, Fedora, openSUSE, Oracle Linux, and Rocky are also known to work.
