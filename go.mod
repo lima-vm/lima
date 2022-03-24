@@ -14,6 +14,7 @@ require (
 	github.com/docker/go-units v0.4.0
 	github.com/elastic/go-libaudit/v2 v2.2.0
 	github.com/google/go-cmp v0.5.7
+	github.com/google/uuid v1.2.0
 	github.com/gorilla/mux v1.8.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/lima-vm/sshocker v0.2.3

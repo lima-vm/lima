@@ -22,6 +22,8 @@ import (
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/mattn/go-shellwords"
 	"github.com/sirupsen/logrus"
+
+	"github.com/google/uuid"
 )
 
 type Config struct {
@@ -425,6 +427,7 @@ func Cmdline(cfg Config) (string, []string, error) {
 
 	// QEMU process
 	args = append(args, "-name", "lima-"+cfg.Name)
+	args = append(args, "-uuid", uuid.NewMD5(uuid.NameSpaceOID, []byte(cfg.Name)).String() )
 	args = append(args, "-pidfile", filepath.Join(cfg.InstanceDir, filenames.QemuPID))
 
 	return exe, args, nil
