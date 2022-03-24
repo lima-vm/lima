@@ -8,7 +8,7 @@ task:
   # We can't use macOS instances of Cirrus because of lack of support for nested VMs.
   # (sysctl machdep.cpu.features lacks "VMX" flag)
   container:
-    image: ubuntu:21.04
+    image: ubuntu:22.04
     kvm: true
     cpu: 2
     memory: 8G
