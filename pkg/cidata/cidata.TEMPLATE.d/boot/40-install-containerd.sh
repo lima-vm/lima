@@ -33,14 +33,27 @@ fi
 
 rm -rf "${tmp_extract_nerdctl}"
 
+: "${CONTAINERD_NAMESPACE:=default}"
+# Overridable in .bashrc
+: "${CONTAINERD_SNAPSHOTTER:=overlayfs}"
+
 if [ "${LIMA_CIDATA_CONTAINERD_SYSTEM}" = 1 ]; then
-	mkdir -p /etc/containerd
+	mkdir -p /etc/containerd /etc/buildkit
 	cat >"/etc/containerd/config.toml" <<EOF
   version = 2
   [proxy_plugins]
     [proxy_plugins."stargz"]
       type = "snapshot"
       address = "/run/containerd-stargz-grpc/containerd-stargz-grpc.sock"
+EOF
+	cat >"/etc/buildkit/buildkitd.toml" <<EOF
+[worker.oci]
+  enabled = false
+
+[worker.containerd]
+  enabled = true
+  namespace = "${CONTAINERD_NAMESPACE}"
+  snapshotter = "${CONTAINERD_SNAPSHOTTER}"
 EOF
 	systemctl enable --now containerd buildkit stargz-snapshotter
 fi
@@ -72,7 +85,9 @@ EOF
 		fi
 		sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" systemctl --user enable --now dbus
 		sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "PATH=${PATH}" containerd-rootless-setuptool.sh install
-		sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "PATH=${PATH}" containerd-rootless-setuptool.sh install-buildkit
+		sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "PATH=${PATH}" \
+			"CONTAINERD_NAMESPACE=${CONTAINERD_NAMESPACE}" "CONTAINERD_SNAPSHOTTER=${CONTAINERD_SNAPSHOTTER}" \
+			containerd-rootless-setuptool.sh install-buildkit-containerd
 
 		# $CONTAINERD_SNAPSHOTTER is configured in 20-rootless-base.sh, when the guest kernel is < 5.13, or the instance was created with Lima < 0.9.0.
 		if [ "$(sudo -iu "${LIMA_CIDATA_USER}" sh -ec 'echo $CONTAINERD_SNAPSHOTTER')" = "fuse-overlayfs" ]; then
