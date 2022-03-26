@@ -39,6 +39,10 @@ memory: null
 # 🟢 Builtin default: "100GiB"
 disk: null
 
+# Data size
+# 🟢 Builtin default: "0"
+data: null
+
 # Expose host directories to the guest, the mount point might be accessible from all UIDs in the guest
 # 🟢 Builtin default: null (Mount nothing)
 # 🔵 This file: Mount the home as read-only, /tmp/lima as writable

@@ -139,6 +139,16 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.Disk = pointer.String("100GiB")
 	}
 
+	if y.Data == nil {
+		y.Data = d.Data
+	}
+	if o.Data != nil {
+		y.Data = o.Data
+	}
+	if y.Data == nil || *y.Data == "" {
+		y.Data = pointer.String("0")
+	}
+
 	if y.Video.Display == nil {
 		y.Video.Display = d.Video.Display
 	}

@@ -13,6 +13,7 @@ type LimaYAML struct {
 	CPUs              *int              `yaml:"cpus,omitempty" json:"cpus,omitempty"`
 	Memory            *string           `yaml:"memory,omitempty" json:"memory,omitempty"` // go-units.RAMInBytes
 	Disk              *string           `yaml:"disk,omitempty" json:"disk,omitempty"`     // go-units.RAMInBytes
+	Data              *string           `yaml:"data,omitempty" json:"data,omitempty"`     // go-units.RAMInBytes
 	Mounts            []Mount           `yaml:"mounts,omitempty" json:"mounts,omitempty"`
 	SSH               SSH               `yaml:"ssh,omitempty" json:"ssh,omitempty"` // REQUIRED (FIXME)
 	Firmware          Firmware          `yaml:"firmware,omitempty" json:"firmware,omitempty"`

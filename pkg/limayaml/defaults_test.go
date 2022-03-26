@@ -55,6 +55,7 @@ func TestFillDefault(t *testing.T) {
 		CPUs:   pointer.Int(4),
 		Memory: pointer.String("4GiB"),
 		Disk:   pointer.String("100GiB"),
+		Data:   pointer.String("0"),
 		Containerd: Containerd{
 			System:   pointer.Bool(false),
 			User:     pointer.Bool(true),
@@ -190,6 +191,7 @@ func TestFillDefault(t *testing.T) {
 		CPUs:   pointer.Int(7),
 		Memory: pointer.String("5GiB"),
 		Disk:   pointer.String("105GiB"),
+		Data:   pointer.String("10GiB"),
 		Containerd: Containerd{
 			System: pointer.Bool(true),
 			User:   pointer.Bool(false),
@@ -314,6 +316,7 @@ func TestFillDefault(t *testing.T) {
 		CPUs:   pointer.Int(12),
 		Memory: pointer.String("7GiB"),
 		Disk:   pointer.String("117GiB"),
+		Data:   pointer.String("17GiB"),
 		Containerd: Containerd{
 			System: pointer.Bool(true),
 			User:   pointer.Bool(false),

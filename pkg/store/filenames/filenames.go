@@ -29,6 +29,7 @@ const (
 	CIDataISO          = "cidata.iso"
 	BaseDisk           = "basedisk"
 	DiffDisk           = "diffdisk"
+	DataDisk           = "datadisk"
 	QemuPID            = "qemu.pid"
 	QMPSock            = "qmp.sock"
 	SerialLog          = "serial.log"

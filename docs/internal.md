@@ -35,6 +35,7 @@ cloud-init:
 disk:
 - `basedisk`: the base image
 - `diffdisk`: the diff image (QCOW2)
+- `datadisk`: the data image (QCOW2), optional
 
 QEMU:
 - `qemu.pid`: QEMU PID

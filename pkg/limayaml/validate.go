@@ -71,6 +71,12 @@ func Validate(y LimaYAML, warn bool) error {
 		return fmt.Errorf("field `memory` has an invalid value: %w", err)
 	}
 
+	if y.Data != nil {
+		if _, err := units.RAMInBytes(*y.Data); err != nil {
+			return fmt.Errorf("field `data` has an invalid value: %w", err)
+		}
+	}
+
 	u, err := osutil.LimaUser(false)
 	if err != nil {
 		return fmt.Errorf("internal error (not an error of YAML): %w", err)
