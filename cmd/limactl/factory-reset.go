@@ -6,8 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	networks "github.com/lima-vm/lima/pkg/networks/reconcile"
-	"github.com/lima-vm/lima/pkg/start"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -55,20 +53,7 @@ func factoryResetAction(cmd *cobra.Command, args []string) error {
 		}
 	}
 	logrus.Infof("Instance %q has been factory reset", instName)
-
-	startNow, err := askWhetherToStart()
-	if err != nil {
-		return err
-	}
-	if !startNow {
-		return nil
-	}
-	ctx := cmd.Context()
-	err = networks.Reconcile(ctx, inst.Name)
-	if err != nil {
-		return err
-	}
-	return start.Start(ctx, inst)
+	return nil
 }
 
 func factoryResetBashComplete(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
