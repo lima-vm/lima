@@ -214,6 +214,9 @@ Use `<INSTANCE>:<FILENAME>` to specify a source or target inside an instance.
 #### `limactl delete`
 `limactl delete [--force] <INSTANCE>`: delete the instance
 
+#### `limactl factory-reset`
+`limactl factory-reset <INSTANCE>`: factory reset the instance
+
 #### `limactl edit`
 `limactl edit <INSTANCE>`: edit the instance
 
