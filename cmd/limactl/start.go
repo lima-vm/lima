@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -11,6 +12,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/containerd/containerd/identifiers"
@@ -55,6 +57,7 @@ $ limactl start --name=default https://raw.githubusercontent.com/lima-vm/lima/ma
 	startCommand.Flags().Bool("tty", isatty.IsTerminal(os.Stdout.Fd()), "enable TUI interactions such as opening an editor, defaults to true when stdout is a terminal")
 	startCommand.Flags().String("name", "", "override the instance name")
 	startCommand.Flags().Bool("list-templates", false, "list available templates and exit")
+	startCommand.Flags().Int("timeout", 600, "start timeout in seconds")
 	return startCommand
 }
 
@@ -458,7 +461,14 @@ func startAction(cmd *cobra.Command, args []string) error {
 	default:
 		logrus.Warnf("expected status %q, got %q", store.StatusStopped, inst.Status)
 	}
+	// fixme: wait cobra 1.5.0 public with https://github.com/spf13/cobra/pull/1551 then use cmd.SetContext(context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second))
 	ctx := cmd.Context()
+	timeout, err := cmd.Flags().GetInt("timeout")
+	if err != nil {
+		return err
+	}
+	ctx, concel := context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
+	defer concel()
 	err = networks.Reconcile(ctx, inst.Name)
 	if err != nil {
 		return err
