@@ -108,7 +108,7 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	}
 	logrus.Debugf("changeDirCmd=%q", changeDirCmd)
 
-	script := fmt.Sprintf("%s ; exec bash --login", changeDirCmd)
+	script := fmt.Sprintf("%s ; exec $SHELL --login", changeDirCmd)
 	if len(args) > 1 {
 		script += fmt.Sprintf(
 			" -c %s",
