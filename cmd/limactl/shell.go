@@ -36,6 +36,7 @@ func newShellCommand() *cobra.Command {
 
 	shellCmd.Flags().SetInterspersed(false)
 
+	shellCmd.Flags().String("shell", "", "shell interpreter, e.g. /bin/bash")
 	shellCmd.Flags().String("workdir", "", "working directory")
 	return shellCmd
 }
@@ -108,7 +109,16 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	}
 	logrus.Debugf("changeDirCmd=%q", changeDirCmd)
 
-	script := fmt.Sprintf("%s ; exec $SHELL --login", changeDirCmd)
+	shell, err := cmd.Flags().GetString("shell")
+	if err != nil {
+		return err
+	}
+	if shell == "" {
+		shell = `"$SHELL"`
+	} else {
+		shell = shellescape.Quote(shell)
+	}
+	script := fmt.Sprintf("%s ; exec %s --login", changeDirCmd, shell)
 	if len(args) > 1 {
 		script += fmt.Sprintf(
 			" -c %s",
