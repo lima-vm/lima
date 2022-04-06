@@ -84,19 +84,19 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	if workDir != "" {
-		changeDirCmd = fmt.Sprintf("cd %q || exit 1", workDir)
+		changeDirCmd = fmt.Sprintf("cd %s || exit 1", shellescape.Quote(workDir))
 		// FIXME: check whether y.Mounts contains the home, not just len > 0
 	} else if len(y.Mounts) > 0 {
 		hostCurrentDir, err := os.Getwd()
 		if err == nil {
-			changeDirCmd = fmt.Sprintf("cd %q", hostCurrentDir)
+			changeDirCmd = fmt.Sprintf("cd %s", shellescape.Quote(hostCurrentDir))
 		} else {
 			changeDirCmd = "false"
 			logrus.WithError(err).Warn("failed to get the current directory")
 		}
 		hostHomeDir, err := os.UserHomeDir()
 		if err == nil {
-			changeDirCmd = fmt.Sprintf("%s || cd %q", changeDirCmd, hostHomeDir)
+			changeDirCmd = fmt.Sprintf("%s || cd %s", changeDirCmd, shellescape.Quote(hostHomeDir))
 		} else {
 			logrus.WithError(err).Warn("failed to get the home directory")
 		}
