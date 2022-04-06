@@ -75,6 +75,12 @@ The directory contains the following files:
 - `$LIMA_INSTANCE`: `lima ...` is expanded to `limactl shell ${LIMA_INSTANCE} ...`.
   - Default : `default`
 
+- `$LIMA_SHELL`: `lima ...` is expanded to `limactl shell --shell ${LIMA_SHELL} ...`.
+  - No default : will use the user's shell configured inside the instance
+
+- `$LIMA_WORKDIR`: `lima ...` is expanded to `limactl shell --workdir ${LIMA_WORKDIR} ...`.
+  - No default : will attempt to use the current directory from the host
+
 - `$QEMU_SYSTEM_X86_64`: path of `qemu-system-x86_64`
   - Default: `qemu-system-x86_64` in `$PATH`
 

@@ -1,6 +1,8 @@
 #!/bin/sh
 set -eu
 : "${LIMA_INSTANCE:=default}"
+: "${LIMA_SHELL:=}"
+: "${LIMA_WORKDIR:=}"
 : "${LIMACTL:=limactl}"
 
 if [ "$#" -eq 1 ]; then
@@ -11,6 +13,9 @@ if [ "$#" -eq 1 ]; then
     echo "${base} is an alias for \"${LIMACTL} shell ${LIMA_INSTANCE}\"."
     echo "The instance name (\"${LIMA_INSTANCE}\") can be changed by specifying \$LIMA_INSTANCE."
     echo
+    echo "The shell and initial workdir inside the instance can be specified via \$LIMA_SHELL"
+    echo "and \$LIMA_WORKDIR."
+    echo
     echo "See \`${LIMACTL} shell --help\` for further information."
     exit 0
   elif [ "$1" = "-v" ] || [ "$1" = "--version" ]; then
@@ -18,4 +23,11 @@ if [ "$#" -eq 1 ]; then
   fi
 fi
 
-exec "$LIMACTL" shell "$LIMA_INSTANCE" "$@"
+set - "$LIMA_INSTANCE" "$@"
+if [ -n "${LIMA_SHELL}" ]; then
+  set - --shell "$LIMA_SHELL" "$@"
+fi
+if [ -n "${LIMA_WORKDIR}" ]; then
+  set - --workdir "$LIMA_WORKDIR" "$@"
+fi
+exec "$LIMACTL" shell "$@"
