@@ -103,6 +103,27 @@ ssh:
 # ADVANCED CONFIGURATION
 # ===================================================================== #
 
+caCerts:
+  # If set to `true`, this will remove all the default trusted CA certificates that
+  # are normally shipped with the OS.
+  # 🟢 Builtin default: false
+  removeDefaults: null
+
+  # A list of trusted CA certificate files. The files will be read and passed to cloud-init.
+  files:
+  # - examples/hello.crt
+
+  # A list of trusted CA certificates. These are directly passed to cloud-init.
+  certs:
+  # - |
+  #   -----BEGIN CERTIFICATE-----
+  #   YOUR-ORGS-TRUSTED-CA-CERT-HERE
+  #   -----END CERTIFICATE-----
+  # - |
+  #   -----BEGIN CERTIFICATE-----
+  #   YOUR-ORGS-TRUSTED-CA-CERT-HERE
+  #   -----END CERTIFICATE-----
+
 containerd:
   # Enable system-wide (aka rootful)  containerd and its dependencies (BuildKit, Stargz Snapshotter)
   # 🟢 Builtin default: false

@@ -186,6 +186,28 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 		}
 	}
 
+	args.CACerts.RemoveDefaults = y.CACertificates.RemoveDefaults
+
+	for _, path := range y.CACertificates.Files {
+		expanded, err := localpathutil.Expand(path)
+		if err != nil {
+			return err
+		}
+
+		content, err := os.ReadFile(expanded)
+		if err != nil {
+			return err
+		}
+
+		cert := getCert(string(content))
+		args.CACerts.Trusted = append(args.CACerts.Trusted, cert)
+	}
+
+	for _, content := range y.CACertificates.Certs {
+		cert := getCert(content)
+		args.CACerts.Trusted = append(args.CACerts.Trusted, cert)
+	}
+
 	if err := ValidateTemplateArgs(args); err != nil {
 		return err
 	}
@@ -243,4 +265,16 @@ func GuestAgentBinary(arch string) (io.ReadCloser, error) {
 	}
 	gaPath := filepath.Join(dir, "lima-guestagent.Linux-"+arch)
 	return os.Open(gaPath)
+}
+
+func getCert(content string) Cert {
+	lines := []string{}
+	for _, line := range strings.Split(content, "\n") {
+		if line == "" {
+			continue
+		}
+		lines = append(lines, strings.TrimSpace(line))
+	}
+	// return lines
+	return Cert{Lines: lines}
 }

@@ -30,6 +30,7 @@ type LimaYAML struct {
 	HostResolver      HostResolver      `yaml:"hostResolver,omitempty" json:"hostResolver,omitempty"`
 	UseHostResolver   *bool             `yaml:"useHostResolver,omitempty" json:"useHostResolver,omitempty"` // DEPRECATED, use `HostResolver.Enabled` instead
 	PropagateProxyEnv *bool             `yaml:"propagateProxyEnv,omitempty" json:"propagateProxyEnv,omitempty"`
+	CACertificates    CACertificates    `yaml:"caCerts,omitempty" json:"caCerts,omitempty"`
 }
 
 type Arch = string
@@ -153,6 +154,12 @@ type HostResolver struct {
 	Enabled *bool             `yaml:"enabled,omitempty" json:"enabled,omitempty"`
 	IPv6    *bool             `yaml:"ipv6,omitempty" json:"ipv6,omitempty"`
 	Hosts   map[string]string `yaml:"hosts,omitempty" json:"hosts,omitempty"`
+}
+
+type CACertificates struct {
+	RemoveDefaults *bool    `yaml:"removeDefaults,omitempty" json:"removeDefaults,omitempty"` // default: false
+	Files          []string `yaml:"files,omitempty" json:"files,omitempty"`
+	Certs          []string `yaml:"certs,omitempty" json:"certs,omitempty"`
 }
 
 // DEPRECATED types below

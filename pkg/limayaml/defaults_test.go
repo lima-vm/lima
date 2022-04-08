@@ -76,6 +76,9 @@ func TestFillDefault(t *testing.T) {
 			IPv6:    pointer.Bool(false),
 		},
 		PropagateProxyEnv: pointer.Bool(true),
+		CACertificates: CACertificates{
+			RemoveDefaults: pointer.Bool(false),
+		},
 	}
 	builtin.CPUType[arch] = "host"
 
@@ -125,6 +128,12 @@ func TestFillDefault(t *testing.T) {
 		},
 		Env: map[string]string{
 			"ONE": "Eins",
+		},
+		CACertificates: CACertificates{
+			Files: []string{"ca.crt"},
+			Certs: []string{
+				"-----BEGIN CERTIFICATE-----\nYOUR-ORGS-TRUSTED-CA-CERT\n-----END CERTIFICATE-----\n",
+			},
 		},
 	}
 
@@ -178,6 +187,14 @@ func TestFillDefault(t *testing.T) {
 	expect.PortForwards[3].HostSocket = fmt.Sprintf("%s | %s | %s | %s | %s", hostHome, instDir, instName, user.Uid, user.Username)
 
 	expect.Env = y.Env
+
+	expect.CACertificates = CACertificates{
+		RemoveDefaults: pointer.Bool(false),
+		Files:          []string{"ca.crt"},
+		Certs: []string{
+			"-----BEGIN CERTIFICATE-----\nYOUR-ORGS-TRUSTED-CA-CERT\n-----END CERTIFICATE-----\n",
+		},
+	}
 
 	FillDefault(&y, &LimaYAML{}, &LimaYAML{}, filePath)
 	assert.DeepEqual(t, &y, &expect, opts...)
@@ -267,6 +284,12 @@ func TestFillDefault(t *testing.T) {
 			"ONE": "one",
 			"TWO": "two",
 		},
+		CACertificates: CACertificates{
+			RemoveDefaults: pointer.Bool(true),
+			Certs: []string{
+				"-----BEGIN CERTIFICATE-----\nYOUR-ORGS-TRUSTED-CA-CERT\n-----END CERTIFICATE-----\n",
+			},
+		},
 	}
 
 	expect = d
@@ -282,6 +305,10 @@ func TestFillDefault(t *testing.T) {
 		"default.": d.HostResolver.Hosts["default"],
 	}
 	expect.MountType = pointer.String(REVSSHFS)
+	expect.CACertificates.RemoveDefaults = pointer.Bool(true)
+	expect.CACertificates.Certs = []string{
+		"-----BEGIN CERTIFICATE-----\nYOUR-ORGS-TRUSTED-CA-CERT\n-----END CERTIFICATE-----\n",
+	}
 
 	y = LimaYAML{}
 	FillDefault(&y, &d, &LimaYAML{}, filePath)
@@ -413,6 +440,9 @@ func TestFillDefault(t *testing.T) {
 			"TWO":   "deux",
 			"THREE": "trois",
 		},
+		CACertificates: CACertificates{
+			RemoveDefaults: pointer.Bool(true),
+		},
 	}
 
 	y = filledDefaults
@@ -450,6 +480,12 @@ func TestFillDefault(t *testing.T) {
 
 	// ONE remains from filledDefaults.Env; the rest are set from o
 	expect.Env["ONE"] = y.Env["ONE"]
+
+	expect.CACertificates.RemoveDefaults = pointer.Bool(true)
+	expect.CACertificates.Files = []string{"ca.crt"}
+	expect.CACertificates.Certs = []string{
+		"-----BEGIN CERTIFICATE-----\nYOUR-ORGS-TRUSTED-CA-CERT\n-----END CERTIFICATE-----\n",
+	}
 
 	FillDefault(&y, &d, &o, filePath)
 	assert.DeepEqual(t, &y, &expect, opts...)

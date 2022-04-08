@@ -52,3 +52,15 @@ resolv_conf:
   - {{$ns}}
   {{- end }}
 {{- end }}
+
+{{ with .CACerts }}
+ca-certs:
+  remove_defaults: {{ .RemoveDefaults }}
+  trusted:
+  {{- range $cert := .Trusted }}
+  - |
+    {{- range $line := $cert.Lines }}
+    {{ $line }}
+    {{- end }}
+  {{- end }}
+{{- end }}
