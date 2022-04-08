@@ -21,6 +21,13 @@ import (
 	"github.com/xorcare/pointer"
 )
 
+const (
+	Default9pSecurityModel   string = "mapped-xattr"
+	Default9pProtocolVersion string = "9p2000.L"
+	Default9pMsize           string = "128KiB"
+	Default9pCache           string = "mmap"
+)
+
 func defaultContainerdArchives() []File {
 	const nerdctlVersion = "0.18.0"
 	location := func(goarch string) string {
@@ -367,6 +374,18 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 			if mount.SSHFS.FollowSymlinks != nil {
 				mounts[i].SSHFS.FollowSymlinks = mount.SSHFS.FollowSymlinks
 			}
+			if mount.NineP.SecurityModel != nil {
+				mounts[i].NineP.SecurityModel = mount.NineP.SecurityModel
+			}
+			if mount.NineP.ProtocolVersion != nil {
+				mounts[i].NineP.ProtocolVersion = mount.NineP.ProtocolVersion
+			}
+			if mount.NineP.Msize != nil {
+				mounts[i].NineP.Msize = mount.NineP.Msize
+			}
+			if mount.NineP.Cache != nil {
+				mounts[i].NineP.Cache = mount.NineP.Cache
+			}
 			if mount.Writable != nil {
 				mounts[i].Writable = mount.Writable
 			}
@@ -385,9 +404,31 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		if mount.SSHFS.FollowSymlinks == nil {
 			mount.SSHFS.FollowSymlinks = pointer.Bool(false)
 		}
+		if mount.NineP.SecurityModel == nil {
+			mounts[i].NineP.SecurityModel = pointer.String(Default9pSecurityModel)
+		}
+		if mount.NineP.ProtocolVersion == nil {
+			mounts[i].NineP.ProtocolVersion = pointer.String(Default9pProtocolVersion)
+		}
+		if mount.NineP.Msize == nil {
+			mounts[i].NineP.Msize = pointer.String(Default9pMsize)
+		}
+		if mount.NineP.Cache == nil {
+			mounts[i].NineP.Cache = pointer.String(Default9pCache)
+		}
 		if mount.Writable == nil {
 			mount.Writable = pointer.Bool(false)
 		}
+	}
+
+	if y.MountType == nil {
+		y.MountType = d.MountType
+	}
+	if o.MountType != nil {
+		y.MountType = o.MountType
+	}
+	if y.MountType == nil || *y.MountType == "" {
+		y.MountType = pointer.String(REVSSHFS)
 	}
 
 	// Note: DNS lists are not combined; highest priority setting is picked

@@ -87,7 +87,7 @@ it must not be created until the session reset is done.
 `,
 		})
 
-	if len(a.y.Mounts) > 0 {
+	if *a.y.MountType == limayaml.REVSSHFS && len(a.y.Mounts) > 0 {
 		req = append(req, requirement{
 			description: "sshfs binary to be installed",
 			script: `#!/bin/bash

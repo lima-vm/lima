@@ -378,19 +378,21 @@ func (a *HostAgent) startHostAgentRoutines(ctx context.Context) error {
 	if err := a.waitForRequirements(ctx, "essential", a.essentialRequirements()); err != nil {
 		mErr = multierror.Append(mErr, err)
 	}
-	mounts, err := a.setupMounts(ctx)
-	if err != nil {
-		mErr = multierror.Append(mErr, err)
-	}
-	a.onClose = append(a.onClose, func() error {
-		var unmountMErr error
-		for _, m := range mounts {
-			if unmountErr := m.close(); unmountErr != nil {
-				unmountMErr = multierror.Append(unmountMErr, unmountErr)
-			}
+	if *a.y.MountType == limayaml.REVSSHFS {
+		mounts, err := a.setupMounts(ctx)
+		if err != nil {
+			mErr = multierror.Append(mErr, err)
 		}
-		return unmountMErr
-	})
+		a.onClose = append(a.onClose, func() error {
+			var unmountMErr error
+			for _, m := range mounts {
+				if unmountErr := m.close(); unmountErr != nil {
+					unmountMErr = multierror.Append(unmountMErr, unmountErr)
+				}
+			}
+			return unmountMErr
+		})
+	}
 	go a.watchGuestAgentEvents(ctx)
 	if err := a.waitForRequirements(ctx, "optional", a.optionalRequirements()); err != nil {
 		mErr = multierror.Append(mErr, err)

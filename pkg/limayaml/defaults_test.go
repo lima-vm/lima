@@ -101,6 +101,7 @@ func TestFillDefault(t *testing.T) {
 		Mounts: []Mount{
 			{Location: "/tmp"},
 		},
+		MountType: pointer.String(NINEP),
 		Provision: []Provision{
 			{Script: "#!/bin/true"},
 		},
@@ -136,7 +137,13 @@ func TestFillDefault(t *testing.T) {
 	expect.Mounts[0].Writable = pointer.Bool(false)
 	expect.Mounts[0].SSHFS.Cache = pointer.Bool(true)
 	expect.Mounts[0].SSHFS.FollowSymlinks = pointer.Bool(false)
+	expect.Mounts[0].NineP.SecurityModel = pointer.String(Default9pSecurityModel)
+	expect.Mounts[0].NineP.ProtocolVersion = pointer.String(Default9pProtocolVersion)
+	expect.Mounts[0].NineP.Msize = pointer.String(Default9pMsize)
+	expect.Mounts[0].NineP.Cache = pointer.String(Default9pCache)
 	// Only missing Mounts field is Writable, and the default value is also the null value: false
+
+	expect.MountType = pointer.String(NINEP)
 
 	expect.Provision = y.Provision
 	expect.Provision[0].Mode = ProvisionModeSystem
@@ -267,9 +274,14 @@ func TestFillDefault(t *testing.T) {
 	expect.Containerd.Archives[0].Arch = *d.Arch
 	expect.Mounts[0].SSHFS.Cache = pointer.Bool(true)
 	expect.Mounts[0].SSHFS.FollowSymlinks = pointer.Bool(false)
+	expect.Mounts[0].NineP.SecurityModel = pointer.String(Default9pSecurityModel)
+	expect.Mounts[0].NineP.ProtocolVersion = pointer.String(Default9pProtocolVersion)
+	expect.Mounts[0].NineP.Msize = pointer.String(Default9pMsize)
+	expect.Mounts[0].NineP.Cache = pointer.String(Default9pCache)
 	expect.HostResolver.Hosts = map[string]string{
 		"default.": d.HostResolver.Hosts["default"],
 	}
+	expect.MountType = pointer.String(REVSSHFS)
 
 	y = LimaYAML{}
 	FillDefault(&y, &d, &LimaYAML{}, filePath)
@@ -353,6 +365,12 @@ func TestFillDefault(t *testing.T) {
 					Cache:          pointer.Bool(false),
 					FollowSymlinks: pointer.Bool(true),
 				},
+				NineP: NineP{
+					SecurityModel:   pointer.String("mapped-file"),
+					ProtocolVersion: pointer.String("9p2000"),
+					Msize:           pointer.String("8KiB"),
+					Cache:           pointer.String("none"),
+				},
 			},
 		},
 		Provision: []Provision{
@@ -414,6 +432,12 @@ func TestFillDefault(t *testing.T) {
 	expect.Mounts[0].Writable = pointer.Bool(true)
 	expect.Mounts[0].SSHFS.Cache = pointer.Bool(false)
 	expect.Mounts[0].SSHFS.FollowSymlinks = pointer.Bool(true)
+	expect.Mounts[0].NineP.SecurityModel = pointer.String("mapped-file")
+	expect.Mounts[0].NineP.ProtocolVersion = pointer.String("9p2000")
+	expect.Mounts[0].NineP.Msize = pointer.String("8KiB")
+	expect.Mounts[0].NineP.Cache = pointer.String("none")
+
+	expect.MountType = pointer.String(NINEP)
 
 	// o.Networks[1] is overriding the d.Networks[0].Lima entry for the "def0" interface
 	expect.Networks = append(append(d.Networks, y.Networks...), o.Networks[0])

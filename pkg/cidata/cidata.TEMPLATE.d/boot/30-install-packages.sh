@@ -21,8 +21,10 @@ fi
 # Install minimum dependencies
 if command -v apt-get >/dev/null 2>&1; then
 	pkgs=""
-	if [ "${LIMA_CIDATA_MOUNTS}" -gt 0 ] && ! command -v sshfs >/dev/null 2>&1; then
-		pkgs="${pkgs} sshfs"
+	if [ "${LIMA_CIDATA_MOUNTTYPE}" = "reverse-sshfs" ]; then
+		if [ "${LIMA_CIDATA_MOUNTS}" -gt 0 ] && ! command -v sshfs >/dev/null 2>&1; then
+			pkgs="${pkgs} sshfs"
+		fi
 	fi
 	if [ "${INSTALL_IPTABLES}" = 1 ] && [ ! -e /usr/sbin/iptables ]; then
 		pkgs="${pkgs} iptables"
@@ -42,8 +44,10 @@ elif command -v dnf >/dev/null 2>&1; then
 	if ! command -v tar >/dev/null 2>&1; then
 		pkgs="${pkgs} tar"
 	fi
-	if [ "${LIMA_CIDATA_MOUNTS}" -gt 0 ] && ! command -v sshfs >/dev/null 2>&1; then
-		pkgs="${pkgs} fuse-sshfs"
+	if [ "${LIMA_CIDATA_MOUNTTYPE}" = "reverse-sshfs" ]; then
+		if [ "${LIMA_CIDATA_MOUNTS}" -gt 0 ] && ! command -v sshfs >/dev/null 2>&1; then
+			pkgs="${pkgs} fuse-sshfs"
+		fi
 	fi
 	if [ "${INSTALL_IPTABLES}" = 1 ] && [ ! -e /usr/sbin/iptables ]; then
 		pkgs="${pkgs} iptables"
@@ -102,8 +106,10 @@ elif command -v yum >/dev/null 2>&1; then
 	fi
 elif command -v pacman >/dev/null 2>&1; then
 	pkgs=""
-	if [ "${LIMA_CIDATA_MOUNTS}" -gt 0 ] && ! command -v sshfs >/dev/null 2>&1; then
-		pkgs="${pkgs} sshfs"
+	if [ "${LIMA_CIDATA_MOUNTTYPE}" = "reverse-sshfs" ]; then
+		if [ "${LIMA_CIDATA_MOUNTS}" -gt 0 ] && ! command -v sshfs >/dev/null 2>&1; then
+			pkgs="${pkgs} sshfs"
+		fi
 	fi
 	# other dependencies are preinstalled on Arch Linux
 	if [ -n "${pkgs}" ]; then
@@ -112,8 +118,10 @@ elif command -v pacman >/dev/null 2>&1; then
 	fi
 elif command -v zypper >/dev/null 2>&1; then
 	pkgs=""
-	if [ "${LIMA_CIDATA_MOUNTS}" -gt 0 ] && ! command -v sshfs >/dev/null 2>&1; then
-		pkgs="${pkgs} sshfs"
+	if [ "${LIMA_CIDATA_MOUNTTYPE}" = "reverse-sshfs" ]; then
+		if [ "${LIMA_CIDATA_MOUNTS}" -gt 0 ] && ! command -v sshfs >/dev/null 2>&1; then
+			pkgs="${pkgs} sshfs"
+		fi
 	fi
 	if [ "${INSTALL_IPTABLES}" = 1 ] && [ ! -e /usr/sbin/iptables ]; then
 		pkgs="${pkgs} iptables"
@@ -127,8 +135,10 @@ elif command -v zypper >/dev/null 2>&1; then
 	fi
 elif command -v apk >/dev/null 2>&1; then
 	pkgs=""
-	if [ "${LIMA_CIDATA_MOUNTS}" -gt 0 ] && ! command -v sshfs >/dev/null 2>&1; then
-		pkgs="${pkgs} sshfs"
+	if [ "${LIMA_CIDATA_MOUNTTYPE}" = "reverse-sshfs" ]; then
+		if [ "${LIMA_CIDATA_MOUNTS}" -gt 0 ] && ! command -v sshfs >/dev/null 2>&1; then
+			pkgs="${pkgs} sshfs"
+		fi
 	fi
 	if [ "${INSTALL_IPTABLES}" = 1 ] && ! command -v iptables >/dev/null 2>&1; then
 		pkgs="${pkgs} iptables"
@@ -154,4 +164,6 @@ fi
 
 # update_fuse_conf has to be called after installing all the packages,
 # otherwise apt-get fails with conflict
-update_fuse_conf
+if [ "${LIMA_CIDATA_MOUNTTYPE}" = "reverse-sshfs" ]; then
+	update_fuse_conf
+fi

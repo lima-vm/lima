@@ -34,6 +34,7 @@ Container orchestration:
 Others:
 - [`vmnet.yaml`](./vmnet.yaml): ⭐enable [`vmnet.framework`](../docs/network.md)
 - [`deprecated/centos-7.yaml`](./deprecated/centos-7.yaml): [deprecated] CentOS 7
+- [`experimental-9p.yaml`](experimental-9p.yaml): use 9p mount type
 
 ## Tier 1
 

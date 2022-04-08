@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/docker/go-units"
 	"github.com/lima-vm/lima/pkg/iso9660util"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/localpathutil"
@@ -120,12 +121,44 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 		args.SSHPubKeys = append(args.SSHPubKeys, f.Content)
 	}
 
-	for _, f := range y.Mounts {
+	var fstype string
+	switch *y.MountType {
+	case limayaml.REVSSHFS:
+		fstype = "sshfs"
+	case limayaml.NINEP:
+		fstype = "9p"
+	}
+	for i, f := range y.Mounts {
+		tag := fmt.Sprintf("mount%d", i)
 		expanded, err := localpathutil.Expand(f.Location)
 		if err != nil {
 			return err
 		}
-		args.Mounts = append(args.Mounts, expanded)
+		options := "defaults"
+		if fstype == "9p" {
+			options = "ro"
+			if *f.Writable {
+				options = "rw"
+			}
+			options += ",trans=virtio"
+			options += fmt.Sprintf(",version=%s", *f.NineP.ProtocolVersion)
+			msize, err := units.RAMInBytes(*f.NineP.Msize)
+			if err != nil {
+				return fmt.Errorf("failed to parse msize for %q: %w", expanded, err)
+			}
+			options += fmt.Sprintf(",msize=%d", msize)
+			options += fmt.Sprintf(",cache=%s", *f.NineP.Cache)
+			// don't fail the boot, if virtfs is not available
+			options += ",nofail"
+		}
+		args.Mounts = append(args.Mounts, Mount{Tag: tag, Target: expanded, Type: fstype, Options: options})
+	}
+
+	switch *y.MountType {
+	case limayaml.REVSSHFS:
+		args.MountType = "reverse-sshfs"
+	case limayaml.NINEP:
+		args.MountType = "9p"
 	}
 
 	slirpMACAddress := limayaml.MACAddress(instDir)

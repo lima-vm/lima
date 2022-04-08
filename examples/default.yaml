@@ -61,10 +61,27 @@ mounts:
     # system will look and feel like regular files directories in the Guest OS.
     # 🟢 Builtin default: false
     followSymlinks: null
+  9p:
+    # Supported security models are "passthrough", "mapped-xattr", "mapped-file" and "none".
+    # 🟢 Builtin default: "mapped-xattr"
+    securityModel: null
+    # Select 9P protocol version. Valid options are: "9p2000" (legacy), "9p2000.u", "9p2000.L".
+    # 🟢 Builtin default: "9p2000.L"
+    protocolVersion: null
+    # The number of bytes to use for 9p packet payload, where 4KiB is the absolute minimum.
+    # 🟢 Builtin default: "128KiB"
+    msize: null
+    # Specifies a caching policy. Valid options are: "none", "loose", "fscache" and "mmap".
+    # 🟢 Builtin default: "mmap"
+    cache: null
 - location: "/tmp/lima"
   # 🟢 Builtin default: false
   # 🔵 This file: true (only for "/tmp/lima")
   writable: true
+
+# Mount type for above mounts, such as "reverse-sshfs" (from sshocker) or "9p" (EXPERIMENTAL, from QEMU’s virtio-9p-pci, aka virtfs)
+# 🟢 Builtin default: "reverse-sshfs"
+mountType: null
 
 ssh:
   # A localhost port of the host. Forwarded to port 22 of the guest.
