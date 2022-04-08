@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"net/url"
 	"os"
@@ -59,15 +60,26 @@ $ limactl start --name=default https://raw.githubusercontent.com/lima-vm/lima/ma
 }
 
 func readTemplate(name string) ([]byte, error) {
-	dir, err := usrlocalsharelima.Dir()
-	if err != nil {
-		return nil, err
-	}
 	if strings.Contains(name, string(os.PathSeparator)) {
 		return nil, fmt.Errorf("invalid template name %q", name)
 	}
-	defaultYAMLPath := filepath.Join(dir, "examples", name+".yaml")
-	return os.ReadFile(defaultYAMLPath)
+	templates, err := listTemplateYAMLs()
+	if err != nil {
+		return nil, err
+	}
+	for _, t := range templates {
+		if t.Name != name {
+			continue
+		}
+		switch {
+		case t.Experimental:
+			logrus.Warnf("Template %q is experimental", name)
+		case t.Deprecated:
+			logrus.Warnf("Template %q is deprecated and will be removed", name)
+		}
+		return os.ReadFile(t.Location)
+	}
+	return nil, fmt.Errorf("unknown template %q", name)
 }
 
 func readDefaultTemplate() ([]byte, error) {
@@ -300,7 +312,14 @@ func chooseNextCreatorState(st *creatorState) (*creatorState, error) {
 				Options: make([]string, len(examples)),
 			}
 			for i := range examples {
-				promptEx.Options[i] = examples[i].Name
+				txt := examples[i].Name
+				switch {
+				case examples[i].Experimental:
+					txt += " [experimental]"
+				case examples[i].Deprecated:
+					txt += " [deprecated]"
+				}
+				promptEx.Options[i] = txt
 			}
 			if err := survey.AskOne(promptEx, &ansEx); err != nil {
 				return st, err
@@ -333,22 +352,37 @@ func listTemplateYAMLs() ([]TemplateYAML, error) {
 		return nil, err
 	}
 	examplesDir := filepath.Join(usrlocalsharelimaDir, "examples")
-	glob := filepath.Join(examplesDir, "*.yaml")
-	globbed, err := filepath.Glob(glob)
-	if err != nil {
+	var res, experimentalRes, deprecatedRes []TemplateYAML
+	walkDirFn := func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		base := filepath.Base(p)
+		if strings.HasPrefix(base, ".") || !strings.HasSuffix(base, ".yaml") {
+			return nil
+		}
+		x := TemplateYAML{
+			Name:         strings.TrimSuffix(base, ".yaml"),
+			Location:     p,
+			Experimental: strings.Contains(p, "experimental"),
+			Deprecated:   strings.Contains(p, "deprecated"),
+		}
+		switch {
+		case x.Experimental:
+			experimentalRes = append(experimentalRes, x)
+		case x.Deprecated:
+			deprecatedRes = append(deprecatedRes, x)
+		default:
+			res = append(res, x)
+		}
+		return nil
+	}
+	if err = filepath.WalkDir(examplesDir, walkDirFn); err != nil {
 		return nil, err
 	}
-	var res []TemplateYAML
-	for _, f := range globbed {
-		base := filepath.Base(f)
-		if strings.HasPrefix(base, ".") {
-			continue
-		}
-		res = append(res, TemplateYAML{
-			Name:     strings.TrimSuffix(filepath.Base(f), ".yaml"),
-			Location: f,
-		})
-	}
+	// experimental ones and deprecated ones are deprioritized
+	res = append(res, experimentalRes...)
+	res = append(res, deprecatedRes...)
 	return res, nil
 }
 

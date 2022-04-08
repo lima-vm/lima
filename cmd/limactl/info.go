@@ -21,8 +21,10 @@ func newInfoCommand() *cobra.Command {
 }
 
 type TemplateYAML struct {
-	Name     string `json:"name"`
-	Location string `json:"location"`
+	Name         string `json:"name"`
+	Location     string `json:"location"`
+	Experimental bool   `json:"experimental,omitempty"`
+	Deprecated   bool   `json:"deprecated,omitempty"`
 }
 
 type Info struct {
