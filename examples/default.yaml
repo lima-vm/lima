@@ -72,7 +72,9 @@ mounts:
     # 🟢 Builtin default: "128KiB"
     msize: null
     # Specifies a caching policy. Valid options are: "none", "loose", "fscache" and "mmap".
-    # 🟢 Builtin default: "mmap"
+    # Try choosing "mmap" or "none" if you see a stability issue with the default "fscache".
+    # See https://www.kernel.org/doc/Documentation/filesystems/9p.txt
+    # 🟢 Builtin default: "fscache" for non-writable mounts, "mmap" for writable mounts
     cache: null
 - location: "/tmp/lima"
   # 🟢 Builtin default: false

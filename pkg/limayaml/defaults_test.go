@@ -140,7 +140,7 @@ func TestFillDefault(t *testing.T) {
 	expect.Mounts[0].NineP.SecurityModel = pointer.String(Default9pSecurityModel)
 	expect.Mounts[0].NineP.ProtocolVersion = pointer.String(Default9pProtocolVersion)
 	expect.Mounts[0].NineP.Msize = pointer.String(Default9pMsize)
-	expect.Mounts[0].NineP.Cache = pointer.String(Default9pCache)
+	expect.Mounts[0].NineP.Cache = pointer.String(Default9pCacheForRO)
 	// Only missing Mounts field is Writable, and the default value is also the null value: false
 
 	expect.MountType = pointer.String(NINEP)
@@ -277,7 +277,7 @@ func TestFillDefault(t *testing.T) {
 	expect.Mounts[0].NineP.SecurityModel = pointer.String(Default9pSecurityModel)
 	expect.Mounts[0].NineP.ProtocolVersion = pointer.String(Default9pProtocolVersion)
 	expect.Mounts[0].NineP.Msize = pointer.String(Default9pMsize)
-	expect.Mounts[0].NineP.Cache = pointer.String(Default9pCache)
+	expect.Mounts[0].NineP.Cache = pointer.String(Default9pCacheForRO)
 	expect.HostResolver.Hosts = map[string]string{
 		"default.": d.HostResolver.Hosts["default"],
 	}
