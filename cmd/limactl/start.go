@@ -75,10 +75,8 @@ func readDefaultTemplate() ([]byte, error) {
 }
 
 func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, error) {
-	var arg string
-	if len(args) == 0 {
-		arg = DefaultInstanceName
-	} else {
+	var arg string // can be empty
+	if len(args) > 0 {
 		arg = args[0]
 	}
 
@@ -154,22 +152,31 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 			return nil, err
 		}
 	} else {
-		logrus.Debugf("interpreting argument %q as an instance name", arg)
-		if st.instName != "" && st.instName != arg {
-			return nil, fmt.Errorf("instance name %q and CLI flag --name=%q cannot be specified together", arg, st.instName)
+		if arg == "" {
+			if st.instName == "" {
+				st.instName = DefaultInstanceName
+			}
+		} else {
+			logrus.Debugf("interpreting argument %q as an instance name", arg)
+			if st.instName != "" && st.instName != arg {
+				return nil, fmt.Errorf("instance name %q and CLI flag --name=%q cannot be specified together", arg, st.instName)
+			}
+			st.instName = arg
 		}
-		st.instName = arg
 		if err := identifiers.Validate(st.instName); err != nil {
 			return nil, fmt.Errorf("argument must be either an instance name, a YAML file path, or a URL, got %q: %w", st.instName, err)
 		}
 		if inst, err := store.Inspect(st.instName); err == nil {
 			logrus.Infof("Using the existing instance %q", st.instName)
+			if arg == "" {
+				logrus.Infof("Hint: To create another instance, run the following command: limactl start --name=NAME template://default")
+			}
 			return inst, nil
 		} else {
 			if !errors.Is(err, os.ErrNotExist) {
 				return nil, err
 			}
-			if st.instName != DefaultInstanceName {
+			if arg != "" && arg != DefaultInstanceName {
 				logrus.Infof("Creating an instance %q from template://default (Not from template://%s)", st.instName, st.instName)
 				logrus.Warnf("This form is deprecated. Use `limactl start --name=%s template://default` instead", st.instName)
 			}
