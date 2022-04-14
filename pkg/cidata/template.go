@@ -19,6 +19,15 @@ var templateFS embed.FS
 
 const templateFSRoot = "cidata.TEMPLATE.d"
 
+type CACerts struct {
+	RemoveDefaults *bool
+	Trusted        []Cert
+}
+
+type Cert struct {
+	Lines []string
+}
+
 type Containerd struct {
 	System bool
 	User   bool
@@ -51,6 +60,7 @@ type TemplateArgs struct {
 	TCPDNSLocalPort int
 	Env             map[string]string
 	DNSAddresses    []string
+	CACerts         CACerts
 }
 
 func ValidateTemplateArgs(args TemplateArgs) error {

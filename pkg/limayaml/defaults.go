@@ -73,6 +73,7 @@ func MACAddress(uniqueID string) string {
 // - Mounts are appended in d, y, o order, but "merged" when the Location matches a previous entry;
 //   the highest priority Writable setting wins.
 // - DNS are picked from the highest priority where DNS is not empty.
+// - CACertificates Files and Certs are uniquely appended
 func FillDefault(y, d, o *LimaYAML, filePath string) {
 	if y.Arch == nil {
 		y.Arch = d.Arch
@@ -455,6 +456,22 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		env[k] = v
 	}
 	y.Env = env
+
+	if y.CACertificates.RemoveDefaults == nil {
+		y.CACertificates.RemoveDefaults = d.CACertificates.RemoveDefaults
+	}
+	if o.CACertificates.RemoveDefaults != nil {
+		y.CACertificates.RemoveDefaults = o.CACertificates.RemoveDefaults
+	}
+	if y.CACertificates.RemoveDefaults == nil {
+		y.CACertificates.RemoveDefaults = pointer.Bool(false)
+	}
+
+	caFiles := unique(append(append(d.CACertificates.Files, y.CACertificates.Files...), o.CACertificates.Files...))
+	y.CACertificates.Files = caFiles
+
+	caCerts := unique(append(append(d.CACertificates.Certs, y.CACertificates.Certs...), o.CACertificates.Certs...))
+	y.CACertificates.Certs = caCerts
 }
 
 func FillPortForwardDefaults(rule *PortForward, instDir string) {
@@ -565,4 +582,16 @@ func Cname(host string) string {
 		host += "."
 	}
 	return host
+}
+
+func unique(s []string) []string {
+	keys := make(map[string]bool)
+	list := []string{}
+	for _, entry := range s {
+		if _, found := keys[entry]; !found {
+			keys[entry] = true
+			list = append(list, entry)
+		}
+	}
+	return list
 }
