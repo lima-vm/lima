@@ -155,6 +155,9 @@ type features struct {
 	// e.g. "Supported machines are:\nakita...\n...virt-6.2...\n...virt-7.0...\n...\n"
 	// Not machine-readable, but checking strings.Contains() should be fine.
 	MachineHelp []byte
+
+	// VersionGEQ7 is true when the QEMU version seems v7.0.0 or later
+	VersionGEQ7 bool
 }
 
 func inspectFeatures(exe string) (*features, error) {
@@ -198,6 +201,7 @@ func inspectFeatures(exe string) (*features, error) {
 			f.MachineHelp = stderr.Bytes()
 		}
 	}
+	f.VersionGEQ7 = strings.Contains(string(f.MachineHelp), "-7.0")
 
 	return &f, nil
 }
@@ -218,8 +222,7 @@ func showDarwinARM64HVFQEMU620Warning(exe, accel string, features *features) {
 	if accel != "hvf" {
 		return
 	}
-	if strings.Contains(string(features.MachineHelp), "virt-7.0") {
-		// QEMU 7.0.0 or later
+	if features.VersionGEQ7 {
 		return
 	}
 	if exeFull, err := exec.LookPath(exe); err == nil {
@@ -285,7 +288,7 @@ func Cmdline(cfg Config) (string, []string, error) {
 		// QEMU <  7.0 requires highmem=off to be set, otherwise fails with "VCPU supports less PA bits (36) than requested by the memory map (40)"
 		// https://github.com/lima-vm/lima/issues/680
 		// https://github.com/lima-vm/lima/pull/24
-		if !strings.Contains(string(features.MachineHelp), "virt-7.0") {
+		if !features.VersionGEQ7 {
 			machine += ",highmem=off"
 		}
 		args = appendArgsIfNoConflict(args, "-machine", machine)
