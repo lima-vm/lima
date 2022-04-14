@@ -88,9 +88,11 @@ jobs:
       run: |
         (
           brew install autoconf automake
+          cd ~
           git clone https://github.com/lima-vm/vde_vmnet
           cd vde_vmnet
           git checkout $VDE_VMNET_VERSION
+          sudo git config --global --add safe.directory /Users/runner/vde_vmnet
           sudo make PREFIX=/opt/vde install
         )
         (
