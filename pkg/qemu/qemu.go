@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/coreos/go-semver/semver"
 	"github.com/docker/go-units"
 	"github.com/lima-vm/lima/pkg/downloader"
 	"github.com/lima-vm/lima/pkg/iso9660util"
@@ -246,6 +247,63 @@ func showDarwinARM64HVFQEMU620Warning(exe, accel string, features *features) {
 	logrus.Warn(w)
 }
 
+func getMacOSProductVersion() (*semver.Version, error) {
+	cmd := exec.Command("sw_vers", "-productVersion")
+	// output is like "12.3.1\n"
+	b, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute %v: %w", cmd.Args, err)
+	}
+	verTrimmed := strings.TrimSpace(string(b))
+	verSem, err := semver.NewVersion(verTrimmed)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse macOS version %q: %w", verTrimmed, err)
+	}
+	return verSem, nil
+}
+
+// adjustMemBytesDarwinARM64HVF adjusts the memory to be <= 3 GiB, only when the following conditions are met:
+//
+// - Host OS   <  macOS 12.4
+// - Host Arch == arm64
+// - Accel     == hvf
+// - QEMU      >= 7.0
+//
+// This adjustment is required for avoiding host kernel panic. The issue was fixed in macOS 12.4 Beta 1.
+// See https://github.com/lima-vm/lima/issues/795 https://gitlab.com/qemu-project/qemu/-/issues/903#note_911000975
+func adjustMemBytesDarwinARM64HVF(memBytes int64, accel string, features *features) int64 {
+	const safeSize = 3 * 1024 * 1024 * 1024 // 3 GiB
+	if memBytes <= safeSize {
+		return memBytes
+	}
+	if runtime.GOOS != "darwin" {
+		return memBytes
+	}
+	if runtime.GOARCH != "arm64" {
+		return memBytes
+	}
+	if accel != "hvf" {
+		return memBytes
+	}
+	if !features.VersionGEQ7 {
+		return memBytes
+	}
+	macOSProductVersion, err := getMacOSProductVersion()
+	if err != nil {
+		logrus.Warn(err)
+		return memBytes
+	}
+	if !macOSProductVersion.LessThan(*semver.New("12.4.0")) {
+		return memBytes
+	}
+	logrus.Warnf("Reducing the guest memory from %s to %s, to avoid host kernel panic on macOS <= 12.3 with QEMU >= 7.0; "+
+		"Please update macOS to 12.4 or later, or downgrade QEMU to 6.2; "+
+		"See https://github.com/lima-vm/lima/issues/795 for the further background.",
+		units.BytesSize(float64(memBytes)), units.BytesSize(float64(safeSize)))
+	memBytes = safeSize
+	return memBytes
+}
+
 func Cmdline(cfg Config) (string, []string, error) {
 	y := cfg.LimaYAML
 	exe, args, err := getExe(*y.Arch)
@@ -265,6 +323,15 @@ func Cmdline(cfg Config) (string, []string, error) {
 	}
 	showDarwinARM64HVFQEMU620Warning(exe, accel, features)
 
+	// Memory
+	memBytes, err := units.RAMInBytes(*y.Memory)
+	if err != nil {
+		return "", nil, err
+	}
+	memBytes = adjustMemBytesDarwinARM64HVF(memBytes, accel, features)
+	args = appendArgsIfNoConflict(args, "-m", strconv.Itoa(int(memBytes>>20)))
+
+	// CPU
 	cpu := y.CPUType[*y.Arch]
 	args = appendArgsIfNoConflict(args, "-cpu", cpu)
 	switch *y.Arch {
@@ -288,7 +355,8 @@ func Cmdline(cfg Config) (string, []string, error) {
 		// QEMU <  7.0 requires highmem=off to be set, otherwise fails with "VCPU supports less PA bits (36) than requested by the memory map (40)"
 		// https://github.com/lima-vm/lima/issues/680
 		// https://github.com/lima-vm/lima/pull/24
-		if !features.VersionGEQ7 {
+		// But when the memory size is <= 3 GiB, we can always set highmem=off.
+		if !features.VersionGEQ7 || memBytes <= 3*1024*1024*1024 {
 			machine += ",highmem=off"
 		}
 		args = appendArgsIfNoConflict(args, "-machine", machine)
@@ -297,13 +365,6 @@ func Cmdline(cfg Config) (string, []string, error) {
 	// SMP
 	args = appendArgsIfNoConflict(args, "-smp",
 		fmt.Sprintf("%d,sockets=1,cores=%d,threads=1", *y.CPUs, *y.CPUs))
-
-	// Memory
-	memBytes, err := units.RAMInBytes(*y.Memory)
-	if err != nil {
-		return "", nil, err
-	}
-	args = appendArgsIfNoConflict(args, "-m", strconv.Itoa(int(memBytes>>20)))
 
 	// Firmware
 	legacyBIOS := *y.Firmware.LegacyBIOS
