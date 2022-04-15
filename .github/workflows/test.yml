@@ -99,7 +99,7 @@ jobs:
           limactl sudoers | sudo tee /etc/sudoers.d/lima
         )
     - name: Cache ~/Library/Caches/lima/download
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: ~/Library/Caches/lima/download
         key: ${{ runner.os }}-integration
