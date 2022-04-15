@@ -194,3 +194,5 @@ jobs:
         fetch-depth: 1
     - name: Make linux artifacts
       run: make artifacts-linux
+    - name: Make misc artifacts
+      run: make artifacts-misc
