@@ -13,16 +13,16 @@ jobs:
     runs-on: ubuntu-20.04
     timeout-minutes: 30
     steps:
-    - uses: actions/setup-go@v2
+    - uses: actions/setup-go@v3
       with:
         go-version: 1.18.x
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         fetch-depth: 1
     - name: Run golangci-lint
-      uses: golangci/golangci-lint-action@v2
+      uses: golangci/golangci-lint-action@v3
       with:
-        version: v1.45.0
+        version: v1.45.2
         args: --verbose
     - name: Run yamllint
       run: yamllint .
@@ -56,10 +56,10 @@ jobs:
     runs-on: macos-11
     timeout-minutes: 120
     steps:
-    - uses: actions/setup-go@v2
+    - uses: actions/setup-go@v3
       with:
         go-version: 1.18.x
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         fetch-depth: 1
     - name: Unit tests
@@ -142,7 +142,7 @@ jobs:
       matrix:
         oldver: ["v0.8.0"]
     steps:
-    - uses: actions/setup-go@v2
+    - uses: actions/setup-go@v3
       with:
         go-version: 1.18.x
     - uses: actions/checkout@v3
@@ -151,7 +151,7 @@ jobs:
     - name: Install test dependencies
       run: brew install qemu bash coreutils
     - name: Cache ~/Library/Caches/lima/download
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: ~/Library/Caches/lima/download
         key: ${{ runner.os }}-upgrade-${{ matrix.oldver }}
@@ -168,10 +168,10 @@ jobs:
     runs-on: macos-11
     timeout-minutes: 20
     steps:
-    - uses: actions/setup-go@v2
+    - uses: actions/setup-go@v3
       with:
         go-version: 1.18.x
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         fetch-depth: 1
     - name: Make darwin artifacts
@@ -182,14 +182,14 @@ jobs:
     runs-on: ubuntu-20.04
     timeout-minutes: 20
     steps:
-    - uses: actions/setup-go@v2
+    - uses: actions/setup-go@v3
       with:
         go-version: 1.18.x
     - name: Install gcc-aarch64-linux-gnu
       run: |
         sudo apt-get update
         sudo apt-get install -y gcc-aarch64-linux-gnu
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         fetch-depth: 1
     - name: Make linux artifacts

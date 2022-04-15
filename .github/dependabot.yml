@@ -7,3 +7,10 @@ updates:
   open-pull-requests-limit: 10
   reviewers:
   - AkihiroSuda
+- package-ecosystem: github-actions
+  directory: "/"
+  schedule:
+    interval: daily
+  open-pull-requests-limit: 10
+  reviewers:
+  - AkihiroSuda
