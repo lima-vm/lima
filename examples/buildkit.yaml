@@ -30,5 +30,5 @@ containerd:
   user: true
 
 portForwards:
-- guestSocket: "/run/user/{{.UID}}/buildkit/buildkitd.sock"
+- guestSocket: "/run/user/{{.UID}}/buildkit-default/buildkitd.sock"
   hostSocket: "{{.Dir}}/sock/buildkitd.sock"
