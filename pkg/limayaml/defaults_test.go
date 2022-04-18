@@ -146,6 +146,7 @@ func TestFillDefault(t *testing.T) {
 	expect.Mounts[0].Writable = pointer.Bool(false)
 	expect.Mounts[0].SSHFS.Cache = pointer.Bool(true)
 	expect.Mounts[0].SSHFS.FollowSymlinks = pointer.Bool(false)
+	expect.Mounts[0].SSHFS.SFTPDriver = pointer.String("")
 	expect.Mounts[0].NineP.SecurityModel = pointer.String(Default9pSecurityModel)
 	expect.Mounts[0].NineP.ProtocolVersion = pointer.String(Default9pProtocolVersion)
 	expect.Mounts[0].NineP.Msize = pointer.String(Default9pMsize)
@@ -297,6 +298,7 @@ func TestFillDefault(t *testing.T) {
 	expect.Containerd.Archives[0].Arch = *d.Arch
 	expect.Mounts[0].SSHFS.Cache = pointer.Bool(true)
 	expect.Mounts[0].SSHFS.FollowSymlinks = pointer.Bool(false)
+	expect.Mounts[0].SSHFS.SFTPDriver = pointer.String("")
 	expect.Mounts[0].NineP.SecurityModel = pointer.String(Default9pSecurityModel)
 	expect.Mounts[0].NineP.ProtocolVersion = pointer.String(Default9pProtocolVersion)
 	expect.Mounts[0].NineP.Msize = pointer.String(Default9pMsize)

@@ -250,7 +250,7 @@ The current default spec:
 ## How it works
 
 - Hypervisor: QEMU with HVF accelerator
-- Filesystem sharing: [reverse sshfs](https://github.com/lima-vm/sshocker/blob/v0.2.0/pkg/reversesshfs/reversesshfs.go) (likely to be replaced with 9p or Samba in future)
+- Filesystem sharing: [Reverse SSHFS (default),  or virtio-9p-pci aka virtfs](./docs/mount.md)
 - Port forwarding: `ssh -L`, automated by watching `/proc/net/tcp` and `iptables` events in the guest
 
 ## Developer guide
@@ -266,6 +266,7 @@ The current default spec:
 - Performance optimization
 - More guest distros
 - Windows hosts
+- virtio-fs to replace virtio-9p-pci aka virtfs (work has to be done on QEMU repo)
 - [vsock](https://github.com/apple/darwin-xnu/blob/xnu-7195.81.3/bsd/man/man4/vsock.4) to replace SSH (work has to be done on QEMU repo)
 
 ## FAQs & Troubleshooting

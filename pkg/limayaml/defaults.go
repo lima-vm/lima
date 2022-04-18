@@ -376,6 +376,9 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 			if mount.SSHFS.FollowSymlinks != nil {
 				mounts[i].SSHFS.FollowSymlinks = mount.SSHFS.FollowSymlinks
 			}
+			if mount.SSHFS.SFTPDriver != nil {
+				mounts[i].SSHFS.SFTPDriver = mount.SSHFS.SFTPDriver
+			}
 			if mount.NineP.SecurityModel != nil {
 				mounts[i].NineP.SecurityModel = mount.NineP.SecurityModel
 			}
@@ -405,6 +408,9 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		}
 		if mount.SSHFS.FollowSymlinks == nil {
 			mount.SSHFS.FollowSymlinks = pointer.Bool(false)
+		}
+		if mount.SSHFS.SFTPDriver == nil {
+			mount.SSHFS.SFTPDriver = pointer.String("")
 		}
 		if mount.NineP.SecurityModel == nil {
 			mounts[i].NineP.SecurityModel = pointer.String(Default9pSecurityModel)
