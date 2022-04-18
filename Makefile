@@ -86,7 +86,7 @@ lint:
 
 .PHONY: clean
 clean:
-	rm -rf _output
+	rm -rf _output vendor
 
 .PHONY: artifacts-darwin
 artifacts-darwin:
@@ -103,3 +103,9 @@ artifacts-linux:
 	$(TAR) -C _output/ -czvf _artifacts/lima-$(VERSION_TRIMMED)-Linux-x86_64.tar.gz ./
 	GOOS=linux GOARCH=arm64 CC=aarch64-linux-gnu-gcc make clean binaries
 	$(TAR) -C _output/ -czvf _artifacts/lima-$(VERSION_TRIMMED)-Linux-aarch64.tar.gz ./
+
+.PHONY: artifacts-misc
+artifacts-misc:
+	mkdir -p _artifacts
+	go mod vendor
+	$(TAR) -czf _artifacts/lima-$(VERSION_TRIMMED)-go-mod-vendor.tar.gz go.mod go.sum vendor

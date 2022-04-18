@@ -47,6 +47,8 @@ jobs:
         sudo apt-get install -y gcc-aarch64-linux-gnu
     - name: "Compile binaries"
       run: make artifacts-linux
+    - name: "Make misc artifacts"
+      run: make artifacts-misc
     - name: "SHA256SUMS"
       run: |
         ( cd _artifacts; sha256sum *.tar.gz ) | tee /tmp/SHA256SUMS
