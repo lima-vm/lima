@@ -51,6 +51,7 @@ func (a *HostAgent) setupMount(ctx context.Context, m limayaml.Mount) (*mount, e
 	}
 	logrus.Infof("Mounting %q", expanded)
 	rsf := &reversesshfs.ReverseSSHFS{
+		Driver:              *m.SSHFS.SFTPDriver,
 		SSHConfig:           a.sshConfig,
 		LocalPath:           expanded,
 		Host:                "127.0.0.1",

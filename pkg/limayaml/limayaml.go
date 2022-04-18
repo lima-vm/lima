@@ -57,9 +57,17 @@ type Mount struct {
 	NineP    NineP  `yaml:"9p,omitempty" json:"9p,omitempty"`
 }
 
+type SFTPDriver = string
+
+const (
+	SFTPDriverBuiltin           = "builtin"
+	SFTPDriverOpenSSHSFTPServer = "openssh-sftp-server"
+)
+
 type SSHFS struct {
-	Cache          *bool `yaml:"cache,omitempty" json:"cache,omitempty"`
-	FollowSymlinks *bool `yaml:"followSymlinks,omitempty" json:"followSymlinks,omitempty"`
+	Cache          *bool       `yaml:"cache,omitempty" json:"cache,omitempty"`
+	FollowSymlinks *bool       `yaml:"followSymlinks,omitempty" json:"followSymlinks,omitempty"`
+	SFTPDriver     *SFTPDriver `yaml:"sftpDriver,omitempty" json:"sftpDriver,omitempty"`
 }
 
 type NineP struct {

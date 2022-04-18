@@ -61,6 +61,9 @@ mounts:
     # system will look and feel like regular files directories in the Guest OS.
     # 🟢 Builtin default: false
     followSymlinks: null
+    # SFTP driver, "builtin" or "openssh-sftp-server". "openssh-sftp-server" is recommended.
+    # 🟢 Builtin default: "openssh-sftp-server" if OpenSSH SFTP Server binary is found, otherwise "builtin"
+    sftpDriver: null
   9p:
     # Supported security models are "passthrough", "mapped-xattr", "mapped-file" and "none".
     # 🟢 Builtin default: "mapped-xattr"
