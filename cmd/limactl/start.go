@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"net/url"
 	"os"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/containerd/containerd/identifiers"
+	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	networks "github.com/lima-vm/lima/pkg/networks/reconcile"
 	"github.com/lima-vm/lima/pkg/osutil"
@@ -63,10 +65,10 @@ func readTemplate(name string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if strings.Contains(name, string(os.PathSeparator)) {
-		return nil, fmt.Errorf("invalid template name %q", name)
+	defaultYAMLPath, err := securejoin.SecureJoin(filepath.Join(dir, "examples"), name+".yaml")
+	if err != nil {
+		return nil, err
 	}
-	defaultYAMLPath := filepath.Join(dir, "examples", name+".yaml")
 	return os.ReadFile(defaultYAMLPath)
 }
 
@@ -91,10 +93,12 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 	const yBytesLimit = 4 * 1024 * 1024 // 4MiB
 
 	if ok, u := argSeemsTemplateURL(arg); ok {
-		templateName := u.Host
+		// No need to use SecureJoin here. https://github.com/lima-vm/lima/pull/805#discussion_r853411702
+		templateName := filepath.Join(u.Host, u.Path)
 		logrus.Debugf("interpreting argument %q as a template name %q", arg, templateName)
 		if st.instName == "" {
-			st.instName = templateName
+			// e.g., templateName = "deprecated/centos-7" , st.instName = "centos-7"
+			st.instName = filepath.Base(templateName)
 		}
 		st.yBytes, err = readTemplate(templateName)
 		if err != nil {
@@ -340,21 +344,26 @@ func listTemplateYAMLs() ([]TemplateYAML, error) {
 		return nil, err
 	}
 	examplesDir := filepath.Join(usrlocalsharelimaDir, "examples")
-	glob := filepath.Join(examplesDir, "*.yaml")
-	globbed, err := filepath.Glob(glob)
-	if err != nil {
-		return nil, err
-	}
+
 	var res []TemplateYAML
-	for _, f := range globbed {
-		base := filepath.Base(f)
-		if strings.HasPrefix(base, ".") {
-			continue
+	walkDirFn := func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
 		}
-		res = append(res, TemplateYAML{
-			Name:     strings.TrimSuffix(filepath.Base(f), ".yaml"),
-			Location: f,
-		})
+		base := filepath.Base(p)
+		if strings.HasPrefix(base, ".") || !strings.HasSuffix(base, ".yaml") {
+			return nil
+		}
+		x := TemplateYAML{
+			// Name is like "default", "debian", "deprecated/centos-7", ...
+			Name:     strings.TrimSuffix(strings.TrimPrefix(p, examplesDir+"/"), ".yaml"),
+			Location: p,
+		}
+		res = append(res, x)
+		return nil
+	}
+	if err = filepath.WalkDir(examplesDir, walkDirFn); err != nil {
+		return nil, err
 	}
 	return res, nil
 }
