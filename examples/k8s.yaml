@@ -40,7 +40,7 @@ provision:
   script: |
     #!/bin/bash
     set -eux -o pipefail
-    command -v kubectl  >/dev/null 2>&1 && exit 0
+    command -v kubeadm >/dev/null 2>&1 && exit 0
     # Installing kubeadm on your hosts
     cat <<EOF | sudo tee /etc/modules-load.d/containerd.conf
     overlay
@@ -88,12 +88,12 @@ provision:
     sed -e "s/${LIMA_CIDATA_SLIRP_IP_ADDRESS:-192.168.5.15}/127.0.0.1/" -i $KUBECONFIG
     mkdir -p ${HOME:-/root}/.kube && cp -f $KUBECONFIG ${HOME:-/root}/.kube/config
 probes:
-- description: "kubectl to be installed"
+- description: "kubeadm to be installed"
   script: |
     #!/bin/bash
     set -eux -o pipefail
-    if ! timeout 30s bash -c "until command -v kubectl >/dev/null 2>&1; do sleep 3; done"; then
-      echo >&2 "kubectl is not installed yet"
+    if ! timeout 30s bash -c "until command -v kubeadm >/dev/null 2>&1; do sleep 3; done"; then
+      echo >&2 "kubeadm is not installed yet"
       exit 1
     fi
   hint: |
