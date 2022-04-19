@@ -73,5 +73,8 @@ mounts:
     # 🟢 Builtin default: "fscache" for non-writable mounts, "mmap" for writable mounts
     cache: null
 ```
+
+The "9p" mount type requires Lima v0.10.0 or later.
+
 #### Caveats
 - The "9p" mount type is known to be incompatible with CentOS, Rocky Linux, and AlmaLinux as their kernel do not support `CONFIG_NET_9P_VIRTIO`.
