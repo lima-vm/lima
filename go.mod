@@ -9,6 +9,7 @@ require (
 	github.com/containerd/containerd v1.6.2
 	github.com/containerd/continuity v0.3.0
 	github.com/coreos/go-semver v0.3.0
+	github.com/cyphar/filepath-securejoin v0.2.3
 	github.com/digitalocean/go-qemu v0.0.0-20210326154740-ac9e0b687001
 	github.com/diskfs/go-diskfs v1.2.0
 	github.com/docker/go-units v0.4.0
