@@ -45,7 +45,7 @@ provision:
 - mode: system
   script: |
     #!/bin/sh
-    curl -sfL https://raw.githubusercontent.com/openfaas/faasd/master/hack/install.sh | sh -s -
+    curl -sfL https://raw.githubusercontent.com/openfaas/faasd/master/hack/install.sh | bash -s -
 
 probes:
 - script: |
