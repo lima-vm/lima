@@ -13,9 +13,9 @@ arch: "x86_64"
 # arch: "aarch64"
 
 images:
-  - location: "https://cloud-images.ubuntu.com/impish/current/impish-server-cloudimg-amd64.img"
+  - location: "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img"
     arch: "x86_64"
-  - location: "https://cloud-images.ubuntu.com/impish/current/impish-server-cloudimg-arm64.img"
+  - location: "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-arm64.img"
     arch: "aarch64"
 
 # Disable mounts and containerd, otherwise booting up may timeout if the host is slow
