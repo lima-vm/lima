@@ -1,7 +1,17 @@
-This is an *unofficial* translation of [`README.md` (revision 616cd115, 2022-Mar-09)](https://github.com/lima-vm/lima/blob/616cd11589b01eb17366419c88db0cfd5c76acb1/README.md).
+This is an *informal* translation of [`README.md` (revision 0aebc304, 2022-Apr-25)](https://github.com/lima-vm/lima/blob/0aebc304f8cdc65375f8bfca7414ced6397a4fcc/README.md) in Japanese.
+This translation might be out of sync with the English version.
+Please refer to the [English `README.md`](README.md) for the latest information.
+
+[`README.md` (リビジョン 0aebc304, 2022年4月25日)](https://github.com/lima-vm/lima/blob/0aebc304f8cdc65375f8bfca7414ced6397a4fcc/README.md)の *非正式* な日本語訳です。
+英語版からの翻訳が遅れていることがあります。
+最新の情報については[英語版 `README.md`](README.md)をご覧ください。
+
+- - -
 
 [[📖**始める**]](#始める)
 [[❓**FAQとトラブルシューティング]**](#FAQとトラブルシューティング)
+
+![Limaロゴ](./docs/images/lima-logo-01.svg)
 
 # Lima: Linux virtual machines (多くの場合、macOSで)
 
@@ -111,7 +121,15 @@ brew install lima
 
 #### QEMU をインストールする
 
-最近のバージョンのQEMUをインストールしてください。v6.2.0かそれ以降が推奨されます。
+最近のバージョンのQEMUをインストールしてください。
+
+M1のmacOSでは、[Homebrew版のQEMU `6.2.0_1`](https://github.com/Homebrew/homebrew-core/pull/96743) 以降が望ましいです。
+
+もしHomebrewを使っていないなら、最近のLinuxゲストを起動するには以下のコミットを含めてください:
+- https://github.com/qemu/qemu/commit/ad99f64f `hvf: arm: Use macros for sysreg shift/masking`
+- https://github.com/qemu/qemu/commit/7f6c295c `hvf: arm: Handle unknown ID registers as RES0`
+
+これらのコミットはQEMU 7.0には含まれていますが、 [QEMU 7.0はM1で3 GiB以上のメモリを使うのにmacOS 12.4以降を要する点に注意が必要です](https://github.com/lima-vm/lima/pull/796)。
 
 #### Lima をインストールする
 
@@ -120,7 +138,7 @@ brew install lima
 ```bash
 brew install jq
 VERSION=$(curl -fsSL https://api.github.com/repos/lima-vm/lima/releases/latest | jq -r .tag_name)
-curl -fsSL https://github.com/lima-vm/lima/releases/download/${VERSION}/lima-${VERSION:1}-$(uname -s)-$(uname -m).tar.gz | tar Cxzvm /usr/local
+curl -fsSL "https://github.com/lima-vm/lima/releases/download/${VERSION}/lima-${VERSION:1}-$(uname -s)-$(uname -m).tar.gz" | tar Cxzvm /usr/local
 ```
 
 - Limaをソースからインストールするには、`make && make install`を実行してください。
@@ -142,22 +160,76 @@ INFO[0029] READY. Run `lima` to open the shell.
 Linux
 ```
 
-詳しい使い方:
+### コマンドリファレンス
 
-- `limactl start <INSTANCE> [--tty=false]` を実行してLinuxインスタンスを起動します。デフォルトのインスタンス名は"default"です。仮想マシンの構成を確認・編集するためにLimaは自動的にエディタ(`vi`)を開きます。ホストの端末で"READY"と表示されるまで待ってください。`--tty=false`はエディタを開くかを問う対話的なプロンプトを無効にします。
+#### `limactl start`
+`limactl start [--name=NAME] [--tty=false] <template://TEMPLATE>`: start the Linux instance
 
-- Linuxで `<COMMAND>` を起動するには `limactl shell <INSTANCE> <COMMAND>`を実行します。"default"インスタンスについては、このコマンドを`lima <COMMAND>`に短縮できます。`lima`コマンドは環境変数 `$LIMA_INSTANCE`によるインスタンス名の指定も受け付けます。
+```console
+$ limactl start
+? Creating an instance "default"  [Use arrows to move, type to filter]
+> Proceed with the current configuration
+  Open an editor to review or modify the current configuration
+  Choose another example (docker, podman, archlinux, fedora, ...)
+  Exit
+...
+INFO[0029] READY. Run `lima` to open the shell.
+```
 
-- インスタンス間でファイルをやりとりする、あるいはインスタンスとホストの間でファイルをやりとりするには、`limactl copy <SOURCE> ... <TARGET>`を実行します。`<INSTANCE>:<FILENAME>`でインスタンス内のコピー元やコピー先を指定します。
+`Proceed with the current configuration` を選び, ホストのターミナルに "READY" と表示されるまで待ってください。
+自動化するには、`--tty=false` フラグで対話的ユーザインターフェースを無効化できます。
 
-- `limactl list [--json]` を実行してインスタンス一覧を表示します。
+##### 応用的な使い方
+インスタンス "default" を テンプレート "docker" から作成するには:
+```console
+$ limactl start --name=default template://docker
+```
 
-- `limactl stop [--force] <INSTANCE>` を実行してインスタンスを停止します。
+> 注: `limactl start template://TEMPLATE` は Lima v0.9.0 以降を必要とします。
+> 古いリリースでは `limactl start /usr/local/share/doc/lima/examples/TEMPLATE.yaml` が代わりに必要です。
 
-- `limactl delete [--force] <INSTANCE>` を実行してインスタンスを削除します。
+テンプレートの一覧を表示するには:
+```console
+$ limactl start --list-templates
+```
 
-- `limactl edit <INSTANCE>` を実行してインスタンスの設定を編集します。
+インスタンス "default" を ローカルファイルから作成するには:
+```console
+$ limactl start --name=default /usr/local/share/lima/examples/fedora.yaml
+```
 
+インスタンス "default" を リモートのURLから作成するには (信頼できるソースで慎重に使ってください):
+```console
+$ limactl start --name=default https://raw.githubusercontent.com/lima-vm/lima/master/examples/alpine.yaml
+```
+
+#### `limactl shell`
+`limactl shell <INSTANCE> <COMMAND>`: `<COMMAND>` を Linux で実行します。
+
+"default" インスタンスについては, このコマンドは `lima <COMMAND>` に短縮できます。.
+`lima` コマンドは、インスタンス名を環境変数 `$LIMA_INSTANCE` としても受け付けます。
+
+#### `limactl copy`
+`limactl copy <SOURCE> ... <TARGET>`: ファイルをインスタンス間、もしくはインスタンスとホストとの間でコピーします。
+
+インスタンス内のコピー元もしくはコピー先を指定するには、`<INSTANCE>:<FILENAME>` を使ってください。
+
+#### `limactl list`
+`limactl list [--json]`: インスタンス一覧を表示します
+
+#### `limactl stop`
+`limactl stop [--force] <INSTANCE>`: インスタンスを停止します
+
+#### `limactl delete`
+`limactl delete [--force] <INSTANCE>`: インスタンスを削除します
+
+#### `limactl factory-reset`
+`limactl factory-reset <INSTANCE>`: インスタンスを初期化します
+
+#### `limactl edit`
+`limactl edit <INSTANCE>`: インスタンスを編集します
+
+#### `limactl completion`
 - bash補完を有効にするには、`~/.bash_profile`へ`source <(limactl completion bash)`を追加します。
 
 - zsh補完を有効にするには、`limactl completion zsh --help`を参照してください。
@@ -173,10 +245,10 @@ Limaにはデータの喪失を引き起こすバグが含まれているかも�
 
 ### 設定
 
-[`./pkg/limayaml/default.yaml`](./pkg/limayaml/default.yaml)を見てください。
+[`./examples/default.yaml`](./examples/default.yaml)を見てください。
 
 現在のデフォルト構成:
-- OS: Ubuntu 21.10 (Impish Indri)
+- OS: Ubuntu 22.04 (Jammy Jellyfish)
 - CPU: 4 コア
 - メモリ: 4 GiB
 - ストレージ: 100 GiB
@@ -186,7 +258,7 @@ Limaにはデータの喪失を引き起こすバグが含まれているかも�
 ## 動作する仕組み
 
 - ハイパーバイザ: HVFアクセラレータを搭載したQEMU
-- ファイルシステム共有: [リバースsshfs](https://github.com/lima-vm/sshocker/blob/v0.2.0/pkg/reversesshfs/reversesshfs.go)(そのうち9pやSambaに取って代わられうる)
+- ファイルシステム共有: [リバースsshfs (デフォルト)、もしくは virtio-9p-pci またの名を virtfs](./docs/mount.md)
 - ポートフォワーディング: ゲストの`/proc/net/tcp`と`iptables`を自動的に見つつ`ssh -L`
 
 ## 開発者ガイド
@@ -201,7 +273,7 @@ Limaにはデータの喪失を引き起こすバグが含まれているかも�
 - パフォーマンス最適化
 - より多くのゲストディストリビューション
 - Windows ホスト
-- [現在のリバースsshfsを置き換えるVirtFS(QEMU側リポジトリで作業をする必要があります)](https://github.com/NixOS/nixpkgs/pull/122420)
+- virtio-fs で、virtio-9p-pci またの名を virtfs を置き換える (QEMU側リポジトリで作業をする必要があります)
 - SSHを置き換える[vsock](https://github.com/apple/darwin-xnu/blob/xnu-7195.81.3/bsd/man/man4/vsock.4)(QEMU側リポジトリで作業をする必要があります)
 
 ## FAQとトラブルシューティング
@@ -345,8 +417,13 @@ Linuxホストでは、sysctlの値`net.ipv4.ip_unprivileged_port_start=0`をセ
 
 #### "Waiting for the essential requirement 1 of X: "ssh" で固まります"
 
-QEMUが使うlibslirp v4.6.0 は[壊れている](https://gitlab.freedesktop.org/slirp/libslirp/-/issues/48)ことが知られています。
-`/usr/local/Cellar/libslirp`にlibslirp v4.6.0があるならば、v4.6.1かそれ以降にアップグレードする必要があります(`brew upgrade`)。
+
+M1のmacOSでは、最近のLinuxゲストを実行するには[Homebrew版のQEMU `6.2.0_1`](https://github.com/Homebrew/homebrew-core/pull/96743) 以降が必要です。
+`brew upgrade` を実行してQEMUを更新してください。
+
+もしHomebrewを使っていないならば、[インストール](#インストール)の節の「手動でのインストール方法」をご覧ください。
+
+デバッグするには、`~/.lima/<インスタンス>` にある `serial.log` もご覧ください。
 
 #### `limactl cp`コマンドで"Permission denied"
 
