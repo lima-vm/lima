@@ -97,7 +97,21 @@ provision:
     kubeadm config images list
     kubeadm config images pull --cri-socket=unix:///run/containerd/containerd.sock
     # Initializing your control-plane node
-    kubeadm init --cri-socket=unix:///run/containerd/containerd.sock --pod-network-cidr=10.244.0.0/16 --apiserver-cert-extra-sans 127.0.0.1
+    cat <<EOF >kubeadm-config.yaml
+    kind: InitConfiguration
+    apiVersion: kubeadm.k8s.io/v1beta3
+    nodeRegistration:
+      criSocket: unix:///run/containerd/containerd.sock
+    ---
+    kind: ClusterConfiguration
+    apiVersion: kubeadm.k8s.io/v1beta3
+    apiServer:
+      certSANs: # --apiserver-cert-extra-sans
+      - "127.0.0.1"
+    networking:
+      podSubnet: "10.244.0.0/16" # --pod-network-cidr
+    EOF
+    kubeadm init --config kubeadm-config.yaml
     # Installing a Pod network add-on
     kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/v0.14.0/Documentation/kube-flannel.yml
     # Control plane node isolation
