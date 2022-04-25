@@ -118,8 +118,7 @@ If you are not using Homebrew, make sure to include the following commits to boo
 - https://github.com/qemu/qemu/commit/ad99f64f `hvf: arm: Use macros for sysreg shift/masking`
 - https://github.com/qemu/qemu/commit/7f6c295c `hvf: arm: Handle unknown ID registers as RES0`
 
-These commits are planned to be included in the upstream QEMU 7.0.0 (ETA: April 2022).
-See https://github.com/Homebrew/homebrew-core/pull/96743 for the further information.
+These commits are also included in the QEMU 7.0, however, [it should be noted that QEMU 7.0 needs macOS 12.4 or later to use more than 3 GiB memory on M1](https://github.com/lima-vm/lima/pull/796).
 
 #### Install Lima
 
