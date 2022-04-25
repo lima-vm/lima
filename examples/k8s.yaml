@@ -110,6 +110,10 @@ provision:
       - "127.0.0.1"
     networking:
       podSubnet: "10.244.0.0/16" # --pod-network-cidr
+    ---
+    kind: KubeletConfiguration
+    apiVersion: kubelet.config.k8s.io/v1beta1
+    cgroupDriver: systemd
     EOF
     kubeadm init --config kubeadm-config.yaml
     # Installing a Pod network add-on
