@@ -10,6 +10,7 @@
 # This example requires Lima v0.7.0 or later.
 
 # Image is set to focal (20.04 LTS) for long-term stability
+# TODO: Upgrade to 22.04 LTS when nomad-driver-containerd supports cgroup v2: https://github.com/Roblox/nomad-driver-containerd/pull/133
 images:
 # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
 - location: "https://cloud-images.ubuntu.com/releases/20.04/release-20220302/ubuntu-20.04-server-cloudimg-amd64.img"
