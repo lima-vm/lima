@@ -75,6 +75,23 @@ provision:
   script: |
     #!/bin/bash
     set -eux -o pipefail
+    grep SystemdCgroup /etc/containerd/config.toml && exit 0
+    # Configuring a cgroup driver
+    cat <<EOF >>/etc/containerd/config.toml
+      [plugins]
+        [plugins."io.containerd.grpc.v1.cri"]
+          [plugins."io.containerd.grpc.v1.cri".containerd]
+            [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]
+              [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
+                runtime_type = "io.containerd.runc.v2"
+                [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
+                  SystemdCgroup = true
+    EOF
+    systemctl restart containerd
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
     test -e /etc/kubernetes/admin.conf && exit 0
     export KUBECONFIG=/etc/kubernetes/admin.conf
     kubeadm config images list
