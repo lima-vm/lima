@@ -76,6 +76,7 @@ provision:
     #!/bin/bash
     set -eux -o pipefail
     grep SystemdCgroup /etc/containerd/config.toml && exit 0
+    grep "version = 2" /etc/containerd/config.toml || exit 1
     # Configuring a cgroup driver
     cat <<EOF >>/etc/containerd/config.toml
       [plugins]
