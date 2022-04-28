@@ -18,41 +18,69 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+func validateFileObject(f File, fieldName string) error {
+	if !strings.Contains(f.Location, "://") {
+		if _, err := localpathutil.Expand(f.Location); err != nil {
+			return fmt.Errorf("field `%s.location` refers to an invalid local file path: %q: %w", fieldName, f.Location, err)
+		}
+		// f.Location does NOT need to be accessible, so we do NOT check os.Stat(f.Location)
+	}
+	switch f.Arch {
+	case X8664, AARCH64, RISCV64:
+	default:
+		return fmt.Errorf("field `arch` must be %q, %q, or %q; got %q", X8664, AARCH64, RISCV64, f.Arch)
+	}
+	if f.Digest != "" {
+		if !f.Digest.Algorithm().Available() {
+			return fmt.Errorf("field `%s.digest` refers to an unavailable digest algorithm", fieldName)
+		}
+		if err := f.Digest.Validate(); err != nil {
+			return fmt.Errorf("field `%s.digest` is invalid: %s: %w", fieldName, f.Digest.String(), err)
+		}
+	}
+	return nil
+}
+
 func Validate(y LimaYAML, warn bool) error {
 	switch *y.Arch {
-	case X8664, AARCH64:
+	case X8664, AARCH64, RISCV64:
 	default:
-		return fmt.Errorf("field `arch` must be %q or %q , got %q", X8664, AARCH64, *y.Arch)
+		return fmt.Errorf("field `arch` must be %q, %q, or %q; got %q", X8664, AARCH64, RISCV64, *y.Arch)
 	}
 
 	if len(y.Images) == 0 {
 		return errors.New("field `images` must be set")
 	}
 	for i, f := range y.Images {
-		if !strings.Contains(f.Location, "://") {
-			if _, err := localpathutil.Expand(f.Location); err != nil {
-				return fmt.Errorf("field `images[%d].location` refers to an invalid local file path: %q: %w", i, f.Location, err)
-			}
-			// f.Location does NOT need to be accessible, so we do NOT check os.Stat(f.Location)
+		if err := validateFileObject(f.File, fmt.Sprintf("images[%d]", i)); err != nil {
+			return err
 		}
-		switch f.Arch {
-		case X8664, AARCH64:
-		default:
-			return fmt.Errorf("field `images.arch` must be %q or %q, got %q", X8664, AARCH64, f.Arch)
-		}
-		if f.Digest != "" {
-			if !f.Digest.Algorithm().Available() {
-				return fmt.Errorf("field `images[%d].digest` refers to an unavailable digest algorithm", i)
+		if f.Kernel != nil {
+			if err := validateFileObject(f.Kernel.File, fmt.Sprintf("images[%d].kernel", i)); err != nil {
+				return err
 			}
-			if err := f.Digest.Validate(); err != nil {
-				return fmt.Errorf("field `images[%d].digest` is invalid: %s: %w", i, f.Digest.String(), err)
+			if f.Kernel.Arch != *y.Arch {
+				return fmt.Errorf("images[%d].kernel has unexpected architecture %q, must be %q", i, f.Kernel.Arch, *y.Arch)
+			}
+		} else if f.Arch == RISCV64 {
+			return errors.New("riscv64 needs the kernel (e.g., \"uboot.elf\") to be specified")
+		}
+		if f.Initrd != nil {
+			if err := validateFileObject(*f.Initrd, fmt.Sprintf("images[%d].initrd", i)); err != nil {
+				return err
+			}
+			if f.Kernel == nil {
+				return errors.New("initrd requires the kernel to be specified")
+			}
+			if f.Initrd.Arch != *y.Arch {
+				return fmt.Errorf("images[%d].initrd has unexpected architecture %q, must be %q", i, f.Initrd.Arch, *y.Arch)
 			}
 		}
 	}
 
 	for arch := range y.CPUType {
 		switch arch {
-		case AARCH64, X8664:
+		case AARCH64, X8664, RISCV64:
 			// these are the only supported architectures
 		default:
 			return fmt.Errorf("field `cpuType` uses unsupported arch %q", arch)

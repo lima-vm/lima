@@ -8,7 +8,7 @@ import (
 
 type LimaYAML struct {
 	Arch              *Arch             `yaml:"arch,omitempty" json:"arch,omitempty"`
-	Images            []File            `yaml:"images" json:"images"` // REQUIRED
+	Images            []Image           `yaml:"images" json:"images"` // REQUIRED
 	CPUType           map[Arch]string   `yaml:"cpuType,omitempty" json:"cpuType,omitempty"`
 	CPUs              *int              `yaml:"cpus,omitempty" json:"cpus,omitempty"`
 	Memory            *string           `yaml:"memory,omitempty" json:"memory,omitempty"` // go-units.RAMInBytes
@@ -39,6 +39,7 @@ type MountType = string
 const (
 	X8664   Arch = "x86_64"
 	AARCH64 Arch = "aarch64"
+	RISCV64 Arch = "riscv64"
 
 	REVSSHFS MountType = "reverse-sshfs"
 	NINEP    MountType = "9p"
@@ -48,6 +49,17 @@ type File struct {
 	Location string        `yaml:"location" json:"location"` // REQUIRED
 	Arch     Arch          `yaml:"arch,omitempty" json:"arch,omitempty"`
 	Digest   digest.Digest `yaml:"digest,omitempty" json:"digest,omitempty"`
+}
+
+type Kernel struct {
+	File    `yaml:",inline"`
+	Cmdline string `yaml:"cmdline,omitempty" json:"cmdline,omitempty"`
+}
+
+type Image struct {
+	File   `yaml:",inline"`
+	Kernel *Kernel `yaml:"kernel,omitempty" json:"kernel,omitempty"`
+	Initrd *File   `yaml:"initrd,omitempty" json:"initrd,omitempty"`
 }
 
 type Mount struct {

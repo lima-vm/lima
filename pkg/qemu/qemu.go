@@ -33,6 +33,31 @@ type Config struct {
 	SSHLocalPort int
 }
 
+func downloadFile(dest string, f limayaml.File, description string, expectedArch limayaml.Arch) error {
+	if f.Arch != expectedArch {
+		return fmt.Errorf("unsupported arch: %q", f.Arch)
+	}
+	logrus.WithField("digest", f.Digest).Infof("Attempting to download %s from %q", description, f.Location)
+	res, err := downloader.Download(dest, f.Location,
+		downloader.WithCache(),
+		downloader.WithExpectedDigest(f.Digest),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to download %q: %w", f.Location, err)
+	}
+	logrus.Debugf("res.ValidatedDigest=%v", res.ValidatedDigest)
+	switch res.Status {
+	case downloader.StatusDownloaded:
+		logrus.Infof("Downloaded %s from %q", description, f.Location)
+	case downloader.StatusUsedCache:
+		logrus.Infof("Using cache %q", res.CachePath)
+	default:
+		logrus.Warnf("Unexpected result from downloader.Download(): %+v", res)
+	}
+	return nil
+}
+
+// EnsureDisk also ensures the kernel and the initrd
 func EnsureDisk(cfg Config) error {
 	diffDisk := filepath.Join(cfg.InstanceDir, filenames.DiffDisk)
 	if _, err := os.Stat(diffDisk); err == nil || !errors.Is(err, os.ErrNotExist) {
@@ -41,31 +66,34 @@ func EnsureDisk(cfg Config) error {
 	}
 
 	baseDisk := filepath.Join(cfg.InstanceDir, filenames.BaseDisk)
+	kernel := filepath.Join(cfg.InstanceDir, filenames.Kernel)
+	kernelCmdline := filepath.Join(cfg.InstanceDir, filenames.KernelCmdline)
+	initrd := filepath.Join(cfg.InstanceDir, filenames.Initrd)
 	if _, err := os.Stat(baseDisk); errors.Is(err, os.ErrNotExist) {
 		var ensuredBaseDisk bool
 		errs := make([]error, len(cfg.LimaYAML.Images))
 		for i, f := range cfg.LimaYAML.Images {
-			if f.Arch != *cfg.LimaYAML.Arch {
-				errs[i] = fmt.Errorf("unsupported arch: %q", f.Arch)
+			if err := downloadFile(baseDisk, f.File, "the image", *cfg.LimaYAML.Arch); err != nil {
+				errs[i] = err
 				continue
 			}
-			logrus.WithField("digest", f.Digest).Infof("Attempting to download the image from %q", f.Location)
-			res, err := downloader.Download(baseDisk, f.Location,
-				downloader.WithCache(),
-				downloader.WithExpectedDigest(f.Digest),
-			)
-			if err != nil {
-				errs[i] = fmt.Errorf("failed to download %q: %w", f.Location, err)
-				continue
+			if f.Kernel != nil {
+				if err := downloadFile(kernel, f.Kernel.File, "the kernel", *cfg.LimaYAML.Arch); err != nil {
+					errs[i] = err
+					continue
+				}
+				if f.Kernel.Cmdline != "" {
+					if err := os.WriteFile(kernelCmdline, []byte(f.Kernel.Cmdline), 0644); err != nil {
+						errs[i] = err
+						continue
+					}
+				}
 			}
-			logrus.Debugf("res.ValidatedDigest=%v", res.ValidatedDigest)
-			switch res.Status {
-			case downloader.StatusDownloaded:
-				logrus.Infof("Downloaded image from %q", f.Location)
-			case downloader.StatusUsedCache:
-				logrus.Infof("Using cache %q", res.CachePath)
-			default:
-				logrus.Warnf("Unexpected result from downloader.Download(): %+v", res)
+			if f.Initrd != nil {
+				if err := downloadFile(initrd, *f.Initrd, "the initrd", *cfg.LimaYAML.Arch); err != nil {
+					errs[i] = err
+					continue
+				}
 			}
 			ensuredBaseDisk = true
 			break
@@ -360,6 +388,9 @@ func Cmdline(cfg Config) (string, []string, error) {
 			machine += ",highmem=off"
 		}
 		args = appendArgsIfNoConflict(args, "-machine", machine)
+	case limayaml.RISCV64:
+		machine := "virt,accel=" + accel
+		args = appendArgsIfNoConflict(args, "-machine", machine)
 	}
 
 	// SMP
@@ -372,7 +403,7 @@ func Cmdline(cfg Config) (string, []string, error) {
 		logrus.Warnf("field `firmware.legacyBIOS` is not supported for architecture %q, ignoring", *y.Arch)
 		legacyBIOS = false
 	}
-	if !legacyBIOS {
+	if !legacyBIOS && *y.Arch != limayaml.RISCV64 {
 		firmware, err := getFirmware(exe, *y.Arch)
 		if err != nil {
 			return "", nil, err
@@ -380,6 +411,7 @@ func Cmdline(cfg Config) (string, []string, error) {
 		args = append(args, "-drive", fmt.Sprintf("if=pflash,format=raw,readonly=on,file=%s", firmware))
 	}
 
+	// Disk
 	baseDisk := filepath.Join(cfg.InstanceDir, filenames.BaseDisk)
 	diffDisk := filepath.Join(cfg.InstanceDir, filenames.DiffDisk)
 	isBaseDiskCDROM, err := iso9660util.IsISO9660(baseDisk)
@@ -398,7 +430,31 @@ func Cmdline(cfg Config) (string, []string, error) {
 		args = append(args, "-drive", fmt.Sprintf("file=%s,if=virtio", baseDisk))
 	}
 	// cloud-init
-	args = append(args, "-cdrom", filepath.Join(cfg.InstanceDir, filenames.CIDataISO))
+	switch *y.Arch {
+	case limayaml.RISCV64:
+		// -cdrom does not seem recognized for RISCV64
+		args = append(args,
+			"-drive", "id=cdrom0,if=none,format=raw,readonly=on,file="+filepath.Join(cfg.InstanceDir, filenames.CIDataISO),
+			"-device", "virtio-scsi-pci,id=scsi0",
+			"-device", "scsi-cd,bus=scsi0.0,drive=cdrom0")
+	default:
+		// TODO: consider using virtio cdrom for all the architectures
+		args = append(args, "-cdrom", filepath.Join(cfg.InstanceDir, filenames.CIDataISO))
+	}
+
+	// Kernel
+	kernel := filepath.Join(cfg.InstanceDir, filenames.Kernel)
+	kernelCmdline := filepath.Join(cfg.InstanceDir, filenames.KernelCmdline)
+	initrd := filepath.Join(cfg.InstanceDir, filenames.Initrd)
+	if _, err := os.Stat(kernel); err == nil {
+		args = appendArgsIfNoConflict(args, "-kernel", kernel)
+	}
+	if b, err := os.ReadFile(kernelCmdline); err == nil {
+		args = appendArgsIfNoConflict(args, "-append", string(b))
+	}
+	if _, err := os.Stat(initrd); err == nil {
+		args = appendArgsIfNoConflict(args, "-initrd", initrd)
+	}
 
 	// Network
 	args = append(args, "-netdev", fmt.Sprintf("user,id=net0,net=%s,dhcpstart=%s,hostfwd=tcp:127.0.0.1:%d-:22",
@@ -554,6 +610,11 @@ func getAccel(arch limayaml.Arch) string {
 }
 
 func getFirmware(qemuExe string, arch limayaml.Arch) (string, error) {
+	switch arch {
+	case limayaml.X8664, limayaml.AARCH64:
+	default:
+		return "", fmt.Errorf("unexpected architecture: %q", arch)
+	}
 	binDir := filepath.Dir(qemuExe)  // "/usr/local/bin"
 	localDir := filepath.Dir(binDir) // "/usr/local"
 
