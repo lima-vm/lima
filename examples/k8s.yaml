@@ -12,8 +12,6 @@
 # lima-k8s   Ready    control-plane,master   44s   v1.22.3
 
 # This example requires Lima v0.7.0 or later.
-
-# Image is set to focal (20.04 LTS) for long-term stability
 images:
 # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
 - location: "https://cloud-images.ubuntu.com/releases/22.04/release-20220420/ubuntu-22.04-server-cloudimg-amd64.img"
