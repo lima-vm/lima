@@ -55,8 +55,10 @@ probes:
     Run "limactl shell k3s sudo journalctl -u k3s" to check the log.
     If that is still empty, check the bottom of the log at "/var/log/cloud-init-output.log".
 message: |
-  To run `kubectl` on the host (assumes kubectl is installed):
-  $ mkdir -p "{{.Dir}}/conf"
-  $ export KUBECONFIG="{{.Dir}}/conf/kubeconfig.yaml"
-  $ limactl shell {{.Name}} sudo cat /etc/rancher/k3s/k3s.yaml >$KUBECONFIG
-  $ kubectl ...
+  To run `kubectl` on the host (assumes kubectl is installed), run the following commands:
+  ------
+  mkdir -p "{{.Dir}}/conf"
+  export KUBECONFIG="{{.Dir}}/conf/kubeconfig.yaml"
+  limactl shell {{.Name}} sudo cat /etc/rancher/k3s/k3s.yaml >$KUBECONFIG
+  kubectl ...
+  ------
