@@ -244,30 +244,42 @@ func LimactlShellCmd(instName string) string {
 	return shellCmd
 }
 
-func ShowMessage(inst *store.Instance) error {
+func GetMessage(inst *store.Instance) ([]string, error) {
 	if inst.Message == "" {
-		return nil
+		return nil, nil
 	}
 	t, err := template.New("message").Parse(inst.Message)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	data, err := store.AddGlobalFields(inst)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	var b bytes.Buffer
 	if err := t.Execute(&b, data); err != nil {
-		return err
+		return nil, err
 	}
 	scanner := bufio.NewScanner(&b)
-	logrus.Infof("Message from the instance %q:", inst.Name)
+	lines := []string{}
 	for scanner.Scan() {
 		// Avoid prepending logrus "INFO" header, for ease of copypasting
-		fmt.Println(scanner.Text())
+		lines = append(lines, scanner.Text())
 	}
 	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+	return lines, nil
+}
+
+func ShowMessage(inst *store.Instance) error {
+	logrus.Infof("Message from the instance %q:", inst.Name)
+	msg, err := GetMessage(inst)
+	if err != nil {
 		return err
+	}
+	for _, line := range msg {
+		fmt.Println(line)
 	}
 	return nil
 }

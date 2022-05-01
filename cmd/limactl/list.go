@@ -11,6 +11,7 @@ import (
 	"text/template"
 
 	"github.com/docker/go-units"
+	"github.com/lima-vm/lima/pkg/start"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -45,6 +46,7 @@ func newListCommand() *cobra.Command {
 
 	listCommand.Flags().StringP("format", "f", "", "Format the output using the given Go template")
 	listCommand.Flags().Bool("list-fields", false, "List fields available for format")
+	listCommand.Flags().Bool("message", false, "Only show names and messages")
 	listCommand.Flags().Bool("json", false, "JSONify output")
 	listCommand.Flags().BoolP("quiet", "q", false, "Only show names")
 
@@ -63,6 +65,10 @@ func instanceMatches(arg string, instances []string) []string {
 
 func listAction(cmd *cobra.Command, args []string) error {
 	quiet, err := cmd.Flags().GetBool("quiet")
+	if err != nil {
+		return err
+	}
+	message, err := cmd.Flags().GetBool("message")
 	if err != nil {
 		return err
 	}
@@ -94,6 +100,9 @@ func listAction(cmd *cobra.Command, args []string) error {
 	if quiet && jsonFormat {
 		return errors.New("option --quiet conflicts with --json")
 	}
+	if message && jsonFormat {
+		return errors.New("option --message conflicts with --json")
+	}
 	if goFormat != "" && jsonFormat {
 		return errors.New("option --format conflicts with --json")
 	}
@@ -120,6 +129,29 @@ func listAction(cmd *cobra.Command, args []string) error {
 	if quiet {
 		for _, instName := range instances {
 			fmt.Fprintln(cmd.OutOrStdout(), instName)
+		}
+		return nil
+	}
+
+	if message {
+		for _, instName := range instances {
+			fmt.Fprintln(cmd.OutOrStdout(), instName)
+			inst, err := store.Inspect(instName)
+			if err != nil {
+				logrus.WithError(err).Errorf("instance %q does not exist?", instName)
+				continue
+			}
+			msg, err := start.GetMessage(inst)
+			if err != nil {
+				logrus.WithError(err).Errorf("instance %q get message error", instName)
+				continue
+			}
+			if msg == nil {
+				msg = []string{"<no message>"}
+			}
+			for _, line := range msg {
+				fmt.Fprintln(cmd.OutOrStdout(), fmt.Sprintf("  %s", line))
+			}
 		}
 		return nil
 	}
