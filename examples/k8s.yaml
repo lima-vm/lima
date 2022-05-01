@@ -151,8 +151,10 @@ probes:
       exit 1
     fi
 message: |
-  To run `kubectl` on the host (assumes kubectl is installed):
-  $ mkdir -p "{{.Dir}}/conf"
-  $ export KUBECONFIG="{{.Dir}}/conf/kubeconfig.yaml"
-  $ limactl shell {{.Name}} sudo cat /etc/kubernetes/admin.conf >$KUBECONFIG
-  $ kubectl ...
+  To run `kubectl` on the host (assumes kubectl is installed), run the following commands:
+  ------
+  mkdir -p "{{.Dir}}/conf"
+  export KUBECONFIG="{{.Dir}}/conf/kubeconfig.yaml"
+  limactl shell {{.Name}} sudo cat /etc/kubernetes/admin.conf >$KUBECONFIG
+  kubectl ...
+  ------
