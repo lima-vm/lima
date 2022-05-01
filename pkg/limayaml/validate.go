@@ -212,6 +212,12 @@ func Validate(y LimaYAML, warn bool) error {
 		if rule.Proto != TCP {
 			return fmt.Errorf("field `%s.proto` must be %q", field, TCP)
 		}
+		if rule.Reverse && rule.GuestSocket == "" {
+			return fmt.Errorf("field `%s.reverse` must be %t", field, false)
+		}
+		if rule.Reverse && rule.HostSocket == "" {
+			return fmt.Errorf("field `%s.reverse` must be %t", field, false)
+		}
 		// Not validating that the various GuestPortRanges and HostPortRanges are not overlapping. Rules will be
 		// processed sequentially and the first matching rule for a guest port determines forwarding behavior.
 	}

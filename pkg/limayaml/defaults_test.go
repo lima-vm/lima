@@ -88,6 +88,7 @@ func TestFillDefault(t *testing.T) {
 		HostIP:         api.IPv4loopback1,
 		HostPortRange:  [2]int{1, 65535},
 		Proto:          TCP,
+		Reverse:        false,
 	}
 
 	// ------------------------------------------------------------------------------------
