@@ -65,6 +65,8 @@ func Inspect(instName string) (*Instance, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Make sure inst.Dir is set, even when YAML validation fails
+	inst.Dir = instDir
 	yamlPath := filepath.Join(instDir, filenames.LimaYAML)
 	y, err := LoadYAMLByFilePath(yamlPath)
 	if err != nil {
@@ -74,7 +76,6 @@ func Inspect(instName string) (*Instance, error) {
 		inst.Errors = append(inst.Errors, err)
 		return inst, nil
 	}
-	inst.Dir = instDir
 	inst.Arch = *y.Arch
 	inst.CPUType = y.CPUType[*y.Arch]
 
