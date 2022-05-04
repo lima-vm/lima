@@ -33,6 +33,11 @@ if [ "$(awk '$2 == "/" {print $3}' /proc/mounts)" == "tmpfs" ]; then
 				PART=$(lsblk --list /dev/"${DISK}" --noheadings --output name,type | awk '$2 == "part" {print $1}')
 				mkfs.ext4 -L data-volume /dev/"${PART}"
 				mount -t ext4 /dev/disk/by-label/data-volume /mnt/data
+				# Unmount all mount points under /tmp so we can move it to the data volume:
+				# "mount1 on /tmp/lima type 9p (rw,dirsync,relatime,mmap,access=client,trans=virtio)"
+				for MP in $(mount | awk '$3 ~ /^\/tmp\// {print $3}'); do
+					umount "${MP}"
+				done
 				for DIR in ${DATADIRS}; do
 					DEST="/mnt/data$(dirname "${DIR}")"
 					mkdir -p "${DIR}" "${DEST}"
@@ -48,4 +53,6 @@ if [ "$(awk '$2 == "/" {print $3}' /proc/mounts)" == "tmpfs" ]; then
 			mount --bind /mnt/data"${DIR}" "${DIR}"
 		fi
 	done
+	# Make sure to re-mount any mount points under /tmp
+	mount -a
 fi
