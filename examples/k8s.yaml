@@ -118,7 +118,7 @@ provision:
     # Installing a Pod network add-on
     kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/v0.14.0/Documentation/kube-flannel.yml
     # Control plane node isolation
-    kubectl taint nodes --all node-role.kubernetes.io/master-
+    kubectl taint nodes --all node-role.kubernetes.io/control-plane-
     sed -e "s/${LIMA_CIDATA_SLIRP_IP_ADDRESS:-192.168.5.15}/127.0.0.1/" -i $KUBECONFIG
     mkdir -p ${HOME:-/root}/.kube && cp -f $KUBECONFIG ${HOME:-/root}/.kube/config
 probes:
