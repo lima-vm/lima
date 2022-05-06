@@ -45,6 +45,7 @@ func defaultContainerdArchives() []File {
 			Arch:     AARCH64,
 			Digest:   "sha256:d07c5213a6789eb1d3d07febaa982a043611e8205264066388c43317924cf446",
 		},
+		// No riscv64
 	}
 }
 
@@ -89,12 +90,19 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		if img.Arch == "" {
 			img.Arch = *y.Arch
 		}
+		if img.Kernel != nil && img.Kernel.Arch == "" {
+			img.Kernel.Arch = img.Arch
+		}
+		if img.Initrd != nil && img.Initrd.Arch == "" {
+			img.Initrd.Arch = img.Arch
+		}
 	}
 
 	cpuType := map[Arch]string{
 		AARCH64: "cortex-a72",
 		// Since https://github.com/lima-vm/lima/pull/494, we use qemu64 cpu for better emulation of x86_64.
-		X8664: "qemu64",
+		X8664:   "qemu64",
+		RISCV64: "rv64", // FIXME: what is the right choice for riscv64?
 	}
 	for arch := range cpuType {
 		if IsNativeArch(arch) {
@@ -563,6 +571,8 @@ func NewArch(arch string) Arch {
 		return X8664
 	case "arm64":
 		return AARCH64
+	case "riscv64":
+		return RISCV64
 	default:
 		logrus.Warnf("Unknown arch: %s", arch)
 		return arch
@@ -579,7 +589,8 @@ func ResolveArch(s *string) Arch {
 func IsNativeArch(arch Arch) bool {
 	nativeX8664 := arch == X8664 && runtime.GOARCH == "amd64"
 	nativeAARCH64 := arch == AARCH64 && runtime.GOARCH == "arm64"
-	return nativeX8664 || nativeAARCH64
+	nativeRISCV64 := arch == RISCV64 && runtime.GOARCH == "riscv64"
+	return nativeX8664 || nativeAARCH64 || nativeRISCV64
 }
 
 func Cname(host string) string {

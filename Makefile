@@ -22,7 +22,8 @@ binaries: clean \
 	_output/bin/limactl \
 	_output/bin/nerdctl.lima \
 	_output/share/lima/lima-guestagent.Linux-x86_64 \
-	_output/share/lima/lima-guestagent.Linux-aarch64
+	_output/share/lima/lima-guestagent.Linux-aarch64 \
+	_output/share/lima/lima-guestagent.Linux-riscv64
 	cp -aL examples _output/share/lima
 	mkdir -p _output/share/doc/lima
 	cp -aL *.md LICENSE docs _output/share/doc/lima
@@ -53,6 +54,11 @@ _output/share/lima/lima-guestagent.Linux-x86_64:
 .PHONY: _output/share/lima/lima-guestagent.Linux-aarch64
 _output/share/lima/lima-guestagent.Linux-aarch64:
 	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 $(GO_BUILD) -o $@ ./cmd/lima-guestagent
+	chmod 644 $@
+
+.PHONY: _output/share/lima/lima-guestagent.Linux-riscv64
+_output/share/lima/lima-guestagent.Linux-riscv64:
+	GOOS=linux GOARCH=riscv64 CGO_ENABLED=0 $(GO_BUILD) -o $@ ./cmd/lima-guestagent
 	chmod 644 $@
 
 .PHONY: diagrams

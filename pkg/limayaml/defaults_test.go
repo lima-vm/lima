@@ -51,6 +51,7 @@ func TestFillDefault(t *testing.T) {
 		CPUType: map[Arch]string{
 			AARCH64: "cortex-a72",
 			X8664:   "qemu64",
+			RISCV64: "rv64",
 		},
 		CPUs:   pointer.Int(4),
 		Memory: pointer.String("4GiB"),
@@ -211,6 +212,7 @@ func TestFillDefault(t *testing.T) {
 		CPUType: map[Arch]string{
 			AARCH64: "arm64",
 			X8664:   "amd64",
+			RISCV64: "riscv64",
 		},
 		CPUs:   pointer.Int(7),
 		Memory: pointer.String("5GiB"),
@@ -351,6 +353,7 @@ func TestFillDefault(t *testing.T) {
 		CPUType: map[Arch]string{
 			AARCH64: "uber-arm",
 			X8664:   "pentium",
+			RISCV64: "sifive-u54",
 		},
 		CPUs:   pointer.Int(12),
 		Memory: pointer.String("7GiB"),

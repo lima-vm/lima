@@ -36,6 +36,11 @@ disk:
 - `basedisk`: the base image
 - `diffdisk`: the diff image (QCOW2)
 
+kernel:
+- `kernel`: the kernel
+- `kernel.cmdline`: the kernel cmdline
+- `initrd`: the initrd
+
 QEMU:
 - `qemu.pid`: QEMU PID
 - `qmp.sock`: QMP socket
