@@ -423,7 +423,7 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 	for _, rule := range a.y.PortForwards {
 		if rule.GuestSocket != "" {
 			local := hostAddress(rule, guestagentapi.IPPort{})
-			_ = forwardSSH(ctx, a.sshConfig, a.sshLocalPort, local, rule.GuestSocket, verbForward)
+			_ = forwardSSH(ctx, a.sshConfig, a.sshLocalPort, local, rule.GuestSocket, verbForward, rule.Reverse)
 		}
 	}
 
@@ -437,12 +437,12 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 			if rule.GuestSocket != "" {
 				local := hostAddress(rule, guestagentapi.IPPort{})
 				// using ctx.Background() because ctx has already been cancelled
-				if err := forwardSSH(context.Background(), a.sshConfig, a.sshLocalPort, local, rule.GuestSocket, verbCancel); err != nil {
+				if err := forwardSSH(context.Background(), a.sshConfig, a.sshLocalPort, local, rule.GuestSocket, verbCancel, rule.Reverse); err != nil {
 					mErr = multierror.Append(mErr, err)
 				}
 			}
 		}
-		if err := forwardSSH(context.Background(), a.sshConfig, a.sshLocalPort, localUnix, remoteUnix, verbCancel); err != nil {
+		if err := forwardSSH(context.Background(), a.sshConfig, a.sshLocalPort, localUnix, remoteUnix, verbCancel, false); err != nil {
 			mErr = multierror.Append(mErr, err)
 		}
 		return mErr
@@ -450,7 +450,7 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 
 	for {
 		if !isGuestAgentSocketAccessible(ctx, localUnix) {
-			_ = forwardSSH(ctx, a.sshConfig, a.sshLocalPort, localUnix, remoteUnix, verbForward)
+			_ = forwardSSH(ctx, a.sshConfig, a.sshLocalPort, localUnix, remoteUnix, verbForward, false)
 		}
 		if err := a.processGuestAgentEvents(ctx, localUnix); err != nil {
 			if !errors.Is(err, context.Canceled) {
@@ -506,12 +506,22 @@ const (
 	verbCancel  = "cancel"
 )
 
-func forwardSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, remote string, verb string) error {
+func forwardSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, remote string, verb string, reverse bool) error {
 	args := sshConfig.Args()
 	args = append(args,
 		"-T",
 		"-O", verb,
-		"-L", local+":"+remote,
+	)
+	if reverse {
+		args = append(args,
+			"-R", remote+":"+local,
+		)
+	} else {
+		args = append(args,
+			"-L", local+":"+remote,
+		)
+	}
+	args = append(args,
 		"-N",
 		"-f",
 		"-p", strconv.Itoa(port),
@@ -521,7 +531,11 @@ func forwardSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, 
 	if strings.HasPrefix(local, "/") {
 		switch verb {
 		case verbForward:
-			logrus.Infof("Forwarding %q (guest) to %q (host)", remote, local)
+			if reverse {
+				logrus.Infof("Forwarding %q (host) to %q (guest)", local, remote)
+			} else {
+				logrus.Infof("Forwarding %q (guest) to %q (host)", remote, local)
+			}
 			if err := os.RemoveAll(local); err != nil {
 				logrus.WithError(err).Warnf("Failed to clean up %q (host) before setting up forwarding", local)
 			}
@@ -529,7 +543,11 @@ func forwardSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, 
 				return fmt.Errorf("can't create directory for local socket %q: %w", local, err)
 			}
 		case verbCancel:
-			logrus.Infof("Stopping forwarding %q (guest) to %q (host)", remote, local)
+			if reverse {
+				logrus.Infof("Stopping forwarding %q (host) to %q (guest)", local, remote)
+			} else {
+				logrus.Infof("Stopping forwarding %q (guest) to %q (host)", remote, local)
+			}
 			defer func() {
 				if err := os.RemoveAll(local); err != nil {
 					logrus.WithError(err).Warnf("Failed to clean up %q (host) after stopping forwarding", local)

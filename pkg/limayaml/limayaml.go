@@ -156,6 +156,7 @@ type PortForward struct {
 	HostPortRange     [2]int `yaml:"hostPortRange,omitempty" json:"hostPortRange,omitempty"`
 	HostSocket        string `yaml:"hostSocket,omitempty" json:"hostSocket,omitempty"`
 	Proto             Proto  `yaml:"proto,omitempty" json:"proto,omitempty"`
+	Reverse           bool   `yaml:"reverse,omitempty" json:"reverse,omitempty"`
 	Ignore            bool   `yaml:"ignore,omitempty" json:"ignore,omitempty"`
 }
 
