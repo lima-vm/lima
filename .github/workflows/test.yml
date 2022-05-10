@@ -82,18 +82,17 @@ jobs:
         time brew update
         time brew install qemu bash coreutils curl jq
         time brew upgrade
-    - name: Install vde_switch and vde_vmnet
+    - name: Install socket_vmnet
       env:
-        VDE_VMNET_VERSION: v0.6.0
+        SOCKET_VMNET_VERSION: v1.0.0-alpha.0
       run: |
         (
-          brew install autoconf automake
           cd ~
-          git clone https://github.com/lima-vm/vde_vmnet
-          cd vde_vmnet
-          git checkout $VDE_VMNET_VERSION
-          sudo git config --global --add safe.directory /Users/runner/vde_vmnet
-          sudo make PREFIX=/opt/vde install
+          git clone https://github.com/lima-vm/socket_vmnet
+          cd socket_vmnet
+          git checkout $SOCKET_VMNET_VERSION
+          sudo git config --global --add safe.directory /Users/runner/socket_vmnet
+          sudo make PREFIX=/opt/socket_vmnet install
         )
         (
           limactl sudoers | sudo tee /etc/sudoers.d/lima

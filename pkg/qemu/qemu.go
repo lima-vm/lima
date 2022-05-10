@@ -337,29 +337,29 @@ func adjustMemBytesDarwinARM64HVF(memBytes int64, accel string, features *featur
 	return memBytes
 }
 
-func Cmdline(cfg Config) (string, []string, error) {
+func Cmdline(cfg Config) (exe string, args, helper []string, err error) {
 	y := cfg.LimaYAML
-	exe, args, err := getExe(*y.Arch)
+	exe, args, err = getExe(*y.Arch)
 	if err != nil {
-		return "", nil, err
+		return "", nil, nil, err
 	}
 
 	features, err := inspectFeatures(exe)
 	if err != nil {
-		return "", nil, err
+		return "", nil, nil, err
 	}
 
 	// Architecture
 	accel := getAccel(*y.Arch)
 	if !strings.Contains(string(features.AccelHelp), accel) {
-		return "", nil, fmt.Errorf("accelerator %q is not supported by %s", accel, exe)
+		return "", nil, nil, fmt.Errorf("accelerator %q is not supported by %s", accel, exe)
 	}
 	showDarwinARM64HVFQEMU620Warning(exe, accel, features)
 
 	// Memory
 	memBytes, err := units.RAMInBytes(*y.Memory)
 	if err != nil {
-		return "", nil, err
+		return "", nil, nil, err
 	}
 	memBytes = adjustMemBytesDarwinARM64HVF(memBytes, accel, features)
 	args = appendArgsIfNoConflict(args, "-m", strconv.Itoa(int(memBytes>>20)))
@@ -414,7 +414,7 @@ func Cmdline(cfg Config) (string, []string, error) {
 	if !legacyBIOS && *y.Arch != limayaml.RISCV64 {
 		firmware, err := getFirmware(exe, *y.Arch)
 		if err != nil {
-			return "", nil, err
+			return "", nil, nil, err
 		}
 		args = append(args, "-drive", fmt.Sprintf("if=pflash,format=raw,readonly=on,file=%s", firmware))
 	}
@@ -424,7 +424,7 @@ func Cmdline(cfg Config) (string, []string, error) {
 	diffDisk := filepath.Join(cfg.InstanceDir, filenames.DiffDisk)
 	isBaseDiskCDROM, err := iso9660util.IsISO9660(baseDisk)
 	if err != nil {
-		return "", nil, err
+		return "", nil, nil, err
 	}
 	if isBaseDiskCDROM {
 		args = appendArgsIfNoConflict(args, "-boot", "order=d,splash-time=0,menu=on")
@@ -468,40 +468,77 @@ func Cmdline(cfg Config) (string, []string, error) {
 	args = append(args, "-netdev", fmt.Sprintf("user,id=net0,net=%s,dhcpstart=%s,hostfwd=tcp:127.0.0.1:%d-:22",
 		qemu.SlirpNetwork, qemu.SlirpIPAddress, cfg.SSHLocalPort))
 	args = append(args, "-device", "virtio-net-pci,netdev=net0,mac="+limayaml.MACAddress(cfg.InstanceDir))
-	if len(y.Networks) > 0 && !strings.Contains(string(features.NetdevHelp), "vde") {
-		return "", nil, fmt.Errorf("netdev \"vde\" is not supported by %s ( Hint: recompile QEMU with `configure --enable-vde` )", exe)
-	}
 	for i, nw := range y.Networks {
 		var vdeSock string
+		sockFDNum := -1
 		if nw.Lima != "" {
-			vdeSock, err = networks.VDESock(nw.Lima)
+			nwCfg, err := networks.Config()
 			if err != nil {
-				return "", nil, err
+				return "", nil, nil, err
+			}
+			if nwCfg.Paths.SocketVMNet != "" {
+				sock, err := networks.Sock(nw.Lima)
+				if err != nil {
+					return "", nil, nil, err
+				}
+				if nwCfg.Paths.SocketVMNetClient == "" {
+					return "", nil, nil, errors.New("socketVMnet requires socketVMNetClient to be set")
+				}
+				helper = append([]string{nwCfg.Paths.SocketVMNetClient, sock, "--"}, helper...)
+				sockFDNum = 3
+			}
+			if nwCfg.Paths.VDEVMNet != "" {
+				logrus.Warn("vdeVMNet is deprecated, use socketVMNet instead (See docs/network.md)")
+				if nwCfg.Paths.SocketVMNet != "" {
+					return "", nil, nil, errors.New("socketVMNet and vdeVMNet must not be mixed together")
+				}
+				vdeSock, err = networks.VDESock(nw.Lima)
+				if err != nil {
+					return "", nil, nil, err
+				}
 			}
 			// TODO: should we also validate that the socket exists, or do we rely on the
 			// networks reconciler to throw an error when the network cannot start?
-		} else {
+		} else if nw.Socket != "" {
+			// TODO: eliminate socket_vmnet_client
+			socketVMNetClient, err := exec.LookPath("socket_vmnet_client")
+			if err != nil {
+				return "", nil, nil, err
+			}
+			helper = append([]string{socketVMNetClient, nw.Socket, "--"}, helper...)
+			sockFDNum = 3
+		} else if nw.VNLDeprecated != "" {
 			// VDE4 accepts VNL like vde:///var/run/vde.ctl as well as file path like /var/run/vde.ctl .
 			// VDE2 only accepts the latter form.
 			// VDE2 supports macOS but VDE4 does not yet, so we trim vde:// prefix here for VDE2 compatibility.
-			vdeSock = strings.TrimPrefix(nw.VNL, "vde://")
+			vdeSock = strings.TrimPrefix(nw.VNLDeprecated, "vde://")
 			if !strings.Contains(vdeSock, "://") {
 				if _, err := os.Stat(vdeSock); err != nil {
-					return "", nil, fmt.Errorf("cannot use VNL %q: %w", nw.VNL, err)
+					return "", nil, nil, fmt.Errorf("cannot use VNL %q: %w", nw.VNLDeprecated, err)
 				}
 				// vdeSock is a directory, unless vde.SwitchPort == 65535 (PTP)
 				actualSocket := filepath.Join(vdeSock, "ctl")
-				if nw.SwitchPort == 65535 { // PTP
+				if nw.SwitchPortDeprecated == 65535 { // PTP
 					actualSocket = vdeSock
 				}
 				if st, err := os.Stat(actualSocket); err != nil {
-					return "", nil, fmt.Errorf("cannot use VNL %q: failed to stat %q: %w", nw.VNL, actualSocket, err)
+					return "", nil, nil, fmt.Errorf("cannot use VNL %q: failed to stat %q: %w", nw.VNLDeprecated, actualSocket, err)
 				} else if st.Mode()&fs.ModeSocket == 0 {
-					return "", nil, fmt.Errorf("cannot use VNL %q: %q is not a socket: %w", nw.VNL, actualSocket, err)
+					return "", nil, nil, fmt.Errorf("cannot use VNL %q: %q is not a socket: %w", nw.VNLDeprecated, actualSocket, err)
 				}
 			}
+		} else {
+			return "", nil, nil, fmt.Errorf("invalid network spec %+v", nw)
 		}
-		args = append(args, "-netdev", fmt.Sprintf("vde,id=net%d,sock=%s", i+1, vdeSock))
+		if sockFDNum >= 0 {
+			args = append(args, "-netdev", fmt.Sprintf("socket,id=net%d,fd=%d", i+1, sockFDNum))
+		}
+		if vdeSock != "" {
+			if !strings.Contains(string(features.NetdevHelp), "vde") {
+				return "", nil, nil, fmt.Errorf("netdev \"vde\" is not supported by %s ( Hint: recompile QEMU with `configure --enable-vde` )", exe)
+			}
+			args = append(args, "-netdev", fmt.Sprintf("vde,id=net%d,sock=%s", i+1, vdeSock))
+		}
 		args = append(args, "-device", fmt.Sprintf("virtio-net-pci,netdev=net%d,mac=%s", i+1, nw.MACAddress))
 	}
 
@@ -532,11 +569,11 @@ func Cmdline(cfg Config) (string, []string, error) {
 	// Serial
 	serialSock := filepath.Join(cfg.InstanceDir, filenames.SerialSock)
 	if err := os.RemoveAll(serialSock); err != nil {
-		return "", nil, err
+		return "", nil, nil, err
 	}
 	serialLog := filepath.Join(cfg.InstanceDir, filenames.SerialLog)
 	if err := os.RemoveAll(serialLog); err != nil {
-		return "", nil, err
+		return "", nil, nil, err
 	}
 	const serialChardev = "char-serial"
 	args = append(args, "-chardev", fmt.Sprintf("socket,id=%s,path=%s,server=on,wait=off,logfile=%s", serialChardev, serialSock, serialLog))
@@ -549,10 +586,10 @@ func Cmdline(cfg Config) (string, []string, error) {
 			tag := fmt.Sprintf("mount%d", i)
 			location, err := localpathutil.Expand(f.Location)
 			if err != nil {
-				return "", nil, err
+				return "", nil, nil, err
 			}
 			if err := os.MkdirAll(location, 0755); err != nil {
-				return "", nil, err
+				return "", nil, nil, err
 			}
 			options := "local"
 			options += fmt.Sprintf(",mount_tag=%s", tag)
@@ -568,7 +605,7 @@ func Cmdline(cfg Config) (string, []string, error) {
 	// QMP
 	qmpSock := filepath.Join(cfg.InstanceDir, filenames.QMPSock)
 	if err := os.RemoveAll(qmpSock); err != nil {
-		return "", nil, err
+		return "", nil, nil, err
 	}
 	const qmpChardev = "char-qmp"
 	args = append(args, "-chardev", fmt.Sprintf("socket,id=%s,path=%s,server=on,wait=off", qmpChardev, qmpSock))
@@ -578,7 +615,7 @@ func Cmdline(cfg Config) (string, []string, error) {
 	args = append(args, "-name", "lima-"+cfg.Name)
 	args = append(args, "-pidfile", filepath.Join(cfg.InstanceDir, filenames.QemuPID))
 
-	return exe, args, nil
+	return exe, args, helper, nil
 }
 
 func getExe(arch limayaml.Arch) (string, []string, error) {

@@ -9,10 +9,12 @@ type NetworksConfig struct {
 }
 
 type Paths struct {
-	VDESwitch string `yaml:"vdeSwitch"`
-	VDEVMNet  string `yaml:"vdeVMNet"`
-	VarRun    string `yaml:"varRun"`
-	Sudoers   string `yaml:"sudoers,omitempty"`
+	SocketVMNet       string `yaml:"socketVMNet"`
+	SocketVMNetClient string `yaml:"socketVMNetClient"`
+	VDESwitch         string `yaml:"vdeSwitch"` // Deprecated
+	VDEVMNet          string `yaml:"vdeVMNet"`  // Deprecated
+	VarRun            string `yaml:"varRun"`
+	Sudoers           string `yaml:"sudoers,omitempty"`
 }
 
 const (

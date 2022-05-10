@@ -343,10 +343,10 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 	if len(y.Network.VDEDeprecated) > 0 && len(y.Networks) == 0 {
 		for _, vde := range y.Network.VDEDeprecated {
 			network := Network{
-				Interface:  vde.Name,
-				MACAddress: vde.MACAddress,
-				SwitchPort: vde.SwitchPort,
-				VNL:        vde.VNL,
+				Interface:            vde.Name,
+				MACAddress:           vde.MACAddress,
+				SwitchPortDeprecated: vde.SwitchPort,
+				VNLDeprecated:        vde.VNL,
 			}
 			y.Networks = append(y.Networks, network)
 		}
@@ -357,20 +357,28 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 	iface := make(map[string]int)
 	for _, nw := range append(append(d.Networks, y.Networks...), o.Networks...) {
 		if i, ok := iface[nw.Interface]; ok {
-			if nw.VNL != "" {
-				networks[i].VNL = nw.VNL
-				networks[i].SwitchPort = nw.SwitchPort
+			if nw.VNLDeprecated != "" {
+				networks[i].VNLDeprecated = nw.VNLDeprecated
+				networks[i].SwitchPortDeprecated = nw.SwitchPortDeprecated
+				networks[i].Socket = ""
+				networks[i].Lima = ""
+			}
+			if nw.Socket != "" {
+				networks[i].Socket = nw.Socket
+				networks[i].VNLDeprecated = ""
+				networks[i].SwitchPortDeprecated = nw.SwitchPortDeprecated
 				networks[i].Lima = ""
 			}
 			if nw.Lima != "" {
-				if nw.VNL != "" {
+				if nw.VNLDeprecated != "" {
 					// We can't return an error, so just log it, and prefer `lima` over `vnl`
 					logrus.Errorf("Network %q has both vnl=%q and lima=%q fields; ignoring vnl",
-						nw.Interface, nw.VNL, nw.Lima)
+						nw.Interface, nw.VNLDeprecated, nw.Lima)
 				}
 				networks[i].Lima = nw.Lima
-				networks[i].VNL = ""
-				networks[i].SwitchPort = 0
+				networks[i].Socket = ""
+				networks[i].VNLDeprecated = ""
+				networks[i].SwitchPortDeprecated = 0
 			}
 			if nw.MACAddress != "" {
 				networks[i].MACAddress = nw.MACAddress

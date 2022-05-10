@@ -48,6 +48,7 @@ type HostAgent struct {
 
 	qExe     string
 	qArgs    []string
+	qHelper  []string
 	sigintCh chan os.Signal
 
 	eventEnc   *json.Encoder
@@ -115,7 +116,7 @@ func New(instName string, stdout io.Writer, sigintCh chan os.Signal, opts ...Opt
 		LimaYAML:     y,
 		SSHLocalPort: sshLocalPort,
 	}
-	qExe, qArgs, err := qemu.Cmdline(qCfg)
+	qExe, qArgs, qHelper, err := qemu.Cmdline(qCfg)
 	if err != nil {
 		return nil, err
 	}
@@ -152,6 +153,7 @@ func New(instName string, stdout io.Writer, sigintCh chan os.Signal, opts ...Opt
 		portForwarder:   newPortForwarder(sshConfig, sshLocalPort, rules),
 		qExe:            qExe,
 		qArgs:           qArgs,
+		qHelper:         qHelper,
 		sigintCh:        sigintCh,
 		eventEnc:        json.NewEncoder(stdout),
 	}
@@ -271,7 +273,14 @@ func (a *HostAgent) Run(ctx context.Context) error {
 		defer dnsServer.Shutdown()
 	}
 
-	qCmd := exec.CommandContext(ctx, a.qExe, a.qArgs...)
+	qCmdCar := a.qExe
+	qCmdCdr := a.qArgs
+	if len(a.qHelper) > 0 {
+		qCmdCar = a.qHelper[0]
+		qCmdCdr = append(a.qHelper[1:], a.qExe)
+		qCmdCdr = append(qCmdCdr, a.qArgs...)
+	}
+	qCmd := exec.CommandContext(ctx, qCmdCar, qCmdCdr...)
 	qStdout, err := qCmd.StdoutPipe()
 	if err != nil {
 		return err
