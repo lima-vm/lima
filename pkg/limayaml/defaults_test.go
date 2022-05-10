@@ -277,10 +277,10 @@ func TestFillDefault(t *testing.T) {
 		},
 		Networks: []Network{
 			{
-				VNL:        "/tmp/vde.ctl",
-				SwitchPort: 65535,
-				MACAddress: "11:22:33:44:55:66",
-				Interface:  "def0",
+				VNLDeprecated:        "/tmp/vde.ctl",
+				SwitchPortDeprecated: 65535,
+				MACAddress:           "11:22:33:44:55:66",
+				Interface:            "def0",
 			},
 		},
 		DNS: []net.IP{
@@ -492,8 +492,8 @@ func TestFillDefault(t *testing.T) {
 	// o.Networks[1] is overriding the d.Networks[0].Lima entry for the "def0" interface
 	expect.Networks = append(append(d.Networks, y.Networks...), o.Networks[0])
 	expect.Networks[0].Lima = o.Networks[1].Lima
-	expect.Networks[0].VNL = ""
-	expect.Networks[0].SwitchPort = 0
+	expect.Networks[0].VNLDeprecated = ""
+	expect.Networks[0].SwitchPortDeprecated = 0
 
 	// Only highest prio DNS are retained
 	expect.DNS = o.DNS

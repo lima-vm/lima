@@ -178,7 +178,20 @@ func startNetwork(config *networks.NetworksConfig, ctx context.Context, name str
 	if err := validateConfig(config); err != nil {
 		return err
 	}
-	for _, daemon := range []string{networks.Switch, networks.VMNet} {
+	var daemons []string
+	ok, err := config.IsDaemonInstalled(networks.SocketVMNet)
+	if err != nil {
+		return err
+	}
+	if ok {
+		daemons = append(daemons, networks.SocketVMNet)
+		if ok, _ := config.IsDaemonInstalled(networks.VDEVMNet); ok {
+			logrus.Debugf("Ignoring deprecated vde_vmnet (%q)", networks.VDEVMNet)
+		}
+	} else {
+		daemons = append(daemons, networks.VDESwitch, networks.VDEVMNet)
+	}
+	for _, daemon := range daemons {
 		pid, _ := store.ReadPIDFile(config.PIDFile(name, daemon))
 		if pid == 0 {
 			logrus.Infof("Starting %s daemon for %q network", daemon, name)
@@ -194,7 +207,10 @@ func stopNetwork(config *networks.NetworksConfig, name string) error {
 	logrus.Debugf("Make sure %q network is stopped", name)
 	// Don't call validateConfig() until we actually need to stop a daemon because
 	// stopNetwork() may be called even when the vde daemons are not installed.
-	for _, daemon := range []string{networks.VMNet, networks.Switch} {
+	for _, daemon := range []string{networks.SocketVMNet, networks.VDEVMNet, networks.VDESwitch} {
+		if ok, _ := config.IsDaemonInstalled(daemon); !ok {
+			continue
+		}
 		pid, _ := store.ReadPIDFile(config.PIDFile(name, daemon))
 		if pid != 0 {
 			logrus.Infof("Stopping %s daemon for %q network", daemon, name)
@@ -211,7 +227,7 @@ func stopNetwork(config *networks.NetworksConfig, name string) error {
 			}
 		}
 		// wait for VMNet to terminate (up to 5s) before stopping Switch, otherwise the socket may not get deleted
-		if daemon == networks.VMNet {
+		if daemon == networks.VDEVMNet {
 			startWaiting := time.Now()
 			for {
 				if pid, _ := store.ReadPIDFile(config.PIDFile(name, daemon)); pid == 0 {

@@ -30,7 +30,12 @@ func Sudoers() (string, error) {
 	for _, name := range names {
 		sb.WriteRune('\n')
 		sb.WriteString(fmt.Sprintf("# Manage %q network daemons\n", name))
-		for _, daemon := range []string{Switch, VMNet} {
+		for _, daemon := range []string{VDESwitch, VDEVMNet, SocketVMNet} {
+			if ok, err := config.IsDaemonInstalled(daemon); err != nil {
+				return "", err
+			} else if !ok {
+				continue
+			}
 			user, err := config.User(daemon)
 			if err != nil {
 				return "", err
@@ -53,7 +58,12 @@ func (config *NetworksConfig) passwordLessSudo() error {
 	}
 	// Verify that user/groups for both daemons work without a password, e.g.
 	// %admin ALL = (ALL:ALL) NOPASSWD: ALL
-	for _, daemon := range []string{Switch, VMNet} {
+	for _, daemon := range []string{VDESwitch, VDEVMNet, SocketVMNet} {
+		if ok, err := config.IsDaemonInstalled(daemon); err != nil {
+			return err
+		} else if !ok {
+			continue
+		}
 		user, err := config.User(daemon)
 		if err != nil {
 			return err

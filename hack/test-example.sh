@@ -23,6 +23,7 @@ declare -A CHECKS=(
 	["containerd-user"]="1"
 	["restart"]="1"
 	["port-forwards"]="1"
+	["vmnet"]=""
 )
 
 case "$NAME" in
@@ -40,6 +41,9 @@ case "$NAME" in
 	# CI failure:
 	# ● run-r2b459797f5b04262bfa79984077a65c7.service                                       loaded failed failed    /usr/bin/systemctl start man-db-cache-update
 	CHECKS["systemd-strict"]=
+	;;
+"vmnet")
+	CHECKS["vmnet"]=1
 	;;
 esac
 
@@ -215,6 +219,22 @@ if [[ -n ${CHECKS["port-forwards"]} ]]; then
 		fi
 	fi
 	set +x
+fi
+
+if [[ -n ${CHECKS["vmnet"]} ]]; then
+	INFO "Testing vmnet functionality"
+	guestip="$(limactl shell "$NAME" ip -4 -j addr show dev lima0 | jq -r '.[0].addr_info[0].local')"
+	INFO "Pinging the guest IP ${guestip}"
+	set -x
+	ping -c 3 "$guestip"
+	set +x
+	INFO "Benchmarking with iperf3"
+	set -x
+	limactl shell "$NAME" sudo apt-get install -y iperf3
+	limactl shell "$NAME" iperf3 -s -1 -D
+	iperf3 -c "$guestip"
+	set +x
+	# NOTE: we only test the shared interface here, as the bridged interface cannot be used on GHA (and systemd-networkd-wait-online.service will fail)
 fi
 
 if [[ -n ${CHECKS["restart"]} ]]; then

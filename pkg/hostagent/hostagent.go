@@ -2,6 +2,7 @@ package hostagent
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -14,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"text/template"
 	"time"
 
 	"github.com/digitalocean/go-qemu/qmp"
@@ -47,7 +49,7 @@ type HostAgent struct {
 	onClose         []func() error // LIFO
 
 	qExe     string
-	qArgs    []string
+	qArgs    []string // May contain text templates like "{{ fd_connect /path/to/sock }}"
 	sigintCh chan os.Signal
 
 	eventEnc   *json.Encoder
@@ -241,6 +243,58 @@ func logPipeRoutine(r io.Reader, header string) {
 	}
 }
 
+type qArgTemplateApplier struct {
+	files []*os.File
+}
+
+func (a *qArgTemplateApplier) applyTemplate(qArg string) (string, error) {
+	if !strings.Contains(qArg, "{{") {
+		return qArg, nil
+	}
+	funcMap := template.FuncMap{
+		"fd_connect": func(v interface{}) string {
+			fn := func(v interface{}) (string, error) {
+				s, ok := v.(string)
+				if !ok {
+					return "", fmt.Errorf("non-string argument %+v", v)
+				}
+				addr := &net.UnixAddr{
+					Net:  "unix",
+					Name: s,
+				}
+				conn, err := net.DialUnix("unix", nil, addr)
+				if err != nil {
+					return "", err
+				}
+				f, err := conn.File()
+				if err != nil {
+					return "", err
+				}
+				if err := conn.Close(); err != nil {
+					return "", err
+				}
+				a.files = append(a.files, f)
+				fd := len(a.files) + 2 // the first FD is 3
+				return strconv.Itoa(fd), nil
+			}
+			res, err := fn(v)
+			if err != nil {
+				panic(fmt.Errorf("fd_connect: %w", err))
+			}
+			return res
+		},
+	}
+	tmpl, err := template.New("").Funcs(funcMap).Parse(qArg)
+	if err != nil {
+		return "", err
+	}
+	var b bytes.Buffer
+	if err := tmpl.Execute(&b, nil); err != nil {
+		return "", nil
+	}
+	return b.String(), nil
+}
+
 func (a *HostAgent) Run(ctx context.Context) error {
 	defer func() {
 		exitingEv := events.Event{
@@ -271,7 +325,17 @@ func (a *HostAgent) Run(ctx context.Context) error {
 		defer dnsServer.Shutdown()
 	}
 
-	qCmd := exec.CommandContext(ctx, a.qExe, a.qArgs...)
+	var qArgs []string
+	applier := &qArgTemplateApplier{}
+	for _, unapplied := range a.qArgs {
+		applied, err := applier.applyTemplate(unapplied)
+		if err != nil {
+			return err
+		}
+		qArgs = append(qArgs, applied)
+	}
+	qCmd := exec.CommandContext(ctx, a.qExe, qArgs...)
+	qCmd.ExtraFiles = append(qCmd.ExtraFiles, applier.files...)
 	qStdout, err := qCmd.StdoutPipe()
 	if err != nil {
 		return err

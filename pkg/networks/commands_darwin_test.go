@@ -6,6 +6,14 @@ import (
 	"gotest.tools/v3/assert"
 )
 
+func TestSock(t *testing.T) {
+	config, err := DefaultConfig()
+	assert.NilError(t, err)
+
+	sock := config.Sock("foo")
+	assert.Equal(t, sock, "/private/var/run/lima/socket_vmnet.foo")
+}
+
 func TestVDESock(t *testing.T) {
 	config, err := DefaultConfig()
 	assert.NilError(t, err)

@@ -15,6 +15,8 @@ import (
 func (config *NetworksConfig) Validate() error {
 	// validate all paths.* values
 	paths := reflect.ValueOf(&config.Paths).Elem()
+	pathsMap := make(map[string]string, paths.NumField())
+	var socketVMNetNotFound, vdeVMNetNotFound, vdeSwitchNotFound bool
 	for i := 0; i < paths.NumField(); i++ {
 		// extract YAML name from struct tag; strip options like "omitempty"
 		name := paths.Type().Field(i).Tag.Get("yaml")
@@ -22,18 +24,37 @@ func (config *NetworksConfig) Validate() error {
 			name = name[:i]
 		}
 		path := paths.Field(i).Interface().(string)
+		pathsMap[name] = path
 		// varPath will be created securely, but any existing parent directories must already be secure
 		if name == "varRun" {
 			path = findBaseDirectory(path)
 		}
 		err := validatePath(path, name == "varRun")
 		if err != nil {
-			// sudoers file does not need to exist; otherwise `limactl sudoers` couldn't bootstrap
-			if name == "sudoers" && errors.Is(err, os.ErrNotExist) {
-				continue
+			if errors.Is(err, os.ErrNotExist) {
+				switch name {
+				// sudoers file does not need to exist; otherwise `limactl sudoers` couldn't bootstrap
+				case "sudoers":
+					continue
+				case "socketVMNet":
+					socketVMNetNotFound = true
+					continue
+				case "vdeVMNet":
+					vdeVMNetNotFound = true
+					continue
+				case "vdeSwitch":
+					vdeSwitchNotFound = true
+					continue
+				}
 			}
 			return fmt.Errorf("networks.yaml field `paths.%s` error: %w", name, err)
 		}
+	}
+	if socketVMNetNotFound && vdeVMNetNotFound {
+		return fmt.Errorf("networks.yaml: either %q (`paths.socketVMNet`) or %q (`paths.vdeVMNet`) has to be installed", pathsMap["socketVMNet"], pathsMap["vdeVMNet"])
+	}
+	if socketVMNetNotFound && !vdeVMNetNotFound && vdeSwitchNotFound {
+		return fmt.Errorf("networks.yaml: %q (`paths.vdeVMNet`) requires %q (`paths.vdeSwitch`) to be installed", pathsMap["vdeVMNet"], pathsMap["vdeSwitch"])
 	}
 	// TODO(jandubois): validate network definitions
 	return nil
