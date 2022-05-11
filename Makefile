@@ -21,6 +21,8 @@ binaries: clean \
 	_output/bin/lima \
 	_output/bin/limactl \
 	_output/bin/nerdctl.lima \
+	_output/bin/docker.lima \
+	_output/bin/podman.lima \
 	_output/share/lima/lima-guestagent.Linux-x86_64 \
 	_output/share/lima/lima-guestagent.Linux-aarch64 \
 	_output/share/lima/lima-guestagent.Linux-riscv64
@@ -39,6 +41,14 @@ _output/bin/lima:
 _output/bin/nerdctl.lima:
 	mkdir -p _output/bin
 	cp -a ./cmd/nerdctl.lima $@
+
+_output/bin/docker.lima: ./cmd/docker.lima
+	@mkdir -p _output/bin
+	cp -a $^ $@
+
+_output/bin/podman.lima: ./cmd/podman.lima
+	@mkdir -p _output/bin
+	cp -a $^ $@
 
 .PHONY: _output/bin/limactl
 _output/bin/limactl:
