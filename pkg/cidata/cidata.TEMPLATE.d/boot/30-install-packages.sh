@@ -67,6 +67,11 @@ elif command -v dnf >/dev/null 2>&1; then
 			dnf_install_flags="${dnf_install_flags} --repo ol8_baseos_latest --repo ol8_codeready_builder"
 		elif grep -q "release 8" /etc/system-release; then
 			dnf_install_flags="${dnf_install_flags} --enablerepo powertools"
+		else
+			# Workaround for disappeared sshfs in Base repos
+			# shellcheck disable=SC2086
+			dnf install ${dnf_install_flags} epel-release
+			dnf_install_flags="${dnf_install_flags} --enablerepo epel"
 		fi
 		# shellcheck disable=SC2086
 		dnf install ${dnf_install_flags} ${pkgs}
