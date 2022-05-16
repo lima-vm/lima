@@ -1,0 +1,18 @@
+#!/bin/sh
+set -eu
+: "${LIMA_INSTANCE:=docker}"
+: "${DOCKER:=docker}"
+
+if [ "$(limactl ls -q "$LIMA_INSTANCE" 2>/dev/null)" != "$LIMA_INSTANCE" ]; then
+  echo "instance \"$LIMA_INSTANCE\" does not exist, run \`limactl start --name=$LIMA_INSTANCE template://docker\` to create a new instance" >&2
+  exit 1
+fi
+DOCKER=$(command -v "$DOCKER" || true)
+if [ -n "$DOCKER" ]; then
+  DOCKER_HOST=$(limactl list "$LIMA_INSTANCE" --format 'unix://{{.Dir}}/sock/docker.sock')
+  export DOCKER_HOST
+  exec "$DOCKER" "$@"
+else
+  export LIMA_INSTANCE
+  exec lima docker "$@"
+fi
