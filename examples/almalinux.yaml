@@ -1,12 +1,12 @@
 # This example requires Lima v0.8.3 or later.
 
 images:
-- location: "http://repo.almalinux.org/almalinux/8.5/cloud/x86_64/images/AlmaLinux-8-GenericCloud-latest.x86_64.qcow2"
+- location: "http://repo.almalinux.org/almalinux/8.6/cloud/x86_64/images/AlmaLinux-8-GenericCloud-8.6-20220513.x86_64.qcow2"
   arch: "x86_64"
-  digest: "sha512:19623e60216800fb3cd9f564c6d20415adc6d990ba4924fef2a2056035049d2ac2c749c8b71843f62af2955e8b505f4705daacb16c13d3079366b007ad846491"
-- location: "http://repo.almalinux.org/almalinux/8.5/cloud/aarch64/images/AlmaLinux-8-GenericCloud-latest.aarch64.qcow2"
+  digest: "sha256:1563c0b09d98e7a606e1e737f1c810830aeb0cbe37ac5585f3696be62f0a32b4"
+- location: "http://repo.almalinux.org/almalinux/8.6/cloud/aarch64/images/AlmaLinux-8-GenericCloud-8.6-20220513.aarch64.qcow2"
   arch: "aarch64"
-  digest: "sha512:bf8c0afaa8aaced047977de73455f09d2867907efece91cbad16dbd3ab454328b432eadccc62cdfc6e529f5147e564c9d97405a2598efde6758151c6fda758d4"
+  digest: "sha256:d00960b398f257d83ade160eea954caf95a060ad5d74f3af9feeb17e0aa0b6e2"
 mounts:
 - location: "~"
 - location: "/tmp/lima"
