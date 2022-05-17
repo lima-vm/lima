@@ -1,5 +1,6 @@
 # This example requires Lima v0.8.3 or later.
 
+# NOTE: skip 8.6-20220515, as it seems broken (lacks sudo): https://bugs.rockylinux.org/view.php?id=102
 images:
 - location: "https://dl.rockylinux.org/pub/rocky/8.5/images/Rocky-8-GenericCloud-8.5-20211114.2.x86_64.qcow2"
   arch: "x86_64"
