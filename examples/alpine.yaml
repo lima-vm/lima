@@ -1,11 +1,11 @@
 # This example requires Lima v0.7.0 or later.
 images:
-- location: "https://github.com/lima-vm/alpine-lima/releases/download/v0.2.11/alpine-lima-std-3.15.4-x86_64.iso"
+- location: "https://github.com/lima-vm/alpine-lima/releases/download/v0.2.13/alpine-lima-std-3.15.4-x86_64.iso"
   arch: "x86_64"
-  digest: "sha512:58b0003400aa5e54c54970a1a4d2376b3d3d6b48fffa5e21ea5b814f398920d6d38957f2a603520c03bdca178046915e198039243f296adf75ea380e02154aa5"
-- location: "https://github.com/lima-vm/alpine-lima/releases/download/v0.2.11/alpine-lima-std-3.15.4-aarch64.iso"
+  digest: "sha512:1da1067355e4db7efb5ae6f827f6555480c1510f764f133c795e736a1fea020091d8bf6ad3cffd7f209c2987dfe41ba490f4796c5ea0be1052d8ac99b81d9bef"
+- location: "https://github.com/lima-vm/alpine-lima/releases/download/v0.2.13/alpine-lima-std-3.15.4-aarch64.iso"
   arch: "aarch64"
-  digest: "sha512:3449965ae57cef13e9af7797c064431bfee1a5132f5f4c181ff72ab19bacdc870d66dda44511a8214ba17e1d1f554bb34ebeb55da923290cf6598980c4077941"
+  digest: "sha512:68fab773f96cc21ae2422ddcdade51392f4fd99ff8e1906c4912ac77945c58c022109098f25f5f3c11a94351b62419193cae04fc645fe35bf2eefb4bc51bb769"
 
 mounts:
 - location: "~"
