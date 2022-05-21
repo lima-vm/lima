@@ -5,7 +5,7 @@ set -eux
 command -v systemctl >/dev/null 2>&1 || exit 0
 
 # Set up env
-for f in .profile .bashrc; do
+for f in .profile .bashrc .zshrc; do
 	if ! grep -q "# Lima BEGIN" "/home/${LIMA_CIDATA_USER}.linux/$f"; then
 		cat >>"/home/${LIMA_CIDATA_USER}.linux/$f" <<EOF
 # Lima BEGIN
