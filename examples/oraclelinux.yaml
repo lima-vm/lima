@@ -1,12 +1,14 @@
 # This example requires Lima v0.9.0 or later.
 # Oracle image licence: https://www.oracle.com/downloads/licenses/oracle-linux-license.html
 # Image source: https://yum.oracle.com/oracle-linux-templates.html
-arch: "x86_64"
 
 images:
-- location: "https://yum.oracle.com/templates/OracleLinux/OL8/u5/x86_64/OL8U5_x86_64-olvm-b113.qcow2"
+- location: "https://yum.oracle.com/templates/OracleLinux/OL8/u6/x86_64/OL8U6_x86_64-kvm-b126.qcow"
   arch: "x86_64"
-  digest: "sha256:550db4100b38825d1778f23f8c457f3fc971d96be1326fb512a5e607032b2a24"
+  digest: "sha256:f00bf07669b1b9b07de446140ed0ac4f3f310160104a41715cfa051d0ded3eed"
+- location: "https://yum.oracle.com/templates/OracleLinux/OL8/u6/aarch64/OL8U6_aarch64-kvm-b2.qcow"
+  arch: "aarch64"
+  digest: "sha256:7fcf1765c5aa346be85eb8df0bc03d9e71b83dba6724fa7c41421be541d2ff93"
 mounts:
 - location: "~"
 - location: "/tmp/lima"
