@@ -9,7 +9,7 @@ growpart:
 {{- if .Mounts }}
 mounts:
   {{- range $m := $.Mounts}}
-- [{{$m.Tag}}, {{$m.Target}}, {{$m.Type}}, "{{$m.Options}}", "0", "0"]
+- [{{$m.Tag}}, {{$m.MountPoint}}, {{$m.Type}}, "{{$m.Options}}", "0", "0"]
   {{- end }}
 {{- end }}
 {{- end }}

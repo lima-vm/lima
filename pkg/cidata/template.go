@@ -37,10 +37,10 @@ type Network struct {
 	Interface  string
 }
 type Mount struct {
-	Tag     string
-	Target  string // abs path, accessible by the User
-	Type    string
-	Options string
+	Tag        string
+	MountPoint string // abs path, accessible by the User
+	Type       string
+	Options    string
 }
 type TemplateArgs struct {
 	Name            string // instance name
@@ -80,7 +80,7 @@ func ValidateTemplateArgs(args TemplateArgs) error {
 		return errors.New("field SSHPubKeys must be set")
 	}
 	for i, m := range args.Mounts {
-		f := m.Target
+		f := m.MountPoint
 		if !filepath.IsAbs(f) {
 			return fmt.Errorf("field mounts[%d] must be absolute, got %q", i, f)
 		}

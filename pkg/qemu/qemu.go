@@ -539,16 +539,16 @@ func Cmdline(cfg Config) (string, []string, error) {
 	if *y.MountType == limayaml.NINEP {
 		for i, f := range y.Mounts {
 			tag := fmt.Sprintf("mount%d", i)
-			expanded, err := localpathutil.Expand(f.Location)
+			location, err := localpathutil.Expand(f.Location)
 			if err != nil {
 				return "", nil, err
 			}
-			if err := os.MkdirAll(expanded, 0755); err != nil {
+			if err := os.MkdirAll(location, 0755); err != nil {
 				return "", nil, err
 			}
 			options := "local"
 			options += fmt.Sprintf(",mount_tag=%s", tag)
-			options += fmt.Sprintf(",path=%s", expanded)
+			options += fmt.Sprintf(",path=%s", location)
 			options += fmt.Sprintf(",security_model=%s", *f.NineP.SecurityModel)
 			if !*f.Writable {
 				options += ",readonly"

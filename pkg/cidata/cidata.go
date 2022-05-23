@@ -130,7 +130,11 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 	}
 	for i, f := range y.Mounts {
 		tag := fmt.Sprintf("mount%d", i)
-		expanded, err := localpathutil.Expand(f.Location)
+		location, err := localpathutil.Expand(f.Location)
+		if err != nil {
+			return err
+		}
+		mountPoint, err := localpathutil.Expand(f.MountPoint)
 		if err != nil {
 			return err
 		}
@@ -144,14 +148,14 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 			options += fmt.Sprintf(",version=%s", *f.NineP.ProtocolVersion)
 			msize, err := units.RAMInBytes(*f.NineP.Msize)
 			if err != nil {
-				return fmt.Errorf("failed to parse msize for %q: %w", expanded, err)
+				return fmt.Errorf("failed to parse msize for %q: %w", location, err)
 			}
 			options += fmt.Sprintf(",msize=%d", msize)
 			options += fmt.Sprintf(",cache=%s", *f.NineP.Cache)
 			// don't fail the boot, if virtfs is not available
 			options += ",nofail"
 		}
-		args.Mounts = append(args.Mounts, Mount{Tag: tag, Target: expanded, Type: fstype, Options: options})
+		args.Mounts = append(args.Mounts, Mount{Tag: tag, MountPoint: mountPoint, Type: fstype, Options: options})
 	}
 
 	switch *y.MountType {
