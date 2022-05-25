@@ -284,6 +284,10 @@ func getMacOSProductVersion() (*semver.Version, error) {
 		return nil, fmt.Errorf("failed to execute %v: %w", cmd.Args, err)
 	}
 	verTrimmed := strings.TrimSpace(string(b))
+	// macOS 12.4 returns just "12.4\n"
+	for strings.Count(verTrimmed, ".") < 2 {
+		verTrimmed += ".0"
+	}
 	verSem, err := semver.NewVersion(verTrimmed)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse macOS version %q: %w", verTrimmed, err)
