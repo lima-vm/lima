@@ -402,6 +402,9 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 			if mount.Writable != nil {
 				mounts[i].Writable = mount.Writable
 			}
+			if mount.MountPoint != "" {
+				mounts[i].MountPoint = mount.MountPoint
+			}
 		} else {
 			location[mount.Location] = len(mounts)
 			mounts = append(mounts, mount)
@@ -438,6 +441,9 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 			} else {
 				mounts[i].NineP.Cache = pointer.String(Default9pCacheForRO)
 			}
+		}
+		if mount.MountPoint == "" {
+			mounts[i].MountPoint = mount.Location
 		}
 	}
 

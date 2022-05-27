@@ -145,6 +145,7 @@ func TestFillDefault(t *testing.T) {
 	}
 
 	expect.Mounts = y.Mounts
+	expect.Mounts[0].MountPoint = expect.Mounts[0].Location
 	expect.Mounts[0].Writable = pointer.Bool(false)
 	expect.Mounts[0].SSHFS.Cache = pointer.Bool(true)
 	expect.Mounts[0].SSHFS.FollowSymlinks = pointer.Bool(false)
@@ -299,6 +300,7 @@ func TestFillDefault(t *testing.T) {
 	expect = d
 	// Also verify that archive arch is filled in
 	expect.Containerd.Archives[0].Arch = *d.Arch
+	expect.Mounts[0].MountPoint = expect.Mounts[0].Location
 	expect.Mounts[0].SSHFS.Cache = pointer.Bool(true)
 	expect.Mounts[0].SSHFS.FollowSymlinks = pointer.Bool(false)
 	expect.Mounts[0].SSHFS.SFTPDriver = pointer.String("")

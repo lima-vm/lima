@@ -17,8 +17,8 @@ func TestTemplate(t *testing.T) {
 			"ssh-rsa dummy foo@example.com",
 		},
 		Mounts: []Mount{
-			{Target: "/Users/dummy"},
-			{Target: "/Users/dummy/lima"},
+			{MountPoint: "/Users/dummy"},
+			{MountPoint: "/Users/dummy/lima"},
 		},
 		MountType: "reverse-sshfs",
 	}
@@ -45,8 +45,8 @@ func TestTemplate9p(t *testing.T) {
 			"ssh-rsa dummy foo@example.com",
 		},
 		Mounts: []Mount{
-			{Tag: "mount0", Target: "/Users/dummy", Type: "9p", Options: "ro,trans=virtio"},
-			{Tag: "mount1", Target: "/Users/dummy/lima", Type: "9p", Options: "rw,trans=virtio"},
+			{Tag: "mount0", MountPoint: "/Users/dummy", Type: "9p", Options: "ro,trans=virtio"},
+			{Tag: "mount1", MountPoint: "/Users/dummy/lima", Type: "9p", Options: "rw,trans=virtio"},
 		},
 		MountType: "9p",
 	}
