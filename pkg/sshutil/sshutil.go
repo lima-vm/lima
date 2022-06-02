@@ -233,6 +233,10 @@ func SSHArgsFromOpts(opts []string) []string {
 	for _, o := range opts {
 		args = append(args, "-o", o)
 	}
+	if _, present := os.LookupEnv("DISPLAY"); present {
+		// forward X11 to vm, if available
+		args = append(args, "-Y")
+	}
 	return args
 }
 
