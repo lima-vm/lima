@@ -206,6 +206,26 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.SSH.ForwardAgent = pointer.Bool(false)
 	}
 
+	if y.SSH.ForwardX11 == nil {
+		y.SSH.ForwardX11 = d.SSH.ForwardX11
+	}
+	if o.SSH.ForwardX11 != nil {
+		y.SSH.ForwardX11 = o.SSH.ForwardX11
+	}
+	if y.SSH.ForwardX11 == nil {
+		y.SSH.ForwardX11 = pointer.Bool(false)
+	}
+
+	if y.SSH.ForwardX11Trusted == nil {
+		y.SSH.ForwardX11Trusted = d.SSH.ForwardX11Trusted
+	}
+	if o.SSH.ForwardX11Trusted != nil {
+		y.SSH.ForwardX11Trusted = o.SSH.ForwardX11Trusted
+	}
+	if y.SSH.ForwardX11Trusted == nil {
+		y.SSH.ForwardX11Trusted = pointer.Bool(false)
+	}
+
 	hosts := make(map[string]string)
 	// Values can be either names or IP addresses. Name values are canonicalized in the hostResolver.
 	for k, v := range d.HostResolver.Hosts {

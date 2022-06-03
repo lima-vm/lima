@@ -96,6 +96,8 @@ type SSH struct {
 	// LoadDotSSHPubKeys loads ~/.ssh/*.pub in addition to $LIMA_HOME/_config/user.pub .
 	LoadDotSSHPubKeys *bool `yaml:"loadDotSSHPubKeys,omitempty" json:"loadDotSSHPubKeys,omitempty"` // default: true
 	ForwardAgent      *bool `yaml:"forwardAgent,omitempty" json:"forwardAgent,omitempty"`           // default: false
+	ForwardX11        *bool `yaml:"forwardX11,omitempty" json:"forwardX11,omitempty"`               // default: false
+	ForwardX11Trusted *bool `yaml:"forwardX11Trusted,omitempty" json:"forwardX11Trusted,omitempty"` // default: false
 }
 
 type Firmware struct {
