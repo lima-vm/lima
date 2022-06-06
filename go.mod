@@ -6,7 +6,7 @@ require (
 	github.com/AlecAivazis/survey/v2 v2.3.4
 	github.com/alessio/shellescape v1.4.1
 	github.com/cheggaaa/pb/v3 v3.0.8
-	github.com/containerd/containerd v1.6.4
+	github.com/containerd/containerd v1.6.5
 	github.com/containerd/continuity v0.3.0
 	github.com/coreos/go-semver v0.3.0
 	github.com/cyphar/filepath-securejoin v0.2.3
@@ -29,7 +29,7 @@ require (
 	github.com/spf13/cobra v1.4.0
 	github.com/xorcare/pointer v1.1.0
 	github.com/yalue/native_endian v1.0.2
-	golang.org/x/sys v0.0.0-20220405210540-1e041c57c461
+	golang.org/x/sys v0.0.0-20220412211240-33da011f77ad
 	gopkg.in/yaml.v2 v2.4.0
 	gotest.tools/v3 v3.2.0
 )
