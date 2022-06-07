@@ -1,0 +1,40 @@
+# Example to use Apptainer instead of containerd & nerdctl
+# $ limactl start ./apptainer.yaml
+# $ limactl shell apptainer apptainer run -u -B $HOME:$HOME docker://alpine
+
+# This example requires Lima v0.8.3 or later.
+
+# NOTE: skip 8.6-20220515, as it seems broken (lacks sudo): https://bugs.rockylinux.org/view.php?id=102
+images:
+- location: "https://dl.rockylinux.org/pub/rocky/8.5/images/Rocky-8-GenericCloud-8.5-20211114.2.x86_64.qcow2"
+  arch: "x86_64"
+  digest: "sha256:c23f58f26f73fb9ae92bfb4cf881993c23fdce1bbcfd2881a5831f90373ce0c8"
+mounts:
+- location: "~"
+- location: "/tmp/lima"
+  writable: true
+firmware:
+  legacyBIOS: true
+cpuType:
+  # Workaround for "vmx_write_mem: mmu_gva_to_gpa XXXXXXXXXXXXXXXX failed" on Intel Mac
+  # https://bugs.launchpad.net/qemu/+bug/1838390
+  x86_64: "Haswell-v4"
+containerd:
+  system: false
+  user: false
+provision:
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    command -v apptainer >/dev/null 2>&1 && exit 0
+    dnf install -y https://github.com/apptainer/apptainer/releases/download/v1.0.2/apptainer-1.0.2-1.x86_64.rpm
+probes:
+- script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    if ! timeout 30s bash -c "until command -v apptainer >/dev/null 2>&1; do sleep 3; done"; then
+      echo >&2 "apptainer is not installed yet"
+      exit 1
+    fi
+  hint: See "/var/log/cloud-init-output.log". in the guest
