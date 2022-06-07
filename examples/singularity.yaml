@@ -23,6 +23,12 @@ provision:
   script: |
     #!/bin/bash
     set -eux -o pipefail
+    modprobe squashfs >/dev/null 2>&1 && exit 0
+    dnf install -y kernel-modules-$(uname -r)
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
     command -v singularity >/dev/null 2>&1 && exit 0
     dnf install -y singularity
 probes:
