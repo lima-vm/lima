@@ -104,15 +104,15 @@ A possible workaround is to run "apt-get install sshfs" in the guest.
 `,
 		})
 		req = append(req, requirement{
-			description: "/etc/fuse.conf to contain \"user_allow_other\"",
+			description: "/etc/fuse.conf (/etc/fuse3.conf) to contain \"user_allow_other\"",
 			script: `#!/bin/bash
 set -eux -o pipefail
-if ! timeout 30s bash -c "until grep -q ^user_allow_other /etc/fuse.conf; do sleep 3; done"; then
-	echo >&2 "/etc/fuse.conf is not updated to contain \"user_allow_other\""
+if ! timeout 30s bash -c "until grep -q ^user_allow_other /etc/fuse*.conf; do sleep 3; done"; then
+	echo >&2 "/etc/fuse.conf (/etc/fuse3.conf) is not updated to contain \"user_allow_other\""
 	exit 1
 fi
 `,
-			debugHint: `Append "user_allow_other" to /etc/fuse.conf in the guest`,
+			debugHint: `Append "user_allow_other" to /etc/fuse.conf (/etc/fuse3.conf) in the guest`,
 		})
 
 	}
