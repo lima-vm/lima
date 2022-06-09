@@ -36,6 +36,7 @@ Others:
 - [`deprecated/centos-7.yaml`](./deprecated/centos-7.yaml): [deprecated] CentOS 7
 - [`experimental/9p.yaml`](experimental/9p.yaml): [experimental] use 9p mount type
 - [`experimental/riscv64.yaml`](experimental/riscv64.yaml): [experimental] RISC-V
+- [`experimental/apptainer.yaml`](./experimental/apptainer.yaml): [experimental] [Apptainer](https://apptainer.org/)
 
 ## Tier 1
 
