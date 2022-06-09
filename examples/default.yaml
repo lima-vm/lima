@@ -106,6 +106,12 @@ ssh:
   # Forward ssh agent into the instance.
   # 🟢 Builtin default: false
   forwardAgent: null
+  # Forward X11 into the instance
+  # 🟢 Builtin default: false
+  forwardX11: null
+  # Trust forwarded X11 clients
+  # 🟢 Builtin default: false
+  forwardX11Trusted: null
 
 # ===================================================================== #
 # ADVANCED CONFIGURATION

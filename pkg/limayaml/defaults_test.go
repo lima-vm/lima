@@ -65,6 +65,8 @@ func TestFillDefault(t *testing.T) {
 			LocalPort:         pointer.Int(0),
 			LoadDotSSHPubKeys: pointer.Bool(true),
 			ForwardAgent:      pointer.Bool(false),
+			ForwardX11:        pointer.Bool(false),
+			ForwardX11Trusted: pointer.Bool(false),
 		},
 		Firmware: Firmware{
 			LegacyBIOS: pointer.Bool(false),
@@ -230,6 +232,8 @@ func TestFillDefault(t *testing.T) {
 			LocalPort:         pointer.Int(888),
 			LoadDotSSHPubKeys: pointer.Bool(false),
 			ForwardAgent:      pointer.Bool(true),
+			ForwardX11:        pointer.Bool(false),
+			ForwardX11Trusted: pointer.Bool(false),
 		},
 		Firmware: Firmware{
 			LegacyBIOS: pointer.Bool(true),
@@ -376,6 +380,8 @@ func TestFillDefault(t *testing.T) {
 			LocalPort:         pointer.Int(4433),
 			LoadDotSSHPubKeys: pointer.Bool(true),
 			ForwardAgent:      pointer.Bool(true),
+			ForwardX11:        pointer.Bool(false),
+			ForwardX11Trusted: pointer.Bool(false),
 		},
 		Firmware: Firmware{
 			LegacyBIOS: pointer.Bool(true),

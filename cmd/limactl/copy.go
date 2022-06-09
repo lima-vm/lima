@@ -108,7 +108,7 @@ func copyAction(cmd *cobra.Command, args []string) error {
 		// arguments such as ControlPath.  This is preferred as we can multiplex
 		// sessions without re-authenticating (MaxSessions permitting).
 		for _, instDir := range instDirs {
-			sshOpts, err = sshutil.SSHOpts(instDir, false, false)
+			sshOpts, err = sshutil.SSHOpts(instDir, false, false, false, false)
 			if err != nil {
 				return err
 			}
