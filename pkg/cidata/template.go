@@ -43,24 +43,25 @@ type Mount struct {
 	Options    string
 }
 type TemplateArgs struct {
-	Name            string // instance name
-	IID             string // instance id
-	User            string // user name
-	UID             int
-	SSHPubKeys      []string
-	Mounts          []Mount
-	MountType       string
-	Containerd      Containerd
-	Networks        []Network
-	SlirpNICName    string
-	SlirpGateway    string
-	SlirpDNS        string
-	SlirpIPAddress  string
-	UDPDNSLocalPort int
-	TCPDNSLocalPort int
-	Env             map[string]string
-	DNSAddresses    []string
-	CACerts         CACerts
+	Name               string // instance name
+	IID                string // instance id
+	User               string // user name
+	UID                int
+	SSHPubKeys         []string
+	Mounts             []Mount
+	MountType          string
+	Containerd         Containerd
+	Networks           []Network
+	SlirpNICName       string
+	SlirpGateway       string
+	SlirpDNS           string
+	SlirpIPAddress     string
+	UDPDNSLocalPort    int
+	TCPDNSLocalPort    int
+	Env                map[string]string
+	DNSAddresses       []string
+	CACerts            CACerts
+	HostHomeMountPoint string
 }
 
 func ValidateTemplateArgs(args TemplateArgs) error {
