@@ -83,7 +83,9 @@ func TestFillDefault(t *testing.T) {
 			RemoveDefaults: pointer.Bool(false),
 		},
 	}
-	builtin.CPUType[arch] = "host"
+	if IsAccelOS() {
+		builtin.CPUType[arch] = "host"
+	}
 
 	defaultPortForward := PortForward{
 		GuestIP:        api.IPv4loopback1,
