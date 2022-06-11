@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
-	"syscall"
 
 	"github.com/lima-vm/lima/pkg/osutil"
 )
@@ -73,7 +72,7 @@ func validatePath(path string, allowDaemonGroupWritable bool) error {
 	if (fi.Mode() & fs.ModeSymlink) != 0 {
 		return fmt.Errorf("%s %q is a symlink", file, path)
 	}
-	stat, ok := fi.Sys().(*syscall.Stat_t)
+	stat, ok := osutil.SysStat(fi)
 	if !ok {
 		// should never happen
 		return fmt.Errorf("could not retrieve stat buffer for %q", path)

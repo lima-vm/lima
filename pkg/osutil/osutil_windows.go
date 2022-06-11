@@ -1,8 +1,8 @@
 package osutil
 
 import (
+	"fmt"
 	"io/fs"
-	"syscall"
 )
 
 // UnixPathMax is the value of UNIX_PATH_MAX.
@@ -15,18 +15,17 @@ type Stat struct {
 }
 
 func SysStat(fi fs.FileInfo) (Stat, bool) {
-	stat, ok := fi.Sys().(*syscall.Stat_t)
-	return Stat{Uid: stat.Uid, Gid: stat.Gid}, ok
+	return Stat{Uid: 0, Gid: 0}, false
 }
 
 // SigInt is the value of SIGINT.
-const SigInt = Signal(syscall.SIGINT)
+const SigInt = Signal(2)
 
 // SigKill is the value of SIGKILL.
-const SigKill = Signal(syscall.SIGKILL)
+const SigKill = Signal(9)
 
-type Signal syscall.Signal
+type Signal int
 
 func SysKill(pid int, sig Signal) error {
-	return syscall.Kill(pid, syscall.Signal(sig))
+	return fmt.Errorf("unimplemented")
 }
