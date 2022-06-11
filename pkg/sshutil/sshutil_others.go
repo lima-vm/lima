@@ -11,6 +11,6 @@ import (
 
 func detectAESAcceleration() bool {
 	const fallback = runtime.GOARCH == "amd64"
-	logrus.WithError(err).Warnf("cannot detect whether AES accelerator is available, assuming %v", fallback)
+	logrus.Warnf("cannot detect whether AES accelerator is available, assuming %v", fallback)
 	return fallback
 }
