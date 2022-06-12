@@ -105,7 +105,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		RISCV64: "rv64", // FIXME: what is the right choice for riscv64?
 	}
 	for arch := range cpuType {
-		if IsNativeArch(arch) {
+		if IsNativeArch(arch) && IsAccelOS() {
 			cpuType[arch] = "host"
 		}
 	}
@@ -610,6 +610,16 @@ func ResolveArch(s *string) Arch {
 		return NewArch(runtime.GOARCH)
 	}
 	return *s
+}
+
+func IsAccelOS() bool {
+	switch runtime.GOOS {
+	case "darwin", "linux", "netbsd", "windows":
+		// Accelerator
+		return true
+	}
+	// Using TCG
+	return false
 }
 
 func IsNativeArch(arch Arch) bool {
