@@ -106,7 +106,9 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 	}
 	for arch := range cpuType {
 		if IsNativeArch(arch) && IsAccelOS() {
-			cpuType[arch] = "host"
+			if HasHostCPU() {
+				cpuType[arch] = "host"
+			}
 		}
 	}
 	for k, v := range d.CPUType {
@@ -619,6 +621,17 @@ func IsAccelOS() bool {
 		return true
 	}
 	// Using TCG
+	return false
+}
+
+func HasHostCPU() bool {
+	switch runtime.GOOS {
+	case "darwin", "linux":
+		return true
+	case "netbsd", "windows":
+		return false
+	}
+	// Not reached
 	return false
 }
 

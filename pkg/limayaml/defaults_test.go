@@ -84,7 +84,9 @@ func TestFillDefault(t *testing.T) {
 		},
 	}
 	if IsAccelOS() {
-		builtin.CPUType[arch] = "host"
+		if HasHostCPU() {
+			builtin.CPUType[arch] = "host"
+		}
 	}
 
 	defaultPortForward := PortForward{
