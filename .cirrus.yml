@@ -3,7 +3,8 @@
 # are too slow and flaky, and Linux instances of GHA do not support KVM.
 
 # yamllint disable rule:line-length
-task:
+main_task:
+  name: main
   timeout_in: 30m
   # We can't use macOS instances of Cirrus because of lack of support for nested VMs.
   # (sysctl machdep.cpu.features lacks "VMX" flag)
@@ -44,3 +45,18 @@ task:
     folder: /home/testuser/.cache/lima
   lima_cache_fix_perm_script: chown -R testuser.testuser /home/testuser
   test_script: sudo -iu testuser $(pwd)/hack/test-example.sh $(pwd)/examples/$EXAMPLE
+
+m1_task:
+  name: m1
+  timeout_in: 40m
+  macos_instance:
+    image: ghcr.io/cirruslabs/macos-monterey-base:latest
+  info_script:
+  - uname -a
+  - sysctl -a | grep '^machdep\.cpu\.'
+  - sysctl -a | grep '^kern.hv'
+  install_deps_script:
+  - brew install go qemu bash coreutils curl jq
+  build_script: make
+  install_script: sudo make install
+  test_script: hack/test-example.sh examples/default.yaml
