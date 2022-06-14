@@ -67,6 +67,11 @@ elif command -v dnf >/dev/null 2>&1; then
 			dnf_install_flags="${dnf_install_flags} --repo ol8_baseos_latest --repo ol8_codeready_builder"
 		elif grep -q "release 8" /etc/system-release; then
 			dnf_install_flags="${dnf_install_flags} --enablerepo powertools"
+		elif grep -q "release 9" /etc/system-release; then
+			# shellcheck disable=SC2086
+			dnf install ${dnf_install_flags} epel-release
+			dnf config-manager --disable epel >/dev/null 2>&1
+			dnf_install_flags="${dnf_install_flags} --enablerepo epel"
 		fi
 		# shellcheck disable=SC2086
 		dnf install ${dnf_install_flags} ${pkgs}
