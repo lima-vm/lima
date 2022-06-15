@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"text/template"
 	"time"
 
 	"github.com/docker/go-units"
@@ -88,7 +89,6 @@ func Inspect(instName string) (*Instance, error) {
 	if err == nil {
 		inst.Disk = disk
 	}
-	inst.Message = y.Message
 	inst.Networks = y.Networks
 	inst.SSHLocalPort = *y.SSH.LocalPort // maybe 0
 
@@ -137,6 +137,26 @@ func Inspect(instName string) (*Instance, error) {
 		}
 	}
 
+	tmpl, err := template.New("format").Parse(y.Message)
+	if err != nil {
+		inst.Errors = append(inst.Errors, fmt.Errorf("message %q is not a valid template: %w", y.Message, err))
+		inst.Status = StatusBroken
+	} else {
+		data, err := AddGlobalFields(inst)
+		if err != nil {
+			inst.Errors = append(inst.Errors, fmt.Errorf("cannot add global fields to instance data: %w", err))
+			inst.Status = StatusBroken
+		} else {
+			var message strings.Builder
+			err = tmpl.Execute(&message, data)
+			if err != nil {
+				inst.Errors = append(inst.Errors, fmt.Errorf("cannot execute template %q: %w", y.Message, err))
+				inst.Status = StatusBroken
+			} else {
+				inst.Message = message.String()
+			}
+		}
+	}
 	return inst, nil
 }
 
