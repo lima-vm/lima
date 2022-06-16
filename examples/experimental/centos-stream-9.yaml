@@ -1,0 +1,19 @@
+# This example requires Lima v0.8.3 or later.
+
+images:
+- location: "https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-9-20220606.0.x86_64.qcow2"
+  arch: "x86_64"
+  digest: "sha256:41c8cce7b5ed9ba70f7f103f058bd6320e3462f2dc2c97db84ad7f1c6918a525"
+- location: "https://cloud.centos.org/centos/9-stream/aarch64/images/CentOS-Stream-GenericCloud-9-20220606.0.aarch64.qcow2"
+  arch: "aarch64"
+  digest: "sha256:55ef64861d7f9cf5d1407af708fba8ad6015b54bfda81913cc942785091912b0"
+mounts:
+- location: "~"
+- location: "/tmp/lima"
+  writable: true
+firmware:
+  legacyBIOS: true
+cpuType:
+  # Workaround for "vmx_write_mem: mmu_gva_to_gpa XXXXXXXXXXXXXXXX failed" on Intel Mac
+  # https://bugs.launchpad.net/qemu/+bug/1838390
+  x86_64: "Haswell-v4"
