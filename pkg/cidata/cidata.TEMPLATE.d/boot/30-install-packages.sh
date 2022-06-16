@@ -2,10 +2,14 @@
 set -eux
 
 update_fuse_conf() {
-	# Modify /etc/fuse.conf to allow "-o allow_root"
+	# Modify /etc/fuse.conf (/etc/fuse3.conf) to allow "-o allow_root"
 	if [ "${LIMA_CIDATA_MOUNTS}" -gt 0 ]; then
-		if ! grep -q "^user_allow_other" /etc/fuse.conf; then
-			echo "user_allow_other" >>/etc/fuse.conf
+		fuse_conf="/etc/fuse.conf"
+		if [ -e /etc/fuse3.conf ]; then
+			fuse_conf="/etc/fuse3.conf"
+		fi
+		if ! grep -q "^user_allow_other" "${fuse_conf}"; then
+			echo "user_allow_other" >>"${fuse_conf}"
 		fi
 	fi
 }
