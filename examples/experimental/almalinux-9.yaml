@@ -1,0 +1,19 @@
+# This example requires Lima v0.8.3 or later.
+
+images:
+- location: "http://repo.almalinux.org/almalinux/9.0/cloud/x86_64/images/AlmaLinux-9-GenericCloud-9.0-20220527.x86_64.qcow2"
+  arch: "x86_64"
+  digest: "sha256:e453dde3dac780c149932f39814e3371cb0b7fe3f758012b86ab6c7a51ec7a42"
+- location: "http://repo.almalinux.org/almalinux/9.0/cloud/aarch64/images/AlmaLinux-9-GenericCloud-9.0-20220527.aarch64.qcow2"
+  arch: "aarch64"
+  digest: "sha256:30fc2e2845a33f19e8090f26b0485d5baafd21db547f59dd33c9d4d93f2a88c7"
+mounts:
+- location: "~"
+- location: "/tmp/lima"
+  writable: true
+firmware:
+  legacyBIOS: true
+cpuType:
+  # Workaround for "vmx_write_mem: mmu_gva_to_gpa XXXXXXXXXXXXXXXX failed" on Intel Mac
+  # https://bugs.launchpad.net/qemu/+bug/1838390
+  x86_64: "Haswell-v4"
