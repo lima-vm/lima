@@ -96,13 +96,21 @@ func showSSHAction(cmd *cobra.Command, args []string) error {
 	return formatSSH(w, instName, format, opts)
 }
 
+func quoteOption(o string) string {
+	// make sure the shell doesn't swallow quotes in option values
+	if strings.ContainsRune(o, '"') {
+		o = "'" + o + "'"
+	}
+	return o
+}
+
 func formatSSH(w io.Writer, instName, format string, opts []string) error {
 	fakeHostname := "lima-" + instName // corresponds to the default guest hostname
 	switch format {
 	case showSSHFormatCmd:
 		args := []string{"ssh"}
 		for _, o := range opts {
-			args = append(args, "-o", o)
+			args = append(args, "-o", quoteOption(o))
 		}
 		args = append(args, fakeHostname)
 		// the args are similar to `limactl shell` but not exactly same. (e.g., lacks -t)
@@ -110,7 +118,7 @@ func formatSSH(w io.Writer, instName, format string, opts []string) error {
 	case showSSHFormatArgs:
 		var args []string
 		for _, o := range opts {
-			args = append(args, "-o", o)
+			args = append(args, "-o", quoteOption(o))
 		}
 		fmt.Fprintln(w, strings.Join(args, " ")) // no need to use shellescape.QuoteCommand
 	case showSSHFormatOptions:
