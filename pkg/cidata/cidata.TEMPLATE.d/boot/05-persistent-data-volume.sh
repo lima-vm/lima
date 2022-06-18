@@ -43,6 +43,8 @@ if [ "$(awk '$2 == "/" {print $3}' /proc/mounts)" == "tmpfs" ]; then
 					mkdir -p "${DIR}" "${DEST}"
 					mv "${DIR}" "${DEST}"
 				done
+				# Make sure all data moved to the persistent volume has been committed to disk
+				sync
 				break
 			fi
 		done
