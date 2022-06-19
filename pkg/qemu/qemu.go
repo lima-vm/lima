@@ -606,7 +606,7 @@ func getAccel(arch limayaml.Arch) string {
 		case "linux":
 			return "kvm"
 		case "netbsd":
-			return "nvmm" // untested
+			return "nvmm"
 		case "windows":
 			return "whpx" // untested
 		}
