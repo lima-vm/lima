@@ -108,6 +108,8 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		if IsNativeArch(arch) && IsAccelOS() {
 			if HasHostCPU() {
 				cpuType[arch] = "host"
+			} else {
+				cpuType[arch] = "max"
 			}
 		}
 	}
