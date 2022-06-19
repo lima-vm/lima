@@ -1,4 +1,7 @@
-// From https://github.com/containerd/nerdctl/blob/v0.9.0/pkg/lockutil/lockutil_linux.go
+//go:build !windows
+// +build !windows
+
+// From https://github.com/containerd/nerdctl/blob/v0.13.0/pkg/lockutil/lockutil_unix.go
 /*
    Copyright The containerd Authors.
 
