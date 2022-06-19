@@ -26,7 +26,8 @@ func TestVDESock(t *testing.T) {
 	assert.NilError(t, err)
 
 	vdeSock := config.VDESock("foo")
-	assert.Equal(t, vdeSock, "/private/var/run/lima/foo.ctl")
+	varRunDir := filepath.Join("/", "private", "var", "run", "lima")
+	assert.Equal(t, vdeSock, filepath.Join(varRunDir, "foo.ctl"))
 }
 
 func TestPIDFile(t *testing.T) {
@@ -34,7 +35,8 @@ func TestPIDFile(t *testing.T) {
 	assert.NilError(t, err)
 
 	pidFile := config.PIDFile("name", "daemon")
-	assert.Equal(t, pidFile, "/private/var/run/lima/name_daemon.pid")
+	varRunDir := filepath.Join("/", "private", "var", "run", "lima")
+	assert.Equal(t, pidFile, filepath.Join(varRunDir, "name_daemon.pid"))
 }
 
 func TestLogFile(t *testing.T) {
@@ -53,6 +55,10 @@ func TestUser(t *testing.T) {
 	if runtime.GOOS != "darwin" && config.Group == "everyone" {
 		// The "everyone" group is a specific macOS feature to include non-local accounts.
 		config.Group = "staff"
+	}
+	if runtime.GOOS == "windows" {
+		// unimplemented
+		t.Skip()
 	}
 
 	user, err := config.User(Switch)
@@ -87,23 +93,27 @@ func TestStartCmd(t *testing.T) {
 	config, err := DefaultConfig()
 	assert.NilError(t, err)
 
+	varRunDir := filepath.Join("/", "private", "var", "run", "lima")
+
 	cmd := config.StartCmd("shared", Switch)
-	assert.Equal(t, cmd, "/opt/vde/bin/vde_switch --pidfile=/private/var/run/lima/shared_switch.pid "+
-		"--sock=/private/var/run/lima/shared.ctl --group=everyone --dirmode=0770 --nostdin")
+	assert.Equal(t, cmd, "/opt/vde/bin/vde_switch --pidfile="+filepath.Join(varRunDir, "shared_switch.pid")+" "+
+		"--sock="+filepath.Join(varRunDir, "shared.ctl")+" --group=everyone --dirmode=0770 --nostdin")
 
 	cmd = config.StartCmd("shared", VMNet)
-	assert.Equal(t, cmd, "/opt/vde/bin/vde_vmnet --pidfile=/private/var/run/lima/shared_vmnet.pid --vde-group=everyone --vmnet-mode=shared "+
-		"--vmnet-gateway=192.168.105.1 --vmnet-dhcp-end=192.168.105.254 --vmnet-mask=255.255.255.0 /private/var/run/lima/shared.ctl")
+	assert.Equal(t, cmd, "/opt/vde/bin/vde_vmnet --pidfile="+filepath.Join(varRunDir, "shared_vmnet.pid")+" --vde-group=everyone --vmnet-mode=shared "+
+		"--vmnet-gateway=192.168.105.1 --vmnet-dhcp-end=192.168.105.254 --vmnet-mask=255.255.255.0 "+filepath.Join(varRunDir, "shared.ctl"))
 
 	cmd = config.StartCmd("bridged", VMNet)
-	assert.Equal(t, cmd, "/opt/vde/bin/vde_vmnet --pidfile=/private/var/run/lima/bridged_vmnet.pid --vde-group=everyone --vmnet-mode=bridged "+
-		"--vmnet-interface=en0 /private/var/run/lima/bridged.ctl")
+	assert.Equal(t, cmd, "/opt/vde/bin/vde_vmnet --pidfile="+filepath.Join(varRunDir, "bridged_vmnet.pid")+" --vde-group=everyone --vmnet-mode=bridged "+
+		"--vmnet-interface=en0 "+filepath.Join(varRunDir, "bridged.ctl"))
 }
 
 func TestStopCmd(t *testing.T) {
 	config, err := DefaultConfig()
 	assert.NilError(t, err)
 
+	varRunDir := filepath.Join("/", "private", "var", "run", "lima")
+
 	cmd := config.StopCmd("name", "daemon")
-	assert.Equal(t, cmd, "/usr/bin/pkill -F /private/var/run/lima/name_daemon.pid")
+	assert.Equal(t, cmd, "/usr/bin/pkill -F "+filepath.Join(varRunDir, "name_daemon.pid"))
 }

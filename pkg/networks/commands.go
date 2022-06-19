@@ -2,6 +2,7 @@ package networks
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
@@ -23,16 +24,16 @@ func (config *NetworksConfig) Check(name string) error {
 }
 
 func (config *NetworksConfig) VDESock(name string) string {
-	return fmt.Sprintf("%s/%s.ctl", config.Paths.VarRun, name)
+	return filepath.Join(config.Paths.VarRun, fmt.Sprintf("%s.ctl", name))
 }
 
 func (config *NetworksConfig) PIDFile(name, daemon string) string {
-	return fmt.Sprintf("%s/%s_%s.pid", config.Paths.VarRun, name, daemon)
+	return filepath.Join(config.Paths.VarRun, fmt.Sprintf("%s_%s.pid", name, daemon))
 }
 
 func (config *NetworksConfig) LogFile(name, daemon, stream string) string {
 	networksDir, _ := dirnames.LimaNetworksDir()
-	return fmt.Sprintf("%s/%s_%s.%s.log", networksDir, name, daemon, stream)
+	return filepath.Join(networksDir, fmt.Sprintf("%s_%s.%s.log", name, daemon, stream))
 }
 
 func (config *NetworksConfig) User(daemon string) (osutil.User, error) {

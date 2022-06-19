@@ -1,15 +1,18 @@
 package dns
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"net"
 	"regexp"
+	"runtime"
 	"testing"
 
 	"github.com/foxcpp/go-mockdns"
 	"github.com/miekg/dns"
 	"gotest.tools/v3/assert"
+	"gotest.tools/v3/assert/cmp"
 )
 
 var (
@@ -43,6 +46,10 @@ func TestTXTRecords(t *testing.T) {
 	}, log.New(io.Discard, "mockdns server: ", log.LstdFlags), false)
 	defer srv.Close()
 
+	if runtime.GOOS == "windows" {
+		// "On Windows, the resolver always uses C library functions, such as GetAddrInfo and DnsQuery."
+		t.Skip()
+	}
 	srv.PatchNet(net.DefaultResolver)
 	defer mockdns.UnpatchNet(net.DefaultResolver)
 
@@ -56,8 +63,17 @@ func TestTXTRecords(t *testing.T) {
 				req := new(dns.Msg)
 				req.SetQuestion(dns.Fqdn(testDomains[i]), dns.TypeTXT)
 				h.ServeDNS(w, req)
-				regex_check := regexp.MustCompile(expectedResults[i]).MatchString(dnsResult.String())
-				assert.Assert(t, regex_check)
+				regex_match := func(value string, pattern string) cmp.Comparison {
+					return func() cmp.Result {
+						re := regexp.MustCompile(pattern)
+						if re.MatchString(value) {
+							return cmp.ResultSuccess
+						}
+						return cmp.ResultFailure(
+							fmt.Sprintf("%q did not match pattern %q", value, pattern))
+					}
+				}
+				assert.Assert(t, regex_match(dnsResult.String(), expectedResults[i]))
 			}
 		}
 	})

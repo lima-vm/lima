@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -217,7 +218,7 @@ func Validate(y LimaYAML, warn bool) error {
 			return fmt.Errorf("field `%s.hostPortRange` must specify the same number of ports as field `%s.guestPortRange`", field, field)
 		}
 		if rule.GuestSocket != "" {
-			if !filepath.IsAbs(rule.GuestSocket) {
+			if !path.IsAbs(rule.GuestSocket) {
 				return fmt.Errorf("field `%s.guestSocket` must be an absolute path", field)
 			}
 			if rule.HostSocket == "" && rule.HostPortRange[1]-rule.HostPortRange[0] > 0 {
