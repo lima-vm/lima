@@ -7,11 +7,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"time"
 
 	hostagentevents "github.com/lima-vm/lima/pkg/hostagent/events"
 	networks "github.com/lima-vm/lima/pkg/networks/reconcile"
+	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/sirupsen/logrus"
@@ -65,7 +65,7 @@ func stopInstanceGracefully(inst *store.Instance) error {
 
 	begin := time.Now() // used for logrus propagation
 	logrus.Infof("Sending SIGINT to hostagent process %d", inst.HostAgentPID)
-	if err := syscall.Kill(inst.HostAgentPID, syscall.SIGINT); err != nil {
+	if err := osutil.SysKill(inst.HostAgentPID, osutil.SigInt); err != nil {
 		logrus.Error(err)
 	}
 
@@ -106,7 +106,7 @@ func waitForHostAgentTermination(ctx context.Context, inst *store.Instance, begi
 func stopInstanceForcibly(inst *store.Instance) {
 	if inst.QemuPID > 0 {
 		logrus.Infof("Sending SIGKILL to the QEMU process %d", inst.QemuPID)
-		if err := syscall.Kill(inst.QemuPID, syscall.SIGKILL); err != nil {
+		if err := osutil.SysKill(inst.QemuPID, osutil.SigKill); err != nil {
 			logrus.Error(err)
 		}
 	} else {
@@ -115,7 +115,7 @@ func stopInstanceForcibly(inst *store.Instance) {
 
 	if inst.HostAgentPID > 0 {
 		logrus.Infof("Sending SIGKILL to the host agent process %d", inst.HostAgentPID)
-		if err := syscall.Kill(inst.HostAgentPID, syscall.SIGKILL); err != nil {
+		if err := osutil.SysKill(inst.HostAgentPID, osutil.SigKill); err != nil {
 			logrus.Error(err)
 		}
 	} else {

@@ -9,7 +9,6 @@ import (
 	"runtime"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/lima-vm/lima/pkg/networks"
@@ -94,7 +93,7 @@ func makeVarRun(config *networks.NetworksConfig) error {
 	if err != nil {
 		return err
 	}
-	stat, ok := fi.Sys().(*syscall.Stat_t)
+	stat, ok := osutil.SysStat(fi)
 	if !ok {
 		// should never happen
 		return fmt.Errorf("could not retrieve stat buffer for %q", config.Paths.VarRun)
