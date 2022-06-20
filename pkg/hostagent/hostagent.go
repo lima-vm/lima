@@ -255,7 +255,15 @@ func (a *HostAgent) Run(ctx context.Context) error {
 		hosts := a.y.HostResolver.Hosts
 		hosts["host.lima.internal."] = qemuconst.SlirpGateway
 		hosts[fmt.Sprintf("lima-%s.", a.instName)] = qemuconst.SlirpIPAddress
-		dnsServer, err := dns.Start(a.udpDNSLocalPort, a.tcpDNSLocalPort, *a.y.HostResolver.IPv6, hosts)
+		srvOpts := dns.ServerOptions{
+			UDPPort: a.udpDNSLocalPort,
+			TCPPort: a.tcpDNSLocalPort,
+			HandlerOptions: dns.HandlerOptions{
+				IPv6:        *a.y.HostResolver.IPv6,
+				StaticHosts: hosts,
+			},
+		}
+		dnsServer, err := dns.Start(srvOpts)
 		if err != nil {
 			return fmt.Errorf("cannot start DNS server: %w", err)
 		}

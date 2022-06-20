@@ -48,9 +48,13 @@ func TestTXTRecords(t *testing.T) {
 
 	t.Run("test TXT records", func(t *testing.T) {
 		w := new(TestResponseWriter)
-		h, err := newHandler(true, map[string]string{
-			"MY.Host": "host.lima.internal",
-		})
+		options := HandlerOptions{
+			IPv6: true,
+			StaticHosts: map[string]string{
+				"MY.Host": "host.lima.internal",
+			},
+		}
+		h, err := NewHandler(options)
 		if err == nil {
 			for i := 0; i < len(testDomains); i++ {
 				req := new(dns.Msg)
