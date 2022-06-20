@@ -258,6 +258,7 @@ func (a *HostAgent) Run(ctx context.Context) error {
 		srvOpts := dns.ServerOptions{
 			UDPPort: a.udpDNSLocalPort,
 			TCPPort: a.tcpDNSLocalPort,
+			Address: "127.0.0.1",
 			HandlerOptions: dns.HandlerOptions{
 				IPv6:        *a.y.HostResolver.IPv6,
 				StaticHosts: hosts,

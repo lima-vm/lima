@@ -23,6 +23,7 @@ type HandlerOptions struct {
 	IPv6            bool
 	StaticHosts     map[string]string
 	UpstreamServers []string
+	TruncateReply   bool
 }
 
 type ServerOptions struct {
@@ -33,9 +34,10 @@ type ServerOptions struct {
 }
 
 type Handler struct {
+	truncate     bool
 	clientConfig *dns.ClientConfig
 	clients      []*dns.Client
-	IPv6         bool
+	ipv6         bool
 	cnameToHost  map[string]string
 	hostToIP     map[string]net.IP
 }
@@ -98,7 +100,7 @@ func NewHandler(opts HandlerOptions) (dns.Handler, error) {
 	h := &Handler{
 		clientConfig: cc,
 		clients:      clients,
-		IPv6:         opts.IPv6,
+		ipv6:         opts.IPv6,
 		cnameToHost:  make(map[string]string),
 		hostToIP:     make(map[string]net.IP),
 	}
@@ -128,7 +130,7 @@ func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
 		qtype := q.Qtype
 		switch qtype {
 		case dns.TypeAAAA:
-			if !h.IPv6 {
+			if !h.ipv6 {
 				// A "correct" answer would be to set `handled = true` and return a NODATA response.
 				// Unfortunately some older resolvers use a slow random source to set the transaction id.
 				// This creates a problem on M1 computers, which are too fast for that implementation:
@@ -268,8 +270,12 @@ func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
 		}
 	}
 	if handled {
-		reply.Truncate(truncateSize)
-		_ = w.WriteMsg(&reply)
+		if h.truncate {
+			reply.Truncate(truncateSize)
+		}
+		if err := w.WriteMsg(&reply); err != nil {
+			logrus.Debugf("handleQuery failed writing DNS reply: %v", err)
+		}
 		return
 	}
 	h.handleDefault(w, req)
@@ -280,17 +286,29 @@ func (h *Handler) handleDefault(w dns.ResponseWriter, req *dns.Msg) {
 		for _, srv := range h.clientConfig.Servers {
 			addr := fmt.Sprintf("%s:%s", srv, h.clientConfig.Port)
 			reply, _, err := client.Exchange(req, addr)
-			if err == nil {
-				reply.Truncate(truncateSize)
-				_ = w.WriteMsg(reply)
-				return
+			if err != nil {
+				logrus.Debugf("handleDefault failed to perform a synchronous query with upstream [%v]: %v", addr, err)
+				continue
 			}
+			if h.truncate {
+				logrus.Debugf("handleDefault truncating reply: %v", reply)
+				reply.Truncate(truncateSize)
+			}
+			if err = w.WriteMsg(reply); err != nil {
+				logrus.Debugf("handleDefault failed writing DNS reply to [%v]: %v", addr, err)
+			}
+			return
 		}
 	}
 	var reply dns.Msg
 	reply.SetReply(req)
-	reply.Truncate(truncateSize)
-	_ = w.WriteMsg(&reply)
+	if h.truncate {
+		logrus.Debugf("handleDefault truncating reply: %v", reply)
+		reply.Truncate(truncateSize)
+	}
+	if err := w.WriteMsg(&reply); err != nil {
+		logrus.Debugf("handleDefault failed writing DNS reply: %v", err)
+	}
 }
 
 func (h *Handler) ServeDNS(w dns.ResponseWriter, req *dns.Msg) {
@@ -303,13 +321,16 @@ func (h *Handler) ServeDNS(w dns.ResponseWriter, req *dns.Msg) {
 }
 
 func Start(opts ServerOptions) (*Server, error) {
-	h, err := NewHandler(opts.HandlerOptions)
-	if err != nil {
-		return nil, err
-	}
 	server := &Server{}
 	if opts.UDPPort > 0 {
-		addr := fmt.Sprintf("127.0.0.1:%d", opts.UDPPort)
+		udpOpts := opts
+		// always enable reply truncate for UDP
+		udpOpts.TruncateReply = true
+		h, err := NewHandler(udpOpts.HandlerOptions)
+		if err != nil {
+			return nil, err
+		}
+		addr := fmt.Sprintf("%s:%d", opts.Address, opts.UDPPort)
 		s := &dns.Server{Net: "udp", Addr: addr, Handler: h}
 		server.udp = s
 		go func() {
@@ -319,7 +340,13 @@ func Start(opts ServerOptions) (*Server, error) {
 		}()
 	}
 	if opts.TCPPort > 0 {
-		addr := fmt.Sprintf("127.0.0.1:%d", opts.TCPPort)
+		tcpOpts := opts
+		tcpOpts.TruncateReply = false
+		h, err := NewHandler(tcpOpts.HandlerOptions)
+		if err != nil {
+			return nil, err
+		}
+		addr := fmt.Sprintf("%s:%d", opts.Address, opts.TCPPort)
 		s := &dns.Server{Net: "tcp", Addr: addr, Handler: h}
 		server.tcp = s
 		go func() {
