@@ -57,6 +57,7 @@ func (s *Server) Shutdown() {
 }
 
 func newStaticClientConfig(ips []string) (*dns.ClientConfig, error) {
+	logrus.Infof("newStaticClientConfig creating config for the the following IPs: %v", ips)
 	s := ``
 	for _, ip := range ips {
 		s += fmt.Sprintf("nameserver %s\n", ip)
@@ -120,6 +121,7 @@ func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
 		handled bool
 	)
 	reply.SetReply(req)
+	logrus.Debugf("handleQuery received DNS query: %v", req)
 	for _, q := range req.Question {
 		hdr := dns.RR_Header{
 			Name:   q.Name,
@@ -128,7 +130,7 @@ func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
 			Ttl:    5,
 		}
 		qtype := q.Qtype
-		switch qtype {
+		switch q.Qtype {
 		case dns.TypeAAAA:
 			if !h.ipv6 {
 				// A "correct" answer would be to set `handled = true` and return a NODATA response.
@@ -209,63 +211,71 @@ func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
 			}
 		case dns.TypeTXT:
 			txt, err := net.LookupTXT(q.Name)
-			if err == nil && len(txt) > 0 {
-				for _, s := range txt {
-					a := &dns.TXT{
-						Hdr: hdr,
-					}
-					// Per RFC7208 3.3, when a TXT answer has multiple strings, the answer must be treated as
-					// a single concatenated string. net.LookupTXT is pre-concatenating such answers, which
-					// means we need to break it back up for this resolver to return a valid response.
-					a.Txt = chunkify(s, 255)
-					reply.Answer = append(reply.Answer, a)
-					handled = true
+			if err != nil {
+				logrus.Debugf("handleQuery lookup TXT failed: %v", err)
+				continue
+			}
+			for _, s := range txt {
+				a := &dns.TXT{
+					Hdr: hdr,
 				}
+				// Per RFC7208 3.3, when a TXT answer has multiple strings, the answer must be treated as
+				// a single concatenated string. net.LookupTXT is pre-concatenating such answers, which
+				// means we need to break it back up for this resolver to return a valid response.
+				a.Txt = chunkify(s, 255)
+				reply.Answer = append(reply.Answer, a)
+				handled = true
 			}
 		case dns.TypeNS:
 			ns, err := net.LookupNS(q.Name)
-			if err == nil && len(ns) > 0 {
-				for _, s := range ns {
-					if s.Host != "" {
-						a := &dns.NS{
-							Hdr: hdr,
-							Ns:  s.Host,
-						}
-						reply.Answer = append(reply.Answer, a)
-						handled = true
+			if err != nil {
+				logrus.Debugf("handleQuery lookup NS failed: %v", err)
+				continue
+			}
+			for _, s := range ns {
+				if s.Host != "" {
+					a := &dns.NS{
+						Hdr: hdr,
+						Ns:  s.Host,
 					}
+					reply.Answer = append(reply.Answer, a)
+					handled = true
 				}
 			}
 		case dns.TypeMX:
 			mx, err := net.LookupMX(q.Name)
-			if err == nil && len(mx) > 0 {
-				for _, s := range mx {
-					if s.Host != "" {
-						a := &dns.MX{
-							Hdr:        hdr,
-							Mx:         s.Host,
-							Preference: s.Pref,
-						}
-						reply.Answer = append(reply.Answer, a)
-						handled = true
-					}
-				}
+			if err != nil {
+				logrus.Debugf("handleQuery lookup MX failed: %v", err)
+				continue
 			}
-		case dns.TypeSRV:
-			_, addrs, err := net.LookupSRV("", "", q.Name)
-			if err == nil {
-				hdr.Rrtype = dns.TypeSRV
-				for _, addr := range addrs {
-					a := &dns.SRV{
-						Hdr:      hdr,
-						Target:   addr.Target,
-						Port:     addr.Port,
-						Priority: addr.Priority,
-						Weight:   addr.Weight,
+			for _, s := range mx {
+				if s.Host != "" {
+					a := &dns.MX{
+						Hdr:        hdr,
+						Mx:         s.Host,
+						Preference: s.Pref,
 					}
 					reply.Answer = append(reply.Answer, a)
 					handled = true
 				}
+			}
+		case dns.TypeSRV:
+			_, addrs, err := net.LookupSRV("", "", q.Name)
+			if err != nil {
+				logrus.Debugf("handleQuery lookup SRV failed: %v", err)
+				continue
+			}
+			hdr.Rrtype = dns.TypeSRV
+			for _, addr := range addrs {
+				a := &dns.SRV{
+					Hdr:      hdr,
+					Target:   addr.Target,
+					Port:     addr.Port,
+					Priority: addr.Priority,
+					Weight:   addr.Weight,
+				}
+				reply.Answer = append(reply.Answer, a)
+				handled = true
 			}
 		}
 	}
@@ -276,12 +286,14 @@ func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
 		if err := w.WriteMsg(&reply); err != nil {
 			logrus.Debugf("handleQuery failed writing DNS reply: %v", err)
 		}
+
 		return
 	}
 	h.handleDefault(w, req)
 }
 
 func (h *Handler) handleDefault(w dns.ResponseWriter, req *dns.Msg) {
+	logrus.Debugf("handleDefault for %v", req)
 	for _, client := range h.clients {
 		for _, srv := range h.clientConfig.Servers {
 			addr := fmt.Sprintf("%s:%s", srv, h.clientConfig.Port)
@@ -334,6 +346,7 @@ func Start(opts ServerOptions) (*Server, error) {
 		s := &dns.Server{Net: "udp", Addr: addr, Handler: h}
 		server.udp = s
 		go func() {
+			logrus.Debugf("Start UDP server listening on: %v", addr)
 			if e := s.ListenAndServe(); e != nil {
 				panic(e)
 			}
@@ -350,6 +363,7 @@ func Start(opts ServerOptions) (*Server, error) {
 		s := &dns.Server{Net: "tcp", Addr: addr, Handler: h}
 		server.tcp = s
 		go func() {
+			logrus.Debugf("Start TCP server listening on: %v", addr)
 			if e := s.ListenAndServe(); e != nil {
 				panic(e)
 			}
