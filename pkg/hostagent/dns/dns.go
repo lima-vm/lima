@@ -36,8 +36,8 @@ type Handler struct {
 	clientConfig *dns.ClientConfig
 	clients      []*dns.Client
 	IPv6         bool
-	cname        map[string]string
-	ip           map[string]net.IP
+	cnameToHost  map[string]string
+	hostToIP     map[string]net.IP
 }
 
 type Server struct {
@@ -99,14 +99,14 @@ func NewHandler(opts HandlerOptions) (dns.Handler, error) {
 		clientConfig: cc,
 		clients:      clients,
 		IPv6:         opts.IPv6,
-		cname:        make(map[string]string),
-		ip:           make(map[string]net.IP),
+		cnameToHost:  make(map[string]string),
+		hostToIP:     make(map[string]net.IP),
 	}
 	for host, address := range opts.StaticHosts {
 		if ip := net.ParseIP(address); ip != nil {
-			h.ip[host] = ip
+			h.hostToIP[host] = ip
 		} else {
-			h.cname[host] = limayaml.Cname(address)
+			h.cnameToHost[host] = limayaml.Cname(address)
 		}
 	}
 	return h, nil
@@ -140,7 +140,40 @@ func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
 				qtype = dns.TypeA
 			}
 			fallthrough
-		case dns.TypeCNAME, dns.TypeA:
+		case dns.TypeA:
+			var err error
+			var addrs []net.IP
+			if _, ok := h.hostToIP[q.Name]; ok {
+				addrs = []net.IP{h.hostToIP[q.Name]}
+			} else {
+				addrs, err = net.LookupIP(q.Name)
+				if err != nil {
+					logrus.Debugf("handleQuery lookup IP failed: %v", err)
+					continue
+				}
+			}
+			for _, ip := range addrs {
+				var a dns.RR
+				ipv6 := ip.To4() == nil
+				if qtype == dns.TypeA && !ipv6 {
+					hdr.Rrtype = dns.TypeA
+					a = &dns.A{
+						Hdr: hdr,
+						A:   ip.To4(),
+					}
+				} else if qtype == dns.TypeAAAA && ipv6 {
+					hdr.Rrtype = dns.TypeAAAA
+					a = &dns.AAAA{
+						Hdr:  hdr,
+						AAAA: ip.To16(),
+					}
+				} else {
+					continue
+				}
+				reply.Answer = append(reply.Answer, a)
+				handled = true
+			}
+		case dns.TypeCNAME:
 			cname := q.Name
 			seen := make(map[string]bool)
 			for {
@@ -148,18 +181,19 @@ func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
 				if seen[cname] {
 					break
 				}
-				if _, ok := h.cname[cname]; ok {
+				if _, ok := h.cnameToHost[cname]; ok {
 					seen[cname] = true
-					cname = h.cname[cname]
+					cname = h.cnameToHost[cname]
 					continue
 				}
 				break
 			}
 			var err error
-			if _, ok := h.ip[cname]; !ok {
+			if _, ok := h.hostToIP[cname]; !ok {
 				cname, err = net.LookupCNAME(cname)
 				if err != nil {
-					break
+					logrus.Debugf("handleQuery lookup CNAME failed: %v", err)
+					continue
 				}
 			}
 			if cname != "" && cname != q.Name {
@@ -170,40 +204,6 @@ func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
 				}
 				reply.Answer = append(reply.Answer, a)
 				handled = true
-			}
-			if qtype == dns.TypeCNAME {
-				break
-			}
-			hdr.Name = cname
-			var addrs []net.IP
-			if _, ok := h.ip[cname]; ok {
-				addrs = []net.IP{h.ip[cname]}
-				err = nil
-			} else {
-				addrs, err = net.LookupIP(cname)
-			}
-			if err == nil && len(addrs) > 0 {
-				for _, ip := range addrs {
-					var a dns.RR
-					ipv6 := ip.To4() == nil
-					if qtype == dns.TypeA && !ipv6 {
-						hdr.Rrtype = dns.TypeA
-						a = &dns.A{
-							Hdr: hdr,
-							A:   ip.To4(),
-						}
-					} else if qtype == dns.TypeAAAA && ipv6 {
-						hdr.Rrtype = dns.TypeAAAA
-						a = &dns.AAAA{
-							Hdr:  hdr,
-							AAAA: ip.To16(),
-						}
-					} else {
-						continue
-					}
-					reply.Answer = append(reply.Answer, a)
-					handled = true
-				}
 			}
 		case dns.TypeTXT:
 			txt, err := net.LookupTXT(q.Name)
