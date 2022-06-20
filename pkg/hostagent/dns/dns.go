@@ -5,6 +5,7 @@ package dns
 import (
 	"fmt"
 	"net"
+	"runtime"
 	"strings"
 
 	"github.com/lima-vm/lima/pkg/limayaml"
@@ -63,12 +64,31 @@ func newStaticClientConfig(ips []string) (*dns.ClientConfig, error) {
 }
 
 func NewHandler(opts HandlerOptions) (dns.Handler, error) {
-	cc, err := dns.ClientConfigFromFile("/etc/resolv.conf")
-	if err != nil {
-		logrus.WithError(err).Warnf("failed to detect system DNS, falling back to %v", defaultFallbackIPs)
-		cc, err = newStaticClientConfig(defaultFallbackIPs)
-		if err != nil {
-			return nil, err
+	var cc *dns.ClientConfig
+	var err error
+	if len(opts.UpstreamServers) == 0 {
+		if runtime.GOOS != "windows" {
+			cc, err = dns.ClientConfigFromFile("/etc/resolv.conf")
+			if err != nil {
+				logrus.WithError(err).Warnf("failed to detect system DNS, falling back to %v", defaultFallbackIPs)
+				cc, err = newStaticClientConfig(defaultFallbackIPs)
+				if err != nil {
+					return nil, err
+				}
+			}
+		} else {
+			// For windows, the only fallback addresses are defaultFallbackIPs
+			// since there is no /etc/resolv.conf
+			cc, err = newStaticClientConfig(defaultFallbackIPs)
+			if err != nil {
+				return nil, err
+			}
+		}
+	} else {
+		if cc, err = newStaticClientConfig(opts.UpstreamServers); err != nil {
+			if cc, err = newStaticClientConfig(defaultFallbackIPs); err != nil {
+				return nil, err
+			}
 		}
 	}
 	clients := []*dns.Client{
