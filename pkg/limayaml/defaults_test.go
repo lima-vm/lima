@@ -86,6 +86,8 @@ func TestFillDefault(t *testing.T) {
 	if IsAccelOS() {
 		if HasHostCPU() {
 			builtin.CPUType[arch] = "host"
+		} else {
+			builtin.CPUType[arch] = "max"
 		}
 	}
 
