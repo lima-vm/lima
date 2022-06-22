@@ -34,7 +34,11 @@ binaries: clean \
 	cp -aL examples _output/share/lima
 	mkdir -p _output/share/doc/lima
 	cp -aL *.md LICENSE docs _output/share/doc/lima
+ifneq ($(GOOS),windows)
 	ln -sf ../../lima/examples _output/share/doc/lima
+else
+	cp -aL examples _output/share/doc/lima
+endif
 	echo $(VERSION) > _output/share/doc/lima/VERSION
 
 .PHONY: _output/bin/lima
