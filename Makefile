@@ -6,6 +6,11 @@ GO ?= go
 TAR ?= tar
 PLANTUML ?= plantuml # may also be "java -jar plantuml.jar" if installed elsewhere
 
+GOOS ?= $(GO) env GOOS
+ifeq ($(GOOS),windows)
+exe = .exe
+endif
+
 PACKAGE := github.com/lima-vm/lima
 
 VERSION=$(shell git describe --match 'v[0-9]*' --dirty='.m' --always --tags)
@@ -19,7 +24,7 @@ all: binaries
 .PHONY: binaries
 binaries: clean \
 	_output/bin/lima \
-	_output/bin/limactl \
+	_output/bin/limactl$(exe) \
 	_output/bin/nerdctl.lima \
 	_output/bin/docker.lima \
 	_output/bin/podman.lima \
@@ -50,8 +55,8 @@ _output/bin/podman.lima: ./cmd/podman.lima
 	@mkdir -p _output/bin
 	cp -a $^ $@
 
-.PHONY: _output/bin/limactl
-_output/bin/limactl:
+.PHONY: _output/bin/limactl$(exe)
+_output/bin/limactl$(exe):
 	# The hostagent must be compiled with CGO_ENABLED=1 so that net.LookupIP() in the DNS server
 	# calls the native resolver library and not the simplistic version in the Go library.
 	CGO_ENABLED=1 $(GO_BUILD) -o $@ ./cmd/limactl
@@ -88,7 +93,7 @@ uninstall:
 	@test -f "$(DEST)/bin/lima" || echo "lima not found in $(DEST) prefix"
 	rm -rf \
 		"$(DEST)/bin/lima" \
-		"$(DEST)/bin/limactl" \
+		"$(DEST)/bin/limactl$(exe)" \
 		"$(DEST)/bin/nerdctl.lima" \
 		"$(DEST)/bin/docker.lima" \
 		"$(DEST)/bin/podman.lima" \
