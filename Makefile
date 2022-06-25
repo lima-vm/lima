@@ -6,7 +6,7 @@ GO ?= go
 TAR ?= tar
 PLANTUML ?= plantuml # may also be "java -jar plantuml.jar" if installed elsewhere
 
-GOOS ?= $(GO) env GOOS
+GOOS ?= $(shell $(GO) env GOOS)
 ifeq ($(GOOS),windows)
 exe = .exe
 endif
