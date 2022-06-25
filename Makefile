@@ -21,6 +21,8 @@ GO_BUILD := $(GO) build -ldflags="-s -w -X $(PACKAGE)/pkg/version.Version=$(VERS
 .PHONY: all
 all: binaries
 
+exe: _output/bin/limactl$(exe)
+
 .PHONY: binaries
 binaries: clean \
 	_output/bin/lima \
