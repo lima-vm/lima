@@ -75,12 +75,13 @@ const (
 
 var cache struct {
 	sync.Once
-	u       *user.User
-	err     error
-	warning string
+	u        *user.User
+	err      error
+	warnings []string
 }
 
 func LimaUser(warn bool) (*user.User, error) {
+	cache.warnings = []string{}
 	cache.Do(func() {
 		cache.u, cache.err = user.Current()
 		if cache.err == nil {
@@ -88,14 +89,17 @@ func LimaUser(warn bool) (*user.User, error) {
 			// (it allows a trailing '$', but it feels prudent to map those to the fallback user as well)
 			validName := "^[a-z_][a-z0-9_-]*$"
 			if !regexp.MustCompile(validName).Match([]byte(cache.u.Username)) {
-				cache.warning = fmt.Sprintf("local user %q is not a valid Linux username (must match %q); using %q username instead",
+				warning := fmt.Sprintf("local user %q is not a valid Linux username (must match %q); using %q username instead",
 					cache.u.Username, validName, fallbackUser)
+				cache.warnings = append(cache.warnings, warning)
 				cache.u.Username = fallbackUser
 			}
 		}
 	})
-	if warn && cache.warning != "" {
-		logrus.Warn(cache.warning)
+	if warn && len(cache.warnings) > 0 {
+		for _, warning := range cache.warnings {
+			logrus.Warn(warning)
+		}
 	}
 	return cache.u, cache.err
 }
