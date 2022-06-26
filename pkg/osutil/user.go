@@ -2,9 +2,13 @@ package osutil
 
 import (
 	"fmt"
+	"os/exec"
 	"os/user"
+	"path/filepath"
 	"regexp"
+	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/sirupsen/logrus"
@@ -15,6 +19,7 @@ type User struct {
 	Uid   uint32
 	Group string
 	Gid   uint32
+	Home  string
 }
 
 type Group struct {
@@ -46,7 +51,7 @@ func LookupUser(name string) (User, error) {
 		if err != nil {
 			return User{}, err
 		}
-		users[name] = User{User: u.Username, Uid: uint32(uid), Group: g.Name, Gid: uint32(gid)}
+		users[name] = User{User: u.Username, Uid: uint32(uid), Group: g.Name, Gid: uint32(gid), Home: u.HomeDir}
 	}
 	return users[name], nil
 }
@@ -71,6 +76,8 @@ func LookupGroup(name string) (Group, error) {
 
 const (
 	fallbackUser = "lima"
+	fallbackUid  = 1000
+	fallbackGid  = 1000
 )
 
 var cache struct {
@@ -78,6 +85,15 @@ var cache struct {
 	u        *user.User
 	err      error
 	warnings []string
+}
+
+func call(args []string) (string, error) {
+	cmd := exec.Command(args[0], args[1:]...)
+	out, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(out)), nil
 }
 
 func LimaUser(warn bool) (*user.User, error) {
@@ -93,6 +109,54 @@ func LimaUser(warn bool) (*user.User, error) {
 					cache.u.Username, validName, fallbackUser)
 				cache.warnings = append(cache.warnings, warning)
 				cache.u.Username = fallbackUser
+			}
+			if runtime.GOOS == "windows" {
+				idu, err := call([]string{"id", "-u"})
+				if err != nil {
+					logrus.Debug(err)
+				}
+				uid, err := strconv.ParseUint(idu, 10, 32)
+				if err != nil {
+					uid = fallbackUid
+				}
+				if !regexp.MustCompile("^[0-9]+$").Match([]byte(cache.u.Uid)) {
+					warning := fmt.Sprintf("local uid %q is not a valid Linux uid (must be integer); using %d uid instead",
+						cache.u.Uid, uid)
+					cache.warnings = append(cache.warnings, warning)
+					cache.u.Uid = fmt.Sprintf("%d", uid)
+				}
+				idg, err := call([]string{"id", "-g"})
+				if err != nil {
+					logrus.Debug(err)
+				}
+				gid, err := strconv.ParseUint(idg, 10, 32)
+				if err != nil {
+					gid = fallbackGid
+				}
+				if !regexp.MustCompile("^[0-9]+$").Match([]byte(cache.u.Gid)) {
+					warning := fmt.Sprintf("local gid %q is not a valid Linux gid (must be integer); using %d gid instead",
+						cache.u.Gid, gid)
+					cache.warnings = append(cache.warnings, warning)
+					cache.u.Gid = fmt.Sprintf("%d", gid)
+				}
+				home, err := call([]string{"cygpath", cache.u.HomeDir})
+				if err != nil {
+					logrus.Debug(err)
+				}
+				if home == "" {
+					drive := filepath.VolumeName(cache.u.HomeDir)
+					home = filepath.ToSlash(cache.u.HomeDir)
+					// replace C: with /c
+					prefix := strings.ToLower(fmt.Sprintf("/%c", drive[0]))
+					home = strings.Replace(home, drive, prefix, 1)
+				}
+				validPath := "^[/a-zA-Z0-9_-]+$"
+				if !regexp.MustCompile(validPath).Match([]byte(cache.u.HomeDir)) {
+					warning := fmt.Sprintf("local home %q is not a valid Linux path (must match %q); using %q home instead",
+						cache.u.HomeDir, validPath, home)
+					cache.warnings = append(cache.warnings, warning)
+					cache.u.HomeDir = home
+				}
 			}
 		}
 	})
