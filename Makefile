@@ -6,6 +6,11 @@ GO ?= go
 TAR ?= tar
 PLANTUML ?= plantuml # may also be "java -jar plantuml.jar" if installed elsewhere
 
+GOOS ?= $(shell $(GO) env GOOS)
+ifeq ($(GOOS),windows)
+exe = .exe
+endif
+
 PACKAGE := github.com/lima-vm/lima
 
 VERSION=$(shell git describe --match 'v[0-9]*' --dirty='.m' --always --tags)
@@ -16,10 +21,12 @@ GO_BUILD := $(GO) build -ldflags="-s -w -X $(PACKAGE)/pkg/version.Version=$(VERS
 .PHONY: all
 all: binaries
 
+exe: _output/bin/limactl$(exe)
+
 .PHONY: binaries
 binaries: clean \
 	_output/bin/lima \
-	_output/bin/limactl \
+	_output/bin/limactl$(exe) \
 	_output/bin/nerdctl.lima \
 	_output/bin/docker.lima \
 	_output/bin/podman.lima \
@@ -29,7 +36,11 @@ binaries: clean \
 	cp -aL examples _output/share/lima
 	mkdir -p _output/share/doc/lima
 	cp -aL *.md LICENSE docs _output/share/doc/lima
+ifneq ($(GOOS),windows)
 	ln -sf ../../lima/examples _output/share/doc/lima
+else
+	cp -aL examples _output/share/doc/lima
+endif
 	echo $(VERSION) > _output/share/doc/lima/VERSION
 
 .PHONY: _output/bin/lima
@@ -50,8 +61,8 @@ _output/bin/podman.lima: ./cmd/podman.lima
 	@mkdir -p _output/bin
 	cp -a $^ $@
 
-.PHONY: _output/bin/limactl
-_output/bin/limactl:
+.PHONY: _output/bin/limactl$(exe)
+_output/bin/limactl$(exe):
 	# The hostagent must be compiled with CGO_ENABLED=1 so that net.LookupIP() in the DNS server
 	# calls the native resolver library and not the simplistic version in the Go library.
 	CGO_ENABLED=1 $(GO_BUILD) -o $@ ./cmd/limactl
@@ -88,7 +99,7 @@ uninstall:
 	@test -f "$(DEST)/bin/lima" || echo "lima not found in $(DEST) prefix"
 	rm -rf \
 		"$(DEST)/bin/lima" \
-		"$(DEST)/bin/limactl" \
+		"$(DEST)/bin/limactl$(exe)" \
 		"$(DEST)/bin/nerdctl.lima" \
 		"$(DEST)/bin/docker.lima" \
 		"$(DEST)/bin/podman.lima" \
