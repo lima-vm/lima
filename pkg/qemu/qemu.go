@@ -369,7 +369,7 @@ func Cmdline(cfg Config) (string, []string, error) {
 	args = appendArgsIfNoConflict(args, "-cpu", cpu)
 	switch *y.Arch {
 	case limayaml.X8664:
-		if strings.HasPrefix(cpu, "qemu64") {
+		if strings.HasPrefix(cpu, "qemu64") && runtime.GOOS != "windows" {
 			// use q35 machine with vmware io port disabled.
 			args = appendArgsIfNoConflict(args, "-machine", "q35,vmport=off")
 			// use tcg accelerator with multi threading with 512MB translation block size
@@ -379,6 +379,9 @@ func Cmdline(cfg Config) (string, []string, error) {
 			args = appendArgsIfNoConflict(args, "-accel", "tcg,thread=multi,tb-size=512")
 			// This will disable CPU S3 state.
 			args = append(args, "-global", "ICH9-LPC.disable_s3=1")
+		} else if runtime.GOOS == "windows" && accel == "whpx" {
+			// whpx: injection failed, MSI (0, 0) delivery: 0, dest_mode: 0, trigger mode: 0, vector: 0
+			args = appendArgsIfNoConflict(args, "-machine", "q35,accel="+accel+",kernel-irqchip=off")
 		} else {
 			args = appendArgsIfNoConflict(args, "-machine", "q35,accel="+accel)
 		}
@@ -608,7 +611,7 @@ func getAccel(arch limayaml.Arch) string {
 		case "netbsd":
 			return "nvmm"
 		case "windows":
-			return "whpx" // untested
+			return "whpx"
 		}
 	}
 	return "tcg"

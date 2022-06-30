@@ -108,7 +108,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		if IsNativeArch(arch) && IsAccelOS() {
 			if HasHostCPU() {
 				cpuType[arch] = "host"
-			} else {
+			} else if HasMaxCPU() {
 				cpuType[arch] = "max"
 			}
 		}
@@ -635,6 +635,11 @@ func HasHostCPU() bool {
 	}
 	// Not reached
 	return false
+}
+
+func HasMaxCPU() bool {
+	// WHPX: Unexpected VP exit code 4
+	return runtime.GOOS != "windows"
 }
 
 func IsNativeArch(arch Arch) bool {
