@@ -80,7 +80,7 @@ portForwards:
 message: |
   To run `docker` on the host (assumes docker-cli is installed), run the following commands:
   ------
-  docker context create lima --docker "host=unix://{{.Dir}}/sock/docker.sock"
-  docker context use lima
+  docker context create lima-{{.Name}} --docker "host=unix://{{.Dir}}/sock/docker.sock"
+  docker context use lima-{{.Name}}
   docker run hello-world
   ------
