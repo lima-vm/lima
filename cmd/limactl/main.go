@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/version"
+	"github.com/mattn/go-isatty"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -57,6 +59,12 @@ func newApp() *cobra.Command {
 		debug, _ := cmd.Flags().GetBool("debug")
 		if debug {
 			logrus.SetLevel(logrus.DebugLevel)
+		}
+		if runtime.GOOS == "windows" && isatty.IsCygwinTerminal(os.Stdout.Fd()) {
+			formatter := new(logrus.TextFormatter)
+			// the default setting does not recognize cygwin on windows
+			formatter.ForceColors = true
+			logrus.StandardLogger().SetFormatter(formatter)
 		}
 		if os.Geteuid() == 0 {
 			return errors.New("must not run as the root")
