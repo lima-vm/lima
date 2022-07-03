@@ -54,6 +54,7 @@ $ limactl start --name=default https://raw.githubusercontent.com/lima-vm/lima/ma
 		ValidArgsFunction: startBashComplete,
 		RunE:              startAction,
 	}
+	// TODO: "survey" does not support using cygwin terminal on windows yet
 	startCommand.Flags().Bool("tty", isatty.IsTerminal(os.Stdout.Fd()), "enable TUI interactions such as opening an editor, defaults to true when stdout is a terminal")
 	startCommand.Flags().String("name", "", "override the instance name")
 	startCommand.Flags().Bool("list-templates", false, "list available templates and exit")

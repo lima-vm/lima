@@ -292,7 +292,7 @@ func createBar(size int64) (*pb.ProgressBar, error) {
 	bar := pb.New64(size)
 
 	bar.Set(pb.Bytes, true)
-	if isatty.IsTerminal(os.Stdout.Fd()) {
+	if isatty.IsTerminal(os.Stdout.Fd()) || isatty.IsCygwinTerminal(os.Stdout.Fd()) {
 		bar.SetTemplateString(`{{counters . }} {{bar . | green }} {{percent .}} {{speed . "%s/s"}}`)
 		bar.SetRefreshRate(200 * time.Millisecond)
 	} else {
