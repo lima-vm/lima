@@ -53,7 +53,7 @@ portForwards:
 message: |
   To run `podman` on the host (assumes podman-remote is installed), run the following commands:
   ------
-  podman system connection add lima "unix://{{.Dir}}/sock/podman.sock"
-  podman system connection default lima
+  podman system connection add lima-{{.Name}} "unix://{{.Dir}}/sock/podman.sock"
+  podman system connection default lima-{{.Name}}
   podman{{if eq .HostOS "linux"}} --remote{{end}} run quay.io/podman/hello
   ------
