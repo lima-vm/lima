@@ -133,6 +133,12 @@ artifacts-linux:
 	GOOS=linux GOARCH=arm64 CC=aarch64-linux-gnu-gcc make clean binaries
 	$(TAR) -C _output/ -czvf _artifacts/lima-$(VERSION_TRIMMED)-Linux-aarch64.tar.gz ./
 
+.PHONY: artifacts-windows
+artifacts-windows:
+	mkdir -p _artifacts
+	GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc make clean binaries
+	$(TAR) -C _output/ -czvf _artifacts/lima-$(VERSION_TRIMMED)-Windows-x86_64.tar.gz ./
+
 .PHONY: artifacts-misc
 artifacts-misc:
 	mkdir -p _artifacts
