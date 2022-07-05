@@ -8,6 +8,7 @@ PLANTUML ?= plantuml # may also be "java -jar plantuml.jar" if installed elsewhe
 
 GOOS ?= $(shell $(GO) env GOOS)
 ifeq ($(GOOS),windows)
+bat = .bat
 exe = .exe
 endif
 
@@ -26,6 +27,7 @@ exe: _output/bin/limactl$(exe)
 .PHONY: binaries
 binaries: clean \
 	_output/bin/lima \
+	_output/bin/lima$(bat) \
 	_output/bin/limactl$(exe) \
 	_output/bin/nerdctl.lima \
 	_output/bin/docker.lima \
@@ -47,6 +49,11 @@ endif
 _output/bin/lima:
 	mkdir -p _output/bin
 	cp -a ./cmd/lima $@
+
+.PHONY: _output/bin/lima.bat
+_output/bin/lima.bat:
+	mkdir -p _output/bin
+	cp -a ./cmd/lima.bat $@
 
 .PHONY: _output/bin/nerdctl.lima
 _output/bin/nerdctl.lima:
@@ -99,6 +106,7 @@ uninstall:
 	@test -f "$(DEST)/bin/lima" || echo "lima not found in $(DEST) prefix"
 	rm -rf \
 		"$(DEST)/bin/lima" \
+		"$(DEST)/bin/lima$(bat)" \
 		"$(DEST)/bin/limactl$(exe)" \
 		"$(DEST)/bin/nerdctl.lima" \
 		"$(DEST)/bin/docker.lima" \
