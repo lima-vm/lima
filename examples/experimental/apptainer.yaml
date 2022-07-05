@@ -4,11 +4,10 @@
 
 # This example requires Lima v0.8.3 or later.
 
-# NOTE: skip 8.6-20220515, as it seems broken (lacks sudo): https://bugs.rockylinux.org/view.php?id=102
 images:
-- location: "https://dl.rockylinux.org/pub/rocky/8.5/images/Rocky-8-GenericCloud-8.5-20211114.2.x86_64.qcow2"
+- location: "https://dl.rockylinux.org/pub/rocky/8.6/images/Rocky-8-GenericCloud-8.6.20220702.0.x86_64.qcow2"
   arch: "x86_64"
-  digest: "sha256:c23f58f26f73fb9ae92bfb4cf881993c23fdce1bbcfd2881a5831f90373ce0c8"
+  digest: "sha256:7b786a39eeb96e22dd85386377ff186737f6c1b9a5faa105b0a0a7a4895c29d0"
 mounts:
 - location: "~"
 - location: "/tmp/lima"
