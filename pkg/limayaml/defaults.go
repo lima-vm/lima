@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	osuser "os/user"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -569,7 +568,7 @@ func FillPortForwardDefaults(rule *PortForward, instDir string) {
 	if rule.HostSocket != "" {
 		tmpl, err := template.New("").Parse(rule.HostSocket)
 		if err == nil {
-			user, _ := osuser.Current()
+			user, _ := osutil.LimaUser(false)
 			home, _ := os.UserHomeDir()
 			limaHome, _ := dirnames.LimaDir()
 			data := map[string]string{
