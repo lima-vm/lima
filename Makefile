@@ -4,6 +4,7 @@ DEST := $(shell echo "$(DESTDIR)/$(PREFIX)" | sed 's:///*:/:g; s://*$$::')
 
 GO ?= go
 TAR ?= tar
+ZIP ?= zip
 PLANTUML ?= plantuml # may also be "java -jar plantuml.jar" if installed elsewhere
 
 GOOS ?= $(shell $(GO) env GOOS)
@@ -132,6 +133,13 @@ artifacts-linux:
 	$(TAR) -C _output/ -czvf _artifacts/lima-$(VERSION_TRIMMED)-Linux-x86_64.tar.gz ./
 	GOOS=linux GOARCH=arm64 CC=aarch64-linux-gnu-gcc make clean binaries
 	$(TAR) -C _output/ -czvf _artifacts/lima-$(VERSION_TRIMMED)-Linux-aarch64.tar.gz ./
+
+.PHONY: artifacts-windows
+artifacts-windows:
+	mkdir -p _artifacts
+	GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc make clean binaries
+	$(TAR) -C _output/ -czvf _artifacts/lima-$(VERSION_TRIMMED)-Windows-x86_64.tar.gz ./
+	cd _output && $(ZIP) -r ../_artifacts/lima-$(VERSION_TRIMMED)-Windows-x86_64.zip *
 
 .PHONY: artifacts-misc
 artifacts-misc:
