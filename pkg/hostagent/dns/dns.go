@@ -5,6 +5,7 @@ package dns
 import (
 	"fmt"
 	"net"
+	"runtime"
 	"strings"
 
 	"github.com/lima-vm/lima/pkg/limayaml"
@@ -16,12 +17,36 @@ import (
 // https://github.com/lima-vm/lima/issues/380
 const truncateSize = 512
 
+var defaultFallbackIPs = []string{"8.8.8.8", "1.1.1.1"}
+
+type Network string
+
+const (
+	TCP Network = "tcp"
+	UDP Network = "udp"
+)
+
+type HandlerOptions struct {
+	IPv6            bool
+	StaticHosts     map[string]string
+	UpstreamServers []string
+	TruncateReply   bool
+}
+
+type ServerOptions struct {
+	HandlerOptions
+	Address string
+	TCPPort int
+	UDPPort int
+}
+
 type Handler struct {
+	truncate     bool
 	clientConfig *dns.ClientConfig
 	clients      []*dns.Client
-	IPv6         bool
-	cname        map[string]string
-	ip           map[string]net.IP
+	ipv6         bool
+	cnameToHost  map[string]string
+	hostToIP     map[string]net.IP
 }
 
 type Server struct {
@@ -38,23 +63,60 @@ func (s *Server) Shutdown() {
 	}
 }
 
-func newStaticClientConfig(ips []net.IP) (*dns.ClientConfig, error) {
+func newStaticClientConfig(ips []string) (*dns.ClientConfig, error) {
+	logrus.Debugf("newStaticClientConfig creating config for the the following IPs: %v", ips)
 	s := ``
 	for _, ip := range ips {
-		s += fmt.Sprintf("nameserver %s\n", ip.String())
+		s += fmt.Sprintf("nameserver %s\n", ip)
 	}
 	r := strings.NewReader(s)
 	return dns.ClientConfigFromReader(r)
 }
 
-func newHandler(IPv6 bool, hosts map[string]string) (dns.Handler, error) {
-	cc, err := dns.ClientConfigFromFile("/etc/resolv.conf")
-	if err != nil {
-		fallbackIPs := []net.IP{net.ParseIP("8.8.8.8"), net.ParseIP("1.1.1.1")}
-		logrus.WithError(err).Warnf("failed to detect system DNS, falling back to %v", fallbackIPs)
-		cc, err = newStaticClientConfig(fallbackIPs)
-		if err != nil {
-			return nil, err
+func (h *Handler) lookupCnameToHost(cname string) string {
+	seen := make(map[string]bool)
+	for {
+		// break cyclic definition
+		if seen[cname] {
+			break
+		}
+		if _, ok := h.cnameToHost[cname]; ok {
+			seen[cname] = true
+			cname = h.cnameToHost[cname]
+			continue
+		}
+		break
+	}
+	return cname
+}
+
+func NewHandler(opts HandlerOptions) (dns.Handler, error) {
+	var cc *dns.ClientConfig
+	var err error
+	if len(opts.UpstreamServers) == 0 {
+		if runtime.GOOS != "windows" {
+			cc, err = dns.ClientConfigFromFile("/etc/resolv.conf")
+			if err != nil {
+				logrus.WithError(err).Warnf("failed to detect system DNS, falling back to %v", defaultFallbackIPs)
+				cc, err = newStaticClientConfig(defaultFallbackIPs)
+				if err != nil {
+					return nil, err
+				}
+			}
+		} else {
+			// For windows, the only fallback addresses are defaultFallbackIPs
+			// since there is no /etc/resolv.conf
+			cc, err = newStaticClientConfig(defaultFallbackIPs)
+			if err != nil {
+				return nil, err
+			}
+		}
+	} else {
+		if cc, err = newStaticClientConfig(opts.UpstreamServers); err != nil {
+			logrus.WithError(err).Warnf("failed to create a client config from: %v, falling back to %v", opts.UpstreamServers, defaultFallbackIPs)
+			if cc, err = newStaticClientConfig(defaultFallbackIPs); err != nil {
+				return nil, err
+			}
 		}
 	}
 	clients := []*dns.Client{
@@ -64,15 +126,15 @@ func newHandler(IPv6 bool, hosts map[string]string) (dns.Handler, error) {
 	h := &Handler{
 		clientConfig: cc,
 		clients:      clients,
-		IPv6:         IPv6,
-		cname:        make(map[string]string),
-		ip:           make(map[string]net.IP),
+		ipv6:         opts.IPv6,
+		cnameToHost:  make(map[string]string),
+		hostToIP:     make(map[string]net.IP),
 	}
-	for host, address := range hosts {
+	for host, address := range opts.StaticHosts {
 		if ip := net.ParseIP(address); ip != nil {
-			h.ip[host] = ip
+			h.hostToIP[host] = ip
 		} else {
-			h.cname[host] = limayaml.Cname(address)
+			h.cnameToHost[host] = limayaml.Cname(address)
 		}
 	}
 	return h, nil
@@ -84,6 +146,7 @@ func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
 		handled bool
 	)
 	reply.SetReply(req)
+	logrus.Debugf("handleQuery received DNS query: %v", req)
 	for _, q := range req.Question {
 		hdr := dns.RR_Header{
 			Name:   q.Name,
@@ -92,9 +155,9 @@ func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
 			Ttl:    5,
 		}
 		qtype := q.Qtype
-		switch qtype {
+		switch q.Qtype {
 		case dns.TypeAAAA:
-			if !h.IPv6 {
+			if !h.ipv6 {
 				// A "correct" answer would be to set `handled = true` and return a NODATA response.
 				// Unfortunately some older resolvers use a slow random source to set the transaction id.
 				// This creates a problem on M1 computers, which are too fast for that implementation:
@@ -106,26 +169,48 @@ func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
 				qtype = dns.TypeA
 			}
 			fallthrough
-		case dns.TypeCNAME, dns.TypeA:
-			cname := q.Name
-			seen := make(map[string]bool)
-			for {
-				// break cyclic definition
-				if seen[cname] {
-					break
-				}
-				if _, ok := h.cname[cname]; ok {
-					seen[cname] = true
-					cname = h.cname[cname]
+		case dns.TypeA:
+			var err error
+			var addrs []net.IP
+			cname := h.lookupCnameToHost(q.Name)
+			if _, ok := h.hostToIP[cname]; ok {
+				addrs = []net.IP{h.hostToIP[cname]}
+			} else {
+				addrs, err = net.LookupIP(cname)
+				if err != nil {
+					logrus.WithError(err).Debug("handleQuery lookup IP failed")
 					continue
 				}
-				break
 			}
+			for _, ip := range addrs {
+				var a dns.RR
+				ipv6 := ip.To4() == nil
+				if qtype == dns.TypeA && !ipv6 {
+					hdr.Rrtype = dns.TypeA
+					a = &dns.A{
+						Hdr: hdr,
+						A:   ip.To4(),
+					}
+				} else if qtype == dns.TypeAAAA && ipv6 {
+					hdr.Rrtype = dns.TypeAAAA
+					a = &dns.AAAA{
+						Hdr:  hdr,
+						AAAA: ip.To16(),
+					}
+				} else {
+					continue
+				}
+				reply.Answer = append(reply.Answer, a)
+				handled = true
+			}
+		case dns.TypeCNAME:
+			cname := h.lookupCnameToHost(q.Name)
 			var err error
-			if _, ok := h.ip[cname]; !ok {
+			if _, ok := h.hostToIP[cname]; !ok {
 				cname, err = net.LookupCNAME(cname)
 				if err != nil {
-					break
+					logrus.WithError(err).Debug("handleQuery lookup CNAME failed")
+					continue
 				}
 			}
 			if cname != "" && cname != q.Name {
@@ -137,126 +222,118 @@ func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
 				reply.Answer = append(reply.Answer, a)
 				handled = true
 			}
-			if qtype == dns.TypeCNAME {
-				break
-			}
-			hdr.Name = cname
-			var addrs []net.IP
-			if _, ok := h.ip[cname]; ok {
-				addrs = []net.IP{h.ip[cname]}
-				err = nil
-			} else {
-				addrs, err = net.LookupIP(cname)
-			}
-			if err == nil && len(addrs) > 0 {
-				for _, ip := range addrs {
-					var a dns.RR
-					ipv6 := ip.To4() == nil
-					if qtype == dns.TypeA && !ipv6 {
-						hdr.Rrtype = dns.TypeA
-						a = &dns.A{
-							Hdr: hdr,
-							A:   ip.To4(),
-						}
-					} else if qtype == dns.TypeAAAA && ipv6 {
-						hdr.Rrtype = dns.TypeAAAA
-						a = &dns.AAAA{
-							Hdr:  hdr,
-							AAAA: ip.To16(),
-						}
-					} else {
-						continue
-					}
-					reply.Answer = append(reply.Answer, a)
-					handled = true
-				}
-			}
 		case dns.TypeTXT:
 			txt, err := net.LookupTXT(q.Name)
-			if err == nil && len(txt) > 0 {
-				for _, s := range txt {
-					a := &dns.TXT{
-						Hdr: hdr,
-					}
-					// Per RFC7208 3.3, when a TXT answer has multiple strings, the answer must be treated as
-					// a single concatenated string. net.LookupTXT is pre-concatenating such answers, which
-					// means we need to break it back up for this resolver to return a valid response.
-					a.Txt = chunkify(s, 255)
-					reply.Answer = append(reply.Answer, a)
-					handled = true
+			if err != nil {
+				logrus.WithError(err).Debug("handleQuery lookup TXT failed")
+				continue
+			}
+			for _, s := range txt {
+				a := &dns.TXT{
+					Hdr: hdr,
 				}
+				// Per RFC7208 3.3, when a TXT answer has multiple strings, the answer must be treated as
+				// a single concatenated string. net.LookupTXT is pre-concatenating such answers, which
+				// means we need to break it back up for this resolver to return a valid response.
+				a.Txt = chunkify(s, 255)
+				reply.Answer = append(reply.Answer, a)
+				handled = true
 			}
 		case dns.TypeNS:
 			ns, err := net.LookupNS(q.Name)
-			if err == nil && len(ns) > 0 {
-				for _, s := range ns {
-					if s.Host != "" {
-						a := &dns.NS{
-							Hdr: hdr,
-							Ns:  s.Host,
-						}
-						reply.Answer = append(reply.Answer, a)
-						handled = true
+			if err != nil {
+				logrus.WithError(err).Debug("handleQuery lookup NS failed")
+				continue
+			}
+			for _, s := range ns {
+				if s.Host != "" {
+					a := &dns.NS{
+						Hdr: hdr,
+						Ns:  s.Host,
 					}
+					reply.Answer = append(reply.Answer, a)
+					handled = true
 				}
 			}
 		case dns.TypeMX:
 			mx, err := net.LookupMX(q.Name)
-			if err == nil && len(mx) > 0 {
-				for _, s := range mx {
-					if s.Host != "" {
-						a := &dns.MX{
-							Hdr:        hdr,
-							Mx:         s.Host,
-							Preference: s.Pref,
-						}
-						reply.Answer = append(reply.Answer, a)
-						handled = true
-					}
-				}
+			if err != nil {
+				logrus.WithError(err).Debugf("handleQuery lookup MX failed")
+				continue
 			}
-		case dns.TypeSRV:
-			_, addrs, err := net.LookupSRV("", "", q.Name)
-			if err == nil {
-				hdr.Rrtype = dns.TypeSRV
-				for _, addr := range addrs {
-					a := &dns.SRV{
-						Hdr:      hdr,
-						Target:   addr.Target,
-						Port:     addr.Port,
-						Priority: addr.Priority,
-						Weight:   addr.Weight,
+			for _, s := range mx {
+				if s.Host != "" {
+					a := &dns.MX{
+						Hdr:        hdr,
+						Mx:         s.Host,
+						Preference: s.Pref,
 					}
 					reply.Answer = append(reply.Answer, a)
 					handled = true
 				}
 			}
+		case dns.TypeSRV:
+			_, addrs, err := net.LookupSRV("", "", q.Name)
+			if err != nil {
+				logrus.WithError(err).Debug("handleQuery lookup SRV failed")
+				continue
+			}
+			hdr.Rrtype = dns.TypeSRV
+			for _, addr := range addrs {
+				a := &dns.SRV{
+					Hdr:      hdr,
+					Target:   addr.Target,
+					Port:     addr.Port,
+					Priority: addr.Priority,
+					Weight:   addr.Weight,
+				}
+				reply.Answer = append(reply.Answer, a)
+				handled = true
+			}
 		}
 	}
 	if handled {
-		reply.Truncate(truncateSize)
-		_ = w.WriteMsg(&reply)
+		if h.truncate {
+			reply.Truncate(truncateSize)
+		}
+		if err := w.WriteMsg(&reply); err != nil {
+			logrus.WithError(err).Debugf("handleQuery failed writing DNS reply")
+		}
+
 		return
 	}
 	h.handleDefault(w, req)
 }
 
 func (h *Handler) handleDefault(w dns.ResponseWriter, req *dns.Msg) {
+	logrus.Debugf("handleDefault for %v", req)
 	for _, client := range h.clients {
 		for _, srv := range h.clientConfig.Servers {
 			addr := fmt.Sprintf("%s:%s", srv, h.clientConfig.Port)
 			reply, _, err := client.Exchange(req, addr)
-			if err == nil {
-				reply.Truncate(truncateSize)
-				_ = w.WriteMsg(reply)
-				return
+			if err != nil {
+				logrus.WithError(err).Debugf("handleDefault failed to perform a synchronous query with upstream [%v]", addr)
+				continue
 			}
+			if h.truncate {
+				logrus.Debugf("handleDefault truncating reply: %v", reply)
+				reply.Truncate(truncateSize)
+			}
+			if err = w.WriteMsg(reply); err != nil {
+				logrus.WithError(err).Debugf("handleDefault failed writing DNS reply to [%v]", addr)
+			}
+			return
 		}
 	}
 	var reply dns.Msg
 	reply.SetReply(req)
-	reply.Truncate(truncateSize)
-	_ = w.WriteMsg(&reply)
+	if h.truncate {
+		logrus.Debugf("handleDefault truncating reply: %v", reply)
+		reply.Truncate(truncateSize)
+	}
+	if err := w.WriteMsg(&reply); err != nil {
+		logrus.WithError(err).Debugf("handleDefault failed writing DNS reply")
+	}
 }
 
 func (h *Handler) ServeDNS(w dns.ResponseWriter, req *dns.Msg) {
@@ -268,33 +345,44 @@ func (h *Handler) ServeDNS(w dns.ResponseWriter, req *dns.Msg) {
 	}
 }
 
-func Start(udpLocalPort, tcpLocalPort int, IPv6 bool, hosts map[string]string) (*Server, error) {
-	h, err := newHandler(IPv6, hosts)
+func Start(opts ServerOptions) (*Server, error) {
+	server := &Server{}
+	if opts.UDPPort > 0 {
+		udpSrv, err := listenAndServe(UDP, opts)
+		if err != nil {
+			return nil, err
+		}
+		server.udp = udpSrv
+	}
+	if opts.TCPPort > 0 {
+		tcpSrv, err := listenAndServe(TCP, opts)
+		if err != nil {
+			return nil, err
+		}
+		server.tcp = tcpSrv
+	}
+	return server, nil
+}
+
+func listenAndServe(network Network, opts ServerOptions) (*dns.Server, error) {
+	// always enable reply truncate for UDP
+	if network == UDP {
+		opts.TruncateReply = true
+	}
+	h, err := NewHandler(opts.HandlerOptions)
 	if err != nil {
 		return nil, err
 	}
-	server := &Server{}
-	if udpLocalPort > 0 {
-		addr := fmt.Sprintf("127.0.0.1:%d", udpLocalPort)
-		s := &dns.Server{Net: "udp", Addr: addr, Handler: h}
-		server.udp = s
-		go func() {
-			if e := s.ListenAndServe(); e != nil {
-				panic(e)
-			}
-		}()
-	}
-	if tcpLocalPort > 0 {
-		addr := fmt.Sprintf("127.0.0.1:%d", tcpLocalPort)
-		s := &dns.Server{Net: "tcp", Addr: addr, Handler: h}
-		server.tcp = s
-		go func() {
-			if e := s.ListenAndServe(); e != nil {
-				panic(e)
-			}
-		}()
-	}
-	return server, nil
+	addr := fmt.Sprintf("%s:%d", opts.Address, opts.UDPPort)
+	s := &dns.Server{Net: string(network), Addr: addr, Handler: h}
+	go func() {
+		logrus.Debugf("Start UDP server listening on: %v", addr)
+		if e := s.ListenAndServe(); e != nil {
+			panic(e)
+		}
+	}()
+
+	return s, nil
 }
 
 func chunkify(buffer string, limit int) []string {
