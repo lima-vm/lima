@@ -517,6 +517,7 @@ func Cmdline(cfg Config) (string, []string, error) {
 		args = append(args, "-device", "virtio-vga")
 		args = append(args, "-device", "virtio-keyboard-pci")
 		args = append(args, "-device", "virtio-mouse-pci")
+		args = append(args, "-device", "qemu-xhci,id=usb-bus")
 	default:
 		// QEMU does not seem to support virtio-vga for aarch64
 		args = append(args, "-vga", "none", "-device", "ramfb")
