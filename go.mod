@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.5
 	github.com/alessio/shellescape v1.4.1
-	github.com/cheggaaa/pb/v3 v3.0.8
+	github.com/cheggaaa/pb/v3 v3.1.0
 	github.com/containerd/containerd v1.6.6
 	github.com/containerd/continuity v0.3.0
 	github.com/coreos/go-semver v0.3.0
@@ -29,7 +29,7 @@ require (
 	github.com/spf13/cobra v1.5.0
 	github.com/xorcare/pointer v1.1.0
 	github.com/yalue/native_endian v1.0.2
-	golang.org/x/sys v0.0.0-20220422013727-9388b58f7150
+	golang.org/x/sys v0.0.0-20220503163025-988cb79eb6c6
 	gopkg.in/yaml.v2 v2.4.0
 	gotest.tools/v3 v3.3.0
 )
