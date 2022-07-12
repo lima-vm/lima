@@ -12,14 +12,10 @@ import (
 // Paths like "~foo/bar" are unsupported.
 //
 // FIXME: is there an existing library for this?
-func Expand(orig string) (string, error) {
+func ExpandHome(orig string, homeDir string) (string, error) {
 	s := orig
 	if s == "" {
 		return "", errors.New("empty path")
-	}
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
 	}
 
 	if strings.HasPrefix(s, "~") {
@@ -29,6 +25,19 @@ func Expand(orig string) (string, error) {
 			// Paths like "~foo/bar" are unsupported.
 			return "", fmt.Errorf("unexpandable path %q", orig)
 		}
+	}
+	return s, nil
+}
+
+// Expand expands a path like "~", "~/", "~/foo", on the host.
+func Expand(orig string) (string, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	s, err := ExpandHome(orig, homeDir)
+	if err != nil {
+		return "", err
 	}
 	return filepath.Abs(s)
 }

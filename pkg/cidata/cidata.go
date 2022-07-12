@@ -134,11 +134,11 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 	}
 	for i, f := range y.Mounts {
 		tag := fmt.Sprintf("mount%d", i)
-		location, err := localpathutil.Expand(f.Location)
+		location, err := localpathutil.ExpandHome(f.Location, hostHome)
 		if err != nil {
 			return err
 		}
-		mountPoint, err := localpathutil.Expand(f.MountPoint)
+		mountPoint, err := localpathutil.ExpandHome(f.MountPoint, u.HomeDir)
 		if err != nil {
 			return err
 		}

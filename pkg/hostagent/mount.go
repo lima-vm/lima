@@ -9,6 +9,7 @@ import (
 
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/localpathutil"
+	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/sshocker/pkg/reversesshfs"
 	"github.com/sirupsen/logrus"
 )
@@ -39,7 +40,11 @@ func (a *HostAgent) setupMount(ctx context.Context, m limayaml.Mount) (*mount, e
 		return nil, err
 	}
 
-	mountPoint, err := localpathutil.Expand(m.MountPoint)
+	u, err := osutil.LimaUser(false)
+	if err != nil {
+		return nil, err
+	}
+	mountPoint, err := localpathutil.ExpandHome(m.MountPoint, u.HomeDir)
 	if err != nil {
 		return nil, err
 	}
