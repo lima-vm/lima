@@ -29,6 +29,7 @@ type LimaYAML struct {
 	DNS               []net.IP          `yaml:"dns,omitempty" json:"dns,omitempty"`
 	HostResolver      HostResolver      `yaml:"hostResolver,omitempty" json:"hostResolver,omitempty"`
 	UseHostResolver   *bool             `yaml:"useHostResolver,omitempty" json:"useHostResolver,omitempty"` // DEPRECATED, use `HostResolver.Enabled` instead
+	UseAccel          *bool             `yaml:"useAccel,omitempty" json:"useAccel,omitempty"`
 	PropagateProxyEnv *bool             `yaml:"propagateProxyEnv,omitempty" json:"propagateProxyEnv,omitempty"`
 	CACertificates    CACertificates    `yaml:"caCerts,omitempty" json:"caCerts,omitempty"`
 }

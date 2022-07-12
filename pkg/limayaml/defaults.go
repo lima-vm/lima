@@ -75,6 +75,16 @@ func MACAddress(uniqueID string) string {
 // - DNS are picked from the highest priority where DNS is not empty.
 // - CACertificates Files and Certs are uniquely appended
 func FillDefault(y, d, o *LimaYAML, filePath string) {
+	if y.UseAccel == nil {
+		y.UseAccel = d.UseAccel
+	}
+	if o.UseAccel != nil {
+		y.UseAccel = o.UseAccel
+	}
+	if y.UseAccel == nil {
+		y.UseAccel = pointer.Bool(true)
+	}
+
 	if y.Arch == nil {
 		y.Arch = d.Arch
 	}

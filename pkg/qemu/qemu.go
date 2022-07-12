@@ -350,7 +350,7 @@ func Cmdline(cfg Config) (string, []string, error) {
 	}
 
 	// Architecture
-	accel := getAccel(*y.Arch)
+	accel := getAccel(*y.Arch, *y.UseAccel)
 	if !strings.Contains(string(features.AccelHelp), accel) {
 		return "", nil, fmt.Errorf("accelerator %q is not supported by %s", accel, exe)
 	}
@@ -602,8 +602,8 @@ func getExe(arch limayaml.Arch) (string, []string, error) {
 	return exe, args, nil
 }
 
-func getAccel(arch limayaml.Arch) string {
-	if limayaml.IsNativeArch(arch) {
+func getAccel(arch limayaml.Arch, useAccel bool) string {
+	if limayaml.IsNativeArch(arch) && useAccel {
 		switch runtime.GOOS {
 		case "darwin":
 			return "hvf"

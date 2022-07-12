@@ -347,6 +347,10 @@ hostResolver:
 # - 1.1.1.1
 # - 1.0.0.1
 
+# Use Accel: "true", "false". Uses hvf, kvm, nvmm, whpx if true or tcg if false.
+# Builtin default: true
+useAccel: null
+
 # ===================================================================== #
 # GLOBAL DEFAULTS AND OVERRIDES
 # ===================================================================== #
