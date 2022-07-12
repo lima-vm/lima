@@ -40,6 +40,7 @@ const (
 	X8664   Arch = "x86_64"
 	AARCH64 Arch = "aarch64"
 	RISCV64 Arch = "riscv64"
+	NOARCH  Arch = "noarch"
 
 	REVSSHFS MountType = "reverse-sshfs"
 	NINEP    MountType = "9p"

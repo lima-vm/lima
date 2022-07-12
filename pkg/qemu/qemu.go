@@ -603,7 +603,7 @@ func getExe(arch limayaml.Arch) (string, []string, error) {
 }
 
 func getAccel(arch limayaml.Arch) string {
-	if limayaml.IsNativeArch(arch) {
+	if limayaml.IsNativeArch(arch) && !limayaml.NoArch(arch) {
 		switch runtime.GOOS {
 		case "darwin":
 			return "hvf"

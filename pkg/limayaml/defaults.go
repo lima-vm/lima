@@ -602,6 +602,8 @@ func NewArch(arch string) Arch {
 		return AARCH64
 	case "riscv64":
 		return RISCV64
+	case "noarch":
+		return NOARCH
 	default:
 		logrus.Warnf("Unknown arch: %s", arch)
 		return arch
@@ -646,6 +648,10 @@ func IsNativeArch(arch Arch) bool {
 	nativeAARCH64 := arch == AARCH64 && runtime.GOARCH == "arm64"
 	nativeRISCV64 := arch == RISCV64 && runtime.GOARCH == "riscv64"
 	return nativeX8664 || nativeAARCH64 || nativeRISCV64
+}
+
+func NoArch(arch Arch) bool {
+	return arch == NOARCH
 }
 
 func Cname(host string) string {
