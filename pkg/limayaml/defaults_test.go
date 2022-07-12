@@ -82,6 +82,7 @@ func TestFillDefault(t *testing.T) {
 		CACertificates: CACertificates{
 			RemoveDefaults: pointer.Bool(false),
 		},
+		UseAccel: pointer.Bool(true),
 	}
 	if IsAccelOS() {
 		if HasHostCPU() {
@@ -305,6 +306,7 @@ func TestFillDefault(t *testing.T) {
 				"-----BEGIN CERTIFICATE-----\nYOUR-ORGS-TRUSTED-CA-CERT\n-----END CERTIFICATE-----\n",
 			},
 		},
+		UseAccel: pointer.Bool(false),
 	}
 
 	expect = d
@@ -463,6 +465,7 @@ func TestFillDefault(t *testing.T) {
 		CACertificates: CACertificates{
 			RemoveDefaults: pointer.Bool(true),
 		},
+		UseAccel: pointer.Bool(false),
 	}
 
 	y = filledDefaults
