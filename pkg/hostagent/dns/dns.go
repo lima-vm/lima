@@ -365,18 +365,21 @@ func Start(opts ServerOptions) (*Server, error) {
 }
 
 func listenAndServe(network Network, opts ServerOptions) (*dns.Server, error) {
+	var addr string
 	// always enable reply truncate for UDP
 	if network == UDP {
 		opts.TruncateReply = true
+		addr = fmt.Sprintf("%s:%d", opts.Address, opts.UDPPort)
+	} else {
+		addr = fmt.Sprintf("%s:%d", opts.Address, opts.TCPPort)
 	}
 	h, err := NewHandler(opts.HandlerOptions)
 	if err != nil {
 		return nil, err
 	}
-	addr := fmt.Sprintf("%s:%d", opts.Address, opts.UDPPort)
 	s := &dns.Server{Net: string(network), Addr: addr, Handler: h}
 	go func() {
-		logrus.Debugf("Start UDP server listening on: %v", addr)
+		logrus.Debugf("Start %v server listening on: %v", network, addr)
 		if e := s.ListenAndServe(); e != nil {
 			panic(e)
 		}
