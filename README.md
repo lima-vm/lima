@@ -183,6 +183,11 @@ To see the template list:
 $ limactl start --list-templates
 ```
 
+To specify using an existing instance
+```console
+$ limactl start <INSTANCE> --existing-instance
+```
+
 To create an instance "default" from a local file:
 ```console
 $ limactl start --name=default /usr/local/share/lima/examples/fedora.yaml

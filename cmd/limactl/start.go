@@ -58,6 +58,7 @@ $ limactl start --name=default https://raw.githubusercontent.com/lima-vm/lima/ma
 	startCommand.Flags().Bool("tty", isatty.IsTerminal(os.Stdout.Fd()), "enable TUI interactions such as opening an editor, defaults to true when stdout is a terminal")
 	startCommand.Flags().String("name", "", "override the instance name")
 	startCommand.Flags().Bool("list-templates", false, "list available templates and exit")
+	startCommand.Flags().Bool("existing-instance", false, "specify whether to start an existed instance")
 	return startCommand
 }
 
@@ -180,6 +181,13 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 		} else {
 			if !errors.Is(err, os.ErrNotExist) {
 				return nil, err
+			}
+			existingInstance, err := cmd.Flags().GetBool("existing-instance")
+			if err != nil {
+				return nil, err
+			}
+			if existingInstance {
+				return nil, errors.New("virtual machine instance does not exist. Set existing-instance to false to create an instance")
 			}
 			if arg != "" && arg != DefaultInstanceName {
 				logrus.Infof("Creating an instance %q from template://default (Not from template://%s)", st.instName, st.instName)
