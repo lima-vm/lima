@@ -1,4 +1,4 @@
-# This example requires Lima v0.8.3 or later.
+# This example requires Lima v0.11.1 or later.
 
 images:
 - location: "http://repo.almalinux.org/almalinux/9.0/cloud/x86_64/images/AlmaLinux-9-GenericCloud-9.0-20220527.x86_64.qcow2"
@@ -11,9 +11,6 @@ mounts:
 - location: "~"
 - location: "/tmp/lima"
   writable: true
-firmware:
-  legacyBIOS: true
 cpuType:
-  # Workaround for "vmx_write_mem: mmu_gva_to_gpa XXXXXXXXXXXXXXXX failed" on Intel Mac
-  # https://bugs.launchpad.net/qemu/+bug/1838390
+  # Workaround for "intel_pstate: CPU model not supported"
   x86_64: "Haswell-v4"
