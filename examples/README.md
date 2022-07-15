@@ -37,6 +37,7 @@ Others:
 - [`vmnet.yaml`](./vmnet.yaml): ⭐enable [`vmnet.framework`](../docs/network.md)
 - [`deprecated/centos-7.yaml`](./deprecated/centos-7.yaml): [deprecated] CentOS Linux 7
 - [`experimental/almalinux-9.yaml`](experimental/almalinux-9.yaml): [experimental] AlmaLinux 9
+- [`experimental/rocky-9.yaml`](experimental/rocky-9.yaml): [experimental] Rocky Linux 9
 - [`experimental/centos-stream-9.yaml`](experimental/centos-stream-9.yaml): [experimental] CentOS Stream 9
 - [`experimental/9p.yaml`](experimental/9p.yaml): [experimental] use 9p mount type
 - [`experimental/riscv64.yaml`](experimental/riscv64.yaml): [experimental] RISC-V
