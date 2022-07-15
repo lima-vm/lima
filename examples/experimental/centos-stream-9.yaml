@@ -1,4 +1,4 @@
-# This example requires Lima v0.8.3 or later.
+# This example requires Lima v0.11.1 or later.
 
 images:
 - location: "https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-9-20220606.0.x86_64.qcow2"
@@ -12,8 +12,8 @@ mounts:
 - location: "/tmp/lima"
   writable: true
 firmware:
+  # CentOS Stream 9 still requires legacyBIOS, while AlmaLinux 9 and Rocky Linux 9 do not.
   legacyBIOS: true
 cpuType:
-  # Workaround for "vmx_write_mem: mmu_gva_to_gpa XXXXXXXXXXXXXXXX failed" on Intel Mac
-  # https://bugs.launchpad.net/qemu/+bug/1838390
+  # Workaround for "intel_pstate: CPU model not supported"
   x86_64: "Haswell-v4"

@@ -1,0 +1,16 @@
+# This example requires Lima v0.11.1 or later.
+
+images:
+- location: "https://dl.rockylinux.org/pub/rocky/9.0/images/x86_64/Rocky-9-GenericCloud-9.0-20220706.0.x86_64.qcow2"
+  arch: "x86_64"
+  digest: "sha256:9305faad09707ab72ec8e4a7b2cdc8e20bc31b608443d6c6df954fd2f3371aa2"
+- location: "https://dl.rockylinux.org/pub/rocky/9.0/images/aarch64/Rocky-9-GenericCloud-9.0-20220706.0.aarch64.qcow2"
+  arch: "aarch64"
+  digest: "sha256:21061e421267e573c39197aaf7f4298424238dab7e7ad44f09a2b805e8d18ea5"
+mounts:
+- location: "~"
+- location: "/tmp/lima"
+  writable: true
+cpuType:
+  # For consistency with AlmaLinux 9
+  x86_64: "Haswell-v4"
