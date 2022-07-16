@@ -1,9 +1,9 @@
 # This example requires Lima v0.7.0 or later
 images:
 # Try to use yyyyMMdd.REV image if available. Note that yyyyMMdd.REV will be removed after several months.
-- location: "https://geo.mirror.pkgbuild.com/images/v20220615.61815/Arch-Linux-x86_64-cloudimg-20220615.61815.qcow2"
+- location: "https://geo.mirror.pkgbuild.com/images/v20220715.68480/Arch-Linux-x86_64-cloudimg-20220715.68480.qcow2"
   arch: "x86_64"
-  digest: "sha256:9959c6c9df0f84c1a6892bbe3f47a8545438d83053f762fc5c969ac13c18a3a8"
+  digest: "sha256:59c15b0c624bd9301e2b85f775dd14f634f8e2bc1ea99065d3f2609e5b6f9916"
 - location: "https://github.com/mcginty/arch-boxes/releases/download/v20220323/Arch-Linux-aarch64-cloudimg-20220323.0.qcow2"
   arch: "aarch64"
   digest: "sha512:27524910bf41cb9b3223c8749c6e67fd2f2fdb8b70d40648708e64d6b03c0b4a01b3c5e72d51fefd3e0c3f58487dbb400a79ca378cde2da341a3a19873612be8"
