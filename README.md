@@ -33,6 +33,8 @@ Related project: [sshocker (ssh with file sharing and port forwarding)](https://
 
 This project is unrelated to [The Lima driver project (driver for ARM Mali GPUs)](https://gitlab.freedesktop.org/lima).
 
+The [talks](docs/talks.md) page contains links to slides and video from conference presentations about Lima.
+
 ## Motivation
 
 The goal of Lima is to promote [containerd](https://containerd.io) including [nerdctl (contaiNERD ctl)](https://github.com/containerd/nerdctl)
