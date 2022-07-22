@@ -344,6 +344,8 @@ func Cmdline(cfg Config) (string, []string, error) {
 		return "", nil, err
 	}
 
+	unix := runtime.GOOS != "windows"
+
 	features, err := inspectFeatures(exe)
 	if err != nil {
 		return "", nil, err
@@ -530,16 +532,35 @@ func Cmdline(cfg Config) (string, []string, error) {
 	args = append(args, "-parallel", "none")
 
 	// Serial
-	serialSock := filepath.Join(cfg.InstanceDir, filenames.SerialSock)
-	if err := os.RemoveAll(serialSock); err != nil {
-		return "", nil, err
+	var serialSock string
+	if unix {
+		serialSock := filepath.Join(cfg.InstanceDir, filenames.SerialSock)
+		if err := os.RemoveAll(serialSock); err != nil {
+			return "", nil, err
+		}
+	} else {
+		if runtime.GOOS != "windows" {
+			// path.in,path.out
+			serialSock = filepath.Join(cfg.InstanceDir, "serial")
+			if err := PipeMakeFifo(serialSock); err != nil {
+				return "", nil, err
+			}
+		} else {
+			// `\\.pipe\path`
+			serialSock = "lima" + "-" + cfg.Name + "." + filenames.SerialPipe
+		}
 	}
 	serialLog := filepath.Join(cfg.InstanceDir, filenames.SerialLog)
 	if err := os.RemoveAll(serialLog); err != nil {
 		return "", nil, err
 	}
 	const serialChardev = "char-serial"
-	args = append(args, "-chardev", fmt.Sprintf("socket,id=%s,path=%s,server=on,wait=off,logfile=%s", serialChardev, serialSock, serialLog))
+	if unix {
+		args = append(args, "-chardev", fmt.Sprintf("socket,id=%s,path=%s,server=on,wait=off,logfile=%s", serialChardev, serialSock, serialLog))
+	} else {
+		//args = append(args, "-chardev", fmt.Sprintf("pipe,id=%s,path=%s,server=on,wait=off,logfile=%s", serialChardev, serialSock, serialLog))
+		args = append(args, "-chardev", fmt.Sprintf("null,id=%s,path=%s,server=on,wait=off,logfile=%s", serialChardev, serialSock, serialLog))
+	}
 	args = append(args, "-serial", "chardev:"+serialChardev)
 
 	// We also want to enable vsock here, but QEMU does not support vsock for macOS hosts
@@ -566,12 +587,31 @@ func Cmdline(cfg Config) (string, []string, error) {
 	}
 
 	// QMP
-	qmpSock := filepath.Join(cfg.InstanceDir, filenames.QMPSock)
-	if err := os.RemoveAll(qmpSock); err != nil {
-		return "", nil, err
+	var qmpSock string
+	if unix {
+		qmpSock = filepath.Join(cfg.InstanceDir, filenames.QMPSock)
+		if err := os.RemoveAll(qmpSock); err != nil {
+			return "", nil, err
+		}
+	} else {
+		if runtime.GOOS != "windows" {
+			// path.in,path.out
+			qmpSock = filepath.Join(cfg.InstanceDir, filenames.QMPPipe)
+			if err := PipeMakeFifo(qmpSock); err != nil {
+				return "", nil, err
+			}
+		} else {
+			// `\\.pipe\path`
+			qmpSock = "lima" + "-" + cfg.Name + "." + filenames.QMPPipe
+		}
 	}
 	const qmpChardev = "char-qmp"
-	args = append(args, "-chardev", fmt.Sprintf("socket,id=%s,path=%s,server=on,wait=off", qmpChardev, qmpSock))
+	if unix {
+		args = append(args, "-chardev", fmt.Sprintf("socket,id=%s,path=%s,server=on,wait=off", qmpChardev, qmpSock))
+	} else {
+		//args = append(args, "-chardev", fmt.Sprintf("pipe,id=%s,path=%s,server=on,wait=off", qmpChardev, qmpSock))
+		args = append(args, "-chardev", fmt.Sprintf("null,id=%s,path=%s,server=on,wait=off", qmpChardev, qmpSock))
+	}
 	args = append(args, "-qmp", "chardev:"+qmpChardev)
 
 	// QEMU process

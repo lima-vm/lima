@@ -68,5 +68,8 @@ require (
 	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	gopkg.in/djherbis/times.v1 v1.2.0 // indirect
+	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 )
+
+replace github.com/digitalocean/go-qemu => github.com/afbjorklund/go-qemu v0.0.0-20220622184141-601d8abbe440
