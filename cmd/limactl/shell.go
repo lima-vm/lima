@@ -142,7 +142,7 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	}
 	if _, present := os.LookupEnv("COLORTERM"); present {
 		// SendEnv config is cumulative, with already existing options in ssh_config
-		sshArgs = append(sshArgs, "-o", "SendEnv=\"COLORTERM\"")
+		sshArgs = append(sshArgs, "-o", "SendEnv=COLORTERM")
 	}
 	sshArgs = append(sshArgs, []string{
 		"-q",

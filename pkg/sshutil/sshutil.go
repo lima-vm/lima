@@ -132,7 +132,7 @@ func CommonOpts(useDotSSH bool) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	opts := []string{"IdentityFile=\"" + privateKeyPath + "\""}
+	opts := []string{"IdentityFile=" + privateKeyPath}
 
 	// Append all private keys corresponding to ~/.ssh/*.pub to keep old instances working
 	// that had been created before lima started using an internal identity.
@@ -163,7 +163,7 @@ func CommonOpts(useDotSSH bool) ([]string, error) {
 				// Fail on permission-related and other path errors
 				return nil, err
 			}
-			opts = append(opts, "IdentityFile=\""+privateKeyPath+"\"")
+			opts = append(opts, "IdentityFile="+privateKeyPath)
 		}
 	}
 
@@ -191,10 +191,10 @@ func CommonOpts(useDotSSH bool) ([]string, error) {
 		// We prioritize AES algorithms when AES accelerator is available.
 		if sshInfo.aesAccelerated {
 			logrus.Debugf("AES accelerator seems available, prioritizing aes128-gcm@openssh.com and aes256-gcm@openssh.com")
-			opts = append(opts, "Ciphers=\"^aes128-gcm@openssh.com,aes256-gcm@openssh.com\"")
+			opts = append(opts, "Ciphers=^aes128-gcm@openssh.com,aes256-gcm@openssh.com")
 		} else {
 			logrus.Debugf("AES accelerator does not seem available, prioritizing chacha20-poly1305@openssh.com")
-			opts = append(opts, "Ciphers=\"^chacha20-poly1305@openssh.com\"")
+			opts = append(opts, "Ciphers=^chacha20-poly1305@openssh.com")
 		}
 	}
 	return opts, nil
@@ -216,8 +216,10 @@ func SSHOpts(instDir string, useDotSSH, forwardAgent bool, forwardX11 bool, forw
 	}
 	opts = append(opts,
 		fmt.Sprintf("User=%s", u.Username), // guest and host have the same username, but we should specify the username explicitly (#85)
+	)
+	opts = append(opts,
 		"ControlMaster=auto",
-		fmt.Sprintf("ControlPath=\"%s\"", controlSock),
+		fmt.Sprintf("ControlPath=%s", controlSock),
 		"ControlPersist=5m",
 	)
 	if forwardAgent {
