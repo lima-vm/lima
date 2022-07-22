@@ -30,4 +30,7 @@ fi
 if [ -n "${LIMA_WORKDIR}" ]; then
   set - --workdir "$LIMA_WORKDIR" "$@"
 fi
+# Avoid converting paths with MSYS2
+MSYS2_ARG_CONV_EXCL="*"
+export MSYS2_ARG_CONV_EXCL
 exec "$LIMACTL" shell "$@"
