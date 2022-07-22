@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/lima-vm/lima/pkg/hostagent/api"
 	"github.com/lima-vm/lima/pkg/httpclientutil"
@@ -21,18 +22,28 @@ type HostAgentClient interface {
 // NewHostAgentClient creates a client.
 // socketPath is a path to the UNIX socket, without unix:// prefix.
 func NewHostAgentClient(socketPath string) (HostAgentClient, error) {
-	hc, err := httpclientutil.NewHTTPClientWithSocketPath(socketPath)
+	port, err := strconv.Atoi(socketPath)
 	if err != nil {
-		return nil, err
+		hc, err := httpclientutil.NewHTTPClientWithSocketPath(socketPath)
+		if err != nil {
+			return nil, err
+		}
+		return NewHostAgentClientWithHTTPClient(hc, "lima-hostagent"), nil
+	} else {
+		hc, err := httpclientutil.NewHTTPClient()
+		if err != nil {
+			return nil, err
+		}
+		address := fmt.Sprintf("127.0.0.1:%d", port)
+		return NewHostAgentClientWithHTTPClient(hc, address), nil
 	}
-	return NewHostAgentClientWithHTTPClient(hc), nil
 }
 
-func NewHostAgentClientWithHTTPClient(hc *http.Client) HostAgentClient {
+func NewHostAgentClientWithHTTPClient(hc *http.Client, address string) HostAgentClient {
 	return &client{
-		Client:    hc,
-		version:   "v1",
-		dummyHost: "lima-hostagent",
+		Client:  hc,
+		version: "v1",
+		address: address,
 	}
 }
 
@@ -40,8 +51,8 @@ type client struct {
 	*http.Client
 	// version is always "v1"
 	// TODO(AkihiroSuda): negotiate the version
-	version   string
-	dummyHost string
+	version string
+	address string
 }
 
 func (c *client) HTTPClient() *http.Client {
@@ -49,7 +60,7 @@ func (c *client) HTTPClient() *http.Client {
 }
 
 func (c *client) Info(ctx context.Context) (*api.Info, error) {
-	u := fmt.Sprintf("http://%s/%s/info", c.dummyHost, c.version)
+	u := fmt.Sprintf("http://%s/%s/info", c.address, c.version)
 	resp, err := httpclientutil.Get(ctx, c.HTTPClient(), u)
 	if err != nil {
 		return nil, err

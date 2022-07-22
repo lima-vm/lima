@@ -38,8 +38,10 @@ const (
 	SerialSock         = "serial.sock"
 	SSHSock            = "ssh.sock"
 	GuestAgentSock     = "ga.sock"
+	GuestAgentPort     = "ga.port"
 	HostAgentPID       = "ha.pid"
 	HostAgentSock      = "ha.sock"
+	HostAgentPort      = "ha.port"
 	HostAgentStdoutLog = "ha.stdout.log"
 	HostAgentStderrLog = "ha.stderr.log"
 

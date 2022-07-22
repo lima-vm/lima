@@ -27,6 +27,7 @@ func newHostagentCommand() *cobra.Command {
 	}
 	hostagentCommand.Flags().StringP("pidfile", "p", "", "write pid to file")
 	hostagentCommand.Flags().String("socket", "", "hostagent socket")
+	hostagentCommand.Flags().Int("port", 0, "hostagent tcp port")
 	hostagentCommand.Flags().String("nerdctl-archive", "", "local file path (not URL) of nerdctl-full-VERSION-linux-GOARCH.tar.gz")
 	return hostagentCommand
 }
@@ -45,12 +46,21 @@ func hostagentAction(cmd *cobra.Command, args []string) error {
 		}
 		defer os.RemoveAll(pidfile)
 	}
+	unix := true
 	socket, err := cmd.Flags().GetString("socket")
 	if err != nil {
 		return err
 	}
-	if socket == "" {
-		return fmt.Errorf("socket must be specified (limactl version mismatch?)")
+	port, err := cmd.Flags().GetInt("port")
+	if err != nil {
+		return err
+	}
+	if socket == "" && port == 0 {
+		return fmt.Errorf("socket or port must be specified (limactl version mismatch?)")
+	}
+	if port != 0 {
+		unix = false
+		socket = fmt.Sprintf(":%d", port)
 	}
 
 	instName := args[0]
@@ -81,13 +91,21 @@ func hostagentAction(cmd *cobra.Command, args []string) error {
 	r := mux.NewRouter()
 	server.AddRoutes(r, backend)
 	srv := &http.Server{Handler: r}
-	err = os.RemoveAll(socket)
-	if err != nil {
-		return err
-	}
-	l, err := net.Listen("unix", socket)
-	if err != nil {
-		return err
+	var l net.Listener
+	if unix {
+		err = os.RemoveAll(socket)
+		if err != nil {
+			return err
+		}
+		l, err = net.Listen("unix", socket)
+		if err != nil {
+			return err
+		}
+	} else {
+		l, err = net.Listen("tcp", socket)
+		if err != nil {
+			return err
+		}
 	}
 	go func() {
 		defer os.RemoveAll(socket)

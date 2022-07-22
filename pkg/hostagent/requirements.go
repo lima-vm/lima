@@ -3,6 +3,7 @@ package hostagent
 import (
 	"context"
 	"fmt"
+	"runtime"
 	"time"
 
 	"github.com/hashicorp/go-multierror"
@@ -116,9 +117,27 @@ fi
 		})
 
 	}
-	req = append(req, requirement{
-		description: "the guest agent to be running",
-		script: `#!/bin/bash
+	if runtime.GOOS == "windows" || true {
+		req = append(req, requirement{
+			description: "the guest agent to be running",
+			script: `#!/bin/bash
+set -eux -o pipefail
+port=1111
+if ! timeout 30s bash -c "until nc -z 127.0.0.1 ${port}; do sleep 3; done"; then
+	echo >&2 "lima-guestagent is not installed yet"
+	exit 1
+fi
+`,
+			debugHint: `The guest agent (:1111) does not seem running.
+Make sure that you are using an officially supported image.
+Also see "/var/log/cloud-init-output.log" in the guest.
+A possible workaround is to run "lima-guestagent install-systemd" in the guest.
+`,
+		})
+	} else {
+		req = append(req, requirement{
+			description: "the guest agent to be running",
+			script: `#!/bin/bash
 set -eux -o pipefail
 sock="/run/lima-guestagent.sock"
 if ! timeout 30s bash -c "until [ -S \"${sock}\" ]; do sleep 3; done"; then
@@ -126,12 +145,13 @@ if ! timeout 30s bash -c "until [ -S \"${sock}\" ]; do sleep 3; done"; then
 	exit 1
 fi
 `,
-		debugHint: `The guest agent (/run/lima-guestagent.sock) does not seem running.
+			debugHint: `The guest agent (/run/lima-guestagent.sock) does not seem running.
 Make sure that you are using an officially supported image.
 Also see "/var/log/cloud-init-output.log" in the guest.
 A possible workaround is to run "lima-guestagent install-systemd" in the guest.
 `,
-	})
+		})
+	}
 	return req
 }
 

@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -427,8 +428,13 @@ func (a *HostAgent) close() error {
 func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 	// TODO: use vSock (when QEMU for macOS gets support for vSock)
 
+	// Prefer unix sockets over tcp
+	unix := runtime.GOOS != "windows"
+
 	// Setup all socket forwards and defer their teardown
-	logrus.Debugf("Forwarding unix sockets")
+	if unix {
+		logrus.Debugf("Forwarding unix sockets")
+	}
 	for _, rule := range a.y.PortForwards {
 		if rule.GuestSocket != "" {
 			local := hostAddress(rule, guestagentapi.IPPort{})
@@ -436,11 +442,27 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 		}
 	}
 
-	localUnix := filepath.Join(a.instDir, filenames.GuestAgentSock)
-	remoteUnix := "/run/lima-guestagent.sock"
+	var localUnix, remoteUnix string
+	var localPort, remotePort int
+	if unix {
+		localUnix = filepath.Join(a.instDir, filenames.GuestAgentSock)
+		remoteUnix = "/run/lima-guestagent.sock"
+	} else {
+		localPort, _ = findFreeTCPLocalPort()
+		localUnix = fmt.Sprintf("127.0.0.1:%d", localPort)
+		logrus.Debugf("Guest Agent Port is %d", localPort)
+		portfile := filepath.Join(a.instDir, filenames.GuestAgentPort)
+		if err := os.WriteFile(portfile, []byte(strconv.Itoa(localPort)+"\n"), 0644); err != nil {
+			logrus.WithError(err).Warn("could not write guest agent port file")
+		}
+		remotePort = 1111
+		remoteUnix = fmt.Sprintf("127.0.0.1:%d", remotePort)
+	}
 
 	a.onClose = append(a.onClose, func() error {
-		logrus.Debugf("Stop forwarding unix sockets")
+		if unix {
+			logrus.Debugf("Stop forwarding unix sockets")
+		}
 		var mErr error
 		for _, rule := range a.y.PortForwards {
 			if rule.GuestSocket != "" {
@@ -451,15 +473,25 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 				}
 			}
 		}
-		if err := forwardSSH(context.Background(), a.sshConfig, a.sshLocalPort, localUnix, remoteUnix, verbCancel, false); err != nil {
-			mErr = multierror.Append(mErr, err)
+		if unix {
+			if err := forwardSSH(context.Background(), a.sshConfig, a.sshLocalPort, localUnix, remoteUnix, verbCancel, false); err != nil {
+				mErr = multierror.Append(mErr, err)
+			}
+		} else {
+			if err := forwardTCP(context.Background(), a.sshConfig, a.sshLocalPort, localUnix, remoteUnix, verbCancel); err != nil {
+				mErr = multierror.Append(mErr, err)
+			}
 		}
 		return mErr
 	})
 
 	for {
 		if !isGuestAgentSocketAccessible(ctx, localUnix) {
-			_ = forwardSSH(ctx, a.sshConfig, a.sshLocalPort, localUnix, remoteUnix, verbForward, false)
+			if unix {
+				_ = forwardSSH(ctx, a.sshConfig, a.sshLocalPort, localUnix, remoteUnix, verbForward, false)
+			} else {
+				_ = forwardTCP(ctx, a.sshConfig, a.sshLocalPort, localUnix, remoteUnix, verbForward)
+			}
 		}
 		if err := a.processGuestAgentEvents(ctx, localUnix); err != nil {
 			if !errors.Is(err, context.Canceled) {

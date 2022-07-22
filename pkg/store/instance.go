@@ -18,6 +18,7 @@ import (
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/store/filenames"
+	"github.com/sirupsen/logrus"
 )
 
 type Status = string
@@ -99,7 +100,14 @@ func Inspect(instName string) (*Instance, error) {
 	}
 
 	if inst.HostAgentPID != 0 {
-		haSock := filepath.Join(instDir, filenames.HostAgentSock)
+		haPort, err := ReadPortFile(filepath.Join(instDir, filenames.HostAgentPort))
+		var haSock string
+		if err != nil {
+			haSock = filepath.Join(instDir, filenames.HostAgentSock)
+		} else {
+			haSock = fmt.Sprintf("%d", haPort)
+		}
+		logrus.Debugf("Connecting to %s", haSock)
 		haClient, err := hostagentclient.NewHostAgentClient(haSock)
 		if err != nil {
 			inst.Status = StatusBroken
@@ -191,6 +199,23 @@ func ReadPIDFile(path string) (int, error) {
 		}
 	}
 	return pid, nil
+}
+
+// ReadPortFile returns 0 if the port file does not exist
+// (in which case a random port will be used)·
+func ReadPortFile(path string) (int, error) {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return 0, nil
+		}
+		return 0, err
+	}
+	port, err := strconv.Atoi(strings.TrimSpace(string(b)))
+	if err != nil {
+		return 0, err
+	}
+	return port, nil
 }
 
 type FormatData struct {
