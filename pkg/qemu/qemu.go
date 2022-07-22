@@ -416,7 +416,11 @@ func Cmdline(cfg Config) (string, []string, error) {
 		if err != nil {
 			return "", nil, err
 		}
-		args = append(args, "-drive", fmt.Sprintf("if=pflash,format=raw,readonly=on,file=%s", firmware))
+		if runtime.GOOS != "windows" {
+			args = append(args, "-drive", fmt.Sprintf("if=pflash,format=raw,readonly=on,file=%s", firmware))
+		} else {
+			args = append(args, "-bios", firmware)
+		}
 	}
 
 	// Disk
@@ -634,10 +638,12 @@ func getFirmware(qemuExe string, arch limayaml.Arch) (string, error) {
 	localDir := filepath.Dir(binDir)                             // "/usr/local"
 	userLocalDir := filepath.Join(currentUser.HomeDir, ".local") // "$HOME/.local"
 
-	relativePath := fmt.Sprintf("share/qemu/edk2-%s-code.fd", arch)
+	firmwareName := fmt.Sprintf("edk2-%s-code.fd", arch)
+	relativePath := filepath.Join("share", "qemu", firmwareName)
 	candidates := []string{
-		filepath.Join(userLocalDir, relativePath), // XDG-like
-		filepath.Join(localDir, relativePath),     // macOS (homebrew)
+		filepath.Join(userLocalDir, relativePath),    // XDG-like
+		filepath.Join(localDir, relativePath),        // macOS (homebrew)
+		filepath.Join(binDir, "share", firmwareName), // Windows
 	}
 
 	switch arch {
