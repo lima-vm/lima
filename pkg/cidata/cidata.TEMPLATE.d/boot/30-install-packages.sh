@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eux
 
-source /etc/os-release
+. /etc/os-release
 SETUP_DNS=0
 DISTRIBUTION=""
 INSTALL_IPTABLES=0
@@ -28,7 +28,7 @@ determine_distribution() {
 		DISTRIBUTION="arch_like"
 	elif command -v zypper >/dev/null 2>&1 && [ "$ID_LIKE" = "opensuse suse" ]; then
 		DISTRIBUTION="suse_like"
-	elif command -v apk >/dev/null 2>&1 && [ "ID" = "alpine" ]; then
+	elif command -v apk >/dev/null 2>&1 && [ "$ID" = "alpine" ]; then
 		DISTRIBUTION="alpine_like"
 	else
 		guess_distribution_based_on_package_manager
