@@ -15,8 +15,8 @@ main() {
 	install_minimal_dependencies
 	setup_dns
 	# update_fuse_conf has to be called after installing all the packages,
-	# otherwise apt-get fails with conflict	
-	update_fuse_conf	
+	# otherwise apt-get fails with conflict
+	update_fuse_conf
 }
 
 determine_distribution() {
