@@ -20,17 +20,17 @@ main() {
 }
 
 determine_distribution() {
-	if command -v apt-get >/dev/null 2>&1 && [ $(expr "$ID_LIKE" : "debian") ]; then
+	if command -v apt-get >/dev/null 2>&1 && [ $(expr "$ID_LIKE" : ".*debian") -gt 0 ]; then
 		DISTRIBUTION="debian_like"
-	elif command -v dnf >/dev/null 2>&1 && [ $(expr "$ID" : "fedora") ]; then
+	elif command -v dnf >/dev/null 2>&1 && [ $(expr "$ID" : ".*fedora") -gt 0 ]; then
 		DISTRIBUTION="redhat_like"
-	elif command -v yum >/dev/null 2>&1 && [ $(expr "$ID_LIKE" : "centos") ]; then
+	elif command -v yum >/dev/null 2>&1 && [ $(expr "$ID_LIKE" : "centos") -gt 0 ]; then
 		DISTRIBUTION="centos_like"
-	elif command -v pacman >/dev/null 2>&1 && [ $(expr "$ID_LIKE" : "arch") ]; then
+	elif command -v pacman >/dev/null 2>&1 && [ $(expr "$ID_LIKE" : "arch") -gt 0 ]; then
 		DISTRIBUTION="arch_like"
-	elif command -v zypper >/dev/null 2>&1 && [ $(expr "$ID_LIKE" : "suse") ]; then
+	elif command -v zypper >/dev/null 2>&1 && [ $(expr "$ID_LIKE" : "suse") -gt 0 ]; then
 		DISTRIBUTION="suse_like"
-	elif command -v apk >/dev/null 2>&1 && [ $(expr "$ID" : "alpine") ]; then
+	elif command -v apk >/dev/null 2>&1 && [ $(expr "$ID" : "alpine") -gt 0 ]; then
 		DISTRIBUTION="alpine_like"
 	else
 		guess_distribution_based_on_package_manager
