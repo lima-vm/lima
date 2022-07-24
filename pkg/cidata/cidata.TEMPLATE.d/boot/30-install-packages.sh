@@ -24,13 +24,13 @@ determine_distribution() {
 		DISTRIBUTION="debian_like"
 	elif command -v dnf >/dev/null 2>&1 && [ $(expr "$ID" : ".*fedora") -gt 0 ]; then
 		DISTRIBUTION="redhat_like"
-	elif command -v yum >/dev/null 2>&1 && [ $(expr "$ID_LIKE" : "centos") -gt 0 ]; then
+	elif command -v yum >/dev/null 2>&1 && [ $(expr "$ID_LIKE" : ".*centos") -gt 0 ]; then
 		DISTRIBUTION="centos_like"
-	elif command -v pacman >/dev/null 2>&1 && [ $(expr "$ID_LIKE" : "arch") -gt 0 ]; then
+	elif command -v pacman >/dev/null 2>&1 && [ $(expr "$ID_LIKE" : ".*arch") -gt 0 ]; then
 		DISTRIBUTION="arch_like"
-	elif command -v zypper >/dev/null 2>&1 && [ $(expr "$ID_LIKE" : "suse") -gt 0 ]; then
+	elif command -v zypper >/dev/null 2>&1 && [ $(expr "$ID_LIKE" : ".*suse") -gt 0 ]; then
 		DISTRIBUTION="suse_like"
-	elif command -v apk >/dev/null 2>&1 && [ $(expr "$ID" : "alpine") -gt 0 ]; then
+	elif command -v apk >/dev/null 2>&1 && [ $(expr "$ID" : ".*alpine") -gt 0 ]; then
 		DISTRIBUTION="alpine_like"
 	else
 		guess_distribution_based_on_package_manager
