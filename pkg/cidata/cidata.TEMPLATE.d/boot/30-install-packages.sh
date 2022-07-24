@@ -1,10 +1,12 @@
 #!/bin/sh
 set -eux
 
-. /etc/os-release
 SETUP_DNS=0
 DISTRIBUTION=""
 INSTALL_IPTABLES=0
+ID_LIKE=""
+ID=""
+[ -f /etc/os-release ] && . /etc/os-release
 
 
 main() {
