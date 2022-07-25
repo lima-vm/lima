@@ -58,6 +58,7 @@ type TemplateArgs struct {
 	SlirpIPAddress     string
 	UDPDNSLocalPort    int
 	TCPDNSLocalPort    int
+	GuestAgentPort     int
 	Env                map[string]string
 	DNSAddresses       []string
 	CACerts            CACerts

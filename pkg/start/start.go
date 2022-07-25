@@ -6,9 +6,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
+	"strconv"
 	"text/template"
 	"time"
 
@@ -84,6 +87,7 @@ func Start(ctx context.Context, inst *store.Instance) error {
 	}
 
 	haSockPath := filepath.Join(inst.Dir, filenames.HostAgentSock)
+	haPortPath := filepath.Join(inst.Dir, filenames.HostAgentPort)
 
 	y, err := inst.LoadYAML()
 	if err != nil {
@@ -127,8 +131,23 @@ func Start(ctx context.Context, inst *store.Instance) error {
 	}
 	args = append(args,
 		"hostagent",
-		"--pidfile", haPIDPath,
-		"--socket", haSockPath)
+		"--pidfile", haPIDPath)
+	if runtime.GOOS == "windows" {
+		port, err := findFreeTCPLocalPort()
+		if err != nil {
+			return err
+		}
+		if err := os.WriteFile(haPortPath, []byte(strconv.Itoa(port)+"\n"), 0644); err != nil {
+			logrus.WithError(err).Warn("could not write host agent port file")
+			return err
+		}
+
+		args = append(args,
+			"--port", fmt.Sprintf("%d", port))
+	} else {
+		args = append(args,
+			"--socket", haSockPath)
+	}
 	if nerdctlArchiveCache != "" {
 		args = append(args, "--nerdctl-archive", nerdctlArchiveCache)
 	}
@@ -168,6 +187,28 @@ func Start(ctx context.Context, inst *store.Instance) error {
 		// waitErr should not be nil
 		return fmt.Errorf("host agent process has exited: %w", waitErr)
 	}
+}
+
+func findFreeTCPLocalPort() (int, error) {
+	lAddr0, err := net.ResolveTCPAddr("tcp4", "127.0.0.1:0")
+	if err != nil {
+		return 0, err
+	}
+	l, err := net.ListenTCP("tcp4", lAddr0)
+	if err != nil {
+		return 0, err
+	}
+	defer l.Close()
+	lAddr := l.Addr()
+	lTCPAddr, ok := lAddr.(*net.TCPAddr)
+	if !ok {
+		return 0, fmt.Errorf("expected *net.TCPAddr, got %v", lAddr)
+	}
+	port := lTCPAddr.Port
+	if port <= 0 {
+		return 0, fmt.Errorf("unexpected port %d", port)
+	}
+	return port, nil
 }
 
 func waitHostAgentStart(ctx context.Context, haPIDPath, haStderrPath string) error {

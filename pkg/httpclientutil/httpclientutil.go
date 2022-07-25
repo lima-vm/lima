@@ -16,6 +16,11 @@ import (
 	"github.com/lima-vm/lima/pkg/httputil"
 )
 
+// NewHTTPClient creates a client.
+func NewHTTPClient() (*http.Client, error) {
+	return &http.Client{}, nil
+}
+
 // NewHTTPClientWithSocketPath creates a client.
 // socketPath is a path to the UNIX socket, without unix:// prefix.
 func NewHTTPClientWithSocketPath(socketPath string) (*http.Client, error) {

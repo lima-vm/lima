@@ -3,6 +3,7 @@ package main
 import (
 	_ "embed"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -19,11 +20,16 @@ func newInstallSystemdCommand() *cobra.Command {
 		Short: "install a systemd unit (user)",
 		RunE:  installSystemdAction,
 	}
+	installSystemdCommand.Flags().Int("port", 0, "guestagent tcp port")
 	return installSystemdCommand
 }
 
 func installSystemdAction(cmd *cobra.Command, args []string) error {
-	unit, err := generateSystemdUnit()
+	port, err := cmd.Flags().GetInt("port")
+	if err != nil {
+		return err
+	}
+	unit, err := generateSystemdUnit(port)
 	if err != nil {
 		return err
 	}
@@ -60,13 +66,18 @@ func installSystemdAction(cmd *cobra.Command, args []string) error {
 //go:embed lima-guestagent.TEMPLATE.service
 var systemdUnitTemplate string
 
-func generateSystemdUnit() ([]byte, error) {
+func generateSystemdUnit(port int) ([]byte, error) {
 	selfExeAbs, err := os.Executable()
 	if err != nil {
 		return nil, err
 	}
+	portString := ""
+	if port != 0 {
+		portString = fmt.Sprintf("%d", port)
+	}
 	m := map[string]string{
 		"Binary": selfExeAbs,
+		"Port":   portString,
 	}
 	return templateutil.Execute(systemdUnitTemplate, m)
 }

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -217,6 +218,10 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 	for _, content := range y.CACertificates.Certs {
 		cert := getCert(content)
 		args.CACerts.Trusted = append(args.CACerts.Trusted, cert)
+	}
+
+	if runtime.GOOS == "windows" {
+		args.GuestAgentPort = 1111
 	}
 
 	if err := ValidateTemplateArgs(args); err != nil {
