@@ -140,7 +140,7 @@ jobs:
     timeout-minutes: 120
     strategy:
       matrix:
-        oldver: ["v0.8.0"]
+        oldver: ["v0.10.0"]
     steps:
     - uses: actions/setup-go@v3
       with:
