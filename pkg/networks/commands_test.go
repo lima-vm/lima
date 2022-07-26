@@ -43,24 +43,45 @@ func TestUser(t *testing.T) {
 		t.Skip()
 	}
 
-	user, err := config.User(Switch)
-	assert.NilError(t, err)
-	assert.Equal(t, user.User, "daemon")
-	assert.Equal(t, user.Group, config.Group)
-	if runtime.GOOS == "darwin" {
-		assert.Equal(t, user.Uid, uint32(1))
-	}
+	t.Run("socket_vmnet", func(t *testing.T) {
+		if ok, _ := config.IsDaemonInstalled(SocketVMNet); !ok {
+			t.Skipf("socket_vmnet is not installed")
+		}
+		user, err := config.User(SocketVMNet)
+		assert.NilError(t, err)
+		assert.Equal(t, user.User, "root")
+		if runtime.GOOS == "darwin" {
+			assert.Equal(t, user.Group, "wheel")
+		} else {
+			assert.Equal(t, user.Group, "root")
+		}
+		assert.Equal(t, user.Uid, uint32(0))
+		assert.Equal(t, user.Gid, uint32(0))
+	})
 
-	user, err = config.User(VMNet)
-	assert.NilError(t, err)
-	assert.Equal(t, user.User, "root")
-	if runtime.GOOS == "darwin" {
-		assert.Equal(t, user.Group, "wheel")
-	} else {
-		assert.Equal(t, user.Group, "root")
-	}
-	assert.Equal(t, user.Uid, uint32(0))
-	assert.Equal(t, user.Gid, uint32(0))
+	t.Run("vde_vmnet", func(t *testing.T) {
+		if ok, _ := config.IsDaemonInstalled(VDEVMNet); !ok {
+			t.Skipf("vde_vmnet is not installed")
+		}
+		user, err := config.User(VDESwitch)
+		assert.NilError(t, err)
+		assert.Equal(t, user.User, "daemon")
+		assert.Equal(t, user.Group, config.Group)
+		if runtime.GOOS == "darwin" {
+			assert.Equal(t, user.Uid, uint32(1))
+		}
+
+		user, err = config.User(VDEVMNet)
+		assert.NilError(t, err)
+		assert.Equal(t, user.User, "root")
+		if runtime.GOOS == "darwin" {
+			assert.Equal(t, user.Group, "wheel")
+		} else {
+			assert.Equal(t, user.Group, "root")
+		}
+		assert.Equal(t, user.Uid, uint32(0))
+		assert.Equal(t, user.Gid, uint32(0))
+	})
 }
 
 func TestMkdirCmd(t *testing.T) {
@@ -77,17 +98,36 @@ func TestStartCmd(t *testing.T) {
 
 	varRunDir := filepath.Join("/", "private", "var", "run", "lima")
 
-	cmd := config.StartCmd("shared", Switch)
-	assert.Equal(t, cmd, "/opt/vde/bin/vde_switch --pidfile="+filepath.Join(varRunDir, "shared_switch.pid")+" "+
-		"--sock="+filepath.Join(varRunDir, "shared.ctl")+" --group=everyone --dirmode=0770 --nostdin")
+	t.Run("socket_vmnet", func(t *testing.T) {
+		if ok, _ := config.IsDaemonInstalled(SocketVMNet); !ok {
+			t.Skipf("socket_vmnet is not installed")
+		}
 
-	cmd = config.StartCmd("shared", VMNet)
-	assert.Equal(t, cmd, "/opt/vde/bin/vde_vmnet --pidfile="+filepath.Join(varRunDir, "shared_vmnet.pid")+" --vde-group=everyone --vmnet-mode=shared "+
-		"--vmnet-gateway=192.168.105.1 --vmnet-dhcp-end=192.168.105.254 --vmnet-mask=255.255.255.0 "+filepath.Join(varRunDir, "shared.ctl"))
+		cmd := config.StartCmd("shared", SocketVMNet)
+		assert.Equal(t, cmd, "/opt/socket_vmnet/bin/socket_vmnet --pidfile="+filepath.Join(varRunDir, "shared_socket_vmnet.pid")+" --socket-group=everyone --vmnet-mode=shared "+
+			"--vmnet-gateway=192.168.105.1 --vmnet-dhcp-end=192.168.105.254 --vmnet-mask=255.255.255.0 "+filepath.Join(varRunDir, "socket_vmnet.shared"))
 
-	cmd = config.StartCmd("bridged", VMNet)
-	assert.Equal(t, cmd, "/opt/vde/bin/vde_vmnet --pidfile="+filepath.Join(varRunDir, "bridged_vmnet.pid")+" --vde-group=everyone --vmnet-mode=bridged "+
-		"--vmnet-interface=en0 "+filepath.Join(varRunDir, "bridged.ctl"))
+		cmd = config.StartCmd("bridged", SocketVMNet)
+		assert.Equal(t, cmd, "/opt/socket_vmnet/bin/socket_vmnet --pidfile="+filepath.Join(varRunDir, "bridged_socket_vmnet.pid")+" --socket-group=everyone --vmnet-mode=bridged "+
+			"--vmnet-interface=en0 "+filepath.Join(varRunDir, "socket_vmnet.bridged"))
+	})
+
+	t.Run("vde_vmnet", func(t *testing.T) {
+		if ok, _ := config.IsDaemonInstalled(VDEVMNet); !ok {
+			t.Skipf("vde_vmnet is not installed")
+		}
+		cmd := config.StartCmd("shared", VDESwitch)
+		assert.Equal(t, cmd, "/opt/vde/bin/vde_switch --pidfile="+filepath.Join(varRunDir, "shared_switch.pid")+" "+
+			"--sock="+filepath.Join(varRunDir, "shared.ctl")+" --group=everyone --dirmode=0770 --nostdin")
+
+		cmd = config.StartCmd("shared", VDEVMNet)
+		assert.Equal(t, cmd, "/opt/vde/bin/vde_vmnet --pidfile="+filepath.Join(varRunDir, "shared_vmnet.pid")+" --vde-group=everyone --vmnet-mode=shared "+
+			"--vmnet-gateway=192.168.105.1 --vmnet-dhcp-end=192.168.105.254 --vmnet-mask=255.255.255.0 "+filepath.Join(varRunDir, "shared.ctl"))
+
+		cmd = config.StartCmd("bridged", VDEVMNet)
+		assert.Equal(t, cmd, "/opt/vde/bin/vde_vmnet --pidfile="+filepath.Join(varRunDir, "bridged_vmnet.pid")+" --vde-group=everyone --vmnet-mode=bridged "+
+			"--vmnet-interface=en0 "+filepath.Join(varRunDir, "bridged.ctl"))
+	})
 }
 
 func TestStopCmd(t *testing.T) {

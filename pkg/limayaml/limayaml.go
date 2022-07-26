@@ -164,14 +164,17 @@ type PortForward struct {
 }
 
 type Network struct {
-	// `Lima` and `VNL` are mutually exclusive; exactly one is required
+	// `Lima`, `Socket`, and `VNL` are mutually exclusive; exactly one is required
 	Lima string `yaml:"lima,omitempty" json:"lima,omitempty"`
-	// VNL is a Virtual Network Locator (https://github.com/rd235/vdeplug4/commit/089984200f447abb0e825eb45548b781ba1ebccd).
+	// Socket is a QEMU-compatible socket
+	Socket string `yaml:"socket,omitempty" json:"socket,omitempty"`
+	// VNLDeprecated is a Virtual Network Locator (https://github.com/rd235/vdeplug4/commit/089984200f447abb0e825eb45548b781ba1ebccd).
 	// On macOS, only VDE2-compatible form (optionally with vde:// prefix) is supported.
-	VNL        string `yaml:"vnl,omitempty" json:"vnl,omitempty"`
-	SwitchPort uint16 `yaml:"switchPort,omitempty" json:"switchPort,omitempty"` // VDE Switch port, not TCP/UDP port (only used by VDE networking)
-	MACAddress string `yaml:"macAddress,omitempty" json:"macAddress,omitempty"`
-	Interface  string `yaml:"interface,omitempty" json:"interface,omitempty"`
+	// VNLDeprecated is deprecated. Use Socket.
+	VNLDeprecated        string `yaml:"vnl,omitempty" json:"vnl,omitempty"`
+	SwitchPortDeprecated uint16 `yaml:"switchPort,omitempty" json:"switchPort,omitempty"` // VDE Switch port, not TCP/UDP port (only used by VDE networking)
+	MACAddress           string `yaml:"macAddress,omitempty" json:"macAddress,omitempty"`
+	Interface            string `yaml:"interface,omitempty" json:"interface,omitempty"`
 }
 
 type HostResolver struct {
