@@ -1,0 +1,18 @@
+# This example requires Lima v0.7.0 or later.
+
+images:
+- location: "https://cdn.amazonlinux.com/os-images/2.0.20211223.0/kvm/amzn2-kvm-2.0.20211223.0-x86_64.xfs.gpt.qcow2"
+  arch: "x86_64"
+  digest: "sha512:8a3191a9cfb08131970819a0863218d4780fa7b8050591e29bad761260a00c6ab13e5f986131cb620c2ddc77fa64e1c9b4d0a23dea653a605b0c5136fc3fe621"
+- location: "https://cdn.amazonlinux.com/os-images/2.0.20211223.0/kvm-arm64/amzn2-kvm-2.0.20211223.0-arm64.xfs.gpt.qcow2"
+  arch: "aarch64"
+  digest: "sha512:159e677fcd92cbf9c0452d28f2d65b5eeae6a4880205e65d700e47a359f66b3c1d32398ab1bd9cd8276620cf300c59f511aa744ef206dcb9b81fedf4054779ee"
+mounts:
+- location: "~"
+- location: "/tmp/lima"
+  writable: true
+firmware:
+  legacyBIOS: true
+containerd:
+  system: false
+  user: false
