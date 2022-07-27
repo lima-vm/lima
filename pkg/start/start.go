@@ -185,8 +185,6 @@ func waitHostAgentStart(ctx context.Context, haPIDPath, haStderrPath string) err
 }
 
 func watchHostAgentEvents(ctx context.Context, inst *store.Instance, haStdoutPath, haStderrPath string, begin time.Time) error {
-	ctx2, cancel := context.WithTimeout(ctx, 10*time.Minute)
-	defer cancel()
 
 	var (
 		printedSSHLocalPort  bool
@@ -221,7 +219,7 @@ func watchHostAgentEvents(ctx context.Context, inst *store.Instance, haStdoutPat
 		return false
 	}
 
-	if xerr := hostagentevents.Watch(ctx2, haStdoutPath, haStderrPath, begin, onEvent); xerr != nil {
+	if xerr := hostagentevents.Watch(ctx, haStdoutPath, haStderrPath, begin, onEvent); xerr != nil {
 		return xerr
 	}
 
