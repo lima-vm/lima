@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/lima-vm/lima/pkg/store/filenames"
 )
@@ -17,6 +18,10 @@ const DotLima = ".lima"
 // NOTE: We do not use `~/Library/Application Support/Lima` on macOS.
 // We use `~/.lima` so that we can have enough space for the length of the socket path,
 // which can be only 104 characters on macOS.
+//
+// NOTE: There are some issues when using "long names" on Windows.
+// We use "short names" here, so that it works with user names containing unicode etc.
+// They normally have 8+3 characters, with suffix.
 func LimaDir() (string, error) {
 	dir := os.Getenv("LIMA_HOME")
 	if dir == "" {
@@ -24,9 +29,20 @@ func LimaDir() (string, error) {
 		if err != nil {
 			return "", err
 		}
+		// on windows, 8.3 paths are needed by some tools like QEMU
+		if runtime.GOOS == "windows" {
+			homeDir, err = ShortPathName(homeDir)
+			if err != nil {
+				return "", err
+			}
+		}
 		dir = filepath.Join(homeDir, DotLima)
 	}
 	if _, err := os.Stat(dir); errors.Is(err, os.ErrNotExist) {
+		return dir, nil
+	}
+	// on windows, EvalSymlinks translates short paths back to long again
+	if runtime.GOOS == "windows" {
 		return dir, nil
 	}
 	realdir, err := filepath.EvalSymlinks(dir)
