@@ -2,60 +2,16 @@
 set -eux
 
 SETUP_DNS=0
-DISTRIBUTION=""
 INSTALL_IPTABLES=0
-ID_LIKE=""
-ID=""
-
-# We check if the file exists or not and we have
-# safeguards in case it sources only empty vars
-# hence we can ignore shellcheck in this instance
-# shellcheck disable=SC1091
-[ -f /etc/os-release ] && . /etc/os-release
-
-
+. "${LIMA_CIDATA_MNT}/boot/27-discover-distribution.sh"
+echo $DISTRO_NAME
 main() {
-	determine_distribution
 	determine_need_for_iptables
 	install_minimal_dependencies
 	setup_dns
 	# update_fuse_conf has to be called after installing all the packages,
 	# otherwise apt-get fails with conflict
 	update_fuse_conf
-}
-
-determine_distribution() {
-	if command -v apt-get >/dev/null 2>&1 && [ "$(expr "$ID_LIKE" : ".*debian")" -gt 0 ]; then
-		DISTRIBUTION="debian_like"
-	elif command -v dnf >/dev/null 2>&1 && [ "$(expr "$ID" : ".*fedora")" -gt 0 ]; then
-		DISTRIBUTION="redhat_like"
-	elif command -v yum >/dev/null 2>&1 && [ "$(expr "$ID_LIKE" : ".*centos")" -gt 0 ]; then
-		DISTRIBUTION="centos_like"
-	elif command -v pacman >/dev/null 2>&1 && [ "$(expr "$ID_LIKE" : ".*arch")" -gt 0 ]; then
-		DISTRIBUTION="arch_like"
-	elif command -v zypper >/dev/null 2>&1 && [ "$(expr "$ID_LIKE" : ".*suse")" -gt 0 ]; then
-		DISTRIBUTION="suse_like"
-	elif command -v apk >/dev/null 2>&1 && [ "$(expr "$ID" : ".*alpine")" -gt 0 ]; then
-		DISTRIBUTION="alpine_like"
-	else
-		guess_distribution_based_on_package_manager
-	fi
-}
-
-guess_distribution_based_on_package_manager() {
-	if command -v apt-get >/dev/null 2>&1; then
-		DISTRIBUTION="debian_like"
-	elif command -v dnf >/dev/null 2>&1; then
-		DISTRIBUTION="redhat_like"
-	elif command -v yum >/dev/null 2>&1; then
-		DISTRIBUTION="redhat_like"
-	elif command -v pacman >/dev/null 2>&1; then
-		DISTRIBUTION="arch_like"
-	elif command -v zypper >/dev/null 2>&1; then
-		DISTRIBUTION="suse_like"
-	elif command -v apk >/dev/null 2>&1; then
-		DISTRIBUTION="alpine_like"
-	fi
 }
 
 determine_need_for_iptables() {
@@ -68,18 +24,39 @@ determine_need_for_iptables() {
 }
 
 install_minimal_dependencies() {
-	case $DISTRIBUTION in
-		"debian_like") install_debian_dependencies
+	echo "##################INSTALL######################"
+	case $DISTRO_NAME in
+		"Arch Linux") install_arch_dependencies
 		;;
-		"redhat_like") install_redhat_dependencies
+		"Alpine Linux") install_alpine_dependencies
 		;;
-		"centos_like") install_centos_dependencies
+		"CentOS") install_centos_dependencies
 		;;
-		"arch_like") install_arch_dependencies
+		"Debian") install_debian_dependencies
 		;;
-		"suse_like") install_suse_dependencies
+		"Ubuntu") install_debian_dependencies
 		;;
-		"alpine_like") install_alpine_dependencies
+		"Fedora") install_redhat_dependencies
+		;;
+		"SUSE") install_suse_dependencies
+		;;
+		"Mandriva")
+		;;
+		"Gentoo")
+		;;
+		"Slackware")
+		;;
+		"TurboLinux")
+		;;
+		"UnitedLinux")
+		;;
+		"VoidLinux")
+		;;
+		"Oracle Linux") install_redhat_dependencies
+		;;
+		"AlmaLinux") install_redhat_dependencies
+		;;
+		"Rocky Linux") install_redhat_dependencies
 		;;
 		*) echo "Could not determine any suitable actions to provision machine"
 		;;
