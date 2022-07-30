@@ -6,6 +6,11 @@ DISTRIBUTION=""
 INSTALL_IPTABLES=0
 ID_LIKE=""
 ID=""
+
+# We check if the file exists or not and we have
+# safeguards in case it sources only empty vars
+# hence we can ignore shellcheck in this instance
+# shellcheck disable=SC1091
 [ -f /etc/os-release ] && . /etc/os-release
 
 
@@ -20,17 +25,17 @@ main() {
 }
 
 determine_distribution() {
-	if command -v apt-get >/dev/null 2>&1 && [ $(expr "$ID_LIKE" : ".*debian") -gt 0 ]; then
+	if command -v apt-get >/dev/null 2>&1 && [ "$(expr "$ID_LIKE" : ".*debian")" -gt 0 ]; then
 		DISTRIBUTION="debian_like"
-	elif command -v dnf >/dev/null 2>&1 && [ $(expr "$ID" : ".*fedora") -gt 0 ]; then
+	elif command -v dnf >/dev/null 2>&1 && [ "$(expr "$ID" : ".*fedora")" -gt 0 ]; then
 		DISTRIBUTION="redhat_like"
-	elif command -v yum >/dev/null 2>&1 && [ $(expr "$ID_LIKE" : ".*centos") -gt 0 ]; then
+	elif command -v yum >/dev/null 2>&1 && [ "$(expr "$ID_LIKE" : ".*centos")" -gt 0 ]; then
 		DISTRIBUTION="centos_like"
-	elif command -v pacman >/dev/null 2>&1 && [ $(expr "$ID_LIKE" : ".*arch") -gt 0 ]; then
+	elif command -v pacman >/dev/null 2>&1 && [ "$(expr "$ID_LIKE" : ".*arch")" -gt 0 ]; then
 		DISTRIBUTION="arch_like"
-	elif command -v zypper >/dev/null 2>&1 && [ $(expr "$ID_LIKE" : ".*suse") -gt 0 ]; then
+	elif command -v zypper >/dev/null 2>&1 && [ "$(expr "$ID_LIKE" : ".*suse")" -gt 0 ]; then
 		DISTRIBUTION="suse_like"
-	elif command -v apk >/dev/null 2>&1 && [ $(expr "$ID" : ".*alpine") -gt 0 ]; then
+	elif command -v apk >/dev/null 2>&1 && [ "$(expr "$ID" : ".*alpine")" -gt 0 ]; then
 		DISTRIBUTION="alpine_like"
 	else
 		guess_distribution_based_on_package_manager
