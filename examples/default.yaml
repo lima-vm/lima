@@ -208,7 +208,9 @@ firmware:
   legacyBIOS: null
 
 video:
-  # QEMU display, e.g., "none", "cocoa", "sdl", "gtk".
+  # QEMU display, e.g., "none", "cocoa", "sdl", "gtk", "default".
+  # Choosing "none" will hide the video output, and not show any window.
+  # Choosing "default" will pick the first available of: gtk, sdl, cocoa.
   # As of QEMU v6.2, enabling this is known to have negative impact
   # on performance on macOS hosts: https://gitlab.com/qemu-project/qemu/-/issues/334
   # 🟢 Builtin default: "none"
