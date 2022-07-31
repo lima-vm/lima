@@ -15,6 +15,10 @@ type Driver interface {
 	Start(_ context.Context) (chan error, error)
 
 	Stop(_ context.Context) error
+
+	ChangeDisplayPassword(_ context.Context, password string) error
+
+	GetDisplayConnection(_ context.Context) (string, error)
 }
 
 type BaseDriver struct {
@@ -38,4 +42,12 @@ func (d *BaseDriver) Start(_ context.Context) (chan error, error) {
 
 func (d *BaseDriver) Stop(_ context.Context) error {
 	return nil
+}
+
+func (d *BaseDriver) ChangeDisplayPassword(_ context.Context, password string) error {
+	return nil
+}
+
+func (d *BaseDriver) GetDisplayConnection(_ context.Context) (string, error) {
+	return "", nil
 }

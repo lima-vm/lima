@@ -549,7 +549,12 @@ func Cmdline(cfg Config) (string, []string, error) {
 
 	// Graphics
 	if *y.Video.Display != "" {
-		args = appendArgsIfNoConflict(args, "-display", *y.Video.Display)
+		display := *y.Video.Display
+		if display == "vnc" {
+			display += "=" + *y.Video.VNC.Display
+			display += ",password=on"
+		}
+		args = appendArgsIfNoConflict(args, "-display", display)
 	}
 	switch *y.Arch {
 	case limayaml.X8664, limayaml.RISCV64:

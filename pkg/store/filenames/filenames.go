@@ -38,6 +38,8 @@ const (
 	SerialSock         = "serial.sock"
 	SSHSock            = "ssh.sock"
 	SSHConfig          = "ssh.config"
+	VNCDisplayFile     = "vncdisplay"
+	VNCPasswordFile    = "vncpassword"
 	GuestAgentSock     = "ga.sock"
 	HostAgentPID       = "ha.pid"
 	HostAgentSock      = "ha.sock"

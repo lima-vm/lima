@@ -122,9 +122,14 @@ type Firmware struct {
 	LegacyBIOS *bool `yaml:"legacyBIOS,omitempty" json:"legacyBIOS,omitempty"`
 }
 
+type VNCOptions struct {
+	Display *string `yaml:"display,omitempty" json:"display,omitempty"`
+}
+
 type Video struct {
 	// Display is a QEMU display string
-	Display *string `yaml:"display,omitempty" json:"display,omitempty"`
+	Display *string    `yaml:"display,omitempty" json:"display,omitempty"`
+	VNC     VNCOptions `yaml:"vnc" json:"vnc"`
 }
 
 type ProvisionMode = string

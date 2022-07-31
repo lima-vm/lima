@@ -72,6 +72,9 @@ func TestFillDefault(t *testing.T) {
 		},
 		Video: Video{
 			Display: pointer.String("none"),
+			VNC: VNCOptions{
+				Display: pointer.String("127.0.0.1:0,to=9"),
+			},
 		},
 		HostResolver: HostResolver{
 			Enabled: pointer.Bool(true),
@@ -262,6 +265,9 @@ func TestFillDefault(t *testing.T) {
 		},
 		Video: Video{
 			Display: pointer.String("cocoa"),
+			VNC: VNCOptions{
+				Display: pointer.String("none"),
+			},
 		},
 		HostResolver: HostResolver{
 			Enabled: pointer.Bool(false),
@@ -418,6 +424,9 @@ func TestFillDefault(t *testing.T) {
 		},
 		Video: Video{
 			Display: pointer.String("cocoa"),
+			VNC: VNCOptions{
+				Display: pointer.String("none"),
+			},
 		},
 		HostResolver: HostResolver{
 			Enabled: pointer.Bool(false),

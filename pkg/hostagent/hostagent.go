@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand"
 	"net"
 	"os"
 	"os/exec"
@@ -251,6 +252,15 @@ func (a *HostAgent) emitEvent(_ context.Context, ev events.Event) {
 	}
 }
 
+func generatePassword(length int) (string, error) {
+	passwd := ""
+	rand.Seed(time.Now().UnixNano())
+	for i := 0; i < length; i++ {
+		passwd += strconv.Itoa(rand.Intn(10))
+	}
+	return passwd, nil
+}
+
 func (a *HostAgent) Run(ctx context.Context) error {
 	defer func() {
 		exitingEv := events.Event{
@@ -283,6 +293,50 @@ func (a *HostAgent) Run(ctx context.Context) error {
 	errCh, err := a.driver.Start(ctx)
 	if err != nil {
 		return err
+	}
+
+	if *a.y.Video.Display == "vnc" {
+		vncdisplay, vncoptions, _ := strings.Cut(*a.y.Video.VNC.Display, ",")
+		vnchost, vncnum, err := net.SplitHostPort(vncdisplay)
+		if err != nil {
+			return err
+		}
+		n, err := strconv.Atoi(vncnum)
+		if err != nil {
+			return err
+		}
+		vncport := strconv.Itoa(5900 + n)
+		vncpwdfile := filepath.Join(a.instDir, filenames.VNCPasswordFile)
+		vncpasswd, err := generatePassword(8)
+		if err != nil {
+			return err
+		}
+		if err := a.driver.ChangeDisplayPassword(ctx, vncpasswd); err != nil {
+			return err
+		}
+		if err := os.WriteFile(vncpwdfile, []byte(vncpasswd), 0600); err != nil {
+			return err
+		}
+		if strings.Contains(vncoptions, "to=") {
+			vncport, err = a.driver.GetDisplayConnection(ctx)
+			if err != nil {
+				return err
+			}
+			p, err := strconv.Atoi(vncport)
+			if err != nil {
+				return err
+			}
+			vncnum = strconv.Itoa(p - 5900)
+			vncdisplay = net.JoinHostPort(vnchost, vncnum)
+		}
+		vncfile := filepath.Join(a.instDir, filenames.VNCDisplayFile)
+		if err := os.WriteFile(vncfile, []byte(vncdisplay), 0600); err != nil {
+			return err
+		}
+		vncurl := "vnc://:" + vncpasswd + "@" + net.JoinHostPort(vnchost, vncport)
+		logrus.Infof("VNC server running at <%s>", vncurl)
+		logrus.Infof("VNC Display: \"%s\" `%s`", vncdisplay, vncfile)
+		logrus.Infof("VNC Password: \"%s\" `%s`", vncpasswd, vncpwdfile)
 	}
 
 	stBase := events.Status{

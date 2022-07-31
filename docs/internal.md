@@ -56,6 +56,10 @@ SSH:
 - `ssh.sock`: SSH control master socket
 - `ssh.config`: SSH config file for `ssh -F`. Not consumed by Lima itself.
 
+VNC:
+- `vncdisplay`: VNC display host/port
+- `vncpassword`: VNC display password
+
 Guest agent:
 - `ga.sock`: Forwarded to `/run/lima-guestagent.sock` in the guest, via SSH
 
