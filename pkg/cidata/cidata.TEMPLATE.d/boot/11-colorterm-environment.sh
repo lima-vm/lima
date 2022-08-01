@@ -1,6 +1,12 @@
 #!/bin/sh
 set -eux
 
+# openSUSE Tumbleweed uses /etc/ssh/sshd_config.d, not /etc/ssh/sshd_config
+# TODO: support /etc/ssh/sshd_config.d
+if [ ! -e /etc/ssh/sshd_config ]; then
+	exit 0
+fi
+
 if grep -q "COLORTERM" /etc/ssh/sshd_config; then
 	exit 0
 fi

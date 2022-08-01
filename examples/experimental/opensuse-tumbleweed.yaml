@@ -1,0 +1,10 @@
+# This example requires Lima v0.11.3 or later
+images:
+# Hint: run `limactl prune` to invalidate the "Current" cache
+- location: https://download.opensuse.org/tumbleweed/appliances/openSUSE-Tumbleweed-JeOS.x86_64-OpenStack-Cloud.qcow2
+  arch: "x86_64"
+# No aarch64 OpenStack build found :(
+mounts:
+- location: "~"
+- location: "/tmp/lima"
+  writable: true
