@@ -40,6 +40,7 @@ Others:
 - [`experimental/rocky-9.yaml`](experimental/rocky-9.yaml): [experimental] Rocky Linux 9
 - [`experimental/oraclelinux-9.yaml`](experimental/oraclelinux-9.yaml): [experimental] Oracle Linux 9
 - [`experimental/centos-stream-9.yaml`](experimental/centos-stream-9.yaml): [experimental] CentOS Stream 9
+- [`experimental/opensuse-tumbleweed.yaml`](experimental/opensuse-tumbleweed.yaml): [experimental] openSUSE Tumbleweed
 - [`experimental/9p.yaml`](experimental/9p.yaml): [experimental] use 9p mount type
 - [`experimental/riscv64.yaml`](experimental/riscv64.yaml): [experimental] RISC-V
 - [`experimental/apptainer.yaml`](./experimental/apptainer.yaml): [experimental] [Apptainer](https://apptainer.org/)
