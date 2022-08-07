@@ -23,7 +23,7 @@ if [ "${LIMA_CIDATA_UDP_DNS_LOCAL_PORT}" -ne 0 ] || [ "${LIMA_CIDATA_TCP_DNS_LOC
 fi
 
 # Install minimum dependencies
-if command -v apt-get >/dev/null 2>&1; then
+if hexdump -C -n 4 "$(command -v apt-get)" | grep -qF 'ELF' >/dev/null 2>&1; then
 	pkgs=""
 	if [ "${LIMA_CIDATA_MOUNTTYPE}" = "reverse-sshfs" ]; then
 		if [ "${LIMA_CIDATA_MOUNTS}" -gt 0 ] && ! command -v sshfs >/dev/null 2>&1; then
