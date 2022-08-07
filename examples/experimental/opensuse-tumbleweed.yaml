@@ -3,7 +3,8 @@ images:
 # Hint: run `limactl prune` to invalidate the "Current" cache
 - location: https://download.opensuse.org/tumbleweed/appliances/openSUSE-Tumbleweed-JeOS.x86_64-OpenStack-Cloud.qcow2
   arch: "x86_64"
-# No aarch64 OpenStack build found :(
+- location: http://download.opensuse.org/ports/aarch64/tumbleweed/appliances/openSUSE-Tumbleweed-ARM-JeOS-efi.aarch64.qcow2
+  arch: "aarch64"
 mounts:
 - location: "~"
 - location: "/tmp/lima"
