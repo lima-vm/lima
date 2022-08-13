@@ -23,6 +23,11 @@ if [ "${LIMA_CIDATA_UDP_DNS_LOCAL_PORT}" -ne 0 ] || [ "${LIMA_CIDATA_TCP_DNS_LOC
 fi
 
 # Install minimum dependencies
+# apt-get detected through the first bytes of apt-get binary to ensure we're
+# matching to an actual binary and not a wrapper script. This case is an issue
+# on OpenSuse which wraps its own package manager in to a script named apt-get
+# to mimic certain options but doesn't offer full parameters compatibility
+# See : https://github.com/lima-vm/lima/pull/1014
 if hexdump -C -n 4 "$(command -v apt-get)" | grep -qF 'ELF' >/dev/null 2>&1; then
 	pkgs=""
 	if [ "${LIMA_CIDATA_MOUNTTYPE}" = "reverse-sshfs" ]; then
