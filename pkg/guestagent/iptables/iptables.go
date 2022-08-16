@@ -20,8 +20,10 @@ type Entry struct {
 // This regex can detect a line in the iptables added by portmap to do the
 // forwarding. The following two are examples of lines (notice that one has the
 // destination IP and the other does not):
-//    -A CNI-DN-2e2f8d5b91929ef9fc152 -d 127.0.0.1/32 -p tcp -m tcp --dport 8081 -j DNAT --to-destination 10.4.0.7:80
-//    -A CNI-DN-04579c7bb67f4c3f6cca0 -p tcp -m tcp --dport 8082 -j DNAT --to-destination 10.4.0.10:80
+//
+//	-A CNI-DN-2e2f8d5b91929ef9fc152 -d 127.0.0.1/32 -p tcp -m tcp --dport 8081 -j DNAT --to-destination 10.4.0.7:80
+//	-A CNI-DN-04579c7bb67f4c3f6cca0 -p tcp -m tcp --dport 8082 -j DNAT --to-destination 10.4.0.10:80
+//
 // The -A on the front is to amend the rule that was already created. portmap
 // ensures the rule is created before creating this line so it is always -A.
 // CNI-DN- is the prefix used for rule for an individual container.

@@ -70,10 +70,10 @@ func MACAddress(uniqueID string) string {
 // matching rule terminates the search).
 //
 // Exceptions:
-// - Mounts are appended in d, y, o order, but "merged" when the Location matches a previous entry;
-//   the highest priority Writable setting wins.
-// - DNS are picked from the highest priority where DNS is not empty.
-// - CACertificates Files and Certs are uniquely appended
+//   - Mounts are appended in d, y, o order, but "merged" when the Location matches a previous entry;
+//     the highest priority Writable setting wins.
+//   - DNS are picked from the highest priority where DNS is not empty.
+//   - CACertificates Files and Certs are uniquely appended
 func FillDefault(y, d, o *LimaYAML, filePath string) {
 	if y.Arch == nil {
 		y.Arch = d.Arch
