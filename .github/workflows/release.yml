@@ -12,7 +12,7 @@ env:
 jobs:
   artifacts-darwin:
     name: Artifacts Darwin
-    runs-on: macos-11
+    runs-on: macos-12
     timeout-minutes: 20
     steps:
     - uses: actions/setup-go@v3
@@ -29,7 +29,7 @@ jobs:
         name: artifacts-darwin
         path: _artifacts/
   release:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: artifacts-darwin
     timeout-minutes: 20
     steps:
