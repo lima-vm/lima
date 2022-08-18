@@ -20,6 +20,7 @@ Distro:
 
 Container engines:
 - [`docker.yaml`](./docker.yaml): Docker
+- [`docker-rootful.yaml`](./docker-rootful.yaml): Docker (rootful)
 - [`podman.yaml`](./podman.yaml): Podman
 - [`singularity.yaml`](./singularity.yaml): Singularity
 - LXD is installed in the default Ubuntu template, so there is no `lxd.yaml`
