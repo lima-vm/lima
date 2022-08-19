@@ -19,11 +19,21 @@ func newSudoersCommand() *cobra.Command {
 		networksMD = filepath.Join(prefixDir, "share/doc/lima/docs/network.md")
 	}
 	sudoersCommand := &cobra.Command{
-		Use:   "sudoers [SUDOERSFILE]",
-		Short: "Generate /etc/sudoers.d/lima file for enabling vmnet.framework support",
-		Long:  fmt.Sprintf("Generate /etc/sudoers.d/lima file for enabling vmnet.framework support.\nSee %s for the usage.", networksMD),
-		Args:  cobra.MaximumNArgs(1),
-		RunE:  sudoersAction,
+		Use: "sudoers [--check [SUDOERSFILE-TO-CHECK]]",
+		Example: `
+To generate the /etc/sudoers.d/lima file:
+$ limactl sudoers | sudo tee /etc/sudoers.d/lima
+
+To validate the existing /etc/sudoers.d/lima file:
+$ limactl sudoers --check /etc/sudoers.d/lima
+`,
+		Short: "Generate the content of the /etc/sudoers.d/lima file",
+		Long: fmt.Sprintf(`Generate the content of the /etc/sudoers.d/lima file for enabling vmnet.framework support.
+The content is written to stdout, NOT to the file.
+This command must not run as the root.
+See %s for the usage.`, networksMD),
+		Args: cobra.MaximumNArgs(1),
+		RunE: sudoersAction,
 	}
 	configFile, _ := networks.ConfigFile()
 	sudoersCommand.Flags().Bool("check", false,
@@ -41,6 +51,14 @@ func sudoersAction(cmd *cobra.Command, args []string) error {
 	}
 	if check {
 		return verifySudoAccess(args)
+	}
+	switch len(args) {
+	case 0:
+		// NOP
+	case 1:
+		return fmt.Errorf("the file argument can be specified only for --check mode")
+	default:
+		return fmt.Errorf("unexpected arguments %v", args)
 	}
 	sudoers, err := networks.Sudoers()
 	if err != nil {
