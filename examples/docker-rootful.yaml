@@ -1,0 +1,84 @@
+# Example to use Docker (rootful) instead of containerd & nerdctl
+# $ limactl start ./docker-rootful.yaml
+# $ limactl shell docker-roootful docker run -it -v $HOME:$HOME --rm alpine
+
+# To run `docker` on the host (assumes docker-cli is installed):
+# $ export DOCKER_HOST=$(limactl list docker-rootful --format 'unix://{{.Dir}}/sock/docker.sock')
+# $ docker ...
+
+# This example requires Lima v0.8.0 or later
+images:
+# Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
+- location: "https://cloud-images.ubuntu.com/releases/22.04/release-20220712/ubuntu-22.04-server-cloudimg-amd64.img"
+  arch: "x86_64"
+  digest: "sha256:86481acb9dbd62e3e93b49eb19a40c66c8aa07f07eff10af20ddf355a317e29f"
+- location: "https://cloud-images.ubuntu.com/releases/22.04/release-20220712/ubuntu-22.04-server-cloudimg-arm64.img"
+  arch: "aarch64"
+  digest: "sha256:e1ce033239f0038dca5ef09e582762ba0d0dfdedc1d329bc51bb0e9f5057af9d"
+# Fallback to the latest release image.
+# Hint: run `limactl prune` to invalidate the cache
+- location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-amd64.img"
+  arch: "x86_64"
+- location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-arm64.img"
+  arch: "aarch64"
+
+mounts:
+- location: "~"
+- location: "/tmp/lima"
+  writable: true
+# containerd is managed by Docker, not by Lima, so the values are set to false here.
+containerd:
+  system: false
+  user: false
+provision:
+- mode: system
+  # This script defines the host.docker.internal hostname when hostResolver is disabled.
+  # It is also needed for lima 0.8.2 and earlier, which does not support hostResolver.hosts.
+  # Names defined in /etc/hosts inside the VM are not resolved inside containers when
+  # using the hostResolver; use hostResolver.hosts instead (requires lima 0.8.3 or later).
+  script: |
+    #!/bin/sh
+    sed -i 's/host.lima.internal.*/host.lima.internal host.docker.internal/' /etc/hosts
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    command -v docker >/dev/null 2>&1 && exit 0
+    if [ ! -e /etc/systemd/system/docker.socket.d/override.conf ]; then
+      mkdir -p /etc/systemd/system/docker.socket.d
+      # Alternatively we could just add the user to the "docker" group, but that requires restarting the user session
+      cat <<-EOF >/etc/systemd/system/docker.socket.d/override.conf
+      [Socket]
+      SocketUser=${LIMA_CIDATA_USER}
+    EOF
+    fi
+    export DEBIAN_FRONTEND=noninteractive
+    curl -fsSL https://get.docker.com | sh
+probes:
+- script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    if ! timeout 30s bash -c "until command -v docker >/dev/null 2>&1; do sleep 3; done"; then
+      echo >&2 "docker is not installed yet"
+      exit 1
+    fi
+    if ! timeout 30s bash -c "until pgrep dockerd; do sleep 3; done"; then
+      echo >&2 "dockerd is not running"
+      exit 1
+    fi
+  hint: See "/var/log/cloud-init-output.log". in the guest
+hostResolver:
+  # hostResolver.hosts requires lima 0.8.3 or later. Names defined here will also
+  # resolve inside containers, and not just inside the VM itself.
+  hosts:
+    host.docker.internal: host.lima.internal
+portForwards:
+- guestSocket: "/var/run/docker.sock"
+  hostSocket: "{{.Dir}}/sock/docker.sock"
+message: |
+  To run `docker` on the host (assumes docker-cli is installed), run the following commands:
+  ------
+  docker context create lima-{{.Name}} --docker "host=unix://{{.Dir}}/sock/docker.sock"
+  docker context use lima-{{.Name}}
+  docker run hello-world
+  ------
