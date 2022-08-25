@@ -50,8 +50,8 @@ github.com/diskfs/go-diskfs v1.2.0 h1:Ow4xorEDw1VNYKbC+SA/qQNwi5gWIwdKUxmUcLFST2
 github.com/diskfs/go-diskfs v1.2.0/go.mod h1:ZTeTbzixuyfnZW5y5qKMtjV2o+GLLHo1KfMhotJI4Rk=
 github.com/docker/go-units v0.4.0 h1:3uh0PgVws3nIA0Q+MwDC8yjEPf9zjRfZZWXZYDct3Tw=
 github.com/docker/go-units v0.4.0/go.mod h1:fgPhTUdO+D/Jk86RDLlptpiXQzgHJF7gydDDbaIK4Dk=
-github.com/elastic/go-libaudit/v2 v2.3.1 h1:BCPhB3BZTl2YBPJy3XHIu4DFfbbbWEmLMLlK/aJ7U/0=
-github.com/elastic/go-libaudit/v2 v2.3.1/go.mod h1:+ZE0czqmbqtnRkl0fNgpI+HvVVRo/ZMJdcXv/PaKcOo=
+github.com/elastic/go-libaudit/v2 v2.3.2 h1:qWNcA3nkwNEGh1UBDbDTVF55KR6SM1W2Ji1LGDqFEpw=
+github.com/elastic/go-libaudit/v2 v2.3.2/go.mod h1:+ZE0czqmbqtnRkl0fNgpI+HvVVRo/ZMJdcXv/PaKcOo=
 github.com/envoyproxy/go-control-plane v0.9.0/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/go-control-plane v0.9.1-0.20191026205805-5f8ba28d4473/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/go-control-plane v0.9.4/go.mod h1:6rpuAdCZL397s3pYoYcLgu1mIlRU8Am5FuJP05cCM98=
