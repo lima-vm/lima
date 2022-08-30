@@ -32,14 +32,14 @@ mounts: []
 containerd:
   system: true
   user: false
-# See https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/
 provision:
+# See <https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/>
 - mode: system
   script: |
     #!/bin/bash
     set -eux -o pipefail
     command -v kubeadm >/dev/null 2>&1 && exit 0
-    # Installing kubeadm on your hosts
+    # Install and configure prerequisites
     cat <<EOF | sudo tee /etc/modules-load.d/containerd.conf
     overlay
     br_netfilter
@@ -52,6 +52,7 @@ provision:
     net.bridge.bridge-nf-call-ip6tables = 1
     EOF
     sysctl --system
+    # Installing kubeadm, kubelet and kubectl
     export DEBIAN_FRONTEND=noninteractive
     apt-get update
     apt-get install -y apt-transport-https ca-certificates curl
@@ -69,16 +70,19 @@ provision:
     rm -f /etc/cni/net.d/*.conf*
     apt-get install -y kubelet kubeadm kubectl && apt-mark hold kubelet kubeadm kubectl
     systemctl enable --now kubelet
+# See <https://kubernetes.io/docs/setup/production-environment/container-runtimes/>
 - mode: system
   script: |
     #!/bin/bash
     set -eux -o pipefail
     grep SystemdCgroup /etc/containerd/config.toml && exit 0
     grep "version = 2" /etc/containerd/config.toml || exit 1
-    # Configuring a cgroup driver
+    # Configuring the systemd cgroup driver
+    # Overriding the sandbox (pause) image
     cat <<EOF >>/etc/containerd/config.toml
       [plugins]
         [plugins."io.containerd.grpc.v1.cri"]
+          sandbox_image = "$(kubeadm config images list | grep pause | sort -r | head -n1)"
           [plugins."io.containerd.grpc.v1.cri".containerd]
             [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]
               [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
@@ -87,6 +91,7 @@ provision:
                   SystemdCgroup = true
     EOF
     systemctl restart containerd
+# See <https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/>
 - mode: system
   script: |
     #!/bin/bash
