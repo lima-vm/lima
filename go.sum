@@ -48,8 +48,8 @@ github.com/digitalocean/go-qemu v0.0.0-20210326154740-ac9e0b687001 h1:WAg57gnaAW
 github.com/digitalocean/go-qemu v0.0.0-20210326154740-ac9e0b687001/go.mod h1:IetBE52JfFxK46p2n2Rqm+p5Gx1gpu2hRHsrbnPOWZQ=
 github.com/diskfs/go-diskfs v1.2.0 h1:Ow4xorEDw1VNYKbC+SA/qQNwi5gWIwdKUxmUcLFST24=
 github.com/diskfs/go-diskfs v1.2.0/go.mod h1:ZTeTbzixuyfnZW5y5qKMtjV2o+GLLHo1KfMhotJI4Rk=
-github.com/docker/go-units v0.4.0 h1:3uh0PgVws3nIA0Q+MwDC8yjEPf9zjRfZZWXZYDct3Tw=
-github.com/docker/go-units v0.4.0/go.mod h1:fgPhTUdO+D/Jk86RDLlptpiXQzgHJF7gydDDbaIK4Dk=
+github.com/docker/go-units v0.5.0 h1:69rxXcBk27SvSaaxTtLh/8llcHD8vYHT7WSdRZ/jvr4=
+github.com/docker/go-units v0.5.0/go.mod h1:fgPhTUdO+D/Jk86RDLlptpiXQzgHJF7gydDDbaIK4Dk=
 github.com/elastic/go-libaudit/v2 v2.3.2 h1:qWNcA3nkwNEGh1UBDbDTVF55KR6SM1W2Ji1LGDqFEpw=
 github.com/elastic/go-libaudit/v2 v2.3.2/go.mod h1:+ZE0czqmbqtnRkl0fNgpI+HvVVRo/ZMJdcXv/PaKcOo=
 github.com/envoyproxy/go-control-plane v0.9.0/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
