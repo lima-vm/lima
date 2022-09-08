@@ -15,6 +15,7 @@ require (
 	github.com/docker/go-units v0.5.0
 	github.com/elastic/go-libaudit/v2 v2.3.2
 	github.com/foxcpp/go-mockdns v1.0.0
+	github.com/goccy/go-yaml v1.9.5
 	github.com/google/go-cmp v0.5.8
 	github.com/gorilla/mux v1.8.0
 	github.com/hashicorp/go-multierror v1.1.1
@@ -31,7 +32,6 @@ require (
 	github.com/xorcare/pointer v1.2.1
 	github.com/yalue/native_endian v1.0.2
 	golang.org/x/sys v0.0.0-20220811171246-fbc7d0a398ab
-	gopkg.in/yaml.v2 v2.4.0
 	gotest.tools/v3 v3.3.0
 )
 
@@ -46,11 +46,9 @@ require (
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
 	github.com/kr/fs v0.1.0 // indirect
-	github.com/kr/text v0.2.0 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-runewidth v0.0.12 // indirect
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
-	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
 	github.com/pkg/sftp v1.13.4 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
@@ -67,7 +65,6 @@ require (
 	google.golang.org/genproto v0.0.0-20211208223120-3a66f561d7aa // indirect
 	google.golang.org/grpc v1.43.0 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
-	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	gopkg.in/djherbis/times.v1 v1.2.0 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 )
