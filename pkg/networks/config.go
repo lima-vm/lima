@@ -9,9 +9,9 @@ import (
 	"runtime"
 	"sync"
 
+	"github.com/goccy/go-yaml"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/store/filenames"
-	"gopkg.in/yaml.v2"
 )
 
 //go:embed networks.yaml
@@ -19,7 +19,7 @@ var defaultConfig []byte
 
 func DefaultConfig() (NetworksConfig, error) {
 	var config NetworksConfig
-	err := yaml.Unmarshal(defaultConfig, &config)
+	err := yaml.UnmarshalWithOptions(defaultConfig, &config, yaml.Strict())
 	return config, err
 }
 
@@ -66,7 +66,7 @@ func loadCache() {
 		if cache.err != nil {
 			return
 		}
-		cache.err = yaml.Unmarshal(b, &cache.config)
+		cache.err = yaml.UnmarshalWithOptions(b, &cache.config, yaml.Strict())
 		if cache.err != nil {
 			cache.err = fmt.Errorf("cannot parse %q: %w", configFile, cache.err)
 		}
