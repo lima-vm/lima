@@ -16,7 +16,7 @@ require (
 	github.com/elastic/go-libaudit/v2 v2.3.2
 	github.com/foxcpp/go-mockdns v1.0.0
 	github.com/goccy/go-yaml v1.9.5
-	github.com/google/go-cmp v0.5.8
+	github.com/google/go-cmp v0.5.9
 	github.com/gorilla/mux v1.8.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/intel-go/cpuid v0.0.0-20220614022739-219e067757cb
