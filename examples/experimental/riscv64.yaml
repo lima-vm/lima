@@ -2,7 +2,7 @@
 
 arch: "riscv64"
 images:
-- location: "https://cloud-images.ubuntu.com/releases/22.04/release-20220712/ubuntu-22.04-server-cloudimg-riscv64.img"
+- location: "https://cloud-images.ubuntu.com/releases/22.04/release-20220902/ubuntu-22.04-server-cloudimg-riscv64.img"
   digest: "sha256:c9c436b7734a53a7d4edb3ff9ccecd60c8484675302d1a4903775152a44170bd"
   kernel:
     # Extracted from http://http.us.debian.org/debian/pool/main/u/u-boot/u-boot-qemu_2022.04+dfsg-2_all.deb (GPL-2.0)
