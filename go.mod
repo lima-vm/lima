@@ -3,7 +3,7 @@ module github.com/lima-vm/lima
 go 1.19
 
 require (
-	github.com/AlecAivazis/survey/v2 v2.3.5
+	github.com/AlecAivazis/survey/v2 v2.3.6
 	github.com/alessio/shellescape v1.4.1
 	github.com/cheggaaa/pb/v3 v3.1.0
 	github.com/containerd/containerd v1.6.8
