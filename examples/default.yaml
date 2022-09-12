@@ -217,12 +217,13 @@ video:
   display: null
 
 # The instance can get routable IP addresses from the vmnet framework using
-# https://github.com/lima-vm/vde_vmnet.
+# https://github.com/lima-vm/socket_vmnet.
 # 🟢 Builtin default: null
 networks:
 # Lima can manage daemons for networks defined in $LIMA_HOME/_config/networks.yaml
-# automatically. Both vde_switch and vde_vmnet binaries must be installed into
+# automatically. The socket_vmnet binary must be installed into
 # secure locations only alterable by the "root" user.
+# The same applies to vde_switch and vde_vmnet for the deprecated VDE mode.
 # - lima: shared
 #   # MAC address of the instance; lima will pick one based on the instance name,
 #   # so DHCP assigned ip addresses should remain constant over instance restarts.
@@ -230,12 +231,15 @@ networks:
 #   # Interface name, defaults to "lima0", "lima1", etc.
 #   interface: ""
 #
-# Lima can also connect to "unmanaged" vde networks addressed by "vnl". This
+# Lima can also connect to "unmanaged" networks addressed by "socket". This
 # means that the daemons will not be controlled by Lima, but must be started
 # before the instance.  The interface type (host, shared, or bridged) is
-# configured in vde_vmnet and not in lima.
+# configured in socket_vmnet and not in lima.
+# - socket: "/var/run/socket_vmnet"
+
 # vnl (virtual network locator) points to the vde_switch socket directory,
 # optionally with vde:// prefix
+# ⚠️  vnl is deprecated, use socket.
 # - vnl: "vde:///var/run/vde.ctl"
 #   # VDE Switch port number (not TCP/UDP port number). Set to 65535 for PTP mode.
 #   # Builtin default: 0

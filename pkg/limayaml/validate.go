@@ -278,10 +278,13 @@ func validateNetwork(y LimaYAML, warn bool) error {
 			if runtime.GOOS != "darwin" {
 				return fmt.Errorf("field `%s.lima` is only supported on macOS right now", field)
 			}
-			if nw.VNL != "" {
+			if nw.Socket != "" {
+				return fmt.Errorf("field `%s.lima` and field `%s.socket` are mutually exclusive", field, field)
+			}
+			if nw.VNLDeprecated != "" {
 				return fmt.Errorf("field `%s.lima` and field `%s.vnl` are mutually exclusive", field, field)
 			}
-			if nw.SwitchPort != 0 {
+			if nw.SwitchPortDeprecated != 0 {
 				return fmt.Errorf("field `%s.switchPort` cannot be used with field `%s.lima`", field, field)
 			}
 			config, err := networks.Config()
@@ -291,15 +294,27 @@ func validateNetwork(y LimaYAML, warn bool) error {
 			if config.Check(nw.Lima) != nil {
 				return fmt.Errorf("field `%s.lima` references network %q which is not defined in networks.yaml", field, nw.Lima)
 			}
+		} else if nw.Socket != "" {
+			if nw.VNLDeprecated != "" {
+				return fmt.Errorf("field `%s.socket` and field `%s.vnl` are mutually exclusive", field, field)
+			}
+			if nw.SwitchPortDeprecated != 0 {
+				return fmt.Errorf("field `%s.switchPort` cannot be used with field `%s.socket`", field, field)
+			}
+			if fi, err := os.Stat(nw.Socket); err != nil && !errors.Is(err, os.ErrNotExist) {
+				return err
+			} else if err == nil && fi.Mode()&os.ModeSocket == 0 {
+				return fmt.Errorf("field `%s.socket` %q points to a non-socket file", field, nw.Socket)
+			}
 		} else {
-			if nw.VNL == "" {
-				return fmt.Errorf("field `%s.lima` or field `%s.vnl` must be set", field, field)
+			if nw.VNLDeprecated == "" {
+				return fmt.Errorf("field `%s.lima`, field `%s.socket`, or field `%s.vnl` must be set", field, field, field)
 			}
 			// The field is called VDE.VNL in anticipation of QEMU upgrading VDE2 to VDEplug4,
 			// but right now the only valid value on macOS is a path to the vde_switch socket directory,
 			// optionally with vde:// prefix.
-			if !strings.Contains(nw.VNL, "://") || strings.HasPrefix(nw.VNL, "vde://") {
-				vdeSwitch := strings.TrimPrefix(nw.VNL, "vde://")
+			if !strings.Contains(nw.VNLDeprecated, "://") || strings.HasPrefix(nw.VNLDeprecated, "vde://") {
+				vdeSwitch := strings.TrimPrefix(nw.VNLDeprecated, "vde://")
 				if fi, err := os.Stat(vdeSwitch); err != nil {
 					// negligible when the instance is stopped
 					logrus.WithError(err).Debugf("field `%s.vnl` %q failed stat", field, vdeSwitch)
@@ -313,7 +328,7 @@ func validateNetwork(y LimaYAML, warn bool) error {
 								return fmt.Errorf("field `%s.vnl` file %q is not a UNIX socket", field, ctlSocket)
 							}
 						}
-						if nw.SwitchPort == 65535 {
+						if nw.SwitchPortDeprecated == 65535 {
 							return fmt.Errorf("field `%s.vnl` points to a non-PTP switch, so the port number must not be 65535", field)
 						}
 					} else {
@@ -321,9 +336,9 @@ func validateNetwork(y LimaYAML, warn bool) error {
 						if fi.Mode()&os.ModeSocket == 0 {
 							return fmt.Errorf("field `%s.vnl` %q is not a directory nor a UNIX socket", field, vdeSwitch)
 						}
-						if nw.SwitchPort != 65535 {
+						if nw.SwitchPortDeprecated != 65535 {
 							return fmt.Errorf("field `%s.vnl` points to a PTP (switchless) socket %q, so the port number has to be 65535 (got %d)",
-								field, vdeSwitch, nw.SwitchPort)
+								field, vdeSwitch, nw.SwitchPortDeprecated)
 						}
 					}
 				}
