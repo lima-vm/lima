@@ -290,7 +290,7 @@ func (a *qArgTemplateApplier) applyTemplate(qArg string) (string, error) {
 	}
 	var b bytes.Buffer
 	if err := tmpl.Execute(&b, nil); err != nil {
-		return "", nil
+		return "", err
 	}
 	return b.String(), nil
 }
