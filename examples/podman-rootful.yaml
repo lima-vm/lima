@@ -1,0 +1,70 @@
+# Example to use Podman instead of containerd & nerdctl
+# $ limactl start ./podman-rootful.yaml
+# $ limactl shell podman-rootful sudo podman run -it -v $HOME:$HOME --rm docker.io/library/alpine
+
+# To run `podman` on the host (assumes podman-remote is installed):
+# $ export CONTAINER_HOST=$(limactl list podman-rootful --format 'unix://{{.Dir}}/sock/podman.sock')
+# $ podman --remote ...
+
+# To run `docker` on the host (assumes docker-cli is installed):
+# $ export DOCKER_HOST=$(limactl list podman-rootful --format 'unix://{{.Dir}}/sock/podman.sock')
+# $ docker ...
+
+# This example requires Lima v0.8.0 or later
+images:
+- location: "https://download.fedoraproject.org/pub/fedora/linux/releases/36/Cloud/x86_64/images/Fedora-Cloud-Base-36-1.5.x86_64.qcow2"
+  arch: "x86_64"
+  digest: "sha256:ca9e514cc2f4a7a0188e7c68af60eb4e573d2e6850cc65b464697223f46b4605"
+- location: "https://download.fedoraproject.org/pub/fedora/linux/releases/36/Cloud/aarch64/images/Fedora-Cloud-Base-36-1.5.aarch64.qcow2"
+  arch: "aarch64"
+  digest: "sha256:5c0e7e99b0c542cb2155cd3b52bbf51a42a65917e52d37df457d1e9759b37512"
+
+mounts:
+- location: "~"
+- location: "/tmp/lima"
+  writable: true
+containerd:
+  system: false
+  user: false
+provision:
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    command -v podman >/dev/null 2>&1 && exit 0
+    if [ ! -e /etc/systemd/system/podman.socket.d/override.conf ]; then
+      mkdir -p /etc/systemd/system/podman.socket.d
+      cat <<-EOF >/etc/systemd/system/podman.socket.d/override.conf
+      [Socket]
+      SocketUser=${LIMA_CIDATA_USER}
+    EOF
+    fi
+    if [ ! -e /etc/tmpfiles.d/podman.conf ]; then
+      mkdir -p /etc/tmpfiles.d
+      echo "d /run/podman 0700 ${LIMA_CIDATA_USER} -" > /etc/tmpfiles.d/podman.conf
+    fi
+    dnf -y install podman
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    systemctl --system enable --now podman.socket
+probes:
+- script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    if ! timeout 30s bash -c "until command -v podman >/dev/null 2>&1; do sleep 3; done"; then
+      echo >&2 "podman is not installed yet"
+      exit 1
+    fi
+  hint: See "/var/log/cloud-init-output.log" in the guest
+portForwards:
+- guestSocket: "/run/podman/podman.sock"
+  hostSocket: "{{.Dir}}/sock/podman.sock"
+message: |
+  To run `podman` on the host (assumes podman-remote is installed), run the following commands:
+  ------
+  podman system connection add lima-{{.Name}} "unix://{{.Dir}}/sock/podman.sock"
+  podman system connection default lima-{{.Name}}
+  podman{{if eq .HostOS "linux"}} --remote{{end}} run quay.io/podman/hello
+  ------
