@@ -112,6 +112,7 @@ func newApp() *cobra.Command {
 		newDiskCommand(),
 		newUsernetCommand(),
 		newGenManCommand(),
+		newSnapshotCommand(),
 	)
 	return rootCmd
 }

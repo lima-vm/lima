@@ -21,6 +21,7 @@ import (
 	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/networks/usernet"
+	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/sirupsen/logrus"
 )
@@ -263,6 +264,42 @@ func logPipeRoutine(r io.Reader, header string) {
 		line := scanner.Text()
 		logrus.Debugf("%s: %s", header, line)
 	}
+}
+
+func (l *LimaQemuDriver) DeleteSnapshot(ctx context.Context, tag string) error {
+	qCfg := Config{
+		Name:        l.Instance.Name,
+		InstanceDir: l.Instance.Dir,
+		LimaYAML:    l.Yaml,
+	}
+	return Del(qCfg, l.Instance.Status == store.StatusRunning, tag)
+}
+
+func (l *LimaQemuDriver) CreateSnapshot(ctx context.Context, tag string) error {
+	qCfg := Config{
+		Name:        l.Instance.Name,
+		InstanceDir: l.Instance.Dir,
+		LimaYAML:    l.Yaml,
+	}
+	return Save(qCfg, l.Instance.Status == store.StatusRunning, tag)
+}
+
+func (l *LimaQemuDriver) ApplySnapshot(ctx context.Context, tag string) error {
+	qCfg := Config{
+		Name:        l.Instance.Name,
+		InstanceDir: l.Instance.Dir,
+		LimaYAML:    l.Yaml,
+	}
+	return Load(qCfg, l.Instance.Status == store.StatusRunning, tag)
+}
+
+func (l *LimaQemuDriver) ListSnapshots(ctx context.Context) (string, error) {
+	qCfg := Config{
+		Name:        l.Instance.Name,
+		InstanceDir: l.Instance.Dir,
+		LimaYAML:    l.Yaml,
+	}
+	return List(qCfg, l.Instance.Status == store.StatusRunning)
 }
 
 type qArgTemplateApplier struct {

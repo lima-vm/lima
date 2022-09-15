@@ -2,6 +2,7 @@ package driver
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/store"
@@ -19,6 +20,14 @@ type Driver interface {
 	ChangeDisplayPassword(_ context.Context, password string) error
 
 	GetDisplayConnection(_ context.Context) (string, error)
+
+	CreateSnapshot(_ context.Context, tag string) error
+
+	ApplySnapshot(_ context.Context, tag string) error
+
+	DeleteSnapshot(_ context.Context, tag string) error
+
+	ListSnapshots(_ context.Context) (string, error)
 }
 
 type BaseDriver struct {
@@ -50,4 +59,20 @@ func (d *BaseDriver) ChangeDisplayPassword(_ context.Context, password string) e
 
 func (d *BaseDriver) GetDisplayConnection(_ context.Context) (string, error) {
 	return "", nil
+}
+
+func (d *BaseDriver) CreateSnapshot(_ context.Context, _ string) error {
+	return fmt.Errorf("unimplemented")
+}
+
+func (d *BaseDriver) ApplySnapshot(_ context.Context, _ string) error {
+	return fmt.Errorf("unimplemented")
+}
+
+func (d *BaseDriver) DeleteSnapshot(_ context.Context, _ string) error {
+	return fmt.Errorf("unimplemented")
+}
+
+func (d *BaseDriver) ListSnapshots(_ context.Context) (string, error) {
+	return "", fmt.Errorf("unimplemented")
 }
