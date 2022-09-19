@@ -135,6 +135,13 @@ jobs:
         retry_on: error
         max_attempts: 3
         command: ./hack/test-example.sh examples/experimental/9p.yaml
+    - name: "Test disk.yaml"
+      uses: nick-invision/retry@v2
+      with:
+        timeout_minutes: 30
+        retry_on: error
+        max_attempts: 3
+        command: ./hack/test-example.sh examples/disk.yaml
     # GHA macOS is slow and flaky, so we only test a few YAMLS here.
     # Other yamls are tested on Linux instances of Cirrus.
 

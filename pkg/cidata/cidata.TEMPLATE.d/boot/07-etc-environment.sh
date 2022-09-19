@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eux
 
-# /etc/environment must be written after 05-persistent-data-volume.sh has run to
+# /etc/environment must be written after 04-persistent-data-volume.sh has run to
 # make sure the changes on a restart are applied to the persisted version.
 
 if [ -e /etc/environment ]; then

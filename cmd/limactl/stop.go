@@ -113,6 +113,17 @@ func stopInstanceForcibly(inst *store.Instance) {
 		logrus.Info("The QEMU process seems already stopped")
 	}
 
+	for _, diskName := range inst.AdditionalDisks {
+		disk, err := store.InspectDisk(diskName)
+		if err != nil {
+			logrus.Warnf("Disk %q does not exist", diskName)
+			continue
+		}
+		if err := disk.Unlock(); err != nil {
+			logrus.Warnf("Failed to unlock disk %q. To use, run `limactl disk unlock %v`", diskName, diskName)
+		}
+	}
+
 	if inst.HostAgentPID > 0 {
 		logrus.Infof("Sending SIGKILL to the host agent process %d", inst.HostAgentPID)
 		if err := osutil.SysKill(inst.HostAgentPID, osutil.SigKill); err != nil {

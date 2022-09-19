@@ -161,6 +161,8 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.Disk = pointer.String("100GiB")
 	}
 
+	y.AdditionalDisks = append(append(o.AdditionalDisks, y.AdditionalDisks...), d.AdditionalDisks...)
+
 	if y.Video.Display == nil {
 		y.Video.Display = d.Video.Display
 	}

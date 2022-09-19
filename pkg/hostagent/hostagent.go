@@ -466,6 +466,23 @@ func (a *HostAgent) startHostAgentRoutines(ctx context.Context) error {
 			return unmountMErr
 		})
 	}
+	if len(a.y.AdditionalDisks) > 0 {
+		a.onClose = append(a.onClose, func() error {
+			var unlockMErr error
+			for _, d := range a.y.AdditionalDisks {
+				disk, inspectErr := store.InspectDisk(d)
+				if inspectErr != nil {
+					unlockMErr = multierror.Append(unlockMErr, inspectErr)
+					continue
+				}
+				logrus.Infof("Unmounting disk %q", disk.Name)
+				if unlockErr := disk.Unlock(); unlockErr != nil {
+					unlockMErr = multierror.Append(unlockMErr, unlockErr)
+				}
+			}
+			return unlockMErr
+		})
+	}
 	go a.watchGuestAgentEvents(ctx)
 	if err := a.waitForRequirements(ctx, "optional", a.optionalRequirements()); err != nil {
 		mErr = multierror.Append(mErr, err)

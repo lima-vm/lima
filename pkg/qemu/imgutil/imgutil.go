@@ -12,6 +12,7 @@ import (
 // Info corresponds to the output of `qemu-img info --output=json FILE`
 type Info struct {
 	Format string `json:"format,omitempty"` // since QEMU 1.3
+	VSize  int64  `json:"virtual-size,omitempty"`
 }
 
 func GetInfo(f string) (*Info, error) {
