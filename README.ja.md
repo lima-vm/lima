@@ -1,8 +1,8 @@
-This is an *informal* translation of [`README.md` (revision 0aebc304, 2022-Apr-25)](https://github.com/lima-vm/lima/blob/0aebc304f8cdc65375f8bfca7414ced6397a4fcc/README.md) in Japanese.
+This is an *informal* translation of [`README.md` (revision df8bf9e7, 2022-Sep-23)](https://github.com/lima-vm/lima/blob/df8bf9e7ff198b01cd877ed425a73cbbaf8dec3b/README.md) in Japanese.
 This translation might be out of sync with the English version.
 Please refer to the [English `README.md`](README.md) for the latest information.
 
-[`README.md` (リビジョン 0aebc304, 2022年4月25日)](https://github.com/lima-vm/lima/blob/0aebc304f8cdc65375f8bfca7414ced6397a4fcc/README.md)の *非正式* な日本語訳です。
+[`README.md` (リビジョン df8bf9e7, 2022年9月23日)](https://github.com/lima-vm/lima/blob/df8bf9e7ff198b01cd877ed425a73cbbaf8dec3b/README.md)の *非正式* な日本語訳です。
 英語版からの翻訳が遅れていることがあります。
 最新の情報については[英語版 `README.md`](README.md)をご覧ください。
 
@@ -41,6 +41,8 @@ LimaはmacOSホストで使用されることを想定していますが、Linux
 
 このプロジェクトは[Limaドライバプロジェクト (ARM Mali GPUのためのドライバ)](https://gitlab.freedesktop.org/lima)とは無関係です。
 
+Limaに関する講演のスライド及びビデオへのリンクが[talks](docs/talks.md)のページにあります。
+
 ## 動機
 
 Limaの目的は、Macユーザに[nerdctl (contaiNERDctl)](https://github.com/containerd/nerdctl)を含め[containerd](https://containerd.io)を広めることです。が、Limaではコンテナでないアプリケーションも使用できます。
@@ -59,9 +61,12 @@ GUI:
 
 ### コミュニケーション方法
 - [GitHub Discussions](https://github.com/lima-vm/lima/discussions)
-- Rancher Users Slackで`#rancher-desktop`チャンネルと同居している`#lima`チャンネル( LimaはRancherのプロジェクトではありません )
-  - 新規アカウント: https://slack.rancher.io/
-  - ログイン: https://rancher-users.slack.com/
+- CNCF Slackの`#lima`チャンネル
+  - 新規アカウント: https://slack.cncf.io/
+  - ログイン: https://cloud-native.slack.com/
+
+### 行動規範
+Limaは[CNCF行動規範](https://github.com/cncf/foundation/blob/master/code-of-conduct.md)に従います。
 
 ## 例
 
@@ -438,7 +443,8 @@ M1のmacOSでは、最近のLinuxゲストを実行するには[Homebrew版のQE
 
 デフォルトのIP 192.168.5.15 はホストや他のゲストからアクセスできません。
 
-ホストや他の仮想マシンからアクセス可能な別のIPアドレスを追加するためには、[`vde_vmnet`](https://github.com/lima-vm/vde_vmnet)を有効にしてください。
+ホストや他の仮想マシンからアクセス可能な別のIPアドレスを追加するためには、[`socket_vmnet`](https://github.com/lima-vm/socket_vmnet) (Lima v0.12以降)
+または [`vde_vmnet`](https://github.com/lima-vm/vde_vmnet) (廃止予定) を有効にしてください。
 
 [`./docs/network.md`](./docs/network.md)を参照してください。
 
@@ -487,3 +493,11 @@ LIMA_HOME="$HOME/.local/share/rancher-desktop/lima" "$(ls -d /tmp/.mount_ranche*
   - `/var/log/cloud-init-output.log` (ゲスト内)
   - `/var/log/cloud-init.log` (ゲスト内)
 - YAML内にタブとスペースを混在させていないことを確認してください。
+
+- - -
+
+**私たちは [Cloud Native Computing Foundation](https://cncf.io/) sandbox project です。**
+
+<img src="https://www.cncf.io/wp-content/uploads/2022/07/cncf-color-bg.svg" width=300 />
+
+The Linux Foundation® (TLF) has registered trademarks and uses trademarks. For a list of TLF trademarks, see [Trademark Usage](https://www.linuxfoundation.org/trademark-usage/).

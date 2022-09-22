@@ -4,5 +4,5 @@ contact_links:
   url: https://github.com/lima-vm/lima/discussions
   about: We use GitHub Discussions for questions, GitHub issues for tracking bug reports and feature requests
 - name: Chat with Lima users and developers
-  url: https://slack.rancher.io/
-  about: Rancher Users slack has `#lima` channel, colocated with `#rancher-desktop` channel (Lima is not a Rancher project)
+  url: https://slack.cncf.io/
+  about: CNCF slack has `#lima` channel
