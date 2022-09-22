@@ -53,9 +53,9 @@ GUI:
 
 ### Communication channels
 - [GitHub Discussions](https://github.com/lima-vm/lima/discussions)
-- `#lima` channel, colocated with `#rancher-desktop` channel in Rancher Users Slack (Lima is not a Rancher project)
-  - New account: https://slack.rancher.io/
-  - Login: https://rancher-users.slack.com/
+- `#lima` channel in the CNCF Slack
+  - New account: https://slack.cncf.io/
+  - Login: https://cloud-native.slack.com/
 
 ### Code of Conduct
 Lima follows the [CNCF Code of Conduct](https://github.com/cncf/foundation/blob/master/code-of-conduct.md).
