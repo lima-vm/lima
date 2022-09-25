@@ -73,6 +73,7 @@ linters:
   # - stylecheck
   # - testpackage
   # - tparallel
+  - revive
   # - unconvert
   # - unparam
   - unused

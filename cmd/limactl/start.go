@@ -177,19 +177,18 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 				logrus.Infof("Hint: To create another instance, run the following command: limactl start --name=NAME template://default")
 			}
 			return inst, nil
-		} else {
-			if !errors.Is(err, os.ErrNotExist) {
-				return nil, err
-			}
-			if arg != "" && arg != DefaultInstanceName {
-				logrus.Infof("Creating an instance %q from template://default (Not from template://%s)", st.instName, st.instName)
-				logrus.Warnf("This form is deprecated. Use `limactl start --name=%s template://default` instead", st.instName)
-			}
-			// Read the default template for creating a new instance
-			st.yBytes, err = readDefaultTemplate()
-			if err != nil {
-				return nil, err
-			}
+		}
+		if !errors.Is(err, os.ErrNotExist) {
+			return nil, err
+		}
+		if arg != "" && arg != DefaultInstanceName {
+			logrus.Infof("Creating an instance %q from template://default (Not from template://%s)", st.instName, st.instName)
+			logrus.Warnf("This form is deprecated. Use `limactl start --name=%s template://default` instead", st.instName)
+		}
+		// Read the default template for creating a new instance
+		st.yBytes, err = readDefaultTemplate()
+		if err != nil {
+			return nil, err
 		}
 	}
 

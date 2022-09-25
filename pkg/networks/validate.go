@@ -12,7 +12,7 @@ import (
 	"github.com/lima-vm/lima/pkg/osutil"
 )
 
-func (config *NetworksConfig) Validate() error {
+func (config *YAML) Validate() error {
 	// validate all paths.* values
 	paths := reflect.ValueOf(&config.Paths).Elem()
 	pathsMap := make(map[string]string, paths.NumField())

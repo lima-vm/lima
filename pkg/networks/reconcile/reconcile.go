@@ -54,7 +54,7 @@ func Reconcile(ctx context.Context, newInst string) error {
 	for name := range config.Networks {
 		var err error
 		if activeNetwork[name] {
-			err = startNetwork(&config, ctx, name)
+			err = startNetwork(ctx, &config, name)
 		} else {
 			err = stopNetwork(&config, name)
 		}
@@ -80,7 +80,7 @@ func sudo(user, group, command string) error {
 	return nil
 }
 
-func makeVarRun(config *networks.NetworksConfig) error {
+func makeVarRun(config *networks.YAML) error {
 	err := sudo("root", "wheel", config.MkdirCmd())
 	if err != nil {
 		return err
@@ -109,7 +109,7 @@ func makeVarRun(config *networks.NetworksConfig) error {
 	return nil
 }
 
-func startDaemon(config *networks.NetworksConfig, ctx context.Context, name, daemon string) error {
+func startDaemon(ctx context.Context, config *networks.YAML, name, daemon string) error {
 	if err := makeVarRun(config); err != nil {
 		return err
 	}
@@ -162,7 +162,7 @@ var validation struct {
 	err error
 }
 
-func validateConfig(config *networks.NetworksConfig) error {
+func validateConfig(config *networks.YAML) error {
 	validation.Do(func() {
 		// make sure all config.Paths.* are secure
 		validation.err = config.Validate()
@@ -173,7 +173,7 @@ func validateConfig(config *networks.NetworksConfig) error {
 	return validation.err
 }
 
-func startNetwork(config *networks.NetworksConfig, ctx context.Context, name string) error {
+func startNetwork(ctx context.Context, config *networks.YAML, name string) error {
 	logrus.Debugf("Make sure %q network is running", name)
 	if err := validateConfig(config); err != nil {
 		return err
@@ -195,7 +195,7 @@ func startNetwork(config *networks.NetworksConfig, ctx context.Context, name str
 		pid, _ := store.ReadPIDFile(config.PIDFile(name, daemon))
 		if pid == 0 {
 			logrus.Infof("Starting %s daemon for %q network", daemon, name)
-			if err := startDaemon(config, ctx, name, daemon); err != nil {
+			if err := startDaemon(ctx, config, name, daemon); err != nil {
 				return err
 			}
 		}
@@ -203,7 +203,7 @@ func startNetwork(config *networks.NetworksConfig, ctx context.Context, name str
 	return nil
 }
 
-func stopNetwork(config *networks.NetworksConfig, name string) error {
+func stopNetwork(config *networks.YAML, name string) error {
 	logrus.Debugf("Make sure %q network is stopped", name)
 	// Don't call validateConfig() until we actually need to stop a daemon because
 	// stopNetwork() may be called even when the vde daemons are not installed.
