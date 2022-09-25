@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/lima-vm/lima/pkg/editutil"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	networks "github.com/lima-vm/lima/pkg/networks/reconcile"
 	"github.com/lima-vm/lima/pkg/start"
@@ -55,8 +56,8 @@ func editAction(cmd *cobra.Command, args []string) error {
 	hdr := fmt.Sprintf("# Please edit the following configuration for Lima instance %q\n", instName)
 	hdr += "# and an empty file will abort the edit.\n"
 	hdr += "\n"
-	hdr += generateEditorWarningHeader()
-	yBytes, err := openEditor(instName, yContent, hdr)
+	hdr += editutil.GenerateEditorWarningHeader()
+	yBytes, err := editutil.OpenEditor(instName, yContent, hdr)
 	if err != nil {
 		return err
 	}
