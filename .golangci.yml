@@ -22,7 +22,6 @@ run:
 linters:
   disable-all: true
   enable:
-  - deadcode
   - depguard
   - gofmt
   - goimports
@@ -31,9 +30,7 @@ linters:
   - misspell
   - nakedret
   # - prealloc
-  - structcheck
   - typecheck
-  - varcheck
   # - asciicheck
   # - bodyclose
   # - dogsled
@@ -78,7 +75,7 @@ linters:
   # - tparallel
   # - unconvert
   # - unparam
-  # - unused
+  - unused
   # - whitespace
   # - wrapcheck
   # - wsl

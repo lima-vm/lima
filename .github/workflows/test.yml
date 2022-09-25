@@ -22,7 +22,7 @@ jobs:
     - name: Run golangci-lint
       uses: golangci/golangci-lint-action@v3
       with:
-        version: v1.48.0
+        version: v1.49.0
         args: --verbose
     - name: Run yamllint
       run: yamllint .
