@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -14,6 +13,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/containerd/containerd/identifiers"
 	"github.com/lima-vm/lima/pkg/editutil"
+	"github.com/lima-vm/lima/pkg/ioutilx"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	networks "github.com/lima-vm/lima/pkg/networks/reconcile"
 	"github.com/lima-vm/lima/pkg/osutil"
@@ -98,7 +98,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 			return nil, err
 		}
 		defer resp.Body.Close()
-		st.yBytes, err = readAtMaximum(resp.Body, yBytesLimit)
+		st.yBytes, err = ioutilx.ReadAtMaximum(resp.Body, yBytesLimit)
 		if err != nil {
 			return nil, err
 		}
@@ -115,7 +115,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 			return nil, err
 		}
 		defer r.Close()
-		st.yBytes, err = readAtMaximum(r, yBytesLimit)
+		st.yBytes, err = ioutilx.ReadAtMaximum(r, yBytesLimit)
 		if err != nil {
 			return nil, err
 		}
@@ -132,7 +132,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 			return nil, err
 		}
 		defer r.Close()
-		st.yBytes, err = readAtMaximum(r, yBytesLimit)
+		st.yBytes, err = ioutilx.ReadAtMaximum(r, yBytesLimit)
 		if err != nil {
 			return nil, err
 		}
@@ -418,18 +418,4 @@ func startBashComplete(cmd *cobra.Command, args []string, toComplete string) ([]
 		}
 	}
 	return comp, cobra.ShellCompDirectiveDefault
-}
-
-func readAtMaximum(r io.Reader, n int64) ([]byte, error) {
-	lr := &io.LimitedReader{
-		R: r,
-		N: n,
-	}
-	b, err := io.ReadAll(lr)
-	if err != nil {
-		if errors.Is(err, io.EOF) && lr.N <= 0 {
-			err = fmt.Errorf("exceeded the limit (%d bytes): %w", n, err)
-		}
-	}
-	return b, err
 }
