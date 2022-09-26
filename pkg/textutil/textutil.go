@@ -1,11 +1,12 @@
-package templateutil
+package textutil
 
 import (
 	"bytes"
 	"text/template"
 )
 
-func Execute(tmpl string, args interface{}) ([]byte, error) {
+// ExecuteTemplate executes a text/template template.
+func ExecuteTemplate(tmpl string, args interface{}) ([]byte, error) {
 	x, err := template.New("").Parse(tmpl)
 	if err != nil {
 		return nil, err
