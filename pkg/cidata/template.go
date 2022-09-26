@@ -11,7 +11,7 @@ import (
 	"github.com/lima-vm/lima/pkg/iso9660util"
 
 	"github.com/containerd/containerd/identifiers"
-	"github.com/lima-vm/lima/pkg/templateutil"
+	"github.com/lima-vm/lima/pkg/textutil"
 )
 
 //go:embed cidata.TEMPLATE.d
@@ -114,7 +114,7 @@ func ExecuteTemplate(args TemplateArgs) ([]iso9660util.Entry, error) {
 		if err != nil {
 			return err
 		}
-		b, err := templateutil.Execute(string(templateB), args)
+		b, err := textutil.ExecuteTemplate(string(templateB), args)
 		if err != nil {
 			return err
 		}

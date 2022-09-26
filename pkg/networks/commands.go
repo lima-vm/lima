@@ -21,7 +21,7 @@ const (
 // Commands in `sudoers` cannot use quotes, so all arguments are printed via "%s"
 // and not "%q". config.Paths.* entries must not include any whitespace!
 
-func (config *NetworksConfig) Check(name string) error {
+func (config *YAML) Check(name string) error {
 	if _, ok := config.Networks[name]; ok {
 		return nil
 	}
@@ -29,7 +29,7 @@ func (config *NetworksConfig) Check(name string) error {
 }
 
 // DaemonPath returns the daemon path.
-func (config *NetworksConfig) DaemonPath(daemon string) (string, error) {
+func (config *YAML) DaemonPath(daemon string) (string, error) {
 	switch daemon {
 	case VDESwitch:
 		return config.Paths.VDESwitch, nil
@@ -43,7 +43,7 @@ func (config *NetworksConfig) DaemonPath(daemon string) (string, error) {
 }
 
 // IsDaemonInstalled checks whether the daemon is installed.
-func (config *NetworksConfig) IsDaemonInstalled(daemon string) (bool, error) {
+func (config *YAML) IsDaemonInstalled(daemon string) (bool, error) {
 	p, err := config.DaemonPath(daemon)
 	if err != nil {
 		return false, err
@@ -61,29 +61,29 @@ func (config *NetworksConfig) IsDaemonInstalled(daemon string) (bool, error) {
 }
 
 // Sock returns a socket_vmnet socket.
-func (config *NetworksConfig) Sock(name string) string {
+func (config *YAML) Sock(name string) string {
 	return filepath.Join(config.Paths.VarRun, fmt.Sprintf("socket_vmnet.%s", name))
 }
 
 // VDESock returns a vde socket.
 //
 // Deprecated. Use Sock.
-func (config *NetworksConfig) VDESock(name string) string {
+func (config *YAML) VDESock(name string) string {
 	return filepath.Join(config.Paths.VarRun, fmt.Sprintf("%s.ctl", name))
 }
 
-func (config *NetworksConfig) PIDFile(name, daemon string) string {
+func (config *YAML) PIDFile(name, daemon string) string {
 	daemonTrimmed := strings.TrimPrefix(daemon, "vde_") // for compatibility
 	return filepath.Join(config.Paths.VarRun, fmt.Sprintf("%s_%s.pid", name, daemonTrimmed))
 }
 
-func (config *NetworksConfig) LogFile(name, daemon, stream string) string {
+func (config *YAML) LogFile(name, daemon, stream string) string {
 	networksDir, _ := dirnames.LimaNetworksDir()
 	daemonTrimmed := strings.TrimPrefix(daemon, "vde_") // for compatibility
 	return filepath.Join(networksDir, fmt.Sprintf("%s_%s.%s.log", name, daemonTrimmed, stream))
 }
 
-func (config *NetworksConfig) User(daemon string) (osutil.User, error) {
+func (config *YAML) User(daemon string) (osutil.User, error) {
 	if ok, _ := config.IsDaemonInstalled(daemon); !ok {
 		daemonPath, _ := config.DaemonPath(daemon)
 		return osutil.User{}, fmt.Errorf("daemon %q (path=%q) is not available", daemon, daemonPath)
@@ -104,11 +104,11 @@ func (config *NetworksConfig) User(daemon string) (osutil.User, error) {
 	return osutil.User{}, fmt.Errorf("daemon %q not defined", daemon)
 }
 
-func (config *NetworksConfig) MkdirCmd() string {
+func (config *YAML) MkdirCmd() string {
 	return fmt.Sprintf("/bin/mkdir -m 775 -p %s", config.Paths.VarRun)
 }
 
-func (config *NetworksConfig) StartCmd(name, daemon string) string {
+func (config *YAML) StartCmd(name, daemon string) string {
 	if ok, _ := config.IsDaemonInstalled(daemon); !ok {
 		panic(fmt.Errorf("daemon %q is not available", daemon))
 	}
@@ -154,6 +154,6 @@ func (config *NetworksConfig) StartCmd(name, daemon string) string {
 	return cmd
 }
 
-func (config *NetworksConfig) StopCmd(name, daemon string) string {
+func (config *YAML) StopCmd(name, daemon string) string {
 	return fmt.Sprintf("/usr/bin/pkill -F %s", config.PIDFile(name, daemon))
 }

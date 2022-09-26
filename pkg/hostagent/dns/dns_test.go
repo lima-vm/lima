@@ -67,7 +67,7 @@ func TestTXTRecords(t *testing.T) {
 				req := new(dns.Msg)
 				req.SetQuestion(dns.Fqdn(testDomains[i]), dns.TypeTXT)
 				h.ServeDNS(w, req)
-				regex_match := func(value string, pattern string) cmp.Comparison {
+				regexMatch := func(value string, pattern string) cmp.Comparison {
 					return func() cmp.Result {
 						re := regexp.MustCompile(pattern)
 						if re.MatchString(value) {
@@ -77,7 +77,7 @@ func TestTXTRecords(t *testing.T) {
 							fmt.Sprintf("%q did not match pattern %q", value, pattern))
 					}
 				}
-				assert.Assert(t, regex_match(dnsResult.String(), expectedResults[i]))
+				assert.Assert(t, regexMatch(dnsResult.String(), expectedResults[i]))
 			}
 		}
 	})

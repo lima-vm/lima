@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/lima-vm/lima/pkg/templateutil"
+	"github.com/lima-vm/lima/pkg/textutil"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -68,5 +68,5 @@ func generateSystemdUnit() ([]byte, error) {
 	m := map[string]string{
 		"Binary": selfExeAbs,
 	}
-	return templateutil.Execute(systemdUnitTemplate, m)
+	return textutil.ExecuteTemplate(systemdUnitTemplate, m)
 }

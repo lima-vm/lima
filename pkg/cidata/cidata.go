@@ -240,15 +240,15 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 		}
 	}
 
-	if guestAgentBinary, err := GuestAgentBinary(*y.Arch); err != nil {
+	guestAgentBinary, err := GuestAgentBinary(*y.Arch)
+	if err != nil {
 		return err
-	} else {
-		defer guestAgentBinary.Close()
-		layout = append(layout, iso9660util.Entry{
-			Path:   "lima-guestagent",
-			Reader: guestAgentBinary,
-		})
 	}
+	defer guestAgentBinary.Close()
+	layout = append(layout, iso9660util.Entry{
+		Path:   "lima-guestagent",
+		Reader: guestAgentBinary,
+	})
 
 	if nerdctlArchive != "" {
 		nftgzR, err := os.Open(nerdctlArchive)

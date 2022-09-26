@@ -3,29 +3,24 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io"
-	"io/fs"
 	"net/http"
-	"net/url"
 	"os"
-	"os/exec"
-	"path"
 	"path/filepath"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/containerd/containerd/identifiers"
-	securejoin "github.com/cyphar/filepath-securejoin"
+	"github.com/lima-vm/lima/cmd/limactl/guessarg"
+	"github.com/lima-vm/lima/pkg/editutil"
+	"github.com/lima-vm/lima/pkg/ioutilx"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	networks "github.com/lima-vm/lima/pkg/networks/reconcile"
 	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/start"
 	"github.com/lima-vm/lima/pkg/store"
-	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/store/filenames"
-	"github.com/lima-vm/lima/pkg/usrlocalsharelima"
+	"github.com/lima-vm/lima/pkg/templatestore"
 	"github.com/mattn/go-isatty"
-	"github.com/norouter/norouter/cmd/norouter/editorcmd"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -61,22 +56,6 @@ $ limactl start --name=default https://raw.githubusercontent.com/lima-vm/lima/ma
 	return startCommand
 }
 
-func readTemplate(name string) ([]byte, error) {
-	dir, err := usrlocalsharelima.Dir()
-	if err != nil {
-		return nil, err
-	}
-	defaultYAMLPath, err := securejoin.SecureJoin(filepath.Join(dir, "examples"), name+".yaml")
-	if err != nil {
-		return nil, err
-	}
-	return os.ReadFile(defaultYAMLPath)
-}
-
-func readDefaultTemplate() ([]byte, error) {
-	return readTemplate("default")
-}
-
 func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, error) {
 	var arg string // can be empty
 	if len(args) > 0 {
@@ -93,7 +72,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 	}
 	const yBytesLimit = 4 * 1024 * 1024 // 4MiB
 
-	if ok, u := argSeemsTemplateURL(arg); ok {
+	if ok, u := guessarg.SeemsTemplateURL(arg); ok {
 		// No need to use SecureJoin here. https://github.com/lima-vm/lima/pull/805#discussion_r853411702
 		templateName := filepath.Join(u.Host, u.Path)
 		logrus.Debugf("interpreting argument %q as a template name %q", arg, templateName)
@@ -101,13 +80,13 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 			// e.g., templateName = "deprecated/centos-7" , st.instName = "centos-7"
 			st.instName = filepath.Base(templateName)
 		}
-		st.yBytes, err = readTemplate(templateName)
+		st.yBytes, err = templatestore.Read(templateName)
 		if err != nil {
 			return nil, err
 		}
-	} else if argSeemsHTTPURL(arg) {
+	} else if guessarg.SeemsHTTPURL(arg) {
 		if st.instName == "" {
-			st.instName, err = instNameFromURL(arg)
+			st.instName, err = guessarg.InstNameFromURL(arg)
 			if err != nil {
 				return nil, err
 			}
@@ -118,13 +97,13 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 			return nil, err
 		}
 		defer resp.Body.Close()
-		st.yBytes, err = readAtMaximum(resp.Body, yBytesLimit)
+		st.yBytes, err = ioutilx.ReadAtMaximum(resp.Body, yBytesLimit)
 		if err != nil {
 			return nil, err
 		}
-	} else if argSeemsFileURL(arg) {
+	} else if guessarg.SeemsFileURL(arg) {
 		if st.instName == "" {
-			st.instName, err = instNameFromURL(arg)
+			st.instName, err = guessarg.InstNameFromURL(arg)
 			if err != nil {
 				return nil, err
 			}
@@ -135,13 +114,13 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 			return nil, err
 		}
 		defer r.Close()
-		st.yBytes, err = readAtMaximum(r, yBytesLimit)
+		st.yBytes, err = ioutilx.ReadAtMaximum(r, yBytesLimit)
 		if err != nil {
 			return nil, err
 		}
-	} else if argSeemsYAMLPath(arg) {
+	} else if guessarg.SeemsYAMLPath(arg) {
 		if st.instName == "" {
-			st.instName, err = instNameFromYAMLPath(arg)
+			st.instName, err = guessarg.InstNameFromYAMLPath(arg)
 			if err != nil {
 				return nil, err
 			}
@@ -152,7 +131,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 			return nil, err
 		}
 		defer r.Close()
-		st.yBytes, err = readAtMaximum(r, yBytesLimit)
+		st.yBytes, err = ioutilx.ReadAtMaximum(r, yBytesLimit)
 		if err != nil {
 			return nil, err
 		}
@@ -177,19 +156,18 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 				logrus.Infof("Hint: To create another instance, run the following command: limactl start --name=NAME template://default")
 			}
 			return inst, nil
-		} else {
-			if !errors.Is(err, os.ErrNotExist) {
-				return nil, err
-			}
-			if arg != "" && arg != DefaultInstanceName {
-				logrus.Infof("Creating an instance %q from template://default (Not from template://%s)", st.instName, st.instName)
-				logrus.Warnf("This form is deprecated. Use `limactl start --name=%s template://default` instead", st.instName)
-			}
-			// Read the default template for creating a new instance
-			st.yBytes, err = readDefaultTemplate()
-			if err != nil {
-				return nil, err
-			}
+		}
+		if !errors.Is(err, os.ErrNotExist) {
+			return nil, err
+		}
+		if arg != "" && arg != DefaultInstanceName {
+			logrus.Infof("Creating an instance %q from template://default (Not from template://%s)", st.instName, st.instName)
+			logrus.Warnf("This form is deprecated. Use `limactl start --name=%s template://default` instead", st.instName)
+		}
+		// Read the default template for creating a new instance
+		st.yBytes, err = templatestore.Read(templatestore.Default)
+		if err != nil {
+			return nil, err
 		}
 	}
 
@@ -289,9 +267,9 @@ func chooseNextCreatorState(st *creatorState) (*creatorState, error) {
 			}
 			hdr += "# - To cancel starting Lima, just save this file as an empty file.\n"
 			hdr += "\n"
-			hdr += generateEditorWarningHeader()
+			hdr += editutil.GenerateEditorWarningHeader()
 			var err error
-			st.yBytes, err = openEditor(st.instName, st.yBytes, hdr)
+			st.yBytes, err = editutil.OpenEditor(st.instName, st.yBytes, hdr)
 			if err != nil {
 				return st, err
 			}
@@ -302,7 +280,7 @@ func chooseNextCreatorState(st *creatorState) (*creatorState, error) {
 			}
 			return st, nil
 		case prompt.Options[2]: // "Choose another example..."
-			examples, err := listTemplateYAMLs()
+			examples, err := templatestore.Templates()
 			if err != nil {
 				return st, err
 			}
@@ -321,7 +299,7 @@ func chooseNextCreatorState(st *creatorState) (*creatorState, error) {
 				return st, fmt.Errorf("invalid answer %d for %d entries", ansEx, len(examples))
 			}
 			yamlPath := examples[ansEx].Location
-			st.instName, err = instNameFromYAMLPath(yamlPath)
+			st.instName, err = guessarg.InstNameFromYAMLPath(yamlPath)
 			if err != nil {
 				return nil, err
 			}
@@ -339,116 +317,11 @@ func chooseNextCreatorState(st *creatorState) (*creatorState, error) {
 	}
 }
 
-func listTemplateYAMLs() ([]TemplateYAML, error) {
-	usrlocalsharelimaDir, err := usrlocalsharelima.Dir()
-	if err != nil {
-		return nil, err
-	}
-	examplesDir := filepath.Join(usrlocalsharelimaDir, "examples")
-
-	var res []TemplateYAML
-	walkDirFn := func(p string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		base := filepath.Base(p)
-		if strings.HasPrefix(base, ".") || !strings.HasSuffix(base, ".yaml") {
-			return nil
-		}
-		x := TemplateYAML{
-			// Name is like "default", "debian", "deprecated/centos-7", ...
-			Name:     strings.TrimSuffix(strings.TrimPrefix(p, examplesDir+"/"), ".yaml"),
-			Location: p,
-		}
-		res = append(res, x)
-		return nil
-	}
-	if err = filepath.WalkDir(examplesDir, walkDirFn); err != nil {
-		return nil, err
-	}
-	return res, nil
-}
-
-func fileWarning(filename string) string {
-	b, err := os.ReadFile(filename)
-	if err != nil || len(b) == 0 {
-		return ""
-	}
-	s := "# WARNING: " + filename + " includes the following settings,\n"
-	s += "# which are applied before applying this YAML:\n"
-	s += "# -----------\n"
-	for _, line := range strings.Split(strings.TrimSuffix(string(b), "\n"), "\n") {
-		s += "#"
-		if len(line) > 0 {
-			s += " " + line
-		}
-		s += "\n"
-	}
-	s += "# -----------\n"
-	s += "\n"
-	return s
-}
-
-func generateEditorWarningHeader() string {
-	var s string
-	configDir, err := dirnames.LimaConfigDir()
-	if err != nil {
-		s += "# WARNING: failed to load the config dir\n"
-		s += "\n"
-		return s
-	}
-
-	s += fileWarning(filepath.Join(configDir, filenames.Default))
-	s += fileWarning(filepath.Join(configDir, filenames.Override))
-	return s
-}
-
-// openEditor opens an editor, and returns the content (not path) of the modified yaml.
-//
-// openEditor returns nil when the file was saved as an empty file, optionally with whitespaces.
-func openEditor(name string, content []byte, hdr string) ([]byte, error) {
-	editor := editorcmd.Detect()
-	if editor == "" {
-		return nil, errors.New("could not detect a text editor binary, try setting $EDITOR")
-	}
-	tmpYAMLFile, err := os.CreateTemp("", "lima-editor-")
-	if err != nil {
-		return nil, err
-	}
-	tmpYAMLPath := tmpYAMLFile.Name()
-	defer os.RemoveAll(tmpYAMLPath)
-	if err := os.WriteFile(tmpYAMLPath,
-		append([]byte(hdr), content...),
-		0o600); err != nil {
-		return nil, err
-	}
-
-	editorCmd := exec.Command(editor, tmpYAMLPath)
-	editorCmd.Env = os.Environ()
-	editorCmd.Stdin = os.Stdin
-	editorCmd.Stdout = os.Stdout
-	editorCmd.Stderr = os.Stderr
-	logrus.Debugf("opening editor %q for a file %q", editor, tmpYAMLPath)
-	if err := editorCmd.Run(); err != nil {
-		return nil, fmt.Errorf("could not execute editor %q for a file %q: %w", editor, tmpYAMLPath, err)
-	}
-	b, err := os.ReadFile(tmpYAMLPath)
-	if err != nil {
-		return nil, err
-	}
-	modifiedInclHdr := string(b)
-	modifiedExclHdr := strings.TrimPrefix(modifiedInclHdr, hdr)
-	if strings.TrimSpace(modifiedExclHdr) == "" {
-		return nil, nil
-	}
-	return []byte(modifiedExclHdr), nil
-}
-
 func startAction(cmd *cobra.Command, args []string) error {
 	if listTemplates, err := cmd.Flags().GetBool("list-templates"); err != nil {
 		return err
 	} else if listTemplates {
-		if templates, err := listTemplateYAMLs(); err == nil {
+		if templates, err := templatestore.Templates(); err == nil {
 			w := cmd.OutOrStdout()
 			for _, f := range templates {
 				fmt.Fprintln(w, f.Name)
@@ -483,79 +356,12 @@ func startAction(cmd *cobra.Command, args []string) error {
 	return start.Start(ctx, inst)
 }
 
-func argSeemsTemplateURL(arg string) (bool, *url.URL) {
-	u, err := url.Parse(arg)
-	if err != nil {
-		return false, u
-	}
-	return u.Scheme == "template", u
-}
-
-func argSeemsHTTPURL(arg string) bool {
-	u, err := url.Parse(arg)
-	if err != nil {
-		return false
-	}
-	if u.Scheme != "http" && u.Scheme != "https" {
-		return false
-	}
-	return true
-}
-
-func argSeemsFileURL(arg string) bool {
-	u, err := url.Parse(arg)
-	if err != nil {
-		return false
-	}
-	return u.Scheme == "file"
-}
-
-func argSeemsYAMLPath(arg string) bool {
-	if strings.Contains(arg, "/") {
-		return true
-	}
-	lower := strings.ToLower(arg)
-	return strings.HasSuffix(lower, ".yml") || strings.HasSuffix(lower, ".yaml")
-}
-
-func instNameFromURL(urlStr string) (string, error) {
-	u, err := url.Parse(urlStr)
-	if err != nil {
-		return "", err
-	}
-	return instNameFromYAMLPath(path.Base(u.Path))
-}
-
-func instNameFromYAMLPath(yamlPath string) (string, error) {
-	s := strings.ToLower(filepath.Base(yamlPath))
-	s = strings.TrimSuffix(strings.TrimSuffix(s, ".yml"), ".yaml")
-	s = strings.ReplaceAll(s, ".", "-")
-	if err := identifiers.Validate(s); err != nil {
-		return "", fmt.Errorf("filename %q is invalid: %w", yamlPath, err)
-	}
-	return s, nil
-}
-
 func startBashComplete(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 	comp, _ := bashCompleteInstanceNames(cmd)
-	if templates, err := listTemplateYAMLs(); err == nil {
+	if templates, err := templatestore.Templates(); err == nil {
 		for _, f := range templates {
 			comp = append(comp, "template://"+f.Name)
 		}
 	}
 	return comp, cobra.ShellCompDirectiveDefault
-}
-
-func readAtMaximum(r io.Reader, n int64) ([]byte, error) {
-	lr := &io.LimitedReader{
-		R: r,
-		N: n,
-	}
-	b, err := io.ReadAll(lr)
-	if err != nil {
-		if errors.Is(err, io.EOF) && lr.N <= 0 {
-			err = fmt.Errorf("exceeded the limit (%d bytes): %w", n, err)
-		}
-	}
-	return b, err
 }

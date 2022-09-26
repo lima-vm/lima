@@ -17,15 +17,15 @@ import (
 //go:embed networks.yaml
 var defaultConfig []byte
 
-func DefaultConfig() (NetworksConfig, error) {
-	var config NetworksConfig
+func DefaultConfig() (YAML, error) {
+	var config YAML
 	err := yaml.UnmarshalWithOptions(defaultConfig, &config, yaml.Strict())
 	return config, err
 }
 
 var cache struct {
 	sync.Once
-	config NetworksConfig
+	config YAML
 	err    error
 }
 
@@ -74,9 +74,9 @@ func loadCache() {
 }
 
 // Config returns the network config from the _config/networks.yaml file.
-func Config() (NetworksConfig, error) {
+func Config() (YAML, error) {
 	if runtime.GOOS != "darwin" {
-		return NetworksConfig{}, errors.New("networks.yaml configuration is only supported on macOS right now")
+		return YAML{}, errors.New("networks.yaml configuration is only supported on macOS right now")
 	}
 	loadCache()
 	return cache.config, cache.err

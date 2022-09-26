@@ -10,8 +10,8 @@ const UnixPathMax = 108
 
 // Stat is a selection of syscall.Stat_t
 type Stat struct {
-	Uid uint32
-	Gid uint32
+	Uid uint32 //nolint:revive
+	Gid uint32 //nolint:revive
 }
 
 func SysStat(fi fs.FileInfo) (Stat, bool) {
