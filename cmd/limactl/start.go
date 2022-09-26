@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"net/http"
 	"net/url"
 	"os"
@@ -14,7 +13,6 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/containerd/containerd/identifiers"
-	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/lima-vm/lima/pkg/editutil"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	networks "github.com/lima-vm/lima/pkg/networks/reconcile"
@@ -22,7 +20,7 @@ import (
 	"github.com/lima-vm/lima/pkg/start"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
-	"github.com/lima-vm/lima/pkg/usrlocalsharelima"
+	"github.com/lima-vm/lima/pkg/templatestore"
 	"github.com/mattn/go-isatty"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -59,22 +57,6 @@ $ limactl start --name=default https://raw.githubusercontent.com/lima-vm/lima/ma
 	return startCommand
 }
 
-func readTemplate(name string) ([]byte, error) {
-	dir, err := usrlocalsharelima.Dir()
-	if err != nil {
-		return nil, err
-	}
-	defaultYAMLPath, err := securejoin.SecureJoin(filepath.Join(dir, "examples"), name+".yaml")
-	if err != nil {
-		return nil, err
-	}
-	return os.ReadFile(defaultYAMLPath)
-}
-
-func readDefaultTemplate() ([]byte, error) {
-	return readTemplate("default")
-}
-
 func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, error) {
 	var arg string // can be empty
 	if len(args) > 0 {
@@ -99,7 +81,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 			// e.g., templateName = "deprecated/centos-7" , st.instName = "centos-7"
 			st.instName = filepath.Base(templateName)
 		}
-		st.yBytes, err = readTemplate(templateName)
+		st.yBytes, err = templatestore.Read(templateName)
 		if err != nil {
 			return nil, err
 		}
@@ -184,7 +166,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 			logrus.Warnf("This form is deprecated. Use `limactl start --name=%s template://default` instead", st.instName)
 		}
 		// Read the default template for creating a new instance
-		st.yBytes, err = readDefaultTemplate()
+		st.yBytes, err = templatestore.Read(templatestore.Default)
 		if err != nil {
 			return nil, err
 		}
@@ -299,7 +281,7 @@ func chooseNextCreatorState(st *creatorState) (*creatorState, error) {
 			}
 			return st, nil
 		case prompt.Options[2]: // "Choose another example..."
-			examples, err := listTemplateYAMLs()
+			examples, err := templatestore.Templates()
 			if err != nil {
 				return st, err
 			}
@@ -336,40 +318,11 @@ func chooseNextCreatorState(st *creatorState) (*creatorState, error) {
 	}
 }
 
-func listTemplateYAMLs() ([]TemplateYAML, error) {
-	usrlocalsharelimaDir, err := usrlocalsharelima.Dir()
-	if err != nil {
-		return nil, err
-	}
-	examplesDir := filepath.Join(usrlocalsharelimaDir, "examples")
-
-	var res []TemplateYAML
-	walkDirFn := func(p string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		base := filepath.Base(p)
-		if strings.HasPrefix(base, ".") || !strings.HasSuffix(base, ".yaml") {
-			return nil
-		}
-		x := TemplateYAML{
-			// Name is like "default", "debian", "deprecated/centos-7", ...
-			Name:     strings.TrimSuffix(strings.TrimPrefix(p, examplesDir+"/"), ".yaml"),
-			Location: p,
-		}
-		res = append(res, x)
-		return nil
-	}
-	if err = filepath.WalkDir(examplesDir, walkDirFn); err != nil {
-		return nil, err
-	}
-	return res, nil
-}
 func startAction(cmd *cobra.Command, args []string) error {
 	if listTemplates, err := cmd.Flags().GetBool("list-templates"); err != nil {
 		return err
 	} else if listTemplates {
-		if templates, err := listTemplateYAMLs(); err == nil {
+		if templates, err := templatestore.Templates(); err == nil {
 			w := cmd.OutOrStdout()
 			for _, f := range templates {
 				fmt.Fprintln(w, f.Name)
@@ -459,7 +412,7 @@ func instNameFromYAMLPath(yamlPath string) (string, error) {
 
 func startBashComplete(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 	comp, _ := bashCompleteInstanceNames(cmd)
-	if templates, err := listTemplateYAMLs(); err == nil {
+	if templates, err := templatestore.Templates(); err == nil {
 		for _, f := range templates {
 			comp = append(comp, "template://"+f.Name)
 		}
