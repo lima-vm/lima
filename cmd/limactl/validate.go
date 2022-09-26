@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/lima-vm/lima/cmd/limactl/guessarg"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/spf13/cobra"
 
@@ -25,7 +26,7 @@ func validateAction(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return fmt.Errorf("failed to load YAML file %q: %w", f, err)
 		}
-		if _, err := instNameFromYAMLPath(f); err != nil {
+		if _, err := guessarg.InstNameFromYAMLPath(f); err != nil {
 			return err
 		}
 		logrus.Infof("%q: OK", f)

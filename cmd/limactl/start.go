@@ -4,14 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/url"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/containerd/containerd/identifiers"
+	"github.com/lima-vm/lima/cmd/limactl/guessarg"
 	"github.com/lima-vm/lima/pkg/editutil"
 	"github.com/lima-vm/lima/pkg/ioutilx"
 	"github.com/lima-vm/lima/pkg/limayaml"
@@ -73,7 +72,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 	}
 	const yBytesLimit = 4 * 1024 * 1024 // 4MiB
 
-	if ok, u := argSeemsTemplateURL(arg); ok {
+	if ok, u := guessarg.SeemsTemplateURL(arg); ok {
 		// No need to use SecureJoin here. https://github.com/lima-vm/lima/pull/805#discussion_r853411702
 		templateName := filepath.Join(u.Host, u.Path)
 		logrus.Debugf("interpreting argument %q as a template name %q", arg, templateName)
@@ -85,9 +84,9 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 		if err != nil {
 			return nil, err
 		}
-	} else if argSeemsHTTPURL(arg) {
+	} else if guessarg.SeemsHTTPURL(arg) {
 		if st.instName == "" {
-			st.instName, err = instNameFromURL(arg)
+			st.instName, err = guessarg.InstNameFromURL(arg)
 			if err != nil {
 				return nil, err
 			}
@@ -102,9 +101,9 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 		if err != nil {
 			return nil, err
 		}
-	} else if argSeemsFileURL(arg) {
+	} else if guessarg.SeemsFileURL(arg) {
 		if st.instName == "" {
-			st.instName, err = instNameFromURL(arg)
+			st.instName, err = guessarg.InstNameFromURL(arg)
 			if err != nil {
 				return nil, err
 			}
@@ -119,9 +118,9 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 		if err != nil {
 			return nil, err
 		}
-	} else if argSeemsYAMLPath(arg) {
+	} else if guessarg.SeemsYAMLPath(arg) {
 		if st.instName == "" {
-			st.instName, err = instNameFromYAMLPath(arg)
+			st.instName, err = guessarg.InstNameFromYAMLPath(arg)
 			if err != nil {
 				return nil, err
 			}
@@ -300,7 +299,7 @@ func chooseNextCreatorState(st *creatorState) (*creatorState, error) {
 				return st, fmt.Errorf("invalid answer %d for %d entries", ansEx, len(examples))
 			}
 			yamlPath := examples[ansEx].Location
-			st.instName, err = instNameFromYAMLPath(yamlPath)
+			st.instName, err = guessarg.InstNameFromYAMLPath(yamlPath)
 			if err != nil {
 				return nil, err
 			}
@@ -355,59 +354,6 @@ func startAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	return start.Start(ctx, inst)
-}
-
-func argSeemsTemplateURL(arg string) (bool, *url.URL) {
-	u, err := url.Parse(arg)
-	if err != nil {
-		return false, u
-	}
-	return u.Scheme == "template", u
-}
-
-func argSeemsHTTPURL(arg string) bool {
-	u, err := url.Parse(arg)
-	if err != nil {
-		return false
-	}
-	if u.Scheme != "http" && u.Scheme != "https" {
-		return false
-	}
-	return true
-}
-
-func argSeemsFileURL(arg string) bool {
-	u, err := url.Parse(arg)
-	if err != nil {
-		return false
-	}
-	return u.Scheme == "file"
-}
-
-func argSeemsYAMLPath(arg string) bool {
-	if strings.Contains(arg, "/") {
-		return true
-	}
-	lower := strings.ToLower(arg)
-	return strings.HasSuffix(lower, ".yml") || strings.HasSuffix(lower, ".yaml")
-}
-
-func instNameFromURL(urlStr string) (string, error) {
-	u, err := url.Parse(urlStr)
-	if err != nil {
-		return "", err
-	}
-	return instNameFromYAMLPath(path.Base(u.Path))
-}
-
-func instNameFromYAMLPath(yamlPath string) (string, error) {
-	s := strings.ToLower(filepath.Base(yamlPath))
-	s = strings.TrimSuffix(strings.TrimSuffix(s, ".yml"), ".yaml")
-	s = strings.ReplaceAll(s, ".", "-")
-	if err := identifiers.Validate(s); err != nil {
-		return "", fmt.Errorf("filename %q is invalid: %w", yamlPath, err)
-	}
-	return s, nil
 }
 
 func startBashComplete(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
