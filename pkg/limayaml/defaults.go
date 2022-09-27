@@ -299,18 +299,6 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		// After defaults processing the singular HostPort and GuestPort values should not be used again.
 	}
 
-	// If both `useHostResolved` and `HostResolver.Enabled` are defined in the same config,
-	// then the deprecated `useHostResolved` setting is silently ignored.
-	if y.HostResolver.Enabled == nil {
-		y.HostResolver.Enabled = y.UseHostResolver
-	}
-	if d.HostResolver.Enabled == nil {
-		d.HostResolver.Enabled = d.UseHostResolver
-	}
-	if o.HostResolver.Enabled == nil {
-		o.HostResolver.Enabled = o.UseHostResolver
-	}
-
 	if y.HostResolver.Enabled == nil {
 		y.HostResolver.Enabled = d.HostResolver.Enabled
 	}
@@ -339,19 +327,6 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 	}
 	if y.PropagateProxyEnv == nil {
 		y.PropagateProxyEnv = pointer.Bool(true)
-	}
-
-	if len(y.Network.VDEDeprecated) > 0 && len(y.Networks) == 0 {
-		for _, vde := range y.Network.VDEDeprecated {
-			network := Network{
-				Interface:            vde.Name,
-				MACAddress:           vde.MACAddress,
-				SwitchPortDeprecated: vde.SwitchPort,
-				VNLDeprecated:        vde.VNL,
-			}
-			y.Networks = append(y.Networks, network)
-		}
-		y.Network.migrated = true
 	}
 
 	networks := make([]Network, 0, len(d.Networks)+len(y.Networks)+len(o.Networks))

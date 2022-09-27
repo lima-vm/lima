@@ -22,8 +22,6 @@ func TestFillDefault(t *testing.T) {
 	var d, y, o LimaYAML
 
 	opts := []cmp.Option{
-		// Ignore internal NetworkDeprecated.migrated field
-		cmpopts.IgnoreUnexported(NetworkDeprecated{}),
 		// Consider nil slices and empty slices to be identical
 		cmpopts.EquateEmpty(),
 	}
