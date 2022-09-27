@@ -10,6 +10,13 @@ The default mount type is shown in the following table:
 | >= 0.10          | reverse-sshfs + OpenSSH SFTP server |
 | >= 1.0 (Planned) | 9p                                  |
 
+## Which mount type should I pick? Or why care?
+
+sshfs leverages mature networking tools to make a reliable filesystem mount.
+Leaning on the classics.
+9p implements innovative ideas from the experimental [Plan 9 operating system](https://9p.io/wiki/plan9/Overview/index.html).
+Exploring new horizons.
+
 ## Mount types
 
 ### reverse-sshfs
