@@ -150,7 +150,8 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 		if err := identifiers.Validate(st.instName); err != nil {
 			return nil, fmt.Errorf("argument must be either an instance name, a YAML file path, or a URL, got %q: %w", st.instName, err)
 		}
-		if inst, err := store.Inspect(st.instName); err == nil {
+		inst, err := store.Inspect(st.instName)
+		if err == nil {
 			logrus.Infof("Using the existing instance %q", st.instName)
 			if arg == "" {
 				logrus.Infof("Hint: To create another instance, run the following command: limactl start --name=NAME template://default")
