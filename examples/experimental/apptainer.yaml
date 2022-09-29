@@ -8,6 +8,9 @@ images:
 - location: "https://dl.rockylinux.org/pub/rocky/8.6/images/Rocky-8-GenericCloud-8.6.20220702.0.x86_64.qcow2"
   arch: "x86_64"
   digest: "sha256:7b786a39eeb96e22dd85386377ff186737f6c1b9a5faa105b0a0a7a4895c29d0"
+- location: "https://dl.rockylinux.org/pub/rocky/8.6/images/Rocky-8-GenericCloud-8.6.20220702.0.aarch64.qcow2"
+  arch: "aarch64"
+  digest: "sha256:42da3cc0c10677d37e43f862c4a8f3ab3b72bcccc91ce0c0ef9f4100f4b950b4"
 mounts:
 - location: "~"
 - location: "/tmp/lima"
@@ -27,7 +30,10 @@ provision:
     #!/bin/bash
     set -eux -o pipefail
     command -v apptainer >/dev/null 2>&1 && exit 0
-    dnf install -y https://github.com/apptainer/apptainer/releases/download/v1.0.3/apptainer-1.0.3-1.x86_64.rpm
+    dnf install -y yum-utils epel-release
+    dnf install -y squashfuse fakeroot
+    yum-config-manager --disable epel*
+    dnf install --enablerepo=epel-testing -y apptainer apptainer-suid
 probes:
 - script: |
     #!/bin/bash
