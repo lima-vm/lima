@@ -124,6 +124,7 @@ func NewHandler(opts HandlerOptions) (dns.Handler, error) {
 		{Net: "tcp"},
 	}
 	h := &Handler{
+		truncate:     opts.TruncateReply,
 		clientConfig: cc,
 		clients:      clients,
 		ipv6:         opts.IPv6,
@@ -368,7 +369,7 @@ func listenAndServe(network Network, opts ServerOptions) (*dns.Server, error) {
 	var addr string
 	// always enable reply truncate for UDP
 	if network == UDP {
-		opts.TruncateReply = true
+		opts.HandlerOptions.TruncateReply = true
 		addr = fmt.Sprintf("%s:%d", opts.Address, opts.UDPPort)
 	} else {
 		addr = fmt.Sprintf("%s:%d", opts.Address, opts.TCPPort)
