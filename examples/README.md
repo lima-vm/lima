@@ -23,7 +23,8 @@ Container engines:
 - [`docker-rootful.yaml`](./docker-rootful.yaml): Docker (rootful)
 - [`podman.yaml`](./podman.yaml): Podman
 - [`podman-rootful.yaml`](./podman-rootful.yaml): Podman (rootful)
-- [`singularity.yaml`](./singularity.yaml): Singularity
+- [`apptainer.yaml`](./apptainer.yaml): Apptainer
+- [`apptainer-rootful.yaml`](./apptainer-rootful.yaml): Apptainer (rootful)
 - LXD is installed in the default Ubuntu template, so there is no `lxd.yaml`
 
 Container image builders:
@@ -45,7 +46,6 @@ Others:
 - [`experimental/opensuse-tumbleweed.yaml`](experimental/opensuse-tumbleweed.yaml): [experimental] openSUSE Tumbleweed
 - [`experimental/9p.yaml`](experimental/9p.yaml): [experimental] use 9p mount type
 - [`experimental/riscv64.yaml`](experimental/riscv64.yaml): [experimental] RISC-V
-- [`experimental/apptainer.yaml`](./experimental/apptainer.yaml): [experimental] [Apptainer](https://apptainer.org/)
 
 ## Tier 1
 

@@ -1,0 +1,42 @@
+# Example to use Apptainer instead of containerd & nerdctl
+# $ limactl start ./apptainer-rootful.yaml
+# $ limactl shell apptainer-rootful apptainer run -u -B $HOME:$HOME docker://alpine
+
+# Fedora provides Apptainer in the default dnf.
+# Ubuntu does not seem to provide Apptainer in the default apt.
+images:
+- location: "https://download.fedoraproject.org/pub/fedora/linux/releases/36/Cloud/x86_64/images/Fedora-Cloud-Base-36-1.5.x86_64.qcow2"
+  arch: "x86_64"
+  digest: "sha256:ca9e514cc2f4a7a0188e7c68af60eb4e573d2e6850cc65b464697223f46b4605"
+- location: "https://download.fedoraproject.org/pub/fedora/linux/releases/36/Cloud/aarch64/images/Fedora-Cloud-Base-36-1.5.aarch64.qcow2"
+  arch: "aarch64"
+  digest: "sha256:5c0e7e99b0c542cb2155cd3b52bbf51a42a65917e52d37df457d1e9759b37512"
+mounts:
+- location: "~"
+- location: "/tmp/lima"
+  writable: true
+containerd:
+  system: false
+  user: false
+provision:
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    modprobe squashfs >/dev/null 2>&1 && exit 0
+    dnf install -y kernel-modules-$(uname -r)
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    command -v apptainer >/dev/null 2>&1 && exit 0
+    dnf -y install apptainer apptainer-suid
+probes:
+- script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    if ! timeout 30s bash -c "until command -v apptainer >/dev/null 2>&1; do sleep 3; done"; then
+      echo >&2 "apptainer is not installed yet"
+      exit 1
+    fi
+  hint: See "/var/log/cloud-init-output.log" in the guest

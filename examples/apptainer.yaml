@@ -1,9 +1,9 @@
-# Example to use Singularity instead of containerd & nerdctl
-# $ limactl start ./singularity.yaml
-# $ limactl shell singularity singularity run -u -B $HOME:$HOME docker://alpine
+# Example to use Apptainer instead of containerd & nerdctl
+# $ limactl start ./apptainer.yaml
+# $ limactl shell apptainer apptainer run -u -B $HOME:$HOME docker://alpine
 
-# Fedora provides Singularity in the default dnf.
-# Ubuntu does not seem to provide Singularity in the default apt.
+# Fedora provides Apptainer in the default dnf.
+# Ubuntu does not seem to provide Apptainer in the default apt.
 images:
 - location: "https://download.fedoraproject.org/pub/fedora/linux/releases/36/Cloud/x86_64/images/Fedora-Cloud-Base-36-1.5.x86_64.qcow2"
   arch: "x86_64"
@@ -23,20 +23,14 @@ provision:
   script: |
     #!/bin/bash
     set -eux -o pipefail
-    modprobe squashfs >/dev/null 2>&1 && exit 0
-    dnf install -y kernel-modules-$(uname -r)
-- mode: system
-  script: |
-    #!/bin/bash
-    set -eux -o pipefail
-    command -v singularity >/dev/null 2>&1 && exit 0
-    dnf install -y singularity
+    command -v apptainer >/dev/null 2>&1 && exit 0
+    dnf -y install apptainer
 probes:
 - script: |
     #!/bin/bash
     set -eux -o pipefail
-    if ! timeout 30s bash -c "until command -v singularity >/dev/null 2>&1; do sleep 3; done"; then
-      echo >&2 "singularity is not installed yet"
+    if ! timeout 30s bash -c "until command -v apptainer >/dev/null 2>&1; do sleep 3; done"; then
+      echo >&2 "apptainer is not installed yet"
       exit 1
     fi
-  hint: See "/var/log/cloud-init-output.log". in the guest
+  hint: See "/var/log/cloud-init-output.log" in the guest

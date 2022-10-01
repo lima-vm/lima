@@ -342,7 +342,7 @@ AlmaLinux, Alpine, Arch Linux, Debian, Fedora, openSUSE, Oracle Linux, Rocky が
 コンテナランタイムの例:
 - [`./examples/docker.yaml`](./examples/docker.yaml): Docker
 - [`./examples/podman.yaml`](./examples/podman.yaml): Podman
-- [`./examples/singularity.yaml`](./examples/singularity.yaml): Singularity
+- [`./examples/apptainer.yaml`](./examples/apptainer.yaml): Apptainer
 
 コンテナイメージビルダの例:
 - [`./examples/buildkit.yaml`](./examples/buildkit.yaml): BuildKit
