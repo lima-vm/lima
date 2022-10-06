@@ -141,14 +141,16 @@ type Video struct {
 type ProvisionMode = string
 
 const (
-	ProvisionModeSystem ProvisionMode = "system"
-	ProvisionModeUser   ProvisionMode = "user"
-	ProvisionModeBoot   ProvisionMode = "boot"
+	ProvisionModeSystem     ProvisionMode = "system"
+	ProvisionModeUser       ProvisionMode = "user"
+	ProvisionModeBoot       ProvisionMode = "boot"
+	ProvisionModeDependency ProvisionMode = "dependency"
 )
 
 type Provision struct {
-	Mode   ProvisionMode `yaml:"mode" json:"mode"` // default: "system"
-	Script string        `yaml:"script" json:"script"`
+	Mode                            ProvisionMode `yaml:"mode" json:"mode"` // default: "system"
+	SkipDefaultDependencyResolution *bool         `yaml:"skipDefaultDependencyResolution,omitempty" json:"skipDefaultDependencyResolution,omitempty"`
+	Script                          string        `yaml:"script" json:"script"`
 }
 
 type Containerd struct {

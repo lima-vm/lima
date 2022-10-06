@@ -153,9 +153,14 @@ func Validate(y LimaYAML, warn bool) error {
 	for i, p := range y.Provision {
 		switch p.Mode {
 		case ProvisionModeSystem, ProvisionModeUser, ProvisionModeBoot:
+			if p.SkipDefaultDependencyResolution != nil {
+				return fmt.Errorf("field `provision[%d].mode` cannot set skipDefaultDependencyResolution, only valid on scripts of type %q",
+					i, ProvisionModeDependency)
+			}
+		case ProvisionModeDependency:
 		default:
-			return fmt.Errorf("field `provision[%d].mode` must be either %q, %q, or %q",
-				i, ProvisionModeSystem, ProvisionModeUser, ProvisionModeBoot)
+			return fmt.Errorf("field `provision[%d].mode` must one of %q, %q, %q, or %q",
+				i, ProvisionModeSystem, ProvisionModeUser, ProvisionModeBoot, ProvisionModeDependency)
 		}
 	}
 	needsContainerdArchives := (y.Containerd.User != nil && *y.Containerd.User) || (y.Containerd.System != nil && *y.Containerd.System)
