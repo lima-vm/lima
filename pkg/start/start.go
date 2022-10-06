@@ -37,9 +37,27 @@ func ensureNerdctlArchiveCache(y *limayaml.LimaYAML) (string, error) {
 		return "", nil
 	}
 
-	errs := make([]error, len(y.Containerd.Archives))
-	for i, f := range y.Containerd.Archives {
-		path, err := fileutils.DownloadFile("", f, false, "the nerdctl archive", *y.Arch)
+	location, errs := downloadAndCacheArchiveForArch(y.Containerd.Archives, *y.Arch, "nerdctl")
+	if location == "" {
+		return "", fmt.Errorf("failed to download the nerdctl archive, attempted %d candidates, errors=%v",
+			len(y.Containerd.Archives), errs)
+	}
+
+	return location, nil
+}
+
+// downloadAndCacheArchiveForArch iterates through a slice of File and tries to download the provided
+// file which matches the supplied arch.
+// The downloader caches remote downloads to disk, and then returns a file path to the archive.
+func downloadAndCacheArchiveForArch(files []limayaml.File, arch limayaml.Arch, archiveDescription string) (string, error) {
+	errs := make([]error, len(files))
+	for i := range files {
+		f := &files[i]
+		if f.Arch != arch {
+			errs[i] = fmt.Errorf("unsupported arch: %q", f.Arch)
+			continue
+		}
+		path, err := fileutils.DownloadFile("", *f, false, archiveDescription, arch)
 		if err != nil {
 			errs[i] = err
 			continue
@@ -48,7 +66,7 @@ func ensureNerdctlArchiveCache(y *limayaml.LimaYAML) (string, error) {
 			if downloader.IsLocal(f.Location) {
 				return f.Location, nil
 			}
-			return "", fmt.Errorf("cache did not contain %q", f.Location)
+			errs[i] = fmt.Errorf("cache did not contain %q", f.Location)
 		}
 		return path, nil
 	}
@@ -120,6 +138,17 @@ func Start(ctx context.Context, inst *store.Instance) error {
 	if nerdctlArchiveCache != "" {
 		args = append(args, "--nerdctl-archive", nerdctlArchiveCache)
 	}
+	if len(y.AdditionalArchives) > 0 {
+		for archName, archPath := range y.AdditionalArchives {
+			location, errs := downloadAndCacheArchiveForArch(archPath, *y.Arch, fmt.Sprintf("additional archive (%s)", archName))
+			if location == "" {
+				return fmt.Errorf("failed to download the additionalArchive archive (%s), attempted %d candidates, errors=%v",
+					archName, len(y.AdditionalArchives), errs)
+			}
+			args = append(args, "--additional-archive", fmt.Sprintf("%s=%s", archName, location))
+		}
+	}
+
 	args = append(args, inst.Name)
 	haCmd := exec.CommandContext(ctx, self, args...)
 

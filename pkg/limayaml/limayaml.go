@@ -32,9 +32,10 @@ type LimaYAML struct {
 	DNS          []net.IP          `yaml:"dns,omitempty" json:"dns,omitempty"`
 	HostResolver HostResolver      `yaml:"hostResolver,omitempty" json:"hostResolver,omitempty"`
 	// `useHostResolver` was deprecated in Lima v0.8.1, removed in Lima v0.14.0. Use `hostResolver.enabled` instead.
-	PropagateProxyEnv *bool          `yaml:"propagateProxyEnv,omitempty" json:"propagateProxyEnv,omitempty"`
-	CACertificates    CACertificates `yaml:"caCerts,omitempty" json:"caCerts,omitempty"`
-	Rosetta           Rosetta        `yaml:"rosetta,omitempty" json:"rosetta,omitempty"`
+	PropagateProxyEnv  *bool             `yaml:"propagateProxyEnv,omitempty" json:"propagateProxyEnv,omitempty"`
+	CACertificates     CACertificates    `yaml:"caCerts,omitempty" json:"caCerts,omitempty"`
+	Rosetta            Rosetta           `yaml:"rosetta,omitempty" json:"rosetta,omitempty"`
+	AdditionalArchives map[string][]File `yaml:"additionalArchives,omitempty" json:"additionalArchives,omitempty"`
 }
 
 type Arch = string

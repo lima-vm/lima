@@ -55,7 +55,8 @@ type HostAgent struct {
 }
 
 type options struct {
-	nerdctlArchive string // local path, not URL
+	nerdctlArchive     string            // local path, not URL
+	additionalArchives map[string]string // archive name => local path, not URL
 }
 
 type Opt func(*options) error
@@ -63,6 +64,16 @@ type Opt func(*options) error
 func WithNerdctlArchive(s string) Opt {
 	return func(o *options) error {
 		o.nerdctlArchive = s
+		return nil
+	}
+}
+
+func WithAdditionalArchive(name string, location string) Opt {
+	return func(o *options) error {
+		if o.additionalArchives == nil {
+			o.additionalArchives = make(map[string]string)
+		}
+		o.additionalArchives[name] = location
 		return nil
 	}
 }
@@ -105,7 +116,7 @@ func New(instName string, stdout io.Writer, sigintCh chan os.Signal, opts ...Opt
 		}
 	}
 
-	if err := cidata.GenerateISO9660(inst.Dir, instName, y, udpDNSLocalPort, tcpDNSLocalPort, o.nerdctlArchive); err != nil {
+	if err := cidata.GenerateISO9660(inst.Dir, instName, y, udpDNSLocalPort, tcpDNSLocalPort, o.nerdctlArchive, o.additionalArchives); err != nil {
 		return nil, err
 	}
 

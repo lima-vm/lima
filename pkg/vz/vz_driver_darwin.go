@@ -65,6 +65,7 @@ func (l *LimaVzDriver) Validate() error {
 		"CACertificates",
 		"Rosetta",
 		"AdditionalDisks",
+		"AdditionalArchives",
 	); len(unknown) > 0 {
 		logrus.Warnf("Ignoring: vmType %s: %+v", *l.Yaml.VMType, unknown)
 	}
