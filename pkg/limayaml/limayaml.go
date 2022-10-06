@@ -116,6 +116,7 @@ type ProvisionMode = string
 const (
 	ProvisionModeSystem ProvisionMode = "system"
 	ProvisionModeUser   ProvisionMode = "user"
+	ProvisionModeBoot   ProvisionMode = "boot"
 )
 
 type Provision struct {

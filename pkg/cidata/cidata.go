@@ -219,6 +219,8 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 		args.CACerts.Trusted = append(args.CACerts.Trusted, cert)
 	}
 
+	args.BootCmds = getBootCmds(y.Provision)
+
 	if err := ValidateTemplateArgs(args); err != nil {
 		return err
 	}
@@ -235,6 +237,8 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 				Path:   fmt.Sprintf("provision.%s/%08d", f.Mode, i),
 				Reader: strings.NewReader(f.Script),
 			})
+		case limayaml.ProvisionModeBoot:
+			continue
 		default:
 			return fmt.Errorf("unknown provision mode %q", f.Mode)
 		}
@@ -288,4 +292,21 @@ func getCert(content string) Cert {
 	}
 	// return lines
 	return Cert{Lines: lines}
+}
+
+func getBootCmds(p []limayaml.Provision) []BootCmds {
+	var bootCmds []BootCmds
+	for _, f := range p {
+		if f.Mode == limayaml.ProvisionModeBoot {
+			lines := []string{}
+			for _, line := range strings.Split(f.Script, "\n") {
+				if line == "" {
+					continue
+				}
+				lines = append(lines, strings.TrimSpace(line))
+			}
+			bootCmds = append(bootCmds, BootCmds{Lines: lines})
+		}
+	}
+	return bootCmds
 }
