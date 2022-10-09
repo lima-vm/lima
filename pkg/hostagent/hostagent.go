@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math/rand"
 	"net"
 	"os"
 	"os/exec"
@@ -33,6 +32,7 @@ import (
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/lima-vm/sshocker/pkg/ssh"
+	"github.com/sethvargo/go-password/password"
 	"github.com/sirupsen/logrus"
 )
 
@@ -253,12 +253,8 @@ func (a *HostAgent) emitEvent(_ context.Context, ev events.Event) {
 }
 
 func generatePassword(length int) (string, error) {
-	passwd := ""
-	rand.Seed(time.Now().UnixNano())
-	for i := 0; i < length; i++ {
-		passwd += strconv.Itoa(rand.Intn(10))
-	}
-	return passwd, nil
+	// avoid any special symbols, to make it easier to copy/paste
+	return password.Generate(length, length/4, 0, false, false)
 }
 
 func (a *HostAgent) Run(ctx context.Context) error {
