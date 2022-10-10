@@ -32,7 +32,7 @@ require (
 	github.com/xorcare/pointer v1.2.1
 	github.com/yalue/native_endian v1.0.2
 	golang.org/x/sys v0.0.0-20220811171246-fbc7d0a398ab
-	gotest.tools/v3 v3.3.0
+	gotest.tools/v3 v3.4.0
 )
 
 require (
