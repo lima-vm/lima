@@ -2,6 +2,9 @@
 # Oracle image licence: https://www.oracle.com/downloads/licenses/oracle-linux-license.html
 # Image source: https://yum.oracle.com/oracle-linux-templates.html
 
+# NOTE: EL8-based distros are known not to work on M1 chips: https://github.com/lima-vm/lima/issues/841
+# EL9-based distros are known to work.
+
 images:
 - location: "https://yum.oracle.com/templates/OracleLinux/OL8/u6/x86_64/OL8U6_x86_64-kvm-b126.qcow"
   arch: "x86_64"
