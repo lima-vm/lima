@@ -1,0 +1,10 @@
+#!/bin/sh
+set -eu
+: "${LIMA_INSTANCE:=apptainer}"
+
+if [ "$(limactl ls -q "$LIMA_INSTANCE" 2>/dev/null)" != "$LIMA_INSTANCE" ]; then
+  echo "instance \"$LIMA_INSTANCE\" does not exist, run \`limactl start --name=$LIMA_INSTANCE template://apptainer\` to create a new instance" >&2
+  exit 1
+fi
+export LIMA_INSTANCE
+exec lima APPTAINER_HOME="$HOME" apptainer "$@"

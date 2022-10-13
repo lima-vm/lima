@@ -31,6 +31,7 @@ binaries: clean \
 	_output/bin/lima$(bat) \
 	_output/bin/limactl$(exe) \
 	_output/bin/nerdctl.lima \
+	_output/bin/apptainer.lima \
 	_output/bin/docker.lima \
 	_output/bin/podman.lima \
 	_output/share/lima/lima-guestagent.Linux-x86_64 \
@@ -61,6 +62,10 @@ _output/bin/lima.bat:
 _output/bin/nerdctl.lima:
 	mkdir -p _output/bin
 	cp -a ./cmd/nerdctl.lima $@
+
+_output/bin/apptainer.lima: ./cmd/apptainer.lima
+	@mkdir -p _output/bin
+	cp -a $^ $@
 
 _output/bin/docker.lima: ./cmd/docker.lima
 	@mkdir -p _output/bin
@@ -102,6 +107,7 @@ install: uninstall
 	# Use tar rather than cp, for better symlink handling
 	( cd _output && tar c * | tar Cxv "$(DEST)" )
 	if [ "$(shell uname -s )" != "Linux" -a ! -e "$(DEST)/bin/nerdctl" ]; then ln -sf nerdctl.lima "$(DEST)/bin/nerdctl"; fi
+	if [ "$(shell uname -s )" != "Linux" -a ! -e "$(DEST)/bin/apptainer" ]; then ln -sf apptainer.lima "$(DEST)/bin/apptainer"; fi
 
 .PHONY: uninstall
 uninstall:
@@ -111,10 +117,12 @@ uninstall:
 		"$(DEST)/bin/lima$(bat)" \
 		"$(DEST)/bin/limactl$(exe)" \
 		"$(DEST)/bin/nerdctl.lima" \
+		"$(DEST)/bin/apptainer.lima" \
 		"$(DEST)/bin/docker.lima" \
 		"$(DEST)/bin/podman.lima" \
 		"$(DEST)/share/lima" "$(DEST)/share/doc/lima"
 	if [ "$$(readlink "$(DEST)/bin/nerdctl")" = "nerdctl.lima" ]; then rm "$(DEST)/bin/nerdctl"; fi
+	if [ "$$(readlink "$(DEST)/bin/apptainer")" = "apptainer.lima" ]; then rm "$(DEST)/bin/apptainer"; fi
 
 .PHONY: lint
 lint:
