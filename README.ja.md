@@ -1,8 +1,8 @@
-This is an *informal* translation of [`README.md` (revision df8bf9e7, 2022-Sep-23)](https://github.com/lima-vm/lima/blob/df8bf9e7ff198b01cd877ed425a73cbbaf8dec3b/README.md) in Japanese.
+This is an *informal* translation of [`README.md` (revision 725d7dca, 2022-Oct-8)](https://github.com/lima-vm/lima/blob/725d7dcac3e641905a444777bce8a65190db1692/README.md) in Japanese.
 This translation might be out of sync with the English version.
 Please refer to the [English `README.md`](README.md) for the latest information.
 
-[`README.md` (リビジョン df8bf9e7, 2022年9月23日)](https://github.com/lima-vm/lima/blob/df8bf9e7ff198b01cd877ed425a73cbbaf8dec3b/README.md)の *非正式* な日本語訳です。
+[`README.md` (リビジョン 725d7dca, 2022年10月8日)](https://github.com/lima-vm/lima/blob/725d7dcac3e641905a444777bce8a65190db1692/README.md)の *非正式* な日本語訳です。
 英語版からの翻訳が遅れていることがあります。
 最新の情報については[英語版 `README.md`](README.md)をご覧ください。
 
@@ -342,7 +342,7 @@ AlmaLinux, Alpine, Arch Linux, Debian, Fedora, openSUSE, Oracle Linux, Rocky が
 コンテナランタイムの例:
 - [`./examples/docker.yaml`](./examples/docker.yaml): Docker
 - [`./examples/podman.yaml`](./examples/podman.yaml): Podman
-- [`./examples/singularity.yaml`](./examples/singularity.yaml): Singularity
+- [`./examples/apptainer.yaml`](./examples/apptainer.yaml): Apptainer
 
 コンテナイメージビルダの例:
 - [`./examples/buildkit.yaml`](./examples/buildkit.yaml): BuildKit

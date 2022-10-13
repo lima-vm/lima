@@ -334,7 +334,7 @@ Yes, any container engine should work with Lima.
 Container runtime examples:
 - [`./examples/docker.yaml`](./examples/docker.yaml): Docker
 - [`./examples/podman.yaml`](./examples/podman.yaml): Podman
-- [`./examples/singularity.yaml`](./examples/singularity.yaml): Singularity
+- [`./examples/apptainer.yaml`](./examples/apptainer.yaml): Apptainer
 
 Container image builder examples:
 - [`./examples/buildkit.yaml`](./examples/buildkit.yaml): BuildKit
