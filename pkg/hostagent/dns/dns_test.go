@@ -19,16 +19,7 @@ var (
 	dnsResult *dns.Msg
 )
 
-func TestTXTRecords(t *testing.T) {
-	testDomains := make([]string, 3)
-	testDomains[0] = "onerecord.com"
-	testDomains[1] = "multistringrecord.com"
-	testDomains[2] = "multiplerecords.com"
-
-	expectedResults := make([]string, 3)
-	expectedResults[0] = `onerecord.com.\s+5\s+IN\s+TXT\s+"My txt record"`
-	expectedResults[1] = `multistringrecord.com.\s+5\s+IN\s+TXT\s+"123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345" "67890123456789012345678901234567890"`
-	expectedResults[2] = `multiplerecords.com.\s+5\s+IN\s+TXT\s+"record 1"\nmultiplerecords.com.\s*5\s*IN\s*TXT\s*"record 2"`
+func TestDNSRecords(t *testing.T) {
 
 	srv, _ := mockdns.NewServerWithLogger(map[string]mockdns.Zone{
 		"onerecord.com.": {
@@ -52,33 +43,42 @@ func TestTXTRecords(t *testing.T) {
 	}
 	srv.PatchNet(net.DefaultResolver)
 	defer mockdns.UnpatchNet(net.DefaultResolver)
+	w := new(TestResponseWriter)
+	options := HandlerOptions{
+		IPv6: true,
+		StaticHosts: map[string]string{
+			"MY.Host": "host.lima.internal",
+		},
+	}
 
-	t.Run("test TXT records", func(t *testing.T) {
-		w := new(TestResponseWriter)
-		options := HandlerOptions{
-			IPv6: true,
-			StaticHosts: map[string]string{
-				"MY.Host": "host.lima.internal",
-			},
-		}
-		h, err := NewHandler(options)
-		if err == nil {
-			for i := 0; i < len(testDomains); i++ {
-				req := new(dns.Msg)
-				req.SetQuestion(dns.Fqdn(testDomains[i]), dns.TypeTXT)
-				h.ServeDNS(w, req)
-				regexMatch := func(value string, pattern string) cmp.Comparison {
-					return func() cmp.Result {
-						re := regexp.MustCompile(pattern)
-						if re.MatchString(value) {
-							return cmp.ResultSuccess
-						}
-						return cmp.ResultFailure(
-							fmt.Sprintf("%q did not match pattern %q", value, pattern))
-					}
-				}
-				assert.Assert(t, regexMatch(dnsResult.String(), expectedResults[i]))
+	h, err := NewHandler(options)
+	assert.NilError(t, err)
+
+	regexMatch := func(value string, pattern string) cmp.Comparison {
+		return func() cmp.Result {
+			re := regexp.MustCompile(pattern)
+			if re.MatchString(value) {
+				return cmp.ResultSuccess
 			}
+			return cmp.ResultFailure(
+				fmt.Sprintf("%q did not match pattern %q", value, pattern))
+		}
+	}
+	t.Run("test TXT records", func(t *testing.T) {
+		tests := []struct {
+			testDomain        string
+			expectedTXTRecord string
+		}{
+			{testDomain: "onerecord.com", expectedTXTRecord: `onerecord.com.\s+5\s+IN\s+TXT\s+"My txt record"`},
+			{testDomain: "multistringrecord.com", expectedTXTRecord: `multistringrecord.com.\s+5\s+IN\s+TXT\s+"123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345" "67890123456789012345678901234567890"`},
+			{testDomain: "multiplerecords.com", expectedTXTRecord: `multiplerecords.com.\s+5\s+IN\s+TXT\s+"record 1"\nmultiplerecords.com.\s*5\s*IN\s*TXT\s*"record 2"`},
+		}
+
+		for _, tc := range tests {
+			req := new(dns.Msg)
+			req.SetQuestion(dns.Fqdn(tc.testDomain), dns.TypeTXT)
+			h.ServeDNS(w, req)
+			assert.Assert(t, regexMatch(dnsResult.String(), tc.expectedTXTRecord))
 		}
 	})
 }
