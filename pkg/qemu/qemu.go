@@ -433,9 +433,9 @@ func Cmdline(cfg Config) (string, []string, error) {
 		args = appendArgsIfNoConflict(args, "-boot", "order=c,splash-time=0,menu=on")
 	}
 	if diskSize, _ := units.RAMInBytes(*cfg.LimaYAML.Disk); diskSize > 0 {
-		args = append(args, "-drive", fmt.Sprintf("file=%s,if=virtio", diffDisk))
+		args = append(args, "-drive", fmt.Sprintf("file=%s,if=virtio,discard=on", diffDisk))
 	} else if !isBaseDiskCDROM {
-		args = append(args, "-drive", fmt.Sprintf("file=%s,if=virtio", baseDisk))
+		args = append(args, "-drive", fmt.Sprintf("file=%s,if=virtio,discard=on", baseDisk))
 	}
 	// cloud-init
 	switch *y.Arch {
