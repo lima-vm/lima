@@ -42,6 +42,9 @@ type Mount struct {
 	Type       string
 	Options    string
 }
+type BootCmds struct {
+	Lines []string
+}
 type TemplateArgs struct {
 	Name               string // instance name
 	IID                string // instance id
@@ -62,6 +65,7 @@ type TemplateArgs struct {
 	DNSAddresses       []string
 	CACerts            CACerts
 	HostHomeMountPoint string
+	BootCmds           []BootCmds
 }
 
 func ValidateTemplateArgs(args TemplateArgs) error {

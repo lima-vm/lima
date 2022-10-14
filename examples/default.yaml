@@ -171,6 +171,12 @@ containerd:
 #     cat <<EOF > ~/.vimrc
 #     set number
 #     EOF
+# # `boot` is executed directly by /bin/sh as part of cloud-init-local.service's early boot process,
+# # which is why there is no hash-bang specified in the example
+# # See cloud-init docs for more info https://cloudinit.readthedocs.io/en/latest/topics/examples.html#run-commands-on-first-boot
+# - mode: boot
+#   script: |
+#     systemctl disable NetworkManager-wait-online.service
 
 # Probe scripts to check readiness.
 # 🟢 Builtin default: null

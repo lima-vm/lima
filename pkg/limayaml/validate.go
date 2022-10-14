@@ -153,10 +153,10 @@ func Validate(y LimaYAML, warn bool) error {
 
 	for i, p := range y.Provision {
 		switch p.Mode {
-		case ProvisionModeSystem, ProvisionModeUser:
+		case ProvisionModeSystem, ProvisionModeUser, ProvisionModeBoot:
 		default:
-			return fmt.Errorf("field `provision[%d].mode` must be either %q or %q",
-				i, ProvisionModeSystem, ProvisionModeUser)
+			return fmt.Errorf("field `provision[%d].mode` must be either %q, %q, or %q",
+				i, ProvisionModeSystem, ProvisionModeUser, ProvisionModeBoot)
 		}
 	}
 	needsContainerdArchives := (y.Containerd.User != nil && *y.Containerd.User) || (y.Containerd.System != nil && *y.Containerd.System)

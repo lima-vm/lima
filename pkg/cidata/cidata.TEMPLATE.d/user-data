@@ -64,3 +64,13 @@ ca-certs:
     {{- end }}
   {{- end }}
 {{- end }}
+
+{{- if .BootCmds }}
+bootcmd:
+  {{- range $cmd := $.BootCmds }}
+- |
+    {{- range $line := $cmd.Lines }}
+  {{ $line }}
+    {{- end }}
+  {{- end }}
+{{- end }}
