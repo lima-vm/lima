@@ -1,5 +1,8 @@
 # This example requires Lima v0.8.3 or later.
 
+# NOTE: EL8-based distros are known not to work on M1 chips: https://github.com/lima-vm/lima/issues/841
+# EL9-based distros are known to work.
+
 images:
 - location: "https://cloud.centos.org/centos/8-stream/x86_64/images/CentOS-Stream-GenericCloud-8-20220125.1.x86_64.qcow2"
   arch: "x86_64"
