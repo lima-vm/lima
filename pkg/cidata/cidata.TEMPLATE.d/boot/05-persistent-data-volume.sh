@@ -14,6 +14,15 @@ DATADIRS="/etc /home /root /tmp /usr/local /var/lib"
 if [ "$(awk '$2 == "/" {print $3}' /proc/mounts)" == "tmpfs" ]; then
 	mkdir -p /mnt/data
 	if [ -e /dev/disk/by-label/data-volume ]; then
+		# Find which disk is data volume on
+		DATA_DISK=$(blkid | grep "data-volume" | awk '{split($0,s,":"); sub(/\d$/, "", s[1]); print s[1]};')
+		# Automatically expand the data volume filesystem
+		growpart "$DATA_DISK" 1 || true
+		# Only resize when filesystem is in a healthy state
+		if e2fsck -f -p /dev/disk/by-label/data-volume; then
+			resize2fs /dev/disk/by-label/data-volume
+		fi
+		# Mount data volume
 		mount -t ext4 /dev/disk/by-label/data-volume /mnt/data
 	else
 		# Find an unpartitioned disk and create data-volume
