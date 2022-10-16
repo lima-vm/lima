@@ -25,6 +25,9 @@ provision:
     set -eux -o pipefail
     command -v apptainer >/dev/null 2>&1 && exit 0
     dnf -y install apptainer
+    # See https://fedoraproject.org/wiki/Features/tmp-on-tmpfs
+    echo "APPTAINER_TMPDIR=/var/tmp" > /etc/profile.d/apptainer.sh
+    echo "export APPTAINER_TMPDIR" >> /etc/profile.d/apptainer.sh
 probes:
 - script: |
     #!/bin/bash
