@@ -59,7 +59,8 @@ mounts:
 - location: "~"
   9p:
     # Supported security models are "passthrough", "mapped-xattr", "mapped-file" and "none".
-    # 🟢 Builtin default: "mapped-xattr"
+    # "mapped-xattr" and "mapped-file" are useful for persistent chown but incompatible with symlinks.
+    # 🟢 Builtin default: "none" (since Lima v0.13)
     securityModel: null
     # Select 9P protocol version. Valid options are: "9p2000" (legacy), "9p2000.u", "9p2000.L".
     # 🟢 Builtin default: "9p2000.L"
