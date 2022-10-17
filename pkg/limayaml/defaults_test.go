@@ -149,7 +149,7 @@ func TestFillDefault(t *testing.T) {
 
 	expect := builtin
 	expect.HostResolver.Hosts = map[string]string{
-		"my.host.": "host.lima.internal",
+		"MY.Host": "host.lima.internal",
 	}
 
 	expect.Mounts = y.Mounts
@@ -319,7 +319,7 @@ func TestFillDefault(t *testing.T) {
 	expect.Mounts[0].NineP.Msize = pointer.String(Default9pMsize)
 	expect.Mounts[0].NineP.Cache = pointer.String(Default9pCacheForRO)
 	expect.HostResolver.Hosts = map[string]string{
-		"default.": d.HostResolver.Hosts["default"],
+		"default": d.HostResolver.Hosts["default"],
 	}
 	expect.MountType = pointer.String(REVSSHFS)
 	expect.CACertificates.RemoveDefaults = pointer.Bool(true)
@@ -348,7 +348,7 @@ func TestFillDefault(t *testing.T) {
 	expect.Mounts = append(d.Mounts, y.Mounts...)
 	expect.Networks = append(d.Networks, y.Networks...)
 
-	expect.HostResolver.Hosts["default."] = d.HostResolver.Hosts["default"]
+	expect.HostResolver.Hosts["default"] = d.HostResolver.Hosts["default"]
 
 	// d.DNS will be ignored, and not appended to y.DNS
 
@@ -474,8 +474,8 @@ func TestFillDefault(t *testing.T) {
 	expect.PortForwards = append(append(o.PortForwards, y.PortForwards...), d.PortForwards...)
 	expect.Containerd.Archives = append(append(o.Containerd.Archives, y.Containerd.Archives...), d.Containerd.Archives...)
 
-	expect.HostResolver.Hosts["default."] = d.HostResolver.Hosts["default"]
-	expect.HostResolver.Hosts["my.host."] = d.HostResolver.Hosts["host.lima.internal"]
+	expect.HostResolver.Hosts["default"] = d.HostResolver.Hosts["default"]
+	expect.HostResolver.Hosts["MY.Host"] = d.HostResolver.Hosts["host.lima.internal"]
 
 	// o.Mounts just makes d.Mounts[0] writable because the Location matches
 	expect.Mounts = append(d.Mounts, y.Mounts...)
