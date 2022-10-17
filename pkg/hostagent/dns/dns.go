@@ -8,7 +8,6 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/miekg/dns"
 	"github.com/sirupsen/logrus"
 )
@@ -132,10 +131,11 @@ func NewHandler(opts HandlerOptions) (dns.Handler, error) {
 		hostToIP:     make(map[string]net.IP),
 	}
 	for host, address := range opts.StaticHosts {
+		cname := dns.CanonicalName(host)
 		if ip := net.ParseIP(address); ip != nil {
-			h.hostToIP[host] = ip
+			h.hostToIP[cname] = ip
 		} else {
-			h.cnameToHost[host] = limayaml.Cname(address)
+			h.cnameToHost[cname] = dns.CanonicalName(address)
 		}
 	}
 	return h, nil

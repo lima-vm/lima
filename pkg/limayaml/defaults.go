@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
-	"strings"
 	"text/template"
 
 	"github.com/lima-vm/lima/pkg/guestagent/api"
@@ -233,13 +232,13 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 	hosts := make(map[string]string)
 	// Values can be either names or IP addresses. Name values are canonicalized in the hostResolver.
 	for k, v := range d.HostResolver.Hosts {
-		hosts[Cname(k)] = v
+		hosts[k] = v
 	}
 	for k, v := range y.HostResolver.Hosts {
-		hosts[Cname(k)] = v
+		hosts[k] = v
 	}
 	for k, v := range o.HostResolver.Hosts {
-		hosts[Cname(k)] = v
+		hosts[k] = v
 	}
 	y.HostResolver.Hosts = hosts
 
@@ -665,14 +664,6 @@ func IsNativeArch(arch Arch) bool {
 	nativeAARCH64 := arch == AARCH64 && runtime.GOARCH == "arm64"
 	nativeRISCV64 := arch == RISCV64 && runtime.GOARCH == "riscv64"
 	return nativeX8664 || nativeAARCH64 || nativeRISCV64
-}
-
-func Cname(host string) string {
-	host = strings.ToLower(host)
-	if !strings.HasSuffix(host, ".") {
-		host += "."
-	}
-	return host
 }
 
 func unique(s []string) []string {

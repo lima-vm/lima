@@ -307,8 +307,8 @@ func (a *HostAgent) Run(ctx context.Context) error {
 
 	if *a.y.HostResolver.Enabled {
 		hosts := a.y.HostResolver.Hosts
-		hosts["host.lima.internal."] = qemuconst.SlirpGateway
-		hosts[fmt.Sprintf("lima-%s.", a.instName)] = qemuconst.SlirpIPAddress
+		hosts["host.lima.internal"] = qemuconst.SlirpGateway
+		hosts[fmt.Sprintf("lima-%s", a.instName)] = qemuconst.SlirpIPAddress
 		srvOpts := dns.ServerOptions{
 			UDPPort: a.udpDNSLocalPort,
 			TCPPort: a.tcpDNSLocalPort,

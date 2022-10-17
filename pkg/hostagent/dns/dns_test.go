@@ -47,7 +47,10 @@ func TestDNSRecords(t *testing.T) {
 	options := HandlerOptions{
 		IPv6: true,
 		StaticHosts: map[string]string{
-			"MY.Host": "host.lima.internal",
+			"MY.DOMAIN.COM":      "192.168.0.23",
+			"host.lima.internal": "10.10.0.34",
+			"my.host":            "host.lima.internal",
+			"default":            "my.domain.com",
 		},
 	}
 
@@ -79,6 +82,40 @@ func TestDNSRecords(t *testing.T) {
 			req.SetQuestion(dns.Fqdn(tc.testDomain), dns.TypeTXT)
 			h.ServeDNS(w, req)
 			assert.Assert(t, regexMatch(dnsResult.String(), tc.expectedTXTRecord))
+		}
+	})
+
+	t.Run("test A records", func(t *testing.T) {
+		tests := []struct {
+			testDomain      string
+			expectedARecord string
+		}{
+			{testDomain: "my.domain.com", expectedARecord: `my.domain.com.\s+5\s+IN\s+A\s+192.168.0.23`},
+			{testDomain: "host.lima.internal", expectedARecord: `host.lima.internal.\s+5\s+IN\s+A\s+10.10.0.34`},
+		}
+
+		for _, tc := range tests {
+			req := new(dns.Msg)
+			req.SetQuestion(dns.Fqdn(tc.testDomain), dns.TypeA)
+			h.ServeDNS(w, req)
+			assert.Assert(t, regexMatch(dnsResult.String(), tc.expectedARecord))
+		}
+	})
+
+	t.Run("test CNAME records", func(t *testing.T) {
+		tests := []struct {
+			testDomain    string
+			expectedCNAME string
+		}{
+			{testDomain: "my.host", expectedCNAME: `my.host.\s+5\s+IN\s+CNAME\s+host.lima.internal.`},
+			{testDomain: "default", expectedCNAME: `default.\s+5\s+IN\s+CNAME\s+my.domain.com.`},
+		}
+
+		for _, tc := range tests {
+			req := new(dns.Msg)
+			req.SetQuestion(dns.Fqdn(tc.testDomain), dns.TypeCNAME)
+			h.ServeDNS(w, req)
+			assert.Assert(t, regexMatch(dnsResult.String(), tc.expectedCNAME))
 		}
 	})
 }
