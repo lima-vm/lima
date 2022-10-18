@@ -124,6 +124,9 @@ diagrams: docs/lima-sequence-diagram.png
 docs/lima-sequence-diagram.png: docs/images/lima-sequence-diagram.puml
 	$(PLANTUML) ./docs/images/lima-sequence-diagram.puml
 
+# Simple wrapper for 'apptainer run' (.sif)
+RUN_SINGULARITY=./cmd/run-singularity.lima
+
 .PHONY: install
 install: uninstall
 	mkdir -p "$(DEST)"
@@ -131,6 +134,8 @@ install: uninstall
 	( cd _output && tar c * | tar Cxv "$(DEST)" )
 	if [ "$(shell uname -s )" != "Linux" -a ! -e "$(DEST)/bin/nerdctl" ]; then ln -sf nerdctl.lima "$(DEST)/bin/nerdctl"; fi
 	if [ "$(shell uname -s )" != "Linux" -a ! -e "$(DEST)/bin/apptainer" ]; then ln -sf apptainer.lima "$(DEST)/bin/apptainer"; fi
+	if [ "$(shell uname -s )" != "Linux" -a ! -e "$(DEST)/bin/singularity" ]; then ln -sf apptainer.lima "$(DEST)/bin/singularity"; fi
+	if [ "$(shell uname -s )" != "Linux" -a ! -e "$(DEST)/bin/run-singularity" ]; then cp -a $(RUN_SINGULARITY) "$(DEST)/bin/run-singularity"; fi
 
 .PHONY: uninstall
 uninstall:
@@ -149,6 +154,8 @@ uninstall:
 		"$(DEST)/share/lima" "$(DEST)/share/doc/lima"
 	if [ "$$(readlink "$(DEST)/bin/nerdctl")" = "nerdctl.lima" ]; then rm "$(DEST)/bin/nerdctl"; fi
 	if [ "$$(readlink "$(DEST)/bin/apptainer")" = "apptainer.lima" ]; then rm "$(DEST)/bin/apptainer"; fi
+	if [ "$$(readlink "$(DEST)/bin/singularity")" = "apptainer.lima" ]; then rm "$(DEST)/bin/singularity"; fi
+	if grep -q apptainer.lima "$(DEST)/bin/run-singularity"; then rm "$(DEST)/bin/run-singularity"; fi
 
 .PHONY: lint
 lint:
