@@ -20,7 +20,9 @@ import (
 )
 
 const (
-	Default9pSecurityModel   string = "mapped-xattr"
+	// Default9pSecurityModel is "none" for supporting symlinks
+	// https://gitlab.com/qemu-project/qemu/-/issues/173
+	Default9pSecurityModel   string = "none"
 	Default9pProtocolVersion string = "9p2000.L"
 	Default9pMsize           string = "128KiB"
 	Default9pCacheForRO      string = "fscache"
