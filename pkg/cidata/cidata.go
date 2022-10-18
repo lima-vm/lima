@@ -4,9 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
+	"net/url"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -22,6 +23,16 @@ import (
 	"github.com/lima-vm/lima/pkg/usrlocalsharelima"
 	"github.com/sirupsen/logrus"
 )
+
+var netLookupIP = func(host string) []net.IP {
+	ips, err := net.LookupIP(host)
+	if err != nil {
+		logrus.Debugf("net.LookupIP %s: %s", host, err)
+		return nil
+	}
+
+	return ips
+}
 
 func setupEnv(y *limayaml.LimaYAML) (map[string]string, error) {
 	// Start with the proxy variables from the system settings.
@@ -50,16 +61,25 @@ func setupEnv(y *limayaml.LimaYAML) (map[string]string, error) {
 			}
 		}
 	}
-	// Replace "localhost" in proxy settings with the gateway address
-	localhostRegexes := []*regexp.Regexp{
-		regexp.MustCompile(`\blocalhost\b`),
-		regexp.MustCompile(`\b127.0.0.1\b`),
-	}
+	// Replace IP that IsLoopback in proxy settings with the gateway address
 	for _, name := range append(lowerVars, upperVars...) {
 		value, ok := env[name]
 		if ok && !strings.EqualFold(name, "no_proxy") {
-			for _, re := range localhostRegexes {
-				value = re.ReplaceAllString(value, qemu.SlirpGateway)
+			u, err := url.Parse(value)
+			if err != nil {
+				logrus.Warnf("Ignoring invalid proxy %q=%v: %s", name, value, err)
+				continue
+			}
+
+			for _, ip := range netLookupIP(u.Hostname()) {
+				if ip.IsLoopback() {
+					newHost := qemu.SlirpGateway
+					if u.Port() != "" {
+						newHost = net.JoinHostPort(newHost, u.Port())
+					}
+					u.Host = newHost
+					value = u.String()
+				}
 			}
 			if value != env[name] {
 				logrus.Infof("Replacing %q value %q with %q", name, env[name], value)
