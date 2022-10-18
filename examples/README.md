@@ -50,8 +50,8 @@ Lost+found:
 - ~`centos.yaml`~: Removed in Lima v0.8.0, as CentOS 8 reached [EOL](https://www.centos.org/centos-linux-eol/).
   Replaced by [`rocky.yaml`](./rocky.yaml), [`almalinux.yaml`](./almalinux.yaml), [`oraclelinux.yaml`](./oraclelinux.yaml),
   and [`centos-stream.yaml`](./centos-stream.yaml).
-- ~`singularity.yaml`~: Moved to [`apptainer-rootful.yaml`](./apptainer-rootful.yaml) in Lima v0.12.1, as Singularity was renamed to Apptainer.
-- ~`experimental/apptainer.yaml`~: Moved to [`apptainer.yaml`](./apptainer.yaml) in Lima v0.12.1
+- ~`singularity.yaml`~: Moved to [`apptainer-rootful.yaml`](./apptainer-rootful.yaml) in Lima v0.13.0, as Singularity was renamed to Apptainer.
+- ~`experimental/apptainer.yaml`~: Moved to [`apptainer.yaml`](./apptainer.yaml) in Lima v0.13.0
 
 ## Tier 1
 
