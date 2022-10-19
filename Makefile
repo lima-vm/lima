@@ -124,8 +124,8 @@ diagrams: docs/lima-sequence-diagram.png
 docs/lima-sequence-diagram.png: docs/images/lima-sequence-diagram.puml
 	$(PLANTUML) ./docs/images/lima-sequence-diagram.puml
 
-# Simple wrapper for 'apptainer run' (.sif)
-RUN_SINGULARITY=./cmd/run-singularity.lima
+# Simple wrapper for 'singularity run' (.sif)
+RUN_SINGULARITY=./cmd/run-singularity.sh
 
 .PHONY: install
 install: uninstall
@@ -155,7 +155,7 @@ uninstall:
 	if [ "$$(readlink "$(DEST)/bin/nerdctl")" = "nerdctl.lima" ]; then rm "$(DEST)/bin/nerdctl"; fi
 	if [ "$$(readlink "$(DEST)/bin/apptainer")" = "apptainer.lima" ]; then rm "$(DEST)/bin/apptainer"; fi
 	if [ "$$(readlink "$(DEST)/bin/singularity")" = "apptainer.lima" ]; then rm "$(DEST)/bin/singularity"; fi
-	if grep -q apptainer.lima "$(DEST)/bin/run-singularity"; then rm "$(DEST)/bin/run-singularity"; fi
+	if grep -q "lima apptainer" "$(DEST)/bin/run-singularity"; then rm "$(DEST)/bin/run-singularity"; fi
 
 .PHONY: lint
 lint:

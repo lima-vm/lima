@@ -1,3 +1,0 @@
-#!/bin/sh
-set -eu
-exec apptainer.lima --quiet run "$@"
