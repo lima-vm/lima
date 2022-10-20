@@ -1,10 +1,15 @@
 #!/bin/sh
 set -eu
 : "${LIMA_INSTANCE:=apptainer}"
+: "${APPTAINER_BINDPATH:=}"
 
 if [ "$(limactl ls -q "$LIMA_INSTANCE" 2>/dev/null)" != "$LIMA_INSTANCE" ]; then
   echo "instance \"$LIMA_INSTANCE\" does not exist, run \`limactl create --name=$LIMA_INSTANCE template://apptainer\` to create a new instance" >&2
   exit 1
 fi
 export LIMA_INSTANCE
-exec lima APPTAINER_HOME="$HOME" apptainer "$@"
+if [ -n "$APPTAINER_BINDPATH" ]; then
+  APPTAINER_BINDPATH="$APPTAINER_BINDPATH,"
+fi
+APPTAINER_BINDPATH="$APPTAINER_BINDPATH$HOME"
+exec lima APPTAINER_BINDPATH="$APPTAINER_BINDPATH" apptainer "$@"
