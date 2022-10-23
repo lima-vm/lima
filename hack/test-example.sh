@@ -230,7 +230,7 @@ if [[ -n ${CHECKS["vmnet"]} ]]; then
 	set +x
 	INFO "Benchmarking with iperf3"
 	set -x
-	limactl shell "$NAME" sudo apt-get install -y iperf3
+	limactl shell "$NAME" sudo DEBIAN_FRONTEND=noninteractive apt-get install -y iperf3
 	limactl shell "$NAME" iperf3 -s -1 -D
 	iperf3 -c "$guestip"
 	set +x
