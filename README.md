@@ -244,7 +244,7 @@ Especially, the following data might be easily lost:
 See [`./examples/default.yaml`](./examples/default.yaml).
 
 The current default spec:
-- OS: Ubuntu 22.04 (Jammy Jellyfish)
+- OS: Ubuntu 22.10 (Kinetic Kudu)
 - CPU: 4 cores
 - Memory: 4 GiB
 - Disk: 100 GiB

@@ -1,8 +1,8 @@
-This is an *informal* translation of [`README.md` (revision 725d7dca, 2022-Oct-8)](https://github.com/lima-vm/lima/blob/725d7dcac3e641905a444777bce8a65190db1692/README.md) in Japanese.
+This is an *informal* translation of [`README.md` (revision b65049d4, 2022-Oct-23)](https://github.com/lima-vm/lima/blob/b65049d4b89421fca5c73f494bb35e23b3c576c0/README.md) in Japanese.
 This translation might be out of sync with the English version.
 Please refer to the [English `README.md`](README.md) for the latest information.
 
-[`README.md` (リビジョン 725d7dca, 2022年10月8日)](https://github.com/lima-vm/lima/blob/725d7dcac3e641905a444777bce8a65190db1692/README.md)の *非正式* な日本語訳です。
+[`README.md` (リビジョン b65049d4, 2022年10月23日)](https://github.com/lima-vm/lima/blob/b65049d4b89421fca5c73f494bb35e23b3c576c0/README.md)の *非正式* な日本語訳です。
 英語版からの翻訳が遅れていることがあります。
 最新の情報については[英語版 `README.md`](README.md)をご覧ください。
 
@@ -253,7 +253,7 @@ Limaにはデータの喪失を引き起こすバグが含まれているかも�
 [`./examples/default.yaml`](./examples/default.yaml)を見てください。
 
 現在のデフォルト構成:
-- OS: Ubuntu 22.04 (Jammy Jellyfish)
+- OS: Ubuntu 22.10 (Kinetic Kudu)
 - CPU: 4 コア
 - メモリ: 4 GiB
 - ストレージ: 100 GiB

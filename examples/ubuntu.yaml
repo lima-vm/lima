@@ -1,17 +1,17 @@
 # This example requires Lima v0.7.0 or later.
 images:
 # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
-- location: "https://cloud-images.ubuntu.com/releases/22.04/release-20220902/ubuntu-22.04-server-cloudimg-amd64.img"
+- location: "https://cloud-images.ubuntu.com/releases/22.10/release-20221022/ubuntu-22.10-server-cloudimg-amd64.img"
   arch: "x86_64"
-  digest: "sha256:c777670007cc5f132417b9e0bc01367ccfc2a989951ffa225bb1952917c3aa81"
-- location: "https://cloud-images.ubuntu.com/releases/22.04/release-20220902/ubuntu-22.04-server-cloudimg-arm64.img"
+  digest: "sha256:8dc6cbae004d61dcd6098a93eeddebc3ddc7221df6688d1cbbbf0d86909aecf4"
+- location: "https://cloud-images.ubuntu.com/releases/22.10/release-20221022/ubuntu-22.10-server-cloudimg-arm64.img"
   arch: "aarch64"
-  digest: "sha256:9620f479bd5a6cbf1e805654d41b27f4fc56ef20f916c8331558241734de81ae"
+  digest: "sha256:9a95b52bc68639f3c60109d25d99fe0b3127d21632da437f00cb18e32bc528c4"
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
-- location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-amd64.img"
+- location: "https://cloud-images.ubuntu.com/releases/22.10/release/ubuntu-22.10-server-cloudimg-amd64.img"
   arch: "x86_64"
-- location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-arm64.img"
+- location: "https://cloud-images.ubuntu.com/releases/22.10/release/ubuntu-22.10-server-cloudimg-arm64.img"
   arch: "aarch64"
 
 mounts:
