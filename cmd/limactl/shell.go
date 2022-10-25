@@ -12,13 +12,21 @@ import (
 	"github.com/lima-vm/lima/pkg/sshutil"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/mattn/go-isatty"
+	"github.com/mattn/go-shellwords"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
+// Environment variable that allows configuring the command (alias) to execute
+// in place of the 'ssh' executable.
+const envShellSSH = "SSH"
+
 var shellHelp = `Execute shell in Lima
 
 lima command is provided as an alias for limactl shell $LIMA_INSTANCE. $LIMA_INSTANCE defaults to "` + DefaultInstanceName + `".
+
+By default, the first 'ssh' executable found in the host's PATH is used to connect to the Lima instance.
+A custom ssh alias can be used instead by setting the $` + envShellSSH + ` environment variable.
 
 Hint: try --debug to show the detailed logs, if it seems hanging (mostly due to some SSH issue).
 `
@@ -126,9 +134,28 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		)
 	}
 
-	arg0, err := exec.LookPath("ssh")
-	if err != nil {
-		return err
+	var arg0 string
+	var arg0Args []string
+
+	if sshShell := os.Getenv(envShellSSH); sshShell != "" {
+		sshShellFields, err := shellwords.Parse(sshShell)
+		switch {
+		case err != nil:
+			logrus.WithError(err).Warnf("Failed to split %s variable into shell tokens. "+
+				"Falling back to 'ssh' command", envShellSSH)
+		case len(sshShellFields) > 0:
+			arg0 = sshShellFields[0]
+			if len(sshShellFields) > 1 {
+				arg0Args = sshShellFields[1:]
+			}
+		}
+	}
+
+	if arg0 == "" {
+		arg0, err = exec.LookPath("ssh")
+		if err != nil {
+			return err
+		}
 	}
 
 	sshOpts, err := sshutil.SSHOpts(inst.Dir, *y.SSH.LoadDotSSHPubKeys, *y.SSH.ForwardAgent, *y.SSH.ForwardX11, *y.SSH.ForwardX11Trusted)
@@ -151,7 +178,7 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		"--",
 		script,
 	}...)
-	sshCmd := exec.Command(arg0, sshArgs...)
+	sshCmd := exec.Command(arg0, append(arg0Args, sshArgs...)...)
 	sshCmd.Stdin = os.Stdin
 	sshCmd.Stdout = os.Stdout
 	sshCmd.Stderr = os.Stderr
