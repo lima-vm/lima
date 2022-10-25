@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -40,6 +41,10 @@ func newShellCommand() *cobra.Command {
 	shellCmd.Flags().String("workdir", "", "working directory")
 	return shellCmd
 }
+
+// envShell contains the user's shell, as specified by the password database.
+// http://man.openbsd.org/login.1#SHELL
+const envShell = "SHELL"
 
 func shellAction(cmd *cobra.Command, args []string) error {
 	// simulate the behavior of double dash
@@ -126,17 +131,13 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		)
 	}
 
-	arg0, err := exec.LookPath("ssh")
-	if err != nil {
-		return err
-	}
-
 	sshOpts, err := sshutil.SSHOpts(inst.Dir, *y.SSH.LoadDotSSHPubKeys, *y.SSH.ForwardAgent, *y.SSH.ForwardX11, *y.SSH.ForwardX11Trusted)
 	if err != nil {
 		return err
 	}
 	sshArgs := sshutil.SSHArgsFromOpts(sshOpts)
-	if isatty.IsTerminal(os.Stdout.Fd()) || isatty.IsCygwinTerminal(os.Stdout.Fd()) {
+	isTerm := isatty.IsTerminal(os.Stdout.Fd()) || isatty.IsCygwinTerminal(os.Stdout.Fd())
+	if isTerm {
 		// required for showing the shell prompt: https://stackoverflow.com/a/626574
 		sshArgs = append(sshArgs, "-t")
 	}
@@ -151,7 +152,24 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		"--",
 		script,
 	}...)
-	sshCmd := exec.Command(arg0, sshArgs...)
+
+	var sshCmd *exec.Cmd
+
+	if usrShell := os.Getenv(envShell); isTerm && usrShell != "" {
+		sshCmdStr := shellescape.QuoteCommand(append([]string{"ssh"}, sshArgs...))
+		shellArgs := []string{"-i", "-c", sshCmdStr}
+		if !isCsh(usrShell) {
+			shellArgs = append([]string{"-l"}, shellArgs...)
+		}
+		sshCmd = exec.Command(usrShell, shellArgs...)
+	} else {
+		arg0, err := exec.LookPath("ssh")
+		if err != nil {
+			return err
+		}
+		sshCmd = exec.Command(arg0, sshArgs...)
+	}
+
 	sshCmd.Stdin = os.Stdin
 	sshCmd.Stdout = os.Stdout
 	sshCmd.Stderr = os.Stderr
@@ -163,4 +181,18 @@ func shellAction(cmd *cobra.Command, args []string) error {
 
 func shellBashComplete(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 	return bashCompleteInstanceNames(cmd)
+}
+
+const cshSuffix = "csh"
+
+// isCsh returns whether the given shell is the C shell (csh) or any of its variants.
+// The shell parameter can be either a shell name ("*sh") or the path to a
+// shell executable ("/bin/*sh").
+func isCsh(shell string) bool {
+	suffixLen := len(cshSuffix)
+	basename := filepath.Base(shell)
+	if len(basename) < suffixLen {
+		return false
+	}
+	return basename[len(basename)-suffixLen:] == cshSuffix
 }
