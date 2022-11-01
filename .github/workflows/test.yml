@@ -103,6 +103,10 @@ jobs:
         # breaking upgrades to latest python@3.9
         rm -f /usr/local/bin/2to3
         time brew update
+        # Github runners seem to have lima installed by brew already; we don't want/need it
+        # It also does throw an error during `brew upgrade`.
+        # Needs --ignore-dependencies because it is installed as a prerequisite for colima.
+        time brew uninstall --ignore-dependencies lima
         time brew install qemu bash coreutils curl jq
         time brew upgrade
     - name: Cache ~/Library/Caches/lima/download
