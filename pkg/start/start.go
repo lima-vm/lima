@@ -21,7 +21,11 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func ensureDisk(ctx context.Context, instName, instDir string, y *limayaml.LimaYAML) error {
+// DefaultWatchHostAgentEventsTimeout is the duration to wait for the instance
+// to be running before timing out.
+const DefaultWatchHostAgentEventsTimeout = 10 * time.Minute
+
+func ensureDisk(instName, instDir string, y *limayaml.LimaYAML) error {
 	qCfg := qemu.Config{
 		Name:        instName,
 		InstanceDir: instDir,
@@ -90,7 +94,7 @@ func Start(ctx context.Context, inst *store.Instance) error {
 		return err
 	}
 
-	if err := ensureDisk(ctx, inst.Name, inst.Dir, y); err != nil {
+	if err := ensureDisk(inst.Name, inst.Dir, y); err != nil {
 		return err
 	}
 	nerdctlArchiveCache, err := ensureNerdctlArchiveCache(y)
@@ -185,7 +189,7 @@ func waitHostAgentStart(ctx context.Context, haPIDPath, haStderrPath string) err
 }
 
 func watchHostAgentEvents(ctx context.Context, inst *store.Instance, haStdoutPath, haStderrPath string, begin time.Time) error {
-	ctx2, cancel := context.WithTimeout(ctx, 10*time.Minute)
+	ctx, cancel := context.WithTimeout(ctx, watchHostAgentTimeout(ctx))
 	defer cancel()
 
 	var (
@@ -221,7 +225,7 @@ func watchHostAgentEvents(ctx context.Context, inst *store.Instance, haStdoutPat
 		return false
 	}
 
-	if xerr := hostagentevents.Watch(ctx2, haStdoutPath, haStderrPath, begin, onEvent); xerr != nil {
+	if xerr := hostagentevents.Watch(ctx, haStdoutPath, haStderrPath, begin, onEvent); xerr != nil {
 		return xerr
 	}
 
@@ -234,6 +238,23 @@ func watchHostAgentEvents(ctx context.Context, inst *store.Instance, haStdoutPat
 	}
 
 	return nil
+}
+
+type watchHostAgentEventsTimeoutKey = struct{}
+
+// WithWatchHostAgentEventsTimeout sets the value of the timeout to use for
+// watchHostAgentEvents in the given Context.
+func WithWatchHostAgentTimeout(ctx context.Context, timeout time.Duration) context.Context {
+	return context.WithValue(ctx, watchHostAgentEventsTimeoutKey{}, timeout)
+}
+
+// watchHostAgentEventsTimeout returns the value of the timeout to use for
+// watchHostAgentEvents contained in the given Context, or its default value.
+func watchHostAgentTimeout(ctx context.Context) time.Duration {
+	if timeout, ok := ctx.Value(watchHostAgentEventsTimeoutKey{}).(time.Duration); ok {
+		return timeout
+	}
+	return DefaultWatchHostAgentEventsTimeout
 }
 
 func LimactlShellCmd(instName string) string {
