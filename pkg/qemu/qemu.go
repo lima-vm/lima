@@ -540,7 +540,7 @@ func Cmdline(cfg Config) (string, []string, error) {
 		args = appendArgsIfNoConflict(args, "-display", *y.Video.Display)
 	}
 	switch *y.Arch {
-	case limayaml.X8664:
+	case limayaml.X8664, limayaml.RISCV64:
 		args = append(args, "-device", "virtio-vga")
 		args = append(args, "-device", "virtio-keyboard-pci")
 		args = append(args, "-device", "virtio-mouse-pci")
