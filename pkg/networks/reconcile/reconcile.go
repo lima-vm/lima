@@ -226,19 +226,18 @@ func stopNetwork(config *networks.YAML, name string) error {
 				return err
 			}
 		}
-		// wait for VMNet to terminate (up to 5s) before stopping Switch, otherwise the socket may not get deleted
-		if daemon == networks.VDEVMNet {
-			startWaiting := time.Now()
-			for {
-				if pid, _ := store.ReadPIDFile(config.PIDFile(name, daemon)); pid == 0 {
-					break
-				}
-				if time.Since(startWaiting) > 5*time.Second {
-					logrus.Infof("%q daemon for %q network still running after 5 seconds", daemon, name)
-					break
-				}
-				time.Sleep(500 * time.Millisecond)
+		// wait for daemons to terminate (up to 5s) before stopping, otherwise the sockets may not get deleted which
+		// will cause subsequent start commands to fail.
+		startWaiting := time.Now()
+		for {
+			if pid, _ := store.ReadPIDFile(config.PIDFile(name, daemon)); pid == 0 {
+				break
 			}
+			if time.Since(startWaiting) > 5*time.Second {
+				logrus.Infof("%q daemon for %q network still running after 5 seconds", daemon, name)
+				break
+			}
+			time.Sleep(500 * time.Millisecond)
 		}
 	}
 	return nil
