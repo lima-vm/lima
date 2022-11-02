@@ -53,6 +53,7 @@ $ limactl start --name=default https://raw.githubusercontent.com/lima-vm/lima/ma
 	startCommand.Flags().Bool("tty", isatty.IsTerminal(os.Stdout.Fd()), "enable TUI interactions such as opening an editor, defaults to true when stdout is a terminal")
 	startCommand.Flags().String("name", "", "override the instance name")
 	startCommand.Flags().Bool("list-templates", false, "list available templates and exit")
+	startCommand.Flags().Duration("timeout", start.DefaultWatchHostAgentEventsTimeout, "duration to wait for the instance to be running before timing out")
 	return startCommand
 }
 
@@ -354,6 +355,15 @@ func startAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+
+	timeout, err := cmd.Flags().GetDuration("timeout")
+	if err != nil {
+		return err
+	}
+	if timeout > 0 {
+		ctx = start.WithWatchHostAgentTimeout(ctx, timeout)
+	}
+
 	return start.Start(ctx, inst)
 }
 
