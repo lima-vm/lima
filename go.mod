@@ -31,7 +31,7 @@ require (
 	github.com/spf13/cobra v1.6.1
 	github.com/xorcare/pointer v1.2.1
 	github.com/yalue/native_endian v1.0.2
-	golang.org/x/sys v0.1.0
+	golang.org/x/sys v0.2.0
 	gotest.tools/v3 v3.4.0
 )
 
