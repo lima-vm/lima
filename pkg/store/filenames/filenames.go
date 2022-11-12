@@ -10,6 +10,7 @@ const (
 	ConfigDir   = "_config"
 	CacheDir    = "_cache"    // not yet implemented
 	NetworksDir = "_networks" // network log files are stored here
+	DisksDir    = "_disks"    // disks are stored here
 )
 
 // Filenames used inside the ConfigDir
@@ -45,6 +46,13 @@ const (
 
 	// SocketDir is the default location for forwarded sockets with a relative paths in HostSocket
 	SocketDir = "sock"
+)
+
+// Filenames used under a disk directory
+
+const (
+	DataDisk = "datadisk"
+	InUseBy  = "in_use_by"
 )
 
 // LongestSock is the longest socket name.

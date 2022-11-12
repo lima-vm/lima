@@ -45,6 +45,10 @@ type Mount struct {
 type BootCmds struct {
 	Lines []string
 }
+type Disk struct {
+	Name   string
+	Device string
+}
 type TemplateArgs struct {
 	Name               string // instance name
 	IID                string // instance id
@@ -53,6 +57,7 @@ type TemplateArgs struct {
 	SSHPubKeys         []string
 	Mounts             []Mount
 	MountType          string
+	Disks              []Disk
 	Containerd         Containerd
 	Networks           []Network
 	SlirpNICName       string

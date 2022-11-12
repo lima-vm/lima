@@ -59,6 +59,16 @@ Host agent:
 - `ha.stdout.log`: hostagent stdout (JSON lines, see `pkg/hostagent/events.Event`)
 - `ha.stderr.log`: hostagent stderr (human-readable messages)
 
+## Disk directory (`${LIMA_HOME}/_disk/<DISK>`)
+
+A disk directory contains the following files:
+
+data disk:
+- `datadisk`: the qcow2 disk that is attached to an instance
+
+lock:
+- `in_use_by`: symlink to the instance directory that is using the disk
+
 ## Lima cache directory (`~/Library/Caches/lima`)
 
 Currently hard-coded to `~/Library/Caches/lima` on macOS.

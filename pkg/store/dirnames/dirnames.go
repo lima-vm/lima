@@ -53,3 +53,12 @@ func LimaNetworksDir() (string, error) {
 	}
 	return filepath.Join(limaDir, filenames.NetworksDir), nil
 }
+
+// LimaDisksDir returns the path of the disks directory, $LIMA_HOME/_disks.
+func LimaDisksDir() (string, error) {
+	limaDir, err := LimaDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(limaDir, filenames.DisksDir), nil
+}

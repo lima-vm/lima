@@ -224,6 +224,14 @@ Use `<INSTANCE>:<FILENAME>` to specify a source or target inside an instance.
 #### `limactl edit`
 `limactl edit <INSTANCE>`: edit the instance
 
+#### `limactl disk`
+
+`limactl disk create <DISK> --size <SIZE>`: create a new external disk to attach to an instance
+
+`limactl disk delete <DISK>`: delete an existing disk
+
+`limactl disk list`: list all existing disks
+
 #### `limactl completion`
 - To enable bash completion, add `source <(limactl completion bash)` to `~/.bash_profile`.
 

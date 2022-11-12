@@ -22,6 +22,7 @@ import (
 	"github.com/lima-vm/lima/pkg/networks"
 	qemu "github.com/lima-vm/lima/pkg/qemu/const"
 	"github.com/lima-vm/lima/pkg/qemu/imgutil"
+	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/mattn/go-shellwords"
 	"github.com/sirupsen/logrus"
@@ -121,6 +122,21 @@ func EnsureDisk(cfg Config) error {
 		args = append(args, "-F", baseDiskFormat, "-b", baseDisk)
 	}
 	args = append(args, diffDisk, strconv.Itoa(int(diskSize)))
+	cmd := exec.Command("qemu-img", args...)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to run %v: %q: %w", cmd.Args, string(out), err)
+	}
+	return nil
+}
+
+func CreateDataDisk(dir string, size int) error {
+	dataDisk := filepath.Join(dir, filenames.DataDisk)
+	if _, err := os.Stat(dataDisk); err == nil || !errors.Is(err, fs.ErrNotExist) {
+		// datadisk already exists
+		return err
+	}
+
+	args := []string{"create", "-f", "qcow2", dataDisk, strconv.Itoa(size)}
 	cmd := exec.Command("qemu-img", args...)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to run %v: %q: %w", cmd.Args, string(out), err)
@@ -422,6 +438,30 @@ func Cmdline(cfg Config) (string, []string, error) {
 	// Disk
 	baseDisk := filepath.Join(cfg.InstanceDir, filenames.BaseDisk)
 	diffDisk := filepath.Join(cfg.InstanceDir, filenames.DiffDisk)
+	extraDisks := []string{}
+	if len(y.AdditionalDisks) > 0 {
+		for _, diskName := range y.AdditionalDisks {
+			d, err := store.InspectDisk(diskName)
+			if err != nil {
+				logrus.Errorf("could not load disk %q: %q", diskName, err)
+				return "", nil, err
+			}
+
+			if d.Instance != "" {
+				logrus.Errorf("could not attach disk %q, in use by instance %q", diskName, d.Instance)
+				return "", nil, err
+			}
+			logrus.Infof("Mounting disk %q on %q", diskName, d.MountPoint)
+			err = d.Lock(cfg.InstanceDir)
+			if err != nil {
+				logrus.Errorf("could not lock disk %q: %q", diskName, err)
+				return "", nil, err
+			}
+			dataDisk := filepath.Join(d.Dir, filenames.DataDisk)
+			extraDisks = append(extraDisks, dataDisk)
+		}
+	}
+
 	isBaseDiskCDROM, err := iso9660util.IsISO9660(baseDisk)
 	if err != nil {
 		return "", nil, err
@@ -437,6 +477,10 @@ func Cmdline(cfg Config) (string, []string, error) {
 	} else if !isBaseDiskCDROM {
 		args = append(args, "-drive", fmt.Sprintf("file=%s,if=virtio,discard=on", baseDisk))
 	}
+	for _, extraDisk := range extraDisks {
+		args = append(args, "-drive", fmt.Sprintf("file=%s,if=virtio,discard=on", extraDisk))
+	}
+
 	// cloud-init
 	switch *y.Arch {
 	case limayaml.RISCV64:

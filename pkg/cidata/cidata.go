@@ -192,6 +192,13 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 		args.MountType = "9p"
 	}
 
+	for i, disk := range y.AdditionalDisks {
+		args.Disks = append(args.Disks, Disk{
+			Name:   disk,
+			Device: diskDeviceNameFromOrder(i),
+		})
+	}
+
 	slirpMACAddress := limayaml.MACAddress(instDir)
 	args.Networks = append(args.Networks, Network{MACAddress: slirpMACAddress, Interface: qemu.SlirpNICName})
 	for _, nw := range y.Networks {
@@ -329,4 +336,8 @@ func getBootCmds(p []limayaml.Provision) []BootCmds {
 		}
 	}
 	return bootCmds
+}
+
+func diskDeviceNameFromOrder(order int) string {
+	return fmt.Sprintf("vd%c", int('b')+order)
 }

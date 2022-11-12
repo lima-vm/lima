@@ -227,6 +227,9 @@ func TestFillDefault(t *testing.T) {
 		CPUs:   pointer.Int(7),
 		Memory: pointer.String("5GiB"),
 		Disk:   pointer.String("105GiB"),
+		AdditionalDisks: []Disk{
+			"data",
+		},
 		Containerd: Containerd{
 			System: pointer.Bool(true),
 			User:   pointer.Bool(false),
@@ -336,6 +339,7 @@ func TestFillDefault(t *testing.T) {
 
 	y = filledDefaults
 	y.DNS = []net.IP{net.ParseIP("8.8.8.8")}
+	y.AdditionalDisks = []Disk{"overridden"}
 
 	expect = y
 
@@ -343,6 +347,7 @@ func TestFillDefault(t *testing.T) {
 	expect.Probes = append(y.Probes, d.Probes...)
 	expect.PortForwards = append(y.PortForwards, d.PortForwards...)
 	expect.Containerd.Archives = append(y.Containerd.Archives, d.Containerd.Archives...)
+	expect.AdditionalDisks = append(y.AdditionalDisks, d.AdditionalDisks...)
 
 	// Mounts and Networks start with lowest priority first, so higher priority entries can overwrite
 	expect.Mounts = append(d.Mounts, y.Mounts...)
@@ -371,6 +376,9 @@ func TestFillDefault(t *testing.T) {
 		CPUs:   pointer.Int(12),
 		Memory: pointer.String("7GiB"),
 		Disk:   pointer.String("117GiB"),
+		AdditionalDisks: []Disk{
+			"test",
+		},
 		Containerd: Containerd{
 			System: pointer.Bool(true),
 			User:   pointer.Bool(false),
@@ -473,6 +481,7 @@ func TestFillDefault(t *testing.T) {
 	expect.Probes = append(append(o.Probes, y.Probes...), d.Probes...)
 	expect.PortForwards = append(append(o.PortForwards, y.PortForwards...), d.PortForwards...)
 	expect.Containerd.Archives = append(append(o.Containerd.Archives, y.Containerd.Archives...), d.Containerd.Archives...)
+	expect.AdditionalDisks = append(append(o.AdditionalDisks, y.AdditionalDisks...), d.AdditionalDisks...)
 
 	expect.HostResolver.Hosts["default"] = d.HostResolver.Hosts["default"]
 	expect.HostResolver.Hosts["MY.Host"] = d.HostResolver.Hosts["host.lima.internal"]

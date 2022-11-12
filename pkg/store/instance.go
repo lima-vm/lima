@@ -30,20 +30,21 @@ const (
 )
 
 type Instance struct {
-	Name         string             `json:"name"`
-	Status       Status             `json:"status"`
-	Dir          string             `json:"dir"`
-	Arch         limayaml.Arch      `json:"arch"`
-	CPUType      string             `json:"cpuType"`
-	CPUs         int                `json:"cpus,omitempty"`
-	Memory       int64              `json:"memory,omitempty"` // bytes
-	Disk         int64              `json:"disk,omitempty"`   // bytes
-	Message      string             `json:"message,omitempty"`
-	Networks     []limayaml.Network `json:"network,omitempty"`
-	SSHLocalPort int                `json:"sshLocalPort,omitempty"`
-	HostAgentPID int                `json:"hostAgentPID,omitempty"`
-	QemuPID      int                `json:"qemuPID,omitempty"`
-	Errors       []error            `json:"errors,omitempty"`
+	Name            string             `json:"name"`
+	Status          Status             `json:"status"`
+	Dir             string             `json:"dir"`
+	Arch            limayaml.Arch      `json:"arch"`
+	CPUType         string             `json:"cpuType"`
+	CPUs            int                `json:"cpus,omitempty"`
+	Memory          int64              `json:"memory,omitempty"` // bytes
+	Disk            int64              `json:"disk,omitempty"`   // bytes
+	Message         string             `json:"message,omitempty"`
+	AdditionalDisks []limayaml.Disk    `json:"additionalDisks,omitempty"`
+	Networks        []limayaml.Network `json:"network,omitempty"`
+	SSHLocalPort    int                `json:"sshLocalPort,omitempty"`
+	HostAgentPID    int                `json:"hostAgentPID,omitempty"`
+	QemuPID         int                `json:"qemuPID,omitempty"`
+	Errors          []error            `json:"errors,omitempty"`
 }
 
 func (inst *Instance) LoadYAML() (*limayaml.LimaYAML, error) {
@@ -89,6 +90,7 @@ func Inspect(instName string) (*Instance, error) {
 	if err == nil {
 		inst.Disk = disk
 	}
+	inst.AdditionalDisks = y.AdditionalDisks
 	inst.Networks = y.Networks
 	inst.SSHLocalPort = *y.SSH.LocalPort // maybe 0
 

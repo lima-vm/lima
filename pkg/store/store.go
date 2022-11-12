@@ -37,6 +37,25 @@ func Instances() ([]string, error) {
 	return names, nil
 }
 
+func Disks() ([]string, error) {
+	limaDiskDir, err := dirnames.LimaDisksDir()
+	if err != nil {
+		return nil, err
+	}
+	limaDiskDirList, err := os.ReadDir(limaDiskDir)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	var names []string
+	for _, f := range limaDiskDirList {
+		names = append(names, f.Name())
+	}
+	return names, nil
+}
+
 // InstanceDir returns the instance dir.
 // InstanceDir does not check whether the instance exists
 func InstanceDir(name string) (string, error) {
@@ -48,6 +67,18 @@ func InstanceDir(name string) (string, error) {
 		return "", err
 	}
 	dir := filepath.Join(limaDir, name)
+	return dir, nil
+}
+
+func DiskDir(name string) (string, error) {
+	if err := identifiers.Validate(name); err != nil {
+		return "", err
+	}
+	limaDisksDir, err := dirnames.LimaDisksDir()
+	if err != nil {
+		return "", err
+	}
+	dir := filepath.Join(limaDisksDir, name)
 	return dir, nil
 }
 

@@ -92,6 +92,15 @@ mounts:
 # 🟢 Builtin default: "reverse-sshfs"
 mountType: null
 
+# Lima disks to attach to the instance. The disks will be accessible from inside the
+# instance, labeled by name. (e.g. if the disk is named "data", it will be labeled
+# "lima-data" inside the instance). The disk will be mounted inside the instance at
+# `/mnt/lima-${VOLUME}`.
+# 🟢 Builtin default: null
+additionalDisks:
+# disks should be a list of disk name strings, for example:
+# - "data"
+
 ssh:
   # A localhost port of the host. Forwarded to port 22 of the guest.
   # 🟢 Builtin default: 0 (automatically assigned to a free port)
