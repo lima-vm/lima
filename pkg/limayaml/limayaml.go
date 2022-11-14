@@ -33,6 +33,7 @@ type LimaYAML struct {
 	// `useHostResolver` was deprecated in Lima v0.8.1, removed in Lima v0.14.0. Use `hostResolver.enabled` instead.
 	PropagateProxyEnv *bool          `yaml:"propagateProxyEnv,omitempty" json:"propagateProxyEnv,omitempty"`
 	CACertificates    CACertificates `yaml:"caCerts,omitempty" json:"caCerts,omitempty"`
+	Rosetta           Rosetta        `yaml:"rosetta,omitempty" json:"rosetta,omitempty"`
 }
 
 type Arch = string
@@ -51,6 +52,11 @@ const (
 	QEMU VMType = "qemu"
 	VZ   VMType = "vz"
 )
+
+type Rosetta struct {
+	Enabled bool `yaml:"enabled" json:"enabled"`
+	BinFmt  bool `yaml:"binfmt" json:"binfmt"`
+}
 
 type File struct {
 	Location string        `yaml:"location" json:"location"` // REQUIRED

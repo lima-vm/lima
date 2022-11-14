@@ -71,6 +71,8 @@ type TemplateArgs struct {
 	CACerts            CACerts
 	HostHomeMountPoint string
 	BootCmds           []BootCmds
+	RosettaEnabled     bool
+	RosettaBinFmt      bool
 }
 
 func ValidateTemplateArgs(args TemplateArgs) error {
