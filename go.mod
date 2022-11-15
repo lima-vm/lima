@@ -6,7 +6,7 @@ require (
 	github.com/AlecAivazis/survey/v2 v2.3.6
 	github.com/alessio/shellescape v1.4.1
 	github.com/cheggaaa/pb/v3 v3.1.0
-	github.com/containerd/containerd v1.6.9
+	github.com/containerd/containerd v1.6.10
 	github.com/containerd/continuity v0.3.0
 	github.com/coreos/go-semver v0.3.0
 	github.com/cyphar/filepath-securejoin v0.2.3
