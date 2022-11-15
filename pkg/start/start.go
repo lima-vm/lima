@@ -12,10 +12,12 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/lima-vm/lima/pkg/driver"
+	"github.com/lima-vm/lima/pkg/driverutil"
+
 	"github.com/lima-vm/lima/pkg/downloader"
 	hostagentevents "github.com/lima-vm/lima/pkg/hostagent/events"
 	"github.com/lima-vm/lima/pkg/limayaml"
-	"github.com/lima-vm/lima/pkg/qemu"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/sirupsen/logrus"
@@ -24,19 +26,6 @@ import (
 // DefaultWatchHostAgentEventsTimeout is the duration to wait for the instance
 // to be running before timing out.
 const DefaultWatchHostAgentEventsTimeout = 10 * time.Minute
-
-func ensureDisk(instName, instDir string, y *limayaml.LimaYAML) error {
-	qCfg := qemu.Config{
-		Name:        instName,
-		InstanceDir: instDir,
-		LimaYAML:    y,
-	}
-	if err := qemu.EnsureDisk(qCfg); err != nil {
-		return err
-	}
-
-	return nil
-}
 
 // ensureNerdctlArchiveCache prefetches the nerdctl-full-VERSION-linux-GOARCH.tar.gz archive
 // into the cache before launching the hostagent process, so that we can show the progress in tty.
@@ -94,7 +83,16 @@ func Start(ctx context.Context, inst *store.Instance) error {
 		return err
 	}
 
-	if err := ensureDisk(inst.Name, inst.Dir, y); err != nil {
+	limaDriver := driverutil.CreateTargetDriverInstance(&driver.BaseDriver{
+		Instance: inst,
+		Yaml:     y,
+	})
+
+	if err := limaDriver.Validate(); err != nil {
+		return err
+	}
+
+	if err := limaDriver.CreateDisk(); err != nil {
 		return err
 	}
 	nerdctlArchiveCache, err := ensureNerdctlArchiveCache(y)
@@ -174,7 +172,7 @@ func Start(ctx context.Context, inst *store.Instance) error {
 	}
 }
 
-func waitHostAgentStart(ctx context.Context, haPIDPath, haStderrPath string) error {
+func waitHostAgentStart(_ context.Context, haPIDPath, haStderrPath string) error {
 	begin := time.Now()
 	deadlineDuration := 5 * time.Second
 	deadline := begin.Add(deadlineDuration)

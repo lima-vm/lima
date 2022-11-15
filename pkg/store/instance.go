@@ -33,6 +33,7 @@ type Instance struct {
 	Name            string             `json:"name"`
 	Status          Status             `json:"status"`
 	Dir             string             `json:"dir"`
+	VMType          limayaml.VMType    `json:"vmType"`
 	Arch            limayaml.Arch      `json:"arch"`
 	CPUType         string             `json:"cpuType"`
 	CPUs            int                `json:"cpus,omitempty"`
@@ -79,6 +80,7 @@ func Inspect(instName string) (*Instance, error) {
 		return inst, nil
 	}
 	inst.Arch = *y.Arch
+	inst.VMType = *y.VMType
 	inst.CPUType = y.CPUType[*y.Arch]
 
 	inst.CPUs = *y.CPUs
@@ -134,7 +136,7 @@ func Inspect(instName string) (*Instance, error) {
 			inst.Errors = append(inst.Errors, errors.New("host agent is running but qemu is not"))
 			inst.Status = StatusBroken
 		} else {
-			inst.Errors = append(inst.Errors, errors.New("qemu is running but host agent is not"))
+			inst.Errors = append(inst.Errors, fmt.Errorf("%s driver is running but host agent is not", inst.VMType))
 			inst.Status = StatusBroken
 		}
 	}

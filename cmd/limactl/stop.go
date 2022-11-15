@@ -69,7 +69,7 @@ func stopInstanceGracefully(inst *store.Instance) error {
 		logrus.Error(err)
 	}
 
-	logrus.Info("Waiting for the host agent and the qemu processes to shut down")
+	logrus.Info("Waiting for the host agent and the driver processes to shut down")
 	return waitForHostAgentTermination(context.TODO(), inst, begin)
 }
 
@@ -105,12 +105,12 @@ func waitForHostAgentTermination(ctx context.Context, inst *store.Instance, begi
 
 func stopInstanceForcibly(inst *store.Instance) {
 	if inst.QemuPID > 0 {
-		logrus.Infof("Sending SIGKILL to the QEMU process %d", inst.QemuPID)
+		logrus.Infof("Sending SIGKILL to the %s driver process %d", inst.VMType, inst.QemuPID)
 		if err := osutil.SysKill(inst.QemuPID, osutil.SigKill); err != nil {
 			logrus.Error(err)
 		}
 	} else {
-		logrus.Info("The QEMU process seems already stopped")
+		logrus.Infof("The %s driver process seems already stopped", inst.VMType)
 	}
 
 	for _, diskName := range inst.AdditionalDisks {

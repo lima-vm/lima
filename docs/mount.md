@@ -79,3 +79,20 @@ The "9p" mount type requires Lima v0.10.0 or later.
 
 #### Caveats
 - The "9p" mount type is known to be incompatible with CentOS, Rocky Linux, and AlmaLinux as their kernel do not support `CONFIG_NET_9P_VIRTIO`.
+
+### virtiofs
+The "virtiofs" mount type is implemented by using apple Virtualization.Framework shared directory (uses virtio-fs) device. 
+Linux guest kernel must enable the CONFIG_VIRTIO_FS support for this support.
+
+An example configuration:
+```yaml
+vmType: "vz"
+mountType: "virtiofs"
+mounts:
+- location: "~"
+```
+
+The "vz" mount type requires Lima v0.14.0 or later.
+
+#### Caveats
+- The "virtiofs" mount type is supported only on macOS 13 or above with `vmType: vz` config.

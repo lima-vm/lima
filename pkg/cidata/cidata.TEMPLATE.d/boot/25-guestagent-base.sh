@@ -2,7 +2,7 @@
 
 set -eux
 
-if [ "${LIMA_CIDATA_MOUNTTYPE}" != "9p" ]; then
+if [ "${LIMA_CIDATA_MOUNTTYPE}" = "reverse-sshfs" ]; then
 	# Create mount points
 	# NOTE: Busybox sh does not support `for ((i=0;i<$N;i++))` form
 	for f in $(seq 0 $((LIMA_CIDATA_MOUNTS - 1))); do

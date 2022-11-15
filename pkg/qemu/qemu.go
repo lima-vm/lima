@@ -15,12 +15,11 @@ import (
 
 	"github.com/coreos/go-semver/semver"
 	"github.com/docker/go-units"
-	"github.com/lima-vm/lima/pkg/downloader"
+	"github.com/lima-vm/lima/pkg/fileutils"
 	"github.com/lima-vm/lima/pkg/iso9660util"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/localpathutil"
 	"github.com/lima-vm/lima/pkg/networks"
-	qemu "github.com/lima-vm/lima/pkg/qemu/const"
 	"github.com/lima-vm/lima/pkg/qemu/imgutil"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
@@ -33,30 +32,6 @@ type Config struct {
 	InstanceDir  string
 	LimaYAML     *limayaml.LimaYAML
 	SSHLocalPort int
-}
-
-func downloadFile(dest string, f limayaml.File, description string, expectedArch limayaml.Arch) error {
-	if f.Arch != expectedArch {
-		return fmt.Errorf("unsupported arch: %q", f.Arch)
-	}
-	logrus.WithField("digest", f.Digest).Infof("Attempting to download %s from %q", description, f.Location)
-	res, err := downloader.Download(dest, f.Location,
-		downloader.WithCache(),
-		downloader.WithExpectedDigest(f.Digest),
-	)
-	if err != nil {
-		return fmt.Errorf("failed to download %q: %w", f.Location, err)
-	}
-	logrus.Debugf("res.ValidatedDigest=%v", res.ValidatedDigest)
-	switch res.Status {
-	case downloader.StatusDownloaded:
-		logrus.Infof("Downloaded %s from %q", description, f.Location)
-	case downloader.StatusUsedCache:
-		logrus.Infof("Using cache %q", res.CachePath)
-	default:
-		logrus.Warnf("Unexpected result from downloader.Download(): %+v", res)
-	}
-	return nil
 }
 
 // EnsureDisk also ensures the kernel and the initrd
@@ -75,12 +50,12 @@ func EnsureDisk(cfg Config) error {
 		var ensuredBaseDisk bool
 		errs := make([]error, len(cfg.LimaYAML.Images))
 		for i, f := range cfg.LimaYAML.Images {
-			if err := downloadFile(baseDisk, f.File, "the image", *cfg.LimaYAML.Arch); err != nil {
+			if err := fileutils.DownloadFile(baseDisk, f.File, "the image", *cfg.LimaYAML.Arch); err != nil {
 				errs[i] = err
 				continue
 			}
 			if f.Kernel != nil {
-				if err := downloadFile(kernel, f.Kernel.File, "the kernel", *cfg.LimaYAML.Arch); err != nil {
+				if err := fileutils.DownloadFile(kernel, f.Kernel.File, "the kernel", *cfg.LimaYAML.Arch); err != nil {
 					errs[i] = err
 					continue
 				}
@@ -92,7 +67,7 @@ func EnsureDisk(cfg Config) error {
 				}
 			}
 			if f.Initrd != nil {
-				if err := downloadFile(initrd, *f.Initrd, "the initrd", *cfg.LimaYAML.Arch); err != nil {
+				if err := fileutils.DownloadFile(initrd, *f.Initrd, "the initrd", *cfg.LimaYAML.Arch); err != nil {
 					errs[i] = err
 					continue
 				}
@@ -510,7 +485,7 @@ func Cmdline(cfg Config) (string, []string, error) {
 
 	// Network
 	args = append(args, "-netdev", fmt.Sprintf("user,id=net0,net=%s,dhcpstart=%s,hostfwd=tcp:127.0.0.1:%d-:22",
-		qemu.SlirpNetwork, qemu.SlirpIPAddress, cfg.SSHLocalPort))
+		networks.SlirpNetwork, networks.SlirpIPAddress, cfg.SSHLocalPort))
 	args = append(args, "-device", "virtio-net-pci,netdev=net0,mac="+limayaml.MACAddress(cfg.InstanceDir))
 	for i, nw := range y.Networks {
 		var vdeSock string

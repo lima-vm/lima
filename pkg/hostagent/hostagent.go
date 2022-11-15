@@ -1,8 +1,6 @@
 package hostagent
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -15,11 +13,12 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"text/template"
 	"time"
 
-	"github.com/digitalocean/go-qemu/qmp"
-	"github.com/digitalocean/go-qemu/qmp/raw"
+	"github.com/lima-vm/lima/pkg/driver"
+	"github.com/lima-vm/lima/pkg/driverutil"
+	"github.com/lima-vm/lima/pkg/networks"
+
 	"github.com/hashicorp/go-multierror"
 	"github.com/lima-vm/lima/pkg/cidata"
 	guestagentapi "github.com/lima-vm/lima/pkg/guestagent/api"
@@ -28,8 +27,6 @@ import (
 	"github.com/lima-vm/lima/pkg/hostagent/dns"
 	"github.com/lima-vm/lima/pkg/hostagent/events"
 	"github.com/lima-vm/lima/pkg/limayaml"
-	"github.com/lima-vm/lima/pkg/qemu"
-	qemuconst "github.com/lima-vm/lima/pkg/qemu/const"
 	"github.com/lima-vm/lima/pkg/sshutil"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
@@ -48,8 +45,7 @@ type HostAgent struct {
 	portForwarder   *portForwarder
 	onClose         []func() error // LIFO
 
-	qExe     string
-	qArgs    []string // May contain text templates like "{{ fd_connect /path/to/sock }}"
+	driver   driver.Driver
 	sigintCh chan os.Signal
 
 	eventEnc   *json.Encoder
@@ -111,17 +107,6 @@ func New(instName string, stdout io.Writer, sigintCh chan os.Signal, opts ...Opt
 		return nil, err
 	}
 
-	qCfg := qemu.Config{
-		Name:         instName,
-		InstanceDir:  inst.Dir,
-		LimaYAML:     y,
-		SSHLocalPort: sshLocalPort,
-	}
-	qExe, qArgs, err := qemu.Cmdline(qCfg)
-	if err != nil {
-		return nil, err
-	}
-
 	sshOpts, err := sshutil.SSHOpts(inst.Dir, *y.SSH.LoadDotSSHPubKeys, *y.SSH.ForwardAgent, *y.SSH.ForwardX11, *y.SSH.ForwardX11Trusted)
 	if err != nil {
 		return nil, err
@@ -143,6 +128,12 @@ func New(instName string, stdout io.Writer, sigintCh chan os.Signal, opts ...Opt
 	limayaml.FillPortForwardDefaults(&rule, inst.Dir)
 	rules = append(rules, rule)
 
+	limaDriver := driverutil.CreateTargetDriverInstance(&driver.BaseDriver{
+		Instance:     inst,
+		Yaml:         y,
+		SSHLocalPort: sshLocalPort,
+	})
+
 	a := &HostAgent{
 		y:               y,
 		sshLocalPort:    sshLocalPort,
@@ -152,8 +143,7 @@ func New(instName string, stdout io.Writer, sigintCh chan os.Signal, opts ...Opt
 		instName:        instName,
 		sshConfig:       sshConfig,
 		portForwarder:   newPortForwarder(sshConfig, sshLocalPort, rules),
-		qExe:            qExe,
-		qArgs:           qArgs,
+		driver:          limaDriver,
 		sigintCh:        sigintCh,
 		eventEnc:        json.NewEncoder(stdout),
 	}
@@ -224,7 +214,7 @@ func findFreeUDPLocalPort() (int, error) {
 	return port, nil
 }
 
-func (a *HostAgent) emitEvent(ctx context.Context, ev events.Event) {
+func (a *HostAgent) emitEvent(_ context.Context, ev events.Event) {
 	a.eventEncMu.Lock()
 	defer a.eventEncMu.Unlock()
 	if ev.Time.IsZero() {
@@ -233,66 +223,6 @@ func (a *HostAgent) emitEvent(ctx context.Context, ev events.Event) {
 	if err := a.eventEnc.Encode(ev); err != nil {
 		logrus.WithField("event", ev).WithError(err).Error("failed to emit an event")
 	}
-}
-
-func logPipeRoutine(r io.Reader, header string) {
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		line := scanner.Text()
-		logrus.Debugf("%s: %s", header, line)
-	}
-}
-
-type qArgTemplateApplier struct {
-	files []*os.File
-}
-
-func (a *qArgTemplateApplier) applyTemplate(qArg string) (string, error) {
-	if !strings.Contains(qArg, "{{") {
-		return qArg, nil
-	}
-	funcMap := template.FuncMap{
-		"fd_connect": func(v interface{}) string {
-			fn := func(v interface{}) (string, error) {
-				s, ok := v.(string)
-				if !ok {
-					return "", fmt.Errorf("non-string argument %+v", v)
-				}
-				addr := &net.UnixAddr{
-					Net:  "unix",
-					Name: s,
-				}
-				conn, err := net.DialUnix("unix", nil, addr)
-				if err != nil {
-					return "", err
-				}
-				f, err := conn.File()
-				if err != nil {
-					return "", err
-				}
-				if err := conn.Close(); err != nil {
-					return "", err
-				}
-				a.files = append(a.files, f)
-				fd := len(a.files) + 2 // the first FD is 3
-				return strconv.Itoa(fd), nil
-			}
-			res, err := fn(v)
-			if err != nil {
-				panic(fmt.Errorf("fd_connect: %w", err))
-			}
-			return res
-		},
-	}
-	tmpl, err := template.New("").Funcs(funcMap).Parse(qArg)
-	if err != nil {
-		return "", err
-	}
-	var b bytes.Buffer
-	if err := tmpl.Execute(&b, nil); err != nil {
-		return "", err
-	}
-	return b.String(), nil
 }
 
 func (a *HostAgent) Run(ctx context.Context) error {
@@ -307,8 +237,8 @@ func (a *HostAgent) Run(ctx context.Context) error {
 
 	if *a.y.HostResolver.Enabled {
 		hosts := a.y.HostResolver.Hosts
-		hosts["host.lima.internal"] = qemuconst.SlirpGateway
-		hosts[fmt.Sprintf("lima-%s", a.instName)] = qemuconst.SlirpIPAddress
+		hosts["host.lima.internal"] = networks.SlirpGateway
+		hosts[fmt.Sprintf("lima-%s", a.instName)] = networks.SlirpIPAddress
 		srvOpts := dns.ServerOptions{
 			UDPPort: a.udpDNSLocalPort,
 			TCPPort: a.tcpDNSLocalPort,
@@ -324,38 +254,10 @@ func (a *HostAgent) Run(ctx context.Context) error {
 		}
 		defer dnsServer.Shutdown()
 	}
-
-	var qArgs []string
-	applier := &qArgTemplateApplier{}
-	for _, unapplied := range a.qArgs {
-		applied, err := applier.applyTemplate(unapplied)
-		if err != nil {
-			return err
-		}
-		qArgs = append(qArgs, applied)
-	}
-	qCmd := exec.CommandContext(ctx, a.qExe, qArgs...)
-	qCmd.ExtraFiles = append(qCmd.ExtraFiles, applier.files...)
-	qStdout, err := qCmd.StdoutPipe()
+	errCh, err := a.driver.Start(ctx)
 	if err != nil {
 		return err
 	}
-	go logPipeRoutine(qStdout, "qemu[stdout]")
-	qStderr, err := qCmd.StderrPipe()
-	if err != nil {
-		return err
-	}
-	go logPipeRoutine(qStderr, "qemu[stderr]")
-
-	logrus.Infof("Starting QEMU (hint: to watch the boot progress, see %q)", filepath.Join(a.instDir, filenames.SerialLog))
-	logrus.Debugf("qCmd.Args: %v", qCmd.Args)
-	if err := qCmd.Start(); err != nil {
-		return err
-	}
-	qWaitCh := make(chan error)
-	go func() {
-		qWaitCh <- qCmd.Wait()
-	}()
 
 	stBase := events.Status{
 		SSHLocalPort: a.sshLocalPort,
@@ -376,67 +278,31 @@ func (a *HostAgent) Run(ctx context.Context) error {
 
 	for {
 		select {
+		case driverErr := <-errCh:
+			logrus.Infof("Driver stopped due to error: %q", driverErr)
+			cancelHA()
+			if closeErr := a.close(); closeErr != nil {
+				logrus.WithError(closeErr).Warn("an error during shutting down the host agent")
+			}
+			err := a.driver.Stop(ctx)
+			return err
 		case <-a.sigintCh:
 			logrus.Info("Received SIGINT, shutting down the host agent")
 			cancelHA()
 			if closeErr := a.close(); closeErr != nil {
 				logrus.WithError(closeErr).Warn("an error during shutting down the host agent")
 			}
-			return a.shutdownQEMU(ctx, 3*time.Minute, qCmd, qWaitCh)
-		case qWaitErr := <-qWaitCh:
-			logrus.WithError(qWaitErr).Info("QEMU has exited")
-			// lint insists that we need to call cancelHA() on all possible codepaths
-			cancelHA()
-			return qWaitErr
+			err := a.driver.Stop(ctx)
+			return err
 		}
 	}
 }
-func (a *HostAgent) Info(ctx context.Context) (*hostagentapi.Info, error) {
+
+func (a *HostAgent) Info(_ context.Context) (*hostagentapi.Info, error) {
 	info := &hostagentapi.Info{
 		SSHLocalPort: a.sshLocalPort,
 	}
 	return info, nil
-}
-
-func (a *HostAgent) shutdownQEMU(ctx context.Context, timeout time.Duration, qCmd *exec.Cmd, qWaitCh <-chan error) error {
-	logrus.Info("Shutting down QEMU with ACPI")
-	qmpSockPath := filepath.Join(a.instDir, filenames.QMPSock)
-	qmpClient, err := qmp.NewSocketMonitor("unix", qmpSockPath, 5*time.Second)
-	if err != nil {
-		logrus.WithError(err).Warnf("failed to open the QMP socket %q, forcibly killing QEMU", qmpSockPath)
-		return a.killQEMU(ctx, timeout, qCmd, qWaitCh)
-	}
-	if err := qmpClient.Connect(); err != nil {
-		logrus.WithError(err).Warnf("failed to connect to the QMP socket %q, forcibly killing QEMU", qmpSockPath)
-		return a.killQEMU(ctx, timeout, qCmd, qWaitCh)
-	}
-	defer func() { _ = qmpClient.Disconnect() }()
-	rawClient := raw.NewMonitor(qmpClient)
-	logrus.Info("Sending QMP system_powerdown command")
-	if err := rawClient.SystemPowerdown(); err != nil {
-		logrus.WithError(err).Warnf("failed to send system_powerdown command via the QMP socket %q, forcibly killing QEMU", qmpSockPath)
-		return a.killQEMU(ctx, timeout, qCmd, qWaitCh)
-	}
-	deadline := time.After(timeout)
-	select {
-	case qWaitErr := <-qWaitCh:
-		logrus.WithError(qWaitErr).Info("QEMU has exited")
-		return qWaitErr
-	case <-deadline:
-	}
-	logrus.Warnf("QEMU did not exit in %v, forcibly killing QEMU", timeout)
-	return a.killQEMU(ctx, timeout, qCmd, qWaitCh)
-}
-
-func (a *HostAgent) killQEMU(ctx context.Context, timeout time.Duration, qCmd *exec.Cmd, qWaitCh <-chan error) error {
-	if killErr := qCmd.Process.Kill(); killErr != nil {
-		logrus.WithError(killErr).Warn("failed to kill QEMU")
-	}
-	qWaitErr := <-qWaitCh
-	logrus.WithError(qWaitErr).Info("QEMU has exited, after killing forcibly")
-	qemuPIDPath := filepath.Join(a.instDir, filenames.QemuPID)
-	_ = os.RemoveAll(qemuPIDPath)
-	return qWaitErr
 }
 
 func (a *HostAgent) startHostAgentRoutines(ctx context.Context) error {

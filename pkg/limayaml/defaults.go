@@ -77,6 +77,13 @@ func MACAddress(uniqueID string) string {
 //   - DNS are picked from the highest priority where DNS is not empty.
 //   - CACertificates Files and Certs are uniquely appended in d, y, o order
 func FillDefault(y, d, o *LimaYAML, filePath string) {
+	if y.VMType == nil {
+		y.VMType = d.VMType
+	}
+	if o.VMType != nil {
+		y.VMType = o.VMType
+	}
+	y.VMType = pointer.String(ResolveVMType(y.VMType))
 	if y.Arch == nil {
 		y.Arch = d.Arch
 	}
@@ -628,6 +635,25 @@ func NewArch(arch string) Arch {
 		logrus.Warnf("Unknown arch: %s", arch)
 		return arch
 	}
+}
+
+func NewVMType(driver string) VMType {
+	switch driver {
+	case "vz":
+		return VZ
+	case "qemu":
+		return QEMU
+	default:
+		logrus.Warnf("Unknown driver: %s", driver)
+		return driver
+	}
+}
+
+func ResolveVMType(s *string) VMType {
+	if s == nil || *s == "" || *s == "default" {
+		return QEMU
+	}
+	return NewVMType(*s)
 }
 
 func ResolveArch(s *string) Arch {

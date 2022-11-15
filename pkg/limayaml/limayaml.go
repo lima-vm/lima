@@ -7,6 +7,7 @@ import (
 )
 
 type LimaYAML struct {
+	VMType            *VMType           `yaml:"vmType,omitempty" json:"vmType,omitempty"`
 	Arch              *Arch             `yaml:"arch,omitempty" json:"arch,omitempty"`
 	Images            []Image           `yaml:"images" json:"images"` // REQUIRED
 	CPUType           map[Arch]string   `yaml:"cpuType,omitempty" json:"cpuType,omitempty"`
@@ -36,6 +37,7 @@ type LimaYAML struct {
 
 type Arch = string
 type MountType = string
+type VMType = string
 
 const (
 	X8664   Arch = "x86_64"
@@ -44,6 +46,10 @@ const (
 
 	REVSSHFS MountType = "reverse-sshfs"
 	NINEP    MountType = "9p"
+	VIRTIOFS MountType = "virtiofs"
+
+	QEMU VMType = "qemu"
+	VZ   VMType = "vz"
 )
 
 type File struct {

@@ -6,8 +6,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/lima-vm/lima/pkg/networks"
+
 	"github.com/lima-vm/lima/pkg/limayaml"
-	qemu "github.com/lima-vm/lima/pkg/qemu/const"
 	"github.com/xorcare/pointer"
 	"gotest.tools/v3/assert"
 )
@@ -49,7 +50,7 @@ func TestSetupEnv(t *testing.T) {
 			envValue := httpProxy.String()
 			envs, err := setupEnv(&limayaml.LimaYAML{PropagateProxyEnv: pointer.Bool(false), Env: map[string]string{envKey: envValue}})
 			assert.NilError(t, err)
-			assert.Equal(t, envs[envKey], strings.ReplaceAll(envValue, httpProxy.Hostname(), qemu.SlirpGateway))
+			assert.Equal(t, envs[envKey], strings.ReplaceAll(envValue, httpProxy.Hostname(), networks.SlirpGateway))
 		})
 	}
 }
