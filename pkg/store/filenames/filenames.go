@@ -43,6 +43,8 @@ const (
 	HostAgentSock      = "ha.sock"
 	HostAgentStdoutLog = "ha.stdout.log"
 	HostAgentStderrLog = "ha.stderr.log"
+	VzIdentifier       = "vz-identifier"
+	VzEfi              = "vz-efi"
 
 	// SocketDir is the default location for forwarded sockets with a relative paths in HostSocket
 	SocketDir = "sock"

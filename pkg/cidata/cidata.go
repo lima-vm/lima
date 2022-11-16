@@ -12,12 +12,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/lima-vm/lima/pkg/networks"
+
 	"github.com/docker/go-units"
 	"github.com/lima-vm/lima/pkg/iso9660util"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/localpathutil"
 	"github.com/lima-vm/lima/pkg/osutil"
-	qemu "github.com/lima-vm/lima/pkg/qemu/const"
 	"github.com/lima-vm/lima/pkg/sshutil"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/lima-vm/lima/pkg/usrlocalsharelima"
@@ -73,7 +74,7 @@ func setupEnv(y *limayaml.LimaYAML) (map[string]string, error) {
 
 			for _, ip := range netLookupIP(u.Hostname()) {
 				if ip.IsLoopback() {
-					newHost := qemu.SlirpGateway
+					newHost := networks.SlirpGateway
 					if u.Port() != "" {
 						newHost = net.JoinHostPort(newHost, u.Port())
 					}
@@ -121,10 +122,10 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 		User:           u.Username,
 		UID:            uid,
 		Containerd:     Containerd{System: *y.Containerd.System, User: *y.Containerd.User},
-		SlirpNICName:   qemu.SlirpNICName,
-		SlirpGateway:   qemu.SlirpGateway,
-		SlirpDNS:       qemu.SlirpDNS,
-		SlirpIPAddress: qemu.SlirpIPAddress,
+		SlirpNICName:   networks.SlirpNICName,
+		SlirpGateway:   networks.SlirpGateway,
+		SlirpDNS:       networks.SlirpDNS,
+		SlirpIPAddress: networks.SlirpIPAddress,
 	}
 
 	// change instance id on every boot so network config will be processed again
@@ -147,6 +148,8 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 		fstype = "sshfs"
 	case limayaml.NINEP:
 		fstype = "9p"
+	case limayaml.VIRTIOFS:
+		fstype = "virtiofs"
 	}
 	hostHome, err := localpathutil.Expand("~")
 	if err != nil {
@@ -190,6 +193,8 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 		args.MountType = "reverse-sshfs"
 	case limayaml.NINEP:
 		args.MountType = "9p"
+	case limayaml.VIRTIOFS:
+		args.MountType = "virtiofs"
 	}
 
 	for i, disk := range y.AdditionalDisks {
@@ -200,7 +205,7 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 	}
 
 	slirpMACAddress := limayaml.MACAddress(instDir)
-	args.Networks = append(args.Networks, Network{MACAddress: slirpMACAddress, Interface: qemu.SlirpNICName})
+	args.Networks = append(args.Networks, Network{MACAddress: slirpMACAddress, Interface: networks.SlirpNICName})
 	for _, nw := range y.Networks {
 		args.Networks = append(args.Networks, Network{MACAddress: nw.MACAddress, Interface: nw.Interface})
 	}
@@ -212,7 +217,7 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 	if *y.HostResolver.Enabled {
 		args.UDPDNSLocalPort = udpDNSLocalPort
 		args.TCPDNSLocalPort = tcpDNSLocalPort
-		args.DNSAddresses = append(args.DNSAddresses, qemu.SlirpDNS)
+		args.DNSAddresses = append(args.DNSAddresses, networks.SlirpDNS)
 	} else if len(y.DNS) > 0 {
 		for _, addr := range y.DNS {
 			args.DNSAddresses = append(args.DNSAddresses, addr.String())

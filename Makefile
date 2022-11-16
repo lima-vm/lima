@@ -30,6 +30,7 @@ binaries: clean \
 	_output/bin/lima \
 	_output/bin/lima$(bat) \
 	_output/bin/limactl$(exe) \
+	codesign \
 	_output/bin/nerdctl.lima \
 	_output/bin/apptainer.lima \
 	_output/bin/docker.lima \
@@ -163,3 +164,9 @@ artifacts-misc:
 	mkdir -p _artifacts
 	go mod vendor
 	$(TAR) -czf _artifacts/lima-$(VERSION_TRIMMED)-go-mod-vendor.tar.gz go.mod go.sum vendor
+
+.PHONY: codesign
+codesign:
+ifeq ($(GOOS),darwin)
+	codesign --entitlements vz.entitlements -s - ./_output/bin/limactl
+endif

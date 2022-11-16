@@ -15,7 +15,6 @@ import (
 	"github.com/lima-vm/lima/pkg/localpathutil"
 	"github.com/lima-vm/lima/pkg/networks"
 	"github.com/lima-vm/lima/pkg/osutil"
-	qemu "github.com/lima-vm/lima/pkg/qemu/const"
 	"github.com/sirupsen/logrus"
 )
 
@@ -144,9 +143,9 @@ func Validate(y LimaYAML, warn bool) error {
 	}
 
 	switch *y.MountType {
-	case REVSSHFS, NINEP:
+	case REVSSHFS, NINEP, VIRTIOFS:
 	default:
-		return fmt.Errorf("field `mountType` must be %q or %q , got %q", REVSSHFS, NINEP, *y.MountType)
+		return fmt.Errorf("field `mountType` must be %q or %q or %q, got %q", REVSSHFS, NINEP, VIRTIOFS, *y.MountType)
 	}
 
 	// y.Firmware.LegacyBIOS is ignored for aarch64, but not a fatal error.
@@ -365,8 +364,8 @@ func validateNetwork(y LimaYAML, warn bool) error {
 		if strings.ContainsAny(nw.Interface, " \t\n/") {
 			return fmt.Errorf("field `%s.interface` must not contain whitespace or slashes", field)
 		}
-		if nw.Interface == qemu.SlirpNICName {
-			return fmt.Errorf("field `%s.interface` must not be set to %q because it is reserved for slirp", field, qemu.SlirpNICName)
+		if nw.Interface == networks.SlirpNICName {
+			return fmt.Errorf("field `%s.interface` must not be set to %q because it is reserved for slirp", field, networks.SlirpNICName)
 		}
 		if prev, ok := interfaceName[nw.Interface]; ok {
 			return fmt.Errorf("field `%s.interface` value %q has already been used by field `networks[%d].interface`", field, nw.Interface, prev)

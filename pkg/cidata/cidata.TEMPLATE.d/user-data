@@ -5,7 +5,7 @@ growpart:
   mode: auto
   devices: ['/']
 
-{{- if eq .MountType "9p" }}
+{{- if or (eq .MountType "9p") (eq .MountType "virtiofs") }}
 {{- if .Mounts }}
 mounts:
   {{- range $m := $.Mounts}}

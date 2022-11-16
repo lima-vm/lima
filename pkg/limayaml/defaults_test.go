@@ -47,7 +47,8 @@ func TestFillDefault(t *testing.T) {
 
 	// Builtin default values
 	builtin := LimaYAML{
-		Arch: pointer.String(arch),
+		VMType: pointer.String("qemu"),
+		Arch:   pointer.String(arch),
 		CPUType: map[Arch]string{
 			AARCH64: "cortex-a72",
 			X8664:   "qemu64",
@@ -218,7 +219,8 @@ func TestFillDefault(t *testing.T) {
 
 	// Choose values that are different from the "builtin" defaults
 	d = LimaYAML{
-		Arch: pointer.String("unknown"),
+		VMType: pointer.String("vz"),
+		Arch:   pointer.String("unknown"),
 		CPUType: map[Arch]string{
 			AARCH64: "arm64",
 			X8664:   "amd64",
@@ -367,7 +369,8 @@ func TestFillDefault(t *testing.T) {
 	// User-provided overrides should override user-provided config settings
 
 	o = LimaYAML{
-		Arch: pointer.String(arch),
+		VMType: pointer.String("qemu"),
+		Arch:   pointer.String(arch),
 		CPUType: map[Arch]string{
 			AARCH64: "uber-arm",
 			X8664:   "pentium",

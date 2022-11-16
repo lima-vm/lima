@@ -15,6 +15,18 @@ type Info struct {
 	VSize  int64  `json:"virtual-size,omitempty"`
 }
 
+func QCOWToRaw(source string, dest string) error {
+	var stdout, stderr bytes.Buffer
+	cmd := exec.Command("qemu-img", "convert", source, dest)
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to run %v: stdout=%q, stderr=%q: %w",
+			cmd.Args, stdout.String(), stderr.String(), err)
+	}
+	return nil
+}
+
 func GetInfo(f string) (*Info, error) {
 	var stdout, stderr bytes.Buffer
 	cmd := exec.Command("qemu-img", "info", "--output=json", f)

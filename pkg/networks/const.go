@@ -1,4 +1,4 @@
-package qemu
+package networks
 
 const (
 	SlirpNICName = "eth0"
