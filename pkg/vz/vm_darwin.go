@@ -240,6 +240,15 @@ func attachDisks(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfigura
 		}
 		configurations = append(configurations, baseDisk)
 	}
+	diffDiskAttachment, err := vz.NewDiskImageStorageDeviceAttachment(diffDiskPath, false)
+	if err != nil {
+		return err
+	}
+	diffDisk, err := vz.NewVirtioBlockDeviceConfiguration(diffDiskAttachment)
+	if err != nil {
+		return err
+	}
+	configurations = append(configurations, diffDisk)
 
 	ciDataAttachment, err := vz.NewDiskImageStorageDeviceAttachment(ciDataPath, true)
 	if err != nil {
@@ -250,17 +259,6 @@ func attachDisks(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfigura
 		return err
 	}
 	configurations = append(configurations, ciData)
-
-	diffDiskAttachment, err := vz.NewDiskImageStorageDeviceAttachment(diffDiskPath, false)
-	if err != nil {
-		return err
-	}
-
-	diffDisk, err := vz.NewVirtioBlockDeviceConfiguration(diffDiskAttachment)
-	if err != nil {
-		return err
-	}
-	configurations = append(configurations, diffDisk)
 
 	vmConfig.SetStorageDevicesVirtualMachineConfiguration(configurations)
 	return nil
