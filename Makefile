@@ -20,6 +20,8 @@ VERSION_TRIMMED := $(VERSION:v%=%)
 
 GO_BUILD := $(GO) build -ldflags="-s -w -X $(PACKAGE)/pkg/version.Version=$(VERSION)"
 
+.NOTPARALLEL:
+
 .PHONY: all
 all: binaries
 
