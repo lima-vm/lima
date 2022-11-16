@@ -166,19 +166,22 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 			return err
 		}
 		options := "defaults"
-		if fstype == "9p" {
+		switch fstype {
+		case "9p", "virtiofs":
 			options = "ro"
 			if *f.Writable {
 				options = "rw"
 			}
-			options += ",trans=virtio"
-			options += fmt.Sprintf(",version=%s", *f.NineP.ProtocolVersion)
-			msize, err := units.RAMInBytes(*f.NineP.Msize)
-			if err != nil {
-				return fmt.Errorf("failed to parse msize for %q: %w", location, err)
+			if fstype == "9p" {
+				options += ",trans=virtio"
+				options += fmt.Sprintf(",version=%s", *f.NineP.ProtocolVersion)
+				msize, err := units.RAMInBytes(*f.NineP.Msize)
+				if err != nil {
+					return fmt.Errorf("failed to parse msize for %q: %w", location, err)
+				}
+				options += fmt.Sprintf(",msize=%d", msize)
+				options += fmt.Sprintf(",cache=%s", *f.NineP.Cache)
 			}
-			options += fmt.Sprintf(",msize=%d", msize)
-			options += fmt.Sprintf(",cache=%s", *f.NineP.Cache)
 			// don't fail the boot, if virtfs is not available
 			options += ",nofail"
 		}
