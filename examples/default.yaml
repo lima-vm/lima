@@ -5,6 +5,10 @@
 # Default values in this YAML file are specified by `null` instead of Lima's "builtin default" values,
 # so they can be overridden by the $LIMA_HOME/_config/default.yaml mechanism documented at the end of this file.
 
+# VM type: "qemu" or "vz" (on macOS 13 and later).
+# 🟢 Builtin default: "qemu"
+vmType: null
+
 # Arch: "default", "x86_64", "aarch64".
 # 🟢 Builtin default: "default" (corresponds to the host architecture)
 arch: null
@@ -88,7 +92,8 @@ mounts:
   # 🔵 This file: true (only for "/tmp/lima")
   writable: true
 
-# Mount type for above mounts, such as "reverse-sshfs" (from sshocker) or "9p" (EXPERIMENTAL, from QEMU’s virtio-9p-pci, aka virtfs)
+# Mount type for above mounts, such as "reverse-sshfs" (from sshocker), "9p" (EXPERIMENTAL, from QEMU’s virtio-9p-pci, aka virtfs),
+# or "virtiofs" (EXPERIMENTAL, needs `vmType: vz`)
 # 🟢 Builtin default: "reverse-sshfs"
 mountType: null
 
