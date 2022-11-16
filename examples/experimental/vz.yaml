@@ -1,4 +1,5 @@
 # Example to run ubuntu using vmType: vz instead of qemu (Default)
+# This example requires Lima v0.14.0 or later.
 vmType: "vz"
 images:
 - location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-amd64.img"

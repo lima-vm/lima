@@ -9,6 +9,12 @@ Lima supports two ways of running guest machines:
 This option is used by default if "vmType" is not set.
 
 ## VZ
+> **Warning**
+> "vz" mode is experimental
+
+| :zap: Requirement | Lima >= 0.14, macOS >= 13.0 |
+|-------------------|-----------------------------|
+
 "vz" option makes use of native virtualization support provided by macOS Virtualization.Framework.
 
 An example configuration:

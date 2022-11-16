@@ -8,7 +8,7 @@ The default mount type is shown in the following table:
 | ---------------- | ----------------------------------- |
 | < 0.10           | reverse-sshfs + Builtin SFTP server |
 | >= 0.10          | reverse-sshfs + OpenSSH SFTP server |
-| >= 1.0 (Planned) | 9p                                  |
+| >= 1.0 (Planned) | 9p for QEMU, virtiofs for VZ        |
 
 ## Mount types
 
@@ -49,6 +49,9 @@ Lima prior to v0.10 had used "builtin" as the SFTP driver.
 - A compromised `sshfs` process in the guest may have an access to unexposed host directories.
 
 ### 9p
+> **Warning**
+> "9p" mode is experimental
+
 The "9p" mount type is implemented by using QEMU's virtio-9p-pci devices.
 virtio-9p-pci is also known as "virtfs", but note that this is unrelated to [virtio-fs](https://virtio-fs.gitlab.io/).
 
@@ -81,6 +84,12 @@ The "9p" mount type requires Lima v0.10.0 or later.
 - The "9p" mount type is known to be incompatible with CentOS, Rocky Linux, and AlmaLinux as their kernel do not support `CONFIG_NET_9P_VIRTIO`.
 
 ### virtiofs
+> **Warning**
+> "virtiofs" mode is experimental
+
+| :zap: Requirement | Lima >= 0.14, macOS >= 13.0 |
+|-------------------|-----------------------------|
+
 The "virtiofs" mount type is implemented by using apple Virtualization.Framework shared directory (uses virtio-fs) device. 
 Linux guest kernel must enable the CONFIG_VIRTIO_FS support for this support.
 
@@ -92,7 +101,5 @@ mounts:
 - location: "~"
 ```
 
-The "vz" mount type requires Lima v0.14.0 or later.
-
 #### Caveats
-- The "virtiofs" mount type is supported only on macOS 13 or above with `vmType: vz` config.
+- The "virtiofs" mount type is supported only on macOS 13 or above with `vmType: vz` config. See also [`vmtype.md`](./vmtype.md).
