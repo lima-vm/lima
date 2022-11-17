@@ -329,10 +329,10 @@ func (a *HostAgent) Run(ctx context.Context) error {
 		if err := os.WriteFile(vncfile, []byte(vncdisplay), 0600); err != nil {
 			return err
 		}
-		vncurl := "vnc://:" + vncpasswd + "@" + net.JoinHostPort(vnchost, vncport)
-		logrus.Infof("VNC server running at <%s>", vncurl)
-		logrus.Infof("VNC Display: \"%s\" `%s`", vncdisplay, vncfile)
-		logrus.Infof("VNC Password: \"%s\" `%s`", vncpasswd, vncpwdfile)
+		vncurl := "vnc://" + net.JoinHostPort(vnchost, vncport)
+		logrus.Infof("VNC server running at %s <%s>", vncdisplay, vncurl)
+		logrus.Infof("VNC Display: `%s`", vncfile)
+		logrus.Infof("VNC Password: `%s`", vncpwdfile)
 	}
 
 	stBase := events.Status{
