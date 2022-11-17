@@ -12,9 +12,6 @@ mounts:
 - location: "/tmp/lima"
   writable: true
 
-firmware:
-  legacyBIOS: true
-
 # The built-in containerd installer does not support Alpine currently.
 # Hint: use the "rd" ISO instead of the "std" ISO to enable containerd: https://github.com/lima-vm/alpine-lima/releases/
 containerd:
