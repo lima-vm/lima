@@ -39,11 +39,17 @@ func StartGVisorNetstack(ctx context.Context, gVisorOpts *GVisorNetstackOpts) {
 		protocol = types.QemuProtocol
 	}
 
+	// The way gvisor-tap-vsock implemented slirp is different from tradition SLIRP,
+	// - GatewayIP handling all request, also answers DNS queries
+	// - based on NAT configuration, gateway forwards and translates calls to host
+	// Comparing this with QEMU SLIRP,
+	// - DNS is equivalent to GatewayIP
+	// - GatewayIP is equivalent to NAT configuration
 	config := types.Configuration{
 		Debug:             false,
 		MTU:               opts.MTU,
 		Subnet:            SlirpNetwork,
-		GatewayIP:         SlirpGateway,
+		GatewayIP:         SlirpDNS,
 		GatewayMacAddress: "5a:94:ef:e4:0c:dd",
 		DHCPStaticLeases: map[string]string{
 			SlirpIPAddress: opts.MacAddress,
@@ -54,9 +60,9 @@ func StartGVisorNetstack(ctx context.Context, gVisorOpts *GVisorNetstackOpts) {
 		DNS:              []types.Zone{},
 		DNSSearchDomains: searchDomains(),
 		NAT: map[string]string{
-			SlirpDNS: "127.0.0.1",
+			SlirpGateway: "127.0.0.1",
 		},
-		GatewayVirtualIPs: []string{SlirpDNS},
+		GatewayVirtualIPs: []string{SlirpGateway},
 		Protocol:          protocol,
 	}
 
