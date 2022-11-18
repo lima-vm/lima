@@ -145,6 +145,23 @@ jobs:
     # GHA macOS is slow and flaky, so we only test a few YAMLS here.
     # Other yamls are tested on Linux instances of Cirrus.
 
+  catalina:
+    name: "macOS 10.15 (deprecated)"
+    # Will be fully unsupported by 12/1/22 https://github.com/actions/runner-images/issues/5583
+    runs-on: macos-10.15
+    timeout-minutes: 20
+    steps:
+    - uses: actions/setup-go@v3
+      with:
+        go-version: 1.19.x
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 1
+    - name: Make
+      run: make
+    - name: Install
+      run: make install
+
   vmnet:
     name: "VMNet test"
     runs-on: macos-11

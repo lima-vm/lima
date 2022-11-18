@@ -13,12 +13,21 @@ bat = .bat
 exe = .exe
 endif
 
+GO_BUILDTAGS ?=
+ifeq ($(GOOS),darwin)
+MACOS_VERSION=$(shell sw_vers -productVersion | cut -d . -f 1)
+ifeq ($(shell test $(MACOS_VERSION) -lt 13; echo $$?),0)
+# The "vz" mode needs macOS 13 or later
+GO_BUILDTAGS += no_vz
+endif
+endif
+
 PACKAGE := github.com/lima-vm/lima
 
 VERSION=$(shell git describe --match 'v[0-9]*' --dirty='.m' --always --tags)
 VERSION_TRIMMED := $(VERSION:v%=%)
 
-GO_BUILD := $(GO) build -ldflags="-s -w -X $(PACKAGE)/pkg/version.Version=$(VERSION)"
+GO_BUILD := $(GO) build -ldflags="-s -w -X $(PACKAGE)/pkg/version.Version=$(VERSION)" -tags "$(GO_BUILDTAGS)"
 
 .NOTPARALLEL:
 
