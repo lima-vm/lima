@@ -64,7 +64,7 @@ func startVM(ctx context.Context, driver *driver.BaseDriver) (*vz.VirtualMachine
 			case newState := <-machine.StateChangedNotify():
 				switch newState {
 				case vz.VirtualMachineStateRunning:
-					pidFile := filepath.Join(driver.Instance.Dir, filenames.QemuPID)
+					pidFile := filepath.Join(driver.Instance.Dir, filenames.PIDFile(*driver.Yaml.VMType))
 					if _, err := os.Stat(pidFile); !errors.Is(err, os.ErrNotExist) {
 						logrus.Errorf("pidfile %q already exists", pidFile)
 						errCh <- err

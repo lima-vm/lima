@@ -44,7 +44,7 @@ type Instance struct {
 	Networks        []limayaml.Network `json:"network,omitempty"`
 	SSHLocalPort    int                `json:"sshLocalPort,omitempty"`
 	HostAgentPID    int                `json:"hostAgentPID,omitempty"`
-	QemuPID         int                `json:"qemuPID,omitempty"`
+	DriverPID       int                `json:"driverPID,omitempty"`
 	Errors          []error            `json:"errors,omitempty"`
 }
 
@@ -121,19 +121,19 @@ func Inspect(instName string) (*Instance, error) {
 		}
 	}
 
-	inst.QemuPID, err = ReadPIDFile(filepath.Join(instDir, filenames.QemuPID))
+	inst.DriverPID, err = ReadPIDFile(filepath.Join(instDir, filenames.PIDFile(*y.VMType)))
 	if err != nil {
 		inst.Status = StatusBroken
 		inst.Errors = append(inst.Errors, err)
 	}
 
 	if inst.Status == StatusUnknown {
-		if inst.HostAgentPID > 0 && inst.QemuPID > 0 {
+		if inst.HostAgentPID > 0 && inst.DriverPID > 0 {
 			inst.Status = StatusRunning
-		} else if inst.HostAgentPID == 0 && inst.QemuPID == 0 {
+		} else if inst.HostAgentPID == 0 && inst.DriverPID == 0 {
 			inst.Status = StatusStopped
-		} else if inst.HostAgentPID > 0 && inst.QemuPID == 0 {
-			inst.Errors = append(inst.Errors, errors.New("host agent is running but qemu is not"))
+		} else if inst.HostAgentPID > 0 && inst.DriverPID == 0 {
+			inst.Errors = append(inst.Errors, errors.New("host agent is running but driver is not"))
 			inst.Status = StatusBroken
 		} else {
 			inst.Errors = append(inst.Errors, fmt.Errorf("%s driver is running but host agent is not", inst.VMType))

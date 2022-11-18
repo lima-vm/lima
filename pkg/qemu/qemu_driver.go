@@ -142,7 +142,7 @@ func (l *LimaQemuDriver) killQEMU(_ context.Context, _ time.Duration, qCmd *exec
 	}
 	qWaitErr := <-qWaitCh
 	logrus.WithError(qWaitErr).Info("QEMU has exited, after killing forcibly")
-	qemuPIDPath := filepath.Join(l.Instance.Dir, filenames.QemuPID)
+	qemuPIDPath := filepath.Join(l.Instance.Dir, filenames.PIDFile(*l.Yaml.VMType))
 	_ = os.RemoveAll(qemuPIDPath)
 	return qWaitErr
 }
