@@ -33,7 +33,6 @@ const (
 	Kernel             = "kernel"
 	KernelCmdline      = "kernel.cmdline"
 	Initrd             = "initrd"
-	QemuPID            = "qemu.pid"
 	QMPSock            = "qmp.sock"
 	SerialLog          = "serial.log"
 	SerialSock         = "serial.sock"
@@ -66,3 +65,7 @@ const (
 // ssh appends 16 bytes of random characters when it first creates the socket:
 // https://github.com/openssh/openssh-portable/blob/V_8_7_P1/mux.c#L1271-L1285
 const LongestSock = SSHSock + ".1234567890123456"
+
+func PIDFile(name string) string {
+	return name + ".pid"
+}

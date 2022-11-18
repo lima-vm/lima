@@ -104,9 +104,9 @@ func waitForHostAgentTermination(ctx context.Context, inst *store.Instance, begi
 }
 
 func stopInstanceForcibly(inst *store.Instance) {
-	if inst.QemuPID > 0 {
-		logrus.Infof("Sending SIGKILL to the %s driver process %d", inst.VMType, inst.QemuPID)
-		if err := osutil.SysKill(inst.QemuPID, osutil.SigKill); err != nil {
+	if inst.DriverPID > 0 {
+		logrus.Infof("Sending SIGKILL to the %s driver process %d", inst.VMType, inst.DriverPID)
+		if err := osutil.SysKill(inst.DriverPID, osutil.SigKill); err != nil {
 			logrus.Error(err)
 		}
 	} else {

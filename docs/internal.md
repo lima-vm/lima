@@ -48,6 +48,7 @@ QEMU:
 - `serial.sock`: QEMU serial socket, for debugging (Usage: `socat -,echo=0,icanon=0 unix-connect:serial.sock`)
 
 VZ:
+- `vz.pid`: VZ PID
 - `vz-identifier`: Unique machine identifier file for a VM
 - `vz-efi`: EFIVariable store file for a VM
 
