@@ -45,6 +45,8 @@ Optional feature enablers:
 - [`vmnet.yaml`](./vmnet.yaml): ⭐enable [`vmnet.framework`](../docs/network.md)
 - [`experimental/9p.yaml`](experimental/9p.yaml): [experimental] use 9p mount type
 - [`experimental/riscv64.yaml`](experimental/riscv64.yaml): [experimental] RISC-V
+- [`experimental/socket-0.yaml`](experimental/socket-0.yaml): [experimental] socket, #0 (listen)
+- [`experimental/socket-1.yaml`](experimental/socket-1.yaml): [experimental] socket, #1 (connect)
 
 Lost+found:
 - ~`centos.yaml`~: Removed in Lima v0.8.0, as CentOS 8 reached [EOL](https://www.centos.org/centos-linux-eol/).

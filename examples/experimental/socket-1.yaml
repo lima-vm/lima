@@ -1,0 +1,25 @@
+# This example requires Lima v0.7.0 or later.
+images:
+# Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
+- location: "https://cloud-images.ubuntu.com/releases/22.10/release-20230215/ubuntu-22.10-server-cloudimg-amd64.img"
+  arch: "x86_64"
+  digest: "sha256:5e5c68cb12002111032d3239ade3763ce25639f1287a59d2509a1603c2b1f7e6"
+- location: "https://cloud-images.ubuntu.com/releases/22.10/release-20230215/ubuntu-22.10-server-cloudimg-arm64.img"
+  arch: "aarch64"
+  digest: "sha256:76c350d3342d59f004040e1f66a5d7f64f8bc3465098afd0d7f83627b8b8523a"
+# Fallback to the latest release image.
+# Hint: run `limactl prune` to invalidate the cache
+- location: "https://cloud-images.ubuntu.com/releases/22.10/release/ubuntu-22.10-server-cloudimg-amd64.img"
+  arch: "x86_64"
+- location: "https://cloud-images.ubuntu.com/releases/22.10/release/ubuntu-22.10-server-cloudimg-arm64.img"
+  arch: "aarch64"
+
+# "socket" network
+socketMain: false
+socketPort: 1234
+socketAddr: "10.0.2.101/24"
+
+mounts:
+- location: "~"
+- location: "/tmp/lima"
+  writable: true
