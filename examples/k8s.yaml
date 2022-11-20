@@ -96,6 +96,16 @@ provision:
   script: |
     #!/bin/bash
     set -eux -o pipefail
+    # To install a worker node, fill in and uncomment this line:
+    #export K8S_URL=https://lima-k8s:6443 K8S_TOKEN=xxx K8S_HASH=yyy
+    if [ -n "${K8S_TOKEN:-}" ]; then
+      # WORKER NODE
+      test -e /etc/kubernetes/kubelet.conf && exit 0
+      kubeadm join "${K8S_URL##https://}" --token "${K8S_TOKEN}" \
+             --discovery-token-ca-cert-hash "${K8S_HASH}"
+      exit 0
+    fi
+    # CONTROL PLANE NODE
     test -e /etc/kubernetes/admin.conf && exit 0
     export KUBECONFIG=/etc/kubernetes/admin.conf
     kubeadm config images list

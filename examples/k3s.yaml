@@ -40,6 +40,8 @@ provision:
 - mode: system
   script: |
     #!/bin/sh
+    # To install a worker node, fill in and uncomment this line:
+    #export K3S_URL=https://lima-k3s:6443 K3S_TOKEN=xxx
     curl -sfL https://get.k3s.io | sh -
 
 probes:
