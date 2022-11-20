@@ -4,7 +4,11 @@ ethernets:
   {{$nw.Interface}}:
     match:
       macaddress: '{{$nw.MACAddress}}'
+    {{- if eq $nw.Interface $.SocketNICName }}
+    addresses: [{{$.SocketIPAddress}}]
+    {{- else }}
     dhcp4: true
+    {{- end }}
     set-name: {{$nw.Interface}}
     {{- if and (eq $nw.Interface $.SlirpNICName) (gt (len $.DNSAddresses) 0) }}
     nameservers:

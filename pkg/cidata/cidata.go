@@ -118,16 +118,18 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 		return err
 	}
 	args := TemplateArgs{
-		Name:           name,
-		User:           u.Username,
-		UID:            uid,
-		Containerd:     Containerd{System: *y.Containerd.System, User: *y.Containerd.User},
-		SlirpNICName:   networks.SlirpNICName,
-		SlirpGateway:   networks.SlirpGateway,
-		SlirpDNS:       networks.SlirpDNS,
-		SlirpIPAddress: networks.SlirpIPAddress,
-		RosettaEnabled: y.Rosetta.Enabled,
-		RosettaBinFmt:  y.Rosetta.BinFmt,
+		Name:            name,
+		User:            u.Username,
+		UID:             uid,
+		Containerd:      Containerd{System: *y.Containerd.System, User: *y.Containerd.User},
+		SlirpNICName:    networks.SlirpNICName,
+		SlirpGateway:    networks.SlirpGateway,
+		SlirpDNS:        networks.SlirpDNS,
+		SlirpIPAddress:  networks.SlirpIPAddress,
+		SocketNICName:   networks.SocketNICName,
+		SocketIPAddress: y.SocketAddr,
+		RosettaEnabled:  y.Rosetta.Enabled,
+		RosettaBinFmt:   y.Rosetta.BinFmt,
 	}
 
 	// change instance id on every boot so network config will be processed again
@@ -211,6 +213,10 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 
 	slirpMACAddress := limayaml.MACAddress(instDir)
 	args.Networks = append(args.Networks, Network{MACAddress: slirpMACAddress, Interface: networks.SlirpNICName})
+	if y.SocketPort != nil {
+		socketMACAddress := limayaml.MACAddress(instDir + strconv.Itoa(*y.SocketPort))
+		args.Networks = append(args.Networks, Network{MACAddress: socketMACAddress, Interface: networks.SocketNICName})
+	}
 	for _, nw := range y.Networks {
 		args.Networks = append(args.Networks, Network{MACAddress: nw.MACAddress, Interface: nw.Interface})
 	}
