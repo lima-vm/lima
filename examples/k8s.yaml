@@ -98,6 +98,8 @@ provision:
     set -eux -o pipefail
     # To install a worker node, fill in and uncomment this line:
     #export K8S_URL=https://lima-k8s:6443 K8S_TOKEN=xxx K8S_HASH=yyy
+    # To get the token/hash to use for the variables, run this command:
+    # $ limactl shell k8s sudo kubeadm token create --print-join-command
     if [ -n "${K8S_TOKEN:-}" ]; then
       # WORKER NODE
       test -e /etc/kubernetes/kubelet.conf && exit 0
