@@ -1,14 +1,16 @@
-//go:build !darwin
-// +build !darwin
+//go:build !darwin || no_vz
+// +build !darwin no_vz
 
 package vz
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	"github.com/lima-vm/lima/pkg/driver"
 )
+
+var ErrUnsupported = errors.New("vm driver 'vz' needs macOS 13 or later (Hint: try recompiling Lima if you are seeing this error on macOS 13)")
 
 type LimaVzDriver struct {
 	*driver.BaseDriver
@@ -21,17 +23,17 @@ func New(driver *driver.BaseDriver) *LimaVzDriver {
 }
 
 func (l *LimaVzDriver) Validate() error {
-	return fmt.Errorf("driver 'vz' is only supported on darwin")
+	return ErrUnsupported
 }
 
 func (l *LimaVzDriver) CreateDisk() error {
-	return fmt.Errorf("driver 'vz' is only supported on darwin")
+	return ErrUnsupported
 }
 
 func (l *LimaVzDriver) Start(ctx context.Context) (chan error, error) {
-	return nil, fmt.Errorf("driver 'vz' is only supported on darwin")
+	return nil, ErrUnsupported
 }
 
 func (l *LimaVzDriver) Stop(_ context.Context) error {
-	return fmt.Errorf("driver 'vz' is only supported on darwin")
+	return ErrUnsupported
 }
