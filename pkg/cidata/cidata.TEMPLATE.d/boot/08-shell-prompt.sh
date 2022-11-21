@@ -1,7 +1,9 @@
 #!/bin/sh
 set -eux
 
-if [ "${LIMA_CIDATA_NAME}" = "default" ]; then
+# This script is only intended for the default.yaml image, which is based on Ubuntu LTS
+
+if [ "${LIMA_CIDATA_NAME}" = "default" ] && command -v patch >/dev/null 2>&1 && grep -q color_prompt "/home/${LIMA_CIDATA_USER}.linux/.bashrc"; then
 
 	! grep -q "^# Lima PS1" "/home/${LIMA_CIDATA_USER}.linux/.bashrc" || exit 0
 
