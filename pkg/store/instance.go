@@ -16,6 +16,7 @@ import (
 	"github.com/docker/go-units"
 	hostagentclient "github.com/lima-vm/lima/pkg/hostagent/api/client"
 	"github.com/lima-vm/lima/pkg/limayaml"
+	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 )
@@ -203,6 +204,7 @@ type FormatData struct {
 	HostArch     string
 	LimaHome     string
 	IdentityFile string
+	User         string
 }
 
 func AddGlobalFields(inst *Instance) (FormatData, error) {
@@ -223,5 +225,12 @@ func AddGlobalFields(inst *Instance) (FormatData, error) {
 	if err != nil {
 		return FormatData{}, err
 	}
+	// Add User
+	limaUser, err := osutil.LimaUser(false)
+	if err != nil {
+		return FormatData{}, err
+	}
+	data.User = limaUser.Username
+
 	return data, nil
 }
