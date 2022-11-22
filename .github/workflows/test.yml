@@ -193,7 +193,7 @@ jobs:
         command: ./hack/test-example.sh examples/vmnet.yaml
     - name: Install socket_vmnet
       env:
-        SOCKET_VMNET_VERSION: v1.0.0
+        SOCKET_VMNET_VERSION: v1.1.0
       run: |
         (
           cd ~
