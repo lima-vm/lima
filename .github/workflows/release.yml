@@ -4,9 +4,13 @@
 name: Release
 on:
   push:
+    branches:
+    - 'master'
     tags:
     - 'v*'
-    - 'test-action-release-*'
+  pull_request:
+    branches:
+    - 'master'
 env:
   GO111MODULE: on
 jobs:
@@ -15,6 +19,13 @@ jobs:
     runs-on: macos-12
     timeout-minutes: 20
     steps:
+    - name: "Switch Xcode version to enable macOS 13 SDK"
+      # Xcode 14.1 added support for macOS 13 SDK.
+      # The default version is still 14.0.1, as of November 2022.
+      # https://github.com/actions/runner-images/blob/main/images/macos/macos-12-Readme.md#xcode
+      run: |
+        sudo xcode-select --switch /Applications/Xcode_14.1.app
+        xcrun --show-sdk-version
     - uses: actions/setup-go@v3
       with:
         go-version: 1.19.x
@@ -81,6 +92,7 @@ jobs:
         The sha256sum of the SHA256SUMS file itself is \`${shasha}\` .
         EOF
     - name: "Create release"
+      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
