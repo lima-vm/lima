@@ -345,6 +345,17 @@ func attachFolderMounts(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineCo
 		config.SetDirectoryShare(share)
 		mounts[i] = config
 	}
+
+	if driver.Yaml.Rosetta.Enabled {
+		logrus.Info("Setting up Rosetta share")
+		directorySharingDeviceConfig, err := createRosettaDirectoryShareConfiguration()
+		if err != nil {
+			logrus.Warnf("Unable to configure Rosetta: %s", err)
+		} else {
+			mounts = append(mounts, directorySharingDeviceConfig)
+		}
+	}
+
 	vmConfig.SetDirectorySharingDevicesVirtualMachineConfiguration(mounts)
 	return nil
 }
