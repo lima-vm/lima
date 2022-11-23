@@ -83,8 +83,6 @@ jobs:
     - uses: actions/checkout@v3
       with:
         fetch-depth: 1
-    - name: Test making darwin artifacts
-      run: make artifacts-darwin
     - name: Unit tests
       run: go test -v ./...
     - name: Make
@@ -243,23 +241,3 @@ jobs:
         retry_on: error
         max_attempts: 3
         command: ./hack/test-upgrade.sh ${{ matrix.oldver }} ${{ github.sha }}
-
-  artifacts-linux:
-    name: Artifacts Linux
-    runs-on: ubuntu-22.04
-    timeout-minutes: 20
-    steps:
-    - uses: actions/setup-go@v3
-      with:
-        go-version: 1.19.x
-    - name: Install gcc-aarch64-linux-gnu
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y gcc-aarch64-linux-gnu
-    - uses: actions/checkout@v3
-      with:
-        fetch-depth: 1
-    - name: Make linux artifacts
-      run: make artifacts-linux
-    - name: Make misc artifacts
-      run: make artifacts-misc
