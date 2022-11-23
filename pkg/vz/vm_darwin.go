@@ -316,34 +316,36 @@ func attachConsole(_ *driver.BaseDriver, vmConfig *vz.VirtualMachineConfiguratio
 
 func attachFolderMounts(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfiguration) error {
 	mounts := make([]vz.DirectorySharingDeviceConfiguration, len(driver.Yaml.Mounts))
-	for i, mount := range driver.Yaml.Mounts {
-		expandedPath, err := localpathutil.Expand(mount.Location)
-		if err != nil {
-			return err
-		}
-		if _, err := os.Stat(expandedPath); errors.Is(err, os.ErrNotExist) {
-			err := os.MkdirAll(expandedPath, 0750)
+	if *driver.Yaml.MountType == limayaml.VIRTIOFS {
+		for i, mount := range driver.Yaml.Mounts {
+			expandedPath, err := localpathutil.Expand(mount.Location)
 			if err != nil {
 				return err
 			}
-		}
+			if _, err := os.Stat(expandedPath); errors.Is(err, os.ErrNotExist) {
+				err := os.MkdirAll(expandedPath, 0750)
+				if err != nil {
+					return err
+				}
+			}
 
-		directory, err := vz.NewSharedDirectory(expandedPath, !*mount.Writable)
-		if err != nil {
-			return err
-		}
-		share, err := vz.NewSingleDirectoryShare(directory)
-		if err != nil {
-			return err
-		}
+			directory, err := vz.NewSharedDirectory(expandedPath, !*mount.Writable)
+			if err != nil {
+				return err
+			}
+			share, err := vz.NewSingleDirectoryShare(directory)
+			if err != nil {
+				return err
+			}
 
-		tag := fmt.Sprintf("mount%d", i)
-		config, err := vz.NewVirtioFileSystemDeviceConfiguration(tag)
-		if err != nil {
-			return err
+			tag := fmt.Sprintf("mount%d", i)
+			config, err := vz.NewVirtioFileSystemDeviceConfiguration(tag)
+			if err != nil {
+				return err
+			}
+			config.SetDirectoryShare(share)
+			mounts[i] = config
 		}
-		config.SetDirectoryShare(share)
-		mounts[i] = config
 	}
 
 	if driver.Yaml.Rosetta.Enabled {
