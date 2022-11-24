@@ -46,6 +46,7 @@ to Mac users, but Lima can be used for non-container applications as well.
 Container environments:
 - [Rancher Desktop](https://rancherdesktop.io/): Kubernetes and container management to the desktop
 - [Colima](https://github.com/abiosoft/colima): Docker (and Kubernetes) on macOS with minimal setup
+- [Finch](https://github.com/runfinch/finch): Finch is a command line client for local container development
 
 GUI:
 - [Lima xbar plugin](https://github.com/unixorn/lima-xbar-plugin): [xbar](https://xbarapp.com/) plugin to start/stop VMs from the menu bar and see their running status.
