@@ -3,6 +3,7 @@ package networks
 import "net"
 
 type YAML struct {
+	// Paths and Group are ignored for vz
 	Paths    Paths              `yaml:"paths"`
 	Group    string             `yaml:"group,omitempty"` // default: "everyone"
 	Networks map[string]Network `yaml:"networks"`

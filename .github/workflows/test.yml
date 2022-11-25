@@ -46,8 +46,6 @@ jobs:
       run: make
     - name: Install
       run: sudo make install
-    - name: Validate examples (except vmnet.yaml)
-      run: find examples -name '*.yaml' | grep -v 'vmnet.yaml' | xargs limactl validate
     - name: Uninstall
       run: sudo make uninstall
 
@@ -89,6 +87,8 @@ jobs:
       run: make
     - name: Install
       run: make install
+    - name: Validate examples
+      run: find examples -name '*.yaml' | xargs limactl validate
     - name: Install test dependencies
       # QEMU:      required by Lima itself
       # bash:      required by test-example.sh (OS version of bash is too old)

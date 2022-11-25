@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/networks"
 	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/store"
@@ -35,6 +36,9 @@ func Reconcile(ctx context.Context, newInst string) error {
 		instance, err := store.Inspect(instName)
 		if err != nil {
 			return err
+		}
+		if instance.VMType == limayaml.VZ {
+			continue
 		}
 		// newInst is about to be started, so its networks should be running
 		if instance.Status != store.StatusRunning && instName != newInst {

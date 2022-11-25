@@ -1,3 +1,9 @@
+# Network definitions for Lima.
+#
+# This configuration file is recognized for both QEMU and VZ instances.
+# However, most properties are ignored by VZ.
+
+# [Only for QEMU]
 # Path to socket_vmnet executable. Because socket_vmnet is invoked via sudo it should be
 # installed where only root can modify/replace it. This means also none of the
 # parent directories should be writable by the user.
@@ -19,18 +25,22 @@ paths:
   varRun: /private/var/run/lima
   sudoers: /private/etc/sudoers.d/lima
 
+# [Only for QEMU]
 group: everyone
 
 networks:
+  # "shared" is recognized by both QEMU and VZ, but the IP address range is ignored by VZ
   shared:
     mode: shared
     gateway: 192.168.105.1
     dhcpEnd: 192.168.105.254
     netmask: 255.255.255.0
+  # [Only for QEMU]
   bridged:
     mode: bridged
     interface: en0
     # bridged mode doesn't have a gateway; dhcp is managed by outside network
+  # [Only for QEMU]
   host:
     mode: host
     gateway: 192.168.106.1

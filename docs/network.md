@@ -44,12 +44,17 @@ If `useHostResolver` is false, then DNS servers can be configured manually in `l
 
 ## Managed VMNet networks (192.168.105.0/24)
 
+### QEMU
 Either [`socket_vmnet`](https://github.com/lima-vm/socket_vmnet) (since Lima v0.12) or [`vde_vmnet`](https://github.com/lima-vm/vde_vmnet) (Deprecated)
 is required for adding another guest IP that is accessible from the host and other guests.
 
 Starting with version v0.7.0 lima can manage the networking daemons automatically. Networks are defined in
 `$LIMA_HOME/_config/networks.yaml`. If this file doesn't already exist, it will be created with these default
 settings:
+
+<details>
+<summary>Default</summary>
+<p>
 
 ```yaml
 # Path to socket_vmnet executable. Because socket_vmnet is invoked via sudo it should be
@@ -92,6 +97,9 @@ networks:
     netmask: 255.255.255.0
 ```
 
+</p>
+</details>
+
 Instances can then reference these networks from their `lima.yaml` file:
 
 ```yaml
@@ -120,7 +128,18 @@ be done via:
 limactl sudoers | sudo tee /etc/sudoers.d/lima
 ```
 
+### VZ
+The `shared` network supports VZ, but no support for custom IP ranges.
+
+```yaml
+networks:
+- lima: shared
+```
+
+The `socket_vmnet` daemon and the `sudoers` file are NOT needed for VZ instances.
+
 ## Unmanaged VMNet networks
+### QEMU
 For Lima >= 0.12:
 ```yaml
 networks:
@@ -132,6 +151,9 @@ networks:
 ```
 
 For older Lima releases:
+<details>
+<p>
+
 ```yaml
 networks:
   # vnl (virtual network locator) points to the vde_switch socket directory,
@@ -147,3 +169,9 @@ networks:
   #   # Interface name, defaults to "lima0", "lima1", etc.
   #   interface: ""
 ```
+
+</p>
+</details>
+
+### VZ
+Not supported.

@@ -191,6 +191,23 @@ func attachSerialPort(driver *driver.BaseDriver, config *vz.VirtualMachineConfig
 	return err
 }
 
+func newVirtioNetworkDeviceConfiguration(attachment vz.NetworkDeviceAttachment, macStr string) (*vz.VirtioNetworkDeviceConfiguration, error) {
+	networkConfig, err := vz.NewVirtioNetworkDeviceConfiguration(attachment)
+	if err != nil {
+		return nil, err
+	}
+	mac, err := net.ParseMAC(macStr)
+	if err != nil {
+		return nil, err
+	}
+	address, err := vz.NewMACAddress(mac)
+	if err != nil {
+		return nil, err
+	}
+	networkConfig.SetMACAddress(address)
+	return networkConfig, nil
+}
+
 func attachNetwork(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfiguration, networkConn *os.File) error {
 	//slirp network using gvisor netstack
 	fileAttachment, err := vz.NewFileHandleNetworkDeviceAttachment(networkConn)
@@ -201,22 +218,52 @@ func attachNetwork(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfigu
 	if err != nil {
 		return err
 	}
-	networkConfig, err := vz.NewVirtioNetworkDeviceConfiguration(fileAttachment)
+	networkConfig, err := newVirtioNetworkDeviceConfiguration(fileAttachment, limayaml.MACAddress(driver.Instance.Dir))
 	if err != nil {
 		return err
 	}
-	mac, err := net.ParseMAC(limayaml.MACAddress(driver.Instance.Dir))
-	if err != nil {
-		return err
-	}
-	address, err := vz.NewMACAddress(mac)
-	if err != nil {
-		return err
-	}
-	networkConfig.SetMACAddress(address)
-
 	configurations := []*vz.VirtioNetworkDeviceConfiguration{
 		networkConfig,
+	}
+
+	if len(driver.Instance.Networks) > 0 {
+		nwYAML, err := networks.Config()
+		if err != nil {
+			return err
+		}
+		for _, nw := range driver.Instance.Networks {
+			if nw.Lima != "" {
+				nwYAMLObj, ok := nwYAML.Networks[nw.Lima]
+				if !ok {
+					logrus.Warnf("Ignoring undefined network %q", nw.Lima)
+					continue
+				}
+				switch nwYAMLObj.Mode {
+				case networks.ModeShared:
+					if !nwYAMLObj.Gateway.IsUnspecified() || !nwYAMLObj.DHCPEnd.IsUnspecified() || !nwYAMLObj.NetMask.IsUnspecified() {
+						logrus.Warnf("Ignoring gateway=%v, dhcpEnd=%v, netmask=%v (unsupported by vz)",
+							nwYAMLObj.Gateway, nwYAMLObj.DHCPEnd, nwYAMLObj.NetMask)
+					}
+					attachment, err := vz.NewNATNetworkDeviceAttachment()
+					if err != nil {
+						return err
+					}
+					networkConfig, err = newVirtioNetworkDeviceConfiguration(attachment, nw.MACAddress)
+					if err != nil {
+						return err
+					}
+					configurations = append(configurations, networkConfig)
+				default:
+					// No support for ModeBridged:
+					// VZBridgedNetworkDeviceAttachment requires the com.apple.vm.networking entitlement
+					// which needs to contact an Apple representative.
+					// - https://developer.apple.com/documentation/virtualization/vzbridgednetworkdeviceattachment?language=objc
+					// - https://developer.apple.com/documentation/bundleresources/entitlements/com_apple_vm_networking?language=objc
+					logrus.Warnf("Ignoring unsupported network mode %q (%q)", nwYAMLObj.Mode, nw.Lima)
+					continue
+				}
+			}
+		}
 	}
 	vmConfig.SetNetworkDevicesVirtualMachineConfiguration(configurations)
 	return nil
