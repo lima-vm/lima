@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os/user"
 	"reflect"
 	"sort"
 	"strings"
@@ -171,6 +172,12 @@ func listAction(cmd *cobra.Command, args []string) error {
 		logrus.Warn("No instance found. Run `limactl start` to create an instance.")
 	}
 
+	u, err := user.Current()
+	if err != nil {
+		return err
+	}
+	homeDir := u.HomeDir
+
 	for _, instName := range instances {
 		inst, err := store.Inspect(instName)
 		if err != nil {
@@ -179,6 +186,10 @@ func listAction(cmd *cobra.Command, args []string) error {
 		}
 		if len(inst.Errors) > 0 {
 			logrus.WithField("errors", inst.Errors).Warnf("instance %q has errors", instName)
+		}
+		dir := inst.Dir
+		if strings.HasPrefix(dir, homeDir) {
+			dir = strings.Replace(dir, homeDir, "~", 1)
 		}
 		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%d\t%s\t%s\t%s\n",
 			inst.Name,
@@ -189,7 +200,7 @@ func listAction(cmd *cobra.Command, args []string) error {
 			inst.CPUs,
 			units.BytesSize(float64(inst.Memory)),
 			units.BytesSize(float64(inst.Disk)),
-			inst.Dir,
+			dir,
 		)
 	}
 
