@@ -165,7 +165,7 @@ func listAction(cmd *cobra.Command, args []string) error {
 	}
 
 	w := tabwriter.NewWriter(cmd.OutOrStdout(), 4, 8, 4, ' ', 0)
-	fmt.Fprintln(w, "NAME\tSTATUS\tSSH\tARCH\tCPUS\tMEMORY\tDISK\tDIR")
+	fmt.Fprintln(w, "NAME\tSTATUS\tSSH\tVMTYPE\tARCH\tCPUS\tMEMORY\tDISK\tDIR")
 
 	if len(allinstances) == 0 {
 		logrus.Warn("No instance found. Run `limactl start` to create an instance.")
@@ -180,10 +180,11 @@ func listAction(cmd *cobra.Command, args []string) error {
 		if len(inst.Errors) > 0 {
 			logrus.WithField("errors", inst.Errors).Warnf("instance %q has errors", instName)
 		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%d\t%s\t%s\t%s\n",
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%d\t%s\t%s\t%s\n",
 			inst.Name,
 			inst.Status,
 			fmt.Sprintf("127.0.0.1:%d", inst.SSHLocalPort),
+			inst.VMType,
 			inst.Arch,
 			inst.CPUs,
 			units.BytesSize(float64(inst.Memory)),
