@@ -271,6 +271,9 @@ func validateNetwork(y LimaYAML, warn bool) error {
 			if nw.Socket != "" {
 				return fmt.Errorf("field `%s.lima` and field `%s.socket` are mutually exclusive", field, field)
 			}
+			if nw.VZNAT != nil && *nw.VZNAT {
+				return fmt.Errorf("field `%s.lima` and field `%s.vzNAT` are mutually exclusive", field, field)
+			}
 			if nw.VNLDeprecated != "" {
 				return fmt.Errorf("field `%s.lima` and field `%s.vnl` are mutually exclusive", field, field)
 			}
@@ -285,6 +288,9 @@ func validateNetwork(y LimaYAML, warn bool) error {
 				return fmt.Errorf("field `%s.lima` references network %q which is not defined in networks.yaml", field, nw.Lima)
 			}
 		} else if nw.Socket != "" {
+			if nw.VZNAT != nil && *nw.VZNAT {
+				return fmt.Errorf("field `%s.socket` and field `%s.vzNAT` are mutually exclusive", field, field)
+			}
 			if nw.VNLDeprecated != "" {
 				return fmt.Errorf("field `%s.socket` and field `%s.vnl` are mutually exclusive", field, field)
 			}
@@ -295,6 +301,22 @@ func validateNetwork(y LimaYAML, warn bool) error {
 				return err
 			} else if err == nil && fi.Mode()&os.ModeSocket == 0 {
 				return fmt.Errorf("field `%s.socket` %q points to a non-socket file", field, nw.Socket)
+			}
+		} else if nw.VZNAT != nil && *nw.VZNAT {
+			if y.VMType == nil || *y.VMType != VZ {
+				return fmt.Errorf("field `%s.vzNAT` requires `vmType` to be %q", field, VZ)
+			}
+			if nw.Lima != "" {
+				return fmt.Errorf("field `%s.vzNAT` and field `%s.lima` are mutually exclusive", field, field)
+			}
+			if nw.Socket != "" {
+				return fmt.Errorf("field `%s.vzNAT` and field `%s.socket` are mutually exclusive", field, field)
+			}
+			if nw.VNLDeprecated != "" {
+				return fmt.Errorf("field `%s.vzNAT` and field `%s.vnl` are mutually exclusive", field, field)
+			}
+			if nw.SwitchPortDeprecated != 0 {
+				return fmt.Errorf("field `%s.switchPort` cannot be used with field `%s.vzNAT`", field, field)
 			}
 		} else {
 			if nw.VNLDeprecated == "" {

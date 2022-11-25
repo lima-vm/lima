@@ -16,3 +16,6 @@ mounts:
 - location: "/tmp/lima"
   writable: true
 mountType: "virtiofs"
+
+networks:
+- vzNAT: true
