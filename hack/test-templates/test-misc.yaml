@@ -1,3 +1,7 @@
+# The test template for testing misc configurations:
+# - disk
+# - (More to come)
+#
 # This example requires Lima v0.14.0 or later.
 images:
 # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
