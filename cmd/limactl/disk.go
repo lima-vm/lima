@@ -135,7 +135,7 @@ func diskListAction(cmd *cobra.Command, args []string) error {
 	}
 
 	w := tabwriter.NewWriter(cmd.OutOrStdout(), 4, 8, 4, ' ', 0)
-	fmt.Fprintln(w, "NAME\tSIZE\tDIR\tIN USE BY")
+	fmt.Fprintln(w, "NAME\tSIZE\tDIR\tIN-USE-BY")
 
 	if len(allDisks) == 0 {
 		logrus.Warn("No disk found. Run `limactl disk create DISK --size SIZE` to create a disk.")
