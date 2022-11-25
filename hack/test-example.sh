@@ -46,7 +46,7 @@ case "$NAME" in
 "vmnet")
 	CHECKS["vmnet"]=1
 	;;
-"disk")
+"test-misc")
 	CHECKS["disk"]=1
 	;;
 esac
