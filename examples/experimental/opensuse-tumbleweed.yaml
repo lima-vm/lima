@@ -1,10 +1,14 @@
 # This example requires Lima v0.11.3 or later
 images:
 # Hint: run `limactl prune` to invalidate the "Current" cache
-- location: https://download.opensuse.org/tumbleweed/appliances/openSUSE-Tumbleweed-JeOS.x86_64-OpenStack-Cloud.qcow2
+- location: "https://download.opensuse.org/tumbleweed/appliances/openSUSE-Tumbleweed-Minimal-VM.x86_64-Cloud.qcow2"
   arch: "x86_64"
-- location: http://download.opensuse.org/ports/aarch64/tumbleweed/appliances/openSUSE-Tumbleweed-ARM-JeOS-efi.aarch64.qcow2
+# JeOS is deprecated and will be removed probably
+- location: "http://download.opensuse.org/ports/aarch64/tumbleweed/appliances/openSUSE-Tumbleweed-ARM-JeOS-efi.aarch64.qcow2"
   arch: "aarch64"
+# Minimal-VM.aarch64-kvm-and-xen is known to hang: https://github.com/lima-vm/lima/pull/1194#issuecomment-1326943869
+# - location: "https://download.opensuse.org/ports/aarch64/tumbleweed/appliances/openSUSE-Tumbleweed-Minimal-VM.aarch64-kvm-and-xen.qcow2"
+#   arch: "aarch64"
 mounts:
 - location: "~"
 - location: "/tmp/lima"
