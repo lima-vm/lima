@@ -42,7 +42,16 @@ During initial cloud-init bootstrap, `iptables` may not yet be installed. In tha
 
 If `useHostResolver` is false, then DNS servers can be configured manually in `lima.yaml` via the `dns` setting. If that list is empty, then Lima will either use the slirp DNS (on Linux), or the nameservers from the first host interface in service order that has an assigned IPv4 address (on macOS).
 
-## Managed VMNet networks (192.168.105.0/24)
+## VMNet networks
+
+VMNet assigns a "real" IP address that is reachable from the host.
+
+The configuration steps are different across QEMU and VZ:
+- [QEMU](#qemu)
+- [VZ](#vz)
+
+### QEMU
+#### Managed (192.168.105.0/24)
 
 Either [`socket_vmnet`](https://github.com/lima-vm/socket_vmnet) (since Lima v0.12) or [`vde_vmnet`](https://github.com/lima-vm/vde_vmnet) (Deprecated)
 is required for adding another guest IP that is accessible from the host and other guests.
@@ -50,6 +59,11 @@ is required for adding another guest IP that is accessible from the host and oth
 Starting with version v0.7.0 lima can manage the networking daemons automatically. Networks are defined in
 `$LIMA_HOME/_config/networks.yaml`. If this file doesn't already exist, it will be created with these default
 settings:
+
+<details>
+<summary>Default</summary>
+
+<p>
 
 ```yaml
 # Path to socket_vmnet executable. Because socket_vmnet is invoked via sudo it should be
@@ -92,6 +106,10 @@ networks:
     netmask: 255.255.255.0
 ```
 
+</p>
+
+</details>
+
 Instances can then reference these networks from their `lima.yaml` file:
 
 ```yaml
@@ -120,7 +138,7 @@ be done via:
 limactl sudoers | sudo tee /etc/sudoers.d/lima
 ```
 
-## Unmanaged VMNet networks
+#### Unmanaged
 For Lima >= 0.12:
 ```yaml
 networks:
@@ -131,7 +149,11 @@ networks:
   # - socket: "/var/run/socket_vmnet"
 ```
 
-For older Lima releases:
+<details>
+<summary>For older Lima releases</summary>
+
+<p>
+
 ```yaml
 networks:
   # vnl (virtual network locator) points to the vde_switch socket directory,
@@ -147,3 +169,18 @@ networks:
   #   # Interface name, defaults to "lima0", "lima1", etc.
   #   interface: ""
 ```
+</p>
+
+</details>
+
+### VZ
+
+For VZ instances, the "vzNAT" network can be configured as follows:
+```yaml
+networks:
+- vzNAT: true
+```
+
+The range of the IP address is not specifiable.
+
+The "vzNAT" network does not need the `socket_vmnet` binary and the `sudoers` file.

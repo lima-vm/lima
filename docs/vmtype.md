@@ -37,5 +37,4 @@ mountType: "virtiofs"
 
 ### Known Issues
 - "vz" doesn't support `legacyBoot: true` option, so guest machine like centos-stream, archlinux, oraclelinux will not work
-- Host to guest networking (`networks` section in lima yaml) is not supported
 - When running lima using "vz", `${LIMA_HOME}/<INSTANCE>/serial.log` will not contain kernel boot logs

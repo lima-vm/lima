@@ -1,4 +1,6 @@
-# Example to enable vmnet.framework
+# Example to enable vmnet.framework for QEMU.
+# VZ users should refer to experimental/vz.yaml
+
 # This example requires Lima v0.7.0 or later.
 # Older versions of Lima were using a different syntax for supporting vmnet.framework.
 images:
