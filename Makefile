@@ -41,6 +41,7 @@ binaries: clean \
 	_output/bin/lima \
 	_output/bin/lima$(bat) \
 	_output/bin/limactl$(exe) \
+	_output/bin/lima-hostagent$(exe) \
 	codesign \
 	_output/bin/nerdctl.lima \
 	_output/bin/apptainer.lima \
@@ -93,6 +94,10 @@ _output/bin/limactl$(exe):
 	# calls the native resolver library and not the simplistic version in the Go library.
 	CGO_ENABLED=1 $(GO_BUILD) -o $@ ./cmd/limactl
 
+.PHONY: _output/bin/lima-hostagent$(exe)
+_output/bin/lima-hostagent$(exe):
+	CGO_ENABLED=1 $(GO_BUILD) -o $@ ./cmd/lima-hostagent
+
 .PHONY: _output/share/lima/lima-guestagent.Linux-x86_64
 _output/share/lima/lima-guestagent.Linux-x86_64:
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 $(GO_BUILD) -o $@ ./cmd/lima-guestagent
@@ -128,6 +133,7 @@ uninstall:
 		"$(DEST)/bin/lima" \
 		"$(DEST)/bin/lima$(bat)" \
 		"$(DEST)/bin/limactl$(exe)" \
+		"$(DEST)/bin/lima-hostagent$(exe)" \
 		"$(DEST)/bin/nerdctl.lima" \
 		"$(DEST)/bin/apptainer.lima" \
 		"$(DEST)/bin/docker.lima" \

@@ -133,6 +133,12 @@ func New(instName string, stdout io.Writer, sigintCh chan os.Signal, opts ...Opt
 		Yaml:         y,
 		SSHLocalPort: sshLocalPort,
 	})
+	if err := limaDriver.Validate(); err != nil {
+		return nil, err
+	}
+	if err := limaDriver.CreateDisk(); err != nil {
+		return nil, err
+	}
 
 	a := &HostAgent{
 		y:               y,

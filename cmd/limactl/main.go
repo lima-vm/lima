@@ -86,7 +86,6 @@ func newApp() *cobra.Command {
 		newValidateCommand(),
 		newSudoersCommand(),
 		newPruneCommand(),
-		newHostagentCommand(),
 		newInfoCommand(),
 		newShowSSHCommand(),
 		newDebugCommand(),

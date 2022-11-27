@@ -9,11 +9,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"text/template"
 	"time"
-
-	"github.com/lima-vm/lima/pkg/driver"
-	"github.com/lima-vm/lima/pkg/driverutil"
 
 	"github.com/lima-vm/lima/pkg/downloader"
 	hostagentevents "github.com/lima-vm/lima/pkg/hostagent/events"
@@ -83,18 +81,6 @@ func Start(ctx context.Context, inst *store.Instance) error {
 		return err
 	}
 
-	limaDriver := driverutil.CreateTargetDriverInstance(&driver.BaseDriver{
-		Instance: inst,
-		Yaml:     y,
-	})
-
-	if err := limaDriver.Validate(); err != nil {
-		return err
-	}
-
-	if err := limaDriver.CreateDisk(); err != nil {
-		return err
-	}
 	nerdctlArchiveCache, err := ensureNerdctlArchiveCache(y)
 	if err != nil {
 		return err
@@ -104,6 +90,7 @@ func Start(ctx context.Context, inst *store.Instance) error {
 	if err != nil {
 		return err
 	}
+	self = strings.Replace(self, "ctl", "-hostagent", 1)
 	haStdoutPath := filepath.Join(inst.Dir, filenames.HostAgentStdoutLog)
 	haStderrPath := filepath.Join(inst.Dir, filenames.HostAgentStderrLog)
 	if err := os.RemoveAll(haStdoutPath); err != nil {
