@@ -78,7 +78,7 @@ func diskCreateAction(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("disk %q already exists (%q)", name, diskDir)
 	}
 
-	logrus.Infof("Creating a disk %q", name)
+	logrus.Infof("Creating disk %q with size %s", name, units.BytesSize(float64(diskSize)))
 
 	if err := os.MkdirAll(diskDir, 0700); err != nil {
 		return err
@@ -100,11 +100,21 @@ $ limactl disk list
 `,
 		Short:   "List existing Lima disks",
 		Aliases: []string{"ls"},
-		Args:    cobra.NoArgs,
+		Args:    cobra.ArbitraryArgs,
 		RunE:    diskListAction,
 	}
 	diskListCommand.Flags().Bool("json", false, "JSONify output")
 	return diskListCommand
+}
+
+func diskMatches(diskName string, disks []string) []string {
+	matches := []string{}
+	for _, disk := range disks {
+		if disk == diskName {
+			matches = append(matches, disk)
+		}
+	}
+	return matches
 }
 
 func diskListAction(cmd *cobra.Command, args []string) error {
@@ -118,8 +128,22 @@ func diskListAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	disks := []string{}
+	if len(args) > 0 {
+		for _, arg := range args {
+			matches := diskMatches(arg, allDisks)
+			if len(matches) > 0 {
+				disks = append(disks, matches...)
+			} else {
+				logrus.Warnf("No disk matching %v found.", arg)
+			}
+		}
+	} else {
+		disks = allDisks
+	}
+
 	if jsonFormat {
-		for _, diskName := range allDisks {
+		for _, diskName := range disks {
 			disk, err := store.InspectDisk(diskName)
 			if err != nil {
 				logrus.WithError(err).Errorf("disk %q does not exist?", diskName)
@@ -137,11 +161,11 @@ func diskListAction(cmd *cobra.Command, args []string) error {
 	w := tabwriter.NewWriter(cmd.OutOrStdout(), 4, 8, 4, ' ', 0)
 	fmt.Fprintln(w, "NAME\tSIZE\tDIR\tIN-USE-BY")
 
-	if len(allDisks) == 0 {
+	if len(disks) == 0 {
 		logrus.Warn("No disk found. Run `limactl disk create DISK --size SIZE` to create a disk.")
 	}
 
-	for _, diskName := range allDisks {
+	for _, diskName := range disks {
 		disk, err := store.InspectDisk(diskName)
 		if err != nil {
 			logrus.WithError(err).Errorf("disk %q does not exist?", diskName)
@@ -168,7 +192,7 @@ $ limactl disk delete DISK1 DISK2 ...
 		Args:    cobra.MinimumNArgs(1),
 		RunE:    diskDeleteAction,
 	}
-	diskDeleteCommand.Flags().Bool("force", false, "force delete")
+	diskDeleteCommand.Flags().BoolP("force", "f", false, "force delete")
 	return diskDeleteCommand
 }
 
@@ -178,24 +202,20 @@ func diskDeleteAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	for _, diskName := range args {
-		if force {
-			disk, err := store.InspectDisk(diskName)
-			if err != nil {
-				if errors.Is(err, fs.ErrNotExist) {
-					logrus.Warnf("Ignoring non-existent disk %q", diskName)
-					continue
-				}
-				return err
-			}
-
-			if err := deleteDisk(disk); err != nil {
-				return fmt.Errorf("failed to delete disk %q: %w", diskName, err)
-			}
-			logrus.Infof("Deleted %q (%q)", diskName, disk.Dir)
+	instNames, err := store.Instances()
+	if err != nil {
+		return err
+	}
+	var instances []*store.Instance
+	for _, instName := range instNames {
+		inst, err := store.Inspect(instName)
+		if err != nil {
 			continue
 		}
+		instances = append(instances, inst)
+	}
 
+	for _, diskName := range args {
 		disk, err := store.InspectDisk(diskName)
 		if err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
@@ -204,33 +224,29 @@ func diskDeleteAction(cmd *cobra.Command, args []string) error {
 			}
 			return err
 		}
-		if disk.Instance != "" {
-			return fmt.Errorf("cannot delete disk %q in use by instance %q", disk.Name, disk.Instance)
-		}
-		instances, err := store.Instances()
-		if err != nil {
-			return err
-		}
-		var refInstances []string
-		for _, instName := range instances {
-			inst, err := store.Inspect(instName)
-			if err != nil {
-				continue
+
+		if !force {
+			if disk.Instance != "" {
+				return fmt.Errorf("cannot delete disk %q in use by instance %q", disk.Name, disk.Instance)
 			}
-			if len(inst.AdditionalDisks) > 0 {
-				for _, d := range inst.AdditionalDisks {
-					if d == diskName {
-						refInstances = append(refInstances, instName)
+			var refInstances []string
+			for _, inst := range instances {
+				if len(inst.AdditionalDisks) > 0 {
+					for _, d := range inst.AdditionalDisks {
+						if d == diskName {
+							refInstances = append(refInstances, inst.Name)
+						}
 					}
 				}
 			}
+			if len(refInstances) > 0 {
+				logrus.Warnf("Skipping deleting disk %q, disk is referenced by one or more non-running instances: %q",
+					diskName, refInstances)
+				logrus.Warnf("To delete anyway, run %q", forceDeleteCommand(diskName))
+				continue
+			}
 		}
-		if len(refInstances) > 0 {
-			logrus.Warnf("Skipping deleting disk %q, disk is referenced by one or more non-running instances: %q",
-				diskName, refInstances)
-			logrus.Warnf("To delete anyway, run %q", forceDeleteCommand(diskName))
-			continue
-		}
+
 		if err := deleteDisk(disk); err != nil {
 			return fmt.Errorf("failed to delete disk %q: %v", diskName, err)
 		}
