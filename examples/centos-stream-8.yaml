@@ -4,17 +4,18 @@
 # EL9-based distros are known to work.
 
 images:
-- location: "https://cloud.centos.org/centos/8-stream/x86_64/images/CentOS-Stream-GenericCloud-8-20220125.1.x86_64.qcow2"
+- location: "https://cloud.centos.org/centos/8-stream/x86_64/images/CentOS-Stream-GenericCloud-8-20220913.0.x86_64.qcow2"
   arch: "x86_64"
-  digest: "sha256:a25560ab39e10594ee7a4a1dadcba7bf303b7c3c41559b4a7fc3c522540a6672"
-- location: "https://cloud.centos.org/centos/8-stream/aarch64/images/CentOS-Stream-GenericCloud-8-20220125.1.aarch64.qcow2"
+  digest: "sha256:8717251f8e4d2fe3e5032799caae89358c1ba68d65a16b5128a59ec6003aac1c"
+- location: "https://cloud.centos.org/centos/8-stream/aarch64/images/CentOS-Stream-GenericCloud-8-20220913.0.aarch64.qcow2"
   arch: "aarch64"
-  digest: "sha256:d973991085db0ca8373e1d9948440213cdc76b6acf8f17aa2aed2163c1347cbc"
+  digest: "sha256:be18d94caaa55d58eba0e1314758ec6f73d852650a497dd5a20972c58db57281"
 mounts:
 - location: "~"
 - location: "/tmp/lima"
   writable: true
 firmware:
+  # CentOS Stream 8 still requires legacyBIOS, while AlmaLinux 8 and Rocky Linux 8 do not.
   legacyBIOS: true
 cpuType:
   # Workaround for "vmx_write_mem: mmu_gva_to_gpa XXXXXXXXXXXXXXXX failed" on Intel Mac

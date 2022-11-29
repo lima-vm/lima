@@ -1,12 +1,12 @@
 # This example requires Lima v0.11.1 or later.
 
 images:
-- location: "https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-9-20220705.0.x86_64.qcow2"
+- location: "https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-9-20221123.0.x86_64.qcow2"
   arch: "x86_64"
-  digest: "sha256:3915a6eccfa0d02d3ae2ebbb48a92bb2cb0dd59a2ebb90ae49abd247c944f6b4"
-- location: "https://cloud.centos.org/centos/9-stream/aarch64/images/CentOS-Stream-GenericCloud-9-20220606.0.aarch64.qcow2"
+  digest: "sha256:ea3301463f91c2a45063b6223bd7af59cae89d4782df261c9664b7e3b5a367a4"
+- location: "https://cloud.centos.org/centos/9-stream/aarch64/images/CentOS-Stream-GenericCloud-9-20221123.0.aarch64.qcow2"
   arch: "aarch64"
-  digest: "sha256:bbcc89fe6f8387d4fe40a735b19ba497bbd41bbb49006242ac63521138a9cd90"
+  digest: "sha256:e74cb4c9ab087cec508e9dae6c4384fc1b630b89cec33a91290d0b4178dd7fd8"
 mounts:
 - location: "~"
 - location: "/tmp/lima"
@@ -14,6 +14,3 @@ mounts:
 firmware:
   # CentOS Stream 9 still requires legacyBIOS, while AlmaLinux 9 and Rocky Linux 9 do not.
   legacyBIOS: true
-cpuType:
-  # Workaround for "intel_pstate: CPU model not supported"
-  x86_64: "Haswell-v4"
