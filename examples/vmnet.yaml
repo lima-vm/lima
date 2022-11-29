@@ -4,12 +4,12 @@
 # This example requires Lima v0.7.0 or later.
 # Older versions of Lima were using a different syntax for supporting vmnet.framework.
 images:
-- location: "https://cloud-images.ubuntu.com/releases/22.10/release-20221022/ubuntu-22.10-server-cloudimg-amd64.img"
+- location: "https://cloud-images.ubuntu.com/releases/22.10/release-20221101/ubuntu-22.10-server-cloudimg-amd64.img"
   arch: "x86_64"
-  digest: "sha256:8dc6cbae004d61dcd6098a93eeddebc3ddc7221df6688d1cbbbf0d86909aecf4"
-- location: "https://cloud-images.ubuntu.com/releases/22.10/release-20221022/ubuntu-22.10-server-cloudimg-arm64.img"
+  digest: "sha256:c6df4529228862a5497bd3090653030ffa79b6f33ca793dd4250aa2817271af4"
+- location: "https://cloud-images.ubuntu.com/releases/22.10/release-20221101/ubuntu-22.10-server-cloudimg-arm64.img"
   arch: "aarch64"
-  digest: "sha256:9a95b52bc68639f3c60109d25d99fe0b3127d21632da437f00cb18e32bc528c4"
+  digest: "sha256:543af52b4e04ee98dd24f7654d0f234a0df5679de6ca12c7d7c1ca3d3facc5aa"
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
 - location: "https://cloud-images.ubuntu.com/releases/22.10/release/ubuntu-22.10-server-cloudimg-amd64.img"
