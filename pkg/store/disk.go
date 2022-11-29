@@ -44,10 +44,7 @@ func InspectDisk(diskName string) (*Disk, error) {
 
 	instDir, err := os.Readlink(filepath.Join(diskDir, filenames.InUseBy))
 	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			disk.Instance = ""
-			disk.InstanceDir = ""
-		} else {
+		if !errors.Is(err, fs.ErrNotExist) {
 			return nil, err
 		}
 	} else {
