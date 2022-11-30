@@ -243,13 +243,15 @@ func canonicalLocalPath(s string) (string, error) {
 }
 
 func copyLocal(dst, src string, expectedDigest digest.Digest) error {
-	if err := validateLocalFileDigest(src, expectedDigest); err != nil {
-		return err
-	}
 	srcPath, err := canonicalLocalPath(src)
 	if err != nil {
 		return err
 	}
+
+	if err := validateLocalFileDigest(srcPath, expectedDigest); err != nil {
+		return err
+	}
+
 	if dst == "" {
 		// empty dst means caching-only mode
 		return nil
