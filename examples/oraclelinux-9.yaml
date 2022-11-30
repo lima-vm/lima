@@ -3,18 +3,16 @@
 # Image source: https://yum.oracle.com/oracle-linux-templates.html
 
 images:
-- location: "https://yum.oracle.com/templates/OracleLinux/OL9/u0/x86_64/OL9U0_x86_64-kvm-b138.qcow"
+- location: "https://yum.oracle.com/templates/OracleLinux/OL9/u1/x86_64/OL9U1_x86_64-kvm-b158.qcow"
   arch: "x86_64"
-  digest: "sha256:7911bf8f0dc7a3e1045967d2d647632aba8cafd9f1505d2cb9bbfb4a0f04f818"
-- location: "https://yum.oracle.com/templates/OracleLinux/OL9/u0/aarch64/OL9U0_aarch64-kvm-b5.qcow"
+  digest: "sha256:ca655beba34038349827c5ab365df4f7936a7f6226a04d0452bbe4430f4d6658"
+- location: "https://yum.oracle.com/templates/OracleLinux/OL9/u1/aarch64/OL9U1_aarch64-kvm-b13.qcow"
   arch: "aarch64"
-  digest: "sha256:084be40daadc63405bf119626bd9f860c19d754ca3798ae37f8eac675ae5e32c"
+  digest: "sha256:a71abfd60713cd5c37443287dd267efd30f1715f8db075e0377b43e2d6ec44cf"
 mounts:
 - location: "~"
 - location: "/tmp/lima"
   writable: true
 firmware:
+  # Oracle Linux 9 still requires legacyBIOS, while AlmaLinux 9 and Rocky Linux 9 do not.
   legacyBIOS: true
-cpuType:
-  # For consistency with AlmaLinux 9
-  x86_64: "Haswell-v4"

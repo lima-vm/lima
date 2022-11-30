@@ -6,17 +6,18 @@
 # EL9-based distros are known to work.
 
 images:
-- location: "https://yum.oracle.com/templates/OracleLinux/OL8/u6/x86_64/OL8U6_x86_64-kvm-b126.qcow"
+- location: "https://yum.oracle.com/templates/OracleLinux/OL8/u7/x86_64/OL8U7_x86_64-kvm-b148.qcow"
   arch: "x86_64"
-  digest: "sha256:f00bf07669b1b9b07de446140ed0ac4f3f310160104a41715cfa051d0ded3eed"
-- location: "https://yum.oracle.com/templates/OracleLinux/OL8/u6/aarch64/OL8U6_aarch64-kvm-b2.qcow"
+  digest: "sha256:4a98e22908333dae1423e0bb4032c88aed60dbf1267addb73a6905778e9930df"
+- location: "https://yum.oracle.com/templates/OracleLinux/OL8/u7/aarch64/OL8U7_aarch64-kvm-b10.qcow"
   arch: "aarch64"
-  digest: "sha256:7fcf1765c5aa346be85eb8df0bc03d9e71b83dba6724fa7c41421be541d2ff93"
+  digest: "sha256:158e748c74a6316e7fdd185e1c6931d6c6d3e55650bdaf098d8019b96886477d"
 mounts:
 - location: "~"
 - location: "/tmp/lima"
   writable: true
 firmware:
+  # Oracle Linux 8 still requires legacyBIOS, while AlmaLinux 8 and Rocky Linux 8 do not.
   legacyBIOS: true
 cpuType:
   # Workaround for "vmx_write_mem: mmu_gva_to_gpa XXXXXXXXXXXXXXXX failed" on Intel Mac

@@ -1,16 +1,13 @@
 # This example requires Lima v0.11.1 or later.
 
 images:
-- location: "http://repo.almalinux.org/almalinux/9.0/cloud/x86_64/images/AlmaLinux-9-GenericCloud-9.0-20220527.x86_64.qcow2"
+- location: "https://repo.almalinux.org/almalinux/9.1/cloud/x86_64/images/AlmaLinux-9-GenericCloud-9.1-20221118.x86_64.qcow2"
   arch: "x86_64"
-  digest: "sha256:e453dde3dac780c149932f39814e3371cb0b7fe3f758012b86ab6c7a51ec7a42"
-- location: "http://repo.almalinux.org/almalinux/9.0/cloud/aarch64/images/AlmaLinux-9-GenericCloud-9.0-20220527.aarch64.qcow2"
+  digest: "sha256:1e93210a0c534de76ae01dc02e8224be14264fa8d54ad6cff9af15b673c6db1a"
+- location: "https://repo.almalinux.org/almalinux/9.1/cloud/aarch64/images/AlmaLinux-9-GenericCloud-9.1-20221118.aarch64.qcow2"
   arch: "aarch64"
-  digest: "sha256:30fc2e2845a33f19e8090f26b0485d5baafd21db547f59dd33c9d4d93f2a88c7"
+  digest: "sha256:3405f30db62441c18258c21c01754addeb4dfdf9714d151f042942d223ab3865"
 mounts:
 - location: "~"
 - location: "/tmp/lima"
   writable: true
-cpuType:
-  # Workaround for "intel_pstate: CPU model not supported"
-  x86_64: "Haswell-v4"
