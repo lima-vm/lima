@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/lima-vm/lima/pkg/reflectutil"
+
 	"github.com/Code-Hex/vz/v3"
 
 	"github.com/lima-vm/lima/pkg/store/filenames"
@@ -36,6 +38,57 @@ func (l *LimaVzDriver) Validate() error {
 	}
 	if *l.Yaml.Firmware.LegacyBIOS {
 		return fmt.Errorf("`firmware.legacyBIOS` configuration is not supported for VZ driver")
+	}
+	if unknown := reflectutil.UnknownNonEmptyFields(l.Yaml, "VMType",
+		"Arch",
+		"Images",
+		"CPUs",
+		"Memory",
+		"Disk",
+		"Mounts",
+		"MountType",
+		"SSH",
+		"Firmware",
+		"Provision",
+		"Containerd",
+		"Probes",
+		"PortForwards",
+		"Message",
+		"Networks",
+		"Env",
+		"DNS",
+		"HostResolver",
+		"PropagateProxyEnv",
+		"CACertificates",
+		"Rosetta",
+	); len(unknown) > 0 {
+		logrus.Warnf("Ignoring: vmType %s: %+v", *l.Yaml.VMType, unknown)
+	}
+
+	for i, image := range l.Yaml.Images {
+		if unknown := reflectutil.UnknownNonEmptyFields(image, "File"); len(unknown) > 0 {
+			logrus.Warnf("Ignoring: vmType %s: images[%d]: %+v", *l.Yaml.VMType, i, unknown)
+		}
+	}
+
+	for i, mount := range l.Yaml.Mounts {
+		if unknown := reflectutil.UnknownNonEmptyFields(mount, "Location",
+			"MountPoint",
+			"Writable",
+			"SSHFS",
+			"NineP",
+		); len(unknown) > 0 {
+			logrus.Warnf("Ignoring: vmType %s: mounts[%d]: %+v", *l.Yaml.VMType, i, unknown)
+		}
+	}
+
+	for i, network := range l.Yaml.Networks {
+		if unknown := reflectutil.UnknownNonEmptyFields(network, "VZNAT",
+			"MACAddress",
+			"Interface",
+		); len(unknown) > 0 {
+			logrus.Warnf("Ignoring: vmType %s: networks[%d]: %+v", *l.Yaml.VMType, i, unknown)
+		}
 	}
 	return nil
 }

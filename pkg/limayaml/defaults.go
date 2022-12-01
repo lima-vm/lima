@@ -121,22 +121,28 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 			}
 		}
 	}
+	var overrideCPUType bool
 	for k, v := range d.CPUType {
 		if len(v) > 0 {
+			overrideCPUType = true
 			cpuType[k] = v
 		}
 	}
 	for k, v := range y.CPUType {
 		if len(v) > 0 {
+			overrideCPUType = true
 			cpuType[k] = v
 		}
 	}
 	for k, v := range o.CPUType {
 		if len(v) > 0 {
+			overrideCPUType = true
 			cpuType[k] = v
 		}
 	}
-	y.CPUType = cpuType
+	if *y.VMType == QEMU || overrideCPUType {
+		y.CPUType = cpuType
+	}
 
 	if y.CPUs == nil {
 		y.CPUs = d.CPUs
@@ -176,7 +182,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 	if o.Video.Display != nil {
 		y.Video.Display = o.Video.Display
 	}
-	if y.Video.Display == nil || *y.Video.Display == "" {
+	if (y.Video.Display == nil || *y.Video.Display == "") && *y.VMType == QEMU {
 		y.Video.Display = pointer.String("none")
 	}
 
