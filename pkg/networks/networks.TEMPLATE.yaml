@@ -12,7 +12,7 @@
 paths:
 # socketVMNet requires Lima >= 0.12 .
 # socketVMNet has precedence over vdeVMNet.
-  socketVMNet: /opt/socket_vmnet/bin/socket_vmnet
+  socketVMNet: "{{.SocketVMNet}}"
 # vdeSwitch and vdeVMNet are DEPRECATED.
   vdeSwitch: /opt/vde/bin/vde_switch
   vdeVMNet: /opt/vde/bin/vde_vmnet

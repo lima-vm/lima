@@ -53,11 +53,23 @@ The configuration steps are different across QEMU and VZ:
 ### QEMU
 #### Managed (192.168.105.0/24)
 
-Either [`socket_vmnet`](https://github.com/lima-vm/socket_vmnet) (since Lima v0.12) or [`vde_vmnet`](https://github.com/lima-vm/vde_vmnet) (Deprecated)
-is required for adding another guest IP that is accessible from the host and other guests.
+[`socket_vmnet`](https://github.com/lima-vm/socket_vmnet) is required for adding another guest IP that is accessible from the host and other guests.
 
-Starting with version v0.7.0 lima can manage the networking daemons automatically. Networks are defined in
-`$LIMA_HOME/_config/networks.yaml`. If this file doesn't already exist, it will be created with these default
+```bash
+# Install socket_vmnet
+brew install socket_vmnet
+
+# Set up the sudoers file for launching socket_vmnet from Lima
+limactl sudoers >etc_sudoers.d_lima
+sudo install -o root etc_sudoers.d_lima /etc/sudoers.d/lima
+```
+
+> **Note**
+>
+> Lima before v0.12 used `vde_vmnet` for managing the networks.
+> `vde_vmnet` is still supported but it is deprecated and no longer documented here.
+
+The networks are defined in `$LIMA_HOME/_config/networks.yaml`. If this file doesn't already exist, it will be created with these default
 settings:
 
 <details>
@@ -114,9 +126,8 @@ Instances can then reference these networks from their `lima.yaml` file:
 
 ```yaml
 networks:
-  # Lima can manage daemons for networks defined in $LIMA_HOME/_config/networks.yaml
-  # automatically. The socket_vmnet must be installed into
-  # secure locations only alterable by the "root" user.
+  # Lima can manage the socket_vmnet daemon for networks defined in $LIMA_HOME/_config/networks.yaml automatically.
+  # The socket_vmnet binary must be installed into a secure location only alterable by the admin.
   # The same applies to vde_switch and vde_vmnet for the deprecated VDE mode.
   # - lima: shared
   #   # MAC address of the instance; lima will pick one based on the instance name,
@@ -126,17 +137,9 @@ networks:
   #   interface: ""
 ```
 
-The network daemons are started automatically when the first instance referencing them is started,
+The network daemon is started automatically when the first instance referencing them is started,
 and will stop automatically once the last instance has stopped. Daemon logs will be stored in the
 `$LIMA_HOME/_networks` directory.
-
-Since the commands to start and stop the `socket_vmnet` daemon (or the `vde_vmnet` daemon) requires root, the user either must
-have password-less `sudo` enabled, or add the required commands to a `sudoers` file. This can
-be done via:
-
-```shell
-limactl sudoers | sudo tee /etc/sudoers.d/lima
-```
 
 #### Unmanaged
 For Lima >= 0.12:
