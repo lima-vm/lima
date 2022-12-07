@@ -29,8 +29,13 @@ func NetworkData() ([]NetworkDataType, error) {
 }
 
 func SystemProfiler(dataType string) ([]byte, error) {
+	exe, err := exec.LookPath("system_profiler")
+	if err != nil {
+		// $PATH may lack /usr/sbin
+		exe = "/usr/sbin/system_profiler"
+	}
 	var stdout, stderr bytes.Buffer
-	cmd := exec.Command("system_profiler", dataType, "-json")
+	cmd := exec.Command(exe, dataType, "-json")
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
