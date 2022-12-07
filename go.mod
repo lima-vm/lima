@@ -7,7 +7,7 @@ require (
 	github.com/Code-Hex/vz/v3 v3.0.2
 	github.com/alessio/shellescape v1.4.1
 	github.com/cheggaaa/pb/v3 v3.1.0
-	github.com/containerd/containerd v1.6.10
+	github.com/containerd/containerd v1.6.11
 	github.com/containerd/continuity v0.3.0
 	github.com/containers/gvisor-tap-vsock v0.4.1-0.20220920072955-5b1aff8ba743
 	github.com/coreos/go-semver v0.3.0
@@ -26,7 +26,7 @@ require (
 	github.com/mattn/go-isatty v0.0.16
 	github.com/mattn/go-shellwords v1.0.12
 	github.com/miekg/dns v1.1.50
-	github.com/norouter/norouter v0.6.4
+	github.com/norouter/norouter v0.6.3
 	github.com/nxadm/tail v1.4.8
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/sirupsen/logrus v1.9.0
