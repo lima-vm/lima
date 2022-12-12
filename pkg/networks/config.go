@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"sync"
@@ -12,15 +13,56 @@ import (
 	"github.com/goccy/go-yaml"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/store/filenames"
+	"github.com/lima-vm/lima/pkg/textutil"
+	"github.com/sirupsen/logrus"
 )
 
-//go:embed networks.yaml
-var defaultConfig []byte
+//go:embed networks.TEMPLATE.yaml
+var defaultConfigTemplate string
+
+type defaultConfigTemplateArgs struct {
+	SocketVMNet string // "/opt/socket_vmnet/bin/socket_vmnet"
+}
+
+func defaultConfigBytes() ([]byte, error) {
+	var args defaultConfigTemplateArgs
+	candidates := []string{
+		"/opt/socket_vmnet/bin/socket_vmnet", // the hard-coded path before v0.14
+		"socket_vmnet",
+		"/usr/local/opt/socket_vmnet/bin/socket_vmnet",    // Homebrew (Intel)
+		"/opt/homebrew/opt/socket_vmnet/bin/socket_vmnet", // Homebrew (ARM)
+	}
+	for _, candidate := range candidates {
+		if p, err := exec.LookPath(candidate); err == nil {
+			realP, evalErr := filepath.EvalSymlinks(p)
+			if evalErr != nil {
+				return nil, evalErr
+			}
+			args.SocketVMNet = realP
+			break
+		} else if errors.Is(err, exec.ErrNotFound) || errors.Is(err, os.ErrNotExist) {
+			logrus.WithError(err).Debugf("Failed to look up socket_vmnet path %q", candidate)
+		} else {
+			logrus.WithError(err).Warnf("Failed to look up socket_vmnet path %q", candidate)
+		}
+	}
+	if args.SocketVMNet == "" {
+		args.SocketVMNet = candidates[0] // the hard-coded path before v0.14
+	}
+	return textutil.ExecuteTemplate(defaultConfigTemplate, args)
+}
 
 func DefaultConfig() (YAML, error) {
 	var config YAML
-	err := yaml.UnmarshalWithOptions(defaultConfig, &config, yaml.Strict())
-	return config, err
+	defaultConfig, err := defaultConfigBytes()
+	if err != nil {
+		return config, err
+	}
+	err = yaml.UnmarshalWithOptions(defaultConfig, &config, yaml.Strict())
+	if err != nil {
+		return config, err
+	}
+	return config, nil
 }
 
 var cache struct {
@@ -54,6 +96,11 @@ func loadCache() {
 			cache.err = os.MkdirAll(configDir, 0755)
 			if cache.err != nil {
 				cache.err = fmt.Errorf("could not create %q directory: %w", configDir, cache.err)
+				return
+			}
+			var defaultConfig []byte
+			defaultConfig, cache.err = defaultConfigBytes()
+			if cache.err != nil {
 				return
 			}
 			cache.err = os.WriteFile(configFile, defaultConfig, 0644)

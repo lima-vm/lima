@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"os/user"
 	"path/filepath"
 	"reflect"
+	"runtime"
+	"strconv"
 	"strings"
 
 	"github.com/lima-vm/lima/pkg/osutil"
@@ -98,28 +101,57 @@ func validatePath(path string, allowDaemonGroupWritable bool) error {
 		// should never happen
 		return fmt.Errorf("could not retrieve stat buffer for %q", path)
 	}
+	if runtime.GOOS != "darwin" {
+		return fmt.Errorf("vmnet code must not be called on non-Darwin") // TODO: move to *_darwin.go
+	}
+	// TODO: cache looked up UIDs/GIDs
 	root, err := osutil.LookupUser("root")
 	if err != nil {
 		return err
 	}
-	if stat.Uid != root.Uid {
-		return fmt.Errorf(`%s %q is not owned by %q (uid: %d), but by uid %d`, file, path, root.User, root.Uid, stat.Uid)
+	adminGroup, err := user.LookupGroup("admin")
+	if err != nil {
+		return err
+	}
+	adminGid, err := strconv.Atoi(adminGroup.Gid)
+	if err != nil {
+		return err
+	}
+	owner, err := user.LookupId(strconv.Itoa(int(stat.Uid)))
+	if err != nil {
+		return err
+	}
+	ownerIsAdmin := owner.Uid == "0"
+	if !ownerIsAdmin {
+		ownerGroupIds, err := owner.GroupIds()
+		if err != nil {
+			return err
+		}
+		for _, g := range ownerGroupIds {
+			if g == adminGroup.Gid {
+				ownerIsAdmin = true
+				break
+			}
+		}
+	}
+	if !ownerIsAdmin {
+		return fmt.Errorf(`%s %q owner %dis not an admin`, file, path, stat.Uid)
 	}
 	if allowDaemonGroupWritable {
 		daemon, err := osutil.LookupUser("daemon")
 		if err != nil {
 			return err
 		}
-		if fi.Mode()&020 != 0 && stat.Gid != root.Gid && stat.Gid != daemon.Gid {
-			return fmt.Errorf(`%s %q is group-writable and group is neither %q (gid: %d) nor %q (gid: %d), but is gid: %d`,
-				file, path, root.User, root.Gid, daemon.User, daemon.Gid, stat.Gid)
+		if fi.Mode()&020 != 0 && stat.Gid != root.Gid && stat.Gid != uint32(adminGid) && stat.Gid != daemon.Gid {
+			return fmt.Errorf(`%s %q is group-writable and group %d is not one of [wheel, admin, daemon]`,
+				file, path, stat.Gid)
 		}
 		if fi.Mode().IsDir() && fi.Mode()&1 == 0 && (fi.Mode()&0010 == 0 || stat.Gid != daemon.Gid) {
 			return fmt.Errorf(`%s %q is not executable by the %q (gid: %d)" group`, file, path, daemon.User, daemon.Gid)
 		}
-	} else if fi.Mode()&020 != 0 && stat.Gid != root.Gid {
-		return fmt.Errorf(`%s %q is group-writable and group is not %q (gid: %d), but is gid: %d`,
-			file, path, root.User, root.Gid, stat.Gid)
+	} else if fi.Mode()&020 != 0 && stat.Gid != root.Gid && stat.Gid != uint32(adminGid) {
+		return fmt.Errorf(`%s %q is group-writable and group %d is not one of [wheel, admin]`,
+			file, path, stat.Gid)
 	}
 	if fi.Mode()&002 != 0 {
 		return fmt.Errorf("%s %q is world-writable", file, path)

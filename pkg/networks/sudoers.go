@@ -85,6 +85,8 @@ func (config *YAML) VerifySudoAccess(sudoersFile string) error {
 		}
 		return fmt.Errorf("passwordLessSudo error: %w", err)
 	}
+	hint := fmt.Sprintf("run `%s sudoers >etc_sudoers.d_lima && sudo install -o root etc_sudoers.d_lima %q`)",
+		os.Args[0], sudoersFile)
 	b, err := os.ReadFile(sudoersFile)
 	if err != nil {
 		// Default networks.yaml specifies /etc/sudoers.d/lima file. Don't throw an error when the
@@ -97,14 +99,15 @@ func (config *YAML) VerifySudoAccess(sudoersFile string) error {
 			}
 			logrus.Debugf("%q does not exist; passwordLessSudo error: %s", sudoersFile, err)
 		}
-		return fmt.Errorf("can't read %q: %s", sudoersFile, err)
+		return fmt.Errorf("can't read %q: %s (Hint: %s)", sudoersFile, err, hint)
 	}
 	sudoers, err := Sudoers()
 	if err != nil {
 		return err
 	}
 	if string(b) != sudoers {
-		return fmt.Errorf("sudoers file %q is out of sync and must be regenerated", sudoersFile)
+		// Happens on upgrading socket_vmnet with Homebrew
+		return fmt.Errorf("sudoers file %q is out of sync and must be regenerated (Hint: %s)", sudoersFile, hint)
 	}
 	return nil
 }

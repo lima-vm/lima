@@ -1,6 +1,12 @@
 # Example to enable vmnet.framework for QEMU.
 # VZ users should refer to experimental/vz.yaml
 
+# Usage:
+#   brew install socket_vmnet
+#   limactl sudoers >etc_sudoers.d_lima
+#   sudo install -o root etc_sudoers.d_lima /etc/sudoers.d/lima
+#   limactl start template://vmnet
+
 # This example requires Lima v0.7.0 or later.
 # Older versions of Lima were using a different syntax for supporting vmnet.framework.
 images:
