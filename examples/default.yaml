@@ -18,12 +18,12 @@ arch: null
 # 🔵 This file: Ubuntu 22.10 Kinetic Kudu images
 images:
 # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
-- location: "https://cloud-images.ubuntu.com/releases/22.10/release-20221101/ubuntu-22.10-server-cloudimg-amd64.img"
+- location: "https://cloud-images.ubuntu.com/releases/22.10/release-20221201/ubuntu-22.10-server-cloudimg-amd64.img"
   arch: "x86_64"
-  digest: "sha256:c6df4529228862a5497bd3090653030ffa79b6f33ca793dd4250aa2817271af4"
-- location: "https://cloud-images.ubuntu.com/releases/22.10/release-20221101/ubuntu-22.10-server-cloudimg-arm64.img"
+  digest: "sha256:4228fae635160ee2eeebda7b3f466e99729121958c125c6fbefe79178355d09b"
+- location: "https://cloud-images.ubuntu.com/releases/22.10/release-20221201/ubuntu-22.10-server-cloudimg-arm64.img"
   arch: "aarch64"
-  digest: "sha256:543af52b4e04ee98dd24f7654d0f234a0df5679de6ca12c7d7c1ca3d3facc5aa"
+  digest: "sha256:9575dfe9f925ec251a933b88a38c5582a18e9d19495025ac01cb2e217e5f14ca"
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
 - location: "https://cloud-images.ubuntu.com/releases/22.10/release/ubuntu-22.10-server-cloudimg-amd64.img"
