@@ -178,7 +178,13 @@ networks:
 
 ### VZ
 
-For VZ instances, the "vzNAT" network can be configured as follows:
+> **Warning**
+> "vz" mode is experimental
+
+| :zap: Requirement | Lima >= 0.14, macOS >= 13.0 |
+|-------------------|-----------------------------|
+
+For [VZ](./vmtype.md) instances, the "vzNAT" network can be configured as follows:
 ```yaml
 networks:
 - vzNAT: true

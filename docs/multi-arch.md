@@ -3,6 +3,7 @@
 Lima supports two modes for running Intel-on-ARM and ARM-on-Intel:
 - [Slow mode](#slow-mode)
 - [Fast mode](#fast-mode)
+- [Fast mode 2](#fast-mode-2)
 
 ## [Slow mode: Intel VM on ARM Host / ARM VM on Intel Host](#slow-mode)
 
@@ -26,21 +27,21 @@ containerd:
 ```
 
 Running a VM with a foreign architecture is extremely slow.
-Consider using [Fast mode](#fast-mode) whenever possible.
+Consider using [Fast mode](#fast-mode) or [Fast mode 2](#fast-mode-2) whenever possible.
 
 ## [Fast mode: Intel containers on ARM VM on ARM Host / ARM containers on Intel VM on Intel Host](#fast-mode)
 
-This mode is significantly faster but often sacrifices compatibility.
+This mode uses QEMU User Mode Emulation.
+QEMU User Mode Emulation is significantly faster than QEMU System Mode Emulation, but it often sacrifices compatibility.
 
-Fast mode requires Lima v0.7.3 (nerdctl v0.13.0) or later.
+| :zap: Requirement | Lima >= 0.7.3 |
+|-------------------|---------------|
 
-If your VM was created with Lima prior to v0.7.3, you have to recreate the VM with Lima >= 0.7.3,
-or upgrade `/usr/local/bin/nerdctl` binary in the VM to [>= 0.13.0](https://github.com/containerd/nerdctl/releases) manually.
 
 Set up:
 ```bash
 lima sudo systemctl start containerd
-lima sudo nerdctl run --privileged --rm tonistiigi/binfmt --install all
+lima sudo nerdctl run --privileged --rm tonistiigi/binfmt:qemu-v7.0.0-28@sha256:66e11bea77a5ea9d6f0fe79b57cd2b189b5d15b93a2bdb925be22949232e4e55 --install all
 ```
 
 Run containers:
@@ -59,3 +60,24 @@ $ lima nerdctl push --all-platforms example.com/foo:latest
 ```
 
 See also https://github.com/containerd/nerdctl/blob/master/docs/multi-platform.md
+
+## [Fast mode 2 (Rosetta): Intel containers on ARM VM on ARM Host](#fast-mode-2)
+
+> **Warning**
+> "vz" mode, including support for Rosetta, is experimental
+
+| :zap: Requirement | Lima >= 0.14, macOS >= 13.0, ARM |
+|-------------------|----------------------------------|
+
+[Rosetta](https://developer.apple.com/documentation/virtualization/running_intel_binaries_in_linux_vms_with_rosetta) is known to be much faster than QEMU User Mode Emulation.
+Rosetta is available for [VZ](./vmtype.md) instances on ARM hosts.
+
+```yaml
+vmType: "vz"
+rosetta:
+  # Enable Rosetta for Linux.
+  # Hint: try `softwareupdate --install-rosetta` if Lima gets stuck at `Installing rosetta...`
+  enabled: true
+  # Register rosetta to /proc/sys/fs/binfmt_misc
+  binfmt: true
+```
