@@ -1,12 +1,12 @@
 # This example requires Lima v0.11.1 or later.
 
 images:
-- location: "https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-9-20221123.0.x86_64.qcow2"
+- location: "https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-9-20221206.0.x86_64.qcow2"
   arch: "x86_64"
-  digest: "sha256:ea3301463f91c2a45063b6223bd7af59cae89d4782df261c9664b7e3b5a367a4"
-- location: "https://cloud.centos.org/centos/9-stream/aarch64/images/CentOS-Stream-GenericCloud-9-20221123.0.aarch64.qcow2"
+  digest: "sha256:16881d90b322c7ebe1f105a24c3abbc36c35b724366f38aa4022dfed08b93406"
+- location: "https://cloud.centos.org/centos/9-stream/aarch64/images/CentOS-Stream-GenericCloud-9-20221206.0.aarch64.qcow2"
   arch: "aarch64"
-  digest: "sha256:e74cb4c9ab087cec508e9dae6c4384fc1b630b89cec33a91290d0b4178dd7fd8"
+  digest: "sha256:2f5d67e99153112eff92925aae89767b8d59d1ff4a9ce0c1055ceb92dcedc75e"
 mounts:
 - location: "~"
 - location: "/tmp/lima"
