@@ -116,15 +116,7 @@ brew install lima
 
 #### Install QEMU
 
-Install recent version of QEMU.
-
-On M1 macOS, [Homebrew's QEMU `6.2.0_1`](https://github.com/Homebrew/homebrew-core/pull/96743) or later is recommended.
-
-If you are not using Homebrew, make sure to include the following commits to boot recent Linux guests:
-- https://github.com/qemu/qemu/commit/ad99f64f `hvf: arm: Use macros for sysreg shift/masking`
-- https://github.com/qemu/qemu/commit/7f6c295c `hvf: arm: Handle unknown ID registers as RES0`
-
-These commits are also included in the QEMU 7.0, however, [it should be noted that QEMU 7.0 needs macOS 12.4 or later to use more than 3 GiB memory on M1](https://github.com/lima-vm/lima/pull/796).
+Install QEMU 7.0 or later.
 
 #### Install Lima
 
@@ -277,9 +269,7 @@ The current default spec:
 ### Help wanted
 :pray:
 - Performance optimization
-- More guest distros
 - Windows hosts
-- virtio-fs to replace virtio-9p-pci aka virtfs (work has to be done on QEMU repo)
 - [vsock](https://github.com/apple/darwin-xnu/blob/xnu-7195.81.3/bsd/man/man4/vsock.4) to replace SSH (work has to be done on QEMU repo)
 
 ## FAQs & Troubleshooting
@@ -301,10 +291,6 @@ The current default spec:
   - ["QEMU is slow"](#qemu-is-slow)
   - [error "killed -9"](#error-killed--9)
   - ["QEMU crashes with `vmx_write_mem: mmu_gva_to_gpa XXXXXXXXXXXXXXXX failed`"](#qemu-crashes-with-vmx_write_mem-mmu_gva_to_gpa-xxxxxxxxxxxxxxxx-failed)
-- [SSH](#ssh)
-  - ["Port forwarding does not work"](#port-forwarding-does-not-work)
-  - [stuck on "Waiting for the essential requirement 1 of X: "ssh"](#stuck-on-waiting-for-the-essential-requirement-1-of-x-ssh)
-  - ["permission denied" for `limactl cp` command](#permission-denied-for-limactl-cp-command)
 - [Networking](#networking)
   - ["Cannot access the guest IP 192.168.5.15 from the host"](#cannot-access-the-guest-ip-192168515-from-the-host)
   - [Ping shows duplicate packets and massive response times](#ping-shows-duplicate-packets-and-massive-response-times)
@@ -416,31 +402,6 @@ This error is known to happen when running an image of RHEL8-compatible distribu
 A workaround is to set environment variable `QEMU_SYSTEM_X86_64="qemu-system-x86_64 -cpu Haswell-v4"`.
 
 https://bugs.launchpad.net/qemu/+bug/1838390
-
-### SSH
-#### "Port forwarding does not work"
-Prior to Lima v0.7.0, Lima did not support forwarding privileged ports (1-1023). e.g., you had to use 8080, not 80.
-
-Lima v0.7.0 and later supports forwarding privileged ports on macOS hosts.
-
-On Linux hosts, you might have to set sysctl value `net.ipv4.ip_unprivileged_port_start=0`.
-
-#### stuck on "Waiting for the essential requirement 1 of X: "ssh"
-
-On M1 macOS, QEMU needs to be [Homebrew's QEMU `6.2.0_1`](https://github.com/Homebrew/homebrew-core/pull/96743) or later to run recent Linux guests.
-Run `brew upgrade` to upgrade QEMU.
-
-If you are not using Homebrew, see the "Manual installation steps" in the [Installation](#installation) section.
-
-See also `serial.log` in `~/.lima/<INSTANCE>` for debugging.
-
-#### "permission denied" for `limactl cp` command
-
-The `copy` command only works for instances that have been created by lima 0.5.0 or later. You can manually install the required identity on older instances with (replace `INSTANCE` with actual instance name):
-
-```console
-< ~/.lima/_config/user.pub limactl shell INSTANCE sh -c 'tee -a ~/.ssh/authorized_keys'
-```
 
 ### Networking
 #### "Cannot access the guest IP 192.168.5.15 from the host"
