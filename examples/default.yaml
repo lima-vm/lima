@@ -223,6 +223,15 @@ cpuType:
   # 🟢 Builtin default: "qemu64" (or "host" when running on x86_64 host)
   x86_64: null
 
+rosetta:
+  # Enable Rosetta for Linux (EXPERIMENTAL).
+  # Hint: try `softwareupdate --install-rosetta` if Lima gets stuck at `Installing rosetta...`
+  # 🟢 Builtin default: false
+  enabled: null
+  # Register rosetta to /proc/sys/fs/binfmt_misc
+  # 🟢 Builtin default: false
+  binfmt: null
+
 firmware:
   # Use legacy BIOS instead of UEFI. Ignored for aarch64.
   # 🟢 Builtin default: false
@@ -257,6 +266,11 @@ networks:
 # before the instance.  The interface type (host, shared, or bridged) is
 # configured in socket_vmnet and not in lima.
 # - socket: "/var/run/socket_vmnet"
+
+
+# The "vzNAT" IP address is accessible from the host, but not from other guests.
+# Needs `vmType: vz` (EXPERIMENTAL).
+# - vzNAT: true
 
 # vnl (virtual network locator) points to the vde_switch socket directory,
 # optionally with vde:// prefix

@@ -254,8 +254,8 @@ The current default spec:
 
 ## How it works
 
-- Hypervisor: QEMU with HVF accelerator
-- Filesystem sharing: [Reverse SSHFS (default),  or virtio-9p-pci aka virtfs](./docs/mount.md)
+- Hypervisor: [QEMU with HVF accelerator (default), or Virtualization.framework](./docs/vmtype.md)
+- Filesystem sharing: [Reverse SSHFS (default),  or virtio-9p-pci aka virtfs, or virtiofs](./docs/mount.md)
 - Port forwarding: `ssh -L`, automated by watching `/proc/net/tcp` and `iptables` events in the guest
 
 ## Developer guide
@@ -268,6 +268,8 @@ The current default spec:
 
 ### Help wanted
 :pray:
+- Documents
+- CLI user experience
 - Performance optimization
 - Windows hosts
 - [vsock](https://github.com/apple/darwin-xnu/blob/xnu-7195.81.3/bsd/man/man4/vsock.4) to replace SSH (work has to be done on QEMU repo)
@@ -293,7 +295,10 @@ The current default spec:
   - ["QEMU crashes with `vmx_write_mem: mmu_gva_to_gpa XXXXXXXXXXXXXXXX failed`"](#qemu-crashes-with-vmx_write_mem-mmu_gva_to_gpa-xxxxxxxxxxxxxxxx-failed)
 - [Networking](#networking)
   - ["Cannot access the guest IP 192.168.5.15 from the host"](#cannot-access-the-guest-ip-192168515-from-the-host)
-  - [Ping shows duplicate packets and massive response times](#ping-shows-duplicate-packets-and-massive-response-times)
+  - ["Ping shows duplicate packets and massive response times"](#ping-shows-duplicate-packets-and-massive-response-times)
+- [Filesystem sharing](#filesystem-sharing)
+  - ["Filesystem is slow"](#filesystem-is-slow)
+  - ["Filesystem is not writable"](#filesystem-is-not-writable)
 - [External projects](#external-projects)
   - ["I am using Rancher Desktop. How to deal with the underlying Lima?"](#i-am-using-rancher-desktop-how-to-deal-with-the-underlying-lima)
 - ["Hints for debugging other problems?"](#hints-for-debugging-other-problems)
@@ -413,7 +418,7 @@ or [`vde_vmnet`](https://github.com/lima-vm/vde_vmnet) (Deprecated).
 
 See [`./docs/network.md`](./docs/network.md).
 
-#### Ping shows duplicate packets and massive response times
+#### "Ping shows duplicate packets and massive response times"
 
 Lima uses QEMU's SLIRP networking which does not support `ping` out of the box:
 
@@ -425,6 +430,22 @@ PING google.com (172.217.165.14): 56 data bytes
 ```
 
 For more details, see [Documentation/Networking](https://wiki.qemu.org/Documentation/Networking#User_Networking_.28SLIRP.29).
+
+### Filesystem sharing
+#### "Filesystem is slow"
+Try virtiofs. See [`docs/mount.md`](./docs/mount.md)
+
+#### "Filesystem is not writable"
+The home directory is mounted as read-only by default.
+To enable writing, specify `writable: true` in the YAML:
+
+```yaml
+mounts:
+- location: "~"
+  writable: true
+```
+
+Run `limactl edit <INSTANCE>` to open the YAML editor for an existing instance.
 
 ### External projects
 #### "I am using Rancher Desktop. How to deal with the underlying Lima?"

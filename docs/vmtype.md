@@ -36,5 +36,5 @@ mountType: "virtiofs"
 - Virtualization.framework doesn't support running "intel guest on arm" and vice versa
 
 ### Known Issues
-- "vz" doesn't support `legacyBoot: true` option, so guest machine like centos-stream, archlinux, oraclelinux will not work
+- "vz" doesn't support `legacyBIOS: true` option, so guest machine like centos-stream, archlinux, oraclelinux will not work
 - When running lima using "vz", `${LIMA_HOME}/<INSTANCE>/serial.log` will not contain kernel boot logs
