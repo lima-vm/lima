@@ -110,8 +110,8 @@ _output/share/lima/lima-guestagent.Linux-riscv64:
 
 .PHONY: diagrams
 diagrams: docs/lima-sequence-diagram.png
-docs/lima-sequence-diagram.png: docs/lima-sequence-diagram.puml
-	$(PLANTUML) ./docs/lima-sequence-diagram.puml
+docs/lima-sequence-diagram.png: docs/images/lima-sequence-diagram.puml
+	$(PLANTUML) ./docs/images/lima-sequence-diagram.puml
 
 .PHONY: install
 install: uninstall
