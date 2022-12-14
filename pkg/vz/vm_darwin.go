@@ -335,7 +335,7 @@ func attachConsole(_ *driver.BaseDriver, vmConfig *vz.VirtualMachineConfiguratio
 }
 
 func attachFolderMounts(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfiguration) error {
-	mounts := make([]vz.DirectorySharingDeviceConfiguration, len(driver.Yaml.Mounts))
+	var mounts []vz.DirectorySharingDeviceConfiguration
 	if *driver.Yaml.MountType == limayaml.VIRTIOFS {
 		for i, mount := range driver.Yaml.Mounts {
 			expandedPath, err := localpathutil.Expand(mount.Location)
@@ -364,7 +364,7 @@ func attachFolderMounts(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineCo
 				return err
 			}
 			config.SetDirectoryShare(share)
-			mounts[i] = config
+			mounts = append(mounts, config)
 		}
 	}
 
@@ -378,7 +378,9 @@ func attachFolderMounts(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineCo
 		}
 	}
 
-	vmConfig.SetDirectorySharingDevicesVirtualMachineConfiguration(mounts)
+	if len(mounts) > 0 {
+		vmConfig.SetDirectorySharingDevicesVirtualMachineConfiguration(mounts)
+	}
 	return nil
 }
 
