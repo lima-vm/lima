@@ -1,17 +1,12 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"os/user"
 	"reflect"
 	"sort"
 	"strings"
-	"text/tabwriter"
-	"text/template"
 
-	"github.com/docker/go-units"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -36,15 +31,26 @@ func fieldNames() []string {
 
 func newListCommand() *cobra.Command {
 	listCommand := &cobra.Command{
-		Use:               "list [flags] [INSTANCE]...",
-		Aliases:           []string{"ls"},
-		Short:             "List instances of Lima.",
+		Use:     "list [flags] [INSTANCE]...",
+		Aliases: []string{"ls"},
+		Short:   "List instances of Lima.",
+		Long: `List instances of Lima.
+		The output can be presented in one of several formats, using the --format <format> flag.
+		
+		  --format json  - output in json format
+		  --format yaml  - output in yaml format
+		  --format table - output in table format
+		  --format '{{ <go template> }}' - if the format begins and ends with '{{ }}', then it is used as a go template.
+
+		The following legacy flags continue to function:
+		  --json - equal to '--format json'
+		`,
 		Args:              cobra.ArbitraryArgs,
 		RunE:              listAction,
 		ValidArgsFunction: listBashComplete,
 	}
 
-	listCommand.Flags().StringP("format", "f", "", "Format the output using the given Go template")
+	listCommand.Flags().StringP("format", "f", "table", "output format, one of: json, yaml, table, go-template")
 	listCommand.Flags().Bool("list-fields", false, "List fields available for format")
 	listCommand.Flags().Bool("json", false, "JSONify output")
 	listCommand.Flags().BoolP("quiet", "q", false, "Only show names")
@@ -67,7 +73,7 @@ func listAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	goFormat, err := cmd.Flags().GetString("format")
+	format, err := cmd.Flags().GetString("format")
 	if err != nil {
 		return err
 	}
@@ -80,131 +86,76 @@ func listAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if goFormat != "" && listFields {
-		return errors.New("option --format conflicts with --list-fields")
+	if jsonFormat {
+		format = "json"
 	}
-	if jsonFormat && listFields {
-		return errors.New("option --json conflicts with --list-fields")
+
+	// conflicts
+	if jsonFormat && cmd.Flags().Changed("format") {
+		return errors.New("option --json conflicts with option --format")
 	}
+	if listFields && cmd.Flags().Changed("format") {
+		return errors.New("option --list-fields conflicts with option --format")
+	}
+
+	if quiet && format != "table" {
+		return errors.New("option --quiet can only be used with '--format table'")
+	}
+
 	if listFields {
 		names := fieldNames()
 		sort.Strings(names)
 		fmt.Println(strings.Join(names, "\n"))
 		return nil
 	}
-	if quiet && jsonFormat {
-		return errors.New("option --quiet conflicts with --json")
-	}
-	if goFormat != "" && jsonFormat {
-		return errors.New("option --format conflicts with --json")
-	}
 
 	allinstances, err := store.Instances()
 	if err != nil {
 		return err
 	}
+	if len(allinstances) == 0 {
+		logrus.Warn("No instance found. Run `limactl start` to create an instance.")
+		return nil
+	}
 
-	instances := []string{}
+	instanceNames := []string{}
 	if len(args) > 0 {
 		for _, arg := range args {
 			matches := instanceMatches(arg, allinstances)
 			if len(matches) > 0 {
-				instances = append(instances, matches...)
+				instanceNames = append(instanceNames, matches...)
 			} else {
 				logrus.Warnf("No instance matching %v found.", arg)
 			}
 		}
 	} else {
-		instances = allinstances
+		instanceNames = allinstances
 	}
 
 	if quiet {
-		for _, instName := range instances {
+		for _, instName := range instanceNames {
 			fmt.Fprintln(cmd.OutOrStdout(), instName)
 		}
 		return nil
 	}
 
-	if goFormat != "" {
-		tmpl, err := template.New("format").Parse(goFormat)
+	// get the state and config for all the requested instances
+	var instances []*store.Instance
+	for _, instanceName := range instanceNames {
+		instance, err := store.Inspect(instanceName)
 		if err != nil {
-			return err
+			return fmt.Errorf("unable to load instance %s: %w", instanceName, err)
 		}
-		for _, instName := range instances {
-			inst, err := store.Inspect(instName)
-			if err != nil {
-				logrus.WithError(err).Errorf("instance %q does not exist?", instName)
-				continue
-			}
-			data, err := store.AddGlobalFields(inst)
-			if err != nil {
-				logrus.WithError(err).Error("Cannot add global fields to instance data")
-				continue
-			}
-			err = tmpl.Execute(cmd.OutOrStdout(), data)
-			if err != nil {
-				return err
-			}
-			fmt.Fprintln(cmd.OutOrStdout())
-		}
-		return nil
-	}
-	if jsonFormat {
-		for _, instName := range instances {
-			inst, err := store.Inspect(instName)
-			if err != nil {
-				logrus.WithError(err).Errorf("instance %q does not exist?", instName)
-				continue
-			}
-			b, err := json.Marshal(inst)
-			if err != nil {
-				return err
-			}
-			fmt.Fprintln(cmd.OutOrStdout(), string(b))
-		}
-		return nil
+		instances = append(instances, instance)
 	}
 
-	w := tabwriter.NewWriter(cmd.OutOrStdout(), 4, 8, 4, ' ', 0)
-	fmt.Fprintln(w, "NAME\tSTATUS\tSSH\tVMTYPE\tARCH\tCPUS\tMEMORY\tDISK\tDIR")
-
-	if len(allinstances) == 0 {
-		logrus.Warn("No instance found. Run `limactl start` to create an instance.")
+	for _, instance := range instances {
+		if len(instance.Errors) > 0 {
+			logrus.WithField("errors", instance.Errors).Warnf("instance %q has errors", instance.Name)
+		}
 	}
 
-	u, err := user.Current()
-	if err != nil {
-		return err
-	}
-	homeDir := u.HomeDir
-
-	for _, instName := range instances {
-		inst, err := store.Inspect(instName)
-		if err != nil {
-			logrus.WithError(err).Errorf("instance %q does not exist?", instName)
-			continue
-		}
-		if len(inst.Errors) > 0 {
-			logrus.WithField("errors", inst.Errors).Warnf("instance %q has errors", instName)
-		}
-		dir := inst.Dir
-		if strings.HasPrefix(dir, homeDir) {
-			dir = strings.Replace(dir, homeDir, "~", 1)
-		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%d\t%s\t%s\t%s\n",
-			inst.Name,
-			inst.Status,
-			fmt.Sprintf("127.0.0.1:%d", inst.SSHLocalPort),
-			inst.VMType,
-			inst.Arch,
-			inst.CPUs,
-			units.BytesSize(float64(inst.Memory)),
-			units.BytesSize(float64(inst.Disk)),
-			dir,
-		)
-	}
-
-	return w.Flush()
+	return store.PrintInstances(cmd.OutOrStdout(), instances, format)
 }
 
 func listBashComplete(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
