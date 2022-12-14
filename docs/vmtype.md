@@ -4,6 +4,9 @@ Lima supports two ways of running guest machines:
 - [qemu](#qemu)
 - [vz](#vz)
 
+The vmType can be specified only on creating the instance.
+The vmType of existing instances cannot be changed.
+
 ## QEMU
 "qemu" option makes use of QEMU to run guest operating system. 
 This option is used by default if "vmType" is not set.

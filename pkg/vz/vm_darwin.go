@@ -20,6 +20,7 @@ import (
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/localpathutil"
 	"github.com/lima-vm/lima/pkg/networks"
+	"github.com/lima-vm/lima/pkg/qemu/imgutil"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/sirupsen/logrus"
 )
@@ -242,6 +243,18 @@ func attachNetwork(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfigu
 	return nil
 }
 
+func validateDiskFormat(diskPath string) error {
+	format, err := imgutil.DetectFormat(diskPath)
+	if err != nil {
+		return fmt.Errorf("failed to detect the format of %q: %w", diskPath, err)
+	}
+	if format != "raw" {
+		return fmt.Errorf("expected the format of %q to be \"raw\", got %q", diskPath, format)
+	}
+	// TODO: ensure that the disk is formatted with GPT or ISO9660
+	return nil
+}
+
 func attachDisks(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfiguration) error {
 	baseDiskPath := filepath.Join(driver.Instance.Dir, filenames.BaseDisk)
 	diffDiskPath := filepath.Join(driver.Instance.Dir, filenames.DiffDisk)
@@ -253,6 +266,9 @@ func attachDisks(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfigura
 	var configurations []vz.StorageDeviceConfiguration
 
 	if isBaseDiskCDROM {
+		if err = validateDiskFormat(baseDiskPath); err != nil {
+			return err
+		}
 		baseDiskAttachment, err := vz.NewDiskImageStorageDeviceAttachment(baseDiskPath, true)
 		if err != nil {
 			return err
@@ -262,6 +278,9 @@ func attachDisks(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfigura
 			return err
 		}
 		configurations = append(configurations, baseDisk)
+	}
+	if err = validateDiskFormat(diffDiskPath); err != nil {
+		return err
 	}
 	diffDiskAttachment, err := vz.NewDiskImageStorageDeviceAttachment(diffDiskPath, false)
 	if err != nil {
@@ -273,6 +292,9 @@ func attachDisks(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfigura
 	}
 	configurations = append(configurations, diffDisk)
 
+	if err = validateDiskFormat(ciDataPath); err != nil {
+		return err
+	}
 	ciDataAttachment, err := vz.NewDiskImageStorageDeviceAttachment(ciDataPath, true)
 	if err != nil {
 		return err
@@ -335,7 +357,7 @@ func attachConsole(_ *driver.BaseDriver, vmConfig *vz.VirtualMachineConfiguratio
 }
 
 func attachFolderMounts(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfiguration) error {
-	mounts := make([]vz.DirectorySharingDeviceConfiguration, len(driver.Yaml.Mounts))
+	var mounts []vz.DirectorySharingDeviceConfiguration
 	if *driver.Yaml.MountType == limayaml.VIRTIOFS {
 		for i, mount := range driver.Yaml.Mounts {
 			expandedPath, err := localpathutil.Expand(mount.Location)
@@ -364,7 +386,7 @@ func attachFolderMounts(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineCo
 				return err
 			}
 			config.SetDirectoryShare(share)
-			mounts[i] = config
+			mounts = append(mounts, config)
 		}
 	}
 
@@ -378,7 +400,9 @@ func attachFolderMounts(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineCo
 		}
 	}
 
-	vmConfig.SetDirectorySharingDevicesVirtualMachineConfiguration(mounts)
+	if len(mounts) > 0 {
+		vmConfig.SetDirectorySharingDevicesVirtualMachineConfiguration(mounts)
+	}
 	return nil
 }
 
