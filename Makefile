@@ -15,10 +15,24 @@ endif
 
 GO_BUILDTAGS ?=
 ifeq ($(GOOS),darwin)
-MACOS_SDK_VERSION=$(shell xcrun --show-sdk-version | cut -d . -f 1)
-ifeq ($(shell test $(MACOS_SDK_VERSION) -lt 13; echo $$?),0)
-# The "vz" mode needs macOS 13 SDK or later
+SW_VERS ?= sw_vers
+XCRUN ?= xcrun
+MACOS_VERSION := $(shell $(SW_VERS) -productVersion)
+MACOS_SDK_VERSION := $(shell $(XCRUN) --show-sdk-version)
+$(info macOS version=$(MACOS_VERSION), macOS SDK version=$(MACOS_SDK_VERSION))
+ALLOW_OLD_MACOS_SDK_VERSION ?=
+ifeq ($(shell echo "$(MACOS_SDK_VERSION) < $(MACOS_VERSION)" | bc -l),1)
+ifeq ($(ALLOW_OLD_MACOS_SDK_VERSION),1)
+$(warning SDK version $(MACOS_SDK_VERSION) seems older than macOS version $(MACOS_VERSION), upgrade Xcode)
+else
+$(error SDK version $(MACOS_SDK_VERSION) seems older than macOS version $(MACOS_VERSION), upgrade Xcode or set ALLOW_OLD_MACOS_SDK_VERSION=1)
+endif
+endif
+ifeq ($(shell echo "$(MACOS_SDK_VERSION) < 13.0" | bc -l),1)
+$(warning SDK version $(MACOS_SDK_VERSION) seems older than 13.0, disabling VZ)
 GO_BUILDTAGS += no_vz
+else
+$(info SDK version $(MACOS_SDK_VERSION) seems >= 13.0, enabling VZ)
 endif
 endif
 
