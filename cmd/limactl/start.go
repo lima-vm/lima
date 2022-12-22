@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -43,6 +44,9 @@ $ limactl start --name=default /usr/local/share/lima/examples/fedora.yaml
 
 To create an instance "default" from a remote URL (use carefully, with a trustable source):
 $ limactl start --name=default https://raw.githubusercontent.com/lima-vm/lima/master/examples/alpine.yaml
+
+To create an instance "local" from a template passed to stdin (--name parameter is required):
+$ cat template.yaml | limactl start --name=local -
 `,
 		Short:             "Start an instance of Lima",
 		Args:              cobra.MaximumNArgs(1),
@@ -67,6 +71,13 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 		st  = &creatorState{}
 		err error
 	)
+
+	// Create an instance, with menu TUI when TTY is available
+	tty, err := cmd.Flags().GetBool("tty")
+	if err != nil {
+		return nil, err
+	}
+
 	st.instName, err = cmd.Flags().GetString("name")
 	if err != nil {
 		return nil, err
@@ -136,6 +147,20 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 		if err != nil {
 			return nil, err
 		}
+	} else if arg == "-" {
+		if st.instName == "" {
+			return nil, errors.New("must pass instance name with --name when reading template from stdin")
+		}
+		st.yBytes, err = io.ReadAll(os.Stdin)
+		if err != nil && err != io.EOF {
+			return nil, fmt.Errorf("unexpected error reading stdin: %w", err)
+		}
+		// see if the tty was set explicitly or not
+		ttySet := cmd.Flags().Changed("tty")
+		if ttySet && tty {
+			return nil, errors.New("cannot use --tty=true and read template from stdin together")
+		}
+		tty = false
 	} else {
 		if arg == "" {
 			if st.instName == "" {
@@ -173,11 +198,6 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 		}
 	}
 
-	// Create an instance, with menu TUI when TTY is available
-	tty, err := cmd.Flags().GetBool("tty")
-	if err != nil {
-		return nil, err
-	}
 	if tty {
 		var err error
 		st, err = chooseNextCreatorState(st)
