@@ -97,16 +97,9 @@ jobs:
       # jq:        required by test-example.sh to determine download URL for nerdctl
       run: |
         set -x
-        # Github runners seem to symlink to python2.7 version of 2to3,
-        # breaking upgrades to latest python@3.9
-        rm -f /usr/local/bin/2to3
-        time brew update
         # Github runners seem to have lima installed by brew already; we don't want/need it
-        # It also does throw an error during `brew upgrade`.
-        # Needs --ignore-dependencies because it is installed as a prerequisite for colima.
-        time brew uninstall --ignore-dependencies lima
+        time brew uninstall --ignore-dependencies lima colima
         time brew install qemu bash coreutils curl jq
-        time brew upgrade
     - name: Cache ~/Library/Caches/lima/download
       uses: actions/cache@v3
       with:
