@@ -1,6 +1,7 @@
 package infoutil
 
 import (
+	"github.com/lima-vm/lima/pkg/driverutil"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/templatestore"
@@ -12,7 +13,7 @@ type Info struct {
 	Templates       []templatestore.Template `json:"templates"`
 	DefaultTemplate *limayaml.LimaYAML       `json:"defaultTemplate"`
 	LimaHome        string                   `json:"limaHome"`
-	// TODO: add diagnostic info of QEMU
+	VMTypes         []string                 `json:"vmTypes"` // since Lima v0.14.2
 }
 
 func GetInfo() (*Info, error) {
@@ -27,6 +28,7 @@ func GetInfo() (*Info, error) {
 	info := &Info{
 		Version:         version.Version,
 		DefaultTemplate: y,
+		VMTypes:         driverutil.Drivers(),
 	}
 	info.Templates, err = templatestore.Templates()
 	if err != nil {
