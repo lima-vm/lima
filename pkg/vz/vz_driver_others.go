@@ -12,6 +12,8 @@ import (
 
 var ErrUnsupported = errors.New("vm driver 'vz' needs macOS 13 or later (Hint: try recompiling Lima if you are seeing this error on macOS 13)")
 
+const Enabled = false
+
 type LimaVzDriver struct {
 	*driver.BaseDriver
 }

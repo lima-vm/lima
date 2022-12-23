@@ -20,6 +20,8 @@ import (
 	"github.com/lima-vm/lima/pkg/limayaml"
 )
 
+const Enabled = true
+
 type LimaVzDriver struct {
 	*driver.BaseDriver
 
