@@ -118,10 +118,6 @@ func createVM(driver *driver.BaseDriver, networkConn *os.File) (*vz.VirtualMachi
 		return nil, err
 	}
 
-	if err = attachConsole(driver, vmConfig); err != nil {
-		return nil, err
-	}
-
 	if err = attachFolderMounts(driver, vmConfig); err != nil {
 		return nil, err
 	}
@@ -325,34 +321,6 @@ func attachDisplay(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfigu
 			graphicsDeviceConfiguration,
 		})
 	}
-	return nil
-}
-
-func attachConsole(_ *driver.BaseDriver, vmConfig *vz.VirtualMachineConfiguration) error {
-	consoleDevice, err := vz.NewVirtioConsoleDeviceConfiguration()
-	if err != nil {
-		return err
-	}
-	spiceAgentAttachment, err := vz.NewSpiceAgentPortAttachment()
-	if err != nil {
-		return err
-	}
-	spiceAgentName, err := vz.SpiceAgentPortAttachmentName()
-	if err != nil {
-		return err
-	}
-	spiceAgentPort, err := vz.NewVirtioConsolePortConfiguration(
-		vz.WithVirtioConsolePortConfigurationAttachment(spiceAgentAttachment),
-		vz.WithVirtioConsolePortConfigurationName(spiceAgentName),
-	)
-	if err != nil {
-		return err
-	}
-
-	consoleDevice.SetVirtioConsolePortConfiguration(0, spiceAgentPort)
-	vmConfig.SetConsoleDevicesVirtualMachineConfiguration([]vz.ConsoleDeviceConfiguration{
-		consoleDevice,
-	})
 	return nil
 }
 
