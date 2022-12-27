@@ -233,7 +233,8 @@ func AddGlobalFields(inst *Instance) (FormatData, error) {
 }
 
 type PrintOptions struct {
-	AllFields bool
+	AllFields     bool
+	TerminalWidth int
 }
 
 // PrintInstances prints instances in a requested format to a given io.Writer.
@@ -252,14 +253,45 @@ func PrintInstances(w io.Writer, instances []*Instance, format string, options *
 			archs[instance.Arch]++
 		}
 		all := options != nil && options.AllFields
+		width := 0
+		if options != nil {
+			width = options.TerminalWidth
+		}
+		columnWidth := 8
 		hideType := false
 		hideArch := false
 		hideDir := false
 
-		hideType = len(types) == 1 && !all
+		columns := 1 // NAME
+		columns += 2 // STATUS
+		columns += 2 // SSH
+		// can we still fit the remaining columns (7)
+		if width == 0 || (columns+7)*columnWidth > width && !all {
+			hideType = len(types) == 1
+		}
+		if !hideType {
+			columns++ // VMTYPE
+		}
 		// only hide arch if it is the same as the host arch
 		goarch := limayaml.NewArch(runtime.GOARCH)
-		hideArch = len(archs) == 1 && instances[0].Arch == goarch && !all
+		// can we still fit the remaining columns (6)
+		if width == 0 || (columns+6)*columnWidth > width && !all {
+			hideArch = len(archs) == 1 && instances[0].Arch == goarch
+		}
+		if !hideArch {
+			columns++ // ARCH
+		}
+		columns++ // CPUS
+		columns++ // MEMORY
+		columns++ // DISK
+		// can we still fit the remaining columns (2)
+		if width != 0 && (columns+2)*columnWidth > width && !all {
+			hideDir = true
+		}
+		if !hideDir {
+			columns += 2 // DIR
+		}
+		_ = columns
 
 		w := tabwriter.NewWriter(w, 4, 8, 4, ' ', 0)
 		fmt.Fprint(w, "NAME\tSTATUS\tSSH")

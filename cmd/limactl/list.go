@@ -3,11 +3,14 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os"
 	"reflect"
 	"sort"
 	"strings"
 
+	"github.com/cheggaaa/pb/v3/termutil"
 	"github.com/lima-vm/lima/pkg/store"
+	"github.com/mattn/go-isatty"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -163,6 +166,13 @@ func listAction(cmd *cobra.Command, args []string) error {
 
 	options := store.PrintOptions{AllFields: allFields}
 	out := cmd.OutOrStdout()
+	if out == os.Stdout {
+		if isatty.IsTerminal(os.Stdout.Fd()) || isatty.IsCygwinTerminal(os.Stdout.Fd()) {
+			if w, err := termutil.TerminalWidth(); err == nil {
+				options.TerminalWidth = w
+			}
+		}
+	}
 	return store.PrintInstances(out, instances, format, &options)
 }
 
