@@ -23,6 +23,37 @@ func ExecuteTemplate(tmpl string, args interface{}) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
+// PrefixString adds prefix to beginning of each line
+func PrefixString(prefix string, text string) string {
+	result := ""
+	for _, line := range strings.Split(text, "\n") {
+		if line == "" {
+			continue
+		}
+		result += prefix + line + "\n"
+	}
+	return result
+}
+
+// IndentString add spaces to beginning of each line
+func IndentString(size int, text string) string {
+	prefix := strings.Repeat(" ", size)
+	return PrefixString(prefix, text)
+}
+
+// TrimString removes characters from beginning and end
+func TrimString(cutset string, text string) string {
+	return strings.Trim(text, cutset)
+}
+
+// MissingString returns message if the text is empty
+func MissingString(message string, text string) string {
+	if text == "" {
+		return message
+	}
+	return text
+}
+
 // TemplateFuncMap is a text/template FuncMap.
 var TemplateFuncMap = template.FuncMap{
 	"json": func(v interface{}) string {
@@ -42,4 +73,14 @@ var TemplateFuncMap = template.FuncMap{
 		}
 		return "---\n" + strings.TrimSuffix(b.String(), "\n")
 	},
+	"indent":  IndentString,
+	"trim":    TrimString,
+	"missing": MissingString,
+}
+
+// TemplateFuncHelp is help for TemplateFuncMap.
+var FuncHelp = []string{
+	"indent <size>: add spaces to beginning of each line",
+	"trim <cutset>: remove characters from beginning and end",
+	"missing <message>: return message if the text is empty",
 }

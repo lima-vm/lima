@@ -211,6 +211,11 @@ type FormatData struct {
 	IdentityFile string
 }
 
+var FormatHelp = "\n" + textutil.PrefixString("\t\t",
+	"These functions are available to go templates:\n\n"+
+		textutil.IndentString(2,
+			strings.Join(textutil.FuncHelp, "\n")+"\n"))
+
 func AddGlobalFields(inst *Instance) (FormatData, error) {
 	var data FormatData
 	data.Instance = *inst

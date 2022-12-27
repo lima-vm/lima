@@ -8,18 +8,43 @@ import (
 	"gotest.tools/v3/assert"
 )
 
+func TestPrefixString(t *testing.T) {
+	assert.Equal(t, "- foo\n", PrefixString("- ", "foo"))
+	assert.Equal(t, "- foo\n- bar\n", PrefixString("- ", "foo\nbar\n"))
+}
+func TestIndentString(t *testing.T) {
+	assert.Equal(t, "  foo\n", IndentString(2, "foo"))
+	assert.Equal(t, "  foo\n  bar\n", IndentString(2, "foo\nbar\n"))
+}
+
+func TestTrimString(t *testing.T) {
+	assert.Equal(t, "foo", TrimString("\n", "foo"))
+	assert.Equal(t, "bar", TrimString("\n", "bar\n"))
+}
+
+func TestMissingString(t *testing.T) {
+	assert.Equal(t, "no", MissingString("no", ""))
+	assert.Equal(t, "msg", MissingString("no", "msg"))
+}
+
 func TestTemplateFuncs(t *testing.T) {
 	type X struct {
-		Foo int    `json:"foo" yaml:"foo"`
-		Bar string `json:"bar" yaml:"bar"`
+		Foo     int    `json:"foo" yaml:"foo"`
+		Bar     string `json:"bar" yaml:"bar"`
+		Message string `json:"message,omitempty" yaml:"message,omitempty"`
 	}
-	x := X{Foo: 42, Bar: "hello"}
+	x := X{Foo: 42, Bar: "hello", Message: "One\nTwo\nThree\n"}
 
 	testCases := map[string]string{
-		"{{json .}}": `{"foo":42,"bar":"hello"}`,
+		"{{json .}}": `{"foo":42,"bar":"hello","message":"One\nTwo\nThree\n"}`,
 		"{{yaml .}}": `---
 foo: 42
-bar: hello`,
+bar: hello
+message: |
+  One
+  Two
+  Three`,
+		`{{.Bar}}{{"\n"}}{{.Message | missing "<no message>" | indent 2 | trim "\n"}}`: "hello\n  One\n  Two\n  Three",
 	}
 
 	for format, expected := range testCases {
