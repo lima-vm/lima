@@ -232,17 +232,48 @@ func AddGlobalFields(inst *Instance) (FormatData, error) {
 	return data, nil
 }
 
+type PrintOptions struct {
+	AllFields bool
+}
+
 // PrintInstances prints instances in a requested format to a given io.Writer.
 // Supported formats are "json", "yaml", "table", or a go template
-func PrintInstances(w io.Writer, instances []*Instance, format string) error {
+func PrintInstances(w io.Writer, instances []*Instance, format string, options *PrintOptions) error {
 	switch format {
 	case "json":
 		format = "{{json .}}"
 	case "yaml":
 		format = "{{yaml .}}"
 	case "table":
+		types := map[string]int{}
+		archs := map[string]int{}
+		for _, instance := range instances {
+			types[instance.VMType]++
+			archs[instance.Arch]++
+		}
+		all := options != nil && options.AllFields
+		hideType := false
+		hideArch := false
+		hideDir := false
+
+		hideType = len(types) == 1 && !all
+		// only hide arch if it is the same as the host arch
+		goarch := limayaml.NewArch(runtime.GOARCH)
+		hideArch = len(archs) == 1 && instances[0].Arch == goarch && !all
+
 		w := tabwriter.NewWriter(w, 4, 8, 4, ' ', 0)
-		fmt.Fprintln(w, "NAME\tSTATUS\tSSH\tVMTYPE\tARCH\tCPUS\tMEMORY\tDISK\tDIR")
+		fmt.Fprint(w, "NAME\tSTATUS\tSSH")
+		if !hideType {
+			fmt.Fprint(w, "\tVMTYPE")
+		}
+		if !hideArch {
+			fmt.Fprint(w, "\tARCH")
+		}
+		fmt.Fprint(w, "\tCPUS\tMEMORY\tDISK")
+		if !hideDir {
+			fmt.Fprint(w, "\tDIR")
+		}
+		fmt.Fprintln(w)
 
 		u, err := user.Current()
 		if err != nil {
@@ -255,17 +286,33 @@ func PrintInstances(w io.Writer, instances []*Instance, format string) error {
 			if strings.HasPrefix(dir, homeDir) {
 				dir = strings.Replace(dir, homeDir, "~", 1)
 			}
-			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%d\t%s\t%s\t%s\n",
+			fmt.Fprintf(w, "%s\t%s\t%s",
 				instance.Name,
 				instance.Status,
 				fmt.Sprintf("127.0.0.1:%d", instance.SSHLocalPort),
-				instance.VMType,
-				instance.Arch,
+			)
+			if !hideType {
+				fmt.Fprintf(w, "\t%s",
+					instance.VMType,
+				)
+			}
+			if !hideArch {
+				fmt.Fprintf(w, "\t%s",
+					instance.Arch,
+				)
+			}
+			fmt.Fprintf(w, "\t%d\t%s\t%s",
 				instance.CPUs,
 				units.BytesSize(float64(instance.Memory)),
 				units.BytesSize(float64(instance.Disk)),
-				dir,
 			)
+			if !hideDir {
+				fmt.Fprintf(w, "\t%s",
+					dir,
+				)
+			}
+			fmt.Fprint(w, "\n")
+
 		}
 		return w.Flush()
 	default:

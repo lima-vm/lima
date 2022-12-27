@@ -54,6 +54,7 @@ func newListCommand() *cobra.Command {
 	listCommand.Flags().Bool("list-fields", false, "List fields available for format")
 	listCommand.Flags().Bool("json", false, "JSONify output")
 	listCommand.Flags().BoolP("quiet", "q", false, "Only show names")
+	listCommand.Flags().Bool("all-fields", false, "Show all fields")
 
 	return listCommand
 }
@@ -155,7 +156,14 @@ func listAction(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	return store.PrintInstances(cmd.OutOrStdout(), instances, format)
+	allFields, err := cmd.Flags().GetBool("all-fields")
+	if err != nil {
+		return err
+	}
+
+	options := store.PrintOptions{AllFields: allFields}
+	out := cmd.OutOrStdout()
+	return store.PrintInstances(out, instances, format, &options)
 }
 
 func listBashComplete(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
