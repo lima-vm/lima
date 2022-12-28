@@ -278,7 +278,7 @@ func attachDisks(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfigura
 	if err = validateDiskFormat(diffDiskPath); err != nil {
 		return err
 	}
-	diffDiskAttachment, err := vz.NewDiskImageStorageDeviceAttachment(diffDiskPath, false)
+	diffDiskAttachment, err := vz.NewDiskImageStorageDeviceAttachmentWithCacheAndSync(diffDiskPath, false, vz.DiskImageCachingModeAutomatic, vz.DiskImageSynchronizationModeFsync)
 	if err != nil {
 		return err
 	}
