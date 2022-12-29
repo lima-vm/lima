@@ -2,18 +2,23 @@ package store
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
+	"os/user"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
+	"text/tabwriter"
 	"text/template"
 	"time"
 
 	"github.com/docker/go-units"
+	"github.com/goccy/go-yaml"
 	hostagentclient "github.com/lima-vm/lima/pkg/hostagent/api/client"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
@@ -46,6 +51,7 @@ type Instance struct {
 	HostAgentPID    int                `json:"hostAgentPID,omitempty"`
 	DriverPID       int                `json:"driverPID,omitempty"`
 	Errors          []error            `json:"errors,omitempty"`
+	Config          *limayaml.LimaYAML `json:"config,omitempty"`
 }
 
 func (inst *Instance) LoadYAML() (*limayaml.LimaYAML, error) {
@@ -79,6 +85,7 @@ func Inspect(instName string) (*Instance, error) {
 		inst.Errors = append(inst.Errors, err)
 		return inst, nil
 	}
+	inst.Config = y
 	inst.Arch = *y.Arch
 	inst.VMType = *y.VMType
 	inst.CPUType = y.CPUType[*y.Arch]
@@ -224,4 +231,65 @@ func AddGlobalFields(inst *Instance) (FormatData, error) {
 		return FormatData{}, err
 	}
 	return data, nil
+}
+
+// PrintInstances prints instances in a requested format to a given io.Writer.
+// Supported formats are "json", "yaml", "table", or a go template
+func PrintInstances(w io.Writer, instances []*Instance, format string) error {
+	switch format {
+	case "json":
+		b, err := json.Marshal(instances)
+		if err != nil {
+			return err
+		}
+		fmt.Fprintln(w, string(b))
+	case "yaml":
+		b, err := yaml.Marshal(instances)
+		if err != nil {
+			return err
+		}
+		fmt.Fprintln(w, string(b))
+	case "table":
+		w := tabwriter.NewWriter(w, 4, 8, 4, ' ', 0)
+		fmt.Fprintln(w, "NAME\tSTATUS\tSSH\tVMTYPE\tARCH\tCPUS\tMEMORY\tDISK\tDIR")
+
+		u, err := user.Current()
+		if err != nil {
+			return err
+		}
+		homeDir := u.HomeDir
+
+		for _, instance := range instances {
+			dir := instance.Dir
+			if strings.HasPrefix(dir, homeDir) {
+				dir = strings.Replace(dir, homeDir, "~", 1)
+			}
+			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%d\t%s\t%s\t%s\n",
+				instance.Name,
+				instance.Status,
+				fmt.Sprintf("127.0.0.1:%d", instance.SSHLocalPort),
+				instance.VMType,
+				instance.Arch,
+				instance.CPUs,
+				units.BytesSize(float64(instance.Memory)),
+				units.BytesSize(float64(instance.Disk)),
+				dir,
+			)
+		}
+		return w.Flush()
+	default:
+		tmpl, err := template.New("format").Parse(format)
+		if err != nil {
+			return fmt.Errorf("invalid go template: %w", err)
+		}
+		for _, instance := range instances {
+			err = tmpl.Execute(w, instance)
+			if err != nil {
+				return err
+			}
+			fmt.Fprintln(w)
+		}
+		return nil
+	}
+	return nil
 }
