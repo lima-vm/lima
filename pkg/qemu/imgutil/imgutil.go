@@ -91,6 +91,18 @@ func ConvertToRaw(source string, dest string) error {
 	return nil
 }
 
+func ConvertToVDI(source string, dest string) error {
+	var stdout, stderr bytes.Buffer
+	cmd := exec.Command("qemu-img", "convert", "-O", "vdi", source, dest)
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to run %v: stdout=%q, stderr=%q: %w",
+			cmd.Args, stdout.String(), stderr.String(), err)
+	}
+	return nil
+}
+
 func ParseInfo(b []byte) (*Info, error) {
 	var imgInfo Info
 	if err := json.Unmarshal(b, &imgInfo); err != nil {

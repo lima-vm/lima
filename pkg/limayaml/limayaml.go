@@ -60,6 +60,7 @@ const (
 	WSLMount MountType = "wsl2"
 
 	QEMU VMType = "qemu"
+	VBOX VMType = "vbox"
 	VZ   VMType = "vz"
 	WSL2 VMType = "wsl2"
 )
