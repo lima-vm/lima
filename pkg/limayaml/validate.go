@@ -84,12 +84,16 @@ func Validate(y *LimaYAML, warn bool) error {
 		// NOP
 	case WSL2:
 		// NOP
+	case VBOX:
+		if *y.Arch != X8664 {
+			return fmt.Errorf("field `arch` must be %q for VBox; got %q", X8664, *y.Arch)
+		}
 	case VZ:
 		if !IsNativeArch(*y.Arch) {
 			return fmt.Errorf("field `arch` must be %q for VZ; got %q", NewArch(runtime.GOARCH), *y.Arch)
 		}
 	default:
-		return fmt.Errorf("field `vmType` must be %q, %q, %q; got %q", QEMU, VZ, WSL2, *y.VMType)
+		return fmt.Errorf("field `vmType` must be %q, %q, %q, or %q; got %q", QEMU, VBOX, VZ, WSL2, *y.VMType)
 	}
 
 	if len(y.Images) == 0 {
