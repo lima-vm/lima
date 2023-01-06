@@ -157,6 +157,8 @@ caCerts:
 
 containerd:
   # Enable system-wide (aka rootful)  containerd and its dependencies (BuildKit, Stargz Snapshotter)
+  # Note that `nerdctl.lima` only works in rootless mode; you have to use `lima sudo nerdctl ...`
+  # to use rootful containerd with nerdctl.
   # 🟢 Builtin default: false
   system: null
   # Enable user-scoped (aka rootless) containerd and its dependencies
