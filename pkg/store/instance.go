@@ -2,7 +2,6 @@ package store
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -18,11 +17,11 @@ import (
 	"time"
 
 	"github.com/docker/go-units"
-	"github.com/goccy/go-yaml"
 	hostagentclient "github.com/lima-vm/lima/pkg/hostagent/api/client"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/store/filenames"
+	"github.com/lima-vm/lima/pkg/textutil"
 )
 
 type Status = string
@@ -238,17 +237,9 @@ func AddGlobalFields(inst *Instance) (FormatData, error) {
 func PrintInstances(w io.Writer, instances []*Instance, format string) error {
 	switch format {
 	case "json":
-		b, err := json.Marshal(instances)
-		if err != nil {
-			return err
-		}
-		fmt.Fprintln(w, string(b))
+		format = "{{json .}}"
 	case "yaml":
-		b, err := yaml.Marshal(instances)
-		if err != nil {
-			return err
-		}
-		fmt.Fprintln(w, string(b))
+		format = "{{yaml .}}"
 	case "table":
 		w := tabwriter.NewWriter(w, 4, 8, 4, ' ', 0)
 		fmt.Fprintln(w, "NAME\tSTATUS\tSSH\tVMTYPE\tARCH\tCPUS\tMEMORY\tDISK\tDIR")
@@ -278,18 +269,18 @@ func PrintInstances(w io.Writer, instances []*Instance, format string) error {
 		}
 		return w.Flush()
 	default:
-		tmpl, err := template.New("format").Parse(format)
+		// NOP
+	}
+	tmpl, err := template.New("format").Funcs(textutil.TemplateFuncMap).Parse(format)
+	if err != nil {
+		return fmt.Errorf("invalid go template: %w", err)
+	}
+	for _, instance := range instances {
+		err = tmpl.Execute(w, instance)
 		if err != nil {
-			return fmt.Errorf("invalid go template: %w", err)
+			return err
 		}
-		for _, instance := range instances {
-			err = tmpl.Execute(w, instance)
-			if err != nil {
-				return err
-			}
-			fmt.Fprintln(w)
-		}
-		return nil
+		fmt.Fprintln(w)
 	}
 	return nil
 }
