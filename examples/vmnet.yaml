@@ -1,5 +1,4 @@
-# Example to enable vmnet.framework for QEMU.
-# VZ users should refer to experimental/vz.yaml
+# Example to enable vmnet.framework.
 
 # Usage:
 #   brew install socket_vmnet

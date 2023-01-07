@@ -46,11 +46,11 @@ If `useHostResolver` is false, then DNS servers can be configured manually in `l
 
 VMNet assigns a "real" IP address that is reachable from the host.
 
-The configuration steps are different across QEMU and VZ:
-- [QEMU](#qemu)
-- [VZ](#vz)
+The configuration steps are different for each network type:
+- [socket_vmnet](#socket_vmnet)
+- [vzNAT](#vzNAT)
 
-### QEMU
+### socket_vmnet
 #### Managed (192.168.105.0/24)
 
 [`socket_vmnet`](https://github.com/lima-vm/socket_vmnet) is required for adding another guest IP that is accessible from the host and other guests.
@@ -176,7 +176,7 @@ networks:
 
 </details>
 
-### VZ
+### vzNAT
 
 > **Warning**
 > "vz" mode is experimental

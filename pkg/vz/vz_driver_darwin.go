@@ -86,6 +86,8 @@ func (l *LimaVzDriver) Validate() error {
 
 	for i, network := range l.Yaml.Networks {
 		if unknown := reflectutil.UnknownNonEmptyFields(network, "VZNAT",
+			"Lima",
+			"Socket",
 			"MACAddress",
 			"Interface",
 		); len(unknown) > 0 {
