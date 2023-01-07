@@ -1,0 +1,34 @@
+# Example to run ubuntu using vmType: vbox instead of qemu (Default)
+vmType: "vbox"
+
+# Arch: "default", "x86_64", "aarch64".
+# 🟢 Builtin default: "default" (corresponds to the host architecture)
+arch: "x86_64"
+
+images:
+- location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-amd64.img"
+  arch: "x86_64"
+
+# CPUs: if you see performance issues, try limiting cpus to 1.
+# 🟢 Builtin default: 4
+cpus: null
+
+# Memory size
+# 🟢 Builtin default: "4GiB"
+memory: null
+
+# Disk size
+# 🟢 Builtin default: "100GiB"
+disk: null
+
+mounts:
+- location: "~"
+- location: "/tmp/lima"
+  writable: true
+
+video:
+  # VirtualBox display, e.g., "none" (or "headless"), "default" (or "gui")
+  # Choosing "none" will hide the video output, and not show any window.
+  # Choosing "default" will show a window while the instance is running.
+  # 🟢 Builtin default: "none"
+  display: null
