@@ -234,6 +234,52 @@ func attachNetwork(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfigu
 			}
 			configurations = append(configurations, networkConfig)
 		}
+
+		if nw.Lima != "" {
+			nwCfg, err := networks.Config()
+			if err != nil {
+				return err
+			}
+			socketVMNetOk, err := nwCfg.IsDaemonInstalled(networks.SocketVMNet)
+			if err != nil {
+				return err
+			}
+			if socketVMNetOk {
+				logrus.Debugf("Using socketVMNet (%q)", nwCfg.Paths.SocketVMNet)
+				sock, err := networks.Sock(nw.Lima)
+				if err != nil {
+					return err
+				}
+
+				clientFile, err := DialQemu(sock)
+				if err != nil {
+					return err
+				}
+				attachment, err := vz.NewFileHandleNetworkDeviceAttachment(clientFile)
+				if err != nil {
+					return err
+				}
+				networkConfig, err = newVirtioNetworkDeviceConfiguration(attachment, nw.MACAddress)
+				if err != nil {
+					return err
+				}
+				configurations = append(configurations, networkConfig)
+			}
+		} else if nw.Socket != "" {
+			clientFile, err := DialQemu(nw.Socket)
+			if err != nil {
+				return err
+			}
+			attachment, err := vz.NewFileHandleNetworkDeviceAttachment(clientFile)
+			if err != nil {
+				return err
+			}
+			networkConfig, err = newVirtioNetworkDeviceConfiguration(attachment, nw.MACAddress)
+			if err != nil {
+				return err
+			}
+			configurations = append(configurations, networkConfig)
+		}
 	}
 	vmConfig.SetNetworkDevicesVirtualMachineConfiguration(configurations)
 	return nil
