@@ -7,14 +7,18 @@ import (
 	"net"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/miekg/dns"
 	"github.com/sirupsen/logrus"
 )
 
-// Truncate for avoiding "Parse error" from `busybox nslookup`
-// https://github.com/lima-vm/lima/issues/380
-const truncateSize = 512
+const (
+	// Truncate for avoiding "Parse error" from `busybox nslookup`
+	// https://github.com/lima-vm/lima/issues/380
+	truncateSize      = 512
+	ipv6ResponseDelay = time.Second
+)
 
 var defaultFallbackIPs = []string{"8.8.8.8", "1.1.1.1"}
 
@@ -159,15 +163,18 @@ func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
 		switch q.Qtype {
 		case dns.TypeAAAA:
 			if !h.ipv6 {
-				// A "correct" answer would be to set `handled = true` and return a NODATA response.
-				// Unfortunately some older resolvers use a slow random source to set the transaction id.
+				// Unfortunately some older resolvers use a slow random source to set the Transaction ID.
 				// This creates a problem on M1 computers, which are too fast for that implementation:
-				// Both the A and AAAA queries might end up with the same id. Returning NODATA for AAAA
-				// is faster, so would arrive first, and be treated as the response to the A query.
-				// To avoid this, we will treat an AAAA query as an A query when IPv6 has been disabled.
-				// This way it is either a valid response for an A query, or the A records will be discarded
-				// by a genuine AAAA query, resulting in the desired NODATA response.
-				qtype = dns.TypeA
+				// Both the A and AAAA queries might end up with the same id. Therefore, we wait for
+				// 1 second and then we return NODATA for AAAA. This will allow the client to receive
+				// the correct response even when both Transaction IDs are the same.
+				time.Sleep(ipv6ResponseDelay)
+				// See RFC 2308 section 2.2 which suggests that NODATA is indicated by setting the
+				// RCODE to NOERROR along with zero entries in the response.
+				reply.SetRcode(req, dns.RcodeSuccess)
+				reply.SetReply(req)
+				handled = true
+				break
 			}
 			fallthrough
 		case dns.TypeA:
