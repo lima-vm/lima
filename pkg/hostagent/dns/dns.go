@@ -150,6 +150,7 @@ func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
 		reply   dns.Msg
 		handled bool
 	)
+	defer w.Close()
 	reply.SetReply(req)
 	logrus.Debugf("handleQuery received DNS query: %v", req)
 	for _, q := range req.Question {
