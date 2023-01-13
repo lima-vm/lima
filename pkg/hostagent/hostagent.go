@@ -356,6 +356,12 @@ func (a *HostAgent) startHostAgentRoutines(ctx context.Context) error {
 	if err := a.waitForRequirements(ctx, "final", a.finalRequirements()); err != nil {
 		mErr = multierror.Append(mErr, err)
 	}
+	// Copy all config files _after_ the requirements are done
+	for _, rule := range a.y.CopyToHost {
+		if err := copyToHost(ctx, a.sshConfig, a.sshLocalPort, rule.HostFile, rule.GuestFile); err != nil {
+			mErr = multierror.Append(mErr, err)
+		}
+	}
 	return mErr
 }
 
@@ -522,6 +528,33 @@ func forwardSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, 
 			}
 		}
 		return fmt.Errorf("failed to run %v: %q: %w", cmd.Args, string(out), err)
+	}
+	return nil
+}
+
+func copyToHost(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, remote string) error {
+	args := sshConfig.Args()
+	args = append(args,
+		"-p", strconv.Itoa(port),
+		"127.0.0.1",
+		"--",
+	)
+	args = append(args,
+		"sudo",
+		"cat",
+		remote,
+	)
+	logrus.Infof("Copying config from %s to %s", remote, local)
+	if err := os.MkdirAll(filepath.Dir(local), 0700); err != nil {
+		return fmt.Errorf("can't create directory for local file %q: %w", local, err)
+	}
+	cmd := exec.CommandContext(ctx, sshConfig.Binary(), args...)
+	out, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("failed to run %v: %q: %w", cmd.Args, string(out), err)
+	}
+	if err := os.WriteFile(local, out, 0600); err != nil {
+		return fmt.Errorf("can't write to local file %q: %w", local, err)
 	}
 	return nil
 }
