@@ -527,6 +527,47 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 	y.CACertificates.Certs = caCerts
 }
 
+func executeGuestTemplate(format string) (bytes.Buffer, error) {
+	tmpl, err := template.New("").Parse(format)
+	if err == nil {
+		user, _ := osutil.LimaUser(false)
+		data := map[string]string{
+			"Home": fmt.Sprintf("/home/%s.linux", user.Username),
+			"UID":  user.Uid,
+			"User": user.Username,
+		}
+		var out bytes.Buffer
+		if err := tmpl.Execute(&out, data); err == nil {
+			return out, nil
+		}
+	}
+	return bytes.Buffer{}, err
+}
+
+func executeHostTemplate(format string, instDir string) (bytes.Buffer, error) {
+	tmpl, err := template.New("").Parse(format)
+	if err == nil {
+		user, _ := osutil.LimaUser(false)
+		home, _ := os.UserHomeDir()
+		limaHome, _ := dirnames.LimaDir()
+		data := map[string]string{
+			"Dir":  instDir,
+			"Home": home,
+			"Name": filepath.Base(instDir),
+			"UID":  user.Uid,
+			"User": user.Username,
+
+			"Instance": filepath.Base(instDir), // DEPRECATED, use `{{.Name}}`
+			"LimaHome": limaHome,               // DEPRECATED, (use `Dir` instead of `{{.LimaHome}}/{{.Instance}}`
+		}
+		var out bytes.Buffer
+		if err := tmpl.Execute(&out, data); err == nil {
+			return out, nil
+		}
+	}
+	return bytes.Buffer{}, err
+}
+
 func FillPortForwardDefaults(rule *PortForward, instDir string) {
 	if rule.Proto == "" {
 		rule.Proto = TCP
@@ -559,44 +600,17 @@ func FillPortForwardDefaults(rule *PortForward, instDir string) {
 		}
 	}
 	if rule.GuestSocket != "" {
-		tmpl, err := template.New("").Parse(rule.GuestSocket)
-		if err == nil {
-			user, _ := osutil.LimaUser(false)
-			data := map[string]string{
-				"Home": fmt.Sprintf("/home/%s.linux", user.Username),
-				"UID":  user.Uid,
-				"User": user.Username,
-			}
-			var out bytes.Buffer
-			if err := tmpl.Execute(&out, data); err == nil {
-				rule.GuestSocket = out.String()
-			} else {
-				logrus.WithError(err).Warnf("Couldn't process guestSocket %q as a template", rule.GuestSocket)
-			}
+		if out, err := executeGuestTemplate(rule.GuestSocket); err == nil {
+			rule.GuestSocket = out.String()
+		} else {
+			logrus.WithError(err).Warnf("Couldn't process guestSocket %q as a template", rule.GuestSocket)
 		}
 	}
 	if rule.HostSocket != "" {
-		tmpl, err := template.New("").Parse(rule.HostSocket)
-		if err == nil {
-			user, _ := osutil.LimaUser(false)
-			home, _ := os.UserHomeDir()
-			limaHome, _ := dirnames.LimaDir()
-			data := map[string]string{
-				"Dir":  instDir,
-				"Home": home,
-				"Name": filepath.Base(instDir),
-				"UID":  user.Uid,
-				"User": user.Username,
-
-				"Instance": filepath.Base(instDir), // DEPRECATED, use `{{.Name}}`
-				"LimaHome": limaHome,               // DEPRECATED, (use `Dir` instead of `{{.LimaHome}}/{{.Instance}}`
-			}
-			var out bytes.Buffer
-			if err := tmpl.Execute(&out, data); err == nil {
-				rule.HostSocket = out.String()
-			} else {
-				logrus.WithError(err).Warnf("Couldn't process hostSocket %q as a template", rule.HostSocket)
-			}
+		if out, err := executeHostTemplate(rule.HostSocket, instDir); err == nil {
+			rule.HostSocket = out.String()
+		} else {
+			logrus.WithError(err).Warnf("Couldn't process hostSocket %q as a template", rule.HostSocket)
 		}
 		if !filepath.IsAbs(rule.HostSocket) {
 			rule.HostSocket = filepath.Join(instDir, filenames.SocketDir, rule.HostSocket)
