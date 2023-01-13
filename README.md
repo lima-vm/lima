@@ -1,4 +1,4 @@
-Translations: [日本語(Japanese)](README.ja.md)
+Translations: [日本語(Japanese)](README.ja.md) [简体中文（Simplified Chinese）](README.zh.md)
 
 [[📖**Getting started**]](#getting-started)
 [[❓**FAQs & Troubleshooting]**](#faqs--troubleshooting)
@@ -344,7 +344,7 @@ Container orchestrator examples:
 - [`./examples/k8s.yaml`](./examples/k8s.yaml): Kubernetes (kubeadm)
 - [`./examples/nomad.yaml`](./examples/nomad.yaml): Nomad
 
-The default Ubuntu image also contains LXD. Run`lima sudo lxc init` to set up LXD.
+The default Ubuntu image also contains LXD. Run `lima sudo lxc init` to set up LXD.
 
 See also third party containerd projects based on Lima:
 - [Rancher Desktop](https://rancherdesktop.io/): Kubernetes and container management to the desktop
