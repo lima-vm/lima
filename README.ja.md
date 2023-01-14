@@ -399,12 +399,12 @@ codesign -s - --entitlements entitlements.xml --force /usr/local/bin/qemu-system
 ```
 
 #### "QEMUが遅いです"
-- `com.apple.security.hypervisor`entitlementでHVFバイナリが有効になっていることを確認してください。["QEMU crashes with`HV_ERROR`"](#qemu-crashes-with-hv_error)を参照してください。
+- `com.apple.security.hypervisor`entitlementでHVFバイナリが有効になっていることを確認してください。["`HV_ERROR`でQEMUがクラッシュします"](#-hverror-でqemuがクラッシュします-)を参照してください。
 - ネイティブでないマシン(Intelマシン上でARM仮想マシン、ARMマシン上でIntel仮想マシン)のエミュレーションは設計からして遅いです。ワークアラウンドについては [`docs/multi-arch.md`](./docs/multi-arch.md) を参照してください。
 
 #### "killed -9" エラー
-- QEMUバイナリが署名されていることを確認してください。 ["QEMU crashes with `HV_ERROR`"](#qemu-crashes-with-hv_error)を参照してください。
-- macOS 10.15.7または11.0またはそれ以降のmacOSを使用している場合、`com.apple.vm.hypervisor`entitlementが**追加されていないこと**を確認してください。このentitlementは古いmacOSのバージョンでのみ動作します。`codesign --remove-signature /usr/local/bin/qemu-system-x86_64`で署名をクリアできます。そして、[最初からやり直してください](#getting-started)
+- QEMUバイナリが署名されていることを確認してください。 ["`HV_ERROR`でQEMUがクラッシュします"](#-hverror-でqemuがクラッシュします-)を参照してください。
+- macOS 10.15.7または11.0またはそれ以降のmacOSを使用している場合、`com.apple.vm.hypervisor`entitlementが**追加されていないこと**を確認してください。このentitlementは古いmacOSのバージョンでのみ動作します。`codesign --remove-signature /usr/local/bin/qemu-system-x86_64`で署名をクリアできます。そして、[最初からやり直してください](#始める)
 
 #### "`vmx_write_mem: mmu_gva_to_gpa XXXXXXXXXXXXXXXX failed`でQEMUがクラッシュします"
 このエラーはRocky Linux 8.x などのようなRHEL8互換ディストリビューションのイメージをIntel Macで動かしたときに発生することが知られています。ワークアラウンドは、`$QEMU_SYSTEM_X86_64="qemu-system-x86_64 -cpu Haswell-v4`環境変数をセットすることです。
