@@ -525,6 +525,8 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 
 	caCerts := unique(append(append(d.CACertificates.Certs, y.CACertificates.Certs...), o.CACertificates.Certs...))
 	y.CACertificates.Certs = caCerts
+
+	y.Labels = unique(append(append(o.Labels, y.Labels...), d.Labels...))
 }
 
 func FillPortForwardDefaults(rule *PortForward, instDir string) {

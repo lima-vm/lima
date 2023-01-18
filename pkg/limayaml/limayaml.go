@@ -34,6 +34,7 @@ type LimaYAML struct {
 	PropagateProxyEnv *bool          `yaml:"propagateProxyEnv,omitempty" json:"propagateProxyEnv,omitempty"`
 	CACertificates    CACertificates `yaml:"caCerts,omitempty" json:"caCerts,omitempty"`
 	Rosetta           Rosetta        `yaml:"rosetta,omitempty" json:"rosetta,omitempty"`
+	Labels            []Label        `yaml:"labels,omitempty" json:"labels,omitempty"`
 }
 
 type Arch = string
@@ -207,6 +208,8 @@ type CACertificates struct {
 	Files          []string `yaml:"files,omitempty" json:"files,omitempty"`
 	Certs          []string `yaml:"certs,omitempty" json:"certs,omitempty"`
 }
+
+type Label = string
 
 // DEPRECATED types below
 

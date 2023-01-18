@@ -144,6 +144,9 @@ func TestFillDefault(t *testing.T) {
 				"-----BEGIN CERTIFICATE-----\nYOUR-ORGS-TRUSTED-CA-CERT\n-----END CERTIFICATE-----\n",
 			},
 		},
+		Labels: []Label{
+			"label_one",
+		},
 	}
 
 	expect := builtin
@@ -206,6 +209,8 @@ func TestFillDefault(t *testing.T) {
 			"-----BEGIN CERTIFICATE-----\nYOUR-ORGS-TRUSTED-CA-CERT\n-----END CERTIFICATE-----\n",
 		},
 	}
+
+	expect.Labels = y.Labels
 
 	FillDefault(&y, &LimaYAML{}, &LimaYAML{}, filePath)
 	assert.DeepEqual(t, &y, &expect, opts...)
@@ -308,6 +313,10 @@ func TestFillDefault(t *testing.T) {
 				"-----BEGIN CERTIFICATE-----\nYOUR-ORGS-TRUSTED-CA-CERT\n-----END CERTIFICATE-----\n",
 			},
 		},
+		Labels: []Label{
+			"label_one",
+			"label_two",
+		},
 	}
 
 	expect = d
@@ -359,6 +368,8 @@ func TestFillDefault(t *testing.T) {
 
 	// "TWO" does not exist in filledDefaults.Env, so is set from d.Env
 	expect.Env["TWO"] = d.Env["TWO"]
+
+	expect.Labels = unique(append(y.Labels, d.Labels...))
 
 	FillDefault(&y, &d, &LimaYAML{}, filePath)
 	assert.DeepEqual(t, &y, &expect, opts...)
@@ -472,6 +483,9 @@ func TestFillDefault(t *testing.T) {
 		CACertificates: CACertificates{
 			RemoveDefaults: pointer.Bool(true),
 		},
+		Labels: []Label{
+			"label_three",
+		},
 	}
 
 	y = filledDefaults
@@ -516,6 +530,8 @@ func TestFillDefault(t *testing.T) {
 	expect.CACertificates.Certs = []string{
 		"-----BEGIN CERTIFICATE-----\nYOUR-ORGS-TRUSTED-CA-CERT\n-----END CERTIFICATE-----\n",
 	}
+
+	expect.Labels = unique(append(append(o.Labels, y.Labels...), d.Labels...))
 
 	FillDefault(&y, &d, &o, filePath)
 	assert.DeepEqual(t, &y, &expect, opts...)
