@@ -22,6 +22,7 @@ import (
 	"github.com/lima-vm/lima/pkg/qemu/entitlementutil"
 	"github.com/mattn/go-isatty"
 
+	"github.com/cheggaaa/pb/v3"
 	"github.com/lima-vm/lima/pkg/downloader"
 	"github.com/lima-vm/lima/pkg/fileutils"
 	hostagentevents "github.com/lima-vm/lima/pkg/hostagent/events"
@@ -32,6 +33,7 @@ import (
 )
 
 var OutputProgress bool
+var ProgressBar *pb.ProgressBar
 
 type Progress = string
 
@@ -300,6 +302,9 @@ func watchHostAgentEvents(ctx context.Context, inst *store.Instance, haStdoutPat
 			return true
 		} else if ev.Status.Running {
 			receivedRunningEvent = true
+			if ProgressBar != nil {
+				ProgressBar.Finish()
+			}
 			if ev.Status.Degraded {
 				logrus.Warnf("DEGRADED. The VM seems running, but file sharing and port forwarding may not work. (hint: see %q)", haStderrPath)
 				err = fmt.Errorf("degraded, status=%+v", ev.Status)
@@ -373,13 +378,30 @@ func ShowProgress(inst *store.Instance, progress Progress) {
 	fmt.Println(message)
 }
 
+// Same as pb.Simple, but don't show the `{{percent . }}`
+const tmpl = `{{with string . "prefix"}}{{.}} {{end}}{{counters . }} {{bar . }} {{with string . "suffix"}} {{.}}{{end}}`
+
 func ShowRequirement(_ *store.Instance, req hostagentevents.Requirement) {
 	if !OutputProgress {
 		return
 	}
+	if ProgressBar == nil {
+		ProgressBar = pb.StartNew(req.Total)
+		// Disable the adaptive width of the bar element
+		pb.RegisterElement("bar", pb.ElementBar, false)
+		ProgressBar.SetTemplateString(tmpl)
+		ProgressBar.SetWidth(120)
+		ProgressBar.Set("prefix", "Waiting")
+	} else {
+		// Flush the progress bar output for this line
+		ProgressBar.Finish()
+		ProgressBar.Start()
+	}
+
 	name := fmt.Sprintf("%s %d/%d", req.Label, req.Number, req.Count)
 	desc := req.Description
-	fmt.Printf("Waiting %d/%d [%s]: %q\n", req.Index+1, req.Total, name, desc)
+	ProgressBar.SetCurrent(int64(req.Index + 1))
+	ProgressBar.Set("suffix", fmt.Sprintf("%q (%s)", desc, name))
 }
 
 func ShowMessage(inst *store.Instance) error {
