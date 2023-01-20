@@ -16,7 +16,17 @@ type Status struct {
 	SSHLocalPort int `json:"sshLocalPort,omitempty"`
 }
 
+type Requirement struct {
+	Label       string `json:"label"`
+	Number      int    `json:"number"`
+	Count       int    `json:"count"`
+	Description string `json:"description"`
+	Index       int    `json:"index"`
+	Total       int    `json:"total"`
+}
+
 type Event struct {
-	Time   time.Time `json:"time,omitempty"`
-	Status Status    `json:"status,omitempty"`
+	Time        time.Time   `json:"time,omitempty"`
+	Status      Status      `json:"status,omitempty"`
+	Requirement Requirement `json:"requirement,omitempty"`
 }

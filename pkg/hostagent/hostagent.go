@@ -449,10 +449,12 @@ func (a *HostAgent) startHostAgentRoutines(ctx context.Context) error {
 		}
 		return nil
 	})
+	index := 0
 	var errs []error
-	if err := a.waitForRequirements("essential", a.essentialRequirements()); err != nil {
+	if err := a.waitForRequirements(ctx, "essential", a.essentialRequirements(), index); err != nil {
 		errs = append(errs, err)
 	}
+	index += len(a.essentialRequirements())
 	if *a.y.SSH.ForwardAgent {
 		faScript := `#!/bin/bash
 set -eux -o pipefail
@@ -501,9 +503,10 @@ sudo chown -R "${USER}" /run/host-services`
 	if !*a.y.Plain {
 		go a.watchGuestAgentEvents(ctx)
 	}
-	if err := a.waitForRequirements("optional", a.optionalRequirements()); err != nil {
+	if err := a.waitForRequirements(ctx, "optional", a.optionalRequirements(), index); err != nil {
 		errs = append(errs, err)
 	}
+	index += len(a.optionalRequirements())
 	if !*a.y.Plain {
 		logrus.Info("Waiting for the guest agent to be running")
 		select {
@@ -519,7 +522,7 @@ sudo chown -R "${USER}" /run/host-services`
 			}
 		}
 	}
-	if err := a.waitForRequirements("final", a.finalRequirements()); err != nil {
+	if err := a.waitForRequirements(ctx, "final", a.finalRequirements(), index); err != nil {
 		errs = append(errs, err)
 	}
 	// Copy all config files _after_ the requirements are done

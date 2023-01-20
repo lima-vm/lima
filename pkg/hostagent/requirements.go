@@ -1,16 +1,18 @@
 package hostagent
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
 
+	"github.com/lima-vm/lima/pkg/hostagent/events"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/sshocker/pkg/ssh"
 	"github.com/sirupsen/logrus"
 )
 
-func (a *HostAgent) waitForRequirements(label string, requirements []requirement) error {
+func (a *HostAgent) waitForRequirements(ctx context.Context, label string, requirements []requirement, index int) error {
 	const (
 		retries       = 60
 		sleepDuration = 10 * time.Second
@@ -18,6 +20,15 @@ func (a *HostAgent) waitForRequirements(label string, requirements []requirement
 	var errs []error
 
 	for i, req := range requirements {
+		stRequirement := events.Requirement{
+			Label:       label,
+			Number:      i + 1,
+			Count:       len(requirements),
+			Description: req.description,
+			Index:       index + i,
+			Total:       len(a.totalRequirements()),
+		}
+		a.emitEvent(ctx, events.Event{Requirement: stRequirement})
 	retryLoop:
 		for j := 0; j < retries; j++ {
 			logrus.Infof("Waiting for the %s requirement %d of %d: %q", label, i+1, len(requirements), req.description)
@@ -187,4 +198,12 @@ Check "/var/log/cloud-init-output.log" in the guest to see where the process is 
 `,
 		})
 	return req
+}
+
+func (a *HostAgent) totalRequirements() []requirement {
+	total := []requirement{}
+	total = append(total, a.essentialRequirements()...)
+	total = append(total, a.optionalRequirements()...)
+	total = append(total, a.finalRequirements()...)
+	return total
 }

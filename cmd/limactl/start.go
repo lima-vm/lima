@@ -96,6 +96,7 @@ See the examples in 'limactl create --help'.
 	if runtime.GOOS != "windows" {
 		startCommand.Flags().Bool("foreground", false, "run the hostagent in the foreground")
 	}
+	startCommand.Flags().Bool("progress", false, "show progress")
 	startCommand.Flags().Duration("timeout", start.DefaultWatchHostAgentEventsTimeout, "duration to wait for the instance to be running before timing out")
 	return startCommand
 }
@@ -115,6 +116,11 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 
 	// Create an instance, with menu TUI when TTY is available
 	tty, err := flags.GetBool("tty")
+	if err != nil {
+		return nil, err
+	}
+
+	start.OutputProgress, err = flags.GetBool("progress")
 	if err != nil {
 		return nil, err
 	}

@@ -31,6 +31,15 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var OutputProgress bool
+
+type Progress = string
+
+const (
+	ProgressBooting Progress = "Booting"
+	ProgressRunning Progress = "Running"
+)
+
 // DefaultWatchHostAgentEventsTimeout is the duration to wait for the instance
 // to be running before timing out.
 const DefaultWatchHostAgentEventsTimeout = 10 * time.Minute
@@ -272,7 +281,13 @@ func watchHostAgentEvents(ctx context.Context, inst *store.Instance, haStdoutPat
 		err                  error
 	)
 	onEvent := func(ev hostagentevents.Event) bool {
+		if ev.Requirement.Label != "" {
+			ShowRequirement(inst, ev.Requirement)
+			return false
+		}
+
 		if !printedSSHLocalPort && ev.Status.SSHLocalPort != 0 {
+			ShowProgress(inst, ProgressBooting)
 			logrus.Infof("SSH Local Port: %d", ev.Status.SSHLocalPort)
 			printedSSHLocalPort = true
 		}
@@ -291,6 +306,7 @@ func watchHostAgentEvents(ctx context.Context, inst *store.Instance, haStdoutPat
 				return true
 			}
 
+			ShowProgress(inst, ProgressRunning)
 			if *inst.Config.Plain {
 				logrus.Infof("READY. Run `ssh -F %q lima-%s` to open the shell.", inst.SSHConfigFile, inst.Name)
 			} else {
@@ -341,6 +357,29 @@ func LimactlShellCmd(instName string) string {
 		shellCmd = "lima"
 	}
 	return shellCmd
+}
+
+func ShowProgress(inst *store.Instance, progress Progress) {
+	if !OutputProgress {
+		return
+	}
+	var message string
+	switch progress {
+	case ProgressBooting:
+		message = fmt.Sprintf("Starting \"%s\"", inst.Name)
+	case ProgressRunning:
+		message = "READY."
+	}
+	fmt.Println(message)
+}
+
+func ShowRequirement(_ *store.Instance, req hostagentevents.Requirement) {
+	if !OutputProgress {
+		return
+	}
+	name := fmt.Sprintf("%s %d/%d", req.Label, req.Number, req.Count)
+	desc := req.Description
+	fmt.Printf("Waiting %d/%d [%s]: %q\n", req.Index+1, req.Total, name, desc)
 }
 
 func ShowMessage(inst *store.Instance) error {
