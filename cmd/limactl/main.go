@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/version"
 	"github.com/mattn/go-isatty"
@@ -60,6 +61,12 @@ func newApp() *cobra.Command {
 		if debug {
 			logrus.SetLevel(logrus.DebugLevel)
 		}
+
+		if osutil.IsBeingRosettaTranslated() {
+			// running under rosetta would provide inappropriate runtime.GOARCH info, see: https://github.com/lima-vm/lima/issues/543
+			return errors.New("limactl is running under rosetta, please reinstall lima with native arch")
+		}
+
 		if runtime.GOOS == "windows" && isatty.IsCygwinTerminal(os.Stdout.Fd()) {
 			formatter := new(logrus.TextFormatter)
 			// the default setting does not recognize cygwin on windows
