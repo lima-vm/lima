@@ -15,6 +15,7 @@ import (
 
 	"github.com/coreos/go-semver/semver"
 	"github.com/docker/go-units"
+	"github.com/google/gousb"
 	"github.com/lima-vm/lima/pkg/fileutils"
 	"github.com/lima-vm/lima/pkg/iso9660util"
 	"github.com/lima-vm/lima/pkg/limayaml"
@@ -468,6 +469,16 @@ func Cmdline(cfg Config) (string, []string, error) {
 		// TODO: consider using virtio cdrom for all the architectures
 		args = append(args, "-cdrom", filepath.Join(cfg.InstanceDir, filenames.CIDataISO))
 	}
+
+	// USB
+	ctx := gousb.NewContext()
+	defer ctx.Close()
+
+	ctx.OpenDevices(func(desc *gousb.DeviceDesc) bool {
+		args = append(args, "-device", fmt.Sprintf("nec-usb-xhci,id=usb-%s-%s", desc.Vendor, desc.Product))
+		args = append(args, "-device", fmt.Sprintf("usb-host,bus=usb-%s-%s.0,vendorid=0x%s,productid=0x%s", desc.Vendor, desc.Product, desc.Vendor, desc.Product))
+		return false
+	})
 
 	// Kernel
 	kernel := filepath.Join(cfg.InstanceDir, filenames.Kernel)

@@ -392,6 +392,10 @@ hostResolver:
 # - 1.1.1.1
 # - 1.0.0.1
 
+# Privileged mode enables some features that are not availble in normal mode, like USB sharing
+# in such mode "limectl start" will ask for root password
+privileged: false
+
 # ===================================================================== #
 # GLOBAL DEFAULTS AND OVERRIDES
 # ===================================================================== #

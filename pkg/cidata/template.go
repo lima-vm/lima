@@ -82,12 +82,12 @@ func ValidateTemplateArgs(args TemplateArgs) error {
 	if err := identifiers.Validate(args.User); err != nil {
 		return err
 	}
-	if args.User == "root" {
-		return errors.New("field User must not be \"root\"")
-	}
-	if args.UID == 0 {
-		return errors.New("field UID must not be 0")
-	}
+	// if args.User == "root" {
+	// 	return errors.New("field User must not be \"root\"")
+	// }
+	// if args.UID == 0 {
+	// 	return errors.New("field UID must not be 0")
+	// }
 	if len(args.SSHPubKeys) == 0 {
 		return errors.New("field SSHPubKeys must be set")
 	}
