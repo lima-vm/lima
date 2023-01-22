@@ -390,7 +390,7 @@ func ShowRequirement(_ *store.Instance, req hostagentevents.Requirement) {
 		// Disable the adaptive width of the bar element
 		pb.RegisterElement("bar", pb.ElementBar, false)
 		ProgressBar.SetTemplateString(tmpl)
-		ProgressBar.SetWidth(120)
+		ProgressBar.SetWidth(100) // with longest suffix
 		ProgressBar.Set("prefix", "Waiting")
 	} else {
 		// Flush the progress bar output for this line
