@@ -381,6 +381,9 @@ func ShowProgress(inst *store.Instance, progress Progress) {
 // Same as pb.Simple, but don't show the `{{percent . }}`
 const tmpl = `{{with string . "prefix"}}{{.}} {{end}}{{counters . }} {{bar . }} {{with string . "suffix"}} {{.}}{{end}}`
 
+// Keep the old progress bar showing, or clean on finish
+const keep = true
+
 func ShowRequirement(_ *store.Instance, req hostagentevents.Requirement) {
 	if !OutputProgress {
 		return
@@ -391,8 +394,9 @@ func ShowRequirement(_ *store.Instance, req hostagentevents.Requirement) {
 		pb.RegisterElement("bar", pb.ElementBar, false)
 		ProgressBar.SetTemplateString(tmpl)
 		ProgressBar.SetWidth(100) // with longest suffix
+		ProgressBar.Set(pb.CleanOnFinish, !keep)
 		ProgressBar.Set("prefix", "Waiting")
-	} else {
+	} else if keep {
 		// Flush the progress bar output for this line
 		ProgressBar.Finish()
 		ProgressBar.Start()
