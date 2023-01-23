@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"time"
 
 	"github.com/lima-vm/lima/pkg/reflectutil"
 
@@ -121,10 +122,27 @@ func (l *LimaVzDriver) Start(ctx context.Context) (chan error, error) {
 
 func (l *LimaVzDriver) Stop(_ context.Context) error {
 	logrus.Info("Shutting down VZ")
-	canStop := l.machine.CanStop()
+	canStop := l.machine.CanRequestStop()
+
 	if canStop {
-		return l.machine.Stop()
+		_, err := l.machine.RequestStop()
+		if err != nil {
+			return err
+		}
+
+		timeout := time.After(5 * time.Second)
+		tick := time.Tick(500 * time.Millisecond)
+		for {
+			select {
+			case <-timeout:
+				return errors.New("vz timeout while waiting for stop status")
+			case <-tick:
+				if l.machine.State() == vz.VirtualMachineStateStopped {
+					return nil
+				}
+			}
+		}
 	}
 
-	return nil
+	return errors.New("vz: CanRequestStop is not supported")
 }
