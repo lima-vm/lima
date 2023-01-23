@@ -10,7 +10,7 @@ require (
 	github.com/containerd/containerd v1.6.15
 	github.com/containerd/continuity v0.3.0
 	github.com/containers/gvisor-tap-vsock v0.4.1-0.20220920072955-5b1aff8ba743
-	github.com/coreos/go-semver v0.3.0
+	github.com/coreos/go-semver v0.3.1
 	github.com/cyphar/filepath-securejoin v0.2.3
 	github.com/digitalocean/go-qemu v0.0.0-20210326154740-ac9e0b687001
 	github.com/diskfs/go-diskfs v1.2.0
@@ -36,6 +36,7 @@ require (
 	golang.org/x/sync v0.1.0
 	golang.org/x/sys v0.4.0
 	gotest.tools/v3 v3.4.0
+	inet.af/tcpproxy v0.0.0-20220326234310-be3ee21c9fa0
 )
 
 require (
@@ -77,5 +78,4 @@ require (
 	gopkg.in/djherbis/times.v1 v1.2.0 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gvisor.dev/gvisor v0.0.0-20220908032458-edc830a43ba6 // indirect
-	inet.af/tcpproxy v0.0.0-20220326234310-be3ee21c9fa0 // indirect
 )
