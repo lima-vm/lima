@@ -157,7 +157,11 @@ alpine_image="ghcr.io/containerd/alpine:3.14.0"
 if [[ -n ${CHECKS["containerd-user"]} ]]; then
 	INFO "Run a nginx container with port forwarding 127.0.0.1:8080"
 	set -x
-	limactl shell "$NAME" nerdctl info
+	if ! limactl shell "$NAME" nerdctl info; then
+		limactl shell "$NAME" sudo cat /var/log/cloud-init-output.log
+		ERROR '"nerdctl info" failed'
+		exit 1
+	fi
 	limactl shell "$NAME" nerdctl pull --quiet ${nginx_image}
 	limactl shell "$NAME" nerdctl run -d --name nginx -p 127.0.0.1:8080:80 ${nginx_image}
 
