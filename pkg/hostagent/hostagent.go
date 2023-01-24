@@ -1,6 +1,7 @@
 package hostagent
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -111,6 +112,9 @@ func New(instName string, stdout io.Writer, sigintCh chan os.Signal, opts ...Opt
 	if err != nil {
 		return nil, err
 	}
+	if err = writeSSHConfigFile(inst, sshLocalPort, sshOpts); err != nil {
+		return nil, err
+	}
 	sshConfig := &ssh.SSHConfig{
 		AdditionalArgs: sshutil.SSHArgsFromOpts(sshOpts),
 	}
@@ -148,6 +152,28 @@ func New(instName string, stdout io.Writer, sigintCh chan os.Signal, opts ...Opt
 		eventEnc:        json.NewEncoder(stdout),
 	}
 	return a, nil
+}
+
+func writeSSHConfigFile(inst *store.Instance, sshLocalPort int, sshOpts []string) error {
+	if inst.Dir == "" {
+		return fmt.Errorf("directory is unknown for the instance %q", inst.Name)
+	}
+	var b bytes.Buffer
+	if _, err := fmt.Fprintf(&b, `# This SSH config file can be passed to 'ssh -F'.
+# This file is created by Lima, but not used by Lima itself currently.
+# Modifications to this file will be lost on restarting the Lima instance.
+`); err != nil {
+		return err
+	}
+	if err := sshutil.Format(&b, inst.Name, sshutil.FormatConfig,
+		append(sshOpts,
+			"Hostname=127.0.0.1",
+			fmt.Sprintf("Port=%d", sshLocalPort),
+		)); err != nil {
+		return err
+	}
+	fileName := filepath.Join(inst.Dir, filenames.SSHConfig)
+	return os.WriteFile(fileName, b.Bytes(), 0600)
 }
 
 func determineSSHLocalPort(y *limayaml.LimaYAML, instName string) (int, error) {

@@ -34,6 +34,10 @@ const showSSHExample = `
       User example
       Hostname 127.0.0.1
       Port 60022
+
+  To show the config file path:
+    $ limactl ls --format='{{.SSHConfigFile}}' default
+    /Users/example/.lima/default/ssh.config
 `
 
 func newShowSSHCommand() *cobra.Command {
