@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"strings"
 
@@ -11,20 +10,6 @@ import (
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/spf13/cobra"
 )
-
-const (
-	showSSHFormatCmd     = "cmd"
-	showSSHFormatArgs    = "args"
-	showSSHFormatOptions = "options"
-	showSSHFormatConfig  = "config"
-	// TODO: consider supporting "url" format (ssh://USER@HOSTNAME:PORT)
-
-	// TODO: consider supporting "json" format
-	// It is unclear whether we can just map ssh "config" into JSON, as "config" has duplicated keys.
-	// (JSON supports duplicated keys too, but not all JSON implementations expect JSON with duplicated keys)
-)
-
-var showSSHFormats = []string{showSSHFormatCmd, showSSHFormatArgs, showSSHFormatOptions, showSSHFormatConfig}
 
 const showSSHExample = `
   "cmd" format (default): Full ssh command line.
@@ -62,9 +47,9 @@ func newShowSSHCommand() *cobra.Command {
 		SilenceErrors:     true,
 	}
 
-	shellCmd.Flags().StringP("format", "f", showSSHFormatCmd, "Format: "+strings.Join(showSSHFormats, ", "))
+	shellCmd.Flags().StringP("format", "f", sshutil.FormatCmd, "Format: "+strings.Join(sshutil.Formats, ", "))
 	_ = shellCmd.RegisterFlagCompletionFunc("format", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		return showSSHFormats, cobra.ShellCompDirectiveNoFileComp
+		return sshutil.Formats, cobra.ShellCompDirectiveNoFileComp
 	})
 	return shellCmd
 }
@@ -93,51 +78,7 @@ func showSSHAction(cmd *cobra.Command, args []string) error {
 	}
 	opts = append(opts, "Hostname=127.0.0.1")
 	opts = append(opts, fmt.Sprintf("Port=%d", inst.SSHLocalPort))
-	return formatSSH(w, instName, format, opts)
-}
-
-func quoteOption(o string) string {
-	// make sure the shell doesn't swallow quotes in option values
-	if strings.ContainsRune(o, '"') {
-		o = "'" + o + "'"
-	}
-	return o
-}
-
-func formatSSH(w io.Writer, instName, format string, opts []string) error {
-	fakeHostname := "lima-" + instName // corresponds to the default guest hostname
-	switch format {
-	case showSSHFormatCmd:
-		args := []string{"ssh"}
-		for _, o := range opts {
-			args = append(args, "-o", quoteOption(o))
-		}
-		args = append(args, fakeHostname)
-		// the args are similar to `limactl shell` but not exactly same. (e.g., lacks -t)
-		fmt.Fprintln(w, strings.Join(args, " ")) // no need to use shellescape.QuoteCommand
-	case showSSHFormatArgs:
-		var args []string
-		for _, o := range opts {
-			args = append(args, "-o", quoteOption(o))
-		}
-		fmt.Fprintln(w, strings.Join(args, " ")) // no need to use shellescape.QuoteCommand
-	case showSSHFormatOptions:
-		for _, o := range opts {
-			fmt.Fprintln(w, o)
-		}
-	case showSSHFormatConfig:
-		fmt.Fprintf(w, "Host %s\n", fakeHostname)
-		for _, o := range opts {
-			kv := strings.SplitN(o, "=", 2)
-			if len(kv) != 2 {
-				return fmt.Errorf("unexpected option %q", o)
-			}
-			fmt.Fprintf(w, "  %s %s\n", kv[0], kv[1])
-		}
-	default:
-		return fmt.Errorf("unknown format: %q", format)
-	}
-	return nil
+	return sshutil.Format(w, instName, format, opts)
 }
 
 func showSSHBashComplete(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
