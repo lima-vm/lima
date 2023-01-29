@@ -136,6 +136,23 @@ uninstall:
 	if [ "$$(readlink "$(DEST)/bin/nerdctl")" = "nerdctl.lima" ]; then rm "$(DEST)/bin/nerdctl"; fi
 	if [ "$$(readlink "$(DEST)/bin/apptainer")" = "apptainer.lima" ]; then rm "$(DEST)/bin/apptainer"; fi
 
+# go install gotest.tools/gotestsum@latest
+# go install github.com/vakenbolt/go-test-report@latest
+.PHONY: test
+test:
+	@if command -v gotestsum >/dev/null 2>&1; then \
+		gotestsum --jsonfile unittest.json ./... -coverprofile=coverage.out; \
+	else \
+		go test -v ./... -coverprofile=coverage.out -json >unittest.json; \
+	fi
+	-$(MAKE) --no-print-directory coverage.html unittest.html
+
+unittest.html: unittest.json
+	go-test-report -o $@ <$<
+
+coverage.html: coverage.out
+	go tool cover -o $@ -html=$<
+
 .PHONY: lint
 lint:
 	golangci-lint run ./...

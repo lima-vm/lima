@@ -1,3 +1,7 @@
 _output/
 _artifacts/
 lima.REJECTED.yaml
+unittest.json
+unittest.html
+coverage.out
+coverage.html
