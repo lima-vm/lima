@@ -285,6 +285,7 @@ func PrintInstances(w io.Writer, instances []*Instance, format string) error {
 		if err != nil {
 			return err
 		}
+		data.Message = strings.TrimSuffix(instance.Message, "\n")
 		err = tmpl.Execute(w, data)
 		if err != nil {
 			return err

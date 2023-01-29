@@ -25,14 +25,15 @@ func ExecuteTemplate(tmpl string, args interface{}) ([]byte, error) {
 
 // PrefixString adds prefix to beginning of each line
 func PrefixString(prefix string, text string) string {
-	result := ""
+	result := []string{}
 	for _, line := range strings.Split(text, "\n") {
 		if line == "" {
+			result = append(result, "")
 			continue
 		}
-		result += prefix + line + "\n"
+		result = append(result, prefix+line)
 	}
-	return result
+	return strings.Join(result, "\n")
 }
 
 // IndentString add spaces to beginning of each line
@@ -74,13 +75,11 @@ var TemplateFuncMap = template.FuncMap{
 		return "---\n" + strings.TrimSuffix(b.String(), "\n")
 	},
 	"indent":  IndentString,
-	"trim":    TrimString,
 	"missing": MissingString,
 }
 
 // TemplateFuncHelp is help for TemplateFuncMap.
 var FuncHelp = []string{
 	"indent <size>: add spaces to beginning of each line",
-	"trim <cutset>: remove characters from beginning and end",
 	"missing <message>: return message if the text is empty",
 }

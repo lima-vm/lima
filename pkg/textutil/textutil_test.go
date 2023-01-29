@@ -9,11 +9,11 @@ import (
 )
 
 func TestPrefixString(t *testing.T) {
-	assert.Equal(t, "- foo\n", PrefixString("- ", "foo"))
+	assert.Equal(t, "- foo", PrefixString("- ", "foo"))
 	assert.Equal(t, "- foo\n- bar\n", PrefixString("- ", "foo\nbar\n"))
 }
 func TestIndentString(t *testing.T) {
-	assert.Equal(t, "  foo\n", IndentString(2, "foo"))
+	assert.Equal(t, "  foo", IndentString(2, "foo"))
 	assert.Equal(t, "  foo\n  bar\n", IndentString(2, "foo\nbar\n"))
 }
 
@@ -33,18 +33,18 @@ func TestTemplateFuncs(t *testing.T) {
 		Bar     string `json:"bar" yaml:"bar"`
 		Message string `json:"message,omitempty" yaml:"message,omitempty"`
 	}
-	x := X{Foo: 42, Bar: "hello", Message: "One\nTwo\nThree\n"}
+	x := X{Foo: 42, Bar: "hello", Message: "One\nTwo\nThree"}
 
 	testCases := map[string]string{
-		"{{json .}}": `{"foo":42,"bar":"hello","message":"One\nTwo\nThree\n"}`,
+		"{{json .}}": `{"foo":42,"bar":"hello","message":"One\nTwo\nThree"}`,
 		"{{yaml .}}": `---
 foo: 42
 bar: hello
-message: |
+message: |-
   One
   Two
   Three`,
-		`{{.Bar}}{{"\n"}}{{.Message | missing "<no message>" | indent 2 | trim "\n"}}`: "hello\n  One\n  Two\n  Three",
+		`{{.Bar}}{{"\n"}}{{.Message | missing "<no message>" | indent 2}}`: "hello\n  One\n  Two\n  Three",
 	}
 
 	for format, expected := range testCases {
