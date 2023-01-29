@@ -3,6 +3,7 @@ package textutil
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"text/template"
@@ -74,8 +75,46 @@ var TemplateFuncMap = template.FuncMap{
 		}
 		return "---\n" + strings.TrimSuffix(b.String(), "\n")
 	},
-	"indent":  IndentString,
-	"missing": MissingString,
+	"indent": func(a ...interface{}) (string, error) {
+		if len(a) == 0 {
+			return "", errors.New("function takes at at least one string argument")
+		}
+		if len(a) > 2 {
+			return "", errors.New("function takes at most 2 arguments")
+		}
+		var ok bool
+		size := 2
+		if len(a) > 1 {
+			if size, ok = a[0].(int); !ok {
+				return "", errors.New("optional first argument must be an integer")
+			}
+		}
+		text := ""
+		if text, ok = a[len(a)-1].(string); !ok {
+			return "", errors.New("last argument must be a string")
+		}
+		return IndentString(size, text), nil
+	},
+	"missing": func(a ...interface{}) (string, error) {
+		if len(a) == 0 {
+			return "", errors.New("function takes at at least one string argument")
+		}
+		if len(a) > 2 {
+			return "", errors.New("function takes at most 2 arguments")
+		}
+		var ok bool
+		message := "<missing>"
+		if len(a) > 1 {
+			if message, ok = a[0].(string); !ok {
+				return "", errors.New("optional first argument must be a string")
+			}
+		}
+		text := ""
+		if text, ok = a[len(a)-1].(string); !ok {
+			return "", errors.New("last argument must be a string")
+		}
+		return MissingString(message, text), nil
+	},
 }
 
 // TemplateFuncHelp is help for TemplateFuncMap.
