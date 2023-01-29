@@ -276,7 +276,11 @@ func PrintInstances(w io.Writer, instances []*Instance, format string) error {
 		return fmt.Errorf("invalid go template: %w", err)
 	}
 	for _, instance := range instances {
-		err = tmpl.Execute(w, instance)
+		data, err := AddGlobalFields(instance)
+		if err != nil {
+			return err
+		}
+		err = tmpl.Execute(w, data)
 		if err != nil {
 			return err
 		}
