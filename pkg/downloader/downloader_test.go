@@ -17,6 +17,11 @@ const (
 	dummyRemoteFileDigest = "sha256:58d2de96f9d91f0acd93cb1e28bf7c42fc86079037768d6aa63b4e7e7b3c9be0"
 )
 
+func TestMain(m *testing.M) {
+	HideProgress = true
+	os.Exit(m.Run())
+}
+
 func TestDownloadRemote(t *testing.T) {
 	if testing.Short() {
 		t.Skip()

@@ -19,6 +19,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var HideProgress bool
+
 type Status = string
 
 const (
@@ -297,6 +299,9 @@ func createBar(size int64) (*pb.ProgressBar, error) {
 	if isatty.IsTerminal(os.Stdout.Fd()) || isatty.IsCygwinTerminal(os.Stdout.Fd()) {
 		bar.SetTemplateString(`{{counters . }} {{bar . | green }} {{percent .}} {{speed . "%s/s"}}`)
 		bar.SetRefreshRate(200 * time.Millisecond)
+	} else if HideProgress {
+		bar.Set(pb.ReturnSymbol, "")
+		bar.SetTemplateString("")
 	} else {
 		bar.Set(pb.Terminal, false)
 		bar.Set(pb.ReturnSymbol, "\n")
