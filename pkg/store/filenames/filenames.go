@@ -37,6 +37,7 @@ const (
 	SerialLog          = "serial.log"
 	SerialSock         = "serial.sock"
 	SSHSock            = "ssh.sock"
+	SSHConfig          = "ssh.config"
 	GuestAgentSock     = "ga.sock"
 	HostAgentPID       = "ha.pid"
 	HostAgentSock      = "ha.sock"

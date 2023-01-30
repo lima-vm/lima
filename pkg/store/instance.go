@@ -47,6 +47,7 @@ type Instance struct {
 	AdditionalDisks []limayaml.Disk    `json:"additionalDisks,omitempty"`
 	Networks        []limayaml.Network `json:"network,omitempty"`
 	SSHLocalPort    int                `json:"sshLocalPort,omitempty"`
+	SSHConfigFile   string             `json:"sshConfigFile,omitempty"`
 	HostAgentPID    int                `json:"hostAgentPID,omitempty"`
 	DriverPID       int                `json:"driverPID,omitempty"`
 	Errors          []error            `json:"errors,omitempty"`
@@ -101,6 +102,7 @@ func Inspect(instName string) (*Instance, error) {
 	inst.AdditionalDisks = y.AdditionalDisks
 	inst.Networks = y.Networks
 	inst.SSHLocalPort = *y.SSH.LocalPort // maybe 0
+	inst.SSHConfigFile = filepath.Join(instDir, filenames.SSHConfig)
 
 	inst.HostAgentPID, err = ReadPIDFile(filepath.Join(instDir, filenames.HostAgentPID))
 	if err != nil {

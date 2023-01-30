@@ -225,6 +225,20 @@ Use `<INSTANCE>:<FILENAME>` to specify a source or target inside an instance.
 
 `limactl disk list`: list all existing disks
 
+#### `limactl show-ssh`
+- `limactl show-ssh --format=cmd <INSTANCE>` (default): Full `ssh` command line
+- `limactl show-ssh --format=args <INSTANCE>`: Similar to the `cmd` format but omits `ssh` and the destination address
+- `limactl show-ssh --format=options <INSTANCE>`: ssh option key value pairs
+- `limactl show-ssh --format=config <INSTANCE>`: `~/.ssh/config` format
+
+The config file is also automatically created inside the instance directory:
+```console
+$ limactl ls --format='{{.SSHConfigFile}}' default
+/Users/example/.lima/default/ssh.config
+
+$ ssh -F /Users/example/.lima/default/ssh.config lima-default
+```
+
 #### `limactl completion`
 - To enable bash completion, add `source <(limactl completion bash)` to `~/.bash_profile`.
 
