@@ -457,17 +457,10 @@ func Cmdline(cfg Config) (string, []string, error) {
 	}
 
 	// cloud-init
-	switch *y.Arch {
-	case limayaml.RISCV64:
-		// -cdrom does not seem recognized for RISCV64
-		args = append(args,
-			"-drive", "id=cdrom0,if=none,format=raw,readonly=on,file="+filepath.Join(cfg.InstanceDir, filenames.CIDataISO),
-			"-device", "virtio-scsi-pci,id=scsi0",
-			"-device", "scsi-cd,bus=scsi0.0,drive=cdrom0")
-	default:
-		// TODO: consider using virtio cdrom for all the architectures
-		args = append(args, "-cdrom", filepath.Join(cfg.InstanceDir, filenames.CIDataISO))
-	}
+	args = append(args,
+		"-drive", "id=cdrom0,if=none,format=raw,readonly=on,file="+filepath.Join(cfg.InstanceDir, filenames.CIDataISO),
+		"-device", "virtio-scsi-pci,id=scsi0",
+		"-device", "scsi-cd,bus=scsi0.0,drive=cdrom0")
 
 	// Kernel
 	kernel := filepath.Join(cfg.InstanceDir, filenames.Kernel)
