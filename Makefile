@@ -46,6 +46,7 @@ binaries: clean \
 	_output/bin/apptainer.lima \
 	_output/bin/docker.lima \
 	_output/bin/podman.lima \
+	_output/bin/kubectl.lima \
 	_output/share/lima/lima-guestagent.Linux-x86_64 \
 	_output/share/lima/lima-guestagent.Linux-aarch64 \
 	_output/share/lima/lima-guestagent.Linux-riscv64
@@ -84,6 +85,10 @@ _output/bin/docker.lima: ./cmd/docker.lima
 	cp -a $^ $@
 
 _output/bin/podman.lima: ./cmd/podman.lima
+	@mkdir -p _output/bin
+	cp -a $^ $@
+
+_output/bin/kubectl.lima: ./cmd/kubectl.lima
 	@mkdir -p _output/bin
 	cp -a $^ $@
 
@@ -132,6 +137,7 @@ uninstall:
 		"$(DEST)/bin/apptainer.lima" \
 		"$(DEST)/bin/docker.lima" \
 		"$(DEST)/bin/podman.lima" \
+		"$(DEST)/bin/kubectl.lima" \
 		"$(DEST)/share/lima" "$(DEST)/share/doc/lima"
 	if [ "$$(readlink "$(DEST)/bin/nerdctl")" = "nerdctl.lima" ]; then rm "$(DEST)/bin/nerdctl"; fi
 	if [ "$$(readlink "$(DEST)/bin/apptainer")" = "apptainer.lima" ]; then rm "$(DEST)/bin/apptainer"; fi
