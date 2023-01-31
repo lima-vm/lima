@@ -41,7 +41,8 @@ func newListCommand() *cobra.Command {
 		  --format yaml  - output in yaml format
 		  --format table - output in table format
 		  --format '{{ <go template> }}' - if the format begins and ends with '{{ }}', then it is used as a go template.
-
+` + store.FormatHelp +
+			`
 		The following legacy flags continue to function:
 		  --json - equal to '--format json'
 		`,
