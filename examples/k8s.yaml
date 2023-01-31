@@ -5,8 +5,7 @@
 # It can be accessed from the host by exporting the kubeconfig file;
 # the ports are already forwarded automatically by lima:
 #
-# $ export KUBECONFIG=$PWD/kubeconfig.yaml
-# $ limactl shell k8s sudo cat /etc/kubernetes/admin.conf >$KUBECONFIG
+# $ export KUBECONFIG=$(limactl list k8s --format 'unix://{{.Dir}}/copied-from-guest/kubeconfig.yaml')
 # $ kubectl get no
 # NAME       STATUS   ROLES                  AGE   VERSION
 # lima-k8s   Ready    control-plane,master   44s   v1.22.3
@@ -155,11 +154,12 @@ probes:
       echo >&2 "kubernetes cluster is not up and running yet"
       exit 1
     fi
+copyToHost:
+- guest: "/etc/kubernetes/admin.conf"
+  host: "{{.Dir}}/copied-from-guest/kubeconfig.yaml"
 message: |
   To run `kubectl` on the host (assumes kubectl is installed), run the following commands:
   ------
-  mkdir -p "{{.Dir}}/conf"
-  export KUBECONFIG="{{.Dir}}/conf/kubeconfig.yaml"
-  limactl shell {{.Name}} sudo cat /etc/kubernetes/admin.conf >$KUBECONFIG
+  export KUBECONFIG="{{.Dir}}/copied-from-guest/kubeconfig.yaml"
   kubectl ...
   ------

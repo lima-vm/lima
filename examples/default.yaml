@@ -336,6 +336,13 @@ networks:
 #   hostPortRange: [1, 65535]
 # # Any port still not matched by a rule will not be forwarded (ignored)
 
+# Copy files from the guest to the host. Copied after provisioning scripts have been completed.
+# copyToHost:
+# - guest: "/etc/myconfig.cfg"
+#   host: "{{.Dir}}/copied-from-guest/myconfig"
+# # "guest" can include these template variables: {{.Home}}, {{.UID}}, and {{.User}}.
+# # "host" can include {{.Home}}, {{.Dir}}, {{.Name}}, {{.UID}}, and {{.User}}.
+
 # Message. Information to be shown to the user, given as a Go template for the instance.
 # The same template variables as for listing instances can be used, for example {{.Dir}}.
 # You can view the complete list of variables using `limactl list --list-fields` command.

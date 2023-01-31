@@ -135,6 +135,12 @@ func TestFillDefault(t *testing.T) {
 				HostSocket:  "{{.Home}} | {{.Dir}} | {{.Name}} | {{.UID}} | {{.User}}",
 			},
 		},
+		CopyToHost: []CopyToHost{
+			{
+				GuestFile: "{{.Home}} | {{.UID}} | {{.User}}",
+				HostFile:  "{{.Home}} | {{.Dir}} | {{.Name}} | {{.UID}} | {{.User}}",
+			},
+		},
 		Env: map[string]string{
 			"ONE": "Eins",
 		},
@@ -183,6 +189,10 @@ func TestFillDefault(t *testing.T) {
 		defaultPortForward,
 		defaultPortForward,
 	}
+	expect.CopyToHost = []CopyToHost{
+		{},
+	}
+
 	// Setting GuestPort and HostPort for DeepEqual(), but they are not supposed to be used
 	// after FillDefault() has been called and the ...PortRange fields have been set.
 	expect.PortForwards[1].GuestPort = 80
@@ -196,6 +206,9 @@ func TestFillDefault(t *testing.T) {
 
 	expect.PortForwards[3].GuestSocket = fmt.Sprintf("%s | %s | %s", guestHome, user.Uid, user.Username)
 	expect.PortForwards[3].HostSocket = fmt.Sprintf("%s | %s | %s | %s | %s", hostHome, instDir, instName, user.Uid, user.Username)
+
+	expect.CopyToHost[0].GuestFile = fmt.Sprintf("%s | %s | %s", guestHome, user.Uid, user.Username)
+	expect.CopyToHost[0].HostFile = fmt.Sprintf("%s | %s | %s | %s | %s", hostHome, instDir, instName, user.Uid, user.Username)
 
 	expect.Env = y.Env
 
@@ -298,6 +311,7 @@ func TestFillDefault(t *testing.T) {
 			HostPortRange:  [2]int{80, 80},
 			Proto:          TCP,
 		}},
+		CopyToHost: []CopyToHost{{}},
 		Env: map[string]string{
 			"ONE": "one",
 			"TWO": "two",
@@ -346,6 +360,7 @@ func TestFillDefault(t *testing.T) {
 	expect.Provision = append(y.Provision, d.Provision...)
 	expect.Probes = append(y.Probes, d.Probes...)
 	expect.PortForwards = append(y.PortForwards, d.PortForwards...)
+	expect.CopyToHost = append(y.CopyToHost, d.CopyToHost...)
 	expect.Containerd.Archives = append(y.Containerd.Archives, d.Containerd.Archives...)
 	expect.AdditionalDisks = append(y.AdditionalDisks, d.AdditionalDisks...)
 
@@ -465,6 +480,7 @@ func TestFillDefault(t *testing.T) {
 			HostPortRange:  [2]int{8080, 8080},
 			Proto:          TCP,
 		}},
+		CopyToHost: []CopyToHost{{}},
 		Env: map[string]string{
 			"TWO":   "deux",
 			"THREE": "trois",
@@ -481,6 +497,7 @@ func TestFillDefault(t *testing.T) {
 	expect.Provision = append(append(o.Provision, y.Provision...), d.Provision...)
 	expect.Probes = append(append(o.Probes, y.Probes...), d.Probes...)
 	expect.PortForwards = append(append(o.PortForwards, y.PortForwards...), d.PortForwards...)
+	expect.CopyToHost = append(append(o.CopyToHost, y.CopyToHost...), d.CopyToHost...)
 	expect.Containerd.Archives = append(append(o.Containerd.Archives, y.Containerd.Archives...), d.Containerd.Archives...)
 	expect.AdditionalDisks = append(append(o.AdditionalDisks, y.AdditionalDisks...), d.AdditionalDisks...)
 

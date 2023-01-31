@@ -24,6 +24,7 @@ type LimaYAML struct {
 	Containerd      Containerd      `yaml:"containerd,omitempty" json:"containerd,omitempty"`
 	Probes          []Probe         `yaml:"probes,omitempty" json:"probes,omitempty"`
 	PortForwards    []PortForward   `yaml:"portForwards,omitempty" json:"portForwards,omitempty"`
+	CopyToHost      []CopyToHost    `yaml:"copyToHost,omitempty" json:"copyToHost,omitempty"`
 	Message         string          `yaml:"message,omitempty" json:"message,omitempty"`
 	Networks        []Network       `yaml:"networks,omitempty" json:"networks,omitempty"`
 	// `network` was deprecated in Lima v0.7.0, removed in Lima v0.14.0. Use `networks` instead.
@@ -177,6 +178,11 @@ type PortForward struct {
 	Proto             Proto  `yaml:"proto,omitempty" json:"proto,omitempty"`
 	Reverse           bool   `yaml:"reverse,omitempty" json:"reverse,omitempty"`
 	Ignore            bool   `yaml:"ignore,omitempty" json:"ignore,omitempty"`
+}
+
+type CopyToHost struct {
+	GuestFile string `yaml:"guest,omitempty" json:"guest,omitempty"`
+	HostFile  string `yaml:"host,omitempty" json:"host,omitempty"`
 }
 
 type Network struct {
