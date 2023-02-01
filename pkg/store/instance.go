@@ -239,17 +239,80 @@ func AddGlobalFields(inst *Instance) (FormatData, error) {
 	return data, nil
 }
 
+type PrintOptions struct {
+	AllFields     bool
+	TerminalWidth int
+}
+
 // PrintInstances prints instances in a requested format to a given io.Writer.
 // Supported formats are "json", "yaml", "table", or a go template
-func PrintInstances(w io.Writer, instances []*Instance, format string) error {
+func PrintInstances(w io.Writer, instances []*Instance, format string, options *PrintOptions) error {
 	switch format {
 	case "json":
 		format = "{{json .}}"
 	case "yaml":
 		format = "{{yaml .}}"
 	case "table":
+		types := map[string]int{}
+		archs := map[string]int{}
+		for _, instance := range instances {
+			types[instance.VMType]++
+			archs[instance.Arch]++
+		}
+		all := options != nil && options.AllFields
+		width := 0
+		if options != nil {
+			width = options.TerminalWidth
+		}
+		columnWidth := 8
+		hideType := false
+		hideArch := false
+		hideDir := false
+
+		columns := 1 // NAME
+		columns += 2 // STATUS
+		columns += 2 // SSH
+		// can we still fit the remaining columns (7)
+		if width == 0 || (columns+7)*columnWidth > width && !all {
+			hideType = len(types) == 1
+		}
+		if !hideType {
+			columns++ // VMTYPE
+		}
+		// only hide arch if it is the same as the host arch
+		goarch := limayaml.NewArch(runtime.GOARCH)
+		// can we still fit the remaining columns (6)
+		if width == 0 || (columns+6)*columnWidth > width && !all {
+			hideArch = len(archs) == 1 && instances[0].Arch == goarch
+		}
+		if !hideArch {
+			columns++ // ARCH
+		}
+		columns++ // CPUS
+		columns++ // MEMORY
+		columns++ // DISK
+		// can we still fit the remaining columns (2)
+		if width != 0 && (columns+2)*columnWidth > width && !all {
+			hideDir = true
+		}
+		if !hideDir {
+			columns += 2 // DIR
+		}
+		_ = columns
+
 		w := tabwriter.NewWriter(w, 4, 8, 4, ' ', 0)
-		fmt.Fprintln(w, "NAME\tSTATUS\tSSH\tVMTYPE\tARCH\tCPUS\tMEMORY\tDISK\tDIR")
+		fmt.Fprint(w, "NAME\tSTATUS\tSSH")
+		if !hideType {
+			fmt.Fprint(w, "\tVMTYPE")
+		}
+		if !hideArch {
+			fmt.Fprint(w, "\tARCH")
+		}
+		fmt.Fprint(w, "\tCPUS\tMEMORY\tDISK")
+		if !hideDir {
+			fmt.Fprint(w, "\tDIR")
+		}
+		fmt.Fprintln(w)
 
 		u, err := user.Current()
 		if err != nil {
@@ -262,17 +325,33 @@ func PrintInstances(w io.Writer, instances []*Instance, format string) error {
 			if strings.HasPrefix(dir, homeDir) {
 				dir = strings.Replace(dir, homeDir, "~", 1)
 			}
-			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%d\t%s\t%s\t%s\n",
+			fmt.Fprintf(w, "%s\t%s\t%s",
 				instance.Name,
 				instance.Status,
 				fmt.Sprintf("127.0.0.1:%d", instance.SSHLocalPort),
-				instance.VMType,
-				instance.Arch,
+			)
+			if !hideType {
+				fmt.Fprintf(w, "\t%s",
+					instance.VMType,
+				)
+			}
+			if !hideArch {
+				fmt.Fprintf(w, "\t%s",
+					instance.Arch,
+				)
+			}
+			fmt.Fprintf(w, "\t%d\t%s\t%s",
 				instance.CPUs,
 				units.BytesSize(float64(instance.Memory)),
 				units.BytesSize(float64(instance.Disk)),
-				dir,
 			)
+			if !hideDir {
+				fmt.Fprintf(w, "\t%s",
+					dir,
+				)
+			}
+			fmt.Fprint(w, "\n")
+
 		}
 		return w.Flush()
 	default:

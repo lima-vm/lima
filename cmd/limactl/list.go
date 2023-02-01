@@ -3,11 +3,14 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os"
 	"reflect"
 	"sort"
 	"strings"
 
+	"github.com/cheggaaa/pb/v3/termutil"
 	"github.com/lima-vm/lima/pkg/store"
+	"github.com/mattn/go-isatty"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -55,6 +58,7 @@ func newListCommand() *cobra.Command {
 	listCommand.Flags().Bool("list-fields", false, "List fields available for format")
 	listCommand.Flags().Bool("json", false, "JSONify output")
 	listCommand.Flags().BoolP("quiet", "q", false, "Only show names")
+	listCommand.Flags().Bool("all-fields", false, "Show all fields")
 
 	return listCommand
 }
@@ -156,7 +160,21 @@ func listAction(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	return store.PrintInstances(cmd.OutOrStdout(), instances, format)
+	allFields, err := cmd.Flags().GetBool("all-fields")
+	if err != nil {
+		return err
+	}
+
+	options := store.PrintOptions{AllFields: allFields}
+	out := cmd.OutOrStdout()
+	if out == os.Stdout {
+		if isatty.IsTerminal(os.Stdout.Fd()) || isatty.IsCygwinTerminal(os.Stdout.Fd()) {
+			if w, err := termutil.TerminalWidth(); err == nil {
+				options.TerminalWidth = w
+			}
+		}
+	}
+	return store.PrintInstances(out, instances, format, &options)
 }
 
 func listBashComplete(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
