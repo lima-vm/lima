@@ -121,6 +121,9 @@ ssh:
   # 🟢 Builtin default: true
   loadDotSSHPubKeys: null
   # Forward ssh agent into the instance.
+  # The ssh agent socket can be mounted in a container at the path `/run/host-services/ssh-auth.sock`.
+  # Set the environment variable `SSH_AUTH_SOCK` value to the path above.
+  # The socket is accessible by the non-root user inside the Lima instance.
   # 🟢 Builtin default: false
   forwardAgent: null
   # Forward X11 into the instance
