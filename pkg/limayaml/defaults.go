@@ -315,6 +315,10 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		// After defaults processing the singular HostPort and GuestPort values should not be used again.
 	}
 
+	y.CopyToGuest = append(append(o.CopyToGuest, y.CopyToGuest...), d.CopyToGuest...)
+	for i := range y.CopyToGuest {
+		FillCopyToGuestDefaults(&y.CopyToGuest[i], instDir)
+	}
 	y.CopyToHost = append(append(o.CopyToHost, y.CopyToHost...), d.CopyToHost...)
 	for i := range y.CopyToHost {
 		FillCopyToHostDefaults(&y.CopyToHost[i], instDir)
@@ -553,10 +557,12 @@ func executeHostTemplate(format string, instDir string) (bytes.Buffer, error) {
 	tmpl, err := template.New("").Parse(format)
 	if err == nil {
 		user, _ := osutil.LimaUser(false)
+		pwd, _ := os.Getwd()
 		home, _ := os.UserHomeDir()
 		limaHome, _ := dirnames.LimaDir()
 		data := map[string]string{
 			"Dir":  instDir,
+			"Pwd":  pwd,
 			"Home": home,
 			"Name": filepath.Base(instDir),
 			"UID":  user.Uid,
@@ -619,6 +625,23 @@ func FillPortForwardDefaults(rule *PortForward, instDir string) {
 		}
 		if !filepath.IsAbs(rule.HostSocket) {
 			rule.HostSocket = filepath.Join(instDir, filenames.SocketDir, rule.HostSocket)
+		}
+	}
+}
+
+func FillCopyToGuestDefaults(rule *CopyToGuest, instDir string) {
+	if rule.GuestFile != "" {
+		if out, err := executeGuestTemplate(rule.GuestFile); err == nil {
+			rule.GuestFile = out.String()
+		} else {
+			logrus.WithError(err).Warnf("Couldn't process guest %q as a template", rule.GuestFile)
+		}
+	}
+	if rule.HostFile != "" {
+		if out, err := executeHostTemplate(rule.HostFile, instDir); err == nil {
+			rule.HostFile = out.String()
+		} else {
+			logrus.WithError(err).Warnf("Couldn't process host %q as a template", rule.HostFile)
 		}
 	}
 }

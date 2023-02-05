@@ -339,6 +339,13 @@ networks:
 #   hostPortRange: [1, 65535]
 # # Any port still not matched by a rule will not be forwarded (ignored)
 
+# Copy files from the host to the guest. Copied before provisioning scripts have been started.
+# copyToGuest:
+# - host: "{{.Pwd}}/myscript"
+#   guest: "/tmp/myscript.sh"
+# # "guest" can include these template variables: {{.Home}}, {{.UID}}, and {{.User}}.
+# # "host" can include {{.Pwd}}, {{.Home}}, {{.Dir}}, {{.Name}}, {{.UID}}, and {{.User}}.
+
 # Copy files from the guest to the host. Copied after provisioning scripts have been completed.
 # copyToHost:
 # - guest: "/etc/myconfig.cfg"

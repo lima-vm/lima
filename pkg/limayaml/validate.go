@@ -249,6 +249,19 @@ func Validate(y LimaYAML, warn bool) error {
 		// Not validating that the various GuestPortRanges and HostPortRanges are not overlapping. Rules will be
 		// processed sequentially and the first matching rule for a guest port determines forwarding behavior.
 	}
+	for i, rule := range y.CopyToGuest {
+		field := fmt.Sprintf("CopyToGuest[%d]", i)
+		if rule.GuestFile != "" {
+			if !path.IsAbs(rule.GuestFile) {
+				return fmt.Errorf("field `%s.guest` must be an absolute path", field)
+			}
+		}
+		if rule.HostFile != "" {
+			if !filepath.IsAbs(rule.HostFile) {
+				return fmt.Errorf("field `%s.host` must be an absolute path, but is %q", field, rule.HostFile)
+			}
+		}
+	}
 	for i, rule := range y.CopyToHost {
 		field := fmt.Sprintf("CopyToHost[%d]", i)
 		if rule.GuestFile != "" {

@@ -24,6 +24,7 @@ type LimaYAML struct {
 	Containerd      Containerd      `yaml:"containerd,omitempty" json:"containerd,omitempty"`
 	Probes          []Probe         `yaml:"probes,omitempty" json:"probes,omitempty"`
 	PortForwards    []PortForward   `yaml:"portForwards,omitempty" json:"portForwards,omitempty"`
+	CopyToGuest     []CopyToGuest   `yaml:"copyToGuest,omitempty" json:"copyToGuest,omitempty"`
 	CopyToHost      []CopyToHost    `yaml:"copyToHost,omitempty" json:"copyToHost,omitempty"`
 	Message         string          `yaml:"message,omitempty" json:"message,omitempty"`
 	Networks        []Network       `yaml:"networks,omitempty" json:"networks,omitempty"`
@@ -178,6 +179,11 @@ type PortForward struct {
 	Proto             Proto  `yaml:"proto,omitempty" json:"proto,omitempty"`
 	Reverse           bool   `yaml:"reverse,omitempty" json:"reverse,omitempty"`
 	Ignore            bool   `yaml:"ignore,omitempty" json:"ignore,omitempty"`
+}
+
+type CopyToGuest struct {
+	HostFile  string `yaml:"host,omitempty" json:"host,omitempty"`
+	GuestFile string `yaml:"guest,omitempty" json:"guest,omitempty"`
 }
 
 type CopyToHost struct {

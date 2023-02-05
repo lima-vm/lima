@@ -388,6 +388,12 @@ sudo chown -R "${USER}" /run/host-services`
 			return unlockMErr
 		})
 	}
+	// Copy all script files _before_ the requirements are run
+	for _, rule := range a.y.CopyToGuest {
+		if err := copyToGuest(ctx, a.sshConfig, a.sshLocalPort, rule.HostFile, rule.GuestFile); err != nil {
+			mErr = multierror.Append(mErr, err)
+		}
+	}
 	go a.watchGuestAgentEvents(ctx)
 	if err := a.waitForRequirements(ctx, "optional", a.optionalRequirements()); err != nil {
 		mErr = multierror.Append(mErr, err)
@@ -567,6 +573,51 @@ func forwardSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, 
 			}
 		}
 		return fmt.Errorf("failed to run %v: %q: %w", cmd.Args, string(out), err)
+	}
+	return nil
+}
+
+func isExecOwner(mode os.FileMode) bool {
+	return mode&0100 != 0
+}
+
+func copyToGuest(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, remote string) error {
+	args := sshConfig.Args()
+	args = append(args,
+		"-p", strconv.Itoa(port),
+		"127.0.0.1",
+		"--",
+	)
+	logrus.Infof("Copying script from %s to %s", local, remote)
+	in, err := os.Open(local)
+	if err != nil {
+		return fmt.Errorf("can't read from local file %q: %w", local, err)
+	}
+	defer in.Close()
+	args1 := append(args,
+		"tee",
+		remote,
+	)
+	cmd := exec.CommandContext(ctx, sshConfig.Binary(), args1...)
+	cmd.Stdin = in
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to run %v: %w", cmd.Args, err)
+	}
+	// copy executable bit
+	st, err := os.Stat(local)
+	if err != nil {
+		return err
+	}
+	if isExecOwner(st.Mode()) {
+		args := append(args,
+			"chmod",
+			"u+x",
+			remote,
+		)
+		cmd = exec.CommandContext(ctx, sshConfig.Binary(), args...)
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to run %v: %w", cmd.Args, err)
+		}
 	}
 	return nil
 }
