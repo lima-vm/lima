@@ -13,7 +13,7 @@ require (
 	github.com/coreos/go-semver v0.3.1
 	github.com/cyphar/filepath-securejoin v0.2.3
 	github.com/digitalocean/go-qemu v0.0.0-20210326154740-ac9e0b687001
-	github.com/diskfs/go-diskfs v1.2.0
+	github.com/diskfs/go-diskfs v1.3.0
 	github.com/docker/go-units v0.5.0
 	github.com/elastic/go-libaudit/v2 v2.3.2
 	github.com/foxcpp/go-mockdns v1.0.0
