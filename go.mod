@@ -34,7 +34,7 @@ require (
 	github.com/xorcare/pointer v1.2.2
 	github.com/yalue/native_endian v1.0.2
 	golang.org/x/sync v0.1.0
-	golang.org/x/sys v0.4.0
+	golang.org/x/sys v0.5.0
 	gotest.tools/v3 v3.4.0
 	inet.af/tcpproxy v0.0.0-20220326234310-be3ee21c9fa0
 )
