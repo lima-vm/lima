@@ -28,7 +28,7 @@ jobs:
         xcrun --show-sdk-version
     - uses: actions/setup-go@v3
       with:
-        go-version: 1.19.x
+        go-version: 1.20.x
     - uses: actions/checkout@v3
       with:
         fetch-depth: 1
@@ -51,7 +51,7 @@ jobs:
         path: _artifacts/
     - uses: actions/setup-go@v3
       with:
-        go-version: 1.19.x
+        go-version: 1.20.x
     - name: Install gcc-aarch64-linux-gnu
       run: |
         sudo apt-get update
