@@ -11,6 +11,7 @@ import (
 	"github.com/elastic/go-libaudit/v2/auparse"
 	"github.com/lima-vm/lima/pkg/guestagent/api"
 	"github.com/lima-vm/lima/pkg/guestagent/iptables"
+	"github.com/lima-vm/lima/pkg/guestagent/kubernetesservice"
 	"github.com/lima-vm/lima/pkg/guestagent/procnettcp"
 	"github.com/lima-vm/lima/pkg/guestagent/timesync"
 	"github.com/sirupsen/logrus"
@@ -19,7 +20,8 @@ import (
 
 func New(newTicker func() (<-chan time.Time, func()), iptablesIdle time.Duration) (Agent, error) {
 	a := &agent{
-		newTicker: newTicker,
+		newTicker:                newTicker,
+		kubernetesServiceWatcher: kubernetesservice.NewServiceWatcher(),
 	}
 
 	auditClient, err := libaudit.NewMulticastAuditClient(nil)
@@ -37,6 +39,7 @@ func New(newTicker func() (<-chan time.Time, func()), iptablesIdle time.Duration
 	}
 
 	go a.setWorthCheckingIPTablesRoutine(auditClient, iptablesIdle)
+	go a.kubernetesServiceWatcher.Start()
 	go a.fixSystemTimeSkew()
 	return a, nil
 }
@@ -47,10 +50,11 @@ type agent struct {
 	// reload /proc/net/tcp.
 	newTicker func() (<-chan time.Time, func())
 
-	worthCheckingIPTables   bool
-	worthCheckingIPTablesMu sync.RWMutex
-	latestIPTables          []iptables.Entry
-	latestIPTablesMu        sync.RWMutex
+	worthCheckingIPTables    bool
+	worthCheckingIPTablesMu  sync.RWMutex
+	latestIPTables           []iptables.Entry
+	latestIPTablesMu         sync.RWMutex
+	kubernetesServiceWatcher *kubernetesservice.ServiceWatcher
 }
 
 // setWorthCheckingIPTablesRoutine sets worthCheckingIPTables to be true
@@ -227,6 +231,24 @@ func (a *agent) LocalPorts(ctx context.Context) ([]api.IPPort, error) {
 				api.IPPort{
 					IP:   ipt.IP,
 					Port: ipt.Port,
+				})
+		}
+	}
+
+	kubernetesEntries := a.kubernetesServiceWatcher.GetPorts()
+	for _, entry := range kubernetesEntries {
+		found := false
+		for _, re := range res {
+			if re.Port == int(entry.Port) {
+				found = true
+			}
+		}
+
+		if !found {
+			res = append(res,
+				api.IPPort{
+					IP:   entry.IP,
+					Port: int(entry.Port),
 				})
 		}
 	}
