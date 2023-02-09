@@ -20,6 +20,7 @@ import (
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sys/cpu"
 )
 
 type PubKey struct {
@@ -293,4 +294,12 @@ func detectValidPublicKey(content string) bool {
 	}
 	var sigFormat = string(decodedKey[4 : 4+sigLength])
 	return algo == sigFormat
+}
+
+func detectAESAcceleration() bool {
+	if !cpu.Initialized {
+		logrus.Warn("Failed to detect CPU features. Assuming that AES acceleration is not available.")
+		return false
+	}
+	return cpu.ARM.HasAES || cpu.ARM64.HasAES || cpu.S390X.HasAES || cpu.X86.HasAES
 }

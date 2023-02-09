@@ -348,8 +348,6 @@ github.com/inconshreveable/mousetrap v1.0.1 h1:U3uMjPSQEBMNp1lFxmllqCPM6P5u/Xq7P
 github.com/inconshreveable/mousetrap v1.0.1/go.mod h1:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
 github.com/insomniacslk/dhcp v0.0.0-20220504074936-1ca156eafb9f h1:l1QCwn715k8nYkj4Ql50rzEog3WnMdrd4YYMMwemxEo=
 github.com/insomniacslk/dhcp v0.0.0-20220504074936-1ca156eafb9f/go.mod h1:h+MxyHxRg9NH3terB1nfRIUaQEcI0XOVkdR9LNBlp8E=
-github.com/intel-go/cpuid v0.0.0-20220614022739-219e067757cb h1:Fg0Y/RDZ6UPwl3o7/IzPbneDq8g9+gH6DPs42KFUsy8=
-github.com/intel-go/cpuid v0.0.0-20220614022739-219e067757cb/go.mod h1:RmeVYf9XrPRbRc3XIx0gLYA8qOFvNoPOfaEZduRlEp4=
 github.com/jonboulle/clockwork v0.1.0/go.mod h1:Ii8DK3G1RaLaWxj9trq07+26W01tbo22gdxWY5EU2bo=
 github.com/jsimonetti/rtnetlink v0.0.0-20190606172950-9527aa82566a/go.mod h1:Oz+70psSo5OFh8DBl0Zv2ACw7Esh6pPUphlvZG9x7uw=
 github.com/jsimonetti/rtnetlink v0.0.0-20200117123717-f846d4f6c1f4/go.mod h1:WGuG/smIU4J/54PblvSbh+xvCZmpJnFgr3ds6Z55XMQ=
