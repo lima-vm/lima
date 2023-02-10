@@ -2,7 +2,6 @@ package guestagent
 
 import (
 	"context"
-	"encoding/binary"
 	"errors"
 	"reflect"
 	"sync"
@@ -15,7 +14,7 @@ import (
 	"github.com/lima-vm/lima/pkg/guestagent/procnettcp"
 	"github.com/lima-vm/lima/pkg/guestagent/timesync"
 	"github.com/sirupsen/logrus"
-	"github.com/yalue/native_endian"
+	"golang.org/x/sys/cpu"
 )
 
 func New(newTicker func() (<-chan time.Time, func()), iptablesIdle time.Duration) (Agent, error) {
@@ -171,7 +170,7 @@ func (a *agent) Events(ctx context.Context, ch chan api.Event) {
 }
 
 func (a *agent) LocalPorts(ctx context.Context) ([]api.IPPort, error) {
-	if native_endian.NativeEndian() == binary.BigEndian {
+	if cpu.IsBigEndian {
 		return nil, errors.New("big endian architecture is unsupported, because I don't know how /proc/net/tcp looks like on big endian hosts")
 	}
 	var res []api.IPPort
