@@ -10,6 +10,7 @@ import (
 
 	"github.com/cheggaaa/pb/v3/termutil"
 	"github.com/lima-vm/lima/pkg/store"
+	"github.com/lithammer/dedent"
 	"github.com/mattn/go-isatty"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -37,18 +38,17 @@ func newListCommand() *cobra.Command {
 		Use:     "list [flags] [INSTANCE]...",
 		Aliases: []string{"ls"},
 		Short:   "List instances of Lima.",
-		Long: `List instances of Lima.
+		Long: "List instances of Lima.\n" + dedent.Dedent(`
 		The output can be presented in one of several formats, using the --format <format> flag.
 		
 		  --format json  - output in json format
 		  --format yaml  - output in yaml format
 		  --format table - output in table format
 		  --format '{{ <go template> }}' - if the format begins and ends with '{{ }}', then it is used as a go template.
-` + store.FormatHelp +
-			`
+`) + store.FormatHelp + dedent.Dedent(`
 		The following legacy flags continue to function:
 		  --json - equal to '--format json'
-		`,
+		`),
 		Args:              cobra.ArbitraryArgs,
 		RunE:              listAction,
 		ValidArgsFunction: listBashComplete,
