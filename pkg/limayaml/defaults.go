@@ -186,6 +186,16 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.Video.Display = pointer.String("none")
 	}
 
+	if y.Video.VNC.Display == nil {
+		y.Video.VNC.Display = d.Video.VNC.Display
+	}
+	if o.Video.VNC.Display != nil {
+		y.Video.VNC.Display = o.Video.VNC.Display
+	}
+	if y.Video.VNC.Display == nil || *y.Video.VNC.Display == "" {
+		y.Video.VNC.Display = pointer.String("127.0.0.1:0,to=9")
+	}
+
 	if y.Firmware.LegacyBIOS == nil {
 		y.Firmware.LegacyBIOS = d.Firmware.LegacyBIOS
 	}

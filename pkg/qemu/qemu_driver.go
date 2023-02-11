@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -106,6 +107,86 @@ func (l *LimaQemuDriver) Stop(ctx context.Context) error {
 	return l.shutdownQEMU(ctx, 3*time.Minute, l.qCmd, l.qWaitCh)
 }
 
+func (l *LimaQemuDriver) ChangeDisplayPassword(ctx context.Context, password string) error {
+	return l.changeVNCPassword(ctx, password)
+}
+
+func (l *LimaQemuDriver) GetDisplayConnection(ctx context.Context) (string, error) {
+	return l.getVNCDisplayPort(ctx)
+}
+
+func waitFileExists(path string, timeout time.Duration) error {
+	startWaiting := time.Now()
+	for {
+		_, err := os.Stat(path)
+		if err == nil {
+			break
+		}
+		if !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+		if time.Since(startWaiting) > timeout {
+			return fmt.Errorf("timeout waiting for %s", path)
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+	return nil
+}
+
+func (l *LimaQemuDriver) changeVNCPassword(ctx context.Context, password string) error {
+	qmpSockPath := filepath.Join(l.Instance.Dir, filenames.QMPSock)
+	err := waitFileExists(qmpSockPath, 30*time.Second)
+	if err != nil {
+		return err
+	}
+	qmpClient, err := qmp.NewSocketMonitor("unix", qmpSockPath, 5*time.Second)
+	if err != nil {
+		return err
+	}
+	if err := qmpClient.Connect(); err != nil {
+		return err
+	}
+	defer func() { _ = qmpClient.Disconnect() }()
+	rawClient := raw.NewMonitor(qmpClient)
+	err = rawClient.ChangeVNCPassword(password)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (l *LimaQemuDriver) getVNCDisplayPort(ctx context.Context) (string, error) {
+	qmpSockPath := filepath.Join(l.Instance.Dir, filenames.QMPSock)
+	qmpClient, err := qmp.NewSocketMonitor("unix", qmpSockPath, 5*time.Second)
+	if err != nil {
+		return "", err
+	}
+	if err := qmpClient.Connect(); err != nil {
+		return "", err
+	}
+	defer func() { _ = qmpClient.Disconnect() }()
+	rawClient := raw.NewMonitor(qmpClient)
+	info, err := rawClient.QueryVNC()
+	if err != nil {
+		return "", err
+	}
+	return *info.Service, nil
+}
+
+func (l *LimaQemuDriver) removeVNCFiles() error {
+	vncfile := filepath.Join(l.Instance.Dir, filenames.VNCDisplayFile)
+	err := os.RemoveAll(vncfile)
+	if err != nil {
+		return err
+	}
+	vncpwdfile := filepath.Join(l.Instance.Dir, filenames.VNCPasswordFile)
+	err = os.RemoveAll(vncpwdfile)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (l *LimaQemuDriver) shutdownQEMU(ctx context.Context, timeout time.Duration, qCmd *exec.Cmd, qWaitCh <-chan error) error {
 	logrus.Info("Shutting down QEMU with ACPI")
 	qmpSockPath := filepath.Join(l.Instance.Dir, filenames.QMPSock)
@@ -129,6 +210,7 @@ func (l *LimaQemuDriver) shutdownQEMU(ctx context.Context, timeout time.Duration
 	select {
 	case qWaitErr := <-qWaitCh:
 		logrus.WithError(qWaitErr).Info("QEMU has exited")
+		l.removeVNCFiles()
 		return qWaitErr
 	case <-deadline:
 	}
@@ -144,6 +226,7 @@ func (l *LimaQemuDriver) killQEMU(_ context.Context, _ time.Duration, qCmd *exec
 	logrus.WithError(qWaitErr).Info("QEMU has exited, after killing forcibly")
 	qemuPIDPath := filepath.Join(l.Instance.Dir, filenames.PIDFile(*l.Yaml.VMType))
 	_ = os.RemoveAll(qemuPIDPath)
+	l.removeVNCFiles()
 	return qWaitErr
 }
 
