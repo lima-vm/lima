@@ -21,6 +21,7 @@ import (
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/lima-vm/lima/pkg/templatestore"
+	"github.com/lima-vm/lima/pkg/yqutil"
 	"github.com/mattn/go-isatty"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -35,6 +36,9 @@ $ limactl start
 
 To create an instance "default" from a template "docker":
 $ limactl start --name=default template://docker
+
+To create an instance "default" with modified parameters:
+$ limactl start --set='.cpus = 2 | .memory = "2GiB"'
 
 To see the template list:
 $ limactl start --list-templates
@@ -56,6 +60,7 @@ $ cat template.yaml | limactl start --name=local -
 	// TODO: "survey" does not support using cygwin terminal on windows yet
 	startCommand.Flags().Bool("tty", isatty.IsTerminal(os.Stdout.Fd()), "enable TUI interactions such as opening an editor, defaults to true when stdout is a terminal")
 	startCommand.Flags().String("name", "", "override the instance name")
+	startCommand.Flags().String("set", "", "modify the template inplace, using yq syntax")
 	startCommand.Flags().Bool("list-templates", false, "list available templates and exit")
 	startCommand.Flags().Duration("timeout", start.DefaultWatchHostAgentEventsTimeout, "duration to wait for the instance to be running before timing out")
 	return startCommand
@@ -79,6 +84,10 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 	}
 
 	st.instName, err = cmd.Flags().GetString("name")
+	if err != nil {
+		return nil, err
+	}
+	st.yq, err = cmd.Flags().GetString("set")
 	if err != nil {
 		return nil, err
 	}
@@ -206,6 +215,9 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 		}
 	} else {
 		logrus.Info("Terminal is not available, proceeding without opening an editor")
+		if err := modifyInPlace(st); err != nil {
+			return nil, err
+		}
 	}
 	saveBrokenEditorBuffer := tty
 	return createInstance(st, saveBrokenEditorBuffer)
@@ -261,10 +273,27 @@ func createInstance(st *creatorState, saveBrokenEditorBuffer bool) (*store.Insta
 type creatorState struct {
 	instName string // instance name
 	yBytes   []byte // yaml bytes
+	yq       string // yq expression
+}
+
+func modifyInPlace(st *creatorState) error {
+	if st.yq == "" {
+		return nil
+	}
+	out, err := yqutil.EvaluateExpression(st.yq, st.yBytes)
+	if err != nil {
+		return err
+	}
+	st.yBytes = out
+	return nil
 }
 
 func chooseNextCreatorState(st *creatorState) (*creatorState, error) {
 	for {
+		if err := modifyInPlace(st); err != nil {
+			logrus.WithError(err).Warn("Failed to evaluate yq expression")
+			return st, err
+		}
 		var ans string
 		prompt := &survey.Select{
 			Message: fmt.Sprintf("Creating an instance %q", st.instName),
