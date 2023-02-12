@@ -35,6 +35,7 @@ type LimaYAML struct {
 	PropagateProxyEnv *bool          `yaml:"propagateProxyEnv,omitempty" json:"propagateProxyEnv,omitempty"`
 	CACertificates    CACertificates `yaml:"caCerts,omitempty" json:"caCerts,omitempty"`
 	Rosetta           Rosetta        `yaml:"rosetta,omitempty" json:"rosetta,omitempty"`
+	Privileged        *bool          `yaml:"privileged,omitempty" json:"privileged,omitempty"`
 }
 
 type Arch = string
