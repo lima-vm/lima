@@ -291,7 +291,7 @@ func (a *HostAgent) Run(ctx context.Context) error {
 		return err
 	}
 
-	if *a.y.Video.Display == "vnc" {
+	if a.y.Video.Display != nil && *a.y.Video.Display == "vnc" {
 		vncdisplay, vncoptions, _ := strings.Cut(*a.y.Video.VNC.Display, ",")
 		vnchost, vncnum, err := net.SplitHostPort(vncdisplay)
 		if err != nil {

@@ -192,7 +192,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 	if o.Video.VNC.Display != nil {
 		y.Video.VNC.Display = o.Video.VNC.Display
 	}
-	if y.Video.VNC.Display == nil || *y.Video.VNC.Display == "" {
+	if (y.Video.VNC.Display == nil || *y.Video.VNC.Display == "") && *y.VMType == QEMU {
 		y.Video.VNC.Display = pointer.String("127.0.0.1:0,to=9")
 	}
 
