@@ -377,8 +377,8 @@ github.com/kr/pty v1.1.4-0.20190131011033-7dc38fb350b1/go.mod h1:pFQYn66WHrOpPYN
 github.com/kr/text v0.1.0/go.mod h1:4Jbv+DJW3UT/LiOwJeYQe1efqtUx/iVham/4vfdArNI=
 github.com/leodido/go-urn v1.2.0 h1:hpXL4XnriNwQ/ABnpepYM/1vCLWNDfUNts8dX3xTG6Y=
 github.com/leodido/go-urn v1.2.0/go.mod h1:+8+nEpDfqqsY+g338gtMEUOtuK+4dEMhiQEgxpxOKII=
-github.com/lima-vm/sshocker v0.3.1 h1:MxqWJVsNZ2AKw/mWJ3n2DBNxFABZpaR79olLIjAQK8o=
-github.com/lima-vm/sshocker v0.3.1/go.mod h1:Pv7KiykFCequiWTPMytCbAC92ZT2TSFPgmMqGgh3vm0=
+github.com/lima-vm/sshocker v0.3.2 h1:o0WqVzcpt6mzVCuqtS3N3O8kwTx6X4SLr4h7YaRISuE=
+github.com/lima-vm/sshocker v0.3.2/go.mod h1:9SWN6wob210VM6oJkkzvWQOlHSp/rQLB+0fSEc92zig=
 github.com/linuxkit/virtsock v0.0.0-20220523201153-1a23e78aa7a2/go.mod h1:SWzULI85WerrFt3u+nIm5F9l7EvxZTKQvd0InF3nmgM=
 github.com/lithammer/dedent v1.1.0 h1:VNzHMVCBNG1j0fh3OrsFRkVUwStdDArbgBWoPAffktY=
 github.com/lithammer/dedent v1.1.0/go.mod h1:jrXYCQtgg0nJiN+StA2KgR7w6CiQNv9Fd/Z9BP0jIOc=
