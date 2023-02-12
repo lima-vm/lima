@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"sync"
 
@@ -298,6 +299,19 @@ func detectValidPublicKey(content string) bool {
 
 func detectAESAcceleration() bool {
 	if !cpu.Initialized {
+		if runtime.GOOS == "darwin" && runtime.GOARCH == "arm64" {
+			// golang.org/x/sys/cpu supports darwin/amd64, linux/amd64, and linux/arm64,
+			// but apparently lacks support for darwin/arm64: https://github.com/golang/sys/blob/v0.5.0/cpu/cpu_arm64.go#L43-L60
+			//
+			// According to https://gist.github.com/voluntas/fd279c7b4e71f9950cfd4a5ab90b722b ,
+			// aes-128-gcm is faster than chacha20-poly1305 on Apple M1.
+			//
+			// So we return `true` here.
+			//
+			// This workaround will not be needed when https://go-review.googlesource.com/c/sys/+/332729 is merged.
+			logrus.Debug("Failed to detect CPU features. Assuming that AES acceleration is available on this Apple silicon.")
+			return true
+		}
 		logrus.Warn("Failed to detect CPU features. Assuming that AES acceleration is not available.")
 		return false
 	}
