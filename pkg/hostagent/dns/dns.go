@@ -67,7 +67,7 @@ func (s *Server) Shutdown() {
 }
 
 func newStaticClientConfig(ips []string) (*dns.ClientConfig, error) {
-	logrus.Debugf("newStaticClientConfig creating config for the the following IPs: %v", ips)
+	logrus.Tracef("newStaticClientConfig creating config for the the following IPs: %v", ips)
 	s := ``
 	for _, ip := range ips {
 		s += fmt.Sprintf("nameserver %s\n", ip)
@@ -152,7 +152,7 @@ func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
 	)
 	defer w.Close()
 	reply.SetReply(req)
-	logrus.Debugf("handleQuery received DNS query: %v", req)
+	logrus.Tracef("handleQuery received DNS query: %v", req)
 	for _, q := range req.Question {
 		hdr := dns.RR_Header{
 			Name:   q.Name,
@@ -315,7 +315,7 @@ func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
 }
 
 func (h *Handler) handleDefault(w dns.ResponseWriter, req *dns.Msg) {
-	logrus.Debugf("handleDefault for %v", req)
+	logrus.Tracef("handleDefault for %v", req)
 	for _, client := range h.clients {
 		for _, srv := range h.clientConfig.Servers {
 			addr := fmt.Sprintf("%s:%s", srv, h.clientConfig.Port)
@@ -325,7 +325,7 @@ func (h *Handler) handleDefault(w dns.ResponseWriter, req *dns.Msg) {
 				continue
 			}
 			if h.truncate {
-				logrus.Debugf("handleDefault truncating reply: %v", reply)
+				logrus.Tracef("handleDefault truncating reply: %v", reply)
 				reply.Truncate(truncateSize)
 			}
 			if err = w.WriteMsg(reply); err != nil {
@@ -337,7 +337,7 @@ func (h *Handler) handleDefault(w dns.ResponseWriter, req *dns.Msg) {
 	var reply dns.Msg
 	reply.SetReply(req)
 	if h.truncate {
-		logrus.Debugf("handleDefault truncating reply: %v", reply)
+		logrus.Tracef("handleDefault truncating reply: %v", reply)
 		reply.Truncate(truncateSize)
 	}
 	if err := w.WriteMsg(&reply); err != nil {
