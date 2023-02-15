@@ -122,5 +122,10 @@ func initLogrus(stderr io.Writer) {
 	logrus.SetOutput(stderr)
 	// JSON logs are parsed in pkg/hostagent/events.Watcher()
 	logrus.SetFormatter(new(logrus.JSONFormatter))
-	logrus.SetLevel(logrus.DebugLevel)
+	// HostAgent logging is one level more verbose than the start command itself
+	if logrus.GetLevel() == logrus.DebugLevel {
+		logrus.SetLevel(logrus.TraceLevel)
+	} else {
+		logrus.SetLevel(logrus.DebugLevel)
+	}
 }
