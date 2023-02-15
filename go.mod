@@ -26,6 +26,7 @@ require (
 	github.com/mattn/go-isatty v0.0.17
 	github.com/mattn/go-shellwords v1.0.12
 	github.com/miekg/dns v1.1.50
+	github.com/mikefarah/yq/v4 v4.30.8
 	github.com/norouter/norouter v0.6.3
 	github.com/nxadm/tail v1.4.8
 	github.com/opencontainers/go-digest v1.0.0
@@ -35,6 +36,7 @@ require (
 	github.com/xorcare/pointer v1.2.2
 	golang.org/x/sync v0.1.0
 	golang.org/x/sys v0.5.0
+	gopkg.in/op/go-logging.v1 v1.0.0-20160211212156-b2cb9fa56473
 	gotest.tools/v3 v3.4.0
 	inet.af/tcpproxy v0.0.0-20220326234310-be3ee21c9fa0
 	k8s.io/api v0.26.1
@@ -45,9 +47,13 @@ require (
 require (
 	github.com/Microsoft/go-winio v0.5.2 // indirect
 	github.com/VividCortex/ewma v1.1.1 // indirect
+	github.com/a8m/envsubst v1.3.0 // indirect
+	github.com/alecthomas/participle/v2 v2.0.0-beta.5 // indirect
 	github.com/apparentlymart/go-cidr v1.1.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/digitalocean/go-libvirt v0.0.0-20201209184759-e2a69bcd5bd1 // indirect
+	github.com/dimchansky/utfbom v1.1.1 // indirect
+	github.com/elliotchance/orderedmap v1.5.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.9.0 // indirect
 	github.com/evanphx/json-patch v4.12.0+incompatible // indirect
 	github.com/fatih/color v1.13.0 // indirect
@@ -56,6 +62,7 @@ require (
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
 	github.com/go-openapi/jsonreference v0.20.0 // indirect
 	github.com/go-openapi/swag v0.19.14 // indirect
+	github.com/goccy/go-json v0.10.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/btree v1.0.1 // indirect
@@ -66,10 +73,12 @@ require (
 	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/inconshreveable/mousetrap v1.0.1 // indirect
 	github.com/insomniacslk/dhcp v0.0.0-20220504074936-1ca156eafb9f // indirect
+	github.com/jinzhu/copier v0.3.5 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
 	github.com/kr/fs v0.1.0 // indirect
+	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mailru/easyjson v0.7.6 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-runewidth v0.0.12 // indirect
