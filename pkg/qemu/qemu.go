@@ -34,6 +34,8 @@ type Config struct {
 	SSHLocalPort int
 }
 
+const extra_disk_offset_index = 100
+
 // EnsureDisk also ensures the kernel and the initrd
 func EnsureDisk(cfg Config) error {
 	diffDisk := filepath.Join(cfg.InstanceDir, filenames.DiffDisk)
@@ -452,8 +454,11 @@ func Cmdline(cfg Config) (string, []string, error) {
 	} else if !isBaseDiskCDROM {
 		args = append(args, "-drive", fmt.Sprintf("file=%s,if=virtio,discard=on", baseDisk))
 	}
-	for _, extraDisk := range extraDisks {
-		args = append(args, "-drive", fmt.Sprintf("file=%s,if=virtio,discard=on", extraDisk))
+	for i, extraDisk := range extraDisks {
+		// use a high index for extra disks to reduce ID collision with current or future devices
+		// e.g., boot disk, firmware, CDROM, cloud config, network device
+		args = append(args, "-drive", fmt.Sprintf("file=%s,index=%d,if=virtio,discard=on",
+			extraDisk, extra_disk_offset_index+i))
 	}
 
 	// cloud-init
