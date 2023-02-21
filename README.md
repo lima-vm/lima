@@ -469,27 +469,14 @@ Run `limactl edit <INSTANCE>` to open the YAML editor for an existing instance.
 ### External projects
 #### "I am using Rancher Desktop. How to deal with the underlying Lima?"
 
-On macOS hosts, Rancher Desktop (as of v1.0) launches Lima with the following configuration:
+Rancher Desktop includes the `rdctl` tool (installed in `~/.rd/bin/rdctl`) that provides shell access via `rdctl shell`.
 
-- `$LIMA_HOME` directory: `$HOME/Library/Application Support/rancher-desktop/lima`
-- `limactl` binary: `/Applications/Rancher Desktop.app/Contents/Resources/resources/darwin/lima/bin/limactl`
-- Lima instance name: `0`
+It is not recommended to directly interact with the Rancher Desktop VM via `limactl`.
 
-To open a shell, run the following command:
+If you need to create an `override.yaml` file, its location should be:
 
-```shell
-LIMA_HOME="$HOME/Library/Application Support/rancher-desktop/lima" "/Applications/Rancher Desktop.app/Contents/Resources/resources/darwin/lima/bin/limactl" shell 0
-```
-
-On Linux hosts, try the following command:
-```shell
-LIMA_HOME="$HOME/.local/share/rancher-desktop/lima" /opt/rancher-desktop/resources/resources/linux/lima/bin/limactl shell 0
-```
-
-If you have installed Rancher Desktop as an AppImage:
-```shell
-LIMA_HOME="$HOME/.local/share/rancher-desktop/lima" "$(ls -d /tmp/.mount_ranche*/opt/rancher-desktop/resources/resources/linux/lima/bin)/limactl" shell 0
-```
+* macOS: `$HOME/Library/Application Support/rancher-desktop/lima/_config/override.yaml`
+* Linux: `$HOME/.local/share/rancher-desktop/lima/_config/override.yaml`
 
 ### "Hints for debugging other problems?"
 - Inspect logs:
