@@ -20,7 +20,7 @@ func newDiskCommand() *cobra.Command {
 		Use:   "disk",
 		Short: "Lima disk management",
 		Example: `  Create a disk:
-  $ limactl disk create DISK --size SIZE
+  $ limactl disk create DISK --size SIZE [--format qcow2]
 
   List existing disks:
   $ limactl disk ls
@@ -44,7 +44,7 @@ func newDiskCreateCommand() *cobra.Command {
 		Use: "create DISK",
 		Example: `
 To create a new disk:
-$ limactl disk create DISK --size SIZE
+$ limactl disk create DISK --size SIZE [--format qcow2]
 `,
 		Short: "Create a Lima disk",
 		Args:  WrapArgsError(cobra.ExactArgs(1)),
@@ -52,6 +52,7 @@ $ limactl disk create DISK --size SIZE
 	}
 	diskCreateCommand.Flags().String("size", "", "configure the disk size")
 	diskCreateCommand.MarkFlagRequired("size")
+	diskCreateCommand.Flags().String("format", "qcow2", "specify the disk format")
 	return diskCreateCommand
 }
 
@@ -61,9 +62,20 @@ func diskCreateAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	format, err := cmd.Flags().GetString("format")
+	if err != nil {
+		return err
+	}
+
 	diskSize, err := units.RAMInBytes(size)
 	if err != nil {
 		return err
+	}
+
+	switch format {
+	case "qcow2", "raw":
+	default:
+		return fmt.Errorf(`disk format %q not supported, use "qcow2" or "raw" instead`, format)
 	}
 
 	// only exactly one arg is allowed
@@ -78,13 +90,13 @@ func diskCreateAction(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("disk %q already exists (%q)", name, diskDir)
 	}
 
-	logrus.Infof("Creating disk %q with size %s", name, units.BytesSize(float64(diskSize)))
+	logrus.Infof("Creating %s disk %q with size %s", format, name, units.BytesSize(float64(diskSize)))
 
 	if err := os.MkdirAll(diskDir, 0700); err != nil {
 		return err
 	}
 
-	if err := qemu.CreateDataDisk(diskDir, int(diskSize)); err != nil {
+	if err := qemu.CreateDataDisk(diskDir, format, int(diskSize)); err != nil {
 		return err
 	}
 
