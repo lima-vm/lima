@@ -270,6 +270,9 @@ func Validate(y LimaYAML, warn bool) error {
 	if err := validateNetwork(y, warn); err != nil {
 		return err
 	}
+	if warn {
+		warnExperimental(y)
+	}
 	return nil
 }
 
@@ -413,4 +416,19 @@ func validatePort(field string, port int) error {
 		return fmt.Errorf("field `%s` must be < 65536", field)
 	}
 	return nil
+}
+
+func warnExperimental(y LimaYAML) {
+	if *y.MountType == NINEP {
+		logrus.Warn("`mountType: 9p` is experimental")
+	}
+	if *y.VMType == VZ {
+		logrus.Warn("`vmType: vz` is experimental")
+	}
+	if *y.Arch == RISCV64 {
+		logrus.Warn("`arch: riscv64` is experimental")
+	}
+	if y.Video.Display != nil && strings.Contains(*y.Video.Display, "vnc") {
+		logrus.Warn("`video.display: vnc` is experimental")
+	}
 }

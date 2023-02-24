@@ -280,6 +280,7 @@ func modifyInPlace(st *creatorState) error {
 	if st.yq == "" {
 		return nil
 	}
+	logrus.Warn("`--set` is experimental")
 	out, err := yqutil.EvaluateExpression(st.yq, st.yBytes)
 	if err != nil {
 		return err
