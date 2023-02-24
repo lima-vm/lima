@@ -62,7 +62,6 @@ provision:
     apt-get install -y cri-tools
     cat  <<EOF | sudo tee /etc/crictl.yaml
     runtime-endpoint: unix:///run/containerd/containerd.sock
-    image-endpoint: unix:///run/containerd/containerd.sock
     EOF
     # cni-plugins
     apt-get install -y kubernetes-cni
