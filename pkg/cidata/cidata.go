@@ -126,8 +126,8 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 		SlirpGateway:   networks.SlirpGateway,
 		SlirpDNS:       networks.SlirpDNS,
 		SlirpIPAddress: networks.SlirpIPAddress,
-		RosettaEnabled: y.Rosetta.Enabled,
-		RosettaBinFmt:  y.Rosetta.BinFmt,
+		RosettaEnabled: *y.Rosetta.Enabled,
+		RosettaBinFmt:  *y.Rosetta.BinFmt,
 	}
 
 	// change instance id on every boot so network config will be processed again

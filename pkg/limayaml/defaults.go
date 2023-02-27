@@ -540,6 +540,26 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 
 	caCerts := unique(append(append(d.CACertificates.Certs, y.CACertificates.Certs...), o.CACertificates.Certs...))
 	y.CACertificates.Certs = caCerts
+
+	if y.Rosetta.Enabled == nil {
+		y.Rosetta.Enabled = d.Rosetta.Enabled
+	}
+	if o.Rosetta.Enabled != nil {
+		y.Rosetta.Enabled = o.Rosetta.Enabled
+	}
+	if y.Rosetta.Enabled == nil {
+		y.Rosetta.Enabled = pointer.Bool(false)
+	}
+
+	if y.Rosetta.BinFmt == nil {
+		y.Rosetta.BinFmt = d.Rosetta.BinFmt
+	}
+	if o.Rosetta.BinFmt != nil {
+		y.Rosetta.BinFmt = o.Rosetta.BinFmt
+	}
+	if y.Rosetta.BinFmt == nil {
+		y.Rosetta.BinFmt = pointer.Bool(false)
+	}
 }
 
 func executeGuestTemplate(format string) (bytes.Buffer, error) {
