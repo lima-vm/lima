@@ -12,7 +12,7 @@ func newPruneCommand() *cobra.Command {
 	pruneCommand := &cobra.Command{
 		Use:               "prune",
 		Short:             "Prune garbage objects",
-		Args:              cobra.NoArgs,
+		Args:              WrapArgsError(cobra.NoArgs),
 		RunE:              pruneAction,
 		ValidArgsFunction: cobra.NoFileCompletions,
 	}

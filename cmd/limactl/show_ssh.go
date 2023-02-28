@@ -45,7 +45,7 @@ func newShowSSHCommand() *cobra.Command {
 		Use:               "show-ssh [flags] INSTANCE",
 		Short:             "Show the ssh command line",
 		Example:           showSSHExample,
-		Args:              cobra.ExactArgs(1),
+		Args:              WrapArgsError(cobra.ExactArgs(1)),
 		RunE:              showSSHAction,
 		ValidArgsFunction: showSSHBashComplete,
 		SilenceErrors:     true,

@@ -47,7 +47,7 @@ To create a new disk:
 $ limactl disk create DISK --size SIZE
 `,
 		Short: "Create a Lima disk",
-		Args:  cobra.ExactArgs(1),
+		Args:  WrapArgsError(cobra.ExactArgs(1)),
 		RunE:  diskCreateAction,
 	}
 	diskCreateCommand.Flags().String("size", "", "configure the disk size")
@@ -100,7 +100,7 @@ $ limactl disk list
 `,
 		Short:   "List existing Lima disks",
 		Aliases: []string{"ls"},
-		Args:    cobra.ArbitraryArgs,
+		Args:    WrapArgsError(cobra.ArbitraryArgs),
 		RunE:    diskListAction,
 	}
 	diskListCommand.Flags().Bool("json", false, "JSONify output")
@@ -189,7 +189,7 @@ $ limactl disk delete DISK1 DISK2 ...
 `,
 		Aliases: []string{"remove", "rm"},
 		Short:   "Delete one or more Lima disks",
-		Args:    cobra.MinimumNArgs(1),
+		Args:    WrapArgsError(cobra.MinimumNArgs(1)),
 		RunE:    diskDeleteAction,
 	}
 	diskDeleteCommand.Flags().BoolP("force", "f", false, "force delete")
@@ -279,7 +279,7 @@ To unlock multiple disks:
 $ limactl disk unlock DISK1 DISK2 ...
 `,
 		Short: "Unlock one or more Lima disks",
-		Args:  cobra.MinimumNArgs(1),
+		Args:  WrapArgsError(cobra.MinimumNArgs(1)),
 		RunE:  diskUnlockAction,
 	}
 	return diskUnlockCommand

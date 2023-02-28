@@ -15,7 +15,7 @@ func newFactoryResetCommand() *cobra.Command {
 	var resetCommand = &cobra.Command{
 		Use:               "factory-reset INSTANCE",
 		Short:             "Factory reset an instance of Lima",
-		Args:              cobra.MaximumNArgs(1),
+		Args:              WrapArgsError(cobra.MaximumNArgs(1)),
 		RunE:              factoryResetAction,
 		ValidArgsFunction: factoryResetBashComplete,
 	}

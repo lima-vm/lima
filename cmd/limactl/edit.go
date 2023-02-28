@@ -22,7 +22,7 @@ func newEditCommand() *cobra.Command {
 	var editCommand = &cobra.Command{
 		Use:               "edit INSTANCE",
 		Short:             "Edit an instance of Lima",
-		Args:              cobra.MaximumNArgs(1),
+		Args:              WrapArgsError(cobra.MaximumNArgs(1)),
 		RunE:              editAction,
 		ValidArgsFunction: editBashComplete,
 	}
