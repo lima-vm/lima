@@ -5,16 +5,16 @@ images:
 - location: "https://cloud-images.ubuntu.com/releases/22.10/release-20230215/ubuntu-22.10-server-cloudimg-riscv64.img"
   digest: "sha256:ff4aa0e80e4b5f7e30950901baeb99b4df80c112d1973a22aa7cecd7d544e99b"
   kernel:
-    # Extracted from http://http.us.debian.org/debian/pool/main/u/u-boot/u-boot-qemu_2022.04+dfsg-2_all.deb (GPL-2.0)
-    location: "https://github.com/lima-vm/u-boot-qemu-mirror/releases/download/2022.04%2Bdfsg-2/qemu-riscv64_smode_uboot.elf"
-    digest: "sha256:d250ede9b4d0ea1871714395edd38a7eb2bc8425b697673cfd15e62e7ee4529c"
+    # Extracted from http://http.us.debian.org/debian/pool/main/u/u-boot/u-boot-qemu_2023.01+dfsg-2_all.deb (GPL-2.0)
+    location: "https://github.com/lima-vm/u-boot-qemu-mirror/releases/download/2023.01%2Bdfsg-2/qemu-riscv64_smode_uboot.elf"
+    digest: "sha256:d688d1afd7fd8266a964437438e7d8744c8c27c50124ac1b05e2d83f312a6ca6"
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
 - location: "https://cloud-images.ubuntu.com/releases/22.10/release/ubuntu-22.10-server-cloudimg-riscv64.img"
   kernel:
-    # Extracted from http://http.us.debian.org/debian/pool/main/u/u-boot/u-boot-qemu_2022.04+dfsg-2_all.deb (GPL-2.0)
-    location: "https://github.com/lima-vm/u-boot-qemu-mirror/releases/download/2022.04%2Bdfsg-2/qemu-riscv64_smode_uboot.elf"
-    digest: "sha256:d250ede9b4d0ea1871714395edd38a7eb2bc8425b697673cfd15e62e7ee4529c"
+    # Extracted from http://http.us.debian.org/debian/pool/main/u/u-boot/u-boot-qemu_2023.01+dfsg-2_all.deb (GPL-2.0)
+    location: "https://github.com/lima-vm/u-boot-qemu-mirror/releases/download/2023.01%2Bdfsg-2/qemu-riscv64_smode_uboot.elf"
+    digest: "sha256:d688d1afd7fd8266a964437438e7d8744c8c27c50124ac1b05e2d83f312a6ca6"
 
 mounts:
 - location: "~"
