@@ -1,12 +1,12 @@
 # This example requires Lima v0.11.1 or later.
 
 images:
-- location: "https://dl.rockylinux.org/pub/rocky/9.1/images/x86_64/Rocky-9-GenericCloud-Base-9.1-20221130.0.x86_64.qcow2"
+- location: "https://dl.rockylinux.org/pub/rocky/9.1/images/x86_64/Rocky-9-GenericCloud-Base-9.1-20230215.0.x86_64.qcow2"
   arch: "x86_64"
-  digest: "sha256:4405926b4c84edf4a25a51d5ed36bffada04e5e143045c41c974a9a9d35937f1"
-- location: "https://dl.rockylinux.org/pub/rocky/9.1/images/aarch64/Rocky-9-GenericCloud-Base-9.1-20221130.0.aarch64.qcow2"
+  digest: "sha256:53850338cd7e918052e13fc0a34b8383675ac747e168f640cfb7f483e65eac65"
+- location: "https://dl.rockylinux.org/pub/rocky/9.1/images/aarch64/Rocky-9-GenericCloud-Base-9.1-20230215.0.aarch64.qcow2"
   arch: "aarch64"
-  digest: "sha256:8e680f226adeaf9f09cfc7fc9b7839db3ca0f40c4a2e7838de605571d1b33fbb"
+  digest: "sha256:6991592f3308376d63c5a69b353586cee1d67077f1af6d0a3f12126b11a13829"
 mounts:
 - location: "~"
 - location: "/tmp/lima"
