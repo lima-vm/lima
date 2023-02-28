@@ -6,7 +6,7 @@ require (
 	github.com/AlecAivazis/survey/v2 v2.3.6
 	github.com/Code-Hex/vz/v3 v3.0.4
 	github.com/alessio/shellescape v1.4.1
-	github.com/cheggaaa/pb/v3 v3.1.0
+	github.com/cheggaaa/pb/v3 v3.1.2
 	github.com/containerd/containerd v1.6.19
 	github.com/containerd/continuity v0.3.0
 	github.com/containers/gvisor-tap-vsock v0.5.0
@@ -46,7 +46,7 @@ require (
 
 require (
 	github.com/Microsoft/go-winio v0.6.0 // indirect
-	github.com/VividCortex/ewma v1.1.1 // indirect
+	github.com/VividCortex/ewma v1.2.0 // indirect
 	github.com/a8m/envsubst v1.4.1 // indirect
 	github.com/alecthomas/participle/v2 v2.0.0-beta.5 // indirect
 	github.com/apparentlymart/go-cidr v1.1.0 // indirect
