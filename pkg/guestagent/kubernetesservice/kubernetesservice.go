@@ -58,7 +58,7 @@ func (s *ServiceWatcher) Start() {
 	wait.PollInfinite(retryInterval, func() (done bool, err error) {
 		kubeClient, err := tryGetKubeClient()
 		if err != nil {
-			logrus.Infof("failed to get kube client: %v, will retry in %v", err, retryInterval)
+			logrus.Tracef("failed to get kube client: %v, will retry in %v", err, retryInterval)
 			return false, nil
 		}
 
