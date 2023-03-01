@@ -219,11 +219,16 @@ func (l *LimaQemuDriver) shutdownQEMU(ctx context.Context, timeout time.Duration
 }
 
 func (l *LimaQemuDriver) killQEMU(_ context.Context, _ time.Duration, qCmd *exec.Cmd, qWaitCh <-chan error) error {
-	if killErr := qCmd.Process.Kill(); killErr != nil {
-		logrus.WithError(killErr).Warn("failed to kill QEMU")
+	var qWaitErr error
+	if qCmd.ProcessState == nil {
+		if killErr := qCmd.Process.Kill(); killErr != nil {
+			logrus.WithError(killErr).Warn("failed to kill QEMU")
+		}
+		qWaitErr = <-qWaitCh
+		logrus.WithError(qWaitErr).Info("QEMU has exited, after killing forcibly")
+	} else {
+		logrus.Info("QEMU has already exited")
 	}
-	qWaitErr := <-qWaitCh
-	logrus.WithError(qWaitErr).Info("QEMU has exited, after killing forcibly")
 	qemuPIDPath := filepath.Join(l.Instance.Dir, filenames.PIDFile(*l.Yaml.VMType))
 	_ = os.RemoveAll(qemuPIDPath)
 	l.removeVNCFiles()
