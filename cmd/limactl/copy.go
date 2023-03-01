@@ -28,7 +28,7 @@ func newCopyCommand() *cobra.Command {
 		Aliases: []string{"cp"},
 		Short:   "Copy files between host and guest",
 		Long:    copyHelp,
-		Args:    cobra.MinimumNArgs(2),
+		Args:    WrapArgsError(cobra.MinimumNArgs(2)),
 		RunE:    copyAction,
 	}
 

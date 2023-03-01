@@ -53,7 +53,7 @@ To create an instance "local" from a template passed to stdin (--name parameter 
 $ cat template.yaml | limactl start --name=local -
 `,
 		Short:             "Start an instance of Lima",
-		Args:              cobra.MaximumNArgs(1),
+		Args:              WrapArgsError(cobra.MaximumNArgs(1)),
 		ValidArgsFunction: startBashComplete,
 		RunE:              startAction,
 	}

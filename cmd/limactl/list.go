@@ -40,7 +40,7 @@ func newListCommand() *cobra.Command {
 		Short:   "List instances of Lima.",
 		Long: "List instances of Lima.\n" + dedent.Dedent(`
 		The output can be presented in one of several formats, using the --format <format> flag.
-		
+
 		  --format json  - output in json format
 		  --format yaml  - output in yaml format
 		  --format table - output in table format
@@ -49,7 +49,7 @@ func newListCommand() *cobra.Command {
 		The following legacy flags continue to function:
 		  --json - equal to '--format json'
 		`),
-		Args:              cobra.ArbitraryArgs,
+		Args:              WrapArgsError(cobra.ArbitraryArgs),
 		RunE:              listAction,
 		ValidArgsFunction: listBashComplete,
 	}

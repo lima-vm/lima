@@ -24,7 +24,7 @@ func newDebugDNSCommand() *cobra.Command {
 		Use:   "dns UDPPORT [TCPPORT]",
 		Short: "Debug built-in DNS",
 		Long:  "DO NOT USE! THE COMMAND SYNTAX IS SUBJECT TO CHANGE!",
-		Args:  cobra.RangeArgs(1, 2),
+		Args:  WrapArgsError(cobra.RangeArgs(1, 2)),
 		RunE:  debugDNSAction,
 	}
 	cmd.Flags().BoolP("ipv6", "6", false, "lookup IPv6 addresses too")

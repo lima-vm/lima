@@ -119,3 +119,19 @@ func handleExitCoder(err error) {
 		return
 	}
 }
+
+// WrapArgsError annotates cobra args error with some context, so the error message is more user-friendly
+func WrapArgsError(argFn cobra.PositionalArgs) cobra.PositionalArgs {
+	return func(cmd *cobra.Command, args []string) error {
+		err := argFn(cmd, args)
+		if err == nil {
+			return nil
+		}
+
+		return fmt.Errorf("%q %s.\nSee '%s --help'.\n\nUsage:  %s\n\n%s",
+			cmd.CommandPath(), err.Error(),
+			cmd.CommandPath(),
+			cmd.UseLine(), cmd.Short,
+		)
+	}
+}

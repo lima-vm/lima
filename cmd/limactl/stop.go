@@ -22,7 +22,7 @@ func newStopCommand() *cobra.Command {
 	var stopCmd = &cobra.Command{
 		Use:               "stop INSTANCE",
 		Short:             "Stop an instance",
-		Args:              cobra.MaximumNArgs(1),
+		Args:              WrapArgsError(cobra.MaximumNArgs(1)),
 		RunE:              stopAction,
 		ValidArgsFunction: stopBashComplete,
 	}

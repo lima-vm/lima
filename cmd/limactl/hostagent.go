@@ -21,7 +21,7 @@ func newHostagentCommand() *cobra.Command {
 	var hostagentCommand = &cobra.Command{
 		Use:    "hostagent INSTANCE",
 		Short:  "run hostagent",
-		Args:   cobra.ExactArgs(1),
+		Args:   WrapArgsError(cobra.ExactArgs(1)),
 		RunE:   hostagentAction,
 		Hidden: true,
 	}

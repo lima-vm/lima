@@ -12,7 +12,7 @@ func newInfoCommand() *cobra.Command {
 	infoCommand := &cobra.Command{
 		Use:   "info",
 		Short: "Show diagnostic information",
-		Args:  cobra.NoArgs,
+		Args:  WrapArgsError(cobra.NoArgs),
 		RunE:  infoAction,
 	}
 	return infoCommand

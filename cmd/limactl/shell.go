@@ -36,7 +36,7 @@ func newShellCommand() *cobra.Command {
 		Use:               "shell INSTANCE [COMMAND...]",
 		Short:             "Execute shell in Lima",
 		Long:              shellHelp,
-		Args:              cobra.MinimumNArgs(1),
+		Args:              WrapArgsError(cobra.MinimumNArgs(1)),
 		RunE:              shellAction,
 		ValidArgsFunction: shellBashComplete,
 		SilenceErrors:     true,
