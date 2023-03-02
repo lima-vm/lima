@@ -29,7 +29,7 @@ func QCOWToRaw(source string, dest string) error {
 
 func GetInfo(f string) (*Info, error) {
 	var stdout, stderr bytes.Buffer
-	cmd := exec.Command("qemu-img", "info", "--output=json", f)
+	cmd := exec.Command("qemu-img", "info", "--output=json", "--force-share", f)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
