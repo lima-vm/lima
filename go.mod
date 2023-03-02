@@ -26,7 +26,7 @@ require (
 	github.com/mattn/go-isatty v0.0.17
 	github.com/mattn/go-shellwords v1.0.12
 	github.com/miekg/dns v1.1.51
-	github.com/mikefarah/yq/v4 v4.31.1
+	github.com/mikefarah/yq/v4 v4.31.2
 	github.com/norouter/norouter v0.6.3
 	github.com/nxadm/tail v1.4.8
 	github.com/opencontainers/go-digest v1.0.0
@@ -47,7 +47,7 @@ require (
 require (
 	github.com/Microsoft/go-winio v0.6.0 // indirect
 	github.com/VividCortex/ewma v1.2.0 // indirect
-	github.com/a8m/envsubst v1.4.1 // indirect
+	github.com/a8m/envsubst v1.4.2 // indirect
 	github.com/alecthomas/participle/v2 v2.0.0-beta.5 // indirect
 	github.com/apparentlymart/go-cidr v1.1.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
@@ -95,10 +95,10 @@ require (
 	go.uber.org/multierr v1.7.0 // indirect
 	golang.org/x/crypto v0.4.0 // indirect
 	golang.org/x/mod v0.7.0 // indirect
-	golang.org/x/net v0.4.0 // indirect
+	golang.org/x/net v0.7.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20220223155221-ee480838109b // indirect
-	golang.org/x/term v0.3.0 // indirect
-	golang.org/x/text v0.5.0 // indirect
+	golang.org/x/term v0.5.0 // indirect
+	golang.org/x/text v0.7.0 // indirect
 	golang.org/x/time v0.0.0-20220210224613-90d013bbcef8 // indirect
 	golang.org/x/tools v0.3.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
