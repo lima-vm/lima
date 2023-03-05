@@ -29,7 +29,7 @@ func EnsureDisk(driver *driver.BaseDriver) error {
 		var ensuredBaseDisk bool
 		errs := make([]error, len(driver.Yaml.Images))
 		for i, f := range driver.Yaml.Images {
-			if err := fileutils.DownloadFile(baseDisk, f.File, "the image", *driver.Yaml.Arch); err != nil {
+			if _, err := fileutils.DownloadFile(baseDisk, f.File, "the image", *driver.Yaml.Arch); err != nil {
 				errs[i] = err
 				continue
 			}

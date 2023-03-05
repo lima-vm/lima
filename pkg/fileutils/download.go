@@ -8,9 +8,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func DownloadFile(dest string, f limayaml.File, description string, expectedArch limayaml.Arch) error {
+// DownloadFile downloads a file to the cache, optionally copying it to the destination. Returns path in cache.
+func DownloadFile(dest string, f limayaml.File, description string, expectedArch limayaml.Arch) (string, error) {
 	if f.Arch != expectedArch {
-		return fmt.Errorf("unsupported arch: %q", f.Arch)
+		return "", fmt.Errorf("unsupported arch: %q", f.Arch)
 	}
 	logrus.WithField("digest", f.Digest).Infof("Attempting to download %s from %q", description, f.Location)
 	res, err := downloader.Download(dest, f.Location,
@@ -18,7 +19,7 @@ func DownloadFile(dest string, f limayaml.File, description string, expectedArch
 		downloader.WithExpectedDigest(f.Digest),
 	)
 	if err != nil {
-		return fmt.Errorf("failed to download %q: %w", f.Location, err)
+		return "", fmt.Errorf("failed to download %q: %w", f.Location, err)
 	}
 	logrus.Debugf("res.ValidatedDigest=%v", res.ValidatedDigest)
 	switch res.Status {
@@ -29,5 +30,5 @@ func DownloadFile(dest string, f limayaml.File, description string, expectedArch
 	default:
 		logrus.Warnf("Unexpected result from downloader.Download(): %+v", res)
 	}
-	return nil
+	return res.CachePath, nil
 }

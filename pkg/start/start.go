@@ -16,6 +16,7 @@ import (
 	"github.com/lima-vm/lima/pkg/driverutil"
 
 	"github.com/lima-vm/lima/pkg/downloader"
+	"github.com/lima-vm/lima/pkg/fileutils"
 	hostagentevents "github.com/lima-vm/lima/pkg/hostagent/events"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/store"
@@ -37,33 +38,19 @@ func ensureNerdctlArchiveCache(y *limayaml.LimaYAML) (string, error) {
 	}
 
 	errs := make([]error, len(y.Containerd.Archives))
-	for i := range y.Containerd.Archives {
-		f := &y.Containerd.Archives[i]
-		if f.Arch != *y.Arch {
-			errs[i] = fmt.Errorf("unsupported arch: %q", f.Arch)
-			continue
-		}
-		logrus.WithField("digest", f.Digest).Infof("Attempting to download the nerdctl archive from %q", f.Location)
-		res, err := downloader.Download("", f.Location, downloader.WithCache(), downloader.WithExpectedDigest(f.Digest))
+	for i, f := range y.Containerd.Archives {
+		path, err := fileutils.DownloadFile("", f, "the nerdctl archive", *y.Arch)
 		if err != nil {
-			errs[i] = fmt.Errorf("failed to download %q: %w", f.Location, err)
+			errs[i] = err
 			continue
 		}
-		switch res.Status {
-		case downloader.StatusDownloaded:
-			logrus.Infof("Downloaded the nerdctl archive from %q", f.Location)
-		case downloader.StatusUsedCache:
-			logrus.Infof("Using cache %q", res.CachePath)
-		default:
-			logrus.Warnf("Unexpected result from downloader.Download(): %+v", res)
-		}
-		if res.CachePath == "" {
+		if path == "" {
 			if downloader.IsLocal(f.Location) {
 				return f.Location, nil
 			}
 			return "", fmt.Errorf("cache did not contain %q", f.Location)
 		}
-		return res.CachePath, nil
+		return path, nil
 	}
 
 	return "", fmt.Errorf("failed to download the nerdctl archive, attempted %d candidates, errors=%v",
