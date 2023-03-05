@@ -2,6 +2,7 @@ package fileutils
 
 import (
 	"fmt"
+	"path"
 
 	"github.com/lima-vm/lima/pkg/downloader"
 	"github.com/lima-vm/lima/pkg/limayaml"
@@ -13,9 +14,11 @@ func DownloadFile(dest string, f limayaml.File, description string, expectedArch
 	if f.Arch != expectedArch {
 		return "", fmt.Errorf("unsupported arch: %q", f.Arch)
 	}
-	logrus.WithField("digest", f.Digest).Infof("Attempting to download %s from %q", description, f.Location)
+	fields := logrus.Fields{"location": f.Location, "arch": f.Arch, "digest": f.Digest}
+	logrus.WithFields(fields).Infof("Attempting to download %s", description)
 	res, err := downloader.Download(dest, f.Location,
 		downloader.WithCache(),
+		downloader.WithDescription(fmt.Sprintf("%s (%s)", description, path.Base(f.Location))),
 		downloader.WithExpectedDigest(f.Digest),
 	)
 	if err != nil {
