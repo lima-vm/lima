@@ -55,8 +55,17 @@ func newApp() *cobra.Command {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
+	rootCmd.PersistentFlags().String("log-level", "", "Set the logging level [trace, debug, info, warn, error]")
 	rootCmd.PersistentFlags().Bool("debug", false, "debug mode")
 	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+		l, _ := cmd.Flags().GetString("log-level")
+		if l != "" {
+			lvl, err := logrus.ParseLevel(l)
+			if err != nil {
+				return err
+			}
+			logrus.SetLevel(lvl)
+		}
 		debug, _ := cmd.Flags().GetBool("debug")
 		if debug {
 			logrus.SetLevel(logrus.DebugLevel)
