@@ -10,3 +10,4 @@ The following features are experimental and subject to change:
 The following flags are experimental and subject to change:
 
 - `start --set`, yq expression
+- `edit --set`, yq expression
