@@ -18,9 +18,25 @@ const (
 	dummyRemoteFileDigest = "sha256:58d2de96f9d91f0acd93cb1e28bf7c42fc86079037768d6aa63b4e7e7b3c9be0"
 )
 
+var dummyRemoteFileURLSHA256 = digest.SHA256.FromString(dummyRemoteFileURL).Encoded()
+
 func TestMain(m *testing.M) {
 	HideProgress = true
 	os.Exit(m.Run())
+}
+
+// helper to check if the file referred by the URL is cached
+func findInCache(url string, opts ...Opt) (*CacheEntry, error) {
+	c, err := CachedDownloads(opts...)
+	if err != nil {
+		return nil, err
+	}
+	for _, entry := range c {
+		if entry.Location == url {
+			return &entry, nil
+		}
+	}
+	return nil, nil
 }
 
 func TestDownloadRemote(t *testing.T) {
@@ -33,6 +49,11 @@ func TestDownloadRemote(t *testing.T) {
 			r, err := Download(localPath, dummyRemoteFileURL)
 			assert.NilError(t, err)
 			assert.Equal(t, StatusDownloaded, r.Status)
+
+			// check the cache is empty
+			c, err := CachedDownloads()
+			assert.NilError(t, err)
+			assert.Equal(t, len(c), 0)
 
 			// download again, make sure StatusSkippedIsReturned
 			r, err = Download(localPath, dummyRemoteFileURL)
@@ -49,6 +70,11 @@ func TestDownloadRemote(t *testing.T) {
 			assert.NilError(t, err)
 			assert.Equal(t, StatusDownloaded, r.Status)
 
+			// check the cache is empty
+			c, err := CachedDownloads()
+			assert.NilError(t, err)
+			assert.Equal(t, len(c), 0)
+
 			r, err = Download(localPath, dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest))
 			assert.NilError(t, err)
 			assert.Equal(t, StatusSkipped, r.Status)
@@ -60,6 +86,12 @@ func TestDownloadRemote(t *testing.T) {
 		r, err := Download(localPath, dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest), WithCacheDir(cacheDir))
 		assert.NilError(t, err)
 		assert.Equal(t, StatusDownloaded, r.Status)
+
+		// check the download is in cache
+		entry, err := findInCache(dummyRemoteFileURL, WithCacheDir(cacheDir))
+		assert.NilError(t, err)
+		assert.Equal(t, entry.Digest.String(), dummyRemoteFileDigest)
+		assert.Equal(t, entry.ID, dummyRemoteFileURLSHA256)
 
 		r, err = Download(localPath, dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest), WithCacheDir(cacheDir))
 		assert.NilError(t, err)
@@ -78,6 +110,12 @@ func TestDownloadRemote(t *testing.T) {
 		r, err := Download("", dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest), WithCacheDir(cacheDir))
 		assert.NilError(t, err)
 		assert.Equal(t, StatusDownloaded, r.Status)
+
+		// check the download is in cache
+		entry, err := findInCache(dummyRemoteFileURL, WithCacheDir(cacheDir))
+		assert.NilError(t, err)
+		assert.Equal(t, entry.Digest.String(), dummyRemoteFileDigest)
+		assert.Equal(t, entry.ID, dummyRemoteFileURLSHA256)
 
 		r, err = Download("", dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest), WithCacheDir(cacheDir))
 		assert.NilError(t, err)

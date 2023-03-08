@@ -39,6 +39,13 @@ type Result struct {
 	ValidatedDigest bool
 }
 
+type CacheEntry struct {
+	ID       string        // sha256 of the Location
+	Location string        // source URL of the entry
+	Path     string        // Absolute path of the entry
+	Digest   digest.Digest // Checksum of the entry's data (a file downloaded)
+}
+
 type options struct {
 	cacheDir       string // default: empty (disables caching)
 	decompress     bool   // default: false (keep compression)
@@ -482,4 +489,79 @@ func downloadHTTP(localPath, url string, description string, expectedDigest dige
 	}
 
 	return nil
+}
+
+// Read first *.digest file found and return the Digest object from its contents
+func guessDigestFromDir(dir string) (digest.Digest, error) {
+	dirList, err := os.ReadDir(dir)
+	if err != nil {
+		return "", err
+	}
+
+	for _, f := range dirList {
+		if strings.HasSuffix(f.Name(), ".digest") && !(f.IsDir()) {
+			data, err := os.ReadFile(filepath.Join(dir, f.Name()))
+			if err != nil {
+				return "", err
+			}
+			d, err := digest.Parse(string(data))
+			if err != nil {
+				return "", err
+			}
+			return d, nil
+		}
+	}
+	return "", nil
+}
+
+func CachedDownloads(opts ...Opt) ([]CacheEntry, error) {
+	// Get the default cache directory
+	var o options
+	for _, f := range opts {
+		if err := f(&o); err != nil {
+			return nil, err
+		}
+	}
+	if o.cacheDir == "" {
+		return []CacheEntry{}, nil // No cache => empty results
+	}
+
+	shaDir := filepath.Join(o.cacheDir, "download", "by-url-sha256")
+
+	shaDirList, err := os.ReadDir(shaDir)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	entries := []CacheEntry{}
+	for _, f := range shaDirList {
+		if strings.HasPrefix(f.Name(), ".") || strings.HasPrefix(f.Name(), "_") {
+			continue
+		}
+		if !f.IsDir() {
+			continue
+		}
+
+		path := filepath.Join(shaDir, f.Name())
+
+		x := CacheEntry{
+			ID:   f.Name(),
+			Path: path,
+		}
+
+		data, err := os.ReadFile(filepath.Join(path, "url"))
+		if err != nil {
+			logrus.WithError(err).Infof("Cannot read url of %q", f.Name())
+		}
+		x.Location = string(data)
+
+		if x.Digest, err = guessDigestFromDir(path); err != nil {
+			logrus.WithError(err).Infof("Cannot read digest of %q", f.Name())
+		}
+		entries = append(entries, x)
+	}
+	return entries, nil
 }

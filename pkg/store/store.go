@@ -102,3 +102,20 @@ func LoadYAMLByFilePath(filePath string) (*limayaml.LimaYAML, error) {
 	}
 	return y, nil
 }
+
+func Downloads() ([]limayaml.File, error) {
+	instanceNames, err := Instances()
+	if err != nil {
+		return nil, err
+	}
+	files := []limayaml.File{}
+
+	for _, instanceName := range instanceNames {
+		instance, err := Inspect(instanceName)
+		if err != nil {
+			return nil, err
+		}
+		files = append(files, instance.Config.ReferredFiles()...)
+	}
+	return files, nil
+}

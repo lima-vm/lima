@@ -38,6 +38,24 @@ type LimaYAML struct {
 	Rosetta           Rosetta        `yaml:"rosetta,omitempty" json:"rosetta,omitempty"`
 }
 
+// Returns list of all the files referred by the LimaYAML instance
+func (y *LimaYAML) ReferredFiles() []File {
+	files := []File{}
+	for _, img := range y.Images {
+		files = append(files, img.File)
+		if img.Kernel != nil {
+			files = append(files, img.Kernel.File)
+		}
+		if img.Initrd != nil {
+			files = append(files, *img.Initrd)
+		}
+	}
+	for _, archive := range y.Containerd.Archives {
+		files = append(files, archive)
+	}
+	return files
+}
+
 type Arch = string
 type MountType = string
 type VMType = string
