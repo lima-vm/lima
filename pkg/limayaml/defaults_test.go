@@ -223,6 +223,11 @@ func TestFillDefault(t *testing.T) {
 		},
 	}
 
+	expect.Rosetta = Rosetta{
+		Enabled: pointer.Bool(false),
+		BinFmt:  pointer.Bool(false),
+	}
+
 	FillDefault(&y, &LimaYAML{}, &LimaYAML{}, filePath)
 	assert.DeepEqual(t, &y, &expect, opts...)
 
@@ -328,6 +333,10 @@ func TestFillDefault(t *testing.T) {
 				"-----BEGIN CERTIFICATE-----\nYOUR-ORGS-TRUSTED-CA-CERT\n-----END CERTIFICATE-----\n",
 			},
 		},
+		Rosetta: Rosetta{
+			Enabled: pointer.Bool(true),
+			BinFmt:  pointer.Bool(true),
+		},
 	}
 
 	expect = d
@@ -348,6 +357,11 @@ func TestFillDefault(t *testing.T) {
 	expect.CACertificates.RemoveDefaults = pointer.Bool(true)
 	expect.CACertificates.Certs = []string{
 		"-----BEGIN CERTIFICATE-----\nYOUR-ORGS-TRUSTED-CA-CERT\n-----END CERTIFICATE-----\n",
+	}
+
+	expect.Rosetta = Rosetta{
+		Enabled: pointer.Bool(true),
+		BinFmt:  pointer.Bool(true),
 	}
 
 	y = LimaYAML{}
@@ -497,6 +511,10 @@ func TestFillDefault(t *testing.T) {
 		CACertificates: CACertificates{
 			RemoveDefaults: pointer.Bool(true),
 		},
+		Rosetta: Rosetta{
+			Enabled: pointer.Bool(false),
+			BinFmt:  pointer.Bool(false),
+		},
 	}
 
 	y = filledDefaults
@@ -541,6 +559,11 @@ func TestFillDefault(t *testing.T) {
 	expect.CACertificates.Files = []string{"ca.crt"}
 	expect.CACertificates.Certs = []string{
 		"-----BEGIN CERTIFICATE-----\nYOUR-ORGS-TRUSTED-CA-CERT\n-----END CERTIFICATE-----\n",
+	}
+
+	expect.Rosetta = Rosetta{
+		Enabled: pointer.Bool(false),
+		BinFmt:  pointer.Bool(false),
 	}
 
 	FillDefault(&y, &d, &o, filePath)
