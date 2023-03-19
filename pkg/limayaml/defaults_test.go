@@ -26,9 +26,16 @@ func TestFillDefault(t *testing.T) {
 		cmpopts.EquateEmpty(),
 	}
 
-	arch := AARCH64
-	if runtime.GOARCH == "amd64" {
+	var arch Arch
+	switch runtime.GOARCH {
+	case "amd64":
 		arch = X8664
+	case "arm64":
+		arch = AARCH64
+	case "riscv64":
+		arch = RISCV64
+	default:
+		t.Skipf("unknown GOARCH: %s", runtime.GOARCH)
 	}
 
 	hostHome, err := os.UserHomeDir()
