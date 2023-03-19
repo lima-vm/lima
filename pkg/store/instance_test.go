@@ -5,6 +5,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/lima-vm/lima/pkg/limayaml"
@@ -15,6 +16,7 @@ const separator = string(filepath.Separator)
 
 var vmtype = limayaml.QEMU
 var goarch = limayaml.NewArch(runtime.GOARCH)
+var space = strings.Repeat(" ", len(goarch)-4)
 
 var instance = Instance{
 	Name:   "foo",
@@ -33,7 +35,7 @@ var tableEmu = "NAME    STATUS     SSH            ARCH       CPUS    MEMORY    D
 var tableHome = "NAME    STATUS     SSH            CPUS    MEMORY    DISK    DIR\n" +
 	"foo     Stopped    127.0.0.1:0    0       0B        0B      ~" + separator + "dir\n"
 
-var tableAll = "NAME    STATUS     SSH            VMTYPE    ARCH      CPUS    MEMORY    DISK    DIR\n" +
+var tableAll = "NAME    STATUS     SSH            VMTYPE    ARCH" + space + "    CPUS    MEMORY    DISK    DIR\n" +
 	"foo     Stopped    127.0.0.1:0    " + vmtype + "      " + goarch + "    0       0B        0B      dir\n"
 
 // for width 60, everything is hidden
@@ -49,7 +51,7 @@ var table80d = "NAME    STATUS     SSH            ARCH       CPUS    MEMORY    D
 	"foo     Stopped    127.0.0.1:0    unknown    0       0B        0B\n"
 
 // for width 100, nothing is hidden
-var table100 = "NAME    STATUS     SSH            VMTYPE    ARCH      CPUS    MEMORY    DISK    DIR\n" +
+var table100 = "NAME    STATUS     SSH            VMTYPE    ARCH" + space + "    CPUS    MEMORY    DISK    DIR\n" +
 	"foo     Stopped    127.0.0.1:0    " + vmtype + "      " + goarch + "    0       0B        0B      dir\n"
 
 // for width 80, directory is hidden (if not identical)
