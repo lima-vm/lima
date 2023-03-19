@@ -2,23 +2,27 @@ package fileutils
 
 import (
 	"fmt"
+	"path"
 
 	"github.com/lima-vm/lima/pkg/downloader"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/sirupsen/logrus"
 )
 
-func DownloadFile(dest string, f limayaml.File, description string, expectedArch limayaml.Arch) error {
+// DownloadFile downloads a file to the cache, optionally copying it to the destination. Returns path in cache.
+func DownloadFile(dest string, f limayaml.File, description string, expectedArch limayaml.Arch) (string, error) {
 	if f.Arch != expectedArch {
-		return fmt.Errorf("unsupported arch: %q", f.Arch)
+		return "", fmt.Errorf("unsupported arch: %q", f.Arch)
 	}
-	logrus.WithField("digest", f.Digest).Infof("Attempting to download %s from %q", description, f.Location)
+	fields := logrus.Fields{"location": f.Location, "arch": f.Arch, "digest": f.Digest}
+	logrus.WithFields(fields).Infof("Attempting to download %s", description)
 	res, err := downloader.Download(dest, f.Location,
 		downloader.WithCache(),
+		downloader.WithDescription(fmt.Sprintf("%s (%s)", description, path.Base(f.Location))),
 		downloader.WithExpectedDigest(f.Digest),
 	)
 	if err != nil {
-		return fmt.Errorf("failed to download %q: %w", f.Location, err)
+		return "", fmt.Errorf("failed to download %q: %w", f.Location, err)
 	}
 	logrus.Debugf("res.ValidatedDigest=%v", res.ValidatedDigest)
 	switch res.Status {
@@ -29,5 +33,5 @@ func DownloadFile(dest string, f limayaml.File, description string, expectedArch
 	default:
 		logrus.Warnf("Unexpected result from downloader.Download(): %+v", res)
 	}
-	return nil
+	return res.CachePath, nil
 }

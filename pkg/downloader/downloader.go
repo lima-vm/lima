@@ -38,6 +38,7 @@ type Result struct {
 
 type options struct {
 	cacheDir       string // default: empty (disables caching)
+	description    string // default: url
 	expectedDigest digest.Digest
 }
 
@@ -60,6 +61,14 @@ func WithCache() Opt {
 func WithCacheDir(cacheDir string) Opt {
 	return func(o *options) error {
 		o.cacheDir = cacheDir
+		return nil
+	}
+}
+
+// WithDecription adds a user description of the download.
+func WithDescription(description string) Opt {
+	return func(o *options) error {
+		o.description = description
 		return nil
 	}
 }
@@ -134,7 +143,7 @@ func Download(local, remote string, opts ...Opt) (*Result, error) {
 	}
 
 	if IsLocal(remote) {
-		if err := copyLocal(localPath, remote, o.expectedDigest); err != nil {
+		if err := copyLocal(localPath, remote, o.description, o.expectedDigest); err != nil {
 			return nil, err
 		}
 		res := &Result{
@@ -145,7 +154,7 @@ func Download(local, remote string, opts ...Opt) (*Result, error) {
 	}
 
 	if o.cacheDir == "" {
-		if err := downloadHTTP(localPath, remote, o.expectedDigest); err != nil {
+		if err := downloadHTTP(localPath, remote, o.description, o.expectedDigest); err != nil {
 			return nil, err
 		}
 		res := &Result{
@@ -174,11 +183,11 @@ func Download(local, remote string, opts ...Opt) (*Result, error) {
 			if o.expectedDigest.String() != shadDigestS {
 				return nil, fmt.Errorf("expected digest %q does not match the cached digest %q", o.expectedDigest.String(), shadDigestS)
 			}
-			if err := copyLocal(localPath, shadData, ""); err != nil {
+			if err := copyLocal(localPath, shadData, "", ""); err != nil {
 				return nil, err
 			}
 		} else {
-			if err := copyLocal(localPath, shadData, o.expectedDigest); err != nil {
+			if err := copyLocal(localPath, shadData, o.description, o.expectedDigest); err != nil {
 				return nil, err
 			}
 		}
@@ -199,11 +208,11 @@ func Download(local, remote string, opts ...Opt) (*Result, error) {
 	if err := os.WriteFile(shadURL, []byte(remote), 0644); err != nil {
 		return nil, err
 	}
-	if err := downloadHTTP(shadData, remote, o.expectedDigest); err != nil {
+	if err := downloadHTTP(shadData, remote, o.description, o.expectedDigest); err != nil {
 		return nil, err
 	}
 	// no need to pass the digest to copyLocal(), as we already verified the digest
-	if err := copyLocal(localPath, shadData, ""); err != nil {
+	if err := copyLocal(localPath, shadData, "", ""); err != nil {
 		return nil, err
 	}
 	if shadDigest != "" && o.expectedDigest != "" {
@@ -244,7 +253,7 @@ func canonicalLocalPath(s string) (string, error) {
 	return localpathutil.Expand(s)
 }
 
-func copyLocal(dst, src string, expectedDigest digest.Digest) error {
+func copyLocal(dst, src string, description string, expectedDigest digest.Digest) error {
 	srcPath, err := canonicalLocalPath(src)
 	if err != nil {
 		return err
@@ -261,6 +270,9 @@ func copyLocal(dst, src string, expectedDigest digest.Digest) error {
 	dstPath, err := canonicalLocalPath(dst)
 	if err != nil {
 		return err
+	}
+	if description != "" {
+		// TODO: progress bar for copy
 	}
 	return fs.CopyFile(dstPath, srcPath)
 }
@@ -316,7 +328,7 @@ func createBar(size int64) (*pb.ProgressBar, error) {
 	return bar, nil
 }
 
-func downloadHTTP(localPath, url string, expectedDigest digest.Digest) error {
+func downloadHTTP(localPath, url string, description string, expectedDigest digest.Digest) error {
 	if localPath == "" {
 		return fmt.Errorf("downloadHTTP: got empty localPath")
 	}
@@ -357,6 +369,12 @@ func downloadHTTP(localPath, url string, expectedDigest digest.Digest) error {
 	}
 	multiWriter := io.MultiWriter(writers...)
 
+	if !HideProgress {
+		if description == "" {
+			description = url
+		}
+		fmt.Printf("Downloading %s\n", description)
+	}
 	bar.Start()
 	if _, err := io.Copy(multiWriter, bar.NewProxyReader(resp.Body)); err != nil {
 		return err
