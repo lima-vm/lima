@@ -32,7 +32,7 @@ const (
 
 type Result struct {
 	Status          Status
-	CachePath       string // "/Users/foo/Library/Caches/lima/download/by-url-sha256/<SHA256_OF_URL>/data"
+	CachePath       string // "$LIMA_CACHE/download/by-url-sha256/<SHA256_OF_URL>/data"
 	ValidatedDigest bool
 }
 
@@ -43,18 +43,6 @@ type options struct {
 }
 
 type Opt func(*options) error
-
-// WithCache enables caching using filepath.Join(os.UserCacheDir(), "lima") as the cache dir.
-func WithCache() Opt {
-	return func(o *options) error {
-		ucd, err := os.UserCacheDir()
-		if err != nil {
-			return err
-		}
-		cacheDir := filepath.Join(ucd, "lima")
-		return WithCacheDir(cacheDir)(o)
-	}
-}
 
 // WithCacheDir enables caching using the specified dir.
 // Empty value disables caching.

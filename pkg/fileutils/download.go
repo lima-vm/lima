@@ -6,6 +6,7 @@ import (
 
 	"github.com/lima-vm/lima/pkg/downloader"
 	"github.com/lima-vm/lima/pkg/limayaml"
+	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/sirupsen/logrus"
 )
 
@@ -16,8 +17,12 @@ func DownloadFile(dest string, f limayaml.File, description string, expectedArch
 	}
 	fields := logrus.Fields{"location": f.Location, "arch": f.Arch, "digest": f.Digest}
 	logrus.WithFields(fields).Infof("Attempting to download %s", description)
+	cacheDir, err := dirnames.LimaCacheDir()
+	if err != nil {
+		return "", err
+	}
 	res, err := downloader.Download(dest, f.Location,
-		downloader.WithCache(),
+		downloader.WithCacheDir(cacheDir),
 		downloader.WithDescription(fmt.Sprintf("%s (%s)", description, path.Base(f.Location))),
 		downloader.WithExpectedDigest(f.Digest),
 	)

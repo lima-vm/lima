@@ -79,11 +79,13 @@ data disk:
 lock:
 - `in_use_by`: symlink to the instance directory that is using the disk
 
-## Lima cache directory (`~/Library/Caches/lima`)
+## Lima cache directory (`${LIMA_CACHE}`)
 
-Currently hard-coded to `~/Library/Caches/lima` on macOS.
+Defaults to `~/Library/Caches/lima` on macOS.
 
-### Download cache (`~/Library/Caches/lima/download/by-url-sha256/<SHA256_OF_URL>`)
+Defaults to `$XDG_CACHE_HOME/lima` on Linux, usually `~/.cache/lima`.
+
+### Download cache (`${LIMA_CACHE}/download/by-url-sha256/<SHA256_OF_URL>`)
 
 The directory contains the following files:
 
@@ -96,6 +98,9 @@ The directory contains the following files:
 
 - `$LIMA_HOME`: The "Lima home directory" (see above).
   - Default : `~/.lima`
+
+- `$LIMA_CACHE`: The "Lima cache directory" (see above).
+  - Default : see above
 
 - `$LIMA_INSTANCE`: `lima ...` is expanded to `limactl shell ${LIMA_INSTANCE} ...`.
   - Default : `default`

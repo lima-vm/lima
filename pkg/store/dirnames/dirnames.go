@@ -36,6 +36,24 @@ func LimaDir() (string, error) {
 	return realdir, nil
 }
 
+// Lima is a directory that appears under the cache directory.
+const Lima = "lima"
+
+// LimaCacheDir returns the path of the cache directory (or $LIMA_CACHE, if set).
+//
+// NOTE: This uses ~/Library/Caches/lima on macOS, or $XDG_CACHE_HOME/lima on Linux.
+func LimaCacheDir() (string, error) {
+	dir := os.Getenv("LIMA_CACHE")
+	if dir == "" {
+		ucd, err := os.UserCacheDir()
+		if err != nil {
+			return "", err
+		}
+		dir = filepath.Join(ucd, Lima)
+	}
+	return dir, nil
+}
+
 // LimaConfigDir returns the path of the config directory, $LIMA_HOME/_config.
 func LimaConfigDir() (string, error) {
 	limaDir, err := LimaDir()
