@@ -22,6 +22,8 @@ if [ "${LIMA_CIDATA_UDP_DNS_LOCAL_PORT}" -ne 0 ] || [ "${LIMA_CIDATA_TCP_DNS_LOC
 	INSTALL_IPTABLES=1
 fi
 
+lima-guestagent hash-generate >SHA256SUMS.orig
+
 # Install minimum dependencies
 # apt-get detected through the first bytes of apt-get binary to ensure we're
 # matching to an actual binary and not a wrapper script. This case is an issue
@@ -168,6 +170,8 @@ elif command -v apk >/dev/null 2>&1; then
 		apk add ${pkgs}
 	fi
 fi
+
+lima-guestagent hash-generate --dedupe SHA256SUMS.orig >SHA256SUMS
 
 SETUP_DNS=0
 if [ -n "${LIMA_CIDATA_UDP_DNS_LOCAL_PORT}" ] && [ "${LIMA_CIDATA_UDP_DNS_LOCAL_PORT}" -ne 0 ]; then
