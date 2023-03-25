@@ -14,6 +14,8 @@ import (
 	"github.com/lima-vm/lima/pkg/start"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
+	"github.com/lima-vm/lima/pkg/yqutil"
+	"github.com/mattn/go-isatty"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -26,6 +28,9 @@ func newEditCommand() *cobra.Command {
 		RunE:              editAction,
 		ValidArgsFunction: editBashComplete,
 	}
+	// TODO: "survey" does not support using cygwin terminal on windows yet
+	editCommand.Flags().Bool("tty", isatty.IsTerminal(os.Stdout.Fd()), "enable TUI interactions such as opening an editor, defaults to true when stdout is a terminal")
+	editCommand.Flags().String("set", "", "modify the template inplace, using yq syntax")
 	return editCommand
 }
 
@@ -53,13 +58,30 @@ func editAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	hdr := fmt.Sprintf("# Please edit the following configuration for Lima instance %q\n", instName)
-	hdr += "# and an empty file will abort the edit.\n"
-	hdr += "\n"
-	hdr += editutil.GenerateEditorWarningHeader()
-	yBytes, err := editutil.OpenEditor(instName, yContent, hdr)
+	tty, err := cmd.Flags().GetBool("tty")
 	if err != nil {
 		return err
+	}
+	yq, err := cmd.Flags().GetString("set")
+	if err != nil {
+		return err
+	}
+	var yBytes []byte
+	if yq != "" {
+		logrus.Warn("`--set` is experimental")
+		yBytes, err = yqutil.EvaluateExpression(yq, yContent)
+		if err != nil {
+			return err
+		}
+	} else if tty {
+		hdr := fmt.Sprintf("# Please edit the following configuration for Lima instance %q\n", instName)
+		hdr += "# and an empty file will abort the edit.\n"
+		hdr += "\n"
+		hdr += editutil.GenerateEditorWarningHeader()
+		yBytes, err = editutil.OpenEditor(instName, yContent, hdr)
+		if err != nil {
+			return err
+		}
 	}
 	if len(yBytes) == 0 {
 		logrus.Info("Aborting, as requested by saving the file with empty content")
@@ -86,6 +108,10 @@ func editAction(cmd *cobra.Command, args []string) error {
 	}
 	logrus.Infof("Instance %q configuration edited", instName)
 
+	if !tty {
+		// use "start" to start it
+		return nil
+	}
 	startNow, err := askWhetherToStart()
 	if err != nil {
 		return err
