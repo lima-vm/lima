@@ -224,3 +224,18 @@ func (l *LimaVBoxDriver) Stop(ctx context.Context) error {
 	err := qCmd.Run()
 	return err
 }
+
+func (l *LimaVBoxDriver) Register(ctx context.Context) error {
+	name := "lima-" + l.Instance.Name
+	args := []string{"registervm", filepath.Join(l.Instance.Dir, name)}
+	qCmd := exec.CommandContext(ctx, "VBoxManage", args...)
+	err := qCmd.Run()
+	return err
+}
+
+func (l *LimaVBoxDriver) Unregister(ctx context.Context) error {
+	args := []string{"unregistervm", "lima-" + l.Instance.Name}
+	qCmd := exec.CommandContext(ctx, "VBoxManage", args...)
+	err := qCmd.Run()
+	return err
+}
