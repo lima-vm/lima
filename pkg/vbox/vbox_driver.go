@@ -171,6 +171,12 @@ func (l *LimaVBoxDriver) Start(ctx context.Context) (chan error, error) {
 		logrus.Debugf("modifyvm natpf1 %v %s", err, out)
 		return nil, err
 	}
+	if out, err := exec.CommandContext(ctx, qExe, "modifyvm", name,
+		"--uart1", "0x3F8", "4", // these are the "traditional values" for COM1, according to the documentation
+		"--uartmode1", "file", filepath.Join(l.Instance.Dir, filenames.SerialLog)).CombinedOutput(); err != nil {
+		logrus.Debugf("modifyvm uartmode %v %s", err, out)
+		return nil, err
+	}
 
 	logrus.Infof("Starting VBox (hint: to watch the boot progress, see %q)", filepath.Join(l.Instance.Dir, filenames.SerialLog))
 	displayType := "headless"
