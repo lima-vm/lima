@@ -62,6 +62,7 @@ type TemplateArgs struct {
 	Mounts                          []Mount
 	MountType                       string
 	Disks                           []Disk
+	DiskType                        string
 	GuestInstallPrefix              string
 	Containerd                      Containerd
 	Networks                        []Network

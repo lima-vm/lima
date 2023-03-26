@@ -15,6 +15,7 @@ import (
 	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/iso9660util"
 	"github.com/lima-vm/lima/pkg/limayaml"
+	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/sirupsen/logrus"
 )
@@ -61,6 +62,30 @@ func (l *LimaVBoxDriver) create(ctx context.Context, name string) error {
 
 	baseDisk := filepath.Join(l.Instance.Dir, filenames.BaseDisk)
 	diffDisk := filepath.Join(l.Instance.Dir, filenames.DiffDisk)
+	extraDisks := []string{}
+	if len(l.Instance.AdditionalDisks) > 0 {
+		for _, d := range l.Instance.AdditionalDisks {
+			diskName := d.Name
+			disk, err := store.InspectDisk(diskName)
+			if err != nil {
+				logrus.Errorf("could not load disk %q: %q", diskName, err)
+				return err
+			}
+
+			if disk.Instance != "" {
+				logrus.Errorf("could not attach disk %q, in use by instance %q", diskName, disk.Instance)
+				return err
+			}
+			logrus.Infof("Mounting disk %q on %q", diskName, disk.MountPoint)
+			err = disk.Lock(l.Instance.Dir)
+			if err != nil {
+				logrus.Errorf("could not lock disk %q: %q", diskName, err)
+				return err
+			}
+			dataDisk := filepath.Join(disk.Dir, filenames.DataDisk)
+			extraDisks = append(extraDisks, dataDisk)
+		}
+	}
 	isBaseDiskISO, err := iso9660util.IsISO9660(baseDisk)
 	if err != nil {
 		return err
@@ -127,6 +152,17 @@ func (l *LimaVBoxDriver) create(ctx context.Context, name string) error {
 		"--medium", diffDisk+".vdi").Run(); err != nil {
 		logrus.Debugf("diffdisk %v", err)
 		return err
+	}
+	for i, extraDisk := range extraDisks {
+		if err := exec.CommandContext(ctx, qExe, "storageattach", name,
+			"--storagectl", "SATA",
+			"--port", "3",
+			"--device", fmt.Sprintf("%d", i),
+			"--type", "hdd",
+			"--medium", extraDisk).Run(); err != nil {
+			logrus.Debugf("extradisk %v", err)
+			return err
+		}
 	}
 
 	if err := exec.CommandContext(ctx, qExe, "storageattach", name,
