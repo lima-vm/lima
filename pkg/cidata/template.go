@@ -79,6 +79,7 @@ type TemplateArgs struct {
 	Mounts                          []Mount
 	MountType                       string
 	Disks                           []Disk
+	DiskType                        string
 	GuestInstallPrefix              string
 	UpgradePackages                 bool
 	Containerd                      Containerd
