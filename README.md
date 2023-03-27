@@ -224,7 +224,7 @@ Use `<INSTANCE>:<FILENAME>` to specify a source or target inside an instance.
 
 #### `limactl disk`
 
-`limactl disk create <DISK> --size <SIZE>`: create a new external disk to attach to an instance
+`limactl disk create <DISK> --size <SIZE> [--format qcow2]`: create a new external disk to attach to an instance
 
 `limactl disk delete <DISK>`: delete an existing disk
 

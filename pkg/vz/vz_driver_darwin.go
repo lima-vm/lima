@@ -64,6 +64,7 @@ func (l *LimaVzDriver) Validate() error {
 		"PropagateProxyEnv",
 		"CACertificates",
 		"Rosetta",
+		"AdditionalDisks",
 	); len(unknown) > 0 {
 		logrus.Warnf("Ignoring: vmType %s: %+v", *l.Yaml.VMType, unknown)
 	}

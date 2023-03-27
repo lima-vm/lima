@@ -74,10 +74,14 @@ Host agent:
 A disk directory contains the following files:
 
 data disk:
-- `datadisk`: the qcow2 disk that is attached to an instance
+- `datadisk`: the qcow2 or raw disk that is attached to an instance
 
 lock:
 - `in_use_by`: symlink to the instance directory that is using the disk
+
+When using `vmType: vz` (Virtualization.framework), on boot, any qcow2 (default) formatted disks that are specified in `additionalDisks` will be converted to RAW since [Virtualization.framework only supports mounting RAW disks](https://developer.apple.com/documentation/virtualization/vzdiskimagestoragedeviceattachment). This conversion enables additional disks to work with both Virtualization.framework and QEMU, but it has some consequences when it comes to interacting with the disks. Most importantly, a regular macOS default `cp` command will copy the _entire_ virtual disk size, instead of just the _used/allocated_ portion. The easiest way to copy only the used data is by adding the `-c` option to cp: `cp -c old_path new_path`. `cp -c` uses clonefile(2) to create a copy-on-write clone of the disk, and should return instantly.
+
+`ls` will also only show the full/virtual size of the disks. To see the allocated space, `du -h disk_path` or `qemu-img info disk_path` can be used instead. See [#1405](https://github.com/lima-vm/lima/pull/1405) for more details.
 
 ## Lima cache directory (`~/Library/Caches/lima`)
 

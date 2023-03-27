@@ -104,14 +104,14 @@ func EnsureDisk(cfg Config) error {
 	return nil
 }
 
-func CreateDataDisk(dir string, size int) error {
+func CreateDataDisk(dir, format string, size int) error {
 	dataDisk := filepath.Join(dir, filenames.DataDisk)
 	if _, err := os.Stat(dataDisk); err == nil || !errors.Is(err, fs.ErrNotExist) {
 		// datadisk already exists
 		return err
 	}
 
-	args := []string{"create", "-f", "qcow2", dataDisk, strconv.Itoa(size)}
+	args := []string{"create", "-f", format, dataDisk, strconv.Itoa(size)}
 	cmd := exec.Command("qemu-img", args...)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to run %v: %q: %w", cmd.Args, string(out), err)
