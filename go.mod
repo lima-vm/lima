@@ -26,7 +26,7 @@ require (
 	github.com/mattn/go-isatty v0.0.18
 	github.com/mattn/go-shellwords v1.0.12
 	github.com/miekg/dns v1.1.52
-	github.com/mikefarah/yq/v4 v4.32.2
+	github.com/mikefarah/yq/v4 v4.33.1
 	github.com/norouter/norouter v0.6.3
 	github.com/nxadm/tail v1.4.8
 	github.com/opencontainers/go-digest v1.0.0
@@ -62,7 +62,7 @@ require (
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
 	github.com/go-openapi/jsonreference v0.20.0 // indirect
 	github.com/go-openapi/swag v0.19.14 // indirect
-	github.com/goccy/go-json v0.10.1 // indirect
+	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/btree v1.0.1 // indirect
@@ -86,6 +86,7 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
+	github.com/pelletier/go-toml/v2 v2.0.6 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pkg/sftp v1.13.5 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
