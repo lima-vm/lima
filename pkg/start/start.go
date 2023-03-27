@@ -39,7 +39,7 @@ func ensureNerdctlArchiveCache(y *limayaml.LimaYAML) (string, error) {
 
 	errs := make([]error, len(y.Containerd.Archives))
 	for i, f := range y.Containerd.Archives {
-		path, err := fileutils.DownloadFile("", f, "the nerdctl archive", *y.Arch)
+		path, err := fileutils.DownloadFile("", f, false, "the nerdctl archive", *y.Arch)
 		if err != nil {
 			errs[i] = err
 			continue

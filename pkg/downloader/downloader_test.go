@@ -3,6 +3,7 @@ package downloader
 import (
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -129,4 +130,30 @@ func TestDownloadLocal(t *testing.T) {
 		os.Remove(localTestFile)
 	})
 
+}
+
+func TestDownloadCompressed(t *testing.T) {
+
+	if runtime.GOOS == "windows" {
+		// FIXME: `assertion failed: error is not nil: exec: "gzip": executable file not found in %PATH%`
+		t.Skip("Skipping on windows")
+	}
+
+	t.Run("gzip", func(t *testing.T) {
+		localPath := filepath.Join(t.TempDir(), t.Name())
+		localFile := filepath.Join(t.TempDir(), "test-file")
+		testDownloadCompressedContents := []byte("TestDownloadCompressed")
+		ioutil.WriteFile(localFile, testDownloadCompressedContents, 0644)
+		assert.NilError(t, exec.Command("gzip", localFile).Run())
+		localFile += ".gz"
+		testLocalFileURL := "file://" + localFile
+
+		r, err := Download(localPath, testLocalFileURL, WithDecompress(true))
+		assert.NilError(t, err)
+		assert.Equal(t, StatusDownloaded, r.Status)
+
+		got, err := os.ReadFile(localPath)
+		assert.NilError(t, err)
+		assert.Equal(t, string(got), string(testDownloadCompressedContents))
+	})
 }
