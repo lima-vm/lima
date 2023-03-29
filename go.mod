@@ -25,7 +25,7 @@ require (
 	github.com/lithammer/dedent v1.1.0
 	github.com/mattn/go-isatty v0.0.18
 	github.com/mattn/go-shellwords v1.0.12
-	github.com/miekg/dns v1.1.52
+	github.com/miekg/dns v1.1.53
 	github.com/mikefarah/yq/v4 v4.33.1
 	github.com/norouter/norouter v0.6.3
 	github.com/nxadm/tail v1.4.8
