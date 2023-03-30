@@ -10,7 +10,7 @@ import (
 )
 
 // DownloadFile downloads a file to the cache, optionally copying it to the destination. Returns path in cache.
-func DownloadFile(dest string, f limayaml.File, description string, expectedArch limayaml.Arch) (string, error) {
+func DownloadFile(dest string, f limayaml.File, decompress bool, description string, expectedArch limayaml.Arch) (string, error) {
 	if f.Arch != expectedArch {
 		return "", fmt.Errorf("unsupported arch: %q", f.Arch)
 	}
@@ -18,6 +18,7 @@ func DownloadFile(dest string, f limayaml.File, description string, expectedArch
 	logrus.WithFields(fields).Infof("Attempting to download %s", description)
 	res, err := downloader.Download(dest, f.Location,
 		downloader.WithCache(),
+		downloader.WithDecompress(decompress),
 		downloader.WithDescription(fmt.Sprintf("%s (%s)", description, path.Base(f.Location))),
 		downloader.WithExpectedDigest(f.Digest),
 	)

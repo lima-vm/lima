@@ -50,12 +50,12 @@ func EnsureDisk(cfg Config) error {
 		var ensuredBaseDisk bool
 		errs := make([]error, len(cfg.LimaYAML.Images))
 		for i, f := range cfg.LimaYAML.Images {
-			if _, err := fileutils.DownloadFile(baseDisk, f.File, "the image", *cfg.LimaYAML.Arch); err != nil {
+			if _, err := fileutils.DownloadFile(baseDisk, f.File, true, "the image", *cfg.LimaYAML.Arch); err != nil {
 				errs[i] = err
 				continue
 			}
 			if f.Kernel != nil {
-				if _, err := fileutils.DownloadFile(kernel, f.Kernel.File, "the kernel", *cfg.LimaYAML.Arch); err != nil {
+				if _, err := fileutils.DownloadFile(kernel, f.Kernel.File, false, "the kernel", *cfg.LimaYAML.Arch); err != nil {
 					errs[i] = err
 					continue
 				}
@@ -67,7 +67,7 @@ func EnsureDisk(cfg Config) error {
 				}
 			}
 			if f.Initrd != nil {
-				if _, err := fileutils.DownloadFile(initrd, *f.Initrd, "the initrd", *cfg.LimaYAML.Arch); err != nil {
+				if _, err := fileutils.DownloadFile(initrd, *f.Initrd, false, "the initrd", *cfg.LimaYAML.Arch); err != nil {
 					errs[i] = err
 					continue
 				}

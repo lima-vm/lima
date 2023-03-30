@@ -1,12 +1,15 @@
 package downloader
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -38,6 +41,7 @@ type Result struct {
 
 type options struct {
 	cacheDir       string // default: empty (disables caching)
+	decompress     bool   // default: false (keep compression)
 	description    string // default: url
 	expectedDigest digest.Digest
 }
@@ -69,6 +73,14 @@ func WithCacheDir(cacheDir string) Opt {
 func WithDescription(description string) Opt {
 	return func(o *options) error {
 		o.description = description
+		return nil
+	}
+}
+
+// WithDecompress decompress the download from the cache.
+func WithDecompress(decompress bool) Opt {
+	return func(o *options) error {
+		o.decompress = decompress
 		return nil
 	}
 }
@@ -142,8 +154,9 @@ func Download(local, remote string, opts ...Opt) (*Result, error) {
 		}
 	}
 
+	ext := path.Ext(remote)
 	if IsLocal(remote) {
-		if err := copyLocal(localPath, remote, o.description, o.expectedDigest); err != nil {
+		if err := copyLocal(localPath, remote, ext, o.decompress, o.description, o.expectedDigest); err != nil {
 			return nil, err
 		}
 		res := &Result{
@@ -183,11 +196,11 @@ func Download(local, remote string, opts ...Opt) (*Result, error) {
 			if o.expectedDigest.String() != shadDigestS {
 				return nil, fmt.Errorf("expected digest %q does not match the cached digest %q", o.expectedDigest.String(), shadDigestS)
 			}
-			if err := copyLocal(localPath, shadData, "", ""); err != nil {
+			if err := copyLocal(localPath, shadData, ext, o.decompress, "", ""); err != nil {
 				return nil, err
 			}
 		} else {
-			if err := copyLocal(localPath, shadData, o.description, o.expectedDigest); err != nil {
+			if err := copyLocal(localPath, shadData, ext, o.decompress, o.description, o.expectedDigest); err != nil {
 				return nil, err
 			}
 		}
@@ -212,7 +225,7 @@ func Download(local, remote string, opts ...Opt) (*Result, error) {
 		return nil, err
 	}
 	// no need to pass the digest to copyLocal(), as we already verified the digest
-	if err := copyLocal(localPath, shadData, "", ""); err != nil {
+	if err := copyLocal(localPath, shadData, ext, o.decompress, "", ""); err != nil {
 		return nil, err
 	}
 	if shadDigest != "" && o.expectedDigest != "" {
@@ -253,7 +266,7 @@ func canonicalLocalPath(s string) (string, error) {
 	return localpathutil.Expand(s)
 }
 
-func copyLocal(dst, src string, description string, expectedDigest digest.Digest) error {
+func copyLocal(dst, src, ext string, decompress bool, description string, expectedDigest digest.Digest) error {
 	srcPath, err := canonicalLocalPath(src)
 	if err != nil {
 		return err
@@ -274,7 +287,58 @@ func copyLocal(dst, src string, description string, expectedDigest digest.Digest
 	if description != "" {
 		// TODO: progress bar for copy
 	}
+	if _, ok := Decompressor(ext); ok && decompress {
+		return decompressLocal(dstPath, srcPath, ext)
+	}
 	return fs.CopyFile(dstPath, srcPath)
+}
+
+func Decompressor(ext string) ([]string, bool) {
+	var program string
+	switch ext {
+	case ".gz":
+		program = "gzip"
+	case ".bz2":
+		program = "bzip2"
+	case ".xz":
+		program = "xz"
+	case ".zst":
+		program = "zstd"
+	default:
+		return nil, false
+	}
+	// -d --decompress
+	return []string{program, "-d"}, true
+}
+
+func decompressLocal(dst, src, ext string) error {
+	command, found := Decompressor(ext)
+	if !found {
+		return fmt.Errorf("decompressLocal: unknown extension %s", ext)
+	}
+	logrus.Infof("decompressing %s with %v", ext, command)
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+	out, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+	buf := new(bytes.Buffer)
+	cmd := exec.Command(command[0], command[1:]...)
+	cmd.Stdin = in
+	cmd.Stdout = out
+	cmd.Stderr = buf
+	err = cmd.Run()
+	if err != nil {
+		if ee, ok := err.(*exec.ExitError); ok {
+			ee.Stderr = buf.Bytes()
+		}
+	}
+	return err
 }
 
 func validateLocalFileDigest(localPath string, expectedDigest digest.Digest) error {
