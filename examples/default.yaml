@@ -432,8 +432,8 @@ hostResolver:
 
 # For slices (e.g. `mounts`, `provision`) and maps (`env`) the entries are
 # combined instead of replacing each other. Slices are produced from override
-# settings, followed by lima.yaml, followed by defaults.yaml (but NOT from
-# builtin defaults). Maps are produced starting with defaults.yaml values,
+# settings, followed by lima.yaml, followed by default.yaml (but NOT from
+# builtin defaults). Maps are produced starting with default.yaml values,
 # overwriting with lima.yaml ones, overwriting with override.yaml.
 
 # Exceptions:
