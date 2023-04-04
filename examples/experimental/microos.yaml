@@ -1,0 +1,12 @@
+# This example requires Lima v0.15.1 or later.
+images:
+# Hint: run `limactl prune` to invalidate the cache
+- location: https://download.opensuse.org/tumbleweed/appliances/openSUSE-MicroOS.x86_64-OpenStack-Cloud.qcow2
+  arch: "x86_64"
+- location: https://download.opensuse.org/ports/aarch64/tumbleweed/appliances/openSUSE-MicroOS.aarch64-OpenStack-Cloud.qcow2
+  arch: "aarch64"
+
+mounts:
+- location: "~"
+- location: "/tmp/lima"
+  writable: true

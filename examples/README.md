@@ -30,6 +30,7 @@ Distro:
 - [`experimental/fedora-coreos`](./experimental/fedora-coreos.yaml): [experimental] Fedora CoreOS
 - [`experimental/flatcar`](experimental/flatcar.yaml): [experimental] Flatcar Container Linux
 - [`experimental/opensuse-tumbleweed`](./experimental/opensuse-tumbleweed.yaml): [experimental] openSUSE Tumbleweed
+- [`experimental/microos`](experimental/microos.yaml): [experimental] openSUSE Tumbleweed MicroOS
 
 Container engines:
 - [`apptainer`](./apptainer.yaml): Apptainer
