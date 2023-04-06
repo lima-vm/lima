@@ -63,7 +63,7 @@ func EnsureDisk(driver *driver.BaseDriver) error {
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to run %v: %q: %w", cmd.Args, string(out), err)
 	}
-	if err = imgutil.QCOWToRaw(diffDisk, diffDisk); err != nil {
+	if err = imgutil.ConvertToRaw(diffDisk, diffDisk); err != nil {
 		return fmt.Errorf("cannot convert qcow2 to raw for vz driver")
 	}
 	return nil
