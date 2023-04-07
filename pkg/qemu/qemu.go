@@ -76,8 +76,7 @@ func EnsureDisk(cfg Config) error {
 			break
 		}
 		if !ensuredBaseDisk {
-			return fmt.Errorf("failed to download the image, attempted %d candidates, errors=%v",
-				len(cfg.LimaYAML.Images), errs)
+			return fileutils.Errors(errs)
 		}
 	}
 	diskSize, _ := units.RAMInBytes(*cfg.LimaYAML.Disk)

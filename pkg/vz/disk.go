@@ -37,8 +37,7 @@ func EnsureDisk(driver *driver.BaseDriver) error {
 			break
 		}
 		if !ensuredBaseDisk {
-			return fmt.Errorf("failed to download the image, attempted %d candidates, errors=%v",
-				len(driver.Yaml.Images), errs)
+			return fileutils.Errors(errs)
 		}
 	}
 	diskSize, _ := units.RAMInBytes(*driver.Yaml.Disk)
