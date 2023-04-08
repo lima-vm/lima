@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"syscall"
 
 	"github.com/Code-Hex/vz/v3"
@@ -356,20 +357,28 @@ func attachDisks(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfigura
 			return fmt.Errorf("failed to run detect disk format %q: %q", diskName, err)
 		}
 		if extraDiskFormat != "raw" {
-			rawPath := fmt.Sprintf("%s.raw", extraDiskPath)
-			qcow2Path := fmt.Sprintf("%s.qcow2", extraDiskPath)
-			if err = imgutil.QCOWToRaw(extraDiskPath, rawPath); err != nil {
-				return fmt.Errorf("failed to convert qcow2 disk %q to raw for vz driver: %w", diskName, err)
+			if strings.Contains(extraDiskFormat, string(os.PathSeparator)) {
+				return fmt.Errorf(
+					"failed to convert disk %q to raw for vz driver because extraDiskFormat %q contains a path separator %q",
+					diskName,
+					extraDiskFormat,
+					os.PathSeparator,
+				)
 			}
-			if err = os.Rename(extraDiskPath, qcow2Path); err != nil {
+			rawPath := fmt.Sprintf("%s.raw", extraDiskPath)
+			oldFormatPath := fmt.Sprintf("%s.%s", extraDiskPath, extraDiskFormat)
+			if err = imgutil.ConvertToRaw(extraDiskPath, rawPath); err != nil {
+				return fmt.Errorf("failed to convert %s disk %q to raw for vz driver: %w", extraDiskFormat, diskName, err)
+			}
+			if err = os.Rename(extraDiskPath, oldFormatPath); err != nil {
 				return fmt.Errorf("failed to rename additional disk for vz driver: %w", err)
 			}
 			if err = os.Rename(rawPath, extraDiskPath); err != nil {
 				return fmt.Errorf("failed to rename additional disk for vz driver: %w", err)
 			}
-			if err = os.Remove(qcow2Path); err != nil {
+			if err = os.Remove(oldFormatPath); err != nil {
 				logrus.Errorf("Failed to delete unused qcow2 additional disk %q."+
-					"Disk is no longer needed by Lima and it can be removed manually.", qcow2Path)
+					"Disk is no longer needed by Lima and it can be removed manually.", oldFormatPath)
 			}
 		}
 
