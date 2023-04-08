@@ -43,8 +43,7 @@ func editAction(cmd *cobra.Command, args []string) error {
 	inst, err := store.Inspect(instName)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			logrus.Infof("Instance %q not found", instName)
-			return nil
+			return fmt.Errorf("Instance %q not found", instName)
 		}
 		return err
 	}
