@@ -50,6 +50,11 @@ if [ "$(awk '$2 == "/" {print $3}' /proc/mounts)" == "tmpfs" ]; then
 				for MP in $(mount | awk '$3 ~ /^\/tmp\// {print $3}'); do
 					umount "${MP}"
 				done
+				# setup apk package cache
+				mkdir -p /mnt/data/apk/cache
+				mkdir -p /etc/apk
+				ln -s /mnt/data/apk/cache /etc/apk/cache
+				# Move all persisted directories to the data volume
 				for DIR in ${DATADIRS}; do
 					DEST="/mnt/data$(dirname "${DIR}")"
 					mkdir -p "${DIR}" "${DEST}"
