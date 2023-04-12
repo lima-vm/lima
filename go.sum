@@ -398,8 +398,8 @@ github.com/miekg/dns v1.1.25/go.mod h1:bPDLeHnStXmXAq1m/Ch/hvfNHr14JKNPMBo3VZKju
 github.com/miekg/dns v1.1.41/go.mod h1:p6aan82bvRIyn+zDIv9xYNUpwa73JcSh9BKwknJysuI=
 github.com/miekg/dns v1.1.53 h1:ZBkuHr5dxHtB1caEOlZTLPo7D3L3TWckgUUs/RHfDxw=
 github.com/miekg/dns v1.1.53/go.mod h1:uInx36IzPl7FYnDcMeVWxj9byh7DutNykX4G9Sj60FY=
-github.com/mikefarah/yq/v4 v4.33.2 h1:NSKcvFU/aPns1vZ/ywlpHzaqgbkGGG3B8pGUjmlBQBk=
-github.com/mikefarah/yq/v4 v4.33.2/go.mod h1:T8p8dVDRqforeTYfKN/r3AkEzItfKwg51Yo/DfcjIaI=
+github.com/mikefarah/yq/v4 v4.33.3 h1:cu6JxWAL82bpLCJTLYP3ILZ/3gXF1YfvYBCMRdnY/xA=
+github.com/mikefarah/yq/v4 v4.33.3/go.mod h1:ajAKq75gdANZHzkWu5shY2QZHpg8HOHVSyscC1+OAIs=
 github.com/mitchellh/mapstructure v1.1.2/go.mod h1:FVVH3fgwuzCH5S8UJGiWEs2h04kUh9fWfEaFds41c1Y=
 github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421/go.mod h1:6dJC0mAP4ikYIbvyc7fijjWJddQyLn8Ig3JB5CqoB9Q=
 github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd h1:TRLaZ9cD/w8PVh93nsPXa1VrQ6jlwL5oN8l14QlcNfg=
