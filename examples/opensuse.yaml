@@ -1,10 +1,18 @@
 # This example requires Lima v0.7.0 or later
 images:
 # Hint: run `limactl prune` to invalidate the "Current" cache
-- location: https://download.opensuse.org/distribution/leap/15.4/appliances/openSUSE-Leap-15.4-JeOS.x86_64-15.4-OpenStack-Cloud-Current.qcow2
+- location: "https://download.opensuse.org/distribution/leap/15.4/appliances/openSUSE-Leap-15.4-JeOS.x86_64-15.4-OpenStack-Cloud-Current.qcow2"
   arch: "x86_64"
-- location: https://download.opensuse.org/distribution/leap/15.4/appliances/openSUSE-Leap-15.4-ARM-JeOS-efi.aarch64.qcow2
+- location: "https://download.opensuse.org/distribution/leap/15.4/appliances/openSUSE-Leap-15.4-ARM-JeOS-efi.aarch64.qcow2"
   arch: "aarch64"
+# download.opensuse.org is inaccessible from Japan (500 Internal Server Error)
+# https://bugzilla.opensuse.org/show_bug.cgi?id=1210240
+# NOTE: the file name on provo-mirror.opensuse.org lacks the "-Current" suffix.
+- location: "https://provo-mirror.opensuse.org/distribution/leap/15.4/appliances/openSUSE-Leap-15.4-JeOS.x86_64-OpenStack-Cloud.qcow2"
+  arch: "x86_64"
+- location: "https://provo-mirror.opensuse.org/distribution/leap/15.4/appliances/openSUSE-Leap-15.4-ARM-JeOS-efi.aarch64.qcow2"
+  arch: "aarch64"
+
 mounts:
 - location: "~"
 - location: "/tmp/lima"
