@@ -356,7 +356,16 @@ func Cmdline(cfg Config) (string, []string, error) {
 
 	// CPU
 	cpu := y.CPUType[*y.Arch]
+	if runtime.GOOS == "darwin" && runtime.GOARCH == "amd64" {
+		switch {
+		case strings.HasPrefix(cpu, "host"), strings.HasPrefix(cpu, "max"):
+			if !strings.Contains(cpu, ",-pdpe1gb") {
+				logrus.Warnf("On Intel Mac, CPU type %q typically needs \",-pdpe1gb\" option (https://stackoverflow.com/a/72863744/5167443)", cpu)
+			}
+		}
+	}
 	args = appendArgsIfNoConflict(args, "-cpu", cpu)
+
 	switch *y.Arch {
 	case limayaml.X8664:
 		if strings.HasPrefix(cpu, "qemu64") && runtime.GOOS != "windows" {

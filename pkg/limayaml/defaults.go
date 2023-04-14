@@ -120,6 +120,15 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 				cpuType[arch] = "max"
 			}
 		}
+		if arch == X8664 && runtime.GOOS == "darwin" {
+			switch cpuType[arch] {
+			case "host", "max":
+				// Disable pdpe1gb on Intel Mac
+				// https://github.com/lima-vm/lima/issues/1485
+				// https://stackoverflow.com/a/72863744/5167443
+				cpuType[arch] += ",-pdpe1gb"
+			}
+		}
 	}
 	var overrideCPUType bool
 	for k, v := range d.CPUType {

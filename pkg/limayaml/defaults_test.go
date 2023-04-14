@@ -98,6 +98,12 @@ func TestFillDefault(t *testing.T) {
 		} else if HasMaxCPU() {
 			builtin.CPUType[arch] = "max"
 		}
+		if arch == X8664 && runtime.GOOS == "darwin" {
+			switch builtin.CPUType[arch] {
+			case "host", "max":
+				builtin.CPUType[arch] += ",-pdpe1gb"
+			}
+		}
 	}
 
 	defaultPortForward := PortForward{
