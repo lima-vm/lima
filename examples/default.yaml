@@ -227,7 +227,7 @@ containerd:
 cpuType:
   # 🟢 Builtin default: "cortex-a72" (or "host" when running on aarch64 host)
   aarch64: null
-  # 🟢 Builtin default: "qemu64" (or "host" when running on x86_64 host)
+  # 🟢 Builtin default: "qemu64" (or "host,-pdpe1gb" when running on x86_64 host)
   x86_64: null
 
 rosetta:
