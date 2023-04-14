@@ -1,6 +1,7 @@
 package fileutils
 
 import (
+	"errors"
 	"fmt"
 	"path"
 
@@ -9,10 +10,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// ErrSkipped is returned when the downloader did not attempt to download the specified file.
+var ErrSkipped = errors.New("skipped to download")
+
 // DownloadFile downloads a file to the cache, optionally copying it to the destination. Returns path in cache.
 func DownloadFile(dest string, f limayaml.File, decompress bool, description string, expectedArch limayaml.Arch) (string, error) {
 	if f.Arch != expectedArch {
-		return "", fmt.Errorf("unsupported arch: %q", f.Arch)
+		return "", fmt.Errorf("%w: %q: unsupported arch: %q", ErrSkipped, f.Location, f.Arch)
 	}
 	fields := logrus.Fields{"location": f.Location, "arch": f.Arch, "digest": f.Digest}
 	logrus.WithFields(fields).Infof("Attempting to download %s", description)
@@ -35,4 +39,26 @@ func DownloadFile(dest string, f limayaml.File, decompress bool, description str
 		logrus.Warnf("Unexpected result from downloader.Download(): %+v", res)
 	}
 	return res.CachePath, nil
+}
+
+// Errors compose multiple into a single error.
+// Errors filters out ErrSkipped.
+func Errors(errs []error) error {
+	var finalErr error
+	for _, err := range errs {
+		if errors.Is(err, ErrSkipped) {
+			logrus.Debug(err)
+		} else {
+			if finalErr == nil {
+				finalErr = err
+			} else {
+				finalErr = fmt.Errorf("%v, %w", finalErr, err)
+			}
+		}
+	}
+	if len(errs) > 0 && finalErr == nil {
+		// errs only contains ErrSkipped
+		finalErr = fmt.Errorf("%v", errs)
+	}
+	return finalErr
 }

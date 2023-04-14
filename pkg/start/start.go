@@ -53,8 +53,7 @@ func ensureNerdctlArchiveCache(y *limayaml.LimaYAML) (string, error) {
 		return path, nil
 	}
 
-	return "", fmt.Errorf("failed to download the nerdctl archive, attempted %d candidates, errors=%v",
-		len(y.Containerd.Archives), errs)
+	return "", fileutils.Errors(errs)
 }
 
 func Start(ctx context.Context, inst *store.Instance) error {
