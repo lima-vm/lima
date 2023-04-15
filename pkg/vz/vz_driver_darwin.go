@@ -138,7 +138,10 @@ func (l *LimaVzDriver) Stop(_ context.Context) error {
 			case <-timeout:
 				return errors.New("vz timeout while waiting for stop status")
 			case <-tick:
-				if l.machine.stopped {
+				l.machine.mu.Lock()
+				stopped := l.machine.stopped
+				l.machine.mu.Unlock()
+				if stopped {
 					return nil
 				}
 			}

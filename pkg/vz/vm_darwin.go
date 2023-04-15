@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 
 	"github.com/Code-Hex/vz/v3"
@@ -29,6 +30,7 @@ import (
 
 type virtualMachineWrapper struct {
 	*vz.VirtualMachine
+	mu      sync.Mutex
 	stopped bool
 }
 
@@ -90,7 +92,9 @@ func startVM(ctx context.Context, driver *driver.BaseDriver) (*virtualMachineWra
 					logrus.Info("[VZ] - vm state change: running")
 				case vz.VirtualMachineStateStopped:
 					logrus.Info("[VZ] - vm state change: stopped")
+					wrapper.mu.Lock()
 					wrapper.stopped = true
+					wrapper.mu.Unlock()
 					errCh <- errors.New("vz driver state stopped")
 				default:
 					logrus.Debugf("[VZ] - vm state change: %q", newState)
