@@ -4,12 +4,13 @@
 # EL9-based distros are known to work.
 
 images:
-- location: "https://cloud.centos.org/centos/8-stream/x86_64/images/CentOS-Stream-GenericCloud-8-20220913.0.x86_64.qcow2"
+- location: "https://cloud.centos.org/centos/8-stream/x86_64/images/CentOS-Stream-GenericCloud-8-20230404.0.x86_64.qcow2"
   arch: "x86_64"
-  digest: "sha256:8717251f8e4d2fe3e5032799caae89358c1ba68d65a16b5128a59ec6003aac1c"
-- location: "https://cloud.centos.org/centos/8-stream/aarch64/images/CentOS-Stream-GenericCloud-8-20220913.0.aarch64.qcow2"
+  digest: "sha256:1c06cac5c84b44e4d3474b1aafc7189bd84013cd1cb480ed0a280bbcb34f57a6"
+# CentOS-Stream-GenericCloud-8-20230404.0.aarch64.qcow2 is broken (0 byte)
+- location: "https://cloud.centos.org/centos/8-stream/aarch64/images/CentOS-Stream-GenericCloud-8-20230308.3.aarch64.qcow2"
   arch: "aarch64"
-  digest: "sha256:be18d94caaa55d58eba0e1314758ec6f73d852650a497dd5a20972c58db57281"
+  digest: "sha256:a982b96bcf3c1e36b5688fcddcd57b85c0ca58d13013e6435234e2497c7c7d82"
 mounts:
 - location: "~"
 - location: "/tmp/lima"
