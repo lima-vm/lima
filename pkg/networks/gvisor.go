@@ -55,7 +55,7 @@ func StartGVisorNetstack(ctx context.Context, gVisorOpts *GVisorNetstackOpts) {
 			SlirpIPAddress: opts.MacAddress,
 		},
 		Forwards: map[string]string{
-			fmt.Sprintf("127.0.0.1:%d", opts.SSHLocalPort): fmt.Sprintf("%s:22", SlirpIPAddress),
+			fmt.Sprintf("127.0.0.1:%d", opts.SSHLocalPort): net.JoinHostPort(SlirpIPAddress, "22"),
 		},
 		DNS:              []types.Zone{},
 		DNSSearchDomains: searchDomains(),

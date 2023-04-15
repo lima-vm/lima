@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -318,7 +319,7 @@ func (h *Handler) handleDefault(w dns.ResponseWriter, req *dns.Msg) {
 	logrus.Tracef("handleDefault for %v", req)
 	for _, client := range h.clients {
 		for _, srv := range h.clientConfig.Servers {
-			addr := fmt.Sprintf("%s:%s", srv, h.clientConfig.Port)
+			addr := net.JoinHostPort(srv, h.clientConfig.Port)
 			reply, _, err := client.Exchange(req, addr)
 			if err != nil {
 				logrus.WithError(err).Debugf("handleDefault failed to perform a synchronous query with upstream [%v]", addr)
@@ -378,9 +379,9 @@ func listenAndServe(network Network, opts ServerOptions) (*dns.Server, error) {
 	// always enable reply truncate for UDP
 	if network == UDP {
 		opts.HandlerOptions.TruncateReply = true
-		addr = fmt.Sprintf("%s:%d", opts.Address, opts.UDPPort)
+		addr = net.JoinHostPort(opts.Address, strconv.Itoa(opts.UDPPort))
 	} else {
-		addr = fmt.Sprintf("%s:%d", opts.Address, opts.TCPPort)
+		addr = net.JoinHostPort(opts.Address, strconv.Itoa(opts.TCPPort))
 	}
 	h, err := NewHandler(opts.HandlerOptions)
 	if err != nil {
