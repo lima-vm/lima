@@ -27,7 +27,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func startVM(ctx context.Context, driver *driver.BaseDriver) (*vz.VirtualMachine, chan error, error) {
+type virtualMachineWrapper struct {
+	*vz.VirtualMachine
+	stopped bool
+}
+
+func startVM(ctx context.Context, driver *driver.BaseDriver) (*virtualMachineWrapper, chan error, error) {
 	server, client, err := createSockPair()
 	if err != nil {
 		return nil, nil, err
@@ -54,6 +59,8 @@ func startVM(ctx context.Context, driver *driver.BaseDriver) (*vz.VirtualMachine
 	if err != nil {
 		return nil, nil, err
 	}
+
+	wrapper := &virtualMachineWrapper{VirtualMachine: machine, stopped: false}
 
 	errCh := make(chan error)
 	go func() {
@@ -83,6 +90,7 @@ func startVM(ctx context.Context, driver *driver.BaseDriver) (*vz.VirtualMachine
 					logrus.Info("[VZ] - vm state change: running")
 				case vz.VirtualMachineStateStopped:
 					logrus.Info("[VZ] - vm state change: stopped")
+					wrapper.stopped = true
 					errCh <- errors.New("vz driver state stopped")
 				default:
 					logrus.Debugf("[VZ] - vm state change: %q", newState)
@@ -91,7 +99,7 @@ func startVM(ctx context.Context, driver *driver.BaseDriver) (*vz.VirtualMachine
 		}
 	}()
 
-	return machine, errCh, err
+	return wrapper, errCh, err
 }
 
 func createVM(driver *driver.BaseDriver, networkConn *os.File) (*vz.VirtualMachine, error) {
