@@ -2,6 +2,7 @@ package osutil
 
 import (
 	"fmt"
+	"net"
 	"strings"
 
 	"github.com/lima-vm/lima/pkg/sysprof"
@@ -31,9 +32,9 @@ func proxyURL(proxy string, port interface{}) string {
 		proxy = "http://" + proxy
 	}
 	if portNumber, ok := port.(float64); ok && portNumber != 0 {
-		proxy = fmt.Sprintf("%s:%.0f", proxy, portNumber)
+		proxy = net.JoinHostPort(proxy, fmt.Sprintf("%.0f", portNumber))
 	} else if portString, ok := port.(string); ok && portString != "" {
-		proxy = fmt.Sprintf("%s:%s", proxy, portString)
+		proxy = net.JoinHostPort(proxy, portString)
 	}
 	return proxy
 }
