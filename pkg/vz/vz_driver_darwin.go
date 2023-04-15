@@ -26,7 +26,7 @@ const Enabled = true
 type LimaVzDriver struct {
 	*driver.BaseDriver
 
-	machine *vz.VirtualMachine
+	machine *virtualMachineWrapper
 }
 
 func New(driver *driver.BaseDriver) *LimaVzDriver {
@@ -138,7 +138,7 @@ func (l *LimaVzDriver) Stop(_ context.Context) error {
 			case <-timeout:
 				return errors.New("vz timeout while waiting for stop status")
 			case <-tick:
-				if l.machine.State() == vz.VirtualMachineStateStopped {
+				if l.machine.stopped {
 					return nil
 				}
 			}
