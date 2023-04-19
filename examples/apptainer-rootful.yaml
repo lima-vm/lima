@@ -5,12 +5,12 @@
 # Fedora provides Apptainer in the default dnf.
 # Ubuntu does not seem to provide Apptainer in the default apt.
 images:
-- location: "https://download.fedoraproject.org/pub/fedora/linux/releases/37/Cloud/x86_64/images/Fedora-Cloud-Base-37-1.7.x86_64.qcow2"
+- location: "https://download.fedoraproject.org/pub/fedora/linux/releases/38/Cloud/x86_64/images/Fedora-Cloud-Base-38-1.6.x86_64.qcow2"
   arch: "x86_64"
-  digest: "sha256:b5b9bec91eee65489a5745f6ee620573b23337cbb1eb4501ce200b157a01f3a0"
-- location: "https://download.fedoraproject.org/pub/fedora/linux/releases/37/Cloud/aarch64/images/Fedora-Cloud-Base-37-1.7.aarch64.qcow2"
+  digest: "sha256:d334670401ff3d5b4129fcc662cf64f5a6e568228af59076cc449a4945318482"
+- location: "https://download.fedoraproject.org/pub/fedora/linux/releases/38/Cloud/aarch64/images/Fedora-Cloud-Base-38-1.6.aarch64.qcow2"
   arch: "aarch64"
-  digest: "sha256:cc8b0f49bc60875a16eef65ad13e0e86ba502ba3585cc51146f11f4182a628c0"
+  digest: "sha256:ad71d22104a16e4f9efa93e61e8c7bce28de693f59c802586abbe85e9db55a65"
 mounts:
 - location: "~"
 - location: "/tmp/lima"
