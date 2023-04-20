@@ -10,10 +10,16 @@ import (
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/sirupsen/logrus"
+	yamlv3 "gopkg.in/yaml.v3"
 )
 
 func unmarshalYAML(data []byte, v interface{}, comment string) error {
 	if err := yaml.UnmarshalWithOptions(data, v, yaml.DisallowDuplicateKey()); err != nil {
+		return fmt.Errorf("failed to unmarshal YAML (%s): %w", comment, err)
+	}
+	// the go-yaml library doesn't catch all markup errors, unfortunately
+	// make sure to get a "second opinion", using the same library as "yq"
+	if err := yamlv3.Unmarshal(data, v); err != nil {
 		return fmt.Errorf("failed to unmarshal YAML (%s): %w", comment, err)
 	}
 	if err := yaml.UnmarshalWithOptions(data, v, yaml.Strict()); err != nil {
