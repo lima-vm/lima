@@ -104,6 +104,16 @@ GUESTAGENT += \
 	_output/share/lima/lima-guestagent.Linux-riscv64
 endif
 endif
+ifeq ($(CONFIG_GUESTAGENT_OS_FREEBSD),y)
+ifeq ($(CONFIG_GUESTAGENT_ARCH_X8664),y)
+GUESTAGENT += \
+	_output/share/lima/lima-guestagent.FreeBSD-x86_64
+endif
+ifeq ($(CONFIG_GUESTAGENT_ARCH_AARCH64),y)
+GUESTAGENT += \
+	_output/share/lima/lima-guestagent.FreeBSD-aarch64
+endif
+endif
 
 .PHONY: binaries
 binaries: clean \
@@ -186,6 +196,16 @@ _output/share/lima/lima-guestagent.Linux-armv7l:
 .PHONY: _output/share/lima/lima-guestagent.Linux-riscv64
 _output/share/lima/lima-guestagent.Linux-riscv64:
 	GOOS=linux GOARCH=riscv64 CGO_ENABLED=0 $(GO_BUILD) -o $@ ./cmd/lima-guestagent
+	chmod 644 $@
+
+.PHONY: _output/share/lima/lima-guestagent.FreeBSD-x86_64
+_output/share/lima/lima-guestagent.FreeBSD-x86_64:
+	GOOS=freebsd GOARCH=amd64 CGO_ENABLED=0 $(GO_BUILD) -o $@ ./cmd/lima-guestagent
+	chmod 644 $@
+
+.PHONY: _output/share/lima/lima-guestagent.FreeBSD-aarch64
+_output/share/lima/lima-guestagent.FreeBSD-aarch64:
+	GOOS=freebsd GOARCH=arm64 CGO_ENABLED=0 $(GO_BUILD) -o $@ ./cmd/lima-guestagent
 	chmod 644 $@
 
 .PHONY: manpages

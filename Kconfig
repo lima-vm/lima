@@ -7,6 +7,12 @@ config GUESTAGENT_OS_LINUX
 		Build lima-guestagent for "Linux" OS
 	default y
 
+config GUESTAGENT_OS_FREEBSD
+	bool "guestagent OS: FreeBSD"
+	help
+		Build lima-guestagent for "FreeBSD" OS
+	default n
+
 config GUESTAGENT_ARCH_X8664
 	bool "guestagent Arch: x86_64"
 	help
