@@ -17,6 +17,7 @@ type Paths struct {
 }
 
 const (
+	ModeUserV2  = "user-v2"
 	ModeHost    = "host"
 	ModeShared  = "shared"
 	ModeBridged = "bridged"

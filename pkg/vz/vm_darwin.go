@@ -10,6 +10,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -22,6 +23,7 @@ import (
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/localpathutil"
 	"github.com/lima-vm/lima/pkg/networks"
+	"github.com/lima-vm/lima/pkg/networks/usernet"
 	"github.com/lima-vm/lima/pkg/qemu/imgutil"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
@@ -35,29 +37,17 @@ type virtualMachineWrapper struct {
 }
 
 func startVM(ctx context.Context, driver *driver.BaseDriver) (*virtualMachineWrapper, chan error, error) {
-	server, client, err := createSockPair()
-	if err != nil {
-		return nil, nil, err
-	}
-	machine, err := createVM(driver, client)
+	usernetClient, err := startUsernet(ctx, driver)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	fileConn, err := net.FileConn(server)
+	machine, err := createVM(driver)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	err = machine.Start()
-
-	networks.StartGVisorNetstack(ctx, &networks.GVisorNetstackOpts{
-		Conn:         fileConn,
-		MTU:          1500,
-		SSHLocalPort: driver.SSHLocalPort,
-		MacAddress:   limayaml.MACAddress(driver.Instance.Dir),
-		Stream:       false,
-	})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -90,11 +80,17 @@ func startVM(ctx context.Context, driver *driver.BaseDriver) (*virtualMachineWra
 					}
 					defer os.RemoveAll(pidFile)
 					logrus.Info("[VZ] - vm state change: running")
+
+					err := usernetClient.ResolveAndForwardSSH(limayaml.MACAddress(driver.Instance.Dir), driver.SSHLocalPort)
+					if err != nil {
+						errCh <- err
+					}
 				case vz.VirtualMachineStateStopped:
 					logrus.Info("[VZ] - vm state change: stopped")
 					wrapper.mu.Lock()
 					wrapper.stopped = true
 					wrapper.mu.Unlock()
+					usernetClient.UnExposeSSH(driver.SSHLocalPort)
 					errCh <- errors.New("vz driver state stopped")
 				default:
 					logrus.Debugf("[VZ] - vm state change: %q", newState)
@@ -106,7 +102,33 @@ func startVM(ctx context.Context, driver *driver.BaseDriver) (*virtualMachineWra
 	return wrapper, errCh, err
 }
 
-func createVM(driver *driver.BaseDriver, networkConn *os.File) (*vz.VirtualMachine, error) {
+func startUsernet(ctx context.Context, driver *driver.BaseDriver) (*usernet.Client, error) {
+	firstUsernetIndex := limayaml.FirstUsernetIndex(driver.Yaml)
+	if firstUsernetIndex == -1 {
+		//Start a in-process gvisor-tap-vsock
+		endpointSock := usernet.SockWithDirectory(driver.Instance.Dir, "", usernet.EndpointSock)
+		vzSock := usernet.SockWithDirectory(driver.Instance.Dir, "", usernet.FDSock)
+		os.RemoveAll(endpointSock)
+		os.RemoveAll(vzSock)
+		err := usernet.StartGVisorNetstack(ctx, &usernet.GVisorNetstackOpts{
+			MTU:      1500,
+			Endpoint: endpointSock,
+			FdSocket: vzSock,
+			Async:    true,
+		})
+		if err != nil {
+			return nil, err
+		}
+		return usernet.NewClient(endpointSock), nil
+	}
+	endpointSock, err := usernet.Sock(driver.Yaml.Networks[firstUsernetIndex].Lima, usernet.EndpointSock)
+	if err != nil {
+		return nil, err
+	}
+	return usernet.NewClient(endpointSock), nil
+}
+
+func createVM(driver *driver.BaseDriver) (*vz.VirtualMachine, error) {
 	vmConfig, err := createInitialConfig(driver)
 	if err != nil {
 		return nil, err
@@ -120,7 +142,7 @@ func createVM(driver *driver.BaseDriver, networkConn *os.File) (*vz.VirtualMachi
 		return nil, err
 	}
 
-	if err = attachNetwork(driver, vmConfig, networkConn); err != nil {
+	if err = attachNetwork(driver, vmConfig); err != nil {
 		return nil, err
 	}
 
@@ -202,6 +224,14 @@ func attachSerialPort(driver *driver.BaseDriver, config *vz.VirtualMachineConfig
 	return err
 }
 
+func newVirtioFileNetworkDeviceConfiguration(file *os.File, macStr string) (*vz.VirtioNetworkDeviceConfiguration, error) {
+	fileAttachment, err := vz.NewFileHandleNetworkDeviceAttachment(file)
+	if err != nil {
+		return nil, err
+	}
+	return newVirtioNetworkDeviceConfiguration(fileAttachment, macStr)
+}
+
 func newVirtioNetworkDeviceConfiguration(attachment vz.NetworkDeviceAttachment, macStr string) (*vz.VirtioNetworkDeviceConfiguration, error) {
 	networkConfig, err := vz.NewVirtioNetworkDeviceConfiguration(attachment)
 	if err != nil {
@@ -219,76 +249,108 @@ func newVirtioNetworkDeviceConfiguration(attachment vz.NetworkDeviceAttachment, 
 	return networkConfig, nil
 }
 
-func attachNetwork(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfiguration, networkConn *os.File) error {
-	//slirp network using gvisor netstack
-	fileAttachment, err := vz.NewFileHandleNetworkDeviceAttachment(networkConn)
-	if err != nil {
-		return err
+func attachNetwork(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfiguration) error {
+	var configurations []*vz.VirtioNetworkDeviceConfiguration
+
+	//Configure default usernetwork with limayaml.MACAddress(driver.Instance.Dir) for eth0 interface
+	firstUsernetIndex := limayaml.FirstUsernetIndex(driver.Yaml)
+	if firstUsernetIndex == -1 {
+		//slirp network using gvisor netstack
+		vzSock := usernet.SockWithDirectory(driver.Instance.Dir, "", usernet.FDSock)
+		networkConn, err := PassFDToUnix(vzSock)
+		if err != nil {
+			return err
+		}
+		networkConfig, err := newVirtioFileNetworkDeviceConfiguration(networkConn, limayaml.MACAddress(driver.Instance.Dir))
+		if err != nil {
+			return err
+		}
+		configurations = append(configurations, networkConfig)
+	} else {
+		vzSock, err := usernet.Sock(driver.Yaml.Networks[firstUsernetIndex].Lima, usernet.FDSock)
+		if err != nil {
+			return err
+		}
+		networkConn, err := PassFDToUnix(vzSock)
+		if err != nil {
+			return err
+		}
+		networkConfig, err := newVirtioFileNetworkDeviceConfiguration(networkConn, limayaml.MACAddress(driver.Instance.Dir))
+		if err != nil {
+			return err
+		}
+		configurations = append(configurations, networkConfig)
 	}
-	err = fileAttachment.SetMaximumTransmissionUnit(1500)
-	if err != nil {
-		return err
-	}
-	networkConfig, err := newVirtioNetworkDeviceConfiguration(fileAttachment, limayaml.MACAddress(driver.Instance.Dir))
-	if err != nil {
-		return err
-	}
-	configurations := []*vz.VirtioNetworkDeviceConfiguration{
-		networkConfig,
-	}
-	for _, nw := range driver.Instance.Networks {
+
+	for i, nw := range driver.Instance.Networks {
 		if nw.VZNAT != nil && *nw.VZNAT {
 			attachment, err := vz.NewNATNetworkDeviceAttachment()
 			if err != nil {
 				return err
 			}
-			networkConfig, err = newVirtioNetworkDeviceConfiguration(attachment, nw.MACAddress)
+			networkConfig, err := newVirtioNetworkDeviceConfiguration(attachment, nw.MACAddress)
 			if err != nil {
 				return err
 			}
 			configurations = append(configurations, networkConfig)
-		}
-
-		if nw.Lima != "" {
+		} else if nw.Lima != "" {
 			nwCfg, err := networks.Config()
 			if err != nil {
 				return err
 			}
-			socketVMNetOk, err := nwCfg.IsDaemonInstalled(networks.SocketVMNet)
+			isUsernet, err := nwCfg.Usernet(nw.Lima)
 			if err != nil {
 				return err
 			}
-			if socketVMNetOk {
-				logrus.Debugf("Using socketVMNet (%q)", nwCfg.Paths.SocketVMNet)
-				sock, err := networks.Sock(nw.Lima)
+			if isUsernet {
+				if i == firstUsernetIndex {
+					continue
+				}
+				vzSock, err := usernet.Sock(nw.Lima, usernet.FDSock)
 				if err != nil {
 					return err
 				}
-
-				clientFile, err := DialQemu(sock)
+				clientFile, err := PassFDToUnix(vzSock)
 				if err != nil {
 					return err
 				}
-				attachment, err := vz.NewFileHandleNetworkDeviceAttachment(clientFile)
-				if err != nil {
-					return err
-				}
-				networkConfig, err = newVirtioNetworkDeviceConfiguration(attachment, nw.MACAddress)
+				networkConfig, err := newVirtioFileNetworkDeviceConfiguration(clientFile, nw.MACAddress)
 				if err != nil {
 					return err
 				}
 				configurations = append(configurations, networkConfig)
+			} else {
+				if runtime.GOOS != "darwin" {
+					return fmt.Errorf("networks.yaml '%s' configuration is only supported on macOS right now", nw.Lima)
+				}
+				socketVMNetOk, err := nwCfg.IsDaemonInstalled(networks.SocketVMNet)
+				if err != nil {
+					return err
+				}
+				if socketVMNetOk {
+					logrus.Debugf("Using socketVMNet (%q)", nwCfg.Paths.SocketVMNet)
+					sock, err := networks.Sock(nw.Lima)
+					if err != nil {
+						return err
+					}
+
+					clientFile, err := DialQemu(sock)
+					if err != nil {
+						return err
+					}
+					networkConfig, err := newVirtioFileNetworkDeviceConfiguration(clientFile, nw.MACAddress)
+					if err != nil {
+						return err
+					}
+					configurations = append(configurations, networkConfig)
+				}
 			}
 		} else if nw.Socket != "" {
 			clientFile, err := DialQemu(nw.Socket)
 			if err != nil {
 				return err
 			}
-			attachment, err := vz.NewFileHandleNetworkDeviceAttachment(clientFile)
-			if err != nil {
-				return err
-			}
-			networkConfig, err = newVirtioNetworkDeviceConfiguration(attachment, nw.MACAddress)
+			networkConfig, err := newVirtioFileNetworkDeviceConfiguration(clientFile, nw.MACAddress)
 			if err != nil {
 				return err
 			}

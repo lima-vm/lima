@@ -11,9 +11,28 @@ import (
 	"os"
 	"time"
 
+	"github.com/balajiv113/fd"
+
 	"github.com/sirupsen/logrus"
 	"inet.af/tcpproxy"
 )
+
+func PassFDToUnix(unixSock string) (*os.File, error) {
+	unixConn, err := net.Dial("unix", unixSock)
+	if err != nil {
+		return nil, err
+	}
+
+	server, client, err := createSockPair()
+	if err != nil {
+		return nil, err
+	}
+	err = fd.Put(unixConn.(*net.UnixConn), server)
+	if err != nil {
+		return nil, err
+	}
+	return client, nil
+}
 
 // DialQemu support connecting to QEMU supported network stack via unix socket
 // Returns os.File, connected dgram connection to be used for vz

@@ -193,3 +193,33 @@ networks:
 The range of the IP address is not specifiable.
 
 The "vzNAT" network does not need the `socket_vmnet` binary and the `sudoers` file.
+
+## Lima user-v2 network
+
+user-v2 network provides a user-mode networking similar to the [default user-mode network](#user-mode-network--1921685024-) and also provides support for `vm -> vm` communication.
+
+> **Warning**
+> This network mode is experimental
+
+To enable this network mode, define a network with `mode: user-v2` in networks.yaml 
+
+```yaml
+...
+networks:
+  example-user-v2:
+    mode: user-v2
+...
+```
+
+Instances can then reference these networks from their `lima.yaml` file:
+
+```yaml
+networks:
+   - lima: example-user-v2
+```
+
+_Note_
+
+- Enabling this network will disable the [default user-mode network](#user-mode-network--1921685024-)
+- Subnet used for this network is 192.168.5.0/24 with 192.168.5.2 used for host connection and 192.168.5.3 used for DNS resolution
+

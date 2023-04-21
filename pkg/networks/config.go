@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"sync"
 
 	"github.com/goccy/go-yaml"
@@ -122,9 +121,6 @@ func loadCache() {
 
 // Config returns the network config from the _config/networks.yaml file.
 func Config() (YAML, error) {
-	if runtime.GOOS != "darwin" {
-		return YAML{}, errors.New("networks.yaml configuration is only supported on macOS right now")
-	}
 	loadCache()
 	return cache.config, cache.err
 }
@@ -142,6 +138,15 @@ func Sock(name string) (string, error) {
 		return "", errors.New("socketVMNet is not set")
 	}
 	return cache.config.Sock(name), nil
+}
+
+// Usernet Returns true if the given network name is usernet network
+func Usernet(name string) (bool, error) {
+	loadCache()
+	if cache.err != nil {
+		return false, cache.err
+	}
+	return cache.config.Usernet(name)
 }
 
 // VDESock returns a vde socket.

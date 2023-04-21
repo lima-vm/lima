@@ -109,6 +109,7 @@ func newApp() *cobra.Command {
 		newEditCommand(),
 		newFactoryResetCommand(),
 		newDiskCommand(),
+		newUsernetCommand(),
 	)
 	return rootCmd
 }
