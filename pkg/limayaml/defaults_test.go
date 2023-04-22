@@ -61,6 +61,7 @@ func TestFillDefault(t *testing.T) {
 	// Builtin default values
 	builtin := LimaYAML{
 		VMType: pointer.String("qemu"),
+		OS:     pointer.String(LINUX),
 		Arch:   pointer.String(arch),
 		CPUType: map[Arch]string{
 			AARCH64: "cortex-a72",
@@ -266,6 +267,7 @@ func TestFillDefault(t *testing.T) {
 	// Choose values that are different from the "builtin" defaults
 	d = LimaYAML{
 		VMType: pointer.String("vz"),
+		OS:     pointer.String("unknown"),
 		Arch:   pointer.String("unknown"),
 		CPUType: map[Arch]string{
 			AARCH64: "arm64",
@@ -443,6 +445,7 @@ func TestFillDefault(t *testing.T) {
 
 	o = LimaYAML{
 		VMType: pointer.String("qemu"),
+		OS:     pointer.String(LINUX),
 		Arch:   pointer.String(arch),
 		CPUType: map[Arch]string{
 			AARCH64: "uber-arm",

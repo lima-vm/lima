@@ -29,7 +29,7 @@ func newHostagentCommand() *cobra.Command {
 	hostagentCommand.Flags().StringP("pidfile", "p", "", "write pid to file")
 	hostagentCommand.Flags().String("socket", "", "hostagent socket")
 	hostagentCommand.Flags().Bool("run-gui", false, "run gui synchronously within hostagent")
-	hostagentCommand.Flags().String("nerdctl-archive", "", "local file path (not URL) of nerdctl-full-VERSION-linux-GOARCH.tar.gz")
+	hostagentCommand.Flags().String("nerdctl-archive", "", "local file path (not URL) of nerdctl-full-VERSION-GOOS-GOARCH.tar.gz")
 	return hostagentCommand
 }
 
