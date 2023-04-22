@@ -134,11 +134,15 @@ A possible workaround is to run "lima-guestagent install-systemd" in the guest.
 `,
 		})
 	} else {
+		run := "/run"
+		if *a.y.OS == limayaml.FREEBSD {
+			run = "/var" + run
+		}
 		req = append(req, requirement{
 			description: "the guest agent to be running",
 			script: `#!/bin/bash
 set -eux -o pipefail
-sock="/run/lima-guestagent.sock"
+sock="` + run + `/lima-guestagent.sock"
 if ! timeout 30s bash -c "until [ -S \"${sock}\" ]; do sleep 3; done"; then
 	echo >&2 "lima-guestagent is not installed yet"
 	exit 1

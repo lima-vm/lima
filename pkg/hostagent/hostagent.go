@@ -539,6 +539,9 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 
 	localUnix := filepath.Join(a.instDir, filenames.GuestAgentSock)
 	remoteUnix := "/run/lima-guestagent.sock"
+	if *a.y.OS == limayaml.FREEBSD {
+		remoteUnix = "/var" + remoteUnix
+	}
 
 	a.onClose = append(a.onClose, func() error {
 		logrus.Debugf("Stop forwarding unix sockets")

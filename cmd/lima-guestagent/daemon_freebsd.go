@@ -28,6 +28,9 @@ func newDaemonCommand() *cobra.Command {
 
 func daemonAction(cmd *cobra.Command, _ []string) error {
 	socket := "/run/lima-guestagent.sock"
+	{ // runtime.GOOS == "freebsd"
+		socket = "/var" + socket
+	}
 	tick, err := cmd.Flags().GetDuration("tick")
 	if err != nil {
 		return err
