@@ -779,6 +779,8 @@ func NewOS(osname string) OS {
 	switch osname {
 	case "linux":
 		return LINUX
+	case "freebsd":
+		return FREEBSD
 	default:
 		logrus.Warnf("Unknown os: %s", osname)
 		return osname

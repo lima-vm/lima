@@ -11,7 +11,7 @@
 # 🟢 Builtin default: "qemu"
 vmType: null
 
-# OS: "Linux".
+# OS: "Linux", "FreeBSD".
 # 🟢 Builtin default: "Linux"
 os: null
 

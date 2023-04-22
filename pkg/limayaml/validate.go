@@ -43,9 +43,9 @@ func validateFileObject(f File, fieldName string) error {
 
 func Validate(y LimaYAML, warn bool) error {
 	switch *y.OS {
-	case LINUX:
+	case LINUX, FREEBSD:
 	default:
-		return fmt.Errorf("field `os` must be %q; got %q", LINUX, *y.OS)
+		return fmt.Errorf("field `os` must be %q or %q; got %q", LINUX, FREEBSD, *y.OS)
 	}
 	switch *y.Arch {
 	case X8664, AARCH64, ARMV7L, RISCV64:

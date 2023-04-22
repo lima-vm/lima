@@ -46,7 +46,8 @@ type MountType = string
 type VMType = string
 
 const (
-	LINUX OS = "Linux"
+	LINUX   OS = "Linux"
+	FREEBSD OS = "FreeBSD"
 
 	X8664   Arch = "x86_64"
 	AARCH64 Arch = "aarch64"
