@@ -439,7 +439,7 @@ func (a *HostAgent) startHostAgentRoutines(ctx context.Context) error {
 		errs = append(errs, err)
 	}
 	if *a.y.SSH.ForwardAgent {
-		faScript := `#!/bin/bash
+		faScript := `#!/usr/bin/env bash
 set -eux -o pipefail
 sudo mkdir -p -m 700 /run/host-services
 sudo ln -sf "${SSH_AUTH_SOCK}" /run/host-services/ssh-auth.sock
