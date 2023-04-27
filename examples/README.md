@@ -49,6 +49,7 @@ Optional feature enablers:
 - [`vmnet`](./vmnet.yaml): ⭐enable [`vmnet.framework`](../docs/network.md)
 - [`experimental/9p`](./experimental/9p.yaml): [experimental] use 9p mount type
 - [`experimental/virtiofs-linux`](./experimental/9p.yaml): [experimental] use virtiofs mount type for Linux
+- [`experimental/freebsd.yaml`](./experimental/freebsd.yaml): [experimental] FreeBSD
 - [`experimental/armv7l`](./experimental/armv7l.yaml): [experimental] ARMv7
 - [`experimental/riscv64`](./experimental/riscv64.yaml): [experimental] RISC-V
 - [`experimental/net-user-v2`](./experimental/net-user-v2.yaml): [experimental] user-v2 network

@@ -1,0 +1,22 @@
+os: "FreeBSD"
+
+images:
+- location: https://download.freebsd.org/ftp/snapshots/VM-IMAGES/14.0-CURRENT/amd64/Latest/FreeBSD-14.0-CURRENT-amd64.qcow2.xz
+  arch: "x86_64"
+- location: https://download.freebsd.org/ftp/snapshots/VM-IMAGES/14.0-CURRENT/aarch64/Latest/FreeBSD-14.0-CURRENT-arm64-aarch64.qcow2.xz
+  arch: "aarch64"
+
+video:
+  display: "default"
+
+mounts:
+- location: "~"
+- location: "/tmp/lima"
+  writable: true
+
+additionalDisks:
+- "zfs"
+
+containerd:
+  system: false
+  user: false
