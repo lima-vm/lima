@@ -113,6 +113,10 @@ ifeq ($(CONFIG_GUESTAGENT_ARCH_AARCH64),y)
 GUESTAGENT += \
 	_output/share/lima/lima-guestagent.FreeBSD-aarch64
 endif
+ifeq ($(CONFIG_GUESTAGENT_ARCH_RISCV64),y)
+GUESTAGENT += \
+	_output/share/lima/lima-guestagent.FreeBSD-riscv64
+endif
 endif
 
 .PHONY: binaries
@@ -206,6 +210,11 @@ _output/share/lima/lima-guestagent.FreeBSD-x86_64:
 .PHONY: _output/share/lima/lima-guestagent.FreeBSD-aarch64
 _output/share/lima/lima-guestagent.FreeBSD-aarch64:
 	GOOS=freebsd GOARCH=arm64 CGO_ENABLED=0 $(GO_BUILD) -o $@ ./cmd/lima-guestagent
+	chmod 644 $@
+
+.PHONY: _output/share/lima/lima-guestagent.FreeBSD-riscv64
+_output/share/lima/lima-guestagent.FreeBSD-riscv64:
+	GOOS=freebsd GOARCH=riscv64 CGO_ENABLED=0 $(GO_BUILD) -o $@ ./cmd/lima-guestagent
 	chmod 644 $@
 
 .PHONY: manpages

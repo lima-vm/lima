@@ -5,6 +5,12 @@ images:
   arch: "x86_64"
 - location: https://download.freebsd.org/ftp/snapshots/VM-IMAGES/14.0-CURRENT/aarch64/Latest/FreeBSD-14.0-CURRENT-arm64-aarch64.qcow2.xz
   arch: "aarch64"
+- location: https://download.freebsd.org/ftp/snapshots/VM-IMAGES/14.0-CURRENT/riscv64/Latest/FreeBSD-14.0-CURRENT-riscv-riscv64.qcow2.xz
+  arch: "riscv64"
+  kernel:
+    # Extracted from https://pkg.freebsd.org/FreeBSD:13:aarch64/latest/All/u-boot-qemu-riscv64-2023.01.pkg (GPL-2.0)
+    location: "file://./usr/local/share/u-boot/u-boot-qemu-riscv64/u-boot.bin"
+    digest: "sha256:a7959ef65183bd4847b0fa1d2a298392148271ef62aeaa7d0ebd03399a0b1cc0"
 
 video:
   display: "default"
