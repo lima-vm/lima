@@ -80,7 +80,9 @@ type Image struct {
 }
 
 type Disk struct {
-	Name string `yaml:"name" json:"name"` // REQUIRED
+	Name   string  `yaml:"name" json:"name"` // REQUIRED
+	Format *bool   `yaml:"format,omitempty" json:"format,omitempty"`
+	FSType *string `yaml:"fsType,omitempty" json:"fsType,omitempty"`
 }
 
 type Mount struct {

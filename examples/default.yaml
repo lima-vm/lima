@@ -109,6 +109,8 @@ additionalDisks:
 # - "data"
 # or a list of disk objects with extra parameters, for example:
 # - name: "data"
+#   format: true
+#   fsType: "ext4"
 
 ssh:
   # A localhost port of the host. Forwarded to port 22 of the guest.

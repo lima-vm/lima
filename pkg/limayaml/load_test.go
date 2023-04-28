@@ -40,15 +40,23 @@ additionalDisks:
 	assert.NilError(t, err)
 	assert.Equal(t, len(y.AdditionalDisks), 1)
 	assert.Equal(t, y.AdditionalDisks[0].Name, "name")
+	assert.Assert(t, y.AdditionalDisks[0].Format == nil)
+	assert.Assert(t, y.AdditionalDisks[0].FSType == nil)
 }
 
 func TestLoadDiskStruct(t *testing.T) {
 	s := `
 additionalDisks:
 - name: "name"
+  format: false
+  fsType: "xfs"
 `
 	y, err := Load([]byte(s), "disk.yaml")
 	assert.NilError(t, err)
 	assert.Assert(t, len(y.AdditionalDisks) == 1)
 	assert.Equal(t, y.AdditionalDisks[0].Name, "name")
+	assert.Assert(t, y.AdditionalDisks[0].Format != nil)
+	assert.Equal(t, *y.AdditionalDisks[0].Format, false)
+	assert.Assert(t, y.AdditionalDisks[0].FSType != nil)
+	assert.Equal(t, *y.AdditionalDisks[0].FSType, "xfs")
 }

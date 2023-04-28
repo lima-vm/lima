@@ -48,6 +48,8 @@ type BootCmds struct {
 type Disk struct {
 	Name   string
 	Device string
+	Format bool
+	FSType string
 }
 type TemplateArgs struct {
 	Name                            string // instance name

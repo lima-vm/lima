@@ -204,9 +204,19 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 	}
 
 	for i, d := range y.AdditionalDisks {
+		format := true
+		if d.Format != nil {
+			format = *d.Format
+		}
+		fstype := ""
+		if d.FSType != nil {
+			fstype = *d.FSType
+		}
 		args.Disks = append(args.Disks, Disk{
 			Name:   d.Name,
 			Device: diskDeviceNameFromOrder(i),
+			Format: format,
+			FSType: fstype,
 		})
 	}
 
