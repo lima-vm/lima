@@ -284,12 +284,10 @@ func copyLocal(dst, src, ext string, decompress bool, description string, expect
 	if err != nil {
 		return err
 	}
-	if description != "" {
-		// TODO: progress bar for copy
-	}
 	if _, ok := Decompressor(ext); ok && decompress {
-		return decompressLocal(dstPath, srcPath, ext)
+		return decompressLocal(dstPath, srcPath, ext, description)
 	}
+	// TODO: progress bar for copy
 	return fs.CopyFile(dstPath, srcPath)
 }
 
@@ -311,12 +309,22 @@ func Decompressor(ext string) ([]string, bool) {
 	return []string{program, "-d"}, true
 }
 
-func decompressLocal(dst, src, ext string) error {
+func decompressLocal(dst, src, ext string, description string) error {
 	command, found := Decompressor(ext)
 	if !found {
 		return fmt.Errorf("decompressLocal: unknown extension %s", ext)
 	}
 	logrus.Infof("decompressing %s with %v", ext, command)
+
+	st, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+	bar, err := createBar(st.Size())
+	if err != nil {
+		return err
+	}
+
 	in, err := os.Open(src)
 	if err != nil {
 		return err
@@ -329,15 +337,23 @@ func decompressLocal(dst, src, ext string) error {
 	defer out.Close()
 	buf := new(bytes.Buffer)
 	cmd := exec.Command(command[0], command[1:]...)
-	cmd.Stdin = in
+	cmd.Stdin = bar.NewProxyReader(in)
 	cmd.Stdout = out
 	cmd.Stderr = buf
+	if !HideProgress {
+		if description == "" {
+			description = filepath.Base(src)
+		}
+		fmt.Printf("Decompressing %s\n", description)
+	}
+	bar.Start()
 	err = cmd.Run()
 	if err != nil {
 		if ee, ok := err.(*exec.ExitError); ok {
 			ee.Stderr = buf.Bytes()
 		}
 	}
+	bar.Finish()
 	return err
 }
 
