@@ -128,9 +128,19 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	}
 	script := fmt.Sprintf("%s ; exec %s --login", changeDirCmd, shell)
 	if len(args) > 1 {
+		quotedArgs := make([]string, len(args[1:]))
+		parsingEnv := true
+		for i, arg := range args[1:] {
+			if parsingEnv && isEnv(arg) {
+				quotedArgs[i] = quoteEnv(arg)
+			} else {
+				parsingEnv = false
+				quotedArgs[i] = shellescape.Quote(arg)
+			}
+		}
 		script += fmt.Sprintf(
 			" -c %s",
-			shellescape.Quote(shellescape.QuoteCommand(args[1:])),
+			shellescape.Quote(strings.Join(quotedArgs, " ")),
 		)
 	}
 
@@ -190,4 +200,14 @@ func shellAction(cmd *cobra.Command, args []string) error {
 
 func shellBashComplete(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 	return bashCompleteInstanceNames(cmd)
+}
+
+func isEnv(arg string) bool {
+	return len(strings.Split(arg, "=")) > 1
+}
+
+func quoteEnv(arg string) string {
+	env := strings.SplitN(arg, "=", 2)
+	env[1] = shellescape.Quote(env[1])
+	return strings.Join(env, "=")
 }
