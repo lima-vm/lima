@@ -277,7 +277,7 @@ func TestFillDefault(t *testing.T) {
 		Memory: pointer.String("5GiB"),
 		Disk:   pointer.String("105GiB"),
 		AdditionalDisks: []Disk{
-			"data",
+			{Name: "data"},
 		},
 		GuestInstallPrefix: pointer.String("/opt"),
 		Containerd: Containerd{
@@ -413,7 +413,7 @@ func TestFillDefault(t *testing.T) {
 
 	y = filledDefaults
 	y.DNS = []net.IP{net.ParseIP("8.8.8.8")}
-	y.AdditionalDisks = []Disk{"overridden"}
+	y.AdditionalDisks = []Disk{{Name: "overridden"}}
 
 	expect = y
 
@@ -454,7 +454,7 @@ func TestFillDefault(t *testing.T) {
 		Memory: pointer.String("7GiB"),
 		Disk:   pointer.String("117GiB"),
 		AdditionalDisks: []Disk{
-			"test",
+			{Name: "test"},
 		},
 		GuestInstallPrefix: pointer.String("/usr"),
 		Containerd: Containerd{

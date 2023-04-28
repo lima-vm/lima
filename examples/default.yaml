@@ -105,8 +105,10 @@ mountType: null
 # `/mnt/lima-${VOLUME}`.
 # 🟢 Builtin default: null
 additionalDisks:
-# disks should be a list of disk name strings, for example:
+# disks should either be a list of disk name strings, for example:
 # - "data"
+# or a list of disk objects with extra parameters, for example:
+# - name: "data"
 
 ssh:
   # A localhost port of the host. Forwarded to port 22 of the guest.

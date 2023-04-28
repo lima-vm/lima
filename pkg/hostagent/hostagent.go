@@ -436,7 +436,7 @@ sudo chown -R "${USER}" /run/host-services`
 		a.onClose = append(a.onClose, func() error {
 			var unlockMErr error
 			for _, d := range a.y.AdditionalDisks {
-				disk, inspectErr := store.InspectDisk(d)
+				disk, inspectErr := store.InspectDisk(d.Name)
 				if inspectErr != nil {
 					unlockMErr = multierror.Append(unlockMErr, inspectErr)
 					continue

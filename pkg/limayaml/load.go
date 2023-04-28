@@ -13,8 +13,28 @@ import (
 	yamlv3 "gopkg.in/yaml.v3"
 )
 
+func unmarshalDisk(dst *Disk, b []byte) error {
+	var s string
+	if err := yaml.Unmarshal(b, &s); err == nil {
+		*dst = Disk{Name: s}
+		return nil
+	}
+	return yaml.Unmarshal(b, dst)
+}
+
+func (d *Disk) UnmarshalYAML(value *yamlv3.Node) error {
+	var v interface{}
+	if err := value.Decode(&v); err != nil {
+		return err
+	}
+	if s, ok := v.(string); ok {
+		*d = Disk{Name: s}
+	}
+	return nil
+}
+
 func unmarshalYAML(data []byte, v interface{}, comment string) error {
-	if err := yaml.UnmarshalWithOptions(data, v, yaml.DisallowDuplicateKey()); err != nil {
+	if err := yaml.UnmarshalWithOptions(data, v, yaml.DisallowDuplicateKey(), yaml.CustomUnmarshaler[Disk](unmarshalDisk)); err != nil {
 		return fmt.Errorf("failed to unmarshal YAML (%s): %w", comment, err)
 	}
 	// the go-yaml library doesn't catch all markup errors, unfortunately
@@ -22,7 +42,7 @@ func unmarshalYAML(data []byte, v interface{}, comment string) error {
 	if err := yamlv3.Unmarshal(data, v); err != nil {
 		return fmt.Errorf("failed to unmarshal YAML (%s): %w", comment, err)
 	}
-	if err := yaml.UnmarshalWithOptions(data, v, yaml.Strict()); err != nil {
+	if err := yaml.UnmarshalWithOptions(data, v, yaml.Strict(), yaml.CustomUnmarshaler[Disk](unmarshalDisk)); err != nil {
 		logrus.WithField("comment", comment).WithError(err).Warn("Non-strict YAML is deprecated and will be unsupported in a future version of Lima")
 		// Non-strict YAML is known to be used by Rancher Desktop:
 		// https://github.com/rancher-sandbox/rancher-desktop/blob/c7ea7508a0191634adf16f4675f64c73198e8d37/src/backend/lima.ts#L114-L117

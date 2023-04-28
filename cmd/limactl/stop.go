@@ -113,7 +113,8 @@ func stopInstanceForcibly(inst *store.Instance) {
 		logrus.Infof("The %s driver process seems already stopped", inst.VMType)
 	}
 
-	for _, diskName := range inst.AdditionalDisks {
+	for _, d := range inst.AdditionalDisks {
+		diskName := d.Name
 		disk, err := store.InspectDisk(diskName)
 		if err != nil {
 			logrus.Warnf("Disk %q does not exist", diskName)

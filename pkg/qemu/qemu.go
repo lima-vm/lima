@@ -587,24 +587,25 @@ func Cmdline(cfg Config) (string, []string, error) {
 	diffDisk := filepath.Join(cfg.InstanceDir, filenames.DiffDisk)
 	extraDisks := []string{}
 	if len(y.AdditionalDisks) > 0 {
-		for _, diskName := range y.AdditionalDisks {
-			d, err := store.InspectDisk(diskName)
+		for _, d := range y.AdditionalDisks {
+			diskName := d.Name
+			disk, err := store.InspectDisk(diskName)
 			if err != nil {
 				logrus.Errorf("could not load disk %q: %q", diskName, err)
 				return "", nil, err
 			}
 
-			if d.Instance != "" {
-				logrus.Errorf("could not attach disk %q, in use by instance %q", diskName, d.Instance)
+			if disk.Instance != "" {
+				logrus.Errorf("could not attach disk %q, in use by instance %q", diskName, disk.Instance)
 				return "", nil, err
 			}
-			logrus.Infof("Mounting disk %q on %q", diskName, d.MountPoint)
-			err = d.Lock(cfg.InstanceDir)
+			logrus.Infof("Mounting disk %q on %q", diskName, disk.MountPoint)
+			err = disk.Lock(cfg.InstanceDir)
 			if err != nil {
 				logrus.Errorf("could not lock disk %q: %q", diskName, err)
 				return "", nil, err
 			}
-			dataDisk := filepath.Join(d.Dir, filenames.DataDisk)
+			dataDisk := filepath.Join(disk.Dir, filenames.DataDisk)
 			extraDisks = append(extraDisks, dataDisk)
 		}
 	}
