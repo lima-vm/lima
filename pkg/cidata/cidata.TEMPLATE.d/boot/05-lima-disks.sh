@@ -14,6 +14,7 @@ for i in $(seq 0 $((LIMA_CIDATA_DISKS - 1))); do
 	DEVICE_NAME="$(get_disk_var "$i" "DEVICE")"
 	FORMAT_DISK="$(get_disk_var "$i" "FORMAT")"
 	FORMAT_FSTYPE="$(get_disk_var "$i" "FSTYPE")"
+	FORMAT_FSARGS="$(get_disk_var "$i" "FSARGS")"
 
 	test -n "$FORMAT_DISK" || FORMAT_DISK=true
 	test -n "$FORMAT_FSTYPE" || FORMAT_FSTYPE=ext4
@@ -22,7 +23,8 @@ for i in $(seq 0 $((LIMA_CIDATA_DISKS - 1))); do
 	if [[ ! -b "/dev/disk/by-label/lima-${DISK_NAME}" ]]; then
 		if $FORMAT_DISK; then
 			echo 'type=linux' | sfdisk --label gpt "/dev/${DEVICE_NAME}"
-			mkfs.$FORMAT_FSTYPE -L "lima-${DISK_NAME}" "/dev/${DEVICE_NAME}1"
+			# shellcheck disable=SC2086
+			mkfs.$FORMAT_FSTYPE $FORMAT_FSARGS -L "lima-${DISK_NAME}" "/dev/${DEVICE_NAME}1"
 		fi
 	fi
 

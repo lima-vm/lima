@@ -217,6 +217,7 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 			Device: diskDeviceNameFromOrder(i),
 			Format: format,
 			FSType: fstype,
+			FSArgs: d.FSArgs,
 		})
 	}
 

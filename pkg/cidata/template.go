@@ -50,6 +50,7 @@ type Disk struct {
 	Device string
 	Format bool
 	FSType string
+	FSArgs []string
 }
 type TemplateArgs struct {
 	Name                            string // instance name
