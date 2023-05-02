@@ -52,8 +52,9 @@ func newApp() *cobra.Command {
   $ limactl stop
 
   See also example YAMLs: %s`, examplesDir),
-		SilenceUsage:  true,
-		SilenceErrors: true,
+		SilenceUsage:      true,
+		SilenceErrors:     true,
+		DisableAutoGenTag: true,
 	}
 	rootCmd.PersistentFlags().String("log-level", "", "Set the logging level [trace, debug, info, warn, error]")
 	rootCmd.PersistentFlags().Bool("debug", false, "debug mode")
@@ -110,6 +111,7 @@ func newApp() *cobra.Command {
 		newFactoryResetCommand(),
 		newDiskCommand(),
 		newUsernetCommand(),
+		newGenManCommand(),
 	)
 	return rootCmd
 }

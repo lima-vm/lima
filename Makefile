@@ -32,7 +32,7 @@ GO_BUILD := $(GO) build -ldflags="-s -w -X $(PACKAGE)/pkg/version.Version=$(VERS
 .NOTPARALLEL:
 
 .PHONY: all
-all: binaries
+all: binaries manpages
 
 exe: _output/bin/limactl$(exe)
 
@@ -113,6 +113,11 @@ _output/share/lima/lima-guestagent.Linux-riscv64:
 	GOOS=linux GOARCH=riscv64 CGO_ENABLED=0 $(GO_BUILD) -o $@ ./cmd/lima-guestagent
 	chmod 644 $@
 
+.PHONY: manpages
+manpages: _output/bin/limactl$(exe)
+	@mkdir -p _output/share/man/man1
+	$< generate-man _output/share/man/man1
+
 .PHONY: diagrams
 diagrams: docs/lima-sequence-diagram.png
 docs/lima-sequence-diagram.png: docs/images/lima-sequence-diagram.puml
@@ -138,6 +143,8 @@ uninstall:
 		"$(DEST)/bin/docker.lima" \
 		"$(DEST)/bin/podman.lima" \
 		"$(DEST)/bin/kubectl.lima" \
+		"$(DEST)/share/man/man1/lima.1" \
+		"$(DEST)/share/man/man1/limactl"*".1" \
 		"$(DEST)/share/lima" "$(DEST)/share/doc/lima"
 	if [ "$$(readlink "$(DEST)/bin/nerdctl")" = "nerdctl.lima" ]; then rm "$(DEST)/bin/nerdctl"; fi
 	if [ "$$(readlink "$(DEST)/bin/apptainer")" = "apptainer.lima" ]; then rm "$(DEST)/bin/apptainer"; fi
