@@ -13,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/lima-vm/lima/pkg/networks/usernet"
+
 	"github.com/coreos/go-semver/semver"
 	"github.com/docker/go-units"
 	"github.com/lima-vm/lima/pkg/fileutils"
@@ -485,9 +487,20 @@ func Cmdline(cfg Config) (string, []string, error) {
 	}
 
 	// Network
-	args = append(args, "-netdev", fmt.Sprintf("user,id=net0,net=%s,dhcpstart=%s,hostfwd=tcp:127.0.0.1:%d-:22",
-		networks.SlirpNetwork, networks.SlirpIPAddress, cfg.SSHLocalPort))
+	//Configure default usernetwork with limayaml.MACAddress(driver.Instance.Dir) for eth0 interface
+	firstUsernetIndex := limayaml.FirstUsernetIndex(y)
+	if firstUsernetIndex == -1 {
+		args = append(args, "-netdev", fmt.Sprintf("user,id=net0,net=%s,dhcpstart=%s,hostfwd=tcp:127.0.0.1:%d-:22",
+			networks.SlirpNetwork, networks.SlirpIPAddress, cfg.SSHLocalPort))
+	} else {
+		qemuSock, err := usernet.Sock(y.Networks[firstUsernetIndex].Lima, usernet.QEMUSock)
+		if err != nil {
+			return "", nil, err
+		}
+		args = append(args, "-netdev", fmt.Sprintf("socket,id=net0,fd={{ fd_connect %q }}", qemuSock))
+	}
 	args = append(args, "-device", "virtio-net-pci,netdev=net0,mac="+limayaml.MACAddress(cfg.InstanceDir))
+
 	for i, nw := range y.Networks {
 		var vdeSock string
 		if nw.Lima != "" {
@@ -495,29 +508,50 @@ func Cmdline(cfg Config) (string, []string, error) {
 			if err != nil {
 				return "", nil, err
 			}
-			socketVMNetOk, err := nwCfg.IsDaemonInstalled(networks.SocketVMNet)
+
+			//Handle usernet connections
+			isUsernet, err := nwCfg.Usernet(nw.Lima)
 			if err != nil {
 				return "", nil, err
 			}
-			if socketVMNetOk {
-				logrus.Debugf("Using socketVMNet (%q)", nwCfg.Paths.SocketVMNet)
-				if vdeVMNetOk, _ := nwCfg.IsDaemonInstalled(networks.VDEVMNet); vdeVMNetOk {
-					logrus.Debugf("Ignoring vdeVMNet (%q), as socketVMNet (%q) is available and has higher precedence", nwCfg.Paths.VDEVMNet, nwCfg.Paths.SocketVMNet)
+			if isUsernet {
+				if i == firstUsernetIndex {
+					continue
 				}
-				sock, err := networks.Sock(nw.Lima)
+				qemuSock, err := usernet.Sock(nw.Lima, usernet.QEMUSock)
 				if err != nil {
 					return "", nil, err
 				}
-				args = append(args, "-netdev", fmt.Sprintf("socket,id=net%d,fd={{ fd_connect %q }}", i+1, sock))
-			} else if nwCfg.Paths.VDEVMNet != "" {
-				logrus.Warn("vdeVMNet is deprecated, use socketVMNet instead (See docs/network.md)")
-				vdeSock, err = networks.VDESock(nw.Lima)
+				args = append(args, "-netdev", fmt.Sprintf("socket,id=net%d,fd={{ fd_connect %q }}", i+1, qemuSock))
+				args = append(args, "-device", fmt.Sprintf("virtio-net-pci,netdev=net%d,mac=%s", i+1, nw.MACAddress))
+			} else {
+				if runtime.GOOS != "darwin" {
+					return "", nil, fmt.Errorf("networks.yaml '%s' configuration is only supported on macOS right now", nw.Lima)
+				}
+				socketVMNetOk, err := nwCfg.IsDaemonInstalled(networks.SocketVMNet)
 				if err != nil {
 					return "", nil, err
 				}
+				if socketVMNetOk {
+					logrus.Debugf("Using socketVMNet (%q)", nwCfg.Paths.SocketVMNet)
+					if vdeVMNetOk, _ := nwCfg.IsDaemonInstalled(networks.VDEVMNet); vdeVMNetOk {
+						logrus.Debugf("Ignoring vdeVMNet (%q), as socketVMNet (%q) is available and has higher precedence", nwCfg.Paths.VDEVMNet, nwCfg.Paths.SocketVMNet)
+					}
+					sock, err := networks.Sock(nw.Lima)
+					if err != nil {
+						return "", nil, err
+					}
+					args = append(args, "-netdev", fmt.Sprintf("socket,id=net%d,fd={{ fd_connect %q }}", i+1, sock))
+				} else if nwCfg.Paths.VDEVMNet != "" {
+					logrus.Warn("vdeVMNet is deprecated, use socketVMNet instead (See docs/network.md)")
+					vdeSock, err = networks.VDESock(nw.Lima)
+					if err != nil {
+						return "", nil, err
+					}
+				}
+				// TODO: should we also validate that the socket exists, or do we rely on the
+				// networks reconciler to throw an error when the network cannot start?
 			}
-			// TODO: should we also validate that the socket exists, or do we rely on the
-			// networks reconciler to throw an error when the network cannot start?
 		} else if nw.Socket != "" {
 			args = append(args, "-netdev", fmt.Sprintf("socket,id=net%d,fd={{ fd_connect %q }}", i+1, nw.Socket))
 		} else if nw.VNLDeprecated != "" {

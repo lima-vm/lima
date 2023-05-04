@@ -25,6 +25,7 @@ declare -A CHECKS=(
 	["port-forwards"]="1"
 	["vmnet"]=""
 	["disk"]=""
+	["user-v2"]=""
 )
 
 case "$NAME" in
@@ -48,6 +49,10 @@ case "$NAME" in
 	;;
 "test-misc")
 	CHECKS["disk"]=1
+	;;
+"net-user-v2")
+	CHECKS["port-forwards"]=""
+	CHECKS["user-v2"]=1
 	;;
 esac
 
@@ -301,6 +306,28 @@ if [[ -n ${CHECKS["restart"]} ]]; then
 			exit 1
 		fi
 	fi
+fi
+
+if [[ -n ${CHECKS["user-v2"]} ]]; then
+	INFO "Testing user-v2 network"
+	secondvm="$NAME-1"
+	limactl start "$FILE" --name "$secondvm" --tty=false
+	guestNewip="$(limactl shell "$secondvm" ip -4 -j addr show dev eth0 | jq -r '.[0].addr_info[0].local')"
+	INFO "IP of $secondvm is $guestNewip"
+	set -x
+	if ! limactl shell "$NAME" ping -c 1 "$guestNewip"; then
+		ERROR "Failed to do vm->vm communication via user-v2"
+		INFO "Stopping \"$secondvm\""
+		limactl stop "$secondvm"
+		INFO "Deleting \"$secondvm\""
+		limactl delete "$secondvm"
+		exit 1
+	fi
+	INFO "Stopping \"$secondvm\""
+	limactl stop "$secondvm"
+	INFO "Deleting \"$secondvm\""
+	limactl delete "$secondvm"
+	set +x
 fi
 
 INFO "Stopping \"$NAME\""

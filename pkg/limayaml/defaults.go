@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"text/template"
 
+	"github.com/lima-vm/lima/pkg/networks"
+
 	"github.com/lima-vm/lima/pkg/guestagent/api"
 	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
@@ -47,6 +49,18 @@ func defaultContainerdArchives() []File {
 		},
 		// No riscv64
 	}
+}
+
+// FirstUsernetIndex gets the index of first usernet network under l.Network[]. Returns -1 if no usernet network found
+func FirstUsernetIndex(l *LimaYAML) int {
+	for i := range l.Networks {
+		nwName := l.Networks[i].Lima
+		isUsernet, _ := networks.Usernet(nwName)
+		if isUsernet {
+			return i
+		}
+	}
+	return -1
 }
 
 func MACAddress(uniqueID string) string {

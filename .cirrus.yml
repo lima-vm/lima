@@ -23,6 +23,7 @@ task:
       EXAMPLE: fedora.yaml
       EXAMPLE: archlinux.yaml
       EXAMPLE: opensuse.yaml
+      EXAMPLE: experimental/net-user-v2.yaml
   info_script:
   - uname -a
   - df -T

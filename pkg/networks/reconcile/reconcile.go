@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/lima-vm/lima/pkg/networks"
+	"github.com/lima-vm/lima/pkg/networks/usernet"
 	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
@@ -19,9 +20,6 @@ import (
 )
 
 func Reconcile(ctx context.Context, newInst string) error {
-	if runtime.GOOS != "darwin" {
-		return nil
-	}
 	config, err := networks.Config()
 	if err != nil {
 		return err
@@ -175,6 +173,23 @@ func validateConfig(config *networks.YAML) error {
 
 func startNetwork(ctx context.Context, config *networks.YAML, name string) error {
 	logrus.Debugf("Make sure %q network is running", name)
+
+	//Handle usernet first without sudo requirements
+	isUsernet, err := config.Usernet(name)
+	if err != nil {
+		return err
+	}
+	if isUsernet {
+		if err := usernet.Start(ctx, name); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	if runtime.GOOS != "darwin" {
+		return nil
+	}
+
 	if err := validateConfig(config); err != nil {
 		return err
 	}
@@ -205,6 +220,22 @@ func startNetwork(ctx context.Context, config *networks.YAML, name string) error
 
 func stopNetwork(config *networks.YAML, name string) error {
 	logrus.Debugf("Make sure %q network is stopped", name)
+	//Handle usernet first without sudo requirements
+	isUsernet, err := config.Usernet(name)
+	if err != nil {
+		return err
+	}
+	if isUsernet {
+		if err := usernet.Stop(name); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	if runtime.GOOS != "darwin" {
+		return nil
+	}
+
 	// Don't call validateConfig() until we actually need to stop a daemon because
 	// stopNetwork() may be called even when the vde daemons are not installed.
 	for _, daemon := range []string{networks.SocketVMNet, networks.VDEVMNet, networks.VDESwitch} {

@@ -281,7 +281,18 @@ func validateNetwork(y LimaYAML, warn bool) error {
 	for i, nw := range y.Networks {
 		field := fmt.Sprintf("networks[%d]", i)
 		if nw.Lima != "" {
-			if runtime.GOOS != "darwin" {
+			config, err := networks.Config()
+			if err != nil {
+				return err
+			}
+			if config.Check(nw.Lima) != nil {
+				return fmt.Errorf("field `%s.lima` references network %q which is not defined in networks.yaml", field, nw.Lima)
+			}
+			usernet, err := config.Usernet(nw.Lima)
+			if err != nil {
+				return err
+			}
+			if !usernet && runtime.GOOS != "darwin" {
 				return fmt.Errorf("field `%s.lima` is only supported on macOS right now", field)
 			}
 			if nw.Socket != "" {
@@ -295,13 +306,6 @@ func validateNetwork(y LimaYAML, warn bool) error {
 			}
 			if nw.SwitchPortDeprecated != 0 {
 				return fmt.Errorf("field `%s.switchPort` cannot be used with field `%s.lima`", field, field)
-			}
-			config, err := networks.Config()
-			if err != nil {
-				return err
-			}
-			if config.Check(nw.Lima) != nil {
-				return fmt.Errorf("field `%s.lima` references network %q which is not defined in networks.yaml", field, nw.Lima)
 			}
 		} else if nw.Socket != "" {
 			if nw.VZNAT != nil && *nw.VZNAT {

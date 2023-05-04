@@ -20,6 +20,7 @@ import (
 	"github.com/digitalocean/go-qemu/qmp/raw"
 	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/limayaml"
+	"github.com/lima-vm/lima/pkg/networks/usernet"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/sirupsen/logrus"
 )
@@ -99,6 +100,12 @@ func (l *LimaQemuDriver) Start(ctx context.Context) (chan error, error) {
 	l.qWaitCh = make(chan error)
 	go func() {
 		l.qWaitCh <- qCmd.Wait()
+	}()
+	go func() {
+		if usernetIndex := limayaml.FirstUsernetIndex(l.Yaml); usernetIndex != -1 {
+			client := newUsernetClient(l.Yaml.Networks[usernetIndex].Lima)
+			err = client.ResolveAndForwardSSH(limayaml.MACAddress(l.Instance.Dir), l.SSHLocalPort)
+		}
 	}()
 	return l.qWaitCh, nil
 }
@@ -189,6 +196,13 @@ func (l *LimaQemuDriver) removeVNCFiles() error {
 
 func (l *LimaQemuDriver) shutdownQEMU(ctx context.Context, timeout time.Duration, qCmd *exec.Cmd, qWaitCh <-chan error) error {
 	logrus.Info("Shutting down QEMU with ACPI")
+	if usernetIndex := limayaml.FirstUsernetIndex(l.Yaml); usernetIndex != -1 {
+		client := newUsernetClient(l.Yaml.Networks[usernetIndex].Lima)
+		err := client.UnExposeSSH(l.SSHLocalPort)
+		if err != nil {
+			logrus.Warnf("Failed to remove SSH binding for port %d", l.SSHLocalPort)
+		}
+	}
 	qmpSockPath := filepath.Join(l.Instance.Dir, filenames.QMPSock)
 	qmpClient, err := qmp.NewSocketMonitor("unix", qmpSockPath, 5*time.Second)
 	if err != nil {
@@ -233,6 +247,14 @@ func (l *LimaQemuDriver) killQEMU(_ context.Context, _ time.Duration, qCmd *exec
 	_ = os.RemoveAll(qemuPIDPath)
 	l.removeVNCFiles()
 	return qWaitErr
+}
+
+func newUsernetClient(nwName string) *usernet.Client {
+	endpointSock, err := usernet.Sock(nwName, usernet.EndpointSock)
+	if err != nil {
+		return nil
+	}
+	return usernet.NewClient(endpointSock)
 }
 
 func logPipeRoutine(r io.Reader, header string) {

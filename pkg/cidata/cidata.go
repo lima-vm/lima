@@ -211,7 +211,11 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 
 	slirpMACAddress := limayaml.MACAddress(instDir)
 	args.Networks = append(args.Networks, Network{MACAddress: slirpMACAddress, Interface: networks.SlirpNICName})
-	for _, nw := range y.Networks {
+	firstUsernetIndex := limayaml.FirstUsernetIndex(y)
+	for i, nw := range y.Networks {
+		if i == firstUsernetIndex {
+			continue
+		}
 		args.Networks = append(args.Networks, Network{MACAddress: nw.MACAddress, Interface: nw.Interface})
 	}
 
