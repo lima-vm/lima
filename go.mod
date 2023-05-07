@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.6
-	github.com/Code-Hex/vz/v3 v3.0.5
+	github.com/Code-Hex/vz/v3 v3.0.6
 	github.com/alessio/shellescape v1.4.1
 	github.com/balajiv113/fd v0.0.0-20230330094840-143eec500f3e
 	github.com/cheggaaa/pb/v3 v3.1.2

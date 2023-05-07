@@ -49,6 +49,8 @@ github.com/Code-Hex/go-infinity-channel v1.0.0 h1:M8BWlfDOxq9or9yvF9+YkceoTkDI1p
 github.com/Code-Hex/go-infinity-channel v1.0.0/go.mod h1:5yUVg/Fqao9dAjcpzoQ33WwfdMWmISOrQloDRn3bsvY=
 github.com/Code-Hex/vz/v3 v3.0.5 h1:2Zht34V0vKVUCThziahZ2RYCneF1FltxQDjTrJszjD0=
 github.com/Code-Hex/vz/v3 v3.0.5/go.mod h1:xUfvg1VJ5A6ZQNuzQERwXJ7l2ZdTnY6eCy9CIS6/DYQ=
+github.com/Code-Hex/vz/v3 v3.0.6 h1:YoW0ZHbdb9G1lYDw9h/QrbBC5lAI1k9LAZMmTGR/Rpw=
+github.com/Code-Hex/vz/v3 v3.0.6/go.mod h1:xUfvg1VJ5A6ZQNuzQERwXJ7l2ZdTnY6eCy9CIS6/DYQ=
 github.com/Microsoft/go-winio v0.4.16-0.20201130162521-d1ffc52c7331/go.mod h1:XB6nPKklQyQ7GC9LdcBEcBl8PF76WugXOPRXwdLnMv0=
 github.com/Microsoft/go-winio v0.4.16/go.mod h1:XB6nPKklQyQ7GC9LdcBEcBl8PF76WugXOPRXwdLnMv0=
 github.com/Microsoft/go-winio v0.6.0 h1:slsWYD/zyx7lCXoZVlvQrj0hPTM1HI4+v1sIda2yDvg=
