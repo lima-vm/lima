@@ -19,6 +19,7 @@ type LimaYAML struct {
 	MountType       *MountType      `yaml:"mountType,omitempty" json:"mountType,omitempty"`
 	SSH             SSH             `yaml:"ssh,omitempty" json:"ssh,omitempty"` // REQUIRED (FIXME)
 	Firmware        Firmware        `yaml:"firmware,omitempty" json:"firmware,omitempty"`
+	Audio           Audio           `yaml:"audio,omitempty" json:"audio,omitempty"`
 	Video           Video           `yaml:"video,omitempty" json:"video,omitempty"`
 	Provision       []Provision     `yaml:"provision,omitempty" json:"provision,omitempty"`
 	Containerd      Containerd      `yaml:"containerd,omitempty" json:"containerd,omitempty"`
@@ -120,6 +121,11 @@ type Firmware struct {
 	// LegacyBIOS disables UEFI if set.
 	// LegacyBIOS is ignored for aarch64.
 	LegacyBIOS *bool `yaml:"legacyBIOS,omitempty" json:"legacyBIOS,omitempty"`
+}
+
+type Audio struct {
+	// Device is a QEMU audiodev string
+	Device *string `yaml:"device,omitempty" json:"device,omitempty"`
 }
 
 type VNCOptions struct {

@@ -77,6 +77,9 @@ func TestFillDefault(t *testing.T) {
 		Firmware: Firmware{
 			LegacyBIOS: pointer.Bool(false),
 		},
+		Audio: Audio{
+			Device: pointer.String(""),
+		},
 		Video: Video{
 			Display: pointer.String("none"),
 			VNC: VNCOptions{
@@ -281,6 +284,9 @@ func TestFillDefault(t *testing.T) {
 		Firmware: Firmware{
 			LegacyBIOS: pointer.Bool(true),
 		},
+		Audio: Audio{
+			Device: pointer.String("coreaudio"),
+		},
 		Video: Video{
 			Display: pointer.String("cocoa"),
 			VNC: VNCOptions{
@@ -448,6 +454,9 @@ func TestFillDefault(t *testing.T) {
 		},
 		Firmware: Firmware{
 			LegacyBIOS: pointer.Bool(true),
+		},
+		Audio: Audio{
+			Device: pointer.String("coreaudio"),
 		},
 		Video: Video{
 			Display: pointer.String("cocoa"),
