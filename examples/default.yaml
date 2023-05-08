@@ -217,6 +217,20 @@ containerd:
 #     vim was not installed in the guest. Make sure the package system is working correctly.
 #     Also see "/var/log/cloud-init-output.log" in the guest.
 
+# Adds an additional archive which matches the system architecture to the CIDATA image which is mounted on boot.
+# The additional archive will be available on the CIDATA disk at /archive.tgz (depending on the key name).
+# Useful for provisioning scripts that run before mounts (like `mode: dependency`) in case they need any file resources.
+# See pkg/cidata/cidata.TEMPLATE.d/boot/40-install-containerd.sh for an example of how to use an archive
+# from a provisioning script.
+# additionalArchives:
+#   archive.tgz:
+#   - location: "/path/to/additional.x86_64.tar.gz"
+#     arch: "x86_64"
+#     digest: "sha256:..."
+#   - location: "/path/to/additional.aarch64.tar.gz"
+#     arch: "aarch64"
+#     digest: "sha256:..."
+
 # ===================================================================== #
 # FURTHER ADVANCED CONFIGURATION
 # ===================================================================== #
