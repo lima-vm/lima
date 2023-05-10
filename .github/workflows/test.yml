@@ -72,7 +72,10 @@ jobs:
 
   integration:
     name: Integration tests
-    runs-on: macos-12
+    strategy:
+      matrix:
+        platform: [macos-12, macos-13]
+    runs-on: ${{ matrix.platform }}
     timeout-minutes: 120
     steps:
     - uses: actions/setup-go@v4
@@ -97,8 +100,8 @@ jobs:
       # jq:        required by test-example.sh to determine download URL for nerdctl
       run: |
         set -x
-        # Github runners seem to have lima installed by brew already; we don't want/need it
-        time brew uninstall --ignore-dependencies lima colima
+        # Github runners seem to have lima installed by brew already on macos-12; we don't want/need it
+        time brew uninstall --ignore-dependencies lima colima || true
         time brew install qemu bash coreutils curl jq
     - name: Cache ~/Library/Caches/lima/download
       uses: actions/cache@v3
