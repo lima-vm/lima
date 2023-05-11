@@ -60,6 +60,12 @@ case "$NAME" in
 	CHECKS["snapshot-online"]=""
 	CHECKS["user-v2"]=1
 	;;
+"vz")
+	CHECKS["systemd-strict"]=
+	CHECKS["port-forwards"]=""
+	CHECKS["snapshot-online"]=""
+	CHECKS["snapshot-offline"]=""
+	;;
 esac
 
 if limactl ls -q | grep -q "$NAME"; then
@@ -83,8 +89,8 @@ function diagnose() {
 	NAME="$1"
 	set -x +e
 	tail "$HOME/.lima/${NAME}"/*.log
-	limactl shell "$NAME" systemctl status
-	limactl shell "$NAME" systemctl
+	limactl shell "$NAME" systemctl --no-pager status
+	limactl shell "$NAME" systemctl --no-pager
 	limactl shell "$NAME" sudo cat /var/log/cloud-init-output.log
 	set +x -e
 }
