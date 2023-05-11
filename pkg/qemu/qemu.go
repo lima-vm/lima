@@ -600,7 +600,7 @@ func Cmdline(cfg Config) (string, []string, error) {
 		// audio controller
 		args = append(args, "-device", "ich9-intel-hda")
 		// audio codec
-		args = append(args, "-device", fmt.Sprintf("hda-output,audiodev=%s", id))
+		args = append(args, "-device", fmt.Sprintf("hda-duplex,audiodev=%s", id))
 	}
 	// Graphics
 	if *y.Video.Display != "" {
