@@ -378,8 +378,9 @@ func Cmdline(cfg Config) (string, []string, error) {
 			// https://qemu-project.gitlab.io/qemu/system/invocation.html?highlight=tcg%20opts
 			// this will make sure each vCPU will be backed by 1 host user thread.
 			args = appendArgsIfNoConflict(args, "-accel", "tcg,thread=multi,tb-size=512")
-			// This will disable CPU S3 state.
+			// This will disable CPU S3/S4 state.
 			args = append(args, "-global", "ICH9-LPC.disable_s3=1")
+			args = append(args, "-global", "ICH9-LPC.disable_s4=1")
 		} else if runtime.GOOS == "windows" && accel == "whpx" {
 			// whpx: injection failed, MSI (0, 0) delivery: 0, dest_mode: 0, trigger mode: 0, vector: 0
 			args = appendArgsIfNoConflict(args, "-machine", "q35,accel="+accel+",kernel-irqchip=off")
@@ -589,6 +590,18 @@ func Cmdline(cfg Config) (string, []string, error) {
 	// virtio-rng-pci accelerates starting up the OS, according to https://wiki.gentoo.org/wiki/QEMU/Options
 	args = append(args, "-device", "virtio-rng-pci")
 
+	// Sound
+	if *y.Audio.Device != "" {
+		id := "default"
+		// audio device
+		audiodev := *y.Audio.Device
+		audiodev += fmt.Sprintf(",id=%s", id)
+		args = append(args, "-audiodev", audiodev)
+		// audio controller
+		args = append(args, "-device", "ich9-intel-hda")
+		// audio codec
+		args = append(args, "-device", fmt.Sprintf("hda-output,audiodev=%s", id))
+	}
 	// Graphics
 	if *y.Video.Display != "" {
 		display := *y.Video.Display
