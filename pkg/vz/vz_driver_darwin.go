@@ -65,6 +65,7 @@ func (l *LimaVzDriver) Validate() error {
 		"CACertificates",
 		"Rosetta",
 		"AdditionalDisks",
+		"Audio",
 	); len(unknown) > 0 {
 		logrus.Warnf("Ignoring: vmType %s: %+v", *l.Yaml.VMType, unknown)
 	}
@@ -95,6 +96,11 @@ func (l *LimaVzDriver) Validate() error {
 		); len(unknown) > 0 {
 			logrus.Warnf("Ignoring: vmType %s: networks[%d]: %+v", *l.Yaml.VMType, i, unknown)
 		}
+	}
+
+	audioDevice := *l.Yaml.Audio.Device
+	if audioDevice != "" && audioDevice != "vz" {
+		logrus.Warnf("field `audio.device` must be %q for VZ driver , got %q", "vz", audioDevice)
 	}
 	return nil
 }
