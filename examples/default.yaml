@@ -246,6 +246,7 @@ firmware:
 
 audio:
   # QEMU audiodev, e.g., "none", "coreaudio", "pa", "alsa", "oss".
+  # VZ driver, use "vz" as device name
   # Choosing "none" will mute the audio output, and not play any sound.
   # 🟢 Builtin default: ""
   device: null

@@ -158,6 +158,10 @@ func createVM(driver *driver.BaseDriver) (*vz.VirtualMachine, error) {
 		return nil, err
 	}
 
+	if err = attachAudio(driver, vmConfig); err != nil {
+		return nil, err
+	}
+
 	if err = attachOtherDevices(driver, vmConfig); err != nil {
 		return nil, err
 	}
@@ -552,6 +556,28 @@ func attachFolderMounts(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineCo
 
 	if len(mounts) > 0 {
 		vmConfig.SetDirectorySharingDevicesVirtualMachineConfiguration(mounts)
+	}
+	return nil
+}
+
+func attachAudio(driver *driver.BaseDriver, config *vz.VirtualMachineConfiguration) error {
+	if *driver.Yaml.Audio.Device == "vz" {
+		outputStream, err := vz.NewVirtioSoundDeviceHostOutputStreamConfiguration()
+		if err != nil {
+			return err
+		}
+		inputStream, err := vz.NewVirtioSoundDeviceHostInputStreamConfiguration()
+		if err != nil {
+			return err
+		}
+		soundDeviceConfiguration, err := vz.NewVirtioSoundDeviceConfiguration()
+		if err != nil {
+			return err
+		}
+		soundDeviceConfiguration.SetStreams(outputStream, inputStream)
+		config.SetAudioDevicesVirtualMachineConfiguration([]vz.AudioDeviceConfiguration{
+			soundDeviceConfiguration,
+		})
 	}
 	return nil
 }
