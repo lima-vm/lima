@@ -90,10 +90,10 @@ settings:
 # None of the paths segments may be symlinks, why it has to be /private/var
 # instead of /var etc.
 paths:
-# socketVMNet requires Lima >= 0.12 .
-# socketVMNet has precedence over vdeVMNet.
+  # socketVMNet requires Lima >= 0.12 .
+  # socketVMNet has precedence over vdeVMNet.
   socketVMNet: /opt/socket_vmnet/bin/socket_vmnet
-# vdeSwitch and vdeVMNet are DEPRECATED.
+  # vdeSwitch and vdeVMNet are DEPRECATED.
   vdeSwitch: /opt/vde/bin/vde_switch
   vdeVMNet: /opt/vde/bin/vde_vmnet
   varRun: /private/var/run/lima
@@ -187,7 +187,7 @@ networks:
 For [VZ](./vmtype.md) instances, the "vzNAT" network can be configured as follows:
 ```yaml
 networks:
-- vzNAT: true
+  - vzNAT: true
 ```
 
 The range of the IP address is not specifiable.

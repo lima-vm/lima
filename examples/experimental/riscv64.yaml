@@ -2,26 +2,24 @@
 
 arch: "riscv64"
 images:
-- location: "https://cloud-images.ubuntu.com/releases/22.10/release-20230413/ubuntu-22.10-server-cloudimg-riscv64.img"
-  digest: "sha256:dbe28fb7c46d28980087b30f2df842bbde02f7a034ce1e0021ee6035ef87674a"
-  kernel:
-    # Extracted from http://http.us.debian.org/debian/pool/main/u/u-boot/u-boot-qemu_2023.01+dfsg-2_all.deb (GPL-2.0)
-    location: "https://github.com/lima-vm/u-boot-qemu-mirror/releases/download/2023.01%2Bdfsg-2/qemu-riscv64_smode_uboot.elf"
-    digest: "sha256:d688d1afd7fd8266a964437438e7d8744c8c27c50124ac1b05e2d83f312a6ca6"
-# Fallback to the latest release image.
-# Hint: run `limactl prune` to invalidate the cache
-- location: "https://cloud-images.ubuntu.com/releases/22.10/release/ubuntu-22.10-server-cloudimg-riscv64.img"
-  kernel:
-    # Extracted from http://http.us.debian.org/debian/pool/main/u/u-boot/u-boot-qemu_2023.04+dfsg-1_all.deb (GPL-2.0)
-    location: "https://github.com/lima-vm/u-boot-qemu-mirror/releases/download/2023.04%2Bdfsg-1/qemu-riscv64_smode_uboot.elf"
-    digest: "sha256:c3c634d66dca211efe7dece9c83071bc40f1c11db86c9dd7ce6f75bf87edef20"
-
+  - location: "https://cloud-images.ubuntu.com/releases/22.10/release-20230413/ubuntu-22.10-server-cloudimg-riscv64.img"
+    digest: "sha256:dbe28fb7c46d28980087b30f2df842bbde02f7a034ce1e0021ee6035ef87674a"
+    kernel:
+      # Extracted from http://http.us.debian.org/debian/pool/main/u/u-boot/u-boot-qemu_2023.01+dfsg-2_all.deb (GPL-2.0)
+      location: "https://github.com/lima-vm/u-boot-qemu-mirror/releases/download/2023.01%2Bdfsg-2/qemu-riscv64_smode_uboot.elf"
+      digest: "sha256:d688d1afd7fd8266a964437438e7d8744c8c27c50124ac1b05e2d83f312a6ca6"
+  # Fallback to the latest release image.
+  # Hint: run `limactl prune` to invalidate the cache
+  - location: "https://cloud-images.ubuntu.com/releases/22.10/release/ubuntu-22.10-server-cloudimg-riscv64.img"
+    kernel:
+      # Extracted from http://http.us.debian.org/debian/pool/main/u/u-boot/u-boot-qemu_2023.04+dfsg-1_all.deb (GPL-2.0)
+      location: "https://github.com/lima-vm/u-boot-qemu-mirror/releases/download/2023.04%2Bdfsg-1/qemu-riscv64_smode_uboot.elf"
+      digest: "sha256:c3c634d66dca211efe7dece9c83071bc40f1c11db86c9dd7ce6f75bf87edef20"
 mounts:
-- location: "~"
-- location: "/tmp/lima"
-  writable: true
+  - location: "~"
+  - location: "/tmp/lima"
+    writable: true
 mountType: "9p"
-
 # We do not have riscv64 binaries of containerd
 containerd:
   system: false

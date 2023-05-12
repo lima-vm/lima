@@ -10,95 +10,87 @@
 # The vmType of existing instances cannot be changed.
 # 🟢 Builtin default: "qemu"
 vmType: null
-
 # Arch: "default", "x86_64", "aarch64".
 # 🟢 Builtin default: "default" (corresponds to the host architecture)
 arch: null
-
 # OpenStack-compatible disk image.
 # 🟢 Builtin default: null (must be specified)
 # 🔵 This file: Ubuntu 22.10 Kinetic Kudu images
 images:
-# Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
-- location: "https://cloud-images.ubuntu.com/releases/22.10/release-20230413/ubuntu-22.10-server-cloudimg-amd64.img"
-  arch: "x86_64"
-  digest: "sha256:d46438111d7a6dfcdfb2e1fb76762a79d56f09dc308cc9ab2300effc0078fd5b"
-- location: "https://cloud-images.ubuntu.com/releases/22.10/release-20230413/ubuntu-22.10-server-cloudimg-arm64.img"
-  arch: "aarch64"
-  digest: "sha256:e1865c2ebc531600ae6012d86fa2dae5846e7801cdcdbcf90d9c830218ef4ae9"
-# Fallback to the latest release image.
-# Hint: run `limactl prune` to invalidate the cache
-- location: "https://cloud-images.ubuntu.com/releases/22.10/release/ubuntu-22.10-server-cloudimg-amd64.img"
-  arch: "x86_64"
-- location: "https://cloud-images.ubuntu.com/releases/22.10/release/ubuntu-22.10-server-cloudimg-arm64.img"
-  arch: "aarch64"
-
+  # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
+  - location: "https://cloud-images.ubuntu.com/releases/22.10/release-20230413/ubuntu-22.10-server-cloudimg-amd64.img"
+    arch: "x86_64"
+    digest: "sha256:d46438111d7a6dfcdfb2e1fb76762a79d56f09dc308cc9ab2300effc0078fd5b"
+  - location: "https://cloud-images.ubuntu.com/releases/22.10/release-20230413/ubuntu-22.10-server-cloudimg-arm64.img"
+    arch: "aarch64"
+    digest: "sha256:e1865c2ebc531600ae6012d86fa2dae5846e7801cdcdbcf90d9c830218ef4ae9"
+  # Fallback to the latest release image.
+  # Hint: run `limactl prune` to invalidate the cache
+  - location: "https://cloud-images.ubuntu.com/releases/22.10/release/ubuntu-22.10-server-cloudimg-amd64.img"
+    arch: "x86_64"
+  - location: "https://cloud-images.ubuntu.com/releases/22.10/release/ubuntu-22.10-server-cloudimg-arm64.img"
+    arch: "aarch64"
 # CPUs: if you see performance issues, try limiting cpus to 1.
 # 🟢 Builtin default: 4
 cpus: null
-
 # Memory size
 # 🟢 Builtin default: "4GiB"
 memory: null
-
 # Disk size
 # 🟢 Builtin default: "100GiB"
 disk: null
-
 # Expose host directories to the guest, the mount point might be accessible from all UIDs in the guest
 # 🟢 Builtin default: null (Mount nothing)
 # 🔵 This file: Mount the home as read-only, /tmp/lima as writable
 mounts:
-- location: "~"
-  # Configure the mountPoint inside the guest.
-  # 🟢 Builtin default: value of location
-  mountPoint: null
-  # CAUTION: `writable` SHOULD be false for the home directory.
-  # Setting `writable` to true is possible, but untested and dangerous.
-  # 🟢 Builtin default: false
-  writable: null
-  sshfs:
-    # Enabling the SSHFS cache will increase performance of the mounted filesystem, at
-    # the cost of potentially not reflecting changes made on the host in a timely manner.
-    # Warning: It looks like PHP filesystem access does not work correctly when
-    # the cache is disabled.
-    # 🟢 Builtin default: true
-    cache: null
-    # SSHFS has an optional flag called 'follow_symlinks'. This allows mounts
-    # to be properly resolved in the guest os and allow for access to the
-    # contents of the symlink. As a result, symlinked files & folders on the Host
-    # system will look and feel like regular files directories in the Guest OS.
+  - location: "~"
+    # Configure the mountPoint inside the guest.
+    # 🟢 Builtin default: value of location
+    mountPoint: null
+    # CAUTION: `writable` SHOULD be false for the home directory.
+    # Setting `writable` to true is possible, but untested and dangerous.
     # 🟢 Builtin default: false
-    followSymlinks: null
-    # SFTP driver, "builtin" or "openssh-sftp-server". "openssh-sftp-server" is recommended.
-    # 🟢 Builtin default: "openssh-sftp-server" if OpenSSH SFTP Server binary is found, otherwise "builtin"
-    sftpDriver: null
-  9p:
-    # Supported security models are "passthrough", "mapped-xattr", "mapped-file" and "none".
-    # "mapped-xattr" and "mapped-file" are useful for persistent chown but incompatible with symlinks.
-    # 🟢 Builtin default: "none" (since Lima v0.13)
-    securityModel: null
-    # Select 9P protocol version. Valid options are: "9p2000" (legacy), "9p2000.u", "9p2000.L".
-    # 🟢 Builtin default: "9p2000.L"
-    protocolVersion: null
-    # The number of bytes to use for 9p packet payload, where 4KiB is the absolute minimum.
-    # 🟢 Builtin default: "128KiB"
-    msize: null
-    # Specifies a caching policy. Valid options are: "none", "loose", "fscache" and "mmap".
-    # Try choosing "mmap" or "none" if you see a stability issue with the default "fscache".
-    # See https://www.kernel.org/doc/Documentation/filesystems/9p.txt
-    # 🟢 Builtin default: "fscache" for non-writable mounts, "mmap" for writable mounts
-    cache: null
-- location: "/tmp/lima"
-  # 🟢 Builtin default: false
-  # 🔵 This file: true (only for "/tmp/lima")
-  writable: true
-
+    writable: null
+    sshfs:
+      # Enabling the SSHFS cache will increase performance of the mounted filesystem, at
+      # the cost of potentially not reflecting changes made on the host in a timely manner.
+      # Warning: It looks like PHP filesystem access does not work correctly when
+      # the cache is disabled.
+      # 🟢 Builtin default: true
+      cache: null
+      # SSHFS has an optional flag called 'follow_symlinks'. This allows mounts
+      # to be properly resolved in the guest os and allow for access to the
+      # contents of the symlink. As a result, symlinked files & folders on the Host
+      # system will look and feel like regular files directories in the Guest OS.
+      # 🟢 Builtin default: false
+      followSymlinks: null
+      # SFTP driver, "builtin" or "openssh-sftp-server". "openssh-sftp-server" is recommended.
+      # 🟢 Builtin default: "openssh-sftp-server" if OpenSSH SFTP Server binary is found, otherwise "builtin"
+      sftpDriver: null
+    9p:
+      # Supported security models are "passthrough", "mapped-xattr", "mapped-file" and "none".
+      # "mapped-xattr" and "mapped-file" are useful for persistent chown but incompatible with symlinks.
+      # 🟢 Builtin default: "none" (since Lima v0.13)
+      securityModel: null
+      # Select 9P protocol version. Valid options are: "9p2000" (legacy), "9p2000.u", "9p2000.L".
+      # 🟢 Builtin default: "9p2000.L"
+      protocolVersion: null
+      # The number of bytes to use for 9p packet payload, where 4KiB is the absolute minimum.
+      # 🟢 Builtin default: "128KiB"
+      msize: null
+      # Specifies a caching policy. Valid options are: "none", "loose", "fscache" and "mmap".
+      # Try choosing "mmap" or "none" if you see a stability issue with the default "fscache".
+      # See https://www.kernel.org/doc/Documentation/filesystems/9p.txt
+      # 🟢 Builtin default: "fscache" for non-writable mounts, "mmap" for writable mounts
+      cache: null
+  - location: "/tmp/lima"
+    # 🟢 Builtin default: false
+    # 🔵 This file: true (only for "/tmp/lima")
+    writable: true
 # Mount type for above mounts, such as "reverse-sshfs" (from sshocker), "9p" (EXPERIMENTAL, from QEMU’s virtio-9p-pci, aka virtfs),
 # or "virtiofs" (EXPERIMENTAL, needs `vmType: vz`)
 # 🟢 Builtin default: "reverse-sshfs"
 mountType: null
-
 # Lima disks to attach to the instance. The disks will be accessible from inside the
 # instance, labeled by name. (e.g. if the disk is named "data", it will be labeled
 # "lima-data" inside the instance). The disk will be mounted inside the instance at
@@ -107,7 +99,6 @@ mountType: null
 additionalDisks:
 # disks should be a list of disk name strings, for example:
 # - "data"
-
 ssh:
   # A localhost port of the host. Forwarded to port 22 of the guest.
   # 🟢 Builtin default: 0 (automatically assigned to a free port)
@@ -132,17 +123,14 @@ ssh:
   # Trust forwarded X11 clients
   # 🟢 Builtin default: false
   forwardX11Trusted: null
-
 # ===================================================================== #
 # ADVANCED CONFIGURATION
 # ===================================================================== #
-
 caCerts:
   # If set to `true`, this will remove all the default trusted CA certificates that
   # are normally shipped with the OS.
   # 🟢 Builtin default: false
   removeDefaults: null
-
   # A list of trusted CA certificate files. The files will be read and passed to cloud-init.
   files:
   # - examples/hello.crt
@@ -157,7 +145,6 @@ caCerts:
   #   -----BEGIN CERTIFICATE-----
   #   YOUR-ORGS-TRUSTED-CA-CERT-HERE
   #   -----END CERTIFICATE-----
-
 containerd:
   # Enable system-wide (aka rootful)  containerd and its dependencies (BuildKit, Stargz Snapshotter)
   # Note that `nerdctl.lima` only works in rootless mode; you have to use `lima sudo nerdctl ...`
@@ -229,7 +216,6 @@ cpuType:
   aarch64: null
   # 🟢 Builtin default: "qemu64" (or "host,-pdpe1gb" when running on x86_64 host)
   x86_64: null
-
 rosetta:
   # Enable Rosetta for Linux (EXPERIMENTAL).
   # Hint: try `softwareupdate --install-rosetta` if Lima gets stuck at `Installing rosetta...`
@@ -238,19 +224,16 @@ rosetta:
   # Register rosetta to /proc/sys/fs/binfmt_misc
   # 🟢 Builtin default: false
   binfmt: null
-
 firmware:
   # Use legacy BIOS instead of UEFI. Ignored for aarch64.
   # 🟢 Builtin default: false
   legacyBIOS: null
-
 audio:
   # QEMU audiodev, e.g., "none", "coreaudio", "pa", "alsa", "oss".
   # VZ driver, use "vz" as device name
   # Choosing "none" will mute the audio output, and not play any sound.
   # 🟢 Builtin default: ""
   device: null
-
 video:
   # QEMU display, e.g., "none", "cocoa", "sdl", "gtk", "vnc", "default".
   # Choosing "none" will hide the video output, and not show any window.
@@ -267,7 +250,6 @@ video:
     # By convention the TCP port is 5900+d, connections from any host.
     # 🟢 Builtin default: "127.0.0.1:0,to=9"
     display: null
-
 # The instance can get routable IP addresses from the vmnet framework using
 # https://github.com/lima-vm/socket_vmnet.
 # 🟢 Builtin default: null
@@ -288,7 +270,6 @@ networks:
 # before the instance.  The interface type (host, shared, or bridged) is
 # configured in socket_vmnet and not in lima.
 # - socket: "/var/run/socket_vmnet"
-
 
 # The "vzNAT" IP address is accessible from the host, but not from other guests.
 # Needs `vmType: vz` (EXPERIMENTAL).
@@ -385,7 +366,6 @@ networks:
 # propagateProxyEnv to false.
 # 🟢 Builtn default: true
 propagateProxyEnv: null
-
 # The host agent implements a DNS server that looks up host names on the host
 # using the local system resolver. This means changing VPN and network settings
 # are reflected automatically into the guest, including conditional forward,
@@ -402,9 +382,8 @@ hostResolver:
   # predefined to specify the gateway address to the host.
   # 🟢 Builtin default: null
   hosts:
-    # guest.name: 127.1.1.1
-    # host.name: host.lima.internal
-
+  # guest.name: 127.1.1.1
+  # host.name: host.lima.internal
 # If useHostResolver is false, then the following rules apply for configuring dns:
 # Explicitly set DNS addresses for qemu user-mode networking. By default qemu picks *one*
 # nameserver from the host config and forwards all queries to this server. On macOS

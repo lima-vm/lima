@@ -21,23 +21,23 @@ An example configuration:
 ```yaml
 mountType: "reverse-sshfs"
 mounts:
-- location: "~"
-  sshfs:
-    # Enabling the SSHFS cache will increase performance of the mounted filesystem, at
-    # the cost of potentially not reflecting changes made on the host in a timely manner.
-    # Warning: It looks like PHP filesystem access does not work correctly when
-    # the cache is disabled.
-    # 🟢 Builtin default: true
-    cache: null
-    # SSHFS has an optional flag called 'follow_symlinks'. This allows mounts
-    # to be properly resolved in the guest os and allow for access to the
-    # contents of the symlink. As a result, symlinked files & folders on the Host
-    # system will look and feel like regular files directories in the Guest OS.
-    # 🟢 Builtin default: false
-    followSymlinks: null
-    # SFTP driver, "builtin" or "openssh-sftp-server". "openssh-sftp-server" is recommended.
-    # 🟢 Builtin default: "openssh-sftp-server" if OpenSSH SFTP Server binary is found, otherwise "builtin"
-    sftpDriver: null
+  - location: "~"
+    sshfs:
+      # Enabling the SSHFS cache will increase performance of the mounted filesystem, at
+      # the cost of potentially not reflecting changes made on the host in a timely manner.
+      # Warning: It looks like PHP filesystem access does not work correctly when
+      # the cache is disabled.
+      # 🟢 Builtin default: true
+      cache: null
+      # SSHFS has an optional flag called 'follow_symlinks'. This allows mounts
+      # to be properly resolved in the guest os and allow for access to the
+      # contents of the symlink. As a result, symlinked files & folders on the Host
+      # system will look and feel like regular files directories in the Guest OS.
+      # 🟢 Builtin default: false
+      followSymlinks: null
+      # SFTP driver, "builtin" or "openssh-sftp-server". "openssh-sftp-server" is recommended.
+      # 🟢 Builtin default: "openssh-sftp-server" if OpenSSH SFTP Server binary is found, otherwise "builtin"
+      sftpDriver: null
 ```
 
 The default value of `sftpDriver` has been set to "openssh-sftp-server" since Lima v0.10, when an OpenSSH SFTP Server binary
@@ -59,23 +59,23 @@ An example configuration:
 ```yaml
 mountType: "9p"
 mounts:
-- location: "~"
-  9p:
-    # Supported security models are "passthrough", "mapped-xattr", "mapped-file" and "none".
-    # "mapped-xattr" and "mapped-file" are useful for persistent chown but incompatible with symlinks.
-    # 🟢 Builtin default: "none" (since Lima v0.13)
-    securityModel: null
-    # Select 9P protocol version. Valid options are: "9p2000" (legacy), "9p2000.u", "9p2000.L".
-    # 🟢 Builtin default: "9p2000.L"
-    protocolVersion: null
-    # The number of bytes to use for 9p packet payload, where 4KiB is the absolute minimum.
-    # 🟢 Builtin default: "128KiB"
-    msize: null
-    # Specifies a caching policy. Valid options are: "none", "loose", "fscache" and "mmap".
-    # Try choosing "mmap" or "none" if you see a stability issue with the default "fscache".
-    # See https://www.kernel.org/doc/Documentation/filesystems/9p.txt
-    # 🟢 Builtin default: "fscache" for non-writable mounts, "mmap" for writable mounts
-    cache: null
+  - location: "~"
+    9p:
+      # Supported security models are "passthrough", "mapped-xattr", "mapped-file" and "none".
+      # "mapped-xattr" and "mapped-file" are useful for persistent chown but incompatible with symlinks.
+      # 🟢 Builtin default: "none" (since Lima v0.13)
+      securityModel: null
+      # Select 9P protocol version. Valid options are: "9p2000" (legacy), "9p2000.u", "9p2000.L".
+      # 🟢 Builtin default: "9p2000.L"
+      protocolVersion: null
+      # The number of bytes to use for 9p packet payload, where 4KiB is the absolute minimum.
+      # 🟢 Builtin default: "128KiB"
+      msize: null
+      # Specifies a caching policy. Valid options are: "none", "loose", "fscache" and "mmap".
+      # Try choosing "mmap" or "none" if you see a stability issue with the default "fscache".
+      # See https://www.kernel.org/doc/Documentation/filesystems/9p.txt
+      # 🟢 Builtin default: "fscache" for non-writable mounts, "mmap" for writable mounts
+      cache: null
 ```
 
 The "9p" mount type requires Lima v0.10.0 or later.
@@ -98,7 +98,7 @@ An example configuration:
 vmType: "vz"
 mountType: "virtiofs"
 mounts:
-- location: "~"
+  - location: "~"
 ```
 
 #### Caveats

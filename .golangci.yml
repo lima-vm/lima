@@ -22,132 +22,132 @@ run:
 linters:
   disable-all: true
   enable:
-  - depguard
-  - gofmt
-  - goimports
-  - govet
-  - ineffassign
-  - misspell
-  - nakedret
-  # - prealloc
-  - typecheck
-  # - asciicheck
-  # - bodyclose
-  # - dogsled
-  # - dupl
-  # - errcheck
-  # - errorlint
-  # - exhaustive
-  # - exhaustivestruct
-  # - exportloopref
-  # - funlen
-  # - gci
-  # - gochecknoglobals
-  # - gochecknoinits
-  # - gocognit
-  # - goconst
-  # - gocritic
-  # - gocyclo
-  # - godot
-  # - godox
-  # - goerr113
-  # - gofumpt
-  # - goheader
-  # - golint
-  # - gomnd
-  # - gomodguard
-  # - goprintffuncname
-  # - gosec (gas)
-  # - gosimple (megacheck)
-  # - interfacer
-  # - lll
-  # - maligned
-  # - nestif
-  # - nlreturn
-  # - noctx
-  # - nolintlint
-  # - rowserrcheck
-  # - scopelint
-  # - sqlclosecheck
-  # - staticcheck
-  # - stylecheck
-  # - testpackage
-  # - tparallel
-  - revive
-  # - unconvert
-  # - unparam
-  - unused
-  # - whitespace
-  # - wrapcheck
-  # - wsl
+    - depguard
+    - gofmt
+    - goimports
+    - govet
+    - ineffassign
+    - misspell
+    - nakedret
+    # - prealloc
+    - typecheck
+    # - asciicheck
+    # - bodyclose
+    # - dogsled
+    # - dupl
+    # - errcheck
+    # - errorlint
+    # - exhaustive
+    # - exhaustivestruct
+    # - exportloopref
+    # - funlen
+    # - gci
+    # - gochecknoglobals
+    # - gochecknoinits
+    # - gocognit
+    # - goconst
+    # - gocritic
+    # - gocyclo
+    # - godot
+    # - godox
+    # - goerr113
+    # - gofumpt
+    # - goheader
+    # - golint
+    # - gomnd
+    # - gomodguard
+    # - goprintffuncname
+    # - gosec (gas)
+    # - gosimple (megacheck)
+    # - interfacer
+    # - lll
+    # - maligned
+    # - nestif
+    # - nlreturn
+    # - noctx
+    # - nolintlint
+    # - rowserrcheck
+    # - scopelint
+    # - sqlclosecheck
+    # - staticcheck
+    # - stylecheck
+    # - testpackage
+    # - tparallel
+    - revive
+    # - unconvert
+    # - unparam
+    - unused
+    # - whitespace
+    # - wrapcheck
+    # - wsl
 linters-settings:
   gocritic:
     enabled-checks:
-    # Diagnostic
-    - appendAssign
-    - argOrder
-    - badCond
-    - caseOrder
-    - codegenComment
-    - commentedOutCode
-    - deprecatedComment
-    - dupArg
-    - dupBranchBody
-    - dupCase
-    - dupSubExpr
-    - exitAfterDefer
-    - flagDeref
-    - flagName
-    - nilValReturn
-    - offBy1
-    - sloppyReassign
-    - weakCond
-    - octalLiteral
+      # Diagnostic
+      - appendAssign
+      - argOrder
+      - badCond
+      - caseOrder
+      - codegenComment
+      - commentedOutCode
+      - deprecatedComment
+      - dupArg
+      - dupBranchBody
+      - dupCase
+      - dupSubExpr
+      - exitAfterDefer
+      - flagDeref
+      - flagName
+      - nilValReturn
+      - offBy1
+      - sloppyReassign
+      - weakCond
+      - octalLiteral
 
-    # Performance
-    - appendCombine
-    - equalFold
-    - hugeParam
-    - indexAlloc
-    - rangeExprCopy
-    - rangeValCopy
+      # Performance
+      - appendCombine
+      - equalFold
+      - hugeParam
+      - indexAlloc
+      - rangeExprCopy
+      - rangeValCopy
 
-    # Style
-    - assignOp
-    - boolExprSimplify
-    - captLocal
-    - commentFormatting
-    - commentedOutImport
-    - defaultCaseOrder
-    - docStub
-    - elseif
-    - emptyFallthrough
-    - emptyStringTest
-    - hexLiteral
-    - ifElseChain
-    - methodExprCall
-    - regexpMust
-    - singleCaseSwitch
-    - sloppyLen
-    - stringXbytes
-    - switchTrue
-    - typeAssertChain
-    - typeSwitchVar
-    - underef
-    - unlabelStmt
-    - unlambda
-    - unslice
-    - valSwap
-    - wrapperFunc
-    - yodaStyleExpr
+      # Style
+      - assignOp
+      - boolExprSimplify
+      - captLocal
+      - commentFormatting
+      - commentedOutImport
+      - defaultCaseOrder
+      - docStub
+      - elseif
+      - emptyFallthrough
+      - emptyStringTest
+      - hexLiteral
+      - ifElseChain
+      - methodExprCall
+      - regexpMust
+      - singleCaseSwitch
+      - sloppyLen
+      - stringXbytes
+      - switchTrue
+      - typeAssertChain
+      - typeSwitchVar
+      - underef
+      - unlabelStmt
+      - unlambda
+      - unslice
+      - valSwap
+      - wrapperFunc
+      - yodaStyleExpr
 
-    # Opinionated
-    - builtinShadow
-    - importShadow
-    - initClause
-    - nestingReduce
-    - paramTypeCombine
-    - ptrToRefParam
-    - typeUnparen
-    - unnamedResult
-    - unnecessaryBlock
+      # Opinionated
+      - builtinShadow
+      - importShadow
+      - initClause
+      - nestingReduce
+      - paramTypeCombine
+      - ptrToRefParam
+      - typeUnparen
+      - unnamedResult
+      - unnecessaryBlock

@@ -5,12 +5,12 @@ name: Release
 on:
   push:
     branches:
-    - 'master'
+      - 'master'
     tags:
-    - 'v*'
+      - 'v*'
   pull_request:
     branches:
-    - 'master'
+      - 'master'
 env:
   GO111MODULE: on
 jobs:
@@ -19,84 +19,84 @@ jobs:
     runs-on: macos-12
     timeout-minutes: 20
     steps:
-    - name: "Switch Xcode version to enable macOS 13 SDK"
-      # Xcode 14.1 added support for macOS 13 SDK.
-      # The default version is still 14.0.1, as of November 2022.
-      # https://github.com/actions/runner-images/blob/main/images/macos/macos-12-Readme.md#xcode
-      run: |
-        sudo xcode-select --switch /Applications/Xcode_14.1.app
-        xcrun --show-sdk-version
-    - uses: actions/setup-go@v4
-      with:
-        go-version: 1.20.x
-    - uses: actions/checkout@v3
-      with:
-        fetch-depth: 1
-    - name: Make darwin artifacts
-      run: make artifacts-darwin
-    - name: "Upload artifacts"
-      uses: actions/upload-artifact@v3
-      with:
-        name: artifacts-darwin
-        path: _artifacts/
+      - name: "Switch Xcode version to enable macOS 13 SDK"
+        # Xcode 14.1 added support for macOS 13 SDK.
+        # The default version is still 14.0.1, as of November 2022.
+        # https://github.com/actions/runner-images/blob/main/images/macos/macos-12-Readme.md#xcode
+        run: |
+          sudo xcode-select --switch /Applications/Xcode_14.1.app
+          xcrun --show-sdk-version
+      - uses: actions/setup-go@v4
+        with:
+          go-version: 1.20.x
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+      - name: Make darwin artifacts
+        run: make artifacts-darwin
+      - name: "Upload artifacts"
+        uses: actions/upload-artifact@v3
+        with:
+          name: artifacts-darwin
+          path: _artifacts/
   release:
     runs-on: ubuntu-22.04
     needs: artifacts-darwin
     timeout-minutes: 20
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/download-artifact@v3
-      with:
-        name: artifacts-darwin
-        path: _artifacts/
-    - uses: actions/setup-go@v4
-      with:
-        go-version: 1.20.x
-    - name: Install gcc-aarch64-linux-gnu
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y gcc-aarch64-linux-gnu
-    - name: "Compile binaries"
-      run: make artifacts-linux
-    - name: "Make misc artifacts"
-      run: make artifacts-misc
-    - name: "SHA256SUMS"
-      run: |
-        ( cd _artifacts; sha256sum *.tar.gz ) | tee /tmp/SHA256SUMS
-        mv /tmp/SHA256SUMS _artifacts/SHA256SUMS
-    - name: "The sha256sum of the SHA256SUMS file"
-      run: (cd _artifacts; sha256sum SHA256SUMS)
-    - name: "Prepare the release note"
-      run: |
-        tag="${GITHUB_REF##*/}"
-        shasha=$(sha256sum _artifacts/SHA256SUMS | awk '{print $1}')
-        cat <<-EOF | tee /tmp/release-note.txt
-        ${tag}
+      - uses: actions/checkout@v3
+      - uses: actions/download-artifact@v3
+        with:
+          name: artifacts-darwin
+          path: _artifacts/
+      - uses: actions/setup-go@v4
+        with:
+          go-version: 1.20.x
+      - name: Install gcc-aarch64-linux-gnu
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+      - name: "Compile binaries"
+        run: make artifacts-linux
+      - name: "Make misc artifacts"
+        run: make artifacts-misc
+      - name: "SHA256SUMS"
+        run: |
+          ( cd _artifacts; sha256sum *.tar.gz ) | tee /tmp/SHA256SUMS
+          mv /tmp/SHA256SUMS _artifacts/SHA256SUMS
+      - name: "The sha256sum of the SHA256SUMS file"
+        run: (cd _artifacts; sha256sum SHA256SUMS)
+      - name: "Prepare the release note"
+        run: |
+          tag="${GITHUB_REF##*/}"
+          shasha=$(sha256sum _artifacts/SHA256SUMS | awk '{print $1}')
+          cat <<-EOF | tee /tmp/release-note.txt
+          ${tag}
 
-        (Changes to be documented)
+          (Changes to be documented)
 
-        ## Usage
-        \`\`\`console
-        [macOS]$ limactl start
-        ...
-        INFO[0029] READY. Run \`lima\` to open the shell.
+          ## Usage
+          \`\`\`console
+          [macOS]$ limactl start
+          ...
+          INFO[0029] READY. Run \`lima\` to open the shell.
 
-        [macOS]$ lima uname
-        Linux
-        \`\`\`
+          [macOS]$ lima uname
+          Linux
+          \`\`\`
 
-        - - -
-        The binaries were built automatically on GitHub Actions.
-        The build log is available for 90 days: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          - - -
+          The binaries were built automatically on GitHub Actions.
+          The build log is available for 90 days: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-        The sha256sum of the SHA256SUMS file itself is \`${shasha}\` .
-        EOF
-    - name: "Create release"
-      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        tag="${GITHUB_REF##*/}"
-        asset_flags=()
-        for f in _artifacts/*; do asset_flags+=("-a" "$f"); done
-        hub release create "${asset_flags[@]}" -F /tmp/release-note.txt --draft "${tag}"
+          The sha256sum of the SHA256SUMS file itself is \`${shasha}\` .
+          EOF
+      - name: "Create release"
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${GITHUB_REF##*/}"
+          asset_flags=()
+          for f in _artifacts/*; do asset_flags+=("-a" "$f"); done
+          hub release create "${asset_flags[@]}" -F /tmp/release-note.txt --draft "${tag}"

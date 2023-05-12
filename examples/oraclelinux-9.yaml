@@ -3,16 +3,16 @@
 # Image source: https://yum.oracle.com/oracle-linux-templates.html
 
 images:
-- location: "https://yum.oracle.com/templates/OracleLinux/OL9/u1/x86_64/OL9U1_x86_64-kvm-b158.qcow"
-  arch: "x86_64"
-  digest: "sha256:ca655beba34038349827c5ab365df4f7936a7f6226a04d0452bbe4430f4d6658"
-- location: "https://yum.oracle.com/templates/OracleLinux/OL9/u1/aarch64/OL9U1_aarch64-kvm-b13.qcow"
-  arch: "aarch64"
-  digest: "sha256:a71abfd60713cd5c37443287dd267efd30f1715f8db075e0377b43e2d6ec44cf"
+  - location: "https://yum.oracle.com/templates/OracleLinux/OL9/u1/x86_64/OL9U1_x86_64-kvm-b158.qcow"
+    arch: "x86_64"
+    digest: "sha256:ca655beba34038349827c5ab365df4f7936a7f6226a04d0452bbe4430f4d6658"
+  - location: "https://yum.oracle.com/templates/OracleLinux/OL9/u1/aarch64/OL9U1_aarch64-kvm-b13.qcow"
+    arch: "aarch64"
+    digest: "sha256:a71abfd60713cd5c37443287dd267efd30f1715f8db075e0377b43e2d6ec44cf"
 mounts:
-- location: "~"
-- location: "/tmp/lima"
-  writable: true
+  - location: "~"
+  - location: "/tmp/lima"
+    writable: true
 firmware:
   # Oracle Linux 9 still requires legacyBIOS, while AlmaLinux 9 and Rocky Linux 9 do not.
   legacyBIOS: true

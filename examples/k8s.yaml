@@ -12,150 +12,149 @@
 
 # This example requires Lima v0.7.0 or later.
 images:
-# Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
-- location: "https://cloud-images.ubuntu.com/releases/22.04/release-20230302/ubuntu-22.04-server-cloudimg-amd64.img"
-  arch: "x86_64"
-  digest: "sha256:345fbbb6ec827ca02ec1a1ced90f7d40d3fd345811ba97c5772ac40e951458e1"
-- location: "https://cloud-images.ubuntu.com/releases/22.04/release-20230302/ubuntu-22.04-server-cloudimg-arm64.img"
-  arch: "aarch64"
-  digest: "sha256:f6b5b3a980f28f25fe5203ae74b79cc664ae5505cf255a62f3b01be46ab9967a"
-# Fallback to the latest release image.
-# Hint: run `limactl prune` to invalidate the cache
-- location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-amd64.img"
-  arch: "x86_64"
-- location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-arm64.img"
-  arch: "aarch64"
-
+  # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
+  - location: "https://cloud-images.ubuntu.com/releases/22.04/release-20230302/ubuntu-22.04-server-cloudimg-amd64.img"
+    arch: "x86_64"
+    digest: "sha256:345fbbb6ec827ca02ec1a1ced90f7d40d3fd345811ba97c5772ac40e951458e1"
+  - location: "https://cloud-images.ubuntu.com/releases/22.04/release-20230302/ubuntu-22.04-server-cloudimg-arm64.img"
+    arch: "aarch64"
+    digest: "sha256:f6b5b3a980f28f25fe5203ae74b79cc664ae5505cf255a62f3b01be46ab9967a"
+  # Fallback to the latest release image.
+  # Hint: run `limactl prune` to invalidate the cache
+  - location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-amd64.img"
+    arch: "x86_64"
+  - location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-arm64.img"
+    arch: "aarch64"
 # Mounts are disabled in this example, but can be enabled optionally.
 mounts: []
 containerd:
   system: true
   user: false
 provision:
-# See <https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/>
-- mode: system
-  script: |
-    #!/bin/bash
-    set -eux -o pipefail
-    command -v kubeadm >/dev/null 2>&1 && exit 0
-    # Install and configure prerequisites
-    cat <<EOF | sudo tee /etc/modules-load.d/containerd.conf
-    overlay
-    br_netfilter
-    EOF
-    modprobe overlay
-    modprobe br_netfilter
-    cat <<EOF | sudo tee /etc/sysctl.d/99-kubernetes-cri.conf
-    net.bridge.bridge-nf-call-iptables  = 1
-    net.ipv4.ip_forward                 = 1
-    net.bridge.bridge-nf-call-ip6tables = 1
-    EOF
-    sysctl --system
-    # Installing kubeadm, kubelet and kubectl
-    export DEBIAN_FRONTEND=noninteractive
-    apt-get update
-    apt-get install -y apt-transport-https ca-certificates curl
-    curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg
-    echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
-    apt-get update
-    # cri-tools
-    apt-get install -y cri-tools
-    cat  <<EOF | sudo tee /etc/crictl.yaml
-    runtime-endpoint: unix:///run/containerd/containerd.sock
-    EOF
-    # cni-plugins
-    apt-get install -y kubernetes-cni
-    rm -f /etc/cni/net.d/*.conf*
-    apt-get install -y kubelet kubeadm kubectl && apt-mark hold kubelet kubeadm kubectl
-    systemctl enable --now kubelet
-# See <https://kubernetes.io/docs/setup/production-environment/container-runtimes/>
-- mode: system
-  script: |
-    #!/bin/bash
-    set -eux -o pipefail
-    grep SystemdCgroup /etc/containerd/config.toml && exit 0
-    grep "version = 2" /etc/containerd/config.toml || exit 1
-    # Configuring the systemd cgroup driver
-    # Overriding the sandbox (pause) image
-    cat <<EOF >>/etc/containerd/config.toml
-      [plugins]
-        [plugins."io.containerd.grpc.v1.cri"]
-          sandbox_image = "$(kubeadm config images list | grep pause | sort -r | head -n1)"
-          [plugins."io.containerd.grpc.v1.cri".containerd]
-            [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]
-              [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
-                runtime_type = "io.containerd.runc.v2"
-                [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
-                  SystemdCgroup = true
-    EOF
-    systemctl restart containerd
-# See <https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/>
-- mode: system
-  script: |
-    #!/bin/bash
-    set -eux -o pipefail
-    test -e /etc/kubernetes/admin.conf && exit 0
-    export KUBECONFIG=/etc/kubernetes/admin.conf
-    kubeadm config images list
-    kubeadm config images pull --cri-socket=unix:///run/containerd/containerd.sock
-    # Initializing your control-plane node
-    cat <<EOF >kubeadm-config.yaml
-    kind: InitConfiguration
-    apiVersion: kubeadm.k8s.io/v1beta3
-    nodeRegistration:
-      criSocket: unix:///run/containerd/containerd.sock
-    ---
-    kind: ClusterConfiguration
-    apiVersion: kubeadm.k8s.io/v1beta3
-    apiServer:
-      certSANs: # --apiserver-cert-extra-sans
-      - "127.0.0.1"
-    networking:
-      podSubnet: "10.244.0.0/16" # --pod-network-cidr
-    ---
-    kind: KubeletConfiguration
-    apiVersion: kubelet.config.k8s.io/v1beta1
-    cgroupDriver: systemd
-    EOF
-    kubeadm init --config kubeadm-config.yaml
-    # Installing a Pod network add-on
-    kubectl apply -f https://github.com/flannel-io/flannel/releases/download/v0.21.4/kube-flannel.yml
-    # Control plane node isolation
-    kubectl taint nodes --all node-role.kubernetes.io/control-plane-
-    sed -e "s/${LIMA_CIDATA_SLIRP_IP_ADDRESS:-192.168.5.15}/127.0.0.1/" -i $KUBECONFIG
-    mkdir -p ${HOME:-/root}/.kube && cp -f $KUBECONFIG ${HOME:-/root}/.kube/config
+  # See <https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/>
+  - mode: system
+    script: |
+      #!/bin/bash
+      set -eux -o pipefail
+      command -v kubeadm >/dev/null 2>&1 && exit 0
+      # Install and configure prerequisites
+      cat <<EOF | sudo tee /etc/modules-load.d/containerd.conf
+      overlay
+      br_netfilter
+      EOF
+      modprobe overlay
+      modprobe br_netfilter
+      cat <<EOF | sudo tee /etc/sysctl.d/99-kubernetes-cri.conf
+      net.bridge.bridge-nf-call-iptables  = 1
+      net.ipv4.ip_forward                 = 1
+      net.bridge.bridge-nf-call-ip6tables = 1
+      EOF
+      sysctl --system
+      # Installing kubeadm, kubelet and kubectl
+      export DEBIAN_FRONTEND=noninteractive
+      apt-get update
+      apt-get install -y apt-transport-https ca-certificates curl
+      curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg
+      echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+      apt-get update
+      # cri-tools
+      apt-get install -y cri-tools
+      cat  <<EOF | sudo tee /etc/crictl.yaml
+      runtime-endpoint: unix:///run/containerd/containerd.sock
+      EOF
+      # cni-plugins
+      apt-get install -y kubernetes-cni
+      rm -f /etc/cni/net.d/*.conf*
+      apt-get install -y kubelet kubeadm kubectl && apt-mark hold kubelet kubeadm kubectl
+      systemctl enable --now kubelet
+  # See <https://kubernetes.io/docs/setup/production-environment/container-runtimes/>
+  - mode: system
+    script: |
+      #!/bin/bash
+      set -eux -o pipefail
+      grep SystemdCgroup /etc/containerd/config.toml && exit 0
+      grep "version = 2" /etc/containerd/config.toml || exit 1
+      # Configuring the systemd cgroup driver
+      # Overriding the sandbox (pause) image
+      cat <<EOF >>/etc/containerd/config.toml
+        [plugins]
+          [plugins."io.containerd.grpc.v1.cri"]
+            sandbox_image = "$(kubeadm config images list | grep pause | sort -r | head -n1)"
+            [plugins."io.containerd.grpc.v1.cri".containerd]
+              [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]
+                [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
+                  runtime_type = "io.containerd.runc.v2"
+                  [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
+                    SystemdCgroup = true
+      EOF
+      systemctl restart containerd
+  # See <https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/>
+  - mode: system
+    script: |
+      #!/bin/bash
+      set -eux -o pipefail
+      test -e /etc/kubernetes/admin.conf && exit 0
+      export KUBECONFIG=/etc/kubernetes/admin.conf
+      kubeadm config images list
+      kubeadm config images pull --cri-socket=unix:///run/containerd/containerd.sock
+      # Initializing your control-plane node
+      cat <<EOF >kubeadm-config.yaml
+      kind: InitConfiguration
+      apiVersion: kubeadm.k8s.io/v1beta3
+      nodeRegistration:
+        criSocket: unix:///run/containerd/containerd.sock
+      ---
+      kind: ClusterConfiguration
+      apiVersion: kubeadm.k8s.io/v1beta3
+      apiServer:
+        certSANs: # --apiserver-cert-extra-sans
+        - "127.0.0.1"
+      networking:
+        podSubnet: "10.244.0.0/16" # --pod-network-cidr
+      ---
+      kind: KubeletConfiguration
+      apiVersion: kubelet.config.k8s.io/v1beta1
+      cgroupDriver: systemd
+      EOF
+      kubeadm init --config kubeadm-config.yaml
+      # Installing a Pod network add-on
+      kubectl apply -f https://github.com/flannel-io/flannel/releases/download/v0.21.4/kube-flannel.yml
+      # Control plane node isolation
+      kubectl taint nodes --all node-role.kubernetes.io/control-plane-
+      sed -e "s/${LIMA_CIDATA_SLIRP_IP_ADDRESS:-192.168.5.15}/127.0.0.1/" -i $KUBECONFIG
+      mkdir -p ${HOME:-/root}/.kube && cp -f $KUBECONFIG ${HOME:-/root}/.kube/config
 probes:
-- description: "kubeadm to be installed"
-  script: |
-    #!/bin/bash
-    set -eux -o pipefail
-    if ! timeout 30s bash -c "until command -v kubeadm >/dev/null 2>&1; do sleep 3; done"; then
-      echo >&2 "kubeadm is not installed yet"
-      exit 1
-    fi
-  hint: |
-    See "/var/log/cloud-init-output.log". in the guest
-- description: "kubeadm to be completed"
-  script: |
-    #!/bin/bash
-    set -eux -o pipefail
-    if ! timeout 300s bash -c "until test -f /etc/kubernetes/admin.conf; do sleep 3; done"; then
-      echo >&2 "k8s is not running yet"
-      exit 1
-    fi
-  hint: |
-    The k8s kubeconfig file has not yet been created.
-- description: "kubernetes cluster to be running"
-  script: |
-    #!/bin/bash
-    set -eux -o pipefail
-    if ! timeout 300s bash -c "until sudo kubectl version >/dev/null 2>&1; do sleep 3; done"; then
-      echo >&2 "kubernetes cluster is not up and running yet"
-      exit 1
-    fi
+  - description: "kubeadm to be installed"
+    script: |
+      #!/bin/bash
+      set -eux -o pipefail
+      if ! timeout 30s bash -c "until command -v kubeadm >/dev/null 2>&1; do sleep 3; done"; then
+        echo >&2 "kubeadm is not installed yet"
+        exit 1
+      fi
+    hint: |
+      See "/var/log/cloud-init-output.log". in the guest
+  - description: "kubeadm to be completed"
+    script: |
+      #!/bin/bash
+      set -eux -o pipefail
+      if ! timeout 300s bash -c "until test -f /etc/kubernetes/admin.conf; do sleep 3; done"; then
+        echo >&2 "k8s is not running yet"
+        exit 1
+      fi
+    hint: |
+      The k8s kubeconfig file has not yet been created.
+  - description: "kubernetes cluster to be running"
+    script: |
+      #!/bin/bash
+      set -eux -o pipefail
+      if ! timeout 300s bash -c "until sudo kubectl version >/dev/null 2>&1; do sleep 3; done"; then
+        echo >&2 "kubernetes cluster is not up and running yet"
+        exit 1
+      fi
 copyToHost:
-- guest: "/etc/kubernetes/admin.conf"
-  host: "{{.Dir}}/copied-from-guest/kubeconfig.yaml"
+  - guest: "/etc/kubernetes/admin.conf"
+    host: "{{.Dir}}/copied-from-guest/kubeconfig.yaml"
 message: |
   To run `kubectl` on the host (assumes kubectl is installed), run the following commands:
   ------

@@ -4,16 +4,16 @@
 # EL9-based distros are known to work.
 
 images:
-- location: "https://dl.rockylinux.org/pub/rocky/8.7/images/x86_64/Rocky-8-GenericCloud-Base-8.7-20230215.0.x86_64.qcow2"
-  arch: "x86_64"
-  digest: "sha256:f242e06b76124b8ea3495fc6d69eb6e89e0a1826e3d9bdabed0ef4e68880eb5a"
-- location: "https://dl.rockylinux.org/pub/rocky/8.7/images/aarch64/Rocky-8-GenericCloud-Base-8.7-20230215.0.aarch64.qcow2"
-  arch: "aarch64"
-  digest: "sha256:f06698cb5e1631eb4ba9b90b8fce73407e285c953ab0e49b451899a8d6558fab"
+  - location: "https://dl.rockylinux.org/pub/rocky/8.7/images/x86_64/Rocky-8-GenericCloud-Base-8.7-20230215.0.x86_64.qcow2"
+    arch: "x86_64"
+    digest: "sha256:f242e06b76124b8ea3495fc6d69eb6e89e0a1826e3d9bdabed0ef4e68880eb5a"
+  - location: "https://dl.rockylinux.org/pub/rocky/8.7/images/aarch64/Rocky-8-GenericCloud-Base-8.7-20230215.0.aarch64.qcow2"
+    arch: "aarch64"
+    digest: "sha256:f06698cb5e1631eb4ba9b90b8fce73407e285c953ab0e49b451899a8d6558fab"
 mounts:
-- location: "~"
-- location: "/tmp/lima"
-  writable: true
+  - location: "~"
+  - location: "/tmp/lima"
+    writable: true
 cpuType:
   # Workaround for "vmx_write_mem: mmu_gva_to_gpa XXXXXXXXXXXXXXXX failed" on Intel Mac
   # https://bugs.launchpad.net/qemu/+bug/1838390

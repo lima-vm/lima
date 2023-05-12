@@ -10,17 +10,15 @@
 # None of the paths segments may be symlinks, why it has to be /private/var
 # instead of /var etc.
 paths:
-# socketVMNet requires Lima >= 0.12 .
-# socketVMNet has precedence over vdeVMNet.
+  # socketVMNet requires Lima >= 0.12 .
+  # socketVMNet has precedence over vdeVMNet.
   socketVMNet: "{{.SocketVMNet}}"
-# vdeSwitch and vdeVMNet are DEPRECATED.
+  # vdeSwitch and vdeVMNet are DEPRECATED.
   vdeSwitch: /opt/vde/bin/vde_switch
   vdeVMNet: /opt/vde/bin/vde_vmnet
   varRun: /private/var/run/lima
   sudoers: /private/etc/sudoers.d/lima
-
 group: everyone
-
 networks:
   user-v2:
     mode: user-v2

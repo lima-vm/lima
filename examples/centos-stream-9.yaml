@@ -1,16 +1,16 @@
 # This example requires Lima v0.11.1 or later.
 
 images:
-- location: "https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-9-20230410.0.x86_64.qcow2"
-  arch: "x86_64"
-  digest: "sha256:8a5abbf8b0dda3e4e49b5112ffae3fff022bf97a5f53b868adbfb80c75c313fe"
-- location: "https://cloud.centos.org/centos/9-stream/aarch64/images/CentOS-Stream-GenericCloud-9-20230410.0.aarch64.qcow2"
-  arch: "aarch64"
-  digest: "sha256:8e954f2b931e51d4cd331497b11a1bbd0180639791352a8da4c7f2b0d38d51c8"
+  - location: "https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-9-20230410.0.x86_64.qcow2"
+    arch: "x86_64"
+    digest: "sha256:8a5abbf8b0dda3e4e49b5112ffae3fff022bf97a5f53b868adbfb80c75c313fe"
+  - location: "https://cloud.centos.org/centos/9-stream/aarch64/images/CentOS-Stream-GenericCloud-9-20230410.0.aarch64.qcow2"
+    arch: "aarch64"
+    digest: "sha256:8e954f2b931e51d4cd331497b11a1bbd0180639791352a8da4c7f2b0d38d51c8"
 mounts:
-- location: "~"
-- location: "/tmp/lima"
-  writable: true
+  - location: "~"
+  - location: "/tmp/lima"
+    writable: true
 firmware:
   # CentOS Stream 9 still requires legacyBIOS, while AlmaLinux 9 and Rocky Linux 9 do not.
   legacyBIOS: true

@@ -23,46 +23,41 @@ message: |
   ------
   faas-cli store deploy NodeInfo
   ------
-
 # Image is set to jammy (22.04 LTS) for long-term stability
 images:
-# Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
-- location: "https://cloud-images.ubuntu.com/releases/22.04/release-20230302/ubuntu-22.04-server-cloudimg-amd64.img"
-  arch: "x86_64"
-  digest: "sha256:345fbbb6ec827ca02ec1a1ced90f7d40d3fd345811ba97c5772ac40e951458e1"
-- location: "https://cloud-images.ubuntu.com/releases/22.04/release-20230302/ubuntu-22.04-server-cloudimg-arm64.img"
-  arch: "aarch64"
-  digest: "sha256:f6b5b3a980f28f25fe5203ae74b79cc664ae5505cf255a62f3b01be46ab9967a"
-# Fallback to the latest release image.
-# Hint: run `limactl prune` to invalidate the cache
-- location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-amd64.img"
-  arch: "x86_64"
-- location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-arm64.img"
-  arch: "aarch64"
-
+  # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
+  - location: "https://cloud-images.ubuntu.com/releases/22.04/release-20230302/ubuntu-22.04-server-cloudimg-amd64.img"
+    arch: "x86_64"
+    digest: "sha256:345fbbb6ec827ca02ec1a1ced90f7d40d3fd345811ba97c5772ac40e951458e1"
+  - location: "https://cloud-images.ubuntu.com/releases/22.04/release-20230302/ubuntu-22.04-server-cloudimg-arm64.img"
+    arch: "aarch64"
+    digest: "sha256:f6b5b3a980f28f25fe5203ae74b79cc664ae5505cf255a62f3b01be46ab9967a"
+  # Fallback to the latest release image.
+  # Hint: run `limactl prune` to invalidate the cache
+  - location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-amd64.img"
+    arch: "x86_64"
+  - location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-arm64.img"
+    arch: "aarch64"
 # Mounts are disabled in this example, but can be enabled optionally.
 mounts: []
-
 # containerd is installed by the faasd installer script, not by Lima, so the values are set to false here.
 containerd:
   system: false
   user: false
-
 provision:
-- mode: user
-  script: |
-    #!/bin/sh
-    curl -sfL https://raw.githubusercontent.com/openfaas/faasd/master/hack/install.sh | bash -s -
-
+  - mode: user
+    script: |
+      #!/bin/sh
+      curl -sfL https://raw.githubusercontent.com/openfaas/faasd/master/hack/install.sh | bash -s -
 probes:
-- script: |
-    #!/bin/bash
-    set -eux -o pipefail
-    if ! timeout 30s bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://localhost:8080/healthz)" != "200" ]]; do sleep 5; done'; then
-            echo >&2 "faasd is not running yet"
-            exit 1
-    fi
-  hint: |
-    The faasd service is not yet running.
-    Run "limactl shell faasd sudo journalctl -u faasd" to check the log.
-    If that is still empty, check the bottom of the log at "/var/log/cloud-init-output.log".
+  - script: |
+      #!/bin/bash
+      set -eux -o pipefail
+      if ! timeout 30s bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://localhost:8080/healthz)" != "200" ]]; do sleep 5; done'; then
+              echo >&2 "faasd is not running yet"
+              exit 1
+      fi
+    hint: |
+      The faasd service is not yet running.
+      Run "limactl shell faasd sudo journalctl -u faasd" to check the log.
+      If that is still empty, check the bottom of the log at "/var/log/cloud-init-output.log".

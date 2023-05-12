@@ -12,20 +12,19 @@
 # Image is set to focal (20.04 LTS) for long-term stability
 # TODO: Upgrade to 22.04 LTS when nomad-driver-containerd supports cgroup v2: https://github.com/Roblox/nomad-driver-containerd/pull/133
 images:
-# Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
-- location: "https://cloud-images.ubuntu.com/releases/20.04/release-20220302/ubuntu-20.04-server-cloudimg-amd64.img"
-  arch: "x86_64"
-  digest: "sha256:243157ea0390890d6e60ce5e08e0249b16e23b6b313b63aed50f39f92b020afe"
-- location: "https://cloud-images.ubuntu.com/releases/20.04/release-20220302/ubuntu-20.04-server-cloudimg-arm64.img"
-  arch: "aarch64"
-  digest: "sha256:fb2b4efdbf0011bd2a9fd49e9d31efdd252966c889f07b5d246351ec5734a329"
-# Fallback to the latest release image.
-# Hint: run `limactl prune` to invalidate the cache
-- location: "https://cloud-images.ubuntu.com/releases/20.04/release/ubuntu-20.04-server-cloudimg-amd64.img"
-  arch: "x86_64"
-- location: "https://cloud-images.ubuntu.com/releases/20.04/release/ubuntu-20.04-server-cloudimg-arm64.img"
-  arch: "aarch64"
-
+  # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
+  - location: "https://cloud-images.ubuntu.com/releases/20.04/release-20220302/ubuntu-20.04-server-cloudimg-amd64.img"
+    arch: "x86_64"
+    digest: "sha256:243157ea0390890d6e60ce5e08e0249b16e23b6b313b63aed50f39f92b020afe"
+  - location: "https://cloud-images.ubuntu.com/releases/20.04/release-20220302/ubuntu-20.04-server-cloudimg-arm64.img"
+    arch: "aarch64"
+    digest: "sha256:fb2b4efdbf0011bd2a9fd49e9d31efdd252966c889f07b5d246351ec5734a329"
+  # Fallback to the latest release image.
+  # Hint: run `limactl prune` to invalidate the cache
+  - location: "https://cloud-images.ubuntu.com/releases/20.04/release/ubuntu-20.04-server-cloudimg-amd64.img"
+    arch: "x86_64"
+  - location: "https://cloud-images.ubuntu.com/releases/20.04/release/ubuntu-20.04-server-cloudimg-arm64.img"
+    arch: "aarch64"
 # Mounts are disabled in this example, but can be enabled optionally.
 mounts: []
 containerd:
@@ -33,47 +32,47 @@ containerd:
   user: false
 # See https://learn.hashicorp.com/tutorials/nomad/get-started-install
 provision:
-- mode: system
-  script: |
-    #!/bin/sh
-    command -v nomad >/dev/null 2>&1 && exit 0
-    curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
-    echo "deb https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
-    apt-get update
-    apt-get install -y nomad consul golang-cfssl
-    sed -e '/^client/a \ \ cni_path = "/usr/local/libexec/cni"\n\ \ cni_config_dir = "/etc/cni/net.d"' -i /etc/nomad.d/nomad.hcl
-    # install containerd-driver
-    DRIVER_VERSION=0.9.3
-    case $(uname -m) in
-      amd64|x86_64)
-        curl -sSL -o containerd-driver https://github.com/Roblox/nomad-driver-containerd/releases/download/v${DRIVER_VERSION}/containerd-driver
-        ;;
-      arm64|aarch64)
-        curl -sSL -o containerd-driver https://github.com/Roblox/nomad-driver-containerd/releases/download/v${DRIVER_VERSION}/containerd-driver-arm64
-        ;;
-    esac
-    sudo install -D containerd-driver /opt/nomad/data/plugins/containerd-driver
-    cat <<EOF | sudo tee -a /etc/nomad.d/nomad.hcl
+  - mode: system
+    script: |
+      #!/bin/sh
+      command -v nomad >/dev/null 2>&1 && exit 0
+      curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
+      echo "deb https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+      apt-get update
+      apt-get install -y nomad consul golang-cfssl
+      sed -e '/^client/a \ \ cni_path = "/usr/local/libexec/cni"\n\ \ cni_config_dir = "/etc/cni/net.d"' -i /etc/nomad.d/nomad.hcl
+      # install containerd-driver
+      DRIVER_VERSION=0.9.3
+      case $(uname -m) in
+        amd64|x86_64)
+          curl -sSL -o containerd-driver https://github.com/Roblox/nomad-driver-containerd/releases/download/v${DRIVER_VERSION}/containerd-driver
+          ;;
+        arm64|aarch64)
+          curl -sSL -o containerd-driver https://github.com/Roblox/nomad-driver-containerd/releases/download/v${DRIVER_VERSION}/containerd-driver-arm64
+          ;;
+      esac
+      sudo install -D containerd-driver /opt/nomad/data/plugins/containerd-driver
+      cat <<EOF | sudo tee -a /etc/nomad.d/nomad.hcl
 
-    plugin "containerd-driver" {
-      config {
-          enabled = true
-          containerd_runtime = "io.containerd.runc.v2"
-          stats_interval = "5s"
+      plugin "containerd-driver" {
+        config {
+            enabled = true
+            containerd_runtime = "io.containerd.runc.v2"
+            stats_interval = "5s"
+        }
       }
-    }
-    EOF
-    systemctl enable --now nomad consul
-- mode: user
-  script: |
-    #!/bin/sh
-    nomad -autocomplete-install
+      EOF
+      systemctl enable --now nomad consul
+  - mode: user
+    script: |
+      #!/bin/sh
+      nomad -autocomplete-install
 probes:
-- script: |
-    #!/bin/bash
-    set -eux -o pipefail
-    if ! timeout 30s bash -c "until command -v nomad >/dev/null 2>&1; do sleep 3; done"; then
-      echo >&2 "nomad is not installed yet"
-      exit 1
-    fi
-  hint: See "/var/log/cloud-init-output.log". in the guest
+  - script: |
+      #!/bin/bash
+      set -eux -o pipefail
+      if ! timeout 30s bash -c "until command -v nomad >/dev/null 2>&1; do sleep 3; done"; then
+        echo >&2 "nomad is not installed yet"
+        exit 1
+      fi
+    hint: See "/var/log/cloud-init-output.log". in the guest

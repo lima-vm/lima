@@ -2,28 +2,26 @@
 # On macOS hosts, QEMU needs to be v7.0.0 or later. Homebrew's QEMU v6.2.0_1 can be used too.
 # This example is planned to be merged to default.yaml in Lima v1.0 (ETA: 2022 Q2).
 images:
-# Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
-- location: "https://cloud-images.ubuntu.com/releases/22.10/release-20230413/ubuntu-22.10-server-cloudimg-amd64.img"
-  arch: "x86_64"
-  digest: "sha256:d46438111d7a6dfcdfb2e1fb76762a79d56f09dc308cc9ab2300effc0078fd5b"
-- location: "https://cloud-images.ubuntu.com/releases/22.10/release-20230413/ubuntu-22.10-server-cloudimg-arm64.img"
-  arch: "aarch64"
-  digest: "sha256:e1865c2ebc531600ae6012d86fa2dae5846e7801cdcdbcf90d9c830218ef4ae9"
-# Fallback to the latest release image.
-# Hint: run `limactl prune` to invalidate the cache
-- location: "https://cloud-images.ubuntu.com/releases/22.10/release/ubuntu-22.10-server-cloudimg-amd64.img"
-  arch: "x86_64"
-- location: "https://cloud-images.ubuntu.com/releases/22.10/release/ubuntu-22.10-server-cloudimg-arm64.img"
-  arch: "aarch64"
-
+  # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
+  - location: "https://cloud-images.ubuntu.com/releases/22.10/release-20230413/ubuntu-22.10-server-cloudimg-amd64.img"
+    arch: "x86_64"
+    digest: "sha256:d46438111d7a6dfcdfb2e1fb76762a79d56f09dc308cc9ab2300effc0078fd5b"
+  - location: "https://cloud-images.ubuntu.com/releases/22.10/release-20230413/ubuntu-22.10-server-cloudimg-arm64.img"
+    arch: "aarch64"
+    digest: "sha256:e1865c2ebc531600ae6012d86fa2dae5846e7801cdcdbcf90d9c830218ef4ae9"
+  # Fallback to the latest release image.
+  # Hint: run `limactl prune` to invalidate the cache
+  - location: "https://cloud-images.ubuntu.com/releases/22.10/release/ubuntu-22.10-server-cloudimg-amd64.img"
+    arch: "x86_64"
+  - location: "https://cloud-images.ubuntu.com/releases/22.10/release/ubuntu-22.10-server-cloudimg-arm64.img"
+    arch: "aarch64"
 mounts:
-- location: "~"
-  9p:
-    # Try choosing "mmap" or "none" if you see a stability issue with the default "fscache".
-    cache: "fscache"
-- location: "/tmp/lima"
-  writable: true
-  9p:
-    cache: "mmap"
-
+  - location: "~"
+    9p:
+      # Try choosing "mmap" or "none" if you see a stability issue with the default "fscache".
+      cache: "fscache"
+  - location: "/tmp/lima"
+    writable: true
+    9p:
+      cache: "mmap"
 mountType: "9p"

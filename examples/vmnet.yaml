@@ -9,33 +9,32 @@
 # This example requires Lima v0.7.0 or later.
 # Older versions of Lima were using a different syntax for supporting vmnet.framework.
 images:
-- location: "https://cloud-images.ubuntu.com/releases/22.10/release-20230413/ubuntu-22.10-server-cloudimg-amd64.img"
-  arch: "x86_64"
-  digest: "sha256:d46438111d7a6dfcdfb2e1fb76762a79d56f09dc308cc9ab2300effc0078fd5b"
-- location: "https://cloud-images.ubuntu.com/releases/22.10/release-20230413/ubuntu-22.10-server-cloudimg-arm64.img"
-  arch: "aarch64"
-  digest: "sha256:e1865c2ebc531600ae6012d86fa2dae5846e7801cdcdbcf90d9c830218ef4ae9"
-# Fallback to the latest release image.
-# Hint: run `limactl prune` to invalidate the cache
-- location: "https://cloud-images.ubuntu.com/releases/22.10/release/ubuntu-22.10-server-cloudimg-amd64.img"
-  arch: "x86_64"
-- location: "https://cloud-images.ubuntu.com/releases/22.10/release/ubuntu-22.10-server-cloudimg-arm64.img"
-  arch: "aarch64"
-
+  - location: "https://cloud-images.ubuntu.com/releases/22.10/release-20230413/ubuntu-22.10-server-cloudimg-amd64.img"
+    arch: "x86_64"
+    digest: "sha256:d46438111d7a6dfcdfb2e1fb76762a79d56f09dc308cc9ab2300effc0078fd5b"
+  - location: "https://cloud-images.ubuntu.com/releases/22.10/release-20230413/ubuntu-22.10-server-cloudimg-arm64.img"
+    arch: "aarch64"
+    digest: "sha256:e1865c2ebc531600ae6012d86fa2dae5846e7801cdcdbcf90d9c830218ef4ae9"
+  # Fallback to the latest release image.
+  # Hint: run `limactl prune` to invalidate the cache
+  - location: "https://cloud-images.ubuntu.com/releases/22.10/release/ubuntu-22.10-server-cloudimg-amd64.img"
+    arch: "x86_64"
+  - location: "https://cloud-images.ubuntu.com/releases/22.10/release/ubuntu-22.10-server-cloudimg-arm64.img"
+    arch: "aarch64"
 mounts:
-- location: "~"
-- location: "/tmp/lima"
-  writable: true
+  - location: "~"
+  - location: "/tmp/lima"
+    writable: true
 networks:
-# The instance can get routable IP addresses from the vmnet framework using
-# https://github.com/lima-vm/socket_vmnet (since Lima v0.12) or
-# https://github.com/lima-vm/vde_vmnet (deprecated) .
-#
-# Available networks are defined in
-# $LIMA_HOME/_config/networks.yaml. Supported network types are "host",
-# "shared", or "bridged".
-#
-# Interface "lima0": shared mode  (IP is assigned by macOS's bootpd)
-- lima: shared
+  # The instance can get routable IP addresses from the vmnet framework using
+  # https://github.com/lima-vm/socket_vmnet (since Lima v0.12) or
+  # https://github.com/lima-vm/vde_vmnet (deprecated) .
+  #
+  # Available networks are defined in
+  # $LIMA_HOME/_config/networks.yaml. Supported network types are "host",
+  # "shared", or "bridged".
+  #
+  # Interface "lima0": shared mode  (IP is assigned by macOS's bootpd)
+  - lima: shared
 # Interface "lima1": bridged mode (IP is assigned by a DHCP server on the physical network)
 # - lima: bridged

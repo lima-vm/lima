@@ -13,49 +13,45 @@
 # This example requires Lima v0.7.0 or later.
 
 images:
-# Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
-- location: "https://cloud-images.ubuntu.com/releases/22.04/release-20230302/ubuntu-22.04-server-cloudimg-amd64.img"
-  arch: "x86_64"
-  digest: "sha256:345fbbb6ec827ca02ec1a1ced90f7d40d3fd345811ba97c5772ac40e951458e1"
-- location: "https://cloud-images.ubuntu.com/releases/22.04/release-20230302/ubuntu-22.04-server-cloudimg-arm64.img"
-  arch: "aarch64"
-  digest: "sha256:f6b5b3a980f28f25fe5203ae74b79cc664ae5505cf255a62f3b01be46ab9967a"
-# Fallback to the latest release image.
-# Hint: run `limactl prune` to invalidate the cache
-- location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-amd64.img"
-  arch: "x86_64"
-- location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-arm64.img"
-  arch: "aarch64"
-
+  # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
+  - location: "https://cloud-images.ubuntu.com/releases/22.04/release-20230302/ubuntu-22.04-server-cloudimg-amd64.img"
+    arch: "x86_64"
+    digest: "sha256:345fbbb6ec827ca02ec1a1ced90f7d40d3fd345811ba97c5772ac40e951458e1"
+  - location: "https://cloud-images.ubuntu.com/releases/22.04/release-20230302/ubuntu-22.04-server-cloudimg-arm64.img"
+    arch: "aarch64"
+    digest: "sha256:f6b5b3a980f28f25fe5203ae74b79cc664ae5505cf255a62f3b01be46ab9967a"
+  # Fallback to the latest release image.
+  # Hint: run `limactl prune` to invalidate the cache
+  - location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-amd64.img"
+    arch: "x86_64"
+  - location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-arm64.img"
+    arch: "aarch64"
 # Mounts are disabled in this example, but can be enabled optionally.
 mounts: []
-
 # containerd is managed by k3s, not by Lima, so the values are set to false here.
 containerd:
   system: false
   user: false
-
 provision:
-- mode: system
-  script: |
-    #!/bin/sh
-    curl -sfL https://get.k3s.io | sh -
-
+  - mode: system
+    script: |
+      #!/bin/sh
+      curl -sfL https://get.k3s.io | sh -
 probes:
-- script: |
-    #!/bin/bash
-    set -eux -o pipefail
-    if ! timeout 30s bash -c "until test -f /etc/rancher/k3s/k3s.yaml; do sleep 3; done"; then
-            echo >&2 "k3s is not running yet"
-            exit 1
-    fi
-  hint: |
-    The k3s kubeconfig file has not yet been created.
-    Run "limactl shell k3s sudo journalctl -u k3s" to check the log.
-    If that is still empty, check the bottom of the log at "/var/log/cloud-init-output.log".
+  - script: |
+      #!/bin/bash
+      set -eux -o pipefail
+      if ! timeout 30s bash -c "until test -f /etc/rancher/k3s/k3s.yaml; do sleep 3; done"; then
+              echo >&2 "k3s is not running yet"
+              exit 1
+      fi
+    hint: |
+      The k3s kubeconfig file has not yet been created.
+      Run "limactl shell k3s sudo journalctl -u k3s" to check the log.
+      If that is still empty, check the bottom of the log at "/var/log/cloud-init-output.log".
 copyToHost:
-- guest: "/etc/rancher/k3s/k3s.yaml"
-  host: "{{.Dir}}/copied-from-guest/kubeconfig.yaml"
+  - guest: "/etc/rancher/k3s/k3s.yaml"
+    host: "{{.Dir}}/copied-from-guest/kubeconfig.yaml"
 message: |
   To run `kubectl` on the host (assumes kubectl is installed), run the following commands:
   ------
