@@ -8,6 +8,7 @@ import (
 
 var (
 	IPv4loopback1 = net.IPv4(127, 0, 0, 1)
+	IPv6loopback1 = net.IPv6loopback
 )
 
 type IPPort struct {

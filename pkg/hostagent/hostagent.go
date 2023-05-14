@@ -129,9 +129,19 @@ func New(instName string, stdout io.Writer, sigintCh chan os.Signal, opts ...Opt
 	}
 	rules = append(rules, y.PortForwards...)
 	// Default forwards for all non-privileged ports from "127.0.0.1" and "::1"
-	rule := limayaml.PortForward{GuestIP: guestagentapi.IPv4loopback1}
-	limayaml.FillPortForwardDefaults(&rule, inst.Dir)
-	rules = append(rules, rule)
+	{
+		rule := limayaml.PortForward{GuestIP: guestagentapi.IPv4loopback1}
+		limayaml.FillPortForwardDefaults(&rule, inst.Dir)
+		rules = append(rules, rule)
+	}
+	{
+		rule := limayaml.PortForward{
+			GuestIP: guestagentapi.IPv4loopback1,
+			HostIP:  guestagentapi.IPv6loopback1,
+		}
+		limayaml.FillPortForwardDefaults(&rule, inst.Dir)
+		rules = append(rules, rule)
+	}
 
 	limaDriver := driverutil.CreateTargetDriverInstance(&driver.BaseDriver{
 		Instance:     inst,
