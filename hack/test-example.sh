@@ -86,6 +86,7 @@ function diagnose() {
 export ftp_proxy=http://localhost:2121
 
 INFO "Starting \"$NAME\" from \"$FILE\""
+defer "cat \"$HOME/.lima/${NAME}\"/*.log"
 defer "limactl delete -f \"$NAME\""
 
 if [[ -n ${CHECKS["disk"]} ]]; then
