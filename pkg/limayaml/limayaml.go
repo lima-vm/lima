@@ -189,6 +189,12 @@ type PortForward struct {
 	Proto             Proto  `yaml:"proto,omitempty" json:"proto,omitempty"`
 	Reverse           bool   `yaml:"reverse,omitempty" json:"reverse,omitempty"`
 	Ignore            bool   `yaml:"ignore,omitempty" json:"ignore,omitempty"`
+
+	// Set in case the HostIP field was automatically filled by FillPortForwardDefaults
+	HostIPWasUndefined bool `yaml:"-" json:"-"`
+
+	// Set in case the GuestIP field was automatically filled by FillPortForwardDefaults
+	GuestIPWasUndefined bool `yaml:"-" json:"-"`
 }
 
 type CopyToHost struct {

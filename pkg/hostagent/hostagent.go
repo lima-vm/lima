@@ -120,7 +120,7 @@ func New(instName string, stdout io.Writer, sigintCh chan os.Signal, opts ...Opt
 		AdditionalArgs: sshutil.SSHArgsFromOpts(sshOpts),
 	}
 
-	rules := make([]limayaml.PortForward, 0, 3+len(y.PortForwards))
+	rules := make([]limayaml.PortForward, 0, 4+len(y.PortForwards))
 	// Block ports 22 and sshLocalPort on all IPs
 	for _, port := range []int{sshGuestPort, sshLocalPort} {
 		rule := limayaml.PortForward{GuestIP: net.IPv4zero, GuestPort: port, Ignore: true}
@@ -129,9 +129,19 @@ func New(instName string, stdout io.Writer, sigintCh chan os.Signal, opts ...Opt
 	}
 	rules = append(rules, y.PortForwards...)
 	// Default forwards for all non-privileged ports from "127.0.0.1" and "::1"
-	rule := limayaml.PortForward{GuestIP: guestagentapi.IPv4loopback1}
-	limayaml.FillPortForwardDefaults(&rule, inst.Dir)
-	rules = append(rules, rule)
+	{
+		rule := limayaml.PortForward{GuestIP: guestagentapi.IPv4loopback1}
+		limayaml.FillPortForwardDefaults(&rule, inst.Dir)
+		rules = append(rules, rule)
+	}
+	{
+		rule := limayaml.PortForward{
+			HostIP:  net.IPv6loopback,
+			GuestIP: net.IPv6loopback,
+		}
+		limayaml.FillPortForwardDefaults(&rule, inst.Dir)
+		rules = append(rules, rule)
+	}
 
 	limaDriver := driverutil.CreateTargetDriverInstance(&driver.BaseDriver{
 		Instance:     inst,

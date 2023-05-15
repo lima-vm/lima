@@ -646,10 +646,14 @@ func FillPortForwardDefaults(rule *PortForward, instDir string) {
 		} else {
 			rule.GuestIP = api.IPv4loopback1
 		}
+		rule.GuestIPWasUndefined = true
 	}
+
 	if rule.HostIP == nil {
 		rule.HostIP = api.IPv4loopback1
+		rule.HostIPWasUndefined = true
 	}
+
 	if rule.GuestPortRange[0] == 0 && rule.GuestPortRange[1] == 0 {
 		if rule.GuestPort == 0 {
 			rule.GuestPortRange[0] = 1
