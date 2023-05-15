@@ -233,7 +233,7 @@ func New(ctx context.Context, instName string, stdout io.Writer, signalCh chan o
 			break
 		}
 	}
-	rules := make([]limatype.PortForward, 0, 3+len(inst.Config.PortForwards))
+	rules := make([]limatype.PortForward, 0, 4+len(inst.Config.PortForwards))
 	// Block ports 22 and sshLocalPort on all IPs
 	for _, port := range []int{sshGuestPort, sshLocalPort} {
 		rule := limatype.PortForward{GuestIP: net.IPv4zero, GuestPort: port, Ignore: true}
@@ -242,9 +242,19 @@ func New(ctx context.Context, instName string, stdout io.Writer, signalCh chan o
 	}
 	rules = append(rules, inst.Config.PortForwards...)
 	// Default forwards for all non-privileged ports from "127.0.0.1" and "::1"
-	rule := limatype.PortForward{}
-	limayaml.FillPortForwardDefaults(&rule, inst.Dir, inst.Config.User, inst.Param)
-	rules = append(rules, rule)
+	{
+		rule := limatype.PortForward{}
+		limayaml.FillPortForwardDefaults(&rule, inst.Dir, inst.Config.User, inst.Param)
+		rules = append(rules, rule)
+	}
+	{
+		rule := limatype.PortForward{
+			HostIP:  net.IPv6loopback,
+			GuestIP: net.IPv6loopback,
+		}
+		limayaml.FillPortForwardDefaults(&rule, inst.Dir, inst.Config.User, inst.Param)
+		rules = append(rules, rule)
+	}
 
 	a := &HostAgent{
 		instConfig:        inst.Config,
