@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -35,6 +36,9 @@ type Config struct {
 	LimaYAML     *limayaml.LimaYAML
 	SSHLocalPort int
 }
+
+// MinimumQemuVersion is the minimum supported QEMU version
+const MinimumQemuVersion = "4.0.0"
 
 // EnsureDisk also ensures the kernel and the initrd
 func EnsureDisk(cfg Config) error {
@@ -339,6 +343,16 @@ func Cmdline(cfg Config) (string, []string, error) {
 	features, err := inspectFeatures(exe)
 	if err != nil {
 		return "", nil, err
+	}
+
+	version, err := getQemuVersion(exe)
+	if err != nil {
+		logrus.WithError(err).Warning("Failed to detect QEMU version")
+	} else {
+		logrus.Debugf("QEMU version %s detected", version.String())
+		if version.LessThan(*semver.New(MinimumQemuVersion)) {
+			logrus.Fatalf("QEMU %v is too old, %v or later required", version, MinimumQemuVersion)
+		}
 	}
 
 	// Architecture
@@ -715,6 +729,31 @@ func getAccel(arch limayaml.Arch) string {
 		}
 	}
 	return "tcg"
+}
+
+func parseQemuVersion(output string) (*semver.Version, error) {
+	lines := strings.Split(output, "\n")
+	regex := regexp.MustCompile(`^QEMU emulator version (\d+\.\d+\.\d+)`)
+	matches := regex.FindStringSubmatch(lines[0])
+	if len(matches) == 2 {
+		return semver.New(matches[1]), nil
+	}
+	return &semver.Version{}, fmt.Errorf("failed to parse %v", output)
+}
+
+func getQemuVersion(qemuExe string) (*semver.Version, error) {
+	var (
+		stdout bytes.Buffer
+		stderr bytes.Buffer
+	)
+	cmd := exec.Command(qemuExe, "--version")
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf("failed to run %v: stdout=%q, stderr=%q", cmd.Args, stdout.String(), stderr.String())
+	}
+
+	return parseQemuVersion(stdout.String())
 }
 
 func getFirmware(qemuExe string, arch limayaml.Arch) (string, error) {
