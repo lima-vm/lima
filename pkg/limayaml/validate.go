@@ -173,9 +173,7 @@ func Validate(y LimaYAML, warn bool) error {
 	for i, rule := range y.PortForwards {
 		field := fmt.Sprintf("portForwards[%d]", i)
 		if rule.GuestIPMustBeZero && !rule.GuestIP.Equal(net.IPv4zero) && !rule.GuestIP.Equal(net.IPv6zero) {
-			// Using IPv6 first so go vet doesn't complain about the error
-			// message ending with a colon.
-			return fmt.Errorf("field `%s.guestIPMustBeZero` can only be true when field `%s.guestIP` is either :: or 0.0.0.0", field, field)
+			return fmt.Errorf("field `%s.guestIPMustBeZero` can only be true when field `%s.guestIP` is either `0.0.0.0` or `::`", field, field)
 		}
 		if rule.GuestPort != 0 {
 			if rule.GuestSocket != "" {
