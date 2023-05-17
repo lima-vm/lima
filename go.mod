@@ -33,7 +33,7 @@ require (
 	github.com/nxadm/tail v1.4.8
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/sethvargo/go-password v0.2.0
-	github.com/sirupsen/logrus v1.9.0
+	github.com/sirupsen/logrus v1.9.1
 	github.com/spf13/cobra v1.7.0
 	github.com/xorcare/pointer v1.2.2
 	golang.org/x/sync v0.2.0
