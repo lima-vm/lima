@@ -964,6 +964,8 @@ honnef.co/go/tools v0.0.1-2020.1.4/go.mod h1:X/FiERA/W4tHapMX5mGpAtMSVEeEUOyHaw9
 honnef.co/go/tools v0.1.1/go.mod h1:NgwopIslSNH47DimFoV78dnkksY2EFtX0ajyb3K/las=
 inet.af/tcpproxy v0.0.0-20220326234310-be3ee21c9fa0 h1:PqdHrvQRVK1zapJkd0qf6+tevvSIcWdfenVqJd3PHWU=
 inet.af/tcpproxy v0.0.0-20220326234310-be3ee21c9fa0/go.mod h1:Tojt5kmHpDIR2jMojxzZK2w2ZR7OILODmUo2gaSwjrk=
+inet.af/tcpproxy v0.0.0-20221017015627-91f861402626 h1:2dMP3Ox/Wh5BiItwOt4jxRsfzkgyBrHzx2nW28Yg6nc=
+inet.af/tcpproxy v0.0.0-20221017015627-91f861402626/go.mod h1:Tojt5kmHpDIR2jMojxzZK2w2ZR7OILODmUo2gaSwjrk=
 k8s.io/api v0.16.13/go.mod h1:QWu8UWSTiuQZMMeYjwLs6ILu5O74qKSJ0c+4vrchDxs=
 k8s.io/api v0.26.3 h1:emf74GIQMTik01Aum9dPP0gAypL8JTLl/lHa4V9RFSU=
 k8s.io/api v0.26.3/go.mod h1:PXsqwPMXBSBcL1lJ9CYDKy7kIReUydukS5JiRlxC3qE=
