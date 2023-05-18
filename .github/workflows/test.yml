@@ -49,9 +49,9 @@ jobs:
     - name: Uninstall
       run: sudo make uninstall
 
-  cross-windows:
-    name: "Windows tests (cross)"
-    runs-on: ubuntu-22.04
+  windows:
+    name: "Windows tests"
+    runs-on: windows-2022
     timeout-minutes: 30
     steps:
     - uses: actions/setup-go@v4
@@ -60,15 +60,10 @@ jobs:
     - uses: actions/checkout@v3
       with:
         fetch-depth: 1
-    - name: Install wine
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y wine-binfmt wine64
-        sudo apt-get remove -y mono-runtime || true
     - name: Unit tests
-      run: GOOS=windows GOARCH=amd64 go test -v ./...
+      run: go test -v ./...
     - name: Make
-      run: make GOOS=windows GOARCH=amd64
+      run: make
 
   integration:
     name: Integration tests
