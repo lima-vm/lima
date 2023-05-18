@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/lima-vm/lima/pkg/editutil/editorcmd"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/store/filenames"
-	"github.com/norouter/norouter/cmd/norouter/editorcmd"
 	"github.com/sirupsen/logrus"
 )
 
