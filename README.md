@@ -244,6 +244,15 @@ $ limactl ls --format='{{.SSHConfigFile}}' default
 $ ssh -F /Users/example/.lima/default/ssh.config lima-default
 ```
 
+#### `limactl snapshot`
+`limactl snapshot <COMMAND> <INSTANCE>`: manage instance snapshots
+
+Commands:
+`limactl snapshot create --tag TAG INSTANCE` : create (save) a snapshot
+`limactl snapshot apply --tag TAG INSTANCE` : apply (load) a snapshot
+`limactl snapshot delete --tag TAG INSTANCE` : delete (del) a snapshot
+`limactl snapshot list INSTANCE` : list existing snapshots in instance
+
 #### `limactl completion`
 - To enable bash completion, add `source <(limactl completion bash)` to `~/.bash_profile`.
 

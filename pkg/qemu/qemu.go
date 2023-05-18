@@ -13,10 +13,13 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/lima-vm/lima/pkg/networks/usernet"
 
 	"github.com/coreos/go-semver/semver"
+	"github.com/digitalocean/go-qemu/qmp"
+	"github.com/digitalocean/go-qemu/qmp/raw"
 	"github.com/docker/go-units"
 	"github.com/lima-vm/lima/pkg/fileutils"
 	"github.com/lima-vm/lima/pkg/iso9660util"
@@ -122,6 +125,105 @@ func CreateDataDisk(dir, format string, size int) error {
 		return fmt.Errorf("failed to run %v: %q: %w", cmd.Args, string(out), err)
 	}
 	return nil
+}
+
+func newQmpClient(cfg Config) (*qmp.SocketMonitor, error) {
+	qmpSock := filepath.Join(cfg.InstanceDir, filenames.QMPSock)
+	qmpClient, err := qmp.NewSocketMonitor("unix", qmpSock, 5*time.Second)
+	if err != nil {
+		return nil, err
+	}
+	return qmpClient, nil
+}
+
+func sendHmpCommand(cfg Config, cmd string, tag string) (string, error) {
+	qmpClient, err := newQmpClient(cfg)
+	if err != nil {
+		return "", err
+	}
+	if err := qmpClient.Connect(); err != nil {
+		return "", err
+	}
+	defer func() { _ = qmpClient.Disconnect() }()
+	rawClient := raw.NewMonitor(qmpClient)
+	logrus.Infof("Sending HMP %s command", cmd)
+	hmc := fmt.Sprintf("%s %s", cmd, tag)
+	return rawClient.HumanMonitorCommand(hmc, nil)
+}
+
+func execImgCommand(cfg Config, args ...string) (string, error) {
+	diffDisk := filepath.Join(cfg.InstanceDir, filenames.DiffDisk)
+	args = append(args, diffDisk)
+	logrus.Debugf("Running qemu-img %v command", args)
+	cmd := exec.Command("qemu-img", args...)
+	b, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	return string(b), err
+}
+
+func Del(cfg Config, run bool, tag string) error {
+	if run {
+		out, err := sendHmpCommand(cfg, "delvm", tag)
+		// there can still be output, even if no error!
+		if out != "" {
+			logrus.Warnf("output: %s", strings.TrimSpace(out))
+		}
+		return err
+	}
+	// -d  deletes a snapshot
+	_, err := execImgCommand(cfg, "snapshot", "-d", tag)
+	return err
+}
+
+func Save(cfg Config, run bool, tag string) error {
+	if run {
+		out, err := sendHmpCommand(cfg, "savevm", tag)
+		// there can still be output, even if no error!
+		if out != "" {
+			logrus.Warnf("output: %s", strings.TrimSpace(out))
+		}
+		return err
+	}
+	// -c  creates a snapshot
+	_, err := execImgCommand(cfg, "snapshot", "-c", tag)
+	return err
+}
+
+func Load(cfg Config, run bool, tag string) error {
+	if run {
+		out, err := sendHmpCommand(cfg, "loadvm", tag)
+		// there can still be output, even if no error!
+		if out != "" {
+			logrus.Warnf("output: %s", strings.TrimSpace(out))
+		}
+		return err
+	}
+	// -a  applies a snapshot
+	_, err := execImgCommand(cfg, "snapshot", "-a", tag)
+	return err
+}
+
+// List returns a space-separated list of all snapshots, with header and newlines
+func List(cfg Config, run bool) (string, error) {
+	if run {
+		out, err := sendHmpCommand(cfg, "info", "snapshots")
+		if err == nil {
+			out = strings.ReplaceAll(out, "\r", "")
+			out = strings.Replace(out, "List of snapshots present on all disks:\n", "", 1)
+			out = strings.Replace(out, "There is no snapshot available.\n", "", 1)
+		}
+		return out, err
+	}
+	// -l  lists all snapshots
+	args := []string{"snapshot", "-l"}
+	out, err := execImgCommand(cfg, args...)
+	if err == nil {
+		// remove the redundant heading, result is not machine-parseable
+		out = strings.Replace(out, "Snapshot list:\n", "", 1)
+	}
+	return out, err
 }
 
 func argValue(args []string, key string) (string, bool) {

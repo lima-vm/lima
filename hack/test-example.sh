@@ -22,6 +22,8 @@ declare -A CHECKS=(
 	["mount-home"]="1"
 	["containerd-user"]="1"
 	["restart"]="1"
+	["snapshot-online"]="1"
+	["snapshot-offline"]="1"
 	["port-forwards"]="1"
 	["vmnet"]=""
 	["disk"]=""
@@ -44,6 +46,9 @@ case "$NAME" in
 	# ● run-r2b459797f5b04262bfa79984077a65c7.service                                       loaded failed failed    /usr/bin/systemctl start man-db-cache-update
 	CHECKS["systemd-strict"]=
 	;;
+"9p")
+	CHECKS["snapshot-online"]=""
+	;;
 "vmnet")
 	CHECKS["vmnet"]=1
 	;;
@@ -52,6 +57,7 @@ case "$NAME" in
 	;;
 "net-user-v2")
 	CHECKS["port-forwards"]=""
+	CHECKS["snapshot-online"]=""
 	CHECKS["user-v2"]=1
 	;;
 esac
@@ -328,6 +334,45 @@ if [[ -n ${CHECKS["user-v2"]} ]]; then
 	INFO "Deleting \"$secondvm\""
 	limactl delete "$secondvm"
 	set +x
+fi
+if [[ -n ${CHECKS["snapshot-online"]} ]]; then
+	INFO "Testing online snapshots"
+	limactl shell "$NAME" sh -c 'echo foo > /tmp/test'
+	limactl snapshot create "$NAME" --tag snap1
+	got=$(limactl snapshot list "$NAME" --quiet)
+	expected="snap1"
+	INFO "snapshot list: expected=${expected} got=${got}"
+	if [ "$got" != "$expected" ]; then
+		ERROR "snapshot list did not return expected value"
+		exit 1
+	fi
+	limactl shell "$NAME" sh -c 'echo bar > /tmp/test'
+	limactl snapshot apply "$NAME" --tag snap1
+	got=$(limactl shell "$NAME" cat /tmp/test)
+	expected="foo"
+	INFO "snapshot apply: expected=${expected} got=${got}"
+	if [ "$got" != "$expected" ]; then
+		ERROR "snapshot apply did not restore snapshot"
+		exit 1
+	fi
+	limactl snapshot delete "$NAME" --tag snap1
+	limactl shell "$NAME" rm /tmp/test
+fi
+if [[ -n ${CHECKS["snapshot-offline"]} ]]; then
+	INFO "Testing offline snapshots"
+	limactl stop "$NAME"
+	sleep 3
+	limactl snapshot create "$NAME" --tag snap2
+	got=$(limactl snapshot list "$NAME" --quiet)
+	expected="snap2"
+	INFO "snapshot list: expected=${expected} got=${got}"
+	if [ "$got" != "$expected" ]; then
+		ERROR "snapshot list did not return expected value"
+		exit 1
+	fi
+	limactl snapshot apply "$NAME" --tag snap2
+	limactl snapshot delete "$NAME" --tag snap2
+	limactl start "$NAME"
 fi
 
 INFO "Stopping \"$NAME\""
