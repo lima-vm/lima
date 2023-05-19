@@ -373,12 +373,12 @@ func attachNetwork(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfigu
 }
 
 func validateDiskFormat(diskPath string) error {
-	format, err := imgutil.DetectFormat(diskPath)
+	info, err := imgutil.GetInfo(diskPath)
 	if err != nil {
 		return fmt.Errorf("failed to detect the format of %q: %w", diskPath, err)
 	}
-	if format != "raw" {
-		return fmt.Errorf("expected the format of %q to be \"raw\", got %q", diskPath, format)
+	if info.Format != "raw" {
+		return fmt.Errorf("expected the format of %q to be \"raw\", got %q", diskPath, info.Format)
 	}
 	// TODO: ensure that the disk is formatted with GPT or ISO9660
 	return nil
@@ -437,23 +437,23 @@ func attachDisks(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfigura
 		}
 		extraDiskPath := filepath.Join(d.Dir, filenames.DataDisk)
 
-		extraDiskFormat, err := imgutil.DetectFormat(extraDiskPath)
+		extraDiskInfo, err := imgutil.GetInfo(extraDiskPath)
 		if err != nil {
 			return fmt.Errorf("failed to run detect disk format %q: %q", diskName, err)
 		}
-		if extraDiskFormat != "raw" {
-			if strings.Contains(extraDiskFormat, string(os.PathSeparator)) {
+		if extraDiskInfo.Format != "raw" {
+			if strings.Contains(extraDiskInfo.Format, string(os.PathSeparator)) {
 				return fmt.Errorf(
 					"failed to convert disk %q to raw for vz driver because extraDiskFormat %q contains a path separator %q",
 					diskName,
-					extraDiskFormat,
+					extraDiskInfo.Format,
 					os.PathSeparator,
 				)
 			}
 			rawPath := fmt.Sprintf("%s.raw", extraDiskPath)
-			oldFormatPath := fmt.Sprintf("%s.%s", extraDiskPath, extraDiskFormat)
+			oldFormatPath := fmt.Sprintf("%s.%s", extraDiskPath, extraDiskInfo.Format)
 			if err = imgutil.ConvertToRaw(extraDiskPath, rawPath); err != nil {
-				return fmt.Errorf("failed to convert %s disk %q to raw for vz driver: %w", extraDiskFormat, diskName, err)
+				return fmt.Errorf("failed to convert %s disk %q to raw for vz driver: %w", extraDiskInfo.Format, diskName, err)
 			}
 			if err = os.Rename(extraDiskPath, oldFormatPath); err != nil {
 				return fmt.Errorf("failed to rename additional disk for vz driver: %w", err)

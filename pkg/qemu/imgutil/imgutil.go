@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
-	"path/filepath"
-	"strings"
+
+	"github.com/sirupsen/logrus"
 )
 
 type InfoChild struct {
@@ -111,19 +111,42 @@ func GetInfo(f string) (*Info, error) {
 	return ParseInfo(stdout.Bytes())
 }
 
-func DetectFormat(f string) (string, error) {
-	switch ext := strings.ToLower(filepath.Ext(f)); ext {
-	case ".qcow2":
-		return "qcow2", nil
-	case ".raw":
-		return "raw", nil
+func AcceptableAsBasedisk(info *Info) error {
+	switch info.Format {
+	case "qcow2", "raw":
+		// NOP
+	default:
+		logrus.WithField("filename", info.Filename).
+			Warnf("Unsupported image format %q. The image may not boot, or may have an extra privilege to access the host filesystem. Use with caution.", info.Format)
 	}
-	imgInfo, err := GetInfo(f)
-	if err != nil {
-		return "", err
+	if info.BackingFilename != "" {
+		return fmt.Errorf("base disk (%q) must not have a backing file (%q)", info.Filename, info.BackingFilename)
 	}
-	if imgInfo.Format == "" {
-		return "", fmt.Errorf("failed to detect format of %q", f)
+	if info.FullBackingFilename != "" {
+		return fmt.Errorf("base disk (%q) must not have a backing file (%q)", info.Filename, info.FullBackingFilename)
 	}
-	return imgInfo.Format, nil
+	if info.FormatSpecific != nil {
+		if vmdk := info.FormatSpecific.Vmdk(); vmdk != nil {
+			for _, e := range vmdk.Extents {
+				if e.Filename != info.Filename {
+					return fmt.Errorf("base disk (%q) must not have an extent file (%q)", info.Filename, e.Filename)
+				}
+			}
+		}
+	}
+	// info.Children is set since QEMU 8.0
+	switch len(info.Children) {
+	case 0:
+	// NOP
+	case 1:
+		if info.Filename != info.Children[0].Info.Filename {
+			return fmt.Errorf("base disk (%q) child must not have a different filename (%q)", info.Filename, info.Children[0].Info.Filename)
+		}
+		if len(info.Children[0].Info.Children) > 0 {
+			return fmt.Errorf("base disk (%q) child must not have children of its own", info.Filename)
+		}
+	default:
+		return fmt.Errorf("base disk (%q) must not have multiple children: %+v", info.Filename, info.Children)
+	}
+	return nil
 }

@@ -49,13 +49,19 @@ func EnsureDisk(driver *driver.BaseDriver) error {
 	if err != nil {
 		return err
 	}
+	baseDiskInfo, err := imgutil.GetInfo(baseDisk)
+	if err != nil {
+		return fmt.Errorf("failed to get the information of base disk %q: %w", baseDisk, err)
+	}
+	if err = imgutil.AcceptableAsBasedisk(baseDiskInfo); err != nil {
+		return fmt.Errorf("file %q is not acceptable as the base disk: %w", baseDisk, err)
+	}
+	if baseDiskInfo.Format == "" {
+		return fmt.Errorf("failed to inspect the format of %q", baseDisk)
+	}
 	args := []string{"create", "-f", "qcow2"}
 	if !isBaseDiskISO {
-		baseDiskFormat, err := imgutil.DetectFormat(baseDisk)
-		if err != nil {
-			return err
-		}
-		args = append(args, "-F", baseDiskFormat, "-b", baseDisk)
+		args = append(args, "-F", baseDiskInfo.Format, "-b", baseDisk)
 	}
 	args = append(args, diffDisk, strconv.Itoa(int(diskSize)))
 	cmd := exec.Command("qemu-img", args...)
