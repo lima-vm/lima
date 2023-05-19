@@ -163,11 +163,11 @@ func listenFD(ctx context.Context, vn *virtualnetwork.VirtualNetwork) error {
 			files[0].Close()
 
 			go func() {
-				err = vn.AcceptBess(ctx, fileConn)
+				err = vn.AcceptBess(ctx, &UDPFileConn{Conn: fileConn})
 				if err != nil {
 					logrus.Error("FD connection closed with error", err)
 				}
-				defer fileConn.Close()
+				fileConn.Close()
 			}()
 			select {
 			case <-ctx.Done():

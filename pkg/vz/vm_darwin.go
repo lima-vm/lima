@@ -36,6 +36,9 @@ type virtualMachineWrapper struct {
 	stopped bool
 }
 
+// Hold all *os.File created via socketpair() so that they won't get garbage collected. f.FD() gets invalid if f gets garbage collected.
+var vmNetworkFiles = make([]*os.File, 1)
+
 func startVM(ctx context.Context, driver *driver.BaseDriver) (*virtualMachineWrapper, chan error, error) {
 	usernetClient, err := startUsernet(ctx, driver)
 	if err != nil {
@@ -57,7 +60,11 @@ func startVM(ctx context.Context, driver *driver.BaseDriver) (*virtualMachineWra
 	errCh := make(chan error)
 	go func() {
 		//Handle errors via errCh and handle stop vm during context close
-
+		defer func() {
+			for i := range vmNetworkFiles {
+				vmNetworkFiles[i].Close()
+			}
+		}()
 		for {
 			select {
 			case <-ctx.Done():
@@ -700,5 +707,14 @@ func createSockPair() (*os.File, *os.File, error) {
 	if err = syscall.SetsockoptInt(clientFD, syscall.SOL_SOCKET, syscall.SO_RCVBUF, 4*1024*1024); err != nil {
 		return nil, nil, err
 	}
-	return os.NewFile(uintptr(serverFD), "server"), os.NewFile(uintptr(clientFD), "client"), nil
+	server := os.NewFile(uintptr(serverFD), "server")
+	client := os.NewFile(uintptr(clientFD), "client")
+	runtime.SetFinalizer(server, func(file *os.File) {
+		logrus.Debugf("Server network file GC'ed")
+	})
+	runtime.SetFinalizer(client, func(file *os.File) {
+		logrus.Debugf("Client network file GC'ed")
+	})
+	vmNetworkFiles = append(vmNetworkFiles, server, client)
+	return server, client, nil
 }
