@@ -196,6 +196,9 @@ The "vzNAT" network does not need the `socket_vmnet` binary and the `sudoers` fi
 
 ## Lima user-v2 network
 
+| :zap: Requirement | Lima >= 0.16.0 |
+|-------------------|----------------|
+
 user-v2 network provides a user-mode networking similar to the [default user-mode network](#user-mode-network--1921685024-) and also provides support for `vm -> vm` communication.
 
 > **Warning**
