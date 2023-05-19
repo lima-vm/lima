@@ -1,12 +1,12 @@
 # This example requires Lima v0.11.1 or later.
 
 images:
-- location: "https://repo.almalinux.org/almalinux/9.1/cloud/x86_64/images/AlmaLinux-9-GenericCloud-9.1-20221118.x86_64.qcow2"
+- location: "https://repo.almalinux.org/almalinux/9.2/cloud/x86_64/images/AlmaLinux-9-GenericCloud-9.2-20230513.x86_64.qcow2"
   arch: "x86_64"
-  digest: "sha256:1e93210a0c534de76ae01dc02e8224be14264fa8d54ad6cff9af15b673c6db1a"
-- location: "https://repo.almalinux.org/almalinux/9.1/cloud/aarch64/images/AlmaLinux-9-GenericCloud-9.1-20221118.aarch64.qcow2"
+  digest: "sha256:207d885ca8140e3106098e946cfc04088b0e21f50d24815051520d452eae0a50"
+- location: "https://repo.almalinux.org/almalinux/9.2/cloud/aarch64/images/AlmaLinux-9-GenericCloud-9.2-20230513.aarch64.qcow2"
   arch: "aarch64"
-  digest: "sha256:3405f30db62441c18258c21c01754addeb4dfdf9714d151f042942d223ab3865"
+  digest: "sha256:a4cbd35010ae0ce7437b2855e5f6f6f03124784ca2aaa5c111563f64e03301e4"
 mounts:
 - location: "~"
 - location: "/tmp/lima"
