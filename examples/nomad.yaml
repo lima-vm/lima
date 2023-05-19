@@ -8,22 +8,19 @@
 # https://github.com/Roblox/nomad-driver-containerd/tree/master/example
 
 # This example requires Lima v0.7.0 or later.
-
-# Image is set to focal (20.04 LTS) for long-term stability
-# TODO: Upgrade to 22.04 LTS when nomad-driver-containerd supports cgroup v2: https://github.com/Roblox/nomad-driver-containerd/pull/133
 images:
 # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
-- location: "https://cloud-images.ubuntu.com/releases/20.04/release-20220302/ubuntu-20.04-server-cloudimg-amd64.img"
+- location: "https://cloud-images.ubuntu.com/releases/22.04/release-20230518/ubuntu-22.04-server-cloudimg-amd64.img"
   arch: "x86_64"
-  digest: "sha256:243157ea0390890d6e60ce5e08e0249b16e23b6b313b63aed50f39f92b020afe"
-- location: "https://cloud-images.ubuntu.com/releases/20.04/release-20220302/ubuntu-20.04-server-cloudimg-arm64.img"
+  digest: "sha256:afb820a9260217fd4c5c5aacfbca74aa7cd2418e830dc64ca2e0642b94aab161"
+- location: "https://cloud-images.ubuntu.com/releases/22.04/release-20230518/ubuntu-22.04-server-cloudimg-arm64.img"
   arch: "aarch64"
-  digest: "sha256:fb2b4efdbf0011bd2a9fd49e9d31efdd252966c889f07b5d246351ec5734a329"
+  digest: "sha256:b47f8be40b5f91c37874817c3324a72cea1982a5fdad031d9b648c9623c3b4e2"
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
-- location: "https://cloud-images.ubuntu.com/releases/20.04/release/ubuntu-20.04-server-cloudimg-amd64.img"
+- location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-amd64.img"
   arch: "x86_64"
-- location: "https://cloud-images.ubuntu.com/releases/20.04/release/ubuntu-20.04-server-cloudimg-arm64.img"
+- location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-arm64.img"
   arch: "aarch64"
 
 # Mounts are disabled in this example, but can be enabled optionally.
@@ -43,12 +40,12 @@ provision:
     apt-get install -y nomad consul golang-cfssl
     sed -e '/^client/a \ \ cni_path = "/usr/local/libexec/cni"\n\ \ cni_config_dir = "/etc/cni/net.d"' -i /etc/nomad.d/nomad.hcl
     # install containerd-driver
-    DRIVER_VERSION=0.9.3
+    DRIVER_VERSION=0.9.4
     case $(uname -m) in
-      amd64|x86_64)
+      x86_64)
         curl -sSL -o containerd-driver https://github.com/Roblox/nomad-driver-containerd/releases/download/v${DRIVER_VERSION}/containerd-driver
         ;;
-      arm64|aarch64)
+      aarch64)
         curl -sSL -o containerd-driver https://github.com/Roblox/nomad-driver-containerd/releases/download/v${DRIVER_VERSION}/containerd-driver-arm64
         ;;
     esac
