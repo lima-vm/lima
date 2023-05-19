@@ -1,6 +1,7 @@
 # Talks
 
-## Kubecon + CloudNativeCon Europe 2022
+## 2022
+### KubeCon + CloudNativeCon Europe 2022
 
 [@AkihiroSuda](https://github.com/AkihiroSuda) and [@jandubois](https://github.com/jandubois) presented "Running containerd and k3s on macOS" about Lima.
 
@@ -8,8 +9,21 @@
 
 Read the [slides](https://static.sched.com/hosted_files/kccnceu2022/5f/lima.pdf) or watch the [video](https://www.youtube.com/watch?v=g5GCsbjkzRM).
 
-## CNCF TAG-Runtime Meeting 2022-10-06
+### CNCF TAG-Runtime Meeting 2022-10-06
 
 [@AkihiroSuda](https://github.com/AkihiroSuda) presented Lima in [the CNCF TAG-Runtime Meeting](https://github.com/cncf/tag-runtime).
 
 Read the [slides](https://www.slideshare.net/AkihiroSuda/cncf-tagruntime-20221006-limapdf).
+
+## 2023
+### DevOps Toolkit 2023-02-09
+
+[@afbjorklund](https://github.com/afbjorklund) presented Lima in [The DevOps Toolkit Series](https://www.devopstoolkitseries.com/).
+
+Watch the [video](https://www.youtube.com/watch?v=GDInFocQJTU).
+
+### KubeCon + CloudNativeCon Europe 2023
+
+[@AkihiroSuda](https://github.com/AkihiroSuda) presented Lima in the CNCF project pavilion.
+
+Read the [slides](https://www.slideshare.net/AkihiroSuda/kubeconeu2023-lima-pavilion).
