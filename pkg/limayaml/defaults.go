@@ -32,7 +32,7 @@ const (
 )
 
 func defaultContainerdArchives() []File {
-	const nerdctlVersion = "1.3.1"
+	const nerdctlVersion = "1.4.0"
 	location := func(goarch string) string {
 		return "https://github.com/containerd/nerdctl/releases/download/v" + nerdctlVersion + "/nerdctl-full-" + nerdctlVersion + "-linux-" + goarch + ".tar.gz"
 	}
@@ -40,12 +40,12 @@ func defaultContainerdArchives() []File {
 		{
 			Location: location("amd64"),
 			Arch:     X8664,
-			Digest:   "sha256:955f9a4853762b1258cd38c967e45b6061a181a668907059e56cc01c32f1cf21",
+			Digest:   "sha256:3bb5f5358ee2c3bd9097e0bf37649c1775e2449094e75acf629f129ec2c7915f",
 		},
 		{
 			Location: location("arm64"),
 			Arch:     AARCH64,
-			Digest:   "sha256:38d9191421284115af796b13c2bc8c79c5a951c285c726fd73d4d650c6669457",
+			Digest:   "sha256:589dabd962d936b29fd377dcddbb49c07d1c4c27dd4b402bc4b6b20287fe9c37",
 		},
 		// No riscv64
 	}
