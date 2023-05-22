@@ -262,6 +262,12 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 
 	args.BootCmds = getBootCmds(y.Provision)
 
+	for _, f := range y.Provision {
+		if f.Mode == limayaml.ProvisionModeDependency && *f.SkipDefaultDependencyResolution {
+			args.SkipDefaultDependencyResolution = true
+		}
+	}
+
 	if err := ValidateTemplateArgs(args); err != nil {
 		return err
 	}
@@ -273,7 +279,7 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 
 	for i, f := range y.Provision {
 		switch f.Mode {
-		case limayaml.ProvisionModeSystem, limayaml.ProvisionModeUser:
+		case limayaml.ProvisionModeSystem, limayaml.ProvisionModeUser, limayaml.ProvisionModeDependency:
 			layout = append(layout, iso9660util.Entry{
 				Path:   fmt.Sprintf("provision.%s/%08d", f.Mode, i),
 				Reader: strings.NewReader(f.Script),

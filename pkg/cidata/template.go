@@ -50,29 +50,30 @@ type Disk struct {
 	Device string
 }
 type TemplateArgs struct {
-	Name               string // instance name
-	IID                string // instance id
-	User               string // user name
-	UID                int
-	SSHPubKeys         []string
-	Mounts             []Mount
-	MountType          string
-	Disks              []Disk
-	Containerd         Containerd
-	Networks           []Network
-	SlirpNICName       string
-	SlirpGateway       string
-	SlirpDNS           string
-	SlirpIPAddress     string
-	UDPDNSLocalPort    int
-	TCPDNSLocalPort    int
-	Env                map[string]string
-	DNSAddresses       []string
-	CACerts            CACerts
-	HostHomeMountPoint string
-	BootCmds           []BootCmds
-	RosettaEnabled     bool
-	RosettaBinFmt      bool
+	Name                            string // instance name
+	IID                             string // instance id
+	User                            string // user name
+	UID                             int
+	SSHPubKeys                      []string
+	Mounts                          []Mount
+	MountType                       string
+	Disks                           []Disk
+	Containerd                      Containerd
+	Networks                        []Network
+	SlirpNICName                    string
+	SlirpGateway                    string
+	SlirpDNS                        string
+	SlirpIPAddress                  string
+	UDPDNSLocalPort                 int
+	TCPDNSLocalPort                 int
+	Env                             map[string]string
+	DNSAddresses                    []string
+	CACerts                         CACerts
+	HostHomeMountPoint              string
+	BootCmds                        []BootCmds
+	RosettaEnabled                  bool
+	RosettaBinFmt                   bool
+	SkipDefaultDependencyResolution bool
 }
 
 func ValidateTemplateArgs(args TemplateArgs) error {

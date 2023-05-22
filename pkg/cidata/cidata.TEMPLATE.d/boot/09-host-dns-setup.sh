@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eux
 
-# Wait until iptables has been installed; 30-install-packages.sh will call this script again
+# Wait until iptables has been installed; 35-configure-packages.sh will call this script again
 if command -v iptables >/dev/null 2>&1; then
 	if [ -n "${LIMA_CIDATA_UDP_DNS_LOCAL_PORT}" ] && [ "${LIMA_CIDATA_UDP_DNS_LOCAL_PORT}" -ne 0 ]; then
 		# Only add the rule once

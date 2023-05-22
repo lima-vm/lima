@@ -308,6 +308,9 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		if provision.Mode == "" {
 			provision.Mode = ProvisionModeSystem
 		}
+		if provision.Mode == ProvisionModeDependency && provision.SkipDefaultDependencyResolution == nil {
+			provision.SkipDefaultDependencyResolution = pointer.Bool(false)
+		}
 	}
 
 	if y.Containerd.System == nil {

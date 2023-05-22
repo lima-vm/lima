@@ -1,19 +1,6 @@
 #!/bin/sh
 set -eux
 
-update_fuse_conf() {
-	# Modify /etc/fuse.conf (/etc/fuse3.conf) to allow "-o allow_root"
-	if [ "${LIMA_CIDATA_MOUNTS}" -gt 0 ]; then
-		fuse_conf="/etc/fuse.conf"
-		if [ -e /etc/fuse3.conf ]; then
-			fuse_conf="/etc/fuse3.conf"
-		fi
-		if ! grep -q "^user_allow_other" "${fuse_conf}"; then
-			echo "user_allow_other" >>"${fuse_conf}"
-		fi
-	fi
-}
-
 INSTALL_IPTABLES=0
 if [ "${LIMA_CIDATA_CONTAINERD_SYSTEM}" = 1 ] || [ "${LIMA_CIDATA_CONTAINERD_USER}" = 1 ]; then
 	INSTALL_IPTABLES=1
@@ -23,11 +10,30 @@ if [ "${LIMA_CIDATA_UDP_DNS_LOCAL_PORT}" -ne 0 ] || [ "${LIMA_CIDATA_TCP_DNS_LOC
 fi
 
 # Install minimum dependencies
+# Run any user provided dependency scripts first
+if [ -d "${LIMA_CIDATA_MNT}"/provision.dependency ]; then
+	echo "Detected dependency provisioning scripts, running before default dependency installation"
+	CODE=0
+	for f in "${LIMA_CIDATA_MNT}"/provision.dependency/*; do
+		if ! "$f"; then
+			CODE=1
+		fi
+	done
+	if [ $CODE != 0 ]; then
+		exit "$CODE"
+	fi
+fi
+
 # apt-get detected through the first bytes of apt-get binary to ensure we're
 # matching to an actual binary and not a wrapper script. This case is an issue
 # on OpenSuse which wraps its own package manager in to a script named apt-get
 # to mimic certain options but doesn't offer full parameters compatibility
 # See : https://github.com/lima-vm/lima/pull/1014
+if [ "${LIMA_CIDATA_SKIP_DEFAULT_DEPENDENCY_RESOLUTION}" = 1 ]; then
+	echo "LIMA_CIDATA_SKIP_DEFAULT_DEPENDENCY_RESOLUTION is set, skipping regular dependency installation"
+	exit 0
+fi
+
 if hexdump -C -n 4 "$(command -v apt-get)" | grep -qF 'ELF' >/dev/null 2>&1; then
 	pkgs=""
 	if [ "${LIMA_CIDATA_MOUNTTYPE}" = "reverse-sshfs" ]; then
@@ -167,22 +173,4 @@ elif command -v apk >/dev/null 2>&1; then
 		# shellcheck disable=SC2086
 		apk add ${pkgs}
 	fi
-fi
-
-SETUP_DNS=0
-if [ -n "${LIMA_CIDATA_UDP_DNS_LOCAL_PORT}" ] && [ "${LIMA_CIDATA_UDP_DNS_LOCAL_PORT}" -ne 0 ]; then
-	SETUP_DNS=1
-fi
-if [ -n "${LIMA_CIDATA_TCP_DNS_LOCAL_PORT}" ] && [ "${LIMA_CIDATA_TCP_DNS_LOCAL_PORT}" -ne 0 ]; then
-	SETUP_DNS=1
-fi
-if [ "${SETUP_DNS}" = 1 ]; then
-	# Try to setup iptables rule again, in case we just installed iptables
-	"${LIMA_CIDATA_MNT}/boot/09-host-dns-setup.sh"
-fi
-
-# update_fuse_conf has to be called after installing all the packages,
-# otherwise apt-get fails with conflict
-if [ "${LIMA_CIDATA_MOUNTTYPE}" = "reverse-sshfs" ]; then
-	update_fuse_conf
 fi

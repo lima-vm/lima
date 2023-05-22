@@ -199,6 +199,16 @@ containerd:
 # - mode: boot
 #   script: |
 #     systemctl disable NetworkManager-wait-online.service
+# # `dependency` is executed before the regular dependency resolution workflow in
+# # pkg/cidata/cidata.TEMPLATE.d/boot/30-install-packages.sh
+# # If skipDefaultDependencyResolution is set on at least one `dependency` mode provisioning script, the regular
+# # dependency resolution workflow in pkg/cidata/cidata.TEMPLATE.d/boot/30-install-packages.sh will be skipped.
+# - mode: dependency
+#   skipDefaultDependencyResolution: false
+#   script: |
+#     #!/bin/bash
+#     dnf config-manager --add-repo ...
+#     dnf install ...
 
 # Probe scripts to check readiness.
 # 🟢 Builtin default: null
