@@ -1,4 +1,6 @@
 # This example requires Lima v0.7.0 or later.
+# Using the Alpine 3.18 aarch64 image with vmType=vz requires macOS Ventura 13.3 or later.
+
 images:
 - location: "https://github.com/lima-vm/alpine-lima/releases/download/v0.2.28/alpine-lima-std-3.18.0-x86_64.iso"
   arch: "x86_64"
