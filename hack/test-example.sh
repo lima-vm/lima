@@ -85,6 +85,9 @@ function diagnose() {
 	tail "$HOME/.lima/${NAME}"/*.log
 	limactl shell "$NAME" systemctl status
 	limactl shell "$NAME" systemctl
+	# Debug ssh.service failure ( https://github.com/lima-vm/lima/issues/1566 )
+	limactl shell "$NAME" sudo systemctl status ssh.service --no-pager -l
+	limactl shell "$NAME" sudo journalctl --unit ssh.service --no-pager --since="1 hour ago"
 	limactl shell "$NAME" sudo cat /var/log/cloud-init-output.log
 	set +x -e
 }
