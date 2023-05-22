@@ -3,7 +3,9 @@
 # are too slow and flaky, and Linux instances of GHA do not support KVM.
 
 # yamllint disable rule:line-length
-task:
+
+
+common_template: &common_template
   timeout_in: 30m
   # We can't use macOS instances of Cirrus because of lack of support for nested VMs.
   # (sysctl machdep.cpu.features lacks "VMX" flag)
@@ -14,16 +16,6 @@ task:
     memory: 8G
   env:
     DEBIAN_FRONTEND: noninteractive
-    # yamllint disable rule:key-duplicates
-    matrix:
-      # We only test "Tier 1" yamls. See examples/README.md for the list of the "Tier 1" yamls.
-      # default.yaml and vmnet.yaml are tested on GHA macOS.
-      EXAMPLE: alpine.yaml
-      EXAMPLE: debian.yaml
-      EXAMPLE: fedora.yaml
-      EXAMPLE: archlinux.yaml
-      EXAMPLE: opensuse.yaml
-      EXAMPLE: experimental/net-user-v2.yaml
   info_script:
   - uname -a
   - df -T
@@ -40,8 +32,39 @@ task:
   prepare_user_script:
   - groupadd -g $(stat -c '%g' /dev/kvm) kvm
   - useradd -m -G kvm testuser
+
+task:
+  <<: *common_template
+  env:
+    # yamllint disable rule:key-duplicates
+    matrix:
+      # We only test "Tier 1" yamls. See examples/README.md for the list of the "Tier 1" yamls.
+      # default.yaml and vmnet.yaml are tested on GHA macOS.
+      TEMPLATE: alpine.yaml
+      TEMPLATE: debian.yaml
+      TEMPLATE: fedora.yaml
+      TEMPLATE: archlinux.yaml
+      TEMPLATE: opensuse.yaml
+      TEMPLATE: experimental/net-user-v2.yaml
   lima_cache:
-    fingerprint_script: uname -s ; cat examples/$EXAMPLE
+    fingerprint_script: uname -s ; cat examples/$TEMPLATE
     folder: /home/testuser/.cache/lima
   lima_cache_fix_perm_script: chown -R testuser.testuser /home/testuser
-  test_script: sudo -iu testuser $(pwd)/hack/test-example.sh $(pwd)/examples/$EXAMPLE
+  test_script: sudo -iu testuser $(pwd)/hack/test-example.sh $(pwd)/examples/$TEMPLATE
+
+colima_task:
+  <<: *common_template
+  colima_install_deps_script:
+  - curl -fOSL https://download.docker.com/linux/ubuntu/dists/jammy/pool/stable/amd64/docker-ce-cli_24.0.1-1~ubuntu.22.04~jammy_amd64.deb
+  - dpkg -i docker-ce-cli_24.0.1-1~ubuntu.22.04~jammy_amd64.deb
+  colima_install_script:
+  - git clone https://github.com/abiosoft/colima
+  - cd colima
+  - git checkout v0.5.5
+  - make
+  - make install
+  lima_cache:
+    fingerprint_script: uname -s ; colima version
+    folder: /home/testuser/.cache/lima
+  lima_cache_fix_perm_script: chown -R testuser.testuser /home/testuser
+  test_script: sudo -iu testuser $(pwd)/hack/test-colima.sh
