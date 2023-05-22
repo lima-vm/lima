@@ -25,7 +25,7 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/lima-vm/sshocker v0.3.2
 	github.com/lithammer/dedent v1.1.0
-	github.com/mattn/go-isatty v0.0.18
+	github.com/mattn/go-isatty v0.0.19
 	github.com/mattn/go-shellwords v1.0.12
 	github.com/miekg/dns v1.1.54
 	github.com/mikefarah/yq/v4 v4.33.3
