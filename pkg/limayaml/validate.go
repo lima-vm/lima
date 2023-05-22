@@ -440,4 +440,7 @@ func warnExperimental(y LimaYAML) {
 	if y.Video.Display != nil && strings.Contains(*y.Video.Display, "vnc") {
 		logrus.Warn("`video.display: vnc` is experimental")
 	}
+	if y.Audio.Device != nil {
+		logrus.Warn("`audio.device` is experimental")
+	}
 }

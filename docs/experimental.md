@@ -7,6 +7,7 @@ The following features are experimental and subject to change:
 - `arch: riscv64`
 - `video.display: vnc` and relevant configuration (`video.vnc.display`)
 - `mode: user-v2` in `networks.yml` and relevant configuration in `lima.yaml` 
+- `audio.device`
 
 The following flags are experimental and subject to change:
 
