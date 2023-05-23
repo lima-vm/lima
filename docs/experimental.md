@@ -9,7 +9,7 @@ The following features are experimental and subject to change:
 - `mode: user-v2` in `networks.yml` and relevant configuration in `lima.yaml` 
 - `audio.device`
 
-The following flags are experimental and subject to change:
+The following commands are experimental and subject to change:
 
-- `start --set`, yq expression
-- `edit --set`, yq expression
+- `limactl (start|edit) --set=<YQ EXPRESSION>`
+- `limactl snapshot *`
