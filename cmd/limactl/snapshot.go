@@ -6,6 +6,7 @@ import (
 
 	"github.com/lima-vm/lima/pkg/snapshot"
 	"github.com/lima-vm/lima/pkg/store"
+	"github.com/sirupsen/logrus"
 
 	"github.com/spf13/cobra"
 )
@@ -14,6 +15,9 @@ func newSnapshotCommand() *cobra.Command {
 	var snapshotCmd = &cobra.Command{
 		Use:   "snapshot",
 		Short: "Manage instance snapshots",
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			logrus.Warn("`limactl snapshot` is experimental")
+		},
 	}
 	snapshotCmd.AddCommand(newSnapshotApplyCommand())
 	snapshotCmd.AddCommand(newSnapshotCreateCommand())
