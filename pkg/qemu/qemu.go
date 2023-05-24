@@ -198,7 +198,21 @@ func Load(cfg Config, run bool, tag string) error {
 		if out != "" {
 			logrus.Warnf("output: %s", strings.TrimSpace(out))
 		}
-		return err
+		if err != nil {
+			return err
+		}
+		// After a live migration, update the network interfaces:
+		// "Trigger a round of GARP/RARP broadcasts; this is useful
+		// for explicitly updating the network infrastructure after
+		// a reconfiguration or some forms of migration."
+		out, err = sendHmpCommand(cfg, "announce_self", "")
+		if out != "" {
+			logrus.Warnf("output: %s", strings.TrimSpace(out))
+		}
+		if err != nil {
+			logrus.WithError(err).Warnf("announce_self")
+		}
+		return nil
 	}
 	// -a  applies a snapshot
 	_, err := execImgCommand(cfg, "snapshot", "-a", tag)
