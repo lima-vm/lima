@@ -1,9 +1,13 @@
-#!/bin/sh
+#!/bin/bash
 
-set -eu
+set -eux -o pipefail
 
 if [ "$LIMA_CIDATA_ROSETTA_ENABLED" != "true" ]; then
 	exit 0
+fi
+
+if [ -f /etc/alpine-release ]; then
+	rc-service qemu-binfmt stop --ifstarted
 fi
 
 mkdir -p /mnt/lima-rosetta
