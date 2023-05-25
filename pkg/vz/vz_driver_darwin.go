@@ -76,6 +76,10 @@ func (l *LimaVzDriver) Validate() error {
 		logrus.Warnf("Ignoring: vmType %s: %+v", *l.Yaml.VMType, unknown)
 	}
 
+	if !limayaml.IsNativeArch(*l.Yaml.Arch) {
+		return fmt.Errorf("unsupported arch: %q", *l.Yaml.Arch)
+	}
+
 	for k, v := range l.Yaml.CPUType {
 		if v != "" {
 			logrus.Warnf("Ignoring: vmType %s: cpuType[%q]: %q", *l.Yaml.VMType, k, v)
