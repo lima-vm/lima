@@ -573,15 +573,11 @@ func attachAudio(driver *driver.BaseDriver, config *vz.VirtualMachineConfigurati
 		if err != nil {
 			return err
 		}
-		inputStream, err := vz.NewVirtioSoundDeviceHostInputStreamConfiguration()
-		if err != nil {
-			return err
-		}
 		soundDeviceConfiguration, err := vz.NewVirtioSoundDeviceConfiguration()
 		if err != nil {
 			return err
 		}
-		soundDeviceConfiguration.SetStreams(outputStream, inputStream)
+		soundDeviceConfiguration.SetStreams(outputStream)
 		config.SetAudioDevicesVirtualMachineConfiguration([]vz.AudioDeviceConfiguration{
 			soundDeviceConfiguration,
 		})
