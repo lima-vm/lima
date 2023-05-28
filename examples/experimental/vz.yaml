@@ -8,6 +8,9 @@ rosetta:
   # Register rosetta to /proc/sys/fs/binfmt_misc
   binfmt: true
 
+# Note: On Intel Mac, kernel v6.2 (used by Ubuntu 23.04, Fedora 38, etc.) is known to be unbootable on vz.
+# kernel v6.3 and later should boot, as long as it is booted via GRUB.
+# https://github.com/lima-vm/lima/issues/1577#issuecomment-1565625668
 images:
 - location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-amd64.img"
   arch: "x86_64"
