@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"io/fs"
 	"os"
 	"path/filepath"
 
@@ -18,10 +20,28 @@ func newGenManCommand() *cobra.Command {
 		RunE:   genmanAction,
 		Hidden: true,
 	}
+	genmanCommand.Flags().String("output", "", "Output directory")
+	genmanCommand.Flags().String("prefix", "", "Install prefix")
 	return genmanCommand
 }
 
 func genmanAction(cmd *cobra.Command, args []string) error {
+	output, err := cmd.Flags().GetString("output")
+	if err != nil {
+		return err
+	}
+	output, err = filepath.Abs(output)
+	if err != nil {
+		return err
+	}
+	prefix, err := cmd.Flags().GetString("prefix")
+	if err != nil {
+		return err
+	}
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
 	dir := args[0]
 	logrus.Infof("Generating man %q", dir)
 	// lima(1)
@@ -49,5 +69,38 @@ and $LIMA_WORKDIR.
 		Title:   "LIMACTL",
 		Section: "1",
 	}
-	return doc.GenManTree(cmd.Root(), header, dir)
+	if err := doc.GenManTree(cmd.Root(), header, dir); err != nil {
+		return err
+	}
+	if output != "" && prefix != "" {
+		replaceAll(dir, output, prefix)
+	}
+	replaceAll(dir, homeDir, "~")
+	return nil
+}
+
+// replaceAll replaces all occurrences of new with old, for all files in dir
+func replaceAll(dir string, old, new string) error {
+	logrus.Infof("Replacing %q with %q", old, new)
+	return filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if path == dir {
+			return nil
+		}
+		if info.IsDir() {
+			return filepath.SkipDir
+		}
+		in, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		out := bytes.Replace(in, []byte(old), []byte(new), -1)
+		err = os.WriteFile(path, out, 0644)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
 }
