@@ -116,7 +116,8 @@ _output/share/lima/lima-guestagent.Linux-riscv64:
 .PHONY: manpages
 manpages: _output/bin/limactl$(exe)
 	@mkdir -p _output/share/man/man1
-	$< generate-man _output/share/man/man1
+	$< generate-man _output/share/man/man1 \
+		--output _output --prefix $(PREFIX)
 
 .PHONY: diagrams
 diagrams: docs/lima-sequence-diagram.png
