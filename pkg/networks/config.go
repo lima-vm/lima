@@ -51,6 +51,26 @@ func defaultConfigBytes() ([]byte, error) {
 	return textutil.ExecuteTemplate(defaultConfigTemplate, args)
 }
 
+func fillDefaults(nwYaml YAML) (YAML, error) {
+	usernetFound := false
+	if nwYaml.Networks == nil {
+		nwYaml.Networks = make(map[string]Network)
+	}
+	for nw := range nwYaml.Networks {
+		if nwYaml.Networks[nw].Mode == ModeUserV2 {
+			usernetFound = true
+		}
+	}
+	if !usernetFound {
+		defaultConfig, err := DefaultConfig()
+		if err != nil {
+			return nwYaml, err
+		}
+		nwYaml.Networks[ModeUserV2] = defaultConfig.Networks[ModeUserV2]
+	}
+	return nwYaml, nil
+}
+
 func DefaultConfig() (YAML, error) {
 	var config YAML
 	defaultConfig, err := defaultConfigBytes()
@@ -115,6 +135,10 @@ func loadCache() {
 		cache.err = yaml.UnmarshalWithOptions(b, &cache.config, yaml.Strict())
 		if cache.err != nil {
 			cache.err = fmt.Errorf("cannot parse %q: %w", configFile, cache.err)
+		}
+		cache.config, cache.err = fillDefaults(cache.config)
+		if cache.err != nil {
+			cache.err = fmt.Errorf("cannot fill default %q: %w", configFile, cache.err)
 		}
 	})
 }
