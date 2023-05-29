@@ -4,12 +4,12 @@
 # EL9-based distros are known to work.
 
 images:
-- location: "https://dl.rockylinux.org/pub/rocky/8.7/images/x86_64/Rocky-8-GenericCloud-Base-8.7-20230215.0.x86_64.qcow2"
+- location: "https://dl.rockylinux.org/pub/rocky/8.8/images/x86_64/Rocky-8-GenericCloud-Base-8.8-20230518.0.x86_64.qcow2"
   arch: "x86_64"
-  digest: "sha256:f242e06b76124b8ea3495fc6d69eb6e89e0a1826e3d9bdabed0ef4e68880eb5a"
-- location: "https://dl.rockylinux.org/pub/rocky/8.7/images/aarch64/Rocky-8-GenericCloud-Base-8.7-20230215.0.aarch64.qcow2"
+  digest: "sha256:086bf68f84c974cfcf533741c5be8752270df681a38f20423cf24b851d5edf77"
+- location: "https://dl.rockylinux.org/pub/rocky/8.8/images/aarch64/Rocky-8-GenericCloud-Base-8.8-20230518.0.aarch64.qcow2"
   arch: "aarch64"
-  digest: "sha256:f06698cb5e1631eb4ba9b90b8fce73407e285c953ab0e49b451899a8d6558fab"
+  digest: "sha256:dcedb823982fab67094c6c8237b8c06e28cf5c4a7bfe7db43ff23c1b9347c746"
 mounts:
 - location: "~"
 - location: "/tmp/lima"
