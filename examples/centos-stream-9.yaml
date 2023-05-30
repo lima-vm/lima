@@ -1,12 +1,19 @@
 # This example requires Lima v0.11.1 or later.
 
 images:
+# Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
 - location: "https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-9-20230523.0.x86_64.qcow2"
   arch: "x86_64"
   digest: "sha256:47dca0f014aff27bad5a4156f7ce3168fc339546d6e66bfaf52617a773f05bf0"
 - location: "https://cloud.centos.org/centos/9-stream/aarch64/images/CentOS-Stream-GenericCloud-9-20230523.0.aarch64.qcow2"
   arch: "aarch64"
   digest: "sha256:6c8566fe05b3541956e2ff0f72b41158b92751be9a4d68ac977e9d7fe22a6db6"
+# Fallback to the latest release image.
+# Hint: run `limactl prune` to invalidate the cache
+- location: "https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-9-latest.x86_64.qcow2"
+  arch: "x86_64"
+- location: "https://cloud.centos.org/centos/9-stream/aarch64/images/CentOS-Stream-GenericCloud-9-latest.aarch64.qcow2"
+  arch: "aarch64"
 mounts:
 - location: "~"
 - location: "/tmp/lima"
