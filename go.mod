@@ -23,6 +23,7 @@ require (
 	github.com/google/go-cmp v0.5.9
 	github.com/gorilla/mux v1.8.0
 	github.com/hashicorp/go-multierror v1.1.1
+	github.com/lima-vm/go-qcow2reader v0.1.1
 	github.com/lima-vm/sshocker v0.3.2
 	github.com/lithammer/dedent v1.1.0
 	github.com/mattn/go-isatty v0.0.19

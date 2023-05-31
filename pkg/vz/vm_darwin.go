@@ -12,19 +12,20 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
-	"strings"
 	"sync"
 	"syscall"
 
 	"github.com/Code-Hex/vz/v3"
 	"github.com/docker/go-units"
+	"github.com/lima-vm/go-qcow2reader"
+	"github.com/lima-vm/go-qcow2reader/image/raw"
 	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/iso9660util"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/localpathutil"
+	"github.com/lima-vm/lima/pkg/nativeimgutil"
 	"github.com/lima-vm/lima/pkg/networks"
 	"github.com/lima-vm/lima/pkg/networks/usernet"
-	"github.com/lima-vm/lima/pkg/qemu/imgutil"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/sirupsen/logrus"
@@ -383,12 +384,17 @@ func attachNetwork(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfigu
 }
 
 func validateDiskFormat(diskPath string) error {
-	info, err := imgutil.GetInfo(diskPath)
+	f, err := os.Open(diskPath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	img, err := qcow2reader.Open(f)
 	if err != nil {
 		return fmt.Errorf("failed to detect the format of %q: %w", diskPath, err)
 	}
-	if info.Format != "raw" {
-		return fmt.Errorf("expected the format of %q to be \"raw\", got %q", diskPath, info.Format)
+	if t := img.Type(); t != raw.Type {
+		return fmt.Errorf("expected the format of %q to be %q, got %q", diskPath, raw.Type, t)
 	}
 	// TODO: ensure that the disk is formatted with GPT or ISO9660
 	return nil
@@ -446,39 +452,10 @@ func attachDisks(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfigura
 			return fmt.Errorf("failed to run lock disk %q: %q", diskName, err)
 		}
 		extraDiskPath := filepath.Join(d.Dir, filenames.DataDisk)
-
-		extraDiskInfo, err := imgutil.GetInfo(extraDiskPath)
-		if err != nil {
-			return fmt.Errorf("failed to run detect disk format %q: %q", diskName, err)
-		}
-		if extraDiskInfo.Format != "raw" {
-			if strings.Contains(extraDiskInfo.Format, string(os.PathSeparator)) {
-				return fmt.Errorf(
-					"failed to convert disk %q to raw for vz driver because extraDiskFormat %q contains a path separator %q",
-					diskName,
-					extraDiskInfo.Format,
-					os.PathSeparator,
-				)
-			}
-			rawPath := fmt.Sprintf("%s.raw", extraDiskPath)
-			oldFormatPath := fmt.Sprintf("%s.%s", extraDiskPath, extraDiskInfo.Format)
-			if err = imgutil.ConvertToRaw(extraDiskPath, rawPath); err != nil {
-				return fmt.Errorf("failed to convert %s disk %q to raw for vz driver: %w", extraDiskInfo.Format, diskName, err)
-			}
-			if err = os.Rename(extraDiskPath, oldFormatPath); err != nil {
-				return fmt.Errorf("failed to rename additional disk for vz driver: %w", err)
-			}
-			if err = os.Rename(rawPath, extraDiskPath); err != nil {
-				return fmt.Errorf("failed to rename additional disk for vz driver: %w", err)
-			}
-			if err = os.Remove(oldFormatPath); err != nil {
-				logrus.Errorf("Failed to delete unused qcow2 additional disk %q."+
-					"Disk is no longer needed by Lima and it can be removed manually.", oldFormatPath)
-			}
-		}
-
-		if err = validateDiskFormat(extraDiskPath); err != nil {
-			return fmt.Errorf("failed to validate extra disk %q: %w", extraDiskPath, err)
+		// ConvertToRaw is a NOP if no conversion is needed
+		logrus.Debugf("Converting extra disk %q to a raw disk (if it is not a raw)", extraDiskPath)
+		if err = nativeimgutil.ConvertToRaw(extraDiskPath, extraDiskPath, nil, true); err != nil {
+			return fmt.Errorf("failed to convert extra disk %q to a raw disk: %w", extraDiskPath, err)
 		}
 		extraDiskPathAttachment, err := vz.NewDiskImageStorageDeviceAttachmentWithCacheAndSync(extraDiskPath, false, vz.DiskImageCachingModeAutomatic, vz.DiskImageSynchronizationModeFsync)
 		if err != nil {

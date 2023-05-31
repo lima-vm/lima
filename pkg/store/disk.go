@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/lima-vm/go-qcow2reader"
 	"github.com/lima-vm/lima/pkg/qemu/imgutil"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 )
@@ -36,11 +37,10 @@ func InspectDisk(diskName string) (*Disk, error) {
 		return nil, err
 	}
 
-	info, err := imgutil.GetInfo(dataDisk)
+	disk.Size, err = inspectDiskSize(dataDisk)
 	if err != nil {
 		return nil, err
 	}
-	disk.Size = info.VSize
 
 	instDir, err := os.Readlink(filepath.Join(diskDir, filenames.InUseBy))
 	if err != nil {
@@ -55,6 +55,34 @@ func InspectDisk(diskName string) (*Disk, error) {
 	disk.MountPoint = fmt.Sprintf("/mnt/lima-%s", diskName)
 
 	return disk, nil
+}
+
+// inspectDiskSize attempts to inspect the disk size by itself,
+// and falls back to inspectDiskSizeWithQemuImg on an error.
+func inspectDiskSize(fName string) (int64, error) {
+	f, err := os.Open(fName)
+	if err != nil {
+		return inspectDiskSizeWithQemuImg(fName)
+	}
+	defer f.Close()
+	img, err := qcow2reader.Open(f)
+	if err != nil {
+		return inspectDiskSizeWithQemuImg(fName)
+	}
+	sz := img.Size()
+	if sz < 0 {
+		return inspectDiskSizeWithQemuImg(fName)
+	}
+	return sz, nil
+}
+
+// inspectDiskSizeWithQemuImg invokes `qemu-img` binary to inspect the disk size.
+func inspectDiskSizeWithQemuImg(fName string) (int64, error) {
+	info, err := imgutil.GetInfo(fName)
+	if err != nil {
+		return -1, err
+	}
+	return info.VSize, nil
 }
 
 func (d *Disk) Lock(instanceDir string) error {
