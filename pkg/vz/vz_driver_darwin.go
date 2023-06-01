@@ -72,6 +72,7 @@ func (l *LimaVzDriver) Validate() error {
 		"Rosetta",
 		"AdditionalDisks",
 		"Audio",
+		"Video",
 	); len(unknown) > 0 {
 		logrus.Warnf("Ignoring: vmType %s: %+v", *l.Yaml.VMType, unknown)
 	}
@@ -118,6 +119,11 @@ func (l *LimaVzDriver) Validate() error {
 	if audioDevice != "" && audioDevice != "vz" {
 		logrus.Warnf("field `audio.device` must be %q for VZ driver , got %q", "vz", audioDevice)
 	}
+
+	videoDisplay := *l.Yaml.Video.Display
+	if videoDisplay != "" && videoDisplay != "vz" {
+		logrus.Warnf("field `video.display` must be %q for VZ driver , got %q", "vz", videoDisplay)
+	}
 	return nil
 }
 
@@ -141,6 +147,17 @@ func (l *LimaVzDriver) Start(ctx context.Context) (chan error, error) {
 	l.machine = vm
 
 	return errCh, nil
+}
+
+func (l *LimaVzDriver) CanRunGUI() bool {
+	return *l.Yaml.Video.Display == "vz"
+}
+
+func (l *LimaVzDriver) RunGUI() error {
+	if l.CanRunGUI() {
+		return l.machine.StartGraphicApplication(1920, 1200)
+	}
+	return fmt.Errorf("RunGUI is not support for the given driver '%s' and diplay '%s'", "vz", *l.Yaml.Video.Display)
 }
 
 func (l *LimaVzDriver) Stop(_ context.Context) error {

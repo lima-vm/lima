@@ -499,7 +499,7 @@ func attachDisks(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfigura
 }
 
 func attachDisplay(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfiguration) error {
-	if driver.Yaml.Video.Display != nil {
+	if *driver.Yaml.Video.Display == "vz" {
 		graphicsDeviceConfiguration, err := vz.NewVirtioGraphicsDeviceConfiguration()
 		if err != nil {
 			return err

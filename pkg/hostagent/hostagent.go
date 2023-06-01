@@ -335,12 +335,24 @@ func (a *HostAgent) Run(ctx context.Context) error {
 		logrus.Infof("VNC Password: `%s`", vncpwdfile)
 	}
 
+	if a.driver.CanRunGUI() {
+		go func() {
+			err = a.startRoutinesAndWait(ctx, errCh)
+			if err != nil {
+				logrus.Error(err)
+			}
+		}()
+		return a.driver.RunGUI()
+	}
+	return a.startRoutinesAndWait(ctx, errCh)
+}
+
+func (a *HostAgent) startRoutinesAndWait(ctx context.Context, errCh chan error) error {
 	stBase := events.Status{
 		SSHLocalPort: a.sshLocalPort,
 	}
 	stBooting := stBase
 	a.emitEvent(ctx, events.Event{Status: stBooting})
-
 	ctxHA, cancelHA := context.WithCancel(ctx)
 	go func() {
 		stRunning := stBase
@@ -351,7 +363,6 @@ func (a *HostAgent) Run(ctx context.Context) error {
 		stRunning.Running = true
 		a.emitEvent(ctx, events.Event{Status: stRunning})
 	}()
-
 	for {
 		select {
 		case driverErr := <-errCh:
