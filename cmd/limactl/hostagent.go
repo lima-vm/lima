@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime"
 	"strconv"
 
 	"github.com/gorilla/mux"
@@ -27,6 +28,7 @@ func newHostagentCommand() *cobra.Command {
 	}
 	hostagentCommand.Flags().StringP("pidfile", "p", "", "write pid to file")
 	hostagentCommand.Flags().String("socket", "", "hostagent socket")
+	hostagentCommand.Flags().Bool("run-gui", false, "run gui synchronously within hostagent")
 	hostagentCommand.Flags().String("nerdctl-archive", "", "local file path (not URL) of nerdctl-full-VERSION-linux-GOARCH.tar.gz")
 	return hostagentCommand
 }
@@ -54,6 +56,16 @@ func hostagentAction(cmd *cobra.Command, args []string) error {
 	}
 
 	instName := args[0]
+
+	runGUI, err := cmd.Flags().GetBool("run-gui")
+	if err != nil {
+		return err
+	}
+	if runGUI {
+		//Without this the call to vz.RunGUI fails. Adding it here, as this has to be called before the vz cgo loads.
+		runtime.LockOSThread()
+		defer runtime.UnlockOSThread()
+	}
 
 	sigintCh := make(chan os.Signal, 1)
 	signal.Notify(sigintCh, os.Interrupt)

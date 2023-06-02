@@ -117,6 +117,9 @@ func Start(ctx context.Context, inst *store.Instance) error {
 		"hostagent",
 		"--pidfile", haPIDPath,
 		"--socket", haSockPath)
+	if limaDriver.CanRunGUI() {
+		args = append(args, "--run-gui")
+	}
 	if nerdctlArchiveCache != "" {
 		args = append(args, "--nerdctl-archive", nerdctlArchiveCache)
 	}
