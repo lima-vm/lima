@@ -59,9 +59,9 @@ func TestFillDefault(t *testing.T) {
 			X8664:   "qemu64",
 			RISCV64: "rv64",
 		},
-		CPUs:   pointer.Int(4),
-		Memory: pointer.String("4GiB"),
-		Disk:   pointer.String("100GiB"),
+		CPUs:   pointer.Int(defaultCPUs()),
+		Memory: pointer.String(defaultMemoryAsString()),
+		Disk:   pointer.String(defaultDiskSizeAsString()),
 		Containerd: Containerd{
 			System:   pointer.Bool(false),
 			User:     pointer.Bool(true),
