@@ -128,11 +128,7 @@ func (l *LimaVzDriver) Validate() error {
 }
 
 func (l *LimaVzDriver) CreateDisk() error {
-	if err := EnsureDisk(l.BaseDriver); err != nil {
-		return err
-	}
-
-	return nil
+	return EnsureDisk(l.BaseDriver)
 }
 
 func (l *LimaVzDriver) Start(ctx context.Context) (chan error, error) {
@@ -171,12 +167,12 @@ func (l *LimaVzDriver) Stop(_ context.Context) error {
 		}
 
 		timeout := time.After(5 * time.Second)
-		tick := time.Tick(500 * time.Millisecond)
+		ticker := time.NewTicker(500 * time.Millisecond)
 		for {
 			select {
 			case <-timeout:
 				return errors.New("vz timeout while waiting for stop status")
-			case <-tick:
+			case <-ticker.C:
 				l.machine.mu.Lock()
 				stopped := l.machine.stopped
 				l.machine.mu.Unlock()

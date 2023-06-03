@@ -5,7 +5,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func bashCompleteInstanceNames(cmd *cobra.Command) ([]string, cobra.ShellCompDirective) {
+func bashCompleteInstanceNames(_ *cobra.Command) ([]string, cobra.ShellCompDirective) {
 	instances, err := store.Instances()
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveDefault

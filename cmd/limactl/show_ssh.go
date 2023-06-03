@@ -85,6 +85,6 @@ func showSSHAction(cmd *cobra.Command, args []string) error {
 	return sshutil.Format(w, instName, format, opts)
 }
 
-func showSSHBashComplete(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func showSSHBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 	return bashCompleteInstanceNames(cmd)
 }

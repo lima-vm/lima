@@ -51,11 +51,7 @@ func (l *LimaQemuDriver) CreateDisk() error {
 		InstanceDir: l.Instance.Dir,
 		LimaYAML:    l.Yaml,
 	}
-	if err := EnsureDisk(qCfg); err != nil {
-		return err
-	}
-
-	return nil
+	return EnsureDisk(qCfg)
 }
 
 func (l *LimaQemuDriver) Start(ctx context.Context) (chan error, error) {
@@ -115,12 +111,12 @@ func (l *LimaQemuDriver) Stop(ctx context.Context) error {
 	return l.shutdownQEMU(ctx, 3*time.Minute, l.qCmd, l.qWaitCh)
 }
 
-func (l *LimaQemuDriver) ChangeDisplayPassword(ctx context.Context, password string) error {
-	return l.changeVNCPassword(ctx, password)
+func (l *LimaQemuDriver) ChangeDisplayPassword(_ context.Context, password string) error {
+	return l.changeVNCPassword(password)
 }
 
-func (l *LimaQemuDriver) GetDisplayConnection(ctx context.Context) (string, error) {
-	return l.getVNCDisplayPort(ctx)
+func (l *LimaQemuDriver) GetDisplayConnection(_ context.Context) (string, error) {
+	return l.getVNCDisplayPort()
 }
 
 func waitFileExists(path string, timeout time.Duration) error {
@@ -141,7 +137,7 @@ func waitFileExists(path string, timeout time.Duration) error {
 	return nil
 }
 
-func (l *LimaQemuDriver) changeVNCPassword(ctx context.Context, password string) error {
+func (l *LimaQemuDriver) changeVNCPassword(password string) error {
 	qmpSockPath := filepath.Join(l.Instance.Dir, filenames.QMPSock)
 	err := waitFileExists(qmpSockPath, 30*time.Second)
 	if err != nil {
@@ -163,7 +159,7 @@ func (l *LimaQemuDriver) changeVNCPassword(ctx context.Context, password string)
 	return nil
 }
 
-func (l *LimaQemuDriver) getVNCDisplayPort(ctx context.Context) (string, error) {
+func (l *LimaQemuDriver) getVNCDisplayPort() (string, error) {
 	qmpSockPath := filepath.Join(l.Instance.Dir, filenames.QMPSock)
 	qmpClient, err := qmp.NewSocketMonitor("unix", qmpSockPath, 5*time.Second)
 	if err != nil {
@@ -266,7 +262,7 @@ func logPipeRoutine(r io.Reader, header string) {
 	}
 }
 
-func (l *LimaQemuDriver) DeleteSnapshot(ctx context.Context, tag string) error {
+func (l *LimaQemuDriver) DeleteSnapshot(_ context.Context, tag string) error {
 	qCfg := Config{
 		Name:        l.Instance.Name,
 		InstanceDir: l.Instance.Dir,
@@ -275,7 +271,7 @@ func (l *LimaQemuDriver) DeleteSnapshot(ctx context.Context, tag string) error {
 	return Del(qCfg, l.Instance.Status == store.StatusRunning, tag)
 }
 
-func (l *LimaQemuDriver) CreateSnapshot(ctx context.Context, tag string) error {
+func (l *LimaQemuDriver) CreateSnapshot(_ context.Context, tag string) error {
 	qCfg := Config{
 		Name:        l.Instance.Name,
 		InstanceDir: l.Instance.Dir,
@@ -284,7 +280,7 @@ func (l *LimaQemuDriver) CreateSnapshot(ctx context.Context, tag string) error {
 	return Save(qCfg, l.Instance.Status == store.StatusRunning, tag)
 }
 
-func (l *LimaQemuDriver) ApplySnapshot(ctx context.Context, tag string) error {
+func (l *LimaQemuDriver) ApplySnapshot(_ context.Context, tag string) error {
 	qCfg := Config{
 		Name:        l.Instance.Name,
 		InstanceDir: l.Instance.Dir,
@@ -293,7 +289,7 @@ func (l *LimaQemuDriver) ApplySnapshot(ctx context.Context, tag string) error {
 	return Load(qCfg, l.Instance.Status == store.StatusRunning, tag)
 }
 
-func (l *LimaQemuDriver) ListSnapshots(ctx context.Context) (string, error) {
+func (l *LimaQemuDriver) ListSnapshots(_ context.Context) (string, error) {
 	qCfg := Config{
 		Name:        l.Instance.Name,
 		InstanceDir: l.Instance.Dir,

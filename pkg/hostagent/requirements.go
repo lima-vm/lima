@@ -1,7 +1,6 @@
 package hostagent
 
 import (
-	"context"
 	"fmt"
 	"time"
 
@@ -11,7 +10,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func (a *HostAgent) waitForRequirements(ctx context.Context, label string, requirements []requirement) error {
+func (a *HostAgent) waitForRequirements(label string, requirements []requirement) error {
 	const (
 		retries       = 60
 		sleepDuration = 10 * time.Second
@@ -22,7 +21,7 @@ func (a *HostAgent) waitForRequirements(ctx context.Context, label string, requi
 	retryLoop:
 		for j := 0; j < retries; j++ {
 			logrus.Infof("Waiting for the %s requirement %d of %d: %q", label, i+1, len(requirements), req.description)
-			err := a.waitForRequirement(ctx, req)
+			err := a.waitForRequirement(req)
 			if err == nil {
 				logrus.Infof("The %s requirement %d of %d is satisfied", label, i+1, len(requirements))
 				break retryLoop
@@ -41,7 +40,7 @@ func (a *HostAgent) waitForRequirements(ctx context.Context, label string, requi
 	return mErr
 }
 
-func (a *HostAgent) waitForRequirement(ctx context.Context, r requirement) error {
+func (a *HostAgent) waitForRequirement(r requirement) error {
 	logrus.Debugf("executing script %q", r.description)
 	stdout, stderr, err := ssh.ExecuteScript("127.0.0.1", a.sshLocalPort, a.sshConfig, r.script, r.description)
 	logrus.Debugf("stdout=%q, stderr=%q, err=%v", stdout, stderr, err)

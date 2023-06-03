@@ -177,6 +177,6 @@ func listAction(cmd *cobra.Command, args []string) error {
 	return store.PrintInstances(out, instances, format, &options)
 }
 
-func listBashComplete(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func listBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 	return bashCompleteInstanceNames(cmd)
 }

@@ -19,7 +19,7 @@ func newPruneCommand() *cobra.Command {
 	return pruneCommand
 }
 
-func pruneAction(cmd *cobra.Command, args []string) error {
+func pruneAction(_ *cobra.Command, _ []string) error {
 	ucd, err := os.UserCacheDir()
 	if err != nil {
 		return err

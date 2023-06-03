@@ -1,7 +1,6 @@
 package hostagent
 
 import (
-	"context"
 	"fmt"
 	"os"
 
@@ -17,13 +16,13 @@ type mount struct {
 	close func() error
 }
 
-func (a *HostAgent) setupMounts(ctx context.Context) ([]*mount, error) {
+func (a *HostAgent) setupMounts() ([]*mount, error) {
 	var (
 		res  []*mount
 		mErr error
 	)
 	for _, f := range a.y.Mounts {
-		m, err := a.setupMount(ctx, f)
+		m, err := a.setupMount(f)
 		if err != nil {
 			mErr = multierror.Append(mErr, err)
 			continue
@@ -33,7 +32,7 @@ func (a *HostAgent) setupMounts(ctx context.Context) ([]*mount, error) {
 	return res, mErr
 }
 
-func (a *HostAgent) setupMount(ctx context.Context, m limayaml.Mount) (*mount, error) {
+func (a *HostAgent) setupMount(m limayaml.Mount) (*mount, error) {
 	location, err := localpathutil.Expand(m.Location)
 	if err != nil {
 		return nil, err

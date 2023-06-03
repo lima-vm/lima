@@ -1,7 +1,6 @@
 package downloader
 
 import (
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -116,7 +115,7 @@ func TestDownloadLocal(t *testing.T) {
 		localTestFile := filepath.Join(t.TempDir(), "some-file")
 		testDownloadFileContents := []byte("TestDownloadLocal")
 
-		ioutil.WriteFile(localTestFile, testDownloadFileContents, 0644)
+		assert.NilError(t, os.WriteFile(localTestFile, testDownloadFileContents, 0644))
 		testLocalFileURL := "file://" + localTestFile
 		wrongDigest := digest.Digest(emptyFileDigest)
 
@@ -143,7 +142,7 @@ func TestDownloadCompressed(t *testing.T) {
 		localPath := filepath.Join(t.TempDir(), t.Name())
 		localFile := filepath.Join(t.TempDir(), "test-file")
 		testDownloadCompressedContents := []byte("TestDownloadCompressed")
-		ioutil.WriteFile(localFile, testDownloadCompressedContents, 0644)
+		assert.NilError(t, os.WriteFile(localFile, testDownloadCompressedContents, 0644))
 		assert.NilError(t, exec.Command("gzip", localFile).Run())
 		localFile += ".gz"
 		testLocalFileURL := "file://" + localFile

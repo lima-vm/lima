@@ -477,9 +477,5 @@ func downloadHTTP(localPath, url string, description string, expectedDigest dige
 	if err := os.RemoveAll(localPath); err != nil {
 		return err
 	}
-	if err := os.Rename(localPathTmp, localPath); err != nil {
-		return err
-	}
-
-	return nil
+	return os.Rename(localPathTmp, localPath)
 }

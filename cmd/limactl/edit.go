@@ -77,7 +77,7 @@ func editAction(cmd *cobra.Command, args []string) error {
 		hdr += "# and an empty file will abort the edit.\n"
 		hdr += "\n"
 		hdr += editutil.GenerateEditorWarningHeader()
-		yBytes, err = editutil.OpenEditor(instName, yContent, hdr)
+		yBytes, err = editutil.OpenEditor(yContent, hdr)
 		if err != nil {
 			return err
 		}
@@ -138,6 +138,6 @@ func askWhetherToStart() (bool, error) {
 	return ans, nil
 }
 
-func editBashComplete(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func editBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 	return bashCompleteInstanceNames(cmd)
 }

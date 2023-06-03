@@ -198,7 +198,7 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	return sshCmd.Run()
 }
 
-func shellBashComplete(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func shellBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 	return bashCompleteInstanceNames(cmd)
 }
 

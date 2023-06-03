@@ -97,7 +97,7 @@ func diskCreateAction(cmd *cobra.Command, args []string) error {
 	}
 
 	if err := qemu.CreateDataDisk(diskDir, format, int(diskSize)); err != nil {
-		return err
+		return fmt.Errorf("Failed to create %s disk in %q", format, diskDir)
 	}
 
 	return nil
@@ -297,7 +297,7 @@ $ limactl disk unlock DISK1 DISK2 ...
 	return diskUnlockCommand
 }
 
-func diskUnlockAction(cmd *cobra.Command, args []string) error {
+func diskUnlockAction(_ *cobra.Command, args []string) error {
 	for _, diskName := range args {
 		disk, err := store.InspectDisk(diskName)
 		if err != nil {

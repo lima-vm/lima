@@ -20,7 +20,7 @@ func newValidateCommand() *cobra.Command {
 	return validateCommand
 }
 
-func validateAction(cmd *cobra.Command, args []string) error {
+func validateAction(_ *cobra.Command, args []string) error {
 	for _, f := range args {
 		_, err := store.LoadYAMLByFilePath(f)
 		if err != nil {

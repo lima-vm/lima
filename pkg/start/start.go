@@ -274,8 +274,5 @@ func ShowMessage(inst *store.Instance) error {
 		// Avoid prepending logrus "INFO" header, for ease of copypasting
 		fmt.Println(scanner.Text())
 	}
-	if err := scanner.Err(); err != nil {
-		return err
-	}
-	return nil
+	return scanner.Err()
 }

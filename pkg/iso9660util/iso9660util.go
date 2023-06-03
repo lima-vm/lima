@@ -2,7 +2,6 @@ package iso9660util
 
 import (
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -30,7 +29,7 @@ func Write(isoPath, label string, layout []Entry) error {
 
 	defer isoFile.Close()
 
-	workdir, err := ioutil.TempDir("", "diskfs_iso")
+	workdir, err := os.MkdirTemp("", "diskfs_iso")
 	if err != nil {
 		return err
 	}
