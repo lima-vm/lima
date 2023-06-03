@@ -121,7 +121,7 @@ func (l *LimaVzDriver) Validate() error {
 	}
 
 	videoDisplay := *l.Yaml.Video.Display
-	if videoDisplay != "" && videoDisplay != "vz" {
+	if videoDisplay != "none" && videoDisplay != "vz" {
 		logrus.Warnf("field `video.display` must be %q for VZ driver , got %q", "vz", videoDisplay)
 	}
 	return nil

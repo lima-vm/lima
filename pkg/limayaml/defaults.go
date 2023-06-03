@@ -215,7 +215,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 	if o.Video.Display != nil {
 		y.Video.Display = o.Video.Display
 	}
-	if (y.Video.Display == nil || *y.Video.Display == "") && *y.VMType == QEMU {
+	if y.Video.Display == nil || *y.Video.Display == "" {
 		y.Video.Display = pointer.String("none")
 	}
 
