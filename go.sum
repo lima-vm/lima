@@ -29,8 +29,8 @@ github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA
 github.com/cheggaaa/pb/v3 v3.1.2 h1:FIxT3ZjOj9XJl0U4o2XbEhjFfZl7jCVCDOGq1ZAB7wQ=
 github.com/cheggaaa/pb/v3 v3.1.2/go.mod h1:SNjnd0yKcW+kw0brSusraeDd5Bf1zBfxAzTL2ss3yQ4=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
-github.com/containerd/containerd v1.7.1 h1:k8DbDkSOwt5rgxQ3uCI4WMKIJxIndSCBUaGm5oRn+Go=
-github.com/containerd/containerd v1.7.1/go.mod h1:gA+nJUADRBm98QS5j5RPROnt0POQSMK+r7P7EGMC/Qc=
+github.com/containerd/containerd v1.7.2 h1:UF2gdONnxO8I6byZXDi5sXWiWvlW3D/sci7dTQimEJo=
+github.com/containerd/containerd v1.7.2/go.mod h1:afcz74+K10M/+cjGHIVQrCt3RAQhUSCAjJ9iMYhhkuI=
 github.com/containerd/continuity v0.4.1 h1:wQnVrjIyQ8vhU2sgOiL5T07jo+ouqc2bnKsv5/EqGhU=
 github.com/containerd/continuity v0.4.1/go.mod h1:F6PTNCKepoxEaXLQp3wDAjygEnImnZ/7o4JzpodfroQ=
 github.com/containers/gvisor-tap-vsock v0.6.1 h1:FaLOl4CE13Q8PgG89MfAaFx/B0AK/akHaR6pR2nvLUY=

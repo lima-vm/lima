@@ -8,7 +8,7 @@ require (
 	github.com/alessio/shellescape v1.4.1
 	github.com/balajiv113/fd v0.0.0-20230330094840-143eec500f3e
 	github.com/cheggaaa/pb/v3 v3.1.2
-	github.com/containerd/containerd v1.7.1
+	github.com/containerd/containerd v1.7.2
 	github.com/containerd/continuity v0.4.1
 	github.com/containers/gvisor-tap-vsock v0.6.1
 	github.com/coreos/go-semver v0.3.1
