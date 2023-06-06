@@ -16,6 +16,11 @@ NAME="$(basename -s .yaml "$FILE")"
 INFO "Validating \"$FILE\""
 limactl validate "$FILE"
 
+# --cpus=1 is needed for running vz on GHA: https://github.com/lima-vm/lima/pull/1511#issuecomment-1574937888
+LIMACTL_CREATE_SET='.cpus = 1 | .memory="1GiB"'
+# TODO: add "limactl create" command
+LIMACTL_CREATE_AND_START=(limactl start --tty=false --set="${LIMACTL_CREATE_SET}")
+
 declare -A CHECKS=(
 	["systemd"]="1"
 	["systemd-strict"]="1"
@@ -60,6 +65,12 @@ case "$NAME" in
 	CHECKS["snapshot-online"]=""
 	CHECKS["user-v2"]=1
 	;;
+"vz")
+	CHECKS["systemd-strict"]=
+	CHECKS["port-forwards"]=""
+	CHECKS["snapshot-online"]=""
+	CHECKS["snapshot-offline"]=""
+	;;
 esac
 
 if limactl ls -q | grep -q "$NAME"; then
@@ -83,8 +94,8 @@ function diagnose() {
 	NAME="$1"
 	set -x +e
 	tail "$HOME/.lima/${NAME}"/*.log
-	limactl shell "$NAME" systemctl status
-	limactl shell "$NAME" systemctl
+	limactl shell "$NAME" systemctl --no-pager status
+	limactl shell "$NAME" systemctl --no-pager
 	limactl shell "$NAME" sudo cat /var/log/cloud-init-output.log
 	set +x -e
 }
@@ -102,7 +113,7 @@ if [[ -n ${CHECKS["disk"]} ]]; then
 fi
 
 set -x
-if ! limactl start --tty=false "$FILE"; then
+if ! "${LIMACTL_CREATE_AND_START[@]}" "$FILE"; then
 	ERROR "Failed to start \"$NAME\""
 	diagnose "$NAME"
 	exit 1
@@ -317,7 +328,7 @@ fi
 if [[ -n ${CHECKS["user-v2"]} ]]; then
 	INFO "Testing user-v2 network"
 	secondvm="$NAME-1"
-	limactl start "$FILE" --name "$secondvm" --tty=false
+	"${LIMACTL_CREATE_AND_START[@]}" "$FILE" --name "$secondvm"
 	guestNewip="$(limactl shell "$secondvm" ip -4 -j addr show dev eth0 | jq -r '.[0].addr_info[0].local')"
 	INFO "IP of $secondvm is $guestNewip"
 	set -x
