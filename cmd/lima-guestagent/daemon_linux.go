@@ -24,7 +24,7 @@ func newDaemonCommand() *cobra.Command {
 	return daemonCommand
 }
 
-func daemonAction(cmd *cobra.Command, args []string) error {
+func daemonAction(cmd *cobra.Command, _ []string) error {
 	socket := "/run/lima-guestagent.sock"
 	tick, err := cmd.Flags().GetDuration("tick")
 	if err != nil {

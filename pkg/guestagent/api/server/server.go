@@ -16,7 +16,7 @@ type Backend struct {
 	Agent guestagent.Agent
 }
 
-func (b *Backend) onError(w http.ResponseWriter, r *http.Request, err error, ec int) {
+func (b *Backend) onError(w http.ResponseWriter, err error, ec int) {
 	w.WriteHeader(ec)
 	w.Header().Set("Content-Type", "application/json")
 	// err may potentially contain credential info (in a future version),
@@ -35,12 +35,12 @@ func (b *Backend) GetInfo(w http.ResponseWriter, r *http.Request) {
 
 	info, err := b.Agent.Info(ctx)
 	if err != nil {
-		b.onError(w, r, err, http.StatusInternalServerError)
+		b.onError(w, err, http.StatusInternalServerError)
 		return
 	}
 	m, err := json.Marshal(info)
 	if err != nil {
-		b.onError(w, r, err, http.StatusInternalServerError)
+		b.onError(w, err, http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")

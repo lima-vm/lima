@@ -79,7 +79,7 @@ func (d *BaseDriver) Stop(_ context.Context) error {
 	return nil
 }
 
-func (d *BaseDriver) ChangeDisplayPassword(_ context.Context, password string) error {
+func (d *BaseDriver) ChangeDisplayPassword(_ context.Context, _ string) error {
 	return nil
 }
 

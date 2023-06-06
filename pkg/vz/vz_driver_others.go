@@ -32,7 +32,7 @@ func (l *LimaVzDriver) CreateDisk() error {
 	return ErrUnsupported
 }
 
-func (l *LimaVzDriver) Start(ctx context.Context) (chan error, error) {
+func (l *LimaVzDriver) Start(_ context.Context) (chan error, error) {
 	return nil, ErrUnsupported
 }
 

@@ -13,7 +13,7 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-func fakeLookupIP(host string) []net.IP {
+func fakeLookupIP(_ string) []net.IP {
 	return []net.IP{net.IPv4(127, 0, 0, 0)}
 }
 

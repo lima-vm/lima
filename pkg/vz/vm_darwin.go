@@ -58,6 +58,13 @@ func startVM(ctx context.Context, driver *driver.BaseDriver) (*virtualMachineWra
 	wrapper := &virtualMachineWrapper{VirtualMachine: machine, stopped: false}
 
 	errCh := make(chan error)
+
+	filesToRemove := make(map[string]struct{})
+	defer func() {
+		for f := range filesToRemove {
+			_ = os.RemoveAll(f)
+		}
+	}()
 	go func() {
 		//Handle errors via errCh and handle stop vm during context close
 		defer func() {
@@ -85,7 +92,7 @@ func startVM(ctx context.Context, driver *driver.BaseDriver) (*virtualMachineWra
 						logrus.Errorf("error writing to pid fil %q", pidFile)
 						errCh <- err
 					}
-					defer os.RemoveAll(pidFile)
+					filesToRemove[pidFile] = struct{}{}
 					logrus.Info("[VZ] - vm state change: running")
 
 					err := usernetClient.ResolveAndForwardSSH(limayaml.MACAddress(driver.Instance.Dir), driver.SSHLocalPort)

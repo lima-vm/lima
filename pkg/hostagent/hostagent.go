@@ -401,7 +401,7 @@ func (a *HostAgent) startHostAgentRoutines(ctx context.Context) error {
 		return nil
 	})
 	var mErr error
-	if err := a.waitForRequirements(ctx, "essential", a.essentialRequirements()); err != nil {
+	if err := a.waitForRequirements("essential", a.essentialRequirements()); err != nil {
 		mErr = multierror.Append(mErr, err)
 	}
 	if *a.y.SSH.ForwardAgent {
@@ -418,7 +418,7 @@ sudo chown -R "${USER}" /run/host-services`
 		}
 	}
 	if *a.y.MountType == limayaml.REVSSHFS {
-		mounts, err := a.setupMounts(ctx)
+		mounts, err := a.setupMounts()
 		if err != nil {
 			mErr = multierror.Append(mErr, err)
 		}
@@ -450,10 +450,10 @@ sudo chown -R "${USER}" /run/host-services`
 		})
 	}
 	go a.watchGuestAgentEvents(ctx)
-	if err := a.waitForRequirements(ctx, "optional", a.optionalRequirements()); err != nil {
+	if err := a.waitForRequirements("optional", a.optionalRequirements()); err != nil {
 		mErr = multierror.Append(mErr, err)
 	}
-	if err := a.waitForRequirements(ctx, "final", a.finalRequirements()); err != nil {
+	if err := a.waitForRequirements("final", a.finalRequirements()); err != nil {
 		mErr = multierror.Append(mErr, err)
 	}
 	// Copy all config files _after_ the requirements are done

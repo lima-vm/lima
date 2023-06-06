@@ -150,7 +150,7 @@ func startDaemon(ctx context.Context, config *networks.YAML, name, daemon string
 
 	logrus.Debugf("Starting %q daemon for %q network: %v", daemon, name, cmd.Args)
 	if err := cmd.Start(); err != nil {
-		return err
+		return fmt.Errorf("failed to run %v: %w (Hint: check %q, %q)", cmd.Args, err, stdoutPath, stderrPath)
 	}
 	return nil
 }
@@ -181,7 +181,7 @@ func startNetwork(ctx context.Context, config *networks.YAML, name string) error
 	}
 	if isUsernet {
 		if err := usernet.Start(ctx, name); err != nil {
-			return err
+			return fmt.Errorf("failed to start usernet %q: %w", name, err)
 		}
 		return nil
 	}
@@ -227,7 +227,7 @@ func stopNetwork(config *networks.YAML, name string) error {
 	}
 	if isUsernet {
 		if err := usernet.Stop(name); err != nil {
-			return err
+			return fmt.Errorf("failed to stop usernet %q: %v", name, err)
 		}
 		return nil
 	}

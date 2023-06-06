@@ -18,7 +18,7 @@ func newInfoCommand() *cobra.Command {
 	return infoCommand
 }
 
-func infoAction(cmd *cobra.Command, args []string) error {
+func infoAction(cmd *cobra.Command, _ []string) error {
 	info, err := infoutil.GetInfo()
 	if err != nil {
 		return err

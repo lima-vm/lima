@@ -22,7 +22,7 @@ func newFactoryResetCommand() *cobra.Command {
 	return resetCommand
 }
 
-func factoryResetAction(cmd *cobra.Command, args []string) error {
+func factoryResetAction(_ *cobra.Command, args []string) error {
 	instName := DefaultInstanceName
 	if len(args) > 0 {
 		instName = args[0]
@@ -56,6 +56,6 @@ func factoryResetAction(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func factoryResetBashComplete(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func factoryResetBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 	return bashCompleteInstanceNames(cmd)
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"strconv"
+	"time"
 
 	"github.com/lima-vm/lima/pkg/hostagent/dns"
 	"github.com/sirupsen/logrus"
@@ -62,5 +63,6 @@ func debugDNSAction(cmd *cobra.Command, args []string) error {
 	}
 	logrus.Infof("Started srv %+v (UDP %d, TCP %d)", srv, udpLocalPort, tcpLocalPort)
 	for {
+		time.Sleep(time.Hour)
 	}
 }

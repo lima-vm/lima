@@ -22,7 +22,7 @@ run:
 linters:
   disable-all: true
   enable:
-  - depguard
+  # - depguard # annoying since golangci-lint v1.53.1 https://github.com/golangci/golangci-lint/issues/3877
   - gofmt
   - goimports
   - govet
@@ -69,7 +69,7 @@ linters:
   # - rowserrcheck
   # - scopelint
   # - sqlclosecheck
-  # - staticcheck
+  - staticcheck
   # - stylecheck
   # - testpackage
   # - tparallel

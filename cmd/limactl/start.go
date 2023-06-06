@@ -321,7 +321,7 @@ func chooseNextCreatorState(st *creatorState) (*creatorState, error) {
 			hdr += "\n"
 			hdr += editutil.GenerateEditorWarningHeader()
 			var err error
-			st.yBytes, err = editutil.OpenEditor(st.instName, st.yBytes, hdr)
+			st.yBytes, err = editutil.OpenEditor(st.yBytes, hdr)
 			if err != nil {
 				return st, err
 			}
@@ -417,7 +417,7 @@ func startAction(cmd *cobra.Command, args []string) error {
 	return start.Start(ctx, inst)
 }
 
-func startBashComplete(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func startBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 	comp, _ := bashCompleteInstanceNames(cmd)
 	if templates, err := templatestore.Templates(); err == nil {
 		for _, f := range templates {

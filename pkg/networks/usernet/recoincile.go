@@ -84,7 +84,7 @@ func Start(ctx context.Context, name string) error {
 
 			logrus.Debugf("Starting usernet network: %v", cmd.Args)
 			if err := cmd.Start(); err != nil {
-				return err
+				return fmt.Errorf("failed to run %v: %w (Hint: check %s/usernet.*.log)", cmd.Args, err, usernetDir)
 			}
 			return nil
 		})

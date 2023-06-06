@@ -30,12 +30,12 @@ func (c *Client) UnExposeSSH(sshPort int) error {
 
 func (c *Client) ResolveAndForwardSSH(vmMacAddr string, sshPort int) error {
 	timeout := time.After(1 * time.Minute)
-	tick := time.Tick(500 * time.Millisecond)
+	ticker := time.NewTicker(500 * time.Millisecond)
 	for {
 		select {
 		case <-timeout:
 			return errors.New("usernet unable to resolve IP for SSH forwarding")
-		case <-tick:
+		case <-ticker.C:
 			leases, err := c.leases()
 			if err != nil {
 				return err

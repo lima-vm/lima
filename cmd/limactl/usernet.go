@@ -26,7 +26,7 @@ func newUsernetCommand() *cobra.Command {
 	return hostagentCommand
 }
 
-func usernetAction(cmd *cobra.Command, args []string) error {
+func usernetAction(cmd *cobra.Command, _ []string) error {
 	pidfile, err := cmd.Flags().GetString("pidfile")
 	if err != nil {
 		return err

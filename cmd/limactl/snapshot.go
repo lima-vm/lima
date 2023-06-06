@@ -184,6 +184,6 @@ func snapshotListAction(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func snapshotBashComplete(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func snapshotBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 	return bashCompleteInstanceNames(cmd)
 }

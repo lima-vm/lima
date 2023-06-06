@@ -173,7 +173,7 @@ func (a *agent) Events(ctx context.Context, ch chan api.Event) {
 	}
 }
 
-func (a *agent) LocalPorts(ctx context.Context) ([]api.IPPort, error) {
+func (a *agent) LocalPorts(_ context.Context) ([]api.IPPort, error) {
 	if cpu.IsBigEndian {
 		return nil, errors.New("big endian architecture is unsupported, because I don't know how /proc/net/tcp looks like on big endian hosts")
 	}

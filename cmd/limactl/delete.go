@@ -59,6 +59,6 @@ func deleteInstance(inst *store.Instance, force bool) error {
 	return nil
 }
 
-func deleteBashComplete(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func deleteBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 	return bashCompleteInstanceNames(cmd)
 }

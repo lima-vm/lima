@@ -22,7 +22,7 @@ func newInstallSystemdCommand() *cobra.Command {
 	return installSystemdCommand
 }
 
-func installSystemdAction(cmd *cobra.Command, args []string) error {
+func installSystemdAction(_ *cobra.Command, _ []string) error {
 	unit, err := generateSystemdUnit()
 	if err != nil {
 		return err
