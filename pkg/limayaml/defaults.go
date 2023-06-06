@@ -11,7 +11,9 @@ import (
 	"strconv"
 	"text/template"
 
+	"github.com/docker/go-units"
 	"github.com/lima-vm/lima/pkg/networks"
+	"github.com/pbnjay/memory"
 
 	"github.com/lima-vm/lima/pkg/guestagent/api"
 	"github.com/lima-vm/lima/pkg/osutil"
@@ -74,6 +76,31 @@ func MACAddress(uniqueID string) string {
 	// See also https://gitlab.com/wireshark/wireshark/-/blob/master/manuf to confirm the uniqueness of this prefix.
 	hw := append(net.HardwareAddr{0x52, 0x55, 0x55}, sha[0:3]...)
 	return hw.String()
+}
+
+func defaultCPUs() int {
+	const x = 4
+	if hostCPUs := runtime.NumCPU(); hostCPUs < x {
+		return hostCPUs
+	}
+	return x
+}
+
+func defaultMemory() uint64 {
+	const x uint64 = 4 * 1024 * 1024 * 1024
+	if halfOfHostMemory := memory.TotalMemory() / 2; halfOfHostMemory < x {
+		return halfOfHostMemory
+	}
+	return x
+}
+
+func defaultMemoryAsString() string {
+	return units.BytesSize(float64(defaultMemory()))
+}
+
+func defaultDiskSizeAsString() string {
+	// currently just hardcoded
+	return "100GiB"
 }
 
 // FillDefault updates undefined fields in y with defaults from d (or built-in default), and overwrites with values from o.
@@ -174,7 +201,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.CPUs = o.CPUs
 	}
 	if y.CPUs == nil || *y.CPUs == 0 {
-		y.CPUs = pointer.Int(4)
+		y.CPUs = pointer.Int(defaultCPUs())
 	}
 
 	if y.Memory == nil {
@@ -184,7 +211,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.Memory = o.Memory
 	}
 	if y.Memory == nil || *y.Memory == "" {
-		y.Memory = pointer.String("4GiB")
+		y.Memory = pointer.String(defaultMemoryAsString())
 	}
 
 	if y.Disk == nil {
@@ -194,7 +221,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.Disk = o.Disk
 	}
 	if y.Disk == nil || *y.Disk == "" {
-		y.Disk = pointer.String("100GiB")
+		y.Disk = pointer.String(defaultDiskSizeAsString())
 	}
 
 	y.AdditionalDisks = append(append(o.AdditionalDisks, y.AdditionalDisks...), d.AdditionalDisks...)
