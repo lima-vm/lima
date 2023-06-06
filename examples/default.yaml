@@ -96,7 +96,7 @@ mounts:
 
 # Mount type for above mounts, such as "reverse-sshfs" (from sshocker), "9p" (EXPERIMENTAL, from QEMU’s virtio-9p-pci, aka virtfs),
 # or "virtiofs" (EXPERIMENTAL, needs `vmType: vz`)
-# 🟢 Builtin default: "reverse-sshfs"
+# 🟢 Builtin default: "reverse-sshfs" (for QEMU), "virtiofs" (for vz)
 mountType: null
 
 # Lima disks to attach to the instance. The disks will be accessible from inside the
