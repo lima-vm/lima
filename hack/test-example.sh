@@ -66,8 +66,6 @@ case "$NAME" in
 	CHECKS["user-v2"]=1
 	;;
 "vz")
-	CHECKS["systemd-strict"]=
-	CHECKS["port-forwards"]=""
 	CHECKS["snapshot-online"]=""
 	CHECKS["snapshot-offline"]=""
 	;;

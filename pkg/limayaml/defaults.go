@@ -577,13 +577,17 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 	caCerts := unique(append(append(d.CACertificates.Certs, y.CACertificates.Certs...), o.CACertificates.Certs...))
 	y.CACertificates.Certs = caCerts
 
-	if y.Rosetta.Enabled == nil {
-		y.Rosetta.Enabled = d.Rosetta.Enabled
-	}
-	if o.Rosetta.Enabled != nil {
-		y.Rosetta.Enabled = o.Rosetta.Enabled
-	}
-	if y.Rosetta.Enabled == nil {
+	if runtime.GOOS == "darwin" && IsNativeArch(AARCH64) {
+		if y.Rosetta.Enabled == nil {
+			y.Rosetta.Enabled = d.Rosetta.Enabled
+		}
+		if o.Rosetta.Enabled != nil {
+			y.Rosetta.Enabled = o.Rosetta.Enabled
+		}
+		if y.Rosetta.Enabled == nil {
+			y.Rosetta.Enabled = pointer.Bool(false)
+		}
+	} else {
 		y.Rosetta.Enabled = pointer.Bool(false)
 	}
 

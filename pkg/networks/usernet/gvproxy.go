@@ -29,6 +29,8 @@ type GVisorNetstackOpts struct {
 	Endpoint   string
 
 	Async bool
+
+	DefaultLeases map[string]string
 }
 
 var (
@@ -38,6 +40,13 @@ var (
 func StartGVisorNetstack(ctx context.Context, gVisorOpts *GVisorNetstackOpts) error {
 	opts = gVisorOpts
 
+	leases := map[string]string{}
+	if opts.DefaultLeases != nil {
+		for k, v := range opts.DefaultLeases {
+			leases[k] = v
+		}
+	}
+	leases[networks.SlirpGateway] = "5a:94:ef:e4:0c:df"
 	// The way gvisor-tap-vsock implemented slirp is different from tradition SLIRP,
 	// - GatewayIP handling all request, also answers DNS queries
 	// - based on NAT configuration, gateway forwards and translates calls to host
@@ -50,12 +59,10 @@ func StartGVisorNetstack(ctx context.Context, gVisorOpts *GVisorNetstackOpts) er
 		Subnet:            networks.SlirpNetwork,
 		GatewayIP:         networks.SlirpDNS,
 		GatewayMacAddress: "5a:94:ef:e4:0c:dd",
-		DHCPStaticLeases: map[string]string{
-			networks.SlirpGateway: "5a:94:ef:e4:0c:df",
-		},
-		Forwards:         map[string]string{},
-		DNS:              []types.Zone{},
-		DNSSearchDomains: searchDomains(),
+		DHCPStaticLeases:  leases,
+		Forwards:          map[string]string{},
+		DNS:               []types.Zone{},
+		DNSSearchDomains:  searchDomains(),
 		NAT: map[string]string{
 			networks.SlirpGateway: "127.0.0.1",
 		},
