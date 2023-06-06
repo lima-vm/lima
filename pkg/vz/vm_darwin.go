@@ -129,6 +129,9 @@ func startUsernet(ctx context.Context, driver *driver.BaseDriver) (*usernet.Clie
 			Endpoint: endpointSock,
 			FdSocket: vzSock,
 			Async:    true,
+			DefaultLeases: map[string]string{
+				networks.SlirpIPAddress: limayaml.MACAddress(driver.Instance.Dir),
+			},
 		})
 		if err != nil {
 			return nil, err

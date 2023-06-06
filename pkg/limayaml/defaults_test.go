@@ -378,9 +378,16 @@ func TestFillDefault(t *testing.T) {
 		"-----BEGIN CERTIFICATE-----\nYOUR-ORGS-TRUSTED-CA-CERT\n-----END CERTIFICATE-----\n",
 	}
 
-	expect.Rosetta = Rosetta{
-		Enabled: pointer.Bool(true),
-		BinFmt:  pointer.Bool(true),
+	if runtime.GOOS == "darwin" && IsNativeArch(AARCH64) {
+		expect.Rosetta = Rosetta{
+			Enabled: pointer.Bool(true),
+			BinFmt:  pointer.Bool(true),
+		}
+	} else {
+		expect.Rosetta = Rosetta{
+			Enabled: pointer.Bool(false),
+			BinFmt:  pointer.Bool(true),
+		}
 	}
 
 	y = LimaYAML{}
