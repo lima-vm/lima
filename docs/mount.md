@@ -4,11 +4,12 @@ Lima supports several methods for mounting the host filesystem into the guest.
 
 The default mount type is shown in the following table:
 
-| Lima Version     | Default                             |
-| ---------------- | ----------------------------------- |
-| < 0.10           | reverse-sshfs + Builtin SFTP server |
-| >= 0.10          | reverse-sshfs + OpenSSH SFTP server |
-| >= 1.0 (Planned) | 9p for QEMU, virtiofs for VZ        |
+| Lima Version     | Default                                                       |
+| ---------------- | ------------------------------------------------------------- |
+| < 0.10           | reverse-sshfs + Builtin SFTP server                           |
+| >= 0.10          | reverse-sshfs + OpenSSH SFTP server                           |
+| >= 0.17          | reverse-sshfs + OpenSSH SFTP server for QEMU, virtiofs for VZ |
+| >= 1.0 (Planned) | 9p for QEMU, virtiofs for VZ                                  |
 
 ## Mount types
 

@@ -372,7 +372,7 @@ func TestFillDefault(t *testing.T) {
 	expect.HostResolver.Hosts = map[string]string{
 		"default": d.HostResolver.Hosts["default"],
 	}
-	expect.MountType = pointer.String(REVSSHFS)
+	expect.MountType = pointer.String(VIRTIOFS)
 	expect.CACertificates.RemoveDefaults = pointer.Bool(true)
 	expect.CACertificates.Certs = []string{
 		"-----BEGIN CERTIFICATE-----\nYOUR-ORGS-TRUSTED-CA-CERT\n-----END CERTIFICATE-----\n",

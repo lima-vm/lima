@@ -565,7 +565,11 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.MountType = o.MountType
 	}
 	if y.MountType == nil || *y.MountType == "" {
-		y.MountType = pointer.String(REVSSHFS)
+		if *y.VMType == VZ {
+			y.MountType = pointer.String(VIRTIOFS)
+		} else {
+			y.MountType = pointer.String(REVSSHFS)
+		}
 	}
 
 	// Note: DNS lists are not combined; highest priority setting is picked
