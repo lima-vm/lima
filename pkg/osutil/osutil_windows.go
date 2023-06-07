@@ -29,3 +29,7 @@ type Signal int
 func SysKill(pid int, sig Signal) error {
 	return fmt.Errorf("unimplemented")
 }
+
+func Ftruncate(fd int, length int64) (err error) {
+	return fmt.Errorf("unimplemented")
+}

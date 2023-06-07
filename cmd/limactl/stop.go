@@ -133,7 +133,8 @@ func stopInstanceForcibly(inst *store.Instance) {
 		logrus.Info("The host agent process seems already stopped")
 	}
 
-	logrus.Infof("Removing *.pid *.sock under %q", inst.Dir)
+	suffixesToBeRemoved := []string{".pid", ".sock", ".tmp"}
+	logrus.Infof("Removing %s under %q", inst.Dir, strings.ReplaceAll(strings.Join(suffixesToBeRemoved, " "), ".", "*."))
 	fi, err := os.ReadDir(inst.Dir)
 	if err != nil {
 		logrus.Error(err)
@@ -141,10 +142,12 @@ func stopInstanceForcibly(inst *store.Instance) {
 	}
 	for _, f := range fi {
 		path := filepath.Join(inst.Dir, f.Name())
-		if strings.HasSuffix(path, ".pid") || strings.HasSuffix(path, ".sock") {
-			logrus.Infof("Removing %q", path)
-			if err := os.Remove(path); err != nil {
-				logrus.Error(err)
+		for _, suffix := range suffixesToBeRemoved {
+			if strings.HasSuffix(path, suffix) {
+				logrus.Infof("Removing %q", path)
+				if err := os.Remove(path); err != nil {
+					logrus.Error(err)
+				}
 			}
 		}
 	}

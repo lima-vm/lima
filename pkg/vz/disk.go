@@ -4,20 +4,18 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"strconv"
 
 	"github.com/docker/go-units"
 	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/fileutils"
 	"github.com/lima-vm/lima/pkg/iso9660util"
-	"github.com/lima-vm/lima/pkg/qemu/imgutil"
+	"github.com/lima-vm/lima/pkg/nativeimgutil"
 	"github.com/lima-vm/lima/pkg/store/filenames"
+	"github.com/sirupsen/logrus"
 )
 
 func EnsureDisk(driver *driver.BaseDriver) error {
-
 	diffDisk := filepath.Join(driver.Instance.Dir, filenames.DiffDisk)
 	if _, err := os.Stat(diffDisk); err == nil || !errors.Is(err, os.ErrNotExist) {
 		// disk is already ensured
@@ -44,32 +42,25 @@ func EnsureDisk(driver *driver.BaseDriver) error {
 	if diskSize == 0 {
 		return nil
 	}
-	//TODO - Break qemu dependency
 	isBaseDiskISO, err := iso9660util.IsISO9660(baseDisk)
 	if err != nil {
 		return err
 	}
-	baseDiskInfo, err := imgutil.GetInfo(baseDisk)
-	if err != nil {
-		return fmt.Errorf("failed to get the information of base disk %q: %w", baseDisk, err)
+	if isBaseDiskISO {
+		// Create an empty data volume (sparse)
+		diffDiskF, err := os.Create(diffDisk)
+		if err != nil {
+			return err
+		}
+		if err = nativeimgutil.MakeSparse(diffDiskF, diskSize); err != nil {
+			diffDiskF.Close()
+			return err
+		}
+		return diffDiskF.Close()
 	}
-	if err = imgutil.AcceptableAsBasedisk(baseDiskInfo); err != nil {
-		return fmt.Errorf("file %q is not acceptable as the base disk: %w", baseDisk, err)
+	logrus.Infof("Converting %q to a raw disk %q (size=%d)", baseDisk, diffDisk, diskSize)
+	if err = nativeimgutil.ConvertToRaw(baseDisk, diffDisk, &diskSize, false); err != nil {
+		return fmt.Errorf("failed to convert %q to a raw disk %q (size=%d): %w", baseDisk, diffDisk, diskSize, err)
 	}
-	if baseDiskInfo.Format == "" {
-		return fmt.Errorf("failed to inspect the format of %q", baseDisk)
-	}
-	args := []string{"create", "-f", "qcow2"}
-	if !isBaseDiskISO {
-		args = append(args, "-F", baseDiskInfo.Format, "-b", baseDisk)
-	}
-	args = append(args, diffDisk, strconv.Itoa(int(diskSize)))
-	cmd := exec.Command("qemu-img", args...)
-	if out, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("failed to run %v: %q: %w", cmd.Args, string(out), err)
-	}
-	if err = imgutil.ConvertToRaw(diffDisk, diffDisk); err != nil {
-		return fmt.Errorf("cannot convert qcow2 to raw for vz driver")
-	}
-	return nil
+	return err
 }
