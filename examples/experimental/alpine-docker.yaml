@@ -1,0 +1,62 @@
+# This template requires Lima v0.7.0 or later.
+# Using the Alpine 3.18 aarch64 image with vmType=vz requires macOS Ventura 13.3 or later.
+
+images:
+- location: "https://github.com/lima-vm/alpine-lima/releases/download/v0.2.32/alpine-lima-std-3.18.0-x86_64.iso"
+  arch: "x86_64"
+  digest: "sha512:7b00fff78736a27a24e4a7de5f28037e9c7cf0fc539a33ec551c6ac619eb54237b5f25bfa35512fa7233cf23396dc249592710ef9150f619afa15267f9c8cbd4"
+- location: "https://github.com/lima-vm/alpine-lima/releases/download/v0.2.32/alpine-lima-std-3.18.0-aarch64.iso"
+  arch: "aarch64"
+  digest: "sha512:bf23a22e05854670eef74d9bfad056caa249832f22d5594eb6bb02fa9aae109d33c764242f862d48de5b6715c4792a3ee29c19888a0711fb27113ba5cf1ccf21"
+
+mounts:
+- location: "~"
+- location: "/tmp/lima"
+  writable: true
+# containerd is managed by Docker, not by Lima, so the values are set to false here.
+containerd:
+  system: false
+  user: false
+provision:
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    command -v docker >/dev/null 2>&1 && exit 0
+    apk add docker
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    if ! grep -q -- --group /etc/conf.d/docker; then
+      # Alternatively we could just add the user to the "docker" group, but that requires restarting the user session
+      echo "DOCKER_OPTS=\"--group ${LIMA_CIDATA_USER}\"" >> /etc/conf.d/docker
+    fi
+    rc-update add docker boot
+    service docker start
+probes:
+- description: "docker to be installed"
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    if ! timeout 30s bash -c "until command -v docker >/dev/null 2>&1; do sleep 3; done"; then
+      echo >&2 "docker is not installed yet"
+      exit 1
+    fi
+- description: "docker to be runnning"
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    if ! timeout 30s bash -c "until pgrep dockerd; do sleep 3; done"; then
+      echo >&2 "dockerd is not running"
+      exit 1
+    fi
+portForwards:
+- guestSocket: "/var/run/docker.sock"
+  hostSocket: "{{.Dir}}/sock/docker.sock"
+message: |
+  To run `docker` on the host (assumes docker-cli is installed), run the following commands:
+  ------
+  export DOCKER_HOST="unix://{{.Dir}}/sock/docker.sock"
+  docker run hello-world
+  ------

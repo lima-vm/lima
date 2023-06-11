@@ -37,6 +37,11 @@ Container engines:
 - [`podman-rootful`](./podman-rootful.yaml): Podman (rootful)
 - LXD is installed in the default Ubuntu template, so there is no `lxd.yaml`
 
+Distro and engine examples:
+- [`experimental/alpine-nerdctl`](./experimental/alpine-nerdctl.yaml): Alpine Linux, with containerd/nerdctl
+- [`experimental/alpine-docker`](./experimental/alpine-docker.yaml): Alpine Linux, with Docker (rootful)
+- [`experimental/alpine-podman`](./experimental/alpine-podman.yaml): Alpine Linux, with Podman (rootless)
+
 Container image builders:
 - [`buildkit`](./buildkit.yaml): BuildKit
 
