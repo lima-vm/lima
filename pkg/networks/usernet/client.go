@@ -29,7 +29,7 @@ func (c *Client) UnExposeSSH(sshPort int) error {
 }
 
 func (c *Client) ResolveAndForwardSSH(vmMacAddr string, sshPort int) error {
-	timeout := time.After(1 * time.Minute)
+	timeout := time.After(2 * time.Minute)
 	ticker := time.NewTicker(500 * time.Millisecond)
 	for {
 		select {
