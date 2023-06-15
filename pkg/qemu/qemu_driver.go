@@ -7,10 +7,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"text/template"
@@ -18,6 +20,7 @@ import (
 
 	"github.com/digitalocean/go-qemu/qmp"
 	"github.com/digitalocean/go-qemu/qmp/raw"
+	"github.com/hashicorp/go-multierror"
 	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/networks/usernet"
@@ -30,6 +33,8 @@ type LimaQemuDriver struct {
 	*driver.BaseDriver
 	qCmd    *exec.Cmd
 	qWaitCh chan error
+
+	vhostCmds []*exec.Cmd
 }
 
 func New(driver *driver.BaseDriver) *LimaQemuDriver {
@@ -39,8 +44,9 @@ func New(driver *driver.BaseDriver) *LimaQemuDriver {
 }
 
 func (l *LimaQemuDriver) Validate() error {
-	if *l.Yaml.MountType == limayaml.VIRTIOFS {
-		return fmt.Errorf("field `mountType` must be %q or %q for QEMU driver , got %q", limayaml.REVSSHFS, limayaml.NINEP, *l.Yaml.MountType)
+	if *l.Yaml.MountType == limayaml.VIRTIOFS && runtime.GOOS != "linux" {
+		return fmt.Errorf("field `mountType` must be %q or %q for QEMU driver on non-Linux, got %q",
+			limayaml.REVSSHFS, limayaml.NINEP, *l.Yaml.MountType)
 	}
 	return nil
 }
@@ -55,6 +61,13 @@ func (l *LimaQemuDriver) CreateDisk() error {
 }
 
 func (l *LimaQemuDriver) Start(ctx context.Context) (chan error, error) {
+	ctx, cancel := context.WithCancel(ctx)
+	defer func() {
+		if l.qCmd == nil {
+			cancel()
+		}
+	}()
+
 	qCfg := Config{
 		Name:         l.Instance.Name,
 		InstanceDir:  l.Instance.Dir,
@@ -64,6 +77,23 @@ func (l *LimaQemuDriver) Start(ctx context.Context) (chan error, error) {
 	qExe, qArgs, err := Cmdline(qCfg)
 	if err != nil {
 		return nil, err
+	}
+
+	var vhostCmds []*exec.Cmd
+	if *l.Yaml.MountType == limayaml.VIRTIOFS {
+		vhostExe, err := FindVirtiofsd(qExe)
+		if err != nil {
+			return nil, err
+		}
+
+		for i := range l.Yaml.Mounts {
+			args, err := VirtiofsdCmdline(qCfg, i)
+			if err != nil {
+				return nil, err
+			}
+
+			vhostCmds = append(vhostCmds, exec.CommandContext(ctx, vhostExe, args...))
+		}
 	}
 
 	var qArgsFinal []string
@@ -88,6 +118,66 @@ func (l *LimaQemuDriver) Start(ctx context.Context) (chan error, error) {
 	}
 	go logPipeRoutine(qStderr, "qemu[stderr]")
 
+	for i, vhostCmd := range vhostCmds {
+		vhostStdout, err := vhostCmd.StdoutPipe()
+		if err != nil {
+			return nil, err
+		}
+		go logPipeRoutine(vhostStdout, fmt.Sprintf("virtiofsd-%d[stdout]", i))
+		vhostStderr, err := vhostCmd.StderrPipe()
+		if err != nil {
+			return nil, err
+		}
+		go logPipeRoutine(vhostStderr, fmt.Sprintf("virtiofsd-%d[stderr]", i))
+	}
+
+	for i, vhostCmd := range vhostCmds {
+		i := i
+		vhostCmd := vhostCmd
+
+		logrus.Debugf("vhostCmd[%d].Args: %v", i, vhostCmd.Args)
+		if err := vhostCmd.Start(); err != nil {
+			return nil, err
+		}
+
+		vhostWaitCh := make(chan error)
+		go func() {
+			vhostWaitCh <- vhostCmd.Wait()
+		}()
+
+		vhostSock := filepath.Join(l.Instance.Dir, fmt.Sprintf(filenames.VhostSock, i))
+		vhostSockExists := false
+		for attempt := 0; attempt < 5; attempt++ {
+			logrus.Debugf("Try waiting for %s to appear (attempt %d)", vhostSock, attempt)
+
+			if _, err := os.Stat(vhostSock); err != nil {
+				if !errors.Is(err, fs.ErrNotExist) {
+					logrus.Warnf("Failed to check for vhost socket: %v", err)
+				}
+			} else {
+				vhostSockExists = true
+				break
+			}
+
+			retry := time.NewTimer(200 * time.Millisecond)
+			select {
+			case err = <-vhostWaitCh:
+				return nil, fmt.Errorf("virtiofsd never created vhost socket: %w", err)
+			case <-retry.C:
+			}
+		}
+
+		if !vhostSockExists {
+			return nil, fmt.Errorf("vhost socket %s never appeared", vhostSock)
+		}
+
+		go func() {
+			if err := <-vhostWaitCh; err != nil {
+				logrus.Errorf("Error from virtiofsd instance #%d: %v", i, err)
+			}
+		}()
+	}
+
 	logrus.Infof("Starting QEMU (hint: to watch the boot progress, see %q)", filepath.Join(qCfg.InstanceDir, filenames.SerialLog))
 	logrus.Debugf("qCmd.Args: %v", qCmd.Args)
 	if err := qCmd.Start(); err != nil {
@@ -98,6 +188,7 @@ func (l *LimaQemuDriver) Start(ctx context.Context) (chan error, error) {
 	go func() {
 		l.qWaitCh <- qCmd.Wait()
 	}()
+	l.vhostCmds = vhostCmds
 	go func() {
 		if usernetIndex := limayaml.FirstUsernetIndex(l.Yaml); usernetIndex != -1 {
 			client := newUsernetClient(l.Yaml.Networks[usernetIndex].Lima)
@@ -191,6 +282,17 @@ func (l *LimaQemuDriver) removeVNCFiles() error {
 	return nil
 }
 
+func (l *LimaQemuDriver) killVhosts() error {
+	var mErr error
+	for i, vhost := range l.vhostCmds {
+		if err := vhost.Process.Kill(); err != nil && !errors.Is(err, os.ErrProcessDone) {
+			mErr = multierror.Append(mErr, fmt.Errorf("Failed to kill virtiofsd instance #%d: %w", i, err))
+		}
+	}
+
+	return mErr
+}
+
 func (l *LimaQemuDriver) shutdownQEMU(ctx context.Context, timeout time.Duration, qCmd *exec.Cmd, qWaitCh <-chan error) error {
 	logrus.Info("Shutting down QEMU with ACPI")
 	if usernetIndex := limayaml.FirstUsernetIndex(l.Yaml); usernetIndex != -1 {
@@ -222,7 +324,7 @@ func (l *LimaQemuDriver) shutdownQEMU(ctx context.Context, timeout time.Duration
 	case qWaitErr := <-qWaitCh:
 		logrus.WithError(qWaitErr).Info("QEMU has exited")
 		l.removeVNCFiles()
-		return qWaitErr
+		return multierror.Append(qWaitErr, l.killVhosts()).ErrorOrNil()
 	case <-deadline:
 	}
 	logrus.Warnf("QEMU did not exit in %v, forcibly killing QEMU", timeout)
@@ -243,7 +345,7 @@ func (l *LimaQemuDriver) killQEMU(_ context.Context, _ time.Duration, qCmd *exec
 	qemuPIDPath := filepath.Join(l.Instance.Dir, filenames.PIDFile(*l.Yaml.VMType))
 	_ = os.RemoveAll(qemuPIDPath)
 	l.removeVNCFiles()
-	return qWaitErr
+	return multierror.Append(qWaitErr, l.killVhosts()).ErrorOrNil()
 }
 
 func newUsernetClient(nwName string) *usernet.Client {

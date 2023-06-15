@@ -80,11 +80,12 @@ type Image struct {
 type Disk = string
 
 type Mount struct {
-	Location   string `yaml:"location" json:"location"` // REQUIRED
-	MountPoint string `yaml:"mountPoint,omitempty" json:"mountPoint,omitempty"`
-	Writable   *bool  `yaml:"writable,omitempty" json:"writable,omitempty"`
-	SSHFS      SSHFS  `yaml:"sshfs,omitempty" json:"sshfs,omitempty"`
-	NineP      NineP  `yaml:"9p,omitempty" json:"9p,omitempty"`
+	Location   string   `yaml:"location" json:"location"` // REQUIRED
+	MountPoint string   `yaml:"mountPoint,omitempty" json:"mountPoint,omitempty"`
+	Writable   *bool    `yaml:"writable,omitempty" json:"writable,omitempty"`
+	SSHFS      SSHFS    `yaml:"sshfs,omitempty" json:"sshfs,omitempty"`
+	NineP      NineP    `yaml:"9p,omitempty" json:"9p,omitempty"`
+	Virtiofs   Virtiofs `yaml:"virtiofs,omitempty" json:"virtiofs,omitempty"`
 }
 
 type SFTPDriver = string
@@ -105,6 +106,10 @@ type NineP struct {
 	ProtocolVersion *string `yaml:"protocolVersion,omitempty" json:"protocolVersion,omitempty"`
 	Msize           *string `yaml:"msize,omitempty" json:"msize,omitempty"`
 	Cache           *string `yaml:"cache,omitempty" json:"cache,omitempty"`
+}
+
+type Virtiofs struct {
+	QueueSize *int `yaml:"queueSize,omitempty" json:"queueSize,omitempty"`
 }
 
 type SSH struct {

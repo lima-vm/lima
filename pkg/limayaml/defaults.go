@@ -31,6 +31,8 @@ const (
 	Default9pMsize           string = "128KiB"
 	Default9pCacheForRO      string = "fscache"
 	Default9pCacheForRW      string = "mmap"
+
+	DefaultVirtiofsQueueSize int = 1024
 )
 
 func defaultContainerdArchives() []File {
@@ -510,6 +512,9 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 			if mount.NineP.Cache != nil {
 				mounts[i].NineP.Cache = mount.NineP.Cache
 			}
+			if mount.Virtiofs.QueueSize != nil {
+				mounts[i].Virtiofs.QueueSize = mount.Virtiofs.QueueSize
+			}
 			if mount.Writable != nil {
 				mounts[i].Writable = mount.Writable
 			}
@@ -542,6 +547,9 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		}
 		if mount.NineP.Msize == nil {
 			mounts[i].NineP.Msize = pointer.String(Default9pMsize)
+		}
+		if mount.Virtiofs.QueueSize == nil {
+			mounts[i].Virtiofs.QueueSize = pointer.Int(DefaultVirtiofsQueueSize)
 		}
 		if mount.Writable == nil {
 			mount.Writable = pointer.Bool(false)
