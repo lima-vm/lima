@@ -290,12 +290,16 @@ type features struct {
 	// e.g. "Supported machines are:\nakita...\n...virt-6.2...\n...virt-7.0...\n...\n"
 	// Not machine-readable, but checking strings.Contains() should be fine.
 	MachineHelp []byte
+	// CPUHelp is the output of `qemu-system-x86_64 -cpu help`
+	// e.g. "Available CPUs:\n...\nx86 base...\nx86 host...\n...\n"
+	// Not machine-readable, but checking strings.Contains() should be fine.
+	CPUHelp []byte
 
 	// VersionGEQ7 is true when the QEMU version seems v7.0.0 or later
 	VersionGEQ7 bool
 }
 
-func inspectFeatures(exe string) (*features, error) {
+func inspectFeatures(exe string, machine string) (*features, error) {
 	var (
 		f      features
 		stdout bytes.Buffer
@@ -337,6 +341,19 @@ func inspectFeatures(exe string) (*features, error) {
 		}
 	}
 	f.VersionGEQ7 = strings.Contains(string(f.MachineHelp), "-7.0")
+
+	// Avoid error: "No machine specified, and there is no default"
+	cmd = exec.Command(exe, "-cpu", "help", "-machine", machine)
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		logrus.Warnf("failed to run %v: stdout=%q, stderr=%q", cmd.Args, stdout.String(), stderr.String())
+	} else {
+		f.CPUHelp = stdout.Bytes()
+		if len(f.CPUHelp) == 0 {
+			f.CPUHelp = stderr.Bytes()
+		}
+	}
 
 	return &f, nil
 }
@@ -442,6 +459,14 @@ func adjustMemBytesDarwinARM64HVF(memBytes int64, accel string, features *featur
 	return memBytes
 }
 
+// qemuMachine returns string to use for -machine
+func qemuMachine(arch limayaml.Arch) string {
+	if arch == limayaml.X8664 {
+		return "q35"
+	}
+	return "virt"
+}
+
 func Cmdline(cfg Config) (string, []string, error) {
 	y := cfg.LimaYAML
 	exe, args, err := getExe(*y.Arch)
@@ -449,7 +474,7 @@ func Cmdline(cfg Config) (string, []string, error) {
 		return "", nil, err
 	}
 
-	features, err := inspectFeatures(exe)
+	features, err := inspectFeatures(exe, qemuMachine(*y.Arch))
 	if err != nil {
 		return "", nil, err
 	}
@@ -494,6 +519,9 @@ func Cmdline(cfg Config) (string, []string, error) {
 				logrus.Warnf("On Intel Mac, CPU type %q typically needs \",-pdpe1gb\" option (https://stackoverflow.com/a/72863744/5167443)", cpu)
 			}
 		}
+	}
+	if !strings.Contains(string(features.CPUHelp), strings.Split(cpu, ",")[0]) {
+		return "", nil, fmt.Errorf("cpu %q is not supported by %s", cpu, exe)
 	}
 	args = appendArgsIfNoConflict(args, "-cpu", cpu)
 
