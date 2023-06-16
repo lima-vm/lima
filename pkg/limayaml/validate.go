@@ -26,9 +26,9 @@ func validateFileObject(f File, fieldName string) error {
 		// f.Location does NOT need to be accessible, so we do NOT check os.Stat(f.Location)
 	}
 	switch f.Arch {
-	case X8664, AARCH64, RISCV64:
+	case X8664, AARCH64, ARMV7L, RISCV64:
 	default:
-		return fmt.Errorf("field `arch` must be %q, %q, or %q; got %q", X8664, AARCH64, RISCV64, f.Arch)
+		return fmt.Errorf("field `arch` must be %q, %q, %q, or %q; got %q", X8664, AARCH64, ARMV7L, RISCV64, f.Arch)
 	}
 	if f.Digest != "" {
 		if !f.Digest.Algorithm().Available() {
@@ -43,9 +43,9 @@ func validateFileObject(f File, fieldName string) error {
 
 func Validate(y LimaYAML, warn bool) error {
 	switch *y.Arch {
-	case X8664, AARCH64, RISCV64:
+	case X8664, AARCH64, ARMV7L, RISCV64:
 	default:
-		return fmt.Errorf("field `arch` must be %q, %q, or %q; got %q", X8664, AARCH64, RISCV64, *y.Arch)
+		return fmt.Errorf("field `arch` must be %q, %q, %q or %q; got %q", X8664, AARCH64, ARMV7L, RISCV64, *y.Arch)
 	}
 
 	switch *y.VMType {
@@ -91,7 +91,7 @@ func Validate(y LimaYAML, warn bool) error {
 
 	for arch := range y.CPUType {
 		switch arch {
-		case AARCH64, X8664, RISCV64:
+		case AARCH64, X8664, ARMV7L, RISCV64:
 			// these are the only supported architectures
 		default:
 			return fmt.Errorf("field `cpuType` uses unsupported arch %q", arch)

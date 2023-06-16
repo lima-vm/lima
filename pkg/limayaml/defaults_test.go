@@ -32,6 +32,14 @@ func TestFillDefault(t *testing.T) {
 		arch = X8664
 	case "arm64":
 		arch = AARCH64
+	case "arm":
+		if runtime.GOOS != "linux" {
+			t.Skipf("unsupported GOOS: %s", runtime.GOOS)
+		}
+		if arm := goarm(); arm < 7 {
+			t.Skipf("unsupported GOARM: %d", arm)
+		}
+		arch = ARMV7L
 	case "riscv64":
 		arch = RISCV64
 	default:
@@ -56,6 +64,7 @@ func TestFillDefault(t *testing.T) {
 		Arch:   pointer.String(arch),
 		CPUType: map[Arch]string{
 			AARCH64: "cortex-a72",
+			ARMV7L:  "cortex-a7",
 			X8664:   "qemu64",
 			RISCV64: "rv64",
 		},
@@ -259,6 +268,7 @@ func TestFillDefault(t *testing.T) {
 		Arch:   pointer.String("unknown"),
 		CPUType: map[Arch]string{
 			AARCH64: "arm64",
+			ARMV7L:  "armhf",
 			X8664:   "amd64",
 			RISCV64: "riscv64",
 		},
@@ -434,6 +444,7 @@ func TestFillDefault(t *testing.T) {
 		Arch:   pointer.String(arch),
 		CPUType: map[Arch]string{
 			AARCH64: "uber-arm",
+			ARMV7L:  "armv8",
 			X8664:   "pentium",
 			RISCV64: "sifive-u54",
 		},

@@ -49,6 +49,7 @@ binaries: clean \
 	_output/bin/kubectl.lima \
 	_output/share/lima/lima-guestagent.Linux-x86_64 \
 	_output/share/lima/lima-guestagent.Linux-aarch64 \
+	_output/share/lima/lima-guestagent.Linux-armv7l \
 	_output/share/lima/lima-guestagent.Linux-riscv64
 	cp -aL examples _output/share/lima
 	mkdir -p _output/share/doc/lima
@@ -106,6 +107,11 @@ _output/share/lima/lima-guestagent.Linux-x86_64:
 .PHONY: _output/share/lima/lima-guestagent.Linux-aarch64
 _output/share/lima/lima-guestagent.Linux-aarch64:
 	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 $(GO_BUILD) -o $@ ./cmd/lima-guestagent
+	chmod 644 $@
+
+.PHONY: _output/share/lima/lima-guestagent.Linux-armv7l
+_output/share/lima/lima-guestagent.Linux-armv7l:
+	GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 $(GO_BUILD) -o $@ ./cmd/lima-guestagent
 	chmod 644 $@
 
 .PHONY: _output/share/lima/lima-guestagent.Linux-riscv64

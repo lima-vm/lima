@@ -45,6 +45,7 @@ type VMType = string
 const (
 	X8664   Arch = "x86_64"
 	AARCH64 Arch = "aarch64"
+	ARMV7L  Arch = "armv7l"
 	RISCV64 Arch = "riscv64"
 
 	REVSSHFS MountType = "reverse-sshfs"
