@@ -61,6 +61,7 @@ $ cat template.yaml | limactl start --name=local -
 	startCommand.Flags().Bool("tty", isatty.IsTerminal(os.Stdout.Fd()), "enable TUI interactions such as opening an editor, defaults to true when stdout is a terminal")
 	startCommand.Flags().String("name", "", "override the instance name")
 	startCommand.Flags().String("set", "", "modify the template inplace, using yq syntax")
+	startCommand.Flags().Bool("rootful", false, "use the rootful version of the template")
 	startCommand.Flags().Bool("list-templates", false, "list available templates and exit")
 	startCommand.Flags().Duration("timeout", start.DefaultWatchHostAgentEventsTimeout, "duration to wait for the instance to be running before timing out")
 	return startCommand
@@ -79,6 +80,10 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 
 	// Create an instance, with menu TUI when TTY is available
 	tty, err := cmd.Flags().GetBool("tty")
+	if err != nil {
+		return nil, err
+	}
+	rootful, err := cmd.Flags().GetBool("rootful")
 	if err != nil {
 		return nil, err
 	}
@@ -101,6 +106,14 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 			// e.g., templateName = "deprecated/centos-7" , st.instName = "centos-7"
 			st.instName = filepath.Base(templateName)
 		}
+		if rootful {
+			if templateName == DefaultInstanceName {
+				templateName = "rootful"
+			} else {
+				templateName += "-rootful"
+			}
+			logrus.Debugf("using the rootful version of %q: %q", arg, templateName)
+		}
 		st.yBytes, err = templatestore.Read(templateName)
 		if err != nil {
 			return nil, err
@@ -111,6 +124,9 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 			if err != nil {
 				return nil, err
 			}
+		}
+		if rootful {
+			return nil, errors.New("cannot use --rootful=true and read template from http")
 		}
 		logrus.Debugf("interpreting argument %q as a http url for instance %q", arg, st.instName)
 		resp, err := http.Get(arg)
@@ -129,6 +145,9 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 				return nil, err
 			}
 		}
+		if rootful {
+			return nil, errors.New("cannot use --rootful=true and read template from file")
+		}
 		logrus.Debugf("interpreting argument %q as a file url for instance %q", arg, st.instName)
 		r, err := os.Open(strings.TrimPrefix(arg, "file://"))
 		if err != nil {
@@ -145,6 +164,9 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 			if err != nil {
 				return nil, err
 			}
+		}
+		if rootful {
+			return nil, errors.New("cannot use --rootful=true and read template from yaml")
 		}
 		logrus.Debugf("interpreting argument %q as a file path for instance %q", arg, st.instName)
 		r, err := os.Open(arg)
@@ -204,6 +226,14 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 		st.yBytes, err = templatestore.Read(templatestore.Default)
 		if err != nil {
 			return nil, err
+		}
+		if rootful {
+			yq := ".containerd.system = true | .containerd.user = false"
+			out, err := yqutil.EvaluateExpression(yq, st.yBytes)
+			if err != nil {
+				return nil, err
+			}
+			st.yBytes = out
 		}
 	}
 

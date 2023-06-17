@@ -42,6 +42,7 @@ Container orchestration:
 - [`nomad.yaml`](./nomad.yaml): Nomad
 
 Optional feature enablers:
+- [`rootful.yaml`](./rootful.yaml): Ubuntu (same as `default.yaml` but rootful)
 - [`vmnet.yaml`](./vmnet.yaml): ⭐enable [`vmnet.framework`](../docs/network.md)
 - [`experimental/9p.yaml`](experimental/9p.yaml): [experimental] use 9p mount type
 - [`experimental/virtiofs-linux.yaml`](experimental/9p.yaml): [experimental] use virtiofs mount type for Linux
