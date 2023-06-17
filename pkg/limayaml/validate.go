@@ -159,6 +159,14 @@ func Validate(y LimaYAML, warn bool) error {
 		return fmt.Errorf("field `mountType` must be %q or %q or %q, got %q", REVSSHFS, NINEP, VIRTIOFS, *y.MountType)
 	}
 
+	if warn && runtime.GOOS != "linux" {
+		for i, mount := range y.Mounts {
+			if mount.Virtiofs.QueueSize != nil {
+				logrus.Warnf("field mounts[%d].virtiofs.queueSize is only supported on Linux", i)
+			}
+		}
+	}
+
 	// y.Firmware.LegacyBIOS is ignored for aarch64, but not a fatal error.
 
 	for i, p := range y.Provision {
@@ -441,6 +449,9 @@ func validatePort(field string, port int) error {
 func warnExperimental(y LimaYAML) {
 	if *y.MountType == NINEP {
 		logrus.Warn("`mountType: 9p` is experimental")
+	}
+	if *y.MountType == VIRTIOFS && runtime.GOOS == "linux" {
+		logrus.Warn("`mountType: virtiofs` on Linux is experimental")
 	}
 	if *y.VMType == VZ {
 		logrus.Warn("`vmType: vz` is experimental")

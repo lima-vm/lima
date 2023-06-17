@@ -54,6 +54,9 @@ case "$NAME" in
 "9p")
 	CHECKS["snapshot-online"]=""
 	;;
+"virtiofs-linux")
+	CHECKS["snapshot-online"]=""
+	;;
 "vmnet")
 	CHECKS["vmnet"]=1
 	;;

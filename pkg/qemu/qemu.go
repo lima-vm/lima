@@ -2,6 +2,7 @@ package qemu
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -478,6 +479,12 @@ func Cmdline(cfg Config) (string, []string, error) {
 	memBytes = adjustMemBytesDarwinARM64HVF(memBytes, accel, features)
 	args = appendArgsIfNoConflict(args, "-m", strconv.Itoa(int(memBytes>>20)))
 
+	if *y.MountType == limayaml.VIRTIOFS {
+		args = appendArgsIfNoConflict(args, "-object",
+			fmt.Sprintf("memory-backend-file,id=virtiofs-shm,size=%s,mem-path=/dev/shm,share=on", strconv.Itoa(int(memBytes))))
+		args = appendArgsIfNoConflict(args, "-numa", "node,memdev=virtiofs-shm")
+	}
+
 	// CPU
 	cpu := y.CPUType[*y.Arch]
 	if runtime.GOOS == "darwin" && runtime.GOARCH == "amd64" {
@@ -775,7 +782,7 @@ func Cmdline(cfg Config) (string, []string, error) {
 
 	// We also want to enable vsock here, but QEMU does not support vsock for macOS hosts
 
-	if *y.MountType == limayaml.NINEP {
+	if *y.MountType == limayaml.NINEP || *y.MountType == limayaml.VIRTIOFS {
 		for i, f := range y.Mounts {
 			tag := fmt.Sprintf("mount%d", i)
 			location, err := localpathutil.Expand(f.Location)
@@ -785,14 +792,30 @@ func Cmdline(cfg Config) (string, []string, error) {
 			if err := os.MkdirAll(location, 0755); err != nil {
 				return "", nil, err
 			}
-			options := "local"
-			options += fmt.Sprintf(",mount_tag=%s", tag)
-			options += fmt.Sprintf(",path=%s", location)
-			options += fmt.Sprintf(",security_model=%s", *f.NineP.SecurityModel)
-			if !*f.Writable {
-				options += ",readonly"
+
+			switch *y.MountType {
+			case limayaml.NINEP:
+				options := "local"
+				options += fmt.Sprintf(",mount_tag=%s", tag)
+				options += fmt.Sprintf(",path=%s", location)
+				options += fmt.Sprintf(",security_model=%s", *f.NineP.SecurityModel)
+				if !*f.Writable {
+					options += ",readonly"
+				}
+				args = append(args, "-virtfs", options)
+			case limayaml.VIRTIOFS:
+				// Note that read-only mode is not supported on the QEMU/virtiofsd side yet:
+				// https://gitlab.com/virtio-fs/virtiofsd/-/issues/97
+				chardev := fmt.Sprintf("char-virtiofs-%d", i)
+				vhostSock := filepath.Join(cfg.InstanceDir, fmt.Sprintf(filenames.VhostSock, i))
+				args = append(args, "-chardev", fmt.Sprintf("socket,id=%s,path=%s", chardev, vhostSock))
+
+				options := "vhost-user-fs-pci"
+				options += fmt.Sprintf(",queue-size=%d", *f.Virtiofs.QueueSize)
+				options += fmt.Sprintf(",chardev=%s", chardev)
+				options += fmt.Sprintf(",tag=%s", tag)
+				args = append(args, "-device", options)
 			}
-			args = append(args, "-virtfs", options)
 		}
 	}
 
@@ -810,6 +833,99 @@ func Cmdline(cfg Config) (string, []string, error) {
 	args = append(args, "-pidfile", filepath.Join(cfg.InstanceDir, filenames.PIDFile(*y.VMType)))
 
 	return exe, args, nil
+}
+
+func FindVirtiofsd(qemuExe string) (string, error) {
+	type vhostUserBackend struct {
+		BackendType string `json:"type"`
+		Binary      string `json:"binary"`
+	}
+
+	currentUser, err := user.Current()
+	if err != nil {
+		return "", err
+	}
+
+	const relativePath = "share/qemu/vhost-user"
+
+	binDir := filepath.Dir(qemuExe)                              // "/usr/local/bin"
+	usrDir := filepath.Dir(binDir)                               // "/usr/local"
+	userLocalDir := filepath.Join(currentUser.HomeDir, ".local") // "$HOME/.local"
+
+	candidates := []string{
+		filepath.Join(userLocalDir, relativePath),
+		filepath.Join(usrDir, relativePath),
+	}
+
+	if usrDir != "/usr" {
+		candidates = append(candidates, filepath.Join("/usr", relativePath))
+	}
+
+	for _, vhostConfigsDir := range candidates {
+		logrus.Debugf("Checking vhost directory %s", vhostConfigsDir)
+
+		configEntries, err := os.ReadDir(vhostConfigsDir)
+		if err != nil {
+			logrus.Debugf("Failed to list vhost directory: %v", err)
+			continue
+		}
+
+		for _, configEntry := range configEntries {
+			logrus.Debugf("Checking vhost config %s", configEntry.Name())
+			if !strings.HasSuffix(configEntry.Name(), ".json") {
+				continue
+			}
+
+			var config vhostUserBackend
+			contents, err := os.ReadFile(filepath.Join(vhostConfigsDir, configEntry.Name()))
+			if err == nil {
+				err = json.Unmarshal(contents, &config)
+			}
+
+			if err != nil {
+				logrus.Warnf("Failed to load vhost-user config %s: %v", configEntry.Name(), err)
+				continue
+			}
+			logrus.Debugf("%v", config)
+
+			if config.BackendType != "fs" {
+				continue
+			}
+
+			// Only rust virtiofsd supports --version, so use that to make sure this isn't
+			// QEMU's virtiofsd, which requires running as root.
+			cmd := exec.Command(config.Binary, "--version")
+			output, err := cmd.CombinedOutput()
+			if err != nil {
+				logrus.Warnf("Failed to run %s --version (is this QEMU virtiofsd?): %s: %s",
+					config.Binary, err, output)
+				continue
+			}
+
+			return config.Binary, nil
+		}
+	}
+
+	return "", errors.New("Failed to locate virtiofsd")
+}
+
+func VirtiofsdCmdline(cfg Config, mountIndex int) ([]string, error) {
+	mount := cfg.LimaYAML.Mounts[mountIndex]
+	location, err := localpathutil.Expand(mount.Location)
+	if err != nil {
+		return nil, err
+	}
+
+	vhostSock := filepath.Join(cfg.InstanceDir, fmt.Sprintf(filenames.VhostSock, mountIndex))
+	// qemu_driver has to wait for the socket to appear, so make sure any old ones are removed here.
+	if err := os.Remove(vhostSock); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		logrus.Warnf("Failed to remove old vhost socket: %v", err)
+	}
+
+	return []string{
+		"--socket-path", vhostSock,
+		"--shared-dir", location,
+	}, nil
 }
 
 func getExe(arch limayaml.Arch) (string, []string, error) {

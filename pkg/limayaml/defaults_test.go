@@ -186,6 +186,7 @@ func TestFillDefault(t *testing.T) {
 	expect.Mounts[0].NineP.ProtocolVersion = pointer.String(Default9pProtocolVersion)
 	expect.Mounts[0].NineP.Msize = pointer.String(Default9pMsize)
 	expect.Mounts[0].NineP.Cache = pointer.String(Default9pCacheForRO)
+	expect.Mounts[0].Virtiofs.QueueSize = pointer.Int(DefaultVirtiofsQueueSize)
 	// Only missing Mounts field is Writable, and the default value is also the null value: false
 
 	expect.MountType = pointer.String(NINEP)
@@ -369,6 +370,7 @@ func TestFillDefault(t *testing.T) {
 	expect.Mounts[0].NineP.ProtocolVersion = pointer.String(Default9pProtocolVersion)
 	expect.Mounts[0].NineP.Msize = pointer.String(Default9pMsize)
 	expect.Mounts[0].NineP.Cache = pointer.String(Default9pCacheForRO)
+	expect.Mounts[0].Virtiofs.QueueSize = pointer.Int(DefaultVirtiofsQueueSize)
 	expect.HostResolver.Hosts = map[string]string{
 		"default": d.HostResolver.Hosts["default"],
 	}
@@ -494,6 +496,9 @@ func TestFillDefault(t *testing.T) {
 					Msize:           pointer.String("8KiB"),
 					Cache:           pointer.String("none"),
 				},
+				Virtiofs: Virtiofs{
+					QueueSize: pointer.Int(2048),
+				},
 			},
 		},
 		Provision: []Provision{
@@ -569,6 +574,7 @@ func TestFillDefault(t *testing.T) {
 	expect.Mounts[0].NineP.ProtocolVersion = pointer.String("9p2000")
 	expect.Mounts[0].NineP.Msize = pointer.String("8KiB")
 	expect.Mounts[0].NineP.Cache = pointer.String("none")
+	expect.Mounts[0].Virtiofs.QueueSize = pointer.Int(2048)
 
 	expect.MountType = pointer.String(NINEP)
 

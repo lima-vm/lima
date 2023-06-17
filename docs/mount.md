@@ -88,19 +88,21 @@ The "9p" mount type requires Lima v0.10.0 or later.
 > **Warning**
 > "virtiofs" mode is experimental
 
-| :zap: Requirement | Lima >= 0.14, macOS >= 13.0 |
-|-------------------|-----------------------------|
+| :zap: Requirement | Lima >= 0.14, macOS >= 13.0 | Lima >= 0.17.0, Linux, QEMU 4.2.0+, virtiofsd (Rust version) |
+|-------------------|-----------------------------| ------------------------------------------------------------ |
 
-The "virtiofs" mount type is implemented by using apple Virtualization.Framework shared directory (uses virtio-fs) device. 
+The "virtiofs" mount type is implemented via the virtio-fs device by using apple Virtualization.Framework shared directory on macOS and virtiofsd on Linux.
 Linux guest kernel must enable the CONFIG_VIRTIO_FS support for this support.
 
 An example configuration:
 ```yaml
-vmType: "vz"
+vmType: "vz"  # only for macOS; Linux uses 'qemu'
 mountType: "virtiofs"
 mounts:
 - location: "~"
 ```
 
 #### Caveats
-- The "virtiofs" mount type is supported only on macOS 13 or above with `vmType: vz` config. See also [`vmtype.md`](./vmtype.md).
+- For macOS, the "virtiofs" mount type is supported only on macOS 13 or above with `vmType: vz` config. See also [`vmtype.md`](./vmtype.md).
+- For Linux, the "virtiofs" mount type requires the [Rust version of virtiofsd](https://gitlab.com/virtio-fs/virtiofsd).
+  Using the version from QEMU (usually packaged as `qemu-virtiofsd`) will *not* work, as it requires root access to run.
