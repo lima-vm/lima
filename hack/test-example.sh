@@ -217,7 +217,7 @@ if [[ -n ${CHECKS["port-forwards"]} ]]; then
 		limactl shell "$NAME" sudo pacman -Syu --noconfirm openbsd-netcat
 	fi
 	if [ "${NAME}" = "debian" ]; then
-		limactl shell "$NAME" sudo apt-get install -y netcat
+		limactl shell "$NAME" sudo apt-get install -y netcat-openbsd
 	fi
 	if [ "${NAME}" = "fedora" ]; then
 		limactl shell "$NAME" sudo dnf install -y nc

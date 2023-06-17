@@ -11,7 +11,8 @@ Distro:
 - [`archlinux.yaml`](./archlinux.yaml): ⭐Arch Linux
 - [`centos-stream-8.yaml`](./centos-stream-8.yaml): CentOS Stream 8
 - [`centos-stream-9.yaml`](./centos-stream-9.yaml), `centos-stream.yaml`: CentOS Stream 9
-- [`debian.yaml`](./debian.yaml): ⭐Debian GNU/Linux
+- [`debian-11.yaml`](./debian-11.yaml): Debian GNU/Linux 11(bullseye)
+- [`debian-12.yaml`](./debian-12.yaml), `debian.yaml`: ⭐Debian GNU/Linux 12(bookworm)
 - [`fedora.yaml`](./fedora.yaml): ⭐Fedora
 - [`opensuse.yaml`](./opensuse.yaml): ⭐openSUSE Leap
 - [`oraclelinux-8.yaml`](./oraclelinux-8.yaml): Oracle Linux 8
