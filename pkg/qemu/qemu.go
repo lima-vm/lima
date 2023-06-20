@@ -290,12 +290,16 @@ type features struct {
 	// e.g. "Supported machines are:\nakita...\n...virt-6.2...\n...virt-7.0...\n...\n"
 	// Not machine-readable, but checking strings.Contains() should be fine.
 	MachineHelp []byte
+	// CPUHelp is the output of `qemu-system-x86_64 -cpu help`
+	// e.g. "Available CPUs:\n...\nx86 base...\nx86 host...\n...\n"
+	// Not machine-readable, but checking strings.Contains() should be fine.
+	CPUHelp []byte
 
 	// VersionGEQ7 is true when the QEMU version seems v7.0.0 or later
 	VersionGEQ7 bool
 }
 
-func inspectFeatures(exe string) (*features, error) {
+func inspectFeatures(exe string, machine string) (*features, error) {
 	var (
 		f      features
 		stdout bytes.Buffer
@@ -337,6 +341,19 @@ func inspectFeatures(exe string) (*features, error) {
 		}
 	}
 	f.VersionGEQ7 = strings.Contains(string(f.MachineHelp), "-7.0")
+
+	// Avoid error: "No machine specified, and there is no default"
+	cmd = exec.Command(exe, "-cpu", "help", "-machine", machine)
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		logrus.Warnf("failed to run %v: stdout=%q, stderr=%q", cmd.Args, stdout.String(), stderr.String())
+	} else {
+		f.CPUHelp = stdout.Bytes()
+		if len(f.CPUHelp) == 0 {
+			f.CPUHelp = stderr.Bytes()
+		}
+	}
 
 	return &f, nil
 }
@@ -442,6 +459,14 @@ func adjustMemBytesDarwinARM64HVF(memBytes int64, accel string, features *featur
 	return memBytes
 }
 
+// qemuMachine returns string to use for -machine
+func qemuMachine(arch limayaml.Arch) string {
+	if arch == limayaml.X8664 {
+		return "q35"
+	}
+	return "virt"
+}
+
 func Cmdline(cfg Config) (string, []string, error) {
 	y := cfg.LimaYAML
 	exe, args, err := getExe(*y.Arch)
@@ -449,7 +474,7 @@ func Cmdline(cfg Config) (string, []string, error) {
 		return "", nil, err
 	}
 
-	features, err := inspectFeatures(exe)
+	features, err := inspectFeatures(exe, qemuMachine(*y.Arch))
 	if err != nil {
 		return "", nil, err
 	}
@@ -495,8 +520,12 @@ func Cmdline(cfg Config) (string, []string, error) {
 			}
 		}
 	}
+	if !strings.Contains(string(features.CPUHelp), strings.Split(cpu, ",")[0]) {
+		return "", nil, fmt.Errorf("cpu %q is not supported by %s", cpu, exe)
+	}
 	args = appendArgsIfNoConflict(args, "-cpu", cpu)
 
+	// Machine
 	switch *y.Arch {
 	case limayaml.X8664:
 		if strings.HasPrefix(cpu, "qemu64") && runtime.GOOS != "windows" {
@@ -530,6 +559,9 @@ func Cmdline(cfg Config) (string, []string, error) {
 	case limayaml.RISCV64:
 		machine := "virt,accel=" + accel
 		args = appendArgsIfNoConflict(args, "-machine", machine)
+	case limayaml.ARMV7L:
+		machine := "virt,accel=" + accel
+		args = appendArgsIfNoConflict(args, "-machine", machine)
 	}
 
 	// SMP
@@ -538,7 +570,7 @@ func Cmdline(cfg Config) (string, []string, error) {
 
 	// Firmware
 	legacyBIOS := *y.Firmware.LegacyBIOS
-	if legacyBIOS && *y.Arch != limayaml.X8664 {
+	if legacyBIOS && *y.Arch != limayaml.X8664 && *y.Arch != limayaml.ARMV7L {
 		logrus.Warnf("field `firmware.legacyBIOS` is not supported for architecture %q, ignoring", *y.Arch)
 		legacyBIOS = false
 	}
@@ -756,9 +788,15 @@ func Cmdline(cfg Config) (string, []string, error) {
 		args = append(args, "-device", "virtio-keyboard-pci")
 		args = append(args, "-device", "virtio-mouse-pci")
 		args = append(args, "-device", "qemu-xhci,id=usb-bus")
-	default:
+	case limayaml.AARCH64:
 		// QEMU does not seem to support virtio-vga for aarch64
 		args = append(args, "-vga", "none", "-device", "ramfb")
+		args = append(args, "-device", "qemu-xhci,id=usb-bus")
+		args = append(args, "-device", "usb-kbd,bus=usb-bus.0")
+		args = append(args, "-device", "usb-mouse,bus=usb-bus.0")
+	case limayaml.ARMV7L:
+		// QEMU does not seem to support virtio-vga for arm
+		args = append(args, "-vga", "cirrus", "-device", "cirrus-vga")
 		args = append(args, "-device", "qemu-xhci,id=usb-bus")
 		args = append(args, "-device", "usb-kbd,bus=usb-bus.0")
 		args = append(args, "-device", "usb-mouse,bus=usb-bus.0")
@@ -928,10 +966,18 @@ func VirtiofsdCmdline(cfg Config, mountIndex int) ([]string, error) {
 	}, nil
 }
 
+// qemuArch returns the arch string used by qemu
+func qemuArch(arch limayaml.Arch) string {
+	if arch == limayaml.ARMV7L {
+		return "arm"
+	}
+	return arch
+}
+
 func getExe(arch limayaml.Arch) (string, []string, error) {
-	exeBase := "qemu-system-" + arch
+	exeBase := "qemu-system-" + qemuArch(arch)
 	var args []string
-	envK := "QEMU_SYSTEM_" + strings.ToUpper(arch)
+	envK := "QEMU_SYSTEM_" + strings.ToUpper(qemuArch(arch))
 	if envV := os.Getenv(envK); envV != "" {
 		ss, err := shellwords.Parse(envV)
 		if err != nil {
@@ -992,7 +1038,7 @@ func getQemuVersion(qemuExe string) (*semver.Version, error) {
 
 func getFirmware(qemuExe string, arch limayaml.Arch) (string, error) {
 	switch arch {
-	case limayaml.X8664, limayaml.AARCH64:
+	case limayaml.X8664, limayaml.AARCH64, limayaml.ARMV7L:
 	default:
 		return "", fmt.Errorf("unexpected architecture: %q", arch)
 	}
@@ -1006,7 +1052,7 @@ func getFirmware(qemuExe string, arch limayaml.Arch) (string, error) {
 	localDir := filepath.Dir(binDir)                             // "/usr/local"
 	userLocalDir := filepath.Join(currentUser.HomeDir, ".local") // "$HOME/.local"
 
-	relativePath := fmt.Sprintf("share/qemu/edk2-%s-code.fd", arch)
+	relativePath := fmt.Sprintf("share/qemu/edk2-%s-code.fd", qemuArch(arch))
 	candidates := []string{
 		filepath.Join(userLocalDir, relativePath), // XDG-like
 		filepath.Join(localDir, relativePath),     // macOS (homebrew)
@@ -1025,6 +1071,9 @@ func getFirmware(qemuExe string, arch limayaml.Arch) (string, error) {
 		candidates = append(candidates, "/usr/share/AAVMF/AAVMF_CODE.fd")
 		// Debian package "qemu-efi-aarch64" (unpadded, backwards compatibility)
 		candidates = append(candidates, "/usr/share/qemu-efi-aarch64/QEMU_EFI.fd")
+	case limayaml.ARMV7L:
+		// Debian package "qemu-efi-arm"
+		candidates = append(candidates, "/usr/share/AAVMF/AAVMF32_CODE.fd")
 	}
 
 	logrus.Debugf("firmware candidates = %v", candidates)

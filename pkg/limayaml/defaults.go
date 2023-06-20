@@ -21,6 +21,8 @@ import (
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/sirupsen/logrus"
 	"github.com/xorcare/pointer"
+
+	"golang.org/x/sys/cpu"
 )
 
 const (
@@ -51,6 +53,7 @@ func defaultContainerdArchives() []File {
 			Arch:     AARCH64,
 			Digest:   "sha256:589dabd962d936b29fd377dcddbb49c07d1c4c27dd4b402bc4b6b20287fe9c37",
 		},
+		// No arm-v7
 		// No riscv64
 	}
 }
@@ -151,6 +154,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 
 	cpuType := map[Arch]string{
 		AARCH64: "cortex-a72",
+		ARMV7L:  "cortex-a7",
 		// Since https://github.com/lima-vm/lima/pull/494, we use qemu64 cpu for better emulation of x86_64.
 		X8664:   "qemu64",
 		RISCV64: "rv64", // FIXME: what is the right choice for riscv64?
@@ -749,12 +753,35 @@ func FillCopyToHostDefaults(rule *CopyToHost, instDir string) {
 	}
 }
 
+func goarm() int {
+	if runtime.GOOS != "linux" {
+		return 0
+	}
+	if runtime.GOARCH != "arm" {
+		return 0
+	}
+	if cpu.ARM.HasVFPv3 {
+		return 7
+	}
+	if cpu.ARM.HasVFP {
+		return 6
+	}
+	return 5 // default
+}
+
 func NewArch(arch string) Arch {
 	switch arch {
 	case "amd64":
 		return X8664
 	case "arm64":
 		return AARCH64
+	case "arm":
+		arm := goarm()
+		if arm == 7 {
+			return ARMV7L
+		}
+		logrus.Warnf("Unknown arm: %d", arm)
+		return arch
 	case "riscv64":
 		return RISCV64
 	default:
@@ -818,8 +845,9 @@ func HasMaxCPU() bool {
 func IsNativeArch(arch Arch) bool {
 	nativeX8664 := arch == X8664 && runtime.GOARCH == "amd64"
 	nativeAARCH64 := arch == AARCH64 && runtime.GOARCH == "arm64"
+	nativeARMV7L := arch == ARMV7L && runtime.GOARCH == "arm" && goarm() == 7
 	nativeRISCV64 := arch == RISCV64 && runtime.GOARCH == "riscv64"
-	return nativeX8664 || nativeAARCH64 || nativeRISCV64
+	return nativeX8664 || nativeAARCH64 || nativeARMV7L || nativeRISCV64
 }
 
 func unique(s []string) []string {

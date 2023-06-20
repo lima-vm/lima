@@ -1,0 +1,22 @@
+# This example requires Lima v0.7.0 or later.
+
+arch: "armv7l"
+images:
+# Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
+- location: "https://cloud-images.ubuntu.com/releases/22.04/release-20230518/ubuntu-22.04-server-cloudimg-armhf.img"
+  arch: "armv7l"
+  digest: "sha256:f9baf349e9f4bb4acc6cbd14dc82aa2aa514fd76e06c74678e5453f0e6717fd2"
+# Fallback to the latest release image.
+# Hint: run `limactl prune` to invalidate the cache
+- location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-armhf.img"
+  arch: "armv7l"
+
+mounts:
+- location: "~"
+- location: "/tmp/lima"
+  writable: true
+
+# We do not have arm-v7 binaries of containerd
+containerd:
+  system: false
+  user: false
