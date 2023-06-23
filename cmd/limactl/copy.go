@@ -78,7 +78,7 @@ func copyAction(cmd *cobra.Command, args []string) error {
 			inst, err := store.Inspect(instName)
 			if err != nil {
 				if errors.Is(err, os.ErrNotExist) {
-					return fmt.Errorf("instance %q does not exist, run `limactl start %s` to create a new instance", instName, instName)
+					return fmt.Errorf("instance %q does not exist, run `limactl create %s` to create a new instance", instName, instName)
 				}
 				return err
 			}
