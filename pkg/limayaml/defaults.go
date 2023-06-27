@@ -489,6 +489,21 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		}
 	}
 
+	// MountType has to be resolved before resolving Mounts
+	if y.MountType == nil {
+		y.MountType = d.MountType
+	}
+	if o.MountType != nil {
+		y.MountType = o.MountType
+	}
+	if y.MountType == nil || *y.MountType == "" {
+		if *y.VMType == VZ {
+			y.MountType = pointer.String(VIRTIOFS)
+		} else {
+			y.MountType = pointer.String(REVSSHFS)
+		}
+	}
+
 	// Combine all mounts; highest priority entry determines writable status.
 	// Only works for exact matches; does not normalize case or resolve symlinks.
 	mounts := make([]Mount, 0, len(d.Mounts)+len(y.Mounts)+len(o.Mounts))
@@ -552,7 +567,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		if mount.NineP.Msize == nil {
 			mounts[i].NineP.Msize = pointer.String(Default9pMsize)
 		}
-		if mount.Virtiofs.QueueSize == nil {
+		if mount.Virtiofs.QueueSize == nil && *y.VMType == QEMU && *y.MountType == VIRTIOFS {
 			mounts[i].Virtiofs.QueueSize = pointer.Int(DefaultVirtiofsQueueSize)
 		}
 		if mount.Writable == nil {
@@ -567,20 +582,6 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		}
 		if mount.MountPoint == "" {
 			mounts[i].MountPoint = mount.Location
-		}
-	}
-
-	if y.MountType == nil {
-		y.MountType = d.MountType
-	}
-	if o.MountType != nil {
-		y.MountType = o.MountType
-	}
-	if y.MountType == nil || *y.MountType == "" {
-		if *y.VMType == VZ {
-			y.MountType = pointer.String(VIRTIOFS)
-		} else {
-			y.MountType = pointer.String(REVSSHFS)
 		}
 	}
 
