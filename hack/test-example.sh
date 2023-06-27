@@ -18,8 +18,7 @@ limactl validate "$FILE"
 
 # --cpus=1 is needed for running vz on GHA: https://github.com/lima-vm/lima/pull/1511#issuecomment-1574937888
 LIMACTL_CREATE_SET='.cpus = 1 | .memory="1GiB"'
-# TODO: add "limactl create" command
-LIMACTL_CREATE_AND_START=(limactl start --tty=false --set="${LIMACTL_CREATE_SET}")
+LIMACTL_CREATE=(limactl create --tty=false --set="${LIMACTL_CREATE_SET}")
 
 declare -A CHECKS=(
 	["systemd"]="1"
@@ -103,7 +102,7 @@ function diagnose() {
 
 export ftp_proxy=http://localhost:2121
 
-INFO "Starting \"$NAME\" from \"$FILE\""
+INFO "Creating \"$NAME\" from \"$FILE\""
 defer "limactl delete -f \"$NAME\""
 
 if [[ -n ${CHECKS["disk"]} ]]; then
@@ -114,7 +113,12 @@ if [[ -n ${CHECKS["disk"]} ]]; then
 fi
 
 set -x
-if ! "${LIMACTL_CREATE_AND_START[@]}" "$FILE"; then
+"${LIMACTL_CREATE[@]}" "$FILE"
+set +x
+
+INFO "Starting \"$NAME\""
+set -x
+if ! limactl start "$NAME"; then
 	ERROR "Failed to start \"$NAME\""
 	diagnose "$NAME"
 	exit 1
@@ -329,7 +333,8 @@ fi
 if [[ -n ${CHECKS["user-v2"]} ]]; then
 	INFO "Testing user-v2 network"
 	secondvm="$NAME-1"
-	"${LIMACTL_CREATE_AND_START[@]}" "$FILE" --name "$secondvm"
+	"${LIMACTL_CREATE[@]}" "$FILE" --name "$secondvm"
+	limactl start "$secondvm"
 	guestNewip="$(limactl shell "$secondvm" ip -4 -j addr show dev eth0 | jq -r '.[0].addr_info[0].local')"
 	INFO "IP of $secondvm is $guestNewip"
 	set -x

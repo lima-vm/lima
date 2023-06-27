@@ -119,7 +119,7 @@ func listAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	if len(allinstances) == 0 {
-		logrus.Warn("No instance found. Run `limactl start` to create an instance.")
+		logrus.Warn("No instance found. Run `limactl create` to create an instance.")
 		return nil
 	}
 

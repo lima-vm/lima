@@ -4,7 +4,7 @@ set -eu
 : "${DOCKER:=docker}"
 
 if [ "$(limactl ls -q "$LIMA_INSTANCE" 2>/dev/null)" != "$LIMA_INSTANCE" ]; then
-  echo "instance \"$LIMA_INSTANCE\" does not exist, run \`limactl start --name=$LIMA_INSTANCE template://docker\` to create a new instance" >&2
+  echo "instance \"$LIMA_INSTANCE\" does not exist, run \`limactl create --name=$LIMA_INSTANCE template://docker\` to create a new instance" >&2
   exit 1
 fi
 DOCKER=$(command -v "$DOCKER" || true)

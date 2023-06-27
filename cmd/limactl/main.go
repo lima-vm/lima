@@ -94,6 +94,7 @@ func newApp() *cobra.Command {
 		return nil
 	}
 	rootCmd.AddCommand(
+		newCreateCommand(),
 		newStartCommand(),
 		newStopCommand(),
 		newShellCommand(),

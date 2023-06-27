@@ -9,14 +9,14 @@ if [ -z "$LIMA_INSTANCE" ]; then
   elif [ "$(limactl ls -f '{{.Status}}' k8s 2>/dev/null)" = "Running" ]; then
     LIMA_INSTANCE=k8s
   else
-    echo "No k3s or k8s running instances found. Either start one with" >&2
-    echo "limactl start --name=k3s template://k3s" >&2
-    echo "limactl start --name=k8s template://k8s" >&2
+    echo "No k3s or k8s running instances found. Either create one with" >&2
+    echo "limactl create --name=k3s template://k3s" >&2
+    echo "limactl create --name=k8s template://k8s" >&2
     echo "or set LIMA_INSTANCE to the name of your Kubernetes instance" >&2
     exit 1
   fi
 elif [ "$(limactl ls -q "$LIMA_INSTANCE" 2>/dev/null)" != "$LIMA_INSTANCE" ]; then
-  echo "instance \"$LIMA_INSTANCE\" does not exist, run \`limactl start --name=$LIMA_INSTANCE\` to create a new instance" >&2
+  echo "instance \"$LIMA_INSTANCE\" does not exist, run \`limactl create --name=$LIMA_INSTANCE\` to create a new instance" >&2
   exit 1
 fi
 KUBECTL=$(command -v "$KUBECTL" || true)

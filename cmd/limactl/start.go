@@ -27,6 +27,49 @@ import (
 	"github.com/spf13/cobra"
 )
 
+func registerCreateFlags(cmd *cobra.Command, commentPrefix string) {
+	flags := cmd.Flags()
+	// TODO: "survey" does not support using cygwin terminal on windows yet
+	flags.Bool("tty", isatty.IsTerminal(os.Stdout.Fd()), commentPrefix+"enable TUI interactions such as opening an editor, defaults to true when stdout is a terminal")
+	flags.String("name", "", commentPrefix+"override the instance name")
+	flags.String("set", "", commentPrefix+"modify the template inplace, using yq syntax")
+	flags.Bool("list-templates", false, commentPrefix+"list available templates and exit")
+}
+
+func newCreateCommand() *cobra.Command {
+	var createCommand = &cobra.Command{
+		Use: "create FILE.yaml|URL",
+		Example: `
+To create an instance "default" from the default Ubuntu template:
+$ limactl create
+
+To create an instance "default" from a template "docker":
+$ limactl create --name=default template://docker
+
+To create an instance "default" with modified parameters:
+$ limactl create --set='.cpus = 2 | .memory = "2GiB"'
+
+To see the template list:
+$ limactl create --list-templates
+
+To create an instance "default" from a local file:
+$ limactl create --name=default /usr/local/share/lima/examples/fedora.yaml
+
+To create an instance "default" from a remote URL (use carefully, with a trustable source):
+$ limactl create --name=default https://raw.githubusercontent.com/lima-vm/lima/master/examples/alpine.yaml
+
+To create an instance "local" from a template passed to stdin (--name parameter is required):
+$ cat template.yaml | limactl create --name=local -
+`,
+		Short:             "Create an instance of Lima",
+		Args:              WrapArgsError(cobra.MaximumNArgs(1)),
+		ValidArgsFunction: createBashComplete,
+		RunE:              createAction,
+	}
+	registerCreateFlags(createCommand, "")
+	return createCommand
+}
+
 func newStartCommand() *cobra.Command {
 	var startCommand = &cobra.Command{
 		Use: "start NAME|FILE.yaml|URL",
@@ -34,39 +77,23 @@ func newStartCommand() *cobra.Command {
 To create an instance "default" (if not created yet) from the default Ubuntu template, and start it:
 $ limactl start
 
-To create an instance "default" from a template "docker":
+To create an instance "default" from a template "docker", and start it:
 $ limactl start --name=default template://docker
 
-To create an instance "default" with modified parameters:
-$ limactl start --set='.cpus = 2 | .memory = "2GiB"'
-
-To see the template list:
-$ limactl start --list-templates
-
-To create an instance "default" from a local file:
-$ limactl start --name=default /usr/local/share/lima/examples/fedora.yaml
-
-To create an instance "default" from a remote URL (use carefully, with a trustable source):
-$ limactl start --name=default https://raw.githubusercontent.com/lima-vm/lima/master/examples/alpine.yaml
-
-To create an instance "local" from a template passed to stdin (--name parameter is required):
-$ cat template.yaml | limactl start --name=local -
+'limactl start' also accepts the 'limactl create' flags such as '--set'.
+See the examples in 'limactl create --help'.
 `,
 		Short:             "Start an instance of Lima",
 		Args:              WrapArgsError(cobra.MaximumNArgs(1)),
 		ValidArgsFunction: startBashComplete,
 		RunE:              startAction,
 	}
-	// TODO: "survey" does not support using cygwin terminal on windows yet
-	startCommand.Flags().Bool("tty", isatty.IsTerminal(os.Stdout.Fd()), "enable TUI interactions such as opening an editor, defaults to true when stdout is a terminal")
-	startCommand.Flags().String("name", "", "override the instance name")
-	startCommand.Flags().String("set", "", "modify the template inplace, using yq syntax")
-	startCommand.Flags().Bool("list-templates", false, "list available templates and exit")
+	registerCreateFlags(startCommand, "[limactl create] ")
 	startCommand.Flags().Duration("timeout", start.DefaultWatchHostAgentEventsTimeout, "duration to wait for the instance to be running before timing out")
 	return startCommand
 }
 
-func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, error) {
+func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*store.Instance, error) {
 	var arg string // can be empty
 	if len(args) > 0 {
 		arg = args[0]
@@ -187,9 +214,12 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 		}
 		inst, err := store.Inspect(st.instName)
 		if err == nil {
+			if createOnly {
+				return nil, fmt.Errorf("Instance %q already exists", st.instName)
+			}
 			logrus.Infof("Using the existing instance %q", st.instName)
 			if arg == "" {
-				logrus.Infof("Hint: To create another instance, run the following command: limactl start --name=NAME template://default")
+				logrus.Infof("Hint: To create another instance, run the following command: limactl create --name=NAME template://default")
 			}
 			return inst, nil
 		}
@@ -198,7 +228,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string) (*store.Instance, e
 		}
 		if arg != "" && arg != DefaultInstanceName {
 			logrus.Infof("Creating an instance %q from template://default (Not from template://%s)", st.instName, st.instName)
-			logrus.Warnf("This form is deprecated. Use `limactl start --name=%s template://default` instead", st.instName)
+			logrus.Warnf("This form is deprecated. Use `limactl create --name=%s template://default` instead", st.instName)
 		}
 		// Read the default template for creating a new instance
 		st.yBytes, err = templatestore.Read(templatestore.Default)
@@ -369,20 +399,46 @@ func chooseNextCreatorState(st *creatorState) (*creatorState, error) {
 	}
 }
 
-func startAction(cmd *cobra.Command, args []string) error {
+// createStartActionCommon is shared by createAction and startAction.
+func createStartActionCommon(cmd *cobra.Command, _ []string) (exit bool, err error) {
 	if listTemplates, err := cmd.Flags().GetBool("list-templates"); err != nil {
-		return err
+		return true, err
 	} else if listTemplates {
 		if templates, err := templatestore.Templates(); err == nil {
 			w := cmd.OutOrStdout()
 			for _, f := range templates {
 				fmt.Fprintln(w, f.Name)
 			}
-			return nil
+			return true, nil
 		}
 	}
+	return false, nil
+}
 
-	inst, err := loadOrCreateInstance(cmd, args)
+func createAction(cmd *cobra.Command, args []string) error {
+	if exit, err := createStartActionCommon(cmd, args); err != nil {
+		return err
+	} else if exit {
+		return nil
+	}
+	inst, err := loadOrCreateInstance(cmd, args, true)
+	if err != nil {
+		return err
+	}
+	if len(inst.Errors) > 0 {
+		return fmt.Errorf("errors inspecting instance: %+v", inst.Errors)
+	}
+	logrus.Infof("Run `limactl start %q` to start the instance.", inst.Name)
+	return nil
+}
+
+func startAction(cmd *cobra.Command, args []string) error {
+	if exit, err := createStartActionCommon(cmd, args); err != nil {
+		return err
+	} else if exit {
+		return nil
+	}
+	inst, err := loadOrCreateInstance(cmd, args, false)
 	if err != nil {
 		return err
 	}
@@ -417,12 +473,12 @@ func startAction(cmd *cobra.Command, args []string) error {
 	return start.Start(ctx, inst)
 }
 
+func createBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
+	return bashCompleteTemplateNames(cmd)
+}
+
 func startBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
-	comp, _ := bashCompleteInstanceNames(cmd)
-	if templates, err := templatestore.Templates(); err == nil {
-		for _, f := range templates {
-			comp = append(comp, "template://"+f.Name)
-		}
-	}
-	return comp, cobra.ShellCompDirectiveDefault
+	compInst, _ := bashCompleteInstanceNames(cmd)
+	compTmpl, _ := bashCompleteTemplateNames(cmd)
+	return append(compInst, compTmpl...), cobra.ShellCompDirectiveDefault
 }
