@@ -1,0 +1,75 @@
+# Deploy kubernetes via rke2 (which installs a bundled containerd).
+# $ limactl start ./rke2.yaml
+# $ limactl shell rke2 sudo kubectl
+#
+# It can be accessed from the host by exporting the kubeconfig file;
+# the ports are already forwarded automatically by lima:
+#
+# $ export KUBECONFIG=$(limactl list rke2 --format 'unix://{{.Dir}}/copied-from-guest/kubeconfig.yaml')
+# $ kubectl get no
+# NAME            STATUS   ROLES                       AGE   VERSION
+# lima-rke2       Ready    control-plane,etcd,master   68s   v1.27.3+rke2r1
+#
+# For more details of RKE2, please refer to https://docs.rke2.io/
+#
+# This example requires Lima v0.7.0 or later.
+
+
+images:
+# Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
+- location: "https://cloud-images.ubuntu.com/releases/22.04/release-20230518/ubuntu-22.04-server-cloudimg-amd64.img"
+  arch: "x86_64"
+  digest: "sha256:afb820a9260217fd4c5c5aacfbca74aa7cd2418e830dc64ca2e0642b94aab161"
+- location: "https://cloud-images.ubuntu.com/releases/22.04/release-20230518/ubuntu-22.04-server-cloudimg-arm64.img"
+  arch: "aarch64"
+  digest: "sha256:b47f8be40b5f91c37874817c3324a72cea1982a5fdad031d9b648c9623c3b4e2"
+# Fallback to the latest release image.
+# Hint: run `limactl prune` to invalidate the cache
+- location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-amd64.img"
+  arch: "x86_64"
+- location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-arm64.img"
+  arch: "aarch64"
+
+# Mounts are disabled in this example, but can be enabled optionally.
+mounts: []
+
+# containerd is managed by rke2, not by Lima, so the values are set to false here.
+containerd:
+  system: false
+  user: false
+
+provision:
+- mode: system
+  script: |
+    #!/bin/sh
+    if [ ! -d /var/lib/rancher/rke2 ]; then
+      curl -sfL https://get.rke2.io | INSTALL_RKE2_CHANNEL=v1.27 sh -
+    fi
+    env | grep "http_proxy\|https_proxy\|no_proxy" > /etc/default/rke2-server
+    sed -i "s/http_proxy/CONTAINERD_HTTP_PROXY/g" /etc/default/rke2-server
+    sed -i "s/https_proxy/CONTAINERD_HTTPS_PROXY/g" /etc/default/rke2-server
+    sed -i "s/no_proxy/CONTAINERD_NO_PROXY/g" /etc/default/rke2-server
+
+    systemctl start rke2-server.service
+
+probes:
+- script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    if ! timeout 30s bash -c "until test -f /etc/rancher/rke2/rke2.yaml; do sleep 3; done"; then
+            echo >&2 "rke2 is not running yet"
+            exit 1
+    fi
+  hint: |
+    The rke2 kubeconfig file has not yet been created.
+    Run "limactl shell rke2 sudo journalctl -u rke2-server" to check the log.
+    If that is still empty, check the bottom of the log at "/var/log/cloud-init-output.log".
+copyToHost:
+- guest: "/etc/rancher/rke2/rke2.yaml"
+  host: "{{.Dir}}/copied-from-guest/kubeconfig.yaml"
+message: |
+  To run `kubectl` on the host (assumes kubectl is installed), run the following commands:
+  ------
+  export KUBECONFIG="{{.Dir}}/copied-from-guest/kubeconfig.yaml"
+  kubectl ...
+  ------
