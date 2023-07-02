@@ -47,6 +47,7 @@ Container environments:
 - [Rancher Desktop](https://rancherdesktop.io/): Kubernetes and container management to the desktop
 - [Colima](https://github.com/abiosoft/colima): Docker (and Kubernetes) on macOS with minimal setup
 - [Finch](https://github.com/runfinch/finch): Finch is a command line client for local container development
+- [Podman Desktop](https://podman-desktop.io/): Podman Desktop GUI has a plug-in for Lima virtual machines
 
 GUI:
 - [Lima xbar plugin](https://github.com/unixorn/lima-xbar-plugin): [xbar](https://xbarapp.com/) plugin to start/stop VMs from the menu bar and see their running status.
@@ -377,6 +378,9 @@ The default Ubuntu image also contains LXD. Run `lima sudo lxc init` to set up L
 See also third party containerd projects based on Lima:
 - [Rancher Desktop](https://rancherdesktop.io/): Kubernetes and container management to the desktop
 - [Colima](https://github.com/abiosoft/colima): Docker (and Kubernetes) on macOS with minimal setup
+
+Or third party "[containers](https://github.com/containers)" projects compatible with Lima:
+- [Podman Desktop](https://podman-desktop.io/): Containers and Kubernetes for application developers
 
 #### "Can I run Lima with a remote Linux machine?"
 Lima itself does not support connecting to a remote Linux machine, but [sshocker](https://github.com/lima-vm/sshocker),
