@@ -1,0 +1,20 @@
+# This example requires Lima v0.15.1 or later.
+# <https://fedoraproject.org/coreos/download/>
+
+images:
+- location: "https://builds.coreos.fedoraproject.org/prod/streams/stable/builds/38.20230918.3.0/x86_64/fedora-coreos-38.20230918.3.0-qemu.x86_64.qcow2.xz"
+  arch: "x86_64"
+  digest: "sha256:52d98121563a61fdab6924a8e3190bc1cbf7775942d8a8046f9ef2a689ed7aa0"
+- location: "https://builds.coreos.fedoraproject.org/prod/streams/stable/builds/38.20230918.3.0/aarch64/fedora-coreos-38.20230918.3.0-qemu.aarch64.qcow2.xz"
+  arch: "aarch64"
+  digest: "sha256:432b5af49f56fcf6d2ed9046ee7b3654adb6345203d69fa14fe8d37b72b79eb9"
+
+mounts:
+- location: "~"
+- location: "/tmp/lima"
+  writable: true
+
+# The built-in containerd installer does not support CoreOS currently.
+containerd:
+  system: false
+  user: false
