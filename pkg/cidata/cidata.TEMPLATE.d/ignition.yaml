@@ -61,6 +61,17 @@ systemd:
 
         [Install]
         RequiredBy=multi-user.target
+{{- if or .Containerd.User .Containerd.System }}
+    - name: lima-install-containerd.service
+      enabled: true
+      contents: |
+        [Service]
+        Type=oneshot
+        ExecStart=/bin/sh -c "/usr/bin/tar Cxzf /usr/local /mnt/lima-cidata/nerdctl-full.tgz"
+
+        [Install]
+        RequiredBy=multi-user.target
+{{- end}}
     - name: lima-install-guestagent.service
       enabled: true
       contents: |
