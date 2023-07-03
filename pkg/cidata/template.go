@@ -6,12 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"os/exec"
 	"path"
 
 	"github.com/lima-vm/lima/pkg/iso9660util"
 
 	"github.com/containerd/containerd/identifiers"
 	"github.com/lima-vm/lima/pkg/textutil"
+	"github.com/sirupsen/logrus"
 )
 
 //go:embed cidata.TEMPLATE.d
@@ -114,17 +116,36 @@ func ValidateTemplateArgs(args TemplateArgs) error {
 	return nil
 }
 
-func ExecuteTemplate(args TemplateArgs) ([]iso9660util.Entry, error) {
-	if err := ValidateTemplateArgs(args); err != nil {
+func executeButane(yaml []byte) ([]byte, error) {
+	butane, err := exec.LookPath("butane")
+	if err != nil {
+		logrus.Debug("butane not found in PATH, skipping ignition")
 		return nil, err
+	}
+	var stdout, stderr bytes.Buffer
+	cmd := exec.Command(butane, "--strict")
+	cmd.Stdin = bytes.NewReader(yaml)
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		logrus.Warnf("%v %s: %s %s", cmd, yaml, err, stderr.String())
+		return nil, err
+	}
+	return stdout.Bytes(), nil
+}
+
+func ExecuteTemplate(args TemplateArgs) ([]iso9660util.Entry, []byte, error) {
+	if err := ValidateTemplateArgs(args); err != nil {
+		return nil, nil, err
 	}
 
 	fsys, err := fs.Sub(templateFS, templateFSRoot)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	var layout []iso9660util.Entry
+	var ignition []byte
 	walkFn := func(p string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
@@ -147,12 +168,18 @@ func ExecuteTemplate(args TemplateArgs) ([]iso9660util.Entry, error) {
 			Path:   p,
 			Reader: bytes.NewReader(b),
 		})
+		if path.Base(p) == "ignition.yaml" {
+			ign, err := executeButane([]byte(b))
+			if err == nil {
+				ignition = ign
+			}
+		}
 		return nil
 	}
 
 	if err := fs.WalkDir(fsys, ".", walkFn); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return layout, nil
+	return layout, ignition, nil
 }

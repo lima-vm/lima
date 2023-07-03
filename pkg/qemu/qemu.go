@@ -674,6 +674,13 @@ func Cmdline(cfg Config) (exe string, args []string, err error) {
 		"-device", "virtio-scsi-pci,id=scsi0",
 		"-device", "scsi-cd,bus=scsi0.0,drive=cdrom0")
 
+	// ignition
+	ignition := filepath.Join(cfg.InstanceDir, filenames.Ignition)
+	if _, err := os.Stat(ignition); err == nil {
+		args = append(args,
+			"-fw_cfg", "name=opt/com.coreos/config,file="+ignition)
+	}
+
 	// Kernel
 	kernel := filepath.Join(cfg.InstanceDir, filenames.Kernel)
 	kernelCmdline := filepath.Join(cfg.InstanceDir, filenames.KernelCmdline)
