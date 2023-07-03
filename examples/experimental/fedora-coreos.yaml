@@ -9,8 +9,8 @@ images:
   arch: "aarch64"
   digest: "sha256:432b5af49f56fcf6d2ed9046ee7b3654adb6345203d69fa14fe8d37b72b79eb9"
 
+# The guest home directory can not be changed with CoreOS currently.
 mounts:
-- location: "~"
 - location: "/tmp/lima"
   writable: true
 

@@ -1,0 +1,85 @@
+variant: fcos
+version: 1.4.0
+passwd:
+  users:
+    - name: "{{.User}}"
+      groups:
+        - sudo
+      ssh_authorized_keys:
+{{- range $val := .SSHPubKeys}}
+        - "{{$val}}"
+{{- end}}
+storage:
+  files:
+    - path: /etc/hostname
+      mode: 0644
+      overwrite: true
+      contents:
+        inline: "lima-{{.Name}}"
+{{- if or (eq .MountType "9p") (eq .MountType "virtiofs") }}
+{{- if .Mounts }}
+    - path: /etc/fstab
+      mode: 0644
+      contents:
+        inline: |
+{{- range $m := $.Mounts}}
+          {{$m.Tag}} {{$m.MountPoint}} {{$m.Type}} {{$m.Options}} 0 0
+{{- end }}
+{{- end }}
+{{- end }}
+    - path: /etc/fuse.conf
+      mode: 0644
+      overwrite: true
+      contents:
+        inline: "user_allow_other\n"
+systemd:
+  units:
+    # Note1: name must systemd-escape path
+    # Note2: path must not contain symlinks
+    - name: "var-mnt-lima\\x2dcidata.mount"
+      enabled: true
+      contents: |
+        [Unit]
+        Before=local-fs.target
+
+        [Mount]
+        What=/dev/disk/by-label/cidata
+        Where=/var/mnt/lima-cidata
+        Options=ro,mode=0700,dmode=0700,overriderockperm,exec,uid=0
+
+        [Install]
+        RequiredBy=local-fs.target
+    - name: lima-ssh-ready.service
+      enabled: true
+      contents: |
+        [Unit]
+        After=sshd.service
+
+        [Service]
+        Type=oneshot
+        ExecStart=/bin/cp /mnt/lima-cidata/meta-data /run/lima-ssh-ready
+
+        [Install]
+        RequiredBy=multi-user.target
+    - name: lima-install-guestagent.service
+      enabled: true
+      contents: |
+        [Service]
+        Type=oneshot
+        ExecStart=/bin/sh -c "install -m 755 /mnt/lima-cidata/lima-guestagent /usr/local/bin/lima-guestagent"
+        ExecStartPost=/usr/local/bin/lima-guestagent install-systemd
+
+        [Install]
+        RequiredBy=multi-user.target
+    - name: lima-boot-done.service
+      enabled: true
+      contents: |
+        [Unit]
+        After=lima-install-guestagent.service
+
+        [Service]
+        Type=oneshot
+        ExecStart=/bin/cp /mnt/lima-cidata/meta-data /run/lima-boot-done
+
+        [Install]
+        RequiredBy=multi-user.target

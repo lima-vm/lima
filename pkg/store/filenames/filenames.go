@@ -29,6 +29,7 @@ const (
 	LimaYAML           = "lima.yaml"
 	CIDataISO          = "cidata.iso"
 	CIDataISODir       = "cidata"
+	Ignition           = "config.ign"
 	BaseDisk           = "basedisk"
 	DiffDisk           = "diffdisk"
 	Kernel             = "kernel"

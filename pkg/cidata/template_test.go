@@ -23,7 +23,7 @@ func TestTemplate(t *testing.T) {
 		},
 		MountType: "reverse-sshfs",
 	}
-	layout, err := ExecuteTemplate(args)
+	layout, _, err := ExecuteTemplate(args)
 	assert.NilError(t, err)
 	for _, f := range layout {
 		t.Logf("=== %q ===", f.Path)
@@ -52,7 +52,7 @@ func TestTemplate9p(t *testing.T) {
 		},
 		MountType: "9p",
 	}
-	layout, err := ExecuteTemplate(args)
+	layout, _, err := ExecuteTemplate(args)
 	assert.NilError(t, err)
 	for _, f := range layout {
 		t.Logf("=== %q ===", f.Path)
