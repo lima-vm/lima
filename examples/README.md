@@ -26,6 +26,7 @@ Distro:
 - [`ubuntu`](./ubuntu.yaml): Ubuntu (same as `default.yaml` but without extra YAML lines)
 - [`ubuntu-lts`](./ubuntu-lts.yaml): Ubuntu LTS (same as `ubuntu.yaml` but pinned to an LTS version)
 - [`deprecated/centos-7`](./deprecated/centos-7.yaml): [deprecated] CentOS Linux 7
+- [`experimental/fedora-coreos`](./experimental/fedora-coreos.yaml): [experimental] Fedora CoreOS
 - [`experimental/opensuse-tumbleweed`](./experimental/opensuse-tumbleweed.yaml): [experimental] openSUSE Tumbleweed
 
 Container engines:
