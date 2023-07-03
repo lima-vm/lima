@@ -13,8 +13,3 @@ images:
 mounts:
 - location: "/tmp/lima"
   writable: true
-
-# The built-in containerd installer does not support CoreOS currently.
-containerd:
-  system: false
-  user: false
