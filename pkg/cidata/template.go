@@ -122,7 +122,7 @@ func ExecuteTemplate(args TemplateArgs) ([]iso9660util.Entry, error) {
 	}
 
 	var layout []iso9660util.Entry
-	walkFn := func(path string, d fs.DirEntry, walkErr error) error {
+	walkFn := func(p string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}
@@ -130,9 +130,9 @@ func ExecuteTemplate(args TemplateArgs) ([]iso9660util.Entry, error) {
 			return nil
 		}
 		if !d.Type().IsRegular() {
-			return fmt.Errorf("got non-regular file %q", path)
+			return fmt.Errorf("got non-regular file %q", p)
 		}
-		templateB, err := fs.ReadFile(fsys, path)
+		templateB, err := fs.ReadFile(fsys, p)
 		if err != nil {
 			return err
 		}
@@ -141,7 +141,7 @@ func ExecuteTemplate(args TemplateArgs) ([]iso9660util.Entry, error) {
 			return err
 		}
 		layout = append(layout, iso9660util.Entry{
-			Path:   path,
+			Path:   p,
 			Reader: bytes.NewReader(b),
 		})
 		return nil
