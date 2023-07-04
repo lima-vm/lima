@@ -108,6 +108,10 @@ func defaultDiskSizeAsString() string {
 	return "100GiB"
 }
 
+func defaultGuestInstallPrefix() string {
+	return "/usr/local"
+}
+
 // FillDefault updates undefined fields in y with defaults from d (or built-in default), and overwrites with values from o.
 // Both d and o may be empty.
 //
@@ -344,6 +348,16 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		if provision.Mode == ProvisionModeDependency && provision.SkipDefaultDependencyResolution == nil {
 			provision.SkipDefaultDependencyResolution = pointer.Bool(false)
 		}
+	}
+
+	if y.GuestInstallPrefix == nil {
+		y.GuestInstallPrefix = d.GuestInstallPrefix
+	}
+	if o.GuestInstallPrefix != nil {
+		y.GuestInstallPrefix = o.GuestInstallPrefix
+	}
+	if y.GuestInstallPrefix == nil {
+		y.GuestInstallPrefix = pointer.String(defaultGuestInstallPrefix())
 	}
 
 	if y.Containerd.System == nil {

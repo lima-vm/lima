@@ -158,7 +158,7 @@ are set to 'false' in the config file.
 				description: "containerd binaries to be installed",
 				script: `#!/bin/bash
 set -eux -o pipefail
-if ! timeout 30s bash -c "until command -v nerdctl; do sleep 3; done"; then
+if ! timeout 30s bash -c "until command -v nerdctl || test -x ` + *a.y.GuestInstallPrefix + `/bin/nerdctl; do sleep 3; done"; then
 	echo >&2 "nerdctl is not installed yet"
 	exit 1
 fi

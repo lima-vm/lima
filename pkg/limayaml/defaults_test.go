@@ -68,9 +68,10 @@ func TestFillDefault(t *testing.T) {
 			X8664:   "qemu64",
 			RISCV64: "rv64",
 		},
-		CPUs:   pointer.Int(defaultCPUs()),
-		Memory: pointer.String(defaultMemoryAsString()),
-		Disk:   pointer.String(defaultDiskSizeAsString()),
+		CPUs:               pointer.Int(defaultCPUs()),
+		Memory:             pointer.String(defaultMemoryAsString()),
+		Disk:               pointer.String(defaultDiskSizeAsString()),
+		GuestInstallPrefix: pointer.String(defaultGuestInstallPrefix()),
 		Containerd: Containerd{
 			System:   pointer.Bool(false),
 			User:     pointer.Bool(true),
@@ -278,6 +279,7 @@ func TestFillDefault(t *testing.T) {
 		AdditionalDisks: []Disk{
 			"data",
 		},
+		GuestInstallPrefix: pointer.String("/opt"),
 		Containerd: Containerd{
 			System: pointer.Bool(true),
 			User:   pointer.Bool(false),
@@ -454,6 +456,7 @@ func TestFillDefault(t *testing.T) {
 		AdditionalDisks: []Disk{
 			"test",
 		},
+		GuestInstallPrefix: pointer.String("/usr"),
 		Containerd: Containerd{
 			System: pointer.Bool(true),
 			User:   pointer.Bool(false),

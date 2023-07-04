@@ -13,18 +13,18 @@ command -v systemctl >/dev/null 2>&1 || exit 0
 tmp_extract_nerdctl="$(mktemp -d)"
 tar Cxzf "${tmp_extract_nerdctl}" "${LIMA_CIDATA_MNT}"/nerdctl-full.tgz bin/nerdctl
 
-if [ ! -f /usr/local/bin/nerdctl ] || [[ "${tmp_extract_nerdctl}"/bin/nerdctl -nt /usr/local/bin/nerdctl ]]; then
-	if [ -f /usr/local/bin/nerdctl ]; then
+if [ ! -f "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/nerdctl ] || [[ "${tmp_extract_nerdctl}"/bin/nerdctl -nt "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/nerdctl ]]; then
+	if [ -f "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/nerdctl ]; then
 		(
 			set +e
 			echo "Upgrading existing nerdctl"
-			echo "- Old: $(/usr/local/bin/nerdctl --version)"
+			echo "- Old: $("${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/nerdctl --version)"
 			echo "- New: $("${tmp_extract_nerdctl}"/bin/nerdctl --version)"
 			systemctl disable --now containerd buildkit stargz-snapshotter
 			sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "PATH=${PATH}" containerd-rootless-setuptool.sh uninstall
 		)
 	fi
-	tar Cxzf /usr/local "${LIMA_CIDATA_MNT}"/nerdctl-full.tgz
+	tar Cxzf "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}" "${LIMA_CIDATA_MNT}"/nerdctl-full.tgz
 
 	mkdir -p /etc/bash_completion.d
 	nerdctl completion bash >/etc/bash_completion.d/nerdctl
