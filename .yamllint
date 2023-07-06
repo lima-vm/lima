@@ -2,6 +2,10 @@
 
 extends: default
 
+ignore: |
+  # this is a yaml template, needs to executed
+  pkg/cidata/cidata.TEMPLATE.d/ignition.yaml
+
 rules:
   indentation:
     indent-sequences: false
