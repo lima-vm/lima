@@ -27,6 +27,7 @@ Distro:
 - [`ubuntu-lts`](./ubuntu-lts.yaml): Ubuntu LTS (same as `ubuntu.yaml` but pinned to an LTS version)
 - [`deprecated/centos-7`](./deprecated/centos-7.yaml): [deprecated] CentOS Linux 7
 - [`experimental/opensuse-tumbleweed`](./experimental/opensuse-tumbleweed.yaml): [experimental] openSUSE Tumbleweed
+- [`experimental/flatcar`](experimental/flatcar.yaml): [experimental] Flatcar Container Linux
 
 Container engines:
 - [`apptainer`](./apptainer.yaml): Apptainer

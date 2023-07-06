@@ -1,0 +1,21 @@
+# # This example requires Lima v0.15.1 or later.
+# <https://www.flatcar.org/releases#stable-release>
+
+images:
+- location: "https://stable.release.flatcar-linux.net/amd64-usr/3510.2.5/flatcar_production_qemu_uefi_image.img.bz2"
+  arch: "x86_64"
+  digest: "sha512:098ddf9aecb4e27d33c5ea9fb7a233720330f0711f3008e75723cce8a8ec1e27ebcfd0959d276bbde034ee5723e5c58a28a78cdd37f04ddea605c0d09a34f267"
+- location: "https://stable.release.flatcar-linux.net/arm64-usr/3510.2.5/flatcar_production_qemu_uefi_image.img.bz2"
+  arch: "aarch64"
+  digest: "sha512:cc6e6cf91e4a566c1911b579eb9570baaac484b92bec9c33215354fc44f1f291957dcae33cce580a19ab9437337260babcee4aaff4ac6fa5b7c649271cacfb98"
+
+# The /usr/local prefix is read-only under Flatcar Container Linux.
+guestInstallPrefix: /opt
+
+# The guest home directory can not be changed with CoreOS currently.
+mounts:
+- location: "/tmp/lima"
+  writable: true
+
+# There is no support for FUSE or sshfs in Flatcar Container Linux.
+mountType: "9p"
