@@ -28,6 +28,7 @@ Distro:
 - [`deprecated/centos-7`](./deprecated/centos-7.yaml): [deprecated] CentOS Linux 7
 - [`experimental/gentoo`](./experimental/gentoo.yaml): [experimental] Gentoo
 - [`experimental/fedora-coreos`](./experimental/fedora-coreos.yaml): [experimental] Fedora CoreOS
+- [`experimental/flatcar`](experimental/flatcar.yaml): [experimental] Flatcar Container Linux
 - [`experimental/opensuse-tumbleweed`](./experimental/opensuse-tumbleweed.yaml): [experimental] openSUSE Tumbleweed
 
 Container engines:
