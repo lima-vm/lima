@@ -2,15 +2,21 @@
 # $ limactl start ./apptainer-rootful.yaml
 # $ limactl shell apptainer-rootful apptainer run -u -B $HOME:$HOME docker://alpine
 
-# Fedora provides Apptainer in the default dnf.
-# Ubuntu does not seem to provide Apptainer in the default apt.
 images:
-- location: "https://download.fedoraproject.org/pub/fedora/linux/releases/38/Cloud/x86_64/images/Fedora-Cloud-Base-38-1.6.x86_64.qcow2"
+# Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
+- location: "https://cloud-images.ubuntu.com/releases/22.04/release-20230518/ubuntu-22.04-server-cloudimg-amd64.img"
   arch: "x86_64"
-  digest: "sha256:d334670401ff3d5b4129fcc662cf64f5a6e568228af59076cc449a4945318482"
-- location: "https://download.fedoraproject.org/pub/fedora/linux/releases/38/Cloud/aarch64/images/Fedora-Cloud-Base-38-1.6.aarch64.qcow2"
+  digest: "sha256:afb820a9260217fd4c5c5aacfbca74aa7cd2418e830dc64ca2e0642b94aab161"
+- location: "https://cloud-images.ubuntu.com/releases/22.04/release-20230518/ubuntu-22.04-server-cloudimg-arm64.img"
   arch: "aarch64"
-  digest: "sha256:ad71d22104a16e4f9efa93e61e8c7bce28de693f59c802586abbe85e9db55a65"
+  digest: "sha256:b47f8be40b5f91c37874817c3324a72cea1982a5fdad031d9b648c9623c3b4e2"
+# Fallback to the latest release image.
+# Hint: run `limactl prune` to invalidate the cache
+- location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-amd64.img"
+  arch: "x86_64"
+- location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-arm64.img"
+  arch: "aarch64"
+
 mounts:
 - location: "~"
 - location: "/tmp/lima"
@@ -23,17 +29,11 @@ provision:
   script: |
     #!/bin/bash
     set -eux -o pipefail
-    modprobe squashfs >/dev/null 2>&1 && exit 0
-    dnf install -y kernel-modules-$(uname -r)
-- mode: system
-  script: |
-    #!/bin/bash
-    set -eux -o pipefail
     command -v apptainer >/dev/null 2>&1 && exit 0
-    dnf -y install apptainer apptainer-suid
-    # See https://fedoraproject.org/wiki/Features/tmp-on-tmpfs
-    echo "APPTAINER_TMPDIR=/var/tmp" > /etc/profile.d/apptainer.sh
-    echo "export APPTAINER_TMPDIR" >> /etc/profile.d/apptainer.sh
+    # add the "Official PPA for Apptainer"
+    add-apt-repository -y ppa:apptainer/ppa
+    apt-get update
+    apt-get install -y apptainer-suid
 probes:
 - script: |
     #!/bin/bash
