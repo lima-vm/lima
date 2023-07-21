@@ -36,6 +36,14 @@ all: binaries manpages
 
 exe: _output/bin/limactl$(exe)
 
+.PHONY: minimal
+minimal: clean \
+	_output/bin/limactl$(exe) \
+	codesign \
+	_output/share/lima/lima-guestagent.Linux-$(shell uname -m | sed -e s/arm64/aarch64/)
+	mkdir -p _output/share/lima/examples
+	cp -aL examples/default.yaml _output/share/lima/examples/
+
 .PHONY: binaries
 binaries: clean \
 	_output/bin/lima \
