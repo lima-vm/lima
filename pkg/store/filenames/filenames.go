@@ -34,8 +34,10 @@ const (
 	KernelCmdline      = "kernel.cmdline"
 	Initrd             = "initrd"
 	QMPSock            = "qmp.sock"
-	SerialLog          = "serial.log"
+	SerialLog          = "serial.log" // legacy
 	SerialSock         = "serial.sock"
+	SerialVirtioLog    = "serialv.log" // virtio serial
+	SerialVirtioSock   = "serialv.sock"
 	SSHSock            = "ssh.sock"
 	SSHConfig          = "ssh.config"
 	VhostSock          = "virtiofsd-%d.sock"

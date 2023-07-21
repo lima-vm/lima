@@ -234,7 +234,7 @@ func attachPlatformConfig(driver *driver.BaseDriver, vmConfig *vz.VirtualMachine
 }
 
 func attachSerialPort(driver *driver.BaseDriver, config *vz.VirtualMachineConfiguration) error {
-	path := filepath.Join(driver.Instance.Dir, filenames.SerialLog)
+	path := filepath.Join(driver.Instance.Dir, filenames.SerialVirtioLog)
 	serialPortAttachment, err := vz.NewFileSerialPortAttachment(path, false)
 	if err != nil {
 		return err

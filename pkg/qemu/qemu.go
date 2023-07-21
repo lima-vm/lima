@@ -805,7 +805,7 @@ func Cmdline(cfg Config) (string, []string, error) {
 	// Parallel
 	args = append(args, "-parallel", "none")
 
-	// Serial
+	// Serial (legacy)
 	serialSock := filepath.Join(cfg.InstanceDir, filenames.SerialSock)
 	if err := os.RemoveAll(serialSock); err != nil {
 		return "", nil, err
@@ -817,6 +817,20 @@ func Cmdline(cfg Config) (string, []string, error) {
 	const serialChardev = "char-serial"
 	args = append(args, "-chardev", fmt.Sprintf("socket,id=%s,path=%s,server=on,wait=off,logfile=%s", serialChardev, serialSock, serialLog))
 	args = append(args, "-serial", "chardev:"+serialChardev)
+
+	// Serial (virtio)
+	serialvSock := filepath.Join(cfg.InstanceDir, filenames.SerialVirtioSock)
+	if err := os.RemoveAll(serialvSock); err != nil {
+		return "", nil, err
+	}
+	serialvLog := filepath.Join(cfg.InstanceDir, filenames.SerialVirtioLog)
+	if err := os.RemoveAll(serialvLog); err != nil {
+		return "", nil, err
+	}
+	const serialvChardev = "char-serial-virtio"
+	args = append(args, "-chardev", fmt.Sprintf("socket,id=%s,path=%s,server=on,wait=off,logfile=%s", serialvChardev, serialvSock, serialvLog))
+	args = append(args, "-device", "virtio-serial-pci,id=virtio-serial0")
+	args = append(args, "-device", fmt.Sprintf("virtconsole,chardev=%s,id=console0", serialvChardev))
 
 	// We also want to enable vsock here, but QEMU does not support vsock for macOS hosts
 
