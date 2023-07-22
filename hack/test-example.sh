@@ -26,8 +26,9 @@ declare -A CHECKS=(
 	["mount-home"]="1"
 	["containerd-user"]="1"
 	["restart"]="1"
-	["snapshot-online"]="1"
-	["snapshot-offline"]="1"
+	# snapshot tests are too flaky (especially with archlinux)
+	["snapshot-online"]=""
+	["snapshot-offline"]=""
 	["port-forwards"]="1"
 	["vmnet"]=""
 	["disk"]=""
@@ -50,26 +51,17 @@ case "$NAME" in
 	# ● run-r2b459797f5b04262bfa79984077a65c7.service                                       loaded failed failed    /usr/bin/systemctl start man-db-cache-update
 	CHECKS["systemd-strict"]=
 	;;
-"9p")
-	CHECKS["snapshot-online"]=""
-	;;
-"virtiofs-linux")
-	CHECKS["snapshot-online"]=""
-	;;
 "vmnet")
 	CHECKS["vmnet"]=1
 	;;
 "test-misc")
 	CHECKS["disk"]=1
+	CHECKS["snapshot-online"]="1"
+	CHECKS["snapshot-offline"]="1"
 	;;
 "net-user-v2")
 	CHECKS["port-forwards"]=""
-	CHECKS["snapshot-online"]=""
 	CHECKS["user-v2"]=1
-	;;
-"vz")
-	CHECKS["snapshot-online"]=""
-	CHECKS["snapshot-offline"]=""
 	;;
 esac
 
