@@ -178,7 +178,7 @@ func (l *LimaQemuDriver) Start(ctx context.Context) (chan error, error) {
 		}()
 	}
 
-	logrus.Infof("Starting QEMU (hint: to watch the boot progress, see %q)", filepath.Join(qCfg.InstanceDir, filenames.SerialLog))
+	logrus.Infof("Starting QEMU (hint: to watch the boot progress, see %q)", filepath.Join(qCfg.InstanceDir, "serial*.log"))
 	logrus.Debugf("qCmd.Args: %v", qCmd.Args)
 	if err := qCmd.Start(); err != nil {
 		return nil, err

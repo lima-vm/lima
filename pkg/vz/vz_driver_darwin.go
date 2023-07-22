@@ -14,7 +14,6 @@ import (
 
 	"github.com/Code-Hex/vz/v3"
 
-	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/pkg/driver"
@@ -132,7 +131,7 @@ func (l *LimaVzDriver) CreateDisk() error {
 }
 
 func (l *LimaVzDriver) Start(ctx context.Context) (chan error, error) {
-	logrus.Infof("Starting VZ (hint: to watch the boot progress, see %q)", filepath.Join(l.Instance.Dir, filenames.SerialLog))
+	logrus.Infof("Starting VZ (hint: to watch the boot progress, see %q)", filepath.Join(l.Instance.Dir, "serial*.log"))
 	vm, errCh, err := startVM(ctx, l.BaseDriver)
 	if err != nil {
 		if errors.Is(err, vz.ErrUnsupportedOSVersion) {

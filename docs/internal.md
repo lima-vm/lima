@@ -44,13 +44,17 @@ kernel:
 QEMU:
 - `qemu.pid`: QEMU PID
 - `qmp.sock`: QMP socket
-- `serial.log`: QEMU serial log, for debugging
-- `serial.sock`: QEMU serial socket, for debugging (Usage: `socat -,echo=0,icanon=0 unix-connect:serial.sock`)
 
 VZ:
 - `vz.pid`: VZ PID
 - `vz-identifier`: Unique machine identifier file for a VM
 - `vz-efi`: EFIVariable store file for a VM
+
+Serial:
+- `serial.log`: legacy serial log (QEMU only), for debugging
+- `serial.sock`: legacy serial socket (QEMU only), for debugging (Usage: `socat -,echo=0,icanon=0 unix-connect:serial.sock`)
+- `serialv.log`: virtio serial log, for debugging
+- `serialv.sock`: virtio serial socket (QEMU only), for debugging (Usage: `socat -,echo=0,icanon=0 unix-connect:serialv.sock`)
 
 SSH:
 - `ssh.sock`: SSH control master socket
