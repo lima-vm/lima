@@ -56,17 +56,16 @@ func ensureNerdctlArchiveCache(y *limayaml.LimaYAML) (string, error) {
 	return "", fileutils.Errors(errs)
 }
 
-func Start(ctx context.Context, inst *store.Instance) error {
-	haPIDPath := filepath.Join(inst.Dir, filenames.HostAgentPID)
-	if _, err := os.Stat(haPIDPath); !errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("instance %q seems running (hint: remove %q if the instance is not actually running)", inst.Name, haPIDPath)
-	}
+type Prepared struct {
+	Driver              driver.Driver
+	NerdctlArchiveCache string
+}
 
-	haSockPath := filepath.Join(inst.Dir, filenames.HostAgentSock)
-
+// Prepare ensures the disk, the nerdctl archive, etc.
+func Prepare(_ context.Context, inst *store.Instance) (*Prepared, error) {
 	y, err := inst.LoadYAML()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	limaDriver := driverutil.CreateTargetDriverInstance(&driver.BaseDriver{
@@ -75,13 +74,34 @@ func Start(ctx context.Context, inst *store.Instance) error {
 	})
 
 	if err := limaDriver.Validate(); err != nil {
-		return err
+		return nil, err
 	}
 
 	if err := limaDriver.CreateDisk(); err != nil {
-		return err
+		return nil, err
 	}
 	nerdctlArchiveCache, err := ensureNerdctlArchiveCache(y)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Prepared{
+		Driver:              limaDriver,
+		NerdctlArchiveCache: nerdctlArchiveCache,
+	}, nil
+}
+
+// Start starts the instance.
+// Start calls Prepare by itself, so you do not need to call Prepare manually before calling Start.
+func Start(ctx context.Context, inst *store.Instance) error {
+	haPIDPath := filepath.Join(inst.Dir, filenames.HostAgentPID)
+	if _, err := os.Stat(haPIDPath); !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("instance %q seems running (hint: remove %q if the instance is not actually running)", inst.Name, haPIDPath)
+	}
+
+	haSockPath := filepath.Join(inst.Dir, filenames.HostAgentSock)
+
+	prepared, err := Prepare(ctx, inst)
 	if err != nil {
 		return err
 	}
@@ -117,11 +137,11 @@ func Start(ctx context.Context, inst *store.Instance) error {
 		"hostagent",
 		"--pidfile", haPIDPath,
 		"--socket", haSockPath)
-	if limaDriver.CanRunGUI() {
+	if prepared.Driver.CanRunGUI() {
 		args = append(args, "--run-gui")
 	}
-	if nerdctlArchiveCache != "" {
-		args = append(args, "--nerdctl-archive", nerdctlArchiveCache)
+	if prepared.NerdctlArchiveCache != "" {
+		args = append(args, "--nerdctl-archive", prepared.NerdctlArchiveCache)
 	}
 	args = append(args, inst.Name)
 	haCmd := exec.CommandContext(ctx, self, args...)
