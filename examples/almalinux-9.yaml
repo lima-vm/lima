@@ -7,6 +7,12 @@ images:
 - location: "https://repo.almalinux.org/almalinux/9.2/cloud/aarch64/images/AlmaLinux-9-GenericCloud-9.2-20230513.aarch64.qcow2"
   arch: "aarch64"
   digest: "sha256:a4cbd35010ae0ce7437b2855e5f6f6f03124784ca2aaa5c111563f64e03301e4"
+# Fallback to the latest release image.
+# Hint: run `limactl prune` to invalidate the cache
+- location: "https://repo.almalinux.org/almalinux/9/cloud/x86_64/images/AlmaLinux-9-GenericCloud-latest.x86_64.qcow2"
+  arch: "x86_64"
+- location: "https://repo.almalinux.org/almalinux/9/cloud/aarch64/images/AlmaLinux-9-GenericCloud-latest.aarch64.qcow2"
+  arch: "aarch64"
 mounts:
 - location: "~"
 - location: "/tmp/lima"
