@@ -53,7 +53,7 @@ To see the template list:
 $ limactl create --list-templates
 
 To create an instance "default" from a local file:
-$ limactl create --name=default /usr/local/share/lima/examples/fedora.yaml
+$ limactl create --name=default /usr/local/share/lima/templates/fedora.yaml
 
 To create an instance "default" from a remote URL (use carefully, with a trustable source):
 $ limactl create --name=default https://raw.githubusercontent.com/lima-vm/lima/master/examples/alpine.yaml
