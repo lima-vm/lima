@@ -40,7 +40,15 @@ provision:
   script: |
     #!/bin/sh
     curl -sfL https://get.k3s.io | sh -
-
+- mode: system
+  script: |
+    #!/bin/bash
+    # Increase inotify limits to prevent nested Kubernetes control planes
+    # from crash looping.
+    set -eux -o pipefail
+    echo 'fs.inotify.max_user_watches = 524288' >> /etc/sysctl.conf
+    echo 'fs.inotify.max_user_instances = 512' >> /etc/sysctl.conf
+    sysctl --system
 probes:
 - script: |
     #!/bin/bash
