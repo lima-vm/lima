@@ -430,6 +430,10 @@ hostResolver:
 # - 1.1.1.1
 # - 1.0.0.1
 
+# Prefix to use for installing guest agent, and containerd with dependencies (if configured)
+# 🟢 Builtin default: /usr/local
+guestInstallPrefix: null
+
 # ===================================================================== #
 # GLOBAL DEFAULTS AND OVERRIDES
 # ===================================================================== #

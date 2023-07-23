@@ -58,6 +58,7 @@ type TemplateArgs struct {
 	Mounts                          []Mount
 	MountType                       string
 	Disks                           []Disk
+	GuestInstallPrefix              string
 	Containerd                      Containerd
 	Networks                        []Network
 	SlirpNICName                    string

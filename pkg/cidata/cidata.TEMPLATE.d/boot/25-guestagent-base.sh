@@ -15,7 +15,7 @@ if [ "${LIMA_CIDATA_MOUNTTYPE}" = "reverse-sshfs" ]; then
 fi
 
 # Install or update the guestagent binary
-install -m 755 "${LIMA_CIDATA_MNT}"/lima-guestagent /usr/local/bin/lima-guestagent
+install -m 755 "${LIMA_CIDATA_MNT}"/lima-guestagent "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/lima-guestagent
 
 # Launch the guestagent service
 if [ -f /sbin/openrc-run ]; then
@@ -27,7 +27,7 @@ supervisor=supervise-daemon
 name="lima-guestagent"
 description="Forward ports to the lima-hostagent"
 
-command=/usr/local/bin/lima-guestagent
+command=${LIMA_CIDATA_GUEST_INSTALL_PREFIX}/bin/lima-guestagent
 command_args="daemon"
 command_background=true
 pidfile="/run/lima-guestagent.pid"
@@ -40,5 +40,5 @@ else
 	# Remove legacy systemd service
 	rm -f "/home/${LIMA_CIDATA_USER}.linux/.config/systemd/user/lima-guestagent.service"
 
-	sudo /usr/local/bin/lima-guestagent install-systemd
+	sudo "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/lima-guestagent install-systemd
 fi
