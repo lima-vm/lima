@@ -41,6 +41,7 @@ mountType: "virtiofs"
 ### Known Issues
 - "vz" doesn't support `legacyBIOS: true` option, so guest machine like centos-stream, archlinux, oraclelinux will not work
 - When running lima using "vz", `${LIMA_HOME}/<INSTANCE>/serial.log` will not contain kernel boot logs
-- On Intel Mac, kernel v6.2 (used by Ubuntu 23.04, Fedora 38, etc.) is known to be unbootable on vz.
+- On Intel Mac with macOS prior to 13.5, Linux kernel v6.2 (used by Ubuntu 23.04, Fedora 38, etc.) is known to be unbootable on vz.
   kernel v6.3 and later should boot, as long as it is booted via GRUB.
   https://github.com/lima-vm/lima/issues/1577#issuecomment-1565625668
+  The issue is fixed in macOS 13.5.
