@@ -38,7 +38,7 @@ task:
   env:
     # yamllint disable rule:key-duplicates
     matrix:
-      # We only test "Tier 1" yamls. See examples/README.md for the list of the "Tier 1" yamls.
+      # We only test "Tier 1" yamls. See templates/README.md for the list of the "Tier 1" yamls.
       # default.yaml and vmnet.yaml are tested on GHA macOS.
       TEMPLATE: alpine.yaml
       TEMPLATE: debian.yaml
@@ -47,10 +47,10 @@ task:
       TEMPLATE: opensuse.yaml
       TEMPLATE: experimental/net-user-v2.yaml
   lima_cache:
-    fingerprint_script: uname -s ; cat examples/$TEMPLATE
+    fingerprint_script: uname -s ; cat templates/$TEMPLATE
     folder: /home/testuser/.cache/lima
   lima_cache_fix_perm_script: chown -R testuser.testuser /home/testuser
-  test_script: sudo -iu testuser $(pwd)/hack/test-example.sh $(pwd)/examples/$TEMPLATE
+  test_script: sudo -iu testuser $(pwd)/hack/test-templates.sh $(pwd)/templates/$TEMPLATE
 
 colima_task:
   <<: *common_template

@@ -1,4 +1,4 @@
-# Lima examples
+# Lima templates
 
 ⭐ = ["Tier 1"](#tier-1)
 

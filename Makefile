@@ -41,8 +41,8 @@ minimal: clean \
 	_output/bin/limactl$(exe) \
 	codesign \
 	_output/share/lima/lima-guestagent.Linux-$(shell uname -m | sed -e s/arm64/aarch64/)
-	mkdir -p _output/share/lima/examples
-	cp -aL examples/default.yaml _output/share/lima/examples/
+	mkdir -p _output/share/lima/templates
+	cp -aL examples/default.yaml _output/share/lima/templates/
 
 .PHONY: binaries
 binaries: clean \
@@ -59,14 +59,21 @@ binaries: clean \
 	_output/share/lima/lima-guestagent.Linux-aarch64 \
 	_output/share/lima/lima-guestagent.Linux-armv7l \
 	_output/share/lima/lima-guestagent.Linux-riscv64
-	cp -aL examples _output/share/lima
+	cp -aL examples _output/share/lima/templates
+ifneq ($(GOOS),windows)
+	ln -sf templates _output/share/lima/examples
+else
+	cp -aL examples _output/share/lima/examples
+endif
 	mkdir -p _output/share/doc/lima
 	cp -aL *.md LICENSE docs _output/share/doc/lima
 	echo "Moved to https://github.com/lima-vm/.github/blob/main/SECURITY.md" >_output/share/doc/lima/SECURITY.md
 ifneq ($(GOOS),windows)
-	ln -sf ../../lima/examples _output/share/doc/lima
+	ln -sf ../../lima/templates _output/share/doc/lima/templates
+	ln -sf templates _output/share/doc/lima/examples
 else
-	cp -aL examples _output/share/doc/lima
+	cp -aL examples _output/share/doc/lima/examples
+	cp -aL examples _output/share/doc/lima/templates
 endif
 	echo $(VERSION) > _output/share/doc/lima/VERSION
 

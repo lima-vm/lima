@@ -20,7 +20,7 @@ func Read(name string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	yamlPath, err := securejoin.SecureJoin(filepath.Join(dir, "examples"), name+".yaml")
+	yamlPath, err := securejoin.SecureJoin(filepath.Join(dir, "templates"), name+".yaml")
 	if err != nil {
 		return nil, err
 	}
@@ -34,7 +34,7 @@ func Templates() ([]Template, error) {
 	if err != nil {
 		return nil, err
 	}
-	examplesDir := filepath.Join(usrlocalsharelimaDir, "examples")
+	templatesDir := filepath.Join(usrlocalsharelimaDir, "templates")
 
 	var res []Template
 	walkDirFn := func(p string, d fs.DirEntry, err error) error {
@@ -47,13 +47,13 @@ func Templates() ([]Template, error) {
 		}
 		x := Template{
 			// Name is like "default", "debian", "deprecated/centos-7", ...
-			Name:     strings.TrimSuffix(strings.TrimPrefix(p, examplesDir+"/"), ".yaml"),
+			Name:     strings.TrimSuffix(strings.TrimPrefix(p, templatesDir+"/"), ".yaml"),
 			Location: p,
 		}
 		res = append(res, x)
 		return nil
 	}
-	if err = filepath.WalkDir(examplesDir, walkDirFn); err != nil {
+	if err = filepath.WalkDir(templatesDir, walkDirFn); err != nil {
 		return nil, err
 	}
 	return res, nil

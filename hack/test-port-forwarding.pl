@@ -5,9 +5,9 @@
 # rules (before the instance is started). And once when the instance is
 # running to perform the tests:
 #
-# ./hack/test-port-forwarding.pl examples/default.yaml
-# limactl start --tty=false examples/default.yaml
-# git restore examples/default.yaml
+# ./hack/test-port-forwarding.pl templates/default.yaml
+# limactl start --tty=false templates/default.yaml
+# git restore templates/default.yaml
 # ./hack/test-port-forwarding.pl default
 #
 # TODO: support for ipv6 host addresses

@@ -28,11 +28,11 @@ func main() {
 }
 
 func newApp() *cobra.Command {
-	examplesDir := "$PREFIX/share/doc/lima/examples"
+	templatesDir := "$PREFIX/share/lima/templates"
 	if exe, err := os.Executable(); err == nil {
 		binDir := filepath.Dir(exe)
 		prefixDir := filepath.Dir(binDir)
-		examplesDir = filepath.Join(prefixDir, "share/doc/lima/examples")
+		templatesDir = filepath.Join(prefixDir, "share/lima/templates")
 	}
 
 	var rootCmd = &cobra.Command{
@@ -51,7 +51,7 @@ func newApp() *cobra.Command {
   Stop the default instance:
   $ limactl stop
 
-  See also example YAMLs: %s`, examplesDir),
+  See also template YAMLs: %s`, templatesDir),
 		SilenceUsage:      true,
 		SilenceErrors:     true,
 		DisableAutoGenTag: true,

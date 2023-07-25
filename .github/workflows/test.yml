@@ -82,14 +82,14 @@ jobs:
       run: make
     - name: Install
       run: make install
-    - name: Validate examples
-      run: find examples -name '*.yaml' | xargs limactl validate
+    - name: Validate templates
+      run: find -L templates -name '*.yaml' | xargs limactl validate
     - name: Install test dependencies
       # QEMU:      required by Lima itself
-      # bash:      required by test-example.sh (OS version of bash is too old)
-      # coreutils: required by test-example.sh for the "timeout" command
-      # curl:      required by test-example.sh to download nerdctl for alpine
-      # jq:        required by test-example.sh to determine download URL for nerdctl
+      # bash:      required by test-templates.sh (OS version of bash is too old)
+      # coreutils: required by test-templates.sh for the "timeout" command
+      # curl:      required by test-templates.sh to download nerdctl for alpine
+      # jq:        required by test-templates.sh to determine download URL for nerdctl
       run: |
         set -x
         # Github runners seem to have lima installed by brew already; we don't want/need it
@@ -106,28 +106,28 @@ jobs:
         timeout_minutes: 30
         retry_on: error
         max_attempts: 3
-        command: ./hack/test-example.sh examples/default.yaml
+        command: ./hack/test-templates.sh templates/default.yaml
     - name: "Test alpine.yaml"
       uses: nick-invision/retry@v2
       with:
         timeout_minutes: 30
         retry_on: error
         max_attempts: 3
-        command: ./hack/test-example.sh examples/alpine.yaml
+        command: ./hack/test-templates.sh templates/alpine.yaml
     - name: "Test experimental/9p.yaml"
       uses: nick-invision/retry@v2
       with:
         timeout_minutes: 30
         retry_on: error
         max_attempts: 3
-        command: ./hack/test-example.sh examples/experimental/9p.yaml
+        command: ./hack/test-templates.sh templates/experimental/9p.yaml
     - name: "Test test-misc.yaml"
       uses: nick-invision/retry@v2
       with:
         timeout_minutes: 30
         retry_on: error
         max_attempts: 3
-        command: ./hack/test-example.sh hack/test-templates/test-misc.yaml
+        command: ./hack/test-templates.sh hack/test-templates/test-misc.yaml
     # GHA macOS is slow and flaky, so we only test a few YAMLS here.
     # Other yamls are tested on Linux instances of Cirrus.
 
@@ -176,7 +176,7 @@ jobs:
         timeout_minutes: 30
         retry_on: error
         max_attempts: 3
-        command: ./hack/test-example.sh examples/vmnet.yaml
+        command: ./hack/test-templates.sh templates/vmnet.yaml
     - name: Install socket_vmnet
       env:
         SOCKET_VMNET_VERSION: v1.1.1
@@ -199,7 +199,7 @@ jobs:
         timeout_minutes: 30
         retry_on: error
         max_attempts: 3
-        command: ./hack/test-example.sh examples/vmnet.yaml
+        command: ./hack/test-templates.sh templates/vmnet.yaml
 
   upgrade:
     name: "Upgrade test"
@@ -253,4 +253,4 @@ jobs:
         path: ~/Library/Caches/lima/download
         key: ${{ runner.os }}-vz
     - name: Test
-      run: ./hack/test-example.sh examples/experimental/vz.yaml
+      run: ./hack/test-templates.sh templates/experimental/vz.yaml
