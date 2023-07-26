@@ -437,7 +437,10 @@ func createAction(cmd *cobra.Command, args []string) error {
 	if len(inst.Errors) > 0 {
 		return fmt.Errorf("errors inspecting instance: %+v", inst.Errors)
 	}
-	logrus.Infof("Run `limactl start %q` to start the instance.", inst.Name)
+	if _, err = start.Prepare(cmd.Context(), inst); err != nil {
+		return err
+	}
+	logrus.Infof("Run `limactl start %s` to start the instance.", inst.Name)
 	return nil
 }
 
