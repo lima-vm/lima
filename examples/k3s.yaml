@@ -39,8 +39,9 @@ provision:
 - mode: system
   script: |
     #!/bin/sh
-    curl -sfL https://get.k3s.io | sh -
-
+    if [ ! -d /var/lib/rancher/k3s ]; then
+            curl -sfL https://get.k3s.io | sh -
+    fi
 probes:
 - script: |
     #!/bin/bash
