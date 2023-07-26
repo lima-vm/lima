@@ -17,8 +17,7 @@ INFO "Validating \"$FILE\""
 limactl validate "$FILE"
 
 # --cpus=1 is needed for running vz on GHA: https://github.com/lima-vm/lima/pull/1511#issuecomment-1574937888
-LIMACTL_CREATE_SET='.cpus = 1 | .memory="1GiB"'
-LIMACTL_CREATE=(limactl create --tty=false --set="${LIMACTL_CREATE_SET}")
+LIMACTL_CREATE=(limactl create --tty=false --cpus=1 --memory=1)
 
 declare -A CHECKS=(
 	["systemd"]="1"

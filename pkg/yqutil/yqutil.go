@@ -12,6 +12,7 @@ import (
 
 // EvaluateExpression evaluates the yq expression, and returns the modified yaml.
 func EvaluateExpression(expression string, content []byte) ([]byte, error) {
+	logrus.Debugf("Evaluating yq expression: %q", expression)
 	tmpYAMLFile, err := os.CreateTemp("", "lima-yq-*.yaml")
 	if err != nil {
 		return nil, err

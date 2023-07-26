@@ -11,6 +11,7 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/containerd/containerd/identifiers"
+	"github.com/lima-vm/lima/cmd/limactl/editflags"
 	"github.com/lima-vm/lima/cmd/limactl/guessarg"
 	"github.com/lima-vm/lima/pkg/editutil"
 	"github.com/lima-vm/lima/pkg/ioutilx"
@@ -32,8 +33,8 @@ func registerCreateFlags(cmd *cobra.Command, commentPrefix string) {
 	// TODO: "survey" does not support using cygwin terminal on windows yet
 	flags.Bool("tty", isatty.IsTerminal(os.Stdout.Fd()), commentPrefix+"enable TUI interactions such as opening an editor, defaults to true when stdout is a terminal")
 	flags.String("name", "", commentPrefix+"override the instance name")
-	flags.String("set", "", commentPrefix+"modify the template inplace, using yq syntax")
 	flags.Bool("list-templates", false, commentPrefix+"list available templates and exit")
+	editflags.RegisterCreate(cmd, commentPrefix)
 }
 
 func newCreateCommand() *cobra.Command {
@@ -47,6 +48,9 @@ To create an instance "default" from a template "docker":
 $ limactl create --name=default template://docker
 
 To create an instance "default" with modified parameters:
+$ limactl create --cpus=2 --memory=2
+
+To create an instance "default" with yq expressions:
 $ limactl create --set='.cpus = 2 | .memory = "2GiB"'
 
 To see the template list:
@@ -104,19 +108,25 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 		err error
 	)
 
+	flags := cmd.Flags()
+
 	// Create an instance, with menu TUI when TTY is available
-	tty, err := cmd.Flags().GetBool("tty")
+	tty, err := flags.GetBool("tty")
 	if err != nil {
 		return nil, err
 	}
 
-	st.instName, err = cmd.Flags().GetString("name")
+	st.instName, err = flags.GetString("name")
 	if err != nil {
 		return nil, err
 	}
-	st.yq, err = cmd.Flags().GetString("set")
+
+	yqExprs, err := editflags.YQExpressions(flags)
 	if err != nil {
 		return nil, err
+	}
+	if len(yqExprs) > 0 {
+		st.yq = strings.Join(yqExprs, " | ")
 	}
 	const yBytesLimit = 4 * 1024 * 1024 // 4MiB
 
@@ -310,7 +320,6 @@ func modifyInPlace(st *creatorState) error {
 	if st.yq == "" {
 		return nil
 	}
-	logrus.Warn("`--set` is experimental")
 	out, err := yqutil.EvaluateExpression(st.yq, st.yBytes)
 	if err != nil {
 		return err

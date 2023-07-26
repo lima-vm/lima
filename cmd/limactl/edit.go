@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/lima-vm/lima/cmd/limactl/editflags"
 	"github.com/lima-vm/lima/pkg/editutil"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	networks "github.com/lima-vm/lima/pkg/networks/reconcile"
@@ -30,7 +32,7 @@ func newEditCommand() *cobra.Command {
 	}
 	// TODO: "survey" does not support using cygwin terminal on windows yet
 	editCommand.Flags().Bool("tty", isatty.IsTerminal(os.Stdout.Fd()), "enable TUI interactions such as opening an editor, defaults to true when stdout is a terminal")
-	editCommand.Flags().String("set", "", "modify the template inplace, using yq syntax")
+	editflags.RegisterEdit(editCommand)
 	return editCommand
 }
 
@@ -57,17 +59,18 @@ func editAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	tty, err := cmd.Flags().GetBool("tty")
+	flags := cmd.Flags()
+	tty, err := flags.GetBool("tty")
 	if err != nil {
 		return err
 	}
-	yq, err := cmd.Flags().GetString("set")
+	yqExprs, err := editflags.YQExpressions(flags)
 	if err != nil {
 		return err
 	}
 	var yBytes []byte
-	if yq != "" {
-		logrus.Warn("`--set` is experimental")
+	if len(yqExprs) > 0 {
+		yq := strings.Join(yqExprs, " | ")
 		yBytes, err = yqutil.EvaluateExpression(yq, yContent)
 		if err != nil {
 			return err
