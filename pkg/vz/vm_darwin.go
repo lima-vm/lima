@@ -437,21 +437,22 @@ func attachDisks(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfigura
 	}
 	configurations = append(configurations, diffDisk)
 
-	for _, diskName := range driver.Yaml.AdditionalDisks {
-		d, err := store.InspectDisk(diskName)
+	for _, d := range driver.Yaml.AdditionalDisks {
+		diskName := d.Name
+		disk, err := store.InspectDisk(diskName)
 		if err != nil {
 			return fmt.Errorf("failed to run load disk %q: %q", diskName, err)
 		}
 
-		if d.Instance != "" {
-			return fmt.Errorf("failed to run attach disk %q, in use by instance %q", diskName, d.Instance)
+		if disk.Instance != "" {
+			return fmt.Errorf("failed to run attach disk %q, in use by instance %q", diskName, disk.Instance)
 		}
-		logrus.Infof("Mounting disk %q on %q", diskName, d.MountPoint)
-		err = d.Lock(driver.Instance.Dir)
+		logrus.Infof("Mounting disk %q on %q", diskName, disk.MountPoint)
+		err = disk.Lock(driver.Instance.Dir)
 		if err != nil {
 			return fmt.Errorf("failed to run lock disk %q: %q", diskName, err)
 		}
-		extraDiskPath := filepath.Join(d.Dir, filenames.DataDisk)
+		extraDiskPath := filepath.Join(disk.Dir, filenames.DataDisk)
 		// ConvertToRaw is a NOP if no conversion is needed
 		logrus.Debugf("Converting extra disk %q to a raw disk (if it is not a raw)", extraDiskPath)
 		if err = nativeimgutil.ConvertToRaw(extraDiskPath, extraDiskPath, nil, true); err != nil {

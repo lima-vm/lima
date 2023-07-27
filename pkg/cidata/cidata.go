@@ -203,10 +203,21 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 		args.MountType = "virtiofs"
 	}
 
-	for i, disk := range y.AdditionalDisks {
+	for i, d := range y.AdditionalDisks {
+		format := true
+		if d.Format != nil {
+			format = *d.Format
+		}
+		fstype := ""
+		if d.FSType != nil {
+			fstype = *d.FSType
+		}
 		args.Disks = append(args.Disks, Disk{
-			Name:   disk,
+			Name:   d.Name,
 			Device: diskDeviceNameFromOrder(i),
+			Format: format,
+			FSType: fstype,
+			FSArgs: d.FSArgs,
 		})
 	}
 

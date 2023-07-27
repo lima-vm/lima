@@ -79,7 +79,12 @@ type Image struct {
 	Initrd *File   `yaml:"initrd,omitempty" json:"initrd,omitempty"`
 }
 
-type Disk = string
+type Disk struct {
+	Name   string   `yaml:"name" json:"name"` // REQUIRED
+	Format *bool    `yaml:"format,omitempty" json:"format,omitempty"`
+	FSType *string  `yaml:"fsType,omitempty" json:"fsType,omitempty"`
+	FSArgs []string `yaml:"fsArgs,omitempty" json:"fsArgs,omitempty"`
+}
 
 type Mount struct {
 	Location   string   `yaml:"location" json:"location"` // REQUIRED
