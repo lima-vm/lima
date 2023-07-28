@@ -8,7 +8,7 @@ require (
 	github.com/alessio/shellescape v1.4.2
 	github.com/balajiv113/fd v0.0.0-20230330094840-143eec500f3e
 	github.com/cheggaaa/pb/v3 v3.1.4
-	github.com/containerd/containerd v1.7.2
+	github.com/containerd/containerd v1.7.3
 	github.com/containerd/continuity v0.4.1
 	github.com/containers/gvisor-tap-vsock v0.6.2
 	github.com/coreos/go-semver v0.3.1
@@ -36,6 +36,7 @@ require (
 	github.com/sethvargo/go-password v0.2.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.7.0
+	github.com/spf13/pflag v1.0.5
 	github.com/xorcare/pointer v1.2.2
 	golang.org/x/sync v0.3.0
 	golang.org/x/sys v0.10.0
@@ -99,7 +100,6 @@ require (
 	github.com/pkg/sftp v1.13.5 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
-	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/u-root/uio v0.0.0-20210528114334-82958018845c // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.7.0 // indirect
