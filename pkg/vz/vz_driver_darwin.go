@@ -59,6 +59,7 @@ func (l *LimaVzDriver) Validate() error {
 		"Firmware",
 		"Provision",
 		"Containerd",
+		"GuestInstallPrefix",
 		"Probes",
 		"PortForwards",
 		"Message",
