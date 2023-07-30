@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 
 	"github.com/containerd/continuity/fs"
+	"github.com/docker/go-units"
 	"github.com/lima-vm/go-qcow2reader"
 	"github.com/lima-vm/go-qcow2reader/image/qcow2"
 	"github.com/lima-vm/go-qcow2reader/image/raw"
@@ -34,6 +35,7 @@ func ConvertToRaw(source, dest string, size *int64, allowSourceWithBackingFile b
 	if size != nil && *size < srcImg.Size() {
 		return fmt.Errorf("specified size %d is smaller than the original image size (%d) of %q", *size, srcImg.Size(), source)
 	}
+	logrus.Infof("Converting %q (%s) to a raw disk %q", source, srcImg.Type(), dest)
 	switch t := srcImg.Type(); t {
 	case raw.Type:
 		if err = srcF.Close(); err != nil {
@@ -82,6 +84,7 @@ func ConvertToRaw(source, dest string, size *int64, allowSourceWithBackingFile b
 
 	// Resize
 	if size != nil {
+		logrus.Infof("Expanding to %s", units.BytesSize(float64(*size)))
 		if err = MakeSparse(destTmpF, *size); err != nil {
 			return err
 		}
@@ -105,6 +108,7 @@ func convertRawToRaw(source, dest string, size *int64) error {
 		}
 	}
 	if size != nil {
+		logrus.Infof("Expanding to %s", units.BytesSize(float64(*size)))
 		destF, err := os.OpenFile(dest, os.O_RDWR, 0644)
 		if err != nil {
 			return err
