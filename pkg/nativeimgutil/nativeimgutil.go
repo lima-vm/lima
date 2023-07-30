@@ -14,6 +14,7 @@ import (
 	"github.com/lima-vm/go-qcow2reader/image/qcow2"
 	"github.com/lima-vm/go-qcow2reader/image/raw"
 	"github.com/lima-vm/lima/pkg/osutil"
+	"github.com/lima-vm/lima/pkg/progressbar"
 	"github.com/sirupsen/logrus"
 )
 
@@ -67,8 +68,15 @@ func ConvertToRaw(source, dest string, size *int64, allowSourceWithBackingFile b
 
 	// Copy
 	srcImgR := io.NewSectionReader(srcImg, 0, srcImg.Size())
+	bar, err := progressbar.New(srcImg.Size())
+	if err != nil {
+		return err
+	}
 	const bufSize = 1024 * 1024
-	if copied, err := copySparse(destTmpF, srcImgR, bufSize); err != nil {
+	bar.Start()
+	copied, err := copySparse(destTmpF, bar.NewProxyReader(srcImgR), bufSize)
+	bar.Finish()
+	if err != nil {
 		return fmt.Errorf("failed to call copySparse(), bufSize=%d, copied=%d: %w", bufSize, copied, err)
 	}
 
