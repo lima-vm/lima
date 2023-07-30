@@ -830,7 +830,8 @@ func Cmdline(cfg Config) (string, []string, error) {
 	}
 	const serialvChardev = "char-serial-virtio"
 	args = append(args, "-chardev", fmt.Sprintf("socket,id=%s,path=%s,server=on,wait=off,logfile=%s", serialvChardev, serialvSock, serialvLog))
-	args = append(args, "-device", "virtio-serial-pci,id=virtio-serial0")
+	// max_ports=1 is required for https://github.com/lima-vm/lima/issues/1689 https://github.com/lima-vm/lima/issues/1691
+	args = append(args, "-device", "virtio-serial-pci,id=virtio-serial0,max_ports=1")
 	args = append(args, "-device", fmt.Sprintf("virtconsole,chardev=%s,id=console0", serialvChardev))
 
 	// We also want to enable vsock here, but QEMU does not support vsock for macOS hosts
