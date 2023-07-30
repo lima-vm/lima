@@ -120,9 +120,10 @@ func (l *LimaVzDriver) Validate() error {
 		logrus.Warnf("field `audio.device` must be %q for VZ driver , got %q", "vz", audioDevice)
 	}
 
-	videoDisplay := *l.Yaml.Video.Display
-	if videoDisplay != "none" && videoDisplay != "vz" {
-		logrus.Warnf("field `video.display` must be %q for VZ driver , got %q", "vz", videoDisplay)
+	switch videoDisplay := *l.Yaml.Video.Display; videoDisplay {
+	case "vz", "default", "none":
+	default:
+		logrus.Warnf("field `video.display` must be \"vz\", \"default\", or \"none\" for VZ driver , got %q", videoDisplay)
 	}
 	return nil
 }
@@ -146,7 +147,12 @@ func (l *LimaVzDriver) Start(ctx context.Context) (chan error, error) {
 }
 
 func (l *LimaVzDriver) CanRunGUI() bool {
-	return *l.Yaml.Video.Display == "vz"
+	switch *l.Yaml.Video.Display {
+	case "vz", "default":
+		return true
+	default:
+		return false
+	}
 }
 
 func (l *LimaVzDriver) RunGUI() error {
