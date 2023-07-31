@@ -59,6 +59,9 @@ func registerEdit(cmd *cobra.Command, commentPrefix string) {
 	flags.Bool("rosetta", false, commentPrefix+"enable Rosetta (for vz instances)")
 
 	flags.String("set", "", commentPrefix+"modify the template inplace, using yq syntax")
+
+	// negative performance impact: https://gitlab.com/qemu-project/qemu/-/issues/334
+	flags.Bool("video", false, commentPrefix+"enable video output (has negative performance impact for QEMU)")
 }
 
 // RegisterCreate registers flags related to in-place YAML modification, for `limactl create`.
@@ -179,6 +182,18 @@ func YQExpressions(flags *flag.FlagSet) ([]string, error) {
 			},
 			true},
 		{"set", d("%s"), true},
+		{"video",
+			func(_ *flag.Flag) (string, error) {
+				b, err := flags.GetBool("video")
+				if err != nil {
+					return "", err
+				}
+				if b {
+					return ".video.display = \"default\"", nil
+				}
+				return ".video.display = \"none\"", nil
+			},
+			true},
 		{"arch", d(".arch = %q"), false},
 		{"containerd",
 			func(_ *flag.Flag) (string, error) {

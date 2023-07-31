@@ -487,7 +487,8 @@ func attachDisks(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfigura
 }
 
 func attachDisplay(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfiguration) error {
-	if *driver.Yaml.Video.Display == "vz" {
+	switch *driver.Yaml.Video.Display {
+	case "vz", "default":
 		graphicsDeviceConfiguration, err := vz.NewVirtioGraphicsDeviceConfiguration()
 		if err != nil {
 			return err
@@ -501,8 +502,12 @@ func attachDisplay(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfigu
 		vmConfig.SetGraphicsDevicesVirtualMachineConfiguration([]vz.GraphicsDeviceConfiguration{
 			graphicsDeviceConfiguration,
 		})
+		return nil
+	case "none":
+		return nil
+	default:
+		return fmt.Errorf("unexpected video display %q", *driver.Yaml.Video.Display)
 	}
-	return nil
 }
 
 func attachFolderMounts(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfiguration) error {
