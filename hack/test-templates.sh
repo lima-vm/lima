@@ -19,11 +19,13 @@ limactl validate "$FILE"
 # --cpus=1 is needed for running vz on GHA: https://github.com/lima-vm/lima/pull/1511#issuecomment-1574937888
 LIMACTL_CREATE=(limactl create --tty=false --cpus=1 --memory=1)
 
+CONTAINER_ENGINE="nerdctl"
+
 declare -A CHECKS=(
 	["systemd"]="1"
 	["systemd-strict"]="1"
 	["mount-home"]="1"
-	["containerd-user"]="1"
+	["container-engine"]="1"
 	["restart"]="1"
 	# snapshot tests are too flaky (especially with archlinux)
 	["snapshot-online"]=""
@@ -38,7 +40,7 @@ case "$NAME" in
 "alpine")
 	WARNING "Alpine does not support systemd"
 	CHECKS["systemd"]=
-	CHECKS["containerd-user"]=
+	CHECKS["container-engine"]=
 	;;
 "k3s")
 	ERROR "File \"$FILE\" is not testable with this script"
@@ -61,6 +63,9 @@ case "$NAME" in
 "net-user-v2")
 	CHECKS["port-forwards"]=""
 	CHECKS["user-v2"]=1
+	;;
+"docker")
+	CONTAINER_ENGINE="docker"
 	;;
 esac
 
@@ -172,33 +177,33 @@ fi
 nginx_image="ghcr.io/stargz-containers/nginx:1.19-alpine-org"
 alpine_image="ghcr.io/containerd/alpine:3.14.0"
 
-if [[ -n ${CHECKS["containerd-user"]} ]]; then
+if [[ -n ${CHECKS["container-engine"]} ]]; then
 	INFO "Run a nginx container with port forwarding 127.0.0.1:8080"
 	set -x
-	if ! limactl shell "$NAME" nerdctl info; then
+	if ! limactl shell "$NAME" $CONTAINER_ENGINE info; then
 		limactl shell "$NAME" sudo cat /var/log/cloud-init-output.log
-		ERROR '"nerdctl info" failed'
+		ERROR "\"${CONTAINER_ENGINE} info\" failed"
 		exit 1
 	fi
-	limactl shell "$NAME" nerdctl pull --quiet ${nginx_image}
-	limactl shell "$NAME" nerdctl run -d --name nginx -p 127.0.0.1:8080:80 ${nginx_image}
+	limactl shell "$NAME" $CONTAINER_ENGINE pull --quiet ${nginx_image}
+	limactl shell "$NAME" $CONTAINER_ENGINE run -d --name nginx -p 127.0.0.1:8080:80 ${nginx_image}
 
 	timeout 3m bash -euxc "until curl -f --retry 30 --retry-connrefused http://127.0.0.1:8080; do sleep 3; done"
 
-	limactl shell "$NAME" nerdctl rm -f nginx
+	limactl shell "$NAME" $CONTAINER_ENGINE rm -f nginx
 	set +x
 	if [[ -n ${CHECKS["mount-home"]} ]]; then
-		hometmp="$HOME/lima-nerdctl-test-tmp"
+		hometmp="$HOME/lima-container-engine-test-tmp"
 		# test for https://github.com/lima-vm/lima/issues/187
 		INFO "Testing home bind mount (\"$hometmp\")"
 		rm -rf "$hometmp"
 		mkdir -p "$hometmp"
 		defer "rm -rf \"$hometmp\""
 		set -x
-		limactl shell "$NAME" nerdctl pull --quiet ${alpine_image}
+		limactl shell "$NAME" $CONTAINER_ENGINE pull --quiet ${alpine_image}
 		echo "random-content-${RANDOM}" >"$hometmp/random"
 		expected="$(cat "$hometmp/random")"
-		got="$(limactl shell "$NAME" nerdctl run --rm -v "$hometmp/random":/mnt/foo ${alpine_image} cat /mnt/foo)"
+		got="$(limactl shell "$NAME" $CONTAINER_ENGINE run --rm -v "$hometmp/random":/mnt/foo ${alpine_image} cat /mnt/foo)"
 		INFO "$hometmp/random: expected=${expected}, got=${got}"
 		if [ "$got" != "$expected" ]; then
 			ERROR "Home directory is not shared?"
@@ -225,8 +230,8 @@ if [[ -n ${CHECKS["port-forwards"]} ]]; then
 	fi
 	"${scriptdir}/test-port-forwarding.pl" "${NAME}"
 
-	if [[ -n ${CHECKS["containerd-user"]} || ${NAME} == "alpine" ]]; then
-		INFO "Testing that 'nerdctl run' binds to 0.0.0.0 by default and is forwarded to the host"
+	if [[ -n ${CHECKS["container-engine"]} || ${NAME} == "alpine" ]]; then
+		INFO "Testing that \"${CONTAINER_ENGINE} run\" binds to 0.0.0.0 by default and is forwarded to the host"
 		if [ "$(uname)" = "Darwin" ]; then
 			# macOS runners seem to use `localhost` as the hostname, so the perl lookup just returns `127.0.0.1`
 			hostip=$(system_profiler SPNetworkDataType -json | jq -r 'first(.SPNetworkDataType[] | select(.ip_address) | .ip_address) | first')
@@ -245,9 +250,9 @@ if [[ -n ${CHECKS["port-forwards"]} ]]; then
 				rm nerdctl-full.tgz
 				sudo="sudo"
 			fi
-			limactl shell "$NAME" $sudo nerdctl info
-			limactl shell "$NAME" $sudo nerdctl pull --quiet ${nginx_image}
-			limactl shell "$NAME" $sudo nerdctl run -d --name nginx -p 8888:80 ${nginx_image}
+			limactl shell "$NAME" $sudo $CONTAINER_ENGINE info
+			limactl shell "$NAME" $sudo $CONTAINER_ENGINE pull --quiet ${nginx_image}
+			limactl shell "$NAME" $sudo $CONTAINER_ENGINE run -d --name nginx -p 8888:80 ${nginx_image}
 
 			timeout 3m bash -euxc "until curl -f --retry 30 --retry-connrefused http://${hostip}:8888; do sleep 3; done"
 		fi

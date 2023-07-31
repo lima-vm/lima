@@ -46,6 +46,7 @@ task:
       TEMPLATE: archlinux.yaml
       TEMPLATE: opensuse.yaml
       TEMPLATE: experimental/net-user-v2.yaml
+      TEMPLATE: docker.yaml
   lima_cache:
     fingerprint_script: uname -s ; cat templates/$TEMPLATE
     folder: /home/testuser/.cache/lima
