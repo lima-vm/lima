@@ -121,11 +121,17 @@ func startUsernet(ctx context.Context, driver *driver.BaseDriver) (*usernet.Clie
 	firstUsernetIndex := limayaml.FirstUsernetIndex(driver.Yaml)
 	if firstUsernetIndex == -1 {
 		//Start a in-process gvisor-tap-vsock
-		endpointSock := usernet.SockWithDirectory(driver.Instance.Dir, "", usernet.EndpointSock)
-		vzSock := usernet.SockWithDirectory(driver.Instance.Dir, "", usernet.FDSock)
+		endpointSock, err := usernet.SockWithDirectory(driver.Instance.Dir, "", usernet.EndpointSock)
+		if err != nil {
+			return nil, err
+		}
+		vzSock, err := usernet.SockWithDirectory(driver.Instance.Dir, "", usernet.FDSock)
+		if err != nil {
+			return nil, err
+		}
 		os.RemoveAll(endpointSock)
 		os.RemoveAll(vzSock)
-		err := usernet.StartGVisorNetstack(ctx, &usernet.GVisorNetstackOpts{
+		err = usernet.StartGVisorNetstack(ctx, &usernet.GVisorNetstackOpts{
 			MTU:      1500,
 			Endpoint: endpointSock,
 			FdSocket: vzSock,
@@ -278,7 +284,10 @@ func attachNetwork(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfigu
 	firstUsernetIndex := limayaml.FirstUsernetIndex(driver.Yaml)
 	if firstUsernetIndex == -1 {
 		//slirp network using gvisor netstack
-		vzSock := usernet.SockWithDirectory(driver.Instance.Dir, "", usernet.FDSock)
+		vzSock, err := usernet.SockWithDirectory(driver.Instance.Dir, "", usernet.FDSock)
+		if err != nil {
+			return err
+		}
 		networkConn, err := PassFDToUnix(vzSock)
 		if err != nil {
 			return err
