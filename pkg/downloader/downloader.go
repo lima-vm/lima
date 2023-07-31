@@ -12,17 +12,23 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/cheggaaa/pb/v3"
 	"github.com/containerd/continuity/fs"
 	"github.com/lima-vm/lima/pkg/localpathutil"
-	"github.com/mattn/go-isatty"
+	"github.com/lima-vm/lima/pkg/progressbar"
 	"github.com/opencontainers/go-digest"
 	"github.com/sirupsen/logrus"
 )
 
+// HideProgress is used only for testing
 var HideProgress bool
+
+// hideBar is used only for testing
+func hideBar(bar *pb.ProgressBar) {
+	bar.Set(pb.ReturnSymbol, "")
+	bar.SetTemplateString("")
+}
 
 type Status = string
 
@@ -320,9 +326,12 @@ func decompressLocal(dst, src, ext string, description string) error {
 	if err != nil {
 		return err
 	}
-	bar, err := createBar(st.Size())
+	bar, err := progressbar.New(st.Size())
 	if err != nil {
 		return err
+	}
+	if HideProgress {
+		hideBar(bar)
 	}
 
 	in, err := os.Open(src)
@@ -384,30 +393,6 @@ func validateLocalFileDigest(localPath string, expectedDigest digest.Digest) err
 	return nil
 }
 
-func createBar(size int64) (*pb.ProgressBar, error) {
-	bar := pb.New64(size)
-
-	bar.Set(pb.Bytes, true)
-	if isatty.IsTerminal(os.Stdout.Fd()) || isatty.IsCygwinTerminal(os.Stdout.Fd()) {
-		bar.SetTemplateString(`{{counters . }} {{bar . | green }} {{percent .}} {{speed . "%s/s"}}`)
-		bar.SetRefreshRate(200 * time.Millisecond)
-	} else if HideProgress {
-		bar.Set(pb.ReturnSymbol, "")
-		bar.SetTemplateString("")
-	} else {
-		bar.Set(pb.Terminal, false)
-		bar.Set(pb.ReturnSymbol, "\n")
-		bar.SetTemplateString(`{{counters . }} ({{percent .}}) {{speed . "%s/s"}}`)
-		bar.SetRefreshRate(5 * time.Second)
-	}
-	bar.SetWidth(80)
-	if err := bar.Err(); err != nil {
-		return nil, err
-	}
-
-	return bar, nil
-}
-
 func downloadHTTP(localPath, url string, description string, expectedDigest digest.Digest) error {
 	if localPath == "" {
 		return fmt.Errorf("downloadHTTP: got empty localPath")
@@ -431,9 +416,12 @@ func downloadHTTP(localPath, url string, description string, expectedDigest dige
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("expected HTTP status %d, got %s", http.StatusOK, resp.Status)
 	}
-	bar, err := createBar(resp.ContentLength)
+	bar, err := progressbar.New(resp.ContentLength)
 	if err != nil {
 		return err
+	}
+	if HideProgress {
+		hideBar(bar)
 	}
 
 	writers := []io.Writer{fileWriter}

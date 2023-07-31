@@ -12,7 +12,6 @@ import (
 	"github.com/lima-vm/lima/pkg/iso9660util"
 	"github.com/lima-vm/lima/pkg/nativeimgutil"
 	"github.com/lima-vm/lima/pkg/store/filenames"
-	"github.com/sirupsen/logrus"
 )
 
 func EnsureDisk(driver *driver.BaseDriver) error {
@@ -58,9 +57,8 @@ func EnsureDisk(driver *driver.BaseDriver) error {
 		}
 		return diffDiskF.Close()
 	}
-	logrus.Infof("Converting %q to a raw disk %q (size=%d)", baseDisk, diffDisk, diskSize)
 	if err = nativeimgutil.ConvertToRaw(baseDisk, diffDisk, &diskSize, false); err != nil {
-		return fmt.Errorf("failed to convert %q to a raw disk %q (size=%d): %w", baseDisk, diffDisk, diskSize, err)
+		return fmt.Errorf("failed to convert %q to a raw disk %q: %w", baseDisk, diffDisk, err)
 	}
 	return err
 }
