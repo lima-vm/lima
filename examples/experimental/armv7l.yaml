@@ -1,4 +1,4 @@
-# This example requires Lima v0.7.0 or later.
+# This example requires Lima v0.17.0 or later.
 
 arch: "armv7l"
 images:
@@ -15,6 +15,7 @@ mounts:
 - location: "~"
 - location: "/tmp/lima"
   writable: true
+mountType: "9p"
 
 # We do not have arm-v7 binaries of containerd
 containerd:
