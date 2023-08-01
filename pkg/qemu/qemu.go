@@ -789,15 +789,9 @@ func Cmdline(cfg Config) (string, []string, error) {
 		args = append(args, "-device", "virtio-keyboard-pci")
 		args = append(args, "-device", "virtio-mouse-pci")
 		args = append(args, "-device", "qemu-xhci,id=usb-bus")
-	case limayaml.AARCH64:
-		// QEMU does not seem to support virtio-vga for aarch64
+	case limayaml.AARCH64, limayaml.ARMV7L:
+		// QEMU does not seem to support virtio-vga for aarch64 and arm
 		args = append(args, "-vga", "none", "-device", "ramfb")
-		args = append(args, "-device", "qemu-xhci,id=usb-bus")
-		args = append(args, "-device", "usb-kbd,bus=usb-bus.0")
-		args = append(args, "-device", "usb-mouse,bus=usb-bus.0")
-	case limayaml.ARMV7L:
-		// QEMU does not seem to support virtio-vga for arm
-		args = append(args, "-vga", "cirrus", "-device", "cirrus-vga")
 		args = append(args, "-device", "qemu-xhci,id=usb-bus")
 		args = append(args, "-device", "usb-kbd,bus=usb-bus.0")
 		args = append(args, "-device", "usb-mouse,bus=usb-bus.0")
@@ -806,7 +800,8 @@ func Cmdline(cfg Config) (string, []string, error) {
 	// Parallel
 	args = append(args, "-parallel", "none")
 
-	// Serial (legacy)
+	// Serial (default)
+	// This is ttyS0 for Intel and RISC-V, ttyAMA0 for ARM.
 	serialSock := filepath.Join(cfg.InstanceDir, filenames.SerialSock)
 	if err := os.RemoveAll(serialSock); err != nil {
 		return "", nil, err
@@ -818,6 +813,24 @@ func Cmdline(cfg Config) (string, []string, error) {
 	const serialChardev = "char-serial"
 	args = append(args, "-chardev", fmt.Sprintf("socket,id=%s,path=%s,server=on,wait=off,logfile=%s", serialChardev, serialSock, serialLog))
 	args = append(args, "-serial", "chardev:"+serialChardev)
+
+	// Serial (PCI, ARM only)
+	// On ARM, the default serial is ttyAMA0, this PCI serial is ttyS0.
+	// https://gitlab.com/qemu-project/qemu/-/issues/1801#note_1494720586
+	switch *y.Arch {
+	case limayaml.AARCH64, limayaml.ARMV7L:
+		serialpSock := filepath.Join(cfg.InstanceDir, filenames.SerialPCISock)
+		if err := os.RemoveAll(serialpSock); err != nil {
+			return "", nil, err
+		}
+		serialpLog := filepath.Join(cfg.InstanceDir, filenames.SerialPCILog)
+		if err := os.RemoveAll(serialpLog); err != nil {
+			return "", nil, err
+		}
+		const serialpChardev = "char-serial-pci"
+		args = append(args, "-chardev", fmt.Sprintf("socket,id=%s,path=%s,server=on,wait=off,logfile=%s", serialpChardev, serialpSock, serialpLog))
+		args = append(args, "-device", "pci-serial,chardev="+serialpChardev)
+	}
 
 	// Serial (virtio)
 	serialvSock := filepath.Join(cfg.InstanceDir, filenames.SerialVirtioSock)

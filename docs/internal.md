@@ -51,8 +51,10 @@ VZ:
 - `vz-efi`: EFIVariable store file for a VM
 
 Serial:
-- `serial.log`: legacy serial log (QEMU only), for debugging
-- `serial.sock`: legacy serial socket (QEMU only), for debugging (Usage: `socat -,echo=0,icanon=0 unix-connect:serial.sock`)
+- `serial.log`: default serial log (QEMU only), for debugging
+- `serial.sock`: default serial socket (QEMU only), for debugging (Usage: `socat -,echo=0,icanon=0 unix-connect:serial.sock`)
+- `serialp.log`: PCI serial log (QEMU (ARM) only), for debugging
+- `serialp.sock`: PCI serial socket (QEMU (ARM) only), for debugging (Usage: `socat -,echo=0,icanon=0 unix-connect:serialp.sock`)
 - `serialv.log`: virtio serial log, for debugging
 - `serialv.sock`: virtio serial socket (QEMU only), for debugging (Usage: `socat -,echo=0,icanon=0 unix-connect:serialv.sock`)
 

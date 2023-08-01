@@ -34,8 +34,10 @@ const (
 	KernelCmdline      = "kernel.cmdline"
 	Initrd             = "initrd"
 	QMPSock            = "qmp.sock"
-	SerialLog          = "serial.log" // legacy
+	SerialLog          = "serial.log" // default serial (ttyS0, but ttyAMA0 on qemu-system-{arm,aarch64})
 	SerialSock         = "serial.sock"
+	SerialPCILog       = "serialp.log" // pci serial (ttyS0 on qemu-system-{arm,aarch64})
+	SerialPCISock      = "serialp.sock"
 	SerialVirtioLog    = "serialv.log" // virtio serial
 	SerialVirtioSock   = "serialv.sock"
 	SSHSock            = "ssh.sock"
