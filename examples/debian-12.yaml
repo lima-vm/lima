@@ -1,4 +1,4 @@
-# This example requires Lima v0.7.0 or later
+# This template requires Lima v0.7.0 or later
 images:
 # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
 - location: "https://cloud.debian.org/images/cloud/bookworm/2023230723-1450/debian-12-genericcloud-amd64-2023230723-1450.qcow2"

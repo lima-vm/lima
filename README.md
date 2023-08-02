@@ -159,7 +159,7 @@ $ limactl start
 ? Creating an instance "default"  [Use arrows to move, type to filter]
 > Proceed with the current configuration
   Open an editor to review or modify the current configuration
-  Choose another example (docker, podman, archlinux, fedora, ...)
+  Choose another template (docker, podman, archlinux, fedora, ...)
   Exit
 ...
 INFO[0029] READY. Run `lima` to open the shell.
@@ -189,7 +189,7 @@ $ limactl start --list-templates
 
 To create an instance "default" from a local file:
 ```console
-$ limactl start --name=default /usr/local/share/lima/examples/fedora.yaml
+$ limactl start --name=default /usr/local/share/lima/templates/fedora.yaml
 ```
 
 To create an instance "default" from a remote URL (use carefully, with a trustable source):

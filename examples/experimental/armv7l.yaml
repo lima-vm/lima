@@ -1,4 +1,4 @@
-# This example requires Lima v0.17.0 or later.
+# This template requires Lima v0.17.0 or later.
 
 arch: "armv7l"
 images:

@@ -1,4 +1,4 @@
-# Example to use Podman instead of containerd & nerdctl
+# A template to use Podman instead of containerd & nerdctl
 # $ limactl start ./podman-rootful.yaml
 # $ limactl shell podman-rootful sudo podman run -it -v $HOME:$HOME --rm docker.io/library/alpine
 
@@ -10,7 +10,7 @@
 # $ export DOCKER_HOST=$(limactl list podman-rootful --format 'unix://{{.Dir}}/sock/podman.sock')
 # $ docker ...
 
-# This example requires Lima v0.8.0 or later
+# This template requires Lima v0.8.0 or later
 images:
 - location: "https://download.fedoraproject.org/pub/fedora/linux/releases/38/Cloud/x86_64/images/Fedora-Cloud-Base-38-1.6.x86_64.qcow2"
   arch: "x86_64"

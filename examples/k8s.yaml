@@ -10,7 +10,7 @@
 # NAME       STATUS   ROLES                  AGE   VERSION
 # lima-k8s   Ready    control-plane,master   44s   v1.22.3
 
-# This example requires Lima v0.7.0 or later.
+# This template requires Lima v0.7.0 or later.
 images:
 # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
 - location: "https://cloud-images.ubuntu.com/releases/22.04/release-20230729/ubuntu-22.04-server-cloudimg-amd64.img"
@@ -26,7 +26,7 @@ images:
 - location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-arm64.img"
   arch: "aarch64"
 
-# Mounts are disabled in this example, but can be enabled optionally.
+# Mounts are disabled in this template, but can be enabled optionally.
 mounts: []
 containerd:
   system: true
