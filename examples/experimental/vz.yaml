@@ -1,5 +1,5 @@
-# Example to run ubuntu using vmType: vz instead of qemu (Default)
-# This example requires Lima v0.14.0 or later and macOS 13.
+# A template to run ubuntu using vmType: vz instead of qemu (Default)
+# This template requires Lima v0.14.0 or later and macOS 13.
 vmType: "vz"
 rosetta:
   # Enable Rosetta for Linux.

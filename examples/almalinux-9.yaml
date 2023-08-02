@@ -1,4 +1,4 @@
-# This example requires Lima v0.11.1 or later.
+# This template requires Lima v0.11.1 or later.
 
 images:
 - location: "https://repo.almalinux.org/almalinux/9.2/cloud/x86_64/images/AlmaLinux-9-GenericCloud-9.2-20230513.x86_64.qcow2"

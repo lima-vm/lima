@@ -1,4 +1,4 @@
-# This example requires Lima v0.11.1 or later.
+# This template requires Lima v0.11.1 or later.
 
 images:
 - location: "https://dl.rockylinux.org/pub/rocky/9.2/images/x86_64/Rocky-9-GenericCloud-Base-9.2-20230513.0.x86_64.qcow2"

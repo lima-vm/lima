@@ -1,4 +1,4 @@
-# This example requires Lima v0.17.0 or later, running on Linux with:
+# This template requires Lima v0.17.0 or later, running on Linux with:
 # - QEMU v4.2.0 or later.
 # - virtiofsd's Rust implementation: https://gitlab.com/virtio-fs/virtiofsd
 #   The QEMU version (qemu-virtiofsd) will *not* work, as it requires root access

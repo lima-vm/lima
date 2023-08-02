@@ -1,7 +1,7 @@
 # NOTE: Tumbleweed image is known to be broken as of April 2023:
 # https://github.com/lima-vm/lima/issues/1496
 #
-# This example requires Lima v0.11.3 or later
+# This template requires Lima v0.11.3 or later
 images:
 # Hint: run `limactl prune` to invalidate the "Current" cache
 - location: "https://download.opensuse.org/tumbleweed/appliances/openSUSE-Tumbleweed-Minimal-VM.x86_64-Cloud.qcow2"

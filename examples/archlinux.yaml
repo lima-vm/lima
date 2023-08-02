@@ -1,4 +1,4 @@
-# This example requires Lima v0.7.0 or later
+# This template requires Lima v0.7.0 or later
 images:
 # Try to use yyyyMMdd.REV image if available. Note that yyyyMMdd.REV will be removed after several months.
 - location: "https://geo.mirror.pkgbuild.com/images/v20230715.165098/Arch-Linux-x86_64-cloudimg-20230715.165098.qcow2"

@@ -159,7 +159,7 @@ $ limactl start
 ? Creating an instance "default"  [Use arrows to move, type to filter]
 > Proceed with the current configuration
   Open an editor to review or modify the current configuration
-  Choose another example (docker, podman, archlinux, fedora, ...)
+  Choose another template (docker, podman, archlinux, fedora, ...)
   Exit
 ...
 INFO[0029] READY. Run `lima` to open the shell.
@@ -189,7 +189,7 @@ $ limactl start --list-templates
 
 To create an instance "default" from a local file:
 ```console
-$ limactl start --name=default /usr/local/share/lima/examples/fedora.yaml
+$ limactl start --name=default /usr/local/share/lima/templates/fedora.yaml
 ```
 
 To create an instance "default" from a remote URL (use carefully, with a trustable source):
@@ -310,27 +310,30 @@ The current default spec:
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 ### Generic
 
-- [Generic](#generic)
-  - ["What's my login password?"](#whats-my-login-password)
-  - ["Does Lima work on ARM Mac?"](#does-lima-work-on-arm-mac)
-  - ["Can I run non-Ubuntu guests?"](#can-i-run-non-ubuntu-guests)
-  - ["Can I run other container engines such as Docker and Podman? What about Kubernetes?"](#can-i-run-other-container-engines-such-as-docker-and-podman-what-about-kubernetes)
-  - ["Can I run Lima with a remote Linux machine?"](#can-i-run-lima-with-a-remote-linux-machine)
-  - ["Advantages compared to Docker for Mac?"](#advantages-compared-to-docker-for-mac)
-- [QEMU](#qemu)
-  - ["QEMU crashes with `HV_ERROR`"](#qemu-crashes-with-hv_error)
-  - ["QEMU is slow"](#qemu-is-slow)
-  - [error "killed -9"](#error-killed--9)
-  - ["QEMU crashes with `vmx_write_mem: mmu_gva_to_gpa XXXXXXXXXXXXXXXX failed`"](#qemu-crashes-with-vmx_write_mem-mmu_gva_to_gpa-xxxxxxxxxxxxxxxx-failed)
-- [Networking](#networking)
-  - ["Cannot access the guest IP 192.168.5.15 from the host"](#cannot-access-the-guest-ip-192168515-from-the-host)
-  - ["Ping shows duplicate packets and massive response times"](#ping-shows-duplicate-packets-and-massive-response-times)
-- [Filesystem sharing](#filesystem-sharing)
-  - ["Filesystem is slow"](#filesystem-is-slow)
-  - ["Filesystem is not writable"](#filesystem-is-not-writable)
-- [External projects](#external-projects)
-  - ["I am using Rancher Desktop. How to deal with the underlying Lima?"](#i-am-using-rancher-desktop-how-to-deal-with-the-underlying-lima)
-- ["Hints for debugging other problems?"](#hints-for-debugging-other-problems)
+  - [Generic](#generic)
+    - ["What's my login password?"](#whats-my-login-password)
+    - ["Does Lima work on ARM Mac?"](#does-lima-work-on-arm-mac)
+    - ["Can I run non-Ubuntu guests?"](#can-i-run-non-ubuntu-guests)
+    - ["Can I run other container engines such as Docker and Podman? What about Kubernetes?"](#can-i-run-other-container-engines-such-as-docker-and-podman-what-about-kubernetes)
+    - ["Can I run Lima with a remote Linux machine?"](#can-i-run-lima-with-a-remote-linux-machine)
+    - ["Advantages compared to Docker for Mac?"](#advantages-compared-to-docker-for-mac)
+  - [QEMU](#qemu)
+    - ["QEMU crashes with `HV_ERROR`"](#qemu-crashes-with-hv_error)
+    - ["QEMU is slow"](#qemu-is-slow)
+    - [error "killed -9"](#error-killed--9)
+    - ["QEMU crashes with `vmx_write_mem: mmu_gva_to_gpa XXXXXXXXXXXXXXXX failed`"](#qemu-crashes-with-vmx_write_mem-mmu_gva_to_gpa-xxxxxxxxxxxxxxxx-failed)
+- [VZ](#vz)
+    - ["Liam gets stuck at `Installing rosetta...`"](#liam-gets-stuck-at-installing-rosetta)
+  - [Networking](#networking)
+    - ["Cannot access the guest IP 192.168.5.15 from the host"](#cannot-access-the-guest-ip-192168515-from-the-host)
+    - ["Ping shows duplicate packets and massive response times"](#ping-shows-duplicate-packets-and-massive-response-times)
+    - ["IP address is not assigined for vmnet networks"](#ip-address-is-not-assigined-for-vmnet-networks)
+  - [Filesystem sharing](#filesystem-sharing)
+    - ["Filesystem is slow"](#filesystem-is-slow)
+    - ["Filesystem is not writable"](#filesystem-is-not-writable)
+  - [External projects](#external-projects)
+    - ["I am using Rancher Desktop. How to deal with the underlying Lima?"](#i-am-using-rancher-desktop-how-to-deal-with-the-underlying-lima)
+  - ["Hints for debugging other problems?"](#hints-for-debugging-other-problems)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 ### Generic
@@ -440,6 +443,11 @@ A workaround is to set environment variable `QEMU_SYSTEM_X86_64="qemu-system-x86
 
 https://bugs.launchpad.net/qemu/+bug/1838390
 
+## VZ
+#### "Liam gets stuck at `Installing rosetta...`"
+
+Try `softwareupdate --install-rosetta` from a terminal.
+
 ### Networking
 #### "Cannot access the guest IP 192.168.5.15 from the host"
 
@@ -462,6 +470,13 @@ PING google.com (172.217.165.14): 56 data bytes
 ```
 
 For more details, see [Documentation/Networking](https://wiki.qemu.org/Documentation/Networking#User_Networking_.28SLIRP.29).
+
+#### "IP address is not assigined for vmnet networks"
+Try the following commands:
+```bash
+/usr/libexec/ApplicationFirewall/socketfilterfw --add /usr/libexec/bootpd
+/usr/libexec/ApplicationFirewall/socketfilterfw --unblock /usr/libexec/bootpd
+```
 
 ### Filesystem sharing
 #### "Filesystem is slow"

@@ -141,6 +141,13 @@ The network daemon is started automatically when the first instance referencing 
 and will stop automatically once the last instance has stopped. Daemon logs will be stored in the
 `$LIMA_HOME/_networks` directory.
 
+The IP address is automatically assigned by macOS's bootpd.
+If the IP address is not assigned, try the following commands:
+```bash
+/usr/libexec/ApplicationFirewall/socketfilterfw --add /usr/libexec/bootpd
+/usr/libexec/ApplicationFirewall/socketfilterfw --unblock /usr/libexec/bootpd
+```
+
 #### Unmanaged
 For Lima >= 0.12:
 ```yaml

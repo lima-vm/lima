@@ -1,4 +1,4 @@
-# Example to use BuildKit
+# A template to use BuildKit
 # $ limactl start ./buildkit.yaml
 
 # To run `buildkit` on the host (assumes buildctl is installed):

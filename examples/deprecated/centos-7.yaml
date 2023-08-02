@@ -1,4 +1,4 @@
-# This example requires Lima v0.10.0 or later.
+# This template requires Lima v0.10.0 or later.
 # WARNING: RHEL-like below version 8 is unsupported, use at your own risk!
 images:
 - location: "https://cloud.centos.org/altarch/7/images/CentOS-7-x86_64-GenericCloud-2009.qcow2"

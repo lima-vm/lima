@@ -10,7 +10,7 @@
 # NAME       STATUS   ROLES                  AGE   VERSION
 # lima-k3s   Ready    control-plane,master   69s   v1.21.1+k3s1
 #
-# This example requires Lima v0.7.0 or later.
+# This template requires Lima v0.7.0 or later.
 
 images:
 # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
@@ -27,7 +27,7 @@ images:
 - location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-arm64.img"
   arch: "aarch64"
 
-# Mounts are disabled in this example, but can be enabled optionally.
+# Mounts are disabled in this template, but can be enabled optionally.
 mounts: []
 
 # containerd is managed by k3s, not by Lima, so the values are set to false here.

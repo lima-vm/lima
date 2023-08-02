@@ -340,7 +340,7 @@ func chooseNextCreatorState(st *creatorState) (*creatorState, error) {
 			Options: []string{
 				"Proceed with the current configuration",
 				"Open an editor to review or modify the current configuration",
-				"Choose another example (docker, podman, archlinux, fedora, ...)",
+				"Choose another template (docker, podman, archlinux, fedora, ...)",
 				"Exit",
 			},
 		}
@@ -370,26 +370,26 @@ func chooseNextCreatorState(st *creatorState) (*creatorState, error) {
 				return st, errors.New("should not reach here")
 			}
 			return st, nil
-		case prompt.Options[2]: // "Choose another example..."
-			examples, err := templatestore.Templates()
+		case prompt.Options[2]: // "Choose another template..."
+			templates, err := templatestore.Templates()
 			if err != nil {
 				return st, err
 			}
 			var ansEx int
 			promptEx := &survey.Select{
-				Message: "Choose an example",
-				Options: make([]string, len(examples)),
+				Message: "Choose a template",
+				Options: make([]string, len(templates)),
 			}
-			for i := range examples {
-				promptEx.Options[i] = examples[i].Name
+			for i := range templates {
+				promptEx.Options[i] = templates[i].Name
 			}
 			if err := survey.AskOne(promptEx, &ansEx); err != nil {
 				return st, err
 			}
-			if ansEx > len(examples)-1 {
-				return st, fmt.Errorf("invalid answer %d for %d entries", ansEx, len(examples))
+			if ansEx > len(templates)-1 {
+				return st, fmt.Errorf("invalid answer %d for %d entries", ansEx, len(templates))
 			}
-			yamlPath := examples[ansEx].Location
+			yamlPath := templates[ansEx].Location
 			st.instName, err = guessarg.InstNameFromYAMLPath(yamlPath)
 			if err != nil {
 				return nil, err

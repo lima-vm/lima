@@ -1,4 +1,4 @@
-# This example requires Lima v0.7.0 or later
+# This template requires Lima v0.7.0 or later
 images:
 # Hint: run `limactl prune` to invalidate the "Current" cache
 - location: "https://download.opensuse.org/distribution/leap/15.5/appliances/openSUSE-Leap-15.5-Minimal-VM.x86_64-Cloud.qcow2"

@@ -1,4 +1,4 @@
-# This example requires Lima v0.7.0 or later.
+# This template requires Lima v0.7.0 or later.
 # Using the Alpine 3.18 aarch64 image with vmType=vz requires macOS Ventura 13.3 or later.
 
 images:

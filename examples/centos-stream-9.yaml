@@ -1,4 +1,4 @@
-# This example requires Lima v0.11.1 or later.
+# This template requires Lima v0.11.1 or later.
 
 images:
 # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
