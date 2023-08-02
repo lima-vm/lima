@@ -21,6 +21,7 @@ func createRosettaDirectoryShareConfiguration() (*vz.VirtioFileSystemDeviceConfi
 		return nil, errRosettaUnsupported
 	case vz.LinuxRosettaAvailabilityNotInstalled:
 		logrus.Info("Installing rosetta...")
+		logrus.Info("Hint: try `softwareupdate --install-rosetta` if Lima gets stuck here")
 		if err := vz.LinuxRosettaDirectoryShareInstallRosetta(); err != nil {
 			return nil, fmt.Errorf("failed to install rosetta: %w", err)
 		}

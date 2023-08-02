@@ -310,27 +310,29 @@ The current default spec:
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 ### Generic
 
-- [Generic](#generic)
-  - ["What's my login password?"](#whats-my-login-password)
-  - ["Does Lima work on ARM Mac?"](#does-lima-work-on-arm-mac)
-  - ["Can I run non-Ubuntu guests?"](#can-i-run-non-ubuntu-guests)
-  - ["Can I run other container engines such as Docker and Podman? What about Kubernetes?"](#can-i-run-other-container-engines-such-as-docker-and-podman-what-about-kubernetes)
-  - ["Can I run Lima with a remote Linux machine?"](#can-i-run-lima-with-a-remote-linux-machine)
-  - ["Advantages compared to Docker for Mac?"](#advantages-compared-to-docker-for-mac)
-- [QEMU](#qemu)
-  - ["QEMU crashes with `HV_ERROR`"](#qemu-crashes-with-hv_error)
-  - ["QEMU is slow"](#qemu-is-slow)
-  - [error "killed -9"](#error-killed--9)
-  - ["QEMU crashes with `vmx_write_mem: mmu_gva_to_gpa XXXXXXXXXXXXXXXX failed`"](#qemu-crashes-with-vmx_write_mem-mmu_gva_to_gpa-xxxxxxxxxxxxxxxx-failed)
-- [Networking](#networking)
-  - ["Cannot access the guest IP 192.168.5.15 from the host"](#cannot-access-the-guest-ip-192168515-from-the-host)
-  - ["Ping shows duplicate packets and massive response times"](#ping-shows-duplicate-packets-and-massive-response-times)
-- [Filesystem sharing](#filesystem-sharing)
-  - ["Filesystem is slow"](#filesystem-is-slow)
-  - ["Filesystem is not writable"](#filesystem-is-not-writable)
-- [External projects](#external-projects)
-  - ["I am using Rancher Desktop. How to deal with the underlying Lima?"](#i-am-using-rancher-desktop-how-to-deal-with-the-underlying-lima)
-- ["Hints for debugging other problems?"](#hints-for-debugging-other-problems)
+  - [Generic](#generic)
+    - ["What's my login password?"](#whats-my-login-password)
+    - ["Does Lima work on ARM Mac?"](#does-lima-work-on-arm-mac)
+    - ["Can I run non-Ubuntu guests?"](#can-i-run-non-ubuntu-guests)
+    - ["Can I run other container engines such as Docker and Podman? What about Kubernetes?"](#can-i-run-other-container-engines-such-as-docker-and-podman-what-about-kubernetes)
+    - ["Can I run Lima with a remote Linux machine?"](#can-i-run-lima-with-a-remote-linux-machine)
+    - ["Advantages compared to Docker for Mac?"](#advantages-compared-to-docker-for-mac)
+  - [QEMU](#qemu)
+    - ["QEMU crashes with `HV_ERROR`"](#qemu-crashes-with-hv_error)
+    - ["QEMU is slow"](#qemu-is-slow)
+    - [error "killed -9"](#error-killed--9)
+    - ["QEMU crashes with `vmx_write_mem: mmu_gva_to_gpa XXXXXXXXXXXXXXXX failed`"](#qemu-crashes-with-vmx_write_mem-mmu_gva_to_gpa-xxxxxxxxxxxxxxxx-failed)
+- [VZ](#vz)
+    - ["Liam gets stuck at `Installing rosetta...`"](#liam-gets-stuck-at-installing-rosetta)
+  - [Networking](#networking)
+    - ["Cannot access the guest IP 192.168.5.15 from the host"](#cannot-access-the-guest-ip-192168515-from-the-host)
+    - ["Ping shows duplicate packets and massive response times"](#ping-shows-duplicate-packets-and-massive-response-times)
+  - [Filesystem sharing](#filesystem-sharing)
+    - ["Filesystem is slow"](#filesystem-is-slow)
+    - ["Filesystem is not writable"](#filesystem-is-not-writable)
+  - [External projects](#external-projects)
+    - ["I am using Rancher Desktop. How to deal with the underlying Lima?"](#i-am-using-rancher-desktop-how-to-deal-with-the-underlying-lima)
+  - ["Hints for debugging other problems?"](#hints-for-debugging-other-problems)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 ### Generic
@@ -439,6 +441,11 @@ This error is known to happen when running an image of RHEL8-compatible distribu
 A workaround is to set environment variable `QEMU_SYSTEM_X86_64="qemu-system-x86_64 -cpu Haswell-v4"`.
 
 https://bugs.launchpad.net/qemu/+bug/1838390
+
+## VZ
+#### "Liam gets stuck at `Installing rosetta...`"
+
+Try `softwareupdate --install-rosetta` from a terminal.
 
 ### Networking
 #### "Cannot access the guest IP 192.168.5.15 from the host"
