@@ -26,7 +26,7 @@ common_template: &common_template
   - apt-get install -y --no-install-recommends ca-certificates curl git golang jq openssh-client make netcat ovmf sudo qemu-system-x86 qemu-utils
   go_cache:
     fingerprint_script: uname -s ; cat go.sum
-    folder: $GOPATH/pkg/mod
+    folder: /root/go/pkg/mod
   build_script: make
   install_script: make install
   prepare_user_script:
@@ -51,7 +51,9 @@ task:
     fingerprint_script: uname -s ; cat templates/$TEMPLATE
     folder: /home/testuser/.cache/lima
   lima_cache_fix_perm_script: chown -R testuser.testuser /home/testuser
+  debug_cache_script: sudo -iu testuser $(pwd)/hack/debug-cache.sh
   test_script: sudo -iu testuser $(pwd)/hack/test-templates.sh $(pwd)/templates/$TEMPLATE
+  debug_cache2_script: sudo -iu testuser $(pwd)/hack/debug-cache.sh
 
 colima_task:
   <<: *common_template
@@ -68,4 +70,6 @@ colima_task:
     fingerprint_script: uname -s ; colima version
     folder: /home/testuser/.cache/lima
   lima_cache_fix_perm_script: chown -R testuser.testuser /home/testuser
+  debug_cache_script: sudo -iu testuser $(pwd)/hack/debug-cache.sh
   test_script: sudo -iu testuser $(pwd)/hack/test-colima.sh
+  debug_cache2_script: sudo -iu testuser $(pwd)/hack/debug-cache.sh
