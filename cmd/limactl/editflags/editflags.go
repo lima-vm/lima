@@ -97,15 +97,16 @@ func defaultExprFunc(expr string) func(v *flag.Flag) (string, error) {
 }
 
 // YQExpressions returns YQ expressions.
-func YQExpressions(flags *flag.FlagSet) ([]string, error) {
+func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 	type def struct {
-		flagName     string
-		exprFunc     func(*flag.Flag) (string, error)
-		experimental bool
+		flagName                 string
+		exprFunc                 func(*flag.Flag) (string, error)
+		onlyValidForNewInstances bool
+		experimental             bool
 	}
 	d := defaultExprFunc
 	defs := []def{
-		{"cpus", d(".cpus = %s"), false},
+		{"cpus", d(".cpus = %s"), false, false},
 		{"dns",
 			func(_ *flag.Flag) (string, error) {
 				ipSlice, err := flags.GetIPSlice("dns")
@@ -123,8 +124,9 @@ func YQExpressions(flags *flag.FlagSet) ([]string, error) {
 				logrus.Warnf("Disabling HostResolver, as custom DNS addresses (%v) are specified", ipSlice)
 				return expr, nil
 			},
+			false,
 			false},
-		{"memory", d(".memory = \"%sGiB\""), false},
+		{"memory", d(".memory = \"%sGiB\""), false, false},
 		{"mount",
 			func(_ *flag.Flag) (string, error) {
 				ss, err := flags.GetStringSlice("mount")
@@ -143,9 +145,10 @@ func YQExpressions(flags *flag.FlagSet) ([]string, error) {
 				expr += `] | .mounts |= unique_by(.location)`
 				return expr, nil
 			},
+			false,
 			false},
-		{"mount-type", d(".mountType = %q"), false},
-		{"mount-writable", d(".mounts[].writable = %s"), false},
+		{"mount-type", d(".mountType = %q"), false, false},
+		{"mount-writable", d(".mounts[].writable = %s"), false, false},
 		{"network",
 			func(_ *flag.Flag) (string, error) {
 				ss, err := flags.GetStringSlice("network")
@@ -171,6 +174,7 @@ func YQExpressions(flags *flag.FlagSet) ([]string, error) {
 				expr += `] | .networks |= unique_by(.lima)`
 				return expr, nil
 			},
+			false,
 			true},
 		{"rosetta",
 			func(_ *flag.Flag) (string, error) {
@@ -180,8 +184,9 @@ func YQExpressions(flags *flag.FlagSet) ([]string, error) {
 				}
 				return fmt.Sprintf(".rosetta.enabled = %v | .rosetta.binfmt = %v", b, b), nil
 			},
+			false,
 			true},
-		{"set", d("%s"), true},
+		{"set", d("%s"), false, true},
 		{"video",
 			func(_ *flag.Flag) (string, error) {
 				b, err := flags.GetBool("video")
@@ -193,8 +198,9 @@ func YQExpressions(flags *flag.FlagSet) ([]string, error) {
 				}
 				return ".video.display = \"none\"", nil
 			},
+			false,
 			true},
-		{"arch", d(".arch = %q"), false},
+		{"arch", d(".arch = %q"), true, false},
 		{"containerd",
 			func(_ *flag.Flag) (string, error) {
 				s, err := flags.GetString("containerd")
@@ -214,10 +220,11 @@ func YQExpressions(flags *flag.FlagSet) ([]string, error) {
 					return "", fmt.Errorf(`expected one of ["user", "system", "user+system", "none"], got %q`, s)
 				}
 			},
+			true,
 			false},
 
-		{"disk", d(".disk= \"%sGiB\""), false},
-		{"vm-type", d(".vmType = %q"), false},
+		{"disk", d(".disk= \"%sGiB\""), true, false},
+		{"vm-type", d(".vmType = %q"), true, false},
 	}
 	var exprs []string
 	for _, def := range defs {
@@ -225,6 +232,11 @@ func YQExpressions(flags *flag.FlagSet) ([]string, error) {
 		if v != nil && v.Changed {
 			if def.experimental {
 				logrus.Warnf("`--%s` is experimental", def.flagName)
+			}
+			if def.onlyValidForNewInstances && !newInstance {
+				logrus.Warnf("`--%s` is not applicable to an existing instance (Hint: create a new instance with `limactl create --%s=%s --name=NAME`)",
+					def.flagName, def.flagName, v.Value.String())
+				continue
 			}
 			expr, err := def.exprFunc(v)
 			if err != nil {
