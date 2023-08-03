@@ -121,13 +121,6 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 		return nil, err
 	}
 
-	yqExprs, err := editflags.YQExpressions(flags)
-	if err != nil {
-		return nil, err
-	}
-	if len(yqExprs) > 0 {
-		st.yq = strings.Join(yqExprs, " | ")
-	}
 	const yBytesLimit = 4 * 1024 * 1024 // 4MiB
 
 	if ok, u := guessarg.SeemsTemplateURL(arg); ok {
@@ -231,6 +224,17 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 			if arg == "" {
 				logrus.Infof("Hint: To create another instance, run the following command: limactl create --name=NAME template://default")
 			}
+			yqExprs, err := editflags.YQExpressions(flags, false)
+			if err != nil {
+				return nil, err
+			}
+			if len(yqExprs) > 0 {
+				yq := yqutil.Join(yqExprs)
+				inst, err = applyYQExpressionToExistingInstance(inst, yq)
+				if err != nil {
+					return nil, fmt.Errorf("failed to apply yq expression %q to instance %q: %w", yq, st.instName, err)
+				}
+			}
 			return inst, nil
 		}
 		if !errors.Is(err, os.ErrNotExist) {
@@ -247,20 +251,46 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 		}
 	}
 
+	yqExprs, err := editflags.YQExpressions(flags, true)
+	if err != nil {
+		return nil, err
+	}
+	yq := yqutil.Join(yqExprs)
 	if tty {
 		var err error
-		st, err = chooseNextCreatorState(st)
+		st, err = chooseNextCreatorState(st, yq)
 		if err != nil {
 			return nil, err
 		}
 	} else {
 		logrus.Info("Terminal is not available, proceeding without opening an editor")
-		if err := modifyInPlace(st); err != nil {
+		if err := modifyInPlace(st, yq); err != nil {
 			return nil, err
 		}
 	}
 	saveBrokenEditorBuffer := tty
 	return createInstance(st, saveBrokenEditorBuffer)
+}
+
+func applyYQExpressionToExistingInstance(inst *store.Instance, yq string) (*store.Instance, error) {
+	if strings.TrimSpace(yq) == "" {
+		return inst, nil
+	}
+	filePath := filepath.Join(inst.Dir, filenames.LimaYAML)
+	yContent, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+	logrus.Debugf("Applying yq expression %q to an existing instance %q", yq, inst.Name)
+	yBytes, err := yqutil.EvaluateExpression(yq, yContent)
+	if err != nil {
+		return nil, err
+	}
+	if err := os.WriteFile(filePath, yBytes, 0644); err != nil {
+		return nil, err
+	}
+	// Reload
+	return store.Inspect(inst.Name)
 }
 
 func createInstance(st *creatorState, saveBrokenEditorBuffer bool) (*store.Instance, error) {
@@ -313,14 +343,10 @@ func createInstance(st *creatorState, saveBrokenEditorBuffer bool) (*store.Insta
 type creatorState struct {
 	instName string // instance name
 	yBytes   []byte // yaml bytes
-	yq       string // yq expression
 }
 
-func modifyInPlace(st *creatorState) error {
-	if st.yq == "" {
-		return nil
-	}
-	out, err := yqutil.EvaluateExpression(st.yq, st.yBytes)
+func modifyInPlace(st *creatorState, yq string) error {
+	out, err := yqutil.EvaluateExpression(yq, st.yBytes)
 	if err != nil {
 		return err
 	}
@@ -328,9 +354,9 @@ func modifyInPlace(st *creatorState) error {
 	return nil
 }
 
-func chooseNextCreatorState(st *creatorState) (*creatorState, error) {
+func chooseNextCreatorState(st *creatorState, yq string) (*creatorState, error) {
 	for {
-		if err := modifyInPlace(st); err != nil {
+		if err := modifyInPlace(st, yq); err != nil {
 			logrus.WithError(err).Warn("Failed to evaluate yq expression")
 			return st, err
 		}

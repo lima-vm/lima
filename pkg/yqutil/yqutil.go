@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/mikefarah/yq/v4/pkg/yqlib"
 	"github.com/sirupsen/logrus"
@@ -64,4 +65,11 @@ func EvaluateExpression(expression string, content []byte) ([]byte, error) {
 
 	return out.Bytes(), nil
 
+}
+
+func Join(yqExprs []string) string {
+	if len(yqExprs) == 0 {
+		return ""
+	}
+	return strings.Join(yqExprs, " | ")
 }

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/lima-vm/lima/cmd/limactl/editflags"
@@ -64,13 +63,13 @@ func editAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	yqExprs, err := editflags.YQExpressions(flags)
+	yqExprs, err := editflags.YQExpressions(flags, false)
 	if err != nil {
 		return err
 	}
 	var yBytes []byte
 	if len(yqExprs) > 0 {
-		yq := strings.Join(yqExprs, " | ")
+		yq := yqutil.Join(yqExprs)
 		yBytes, err = yqutil.EvaluateExpression(yq, yContent)
 		if err != nil {
 			return err
