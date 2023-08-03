@@ -323,7 +323,7 @@ The current default spec:
     - [error "killed -9"](#error-killed--9)
     - ["QEMU crashes with `vmx_write_mem: mmu_gva_to_gpa XXXXXXXXXXXXXXXX failed`"](#qemu-crashes-with-vmx_write_mem-mmu_gva_to_gpa-xxxxxxxxxxxxxxxx-failed)
 - [VZ](#vz)
-    - ["Liam gets stuck at `Installing rosetta...`"](#liam-gets-stuck-at-installing-rosetta)
+    - ["Lima gets stuck at `Installing rosetta...`"](#lima-gets-stuck-at-installing-rosetta)
   - [Networking](#networking)
     - ["Cannot access the guest IP 192.168.5.15 from the host"](#cannot-access-the-guest-ip-192168515-from-the-host)
     - ["Ping shows duplicate packets and massive response times"](#ping-shows-duplicate-packets-and-massive-response-times)
@@ -444,7 +444,7 @@ A workaround is to set environment variable `QEMU_SYSTEM_X86_64="qemu-system-x86
 https://bugs.launchpad.net/qemu/+bug/1838390
 
 ## VZ
-#### "Liam gets stuck at `Installing rosetta...`"
+#### "Lima gets stuck at `Installing rosetta...`"
 
 Try `softwareupdate --install-rosetta` from a terminal.
 
