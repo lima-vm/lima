@@ -13,12 +13,12 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 30
     steps:
-    - uses: actions/setup-go@v4
-      with:
-        go-version: 1.20.x
     - uses: actions/checkout@v3
       with:
         fetch-depth: 1
+    - uses: actions/setup-go@v4
+      with:
+        go-version: 1.20.x
     - name: Run golangci-lint
       uses: golangci/golangci-lint-action@v3.6.0
       with:
@@ -54,12 +54,12 @@ jobs:
     runs-on: windows-2022
     timeout-minutes: 30
     steps:
-    - uses: actions/setup-go@v4
-      with:
-        go-version: 1.20.x
     - uses: actions/checkout@v3
       with:
         fetch-depth: 1
+    - uses: actions/setup-go@v4
+      with:
+        go-version: 1.20.x
     - name: Unit tests
       run: go test -v ./...
     - name: Make
@@ -70,12 +70,18 @@ jobs:
     runs-on: macos-12
     timeout-minutes: 120
     steps:
-    - uses: actions/setup-go@v4
-      with:
-        go-version: 1.20.x
     - uses: actions/checkout@v3
       with:
         fetch-depth: 1
+    - uses: actions/setup-go@v4
+      with:
+        go-version: 1.20.x
+    - name: Cache ~/Library/Caches/lima/download
+      uses: actions/cache@v3
+      with:
+        path: ~/Library/Caches/lima/download
+        # hashFiles do not seem to support symlinks
+        key: ${{ runner.os }}-${{ hashFiles('examples/*.yaml') }}
     - name: Unit tests
       run: go test -v ./...
     - name: Make
@@ -95,11 +101,8 @@ jobs:
         # Github runners seem to have lima installed by brew already; we don't want/need it
         time brew uninstall --ignore-dependencies lima colima
         time brew install qemu bash coreutils curl jq
-    - name: Cache ~/Library/Caches/lima/download
-      uses: actions/cache@v3
-      with:
-        path: ~/Library/Caches/lima/download
-        key: ${{ runner.os }}-integration
+    - name: "Show cache"
+      run: ./hack/debug-cache.sh
     - name: "Test default.yaml"
       uses: nick-invision/retry@v2
       with:
@@ -130,29 +133,34 @@ jobs:
         command: ./hack/test-templates.sh hack/test-templates/test-misc.yaml
     # GHA macOS is slow and flaky, so we only test a few YAMLS here.
     # Other yamls are tested on Linux instances of Cirrus.
+    #
+    - name: "Show cache"
+      if: always()
+      run: ./hack/debug-cache.sh
 
   vmnet:
     name: "VMNet test"
     runs-on: macos-11
     timeout-minutes: 120
     steps:
-    - uses: actions/setup-go@v4
-      with:
-        go-version: 1.20.x
     - uses: actions/checkout@v3
       with:
         fetch-depth: 1
+    - uses: actions/setup-go@v4
+      with:
+        go-version: 1.20.x
+    - name: Cache ~/Library/Caches/lima/download
+      uses: actions/cache@v3
+      with:
+        path: ~/Library/Caches/lima/download
+        # hashFiles do not seem to support symlinks
+        key: ${{ runner.os }}-${{ hashFiles('examples/vmnet.yaml') }}
     - name: Make
       run: make
     - name: Install
       run: make install
     - name: Install test dependencies
       run: brew install qemu bash coreutils iperf3
-    - name: Cache ~/Library/Caches/lima/download
-      uses: actions/cache@v3
-      with:
-        path: ~/Library/Caches/lima/download
-        key: ${{ runner.os }}-vmnet
     - name: Install vde_switch and vde_vmnet (Deprecated)
       env:
         VDE_VMNET_VERSION: v0.6.0
@@ -209,19 +217,19 @@ jobs:
       matrix:
         oldver: ["v0.10.0"]
     steps:
-    - uses: actions/setup-go@v4
-      with:
-        go-version: 1.20.x
     - uses: actions/checkout@v3
       with:
         fetch-depth: 0
-    - name: Install test dependencies
-      run: brew install qemu bash coreutils
+    - uses: actions/setup-go@v4
+      with:
+        go-version: 1.20.x
     - name: Cache ~/Library/Caches/lima/download
       uses: actions/cache@v3
       with:
         path: ~/Library/Caches/lima/download
         key: ${{ runner.os }}-upgrade-${{ matrix.oldver }}
+    - name: Install test dependencies
+      run: brew install qemu bash coreutils
     - name: Test
       uses: nick-invision/retry@v2
       with:
@@ -235,22 +243,23 @@ jobs:
     runs-on: macos-13
     timeout-minutes: 120
     steps:
-    - uses: actions/setup-go@v4
-      with:
-        go-version: 1.20.x
     - uses: actions/checkout@v3
       with:
         fetch-depth: 1
+    - uses: actions/setup-go@v4
+      with:
+        go-version: 1.20.x
+    - name: Cache ~/Library/Caches/lima/download
+      uses: actions/cache@v3
+      with:
+        path: ~/Library/Caches/lima/download
+        # hashFiles do not seem to support symlinks
+        key: ${{ runner.os }}-${{ hashFiles('examples/experimental/vz.yaml') }}
     - name: Make
       run: make
     - name: Install
       run: make install
     - name: Install test dependencies
       run: brew install qemu bash coreutils
-    - name: Cache ~/Library/Caches/lima/download
-      uses: actions/cache@v3
-      with:
-        path: ~/Library/Caches/lima/download
-        key: ${{ runner.os }}-vz
     - name: Test
       run: ./hack/test-templates.sh templates/experimental/vz.yaml
