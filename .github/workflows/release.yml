@@ -19,12 +19,11 @@ jobs:
     runs-on: macos-12
     timeout-minutes: 20
     steps:
-    - name: "Switch Xcode version to enable macOS 13 SDK"
-      # Xcode 14.1 added support for macOS 13 SDK.
-      # The default version is still 14.0.1, as of November 2022.
-      # https://github.com/actions/runner-images/blob/main/images/macos/macos-12-Readme.md#xcode
+    - name: "Show xcode and SDK version"
       run: |
-        sudo xcode-select --switch /Applications/Xcode_14.1.app
+        # Xcode version
+        xcodebuild -version
+        # macOS SDK version
         xcrun --show-sdk-version
     - uses: actions/checkout@v3
       with:
