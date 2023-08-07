@@ -67,7 +67,7 @@ jobs:
 
   integration:
     name: Integration tests
-    runs-on: macos-12
+    runs-on: macos-12-xl
     timeout-minutes: 120
     steps:
     - uses: actions/checkout@v3
@@ -140,7 +140,7 @@ jobs:
 
   vmnet:
     name: "VMNet test"
-    runs-on: macos-11
+    runs-on: macos-12-xl
     timeout-minutes: 120
     steps:
     - uses: actions/checkout@v3
@@ -211,7 +211,7 @@ jobs:
 
   upgrade:
     name: "Upgrade test"
-    runs-on: macos-12
+    runs-on: macos-12-xl
     timeout-minutes: 120
     strategy:
       matrix:
@@ -240,7 +240,7 @@ jobs:
 
   vz:
     name: "vz"
-    runs-on: macos-13
+    runs-on: macos-13-xl
     timeout-minutes: 120
     steps:
     - uses: actions/checkout@v3
