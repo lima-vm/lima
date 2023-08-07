@@ -56,8 +56,8 @@ GUI:
 ### Communication channels
 - [GitHub Discussions](https://github.com/lima-vm/lima/discussions)
 - `#lima` channel in the CNCF Slack
-  - New account: https://slack.cncf.io/
-  - Login: https://cloud-native.slack.com/
+  - New account: <https://slack.cncf.io/>
+  - Login: <https://cloud-native.slack.com/>
 
 ### Code of Conduct
 Lima follows the [CNCF Code of Conduct](https://github.com/cncf/foundation/blob/master/code-of-conduct.md).
@@ -98,9 +98,9 @@ $ lima nerdctl run -d --name nginx -p 127.0.0.1:8080:80 nginx:alpine
 
 > You don't need to run "lima nerdctl" everytime, instead you can use special shortcut called "nerdctl.lima" to do the same thing. By default, it'll be installed along with the lima, so, you don't need to do anything extra. There will be a symlink called nerdctl pointing to nerdctl.lima. This is only created when there is no nerdctl entry in the directory already though. It worths to mention that this is created only via make install. Not included in Homebrew/MacPorts/nix packages.
 
-http://127.0.0.1:8080 is accessible from both macOS and Linux.
+<http://127.0.0.1:8080> is accessible from both macOS and Linux.
 
-For the usage of containerd and nerdctl (contaiNERD ctl), visit https://github.com/containerd/containerd and https://github.com/containerd/nerdctl.
+For the usage of containerd and nerdctl (contaiNERD ctl), visit <https://github.com/containerd/containerd> and <https://github.com/containerd/nerdctl>.
 
 ## Getting started
 ### Installation
@@ -121,7 +121,7 @@ Install QEMU 7.0 or later.
 
 #### Install Lima
 
-- Download the binary archive of Lima from https://github.com/lima-vm/lima/releases ,
+- Download the binary archive of Lima from <https://github.com/lima-vm/lima/releases>,
 and extract it under `/usr/local` (or somewhere else). For instance:
 
 ```bash
@@ -308,7 +308,6 @@ The current default spec:
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-### Generic
 
 - [Generic](#generic)
   - ["What's my login password?"](#whats-my-login-password)
@@ -336,6 +335,7 @@ The current default spec:
 - ["Hints for debugging other problems?"](#hints-for-debugging-other-problems)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ### Generic
 #### "What's my login password?"
 Password is disabled and locked by default.
@@ -424,7 +424,7 @@ codesign -s - --entitlements entitlements.xml --force /usr/local/bin/qemu-system
 
 Note: **Only** on macOS versions **before** 10.15.7 you might need to add this entitlement in addition:
 
-```
+```xml
     <key>com.apple.vm.hypervisor</key>
     <true/>
 ```
@@ -441,7 +441,7 @@ Note: **Only** on macOS versions **before** 10.15.7 you might need to add this e
 This error is known to happen when running an image of RHEL8-compatible distribution such as Rocky Linux 8.x on Intel Mac.
 A workaround is to set environment variable `QEMU_SYSTEM_X86_64="qemu-system-x86_64 -cpu Haswell-v4"`.
 
-https://bugs.launchpad.net/qemu/+bug/1838390
+<https://bugs.launchpad.net/qemu/+bug/1838390>
 
 ### VZ
 #### "Lima gets stuck at `Installing rosetta...`"
@@ -462,7 +462,7 @@ See [`./docs/network.md`](./docs/network.md).
 
 Lima uses QEMU's SLIRP networking which does not support `ping` out of the box:
 
-```
+```console
 $ ping google.com
 PING google.com (172.217.165.14): 56 data bytes
 64 bytes from 172.217.165.14: seq=0 ttl=42 time=2395159.646 ms
