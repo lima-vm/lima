@@ -14,15 +14,17 @@ type portForwarder struct {
 	sshConfig   *ssh.SSHConfig
 	sshHostPort int
 	rules       []limayaml.PortForward
+	vmType      limayaml.VMType
 }
 
 const sshGuestPort = 22
 
-func newPortForwarder(sshConfig *ssh.SSHConfig, sshHostPort int, rules []limayaml.PortForward) *portForwarder {
+func newPortForwarder(sshConfig *ssh.SSHConfig, sshHostPort int, rules []limayaml.PortForward, vmType limayaml.VMType) *portForwarder {
 	return &portForwarder{
 		sshConfig:   sshConfig,
 		sshHostPort: sshHostPort,
 		rules:       rules,
+		vmType:      vmType,
 	}
 }
 
@@ -40,7 +42,15 @@ func hostAddress(rule limayaml.PortForward, guest api.IPPort) string {
 	return host.String()
 }
 
-func (pf *portForwarder) forwardingAddresses(guest api.IPPort) (string, string) {
+func (pf *portForwarder) forwardingAddresses(guest api.IPPort, localUnixIP net.IP) (string, string) {
+	if pf.vmType == limayaml.WSL2 {
+		guest.IP = localUnixIP
+		host := api.IPPort{
+			IP:   net.ParseIP("127.0.0.1"),
+			Port: guest.Port,
+		}
+		return host.String(), guest.String()
+	}
 	for _, rule := range pf.rules {
 		if rule.GuestSocket != "" {
 			continue
@@ -69,9 +79,11 @@ func (pf *portForwarder) forwardingAddresses(guest api.IPPort) (string, string) 
 	return "", guest.String()
 }
 
-func (pf *portForwarder) OnEvent(ctx context.Context, ev api.Event) {
+func (pf *portForwarder) OnEvent(ctx context.Context, ev api.Event, instSSHAddress string) {
+	localUnixIP := net.ParseIP(instSSHAddress)
+
 	for _, f := range ev.LocalPortsRemoved {
-		local, remote := pf.forwardingAddresses(f)
+		local, remote := pf.forwardingAddresses(f, localUnixIP)
 		if local == "" {
 			continue
 		}
@@ -81,7 +93,7 @@ func (pf *portForwarder) OnEvent(ctx context.Context, ev api.Event) {
 		}
 	}
 	for _, f := range ev.LocalPortsAdded {
-		local, remote := pf.forwardingAddresses(f)
+		local, remote := pf.forwardingAddresses(f, localUnixIP)
 		if local == "" {
 			logrus.Infof("Not forwarding TCP %s", remote)
 			continue

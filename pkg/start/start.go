@@ -160,6 +160,7 @@ func Start(ctx context.Context, inst *store.Instance) error {
 	}
 	args = append(args, inst.Name)
 	haCmd := exec.CommandContext(ctx, self, args...)
+	haCmd.SysProcAttr = SysProcAttr
 
 	haCmd.Stdout = haStdoutW
 	haCmd.Stderr = haStderrW

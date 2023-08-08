@@ -28,6 +28,7 @@ const (
 const (
 	LimaYAML           = "lima.yaml"
 	CIDataISO          = "cidata.iso"
+	CIDataISODir       = "cidata"
 	BaseDisk           = "basedisk"
 	DiffDisk           = "diffdisk"
 	Kernel             = "kernel"

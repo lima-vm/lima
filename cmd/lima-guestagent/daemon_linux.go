@@ -10,6 +10,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/lima-vm/lima/pkg/guestagent"
 	"github.com/lima-vm/lima/pkg/guestagent/api/server"
+	"github.com/mdlayher/vsock"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -21,12 +22,17 @@ func newDaemonCommand() *cobra.Command {
 		RunE:  daemonAction,
 	}
 	daemonCommand.Flags().Duration("tick", 3*time.Second, "tick for polling events")
+	daemonCommand.Flags().Int("vsock-port", 0, "use vsock server instead a UNIX socket")
 	return daemonCommand
 }
 
 func daemonAction(cmd *cobra.Command, _ []string) error {
 	socket := "/run/lima-guestagent.sock"
 	tick, err := cmd.Flags().GetDuration("tick")
+	if err != nil {
+		return err
+	}
+	vSockPort, err := cmd.Flags().GetInt("vsock-port")
 	if err != nil {
 		return err
 	}
@@ -60,13 +66,25 @@ func daemonAction(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	l, err := net.Listen("unix", socket)
-	if err != nil {
-		return err
+
+	var l net.Listener
+	if vSockPort != 0 {
+		vsockL, err := vsock.Listen(uint32(vSockPort), nil)
+		if err != nil {
+			return err
+		}
+		l = vsockL
+		logrus.Infof("serving the guest agent on vsock port: %d", vSockPort)
+	} else {
+		socketL, err := net.Listen("unix", socket)
+		if err != nil {
+			return err
+		}
+		if err := os.Chmod(socket, 0777); err != nil {
+			return err
+		}
+		l = socketL
+		logrus.Infof("serving the guest agent on %q", socket)
 	}
-	if err := os.Chmod(socket, 0777); err != nil {
-		return err
-	}
-	logrus.Infof("serving the guest agent on %q", socket)
 	return srv.Serve(l)
 }
