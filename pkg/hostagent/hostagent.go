@@ -568,6 +568,21 @@ const (
 	verbCancel  = "cancel"
 )
 
+func executeSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, command ...string) error {
+	args := sshConfig.Args()
+	args = append(args,
+		"-p", strconv.Itoa(port),
+		"127.0.0.1",
+		"--",
+	)
+	args = append(args, command...)
+	cmd := exec.CommandContext(ctx, sshConfig.Binary(), args...)
+	if out, err := cmd.Output(); err != nil {
+		return fmt.Errorf("failed to run %v: %q: %w", cmd.Args, string(out), err)
+	}
+	return nil
+}
+
 func forwardSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, remote string, verb string, reverse bool) error {
 	args := sshConfig.Args()
 	args = append(args,
@@ -595,6 +610,9 @@ func forwardSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, 
 		case verbForward:
 			if reverse {
 				logrus.Infof("Forwarding %q (host) to %q (guest)", local, remote)
+				if err := executeSSH(ctx, sshConfig, port, "rm", "-f", remote); err != nil {
+					logrus.WithError(err).Warnf("Failed to clean up %q (guest) before setting up forwarding", remote)
+				}
 			} else {
 				logrus.Infof("Forwarding %q (guest) to %q (host)", remote, local)
 				if err := os.RemoveAll(local); err != nil {
@@ -607,6 +625,9 @@ func forwardSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, 
 		case verbCancel:
 			if reverse {
 				logrus.Infof("Stopping forwarding %q (host) to %q (guest)", local, remote)
+				if err := executeSSH(ctx, sshConfig, port, "rm", "-f", remote); err != nil {
+					logrus.WithError(err).Warnf("Failed to clean up %q (guest) after stopping forwarding", remote)
+				}
 			} else {
 				logrus.Infof("Stopping forwarding %q (guest) to %q (host)", remote, local)
 				defer func() {
@@ -622,7 +643,12 @@ func forwardSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, 
 	cmd := exec.CommandContext(ctx, sshConfig.Binary(), args...)
 	if out, err := cmd.Output(); err != nil {
 		if verb == verbForward && strings.HasPrefix(local, "/") {
-			if !reverse {
+			if reverse {
+				logrus.WithError(err).Warnf("Failed to set up forward from %q (host) to %q (guest)", local, remote)
+				if err := executeSSH(ctx, sshConfig, port, "rm", "-f", remote); err != nil {
+					logrus.WithError(err).Warnf("Failed to clean up %q (guest) after forwarding failed", remote)
+				}
+			} else {
 				logrus.WithError(err).Warnf("Failed to set up forward from %q (guest) to %q (host)", remote, local)
 				if removeErr := os.RemoveAll(local); err != nil {
 					logrus.WithError(removeErr).Warnf("Failed to clean up %q (host) after forwarding failed", local)
