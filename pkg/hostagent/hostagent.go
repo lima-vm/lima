@@ -285,6 +285,7 @@ func (a *HostAgent) Run(ctx context.Context) error {
 		}
 		defer dnsServer.Shutdown()
 	}
+
 	errCh, err := a.driver.Start(ctx)
 	if err != nil {
 		return err
