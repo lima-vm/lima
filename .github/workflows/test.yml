@@ -110,13 +110,6 @@ jobs:
         retry_on: error
         max_attempts: 3
         command: ./hack/test-templates.sh templates/default.yaml
-    - name: "Test alpine.yaml"
-      uses: nick-invision/retry@v2
-      with:
-        timeout_minutes: 30
-        retry_on: error
-        max_attempts: 3
-        command: ./hack/test-templates.sh templates/alpine.yaml
     - name: "Test experimental/9p.yaml"
       uses: nick-invision/retry@v2
       with:
@@ -132,10 +125,111 @@ jobs:
         max_attempts: 3
         command: ./hack/test-templates.sh hack/test-templates/test-misc.yaml
     # GHA macOS is slow and flaky, so we only test a few YAMLS here.
-    # Other yamls are tested on Linux instances of Cirrus.
+    # Other yamls are tested on Linux instances.
     #
     - name: "Show cache"
       if: always()
+      run: ./hack/debug-cache.sh
+
+  # Non-default templates are tested on Linux instances of GHA,
+  # as they seem more stable than macOS instances.
+  integration-linux:
+    name: Integration tests (on Linux)
+    # A "larger" runner is used for enabling nested virt
+    runs-on: ubuntu-latest-4-cores
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        template:
+        - alpine.yaml
+        - debian.yaml
+        - fedora.yaml
+        - archlinux.yaml
+        - opensuse.yaml
+        - experimental/net-user-v2.yaml
+        - docker.yaml
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 1
+    - uses: actions/setup-go@v4
+      with:
+        go-version: 1.20.x
+    - uses: actions/cache@v3
+      with:
+        path: ~/.cache/lima/download
+        # hashFiles do not seem to support symlinks
+        # TODO: more fine-grained cache
+        key: ${{ runner.os }}-${{ hashFiles('examples/*.yaml') }}
+    - name: Make
+      run: make
+    - name: Install
+      run: sudo make install
+    - name: Install test dependencies
+      run: |
+        sudo apt-get install -y --no-install-recommends ovmf qemu-system-x86 qemu-utils
+        sudo modprobe kvm
+        # `sudo usermod -aG kvm $(whoami)` does not take an effect on GHA
+        sudo chown $(whoami) /dev/kvm
+    - name: "Show cache"
+      run: ./hack/debug-cache.sh
+    - name: "Test"
+      uses: nick-invision/retry@v2
+      with:
+        timeout_minutes: 30
+        retry_on: error
+        max_attempts: 3
+        command: ./hack/test-templates.sh templates/${{ matrix.template }}
+    - name: "Show cache"
+      run: ./hack/debug-cache.sh
+
+  colima:
+    name: Colima
+    # A "larger" runner is used for enabling nested virt
+    runs-on: ubuntu-latest-4-cores
+    timeout-minutes: 120
+    strategy:
+      matrix:
+        colima-version: ["v0.5.5"]
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 1
+    - uses: actions/setup-go@v4
+      with:
+        go-version: 1.20.x
+    - uses: actions/cache@v3
+      with:
+        path: ~/.cache/lima/download
+        key: ${{ runner.os }}-colima-${{ matrix.colima-version }}
+    - name: Make
+      run: make
+    - name: Install
+      run: sudo make install
+    - name: Install colima
+      run: |
+        git clone https://github.com/abiosoft/colima
+        cd colima
+        git checkout ${{ matrix.colima-version }}
+        make
+        sudo make install
+    - name: Install test dependencies
+      run: |
+        sudo apt-get install -y --no-install-recommends ovmf qemu-system-x86 qemu-utils
+        sudo modprobe kvm
+        # `sudo usermod -aG kvm $(whoami)` does not take an effect on GHA
+        sudo chown $(whoami) /dev/kvm
+    - name: "Show cache"
+      run: ./hack/debug-cache.sh
+    - name: "Test"
+      uses: nick-invision/retry@v2
+      with:
+        timeout_minutes: 30
+        retry_on: error
+        max_attempts: 3
+        command: ./hack/test-colima.sh
+    - name: "Show cache"
       run: ./hack/debug-cache.sh
 
   vmnet:

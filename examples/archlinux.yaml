@@ -16,5 +16,8 @@ mounts:
 - location: "~"
 - location: "/tmp/lima"
   writable: true
+# reverse-sshfs seems unstable with ArchLinux ?
+mountType: "9p"
+vmType: "qemu"
 firmware:
   legacyBIOS: true
