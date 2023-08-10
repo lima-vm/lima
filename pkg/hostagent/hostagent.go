@@ -597,9 +597,9 @@ func forwardSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, 
 				logrus.Infof("Forwarding %q (host) to %q (guest)", local, remote)
 			} else {
 				logrus.Infof("Forwarding %q (guest) to %q (host)", remote, local)
-			}
-			if err := os.RemoveAll(local); err != nil {
-				logrus.WithError(err).Warnf("Failed to clean up %q (host) before setting up forwarding", local)
+				if err := os.RemoveAll(local); err != nil {
+					logrus.WithError(err).Warnf("Failed to clean up %q (host) before setting up forwarding", local)
+				}
 			}
 			if err := os.MkdirAll(filepath.Dir(local), 0750); err != nil {
 				return fmt.Errorf("can't create directory for local socket %q: %w", local, err)
@@ -609,12 +609,12 @@ func forwardSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, 
 				logrus.Infof("Stopping forwarding %q (host) to %q (guest)", local, remote)
 			} else {
 				logrus.Infof("Stopping forwarding %q (guest) to %q (host)", remote, local)
+				defer func() {
+					if err := os.RemoveAll(local); err != nil {
+						logrus.WithError(err).Warnf("Failed to clean up %q (host) after stopping forwarding", local)
+					}
+				}()
 			}
-			defer func() {
-				if err := os.RemoveAll(local); err != nil {
-					logrus.WithError(err).Warnf("Failed to clean up %q (host) after stopping forwarding", local)
-				}
-			}()
 		default:
 			panic(fmt.Errorf("invalid verb %q", verb))
 		}
@@ -622,9 +622,11 @@ func forwardSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, 
 	cmd := exec.CommandContext(ctx, sshConfig.Binary(), args...)
 	if out, err := cmd.Output(); err != nil {
 		if verb == verbForward && strings.HasPrefix(local, "/") {
-			logrus.WithError(err).Warnf("Failed to set up forward from %q (guest) to %q (host)", remote, local)
-			if removeErr := os.RemoveAll(local); err != nil {
-				logrus.WithError(removeErr).Warnf("Failed to clean up %q (host) after forwarding failed", local)
+			if !reverse {
+				logrus.WithError(err).Warnf("Failed to set up forward from %q (guest) to %q (host)", remote, local)
+				if removeErr := os.RemoveAll(local); err != nil {
+					logrus.WithError(removeErr).Warnf("Failed to clean up %q (host) after forwarding failed", local)
+				}
 			}
 		}
 		return fmt.Errorf("failed to run %v: %q: %w", cmd.Args, string(out), err)
