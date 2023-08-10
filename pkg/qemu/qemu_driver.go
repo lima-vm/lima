@@ -192,7 +192,10 @@ func (l *LimaQemuDriver) Start(ctx context.Context) (chan error, error) {
 	go func() {
 		if usernetIndex := limayaml.FirstUsernetIndex(l.Yaml); usernetIndex != -1 {
 			client := newUsernetClient(l.Yaml.Networks[usernetIndex].Lima)
-			err = client.ResolveAndForwardSSH(limayaml.MACAddress(l.Instance.Dir), l.SSHLocalPort)
+			err := client.ConfigureDriver(l.BaseDriver)
+			if err != nil {
+				l.qWaitCh <- err
+			}
 		}
 	}()
 	return l.qWaitCh, nil
@@ -353,7 +356,11 @@ func newUsernetClient(nwName string) *usernet.Client {
 	if err != nil {
 		return nil
 	}
-	return usernet.NewClient(endpointSock)
+	subnet, err := usernet.Subnet(nwName)
+	if err != nil {
+		return nil
+	}
+	return usernet.NewClient(endpointSock, subnet)
 }
 
 func logPipeRoutine(r io.Reader, header string) {

@@ -22,6 +22,7 @@ func newUsernetCommand() *cobra.Command {
 	hostagentCommand.Flags().StringP("endpoint", "e", "", "exposes usernet api(s) on this endpoint")
 	hostagentCommand.Flags().String("listen-qemu", "", "listen for qemu connections")
 	hostagentCommand.Flags().String("listen", "", "listen on a Unix socket and receive Bess-compatible FDs as SCM_RIGHTS messages")
+	hostagentCommand.Flags().String("subnet", "192.168.5.0/24", "sets subnet value for the usernet network")
 	hostagentCommand.Flags().Int("mtu", 1500, "mtu")
 	return hostagentCommand
 }
@@ -52,6 +53,10 @@ func usernetAction(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
+	subnet, err := cmd.Flags().GetString("subnet")
+	if err != nil {
+		return err
+	}
 
 	mtu, err := cmd.Flags().GetInt("mtu")
 	if err != nil {
@@ -67,5 +72,6 @@ func usernetAction(cmd *cobra.Command, _ []string) error {
 		Endpoint:   endpoint,
 		QemuSocket: qemuSocket,
 		FdSocket:   fdSocket,
+		Subnet:     subnet,
 	})
 }
