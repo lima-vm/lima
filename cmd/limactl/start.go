@@ -221,9 +221,6 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 				return nil, fmt.Errorf("Instance %q already exists", st.instName)
 			}
 			logrus.Infof("Using the existing instance %q", st.instName)
-			if arg == "" {
-				logrus.Infof("Hint: To create another instance, run the following command: limactl create --name=NAME template://default")
-			}
 			yqExprs, err := editflags.YQExpressions(flags, false)
 			if err != nil {
 				return nil, err
