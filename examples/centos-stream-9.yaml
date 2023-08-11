@@ -2,13 +2,12 @@
 
 images:
 # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
-# NOTE: 20230727.1 does not boot (fails to mount rootfs)
-- location: "https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-9-20230720.0.x86_64.qcow2"
+- location: "https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-9-20230807.1.x86_64.qcow2"
   arch: "x86_64"
-  digest: "sha256:f23d3f002948141ac6b3287ccdc43a7c7b5a1266fdd08c104e74dbc20f0074ae"
-- location: "https://cloud.centos.org/centos/9-stream/aarch64/images/CentOS-Stream-GenericCloud-9-20230720.0.aarch64.qcow2"
+  digest: "sha256:6a004e591d0a6b84bc4c1b5cd7a797a3376181162a7e1cf010e0bbf0cdfd6724"
+- location: "https://cloud.centos.org/centos/9-stream/aarch64/images/CentOS-Stream-GenericCloud-9-20230807.1.aarch64.qcow2"
   arch: "aarch64"
-  digest: "sha256:dffcd081cd0060fa2f356ecc4117642934f41f416d7eecf982c410305216ef97"
+  digest: "sha256:0ed3b428f282866cf1c74048ea566fb579979b12f5e1fb527133223883ad8f76"
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
 - location: "https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-9-latest.x86_64.qcow2"
