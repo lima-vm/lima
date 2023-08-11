@@ -58,8 +58,8 @@ github.com/diskfs/go-diskfs v1.3.0/go.mod h1:3pUpCAz75Q11om5RsGpVKUgXp2Z+ATw1xV5
 github.com/docker/go-units v0.5.0 h1:69rxXcBk27SvSaaxTtLh/8llcHD8vYHT7WSdRZ/jvr4=
 github.com/docker/go-units v0.5.0/go.mod h1:fgPhTUdO+D/Jk86RDLlptpiXQzgHJF7gydDDbaIK4Dk=
 github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815/go.mod h1:WwZ+bS3ebgob9U8Nd0kOddGdZWjyMGR8Wziv+TBNwSE=
-github.com/elastic/go-libaudit/v2 v2.3.2 h1:qWNcA3nkwNEGh1UBDbDTVF55KR6SM1W2Ji1LGDqFEpw=
-github.com/elastic/go-libaudit/v2 v2.3.2/go.mod h1:+ZE0czqmbqtnRkl0fNgpI+HvVVRo/ZMJdcXv/PaKcOo=
+github.com/elastic/go-libaudit/v2 v2.3.3 h1:PO+9/HDSn65UAyydkkoTf81QET14fWmocHFiGEX/E6M=
+github.com/elastic/go-libaudit/v2 v2.3.3/go.mod h1:+ZE0czqmbqtnRkl0fNgpI+HvVVRo/ZMJdcXv/PaKcOo=
 github.com/elliotchance/orderedmap v1.5.0 h1:1IsExUsjv5XNBD3ZdC7jkAAqLWOOKdbPTmkHx63OsBg=
 github.com/elliotchance/orderedmap v1.5.0/go.mod h1:wsDwEaX5jEoyhbs7x93zk2H/qv0zwuhg4inXhDkYqys=
 github.com/emicklei/go-restful/v3 v3.10.1 h1:rc42Y5YTp7Am7CS630D7JmhRjq4UlEUuEKfrDac4bSQ=
