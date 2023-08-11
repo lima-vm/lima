@@ -374,7 +374,6 @@ Container image builder examples:
 Container orchestrator examples:
 - [`./examples/k3s.yaml`](./examples/k3s.yaml): Kubernetes (k3s)
 - [`./examples/k8s.yaml`](./examples/k8s.yaml): Kubernetes (kubeadm)
-- [`./examples/nomad.yaml`](./examples/nomad.yaml): Nomad
 
 The default Ubuntu image also contains LXD. Run `lima sudo lxc init` to set up LXD.
 
