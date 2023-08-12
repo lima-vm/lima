@@ -1,10 +1,9 @@
 package hostagent
 
 import (
+	"errors"
 	"fmt"
 	"os"
-
-	"github.com/hashicorp/go-multierror"
 
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/localpathutil"
@@ -24,7 +23,7 @@ func (a *HostAgent) setupMounts() ([]*mount, error) {
 	for _, f := range a.y.Mounts {
 		m, err := a.setupMount(f)
 		if err != nil {
-			mErr = multierror.Append(mErr, err)
+			mErr = errors.Join(mErr, err)
 			continue
 		}
 		res = append(res, m)

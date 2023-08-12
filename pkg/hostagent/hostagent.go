@@ -20,7 +20,6 @@ import (
 	"github.com/lima-vm/lima/pkg/driverutil"
 	"github.com/lima-vm/lima/pkg/networks"
 
-	"github.com/hashicorp/go-multierror"
 	"github.com/lima-vm/lima/pkg/cidata"
 	guestagentapi "github.com/lima-vm/lima/pkg/guestagent/api"
 	guestagentclient "github.com/lima-vm/lima/pkg/guestagent/api/client"
@@ -402,7 +401,7 @@ func (a *HostAgent) startHostAgentRoutines(ctx context.Context) error {
 	})
 	var mErr error
 	if err := a.waitForRequirements("essential", a.essentialRequirements()); err != nil {
-		mErr = multierror.Append(mErr, err)
+		mErr = errors.Join(mErr, err)
 	}
 	if *a.y.SSH.ForwardAgent {
 		faScript := `#!/bin/bash
@@ -414,19 +413,19 @@ sudo chown -R "${USER}" /run/host-services`
 		stdout, stderr, err := ssh.ExecuteScript("127.0.0.1", a.sshLocalPort, a.sshConfig, faScript, faDesc)
 		logrus.Debugf("stdout=%q, stderr=%q, err=%v", stdout, stderr, err)
 		if err != nil {
-			mErr = multierror.Append(mErr, fmt.Errorf("stdout=%q, stderr=%q: %w", stdout, stderr, err))
+			mErr = errors.Join(mErr, fmt.Errorf("stdout=%q, stderr=%q: %w", stdout, stderr, err))
 		}
 	}
 	if *a.y.MountType == limayaml.REVSSHFS {
 		mounts, err := a.setupMounts()
 		if err != nil {
-			mErr = multierror.Append(mErr, err)
+			mErr = errors.Join(mErr, err)
 		}
 		a.onClose = append(a.onClose, func() error {
 			var unmountMErr error
 			for _, m := range mounts {
 				if unmountErr := m.close(); unmountErr != nil {
-					unmountMErr = multierror.Append(unmountMErr, unmountErr)
+					unmountMErr = errors.Join(unmountMErr, unmountErr)
 				}
 			}
 			return unmountMErr
@@ -438,12 +437,12 @@ sudo chown -R "${USER}" /run/host-services`
 			for _, d := range a.y.AdditionalDisks {
 				disk, inspectErr := store.InspectDisk(d.Name)
 				if inspectErr != nil {
-					unlockMErr = multierror.Append(unlockMErr, inspectErr)
+					unlockMErr = errors.Join(unlockMErr, inspectErr)
 					continue
 				}
 				logrus.Infof("Unmounting disk %q", disk.Name)
 				if unlockErr := disk.Unlock(); unlockErr != nil {
-					unlockMErr = multierror.Append(unlockMErr, unlockErr)
+					unlockMErr = errors.Join(unlockMErr, unlockErr)
 				}
 			}
 			return unlockMErr
@@ -451,15 +450,15 @@ sudo chown -R "${USER}" /run/host-services`
 	}
 	go a.watchGuestAgentEvents(ctx)
 	if err := a.waitForRequirements("optional", a.optionalRequirements()); err != nil {
-		mErr = multierror.Append(mErr, err)
+		mErr = errors.Join(mErr, err)
 	}
 	if err := a.waitForRequirements("final", a.finalRequirements()); err != nil {
-		mErr = multierror.Append(mErr, err)
+		mErr = errors.Join(mErr, err)
 	}
 	// Copy all config files _after_ the requirements are done
 	for _, rule := range a.y.CopyToHost {
 		if err := copyToHost(ctx, a.sshConfig, a.sshLocalPort, rule.HostFile, rule.GuestFile); err != nil {
-			mErr = multierror.Append(mErr, err)
+			mErr = errors.Join(mErr, err)
 		}
 	}
 	return mErr
@@ -471,7 +470,7 @@ func (a *HostAgent) close() error {
 	for i := len(a.onClose) - 1; i >= 0; i-- {
 		f := a.onClose[i]
 		if err := f(); err != nil {
-			mErr = multierror.Append(mErr, err)
+			mErr = errors.Join(mErr, err)
 		}
 	}
 	return mErr
@@ -500,12 +499,12 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 				local := hostAddress(rule, guestagentapi.IPPort{})
 				// using ctx.Background() because ctx has already been cancelled
 				if err := forwardSSH(context.Background(), a.sshConfig, a.sshLocalPort, local, rule.GuestSocket, verbCancel, rule.Reverse); err != nil {
-					mErr = multierror.Append(mErr, err)
+					mErr = errors.Join(mErr, err)
 				}
 			}
 		}
 		if err := forwardSSH(context.Background(), a.sshConfig, a.sshLocalPort, localUnix, remoteUnix, verbCancel, false); err != nil {
-			mErr = multierror.Append(mErr, err)
+			mErr = errors.Join(mErr, err)
 		}
 		return mErr
 	})

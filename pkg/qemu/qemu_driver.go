@@ -20,7 +20,6 @@ import (
 
 	"github.com/digitalocean/go-qemu/qmp"
 	"github.com/digitalocean/go-qemu/qmp/raw"
-	"github.com/hashicorp/go-multierror"
 	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/networks/usernet"
@@ -286,7 +285,7 @@ func (l *LimaQemuDriver) killVhosts() error {
 	var mErr error
 	for i, vhost := range l.vhostCmds {
 		if err := vhost.Process.Kill(); err != nil && !errors.Is(err, os.ErrProcessDone) {
-			mErr = multierror.Append(mErr, fmt.Errorf("Failed to kill virtiofsd instance #%d: %w", i, err))
+			mErr = errors.Join(mErr, fmt.Errorf("Failed to kill virtiofsd instance #%d: %w", i, err))
 		}
 	}
 
@@ -324,7 +323,7 @@ func (l *LimaQemuDriver) shutdownQEMU(ctx context.Context, timeout time.Duration
 	case qWaitErr := <-qWaitCh:
 		logrus.WithError(qWaitErr).Info("QEMU has exited")
 		l.removeVNCFiles()
-		return multierror.Append(qWaitErr, l.killVhosts()).ErrorOrNil()
+		return errors.Join(qWaitErr, l.killVhosts())
 	case <-deadline:
 	}
 	logrus.Warnf("QEMU did not exit in %v, forcibly killing QEMU", timeout)
@@ -345,7 +344,7 @@ func (l *LimaQemuDriver) killQEMU(_ context.Context, _ time.Duration, qCmd *exec
 	qemuPIDPath := filepath.Join(l.Instance.Dir, filenames.PIDFile(*l.Yaml.VMType))
 	_ = os.RemoveAll(qemuPIDPath)
 	l.removeVNCFiles()
-	return multierror.Append(qWaitErr, l.killVhosts()).ErrorOrNil()
+	return errors.Join(qWaitErr, l.killVhosts())
 }
 
 func newUsernetClient(nwName string) *usernet.Client {
