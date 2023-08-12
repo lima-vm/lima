@@ -55,6 +55,7 @@ func (s *ServiceWatcher) getServiceInformer() cache.SharedIndexInformer {
 
 func (s *ServiceWatcher) Start() {
 	retryInterval := 10 * time.Second
+	//nolint:staticcheck // SA1019: wait.PollInfinite is deprecated
 	wait.PollInfinite(retryInterval, func() (done bool, err error) {
 		kubeClient, err := tryGetKubeClient()
 		if err != nil {
