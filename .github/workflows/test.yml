@@ -8,8 +8,8 @@ on:
   pull_request:
 
 jobs:
-  basic:
-    name: "Lints & Unit tests"
+  lints:
+    name: "Lints"
     runs-on: ubuntu-22.04
     timeout-minutes: 30
     steps:
@@ -18,7 +18,7 @@ jobs:
         fetch-depth: 1
     - uses: actions/setup-go@v4
       with:
-        go-version: 1.20.x
+        go-version: 1.21.x
     - name: Run golangci-lint
       uses: golangci/golangci-lint-action@v3.6.0
       with:
@@ -40,6 +40,23 @@ jobs:
       uses: docker://dkhamsing/awesome_bot:latest
       with:
         args: /github/workspace/README.md --allow-dupe --allow-redirect --request-delay 1 --white-list https://img.shields.io,http://127.0.0.1:8080,https://github.com/lima-vm/lima/releases/download,https://xbarapp.com,https://api.github.com
+
+  unit:
+    name: "Unit tests"
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        # For Linux we have to support an old release of Go
+        go-version: ["1.20.x", "1.21.x"]
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 1
+    - uses: actions/setup-go@v4
+      with:
+        go-version: ${{ matrix.go-version }}
     - name: Unit tests
       run: go test -v ./...
     - name: Make
@@ -59,7 +76,7 @@ jobs:
         fetch-depth: 1
     - uses: actions/setup-go@v4
       with:
-        go-version: 1.20.x
+        go-version: 1.21.x
     - name: Unit tests
       run: go test -v ./...
     - name: Make
@@ -75,7 +92,7 @@ jobs:
         fetch-depth: 1
     - uses: actions/setup-go@v4
       with:
-        go-version: 1.20.x
+        go-version: 1.21.x
     - name: Cache ~/Library/Caches/lima/download
       uses: actions/cache@v3
       with:
@@ -242,7 +259,7 @@ jobs:
         fetch-depth: 1
     - uses: actions/setup-go@v4
       with:
-        go-version: 1.20.x
+        go-version: 1.21.x
     - name: Cache ~/Library/Caches/lima/download
       uses: actions/cache@v3
       with:
@@ -316,7 +333,7 @@ jobs:
         fetch-depth: 0
     - uses: actions/setup-go@v4
       with:
-        go-version: 1.20.x
+        go-version: 1.21.x
     - name: Cache ~/Library/Caches/lima/download
       uses: actions/cache@v3
       with:
@@ -342,7 +359,7 @@ jobs:
         fetch-depth: 1
     - uses: actions/setup-go@v4
       with:
-        go-version: 1.20.x
+        go-version: 1.21.x
     - name: Cache ~/Library/Caches/lima/download
       uses: actions/cache@v3
       with:
