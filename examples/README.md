@@ -40,7 +40,6 @@ Container orchestration:
 - [`faasd.yaml`](./faasd.yaml): [Faasd](https://docs.openfaas.com/deployment/faasd/)
 - [`k3s.yaml`](./k3s.yaml): Kubernetes via k3s
 - [`k8s.yaml`](./k8s.yaml): Kubernetes via kubeadm
-- [`nomad.yaml`](./nomad.yaml): Nomad
 
 Optional feature enablers:
 - [`vmnet.yaml`](./vmnet.yaml): ⭐enable [`vmnet.framework`](../docs/network.md)
@@ -59,6 +58,7 @@ Lost+found:
 - ~`experimental/apptainer.yaml`~: Moved to [`apptainer.yaml`](./apptainer.yaml) in Lima v0.13.0.
 - ~`experimental/{almalinux,centos-stream-9,oraclelinux,rocky}-9.yaml`~: Moved to [`almalinux-9.yaml`](./almalinux.yaml), [`centos-stream-9.yaml`](./centos-stream-9.yaml),
   [`oraclelinux-9.yaml`](./oraclelinux-9.yaml), and [`rocky-9.yaml`](./rocky-9.yaml) in Lima v0.13.0.
+- ~`nomad.yaml`~: Removed in Lima v0.17.1, as Nomad is [no longer free software](https://github.com/hashicorp/nomad/commit/b3e30b1dfa185d9437a25830522da47b91f78816)
 
 ## Tier 1
 
