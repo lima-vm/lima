@@ -1,10 +1,10 @@
 package hostagent
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/go-multierror"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/sshocker/pkg/ssh"
 	"github.com/sirupsen/logrus"
@@ -28,10 +28,10 @@ func (a *HostAgent) waitForRequirements(label string, requirements []requirement
 			}
 			if req.fatal {
 				logrus.Infof("No further %s requirements will be checked", label)
-				return multierror.Append(mErr, fmt.Errorf("failed to satisfy the %s requirement %d of %d %q: %s; skipping further checks: %w", label, i+1, len(requirements), req.description, req.debugHint, err))
+				return errors.Join(mErr, fmt.Errorf("failed to satisfy the %s requirement %d of %d %q: %s; skipping further checks: %w", label, i+1, len(requirements), req.description, req.debugHint, err))
 			}
 			if j == retries-1 {
-				mErr = multierror.Append(mErr, fmt.Errorf("failed to satisfy the %s requirement %d of %d %q: %s: %w", label, i+1, len(requirements), req.description, req.debugHint, err))
+				mErr = errors.Join(mErr, fmt.Errorf("failed to satisfy the %s requirement %d of %d %q: %s: %w", label, i+1, len(requirements), req.description, req.debugHint, err))
 				break retryLoop
 			}
 			time.Sleep(10 * time.Second)
