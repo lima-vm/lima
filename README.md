@@ -5,13 +5,9 @@ Translations: [日本語(Japanese)](README.ja.md) [简体中文（Simplified Chi
 
 ![Lima logo](./docs/images/lima-logo-01.svg)
 
-# Lima: Linux virtual machines (on macOS, in most cases)
+# Lima: Linux Machines
 
-Lima launches Linux virtual machines with automatic file sharing and port forwarding (similar to WSL2), and [containerd](https://containerd.io).
-
-Lima can be considered as a some sort of unofficial "containerd for Mac".
-
-Lima is expected to be used on macOS hosts, but can be used on Linux hosts as well.
+Lima launches Linux virtual machines with automatic file sharing and port forwarding (similar to WSL2).
 
 ✅ Automatic file sharing
 
@@ -37,8 +33,9 @@ The [talks](docs/talks.md) page contains links to slides and video from conferen
 
 ## Motivation
 
-The goal of Lima is to promote [containerd](https://containerd.io) including [nerdctl (contaiNERD ctl)](https://github.com/containerd/nerdctl)
+The original goal of Lima was to promote [containerd](https://containerd.io) including [nerdctl (contaiNERD ctl)](https://github.com/containerd/nerdctl)
 to Mac users, but Lima can be used for non-container applications as well.
+Lima also supports non-macOS hosts (Linux, NetBSD, etc.).
 
 ## Community
 ### Adopters
