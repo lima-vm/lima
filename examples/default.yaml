@@ -11,6 +11,10 @@
 # 🟢 Builtin default: "qemu"
 vmType: null
 
+# OS: "Linux".
+# 🟢 Builtin default: "Linux"
+os: null
+
 # Arch: "default", "x86_64", "aarch64".
 # 🟢 Builtin default: "default" (corresponds to the host architecture)
 arch: null

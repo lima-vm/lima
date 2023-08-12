@@ -39,17 +39,17 @@ const (
 
 func defaultContainerdArchives() []File {
 	const nerdctlVersion = "1.5.0"
-	location := func(goarch string) string {
-		return "https://github.com/containerd/nerdctl/releases/download/v" + nerdctlVersion + "/nerdctl-full-" + nerdctlVersion + "-linux-" + goarch + ".tar.gz"
+	location := func(goos string, goarch string) string {
+		return "https://github.com/containerd/nerdctl/releases/download/v" + nerdctlVersion + "/nerdctl-full-" + nerdctlVersion + "-" + goos + "-" + goarch + ".tar.gz"
 	}
 	return []File{
 		{
-			Location: location("amd64"),
+			Location: location("linux", "amd64"),
 			Arch:     X8664,
 			Digest:   "sha256:3f8c494e3c6a265fe2a3c41ef9d6bc859eeeb22095b3353d3558d8120833a23a",
 		},
 		{
-			Location: location("arm64"),
+			Location: location("linux", "arm64"),
 			Arch:     AARCH64,
 			Digest:   "sha256:32a2537e0a80e1493b5934ca56c3e237466606a1b720aef23b9c0a7fc3303bdb",
 		},
@@ -134,6 +134,13 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.VMType = o.VMType
 	}
 	y.VMType = pointer.String(ResolveVMType(y.VMType))
+	if y.OS == nil {
+		y.OS = d.OS
+	}
+	if o.OS != nil {
+		y.OS = o.OS
+	}
+	y.OS = pointer.String(ResolveOS(y.OS))
 	if y.Arch == nil {
 		y.Arch = d.Arch
 	}
@@ -768,6 +775,16 @@ func FillCopyToHostDefaults(rule *CopyToHost, instDir string) {
 	}
 }
 
+func NewOS(osname string) OS {
+	switch osname {
+	case "linux":
+		return LINUX
+	default:
+		logrus.Warnf("Unknown os: %s", osname)
+		return osname
+	}
+}
+
 func goarm() int {
 	if runtime.GOOS != "linux" {
 		return 0
@@ -822,6 +839,13 @@ func ResolveVMType(s *string) VMType {
 		return QEMU
 	}
 	return NewVMType(*s)
+}
+
+func ResolveOS(s *string) OS {
+	if s == nil || *s == "" || *s == "default" {
+		return NewOS("linux")
+	}
+	return *s
 }
 
 func ResolveArch(s *string) Arch {

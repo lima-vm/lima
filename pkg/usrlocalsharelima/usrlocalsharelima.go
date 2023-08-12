@@ -27,6 +27,7 @@ func Dir() (string, error) {
 		}
 	}
 
+	ostype := limayaml.NewOS("linux")
 	arch := limayaml.NewArch(runtime.GOARCH)
 	if arch == "" {
 		return "", fmt.Errorf("failed to get arch for %q", runtime.GOARCH)
@@ -40,12 +41,12 @@ func Dir() (string, error) {
 		// - self:  /Applications/Lima.app/Contents/MacOS/limactl
 		// - agent: /Applications/Lima.app/Contents/MacOS/lima-guestagent.Linux-x86_64
 		// - dir:   /Applications/Lima.app/Contents/MacOS
-		filepath.Join(selfDir, "lima-guestagent.Linux-"+arch),
+		filepath.Join(selfDir, "lima-guestagent."+ostype+"-"+arch),
 		// candidate 1:
 		// - self:  /usr/local/bin/limactl
 		// - agent: /usr/local/share/lima/lima-guestagent.Linux-x86_64
 		// - dir:   /usr/local/share/lima
-		filepath.Join(selfDirDir, "share/lima/lima-guestagent.Linux-"+arch),
+		filepath.Join(selfDirDir, "share/lima/lima-guestagent."+ostype+"-"+arch),
 		// TODO: support custom path
 	}
 	for _, gaCandidate := range gaCandidates {
@@ -56,6 +57,6 @@ func Dir() (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("failed to find \"lima-guestagent.Linux-%s\" binary for %q, attempted %v",
-		arch, self, gaCandidates)
+	return "", fmt.Errorf("failed to find \"lima-guestagent.%s-%s\" binary for %q, attempted %v",
+		ostype, arch, self, gaCandidates)
 }

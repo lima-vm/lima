@@ -28,7 +28,7 @@ import (
 // to be running before timing out.
 const DefaultWatchHostAgentEventsTimeout = 10 * time.Minute
 
-// ensureNerdctlArchiveCache prefetches the nerdctl-full-VERSION-linux-GOARCH.tar.gz archive
+// ensureNerdctlArchiveCache prefetches the nerdctl-full-VERSION-GOOS-GOARCH.tar.gz archive
 // into the cache before launching the hostagent process, so that we can show the progress in tty.
 // https://github.com/lima-vm/lima/issues/326
 func ensureNerdctlArchiveCache(y *limayaml.LimaYAML) (string, error) {
