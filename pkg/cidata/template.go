@@ -56,6 +56,7 @@ type TemplateArgs struct {
 	Name                            string // instance name
 	IID                             string // instance id
 	User                            string // user name
+	Home                            string // home directory
 	UID                             int
 	SSHPubKeys                      []string
 	Mounts                          []Mount
@@ -92,6 +93,9 @@ func ValidateTemplateArgs(args TemplateArgs) error {
 	}
 	if args.UID == 0 {
 		return errors.New("field UID must not be 0")
+	}
+	if args.Home == "" {
+		return errors.New("field Home must be set")
 	}
 	if len(args.SSHPubKeys) == 0 {
 		return errors.New("field SSHPubKeys must be set")

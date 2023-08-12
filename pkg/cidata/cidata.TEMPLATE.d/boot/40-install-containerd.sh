@@ -59,9 +59,9 @@ EOF
 fi
 
 if [ "${LIMA_CIDATA_CONTAINERD_USER}" = 1 ]; then
-	if [ ! -e "/home/${LIMA_CIDATA_USER}.linux/.config/containerd/config.toml" ]; then
-		mkdir -p "/home/${LIMA_CIDATA_USER}.linux/.config/containerd"
-		cat >"/home/${LIMA_CIDATA_USER}.linux/.config/containerd/config.toml" <<EOF
+	if [ ! -e "${LIMA_CIDATA_HOME}/.config/containerd/config.toml" ]; then
+		mkdir -p "${LIMA_CIDATA_HOME}/.config/containerd"
+		cat >"${LIMA_CIDATA_HOME}/.config/containerd/config.toml" <<EOF
   version = 2
   [proxy_plugins]
     [proxy_plugins."fuse-overlayfs"]
@@ -71,13 +71,13 @@ if [ "${LIMA_CIDATA_CONTAINERD_USER}" = 1 ]; then
       type = "snapshot"
       address = "/run/user/${LIMA_CIDATA_UID}/containerd-stargz-grpc/containerd-stargz-grpc.sock"
 EOF
-		chown -R "${LIMA_CIDATA_USER}" "/home/${LIMA_CIDATA_USER}.linux/.config"
+		chown -R "${LIMA_CIDATA_USER}" "${LIMA_CIDATA_HOME}/.config"
 	fi
 	selinux=
 	if command -v selinuxenabled >/dev/null 2>&1 && selinuxenabled; then
 		selinux=1
 	fi
-	if [ ! -e "/home/${LIMA_CIDATA_USER}.linux/.config/systemd/user/containerd.service" ]; then
+	if [ ! -e "${LIMA_CIDATA_HOME}/.config/systemd/user/containerd.service" ]; then
 		until [ -e "/run/user/${LIMA_CIDATA_UID}/systemd/private" ]; do sleep 3; done
 		if [ -n "$selinux" ]; then
 			echo "Temporarily disabling SELinux, during installing containerd units"

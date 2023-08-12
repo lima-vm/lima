@@ -17,7 +17,7 @@ mounts:
 users:
   - name: "{{.User}}"
     uid: "{{.UID}}"
-    homedir: "/home/{{.User}}.linux"
+    homedir: "{{.Home}}"
     shell: /bin/bash
     sudo: ALL=(ALL) NOPASSWD:ALL
     lock_passwd: true
