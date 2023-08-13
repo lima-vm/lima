@@ -389,7 +389,7 @@ func listenAndServe(network Network, opts ServerOptions) (*dns.Server, error) {
 	}
 	s := &dns.Server{Net: string(network), Addr: addr, Handler: h}
 	go func() {
-		logrus.Debugf("Start %v server listening on: %v", network, addr)
+		logrus.Debugf("Start %v DNS listening on: %v", network, addr)
 		if e := s.ListenAndServe(); e != nil {
 			panic(e)
 		}
