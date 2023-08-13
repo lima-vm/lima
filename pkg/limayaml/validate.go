@@ -75,8 +75,8 @@ func Validate(y LimaYAML, warn bool) error {
 			if err := validateFileObject(f.Kernel.File, fmt.Sprintf("images[%d].kernel", i)); err != nil {
 				return err
 			}
-			if f.Kernel.Arch != *y.Arch {
-				return fmt.Errorf("images[%d].kernel has unexpected architecture %q, must be %q", i, f.Kernel.Arch, *y.Arch)
+			if f.Kernel.Arch != f.Arch {
+				return fmt.Errorf("images[%d].kernel has unexpected architecture %q, must be %q", i, f.Kernel.Arch, f.Arch)
 			}
 		} else if f.Arch == RISCV64 {
 			return errors.New("riscv64 needs the kernel (e.g., \"uboot.elf\") to be specified")
@@ -88,8 +88,8 @@ func Validate(y LimaYAML, warn bool) error {
 			if f.Kernel == nil {
 				return errors.New("initrd requires the kernel to be specified")
 			}
-			if f.Initrd.Arch != *y.Arch {
-				return fmt.Errorf("images[%d].initrd has unexpected architecture %q, must be %q", i, f.Initrd.Arch, *y.Arch)
+			if f.Initrd.Arch != f.Arch {
+				return fmt.Errorf("images[%d].initrd has unexpected architecture %q, must be %q", i, f.Initrd.Arch, f.Arch)
 			}
 		}
 	}
