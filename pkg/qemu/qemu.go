@@ -469,7 +469,7 @@ func qemuMachine(arch limayaml.Arch) string {
 
 func Cmdline(cfg Config) (string, []string, error) {
 	y := cfg.LimaYAML
-	exe, args, err := getExe(*y.Arch)
+	exe, args, err := Exe(*y.Arch)
 	if err != nil {
 		return "", nil, err
 	}
@@ -490,7 +490,7 @@ func Cmdline(cfg Config) (string, []string, error) {
 	}
 
 	// Architecture
-	accel := getAccel(*y.Arch)
+	accel := Accel(*y.Arch)
 	if !strings.Contains(string(features.AccelHelp), accel) {
 		return "", nil, fmt.Errorf("accelerator %q is not supported by %s", accel, exe)
 	}
@@ -1003,7 +1003,7 @@ func qemuArch(arch limayaml.Arch) string {
 	return arch
 }
 
-func getExe(arch limayaml.Arch) (string, []string, error) {
+func Exe(arch limayaml.Arch) (string, []string, error) {
 	exeBase := "qemu-system-" + qemuArch(arch)
 	var args []string
 	envK := "QEMU_SYSTEM_" + strings.ToUpper(qemuArch(arch))
@@ -1024,7 +1024,7 @@ func getExe(arch limayaml.Arch) (string, []string, error) {
 	return exe, args, nil
 }
 
-func getAccel(arch limayaml.Arch) string {
+func Accel(arch limayaml.Arch) string {
 	if limayaml.IsNativeArch(arch) {
 		switch runtime.GOOS {
 		case "darwin":
