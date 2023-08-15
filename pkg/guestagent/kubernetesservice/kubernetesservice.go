@@ -54,16 +54,15 @@ func (s *ServiceWatcher) getServiceInformer() cache.SharedIndexInformer {
 }
 
 func (s *ServiceWatcher) Start() {
-	retryInterval := 10 * time.Second
-	//nolint:staticcheck // SA1019: wait.PollInfinite is deprecated
-	wait.PollInfinite(retryInterval, func() (done bool, err error) {
+	const retryInterval = 10 * time.Second
+	const pollImmediately = false
+	wait.PollUntilContextCancel(context.TODO(), retryInterval, pollImmediately, func(ctx context.Context) (done bool, err error) {
 		kubeClient, err := tryGetKubeClient()
 		if err != nil {
 			logrus.Tracef("failed to get kube client: %v, will retry in %v", err, retryInterval)
 			return false, nil
 		}
 
-		ctx := context.TODO()
 		informerFactory := informers.NewSharedInformerFactory(kubeClient, time.Hour)
 		serviceInformer := informerFactory.Core().V1().Services().Informer()
 		informerFactory.Start(ctx.Done())
