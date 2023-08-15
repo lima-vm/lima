@@ -109,7 +109,7 @@ $ lima nerdctl run -d --name nginx -p 127.0.0.1:8080:80 nginx:alpine
 ## 开始使用
 ### 安装
 
-可以直接使用 [Homebrew 上的包](https://github.com/Homebrew/homebrew-core/blob/master/Formula/lima.rb) 进行安装。
+可以直接使用 [Homebrew 上的包](https://github.com/Homebrew/homebrew-core/blob/master/Formula/l/lima.rb) 进行安装。
 
 ```console
 brew install lima

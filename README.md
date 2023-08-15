@@ -102,7 +102,7 @@ For the usage of containerd and nerdctl (contaiNERD ctl), visit <https://github.
 ## Getting started
 ### Installation
 
-[Homebrew package](https://github.com/Homebrew/homebrew-core/blob/master/Formula/lima.rb) is available.
+[Homebrew package](https://github.com/Homebrew/homebrew-core/blob/master/Formula/l/lima.rb) is available.
 
 ```console
 brew install lima
