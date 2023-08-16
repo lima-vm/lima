@@ -6,15 +6,15 @@ command -v systemctl >/dev/null 2>&1 || exit 0
 
 # Set up env
 for f in .profile .bashrc .zshrc; do
-	if ! grep -q "# Lima BEGIN" "/home/${LIMA_CIDATA_USER}.linux/$f"; then
-		cat >>"/home/${LIMA_CIDATA_USER}.linux/$f" <<EOF
+	if ! grep -q "# Lima BEGIN" "${LIMA_CIDATA_HOME}/$f"; then
+		cat >>"${LIMA_CIDATA_HOME}/$f" <<EOF
 # Lima BEGIN
 # Make sure iptables and mount.fuse3 are available
 PATH="\$PATH:/usr/sbin:/sbin"
 export PATH
 EOF
 		if compare_version.sh "$(uname -r)" -lt "5.13"; then
-			cat >>"/home/${LIMA_CIDATA_USER}.linux/$f" <<EOF
+			cat >>"${LIMA_CIDATA_HOME}/$f" <<EOF
 # fuse-overlayfs is the most stable snapshotter for rootless, on kernel < 5.13
 # https://github.com/lima-vm/lima/issues/383
 # https://rootlesscontaine.rs/how-it-works/overlayfs/
@@ -22,10 +22,10 @@ CONTAINERD_SNAPSHOTTER="fuse-overlayfs"
 export CONTAINERD_SNAPSHOTTER
 EOF
 		fi
-		cat >>"/home/${LIMA_CIDATA_USER}.linux/$f" <<EOF
+		cat >>"${LIMA_CIDATA_HOME}/$f" <<EOF
 # Lima END
 EOF
-		chown "${LIMA_CIDATA_USER}" "/home/${LIMA_CIDATA_USER}.linux/$f"
+		chown "${LIMA_CIDATA_USER}" "${LIMA_CIDATA_HOME}/$f"
 	fi
 done
 # Enable cgroup delegation (only meaningful on cgroup v2)

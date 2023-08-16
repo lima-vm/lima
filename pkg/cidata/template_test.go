@@ -13,6 +13,7 @@ func TestTemplate(t *testing.T) {
 		Name: "default",
 		User: "foo",
 		UID:  501,
+		Home: "/home/foo.linux",
 		SSHPubKeys: []string{
 			"ssh-rsa dummy foo@example.com",
 		},
@@ -41,6 +42,7 @@ func TestTemplate9p(t *testing.T) {
 		Name: "default",
 		User: "foo",
 		UID:  501,
+		Home: "/home/foo.linux",
 		SSHPubKeys: []string{
 			"ssh-rsa dummy foo@example.com",
 		},

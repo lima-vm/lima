@@ -52,7 +52,7 @@ if [ -d "${LIMA_CIDATA_MNT}"/provision.system ]; then
 	done
 fi
 
-USER_SCRIPT="/home/${LIMA_CIDATA_USER}.linux/.lima-user-script"
+USER_SCRIPT="${LIMA_CIDATA_HOME}/.lima-user-script"
 if [ -d "${LIMA_CIDATA_MNT}"/provision.user ]; then
 	if [ ! -f /sbin/openrc-run ]; then
 		until [ -e "/run/user/${LIMA_CIDATA_UID}/systemd/private" ]; do sleep 3; done

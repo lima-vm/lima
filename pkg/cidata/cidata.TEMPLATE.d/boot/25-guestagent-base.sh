@@ -38,7 +38,7 @@ EOF
 	rc-service lima-guestagent start
 else
 	# Remove legacy systemd service
-	rm -f "/home/${LIMA_CIDATA_USER}.linux/.config/systemd/user/lima-guestagent.service"
+	rm -f "${LIMA_CIDATA_HOME}/.config/systemd/user/lima-guestagent.service"
 
 	sudo "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/lima-guestagent install-systemd
 fi

@@ -3,13 +3,13 @@ set -eux
 
 # This script is only intended for the default.yaml image, which is based on Ubuntu LTS
 
-if [ "${LIMA_CIDATA_NAME}" = "default" ] && command -v patch >/dev/null 2>&1 && grep -q color_prompt "/home/${LIMA_CIDATA_USER}.linux/.bashrc"; then
+if [ "${LIMA_CIDATA_NAME}" = "default" ] && command -v patch >/dev/null 2>&1 && grep -q color_prompt "${LIMA_CIDATA_HOME}/.bashrc"; then
 
-	! grep -q "^# Lima PS1" "/home/${LIMA_CIDATA_USER}.linux/.bashrc" || exit 0
+	! grep -q "^# Lima PS1" "${LIMA_CIDATA_HOME}/.bashrc" || exit 0
 
 	# Change the default shell prompt from "green" to "lime" (#BFFF00)
 
-	patch --forward -r - "/home/${LIMA_CIDATA_USER}.linux/.bashrc" <<'EOF'
+	patch --forward -r - "${LIMA_CIDATA_HOME}/.bashrc" <<'EOF'
 @@ -37,7 +37,11 @@
  
  # set a fancy prompt (non-color, unless we know we "want" color)
