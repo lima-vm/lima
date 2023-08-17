@@ -3,9 +3,9 @@ package kubernetesservice
 import (
 	"context"
 	"net"
-	"reflect"
 	"testing"
 
+	"gotest.tools/v3/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -107,16 +107,14 @@ func TestGetPorts(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			_, err := kubeClient.CoreV1().Services("default").Create(ctx, &c.service, metav1.CreateOptions{})
-			if err != nil {
-				t.Fatalf("failed to create service: %v", err)
-			}
+			assert.NilError(t, err, "failed to create service [%s]", c.service.Name)
+
 			<-serviceCreatedCh
 
 			got := serviceWatcher.GetPorts()
-			if !reflect.DeepEqual(got, c.want) {
-				t.Errorf("got %v, want %v", got, c.want)
-			}
-			kubeClient.CoreV1().Services("default").Delete(ctx, c.service.Name, metav1.DeleteOptions{})
+			assert.DeepEqual(t, got, c.want)
+			err = kubeClient.CoreV1().Services("default").Delete(ctx, c.service.Name, metav1.DeleteOptions{})
+			assert.NilError(t, err, "failed to delete service [%s]", c.service.Name)
 		})
 	}
 }
