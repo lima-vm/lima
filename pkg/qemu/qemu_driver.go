@@ -282,14 +282,14 @@ func (l *LimaQemuDriver) removeVNCFiles() error {
 }
 
 func (l *LimaQemuDriver) killVhosts() error {
-	var mErr error
+	var errs []error
 	for i, vhost := range l.vhostCmds {
 		if err := vhost.Process.Kill(); err != nil && !errors.Is(err, os.ErrProcessDone) {
-			mErr = errors.Join(mErr, fmt.Errorf("Failed to kill virtiofsd instance #%d: %w", i, err))
+			errs = append(errs, fmt.Errorf("Failed to kill virtiofsd instance #%d: %w", i, err))
 		}
 	}
 
-	return mErr
+	return errors.Join(errs...)
 }
 
 func (l *LimaQemuDriver) shutdownQEMU(ctx context.Context, timeout time.Duration, qCmd *exec.Cmd, qWaitCh <-chan error) error {

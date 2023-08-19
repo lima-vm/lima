@@ -15,7 +15,7 @@ func (a *HostAgent) waitForRequirements(label string, requirements []requirement
 		retries       = 60
 		sleepDuration = 10 * time.Second
 	)
-	var mErr error
+	var errs []error
 
 	for i, req := range requirements {
 	retryLoop:
@@ -28,16 +28,17 @@ func (a *HostAgent) waitForRequirements(label string, requirements []requirement
 			}
 			if req.fatal {
 				logrus.Infof("No further %s requirements will be checked", label)
-				return errors.Join(mErr, fmt.Errorf("failed to satisfy the %s requirement %d of %d %q: %s; skipping further checks: %w", label, i+1, len(requirements), req.description, req.debugHint, err))
+				errs = append(errs, fmt.Errorf("failed to satisfy the %s requirement %d of %d %q: %s; skipping further checks: %w", label, i+1, len(requirements), req.description, req.debugHint, err))
+				return errors.Join(errs...)
 			}
 			if j == retries-1 {
-				mErr = errors.Join(mErr, fmt.Errorf("failed to satisfy the %s requirement %d of %d %q: %s: %w", label, i+1, len(requirements), req.description, req.debugHint, err))
+				errs = append(errs, fmt.Errorf("failed to satisfy the %s requirement %d of %d %q: %s: %w", label, i+1, len(requirements), req.description, req.debugHint, err))
 				break retryLoop
 			}
 			time.Sleep(10 * time.Second)
 		}
 	}
-	return mErr
+	return errors.Join(errs...)
 }
 
 func (a *HostAgent) waitForRequirement(r requirement) error {

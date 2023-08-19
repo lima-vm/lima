@@ -18,17 +18,17 @@ type mount struct {
 func (a *HostAgent) setupMounts() ([]*mount, error) {
 	var (
 		res  []*mount
-		mErr error
+		errs []error
 	)
 	for _, f := range a.y.Mounts {
 		m, err := a.setupMount(f)
 		if err != nil {
-			mErr = errors.Join(mErr, err)
+			errs = append(errs, err)
 			continue
 		}
 		res = append(res, m)
 	}
-	return res, mErr
+	return res, errors.Join(errs...)
 }
 
 func (a *HostAgent) setupMount(m limayaml.Mount) (*mount, error) {

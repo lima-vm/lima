@@ -399,9 +399,9 @@ func (a *HostAgent) startHostAgentRoutines(ctx context.Context) error {
 		}
 		return nil
 	})
-	var mErr error
+	var errs []error
 	if err := a.waitForRequirements("essential", a.essentialRequirements()); err != nil {
-		mErr = errors.Join(mErr, err)
+		errs = append(errs, err)
 	}
 	if *a.y.SSH.ForwardAgent {
 		faScript := `#!/bin/bash
@@ -413,79 +413,79 @@ sudo chown -R "${USER}" /run/host-services`
 		stdout, stderr, err := ssh.ExecuteScript("127.0.0.1", a.sshLocalPort, a.sshConfig, faScript, faDesc)
 		logrus.Debugf("stdout=%q, stderr=%q, err=%v", stdout, stderr, err)
 		if err != nil {
-			mErr = errors.Join(mErr, fmt.Errorf("stdout=%q, stderr=%q: %w", stdout, stderr, err))
+			errs = append(errs, fmt.Errorf("stdout=%q, stderr=%q: %w", stdout, stderr, err))
 		}
 	}
 	if *a.y.MountType == limayaml.REVSSHFS {
 		mounts, err := a.setupMounts()
 		if err != nil {
-			mErr = errors.Join(mErr, err)
+			errs = append(errs, err)
 		}
 		a.onClose = append(a.onClose, func() error {
-			var unmountMErr error
+			var unmountErrs []error
 			for _, m := range mounts {
 				if unmountErr := m.close(); unmountErr != nil {
-					unmountMErr = errors.Join(unmountMErr, unmountErr)
+					unmountErrs = append(unmountErrs, unmountErr)
 				}
 			}
-			return unmountMErr
+			return errors.Join(unmountErrs...)
 		})
 	}
 	if len(a.y.AdditionalDisks) > 0 {
 		a.onClose = append(a.onClose, func() error {
-			var unlockMErr error
+			var unlockErrs []error
 			for _, d := range a.y.AdditionalDisks {
 				disk, inspectErr := store.InspectDisk(d.Name)
 				if inspectErr != nil {
-					unlockMErr = errors.Join(unlockMErr, inspectErr)
+					unlockErrs = append(unlockErrs, inspectErr)
 					continue
 				}
 				logrus.Infof("Unmounting disk %q", disk.Name)
 				if unlockErr := disk.Unlock(); unlockErr != nil {
-					unlockMErr = errors.Join(unlockMErr, unlockErr)
+					unlockErrs = append(unlockErrs, unlockErr)
 				}
 			}
-			return unlockMErr
+			return errors.Join(unlockErrs...)
 		})
 	}
 	go a.watchGuestAgentEvents(ctx)
 	if err := a.waitForRequirements("optional", a.optionalRequirements()); err != nil {
-		mErr = errors.Join(mErr, err)
+		errs = append(errs, err)
 	}
 	if err := a.waitForRequirements("final", a.finalRequirements()); err != nil {
-		mErr = errors.Join(mErr, err)
+		errs = append(errs, err)
 	}
 	// Copy all config files _after_ the requirements are done
 	for _, rule := range a.y.CopyToHost {
 		if err := copyToHost(ctx, a.sshConfig, a.sshLocalPort, rule.HostFile, rule.GuestFile); err != nil {
-			mErr = errors.Join(mErr, err)
+			errs = append(errs, err)
 		}
 	}
 	a.onClose = append(a.onClose, func() error {
-		var mErr error
+		var rmErrs []error
 		for _, rule := range a.y.CopyToHost {
 			if rule.DeleteOnStop {
 				logrus.Infof("Deleting %s", rule.HostFile)
 				if err := os.RemoveAll(rule.HostFile); err != nil {
-					mErr = errors.Join(mErr, err)
+					rmErrs = append(rmErrs, err)
 				}
 			}
 		}
-		return mErr
+		return errors.Join(rmErrs...)
 	})
-	return mErr
+	return errors.Join(errs...)
 }
 
 func (a *HostAgent) close() error {
 	logrus.Infof("Shutting down the host agent")
-	var mErr error
+	var errs []error
 	for i := len(a.onClose) - 1; i >= 0; i-- {
 		f := a.onClose[i]
 		if err := f(); err != nil {
-			mErr = errors.Join(mErr, err)
+			errs = append(errs, err)
 		}
 	}
-	return mErr
+	return errors.Join(errs...)
 }
 
 func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
@@ -505,20 +505,20 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 
 	a.onClose = append(a.onClose, func() error {
 		logrus.Debugf("Stop forwarding unix sockets")
-		var mErr error
+		var errs []error
 		for _, rule := range a.y.PortForwards {
 			if rule.GuestSocket != "" {
 				local := hostAddress(rule, guestagentapi.IPPort{})
 				// using ctx.Background() because ctx has already been cancelled
 				if err := forwardSSH(context.Background(), a.sshConfig, a.sshLocalPort, local, rule.GuestSocket, verbCancel, rule.Reverse); err != nil {
-					mErr = errors.Join(mErr, err)
+					errs = append(errs, err)
 				}
 			}
 		}
 		if err := forwardSSH(context.Background(), a.sshConfig, a.sshLocalPort, localUnix, remoteUnix, verbCancel, false); err != nil {
-			mErr = errors.Join(mErr, err)
+			errs = append(errs, err)
 		}
-		return mErr
+		return errors.Join(errs...)
 	})
 
 	for {
