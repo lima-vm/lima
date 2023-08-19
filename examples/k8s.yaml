@@ -156,6 +156,7 @@ probes:
 copyToHost:
 - guest: "/etc/kubernetes/admin.conf"
   host: "{{.Dir}}/copied-from-guest/kubeconfig.yaml"
+  deleteOnStop: true
 message: |
   To run `kubectl` on the host (assumes kubectl is installed), run the following commands:
   ------

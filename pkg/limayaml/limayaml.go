@@ -210,8 +210,9 @@ type PortForward struct {
 }
 
 type CopyToHost struct {
-	GuestFile string `yaml:"guest,omitempty" json:"guest,omitempty"`
-	HostFile  string `yaml:"host,omitempty" json:"host,omitempty"`
+	GuestFile    string `yaml:"guest,omitempty" json:"guest,omitempty"`
+	HostFile     string `yaml:"host,omitempty" json:"host,omitempty"`
+	DeleteOnStop bool   `yaml:"deleteOnStop,omitempty" json:"deleteOnStop,omitempty"`
 }
 
 type Network struct {

@@ -379,8 +379,10 @@ networks:
 # copyToHost:
 # - guest: "/etc/myconfig.cfg"
 #   host: "{{.Dir}}/copied-from-guest/myconfig"
+# # deleteOnStop: false
 # # "guest" can include these template variables: {{.Home}}, {{.UID}}, and {{.User}}.
 # # "host" can include {{.Home}}, {{.Dir}}, {{.Name}}, {{.UID}}, and {{.User}}.
+# # "deleteOnStop" will delete the file from the host when the instance is stopped.
 
 # Message. Information to be shown to the user, given as a Go template for the instance.
 # The same template variables as for listing instances can be used, for example {{.Dir}}.

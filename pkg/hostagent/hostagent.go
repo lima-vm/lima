@@ -461,6 +461,18 @@ sudo chown -R "${USER}" /run/host-services`
 			mErr = errors.Join(mErr, err)
 		}
 	}
+	a.onClose = append(a.onClose, func() error {
+		var mErr error
+		for _, rule := range a.y.CopyToHost {
+			if rule.DeleteOnStop {
+				logrus.Infof("Deleting %s", rule.HostFile)
+				if err := os.RemoveAll(rule.HostFile); err != nil {
+					mErr = errors.Join(mErr, err)
+				}
+			}
+		}
+		return mErr
+	})
 	return mErr
 }
 
