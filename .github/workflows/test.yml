@@ -118,6 +118,8 @@ jobs:
         # Github runners seem to have lima installed by brew already; we don't want/need it
         time brew uninstall --ignore-dependencies lima colima
         time brew install qemu bash coreutils curl jq
+    - name: "Fix QEMU binary signature (Workaround for https://github.com/Homebrew/homebrew-core/issues/140244)"
+      run: ./hack/fix-qemu-signature.sh
     - name: "Show cache"
       run: ./hack/debug-cache.sh
     - name: "Test default.yaml"
@@ -272,6 +274,8 @@ jobs:
       run: make install
     - name: Install test dependencies
       run: brew install qemu bash coreutils iperf3
+    - name: "Fix QEMU binary signature (Workaround for https://github.com/Homebrew/homebrew-core/issues/140244)"
+      run: ./hack/fix-qemu-signature.sh
     - name: Install vde_switch and vde_vmnet (Deprecated)
       env:
         VDE_VMNET_VERSION: v0.6.0
@@ -341,6 +345,8 @@ jobs:
         key: ${{ runner.os }}-upgrade-${{ matrix.oldver }}
     - name: Install test dependencies
       run: brew install qemu bash coreutils
+    - name: "Fix QEMU binary signature (Workaround for https://github.com/Homebrew/homebrew-core/issues/140244)"
+      run: ./hack/fix-qemu-signature.sh
     - name: Test
       uses: nick-invision/retry@v2
       with:
