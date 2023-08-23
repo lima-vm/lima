@@ -15,7 +15,7 @@ require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.2
 	github.com/cyphar/filepath-securejoin v0.2.3
 	github.com/digitalocean/go-qemu v0.0.0-20221209210016-f035778c97f7
-	github.com/diskfs/go-diskfs v1.3.0
+	github.com/diskfs/go-diskfs v1.4.0
 	github.com/docker/go-units v0.5.0
 	github.com/elastic/go-libaudit/v2 v2.3.3
 	github.com/foxcpp/go-mockdns v1.0.0
@@ -115,7 +115,7 @@ require (
 	google.golang.org/genproto v0.0.0-20230306155012-7f2fa6fef1f4 // indirect
 	google.golang.org/grpc v1.53.0 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
-	gopkg.in/djherbis/times.v1 v1.2.0 // indirect
+	gopkg.in/djherbis/times.v1 v1.3.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
