@@ -401,8 +401,8 @@ inet.af/tcpproxy v0.0.0-20221017015627-91f861402626 h1:2dMP3Ox/Wh5BiItwOt4jxRsfz
 inet.af/tcpproxy v0.0.0-20221017015627-91f861402626/go.mod h1:Tojt5kmHpDIR2jMojxzZK2w2ZR7OILODmUo2gaSwjrk=
 k8s.io/api v0.28.0 h1:3j3VPWmN9tTDI68NETBWlDiA9qOiGJ7sdKeufehBYsM=
 k8s.io/api v0.28.0/go.mod h1:0l8NZJzB0i/etuWnIXcwfIv+xnDOhL3lLW919AWYDuY=
-k8s.io/apimachinery v0.28.0 h1:ScHS2AG16UlYWk63r46oU3D5y54T53cVI5mMJwwqFNA=
-k8s.io/apimachinery v0.28.0/go.mod h1:X0xh/chESs2hP9koe+SdIAcXWcQ+RM5hy0ZynB+yEvw=
+k8s.io/apimachinery v0.28.1 h1:EJD40og3GizBSV3mkIoXQBsws32okPOy+MkRyzh6nPY=
+k8s.io/apimachinery v0.28.1/go.mod h1:X0xh/chESs2hP9koe+SdIAcXWcQ+RM5hy0ZynB+yEvw=
 k8s.io/client-go v0.28.0 h1:ebcPRDZsCjpj62+cMk1eGNX1QkMdRmQ6lmz5BLoFWeM=
 k8s.io/client-go v0.28.0/go.mod h1:0Asy9Xt3U98RypWJmU1ZrRAGKhP6NqDPmptlAzK2kMc=
 k8s.io/klog/v2 v2.100.1 h1:7WCHKK6K8fNhTqfBhISHQ97KrnJNFZMcQvKp7gP/tmg=

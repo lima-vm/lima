@@ -44,7 +44,7 @@ require (
 	gotest.tools/v3 v3.5.0
 	inet.af/tcpproxy v0.0.0-20221017015627-91f861402626
 	k8s.io/api v0.28.0
-	k8s.io/apimachinery v0.28.0
+	k8s.io/apimachinery v0.28.1
 	k8s.io/client-go v0.28.0
 )
 
