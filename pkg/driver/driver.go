@@ -35,6 +35,14 @@ type Driver interface {
 	// It returns error if there are any errors during Stop
 	Stop(_ context.Context) error
 
+	// Register will add an instance to a registry.
+	// It returns error if there are any errors during Register
+	Register(_ context.Context) error
+
+	// Unregister will perform any cleanup related to the vm instance.
+	// It returns error if there are any errors during Unregister
+	Unregister(_ context.Context) error
+
 	ChangeDisplayPassword(_ context.Context, password string) error
 
 	GetDisplayConnection(_ context.Context) (string, error)
@@ -54,6 +62,8 @@ type BaseDriver struct {
 
 	SSHLocalPort int
 }
+
+var _ Driver = (*BaseDriver)(nil)
 
 func (d *BaseDriver) Validate() error {
 	return nil
@@ -76,6 +86,14 @@ func (d *BaseDriver) RunGUI() error {
 }
 
 func (d *BaseDriver) Stop(_ context.Context) error {
+	return nil
+}
+
+func (d *BaseDriver) Register(_ context.Context) error {
+	return nil
+}
+
+func (d *BaseDriver) Unregister(_ context.Context) error {
 	return nil
 }
 

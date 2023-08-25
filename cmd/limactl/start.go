@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -266,7 +267,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 		}
 	}
 	saveBrokenEditorBuffer := tty
-	return createInstance(st, saveBrokenEditorBuffer)
+	return createInstance(cmd.Context(), st, saveBrokenEditorBuffer)
 }
 
 func applyYQExpressionToExistingInstance(inst *store.Instance, yq string) (*store.Instance, error) {
@@ -290,7 +291,7 @@ func applyYQExpressionToExistingInstance(inst *store.Instance, yq string) (*stor
 	return store.Inspect(inst.Name)
 }
 
-func createInstance(st *creatorState, saveBrokenEditorBuffer bool) (*store.Instance, error) {
+func createInstance(ctx context.Context, st *creatorState, saveBrokenEditorBuffer bool) (*store.Instance, error) {
 	if st.instName == "" {
 		return nil, errors.New("got empty st.instName")
 	}
@@ -334,7 +335,17 @@ func createInstance(st *creatorState, saveBrokenEditorBuffer bool) (*store.Insta
 	if err := os.WriteFile(filePath, st.yBytes, 0644); err != nil {
 		return nil, err
 	}
-	return store.Inspect(st.instName)
+
+	inst, err := store.Inspect(st.instName)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := start.Register(ctx, inst); err != nil {
+		return nil, err
+	}
+
+	return inst, nil
 }
 
 type creatorState struct {
