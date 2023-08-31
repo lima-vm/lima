@@ -73,8 +73,9 @@ func (l *LimaVzDriver) Validate() error {
 		"AdditionalDisks",
 		"Audio",
 		"Video",
+		"OS",
 	); len(unknown) > 0 {
-		logrus.Warnf("Ignoring: vmType %s: %+v", *l.Yaml.VMType, unknown)
+		logrus.Warnf("vmType %s: ignoring %+v", *l.Yaml.VMType, unknown)
 	}
 
 	if !limayaml.IsNativeArch(*l.Yaml.Arch) {
@@ -83,13 +84,13 @@ func (l *LimaVzDriver) Validate() error {
 
 	for k, v := range l.Yaml.CPUType {
 		if v != "" {
-			logrus.Warnf("Ignoring: vmType %s: cpuType[%q]: %q", *l.Yaml.VMType, k, v)
+			logrus.Warnf("vmType %s: ignoring cpuType[%q]: %q", *l.Yaml.VMType, k, v)
 		}
 	}
 
 	for i, image := range l.Yaml.Images {
 		if unknown := reflectutil.UnknownNonEmptyFields(image, "File"); len(unknown) > 0 {
-			logrus.Warnf("Ignoring: vmType %s: images[%d]: %+v", *l.Yaml.VMType, i, unknown)
+			logrus.Warnf("vmType %s: ignoring images[%d]: %+v", *l.Yaml.VMType, i, unknown)
 		}
 	}
 
@@ -100,7 +101,7 @@ func (l *LimaVzDriver) Validate() error {
 			"SSHFS",
 			"NineP",
 		); len(unknown) > 0 {
-			logrus.Warnf("Ignoring: vmType %s: mounts[%d]: %+v", *l.Yaml.VMType, i, unknown)
+			logrus.Warnf("vmType %s: ignoring mounts[%d]: %+v", *l.Yaml.VMType, i, unknown)
 		}
 	}
 
@@ -111,7 +112,7 @@ func (l *LimaVzDriver) Validate() error {
 			"MACAddress",
 			"Interface",
 		); len(unknown) > 0 {
-			logrus.Warnf("Ignoring: vmType %s: networks[%d]: %+v", *l.Yaml.VMType, i, unknown)
+			logrus.Warnf("vmType %s: ignoring networks[%d]: %+v", *l.Yaml.VMType, i, unknown)
 		}
 	}
 
