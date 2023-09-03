@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/lima-vm/lima/pkg/lockutil"
-
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/sirupsen/logrus"
@@ -53,6 +52,11 @@ func Start(ctx context.Context, name string) error {
 			return err
 		}
 
+		subnet, err := SubnetCIDR(name)
+		if err != nil {
+			return err
+		}
+
 		err = lockutil.WithDirLock(usernetDir, func() error {
 			self, err := os.Executable()
 			if err != nil {
@@ -61,7 +65,8 @@ func Start(ctx context.Context, name string) error {
 			args := []string{"usernet", "-p", pidFile,
 				"-e", endpointSock,
 				"--listen-qemu", qemuSock,
-				"--listen", fdSock}
+				"--listen", fdSock,
+				"--subnet", subnet.String()}
 			cmd := exec.CommandContext(ctx, self, args...)
 
 			stdoutPath := filepath.Join(usernetDir, fmt.Sprintf("%s.%s.%s.log", "usernet", name, "stdout"))

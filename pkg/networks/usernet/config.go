@@ -2,8 +2,11 @@ package usernet
 
 import (
 	"fmt"
+	"net"
 	"path/filepath"
 
+	"github.com/apparentlymart/go-cidr/cidr"
+	"github.com/lima-vm/lima/pkg/networks"
 	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 )
@@ -45,4 +48,62 @@ func PIDFile(name string) (string, error) {
 		return "", err
 	}
 	return filepath.Join(dir, name, fmt.Sprintf("usernet_%s.pid", name)), nil
+}
+
+// SubnetCIDR returns a subnet in form of net.IPNet for the given network name.
+func SubnetCIDR(name string) (*net.IPNet, error) {
+	config, err := networks.Config()
+	if err != nil {
+		return nil, err
+	}
+	err = config.Check(name)
+	if err != nil {
+		return nil, err
+	}
+	_, ipNet, err := netmaskToCidr(config.Networks[name].Gateway, config.Networks[name].NetMask)
+	if err != nil {
+		return nil, err
+	}
+	return ipNet, err
+}
+
+// Subnet returns a subnet net.IP for the given network name.
+func Subnet(name string) (net.IP, error) {
+	config, err := networks.Config()
+	if err != nil {
+		return nil, err
+	}
+	err = config.Check(name)
+	if err != nil {
+		return nil, err
+	}
+	_, ipNet, err := netmaskToCidr(config.Networks[name].Gateway, config.Networks[name].NetMask)
+	if err != nil {
+		return nil, err
+	}
+	return ipNet.IP, err
+}
+
+// ParseSubnet converts subnet string to net.IP
+func ParseSubnet(subnet string) (net.IP, error) {
+	subnetIP, _, err := net.ParseCIDR(subnet)
+	if err != nil {
+		return nil, err
+	}
+	return subnetIP, nil
+}
+
+// GatewayIP returns the 2nd IP for the given subnet
+func GatewayIP(subnet net.IP) string {
+	return cidr.Inc(cidr.Inc(subnet)).String()
+}
+
+// DNSIP returns the 3rd IP for the given subnet
+func DNSIP(subnet net.IP) string {
+	return cidr.Inc(cidr.Inc(cidr.Inc(subnet))).String()
+}
+
+func netmaskToCidr(baseIP net.IP, netMask net.IP) (net.IP, *net.IPNet, error) {
+	size, _ := net.IPMask(netMask.To4()).Size()
+	return net.ParseCIDR(fmt.Sprintf("%s/%d", baseIP.String(), size))
 }

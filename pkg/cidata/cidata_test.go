@@ -48,7 +48,8 @@ func TestSetupEnv(t *testing.T) {
 		t.Run(httpProxy.Host, func(t *testing.T) {
 			envKey := "http_proxy"
 			envValue := httpProxy.String()
-			envs, err := setupEnv(&limayaml.LimaYAML{PropagateProxyEnv: pointer.Bool(false), Env: map[string]string{envKey: envValue}})
+			templateArgs := TemplateArgs{SlirpGateway: networks.SlirpGateway}
+			envs, err := setupEnv(&limayaml.LimaYAML{PropagateProxyEnv: pointer.Bool(false), Env: map[string]string{envKey: envValue}}, templateArgs)
 			assert.NilError(t, err)
 			assert.Equal(t, envs[envKey], strings.ReplaceAll(envValue, httpProxy.Hostname(), networks.SlirpGateway))
 		})
@@ -58,7 +59,8 @@ func TestSetupEnv(t *testing.T) {
 func TestSetupInvalidEnv(t *testing.T) {
 	envKey := "http_proxy"
 	envValue := "://localhost:8080"
-	envs, err := setupEnv(&limayaml.LimaYAML{PropagateProxyEnv: pointer.Bool(false), Env: map[string]string{envKey: envValue}})
+	templateArgs := TemplateArgs{SlirpGateway: networks.SlirpGateway}
+	envs, err := setupEnv(&limayaml.LimaYAML{PropagateProxyEnv: pointer.Bool(false), Env: map[string]string{envKey: envValue}}, templateArgs)
 	assert.NilError(t, err)
 	assert.Equal(t, envs[envKey], envValue)
 }

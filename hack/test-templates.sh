@@ -129,7 +129,8 @@ INFO "Testing proxy settings are imported"
 got=$(limactl shell "$NAME" env | grep FTP_PROXY)
 # Expected: FTP_PROXY is set in addition to ftp_proxy, localhost is replaced
 # by the gateway address, and the value is set immediately without a restart
-expected="FTP_PROXY=http://192.168.5.2:2121"
+gatewayIp=$(limactl shell "$NAME" ip route show 0.0.0.0/0 dev eth0 | cut -d\  -f3)
+expected="FTP_PROXY=http://${gatewayIp}:2121"
 INFO "FTP_PROXY: expected=${expected} got=${got}"
 if [ "$got" != "$expected" ]; then
 	ERROR "proxy environment variable not set to correct value"
@@ -331,10 +332,10 @@ if [[ -n ${CHECKS["user-v2"]} ]]; then
 	secondvm="$NAME-1"
 	"${LIMACTL_CREATE[@]}" "$FILE" --name "$secondvm"
 	limactl start "$secondvm"
-	guestNewip="$(limactl shell "$secondvm" ip -4 -j addr show dev eth0 | jq -r '.[0].addr_info[0].local')"
-	INFO "IP of $secondvm is $guestNewip"
+	secondvmDNS="lima-$secondvm.internal"
+	INFO "DNS of $secondvm is $secondvmDNS"
 	set -x
-	if ! limactl shell "$NAME" ping -c 1 "$guestNewip"; then
+	if ! limactl shell "$NAME" ping -c 1 "$secondvmDNS"; then
 		ERROR "Failed to do vm->vm communication via user-v2"
 		INFO "Stopping \"$secondvm\""
 		limactl stop "$secondvm"

@@ -1,44 +1,44 @@
 package usernet
 
 import (
-	"path/filepath"
-	"strings"
+	"net"
 	"testing"
 
-	"github.com/lima-vm/lima/pkg/store/dirnames"
-	"github.com/lima-vm/lima/pkg/store/filenames"
+	"github.com/lima-vm/lima/pkg/networks"
 	"gotest.tools/v3/assert"
 )
 
-func TestConfig(t *testing.T) {
-	t.Run("max network path in instance directory", func(t *testing.T) {
-		limaHome, err := dirnames.LimaDir()
-		assert.NilError(t, err)
-		longName := strings.Repeat("a", len(filenames.LongestSock))
-		longestInstDir := filepath.Join(limaHome, longName)
-		_, err = SockWithDirectory(longestInstDir, longName, QEMUSock)
-		assert.NilError(t, err)
+func TestUsernetConfig(t *testing.T) {
+
+	t.Run("parse subnet", func(t *testing.T) {
+		subnet, err := ParseSubnet(networks.SlirpNetwork)
+		if err != nil {
+			t.Fatal(err)
+		}
+		assert.Equal(t, subnet.String(), "192.168.5.0")
 	})
 
-	t.Run("max network path in _networks directory", func(t *testing.T) {
-		instName := strings.Repeat("a", len(filenames.LongestSock))
-		_, err := Sock(instName, EndpointSock)
-		assert.NilError(t, err)
+	t.Run("verify dns ip", func(t *testing.T) {
+		subnet, _, err := net.ParseCIDR(networks.SlirpNetwork)
+		if err != nil {
+			t.Fatal(err)
+		}
+		assert.Equal(t, DNSIP(subnet), "192.168.5.3")
 	})
 
-	t.Run("throw error for invalid socket path", func(t *testing.T) {
-		limaHome, err := dirnames.LimaDir()
-		assert.NilError(t, err)
-		longName := strings.Repeat("a", len(filenames.LongestSock))
-		longestInstDir := filepath.Join(limaHome, longName)
-		invalidName := strings.Repeat(longName, 4)
-		_, err = SockWithDirectory(longestInstDir, invalidName, QEMUSock)
-		assert.ErrorContains(t, err, "must be less than UNIX_PATH_MAX=")
+	t.Run("verify gateway ip", func(t *testing.T) {
+		subnet, _, err := net.ParseCIDR(networks.SlirpNetwork)
+		if err != nil {
+			t.Fatal(err)
+		}
+		assert.Equal(t, GatewayIP(subnet), "192.168.5.2")
 	})
 
-	t.Run("default as name when empty", func(t *testing.T) {
-		path, err := SockWithDirectory("test", "", QEMUSock)
-		assert.NilError(t, err)
-		assert.Equal(t, path, filepath.Join("test", "default_qemu.sock"))
+	t.Run("verify subnet via config ip", func(t *testing.T) {
+		subnet, err := Subnet("user-v2")
+		if err != nil {
+			t.Fatal(err)
+		}
+		assert.Equal(t, subnet.String(), "192.168.104.0")
 	})
 }

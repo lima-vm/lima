@@ -96,7 +96,7 @@ func startVM(ctx context.Context, driver *driver.BaseDriver) (*virtualMachineWra
 					filesToRemove[pidFile] = struct{}{}
 					logrus.Info("[VZ] - vm state change: running")
 
-					err := usernetClient.ResolveAndForwardSSH(limayaml.MACAddress(driver.Instance.Dir), driver.SSHLocalPort)
+					err := usernetClient.ConfigureDriver(driver)
 					if err != nil {
 						errCh <- err
 					}
@@ -139,17 +139,24 @@ func startUsernet(ctx context.Context, driver *driver.BaseDriver) (*usernet.Clie
 			DefaultLeases: map[string]string{
 				networks.SlirpIPAddress: limayaml.MACAddress(driver.Instance.Dir),
 			},
+			Subnet: networks.SlirpNetwork,
 		})
 		if err != nil {
 			return nil, err
 		}
-		return usernet.NewClient(endpointSock), nil
+		subnetIP, err := usernet.ParseSubnet(networks.SlirpNetwork)
+		return usernet.NewClient(endpointSock, subnetIP), err
 	}
-	endpointSock, err := usernet.Sock(driver.Yaml.Networks[firstUsernetIndex].Lima, usernet.EndpointSock)
+	nwName := driver.Yaml.Networks[firstUsernetIndex].Lima
+	endpointSock, err := usernet.Sock(nwName, usernet.EndpointSock)
 	if err != nil {
 		return nil, err
 	}
-	return usernet.NewClient(endpointSock), nil
+	subnetIP, err := usernet.Subnet(nwName)
+	if err != nil {
+		return nil, err
+	}
+	return usernet.NewClient(endpointSock, subnetIP), nil
 }
 
 func createVM(driver *driver.BaseDriver) (*vz.VirtualMachine, error) {
