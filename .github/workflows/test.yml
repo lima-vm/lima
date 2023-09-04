@@ -187,6 +187,7 @@ jobs:
       run: sudo make install
     - name: Install test dependencies
       run: |
+        sudo apt-get update
         sudo apt-get install -y --no-install-recommends ovmf qemu-system-x86 qemu-utils
         sudo modprobe kvm
         # `sudo usermod -aG kvm $(whoami)` does not take an effect on GHA
@@ -235,6 +236,7 @@ jobs:
         sudo make install
     - name: Install test dependencies
       run: |
+        sudo apt-get update
         sudo apt-get install -y --no-install-recommends ovmf qemu-system-x86 qemu-utils
         sudo modprobe kvm
         # `sudo usermod -aG kvm $(whoami)` does not take an effect on GHA
