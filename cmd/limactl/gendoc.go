@@ -2,9 +2,11 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/cpuguy83/go-md2man/v2/md2man"
 	"github.com/sirupsen/logrus"
@@ -12,20 +14,21 @@ import (
 	"github.com/spf13/cobra/doc"
 )
 
-func newGenManCommand() *cobra.Command {
+func newGenDocCommand() *cobra.Command {
 	genmanCommand := &cobra.Command{
-		Use:    "generate-man DIR",
-		Short:  "Generate manual pages",
+		Use:    "generate-doc DIR",
+		Short:  "Generate cli-reference pages",
 		Args:   WrapArgsError(cobra.MinimumNArgs(1)),
-		RunE:   genmanAction,
+		RunE:   gendocAction,
 		Hidden: true,
 	}
+	genmanCommand.Flags().String("type", "man", "Output type  (man, docsy)")
 	genmanCommand.Flags().String("output", "", "Output directory")
 	genmanCommand.Flags().String("prefix", "", "Install prefix")
 	return genmanCommand
 }
 
-func genmanAction(cmd *cobra.Command, args []string) error {
+func gendocAction(cmd *cobra.Command, args []string) error {
 	output, err := cmd.Flags().GetString("output")
 	if err != nil {
 		return err
@@ -38,11 +41,33 @@ func genmanAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	outputType, err := cmd.Flags().GetString("type")
+	if err != nil {
+		return err
+	}
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return err
 	}
 	dir := args[0]
+	switch outputType {
+	case "man":
+		if err := genMan(cmd, dir); err != nil {
+			return err
+		}
+	case "docsy":
+		if err := genDocsy(cmd, dir); err != nil {
+			return err
+		}
+	}
+	if output != "" && prefix != "" {
+		replaceAll(dir, output, prefix)
+	}
+	replaceAll(dir, homeDir, "~")
+	return nil
+}
+
+func genMan(cmd *cobra.Command, dir string) error {
 	logrus.Infof("Generating man %q", dir)
 	// lima(1)
 	filePath := filepath.Join(dir, "lima.1")
@@ -69,14 +94,25 @@ and $LIMA_WORKDIR.
 		Title:   "LIMACTL",
 		Section: "1",
 	}
-	if err := doc.GenManTree(cmd.Root(), header, dir); err != nil {
-		return err
-	}
-	if output != "" && prefix != "" {
-		replaceAll(dir, output, prefix)
-	}
-	replaceAll(dir, homeDir, "~")
-	return nil
+	return doc.GenManTree(cmd.Root(), header, dir)
+}
+
+func genDocsy(cmd *cobra.Command, dir string) error {
+	return doc.GenMarkdownTreeCustom(cmd.Root(), dir, func(s string) string {
+		//Replace limactl_completion_bash to completion bash for docsy title
+		name := filepath.Base(s)
+		name = strings.ReplaceAll(name, "limactl_", "")
+		name = strings.ReplaceAll(name, "_", " ")
+		name = strings.TrimSuffix(name, filepath.Ext(name))
+		return fmt.Sprintf(`---
+title: %s
+weight: 3
+---
+`, name)
+	}, func(s string) string {
+		//Use ../ for move one folder up for docsy
+		return "../" + strings.TrimSuffix(s, filepath.Ext(s))
+	})
 }
 
 // replaceAll replaces all occurrences of new with old, for all files in dir
