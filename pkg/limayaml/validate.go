@@ -201,8 +201,8 @@ func Validate(y LimaYAML, warn bool) error {
 	}
 	for i, rule := range y.PortForwards {
 		field := fmt.Sprintf("portForwards[%d]", i)
-		if rule.GuestIPMustBeZero && !rule.GuestIP.Equal(net.IPv4zero) {
-			return fmt.Errorf("field `%s.guestIPMustBeZero` can only be true when field `%s.guestIP` is 0.0.0.0", field, field)
+		if rule.GuestIPMustBeZero && !rule.GuestIP.Equal(net.IPv4zero) && !rule.GuestIP.Equal(net.IPv6zero) {
+			return fmt.Errorf("field `%s.guestIPMustBeZero` can only be true when field `%s.guestIP` is either `0.0.0.0` or `::`", field, field)
 		}
 		if rule.GuestPort != 0 {
 			if rule.GuestSocket != "" {

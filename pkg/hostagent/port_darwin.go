@@ -30,7 +30,7 @@ func forwardTCP(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, 
 		return err
 	}
 
-	if !localIP.Equal(api.IPv4loopback1) || localPort >= 1024 {
+	if (!localIP.Equal(api.IPv4loopback1) && !localIP.Equal(net.IPv6loopback)) || localPort >= 1024 {
 		return forwardSSH(ctx, sshConfig, port, local, remote, verb, false)
 	}
 
@@ -86,9 +86,10 @@ func forwardTCP(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, 
 var pseudoLoopbackForwarders = make(map[string]*pseudoLoopbackForwarder)
 
 type pseudoLoopbackForwarder struct {
-	ln       *net.TCPListener
-	unixAddr *net.UnixAddr
-	onClose  func() error
+	lns           []*net.TCPListener
+	unixAddr      *net.UnixAddr
+	onClose       func() error
+	incomingConns chan *net.TCPConn
 }
 
 func newPseudoLoopbackForwarder(localPort int, unixSock string) (*pseudoLoopbackForwarder, error) {
@@ -97,30 +98,56 @@ func newPseudoLoopbackForwarder(localPort int, unixSock string) (*pseudoLoopback
 		return nil, err
 	}
 
-	lnAddr, err := net.ResolveTCPAddr("tcp4", fmt.Sprintf("0.0.0.0:%d", localPort))
-	if err != nil {
-		return nil, err
+	toResolve := [][]string{
+		{"tcp4", fmt.Sprintf("0.0.0.0:%d", localPort)},
+		{"tcp6", fmt.Sprintf("[::]:%d", localPort)},
 	}
-	ln, err := net.ListenTCP("tcp4", lnAddr)
-	if err != nil {
-		return nil, err
+
+	var lns []*net.TCPListener
+	for _, addr := range toResolve {
+		network, address := addr[0], addr[1]
+		lnAddr, err := net.ResolveTCPAddr(network, address)
+		if err != nil {
+			return nil, err
+		}
+		ln, err := net.ListenTCP(network, lnAddr)
+		if err != nil {
+			return nil, err
+		}
+		lns = append(lns, ln)
 	}
 
 	plf := &pseudoLoopbackForwarder{
-		ln:       ln,
-		unixAddr: unixAddr,
+		lns:           lns,
+		incomingConns: make(chan *net.TCPConn, 10),
+		unixAddr:      unixAddr,
 	}
 
 	return plf, nil
 }
 
-func (plf *pseudoLoopbackForwarder) Serve() error {
-	defer plf.ln.Close()
+func (plf *pseudoLoopbackForwarder) acceptLn(ln *net.TCPListener) {
+	defer ln.Close()
 	for {
-		ac, err := plf.ln.AcceptTCP()
+		ac, err := ln.AcceptTCP()
 		if err != nil {
-			return err
+			logrus.WithError(err).Errorf("Stopping listening %#v", ln)
+			return
 		}
+		plf.incomingConns <- ac
+	}
+}
+
+func (plf *pseudoLoopbackForwarder) accept() {
+	for _, ln := range plf.lns {
+		go plf.acceptLn(ln)
+	}
+}
+
+func (plf *pseudoLoopbackForwarder) Serve() error {
+	plf.accept()
+
+	for ac := range plf.incomingConns {
 		remoteAddr := ac.RemoteAddr().String() // ip:port
 		remoteAddrIP, _, err := net.SplitHostPort(remoteAddr)
 		if err != nil {
@@ -128,7 +155,7 @@ func (plf *pseudoLoopbackForwarder) Serve() error {
 			ac.Close()
 			continue
 		}
-		if remoteAddrIP != "127.0.0.1" {
+		if remoteAddrIP != "127.0.0.1" && remoteAddrIP != "::" {
 			logrus.WithError(err).Debugf("pseudoloopback forwarder: rejecting non-loopback remoteAddr %q", remoteAddr)
 			ac.Close()
 			continue
@@ -139,6 +166,8 @@ func (plf *pseudoLoopbackForwarder) Serve() error {
 			}
 		}(ac)
 	}
+
+	return nil
 }
 
 func (plf *pseudoLoopbackForwarder) forward(ac *net.TCPConn) error {
@@ -153,6 +182,8 @@ func (plf *pseudoLoopbackForwarder) forward(ac *net.TCPConn) error {
 }
 
 func (plf *pseudoLoopbackForwarder) Close() error {
-	_ = plf.ln.Close()
+	for _, ln := range plf.lns {
+		_ = ln.Close()
+	}
 	return plf.onClose()
 }

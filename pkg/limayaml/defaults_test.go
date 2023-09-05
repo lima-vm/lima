@@ -121,12 +121,14 @@ func TestFillDefault(t *testing.T) {
 	}
 
 	defaultPortForward := PortForward{
-		GuestIP:        api.IPv4loopback1,
-		GuestPortRange: [2]int{1, 65535},
-		HostIP:         api.IPv4loopback1,
-		HostPortRange:  [2]int{1, 65535},
-		Proto:          TCP,
-		Reverse:        false,
+		GuestIP:             api.IPv4loopback1,
+		GuestPortRange:      [2]int{1, 65535},
+		HostIP:              api.IPv4loopback1,
+		HostPortRange:       [2]int{1, 65535},
+		Proto:               TCP,
+		Reverse:             false,
+		HostIPWasUndefined:  true,
+		GuestIPWasUndefined: true,
 	}
 
 	// ------------------------------------------------------------------------------------
