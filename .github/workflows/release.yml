@@ -25,7 +25,7 @@ jobs:
         xcodebuild -version
         # macOS SDK version
         xcrun --show-sdk-version
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 1
     - uses: actions/setup-go@v4
@@ -43,7 +43,7 @@ jobs:
     needs: artifacts-darwin
     timeout-minutes: 20
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - uses: actions/download-artifact@v3
       with:
         name: artifacts-darwin
