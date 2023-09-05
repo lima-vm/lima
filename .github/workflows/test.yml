@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 30
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 1
     - uses: actions/setup-go@v4
@@ -51,7 +51,7 @@ jobs:
         # For Linux we have to support an old release of Go
         go-version: ["1.20.x", "1.21.x"]
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 1
     - uses: actions/setup-go@v4
@@ -71,7 +71,7 @@ jobs:
     runs-on: windows-2022
     timeout-minutes: 30
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 1
     - uses: actions/setup-go@v4
@@ -87,7 +87,7 @@ jobs:
     runs-on: macos-12
     timeout-minutes: 120
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 1
     - uses: actions/setup-go@v4
@@ -169,7 +169,7 @@ jobs:
         - experimental/net-user-v2.yaml
         - docker.yaml
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 1
     - uses: actions/setup-go@v4
@@ -213,7 +213,7 @@ jobs:
       matrix:
         colima-version: ["v0.5.5"]
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 1
     - uses: actions/setup-go@v4
@@ -258,7 +258,7 @@ jobs:
     runs-on: macos-11
     timeout-minutes: 120
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 1
     - uses: actions/setup-go@v4
@@ -334,7 +334,7 @@ jobs:
       matrix:
         oldver: ["v0.10.0"]
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
     - uses: actions/setup-go@v4
@@ -362,7 +362,7 @@ jobs:
     runs-on: macos-13
     timeout-minutes: 120
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 1
     - uses: actions/setup-go@v4
