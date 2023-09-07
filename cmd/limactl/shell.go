@@ -184,7 +184,7 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	sshArgs = append(sshArgs, []string{
 		"-q",
 		"-p", strconv.Itoa(inst.SSHLocalPort),
-		"127.0.0.1",
+		inst.SSHAddress,
 		"--",
 		script,
 	}...)

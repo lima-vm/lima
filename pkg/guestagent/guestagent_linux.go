@@ -5,6 +5,7 @@ import (
 	"errors"
 	"reflect"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/elastic/go-libaudit/v2"
@@ -25,9 +26,17 @@ func New(newTicker func() (<-chan time.Time, func()), iptablesIdle time.Duration
 	}
 
 	auditClient, err := libaudit.NewMulticastAuditClient(nil)
-	if err != nil {
+	switch {
+	case errors.Is(err, syscall.EPROTONOSUPPORT), errors.Is(err, syscall.EAFNOSUPPORT):
+		// system doesn't support auditing, skip
+		a.worthCheckingIPTables = true
+		go a.kubernetesServiceWatcher.Start()
+		go a.fixSystemTimeSkew()
+		return a, nil
+	case !errors.Is(err, nil):
 		return nil, err
 	}
+
 	auditStatus, err := auditClient.GetStatus()
 	if err != nil {
 		return nil, err
@@ -36,9 +45,20 @@ func New(newTicker func() (<-chan time.Time, func()), iptablesIdle time.Duration
 		if err = auditClient.SetEnabled(true, libaudit.WaitForReply); err != nil {
 			return nil, err
 		}
-	}
+		auditStatus, err := auditClient.GetStatus()
+		if err != nil {
+			return nil, err
+		}
+		if auditStatus.Enabled == 0 {
+			if err = auditClient.SetEnabled(true, libaudit.WaitForReply); err != nil {
+				return nil, err
+			}
+		}
 
-	go a.setWorthCheckingIPTablesRoutine(auditClient, iptablesIdle)
+		go a.setWorthCheckingIPTablesRoutine(auditClient, iptablesIdle)
+	} else {
+		a.worthCheckingIPTables = true
+	}
 	go a.kubernetesServiceWatcher.Start()
 	go a.fixSystemTimeSkew()
 	return a, nil

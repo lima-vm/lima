@@ -27,10 +27,12 @@ import (
 type Status = string
 
 const (
-	StatusUnknown Status = ""
-	StatusBroken  Status = "Broken"
-	StatusStopped Status = "Stopped"
-	StatusRunning Status = "Running"
+	StatusUnknown       Status = ""
+	StatusUninitialized Status = "Uninitialized"
+	StatusInstalling    Status = "Installing"
+	StatusBroken        Status = "Broken"
+	StatusStopped       Status = "Stopped"
+	StatusRunning       Status = "Running"
 )
 
 type Instance struct {
@@ -52,6 +54,7 @@ type Instance struct {
 	DriverPID       int                `json:"driverPID,omitempty"`
 	Errors          []error            `json:"errors,omitempty"`
 	Config          *limayaml.LimaYAML `json:"config,omitempty"`
+	SSHAddress      string             `json:"sshAddress,omitempty"`
 }
 
 func (inst *Instance) LoadYAML() (*limayaml.LimaYAML, error) {
@@ -89,21 +92,9 @@ func Inspect(instName string) (*Instance, error) {
 	inst.Arch = *y.Arch
 	inst.VMType = *y.VMType
 	inst.CPUType = y.CPUType[*y.Arch]
-
-	inst.CPUs = *y.CPUs
-	memory, err := units.RAMInBytes(*y.Memory)
-	if err == nil {
-		inst.Memory = memory
-	}
-	disk, err := units.RAMInBytes(*y.Disk)
-	if err == nil {
-		inst.Disk = disk
-	}
-	inst.AdditionalDisks = y.AdditionalDisks
-	inst.Networks = y.Networks
+	inst.SSHAddress = "127.0.0.1"
 	inst.SSHLocalPort = *y.SSH.LocalPort // maybe 0
 	inst.SSHConfigFile = filepath.Join(instDir, filenames.SSHConfig)
-
 	inst.HostAgentPID, err = ReadPIDFile(filepath.Join(instDir, filenames.HostAgentPID))
 	if err != nil {
 		inst.Status = StatusBroken
@@ -129,25 +120,26 @@ func Inspect(instName string) (*Instance, error) {
 		}
 	}
 
-	inst.DriverPID, err = ReadPIDFile(filepath.Join(instDir, filenames.PIDFile(*y.VMType)))
-	if err != nil {
-		inst.Status = StatusBroken
-		inst.Errors = append(inst.Errors, err)
+	inst.CPUs = *y.CPUs
+	memory, err := units.RAMInBytes(*y.Memory)
+	if err == nil {
+		inst.Memory = memory
+	}
+	disk, err := units.RAMInBytes(*y.Disk)
+	if err == nil {
+		inst.Disk = disk
+	}
+	inst.AdditionalDisks = y.AdditionalDisks
+	inst.Networks = y.Networks
+
+	// 0 out values since not configurable on WSL2
+	if inst.VMType == limayaml.WSL2 {
+		inst.Memory = 0
+		inst.CPUs = 0
+		inst.Disk = 0
 	}
 
-	if inst.Status == StatusUnknown {
-		if inst.HostAgentPID > 0 && inst.DriverPID > 0 {
-			inst.Status = StatusRunning
-		} else if inst.HostAgentPID == 0 && inst.DriverPID == 0 {
-			inst.Status = StatusStopped
-		} else if inst.HostAgentPID > 0 && inst.DriverPID == 0 {
-			inst.Errors = append(inst.Errors, errors.New("host agent is running but driver is not"))
-			inst.Status = StatusBroken
-		} else {
-			inst.Errors = append(inst.Errors, fmt.Errorf("%s driver is running but host agent is not", inst.VMType))
-			inst.Status = StatusBroken
-		}
-	}
+	inspectStatus(instDir, inst, y)
 
 	tmpl, err := template.New("format").Parse(y.Message)
 	if err != nil {
@@ -172,6 +164,29 @@ func Inspect(instName string) (*Instance, error) {
 	return inst, nil
 }
 
+func inspectStatusWithPIDFiles(instDir string, inst *Instance, y *limayaml.LimaYAML) {
+	var err error
+	inst.DriverPID, err = ReadPIDFile(filepath.Join(instDir, filenames.PIDFile(*y.VMType)))
+	if err != nil {
+		inst.Status = StatusBroken
+		inst.Errors = append(inst.Errors, err)
+	}
+
+	if inst.Status == StatusUnknown {
+		if inst.HostAgentPID > 0 && inst.DriverPID > 0 {
+			inst.Status = StatusRunning
+		} else if inst.HostAgentPID == 0 && inst.DriverPID == 0 {
+			inst.Status = StatusStopped
+		} else if inst.HostAgentPID > 0 && inst.DriverPID == 0 {
+			inst.Errors = append(inst.Errors, errors.New("host agent is running but driver is not"))
+			inst.Status = StatusBroken
+		} else {
+			inst.Errors = append(inst.Errors, fmt.Errorf("%s driver is running but host agent is not", inst.VMType))
+			inst.Status = StatusBroken
+		}
+	}
+}
+
 // ReadPIDFile returns 0 if the PID file does not exist or the process has already terminated
 // (in which case the PID file will be removed).
 func ReadPIDFile(path string) (int, error) {
@@ -189,6 +204,10 @@ func ReadPIDFile(path string) (int, error) {
 	proc, err := os.FindProcess(pid)
 	if err != nil {
 		return 0, err
+	}
+	// os.FindProcess will only return running processes on Windows, exit early
+	if runtime.GOOS == "windows" {
+		return pid, nil
 	}
 	err = proc.Signal(syscall.Signal(0))
 	if err != nil {
@@ -328,7 +347,7 @@ func PrintInstances(w io.Writer, instances []*Instance, format string, options *
 			fmt.Fprintf(w, "%s\t%s\t%s",
 				instance.Name,
 				instance.Status,
-				fmt.Sprintf("127.0.0.1:%d", instance.SSHLocalPort),
+				fmt.Sprintf("%s:%d", instance.SSHAddress, instance.SSHLocalPort),
 			)
 			if !hideType {
 				fmt.Fprintf(w, "\t%s",

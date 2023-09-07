@@ -2,7 +2,7 @@
 Description=lima-guestagent
 
 [Service]
-ExecStart={{.Binary}} daemon
+ExecStart={{.Binary}} daemon {{.Args}}
 Type=simple
 Restart=on-failure
 

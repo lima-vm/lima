@@ -56,12 +56,14 @@ func Validate(y LimaYAML, warn bool) error {
 	switch *y.VMType {
 	case QEMU:
 		// NOP
+	case WSL2:
+		// NOP
 	case VZ:
 		if !IsNativeArch(*y.Arch) {
 			return fmt.Errorf("field `arch` must be %q for VZ; got %q", NewArch(runtime.GOARCH), *y.Arch)
 		}
 	default:
-		return fmt.Errorf("field `vmType` must be %q or %q; got %q", QEMU, VZ, *y.VMType)
+		return fmt.Errorf("field `vmType` must be %q, %q, %q; got %q", QEMU, VZ, WSL2, *y.VMType)
 	}
 
 	if len(y.Images) == 0 {
@@ -159,9 +161,9 @@ func Validate(y LimaYAML, warn bool) error {
 	}
 
 	switch *y.MountType {
-	case REVSSHFS, NINEP, VIRTIOFS:
+	case REVSSHFS, NINEP, VIRTIOFS, WSLMount:
 	default:
-		return fmt.Errorf("field `mountType` must be %q or %q or %q, got %q", REVSSHFS, NINEP, VIRTIOFS, *y.MountType)
+		return fmt.Errorf("field `mountType` must be %q or %q or %q, or %q, got %q", REVSSHFS, NINEP, VIRTIOFS, WSLMount, *y.MountType)
 	}
 
 	if warn && runtime.GOOS != "linux" {

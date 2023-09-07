@@ -19,11 +19,12 @@ var goarch = limayaml.NewArch(runtime.GOARCH)
 var space = strings.Repeat(" ", len(goarch)-4)
 
 var instance = Instance{
-	Name:   "foo",
-	Status: StatusStopped,
-	VMType: vmtype,
-	Arch:   goarch,
-	Dir:    "dir",
+	Name:       "foo",
+	Status:     StatusStopped,
+	VMType:     vmtype,
+	Arch:       goarch,
+	Dir:        "dir",
+	SSHAddress: "127.0.0.1",
 }
 
 var table = "NAME    STATUS     SSH            CPUS    MEMORY    DISK    DIR\n" +

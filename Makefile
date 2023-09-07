@@ -22,6 +22,17 @@ GO_BUILDTAGS += no_vz
 endif
 endif
 
+ifeq ($(GOOS),windows)
+WINVER_MAJOR=$(shell powershell.exe "[System.Environment]::OSVersion.Version.Major")
+ifeq ($(WINVER_MAJOR),10)
+WINVER_BUILD=$(shell powershell.exe "[System.Environment]::OSVersion.Version.Build")
+WINVER_BUILD_HIGH_ENOUGH=$(shell powershell.exe $(WINVER_BUILD) -ge 19041)
+ifeq ($(WINVER_BUILD_HIGH_ENOUGH),False)
+GO_BUILDTAGS += no_wsl
+endif
+endif
+endif
+
 PACKAGE := github.com/lima-vm/lima
 
 VERSION=$(shell git describe --match 'v[0-9]*' --dirty='.m' --always --tags)

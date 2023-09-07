@@ -62,6 +62,7 @@ func deleteInstance(ctx context.Context, inst *store.Instance, force bool) error
 	if err := os.RemoveAll(inst.Dir); err != nil {
 		return fmt.Errorf("failed to remove %q: %w", inst.Dir, err)
 	}
+
 	return nil
 }
 

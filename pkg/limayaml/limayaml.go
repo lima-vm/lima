@@ -56,9 +56,11 @@ const (
 	REVSSHFS MountType = "reverse-sshfs"
 	NINEP    MountType = "9p"
 	VIRTIOFS MountType = "virtiofs"
+	WSLMount MountType = "wsl2"
 
 	QEMU VMType = "qemu"
 	VZ   VMType = "vz"
+	WSL2 VMType = "wsl2"
 )
 
 type Rosetta struct {

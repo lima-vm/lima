@@ -98,6 +98,7 @@ func hostagentAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	l, err := net.Listen("unix", socket)
+	logrus.Infof("hostagent socket created at %s", socket)
 	if err != nil {
 		return err
 	}
