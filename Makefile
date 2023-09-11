@@ -148,7 +148,13 @@ _output/share/lima/lima-guestagent.Linux-riscv64:
 .PHONY: manpages
 manpages: _output/bin/limactl$(exe)
 	@mkdir -p _output/share/man/man1
-	$< generate-man _output/share/man/man1 \
+	$< generate-doc _output/share/man/man1 \
+		--output _output --prefix $(PREFIX)
+
+.PHONY: docsy
+docsy: _output/bin/limactl$(exe)
+	@mkdir -p website/_output/docsy
+	$< generate-doc --type docsy website/_output/docsy \
 		--output _output --prefix $(PREFIX)
 
 .PHONY: diagrams
