@@ -1,0 +1,38 @@
+{
+  "name": "lima-site",
+  "version": "0.7.1",
+  "description": "Lima website that uses Docsy theme for technical documentation.",
+  "repository": "github:lima-vm/lima",
+  "homepage": "https://lima-vm.io",
+  "author": "Lima",
+  "license": "Apache-2.0",
+  "bugs": "https://github.com/lima-vm/lima/issues",
+  "spelling": "cSpell:ignore HTMLTEST precheck postbuild -",
+  "scripts": {
+    "_build": "npm run _hugo-dev",
+    "_check:links": "echo IMPLEMENTATION PENDING for check-links; echo",
+    "_hugo": "hugo --cleanDestinationDir",
+    "_hugo-dev": "npm run _hugo -- -e dev -DFE",
+    "_serve": "npm run _hugo-dev -- --minify serve",
+    "build:preview": "npm run _hugo-dev -- --minify --baseURL \"${DEPLOY_PRIME_URL:-/}\"",
+    "build:production": "npm run _hugo -- --minify",
+    "build": "npm run _build",
+    "check:links:all": "HTMLTEST_ARGS= npm run _check:links",
+    "check:links": "npm run _check:links",
+    "clean": "rm -Rf public/* resources",
+    "make:public": "git init -b main public",
+    "precheck:links:all": "npm run build",
+    "precheck:links": "npm run build",
+    "postbuild:preview": "npm run _check:links",
+    "postbuild:production": "npm run _check:links",
+    "serve": "npm run _serve",
+    "test": "npm run check:links",
+    "update:pkg:dep": "npm install --save-dev autoprefixer@latest postcss-cli@latest",
+    "update:pkg:hugo": "npm install --save-dev --save-exact hugo-extended@latest"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.14",
+    "hugo-extended": "0.113.0",
+    "postcss-cli": "^10.1.0"
+  }
+}
