@@ -7,6 +7,10 @@ TAR ?= tar
 ZIP ?= zip
 PLANTUML ?= plantuml # may also be "java -jar plantuml.jar" if installed elsewhere
 
+# The KCONFIG programs are only needed for re-generating the ".config" file.
+KCONFIG_CONF ?= kconfig-conf
+KCONFIG_MCONF ?= kconfig-mconf
+
 GOOS ?= $(shell $(GO) env GOOS)
 ifeq ($(GOOS),windows)
 bat = .bat
@@ -45,6 +49,11 @@ GO_BUILD := $(GO) build -ldflags="-s -w -X $(PACKAGE)/pkg/version.Version=$(VERS
 .PHONY: all
 all: binaries manpages
 
+.PHONY: help
+help:
+	@echo  '  binaries        - Build all binaries'
+	@echo  '  manpages        - Build manual pages'
+
 exe: _output/bin/limactl$(exe)
 
 .PHONY: minimal
@@ -55,6 +64,19 @@ minimal: clean \
 	mkdir -p _output/share/lima/templates
 	cp -aL examples/default.yaml _output/share/lima/templates/
 
+config: Kconfig
+	$(KCONFIG_CONF) $<
+
+menuconfig: Kconfig
+	$(KCONFIG_MCONF) $<
+
+# Copy the default config, if not overridden locally
+# This is done to avoid a dependency on KCONFIG tools
+.config: config.mk
+	cp $^ $@
+
+-include .config
+
 HELPERS = \
 	_output/bin/nerdctl.lima \
 	_output/bin/apptainer.lima \
@@ -62,14 +84,24 @@ HELPERS = \
 	_output/bin/podman.lima \
 	_output/bin/kubectl.lima
 
+ifeq ($(CONFIG_GUESTAGENT_OS_LINUX),y)
+ifeq ($(CONFIG_GUESTAGENT_ARCH_X8664),y)
 GUESTAGENT += \
 	_output/share/lima/lima-guestagent.Linux-x86_64
+endif
+ifeq ($(CONFIG_GUESTAGENT_ARCH_AARCH64),y)
 GUESTAGENT += \
 	_output/share/lima/lima-guestagent.Linux-aarch64
+endif
+ifeq ($(CONFIG_GUESTAGENT_ARCH_ARMV7L),y)
 GUESTAGENT += \
 	_output/share/lima/lima-guestagent.Linux-armv7l
+endif
+ifeq ($(CONFIG_GUESTAGENT_ARCH_RISCV64),y)
 GUESTAGENT += \
 	_output/share/lima/lima-guestagent.Linux-riscv64
+endif
+endif
 
 .PHONY: binaries
 binaries: clean \
