@@ -55,21 +55,30 @@ minimal: clean \
 	mkdir -p _output/share/lima/templates
 	cp -aL examples/default.yaml _output/share/lima/templates/
 
+HELPERS = \
+	_output/bin/nerdctl.lima \
+	_output/bin/apptainer.lima \
+	_output/bin/docker.lima \
+	_output/bin/podman.lima \
+	_output/bin/kubectl.lima
+
+GUESTAGENT += \
+	_output/share/lima/lima-guestagent.Linux-x86_64
+GUESTAGENT += \
+	_output/share/lima/lima-guestagent.Linux-aarch64
+GUESTAGENT += \
+	_output/share/lima/lima-guestagent.Linux-armv7l
+GUESTAGENT += \
+	_output/share/lima/lima-guestagent.Linux-riscv64
+
 .PHONY: binaries
 binaries: clean \
 	_output/bin/lima \
 	_output/bin/lima$(bat) \
 	_output/bin/limactl$(exe) \
 	codesign \
-	_output/bin/nerdctl.lima \
-	_output/bin/apptainer.lima \
-	_output/bin/docker.lima \
-	_output/bin/podman.lima \
-	_output/bin/kubectl.lima \
-	_output/share/lima/lima-guestagent.Linux-x86_64 \
-	_output/share/lima/lima-guestagent.Linux-aarch64 \
-	_output/share/lima/lima-guestagent.Linux-armv7l \
-	_output/share/lima/lima-guestagent.Linux-riscv64
+	$(HELPERS) \
+	$(GUESTAGENT)
 	cp -aL examples _output/share/lima/templates
 ifneq ($(GOOS),windows)
 	ln -sf templates _output/share/lima/examples
