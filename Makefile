@@ -8,8 +8,9 @@ ZIP ?= zip
 PLANTUML ?= plantuml # may also be "java -jar plantuml.jar" if installed elsewhere
 
 # The KCONFIG programs are only needed for re-generating the ".config" file.
-KCONFIG_CONF ?= kconfig-conf
-KCONFIG_MCONF ?= kconfig-mconf
+# You can install the python "kconfiglib", if you don't have kconfig/kbuild.
+KCONFIG_CONF ?= $(shell command -v kconfig-conf || command -v kbuild-conf || echo oldconfig)
+KCONFIG_MCONF ?= $(shell command -v kconfig-mconf || command -v kbuild-mconf || echo menuconfig)
 
 GOOS ?= $(shell $(GO) env GOOS)
 ifeq ($(GOOS),windows)
@@ -68,6 +69,7 @@ config: Kconfig
 	$(KCONFIG_CONF) $<
 
 menuconfig: Kconfig
+	MENUCONFIG_STYLE=aquatic \
 	$(KCONFIG_MCONF) $<
 
 # Copy the default config, if not overridden locally
