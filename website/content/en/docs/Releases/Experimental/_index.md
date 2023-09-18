@@ -1,4 +1,8 @@
-# Experimental features
+---
+title: Experimental features
+weight: 10
+---
+
 
 The following features are experimental and subject to change:
 

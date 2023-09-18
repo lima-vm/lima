@@ -1,4 +1,7 @@
-# Deprecated features
+---
+title: Deprecated features
+weight: 10
+---
 
 The following features are deprecated:
 
