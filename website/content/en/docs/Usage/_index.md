@@ -3,14 +3,6 @@ title: Usage
 weight: 2
 ---
 
-> **CAUTION**
-> Lima may have bugs that result in loss of data.
-> **Make sure to back up your data before running Lima.**
-> Especially, the following data might be easily lost:
-> - Data in the shared writable directories (`/tmp/lima` by default),
->  probably after hibernation of the host machine (e.g., after closing and reopening the laptop lid)
-> - Data in the VM image, mostly when upgrading the version of lima
-
 ## Start a linux instance
 
 ```console
