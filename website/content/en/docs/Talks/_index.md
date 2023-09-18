@@ -1,4 +1,7 @@
-# Talks
+---
+title: Talks
+weight: 10
+---
 
 ## 2022
 ### KubeCon + CloudNativeCon Europe 2022
