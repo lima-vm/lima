@@ -1,0 +1,16 @@
+- name: Rancher Desktop
+  link: https://rancherdesktop.io
+  image: rancherdesktop.svg
+  width: 200
+- name: Colima
+  link: https://github.com/abiosoft/colima
+  image: colima.png
+  width: 100
+- name: Finch
+  link: https://github.com/runfinch/finch
+  image: finch.svg
+  width: 100
+- name: Podman Desktop
+  link: https://podman-desktop.io
+  image: podman-desktop.svg
+  width: 75

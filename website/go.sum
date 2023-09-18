@@ -1,0 +1,7 @@
+github.com/FortAwesome/Font-Awesome v0.0.0-20230327165841-0698449d50f2 h1:Uv1z5EqCfmiK4IHUwT0m3h/u/WCk+kpRfxvAZhpC7Gc=
+github.com/FortAwesome/Font-Awesome v0.0.0-20230327165841-0698449d50f2/go.mod h1:IUgezN/MFpCDIlFezw3L8j83oeiIuYoj28Miwr/KUYo=
+github.com/google/docsy v0.7.1 h1:DUriA7Nr3lJjNi9Ulev1SfiG1sUYmvyDeU4nTp7uDxY=
+github.com/google/docsy v0.7.1/go.mod h1:JCmE+c+izhE0Rvzv3y+AzHhz1KdwlA9Oj5YBMklJcfc=
+github.com/google/docsy/dependencies v0.7.1/go.mod h1:gihhs5gmgeO+wuoay4FwOzob+jYJVyQbNaQOh788lD4=
+github.com/twbs/bootstrap v5.2.3+incompatible h1:lOmsJx587qfF7/gE7Vv4FxEofegyJlEACeVV+Mt7cgc=
+github.com/twbs/bootstrap v5.2.3+incompatible/go.mod h1:fZTSrkpSf0/HkL0IIJzvVspTt1r9zuf7XlZau8kpcY0=
