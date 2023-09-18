@@ -1,4 +1,7 @@
-# vmType
+---
+title: VM types
+weight: 10
+---
 
 Lima supports two ways of running guest machines:
 - [qemu](#qemu)

@@ -1,4 +1,7 @@
-# Intel-on-ARM and ARM-on-Intel
+---
+title: Intel-on-ARM and ARM-on-Intel
+weight: 20
+---
 
 Lima supports two modes for running Intel-on-ARM and ARM-on-Intel:
 - [Slow mode](#slow-mode)

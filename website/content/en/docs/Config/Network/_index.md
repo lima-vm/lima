@@ -1,4 +1,7 @@
-# Network
+---
+title: Network
+weight: 30
+---
 
 ## user-mode network (192.168.5.0/24)
 

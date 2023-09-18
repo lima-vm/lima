@@ -1,4 +1,7 @@
-# Filesystem mounts
+---
+title: Filesystem mounts
+weight: 50
+---
 
 Lima supports several methods for mounting the host filesystem into the guest.
 
