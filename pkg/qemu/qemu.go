@@ -790,11 +790,16 @@ func Cmdline(cfg Config) (string, []string, error) {
 		args = append(args, "-device", "virtio-mouse-pci")
 		args = append(args, "-device", "qemu-xhci,id=usb-bus")
 	case limayaml.AARCH64, limayaml.ARMV7L:
-		// QEMU does not seem to support virtio-vga for aarch64 and arm
-		args = append(args, "-vga", "none", "-device", "ramfb")
+		if features.VersionGEQ7 {
+			args = append(args, "-device", "virtio-gpu")
+			args = append(args, "-device", "virtio-keyboard-pci")
+			args = append(args, "-device", "virtio-mouse-pci")
+		} else { // kernel panic with virtio and old versions of QEMU
+			args = append(args, "-vga", "none", "-device", "ramfb")
+			args = append(args, "-device", "usb-kbd,bus=usb-bus.0")
+			args = append(args, "-device", "usb-mouse,bus=usb-bus.0")
+		}
 		args = append(args, "-device", "qemu-xhci,id=usb-bus")
-		args = append(args, "-device", "usb-kbd,bus=usb-bus.0")
-		args = append(args, "-device", "usb-mouse,bus=usb-bus.0")
 	}
 
 	// Parallel
