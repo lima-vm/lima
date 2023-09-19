@@ -37,10 +37,6 @@ Consider using [Fast mode](#fast-mode) or [Fast mode 2](#fast-mode-2) whenever p
 This mode uses QEMU User Mode Emulation.
 QEMU User Mode Emulation is significantly faster than QEMU System Mode Emulation, but it often sacrifices compatibility.
 
-| ⚡ Requirement | Lima >= 0.7.3 |
-|-------------------|---------------|
-
-
 Set up:
 ```bash
 lima sudo systemctl start containerd
