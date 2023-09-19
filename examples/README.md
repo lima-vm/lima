@@ -22,7 +22,7 @@ Distro:
 - [`ubuntu.yaml`](./ubuntu.yaml): Ubuntu (same as `default.yaml` but without extra YAML lines)
 - [`ubuntu-lts.yaml`](./ubuntu-lts.yaml): Ubuntu LTS (same as `ubuntu.yaml` but pinned to an LTS version)
 - [`deprecated/centos-7.yaml`](./deprecated/centos-7.yaml): [deprecated] CentOS Linux 7
-- [`experimental/opensuse-tumbleweed.yaml`](experimental/opensuse-tumbleweed.yaml): [experimental] openSUSE Tumbleweed
+- [`experimental/opensuse-tumbleweed.yaml`](./experimental/opensuse-tumbleweed.yaml): [experimental] openSUSE Tumbleweed
 
 Container engines:
 - [`apptainer.yaml`](./apptainer.yaml): Apptainer
@@ -43,11 +43,11 @@ Container orchestration:
 
 Optional feature enablers:
 - [`vmnet.yaml`](./vmnet.yaml): ⭐enable [`vmnet.framework`](../docs/network.md)
-- [`experimental/9p.yaml`](experimental/9p.yaml): [experimental] use 9p mount type
-- [`experimental/virtiofs-linux.yaml`](experimental/9p.yaml): [experimental] use virtiofs mount type for Linux
-- [`experimental/armv7l.yaml`](experimental/armv7l.yaml): [experimental] ARMv7
-- [`experimental/riscv64.yaml`](experimental/riscv64.yaml): [experimental] RISC-V
-- [`experimental/net-user-v2.yaml`](experimental/net-user-v2.yaml): [experimental] user-v2 network
+- [`experimental/9p.yaml`](./experimental/9p.yaml): [experimental] use 9p mount type
+- [`experimental/virtiofs-linux.yaml`](./experimental/9p.yaml): [experimental] use virtiofs mount type for Linux
+- [`experimental/armv7l.yaml`](./experimental/armv7l.yaml): [experimental] ARMv7
+- [`experimental/riscv64.yaml`](./experimental/riscv64.yaml): [experimental] RISC-V
+- [`experimental/net-user-v2.yaml`](./experimental/net-user-v2.yaml): [experimental] user-v2 network
   to enable VM-to-VM communication without root privilege
 
 Lost+found:
