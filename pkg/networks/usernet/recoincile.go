@@ -3,12 +3,14 @@ package usernet
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/lima-vm/lima/pkg/lockutil"
@@ -57,16 +59,25 @@ func Start(ctx context.Context, name string) error {
 			return err
 		}
 
+		leases, err := readLeases(name)
+		if err != nil {
+			return err
+		}
+
 		err = lockutil.WithDirLock(usernetDir, func() error {
 			self, err := os.Executable()
 			if err != nil {
 				return err
 			}
+			leasesString := mapToCliString(leases)
 			args := []string{"usernet", "-p", pidFile,
 				"-e", endpointSock,
 				"--listen-qemu", qemuSock,
 				"--listen", fdSock,
 				"--subnet", subnet.String()}
+			if leasesString != "" {
+				args = append(args, "--leases", leasesString)
+			}
 			cmd := exec.CommandContext(ctx, self, args...)
 
 			stdoutPath := filepath.Join(usernetDir, fmt.Sprintf("%s.%s.%s.log", "usernet", name, "stdout"))
@@ -119,6 +130,11 @@ func Stop(name string) error {
 	if pid != 0 {
 		logrus.Debugf("Stopping usernet daemon")
 
+		err = writeLeases(name)
+		if err != nil {
+			return err
+		}
+
 		var stdout, stderr bytes.Buffer
 		cmd := exec.Command("/usr/bin/pkill", "-F", pidFile)
 		cmd.Stdout = &stdout
@@ -142,6 +158,54 @@ func Stop(name string) error {
 			break
 		}
 		time.Sleep(500 * time.Millisecond)
+	}
+	return nil
+}
+
+func mapToCliString(m map[string]string) string {
+	var strArr []string
+	for key, value := range m {
+		strArr = append(strArr, fmt.Sprintf("%s=%s", key, value))
+	}
+	return strings.Join(strArr, ",")
+}
+
+func readLeases(name string) (map[string]string, error) {
+	leasesFile, err := Leases(name)
+	if err != nil {
+		return nil, err
+	}
+	var leases map[string]string
+	if _, err := os.Stat(leasesFile); errors.Is(err, os.ErrNotExist) {
+		return leases, nil
+	}
+	file, err := os.Open(leasesFile)
+	if err != nil {
+		return nil, err
+	}
+	decoder := json.NewDecoder(file)
+	err = decoder.Decode(&leases)
+	return leases, err
+}
+
+func writeLeases(nwName string) error {
+	client := NewClientByName(nwName)
+	leases, err := client.Leases()
+	if err != nil {
+		return err
+	}
+	leasesFile, err := Leases(nwName)
+	if err != nil {
+		return err
+	}
+	file, err := os.Create(leasesFile)
+	if err != nil {
+		return err
+	}
+	encoder := json.NewEncoder(file)
+	err = encoder.Encode(leases)
+	if err != nil {
+		return err
 	}
 	return nil
 }

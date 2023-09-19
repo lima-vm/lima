@@ -148,15 +148,7 @@ func startUsernet(ctx context.Context, driver *driver.BaseDriver) (*usernet.Clie
 		return usernet.NewClient(endpointSock, subnetIP), err
 	}
 	nwName := driver.Yaml.Networks[firstUsernetIndex].Lima
-	endpointSock, err := usernet.Sock(nwName, usernet.EndpointSock)
-	if err != nil {
-		return nil, err
-	}
-	subnetIP, err := usernet.Subnet(nwName)
-	if err != nil {
-		return nil, err
-	}
-	return usernet.NewClient(endpointSock, subnetIP), nil
+	return usernet.NewClientByName(nwName), nil
 }
 
 func createVM(driver *driver.BaseDriver) (*vz.VirtualMachine, error) {
