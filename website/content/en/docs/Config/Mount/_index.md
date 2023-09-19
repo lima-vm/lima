@@ -91,7 +91,7 @@ The "9p" mount type requires Lima v0.10.0 or later.
 > **Warning**
 > "virtiofs" mode is experimental
 
-| :zap: Requirement | Lima >= 0.14, macOS >= 13.0 | Lima >= 0.17.0, Linux, QEMU 4.2.0+, virtiofsd (Rust version) |
+| ⚡ Requirement | Lima >= 0.14, macOS >= 13.0 | Lima >= 0.17.0, Linux, QEMU 4.2.0+, virtiofsd (Rust version) |
 |-------------------|-----------------------------| ------------------------------------------------------------ |
 
 The "virtiofs" mount type is implemented via the virtio-fs device by using apple Virtualization.Framework shared directory on macOS and virtiofsd on Linux.
@@ -114,7 +114,7 @@ mounts:
 > **Warning**
 > "wsl2" mode is experimental
 
-| :zap: Requirement | Lima >= 0.18 + (Windows >= 10 Build 19041 OR Windows 11) |
+| ⚡ Requirement | Lima >= 0.18 + (Windows >= 10 Build 19041 OR Windows 11) |
 | ----------------- | -------------------------------------------------------- |
 
 The "wsl2" mount type relies on using WSL2's navite disk sharing, where the root disk is available by default at `/mnt/$DISK_LETTER` (e.g. `/mnt/c/`).

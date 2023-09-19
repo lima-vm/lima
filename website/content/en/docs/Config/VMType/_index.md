@@ -18,7 +18,7 @@ This option is used by default if "vmType" is not set.
 > **Warning**
 > "vz" mode is experimental
 
-| :zap: Requirement | Lima >= 0.14, macOS >= 13.0 |
+| ⚡ Requirement | Lima >= 0.14, macOS >= 13.0 |
 |-------------------|-----------------------------|
 
 "vz" option makes use of native virtualization support provided by macOS Virtualization.Framework.
@@ -53,7 +53,7 @@ mountType: "virtiofs"
 > **Warning**
 > "wsl2" mode is experimental
 
-| :zap: Requirement | Lima >= 0.18 + (Windows >= 10 Build 19041 OR Windows 11) |
+| ⚡ Requirement | Lima >= 0.18 + (Windows >= 10 Build 19041 OR Windows 11) |
 | ----------------- | -------------------------------------------------------- |
 
 "wsl2" option makes use of native virtualization support provided by Windows' `wsl.exe` ([more info](https://learn.microsoft.com/en-us/windows/wsl/about)).

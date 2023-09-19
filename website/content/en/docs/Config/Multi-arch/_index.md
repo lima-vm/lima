@@ -37,7 +37,7 @@ Consider using [Fast mode](#fast-mode) or [Fast mode 2](#fast-mode-2) whenever p
 This mode uses QEMU User Mode Emulation.
 QEMU User Mode Emulation is significantly faster than QEMU System Mode Emulation, but it often sacrifices compatibility.
 
-| :zap: Requirement | Lima >= 0.7.3 |
+| ⚡ Requirement | Lima >= 0.7.3 |
 |-------------------|---------------|
 
 
@@ -69,7 +69,7 @@ See also https://github.com/containerd/nerdctl/blob/master/docs/multi-platform.m
 > **Warning**
 > "vz" mode, including support for Rosetta, is experimental
 
-| :zap: Requirement | Lima >= 0.14, macOS >= 13.0, ARM |
+| ⚡ Requirement | Lima >= 0.14, macOS >= 13.0, ARM |
 |-------------------|----------------------------------|
 
 [Rosetta](https://developer.apple.com/documentation/virtualization/running_intel_binaries_in_linux_vms_with_rosetta) is known to be much faster than QEMU User Mode Emulation.
