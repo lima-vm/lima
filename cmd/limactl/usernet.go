@@ -24,6 +24,7 @@ func newUsernetCommand() *cobra.Command {
 	hostagentCommand.Flags().String("listen", "", "listen on a Unix socket and receive Bess-compatible FDs as SCM_RIGHTS messages")
 	hostagentCommand.Flags().String("subnet", "192.168.5.0/24", "sets subnet value for the usernet network")
 	hostagentCommand.Flags().Int("mtu", 1500, "mtu")
+	hostagentCommand.Flags().StringToString("leases", nil, "pass default static leases for startup. Eg: '192.168.104.1=52:55:55:b3:bc:d9,192.168.104.2=5a:94:ef:e4:0c:df' ")
 	return hostagentCommand
 }
 
@@ -58,6 +59,11 @@ func usernetAction(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
+	leases, err := cmd.Flags().GetStringToString("leases")
+	if err != nil {
+		return err
+	}
+
 	mtu, err := cmd.Flags().GetInt("mtu")
 	if err != nil {
 		return err
@@ -68,10 +74,11 @@ func usernetAction(cmd *cobra.Command, _ []string) error {
 	os.RemoveAll(fdSocket)
 
 	return usernet.StartGVisorNetstack(cmd.Context(), &usernet.GVisorNetstackOpts{
-		MTU:        mtu,
-		Endpoint:   endpoint,
-		QemuSocket: qemuSocket,
-		FdSocket:   fdSocket,
-		Subnet:     subnet,
+		MTU:           mtu,
+		Endpoint:      endpoint,
+		QemuSocket:    qemuSocket,
+		FdSocket:      fdSocket,
+		Subnet:        subnet,
+		DefaultLeases: leases,
 	})
 }

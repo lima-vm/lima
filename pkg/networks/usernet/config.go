@@ -103,6 +103,20 @@ func DNSIP(subnet net.IP) string {
 	return cidr.Inc(cidr.Inc(cidr.Inc(subnet))).String()
 }
 
+// Leases returns a leases file based on network name.
+func Leases(name string) (string, error) {
+	dir, err := dirnames.LimaNetworksDir()
+	if err != nil {
+		return "", err
+	}
+	sockPath := filepath.Join(filepath.Join(dir, name), "leases.json")
+	if len(sockPath) >= osutil.UnixPathMax {
+		return "", fmt.Errorf("usernet leases path %q too long: must be less than UNIX_PATH_MAX=%d characters, but is %d",
+			sockPath, osutil.UnixPathMax, len(sockPath))
+	}
+	return sockPath, nil
+}
+
 func netmaskToCidr(baseIP net.IP, netMask net.IP) (net.IP, *net.IPNet, error) {
 	size, _ := net.IPMask(netMask.To4()).Size()
 	return net.ParseCIDR(fmt.Sprintf("%s/%d", baseIP.String(), size))

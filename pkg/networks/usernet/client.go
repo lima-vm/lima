@@ -80,7 +80,7 @@ func (c *Client) ResolveIPAddress(vmMacAddr string) (string, error) {
 		case <-timeout:
 			return "", errors.New("usernet unable to resolve IP for SSH forwarding")
 		case <-ticker.C:
-			leases, err := c.leases()
+			leases, err := c.Leases()
 			if err != nil {
 				return "", err
 			}
@@ -94,7 +94,7 @@ func (c *Client) ResolveIPAddress(vmMacAddr string) (string, error) {
 	}
 }
 
-func (c *Client) leases() (map[string]string, error) {
+func (c *Client) Leases() (map[string]string, error) {
 	res, err := c.client.Get(fmt.Sprintf("%s%s", c.base, "/services/dhcp/leases"))
 	if err != nil {
 		return nil, err
@@ -109,6 +109,18 @@ func (c *Client) leases() (map[string]string, error) {
 		return nil, err
 	}
 	return leases, nil
+}
+
+func NewClientByName(nwName string) *Client {
+	endpointSock, err := Sock(nwName, EndpointSock)
+	if err != nil {
+		return nil
+	}
+	subnet, err := Subnet(nwName)
+	if err != nil {
+		return nil
+	}
+	return NewClient(endpointSock, subnet)
 }
 
 func NewClient(endpointSock string, subnet net.IP) *Client {
