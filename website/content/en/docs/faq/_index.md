@@ -96,12 +96,6 @@ and forward `localhost:8080` to the port 80 of the remote machine.
 
 #### "Advantages compared to Docker for Mac?"
 Lima is free software (Apache License 2.0), while Docker for Mac is not.
-Their [EULA](https://www.docker.com/legal/docker-software-end-user-license-agreement) even prohibits disclosure of benchmarking result.
-
-On the other hand, [Moby](https://github.com/moby/moby), aka Docker for Linux, is free software, but Moby/Docker lacks several novel features of containerd, such as:
-- [On-demand image pulling (aka lazy-pulling, eStargz)](https://github.com/containerd/nerdctl/blob/master/docs/stargz.md)
-- [Running an encrypted container](https://github.com/containerd/nerdctl/blob/master/docs/ocicrypt.md)
-- Importing and exporting [local OCI archives](https://github.com/opencontainers/image-spec/blob/master/image-layout.md)
 
 ### QEMU
 #### "QEMU crashes with `HV_ERROR`"
