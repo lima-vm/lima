@@ -4,10 +4,14 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/lima-vm/lima/pkg/sshutil"
 	"github.com/lima-vm/lima/pkg/store"
+	"github.com/lima-vm/lima/pkg/store/dirnames"
+	"github.com/lima-vm/lima/pkg/store/filenames"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -41,9 +45,18 @@ const showSSHExample = `
 `
 
 func newShowSSHCommand() *cobra.Command {
+	limaHome := "~/" + dirnames.DotLima
+	if s, err := dirnames.LimaDir(); err == nil {
+		limaHome = s
+	}
 	var shellCmd = &cobra.Command{
-		Use:               "show-ssh [flags] INSTANCE",
-		Short:             "Show the ssh command line",
+		Use:   "show-ssh [flags] INSTANCE",
+		Short: "Show the ssh command line (DEPRECATED; use `ssh -F` instead)",
+		Long: fmt.Sprintf(`Show the ssh command line (DEPRECATED)
+
+WARNING: 'limactl show-ssh' is deprecated.
+Instead, use 'ssh -F %s/default/ssh.config lima-default' .
+`, limaHome),
 		Example:           showSSHExample,
 		Args:              WrapArgsError(cobra.ExactArgs(1)),
 		RunE:              showSSHAction,
@@ -72,6 +85,8 @@ func showSSHAction(cmd *cobra.Command, args []string) error {
 		}
 		return err
 	}
+	logrus.Warnf("`limactl show-ssh` is deprecated. Instead, use `ssh -F %s lima-%s`.",
+		filepath.Join(inst.Dir, filenames.SSHConfig), inst.Name)
 	y, err := inst.LoadYAML()
 	if err != nil {
 		return err
