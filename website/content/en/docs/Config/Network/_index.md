@@ -152,7 +152,6 @@ If the IP address is not assigned, try the following commands:
 ```
 
 #### Unmanaged
-For Lima >= 0.12:
 ```yaml
 networks:
   # Lima can also connect to "unmanaged" networks addressed by "socket". This
@@ -161,30 +160,6 @@ networks:
   # configured in socket_vmnet and not in lima.
   # - socket: "/var/run/socket_vmnet"
 ```
-
-<details>
-<summary>For older Lima releases</summary>
-
-<p>
-
-```yaml
-networks:
-  # vnl (virtual network locator) points to the vde_switch socket directory,
-  # optionally with vde:// prefix
-  # ⚠️  vnl is deprecated, use socket.
-  # - vnl: "vde:///var/run/vde.ctl"
-  #   # VDE Switch port number (not TCP/UDP port number). Set to 65535 for PTP mode.
-  #   # Builtin default: 0
-  #   switchPort: 0
-  #   # MAC address of the instance; lima will pick one based on the instance name,
-  #   # so DHCP assigned ip addresses should remain constant over instance restarts.
-  #   macAddress: ""
-  #   # Interface name, defaults to "lima0", "lima1", etc.
-  #   interface: ""
-```
-</p>
-
-</details>
 
 ### vzNAT
 

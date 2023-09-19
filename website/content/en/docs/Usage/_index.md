@@ -30,9 +30,6 @@ To create an instance "default" from a template "docker":
 $ limactl start --name=default template://docker
 ```
 
-> NOTE: `limactl start template://TEMPLATE` requires Lima v0.9.0 or later.
-> Older releases require `limactl start /usr/local/share/doc/lima/examples/TEMPLATE.yaml` instead.
-
 To create an instance "default" with modified parameters:
 ```console
 $ limactl start --set='.cpus = 2 | .memory = "2GiB"'
