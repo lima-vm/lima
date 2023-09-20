@@ -16,7 +16,7 @@ Prerequisite:
 brew install lima
 ```
 
-Homebrew formular is available [here](https://github.com/Homebrew/homebrew-core/blob/master/Formula/l/lima.rb).
+Homebrew formula is available [here](https://github.com/Homebrew/homebrew-core/blob/master/Formula/l/lima.rb).
 Supports macOS and Linux.
 {{% /tab %}}
 
