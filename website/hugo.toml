@@ -178,6 +178,9 @@ enable = false
   icon = "fab fa-slack"
   desc = "Chat with other project users"
 
+[params.mermaid]
+  enable = true
+
 [[menus.main]]
   name = "Github"
   url = "https://github.com/lima-vm/lima"
