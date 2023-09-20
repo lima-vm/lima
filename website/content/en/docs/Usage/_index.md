@@ -56,13 +56,7 @@ $ limactl start --name=default https://raw.githubusercontent.com/lima-vm/lima/ma
 For the "default" instance, this command can be shortened as `lima <COMMAND>`.
 The `lima` command also accepts the instance name as the environment variable `$LIMA_INSTANCE`.
 
-#### limactl show-ssh
-- `limactl show-ssh --format=cmd <INSTANCE>` (default): Full `ssh` command line
-- `limactl show-ssh --format=args <INSTANCE>`: Similar to the `cmd` format but omits `ssh` and the destination address
-- `limactl show-ssh --format=options <INSTANCE>`: ssh option key value pairs
-- `limactl show-ssh --format=config <INSTANCE>`: `~/.ssh/config` format
-
-The config file is also automatically created inside the instance directory:
+SSH can be used too:
 ```console
 $ limactl ls --format='{{.SSHConfigFile}}' default
 /Users/example/.lima/default/ssh.config
