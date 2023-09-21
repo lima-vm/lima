@@ -56,5 +56,18 @@ cd lima
 make
 make install
 ```
+
+To change the build configuration, run `make config` or `make menuconfig`.
+
+This requires kconfig tools installed, it is also possible to edit `.config`.
+The default configuration can be found in the file `config.mk` (make syntax).
+
+## Kconfig tools
+
+The tools are available as either "kconfig-frontends" or "kbuild-standalone".
+There is one `conf` for the text, and one `mconf` for the menu interface.
+
+A python implementation is available at <https://pypi.org/project/kconfiglib>.
+It can be installed with `pip install --user kconfiglib`, including `guiconfig`.
 {{% /tab %}}
 {{< /tabpane >}}

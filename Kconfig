@@ -1,0 +1,32 @@
+
+mainmenu "Lima"
+
+config GUESTAGENT_OS_LINUX
+	bool "guestagent OS: Linux"
+	help
+		Build lima-guestagent for "Linux" OS
+	default y
+
+config GUESTAGENT_ARCH_X8664
+	bool "guestagent Arch: x86_64"
+	help
+		Build lima-guestagent for "x86_64" Arch
+	default y
+
+config GUESTAGENT_ARCH_AARCH64
+	bool "guestagent Arch: aarch64"
+	help
+		Build lima-guestagent for "aarch64" Arch
+	default y
+
+config GUESTAGENT_ARCH_ARMV7L
+	bool "guestagent Arch: armv7l"
+	help
+		Build lima-guestagent for "armv7l" Arch
+	default y
+
+config GUESTAGENT_ARCH_RISCV64
+	bool "guestagent Arch: riscv64"
+	help
+		Build lima-guestagent for "riscv64" Arch
+	default y
