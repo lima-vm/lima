@@ -22,7 +22,7 @@ const (
 
 // AddVSockRegistryKey makes a vsock server running on the host acceessible in guests.
 func AddVSockRegistryKey(port int) error {
-	rootKey, err := getGuestCommunicationServicesKey()
+	rootKey, err := getGuestCommunicationServicesKey(true)
 	if err != nil {
 		return err
 	}
@@ -58,7 +58,7 @@ func AddVSockRegistryKey(port int) error {
 
 // RemoveVSockRegistryKey removes entries created by AddVSockRegistryKey.
 func RemoveVSockRegistryKey(port int) error {
-	rootKey, err := getGuestCommunicationServicesKey()
+	rootKey, err := getGuestCommunicationServicesKey(true)
 	if err != nil {
 		return err
 	}
@@ -79,7 +79,7 @@ func RemoveVSockRegistryKey(port int) error {
 
 // IsVSockPortFree determines if a VSock port has been registiered already.
 func IsVSockPortFree(port int) (bool, error) {
-	rootKey, err := getGuestCommunicationServicesKey()
+	rootKey, err := getGuestCommunicationServicesKey(false)
 	if err != nil {
 		return false, err
 	}
@@ -148,7 +148,7 @@ func GetDistroID(name string) (string, error) {
 
 // GetRandomFreeVSockPort gets a list of all registered VSock ports and returns a non-registered port.
 func GetRandomFreeVSockPort(min, max int) (int, error) {
-	rootKey, err := getGuestCommunicationServicesKey()
+	rootKey, err := getGuestCommunicationServicesKey(false)
 	if err != nil {
 		return 0, err
 	}
@@ -186,11 +186,19 @@ func GetRandomFreeVSockPort(min, max int) (int, error) {
 	return tree[0].offset + v, nil
 }
 
-func getGuestCommunicationServicesKey() (registry.Key, error) {
+// getGuestCommunicationServicesKey returns the HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Virtualization\GuestCommunicationServices
+// registry key for use in other operations.
+//
+// allowWrite is configurable because setting it to true requires Administrator access.
+func getGuestCommunicationServicesKey(allowWrite bool) (registry.Key, error) {
+	var registryPermissions uint32 = registry.READ
+	if allowWrite {
+		registryPermissions = registry.WRITE | registry.READ
+	}
 	rootKey, err := registry.OpenKey(
 		registry.LOCAL_MACHINE,
 		guestCommunicationsPrefix,
-		registry.WRITE|registry.READ,
+		registryPermissions,
 	)
 	if err != nil {
 		return 0, fmt.Errorf(
