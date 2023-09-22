@@ -146,7 +146,7 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 		args.SlirpGateway = usernet.GatewayIP(subnet)
 		args.SlirpDNS = usernet.GatewayIP(subnet)
 	} else {
-		subnet, err = usernet.ParseSubnet(networks.SlirpNetwork)
+		subnet, _, err = net.ParseCIDR(networks.SlirpNetwork)
 		if err != nil {
 			return err
 		}

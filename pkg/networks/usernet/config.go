@@ -84,15 +84,6 @@ func Subnet(name string) (net.IP, error) {
 	return ipNet.IP, err
 }
 
-// ParseSubnet converts subnet string to net.IP
-func ParseSubnet(subnet string) (net.IP, error) {
-	subnetIP, _, err := net.ParseCIDR(subnet)
-	if err != nil {
-		return nil, err
-	}
-	return subnetIP, nil
-}
-
 // GatewayIP returns the 2nd IP for the given subnet
 func GatewayIP(subnet net.IP) string {
 	return cidr.Inc(cidr.Inc(subnet)).String()

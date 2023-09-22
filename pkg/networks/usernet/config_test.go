@@ -10,14 +10,6 @@ import (
 
 func TestUsernetConfig(t *testing.T) {
 
-	t.Run("parse subnet", func(t *testing.T) {
-		subnet, err := ParseSubnet(networks.SlirpNetwork)
-		if err != nil {
-			t.Fatal(err)
-		}
-		assert.Equal(t, subnet.String(), "192.168.5.0")
-	})
-
 	t.Run("verify dns ip", func(t *testing.T) {
 		subnet, _, err := net.ParseCIDR(networks.SlirpNetwork)
 		if err != nil {
