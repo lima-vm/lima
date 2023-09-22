@@ -40,7 +40,7 @@ var (
 func StartGVisorNetstack(ctx context.Context, gVisorOpts *GVisorNetstackOpts) error {
 	opts = gVisorOpts
 
-	ip, err := ParseSubnet(opts.Subnet)
+	ip, ipNet, err := net.ParseCIDR(opts.Subnet)
 	if err != nil {
 		return err
 	}
@@ -49,7 +49,9 @@ func StartGVisorNetstack(ctx context.Context, gVisorOpts *GVisorNetstackOpts) er
 	leases := map[string]string{}
 	if opts.DefaultLeases != nil {
 		for k, v := range opts.DefaultLeases {
-			leases[k] = v
+			if ipNet.Contains(net.ParseIP(k)) {
+				leases[k] = v
+			}
 		}
 	}
 	leases[gatewayIP] = "5a:94:ef:e4:0c:df"

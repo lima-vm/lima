@@ -144,7 +144,7 @@ func startUsernet(ctx context.Context, driver *driver.BaseDriver) (*usernet.Clie
 		if err != nil {
 			return nil, err
 		}
-		subnetIP, err := usernet.ParseSubnet(networks.SlirpNetwork)
+		subnetIP, _, err := net.ParseCIDR(networks.SlirpNetwork)
 		return usernet.NewClient(endpointSock, subnetIP), err
 	}
 	nwName := driver.Yaml.Networks[firstUsernetIndex].Lima
