@@ -65,9 +65,12 @@ func setupEnv(y *limayaml.LimaYAML, args TemplateArgs) (map[string]string, error
 		}
 	}
 	// Replace IP that IsLoopback in proxy settings with the gateway address
+	// Delete settings with empty values, so the user can choose to ignore system settings.
 	for _, name := range append(lowerVars, upperVars...) {
 		value, ok := env[name]
-		if ok && !strings.EqualFold(name, "no_proxy") {
+		if ok && value == "" {
+			delete(env, name)
+		} else if ok && !strings.EqualFold(name, "no_proxy") {
 			u, err := url.Parse(value)
 			if err != nil {
 				logrus.Warnf("Ignoring invalid proxy %q=%v: %s", name, value, err)
