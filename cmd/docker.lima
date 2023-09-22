@@ -6,6 +6,9 @@ set -eu
 if [ "$(limactl ls -q "$LIMA_INSTANCE" 2>/dev/null)" != "$LIMA_INSTANCE" ]; then
   echo "instance \"$LIMA_INSTANCE\" does not exist, run \`limactl create --name=$LIMA_INSTANCE template://docker\` to create a new instance" >&2
   exit 1
+elif [ "$(limactl ls -f '{{ .Status }}' "$LIMA_INSTANCE" 2>/dev/null)" != "Running" ]; then
+  echo "instance \"$LIMA_INSTANCE\" is not running, run \`limactl start $LIMA_INSTANCE\` to start the existing instance" >&2
+  exit 1
 fi
 DOCKER=$(command -v "$DOCKER" || true)
 if [ -n "$DOCKER" ]; then
