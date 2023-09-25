@@ -13,4 +13,4 @@
 - name: Podman Desktop
   link: https://podman-desktop.io
   image: podman-desktop.svg
-  width: 75
+  width: 200
