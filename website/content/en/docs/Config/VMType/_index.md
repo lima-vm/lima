@@ -36,6 +36,13 @@ This option is used by default if "vmType" is not set.
 "vz" option makes use of native virtualization support provided by macOS Virtualization.Framework.
 
 An example configuration:
+{{< tabpane text=true >}}
+{{% tab header="CLI" %}}
+```bash
+limactl start --vm-type=vz --mount-type=virtiofs
+```
+{{% /tab %}}
+{{% tab header="YAML" %}}
 ```yaml
 # Example to run ubuntu using vmType: vz instead of qemu (Default)
 vmType: "vz"
@@ -48,7 +55,8 @@ mounts:
   - location: "~"
 mountType: "virtiofs"
 ```
-
+{{% /tab %}}
+{{< /tabpane >}}
 ### Caveats
 - "vz" option is only supported on macOS 13 or above
 - Virtualization.framework doesn't support running "intel guest on arm" and vice versa
@@ -71,6 +79,13 @@ mountType: "virtiofs"
 "wsl2" option makes use of native virtualization support provided by Windows' `wsl.exe` ([more info](https://learn.microsoft.com/en-us/windows/wsl/about)).
 
 An example configuration:
+{{< tabpane text=true >}}
+{{% tab header="CLI" %}}
+```bash
+limactl start --vm-type=wsl2 --mount-type=wsl2 --containerd=system
+```
+{{% /tab %}}
+{{% tab header="YAML" %}}
 ```yaml
 # Example to run Fedora using vmType: wsl2
 vmType: wsl2
@@ -84,6 +99,8 @@ containerd:
   system: true
   user: false
 ```
+{{% /tab %}}
+{{< /tabpane >}}
 
 ### Caveats
 - "wsl2" option is only supported on newer versions of Windows (roughly anything since 2019)
