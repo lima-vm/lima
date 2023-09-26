@@ -71,7 +71,11 @@ true
 Make sure that the YAML field "ssh.localPort" is not used by other processes on the host.
 If any private key under ~/.ssh is protected with a passphrase, you need to have ssh-agent to be running.
 `,
-		},
+		})
+	if *a.y.Plain {
+		return req
+	}
+	req = append(req,
 		requirement{
 			description: "user session is ready for ssh",
 			script: `#!/bin/bash
@@ -156,7 +160,7 @@ A possible workaround is to run "lima-guestagent install-systemd" in the guest.
 
 func (a *HostAgent) optionalRequirements() []requirement {
 	req := make([]requirement, 0)
-	if *a.y.Containerd.System || *a.y.Containerd.User {
+	if (*a.y.Containerd.System || *a.y.Containerd.User) && !*a.y.Plain {
 		req = append(req,
 			requirement{
 				description: "systemd must be available",

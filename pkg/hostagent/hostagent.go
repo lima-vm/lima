@@ -427,6 +427,9 @@ func (a *HostAgent) Info(_ context.Context) (*hostagentapi.Info, error) {
 }
 
 func (a *HostAgent) startHostAgentRoutines(ctx context.Context) error {
+	if *a.y.Plain {
+		logrus.Info("Running in plain mode. Mounts, port forwarding, containerd, etc. will be ignored. Guest agent will not be running.")
+	}
 	a.onClose = append(a.onClose, func() error {
 		logrus.Debugf("shutting down the SSH master")
 		if exitMasterErr := ssh.ExitMaster(a.instSSHAddress, a.sshLocalPort, a.sshConfig); exitMasterErr != nil {
@@ -451,7 +454,7 @@ sudo chown -R "${USER}" /run/host-services`
 			errs = append(errs, fmt.Errorf("stdout=%q, stderr=%q: %w", stdout, stderr, err))
 		}
 	}
-	if *a.y.MountType == limayaml.REVSSHFS {
+	if *a.y.MountType == limayaml.REVSSHFS && !*a.y.Plain {
 		mounts, err := a.setupMounts()
 		if err != nil {
 			errs = append(errs, err)
@@ -483,7 +486,9 @@ sudo chown -R "${USER}" /run/host-services`
 			return errors.Join(unlockErrs...)
 		})
 	}
-	go a.watchGuestAgentEvents(ctx)
+	if !*a.y.Plain {
+		go a.watchGuestAgentEvents(ctx)
+	}
 	if err := a.waitForRequirements("optional", a.optionalRequirements()); err != nil {
 		errs = append(errs, err)
 	}

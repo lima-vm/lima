@@ -88,6 +88,8 @@ func RegisterCreate(cmd *cobra.Command, commentPrefix string) {
 	_ = cmd.RegisterFlagCompletionFunc("vm-type", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return []string{"qemu", "vz"}, cobra.ShellCompDirectiveNoFileComp
 	})
+
+	flags.Bool("plain", false, commentPrefix+"plain mode. Disable mounts, port forwarding, containerd, etc.")
 }
 
 func defaultExprFunc(expr string) func(v *flag.Flag) (string, error) {
@@ -225,6 +227,7 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 
 		{"disk", d(".disk= \"%sGiB\""), true, false},
 		{"vm-type", d(".vmType = %q"), true, false},
+		{"plain", d(".plain = %s"), true, false},
 	}
 	var exprs []string
 	for _, def := range defs {

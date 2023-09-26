@@ -74,6 +74,7 @@ func (l *LimaVzDriver) Validate() error {
 		"Audio",
 		"Video",
 		"OS",
+		"Plain",
 	); len(unknown) > 0 {
 		logrus.Warnf("vmType %s: ignoring %+v", *l.Yaml.VMType, unknown)
 	}

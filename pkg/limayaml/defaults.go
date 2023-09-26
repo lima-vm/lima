@@ -665,6 +665,30 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 	if y.Rosetta.BinFmt == nil {
 		y.Rosetta.BinFmt = pointer.Bool(false)
 	}
+
+	if y.Plain == nil {
+		y.Plain = d.Plain
+	}
+	if o.Plain != nil {
+		y.Plain = o.Plain
+	}
+	if y.Plain == nil {
+		y.Plain = pointer.Bool(false)
+	}
+
+	fixUpForPlainMode(y)
+}
+
+func fixUpForPlainMode(y *LimaYAML) {
+	if !*y.Plain {
+		return
+	}
+	y.Mounts = nil
+	y.PortForwards = nil
+	y.Containerd.System = pointer.Bool(false)
+	y.Containerd.User = pointer.Bool(false)
+	y.Rosetta.BinFmt = pointer.Bool(false)
+	y.Rosetta.Enabled = pointer.Bool(false)
 }
 
 func executeGuestTemplate(format string) (bytes.Buffer, error) {
