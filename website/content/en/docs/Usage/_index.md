@@ -3,11 +3,10 @@ title: Usage
 weight: 2
 ---
 
-## Start a linux instance
+## Starting a Linux instance
 
-```console
-limactl start [--name=NAME] [--tty=false] <template://TEMPLATE>
-```
+Run `limactl start <INSTANCE>` to create and start the first instance.
+The `<INSTANCE>` name defaults to "default".
 
 ```console
 $ limactl start
@@ -24,37 +23,33 @@ Choose `Proceed with the current configuration`, and wait until "READY" to be pr
 
 For automation,  `--tty=false` flag can be used for disabling the interactive user interface.
 
-### Advanced usage
+### Customization
 To create an instance "default" from a template "docker":
-```console
-$ limactl start --name=default template://docker
+```bash
+limactl create --name=default template://docker
+limactl start default
 ```
 
-To create an instance "default" with modified parameters:
-```console
-$ limactl start --set='.cpus = 2 | .memory = "2GiB"'
+See also the command reference:
+- [`limactl create`](../reference/limactl_create/)
+- [`limactl start`](../reference/limactl_start/)
+- [`limactl edit`](../reference/limactl_edit/)
+
+### Executing Linux commands
+Run `limactl shell <INSTANCE> <COMMAND>` to launch `<COMMAND>` on the VM:
+```bash
+limactl shell default uname -a
 ```
 
-To see the template list:
-```console
-$ limactl start --list-templates
-```
-
-To create an instance "default" from a local file:
-```console
-$ limactl start --name=default /usr/local/share/lima/templates/fedora.yaml
-```
-
-To create an instance "default" from a remote URL (use carefully, with a trustable source):
-```console
-$ limactl start --name=default https://raw.githubusercontent.com/lima-vm/lima/master/examples/alpine.yaml
-```
-
-#### limactl shell
-`limactl shell <INSTANCE> <COMMAND>`: launch `<COMMAND>` on Linux.
+See also the command reference:
+- [`limactl shell`](../reference/limactl_shell/)
 
 For the "default" instance, this command can be shortened as `lima <COMMAND>`.
+```bash
+lima uname -a
+```
 The `lima` command also accepts the instance name as the environment variable `$LIMA_INSTANCE`.
+
 
 SSH can be used too:
 ```console
@@ -64,28 +59,6 @@ $ limactl ls --format='{{.SSHConfigFile}}' default
 $ ssh -F /Users/example/.lima/default/ssh.config lima-default
 ```
 
-#### limactl completion
+### Shell completion
 - To enable bash completion, add `source <(limactl completion bash)` to `~/.bash_profile`.
-
 - To enable zsh completion, see `limactl completion zsh --help`
-
-## Configuration
-{{% fixlinks %}}
-
-See [`./examples/default.yaml`](./examples/default.yaml).
-
-The current default spec:
-- OS: Ubuntu 23.04 (Lunar Lobster)
-- CPU: 4 cores
-- Memory: 4 GiB
-- Disk: 100 GiB
-- Mounts: `~` (read-only), `/tmp/lima` (writable)
-- SSH: 127.0.0.1:60022
-
-## How it works
-
-- Hypervisor: [QEMU with HVF accelerator (default), or Virtualization.framework](./docs/vmtype.md)
-- Filesystem sharing: [Reverse SSHFS (default),  or virtio-9p-pci aka virtfs, or virtiofs](./docs/mount.md)
-- Port forwarding: `ssh -L`, automated by watching `/proc/net/tcp` and `iptables` events in the guest
-
-{{% /fixlinks %}}
