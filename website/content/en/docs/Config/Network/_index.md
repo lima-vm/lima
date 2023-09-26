@@ -3,7 +3,19 @@ title: Network
 weight: 30
 ---
 
-## user-mode network (192.168.5.0/24)
+See the following flowchart to choose the best network for you:
+```mermaid
+flowchart
+  connect_to_vm_via{"Connect to the VM via"} -- "localhost" --> default["Default"]
+  connect_to_vm_via -- "IP" --> connect_from{"Connect to the VM IP from"}
+  connect_from -- "Host" --> vm{"VM type"}
+  vm -- "vz" --> vzNAT["vzNAT"]
+  vm -- "qemu" --> shared["socket_vmnet (shared)"]
+  connect_from -- "Other VMs" --> userV2["user-v2"]
+  connect_from -- "Other hosts" --> bridged["socket_vmnet (bridged)"]
+```
+
+## Default user-mode network (192.168.5.0/24)
 
 By default Lima only enables the user-mode networking aka "slirp".
 
@@ -125,8 +137,15 @@ networks:
 
 </details>
 
-Instances can then reference these networks from their `lima.yaml` file:
+Instances can then reference these networks:
 
+{{< tabpane text=true >}}
+{{% tab header="CLI" %}}
+```bash
+limactl start --network=lima:shared
+```
+{{% /tab %}}
+{{% tab header="YAML" %}}
 ```yaml
 networks:
   # Lima can manage the socket_vmnet daemon for networks defined in $LIMA_HOME/_config/networks.yaml automatically.
@@ -139,6 +158,8 @@ networks:
   #   # Interface name, defaults to "lima0", "lima1", etc.
   #   interface: ""
 ```
+{{% /tab %}}
+{{< /tabpane >}}
 
 The network daemon is started automatically when the first instance referencing them is started,
 and will stop automatically once the last instance has stopped. Daemon logs will be stored in the
@@ -170,10 +191,19 @@ networks:
 |-------------------|-----------------------------|
 
 For [VZ](./vmtype.md) instances, the "vzNAT" network can be configured as follows:
+{{< tabpane text=true >}}
+{{% tab header="CLI" %}}
+```bash
+limactl start --vm-type=vz --network=vzNAT
+```
+{{% /tab %}}
+{{% tab header="YAML" %}}
 ```yaml
 networks:
 - vzNAT: true
 ```
+{{% /tab %}}
+{{< /tabpane >}}
 
 The range of the IP address is not specifiable.
 
@@ -201,10 +231,19 @@ networks:
 
 Instances can then reference these networks from their `lima.yaml` file:
 
+{{< tabpane text=true >}}
+{{% tab header="CLI" %}}
+```bash
+limactl start --network=lima:example-user-v2
+```
+{{% /tab %}}
+{{% tab header="YAML" %}}
 ```yaml
 networks:
    - lima: example-user-v2
 ```
+{{% /tab %}}
+{{< /tabpane >}}
 
 _Note_
 

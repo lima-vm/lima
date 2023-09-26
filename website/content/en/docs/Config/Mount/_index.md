@@ -22,6 +22,13 @@ While the host works as an SFTP server, the host does not open any TCP port,
 as the host initiates an SSH connection into the guest and let the guest connect to the SFTP server via the stdin.
 
 An example configuration:
+{{< tabpane text=true >}}
+{{% tab header="CLI" %}}
+```bash
+limactl start --mount-type=reverse-sshfs
+```
+{{% /tab %}}
+{{% tab header="YAML" %}}
 ```yaml
 mountType: "reverse-sshfs"
 mounts:
@@ -43,6 +50,8 @@ mounts:
     # 🟢 Builtin default: "openssh-sftp-server" if OpenSSH SFTP Server binary is found, otherwise "builtin"
     sftpDriver: null
 ```
+{{% /tab %}}
+{{< /tabpane >}}
 
 The default value of `sftpDriver` has been set to "openssh-sftp-server" since Lima v0.10, when an OpenSSH SFTP Server binary
 such as `/usr/libexec/sftp-server` is detected on the host.
@@ -60,7 +69,15 @@ The "9p" mount type is implemented by using QEMU's virtio-9p-pci devices.
 virtio-9p-pci is also known as "virtfs", but note that this is unrelated to [virtio-fs](https://virtio-fs.gitlab.io/).
 
 An example configuration:
+{{< tabpane text=true >}}
+{{% tab header="CLI" %}}
+```bash
+limactl start --vm-type=qemu --mount-type=9p
+```
+{{% /tab %}}
+{{% tab header="YAML" %}}
 ```yaml
+vmType: "qemu"
 mountType: "9p"
 mounts:
 - location: "~"
@@ -81,6 +98,8 @@ mounts:
     # 🟢 Builtin default: "fscache" for non-writable mounts, "mmap" for writable mounts
     cache: null
 ```
+{{% /tab %}}
+{{< /tabpane >}}
 
 The "9p" mount type requires Lima v0.10.0 or later.
 
@@ -98,12 +117,21 @@ The "virtiofs" mount type is implemented via the virtio-fs device by using apple
 Linux guest kernel must enable the CONFIG_VIRTIO_FS support for this support.
 
 An example configuration:
+{{< tabpane text=true >}}
+{{% tab header="CLI" %}}
+```bash
+limactl start --vm-type=vz --mount-type=virtiofs
+```
+{{% /tab %}}
+{{% tab header="YAML" %}}
 ```yaml
 vmType: "vz"  # only for macOS; Linux uses 'qemu'
 mountType: "virtiofs"
 mounts:
 - location: "~"
 ```
+{{% /tab %}}
+{{< /tabpane >}}
 
 #### Caveats
 - For macOS, the "virtiofs" mount type is supported only on macOS 13 or above with `vmType: vz` config. See also [`vmtype.md`](./vmtype.md).
@@ -120,10 +148,19 @@ mounts:
 The "wsl2" mount type relies on using WSL2's navite disk sharing, where the root disk is available by default at `/mnt/$DISK_LETTER` (e.g. `/mnt/c/`).
 
 An example configuration:
+{{< tabpane text=true >}}
+{{% tab header="CLI" %}}
+```bash
+limactl start --vm-type=wsl2 --mount-type=wsl2
+```
+{{% /tab %}}
+{{% tab header="YAML" %}}
 ```yaml
 vmType: "wsl2"
 mountType: "wsl2"
 ```
+{{% /tab %}}
+{{< /tabpane >}}
 
 #### Caveats
 - WSL2 file permissions may not work exactly as expected when accessing files that are natively on the Windows disk ([more info](https://github.com/MicrosoftDocs/WSL/blob/mattw-wsl2-explainer/WSL/file-permissions.md))
