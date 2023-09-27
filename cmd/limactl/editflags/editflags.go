@@ -175,7 +175,7 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 				return expr, nil
 			},
 			false,
-			true},
+			false},
 		{"rosetta",
 			func(_ *flag.Flag) (string, error) {
 				b, err := flags.GetBool("rosetta")
@@ -186,7 +186,7 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 			},
 			false,
 			true},
-		{"set", d("%s"), false, true},
+		{"set", d("%s"), false, false},
 		{"video",
 			func(_ *flag.Flag) (string, error) {
 				b, err := flags.GetBool("video")
@@ -199,7 +199,7 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 				return ".video.display = \"none\"", nil
 			},
 			false,
-			true},
+			false},
 		{"arch", d(".arch = %q"), true, false},
 		{"containerd",
 			func(_ *flag.Flag) (string, error) {
