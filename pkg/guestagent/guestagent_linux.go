@@ -27,20 +27,25 @@ func New(newTicker func() (<-chan time.Time, func()), iptablesIdle time.Duration
 
 	auditClient, err := libaudit.NewMulticastAuditClient(nil)
 	switch {
+	// syscall.EPROTONOSUPPORT or syscall.EAFNOSUPPORT is returned when calling attempting to connect to NETLINK_AUDIT
+	// on a kernel built without auditing support.
+	// https://github.com/elastic/go-libaudit/blob/ec298e53a6841a1f7715abbc7122635622f349bd/audit.go#L112-L115
 	case errors.Is(err, syscall.EPROTONOSUPPORT), errors.Is(err, syscall.EAFNOSUPPORT):
-		// system doesn't support auditing, skip
-		a.worthCheckingIPTables = true
-		go a.kubernetesServiceWatcher.Start()
-		go a.fixSystemTimeSkew()
-		return a, nil
+		return startGuestAgentRoutines(a, false)
 	case !errors.Is(err, nil):
 		return nil, err
 	}
 
+	// syscall.EPERM is returned when using audit from a non-initial namespace
+	// https://github.com/torvalds/linux/blob/633b47cb009d09dc8f4ba9cdb3a0ca138809c7c7/kernel/audit.c#L1054-L1057
 	auditStatus, err := auditClient.GetStatus()
-	if err != nil {
+	switch {
+	case errors.Is(err, syscall.EPERM):
+		return startGuestAgentRoutines(a, false)
+	case !errors.Is(err, nil):
 		return nil, err
 	}
+
 	if auditStatus.Enabled == 0 {
 		if err = auditClient.SetEnabled(true, libaudit.WaitForReply); err != nil {
 			return nil, err
@@ -59,8 +64,21 @@ func New(newTicker func() (<-chan time.Time, func()), iptablesIdle time.Duration
 	} else {
 		a.worthCheckingIPTables = true
 	}
+	return startGuestAgentRoutines(a, true)
+}
+
+// startGuestAgentRoutines sets worthCheckingIPTables to true if auditing is not supported,
+// instead of using setWorthCheckingIPTablesRoutine to dynamically set the value.
+//
+// Auditing is not supported in a kernels and is not currently supported outside of the initial namespace, so does not work
+// from inside a container or WSL2 instance, for example.
+func startGuestAgentRoutines(a *agent, supportsAuditing bool) (*agent, error) {
+	if !supportsAuditing {
+		a.worthCheckingIPTables = true
+	}
 	go a.kubernetesServiceWatcher.Start()
 	go a.fixSystemTimeSkew()
+
 	return a, nil
 }
 
