@@ -62,13 +62,27 @@ func Sign(qExe string) error {
 	return nil
 }
 
+// isColimaWrapper__useThisFunctionOnlyForPrintingHints returns true
+// if qExe is like "/Users/<USER>/.colima/_wrapper/4e1b408f843d1c63afbbdcf80c40e4c88d33509f/bin/qemu-system-x86_64".
+//
+// The result can be used *ONLY* for controlling hint messages.
+// DO NOT change the behavior of Lima depending on this result.
+//
+//nolint:revive
+func isColimaWrapper__useThisFunctionOnlyForPrintingHints__(qExe string) bool {
+	return strings.Contains(qExe, "/.colima/_wrapper/")
+}
+
 // AskToSignIfNotSignedProperly asks to sign the QEMU binary with the "com.apple.security.hypervisor" entitlement.
 //
 // On Homebrew, QEMU binaries are usually already signed, but Homebrew's signing infrastructure is broken for Intel as of Augest 2023.
 // https://github.com/lima-vm/lima/issues/1742
 func AskToSignIfNotSignedProperly(qExe string) {
 	if isSignedErr := IsSigned(qExe); isSignedErr != nil {
-		logrus.WithError(isSignedErr).Warnf("QEMU binary %q is not properly signed with the \"com.apple.security.hypervisor\" entitlement", qExe)
+		logrus.WithError(isSignedErr).Warnf("QEMU binary %q does not seem properly signed with the \"com.apple.security.hypervisor\" entitlement", qExe)
+		if isColimaWrapper__useThisFunctionOnlyForPrintingHints__(qExe) {
+			logrus.Info("Hint: the warning above is usually negligible for colima ( Printed due to https://github.com/abiosoft/colima/issues/796 )")
+		}
 		var ans bool
 		if isatty.IsTerminal(os.Stdout.Fd()) || isatty.IsCygwinTerminal(os.Stdout.Fd()) {
 			prompt := &survey.Confirm{
@@ -86,7 +100,7 @@ func AskToSignIfNotSignedProperly(qExe string) {
 				logrus.Infof("Successfully signed %q with the \"com.apple.security.hypervisor\" entitlement", qExe)
 			}
 		} else {
-			logrus.Warn("You have to sign the QEMU binary with the \"com.apple.security.hypervisor\" entitlement manually. See https://github.com/lima-vm/lima/issues/1742 .")
+			logrus.Warn("If QEMU does not start up, you may have to sign the QEMU binary with the \"com.apple.security.hypervisor\" entitlement manually. See https://github.com/lima-vm/lima/issues/1742 .")
 		}
 	} else {
 		logrus.Infof("QEMU binary %q seems properly signed with the \"com.apple.security.hypervisor\" entitlement", qExe)
