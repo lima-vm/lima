@@ -20,13 +20,14 @@ import (
 
 // startVM calls WSL to start a VM.
 func startVM(ctx context.Context, distroName string) error {
-	_, err := executil.RunUTF16leCommand([]string{
+	out, err := executil.RunUTF16leCommand([]string{
 		"wsl.exe",
 		"--distribution",
 		distroName,
 	}, executil.WithContext(&ctx))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to run `wsl.exe --distribution %s`: %w (out=%q)",
+			distroName, err, string(out))
 	}
 	return nil
 }
@@ -35,7 +36,7 @@ func startVM(ctx context.Context, distroName string) error {
 func initVM(ctx context.Context, instanceDir, distroName string) error {
 	baseDisk := filepath.Join(instanceDir, filenames.BaseDisk)
 	logrus.Infof("Importing distro from %q to %q", baseDisk, instanceDir)
-	_, err := executil.RunUTF16leCommand([]string{
+	out, err := executil.RunUTF16leCommand([]string{
 		"wsl.exe",
 		"--import",
 		distroName,
@@ -43,20 +44,22 @@ func initVM(ctx context.Context, instanceDir, distroName string) error {
 		baseDisk,
 	}, executil.WithContext(&ctx))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to run `wsl.exe --import %s %s %s`: %w (out=%q)",
+			distroName, instanceDir, baseDisk, err, string(out))
 	}
 	return nil
 }
 
 // stopVM calls WSL to stop a running VM.
 func stopVM(ctx context.Context, distroName string) error {
-	_, err := executil.RunUTF16leCommand([]string{
+	out, err := executil.RunUTF16leCommand([]string{
 		"wsl.exe",
 		"--terminate",
 		distroName,
 	}, executil.WithContext(&ctx))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to run `wsl.exe --terminate %s`: %w (out=%q)",
+			distroName, err, string(out))
 	}
 	return nil
 }
@@ -86,10 +89,10 @@ func provisionVM(ctx context.Context, instanceDir, instanceName, distroName stri
 			"-c",
 			outString,
 		)
-		if _, err := cmd.CombinedOutput(); err != nil {
+		if out, err := cmd.CombinedOutput(); err != nil {
 			*errCh <- fmt.Errorf(
-				"error running wslCommand that executes boot.sh: %w, "+
-					"check /var/log/lima-init.log for more details", err)
+				"error running wslCommand that executes boot.sh (%v): %w, "+
+					"check /var/log/lima-init.log for more details (out=%q)", cmd.Args, err, string(out))
 		}
 
 		for {
@@ -130,13 +133,14 @@ func keepAlive(ctx context.Context, distroName string, errCh *chan error) {
 // unregisterVM calls WSL to unregister a VM.
 func unregisterVM(ctx context.Context, distroName string) error {
 	logrus.Info("Unregistering WSL2 VM")
-	_, err := executil.RunUTF16leCommand([]string{
+	out, err := executil.RunUTF16leCommand([]string{
 		"wsl.exe",
 		"--unregister",
 		distroName,
 	}, executil.WithContext(&ctx))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to run `wsl.exe --unregister %s`: %w (out=%q)",
+			distroName, err, string(out))
 	}
 	return nil
 }

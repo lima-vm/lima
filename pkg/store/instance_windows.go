@@ -51,7 +51,7 @@ func GetWslStatus(instName string) (string, error) {
 		"--verbose",
 	})
 	if err != nil {
-		return "", fmt.Errorf("failed to run `wsl --list --verbose`, err: %w", err)
+		return "", fmt.Errorf("failed to run `wsl --list --verbose`, err: %w (out=%q)", err, string(out))
 	}
 
 	if len(out) == 0 {
@@ -94,7 +94,7 @@ func getWslSSHAddress(instName string) (string, error) {
 	cmd := exec.Command("wsl.exe", "-d", distroName, "bash", "-c", `hostname -I | cut -d ' ' -f1`)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("failed to get hostname for instance %s, err: %w", instName, err)
+		return "", fmt.Errorf("failed to get hostname for instance %s, err: %w (out=%q)", instName, err, string(out))
 	}
 
 	return strings.TrimSpace(string(out)), nil
