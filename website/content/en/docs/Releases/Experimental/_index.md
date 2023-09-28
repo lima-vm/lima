@@ -18,7 +18,4 @@ The following features are experimental and subject to change:
 
 The following commands are experimental and subject to change:
 
-- `limactl (create|start|edit) --set=<YQ EXPRESSION>`
-- `limactl (create|start|edit) --network=<NETWORK>`
-- `limactl (create|start|edit) --video=<BOOL>`
 - `limactl snapshot *`
