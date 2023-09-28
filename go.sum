@@ -29,8 +29,8 @@ github.com/containerd/containerd v1.7.6 h1:oNAVsnhPoy4BTPQivLgTzI9Oleml9l/+eYIDY
 github.com/containerd/containerd v1.7.6/go.mod h1:SY6lrkkuJT40BVNO37tlYTSnKJnP5AXBc0fhx0q+TJ4=
 github.com/containerd/continuity v0.4.2 h1:v3y/4Yz5jwnvqPKJJ+7Wf93fyWoCB3F5EclWG023MDM=
 github.com/containerd/continuity v0.4.2/go.mod h1:F6PTNCKepoxEaXLQp3wDAjygEnImnZ/7o4JzpodfroQ=
-github.com/containers/gvisor-tap-vsock v0.7.0 h1:lL5UpfXhl+tuTwK43CXhKWwfvAiZtde6G5alFeoO+Z8=
-github.com/containers/gvisor-tap-vsock v0.7.0/go.mod h1:edQTwl8ar+ACuQOkazpQkgd/ZMF6TJ2Xr3fv+MKUaw8=
+github.com/containers/gvisor-tap-vsock v0.7.1 h1:+Rc+sOPplrkQb/BUXeN0ug8TxjgyrIqo/9P/eNS2A4c=
+github.com/containers/gvisor-tap-vsock v0.7.1/go.mod h1:WSSsjcuYZkvP8i0J+Ht3LF8yvysn3krD5zxQ74wz7y0=
 github.com/coreos/go-semver v0.3.1 h1:yi21YpKnrx1gt5R+la8n5WgS0kCrsPp33dmEyHReZr4=
 github.com/coreos/go-semver v0.3.1/go.mod h1:irMmmIw/7yzSRPWryHsK7EYSg09caPQL03VsM8rvUec=
 github.com/cpuguy83/go-md2man/v2 v2.0.2 h1:p1EgwI/C7NhT0JmVkwCD2ZBK8j4aeHQX2pMHHBfMQ6w=
