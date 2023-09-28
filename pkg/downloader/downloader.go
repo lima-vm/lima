@@ -441,7 +441,8 @@ func downloadHTTP(localPath, url string, description string, expectedDigest dige
 		if description == "" {
 			description = url
 		}
-		fmt.Printf("Downloading %s\n", description)
+		// stderr corresponds to the progress bar output
+		fmt.Fprintf(os.Stderr, "Downloading %s\n", description)
 	}
 	bar.Start()
 	if _, err := io.Copy(multiWriter, bar.NewProxyReader(resp.Body)); err != nil {
