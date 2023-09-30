@@ -181,8 +181,8 @@ For more details, see [Documentation/Networking](https://wiki.qemu.org/Documenta
 #### "IP address is not assigined for vmnet networks"
 Try the following commands:
 ```bash
-/usr/libexec/ApplicationFirewall/socketfilterfw --add /usr/libexec/bootpd
-/usr/libexec/ApplicationFirewall/socketfilterfw --unblock /usr/libexec/bootpd
+sudo /usr/libexec/ApplicationFirewall/socketfilterfw --add /usr/libexec/bootpd
+sudo /usr/libexec/ApplicationFirewall/socketfilterfw --unblock /usr/libexec/bootpd
 ```
 
 ### Filesystem sharing
