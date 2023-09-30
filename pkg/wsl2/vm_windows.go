@@ -7,9 +7,9 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 
 	"github.com/lima-vm/lima/pkg/executil"
 	"github.com/lima-vm/lima/pkg/store"
@@ -73,11 +73,27 @@ func provisionVM(ctx context.Context, instanceDir, instanceName, distroName stri
 	m := map[string]string{
 		"CIDataPath": ciDataPath,
 	}
-	out, err := textutil.ExecuteTemplate(limaBoot, m)
+	limaBootB, err := textutil.ExecuteTemplate(limaBoot, m)
 	if err != nil {
 		return fmt.Errorf("failed to construct wsl boot.sh script: %w", err)
 	}
-	outString := strings.Replace(string(out), `\r\n`, `\n`, -1)
+	limaBootFile, err := os.CreateTemp("", "lima-wsl2-boot-*.sh")
+	if err != nil {
+		return err
+	}
+	if _, err = limaBootFile.Write(limaBootB); err != nil {
+		return err
+	}
+	limaBootFilePathOnWindows := limaBootFile.Name()
+	if err = limaBootFile.Close(); err != nil {
+		return err
+	}
+	defer os.RemoveAll(limaBootFilePathOnWindows)
+	limaBootFilePathOnLinuxB, err := exec.Command("wsl.exe", "wslpath", "-u", limaBootFilePathOnWindows).Output()
+	if err != nil {
+		return err
+	}
+	limaBootFilePathOnLinux := string(limaBootFilePathOnLinuxB)
 
 	go func() {
 		cmd := exec.CommandContext(
@@ -86,10 +102,11 @@ func provisionVM(ctx context.Context, instanceDir, instanceName, distroName stri
 			"-d",
 			distroName,
 			"bash",
-			"-c",
-			outString,
+			limaBootFilePathOnLinux,
 		)
-		if out, err := cmd.CombinedOutput(); err != nil {
+		out, err := cmd.CombinedOutput()
+		logrus.Infof("%v: %q", cmd.Args, string(out))
+		if err != nil {
 			*errCh <- fmt.Errorf(
 				"error running wslCommand that executes boot.sh (%v): %w, "+
 					"check /var/log/lima-init.log for more details (out=%q)", cmd.Args, err, string(out))

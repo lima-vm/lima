@@ -106,6 +106,12 @@ jobs:
       run: |
         .\_output\bin\limactl.exe start template://experimental/wsl2
       # TODO: run the full integration tests
+    - name: Debug
+      if: always()
+      run: type C:\Users\runneradmin\.lima\wsl2\ha.stdout.log
+    - name: Debug
+      if: always()
+      run: type C:\Users\runneradmin\.lima\wsl2\ha.stderr.log
     - name: Unit tests
       run: go test -v ./...
 
