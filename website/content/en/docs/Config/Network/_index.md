@@ -168,8 +168,8 @@ and will stop automatically once the last instance has stopped. Daemon logs will
 The IP address is automatically assigned by macOS's bootpd.
 If the IP address is not assigned, try the following commands:
 ```bash
-/usr/libexec/ApplicationFirewall/socketfilterfw --add /usr/libexec/bootpd
-/usr/libexec/ApplicationFirewall/socketfilterfw --unblock /usr/libexec/bootpd
+sudo /usr/libexec/ApplicationFirewall/socketfilterfw --add /usr/libexec/bootpd
+sudo /usr/libexec/ApplicationFirewall/socketfilterfw --unblock /usr/libexec/bootpd
 ```
 
 #### Unmanaged
