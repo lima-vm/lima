@@ -22,7 +22,10 @@ func Sudoers() (string, error) {
 
 	// names must be in stable order to be able to check if sudoers file needs updating
 	names := make([]string, 0, len(config.Networks))
-	for name := range config.Networks {
+	for name, nw := range config.Networks {
+		if nw.Mode == ModeUserV2 {
+			continue // no sudo needed
+		}
 		names = append(names, name)
 	}
 	sort.Strings(names)
