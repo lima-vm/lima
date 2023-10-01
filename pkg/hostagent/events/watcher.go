@@ -3,6 +3,7 @@ package events
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/lima-vm/lima/pkg/logrusutil"
@@ -51,7 +52,7 @@ loop:
 			}
 			var ev Event
 			if err := json.Unmarshal([]byte(line.Text), &ev); err != nil {
-				return err
+				return fmt.Errorf("failed to unmarshal %q as %T: %w", line.Text, ev, err)
 			}
 			logrus.WithField("event", ev).Debugf("received an event")
 			if stop := onEvent(ev); stop {
