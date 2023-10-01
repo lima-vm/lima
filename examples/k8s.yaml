@@ -123,7 +123,8 @@ provision:
     kubectl apply -f https://github.com/flannel-io/flannel/releases/download/v0.22.1/kube-flannel.yml
     # Control plane node isolation
     kubectl taint nodes --all node-role.kubernetes.io/control-plane-
-    sed -e "s/${LIMA_CIDATA_SLIRP_IP_ADDRESS:-192.168.5.15}/127.0.0.1/" -i $KUBECONFIG
+    # Replace the server address with localhost, so that it works also from the host
+    sed -e "/server:/ s|https://.*:\([0-9]*\)$|https://127.0.0.1:\1|" -i $KUBECONFIG
     mkdir -p ${HOME:-/root}/.kube && cp -f $KUBECONFIG ${HOME:-/root}/.kube/config
 probes:
 - description: "kubeadm to be installed"
