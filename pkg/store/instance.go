@@ -55,6 +55,7 @@ type Instance struct {
 	Errors          []error            `json:"errors,omitempty"`
 	Config          *limayaml.LimaYAML `json:"config,omitempty"`
 	SSHAddress      string             `json:"sshAddress,omitempty"`
+	Protected       bool               `json:"protected"`
 }
 
 func (inst *Instance) LoadYAML() (*limayaml.LimaYAML, error) {
@@ -137,6 +138,11 @@ func Inspect(instName string) (*Instance, error) {
 		inst.Memory = 0
 		inst.CPUs = 0
 		inst.Disk = 0
+	}
+
+	protected := filepath.Join(instDir, filenames.Protected)
+	if _, err := os.Lstat(protected); !errors.Is(err, os.ErrNotExist) {
+		inst.Protected = true
 	}
 
 	inspectStatus(instDir, inst, y)
@@ -392,5 +398,29 @@ func PrintInstances(w io.Writer, instances []*Instance, format string, options *
 		}
 		fmt.Fprintln(w)
 	}
+	return nil
+}
+
+// Protect protects the instance to prohibit accidental removal.
+// Protect does not return an error even when the instance is already protected.
+func (inst *Instance) Protect() error {
+	protected := filepath.Join(inst.Dir, filenames.Protected)
+	// TODO: Do an equivalent of `chmod +a "everyone deny delete,delete_child,file_inherit,directory_inherit"`
+	// https://github.com/lima-vm/lima/issues/1595
+	if err := os.WriteFile(protected, nil, 0400); err != nil {
+		return err
+	}
+	inst.Protected = true
+	return nil
+}
+
+// Unprotect unprotects the instance.
+// Unprotect does not return an error even when the instance is already unprotected.
+func (inst *Instance) Unprotect() error {
+	protected := filepath.Join(inst.Dir, filenames.Protected)
+	if err := os.RemoveAll(protected); err != nil {
+		return err
+	}
+	inst.Protected = false
 	return nil
 }

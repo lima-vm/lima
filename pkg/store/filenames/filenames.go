@@ -56,6 +56,8 @@ const (
 
 	// SocketDir is the default location for forwarded sockets with a relative paths in HostSocket
 	SocketDir = "sock"
+
+	Protected = "protected" // empty file; used by `limactl protect`
 )
 
 // Filenames used under a disk directory
