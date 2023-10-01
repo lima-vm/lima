@@ -16,7 +16,6 @@ import (
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/lima-vm/lima/pkg/yqutil"
-	"github.com/mattn/go-isatty"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -29,8 +28,6 @@ func newEditCommand() *cobra.Command {
 		RunE:              editAction,
 		ValidArgsFunction: editBashComplete,
 	}
-	// TODO: "survey" does not support using cygwin terminal on windows yet
-	editCommand.Flags().Bool("tty", isatty.IsTerminal(os.Stdout.Fd()), "enable TUI interactions such as opening an editor, defaults to true when stdout is a terminal")
 	editflags.RegisterEdit(editCommand)
 	return editCommand
 }

@@ -24,15 +24,12 @@ import (
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/lima-vm/lima/pkg/templatestore"
 	"github.com/lima-vm/lima/pkg/yqutil"
-	"github.com/mattn/go-isatty"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
 func registerCreateFlags(cmd *cobra.Command, commentPrefix string) {
 	flags := cmd.Flags()
-	// TODO: "survey" does not support using cygwin terminal on windows yet
-	flags.Bool("tty", isatty.IsTerminal(os.Stdout.Fd()), commentPrefix+"enable TUI interactions such as opening an editor, defaults to true when stdout is a terminal")
 	flags.String("name", "", commentPrefix+"override the instance name")
 	flags.Bool("list-templates", false, commentPrefix+"list available templates and exit")
 	editflags.RegisterCreate(cmd, commentPrefix)
