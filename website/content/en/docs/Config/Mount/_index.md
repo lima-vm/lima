@@ -138,6 +138,8 @@ mounts:
 - For Linux, the "virtiofs" mount type requires the [Rust version of virtiofsd](https://gitlab.com/virtio-fs/virtiofsd).
   Using the version from QEMU (usually packaged as `qemu-virtiofsd`) will *not* work, as it requires root access to run.
 
+<!-- WSL2 driver seems currently unstable -->
+<!--
 ### wsl2
 > **Warning**
 > "wsl2" mode is experimental
@@ -165,3 +167,4 @@ mountType: "wsl2"
 #### Caveats
 - WSL2 file permissions may not work exactly as expected when accessing files that are natively on the Windows disk ([more info](https://github.com/MicrosoftDocs/WSL/blob/mattw-wsl2-explainer/WSL/file-permissions.md))
 - WSL2's disk sharing system uses a 9P protocol server, making the performance similar to [Lima's 9p](#9p) mode ([more info](https://github.com/MicrosoftDocs/WSL/blob/mattw-wsl2-explainer/WSL/wsl2-architecture.md#wsl-2-architectural-flow))
+-->
