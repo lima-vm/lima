@@ -1,0 +1,12 @@
+- header: Install Lima
+  icon: fa-solid fa-code
+  link: /docs/installation
+  label: Get Lima Here
+- header: Try Lima
+  icon: fa-solid fa-chalkboard
+  link: /docs/usage
+  label: Get started with Lima
+- header: Contributions welcome
+  icon: fa-brands fa-github
+  link: /community
+  label: Join the Lima community
