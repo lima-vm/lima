@@ -191,12 +191,11 @@ func Download(local, remote string, opts ...Opt) (*Result, error) {
 	}
 	if _, err := os.Stat(shadData); err == nil {
 		logrus.Debugf("file %q is cached as %q", localPath, shadData)
-		if shadDigestB, err := os.ReadFile(shadDigest); err == nil {
+		if _, err := os.Stat(shadDigest); err == nil {
 			logrus.Debugf("Comparing digest %q with the cached digest file %q, not computing the actual digest of %q",
 				o.expectedDigest, shadDigest, shadData)
-			shadDigestS := strings.TrimSpace(string(shadDigestB))
-			if o.expectedDigest.String() != shadDigestS {
-				return nil, fmt.Errorf("expected digest %q does not match the cached digest %q", o.expectedDigest.String(), shadDigestS)
+			if err := validateCachedDigest(shadDigest, o.expectedDigest); err != nil {
+				return nil, err
 			}
 			if err := copyLocal(localPath, shadData, ext, o.decompress, "", ""); err != nil {
 				return nil, err
@@ -295,6 +294,9 @@ func copyLocal(dst, src, ext string, decompress bool, description string, expect
 		return err
 	}
 
+	if expectedDigest != "" {
+		logrus.Debugf("verifying digest of local file %q (%s)", srcPath, expectedDigest)
+	}
 	if err := validateLocalFileDigest(srcPath, expectedDigest); err != nil {
 		return err
 	}
@@ -383,6 +385,21 @@ func decompressLocal(dst, src, ext string, description string) error {
 	return err
 }
 
+func validateCachedDigest(shadDigest string, expectedDigest digest.Digest) error {
+	if expectedDigest == "" {
+		return nil
+	}
+	shadDigestB, err := os.ReadFile(shadDigest)
+	if err != nil {
+		return err
+	}
+	shadDigestS := strings.TrimSpace(string(shadDigestB))
+	if shadDigestS != expectedDigest.String() {
+		return fmt.Errorf("expected digest %q, got %q", expectedDigest, shadDigestS)
+	}
+	return nil
+}
+
 func validateLocalFileDigest(localPath string, expectedDigest digest.Digest) error {
 	if localPath == "" {
 		return fmt.Errorf("validateLocalFileDigest: got empty localPath")
@@ -390,7 +407,6 @@ func validateLocalFileDigest(localPath string, expectedDigest digest.Digest) err
 	if expectedDigest == "" {
 		return nil
 	}
-	logrus.Debugf("verifying digest of local file %q (%s)", localPath, expectedDigest)
 	algo := expectedDigest.Algorithm()
 	if !algo.Available() {
 		return fmt.Errorf("expected digest algorithm %q is not available", algo)
