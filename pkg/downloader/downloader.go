@@ -242,6 +242,52 @@ func Download(local, remote string, opts ...Opt) (*Result, error) {
 	return res, nil
 }
 
+// Cached checks if the remote resource is in the cache.
+//
+// Download caches the remote resource if WithCache or WithCacheDir option is specified.
+// Local files are not cached.
+//
+// When the cache path already exists, Cached returns Result with StatusUsedCache.
+func Cached(remote string, opts ...Opt) (*Result, error) {
+	var o options
+	for _, f := range opts {
+		if err := f(&o); err != nil {
+			return nil, err
+		}
+	}
+	if o.cacheDir == "" {
+		return nil, fmt.Errorf("caching-only mode requires the cache directory to be specified")
+	}
+	if IsLocal(remote) {
+		return nil, fmt.Errorf("local files are not cached")
+	}
+
+	shad := cacheDirectoryPath(o.cacheDir, remote)
+	shadData := filepath.Join(shad, "data")
+	shadDigest, err := cacheDigestPath(shad, o.expectedDigest)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := os.Stat(shadData); err != nil {
+		return nil, err
+	}
+	if _, err := os.Stat(shadDigest); err != nil {
+		if err := validateCachedDigest(shadDigest, o.expectedDigest); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := validateLocalFileDigest(shadData, o.expectedDigest); err != nil {
+			return nil, err
+		}
+	}
+	res := &Result{
+		Status:          StatusUsedCache,
+		CachePath:       shadData,
+		ValidatedDigest: o.expectedDigest != "",
+	}
+	return res, nil
+}
+
 // cacheDirectoryPath returns the cache subdirectory path.
 // - "url" file contains the url
 // - "data" file contains the data
