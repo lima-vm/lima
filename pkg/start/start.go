@@ -34,7 +34,7 @@ const DefaultWatchHostAgentEventsTimeout = 10 * time.Minute
 // ensureNerdctlArchiveCache prefetches the nerdctl-full-VERSION-GOOS-GOARCH.tar.gz archive
 // into the cache before launching the hostagent process, so that we can show the progress in tty.
 // https://github.com/lima-vm/lima/issues/326
-func ensureNerdctlArchiveCache(y *limayaml.LimaYAML) (string, error) {
+func ensureNerdctlArchiveCache(y *limayaml.LimaYAML, created bool) (string, error) {
 	if !*y.Containerd.System && !*y.Containerd.User {
 		// nerdctl archive is not needed
 		return "", nil
@@ -42,6 +42,13 @@ func ensureNerdctlArchiveCache(y *limayaml.LimaYAML) (string, error) {
 
 	errs := make([]error, len(y.Containerd.Archives))
 	for i, f := range y.Containerd.Archives {
+		// Skip downloading again if the file is already in the cache
+		if created && f.Arch == *y.Arch && !downloader.IsLocal(f.Location) {
+			path, err := fileutils.CachedFile(f)
+			if err == nil {
+				return path, nil
+			}
+		}
 		path, err := fileutils.DownloadFile("", f, false, "the nerdctl archive", *y.Arch)
 		if err != nil {
 			errs[i] = err
@@ -80,10 +87,16 @@ func Prepare(_ context.Context, inst *store.Instance) (*Prepared, error) {
 		return nil, err
 	}
 
+	// Check if the instance has been created (the base disk already exists)
+	created := false
+	baseDisk := filepath.Join(inst.Dir, filenames.BaseDisk)
+	if _, err := os.Stat(baseDisk); err == nil {
+		created = true
+	}
 	if err := limaDriver.CreateDisk(); err != nil {
 		return nil, err
 	}
-	nerdctlArchiveCache, err := ensureNerdctlArchiveCache(y)
+	nerdctlArchiveCache, err := ensureNerdctlArchiveCache(y, created)
 	if err != nil {
 		return nil, err
 	}

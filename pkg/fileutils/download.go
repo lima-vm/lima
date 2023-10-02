@@ -41,6 +41,17 @@ func DownloadFile(dest string, f limayaml.File, decompress bool, description str
 	return res.CachePath, nil
 }
 
+// CachedFile checks if a file is in the cache, validating the digest if it is available. Returns path in cache.
+func CachedFile(f limayaml.File) (string, error) {
+	res, err := downloader.Cached(f.Location,
+		downloader.WithCache(),
+		downloader.WithExpectedDigest(f.Digest))
+	if err != nil {
+		return "", fmt.Errorf("cache did not contain %q: %w", f.Location, err)
+	}
+	return res.CachePath, nil
+}
+
 // Errors compose multiple into a single error.
 // Errors filters out ErrSkipped.
 func Errors(errs []error) error {
