@@ -358,7 +358,7 @@ jobs:
 
   vz:
     name: "vz"
-    runs-on: macos-13
+    runs-on: macos-13-xlarge
     timeout-minutes: 120
     steps:
     - uses: actions/checkout@v4
@@ -376,8 +376,8 @@ jobs:
     - name: Make
       run: make
     - name: Install
-      run: make install
+      run: sudo make install
     - name: Install test dependencies
-      run: brew install qemu bash coreutils
+      run: brew install bash coreutils
     - name: Test
       run: ./hack/test-templates.sh templates/experimental/vz.yaml
