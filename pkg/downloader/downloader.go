@@ -97,8 +97,8 @@ func WithDecompress(decompress bool) Opt {
 // - The digest was not specified.
 // - The file already exists in the local target path.
 //
-// When the `data` file exists in the cache dir with `digest.<ALGO>` file,
-// the digest is verified by comparing the content of `digest.<ALGO>` with the expected
+// When the `data` file exists in the cache dir with `<ALGO>.digest` file,
+// the digest is verified by comparing the content of `<ALGO>.digest` with the expected
 // digest string. So, the actual digest of the `data` file is not computed.
 func WithExpectedDigest(expectedDigest digest.Digest) Opt {
 	return func(o *options) error {
@@ -183,24 +183,19 @@ func Download(local, remote string, opts ...Opt) (*Result, error) {
 		return res, nil
 	}
 
-	shad := filepath.Join(o.cacheDir, "download", "by-url-sha256", fmt.Sprintf("%x", sha256.Sum256([]byte(remote))))
+	shad := cacheDirectoryPath(o.cacheDir, remote)
 	shadData := filepath.Join(shad, "data")
-	shadDigest := ""
-	if o.expectedDigest != "" {
-		algo := o.expectedDigest.Algorithm().String()
-		if strings.Contains(algo, "/") || strings.Contains(algo, "\\") {
-			return nil, fmt.Errorf("invalid digest algorithm %q", algo)
-		}
-		shadDigest = filepath.Join(shad, algo+".digest")
+	shadDigest, err := cacheDigestPath(shad, o.expectedDigest)
+	if err != nil {
+		return nil, err
 	}
 	if _, err := os.Stat(shadData); err == nil {
 		logrus.Debugf("file %q is cached as %q", localPath, shadData)
-		if shadDigestB, err := os.ReadFile(shadDigest); err == nil {
+		if _, err := os.Stat(shadDigest); err == nil {
 			logrus.Debugf("Comparing digest %q with the cached digest file %q, not computing the actual digest of %q",
 				o.expectedDigest, shadDigest, shadData)
-			shadDigestS := strings.TrimSpace(string(shadDigestB))
-			if o.expectedDigest.String() != shadDigestS {
-				return nil, fmt.Errorf("expected digest %q does not match the cached digest %q", o.expectedDigest.String(), shadDigestS)
+			if err := validateCachedDigest(shadDigest, o.expectedDigest); err != nil {
+				return nil, err
 			}
 			if err := copyLocal(localPath, shadData, ext, o.decompress, "", ""); err != nil {
 				return nil, err
@@ -247,6 +242,73 @@ func Download(local, remote string, opts ...Opt) (*Result, error) {
 	return res, nil
 }
 
+// Cached checks if the remote resource is in the cache.
+//
+// Download caches the remote resource if WithCache or WithCacheDir option is specified.
+// Local files are not cached.
+//
+// When the cache path already exists, Cached returns Result with StatusUsedCache.
+func Cached(remote string, opts ...Opt) (*Result, error) {
+	var o options
+	for _, f := range opts {
+		if err := f(&o); err != nil {
+			return nil, err
+		}
+	}
+	if o.cacheDir == "" {
+		return nil, fmt.Errorf("caching-only mode requires the cache directory to be specified")
+	}
+	if IsLocal(remote) {
+		return nil, fmt.Errorf("local files are not cached")
+	}
+
+	shad := cacheDirectoryPath(o.cacheDir, remote)
+	shadData := filepath.Join(shad, "data")
+	shadDigest, err := cacheDigestPath(shad, o.expectedDigest)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := os.Stat(shadData); err != nil {
+		return nil, err
+	}
+	if _, err := os.Stat(shadDigest); err != nil {
+		if err := validateCachedDigest(shadDigest, o.expectedDigest); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := validateLocalFileDigest(shadData, o.expectedDigest); err != nil {
+			return nil, err
+		}
+	}
+	res := &Result{
+		Status:          StatusUsedCache,
+		CachePath:       shadData,
+		ValidatedDigest: o.expectedDigest != "",
+	}
+	return res, nil
+}
+
+// cacheDirectoryPath returns the cache subdirectory path.
+// - "url" file contains the url
+// - "data" file contains the data
+func cacheDirectoryPath(cacheDir string, remote string) string {
+	return filepath.Join(cacheDir, "download", "by-url-sha256", fmt.Sprintf("%x", sha256.Sum256([]byte(remote))))
+}
+
+// cacheDigestPath returns the cache digest file path.
+// - "<ALGO>.digest" contains the digest
+func cacheDigestPath(shad string, expectedDigest digest.Digest) (string, error) {
+	shadDigest := ""
+	if expectedDigest != "" {
+		algo := expectedDigest.Algorithm().String()
+		if strings.Contains(algo, "/") || strings.Contains(algo, "\\") {
+			return "", fmt.Errorf("invalid digest algorithm %q", algo)
+		}
+		shadDigest = filepath.Join(shad, algo+".digest")
+	}
+	return shadDigest, nil
+}
+
 func IsLocal(s string) bool {
 	return !strings.Contains(s, "://") || strings.HasPrefix(s, "file://")
 }
@@ -278,6 +340,9 @@ func copyLocal(dst, src, ext string, decompress bool, description string, expect
 		return err
 	}
 
+	if expectedDigest != "" {
+		logrus.Debugf("verifying digest of local file %q (%s)", srcPath, expectedDigest)
+	}
 	if err := validateLocalFileDigest(srcPath, expectedDigest); err != nil {
 		return err
 	}
@@ -366,6 +431,21 @@ func decompressLocal(dst, src, ext string, description string) error {
 	return err
 }
 
+func validateCachedDigest(shadDigest string, expectedDigest digest.Digest) error {
+	if expectedDigest == "" {
+		return nil
+	}
+	shadDigestB, err := os.ReadFile(shadDigest)
+	if err != nil {
+		return err
+	}
+	shadDigestS := strings.TrimSpace(string(shadDigestB))
+	if shadDigestS != expectedDigest.String() {
+		return fmt.Errorf("expected digest %q, got %q", expectedDigest, shadDigestS)
+	}
+	return nil
+}
+
 func validateLocalFileDigest(localPath string, expectedDigest digest.Digest) error {
 	if localPath == "" {
 		return fmt.Errorf("validateLocalFileDigest: got empty localPath")
@@ -373,7 +453,6 @@ func validateLocalFileDigest(localPath string, expectedDigest digest.Digest) err
 	if expectedDigest == "" {
 		return nil
 	}
-	logrus.Debugf("verifying digest of local file %q (%s)", localPath, expectedDigest)
 	algo := expectedDigest.Algorithm()
 	if !algo.Available() {
 		return fmt.Errorf("expected digest algorithm %q is not available", algo)

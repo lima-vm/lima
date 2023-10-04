@@ -5,6 +5,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/opencontainers/go-digest"
@@ -87,6 +88,24 @@ func TestDownloadRemote(t *testing.T) {
 		assert.NilError(t, err)
 		assert.Equal(t, StatusUsedCache, r.Status)
 	})
+	t.Run("cached", func(t *testing.T) {
+		_, err := Cached(dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest))
+		assert.ErrorContains(t, err, "cache directory to be specified")
+
+		cacheDir := filepath.Join(t.TempDir(), "cache")
+		r, err := Download("", dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest), WithCacheDir(cacheDir))
+		assert.NilError(t, err)
+		assert.Equal(t, StatusDownloaded, r.Status)
+
+		r, err = Cached(dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest), WithCacheDir(cacheDir))
+		assert.NilError(t, err)
+		assert.Equal(t, StatusUsedCache, r.Status)
+		assert.Assert(t, strings.HasPrefix(r.CachePath, cacheDir), "expected %s to be in %s", r.CachePath, cacheDir)
+
+		wrongDigest := digest.Digest("sha256:8313944efb4f38570c689813f288058b674ea6c487017a5a4738dc674b65f9d9")
+		_, err = Cached(dummyRemoteFileURL, WithExpectedDigest(wrongDigest), WithCacheDir(cacheDir))
+		assert.ErrorContains(t, err, "expected digest")
+	})
 }
 
 func TestDownloadLocal(t *testing.T) {
@@ -129,6 +148,15 @@ func TestDownloadLocal(t *testing.T) {
 		os.Remove(localTestFile)
 	})
 
+	t.Run("cached", func(t *testing.T) {
+		localFile := filepath.Join(t.TempDir(), "test-file")
+		os.Create(localFile)
+		testLocalFileURL := "file://" + localFile
+
+		cacheDir := filepath.Join(t.TempDir(), "cache")
+		_, err := Cached(testLocalFileURL, WithCacheDir(cacheDir))
+		assert.ErrorContains(t, err, "not cached")
+	})
 }
 
 func TestDownloadCompressed(t *testing.T) {
