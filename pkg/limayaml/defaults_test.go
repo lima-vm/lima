@@ -143,7 +143,8 @@ func TestFillDefault(t *testing.T) {
 		Mounts: []Mount{
 			{Location: "/tmp"},
 		},
-		MountType: pointer.String(NINEP),
+		MountType:     pointer.String(NINEP),
+		MountWritable: pointer.Bool(false),
 		Provision: []Provision{
 			{Script: "#!/bin/true"},
 		},
@@ -189,7 +190,7 @@ func TestFillDefault(t *testing.T) {
 
 	expect.Mounts = y.Mounts
 	expect.Mounts[0].MountPoint = expect.Mounts[0].Location
-	expect.Mounts[0].Writable = pointer.Bool(false)
+	expect.Mounts[0].Writable = pointer.Bool(DefaultMountWritable)
 	expect.Mounts[0].SSHFS.Cache = pointer.Bool(true)
 	expect.Mounts[0].SSHFS.FollowSymlinks = pointer.Bool(false)
 	expect.Mounts[0].SSHFS.SFTPDriver = pointer.String("")
@@ -198,9 +199,9 @@ func TestFillDefault(t *testing.T) {
 	expect.Mounts[0].NineP.Msize = pointer.String(Default9pMsize)
 	expect.Mounts[0].NineP.Cache = pointer.String(Default9pCacheForRO)
 	expect.Mounts[0].Virtiofs.QueueSize = pointer.Int(DefaultVirtiofsQueueSize)
-	// Only missing Mounts field is Writable, and the default value is also the null value: false
 
 	expect.MountType = pointer.String(NINEP)
+	expect.MountWritable = pointer.Bool(false)
 
 	expect.Provision = y.Provision
 	expect.Provision[0].Mode = ProvisionModeSystem
@@ -323,6 +324,8 @@ func TestFillDefault(t *testing.T) {
 				Writable: pointer.Bool(false),
 			},
 		},
+		MountType:     nil, // set by VMType
+		MountWritable: pointer.Bool(true),
 		Provision: []Provision{
 			{
 				Script: "#!/bin/true",
@@ -377,6 +380,7 @@ func TestFillDefault(t *testing.T) {
 	// Also verify that archive arch is filled in
 	expect.Containerd.Archives[0].Arch = *d.Arch
 	expect.Mounts[0].MountPoint = expect.Mounts[0].Location
+	expect.Mounts[0].Writable = pointer.Bool(DefaultMountWritable)
 	expect.Mounts[0].SSHFS.Cache = pointer.Bool(true)
 	expect.Mounts[0].SSHFS.FollowSymlinks = pointer.Bool(false)
 	expect.Mounts[0].SSHFS.SFTPDriver = pointer.String("")
@@ -389,6 +393,7 @@ func TestFillDefault(t *testing.T) {
 		"default": d.HostResolver.Hosts["default"],
 	}
 	expect.MountType = pointer.String(VIRTIOFS)
+	expect.MountWritable = pointer.Bool(true)
 	expect.CACertificates.RemoveDefaults = pointer.Bool(true)
 	expect.CACertificates.Certs = []string{
 		"-----BEGIN CERTIFICATE-----\nYOUR-ORGS-TRUSTED-CA-CERT\n-----END CERTIFICATE-----\n",
@@ -594,6 +599,7 @@ func TestFillDefault(t *testing.T) {
 	expect.Mounts[0].Virtiofs.QueueSize = pointer.Int(2048)
 
 	expect.MountType = pointer.String(NINEP)
+	expect.MountWritable = pointer.Bool(false)
 
 	// o.Networks[1] is overriding the d.Networks[0].Lima entry for the "def0" interface
 	expect.Networks = append(append(d.Networks, y.Networks...), o.Networks[0])

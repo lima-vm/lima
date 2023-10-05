@@ -26,6 +26,9 @@ import (
 )
 
 const (
+	// DefaultMountWritable is false for the home directory
+	DefaultMountWritable bool = false
+
 	// Default9pSecurityModel is "none" for supporting symlinks
 	// https://gitlab.com/qemu-project/qemu/-/issues/173
 	Default9pSecurityModel   string = "none"
@@ -524,6 +527,15 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 			y.MountType = pointer.String(REVSSHFS)
 		}
 	}
+	if y.MountWritable == nil {
+		y.MountWritable = d.MountWritable
+	}
+	if o.MountWritable != nil {
+		y.MountWritable = o.MountWritable
+	}
+	if y.MountWritable == nil {
+		y.MountWritable = pointer.Bool(DefaultMountWritable)
+	}
 
 	// Combine all mounts; highest priority entry determines writable status.
 	// Only works for exact matches; does not normalize case or resolve symlinks.
@@ -592,7 +604,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 			mounts[i].Virtiofs.QueueSize = pointer.Int(DefaultVirtiofsQueueSize)
 		}
 		if mount.Writable == nil {
-			mount.Writable = pointer.Bool(false)
+			mount.Writable = y.MountWritable
 		}
 		if mount.NineP.Cache == nil {
 			if *mount.Writable {

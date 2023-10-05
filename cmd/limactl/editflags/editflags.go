@@ -48,7 +48,7 @@ func registerEdit(cmd *cobra.Command, commentPrefix string) {
 		return []string{"reverse-sshfs", "9p", "virtiofs"}, cobra.ShellCompDirectiveNoFileComp
 	})
 
-	flags.Bool("mount-writable", false, commentPrefix+"make all mounts writable")
+	flags.Bool("mount-writable", false, commentPrefix+"make mounts writable by default")
 
 	flags.StringSlice("network", nil, commentPrefix+"additional networks, e.g., \"vzNAT\" or \"lima:shared\" to assign vmnet IP")
 	_ = cmd.RegisterFlagCompletionFunc("network", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
@@ -148,7 +148,7 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 			false,
 			false},
 		{"mount-type", d(".mountType = %q"), false, false},
-		{"mount-writable", d(".mounts[].writable = %s"), false, false},
+		{"mount-writable", d(".mountWritable = %s"), false, false},
 		{"network",
 			func(_ *flag.Flag) (string, error) {
 				ss, err := flags.GetStringSlice("network")

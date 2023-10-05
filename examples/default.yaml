@@ -51,7 +51,7 @@ disk: null
 
 # Expose host directories to the guest, the mount point might be accessible from all UIDs in the guest
 # 🟢 Builtin default: null (Mount nothing)
-# 🔵 This file: Mount the home as read-only, /tmp/lima as writable
+# 🔵 This file: Mount the home as default, /tmp/lima as writable
 mounts:
 - location: "~"
   # Configure the mountPoint inside the guest.
@@ -59,7 +59,8 @@ mounts:
   mountPoint: null
   # CAUTION: `writable` SHOULD be false for the home directory.
   # Setting `writable` to true is possible, but untested and dangerous.
-  # 🟢 Builtin default: false
+  # 🟢 Builtin default: see `mountWritable`
+  # 🔵 This file: null (only for the home)
   writable: null
   sshfs:
     # Enabling the SSHFS cache will increase performance of the mounted filesystem, at
@@ -94,7 +95,7 @@ mounts:
     # 🟢 Builtin default: "fscache" for non-writable mounts, "mmap" for writable mounts
     cache: null
 - location: "/tmp/lima"
-  # 🟢 Builtin default: false
+  # 🟢 Builtin default: see `mountWritable`
   # 🔵 This file: true (only for "/tmp/lima")
   writable: true
 
@@ -102,6 +103,11 @@ mounts:
 # or "virtiofs" (EXPERIMENTAL, needs `vmType: vz`)
 # 🟢 Builtin default: "reverse-sshfs" (for QEMU), "virtiofs" (for vz)
 mountType: null
+
+# Mount writable default for above mounts, true for read-write and false for read-only
+# (in this file the default writable is only used for the home, but not for "/tmp/lima").
+# 🟢 Builtin default: false
+mountWritable: null
 
 # Lima disks to attach to the instance. The disks will be accessible from inside the
 # instance, labeled by name. (e.g. if the disk is named "data", it will be labeled
