@@ -219,13 +219,17 @@ user-v2 network provides a user-mode networking similar to the [default user-mod
 > **Warning**
 > This network mode is experimental
 
-To enable this network mode, define a network with `mode: user-v2` in networks.yaml 
+To enable this network mode, define a network with `mode: user-v2` in networks.yaml
+
+By default, the below network configuration is already applied (Since v0.18).
 
 ```yaml
 ...
 networks:
-  example-user-v2:
+  user-v2:
     mode: user-v2
+    gateway: 192.168.104.1
+    netmask: 255.255.255.0
 ...
 ```
 
@@ -234,13 +238,13 @@ Instances can then reference these networks from their `lima.yaml` file:
 {{< tabpane text=true >}}
 {{% tab header="CLI" %}}
 ```bash
-limactl start --network=lima:example-user-v2
+limactl start --network=lima:user-v2
 ```
 {{% /tab %}}
 {{% tab header="YAML" %}}
 ```yaml
 networks:
-   - lima: example-user-v2
+   - lima: user-v2
 ```
 {{% /tab %}}
 {{< /tabpane >}}
@@ -248,5 +252,3 @@ networks:
 _Note_
 
 - Enabling this network will disable the [default user-mode network](#user-mode-network--1921685024-)
-- Subnet used for this network is 192.168.5.0/24 with 192.168.5.2 used for host connection and 192.168.5.3 used for DNS resolution
-
