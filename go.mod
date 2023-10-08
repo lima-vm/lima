@@ -39,7 +39,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/xorcare/pointer v1.2.2
 	golang.org/x/sync v0.3.0
-	golang.org/x/sys v0.12.0
+	golang.org/x/sys v0.13.0
 	gopkg.in/op/go-logging.v1 v1.0.0-20160211212156-b2cb9fa56473
 	gopkg.in/yaml.v3 v3.0.1
 	gotest.tools/v3 v3.5.1
