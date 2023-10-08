@@ -116,6 +116,8 @@ func newApp() *cobra.Command {
 		newUsernetCommand(),
 		newGenDocCommand(),
 		newSnapshotCommand(),
+		newProtectCommand(),
+		newUnprotectCommand(),
 	)
 	return rootCmd
 }

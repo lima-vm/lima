@@ -31,6 +31,7 @@ An instance directory contains the following files:
 
 Metadata:
 - `lima.yaml`: the YAML
+- `protected`: empty file, used by `limactl protect`
 
 cloud-init:
 - `cidata.iso`: cloud-init ISO9660 image. See [`cidata.iso`](#cidataiso).
