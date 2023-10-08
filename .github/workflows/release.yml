@@ -95,4 +95,4 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         tag="${GITHUB_REF##*/}"
-        gh release create -F /tmp/release-note.txt --draft "${tag}" --title "${tag}" _artifacts/*
+        gh release create -F /tmp/release-note.txt --draft --title "${tag}" "${tag}" _artifacts/*
