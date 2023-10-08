@@ -81,6 +81,7 @@ type TemplateArgs struct {
 	SkipDefaultDependencyResolution bool
 	VMType                          string
 	VSockPort                       int
+	Plain                           bool
 }
 
 func ValidateTemplateArgs(args TemplateArgs) error {

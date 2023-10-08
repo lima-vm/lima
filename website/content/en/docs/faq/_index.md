@@ -16,6 +16,8 @@ weight: 6
   - ["Can I run other container engines such as Docker and Podman? What about Kubernetes?"](#can-i-run-other-container-engines-such-as-docker-and-podman-what-about-kubernetes)
   - ["Can I run Lima with a remote Linux machine?"](#can-i-run-lima-with-a-remote-linux-machine)
   - ["Advantages compared to Docker for Mac?"](#advantages-compared-to-docker-for-mac)
+- [Configuration](#configuration)
+  - ["Is it possible to disable mounts, port forwarding, containerd, etc. ?"](#is-it-possible-to-disable-mounts-port-forwarding-containerd-etc-)
 - [QEMU](#qemu)
   - ["QEMU crashes with `HV_ERROR`"](#qemu-crashes-with-hv_error)
   - ["QEMU is slow"](#qemu-is-slow)
@@ -104,6 +106,32 @@ and forward `localhost:8080` to the port 80 of the remote machine.
 
 #### "Advantages compared to Docker for Mac?"
 Lima is free software (Apache License 2.0), while Docker for Mac is not.
+
+### Configuration
+#### "Is it possible to disable mounts, port forwarding, containerd, etc. ?"
+
+Yes, since Lima v0.18:
+
+{{< tabpane text=true >}}
+{{% tab header="CLI" %}}
+```bash
+limactl start --plain
+```
+{{% /tab %}}
+{{% tab header="YAML" %}}
+```yaml
+plain: true
+```
+{{% /tab %}}
+{{< /tabpane >}}
+
+
+When the "plain" mode is enabled:
+- the YAML properties for mounts, port forwarding, containerd, etc. will be ignored
+- guest agent will not be running
+- dependency packages like sshfs will not be installed into the VM
+
+User-specified provisioning scripts will be still executed.
 
 ### QEMU
 #### "QEMU crashes with `HV_ERROR`"

@@ -105,6 +105,7 @@ func TestFillDefault(t *testing.T) {
 		CACertificates: CACertificates{
 			RemoveDefaults: pointer.Bool(false),
 		},
+		Plain: pointer.Bool(false),
 	}
 	if IsAccelOS() {
 		if HasHostCPU() {
@@ -405,6 +406,7 @@ func TestFillDefault(t *testing.T) {
 			BinFmt:  pointer.Bool(true),
 		}
 	}
+	expect.Plain = pointer.Bool(false)
 
 	y = LimaYAML{}
 	FillDefault(&y, &d, &LimaYAML{}, filePath)
@@ -617,6 +619,7 @@ func TestFillDefault(t *testing.T) {
 		Enabled: pointer.Bool(false),
 		BinFmt:  pointer.Bool(false),
 	}
+	expect.Plain = pointer.Bool(false)
 
 	FillDefault(&y, &d, &o, filePath)
 	assert.DeepEqual(t, &y, &expect, opts...)

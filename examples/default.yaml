@@ -444,6 +444,14 @@ hostResolver:
 # 🟢 Builtin default: /usr/local
 guestInstallPrefix: null
 
+# When the "plain" mode is enabled:
+# - the YAML properties for mounts, port forwarding, containerd, etc. will be ignored
+# - guest agent will not be running
+# - dependency packages like sshfs will not be installed into the VM
+# User-specified provisioning scripts will be still executed.
+# 🟢 Builtin default: false
+plain: null
+
 # ===================================================================== #
 # GLOBAL DEFAULTS AND OVERRIDES
 # ===================================================================== #

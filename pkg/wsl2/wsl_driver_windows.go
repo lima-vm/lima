@@ -49,6 +49,7 @@ func (l *LimaWslDriver) Validate() error {
 		"DNS",
 		"HostResolver",
 		"PropagateProxyEnv",
+		"Plain",
 	); len(unknown) > 0 {
 		logrus.Warnf("Ignoring: vmType %s: %+v", *l.Yaml.VMType, unknown)
 	}

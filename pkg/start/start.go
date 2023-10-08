@@ -253,7 +253,11 @@ func watchHostAgentEvents(ctx context.Context, inst *store.Instance, haStdoutPat
 				return true
 			}
 
-			logrus.Infof("READY. Run `%s` to open the shell.", LimactlShellCmd(inst.Name))
+			if *inst.Config.Plain {
+				logrus.Infof("READY. Run `ssh -F %q lima-%s` to open the shell.", inst.SSHConfigFile, inst.Name)
+			} else {
+				logrus.Infof("READY. Run `%s` to open the shell.", LimactlShellCmd(inst.Name))
+			}
 			ShowMessage(inst)
 			err = nil
 			return true
