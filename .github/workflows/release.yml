@@ -68,11 +68,8 @@ jobs:
       run: (cd _artifacts; sha256sum SHA256SUMS)
     - name: "Prepare the release note"
       run: |
-        tag="${GITHUB_REF##*/}"
         shasha=$(sha256sum _artifacts/SHA256SUMS | awk '{print $1}')
         cat <<-EOF | tee /tmp/release-note.txt
-        ${tag}
-
         (Changes to be documented)
 
         ## Usage
@@ -98,4 +95,4 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         tag="${GITHUB_REF##*/}"
-        gh release create -F /tmp/release-note.txt --draft "${tag}" _artifacts/*
+        gh release create -F /tmp/release-note.txt --draft "${tag}" --title "${tag}" _artifacts/*
