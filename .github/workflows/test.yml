@@ -73,9 +73,35 @@ jobs:
 
   windows:
     name: "Windows tests"
-    runs-on: windows-2022
+    runs-on: windows-2022-8-cores
     timeout-minutes: 30
     steps:
+    - name: Enable WSL2
+      run: |
+        wsl --set-default-version 2
+        # Manually install the latest kernel from MSI
+        Invoke-WebRequest -Uri "https://wslstorestorage.blob.core.windows.net/wslblob/wsl_update_x64.msi" -OutFile "wsl_update_x64.msi"
+        $pwd = (pwd).Path
+        Start-Process msiexec.exe -Wait -ArgumentList "/I $pwd\wsl_update_x64.msi /quiet"
+        wsl --update
+        wsl --status
+        wsl --list --online
+    - name: Install WSL2 distro
+      timeout-minutes: 3
+      run: |
+        # FIXME: At least one distro has to be installed here,
+        # otherwise `wsl --list --verbose` (called from Lima) fails:
+        # https://github.com/lima-vm/lima/pull/1826#issuecomment-1729993334
+        # The distro image itself is not consumed by Lima.
+        # ------------------------------------------------------------------
+        # Ubuntu-22.04:    gets stuck in some infinite loop during adduser
+        # OracleLinux_9_1: almostly silently fails, and just prints "Usage: adduser [options] LOGIN"
+        wsl --install -d openSUSE-Leap-15.5
+        wsl --list --verbose
+    - name: Set gitconfig
+      run: |
+        git config --global core.autocrlf false
+        git config --global core.eol lf
     - uses: actions/checkout@v4
       with:
         fetch-depth: 1
@@ -86,6 +112,19 @@ jobs:
       run: go test -v ./...
     - name: Make
       run: make
+    - name: Smoke test
+      # Make sure the path is set properly and then run limactl
+      run: |
+        $env:Path = 'C:\Program Files\Git\usr\bin;' + $env:Path
+        Set-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Session Manager\Environment' -Name PATH -Value $env:Path
+        .\_output\bin\limactl.exe start template://experimental/wsl2
+      # TODO: run the full integration tests
+    - name: Debug
+      if: always()
+      run: type C:\Users\runneradmin\.lima\wsl2\ha.stdout.log
+    - name: Debug
+      if: always()
+      run: type C:\Users\runneradmin\.lima\wsl2\ha.stderr.log
 
   integration:
     name: Integration tests
