@@ -24,7 +24,7 @@ require (
 	github.com/google/go-cmp v0.5.9
 	github.com/gorilla/mux v1.8.0
 	github.com/lima-vm/go-qcow2reader v0.1.1
-	github.com/lima-vm/sshocker v0.3.3
+	github.com/lima-vm/sshocker v0.3.4
 	github.com/lithammer/dedent v1.1.0
 	github.com/mattn/go-isatty v0.0.19
 	github.com/mattn/go-shellwords v1.0.12
@@ -96,7 +96,7 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pelletier/go-toml/v2 v2.1.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/pkg/sftp v1.13.5 // indirect
+	github.com/pkg/sftp v1.13.6 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/u-root/uio v0.0.0-20210528114334-82958018845c // indirect
