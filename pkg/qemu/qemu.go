@@ -762,6 +762,9 @@ func Cmdline(cfg Config) (string, []string, error) {
 	// virtio-rng-pci accelerates starting up the OS, according to https://wiki.gentoo.org/wiki/QEMU/Options
 	args = append(args, "-device", "virtio-rng-pci")
 
+	// Input
+	input := "mouse"
+
 	// Sound
 	if *y.Audio.Device != "" {
 		id := "default"
@@ -780,24 +783,27 @@ func Cmdline(cfg Config) (string, []string, error) {
 		if display == "vnc" {
 			display += "=" + *y.Video.VNC.Display
 			display += ",password=on"
+			// use tablet to avoid double cursors
+			input = "tablet"
 		}
 		args = appendArgsIfNoConflict(args, "-display", display)
 	}
+
 	switch *y.Arch {
 	case limayaml.X8664, limayaml.RISCV64:
 		args = append(args, "-device", "virtio-vga")
 		args = append(args, "-device", "virtio-keyboard-pci")
-		args = append(args, "-device", "virtio-mouse-pci")
+		args = append(args, "-device", "virtio-"+input+"-pci")
 		args = append(args, "-device", "qemu-xhci,id=usb-bus")
 	case limayaml.AARCH64, limayaml.ARMV7L:
 		if features.VersionGEQ7 {
 			args = append(args, "-device", "virtio-gpu")
 			args = append(args, "-device", "virtio-keyboard-pci")
-			args = append(args, "-device", "virtio-mouse-pci")
+			args = append(args, "-device", "virtio-"+input+"-pci")
 		} else { // kernel panic with virtio and old versions of QEMU
 			args = append(args, "-vga", "none", "-device", "ramfb")
 			args = append(args, "-device", "usb-kbd,bus=usb-bus.0")
-			args = append(args, "-device", "usb-mouse,bus=usb-bus.0")
+			args = append(args, "-device", "usb-"+input+",bus=usb-bus.0")
 		}
 		args = append(args, "-device", "qemu-xhci,id=usb-bus")
 	}
