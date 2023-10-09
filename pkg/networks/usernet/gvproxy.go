@@ -37,6 +37,8 @@ var (
 	opts *GVisorNetstackOpts
 )
 
+const gatewayMacAddr = "5a:94:ef:e4:0c:dd"
+
 func StartGVisorNetstack(ctx context.Context, gVisorOpts *GVisorNetstackOpts) error {
 	opts = gVisorOpts
 
@@ -54,7 +56,7 @@ func StartGVisorNetstack(ctx context.Context, gVisorOpts *GVisorNetstackOpts) er
 			}
 		}
 	}
-	leases[gatewayIP] = "5a:94:ef:e4:0c:df"
+	leases[gatewayIP] = gatewayMacAddr
 
 	// The way gvisor-tap-vsock implemented slirp is different from tradition SLIRP,
 	// - GatewayIP handling all request, also answers DNS queries
@@ -67,7 +69,7 @@ func StartGVisorNetstack(ctx context.Context, gVisorOpts *GVisorNetstackOpts) er
 		MTU:               opts.MTU,
 		Subnet:            opts.Subnet,
 		GatewayIP:         gatewayIP,
-		GatewayMacAddress: "5a:94:ef:e4:0c:dd",
+		GatewayMacAddress: gatewayMacAddr,
 		DHCPStaticLeases:  leases,
 		Forwards:          map[string]string{},
 		DNS:               []types.Zone{},
