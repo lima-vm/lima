@@ -35,14 +35,33 @@ func inspectStatus(instDir string, inst *Instance, y *limayaml.LimaYAML) {
 	}
 }
 
-// GetWslStatus runs `wsl --list --verbose` and parses its output
+// GetWslStatus runs `wsl --list --verbose` and parses its output.
+// There are several possible outputs, all listed with their whitespace preserved output below.
 //
-// Expected output (whitespace preserved):
+// (1) Expected output if at least one distro is installed:
 // PS > wsl --list --verbose
 //
 //	NAME      STATE           VERSION
 //
 // * Ubuntu    Stopped         2
+//
+// (2) Expected output when no distros are installed, but WSL is configured properly:
+// PS > wsl --list --verbose
+// Windows Subsystem for Linux has no installed distributions.
+//
+// Use 'wsl.exe --list --online' to list available distributions
+// and 'wsl.exe --install <Distro>' to install.
+//
+// Distributions can also be installed by visiting the Microsoft Store:
+// https://aka.ms/wslstore
+// Error code: Wsl/WSL_E_DEFAULT_DISTRO_NOT_FOUND
+//
+// (3) Expected output when no distros are installed, and WSL2 has no kernel installed:
+//
+// PS > wsl --list --verbose
+// Windows Subsystem for Linux has no installed distributions.
+// Distributions can be installed by visiting the Microsoft Store:
+// https://aka.ms/wslstore
 func GetWslStatus(instName string) (string, error) {
 	distroName := "lima-" + instName
 	out, err := executil.RunUTF16leCommand([]string{
@@ -51,11 +70,25 @@ func GetWslStatus(instName string) (string, error) {
 		"--verbose",
 	})
 	if err != nil {
-		return "", fmt.Errorf("failed to run `wsl --list --verbose`, err: %w", err)
+		return "", fmt.Errorf("failed to run `wsl --list --verbose`, err: %w (out=%q)", err, string(out))
 	}
 
 	if len(out) == 0 {
-		return StatusBroken, fmt.Errorf("failed to read instance state for instance %s, try running `wsl --list --verbose` to debug, err: %w", instName, err)
+		return StatusBroken, fmt.Errorf("failed to read instance state for instance %q, try running `wsl --list --verbose` to debug, err: %w", instName, err)
+	}
+
+	// Check for edge cases first
+	outString := string(out)
+	if strings.Contains(outString, "Windows Subsystem for Linux has no installed distributions.") {
+		if strings.Contains(outString, "Wsl/WSL_E_DEFAULT_DISTRO_NOT_FOUND") {
+			return StatusBroken, fmt.Errorf(
+				"failed to read instance state for instance %q because no distro is installed,"+
+					"try running `wsl --install -d Ubuntu` and then re-running Lima", instName)
+		}
+		return StatusBroken, fmt.Errorf(
+			"failed to read instance state for instance %q because there is no WSL kernel installed,"+
+				"this usually happens when WSL was installed for another user, but never for your user."+
+				"Try running `wsl --install -d Ubuntu` and `wsl --update`, and then re-running Lima", instName)
 	}
 
 	var instState string
@@ -94,7 +127,7 @@ func getWslSSHAddress(instName string) (string, error) {
 	cmd := exec.Command("wsl.exe", "-d", distroName, "bash", "-c", `hostname -I | cut -d ' ' -f1`)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("failed to get hostname for instance %s, err: %w", instName, err)
+		return "", fmt.Errorf("failed to get hostname for instance %q, err: %w (out=%q)", instName, err, string(out))
 	}
 
 	return strings.TrimSpace(string(out)), nil
