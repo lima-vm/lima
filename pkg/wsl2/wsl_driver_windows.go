@@ -101,11 +101,6 @@ func (l *LimaWslDriver) Validate() error {
 
 func (l *LimaWslDriver) Start(ctx context.Context) (chan error, error) {
 	logrus.Infof("Starting WSL VM")
-
-	// Keep this warning below, at least until we can get the driver to work on GHA Large Runner (windows-2022-8-cores).
-	// A failed attempt can be found at https://github.com/lima-vm/lima/pull/1826
-	logrus.Warnf("wsl2 driver is experimental and seems currently unstable. Help wanted to fix it.")
-
 	status, err := store.GetWslStatus(l.Instance.Name)
 	if err != nil {
 		return nil, err

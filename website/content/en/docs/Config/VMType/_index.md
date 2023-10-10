@@ -13,7 +13,8 @@ The vmType of existing instances cannot be changed.
 See the following flowchart to choose the best vmType for you:
 ```mermaid
 flowchart
-  host{"Host OS"} -- "Linux" --> qemu["QEMU"]
+  host{"Host OS"} -- "Windows" --> wsl2["WSL2"]
+  host -- "Linux" --> qemu["QEMU"]
   host -- "macOS" --> intel_on_arm{"Need to run <br> Intel binaries <br> on ARM?"}
   intel_on_arm -- "Yes" --> just_elf{"Just need to <br> run Intel userspace (fast), <br> or entire Intel VM (slow)?"}
   just_elf -- "Userspace (fast)" --> vz
@@ -68,8 +69,6 @@ mountType: "virtiofs"
   https://github.com/lima-vm/lima/issues/1577#issuecomment-1565625668
   The issue is fixed in macOS 13.5.
 
-<!-- WSL2 driver seems currently unstable -->
-<!--
 ## WSL2
 > **Warning**
 > "wsl2" mode is experimental
@@ -111,4 +110,3 @@ containerd:
 - When running lima using "wsl2", `${LIMA_HOME}/<INSTANCE>/serial.log` will not contain kernel boot logs
 - WSL2 requires a `tar` formatted rootfs archive instead of a VM image
 - Windows doesn't ship with ssh.exe, gzip.exe, etc. which are used by Lima at various points. The easiest way around this is to run `winget install -e --id Git.MinGit` (winget is now built in to Windows as well), and add the resulting `C:\Program Files\Git\usr\bin\` directory to your path.
--->
