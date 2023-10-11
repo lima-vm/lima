@@ -1,10 +1,10 @@
-# This template installs the neccessary packages you need to get started with writing and testing eBPF programs. 
+# This template installs the necessary packages you need to get started with writing and testing eBPF programs. 
 # limactl start ./ebpf.yaml
 # limactl shell ebpf
 
-# To remotely connect your your IDE (e.g Visual Studion Code) to the V, run: 
+# To remotely connect your IDE (e.g Visual Studion Code) to the V, run: 
 # limactl show-ssh ebpf
-# to get the SSH commad 
+# to get the SSH command 
 
 # This config requires Lima v0.8.0 or later
 
