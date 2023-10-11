@@ -1,0 +1,35 @@
+# This template installs the neccessary packages you need to get started with writing and testing eBPF programs. 
+# limactl start ./ebpf.yaml
+# limactl shell ebpf
+
+# To remotely connect your your IDE (e.g Visual Studion Code) to the V, run: 
+# limactl show-ssh ebpf
+# to get the SSH commad 
+
+# This config requires Lima v0.8.0 or later
+
+images:
+- location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-amd64.img"
+  arch: "x86_64"
+- location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-arm64.img"
+  arch: "aarch64"
+
+cpus: 3
+memory: "10GiB"
+
+mounts:
+- location: "~"
+  writable: true
+- location: "/tmp/lima"
+  writable: true
+provision:
+- mode: system
+  script: |
+    apt-get update
+    apt-get install -y apt-transport-https ca-certificates curl clang llvm jq 
+    apt-get install -y libelf-dev libpcap-dev libbpf-dev libbfd-dev binutils-dev build-essential make 
+    apt-get install -y linux-tools-common linux-tools-$(uname -r) bpfcc-tools
+    apt-get install -y python3-pip
+    apt-get install -y golang-go 
+    apt-get install -y git build-essential libelf-dev flex bison 
+    apt-get install -y sudo gcc-multilib
