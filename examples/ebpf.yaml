@@ -2,7 +2,7 @@
 # limactl start ./ebpf.yaml
 # limactl shell ebpf
 
-# To remotely connect your IDE (e.g Visual Studion Code) to the V, run: 
+# To remotely connect your IDE (e.g Visual Studio Code) to the VM, run: 
 # limactl show-ssh ebpf
 # to get the SSH command 
 
