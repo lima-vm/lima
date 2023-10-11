@@ -53,6 +53,7 @@ Optional feature enablers:
 - [`experimental/riscv64`](./experimental/riscv64.yaml): [experimental] RISC-V
 - [`experimental/net-user-v2`](./experimental/net-user-v2.yaml): [experimental] user-v2 network
   to enable VM-to-VM communication without root privilege
+- [`experimental/vnc`](./experimental/vnc.yaml): [experimental] use vnc display and xorg server
 
 Lost+found:
 - ~`centos`~: Removed in Lima v0.8.0, as CentOS 8 reached [EOL](https://www.centos.org/centos-linux-eol/).
