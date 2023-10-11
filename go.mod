@@ -13,7 +13,7 @@ require (
 	github.com/containerd/continuity v0.4.2
 	github.com/containers/gvisor-tap-vsock v0.7.1
 	github.com/coreos/go-semver v0.3.1
-	github.com/cpuguy83/go-md2man/v2 v2.0.2
+	github.com/cpuguy83/go-md2man/v2 v2.0.3
 	github.com/cyphar/filepath-securejoin v0.2.4
 	github.com/digitalocean/go-qemu v0.0.0-20221209210016-f035778c97f7
 	github.com/diskfs/go-diskfs v1.4.0
