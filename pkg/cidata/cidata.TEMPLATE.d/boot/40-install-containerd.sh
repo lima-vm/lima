@@ -77,6 +77,26 @@ EOF
 	if command -v selinuxenabled >/dev/null 2>&1 && selinuxenabled; then
 		selinux=1
 	fi
+	if [ ! -e "/etc/apparmor.d/usr.local.bin.rootlesskit" ] && [ -e "/etc/apparmor.d/abi/4.0" ] && [ -e "/proc/sys/kernel/apparmor_restrict_unprivileged_userns" ]; then
+		cat >"/etc/apparmor.d/usr.local.bin.rootlesskit" <<EOF
+# Ubuntu 23.10 introduced kernel.apparmor_restrict_unprivileged_userns
+# to restrict unsharing user namespaces:
+# https://ubuntu.com/blog/ubuntu-23-10-restricted-unprivileged-user-namespaces
+#
+# kernel.apparmor_restrict_unprivileged_userns is still opt-in in Ubuntu 23.10,
+# but it is expected to be enabled in future releases of Ubuntu.
+abi <abi/4.0>,
+include <tunables/global>
+
+/usr/local/bin/rootlesskit flags=(unconfined) {
+  userns,
+
+  # Site-specific additions and overrides. See local/README for details.
+  include if exists <local/usr.local.bin.rootlesskit>
+}
+EOF
+		systemctl restart apparmor.service
+	fi
 	if [ ! -e "${LIMA_CIDATA_HOME}/.config/systemd/user/containerd.service" ]; then
 		until [ -e "/run/user/${LIMA_CIDATA_UID}/systemd/private" ]; do sleep 3; done
 		if [ -n "$selinux" ]; then
