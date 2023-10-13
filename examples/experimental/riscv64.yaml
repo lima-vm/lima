@@ -2,21 +2,21 @@
 
 arch: "riscv64"
 images:
-- location: "https://cloud-images.ubuntu.com/releases/23.04/release-20230926/ubuntu-23.04-server-cloudimg-riscv64.img"
+- location: "https://cloud-images.ubuntu.com/releases/23.10/release-20231011/ubuntu-23.10-server-cloudimg-riscv64.img"
   arch: "riscv64"
-  digest: "sha256:80133bccf0dfd3bc06d63acbef7a78de38c29d9eef5e903f683173cd206b4458"
+  digest: "sha256:73e7e8d673e3db5bb629e81286db20438343ff4e7aaf4d90844299b4537b59c8"
   kernel:
-    # Extracted from http://http.us.debian.org/debian/pool/main/u/u-boot/u-boot-qemu_2023.01+dfsg-2_all.deb (GPL-2.0)
-    location: "https://github.com/lima-vm/u-boot-qemu-mirror/releases/download/2023.01%2Bdfsg-2/qemu-riscv64_smode_uboot.elf"
-    digest: "sha256:d688d1afd7fd8266a964437438e7d8744c8c27c50124ac1b05e2d83f312a6ca6"
+    # Extracted from http://http.us.debian.org/debian/pool/main/u/u-boot/u-boot-qemu_2023.07+dfsg-1_all.deb (GPL-2.0)
+    location: "https://github.com/lima-vm/u-boot-qemu-mirror/releases/download/2023.07%2Bdfsg-7/qemu-riscv64_smode_uboot.elf"
+    digest: "sha256:d4b3a10c3ef04219641802a586dca905e768805f5a5164fb68520887df54f33c"
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
-- location: "https://cloud-images.ubuntu.com/releases/23.04/release/ubuntu-23.04-server-cloudimg-riscv64.img"
+- location: "https://cloud-images.ubuntu.com/releases/23.10/release/ubuntu-23.10-server-cloudimg-riscv64.img"
   arch: "riscv64"
   kernel:
-    # Extracted from http://http.us.debian.org/debian/pool/main/u/u-boot/u-boot-qemu_2023.04+dfsg-1_all.deb (GPL-2.0)
-    location: "https://github.com/lima-vm/u-boot-qemu-mirror/releases/download/2023.04%2Bdfsg-1/qemu-riscv64_smode_uboot.elf"
-    digest: "sha256:c3c634d66dca211efe7dece9c83071bc40f1c11db86c9dd7ce6f75bf87edef20"
+    # Extracted from http://http.us.debian.org/debian/pool/main/u/u-boot/u-boot-qemu_2023.07+dfsg-1_all.deb (GPL-2.0)
+    location: "https://github.com/lima-vm/u-boot-qemu-mirror/releases/download/2023.07%2Bdfsg-1/qemu-riscv64_smode_uboot.elf"
+    digest: "sha256:d4b3a10c3ef04219641802a586dca905e768805f5a5164fb68520887df54f33c"
 
 mounts:
 - location: "~"
