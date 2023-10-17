@@ -1,0 +1,44 @@
+#!/bin/sh
+set -eu
+: "${LIMA_INSTANCE:=k8s}"
+: "${CONTAINERD_NAMESPACE:=k8s.io}"
+: "${DOCKER:=docker}"
+: "${TAR:=tar}"
+
+case "$1" in
+	load)
+		shift
+		save() {
+			test -e "$2" && cp "$2" "$1" && return
+
+			"$DOCKER" save -o "$1" "$2"
+		}
+		tmp=$(mktemp tmp.XXXXXXXXXX.tar)
+		save "$tmp" "$1"
+		shift
+		tar=$(lima mktemp)
+		limactl copy "$tmp" "$LIMA_INSTANCE":"$tar"
+		rm "$tmp"
+		set -- load -i "$tar" "$@"
+		trap 'lima rm -- "$tar"' EXIT
+		;;
+	build)
+		shift
+		pack() {
+			"$TAR" --exclude-ignore .dockerignore \
+			       --exclude-ignore .containerignore \
+			       -cf "$1" -C "$2" .
+		}
+		tmp=$(mktemp tmp.XXXXXXXXXX.tar)
+		pack "$tmp" "$1"
+		shift
+		tar=$(lima mktemp)
+		limactl copy "$tmp" "$LIMA_INSTANCE":"$tar"
+		rm "$tmp"
+		dir=$(lima mktemp -d)
+		lima tar -C "$dir" -xf "$tar" && lima rm "$tar"
+		set -- build "$dir" "$@"
+		trap 'lima rm -rf -- "$dir"' EXIT
+		;;
+esac
+lima sudo CONTAINERD_NAMESPACE="$CONTAINERD_NAMESPACE" nerdctl "$@"
