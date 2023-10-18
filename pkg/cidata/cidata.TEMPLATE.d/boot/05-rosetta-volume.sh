@@ -11,7 +11,13 @@ if [ -f /etc/alpine-release ]; then
 fi
 
 mkdir -p /mnt/lima-rosetta
-mount -t virtiofs vz-rosetta /mnt/lima-rosetta
+
+#Check selinux is enabled by kernel
+if [ -d /sys/fs/selinux ]; then
+	mount -t virtiofs vz-rosetta /mnt/lima-rosetta -o context="system_u:object_r:container_file_t:s0"
+else
+	mount -t virtiofs vz-rosetta /mnt/lima-rosetta
+fi
 
 if [ "$LIMA_CIDATA_ROSETTA_BINFMT" = "true" ]; then
 	echo \
