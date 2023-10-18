@@ -26,7 +26,7 @@ require (
 	github.com/lima-vm/go-qcow2reader v0.1.1
 	github.com/lima-vm/sshocker v0.3.4
 	github.com/lithammer/dedent v1.1.0
-	github.com/mattn/go-isatty v0.0.19
+	github.com/mattn/go-isatty v0.0.20
 	github.com/mattn/go-shellwords v1.0.12
 	github.com/miekg/dns v1.1.56
 	github.com/mikefarah/yq/v4 v4.35.2
