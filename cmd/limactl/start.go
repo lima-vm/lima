@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/AlecAivazis/survey/v2/terminal"
 	"github.com/containerd/containerd/identifiers"
 	"github.com/lima-vm/lima/cmd/limactl/editflags"
 	"github.com/lima-vm/lima/cmd/limactl/guessarg"
@@ -376,6 +377,9 @@ func chooseNextCreatorState(st *creatorState, yq string) (*creatorState, error) 
 			},
 		}
 		if err := survey.AskOne(prompt, &ans); err != nil {
+			if err == terminal.InterruptErr {
+				logrus.Fatal("Interrupted by user")
+			}
 			logrus.WithError(err).Warn("Failed to open TUI")
 			return st, nil
 		}
