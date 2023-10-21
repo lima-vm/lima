@@ -470,9 +470,15 @@ func (a *HostAgent) Status(ctx context.Context) (*hostagentapi.Status, error) {
 	if err != nil {
 		return nil, err
 	}
+	var state hostagentapi.RunState
+	if driverStatus.Running {
+		state = hostagentapi.StateRunning
+	}
+	if driverStatus.Paused {
+		state = hostagentapi.StatePaused
+	}
 	status := &hostagentapi.Status{
-		Running: driverStatus.Running,
-		Paused:  driverStatus.Paused,
+		State: state,
 	}
 	return status, nil
 }

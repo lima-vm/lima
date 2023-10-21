@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/docker/go-units"
+	hostagentapi "github.com/lima-vm/lima/pkg/hostagent/api"
 	hostagentclient "github.com/lima-vm/lima/pkg/hostagent/api/client"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
@@ -201,10 +202,10 @@ func inspectStatusWithPIDFiles(instDir string, inst *Instance, y *limayaml.LimaY
 				inst.Status = StatusBroken
 				inst.Errors = append(inst.Errors, fmt.Errorf("failed to get Status from %q: %w", haSock, err))
 			} else {
-				if status.Paused {
+				if status.State == hostagentapi.StatePaused {
 					instStatus = StatusPaused
 				}
-				if status.Running {
+				if status.State == hostagentapi.StateRunning {
 					instStatus = StatusRunning
 				}
 			}

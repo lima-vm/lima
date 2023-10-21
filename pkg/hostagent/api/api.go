@@ -4,7 +4,13 @@ type Info struct {
 	SSHLocalPort int `json:"sshLocalPort,omitempty"`
 }
 
+type RunState = string
+
+const (
+	StateRunning RunState = "running"
+	StatePaused  RunState = "paused"
+)
+
 type Status struct {
-	Running bool `json:"running"`
-	Paused  bool `json:"paused"`
+	State RunState `json:"state"`
 }
