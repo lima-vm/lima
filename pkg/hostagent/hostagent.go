@@ -59,6 +59,7 @@ type HostAgent struct {
 
 type options struct {
 	nerdctlArchive string // local path, not URL
+	nerdctlVersion string
 }
 
 type Opt func(*options) error
@@ -66,6 +67,13 @@ type Opt func(*options) error
 func WithNerdctlArchive(s string) Opt {
 	return func(o *options) error {
 		o.nerdctlArchive = s
+		return nil
+	}
+}
+
+func WithNerdctlVersion(s string) Opt {
+	return func(o *options) error {
+		o.nerdctlVersion = s
 		return nil
 	}
 }
@@ -125,7 +133,7 @@ func New(instName string, stdout io.Writer, sigintCh chan os.Signal, opts ...Opt
 		vSockPort = port
 	}
 
-	if err := cidata.GenerateISO9660(inst.Dir, instName, y, udpDNSLocalPort, tcpDNSLocalPort, o.nerdctlArchive, vSockPort); err != nil {
+	if err := cidata.GenerateISO9660(inst.Dir, instName, y, udpDNSLocalPort, tcpDNSLocalPort, o.nerdctlArchive, o.nerdctlVersion, vSockPort); err != nil {
 		return nil, err
 	}
 

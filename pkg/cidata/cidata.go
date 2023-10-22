@@ -110,7 +110,7 @@ func setupEnv(y *limayaml.LimaYAML, args TemplateArgs) (map[string]string, error
 	return env, nil
 }
 
-func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort int, nerdctlArchive string, vsockPort int) error {
+func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort int, nerdctlArchive string, nerdctlVersion string, vsockPort int) error {
 	if err := limayaml.Validate(*y, false); err != nil {
 		return err
 	}
@@ -355,6 +355,12 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 			// ISO9660 requires len(Path) <= 30
 			Path:   "nerdctl-full.tgz",
 			Reader: nftgzR,
+		})
+	}
+	if nerdctlVersion != "" {
+		layout = append(layout, iso9660util.Entry{
+			Path:   "nerdctl-version.txt",
+			Reader: strings.NewReader("nerdctl version " + nerdctlVersion + "\n"),
 		})
 	}
 

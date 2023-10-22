@@ -138,6 +138,7 @@ The directory contains the following files:
 - `lima.env`: The `LIMA_CIDATA_*` environment variables (see below) available during `boot.sh` processing
 - `lima-guestagent`: Lima guest agent binary
 - `nerdctl-full.tgz`: [`nerdctl-full-<VERSION>-<OS>-<ARCH>.tar.gz`](https://github.com/containerd/nerdctl/releases)
+- `nerdctl-version.txt`: `"nerdctl version <VERSION>"`(`nerdctl --version` output)
 - `boot.sh`: Boot script
 - `boot/*`: Boot script modules
 - `util/*`: Utility command scripts, executed in the boot script modules

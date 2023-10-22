@@ -175,6 +175,9 @@ func Start(ctx context.Context, inst *store.Instance) error {
 	if prepared.NerdctlArchiveCache != "" {
 		args = append(args, "--nerdctl-archive", prepared.NerdctlArchiveCache)
 	}
+	if prepared.NerdctlArchiveVersion != "" {
+		args = append(args, "--nerdctl-version", prepared.NerdctlArchiveVersion)
+	}
 	args = append(args, inst.Name)
 	haCmd := exec.CommandContext(ctx, self, args...)
 	haCmd.SysProcAttr = SysProcAttr

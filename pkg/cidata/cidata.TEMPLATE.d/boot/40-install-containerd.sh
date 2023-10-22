@@ -8,18 +8,22 @@ fi
 # This script does not work unless systemd is available
 command -v systemctl >/dev/null 2>&1 || exit 0
 
-# Extract bin/nerdctl and compare whether it is newer than the current /usr/local/bin/nerdctl (if already exists).
-# Takes 4-5 seconds. (FIXME: optimize)
-tmp_extract_nerdctl="$(mktemp -d)"
-tar Cxzf "${tmp_extract_nerdctl}" "${LIMA_CIDATA_MNT}"/nerdctl-full.tgz bin/nerdctl
-
-if [ ! -f "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/nerdctl ] || [[ "${tmp_extract_nerdctl}"/bin/nerdctl -nt "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/nerdctl ]]; then
+# Check nerdctl version and compare whether it is different than the current /usr/local/bin/nerdctl (if already exists).
+if [ ! -f "${LIMA_CIDATA_MNT}"/nerdctl-version.txt ]; then
+	tmp_extract_nerdctl="$(mktemp -d)"
+	tar Cxzf "${tmp_extract_nerdctl}" "${LIMA_CIDATA_MNT}"/nerdctl-full.tgz bin/nerdctl
+	tmp_version_nerdctl="$("${tmp_extract_nerdctl}"/bin/nerdctl --version)"
+	rm -rf "${tmp_extract_nerdctl}"
+else
+	tmp_version_nerdctl="$(cat "${LIMA_CIDATA_MNT}"/nerdctl-version.txt)"
+fi
+if [ ! -f "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/nerdctl ] || [ "$tmp_version_nerdctl" != "$("${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/nerdctl --version)" ]; then
 	if [ -f "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/nerdctl ]; then
 		(
 			set +e
 			echo "Upgrading existing nerdctl"
 			echo "- Old: $("${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/nerdctl --version)"
-			echo "- New: $("${tmp_extract_nerdctl}"/bin/nerdctl --version)"
+			echo "- New: ${tmp_version_nerdctl}"
 			systemctl disable --now containerd buildkit stargz-snapshotter
 			sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "PATH=${PATH}" containerd-rootless-setuptool.sh uninstall
 		)
@@ -30,8 +34,6 @@ if [ ! -f "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/nerdctl ] || [[ "${tmp_extra
 	nerdctl completion bash >/etc/bash_completion.d/nerdctl
 	# TODO: enable zsh completion too
 fi
-
-rm -rf "${tmp_extract_nerdctl}"
 
 : "${CONTAINERD_NAMESPACE:=default}"
 # Overridable in .bashrc

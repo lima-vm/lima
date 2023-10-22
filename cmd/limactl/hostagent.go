@@ -30,6 +30,7 @@ func newHostagentCommand() *cobra.Command {
 	hostagentCommand.Flags().String("socket", "", "hostagent socket")
 	hostagentCommand.Flags().Bool("run-gui", false, "run gui synchronously within hostagent")
 	hostagentCommand.Flags().String("nerdctl-archive", "", "local file path (not URL) of nerdctl-full-VERSION-GOOS-GOARCH.tar.gz")
+	hostagentCommand.Flags().String("nerdctl-version", "", "just version (i.e. VERSION) of nerdctl-full-VERSION-GOOS-GOARCH.tar.gz")
 	return hostagentCommand
 }
 
@@ -79,8 +80,15 @@ func hostagentAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	nerdctlVersion, err := cmd.Flags().GetString("nerdctl-version")
+	if err != nil {
+		return err
+	}
 	if nerdctlArchive != "" {
 		opts = append(opts, hostagent.WithNerdctlArchive(nerdctlArchive))
+	}
+	if nerdctlVersion != "" {
+		opts = append(opts, hostagent.WithNerdctlVersion(nerdctlVersion))
 	}
 	ha, err := hostagent.New(instName, stdout, sigintCh, opts...)
 	if err != nil {
