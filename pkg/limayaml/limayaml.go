@@ -75,6 +75,11 @@ type File struct {
 	Digest   digest.Digest `yaml:"digest,omitempty" json:"digest,omitempty"`
 }
 
+type Archive struct {
+	File
+	Version string `yaml:"version,omitempty" json:"version,omitempty"`
+}
+
 type Kernel struct {
 	File    `yaml:",inline"`
 	Cmdline string `yaml:"cmdline,omitempty" json:"cmdline,omitempty"`
@@ -173,9 +178,9 @@ type Provision struct {
 }
 
 type Containerd struct {
-	System   *bool  `yaml:"system,omitempty" json:"system,omitempty"`     // default: false
-	User     *bool  `yaml:"user,omitempty" json:"user,omitempty"`         // default: true
-	Archives []File `yaml:"archives,omitempty" json:"archives,omitempty"` // default: see defaultContainerdArchives
+	System   *bool     `yaml:"system,omitempty" json:"system,omitempty"`     // default: false
+	User     *bool     `yaml:"user,omitempty" json:"user,omitempty"`         // default: true
+	Archives []Archive `yaml:"archives,omitempty" json:"archives,omitempty"` // default: see defaultContainerdArchives
 }
 
 type ProbeMode = string

@@ -34,19 +34,21 @@ const DefaultWatchHostAgentEventsTimeout = 10 * time.Minute
 // ensureNerdctlArchiveCache prefetches the nerdctl-full-VERSION-GOOS-GOARCH.tar.gz archive
 // into the cache before launching the hostagent process, so that we can show the progress in tty.
 // https://github.com/lima-vm/lima/issues/326
-func ensureNerdctlArchiveCache(y *limayaml.LimaYAML, created bool) (string, error) {
+func ensureNerdctlArchiveCache(y *limayaml.LimaYAML, created bool) (string, string, error) {
 	if !*y.Containerd.System && !*y.Containerd.User {
 		// nerdctl archive is not needed
-		return "", nil
+		return "", "", nil
 	}
 
 	errs := make([]error, len(y.Containerd.Archives))
-	for i, f := range y.Containerd.Archives {
+	for i, a := range y.Containerd.Archives {
+		f := a.File
+		v := a.Version
 		// Skip downloading again if the file is already in the cache
 		if created && f.Arch == *y.Arch && !downloader.IsLocal(f.Location) {
 			path, err := fileutils.CachedFile(f)
 			if err == nil {
-				return path, nil
+				return path, v, nil
 			}
 		}
 		path, err := fileutils.DownloadFile("", f, false, "the nerdctl archive", *y.Arch)
@@ -56,19 +58,20 @@ func ensureNerdctlArchiveCache(y *limayaml.LimaYAML, created bool) (string, erro
 		}
 		if path == "" {
 			if downloader.IsLocal(f.Location) {
-				return f.Location, nil
+				return f.Location, v, nil
 			}
-			return "", fmt.Errorf("cache did not contain %q", f.Location)
+			return "", "", fmt.Errorf("cache did not contain %q", f.Location)
 		}
-		return path, nil
+		return path, v, nil
 	}
 
-	return "", fileutils.Errors(errs)
+	return "", "", fileutils.Errors(errs)
 }
 
 type Prepared struct {
-	Driver              driver.Driver
-	NerdctlArchiveCache string
+	Driver                driver.Driver
+	NerdctlArchiveCache   string
+	NerdctlArchiveVersion string
 }
 
 // Prepare ensures the disk, the nerdctl archive, etc.
@@ -96,14 +99,15 @@ func Prepare(_ context.Context, inst *store.Instance) (*Prepared, error) {
 	if err := limaDriver.CreateDisk(); err != nil {
 		return nil, err
 	}
-	nerdctlArchiveCache, err := ensureNerdctlArchiveCache(y, created)
+	nerdctlArchiveCache, nerdctlVersion, err := ensureNerdctlArchiveCache(y, created)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Prepared{
-		Driver:              limaDriver,
-		NerdctlArchiveCache: nerdctlArchiveCache,
+		Driver:                limaDriver,
+		NerdctlArchiveCache:   nerdctlArchiveCache,
+		NerdctlArchiveVersion: nerdctlVersion,
 	}, nil
 }
 

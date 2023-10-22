@@ -286,8 +286,12 @@ func TestFillDefault(t *testing.T) {
 		Containerd: Containerd{
 			System: pointer.Bool(true),
 			User:   pointer.Bool(false),
-			Archives: []File{
-				{Location: "/tmp/nerdctl.tgz"},
+			Archives: []Archive{
+				{
+					File: File{
+						Location: "/tmp/nerdctl.tgz",
+					},
+				},
 			},
 		},
 		SSH: SSH{
@@ -465,11 +469,14 @@ func TestFillDefault(t *testing.T) {
 		Containerd: Containerd{
 			System: pointer.Bool(true),
 			User:   pointer.Bool(false),
-			Archives: []File{
+			Archives: []Archive{
 				{
-					Arch:     arch,
-					Location: "/tmp/nerdctl.tgz",
-					Digest:   "$DIGEST",
+					File: File{
+						Arch:     arch,
+						Location: "/tmp/nerdctl.tgz",
+						Digest:   "$DIGEST",
+					},
+					Version: "1.0.0",
 				},
 			},
 		},
