@@ -38,6 +38,10 @@ function uninstall_lima() {
 	fi
 }
 
+function show_lima_log() {
+	tail -n 100 ~/.lima/"${LIMA_INSTANCE}"/*.log || true
+}
+
 INFO "Uninstalling lima"
 uninstall_lima
 
@@ -47,8 +51,12 @@ install_lima "${OLDVER}"
 export LIMA_INSTANCE="test-upgrade"
 
 INFO "Creating an instance \"${LIMA_INSTANCE}\" with the old Lima"
-defer "limactl delete -f \"${LIMA_INSTANCE}\""
-limactl start --tty=false "${LIMA_INSTANCE}"
+defer "show_lima_log;limactl delete -f \"${LIMA_INSTANCE}\""
+# Lima older than v0.15.1 needs `-pdpe1gb` for stability: https://github.com/lima-vm/lima/pull/1487
+QEMU_SYSTEM_X86_64="qemu-system-x86_64 -cpu host,-pdpe1gb" limactl start --tty=false "${LIMA_INSTANCE}" || (
+	show_lima_log
+	exit 1
+)
 lima nerdctl info
 
 image_name="lima-test-upgrade-containerd-${RANDOM}"
