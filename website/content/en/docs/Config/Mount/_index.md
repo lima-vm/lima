@@ -145,7 +145,7 @@ mounts:
 | ⚡ Requirement | Lima >= 0.18 + (Windows >= 10 Build 19041 OR Windows 11) |
 | ----------------- | -------------------------------------------------------- |
 
-The "wsl2" mount type relies on using WSL2's navite disk sharing, where the root disk is available by default at `/mnt/$DISK_LETTER` (e.g. `/mnt/c/`).
+The "wsl2" mount type relies on using WSL2's native disk sharing, where the root disk is available by default at `/mnt/$DISK_LETTER` (e.g. `/mnt/c/`).
 
 An example configuration:
 {{< tabpane text=true >}}

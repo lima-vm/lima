@@ -28,7 +28,7 @@ weight: 6
 - [Networking](#networking)
   - ["Cannot access the guest IP 192.168.5.15 from the host"](#cannot-access-the-guest-ip-192168515-from-the-host)
   - ["Ping shows duplicate packets and massive response times"](#ping-shows-duplicate-packets-and-massive-response-times)
-  - ["IP address is not assigined for vmnet networks"](#ip-address-is-not-assigined-for-vmnet-networks)
+  - ["IP address is not assigned for vmnet networks"](#ip-address-is-not-assigned-for-vmnet-networks)
 - [Filesystem sharing](#filesystem-sharing)
   - ["Filesystem is slow"](#filesystem-is-slow)
   - ["Filesystem is not writable"](#filesystem-is-not-writable)
@@ -206,7 +206,7 @@ PING google.com (172.217.165.14): 56 data bytes
 
 For more details, see [Documentation/Networking](https://wiki.qemu.org/Documentation/Networking#User_Networking_.28SLIRP.29).
 
-#### "IP address is not assigined for vmnet networks"
+#### "IP address is not assigned for vmnet networks"
 Try the following commands:
 ```bash
 sudo /usr/libexec/ApplicationFirewall/socketfilterfw --add /usr/libexec/bootpd
