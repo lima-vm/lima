@@ -4,19 +4,12 @@ import (
 	"bufio"
 	"os"
 	"path"
-	"runtime"
 	"testing"
 
 	"gotest.tools/v3/assert"
 )
 
 func TestSearchDomain(t *testing.T) {
-
-	if runtime.GOOS == "windows" {
-		// FIXME: `TempDir RemoveAll cleanup: remove C:\users\runner\Temp\TestDownloadLocalwithout_digest2738386858\002\test-file: Sharing violation.`
-		t.Skip("Skipping on windows")
-	}
-
 	t.Run("search domain", func(t *testing.T) {
 		resolvFile := path.Join(t.TempDir(), "resolv.conf")
 		createResolveFile(t, resolvFile, `
@@ -45,6 +38,7 @@ func createResolveFile(t *testing.T, file string, content string) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(func() { _ = f.Close() })
 	writer := bufio.NewWriter(f)
 	_, err = writer.Write([]byte(content))
 	if err != nil {

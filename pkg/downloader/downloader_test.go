@@ -109,19 +109,15 @@ func TestDownloadRemote(t *testing.T) {
 }
 
 func TestDownloadLocal(t *testing.T) {
-
-	if runtime.GOOS == "windows" {
-		// FIXME: `TempDir RemoveAll cleanup: remove C:\users\runner\Temp\TestDownloadLocalwithout_digest2738386858\002\test-file: Sharing violation.`
-		t.Skip("Skipping on windows")
-	}
-
 	const emptyFileDigest = "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 	const testDownloadLocalDigest = "sha256:0c1e0fba69e8919b306d030bf491e3e0c46cf0a8140ff5d7516ba3a83cbea5b3"
 
 	t.Run("without digest", func(t *testing.T) {
 		localPath := filepath.Join(t.TempDir(), t.Name())
 		localFile := filepath.Join(t.TempDir(), "test-file")
-		os.Create(localFile)
+		f, err := os.Create(localFile)
+		assert.NilError(t, err)
+		t.Cleanup(func() { _ = f.Close() })
 		testLocalFileURL := "file://" + localFile
 
 		r, err := Download(localPath, testLocalFileURL)
@@ -150,11 +146,13 @@ func TestDownloadLocal(t *testing.T) {
 
 	t.Run("cached", func(t *testing.T) {
 		localFile := filepath.Join(t.TempDir(), "test-file")
-		os.Create(localFile)
+		f, err := os.Create(localFile)
+		assert.NilError(t, err)
+		t.Cleanup(func() { _ = f.Close() })
 		testLocalFileURL := "file://" + localFile
 
 		cacheDir := filepath.Join(t.TempDir(), "cache")
-		_, err := Cached(testLocalFileURL, WithCacheDir(cacheDir))
+		_, err = Cached(testLocalFileURL, WithCacheDir(cacheDir))
 		assert.ErrorContains(t, err, "not cached")
 	})
 }
