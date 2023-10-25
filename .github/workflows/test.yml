@@ -394,12 +394,6 @@ jobs:
         retry_on: error
         max_attempts: 3
         command: ./hack/test-upgrade.sh ${{ matrix.oldver }} ${{ github.sha }}
-    - name: "Debug: ha.stdout.log"
-      if: always()
-      run: cat ~/.lima/test-upgrade/ha.stdout.log || true
-    - name: "Debug: ha.stderr.log"
-      if: always()
-      run: cat ~/.lima/test-upgrade/ha.stderr.log || true
 
   vz:
     name: "vz"
