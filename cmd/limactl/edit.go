@@ -85,7 +85,7 @@ func editAction(cmd *cobra.Command, args []string) error {
 		logrus.Info("Aborting, as requested by saving the file with empty content")
 		return nil
 	}
-	if bytes.Compare(yBytes, yContent) == 0 {
+	if bytes.Equal(yBytes, yContent) {
 		logrus.Info("Aborting, no changes made to the instance")
 		return nil
 	}

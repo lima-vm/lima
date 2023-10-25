@@ -18,13 +18,13 @@ type User struct {
 	User  string
 	Uid   uint32 //nolint:revive
 	Group string
-	Gid   uint32 //nolint:revive
+	Gid   uint32
 	Home  string
 }
 
 type Group struct {
 	Name string
-	Gid  uint32 //nolint:revive
+	Gid  uint32
 }
 
 var users map[string]User
@@ -77,7 +77,7 @@ func LookupGroup(name string) (Group, error) {
 const (
 	fallbackUser = "lima"
 	fallbackUid  = 1000 //nolint:revive
-	fallbackGid  = 1000 //nolint:revive
+	fallbackGid  = 1000
 )
 
 var cache struct {

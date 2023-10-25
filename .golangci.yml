@@ -32,7 +32,7 @@ linters:
   # - prealloc
   - typecheck
   # - asciicheck
-  # - bodyclose
+  - bodyclose
   # - dogsled
   # - dupl
   # - errcheck
@@ -58,14 +58,14 @@ linters:
   # - gomodguard
   # - goprintffuncname
   # - gosec (gas)
-  # - gosimple (megacheck)
+  - gosimple
   # - interfacer
   # - lll
   # - maligned
   # - nestif
   # - nlreturn
   # - noctx
-  # - nolintlint
+  - nolintlint
   # - rowserrcheck
   # - scopelint
   # - sqlclosecheck
