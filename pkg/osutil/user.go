@@ -30,6 +30,16 @@ type Group struct {
 var users map[string]User
 var groups map[string]Group
 
+// regexUidGid detects valid Linux uid or gid.
+var regexUidGid = regexp.MustCompile("^[0-9]+$") //nolint:revive
+
+// regexUsername matches user and group names to be valid for `useradd`.
+// It allows a trailing '$', but it feels prudent to map those to the fallback user as well.
+var regexUsername = regexp.MustCompile("^[a-z_][a-z0-9_-]*$")
+
+// regexPath detects valid Linux path.
+var regexPath = regexp.MustCompile("^[/a-zA-Z0-9_-]+$")
+
 func LookupUser(name string) (User, error) {
 	if users == nil {
 		users = make(map[string]User)
@@ -101,12 +111,9 @@ func LimaUser(warn bool) (*user.User, error) {
 	cache.Do(func() {
 		cache.u, cache.err = user.Current()
 		if cache.err == nil {
-			// `useradd` only allows user and group names matching the following pattern:
-			// (it allows a trailing '$', but it feels prudent to map those to the fallback user as well)
-			validName := "^[a-z_][a-z0-9_-]*$"
-			if !regexp.MustCompile(validName).Match([]byte(cache.u.Username)) {
+			if !regexUsername.MatchString(cache.u.Username) {
 				warning := fmt.Sprintf("local user %q is not a valid Linux username (must match %q); using %q username instead",
-					cache.u.Username, validName, fallbackUser)
+					cache.u.Username, regexUsername.String(), fallbackUser)
 				cache.warnings = append(cache.warnings, warning)
 				cache.u.Username = fallbackUser
 			}
@@ -119,7 +126,7 @@ func LimaUser(warn bool) (*user.User, error) {
 				if err != nil {
 					uid = fallbackUid
 				}
-				if !regexp.MustCompile("^[0-9]+$").Match([]byte(cache.u.Uid)) {
+				if !regexUidGid.MatchString(cache.u.Uid) {
 					warning := fmt.Sprintf("local uid %q is not a valid Linux uid (must be integer); using %d uid instead",
 						cache.u.Uid, uid)
 					cache.warnings = append(cache.warnings, warning)
@@ -133,7 +140,7 @@ func LimaUser(warn bool) (*user.User, error) {
 				if err != nil {
 					gid = fallbackGid
 				}
-				if !regexp.MustCompile("^[0-9]+$").Match([]byte(cache.u.Gid)) {
+				if !regexUidGid.MatchString(cache.u.Gid) {
 					warning := fmt.Sprintf("local gid %q is not a valid Linux gid (must be integer); using %d gid instead",
 						cache.u.Gid, gid)
 					cache.warnings = append(cache.warnings, warning)
@@ -150,10 +157,9 @@ func LimaUser(warn bool) (*user.User, error) {
 					prefix := strings.ToLower(fmt.Sprintf("/%c", drive[0]))
 					home = strings.Replace(home, drive, prefix, 1)
 				}
-				validPath := "^[/a-zA-Z0-9_-]+$"
-				if !regexp.MustCompile(validPath).Match([]byte(cache.u.HomeDir)) {
+				if !regexPath.MatchString(cache.u.HomeDir) {
 					warning := fmt.Sprintf("local home %q is not a valid Linux path (must match %q); using %q home instead",
-						cache.u.HomeDir, validPath, home)
+						cache.u.HomeDir, regexPath.String(), home)
 					cache.warnings = append(cache.warnings, warning)
 					cache.u.HomeDir = home
 				}
