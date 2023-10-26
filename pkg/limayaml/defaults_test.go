@@ -14,11 +14,15 @@ import (
 	"github.com/lima-vm/lima/pkg/ptr"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/store/filenames"
+	"github.com/sirupsen/logrus"
 	"gotest.tools/v3/assert"
 )
 
 func TestFillDefault(t *testing.T) {
+	logrus.SetLevel(logrus.DebugLevel)
 	var d, y, o LimaYAML
+
+	defaultVMType := ResolveVMType(&y, &d, &o, "")
 
 	opts := []cmp.Option{
 		// Consider nil slices and empty slices to be identical
@@ -59,7 +63,7 @@ func TestFillDefault(t *testing.T) {
 
 	// Builtin default values
 	builtin := LimaYAML{
-		VMType:             ptr.Of("qemu"),
+		VMType:             &defaultVMType,
 		OS:                 ptr.Of(LINUX),
 		Arch:               ptr.Of(arch),
 		CPUType:            defaultCPUType(),
@@ -189,6 +193,7 @@ func TestFillDefault(t *testing.T) {
 	}
 
 	expect := builtin
+	expect.VMType = ptr.Of(QEMU) // due to NINEP
 	expect.HostResolver.Hosts = map[string]string{
 		"MY.Host": "host.lima.internal",
 	}
@@ -459,6 +464,7 @@ func TestFillDefault(t *testing.T) {
 	// "TWO" does not exist in filledDefaults.Env, so is set from d.Env
 	expect.Env["TWO"] = d.Env["TWO"]
 
+	t.Logf("d.vmType=%q, y.vmType=%q, expect.vmType=%q", *d.VMType, *y.VMType, *expect.VMType)
 	FillDefault(&y, &d, &LimaYAML{}, filePath)
 	assert.DeepEqual(t, &y, &expect, opts...)
 

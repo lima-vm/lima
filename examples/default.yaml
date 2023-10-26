@@ -8,7 +8,7 @@
 # VM type: "qemu", "vz" (on macOS 13 and later), or "default".
 # The vmType can be specified only on creating the instance.
 # The vmType of existing instances cannot be changed.
-# 🟢 Builtin default: "qemu"
+# 🟢 Builtin default: "vz" (on macOS 13.5 and later), "qemu" (on others)
 vmType: null
 
 # OS: "Linux".
