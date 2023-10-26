@@ -63,7 +63,7 @@ See also https://github.com/containerd/nerdctl/blob/master/docs/multi-platform.m
 ## [Fast mode 2 (Rosetta): Intel containers on ARM VM on ARM Host](#fast-mode-2)
 
 > **Warning**
-> "vz" mode, including support for Rosetta, is experimental
+> "vz" mode, including support for Rosetta, is experimental (will graduate from experimental in Lima v1.0)
 
 | ⚡ Requirement | Lima >= 0.14, macOS >= 13.0, ARM |
 |-------------------|----------------------------------|

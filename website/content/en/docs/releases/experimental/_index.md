@@ -9,6 +9,7 @@ The following features are experimental and subject to change:
 - `mountType: 9p`
 - `mountType: virtiofs` on Linux
 - `vmType: vz` and relevant configurations (`mountType: virtiofs`, `rosetta`, `[]networks.vzNAT`)
+  (will graduate from experimental in Lima v1.0)
 - `vmType: wsl2` and relevant configurations (`mountType: wsl2`)
 - `arch: riscv64`
 - `video.display: vnc` and relevant configuration (`video.vnc.display`)

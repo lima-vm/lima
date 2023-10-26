@@ -28,7 +28,7 @@ This option is used by default if "vmType" is not set.
 
 ## VZ
 > **Warning**
-> "vz" mode is experimental
+> "vz" mode is experimental (will graduate from experimental in Lima v1.0)
 
 | ⚡ Requirement | Lima >= 0.14, macOS >= 13.0 |
 |-------------------|-----------------------------|

@@ -196,7 +196,7 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 				return fmt.Sprintf(".rosetta.enabled = %v | .rosetta.binfmt = %v", b, b), nil
 			},
 			false,
-			true,
+			false,
 		},
 		{"set", d("%s"), false, false},
 		{
