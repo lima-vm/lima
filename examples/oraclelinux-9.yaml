@@ -9,6 +9,8 @@ images:
 - location: "https://yum.oracle.com/templates/OracleLinux/OL9/u4/aarch64/OL9U4_aarch64-kvm-cloud-b90.qcow2"
   arch: "aarch64"
   digest: "sha256:1f4e20190e87c76e8c3b4a9e15e660972386cbfa4f128e5cdcd8faa43a713d44"
+# The mount type is set to reverse-sshfs because 9p (default for QEMU) is not supported by the guest kernel. VZ users should specify `--mount-type=virtiofs` on `limactl create` for better performance.
+mountType: "reverse-sshfs"
 mounts:
 - location: "~"
 - location: "/tmp/lima"
