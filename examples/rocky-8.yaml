@@ -10,6 +10,8 @@ images:
 - location: "https://dl.rockylinux.org/pub/rocky/8.8/images/aarch64/Rocky-8-GenericCloud-Base-8.8-20230518.0.aarch64.qcow2"
   arch: "aarch64"
   digest: "sha256:dcedb823982fab67094c6c8237b8c06e28cf5c4a7bfe7db43ff23c1b9347c746"
+# The mount type is set to reverse-sshfs because 9p (default for QEMU) is not supported by the guest kernel. VZ users should specify `--mount-type=virtiofs` on `limactl create` for better performance.
+mountType: "reverse-sshfs"
 mounts:
 - location: "~"
 - location: "/tmp/lima"

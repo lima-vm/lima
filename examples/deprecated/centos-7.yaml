@@ -12,6 +12,8 @@ images:
 containerd:
   system: false
   user: false
+# The mount type is set to reverse-sshfs because 9p (default for QEMU) is not supported by the guest kernel.
+mountType: "reverse-sshfs"
 mounts:
 - location: "~"
 - location: "/tmp/lima"

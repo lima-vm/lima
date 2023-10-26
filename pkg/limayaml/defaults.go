@@ -518,9 +518,12 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.MountType = o.MountType
 	}
 	if y.MountType == nil || *y.MountType == "" {
-		if *y.VMType == VZ {
+		switch *y.VMType {
+		case VZ:
 			y.MountType = pointer.String(VIRTIOFS)
-		} else {
+		case QEMU:
+			y.MountType = pointer.String(NINEP)
+		default:
 			y.MountType = pointer.String(REVSSHFS)
 		}
 	}
