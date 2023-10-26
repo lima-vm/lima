@@ -72,7 +72,7 @@ type Prepared struct {
 }
 
 // Prepare ensures the disk, the nerdctl archive, etc.
-func Prepare(_ context.Context, inst *store.Instance) (*Prepared, error) {
+func Prepare(ctx context.Context, inst *store.Instance) (*Prepared, error) {
 	y, err := inst.LoadYAML()
 	if err != nil {
 		return nil, err
@@ -84,6 +84,10 @@ func Prepare(_ context.Context, inst *store.Instance) (*Prepared, error) {
 	})
 
 	if err := limaDriver.Validate(); err != nil {
+		return nil, err
+	}
+
+	if err := limaDriver.Initialize(ctx); err != nil {
 		return nil, err
 	}
 

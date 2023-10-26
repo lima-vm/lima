@@ -16,6 +16,14 @@ type Driver interface {
 	// Validate returns error if the current driver isn't support for given config
 	Validate() error
 
+	// Initialize is called on creating the instance for initialization.
+	// (e.g., creating "vz-identifier" file)
+	//
+	// Initialize MUST return nil when it is called against an existing instance.
+	//
+	// Initialize does not create the disks.
+	Initialize(_ context.Context) error
+
 	// CreateDisk returns error if the current driver fails in creating disk
 	CreateDisk() error
 
@@ -66,6 +74,10 @@ type BaseDriver struct {
 var _ Driver = (*BaseDriver)(nil)
 
 func (d *BaseDriver) Validate() error {
+	return nil
+}
+
+func (d *BaseDriver) Initialize(_ context.Context) error {
 	return nil
 }
 
