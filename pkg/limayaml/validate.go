@@ -508,9 +508,6 @@ func validatePort(field string, port int) error {
 }
 
 func warnExperimental(y *LimaYAML) {
-	if *y.MountType == NINEP {
-		logrus.Warn("`mountType: 9p` is experimental")
-	}
 	if *y.MountType == VIRTIOFS && runtime.GOOS == "linux" {
 		logrus.Warn("`mountType: virtiofs` on Linux is experimental")
 	}

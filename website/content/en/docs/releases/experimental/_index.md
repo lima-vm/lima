@@ -6,7 +6,7 @@ weight: 10
 
 The following features are experimental and subject to change:
 
-- `mountType: 9p`
+- `mountType: 9p` (will graduate from experimental in Lima v1.0)
 - `mountType: virtiofs` on Linux
 - `vmType: vz` and relevant configurations (`mountType: virtiofs`, `rosetta`, `[]networks.vzNAT`)
   (will graduate from experimental in Lima v1.0)

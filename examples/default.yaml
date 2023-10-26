@@ -112,7 +112,7 @@ mounts:
   # 🔵 This file: true (only for "/tmp/lima")
   writable: true
 
-# Mount type for above mounts, such as "reverse-sshfs" (from sshocker), "9p" (EXPERIMENTAL, from QEMU’s virtio-9p-pci, aka virtfs),
+# Mount type for above mounts, such as "reverse-sshfs" (from sshocker), "9p" (EXPERIMENTAL until Lima v1.0, from QEMU’s virtio-9p-pci, aka virtfs),
 # or "virtiofs" (EXPERIMENTAL, needs `vmType: vz`; will graduate from experimental in Lima v1.0)
 # 🟢 Builtin default: "reverse-sshfs" (for QEMU), "virtiofs" (for vz)
 mountType: null
