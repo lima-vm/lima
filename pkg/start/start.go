@@ -114,6 +114,7 @@ func Start(ctx context.Context, inst *store.Instance) error {
 	if _, err := os.Stat(haPIDPath); !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("instance %q seems running (hint: remove %q if the instance is not actually running)", inst.Name, haPIDPath)
 	}
+	logrus.Infof("Starting the instance %q with VM driver %q", inst.Name, inst.VMType)
 
 	haSockPath := filepath.Join(inst.Dir, filenames.HostAgentSock)
 
