@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/lima-vm/lima/pkg/networks/usernet"
+	"github.com/lima-vm/lima/pkg/osutil"
 
 	"github.com/coreos/go-semver/semver"
 	"github.com/digitalocean/go-qemu/qmp"
@@ -398,25 +399,6 @@ func showDarwinARM64HVFQEMU620Warning(exe, accel string, features *features) {
 	logrus.Warn(w)
 }
 
-func getMacOSProductVersion() (*semver.Version, error) {
-	cmd := exec.Command("sw_vers", "-productVersion")
-	// output is like "12.3.1\n"
-	b, err := cmd.Output()
-	if err != nil {
-		return nil, fmt.Errorf("failed to execute %v: %w", cmd.Args, err)
-	}
-	verTrimmed := strings.TrimSpace(string(b))
-	// macOS 12.4 returns just "12.4\n"
-	for strings.Count(verTrimmed, ".") < 2 {
-		verTrimmed += ".0"
-	}
-	verSem, err := semver.NewVersion(verTrimmed)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse macOS version %q: %w", verTrimmed, err)
-	}
-	return verSem, nil
-}
-
 // adjustMemBytesDarwinARM64HVF adjusts the memory to be <= 3 GiB, only when the following conditions are met:
 //
 // - Host OS   <  macOS 12.4
@@ -443,7 +425,7 @@ func adjustMemBytesDarwinARM64HVF(memBytes int64, accel string, features *featur
 	if !features.VersionGEQ7 {
 		return memBytes
 	}
-	macOSProductVersion, err := getMacOSProductVersion()
+	macOSProductVersion, err := osutil.ProductVersion()
 	if err != nil {
 		logrus.Warn(err)
 		return memBytes
