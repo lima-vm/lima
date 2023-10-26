@@ -1,3 +1,11 @@
+# ⚠️ ⚠️ ⚠️ `template://experimental/vz` will be removed in Lima v1.0,
+# as vz will graduate from experimental and will be the default vmType.
+#
+# For Lima v1.0 and later, use the following command instead:
+# ```
+# limactl create template://default
+# ```
+
 # A template to run ubuntu using vmType: vz instead of qemu (Default)
 # This template requires Lima v0.14.0 or later and macOS 13.
 vmType: "vz"
