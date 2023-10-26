@@ -109,7 +109,8 @@ if [[ -n ${CHECKS["disk"]} ]]; then
 fi
 
 set -x
-"${LIMACTL_CREATE[@]}" "$FILE"
+# shellcheck disable=SC2086
+"${LIMACTL_CREATE[@]}" ${LIMACTL_CREATE_ARGS} "$FILE"
 set +x
 
 INFO "Starting \"$NAME\""
@@ -223,7 +224,7 @@ if [[ -n ${CHECKS["port-forwards"]} ]]; then
 	if [ "${NAME}" = "debian" ]; then
 		limactl shell "$NAME" sudo apt-get install -y netcat-openbsd
 	fi
-	if [ "${NAME}" = "fedora" ]; then
+	if [ "${NAME}" == "fedora" ]; then
 		limactl shell "$NAME" sudo dnf install -y nc
 	fi
 	if [ "${NAME}" = "opensuse" ]; then
@@ -387,6 +388,10 @@ if [[ -n ${CHECKS["snapshot-offline"]} ]]; then
 	limactl snapshot apply "$NAME" --tag snap2
 	limactl snapshot delete "$NAME" --tag snap2
 	limactl start "$NAME"
+fi
+
+if [[ $NAME == "fedora" && "$(limactl ls --json "$NAME" | jq -r .vmType)" == "vz" ]]; then
+	"${scriptdir}"/test-selinux.sh "$NAME"
 fi
 
 INFO "Stopping \"$NAME\""

@@ -7,6 +7,9 @@ on:
     - 'release/**'
   pull_request:
 
+env:
+  LIMACTL_CREATE_ARGS: ""
+
 jobs:
   lints:
     name: "Lints"
@@ -399,6 +402,12 @@ jobs:
     name: "vz"
     runs-on: macos-13
     timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        template:
+        - experimental/vz.yaml
+        - fedora.yaml
     steps:
     - uses: actions/checkout@v4
       with:
@@ -411,14 +420,16 @@ jobs:
       with:
         path: ~/Library/Caches/lima/download
         # hashFiles do not seem to support symlinks
-        key: ${{ runner.os }}-${{ hashFiles('examples/experimental/vz.yaml') }}
+        key: ${{ runner.os }}-${{ hashFiles('examples/*.yaml') }}
     - name: Make
       run: make
     - name: Install
       run: make install
     - name: Install test dependencies
-      run: brew install bash coreutils
+      run: brew install bash coreutils jq
     - name: Uninstall qemu
       run: brew uninstall --ignore-dependencies --force qemu
     - name: Test
-      run: ./hack/test-templates.sh templates/experimental/vz.yaml
+      env:
+        LIMACTL_CREATE_ARGS: "--vm-type vz --mount-type virtiofs --rosetta --network vzNAT"
+      run: ./hack/test-templates.sh templates/${{ matrix.template }}
