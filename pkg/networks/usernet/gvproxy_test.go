@@ -35,17 +35,11 @@ nameserver 8.8.8.8`)
 
 func createResolveFile(t *testing.T, file string, content string) {
 	f, err := os.Create(file)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NilError(t, err)
 	t.Cleanup(func() { _ = f.Close() })
 	writer := bufio.NewWriter(f)
 	_, err = writer.Write([]byte(content))
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NilError(t, err)
 	err = writer.Flush()
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NilError(t, err)
 }

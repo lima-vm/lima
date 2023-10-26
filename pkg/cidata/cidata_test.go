@@ -21,10 +21,7 @@ func TestSetupEnv(t *testing.T) {
 	netLookupIP = fakeLookupIP
 	urlMustParse := func(urlStr string) *url.URL {
 		u, err := url.Parse(urlStr)
-		if err != nil {
-			panic(err)
-		}
-
+		assert.NilError(t, err)
 		return u
 	}
 

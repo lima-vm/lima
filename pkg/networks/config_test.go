@@ -10,7 +10,7 @@ import (
 func TestFillDefault(t *testing.T) {
 	nwYaml := YAML{}
 	newYaml, err := fillDefaults(nwYaml)
-	assert.Check(t, err == nil)
+	assert.NilError(t, err)
 
 	userNet := newYaml.Networks[ModeUserV2]
 	assert.Equal(t, userNet.Mode, ModeUserV2)
