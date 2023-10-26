@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/lima-vm/lima/pkg/store"
+	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -45,7 +46,7 @@ func factoryResetAction(_ *cobra.Command, args []string) error {
 	}
 	for _, f := range fi {
 		path := filepath.Join(inst.Dir, f.Name())
-		if !strings.HasSuffix(path, ".yaml") && !strings.HasSuffix(path, ".yml") {
+		if !strings.HasSuffix(path, ".yaml") && !strings.HasSuffix(path, ".yml") && f.Name() != filenames.VzIdentifier {
 			logrus.Infof("Removing %q", path)
 			if err := os.Remove(path); err != nil {
 				logrus.Error(err)
