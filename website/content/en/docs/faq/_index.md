@@ -32,6 +32,7 @@ weight: 6
 - [Filesystem sharing](#filesystem-sharing)
   - ["Filesystem is slow"](#filesystem-is-slow)
   - ["Filesystem is not writable"](#filesystem-is-not-writable)
+  - ["Filesystem is unmounted after upgrading Lima to v1.0 (pre-release)"](#filesystem-is-unmounted-after-upgrading-lima-to-v10-pre-release)
 - [External projects](#external-projects)
   - ["I am using Rancher Desktop. How to deal with the underlying Lima?"](#i-am-using-rancher-desktop-how-to-deal-with-the-underlying-lima)
 - ["Hints for debugging other problems?"](#hints-for-debugging-other-problems)
@@ -229,6 +230,25 @@ mounts:
 ```
 
 Run `limactl edit <INSTANCE>` to open the YAML editor for an existing instance.
+
+#### "Filesystem is unmounted after upgrading Lima to v1.0 (pre-release)"
+
+Lima v1.0 (pre-release) changed the default mount type for QEMU from `reverse-sshfs` to `9p`.
+
+The `9p` mount type is known to be incompatible with the following guest operating systems:
+- AlmaLinux, CentOS Stream, Oracle Linux, and RockyLinux
+- Debian GNU/Linux
+- openSUSE
+
+A new instance of these OS still use `reverse-sshfs` by default.
+However, an existing instance created with a previous version of Lima may potentially need
+running the following command (usually not needed):
+
+```
+limactl edit --mount-type=reverse-sshfs <NAME>
+```
+
+Ubuntu users are not affected by this issue.
 
 ### External projects
 #### "I am using Rancher Desktop. How to deal with the underlying Lima?"

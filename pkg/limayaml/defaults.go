@@ -27,6 +27,7 @@ import (
 	"github.com/lima-vm/lima/pkg/ptr"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/store/filenames"
+	"github.com/lima-vm/lima/pkg/version/versionutil"
 )
 
 const (
@@ -171,6 +172,17 @@ func defaultGuestInstallPrefix() string {
 //   - CACertificates Files and Certs are uniquely appended in d, y, o order
 func FillDefault(y, d, o *LimaYAML, filePath string) {
 	instDir := filepath.Dir(filePath)
+
+	// existingLimaVersion can be empty if the instance was created with Lima prior to v0.20,
+	// or, when editing a template file without an instance (`limactl edit foo.yaml`)
+	var existingLimaVersion string
+	limaVersionFile := filepath.Join(instDir, filenames.LimaVersion)
+	if b, err := os.ReadFile(limaVersionFile); err == nil {
+		existingLimaVersion = strings.TrimSpace(string(b))
+	} else if !errors.Is(err, os.ErrNotExist) {
+		logrus.WithError(err).Warnf("Failed to read %q", limaVersionFile)
+	}
+
 	if y.VMType == nil {
 		y.VMType = d.VMType
 	}
@@ -547,6 +559,11 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		}
 	}
 
+	y.MountTypesUnsupported = append(append(o.MountTypesUnsupported, y.MountTypesUnsupported...), d.MountTypesUnsupported...)
+	mountTypesUnsupported := make(map[string]struct{})
+	for _, f := range y.MountTypesUnsupported {
+		mountTypesUnsupported[f] = struct{}{}
+	}
 	// MountType has to be resolved before resolving Mounts
 	if y.MountType == nil {
 		y.MountType = d.MountType
@@ -554,12 +571,27 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 	if o.MountType != nil {
 		y.MountType = o.MountType
 	}
-	if y.MountType == nil || *y.MountType == "" {
-		if *y.VMType == VZ {
+	if y.MountType == nil || *y.MountType == "" || *y.MountType == "default" {
+		switch *y.VMType {
+		case VZ:
 			y.MountType = ptr.Of(VIRTIOFS)
-		} else {
+		case QEMU:
+			y.MountType = ptr.Of(NINEP)
+			if _, ok := mountTypesUnsupported[NINEP]; ok {
+				// Use REVSSHFS if the instance does not support 9p
+				y.MountType = ptr.Of(REVSSHFS)
+			} else if isExistingInstanceDir(instDir) && !versionutil.GreaterEqual(existingLimaVersion, "1.0.0") {
+				// Use REVSSHFS if the instance was created with Lima prior to v1.0
+				y.MountType = ptr.Of(REVSSHFS)
+			}
+		default:
 			y.MountType = ptr.Of(REVSSHFS)
 		}
+	}
+
+	if _, ok := mountTypesUnsupported[*y.MountType]; ok {
+		// We cannot return an error here, but Validate() will return it.
+		logrus.Warnf("Unsupported mount type: %q", *y.MountType)
 	}
 
 	if y.MountInotify == nil {
