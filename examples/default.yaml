@@ -71,8 +71,7 @@ mounts:
   # Configure the mountPoint inside the guest.
   # 🟢 Builtin default: value of location
   mountPoint: null
-  # CAUTION: `writable` SHOULD be false for the home directory.
-  # Setting `writable` to true is possible, but untested and dangerous.
+  # Setting `writable` to true is discouraged when mountType is set to "reverse-sshfs".
   # 🟢 Builtin default: false
   writable: null
   sshfs:
