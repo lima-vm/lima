@@ -428,7 +428,7 @@ hostResolver:
     # guest.name: 127.1.1.1
     # host.name: host.lima.internal
 
-# If useHostResolver is false, then the following rules apply for configuring dns:
+# If hostResolver.enabled is false, then the following rules apply for configuring dns:
 # Explicitly set DNS addresses for qemu user-mode networking. By default qemu picks *one*
 # nameserver from the host config and forwards all queries to this server. On macOS
 # Lima adds the nameservers configured for the first host interface in service order,
