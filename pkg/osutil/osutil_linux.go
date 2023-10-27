@@ -10,7 +10,7 @@ const UnixPathMax = 108
 
 // Stat is a selection of syscall.Stat_t
 type Stat struct {
-	Uid uint32 //nolint:revive
+	Uid uint32
 	Gid uint32
 }
 
