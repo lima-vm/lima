@@ -375,7 +375,7 @@ jobs:
     timeout-minutes: 120
     strategy:
       matrix:
-        oldver: ["v0.10.0"]
+        oldver: ["v0.15.1"]
     steps:
     - uses: actions/checkout@v4
       with:

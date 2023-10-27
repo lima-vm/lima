@@ -27,6 +27,15 @@ function install_lima() {
 	fi
 }
 
+function install_lima_binary() {
+	ver="$1"
+	tar="tar"
+	if [ ! -w "${PREFIX}/bin" ] || [ ! -w "${PREFIX}/share" ]; then
+		tar="sudo ${tar}"
+	fi
+	curl -fsSL "https://github.com/lima-vm/lima/releases/download/${ver}/lima-${ver:1}-$(uname -s)-$(uname -m).tar.gz" | ${tar} Cxzvm "${PREFIX}"
+}
+
 function uninstall_lima() {
 	files="${PREFIX}/bin/lima ${PREFIX}/bin/limactl ${PREFIX}/share/lima ${PREFIX}/share/doc/lima"
 	if [ -w "${PREFIX}/bin" ] && [ -w "${PREFIX}/share" ]; then
@@ -46,14 +55,13 @@ INFO "Uninstalling lima"
 uninstall_lima
 
 INFO "Installing the old Lima ${OLDVER}"
-install_lima "${OLDVER}"
+install_lima_binary "${OLDVER}" || install_lima "${OLDVER}"
 
 export LIMA_INSTANCE="test-upgrade"
 
 INFO "Creating an instance \"${LIMA_INSTANCE}\" with the old Lima"
 defer "show_lima_log;limactl delete -f \"${LIMA_INSTANCE}\""
-# Lima older than v0.15.1 needs `-pdpe1gb` for stability: https://github.com/lima-vm/lima/pull/1487
-QEMU_SYSTEM_X86_64="qemu-system-x86_64 -cpu host,-pdpe1gb" limactl start --tty=false "${LIMA_INSTANCE}" || (
+limactl start --tty=false --name="${LIMA_INSTANCE}" template://ubuntu-lts || (
 	show_lima_log
 	exit 1
 )
