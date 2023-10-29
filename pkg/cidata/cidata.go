@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -136,6 +137,7 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 		VMType:         *y.VMType,
 		VSockPort:      vsockPort,
 		Plain:          *y.Plain,
+		Timezone:       getHostTimezone(),
 	}
 
 	firstUsernetIndex := limayaml.FirstUsernetIndex(y)
@@ -368,6 +370,54 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 	}
 
 	return iso9660util.Write(filepath.Join(instDir, filenames.CIDataISO), "cidata", layout)
+}
+
+// getHostTimezone tries to get host timezone from env or specific files
+func getHostTimezone() string {
+	if runtime.GOOS == "windows" {
+		logrus.Debug("skip get host timezone on Windows")
+		return ""
+	}
+
+	// 1. try to get timezone from env.TZ
+	tzEnv := os.Getenv("TZ")
+	if tzEnv != "" &&
+		// skip if TZ is in "std offset dst offset, rule" format
+		!strings.Contains(tzEnv, " ") {
+		return tzEnv
+	}
+	logrus.Debugf("cannot get timezone from env TZ: [%s]", tzEnv)
+
+	// 2. try to get timezone from /etc/timezone
+	tzName, err := os.ReadFile("/etc/timezone")
+	if err == nil {
+		return string(tzName)
+	}
+	logrus.Debugf("cannot get timezone from /etc/timezone: %s", err)
+
+	// 3. try to get timezone from /etc/localtime soft link
+	// base on the assumption that <zoneinfo_basedir>/zone.tab file exists
+	// and /etc/localtime is a soft link to <zoneinfo_basedir>/<timezone>
+	tzFilePath, err := filepath.EvalSymlinks("/etc/localtime")
+	if err == nil {
+		for baseDir := filepath.Dir(tzFilePath); baseDir != "/"; baseDir = filepath.Dir(baseDir) {
+			anchorFile := filepath.Join(baseDir, "zone.tab")
+			_, err = os.Stat(anchorFile)
+			if err != nil {
+				continue
+			}
+
+			tz := strings.TrimPrefix(tzFilePath, baseDir+"/")
+			_, err = time.LoadLocation(tz)
+			if err == nil {
+				return tz
+			}
+		}
+	}
+	logrus.Debugf("cannot get host timezone from /etc/localtime: %s", err)
+
+	logrus.Warnf("cannot get host timezone")
+	return ""
 }
 
 func GuestAgentBinary(ostype limayaml.OS, arch limayaml.Arch) (io.ReadCloser, error) {

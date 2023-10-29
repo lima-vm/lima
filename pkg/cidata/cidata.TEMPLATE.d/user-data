@@ -1,6 +1,10 @@
 #cloud-config
 # vim:syntax=yaml
 
+{{- if .Timezone }}
+timezone: {{.Timezone}}
+{{- end }}
+
 growpart:
   mode: auto
   devices: ['/']
