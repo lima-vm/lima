@@ -5,8 +5,15 @@ on:
     branches:
     - master
     - 'release/**'
+    paths-ignore:
+    - "docs/**"
+    - "website/**"
+    - "**.md"
   pull_request:
-
+    paths-ignore:
+    - "docs/**"
+    - "website/**"
+    - "**.md"
 env:
   LIMACTL_CREATE_ARGS: ""
 
