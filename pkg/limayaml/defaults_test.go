@@ -12,9 +12,9 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/lima-vm/lima/pkg/guestagent/api"
 	"github.com/lima-vm/lima/pkg/osutil"
+	"github.com/lima-vm/lima/pkg/ptr"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/store/filenames"
-	"github.com/xorcare/pointer"
 	"gotest.tools/v3/assert"
 )
 
@@ -60,52 +60,52 @@ func TestFillDefault(t *testing.T) {
 
 	// Builtin default values
 	builtin := LimaYAML{
-		VMType: pointer.String("qemu"),
-		OS:     pointer.String(LINUX),
-		Arch:   pointer.String(arch),
+		VMType: ptr.Of("qemu"),
+		OS:     ptr.Of(LINUX),
+		Arch:   ptr.Of(arch),
 		CPUType: map[Arch]string{
 			AARCH64: "cortex-a72",
 			ARMV7L:  "cortex-a7",
 			X8664:   "qemu64",
 			RISCV64: "rv64",
 		},
-		CPUs:               pointer.Int(defaultCPUs()),
-		Memory:             pointer.String(defaultMemoryAsString()),
-		Disk:               pointer.String(defaultDiskSizeAsString()),
-		GuestInstallPrefix: pointer.String(defaultGuestInstallPrefix()),
+		CPUs:               ptr.Of(defaultCPUs()),
+		Memory:             ptr.Of(defaultMemoryAsString()),
+		Disk:               ptr.Of(defaultDiskSizeAsString()),
+		GuestInstallPrefix: ptr.Of(defaultGuestInstallPrefix()),
 		Containerd: Containerd{
-			System:   pointer.Bool(false),
-			User:     pointer.Bool(true),
+			System:   ptr.Of(false),
+			User:     ptr.Of(true),
 			Archives: defaultContainerdArchives(),
 		},
 		SSH: SSH{
-			LocalPort:         pointer.Int(0),
-			LoadDotSSHPubKeys: pointer.Bool(true),
-			ForwardAgent:      pointer.Bool(false),
-			ForwardX11:        pointer.Bool(false),
-			ForwardX11Trusted: pointer.Bool(false),
+			LocalPort:         ptr.Of(0),
+			LoadDotSSHPubKeys: ptr.Of(true),
+			ForwardAgent:      ptr.Of(false),
+			ForwardX11:        ptr.Of(false),
+			ForwardX11Trusted: ptr.Of(false),
 		},
 		Firmware: Firmware{
-			LegacyBIOS: pointer.Bool(false),
+			LegacyBIOS: ptr.Of(false),
 		},
 		Audio: Audio{
-			Device: pointer.String(""),
+			Device: ptr.Of(""),
 		},
 		Video: Video{
-			Display: pointer.String("none"),
+			Display: ptr.Of("none"),
 			VNC: VNCOptions{
-				Display: pointer.String("127.0.0.1:0,to=9"),
+				Display: ptr.Of("127.0.0.1:0,to=9"),
 			},
 		},
 		HostResolver: HostResolver{
-			Enabled: pointer.Bool(true),
-			IPv6:    pointer.Bool(false),
+			Enabled: ptr.Of(true),
+			IPv6:    ptr.Of(false),
 		},
-		PropagateProxyEnv: pointer.Bool(true),
+		PropagateProxyEnv: ptr.Of(true),
 		CACertificates: CACertificates{
-			RemoveDefaults: pointer.Bool(false),
+			RemoveDefaults: ptr.Of(false),
 		},
-		Plain: pointer.Bool(false),
+		Plain: ptr.Of(false),
 	}
 	if IsAccelOS() {
 		if HasHostCPU() {
@@ -144,7 +144,7 @@ func TestFillDefault(t *testing.T) {
 		Mounts: []Mount{
 			{Location: "/tmp"},
 		},
-		MountType: pointer.String(NINEP),
+		MountType: ptr.Of(NINEP),
 		Provision: []Provision{
 			{Script: "#!/bin/true"},
 		},
@@ -190,18 +190,18 @@ func TestFillDefault(t *testing.T) {
 
 	expect.Mounts = y.Mounts
 	expect.Mounts[0].MountPoint = expect.Mounts[0].Location
-	expect.Mounts[0].Writable = pointer.Bool(false)
-	expect.Mounts[0].SSHFS.Cache = pointer.Bool(true)
-	expect.Mounts[0].SSHFS.FollowSymlinks = pointer.Bool(false)
-	expect.Mounts[0].SSHFS.SFTPDriver = pointer.String("")
-	expect.Mounts[0].NineP.SecurityModel = pointer.String(Default9pSecurityModel)
-	expect.Mounts[0].NineP.ProtocolVersion = pointer.String(Default9pProtocolVersion)
-	expect.Mounts[0].NineP.Msize = pointer.String(Default9pMsize)
-	expect.Mounts[0].NineP.Cache = pointer.String(Default9pCacheForRO)
-	expect.Mounts[0].Virtiofs.QueueSize = pointer.Int(DefaultVirtiofsQueueSize)
+	expect.Mounts[0].Writable = ptr.Of(false)
+	expect.Mounts[0].SSHFS.Cache = ptr.Of(true)
+	expect.Mounts[0].SSHFS.FollowSymlinks = ptr.Of(false)
+	expect.Mounts[0].SSHFS.SFTPDriver = ptr.Of("")
+	expect.Mounts[0].NineP.SecurityModel = ptr.Of(Default9pSecurityModel)
+	expect.Mounts[0].NineP.ProtocolVersion = ptr.Of(Default9pProtocolVersion)
+	expect.Mounts[0].NineP.Msize = ptr.Of(Default9pMsize)
+	expect.Mounts[0].NineP.Cache = ptr.Of(Default9pCacheForRO)
+	expect.Mounts[0].Virtiofs.QueueSize = ptr.Of(DefaultVirtiofsQueueSize)
 	// Only missing Mounts field is Writable, and the default value is also the null value: false
 
-	expect.MountType = pointer.String(NINEP)
+	expect.MountType = ptr.Of(NINEP)
 
 	expect.Provision = y.Provision
 	expect.Provision[0].Mode = ProvisionModeSystem
@@ -245,7 +245,7 @@ func TestFillDefault(t *testing.T) {
 	expect.Env = y.Env
 
 	expect.CACertificates = CACertificates{
-		RemoveDefaults: pointer.Bool(false),
+		RemoveDefaults: ptr.Of(false),
 		Files:          []string{"ca.crt"},
 		Certs: []string{
 			"-----BEGIN CERTIFICATE-----\nYOUR-ORGS-TRUSTED-CA-CERT\n-----END CERTIFICATE-----\n",
@@ -253,8 +253,8 @@ func TestFillDefault(t *testing.T) {
 	}
 
 	expect.Rosetta = Rosetta{
-		Enabled: pointer.Bool(false),
-		BinFmt:  pointer.Bool(false),
+		Enabled: ptr.Of(false),
+		BinFmt:  ptr.Of(false),
 	}
 
 	FillDefault(&y, &LimaYAML{}, &LimaYAML{}, filePath)
@@ -267,61 +267,61 @@ func TestFillDefault(t *testing.T) {
 
 	// Choose values that are different from the "builtin" defaults
 	d = LimaYAML{
-		VMType: pointer.String("vz"),
-		OS:     pointer.String("unknown"),
-		Arch:   pointer.String("unknown"),
+		VMType: ptr.Of("vz"),
+		OS:     ptr.Of("unknown"),
+		Arch:   ptr.Of("unknown"),
 		CPUType: map[Arch]string{
 			AARCH64: "arm64",
 			ARMV7L:  "armhf",
 			X8664:   "amd64",
 			RISCV64: "riscv64",
 		},
-		CPUs:   pointer.Int(7),
-		Memory: pointer.String("5GiB"),
-		Disk:   pointer.String("105GiB"),
+		CPUs:   ptr.Of(7),
+		Memory: ptr.Of("5GiB"),
+		Disk:   ptr.Of("105GiB"),
 		AdditionalDisks: []Disk{
 			{Name: "data"},
 		},
-		GuestInstallPrefix: pointer.String("/opt"),
+		GuestInstallPrefix: ptr.Of("/opt"),
 		Containerd: Containerd{
-			System: pointer.Bool(true),
-			User:   pointer.Bool(false),
+			System: ptr.Of(true),
+			User:   ptr.Of(false),
 			Archives: []File{
 				{Location: "/tmp/nerdctl.tgz"},
 			},
 		},
 		SSH: SSH{
-			LocalPort:         pointer.Int(888),
-			LoadDotSSHPubKeys: pointer.Bool(false),
-			ForwardAgent:      pointer.Bool(true),
-			ForwardX11:        pointer.Bool(false),
-			ForwardX11Trusted: pointer.Bool(false),
+			LocalPort:         ptr.Of(888),
+			LoadDotSSHPubKeys: ptr.Of(false),
+			ForwardAgent:      ptr.Of(true),
+			ForwardX11:        ptr.Of(false),
+			ForwardX11Trusted: ptr.Of(false),
 		},
 		Firmware: Firmware{
-			LegacyBIOS: pointer.Bool(true),
+			LegacyBIOS: ptr.Of(true),
 		},
 		Audio: Audio{
-			Device: pointer.String("coreaudio"),
+			Device: ptr.Of("coreaudio"),
 		},
 		Video: Video{
-			Display: pointer.String("cocoa"),
+			Display: ptr.Of("cocoa"),
 			VNC: VNCOptions{
-				Display: pointer.String("none"),
+				Display: ptr.Of("none"),
 			},
 		},
 		HostResolver: HostResolver{
-			Enabled: pointer.Bool(false),
-			IPv6:    pointer.Bool(true),
+			Enabled: ptr.Of(false),
+			IPv6:    ptr.Of(true),
 			Hosts: map[string]string{
 				"default": "localhost",
 			},
 		},
-		PropagateProxyEnv: pointer.Bool(false),
+		PropagateProxyEnv: ptr.Of(false),
 
 		Mounts: []Mount{
 			{
 				Location: "/var/log",
-				Writable: pointer.Bool(false),
+				Writable: ptr.Of(false),
 			},
 		},
 		Provision: []Provision{
@@ -363,14 +363,14 @@ func TestFillDefault(t *testing.T) {
 			"TWO": "two",
 		},
 		CACertificates: CACertificates{
-			RemoveDefaults: pointer.Bool(true),
+			RemoveDefaults: ptr.Of(true),
 			Certs: []string{
 				"-----BEGIN CERTIFICATE-----\nYOUR-ORGS-TRUSTED-CA-CERT\n-----END CERTIFICATE-----\n",
 			},
 		},
 		Rosetta: Rosetta{
-			Enabled: pointer.Bool(true),
-			BinFmt:  pointer.Bool(true),
+			Enabled: ptr.Of(true),
+			BinFmt:  ptr.Of(true),
 		},
 	}
 
@@ -378,35 +378,35 @@ func TestFillDefault(t *testing.T) {
 	// Also verify that archive arch is filled in
 	expect.Containerd.Archives[0].Arch = *d.Arch
 	expect.Mounts[0].MountPoint = expect.Mounts[0].Location
-	expect.Mounts[0].SSHFS.Cache = pointer.Bool(true)
-	expect.Mounts[0].SSHFS.FollowSymlinks = pointer.Bool(false)
-	expect.Mounts[0].SSHFS.SFTPDriver = pointer.String("")
-	expect.Mounts[0].NineP.SecurityModel = pointer.String(Default9pSecurityModel)
-	expect.Mounts[0].NineP.ProtocolVersion = pointer.String(Default9pProtocolVersion)
-	expect.Mounts[0].NineP.Msize = pointer.String(Default9pMsize)
-	expect.Mounts[0].NineP.Cache = pointer.String(Default9pCacheForRO)
-	expect.Mounts[0].Virtiofs.QueueSize = pointer.Int(DefaultVirtiofsQueueSize)
+	expect.Mounts[0].SSHFS.Cache = ptr.Of(true)
+	expect.Mounts[0].SSHFS.FollowSymlinks = ptr.Of(false)
+	expect.Mounts[0].SSHFS.SFTPDriver = ptr.Of("")
+	expect.Mounts[0].NineP.SecurityModel = ptr.Of(Default9pSecurityModel)
+	expect.Mounts[0].NineP.ProtocolVersion = ptr.Of(Default9pProtocolVersion)
+	expect.Mounts[0].NineP.Msize = ptr.Of(Default9pMsize)
+	expect.Mounts[0].NineP.Cache = ptr.Of(Default9pCacheForRO)
+	expect.Mounts[0].Virtiofs.QueueSize = ptr.Of(DefaultVirtiofsQueueSize)
 	expect.HostResolver.Hosts = map[string]string{
 		"default": d.HostResolver.Hosts["default"],
 	}
-	expect.MountType = pointer.String(VIRTIOFS)
-	expect.CACertificates.RemoveDefaults = pointer.Bool(true)
+	expect.MountType = ptr.Of(VIRTIOFS)
+	expect.CACertificates.RemoveDefaults = ptr.Of(true)
 	expect.CACertificates.Certs = []string{
 		"-----BEGIN CERTIFICATE-----\nYOUR-ORGS-TRUSTED-CA-CERT\n-----END CERTIFICATE-----\n",
 	}
 
 	if runtime.GOOS == "darwin" && IsNativeArch(AARCH64) {
 		expect.Rosetta = Rosetta{
-			Enabled: pointer.Bool(true),
-			BinFmt:  pointer.Bool(true),
+			Enabled: ptr.Of(true),
+			BinFmt:  ptr.Of(true),
 		}
 	} else {
 		expect.Rosetta = Rosetta{
-			Enabled: pointer.Bool(false),
-			BinFmt:  pointer.Bool(true),
+			Enabled: ptr.Of(false),
+			BinFmt:  ptr.Of(true),
 		}
 	}
-	expect.Plain = pointer.Bool(false)
+	expect.Plain = ptr.Of(false)
 
 	y = LimaYAML{}
 	FillDefault(&y, &d, &LimaYAML{}, filePath)
@@ -446,25 +446,25 @@ func TestFillDefault(t *testing.T) {
 	// User-provided overrides should override user-provided config settings
 
 	o = LimaYAML{
-		VMType: pointer.String("qemu"),
-		OS:     pointer.String(LINUX),
-		Arch:   pointer.String(arch),
+		VMType: ptr.Of("qemu"),
+		OS:     ptr.Of(LINUX),
+		Arch:   ptr.Of(arch),
 		CPUType: map[Arch]string{
 			AARCH64: "uber-arm",
 			ARMV7L:  "armv8",
 			X8664:   "pentium",
 			RISCV64: "sifive-u54",
 		},
-		CPUs:   pointer.Int(12),
-		Memory: pointer.String("7GiB"),
-		Disk:   pointer.String("117GiB"),
+		CPUs:   ptr.Of(12),
+		Memory: ptr.Of("7GiB"),
+		Disk:   ptr.Of("117GiB"),
 		AdditionalDisks: []Disk{
 			{Name: "test"},
 		},
-		GuestInstallPrefix: pointer.String("/usr"),
+		GuestInstallPrefix: ptr.Of("/usr"),
 		Containerd: Containerd{
-			System: pointer.Bool(true),
-			User:   pointer.Bool(false),
+			System: ptr.Of(true),
+			User:   ptr.Of(false),
 			Archives: []File{
 				{
 					Arch:     arch,
@@ -474,49 +474,49 @@ func TestFillDefault(t *testing.T) {
 			},
 		},
 		SSH: SSH{
-			LocalPort:         pointer.Int(4433),
-			LoadDotSSHPubKeys: pointer.Bool(true),
-			ForwardAgent:      pointer.Bool(true),
-			ForwardX11:        pointer.Bool(false),
-			ForwardX11Trusted: pointer.Bool(false),
+			LocalPort:         ptr.Of(4433),
+			LoadDotSSHPubKeys: ptr.Of(true),
+			ForwardAgent:      ptr.Of(true),
+			ForwardX11:        ptr.Of(false),
+			ForwardX11Trusted: ptr.Of(false),
 		},
 		Firmware: Firmware{
-			LegacyBIOS: pointer.Bool(true),
+			LegacyBIOS: ptr.Of(true),
 		},
 		Audio: Audio{
-			Device: pointer.String("coreaudio"),
+			Device: ptr.Of("coreaudio"),
 		},
 		Video: Video{
-			Display: pointer.String("cocoa"),
+			Display: ptr.Of("cocoa"),
 			VNC: VNCOptions{
-				Display: pointer.String("none"),
+				Display: ptr.Of("none"),
 			},
 		},
 		HostResolver: HostResolver{
-			Enabled: pointer.Bool(false),
-			IPv6:    pointer.Bool(false),
+			Enabled: ptr.Of(false),
+			IPv6:    ptr.Of(false),
 			Hosts: map[string]string{
 				"override.": "underflow",
 			},
 		},
-		PropagateProxyEnv: pointer.Bool(false),
+		PropagateProxyEnv: ptr.Of(false),
 
 		Mounts: []Mount{
 			{
 				Location: "/var/log",
-				Writable: pointer.Bool(true),
+				Writable: ptr.Of(true),
 				SSHFS: SSHFS{
-					Cache:          pointer.Bool(false),
-					FollowSymlinks: pointer.Bool(true),
+					Cache:          ptr.Of(false),
+					FollowSymlinks: ptr.Of(true),
 				},
 				NineP: NineP{
-					SecurityModel:   pointer.String("mapped-file"),
-					ProtocolVersion: pointer.String("9p2000"),
-					Msize:           pointer.String("8KiB"),
-					Cache:           pointer.String("none"),
+					SecurityModel:   ptr.Of("mapped-file"),
+					ProtocolVersion: ptr.Of("9p2000"),
+					Msize:           ptr.Of("8KiB"),
+					Cache:           ptr.Of("none"),
 				},
 				Virtiofs: Virtiofs{
-					QueueSize: pointer.Int(2048),
+					QueueSize: ptr.Of(2048),
 				},
 			},
 		},
@@ -562,11 +562,11 @@ func TestFillDefault(t *testing.T) {
 			"THREE": "trois",
 		},
 		CACertificates: CACertificates{
-			RemoveDefaults: pointer.Bool(true),
+			RemoveDefaults: ptr.Of(true),
 		},
 		Rosetta: Rosetta{
-			Enabled: pointer.Bool(false),
-			BinFmt:  pointer.Bool(false),
+			Enabled: ptr.Of(false),
+			BinFmt:  ptr.Of(false),
 		},
 	}
 
@@ -586,16 +586,16 @@ func TestFillDefault(t *testing.T) {
 
 	// o.Mounts just makes d.Mounts[0] writable because the Location matches
 	expect.Mounts = append(d.Mounts, y.Mounts...)
-	expect.Mounts[0].Writable = pointer.Bool(true)
-	expect.Mounts[0].SSHFS.Cache = pointer.Bool(false)
-	expect.Mounts[0].SSHFS.FollowSymlinks = pointer.Bool(true)
-	expect.Mounts[0].NineP.SecurityModel = pointer.String("mapped-file")
-	expect.Mounts[0].NineP.ProtocolVersion = pointer.String("9p2000")
-	expect.Mounts[0].NineP.Msize = pointer.String("8KiB")
-	expect.Mounts[0].NineP.Cache = pointer.String("none")
-	expect.Mounts[0].Virtiofs.QueueSize = pointer.Int(2048)
+	expect.Mounts[0].Writable = ptr.Of(true)
+	expect.Mounts[0].SSHFS.Cache = ptr.Of(false)
+	expect.Mounts[0].SSHFS.FollowSymlinks = ptr.Of(true)
+	expect.Mounts[0].NineP.SecurityModel = ptr.Of("mapped-file")
+	expect.Mounts[0].NineP.ProtocolVersion = ptr.Of("9p2000")
+	expect.Mounts[0].NineP.Msize = ptr.Of("8KiB")
+	expect.Mounts[0].NineP.Cache = ptr.Of("none")
+	expect.Mounts[0].Virtiofs.QueueSize = ptr.Of(2048)
 
-	expect.MountType = pointer.String(NINEP)
+	expect.MountType = ptr.Of(NINEP)
 
 	// o.Networks[1] is overriding the d.Networks[0].Lima entry for the "def0" interface
 	expect.Networks = append(append(d.Networks, y.Networks...), o.Networks[0])
@@ -609,17 +609,17 @@ func TestFillDefault(t *testing.T) {
 	// ONE remains from filledDefaults.Env; the rest are set from o
 	expect.Env["ONE"] = y.Env["ONE"]
 
-	expect.CACertificates.RemoveDefaults = pointer.Bool(true)
+	expect.CACertificates.RemoveDefaults = ptr.Of(true)
 	expect.CACertificates.Files = []string{"ca.crt"}
 	expect.CACertificates.Certs = []string{
 		"-----BEGIN CERTIFICATE-----\nYOUR-ORGS-TRUSTED-CA-CERT\n-----END CERTIFICATE-----\n",
 	}
 
 	expect.Rosetta = Rosetta{
-		Enabled: pointer.Bool(false),
-		BinFmt:  pointer.Bool(false),
+		Enabled: ptr.Of(false),
+		BinFmt:  ptr.Of(false),
 	}
-	expect.Plain = pointer.Bool(false)
+	expect.Plain = ptr.Of(false)
 
 	FillDefault(&y, &d, &o, filePath)
 	assert.DeepEqual(t, &y, &expect, opts...)

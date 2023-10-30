@@ -13,6 +13,7 @@ import (
 
 	"github.com/docker/go-units"
 	"github.com/lima-vm/lima/pkg/networks"
+	"github.com/lima-vm/lima/pkg/ptr"
 	"github.com/pbnjay/memory"
 
 	"github.com/lima-vm/lima/pkg/guestagent/api"
@@ -20,7 +21,6 @@ import (
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/sirupsen/logrus"
-	"github.com/xorcare/pointer"
 
 	"golang.org/x/sys/cpu"
 )
@@ -133,21 +133,21 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 	if o.VMType != nil {
 		y.VMType = o.VMType
 	}
-	y.VMType = pointer.String(ResolveVMType(y.VMType))
+	y.VMType = ptr.Of(ResolveVMType(y.VMType))
 	if y.OS == nil {
 		y.OS = d.OS
 	}
 	if o.OS != nil {
 		y.OS = o.OS
 	}
-	y.OS = pointer.String(ResolveOS(y.OS))
+	y.OS = ptr.Of(ResolveOS(y.OS))
 	if y.Arch == nil {
 		y.Arch = d.Arch
 	}
 	if o.Arch != nil {
 		y.Arch = o.Arch
 	}
-	y.Arch = pointer.String(ResolveArch(y.Arch))
+	y.Arch = ptr.Of(ResolveArch(y.Arch))
 
 	y.Images = append(append(o.Images, y.Images...), d.Images...)
 	for i := range y.Images {
@@ -218,7 +218,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.CPUs = o.CPUs
 	}
 	if y.CPUs == nil || *y.CPUs == 0 {
-		y.CPUs = pointer.Int(defaultCPUs())
+		y.CPUs = ptr.Of(defaultCPUs())
 	}
 
 	if y.Memory == nil {
@@ -228,7 +228,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.Memory = o.Memory
 	}
 	if y.Memory == nil || *y.Memory == "" {
-		y.Memory = pointer.String(defaultMemoryAsString())
+		y.Memory = ptr.Of(defaultMemoryAsString())
 	}
 
 	if y.Disk == nil {
@@ -238,7 +238,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.Disk = o.Disk
 	}
 	if y.Disk == nil || *y.Disk == "" {
-		y.Disk = pointer.String(defaultDiskSizeAsString())
+		y.Disk = ptr.Of(defaultDiskSizeAsString())
 	}
 
 	y.AdditionalDisks = append(append(o.AdditionalDisks, y.AdditionalDisks...), d.AdditionalDisks...)
@@ -250,7 +250,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.Audio.Device = o.Audio.Device
 	}
 	if y.Audio.Device == nil {
-		y.Audio.Device = pointer.String("")
+		y.Audio.Device = ptr.Of("")
 	}
 
 	if y.Video.Display == nil {
@@ -260,7 +260,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.Video.Display = o.Video.Display
 	}
 	if y.Video.Display == nil || *y.Video.Display == "" {
-		y.Video.Display = pointer.String("none")
+		y.Video.Display = ptr.Of("none")
 	}
 
 	if y.Video.VNC.Display == nil {
@@ -270,7 +270,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.Video.VNC.Display = o.Video.VNC.Display
 	}
 	if (y.Video.VNC.Display == nil || *y.Video.VNC.Display == "") && *y.VMType == QEMU {
-		y.Video.VNC.Display = pointer.String("127.0.0.1:0,to=9")
+		y.Video.VNC.Display = ptr.Of("127.0.0.1:0,to=9")
 	}
 
 	if y.Firmware.LegacyBIOS == nil {
@@ -280,7 +280,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.Firmware.LegacyBIOS = o.Firmware.LegacyBIOS
 	}
 	if y.Firmware.LegacyBIOS == nil {
-		y.Firmware.LegacyBIOS = pointer.Bool(false)
+		y.Firmware.LegacyBIOS = ptr.Of(false)
 	}
 
 	if y.SSH.LocalPort == nil {
@@ -291,7 +291,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 	}
 	if y.SSH.LocalPort == nil {
 		// y.SSH.LocalPort value is not filled here (filled by the hostagent)
-		y.SSH.LocalPort = pointer.Int(0)
+		y.SSH.LocalPort = ptr.Of(0)
 	}
 	if y.SSH.LoadDotSSHPubKeys == nil {
 		y.SSH.LoadDotSSHPubKeys = d.SSH.LoadDotSSHPubKeys
@@ -300,7 +300,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.SSH.LoadDotSSHPubKeys = o.SSH.LoadDotSSHPubKeys
 	}
 	if y.SSH.LoadDotSSHPubKeys == nil {
-		y.SSH.LoadDotSSHPubKeys = pointer.Bool(true)
+		y.SSH.LoadDotSSHPubKeys = ptr.Of(true)
 	}
 
 	if y.SSH.ForwardAgent == nil {
@@ -310,7 +310,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.SSH.ForwardAgent = o.SSH.ForwardAgent
 	}
 	if y.SSH.ForwardAgent == nil {
-		y.SSH.ForwardAgent = pointer.Bool(false)
+		y.SSH.ForwardAgent = ptr.Of(false)
 	}
 
 	if y.SSH.ForwardX11 == nil {
@@ -320,7 +320,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.SSH.ForwardX11 = o.SSH.ForwardX11
 	}
 	if y.SSH.ForwardX11 == nil {
-		y.SSH.ForwardX11 = pointer.Bool(false)
+		y.SSH.ForwardX11 = ptr.Of(false)
 	}
 
 	if y.SSH.ForwardX11Trusted == nil {
@@ -330,7 +330,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.SSH.ForwardX11Trusted = o.SSH.ForwardX11Trusted
 	}
 	if y.SSH.ForwardX11Trusted == nil {
-		y.SSH.ForwardX11Trusted = pointer.Bool(false)
+		y.SSH.ForwardX11Trusted = ptr.Of(false)
 	}
 
 	hosts := make(map[string]string)
@@ -353,7 +353,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 			provision.Mode = ProvisionModeSystem
 		}
 		if provision.Mode == ProvisionModeDependency && provision.SkipDefaultDependencyResolution == nil {
-			provision.SkipDefaultDependencyResolution = pointer.Bool(false)
+			provision.SkipDefaultDependencyResolution = ptr.Of(false)
 		}
 	}
 
@@ -364,7 +364,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.GuestInstallPrefix = o.GuestInstallPrefix
 	}
 	if y.GuestInstallPrefix == nil {
-		y.GuestInstallPrefix = pointer.String(defaultGuestInstallPrefix())
+		y.GuestInstallPrefix = ptr.Of(defaultGuestInstallPrefix())
 	}
 
 	if y.Containerd.System == nil {
@@ -374,7 +374,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.Containerd.System = o.Containerd.System
 	}
 	if y.Containerd.System == nil {
-		y.Containerd.System = pointer.Bool(false)
+		y.Containerd.System = ptr.Of(false)
 	}
 	if y.Containerd.User == nil {
 		y.Containerd.User = d.Containerd.User
@@ -383,7 +383,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.Containerd.User = o.Containerd.User
 	}
 	if y.Containerd.User == nil {
-		y.Containerd.User = pointer.Bool(true)
+		y.Containerd.User = ptr.Of(true)
 	}
 
 	y.Containerd.Archives = append(append(o.Containerd.Archives, y.Containerd.Archives...), d.Containerd.Archives...)
@@ -427,7 +427,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.HostResolver.Enabled = o.HostResolver.Enabled
 	}
 	if y.HostResolver.Enabled == nil {
-		y.HostResolver.Enabled = pointer.Bool(true)
+		y.HostResolver.Enabled = ptr.Of(true)
 	}
 
 	if y.HostResolver.IPv6 == nil {
@@ -437,7 +437,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.HostResolver.IPv6 = o.HostResolver.IPv6
 	}
 	if y.HostResolver.IPv6 == nil {
-		y.HostResolver.IPv6 = pointer.Bool(false)
+		y.HostResolver.IPv6 = ptr.Of(false)
 	}
 
 	if y.PropagateProxyEnv == nil {
@@ -447,7 +447,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.PropagateProxyEnv = o.PropagateProxyEnv
 	}
 	if y.PropagateProxyEnv == nil {
-		y.PropagateProxyEnv = pointer.Bool(true)
+		y.PropagateProxyEnv = ptr.Of(true)
 	}
 
 	networks := make([]Network, 0, len(d.Networks)+len(y.Networks)+len(o.Networks))
@@ -519,9 +519,9 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 	}
 	if y.MountType == nil || *y.MountType == "" {
 		if *y.VMType == VZ {
-			y.MountType = pointer.String(VIRTIOFS)
+			y.MountType = ptr.Of(VIRTIOFS)
 		} else {
-			y.MountType = pointer.String(REVSSHFS)
+			y.MountType = ptr.Of(REVSSHFS)
 		}
 	}
 
@@ -571,34 +571,34 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 	for i := range y.Mounts {
 		mount := &y.Mounts[i]
 		if mount.SSHFS.Cache == nil {
-			mount.SSHFS.Cache = pointer.Bool(true)
+			mount.SSHFS.Cache = ptr.Of(true)
 		}
 		if mount.SSHFS.FollowSymlinks == nil {
-			mount.SSHFS.FollowSymlinks = pointer.Bool(false)
+			mount.SSHFS.FollowSymlinks = ptr.Of(false)
 		}
 		if mount.SSHFS.SFTPDriver == nil {
-			mount.SSHFS.SFTPDriver = pointer.String("")
+			mount.SSHFS.SFTPDriver = ptr.Of("")
 		}
 		if mount.NineP.SecurityModel == nil {
-			mounts[i].NineP.SecurityModel = pointer.String(Default9pSecurityModel)
+			mounts[i].NineP.SecurityModel = ptr.Of(Default9pSecurityModel)
 		}
 		if mount.NineP.ProtocolVersion == nil {
-			mounts[i].NineP.ProtocolVersion = pointer.String(Default9pProtocolVersion)
+			mounts[i].NineP.ProtocolVersion = ptr.Of(Default9pProtocolVersion)
 		}
 		if mount.NineP.Msize == nil {
-			mounts[i].NineP.Msize = pointer.String(Default9pMsize)
+			mounts[i].NineP.Msize = ptr.Of(Default9pMsize)
 		}
 		if mount.Virtiofs.QueueSize == nil && *y.VMType == QEMU && *y.MountType == VIRTIOFS {
-			mounts[i].Virtiofs.QueueSize = pointer.Int(DefaultVirtiofsQueueSize)
+			mounts[i].Virtiofs.QueueSize = ptr.Of(DefaultVirtiofsQueueSize)
 		}
 		if mount.Writable == nil {
-			mount.Writable = pointer.Bool(false)
+			mount.Writable = ptr.Of(false)
 		}
 		if mount.NineP.Cache == nil {
 			if *mount.Writable {
-				mounts[i].NineP.Cache = pointer.String(Default9pCacheForRW)
+				mounts[i].NineP.Cache = ptr.Of(Default9pCacheForRW)
 			} else {
-				mounts[i].NineP.Cache = pointer.String(Default9pCacheForRO)
+				mounts[i].NineP.Cache = ptr.Of(Default9pCacheForRO)
 			}
 		}
 		if mount.MountPoint == "" {
@@ -633,7 +633,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.CACertificates.RemoveDefaults = o.CACertificates.RemoveDefaults
 	}
 	if y.CACertificates.RemoveDefaults == nil {
-		y.CACertificates.RemoveDefaults = pointer.Bool(false)
+		y.CACertificates.RemoveDefaults = ptr.Of(false)
 	}
 
 	caFiles := unique(append(append(d.CACertificates.Files, y.CACertificates.Files...), o.CACertificates.Files...))
@@ -650,10 +650,10 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 			y.Rosetta.Enabled = o.Rosetta.Enabled
 		}
 		if y.Rosetta.Enabled == nil {
-			y.Rosetta.Enabled = pointer.Bool(false)
+			y.Rosetta.Enabled = ptr.Of(false)
 		}
 	} else {
-		y.Rosetta.Enabled = pointer.Bool(false)
+		y.Rosetta.Enabled = ptr.Of(false)
 	}
 
 	if y.Rosetta.BinFmt == nil {
@@ -663,7 +663,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.Rosetta.BinFmt = o.Rosetta.BinFmt
 	}
 	if y.Rosetta.BinFmt == nil {
-		y.Rosetta.BinFmt = pointer.Bool(false)
+		y.Rosetta.BinFmt = ptr.Of(false)
 	}
 
 	if y.Plain == nil {
@@ -673,7 +673,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.Plain = o.Plain
 	}
 	if y.Plain == nil {
-		y.Plain = pointer.Bool(false)
+		y.Plain = ptr.Of(false)
 	}
 
 	fixUpForPlainMode(y)
@@ -685,10 +685,10 @@ func fixUpForPlainMode(y *LimaYAML) {
 	}
 	y.Mounts = nil
 	y.PortForwards = nil
-	y.Containerd.System = pointer.Bool(false)
-	y.Containerd.User = pointer.Bool(false)
-	y.Rosetta.BinFmt = pointer.Bool(false)
-	y.Rosetta.Enabled = pointer.Bool(false)
+	y.Containerd.System = ptr.Of(false)
+	y.Containerd.User = ptr.Of(false)
+	y.Rosetta.BinFmt = ptr.Of(false)
+	y.Rosetta.Enabled = ptr.Of(false)
 }
 
 func executeGuestTemplate(format string) (bytes.Buffer, error) {
