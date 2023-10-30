@@ -6,11 +6,14 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"text/tabwriter"
 
 	"github.com/docker/go-units"
+	"github.com/lima-vm/lima/pkg/nativeimgutil"
 	"github.com/lima-vm/lima/pkg/qemu"
 	"github.com/lima-vm/lima/pkg/store"
+	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -32,6 +35,7 @@ func newDiskCommand() *cobra.Command {
 	}
 	diskCommand.AddCommand(
 		newDiskCreateCommand(),
+		newDiskConvertCommand(),
 		newDiskListCommand(),
 		newDiskDeleteCommand(),
 		newDiskUnlockCommand(),
@@ -98,6 +102,48 @@ func diskCreateAction(cmd *cobra.Command, args []string) error {
 
 	if err := qemu.CreateDataDisk(diskDir, format, int(diskSize)); err != nil {
 		return fmt.Errorf("Failed to create %s disk in %q", format, diskDir)
+	}
+
+	return nil
+}
+
+func newDiskConvertCommand() *cobra.Command {
+	diskConvertCommand := &cobra.Command{
+		Use: "convert INPUT OUTPUT",
+		Example: `
+To convert a disk:
+$ limactl disk convert INPUT OUTPUT [--format qcow2]
+`,
+		Short: "Convert a Lima disk",
+		Args:  WrapArgsError(cobra.ExactArgs(1)),
+		RunE:  diskConvertAction,
+	}
+	diskConvertCommand.Flags().String("format", "qcow2", "specify the disk format")
+	return diskConvertCommand
+}
+
+func diskConvertAction(cmd *cobra.Command, args []string) error {
+	format, err := cmd.Flags().GetString("format")
+	if err != nil {
+		return err
+	}
+
+	switch format {
+	case "qcow2", "raw":
+	default:
+		return fmt.Errorf(`disk format %q not supported, use "qcow2" or "raw" instead`, format)
+	}
+
+	name := args[0]
+
+	diskDir, err := store.DiskDir(name)
+	if err != nil {
+		return err
+	}
+
+	extraDiskPath := filepath.Join(diskDir, filenames.DataDisk)
+	if err := nativeimgutil.ConvertToRaw(extraDiskPath, extraDiskPath, nil, true); err != nil {
+		return fmt.Errorf("Failed to convert %s disk in %q", format, diskDir)
 	}
 
 	return nil
