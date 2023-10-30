@@ -1,5 +1,4 @@
 //go:build darwin && !arm64 && !no_vz
-// +build darwin,!arm64,!no_vz
 
 package vz
 
