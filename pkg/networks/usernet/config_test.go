@@ -9,7 +9,6 @@ import (
 )
 
 func TestUsernetConfig(t *testing.T) {
-
 	t.Run("verify dns ip", func(t *testing.T) {
 		subnet, _, err := net.ParseCIDR(networks.SlirpNetwork)
 		assert.NilError(t, err)

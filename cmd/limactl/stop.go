@@ -19,7 +19,7 @@ import (
 )
 
 func newStopCommand() *cobra.Command {
-	var stopCmd = &cobra.Command{
+	stopCmd := &cobra.Command{
 		Use:               "stop INSTANCE",
 		Short:             "Stop an instance",
 		Args:              WrapArgsError(cobra.MaximumNArgs(1)),

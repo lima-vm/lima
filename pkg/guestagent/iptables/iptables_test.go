@@ -67,7 +67,6 @@ const data = `# Warning: iptables-legacy tables present, use iptables-legacy to 
 `
 
 func TestParsePortsFromRules(t *testing.T) {
-
 	// Turn the string into individual lines
 	rules := strings.Split(data, "\n")
 	if len(rules) > 0 && rules[len(rules)-1] == "" {

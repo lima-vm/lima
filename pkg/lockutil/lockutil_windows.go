@@ -34,7 +34,7 @@ var (
 )
 
 func WithDirLock(dir string, fn func() error) error {
-	dirFile, err := os.OpenFile(dir+".lock", os.O_CREATE, 0644)
+	dirFile, err := os.OpenFile(dir+".lock", os.O_CREATE, 0o644)
 	if err != nil {
 		return err
 	}

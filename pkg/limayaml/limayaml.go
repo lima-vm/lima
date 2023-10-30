@@ -41,10 +41,12 @@ type LimaYAML struct {
 	Plain             *bool          `yaml:"plain,omitempty" json:"plain,omitempty"`
 }
 
-type OS = string
-type Arch = string
-type MountType = string
-type VMType = string
+type (
+	OS        = string
+	Arch      = string
+	MountType = string
+	VMType    = string
+)
 
 const (
 	LINUX OS = "Linux"

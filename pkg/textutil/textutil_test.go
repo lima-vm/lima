@@ -12,6 +12,7 @@ func TestPrefixString(t *testing.T) {
 	assert.Equal(t, "- foo", PrefixString("- ", "foo"))
 	assert.Equal(t, "- foo\n- bar\n", PrefixString("- ", "foo\nbar\n"))
 }
+
 func TestIndentString(t *testing.T) {
 	assert.Equal(t, "  foo", IndentString(2, "foo"))
 	assert.Equal(t, "  foo\n  bar\n", IndentString(2, "foo\nbar\n"))

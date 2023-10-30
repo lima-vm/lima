@@ -193,8 +193,10 @@ func Test_extractZones(t *testing.T) {
 	}
 }
 
-var _ sort.Interface = (recordSorter)(nil)
-var _ sort.Interface = (zoneSorter)(nil)
+var (
+	_ sort.Interface = (recordSorter)(nil)
+	_ sort.Interface = (zoneSorter)(nil)
+)
 
 type recordSorter []types.Record
 

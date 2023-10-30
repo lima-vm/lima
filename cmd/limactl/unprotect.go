@@ -10,7 +10,7 @@ import (
 )
 
 func newUnprotectCommand() *cobra.Command {
-	var unprotectCommand = &cobra.Command{
+	unprotectCommand := &cobra.Command{
 		Use:               "unprotect INSTANCE [INSTANCE, ...]",
 		Short:             "Unprotect an instance",
 		Args:              WrapArgsError(cobra.MinimumNArgs(1)),

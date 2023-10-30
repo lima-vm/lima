@@ -21,7 +21,7 @@ import (
 )
 
 func newEditCommand() *cobra.Command {
-	var editCommand = &cobra.Command{
+	editCommand := &cobra.Command{
 		Use:               "edit INSTANCE",
 		Short:             "Edit an instance of Lima",
 		Args:              WrapArgsError(cobra.MaximumNArgs(1)),
@@ -95,13 +95,13 @@ func editAction(cmd *cobra.Command, args []string) error {
 	}
 	if err := limayaml.Validate(*y, true); err != nil {
 		rejectedYAML := "lima.REJECTED.yaml"
-		if writeErr := os.WriteFile(rejectedYAML, yBytes, 0644); writeErr != nil {
+		if writeErr := os.WriteFile(rejectedYAML, yBytes, 0o644); writeErr != nil {
 			return fmt.Errorf("the YAML is invalid, attempted to save the buffer as %q but failed: %v: %w", rejectedYAML, writeErr, err)
 		}
 		// TODO: may need to support editing the rejected YAML
 		return fmt.Errorf("the YAML is invalid, saved the buffer as %q: %w", rejectedYAML, err)
 	}
-	if err := os.WriteFile(filePath, yBytes, 0644); err != nil {
+	if err := os.WriteFile(filePath, yBytes, 0o644); err != nil {
 		return err
 	}
 	logrus.Infof("Instance %q configuration edited", instName)

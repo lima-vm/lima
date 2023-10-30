@@ -35,7 +35,7 @@ func (c *Client) ConfigureDriver(driver *driver.BaseDriver) error {
 	if err != nil {
 		return err
 	}
-	var hosts = driver.Yaml.HostResolver.Hosts
+	hosts := driver.Yaml.HostResolver.Hosts
 	hosts[fmt.Sprintf("lima-%s.internal", driver.Instance.Name)] = ipAddress
 	err = c.AddDNSHosts(hosts)
 	return err

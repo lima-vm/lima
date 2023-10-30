@@ -41,7 +41,7 @@ func (a *HostAgent) setupMount(m limayaml.Mount) (*mount, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := os.MkdirAll(location, 0755); err != nil {
+	if err := os.MkdirAll(location, 0o755); err != nil {
 		return nil, err
 	}
 	// NOTE: allow_other requires "user_allow_other" in /etc/fuse.conf

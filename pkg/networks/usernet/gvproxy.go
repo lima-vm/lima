@@ -33,9 +33,7 @@ type GVisorNetstackOpts struct {
 	DefaultLeases map[string]string
 }
 
-var (
-	opts *GVisorNetstackOpts
-)
+var opts *GVisorNetstackOpts
 
 const gatewayMacAddr = "5a:94:ef:e4:0c:dd"
 
@@ -146,7 +144,6 @@ func listenQEMU(ctx context.Context, vn *virtualnetwork.VirtualNetwork) error {
 				continue
 			}
 		}
-
 	}()
 
 	return nil

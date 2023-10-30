@@ -25,7 +25,7 @@ import (
 // Detect detects a text editor command.
 // Returns an empty string when no editor is found.
 func Detect() string {
-	var candidates = []string{
+	candidates := []string{
 		os.Getenv("VISUAL"),
 		os.Getenv("EDITOR"),
 		"editor",

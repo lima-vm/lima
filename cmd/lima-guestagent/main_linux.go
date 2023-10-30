@@ -15,7 +15,7 @@ func main() {
 }
 
 func newApp() *cobra.Command {
-	var rootCmd = &cobra.Command{
+	rootCmd := &cobra.Command{
 		Use:     "lima-guestagent",
 		Short:   "Do not launch manually",
 		Version: strings.TrimPrefix(version.Version, "v"),

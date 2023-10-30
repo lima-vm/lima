@@ -1,6 +1,7 @@
 package limayaml
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -8,8 +9,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-
-	"errors"
 
 	"github.com/docker/go-units"
 	"github.com/lima-vm/lima/pkg/localpathutil"

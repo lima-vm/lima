@@ -80,7 +80,7 @@ func daemonAction(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			return err
 		}
-		if err := os.Chmod(socket, 0777); err != nil {
+		if err := os.Chmod(socket, 0o777); err != nil {
 			return err
 		}
 		l = socketL

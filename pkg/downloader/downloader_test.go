@@ -130,7 +130,7 @@ func TestDownloadLocal(t *testing.T) {
 		localTestFile := filepath.Join(t.TempDir(), "some-file")
 		testDownloadFileContents := []byte("TestDownloadLocal")
 
-		assert.NilError(t, os.WriteFile(localTestFile, testDownloadFileContents, 0644))
+		assert.NilError(t, os.WriteFile(localTestFile, testDownloadFileContents, 0o644))
 		testLocalFileURL := "file://" + localTestFile
 		wrongDigest := digest.Digest(emptyFileDigest)
 
@@ -158,7 +158,6 @@ func TestDownloadLocal(t *testing.T) {
 }
 
 func TestDownloadCompressed(t *testing.T) {
-
 	if runtime.GOOS == "windows" {
 		// FIXME: `assertion failed: error is not nil: exec: "gzip": executable file not found in %PATH%`
 		t.Skip("Skipping on windows")
@@ -168,7 +167,7 @@ func TestDownloadCompressed(t *testing.T) {
 		localPath := filepath.Join(t.TempDir(), t.Name())
 		localFile := filepath.Join(t.TempDir(), "test-file")
 		testDownloadCompressedContents := []byte("TestDownloadCompressed")
-		assert.NilError(t, os.WriteFile(localFile, testDownloadCompressedContents, 0644))
+		assert.NilError(t, os.WriteFile(localFile, testDownloadCompressedContents, 0o644))
 		assert.NilError(t, exec.Command("gzip", localFile).Run())
 		localFile += ".gz"
 		testLocalFileURL := "file://" + localFile

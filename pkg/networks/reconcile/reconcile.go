@@ -100,7 +100,7 @@ func makeVarRun(config *networks.YAML) error {
 	if err != nil {
 		return err
 	}
-	if fi.Mode()&020 == 0 || stat.Gid != daemon.Gid {
+	if fi.Mode()&0o20 == 0 || stat.Gid != daemon.Gid {
 		return fmt.Errorf("%q doesn't seem to be writable by the daemon (gid:%d) group",
 			config.Paths.VarRun, daemon.Gid)
 	}
@@ -115,7 +115,7 @@ func startDaemon(ctx context.Context, config *networks.YAML, name, daemon string
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(networksDir, 0755); err != nil {
+	if err := os.MkdirAll(networksDir, 0o755); err != nil {
 		return err
 	}
 	user, err := config.User(daemon)
@@ -174,7 +174,7 @@ func validateConfig(config *networks.YAML) error {
 func startNetwork(ctx context.Context, config *networks.YAML, name string) error {
 	logrus.Debugf("Make sure %q network is running", name)
 
-	//Handle usernet first without sudo requirements
+	// Handle usernet first without sudo requirements
 	isUsernet, err := config.Usernet(name)
 	if err != nil {
 		return err
@@ -220,7 +220,7 @@ func startNetwork(ctx context.Context, config *networks.YAML, name string) error
 
 func stopNetwork(config *networks.YAML, name string) error {
 	logrus.Debugf("Make sure %q network is stopped", name)
-	//Handle usernet first without sudo requirements
+	// Handle usernet first without sudo requirements
 	isUsernet, err := config.Usernet(name)
 	if err != nil {
 		return err

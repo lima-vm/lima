@@ -428,11 +428,11 @@ func writeCIDataDir(rootPath string, layout []iso9660util.Entry) error {
 
 	for _, e := range layout {
 		if dir := path.Dir(e.Path); dir != "" && dir != "/" {
-			if err := os.MkdirAll(filepath.Join(rootPath, dir), 0700); err != nil {
+			if err := os.MkdirAll(filepath.Join(rootPath, dir), 0o700); err != nil {
 				return err
 			}
 		}
-		f, err := os.OpenFile(filepath.Join(rootPath, e.Path), os.O_CREATE|os.O_RDWR, 0700)
+		f, err := os.OpenFile(filepath.Join(rootPath, e.Path), os.O_CREATE|os.O_RDWR, 0o700)
 		if err != nil {
 			return err
 		}
