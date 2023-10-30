@@ -1,0 +1,15 @@
+vmType: "qemu"
+images:
+- location: "https://distfiles.gentoo.org/experimental/amd64/openstack/gentoo-openstack-amd64-default-latest.qcow2"
+  arch: "x86_64"
+
+mounts:
+- location: "~"
+- location: "/tmp/lima"
+  writable: true
+mountType: "9p"
+
+# The built-in containerd installer does not support Gentoo currently.
+containerd:
+  system: false
+  user: false
