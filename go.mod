@@ -37,7 +37,6 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
-	github.com/xorcare/pointer v1.2.2
 	golang.org/x/sync v0.4.0
 	golang.org/x/sys v0.13.0
 	gopkg.in/op/go-logging.v1 v1.0.0-20160211212156-b2cb9fa56473
