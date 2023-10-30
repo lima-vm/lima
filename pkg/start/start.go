@@ -72,7 +72,7 @@ type Prepared struct {
 }
 
 // Prepare ensures the disk, the nerdctl archive, etc.
-func Prepare(_ context.Context, inst *store.Instance) (*Prepared, error) {
+func Prepare(ctx context.Context, inst *store.Instance) (*Prepared, error) {
 	y, err := inst.LoadYAML()
 	if err != nil {
 		return nil, err
@@ -84,6 +84,10 @@ func Prepare(_ context.Context, inst *store.Instance) (*Prepared, error) {
 	})
 
 	if err := limaDriver.Validate(); err != nil {
+		return nil, err
+	}
+
+	if err := limaDriver.Initialize(ctx); err != nil {
 		return nil, err
 	}
 
@@ -114,6 +118,7 @@ func Start(ctx context.Context, inst *store.Instance) error {
 	if _, err := os.Stat(haPIDPath); !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("instance %q seems running (hint: remove %q if the instance is not actually running)", inst.Name, haPIDPath)
 	}
+	logrus.Infof("Starting the instance %q with VM driver %q", inst.Name, inst.VMType)
 
 	haSockPath := filepath.Join(inst.Dir, filenames.HostAgentSock)
 

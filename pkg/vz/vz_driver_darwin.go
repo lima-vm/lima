@@ -129,6 +129,11 @@ func (l *LimaVzDriver) Validate() error {
 	return nil
 }
 
+func (l *LimaVzDriver) Initialize(_ context.Context) error {
+	_, err := getMachineIdentifier(l.BaseDriver)
+	return err
+}
+
 func (l *LimaVzDriver) CreateDisk() error {
 	return EnsureDisk(l.BaseDriver)
 }
