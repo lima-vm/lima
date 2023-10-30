@@ -151,3 +151,8 @@ linters-settings:
     - typeUnparen
     - unnamedResult
     - unnecessaryBlock
+issues:
+  exclude-rules:
+  # Allow using Uid, Gid in pkg/osutil.
+  - path: "pkg/osutil/"
+    text: "uid"

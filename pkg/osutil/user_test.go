@@ -2,7 +2,6 @@ package osutil
 
 import (
 	"path"
-	"regexp"
 	"strconv"
 	"testing"
 
@@ -15,8 +14,7 @@ func TestLimaUserWarn(t *testing.T) {
 }
 
 func validUsername(username string) bool {
-	validName := "^[a-z_][a-z0-9_-]*$"
-	return regexp.MustCompile(validName).Match([]byte(username))
+	return regexUsername.MatchString(username)
 }
 
 func TestLimaUsername(t *testing.T) {
