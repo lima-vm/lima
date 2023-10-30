@@ -185,7 +185,7 @@ networks:
 ### vzNAT
 
 > **Warning**
-> "vz" mode is experimental
+> "vz" mode is experimental (will graduate from experimental in Lima v1.0)
 
 | ⚡ Requirement | Lima >= 0.14, macOS >= 13.0 |
 |-------------------|-----------------------------|
