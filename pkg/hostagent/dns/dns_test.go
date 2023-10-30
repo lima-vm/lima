@@ -18,7 +18,12 @@ import (
 var dnsResult *dns.Msg
 
 func TestDNSRecords(t *testing.T) {
-	srv, _ := mockdns.NewServerWithLogger(map[string]mockdns.Zone{
+	if runtime.GOOS == "windows" {
+		// "On Windows, the resolver always uses C library functions, such as GetAddrInfo and DnsQuery."
+		t.Skip()
+	}
+
+	srv, err := mockdns.NewServerWithLogger(map[string]mockdns.Zone{
 		"onerecord.com.": {
 			TXT: []string{"My txt record"},
 		},
@@ -32,12 +37,9 @@ func TestDNSRecords(t *testing.T) {
 			TXT: []string{"record 1", "record 2"},
 		},
 	}, log.New(io.Discard, "mockdns server: ", log.LstdFlags), false)
+	assert.NilError(t, err)
 	defer srv.Close()
 
-	if runtime.GOOS == "windows" {
-		// "On Windows, the resolver always uses C library functions, such as GetAddrInfo and DnsQuery."
-		t.Skip()
-	}
 	srv.PatchNet(net.DefaultResolver)
 	defer mockdns.UnpatchNet(net.DefaultResolver)
 	w := new(TestResponseWriter)
