@@ -17,6 +17,8 @@ images:
   arch: "x86_64"
 - location: "https://cloud.centos.org/centos/8-stream/aarch64/images/CentOS-Stream-GenericCloud-8-latest.aarch64.qcow2"
   arch: "aarch64"
+# The mount type is set to reverse-sshfs because 9p (default for QEMU) is not supported by the guest kernel. VZ users should specify `--mount-type=virtiofs` on `limactl create` for better performance.
+mountType: "reverse-sshfs"
 mounts:
 - location: "~"
 - location: "/tmp/lima"
