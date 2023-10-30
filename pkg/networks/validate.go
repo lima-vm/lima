@@ -142,18 +142,18 @@ func validatePath(path string, allowDaemonGroupWritable bool) error {
 		if err != nil {
 			return err
 		}
-		if fi.Mode()&020 != 0 && stat.Gid != root.Gid && stat.Gid != uint32(adminGid) && stat.Gid != daemon.Gid {
+		if fi.Mode()&0o20 != 0 && stat.Gid != root.Gid && stat.Gid != uint32(adminGid) && stat.Gid != daemon.Gid {
 			return fmt.Errorf(`%s %q is group-writable and group %d is not one of [wheel, admin, daemon]`,
 				file, path, stat.Gid)
 		}
-		if fi.Mode().IsDir() && fi.Mode()&1 == 0 && (fi.Mode()&0010 == 0 || stat.Gid != daemon.Gid) {
+		if fi.Mode().IsDir() && fi.Mode()&1 == 0 && (fi.Mode()&0o010 == 0 || stat.Gid != daemon.Gid) {
 			return fmt.Errorf(`%s %q is not executable by the %q (gid: %d)" group`, file, path, daemon.User, daemon.Gid)
 		}
-	} else if fi.Mode()&020 != 0 && stat.Gid != root.Gid && stat.Gid != uint32(adminGid) {
+	} else if fi.Mode()&0o20 != 0 && stat.Gid != root.Gid && stat.Gid != uint32(adminGid) {
 		return fmt.Errorf(`%s %q is group-writable and group %d is not one of [wheel, admin]`,
 			file, path, stat.Gid)
 	}
-	if fi.Mode()&002 != 0 {
+	if fi.Mode()&0o02 != 0 {
 		return fmt.Errorf("%s %q is world-writable", file, path)
 	}
 	if path != "/" {

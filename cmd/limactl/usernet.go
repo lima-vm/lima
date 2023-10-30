@@ -11,7 +11,7 @@ import (
 )
 
 func newUsernetCommand() *cobra.Command {
-	var hostagentCommand = &cobra.Command{
+	hostagentCommand := &cobra.Command{
 		Use:    "usernet",
 		Short:  "run usernet",
 		Args:   cobra.ExactArgs(0),
@@ -37,7 +37,7 @@ func usernetAction(cmd *cobra.Command, _ []string) error {
 		if _, err := os.Stat(pidfile); !errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("pidfile %q already exists", pidfile)
 		}
-		if err := os.WriteFile(pidfile, []byte(strconv.Itoa(os.Getpid())+"\n"), 0644); err != nil {
+		if err := os.WriteFile(pidfile, []byte(strconv.Itoa(os.Getpid())+"\n"), 0o644); err != nil {
 			return err
 		}
 		defer os.RemoveAll(pidfile)

@@ -35,7 +35,7 @@ func newApp() *cobra.Command {
 		templatesDir = filepath.Join(prefixDir, "share/lima/templates")
 	}
 
-	var rootCmd = &cobra.Command{
+	rootCmd := &cobra.Command{
 		Use:     "limactl",
 		Short:   "Lima: Linux virtual machines",
 		Version: strings.TrimPrefix(version.Version, "v"),

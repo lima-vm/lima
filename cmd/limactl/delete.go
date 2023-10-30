@@ -14,7 +14,7 @@ import (
 )
 
 func newDeleteCommand() *cobra.Command {
-	var deleteCommand = &cobra.Command{
+	deleteCommand := &cobra.Command{
 		Use:               "delete INSTANCE [INSTANCE, ...]",
 		Aliases:           []string{"remove", "rm"},
 		Short:             "Delete an instance of Lima.",

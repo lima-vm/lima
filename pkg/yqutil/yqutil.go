@@ -64,7 +64,6 @@ func EvaluateExpression(expression string, content []byte) ([]byte, error) {
 	}
 
 	return out.Bytes(), nil
-
 }
 
 func Join(yqExprs []string) string {

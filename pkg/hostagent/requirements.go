@@ -119,7 +119,6 @@ fi
 `,
 			debugHint: `Append "user_allow_other" to /etc/fuse.conf (/etc/fuse3.conf) in the guest`,
 		})
-
 	}
 	if a.guestAgentProto == guestagentclient.VSOCK {
 		req = append(req, requirement{

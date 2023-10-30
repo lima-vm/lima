@@ -86,7 +86,7 @@ and $LIMA_WORKDIR.
 **limactl**(1)
 `
 	out := md2man.Render([]byte(md))
-	if err := os.WriteFile(filePath, out, 0644); err != nil {
+	if err := os.WriteFile(filePath, out, 0o644); err != nil {
 		return err
 	}
 	// limactl(1)
@@ -99,7 +99,7 @@ and $LIMA_WORKDIR.
 
 func genDocsy(cmd *cobra.Command, dir string) error {
 	return doc.GenMarkdownTreeCustom(cmd.Root(), dir, func(s string) string {
-		//Replace limactl_completion_bash to completion bash for docsy title
+		// Replace limactl_completion_bash to completion bash for docsy title
 		name := filepath.Base(s)
 		name = strings.ReplaceAll(name, "limactl_", "")
 		name = strings.ReplaceAll(name, "_", " ")
@@ -110,7 +110,7 @@ weight: 3
 ---
 `, name)
 	}, func(s string) string {
-		//Use ../ for move one folder up for docsy
+		// Use ../ for move one folder up for docsy
 		return "../" + strings.TrimSuffix(s, filepath.Ext(s))
 	})
 }
@@ -133,7 +133,7 @@ func replaceAll(dir string, old, new string) error {
 			return err
 		}
 		out := bytes.Replace(in, []byte(old), []byte(new), -1)
-		err = os.WriteFile(path, out, 0644)
+		err = os.WriteFile(path, out, 0o644)
 		if err != nil {
 			return err
 		}

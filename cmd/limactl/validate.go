@@ -11,7 +11,7 @@ import (
 )
 
 func newValidateCommand() *cobra.Command {
-	var validateCommand = &cobra.Command{
+	validateCommand := &cobra.Command{
 		Use:   "validate FILE.yaml [FILE.yaml, ...]",
 		Short: "Validate YAML files",
 		Args:  WrapArgsError(cobra.MinimumNArgs(1)),

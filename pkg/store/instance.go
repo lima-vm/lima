@@ -376,7 +376,6 @@ func PrintInstances(w io.Writer, instances []*Instance, format string, options *
 				)
 			}
 			fmt.Fprint(w, "\n")
-
 		}
 		return w.Flush()
 	default:
@@ -407,7 +406,7 @@ func (inst *Instance) Protect() error {
 	protected := filepath.Join(inst.Dir, filenames.Protected)
 	// TODO: Do an equivalent of `chmod +a "everyone deny delete,delete_child,file_inherit,directory_inherit"`
 	// https://github.com/lima-vm/lima/issues/1595
-	if err := os.WriteFile(protected, nil, 0400); err != nil {
+	if err := os.WriteFile(protected, nil, 0o400); err != nil {
 		return err
 	}
 	inst.Protected = true

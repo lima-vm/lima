@@ -114,7 +114,6 @@ func GetDistroID(name string) (string, error) {
 	defer rootKey.Close()
 
 	keys, err := rootKey.ReadSubKeyNames(-1)
-
 	if err != nil {
 		return "", fmt.Errorf("failed to read subkey names for %s: %w", wslDistroInfoPrefix, err)
 	}

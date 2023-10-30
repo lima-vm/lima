@@ -109,7 +109,7 @@ func convertRawToRaw(source, dest string, size *int64) error {
 	}
 	if size != nil {
 		logrus.Infof("Expanding to %s", units.BytesSize(float64(*size)))
-		destF, err := os.OpenFile(dest, os.O_RDWR, 0644)
+		destF, err := os.OpenFile(dest, os.O_RDWR, 0o644)
 		if err != nil {
 			return err
 		}

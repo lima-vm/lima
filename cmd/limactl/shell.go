@@ -32,7 +32,7 @@ Hint: try --debug to show the detailed logs, if it seems hanging (mostly due to 
 `
 
 func newShellCommand() *cobra.Command {
-	var shellCmd = &cobra.Command{
+	shellCmd := &cobra.Command{
 		Use:               "shell [flags] INSTANCE [COMMAND...]",
 		Short:             "Execute shell in Lima",
 		Long:              shellHelp,

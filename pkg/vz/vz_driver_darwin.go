@@ -35,7 +35,7 @@ func New(driver *driver.BaseDriver) *LimaVzDriver {
 }
 
 func (l *LimaVzDriver) Validate() error {
-	//Calling NewEFIBootLoader to do required version check for latest APIs
+	// Calling NewEFIBootLoader to do required version check for latest APIs
 	_, err := vz.NewEFIBootLoader()
 	if errors.Is(err, vz.ErrUnsupportedOSVersion) {
 		return fmt.Errorf("VZ driver requires macOS 13 or higher to run")

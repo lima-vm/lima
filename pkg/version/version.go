@@ -1,6 +1,4 @@
 package version
 
-var (
-	// Version is filled on compilation time
-	Version = "<unknown>"
-)
+// Version is filled on compilation time
+var Version = "<unknown>"

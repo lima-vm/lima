@@ -16,7 +16,7 @@ import (
 )
 
 func newDiskCommand() *cobra.Command {
-	var diskCommand = &cobra.Command{
+	diskCommand := &cobra.Command{
 		Use:   "disk",
 		Short: "Lima disk management",
 		Example: `  Create a disk:
@@ -40,7 +40,7 @@ func newDiskCommand() *cobra.Command {
 }
 
 func newDiskCreateCommand() *cobra.Command {
-	var diskCreateCommand = &cobra.Command{
+	diskCreateCommand := &cobra.Command{
 		Use: "create DISK",
 		Example: `
 To create a new disk:
@@ -92,7 +92,7 @@ func diskCreateAction(cmd *cobra.Command, args []string) error {
 
 	logrus.Infof("Creating %s disk %q with size %s", format, name, units.BytesSize(float64(diskSize)))
 
-	if err := os.MkdirAll(diskDir, 0700); err != nil {
+	if err := os.MkdirAll(diskDir, 0o700); err != nil {
 		return err
 	}
 
@@ -104,7 +104,7 @@ func diskCreateAction(cmd *cobra.Command, args []string) error {
 }
 
 func newDiskListCommand() *cobra.Command {
-	var diskListCommand = &cobra.Command{
+	diskListCommand := &cobra.Command{
 		Use: "list",
 		Example: `
 To list existing disks:
@@ -190,7 +190,7 @@ func diskListAction(cmd *cobra.Command, args []string) error {
 }
 
 func newDiskDeleteCommand() *cobra.Command {
-	var diskDeleteCommand = &cobra.Command{
+	diskDeleteCommand := &cobra.Command{
 		Use: "delete DISK [DISK, ...]",
 		Example: `
 To delete a disk:
@@ -279,7 +279,7 @@ func forceDeleteCommand(diskName string) string {
 }
 
 func newDiskUnlockCommand() *cobra.Command {
-	var diskUnlockCommand = &cobra.Command{
+	diskUnlockCommand := &cobra.Command{
 		Use: "unlock DISK [DISK, ...]",
 		Example: `
 Emergency recovery! If an instance is force stopped, it may leave a disk locked while not actually using it.

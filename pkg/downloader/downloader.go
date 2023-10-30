@@ -155,7 +155,7 @@ func Download(local, remote string, opts ...Opt) (*Result, error) {
 		}
 
 		localPathDir := filepath.Dir(localPath)
-		if err := os.MkdirAll(localPathDir, 0755); err != nil {
+		if err := os.MkdirAll(localPathDir, 0o755); err != nil {
 			return nil, err
 		}
 	}
@@ -215,11 +215,11 @@ func Download(local, remote string, opts ...Opt) (*Result, error) {
 	if err := os.RemoveAll(shad); err != nil {
 		return nil, err
 	}
-	if err := os.MkdirAll(shad, 0700); err != nil {
+	if err := os.MkdirAll(shad, 0o700); err != nil {
 		return nil, err
 	}
 	shadURL := filepath.Join(shad, "url")
-	if err := os.WriteFile(shadURL, []byte(remote), 0644); err != nil {
+	if err := os.WriteFile(shadURL, []byte(remote), 0o644); err != nil {
 		return nil, err
 	}
 	if err := downloadHTTP(shadData, remote, o.description, o.expectedDigest); err != nil {
@@ -230,7 +230,7 @@ func Download(local, remote string, opts ...Opt) (*Result, error) {
 		return nil, err
 	}
 	if shadDigest != "" && o.expectedDigest != "" {
-		if err := os.WriteFile(shadDigest, []byte(o.expectedDigest.String()), 0644); err != nil {
+		if err := os.WriteFile(shadDigest, []byte(o.expectedDigest.String()), 0o644); err != nil {
 			return nil, err
 		}
 	}
@@ -404,7 +404,7 @@ func decompressLocal(dst, src, ext string, description string) error {
 		return err
 	}
 	defer in.Close()
-	out, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY, 0644)
+	out, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
 		return err
 	}

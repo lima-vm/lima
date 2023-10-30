@@ -67,7 +67,7 @@ func startVM(ctx context.Context, driver *driver.BaseDriver) (*virtualMachineWra
 		}
 	}()
 	go func() {
-		//Handle errors via errCh and handle stop vm during context close
+		// Handle errors via errCh and handle stop vm during context close
 		defer func() {
 			for i := range vmNetworkFiles {
 				vmNetworkFiles[i].Close()
@@ -89,7 +89,7 @@ func startVM(ctx context.Context, driver *driver.BaseDriver) (*virtualMachineWra
 						logrus.Errorf("pidfile %q already exists", pidFile)
 						errCh <- err
 					}
-					if err := os.WriteFile(pidFile, []byte(strconv.Itoa(os.Getpid())+"\n"), 0644); err != nil {
+					if err := os.WriteFile(pidFile, []byte(strconv.Itoa(os.Getpid())+"\n"), 0o644); err != nil {
 						logrus.Errorf("error writing to pid fil %q", pidFile)
 						errCh <- err
 					}
@@ -120,7 +120,7 @@ func startVM(ctx context.Context, driver *driver.BaseDriver) (*virtualMachineWra
 func startUsernet(ctx context.Context, driver *driver.BaseDriver) (*usernet.Client, error) {
 	firstUsernetIndex := limayaml.FirstUsernetIndex(driver.Yaml)
 	if firstUsernetIndex == -1 {
-		//Start a in-process gvisor-tap-vsock
+		// Start a in-process gvisor-tap-vsock
 		endpointSock, err := usernet.SockWithDirectory(driver.Instance.Dir, "", usernet.EndpointSock)
 		if err != nil {
 			return nil, err
@@ -279,10 +279,10 @@ func newVirtioNetworkDeviceConfiguration(attachment vz.NetworkDeviceAttachment, 
 func attachNetwork(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfiguration) error {
 	var configurations []*vz.VirtioNetworkDeviceConfiguration
 
-	//Configure default usernetwork with limayaml.MACAddress(driver.Instance.Dir) for eth0 interface
+	// Configure default usernetwork with limayaml.MACAddress(driver.Instance.Dir) for eth0 interface
 	firstUsernetIndex := limayaml.FirstUsernetIndex(driver.Yaml)
 	if firstUsernetIndex == -1 {
-		//slirp network using gvisor netstack
+		// slirp network using gvisor netstack
 		vzSock, err := usernet.SockWithDirectory(driver.Instance.Dir, "", usernet.FDSock)
 		if err != nil {
 			return err
@@ -527,7 +527,7 @@ func attachFolderMounts(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineCo
 				return err
 			}
 			if _, err := os.Stat(expandedPath); errors.Is(err, os.ErrNotExist) {
-				err := os.MkdirAll(expandedPath, 0750)
+				err := os.MkdirAll(expandedPath, 0o750)
 				if err != nil {
 					return err
 				}
@@ -667,7 +667,7 @@ func getMachineIdentifier(driver *driver.BaseDriver) (*vz.GenericMachineIdentifi
 		if err != nil {
 			return nil, err
 		}
-		err = os.WriteFile(identifier, machineIdentifier.DataRepresentation(), 0666)
+		err = os.WriteFile(identifier, machineIdentifier.DataRepresentation(), 0o666)
 		if err != nil {
 			return nil, err
 		}

@@ -49,7 +49,7 @@ func newShowSSHCommand() *cobra.Command {
 	if s, err := dirnames.LimaDir(); err == nil {
 		limaHome = s
 	}
-	var shellCmd = &cobra.Command{
+	shellCmd := &cobra.Command{
 		Use:   "show-ssh [flags] INSTANCE",
 		Short: "Show the ssh command line (DEPRECATED; use `ssh -F` instead)",
 		Long: fmt.Sprintf(`Show the ssh command line (DEPRECATED)

@@ -36,7 +36,7 @@ func Bicopy(x, y io.ReadWriter, quit <-chan struct{}) {
 		CloseWrite() error
 	}
 	var wg sync.WaitGroup
-	var broker = func(to, from io.ReadWriter) {
+	broker := func(to, from io.ReadWriter) {
 		if _, err := io.Copy(to, from); err != nil {
 			logrus.WithError(err).Debug("failed to call io.Copy")
 		}

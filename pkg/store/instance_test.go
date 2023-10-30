@@ -14,9 +14,11 @@ import (
 
 const separator = string(filepath.Separator)
 
-var vmtype = limayaml.QEMU
-var goarch = limayaml.NewArch(runtime.GOARCH)
-var space = strings.Repeat(" ", len(goarch)-4)
+var (
+	vmtype = limayaml.QEMU
+	goarch = limayaml.NewArch(runtime.GOARCH)
+	space  = strings.Repeat(" ", len(goarch)-4)
+)
 
 var instance = Instance{
 	Name:       "foo",

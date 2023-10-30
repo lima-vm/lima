@@ -19,7 +19,7 @@ import (
 )
 
 func newHostagentCommand() *cobra.Command {
-	var hostagentCommand = &cobra.Command{
+	hostagentCommand := &cobra.Command{
 		Use:    "hostagent INSTANCE",
 		Short:  "run hostagent",
 		Args:   WrapArgsError(cobra.ExactArgs(1)),
@@ -42,7 +42,7 @@ func hostagentAction(cmd *cobra.Command, args []string) error {
 		if _, err := os.Stat(pidfile); !errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("pidfile %q already exists", pidfile)
 		}
-		if err := os.WriteFile(pidfile, []byte(strconv.Itoa(os.Getpid())+"\n"), 0644); err != nil {
+		if err := os.WriteFile(pidfile, []byte(strconv.Itoa(os.Getpid())+"\n"), 0o644); err != nil {
 			return err
 		}
 		defer os.RemoveAll(pidfile)
@@ -62,7 +62,7 @@ func hostagentAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	if runGUI {
-		//Without this the call to vz.RunGUI fails. Adding it here, as this has to be called before the vz cgo loads.
+		// Without this the call to vz.RunGUI fails. Adding it here, as this has to be called before the vz cgo loads.
 		runtime.LockOSThread()
 		defer runtime.UnlockOSThread()
 	}

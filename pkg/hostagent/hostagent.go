@@ -197,7 +197,7 @@ func writeSSHConfigFile(inst *store.Instance, instSSHAddress string, sshLocalPor
 		return err
 	}
 	fileName := filepath.Join(inst.Dir, filenames.SSHConfig)
-	return os.WriteFile(fileName, b.Bytes(), 0600)
+	return os.WriteFile(fileName, b.Bytes(), 0o600)
 }
 
 func determineSSHLocalPort(y *limayaml.LimaYAML, instName string) (int, error) {
@@ -344,7 +344,7 @@ func (a *HostAgent) Run(ctx context.Context) error {
 		if err := a.driver.ChangeDisplayPassword(ctx, vncpasswd); err != nil {
 			return err
 		}
-		if err := os.WriteFile(vncpwdfile, []byte(vncpasswd), 0600); err != nil {
+		if err := os.WriteFile(vncpwdfile, []byte(vncpasswd), 0o600); err != nil {
 			return err
 		}
 		if strings.Contains(vncoptions, "to=") {
@@ -360,7 +360,7 @@ func (a *HostAgent) Run(ctx context.Context) error {
 			vncdisplay = net.JoinHostPort(vnchost, vncnum)
 		}
 		vncfile := filepath.Join(a.instDir, filenames.VNCDisplayFile)
-		if err := os.WriteFile(vncfile, []byte(vncdisplay), 0600); err != nil {
+		if err := os.WriteFile(vncfile, []byte(vncdisplay), 0o600); err != nil {
 			return err
 		}
 		vncurl := "vnc://" + net.JoinHostPort(vnchost, vncport)
@@ -679,7 +679,7 @@ func forwardSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, 
 					logrus.WithError(err).Warnf("Failed to clean up %q (host) before setting up forwarding", local)
 				}
 			}
-			if err := os.MkdirAll(filepath.Dir(local), 0750); err != nil {
+			if err := os.MkdirAll(filepath.Dir(local), 0o750); err != nil {
 				return fmt.Errorf("can't create directory for local socket %q: %w", local, err)
 			}
 		case verbCancel:
@@ -733,7 +733,7 @@ func copyToHost(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, 
 		remote,
 	)
 	logrus.Infof("Copying config from %s to %s", remote, local)
-	if err := os.MkdirAll(filepath.Dir(local), 0700); err != nil {
+	if err := os.MkdirAll(filepath.Dir(local), 0o700); err != nil {
 		return fmt.Errorf("can't create directory for local file %q: %w", local, err)
 	}
 	cmd := exec.CommandContext(ctx, sshConfig.Binary(), args...)
@@ -741,7 +741,7 @@ func copyToHost(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, 
 	if err != nil {
 		return fmt.Errorf("failed to run %v: %q: %w", cmd.Args, string(out), err)
 	}
-	if err := os.WriteFile(local, out, 0600); err != nil {
+	if err := os.WriteFile(local, out, 0o600); err != nil {
 		return fmt.Errorf("can't write to local file %q: %w", local, err)
 	}
 	return nil

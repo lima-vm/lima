@@ -70,7 +70,7 @@ func EnsureDisk(cfg Config) error {
 					continue
 				}
 				if f.Kernel.Cmdline != "" {
-					if err := os.WriteFile(kernelCmdline, []byte(f.Kernel.Cmdline), 0644); err != nil {
+					if err := os.WriteFile(kernelCmdline, []byte(f.Kernel.Cmdline), 0o644); err != nil {
 						errs[i] = err
 						continue
 					}
@@ -660,7 +660,7 @@ func Cmdline(cfg Config) (string, []string, error) {
 	}
 
 	// Network
-	//Configure default usernetwork with limayaml.MACAddress(driver.Instance.Dir) for eth0 interface
+	// Configure default usernetwork with limayaml.MACAddress(driver.Instance.Dir) for eth0 interface
 	firstUsernetIndex := limayaml.FirstUsernetIndex(y)
 	if firstUsernetIndex == -1 {
 		args = append(args, "-netdev", fmt.Sprintf("user,id=net0,net=%s,dhcpstart=%s,hostfwd=tcp:127.0.0.1:%d-:22",
@@ -682,7 +682,7 @@ func Cmdline(cfg Config) (string, []string, error) {
 				return "", nil, err
 			}
 
-			//Handle usernet connections
+			// Handle usernet connections
 			isUsernet, err := nwCfg.Usernet(nw.Lima)
 			if err != nil {
 				return "", nil, err
@@ -867,7 +867,7 @@ func Cmdline(cfg Config) (string, []string, error) {
 			if err != nil {
 				return "", nil, err
 			}
-			if err := os.MkdirAll(location, 0755); err != nil {
+			if err := os.MkdirAll(location, 0o755); err != nil {
 				return "", nil, err
 			}
 

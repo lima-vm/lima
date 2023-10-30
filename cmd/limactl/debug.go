@@ -21,7 +21,7 @@ func newDebugCommand() *cobra.Command {
 }
 
 func newDebugDNSCommand() *cobra.Command {
-	var cmd = &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "dns UDPPORT [TCPPORT]",
 		Short: "Debug built-in DNS",
 		Long:  "DO NOT USE! THE COMMAND SYNTAX IS SUBJECT TO CHANGE!",

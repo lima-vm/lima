@@ -10,7 +10,7 @@ import (
 )
 
 func newProtectCommand() *cobra.Command {
-	var protectCommand = &cobra.Command{
+	protectCommand := &cobra.Command{
 		Use:   "protect INSTANCE [INSTANCE, ...]",
 		Short: "Protect an instance to prohibit accidental removal",
 		Long: `Protect an instance to prohibit accidental removal via the 'limactl delete' command.

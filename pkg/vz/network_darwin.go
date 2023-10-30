@@ -102,9 +102,11 @@ func (v *QEMUPacketConn) Write(b []byte) (n int, err error) {
 	}
 	return write, nil
 }
+
 func (v *QEMUPacketConn) Close() error {
 	return v.unixConn.Close()
 }
+
 func (v *QEMUPacketConn) LocalAddr() net.Addr {
 	return v.unixConn.LocalAddr()
 }

@@ -109,7 +109,8 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 	d := defaultExprFunc
 	defs := []def{
 		{"cpus", d(".cpus = %s"), false, false},
-		{"dns",
+		{
+			"dns",
 			func(_ *flag.Flag) (string, error) {
 				ipSlice, err := flags.GetIPSlice("dns")
 				if err != nil {
@@ -127,9 +128,11 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 				return expr, nil
 			},
 			false,
-			false},
+			false,
+		},
 		{"memory", d(".memory = \"%sGiB\""), false, false},
-		{"mount",
+		{
+			"mount",
 			func(_ *flag.Flag) (string, error) {
 				ss, err := flags.GetStringSlice("mount")
 				if err != nil {
@@ -148,10 +151,12 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 				return expr, nil
 			},
 			false,
-			false},
+			false,
+		},
 		{"mount-type", d(".mountType = %q"), false, false},
 		{"mount-writable", d(".mounts[].writable = %s"), false, false},
-		{"network",
+		{
+			"network",
 			func(_ *flag.Flag) (string, error) {
 				ss, err := flags.GetStringSlice("network")
 				if err != nil {
@@ -177,8 +182,10 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 				return expr, nil
 			},
 			false,
-			false},
-		{"rosetta",
+			false,
+		},
+		{
+			"rosetta",
 			func(_ *flag.Flag) (string, error) {
 				b, err := flags.GetBool("rosetta")
 				if err != nil {
@@ -187,9 +194,11 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 				return fmt.Sprintf(".rosetta.enabled = %v | .rosetta.binfmt = %v", b, b), nil
 			},
 			false,
-			true},
+			true,
+		},
 		{"set", d("%s"), false, false},
-		{"video",
+		{
+			"video",
 			func(_ *flag.Flag) (string, error) {
 				b, err := flags.GetBool("video")
 				if err != nil {
@@ -201,9 +210,11 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 				return ".video.display = \"none\"", nil
 			},
 			false,
-			false},
+			false,
+		},
 		{"arch", d(".arch = %q"), true, false},
-		{"containerd",
+		{
+			"containerd",
 			func(_ *flag.Flag) (string, error) {
 				s, err := flags.GetString("containerd")
 				if err != nil {
@@ -223,8 +234,8 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 				}
 			},
 			true,
-			false},
-
+			false,
+		},
 		{"disk", d(".disk= \"%sGiB\""), true, false},
 		{"vm-type", d(".vmType = %q"), true, false},
 		{"plain", d(".plain = %s"), true, false},

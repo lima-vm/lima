@@ -59,7 +59,7 @@ func DefaultPubKeys(loadDotSSH bool) ([]PubKey, error) {
 		if !errors.Is(err, os.ErrNotExist) {
 			return nil, err
 		}
-		if err := os.MkdirAll(configDir, 0700); err != nil {
+		if err := os.MkdirAll(configDir, 0o700); err != nil {
 			return nil, fmt.Errorf("could not create %q directory: %w", configDir, err)
 		}
 		if err := lockutil.WithDirLock(configDir, func() error {
@@ -304,20 +304,20 @@ func detectValidPublicKey(content string) bool {
 	if strings.ContainsRune(content, '\n') {
 		return false
 	}
-	var spaced = strings.SplitN(content, " ", 3)
+	spaced := strings.SplitN(content, " ", 3)
 	if len(spaced) < 2 {
 		return false
 	}
-	var algo, base64Key = spaced[0], spaced[1]
-	var decodedKey, err = base64.StdEncoding.DecodeString(base64Key)
+	algo, base64Key := spaced[0], spaced[1]
+	decodedKey, err := base64.StdEncoding.DecodeString(base64Key)
 	if err != nil || len(decodedKey) < 4 {
 		return false
 	}
-	var sigLength = binary.BigEndian.Uint32(decodedKey)
+	sigLength := binary.BigEndian.Uint32(decodedKey)
 	if uint32(len(decodedKey)) < sigLength {
 		return false
 	}
-	var sigFormat = string(decodedKey[4 : 4+sigLength])
+	sigFormat := string(decodedKey[4 : 4+sigLength])
 	return algo == sigFormat
 }
 

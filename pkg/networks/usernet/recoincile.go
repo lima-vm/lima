@@ -27,9 +27,9 @@ func Start(ctx context.Context, name string) error {
 	if err != nil {
 		return err
 	}
-	//usernet files contents are stored under {LIMA_HOME}/_networks/user-v2/<pid, fdsock, endpointsock, logs>
+	// usernet files contents are stored under {LIMA_HOME}/_networks/user-v2/<pid, fdsock, endpointsock, logs>
 	usernetDir := path.Join(networksDir, name)
-	if err := os.MkdirAll(usernetDir, 0755); err != nil {
+	if err := os.MkdirAll(usernetDir, 0o755); err != nil {
 		return err
 	}
 
@@ -70,11 +70,13 @@ func Start(ctx context.Context, name string) error {
 				return err
 			}
 			leasesString := mapToCliString(leases)
-			args := []string{"usernet", "-p", pidFile,
+			args := []string{
+				"usernet", "-p", pidFile,
 				"-e", endpointSock,
 				"--listen-qemu", qemuSock,
 				"--listen", fdSock,
-				"--subnet", subnet.String()}
+				"--subnet", subnet.String(),
+			}
 			if leasesString != "" {
 				args = append(args, "--leases", leasesString)
 			}

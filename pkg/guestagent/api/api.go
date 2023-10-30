@@ -6,9 +6,7 @@ import (
 	"time"
 )
 
-var (
-	IPv4loopback1 = net.IPv4(127, 0, 0, 1)
-)
+var IPv4loopback1 = net.IPv4(127, 0, 0, 1)
 
 type IPPort struct {
 	IP   net.IP `json:"ip"`

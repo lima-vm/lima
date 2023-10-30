@@ -12,7 +12,7 @@ import (
 )
 
 func newFactoryResetCommand() *cobra.Command {
-	var resetCommand = &cobra.Command{
+	resetCommand := &cobra.Command{
 		Use:               "factory-reset INSTANCE",
 		Short:             "Factory reset an instance of Lima",
 		Args:              WrapArgsError(cobra.MaximumNArgs(1)),

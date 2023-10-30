@@ -12,7 +12,7 @@ import (
 )
 
 func newSnapshotCommand() *cobra.Command {
-	var snapshotCmd = &cobra.Command{
+	snapshotCmd := &cobra.Command{
 		Use:   "snapshot",
 		Short: "Manage instance snapshots",
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
@@ -28,7 +28,7 @@ func newSnapshotCommand() *cobra.Command {
 }
 
 func newSnapshotCreateCommand() *cobra.Command {
-	var createCmd = &cobra.Command{
+	createCmd := &cobra.Command{
 		Use:               "create INSTANCE",
 		Aliases:           []string{"save"},
 		Short:             "Create (save) a snapshot",
@@ -63,7 +63,7 @@ func snapshotCreateAction(cmd *cobra.Command, args []string) error {
 }
 
 func newSnapshotDeleteCommand() *cobra.Command {
-	var deleteCmd = &cobra.Command{
+	deleteCmd := &cobra.Command{
 		Use:               "delete INSTANCE",
 		Aliases:           []string{"del"},
 		Short:             "Delete (del) a snapshot",
@@ -98,7 +98,7 @@ func snapshotDeleteAction(cmd *cobra.Command, args []string) error {
 }
 
 func newSnapshotApplyCommand() *cobra.Command {
-	var applyCmd = &cobra.Command{
+	applyCmd := &cobra.Command{
 		Use:               "apply INSTANCE",
 		Aliases:           []string{"load"},
 		Short:             "Apply (load) a snapshot",
@@ -133,7 +133,7 @@ func snapshotApplyAction(cmd *cobra.Command, args []string) error {
 }
 
 func newSnapshotListCommand() *cobra.Command {
-	var listCmd = &cobra.Command{
+	listCmd := &cobra.Command{
 		Use:               "list INSTANCE",
 		Aliases:           []string{"ls"},
 		Short:             "List existing snapshots",

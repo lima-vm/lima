@@ -51,7 +51,7 @@ linters:
   # - godot
   # - godox
   # - goerr113
-  # - gofumpt
+  - gofumpt
   # - goheader
   # - golint
   # - gomnd
@@ -77,7 +77,7 @@ linters:
   # - unconvert
   # - unparam
   - unused
-  # - whitespace
+  - whitespace
   # - wrapcheck
   # - wsl
 linters-settings:

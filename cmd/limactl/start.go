@@ -37,7 +37,7 @@ func registerCreateFlags(cmd *cobra.Command, commentPrefix string) {
 }
 
 func newCreateCommand() *cobra.Command {
-	var createCommand = &cobra.Command{
+	createCommand := &cobra.Command{
 		Use: "create FILE.yaml|URL",
 		Example: `
 To create an instance "default" from the default Ubuntu template:
@@ -74,7 +74,7 @@ $ cat template.yaml | limactl create --name=local -
 }
 
 func newStartCommand() *cobra.Command {
-	var startCommand = &cobra.Command{
+	startCommand := &cobra.Command{
 		Use: "start NAME|FILE.yaml|URL",
 		Example: `
 To create an instance "default" (if not created yet) from the default Ubuntu template, and start it:
@@ -282,7 +282,7 @@ func applyYQExpressionToExistingInstance(inst *store.Instance, yq string) (*stor
 	if err != nil {
 		return nil, err
 	}
-	if err := os.WriteFile(filePath, yBytes, 0644); err != nil {
+	if err := os.WriteFile(filePath, yBytes, 0o644); err != nil {
 		return nil, err
 	}
 	// Reload
@@ -322,15 +322,15 @@ func createInstance(ctx context.Context, st *creatorState, saveBrokenEditorBuffe
 			return nil, err
 		}
 		rejectedYAML := "lima.REJECTED.yaml"
-		if writeErr := os.WriteFile(rejectedYAML, st.yBytes, 0644); writeErr != nil {
+		if writeErr := os.WriteFile(rejectedYAML, st.yBytes, 0o644); writeErr != nil {
 			return nil, fmt.Errorf("the YAML is invalid, attempted to save the buffer as %q but failed: %v: %w", rejectedYAML, writeErr, err)
 		}
 		return nil, fmt.Errorf("the YAML is invalid, saved the buffer as %q: %w", rejectedYAML, err)
 	}
-	if err := os.MkdirAll(instDir, 0700); err != nil {
+	if err := os.MkdirAll(instDir, 0o700); err != nil {
 		return nil, err
 	}
-	if err := os.WriteFile(filePath, st.yBytes, 0644); err != nil {
+	if err := os.WriteFile(filePath, st.yBytes, 0o644); err != nil {
 		return nil, err
 	}
 

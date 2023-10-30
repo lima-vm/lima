@@ -27,8 +27,10 @@ type Group struct {
 	Gid  uint32
 }
 
-var users map[string]User
-var groups map[string]Group
+var (
+	users  map[string]User
+	groups map[string]Group
+)
 
 // regexUsername matches user and group names to be valid for `useradd`.
 // `useradd` allows names with a trailing '$', but it feels prudent to map those

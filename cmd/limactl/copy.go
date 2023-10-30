@@ -23,7 +23,7 @@ Example: limactl copy default:/etc/os-release .
 `
 
 func newCopyCommand() *cobra.Command {
-	var copyCommand = &cobra.Command{
+	copyCommand := &cobra.Command{
 		Use:     "copy SOURCE ... TARGET",
 		Aliases: []string{"cp"},
 		Short:   "Copy files between host and guest",
