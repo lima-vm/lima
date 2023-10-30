@@ -1,5 +1,4 @@
 //go:build !windows || no_wsl
-// +build !windows no_wsl
 
 package wsl2
 
