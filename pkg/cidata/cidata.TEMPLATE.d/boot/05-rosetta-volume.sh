@@ -14,7 +14,16 @@ mkdir -p /mnt/lima-rosetta
 
 #Check selinux is enabled by kernel
 if [ -d /sys/fs/selinux ]; then
-	mount -t virtiofs vz-rosetta /mnt/lima-rosetta -o context="system_u:object_r:container_file_t:s0"
+	##########################################################################################
+	## When using vz & virtiofs, initially container_file_t selinux label
+	## was considered which works perfectly for container work loads
+	## but it might break for other work loads if the process is running with
+	## different label. Also these are the remote mounts from the host machine,
+	## so keeping the label as nfs_t fits right. Package container-selinux by
+	## default adds rules for nfs_t context which allows container workloads to work as well.
+	## https://github.com/lima-vm/lima/pull/1965
+	##########################################################################################
+	mount -t virtiofs vz-rosetta /mnt/lima-rosetta -o context="system_u:object_r:nfs_t:s0"
 else
 	mount -t virtiofs vz-rosetta /mnt/lima-rosetta
 fi
