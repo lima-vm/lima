@@ -77,7 +77,7 @@ var TemplateFuncMap = template.FuncMap{
 	},
 	"indent": func(a ...interface{}) (string, error) {
 		if len(a) == 0 {
-			return "", errors.New("function takes at at least one string argument")
+			return "", errors.New("function takes at least one string argument")
 		}
 		if len(a) > 2 {
 			return "", errors.New("function takes at most 2 arguments")
@@ -97,7 +97,7 @@ var TemplateFuncMap = template.FuncMap{
 	},
 	"missing": func(a ...interface{}) (string, error) {
 		if len(a) == 0 {
-			return "", errors.New("function takes at at least one string argument")
+			return "", errors.New("function takes at least one string argument")
 		}
 		if len(a) > 2 {
 			return "", errors.New("function takes at most 2 arguments")
