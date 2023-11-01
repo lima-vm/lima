@@ -47,31 +47,6 @@ GO_BUILD := $(GO) build -ldflags="-s -w -X $(PACKAGE)/pkg/version.Version=$(VERS
 
 .NOTPARALLEL:
 
-.PHONY: all
-all: binaries manpages
-
-.PHONY: help
-help:
-	@echo  '  binaries        - Build all binaries'
-	@echo  '  manpages        - Build manual pages'
-
-exe: _output/bin/limactl$(exe)
-
-.PHONY: minimal
-minimal: clean \
-	_output/bin/limactl$(exe) \
-	codesign \
-	_output/share/lima/lima-guestagent.Linux-$(shell uname -m | sed -e s/arm64/aarch64/)
-	mkdir -p _output/share/lima/templates
-	cp -aL examples/default.yaml _output/share/lima/templates/
-
-config: Kconfig
-	$(KCONFIG_CONF) $<
-
-menuconfig: Kconfig
-	MENUCONFIG_STYLE=aquatic \
-	$(KCONFIG_MCONF) $<
-
 # Copy the default config, if not overridden locally
 # This is done to avoid a dependency on KCONFIG tools
 .config: config.mk
@@ -106,7 +81,7 @@ endif
 endif
 
 .PHONY: binaries
-binaries: clean \
+binaries: \
 	_output/bin/lima \
 	_output/bin/lima$(bat) \
 	_output/bin/limactl$(exe) \
@@ -130,6 +105,31 @@ else
 	cp -aL examples _output/share/doc/lima/templates
 endif
 	echo $(VERSION) > _output/share/doc/lima/VERSION
+
+.PHONY: all
+all: clean binaries manpages
+
+.PHONY: help
+help:
+	@echo  '  binaries        - Build all binaries'
+	@echo  '  manpages        - Build manual pages'
+
+exe: _output/bin/limactl$(exe)
+
+.PHONY: minimal
+minimal: clean \
+	_output/bin/limactl$(exe) \
+	codesign \
+	_output/share/lima/lima-guestagent.Linux-$(shell uname -m | sed -e s/arm64/aarch64/)
+	mkdir -p _output/share/lima/templates
+	cp -aL examples/default.yaml _output/share/lima/templates/
+
+config: Kconfig
+	$(KCONFIG_CONF) $<
+
+menuconfig: Kconfig
+	MENUCONFIG_STYLE=aquatic \
+	$(KCONFIG_MCONF) $<
 
 .PHONY: _output/bin/lima
 _output/bin/lima:
