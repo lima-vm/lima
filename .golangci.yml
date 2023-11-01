@@ -35,6 +35,7 @@ linters:
   - bodyclose
   # - dogsled
   # - dupl
+  - dupword
   # - errcheck
   # - errorlint
   # - exhaustive

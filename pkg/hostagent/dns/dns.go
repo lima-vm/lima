@@ -68,7 +68,7 @@ func (s *Server) Shutdown() {
 }
 
 func newStaticClientConfig(ips []string) (*dns.ClientConfig, error) {
-	logrus.Tracef("newStaticClientConfig creating config for the the following IPs: %v", ips)
+	logrus.Tracef("newStaticClientConfig creating config for the following IPs: %v", ips)
 	s := ``
 	for _, ip := range ips {
 		s += fmt.Sprintf("nameserver %s\n", ip)
