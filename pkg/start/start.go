@@ -13,8 +13,10 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/coreos/go-semver/semver"
 	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/driverutil"
+	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/qemu"
 	"github.com/lima-vm/lima/pkg/qemu/entitlementutil"
 
@@ -125,12 +127,19 @@ func Start(ctx context.Context, inst *store.Instance) error {
 	// Ask the user to sign the qemu binary with the "com.apple.security.hypervisor" if needed.
 	// Workaround for https://github.com/lima-vm/lima/issues/1742
 	if runtime.GOOS == "darwin" && inst.VMType == limayaml.QEMU {
-		qExe, _, err := qemu.Exe(inst.Arch)
+		macOSProductVersion, err := osutil.ProductVersion()
 		if err != nil {
-			return fmt.Errorf("failed to find the QEMU binary for the architecture %q: %w", inst.Arch, err)
+			return err
 		}
-		if accel := qemu.Accel(inst.Arch); accel == "hvf" {
-			entitlementutil.AskToSignIfNotSignedProperly(qExe)
+		// The codesign --xml option is only available on macOS Monterey and later
+		if !macOSProductVersion.LessThan(*semver.New("12.0.0")) {
+			qExe, _, err := qemu.Exe(inst.Arch)
+			if err != nil {
+				return fmt.Errorf("failed to find the QEMU binary for the architecture %q: %w", inst.Arch, err)
+			}
+			if accel := qemu.Accel(inst.Arch); accel == "hvf" {
+				entitlementutil.AskToSignIfNotSignedProperly(qExe)
+			}
 		}
 	}
 
