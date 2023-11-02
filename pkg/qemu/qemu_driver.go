@@ -325,7 +325,7 @@ func (l *LimaQemuDriver) shutdownQEMU(ctx context.Context, timeout time.Duration
 	select {
 	case qWaitErr := <-qWaitCh:
 		logrus.WithError(qWaitErr).Info("QEMU has exited")
-		l.removeVNCFiles()
+		_ = l.removeVNCFiles()
 		return errors.Join(qWaitErr, l.killVhosts())
 	case <-deadline:
 	}
@@ -346,7 +346,7 @@ func (l *LimaQemuDriver) killQEMU(_ context.Context, _ time.Duration, qCmd *exec
 	}
 	qemuPIDPath := filepath.Join(l.Instance.Dir, filenames.PIDFile(*l.Yaml.VMType))
 	_ = os.RemoveAll(qemuPIDPath)
-	l.removeVNCFiles()
+	_ = l.removeVNCFiles()
 	return errors.Join(qWaitErr, l.killVhosts())
 }
 

@@ -61,10 +61,11 @@ func gendocAction(cmd *cobra.Command, args []string) error {
 		}
 	}
 	if output != "" && prefix != "" {
-		replaceAll(dir, output, prefix)
+		if err := replaceAll(dir, output, prefix); err != nil {
+			return err
+		}
 	}
-	replaceAll(dir, homeDir, "~")
-	return nil
+	return replaceAll(dir, homeDir, "~")
 }
 
 func genMan(cmd *cobra.Command, dir string) error {

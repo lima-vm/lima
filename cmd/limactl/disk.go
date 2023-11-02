@@ -51,7 +51,7 @@ $ limactl disk create DISK --size SIZE [--format qcow2]
 		RunE:  diskCreateAction,
 	}
 	diskCreateCommand.Flags().String("size", "", "configure the disk size")
-	diskCreateCommand.MarkFlagRequired("size")
+	_ = diskCreateCommand.MarkFlagRequired("size")
 	diskCreateCommand.Flags().String("format", "qcow2", "specify the disk format")
 	return diskCreateCommand
 }

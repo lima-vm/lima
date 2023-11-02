@@ -36,7 +36,7 @@ linters:
   # - dogsled
   # - dupl
   - dupword
-  # - errcheck
+  - errcheck
   # - errorlint
   # - exhaustive
   # - exhaustivestruct
