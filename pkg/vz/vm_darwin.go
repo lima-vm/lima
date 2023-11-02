@@ -104,7 +104,7 @@ func startVM(ctx context.Context, driver *driver.BaseDriver) (*virtualMachineWra
 					wrapper.mu.Lock()
 					wrapper.stopped = true
 					wrapper.mu.Unlock()
-					usernetClient.UnExposeSSH(driver.SSHLocalPort)
+					_ = usernetClient.UnExposeSSH(driver.SSHLocalPort)
 					errCh <- errors.New("vz driver state stopped")
 				default:
 					logrus.Debugf("[VZ] - vm state change: %q", newState)

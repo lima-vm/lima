@@ -27,9 +27,10 @@ func TestGetPorts(t *testing.T) {
 	serviceCreatedCh := make(chan struct{}, 1)
 	kubeClient, informerFactory := newFakeKubeClient()
 	serviceInformer := informerFactory.Core().V1().Services().Informer()
-	serviceInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, err := serviceInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) { serviceCreatedCh <- struct{}{} },
 	})
+	assert.NilError(t, err)
 	informerFactory.Start(ctx.Done())
 	serviceWatcher := NewServiceWatcher()
 	serviceWatcher.setServiceInformer(serviceInformer)
@@ -41,7 +42,7 @@ func TestGetPorts(t *testing.T) {
 	}
 	cases := []testCase{
 		{
-			name: "nodePort serivce",
+			name: "nodePort service",
 			service: corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{Name: "nodeport"},
 				Spec: corev1.ServiceSpec{

@@ -263,7 +263,7 @@ func watchHostAgentEvents(ctx context.Context, inst *store.Instance, haStdoutPat
 			} else {
 				logrus.Infof("READY. Run `%s` to open the shell.", LimactlShellCmd(inst.Name))
 			}
-			ShowMessage(inst)
+			_ = ShowMessage(inst)
 			err = nil
 			return true
 		}
