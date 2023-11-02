@@ -5,7 +5,6 @@ import (
 	"net"
 	"path/filepath"
 
-	"github.com/apparentlymart/go-cidr/cidr"
 	"github.com/lima-vm/lima/pkg/networks"
 	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
@@ -86,12 +85,12 @@ func Subnet(name string) (net.IP, error) {
 
 // GatewayIP returns the 2nd IP for the given subnet
 func GatewayIP(subnet net.IP) string {
-	return cidr.Inc(cidr.Inc(subnet)).String()
+	return incIP(incIP(subnet)).String()
 }
 
 // DNSIP returns the 3rd IP for the given subnet
 func DNSIP(subnet net.IP) string {
-	return cidr.Inc(cidr.Inc(cidr.Inc(subnet))).String()
+	return incIP(incIP(incIP(subnet))).String()
 }
 
 // Leases returns a leases file based on network name.
