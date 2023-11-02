@@ -155,6 +155,11 @@ probes:
       echo >&2 "kubernetes cluster is not up and running yet"
       exit 1
     fi
+- description: "coredns deployment to be running"
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    sudo kubectl wait -n kube-system --timeout=180s --for=condition=available deploy coredns
 copyToHost:
 - guest: "/etc/kubernetes/admin.conf"
   host: "{{.Dir}}/copied-from-guest/kubeconfig.yaml"
