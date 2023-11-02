@@ -110,7 +110,7 @@ version = "master"
 #url_latest_version = "https://lima-vm.io"
 
 # Specify a value here if your content directory is not in your repo's root directory
-# github_subdir = ""
+github_subdir = "website"
 
 # Uncomment this if your GitHub repo does not have "main" as the default branch,
 # or specify a new value if you want to reference another branch in your GitHub links
