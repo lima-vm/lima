@@ -182,7 +182,7 @@ enable = false
   enable = true
 
 [[menus.main]]
-  name = "Github"
+  name = "GitHub"
   url = "https://github.com/lima-vm/lima"
   pre = '<i class="fab fa-github"></i>'
 

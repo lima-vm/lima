@@ -27,7 +27,7 @@ my $addr = scalar gethostbyname(hostname());
 my $ipv4 = length $addr ? inet_ntoa($addr) : "127.0.0.1";
 my $ipv6 = ""; # todo
 
-# macOS Github runners seem to use "localhost" as the hostname
+# macOS GitHub runners seem to use "localhost" as the hostname
 if ($ipv4 eq "127.0.0.1" && $Config{osname} eq "darwin") {
     $ipv4 = qx(system_profiler SPNetworkDataType -json | jq -r 'first(.SPNetworkDataType[] | select(.ip_address) | .ip_address) | first');
     chomp $ipv4;

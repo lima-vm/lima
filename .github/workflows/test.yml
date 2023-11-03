@@ -169,7 +169,7 @@ jobs:
       # jq:        required by test-templates.sh to determine download URL for nerdctl
       run: |
         set -x
-        # Github runners seem to have lima installed by brew already; we don't want/need it
+        # GitHub runners seem to have lima installed by brew already; we don't want/need it
         time brew uninstall --ignore-dependencies lima colima
         time brew install qemu bash coreutils curl jq
     - name: "Show cache"

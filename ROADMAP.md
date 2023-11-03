@@ -1,6 +1,6 @@
 # Lima roadmap
 
-Instead of using a static text file, Lima uses the `roadmap` label on Github issues to designate features or bug fixes that we plan to implement.
+Instead of using a static text file, Lima uses the `roadmap` label on GitHub issues to designate features or bug fixes that we plan to implement.
 
 Issues are tagged with the `roadmap` label when at least one maintainer or contributor has declared intent to work on or help with the implementation.
 
