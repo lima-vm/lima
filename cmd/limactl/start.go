@@ -425,9 +425,11 @@ func chooseNextCreatorState(st *creatorState, yq string) (*creatorState, error) 
 				return st, fmt.Errorf("invalid answer %d for %d entries", ansEx, len(templates))
 			}
 			yamlPath := templates[ansEx].Location
-			st.instName, err = guessarg.InstNameFromYAMLPath(yamlPath)
-			if err != nil {
-				return nil, err
+			if st.instName == "" {
+				st.instName, err = guessarg.InstNameFromYAMLPath(yamlPath)
+				if err != nil {
+					return nil, err
+				}
 			}
 			st.yBytes, err = os.ReadFile(yamlPath)
 			if err != nil {
