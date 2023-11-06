@@ -46,6 +46,11 @@ Container orchestration:
 - [`k3s`](./k3s.yaml): Kubernetes via k3s
 - [`k8s`](./k8s.yaml): Kubernetes via kubeadm
 
+Container runtimes:
+- [`k8s-nerdctl`](./experimental/k8s-nerdctl.yaml): Kubernetes via kubeadm, with containerd/buildkitd
+- [`k8s-docker`](./experimental/k8s-docker.yaml): Kubernetes via kubeadm, with Docker and CRI-Docker
+- [`k8s-podman`](./experimental/k8s-podman.yaml): Kubernetes via kubeadm, with Podman and CRI-O
+
 Optional feature enablers:
 - [`vmnet`](./vmnet.yaml): ⭐enable [`vmnet.framework`](../docs/network.md)
 - [`experimental/9p`](./experimental/9p.yaml): [experimental] use 9p mount type

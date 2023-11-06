@@ -1,0 +1,208 @@
+# Deploy kubernetes via kubeadm, with nerdctl.
+# $ limactl start --name=k8s ./k8s-nerdctl.yaml
+# $ limactl shell k8s sudo kubectl
+
+# This template requires Lima v0.7.0 or later.
+images:
+# Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
+- location: "https://cloud-images.ubuntu.com/releases/22.04/release-20231010/ubuntu-22.04-server-cloudimg-amd64.img"
+  arch: "x86_64"
+  digest: "sha256:5bed3f233c2422187e86089deea51bb8469dc2a26e96814ca41ff8f14dc80308"
+- location: "https://cloud-images.ubuntu.com/releases/22.04/release-20231010/ubuntu-22.04-server-cloudimg-arm64.img"
+  arch: "aarch64"
+  digest: "sha256:5167c1b13cb33274955e36332ecb7b14f02b71fd19a37a9c1a3a0f8a805ab8e5"
+# Fallback to the latest release image.
+# Hint: run `limactl prune` to invalidate the cache
+- location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-amd64.img"
+  arch: "x86_64"
+- location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-arm64.img"
+  arch: "aarch64"
+
+# Mounts are disabled in this template, but can be enabled optionally.
+mounts: []
+containerd:
+  system: true
+  user: false
+provision:
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    command -v nerdctld >/dev/null 2>&1 && exit 0
+    if [ ! -e /etc/systemd/system/nerdctl.socket.d/override.conf ]; then
+      mkdir -p /etc/systemd/system/nerdctl.socket.d
+      cat <<-EOF >/etc/systemd/system/nerdctl.socket.d/override.conf
+      [Socket]
+      SocketUser=${LIMA_CIDATA_USER}
+    EOF
+    fi
+    NAME=nerdctld
+    VERSION=0.4.0
+    case $(uname -m) in
+      x86_64)   DEBARCH=amd64;;
+      aarch64)  DEBARCH=arm64;;
+    esac
+    curl -sSLO https://github.com/afbjorklund/nerdctld/releases/download/v${VERSION}/${NAME}_${VERSION}_${DEBARCH}.deb
+    dpkg -i ${NAME}_${VERSION}_${DEBARCH}.deb
+    systemctl --system enable --now nerdctl.socket
+# See <https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/>
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    command -v kubeadm >/dev/null 2>&1 && exit 0
+    # Install and configure prerequisites
+    cat <<EOF | sudo tee /etc/modules-load.d/containerd.conf
+    overlay
+    br_netfilter
+    EOF
+    modprobe overlay
+    modprobe br_netfilter
+    cat <<EOF | sudo tee /etc/sysctl.d/99-kubernetes-cri.conf
+    net.bridge.bridge-nf-call-iptables  = 1
+    net.ipv4.ip_forward                 = 1
+    net.bridge.bridge-nf-call-ip6tables = 1
+    EOF
+    sysctl --system
+    # Installing kubeadm, kubelet and kubectl
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update
+    apt-get install -y apt-transport-https ca-certificates curl
+    VERSION=$(curl -L -s https://dl.k8s.io/release/stable.txt | sed -e 's/v//' | cut -d'.' -f1-2)
+    echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v${VERSION}/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+    curl -fsSL https://pkgs.k8s.io/core:/stable:/v${VERSION}/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+    apt-get update
+    # cri-tools
+    apt-get install -y cri-tools
+    cat  <<EOF | sudo tee /etc/crictl.yaml
+    runtime-endpoint: unix:///run/containerd/containerd.sock
+    EOF
+    # cni-plugins
+    apt-get install -y kubernetes-cni
+    rm -f /etc/cni/net.d/*.conf*
+    apt-get install -y kubelet kubeadm kubectl && apt-mark hold kubelet kubeadm kubectl
+    systemctl enable --now kubelet
+# See <https://kubernetes.io/docs/setup/production-environment/container-runtimes/>
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    grep SystemdCgroup /etc/containerd/config.toml && exit 0
+    grep "version = 2" /etc/containerd/config.toml || exit 1
+    # Configuring the systemd cgroup driver
+    # Overriding the sandbox (pause) image
+    cat <<EOF >>/etc/containerd/config.toml
+      [plugins]
+        [plugins."io.containerd.grpc.v1.cri"]
+          sandbox_image = "$(kubeadm config images list | grep pause | sort -r | head -n1)"
+          [plugins."io.containerd.grpc.v1.cri".containerd]
+            [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]
+              [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
+                runtime_type = "io.containerd.runc.v2"
+                [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
+                  SystemdCgroup = true
+    EOF
+    systemctl restart containerd
+    mkdir -p /etc/systemd/system/nerdctl.service.d
+    cat <<EOF >>/etc/systemd/system/nerdctl.service.d/10-namespace.conf
+    [Service]
+    Environment=CONTAINERD_NAMESPACE=k8s.io
+    EOF
+    systemctl daemon-reload
+    systemctl restart nerdctl
+# See <https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/>
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    test -e /etc/kubernetes/admin.conf && exit 0
+    export KUBECONFIG=/etc/kubernetes/admin.conf
+    kubeadm config images list
+    kubeadm config images pull --cri-socket=unix:///run/containerd/containerd.sock
+    # Initializing your control-plane node
+    cat <<EOF >kubeadm-config.yaml
+    kind: InitConfiguration
+    apiVersion: kubeadm.k8s.io/v1beta3
+    nodeRegistration:
+      criSocket: unix:///run/containerd/containerd.sock
+    ---
+    kind: ClusterConfiguration
+    apiVersion: kubeadm.k8s.io/v1beta3
+    apiServer:
+      certSANs: # --apiserver-cert-extra-sans
+      - "127.0.0.1"
+    networking:
+      podSubnet: "10.244.0.0/16" # --pod-network-cidr
+    ---
+    kind: KubeletConfiguration
+    apiVersion: kubelet.config.k8s.io/v1beta1
+    cgroupDriver: systemd
+    EOF
+    kubeadm init --config kubeadm-config.yaml
+    # Installing a Pod network add-on
+    kubectl apply -f https://github.com/flannel-io/flannel/releases/download/v0.22.1/kube-flannel.yml
+    # Control plane node isolation
+    kubectl taint nodes --all node-role.kubernetes.io/control-plane-
+    # Replace the server address with localhost, so that it works also from the host
+    sed -e "/server:/ s|https://.*:\([0-9]*\)$|https://127.0.0.1:\1|" -i $KUBECONFIG
+    mkdir -p ${HOME:-/root}/.kube && cp -f $KUBECONFIG ${HOME:-/root}/.kube/config
+probes:
+- script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    if ! timeout 30s bash -c "until command -v nerdctld >/dev/null 2>&1; do sleep 3; done"; then
+      echo >&2 "nerdctld is not installed yet"
+      exit 1
+    fi
+  hint: See "/var/log/cloud-init-output.log" in the guest
+- description: "kubeadm to be installed"
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    if ! timeout 30s bash -c "until command -v kubeadm >/dev/null 2>&1; do sleep 3; done"; then
+      echo >&2 "kubeadm is not installed yet"
+      exit 1
+    fi
+  hint: |
+    See "/var/log/cloud-init-output.log". in the guest
+- description: "kubeadm to be completed"
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    if ! timeout 300s bash -c "until test -f /etc/kubernetes/admin.conf; do sleep 3; done"; then
+      echo >&2 "k8s is not running yet"
+      exit 1
+    fi
+  hint: |
+    The k8s kubeconfig file has not yet been created.
+- description: "kubernetes cluster to be running"
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    if ! timeout 300s bash -c "until sudo kubectl version >/dev/null 2>&1; do sleep 3; done"; then
+      echo >&2 "kubernetes cluster is not up and running yet"
+      exit 1
+    fi
+- description: "coredns deployment to be running"
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    sudo kubectl wait -n kube-system --timeout=180s --for=condition=available deploy coredns
+portForwards:
+- guestSocket: "/var/run/nerdctl.sock"
+  hostSocket: "{{.Dir}}/sock/nerdctl.sock"
+copyToHost:
+- guest: "/etc/kubernetes/admin.conf"
+  host: "{{.Dir}}/copied-from-guest/kubeconfig.yaml"
+  deleteOnStop: true
+message: |
+  To run `docker` on the host (assumes docker-cli is installed), run the following commands:
+  ------
+  export DOCKER_HOST="unix://{{.Dir}}/sock/nerdctl.sock"
+  docker ...
+  ------
+  To run `kubectl` on the host (assumes kubectl is installed), run the following commands:
+  ------
+  export KUBECONFIG="{{.Dir}}/copied-from-guest/kubeconfig.yaml"
+  kubectl ...
+  ------
