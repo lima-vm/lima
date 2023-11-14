@@ -28,7 +28,7 @@ name="lima-guestagent"
 description="Forward ports to the lima-hostagent"
 
 command=${LIMA_CIDATA_GUEST_INSTALL_PREFIX}/bin/lima-guestagent
-command_args="daemon"
+command_args="daemon --vsock-port "${LIMA_CIDATA_VSOCK_PORT}""
 command_background=true
 pidfile="/run/lima-guestagent.pid"
 EOF
@@ -40,9 +40,5 @@ else
 	# Remove legacy systemd service
 	rm -f "${LIMA_CIDATA_HOME}/.config/systemd/user/lima-guestagent.service"
 
-	if [ "$LIMA_CIDATA_VMTYPE" = "wsl2" ]; then
-		sudo "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/lima-guestagent install-systemd --vsock-port "${LIMA_CIDATA_VSOCK_PORT}"
-	else
-		sudo "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/lima-guestagent install-systemd
-	fi
+	sudo "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/lima-guestagent install-systemd --vsock-port "${LIMA_CIDATA_VSOCK_PORT}"
 fi

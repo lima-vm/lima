@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 
 	"github.com/lima-vm/lima/pkg/httputil"
@@ -82,4 +83,17 @@ func Successful(resp *http.Response) error {
 		}
 	}
 	return nil
+}
+
+// NewHTTPClientWithConn creates a client.
+// conn is a raw net.Conn instance.
+func NewHTTPClientWithConn(conn net.Conn) (*http.Client, error) {
+	hc := &http.Client{
+		Transport: &http.Transport{
+			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+				return conn, nil
+			},
+		},
+	}
+	return hc, nil
 }

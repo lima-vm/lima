@@ -3,12 +3,14 @@ package wsl2
 import (
 	"context"
 	"fmt"
+	"net"
 	"regexp"
 
 	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/reflectutil"
 	"github.com/lima-vm/lima/pkg/store"
+	"github.com/mdlayher/vsock"
 	"github.com/sirupsen/logrus"
 )
 
@@ -165,4 +167,8 @@ func (l *LimaWslDriver) Unregister(ctx context.Context) error {
 
 	logrus.Info("VM not registered, skipping unregistration")
 	return nil
+}
+
+func (l *LimaWslDriver) GuestAgentConn(_ context.Context) (net.Conn, error) {
+	return vsock.Dial(2, uint32(l.VSockPort), nil)
 }
