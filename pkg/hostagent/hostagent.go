@@ -221,6 +221,9 @@ func determineSSHLocalPort(y *limayaml.LimaYAML, instName string) (int, error) {
 	if *y.SSH.LocalPort < 0 {
 		return 0, fmt.Errorf("invalid ssh local port %d", y.SSH.LocalPort)
 	}
+	if *y.SSH.LocalPort == 0 && *y.SSH.Address != "127.0.0.1" {
+		return 22, nil
+	}
 	switch instName {
 	case "default":
 		// use hard-coded value for "default" instance, for backward compatibility
@@ -593,7 +596,7 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 		if a.y.MountInotify != nil && *a.y.MountInotify {
 			if a.client == nil || !isGuestAgentSocketAccessible(ctx, a.client) {
 				if a.driver.ForwardGuestAgent() {
-					_ = forwardSSH(ctx, a.sshConfig, a.sshLocalPort, localUnix, remoteUnix, verbForward, false)
+					_ = forwardSSH(ctx, a.sshConfig, a.instSSHAddress, a.sshLocalPort, localUnix, remoteUnix, verbForward, false)
 				}
 			}
 			err := a.startInotify(ctx)
