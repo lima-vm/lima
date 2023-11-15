@@ -105,7 +105,7 @@ func Prepare(ctx context.Context, inst *limatype.Instance) (*Prepared, error) {
 			ensuredBaseDisk = true
 			break
 		}
-		if !ensuredBaseDisk {
+		if !ensuredBaseDisk && *inst.Config.VMType != limatype.EXT {
 			return nil, fileutils.Errors(errs)
 		}
 	}
@@ -117,6 +117,11 @@ func Prepare(ctx context.Context, inst *limatype.Instance) (*Prepared, error) {
 	// Ensure diffDisk size matches the store
 	if err := prepareDiffDisk(ctx, inst); err != nil {
 		return nil, err
+	}
+
+	if *inst.Config.VMType == limatype.EXT {
+		// Created externally
+		created = true
 	}
 
 	nerdctlArchiveCache, err := cacheutil.EnsureNerdctlArchiveCache(ctx, inst.Config, created)
