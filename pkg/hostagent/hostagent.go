@@ -137,7 +137,7 @@ func New(ctx context.Context, instName string, stdout io.Writer, signalCh chan o
 	}
 
 	// inst.Config is loaded with FillDefault() already, so no need to care about nil pointers.
-	sshLocalPort, err := determineSSHLocalPort(*inst.Config.SSH.LocalPort, instName, limaVersion)
+	sshLocalPort, err := determineSSHLocalPort(*inst.Config.SSH.Address, *inst.Config.SSH.LocalPort, instName, limaVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -189,6 +189,7 @@ func New(ctx context.Context, instName string, stdout io.Writer, signalCh chan o
 		inst.Dir,
 		*inst.Config.User.Name,
 		*inst.Config.SSH.LoadDotSSHPubKeys,
+		*inst.Config.SSH.Address,
 		*inst.Config.SSH.ForwardAgent,
 		*inst.Config.SSH.ForwardX11,
 		*inst.Config.SSH.ForwardX11Trusted)
@@ -290,12 +291,15 @@ func writeSSHConfigFile(sshPath, instName, instDir, instSSHAddress string, sshLo
 	return os.WriteFile(fileName, b.Bytes(), 0o600)
 }
 
-func determineSSHLocalPort(confLocalPort int, instName, limaVersion string) (int, error) {
+func determineSSHLocalPort(confSSHAddress string, confLocalPort int, instName, limaVersion string) (int, error) {
 	if confLocalPort > 0 {
 		return confLocalPort, nil
 	}
 	if confLocalPort < 0 {
 		return 0, fmt.Errorf("invalid ssh local port %d", confLocalPort)
+	}
+	if confLocalPort == 0 && confSSHAddress != "127.0.0.1" {
+		return 22, nil
 	}
 	if versionutil.LessThan(limaVersion, "2.0.0") && instName == "default" {
 		// use hard-coded value for "default" instance, for backward compatibility
@@ -449,8 +453,22 @@ func (a *HostAgent) Run(ctx context.Context) error {
 	return a.startRoutinesAndWait(ctx, errCh)
 }
 
+func getIP(address string) string {
+	ip := net.ParseIP(address)
+	if ip != nil {
+		return address
+	}
+	ctx := context.Background()
+	ips, err := net.DefaultResolver.LookupIP(ctx, "ip", address)
+	if err == nil && len(ips) > 0 {
+		return ips[0].String()
+	}
+	return address
+}
+
 func (a *HostAgent) startRoutinesAndWait(ctx context.Context, errCh <-chan error) error {
 	stBase := events.Status{
+		SSHIPAddress: getIP(a.instSSHAddress),
 		SSHLocalPort: a.sshLocalPort,
 	}
 	stBooting := stBase
