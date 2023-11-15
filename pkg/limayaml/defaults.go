@@ -363,6 +363,16 @@ func FillDefault(ctx context.Context, y, d, o *LimaYAML, filePath string, warn b
 		y.TimeZone = ptr.Of(hostTimeZone())
 	}
 
+	if y.SSH.Address == nil {
+		y.SSH.Address = d.SSH.Address
+	}
+	if o.SSH.Address != nil {
+		y.SSH.Address = o.SSH.Address
+	}
+	if y.SSH.Address == nil {
+		y.SSH.Address = ptr.Of("127.0.0.1")
+	}
+
 	if y.SSH.LocalPort == nil {
 		y.SSH.LocalPort = d.SSH.LocalPort
 	}

@@ -158,6 +158,11 @@ func Validate(y *LimaYAML, warn bool) error {
 		}
 	}
 
+	if y.SSH.Address != nil {
+		if err := validateHost("ssh.address", *y.SSH.Address); err != nil {
+			return err
+		}
+	}
 	if *y.SSH.LocalPort != 0 {
 		if err := validatePort("ssh.localPort", *y.SSH.LocalPort); err != nil {
 			errs = errors.Join(errs, err)
@@ -564,6 +569,13 @@ func validateParamIsUsed(y *LimaYAML) error {
 		if !keyIsUsed {
 			return fmt.Errorf("field `param` key %q is not used in any provision, probe, copyToHost, or portForward", key)
 		}
+	}
+	return nil
+}
+
+func validateHost(field, host string) error {
+	if net.ParseIP(host) == nil {
+		return fmt.Errorf("field `%s` must be IP", field)
 	}
 	return nil
 }

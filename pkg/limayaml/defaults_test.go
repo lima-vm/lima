@@ -90,6 +90,7 @@ func TestFillDefault(t *testing.T) {
 			Archives: defaultContainerdArchives(),
 		},
 		SSH: SSH{
+			Address:           ptr.Of("127.0.0.1"),
 			LocalPort:         ptr.Of(0),
 			LoadDotSSHPubKeys: ptr.Of(false),
 			ForwardAgent:      ptr.Of(false),
@@ -354,6 +355,7 @@ func TestFillDefault(t *testing.T) {
 			},
 		},
 		SSH: SSH{
+			Address:           ptr.Of("0.0.0.0"),
 			LocalPort:         ptr.Of(888),
 			LoadDotSSHPubKeys: ptr.Of(false),
 			ForwardAgent:      ptr.Of(true),
@@ -570,6 +572,7 @@ func TestFillDefault(t *testing.T) {
 			},
 		},
 		SSH: SSH{
+			Address:           ptr.Of("127.0.1.1"),
 			LocalPort:         ptr.Of(4433),
 			LoadDotSSHPubKeys: ptr.Of(true),
 			ForwardAgent:      ptr.Of(true),
