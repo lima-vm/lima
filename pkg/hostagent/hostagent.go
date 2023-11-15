@@ -248,6 +248,9 @@ func determineSSHLocalPort(confLocalPort int, instName string) (int, error) {
 	if confLocalPort < 0 {
 		return 0, fmt.Errorf("invalid ssh local port %d", confLocalPort)
 	}
+	if *y.SSH.LocalPort == 0 && *y.SSH.Address != "127.0.0.1" {
+		return 22, nil
+	}
 	if instName == "default" {
 		// use hard-coded value for "default" instance, for backward compatibility
 		return 60022, nil
@@ -617,7 +620,7 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 		if a.instConfig.MountInotify != nil && *a.instConfig.MountInotify {
 			if a.client == nil || !isGuestAgentSocketAccessible(ctx, a.client) {
 				if a.driver.ForwardGuestAgent() {
-					_ = forwardSSH(ctx, a.sshConfig, a.sshLocalPort, localUnix, remoteUnix, verbForward, false)
+					_ = forwardSSH(ctx, a.sshConfig, a.instSSHAddress, a.sshLocalPort, localUnix, remoteUnix, verbForward, false)
 				}
 			}
 			err := a.startInotify(ctx)
