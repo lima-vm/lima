@@ -43,6 +43,9 @@ Distro:
 Alternative package managers:
 - [`linuxbrew.yaml`](./linuxbrew.yaml): [Homebrew](https://brew.sh) on Linux (Ubuntu)
 
+External:
+- [`experimental/ext`](./experimental/ext.yaml): [experimental] External Raspberry Pi Zero
+
 Container engines:
 - [`apptainer`](./apptainer.yaml): Apptainer
 - [`apptainer-rootful`](./apptainer-rootful.yaml): Apptainer (rootful)
