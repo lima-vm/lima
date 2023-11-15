@@ -140,7 +140,7 @@ func Prepare(ctx context.Context, inst *store.Instance) (*Prepared, error) {
 			ensuredBaseDisk = true
 			break
 		}
-		if !ensuredBaseDisk {
+		if !ensuredBaseDisk && *inst.Config.VMType != limayaml.EXT {
 			return nil, fileutils.Errors(errs)
 		}
 	}
