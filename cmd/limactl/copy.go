@@ -257,7 +257,7 @@ func checkRsyncOnGuest(ctx context.Context, inst *limatype.Instance) bool {
 		logrus.Debugf("failed to create SSH executable: %v", err)
 		return false
 	}
-	sshOpts, err := sshutil.SSHOpts(ctx, sshExe, inst.Dir, *inst.Config.User.Name, false, false, false, false)
+	sshOpts, err := sshutil.SSHOpts(ctx, sshExe, inst.Dir, *inst.Config.User.Name, false, inst.SSHAddress, false, false, false)
 	if err != nil {
 		logrus.Debugf("failed to get SSH options for rsync check: %v", err)
 		return false
@@ -268,7 +268,7 @@ func checkRsyncOnGuest(ctx context.Context, inst *limatype.Instance) bool {
 	checkCmd.Args = append(checkCmd.Args, sshArgs...)
 	checkCmd.Args = append(checkCmd.Args,
 		"-p", fmt.Sprintf("%d", inst.SSHLocalPort),
-		fmt.Sprintf("%s@127.0.0.1", *inst.Config.User.Name),
+		fmt.Sprintf("%s@%s", *inst.Config.User.Name, inst.SSHAddress),
 		"command -v rsync >/dev/null 2>&1",
 	)
 
@@ -297,14 +297,18 @@ func scpCommand(ctx context.Context, command string, copyPaths []*copyPath, verb
 		return nil, err
 	}
 	legacySSH := sshutil.DetectOpenSSHVersion(ctx, sshExeForVersion).LessThan(*semver.New("8.0.0"))
+	localhostOnly := true
 
 	for _, cp := range copyPaths {
 		if cp.isRemote {
 			if legacySSH {
 				scpFlags = append(scpFlags, "-P", fmt.Sprintf("%d", cp.instance.SSHLocalPort))
-				scpArgs = append(scpArgs, fmt.Sprintf("%s@127.0.0.1:%s", *cp.instance.Config.User.Name, cp.path))
+				scpArgs = append(scpArgs, fmt.Sprintf("%s@%s:%s", *cp.instance.Config.User.Name, cp.instance.SSHAddress, cp.path))
 			} else {
-				scpArgs = append(scpArgs, fmt.Sprintf("scp://%s@127.0.0.1:%d/%s", *cp.instance.Config.User.Name, cp.instance.SSHLocalPort, cp.path))
+				scpArgs = append(scpArgs, fmt.Sprintf("scp://%s@%s:%d/%s", *cp.instance.Config.User.Name, cp.instance.SSHAddress, cp.instance.SSHLocalPort, cp.path))
+			}
+			if !sshutil.IsLocalhost(cp.instance.SSHAddress) {
+				localhostOnly = false
 			}
 			instances[cp.instanceName] = cp.instance
 		} else {
@@ -329,7 +333,7 @@ func scpCommand(ctx context.Context, command string, copyPaths []*copyPath, verb
 			if err != nil {
 				return nil, err
 			}
-			sshOpts, err = sshutil.SSHOpts(ctx, sshExe, inst.Dir, *inst.Config.User.Name, false, false, false, false)
+			sshOpts, err = sshutil.SSHOpts(ctx, sshExe, inst.Dir, *inst.Config.User.Name, false, inst.SSHAddress, false, false, false)
 			if err != nil {
 				return nil, err
 			}
@@ -340,7 +344,7 @@ func scpCommand(ctx context.Context, command string, copyPaths []*copyPath, verb
 		if err != nil {
 			return nil, err
 		}
-		sshOpts, err = sshutil.CommonOpts(ctx, sshExe, false)
+		sshOpts, err = sshutil.CommonOpts(ctx, sshExe, false, localhostOnly)
 		if err != nil {
 			return nil, err
 		}
@@ -377,7 +381,7 @@ func rsyncCommand(ctx context.Context, command string, copyPaths []*copyPath, ve
 				if err != nil {
 					return nil, err
 				}
-				sshOpts, err := sshutil.SSHOpts(ctx, sshExe, cp.instance.Dir, *cp.instance.Config.User.Name, false, false, false, false)
+				sshOpts, err := sshutil.SSHOpts(ctx, sshExe, cp.instance.Dir, *cp.instance.Config.User.Name, false, cp.instance.SSHAddress, false, false, false)
 				if err != nil {
 					return nil, err
 				}
@@ -394,7 +398,7 @@ func rsyncCommand(ctx context.Context, command string, copyPaths []*copyPath, ve
 
 	for _, cp := range copyPaths {
 		if cp.isRemote {
-			rsyncArgs = append(rsyncArgs, fmt.Sprintf("%s@127.0.0.1:%s", *cp.instance.Config.User.Name, cp.path))
+			rsyncArgs = append(rsyncArgs, fmt.Sprintf("%s@%s:%s", *cp.instance.Config.User.Name, cp.instance.SSHAddress, cp.path))
 		} else {
 			rsyncArgs = append(rsyncArgs, cp.path)
 		}
