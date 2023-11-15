@@ -58,7 +58,7 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 		errs = errors.Join(errs, fmt.Errorf("field `arch` must be one of %v; got %q", limatype.ArchTypes, *y.Arch))
 	}
 
-	if len(y.Images) == 0 {
+	if len(y.Images) == 0 && (y.VMType == nil || *y.VMType != limatype.EXT) {
 		errs = errors.Join(errs, errors.New("field `images` must be set"))
 	}
 	for i, f := range y.Images {
@@ -143,6 +143,9 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 		}
 	}
 
+	if *y.SSH.Address == "127.0.0.1" && (y.VMType != nil && *y.VMType == limatype.EXT) {
+		return errors.New("field `ssh.address` must be set, for ext")
+	}
 	if y.SSH.Address != nil {
 		if err := validateHost("ssh.address", *y.SSH.Address); err != nil {
 			return err
@@ -604,6 +607,9 @@ func validatePort(field string, port int) error {
 func warnExperimental(y *limatype.LimaYAML) {
 	if *y.MountType == limatype.VIRTIOFS && runtime.GOOS == "linux" {
 		logrus.Warn("`mountType: virtiofs` on Linux is experimental")
+	}
+	if *y.VMType == limatype.EXT {
+		logrus.Warn("`vmType: ext` is experimental")
 	}
 	switch *y.Arch {
 	case limatype.RISCV64, limatype.ARMV7L, limatype.S390X, limatype.PPC64LE:

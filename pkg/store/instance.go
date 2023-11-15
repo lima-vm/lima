@@ -170,6 +170,14 @@ func inspectStatusWithPIDFiles(instDir string, inst *limatype.Instance, y *limat
 		inst.Status = limatype.StatusBroken
 		inst.Errors = append(inst.Errors, err)
 	}
+	if *y.VMType == limatype.EXT {
+		if inst.HostAgentPID > 0 {
+			inst.Status = limatype.StatusRunning
+		} else if inst.HostAgentPID == 0 {
+			inst.Status = limatype.StatusStopped
+		}
+		return
+	}
 
 	if inst.Status == limatype.StatusUnknown {
 		switch {
