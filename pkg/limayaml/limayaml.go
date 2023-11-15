@@ -67,6 +67,7 @@ const (
 	QEMU VMType = "qemu"
 	VZ   VMType = "vz"
 	WSL2 VMType = "wsl2"
+	EXT  VMType = "ext"
 )
 
 type Rosetta struct {
