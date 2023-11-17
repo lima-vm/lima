@@ -64,6 +64,10 @@ type Driver interface {
 
 	ListSnapshots(_ context.Context) (string, error)
 
+	// ForwardGuestAgent returns if the guest agent sock needs forwarding by host agent.
+	ForwardGuestAgent() bool
+
+	// GuestAgentConn returns the guest agent connection, or nil (if forwarded by ssh).
 	GuestAgentConn(_ context.Context) (net.Conn, error)
 }
 
@@ -73,6 +77,7 @@ type BaseDriver struct {
 
 	SSHLocalPort int
 	VSockPort    int
+	VirtioPort   string
 }
 
 var _ Driver = (*BaseDriver)(nil)
@@ -137,6 +142,12 @@ func (d *BaseDriver) ListSnapshots(_ context.Context) (string, error) {
 	return "", fmt.Errorf("unimplemented")
 }
 
+func (d *BaseDriver) ForwardGuestAgent() bool {
+	// if driver is not providing, use host agent
+	return d.VSockPort == 0 && d.VirtioPort == ""
+}
+
 func (d *BaseDriver) GuestAgentConn(_ context.Context) (net.Conn, error) {
-	return nil, fmt.Errorf("unimplemented")
+	// use the unix socket forwarded by host agent
+	return nil, nil
 }
