@@ -29,7 +29,7 @@ require (
 	github.com/mattn/go-isatty v0.0.20
 	github.com/mattn/go-shellwords v1.0.12
 	github.com/miekg/dns v1.1.57
-	github.com/mikefarah/yq/v4 v4.35.2
+	github.com/mikefarah/yq/v4 v4.40.1
 	github.com/nxadm/tail v1.4.11
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58
@@ -48,7 +48,10 @@ require (
 	k8s.io/client-go v0.28.3
 )
 
-require google.golang.org/genproto/googleapis/rpc v0.0.0-20230711160842-782d3b101e98 // indirect
+require (
+	github.com/yuin/gopher-lua v1.1.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20230711160842-782d3b101e98 // indirect
+)
 
 require (
 	github.com/Code-Hex/go-infinity-channel v1.0.0 // indirect
