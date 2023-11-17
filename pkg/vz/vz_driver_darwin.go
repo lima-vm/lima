@@ -6,10 +6,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"path/filepath"
 	"time"
-
-	"github.com/lima-vm/lima/pkg/reflectutil"
 
 	"github.com/Code-Hex/vz/v3"
 
@@ -17,6 +16,7 @@ import (
 
 	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/limayaml"
+	"github.com/lima-vm/lima/pkg/reflectutil"
 )
 
 const Enabled = true
@@ -196,4 +196,14 @@ func (l *LimaVzDriver) Stop(_ context.Context) error {
 	}
 
 	return errors.New("vz: CanRequestStop is not supported")
+}
+
+func (l *LimaVzDriver) GuestAgentConn(_ context.Context) (net.Conn, error) {
+	for _, socket := range l.machine.SocketDevices() {
+		connect, err := socket.Connect(uint32(l.VSockPort))
+		if err == nil && connect.SourcePort() != 0 {
+			return connect, nil
+		}
+	}
+	return nil, fmt.Errorf("unable to connect to guest agent via vsock port 2222")
 }

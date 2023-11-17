@@ -10,6 +10,8 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/lima-vm/lima/pkg/guestagent"
 	"github.com/lima-vm/lima/pkg/guestagent/api/server"
+	"github.com/lima-vm/lima/pkg/guestagent/serialport"
+	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/mdlayher/vsock"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -26,15 +28,23 @@ func newDaemonCommand() *cobra.Command {
 	return daemonCommand
 }
 
+var (
+	vSockPort = 0
+
+	virtioPort = "/dev/virtio-ports/" + filenames.VirtioPort
+)
+
 func daemonAction(cmd *cobra.Command, _ []string) error {
-	socket := "/run/lima-guestagent.sock"
 	tick, err := cmd.Flags().GetDuration("tick")
 	if err != nil {
 		return err
 	}
-	vSockPort, err := cmd.Flags().GetInt("vsock-port")
+	vSockPortOverride, err := cmd.Flags().GetInt("vsock-port")
 	if err != nil {
 		return err
+	}
+	if vSockPortOverride != 0 {
+		vSockPort = vSockPortOverride
 	}
 	if tick == 0 {
 		return errors.New("tick must be specified")
@@ -62,29 +72,22 @@ func daemonAction(cmd *cobra.Command, _ []string) error {
 	r := mux.NewRouter()
 	server.AddRoutes(r, backend)
 	srv := &http.Server{Handler: r}
-	err = os.RemoveAll(socket)
-	if err != nil {
-		return err
-	}
 
 	var l net.Listener
-	if vSockPort != 0 {
+	if _, err := os.Stat(virtioPort); err == nil {
+		qemuL, err := serialport.Listen(virtioPort)
+		if err != nil {
+			return err
+		}
+		l = qemuL
+		logrus.Infof("serving the guest agent on qemu serial file: %s", virtioPort)
+	} else if vSockPort != 0 {
 		vsockL, err := vsock.Listen(uint32(vSockPort), nil)
 		if err != nil {
 			return err
 		}
 		l = vsockL
 		logrus.Infof("serving the guest agent on vsock port: %d", vSockPort)
-	} else {
-		socketL, err := net.Listen("unix", socket)
-		if err != nil {
-			return err
-		}
-		if err := os.Chmod(socket, 0o777); err != nil {
-			return err
-		}
-		l = socketL
-		logrus.Infof("serving the guest agent on %q", socket)
 	}
 	return srv.Serve(l)
 }

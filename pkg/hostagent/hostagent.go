@@ -46,7 +46,6 @@ type HostAgent struct {
 	sshConfig       *ssh.SSHConfig
 	portForwarder   *portForwarder
 	onClose         []func() error // LIFO
-	guestAgentProto guestagentclient.Proto
 
 	driver   driver.Driver
 	sigintCh chan os.Signal
@@ -55,6 +54,9 @@ type HostAgent struct {
 	eventEncMu sync.Mutex
 
 	vSockPort int
+
+	clientMu sync.RWMutex
+	client   guestagentclient.GuestAgentClient
 }
 
 type options struct {
@@ -111,13 +113,10 @@ func New(instName string, stdout io.Writer, sigintCh chan os.Signal, opts ...Opt
 		}
 	}
 
-	guestAgentProto := guestagentclient.UNIX
-	if *y.VMType == limayaml.WSL2 {
-		guestAgentProto = guestagentclient.VSOCK
-	}
-
 	vSockPort := 0
-	if guestAgentProto == guestagentclient.VSOCK {
+	if *y.VMType == limayaml.VZ {
+		vSockPort = 2222
+	} else if *y.VMType == limayaml.WSL2 {
 		port, err := getFreeVSockPort()
 		if err != nil {
 			logrus.WithError(err).Error("failed to get free VSock port")
@@ -157,6 +156,7 @@ func New(instName string, stdout io.Writer, sigintCh chan os.Signal, opts ...Opt
 		Instance:     inst,
 		Yaml:         y,
 		SSHLocalPort: sshLocalPort,
+		VSockPort:    vSockPort,
 	})
 
 	a := &HostAgent{
@@ -173,7 +173,6 @@ func New(instName string, stdout io.Writer, sigintCh chan os.Signal, opts ...Opt
 		sigintCh:        sigintCh,
 		eventEnc:        json.NewEncoder(stdout),
 		vSockPort:       vSockPort,
-		guestAgentProto: guestAgentProto,
 	}
 	return a, nil
 }
@@ -542,9 +541,6 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 		}
 	}
 
-	localUnix := filepath.Join(a.instDir, filenames.GuestAgentSock)
-	remoteUnix := "/run/lima-guestagent.sock"
-
 	a.onClose = append(a.onClose, func() error {
 		logrus.Debugf("Stop forwarding unix sockets")
 		var errs []error
@@ -557,27 +553,18 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 				}
 			}
 		}
-		if err := forwardSSH(context.Background(), a.sshConfig, a.sshLocalPort, localUnix, remoteUnix, verbCancel, false); err != nil {
-			errs = append(errs, err)
-		}
 		return errors.Join(errs...)
 	})
-
-	guestSocketAddr := localUnix
-	if a.guestAgentProto == guestagentclient.VSOCK {
-		guestSocketAddr = fmt.Sprintf("0.0.0.0:%d", a.vSockPort)
-	}
-
 	for {
-		if !isGuestAgentSocketAccessible(ctx, guestSocketAddr, a.guestAgentProto, a.instName) {
-			if a.guestAgentProto != guestagentclient.VSOCK {
-				_ = forwardSSH(ctx, a.sshConfig, a.sshLocalPort, localUnix, remoteUnix, verbForward, false)
+		client, err := a.getOrCreateClient(ctx)
+		if err == nil {
+			if err := a.processGuestAgentEvents(ctx, client); err != nil {
+				if !errors.Is(err, context.Canceled) {
+					logrus.WithError(err).Warn("connection to the guest agent was closed unexpectedly", err)
+				}
 			}
-		}
-		if err := a.processGuestAgentEvents(ctx, guestSocketAddr, a.guestAgentProto, a.instName); err != nil {
-			if !errors.Is(err, context.Canceled) {
-				logrus.WithError(err).Warn("connection to the guest agent was closed unexpectedly")
-			}
+		} else {
+			logrus.WithError(err).Warn("connection to the guest agent was closed unexpectedly", err)
 		}
 		select {
 		case <-ctx.Done():
@@ -587,21 +574,32 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 	}
 }
 
-func isGuestAgentSocketAccessible(ctx context.Context, localUnix string, proto guestagentclient.Proto, instanceName string) bool {
-	client, err := guestagentclient.NewGuestAgentClient(localUnix, proto, instanceName)
-	if err != nil {
-		return false
-	}
-	_, err = client.Info(ctx)
+func isGuestAgentSocketAccessible(ctx context.Context, client guestagentclient.GuestAgentClient) bool {
+	_, err := client.Info(ctx)
 	return err == nil
 }
 
-func (a *HostAgent) processGuestAgentEvents(ctx context.Context, localUnix string, proto guestagentclient.Proto, instanceName string) error {
-	client, err := guestagentclient.NewGuestAgentClient(localUnix, proto, instanceName)
+func (a *HostAgent) getOrCreateClient(ctx context.Context) (guestagentclient.GuestAgentClient, error) {
+	a.clientMu.Lock()
+	defer a.clientMu.Unlock()
+	if a.client != nil && isGuestAgentSocketAccessible(ctx, a.client) {
+		return a.client, nil
+	}
+	var err error
+	a.client, err = a.createClient(ctx)
+	return a.client, err
+}
+
+func (a *HostAgent) createClient(ctx context.Context) (guestagentclient.GuestAgentClient, error) {
+	conn, err := a.driver.GuestAgentConn(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
+	return guestagentclient.NewGuestAgentClient(conn)
+}
+
+func (a *HostAgent) processGuestAgentEvents(ctx context.Context, client guestagentclient.GuestAgentClient) error {
 	info, err := client.Info(ctx)
 	if err != nil {
 		return err

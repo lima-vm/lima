@@ -394,6 +394,12 @@ func (l *LimaQemuDriver) ListSnapshots(_ context.Context) (string, error) {
 	return List(qCfg, l.Instance.Status == store.StatusRunning)
 }
 
+func (l *LimaQemuDriver) GuestAgentConn(ctx context.Context) (net.Conn, error) {
+	var d net.Dialer
+	dialContext, err := d.DialContext(ctx, "unix", filepath.Join(l.Instance.Dir, filenames.GuestAgentSock))
+	return dialContext, err
+}
+
 type qArgTemplateApplier struct {
 	files []*os.File
 }

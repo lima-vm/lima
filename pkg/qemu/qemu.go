@@ -43,7 +43,9 @@ type Config struct {
 }
 
 // MinimumQemuVersion is the minimum supported QEMU version
-const MinimumQemuVersion = "4.0.0"
+const (
+	MinimumQemuVersion = "4.0.0"
+)
 
 // EnsureDisk also ensures the kernel and the initrd
 func EnsureDisk(cfg Config) error {
@@ -887,6 +889,12 @@ func Cmdline(cfg Config) (string, []string, error) {
 	const qmpChardev = "char-qmp"
 	args = append(args, "-chardev", fmt.Sprintf("socket,id=%s,path=%s,server=on,wait=off", qmpChardev, qmpSock))
 	args = append(args, "-qmp", "chardev:"+qmpChardev)
+
+	// Guest agent via serialport
+	guestSock := filepath.Join(cfg.InstanceDir, filenames.GuestAgentSock)
+	args = append(args, "-chardev", fmt.Sprintf("socket,path=%s,server=on,wait=off,id=qga0", guestSock))
+	args = append(args, "-device", "virtio-serial")
+	args = append(args, "-device", "virtserialport,chardev=qga0,name="+filenames.VirtioPort)
 
 	// QEMU process
 	args = append(args, "-name", "lima-"+cfg.Name)

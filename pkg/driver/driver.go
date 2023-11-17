@@ -3,6 +3,7 @@ package driver
 import (
 	"context"
 	"fmt"
+	"net"
 
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/store"
@@ -62,6 +63,8 @@ type Driver interface {
 	DeleteSnapshot(_ context.Context, tag string) error
 
 	ListSnapshots(_ context.Context) (string, error)
+
+	GuestAgentConn(_ context.Context) (net.Conn, error)
 }
 
 type BaseDriver struct {
@@ -69,6 +72,7 @@ type BaseDriver struct {
 	Yaml     *limayaml.LimaYAML
 
 	SSHLocalPort int
+	VSockPort    int
 }
 
 var _ Driver = (*BaseDriver)(nil)
@@ -131,4 +135,8 @@ func (d *BaseDriver) DeleteSnapshot(_ context.Context, _ string) error {
 
 func (d *BaseDriver) ListSnapshots(_ context.Context) (string, error) {
 	return "", fmt.Errorf("unimplemented")
+}
+
+func (d *BaseDriver) GuestAgentConn(_ context.Context) (net.Conn, error) {
+	return nil, fmt.Errorf("unimplemented")
 }

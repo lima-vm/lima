@@ -125,13 +125,11 @@ func provisionVM(ctx context.Context, instanceDir, instanceName, distroName stri
 		}
 
 		for {
-			select {
-			case <-ctx.Done():
-				logrus.Info("Context closed, stopping vm")
-				if status, err := store.GetWslStatus(instanceName); err == nil &&
-					status == store.StatusRunning {
-					stopVM(ctx, distroName)
-				}
+			<-ctx.Done()
+			logrus.Info("Context closed, stopping vm")
+			if status, err := store.GetWslStatus(instanceName); err == nil &&
+				status == store.StatusRunning {
+				_ = stopVM(ctx, distroName)
 			}
 		}
 	}()
