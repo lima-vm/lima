@@ -45,6 +45,7 @@ Container orchestration:
 - [`faasd`](./faasd.yaml): [Faasd](https://docs.openfaas.com/deployment/faasd/)
 - [`k3s`](./k3s.yaml): Kubernetes via k3s
 - [`k8s`](./k8s.yaml): Kubernetes via kubeadm
+- [`experimental/u7s`](./experimental/u7s.yaml): [Usernetes](https://github.com/rootless-containers/usernetes): Rootless Kubernetes
 
 Optional feature enablers:
 - [`vmnet`](./vmnet.yaml): ⭐enable [`vmnet.framework`](../docs/network.md)
