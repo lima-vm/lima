@@ -15,7 +15,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var copyHelp = `Copy files between host and guest
+const copyHelp = `Copy files between host and guest
 
 Prefix guest filenames with the instance name and a colon.
 
