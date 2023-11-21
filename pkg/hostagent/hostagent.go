@@ -288,6 +288,7 @@ func (a *HostAgent) Run(ctx context.Context) error {
 		}
 		a.emitEvent(ctx, exitingEv)
 	}()
+	adjustNofileRlimit()
 
 	firstUsernetIndex := limayaml.FirstUsernetIndex(a.y)
 	if firstUsernetIndex == -1 && *a.y.HostResolver.Enabled {
