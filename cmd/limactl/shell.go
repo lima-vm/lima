@@ -21,7 +21,7 @@ import (
 // in place of the 'ssh' executable.
 const envShellSSH = "SSH"
 
-var shellHelp = `Execute shell in Lima
+const shellHelp = `Execute shell in Lima
 
 lima command is provided as an alias for limactl shell $LIMA_INSTANCE. $LIMA_INSTANCE defaults to "` + DefaultInstanceName + `".
 

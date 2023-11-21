@@ -28,12 +28,6 @@ func newDaemonCommand() *cobra.Command {
 	return daemonCommand
 }
 
-var (
-	vSockPort = 0
-
-	virtioPort = "/dev/virtio-ports/" + filenames.VirtioPort
-)
-
 func daemonAction(cmd *cobra.Command, _ []string) error {
 	tick, err := cmd.Flags().GetDuration("tick")
 	if err != nil {
@@ -43,6 +37,7 @@ func daemonAction(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
+	vSockPort := 0
 	if vSockPortOverride != 0 {
 		vSockPort = vSockPortOverride
 	}
@@ -74,6 +69,7 @@ func daemonAction(cmd *cobra.Command, _ []string) error {
 	srv := &http.Server{Handler: r}
 
 	var l net.Listener
+	virtioPort := "/dev/virtio-ports/" + filenames.VirtioPort
 	if _, err := os.Stat(virtioPort); err == nil {
 		qemuL, err := serialport.Listen(virtioPort)
 		if err != nil {
