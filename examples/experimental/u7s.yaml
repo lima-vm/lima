@@ -1,0 +1,136 @@
+# Deploy kubernetes via usernetes.
+# $ limactl start ./u7s.yaml
+# $ limactl shell u7s kubectl
+
+# It can be accessed from the host by exporting the kubeconfig file;
+# the ports are already forwarded automatically by lima:
+#
+# $ export KUBECONFIG=$(limactl list u7s --format 'unix://{{.Dir}}/copied-from-guest/kubeconfig.yaml')
+# $ kubectl get no
+# NAME           STATUS   ROLES           AGE   VERSION
+# u7s-lima-u7s   Ready    control-plane   33s   v1.28.0
+
+# This template requires Lima v0.8.0 or later
+images:
+# Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
+- location: "https://cloud-images.ubuntu.com/releases/22.04/release-20231010/ubuntu-22.04-server-cloudimg-amd64.img"
+  arch: "x86_64"
+  digest: "sha256:5bed3f233c2422187e86089deea51bb8469dc2a26e96814ca41ff8f14dc80308"
+- location: "https://cloud-images.ubuntu.com/releases/22.04/release-20231010/ubuntu-22.04-server-cloudimg-arm64.img"
+  arch: "aarch64"
+  digest: "sha256:5167c1b13cb33274955e36332ecb7b14f02b71fd19a37a9c1a3a0f8a805ab8e5"
+# Fallback to the latest release image.
+# Hint: run `limactl prune` to invalidate the cache
+- location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-amd64.img"
+  arch: "x86_64"
+- location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-arm64.img"
+  arch: "aarch64"
+
+# Mounts are disabled in this template, but can be enabled optionally.
+mounts: []
+# containerd is managed by Docker, not by Lima, so the values are set to false here.
+containerd:
+  system: false
+  user: false
+provision:
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    command -v kubectl >/dev/null 2>&1 && exit 0
+    version=$(curl -L -s https://dl.k8s.io/release/stable.txt)
+    case $(uname -m) in
+      x86_64)   arch=amd64;;
+      aarch64)  arch=arm64;;
+    esac
+    curl -L "https://dl.k8s.io/release/$version/bin/linux/$arch/kubectl" -o /usr/local/bin/kubectl
+    chmod 755 /usr/local/bin/kubectl
+    kubectl version --client
+- mode: user
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    test -d ~/usernetes && exit 0
+    cd ~
+    git clone --branch=gen2-v20230919.0 https://github.com/rootless-containers/usernetes
+- mode: user
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    cd ~/usernetes/init-host
+    sudo ./init-host.root.sh
+    ./init-host.rootless.sh
+- mode: user
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    test -e ~/usernetes/kubeconfig && exit 0
+    cd ~/usernetes
+    export KUBECONFIG=./kubeconfig
+    patch --forward -r - kubeadm-config.yaml <<EOF
+    @@ -7,6 +7,9 @@
+     ---
+     apiVersion: kubeadm.k8s.io/v1beta3
+     kind: ClusterConfiguration
+    +apiServer:
+    +  certSANs:
+    +  - "127.0.0.1"
+     networking:
+       serviceSubnet: "10.96.0.0/16"
+       podSubnet: "10.244.0.0/16"
+    EOF
+    make up
+    sleep 5
+    make kubeadm-init
+    # Installing a Pod network add-on
+    make install-flannel
+    # Control plane node isolation
+    make kubeconfig
+    kubectl taint nodes --all node-role.kubernetes.io/control-plane-
+    # Replace the server address with localhost, so that it works also from the host
+    sed -e "/server:/ s|https://.*:\([0-9]*\)$|https://127.0.0.1:\1|" -i $KUBECONFIG
+    mkdir -p ~/.kube && cp -f $KUBECONFIG ~/.kube/config
+probes:
+- description: "kubectl to be installed"
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    if ! timeout 30s bash -c "until command -v kubectl >/dev/null 2>&1; do sleep 3; done"; then
+      echo >&2 "kubectl is not installed yet"
+      exit 1
+    fi
+  hint: |
+    See "/var/log/cloud-init-output.log". in the guest
+- description: "kubeadm to be completed"
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    if ! timeout 300s bash -c "until test -f ~/usernetes/kubeconfig; do sleep 3; done"; then
+      echo >&2 "k8s is not running yet"
+      exit 1
+    fi
+  hint: |
+    The k8s kubeconfig file has not yet been created.
+- description: "kubernetes cluster to be running"
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    if ! timeout 300s bash -c "until kubectl version >/dev/null 2>&1; do sleep 3; done"; then
+      echo >&2 "kubernetes cluster is not up and running yet"
+      exit 1
+    fi
+- description: "coredns deployment to be running"
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    kubectl wait -n kube-system --timeout=180s --for=condition=available deploy coredns
+copyToHost:
+- guest: "{{.Home}}/usernetes/kubeconfig"
+  host: "{{.Dir}}/copied-from-guest/kubeconfig.yaml"
+  deleteOnStop: true
+message: |
+  To run `kubectl` on the host (assumes kubectl is installed), run the following commands:
+  ------
+  export KUBECONFIG="{{.Dir}}/copied-from-guest/kubeconfig.yaml"
+  kubectl ...
+  ------
