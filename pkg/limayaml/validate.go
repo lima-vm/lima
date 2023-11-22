@@ -583,9 +583,22 @@ func validateParamIsUsed(y *limatype.LimaYAML) error {
 	return nil
 }
 
+func lookupIP(host string) error {
+	if strings.HasSuffix(host, ".local") {
+		// allow offline or slow mDNS
+		return nil
+	}
+	ctx := context.Background()
+	_, err := net.DefaultResolver.LookupIP(ctx, "ip", host)
+	return err
+}
+
 func validateHost(field, host string) error {
-	if net.ParseIP(host) == nil {
-		return fmt.Errorf("field `%s` must be IP", field)
+	if net.ParseIP(host) != nil {
+		return nil
+	}
+	if err := lookupIP(host); err != nil {
+		return fmt.Errorf("field `%s` must be IP: %w", field, err)
 	}
 	return nil
 }
