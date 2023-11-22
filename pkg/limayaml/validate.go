@@ -396,7 +396,10 @@ func validateNetwork(y *LimaYAML) error {
 }
 
 func validateHost(field, host string) error {
-	if net.ParseIP(host) == nil {
+	if net.ParseIP(host) != nil {
+		return nil
+	}
+	if _, err := net.LookupIP(host); err != nil {
 		return fmt.Errorf("field `%s` must be IP", field)
 	}
 	return nil
