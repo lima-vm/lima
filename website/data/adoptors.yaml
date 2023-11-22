@@ -4,7 +4,7 @@
   width: 200
 - name: Colima
   link: https://github.com/abiosoft/colima
-  image: colima.png
+  image: colima.svg
   width: 100
 - name: Finch
   link: https://github.com/runfinch/finch
