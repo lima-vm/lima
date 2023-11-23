@@ -57,7 +57,7 @@ func fillDefaults(nwYaml YAML) (YAML, error) {
 		nwYaml.Networks = make(map[string]Network)
 	}
 	for nw := range nwYaml.Networks {
-		if nwYaml.Networks[nw].Mode == ModeUserV2 {
+		if nwYaml.Networks[nw].Mode == ModeUserV2 && nwYaml.Networks[nw].Gateway != nil {
 			usernetFound = true
 		}
 	}
