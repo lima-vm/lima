@@ -6,14 +6,25 @@ package cacheutil
 import (
 	"context"
 	"fmt"
+	"path"
 
 	"github.com/lima-vm/lima/v2/pkg/downloader"
 	"github.com/lima-vm/lima/v2/pkg/fileutils"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 )
 
-// EnsureNerdctlArchiveCache prefetches the archive into the cache.
-//
+// NerdctlArchive returns the basename of the archive.
+func NerdctlArchive(y *limatype.LimaYAML) string {
+	if *y.Containerd.System || *y.Containerd.User {
+		for _, f := range y.Containerd.Archives {
+			if f.Arch == *y.Arch {
+				return path.Base(f.Location)
+			}
+		}
+	}
+	return ""
+}
+
 // EnsureNerdctlArchiveCache prefetches the nerdctl-full-VERSION-GOOS-GOARCH.tar.gz archive
 // into the cache before launching the hostagent process, so that we can show the progress in tty.
 // https://github.com/lima-vm/lima/issues/326
