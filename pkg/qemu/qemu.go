@@ -786,8 +786,8 @@ func Cmdline(cfg Config) (string, []string, error) {
 			args = append(args, "-device", "virtio-"+input+"-pci")
 		} else { // kernel panic with virtio and old versions of QEMU
 			args = append(args, "-vga", "none", "-device", "ramfb")
-			args = append(args, "-device", "usb-kbd,bus=usb-bus.0")
-			args = append(args, "-device", "usb-"+input+",bus=usb-bus.0")
+			args = append(args, "-device", "usb-kbd,bus=usb-bus")
+			args = append(args, "-device", "usb-"+input+",bus=usb-bus")
 		}
 		args = append(args, "-device", "qemu-xhci,id=usb-bus")
 	}
