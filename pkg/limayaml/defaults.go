@@ -848,6 +848,8 @@ func NewArch(arch string) Arch {
 
 func NewVMType(driver string) VMType {
 	switch driver {
+	case "virt":
+		return VIRT
 	case "vz":
 		return VZ
 	case "qemu":

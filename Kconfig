@@ -30,3 +30,9 @@ config GUESTAGENT_ARCH_RISCV64
 	help
 		Build lima-guestagent for "riscv64" Arch
 	default y
+
+config PLUGIN_VIRT
+	bool "plugin for vmType virt"
+	help
+		Build plugin for virt (requires libvirt)
+	default n

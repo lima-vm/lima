@@ -38,6 +38,14 @@ endif
 endif
 endif
 
+-include .config
+
+ifneq ($(CONFIG_PLUGIN_VIRT),y)
+GO_BUILDTAGS += no_virt
+else
+GO_BUILDTAGS += libvirt_without_lxc
+endif
+
 PACKAGE := github.com/lima-vm/lima
 
 VERSION=$(shell git describe --match 'v[0-9]*' --dirty='.m' --always --tags)
@@ -77,14 +85,17 @@ menuconfig: Kconfig
 .config: config.mk
 	cp $^ $@
 
--include .config
-
 HELPERS = \
 	_output/bin/nerdctl.lima \
 	_output/bin/apptainer.lima \
 	_output/bin/docker.lima \
 	_output/bin/podman.lima \
 	_output/bin/kubectl.lima
+
+ifeq ($(CONFIG_PLUGIN_VIRT),y)
+PLUGINS += \
+	_output/lib/lima/plugins/virt.so
+endif
 
 ifeq ($(CONFIG_GUESTAGENT_OS_LINUX),y)
 ifeq ($(CONFIG_GUESTAGENT_ARCH_X8664),y)
@@ -112,6 +123,7 @@ binaries: clean \
 	_output/bin/limactl$(exe) \
 	codesign \
 	$(HELPERS) \
+	$(PLUGINS) \
 	$(GUESTAGENT)
 	cp -aL examples _output/share/lima/templates
 ifneq ($(GOOS),windows)
@@ -187,6 +199,12 @@ _output/share/lima/lima-guestagent.Linux-armv7l:
 _output/share/lima/lima-guestagent.Linux-riscv64:
 	GOOS=linux GOARCH=riscv64 CGO_ENABLED=0 $(GO_BUILD) -o $@ ./cmd/lima-guestagent
 	chmod 644 $@
+
+plugins: $(PLUGINS)
+
+.PHONY: _output/lib/lima/plugins/virt.so
+_output/lib/lima/plugins/virt.so:
+	CGO_ENABLED=1 $(GO_BUILD) -buildmode=plugin -o $@ ./pkg/virt/plugin
 
 .PHONY: manpages
 manpages: _output/bin/limactl$(exe)

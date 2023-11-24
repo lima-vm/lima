@@ -48,6 +48,9 @@ require (
 	k8s.io/client-go v0.28.4
 )
 
+// pkg/virt/plugin
+require libvirt.org/go/libvirt v1.9008.0
+
 require google.golang.org/genproto/googleapis/rpc v0.0.0-20230711160842-782d3b101e98 // indirect
 
 require (
