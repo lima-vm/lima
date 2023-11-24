@@ -2,6 +2,7 @@ package driverutil
 
 import (
 	"github.com/lima-vm/lima/pkg/limayaml"
+	"github.com/lima-vm/lima/pkg/virt"
 	"github.com/lima-vm/lima/pkg/vz"
 	"github.com/lima-vm/lima/pkg/wsl2"
 )
@@ -9,6 +10,9 @@ import (
 // Drivers returns the available drivers.
 func Drivers() []string {
 	drivers := []string{limayaml.QEMU}
+	if virt.Enabled {
+		drivers = append(drivers, limayaml.VIRT)
+	}
 	if vz.Enabled {
 		drivers = append(drivers, limayaml.VZ)
 	}
