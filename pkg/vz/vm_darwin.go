@@ -30,6 +30,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// diskImageCachingMode is set to DiskImageCachingModeCached so as to avoid disk corruption on ARM:
+// - https://github.com/utmapp/UTM/issues/4840#issuecomment-1824340975
+// - https://github.com/utmapp/UTM/issues/4840#issuecomment-1824542732
+//
+// Eventually we may bring this back to DiskImageCachingModeAutomatic when the corruption issue is properly fixed.
+const diskImageCachingMode = vz.DiskImageCachingModeCached
+
 type virtualMachineWrapper struct {
 	*vz.VirtualMachine
 	mu      sync.Mutex
@@ -434,7 +441,7 @@ func attachDisks(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfigura
 	if err = validateDiskFormat(diffDiskPath); err != nil {
 		return err
 	}
-	diffDiskAttachment, err := vz.NewDiskImageStorageDeviceAttachmentWithCacheAndSync(diffDiskPath, false, vz.DiskImageCachingModeAutomatic, vz.DiskImageSynchronizationModeFsync)
+	diffDiskAttachment, err := vz.NewDiskImageStorageDeviceAttachmentWithCacheAndSync(diffDiskPath, false, diskImageCachingMode, vz.DiskImageSynchronizationModeFsync)
 	if err != nil {
 		return err
 	}
@@ -465,7 +472,7 @@ func attachDisks(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfigura
 		if err = nativeimgutil.ConvertToRaw(extraDiskPath, extraDiskPath, nil, true); err != nil {
 			return fmt.Errorf("failed to convert extra disk %q to a raw disk: %w", extraDiskPath, err)
 		}
-		extraDiskPathAttachment, err := vz.NewDiskImageStorageDeviceAttachmentWithCacheAndSync(extraDiskPath, false, vz.DiskImageCachingModeAutomatic, vz.DiskImageSynchronizationModeFsync)
+		extraDiskPathAttachment, err := vz.NewDiskImageStorageDeviceAttachmentWithCacheAndSync(extraDiskPath, false, diskImageCachingMode, vz.DiskImageSynchronizationModeFsync)
 		if err != nil {
 			return fmt.Errorf("failed to create disk attachment for extra disk %q: %w", extraDiskPath, err)
 		}
