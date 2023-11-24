@@ -57,6 +57,9 @@ type HostAgent struct {
 
 	clientMu sync.RWMutex
 	client   guestagentclient.GuestAgentClient
+
+	guestAgentAliveCh     chan struct{} // closed on establishing the connection
+	guestAgentAliveChOnce sync.Once
 }
 
 type options struct {
@@ -160,19 +163,20 @@ func New(instName string, stdout io.Writer, sigintCh chan os.Signal, opts ...Opt
 	})
 
 	a := &HostAgent{
-		y:               y,
-		sshLocalPort:    sshLocalPort,
-		udpDNSLocalPort: udpDNSLocalPort,
-		tcpDNSLocalPort: tcpDNSLocalPort,
-		instDir:         inst.Dir,
-		instName:        instName,
-		instSSHAddress:  inst.SSHAddress,
-		sshConfig:       sshConfig,
-		portForwarder:   newPortForwarder(sshConfig, sshLocalPort, rules, inst.VMType),
-		driver:          limaDriver,
-		sigintCh:        sigintCh,
-		eventEnc:        json.NewEncoder(stdout),
-		vSockPort:       vSockPort,
+		y:                 y,
+		sshLocalPort:      sshLocalPort,
+		udpDNSLocalPort:   udpDNSLocalPort,
+		tcpDNSLocalPort:   tcpDNSLocalPort,
+		instDir:           inst.Dir,
+		instName:          instName,
+		instSSHAddress:    inst.SSHAddress,
+		sshConfig:         sshConfig,
+		portForwarder:     newPortForwarder(sshConfig, sshLocalPort, rules, inst.VMType),
+		driver:            limaDriver,
+		sigintCh:          sigintCh,
+		eventEnc:          json.NewEncoder(stdout),
+		vSockPort:         vSockPort,
+		guestAgentAliveCh: make(chan struct{}),
 	}
 	return a, nil
 }
@@ -492,6 +496,21 @@ sudo chown -R "${USER}" /run/host-services`
 	if err := a.waitForRequirements("optional", a.optionalRequirements()); err != nil {
 		errs = append(errs, err)
 	}
+	if !*a.y.Plain {
+		logrus.Info("Waiting for the guest agent to be running")
+		select {
+		case <-a.guestAgentAliveCh:
+			// NOP
+		case <-time.After(time.Minute):
+			err := errors.New("guest agent does not seem to be running; port forwards will not work")
+			if *a.y.VMType == limayaml.WSL2 {
+				// geustagent is currently not available for WSL2: https://github.com/lima-vm/lima/issues/2025
+				logrus.Warn(err)
+			} else {
+				errs = append(errs, err)
+			}
+		}
+	}
 	if err := a.waitForRequirements("final", a.finalRequirements()); err != nil {
 		errs = append(errs, err)
 	}
@@ -605,6 +624,10 @@ func (a *HostAgent) processGuestAgentEvents(ctx context.Context, client guestage
 	if err != nil {
 		return err
 	}
+	logrus.Info("Guest agent is running")
+	a.guestAgentAliveChOnce.Do(func() {
+		close(a.guestAgentAliveCh)
+	})
 
 	logrus.Debugf("guest agent info: %+v", info)
 

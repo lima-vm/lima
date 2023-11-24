@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/lima-vm/lima/pkg/limayaml"
-	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/lima-vm/sshocker/pkg/ssh"
 	"github.com/sirupsen/logrus"
 )
@@ -118,40 +117,6 @@ if ! timeout 30s bash -c "until grep -q ^user_allow_other /etc/fuse*.conf; do sl
 fi
 `,
 			debugHint: `Append "user_allow_other" to /etc/fuse.conf (/etc/fuse3.conf) in the guest`,
-		})
-	}
-	if a.vSockPort != 0 {
-		req = append(req, requirement{
-			description: "the guest agent to be running",
-			script: fmt.Sprintf(`#!/bin/bash
-set -eux -o pipefail
-if ! timeout 30s bash -c "until ss -a -n --vsock --listen | grep -q ':%d'; do sleep 3; done"; then
-	echo >&2 "lima-guestagent is not installed yet"
-	exit 1
-fi
-`, a.vSockPort),
-			debugHint: fmt.Sprintf(`The guest agent with vsockPort %d does not seem running.
-Make sure that you are using an officially supported image.
-Also see "/var/log/cloud-init-output.log" in the guest.
-A possible workaround is to run "lima-guestagent install-systemd" in the guest.
-`, a.vSockPort),
-		})
-	} else {
-		req = append(req, requirement{
-			description: "the guest agent to be running",
-			script: fmt.Sprintf(`#!/bin/bash
-set -eux -o pipefail
-sock="/dev/virtio-ports/%s"
-if ! timeout 30s bash -c "until sudo fuser \"${sock}\" || sudo lsof \"${sock}\"; do sleep 3; done"; then
-	echo >&2 "lima-guestagent is not installed yet"
-	exit 1
-fi
-`, filenames.VirtioPort),
-			debugHint: fmt.Sprintf(`The guest agent with serialport /dev/virtio-ports/%s does not seem running.
-Make sure that you are using an officially supported image.
-Also see "/var/log/cloud-init-output.log" in the guest.
-A possible workaround is to run "lima-guestagent install-systemd" in the guest.
-`, filenames.VirtioPort),
 		})
 	}
 	return req
