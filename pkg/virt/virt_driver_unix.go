@@ -4,7 +4,6 @@ package virt
 
 import (
 	"context"
-	"errors"
 	"path/filepath"
 	"plugin"
 
@@ -27,7 +26,7 @@ func New(driver *driver.BaseDriver) *LimaVirtDriver {
 	}
 }
 
-func (l *LimaVirtDriver) Validate() error {
+func (l *LimaVirtDriver) loadPlugin() error {
 	dir, err := usrlocalliblima.Dir()
 	if err != nil {
 		return err
@@ -36,7 +35,16 @@ func (l *LimaVirtDriver) Validate() error {
 	if err != nil {
 		return err
 	}
+	l.virtPlugin = p
+	return nil
+}
 
+func (l *LimaVirtDriver) Validate() error {
+	err := l.loadPlugin()
+	if err != nil {
+		return err
+	}
+	p := l.virtPlugin
 	// test variable
 	v, err := p.Lookup("VERSION")
 	if err != nil {
@@ -55,7 +63,6 @@ func (l *LimaVirtDriver) Validate() error {
 	}
 	logrus.Infof("Version: %d", n)
 
-	l.virtPlugin = p
 	return nil
 }
 
@@ -64,7 +71,38 @@ func (l *LimaVirtDriver) CreateDisk() error {
 }
 
 func (l *LimaVirtDriver) Start(_ context.Context) (chan error, error) {
-	return nil, errors.New("TODO")
+	err := l.loadPlugin()
+	if err != nil {
+		return nil, err
+	}
+
+	/*
+	net, err := NetworkXML(l.BaseDriver)
+	if err != nil {
+		return nil, err
+	}
+	cn, err := l.virtPlugin.Lookup("CreateNetwork")
+	if err != nil {
+		return nil, err
+	}
+	if err := cn.(func(string) error)(net); err != nil {
+		return nil, err
+	}
+	*/
+
+	dom, err := DomainXML(l.BaseDriver)
+	if err != nil {
+		return nil, err
+	}
+	cd, err := l.virtPlugin.Lookup("CreateDomain")
+	if err != nil {
+		return nil, err
+	}
+	if err := cd.(func(string) error)(dom); err != nil {
+		return nil, err
+	}
+
+	return nil, err
 }
 
 func (l *LimaVirtDriver) Stop(_ context.Context) error {
