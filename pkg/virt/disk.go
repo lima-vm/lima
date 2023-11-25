@@ -2,8 +2,11 @@ package virt
 
 import (
 	"errors"
+	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strconv"
 
 	"github.com/docker/go-units"
 	"github.com/lima-vm/lima/pkg/driver"
@@ -43,7 +46,14 @@ func EnsureDisk(driver *driver.BaseDriver) error {
 	if err != nil {
 		return err
 	}
-	_ = isBaseDiskISO
-	// TODO
+	args := []string{"create", "-f", "qcow2"}
+	if !isBaseDiskISO {
+		args = append(args, "-b", baseDisk)
+	}
+	args = append(args, diffDisk, strconv.Itoa(int(diskSize)))
+	cmd := exec.Command("qemu-img", args...)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to run %v: %q: %w", cmd.Args, string(out), err)
+	}
 	return nil
 }

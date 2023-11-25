@@ -39,7 +39,25 @@ func (l *LimaVirtDriver) CreateDisk() error {
 }
 
 func (l *LimaVirtDriver) Start(_ context.Context) (chan error, error) {
-	return nil, errors.New("TODO")
+	/*
+		net, err := NetworkXML(l.BaseDriver)
+		if err != nil {
+			return nil, err
+		}
+		if err := CreateNetwork(net); err != nil {
+			return nil, err
+		}
+	*/
+
+	dom, err := DomainXML(l.BaseDriver)
+	if err != nil {
+		return nil, err
+	}
+	if err := CreateDomain(dom); err != nil {
+		return nil, err
+	}
+
+	return nil, err
 }
 
 func (l *LimaVirtDriver) Stop(_ context.Context) error {

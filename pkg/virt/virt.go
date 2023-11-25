@@ -18,3 +18,19 @@ func Version() (string, error) {
 	}
 	return m[1], nil
 }
+
+const connectString = "qemu:///session"
+
+func virsh(args ...string) error {
+	connect := []string{"--connect", connectString}
+	args = append(connect, args...)
+	return exec.Command("virsh", args...).Run()
+}
+
+func CreateNetwork(xml string) error {
+	return virsh("net-create", xml)
+}
+
+func CreateDomain(xml string) error {
+	return virsh("create", xml)
+}
