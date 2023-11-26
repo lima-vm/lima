@@ -18,9 +18,6 @@ if command -v loginctl >/dev/null 2>&1 && [ "${orig}" != "$(cat /etc/environment
 	loginctl terminate-user "${LIMA_CIDATA_USER}" || true
 fi
 
-# Make sure the guestagent socket from a previous boot is removed before we open the "lima-ssh-ready" gate.
-rm -f /run/lima-guest-agent.sock
-
 # Signal that provisioning is done. The instance-id in the meta-data file changes on every boot,
 # so any copy from a previous boot cycle will have different content.
 cp "${LIMA_CIDATA_MNT}"/meta-data /run/lima-ssh-ready
