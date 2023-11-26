@@ -30,4 +30,17 @@ for i in $(seq 0 $((LIMA_CIDATA_DISKS - 1))); do
 
 	mkdir -p "/mnt/lima-${DISK_NAME}"
 	mount -t $FORMAT_FSTYPE "/dev/${DEVICE_NAME}1" "/mnt/lima-${DISK_NAME}"
+	if command -v growpart >/dev/null 2>&1 && command -v resize2fs >/dev/null 2>&1; then
+		growpart "/dev/${DEVICE_NAME}" 1 || true
+		# Only resize when filesystem is in a healthy state
+		if command -v "fsck.$FORMAT_FSTYPE" -f -p "/dev/disk/by-label/lima-${DISK_NAME}"; then
+			if [[ $FORMAT_FSTYPE == "ext2" || $FORMAT_FSTYPE == "ext3" || $FORMAT_FSTYPE == "ext4" ]]; then
+				resize2fs "/dev/disk/by-label/lima-${DISK_NAME}" || true
+			elif [ "$FORMAT_FSTYPE" == "xfs" ]; then
+				xfs_growfs "/dev/disk/by-label/lima-${DISK_NAME}" || true
+			else
+				echo >&2 "WARNING: unknown fs '$FORMAT_FSTYPE'. FS will not be grew up automatically"
+			fi
+		fi
+	fi
 done

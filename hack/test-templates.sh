@@ -301,6 +301,11 @@ if [[ -n ${CHECKS["restart"]} ]]; then
 	limactl stop "$NAME"
 	sleep 3
 
+	if [[ -n ${CHECKS["disk"]} ]]; then
+		INFO "Resize disk and verify that partition and fs size are increased"
+		limactl disk resize data --size 11G
+	fi
+
 	export ftp_proxy=my.proxy:8021
 	INFO "Restarting \"$NAME\""
 	limactl start "$NAME"
@@ -323,6 +328,10 @@ if [[ -n ${CHECKS["restart"]} ]]; then
 	if [[ -n ${CHECKS["disk"]} ]]; then
 		if ! limactl shell "$NAME" sh -c 'test -f /mnt/lima-data/sweet-disk'; then
 			ERROR "Disk does not persist across restarts"
+			exit 1
+		fi
+		if ! limactl shell "$NAME" sh -c 'df -h /mnt/lima-data/ --output=size | grep -q 11G'; then
+			ERROR "Disk FS does not resized after restart"
 			exit 1
 		fi
 	fi

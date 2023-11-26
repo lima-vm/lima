@@ -15,6 +15,7 @@ import (
 type Disk struct {
 	Name        string `json:"name"`
 	Size        int64  `json:"size"`
+	Format      string `json:"format"`
 	Dir         string `json:"dir"`
 	Instance    string `json:"instance"`
 	InstanceDir string `json:"instanceDir"`
@@ -37,7 +38,7 @@ func InspectDisk(diskName string) (*Disk, error) {
 		return nil, err
 	}
 
-	disk.Size, err = inspectDiskSize(dataDisk)
+	disk.Size, disk.Format, err = inspectDisk(dataDisk)
 	if err != nil {
 		return nil, err
 	}
@@ -57,32 +58,33 @@ func InspectDisk(diskName string) (*Disk, error) {
 	return disk, nil
 }
 
-// inspectDiskSize attempts to inspect the disk size by itself,
-// and falls back to inspectDiskSizeWithQemuImg on an error.
-func inspectDiskSize(fName string) (int64, error) {
+// inspectDisk attempts to inspect the disk size and format by itself,
+// and falls back to inspectDiskWithQemuImg on an error.
+func inspectDisk(fName string) (int64, string, error) {
 	f, err := os.Open(fName)
 	if err != nil {
-		return inspectDiskSizeWithQemuImg(fName)
+		return inspectDiskWithQemuImg(fName)
 	}
 	defer f.Close()
 	img, err := qcow2reader.Open(f)
 	if err != nil {
-		return inspectDiskSizeWithQemuImg(fName)
+		return inspectDiskWithQemuImg(fName)
 	}
 	sz := img.Size()
 	if sz < 0 {
-		return inspectDiskSizeWithQemuImg(fName)
+		return inspectDiskWithQemuImg(fName)
 	}
-	return sz, nil
+
+	return sz, string(img.Type()), nil
 }
 
-// inspectDiskSizeWithQemuImg invokes `qemu-img` binary to inspect the disk size.
-func inspectDiskSizeWithQemuImg(fName string) (int64, error) {
+// inspectDiskSizeWithQemuImg invokes `qemu-img` binary to inspect the disk size and format.
+func inspectDiskWithQemuImg(fName string) (int64, string, error) {
 	info, err := imgutil.GetInfo(fName)
 	if err != nil {
-		return -1, err
+		return -1, "", err
 	}
-	return info.VSize, nil
+	return info.VSize, info.Format, nil
 }
 
 func (d *Disk) Lock(instanceDir string) error {
