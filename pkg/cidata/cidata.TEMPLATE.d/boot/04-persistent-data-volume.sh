@@ -27,6 +27,10 @@ if [ "$(awk '$2 == "/" {print $3}' /proc/mounts)" == "tmpfs" ]; then
 		fi
 		# Mount data volume
 		mount -t ext4 /dev/disk/by-label/data-volume /mnt/data
+		# Update /etc files that might have changed during this boot
+		cp /etc/network/interfaces /mnt/data/etc/network/
+		cp /etc/resolv.conf /mnt/data/etc/
+		# TODO there are probably others that should be updated as well
 	else
 		# Find an unpartitioned disk and create data-volume
 		DISKS=$(lsblk --list --noheadings --output name,type | awk '$2 == "disk" {print $1}')
