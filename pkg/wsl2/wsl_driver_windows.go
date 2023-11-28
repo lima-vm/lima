@@ -14,6 +14,28 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var knownYamlProperties = []string{
+	"Arch",
+	"Containerd",
+	"CopyToHost",
+	"CPUType",
+	"Disk",
+	"DNS",
+	"Env",
+	"HostResolver",
+	"Images",
+	"Message",
+	"Mounts",
+	"MountType",
+	"Plain",
+	"PortForwards",
+	"Probes",
+	"PropagateProxyEnv",
+	"Provision",
+	"SSH",
+	"VMType",
+}
+
 const Enabled = true
 
 type LimaWslDriver struct {
@@ -31,25 +53,7 @@ func (l *LimaWslDriver) Validate() error {
 		return fmt.Errorf("field `mountType` must be %q for WSL2 driver, got %q", limayaml.WSLMount, *l.Yaml.MountType)
 	}
 	// TODO: revise this list for WSL2
-	if unknown := reflectutil.UnknownNonEmptyFields(l.Yaml, "VMType",
-		"Arch",
-		"Images",
-		"CPUType",
-		"Disk",
-		"Mounts",
-		"MountType",
-		"SSH",
-		"Provision",
-		"Containerd",
-		"Probes",
-		"PortForwards",
-		"Message",
-		"Env",
-		"DNS",
-		"HostResolver",
-		"PropagateProxyEnv",
-		"Plain",
-	); len(unknown) > 0 {
+	if unknown := reflectutil.UnknownNonEmptyFields(l.Yaml, knownYamlProperties...); len(unknown) > 0 {
 		logrus.Warnf("Ignoring: vmType %s: %+v", *l.Yaml.VMType, unknown)
 	}
 

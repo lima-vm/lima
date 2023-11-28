@@ -19,6 +19,39 @@ import (
 	"github.com/lima-vm/lima/pkg/reflectutil"
 )
 
+var knownYamlProperties = []string{
+	"AdditionalDisks",
+	"Arch",
+	"Audio",
+	"CACertificates",
+	"Containerd",
+	"CopyToHost",
+	"CPUs",
+	"CPUType",
+	"Disk",
+	"DNS",
+	"Env",
+	"Firmware",
+	"GuestInstallPrefix",
+	"HostResolver",
+	"Images",
+	"Memory",
+	"Message",
+	"Mounts",
+	"MountType",
+	"Networks",
+	"OS",
+	"Plain",
+	"PortForwards",
+	"Probes",
+	"PropagateProxyEnv",
+	"Provision",
+	"Rosetta",
+	"SSH",
+	"Video",
+	"VMType",
+}
+
 const Enabled = true
 
 type LimaVzDriver struct {
@@ -45,36 +78,7 @@ func (l *LimaVzDriver) Validate() error {
 	if *l.Yaml.Firmware.LegacyBIOS {
 		return fmt.Errorf("`firmware.legacyBIOS` configuration is not supported for VZ driver")
 	}
-	if unknown := reflectutil.UnknownNonEmptyFields(l.Yaml, "VMType",
-		"Arch",
-		"Images",
-		"CPUs",
-		"CPUType",
-		"Memory",
-		"Disk",
-		"Mounts",
-		"MountType",
-		"SSH",
-		"Firmware",
-		"Provision",
-		"Containerd",
-		"GuestInstallPrefix",
-		"Probes",
-		"PortForwards",
-		"Message",
-		"Networks",
-		"Env",
-		"DNS",
-		"HostResolver",
-		"PropagateProxyEnv",
-		"CACertificates",
-		"Rosetta",
-		"AdditionalDisks",
-		"Audio",
-		"Video",
-		"OS",
-		"Plain",
-	); len(unknown) > 0 {
+	if unknown := reflectutil.UnknownNonEmptyFields(l.Yaml, knownYamlProperties...); len(unknown) > 0 {
 		logrus.Warnf("vmType %s: ignoring %+v", *l.Yaml.VMType, unknown)
 	}
 
