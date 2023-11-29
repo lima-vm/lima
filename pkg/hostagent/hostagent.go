@@ -176,6 +176,7 @@ func New(ctx context.Context, instName string, stdout io.Writer, signalCh chan o
 		inst.Dir,
 		*inst.Config.User.Name,
 		*inst.Config.SSH.LoadDotSSHPubKeys,
+		*inst.Config.SSH.Address,
 		*inst.Config.SSH.ForwardAgent,
 		*inst.Config.SSH.ForwardX11,
 		*inst.Config.SSH.ForwardX11Trusted)
@@ -611,7 +612,7 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 		if a.instConfig.MountInotify != nil && *a.instConfig.MountInotify {
 			if a.client == nil || !isGuestAgentSocketAccessible(ctx, a.client) {
 				if a.driver.ForwardGuestAgent() {
-					_ = forwardSSH(ctx, a.sshConfig, a.sshLocalPort, localUnix, remoteUnix, verbForward, false)
+					_ = forwardSSH(ctx, a.sshConfig, a.instSSHAddress, a.sshLocalPort, localUnix, remoteUnix, verbForward, false)
 				}
 			}
 			err := a.startInotify(ctx)
