@@ -98,7 +98,7 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 	}
 
 	// inst.Config is loaded with FillDefault() already, so no need to care about nil pointers.
-	sshLocalPort, err := determineSSHLocalPort(*inst.Config.SSH.LocalPort, instName)
+	sshLocalPort, err := determineSSHLocalPort(*inst.Config.SSH.Address, *inst.Config.SSH.LocalPort, instName)
 	if err != nil {
 		return nil, err
 	}
@@ -140,6 +140,7 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 	sshOpts, err := sshutil.SSHOpts(
 		inst.Dir,
 		*inst.Config.SSH.LoadDotSSHPubKeys,
+		*inst.Config.SSH.Address,
 		*inst.Config.SSH.ForwardAgent,
 		*inst.Config.SSH.ForwardX11,
 		*inst.Config.SSH.ForwardX11Trusted)
@@ -241,14 +242,14 @@ func writeSSHConfigFile(instName, instDir, instSSHAddress string, sshLocalPort i
 	return os.WriteFile(fileName, b.Bytes(), 0o600)
 }
 
-func determineSSHLocalPort(confLocalPort int, instName string) (int, error) {
+func determineSSHLocalPort(confAddress string, confLocalPort int, instName string) (int, error) {
 	if confLocalPort > 0 {
 		return confLocalPort, nil
 	}
 	if confLocalPort < 0 {
 		return 0, fmt.Errorf("invalid ssh local port %d", confLocalPort)
 	}
-	if *y.SSH.LocalPort == 0 && *y.SSH.Address != "127.0.0.1" {
+	if confLocalPort == 0 && confAddress != "127.0.0.1" {
 		return 22, nil
 	}
 	if instName == "default" {
