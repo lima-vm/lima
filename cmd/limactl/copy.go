@@ -82,6 +82,7 @@ func copyAction(cmd *cobra.Command, args []string) error {
 	}
 	// this assumes that ssh and scp come from the same place, but scp has no -V
 	legacySSH := sshutil.DetectOpenSSHVersion("ssh").LessThan(*semver.New("8.0.0"))
+	localhostOnly := true
 	for _, arg := range args {
 		if runtime.GOOS == "windows" {
 			if filepath.IsAbs(arg) {
@@ -115,6 +116,9 @@ func copyAction(cmd *cobra.Command, args []string) error {
 			} else {
 				scpArgs = append(scpArgs, fmt.Sprintf("scp://%s@%s:%d/%s", *inst.Config.User.Name, inst.SSHAddress, inst.SSHLocalPort, path[1]))
 			}
+			if inst.SSHAddress != "127.0.0.1" {
+				localhostOnly = false
+			}
 			instances[instName] = inst
 		default:
 			return fmt.Errorf("path %q contains multiple colons", arg)
@@ -132,14 +136,14 @@ func copyAction(cmd *cobra.Command, args []string) error {
 		// arguments such as ControlPath.  This is preferred as we can multiplex
 		// sessions without re-authenticating (MaxSessions permitting).
 		for _, inst := range instances {
-			sshOpts, err = sshutil.SSHOpts("ssh", inst.Dir, *inst.Config.User.Name, false, false, false, false)
+			sshOpts, err = sshutil.SSHOpts("ssh", inst.Dir, *inst.Config.User.Name, false, inst.SSHAddress, false, false, false)
 			if err != nil {
 				return err
 			}
 		}
 	} else {
 		// Copying among multiple hosts; we can't pass in host-specific options.
-		sshOpts, err = sshutil.CommonOpts("ssh", false)
+		sshOpts, err = sshutil.CommonOpts("ssh", false, localhostOnly)
 		if err != nil {
 			return err
 		}
