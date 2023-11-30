@@ -4,15 +4,15 @@
 # EL9-based distros are known to work.
 
 images:
-- location: "https://repo.almalinux.org/almalinux/8.8/cloud/x86_64/images/AlmaLinux-8-GenericCloud-UEFI-8.8-20230524.x86_64.qcow2"
+- location: "https://repo.almalinux.org/almalinux/8.9/cloud/x86_64/images/AlmaLinux-8-GenericCloud-8.9-20231128.x86_64.qcow2"
   arch: "x86_64"
-  digest: "sha256:6933e2436b7c6f5324937ea6699f00297b21f8758d1a51cab80fbb8a8926877f"
-- location: "https://repo.almalinux.org/almalinux/8.8/cloud/aarch64/images/AlmaLinux-8-GenericCloud-8.8-20230524.aarch64.qcow2"
+  digest: "sha256:a1686bc537bce699b512e3233666f5b8f69ed797ff1ce0af52c17fdc52942621"
+- location: "https://repo.almalinux.org/almalinux/8.9/cloud/aarch64/images/AlmaLinux-8-GenericCloud-8.9-20231128.aarch64.qcow2"
   arch: "aarch64"
-  digest: "sha256:ea6058be50597b7a54904a47c0b4a83eb4bff040301376ac828a6ac0932399a0"
+  digest: "sha256:603531fce80537f1ac4f78b6a43f79a47d1b2d70247fb2004da48ff1e5300813"
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
-- location: "https://repo.almalinux.org/almalinux/8/cloud/x86_64/images/AlmaLinux-8-GenericCloud-UEFI-latest.x86_64.qcow2"
+- location: "https://repo.almalinux.org/almalinux/8/cloud/x86_64/images/AlmaLinux-8-GenericCloud-latest.x86_64.qcow2"
   arch: "x86_64"
 - location: "https://repo.almalinux.org/almalinux/8/cloud/aarch64/images/AlmaLinux-8-GenericCloud-latest.aarch64.qcow2"
   arch: "aarch64"

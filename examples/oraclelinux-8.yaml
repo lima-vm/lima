@@ -6,12 +6,12 @@
 # EL9-based distros are known to work.
 
 images:
-- location: "https://yum.oracle.com/templates/OracleLinux/OL8/u8/x86_64/OL8U8_x86_64-kvm-b198.qcow"
+- location: "https://yum.oracle.com/templates/OracleLinux/OL8/u9/x86_64/OL8U9_x86_64-kvm-b210.qcow"
   arch: "x86_64"
-  digest: "sha256:67b644451efe5c9c472820922085cb5112e305fedfb5edb1ab7020b518ba8c3b"
-- location: "https://yum.oracle.com/templates/OracleLinux/OL8/u8/aarch64/OL8U8_aarch64-kvm-b42.qcow"
+  digest: "sha256:1a2764476748c57bcf5bf9a9fcfa445da77b62d06614a87599e4b483426c8758"
+- location: "https://yum.oracle.com/templates/OracleLinux/OL8/u9/aarch64/OL8U9_aarch64-kvm-b47.qcow"
   arch: "aarch64"
-  digest: "sha256:8fe33ebf15780a2d3917a80b3bddabac834f97ac62fc677d35480ebc80cd6db5"
+  digest: "sha256:f6ea4019b67e873606fc47b88639da1a52320d7bc6453d918915b22a77247be5"
 mounts:
 - location: "~"
 - location: "/tmp/lima"

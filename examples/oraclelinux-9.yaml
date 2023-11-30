@@ -3,12 +3,12 @@
 # Image source: https://yum.oracle.com/oracle-linux-templates.html
 
 images:
-- location: "https://yum.oracle.com/templates/OracleLinux/OL9/u2/x86_64/OL9U2_x86_64-kvm-b197.qcow"
+- location: "https://yum.oracle.com/templates/OracleLinux/OL9/u3/x86_64/OL9U3_x86_64-kvm-b211.qcow"
   arch: "x86_64"
-  digest: "sha256:840345cb866837ac7cc7c347cd9a8196c3a17e9c054c613eda8c2a912434c956"
-- location: "https://yum.oracle.com/templates/OracleLinux/OL9/u2/aarch64/OL9U2_aarch64-kvm-b39.qcow"
+  digest: "sha256:b37061c50d341d01b674455eca404d0bdcf2c8391665eca7e601cbd4aef456f8"
+- location: "https://yum.oracle.com/templates/OracleLinux/OL9/u3/aarch64/OL9U3_aarch64-kvm-b50.qcow"
   arch: "aarch64"
-  digest: "sha256:48351bc318b59ab6d54a2f22d11a28891cd54b9ec2fbbcdf83a7c8483b856221"
+  digest: "sha256:14428b531c1e2c76cd33bdbd69acc4d65ec9c12dd5eef7c8c1de2119adc3f8c8"
 mounts:
 - location: "~"
 - location: "/tmp/lima"
