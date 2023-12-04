@@ -66,7 +66,7 @@ if [ -d "${LIMA_CIDATA_MNT}"/provision.user ]; then
 		cp "$f" "${USER_SCRIPT}"
 		chown "${LIMA_CIDATA_USER}" "${USER_SCRIPT}"
 		chmod 755 "${USER_SCRIPT}"
-		if ! sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "${USER_SCRIPT}"; then
+		if ! sudo -Eiu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "${USER_SCRIPT}"; then
 			WARNING "Failed to execute $f (as user ${LIMA_CIDATA_USER})"
 			CODE=1
 		fi
