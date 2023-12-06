@@ -56,8 +56,18 @@ if [ -d "${LIMA_CIDATA_MNT}"/provision.system ]; then
 	done
 fi
 
-USER_SCRIPT="${LIMA_CIDATA_HOME}/.lima-user-script"
 if [ -d "${LIMA_CIDATA_MNT}"/provision.user ]; then
+	USER_SCRIPT="${LIMA_CIDATA_HOME}/.lima-user-script"
+	USER_SCRIPT_LAUNCHER="${LIMA_CIDATA_HOME}/.lima-user-script-launcher"
+
+	# create wrapper script that exports all of lima.env before execing the user script
+	echo "#!/bin/sh -eu" >"${USER_SCRIPT_LAUNCHER}"
+	while read -r line; do
+		echo "export \"$line\"" >>"${USER_SCRIPT_LAUNCHER}"
+	done <"${LIMA_CIDATA_MNT}"/lima.env
+	echo 'exec "$@"' >>"${USER_SCRIPT_LAUNCHER}"
+	chmod 755 "${USER_SCRIPT_LAUNCHER}"
+
 	if [ ! -f /sbin/openrc-run ]; then
 		until [ -e "/run/user/${LIMA_CIDATA_UID}/systemd/private" ]; do sleep 3; done
 	fi
@@ -66,12 +76,13 @@ if [ -d "${LIMA_CIDATA_MNT}"/provision.user ]; then
 		cp "$f" "${USER_SCRIPT}"
 		chown "${LIMA_CIDATA_USER}" "${USER_SCRIPT}"
 		chmod 755 "${USER_SCRIPT}"
-		if ! sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "${USER_SCRIPT}"; then
+		if ! sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "${USER_SCRIPT_LAUNCHER}" "${USER_SCRIPT}"; then
 			WARNING "Failed to execute $f (as user ${LIMA_CIDATA_USER})"
 			CODE=1
 		fi
 		rm "${USER_SCRIPT}"
 	done
+	rm "${USER_SCRIPT_LAUNCHER}"
 fi
 
 # Signal that provisioning is done. The instance-id in the meta-data file changes on every boot,
