@@ -26,7 +26,7 @@ jobs:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 1
-    - uses: actions/setup-go@v4
+    - uses: actions/setup-go@v5
       with:
         go-version: 1.21.x
     - name: Run golangci-lint
@@ -69,7 +69,7 @@ jobs:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 1
-    - uses: actions/setup-go@v4
+    - uses: actions/setup-go@v5
       with:
         go-version: ${{ matrix.go-version }}
     - name: Unit tests
@@ -115,7 +115,7 @@ jobs:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 1
-    - uses: actions/setup-go@v4
+    - uses: actions/setup-go@v5
       with:
         go-version: 1.21.x
     - name: Unit tests
@@ -144,7 +144,7 @@ jobs:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 1
-    - uses: actions/setup-go@v4
+    - uses: actions/setup-go@v5
       with:
         go-version: 1.21.x
     - name: Cache ~/Library/Caches/lima/download
@@ -224,7 +224,7 @@ jobs:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 1
-    - uses: actions/setup-go@v4
+    - uses: actions/setup-go@v5
       with:
         go-version: 1.20.x
     - uses: actions/cache@v3
@@ -270,7 +270,7 @@ jobs:
         # fetch-depth is set to 0 to let `limactl --version` print semver-ish version
         fetch-depth: 0
         ref: ${{ github.event.pull_request.head.sha }}
-    - uses: actions/setup-go@v4
+    - uses: actions/setup-go@v5
       with:
         go-version: 1.20.x
     - uses: actions/cache@v3
@@ -315,7 +315,7 @@ jobs:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 1
-    - uses: actions/setup-go@v4
+    - uses: actions/setup-go@v5
       with:
         go-version: 1.21.x
     - name: Cache ~/Library/Caches/lima/download
@@ -389,7 +389,7 @@ jobs:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
-    - uses: actions/setup-go@v4
+    - uses: actions/setup-go@v5
       with:
         go-version: 1.21.x
     - name: Cache ~/Library/Caches/lima/download
@@ -421,7 +421,7 @@ jobs:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 1
-    - uses: actions/setup-go@v4
+    - uses: actions/setup-go@v5
       with:
         go-version: 1.21.x
     - name: Cache ~/Library/Caches/lima/download
