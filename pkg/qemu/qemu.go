@@ -569,12 +569,31 @@ func Cmdline(cfg Config) (exe string, args []string, err error) {
 		logrus.Warnf("field `firmware.legacyBIOS` is not supported for architecture %q, ignoring", *y.Arch)
 		legacyBIOS = false
 	}
-	if !legacyBIOS && *y.Arch != limayaml.RISCV64 {
-		firmware, err := getFirmware(exe, *y.Arch)
-		if err != nil {
-			return "", nil, err
+	if !legacyBIOS {
+		var firmware string
+		for _, f := range y.Firmware.Images {
+			switch f.VMType {
+			case "", limayaml.QEMU:
+				if f.Arch == *y.Arch {
+					firmwareCandidate := filepath.Join(cfg.InstanceDir, filenames.QemuEfiCodeFD)
+					if _, err = fileutils.DownloadFile(firmwareCandidate, f.File, true, "UEFI code", *y.Arch); err != nil {
+						logrus.WithError(err).Warnf("failed to download %q", f.Location)
+						continue
+					}
+					firmware = firmwareCandidate
+					break
+				}
+			}
 		}
-		args = append(args, "-drive", fmt.Sprintf("if=pflash,format=raw,readonly=on,file=%s", firmware))
+		if firmware == "" && *y.Arch != limayaml.RISCV64 {
+			firmware, err = getFirmware(exe, *y.Arch)
+			if err != nil {
+				return "", nil, err
+			}
+		}
+		if firmware != "" {
+			args = append(args, "-drive", fmt.Sprintf("if=pflash,format=raw,readonly=on,file=%s", firmware))
+		}
 	}
 
 	// Disk

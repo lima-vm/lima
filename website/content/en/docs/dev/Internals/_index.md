@@ -48,6 +48,7 @@ kernel:
 QEMU:
 - `qemu.pid`: QEMU PID
 - `qmp.sock`: QMP socket
+- `qemu-efi-code.fd`: QEMU UEFI code (not always present)
 
 VZ:
 - `vz.pid`: VZ PID

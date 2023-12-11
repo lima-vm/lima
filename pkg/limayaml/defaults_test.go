@@ -181,6 +181,27 @@ func TestFillDefault(t *testing.T) {
 				"-----BEGIN CERTIFICATE-----\nYOUR-ORGS-TRUSTED-CA-CERT\n-----END CERTIFICATE-----\n",
 			},
 		},
+		Firmware: Firmware{
+			LegacyBIOS: ptr.Of(false),
+			Images: []FileWithVMType{
+				{
+					File: File{
+						Location: "https://gitlab.com/kraxel/qemu/-/raw/704f7cad5105246822686f65765ab92045f71a3b/pc-bios/edk2-aarch64-code.fd.bz2",
+						Arch:     AARCH64,
+						Digest:   "sha256:a5fc228623891297f2d82e22ea56ec57cde93fea5ec01abf543e4ed5cacaf277",
+					},
+					VMType: QEMU,
+				},
+				{
+					File: File{
+						Location: "https://github.com/AkihiroSuda/qemu/raw/704f7cad5105246822686f65765ab92045f71a3b/pc-bios/edk2-aarch64-code.fd.bz2",
+						Arch:     AARCH64,
+						Digest:   "sha256:a5fc228623891297f2d82e22ea56ec57cde93fea5ec01abf543e4ed5cacaf277",
+					},
+					VMType: QEMU,
+				},
+			},
+		},
 	}
 
 	expect := builtin
@@ -252,6 +273,8 @@ func TestFillDefault(t *testing.T) {
 		},
 	}
 
+	expect.Firmware = y.Firmware
+
 	expect.Rosetta = Rosetta{
 		Enabled: ptr.Of(false),
 		BinFmt:  ptr.Of(false),
@@ -299,6 +322,14 @@ func TestFillDefault(t *testing.T) {
 		},
 		Firmware: Firmware{
 			LegacyBIOS: ptr.Of(true),
+			Images: []FileWithVMType{
+				{
+					File: File{
+						Location: "/dummy",
+						Arch:     X8664,
+					},
+				},
+			},
 		},
 		Audio: Audio{
 			Device: ptr.Of("coreaudio"),
@@ -427,6 +458,7 @@ func TestFillDefault(t *testing.T) {
 	expect.CopyToHost = append(append([]CopyToHost{}, y.CopyToHost...), d.CopyToHost...)
 	expect.Containerd.Archives = append(append([]File{}, y.Containerd.Archives...), d.Containerd.Archives...)
 	expect.AdditionalDisks = append(append([]Disk{}, y.AdditionalDisks...), d.AdditionalDisks...)
+	expect.Firmware.Images = append(append([]FileWithVMType{}, y.Firmware.Images...), d.Firmware.Images...)
 
 	// Mounts and Networks start with lowest priority first, so higher priority entries can overwrite
 	expect.Mounts = append(append([]Mount{}, d.Mounts...), y.Mounts...)
@@ -580,6 +612,7 @@ func TestFillDefault(t *testing.T) {
 	expect.CopyToHost = append(append(o.CopyToHost, y.CopyToHost...), d.CopyToHost...)
 	expect.Containerd.Archives = append(append(o.Containerd.Archives, y.Containerd.Archives...), d.Containerd.Archives...)
 	expect.AdditionalDisks = append(append(o.AdditionalDisks, y.AdditionalDisks...), d.AdditionalDisks...)
+	expect.Firmware.Images = append(append(o.Firmware.Images, y.Firmware.Images...), d.Firmware.Images...)
 
 	expect.HostResolver.Hosts["default"] = d.HostResolver.Hosts["default"]
 	expect.HostResolver.Hosts["MY.Host"] = d.HostResolver.Hosts["host.lima.internal"]

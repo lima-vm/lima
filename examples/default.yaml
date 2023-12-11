@@ -263,6 +263,14 @@ firmware:
   # Use legacy BIOS instead of UEFI. Ignored for aarch64.
   # 🟢 Builtin default: false
   legacyBIOS: null
+#  # Override UEFI images
+#  # 🟢 Builtin default: uses VM's default UEFI, except for qemu + aarch64.
+#  # See <https://lists.gnu.org/archive/html/qemu-devel/2023-12/msg01694.html>
+#  images:
+#  - location: "~/Downloads/edk2-aarch64-code.fd.gz"
+#    arch: "aarch64"
+#    digest: "sha256:..."
+#    vmType: "qemu"
 
 audio:
   # EXPERIMENTAL
