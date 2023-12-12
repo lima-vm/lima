@@ -1,12 +1,12 @@
 # This template requires Lima v0.7.0 or later
 images:
 # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
-- location: "https://cloud.debian.org/images/cloud/bookworm/20231013-1532/debian-12-genericcloud-amd64-20231013-1532.qcow2"
+- location: "https://cloud.debian.org/images/cloud/bookworm/20231210-1591/debian-12-genericcloud-amd64-20231210-1591.qcow2"
   arch: "x86_64"
-  digest: "sha512:6b55e88b027c14da1b55c85a25a9f7069d4560a8fdb2d948c986a585db469728a06d2c528303e34bb62d8b2984def38fd9ddfc00965846ff6e05b01d6e883bfe"
-- location: "https://cloud.debian.org/images/cloud/bookworm/20231013-1532/debian-12-genericcloud-arm64-20231013-1532.qcow2"
+  digest: "sha512:7b7f4d34bba4a6a819dbd67ae338b46141646de7b18ae3818a7aa178d383bfbb3e9e0197c545bb2d5fd5be7f8e55a7d449b285983ae86a09a294124bb97d3d5f"
+- location: "https://cloud.debian.org/images/cloud/bookworm/20231210-1591/debian-12-genericcloud-arm64-20231210-1591.qcow2"
   arch: "aarch64"
-  digest: "sha512:b3754e8c4b474fad2f0bb6d483158cc8e6661cf481dcd7a8c55cc128acb4cd2d829d4afe024462ae45028f33ab977d69737d820c8f6c56800cc133cdcfb5874d"
+  digest: "sha512:dac4bd7fcfe3e31f6d413bf0e6e5f1d991e5bfac2d84f4775c044ea9cd0263e71548a874d7995bc15c61984bfe931c1a82acae42c1fff65e425cdb0a0ef77a7e"
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
 - location: "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-genericcloud-amd64.qcow2"
