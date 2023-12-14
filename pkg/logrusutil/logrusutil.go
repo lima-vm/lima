@@ -50,7 +50,7 @@ func PropagateJSON(logger *logrus.Logger, jsonLine []byte, header string, begin 
 	return
 
 fallback:
-	logrus.Info(header + string(jsonLine))
+	logger.Info(header + string(jsonLine))
 }
 
 // JSON is the type used in logrus.JSONFormatter
