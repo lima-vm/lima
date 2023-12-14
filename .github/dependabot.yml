@@ -5,12 +5,15 @@ updates:
   schedule:
     interval: daily
   open-pull-requests-limit: 10
-  reviewers:
-  - AkihiroSuda
+  groups:
+    golang-x:
+      patterns:
+      - "golang.org/x/*"
+    k8s:
+      patterns:
+      - "k8s.io/*"
 - package-ecosystem: github-actions
   directory: "/"
   schedule:
     interval: daily
   open-pull-requests-limit: 10
-  reviewers:
-  - AkihiroSuda
