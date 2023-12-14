@@ -5,6 +5,13 @@ updates:
   schedule:
     interval: daily
   open-pull-requests-limit: 10
+  groups:
+    golang-x:
+      patterns:
+      - "golang.org/x/*"
+    k8s:
+      patterns:
+      - "k8s.io/*"
 - package-ecosystem: github-actions
   directory: "/"
   schedule:
