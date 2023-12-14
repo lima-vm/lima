@@ -24,6 +24,13 @@ if [ -f /sbin/openrc-run ]; then
 #!/sbin/openrc-run
 supervisor=supervise-daemon
 
+log_file="${log_file:-/var/log/${RC_SVCNAME}.log}"
+err_file="${err_file:-${log_file}}"
+log_mode="${log_mode:-0644}"
+log_owner="${log_owner:-root:root}"
+
+supervise_daemon_args="${supervise_daemon_opts:---stderr \"${err_file}\" --stdout \"${log_file}\"}"
+
 name="lima-guestagent"
 description="Forward ports to the lima-hostagent"
 
