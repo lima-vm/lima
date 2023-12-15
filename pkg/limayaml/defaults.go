@@ -708,7 +708,7 @@ func executeGuestTemplate(format string) (bytes.Buffer, error) {
 	return bytes.Buffer{}, err
 }
 
-func executeHostTemplate(format string, instDir string) (bytes.Buffer, error) {
+func executeHostTemplate(format, instDir string) (bytes.Buffer, error) {
 	tmpl, err := template.New("").Parse(format)
 	if err == nil {
 		user, _ := osutil.LimaUser(false)

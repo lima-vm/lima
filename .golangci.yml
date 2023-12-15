@@ -18,7 +18,6 @@
 ---
 run:
   concurrency: 6
-  deadline: 5m
 linters:
   disable-all: true
   enable:
@@ -47,7 +46,7 @@ linters:
   # - gochecknoinits
   # - gocognit
   # - goconst
-  # - gocritic
+  - gocritic
   # - gocyclo
   # - godot
   # - godox
@@ -83,76 +82,29 @@ linters:
   # - wsl
 linters-settings:
   gocritic:
-    enabled-checks:
-    # Diagnostic
-    - appendAssign
-    - argOrder
-    - badCond
-    - caseOrder
-    - codegenComment
-    - commentedOutCode
-    - deprecatedComment
-    - dupArg
-    - dupBranchBody
-    - dupCase
-    - dupSubExpr
-    - exitAfterDefer
-    - flagDeref
-    - flagName
-    - nilValReturn
-    - offBy1
-    - sloppyReassign
-    - weakCond
-    - octalLiteral
-
-    # Performance
+    # See "Tags" section in https://github.com/go-critic/go-critic#usage
+    enabled-tags:
+    - diagnostic
+    - performance
+    - style
+    - opinionated
+    - experimental
+    disabled-checks:
     - appendCombine
-    - equalFold
-    - hugeParam
-    - indexAlloc
-    - rangeExprCopy
-    - rangeValCopy
-
-    # Style
-    - assignOp
-    - boolExprSimplify
-    - captLocal
-    - commentFormatting
-    - commentedOutImport
-    - defaultCaseOrder
-    - docStub
-    - elseif
-    - emptyFallthrough
-    - emptyStringTest
-    - hexLiteral
-    - ifElseChain
-    - methodExprCall
-    - regexpMust
-    - singleCaseSwitch
-    - sloppyLen
-    - stringXbytes
-    - switchTrue
-    - typeAssertChain
-    - typeSwitchVar
-    - underef
+    - sloppyReassign
     - unlabelStmt
-    - unlambda
-    - unslice
-    - valSwap
-    - wrapperFunc
-    - yodaStyleExpr
-
-    # Opinionated
-    - builtinShadow
+    - rangeValCopy
+    - hugeParam
     - importShadow
-    - initClause
-    - nestingReduce
-    - paramTypeCombine
-    - ptrToRefParam
-    - typeUnparen
-    - unnamedResult
-    - unnecessaryBlock
+    - ifElseChain
+    - sprintfQuotedString
+    - builtinShadow
+    - filepathJoin
 issues:
+  # Maximum issues count per one linter.
+  max-issues-per-linter: 0
+  # Maximum count of issues with the same text.
+  max-same-issues: 0
   exclude-rules:
   # Allow using Uid, Gid in pkg/osutil.
   - path: "pkg/osutil/"

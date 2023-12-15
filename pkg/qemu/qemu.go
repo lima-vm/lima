@@ -157,7 +157,7 @@ func newQmpClient(cfg Config) (*qmp.SocketMonitor, error) {
 	return qmpClient, nil
 }
 
-func sendHmpCommand(cfg Config, cmd string, tag string) (string, error) {
+func sendHmpCommand(cfg Config, cmd, tag string) (string, error) {
 	qmpClient, err := newQmpClient(cfg)
 	if err != nil {
 		return "", err
@@ -313,7 +313,7 @@ type features struct {
 	VersionGEQ7 bool
 }
 
-func inspectFeatures(exe string, machine string) (*features, error) {
+func inspectFeatures(exe, machine string) (*features, error) {
 	var (
 		f      features
 		stdout bytes.Buffer
@@ -462,9 +462,9 @@ func qemuMachine(arch limayaml.Arch) string {
 	return "virt"
 }
 
-func Cmdline(cfg Config) (string, []string, error) {
+func Cmdline(cfg Config) (exe string, args []string, err error) {
 	y := cfg.LimaYAML
-	exe, args, err := Exe(*y.Arch)
+	exe, args, err = Exe(*y.Arch)
 	if err != nil {
 		return "", nil, err
 	}
@@ -712,7 +712,7 @@ func Cmdline(cfg Config) (string, []string, error) {
 					args = append(args, "-netdev", fmt.Sprintf("socket,id=net%d,fd={{ fd_connect %q }}", i+1, sock))
 				} else if nwCfg.Paths.VDEVMNet != "" {
 					logrus.Warn("vdeVMNet is deprecated, use socketVMNet instead (See docs/network.md)")
-					vdeSock, err = networks.VDESock(nw.Lima)
+					vdeSock, err = networks.VDESock(nw.Lima) //nolint:staticcheck // deprecated
 					if err != nil {
 						return "", nil, err
 					}
@@ -1015,9 +1015,8 @@ func qemuArch(arch limayaml.Arch) string {
 	return arch
 }
 
-func Exe(arch limayaml.Arch) (string, []string, error) {
+func Exe(arch limayaml.Arch) (exe string, args []string, err error) {
 	exeBase := "qemu-system-" + qemuArch(arch)
-	var args []string
 	envK := "QEMU_SYSTEM_" + strings.ToUpper(qemuArch(arch))
 	if envV := os.Getenv(envK); envV != "" {
 		ss, err := shellwords.Parse(envV)
@@ -1029,7 +1028,7 @@ func Exe(arch limayaml.Arch) (string, []string, error) {
 			logrus.Warnf("Specifying args (%v) via $%s is supported only for debugging!", args, envK)
 		}
 	}
-	exe, err := exec.LookPath(exeBase)
+	exe, err = exec.LookPath(exeBase)
 	if err != nil {
 		return "", nil, err
 	}

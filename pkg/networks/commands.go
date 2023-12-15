@@ -75,7 +75,7 @@ func (config *YAML) Sock(name string) string {
 
 // VDESock returns a vde socket.
 //
-// Deprecated. Use Sock.
+// Deprecated: Use Sock.
 func (config *YAML) VDESock(name string) string {
 	return filepath.Join(config.Paths.VarRun, fmt.Sprintf("%s.ctl", name))
 }

@@ -121,8 +121,7 @@ func (a *agent) setWorthCheckingIPTablesRoutine(auditClient *libaudit.AuditClien
 			logrus.Error(err)
 			continue
 		}
-		switch msg.Type {
-		case auparse.AUDIT_NETFILTER_CFG:
+		if msg.Type == auparse.AUDIT_NETFILTER_CFG {
 			a.worthCheckingIPTablesMu.Lock()
 			logrus.Debug("setWorthCheckingIPTablesRoutine(): setting to true")
 			a.worthCheckingIPTables = true

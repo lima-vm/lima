@@ -421,16 +421,16 @@ func TestFillDefault(t *testing.T) {
 
 	expect = y
 
-	expect.Provision = append(y.Provision, d.Provision...)
-	expect.Probes = append(y.Probes, d.Probes...)
-	expect.PortForwards = append(y.PortForwards, d.PortForwards...)
-	expect.CopyToHost = append(y.CopyToHost, d.CopyToHost...)
-	expect.Containerd.Archives = append(y.Containerd.Archives, d.Containerd.Archives...)
-	expect.AdditionalDisks = append(y.AdditionalDisks, d.AdditionalDisks...)
+	expect.Provision = append(append([]Provision{}, y.Provision...), d.Provision...)
+	expect.Probes = append(append([]Probe{}, y.Probes...), d.Probes...)
+	expect.PortForwards = append(append([]PortForward{}, y.PortForwards...), d.PortForwards...)
+	expect.CopyToHost = append(append([]CopyToHost{}, y.CopyToHost...), d.CopyToHost...)
+	expect.Containerd.Archives = append(append([]File{}, y.Containerd.Archives...), d.Containerd.Archives...)
+	expect.AdditionalDisks = append(append([]Disk{}, y.AdditionalDisks...), d.AdditionalDisks...)
 
 	// Mounts and Networks start with lowest priority first, so higher priority entries can overwrite
-	expect.Mounts = append(d.Mounts, y.Mounts...)
-	expect.Networks = append(d.Networks, y.Networks...)
+	expect.Mounts = append(append([]Mount{}, d.Mounts...), y.Mounts...)
+	expect.Networks = append(append([]Network{}, d.Networks...), y.Networks...)
 
 	expect.HostResolver.Hosts["default"] = d.HostResolver.Hosts["default"]
 
@@ -585,7 +585,7 @@ func TestFillDefault(t *testing.T) {
 	expect.HostResolver.Hosts["MY.Host"] = d.HostResolver.Hosts["host.lima.internal"]
 
 	// o.Mounts just makes d.Mounts[0] writable because the Location matches
-	expect.Mounts = append(d.Mounts, y.Mounts...)
+	expect.Mounts = append(append([]Mount{}, d.Mounts...), y.Mounts...)
 	expect.Mounts[0].Writable = ptr.Of(true)
 	expect.Mounts[0].SSHFS.Cache = ptr.Of(false)
 	expect.Mounts[0].SSHFS.FollowSymlinks = ptr.Of(true)

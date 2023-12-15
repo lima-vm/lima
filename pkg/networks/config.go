@@ -175,7 +175,7 @@ func Usernet(name string) (bool, error) {
 
 // VDESock returns a vde socket.
 //
-// Deprecated. Use Sock.
+// Deprecated: Use Sock.
 func VDESock(name string) (string, error) {
 	loadCache()
 	if cache.err != nil {

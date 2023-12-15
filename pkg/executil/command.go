@@ -16,6 +16,8 @@ type options struct {
 type Opt func(*options) error
 
 // WithContext runs the command with CommandContext.
+//
+//nolint:gocritic // consider `ctx' to be of non-pointer type
 func WithContext(ctx *context.Context) Opt {
 	return func(o *options) error {
 		o.ctx = ctx
