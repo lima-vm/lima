@@ -665,7 +665,7 @@ func executeSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, command
 	return nil
 }
 
-func forwardSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, remote string, verb string, reverse bool) error {
+func forwardSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, remote, verb string, reverse bool) error {
 	args := sshConfig.Args()
 	args = append(args,
 		"-T",
@@ -732,7 +732,7 @@ func forwardSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, 
 				}
 			} else {
 				logrus.WithError(err).Warnf("Failed to set up forward from %q (guest) to %q (host)", remote, local)
-				if removeErr := os.RemoveAll(local); err != nil {
+				if removeErr := os.RemoveAll(local); removeErr != nil {
 					logrus.WithError(removeErr).Warnf("Failed to clean up %q (host) after forwarding failed", local)
 				}
 			}

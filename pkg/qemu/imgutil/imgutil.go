@@ -79,7 +79,7 @@ type Info struct {
 	Children              []InfoChild         `json:"children,omitempty"`                // since QEMU 8.0
 }
 
-func ConvertToRaw(source string, dest string) error {
+func ConvertToRaw(source, dest string) error {
 	var stdout, stderr bytes.Buffer
 	cmd := exec.Command("qemu-img", "convert", "-O", "raw", source, dest)
 	cmd.Stdout = &stdout

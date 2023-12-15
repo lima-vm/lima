@@ -42,7 +42,7 @@ func hostAddress(rule limayaml.PortForward, guest api.IPPort) string {
 	return host.String()
 }
 
-func (pf *portForwarder) forwardingAddresses(guest api.IPPort, localUnixIP net.IP) (string, string) {
+func (pf *portForwarder) forwardingAddresses(guest api.IPPort, localUnixIP net.IP) (hostAddr, guestAddr string) {
 	if pf.vmType == limayaml.WSL2 {
 		guest.IP = localUnixIP
 		host := api.IPPort{

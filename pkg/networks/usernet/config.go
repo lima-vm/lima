@@ -29,7 +29,7 @@ func Sock(name string, sockType SockType) (string, error) {
 }
 
 // SockWithDirectory return a usernet socket based on dir, name and sockType
-func SockWithDirectory(dir string, name string, sockType SockType) (string, error) {
+func SockWithDirectory(dir, name string, sockType SockType) (string, error) {
 	if name == "" {
 		name = "default"
 	}
@@ -108,7 +108,7 @@ func Leases(name string) (string, error) {
 	return sockPath, nil
 }
 
-func netmaskToCidr(baseIP net.IP, netMask net.IP) (net.IP, *net.IPNet, error) {
+func netmaskToCidr(baseIP, netMask net.IP) (net.IP, *net.IPNet, error) {
 	size, _ := net.IPMask(netMask.To4()).Size()
 	return net.ParseCIDR(fmt.Sprintf("%s/%d", baseIP.String(), size))
 }

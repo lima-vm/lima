@@ -690,7 +690,7 @@ func getEFI(driver *driver.BaseDriver) (*vz.EFIVariableStore, error) {
 	return vz.NewEFIVariableStore(efi)
 }
 
-func createSockPair() (*os.File, *os.File, error) {
+func createSockPair() (server, client *os.File, _ error) {
 	pairs, err := syscall.Socketpair(syscall.AF_UNIX, syscall.SOCK_DGRAM, 0)
 	if err != nil {
 		return nil, nil, err
@@ -710,8 +710,8 @@ func createSockPair() (*os.File, *os.File, error) {
 	if err = syscall.SetsockoptInt(clientFD, syscall.SOL_SOCKET, syscall.SO_RCVBUF, 4*1024*1024); err != nil {
 		return nil, nil, err
 	}
-	server := os.NewFile(uintptr(serverFD), "server")
-	client := os.NewFile(uintptr(clientFD), "client")
+	server = os.NewFile(uintptr(serverFD), "server")
+	client = os.NewFile(uintptr(clientFD), "client")
 	runtime.SetFinalizer(server, func(file *os.File) {
 		logrus.Debugf("Server network file GC'ed")
 	})

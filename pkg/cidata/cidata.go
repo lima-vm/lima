@@ -437,10 +437,11 @@ func writeCIDataDir(rootPath string, layout []iso9660util.Entry) error {
 		if err != nil {
 			return err
 		}
-		defer f.Close()
 		if _, err := io.Copy(f, e.Reader); err != nil {
+			_ = f.Close()
 			return err
 		}
+		_ = f.Close()
 	}
 
 	return nil

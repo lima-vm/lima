@@ -194,8 +194,8 @@ func Test_extractZones(t *testing.T) {
 }
 
 var (
-	_ sort.Interface = (recordSorter)(nil)
-	_ sort.Interface = (zoneSorter)(nil)
+	_ sort.Interface = recordSorter(nil)
+	_ sort.Interface = zoneSorter(nil)
 )
 
 type recordSorter []types.Record
@@ -206,12 +206,12 @@ func (r recordSorter) Len() int {
 }
 
 // Less implements sort.Interface
-func (r recordSorter) Less(i int, j int) bool {
+func (r recordSorter) Less(i, j int) bool {
 	return r[i].Name < r[j].Name
 }
 
 // Swap implements sort.Interface
-func (r recordSorter) Swap(i int, j int) {
+func (r recordSorter) Swap(i, j int) {
 	r[i], r[j] = r[j], r[i]
 }
 
@@ -223,11 +223,11 @@ func (z zoneSorter) Len() int {
 }
 
 // Less implements sort.Interface
-func (z zoneSorter) Less(i int, j int) bool {
+func (z zoneSorter) Less(i, j int) bool {
 	return z[i].Name < z[j].Name
 }
 
 // Swap implements sort.Interface
-func (z zoneSorter) Swap(i int, j int) {
+func (z zoneSorter) Swap(i, j int) {
 	z[i], z[j] = z[j], z[i]
 }

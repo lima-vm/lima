@@ -47,10 +47,10 @@ func (a *HostAgent) setupMount(m limayaml.Mount) (*mount, error) {
 	// NOTE: allow_other requires "user_allow_other" in /etc/fuse.conf
 	sshfsOptions := "allow_other"
 	if !*m.SSHFS.Cache {
-		sshfsOptions = sshfsOptions + ",cache=no"
+		sshfsOptions += ",cache=no"
 	}
 	if *m.SSHFS.FollowSymlinks {
-		sshfsOptions = sshfsOptions + ",follow_symlinks"
+		sshfsOptions += ",follow_symlinks"
 	}
 	logrus.Infof("Mounting %q on %q", location, mountPoint)
 

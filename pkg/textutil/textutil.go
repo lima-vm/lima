@@ -25,7 +25,7 @@ func ExecuteTemplate(tmpl string, args interface{}) ([]byte, error) {
 }
 
 // PrefixString adds prefix to beginning of each line
-func PrefixString(prefix string, text string) string {
+func PrefixString(prefix, text string) string {
 	result := []string{}
 	for _, line := range strings.Split(text, "\n") {
 		if line == "" {
@@ -44,12 +44,12 @@ func IndentString(size int, text string) string {
 }
 
 // TrimString removes characters from beginning and end
-func TrimString(cutset string, text string) string {
+func TrimString(cutset, text string) string {
 	return strings.Trim(text, cutset)
 }
 
 // MissingString returns message if the text is empty
-func MissingString(message string, text string) string {
+func MissingString(message, text string) string {
 	if text == "" {
 		return message
 	}

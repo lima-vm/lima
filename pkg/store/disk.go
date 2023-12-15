@@ -60,7 +60,7 @@ func InspectDisk(diskName string) (*Disk, error) {
 
 // inspectDisk attempts to inspect the disk size and format by itself,
 // and falls back to inspectDiskWithQemuImg on an error.
-func inspectDisk(fName string) (int64, string, error) {
+func inspectDisk(fName string) (size int64, format string, _ error) {
 	f, err := os.Open(fName)
 	if err != nil {
 		return inspectDiskWithQemuImg(fName)
@@ -79,7 +79,7 @@ func inspectDisk(fName string) (int64, string, error) {
 }
 
 // inspectDiskSizeWithQemuImg invokes `qemu-img` binary to inspect the disk size and format.
-func inspectDiskWithQemuImg(fName string) (int64, string, error) {
+func inspectDiskWithQemuImg(fName string) (size int64, format string, _ error) {
 	info, err := imgutil.GetInfo(fName)
 	if err != nil {
 		return -1, "", err

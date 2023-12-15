@@ -49,7 +49,7 @@ func Sign(qExe string) error {
     <true/>
   </dict>
 </plist>`
-	if _, err = ent.Write([]byte(entXML)); err != nil {
+	if _, err = ent.WriteString(entXML); err != nil {
 		return fmt.Errorf("Failed to write to a temporary file %q for signing QEMU binary: %w", entName, err)
 	}
 	ent.Close()
@@ -68,7 +68,7 @@ func Sign(qExe string) error {
 // The result can be used *ONLY* for controlling hint messages.
 // DO NOT change the behavior of Lima depending on this result.
 //
-//nolint:revive
+//nolint:revive // underscores in this function name intentionally added
 func isColimaWrapper__useThisFunctionOnlyForPrintingHints__(qExe string) bool {
 	return strings.Contains(qExe, "/.colima/_wrapper/")
 }

@@ -20,11 +20,12 @@ func ParseFiles() ([]Entry, error) {
 			}
 			return res, err
 		}
-		defer r.Close()
 		parsed, err := Parse(r, kind)
 		if err != nil {
+			_ = r.Close()
 			return res, err
 		}
+		_ = r.Close()
 		res = append(res, parsed...)
 	}
 	return res, nil

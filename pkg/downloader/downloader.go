@@ -291,7 +291,7 @@ func Cached(remote string, opts ...Opt) (*Result, error) {
 // cacheDirectoryPath returns the cache subdirectory path.
 // - "url" file contains the url
 // - "data" file contains the data
-func cacheDirectoryPath(cacheDir string, remote string) string {
+func cacheDirectoryPath(cacheDir, remote string) string {
 	return filepath.Join(cacheDir, "download", "by-url-sha256", fmt.Sprintf("%x", sha256.Sum256([]byte(remote))))
 }
 
@@ -380,7 +380,7 @@ func Decompressor(ext string) ([]string, bool) {
 	return []string{program, "-d"}, true
 }
 
-func decompressLocal(dst, src, ext string, description string) error {
+func decompressLocal(dst, src, ext, description string) error {
 	command, found := Decompressor(ext)
 	if !found {
 		return fmt.Errorf("decompressLocal: unknown extension %s", ext)
@@ -472,7 +472,7 @@ func validateLocalFileDigest(localPath string, expectedDigest digest.Digest) err
 	return nil
 }
 
-func downloadHTTP(localPath, url string, description string, expectedDigest digest.Digest) error {
+func downloadHTTP(localPath, url, description string, expectedDigest digest.Digest) error {
 	if localPath == "" {
 		return fmt.Errorf("downloadHTTP: got empty localPath")
 	}

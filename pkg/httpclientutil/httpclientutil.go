@@ -17,7 +17,7 @@ import (
 
 // Get calls HTTP GET and verifies that the status code is 2XX .
 func Get(ctx context.Context, c *http.Client, url string) (*http.Response, error) {
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, http.NoBody)
 	if err != nil {
 		return nil, err
 	}
