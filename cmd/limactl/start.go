@@ -10,8 +10,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/AlecAivazis/survey/v2"
-	"github.com/AlecAivazis/survey/v2/terminal"
 	"github.com/containerd/containerd/identifiers"
 	"github.com/lima-vm/lima/cmd/limactl/editflags"
 	"github.com/lima-vm/lima/cmd/limactl/guessarg"
@@ -24,6 +22,7 @@ import (
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/lima-vm/lima/pkg/templatestore"
+	"github.com/lima-vm/lima/pkg/uiutil"
 	"github.com/lima-vm/lima/pkg/yqutil"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -366,27 +365,25 @@ func chooseNextCreatorState(st *creatorState, yq string) (*creatorState, error) 
 			logrus.WithError(err).Warn("Failed to evaluate yq expression")
 			return st, err
 		}
-		var ans string
-		prompt := &survey.Select{
-			Message: fmt.Sprintf("Creating an instance %q", st.instName),
-			Options: []string{
-				"Proceed with the current configuration",
-				"Open an editor to review or modify the current configuration",
-				"Choose another template (docker, podman, archlinux, fedora, ...)",
-				"Exit",
-			},
+		message := fmt.Sprintf("Creating an instance %q", st.instName)
+		options := []string{
+			"Proceed with the current configuration",
+			"Open an editor to review or modify the current configuration",
+			"Choose another template (docker, podman, archlinux, fedora, ...)",
+			"Exit",
 		}
-		if err := survey.AskOne(prompt, &ans); err != nil {
-			if err == terminal.InterruptErr {
+		ans, err := uiutil.Select(message, options)
+		if err != nil {
+			if err == uiutil.InterruptErr {
 				logrus.Fatal("Interrupted by user")
 			}
 			logrus.WithError(err).Warn("Failed to open TUI")
 			return st, nil
 		}
 		switch ans {
-		case prompt.Options[0]: // "Proceed with the current configuration"
+		case 0: // "Proceed with the current configuration"
 			return st, nil
-		case prompt.Options[1]: // "Open an editor ..."
+		case 1: // "Open an editor ..."
 			hdr := fmt.Sprintf("# Review and modify the following configuration for Lima instance %q.\n", st.instName)
 			if st.instName == DefaultInstanceName {
 				hdr += "# - In most cases, you do not need to modify this file.\n"
@@ -405,20 +402,18 @@ func chooseNextCreatorState(st *creatorState, yq string) (*creatorState, error) 
 				return st, errors.New("should not reach here")
 			}
 			return st, nil
-		case prompt.Options[2]: // "Choose another template..."
+		case 2: // "Choose another template..."
 			templates, err := templatestore.Templates()
 			if err != nil {
 				return st, err
 			}
-			var ansEx int
-			promptEx := &survey.Select{
-				Message: "Choose a template",
-				Options: make([]string, len(templates)),
-			}
+			message := "Choose a template"
+			options := make([]string, len(templates))
 			for i := range templates {
-				promptEx.Options[i] = templates[i].Name
+				options[i] = templates[i].Name
 			}
-			if err := survey.AskOne(promptEx, &ansEx); err != nil {
+			ansEx, err := uiutil.Select(message, options)
+			if err != nil {
 				return st, err
 			}
 			if ansEx > len(templates)-1 {
@@ -436,7 +431,7 @@ func chooseNextCreatorState(st *creatorState, yq string) (*creatorState, error) 
 				return nil, err
 			}
 			continue
-		case prompt.Options[3]: // "Exit"
+		case 3: // "Exit"
 			os.Exit(0)
 			return st, errors.New("should not reach here")
 		default:

@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/AlecAivazis/survey/v2"
 	"github.com/lima-vm/lima/cmd/limactl/editflags"
 	"github.com/lima-vm/lima/pkg/editutil"
 	"github.com/lima-vm/lima/pkg/limayaml"
@@ -15,6 +14,7 @@ import (
 	"github.com/lima-vm/lima/pkg/start"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
+	"github.com/lima-vm/lima/pkg/uiutil"
 	"github.com/lima-vm/lima/pkg/yqutil"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -126,15 +126,8 @@ func editAction(cmd *cobra.Command, args []string) error {
 }
 
 func askWhetherToStart() (bool, error) {
-	ans := true
-	prompt := &survey.Confirm{
-		Message: "Do you want to start the instance now? ",
-		Default: true,
-	}
-	if err := survey.AskOne(prompt, &ans); err != nil {
-		return false, err
-	}
-	return ans, nil
+	message := "Do you want to start the instance now? "
+	return uiutil.Confirm(message, true)
 }
 
 func editBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
