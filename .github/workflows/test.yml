@@ -33,7 +33,7 @@ jobs:
       uses: golangci/golangci-lint-action@v3.7.0
       with:
         version: v1.55.2
-        args: --verbose
+        args: --verbose --timeout=10m
     - name: Run yamllint
       run: yamllint .
     - name: Install shellcheck
