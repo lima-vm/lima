@@ -77,6 +77,11 @@ type File struct {
 	Digest   digest.Digest `yaml:"digest,omitempty" json:"digest,omitempty"`
 }
 
+type FileWithVMType struct {
+	File   `yaml:",inline"`
+	VMType VMType `yaml:"vmType,omitempty" json:"vmType,omitempty"`
+}
+
 type Kernel struct {
 	File    `yaml:",inline"`
 	Cmdline string `yaml:"cmdline,omitempty" json:"cmdline,omitempty"`
@@ -142,6 +147,10 @@ type Firmware struct {
 	// LegacyBIOS disables UEFI if set.
 	// LegacyBIOS is ignored for aarch64.
 	LegacyBIOS *bool `yaml:"legacyBIOS,omitempty" json:"legacyBIOS,omitempty"`
+
+	// Images specify UEFI images (edk2-aarch64-code.fd.gz).
+	// Defaults to built-in UEFI.
+	Images []FileWithVMType `yaml:"images,omitempty" json:"images,omitempty"`
 }
 
 type Audio struct {

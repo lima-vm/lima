@@ -53,7 +53,8 @@ const (
 	HostAgentStdoutLog = "ha.stdout.log"
 	HostAgentStderrLog = "ha.stderr.log"
 	VzIdentifier       = "vz-identifier"
-	VzEfi              = "vz-efi"
+	VzEfi              = "vz-efi"           // efi variable store
+	QemuEfiCodeFD      = "qemu-efi-code.fd" // efi code; not always created
 
 	// SocketDir is the default location for forwarded sockets with a relative paths in HostSocket
 	SocketDir = "sock"

@@ -78,6 +78,14 @@ func (l *LimaVzDriver) Validate() error {
 	if *l.Yaml.Firmware.LegacyBIOS {
 		return fmt.Errorf("`firmware.legacyBIOS` configuration is not supported for VZ driver")
 	}
+	for _, f := range l.Yaml.Firmware.Images {
+		switch f.VMType {
+		case "", limayaml.VZ:
+			if f.Arch == *l.Yaml.Arch {
+				return fmt.Errorf("`firmware.images` configuration is not supported for VZ driver")
+			}
+		}
+	}
 	if unknown := reflectutil.UnknownNonEmptyFields(l.Yaml, knownYamlProperties...); len(unknown) > 0 {
 		logrus.Warnf("vmType %s: ignoring %+v", *l.Yaml.VMType, unknown)
 	}
