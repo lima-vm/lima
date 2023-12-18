@@ -2,7 +2,10 @@
 [[📖**Documentations**]](https://lima-vm.io/docs/)
 [[👤**Slack (`#lima`)**]](https://slack.cncf.io)
 
-<img src="https://lima-vm.io/images/logo.svg" width=400 />
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="website/static/images/logo-dark.svg">
+  <img alt="Shows a stylized 'Lima' text in bold, modern font" src="website/static/images/logo.svg" width=400 />
+</picture>
 
 # Lima: Linux Machines
 
