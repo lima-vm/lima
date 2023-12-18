@@ -571,25 +571,33 @@ func Cmdline(cfg Config) (exe string, args []string, err error) {
 	}
 	if !legacyBIOS {
 		var firmware string
-		for _, f := range y.Firmware.Images {
-			switch f.VMType {
-			case "", limayaml.QEMU:
-				if f.Arch == *y.Arch {
-					firmwareCandidate := filepath.Join(cfg.InstanceDir, filenames.QemuEfiCodeFD)
-					if _, err = fileutils.DownloadFile(firmwareCandidate, f.File, true, "UEFI code", *y.Arch); err != nil {
-						logrus.WithError(err).Warnf("failed to download %q", f.Location)
-						continue
+		downloadedFirmware := filepath.Join(cfg.InstanceDir, filenames.QemuEfiCodeFD)
+		if _, stErr := os.Stat(downloadedFirmware); errors.Is(stErr, os.ErrNotExist) {
+		loop:
+			for _, f := range y.Firmware.Images {
+				switch f.VMType {
+				case "", limayaml.QEMU:
+					if f.Arch == *y.Arch {
+						if _, err = fileutils.DownloadFile(downloadedFirmware, f.File, true, "UEFI code "+f.Location, *y.Arch); err != nil {
+							logrus.WithError(err).Warnf("failed to download %q", f.Location)
+							continue loop
+						}
+						firmware = downloadedFirmware
+						logrus.Infof("Using firmware %q (downloaded from %q)", firmware, f.Location)
+						break loop
 					}
-					firmware = firmwareCandidate
-					break
 				}
 			}
+		} else {
+			firmware = downloadedFirmware
+			logrus.Infof("Using existing firmware (%q)", firmware)
 		}
 		if firmware == "" && *y.Arch != limayaml.RISCV64 {
 			firmware, err = getFirmware(exe, *y.Arch)
 			if err != nil {
 				return "", nil, err
 			}
+			logrus.Infof("Using system firmware (%q)", firmware)
 		}
 		if firmware != "" {
 			args = append(args, "-drive", fmt.Sprintf("if=pflash,format=raw,readonly=on,file=%s", firmware))
