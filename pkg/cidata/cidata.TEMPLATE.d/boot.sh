@@ -2,11 +2,11 @@
 set -eu
 
 INFO() {
-	echo "LIMA| $*"
+	echo "LIMA $(date -Iseconds)| $*"
 }
 
 WARNING() {
-	echo "LIMA| WARNING: $*"
+	echo "LIMA $(date -Iseconds)| WARNING: $*"
 }
 
 # shellcheck disable=SC2163
