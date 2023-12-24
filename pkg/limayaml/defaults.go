@@ -9,20 +9,20 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"text/template"
 
 	"github.com/docker/go-units"
-	"github.com/lima-vm/lima/pkg/networks"
-	"github.com/lima-vm/lima/pkg/ptr"
 	"github.com/pbnjay/memory"
+	"github.com/sirupsen/logrus"
+	"golang.org/x/sys/cpu"
 
 	"github.com/lima-vm/lima/pkg/guestagent/api"
+	"github.com/lima-vm/lima/pkg/networks"
 	"github.com/lima-vm/lima/pkg/osutil"
+	"github.com/lima-vm/lima/pkg/ptr"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/store/filenames"
-	"github.com/sirupsen/logrus"
-
-	"golang.org/x/sys/cpu"
 )
 
 const (
@@ -81,6 +81,26 @@ func MACAddress(uniqueID string) string {
 	// See also https://gitlab.com/wireshark/wireshark/-/blob/master/manuf to confirm the uniqueness of this prefix.
 	hw := append(net.HardwareAddr{0x52, 0x55, 0x55}, sha[0:3]...)
 	return hw.String()
+}
+
+func hostTimeZone() string {
+	// WSL2 will automatically set the timezone
+	if runtime.GOOS != "windows" {
+		tz, err := os.ReadFile("/etc/timezone")
+		if err == nil {
+			return strings.TrimSpace(string(tz))
+		}
+		zoneinfoFile, err := filepath.EvalSymlinks("/etc/localtime")
+		if err == nil {
+			for baseDir := filepath.Dir(zoneinfoFile); baseDir != "/"; baseDir = filepath.Dir(baseDir) {
+				if _, err = os.Stat(filepath.Join(baseDir, "Etc/UTC")); err == nil {
+					return strings.TrimPrefix(zoneinfoFile, baseDir+"/")
+				}
+			}
+			logrus.Warnf("could not locate zoneinfo directory from %q", zoneinfoFile)
+		}
+	}
+	return ""
 }
 
 func defaultCPUs() int {
@@ -323,6 +343,16 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		if f.Arch == "" {
 			f.Arch = *y.Arch
 		}
+	}
+
+	if y.TimeZone == nil {
+		y.TimeZone = d.TimeZone
+	}
+	if o.TimeZone != nil {
+		y.TimeZone = o.TimeZone
+	}
+	if y.TimeZone == nil {
+		y.TimeZone = ptr.Of(hostTimeZone())
 	}
 
 	if y.SSH.LocalPort == nil {
@@ -731,6 +761,7 @@ func fixUpForPlainMode(y *LimaYAML) {
 	y.Containerd.User = ptr.Of(false)
 	y.Rosetta.BinFmt = ptr.Of(false)
 	y.Rosetta.Enabled = ptr.Of(false)
+	y.TimeZone = ptr.Of("")
 }
 
 func executeGuestTemplate(format string) (bytes.Buffer, error) {

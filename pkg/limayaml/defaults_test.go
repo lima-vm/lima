@@ -85,6 +85,7 @@ func TestFillDefault(t *testing.T) {
 			ForwardX11:        ptr.Of(false),
 			ForwardX11Trusted: ptr.Of(false),
 		},
+		TimeZone: ptr.Of(hostTimeZone()),
 		Firmware: Firmware{
 			LegacyBIOS: ptr.Of(false),
 		},
@@ -181,6 +182,7 @@ func TestFillDefault(t *testing.T) {
 				"-----BEGIN CERTIFICATE-----\nYOUR-ORGS-TRUSTED-CA-CERT\n-----END CERTIFICATE-----\n",
 			},
 		},
+		TimeZone: ptr.Of("Antarctica/Troll"),
 		Firmware: Firmware{
 			LegacyBIOS: ptr.Of(false),
 			Images: []FileWithVMType{
@@ -273,6 +275,7 @@ func TestFillDefault(t *testing.T) {
 		},
 	}
 
+	expect.TimeZone = y.TimeZone
 	expect.Firmware = y.Firmware
 
 	expect.Rosetta = Rosetta{
@@ -320,6 +323,7 @@ func TestFillDefault(t *testing.T) {
 			ForwardX11:        ptr.Of(false),
 			ForwardX11Trusted: ptr.Of(false),
 		},
+		TimeZone: ptr.Of("Zulu"),
 		Firmware: Firmware{
 			LegacyBIOS: ptr.Of(true),
 			Images: []FileWithVMType{
@@ -512,6 +516,7 @@ func TestFillDefault(t *testing.T) {
 			ForwardX11:        ptr.Of(false),
 			ForwardX11Trusted: ptr.Of(false),
 		},
+		TimeZone: ptr.Of("Universal"),
 		Firmware: Firmware{
 			LegacyBIOS: ptr.Of(true),
 		},

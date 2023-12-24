@@ -82,6 +82,7 @@ type TemplateArgs struct {
 	VMType                          string
 	VSockPort                       int
 	Plain                           bool
+	TimeZone                        string
 }
 
 func ValidateTemplateArgs(args TemplateArgs) error {

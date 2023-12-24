@@ -14,6 +14,10 @@ mounts:
 {{- end }}
 {{- end }}
 
+{{- if .TimeZone }}
+timezone: {{.TimeZone}}
+{{- end }}
+
 users:
   - name: "{{.User}}"
     uid: "{{.UID}}"
