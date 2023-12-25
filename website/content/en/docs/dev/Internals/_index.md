@@ -73,10 +73,12 @@ VNC:
 
 Guest agent:
 
-Each drivers use their own mode of communication 
+Each drivers use their own mode of communication
 - `qemu`: uses virtio-port `io.lima-vm.guest_agent.0`
 - `vz`: uses vsock port 2222
 - `wsl2`: uses free random vsock port
+The fallback is to use port forward over ssh port
+- `ga.sock`: Forwarded to `/run/lima-guestagent.sock` in the guest, via SSH
 
 Host agent:
 - `ha.pid`: hostagent PID

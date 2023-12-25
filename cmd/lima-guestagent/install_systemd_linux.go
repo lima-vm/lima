@@ -21,6 +21,7 @@ func newInstallSystemdCommand() *cobra.Command {
 		RunE:  installSystemdAction,
 	}
 	installSystemdCommand.Flags().Int("vsock-port", 0, "use vsock server on specified port")
+	installSystemdCommand.Flags().String("virtio-port", "", "use virtio server instead a UNIX socket")
 	return installSystemdCommand
 }
 
@@ -29,7 +30,11 @@ func installSystemdAction(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	unit, err := generateSystemdUnit(vsockPort)
+	virtioPort, err := cmd.Flags().GetString("virtio-port")
+	if err != nil {
+		return err
+	}
+	unit, err := generateSystemdUnit(vsockPort, virtioPort)
 	if err != nil {
 		return err
 	}
@@ -67,7 +72,7 @@ func installSystemdAction(cmd *cobra.Command, _ []string) error {
 //go:embed lima-guestagent.TEMPLATE.service
 var systemdUnitTemplate string
 
-func generateSystemdUnit(vsockPort int) ([]byte, error) {
+func generateSystemdUnit(vsockPort int, virtioPort string) ([]byte, error) {
 	selfExeAbs, err := os.Executable()
 	if err != nil {
 		return nil, err
@@ -76,6 +81,9 @@ func generateSystemdUnit(vsockPort int) ([]byte, error) {
 	var args []string
 	if vsockPort != 0 {
 		args = append(args, fmt.Sprintf("--vsock-port %d", vsockPort))
+	}
+	if virtioPort != "" {
+		args = append(args, fmt.Sprintf("--virtio-port %s", virtioPort))
 	}
 
 	m := map[string]string{

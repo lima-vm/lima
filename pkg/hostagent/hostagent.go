@@ -53,7 +53,8 @@ type HostAgent struct {
 	eventEnc   *json.Encoder
 	eventEncMu sync.Mutex
 
-	vSockPort int
+	vSockPort  int
+	virtioPort string
 
 	clientMu sync.RWMutex
 	client   guestagentclient.GuestAgentClient
@@ -117,6 +118,7 @@ func New(instName string, stdout io.Writer, sigintCh chan os.Signal, opts ...Opt
 	}
 
 	vSockPort := 0
+	virtioPort := ""
 	if *y.VMType == limayaml.VZ {
 		vSockPort = 2222
 	} else if *y.VMType == limayaml.WSL2 {
@@ -125,9 +127,11 @@ func New(instName string, stdout io.Writer, sigintCh chan os.Signal, opts ...Opt
 			logrus.WithError(err).Error("failed to get free VSock port")
 		}
 		vSockPort = port
+	} else if *y.VMType == limayaml.QEMU {
+		virtioPort = filenames.VirtioPort
 	}
 
-	if err := cidata.GenerateISO9660(inst.Dir, instName, y, udpDNSLocalPort, tcpDNSLocalPort, o.nerdctlArchive, vSockPort); err != nil {
+	if err := cidata.GenerateISO9660(inst.Dir, instName, y, udpDNSLocalPort, tcpDNSLocalPort, o.nerdctlArchive, vSockPort, virtioPort); err != nil {
 		return nil, err
 	}
 
@@ -160,6 +164,7 @@ func New(instName string, stdout io.Writer, sigintCh chan os.Signal, opts ...Opt
 		Yaml:         y,
 		SSHLocalPort: sshLocalPort,
 		VSockPort:    vSockPort,
+		VirtioPort:   virtioPort,
 	})
 
 	a := &HostAgent{
@@ -176,6 +181,7 @@ func New(instName string, stdout io.Writer, sigintCh chan os.Signal, opts ...Opt
 		sigintCh:          sigintCh,
 		eventEnc:          json.NewEncoder(stdout),
 		vSockPort:         vSockPort,
+		virtioPort:        virtioPort,
 		guestAgentAliveCh: make(chan struct{}),
 	}
 	return a, nil
@@ -561,6 +567,9 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 		}
 	}
 
+	localUnix := filepath.Join(a.instDir, filenames.GuestAgentSock)
+	remoteUnix := "/run/lima-guestagent.sock"
+
 	a.onClose = append(a.onClose, func() error {
 		logrus.Debugf("Stop forwarding unix sockets")
 		var errs []error
@@ -573,9 +582,19 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 				}
 			}
 		}
+		if a.driver.ForwardGuestAgent() {
+			if err := forwardSSH(context.Background(), a.sshConfig, a.sshLocalPort, localUnix, remoteUnix, verbCancel, false); err != nil {
+				errs = append(errs, err)
+			}
+		}
 		return errors.Join(errs...)
 	})
 	for {
+		if a.client == nil || !isGuestAgentSocketAccessible(ctx, a.client) {
+			if a.driver.ForwardGuestAgent() {
+				_ = forwardSSH(ctx, a.sshConfig, a.sshLocalPort, localUnix, remoteUnix, verbForward, false)
+			}
+		}
 		client, err := a.getOrCreateClient(ctx)
 		if err == nil {
 			if err := a.processGuestAgentEvents(ctx, client); err != nil {
@@ -610,8 +629,18 @@ func (a *HostAgent) getOrCreateClient(ctx context.Context) (guestagentclient.Gue
 	return a.client, err
 }
 
-func (a *HostAgent) createClient(ctx context.Context) (guestagentclient.GuestAgentClient, error) {
+func (a *HostAgent) createConnection(ctx context.Context) (net.Conn, error) {
 	conn, err := a.driver.GuestAgentConn(ctx)
+	// default to forwarded sock
+	if conn == nil && err == nil {
+		var d net.Dialer
+		conn, err = d.DialContext(ctx, "unix", filepath.Join(a.instDir, filenames.GuestAgentSock))
+	}
+	return conn, err
+}
+
+func (a *HostAgent) createClient(ctx context.Context) (guestagentclient.GuestAgentClient, error) {
+	conn, err := a.createConnection(ctx)
 	if err != nil {
 		return nil, err
 	}

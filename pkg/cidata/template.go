@@ -81,6 +81,7 @@ type TemplateArgs struct {
 	SkipDefaultDependencyResolution bool
 	VMType                          string
 	VSockPort                       int
+	VirtioPort                      string
 	Plain                           bool
 }
 
