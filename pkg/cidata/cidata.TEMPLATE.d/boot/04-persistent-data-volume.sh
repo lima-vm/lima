@@ -30,6 +30,18 @@ if [ "$(awk '$2 == "/" {print $3}' /proc/mounts)" == "tmpfs" ]; then
 		# Update /etc files that might have changed during this boot
 		cp /etc/network/interfaces /mnt/data/etc/network/
 		cp /etc/resolv.conf /mnt/data/etc/
+		if [ -f /etc/localtime ]; then
+			# Preserve symlink
+			cp -d /etc/localtime /mnt/data/etc/
+			# setup-timezone copies the single zoneinfo file into /etc/zoneinfo and targets the symlink there
+			if [ -d /etc/zoneinfo ]; then
+				rm -rf /mnt/data/etc/zoneinfo
+				cp -r /etc/zoneinfo /mnt/data/etc
+			fi
+		fi
+		if [ -f /etc/timezone ]; then
+			cp /etc/timezone /mnt/data/etc/
+		fi
 		# TODO there are probably others that should be updated as well
 	else
 		# Find an unpartitioned disk and create data-volume
