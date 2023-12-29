@@ -7,7 +7,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/AlecAivazis/survey/v2"
+	"github.com/lima-vm/lima/pkg/uiutil"
+
 	"github.com/mattn/go-isatty"
 	"github.com/sirupsen/logrus"
 )
@@ -85,11 +86,10 @@ func AskToSignIfNotSignedProperly(qExe string) {
 		}
 		var ans bool
 		if isatty.IsTerminal(os.Stdout.Fd()) || isatty.IsCygwinTerminal(os.Stdout.Fd()) {
-			prompt := &survey.Confirm{
-				Message: fmt.Sprintf("Try to sign %q with the \"com.apple.security.hypervisor\" entitlement?", qExe),
-				Default: true,
-			}
-			if askErr := survey.AskOne(prompt, &ans); askErr != nil {
+			message := fmt.Sprintf("Try to sign %q with the \"com.apple.security.hypervisor\" entitlement?", qExe)
+			var askErr error
+			ans, askErr = uiutil.Confirm(message, true)
+			if askErr != nil {
 				logrus.WithError(askErr).Warn("No answer was given")
 			}
 		}
