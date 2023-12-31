@@ -48,6 +48,7 @@ var knownYamlProperties = []string{
 	"Provision",
 	"Rosetta",
 	"SSH",
+	"TimeZone",
 	"Video",
 	"VMType",
 }
