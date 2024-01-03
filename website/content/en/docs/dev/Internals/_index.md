@@ -30,6 +30,7 @@ having to specify an identity explicitly.
 An instance directory contains the following files:
 
 Metadata:
+- `lima-version`: the Lima version used to create this instance
 - `lima.yaml`: the YAML
 - `protected`: empty file, used by `limactl protect`
 

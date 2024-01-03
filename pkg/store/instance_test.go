@@ -155,3 +155,12 @@ func TestPrintInstanceTableTwo(t *testing.T) {
 	assert.NilError(t, err)
 	assert.Equal(t, tableTwo, buf.String())
 }
+
+func TestLimaVersionGreaterThan(t *testing.T) {
+	assert.Equal(t, LimaVersionGreaterThan("", "0.1.0"), false)
+	assert.Equal(t, LimaVersionGreaterThan("0.0.1", "0.1.0"), false)
+	assert.Equal(t, LimaVersionGreaterThan("0.1.0", "0.1.0"), false)
+	assert.Equal(t, LimaVersionGreaterThan("0.1.0-2", "0.1.0"), true)
+	assert.Equal(t, LimaVersionGreaterThan("0.2.0", "0.1.0"), true)
+	assert.Equal(t, LimaVersionGreaterThan("abacab", "0.1.0"), true)
+}

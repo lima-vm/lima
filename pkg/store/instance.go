@@ -16,12 +16,14 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/coreos/go-semver/semver"
 	"github.com/docker/go-units"
 	hostagentclient "github.com/lima-vm/lima/pkg/hostagent/api/client"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/lima-vm/lima/pkg/textutil"
+	"github.com/sirupsen/logrus"
 )
 
 type Status = string
@@ -56,6 +58,7 @@ type Instance struct {
 	Config          *limayaml.LimaYAML `json:"config,omitempty"`
 	SSHAddress      string             `json:"sshAddress,omitempty"`
 	Protected       bool               `json:"protected"`
+	LimaVersion     string             `json:"limaVersion"`
 }
 
 func (inst *Instance) LoadYAML() (*limayaml.LimaYAML, error) {
@@ -166,6 +169,16 @@ func Inspect(instName string) (*Instance, error) {
 				inst.Message = message.String()
 			}
 		}
+	}
+
+	limaVersionFile := filepath.Join(instDir, filenames.LimaVersion)
+	if version, err := os.ReadFile(limaVersionFile); err == nil {
+		inst.LimaVersion = strings.TrimSpace(string(version))
+		if _, err = parseLimaVersion(inst.LimaVersion); err != nil {
+			logrus.Warnf("treating lima version %q from %q as very latest release", inst.LimaVersion, limaVersionFile)
+		}
+	} else if !errors.Is(err, os.ErrNotExist) {
+		inst.Errors = append(inst.Errors, err)
 	}
 	return inst, nil
 }
@@ -422,4 +435,37 @@ func (inst *Instance) Unprotect() error {
 	}
 	inst.Protected = false
 	return nil
+}
+
+// parseLimaVersion parses a Lima version string by removing the leading "v" character and
+// stripping everything from the first "-" forward (which are `git describe` artifacts and
+// not semver pre-release markers). So "v0.19.1-16-gf3dc6ed.m" will be parsed as "0.19.1".
+func parseLimaVersion(version string) (*semver.Version, error) {
+	version = strings.TrimPrefix(version, "v")
+	version, _, _ = strings.Cut(version, "-")
+	return semver.NewVersion(version)
+}
+
+// LimaVersionGreaterThan returns true if the Lima version used to create an instance is greater
+// than a specific older version. Always returns false if the Lima version is the empty string.
+// Unparsable lima versions (like SHA1 commit ids) are treated as the latest version and return true.
+// limaVersion is a `github describe` string, not a semantic version. So "0.19.1-16-gf3dc6ed.m"
+// will be considered greater than "0.19.1".
+func LimaVersionGreaterThan(limaVersion, oldVersion string) bool {
+	if limaVersion == "" {
+		return false
+	}
+	version, err := parseLimaVersion(limaVersion)
+	if err != nil {
+		return true
+	}
+	switch version.Compare(*semver.New(oldVersion)) {
+	case -1:
+		return false
+	case +1:
+		return true
+	case 0:
+		return strings.Contains(limaVersion, "-")
+	}
+	panic("unreachable")
 }
