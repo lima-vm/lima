@@ -35,7 +35,7 @@ name="lima-guestagent"
 description="Forward ports to the lima-hostagent"
 
 command=${LIMA_CIDATA_GUEST_INSTALL_PREFIX}/bin/lima-guestagent
-command_args="daemon --vsock-port "${LIMA_CIDATA_VSOCK_PORT}" --virtio-port "${LIMA_CIDATA_VIRTIO_PORT}""
+command_args="daemon --vsock-port \"${LIMA_CIDATA_VSOCK_PORT}\" --virtio-port \"${LIMA_CIDATA_VIRTIO_PORT}\""
 command_background=true
 pidfile="/run/lima-guestagent.pid"
 EOF
