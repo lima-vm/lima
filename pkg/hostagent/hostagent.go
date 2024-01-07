@@ -581,6 +581,12 @@ sudo chown -R "${USER}" /run/host-services`
 		})
 	}
 
+	if *a.instConfig.VMType == limatype.EXT {
+		if err := a.runProvisionScripts(); err != nil {
+			return err
+		}
+	}
+
 	staticPortForwards := a.separateStaticPortForwards()
 	a.addStaticPortForwardsFromList(ctx, staticPortForwards)
 
