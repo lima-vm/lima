@@ -516,6 +516,11 @@ sudo chown -R "${USER}" /run/host-services`
 			return errors.Join(unlockErrs...)
 		})
 	}
+	if *a.y.VMType == limayaml.EXT {
+		if err := a.runProvisionScripts(); err != nil {
+			return err
+		}
+	}
 	if !*a.y.Plain {
 		go a.watchGuestAgentEvents(ctx)
 	}
