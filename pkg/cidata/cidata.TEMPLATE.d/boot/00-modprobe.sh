@@ -13,6 +13,6 @@ for f in \
 	overlay; do
 	echo "Loading kernel module \"$f\""
 	if ! modprobe "$f"; then
-		echo >&2 "Faild to load \"$f\" (negligible if it is built-in the kernel)"
+		echo >&2 "Failed to load \"$f\" (negligible if it is built-in the kernel)"
 	fi
 done

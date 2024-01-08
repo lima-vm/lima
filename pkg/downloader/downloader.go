@@ -75,7 +75,7 @@ func WithCacheDir(cacheDir string) Opt {
 	}
 }
 
-// WithDecription adds a user description of the download.
+// WithDescription adds a user description of the download.
 func WithDescription(description string) Opt {
 	return func(o *options) error {
 		o.description = description

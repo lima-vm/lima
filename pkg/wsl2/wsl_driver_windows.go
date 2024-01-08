@@ -149,7 +149,7 @@ func (l *LimaWslDriver) CanRunGUI() bool {
 }
 
 func (l *LimaWslDriver) RunGUI() error {
-	return fmt.Errorf("RunGUI is not support for the given driver '%s' and diplay '%s'", "wsl", *l.Yaml.Video.Display)
+	return fmt.Errorf("RunGUI is not supported for the given driver '%s' and display '%s'", "wsl", *l.Yaml.Video.Display)
 }
 
 func (l *LimaWslDriver) Stop(ctx context.Context) error {
