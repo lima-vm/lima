@@ -166,6 +166,11 @@ caCerts:
   #   YOUR-ORGS-TRUSTED-CA-CERT-HERE
   #   -----END CERTIFICATE-----
 
+# Upgrade the instance on boot
+# Reboot after upgrade if required
+# 🟢 Builtin default: false
+upgradePackages: null
+
 containerd:
   # Enable system-wide (aka rootful)  containerd and its dependencies (BuildKit, Stargz Snapshotter)
   # Note that `nerdctl.lima` only works in rootless mode; you have to use `lima sudo nerdctl ...`

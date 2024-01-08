@@ -23,6 +23,7 @@ type LimaYAML struct {
 	Audio              Audio           `yaml:"audio,omitempty" json:"audio,omitempty"`
 	Video              Video           `yaml:"video,omitempty" json:"video,omitempty"`
 	Provision          []Provision     `yaml:"provision,omitempty" json:"provision,omitempty"`
+	UpgradePackages    *bool           `yaml:"upgradePackages,omitempty" json:"upgradePackages,omitempty"`
 	Containerd         Containerd      `yaml:"containerd,omitempty" json:"containerd,omitempty"`
 	GuestInstallPrefix *string         `yaml:"guestInstallPrefix,omitempty" json:"guestInstallPrefix,omitempty"`
 	Probes             []Probe         `yaml:"probes,omitempty" json:"probes,omitempty"`

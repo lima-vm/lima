@@ -73,6 +73,7 @@ func TestFillDefault(t *testing.T) {
 		Memory:             ptr.Of(defaultMemoryAsString()),
 		Disk:               ptr.Of(defaultDiskSizeAsString()),
 		GuestInstallPrefix: ptr.Of(defaultGuestInstallPrefix()),
+		UpgradePackages:    ptr.Of(false),
 		Containerd: Containerd{
 			System:   ptr.Of(false),
 			User:     ptr.Of(true),
@@ -309,6 +310,7 @@ func TestFillDefault(t *testing.T) {
 			{Name: "data"},
 		},
 		GuestInstallPrefix: ptr.Of("/opt"),
+		UpgradePackages:    ptr.Of(true),
 		Containerd: Containerd{
 			System: ptr.Of(true),
 			User:   ptr.Of(false),
@@ -498,6 +500,7 @@ func TestFillDefault(t *testing.T) {
 			{Name: "test"},
 		},
 		GuestInstallPrefix: ptr.Of("/usr"),
+		UpgradePackages:    ptr.Of(true),
 		Containerd: Containerd{
 			System: ptr.Of(true),
 			User:   ptr.Of(false),

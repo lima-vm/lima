@@ -5,6 +5,12 @@ growpart:
   mode: auto
   devices: ['/']
 
+{{- if .UpgradePackages }}
+package_update: true
+package_upgrade: true
+package_reboot_if_required: true
+{{- end }}
+
 {{- if or (eq .MountType "9p") (eq .MountType "virtiofs") }}
 {{- if .Mounts }}
 mounts:
