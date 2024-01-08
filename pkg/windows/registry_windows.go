@@ -13,7 +13,7 @@ import (
 
 const (
 	guestCommunicationsPrefix = `SOFTWARE\Microsoft\Windows NT\CurrentVersion\Virtualization\GuestCommunicationServices`
-	MagicVSOCKSuffix          = "-facb-11e6-bd58-64006a7986d3"
+	magicVSOCKSuffix          = "-facb-11e6-bd58-64006a7986d3"
 	wslDistroInfoPrefix       = `SOFTWARE\Microsoft\Windows\CurrentVersion\Lxss`
 )
 
@@ -34,7 +34,7 @@ func AddVSockRegistryKey(port int) error {
 		return fmt.Errorf("port %q in use", port)
 	}
 
-	vsockKeyPath := fmt.Sprintf(`%x%s`, port, MagicVSOCKSuffix)
+	vsockKeyPath := fmt.Sprintf(`%x%s`, port, magicVSOCKSuffix)
 	vSockKey, _, err := registry.CreateKey(
 		rootKey,
 		vsockKeyPath,
@@ -61,7 +61,7 @@ func RemoveVSockRegistryKey(port int) error {
 	}
 	defer rootKey.Close()
 
-	vsockKeyPath := fmt.Sprintf(`%x%s`, port, MagicVSOCKSuffix)
+	vsockKeyPath := fmt.Sprintf(`%x%s`, port, magicVSOCKSuffix)
 	if err := registry.DeleteKey(rootKey, vsockKeyPath); err != nil {
 		return fmt.Errorf(
 			"failed to create new key (%s%s): %w",
@@ -215,7 +215,7 @@ func getUsedPorts(key registry.Key) ([]int, error) {
 
 	out := []int{}
 	for _, k := range keys {
-		split := strings.Split(k, MagicVSOCKSuffix)
+		split := strings.Split(k, magicVSOCKSuffix)
 		if len(split) == 2 {
 			i, err := strconv.Atoi(split[0])
 			if err != nil {

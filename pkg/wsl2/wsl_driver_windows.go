@@ -6,11 +6,13 @@ import (
 	"net"
 	"regexp"
 
+	"github.com/Microsoft/go-winio"
+	"github.com/Microsoft/go-winio/pkg/guid"
 	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/reflectutil"
 	"github.com/lima-vm/lima/pkg/store"
-	"github.com/mdlayher/vsock"
+	"github.com/lima-vm/lima/pkg/windows"
 	"github.com/sirupsen/logrus"
 )
 
@@ -173,6 +175,21 @@ func (l *LimaWslDriver) Unregister(ctx context.Context) error {
 	return nil
 }
 
-func (l *LimaWslDriver) GuestAgentConn(_ context.Context) (net.Conn, error) {
-	return vsock.Dial(2, uint32(l.VSockPort), nil)
+// GuestAgentConn returns the guest agent connection, or nil (if forwarded by ssh).
+// As of 08-01-2024, github.com/mdlayher/vsock does not natively support vsock on
+// Windows, so use the winio library to create the connection.
+func (l *LimaWslDriver) GuestAgentConn(ctx context.Context) (net.Conn, error) {
+	VMIDStr, err := windows.GetInstanceVMID(fmt.Sprintf("lima-%s", l.Instance.Name))
+	if err != nil {
+		return nil, err
+	}
+	VMIDGUID, err := guid.FromString(VMIDStr)
+	if err != nil {
+		return nil, err
+	}
+	sockAddr := &winio.HvsockAddr{
+		VMID:      VMIDGUID,
+		ServiceID: winio.VsockServiceID(uint32(l.VSockPort)),
+	}
+	return winio.Dial(ctx, sockAddr)
 }
