@@ -76,7 +76,7 @@ func isColimaWrapper__useThisFunctionOnlyForPrintingHints__(qExe string) bool {
 
 // AskToSignIfNotSignedProperly asks to sign the QEMU binary with the "com.apple.security.hypervisor" entitlement.
 //
-// On Homebrew, QEMU binaries are usually already signed, but Homebrew's signing infrastructure is broken for Intel as of Augest 2023.
+// On Homebrew, QEMU binaries are usually already signed, but Homebrew's signing infrastructure is broken for Intel as of August 2023.
 // https://github.com/lima-vm/lima/issues/1742
 func AskToSignIfNotSignedProperly(qExe string) {
 	if isSignedErr := IsSigned(qExe); isSignedErr != nil {
