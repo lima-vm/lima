@@ -10,7 +10,7 @@
 # NAME       STATUS   ROLES                  AGE   VERSION
 # lima-k8s   Ready    control-plane,master   44s   v1.22.3
 
-# This template requires Lima v0.7.0 or later.
+# This template requires Lima v0.20.0 or later.
 images:
 # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
 - location: "https://cloud-images.ubuntu.com/releases/22.04/release-20231211/ubuntu-22.04-server-cloudimg-amd64.img"
@@ -131,9 +131,9 @@ provision:
     #!/bin/bash
     set -eux -o pipefail
     export KUBECONFIG=/etc/kubernetes/admin.conf
-    mkdir -p ${LIMA_CIDATA_HOME}/.kube
-    cp -f $KUBECONFIG ${LIMA_CIDATA_HOME}/.kube/config
-    chown -R ${LIMA_CIDATA_USER} ${LIMA_CIDATA_HOME}/.kube
+    mkdir -p {{.Home}}/.kube
+    cp -f $KUBECONFIG {{.Home}}/.kube/config
+    chown -R {{.User}} {{.Home}}/.kube
 probes:
 - description: "kubeadm to be installed"
   script: |

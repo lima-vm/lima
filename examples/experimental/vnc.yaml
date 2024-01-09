@@ -1,5 +1,5 @@
 # A template to run ubuntu using display: vnc
-# This template requires Lima v0.15.0 or later.
+# This template requires Lima v0.20.0 or later.
 images:
 # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
 - location: "https://cloud-images.ubuntu.com/releases/23.10/release-20231011/ubuntu-23.10-server-cloudimg-amd64.img"
@@ -33,7 +33,7 @@ provision:
     export DEBIAN_FRONTEND=noninteractive
     # x-terminal-emulator x-session-manager x-window-manager
     apt-get install -y xorg xterm openbox hsetroot tint2 slim
-    printf "auto_login yes\ndefault_user ${LIMA_CIDATA_USER}\n" >>/etc/slim.conf
+    printf "auto_login yes\ndefault_user {{.User}}\n" >>/etc/slim.conf
     # configure some nice lima green, set up panel and apps
     printf "hsetroot -solid \"#32CD32\" &\ntint2 &\n" >>/etc/xdg/openbox/autostart
     sed -i 's/Clearlooks/Clearlooks-Olive/' /etc/xdg/openbox/rc.xml # go for green
