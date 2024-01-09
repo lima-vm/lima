@@ -427,6 +427,11 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		if provision.Mode == ProvisionModeDependency && provision.SkipDefaultDependencyResolution == nil {
 			provision.SkipDefaultDependencyResolution = ptr.Of(false)
 		}
+		if out, err := executeGuestTemplate(provision.Script); err == nil {
+			provision.Script = out.String()
+		} else {
+			logrus.WithError(err).Warnf("Couldn't process provisioning script %q as a template", provision.Script)
+		}
 	}
 
 	if y.GuestInstallPrefix == nil {
@@ -795,7 +800,7 @@ func executeHostTemplate(format, instDir string) (bytes.Buffer, error) {
 			"User": user.Username,
 
 			"Instance": filepath.Base(instDir), // DEPRECATED, use `{{.Name}}`
-			"LimaHome": limaHome,               // DEPRECATED, (use `Dir` instead of `{{.LimaHome}}/{{.Instance}}`
+			"LimaHome": limaHome,               // DEPRECATED, use `{{.Dir}}` instead of `{{.LimaHome}}/{{.Instance}}`
 		}
 		var out bytes.Buffer
 		if err := tmpl.Execute(&out, data); err == nil {
