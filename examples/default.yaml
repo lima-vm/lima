@@ -184,6 +184,7 @@ containerd:
 
 # Provisioning scripts need to be idempotent because they might be called
 # multiple times, e.g. when the host VM is being restarted.
+# The scripts can use the following template variables: {{.Home}}, {{.UID}}, and {{.User}}
 # 🟢 Builtin default: null
 # provision:
 # # `system` is executed with the root privilege
