@@ -3,6 +3,7 @@ package osutil
 import (
 	"fmt"
 	"io/fs"
+	"os"
 	"syscall"
 
 	"golang.org/x/sys/windows"
@@ -35,4 +36,15 @@ func SysKill(pid int, _ Signal) error {
 
 func Ftruncate(_ int, _ int64) (err error) {
 	return fmt.Errorf("unimplemented")
+}
+
+func SignalName(sig os.Signal) string {
+	switch sig {
+	case syscall.SIGINT:
+		return "SIGINT"
+	case syscall.SIGTERM:
+		return "SIGTERM"
+	default:
+		return fmt.Sprintf("Signal(%d)", sig)
+	}
 }
