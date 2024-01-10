@@ -187,6 +187,9 @@ func Validate(y LimaYAML, warn bool) error {
 			return fmt.Errorf("field `provision[%d].mode` must one of %q, %q, %q, or %q",
 				i, ProvisionModeSystem, ProvisionModeUser, ProvisionModeBoot, ProvisionModeDependency)
 		}
+		if strings.Contains(p.Script, "LIMA_CIDATA") {
+			logrus.Warn("provisioning scripts should not reference the LIMA_CIDATA variables")
+		}
 	}
 	needsContainerdArchives := (y.Containerd.User != nil && *y.Containerd.User) || (y.Containerd.System != nil && *y.Containerd.System)
 	if needsContainerdArchives && len(y.Containerd.Archives) == 0 {
