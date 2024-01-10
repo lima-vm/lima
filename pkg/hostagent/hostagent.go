@@ -128,7 +128,8 @@ func New(instName string, stdout io.Writer, sigintCh chan os.Signal, opts ...Opt
 		}
 		vSockPort = port
 	} else if *y.VMType == limayaml.QEMU {
-		virtioPort = filenames.VirtioPort
+		// virtserialport doesn't seem to work reliably: https://github.com/lima-vm/lima/issues/2064
+		virtioPort = "" // filenames.VirtioPort
 	}
 
 	if err := cidata.GenerateISO9660(inst.Dir, instName, y, udpDNSLocalPort, tcpDNSLocalPort, o.nerdctlArchive, vSockPort, virtioPort); err != nil {
