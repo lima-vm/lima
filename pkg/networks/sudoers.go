@@ -102,7 +102,7 @@ func (config *YAML) VerifySudoAccess(sudoersFile string) error {
 			}
 			logrus.Debugf("%q does not exist; passwordLessSudo error: %s", sudoersFile, err)
 		}
-		return fmt.Errorf("can't read %q: %s (Hint: %s)", sudoersFile, err, hint)
+		return fmt.Errorf("can't read %q: %w: (Hint: %s)", sudoersFile, err, hint)
 	}
 	sudoers, err := Sudoers()
 	if err != nil {

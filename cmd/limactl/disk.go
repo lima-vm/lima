@@ -264,7 +264,7 @@ func diskDeleteAction(cmd *cobra.Command, args []string) error {
 		}
 
 		if err := deleteDisk(disk); err != nil {
-			return fmt.Errorf("failed to delete disk %q: %v", diskName, err)
+			return fmt.Errorf("failed to delete disk %q: %w", diskName, err)
 		}
 		logrus.Infof("Deleted %q (%q)", diskName, disk.Dir)
 	}

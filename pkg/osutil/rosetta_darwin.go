@@ -1,6 +1,7 @@
 package osutil
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/sirupsen/logrus"
@@ -11,7 +12,7 @@ func IsBeingRosettaTranslated() bool {
 	ret, err := unix.SysctlUint32("sysctl.proc_translated")
 	if err != nil {
 		const fallback = false
-		if err == unix.ENOENT {
+		if errors.Is(err, unix.ENOENT) {
 			return false
 		}
 
