@@ -12,7 +12,7 @@ import (
 	"golang.org/x/text/transform"
 )
 
-// ReadAtMaximum reands n at maximum.
+// ReadAtMaximum reads n at maximum.
 func ReadAtMaximum(r io.Reader, n int64) ([]byte, error) {
 	lr := &io.LimitedReader{
 		R: r,
