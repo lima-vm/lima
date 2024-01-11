@@ -189,7 +189,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 			return nil, errors.New("must pass instance name with --name when reading template from stdin")
 		}
 		st.yBytes, err = io.ReadAll(os.Stdin)
-		if err != nil && err != io.EOF {
+		if err != nil {
 			return nil, fmt.Errorf("unexpected error reading stdin: %w", err)
 		}
 		// see if the tty was set explicitly or not
@@ -322,7 +322,7 @@ func createInstance(ctx context.Context, st *creatorState, saveBrokenEditorBuffe
 		}
 		rejectedYAML := "lima.REJECTED.yaml"
 		if writeErr := os.WriteFile(rejectedYAML, st.yBytes, 0o644); writeErr != nil {
-			return nil, fmt.Errorf("the YAML is invalid, attempted to save the buffer as %q but failed: %v: %w", rejectedYAML, writeErr, err)
+			return nil, fmt.Errorf("the YAML is invalid, attempted to save the buffer as %q but failed: %w: %w", rejectedYAML, writeErr, err)
 		}
 		return nil, fmt.Errorf("the YAML is invalid, saved the buffer as %q: %w", rejectedYAML, err)
 	}
@@ -374,7 +374,7 @@ func chooseNextCreatorState(st *creatorState, yq string) (*creatorState, error) 
 		}
 		ans, err := uiutil.Select(message, options)
 		if err != nil {
-			if err == uiutil.InterruptErr {
+			if errors.Is(err, uiutil.InterruptErr) {
 				logrus.Fatal("Interrupted by user")
 			}
 			logrus.WithError(err).Warn("Failed to open TUI")

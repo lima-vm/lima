@@ -60,11 +60,7 @@ func Errors(errs []error) error {
 		if errors.Is(err, ErrSkipped) {
 			logrus.Debug(err)
 		} else {
-			if finalErr == nil {
-				finalErr = err
-			} else {
-				finalErr = fmt.Errorf("%v, %w", finalErr, err)
-			}
+			finalErr = errors.Join(finalErr, err)
 		}
 	}
 	if len(errs) > 0 && finalErr == nil {

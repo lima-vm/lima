@@ -455,7 +455,7 @@ func attachDisks(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfigura
 		diskName := d.Name
 		disk, err := store.InspectDisk(diskName)
 		if err != nil {
-			return fmt.Errorf("failed to run load disk %q: %q", diskName, err)
+			return fmt.Errorf("failed to run load disk %q: %w", diskName, err)
 		}
 
 		if disk.Instance != "" {
@@ -464,7 +464,7 @@ func attachDisks(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfigura
 		logrus.Infof("Mounting disk %q on %q", diskName, disk.MountPoint)
 		err = disk.Lock(driver.Instance.Dir)
 		if err != nil {
-			return fmt.Errorf("failed to run lock disk %q: %q", diskName, err)
+			return fmt.Errorf("failed to run lock disk %q: %w", diskName, err)
 		}
 		extraDiskPath := filepath.Join(disk.Dir, filenames.DataDisk)
 		// ConvertToRaw is a NOP if no conversion is needed

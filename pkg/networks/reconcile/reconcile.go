@@ -227,7 +227,7 @@ func stopNetwork(config *networks.YAML, name string) error {
 	}
 	if isUsernet {
 		if err := usernet.Stop(name); err != nil {
-			return fmt.Errorf("failed to stop usernet %q: %v", name, err)
+			return fmt.Errorf("failed to stop usernet %q: %w", name, err)
 		}
 		return nil
 	}
