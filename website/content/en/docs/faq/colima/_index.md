@@ -8,8 +8,8 @@ weight: 0
 [Colima](https://github.com/abiosoft/colima) is a third-party project
 that wraps Lima to provide an alternative user experience for launching containers.
 
-The key difference is that Colima launches Docker on Alpine VM by default,
-while Lima launches containerd on Ubuntu VM by default.
+The key difference is that Colima launches Docker by default,
+while Lima launches containerd by default.
 
 | Container  | Lima                              | Colima                              |
 |------------|-----------------------------------|-------------------------------------|
