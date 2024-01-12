@@ -23,6 +23,7 @@ import (
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/lima-vm/lima/pkg/templatestore"
 	"github.com/lima-vm/lima/pkg/uiutil"
+	"github.com/lima-vm/lima/pkg/version"
 	"github.com/lima-vm/lima/pkg/yqutil"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -330,6 +331,9 @@ func createInstance(ctx context.Context, st *creatorState, saveBrokenEditorBuffe
 		return nil, err
 	}
 	if err := os.WriteFile(filePath, st.yBytes, 0o644); err != nil {
+		return nil, err
+	}
+	if err := os.WriteFile(filepath.Join(instDir, filenames.LimaVersion), []byte(version.Version), 0o444); err != nil {
 		return nil, err
 	}
 
