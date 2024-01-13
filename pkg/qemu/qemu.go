@@ -618,8 +618,15 @@ func Cmdline(cfg Config) (exe string, args []string, err error) {
 			}
 
 			if disk.Instance != "" {
-				logrus.Errorf("could not attach disk %q, in use by instance %q", diskName, disk.Instance)
-				return "", nil, err
+				if disk.InstanceDir != cfg.InstanceDir {
+					logrus.Errorf("could not attach disk %q, in use by instance %q", diskName, disk.Instance)
+					return "", nil, err
+				}
+				err = disk.Unlock()
+				if err != nil {
+					logrus.Errorf("could not unlock disk %q to reuse in the same instance %q", diskName, cfg.Name)
+					return "", nil, err
+				}
 			}
 			logrus.Infof("Mounting disk %q on %q", diskName, disk.MountPoint)
 			err = disk.Lock(cfg.InstanceDir)
