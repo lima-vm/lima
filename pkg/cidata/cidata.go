@@ -324,7 +324,7 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 		return err
 	}
 	if ignition != nil {
-		if err := os.WriteFile(filepath.Join(instDir, filenames.Ignition), ignition, 0600); err != nil {
+		if err := os.WriteFile(filepath.Join(instDir, filenames.Ignition), ignition, 0o600); err != nil {
 			return err
 		}
 	}
