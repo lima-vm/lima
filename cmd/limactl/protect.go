@@ -18,6 +18,7 @@ The instance is not being protected against removal via '/bin/rm', Finder, etc.`
 		Args:              WrapArgsError(cobra.MinimumNArgs(1)),
 		RunE:              protectAction,
 		ValidArgsFunction: protectBashComplete,
+		GroupID:           "instance",
 	}
 	return protectCommand
 }

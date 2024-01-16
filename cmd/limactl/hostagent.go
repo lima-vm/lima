@@ -20,11 +20,12 @@ import (
 
 func newHostagentCommand() *cobra.Command {
 	hostagentCommand := &cobra.Command{
-		Use:    "hostagent INSTANCE",
-		Short:  "run hostagent",
-		Args:   WrapArgsError(cobra.ExactArgs(1)),
-		RunE:   hostagentAction,
-		Hidden: true,
+		Use:     "hostagent INSTANCE",
+		Short:   "run hostagent",
+		Args:    WrapArgsError(cobra.ExactArgs(1)),
+		RunE:    hostagentAction,
+		Hidden:  true,
+		GroupID: "instance",
 	}
 	hostagentCommand.Flags().StringP("pidfile", "p", "", "write pid to file")
 	hostagentCommand.Flags().String("socket", "", "hostagent socket")

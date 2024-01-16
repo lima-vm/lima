@@ -68,6 +68,7 @@ $ cat template.yaml | limactl create --name=local -
 		Args:              WrapArgsError(cobra.MaximumNArgs(1)),
 		ValidArgsFunction: createBashComplete,
 		RunE:              createAction,
+		GroupID:           "instance",
 	}
 	registerCreateFlags(createCommand, "")
 	return createCommand
@@ -90,6 +91,7 @@ See the examples in 'limactl create --help'.
 		Args:              WrapArgsError(cobra.MaximumNArgs(1)),
 		ValidArgsFunction: startBashComplete,
 		RunE:              startAction,
+		GroupID:           "instance",
 	}
 	registerCreateFlags(startCommand, "[limactl create] ")
 	startCommand.Flags().Duration("timeout", start.DefaultWatchHostAgentEventsTimeout, "duration to wait for the instance to be running before timing out")

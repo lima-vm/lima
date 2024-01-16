@@ -40,6 +40,7 @@ func newApp() *cobra.Command {
 		Short:   "Lima: Linux virtual machines",
 		Version: strings.TrimPrefix(version.Version, "v"),
 		Example: fmt.Sprintf(`  Start the default instance:
+
   $ limactl start
 
   Open a shell:
@@ -95,29 +96,36 @@ func newApp() *cobra.Command {
 		}
 		return nil
 	}
+	rootCmd.AddGroup(&cobra.Group{ID: "management", Title: "Management Commands:"})
+	rootCmd.AddGroup(&cobra.Group{ID: "instance", Title: "Instance Commands:"})
+	rootCmd.AddGroup(&cobra.Group{ID: "helper", Title: "Helper Commands:"})
 	rootCmd.AddCommand(
+		// management
+		newListCommand(),
+		newInfoCommand(),
+		newUsernetCommand(),
+		newDiskCommand(),
+		newCopyCommand(),
+		newPruneCommand(),
+		// instance
 		newCreateCommand(),
+		newDeleteCommand(),
+		newEditCommand(),
 		newStartCommand(),
 		newStopCommand(),
 		newShellCommand(),
-		newCopyCommand(),
-		newListCommand(),
-		newDeleteCommand(),
-		newValidateCommand(),
-		newSudoersCommand(),
-		newPruneCommand(),
-		newHostagentCommand(),
-		newInfoCommand(),
 		newShowSSHCommand(),
-		newDebugCommand(),
-		newEditCommand(),
+		newHostagentCommand(),
 		newFactoryResetCommand(),
-		newDiskCommand(),
-		newUsernetCommand(),
-		newGenDocCommand(),
 		newSnapshotCommand(),
 		newProtectCommand(),
 		newUnprotectCommand(),
+		// helper
+		newValidateCommand(),
+		newSudoersCommand(),
+		// development
+		newDebugCommand(),
+		newGenDocCommand(),
 	)
 	return rootCmd
 }

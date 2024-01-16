@@ -10,10 +10,11 @@ import (
 
 func newInfoCommand() *cobra.Command {
 	infoCommand := &cobra.Command{
-		Use:   "info",
-		Short: "Show diagnostic information",
-		Args:  WrapArgsError(cobra.NoArgs),
-		RunE:  infoAction,
+		Use:     "info",
+		Short:   "Show diagnostic information",
+		Args:    WrapArgsError(cobra.NoArgs),
+		RunE:    infoAction,
+		GroupID: "management",
 	}
 	return infoCommand
 }

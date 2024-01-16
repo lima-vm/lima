@@ -25,6 +25,7 @@ func newStopCommand() *cobra.Command {
 		Args:              WrapArgsError(cobra.MaximumNArgs(1)),
 		RunE:              stopAction,
 		ValidArgsFunction: stopBashComplete,
+		GroupID:           "instance",
 	}
 
 	stopCmd.Flags().BoolP("force", "f", false, "force stop the instance")

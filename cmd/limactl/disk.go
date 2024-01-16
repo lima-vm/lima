@@ -27,11 +27,12 @@ func newDiskCommand() *cobra.Command {
 
   Delete a disk:
   $ limactl disk delete DISK
-  
+
   Resize a disk:
   $ limactl disk resize DISK --size SIZE`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
+		GroupID:       "management",
 	}
 	diskCommand.AddCommand(
 		newDiskCreateCommand(),

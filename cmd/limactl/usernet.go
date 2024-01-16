@@ -12,11 +12,12 @@ import (
 
 func newUsernetCommand() *cobra.Command {
 	hostagentCommand := &cobra.Command{
-		Use:    "usernet",
-		Short:  "run usernet",
-		Args:   cobra.ExactArgs(0),
-		RunE:   usernetAction,
-		Hidden: true,
+		Use:     "usernet",
+		Short:   "run usernet",
+		Args:    cobra.ExactArgs(0),
+		RunE:    usernetAction,
+		Hidden:  true,
+		GroupID: "management",
 	}
 	hostagentCommand.Flags().StringP("pidfile", "p", "", "write pid to file")
 	hostagentCommand.Flags().StringP("endpoint", "e", "", "exposes usernet api(s) on this endpoint")

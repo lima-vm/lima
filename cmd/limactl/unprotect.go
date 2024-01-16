@@ -16,6 +16,7 @@ func newUnprotectCommand() *cobra.Command {
 		Args:              WrapArgsError(cobra.MinimumNArgs(1)),
 		RunE:              unprotectAction,
 		ValidArgsFunction: unprotectBashComplete,
+		GroupID:           "instance",
 	}
 	return unprotectCommand
 }

@@ -21,6 +21,7 @@ func newDeleteCommand() *cobra.Command {
 		Args:              WrapArgsError(cobra.MinimumNArgs(1)),
 		RunE:              deleteAction,
 		ValidArgsFunction: deleteBashComplete,
+		GroupID:           "instance",
 	}
 	deleteCommand.Flags().BoolP("force", "f", false, "forcibly kill the processes")
 	return deleteCommand
