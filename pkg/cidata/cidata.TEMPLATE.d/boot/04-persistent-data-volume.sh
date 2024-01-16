@@ -90,6 +90,14 @@ if [ "$(awk '$2 == "/" {print $3}' /proc/mounts)" == "tmpfs" ]; then
 	done
 	# Make sure to re-mount any mount points under /tmp
 	mount -a
+	# The boot iso is sometimes mounted as /media/cdrom but more often as /media/sr0.
+	# This can change on each reboot.
+	for MEDIA in cdrom sr0; do
+		if [ -d "/media/${MEDIA}/apks" ]; then
+			sed -i "s#^/media/.*/apks#/media/$MEDIA/apks#" /etc/apk/repositories
+			break
+		fi
+	done
 	# Reinstall packages from /mnt/data/apk/cache into the RAM disk
 	apk fix --no-network
 fi
