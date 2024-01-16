@@ -90,4 +90,6 @@ if [ "$(awk '$2 == "/" {print $3}' /proc/mounts)" == "tmpfs" ]; then
 	done
 	# Make sure to re-mount any mount points under /tmp
 	mount -a
+	# Reinstall packages from /mnt/data/apk/cache into the RAM disk
+	apk fix --no-network
 fi
