@@ -136,8 +136,10 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 		virtioPort = "" // filenames.VirtioPort
 	}
 
-	if err := cidata.GenerateISO9660(inst.Dir, instName, y, udpDNSLocalPort, tcpDNSLocalPort, o.nerdctlArchive, vSockPort, virtioPort); err != nil {
-		return nil, err
+	if *y.VMType != limayaml.EXT {
+		if err := cidata.GenerateISO9660(inst.Dir, instName, y, udpDNSLocalPort, tcpDNSLocalPort, o.nerdctlArchive, vSockPort, virtioPort); err != nil {
+			return nil, err
+		}
 	}
 
 	sshOpts, err := sshutil.SSHOpts(inst.Dir, *y.SSH.LoadDotSSHPubKeys, *y.SSH.Address, *y.SSH.ForwardAgent, *y.SSH.ForwardX11, *y.SSH.ForwardX11Trusted)
