@@ -24,6 +24,7 @@ func newGuestInstallCommand() *cobra.Command {
 		ValidArgsFunction: cobra.NoFileCompletions,
 		Hidden:            true,
 	}
+	guestInstallCommand.Flags().BoolP("rsync", "", false, "use rsync")
 	return guestInstallCommand
 }
 
@@ -36,6 +37,11 @@ func runCmd(name string, flags []string, args ...string) error {
 }
 
 func guestInstallAction(cmd *cobra.Command, args []string) error {
+	rsync, err := cmd.Flags().GetBool("rsync")
+	if err != nil {
+		return err
+	}
+
 	instName := DefaultInstanceName
 	if len(args) > 0 {
 		instName = args[0]
@@ -55,6 +61,10 @@ func guestInstallAction(cmd *cobra.Command, args []string) error {
 
 	scpExe := "scp"
 	scpFlags := sshFlags
+	if rsync {
+		scpExe = "rsync"
+		scpFlags = []string{"-e", "ssh -F " + sshConfig, "--progress"}
+	}
 
 	y, err := inst.LoadYAML()
 	if err != nil {
