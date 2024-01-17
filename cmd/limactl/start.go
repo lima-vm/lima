@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/containerd/containerd/identifiers"
@@ -92,6 +93,9 @@ See the examples in 'limactl create --help'.
 		RunE:              startAction,
 	}
 	registerCreateFlags(startCommand, "[limactl create] ")
+	if runtime.GOOS != "windows" {
+		startCommand.Flags().Bool("foreground", false, "run the hostagent in the foreground")
+	}
 	startCommand.Flags().Duration("timeout", start.DefaultWatchHostAgentEventsTimeout, "duration to wait for the instance to be running before timing out")
 	return startCommand
 }
@@ -510,6 +514,14 @@ func startAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	launchHostAgentForeground := false
+	if runtime.GOOS != "windows" {
+		foreground, err := cmd.Flags().GetBool("foreground")
+		if err != nil {
+			return err
+		}
+		launchHostAgentForeground = foreground
+	}
 	timeout, err := cmd.Flags().GetDuration("timeout")
 	if err != nil {
 		return err
@@ -518,7 +530,7 @@ func startAction(cmd *cobra.Command, args []string) error {
 		ctx = start.WithWatchHostAgentTimeout(ctx, timeout)
 	}
 
-	return start.Start(ctx, inst)
+	return start.Start(ctx, inst, launchHostAgentForeground)
 }
 
 func createBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {

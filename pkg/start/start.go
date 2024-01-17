@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"syscall"
 	"text/template"
 	"time"
 
@@ -19,6 +20,7 @@ import (
 	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/qemu"
 	"github.com/lima-vm/lima/pkg/qemu/entitlementutil"
+	"github.com/mattn/go-isatty"
 
 	"github.com/lima-vm/lima/pkg/downloader"
 	"github.com/lima-vm/lima/pkg/fileutils"
@@ -115,7 +117,7 @@ func Prepare(ctx context.Context, inst *store.Instance) (*Prepared, error) {
 
 // Start starts the instance.
 // Start calls Prepare by itself, so you do not need to call Prepare manually before calling Start.
-func Start(ctx context.Context, inst *store.Instance) error {
+func Start(ctx context.Context, inst *store.Instance, launchHostAgentForeground bool) error {
 	haPIDPath := filepath.Join(inst.Dir, filenames.HostAgentPID)
 	if _, err := os.Stat(haPIDPath); !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("instance %q seems running (hint: remove %q if the instance is not actually running)", inst.Name, haPIDPath)
@@ -194,7 +196,29 @@ func Start(ctx context.Context, inst *store.Instance) error {
 
 	begin := time.Now() // used for logrus propagation
 
-	if err := haCmd.Start(); err != nil {
+	if launchHostAgentForeground {
+		logrus.Info("Running the host agent in the foreground")
+		if isatty.IsTerminal(os.Stdin.Fd()) || isatty.IsCygwinTerminal(os.Stdin.Fd()) {
+			// Write message to standard log files to avoid confusing users
+			message := "This log file is not used because `limactl start` was launched in the terminal with the `--foreground` option."
+			if _, err := haStdoutW.WriteString(message); err != nil {
+				return err
+			}
+			if _, err := haStderrW.WriteString(message); err != nil {
+				return err
+			}
+		} else {
+			if err := osutil.Dup2(int(haStdoutW.Fd()), syscall.Stdout); err != nil {
+				return err
+			}
+			if err := osutil.Dup2(int(haStderrW.Fd()), syscall.Stderr); err != nil {
+				return err
+			}
+		}
+		if err := syscall.Exec(self, haCmd.Args, haCmd.Environ()); err != nil {
+			return err
+		}
+	} else if err := haCmd.Start(); err != nil {
 		return err
 	}
 
