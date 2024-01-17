@@ -19,6 +19,7 @@ import (
 	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/driverutil"
 	"github.com/lima-vm/lima/pkg/networks"
+	"github.com/lima-vm/lima/pkg/osutil"
 
 	"github.com/lima-vm/lima/pkg/cidata"
 	guestagentapi "github.com/lima-vm/lima/pkg/guestagent/api"
@@ -48,7 +49,7 @@ type HostAgent struct {
 	onClose         []func() error // LIFO
 
 	driver   driver.Driver
-	sigintCh chan os.Signal
+	signalCh chan os.Signal
 
 	eventEnc   *json.Encoder
 	eventEncMu sync.Mutex
@@ -79,7 +80,7 @@ func WithNerdctlArchive(s string) Opt {
 // New creates the HostAgent.
 //
 // stdout is for emitting JSON lines of Events.
-func New(instName string, stdout io.Writer, sigintCh chan os.Signal, opts ...Opt) (*HostAgent, error) {
+func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt) (*HostAgent, error) {
 	var o options
 	for _, f := range opts {
 		if err := f(&o); err != nil {
@@ -179,7 +180,7 @@ func New(instName string, stdout io.Writer, sigintCh chan os.Signal, opts ...Opt
 		sshConfig:         sshConfig,
 		portForwarder:     newPortForwarder(sshConfig, sshLocalPort, rules, inst.VMType),
 		driver:            limaDriver,
-		sigintCh:          sigintCh,
+		signalCh:          signalCh,
 		eventEnc:          json.NewEncoder(stdout),
 		vSockPort:         vSockPort,
 		virtioPort:        virtioPort,
@@ -418,8 +419,8 @@ func (a *HostAgent) startRoutinesAndWait(ctx context.Context, errCh chan error) 
 			}
 			err := a.driver.Stop(ctx)
 			return err
-		case <-a.sigintCh:
-			logrus.Info("Received SIGINT, shutting down the host agent")
+		case sig := <-a.signalCh:
+			logrus.Infof("Received %s, shutting down the host agent", osutil.SignalName(sig))
 			cancelHA()
 			if closeErr := a.close(); closeErr != nil {
 				logrus.WithError(closeErr).Warn("an error during shutting down the host agent")

@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"runtime"
 	"strconv"
+	"syscall"
 
 	"github.com/gorilla/mux"
 	"github.com/lima-vm/lima/pkg/hostagent"
@@ -67,8 +68,8 @@ func hostagentAction(cmd *cobra.Command, args []string) error {
 		defer runtime.UnlockOSThread()
 	}
 
-	sigintCh := make(chan os.Signal, 1)
-	signal.Notify(sigintCh, os.Interrupt)
+	signalCh := make(chan os.Signal, 1)
+	signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM)
 
 	stdout := &syncWriter{w: cmd.OutOrStdout()}
 	stderr := &syncWriter{w: cmd.ErrOrStderr()}
@@ -82,7 +83,7 @@ func hostagentAction(cmd *cobra.Command, args []string) error {
 	if nerdctlArchive != "" {
 		opts = append(opts, hostagent.WithNerdctlArchive(nerdctlArchive))
 	}
-	ha, err := hostagent.New(instName, stdout, sigintCh, opts...)
+	ha, err := hostagent.New(instName, stdout, signalCh, opts...)
 	if err != nil {
 		return err
 	}
