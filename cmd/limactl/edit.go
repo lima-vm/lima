@@ -122,7 +122,7 @@ func editAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	return start.Start(ctx, inst)
+	return start.Start(ctx, inst, false)
 }
 
 func askWhetherToStart() (bool, error) {
