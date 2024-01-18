@@ -148,7 +148,7 @@ jobs:
       with:
         go-version: 1.21.x
     - name: Cache ~/Library/Caches/lima/download
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/Library/Caches/lima/download
         # hashFiles do not seem to support symlinks
@@ -227,7 +227,7 @@ jobs:
     - uses: actions/setup-go@v5
       with:
         go-version: 1.20.x
-    - uses: actions/cache@v3
+    - uses: actions/cache@v4
       with:
         path: ~/.cache/lima/download
         # hashFiles do not seem to support symlinks
@@ -273,7 +273,7 @@ jobs:
     - uses: actions/setup-go@v5
       with:
         go-version: 1.20.x
-    - uses: actions/cache@v3
+    - uses: actions/cache@v4
       with:
         path: ~/.cache/lima/download
         key: ${{ runner.os }}-colima-${{ matrix.colima-version }}
@@ -319,7 +319,7 @@ jobs:
       with:
         go-version: 1.21.x
     - name: Cache ~/Library/Caches/lima/download
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/Library/Caches/lima/download
         # hashFiles do not seem to support symlinks
@@ -393,7 +393,7 @@ jobs:
       with:
         go-version: 1.21.x
     - name: Cache ~/Library/Caches/lima/download
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/Library/Caches/lima/download
         key: ${{ runner.os }}-upgrade-${{ matrix.oldver }}
@@ -425,7 +425,7 @@ jobs:
       with:
         go-version: 1.21.x
     - name: Cache ~/Library/Caches/lima/download
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/Library/Caches/lima/download
         # hashFiles do not seem to support symlinks
