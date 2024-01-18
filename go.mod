@@ -12,7 +12,7 @@ require (
 	github.com/cheggaaa/pb/v3 v3.1.4
 	github.com/containerd/containerd v1.7.12
 	github.com/containerd/continuity v0.4.3
-	github.com/containers/gvisor-tap-vsock v0.7.1
+	github.com/containers/gvisor-tap-vsock v0.7.2
 	github.com/coreos/go-semver v0.3.1
 	github.com/cpuguy83/go-md2man/v2 v2.0.3
 	github.com/cyphar/filepath-securejoin v0.2.4
