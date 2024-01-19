@@ -43,7 +43,7 @@ provision:
   script: |
     #!/bin/sh
     if [ ! -d /var/lib/rancher/rke2 ]; then
-      curl -sfL https://get.rke2.io | INSTALL_RKE2_CHANNEL=v1.27 sh -
+      curl -sfL https://get.rke2.io | INSTALL_RKE2_CHANNEL=v1.29 sh -
     fi
     env | grep "http_proxy\|https_proxy\|no_proxy" > /etc/default/rke2-server
     sed -i "s/http_proxy/CONTAINERD_HTTP_PROXY/g" /etc/default/rke2-server
