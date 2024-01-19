@@ -6,7 +6,7 @@
 # $ export DOCKER_HOST=$(limactl list docker-rootful --format 'unix://{{.Dir}}/sock/docker.sock')
 # $ docker ...
 
-# This template requires Lima v0.8.0 or later
+# This template requires Lima v0.20.0 or later
 images:
 # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
 - location: "https://cloud-images.ubuntu.com/releases/22.04/release-20231211/ubuntu-22.04-server-cloudimg-amd64.img"
@@ -49,7 +49,7 @@ provision:
       # Alternatively we could just add the user to the "docker" group, but that requires restarting the user session
       cat <<-EOF >/etc/systemd/system/docker.socket.d/override.conf
       [Socket]
-      SocketUser=${LIMA_CIDATA_USER}
+      SocketUser={{.User}}
     EOF
     fi
     export DEBIAN_FRONTEND=noninteractive

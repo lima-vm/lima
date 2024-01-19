@@ -10,7 +10,7 @@
 # $ export DOCKER_HOST=$(limactl list podman-rootful --format 'unix://{{.Dir}}/sock/podman.sock')
 # $ docker ...
 
-# This template requires Lima v0.8.0 or later
+# This template requires Lima v0.20.0 or later
 images:
 - location: "https://download.fedoraproject.org/pub/fedora/linux/releases/39/Cloud/x86_64/images/Fedora-Cloud-Base-39-1.5.x86_64.qcow2"
   arch: "x86_64"
@@ -36,12 +36,12 @@ provision:
       mkdir -p /etc/systemd/system/podman.socket.d
       cat <<-EOF >/etc/systemd/system/podman.socket.d/override.conf
       [Socket]
-      SocketUser=${LIMA_CIDATA_USER}
+      SocketUser={{.User}}
     EOF
     fi
     if [ ! -e /etc/tmpfiles.d/podman.conf ]; then
       mkdir -p /etc/tmpfiles.d
-      echo "d /run/podman 0700 ${LIMA_CIDATA_USER} -" > /etc/tmpfiles.d/podman.conf
+      echo "d /run/podman 0700 {{.User}} -" > /etc/tmpfiles.d/podman.conf
     fi
     dnf -y install podman
 - mode: system
