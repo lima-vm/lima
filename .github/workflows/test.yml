@@ -206,8 +206,7 @@ jobs:
   # as they seem more stable than macOS instances.
   integration-linux:
     name: Integration tests (on Linux)
-    # A "larger" runner is used for enabling nested virt
-    runs-on: ubuntu-latest-4-cores
+    runs-on: ubuntu-22.04
     timeout-minutes: 120
     strategy:
       fail-fast: false
@@ -258,8 +257,7 @@ jobs:
 
   colima:
     name: Colima
-    # A "larger" runner is used for enabling nested virt
-    runs-on: ubuntu-latest-4-cores
+    runs-on: ubuntu-22.04
     timeout-minutes: 120
     strategy:
       matrix:
