@@ -444,6 +444,16 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.GuestInstallPrefix = ptr.Of(defaultGuestInstallPrefix())
 	}
 
+	if y.UpgradePackages == nil {
+		y.UpgradePackages = d.UpgradePackages
+	}
+	if o.UpgradePackages != nil {
+		y.UpgradePackages = o.UpgradePackages
+	}
+	if y.UpgradePackages == nil {
+		y.UpgradePackages = ptr.Of(false)
+	}
+
 	if y.Containerd.System == nil {
 		y.Containerd.System = d.Containerd.System
 	}

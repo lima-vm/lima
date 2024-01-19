@@ -63,6 +63,7 @@ type TemplateArgs struct {
 	MountType                       string
 	Disks                           []Disk
 	GuestInstallPrefix              string
+	UpgradePackages                 bool
 	Containerd                      Containerd
 	Networks                        []Network
 	SlirpNICName                    string
