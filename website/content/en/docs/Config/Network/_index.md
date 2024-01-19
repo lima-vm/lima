@@ -249,6 +249,8 @@ networks:
 {{% /tab %}}
 {{< /tabpane >}}
 
+An instance's IP address is resolvable from another instance as `lima-<NAME>.internal.` (e.g., `lima-default.internal.`).
+
 _Note_
 
 - Enabling this network will disable the [default user-mode network](#user-mode-network--1921685024-)
