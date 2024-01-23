@@ -122,6 +122,11 @@ func TestFillDefault(t *testing.T) {
 			}
 		}
 	}
+	if runtime.GOOS == "darwin" {
+		builtin.ExcludeFromBackup = ptr.Of(ExcludeFromBackupDisks)
+	} else {
+		builtin.ExcludeFromBackup = ptr.Of(ExcludeFromBackupNone)
+	}
 
 	defaultPortForward := PortForward{
 		GuestIP:        api.IPv4loopback1,
@@ -444,6 +449,11 @@ func TestFillDefault(t *testing.T) {
 		}
 	}
 	expect.Plain = ptr.Of(false)
+	if runtime.GOOS == "darwin" {
+		expect.ExcludeFromBackup = ptr.Of(ExcludeFromBackupDisks)
+	} else {
+		expect.ExcludeFromBackup = ptr.Of(ExcludeFromBackupNone)
+	}
 
 	y = LimaYAML{}
 	FillDefault(&y, &d, &LimaYAML{}, filePath)
@@ -608,6 +618,7 @@ func TestFillDefault(t *testing.T) {
 			Enabled: ptr.Of(false),
 			BinFmt:  ptr.Of(false),
 		},
+		ExcludeFromBackup: ptr.Of(ExcludeFromBackupAll),
 	}
 
 	y = filledDefaults
@@ -661,6 +672,11 @@ func TestFillDefault(t *testing.T) {
 		BinFmt:  ptr.Of(false),
 	}
 	expect.Plain = ptr.Of(false)
+	if runtime.GOOS == "darwin" {
+		expect.ExcludeFromBackup = ptr.Of(ExcludeFromBackupAll)
+	} else {
+		expect.ExcludeFromBackup = ptr.Of(ExcludeFromBackupNone)
+	}
 
 	FillDefault(&y, &d, &o, filePath)
 	assert.DeepEqual(t, &y, &expect, opts...)

@@ -753,6 +753,20 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.Rosetta.BinFmt = ptr.Of(false)
 	}
 
+	if runtime.GOOS == "darwin" {
+		if y.ExcludeFromBackup == nil {
+			y.ExcludeFromBackup = d.ExcludeFromBackup
+		}
+		if o.ExcludeFromBackup != nil {
+			y.ExcludeFromBackup = o.ExcludeFromBackup
+		}
+		if y.ExcludeFromBackup == nil {
+			y.ExcludeFromBackup = ptr.Of(ExcludeFromBackupDisks)
+		}
+	} else {
+		y.ExcludeFromBackup = ptr.Of(ExcludeFromBackupNone)
+	}
+
 	if y.Plain == nil {
 		y.Plain = d.Plain
 	}

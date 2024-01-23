@@ -303,6 +303,16 @@ func Validate(y LimaYAML, warn bool) error {
 	if err := validateNetwork(y, warn); err != nil {
 		return err
 	}
+
+	switch *y.ExcludeFromBackup {
+	case ExcludeFromBackupAll, ExcludeFromBackupDisks, ExcludeFromBackupNone:
+	default:
+		return fmt.Errorf("field `excludeFromBackup` must be %q, %q, or %q; got %q", ExcludeFromBackupAll, ExcludeFromBackupDisks, ExcludeFromBackupNone, *y.ExcludeFromBackup)
+	}
+	if warn && runtime.GOOS != "darwin" && *y.ExcludeFromBackup != "none" {
+		logrus.Warn("field `excludeFromBackup` is only supported on macOS")
+	}
+
 	if warn {
 		warnExperimental(y)
 	}

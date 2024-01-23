@@ -70,6 +70,26 @@ func ensureNerdctlArchiveCache(y *limayaml.LimaYAML, created bool) (string, erro
 	return "", fileutils.Errors(errs)
 }
 
+// applyExcludeFromBackup sets the NSURLIsExcludedFromBackupKey attribute of the instance directory.
+func applyExcludeFromBackup(instDir string, excludeFromBackup limayaml.ExcludeFromBackup) {
+	baseDisk := filepath.Join(instDir, filenames.BaseDisk)
+	diffDisk := filepath.Join(instDir, filenames.DiffDisk)
+	var targets map[string]bool
+	switch excludeFromBackup {
+	case limayaml.ExcludeFromBackupAll:
+		// Exclude the instance directory from Time Machine backups
+		targets = map[string]bool{instDir: true, baseDisk: false, diffDisk: false}
+	case limayaml.ExcludeFromBackupDisks:
+		// Exclude disk files from Time Machine backup.
+		targets = map[string]bool{instDir: false, baseDisk: true, diffDisk: true}
+	default: // limayaml.ExcludeFromBackupNone
+		targets = map[string]bool{instDir: false, baseDisk: false, diffDisk: false}
+	}
+	for target, exclude := range targets {
+		osutil.SetExcludeFromBackup(target, exclude)
+	}
+}
+
 type Prepared struct {
 	Driver              driver.Driver
 	NerdctlArchiveCache string
@@ -108,6 +128,7 @@ func Prepare(ctx context.Context, inst *store.Instance) (*Prepared, error) {
 	if err != nil {
 		return nil, err
 	}
+	applyExcludeFromBackup(inst.Dir, *y.ExcludeFromBackup)
 
 	return &Prepared{
 		Driver:              limaDriver,

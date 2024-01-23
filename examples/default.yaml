@@ -265,6 +265,12 @@ rosetta:
   # 🟢 Builtin default: false
   binfmt: null
 
+# Exclude from backup: "all", "disks" or "none"
+# Specify which file in the instance's configuration to exclude from backup.
+# Only available on macOS.
+# 🟢 Builtin default: "disks"
+excludeFromBackup: null
+
 # Specify the timezone name (as used by the zoneinfo database). Specify the empty string
 # to not set a timezone in the instance.
 # 🟢 Builtin default: use name from /etc/timezone or deduce from symlink target of /etc/localtime

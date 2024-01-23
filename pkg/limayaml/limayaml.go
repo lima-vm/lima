@@ -36,11 +36,12 @@ type LimaYAML struct {
 	DNS          []net.IP          `yaml:"dns,omitempty" json:"dns,omitempty"`
 	HostResolver HostResolver      `yaml:"hostResolver,omitempty" json:"hostResolver,omitempty"`
 	// `useHostResolver` was deprecated in Lima v0.8.1, removed in Lima v0.14.0. Use `hostResolver.enabled` instead.
-	PropagateProxyEnv *bool          `yaml:"propagateProxyEnv,omitempty" json:"propagateProxyEnv,omitempty"`
-	CACertificates    CACertificates `yaml:"caCerts,omitempty" json:"caCerts,omitempty"`
-	Rosetta           Rosetta        `yaml:"rosetta,omitempty" json:"rosetta,omitempty"`
-	Plain             *bool          `yaml:"plain,omitempty" json:"plain,omitempty"`
-	TimeZone          *string        `yaml:"timezone,omitempty" json:"timezone,omitempty"`
+	PropagateProxyEnv *bool              `yaml:"propagateProxyEnv,omitempty" json:"propagateProxyEnv,omitempty"`
+	CACertificates    CACertificates     `yaml:"caCerts,omitempty" json:"caCerts,omitempty"`
+	Rosetta           Rosetta            `yaml:"rosetta,omitempty" json:"rosetta,omitempty"`
+	ExcludeFromBackup *ExcludeFromBackup `yaml:"excludeFromBackup,omitempty" json:"excludeFromBackup,omitempty"`
+	Plain             *bool              `yaml:"plain,omitempty" json:"plain,omitempty"`
+	TimeZone          *string            `yaml:"timezone,omitempty" json:"timezone,omitempty"`
 }
 
 type (
@@ -259,6 +260,14 @@ type CACertificates struct {
 	Files          []string `yaml:"files,omitempty" json:"files,omitempty"`
 	Certs          []string `yaml:"certs,omitempty" json:"certs,omitempty"`
 }
+
+type ExcludeFromBackup = string
+
+const (
+	ExcludeFromBackupAll   ExcludeFromBackup = "all"
+	ExcludeFromBackupDisks ExcludeFromBackup = "disks"
+	ExcludeFromBackupNone  ExcludeFromBackup = "none"
+)
 
 // DEPRECATED types below
 
