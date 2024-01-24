@@ -23,3 +23,11 @@ func bashCompleteTemplateNames(_ *cobra.Command) ([]string, cobra.ShellCompDirec
 	}
 	return comp, cobra.ShellCompDirectiveDefault
 }
+
+func bashCompleteDiskNames(_ *cobra.Command) ([]string, cobra.ShellCompDirective) {
+	disks, err := store.Disks()
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveDefault
+	}
+	return disks, cobra.ShellCompDirectiveNoFileComp
+}
