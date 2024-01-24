@@ -53,8 +53,8 @@ github.com/diskfs/go-diskfs v1.4.0 h1:MAybY6TPD+fmhY+a2qFhmdvMeIKvCqlgh4QIc1uCmB
 github.com/diskfs/go-diskfs v1.4.0/go.mod h1:G8cyy+ngM+3yKlqjweMmtqvE+TxsnIo1xumbJX1AeLg=
 github.com/docker/go-units v0.5.0 h1:69rxXcBk27SvSaaxTtLh/8llcHD8vYHT7WSdRZ/jvr4=
 github.com/docker/go-units v0.5.0/go.mod h1:fgPhTUdO+D/Jk86RDLlptpiXQzgHJF7gydDDbaIK4Dk=
-github.com/elastic/go-libaudit/v2 v2.4.0 h1:PqaGnB+dncrdUXqzQMyJu/dGysAtk6m5V3GIBMY473I=
-github.com/elastic/go-libaudit/v2 v2.4.0/go.mod h1:AjlnhinP+kKQuUJoXLVrqxBM8uyhQmkzoV6jjsCFP4Q=
+github.com/elastic/go-libaudit/v2 v2.5.0 h1:5OK919QRnGtcjVBz3n/cs5F42im1mPlVTA9TyIn2K54=
+github.com/elastic/go-libaudit/v2 v2.5.0/go.mod h1:AjlnhinP+kKQuUJoXLVrqxBM8uyhQmkzoV6jjsCFP4Q=
 github.com/elastic/go-licenser v0.4.1 h1:1xDURsc8pL5zYT9R29425J3vkHdt4RT5TNEMeRN48x4=
 github.com/elastic/go-licenser v0.4.1/go.mod h1:V56wHMpmdURfibNBggaSBfqgPxyT1Tldns1i87iTEvU=
 github.com/elliotchance/orderedmap v1.5.0 h1:1IsExUsjv5XNBD3ZdC7jkAAqLWOOKdbPTmkHx63OsBg=
