@@ -121,7 +121,7 @@ func Start(ctx context.Context, name string) error {
 
 // Stop stops running instance a usernet network with the given name.
 // The name parameter must point to a valid network configuration name under <LIMA_HOME>/_config/networks.yaml with `mode: user-v2`
-func Stop(name string) error {
+func Stop(ctx context.Context, name string) error {
 	logrus.Debugf("Make sure usernet network is stopped")
 	pidFile, err := PIDFile(name)
 	if err != nil {
@@ -132,7 +132,7 @@ func Stop(name string) error {
 	if pid != 0 {
 		logrus.Debugf("Stopping usernet daemon")
 
-		err = writeLeases(name)
+		err = writeLeases(ctx, name)
 		if err != nil {
 			return err
 		}
@@ -190,9 +190,9 @@ func readLeases(name string) (map[string]string, error) {
 	return leases, err
 }
 
-func writeLeases(nwName string) error {
+func writeLeases(ctx context.Context, nwName string) error {
 	client := NewClientByName(nwName)
-	leases, err := client.Leases()
+	leases, err := client.Leases(ctx)
 	if err != nil {
 		return err
 	}

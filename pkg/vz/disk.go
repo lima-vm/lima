@@ -1,6 +1,7 @@
 package vz
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -14,7 +15,7 @@ import (
 	"github.com/lima-vm/lima/pkg/store/filenames"
 )
 
-func EnsureDisk(driver *driver.BaseDriver) error {
+func EnsureDisk(ctx context.Context, driver *driver.BaseDriver) error {
 	diffDisk := filepath.Join(driver.Instance.Dir, filenames.DiffDisk)
 	if _, err := os.Stat(diffDisk); err == nil || !errors.Is(err, os.ErrNotExist) {
 		// disk is already ensured
@@ -26,7 +27,7 @@ func EnsureDisk(driver *driver.BaseDriver) error {
 		var ensuredBaseDisk bool
 		errs := make([]error, len(driver.Yaml.Images))
 		for i, f := range driver.Yaml.Images {
-			if _, err := fileutils.DownloadFile(baseDisk, f.File, true, "the image", *driver.Yaml.Arch); err != nil {
+			if _, err := fileutils.DownloadFile(ctx, baseDisk, f.File, true, "the image", *driver.Yaml.Arch); err != nil {
 				errs[i] = err
 				continue
 			}

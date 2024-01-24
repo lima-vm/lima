@@ -27,7 +27,7 @@ func (l *LimaWslDriver) Validate() error {
 	return ErrUnsupported
 }
 
-func (l *LimaWslDriver) CreateDisk() error {
+func (l *LimaWslDriver) CreateDisk(_ context.Context) error {
 	return ErrUnsupported
 }
 

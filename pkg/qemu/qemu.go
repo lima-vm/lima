@@ -2,6 +2,7 @@ package qemu
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -48,7 +49,7 @@ const (
 )
 
 // EnsureDisk also ensures the kernel and the initrd
-func EnsureDisk(cfg Config) error {
+func EnsureDisk(ctx context.Context, cfg Config) error {
 	diffDisk := filepath.Join(cfg.InstanceDir, filenames.DiffDisk)
 	if _, err := os.Stat(diffDisk); err == nil || !errors.Is(err, os.ErrNotExist) {
 		// disk is already ensured
@@ -63,12 +64,12 @@ func EnsureDisk(cfg Config) error {
 		var ensuredBaseDisk bool
 		errs := make([]error, len(cfg.LimaYAML.Images))
 		for i, f := range cfg.LimaYAML.Images {
-			if _, err := fileutils.DownloadFile(baseDisk, f.File, true, "the image", *cfg.LimaYAML.Arch); err != nil {
+			if _, err := fileutils.DownloadFile(ctx, baseDisk, f.File, true, "the image", *cfg.LimaYAML.Arch); err != nil {
 				errs[i] = err
 				continue
 			}
 			if f.Kernel != nil {
-				if _, err := fileutils.DownloadFile(kernel, f.Kernel.File, false, "the kernel", *cfg.LimaYAML.Arch); err != nil {
+				if _, err := fileutils.DownloadFile(ctx, kernel, f.Kernel.File, false, "the kernel", *cfg.LimaYAML.Arch); err != nil {
 					errs[i] = err
 					continue
 				}
@@ -80,7 +81,7 @@ func EnsureDisk(cfg Config) error {
 				}
 			}
 			if f.Initrd != nil {
-				if _, err := fileutils.DownloadFile(initrd, *f.Initrd, false, "the initrd", *cfg.LimaYAML.Arch); err != nil {
+				if _, err := fileutils.DownloadFile(ctx, initrd, *f.Initrd, false, "the initrd", *cfg.LimaYAML.Arch); err != nil {
 					errs[i] = err
 					continue
 				}
@@ -462,7 +463,7 @@ func qemuMachine(arch limayaml.Arch) string {
 	return "virt"
 }
 
-func Cmdline(cfg Config) (exe string, args []string, err error) {
+func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err error) {
 	y := cfg.LimaYAML
 	exe, args, err = Exe(*y.Arch)
 	if err != nil {
@@ -578,7 +579,7 @@ func Cmdline(cfg Config) (exe string, args []string, err error) {
 				switch f.VMType {
 				case "", limayaml.QEMU:
 					if f.Arch == *y.Arch {
-						if _, err = fileutils.DownloadFile(downloadedFirmware, f.File, true, "UEFI code "+f.Location, *y.Arch); err != nil {
+						if _, err = fileutils.DownloadFile(ctx, downloadedFirmware, f.File, true, "UEFI code "+f.Location, *y.Arch); err != nil {
 							logrus.WithError(err).Warnf("failed to download %q", f.Location)
 							continue loop
 						}

@@ -26,7 +26,7 @@ type Driver interface {
 	Initialize(_ context.Context) error
 
 	// CreateDisk returns error if the current driver fails in creating disk
-	CreateDisk() error
+	CreateDisk(_ context.Context) error
 
 	// Start is used for booting the vm using driver instance
 	// It returns a chan error on successful boot
@@ -90,7 +90,7 @@ func (d *BaseDriver) Initialize(_ context.Context) error {
 	return nil
 }
 
-func (d *BaseDriver) CreateDisk() error {
+func (d *BaseDriver) CreateDisk(_ context.Context) error {
 	return nil
 }
 

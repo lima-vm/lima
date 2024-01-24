@@ -102,7 +102,7 @@ func startVM(ctx context.Context, driver *driver.BaseDriver) (*virtualMachineWra
 					filesToRemove[pidFile] = struct{}{}
 					logrus.Info("[VZ] - vm state change: running")
 
-					err := usernetClient.ConfigureDriver(driver)
+					err := usernetClient.ConfigureDriver(ctx, driver)
 					if err != nil {
 						errCh <- err
 					}

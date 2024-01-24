@@ -12,6 +12,7 @@ import (
 	gvproxyclient "github.com/containers/gvisor-tap-vsock/pkg/client"
 	"github.com/containers/gvisor-tap-vsock/pkg/types"
 	"github.com/lima-vm/lima/pkg/driver"
+	"github.com/lima-vm/lima/pkg/httpclientutil"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/networks/usernet/dnshosts"
 )
@@ -25,9 +26,9 @@ type Client struct {
 	subnet   net.IP
 }
 
-func (c *Client) ConfigureDriver(driver *driver.BaseDriver) error {
+func (c *Client) ConfigureDriver(ctx context.Context, driver *driver.BaseDriver) error {
 	macAddress := limayaml.MACAddress(driver.Instance.Dir)
-	ipAddress, err := c.ResolveIPAddress(macAddress)
+	ipAddress, err := c.ResolveIPAddress(ctx, macAddress)
 	if err != nil {
 		return err
 	}
@@ -72,7 +73,7 @@ func (c *Client) ResolveAndForwardSSH(ipAddr string, sshPort int) error {
 	return nil
 }
 
-func (c *Client) ResolveIPAddress(vmMacAddr string) (string, error) {
+func (c *Client) ResolveIPAddress(ctx context.Context, vmMacAddr string) (string, error) {
 	timeout := time.After(2 * time.Minute)
 	ticker := time.NewTicker(500 * time.Millisecond)
 	for {
@@ -80,7 +81,7 @@ func (c *Client) ResolveIPAddress(vmMacAddr string) (string, error) {
 		case <-timeout:
 			return "", errors.New("usernet unable to resolve IP for SSH forwarding")
 		case <-ticker.C:
-			leases, err := c.Leases()
+			leases, err := c.Leases(ctx)
 			if err != nil {
 				return "", err
 			}
@@ -94,15 +95,13 @@ func (c *Client) ResolveIPAddress(vmMacAddr string) (string, error) {
 	}
 }
 
-func (c *Client) Leases() (map[string]string, error) {
-	res, err := c.client.Get(fmt.Sprintf("%s%s", c.base, "/services/dhcp/leases"))
+func (c *Client) Leases(ctx context.Context) (map[string]string, error) {
+	u := fmt.Sprintf("%s%s", c.base, "/services/dhcp/leases")
+	res, err := httpclientutil.Get(ctx, c.client, u)
 	if err != nil {
 		return nil, err
 	}
 	defer res.Body.Close()
-	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status: %d", res.StatusCode)
-	}
 	dec := json.NewDecoder(res.Body)
 	var leases map[string]string
 	if err := dec.Decode(&leases); err != nil {

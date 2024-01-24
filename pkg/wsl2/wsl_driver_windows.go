@@ -114,7 +114,7 @@ func (l *LimaWslDriver) Start(ctx context.Context) (chan error, error) {
 	distroName := "lima-" + l.Instance.Name
 
 	if status == store.StatusUninitialized {
-		if err := EnsureFs(l.BaseDriver); err != nil {
+		if err := EnsureFs(ctx, l.BaseDriver); err != nil {
 			return nil, err
 		}
 		if err := initVM(ctx, l.BaseDriver.Instance.Dir, distroName); err != nil {
