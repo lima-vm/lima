@@ -203,10 +203,11 @@ $ limactl disk delete DISK
 To delete multiple disks:
 $ limactl disk delete DISK1 DISK2 ...
 `,
-		Aliases: []string{"remove", "rm"},
-		Short:   "Delete one or more Lima disks",
-		Args:    WrapArgsError(cobra.MinimumNArgs(1)),
-		RunE:    diskDeleteAction,
+		Aliases:           []string{"remove", "rm"},
+		Short:             "Delete one or more Lima disks",
+		Args:              WrapArgsError(cobra.MinimumNArgs(1)),
+		RunE:              diskDeleteAction,
+		ValidArgsFunction: diskBashComplete,
 	}
 	diskDeleteCommand.Flags().BoolP("force", "f", false, "force delete")
 	return diskDeleteCommand
@@ -294,9 +295,10 @@ $ limactl disk unlock DISK
 To unlock multiple disks:
 $ limactl disk unlock DISK1 DISK2 ...
 `,
-		Short: "Unlock one or more Lima disks",
-		Args:  WrapArgsError(cobra.MinimumNArgs(1)),
-		RunE:  diskUnlockAction,
+		Short:             "Unlock one or more Lima disks",
+		Args:              WrapArgsError(cobra.MinimumNArgs(1)),
+		RunE:              diskUnlockAction,
+		ValidArgsFunction: diskBashComplete,
 	}
 	return diskUnlockCommand
 }
@@ -342,9 +344,10 @@ func newDiskResizeCommand() *cobra.Command {
 		Example: `
 Resize a disk:
 $ limactl disk resize DISK --size SIZE`,
-		Short: "Resize existing Lima disk",
-		Args:  WrapArgsError(cobra.ExactArgs(1)),
-		RunE:  diskResizeAction,
+		Short:             "Resize existing Lima disk",
+		Args:              WrapArgsError(cobra.ExactArgs(1)),
+		RunE:              diskResizeAction,
+		ValidArgsFunction: diskBashComplete,
 	}
 	diskResizeCommand.Flags().String("size", "", "Disk size")
 	_ = diskResizeCommand.MarkFlagRequired("size")
@@ -389,4 +392,8 @@ func diskResizeAction(cmd *cobra.Command, args []string) error {
 	}
 	logrus.Infof("Resized disk %q (%q)", diskName, disk.Dir)
 	return nil
+}
+
+func diskBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
+	return bashCompleteDiskNames(cmd)
 }
