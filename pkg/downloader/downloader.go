@@ -2,6 +2,7 @@ package downloader
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"errors"
 	"fmt"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/cheggaaa/pb/v3"
 	"github.com/containerd/continuity/fs"
+	"github.com/lima-vm/lima/pkg/httpclientutil"
 	"github.com/lima-vm/lima/pkg/localpathutil"
 	"github.com/lima-vm/lima/pkg/progressbar"
 	"github.com/opencontainers/go-digest"
@@ -125,7 +127,7 @@ func WithExpectedDigest(expectedDigest digest.Digest) Opt {
 // (So, the local path cannot be set to /dev/null for "caching only" mode.)
 //
 // The local path can be an empty string for "caching only" mode.
-func Download(local, remote string, opts ...Opt) (*Result, error) {
+func Download(ctx context.Context, local, remote string, opts ...Opt) (*Result, error) {
 	var o options
 	for _, f := range opts {
 		if err := f(&o); err != nil {
@@ -173,7 +175,7 @@ func Download(local, remote string, opts ...Opt) (*Result, error) {
 	}
 
 	if o.cacheDir == "" {
-		if err := downloadHTTP(localPath, remote, o.description, o.expectedDigest); err != nil {
+		if err := downloadHTTP(ctx, localPath, remote, o.description, o.expectedDigest); err != nil {
 			return nil, err
 		}
 		res := &Result{
@@ -222,7 +224,7 @@ func Download(local, remote string, opts ...Opt) (*Result, error) {
 	if err := os.WriteFile(shadURL, []byte(remote), 0o644); err != nil {
 		return nil, err
 	}
-	if err := downloadHTTP(shadData, remote, o.description, o.expectedDigest); err != nil {
+	if err := downloadHTTP(ctx, shadData, remote, o.description, o.expectedDigest); err != nil {
 		return nil, err
 	}
 	// no need to pass the digest to copyLocal(), as we already verified the digest
@@ -472,7 +474,7 @@ func validateLocalFileDigest(localPath string, expectedDigest digest.Digest) err
 	return nil
 }
 
-func downloadHTTP(localPath, url, description string, expectedDigest digest.Digest) error {
+func downloadHTTP(ctx context.Context, localPath, url, description string, expectedDigest digest.Digest) error {
 	if localPath == "" {
 		return fmt.Errorf("downloadHTTP: got empty localPath")
 	}
@@ -487,14 +489,11 @@ func downloadHTTP(localPath, url, description string, expectedDigest digest.Dige
 	}
 	defer fileWriter.Close()
 
-	resp, err := http.Get(url)
+	resp, err := httpclientutil.Get(ctx, http.DefaultClient, url)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("expected HTTP status %d, got %s", http.StatusOK, resp.Status)
-	}
 	bar, err := progressbar.New(resp.ContentLength)
 	if err != nil {
 		return err

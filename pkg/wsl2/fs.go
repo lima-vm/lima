@@ -1,6 +1,7 @@
 package wsl2
 
 import (
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -12,13 +13,13 @@ import (
 )
 
 // EnsureFs downloads the root fs.
-func EnsureFs(driver *driver.BaseDriver) error {
+func EnsureFs(ctx context.Context, driver *driver.BaseDriver) error {
 	baseDisk := filepath.Join(driver.Instance.Dir, filenames.BaseDisk)
 	if _, err := os.Stat(baseDisk); errors.Is(err, os.ErrNotExist) {
 		var ensuredBaseDisk bool
 		errs := make([]error, len(driver.Yaml.Images))
 		for i, f := range driver.Yaml.Images {
-			if _, err := fileutils.DownloadFile(baseDisk, f.File, true, "the image", *driver.Yaml.Arch); err != nil {
+			if _, err := fileutils.DownloadFile(ctx, baseDisk, f.File, true, "the image", *driver.Yaml.Arch); err != nil {
 				errs[i] = err
 				continue
 			}

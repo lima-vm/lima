@@ -50,13 +50,13 @@ func (l *LimaQemuDriver) Validate() error {
 	return nil
 }
 
-func (l *LimaQemuDriver) CreateDisk() error {
+func (l *LimaQemuDriver) CreateDisk(ctx context.Context) error {
 	qCfg := Config{
 		Name:        l.Instance.Name,
 		InstanceDir: l.Instance.Dir,
 		LimaYAML:    l.Yaml,
 	}
-	return EnsureDisk(qCfg)
+	return EnsureDisk(ctx, qCfg)
 }
 
 func (l *LimaQemuDriver) Start(ctx context.Context) (chan error, error) {
@@ -73,7 +73,7 @@ func (l *LimaQemuDriver) Start(ctx context.Context) (chan error, error) {
 		LimaYAML:     l.Yaml,
 		SSHLocalPort: l.SSHLocalPort,
 	}
-	qExe, qArgs, err := Cmdline(qCfg)
+	qExe, qArgs, err := Cmdline(ctx, qCfg)
 	if err != nil {
 		return nil, err
 	}
@@ -191,7 +191,7 @@ func (l *LimaQemuDriver) Start(ctx context.Context) (chan error, error) {
 	go func() {
 		if usernetIndex := limayaml.FirstUsernetIndex(l.Yaml); usernetIndex != -1 {
 			client := usernet.NewClientByName(l.Yaml.Networks[usernetIndex].Lima)
-			err := client.ConfigureDriver(l.BaseDriver)
+			err := client.ConfigureDriver(ctx, l.BaseDriver)
 			if err != nil {
 				l.qWaitCh <- err
 			}

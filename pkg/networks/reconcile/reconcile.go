@@ -54,7 +54,7 @@ func Reconcile(ctx context.Context, newInst string) error {
 		if activeNetwork[name] {
 			err = startNetwork(ctx, &config, name)
 		} else {
-			err = stopNetwork(&config, name)
+			err = stopNetwork(ctx, &config, name)
 		}
 		if err != nil {
 			return err
@@ -218,7 +218,7 @@ func startNetwork(ctx context.Context, config *networks.YAML, name string) error
 	return nil
 }
 
-func stopNetwork(config *networks.YAML, name string) error {
+func stopNetwork(ctx context.Context, config *networks.YAML, name string) error {
 	logrus.Debugf("Make sure %q network is stopped", name)
 	// Handle usernet first without sudo requirements
 	isUsernet, err := config.Usernet(name)
@@ -226,7 +226,7 @@ func stopNetwork(config *networks.YAML, name string) error {
 		return err
 	}
 	if isUsernet {
-		if err := usernet.Stop(name); err != nil {
+		if err := usernet.Stop(ctx, name); err != nil {
 			return fmt.Errorf("failed to stop usernet %q: %w", name, err)
 		}
 		return nil

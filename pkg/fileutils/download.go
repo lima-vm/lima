@@ -1,6 +1,7 @@
 package fileutils
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"path"
@@ -14,13 +15,13 @@ import (
 var ErrSkipped = errors.New("skipped to download")
 
 // DownloadFile downloads a file to the cache, optionally copying it to the destination. Returns path in cache.
-func DownloadFile(dest string, f limayaml.File, decompress bool, description string, expectedArch limayaml.Arch) (string, error) {
+func DownloadFile(ctx context.Context, dest string, f limayaml.File, decompress bool, description string, expectedArch limayaml.Arch) (string, error) {
 	if f.Arch != expectedArch {
 		return "", fmt.Errorf("%w: %q: unsupported arch: %q", ErrSkipped, f.Location, f.Arch)
 	}
 	fields := logrus.Fields{"location": f.Location, "arch": f.Arch, "digest": f.Digest}
 	logrus.WithFields(fields).Infof("Attempting to download %s", description)
-	res, err := downloader.Download(dest, f.Location,
+	res, err := downloader.Download(ctx, dest, f.Location,
 		downloader.WithCache(),
 		downloader.WithDecompress(decompress),
 		downloader.WithDescription(fmt.Sprintf("%s (%s)", description, path.Base(f.Location))),

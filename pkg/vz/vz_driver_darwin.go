@@ -147,8 +147,8 @@ func (l *LimaVzDriver) Initialize(_ context.Context) error {
 	return err
 }
 
-func (l *LimaVzDriver) CreateDisk() error {
-	return EnsureDisk(l.BaseDriver)
+func (l *LimaVzDriver) CreateDisk(ctx context.Context) error {
+	return EnsureDisk(ctx, l.BaseDriver)
 }
 
 func (l *LimaVzDriver) Start(ctx context.Context) (chan error, error) {

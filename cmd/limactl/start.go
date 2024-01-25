@@ -146,7 +146,11 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 			}
 		}
 		logrus.Debugf("interpreting argument %q as a http url for instance %q", arg, st.instName)
-		resp, err := http.Get(arg)
+		req, err := http.NewRequestWithContext(cmd.Context(), http.MethodGet, arg, http.NoBody)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			return nil, err
 		}
