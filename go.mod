@@ -9,7 +9,7 @@ require (
 	github.com/alessio/shellescape v1.4.2
 	github.com/apparentlymart/go-cidr v1.1.0
 	github.com/balajiv113/fd v0.0.0-20230330094840-143eec500f3e
-	github.com/cheggaaa/pb/v3 v3.1.4
+	github.com/cheggaaa/pb/v3 v3.1.5
 	github.com/containerd/containerd v1.7.12
 	github.com/containerd/continuity v0.4.3
 	github.com/containers/gvisor-tap-vsock v0.7.2
@@ -90,7 +90,7 @@ require (
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
-	github.com/mattn/go-runewidth v0.0.14 // indirect
+	github.com/mattn/go-runewidth v0.0.15 // indirect
 	github.com/mdlayher/socket v0.4.1 // indirect
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
