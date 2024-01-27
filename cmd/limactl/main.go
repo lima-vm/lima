@@ -133,7 +133,6 @@ func newApp() *cobra.Command {
 		Run:   func(cmd *cobra.Command, args []string) {},
 	}
 
-	// Add basic commands
 	basicCmds.AddCommand(
 		newCreateCommand(),
 		newStartCommand(),
@@ -144,7 +143,6 @@ func newApp() *cobra.Command {
 		newEditCommand(),
 	)
 
-	// Add advanced commands
 	advancedCmds.AddCommand(
 		newCopyCommand(),
 		newValidateCommand(),
@@ -160,9 +158,9 @@ func newApp() *cobra.Command {
 	)
 
 	rootCmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
-		fmt.Println("Lima: Linux virtual machines\n")
-		fmt.Println("Usage:")
-		fmt.Println("  limactl [command]\n")
+		fmt.Print("Lima: Linux virtual machines\n\n")
+		fmt.Print("Usage:\n")
+		fmt.Print("  limactl [command]\n\n")
 		fmt.Println("Examples:")
 		fmt.Printf(`  Start the default instance:
   $ limactl start
