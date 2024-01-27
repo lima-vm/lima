@@ -14,6 +14,7 @@ import (
 	"github.com/mattn/go-isatty"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 const (
@@ -119,12 +120,86 @@ func newApp() *cobra.Command {
 		newProtectCommand(),
 		newUnprotectCommand(),
 	)
+
+	basicCmds := &cobra.Command{
+		Use:   "Basic commands",
+		Short: "Basic commands for managing Lima instances",
+		Run:   func(cmd *cobra.Command, args []string) {},
+	}
+
+	advancedCmds := &cobra.Command{
+		Use:   "Advanced commands",
+		Short: "Advanced commands for managing Lima instances",
+		Run:   func(cmd *cobra.Command, args []string) {},
+	}
+
+	// Add basic commands
+	basicCmds.AddCommand(
+		newCreateCommand(),
+		newStartCommand(),
+		newStopCommand(),
+		newShellCommand(),
+		newListCommand(),
+		newDeleteCommand(),
+		newEditCommand(),
+	)
+
+	// Add advanced commands
+	advancedCmds.AddCommand(
+		newCopyCommand(),
+		newValidateCommand(),
+		newSudoersCommand(),
+		newPruneCommand(),
+		newInfoCommand(),
+		newShowSSHCommand(),
+		newFactoryResetCommand(),
+		newDiskCommand(),
+		newSnapshotCommand(),
+		newProtectCommand(),
+		newUnprotectCommand(),
+	)
+
+	rootCmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
+		fmt.Println("Lima: Linux virtual machines\n")
+		fmt.Println("Usage:")
+		fmt.Println("  limactl [command]\n")
+		fmt.Println("Examples:")
+		fmt.Printf(`  Start the default instance:
+  $ limactl start
+
+  Open a shell:
+  $ lima
+
+  Run a container:
+  $ lima nerdctl run -d --name nginx -p 8080:80 nginx:alpine
+
+  Stop the default instance:
+  $ limactl stop
+
+  See also template YAMLs: %s`, templatesDir)
+		fmt.Println("\n\nBasic Commands:")
+		printCommands(basicCmds.Commands())
+		fmt.Println("\nAdvanced Commands:")
+		printCommands(advancedCmds.Commands())
+		fmt.Println("\nFlags:")
+    cmd.Flags().VisitAll(func(flag *pflag.Flag) {
+        fmt.Printf("  --%-15s %s\n", flag.Name, flag.Usage)
+    })
+    fmt.Println("\nUse \"limactl [command] --help\" for more information about a command.")
+	})
+
 	return rootCmd
 }
 
 type ExitCoder interface {
 	error
 	ExitCode() int
+}
+
+func printCommands(commands []*cobra.Command) {
+	for _, cmd := range commands {
+		fmt.Printf("  %-15s %s\n", cmd.Name(), cmd.Short)
+	}
 }
 
 func handleExitCoder(err error) {
