@@ -179,4 +179,38 @@ func TestDownloadCompressed(t *testing.T) {
 		assert.NilError(t, err)
 		assert.Equal(t, string(got), string(testDownloadCompressedContents))
 	})
+
+	t.Run("bzip2", func(t *testing.T) {
+		localPath := filepath.Join(t.TempDir(), t.Name())
+		localFile := filepath.Join(t.TempDir(), "test-file")
+		testDownloadCompressedContents := []byte("TestDownloadCompressed")
+		assert.NilError(t, os.WriteFile(localFile, testDownloadCompressedContents, 0o644))
+		assert.NilError(t, exec.Command("bzip2", localFile).Run())
+		localFile += ".bz2"
+		testLocalFileURL := "file://" + localFile
+
+		r, err := Download(context.Background(), localPath, testLocalFileURL, WithDecompress(true))
+		assert.NilError(t, err)
+		assert.Equal(t, StatusDownloaded, r.Status)
+
+		got, err := os.ReadFile(localPath)
+		assert.NilError(t, err)
+		assert.Equal(t, string(got), string(testDownloadCompressedContents))
+	})
+
+	t.Run("unknown decompressor", func(t *testing.T) {
+		localPath := filepath.Join(t.TempDir(), t.Name())
+		localFile := filepath.Join(t.TempDir(), "test-file.rar")
+		testDownloadCompressedContents := []byte("TestDownloadCompressed")
+		assert.NilError(t, os.WriteFile(localFile, testDownloadCompressedContents, 0o644))
+		testLocalFileURL := "file://" + localFile
+
+		r, err := Download(context.Background(), localPath, testLocalFileURL, WithDecompress(true))
+		assert.NilError(t, err)
+		assert.Equal(t, StatusDownloaded, r.Status)
+
+		got, err := os.ReadFile(localPath)
+		assert.NilError(t, err)
+		assert.Equal(t, string(got), string(testDownloadCompressedContents))
+	})
 }

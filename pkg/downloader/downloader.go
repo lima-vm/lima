@@ -164,7 +164,7 @@ func Download(ctx context.Context, local, remote string, opts ...Opt) (*Result, 
 
 	ext := path.Ext(remote)
 	if IsLocal(remote) {
-		if err := copyLocal(localPath, remote, ext, o.decompress, o.description, o.expectedDigest); err != nil {
+		if err := copyLocal(ctx, localPath, remote, ext, o.decompress, o.description, o.expectedDigest); err != nil {
 			return nil, err
 		}
 		res := &Result{
@@ -199,11 +199,11 @@ func Download(ctx context.Context, local, remote string, opts ...Opt) (*Result, 
 			if err := validateCachedDigest(shadDigest, o.expectedDigest); err != nil {
 				return nil, err
 			}
-			if err := copyLocal(localPath, shadData, ext, o.decompress, "", ""); err != nil {
+			if err := copyLocal(ctx, localPath, shadData, ext, o.decompress, "", ""); err != nil {
 				return nil, err
 			}
 		} else {
-			if err := copyLocal(localPath, shadData, ext, o.decompress, o.description, o.expectedDigest); err != nil {
+			if err := copyLocal(ctx, localPath, shadData, ext, o.decompress, o.description, o.expectedDigest); err != nil {
 				return nil, err
 			}
 		}
@@ -228,7 +228,7 @@ func Download(ctx context.Context, local, remote string, opts ...Opt) (*Result, 
 		return nil, err
 	}
 	// no need to pass the digest to copyLocal(), as we already verified the digest
-	if err := copyLocal(localPath, shadData, ext, o.decompress, "", ""); err != nil {
+	if err := copyLocal(ctx, localPath, shadData, ext, o.decompress, "", ""); err != nil {
 		return nil, err
 	}
 	if shadDigest != "" && o.expectedDigest != "" {
@@ -336,7 +336,7 @@ func canonicalLocalPath(s string) (string, error) {
 	return localpathutil.Expand(s)
 }
 
-func copyLocal(dst, src, ext string, decompress bool, description string, expectedDigest digest.Digest) error {
+func copyLocal(ctx context.Context, dst, src, ext string, decompress bool, description string, expectedDigest digest.Digest) error {
 	srcPath, err := canonicalLocalPath(src)
 	if err != nil {
 		return err
@@ -357,37 +357,33 @@ func copyLocal(dst, src, ext string, decompress bool, description string, expect
 	if err != nil {
 		return err
 	}
-	if _, ok := Decompressor(ext); ok && decompress {
-		return decompressLocal(dstPath, srcPath, ext, description)
+	if decompress {
+		command := decompressor(ext)
+		if command != "" {
+			return decompressLocal(ctx, command, dstPath, srcPath, ext, description)
+		}
 	}
 	// TODO: progress bar for copy
 	return fs.CopyFile(dstPath, srcPath)
 }
 
-func Decompressor(ext string) ([]string, bool) {
-	var program string
+func decompressor(ext string) string {
 	switch ext {
 	case ".gz":
-		program = "gzip"
+		return "gzip"
 	case ".bz2":
-		program = "bzip2"
+		return "bzip2"
 	case ".xz":
-		program = "xz"
+		return "xz"
 	case ".zst":
-		program = "zstd"
+		return "zstd"
 	default:
-		return nil, false
+		return ""
 	}
-	// -d --decompress
-	return []string{program, "-d"}, true
 }
 
-func decompressLocal(dst, src, ext, description string) error {
-	command, found := Decompressor(ext)
-	if !found {
-		return fmt.Errorf("decompressLocal: unknown extension %s", ext)
-	}
-	logrus.Infof("decompressing %s with %v", ext, command)
+func decompressLocal(ctx context.Context, decompressCmd, dst, src, ext, description string) error {
+	logrus.Infof("decompressing %s with %v", ext, decompressCmd)
 
 	st, err := os.Stat(src)
 	if err != nil {
@@ -412,7 +408,7 @@ func decompressLocal(dst, src, ext, description string) error {
 	}
 	defer out.Close()
 	buf := new(bytes.Buffer)
-	cmd := exec.Command(command[0], command[1:]...)
+	cmd := exec.CommandContext(ctx, decompressCmd, "-d") // -d --decompress
 	cmd.Stdin = bar.NewProxyReader(in)
 	cmd.Stdout = out
 	cmd.Stderr = buf
