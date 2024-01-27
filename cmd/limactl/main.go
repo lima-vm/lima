@@ -180,10 +180,10 @@ func newApp() *cobra.Command {
 		fmt.Println("\nAdvanced Commands:")
 		printCommands(advancedCmds.Commands())
 		fmt.Println("\nFlags:")
-    cmd.Flags().VisitAll(func(flag *pflag.Flag) {
-        fmt.Printf("  --%-15s %s\n", flag.Name, flag.Usage)
-    })
-    fmt.Println("\nUse \"limactl [command] --help\" for more information about a command.")
+		cmd.Flags().VisitAll(func(flag *pflag.Flag) {
+			fmt.Printf("  --%-15s %s\n", flag.Name, flag.Usage)
+		})
+		fmt.Println("\nUse \"limactl [command] --help\" for more information about a command.")
 	})
 
 	return rootCmd
