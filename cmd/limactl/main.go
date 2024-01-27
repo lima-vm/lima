@@ -18,6 +18,8 @@ import (
 
 const (
 	DefaultInstanceName = "default"
+	basicCommand        = "basic"
+	advancedCommand     = "advanced"
 )
 
 func main() {
@@ -95,6 +97,8 @@ func newApp() *cobra.Command {
 		}
 		return nil
 	}
+	rootCmd.AddGroup(&cobra.Group{ID: "basic", Title: "Basic Commands:"})
+	rootCmd.AddGroup(&cobra.Group{ID: "advanced", Title: "Advanced Commands:"})
 	rootCmd.AddCommand(
 		newCreateCommand(),
 		newStartCommand(),

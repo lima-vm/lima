@@ -32,8 +32,9 @@ $ limactl sudoers --check /etc/sudoers.d/lima
 The content is written to stdout, NOT to the file.
 This command must not run as the root.
 See %s for the usage.`, networksMD),
-		Args: WrapArgsError(cobra.MaximumNArgs(1)),
-		RunE: sudoersAction,
+		Args:    WrapArgsError(cobra.MaximumNArgs(1)),
+		RunE:    sudoersAction,
+		GroupID: advancedCommand,
 	}
 	configFile, _ := networks.ConfigFile()
 	sudoersCommand.Flags().Bool("check", false,

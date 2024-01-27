@@ -18,6 +18,7 @@ func newSnapshotCommand() *cobra.Command {
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			logrus.Warn("`limactl snapshot` is experimental")
 		},
+		GroupID: advancedCommand,
 	}
 	snapshotCmd.AddCommand(newSnapshotApplyCommand())
 	snapshotCmd.AddCommand(newSnapshotCreateCommand())

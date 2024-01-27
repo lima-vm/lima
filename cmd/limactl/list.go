@@ -52,6 +52,7 @@ func newListCommand() *cobra.Command {
 		Args:              WrapArgsError(cobra.ArbitraryArgs),
 		RunE:              listAction,
 		ValidArgsFunction: listBashComplete,
+		GroupID:           basicCommand,
 	}
 
 	listCommand.Flags().StringP("format", "f", "table", "output format, one of: json, yaml, table, go-template")

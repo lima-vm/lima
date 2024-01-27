@@ -69,6 +69,7 @@ $ cat template.yaml | limactl create --name=local -
 		Args:              WrapArgsError(cobra.MaximumNArgs(1)),
 		ValidArgsFunction: createBashComplete,
 		RunE:              createAction,
+		GroupID:           basicCommand,
 	}
 	registerCreateFlags(createCommand, "")
 	return createCommand
@@ -91,6 +92,7 @@ See the examples in 'limactl create --help'.
 		Args:              WrapArgsError(cobra.MaximumNArgs(1)),
 		ValidArgsFunction: startBashComplete,
 		RunE:              startAction,
+		GroupID:           basicCommand,
 	}
 	registerCreateFlags(startCommand, "[limactl create] ")
 	if runtime.GOOS != "windows" {

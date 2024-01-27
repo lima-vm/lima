@@ -40,6 +40,7 @@ func newShellCommand() *cobra.Command {
 		RunE:              shellAction,
 		ValidArgsFunction: shellBashComplete,
 		SilenceErrors:     true,
+		GroupID:           basicCommand,
 	}
 
 	shellCmd.Flags().SetInterspersed(false)
