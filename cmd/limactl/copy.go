@@ -30,6 +30,7 @@ func newCopyCommand() *cobra.Command {
 		Long:    copyHelp,
 		Args:    WrapArgsError(cobra.MinimumNArgs(2)),
 		RunE:    copyAction,
+		GroupID: advancedCommand,
 	}
 
 	copyCommand.Flags().BoolP("recursive", "r", false, "copy directories recursively")

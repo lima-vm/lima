@@ -32,6 +32,7 @@ func newDiskCommand() *cobra.Command {
   $ limactl disk resize DISK --size SIZE`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
+		GroupID:       advancedCommand,
 	}
 	diskCommand.AddCommand(
 		newDiskCreateCommand(),

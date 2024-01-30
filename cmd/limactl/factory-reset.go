@@ -19,6 +19,7 @@ func newFactoryResetCommand() *cobra.Command {
 		Args:              WrapArgsError(cobra.MaximumNArgs(1)),
 		RunE:              factoryResetAction,
 		ValidArgsFunction: factoryResetBashComplete,
+		GroupID:           advancedCommand,
 	}
 	return resetCommand
 }

@@ -62,6 +62,7 @@ Instead, use 'ssh -F %s/default/ssh.config lima-default' .
 		RunE:              showSSHAction,
 		ValidArgsFunction: showSSHBashComplete,
 		SilenceErrors:     true,
+		GroupID:           advancedCommand,
 	}
 
 	shellCmd.Flags().StringP("format", "f", sshutil.FormatCmd, "Format: "+strings.Join(sshutil.Formats, ", "))

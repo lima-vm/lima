@@ -15,6 +15,7 @@ func newPruneCommand() *cobra.Command {
 		Args:              WrapArgsError(cobra.NoArgs),
 		RunE:              pruneAction,
 		ValidArgsFunction: cobra.NoFileCompletions,
+		GroupID:           advancedCommand,
 	}
 	return pruneCommand
 }

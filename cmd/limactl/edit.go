@@ -27,6 +27,7 @@ func newEditCommand() *cobra.Command {
 		Args:              WrapArgsError(cobra.MaximumNArgs(1)),
 		RunE:              editAction,
 		ValidArgsFunction: editBashComplete,
+		GroupID:           basicCommand,
 	}
 	editflags.RegisterEdit(editCommand)
 	return editCommand
