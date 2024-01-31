@@ -407,7 +407,7 @@ jobs:
 
   vz:
     name: "vz"
-    runs-on: macos-13
+    runs-on: macos-14
     timeout-minutes: 120
     strategy:
       fail-fast: false
@@ -431,7 +431,7 @@ jobs:
     - name: Make
       run: make
     - name: Install
-      run: make install
+      run: sudo make install
     - name: Install test dependencies
       run: brew install bash coreutils jq
     - name: Uninstall qemu
