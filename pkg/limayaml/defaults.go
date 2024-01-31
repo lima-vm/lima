@@ -132,37 +132,6 @@ func defaultGuestInstallPrefix() string {
 	return "/usr/local"
 }
 
-func defaultFirmwareImages() []FileWithVMType {
-	return []FileWithVMType{
-		/*
-			The "Firmware/edk2 20231213" patches <https://lists.gnu.org/archive/html/qemu-devel/2023-12/msg01694.html>
-			are necessary to boot most aarch64 images (except Debian, which does not use UEFI shim).
-
-			The patches are proposed for the QEMU v8.2.0 milestone, but likely to be postponed to v8.2.1.
-			Until the patches get accepted in the QEMU upstream, Lima fetches the patched edk2 binary from
-			<https://gitlab.com/kraxel/qemu/-/tags/firmware%2Fedk2-20231213-pull-request>.
-		*/
-		{
-			File: File{
-				Location: "https://gitlab.com/kraxel/qemu/-/raw/704f7cad5105246822686f65765ab92045f71a3b/pc-bios/edk2-aarch64-code.fd.bz2",
-				Arch:     AARCH64,
-				Digest:   "sha256:a5fc228623891297f2d82e22ea56ec57cde93fea5ec01abf543e4ed5cacaf277",
-			},
-			VMType: QEMU,
-		},
-		// Mirror
-		{
-			File: File{
-				Location: "https://github.com/AkihiroSuda/qemu/raw/704f7cad5105246822686f65765ab92045f71a3b/pc-bios/edk2-aarch64-code.fd.bz2",
-				Arch:     AARCH64,
-				Digest:   "sha256:a5fc228623891297f2d82e22ea56ec57cde93fea5ec01abf543e4ed5cacaf277",
-			},
-			VMType: QEMU,
-		},
-		// TODO: what about ARMv7?
-	}
-}
-
 // FillDefault updates undefined fields in y with defaults from d (or built-in default), and overwrites with values from o.
 // Both d and o may be empty.
 //
@@ -335,9 +304,6 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 	}
 
 	y.Firmware.Images = append(append(o.Firmware.Images, y.Firmware.Images...), d.Firmware.Images...)
-	if len(y.Firmware.Images) == 0 {
-		y.Firmware.Images = defaultFirmwareImages()
-	}
 	for i := range y.Firmware.Images {
 		f := &y.Firmware.Images[i]
 		if f.Arch == "" {
