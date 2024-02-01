@@ -2,9 +2,9 @@
 
 arch: "riscv64"
 images:
-- location: "https://cloud-images.ubuntu.com/releases/23.10/release-20231220/ubuntu-23.10-server-cloudimg-riscv64.img"
+- location: "https://cloud-images.ubuntu.com/releases/23.10/release-20240125/ubuntu-23.10-server-cloudimg-riscv64.img"
   arch: "riscv64"
-  digest: "sha256:18aadb8e2407dfb0e85948f53f231de15e65e21f5b7e9833e64188a2af3f4315"
+  digest: "sha256:3312ff20f3198166359351b1ea090a88b4c51d3832d9ff48964701bbc4db7cfa"
   kernel:
     # Extracted from http://http.us.debian.org/debian/pool/main/u/u-boot/u-boot-qemu_2023.07+dfsg-1_all.deb (GPL-2.0)
     location: "https://github.com/lima-vm/u-boot-qemu-mirror/releases/download/2023.07%2Bdfsg-7/qemu-riscv64_smode_uboot.elf"

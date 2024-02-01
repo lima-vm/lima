@@ -3,9 +3,9 @@
 arch: "armv7l"
 images:
 # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
-- location: "https://cloud-images.ubuntu.com/releases/23.10/release-20231220/ubuntu-23.10-server-cloudimg-armhf.img"
+- location: "https://cloud-images.ubuntu.com/releases/23.10/release-20240125/ubuntu-23.10-server-cloudimg-armhf.img"
   arch: "armv7l"
-  digest: "sha256:849b92b9735c022b986b64cdc7d518535c654073b15a6732a53f6ebebbea259b"
+  digest: "sha256:99b10abb8af8d6a7d454025ef068e77b7205924bcc166c2e0d306b629a478ca4"
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
 - location: "https://cloud-images.ubuntu.com/releases/23.10/release/ubuntu-23.10-server-cloudimg-armhf.img"
