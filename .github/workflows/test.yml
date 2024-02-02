@@ -175,21 +175,21 @@ jobs:
     - name: "Show cache"
       run: ./hack/debug-cache.sh
     - name: "Test default.yaml"
-      uses: nick-invision/retry@v2
+      uses: nick-invision/retry@v3
       with:
         timeout_minutes: 30
         retry_on: error
         max_attempts: 3
         command: ./hack/test-templates.sh templates/default.yaml
     - name: "Test experimental/9p.yaml"
-      uses: nick-invision/retry@v2
+      uses: nick-invision/retry@v3
       with:
         timeout_minutes: 30
         retry_on: error
         max_attempts: 3
         command: ./hack/test-templates.sh templates/experimental/9p.yaml
     - name: "Test test-misc.yaml"
-      uses: nick-invision/retry@v2
+      uses: nick-invision/retry@v3
       with:
         timeout_minutes: 30
         retry_on: error
@@ -246,7 +246,7 @@ jobs:
     - name: "Show cache"
       run: ./hack/debug-cache.sh
     - name: "Test"
-      uses: nick-invision/retry@v2
+      uses: nick-invision/retry@v3
       with:
         timeout_minutes: 30
         retry_on: error
@@ -296,7 +296,7 @@ jobs:
     - name: "Show cache"
       run: ./hack/debug-cache.sh
     - name: "Test"
-      uses: nick-invision/retry@v2
+      uses: nick-invision/retry@v3
       with:
         timeout_minutes: 30
         retry_on: error
@@ -346,7 +346,7 @@ jobs:
       # Set -count=1 to disable cache
       run: go test -v -count=1 ./pkg/networks/...
     - name: Test vde_vmnet (Deprecated)
-      uses: nick-invision/retry@v2
+      uses: nick-invision/retry@v3
       with:
         timeout_minutes: 30
         retry_on: error
@@ -369,7 +369,7 @@ jobs:
       # Set -count=1 to disable cache
       run: go test -v -count=1 ./pkg/networks/...
     - name: Test socket_vmnet
-      uses: nick-invision/retry@v2
+      uses: nick-invision/retry@v3
       with:
         timeout_minutes: 30
         retry_on: error
@@ -398,7 +398,7 @@ jobs:
     - name: Install test dependencies
       run: brew install qemu bash coreutils
     - name: Test
-      uses: nick-invision/retry@v2
+      uses: nick-invision/retry@v3
       with:
         timeout_minutes: 30
         retry_on: error
