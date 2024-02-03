@@ -147,6 +147,7 @@ func defaultGuestInstallPrefix() string {
 //   - DNS are picked from the highest priority where DNS is not empty.
 //   - CACertificates Files and Certs are uniquely appended in d, y, o order
 func FillDefault(y, d, o *LimaYAML, filePath string) {
+	instDir := filepath.Dir(filePath)
 	if y.VMType == nil {
 		y.VMType = d.VMType
 	}
@@ -393,7 +394,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		if provision.Mode == ProvisionModeDependency && provision.SkipDefaultDependencyResolution == nil {
 			provision.SkipDefaultDependencyResolution = ptr.Of(false)
 		}
-		if out, err := executeGuestTemplate(provision.Script); err == nil {
+		if out, err := executeGuestTemplate(provision.Script, instDir); err == nil {
 			provision.Script = out.String()
 		} else {
 			logrus.WithError(err).Warnf("Couldn't process provisioning script %q as a template", provision.Script)
@@ -462,7 +463,6 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 	}
 
 	y.PortForwards = append(append(o.PortForwards, y.PortForwards...), d.PortForwards...)
-	instDir := filepath.Dir(filePath)
 	for i := range y.PortForwards {
 		FillPortForwardDefaults(&y.PortForwards[i], instDir)
 		// After defaults processing the singular HostPort and GuestPort values should not be used again.
@@ -745,12 +745,13 @@ func fixUpForPlainMode(y *LimaYAML) {
 	y.TimeZone = ptr.Of("")
 }
 
-func executeGuestTemplate(format string) (bytes.Buffer, error) {
+func executeGuestTemplate(format, instDir string) (bytes.Buffer, error) {
 	tmpl, err := template.New("").Parse(format)
 	if err == nil {
 		user, _ := osutil.LimaUser(false)
 		data := map[string]string{
 			"Home": fmt.Sprintf("/home/%s.linux", user.Username),
+			"Name": filepath.Base(instDir),
 			"UID":  user.Uid,
 			"User": user.Username,
 		}
@@ -818,7 +819,7 @@ func FillPortForwardDefaults(rule *PortForward, instDir string) {
 		}
 	}
 	if rule.GuestSocket != "" {
-		if out, err := executeGuestTemplate(rule.GuestSocket); err == nil {
+		if out, err := executeGuestTemplate(rule.GuestSocket, instDir); err == nil {
 			rule.GuestSocket = out.String()
 		} else {
 			logrus.WithError(err).Warnf("Couldn't process guestSocket %q as a template", rule.GuestSocket)
@@ -838,7 +839,7 @@ func FillPortForwardDefaults(rule *PortForward, instDir string) {
 
 func FillCopyToHostDefaults(rule *CopyToHost, instDir string) {
 	if rule.GuestFile != "" {
-		if out, err := executeGuestTemplate(rule.GuestFile); err == nil {
+		if out, err := executeGuestTemplate(rule.GuestFile, instDir); err == nil {
 			rule.GuestFile = out.String()
 		} else {
 			logrus.WithError(err).Warnf("Couldn't process guest %q as a template", rule.GuestFile)
