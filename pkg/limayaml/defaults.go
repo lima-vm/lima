@@ -136,7 +136,7 @@ func defaultGuestInstallPrefix() string {
 // Both d and o may be empty.
 //
 // Maps (`Env`) are being merged: first populated from d, overwritten by y, and again overwritten by o.
-// Slices (e.g. `Mounts`, `Provision`) are appended, starting with o, followed by y, and finally d. This
+// Slices (e.g. `Mounts`, `Provision`, `HostProvision`) are appended, starting with o, followed by y, and finally d. This
 // makes sure o takes priority over y over d, in cases it matters (e.g. `PortForwards`, where the first
 // matching rule terminates the search).
 //
@@ -459,6 +459,17 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		}
 		if probe.Description == "" {
 			probe.Description = fmt.Sprintf("user probe %d/%d", i+1, len(y.Probes))
+		}
+	}
+
+	y.HostProvision = append(append(o.HostProvision, y.HostProvision...), d.HostProvision...)
+	for i := range y.HostProvision {
+		hostProvision := &y.HostProvision[i]
+		if hostProvision.Debug == nil {
+			hostProvision.Debug = ptr.Of(false)
+		}
+		if hostProvision.Wait == nil {
+			hostProvision.Wait = ptr.Of(true)
 		}
 	}
 

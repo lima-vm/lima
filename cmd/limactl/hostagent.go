@@ -88,6 +88,10 @@ func hostagentAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	if err := ha.ExecuteHostProvision(); err != nil {
+		return err
+	}
+
 	backend := &server.Backend{
 		Agent: ha,
 	}

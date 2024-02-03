@@ -65,3 +65,27 @@ additionalDisks:
 	assert.Equal(t, y.AdditionalDisks[0].FSArgs[0], "-i")
 	assert.Equal(t, y.AdditionalDisks[0].FSArgs[1], "size=512")
 }
+
+func TestLoadHostProvisionWithStringHostOS(t *testing.T) {
+	s := `
+hostProvision:
+- hostOS: linux
+`
+	y, err := Load([]byte(s), "hostprovision.yaml")
+	assert.NilError(t, err)
+	assert.Equal(t, len(y.HostProvision), 1)
+	assert.Assert(t, y.HostProvision[0].HostOS != nil)
+	assert.DeepEqual(t, *y.HostProvision[0].HostOS, StringArray{"linux"})
+}
+
+func TestLoadHostProvisionWithSliceHostOS(t *testing.T) {
+	s := `
+hostProvision:
+- hostOS: [linux, darwin]
+`
+	y, err := Load([]byte(s), "hostprovision.yaml")
+	assert.NilError(t, err)
+	assert.Equal(t, len(y.HostProvision), 1)
+	assert.Assert(t, y.HostProvision[0].HostOS != nil)
+	assert.DeepEqual(t, *y.HostProvision[0].HostOS, StringArray{"linux", "darwin"})
+}

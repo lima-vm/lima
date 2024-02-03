@@ -40,6 +40,56 @@ func validateFileObject(f File, fieldName string) error {
 	return nil
 }
 
+func (hp *HostProvision) Validate(i int) error {
+	exclusiveShorthands := map[string]*string{
+		HostProvisionShellBash:       hp.Bash,
+		HostProvisionShellSh:         hp.Sh,
+		HostProvisionShellPwsh:       hp.Pwsh,
+		HostProvisionShellPowerShell: hp.PowerShell,
+		HostProvisionShellCmd:        hp.Cmd,
+	}
+	shorthands := []string{}
+	for name, member := range exclusiveShorthands {
+		if member != nil {
+			shorthands = append(shorthands, name)
+		}
+	}
+	joinedShorthands := strings.Join(shorthands, "`, `")
+	switch shorthandsNum := len(shorthands); {
+	case shorthandsNum > 0 && hp.Shell != nil && hp.Script != nil:
+		return fmt.Errorf("field `hostProvision[%d]` can not have both shorthand fields `%s` and fields `shell` and `script`", i, joinedShorthands)
+	case shorthandsNum > 0 && hp.Shell != nil && hp.Script == nil:
+		return fmt.Errorf("field `hostProvision[%d]` can not have both shorthand fields `%s` and field `shell`", i, joinedShorthands)
+	case shorthandsNum > 0 && hp.Shell == nil && hp.Script != nil:
+		return fmt.Errorf("field `hostProvision[%d]` can not have both shorthand fields `%s` and field `script`", i, joinedShorthands)
+	case shorthandsNum > 1 && hp.Shell == nil && hp.Script == nil:
+		return fmt.Errorf("field `hostProvision[%d]` can only have one shorthand field, got `%s`", i, joinedShorthands)
+	case shorthandsNum == 0 && hp.Shell != nil && hp.Script != nil:
+		switch *hp.Shell {
+		case HostProvisionShellBash, HostProvisionShellSh, HostProvisionShellPwsh, HostProvisionShellPowerShell, HostProvisionShellCmd:
+			// NOP
+		default:
+			// Custom shell using template variable {{.ScriptName}} requires field `script` to be set
+			if !strings.Contains(*hp.Shell, "{{.ScriptName}}") {
+				return fmt.Errorf("field `hostProvision[%d].shell` does not contain `{{.ScriptName}}` for the script name but `hostProvision[%d].script` is set", i, i)
+			}
+		}
+	case shorthandsNum == 0 && hp.Shell != nil && hp.Script == nil:
+		switch *hp.Shell {
+		case HostProvisionShellBash, HostProvisionShellSh, HostProvisionShellPwsh, HostProvisionShellPowerShell, HostProvisionShellCmd:
+			return fmt.Errorf("field `hostProvision[%d].shell` with value %q requires field `hostProvision[%d].script` to be set", i, *hp.Shell, i)
+		default:
+			// Custom shell using template variable {{.ScriptName}} requires field `script` to be set
+			if strings.Contains(*hp.Shell, "{{.ScriptName}}") {
+				return fmt.Errorf("field `hostProvision[%d].shell` contains `{{.ScriptName}}` for the script name but `hostProvision[%d].script` is not set", i, i)
+			}
+		}
+	case shorthandsNum == 0 && hp.Shell == nil && hp.Script == nil:
+		return fmt.Errorf("field `hostProvision[%d].script` is required when no shell is specified", i)
+	}
+	return nil
+}
+
 func Validate(y LimaYAML, warn bool) error {
 	switch *y.OS {
 	case LINUX:
@@ -201,6 +251,11 @@ func Validate(y LimaYAML, warn bool) error {
 		default:
 			return fmt.Errorf("field `probe[%d].mode` can only be %q",
 				i, ProbeModeReadiness)
+		}
+	}
+	for i, hp := range y.HostProvision {
+		if err := hp.Validate(i); err != nil {
+			return err
 		}
 	}
 	for i, rule := range y.PortForwards {

@@ -153,6 +153,9 @@ func TestFillDefault(t *testing.T) {
 		Probes: []Probe{
 			{Script: "#!/bin/false"},
 		},
+		HostProvision: []HostProvision{
+			{Debug: ptr.Of(true), Script: ptr.Of("true")},
+		},
 		Networks: []Network{
 			{Lima: "shared"},
 		},
@@ -233,6 +236,10 @@ func TestFillDefault(t *testing.T) {
 	expect.Probes = y.Probes
 	expect.Probes[0].Mode = ProbeModeReadiness
 	expect.Probes[0].Description = "user probe 1/1"
+
+	expect.HostProvision = y.HostProvision
+	expect.HostProvision[0].Debug = ptr.Of(true)
+	expect.HostProvision[0].Wait = ptr.Of(true)
 
 	expect.Networks = y.Networks
 	expect.Networks[0].MACAddress = MACAddress(fmt.Sprintf("%s#%d", filePath, 0))
@@ -374,6 +381,13 @@ func TestFillDefault(t *testing.T) {
 				Description: "User Probe",
 			},
 		},
+		HostProvision: []HostProvision{
+			{
+				Debug:  ptr.Of(false),
+				Script: ptr.Of("false"),
+				Wait:   ptr.Of(false),
+			},
+		},
 		Networks: []Network{
 			{
 				VNLDeprecated:        "/tmp/vde.ctl",
@@ -460,6 +474,7 @@ func TestFillDefault(t *testing.T) {
 
 	expect.Provision = append(append([]Provision{}, y.Provision...), d.Provision...)
 	expect.Probes = append(append([]Probe{}, y.Probes...), d.Probes...)
+	expect.HostProvision = append(append([]HostProvision{}, y.HostProvision...), d.HostProvision...)
 	expect.PortForwards = append(append([]PortForward{}, y.PortForwards...), d.PortForwards...)
 	expect.CopyToHost = append(append([]CopyToHost{}, y.CopyToHost...), d.CopyToHost...)
 	expect.Containerd.Archives = append(append([]File{}, y.Containerd.Archives...), d.Containerd.Archives...)
@@ -573,6 +588,13 @@ func TestFillDefault(t *testing.T) {
 				Description: "Another Probe",
 			},
 		},
+		HostProvision: []HostProvision{
+			{
+				Debug:  ptr.Of(false),
+				Script: ptr.Of("false"),
+				Wait:   ptr.Of(false),
+			},
+		},
 		Networks: []Network{
 			{
 				Lima:       "shared",
@@ -616,6 +638,7 @@ func TestFillDefault(t *testing.T) {
 
 	expect.Provision = append(append(o.Provision, y.Provision...), d.Provision...)
 	expect.Probes = append(append(o.Probes, y.Probes...), d.Probes...)
+	expect.HostProvision = append(append(o.HostProvision, y.HostProvision...), d.HostProvision...)
 	expect.PortForwards = append(append(o.PortForwards, y.PortForwards...), d.PortForwards...)
 	expect.CopyToHost = append(append(o.CopyToHost, y.CopyToHost...), d.CopyToHost...)
 	expect.Containerd.Archives = append(append(o.Containerd.Archives, y.Containerd.Archives...), d.Containerd.Archives...)

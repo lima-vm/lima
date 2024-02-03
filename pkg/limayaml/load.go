@@ -33,8 +33,37 @@ func (d *Disk) UnmarshalYAML(value *yamlv3.Node) error {
 	return nil
 }
 
+func unmarshalStringArray(dst *StringArray, b []byte) error {
+	var multi []string
+	if err := yaml.Unmarshal(b, &multi); err == nil {
+		*dst = multi
+	} else {
+		var single string
+		if err := yaml.Unmarshal(b, &single); err != nil {
+			return err
+		}
+		*dst = []string{single}
+	}
+	return nil
+}
+
+func (a *StringArray) UnmarshalYAML(value *yamlv3.Node) error {
+	var multi []string
+	if err := value.Decode(&multi); err == nil {
+		*a = multi
+	} else {
+		var single string
+		if err := value.Decode(&single); err != nil {
+			return err
+		}
+		*a = []string{single}
+	}
+	return nil
+}
+
 func unmarshalYAML(data []byte, v interface{}, comment string) error {
-	if err := yaml.UnmarshalWithOptions(data, v, yaml.DisallowDuplicateKey(), yaml.CustomUnmarshaler[Disk](unmarshalDisk)); err != nil {
+	decoderOptions := []yaml.DecodeOption{yaml.CustomUnmarshaler(unmarshalDisk), yaml.CustomUnmarshaler(unmarshalStringArray)}
+	if err := yaml.UnmarshalWithOptions(data, v, append(decoderOptions, yaml.DisallowDuplicateKey())...); err != nil {
 		return fmt.Errorf("failed to unmarshal YAML (%s): %w", comment, err)
 	}
 	// the go-yaml library doesn't catch all markup errors, unfortunately
@@ -42,7 +71,7 @@ func unmarshalYAML(data []byte, v interface{}, comment string) error {
 	if err := yamlv3.Unmarshal(data, v); err != nil {
 		return fmt.Errorf("failed to unmarshal YAML (%s): %w", comment, err)
 	}
-	if err := yaml.UnmarshalWithOptions(data, v, yaml.Strict(), yaml.CustomUnmarshaler[Disk](unmarshalDisk)); err != nil {
+	if err := yaml.UnmarshalWithOptions(data, v, append(decoderOptions, yaml.Strict())...); err != nil {
 		logrus.WithField("comment", comment).WithError(err).Warn("Non-strict YAML is deprecated and will be unsupported in a future version of Lima")
 		// Non-strict YAML is known to be used by Rancher Desktop:
 		// https://github.com/rancher-sandbox/rancher-desktop/blob/c7ea7508a0191634adf16f4675f64c73198e8d37/src/backend/lima.ts#L114-L117

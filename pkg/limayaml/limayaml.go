@@ -36,11 +36,12 @@ type LimaYAML struct {
 	DNS          []net.IP          `yaml:"dns,omitempty" json:"dns,omitempty"`
 	HostResolver HostResolver      `yaml:"hostResolver,omitempty" json:"hostResolver,omitempty"`
 	// `useHostResolver` was deprecated in Lima v0.8.1, removed in Lima v0.14.0. Use `hostResolver.enabled` instead.
-	PropagateProxyEnv *bool          `yaml:"propagateProxyEnv,omitempty" json:"propagateProxyEnv,omitempty"`
-	CACertificates    CACertificates `yaml:"caCerts,omitempty" json:"caCerts,omitempty"`
-	Rosetta           Rosetta        `yaml:"rosetta,omitempty" json:"rosetta,omitempty"`
-	Plain             *bool          `yaml:"plain,omitempty" json:"plain,omitempty"`
-	TimeZone          *string        `yaml:"timezone,omitempty" json:"timezone,omitempty"`
+	PropagateProxyEnv *bool           `yaml:"propagateProxyEnv,omitempty" json:"propagateProxyEnv,omitempty"`
+	CACertificates    CACertificates  `yaml:"caCerts,omitempty" json:"caCerts,omitempty"`
+	Rosetta           Rosetta         `yaml:"rosetta,omitempty" json:"rosetta,omitempty"`
+	Plain             *bool           `yaml:"plain,omitempty" json:"plain,omitempty"`
+	TimeZone          *string         `yaml:"timezone,omitempty" json:"timezone,omitempty"`
+	HostProvision     []HostProvision `yaml:"hostProvision,omitempty" json:"hostProvision,omitempty"`
 }
 
 type (
@@ -202,6 +203,31 @@ type Probe struct {
 	Description string
 	Script      string
 	Hint        string
+}
+
+type HostProvisionShell = string
+
+const (
+	HostProvisionShellBash       HostProvisionShell = "bash"
+	HostProvisionShellSh         HostProvisionShell = "sh"
+	HostProvisionShellPwsh       HostProvisionShell = "pwsh"
+	HostProvisionShellPowerShell HostProvisionShell = "powershell"
+	HostProvisionShellCmd        HostProvisionShell = "cmd"
+)
+
+type StringArray []string
+
+type HostProvision struct {
+	Debug      *bool               `yaml:"debug,omitempty" json:"debug,omitempty"`
+	HostOS     *StringArray        `yaml:"hostOS,omitempty" json:"hostOS,omitempty"`
+	Script     *string             `yaml:"script,omitempty" json:"script,omitempty"`
+	Shell      *HostProvisionShell `yaml:"shell,omitempty" json:"shell,omitempty"` // default: see defaultHostProvisionCmd
+	Wait       *bool               `yaml:"wait,omitempty" json:"wait,omitempty"`   // default: true
+	Bash       *string             `yaml:"bash,omitempty" json:"bash,omitempty"`
+	Sh         *string             `yaml:"sh,omitempty" json:"sh,omitempty"`
+	Pwsh       *string             `yaml:"pwsh,omitempty" json:"pwsh,omitempty"`
+	PowerShell *string             `yaml:"powershell,omitempty" json:"powershell,omitempty"`
+	Cmd        *string             `yaml:"cmd,omitempty" json:"cmd,omitempty"`
 }
 
 type Proto = string
