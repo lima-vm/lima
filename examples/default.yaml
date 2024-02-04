@@ -241,59 +241,6 @@ containerd:
 #     vim was not installed in the guest. Make sure the package system is working correctly.
 #     Also see "/var/log/cloud-init-output.log" in the guest.
 
-# Host provisioning scripts are executed every time before starting the instance.
-# - the working directory is the instance directory `{{.Dir}}`
-# - the `runtime.GOOS` is used to determine the host OS. e.g. `darwin` for macOS, `linux` for Linux, and `windows` for Windows.
-# - if `wait` is true and the script exits with a non-zero status, the instance start will be aborted.
-# `shell` and `script` can include these template variables:
-# - `{{.ScriptName}}` that represents the temporary script file path.
-# - `{{.Index}}` that represents the index in the list of host provisioning scripts (0-based).
-# - template variables available in `limactl list --format` command.
-# 🟢 Builtin default: null
-# hostProvision:
-# - debug: false      # change the temporary script location to {{.Dir}} and not delete it after execution. default: false
-#   hostOS: darwin    # string or []string. The script is executed only on the specified host OS.
-#   script: |         # passed to the shell as temporary file argument if exists
-#     xattr -w com.apple.metadata:com_apple_backup_excludeItem true {{.Dir}}/{basedisk,diffdisk}
-#   shell: bash       # default: null
-#   wait: true        # wait for the script to finish before starting the instance. default: true
-# # If no shell is given, the default shell is selected based on the host OS. If the default shell is not
-# # located on the PATH, fallbacks to `sh` (when host OS is not windows) or `powershell` (when host OS is windows).
-# # `shell` can be either:
-# # 1. Builtin / Explicitly supported keywords
-# # | Keyword      | Command run internally                                 | Description                                    |
-# # | ------------ | ------------------------------------------------------ | ---------------------------------------------- |
-# # | `bash`       | `bash --noprofile --norc -eo pipefail {{.ScriptName}}` | The default shell when host OS is not windows. |
-# # | `sh`         | `sh -e {{.ScriptName}}`                                |                                                |
-# # | `pwsh`       | `pwsh -command ". '{{.ScriptName}}'"`                  | The default shell when host OS is windows.     |
-# # | `powershell` | `powershell -command ". '{{.ScriptName}}'"`            |                                                |
-# # | `cmd`        | `cmd /D /E:ON /V:OFF /S /C "CALL "{{.ScriptName}}""`   |                                                |
-# # 2. Template string: `command [...options] {{.ScriptName}} [...more_options]`
-# #   `{{.ScriptName}}` is replaced with the temporary script file path
-# #
-# # there are shorthand forms for the builtin shells:
-# - bash: echo "executed by bash"                    # interpreted as {shell: bash, hostOS: [darwin, linux], script: ...}
-# - sh: echo "executed by sh"                        # interpreted as {shell: sh, hostOS: [darwin, linux], script: ...}
-# - pwsh: Write-Host "executed by pwsh"              # interpreted as {shell: pwsh, hostOS: [windows], script: ...}
-# - powershell: Write-Host "executed by powershell"  # interpreted as {shell: powershell, hostOS: [windows], script: ...}
-# - cmd: echo "executed by cmd"                      # interpreted as {shell: cmd, hostOS: [windows], script: ...}
-# # e.g.
-# - bash: | # Post a notification when an error by the hostProvision script is detected
-#     jq=/opt/homebrew/bin/jq && test -x $jq || exit 0
-#     tail -n0 -F ha.stderr.log | while read -r line; do
-#       msg=$(echo "$line"|$jq -er '
-#         select(.hostProvision and .hostProvision != {{.Index}})| # select log lines from other hostProvision scripts
-#         select(.level == "error")|                               # select error log lines
-#         .msg
-#       ') || continue
-#       osascript -e "on run argv" -e "display notification (item 1 of argv) with title \"Lima\"" -e "end run" "$msg"
-#       echo Posted a notification
-#     done
-#   debug: false
-#   hostOS: darwin
-#   wait: false
-
-
 # ===================================================================== #
 # FURTHER ADVANCED CONFIGURATION
 # ===================================================================== #
@@ -563,6 +510,62 @@ plain: null
 #   name with higher priority definitions. This does not apply if the
 #  `interface` field is empty. `networks` are therefore also processed
 #  in lowest to highest priority order.
+
+# ===================================================================== #
+# CONFIGURATION AVAILABLE ONLY IN $LIMA_HOME/_config/default.yaml
+# ===================================================================== #
+
+# Host provisioning scripts are executed every time before starting the instance.
+# - the working directory is the instance directory `{{.Dir}}`
+# - the `runtime.GOOS` is used to determine the host OS. e.g. `darwin` for macOS, `linux` for Linux, and `windows` for Windows.
+# - if `wait` is true and the script exits with a non-zero status, the instance start will be aborted.
+# `shell` and `script` can include these template variables:
+# - `{{.ScriptName}}` that represents the temporary script file path.
+# - `{{.Index}}` that represents the index in the list of host provisioning scripts (0-based).
+# - template variables available in `limactl list --format` command.
+# 🟢 Builtin default: null
+# hostProvision:
+# - debug: false      # change the temporary script location to {{.Dir}} and not delete it after execution. default: false
+#   hostOS: darwin    # string or []string. The script is executed only on the specified host OS.
+#   script: |         # passed to the shell as temporary file argument if exists
+#     xattr -w com.apple.metadata:com_apple_backup_excludeItem true {{.Dir}}/{basedisk,diffdisk}
+#   shell: bash       # default: null
+#   wait: true        # wait for the script to finish before starting the instance. default: true
+# # If no shell is given, the default shell is selected based on the host OS. If the default shell is not
+# # located on the PATH, fallbacks to `sh` (when host OS is not windows) or `powershell` (when host OS is windows).
+# # `shell` can be either:
+# # 1. Builtin / Explicitly supported keywords
+# # | Keyword      | Command run internally                                 | Description                                    |
+# # | ------------ | ------------------------------------------------------ | ---------------------------------------------- |
+# # | `bash`       | `bash --noprofile --norc -eo pipefail {{.ScriptName}}` | The default shell when host OS is not windows. |
+# # | `sh`         | `sh -e {{.ScriptName}}`                                |                                                |
+# # | `pwsh`       | `pwsh -command ". '{{.ScriptName}}'"`                  | The default shell when host OS is windows.     |
+# # | `powershell` | `powershell -command ". '{{.ScriptName}}'"`            |                                                |
+# # | `cmd`        | `cmd /D /E:ON /V:OFF /S /C "CALL "{{.ScriptName}}""`   |                                                |
+# # 2. Template string: `command [...options] {{.ScriptName}} [...more_options]`
+# #   `{{.ScriptName}}` is replaced with the temporary script file path
+# #
+# # there are shorthand forms for the builtin shells:
+# - bash: echo "executed by bash"                    # interpreted as {shell: bash, hostOS: [darwin, linux], script: ...}
+# - sh: echo "executed by sh"                        # interpreted as {shell: sh, hostOS: [darwin, linux], script: ...}
+# - pwsh: Write-Host "executed by pwsh"              # interpreted as {shell: pwsh, hostOS: [windows], script: ...}
+# - powershell: Write-Host "executed by powershell"  # interpreted as {shell: powershell, hostOS: [windows], script: ...}
+# - cmd: echo "executed by cmd"                      # interpreted as {shell: cmd, hostOS: [windows], script: ...}
+# # e.g.
+# - bash: | # Post a notification when an error by the hostProvision script is detected
+#     jq=/opt/homebrew/bin/jq && test -x $jq || exit 0
+#     tail -n0 -F ha.stderr.log | while read -r line; do
+#       msg=$(echo "$line"|$jq -er '
+#         select(.hostProvision and .hostProvision != {{.Index}})| # select log lines from other hostProvision scripts
+#         select(.level == "error")|                               # select error log lines
+#         .msg
+#       ') || continue
+#       osascript -e "on run argv" -e "display notification (item 1 of argv) with title \"Lima\"" -e "end run" "$msg"
+#       echo Posted a notification
+#     done
+#   debug: false
+#   hostOS: darwin
+#   wait: false
 
 # ===================================================================== #
 # END OF TEMPLATE
