@@ -79,10 +79,22 @@ func unmarshalYAML(data []byte, v interface{}, comment string) error {
 	return nil
 }
 
+type options struct {
+	enableHostProvision bool // default: false
+}
+
+type Opt func(*options)
+
+func WithEnableHostProvision() Opt {
+	return func(o *options) {
+		o.enableHostProvision = true
+	}
+}
+
 // Load loads the yaml and fulfills unspecified fields with the default values.
 //
 // Load does not validate. Use Validate for validation.
-func Load(b []byte, filePath string) (*LimaYAML, error) {
+func Load(b []byte, filePath string, opts ...Opt) (*LimaYAML, error) {
 	var y, d, o LimaYAML
 
 	if err := unmarshalYAML(b, &y, fmt.Sprintf("main file %q", filePath)); err != nil {
@@ -115,6 +127,6 @@ func Load(b []byte, filePath string) (*LimaYAML, error) {
 		return nil, err
 	}
 
-	FillDefault(&y, &d, &o, filePath)
+	FillDefault(&y, &d, &o, filePath, opts...)
 	return &y, nil
 }

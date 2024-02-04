@@ -291,8 +291,13 @@ func TestFillDefault(t *testing.T) {
 		BinFmt:  ptr.Of(false),
 	}
 
-	FillDefault(&y, &LimaYAML{}, &LimaYAML{}, filePath)
+	yLimited := y
+	FillDefault(&y, &LimaYAML{}, &LimaYAML{}, filePath, WithEnableHostProvision())
 	assert.DeepEqual(t, &y, &expect, opts...)
+
+	expect.HostProvision = nil
+	FillDefault(&yLimited, &LimaYAML{}, &LimaYAML{}, filePath)
+	assert.DeepEqual(t, &yLimited, &expect, opts...)
 
 	filledDefaults := y
 
@@ -460,8 +465,12 @@ func TestFillDefault(t *testing.T) {
 	expect.Plain = ptr.Of(false)
 
 	y = LimaYAML{}
-	FillDefault(&y, &d, &LimaYAML{}, filePath)
+	FillDefault(&y, &d, &LimaYAML{}, filePath, WithEnableHostProvision())
 	assert.DeepEqual(t, &y, &expect, opts...)
+
+	yLimited = LimaYAML{}
+	FillDefault(&yLimited, &d, &LimaYAML{}, filePath)
+	assert.DeepEqual(t, &yLimited, &expect, opts...)
 
 	// ------------------------------------------------------------------------------------
 	// User-provided defaults should not override user-provided config values
@@ -492,8 +501,13 @@ func TestFillDefault(t *testing.T) {
 	// "TWO" does not exist in filledDefaults.Env, so is set from d.Env
 	expect.Env["TWO"] = d.Env["TWO"]
 
-	FillDefault(&y, &d, &LimaYAML{}, filePath)
+	yLimited = y
+	FillDefault(&y, &d, &LimaYAML{}, filePath, WithEnableHostProvision())
 	assert.DeepEqual(t, &y, &expect, opts...)
+
+	expect.HostProvision = d.HostProvision
+	FillDefault(&yLimited, &d, &LimaYAML{}, filePath)
+	assert.DeepEqual(t, &yLimited, &expect, opts...)
 
 	// ------------------------------------------------------------------------------------
 	// User-provided overrides should override user-provided config settings
@@ -638,7 +652,8 @@ func TestFillDefault(t *testing.T) {
 
 	expect.Provision = append(append(o.Provision, y.Provision...), d.Provision...)
 	expect.Probes = append(append(o.Probes, y.Probes...), d.Probes...)
-	expect.HostProvision = append(append(o.HostProvision, y.HostProvision...), d.HostProvision...)
+	// HostProvision is not supported in override.yaml
+	expect.HostProvision = append(append([]HostProvision{}, y.HostProvision...), d.HostProvision...)
 	expect.PortForwards = append(append(o.PortForwards, y.PortForwards...), d.PortForwards...)
 	expect.CopyToHost = append(append(o.CopyToHost, y.CopyToHost...), d.CopyToHost...)
 	expect.Containerd.Archives = append(append(o.Containerd.Archives, y.Containerd.Archives...), d.Containerd.Archives...)
@@ -685,6 +700,11 @@ func TestFillDefault(t *testing.T) {
 	}
 	expect.Plain = ptr.Of(false)
 
-	FillDefault(&y, &d, &o, filePath)
+	yLimited = y
+	FillDefault(&y, &d, &o, filePath, WithEnableHostProvision())
 	assert.DeepEqual(t, &y, &expect, opts...)
+
+	expect.HostProvision = d.HostProvision
+	FillDefault(&yLimited, &d, &o, filePath)
+	assert.DeepEqual(t, &yLimited, &expect, opts...)
 }

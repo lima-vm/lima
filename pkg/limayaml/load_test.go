@@ -71,7 +71,7 @@ func TestLoadHostProvisionWithStringHostOS(t *testing.T) {
 hostProvision:
 - hostOS: linux
 `
-	y, err := Load([]byte(s), "hostprovision.yaml")
+	y, err := Load([]byte(s), "hostprovision.yaml", WithEnableHostProvision())
 	assert.NilError(t, err)
 	assert.Equal(t, len(y.HostProvision), 1)
 	assert.Assert(t, y.HostProvision[0].HostOS != nil)
@@ -83,7 +83,7 @@ func TestLoadHostProvisionWithSliceHostOS(t *testing.T) {
 hostProvision:
 - hostOS: [linux, darwin]
 `
-	y, err := Load([]byte(s), "hostprovision.yaml")
+	y, err := Load([]byte(s), "hostprovision.yaml", WithEnableHostProvision())
 	assert.NilError(t, err)
 	assert.Equal(t, len(y.HostProvision), 1)
 	assert.Assert(t, y.HostProvision[0].HostOS != nil)

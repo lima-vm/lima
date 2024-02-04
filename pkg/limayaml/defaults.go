@@ -146,7 +146,11 @@ func defaultGuestInstallPrefix() string {
 //   - Networks are appended in d, y, o order
 //   - DNS are picked from the highest priority where DNS is not empty.
 //   - CACertificates Files and Certs are uniquely appended in d, y, o order
-func FillDefault(y, d, o *LimaYAML, filePath string) {
+func FillDefault(y, d, o *LimaYAML, filePath string, opts ...Opt) {
+	var opt options
+	for _, f := range opts {
+		f(&opt)
+	}
 	instDir := filepath.Dir(filePath)
 	if y.VMType == nil {
 		y.VMType = d.VMType
@@ -462,6 +466,14 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		}
 	}
 
+	if !opt.enableHostProvision && len(y.HostProvision) > 0 {
+		y.HostProvision = nil
+		logrus.Warnf("HostProvision is not enabled in %q. Use them in %q", filePath, filenames.Default)
+	}
+	if len(o.HostProvision) > 0 {
+		o.HostProvision = nil
+		logrus.Warnf("HostProvision is not supported in %q. Use them in %q", filePath, filenames.Override)
+	}
 	y.HostProvision = append(append(o.HostProvision, y.HostProvision...), d.HostProvision...)
 	for i := range y.HostProvision {
 		hostProvision := &y.HostProvision[i]
