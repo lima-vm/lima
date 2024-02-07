@@ -28,7 +28,7 @@ jobs:
         fetch-depth: 1
     - uses: actions/setup-go@v5
       with:
-        go-version: 1.21.x
+        go-version: 1.22.x
     - name: Run golangci-lint
       uses: golangci/golangci-lint-action@v3.7.0
       with:
@@ -63,8 +63,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # For Linux we have to support an old release of Go
-        go-version: ["1.20.x", "1.21.x", "1.22.0-rc.1"]
+        # For non-Homebrew we have to support an old release of Go
+        go-version: ["1.21.x", "1.22.x"]
     steps:
     - uses: actions/checkout@v4
       with:
@@ -117,7 +117,7 @@ jobs:
         fetch-depth: 1
     - uses: actions/setup-go@v5
       with:
-        go-version: 1.21.x
+        go-version: 1.22.x
     - name: Unit tests
       run: go test -v ./...
     - name: Make
@@ -146,7 +146,7 @@ jobs:
         fetch-depth: 1
     - uses: actions/setup-go@v5
       with:
-        go-version: 1.21.x
+        go-version: 1.22.x
     - name: Cache ~/Library/Caches/lima/download
       uses: actions/cache@v4
       with:
@@ -315,7 +315,7 @@ jobs:
         fetch-depth: 1
     - uses: actions/setup-go@v5
       with:
-        go-version: 1.21.x
+        go-version: 1.22.x
     - name: Cache ~/Library/Caches/lima/download
       uses: actions/cache@v4
       with:
@@ -389,7 +389,7 @@ jobs:
         fetch-depth: 0
     - uses: actions/setup-go@v5
       with:
-        go-version: 1.21.x
+        go-version: 1.22.x
     - name: Cache ~/Library/Caches/lima/download
       uses: actions/cache@v4
       with:
@@ -421,7 +421,7 @@ jobs:
         fetch-depth: 1
     - uses: actions/setup-go@v5
       with:
-        go-version: 1.21.x
+        go-version: 1.22.x
     - name: Cache ~/Library/Caches/lima/download
       uses: actions/cache@v4
       with:
