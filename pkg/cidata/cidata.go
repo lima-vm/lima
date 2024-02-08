@@ -177,7 +177,7 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 		return errors.New("no SSH key was found, run `ssh-keygen`")
 	}
 	for _, f := range pubKeys {
-		args.SSHPubKeys = append(args.SSHPubKeys, f.Content)
+		args.SSHPubKeys = append(args.SSHPubKeys, strconv.Quote(f.Content))
 	}
 
 	var fstype string
