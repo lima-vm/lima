@@ -6,6 +6,9 @@ import (
 	"strings"
 )
 
+// vmIDRegex is a regular expression to extract the VM ID from the command line of wslhost.exe.
+var vmIDRegex = regexp.MustCompile(`--vm-id\s\{(?P<vmID>.{36})\}`)
+
 // GetInstanceVMID returns the VM ID of a running WSL instance.
 func GetInstanceVMID(instanceName string) (string, error) {
 	distroID, err := GetDistroID(instanceName)
@@ -18,16 +21,11 @@ func GetInstanceVMID(instanceName string) (string, error) {
 		return "", err
 	}
 
-	re := regexp.MustCompile(`--vm-id\s\{(?P<vmID>.{36})\}`)
-	if err != nil {
-		return "", err
-	}
-
 	vmID := ""
 	for _, cmdLine := range cmdLines {
 		if strings.Contains(cmdLine, distroID) {
-			if matches := re.FindStringSubmatch(cmdLine); matches != nil {
-				vmID = matches[re.SubexpIndex("vmID")]
+			if matches := vmIDRegex.FindStringSubmatch(cmdLine); matches != nil {
+				vmID = matches[vmIDRegex.SubexpIndex("vmID")]
 				break
 			}
 		}
