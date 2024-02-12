@@ -30,7 +30,7 @@ jobs:
       with:
         go-version: 1.22.x
     - name: Run golangci-lint
-      uses: golangci/golangci-lint-action@v3.7.0
+      uses: golangci/golangci-lint-action@v4.0.0
       with:
         version: v1.55.2
         args: --verbose --timeout=10m
