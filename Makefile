@@ -231,8 +231,14 @@ uninstall:
 	if [ "$$(readlink "$(DEST)/bin/nerdctl")" = "nerdctl.lima" ]; then rm "$(DEST)/bin/nerdctl"; fi
 	if [ "$$(readlink "$(DEST)/bin/apptainer")" = "apptainer.lima" ]; then rm "$(DEST)/bin/apptainer"; fi
 
+.PHONY: check-generated
+check-generated:
+	@test -z "$$(git status --short | grep ".pb.desc" | tee /dev/stderr)" || \
+		((git diff $$(find . -name '*.pb.desc') | cat) && \
+		(echo "Please run 'make generate' when making changes to proto files and check-in the generated file changes" && false))
+
 .PHONY: lint
-lint:
+lint: check-generated
 	golangci-lint run ./...
 	yamllint .
 	find . -name '*.sh' | xargs shellcheck
@@ -241,6 +247,15 @@ lint:
 .PHONY: clean
 clean:
 	rm -rf _output vendor
+
+.PHONY: install-tools
+install-tools:
+	go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28
+	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2
+
+.PHONY: generate
+generate:
+	go generate ./...
 
 .PHONY: artifacts-darwin
 artifacts-darwin:

@@ -17,7 +17,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/cpu"
 
-	"github.com/lima-vm/lima/pkg/guestagent/api"
 	"github.com/lima-vm/lima/pkg/networks"
 	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/ptr"
@@ -36,6 +35,8 @@ const (
 
 	DefaultVirtiofsQueueSize int = 1024
 )
+
+var IPv4loopback1 = net.IPv4(127, 0, 0, 1)
 
 func defaultContainerdArchives() []File {
 	const nerdctlVersion = "1.7.3"
@@ -795,11 +796,11 @@ func FillPortForwardDefaults(rule *PortForward, instDir string) {
 		if rule.GuestIPMustBeZero {
 			rule.GuestIP = net.IPv4zero
 		} else {
-			rule.GuestIP = api.IPv4loopback1
+			rule.GuestIP = IPv4loopback1
 		}
 	}
 	if rule.HostIP == nil {
-		rule.HostIP = api.IPv4loopback1
+		rule.HostIP = IPv4loopback1
 	}
 	if rule.GuestPortRange[0] == 0 && rule.GuestPortRange[1] == 0 {
 		if rule.GuestPort == 0 {

@@ -10,7 +10,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/lima-vm/lima/pkg/guestagent/api"
 	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/ptr"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
@@ -124,9 +123,9 @@ func TestFillDefault(t *testing.T) {
 	}
 
 	defaultPortForward := PortForward{
-		GuestIP:        api.IPv4loopback1,
+		GuestIP:        IPv4loopback1,
 		GuestPortRange: [2]int{1, 65535},
-		HostIP:         api.IPv4loopback1,
+		HostIP:         IPv4loopback1,
 		HostPortRange:  [2]int{1, 65535},
 		Proto:          TCP,
 		Reverse:        false,
@@ -386,10 +385,10 @@ func TestFillDefault(t *testing.T) {
 			net.ParseIP("1.1.1.1"),
 		},
 		PortForwards: []PortForward{{
-			GuestIP:        api.IPv4loopback1,
+			GuestIP:        IPv4loopback1,
 			GuestPort:      80,
 			GuestPortRange: [2]int{80, 80},
-			HostIP:         api.IPv4loopback1,
+			HostIP:         IPv4loopback1,
 			HostPort:       80,
 			HostPortRange:  [2]int{80, 80},
 			Proto:          TCP,
@@ -588,10 +587,10 @@ func TestFillDefault(t *testing.T) {
 			net.ParseIP("2.2.2.2"),
 		},
 		PortForwards: []PortForward{{
-			GuestIP:        api.IPv4loopback1,
+			GuestIP:        IPv4loopback1,
 			GuestPort:      88,
 			GuestPortRange: [2]int{88, 88},
-			HostIP:         api.IPv4loopback1,
+			HostIP:         IPv4loopback1,
 			HostPort:       8080,
 			HostPortRange:  [2]int{8080, 8080},
 			Proto:          TCP,

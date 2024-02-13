@@ -58,7 +58,7 @@ type HostAgent struct {
 	virtioPort string
 
 	clientMu sync.RWMutex
-	client   guestagentclient.GuestAgentClient
+	client   *guestagentclient.GuestAgentClient
 
 	guestAgentAliveCh     chan struct{} // closed on establishing the connection
 	guestAgentAliveChOnce sync.Once
@@ -157,7 +157,7 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 	}
 	rules = append(rules, y.PortForwards...)
 	// Default forwards for all non-privileged ports from "127.0.0.1" and "::1"
-	rule := limayaml.PortForward{GuestIP: guestagentapi.IPv4loopback1}
+	rule := limayaml.PortForward{}
 	limayaml.FillPortForwardDefaults(&rule, inst.Dir)
 	rules = append(rules, rule)
 
@@ -563,7 +563,7 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 		logrus.Debugf("Forwarding unix sockets")
 		for _, rule := range a.y.PortForwards {
 			if rule.GuestSocket != "" {
-				local := hostAddress(rule, guestagentapi.IPPort{})
+				local := hostAddress(rule, &guestagentapi.IPPort{})
 				_ = forwardSSH(ctx, a.sshConfig, a.sshLocalPort, local, rule.GuestSocket, verbForward, rule.Reverse)
 			}
 		}
@@ -577,7 +577,7 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 		var errs []error
 		for _, rule := range a.y.PortForwards {
 			if rule.GuestSocket != "" {
-				local := hostAddress(rule, guestagentapi.IPPort{})
+				local := hostAddress(rule, &guestagentapi.IPPort{})
 				// using ctx.Background() because ctx has already been cancelled
 				if err := forwardSSH(context.Background(), a.sshConfig, a.sshLocalPort, local, rule.GuestSocket, verbCancel, rule.Reverse); err != nil {
 					errs = append(errs, err)
@@ -605,7 +605,9 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 				}
 			}
 		} else {
-			logrus.WithError(err).Warn("connection to the guest agent was closed unexpectedly", err)
+			if !errors.Is(err, context.Canceled) {
+				logrus.WithError(err).Warn("connection to the guest agent was closed unexpectedly", err)
+			}
 		}
 		select {
 		case <-ctx.Done():
@@ -615,19 +617,19 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 	}
 }
 
-func isGuestAgentSocketAccessible(ctx context.Context, client guestagentclient.GuestAgentClient) bool {
+func isGuestAgentSocketAccessible(ctx context.Context, client *guestagentclient.GuestAgentClient) bool {
 	_, err := client.Info(ctx)
 	return err == nil
 }
 
-func (a *HostAgent) getOrCreateClient(ctx context.Context) (guestagentclient.GuestAgentClient, error) {
+func (a *HostAgent) getOrCreateClient(ctx context.Context) (*guestagentclient.GuestAgentClient, error) {
 	a.clientMu.Lock()
 	defer a.clientMu.Unlock()
 	if a.client != nil && isGuestAgentSocketAccessible(ctx, a.client) {
 		return a.client, nil
 	}
 	var err error
-	a.client, err = a.createClient(ctx)
+	a.client, err = guestagentclient.NewGuestAgentClient(a.createConnection)
 	return a.client, err
 }
 
@@ -641,16 +643,7 @@ func (a *HostAgent) createConnection(ctx context.Context) (net.Conn, error) {
 	return conn, err
 }
 
-func (a *HostAgent) createClient(ctx context.Context) (guestagentclient.GuestAgentClient, error) {
-	conn, err := a.createConnection(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	return guestagentclient.NewGuestAgentClient(conn)
-}
-
-func (a *HostAgent) processGuestAgentEvents(ctx context.Context, client guestagentclient.GuestAgentClient) error {
+func (a *HostAgent) processGuestAgentEvents(ctx context.Context, client *guestagentclient.GuestAgentClient) error {
 	info, err := client.Info(ctx)
 	if err != nil {
 		return err
@@ -662,7 +655,7 @@ func (a *HostAgent) processGuestAgentEvents(ctx context.Context, client guestage
 
 	logrus.Debugf("guest agent info: %+v", info)
 
-	onEvent := func(ev guestagentapi.Event) {
+	onEvent := func(ev *guestagentapi.Event) {
 		logrus.Debugf("guest agent event: %+v", ev)
 		for _, f := range ev.Errors {
 			logrus.Warnf("received error from the guest: %q", f)

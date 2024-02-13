@@ -3,11 +3,9 @@ package main
 import (
 	"errors"
 	"net"
-	"net/http"
 	"os"
 	"time"
 
-	"github.com/gorilla/mux"
 	"github.com/lima-vm/lima/pkg/guestagent"
 	"github.com/lima-vm/lima/pkg/guestagent/api/server"
 	"github.com/lima-vm/lima/pkg/guestagent/serialport"
@@ -62,12 +60,6 @@ func daemonAction(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	backend := &server.Backend{
-		Agent: agent,
-	}
-	r := mux.NewRouter()
-	server.AddRoutes(r, backend)
-	srv := &http.Server{Handler: r}
 	err = os.RemoveAll(socket)
 	if err != nil {
 		return err
@@ -99,5 +91,5 @@ func daemonAction(cmd *cobra.Command, _ []string) error {
 		l = socketL
 		logrus.Infof("serving the guest agent on %q", socket)
 	}
-	return srv.Serve(l)
+	return server.StartServer(l, &server.GuestServer{Agent: agent})
 }

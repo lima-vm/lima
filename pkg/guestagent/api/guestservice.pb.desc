@@ -1,0 +1,17 @@
+
+†
+guestservice.protogoogle/protobuf/empty.protogoogle/protobuf/timestamp.proto"0
+Info(
+local_ports (2.IPPortR
+localPorts"½
+Event.
+time (2.google.protobuf.TimestampRtime3
+local_ports_added (2.IPPortRlocalPortsAdded7
+local_ports_removed (2.IPPortRlocalPortsRemoved
+errors (	Rerrors",
+IPPort
+ip (	Rip
+port (Rport2g
+GuestService(
+GetInfo.google.protobuf.Empty.Info-
+	GetEvents.google.protobuf.Empty.Event0B!Zgithub.com/lima-vm/lima/pkg/apibproto3
