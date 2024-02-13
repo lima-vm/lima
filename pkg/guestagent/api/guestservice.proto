@@ -1,0 +1,26 @@
+syntax = "proto3";
+option go_package = "github.com/lima-vm/lima/pkg/api";
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+service GuestService {
+  rpc GetInfo(google.protobuf.Empty) returns (Info);
+  rpc GetEvents(google.protobuf.Empty) returns (stream Event);
+}
+
+message Info {
+  repeated IPPort local_ports = 1;
+}
+
+message Event {
+  google.protobuf.Timestamp time = 1;
+  repeated IPPort local_ports_added = 2;
+  repeated IPPort local_ports_removed = 3;
+  repeated string errors = 4;
+}
+
+message IPPort {
+  string ip = 1;
+  int32 port = 2;
+}

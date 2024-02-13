@@ -17,6 +17,7 @@ import (
 	"github.com/lima-vm/lima/pkg/guestagent/timesync"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/cpu"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func New(newTicker func() (<-chan time.Time, func()), iptablesIdle time.Duration) (Agent, error) {
@@ -132,11 +133,11 @@ func (a *agent) setWorthCheckingIPTablesRoutine(auditClient *libaudit.AuditClien
 }
 
 type eventState struct {
-	ports []api.IPPort
+	ports []*api.IPPort
 }
 
-func comparePorts(old, neww []api.IPPort) (added, removed []api.IPPort) {
-	mRaw := make(map[string]api.IPPort, len(old))
+func comparePorts(old, neww []*api.IPPort) (added, removed []*api.IPPort) {
+	mRaw := make(map[string]*api.IPPort, len(old))
 	mStillExist := make(map[string]bool, len(old))
 
 	for _, f := range old {
@@ -162,38 +163,37 @@ func comparePorts(old, neww []api.IPPort) (added, removed []api.IPPort) {
 	return
 }
 
-func (a *agent) collectEvent(ctx context.Context, st eventState) (api.Event, eventState) {
+func (a *agent) collectEvent(ctx context.Context, st eventState) (*api.Event, eventState) {
 	var (
-		ev  api.Event
+		ev  = &api.Event{}
 		err error
 	)
 	newSt := st
 	newSt.ports, err = a.LocalPorts(ctx)
 	if err != nil {
 		ev.Errors = append(ev.Errors, err.Error())
-		ev.Time = time.Now()
+		ev.Time = timestamppb.Now()
 		return ev, newSt
 	}
 	ev.LocalPortsAdded, ev.LocalPortsRemoved = comparePorts(st.ports, newSt.ports)
-	ev.Time = time.Now()
+	ev.Time = timestamppb.Now()
 	return ev, newSt
 }
 
-func isEventEmpty(ev api.Event) bool {
-	var empty api.Event
-	// ignore ev.Time
+func isEventEmpty(ev *api.Event) bool {
+	empty := &api.Event{}
 	copied := ev
-	copied.Time = time.Time{}
+	copied.Time = nil
 	return reflect.DeepEqual(empty, copied)
 }
 
-func (a *agent) Events(ctx context.Context, ch chan api.Event) {
+func (a *agent) Events(ctx context.Context, ch chan *api.Event) {
 	defer close(ch)
 	tickerCh, tickerClose := a.newTicker()
 	defer tickerClose()
 	var st eventState
 	for {
-		var ev api.Event
+		var ev *api.Event
 		ev, st = a.collectEvent(ctx, st)
 		if !isEventEmpty(ev) {
 			ch <- ev
@@ -210,11 +210,11 @@ func (a *agent) Events(ctx context.Context, ch chan api.Event) {
 	}
 }
 
-func (a *agent) LocalPorts(_ context.Context) ([]api.IPPort, error) {
+func (a *agent) LocalPorts(_ context.Context) ([]*api.IPPort, error) {
 	if cpu.IsBigEndian {
 		return nil, errors.New("big endian architecture is unsupported, because I don't know how /proc/net/tcp looks like on big endian hosts")
 	}
-	var res []api.IPPort
+	var res []*api.IPPort
 	tcpParsed, err := procnettcp.ParseFiles()
 	if err != nil {
 		return res, err
@@ -228,9 +228,9 @@ func (a *agent) LocalPorts(_ context.Context) ([]api.IPPort, error) {
 		}
 		if f.State == procnettcp.TCPListen {
 			res = append(res,
-				api.IPPort{
-					IP:   f.IP,
-					Port: int(f.Port),
+				&api.IPPort{
+					Ip:   f.IP.String(),
+					Port: int32(f.Port),
 				})
 		}
 	}
@@ -259,15 +259,15 @@ func (a *agent) LocalPorts(_ context.Context) ([]api.IPPort, error) {
 		// Make sure the port isn't already listed from procnettcp
 		found := false
 		for _, re := range res {
-			if re.Port == ipt.Port {
+			if re.Port == int32(ipt.Port) {
 				found = true
 			}
 		}
 		if !found {
 			res = append(res,
-				api.IPPort{
-					IP:   ipt.IP,
-					Port: ipt.Port,
+				&api.IPPort{
+					Ip:   ipt.IP.String(),
+					Port: int32(ipt.Port),
 				})
 		}
 	}
@@ -276,16 +276,16 @@ func (a *agent) LocalPorts(_ context.Context) ([]api.IPPort, error) {
 	for _, entry := range kubernetesEntries {
 		found := false
 		for _, re := range res {
-			if re.Port == int(entry.Port) {
+			if re.Port == int32(entry.Port) {
 				found = true
 			}
 		}
 
 		if !found {
 			res = append(res,
-				api.IPPort{
-					IP:   entry.IP,
-					Port: int(entry.Port),
+				&api.IPPort{
+					Ip:   entry.IP.String(),
+					Port: int32(entry.Port),
 				})
 		}
 	}
