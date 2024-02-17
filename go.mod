@@ -45,7 +45,7 @@ require (
 	golang.org/x/sys v0.17.0
 	golang.org/x/text v0.14.0
 	google.golang.org/grpc v1.61.1
-	google.golang.org/protobuf v1.31.0
+	google.golang.org/protobuf v1.32.0
 	gopkg.in/op/go-logging.v1 v1.0.0-20160211212156-b2cb9fa56473
 	gopkg.in/yaml.v3 v3.0.1
 	gotest.tools/v3 v3.5.1
