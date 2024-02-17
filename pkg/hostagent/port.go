@@ -44,16 +44,8 @@ func hostAddress(rule limayaml.PortForward, guest *api.IPPort) string {
 	return host.HostString()
 }
 
-func (pf *portForwarder) forwardingAddresses(guest *api.IPPort, localUnixIP net.IP) (hostAddr, guestAddr string) {
+func (pf *portForwarder) forwardingAddresses(guest *api.IPPort) (hostAddr, guestAddr string) {
 	guestIP := net.ParseIP(guest.Ip)
-	if pf.vmType == limayaml.WSL2 {
-		guestIP = localUnixIP
-		host := &api.IPPort{
-			Ip:   guestIP.String(),
-			Port: guest.Port,
-		}
-		return host.String(), guest.HostString()
-	}
 	for _, rule := range pf.rules {
 		if rule.GuestSocket != "" {
 			continue
@@ -82,11 +74,9 @@ func (pf *portForwarder) forwardingAddresses(guest *api.IPPort, localUnixIP net.
 	return "", guest.HostString()
 }
 
-func (pf *portForwarder) OnEvent(ctx context.Context, ev *api.Event, instSSHAddress string) {
-	localUnixIP := net.ParseIP(instSSHAddress)
-
+func (pf *portForwarder) OnEvent(ctx context.Context, ev *api.Event) {
 	for _, f := range ev.LocalPortsRemoved {
-		local, remote := pf.forwardingAddresses(f, localUnixIP)
+		local, remote := pf.forwardingAddresses(f)
 		if local == "" {
 			continue
 		}
@@ -96,7 +86,7 @@ func (pf *portForwarder) OnEvent(ctx context.Context, ev *api.Event, instSSHAddr
 		}
 	}
 	for _, f := range ev.LocalPortsAdded {
-		local, remote := pf.forwardingAddresses(f, localUnixIP)
+		local, remote := pf.forwardingAddresses(f)
 		if local == "" {
 			logrus.Infof("Not forwarding TCP %s", remote)
 			continue

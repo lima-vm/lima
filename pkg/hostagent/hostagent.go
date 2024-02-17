@@ -510,13 +510,7 @@ sudo chown -R "${USER}" /run/host-services`
 		case <-a.guestAgentAliveCh:
 			// NOP
 		case <-time.After(time.Minute):
-			err := errors.New("guest agent does not seem to be running; port forwards will not work")
-			if *a.y.VMType == limayaml.WSL2 {
-				// geustagent is currently not available for WSL2: https://github.com/lima-vm/lima/issues/2025
-				logrus.Warn(err)
-			} else {
-				errs = append(errs, err)
-			}
+			errs = append(errs, errors.New("guest agent does not seem to be running; port forwards will not work"))
 		}
 	}
 	if err := a.waitForRequirements("final", a.finalRequirements()); err != nil {
@@ -660,7 +654,7 @@ func (a *HostAgent) processGuestAgentEvents(ctx context.Context, client *guestag
 		for _, f := range ev.Errors {
 			logrus.Warnf("received error from the guest: %q", f)
 		}
-		a.portForwarder.OnEvent(ctx, ev, a.instSSHAddress)
+		a.portForwarder.OnEvent(ctx, ev)
 	}
 
 	if err := client.Events(ctx, onEvent); err != nil {
