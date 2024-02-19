@@ -79,7 +79,6 @@ func (v *QEMUPacketConn) Read(b []byte) (n int, err error) {
 	size := binary.BigEndian.Uint32(header)
 	reader := io.LimitReader(v.unixConn, int64(size))
 	_, err = reader.Read(b)
-
 	if err != nil {
 		logrus.Errorln("Failed to read packet", err)
 	}

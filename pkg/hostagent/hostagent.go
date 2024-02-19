@@ -16,6 +16,9 @@ import (
 	"sync"
 	"time"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/driverutil"
 	"github.com/lima-vm/lima/pkg/networks"
@@ -595,7 +598,7 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 		if err == nil {
 			if err := a.processGuestAgentEvents(ctx, client); err != nil {
 				if !errors.Is(err, context.Canceled) {
-					logrus.WithError(err).Warn("connection to the guest agent was closed unexpectedly", err)
+					logrus.WithError(err).Warn("guest agent events closed unexpectedly", err)
 				}
 			}
 		} else {
@@ -658,6 +661,9 @@ func (a *HostAgent) processGuestAgentEvents(ctx context.Context, client *guestag
 	}
 
 	if err := client.Events(ctx, onEvent); err != nil {
+		if status.Code(err) == codes.Canceled {
+			return context.Canceled
+		}
 		return err
 	}
 	return io.EOF
