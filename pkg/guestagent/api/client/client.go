@@ -4,8 +4,6 @@ import (
 	"context"
 	"net"
 
-	"google.golang.org/grpc/credentials/insecure"
-
 	"github.com/lima-vm/lima/pkg/guestagent/api"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -20,7 +18,7 @@ func NewGuestAgentClient(dialFn func(ctx context.Context) (net.Conn, error)) (*G
 		grpc.WithContextDialer(func(ctx context.Context, target string) (net.Conn, error) {
 			return dialFn(ctx)
 		}),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithTransportCredentials(NewCredentials()),
 	}
 
 	clientConn, err := grpc.Dial("", opts...)
