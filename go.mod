@@ -31,7 +31,7 @@ require (
 	github.com/mattn/go-shellwords v1.0.12
 	github.com/mdlayher/vsock v1.2.1
 	github.com/miekg/dns v1.1.58
-	github.com/mikefarah/yq/v4 v4.41.1
+	github.com/mikefarah/yq/v4 v4.42.1
 	github.com/nxadm/tail v1.4.11
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58
