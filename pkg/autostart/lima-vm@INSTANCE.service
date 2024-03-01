@@ -1,0 +1,13 @@
+[Unit]
+Description=Lima - Linux virtual machines, with a focus on running containers.
+Documentation=man:lima(1)
+
+[Service]
+ExecStart={{.Binary}} start %i --foreground
+WorkingDirectory=%h
+Type=simple
+TimeoutSec=10
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

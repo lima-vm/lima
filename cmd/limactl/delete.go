@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"runtime"
 
+	"github.com/lima-vm/lima/pkg/autostart"
 	networks "github.com/lima-vm/lima/pkg/networks/reconcile"
 	"github.com/lima-vm/lima/pkg/stop"
 	"github.com/lima-vm/lima/pkg/store"
@@ -43,6 +45,14 @@ func deleteAction(cmd *cobra.Command, args []string) error {
 		}
 		if err := deleteInstance(cmd.Context(), inst, force); err != nil {
 			return fmt.Errorf("failed to delete instance %q: %w", instName, err)
+		}
+		if runtime.GOOS == "darwin" || runtime.GOOS == "linux" {
+			deleted, err := autostart.DeleteStartAtLoginEntry(runtime.GOOS, instName)
+			if err != nil && !errors.Is(err, os.ErrNotExist) {
+				logrus.WithError(err).Warnf("The autostart file for instance %q does not exist", instName)
+			} else if deleted {
+				logrus.Infof("The autostart file %q has been deleted", autostart.GetFilePath(runtime.GOOS, instName))
+			}
 		}
 		logrus.Infof("Deleted %q (%q)", instName, inst.Dir)
 	}
