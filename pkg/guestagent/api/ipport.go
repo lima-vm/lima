@@ -6,5 +6,5 @@ import (
 )
 
 func (x *IPPort) HostString() string {
-	return net.JoinHostPort(x.Ip, strconv.Itoa(int(x.Port)))
+	return net.JoinHostPort(x.GetIp(), strconv.Itoa(int(x.GetPort())))
 }

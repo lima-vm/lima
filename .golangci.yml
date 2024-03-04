@@ -66,6 +66,7 @@ linters:
   # - nlreturn
   - noctx
   - nolintlint
+  - protogetter
   # - rowserrcheck
   # - scopelint
   # - sqlclosecheck

@@ -654,7 +654,7 @@ func (a *HostAgent) processGuestAgentEvents(ctx context.Context, client *guestag
 
 	onEvent := func(ev *guestagentapi.Event) {
 		logrus.Debugf("guest agent event: %+v", ev)
-		for _, f := range ev.Errors {
+		for _, f := range ev.GetErrors() {
 			logrus.Warnf("received error from the guest: %q", f)
 		}
 		a.portForwarder.OnEvent(ctx, ev)

@@ -35,22 +35,24 @@ func hostAddress(rule limayaml.PortForward, guest *api.IPPort) string {
 		return rule.HostSocket
 	}
 	host := &api.IPPort{Ip: rule.HostIP.String()}
-	if guest.Port == 0 {
+	port := guest.GetPort()
+	if port == 0 {
 		// guest is a socket
 		host.Port = int32(rule.HostPort)
 	} else {
-		host.Port = guest.Port + int32(rule.HostPortRange[0]-rule.GuestPortRange[0])
+		host.Port = port + int32(rule.HostPortRange[0]-rule.GuestPortRange[0])
 	}
 	return host.HostString()
 }
 
 func (pf *portForwarder) forwardingAddresses(guest *api.IPPort) (hostAddr, guestAddr string) {
-	guestIP := net.ParseIP(guest.Ip)
+	guestIP := net.ParseIP(guest.GetIp())
 	for _, rule := range pf.rules {
 		if rule.GuestSocket != "" {
 			continue
 		}
-		if guest.Port < int32(rule.GuestPortRange[0]) || guest.Port > int32(rule.GuestPortRange[1]) {
+		port := int(guest.GetPort())
+		if port < rule.GuestPortRange[0] || port > rule.GuestPortRange[1] {
 			continue
 		}
 		switch {
@@ -75,17 +77,17 @@ func (pf *portForwarder) forwardingAddresses(guest *api.IPPort) (hostAddr, guest
 }
 
 func (pf *portForwarder) OnEvent(ctx context.Context, ev *api.Event) {
-	for _, f := range ev.LocalPortsRemoved {
+	for _, f := range ev.GetLocalPortsRemoved() {
 		local, remote := pf.forwardingAddresses(f)
 		if local == "" {
 			continue
 		}
 		logrus.Infof("Stopping forwarding TCP from %s to %s", remote, local)
 		if err := forwardTCP(ctx, pf.sshConfig, pf.sshHostPort, local, remote, verbCancel); err != nil {
-			logrus.WithError(err).Warnf("failed to stop forwarding tcp port %d", f.Port)
+			logrus.WithError(err).Warnf("failed to stop forwarding tcp port %d", f.GetPort())
 		}
 	}
-	for _, f := range ev.LocalPortsAdded {
+	for _, f := range ev.GetLocalPortsAdded() {
 		local, remote := pf.forwardingAddresses(f)
 		if local == "" {
 			logrus.Infof("Not forwarding TCP %s", remote)
@@ -93,7 +95,7 @@ func (pf *portForwarder) OnEvent(ctx context.Context, ev *api.Event) {
 		}
 		logrus.Infof("Forwarding TCP from %s to %s", remote, local)
 		if err := forwardTCP(ctx, pf.sshConfig, pf.sshHostPort, local, remote, verbForward); err != nil {
-			logrus.WithError(err).Warnf("failed to set up forwarding tcp port %d (negligible if already forwarded)", f.Port)
+			logrus.WithError(err).Warnf("failed to set up forwarding tcp port %d (negligible if already forwarded)", f.GetPort())
 		}
 	}
 }
