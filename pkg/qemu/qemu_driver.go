@@ -324,7 +324,11 @@ func (l *LimaQemuDriver) shutdownQEMU(ctx context.Context, timeout time.Duration
 	deadline := time.After(timeout)
 	select {
 	case qWaitErr := <-qWaitCh:
-		logrus.WithError(qWaitErr).Info("QEMU has exited")
+		entry := logrus.NewEntry(logrus.StandardLogger())
+		if qWaitErr != nil {
+			entry = entry.WithError(qWaitErr)
+		}
+		entry.Info("QEMU has exited")
 		_ = l.removeVNCFiles()
 		return errors.Join(qWaitErr, l.killVhosts())
 	case <-deadline:

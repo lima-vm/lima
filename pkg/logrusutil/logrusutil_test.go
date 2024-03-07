@@ -81,6 +81,35 @@ func TestPropagateJSON(t *testing.T) {
 
 		assert.Equal(t, "level=error msg=header fields.level=fatal\n", actual.String())
 	})
+	t.Run("SetLevel", func(t *testing.T) {
+		actual := &bytes.Buffer{}
+		logger := loggerWithoutTs(actual)
+		logger.SetLevel(logrus.ErrorLevel)
+		jsonLine := []byte(`{"level": "warning"}`)
+
+		PropagateJSON(logger, jsonLine, "header", time.Time{})
+
+		assert.Equal(t, "", actual.String())
+	})
+	t.Run("extra fields", func(t *testing.T) {
+		actual := &bytes.Buffer{}
+		logger := loggerWithoutTs(actual)
+		jsonLine := []byte(`{"level": "warning", "error": "oops", "extra": "field"}`)
+
+		PropagateJSON(logger, jsonLine, "header", time.Time{})
+
+		assert.Equal(t, "level=warning msg=header error=oops extra=field\n", actual.String())
+	})
+	t.Run("timestamp", func(t *testing.T) {
+		actual := &bytes.Buffer{}
+		logger := loggerWithoutTs(actual)
+		logger.SetFormatter(&logrus.TextFormatter{DisableTimestamp: false})
+		jsonLine := []byte(`{"level": "warning", "time": "2024-03-06T00:20:53-08:00"}`)
+
+		PropagateJSON(logger, jsonLine, "header", time.Time{})
+
+		assert.Equal(t, "time=\"2024-03-06T00:20:53-08:00\" level=warning msg=header\n", actual.String())
+	})
 	t.Run("empty json line", func(t *testing.T) {
 		actual := &bytes.Buffer{}
 		logger := loggerWithoutTs(actual)
