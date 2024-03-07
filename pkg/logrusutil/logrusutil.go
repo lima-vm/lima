@@ -19,10 +19,14 @@ func PropagateJSON(logger *logrus.Logger, jsonLine []byte, header string, begin 
 	}
 
 	var (
-		lv  logrus.Level
-		j   JSON
-		err error
+		entry  *logrus.Entry
+		fields logrus.Fields
+		lv     logrus.Level
+		j      JSON
+		err    error
 	)
+	entry = logrus.NewEntry(logger)
+
 	if err := json.Unmarshal(jsonLine, &j); err != nil {
 		goto fallback
 	}
@@ -33,24 +37,26 @@ func PropagateJSON(logger *logrus.Logger, jsonLine []byte, header string, begin 
 	if err != nil {
 		goto fallback
 	}
-	switch lv {
-	case logrus.PanicLevel, logrus.FatalLevel:
-		logger.WithField("level", lv).Error(header + j.Msg)
-	case logrus.ErrorLevel:
-		logger.Error(header + j.Msg)
-	case logrus.WarnLevel:
-		logger.Warn(header + j.Msg)
-	case logrus.InfoLevel:
-		logger.Info(header + j.Msg)
-	case logrus.DebugLevel:
-		logger.Debug(header + j.Msg)
-	case logrus.TraceLevel:
-		logger.Trace(header + j.Msg)
+	entry = entry.WithTime(j.Time)
+	// Unmarshal jsonLine once more to capture all the "extra" fields that have been added by
+	// WithError() and WithField(). The regular fields "level", "msg", and "time" are already
+	// unmarshalled into j and are handled specially. They must not be added again.
+	if err := json.Unmarshal(jsonLine, &fields); err == nil {
+		delete(fields, "level")
+		delete(fields, "msg")
+		delete(fields, "time")
+		entry = entry.WithFields(fields)
 	}
+	// Don't exit on Fatal or Panic entries
+	if lv <= logrus.FatalLevel {
+		entry = entry.WithField("level", lv)
+		lv = logrus.ErrorLevel
+	}
+	entry.Log(lv, header+j.Msg)
 	return
 
 fallback:
-	logger.Info(header + string(jsonLine))
+	entry.Info(header + string(jsonLine))
 }
 
 // JSON is the type used in logrus.JSONFormatter

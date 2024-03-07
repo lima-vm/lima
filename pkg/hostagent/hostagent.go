@@ -598,12 +598,12 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 		if err == nil {
 			if err := a.processGuestAgentEvents(ctx, client); err != nil {
 				if !errors.Is(err, context.Canceled) {
-					logrus.WithError(err).Warn("guest agent events closed unexpectedly", err)
+					logrus.WithError(err).Warn("guest agent events closed unexpectedly")
 				}
 			}
 		} else {
 			if !errors.Is(err, context.Canceled) {
-				logrus.WithError(err).Warn("connection to the guest agent was closed unexpectedly", err)
+				logrus.WithError(err).Warn("connection to the guest agent was closed unexpectedly")
 			}
 		}
 		select {
