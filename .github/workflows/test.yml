@@ -219,6 +219,7 @@ jobs:
         - opensuse.yaml
         - experimental/net-user-v2.yaml
         - docker.yaml
+        - ../hack/test-templates/alpine-9p-writable.yaml
     steps:
     - uses: actions/checkout@v4
       with:

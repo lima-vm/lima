@@ -20,6 +20,9 @@ images:
 
 mounts:
 - location: "~"
+  writable: true
+- location: "/tmp/lima test dir with spaces"
+  writable: true
 - location: "/tmp/lima"
   writable: true
 
