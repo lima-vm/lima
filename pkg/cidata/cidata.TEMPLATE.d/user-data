@@ -64,7 +64,7 @@ resolv_conf:
 {{- end }}
 
 {{ with .CACerts }}
-ca-certs:
+ca_certs:
   remove_defaults: {{ .RemoveDefaults }}
   trusted:
   {{- range $cert := .Trusted }}
