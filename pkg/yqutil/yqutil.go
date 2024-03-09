@@ -33,8 +33,10 @@ func EvaluateExpression(expression string, content []byte) ([]byte, error) {
 	logging.SetBackend(backend)
 	yqlib.InitExpressionParser()
 
-	indent := 2
-	encoder := yqlib.NewYamlEncoder(indent, false, yqlib.ConfiguredYamlPreferences)
+	encoderPrefs := yqlib.ConfiguredYamlPreferences.Copy()
+	encoderPrefs.Indent = 2
+	encoderPrefs.ColorsEnabled = false
+	encoder := yqlib.NewYamlEncoder(encoderPrefs)
 	out := new(bytes.Buffer)
 	printer := yqlib.NewPrinter(encoder, yqlib.NewSinglePrinterWriter(out))
 	decoder := yqlib.NewYamlDecoder(yqlib.ConfiguredYamlPreferences)
