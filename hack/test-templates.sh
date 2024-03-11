@@ -34,13 +34,15 @@ declare -A CHECKS=(
 	["vmnet"]=""
 	["disk"]=""
 	["user-v2"]=""
+	["mount-path-with-spaces"]=""
 )
 
 case "$NAME" in
-"alpine")
+"alpine"*)
 	WARNING "Alpine does not support systemd"
 	CHECKS["systemd"]=
 	CHECKS["container-engine"]=
+	[ "$NAME" = "alpine-9p-writable" ] && CHECKS["mount-path-with-spaces"]="1"
 	;;
 "k3s")
 	ERROR "File \"$FILE\" is not testable with this script"
@@ -59,6 +61,7 @@ case "$NAME" in
 	CHECKS["disk"]=1
 	CHECKS["snapshot-online"]="1"
 	CHECKS["snapshot-offline"]="1"
+	CHECKS["mount-path-with-spaces"]="1"
 	;;
 "net-user-v2")
 	CHECKS["port-forwards"]=""
@@ -113,6 +116,11 @@ set -x
 "${LIMACTL_CREATE[@]}" ${LIMACTL_CREATE_ARGS} "$FILE"
 set +x
 
+if [[ -n ${CHECKS["mount-path-with-spaces"]} ]]; then
+	mkdir -p "/tmp/lima test dir with spaces"
+	echo "test file content" >"/tmp/lima test dir with spaces/test file"
+fi
+
 INFO "Starting \"$NAME\""
 set -x
 if ! limactl start "$NAME"; then
@@ -125,6 +133,15 @@ limactl shell "$NAME" uname -a
 
 limactl shell "$NAME" cat /etc/os-release
 set +x
+
+INFO "Testing that host home is not wiped out"
+[ -e "$HOME/.lima" ]
+
+if [[ -n ${CHECKS["mount-path-with-spaces"]} ]]; then
+	INFO 'Testing that "/tmp/lima test dir with spaces" is not wiped out'
+	[ "$(cat "/tmp/lima test dir with spaces/test file")" = "test file content" ]
+	[ "$(limactl shell "$NAME" cat "/tmp/lima test dir with spaces/test file")" = "test file content" ]
+fi
 
 INFO "Testing proxy settings are imported"
 got=$(limactl shell "$NAME" env | grep FTP_PROXY)
@@ -409,3 +426,7 @@ sleep 3
 
 INFO "Deleting \"$NAME\""
 limactl delete "$NAME"
+
+if [[ -n ${CHECKS["mount-path-with-spaces"]} ]]; then
+	rm -rf "/tmp/lima test dir with spaces"
+fi
