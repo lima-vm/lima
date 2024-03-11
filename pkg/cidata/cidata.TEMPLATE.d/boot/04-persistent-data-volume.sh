@@ -29,12 +29,12 @@ for DIR in ${DATADIRS}; do
 		[ "${MNTTYPE}" = "ext4" ] && continue
 		[ "${MNTTYPE}" = "tmpfs" ] && continue
 		MNTOPTS="$(echo "${LINE}" | awk '{print $4}')"
-		MNTPNT=${MNTPNT//\\/\\\\}
-		MNTPNT=${MNTPNT//\"/\\\"}
-		echo "mount -t \"${MNTTYPE}\" -o \"${MNTOPTS}\" \"${MNTDEV}\" \"${MNTPNT}\"" >>/mnt.sh
 		# Before mv, unmount filesystems (virtiofs, 9p, etc.) below "${DIR}", otherwise host mounts will be wiped out
 		# https://github.com/rancher-sandbox/rancher-desktop/issues/6582
 		umount "${MNTPNT}" || exit 1
+		MNTPNT=${MNTPNT//\\/\\\\}
+		MNTPNT=${MNTPNT//\"/\\\"}
+		echo "mount -t \"${MNTTYPE}\" -o \"${MNTOPTS}\" \"${MNTDEV}\" \"${MNTPNT}\"" >>/mnt.sh
 	done </proc/mounts
 done
 chmod +x /mnt.sh
