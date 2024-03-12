@@ -103,6 +103,10 @@ mounts:
 # 🟢 Builtin default: "reverse-sshfs" (for QEMU), "virtiofs" (for vz)
 mountType: null
 
+# Enable inotify support for mounted directories (EXPERIMENTAL)
+# 🟢 Builtin default: Disabled by default
+mountInotify: null
+
 # Lima disks to attach to the instance. The disks will be accessible from inside the
 # instance, labeled by name. (e.g. if the disk is named "data", it will be labeled
 # "lima-data" inside the instance). The disk will be mounted inside the instance at

@@ -7,6 +7,7 @@ import "google/protobuf/timestamp.proto";
 service GuestService {
   rpc GetInfo(google.protobuf.Empty) returns (Info);
   rpc GetEvents(google.protobuf.Empty) returns (stream Event);
+  rpc PostInotify(stream Inotify) returns (google.protobuf.Empty);
 }
 
 message Info {
@@ -23,4 +24,9 @@ message Event {
 message IPPort {
   string ip = 1;
   int32 port = 2;
+}
+
+message Inotify {
+  string mount_path = 1;
+  google.protobuf.Timestamp time = 2;
 }

@@ -165,3 +165,39 @@ mountType: "wsl2"
 #### Caveats
 - WSL2 file permissions may not work exactly as expected when accessing files that are natively on the Windows disk ([more info](https://github.com/MicrosoftDocs/WSL/blob/mattw-wsl2-explainer/WSL/file-permissions.md))
 - WSL2's disk sharing system uses a 9P protocol server, making the performance similar to [Lima's 9p](#9p) mode ([more info](https://github.com/MicrosoftDocs/WSL/blob/mattw-wsl2-explainer/WSL/wsl2-architecture.md#wsl-2-architectural-flow))
+
+## Mount Inotify
+> **Warning**
+> "mountInotify" is experimental
+
+| ⚡ Requirement | Lima >= 0.21.0 |
+| ----------------- |----------------|
+
+The `mountInotify` support enables inotify support for all different mountTypes like 9p, virtiofs etc.
+
+When mountInotify is enabled, 
+- hostagent will listen and send inotify events from host machine to guest. 
+- Guest will modify the file to trigger inotify on guest side 
+
+This support will be enabled only for writable mounts because only for writable mount guest will be able to trigger inotify
+
+An example configuration:
+{{< tabpane text=true >}}
+{{% tab header="CLI" %}}
+```bash
+limactl start --mount-inotify
+```
+{{% /tab %}}
+{{% tab header="YAML" %}}
+```yaml
+mountInotify: true
+mounts:
+  - location: "~"
+    writable: true
+```
+{{% /tab %}}
+{{< /tabpane >}}
+
+#### Caveats
+- For `mountType: 9p`, Inotify events are not triggered for nested files from the listening directory.
+- Inotify events are not triggered when files are removed from host

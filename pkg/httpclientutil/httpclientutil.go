@@ -32,6 +32,22 @@ func Get(ctx context.Context, c *http.Client, url string) (*http.Response, error
 	return resp, nil
 }
 
+func Post(ctx context.Context, c *http.Client, url string, body io.Reader) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, "POST", url, body)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := c.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	if err := Successful(resp); err != nil {
+		resp.Body.Close()
+		return nil, err
+	}
+	return resp, nil
+}
+
 func readAtMost(r io.Reader, maxBytes int) ([]byte, error) {
 	lr := &io.LimitedReader{
 		R: r,
@@ -85,13 +101,13 @@ func Successful(resp *http.Response) error {
 	return nil
 }
 
-// NewHTTPClientWithConn creates a client.
+// NewHTTPClientWithDialFn creates a client.
 // conn is a raw net.Conn instance.
-func NewHTTPClientWithConn(conn net.Conn) (*http.Client, error) {
+func NewHTTPClientWithDialFn(dialFn func(ctx context.Context) (net.Conn, error)) (*http.Client, error) {
 	hc := &http.Client{
 		Transport: &http.Transport{
 			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
-				return conn, nil
+				return dialFn(ctx)
 			},
 		},
 	}

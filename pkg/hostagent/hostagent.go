@@ -588,6 +588,21 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 		}
 		return errors.Join(errs...)
 	})
+
+	go func() {
+		if a.y.MountInotify != nil && *a.y.MountInotify {
+			if a.client == nil || !isGuestAgentSocketAccessible(ctx, a.client) {
+				if a.driver.ForwardGuestAgent() {
+					_ = forwardSSH(ctx, a.sshConfig, a.sshLocalPort, localUnix, remoteUnix, verbForward, false)
+				}
+			}
+			err := a.startInotify(ctx)
+			if err != nil {
+				logrus.WithError(err).Warn("failed to start inotify", err)
+			}
+		}
+	}()
+
 	for {
 		if a.client == nil || !isGuestAgentSocketAccessible(ctx, a.client) {
 			if a.driver.ForwardGuestAgent() {
@@ -602,7 +617,7 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 				}
 			}
 		} else {
-			if !errors.Is(err, context.Canceled) {
+			if !strings.Contains(err.Error(), context.Canceled.Error()) {
 				logrus.WithError(err).Warn("connection to the guest agent was closed unexpectedly")
 			}
 		}

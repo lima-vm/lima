@@ -1,5 +1,5 @@
 
-†
+”
 guestservice.protogoogle/protobuf/empty.protogoogle/protobuf/timestamp.proto"0
 Info(
 local_ports (2.IPPortR
@@ -11,7 +11,12 @@ localPorts"½
 errors (	Rerrors",
 IPPort
 ip (	Rip
-port (Rport2g
+port (Rport"X
+Inotify
+
+mount_path (	R	mountPath.
+time (2.google.protobuf.TimestampRtime2š
 GuestService(
 GetInfo.google.protobuf.Empty.Info-
-	GetEvents.google.protobuf.Empty.Event0B!Zgithub.com/lima-vm/lima/pkg/apibproto3
+	GetEvents.google.protobuf.Empty.Event01
+PostInotify.Inotify.google.protobuf.Empty(B!Zgithub.com/lima-vm/lima/pkg/apibproto3

@@ -49,6 +49,7 @@ func registerEdit(cmd *cobra.Command, commentPrefix string) {
 	})
 
 	flags.Bool("mount-writable", false, commentPrefix+"make all mounts writable")
+	flags.Bool("mount-inotify", false, commentPrefix+"enable inotify for mounts")
 
 	flags.StringSlice("network", nil, commentPrefix+"additional networks, e.g., \"vzNAT\" or \"lima:shared\" to assign vmnet IP")
 	_ = cmd.RegisterFlagCompletionFunc("network", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
@@ -154,6 +155,7 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 			false,
 		},
 		{"mount-type", d(".mountType = %q"), false, false},
+		{"mount-inotify", d(".mountInotify = %s"), false, true},
 		{"mount-writable", d(".mounts[].writable = %s"), false, false},
 		{
 			"network",

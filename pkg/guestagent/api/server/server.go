@@ -36,3 +36,13 @@ func (s GuestServer) GetEvents(_ *emptypb.Empty, stream api.GuestService_GetEven
 	}
 	return nil
 }
+
+func (s GuestServer) PostInotify(server api.GuestService_PostInotifyServer) error {
+	for {
+		recv, err := server.Recv()
+		if err != nil {
+			return err
+		}
+		s.Agent.HandleInotify(recv)
+	}
+}

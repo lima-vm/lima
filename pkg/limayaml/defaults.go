@@ -579,6 +579,16 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		}
 	}
 
+	if y.MountInotify == nil {
+		y.MountInotify = d.MountInotify
+	}
+	if o.MountInotify != nil {
+		y.MountInotify = o.MountInotify
+	}
+	if y.MountInotify == nil {
+		y.MountInotify = ptr.Of(false)
+	}
+
 	// Combine all mounts; highest priority entry determines writable status.
 	// Only works for exact matches; does not normalize case or resolve symlinks.
 	mounts := make([]Mount, 0, len(d.Mounts)+len(y.Mounts)+len(o.Mounts))

@@ -18,6 +18,7 @@ type LimaYAML struct {
 	AdditionalDisks    []Disk          `yaml:"additionalDisks,omitempty" json:"additionalDisks,omitempty"`
 	Mounts             []Mount         `yaml:"mounts,omitempty" json:"mounts,omitempty"`
 	MountType          *MountType      `yaml:"mountType,omitempty" json:"mountType,omitempty"`
+	MountInotify       *bool           `yaml:"mountInotify,omitempty" json:"mountInotify,omitempty"`
 	SSH                SSH             `yaml:"ssh,omitempty" json:"ssh,omitempty"` // REQUIRED (FIXME)
 	Firmware           Firmware        `yaml:"firmware,omitempty" json:"firmware,omitempty"`
 	Audio              Audio           `yaml:"audio,omitempty" json:"audio,omitempty"`

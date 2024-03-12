@@ -474,4 +474,7 @@ func warnExperimental(y LimaYAML) {
 	if y.Audio.Device != nil && *y.Audio.Device != "" {
 		logrus.Warn("`audio.device` is experimental")
 	}
+	if y.MountInotify != nil && *y.MountInotify {
+		logrus.Warn("`mountInotify` is experimental")
+	}
 }
