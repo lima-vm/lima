@@ -226,6 +226,8 @@ func TestFillDefault(t *testing.T) {
 
 	expect.MountType = ptr.Of(NINEP)
 
+	expect.MountInotify = ptr.Of(false)
+
 	expect.Provision = y.Provision
 	expect.Provision[0].Mode = ProvisionModeSystem
 
@@ -426,6 +428,7 @@ func TestFillDefault(t *testing.T) {
 		"default": d.HostResolver.Hosts["default"],
 	}
 	expect.MountType = ptr.Of(VIRTIOFS)
+	expect.MountInotify = ptr.Of(false)
 	expect.CACertificates.RemoveDefaults = ptr.Of(true)
 	expect.CACertificates.Certs = []string{
 		"-----BEGIN CERTIFICATE-----\nYOUR-ORGS-TRUSTED-CA-CERT\n-----END CERTIFICATE-----\n",
@@ -559,6 +562,7 @@ func TestFillDefault(t *testing.T) {
 				},
 			},
 		},
+		MountInotify: ptr.Of(true),
 		Provision: []Provision{
 			{
 				Script: "#!/bin/true",
@@ -636,6 +640,7 @@ func TestFillDefault(t *testing.T) {
 	expect.Mounts[0].Virtiofs.QueueSize = ptr.Of(2048)
 
 	expect.MountType = ptr.Of(NINEP)
+	expect.MountInotify = ptr.Of(true)
 
 	// o.Networks[1] is overriding the d.Networks[0].Lima entry for the "def0" interface
 	expect.Networks = append(append(d.Networks, y.Networks...), o.Networks[0])

@@ -49,3 +49,11 @@ func (c *GuestAgentClient) Events(ctx context.Context, eventCb func(response *ap
 		eventCb(recv)
 	}
 }
+
+func (c *GuestAgentClient) Inotify(ctx context.Context) (api.GuestService_PostInotifyClient, error) {
+	inotify, err := c.cli.PostInotify(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return inotify, nil
+}

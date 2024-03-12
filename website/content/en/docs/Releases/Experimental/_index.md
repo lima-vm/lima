@@ -15,6 +15,7 @@ The following features are experimental and subject to change:
 - `mode: user-v2` in `networks.yml` and relevant configuration in `lima.yaml`
 - `audio.device`
 - `arch: armv7l`
+- `mountInotify: true`
 
 The following commands are experimental and subject to change:
 
