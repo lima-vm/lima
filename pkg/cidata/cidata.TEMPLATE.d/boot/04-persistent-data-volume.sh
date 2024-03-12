@@ -9,6 +9,36 @@ test -f /etc/alpine-release || exit 0
 # Data directories that should be persisted across reboots
 DATADIRS="/etc /home /root /tmp /usr/local /var/lib"
 
+# Prepare mnt.sh (used for restoring mounts later)
+echo "#!/bin/sh" >/mnt.sh
+echo "set -eux" >>/mnt.sh
+for DIR in ${DATADIRS}; do
+	while IFS= read -r LINE; do
+		[ -z "$LINE" ] && continue
+		MNTDEV="$(echo "${LINE}" | awk '{print $1}')"
+		# unmangle " \t\n\\#"
+		# https://github.com/torvalds/linux/blob/v6.6/fs/proc_namespace.c#L89
+		MNTPNT="$(echo "${LINE}" | awk '{print $2}' | sed -e 's/\\040/ /g; s/\\011/\t/g; s/\\012/\n/g; s/\\134/\\/g; s/\\043/#/g')"
+		# Ignore if MNTPNT is neither DIR nor a parent directory of DIR.
+		# It is not a parent if MNTPNT doesn't start with DIR, or the first
+		# character after DIR isn't a slash.
+		WITHOUT_DIR="${MNTPNT#"$DIR"}"
+		# shellcheck disable=SC2166
+		[ "$MNTPNT" != "$DIR" ] && [ "$MNTPNT" == "$WITHOUT_DIR" -o "${WITHOUT_DIR::1}" != "/" ] && continue
+		MNTTYPE="$(echo "${LINE}" | awk '{print $3}')"
+		[ "${MNTTYPE}" = "ext4" ] && continue
+		[ "${MNTTYPE}" = "tmpfs" ] && continue
+		MNTOPTS="$(echo "${LINE}" | awk '{print $4}')"
+		# Before mv, unmount filesystems (virtiofs, 9p, etc.) below "${DIR}", otherwise host mounts will be wiped out
+		# https://github.com/rancher-sandbox/rancher-desktop/issues/6582
+		umount "${MNTPNT}" || exit 1
+		MNTPNT=${MNTPNT//\\/\\\\}
+		MNTPNT=${MNTPNT//\"/\\\"}
+		echo "mount -t \"${MNTTYPE}\" -o \"${MNTOPTS}\" \"${MNTDEV}\" \"${MNTPNT}\"" >>/mnt.sh
+	done </proc/mounts
+done
+chmod +x /mnt.sh
+
 # When running from RAM try to move persistent data to data-volume
 # FIXME: the test for tmpfs mounts is probably Alpine-specific
 if [ "$(awk '$2 == "/" {print $3}' /proc/mounts)" == "tmpfs" ]; then
@@ -61,11 +91,6 @@ if [ "$(awk '$2 == "/" {print $3}' /proc/mounts)" == "tmpfs" ]; then
 				PART=$(lsblk --list /dev/"${DISK}" --noheadings --output name,type | awk '$2 == "part" {print $1}')
 				mkfs.ext4 -L data-volume /dev/"${PART}"
 				mount -t ext4 /dev/disk/by-label/data-volume /mnt/data
-				# Unmount all mount points under /tmp so we can move it to the data volume:
-				# "mount1 on /tmp/lima type 9p (rw,dirsync,relatime,mmap,access=client,trans=virtio)"
-				for MP in $(mount | awk '$3 ~ /^\/tmp\// {print $3}'); do
-					umount "${MP}"
-				done
 				# setup apk package cache
 				mkdir -p /mnt/data/apk/cache
 				mkdir -p /etc/apk
@@ -88,8 +113,8 @@ if [ "$(awk '$2 == "/" {print $3}' /proc/mounts)" == "tmpfs" ]; then
 			mount --bind /mnt/data"${DIR}" "${DIR}"
 		fi
 	done
-	# Make sure to re-mount any mount points under /tmp
-	mount -a
+	# Remount submounts on top of the new ${DIR}
+	/mnt.sh
 	# Reinstall packages from /mnt/data/apk/cache into the RAM disk
 	apk fix --no-network
 fi

@@ -126,7 +126,7 @@ my $ha_log_size = -s $ha_log or die;
 foreach my $id (0..@test-1) {
     my $test = $test[$id];
     my $nc = "nc -l $test->{guest_ip} $test->{guest_port}";
-    if ($instance eq "alpine") {
+    if ($instance =~ /^alpine/) {
         $nc = "nc -l -s $test->{guest_ip} -p $test->{guest_port}";
     }
 
