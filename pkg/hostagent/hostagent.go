@@ -598,7 +598,7 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 			}
 			err := a.startInotify(ctx)
 			if err != nil {
-				logrus.WithError(err).Warn("failed to start inotify", err)
+				logrus.WithError(err).Warn("failed to start inotify")
 			}
 		}
 	}()
