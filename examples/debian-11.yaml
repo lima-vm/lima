@@ -1,12 +1,12 @@
 # This template requires Lima v0.7.0 or later
 images:
 # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
-- location: "https://cloud.debian.org/images/cloud/bullseye/20240104-1616/debian-11-genericcloud-amd64-20240104-1616.qcow2"
+- location: "https://cloud.debian.org/images/cloud/bullseye/20240211-1654/debian-11-genericcloud-amd64-20240211-1654.qcow2"
   arch: "x86_64"
-  digest: "sha512:01f1a9aa92f6257936193359642d7ff780ad3c721f4b731ed0a04684f015db66d7919a72b2b2a272a7dd3cf0e4e0314694c00684c333552a01bd149a535f2a09"
-- location: "https://cloud.debian.org/images/cloud/bullseye/20240104-1616/debian-11-genericcloud-arm64-20240104-1616.qcow2"
+  digest: "sha512:57ea3ba6855784f627730a16b8cb2b4e85a434f0626903dc9b036a10c0edf35242b86a1938bf84890ebbdba2b27e6d9ceff0a47da106e365f6d81077e4089a1c"
+- location: "https://cloud.debian.org/images/cloud/bullseye/20240211-1654/debian-11-genericcloud-arm64-20240211-1654.qcow2"
   arch: "aarch64"
-  digest: "sha512:55d52a286cdb022f67b81acfc625945d7d6e32bfc3e084a0cccaf0a43521e645400343862572526d0092301ec7e8e36039b471395ea92585f39f050b1b247592"
+  digest: "sha512:41fd17483f2c0d18ddaeec3a956557627e453464678935bd15e66ca2f75e902848ecc0f71fa50f7867eccf14119843ff79983423cb9be85d9ffb65385b0319e9"
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
 - location: "https://cloud.debian.org/images/cloud/bullseye/latest/debian-11-genericcloud-amd64.qcow2"
