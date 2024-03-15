@@ -190,7 +190,7 @@ networks:
 | ⚡ Requirement | Lima >= 0.14, macOS >= 13.0 |
 |-------------------|-----------------------------|
 
-For [VZ](./vmtype.md) instances, the "vzNAT" network can be configured as follows:
+For [VZ](../vmtype/#vz) instances, the "vzNAT" network can be configured as follows:
 {{< tabpane text=true >}}
 {{% tab header="CLI" %}}
 ```bash

@@ -69,7 +69,7 @@ See also https://github.com/containerd/nerdctl/blob/master/docs/multi-platform.m
 |-------------------|----------------------------------|
 
 [Rosetta](https://developer.apple.com/documentation/virtualization/running_intel_binaries_in_linux_vms_with_rosetta) is known to be much faster than QEMU User Mode Emulation.
-Rosetta is available for [VZ](./vmtype.md) instances on ARM hosts.
+Rosetta is available for [VZ](../vmtype/#vz) instances on ARM hosts.
 
 {{< tabpane text=true >}}
 {{% tab header="CLI" %}}
