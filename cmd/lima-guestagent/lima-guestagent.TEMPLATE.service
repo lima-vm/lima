@@ -5,6 +5,8 @@ Description=lima-guestagent
 ExecStart={{.Binary}} daemon {{.Args}}
 Type=simple
 Restart=on-failure
+OOMPolicy=continue
+OOMScoreAdjust=-500
 
 [Install]
 WantedBy=multi-user.target
