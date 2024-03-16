@@ -2,12 +2,12 @@
 # This template requires Lima v0.20.0 or later.
 images:
 # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
-- location: "https://cloud-images.ubuntu.com/releases/23.10/release-20240125/ubuntu-23.10-server-cloudimg-amd64.img"
+- location: "https://cloud-images.ubuntu.com/releases/23.10/release-20240307/ubuntu-23.10-server-cloudimg-amd64.img"
   arch: "x86_64"
-  digest: "sha256:a7700ca87b691246cf57812c63f64a8ab0d6702c00f04c8f6efd97513bab5d59"
-- location: "https://cloud-images.ubuntu.com/releases/23.10/release-20240125/ubuntu-23.10-server-cloudimg-arm64.img"
+  digest: "sha256:415123eb3b3ba1841e39a25d0dd82da43f968c7625b9cdf6312235b9b8ec17e9"
+- location: "https://cloud-images.ubuntu.com/releases/23.10/release-20240307/ubuntu-23.10-server-cloudimg-arm64.img"
   arch: "aarch64"
-  digest: "sha256:1072e90dd339fd7ba1e82b6c1c3b03183287ca4a6da52c04eaeb0e5653a59bc7"
+  digest: "sha256:373e8866d33909b283b14c86c18f8a48844c8f9fe6aed3ca280288846fc4fb74"
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
 - location: "https://cloud-images.ubuntu.com/releases/23.10/release/ubuntu-23.10-server-cloudimg-amd64.img"
