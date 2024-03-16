@@ -106,7 +106,7 @@ containerd:
 - "wsl2" option is only supported on newer versions of Windows (roughly anything since 2019)
 
 ### Known Issues
-- "wsl2" currently doesn't support many of Lima's options. See [this file](../pkg/wsl2/wsl_driver_windows.go#35) for the latest supported options.
+- "wsl2" currently doesn't support many of Lima's options. See [this file](https://github.com/lima-vm/lima/blob/master/pkg/wsl2/wsl_driver_windows.go#L19) for the latest supported options.
 - When running lima using "wsl2", `${LIMA_HOME}/<INSTANCE>/serial.log` will not contain kernel boot logs
 - WSL2 requires a `tar` formatted rootfs archive instead of a VM image
 - Windows doesn't ship with ssh.exe, gzip.exe, etc. which are used by Lima at various points. The easiest way around this is to run `winget install -e --id Git.MinGit` (winget is now built in to Windows as well), and add the resulting `C:\Program Files\Git\usr\bin\` directory to your path.

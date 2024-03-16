@@ -134,7 +134,7 @@ mounts:
 {{< /tabpane >}}
 
 #### Caveats
-- For macOS, the "virtiofs" mount type is supported only on macOS 13 or above with `vmType: vz` config. See also [`vmtype.md`](./vmtype.md).
+- For macOS, the "virtiofs" mount type is supported only on macOS 13 or above with `vmType: vz` config. See also [`vmtype`](../vmtype/).
 - For Linux, the "virtiofs" mount type requires the [Rust version of virtiofsd](https://gitlab.com/virtio-fs/virtiofsd).
   Using the version from QEMU (usually packaged as `qemu-virtiofsd`) will *not* work, as it requires root access to run.
 
