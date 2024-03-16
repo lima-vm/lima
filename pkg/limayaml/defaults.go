@@ -39,7 +39,7 @@ const (
 var IPv4loopback1 = net.IPv4(127, 0, 0, 1)
 
 func defaultContainerdArchives() []File {
-	const nerdctlVersion = "1.7.3"
+	const nerdctlVersion = "1.7.5"
 	location := func(goos string, goarch string) string {
 		return "https://github.com/containerd/nerdctl/releases/download/v" + nerdctlVersion + "/nerdctl-full-" + nerdctlVersion + "-" + goos + "-" + goarch + ".tar.gz"
 	}
@@ -47,12 +47,12 @@ func defaultContainerdArchives() []File {
 		{
 			Location: location("linux", "amd64"),
 			Arch:     X8664,
-			Digest:   "sha256:f373aab78f04379557285590ee60ed953d12c9a60e08a52ba159004cf5e3d212",
+			Digest:   "sha256:adb246a4ef15b8f3d7eed4c6b61173014a6cf343e43ad95eae2087b454dcae5d",
 		},
 		{
 			Location: location("linux", "arm64"),
 			Arch:     AARCH64,
-			Digest:   "sha256:4bf3e05c7203a1b86c84a506d022f7f4d2727143c8031cd5e4b78ef03f0fdcda",
+			Digest:   "sha256:ff38142440b4705e12782b7a71074849e712a42ccb69a11306343a8d9f81d8ab",
 		},
 		// No arm-v7
 		// No riscv64
