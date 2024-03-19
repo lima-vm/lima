@@ -1,6 +1,7 @@
 package limayaml
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -9,6 +10,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/docker/go-units"
 	"github.com/lima-vm/lima/pkg/localpathutil"
@@ -61,11 +63,13 @@ func Validate(y LimaYAML, warn bool) error {
 		if !IsNativeArch(*y.Arch) {
 			return fmt.Errorf("field `arch` must be %q for VZ; got %q", NewArch(runtime.GOARCH), *y.Arch)
 		}
+	case EXT:
+		// NOP
 	default:
-		return fmt.Errorf("field `vmType` must be %q, %q, %q; got %q", QEMU, VZ, WSL2, *y.VMType)
+		return fmt.Errorf("field `vmType` must be %q, %q, %q, %q; got %q", QEMU, VZ, WSL2, EXT, *y.VMType)
 	}
 
-	if len(y.Images) == 0 {
+	if len(y.Images) == 0 && *y.VMType != EXT {
 		return errors.New("field `images` must be set")
 	}
 	for i, f := range y.Images {
@@ -153,6 +157,14 @@ func Validate(y LimaYAML, warn bool) error {
 		}
 	}
 
+	if *y.SSH.Address == "127.0.0.1" && *y.VMType == EXT {
+		return errors.New("field `ssh.address` must be set, for ext")
+	}
+	if y.SSH.Address != nil {
+		if err := validateHost("ssh.address", *y.SSH.Address); err != nil {
+			return err
+		}
+	}
 	if *y.SSH.LocalPort != 0 {
 		if err := validatePort("ssh.localPort", *y.SSH.LocalPort); err != nil {
 			return err
@@ -437,6 +449,30 @@ func validateNetwork(y LimaYAML, warn bool) error {
 			return fmt.Errorf("field `%s.interface` value %q has already been used by field `networks[%d].interface`", field, nw.Interface, prev)
 		}
 		interfaceName[nw.Interface] = i
+	}
+	return nil
+}
+
+func lookupIP(host string) error {
+	var err error
+	if strings.HasSuffix(host, ".local") {
+		var r net.Resolver
+		const timeout = 500 * time.Millisecond // timeout for .local
+		ctx, cancel := context.WithTimeout(context.TODO(), timeout)
+		defer cancel()
+		_, err = r.LookupIP(ctx, "ip", host)
+	} else {
+		_, err = net.LookupIP(host)
+	}
+	return err
+}
+
+func validateHost(field, host string) error {
+	if net.ParseIP(host) != nil {
+		return nil
+	}
+	if err := lookupIP(host); err != nil {
+		return fmt.Errorf("field `%s` must be IP: %w", field, err)
 	}
 	return nil
 }

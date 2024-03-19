@@ -52,6 +52,7 @@ func copyAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	instAddr := "127.0.0.1"
 	instDirs := make(map[string]string)
 	scpFlags := []string{}
 	scpArgs := []string{}
@@ -69,6 +70,7 @@ func copyAction(cmd *cobra.Command, args []string) error {
 	if sshutil.DetectOpenSSHVersion().LessThan(*semver.New("8.0.0")) {
 		legacySSH = true
 	}
+	localhostOnly := true
 	for _, arg := range args {
 		path := strings.Split(arg, ":")
 		switch len(path) {
@@ -88,9 +90,13 @@ func copyAction(cmd *cobra.Command, args []string) error {
 			}
 			if legacySSH {
 				scpFlags = append(scpFlags, "-P", fmt.Sprintf("%d", inst.SSHLocalPort))
-				scpArgs = append(scpArgs, fmt.Sprintf("%s@127.0.0.1:%s", u.Username, path[1]))
+				scpArgs = append(scpArgs, fmt.Sprintf("%s@%s:%s", u.Username, inst.SSHAddress, path[1]))
 			} else {
-				scpArgs = append(scpArgs, fmt.Sprintf("scp://%s@127.0.0.1:%d/%s", u.Username, inst.SSHLocalPort, path[1]))
+				scpArgs = append(scpArgs, fmt.Sprintf("scp://%s@%s:%d/%s", u.Username, inst.SSHAddress, inst.SSHLocalPort, path[1]))
+			}
+			if inst.SSHAddress != "127.0.0.1" {
+				instAddr = inst.SSHAddress
+				localhostOnly = false
 			}
 			instDirs[instName] = inst.Dir
 		default:
@@ -109,14 +115,14 @@ func copyAction(cmd *cobra.Command, args []string) error {
 		// arguments such as ControlPath.  This is preferred as we can multiplex
 		// sessions without re-authenticating (MaxSessions permitting).
 		for _, instDir := range instDirs {
-			sshOpts, err = sshutil.SSHOpts(instDir, false, false, false, false)
+			sshOpts, err = sshutil.SSHOpts(instDir, false, instAddr, false, false, false)
 			if err != nil {
 				return err
 			}
 		}
 	} else {
 		// Copying among multiple hosts; we can't pass in host-specific options.
-		sshOpts, err = sshutil.CommonOpts(false)
+		sshOpts, err = sshutil.CommonOpts(false, localhostOnly)
 		if err != nil {
 			return err
 		}
