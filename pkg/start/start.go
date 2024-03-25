@@ -22,6 +22,7 @@ import (
 	"github.com/lima-vm/lima/pkg/qemu/entitlementutil"
 	"github.com/mattn/go-isatty"
 
+	"github.com/cheggaaa/pb/v3"
 	"github.com/lima-vm/lima/pkg/downloader"
 	"github.com/lima-vm/lima/pkg/fileutils"
 	hostagentevents "github.com/lima-vm/lima/pkg/hostagent/events"
@@ -29,6 +30,16 @@ import (
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/sirupsen/logrus"
+)
+
+var OutputProgress bool
+var ProgressBar *pb.ProgressBar
+
+type Progress = string
+
+const (
+	ProgressBooting Progress = "Booting"
+	ProgressRunning Progress = "Running"
 )
 
 // DefaultWatchHostAgentEventsTimeout is the duration to wait for the instance
@@ -272,7 +283,13 @@ func watchHostAgentEvents(ctx context.Context, inst *store.Instance, haStdoutPat
 		err                  error
 	)
 	onEvent := func(ev hostagentevents.Event) bool {
+		if ev.Requirement.Label != "" {
+			ShowRequirement(inst, ev.Requirement)
+			return false
+		}
+
 		if !printedSSHLocalPort && ev.Status.SSHLocalPort != 0 {
+			ShowProgress(inst, ProgressBooting)
 			logrus.Infof("SSH Local Port: %d", ev.Status.SSHLocalPort)
 			printedSSHLocalPort = true
 		}
@@ -285,12 +302,16 @@ func watchHostAgentEvents(ctx context.Context, inst *store.Instance, haStdoutPat
 			return true
 		} else if ev.Status.Running {
 			receivedRunningEvent = true
+			if ProgressBar != nil {
+				ProgressBar.Finish()
+			}
 			if ev.Status.Degraded {
 				logrus.Warnf("DEGRADED. The VM seems running, but file sharing and port forwarding may not work. (hint: see %q)", haStderrPath)
 				err = fmt.Errorf("degraded, status=%+v", ev.Status)
 				return true
 			}
 
+			ShowProgress(inst, ProgressRunning)
 			if *inst.Config.Plain {
 				logrus.Infof("READY. Run `ssh -F %q lima-%s` to open the shell.", inst.SSHConfigFile, inst.Name)
 			} else {
@@ -341,6 +362,50 @@ func LimactlShellCmd(instName string) string {
 		shellCmd = "lima"
 	}
 	return shellCmd
+}
+
+func ShowProgress(inst *store.Instance, progress Progress) {
+	if !OutputProgress {
+		return
+	}
+	var message string
+	switch progress {
+	case ProgressBooting:
+		message = fmt.Sprintf("Starting \"%s\"", inst.Name)
+	case ProgressRunning:
+		message = "READY."
+	}
+	fmt.Println(message)
+}
+
+// Same as pb.Simple, but don't show the `{{percent . }}`
+const tmpl = `{{with string . "prefix"}}{{.}} {{end}}{{counters . }} {{bar . }} {{with string . "suffix"}} {{.}}{{end}}`
+
+// Keep the old progress bar showing, or clean on finish
+const keep = true
+
+func ShowRequirement(_ *store.Instance, req hostagentevents.Requirement) {
+	if !OutputProgress {
+		return
+	}
+	if ProgressBar == nil {
+		ProgressBar = pb.StartNew(req.Total)
+		// Disable the adaptive width of the bar element
+		pb.RegisterElement("bar", pb.ElementBar, false)
+		ProgressBar.SetTemplateString(tmpl)
+		ProgressBar.SetWidth(100) // with longest suffix
+		ProgressBar.Set(pb.CleanOnFinish, !keep)
+		ProgressBar.Set("prefix", "Waiting")
+	} else if keep {
+		// Flush the progress bar output for this line
+		ProgressBar.Finish()
+		ProgressBar.Start()
+	}
+
+	name := fmt.Sprintf("%s %d/%d", req.Label, req.Number, req.Count)
+	desc := req.Description
+	ProgressBar.SetCurrent(int64(req.Index + 1))
+	ProgressBar.Set("suffix", fmt.Sprintf("%q (%s)", desc, name))
 }
 
 func ShowMessage(inst *store.Instance) error {

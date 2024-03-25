@@ -34,6 +34,7 @@ func registerCreateFlags(cmd *cobra.Command, commentPrefix string) {
 	flags := cmd.Flags()
 	flags.String("name", "", commentPrefix+"override the instance name")
 	flags.Bool("list-templates", false, commentPrefix+"list available templates and exit")
+	flags.Bool("progress", false, "show progress")
 	editflags.RegisterCreate(cmd, commentPrefix)
 }
 
@@ -117,6 +118,11 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 
 	// Create an instance, with menu TUI when TTY is available
 	tty, err := flags.GetBool("tty")
+	if err != nil {
+		return nil, err
+	}
+
+	start.OutputProgress, err = flags.GetBool("progress")
 	if err != nil {
 		return nil, err
 	}
