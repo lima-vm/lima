@@ -123,10 +123,13 @@ func convertRawToRaw(source, dest string, size *int64) error {
 }
 
 func copySparse(w *os.File, r io.Reader, bufSize int64) (int64, error) {
-	var n int64
+	var (
+		n              int64
+		eof, hasWrites bool
+	)
+
 	zeroBuf := make([]byte, bufSize)
 	buf := make([]byte, bufSize)
-	var eof bool
 	for !eof {
 		rN, rErr := r.Read(buf)
 		if rErr != nil {
@@ -143,6 +146,7 @@ func copySparse(w *os.File, r io.Reader, bufSize int64) (int64, error) {
 			// no need to ftruncate here
 			n += int64(rN)
 		} else {
+			hasWrites = true
 			wN, wErr := w.Write(buf)
 			if wN > 0 {
 				n += int64(wN)
@@ -154,6 +158,11 @@ func copySparse(w *os.File, r io.Reader, bufSize int64) (int64, error) {
 				return n, fmt.Errorf("read %d, but wrote %d bytes", rN, wN)
 			}
 		}
+	}
+
+	// Ftruncate must be run if the file contains only zeros
+	if !hasWrites {
+		return n, MakeSparse(w, n)
 	}
 	return n, nil
 }

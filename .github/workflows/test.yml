@@ -72,6 +72,10 @@ jobs:
         # For non-Homebrew we have to support an old release of Go
         go-version: ["1.21.x", "1.22.x"]
     steps:
+    - name: Install test dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends qemu-utils
     - uses: actions/checkout@v4
       with:
         fetch-depth: 1
