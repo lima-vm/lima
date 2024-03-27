@@ -26,7 +26,6 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/lima-vm/go-qcow2reader v0.1.1
 	github.com/lima-vm/sshocker v0.3.4
-	github.com/lithammer/dedent v1.1.0
 	github.com/mattn/go-isatty v0.0.20
 	github.com/mattn/go-shellwords v1.0.12
 	github.com/mdlayher/vsock v1.2.1
