@@ -137,7 +137,7 @@ func defaultGuestInstallPrefix() string {
 // Both d and o may be empty.
 //
 // Maps (`Env`) are being merged: first populated from d, overwritten by y, and again overwritten by o.
-// Slices (e.g. `Mounts`, `Provision`) are appended, starting with o, followed by y, and finally d. This
+// Slices (e.g. `Mounts`, `Provision`, `HostProvision`) are appended, starting with o, followed by y, and finally d. This
 // makes sure o takes priority over y over d, in cases it matters (e.g. `PortForwards`, where the first
 // matching rule terminates the search).
 //
@@ -147,7 +147,11 @@ func defaultGuestInstallPrefix() string {
 //   - Networks are appended in d, y, o order
 //   - DNS are picked from the highest priority where DNS is not empty.
 //   - CACertificates Files and Certs are uniquely appended in d, y, o order
-func FillDefault(y, d, o *LimaYAML, filePath string) {
+func FillDefault(y, d, o *LimaYAML, filePath string, opts ...Opt) {
+	var opt options
+	for _, f := range opts {
+		f(&opt)
+	}
 	instDir := filepath.Dir(filePath)
 	if y.VMType == nil {
 		y.VMType = d.VMType
@@ -460,6 +464,25 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		}
 		if probe.Description == "" {
 			probe.Description = fmt.Sprintf("user probe %d/%d", i+1, len(y.Probes))
+		}
+	}
+
+	if !opt.enableHostProvision && len(y.HostProvision) > 0 {
+		y.HostProvision = nil
+		logrus.Warnf("HostProvision is not enabled in %q. Use them in %q", filePath, filenames.Default)
+	}
+	if len(o.HostProvision) > 0 {
+		o.HostProvision = nil
+		logrus.Warnf("HostProvision is not supported in %q. Use them in %q", filePath, filenames.Override)
+	}
+	y.HostProvision = append(append(o.HostProvision, y.HostProvision...), d.HostProvision...)
+	for i := range y.HostProvision {
+		hostProvision := &y.HostProvision[i]
+		if hostProvision.Debug == nil {
+			hostProvision.Debug = ptr.Of(false)
+		}
+		if hostProvision.Wait == nil {
+			hostProvision.Wait = ptr.Of(true)
 		}
 	}
 

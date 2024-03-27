@@ -152,6 +152,9 @@ func TestFillDefault(t *testing.T) {
 		Probes: []Probe{
 			{Script: "#!/bin/false"},
 		},
+		HostProvision: []HostProvision{
+			{Debug: ptr.Of(true), Script: ptr.Of("true")},
+		},
 		Networks: []Network{
 			{Lima: "shared"},
 		},
@@ -235,6 +238,10 @@ func TestFillDefault(t *testing.T) {
 	expect.Probes[0].Mode = ProbeModeReadiness
 	expect.Probes[0].Description = "user probe 1/1"
 
+	expect.HostProvision = y.HostProvision
+	expect.HostProvision[0].Debug = ptr.Of(true)
+	expect.HostProvision[0].Wait = ptr.Of(true)
+
 	expect.Networks = y.Networks
 	expect.Networks[0].MACAddress = MACAddress(fmt.Sprintf("%s#%d", filePath, 0))
 	expect.Networks[0].Interface = "lima0"
@@ -285,8 +292,13 @@ func TestFillDefault(t *testing.T) {
 		BinFmt:  ptr.Of(false),
 	}
 
-	FillDefault(&y, &LimaYAML{}, &LimaYAML{}, filePath)
+	yLimited := y
+	FillDefault(&y, &LimaYAML{}, &LimaYAML{}, filePath, WithEnableHostProvision())
 	assert.DeepEqual(t, &y, &expect, opts...)
+
+	expect.HostProvision = nil
+	FillDefault(&yLimited, &LimaYAML{}, &LimaYAML{}, filePath)
+	assert.DeepEqual(t, &yLimited, &expect, opts...)
 
 	filledDefaults := y
 
@@ -375,6 +387,13 @@ func TestFillDefault(t *testing.T) {
 				Description: "User Probe",
 			},
 		},
+		HostProvision: []HostProvision{
+			{
+				Debug:  ptr.Of(false),
+				Script: ptr.Of("false"),
+				Wait:   ptr.Of(false),
+			},
+		},
 		Networks: []Network{
 			{
 				VNLDeprecated:        "/tmp/vde.ctl",
@@ -448,8 +467,12 @@ func TestFillDefault(t *testing.T) {
 	expect.Plain = ptr.Of(false)
 
 	y = LimaYAML{}
-	FillDefault(&y, &d, &LimaYAML{}, filePath)
+	FillDefault(&y, &d, &LimaYAML{}, filePath, WithEnableHostProvision())
 	assert.DeepEqual(t, &y, &expect, opts...)
+
+	yLimited = LimaYAML{}
+	FillDefault(&yLimited, &d, &LimaYAML{}, filePath)
+	assert.DeepEqual(t, &yLimited, &expect, opts...)
 
 	// ------------------------------------------------------------------------------------
 	// User-provided defaults should not override user-provided config values
@@ -462,6 +485,7 @@ func TestFillDefault(t *testing.T) {
 
 	expect.Provision = append(append([]Provision{}, y.Provision...), d.Provision...)
 	expect.Probes = append(append([]Probe{}, y.Probes...), d.Probes...)
+	expect.HostProvision = append(append([]HostProvision{}, y.HostProvision...), d.HostProvision...)
 	expect.PortForwards = append(append([]PortForward{}, y.PortForwards...), d.PortForwards...)
 	expect.CopyToHost = append(append([]CopyToHost{}, y.CopyToHost...), d.CopyToHost...)
 	expect.Containerd.Archives = append(append([]File{}, y.Containerd.Archives...), d.Containerd.Archives...)
@@ -479,8 +503,13 @@ func TestFillDefault(t *testing.T) {
 	// "TWO" does not exist in filledDefaults.Env, so is set from d.Env
 	expect.Env["TWO"] = d.Env["TWO"]
 
-	FillDefault(&y, &d, &LimaYAML{}, filePath)
+	yLimited = y
+	FillDefault(&y, &d, &LimaYAML{}, filePath, WithEnableHostProvision())
 	assert.DeepEqual(t, &y, &expect, opts...)
+
+	expect.HostProvision = d.HostProvision
+	FillDefault(&yLimited, &d, &LimaYAML{}, filePath)
+	assert.DeepEqual(t, &yLimited, &expect, opts...)
 
 	// ------------------------------------------------------------------------------------
 	// User-provided overrides should override user-provided config settings
@@ -576,6 +605,13 @@ func TestFillDefault(t *testing.T) {
 				Description: "Another Probe",
 			},
 		},
+		HostProvision: []HostProvision{
+			{
+				Debug:  ptr.Of(false),
+				Script: ptr.Of("false"),
+				Wait:   ptr.Of(false),
+			},
+		},
 		Networks: []Network{
 			{
 				Lima:       "shared",
@@ -619,6 +655,8 @@ func TestFillDefault(t *testing.T) {
 
 	expect.Provision = append(append(o.Provision, y.Provision...), d.Provision...)
 	expect.Probes = append(append(o.Probes, y.Probes...), d.Probes...)
+	// HostProvision is not supported in override.yaml
+	expect.HostProvision = append(append([]HostProvision{}, y.HostProvision...), d.HostProvision...)
 	expect.PortForwards = append(append(o.PortForwards, y.PortForwards...), d.PortForwards...)
 	expect.CopyToHost = append(append(o.CopyToHost, y.CopyToHost...), d.CopyToHost...)
 	expect.Containerd.Archives = append(append(o.Containerd.Archives, y.Containerd.Archives...), d.Containerd.Archives...)
@@ -666,6 +704,11 @@ func TestFillDefault(t *testing.T) {
 	}
 	expect.Plain = ptr.Of(false)
 
-	FillDefault(&y, &d, &o, filePath)
+	yLimited = y
+	FillDefault(&y, &d, &o, filePath, WithEnableHostProvision())
 	assert.DeepEqual(t, &y, &expect, opts...)
+
+	expect.HostProvision = d.HostProvision
+	FillDefault(&yLimited, &d, &o, filePath)
+	assert.DeepEqual(t, &yLimited, &expect, opts...)
 }
