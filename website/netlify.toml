@@ -6,7 +6,7 @@ command = "make -C .. docsy && npm run build:preview"
 publish = "public"
 
 [build.environment]
-GO_VERSION = "1.20.5"
+GO_VERSION = "1.22.1"
 
 [context.production]
 command = "make -C .. docsy && npm run build:production"
