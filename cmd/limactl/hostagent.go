@@ -12,7 +12,6 @@ import (
 	"strconv"
 	"syscall"
 
-	"github.com/gorilla/mux"
 	"github.com/lima-vm/lima/pkg/hostagent"
 	"github.com/lima-vm/lima/pkg/hostagent/api/server"
 	"github.com/sirupsen/logrus"
@@ -91,7 +90,7 @@ func hostagentAction(cmd *cobra.Command, args []string) error {
 	backend := &server.Backend{
 		Agent: ha,
 	}
-	r := mux.NewRouter()
+	r := http.NewServeMux()
 	server.AddRoutes(r, backend)
 	srv := &http.Server{Handler: r}
 	err = os.RemoveAll(socket)
