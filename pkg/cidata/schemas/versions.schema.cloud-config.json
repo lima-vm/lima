@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "$id": "https://raw.githubusercontent.com/canonical/cloud-init/main/cloudinit/config/schemas/versions.schema.cloud-config.json",
+  "oneOf": [
+    {
+      "allOf": [
+        {
+          "properties": {
+            "version": {
+              "enum": [
+                "v1"
+              ]
+            }
+          }
+        },
+        {
+          "$ref": "https://raw.githubusercontent.com/canonical/cloud-init/main/cloudinit/config/schemas/schema-cloud-config-v1.json"
+        }
+      ]
+    }
+  ]
+}

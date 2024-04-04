@@ -147,6 +147,11 @@ func ExecuteTemplate(args TemplateArgs) ([]iso9660util.Entry, error) {
 		if err != nil {
 			return err
 		}
+		if d.Name() == "user-data" {
+			if err := validateCloudConfig(b); err != nil {
+				return err
+			}
+		}
 		layout = append(layout, iso9660util.Entry{
 			Path:   path,
 			Reader: bytes.NewReader(b),
