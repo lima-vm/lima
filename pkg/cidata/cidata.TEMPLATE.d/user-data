@@ -66,12 +66,14 @@ resolv_conf:
 {{ with .CACerts }}
 ca_certs:
   remove_defaults: {{ .RemoveDefaults }}
+  {{- if .Trusted}}
   trusted:
   {{- range $cert := .Trusted }}
   - |
     {{- range $line := $cert.Lines }}
     {{ $line }}
     {{- end }}
+  {{- end }}
   {{- end }}
 {{- end }}
 
