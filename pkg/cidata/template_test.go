@@ -22,6 +22,9 @@ func TestTemplate(t *testing.T) {
 			{MountPoint: "/Users/dummy/lima"},
 		},
 		MountType: "reverse-sshfs",
+		CACerts: CACerts{
+			Trusted: []Cert{},
+		},
 	}
 	layout, err := ExecuteTemplate(args)
 	assert.NilError(t, err)
@@ -33,6 +36,8 @@ func TestTemplate(t *testing.T) {
 		if f.Path == "user-data" {
 			// mounted later
 			assert.Assert(t, !strings.Contains(string(b), "mounts:"))
+			// ca_certs:
+			assert.Assert(t, !strings.Contains(string(b), "trusted:"))
 		}
 	}
 }
