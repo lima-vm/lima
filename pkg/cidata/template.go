@@ -89,7 +89,7 @@ type TemplateArgs struct {
 	TimeZone                        string
 }
 
-func ValidateTemplateArgs(args TemplateArgs) error {
+func ValidateTemplateArgs(args *TemplateArgs) error {
 	if err := identifiers.Validate(args.Name); err != nil {
 		return err
 	}
@@ -120,7 +120,7 @@ func ValidateTemplateArgs(args TemplateArgs) error {
 	return nil
 }
 
-func ExecuteTemplate(args TemplateArgs) ([]iso9660util.Entry, error) {
+func ExecuteTemplate(args *TemplateArgs) ([]iso9660util.Entry, error) {
 	if err := ValidateTemplateArgs(args); err != nil {
 		return nil, err
 	}

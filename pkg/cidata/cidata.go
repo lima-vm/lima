@@ -111,17 +111,17 @@ func setupEnv(instConfigEnv map[string]string, propagateProxyEnv bool, slirpGate
 	return env, nil
 }
 
-func GenerateISO9660(instDir, name string, instConfig *limayaml.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort int, nerdctlArchive string, vsockPort int, virtioPort string) error {
+func templateArgs(instDir, name string, instConfig *limayaml.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort int, nerdctlArchive string, vsockPort int, virtioPort string) (*TemplateArgs, error) {
 	if err := limayaml.Validate(instConfig, false); err != nil {
-		return err
+		return nil, err
 	}
 	u, err := osutil.LimaUser(true)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	uid, err := strconv.Atoi(u.Uid)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	args := TemplateArgs{
 		Name:               name,
@@ -150,14 +150,14 @@ func GenerateISO9660(instDir, name string, instConfig *limayaml.LimaYAML, udpDNS
 		usernetName := instConfig.Networks[firstUsernetIndex].Lima
 		subnet, err = usernet.Subnet(usernetName)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		args.SlirpGateway = usernet.GatewayIP(subnet)
 		args.SlirpDNS = usernet.GatewayIP(subnet)
 	} else {
 		subnet, _, err = net.ParseCIDR(networks.SlirpNetwork)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		args.SlirpGateway = usernet.GatewayIP(subnet)
 		if *instConfig.VMType == limayaml.VZ {
@@ -173,10 +173,10 @@ func GenerateISO9660(instDir, name string, instConfig *limayaml.LimaYAML, udpDNS
 
 	pubKeys, err := sshutil.DefaultPubKeys(*instConfig.SSH.LoadDotSSHPubKeys)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if len(pubKeys) == 0 {
-		return errors.New("no SSH key was found, run `ssh-keygen`")
+		return nil, errors.New("no SSH key was found, run `ssh-keygen`")
 	}
 	for _, f := range pubKeys {
 		args.SSHPubKeys = append(args.SSHPubKeys, f.Content)
@@ -193,17 +193,17 @@ func GenerateISO9660(instDir, name string, instConfig *limayaml.LimaYAML, udpDNS
 	}
 	hostHome, err := localpathutil.Expand("~")
 	if err != nil {
-		return err
+		return nil, err
 	}
 	for i, f := range instConfig.Mounts {
 		tag := fmt.Sprintf("mount%d", i)
 		location, err := localpathutil.Expand(f.Location)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		mountPoint, err := localpathutil.Expand(f.MountPoint)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		options := "defaults"
 		switch fstype {
@@ -217,7 +217,7 @@ func GenerateISO9660(instDir, name string, instConfig *limayaml.LimaYAML, udpDNS
 				options += fmt.Sprintf(",version=%s", *f.NineP.ProtocolVersion)
 				msize, err := units.RAMInBytes(*f.NineP.Msize)
 				if err != nil {
-					return fmt.Errorf("failed to parse msize for %q: %w", location, err)
+					return nil, fmt.Errorf("failed to parse msize for %q: %w", location, err)
 				}
 				options += fmt.Sprintf(",msize=%d", msize)
 				options += fmt.Sprintf(",cache=%s", *f.NineP.Cache)
@@ -268,7 +268,7 @@ func GenerateISO9660(instDir, name string, instConfig *limayaml.LimaYAML, udpDNS
 
 	args.Env, err = setupEnv(instConfig.Env, *instConfig.PropagateProxyEnv, args.SlirpGateway)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	switch {
@@ -285,7 +285,7 @@ func GenerateISO9660(instDir, name string, instConfig *limayaml.LimaYAML, udpDNS
 	default:
 		args.DNSAddresses, err = osutil.DNSAddresses()
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -294,12 +294,12 @@ func GenerateISO9660(instDir, name string, instConfig *limayaml.LimaYAML, udpDNS
 	for _, path := range instConfig.CACertificates.Files {
 		expanded, err := localpathutil.Expand(path)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		content, err := os.ReadFile(expanded)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		cert := getCert(string(content))
@@ -317,6 +317,15 @@ func GenerateISO9660(instDir, name string, instConfig *limayaml.LimaYAML, udpDNS
 		if f.Mode == limayaml.ProvisionModeDependency && *f.SkipDefaultDependencyResolution {
 			args.SkipDefaultDependencyResolution = true
 		}
+	}
+
+	return &args, nil
+}
+
+func GenerateISO9660(instDir, name string, instConfig *limayaml.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort int, nerdctlArchive string, vsockPort int, virtioPort string) error {
+	args, err := templateArgs(instDir, name, instConfig, udpDNSLocalPort, tcpDNSLocalPort, nerdctlArchive, vsockPort, virtioPort)
+	if err != nil {
+		return err
 	}
 
 	if err := ValidateTemplateArgs(args); err != nil {
