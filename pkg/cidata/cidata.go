@@ -319,6 +319,24 @@ func templateArgs(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort, t
 	return &args, nil
 }
 
+func GenerateCloudConfig(instDir, name string, y *limayaml.LimaYAML) error {
+	args, err := templateArgs(instDir, name, y, 0, 0, 0, "")
+	if err != nil {
+		return err
+	}
+
+	if err := ValidateTemplateArgs(args); err != nil {
+		return err
+	}
+
+	config, err := ExpandTemplate(args)
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(filepath.Join(instDir, filenames.CloudConfig), config, 0o644)
+}
+
 func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort int, nerdctlArchive string, vsockPort int, virtioPort string) error {
 	args, err := templateArgs(instDir, name, y, udpDNSLocalPort, tcpDNSLocalPort, vsockPort, virtioPort)
 	if err != nil {

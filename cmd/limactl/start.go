@@ -14,6 +14,7 @@ import (
 	"github.com/containerd/containerd/identifiers"
 	"github.com/lima-vm/lima/cmd/limactl/editflags"
 	"github.com/lima-vm/lima/cmd/limactl/guessarg"
+	"github.com/lima-vm/lima/pkg/cidata"
 	"github.com/lima-vm/lima/pkg/editutil"
 	"github.com/lima-vm/lima/pkg/ioutilx"
 	"github.com/lima-vm/lima/pkg/limayaml"
@@ -341,6 +342,9 @@ func createInstance(ctx context.Context, st *creatorState, saveBrokenEditorBuffe
 		return nil, err
 	}
 	if err := os.WriteFile(filePath, st.yBytes, 0o644); err != nil {
+		return nil, err
+	}
+	if err := cidata.GenerateCloudConfig(instDir, st.instName, y); err != nil {
 		return nil, err
 	}
 	if err := os.WriteFile(filepath.Join(instDir, filenames.LimaVersion), []byte(version.Version), 0o444); err != nil {
