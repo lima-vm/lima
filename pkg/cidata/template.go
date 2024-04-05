@@ -20,6 +20,9 @@ var templateFS embed.FS
 
 const templateFSRoot = "cidata.TEMPLATE.d"
 
+//go:embed cloud-config.yaml
+var cloudConfigYaml string
+
 type CACerts struct {
 	RemoveDefaults *bool
 	Trusted        []Cert
@@ -118,6 +121,13 @@ func ValidateTemplateArgs(args *TemplateArgs) error {
 		return errors.New("field CACerts.RemoveDefaults must be set")
 	}
 	return nil
+}
+
+func ExpandTemplate(args *TemplateArgs) ([]byte, error) {
+	if err := ValidateTemplateArgs(args); err != nil {
+		return nil, err
+	}
+	return textutil.ExecuteTemplate(cloudConfigYaml, args)
 }
 
 func ExecuteTemplate(args *TemplateArgs) ([]iso9660util.Entry, error) {

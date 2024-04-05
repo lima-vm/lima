@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/lima-vm/lima/pkg/cidata"
 	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/driverutil"
 	"github.com/lima-vm/lima/pkg/limayaml"
@@ -58,6 +59,9 @@ func Create(ctx context.Context, instName string, instConfig []byte, saveBrokenY
 		return nil, err
 	}
 	if err := os.WriteFile(filePath, instConfig, 0o644); err != nil {
+		return nil, err
+	}
+	if err := cidata.GenerateCloudConfig(instDir, instName, loadedInstConfig); err != nil {
 		return nil, err
 	}
 	if err := os.WriteFile(filepath.Join(instDir, filenames.LimaVersion), []byte(version.Version), 0o444); err != nil {
