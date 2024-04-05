@@ -10,6 +10,25 @@ import (
 
 var defaultRemoveDefaults = false
 
+func TestConfig(t *testing.T) {
+	args := &TemplateArgs{
+		Name: "default",
+		User: "foo",
+		UID:  501,
+		Home: "/home/foo.linux",
+		SSHPubKeys: []string{
+			"ssh-rsa dummy foo@example.com",
+		},
+		MountType: "reverse-sshfs",
+		CACerts: CACerts{
+			RemoveDefaults: &defaultRemoveDefaults,
+		},
+	}
+	config, err := ExpandTemplate(args)
+	assert.NilError(t, err)
+	t.Log(string(config))
+}
+
 func TestTemplate(t *testing.T) {
 	args := &TemplateArgs{
 		Name: "default",

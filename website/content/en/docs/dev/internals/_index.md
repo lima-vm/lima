@@ -37,6 +37,7 @@ Metadata:
 - `protected`: empty file, used by `limactl protect`
 
 cloud-init:
+- `cloud-config.yaml`: cloud-init configuration, for reference only.
 - `cidata.iso`: cloud-init ISO9660 image. See [`cidata.iso`](#cidataiso).
 
 Ansible:

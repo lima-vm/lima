@@ -30,6 +30,7 @@ const (
 	LimaVersion          = "lima-version" // Lima version used to create instance
 	CIDataISO            = "cidata.iso"
 	CIDataISODir         = "cidata"
+	CloudConfig          = "cloud-config.yaml"
 	BaseDisk             = "basedisk"
 	DiffDisk             = "diffdisk"
 	Kernel               = "kernel"
