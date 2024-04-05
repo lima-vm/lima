@@ -8,6 +8,8 @@ import (
 	"gotest.tools/v3/assert"
 )
 
+var defaultRemoveDefaults = false
+
 func TestTemplate(t *testing.T) {
 	args := TemplateArgs{
 		Name: "default",
@@ -22,6 +24,10 @@ func TestTemplate(t *testing.T) {
 			{MountPoint: "/Users/dummy/lima"},
 		},
 		MountType: "reverse-sshfs",
+		CACerts: CACerts{
+			RemoveDefaults: &defaultRemoveDefaults,
+			Trusted:        []Cert{},
+		},
 	}
 	layout, err := ExecuteTemplate(args)
 	assert.NilError(t, err)
@@ -33,6 +39,8 @@ func TestTemplate(t *testing.T) {
 		if f.Path == "user-data" {
 			// mounted later
 			assert.Assert(t, !strings.Contains(string(b), "mounts:"))
+			// ca_certs:
+			assert.Assert(t, !strings.Contains(string(b), "trusted:"))
 		}
 	}
 }
@@ -51,6 +59,9 @@ func TestTemplate9p(t *testing.T) {
 			{Tag: "mount1", MountPoint: "/Users/dummy/lima", Type: "9p", Options: "rw,trans=virtio"},
 		},
 		MountType: "9p",
+		CACerts: CACerts{
+			RemoveDefaults: &defaultRemoveDefaults,
+		},
 	}
 	layout, err := ExecuteTemplate(args)
 	assert.NilError(t, err)
