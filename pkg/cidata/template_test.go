@@ -11,7 +11,7 @@ import (
 var defaultRemoveDefaults = false
 
 func TestTemplate(t *testing.T) {
-	args := TemplateArgs{
+	args := &TemplateArgs{
 		Name: "default",
 		User: "foo",
 		UID:  501,
@@ -46,7 +46,7 @@ func TestTemplate(t *testing.T) {
 }
 
 func TestTemplate9p(t *testing.T) {
-	args := TemplateArgs{
+	args := &TemplateArgs{
 		Name: "default",
 		User: "foo",
 		UID:  501,
