@@ -123,14 +123,14 @@ func ValidateTemplateArgs(args *TemplateArgs) error {
 	return nil
 }
 
-func ExpandTemplate(args *TemplateArgs) ([]byte, error) {
+func ExecuteTemplateCloudConfig(args *TemplateArgs) ([]byte, error) {
 	if err := ValidateTemplateArgs(args); err != nil {
 		return nil, err
 	}
 	return textutil.ExecuteTemplate(cloudConfigYaml, args)
 }
 
-func ExecuteTemplate(args *TemplateArgs) ([]iso9660util.Entry, error) {
+func ExecuteTemplateCIDataISO(args *TemplateArgs) ([]iso9660util.Entry, error) {
 	if err := ValidateTemplateArgs(args); err != nil {
 		return nil, err
 	}

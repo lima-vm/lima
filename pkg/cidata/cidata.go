@@ -332,7 +332,7 @@ func GenerateCloudConfig(instDir, name string, instConfig *limayaml.LimaYAML) er
 		return err
 	}
 
-	config, err := ExpandTemplate(args)
+	config, err := ExecuteTemplateCloudConfig(args)
 	if err != nil {
 		return err
 	}
@@ -350,7 +350,7 @@ func GenerateISO9660(instDir, name string, instConfig *limayaml.LimaYAML, udpDNS
 		return err
 	}
 
-	layout, err := ExecuteTemplate(args)
+	layout, err := ExecuteTemplateCIDataISO(args)
 	if err != nil {
 		return err
 	}
