@@ -110,7 +110,7 @@ func setupEnv(y *limayaml.LimaYAML, args TemplateArgs) (map[string]string, error
 	return env, nil
 }
 
-func templateArgs(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort int, nerdctlArchive string, vsockPort int, virtioPort string) (*TemplateArgs, error) {
+func templateArgs(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort, vsockPort int, virtioPort string) (*TemplateArgs, error) {
 	if err := limayaml.Validate(y, false); err != nil {
 		return nil, err
 	}
@@ -320,7 +320,7 @@ func templateArgs(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort, t
 }
 
 func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort int, nerdctlArchive string, vsockPort int, virtioPort string) error {
-	args, err := templateArgs(instDir, name, y, udpDNSLocalPort, tcpDNSLocalPort, nerdctlArchive, vsockPort, virtioPort)
+	args, err := templateArgs(instDir, name, y, udpDNSLocalPort, tcpDNSLocalPort, vsockPort, virtioPort)
 	if err != nil {
 		return err
 	}
