@@ -24,7 +24,7 @@ func TestConfig(t *testing.T) {
 			RemoveDefaults: &defaultRemoveDefaults,
 		},
 	}
-	config, err := ExpandTemplate(args)
+	config, err := ExecuteTemplateCloudConfig(args)
 	assert.NilError(t, err)
 	t.Log(string(config))
 }
@@ -48,7 +48,7 @@ func TestTemplate(t *testing.T) {
 			Trusted:        []Cert{},
 		},
 	}
-	layout, err := ExecuteTemplate(args)
+	layout, err := ExecuteTemplateCIDataISO(args)
 	assert.NilError(t, err)
 	for _, f := range layout {
 		t.Logf("=== %q ===", f.Path)
@@ -82,7 +82,7 @@ func TestTemplate9p(t *testing.T) {
 			RemoveDefaults: &defaultRemoveDefaults,
 		},
 	}
-	layout, err := ExecuteTemplate(args)
+	layout, err := ExecuteTemplateCIDataISO(args)
 	assert.NilError(t, err)
 	for _, f := range layout {
 		t.Logf("=== %q ===", f.Path)
