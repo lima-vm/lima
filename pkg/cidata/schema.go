@@ -1,7 +1,9 @@
 package cidata
 
 import (
+	"bytes"
 	_ "embed"
+	"fmt"
 	"strings"
 
 	"github.com/santhosh-tekuri/jsonschema/v5"
@@ -15,6 +17,9 @@ const schemaURL = "https://raw.githubusercontent.com/canonical/cloud-init/main/c
 var schemaText string
 
 func validateCloudConfig(userData []byte) error {
+	if !bytes.HasPrefix(userData, []byte("#cloud-config")) {
+		return fmt.Errorf("missing #cloud-config")
+	}
 	var m interface{}
 	err := yaml.Unmarshal(userData, &m)
 	if err != nil {
