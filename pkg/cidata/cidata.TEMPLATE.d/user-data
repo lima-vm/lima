@@ -26,7 +26,7 @@ timezone: {{.TimeZone}}
 
 users:
   - name: "{{.User}}"
-    uid: "{{.UID}}"
+    uid: {{.UID}}
     homedir: "{{.Home}}"
     shell: /bin/bash
     sudo: ALL=(ALL) NOPASSWD:ALL
