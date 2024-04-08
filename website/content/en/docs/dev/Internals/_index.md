@@ -140,9 +140,9 @@ The directory contains the following files:
 ## `cidata.iso`
 `cidata.iso` contains the following files:
 
-- `user-data`: [Cloud-init user-data](https://cloudinit.readthedocs.io/en/latest/topics/format.html)
-- `meta-data`: [Cloud-init meta-data](https://cloudinit.readthedocs.io/en/latest/topics/instancedata.html)
-- `network-config`: [Cloud-init Networking Config Version 2](https://cloudinit.readthedocs.io/en/latest/topics/network-config-format-v2.html)
+- `user-data`: [Cloud-init user-data](https://docs.cloud-init.io/en/latest/explanation/format.html)
+- `meta-data`: [Cloud-init meta-data](https://docs.cloud-init.io/en/latest/explanation/instancedata.html)
+- `network-config`: [Cloud-init Networking Config Version 2](https://docs.cloud-init.io/en/latest/reference/network-config-format-v2.html)
 - `lima.env`: The `LIMA_CIDATA_*` environment variables (see below) available during `boot.sh` processing
 - `lima-guestagent`: Lima guest agent binary
 - `nerdctl-full.tgz`: [`nerdctl-full-<VERSION>-<OS>-<ARCH>.tar.gz`](https://github.com/containerd/nerdctl/releases)
@@ -156,7 +156,7 @@ The directory contains the following files:
 Max file name length = 30
 
 ### Volume label
-The volume label is "cidata", as defined by [cloud-init NoCloud](https://cloudinit.readthedocs.io/en/latest/topics/datasources/nocloud.html).
+The volume label is "cidata", as defined by [cloud-init NoCloud](https://docs.cloud-init.io/en/latest/reference/datasources/nocloud.html).
 
 ### Environment variables
 - `LIMA_CIDATA_NAME`: the lima instance name
