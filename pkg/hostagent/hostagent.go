@@ -136,6 +136,9 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 		virtioPort = "" // filenames.VirtioPort
 	}
 
+	if err := cidata.GenerateCloudConfig(inst.Dir, instName, y); err != nil {
+		return nil, err
+	}
 	if err := cidata.GenerateISO9660(inst.Dir, instName, y, udpDNSLocalPort, tcpDNSLocalPort, o.nerdctlArchive, vSockPort, virtioPort); err != nil {
 		return nil, err
 	}
