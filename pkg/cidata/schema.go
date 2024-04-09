@@ -26,7 +26,6 @@ func validateCloudConfig(userData []byte) error {
 		return err
 	}
 	compiler := jsonschema.NewCompiler()
-	compiler.ExtractAnnotations = true
 	if err := compiler.AddResource(schemaURL, strings.NewReader(schemaText)); err != nil {
 		return err
 	}
