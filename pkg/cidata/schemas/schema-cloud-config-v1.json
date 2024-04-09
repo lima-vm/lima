@@ -361,6 +361,22 @@
           },
           "minItems": 1
         },
+	"ssh-authorized-keys": {
+          "allOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1
+            },
+            {
+              "deprecated": true,
+              "deprecated_version": "18.3",
+              "deprecated_description": "Use ``ssh_authorized_keys`` instead."
+            }
+          ]
+        },
         "ssh_import_id": {
           "description": "List of ssh ids to import for user. Can not be combined with ``ssh_redirect_user``. See the man page[1] for more details. [1] https://manpages.ubuntu.com/manpages/noble/en/man1/ssh-import-id.1.html",
           "type": "array",
