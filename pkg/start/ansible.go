@@ -1,0 +1,66 @@
+package start
+
+import (
+	"context"
+	"os"
+	"os/exec"
+	"path/filepath"
+
+	"github.com/goccy/go-yaml"
+	"github.com/lima-vm/lima/pkg/limayaml"
+	"github.com/lima-vm/lima/pkg/store"
+	"github.com/lima-vm/lima/pkg/store/filenames"
+	"github.com/sirupsen/logrus"
+)
+
+func runAnsibleProvision(ctx context.Context, inst *store.Instance) error {
+	y, err := inst.LoadYAML()
+	if err != nil {
+		return err
+	}
+	for _, f := range y.Provision {
+		if f.Mode == limayaml.ProvisionModeAnsible {
+			logrus.Infof("Waiting for ansible playbook %q", f.Playbook)
+			if err := runAnsiblePlaybook(ctx, inst, f.Playbook); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func runAnsiblePlaybook(ctx context.Context, inst *store.Instance, playbook string) error {
+	inventory, err := createInventory(inst)
+	if err != nil {
+		return err
+	}
+	logrus.Debugf("ansible-playbook -i %q %q", inventory, playbook)
+	args := []string{"-i", inventory, playbook}
+	cmd := exec.CommandContext(ctx, "ansible-playbook", args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
+}
+
+func createInventory(inst *store.Instance) (string, error) {
+	vars := map[string]interface{}{
+		"ansible_connection":      "ssh",
+		"ansible_host":            "lima-" + inst.Name,
+		"ansible_ssh_common_args": "-F " + inst.SSHConfigFile,
+	}
+	hosts := map[string]interface{}{
+		inst.Name: vars,
+	}
+	group := "lima"
+	data := map[string]interface{}{
+		group: map[string]interface{}{
+			"hosts": hosts,
+		},
+	}
+	bytes, err := yaml.Marshal(data)
+	if err != nil {
+		return "", err
+	}
+	inventory := filepath.Join(inst.Dir, filenames.InventoryYAML)
+	return inventory, os.WriteFile(inventory, bytes, 0o644)
+}

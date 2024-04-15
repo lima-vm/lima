@@ -334,6 +334,8 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 			})
 		case limayaml.ProvisionModeBoot:
 			continue
+		case limayaml.ProvisionModeAnsible:
+			continue
 		default:
 			return fmt.Errorf("unknown provision mode %q", f.Mode)
 		}

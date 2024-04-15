@@ -180,12 +180,14 @@ const (
 	ProvisionModeUser       ProvisionMode = "user"
 	ProvisionModeBoot       ProvisionMode = "boot"
 	ProvisionModeDependency ProvisionMode = "dependency"
+	ProvisionModeAnsible    ProvisionMode = "ansible"
 )
 
 type Provision struct {
 	Mode                            ProvisionMode `yaml:"mode" json:"mode"` // default: "system"
 	SkipDefaultDependencyResolution *bool         `yaml:"skipDefaultDependencyResolution,omitempty" json:"skipDefaultDependencyResolution,omitempty"`
 	Script                          string        `yaml:"script" json:"script"`
+	Playbook                        string        `yaml:"playbook,omitempty" json:"playbook,omitempty"`
 }
 
 type Containerd struct {

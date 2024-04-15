@@ -56,6 +56,7 @@ const (
 	VzIdentifier       = "vz-identifier"
 	VzEfi              = "vz-efi"           // efi variable store
 	QemuEfiCodeFD      = "qemu-efi-code.fd" // efi code; not always created
+	InventoryYAML      = "inventory.yaml"   // ansible inventory
 
 	// SocketDir is the default location for forwarded sockets with a relative paths in HostSocket
 	SocketDir = "sock"

@@ -183,9 +183,10 @@ func Validate(y LimaYAML, warn bool) error {
 					i, ProvisionModeDependency)
 			}
 		case ProvisionModeDependency:
+		case ProvisionModeAnsible:
 		default:
-			return fmt.Errorf("field `provision[%d].mode` must one of %q, %q, %q, or %q",
-				i, ProvisionModeSystem, ProvisionModeUser, ProvisionModeBoot, ProvisionModeDependency)
+			return fmt.Errorf("field `provision[%d].mode` must one of %q, %q, %q, %q, or %q",
+				i, ProvisionModeSystem, ProvisionModeUser, ProvisionModeBoot, ProvisionModeDependency, ProvisionModeAnsible)
 		}
 		if strings.Contains(p.Script, "LIMA_CIDATA") {
 			logrus.Warn("provisioning scripts should not reference the LIMA_CIDATA variables")
