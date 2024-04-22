@@ -37,6 +37,9 @@ Metadata:
 cloud-init:
 - `cidata.iso`: cloud-init ISO9660 image. See [`cidata.iso`](#cidataiso).
 
+Ansible:
+- `inventory.yaml`: the Ansible node inventory. See [ansible](#ansible).
+
 disk:
 - `basedisk`: the base image
 - `diffdisk`: the diff image (QCOW2)
@@ -136,6 +139,10 @@ The directory contains the following files:
 
 - `$QEMU_SYSTEM_ARM`: path of `qemu-system-arm`
   - Default: `qemu-system-arm` in `$PATH`
+
+## Ansible
+The instance directory contains an inventory file, that might be used with Ansible playbooks and commands.
+See [Building Ansible inventories](https://docs.ansible.com/ansible/latest/inventory_guide/) about dynamic inventories.
 
 ## `cidata.iso`
 `cidata.iso` contains the following files:

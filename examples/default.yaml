@@ -227,6 +227,12 @@ containerd:
 #     #!/bin/bash
 #     dnf config-manager --add-repo ...
 #     dnf install ...
+# # `ansible` is executed after other scripts are complete
+# # It requires `ansible-playbook` command to be installed.
+# # Environment variables such as ANSIBLE_CONFIG can be used, to control the behavior of the playbook execution.
+# # See ansible docs, and `ansible-config`, for more info https://docs.ansible.com/ansible/latest/playbook_guide/
+# - mode: ansible
+#   playbook: playbook.yaml
 
 # Probe scripts to check readiness.
 # 🟢 Builtin default: null
