@@ -1,12 +1,12 @@
 diff --git a/cloudinit/config/schemas/schema-cloud-config-v1.json b/cloudinit/config/schemas/schema-cloud-config-v1.json
-index ff61dcaa6..73e54ebaf 100644
+index ff61dcaa6..f2a6d878a 100644
 --- a/cloudinit/config/schemas/schema-cloud-config-v1.json
 +++ b/cloudinit/config/schemas/schema-cloud-config-v1.json
 @@ -361,6 +361,22 @@
            },
            "minItems": 1
          },
-+	"ssh-authorized-keys": {
++        "ssh-authorized-keys": {
 +          "allOf": [
 +            {
 +              "type": "array",

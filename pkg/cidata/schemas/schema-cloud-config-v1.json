@@ -361,7 +361,7 @@
           },
           "minItems": 1
         },
-	"ssh-authorized-keys": {
+        "ssh-authorized-keys": {
           "allOf": [
             {
               "type": "array",
