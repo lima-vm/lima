@@ -130,7 +130,7 @@ func listAction(cmd *cobra.Command, args []string) error {
 			if len(matches) > 0 {
 				instanceNames = append(instanceNames, matches...)
 			} else {
-				logrus.Warnf("No instance matching %v found.", arg)
+				return fmt.Errorf("no instance matching %v found", arg)
 			}
 		}
 	} else {
