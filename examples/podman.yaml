@@ -12,12 +12,12 @@
 
 # This template requires Lima v0.8.0 or later
 images:
-- location: "https://download.fedoraproject.org/pub/fedora/linux/releases/39/Cloud/x86_64/images/Fedora-Cloud-Base-39-1.5.x86_64.qcow2"
+- location: "https://download.fedoraproject.org/pub/fedora/linux/releases/40/Cloud/x86_64/images/Fedora-Cloud-Base-Generic.x86_64-40-1.14.qcow2"
   arch: "x86_64"
-  digest: "sha256:ab5be5058c5c839528a7d6373934e0ce5ad6c8f80bd71ed3390032027da52f37"
-- location: "https://download.fedoraproject.org/pub/fedora/linux/releases/39/Cloud/aarch64/images/Fedora-Cloud-Base-39-1.5.aarch64.qcow2"
+  digest: "sha256:ac58f3c35b73272d5986fa6d3bc44fd246b45df4c334e99a07b3bbd00684adee"
+- location: "https://download.fedoraproject.org/pub/fedora/linux/releases/40/Cloud/aarch64/images/Fedora-Cloud-Base-Generic.aarch64-40-1.14.qcow2"
   arch: "aarch64"
-  digest: "sha256:765996d5b77481ca02d0ac06405641bf134ac920cfc1e60d981c64d7971162dc"
+  digest: "sha256:ebdce26d861a9d15072affe1919ed753ec7015bd97b3a7d0d0df6a10834f7459"
 
 mounts:
 - location: "~"
