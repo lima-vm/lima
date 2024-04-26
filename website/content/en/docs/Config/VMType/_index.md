@@ -47,9 +47,9 @@ limactl start --vm-type=vz --mount-type=virtiofs
 # Example to run ubuntu using vmType: vz instead of qemu (Default)
 vmType: "vz"
 images:
-- location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-amd64.img"
+- location: "https://cloud-images.ubuntu.com/releases/24.04/release/ubuntu-24.04-server-cloudimg-amd64.img"
   arch: "x86_64"
-- location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-arm64.img"
+- location: "https://cloud-images.ubuntu.com/releases/24.04/release/ubuntu-24.04-server-cloudimg-arm64.img"
   arch: "aarch64"
 mounts:
   - location: "~"

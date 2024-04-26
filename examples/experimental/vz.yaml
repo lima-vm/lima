@@ -11,9 +11,9 @@ rosetta:
 # Note: On Intel Mac, macOS >= 13.5 is required to boot kernel v6.2 (used by Ubuntu 23.04, Fedora 38, etc.) with vz.
 # https://github.com/lima-vm/lima/issues/1577
 images:
-- location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-amd64.img"
+- location: "https://cloud-images.ubuntu.com/releases/24.04/release/ubuntu-24.04-server-cloudimg-amd64.img"
   arch: "x86_64"
-- location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-arm64.img"
+- location: "https://cloud-images.ubuntu.com/releases/24.04/release/ubuntu-24.04-server-cloudimg-arm64.img"
   arch: "aarch64"
 
 mounts:
