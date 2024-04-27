@@ -2,16 +2,16 @@
 
 arch: "riscv64"
 images:
-- location: "https://cloud-images.ubuntu.com/releases/23.10/release-20240307/ubuntu-23.10-server-cloudimg-riscv64.img"
+- location: "https://cloud-images.ubuntu.com/releases/24.04/release-20240423/ubuntu-24.04-server-cloudimg-riscv64.img"
   arch: "riscv64"
-  digest: "sha256:d940c6c8072800ebf853ee16b9c3e94f7c8ce26662541d3ce7af163407ccbc71"
+  digest: "sha256:cf83a85b5cafdf994c4fe2647915547e3184169e76c7da642912c2f6e493681c"
   kernel:
     # Extracted from http://http.us.debian.org/debian/pool/main/u/u-boot/u-boot-qemu_2023.07+dfsg-1_all.deb (GPL-2.0)
     location: "https://github.com/lima-vm/u-boot-qemu-mirror/releases/download/2023.07%2Bdfsg-7/qemu-riscv64_smode_uboot.elf"
     digest: "sha256:d4b3a10c3ef04219641802a586dca905e768805f5a5164fb68520887df54f33c"
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
-- location: "https://cloud-images.ubuntu.com/releases/23.10/release/ubuntu-23.10-server-cloudimg-riscv64.img"
+- location: "https://cloud-images.ubuntu.com/releases/24.04/release/ubuntu-24.04-server-cloudimg-riscv64.img"
   arch: "riscv64"
   kernel:
     # Extracted from http://http.us.debian.org/debian/pool/main/u/u-boot/u-boot-qemu_2023.07+dfsg-1_all.deb (GPL-2.0)
