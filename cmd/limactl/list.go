@@ -124,13 +124,15 @@ func listAction(cmd *cobra.Command, args []string) error {
 	}
 
 	instanceNames := []string{}
+	unmatchedInstances := false
 	if len(args) > 0 {
 		for _, arg := range args {
 			matches := instanceMatches(arg, allinstances)
 			if len(matches) > 0 {
 				instanceNames = append(instanceNames, matches...)
 			} else {
-				return fmt.Errorf("no instance matching %v found", arg)
+				logrus.Warnf("No instance matching %v found.", arg)
+				unmatchedInstances = true
 			}
 		}
 	} else {
@@ -140,6 +142,9 @@ func listAction(cmd *cobra.Command, args []string) error {
 	if quiet {
 		for _, instName := range instanceNames {
 			fmt.Fprintln(cmd.OutOrStdout(), instName)
+		}
+		if unmatchedInstances {
+			os.Exit(1)
 		}
 		return nil
 	}
@@ -174,7 +179,12 @@ func listAction(cmd *cobra.Command, args []string) error {
 			}
 		}
 	}
-	return store.PrintInstances(out, instances, format, &options)
+
+	err = store.PrintInstances(out, instances, format, &options)
+	if err == nil && unmatchedInstances {
+		os.Exit(1)
+	}
+	return err
 }
 
 func listBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
