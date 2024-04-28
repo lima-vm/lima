@@ -4,6 +4,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"context"
 	"os"
@@ -40,6 +41,16 @@ func runCmd(ctx context.Context, name string, flags []string, args ...string) er
 	return cmd.Run()
 }
 
+func shell(ctx context.Context, name string, flags []string, args ...string) (string, error) {
+	cmd := exec.CommandContext(ctx, name, append(flags, args...)...)
+	out, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	out = bytes.TrimSuffix(out, []byte{'\n'})
+	return string(out), nil
+}
+
 func guestInstallAction(cmd *cobra.Command, args []string) error {
 	instName := DefaultInstanceName
 	if len(args) > 0 {
@@ -71,18 +82,23 @@ func guestInstallAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	tmp := "/tmp/lima-guestagent"
+	tmpname := "lima-guestagent"
+	tmp, err := shell(ctx, sshExe, sshFlags, hostname, "mktemp", "-t", "lima-guestagent.XXXXXX")
+	if err != nil {
+		return err
+	}
 	bin := prefix + "/bin/lima-guestagent"
-	logrus.Infof("Copying %q to %s", guestAgentBinary, hostname)
+	logrus.Infof("Copying %q to %s:%s", guestAgentBinary, inst.Name, tmpname)
 	scpArgs := []string{guestAgentBinary, hostname + ":" + tmp}
 	if err := runCmd(ctx, scpExe, scpFlags, scpArgs...); err != nil {
 		return nil
 	}
-	logrus.Infof("Installing %s to %s", tmp, bin)
+	logrus.Infof("Installing %s to %s", tmpname, bin)
 	sshArgs := []string{hostname, "sudo", "install", "-m", "755", tmp, bin}
 	if err := runCmd(ctx, sshExe, sshFlags, sshArgs...); err != nil {
 		return nil
 	}
+	_, _ = shell(ctx, sshExe, sshFlags, hostname, "rm", tmp)
 
 	// nerdctl-full.tgz
 	nerdctlFilename := cacheutil.NerdctlArchive(inst.Config)
@@ -91,17 +107,22 @@ func guestInstallAction(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		tmp := "/tmp/nerdctl-full.tgz"
-		logrus.Infof("Copying %q to %s", nerdctlFilename, hostname)
+		tmpname := "nerdctl-full.tgz"
+		tmp, err := shell(ctx, sshExe, sshFlags, hostname, "mktemp", "-t", "nerdctl-full.XXXXXX.tgz")
+		if err != nil {
+			return err
+		}
+		logrus.Infof("Copying %q to %s:%s", nerdctlFilename, inst.Name, tmpname)
 		scpArgs := []string{nerdctlArchive, hostname + ":" + tmp}
 		if err := runCmd(ctx, scpExe, scpFlags, scpArgs...); err != nil {
 			return nil
 		}
-		logrus.Infof("Installing %s in %s", tmp, prefix)
+		logrus.Infof("Installing %s in %s", tmpname, prefix)
 		sshArgs := []string{hostname, "sudo", "tar", "Cxzf", prefix, tmp}
 		if err := runCmd(ctx, sshExe, sshFlags, sshArgs...); err != nil {
 			return nil
 		}
+		_, _ = shell(ctx, sshExe, sshFlags, hostname, "rm", tmp)
 	}
 
 	return nil
