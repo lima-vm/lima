@@ -124,7 +124,8 @@ mounts:
 # List of mount types not supported by the kernel of this distro.
 # Also used to resolve the default mount type when not explicitly specified.
 # 🟢 Builtin default: null
-mountTypesUnsupported: null
+mountTypesUnsupported:
+# - "9p"
 
 # Mount type for above mounts, such as "reverse-sshfs" (from sshocker), "9p" (EXPERIMENTAL until Lima v1.0, from QEMU’s virtio-9p-pci, aka virtfs),
 # or "virtiofs" (EXPERIMENTAL, needs `vmType: vz`; will graduate from experimental in Lima v1.0)
