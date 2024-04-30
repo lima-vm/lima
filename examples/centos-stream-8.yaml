@@ -5,12 +5,12 @@
 
 images:
 # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
-- location: "https://cloud.centos.org/centos/8-stream/x86_64/images/CentOS-Stream-GenericCloud-8-20240311.0.x86_64.qcow2"
+- location: "https://cloud.centos.org/centos/8-stream/x86_64/images/CentOS-Stream-GenericCloud-8-20240429.0.x86_64.qcow2"
   arch: "x86_64"
-  digest: "sha256:bde1730abc0e05278d2e0284b6499f054cfcedb1b2ca4f1437731c35fb5a89fb"
-- location: "https://cloud.centos.org/centos/8-stream/aarch64/images/CentOS-Stream-GenericCloud-8-20240311.0.aarch64.qcow2"
+  digest: "sha256:dd4d28d3ff4e1e9e18748fdc1daae1f5502b93663fbd8c0a6072822fd0afd7e5"
+- location: "https://cloud.centos.org/centos/8-stream/aarch64/images/CentOS-Stream-GenericCloud-8-20240429.0.aarch64.qcow2"
   arch: "aarch64"
-  digest: "sha256:a14054a56e6593343fe0062e10ad17b882417782fcd2b8015c74e67f0aff6cde"
+  digest: "sha256:d72dc4d34920150e5bda2a29be8faef23639e02e95421a03c8df300a49436ff2"
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
 - location: "https://cloud.centos.org/centos/8-stream/x86_64/images/CentOS-Stream-GenericCloud-8-latest.x86_64.qcow2"
