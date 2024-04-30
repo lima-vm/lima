@@ -1,5 +1,5 @@
 [[🌎**Web site**]](https://lima-vm.io/)
-[[📖**Documentations**]](https://lima-vm.io/docs/)
+[[📖**Documentation**]](https://lima-vm.io/docs/)
 [[👤**Slack (`#lima`)**]](https://slack.cncf.io)
 
 <picture>
