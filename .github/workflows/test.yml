@@ -191,21 +191,7 @@ jobs:
         retry_on: error
         max_attempts: 3
         command: ./hack/test-templates.sh templates/default.yaml
-    - name: "Test experimental/9p.yaml"
-      uses: nick-invision/retry@v3
-      with:
-        timeout_minutes: 30
-        retry_on: error
-        max_attempts: 3
-        command: ./hack/test-templates.sh templates/experimental/9p.yaml
-    - name: "Test test-misc.yaml"
-      uses: nick-invision/retry@v3
-      with:
-        timeout_minutes: 30
-        retry_on: error
-        max_attempts: 3
-        command: ./hack/test-templates.sh hack/test-templates/test-misc.yaml
-    # GHA macOS is slow and flaky, so we only test a few YAMLS here.
+    # GHA macOS is slow and flaky, so we only test default.yaml here.
     # Other yamls are tested on Linux instances.
     #
     - name: "Show cache"
@@ -228,8 +214,10 @@ jobs:
         - archlinux.yaml
         - opensuse.yaml
         - experimental/net-user-v2.yaml
+        - experimental/9p.yaml
         - docker.yaml
         - ../hack/test-templates/alpine-9p-writable.yaml
+        - ../hack/test-templates/test-misc.yaml
     steps:
     - uses: actions/checkout@v4
       with:
@@ -339,30 +327,6 @@ jobs:
       run: make install
     - name: Install test dependencies
       run: brew install qemu bash coreutils iperf3
-    - name: Install vde_switch and vde_vmnet (Deprecated)
-      env:
-        VDE_VMNET_VERSION: v0.6.0
-      run: |
-        (
-          brew install autoconf automake
-          cd ~
-          git clone https://github.com/lima-vm/vde_vmnet
-          cd vde_vmnet
-          git checkout $VDE_VMNET_VERSION
-          sudo git config --global --add safe.directory /Users/runner/vde_vmnet
-          sudo make PREFIX=/opt/vde install
-        )
-        limactl sudoers | sudo tee /etc/sudoers.d/lima
-    - name: Unit test (pkg/networks) with vde_vmnet (Deprecated)
-      # Set -count=1 to disable cache
-      run: go test -v -count=1 ./pkg/networks/...
-    - name: Test vde_vmnet (Deprecated)
-      uses: nick-invision/retry@v3
-      with:
-        timeout_minutes: 30
-        retry_on: error
-        max_attempts: 3
-        command: ./hack/test-templates.sh templates/vmnet.yaml
     - name: Install socket_vmnet
       env:
         SOCKET_VMNET_VERSION: v1.1.1
