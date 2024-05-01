@@ -508,29 +508,11 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 	iface := make(map[string]int)
 	for _, nw := range append(append(d.Networks, y.Networks...), o.Networks...) {
 		if i, ok := iface[nw.Interface]; ok {
-			if nw.VNLDeprecated != "" {
-				networks[i].VNLDeprecated = nw.VNLDeprecated
-				networks[i].SwitchPortDeprecated = nw.SwitchPortDeprecated
-				networks[i].Socket = ""
-				networks[i].Lima = ""
-			}
 			if nw.Socket != "" {
-				if nw.VNLDeprecated != "" {
-					// We can't return an error, so just log it, and prefer `socket` over `vnl`
-					logrus.Errorf("Network %q has both vnl=%q and socket=%q fields; ignoring vnl",
-						nw.Interface, nw.VNLDeprecated, nw.Socket)
-				}
 				networks[i].Socket = nw.Socket
-				networks[i].VNLDeprecated = ""
-				networks[i].SwitchPortDeprecated = 0
 				networks[i].Lima = ""
 			}
 			if nw.Lima != "" {
-				if nw.VNLDeprecated != "" {
-					// We can't return an error, so just log it, and prefer `lima` over `vnl`
-					logrus.Errorf("Network %q has both vnl=%q and lima=%q fields; ignoring vnl",
-						nw.Interface, nw.VNLDeprecated, nw.Lima)
-				}
 				if nw.Socket != "" {
 					// We can't return an error, so just log it, and prefer `lima` over `socket`
 					logrus.Errorf("Network %q has both socket=%q and lima=%q fields; ignoring socket",
@@ -538,8 +520,6 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 				}
 				networks[i].Lima = nw.Lima
 				networks[i].Socket = ""
-				networks[i].VNLDeprecated = ""
-				networks[i].SwitchPortDeprecated = 0
 			}
 			if nw.MACAddress != "" {
 				networks[i].MACAddress = nw.MACAddress

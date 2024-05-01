@@ -300,7 +300,7 @@ func Validate(y LimaYAML, warn bool) error {
 		return fmt.Errorf("field `dns` must be empty when field `HostResolver.Enabled` is true")
 	}
 
-	if err := validateNetwork(y, warn); err != nil {
+	if err := validateNetwork(y); err != nil {
 		return err
 	}
 	if warn {
@@ -309,7 +309,7 @@ func Validate(y LimaYAML, warn bool) error {
 	return nil
 }
 
-func validateNetwork(y LimaYAML, warn bool) error {
+func validateNetwork(y LimaYAML) error {
 	interfaceName := make(map[string]int)
 	for i, nw := range y.Networks {
 		field := fmt.Sprintf("networks[%d]", i)
@@ -334,21 +334,9 @@ func validateNetwork(y LimaYAML, warn bool) error {
 			if nw.VZNAT != nil && *nw.VZNAT {
 				return fmt.Errorf("field `%s.lima` and field `%s.vzNAT` are mutually exclusive", field, field)
 			}
-			if nw.VNLDeprecated != "" {
-				return fmt.Errorf("field `%s.lima` and field `%s.vnl` are mutually exclusive", field, field)
-			}
-			if nw.SwitchPortDeprecated != 0 {
-				return fmt.Errorf("field `%s.switchPort` cannot be used with field `%s.lima`", field, field)
-			}
 		} else if nw.Socket != "" {
 			if nw.VZNAT != nil && *nw.VZNAT {
 				return fmt.Errorf("field `%s.socket` and field `%s.vzNAT` are mutually exclusive", field, field)
-			}
-			if nw.VNLDeprecated != "" {
-				return fmt.Errorf("field `%s.socket` and field `%s.vnl` are mutually exclusive", field, field)
-			}
-			if nw.SwitchPortDeprecated != 0 {
-				return fmt.Errorf("field `%s.switchPort` cannot be used with field `%s.socket`", field, field)
 			}
 			if fi, err := os.Stat(nw.Socket); err != nil && !errors.Is(err, os.ErrNotExist) {
 				return err
@@ -365,54 +353,8 @@ func validateNetwork(y LimaYAML, warn bool) error {
 			if nw.Socket != "" {
 				return fmt.Errorf("field `%s.vzNAT` and field `%s.socket` are mutually exclusive", field, field)
 			}
-			if nw.VNLDeprecated != "" {
-				return fmt.Errorf("field `%s.vzNAT` and field `%s.vnl` are mutually exclusive", field, field)
-			}
-			if nw.SwitchPortDeprecated != 0 {
-				return fmt.Errorf("field `%s.switchPort` cannot be used with field `%s.vzNAT`", field, field)
-			}
 		} else {
-			if nw.VNLDeprecated == "" {
-				return fmt.Errorf("field `%s.lima`, field `%s.socket`, or field `%s.vnl` must be set", field, field, field)
-			}
-			// The field is called VDE.VNL in anticipation of QEMU upgrading VDE2 to VDEplug4,
-			// but right now the only valid value on macOS is a path to the vde_switch socket directory,
-			// optionally with vde:// prefix.
-			if !strings.Contains(nw.VNLDeprecated, "://") || strings.HasPrefix(nw.VNLDeprecated, "vde://") {
-				vdeSwitch := strings.TrimPrefix(nw.VNLDeprecated, "vde://")
-				if fi, err := os.Stat(vdeSwitch); err != nil {
-					// negligible when the instance is stopped
-					logrus.WithError(err).Debugf("field `%s.vnl` %q failed stat", field, vdeSwitch)
-				} else {
-					if fi.IsDir() {
-						/* Switch mode (vdeSwitch is dir, port != 65535) */
-						ctlSocket := filepath.Join(vdeSwitch, "ctl")
-						// ErrNotExist during os.Stat(ctlSocket) can be ignored. ctlSocket does not need to exist until actually starting the VM
-						if fi, err = os.Stat(ctlSocket); err == nil {
-							if fi.Mode()&os.ModeSocket == 0 {
-								return fmt.Errorf("field `%s.vnl` file %q is not a UNIX socket", field, ctlSocket)
-							}
-						}
-						if nw.SwitchPortDeprecated == 65535 {
-							return fmt.Errorf("field `%s.vnl` points to a non-PTP switch, so the port number must not be 65535", field)
-						}
-					} else {
-						/* PTP mode (vdeSwitch is socket, port == 65535) */
-						if fi.Mode()&os.ModeSocket == 0 {
-							return fmt.Errorf("field `%s.vnl` %q is not a directory nor a UNIX socket", field, vdeSwitch)
-						}
-						if nw.SwitchPortDeprecated != 65535 {
-							return fmt.Errorf("field `%s.vnl` points to a PTP (switchless) socket %q, so the port number has to be 65535 (got %d)",
-								field, vdeSwitch, nw.SwitchPortDeprecated)
-						}
-					}
-				}
-			} else if runtime.GOOS != "linux" {
-				if warn {
-					logrus.Warnf("field `%s.vnl` is unlikely to work for %s (unless libvdeplug4 has been ported to %s and is installed)",
-						field, runtime.GOOS, runtime.GOOS)
-				}
-			}
+			return fmt.Errorf("field `%s.lima` or  field `%s.socket must be set", field, field)
 		}
 		if nw.MACAddress != "" {
 			hw, err := net.ParseMAC(nw.MACAddress)

@@ -172,20 +172,3 @@ func Usernet(name string) (bool, error) {
 	}
 	return cache.config.Usernet(name)
 }
-
-// VDESock returns a vde socket.
-//
-// Deprecated: Use Sock.
-func VDESock(name string) (string, error) {
-	loadCache()
-	if cache.err != nil {
-		return "", cache.err
-	}
-	if err := cache.config.Check(name); err != nil {
-		return "", err
-	}
-	if cache.config.Paths.VDEVMNet == "" {
-		return "", errors.New("vdeVMnet is not set")
-	}
-	return cache.config.VDESock(name), nil
-}

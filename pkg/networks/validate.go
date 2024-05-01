@@ -19,7 +19,7 @@ func (config *YAML) Validate() error {
 	// validate all paths.* values
 	paths := reflect.ValueOf(&config.Paths).Elem()
 	pathsMap := make(map[string]string, paths.NumField())
-	var socketVMNetNotFound, vdeVMNetNotFound, vdeSwitchNotFound bool
+	var socketVMNetNotFound bool
 	for i := 0; i < paths.NumField(); i++ {
 		// extract YAML name from struct tag; strip options like "omitempty"
 		name := paths.Type().Field(i).Tag.Get("yaml")
@@ -42,22 +42,13 @@ func (config *YAML) Validate() error {
 				case "socketVMNet":
 					socketVMNetNotFound = true
 					continue
-				case "vdeVMNet":
-					vdeVMNetNotFound = true
-					continue
-				case "vdeSwitch":
-					vdeSwitchNotFound = true
-					continue
 				}
 			}
 			return fmt.Errorf("networks.yaml field `paths.%s` error: %w", name, err)
 		}
 	}
-	if socketVMNetNotFound && vdeVMNetNotFound {
-		return fmt.Errorf("networks.yaml: either %q (`paths.socketVMNet`) or %q (`paths.vdeVMNet`) has to be installed", pathsMap["socketVMNet"], pathsMap["vdeVMNet"])
-	}
-	if socketVMNetNotFound && !vdeVMNetNotFound && vdeSwitchNotFound {
-		return fmt.Errorf("networks.yaml: %q (`paths.vdeVMNet`) requires %q (`paths.vdeSwitch`) to be installed", pathsMap["vdeVMNet"], pathsMap["vdeSwitch"])
+	if socketVMNetNotFound {
+		return fmt.Errorf("networks.yaml: %q (`paths.socketVMNet`) has to be installed", pathsMap["socketVMNet"])
 	}
 	// TODO(jandubois): validate network definitions
 	return nil

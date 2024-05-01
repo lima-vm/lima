@@ -233,20 +233,15 @@ type CopyToHost struct {
 }
 
 type Network struct {
-	// `Lima`, `Socket`, and `VNL` are mutually exclusive; exactly one is required
+	// `Lima` and `Socket` are mutually exclusive; exactly one is required
 	Lima string `yaml:"lima,omitempty" json:"lima,omitempty"`
 	// Socket is a QEMU-compatible socket
 	Socket string `yaml:"socket,omitempty" json:"socket,omitempty"`
 	// VZNAT uses VZNATNetworkDeviceAttachment. Needs VZ. No root privilege is required.
 	VZNAT *bool `yaml:"vzNAT,omitempty" json:"vzNAT,omitempty"`
 
-	// VNLDeprecated is a Virtual Network Locator (https://github.com/rd235/vdeplug4/commit/089984200f447abb0e825eb45548b781ba1ebccd).
-	// On macOS, only VDE2-compatible form (optionally with vde:// prefix) is supported.
-	// VNLDeprecated is deprecated. Use Socket.
-	VNLDeprecated        string `yaml:"vnl,omitempty" json:"vnl,omitempty"`
-	SwitchPortDeprecated uint16 `yaml:"switchPort,omitempty" json:"switchPort,omitempty"` // VDE Switch port, not TCP/UDP port (only used by VDE networking)
-	MACAddress           string `yaml:"macAddress,omitempty" json:"macAddress,omitempty"`
-	Interface            string `yaml:"interface,omitempty" json:"interface,omitempty"`
+	MACAddress string `yaml:"macAddress,omitempty" json:"macAddress,omitempty"`
+	Interface  string `yaml:"interface,omitempty" json:"interface,omitempty"`
 }
 
 type HostResolver struct {
@@ -259,16 +254,4 @@ type CACertificates struct {
 	RemoveDefaults *bool    `yaml:"removeDefaults,omitempty" json:"removeDefaults,omitempty"` // default: false
 	Files          []string `yaml:"files,omitempty" json:"files,omitempty"`
 	Certs          []string `yaml:"certs,omitempty" json:"certs,omitempty"`
-}
-
-// DEPRECATED types below
-
-// Types have been renamed to turn all references to the old names into compiler errors,
-// and to avoid accidental usage in new code.
-
-type VDEDeprecated struct {
-	VNL        string `yaml:"vnl,omitempty" json:"vnl,omitempty"`
-	SwitchPort uint16 `yaml:"switchPort,omitempty" json:"switchPort,omitempty"` // VDE Switch port, not TCP/UDP port
-	MACAddress string `yaml:"macAddress,omitempty" json:"macAddress,omitempty"`
-	Name       string `yaml:"name,omitempty" json:"name,omitempty"`
 }
