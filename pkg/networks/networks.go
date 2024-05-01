@@ -10,8 +10,6 @@ type YAML struct {
 
 type Paths struct {
 	SocketVMNet string `yaml:"socketVMNet"`
-	VDESwitch   string `yaml:"vdeSwitch"` // Deprecated
-	VDEVMNet    string `yaml:"vdeVMNet"`  // Deprecated
 	VarRun      string `yaml:"varRun"`
 	Sudoers     string `yaml:"sudoers,omitempty"`
 }

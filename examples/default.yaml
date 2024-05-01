@@ -319,7 +319,6 @@ networks:
 # Lima can manage daemons for networks defined in $LIMA_HOME/_config/networks.yaml
 # automatically. The socket_vmnet binary must be installed into
 # secure locations only alterable by the "root" user.
-# The same applies to vde_switch and vde_vmnet for the deprecated VDE mode.
 # - lima: shared
 #   # MAC address of the instance; lima will pick one based on the instance name,
 #   # so DHCP assigned ip addresses should remain constant over instance restarts.
@@ -337,19 +336,6 @@ networks:
 # The "vzNAT" IP address is accessible from the host, but not from other guests.
 # Needs `vmType: vz` (EXPERIMENTAL).
 # - vzNAT: true
-
-# vnl (virtual network locator) points to the vde_switch socket directory,
-# optionally with vde:// prefix
-# ⚠️  vnl is deprecated, use socket.
-# - vnl: "vde:///var/run/vde.ctl"
-#   # VDE Switch port number (not TCP/UDP port number). Set to 65535 for PTP mode.
-#   # Builtin default: 0
-#   switchPort: 0
-#   # MAC address of the instance; lima will pick one based on the instance name,
-#   # so DHCP assigned ip addresses should remain constant over instance restarts.
-#   macAddress: ""
-#   # Interface name, defaults to "lima0", "lima1", etc.
-#   interface: ""
 
 # Port forwarding rules. Forwarding between ports 22 and ssh.localPort cannot be overridden.
 # Rules are checked sequentially until the first one matches.

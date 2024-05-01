@@ -82,7 +82,7 @@ sudo install -o root etc_sudoers.d_lima /etc/sudoers.d/lima
 > **Note**
 >
 > Lima before v0.12 used `vde_vmnet` for managing the networks.
-> `vde_vmnet` is still supported but it is deprecated and no longer documented here.
+> `vde_vmnet` is no longer supported.
 
 The networks are defined in `$LIMA_HOME/_config/networks.yaml`. If this file doesn't already exist, it will be created with these default
 settings:
@@ -106,11 +106,7 @@ settings:
 # instead of /var etc.
 paths:
 # socketVMNet requires Lima >= 0.12 .
-# socketVMNet has precedence over vdeVMNet.
   socketVMNet: /opt/socket_vmnet/bin/socket_vmnet
-# vdeSwitch and vdeVMNet are DEPRECATED.
-  vdeSwitch: /opt/vde/bin/vde_switch
-  vdeVMNet: /opt/vde/bin/vde_vmnet
   varRun: /private/var/run/lima
   sudoers: /private/etc/sudoers.d/lima
 
@@ -150,7 +146,6 @@ limactl start --network=lima:shared
 networks:
   # Lima can manage the socket_vmnet daemon for networks defined in $LIMA_HOME/_config/networks.yaml automatically.
   # The socket_vmnet binary must be installed into a secure location only alterable by the admin.
-  # The same applies to vde_switch and vde_vmnet for the deprecated VDE mode.
   # - lima: shared
   #   # MAC address of the instance; lima will pick one based on the instance name,
   #   # so DHCP assigned ip addresses should remain constant over instance restarts.

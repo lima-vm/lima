@@ -709,7 +709,6 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	args = append(args, "-device", "virtio-net-pci,netdev=net0,mac="+limayaml.MACAddress(cfg.InstanceDir))
 
 	for i, nw := range y.Networks {
-		var vdeSock string
 		if nw.Lima != "" {
 			nwCfg, err := networks.Config()
 			if err != nil {
@@ -735,60 +734,19 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 				if runtime.GOOS != "darwin" {
 					return "", nil, fmt.Errorf("networks.yaml '%s' configuration is only supported on macOS right now", nw.Lima)
 				}
-				socketVMNetOk, err := nwCfg.IsDaemonInstalled(networks.SocketVMNet)
+				logrus.Debugf("Using socketVMNet (%q)", nwCfg.Paths.SocketVMNet)
+				sock, err := networks.Sock(nw.Lima)
 				if err != nil {
 					return "", nil, err
 				}
-				if socketVMNetOk {
-					logrus.Debugf("Using socketVMNet (%q)", nwCfg.Paths.SocketVMNet)
-					if vdeVMNetOk, _ := nwCfg.IsDaemonInstalled(networks.VDEVMNet); vdeVMNetOk {
-						logrus.Debugf("Ignoring vdeVMNet (%q), as socketVMNet (%q) is available and has higher precedence", nwCfg.Paths.VDEVMNet, nwCfg.Paths.SocketVMNet)
-					}
-					sock, err := networks.Sock(nw.Lima)
-					if err != nil {
-						return "", nil, err
-					}
-					args = append(args, "-netdev", fmt.Sprintf("socket,id=net%d,fd={{ fd_connect %q }}", i+1, sock))
-				} else if nwCfg.Paths.VDEVMNet != "" {
-					logrus.Warn("vdeVMNet is deprecated, use socketVMNet instead (See docs/network.md)")
-					vdeSock, err = networks.VDESock(nw.Lima) //nolint:staticcheck // deprecated
-					if err != nil {
-						return "", nil, err
-					}
-				}
+				args = append(args, "-netdev", fmt.Sprintf("socket,id=net%d,fd={{ fd_connect %q }}", i+1, sock))
 				// TODO: should we also validate that the socket exists, or do we rely on the
 				// networks reconciler to throw an error when the network cannot start?
 			}
 		} else if nw.Socket != "" {
 			args = append(args, "-netdev", fmt.Sprintf("socket,id=net%d,fd={{ fd_connect %q }}", i+1, nw.Socket))
-		} else if nw.VNLDeprecated != "" {
-			// VDE4 accepts VNL like vde:///var/run/vde.ctl as well as file path like /var/run/vde.ctl .
-			// VDE2 only accepts the latter form.
-			// VDE2 supports macOS but VDE4 does not yet, so we trim vde:// prefix here for VDE2 compatibility.
-			vdeSock = strings.TrimPrefix(nw.VNLDeprecated, "vde://")
-			if !strings.Contains(vdeSock, "://") {
-				if _, err := os.Stat(vdeSock); err != nil {
-					return "", nil, fmt.Errorf("cannot use VNL %q: %w", nw.VNLDeprecated, err)
-				}
-				// vdeSock is a directory, unless vde.SwitchPort == 65535 (PTP)
-				actualSocket := filepath.Join(vdeSock, "ctl")
-				if nw.SwitchPortDeprecated == 65535 { // PTP
-					actualSocket = vdeSock
-				}
-				if st, err := os.Stat(actualSocket); err != nil {
-					return "", nil, fmt.Errorf("cannot use VNL %q: failed to stat %q: %w", nw.VNLDeprecated, actualSocket, err)
-				} else if st.Mode()&fs.ModeSocket == 0 {
-					return "", nil, fmt.Errorf("cannot use VNL %q: %q is not a socket: %w", nw.VNLDeprecated, actualSocket, err)
-				}
-			}
 		} else {
 			return "", nil, fmt.Errorf("invalid network spec %+v", nw)
-		}
-		if vdeSock != "" {
-			if !strings.Contains(string(features.NetdevHelp), "vde") {
-				return "", nil, fmt.Errorf("netdev \"vde\" is not supported by %s ( Hint: recompile QEMU with `configure --enable-vde` )", exe)
-			}
-			args = append(args, "-netdev", fmt.Sprintf("vde,id=net%d,sock=%s", i+1, vdeSock))
 		}
 		args = append(args, "-device", fmt.Sprintf("virtio-net-pci,netdev=net%d,mac=%s", i+1, nw.MACAddress))
 	}

@@ -28,8 +28,7 @@ mounts:
   writable: true
 networks:
 # The instance can get routable IP addresses from the vmnet framework using
-# https://github.com/lima-vm/socket_vmnet (since Lima v0.12) or
-# https://github.com/lima-vm/vde_vmnet (deprecated) .
+# https://github.com/lima-vm/socket_vmnet (since Lima v0.12).
 #
 # Available networks are defined in
 # $LIMA_HOME/_config/networks.yaml. Supported network types are "host",

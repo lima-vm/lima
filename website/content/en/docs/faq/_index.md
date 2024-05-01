@@ -187,8 +187,7 @@ Try `softwareupdate --install-rosetta` from a terminal.
 {{% fixlinks %}}
 The default guest IP 192.168.5.15 is not accessible from the host and other guests.
 
-To add another IP address that is accessible from the host and other virtual machines, enable [`socket_vmnet`](https://github.com/lima-vm/socket_vmnet) (since Lima v0.12)
-or [`vde_vmnet`](https://github.com/lima-vm/vde_vmnet) (Deprecated).
+To add another IP address that is accessible from the host and other virtual machines, enable [`socket_vmnet`](https://github.com/lima-vm/socket_vmnet) (since Lima v0.12).
 
 See [`./docs/network.md`](./docs/network.md).
 {{% /fixlinks %}}

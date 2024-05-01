@@ -14,14 +14,6 @@ func TestSock(t *testing.T) {
 	assert.Equal(t, sock, "/private/var/run/lima/socket_vmnet.foo")
 }
 
-func TestVDESock(t *testing.T) {
-	config, err := DefaultConfig()
-	assert.NilError(t, err)
-
-	vdeSock := config.VDESock("foo")
-	assert.Equal(t, vdeSock, "/private/var/run/lima/foo.ctl")
-}
-
 func TestPIDFile(t *testing.T) {
 	config, err := DefaultConfig()
 	assert.NilError(t, err)
