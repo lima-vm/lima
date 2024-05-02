@@ -11,6 +11,6 @@ func TestValidate(t *testing.T) {
 users:
    - default
 `
-	err := validateCloudConfig([]byte(config))
+	err := ValidateCloudConfig([]byte(config))
 	assert.NilError(t, err)
 }
