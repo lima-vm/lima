@@ -59,15 +59,10 @@ func TestFillDefault(t *testing.T) {
 
 	// Builtin default values
 	builtin := LimaYAML{
-		VMType: ptr.Of("qemu"),
-		OS:     ptr.Of(LINUX),
-		Arch:   ptr.Of(arch),
-		CPUType: map[Arch]string{
-			AARCH64: "cortex-a72",
-			ARMV7L:  "cortex-a7",
-			X8664:   "qemu64",
-			RISCV64: "rv64",
-		},
+		VMType:             ptr.Of("qemu"),
+		OS:                 ptr.Of(LINUX),
+		Arch:               ptr.Of(arch),
+		CPUType:            defaultCPUType(),
 		CPUs:               ptr.Of(defaultCPUs()),
 		Memory:             ptr.Of(defaultMemoryAsString()),
 		Disk:               ptr.Of(defaultDiskSizeAsString()),
@@ -107,19 +102,6 @@ func TestFillDefault(t *testing.T) {
 			RemoveDefaults: ptr.Of(false),
 		},
 		Plain: ptr.Of(false),
-	}
-	if IsAccelOS() {
-		if HasHostCPU() {
-			builtin.CPUType[arch] = "host"
-		} else if HasMaxCPU() {
-			builtin.CPUType[arch] = "max"
-		}
-		if arch == X8664 && runtime.GOOS == "darwin" {
-			switch builtin.CPUType[arch] {
-			case "host", "max":
-				builtin.CPUType[arch] += ",-pdpe1gb"
-			}
-		}
 	}
 
 	defaultPortForward := PortForward{
@@ -298,7 +280,7 @@ func TestFillDefault(t *testing.T) {
 		VMType: ptr.Of("vz"),
 		OS:     ptr.Of("unknown"),
 		Arch:   ptr.Of("unknown"),
-		CPUType: map[Arch]string{
+		CPUType: CPUType{
 			AARCH64: "arm64",
 			ARMV7L:  "armhf",
 			X8664:   "amd64",
@@ -487,7 +469,7 @@ func TestFillDefault(t *testing.T) {
 		VMType: ptr.Of("qemu"),
 		OS:     ptr.Of(LINUX),
 		Arch:   ptr.Of(arch),
-		CPUType: map[Arch]string{
+		CPUType: CPUType{
 			AARCH64: "uber-arm",
 			ARMV7L:  "armv8",
 			X8664:   "pentium",

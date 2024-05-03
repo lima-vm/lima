@@ -38,6 +38,35 @@ const (
 
 var IPv4loopback1 = net.IPv4(127, 0, 0, 1)
 
+func defaultCPUType() CPUType {
+	cpuType := map[Arch]string{
+		AARCH64: "cortex-a72",
+		ARMV7L:  "cortex-a7",
+		// Since https://github.com/lima-vm/lima/pull/494, we use qemu64 cpu for better emulation of x86_64.
+		X8664:   "qemu64",
+		RISCV64: "rv64", // FIXME: what is the right choice for riscv64?
+	}
+	for arch := range cpuType {
+		if IsNativeArch(arch) && IsAccelOS() {
+			if HasHostCPU() {
+				cpuType[arch] = "host"
+			} else if HasMaxCPU() {
+				cpuType[arch] = "max"
+			}
+		}
+		if arch == X8664 && runtime.GOOS == "darwin" {
+			switch cpuType[arch] {
+			case "host", "max":
+				// Disable pdpe1gb on Intel Mac
+				// https://github.com/lima-vm/lima/issues/1485
+				// https://stackoverflow.com/a/72863744/5167443
+				cpuType[arch] += ",-pdpe1gb"
+			}
+		}
+	}
+	return cpuType
+}
+
 func defaultContainerdArchives() []File {
 	const nerdctlVersion = "1.7.6"
 	location := func(goos string, goarch string) string {
@@ -185,31 +214,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		}
 	}
 
-	cpuType := map[Arch]string{
-		AARCH64: "cortex-a72",
-		ARMV7L:  "cortex-a7",
-		// Since https://github.com/lima-vm/lima/pull/494, we use qemu64 cpu for better emulation of x86_64.
-		X8664:   "qemu64",
-		RISCV64: "rv64", // FIXME: what is the right choice for riscv64?
-	}
-	for arch := range cpuType {
-		if IsNativeArch(arch) && IsAccelOS() {
-			if HasHostCPU() {
-				cpuType[arch] = "host"
-			} else if HasMaxCPU() {
-				cpuType[arch] = "max"
-			}
-		}
-		if arch == X8664 && runtime.GOOS == "darwin" {
-			switch cpuType[arch] {
-			case "host", "max":
-				// Disable pdpe1gb on Intel Mac
-				// https://github.com/lima-vm/lima/issues/1485
-				// https://stackoverflow.com/a/72863744/5167443
-				cpuType[arch] += ",-pdpe1gb"
-			}
-		}
-	}
+	cpuType := defaultCPUType()
 	var overrideCPUType bool
 	for k, v := range d.CPUType {
 		if len(v) > 0 {
