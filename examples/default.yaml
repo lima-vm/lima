@@ -56,7 +56,7 @@ mounts:
 - location: "~"
   # Configure the mountPoint inside the guest.
   # 🟢 Builtin default: value of location
-  mountPoint: ""
+  mountPoint: null
   # CAUTION: `writable` SHOULD be false for the home directory.
   # Setting `writable` to true is possible, but untested and dangerous.
   # 🟢 Builtin default: false
