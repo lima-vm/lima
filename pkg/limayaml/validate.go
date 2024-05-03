@@ -487,7 +487,7 @@ func ValidateParamIsUsed(y *LimaYAML) error {
 				keyIsUsed = true
 				break
 			}
-			if re.MatchString(p.MountPoint) {
+			if p.MountPoint != nil && re.MatchString(*p.MountPoint) {
 				keyIsUsed = true
 				break
 			}

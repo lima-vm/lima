@@ -120,7 +120,7 @@ type Disk struct {
 
 type Mount struct {
 	Location   string   `yaml:"location" json:"location"` // REQUIRED
-	MountPoint string   `yaml:"mountPoint,omitempty" json:"mountPoint,omitempty"`
+	MountPoint *string  `yaml:"mountPoint,omitempty" json:"mountPoint,omitempty" jsonschema:"nullable"`
 	Writable   *bool    `yaml:"writable,omitempty" json:"writable,omitempty" jsonschema:"nullable"`
 	SSHFS      SSHFS    `yaml:"sshfs,omitempty" json:"sshfs,omitempty"`
 	NineP      NineP    `yaml:"9p,omitempty" json:"9p,omitempty"`
