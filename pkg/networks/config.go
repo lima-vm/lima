@@ -132,10 +132,16 @@ func loadCache() {
 		if cache.err != nil {
 			return
 		}
-		cache.err = yaml.UnmarshalWithOptions(b, &cache.config, yaml.Strict())
+		cache.err = yaml.UnmarshalWithOptions(b, &cache.config, yaml.DisallowDuplicateKey())
 		if cache.err != nil {
 			cache.err = fmt.Errorf("cannot parse %q: %w", configFile, cache.err)
 			return
+		}
+		var strictConfig YAML
+		if strictErr := yaml.UnmarshalWithOptions(b, &strictConfig, yaml.Strict()); strictErr != nil {
+			// Allow non-existing YAML fields, as a config created with Lima < v0.22 contains `vdeSwitch` and `vdeVMNet`.
+			// These fields were removed in Lima v0.22.
+			logrus.WithError(strictErr).Warn("Non-strict YAML is deprecated and will be unsupported in a future version of Lima: " + configFile)
 		}
 		cache.config, cache.err = fillDefaults(cache.config)
 		if cache.err != nil {
