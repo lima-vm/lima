@@ -135,6 +135,7 @@ func loadCache() {
 		cache.err = yaml.UnmarshalWithOptions(b, &cache.config, yaml.Strict())
 		if cache.err != nil {
 			cache.err = fmt.Errorf("cannot parse %q: %w", configFile, cache.err)
+			return
 		}
 		cache.config, cache.err = fillDefaults(cache.config)
 		if cache.err != nil {
