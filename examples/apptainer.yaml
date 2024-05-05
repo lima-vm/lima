@@ -30,6 +30,9 @@ provision:
     #!/bin/bash
     set -eux -o pipefail
     command -v apptainer >/dev/null 2>&1 && exit 0
+    # Workaround for https://github.com/apptainer/apptainer/issues/2027
+    echo "kernel.apparmor_restrict_unprivileged_userns = 0" >/etc/sysctl.d/99-userns.conf
+    sysctl --system
     # add the "Official PPA for Apptainer"
     add-apt-repository -y ppa:apptainer/ppa
     apt-get update
