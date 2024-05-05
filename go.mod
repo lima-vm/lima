@@ -138,3 +138,5 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
+
+replace github.com/mattn/go-localereader => github.com/mattn/go-localereader v0.0.2-0.20220822084749-2491eb6c1c75
