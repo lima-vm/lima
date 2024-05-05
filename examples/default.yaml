@@ -252,15 +252,12 @@ containerd:
 # Specify desired QEMU CPU type for each arch.
 # You can see what options are available for host emulation with: `qemu-system-$(arch) -cpu help`.
 # Setting of instructions is supported like this: "qemu64,+ssse3".
+# 🟢 Builtin default: hard-coded arch map with type (see the output of `limactl info | jq .defaultTemplate.cpuType`)
 cpuType:
-  # 🟢 Builtin default: "cortex-a72" (or "host" when running on aarch64 host)
-  aarch64: null
-  # 🟢 Builtin default: "cortex-a7" (or "host" when running on armv7l host)
-  armv7l: null
-  # 🟢 Builtin default: "qemu64" (or "host,-pdpe1gb" when running on x86_64 host)
-  x86_64: null
-  # 🟢 Builtin default: "rv64" (or "host" when running on riscv64 host)
-  riscv64: null
+  # aarch64: "cortex-a72" # (or "host" when running on aarch64 host)
+  # armv7l: "cortex-a7" # (or "host" when running on armv7l host)
+  # riscv64: "rv64" # (or "host" when running on riscv64 host)
+  # x86_64: "qemu64" # (or "host,-pdpe1gb" when running on x86_64 host)
 
 rosetta:
   # Enable Rosetta for Linux (EXPERIMENTAL).
