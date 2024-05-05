@@ -1,20 +1,22 @@
 package uiutil
 
 import (
-	"github.com/AlecAivazis/survey/v2"
-	"github.com/AlecAivazis/survey/v2/terminal"
+	"github.com/charmbracelet/huh"
 )
 
-var InterruptErr = terminal.InterruptErr
+var InterruptErr = huh.ErrUserAborted
 
 // Confirm is a regular text input that accept yes/no answers.
 func Confirm(message string, defaultParam bool) (bool, error) {
-	var ans bool
-	prompt := &survey.Confirm{
-		Message: message,
-		Default: defaultParam,
-	}
-	if err := survey.AskOne(prompt, &ans); err != nil {
+	ans := defaultParam
+	form := huh.NewForm(
+		huh.NewGroup(
+			huh.NewConfirm().
+				Title(message).
+				Value(&ans),
+		),
+	)
+	if err := form.Run(); err != nil {
 		return false, err
 	}
 	return ans, nil
@@ -24,11 +26,20 @@ func Confirm(message string, defaultParam bool) (bool, error) {
 // to the user for them to select using the arrow keys and enter.
 func Select(message string, options []string) (int, error) {
 	var ans int
-	prompt := &survey.Select{
-		Message: message,
-		Options: options,
+	opt := []huh.Option[int]{}
+	for i, option := range options {
+		opt = append(opt, huh.NewOption(option, i))
 	}
-	if err := survey.AskOne(prompt, &ans); err != nil {
+	form := huh.NewForm(
+		huh.NewGroup(
+			huh.NewSelect[int]().
+				Title(message).
+				Options(opt...).
+				Height(6).
+				Value(&ans),
+		),
+	)
+	if err := form.Run(); err != nil {
 		return -1, err
 	}
 	return ans, nil
