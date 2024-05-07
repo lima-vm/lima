@@ -9,7 +9,38 @@ import (
 	"github.com/containerd/containerd/identifiers"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
+	"github.com/lima-vm/lima/pkg/store/filenames"
 )
+
+// Directory returns the LimaDir.
+func Directory() string {
+	limaDir, err := dirnames.LimaDir()
+	if err != nil {
+		return ""
+	}
+	return limaDir
+}
+
+// Validate checks the LimaDir.
+func Validate() error {
+	limaDir, err := dirnames.LimaDir()
+	if err != nil {
+		return err
+	}
+	names, err := Instances()
+	if err != nil {
+		return err
+	}
+	for _, name := range names {
+		// Each instance directory needs to have limayaml
+		instDir := filepath.Join(limaDir, name)
+		yamlPath := filepath.Join(instDir, filenames.LimaYAML)
+		if _, err := os.Stat(yamlPath); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 // Instances returns the names of the instances under LimaDir.
 func Instances() ([]string, error) {
