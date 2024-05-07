@@ -12,6 +12,8 @@ Note that we intentionally avoid using `~/Library/Application Support/Lima` on m
 We use `~/.lima` so that we can have enough space for the length of the socket path,
 which must be less than 104 characters on macOS.
 
+Unix: The directory can not be located on an NFS file system, it needs to be local.
+
 ### Config directory (`${LIMA_HOME}/_config`)
 
 The config directory contains global lima settings that apply to all instances.
