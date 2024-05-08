@@ -92,9 +92,10 @@ func GetWslStatus(instName string) (string, error) {
 	}
 
 	var instState string
+	wslListColsRegex := regexp.MustCompile(`\s+`)
 	// wsl --list --verbose may have different headers depending on localization, just split by line
 	for _, rows := range strings.Split(strings.ReplaceAll(string(out), "\r\n", "\n"), "\n") {
-		cols := regexp.MustCompile(`\s+`).Split(strings.TrimSpace(rows), -1)
+		cols := wslListColsRegex.Split(strings.TrimSpace(rows), -1)
 		nameIdx := 0
 		// '*' indicates default instance
 		if cols[0] == "*" {
