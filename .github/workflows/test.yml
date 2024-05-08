@@ -242,6 +242,10 @@ jobs:
         sudo modprobe kvm
         # `sudo usermod -aG kvm $(whoami)` does not take an effect on GHA
         sudo chown $(whoami) /dev/kvm
+    - name: Install ansible-playbook
+      run: |
+        sudo apt-get install -y --no-install-recommends ansible
+      if: matrix.template == '../hack/test-templates/test-misc.yaml'
     - name: "Show cache"
       run: ./hack/debug-cache.sh
     - name: "Test"

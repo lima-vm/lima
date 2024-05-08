@@ -26,6 +26,10 @@ mounts:
 - location: "/tmp/lima"
   writable: true
 
+provision:
+- mode: ansible
+  playbook: ./hack/ansible-test.yaml
+
 # in order to use this example, you must first create the disk "data". run:
 # $ limactl disk create data --size 10G
 additionalDisks:
