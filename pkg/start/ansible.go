@@ -30,7 +30,7 @@ func runAnsibleProvision(ctx context.Context, inst *store.Instance) error {
 }
 
 func runAnsiblePlaybook(ctx context.Context, inst *store.Instance, playbook string) error {
-	inventory, err := createInventory(inst)
+	inventory, err := createAnsibleInventory(inst)
 	if err != nil {
 		return err
 	}
@@ -42,7 +42,7 @@ func runAnsiblePlaybook(ctx context.Context, inst *store.Instance, playbook stri
 	return cmd.Run()
 }
 
-func createInventory(inst *store.Instance) (string, error) {
+func createAnsibleInventory(inst *store.Instance) (string, error) {
 	vars := map[string]interface{}{
 		"ansible_connection":      "ssh",
 		"ansible_host":            "lima-" + inst.Name,
@@ -61,6 +61,6 @@ func createInventory(inst *store.Instance) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	inventory := filepath.Join(inst.Dir, filenames.InventoryYAML)
+	inventory := filepath.Join(inst.Dir, filenames.AnsibleInventoryYAML)
 	return inventory, os.WriteFile(inventory, bytes, 0o644)
 }

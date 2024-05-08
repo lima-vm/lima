@@ -38,7 +38,7 @@ cloud-init:
 - `cidata.iso`: cloud-init ISO9660 image. See [`cidata.iso`](#cidataiso).
 
 Ansible:
-- `inventory.yaml`: the Ansible node inventory. See [ansible](#ansible).
+- `ansible-inventory.yaml`: the Ansible node inventory. See [ansible](#ansible).
 
 disk:
 - `basedisk`: the base image
