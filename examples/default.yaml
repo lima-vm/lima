@@ -125,7 +125,7 @@ ssh:
   # 🟢 Builtin default: 0 (automatically assigned to a free port)
   # NOTE: when the instance name is "default", the builtin default value is set to
   # 60022 for backward compatibility.
-  localPort: 0
+  localPort: null
   # Load ~/.ssh/*.pub in addition to $LIMA_HOME/_config/user.pub .
   # This option is useful when you want to use other SSH-based
   # applications such as rsync with the Lima instance.
