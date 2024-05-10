@@ -72,8 +72,8 @@ const (
 )
 
 type Rosetta struct {
-	Enabled *bool `yaml:"enabled" json:"enabled"`
-	BinFmt  *bool `yaml:"binfmt" json:"binfmt"`
+	Enabled *bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
+	BinFmt  *bool `yaml:"binfmt,omitempty" json:"binfmt,omitempty"`
 }
 
 type File struct {
