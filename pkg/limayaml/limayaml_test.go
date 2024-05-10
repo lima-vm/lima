@@ -26,10 +26,7 @@ func TestEmptyYAML(t *testing.T) {
 	assert.Equal(t, string(b), emptyYAML)
 }
 
-const defaultYAML = `images: []
-ssh:
-  localPort: 0
-`
+const defaultYAML = "images: []\n"
 
 func TestDefaultYAML(t *testing.T) {
 	bytes, err := os.ReadFile("default.yaml")
