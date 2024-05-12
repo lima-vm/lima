@@ -40,7 +40,7 @@ func validateFileObject(f File, fieldName string) error {
 	return nil
 }
 
-func Validate(y LimaYAML, warn bool) error {
+func Validate(y *LimaYAML, warn bool) error {
 	switch *y.OS {
 	case LINUX:
 	default:
@@ -309,7 +309,7 @@ func Validate(y LimaYAML, warn bool) error {
 	return nil
 }
 
-func validateNetwork(y LimaYAML) error {
+func validateNetwork(y *LimaYAML) error {
 	interfaceName := make(map[string]int)
 	for i, nw := range y.Networks {
 		field := fmt.Sprintf("networks[%d]", i)
@@ -397,7 +397,7 @@ func validatePort(field string, port int) error {
 	return nil
 }
 
-func warnExperimental(y LimaYAML) {
+func warnExperimental(y *LimaYAML) {
 	if *y.MountType == NINEP {
 		logrus.Warn("`mountType: 9p` is experimental")
 	}

@@ -94,7 +94,7 @@ func editAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	if err := limayaml.Validate(*y, true); err != nil {
+	if err := limayaml.Validate(y, true); err != nil {
 		rejectedYAML := "lima.REJECTED.yaml"
 		if writeErr := os.WriteFile(rejectedYAML, yBytes, 0o644); writeErr != nil {
 			return fmt.Errorf("the YAML is invalid, attempted to save the buffer as %q but failed: %w: %w", rejectedYAML, writeErr, err)

@@ -97,7 +97,7 @@ func LoadYAMLByFilePath(filePath string) (*limayaml.LimaYAML, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := limayaml.Validate(*y, false); err != nil {
+	if err := limayaml.Validate(y, false); err != nil {
 		return nil, err
 	}
 	return y, nil
