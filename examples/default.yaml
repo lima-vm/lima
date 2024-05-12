@@ -196,14 +196,14 @@ containerd:
 # The scripts can use the following template variables: {{.Home}}, {{.UID}}, and {{.User}}
 # 🟢 Builtin default: null
 # provision:
-# # `system` is executed with the root privilege
+# # `system` is executed with root privileges
 # - mode: system
 #   script: |
 #     #!/bin/bash
 #     set -eux -o pipefail
 #     export DEBIAN_FRONTEND=noninteractive
 #     apt-get install -y vim
-# # `user` is executed without the root privilege
+# # `user` is executed without root privileges
 # - mode: user
 #   script: |
 #     #!/bin/bash

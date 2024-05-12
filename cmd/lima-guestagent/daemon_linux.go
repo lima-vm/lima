@@ -44,7 +44,7 @@ func daemonAction(cmd *cobra.Command, _ []string) error {
 		return errors.New("tick must be specified")
 	}
 	if os.Geteuid() != 0 {
-		return errors.New("must run as the root")
+		return errors.New("must run as the root user")
 	}
 	logrus.Infof("event tick: %v", tick)
 
