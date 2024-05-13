@@ -17,6 +17,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/cpu"
 
+	"github.com/lima-vm/lima/pkg/localpathutil"
 	"github.com/lima-vm/lima/pkg/networks"
 	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/ptr"
@@ -650,8 +651,11 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 				mounts[i].NineP.Cache = ptr.Of(Default9pCacheForRO)
 			}
 		}
+		if mount.Location == "/tmp/lima" {
+			mounts[i].Location = filepath.Join(os.TempDir(), "lima")
+		}
 		if mount.MountPoint == "" {
-			mounts[i].MountPoint = mount.Location
+			mounts[i].MountPoint = localpathutil.Path(mount.Location)
 		}
 	}
 

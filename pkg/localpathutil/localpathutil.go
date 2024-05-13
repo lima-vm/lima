@@ -32,3 +32,17 @@ func Expand(orig string) (string, error) {
 	}
 	return filepath.Abs(s)
 }
+
+// Path converts a filepath to a path
+// Unix:        /foo/bar => /foo/bar
+// Windows:     C:\foo\bar => /c/foo/bar
+func Path(orig string) string {
+	s := filepath.ToSlash(orig)
+	vol := filepath.VolumeName(orig)
+	if vol != "" && strings.Contains(vol, ":") {
+		v := "/"
+		v += strings.ToLower(vol[0:1])
+		s = strings.Replace(s, vol, v, 1)
+	}
+	return s
+}

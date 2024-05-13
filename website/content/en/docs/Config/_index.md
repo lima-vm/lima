@@ -12,3 +12,8 @@ The current default spec:
 - Disk: 100 GiB
 - Mounts: `~` (read-only), `/tmp/lima` (writable)
 - SSH: 127.0.0.1:60022
+
+{{% alert title="Temp" color="info" %}}
+Use `$TMPDIR` to change the location of `/tmp` on Unix.
+Use `$TEMP` to change the location of `/tmp` on Windows.
+{{% /alert %}}
