@@ -125,6 +125,13 @@ func ExecuteTemplateCloudConfig(args *TemplateArgs) ([]byte, error) {
 	if err := ValidateTemplateArgs(args); err != nil {
 		return nil, err
 	}
+	// Remove empty CACerts struct from cloud-config output
+	if !*args.CACerts.RemoveDefaults && len(args.CACerts.Trusted) == 0 {
+		temp := *args
+		temp.CACerts.RemoveDefaults = nil
+		temp.CACerts.Trusted = nil
+		args = &temp
+	}
 	return textutil.ExecuteTemplate(cloudConfigYaml, args)
 }
 

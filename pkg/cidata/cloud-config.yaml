@@ -37,6 +37,7 @@ users:
 # resolv_conf is not included here
 {{- end }}
 
+{{- if .CACerts.RemoveDefaults }}
 {{ with .CACerts }}
 ca_certs:
   remove_defaults: {{ .RemoveDefaults }}
@@ -49,6 +50,7 @@ ca_certs:
     {{- end }}
   {{- end }}
   {{- end }}
+{{- end }}
 {{- end }}
 
 {{- if .BootCmds }}
