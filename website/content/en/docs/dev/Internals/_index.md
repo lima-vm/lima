@@ -105,6 +105,10 @@ When using `vmType: vz` (Virtualization.framework), on boot, any qcow2 (default)
 
 Currently hard-coded to `~/Library/Caches/lima` on macOS.
 
+Uses `$XDG_CACHE_HOME/lima`, normally `$HOME/.cache/lima`, on Linux.
+
+Uses `%LocalAppData%\lima`, `C:\Users\<USERNAME>\AppData\Local\lima`, on Windows.
+
 ### Download cache (`~/Library/Caches/lima/download/by-url-sha256/<SHA256_OF_URL>`)
 
 The directory contains the following files:
