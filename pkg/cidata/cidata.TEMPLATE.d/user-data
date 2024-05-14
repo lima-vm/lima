@@ -66,6 +66,7 @@ resolv_conf:
   {{- end }}
 {{- end }}
 
+{{- if .CACerts.RemoveDefaults }}
 {{ with .CACerts }}
 ca_certs:
   remove_defaults: {{ .RemoveDefaults }}
@@ -75,6 +76,7 @@ ca_certs:
   - |
     {{- range $line := $cert.Lines }}
     {{ $line }}
+    {{- end }}
     {{- end }}
   {{- end }}
   {{- end }}

@@ -20,9 +20,6 @@ func TestConfig(t *testing.T) {
 			"ssh-rsa dummy foo@example.com",
 		},
 		MountType: "reverse-sshfs",
-		CACerts: CACerts{
-			RemoveDefaults: &defaultRemoveDefaults,
-		},
 	}
 	config, err := ExecuteTemplateCloudConfig(args)
 	assert.NilError(t, err)
