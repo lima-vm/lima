@@ -20,6 +20,23 @@ func TestConfig(t *testing.T) {
 			"ssh-rsa dummy foo@example.com",
 		},
 		MountType: "reverse-sshfs",
+	}
+	config, err := ExecuteTemplateCloudConfig(args)
+	assert.NilError(t, err)
+	t.Log(string(config))
+	assert.Assert(t, !strings.Contains(string(config), "ca_certs:"))
+}
+
+func TestConfigCACerts(t *testing.T) {
+	args := &TemplateArgs{
+		Name: "default",
+		User: "foo",
+		UID:  501,
+		Home: "/home/foo.linux",
+		SSHPubKeys: []string{
+			"ssh-rsa dummy foo@example.com",
+		},
+		MountType: "reverse-sshfs",
 		CACerts: CACerts{
 			RemoveDefaults: &defaultRemoveDefaults,
 		},
@@ -27,6 +44,7 @@ func TestConfig(t *testing.T) {
 	config, err := ExecuteTemplateCloudConfig(args)
 	assert.NilError(t, err)
 	t.Log(string(config))
+	assert.Assert(t, strings.Contains(string(config), "ca_certs:"))
 }
 
 func TestTemplate(t *testing.T) {

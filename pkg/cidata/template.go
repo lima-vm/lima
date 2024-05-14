@@ -117,9 +117,6 @@ func ValidateTemplateArgs(args *TemplateArgs) error {
 			return fmt.Errorf("field mounts[%d] must be absolute, got %q", i, f)
 		}
 	}
-	if args.CACerts.RemoveDefaults == nil {
-		return errors.New("field CACerts.RemoveDefaults must be set")
-	}
 	return nil
 }
 
