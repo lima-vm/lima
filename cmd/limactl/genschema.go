@@ -22,6 +22,12 @@ func newGenSchemaCommand() *cobra.Command {
 
 func genschemaAction(cmd *cobra.Command, _ []string) error {
 	schema := jsonschema.Reflect(&limayaml.LimaYAML{})
+	// allow Disk to be either string (name) or object (struct)
+	schema.Definitions["Disk"].Type = "" // was: "object"
+	schema.Definitions["Disk"].OneOf = []*jsonschema.Schema{
+		{Type: "string"},
+		{Type: "object"},
+	}
 	j, err := json.MarshalIndent(schema, "", "    ")
 	if err != nil {
 		return err
