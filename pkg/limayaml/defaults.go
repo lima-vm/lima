@@ -652,7 +652,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 			}
 		}
 		if mount.Location == "/tmp/lima" {
-			mounts[i].Location = filepath.Join(os.TempDir(), "lima")
+			mounts[i].Location = dirnames.LimaTmp()
 		}
 		if mount.MountPoint == "" {
 			mounts[i].MountPoint = localpathutil.Path(mount.Location)

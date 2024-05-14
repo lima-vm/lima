@@ -13,6 +13,7 @@ type Info struct {
 	Templates       []templatestore.Template `json:"templates"`
 	DefaultTemplate *limayaml.LimaYAML       `json:"defaultTemplate"`
 	LimaHome        string                   `json:"limaHome"`
+	LimaTemp        string                   `json:"limaTemp"`
 	VMTypes         []string                 `json:"vmTypes"` // since Lima v0.14.2
 }
 
@@ -38,5 +39,6 @@ func GetInfo() (*Info, error) {
 	if err != nil {
 		return nil, err
 	}
+	info.LimaTemp = dirnames.LimaTmp()
 	return info, nil
 }
