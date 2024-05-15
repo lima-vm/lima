@@ -21,7 +21,7 @@ func NewGuestAgentClient(dialFn func(ctx context.Context) (net.Conn, error)) (*G
 		grpc.WithTransportCredentials(NewCredentials()),
 	}
 
-	clientConn, err := grpc.Dial("", opts...)
+	clientConn, err := grpc.Dial("", opts...) //nolint:staticcheck // SA1019: grpc.Dial is deprecated: use NewClient instead.  Will be supported throughout 1.x
 	if err != nil {
 		return nil, err
 	}
