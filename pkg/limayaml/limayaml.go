@@ -50,7 +50,9 @@ type LimaYAML struct {
 
 type (
 	OS        = string
+	OSType    = OS
 	Arch      = string
+	ArchType  = Arch
 	MountType = string
 	VMType    = string
 )
@@ -73,6 +75,13 @@ const (
 	QEMU VMType = "qemu"
 	VZ   VMType = "vz"
 	WSL2 VMType = "wsl2"
+)
+
+var (
+	OSTypes    = []OSType{LINUX}
+	ArchTypes  = []ArchType{X8664, AARCH64, ARMV7L, RISCV64}
+	MountTypes = []MountType{REVSSHFS, NINEP, VIRTIOFS, WSLMount}
+	VMTypes    = []VMType{QEMU, VZ, WSL2}
 )
 
 type VMOpts struct {
