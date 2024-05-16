@@ -88,7 +88,7 @@ func newApp() *cobra.Command {
 			logrus.StandardLogger().SetFormatter(formatter)
 		}
 		if os.Geteuid() == 0 && cmd.Name() != "generate-doc" {
-			return errors.New("must not run as the root")
+			return errors.New("must not run as the root user")
 		}
 		// Make sure either $HOME or $LIMA_HOME is defined, so we don't need
 		// to check for errors later

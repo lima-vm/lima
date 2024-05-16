@@ -30,7 +30,7 @@ $ limactl sudoers --check /etc/sudoers.d/lima
 		Short: "Generate the content of the /etc/sudoers.d/lima file",
 		Long: fmt.Sprintf(`Generate the content of the /etc/sudoers.d/lima file for enabling vmnet.framework support.
 The content is written to stdout, NOT to the file.
-This command must not run as the root.
+This command must not run as the root user.
 See %s for the usage.`, networksMD),
 		Args:    WrapArgsError(cobra.MaximumNArgs(1)),
 		RunE:    sudoersAction,
