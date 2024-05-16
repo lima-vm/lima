@@ -40,6 +40,7 @@ require (
 	github.com/sirupsen/logrus v1.9.4-0.20230606125235-dd1b4c2e81af
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.5
+	github.com/wk8/go-ordered-map/v2 v2.1.8
 	golang.org/x/net v0.30.0
 	golang.org/x/sync v0.8.0
 	golang.org/x/sys v0.26.0
@@ -111,7 +112,6 @@ require (
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06 // indirect
 	github.com/u-root/uio v0.0.0-20240224005618-d2acac8f3701 // indirect
-	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/yuin/gopher-lua v1.1.1 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
