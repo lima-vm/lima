@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/lima-vm/lima/pkg/fsutil"
 	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/version"
@@ -92,8 +93,22 @@ func newApp() *cobra.Command {
 		}
 		// Make sure either $HOME or $LIMA_HOME is defined, so we don't need
 		// to check for errors later
-		if _, err := dirnames.LimaDir(); err != nil {
+		dir, err := dirnames.LimaDir()
+		if err != nil {
 			return err
+		}
+		// Make sure that directory is on a local filesystem, not on NFS
+		// if the directory does not yet exist, check the home directory
+		_, err = os.Stat(dir)
+		if errors.Is(err, os.ErrNotExist) {
+			dir = filepath.Dir(dir)
+		}
+		nfs, err := fsutil.IsNFS(dir)
+		if err != nil {
+			return err
+		}
+		if nfs {
+			return errors.New("must not run on NFS dir")
 		}
 		return nil
 	}
