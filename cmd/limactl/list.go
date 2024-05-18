@@ -114,6 +114,10 @@ func listAction(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
+	if err := store.Validate(); err != nil {
+		logrus.Warnf("The directory %q does not look like a valid Lima directory: %v", store.Directory(), err)
+	}
+
 	allinstances, err := store.Instances()
 	if err != nil {
 		return err
