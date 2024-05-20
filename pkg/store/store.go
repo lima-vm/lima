@@ -133,3 +133,20 @@ func LoadYAMLByFilePath(filePath string) (*limayaml.LimaYAML, error) {
 	}
 	return y, nil
 }
+
+const documentStart = "---\n"
+
+const documentEnd = "...\n"
+
+// SaveYAML saves the yaml, optionally as a stream.
+func SaveYAML(y *limayaml.LimaYAML, stream bool) ([]byte, error) {
+	b, err := limayaml.Save(y)
+	if err != nil {
+		return nil, err
+	}
+	if stream {
+		doc := documentStart + string(b) + documentEnd
+		b = []byte(doc)
+	}
+	return b, nil
+}

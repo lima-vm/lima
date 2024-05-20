@@ -18,12 +18,18 @@ func newValidateCommand() *cobra.Command {
 		RunE:    validateAction,
 		GroupID: advancedCommand,
 	}
+	validateCommand.Flags().Bool("fill", false, "fill defaults")
 	return validateCommand
 }
 
-func validateAction(_ *cobra.Command, args []string) error {
+func validateAction(cmd *cobra.Command, args []string) error {
+	fill, err := cmd.Flags().GetBool("fill")
+	if err != nil {
+		return err
+	}
+
 	for _, f := range args {
-		_, err := store.LoadYAMLByFilePath(f)
+		y, err := store.LoadYAMLByFilePath(f)
 		if err != nil {
 			return fmt.Errorf("failed to load YAML file %q: %w", f, err)
 		}
@@ -31,6 +37,13 @@ func validateAction(_ *cobra.Command, args []string) error {
 			return err
 		}
 		logrus.Infof("%q: OK", f)
+		if fill {
+			b, err := store.SaveYAML(y, len(args) > 1)
+			if err != nil {
+				return err
+			}
+			fmt.Fprint(cmd.OutOrStdout(), string(b))
+		}
 	}
 
 	return nil
