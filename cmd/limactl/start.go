@@ -327,7 +327,7 @@ func createInstance(ctx context.Context, st *creatorState, saveBrokenEditorBuffe
 	if err != nil {
 		return nil, err
 	}
-	if err := limayaml.Validate(*y, true); err != nil {
+	if err := limayaml.Validate(y, true); err != nil {
 		if !saveBrokenEditorBuffer {
 			return nil, err
 		}

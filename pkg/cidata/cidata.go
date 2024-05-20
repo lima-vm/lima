@@ -111,7 +111,7 @@ func setupEnv(y *limayaml.LimaYAML, args TemplateArgs) (map[string]string, error
 }
 
 func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort int, nerdctlArchive string, vsockPort int, virtioPort string) error {
-	if err := limayaml.Validate(*y, false); err != nil {
+	if err := limayaml.Validate(y, false); err != nil {
 		return err
 	}
 	u, err := osutil.LimaUser(true)
