@@ -94,7 +94,7 @@ func Test_zoneHost(t *testing.T) {
 	}
 }
 
-func Test_extractZones(t *testing.T) {
+func TestExtractZones(t *testing.T) {
 	equalZones := func(za, zb []types.Zone) bool {
 		find := func(list []types.Zone, name string) (types.Zone, bool) {
 			for _, z := range list {
