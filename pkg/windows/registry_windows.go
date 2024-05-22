@@ -3,11 +3,11 @@ package windows
 import (
 	"fmt"
 	"math/rand"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
 
-	"golang.org/x/exp/slices"
 	"golang.org/x/sys/windows/registry"
 )
 
