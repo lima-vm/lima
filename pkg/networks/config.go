@@ -171,11 +171,16 @@ func Sock(name string) (string, error) {
 	return cache.config.Sock(name), nil
 }
 
-// Usernet Returns true if the given network name is usernet network
-func Usernet(name string) (bool, error) {
+// IsUsernet returns true if the given network name is a usernet network.
+// It return false if the cache cannot be loaded or the network is not defined.
+func IsUsernet(name string) bool {
 	loadCache()
 	if cache.err != nil {
-		return false, cache.err
+		return false
 	}
-	return cache.config.Usernet(name)
+	isUsernet, err := cache.config.Usernet(name)
+	if err != nil {
+		return false
+	}
+	return isUsernet
 }

@@ -124,37 +124,36 @@ func startVM(ctx context.Context, driver *driver.BaseDriver) (*virtualMachineWra
 }
 
 func startUsernet(ctx context.Context, driver *driver.BaseDriver) (*usernet.Client, error) {
-	firstUsernetIndex := limayaml.FirstUsernetIndex(driver.Yaml)
-	if firstUsernetIndex == -1 {
-		// Start a in-process gvisor-tap-vsock
-		endpointSock, err := usernet.SockWithDirectory(driver.Instance.Dir, "", usernet.EndpointSock)
-		if err != nil {
-			return nil, err
-		}
-		vzSock, err := usernet.SockWithDirectory(driver.Instance.Dir, "", usernet.FDSock)
-		if err != nil {
-			return nil, err
-		}
-		os.RemoveAll(endpointSock)
-		os.RemoveAll(vzSock)
-		err = usernet.StartGVisorNetstack(ctx, &usernet.GVisorNetstackOpts{
-			MTU:      1500,
-			Endpoint: endpointSock,
-			FdSocket: vzSock,
-			Async:    true,
-			DefaultLeases: map[string]string{
-				networks.SlirpIPAddress: limayaml.MACAddress(driver.Instance.Dir),
-			},
-			Subnet: networks.SlirpNetwork,
-		})
-		if err != nil {
-			return nil, err
-		}
-		subnetIP, _, err := net.ParseCIDR(networks.SlirpNetwork)
-		return usernet.NewClient(endpointSock, subnetIP), err
+	if firstUsernetIndex := limayaml.FirstUsernetIndex(driver.Yaml); firstUsernetIndex != -1 {
+		nwName := driver.Yaml.Networks[firstUsernetIndex].Lima
+		return usernet.NewClientByName(nwName), nil
 	}
-	nwName := driver.Yaml.Networks[firstUsernetIndex].Lima
-	return usernet.NewClientByName(nwName), nil
+	// Start a in-process gvisor-tap-vsock
+	endpointSock, err := usernet.SockWithDirectory(driver.Instance.Dir, "", usernet.EndpointSock)
+	if err != nil {
+		return nil, err
+	}
+	vzSock, err := usernet.SockWithDirectory(driver.Instance.Dir, "", usernet.FDSock)
+	if err != nil {
+		return nil, err
+	}
+	os.RemoveAll(endpointSock)
+	os.RemoveAll(vzSock)
+	err = usernet.StartGVisorNetstack(ctx, &usernet.GVisorNetstackOpts{
+		MTU:      1500,
+		Endpoint: endpointSock,
+		FdSocket: vzSock,
+		Async:    true,
+		DefaultLeases: map[string]string{
+			networks.SlirpIPAddress: limayaml.MACAddress(driver.Instance.Dir),
+		},
+		Subnet: networks.SlirpNetwork,
+	})
+	if err != nil {
+		return nil, err
+	}
+	subnetIP, _, err := net.ParseCIDR(networks.SlirpNetwork)
+	return usernet.NewClient(endpointSock, subnetIP), err
 }
 
 func createVM(driver *driver.BaseDriver) (*vz.VirtualMachine, error) {
