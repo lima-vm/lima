@@ -305,8 +305,7 @@ func (a *HostAgent) Run(ctx context.Context) error {
 	}()
 	adjustNofileRlimit()
 
-	firstUsernetIndex := limayaml.FirstUsernetIndex(a.y)
-	if firstUsernetIndex == -1 && *a.y.HostResolver.Enabled {
+	if limayaml.FirstUsernetIndex(a.y) == -1 && *a.y.HostResolver.Enabled {
 		hosts := a.y.HostResolver.Hosts
 		hosts["host.lima.internal"] = networks.SlirpGateway
 		hosts[fmt.Sprintf("lima-%s", a.instName)] = networks.SlirpIPAddress
