@@ -1,13 +1,10 @@
 images:
-- location: "https://dl-cdn.alpinelinux.org/alpine/v3.19/releases/cloud/nocloud_alpine-3.19.1-x86_64-bios-cloudinit-r0.qcow2"
+- location: "https://dl-cdn.alpinelinux.org/alpine/v3.19/releases/cloud/nocloud_alpine-3.19.1-x86_64-uefi-cloudinit-r0.qcow2"
   arch: "x86_64"
-  digest: "sha512:f122b0e9e832cf90bda49ca73b800105ab4aa193bd340cba641e6acbda1da9aa5571de87870561380ac69bdb2dcd428590e7b4a898f7f62b559f5c12a4aefc01"
+  digest: "sha512:bd9e0d84970c91c5699f9ece5df071f8254e8e63a6e53f5dfb4bb8e2eb19f8ce9749dc768fe8a338d91b93555f96d601c4a559510f06a627a63437c81534335d"
 - location: "https://dl-cdn.alpinelinux.org/alpine/v3.19/releases/cloud/nocloud_alpine-3.19.1-aarch64-uefi-cloudinit-r0.qcow2"
   arch: "aarch64"
   digest: "sha512:d5e69cff0ecb0fd3850bd78f56f66131115934df27b2373c35a85a74b9def52822134dd43f90b4fabe239fdd4452026cb45f1c8f0b36a43af69335a26f0959b5"
-
-firmware:
-  legacyBIOS: true
 
 mounts:
 - location: "~"
