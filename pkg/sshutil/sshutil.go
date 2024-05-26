@@ -63,8 +63,9 @@ func DefaultPubKeys(loadDotSSH bool) ([]PubKey, error) {
 			return nil, fmt.Errorf("could not create %q directory: %w", configDir, err)
 		}
 		if err := lockutil.WithDirLock(configDir, func() error {
-			keygenCmd := exec.Command("ssh-keygen", "-t", "ed25519", "-q", "-N", "", "-f",
-				filepath.Join(configDir, filenames.UserPrivateKey))
+			// no passphrase, no user@host comment
+			keygenCmd := exec.Command("ssh-keygen", "-t", "ed25519", "-q", "-N", "",
+				"-C", "lima", "-f", filepath.Join(configDir, filenames.UserPrivateKey))
 			logrus.Debugf("executing %v", keygenCmd.Args)
 			if out, err := keygenCmd.CombinedOutput(); err != nil {
 				return fmt.Errorf("failed to run %v: %q: %w", keygenCmd.Args, string(out), err)
