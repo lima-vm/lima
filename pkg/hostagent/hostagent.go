@@ -30,6 +30,7 @@ import (
 	hostagentapi "github.com/lima-vm/lima/pkg/hostagent/api"
 	"github.com/lima-vm/lima/pkg/hostagent/dns"
 	"github.com/lima-vm/lima/pkg/hostagent/events"
+	"github.com/lima-vm/lima/pkg/hostagent/proxy"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/sshutil"
 	"github.com/lima-vm/lima/pkg/store"
@@ -44,6 +45,7 @@ type HostAgent struct {
 	sshLocalPort    int
 	udpDNSLocalPort int
 	tcpDNSLocalPort int
+	proxyLocalPort  int
 	instDir         string
 	instName        string
 	instSSHAddress  string
@@ -120,6 +122,13 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 			return nil, err
 		}
 	}
+	var proxyLocalPort int
+	if *y.HostProxy.Enabled {
+		proxyLocalPort, err = findFreeUDPLocalPort()
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	vSockPort := 0
 	virtioPort := ""
@@ -136,7 +145,7 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 		virtioPort = "" // filenames.VirtioPort
 	}
 
-	if err := cidata.GenerateISO9660(inst.Dir, instName, y, udpDNSLocalPort, tcpDNSLocalPort, o.nerdctlArchive, vSockPort, virtioPort); err != nil {
+	if err := cidata.GenerateISO9660(inst.Dir, instName, y, udpDNSLocalPort, tcpDNSLocalPort, o.nerdctlArchive, vSockPort, virtioPort, proxyLocalPort, proxy.CACert); err != nil {
 		return nil, err
 	}
 
@@ -177,6 +186,7 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 		sshLocalPort:      sshLocalPort,
 		udpDNSLocalPort:   udpDNSLocalPort,
 		tcpDNSLocalPort:   tcpDNSLocalPort,
+		proxyLocalPort:    proxyLocalPort,
 		instDir:           inst.Dir,
 		instName:          instName,
 		instSSHAddress:    inst.SSHAddress,
@@ -323,6 +333,17 @@ func (a *HostAgent) Run(ctx context.Context) error {
 			return fmt.Errorf("cannot start DNS server: %w", err)
 		}
 		defer dnsServer.Shutdown()
+	}
+
+	if *a.y.HostProxy.Enabled {
+		srvOpts := proxy.ServerOptions{
+			TCPPort: a.proxyLocalPort,
+		}
+		proxyServer, err := proxy.Start(srvOpts)
+		if err != nil {
+			return fmt.Errorf("cannot start proxy server: %w", err)
+		}
+		defer proxyServer.Shutdown()
 	}
 
 	errCh, err := a.driver.Start(ctx)
