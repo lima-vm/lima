@@ -44,6 +44,7 @@ const (
 type Result struct {
 	Status          Status
 	CachePath       string // "/Users/foo/Library/Caches/lima/download/by-url-sha256/<SHA256_OF_URL>/data"
+	LastModified    string
 	ValidatedDigest bool
 }
 
@@ -175,7 +176,7 @@ func Download(ctx context.Context, local, remote string, opts ...Opt) (*Result, 
 	}
 
 	if o.cacheDir == "" {
-		if err := downloadHTTP(ctx, localPath, remote, o.description, o.expectedDigest); err != nil {
+		if err := downloadHTTP(ctx, localPath, "", remote, o.description, o.expectedDigest); err != nil {
 			return nil, err
 		}
 		res := &Result{
@@ -187,6 +188,7 @@ func Download(ctx context.Context, local, remote string, opts ...Opt) (*Result, 
 
 	shad := cacheDirectoryPath(o.cacheDir, remote)
 	shadData := filepath.Join(shad, "data")
+	shadTime := filepath.Join(shad, "time")
 	shadDigest, err := cacheDigestPath(shad, o.expectedDigest)
 	if err != nil {
 		return nil, err
@@ -210,6 +212,7 @@ func Download(ctx context.Context, local, remote string, opts ...Opt) (*Result, 
 		res := &Result{
 			Status:          StatusUsedCache,
 			CachePath:       shadData,
+			LastModified:    shadTime,
 			ValidatedDigest: o.expectedDigest != "",
 		}
 		return res, nil
@@ -224,7 +227,7 @@ func Download(ctx context.Context, local, remote string, opts ...Opt) (*Result, 
 	if err := os.WriteFile(shadURL, []byte(remote), 0o644); err != nil {
 		return nil, err
 	}
-	if err := downloadHTTP(ctx, shadData, remote, o.description, o.expectedDigest); err != nil {
+	if err := downloadHTTP(ctx, shadData, shadTime, remote, o.description, o.expectedDigest); err != nil {
 		return nil, err
 	}
 	// no need to pass the digest to copyLocal(), as we already verified the digest
@@ -239,6 +242,7 @@ func Download(ctx context.Context, local, remote string, opts ...Opt) (*Result, 
 	res := &Result{
 		Status:          StatusDownloaded,
 		CachePath:       shadData,
+		LastModified:    shadTime,
 		ValidatedDigest: o.expectedDigest != "",
 	}
 	return res, nil
@@ -266,6 +270,7 @@ func Cached(remote string, opts ...Opt) (*Result, error) {
 
 	shad := cacheDirectoryPath(o.cacheDir, remote)
 	shadData := filepath.Join(shad, "data")
+	shadTime := filepath.Join(shad, "time")
 	shadDigest, err := cacheDigestPath(shad, o.expectedDigest)
 	if err != nil {
 		return nil, err
@@ -285,6 +290,7 @@ func Cached(remote string, opts ...Opt) (*Result, error) {
 	res := &Result{
 		Status:          StatusUsedCache,
 		CachePath:       shadData,
+		LastModified:    shadTime,
 		ValidatedDigest: o.expectedDigest != "",
 	}
 	return res, nil
@@ -293,6 +299,7 @@ func Cached(remote string, opts ...Opt) (*Result, error) {
 // cacheDirectoryPath returns the cache subdirectory path.
 //   - "url" file contains the url
 //   - "data" file contains the data
+//   - "time" file contains the time (Last-Modified header)
 func cacheDirectoryPath(cacheDir, remote string) string {
 	return filepath.Join(cacheDir, "download", "by-url-sha256", fmt.Sprintf("%x", sha256.Sum256([]byte(remote))))
 }
@@ -470,7 +477,7 @@ func validateLocalFileDigest(localPath string, expectedDigest digest.Digest) err
 	return nil
 }
 
-func downloadHTTP(ctx context.Context, localPath, url, description string, expectedDigest digest.Digest) error {
+func downloadHTTP(ctx context.Context, localPath, lastModified, url, description string, expectedDigest digest.Digest) error {
 	if localPath == "" {
 		return fmt.Errorf("downloadHTTP: got empty localPath")
 	}
@@ -488,6 +495,12 @@ func downloadHTTP(ctx context.Context, localPath, url, description string, expec
 	resp, err := httpclientutil.Get(ctx, http.DefaultClient, url)
 	if err != nil {
 		return err
+	}
+	if lastModified != "" {
+		lm := resp.Header.Get("Last-Modified")
+		if err := os.WriteFile(lastModified, []byte(lm), 0o644); err != nil {
+			return err
+		}
 	}
 	defer resp.Body.Close()
 	bar, err := progressbar.New(resp.ContentLength)
