@@ -120,6 +120,20 @@ func WithExpectedDigest(expectedDigest digest.Digest) Opt {
 	}
 }
 
+func readFile(path string) string {
+	if path == "" {
+		return ""
+	}
+	if _, err := os.Stat(path); err != nil {
+		return ""
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	return string(b)
+}
+
 // Download downloads the remote resource into the local path.
 //
 // Download caches the remote resource if WithCache or WithCacheDir option is specified.
@@ -214,8 +228,8 @@ func Download(ctx context.Context, local, remote string, opts ...Opt) (*Result, 
 		res := &Result{
 			Status:          StatusUsedCache,
 			CachePath:       shadData,
-			LastModified:    shadTime,
-			ContentType:     shadType,
+			LastModified:    readFile(shadTime),
+			ContentType:     readFile(shadType),
 			ValidatedDigest: o.expectedDigest != "",
 		}
 		return res, nil
@@ -245,8 +259,8 @@ func Download(ctx context.Context, local, remote string, opts ...Opt) (*Result, 
 	res := &Result{
 		Status:          StatusDownloaded,
 		CachePath:       shadData,
-		LastModified:    shadTime,
-		ContentType:     shadType,
+		LastModified:    readFile(shadTime),
+		ContentType:     readFile(shadType),
 		ValidatedDigest: o.expectedDigest != "",
 	}
 	return res, nil
@@ -295,8 +309,8 @@ func Cached(remote string, opts ...Opt) (*Result, error) {
 	res := &Result{
 		Status:          StatusUsedCache,
 		CachePath:       shadData,
-		LastModified:    shadTime,
-		ContentType:     shadType,
+		LastModified:    readFile(shadTime),
+		ContentType:     readFile(shadType),
 		ValidatedDigest: o.expectedDigest != "",
 	}
 	return res, nil
