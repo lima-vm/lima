@@ -51,7 +51,6 @@ kubectl apply -f ...
 See <https://lima-vm.io/docs/> for the further information.
 
 ## Community
-<!-- TODO: move or copy the most of this section to https://lima-vm.io/community/ -->
 ### Adopters
 
 Container environments:
