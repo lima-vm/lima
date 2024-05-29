@@ -209,7 +209,7 @@ docs/lima-sequence-diagram.png: docs/images/lima-sequence-diagram.puml
 install: uninstall
 	mkdir -p "$(DEST)"
 	# Use tar rather than cp, for better symlink handling
-	( cd _output && tar c * | tar Cxv "$(DEST)" )
+	( cd _output && $(TAR) c * | $(TAR) -xv --no-same-owner -C "$(DEST)" )
 	if [ "$(shell uname -s )" != "Linux" -a ! -e "$(DEST)/bin/nerdctl" ]; then ln -sf nerdctl.lima "$(DEST)/bin/nerdctl"; fi
 	if [ "$(shell uname -s )" != "Linux" -a ! -e "$(DEST)/bin/apptainer" ]; then ln -sf apptainer.lima "$(DEST)/bin/apptainer"; fi
 
