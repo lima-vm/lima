@@ -35,7 +35,7 @@ var (
 // regexUsername matches user and group names to be valid for `useradd`.
 // `useradd` allows names with a trailing '$', but it feels prudent to map those
 // names to the fallback user as well, so the regex does not allow them.
-var regexUsername = regexp.MustCompile("^[a-z_][a-z0-9_-]*$")
+var regexUsername = regexp.MustCompile("^(?!admin$)[a-z_][a-z0-9_-]*$")
 
 // regexPath detects valid Linux path.
 var regexPath = regexp.MustCompile("^[/a-zA-Z0-9_-]+$")
