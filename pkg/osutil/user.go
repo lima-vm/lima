@@ -35,7 +35,8 @@ var (
 // regexUsername matches user and group names to be valid for `useradd`.
 // `useradd` allows names with a trailing '$', but it feels prudent to map those
 // names to the fallback user as well, so the regex does not allow them.
-var regexUsername = regexp.MustCompile("^(?!admin$)[a-z_][a-z0-9_-]*$")
+var regexUsername = regexp.MustCompile("^[a-z_][a-z0-9_-]*$")
+var notAllowedUsernameRegex = regexp.MustCompile(`^admin$`)
 
 // regexPath detects valid Linux path.
 var regexPath = regexp.MustCompile("^[/a-zA-Z0-9_-]+$")
@@ -111,7 +112,13 @@ func LimaUser(warn bool) (*user.User, error) {
 	cache.Do(func() {
 		cache.u, cache.err = user.Current()
 		if cache.err == nil {
-			if !regexUsername.MatchString(cache.u.Username) {
+			if notAllowedUsernameRegex.MatchString(cache.u.Username) {
+				warning := fmt.Sprintf("local user %q is not a allowed (must not match %q); using %q username instead",
+					cache.u.Username, isNotAllowedRegex.String(), fallbackUser)
+				cache.warnings = append(cache.warnings, warning)
+				cache.u.Username = fallbackUser
+			}
+			else if !regexUsername.MatchString(cache.u.Username) {
 				warning := fmt.Sprintf("local user %q is not a valid Linux username (must match %q); using %q username instead",
 					cache.u.Username, regexUsername.String(), fallbackUser)
 				cache.warnings = append(cache.warnings, warning)
