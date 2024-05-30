@@ -117,8 +117,7 @@ func LimaUser(warn bool) (*user.User, error) {
 					cache.u.Username, isNotAllowedRegex.String(), fallbackUser)
 				cache.warnings = append(cache.warnings, warning)
 				cache.u.Username = fallbackUser
-			}
-			else if !regexUsername.MatchString(cache.u.Username) {
+			} else if !regexUsername.MatchString(cache.u.Username) {
 				warning := fmt.Sprintf("local user %q is not a valid Linux username (must match %q); using %q username instead",
 					cache.u.Username, regexUsername.String(), fallbackUser)
 				cache.warnings = append(cache.warnings, warning)
