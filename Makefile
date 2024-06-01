@@ -268,7 +268,7 @@ artifacts-darwin:
 .PHONY: artifacts-linux
 artifacts-linux:
 	mkdir -p _artifacts
-	GOOS=linux GOARCH=amd64 make clean binaries
+	GOOS=linux GOARCH=amd64 CC=x86_64-linux-gnu-gcc make clean binaries
 	$(TAR) -C _output/ -czvf _artifacts/lima-$(VERSION_TRIMMED)-Linux-x86_64.tar.gz ./
 	GOOS=linux GOARCH=arm64 CC=aarch64-linux-gnu-gcc make clean binaries
 	$(TAR) -C _output/ -czvf _artifacts/lima-$(VERSION_TRIMMED)-Linux-aarch64.tar.gz ./
