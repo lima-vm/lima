@@ -4,12 +4,12 @@
 # EL9-based distros are known to work.
 
 images:
-- location: "https://dl.rockylinux.org/pub/rocky/8.9/images/x86_64/Rocky-8-GenericCloud-Base-8.9-20231119.0.x86_64.qcow2"
+- location: "https://dl.rockylinux.org/pub/rocky/8.10/images/x86_64/Rocky-8-GenericCloud-Base-8.10-20240528.0.x86_64.qcow2"
   arch: "x86_64"
-  digest: "sha256:d17f15a7649dd064795306c114b90fc5062e7d5fefa9e9f0bd6b7ce1aeac3ae5"
-- location: "https://dl.rockylinux.org/pub/rocky/8.9/images/aarch64/Rocky-8-GenericCloud-Base-8.9-20231119.0.aarch64.qcow2"
+  digest: "sha256:e56066c58606191e96184de9a9183a3af33c59bcbd8740d8b10ca054a7a89c14"
+- location: "https://dl.rockylinux.org/pub/rocky/8.10/images/aarch64/Rocky-8-GenericCloud-Base-8.10-20240528.0.aarch64.qcow2"
   arch: "aarch64"
-  digest: "sha256:801c1afc27b8d200702193312c342f39f1418ed37f8501e6f07e9f707196df44"
+  digest: "sha256:946b5b9845aa5e3ed98f1bc6ee9873201712a2aef01b87731aed16857e0ca13f"
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
 - location: "https://dl.rockylinux.org/pub/rocky/8/images/x86_64/Rocky-8-GenericCloud.latest.x86_64.qcow2"
