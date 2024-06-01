@@ -35,8 +35,7 @@ See also the [Contributing](../contributing) page.
 | Jan Dubois         | Committer | [@jandubois](https://github.com/jandubois)     | [DBF6 DA01 BD81 2D63 3B77  300F A2CA E583 3B6A D416](https://github.com/jandubois.gpg)   |
 | Anders F Björklund | Committer | [@afbjorklund](https://github.com/afbjorklund) | [5981 D2E8 4E4B 9197 95B3  2174 DC05 CAD2 E73B 0C92](https://github.com/afbjorklund.gpg) |
 | Balaji Vijayakumar | Committer | [@balajiv113](https://github.com/balajiv113)   | [80E1 01FE 5C89 FCF6 6171  72C8 377C 6A63 934B 8E6E](https://github.com/balajiv113.gpg)  |
-
-<!-- TODO: invite non-committer reviewers -->
+| Oleksandr Redko    | Reviewer  | [@alexandear](https://github.com/alexandear)   | [50F8 9811 D8D8 3E79 3E7E  0680 A947 E3F1 1A61 2A57](https://github.com/alexandear.gpg)  |
 
 ### Addition and promotion of Maintainers
 An active contributor to the project can be invited as a Reviewer,
