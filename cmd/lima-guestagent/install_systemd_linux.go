@@ -53,7 +53,8 @@ func installSystemdAction(cmd *cobra.Command, _ []string) error {
 	logrus.Infof("Written file %q", unitPath)
 	args := [][]string{
 		{"daemon-reload"},
-		{"enable", "--now", "lima-guestagent.service"},
+		{"enable", "lima-guestagent.service"},
+		{"start", "lima-guestagent.service"},
 		{"try-restart", "lima-guestagent.service"},
 	}
 	for _, args := range args {
