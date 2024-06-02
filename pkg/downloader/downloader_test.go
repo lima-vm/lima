@@ -116,7 +116,7 @@ func TestDownloadRemote(t *testing.T) {
 		r, err := Download(context.Background(), "", dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest), WithCacheDir(cacheDir))
 		assert.NilError(t, err)
 		assert.Equal(t, StatusDownloaded, r.Status)
-		assert.Equal(t, dummyRemoteFileStat.ModTime().UTC().Format(time.RFC1123), strings.Replace(r.LastModified, "GMT", "UTC", 1))
+		assert.Equal(t, dummyRemoteFileStat.ModTime().Truncate(time.Second).UTC(), r.LastModified)
 		assert.Equal(t, "text/plain; charset=utf-8", r.ContentType)
 	})
 }

@@ -13,6 +13,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/cheggaaa/pb/v3"
 	"github.com/containerd/continuity/fs"
@@ -44,7 +45,7 @@ const (
 type Result struct {
 	Status          Status
 	CachePath       string // "/Users/foo/Library/Caches/lima/download/by-url-sha256/<SHA256_OF_URL>/data"
-	LastModified    string
+	LastModified    time.Time
 	ContentType     string
 	ValidatedDigest bool
 }
@@ -132,6 +133,24 @@ func readFile(path string) string {
 		return ""
 	}
 	return string(b)
+}
+
+func readTime(path string) time.Time {
+	if path == "" {
+		return time.Time{}
+	}
+	if _, err := os.Stat(path); err != nil {
+		return time.Time{}
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return time.Time{}
+	}
+	t, err := time.Parse(http.TimeFormat, string(b))
+	if err != nil {
+		return time.Time{}
+	}
+	return t
 }
 
 // Download downloads the remote resource into the local path.
@@ -228,7 +247,7 @@ func Download(ctx context.Context, local, remote string, opts ...Opt) (*Result, 
 		res := &Result{
 			Status:          StatusUsedCache,
 			CachePath:       shadData,
-			LastModified:    readFile(shadTime),
+			LastModified:    readTime(shadTime),
 			ContentType:     readFile(shadType),
 			ValidatedDigest: o.expectedDigest != "",
 		}
@@ -259,7 +278,7 @@ func Download(ctx context.Context, local, remote string, opts ...Opt) (*Result, 
 	res := &Result{
 		Status:          StatusDownloaded,
 		CachePath:       shadData,
-		LastModified:    readFile(shadTime),
+		LastModified:    readTime(shadTime),
 		ContentType:     readFile(shadType),
 		ValidatedDigest: o.expectedDigest != "",
 	}
@@ -309,7 +328,7 @@ func Cached(remote string, opts ...Opt) (*Result, error) {
 	res := &Result{
 		Status:          StatusUsedCache,
 		CachePath:       shadData,
-		LastModified:    readFile(shadTime),
+		LastModified:    readTime(shadTime),
 		ContentType:     readFile(shadType),
 		ValidatedDigest: o.expectedDigest != "",
 	}
