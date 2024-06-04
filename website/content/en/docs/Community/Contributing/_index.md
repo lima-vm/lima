@@ -21,6 +21,10 @@ See also <https://github.com/cncf/foundation/blob/main/allowed-third-party-licen
 
 Pull requests can be submitted to <https://github.com/lima-vm/lima/pulls>.
 
+It is highly suggested to add [tests](../../dev/testing/) for every non-trivial pull requests.
+A test can be implemented as a unit test rather than an integration test when it is possible,
+to avoid slowing the integration test CI.
+
 ## Merging pull requests
 
 [Committers](../governance) can merge pull requests.
