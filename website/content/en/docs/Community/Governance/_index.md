@@ -18,6 +18,7 @@ Maintainers consist of two roles:
 
 - **Committer** (Full maintainership): Committers have full write accesses to repos under <https://github.com/lima-vm>.
   Committers' commits should still be made via GitHub pull requests (except for urgent security fixes), and should not be pushed directly.
+  Committers must enable 2FA for their GitHub accounts.
   Committers are also recognized as Maintainers in <https://github.com/cncf/foundation/blob/main/project-maintainers.csv>.
 
 - **Reviewer** (Limited maintainership): Reviewers may moderate GitHub issues and pull requests (such as adding labels and cleaning up spams),
