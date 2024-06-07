@@ -324,6 +324,11 @@ func detectValidPublicKey(content string) bool {
 
 func detectAESAcceleration() bool {
 	if !cpu.Initialized {
+		if runtime.GOOS == "linux" && runtime.GOARCH == "arm64" {
+			// cpu.Initialized seems to always be false, even when the cpu.ARM64 struct is filled out
+			// it is only being set by readARM64Registers, but not by readHWCAP or readLinuxProcCPUInfo
+			return cpu.ARM64.HasAES
+		}
 		if runtime.GOOS == "darwin" && runtime.GOARCH == "arm64" {
 			// golang.org/x/sys/cpu supports darwin/amd64, linux/amd64, and linux/arm64,
 			// but apparently lacks support for darwin/arm64: https://github.com/golang/sys/blob/v0.5.0/cpu/cpu_arm64.go#L43-L60
