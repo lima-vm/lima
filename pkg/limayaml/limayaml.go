@@ -45,6 +45,10 @@ type LimaYAML struct {
 	TimeZone          *string        `yaml:"timezone,omitempty" json:"timezone,omitempty"`
 }
 
+type ImageYAML struct {
+	Images []Image `yaml:"images" json:"images"`
+}
+
 type (
 	OS        = string
 	Arch      = string
@@ -94,6 +98,7 @@ type Kernel struct {
 }
 
 type Image struct {
+	Name   string `yaml:"name,omitempty" json:"name,omitempty"`
 	File   `yaml:",inline"`
 	Kernel *Kernel `yaml:"kernel,omitempty" json:"kernel,omitempty"`
 	Initrd *File   `yaml:"initrd,omitempty" json:"initrd,omitempty"`
