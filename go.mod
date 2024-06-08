@@ -32,6 +32,7 @@ require (
 	github.com/mikefarah/yq/v4 v4.44.1
 	github.com/nxadm/tail v1.4.11
 	github.com/opencontainers/go-digest v1.0.0
+	github.com/opencontainers/image-spec v1.1.0
 	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58
 	github.com/rjeczalik/notify v0.9.3
 	github.com/sethvargo/go-password v0.2.0

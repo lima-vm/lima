@@ -1,0 +1,14 @@
+# https://gitlab.com/fedora/bootc/examples/-/tree/main/cloud-init
+images:
+- location: "oras://ghcr.io/centos/fedora-bootc-cloud-disk:eln"
+mounts:
+- location: "~"
+- location: "/tmp/lima"
+  writable: true
+provision:
+- mode: system
+  script: |
+    command -v sshfs >/dev/null 2>&1 && exit 0
+    rpm-ostree install https://kojipkgs.fedoraproject.org//packages/fuse-sshfs/3.7.3/9.eln136/$(uname -m)/fuse-sshfs-3.7.3-9.eln136.$(uname -m).rpm
+    echo "user_allow_other" >>/etc/fuse.conf
+    systemctl reboot

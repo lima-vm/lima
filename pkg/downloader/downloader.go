@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -20,6 +21,7 @@ import (
 	"github.com/lima-vm/lima/pkg/localpathutil"
 	"github.com/lima-vm/lima/pkg/progressbar"
 	"github.com/opencontainers/go-digest"
+	specv1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sirupsen/logrus"
 )
 
@@ -163,6 +165,21 @@ func Download(ctx context.Context, local, remote string, opts ...Opt) (*Result, 
 	}
 
 	ext := path.Ext(remote)
+	if IsORAS(remote) {
+		descriptor, err := describeORAS(ctx, remote)
+		if err != nil {
+			return nil, err
+		}
+		title, ok := descriptor.Annotations["org.opencontainers.image.title"]
+		if !ok {
+			return nil, fmt.Errorf("missing org.opencontainers.image.title")
+		}
+		logrus.Debugf("title is %s", title)
+		o.description = title
+		o.expectedDigest = descriptor.Digest
+		// for decompression
+		ext = path.Ext(title)
+	}
 	if IsLocal(remote) {
 		if err := copyLocal(ctx, localPath, remote, ext, o.decompress, o.description, o.expectedDigest); err != nil {
 			return nil, err
@@ -224,8 +241,14 @@ func Download(ctx context.Context, local, remote string, opts ...Opt) (*Result, 
 	if err := os.WriteFile(shadURL, []byte(remote), 0o644); err != nil {
 		return nil, err
 	}
-	if err := downloadHTTP(ctx, shadData, remote, o.description, o.expectedDigest); err != nil {
-		return nil, err
+	if IsORAS(remote) {
+		if err := downloadORAS(ctx, shadData, remote, o.description); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := downloadHTTP(ctx, shadData, remote, o.description, o.expectedDigest); err != nil {
+			return nil, err
+		}
 	}
 	// no need to pass the digest to copyLocal(), as we already verified the digest
 	if err := copyLocal(ctx, localPath, shadData, ext, o.decompress, "", ""); err != nil {
@@ -313,6 +336,10 @@ func cacheDigestPath(shad string, expectedDigest digest.Digest) (string, error) 
 
 func IsLocal(s string) bool {
 	return !strings.Contains(s, "://") || strings.HasPrefix(s, "file://")
+}
+
+func IsORAS(s string) bool {
+	return strings.HasPrefix(s, "oras://")
 }
 
 // canonicalLocalPath canonicalizes the local path string.
@@ -541,4 +568,34 @@ func downloadHTTP(ctx context.Context, localPath, url, description string, expec
 		return err
 	}
 	return os.Rename(localPathTmp, localPath)
+}
+
+func describeORAS(ctx context.Context, url string) (*specv1.Descriptor, error) {
+	address := strings.Replace(url, "oras://", "", 1)
+	cmd := exec.CommandContext(ctx, "oras", "manifest", "fetch", address)
+	b, err := cmd.Output()
+	if err != nil {
+		return nil, err
+	}
+	var mf specv1.Manifest
+	if err = json.Unmarshal(b, &mf); err != nil {
+		return nil, err
+	}
+	if len(mf.Layers) != 1 {
+		return nil, fmt.Errorf("wrong number of layers: %d", len(mf.Layers))
+	}
+	return &mf.Layers[0], nil
+}
+
+func downloadORAS(ctx context.Context, localPath, url, description string) error {
+	localDir := path.Dir(localPath)
+	address := strings.Replace(url, "oras://", "", 1)
+	cmd := exec.CommandContext(ctx, "oras", "pull", "-o", localDir, address)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return err
+	}
+	shadFile := filepath.Join(localDir, description)
+	return os.Rename(shadFile, localPath) // "data"
 }
