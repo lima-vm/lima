@@ -91,6 +91,15 @@ func Validate(y *LimaYAML, warn bool) error {
 		return errors.New("field `images` must be set")
 	}
 	for i, f := range y.Images {
+		if f.Name != "" {
+			if ReadImage == nil {
+				return fmt.Errorf("limayaml.ReadImage is not set")
+			}
+			if _, err := ReadImage(f.Name); err != nil {
+				return err
+			}
+			continue
+		}
 		if err := validateFileObject(f.File, fmt.Sprintf("images[%d]", i)); err != nil {
 			return err
 		}

@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"github.com/lima-vm/lima/pkg/fsutil"
+	"github.com/lima-vm/lima/pkg/imagestore"
+	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/version"
@@ -111,6 +113,8 @@ func newApp() *cobra.Command {
 		if err != nil {
 			return err
 		}
+		// Connect limayaml.Load to imagestore
+		limayaml.ReadImage = imagestore.Read
 		// Make sure that directory is on a local filesystem, not on NFS
 		// if the directory does not yet exist, check the home directory
 		_, err = os.Stat(dir)
