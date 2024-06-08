@@ -114,6 +114,7 @@ binaries: clean \
 	$(HELPERS) \
 	$(GUESTAGENT)
 	cp -aL examples _output/share/lima/templates
+	cp -aL images _output/share/lima/images
 ifneq ($(GOOS),windows)
 	ln -sf templates _output/share/lima/examples
 else
