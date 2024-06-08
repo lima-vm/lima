@@ -673,3 +673,8 @@ func TestFillDefault(t *testing.T) {
 	FillDefault(&y, &d, &o, filePath)
 	assert.DeepEqual(t, &y, &expect, opts...)
 }
+
+func TestContainerdDefault(t *testing.T) {
+	archives := defaultContainerdArchives()
+	assert.Assert(t, len(archives) > 0)
+}
