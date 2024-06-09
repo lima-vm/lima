@@ -272,8 +272,14 @@ func Download(ctx context.Context, local, remote string, opts ...Opt) (*Result, 
 	if err := os.WriteFile(shadURL, []byte(remote), 0o644); err != nil {
 		return nil, err
 	}
-	if err := downloadHTTP(ctx, shadData, shadTime, shadType, remote, o.description, o.expectedDigest); err != nil {
-		return nil, err
+	if IsIPFS(remote) {
+		if err := downloadIPFS(ctx, shadData, remote); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := downloadHTTP(ctx, shadData, shadTime, shadType, remote, o.description, o.expectedDigest); err != nil {
+			return nil, err
+		}
 	}
 	// no need to pass the digest to copyLocal(), as we already verified the digest
 	if err := copyLocal(ctx, localPath, shadData, ext, o.decompress, "", ""); err != nil {
@@ -369,6 +375,10 @@ func cacheDigestPath(shad string, expectedDigest digest.Digest) (string, error) 
 
 func IsLocal(s string) bool {
 	return !strings.Contains(s, "://") || strings.HasPrefix(s, "file://")
+}
+
+func IsIPFS(s string) bool {
+	return strings.HasPrefix(s, "ipfs://")
 }
 
 // canonicalLocalPath canonicalizes the local path string.
@@ -678,6 +688,15 @@ func downloadHTTP(ctx context.Context, localPath, lastModified, contentType, url
 		return err
 	}
 	return os.Rename(localPathTmp, localPath)
+}
+
+func downloadIPFS(ctx context.Context, localPath, url string) error {
+	address := strings.Replace(url, "ipfs://", "", 1)
+	address = strings.Split(address, "/")[0] // remove file name from path
+	cmd := exec.CommandContext(ctx, "ipfs", "get", "-o", localPath, address)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
 
 // CacheEntries returns a map of cache entries.
