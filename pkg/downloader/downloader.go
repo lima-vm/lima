@@ -527,11 +527,7 @@ func validateLocalFileDigest(localPath string, expectedDigest digest.Digest) err
 	return nil
 }
 
-func downloadHTTP(ctx context.Context, localPath, lastModified, contentType, url, description string, expectedDigest digest.Digest) error {
-	if localPath == "" {
-		return fmt.Errorf("downloadHTTP: got empty localPath")
-	}
-	logrus.Debugf("downloading %q into %q", url, localPath)
+func download(reader io.Reader, size int64, localPath, url, description string, expectedDigest digest.Digest) error {
 	localPathTmp := localPath + ".tmp"
 	if err := os.RemoveAll(localPathTmp); err != nil {
 		return err
@@ -542,24 +538,7 @@ func downloadHTTP(ctx context.Context, localPath, lastModified, contentType, url
 	}
 	defer fileWriter.Close()
 
-	resp, err := httpclientutil.Get(ctx, http.DefaultClient, url)
-	if err != nil {
-		return err
-	}
-	if lastModified != "" {
-		lm := resp.Header.Get("Last-Modified")
-		if err := os.WriteFile(lastModified, []byte(lm), 0o644); err != nil {
-			return err
-		}
-	}
-	if contentType != "" {
-		ct := resp.Header.Get("Content-Type")
-		if err := os.WriteFile(contentType, []byte(ct), 0o644); err != nil {
-			return err
-		}
-	}
-	defer resp.Body.Close()
-	bar, err := progressbar.New(resp.ContentLength)
+	bar, err := progressbar.New(size)
 	if err != nil {
 		return err
 	}
@@ -588,7 +567,7 @@ func downloadHTTP(ctx context.Context, localPath, lastModified, contentType, url
 		fmt.Fprintf(os.Stderr, "Downloading %s\n", description)
 	}
 	bar.Start()
-	if _, err := io.Copy(multiWriter, bar.NewProxyReader(resp.Body)); err != nil {
+	if _, err := io.Copy(multiWriter, bar.NewProxyReader(reader)); err != nil {
 		return err
 	}
 	bar.Finish()
@@ -610,6 +589,33 @@ func downloadHTTP(ctx context.Context, localPath, lastModified, contentType, url
 		return err
 	}
 	return os.Rename(localPathTmp, localPath)
+}
+
+func downloadHTTP(ctx context.Context, localPath, lastModified, contentType, url, description string, expectedDigest digest.Digest) error {
+	if localPath == "" {
+		return fmt.Errorf("downloadHTTP: got empty localPath")
+	}
+	logrus.Debugf("downloading %q into %q", url, localPath)
+
+	resp, err := httpclientutil.Get(ctx, http.DefaultClient, url)
+	if err != nil {
+		return err
+	}
+	if lastModified != "" {
+		lm := resp.Header.Get("Last-Modified")
+		if err := os.WriteFile(lastModified, []byte(lm), 0o644); err != nil {
+			return err
+		}
+	}
+	if contentType != "" {
+		ct := resp.Header.Get("Content-Type")
+		if err := os.WriteFile(contentType, []byte(ct), 0o644); err != nil {
+			return err
+		}
+	}
+	defer resp.Body.Close()
+
+	return download(resp.Body, resp.ContentLength, localPath, url, description, expectedDigest)
 }
 
 func downloadIPFS(ctx context.Context, localPath, url string) error {
