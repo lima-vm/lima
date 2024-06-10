@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -272,7 +273,7 @@ func Download(ctx context.Context, local, remote string, opts ...Opt) (*Result, 
 		return nil, err
 	}
 	if IsIPFS(remote) {
-		if err := downloadIPFS(ctx, shadData, remote); err != nil {
+		if err := downloadIPFS(ctx, shadData, remote, o.description, o.expectedDigest); err != nil {
 			return nil, err
 		}
 	} else {
@@ -630,13 +631,44 @@ func downloadHTTP(ctx context.Context, localPath, lastModified, contentType, url
 	return download(resp.Body, resp.ContentLength, localPath, url, description, expectedDigest)
 }
 
-func downloadIPFS(ctx context.Context, localPath, url string) error {
+func downloadIPFS(ctx context.Context, localPath, url, description string, expectedDigest digest.Digest) error {
+	if localPath == "" {
+		return fmt.Errorf("downloadIPFS: got empty localPath")
+	}
+	logrus.Debugf("downloading %q into %q", url, localPath)
+
 	address := strings.Replace(url, "ipfs://", "", 1)
 	address = strings.Split(address, "/")[0] // remove file name from path
-	cmd := exec.CommandContext(ctx, "ipfs", "get", "-o", localPath, address)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
+	cmd := exec.CommandContext(ctx, "ipfs", "ls", address)
+	out, err := cmd.Output()
+	if err != nil {
+		return err
+	}
+	size := int64(0)
+	for _, line := range strings.Split(string(out), "\n") {
+		// Hash Size Name
+		f := strings.Fields(line)
+		if len(f) >= 2 {
+			s, err := strconv.Atoi(f[1])
+			if err != nil {
+				return err
+			}
+			size += int64(s)
+		}
+	}
+
+	cmd = exec.CommandContext(ctx, "ipfs", "cat", "--progress=false", address)
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	if err := download(stdout, size, localPath, url, description, expectedDigest); err != nil {
+		return err
+	}
+	return cmd.Wait()
 }
 
 func download(reader io.Reader, size int64, localPath, url, description string, expectedDigest digest.Digest) error {
