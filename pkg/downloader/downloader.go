@@ -627,7 +627,20 @@ func downloadHTTP(ctx context.Context, localPath, lastModified, contentType, url
 		}
 	}
 	defer resp.Body.Close()
-	bar, err := progressbar.New(resp.ContentLength)
+	return download(resp.Body, resp.ContentLength, localPath, url, description, expectedDigest)
+}
+
+func downloadIPFS(ctx context.Context, localPath, url string) error {
+	address := strings.Replace(url, "ipfs://", "", 1)
+	address = strings.Split(address, "/")[0] // remove file name from path
+	cmd := exec.CommandContext(ctx, "ipfs", "get", "-o", localPath, address)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
+}
+
+func download(reader io.Reader, size int64, localPath, url, description string, expectedDigest digest.Digest) error {
+	bar, err := progressbar.New(size)
 	if err != nil {
 		return err
 	}
@@ -664,7 +677,7 @@ func downloadHTTP(ctx context.Context, localPath, lastModified, contentType, url
 		fmt.Fprintf(os.Stderr, "Downloading %s\n", description)
 	}
 	bar.Start()
-	if _, err := io.Copy(multiWriter, bar.NewProxyReader(resp.Body)); err != nil {
+	if _, err := io.Copy(multiWriter, bar.NewProxyReader(reader)); err != nil {
 		return err
 	}
 	bar.Finish()
@@ -720,15 +733,6 @@ func writeFirst(path string, data []byte, perm os.FileMode) error {
 		}
 		return os.WriteFile(path, data, perm)
 	})
-}
-
-func downloadIPFS(ctx context.Context, localPath, url string) error {
-	address := strings.Replace(url, "ipfs://", "", 1)
-	address = strings.Split(address, "/")[0] // remove file name from path
-	cmd := exec.CommandContext(ctx, "ipfs", "get", "-o", localPath, address)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
 }
 
 // CacheEntries returns a map of cache entries.
