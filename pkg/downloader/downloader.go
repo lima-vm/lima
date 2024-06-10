@@ -480,11 +480,7 @@ func validateLocalFileDigest(localPath string, expectedDigest digest.Digest) err
 	return nil
 }
 
-func downloadHTTP(ctx context.Context, localPath, url, description string, expectedDigest digest.Digest) error {
-	if localPath == "" {
-		return fmt.Errorf("downloadHTTP: got empty localPath")
-	}
-	logrus.Debugf("downloading %q into %q", url, localPath)
+func download(reader io.Reader, size int64, localPath, url, description string, expectedDigest digest.Digest) error {
 	localPathTmp := localPath + ".tmp"
 	if err := os.RemoveAll(localPathTmp); err != nil {
 		return err
@@ -494,13 +490,7 @@ func downloadHTTP(ctx context.Context, localPath, url, description string, expec
 		return err
 	}
 	defer fileWriter.Close()
-
-	resp, err := httpclientutil.Get(ctx, http.DefaultClient, url)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	bar, err := progressbar.New(resp.ContentLength)
+	bar, err := progressbar.New(size)
 	if err != nil {
 		return err
 	}
@@ -529,7 +519,7 @@ func downloadHTTP(ctx context.Context, localPath, url, description string, expec
 		fmt.Fprintf(os.Stderr, "Downloading %s\n", description)
 	}
 	bar.Start()
-	if _, err := io.Copy(multiWriter, bar.NewProxyReader(resp.Body)); err != nil {
+	if _, err := io.Copy(multiWriter, bar.NewProxyReader(reader)); err != nil {
 		return err
 	}
 	bar.Finish()
@@ -553,7 +543,22 @@ func downloadHTTP(ctx context.Context, localPath, url, description string, expec
 	return os.Rename(localPathTmp, localPath)
 }
 
-func downloadIPFS(ctx context.Context, localPath, url string) error {
+func downloadHTTP(ctx context.Context, localPath, url, description string, expectedDigest digest.Digest) error {
+	if localPath == "" {
+		return fmt.Errorf("downloadHTTP: got empty localPath")
+	}
+	logrus.Debugf("downloading %q into %q", url, localPath)
+
+	resp, err := httpclientutil.Get(ctx, http.DefaultClient, url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	return download(resp.Body, resp.ContentLength, localPath, url, description, expectedDigest)
+}
+
+func downloadIPFS(ctx context.Context, localPath, url, string) error {
 	address := strings.Replace(url, "ipfs://", "", 1)
 	address = strings.Split(address, "/")[0] // remove file name from path
 	cmd := exec.CommandContext(ctx, "ipfs", "get", "-o", localPath, address)
