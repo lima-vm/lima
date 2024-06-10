@@ -4,7 +4,7 @@ set -eux
 # /etc/environment must be written after 04-persistent-data-volume.sh has run to
 # make sure the changes on a restart are applied to the persisted version.
 
-orig=$(test -f /etc/environment && cat /etc/environment)
+orig=$(test ! -f /etc/environment || cat /etc/environment)
 if [ -e /etc/environment ]; then
 	sed -i '/#LIMA-START/,/#LIMA-END/d' /etc/environment
 fi
