@@ -24,7 +24,7 @@ func fileWarning(filename string) string {
 	s += "# -----------\n"
 	for _, line := range strings.Split(strings.TrimSuffix(string(b), "\n"), "\n") {
 		s += "#"
-		if len(line) > 0 {
+		if line != "" {
 			s += " " + line
 		}
 		s += "\n"

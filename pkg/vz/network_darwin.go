@@ -52,7 +52,7 @@ func DialQemu(unixSock string) (*os.File, error) {
 	}
 
 	remote := tcpproxy.DialProxy{
-		DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
+		DialContext: func(context.Context, string, string) (net.Conn, error) {
 			return dgramConn, nil
 		},
 	}

@@ -63,7 +63,7 @@ func newApp() *cobra.Command {
 	rootCmd.PersistentFlags().Bool("debug", false, "debug mode")
 	// TODO: "survey" does not support using cygwin terminal on windows yet
 	rootCmd.PersistentFlags().Bool("tty", isatty.IsTerminal(os.Stdout.Fd()), "Enable TUI interactions such as opening an editor. Defaults to true when stdout is a terminal. Set to false for automation.")
-	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, _ []string) error {
 		l, _ := cmd.Flags().GetString("log-level")
 		if l != "" {
 			lvl, err := logrus.ParseLevel(l)

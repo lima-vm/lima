@@ -37,7 +37,7 @@ func Templates() ([]Template, error) {
 	templatesDir := filepath.Join(usrlocalsharelimaDir, "templates")
 
 	var res []Template
-	walkDirFn := func(p string, d fs.DirEntry, err error) error {
+	walkDirFn := func(p string, _ fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

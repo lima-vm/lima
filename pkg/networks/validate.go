@@ -114,11 +114,11 @@ func validatePath(path string, allowDaemonGroupWritable bool) error {
 	}
 	ownerIsAdmin := owner.Uid == "0"
 	if !ownerIsAdmin {
-		ownerGroupIds, err := owner.GroupIds()
+		ownerGroupIDs, err := owner.GroupIds()
 		if err != nil {
 			return err
 		}
-		for _, g := range ownerGroupIds {
+		for _, g := range ownerGroupIDs {
 			if g == adminGroup.Gid {
 				ownerIsAdmin = true
 				break
