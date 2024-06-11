@@ -69,16 +69,13 @@ func (l *LimaWslDriver) Validate() error {
 		}
 	}
 
-	re, err := regexp.Compile(`.*tar\.*`)
-	if err != nil {
-		return fmt.Errorf("failed to compile file check regex: %w", err)
-	}
+	// TODO: real filetype checks
+	tarFileRegex := regexp.MustCompile(`.*tar\.*`)
 	for i, image := range l.Yaml.Images {
 		if unknown := reflectutil.UnknownNonEmptyFields(image, "File"); len(unknown) > 0 {
 			logrus.Warnf("Ignoring: vmType %s: images[%d]: %+v", *l.Yaml.VMType, i, unknown)
 		}
-		// TODO: real filetype checks
-		match := re.MatchString(image.Location)
+		match := tarFileRegex.MatchString(image.Location)
 		if image.Arch == *l.Yaml.Arch && !match {
 			return fmt.Errorf("unsupported image type for vmType: %s, tarball root file system required: %q", *l.Yaml.VMType, image.Location)
 		}
