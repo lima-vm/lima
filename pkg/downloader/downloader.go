@@ -628,6 +628,7 @@ func downloadIPFS(ctx context.Context, localPath, url, description string, expec
 	address := strings.Replace(url, "ipfs://", "", 1)
 	address = strings.Split(address, "/")[0] // remove file name from path
 	cmd := exec.CommandContext(ctx, "ipfs", "ls", address)
+	cmd.Stderr = os.Stderr
 	out, err := cmd.Output()
 	if err != nil {
 		return err
@@ -649,6 +650,7 @@ func downloadIPFS(ctx context.Context, localPath, url, description string, expec
 	}
 
 	cmd = exec.CommandContext(ctx, "ipfs", "cat", address)
+	cmd.Stderr = os.Stderr
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return err
