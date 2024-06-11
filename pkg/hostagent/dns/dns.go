@@ -400,7 +400,7 @@ func listenAndServe(network Network, opts ServerOptions) (*dns.Server, error) {
 
 func chunkify(buffer string, limit int) []string {
 	var result []string
-	for len(buffer) > 0 {
+	for buffer != "" {
 		if len(buffer) < limit {
 			limit = len(buffer)
 		}

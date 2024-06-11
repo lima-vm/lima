@@ -15,7 +15,7 @@ type GuestAgentClient struct {
 
 func NewGuestAgentClient(dialFn func(ctx context.Context) (net.Conn, error)) (*GuestAgentClient, error) {
 	opts := []grpc.DialOption{
-		grpc.WithContextDialer(func(ctx context.Context, target string) (net.Conn, error) {
+		grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) {
 			return dialFn(ctx)
 		}),
 		grpc.WithTransportCredentials(NewCredentials()),

@@ -711,10 +711,10 @@ func createSockPair() (server, client *os.File, _ error) {
 	}
 	server = os.NewFile(uintptr(serverFD), "server")
 	client = os.NewFile(uintptr(clientFD), "client")
-	runtime.SetFinalizer(server, func(file *os.File) {
+	runtime.SetFinalizer(server, func(*os.File) {
 		logrus.Debugf("Server network file GC'ed")
 	})
-	runtime.SetFinalizer(client, func(file *os.File) {
+	runtime.SetFinalizer(client, func(*os.File) {
 		logrus.Debugf("Client network file GC'ed")
 	})
 	vmNetworkFiles = append(vmNetworkFiles, server, client)

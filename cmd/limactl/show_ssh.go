@@ -66,7 +66,7 @@ Instead, use 'ssh -F %s/default/ssh.config lima-default' .
 	}
 
 	shellCmd.Flags().StringP("format", "f", sshutil.FormatCmd, "Format: "+strings.Join(sshutil.Formats, ", "))
-	_ = shellCmd.RegisterFlagCompletionFunc("format", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	_ = shellCmd.RegisterFlagCompletionFunc("format", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
 		return sshutil.Formats, cobra.ShellCompDirectiveNoFileComp
 	})
 	return shellCmd

@@ -2,6 +2,6 @@
 
 package fsutil
 
-func IsNFS(path string) (bool, error) {
+func IsNFS(string) (bool, error) {
 	return false, nil
 }

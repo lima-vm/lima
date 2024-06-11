@@ -211,19 +211,19 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 	cpuType := defaultCPUType()
 	var overrideCPUType bool
 	for k, v := range d.CPUType {
-		if len(v) > 0 {
+		if v != "" {
 			overrideCPUType = true
 			cpuType[k] = v
 		}
 	}
 	for k, v := range y.CPUType {
-		if len(v) > 0 {
+		if v != "" {
 			overrideCPUType = true
 			cpuType[k] = v
 		}
 	}
 	for k, v := range o.CPUType {
-		if len(v) > 0 {
+		if v != "" {
 			overrideCPUType = true
 			cpuType[k] = v
 		}
