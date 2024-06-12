@@ -6,6 +6,7 @@ import (
 
 	"github.com/lima-vm/lima/pkg/guestagent/api"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/resolver"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -21,7 +22,8 @@ func NewGuestAgentClient(dialFn func(ctx context.Context) (net.Conn, error)) (*G
 		grpc.WithTransportCredentials(NewCredentials()),
 	}
 
-	clientConn, err := grpc.Dial("", opts...) //nolint:staticcheck // SA1019: grpc.Dial is deprecated: use NewClient instead.  Will be supported throughout 1.x
+	resolver.SetDefaultScheme("passthrough")
+	clientConn, err := grpc.NewClient("", opts...)
 	if err != nil {
 		return nil, err
 	}
