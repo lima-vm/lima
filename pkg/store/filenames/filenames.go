@@ -57,7 +57,7 @@ const (
 	VzEfi              = "vz-efi"           // efi variable store
 	QemuEfiCodeFD      = "qemu-efi-code.fd" // efi code; not always created
 
-	// SocketDir is the default location for forwarded sockets with a relative paths in HostSocket
+	// SocketDir is the default location for forwarded sockets with a relative paths in HostSocket.
 	SocketDir = "sock"
 
 	Protected = "protected" // empty file; used by `limactl protect`

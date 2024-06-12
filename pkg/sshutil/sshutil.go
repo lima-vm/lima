@@ -222,7 +222,7 @@ func CommonOpts(useDotSSH bool) ([]string, error) {
 	return opts, nil
 }
 
-// SSHOpts adds the following options to CommonOptions: User, ControlMaster, ControlPath, ControlPersist
+// SSHOpts adds the following options to CommonOptions: User, ControlMaster, ControlPath, ControlPersist.
 func SSHOpts(instDir string, useDotSSH, forwardAgent, forwardX11, forwardX11Trusted bool) ([]string, error) {
 	controlSock := filepath.Join(instDir, filenames.SSHSock)
 	if len(controlSock) >= osutil.UnixPathMax {

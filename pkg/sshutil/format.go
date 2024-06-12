@@ -12,29 +12,29 @@ type FormatT = string
 const (
 	// FormatCmd prints the full ssh command line.
 	//
-	// ssh -o IdentityFile="/Users/example/.lima/_config/user" -o User=example -o Hostname=127.0.0.1 -o Port=60022 lima-default
+	//	ssh -o IdentityFile="/Users/example/.lima/_config/user" -o User=example -o Hostname=127.0.0.1 -o Port=60022 lima-default
 	FormatCmd = FormatT("cmd")
 
-	// FormatArgs is similar to FormatCmd but omits "ssh" and the destination address
+	// FormatArgs is similar to FormatCmd but omits "ssh" and the destination address.
 	//
-	// -o IdentityFile="/Users/example/.lima/_config/user" -o User=example -o Hostname=127.0.0.1 -o Port=60022
+	//	-o IdentityFile="/Users/example/.lima/_config/user" -o User=example -o Hostname=127.0.0.1 -o Port=60022
 	FormatArgs = FormatT("args")
 
 	// FormatOptions prints the ssh option key value pairs.
 	//
-	// IdentityFile="/Users/example/.lima/_config/user"
-	// User=example
-	// Hostname=127.0.0.1
-	// Port=60022
+	//	IdentityFile="/Users/example/.lima/_config/user"
+	//	User=example
+	//	Hostname=127.0.0.1
+	//	Port=60022
 	FormatOptions = FormatT("options")
 
 	// FormatConfig uses the ~/.ssh/config format
 	//
-	// Host lima-default
-	//  IdentityFile "/Users/example/.lima/_config/user "
-	//  User example
-	//  Hostname 127.0.0.1
-	//  Port 60022
+	//	Host lima-default
+	//	  IdentityFile "/Users/example/.lima/_config/user "
+	//	  User example
+	//	  Hostname 127.0.0.1
+	//	  Port 60022
 	FormatConfig = FormatT("config")
 
 // TODO: consider supporting "url" format (ssh://USER@HOSTNAME:PORT)

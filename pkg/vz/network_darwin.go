@@ -33,8 +33,8 @@ func PassFDToUnix(unixSock string) (*os.File, error) {
 	return client, nil
 }
 
-// DialQemu support connecting to QEMU supported network stack via unix socket
-// Returns os.File, connected dgram connection to be used for vz
+// DialQemu support connecting to QEMU supported network stack via unix socket.
+// Returns os.File, connected dgram connection to be used for vz.
 func DialQemu(unixSock string) (*os.File, error) {
 	unixConn, err := net.Dial("unix", unixSock)
 	if err != nil {
@@ -68,7 +68,7 @@ type QEMUPacketConn struct {
 
 var _ net.Conn = (*QEMUPacketConn)(nil)
 
-// Read gets rid of the QEMU header packet and returns the raw packet as response
+// Read gets rid of the QEMU header packet and returns the raw packet as response.
 func (v *QEMUPacketConn) Read(b []byte) (n int, err error) {
 	header := make([]byte, 4)
 	_, err = io.ReadFull(v.unixConn, header)
@@ -85,7 +85,7 @@ func (v *QEMUPacketConn) Read(b []byte) (n int, err error) {
 	return int(size), nil
 }
 
-// Write puts QEMU header packet first and then writes the raw packet
+// Write puts QEMU header packet first and then writes the raw packet.
 func (v *QEMUPacketConn) Write(b []byte) (n int, err error) {
 	header := make([]byte, 4)
 	binary.BigEndian.PutUint32(header, uint32(len(b)))

@@ -43,12 +43,12 @@ type Config struct {
 	SSHLocalPort int
 }
 
-// MinimumQemuVersion is the minimum supported QEMU version
+// MinimumQemuVersion is the minimum supported QEMU version.
 const (
 	MinimumQemuVersion = "4.0.0"
 )
 
-// EnsureDisk also ensures the kernel and the initrd
+// EnsureDisk also ensures the kernel and the initrd.
 func EnsureDisk(ctx context.Context, cfg Config) error {
 	diffDisk := filepath.Join(cfg.InstanceDir, filenames.DiffDisk)
 	if _, err := os.Stat(diffDisk); err == nil || !errors.Is(err, os.ErrNotExist) {
@@ -227,7 +227,7 @@ func Load(cfg Config, run bool, tag string) error {
 	return err
 }
 
-// List returns a space-separated list of all snapshots, with header and newlines
+// List returns a space-separated list of all snapshots, with header and newlines.
 func List(cfg Config, run bool) (string, error) {
 	if run {
 		out, err := sendHmpCommand(cfg, "info", "snapshots")
@@ -455,7 +455,7 @@ func adjustMemBytesDarwinARM64HVF(memBytes int64, accel string, features *featur
 	return memBytes
 }
 
-// qemuMachine returns string to use for -machine
+// qemuMachine returns string to use for -machine.
 func qemuMachine(arch limayaml.Arch) string {
 	if arch == limayaml.X8664 {
 		return "q35"
@@ -1004,7 +1004,7 @@ func VirtiofsdCmdline(cfg Config, mountIndex int) ([]string, error) {
 	}, nil
 }
 
-// qemuArch returns the arch string used by qemu
+// qemuArch returns the arch string used by qemu.
 func qemuArch(arch limayaml.Arch) string {
 	if arch == limayaml.ARMV7L {
 		return "arm"

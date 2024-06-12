@@ -23,10 +23,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// HideProgress is used only for testing
+// HideProgress is used only for testing.
 var HideProgress bool
 
-// hideBar is used only for testing
+// hideBar is used only for testing.
 func hideBar(bar *pb.ProgressBar) {
 	bar.Set(pb.ReturnSymbol, "")
 	bar.SetTemplateString("")
@@ -96,8 +96,8 @@ func WithDecompress(decompress bool) Opt {
 // WithExpectedDigest is used to validate the downloaded file against the expected digest.
 //
 // The digest is not verified in the following cases:
-// - The digest was not specified.
-// - The file already exists in the local target path.
+//   - The digest was not specified.
+//   - The file already exists in the local target path.
 //
 // When the `data` file exists in the cache dir with `<ALGO>.digest` file,
 // the digest is verified by comparing the content of `<ALGO>.digest` with the expected
@@ -291,14 +291,14 @@ func Cached(remote string, opts ...Opt) (*Result, error) {
 }
 
 // cacheDirectoryPath returns the cache subdirectory path.
-// - "url" file contains the url
-// - "data" file contains the data
+//   - "url" file contains the url
+//   - "data" file contains the data
 func cacheDirectoryPath(cacheDir, remote string) string {
 	return filepath.Join(cacheDir, "download", "by-url-sha256", fmt.Sprintf("%x", sha256.Sum256([]byte(remote))))
 }
 
 // cacheDigestPath returns the cache digest file path.
-// - "<ALGO>.digest" contains the digest
+//   - "<ALGO>.digest" contains the digest
 func cacheDigestPath(shad string, expectedDigest digest.Digest) (string, error) {
 	shadDigest := ""
 	if expectedDigest != "" {
@@ -316,9 +316,9 @@ func IsLocal(s string) bool {
 }
 
 // canonicalLocalPath canonicalizes the local path string.
-// - Make sure the file has no scheme, or the `file://` scheme
-// - If it has the `file://` scheme, strip the scheme and make sure the filename is absolute
-// - Expand a leading `~`, or convert relative to absolute name
+//   - Make sure the file has no scheme, or the `file://` scheme
+//   - If it has the `file://` scheme, strip the scheme and make sure the filename is absolute
+//   - Expand a leading `~`, or convert relative to absolute name
 func canonicalLocalPath(s string) (string, error) {
 	if s == "" {
 		return "", fmt.Errorf("got empty path")

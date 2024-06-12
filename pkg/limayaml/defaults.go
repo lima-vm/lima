@@ -89,7 +89,7 @@ func defaultContainerdArchives() []File {
 	}
 }
 
-// FirstUsernetIndex gets the index of first usernet network under l.Network[]. Returns -1 if no usernet network found
+// FirstUsernetIndex gets the index of first usernet network under l.Network[]. Returns -1 if no usernet network found.
 func FirstUsernetIndex(l *LimaYAML) int {
 	return slices.IndexFunc(l.Networks, func(network Network) bool { return networks.IsUsernet(network.Lima) })
 }

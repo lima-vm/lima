@@ -64,7 +64,7 @@ type InfoFormatSpecificDataVmdkExtent struct {
 	ClusterSize int    `json:"cluster-size,omitempty"` // since QEMU 1.7
 }
 
-// Info corresponds to the output of `qemu-img info --output=json FILE`
+// Info corresponds to the output of `qemu-img info --output=json FILE`.
 type Info struct {
 	Filename              string              `json:"filename,omitempty"`                // since QEMU 1.3
 	Format                string              `json:"format,omitempty"`                  // since QEMU 1.3

@@ -15,7 +15,7 @@ type Kind = string
 const (
 	TCP  Kind = "tcp"
 	TCP6 Kind = "tcp6"
-	// TODO: "udp", "udp6", "udplite", "udplite6"
+	// TODO: "udp", "udp6", "udplite", "udplite6".
 )
 
 type State = int

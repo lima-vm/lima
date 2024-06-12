@@ -20,7 +20,7 @@ import (
 )
 
 // Start starts a instance a usernet network with the given name.
-// The name parameter must point to a valid network configuration name under <LIMA_HOME>/_config/networks.yaml with `mode: user-v2`
+// The name parameter must point to a valid network configuration name under <LIMA_HOME>/_config/networks.yaml with `mode: user-v2`.
 func Start(ctx context.Context, name string) error {
 	logrus.Debugf("Make sure usernet network is started")
 	networksDir, err := dirnames.LimaNetworksDir()
@@ -120,7 +120,7 @@ func Start(ctx context.Context, name string) error {
 }
 
 // Stop stops running instance a usernet network with the given name.
-// The name parameter must point to a valid network configuration name under <LIMA_HOME>/_config/networks.yaml with `mode: user-v2`
+// The name parameter must point to a valid network configuration name under <LIMA_HOME>/_config/networks.yaml with `mode: user-v2`.
 func Stop(ctx context.Context, name string) error {
 	logrus.Debugf("Make sure usernet network is stopped")
 	pidFile, err := PIDFile(name)

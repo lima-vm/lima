@@ -22,7 +22,7 @@ import (
 type Protocol string
 
 const (
-	// UDP/SCTP when lima port forwarding works on those protocols
+	// UDP/SCTP when lima port forwarding works on those protocols.
 	TCP Protocol = "TCP"
 )
 

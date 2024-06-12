@@ -70,7 +70,7 @@ func (inst *Instance) LoadYAML() (*limayaml.LimaYAML, error) {
 }
 
 // Inspect returns err only when the instance does not exist (os.ErrNotExist).
-// Other errors are returned as *Instance.Errors
+// Other errors are returned as *Instance.Errors.
 func Inspect(instName string) (*Instance, error) {
 	inst := &Instance{
 		Name:   instName,
@@ -283,7 +283,7 @@ type PrintOptions struct {
 }
 
 // PrintInstances prints instances in a requested format to a given io.Writer.
-// Supported formats are "json", "yaml", "table", or a go template
+// Supported formats are "json", "yaml", "table", or a go template.
 func PrintInstances(w io.Writer, instances []*Instance, format string, options *PrintOptions) error {
 	switch format {
 	case "json":

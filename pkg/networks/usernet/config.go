@@ -28,7 +28,7 @@ func Sock(name string, sockType SockType) (string, error) {
 	return SockWithDirectory(filepath.Join(dir, name), name, sockType)
 }
 
-// SockWithDirectory return a usernet socket based on dir, name and sockType
+// SockWithDirectory return a usernet socket based on dir, name and sockType.
 func SockWithDirectory(dir, name string, sockType SockType) (string, error) {
 	if name == "" {
 		name = "default"
@@ -41,7 +41,7 @@ func SockWithDirectory(dir, name string, sockType SockType) (string, error) {
 	return sockPath, nil
 }
 
-// PIDFile returns a path for usernet PID file
+// PIDFile returns a path for usernet PID file.
 func PIDFile(name string) (string, error) {
 	dir, err := dirnames.LimaNetworksDir()
 	if err != nil {
@@ -84,12 +84,12 @@ func Subnet(name string) (net.IP, error) {
 	return ipNet.IP, err
 }
 
-// GatewayIP returns the 2nd IP for the given subnet
+// GatewayIP returns the 2nd IP for the given subnet.
 func GatewayIP(subnet net.IP) string {
 	return cidr.Inc(cidr.Inc(subnet)).String()
 }
 
-// DNSIP returns the 3rd IP for the given subnet
+// DNSIP returns the 3rd IP for the given subnet.
 func DNSIP(subnet net.IP) string {
 	return cidr.Inc(cidr.Inc(cidr.Inc(subnet))).String()
 }

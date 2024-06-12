@@ -161,7 +161,7 @@ func handleExitCoder(err error) {
 	}
 }
 
-// WrapArgsError annotates cobra args error with some context, so the error message is more user-friendly
+// WrapArgsError annotates cobra args error with some context, so the error message is more user-friendly.
 func WrapArgsError(argFn cobra.PositionalArgs) cobra.PositionalArgs {
 	return func(cmd *cobra.Command, args []string) error {
 		err := argFn(cmd, args)

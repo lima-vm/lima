@@ -112,7 +112,7 @@ func hostagentAction(cmd *cobra.Command, args []string) error {
 	return ha.Run(cmd.Context())
 }
 
-// syncer is implemented by *os.File
+// syncer is implemented by *os.File.
 type syncer interface {
 	Sync() error
 }

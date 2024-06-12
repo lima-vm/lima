@@ -14,7 +14,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// forwardTCP is not thread-safe
+// forwardTCP is not thread-safe.
 func forwardTCP(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, remote, verb string) error {
 	if strings.HasPrefix(local, "/") {
 		return forwardSSH(ctx, sshConfig, port, local, remote, verb, false)

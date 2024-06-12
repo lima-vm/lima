@@ -24,7 +24,7 @@ func (b *Backend) onError(w http.ResponseWriter, err error, ec int) {
 	_ = json.NewEncoder(w).Encode(e)
 }
 
-// GetInfo is the handler for GET /v1/info
+// GetInfo is the handler for GET /v1/info.
 func (b *Backend) GetInfo(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)

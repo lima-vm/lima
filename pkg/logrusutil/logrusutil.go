@@ -59,7 +59,7 @@ fallback:
 	entry.Info(header + string(jsonLine))
 }
 
-// JSON is the type used in logrus.JSONFormatter
+// JSON is the type used in logrus.JSONFormatter.
 type JSON struct {
 	Level string    `json:"level"`
 	Msg   string    `json:"msg"`

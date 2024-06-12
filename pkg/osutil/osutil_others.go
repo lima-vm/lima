@@ -10,7 +10,7 @@ import (
 // UnixPathMax is the value of UNIX_PATH_MAX.
 const UnixPathMax = 104
 
-// Stat is a selection of syscall.Stat_t
+// Stat is a selection of syscall.Stat_t.
 type Stat struct {
 	Uid uint32
 	Gid uint32
