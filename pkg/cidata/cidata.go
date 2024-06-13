@@ -110,7 +110,7 @@ func setupEnv(y *limayaml.LimaYAML, args TemplateArgs) (map[string]string, error
 	return env, nil
 }
 
-func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort int, nerdctlArchive string, vsockPort int, virtioPort string) error {
+func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort int, nerdctlArchive string, vsockPort int, virtioPort string, proxyPort int, proxyCert string) error {
 	if err := limayaml.Validate(y, false); err != nil {
 		return err
 	}
@@ -284,6 +284,11 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 		if err != nil {
 			return err
 		}
+	}
+
+	if *y.HostProxy.Enabled {
+		args.HTTPProxyLocalPort = proxyPort
+		args.HTTPProxyCACert = getCert(proxyCert)
 	}
 
 	args.CACerts.RemoveDefaults = y.CACertificates.RemoveDefaults

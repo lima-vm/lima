@@ -20,6 +20,7 @@ require (
 	github.com/diskfs/go-diskfs v1.4.0
 	github.com/docker/go-units v0.5.0
 	github.com/elastic/go-libaudit/v2 v2.5.0
+	github.com/elazarl/goproxy v0.0.0-20231117061959-7cc037d33fb5
 	github.com/foxcpp/go-mockdns v1.1.0
 	github.com/goccy/go-yaml v1.11.3
 	github.com/google/go-cmp v0.6.0
