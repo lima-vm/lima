@@ -153,6 +153,13 @@ func Validate(y *LimaYAML, warn bool) error {
 	reservedHome := fmt.Sprintf("/home/%s.linux", u.Username)
 
 	for i, f := range y.Mounts {
+		if f.Name != "" {
+			if f.Name != "default" {
+				return fmt.Errorf("field `mounts[%d].name` refers to an unknown name: %q",
+					i, f.Name)
+			}
+			continue
+		}
 		if !filepath.IsAbs(f.Location) && !strings.HasPrefix(f.Location, "~") {
 			return fmt.Errorf("field `mounts[%d].location` must be an absolute path, got %q",
 				i, f.Location)

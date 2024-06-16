@@ -88,6 +88,19 @@ func defaultContainerdArchives() []File {
 	return containerd.Archives
 }
 
+func defaultMounts() []Mount {
+	return []Mount{
+		{
+			Location: "~",
+			Writable: ptr.Of(false),
+		},
+		{
+			Location: "/tmp/lima",
+			Writable: ptr.Of(true),
+		},
+	}
+}
+
 // FirstUsernetIndex gets the index of first usernet network under l.Network[]. Returns -1 if no usernet network found.
 func FirstUsernetIndex(l *LimaYAML) int {
 	return slices.IndexFunc(l.Networks, func(network Network) bool { return networks.IsUsernet(network.Lima) })
@@ -644,6 +657,16 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 			location[mount.Location] = len(mounts)
 			mounts = append(mounts, mount)
 		}
+	}
+	y.Mounts = mounts
+
+	mounts = []Mount{}
+	for _, mount := range y.Mounts {
+		if mount.Name == "default" {
+			mounts = append(mounts, defaultMounts()...)
+			continue
+		}
+		mounts = append(mounts, mount)
 	}
 	y.Mounts = mounts
 

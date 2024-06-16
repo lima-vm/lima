@@ -122,6 +122,7 @@ type Disk struct {
 }
 
 type Mount struct {
+	Name       string   `yaml:"name,omitempty" json:"name,omitempty"`
 	Location   string   `yaml:"location" json:"location"` // REQUIRED
 	MountPoint string   `yaml:"mountPoint,omitempty" json:"mountPoint,omitempty"`
 	Writable   *bool    `yaml:"writable,omitempty" json:"writable,omitempty"`

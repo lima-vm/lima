@@ -13,6 +13,15 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+func unmarshalMount(dst *Mount, b []byte) error {
+	var s string
+	if err := yaml.Unmarshal(b, &s); err == nil {
+		*dst = Mount{Name: s}
+		return nil
+	}
+	return yaml.Unmarshal(b, dst)
+}
+
 func unmarshalDisk(dst *Disk, b []byte) error {
 	var s string
 	if err := yaml.Unmarshal(b, &s); err == nil {
@@ -32,6 +41,7 @@ func unmarshalImage(dst *Image, b []byte) error {
 }
 
 var customMarshalers = []yaml.DecodeOption{
+	yaml.CustomUnmarshaler[Mount](unmarshalMount),
 	yaml.CustomUnmarshaler[Disk](unmarshalDisk),
 	yaml.CustomUnmarshaler[Image](unmarshalImage),
 }
