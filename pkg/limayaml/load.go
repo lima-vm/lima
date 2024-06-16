@@ -13,6 +13,15 @@ import (
 	yamlv3 "gopkg.in/yaml.v3"
 )
 
+func unmarshalMount(dst *Mount, b []byte) error {
+	var s string
+	if err := yaml.Unmarshal(b, &s); err == nil {
+		*dst = Mount{Name: s}
+		return nil
+	}
+	return yaml.Unmarshal(b, dst)
+}
+
 func unmarshalDisk(dst *Disk, b []byte) error {
 	var s string
 	if err := yaml.Unmarshal(b, &s); err == nil {
@@ -32,8 +41,20 @@ func unmarshalImage(dst *Image, b []byte) error {
 }
 
 var customMarshalers = []yaml.DecodeOption{
+	yaml.CustomUnmarshaler[Mount](unmarshalMount),
 	yaml.CustomUnmarshaler[Disk](unmarshalDisk),
 	yaml.CustomUnmarshaler[Image](unmarshalImage),
+}
+
+func (d *Mount) UnmarshalYAML(value *yamlv3.Node) error {
+	var v interface{}
+	if err := value.Decode(&v); err != nil {
+		return err
+	}
+	if s, ok := v.(string); ok {
+		*d = Mount{Name: s}
+	}
+	return nil
 }
 
 func (d *Disk) UnmarshalYAML(value *yamlv3.Node) error {
