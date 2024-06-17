@@ -107,16 +107,14 @@ jobs:
         wsl --status
         wsl --list --online
     - name: Install WSL2 distro
-      timeout-minutes: 3
+      timeout-minutes: 1
       run: |
         # FIXME: At least one distro has to be installed here,
         # otherwise `wsl --list --verbose` (called from Lima) fails:
         # https://github.com/lima-vm/lima/pull/1826#issuecomment-1729993334
         # The distro image itself is not consumed by Lima.
         # ------------------------------------------------------------------
-        # Ubuntu-22.04:    gets stuck in some infinite loop during adduser
-        # OracleLinux_9_1: almostly silently fails, and just prints "Usage: adduser [options] LOGIN"
-        wsl --install -d openSUSE-Leap-15.5
+        wsl --import dummy $env:TEMP nul
         wsl --list --verbose
     - name: Set gitconfig
       run: |
