@@ -88,7 +88,7 @@ func Disks() ([]string, error) {
 }
 
 // InstanceDir returns the instance dir.
-// InstanceDir does not check whether the instance exists
+// InstanceDir does not check whether the instance exists.
 func InstanceDir(name string) (string, error) {
 	if err := identifiers.Validate(name); err != nil {
 		return "", err

@@ -116,7 +116,7 @@ weight: 3
 	})
 }
 
-// replaceAll replaces all occurrences of new with old, for all files in dir
+// replaceAll replaces all occurrences of new with old, for all files in dir.
 func replaceAll(dir, old, new string) error {
 	logrus.Infof("Replacing %q with %q", old, new)
 	return filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {

@@ -21,7 +21,7 @@ var systemdTemplate string
 //go:embed io.lima-vm.autostart.INSTANCE.plist
 var launchdTemplate string
 
-// CreateStartAtLoginEntry respect host OS arch and create unit file
+// CreateStartAtLoginEntry respect host OS arch and create unit file.
 func CreateStartAtLoginEntry(hostOS, instName, workDir string) error {
 	unitPath := GetFilePath(hostOS, instName)
 	if _, err := os.Stat(unitPath); err != nil && !errors.Is(err, os.ErrNotExist) {
@@ -40,8 +40,8 @@ func CreateStartAtLoginEntry(hostOS, instName, workDir string) error {
 	return enableDisableService("enable", hostOS, GetFilePath(hostOS, instName))
 }
 
-// DeleteStartAtLoginEntry respect host OS arch and delete unit file
-// return true, nil if unit file has been deleted
+// DeleteStartAtLoginEntry respect host OS arch and delete unit file.
+// Return true, nil if unit file has been deleted.
 func DeleteStartAtLoginEntry(hostOS, instName string) (bool, error) {
 	unitPath := GetFilePath(hostOS, instName)
 	if _, err := os.Stat(unitPath); err != nil {
@@ -56,7 +56,7 @@ func DeleteStartAtLoginEntry(hostOS, instName string) (bool, error) {
 	return true, nil
 }
 
-// GetFilePath returns the path to autostart file with respect of host
+// GetFilePath returns the path to autostart file with respect of host.
 func GetFilePath(hostOS, instName string) string {
 	var fileTmpl string
 	if hostOS == "darwin" { // launchd plist

@@ -48,7 +48,7 @@ linters:
   # - goconst
   - gocritic
   # - gocyclo
-  # - godot
+  - godot
   # - godox
   # - goerr113
   - gofumpt
@@ -111,3 +111,7 @@ issues:
   # Allow using Uid, Gid in pkg/osutil.
   - path: "pkg/osutil/"
     text: "uid"
+  # Disable some linters for test files.
+  - path: _test\.go
+    linters:
+    - godot

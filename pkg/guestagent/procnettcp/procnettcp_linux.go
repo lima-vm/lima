@@ -5,7 +5,7 @@ import (
 	"os"
 )
 
-// ParseFiles parses /proc/net/{tcp, tcp6}
+// ParseFiles parses /proc/net/{tcp, tcp6}.
 func ParseFiles() ([]Entry, error) {
 	var res []Entry
 	files := map[string]Kind{

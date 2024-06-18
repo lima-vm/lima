@@ -12,7 +12,7 @@ import (
 // Driver interface is used by hostagent for managing vm.
 //
 // This interface is extended by BaseDriver which provides default implementation.
-// All other driver definition must extend BaseDriver
+// All other driver definition must extend BaseDriver.
 type Driver interface {
 	// Validate returns error if the current driver isn't support for given config
 	Validate() error

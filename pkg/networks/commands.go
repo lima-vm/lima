@@ -25,7 +25,7 @@ func (config *YAML) Check(name string) error {
 	return fmt.Errorf("network %q is not defined", name)
 }
 
-// Usernet Returns true if the mode of given network is ModeUserV2
+// Usernet returns true if the mode of given network is ModeUserV2.
 func (config *YAML) Usernet(name string) (bool, error) {
 	if nw, ok := config.Networks[name]; ok {
 		return nw.Mode == ModeUserV2, nil

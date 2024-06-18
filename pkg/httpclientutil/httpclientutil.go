@@ -63,10 +63,10 @@ func readAtMost(r io.Reader, maxBytes int) ([]byte, error) {
 	return b, nil
 }
 
-// HTTPStatusErrorBodyMaxLength specifies the maximum length of HTTPStatusError.Body
+// HTTPStatusErrorBodyMaxLength specifies the maximum length of HTTPStatusError.Body.
 const HTTPStatusErrorBodyMaxLength = 64 * 1024
 
-// HTTPStatusError is created from non-2XX HTTP response
+// HTTPStatusError is created from non-2XX HTTP response.
 type HTTPStatusError struct {
 	// StatusCode is non-2XX status code
 	StatusCode int
