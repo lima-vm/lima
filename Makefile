@@ -44,8 +44,6 @@ PACKAGE := github.com/lima-vm/lima
 VERSION=$(shell git describe --match 'v[0-9]*' --dirty='.m' --always --tags)
 VERSION_TRIMMED := $(VERSION:v%=%)
 
-GO_BUILD := $(GO) build -ldflags="-s -w -X $(PACKAGE)/pkg/version.Version=$(VERSION)" -tags "$(GO_BUILDTAGS)"
-
 .NOTPARALLEL:
 
 .PHONY: all
@@ -83,6 +81,8 @@ menuconfig: Kconfig
 ifneq ($(CONFIG_GUESTAGENT_COMPRESS_ZSTD),y)
 GO_BUILDTAGS += no_zstd
 endif
+
+GO_BUILD := $(GO) build -ldflags="-s -w -X $(PACKAGE)/pkg/version.Version=$(VERSION)" -tags "$(GO_BUILDTAGS)"
 
 HELPERS = \
 	_output/bin/nerdctl.lima \
