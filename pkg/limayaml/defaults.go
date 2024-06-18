@@ -102,7 +102,7 @@ func MACAddress(uniqueID string) string {
 	// But the second hex number is changed to 2 to satisfy the convention for
 	// local MAC addresses (https://en.wikipedia.org/wiki/MAC_address#Ranges_of_group_and_locally_administered_addresses)
 	//
-	// See also https://gitlab.com/wireshark/wireshark/-/blob/master/manuf to confirm the uniqueness of this prefix.
+	// See also https://gitlab.com/wireshark/wireshark/-/blob/release-4.0/manuf to confirm the uniqueness of this prefix.
 	hw := append(net.HardwareAddr{0x52, 0x55, 0x55}, sha[0:3]...)
 	return hw.String()
 }
