@@ -5,6 +5,7 @@ DEST := $(shell echo "$(DESTDIR)/$(PREFIX)" | sed 's:///*:/:g; s://*$$::')
 GO ?= go
 TAR ?= tar
 ZIP ?= zip
+GZIP ?= gzip
 ZSTD ?= zstd
 PLANTUML ?= plantuml # may also be "java -jar plantuml.jar" if installed elsewhere
 
@@ -78,6 +79,9 @@ menuconfig: Kconfig
 
 -include .config
 
+ifneq ($(CONFIG_GUESTAGENT_COMPRESS_GZIP),y)
+GO_BUILDTAGS += no_gzip
+endif
 ifneq ($(CONFIG_GUESTAGENT_COMPRESS_ZSTD),y)
 GO_BUILDTAGS += no_zstd
 endif
@@ -118,6 +122,10 @@ binaries: clean \
 	codesign \
 	$(HELPERS) \
 	$(GUESTAGENT)
+ifeq ($(CONFIG_GUESTAGENT_COMPRESS_GZIP),y)
+	for ga in $(GUESTAGENT); do \
+	$(GZIP) -$(CONFIG_GUESTAGENT_COMPRESS_LEVEL) $$ga && $(GZIP) --list $$ga; done
+endif
 ifeq ($(CONFIG_GUESTAGENT_COMPRESS_ZSTD),y)
 	for ga in $(GUESTAGENT); do \
 	ZSTD_CLEVEL=$(CONFIG_GUESTAGENT_COMPRESS_LEVEL) $(ZSTD) --rm $$ga; done

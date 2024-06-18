@@ -1,4 +1,4 @@
-//go:build no_zstd
+//go:build no_gzip && no_zstd
 
 package usrlocalsharelima
 
