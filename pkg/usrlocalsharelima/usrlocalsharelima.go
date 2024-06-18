@@ -41,12 +41,12 @@ func Dir() (string, error) {
 		// - self:  /Applications/Lima.app/Contents/MacOS/limactl
 		// - agent: /Applications/Lima.app/Contents/MacOS/lima-guestagent.Linux-x86_64
 		// - dir:   /Applications/Lima.app/Contents/MacOS
-		filepath.Join(selfDir, "lima-guestagent."+ostype+"-"+arch),
+		filepath.Join(selfDir, "lima-guestagent."+ostype+"-"+arch+Ext),
 		// candidate 1:
 		// - self:  /usr/local/bin/limactl
 		// - agent: /usr/local/share/lima/lima-guestagent.Linux-x86_64
 		// - dir:   /usr/local/share/lima
-		filepath.Join(selfDirDir, "share/lima/lima-guestagent."+ostype+"-"+arch),
+		filepath.Join(selfDirDir, "share/lima/lima-guestagent."+ostype+"-"+arch+Ext),
 		// TODO: support custom path
 	}
 	for _, gaCandidate := range gaCandidates {

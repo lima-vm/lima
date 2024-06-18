@@ -30,3 +30,16 @@ config GUESTAGENT_ARCH_RISCV64
 	help
 		Build lima-guestagent for "riscv64" Arch
 	default y
+
+config GUESTAGENT_COMPRESS_ZSTD
+	bool "guestagent compress zstd"
+	help
+		Compress lima-guestagent using zstd
+	default n
+
+config GUESTAGENT_COMPRESS_LEVEL
+	depends on GUESTAGENT_COMPRESS_ZSTD
+	int "guestagent compress level"
+	help
+		Compression level to use (default: 3)
+	default 19

@@ -5,6 +5,7 @@ DEST := $(shell echo "$(DESTDIR)/$(PREFIX)" | sed 's:///*:/:g; s://*$$::')
 GO ?= go
 TAR ?= tar
 ZIP ?= zip
+ZSTD ?= zstd
 PLANTUML ?= plantuml # may also be "java -jar plantuml.jar" if installed elsewhere
 
 # The KCONFIG programs are only needed for re-generating the ".config" file.
@@ -79,6 +80,10 @@ menuconfig: Kconfig
 
 -include .config
 
+ifneq ($(CONFIG_GUESTAGENT_COMPRESS_ZSTD),y)
+GO_BUILDTAGS += no_zstd
+endif
+
 HELPERS = \
 	_output/bin/nerdctl.lima \
 	_output/bin/apptainer.lima \
@@ -113,6 +118,10 @@ binaries: clean \
 	codesign \
 	$(HELPERS) \
 	$(GUESTAGENT)
+ifeq ($(CONFIG_GUESTAGENT_COMPRESS_ZSTD),y)
+	ZSTD_CLEVEL=$(CONFIG_GUESTAGENT_COMPRESS_LEVEL) \
+	$(ZSTD) --rm _output/share/lima/lima-guestagent.*
+endif
 	cp -aL examples _output/share/lima/templates
 ifneq ($(GOOS),windows)
 	ln -sf templates _output/share/lima/examples
