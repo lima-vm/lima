@@ -119,8 +119,8 @@ binaries: clean \
 	$(HELPERS) \
 	$(GUESTAGENT)
 ifeq ($(CONFIG_GUESTAGENT_COMPRESS_ZSTD),y)
-	ZSTD_CLEVEL=$(CONFIG_GUESTAGENT_COMPRESS_LEVEL) \
-	$(ZSTD) --rm _output/share/lima/lima-guestagent.*
+	for ga in $(GUESTAGENT); do \
+	ZSTD_CLEVEL=$(CONFIG_GUESTAGENT_COMPRESS_LEVEL) $(ZSTD) --rm $$ga; done
 endif
 	cp -aL examples _output/share/lima/templates
 ifneq ($(GOOS),windows)
