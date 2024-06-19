@@ -291,6 +291,10 @@ func watchHostAgentEvents(ctx context.Context, inst *store.Instance, haStdoutPat
 				return true
 			}
 
+			if xerr := runAnsibleProvision(ctx, inst); xerr != nil {
+				err = xerr
+				return true
+			}
 			if *inst.Config.Plain {
 				logrus.Infof("READY. Run `ssh -F %q lima-%s` to open the shell.", inst.SSHConfigFile, inst.Name)
 			} else {

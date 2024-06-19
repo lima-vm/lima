@@ -26,36 +26,37 @@ const (
 // Filenames that may appear under an instance directory
 
 const (
-	LimaYAML           = "lima.yaml"
-	LimaVersion        = "lima-version" // Lima version used to create instance
-	CIDataISO          = "cidata.iso"
-	CIDataISODir       = "cidata"
-	BaseDisk           = "basedisk"
-	DiffDisk           = "diffdisk"
-	Kernel             = "kernel"
-	KernelCmdline      = "kernel.cmdline"
-	Initrd             = "initrd"
-	QMPSock            = "qmp.sock"
-	SerialLog          = "serial.log" // default serial (ttyS0, but ttyAMA0 on qemu-system-{arm,aarch64})
-	SerialSock         = "serial.sock"
-	SerialPCILog       = "serialp.log" // pci serial (ttyS0 on qemu-system-{arm,aarch64})
-	SerialPCISock      = "serialp.sock"
-	SerialVirtioLog    = "serialv.log" // virtio serial
-	SerialVirtioSock   = "serialv.sock"
-	SSHSock            = "ssh.sock"
-	SSHConfig          = "ssh.config"
-	VhostSock          = "virtiofsd-%d.sock"
-	VNCDisplayFile     = "vncdisplay"
-	VNCPasswordFile    = "vncpassword"
-	GuestAgentSock     = "ga.sock"
-	VirtioPort         = "io.lima-vm.guest_agent.0"
-	HostAgentPID       = "ha.pid"
-	HostAgentSock      = "ha.sock"
-	HostAgentStdoutLog = "ha.stdout.log"
-	HostAgentStderrLog = "ha.stderr.log"
-	VzIdentifier       = "vz-identifier"
-	VzEfi              = "vz-efi"           // efi variable store
-	QemuEfiCodeFD      = "qemu-efi-code.fd" // efi code; not always created
+	LimaYAML             = "lima.yaml"
+	LimaVersion          = "lima-version" // Lima version used to create instance
+	CIDataISO            = "cidata.iso"
+	CIDataISODir         = "cidata"
+	BaseDisk             = "basedisk"
+	DiffDisk             = "diffdisk"
+	Kernel               = "kernel"
+	KernelCmdline        = "kernel.cmdline"
+	Initrd               = "initrd"
+	QMPSock              = "qmp.sock"
+	SerialLog            = "serial.log" // default serial (ttyS0, but ttyAMA0 on qemu-system-{arm,aarch64})
+	SerialSock           = "serial.sock"
+	SerialPCILog         = "serialp.log" // pci serial (ttyS0 on qemu-system-{arm,aarch64})
+	SerialPCISock        = "serialp.sock"
+	SerialVirtioLog      = "serialv.log" // virtio serial
+	SerialVirtioSock     = "serialv.sock"
+	SSHSock              = "ssh.sock"
+	SSHConfig            = "ssh.config"
+	VhostSock            = "virtiofsd-%d.sock"
+	VNCDisplayFile       = "vncdisplay"
+	VNCPasswordFile      = "vncpassword"
+	GuestAgentSock       = "ga.sock"
+	VirtioPort           = "io.lima-vm.guest_agent.0"
+	HostAgentPID         = "ha.pid"
+	HostAgentSock        = "ha.sock"
+	HostAgentStdoutLog   = "ha.stdout.log"
+	HostAgentStderrLog   = "ha.stderr.log"
+	VzIdentifier         = "vz-identifier"
+	VzEfi                = "vz-efi"           // efi variable store
+	QemuEfiCodeFD        = "qemu-efi-code.fd" // efi code; not always created
+	AnsibleInventoryYAML = "ansible-inventory.yaml"
 
 	// SocketDir is the default location for forwarded sockets with a relative paths in HostSocket.
 	SocketDir = "sock"
