@@ -73,6 +73,19 @@ func instanceMatches(arg string, instances []string) []string {
 	return matches
 }
 
+// unmatchedInstancesError is created when unmatched instance names found.
+type unmatchedInstancesError struct{}
+
+// Error implements error.
+func (unmatchedInstancesError) Error() string {
+	return "unmatched instances"
+}
+
+// ExitCode implements ExitCoder.
+func (unmatchedInstancesError) ExitCode() int {
+	return 1
+}
+
 func listAction(cmd *cobra.Command, args []string) error {
 	quiet, err := cmd.Flags().GetBool("quiet")
 	if err != nil {
@@ -148,7 +161,7 @@ func listAction(cmd *cobra.Command, args []string) error {
 			fmt.Fprintln(cmd.OutOrStdout(), instName)
 		}
 		if unmatchedInstances {
-			os.Exit(1)
+			return unmatchedInstancesError{}
 		}
 		return nil
 	}
@@ -186,7 +199,7 @@ func listAction(cmd *cobra.Command, args []string) error {
 
 	err = store.PrintInstances(out, instances, format, &options)
 	if err == nil && unmatchedInstances {
-		os.Exit(1)
+		return unmatchedInstancesError{}
 	}
 	return err
 }
