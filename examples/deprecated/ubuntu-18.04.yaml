@@ -1,0 +1,20 @@
+# This template requires Lima v0.7.0 or later.
+images:
+# Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
+- location: "https://cloud-images.ubuntu.com/releases/18.04/release-20230607/ubuntu-18.04-server-cloudimg-amd64.img"
+  arch: "x86_64"
+  digest: "sha256:8dd2e6b5e5aad20c3f836123b300cba9861249408cbb07c359145a65d6bab6b6"
+- location: "https://cloud-images.ubuntu.com/releases/18.04/release-20230607/ubuntu-18.04-server-cloudimg-arm64.img"
+  arch: "aarch64"
+  digest: "sha256:9930a57427ad8c9e50a84a36132cd5ad81751b64ee678062dcc354a9b84654f7"
+# Fallback to the latest release image.
+# Hint: run `limactl prune` to invalidate the cache
+- location: "https://cloud-images.ubuntu.com/releases/18.04/release/ubuntu-18.04-server-cloudimg-amd64.img"
+  arch: "x86_64"
+- location: "https://cloud-images.ubuntu.com/releases/18.04/release/ubuntu-18.04-server-cloudimg-arm64.img"
+  arch: "aarch64"
+
+mounts:
+- location: "~"
+- location: "/tmp/lima"
+  writable: true
