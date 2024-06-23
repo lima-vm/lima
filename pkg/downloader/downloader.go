@@ -40,6 +40,7 @@ const (
 	StatusDownloaded Status = "downloaded"
 	StatusSkipped    Status = "skipped"
 	StatusUsedCache  Status = "used-cache"
+	StatusUsedIPFS   Status = "used-ipfs"
 )
 
 type Result struct {
@@ -53,6 +54,7 @@ type options struct {
 	decompress     bool   // default: false (keep compression)
 	description    string // default: url
 	expectedDigest digest.Digest
+	cid            string
 }
 
 type Opt func(*options) error
@@ -115,6 +117,13 @@ func WithExpectedDigest(expectedDigest digest.Digest) Opt {
 		}
 
 		o.expectedDigest = expectedDigest
+		return nil
+	}
+}
+
+func WithContentIdentifier(cid string) Opt {
+	return func(o *options) error {
+		o.cid = cid
 		return nil
 	}
 }
@@ -225,11 +234,17 @@ func Download(ctx context.Context, local, remote string, opts ...Opt) (*Result, 
 	if err := os.WriteFile(shadURL, []byte(remote), 0o644); err != nil {
 		return nil, err
 	}
+	status := StatusDownloaded
+	if o.cid != "" {
+		if err := downloadIPFS(ctx, shadData, fmt.Sprintf("ipfs://%s", o.cid), o.description, o.expectedDigest); err == nil {
+			status = StatusUsedIPFS
+		}
+	}
 	if IsIPFS(remote) {
 		if err := downloadIPFS(ctx, shadData, remote, o.description, o.expectedDigest); err != nil {
 			return nil, err
 		}
-	} else {
+	} else if status != StatusUsedIPFS {
 		if err := downloadHTTP(ctx, shadData, remote, o.description, o.expectedDigest); err != nil {
 			return nil, err
 		}
@@ -244,7 +259,7 @@ func Download(ctx context.Context, local, remote string, opts ...Opt) (*Result, 
 		}
 	}
 	res := &Result{
-		Status:          StatusDownloaded,
+		Status:          status,
 		CachePath:       shadData,
 		ValidatedDigest: o.expectedDigest != "",
 	}
