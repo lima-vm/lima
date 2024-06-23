@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -40,6 +41,18 @@ func validateFileObject(f File, fieldName string) error {
 		}
 		if err := f.Digest.Validate(); err != nil {
 			return fmt.Errorf("field `%s.digest` is invalid: %s: %w", fieldName, f.Digest.String(), err)
+		}
+	}
+	if f.Cid != "" {
+		if _, err := exec.LookPath("ipfs"); err == nil {
+			cmd := exec.Command("ipfs", "cid", "format", f.Cid)
+			if cid, err := cmd.CombinedOutput(); err != nil || strings.TrimSuffix(string(cid), "\n") != f.Cid {
+				// unfortunately, the `ipfs cid` command does not return any proper exit codes
+				if err == nil {
+					return fmt.Errorf("field `%s.cid` is invalid: %s", fieldName, string(cid))
+				}
+				return fmt.Errorf("field `%s.cid` is invalid: %s: %w", fieldName, f.Cid, err)
+			}
 		}
 	}
 	return nil

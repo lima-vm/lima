@@ -26,6 +26,7 @@ func DownloadFile(ctx context.Context, dest string, f limayaml.File, decompress 
 		downloader.WithDecompress(decompress),
 		downloader.WithDescription(fmt.Sprintf("%s (%s)", description, path.Base(f.Location))),
 		downloader.WithExpectedDigest(f.Digest),
+		downloader.WithContentIdentifier(f.Cid),
 	)
 	if err != nil {
 		return "", fmt.Errorf("failed to download %q: %w", f.Location, err)
@@ -36,6 +37,8 @@ func DownloadFile(ctx context.Context, dest string, f limayaml.File, decompress 
 		logrus.Infof("Downloaded %s from %q", description, f.Location)
 	case downloader.StatusUsedCache:
 		logrus.Infof("Using cache %q", res.CachePath)
+	case downloader.StatusUsedIPFS:
+		logrus.Infof("Used ipfs %q", f.Cid)
 	default:
 		logrus.Warnf("Unexpected result from downloader.Download(): %+v", res)
 	}

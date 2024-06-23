@@ -100,6 +100,7 @@ type File struct {
 	Location string        `yaml:"location" json:"location"` // REQUIRED
 	Arch     Arch          `yaml:"arch,omitempty" json:"arch,omitempty"`
 	Digest   digest.Digest `yaml:"digest,omitempty" json:"digest,omitempty"`
+	Cid      string        `yaml:"cid,omitempty" json:"cid,omitempty"`
 }
 
 type FileWithVMType struct {
