@@ -646,7 +646,7 @@ func downloadIPFS(ctx context.Context, localPath, url, description string, expec
 		}
 	}
 
-	cmd = exec.CommandContext(ctx, "ipfs", "cat", address)
+	cmd = exec.CommandContext(ctx, "ipfs", "cat", "--progress=false", address)
 	cmd.Stderr = os.Stderr
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
