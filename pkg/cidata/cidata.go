@@ -345,7 +345,7 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 	if err != nil {
 		return err
 	}
-	guestAgent, err := os.Open(guestAgentBinary)
+	guestAgent, err := usrlocalsharelima.Open(guestAgentBinary)
 	if err != nil {
 		return err
 	}

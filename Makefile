@@ -86,22 +86,26 @@ HELPERS = \
 	_output/bin/podman.lima \
 	_output/bin/kubectl.lima
 
+ifeq ($(CONFIG_GUESTAGENT_COMPRESS),y)
+gz = .gz
+endif
+
 ifeq ($(CONFIG_GUESTAGENT_OS_LINUX),y)
 ifeq ($(CONFIG_GUESTAGENT_ARCH_X8664),y)
 GUESTAGENT += \
-	_output/share/lima/lima-guestagent.Linux-x86_64
+	_output/share/lima/lima-guestagent.Linux-x86_64$(gz)
 endif
 ifeq ($(CONFIG_GUESTAGENT_ARCH_AARCH64),y)
 GUESTAGENT += \
-	_output/share/lima/lima-guestagent.Linux-aarch64
+	_output/share/lima/lima-guestagent.Linux-aarch64$(gz)
 endif
 ifeq ($(CONFIG_GUESTAGENT_ARCH_ARMV7L),y)
 GUESTAGENT += \
-	_output/share/lima/lima-guestagent.Linux-armv7l
+	_output/share/lima/lima-guestagent.Linux-armv7l$(gz)
 endif
 ifeq ($(CONFIG_GUESTAGENT_ARCH_RISCV64),y)
 GUESTAGENT += \
-	_output/share/lima/lima-guestagent.Linux-riscv64
+	_output/share/lima/lima-guestagent.Linux-riscv64$(gz)
 endif
 endif
 
@@ -187,6 +191,9 @@ _output/share/lima/lima-guestagent.Linux-armv7l:
 _output/share/lima/lima-guestagent.Linux-riscv64:
 	GOOS=linux GOARCH=riscv64 CGO_ENABLED=0 $(GO_BUILD) -o $@ ./cmd/lima-guestagent
 	chmod 644 $@
+
+_output/share/lima/lima-guestagent.%.gz: _output/share/lima/lima-guestagent.%
+	gzip $<
 
 .PHONY: manpages
 manpages: _output/bin/limactl$(exe)

@@ -1,14 +1,17 @@
 package usrlocalsharelima
 
 import (
+	"compress/gzip"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"runtime"
 
 	"github.com/lima-vm/lima/pkg/limayaml"
+	"github.com/sirupsen/logrus"
 )
 
 func Dir() (string, error) {
@@ -55,6 +58,11 @@ func Dir() (string, error) {
 		} else if !errors.Is(err, os.ErrNotExist) {
 			return "", err
 		}
+		if _, err := os.Stat(gaCandidate + ".gz"); err == nil {
+			return filepath.Dir(gaCandidate), nil
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return "", err
+		}
 	}
 
 	return "", fmt.Errorf("failed to find \"lima-guestagent.%s-%s\" binary for %q, attempted %v",
@@ -73,4 +81,20 @@ func GuestAgentBinary(ostype limayaml.OS, arch limayaml.Arch) (string, error) {
 		return "", err
 	}
 	return filepath.Join(dir, "lima-guestagent."+ostype+"-"+arch), nil
+}
+
+func Open(path string) (io.ReadCloser, error) {
+	reader, err := os.Open(path)
+	if errors.Is(err, os.ErrNotExist) {
+		reader, err := os.Open(path + ".gz")
+		if err != nil {
+			return nil, err
+		}
+		logrus.Debugf("Decompressing %s.gz", path)
+		return gzip.NewReader(reader)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return reader, nil
 }
