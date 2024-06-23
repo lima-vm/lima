@@ -645,9 +645,6 @@ func downloadIPFS(ctx context.Context, localPath, url, description string, expec
 			size += int64(s)
 		}
 	}
-	if size == 0 {
-		return fmt.Errorf("invalid ipfs size: %d", size)
-	}
 
 	cmd = exec.CommandContext(ctx, "ipfs", "cat", address)
 	cmd.Stderr = os.Stderr
