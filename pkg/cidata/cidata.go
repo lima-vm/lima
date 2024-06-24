@@ -311,7 +311,10 @@ func GenerateISO9660(instDir, name string, instConfig *limayaml.LimaYAML, udpDNS
 		args.CACerts.Trusted = append(args.CACerts.Trusted, cert)
 	}
 
-	args.BootCmds = getBootCmds(instConfig.Provision)
+	args.BootCmds, err = getBootCmds(instConfig.Provision)
+	if err != nil {
+		return err
+	}
 
 	for _, f := range instConfig.Provision {
 		if f.Mode == limayaml.ProvisionModeDependency && *f.SkipDefaultDependencyResolution {
@@ -406,21 +409,22 @@ func getCert(content string) Cert {
 	return Cert{Lines: lines}
 }
 
-func getBootCmds(p []limayaml.Provision) []BootCmds {
+func getBootCmds(p []limayaml.Provision) ([]BootCmds, error) {
 	var bootCmds []BootCmds
 	for _, f := range p {
-		if f.Mode == limayaml.ProvisionModeBoot {
-			lines := []string{}
-			for _, line := range strings.Split(f.Script, "\n") {
-				if line == "" {
-					continue
-				}
-				lines = append(lines, strings.TrimSpace(line))
-			}
-			bootCmds = append(bootCmds, BootCmds{Lines: lines})
+		if f.Mode != limayaml.ProvisionModeBoot {
+			continue
 		}
+		lines := []string{}
+		for _, line := range strings.Split(f.Script, "\n") {
+			if line == "" {
+				continue
+			}
+			lines = append(lines, strings.TrimSpace(line))
+		}
+		bootCmds = append(bootCmds, BootCmds{Lines: lines})
 	}
-	return bootCmds
+	return bootCmds, nil
 }
 
 func diskDeviceNameFromOrder(order int) string {
