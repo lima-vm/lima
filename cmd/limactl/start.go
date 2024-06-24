@@ -343,6 +343,13 @@ func createInstance(ctx context.Context, st *creatorState, saveBrokenEditorBuffe
 	if err := os.WriteFile(filePath, st.yBytes, 0o644); err != nil {
 		return nil, err
 	}
+	wd, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+	if err := os.WriteFile(filepath.Join(instDir, filenames.LimaWorkDir), []byte(wd), 0o644); err != nil {
+		return nil, err
+	}
 	if err := os.WriteFile(filepath.Join(instDir, filenames.LimaVersion), []byte(version.Version), 0o444); err != nil {
 		return nil, err
 	}
