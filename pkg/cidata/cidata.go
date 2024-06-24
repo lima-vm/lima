@@ -329,11 +329,19 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 	}
 
 	for i, f := range y.Provision {
+		script := f.Script
+		if f.Path != "" {
+			b, err := os.ReadFile(f.Path)
+			if err != nil {
+				return err
+			}
+			script = string(b)
+		}
 		switch f.Mode {
 		case limayaml.ProvisionModeSystem, limayaml.ProvisionModeUser, limayaml.ProvisionModeDependency:
 			layout = append(layout, iso9660util.Entry{
 				Path:   fmt.Sprintf("provision.%s/%08d", f.Mode, i),
-				Reader: strings.NewReader(f.Script),
+				Reader: strings.NewReader(script),
 			})
 		case limayaml.ProvisionModeBoot:
 			continue
@@ -411,8 +419,16 @@ func getBootCmds(p []limayaml.Provision) ([]BootCmds, error) {
 		if f.Mode != limayaml.ProvisionModeBoot {
 			continue
 		}
+		script := f.Script
+		if f.Path != "" {
+			b, err := os.ReadFile(f.Path)
+			if err != nil {
+				return nil, err
+			}
+			script = string(b)
+		}
 		lines := []string{}
-		for _, line := range strings.Split(f.Script, "\n") {
+		for _, line := range strings.Split(script, "\n") {
 			if line == "" {
 				continue
 			}
