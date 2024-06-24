@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"math"
 	"net"
 
 	"github.com/lima-vm/lima/pkg/guestagent/api"
@@ -16,6 +17,10 @@ type GuestAgentClient struct {
 
 func NewGuestAgentClient(dialFn func(ctx context.Context) (net.Conn, error)) (*GuestAgentClient, error) {
 	opts := []grpc.DialOption{
+		grpc.WithDefaultCallOptions(
+			grpc.MaxCallRecvMsgSize(math.MaxInt64),
+			grpc.MaxCallSendMsgSize(math.MaxInt64),
+		),
 		grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) {
 			return dialFn(ctx)
 		}),
@@ -58,4 +63,12 @@ func (c *GuestAgentClient) Inotify(ctx context.Context) (api.GuestService_PostIn
 		return nil, err
 	}
 	return inotify, nil
+}
+
+func (c *GuestAgentClient) Tunnel(ctx context.Context) (api.GuestService_TunnelClient, error) {
+	stream, err := c.cli.Tunnel(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return stream, nil
 }

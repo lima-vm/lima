@@ -76,6 +76,9 @@ func (pf *portForwarder) forwardingAddresses(guest *api.IPPort) (hostAddr, guest
 
 func (pf *portForwarder) OnEvent(ctx context.Context, ev *api.Event) {
 	for _, f := range ev.LocalPortsRemoved {
+		if f.Protocol != "tcp" {
+			continue
+		}
 		local, remote := pf.forwardingAddresses(f)
 		if local == "" {
 			continue
@@ -86,6 +89,9 @@ func (pf *portForwarder) OnEvent(ctx context.Context, ev *api.Event) {
 		}
 	}
 	for _, f := range ev.LocalPortsAdded {
+		if f.Protocol != "tcp" {
+			continue
+		}
 		local, remote := pf.forwardingAddresses(f)
 		if local == "" {
 			logrus.Infof("Not forwarding TCP %s", remote)

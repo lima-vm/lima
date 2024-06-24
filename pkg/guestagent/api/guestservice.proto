@@ -8,6 +8,8 @@ service GuestService {
   rpc GetInfo(google.protobuf.Empty) returns (Info);
   rpc GetEvents(google.protobuf.Empty) returns (stream Event);
   rpc PostInotify(stream Inotify) returns (google.protobuf.Empty);
+  
+  rpc Tunnel(stream TunnelMessage) returns (stream TunnelMessage);
 }
 
 message Info {
@@ -22,11 +24,20 @@ message Event {
 }
 
 message IPPort {
-  string ip = 1;
-  int32 port = 2;
+  string protocol = 1; //tcp, udp
+  string ip = 2;
+  int32 port = 3;
 }
 
 message Inotify {
   string mount_path = 1;
   google.protobuf.Timestamp time = 2;
+}
+
+message TunnelMessage {
+  string id = 1;
+  string protocol = 2; //tcp, udp
+  bytes data = 3;
+  string guestAddr = 4;
+  string udpTargetAddr = 5;
 }
