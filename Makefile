@@ -72,6 +72,11 @@ menuconfig: Kconfig
 	MENUCONFIG_STYLE=aquatic \
 	$(KCONFIG_MCONF) $<
 
+# Generate config for the current architecture (only)
+# This is done to avoid a dependency on KCONFIG tools
+nativeconfig: .config
+	./hack/native-config.sh $<
+
 # Copy the default config, if not overridden locally
 # This is done to avoid a dependency on KCONFIG tools
 .config: config.mk
