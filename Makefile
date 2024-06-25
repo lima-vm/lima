@@ -200,6 +200,13 @@ docsy: _output/bin/limactl$(exe)
 	$< generate-doc --type docsy website/_output/docsy \
 		--output _output --prefix $(PREFIX)
 
+schema-limayaml.json: _output/bin/limactl$(exe)
+	$< generate-schema >$@
+
+.PHONY: check-jsonschema
+check-jsonschema: schema-limayaml.json
+	check-jsonschema --schemafile $< examples/default.yaml
+
 .PHONY: diagrams
 diagrams: docs/lima-sequence-diagram.png
 docs/lima-sequence-diagram.png: docs/images/lima-sequence-diagram.puml

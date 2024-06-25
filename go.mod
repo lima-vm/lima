@@ -23,6 +23,7 @@ require (
 	github.com/foxcpp/go-mockdns v1.1.0
 	github.com/goccy/go-yaml v1.11.3
 	github.com/google/go-cmp v0.6.0
+	github.com/invopop/jsonschema v0.12.0
 	github.com/lima-vm/go-qcow2reader v0.1.1
 	github.com/lima-vm/sshocker v0.3.4
 	github.com/mattn/go-isatty v0.0.20
@@ -58,6 +59,8 @@ require (
 	github.com/VividCortex/ewma v1.2.0 // indirect
 	github.com/a8m/envsubst v1.4.2 // indirect
 	github.com/alecthomas/participle/v2 v2.1.1 // indirect
+	github.com/bahlo/generic-list-go v0.2.0 // indirect
+	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/containerd/errdefs v0.1.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/digitalocean/go-libvirt v0.0.0-20220804181439-8648fbde413e // indirect
@@ -103,6 +106,7 @@ require (
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/u-root/uio v0.0.0-20210528114334-82958018845c // indirect
+	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 	github.com/yuin/gopher-lua v1.1.1 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.7.0 // indirect
