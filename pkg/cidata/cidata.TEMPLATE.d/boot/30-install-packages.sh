@@ -34,7 +34,7 @@ if [ "${LIMA_CIDATA_SKIP_DEFAULT_DEPENDENCY_RESOLUTION}" = 1 ]; then
 	exit 0
 fi
 
-if hexdump -C -n 4 "$(command -v apt-get)" | grep -qF 'ELF' >/dev/null 2>&1; then
+if head -c 4 "$(command -v apt-get)" | grep -qP '\x7fELF' >/dev/null 2>&1; then
 	pkgs=""
 	if [ "${LIMA_CIDATA_MOUNTTYPE}" = "reverse-sshfs" ]; then
 		if [ "${LIMA_CIDATA_MOUNTS}" -gt 0 ] && ! command -v sshfs >/dev/null 2>&1; then
