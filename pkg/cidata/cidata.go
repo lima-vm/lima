@@ -1,6 +1,7 @@
 package cidata
 
 import (
+	"compress/gzip"
 	"errors"
 	"fmt"
 	"io"
@@ -345,9 +346,21 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 	if err != nil {
 		return err
 	}
-	guestAgent, err := usrlocalsharelima.Open(guestAgentBinary)
+	var guestAgent io.ReadCloser
+	guestAgent, err = os.Open(guestAgentBinary)
 	if err != nil {
-		return err
+		if !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+		compressedGuestAgent, err := os.Open(guestAgentBinary + ".gz")
+		if err != nil {
+			return err
+		}
+		logrus.Debugf("Decompressing %s.gz", guestAgentBinary)
+		guestAgent, err = gzip.NewReader(compressedGuestAgent)
+		if err != nil {
+			return err
+		}
 	}
 	defer guestAgent.Close()
 	layout = append(layout, iso9660util.Entry{
