@@ -1,5 +1,8 @@
 #!/bin/bash
 set -eux
+: "${CONTAINERD_NAMESPACE:=default}"
+# Overridable in .bashrc
+: "${CONTAINERD_SNAPSHOTTER:=overlayfs}"
 
 if [ "${LIMA_CIDATA_CONTAINERD_SYSTEM}" != 1 ] && [ "${LIMA_CIDATA_CONTAINERD_USER}" != 1 ]; then
 	exit 0
@@ -20,7 +23,8 @@ if [ ! -f "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/nerdctl ] || [[ "${tmp_extra
 			echo "Upgrading existing nerdctl"
 			echo "- Old: $("${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/nerdctl --version)"
 			echo "- New: $("${tmp_extract_nerdctl}"/bin/nerdctl --version)"
-			systemctl disable --now containerd buildkit stargz-snapshotter
+			systemctl disable --now containerd default-buildkit stargz-snapshotter
+			sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "PATH=${PATH}" "CONTAINERD_NAMESPACE=${CONTAINERD_NAMESPACE}" containerd-rootless-setuptool.sh uninstall-buildkit-containerd
 			sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "PATH=${PATH}" containerd-rootless-setuptool.sh uninstall
 		)
 	fi
@@ -32,10 +36,6 @@ if [ ! -f "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/nerdctl ] || [[ "${tmp_extra
 fi
 
 rm -rf "${tmp_extract_nerdctl}"
-
-: "${CONTAINERD_NAMESPACE:=default}"
-# Overridable in .bashrc
-: "${CONTAINERD_SNAPSHOTTER:=overlayfs}"
 
 if [ "${LIMA_CIDATA_CONTAINERD_SYSTEM}" = 1 ]; then
 	mkdir -p /etc/containerd /etc/buildkit
