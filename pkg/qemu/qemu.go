@@ -463,6 +463,19 @@ func qemuMachine(arch limayaml.Arch) string {
 	return "virt"
 }
 
+// audioDevice returns the default audio device.
+func audioDevice() string {
+	switch runtime.GOOS {
+	case "darwin":
+		return "coreaudio"
+	case "linux":
+		return "pa" // pulseaudio
+	case "windows":
+		return "dsound"
+	}
+	return "oss"
+}
+
 func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err error) {
 	y := cfg.LimaYAML
 	exe, args, err = Exe(*y.Arch)
@@ -762,6 +775,9 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 		id := "default"
 		// audio device
 		audiodev := *y.Audio.Device
+		if audiodev == "default" {
+			audiodev = audioDevice()
+		}
 		audiodev += fmt.Sprintf(",id=%s", id)
 		args = append(args, "-audiodev", audiodev)
 		// audio controller
