@@ -15,7 +15,6 @@ Distro:
 - [`almalinux-9`](./almalinux-9.yaml), `almalinux.yaml`: AlmaLinux 9
 - [`alpine`](./alpine.yaml): ☆Alpine Linux
 - [`archlinux`](./archlinux.yaml): ⭐Arch Linux
-- [`centos-stream-8`](./centos-stream-8.yaml): CentOS Stream 8
 - [`centos-stream-9`](./centos-stream-9.yaml), `centos-stream.yaml`: CentOS Stream 9
 - [`debian-11`](./debian-11.yaml): Debian GNU/Linux 11(bullseye)
 - [`debian-12`](./debian-12.yaml), `debian.yaml`: ⭐Debian GNU/Linux 12(bookworm)
@@ -27,7 +26,6 @@ Distro:
 - [`rocky-9`](./rocky-9.yaml), `rocky.yaml`: Rocky Linux 9
 - [`ubuntu`](./ubuntu.yaml): Ubuntu (same as `default.yaml` but without extra YAML lines)
 - [`ubuntu-lts`](./ubuntu-lts.yaml): Ubuntu LTS (same as `ubuntu.yaml` but pinned to an LTS version)
-- [`deprecated/centos-7`](./deprecated/centos-7.yaml): [deprecated] CentOS Linux 7
 - [`experimental/gentoo`](./experimental/gentoo.yaml): [experimental] Gentoo
 - [`experimental/opensuse-tumbleweed`](./experimental/opensuse-tumbleweed.yaml): [experimental] openSUSE Tumbleweed
 
@@ -68,6 +66,8 @@ Lost+found:
 - ~`experimental/{almalinux,centos-stream-9,oraclelinux,rocky}-9`~: Moved to [`almalinux-9`](./almalinux-9.yaml), [`centos-stream-9`](./centos-stream-9.yaml),
   [`oraclelinux-9`](./oraclelinux-9.yaml), and [`rocky-9`](./rocky-9.yaml) in Lima v0.13.0.
 - ~`nomad`~: Removed in Lima v0.17.1, as Nomad is [no longer free software](https://github.com/hashicorp/nomad/commit/b3e30b1dfa185d9437a25830522da47b91f78816)
+- ~`centos-stream-8`~: Remove in Lima v0.23.0, as CentOS Stream 8 reached [EOL](https://blog.centos.org/2023/04/end-dates-are-coming-for-centos-stream-8-and-centos-linux-7/).
+- ~`deprecated/centos-7`~: Remove in Lima v0.23.0, as CentOS 7 reached [EOL](https://blog.centos.org/2023/04/end-dates-are-coming-for-centos-stream-8-and-centos-linux-7/).
 
 ## Tier
 
