@@ -110,7 +110,7 @@ func setupEnv(y *limayaml.LimaYAML, args TemplateArgs) (map[string]string, error
 	return env, nil
 }
 
-func templateArgs(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort, vsockPort int, virtioPort string) (*TemplateArgs, error) {
+func templateArgs(bootScripts bool, instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort, vsockPort int, virtioPort string) (*TemplateArgs, error) {
 	if err := limayaml.Validate(y, false); err != nil {
 		return nil, err
 	}
@@ -123,6 +123,7 @@ func templateArgs(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort, t
 		return nil, err
 	}
 	args := TemplateArgs{
+		BootScripts:        bootScripts,
 		Name:               name,
 		User:               u.Username,
 		UID:                uid,
@@ -325,10 +326,14 @@ func templateArgs(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort, t
 }
 
 func GenerateCloudConfig(instDir, name string, y *limayaml.LimaYAML) error {
-	args, err := templateArgs(instDir, name, y, 0, 0, 0, "")
+	args, err := templateArgs(false, instDir, name, y, 0, 0, 0, "")
 	if err != nil {
 		return err
 	}
+	// mounts are not included here
+	args.Mounts = nil
+	// resolv_conf is not included here
+	args.DNSAddresses = nil
 
 	if err := ValidateTemplateArgs(args); err != nil {
 		return err
@@ -343,7 +348,7 @@ func GenerateCloudConfig(instDir, name string, y *limayaml.LimaYAML) error {
 }
 
 func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort int, nerdctlArchive string, vsockPort int, virtioPort string) error {
-	args, err := templateArgs(instDir, name, y, udpDNSLocalPort, tcpDNSLocalPort, vsockPort, virtioPort)
+	args, err := templateArgs(true, instDir, name, y, udpDNSLocalPort, tcpDNSLocalPort, vsockPort, virtioPort)
 	if err != nil {
 		return err
 	}
