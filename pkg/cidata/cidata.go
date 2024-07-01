@@ -1,6 +1,7 @@
 package cidata
 
 import (
+	"compress/gzip"
 	"errors"
 	"fmt"
 	"io"
@@ -341,14 +342,30 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 		}
 	}
 
-	guestAgentBinary, err := GuestAgentBinary(*y.OS, *y.Arch)
+	guestAgentBinary, err := usrlocalsharelima.GuestAgentBinary(*y.OS, *y.Arch)
 	if err != nil {
 		return err
 	}
-	defer guestAgentBinary.Close()
+	var guestAgent io.ReadCloser
+	guestAgent, err = os.Open(guestAgentBinary)
+	if err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+		compressedGuestAgent, err := os.Open(guestAgentBinary + ".gz")
+		if err != nil {
+			return err
+		}
+		logrus.Debugf("Decompressing %s.gz", guestAgentBinary)
+		guestAgent, err = gzip.NewReader(compressedGuestAgent)
+		if err != nil {
+			return err
+		}
+	}
+	defer guestAgent.Close()
 	layout = append(layout, iso9660util.Entry{
 		Path:   "lima-guestagent",
-		Reader: guestAgentBinary,
+		Reader: guestAgent,
 	})
 
 	if nerdctlArchive != "" {
@@ -373,21 +390,6 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 	}
 
 	return iso9660util.Write(filepath.Join(instDir, filenames.CIDataISO), "cidata", layout)
-}
-
-func GuestAgentBinary(ostype limayaml.OS, arch limayaml.Arch) (io.ReadCloser, error) {
-	if ostype == "" {
-		return nil, errors.New("os must be set")
-	}
-	if arch == "" {
-		return nil, errors.New("arch must be set")
-	}
-	dir, err := usrlocalsharelima.Dir()
-	if err != nil {
-		return nil, err
-	}
-	gaPath := filepath.Join(dir, "lima-guestagent."+ostype+"-"+arch)
-	return os.Open(gaPath)
 }
 
 func getCert(content string) Cert {

@@ -55,8 +55,27 @@ func Dir() (string, error) {
 		} else if !errors.Is(err, os.ErrNotExist) {
 			return "", err
 		}
+		if _, err := os.Stat(gaCandidate + ".gz"); err == nil {
+			return filepath.Dir(gaCandidate), nil
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return "", err
+		}
 	}
 
 	return "", fmt.Errorf("failed to find \"lima-guestagent.%s-%s\" binary for %q, attempted %v",
 		ostype, arch, self, gaCandidates)
+}
+
+func GuestAgentBinary(ostype limayaml.OS, arch limayaml.Arch) (string, error) {
+	if ostype == "" {
+		return "", errors.New("os must be set")
+	}
+	if arch == "" {
+		return "", errors.New("arch must be set")
+	}
+	dir, err := Dir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, "lima-guestagent."+ostype+"-"+arch), nil
 }
