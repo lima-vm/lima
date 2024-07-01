@@ -20,9 +20,6 @@ var templateFS embed.FS
 
 const templateFSRoot = "cidata.TEMPLATE.d"
 
-//go:embed cloud-config.yaml
-var cloudConfigYaml string
-
 type CACerts struct {
 	RemoveDefaults *bool
 	Trusted        []Cert
@@ -78,6 +75,7 @@ type TemplateArgs struct {
 	TCPDNSLocalPort                 int
 	Env                             map[string]string
 	Param                           map[string]string
+	BootScripts                     bool
 	DNSAddresses                    []string
 	CACerts                         CACerts
 	HostHomeMountPoint              string
@@ -124,6 +122,13 @@ func ExecuteTemplateCloudConfig(args *TemplateArgs) ([]byte, error) {
 	if err := ValidateTemplateArgs(args); err != nil {
 		return nil, err
 	}
+
+	userData, err := templateFS.ReadFile(path.Join(templateFSRoot, "user-data"))
+	if err != nil {
+		return nil, err
+	}
+
+	cloudConfigYaml := string(userData)
 	return textutil.ExecuteTemplate(cloudConfigYaml, args)
 }
 
