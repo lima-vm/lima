@@ -28,6 +28,7 @@ const (
 const (
 	LimaYAML             = "lima.yaml"
 	LimaVersion          = "lima-version" // Lima version used to create instance
+	LimaWorkDir          = "lima-workdir" // Lima workdir used to create instance
 	CIDataISO            = "cidata.iso"
 	CIDataISODir         = "cidata"
 	BaseDisk             = "basedisk"

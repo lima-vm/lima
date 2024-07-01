@@ -81,6 +81,16 @@ func Inspect(instName string) (*Instance, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Read working directory from instance directory, if existing
+	limaWorkDirFile := filepath.Join(instDir, filenames.LimaWorkDir)
+	if workdir, err := os.ReadFile(limaWorkDirFile); err == nil {
+		wd := strings.TrimSuffix(string(workdir), "\n")
+		if err := os.Chdir(wd); err != nil {
+			logrus.Warnf("failed to change workdir to %q from %q", wd, limaWorkDirFile)
+		}
+	} else if !errors.Is(err, os.ErrNotExist) {
+		inst.Errors = append(inst.Errors, err)
+	}
 	// Make sure inst.Dir is set, even when YAML validation fails
 	inst.Dir = instDir
 	yamlPath := filepath.Join(instDir, filenames.LimaYAML)
