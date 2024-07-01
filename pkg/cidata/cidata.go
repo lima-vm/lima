@@ -308,6 +308,11 @@ func templateArgs(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort, t
 		args.CACerts.Trusted = append(args.CACerts.Trusted, cert)
 	}
 
+	if !*args.CACerts.RemoveDefaults && len(args.CACerts.Trusted) == 0 {
+		args.CACerts.RemoveDefaults = nil
+		args.CACerts.Trusted = nil
+	}
+
 	args.BootCmds = getBootCmds(y.Provision)
 
 	for _, f := range y.Provision {

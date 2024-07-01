@@ -115,9 +115,6 @@ func ValidateTemplateArgs(args *TemplateArgs) error {
 			return fmt.Errorf("field mounts[%d] must be absolute, got %q", i, f)
 		}
 	}
-	if args.CACerts.RemoveDefaults == nil {
-		return errors.New("field CACerts.RemoveDefaults must be set")
-	}
 	return nil
 }
 
@@ -125,12 +122,6 @@ func ExecuteTemplateCloudConfig(args *TemplateArgs) ([]byte, error) {
 	if err := ValidateTemplateArgs(args); err != nil {
 		return nil, err
 	}
-	// Remove empty CACerts struct from cloud-config output
-	if !*args.CACerts.RemoveDefaults && len(args.CACerts.Trusted) == 0 {
-		temp := *args
-		temp.CACerts.RemoveDefaults = nil
-		temp.CACerts.Trusted = nil
-		args = &temp
 	}
 	return textutil.ExecuteTemplate(cloudConfigYaml, args)
 }
