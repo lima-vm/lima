@@ -69,6 +69,7 @@ const (
 	QEMU VMType = "qemu"
 	VZ   VMType = "vz"
 	WSL2 VMType = "wsl2"
+	EXT  VMType = "ext"
 )
 
 type Rosetta struct {
@@ -139,7 +140,8 @@ type Virtiofs struct {
 }
 
 type SSH struct {
-	LocalPort *int `yaml:"localPort,omitempty" json:"localPort,omitempty"`
+	Address   *string `yaml:"address,omitempty" json:"address,omitempty"`
+	LocalPort *int    `yaml:"localPort,omitempty" json:"localPort,omitempty"`
 
 	// LoadDotSSHPubKeys loads ~/.ssh/*.pub in addition to $LIMA_HOME/_config/user.pub .
 	LoadDotSSHPubKeys *bool `yaml:"loadDotSSHPubKeys,omitempty" json:"loadDotSSHPubKeys,omitempty"` // default: true
