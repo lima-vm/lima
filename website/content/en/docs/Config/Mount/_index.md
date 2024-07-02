@@ -63,7 +63,7 @@ Lima prior to v0.10 had used "builtin" as the SFTP driver.
 
 ### 9p
 > **Warning**
-> "9p" mode is experimental
+> "9p" mode is experimental (will graduate from experimental in Lima v1.0)
 
 The "9p" mount type is implemented by using QEMU's virtio-9p-pci devices.
 virtio-9p-pci is also known as "virtfs", but note that this is unrelated to [virtio-fs](https://virtio-fs.gitlab.io/).
