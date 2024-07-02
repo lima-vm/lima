@@ -74,7 +74,7 @@ func (c *Client) ResolveAndForwardSSH(ipAddr string, sshPort int) error {
 }
 
 func (c *Client) ResolveIPAddress(ctx context.Context, vmMacAddr string) (string, error) {
-	timeout := time.After(2 * time.Minute)
+	timeout := time.After(3 * time.Minute)
 	ticker := time.NewTicker(500 * time.Millisecond)
 	for {
 		select {
