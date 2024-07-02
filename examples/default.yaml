@@ -297,6 +297,9 @@ audio:
   # QEMU audiodev, e.g., "none", "coreaudio", "pa", "alsa", "oss".
   # VZ driver, use "vz" as device name
   # Choosing "none" will mute the audio output, and not play any sound.
+  # Choosing "default" will pick a suitable of: coreudio, pa, dsound, oss.
+  # As of QEMU v6.2 the default is to create a disconnected sound device
+  # that is still visible in the guest but not connected to the host.
   # 🟢 Builtin default: ""
   device: null
 
