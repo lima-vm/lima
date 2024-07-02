@@ -102,6 +102,33 @@ linters-settings:
     - filepathJoin
   errorlint:
     asserts: false
+  revive:
+    # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md
+    rules:
+    - name: blank-imports
+    - name: context-as-argument
+    - name: context-keys-type
+    - name: deep-exit
+    - name: dot-imports
+    - name: empty-block
+    - name: error-naming
+    - name: error-return
+    - name: error-strings
+    - name: errorf
+    - name: exported
+    - name: increment-decrement
+    - name: indent-error-flow
+    - name: package-comments
+    - name: range
+    - name: receiver-naming
+    - name: redefines-builtin-id
+    - name: superfluous-else
+    - name: time-naming
+    - name: unexported-return
+    - name: unreachable-code
+    - name: unused-parameter
+    - name: var-declaration
+    - name: var-naming
 issues:
   # Maximum issues count per one linter.
   max-issues-per-linter: 0

@@ -373,6 +373,21 @@ func modifyInPlace(st *creatorState, yq string) error {
 	return nil
 }
 
+// exitSuccessError is an error that indicates a successful exit.
+type exitSuccessError struct {
+	Msg string
+}
+
+// Error implements error.
+func (e exitSuccessError) Error() string {
+	return e.Msg
+}
+
+// ExitCode implements ExitCoder.
+func (exitSuccessError) ExitCode() int {
+	return 0
+}
+
 func chooseNextCreatorState(st *creatorState, yq string) (*creatorState, error) {
 	for {
 		if err := modifyInPlace(st, yq); err != nil {
@@ -411,9 +426,9 @@ func chooseNextCreatorState(st *creatorState, yq string) (*creatorState, error) 
 				return st, err
 			}
 			if len(st.yBytes) == 0 {
-				logrus.Info("Aborting, as requested by saving the file with empty content")
-				os.Exit(0)
-				return st, errors.New("should not reach here")
+				const msg = "Aborting, as requested by saving the file with empty content"
+				logrus.Info(msg)
+				return nil, exitSuccessError{Msg: msg}
 			}
 			return st, nil
 		case 2: // "Choose another template..."
@@ -446,8 +461,7 @@ func chooseNextCreatorState(st *creatorState, yq string) (*creatorState, error) 
 			}
 			continue
 		case 3: // "Exit"
-			os.Exit(0)
-			return st, errors.New("should not reach here")
+			return nil, exitSuccessError{Msg: "Choosing to exit"}
 		default:
 			return st, fmt.Errorf("unexpected answer %q", ans)
 		}

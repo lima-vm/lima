@@ -156,7 +156,7 @@ func handleExitCoder(err error) {
 	}
 
 	if exitErr, ok := err.(ExitCoder); ok {
-		os.Exit(exitErr.ExitCode())
+		os.Exit(exitErr.ExitCode()) //nolint:revive // it's intentional to call os.Exit in this function
 		return
 	}
 }
