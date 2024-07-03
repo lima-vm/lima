@@ -574,7 +574,8 @@ func attachFolderMounts(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineCo
 }
 
 func attachAudio(driver *driver.BaseDriver, config *vz.VirtualMachineConfiguration) error {
-	if *driver.Yaml.Audio.Device == "vz" {
+	switch *driver.Yaml.Audio.Device {
+	case "vz", "default":
 		outputStream, err := vz.NewVirtioSoundDeviceHostOutputStreamConfiguration()
 		if err != nil {
 			return err
@@ -587,8 +588,12 @@ func attachAudio(driver *driver.BaseDriver, config *vz.VirtualMachineConfigurati
 		config.SetAudioDevicesVirtualMachineConfiguration([]vz.AudioDeviceConfiguration{
 			soundDeviceConfiguration,
 		})
+		return nil
+	case "", "none":
+		return nil
+	default:
+		return fmt.Errorf("unexpected audio device %q", *driver.Yaml.Audio.Device)
 	}
-	return nil
 }
 
 func attachOtherDevices(_ *driver.BaseDriver, vmConfig *vz.VirtualMachineConfiguration) error {

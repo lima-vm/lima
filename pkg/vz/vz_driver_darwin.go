@@ -131,9 +131,11 @@ func (l *LimaVzDriver) Validate() error {
 		}
 	}
 
-	audioDevice := *l.Yaml.Audio.Device
-	if audioDevice != "" && audioDevice != "vz" {
-		logrus.Warnf("field `audio.device` must be %q for VZ driver , got %q", "vz", audioDevice)
+	switch audioDevice := *l.Yaml.Audio.Device; audioDevice {
+	case "":
+	case "vz", "default", "none":
+	default:
+		logrus.Warnf("field `audio.device` must be \"vz\", \"default\", or \"none\" for VZ driver, got %q", audioDevice)
 	}
 
 	switch videoDisplay := *l.Yaml.Video.Display; videoDisplay {
