@@ -100,7 +100,7 @@ probes:
       exit 1
     fi
   hint: |
-    See "/var/log/cloud-init-output.log". in the guest
+    See "/var/log/cloud-init-output.log" in the guest
 - description: "kubeadm to be completed"
   script: |
     #!/bin/bash
