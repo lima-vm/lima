@@ -53,7 +53,7 @@ probes:
       echo >&2 "Xorg is not installed yet"
       exit 1
     fi
-  hint: See "/var/log/cloud-init-output.log". in the guest
+  hint: See "/var/log/cloud-init-output.log" in the guest
 message: |
   Use a VNC viewer or noVNC, to connect to the display:
 
