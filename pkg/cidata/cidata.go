@@ -270,17 +270,18 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 		return err
 	}
 
-	if len(y.DNS) > 0 {
+	switch {
+	case len(y.DNS) > 0:
 		for _, addr := range y.DNS {
 			args.DNSAddresses = append(args.DNSAddresses, addr.String())
 		}
-	} else if firstUsernetIndex != -1 || *y.VMType == limayaml.VZ {
+	case firstUsernetIndex != -1 || *y.VMType == limayaml.VZ:
 		args.DNSAddresses = append(args.DNSAddresses, args.SlirpDNS)
-	} else if *y.HostResolver.Enabled {
+	case *y.HostResolver.Enabled:
 		args.UDPDNSLocalPort = udpDNSLocalPort
 		args.TCPDNSLocalPort = tcpDNSLocalPort
 		args.DNSAddresses = append(args.DNSAddresses, args.SlirpDNS)
-	} else {
+	default:
 		args.DNSAddresses, err = osutil.DNSAddresses()
 		if err != nil {
 			return err

@@ -314,7 +314,8 @@ func validateNetwork(y *LimaYAML) error {
 	interfaceName := make(map[string]int)
 	for i, nw := range y.Networks {
 		field := fmt.Sprintf("networks[%d]", i)
-		if nw.Lima != "" {
+		switch {
+		case nw.Lima != "":
 			config, err := networks.Config()
 			if err != nil {
 				return err
@@ -335,7 +336,7 @@ func validateNetwork(y *LimaYAML) error {
 			if nw.VZNAT != nil && *nw.VZNAT {
 				return fmt.Errorf("field `%s.lima` and field `%s.vzNAT` are mutually exclusive", field, field)
 			}
-		} else if nw.Socket != "" {
+		case nw.Socket != "":
 			if nw.VZNAT != nil && *nw.VZNAT {
 				return fmt.Errorf("field `%s.socket` and field `%s.vzNAT` are mutually exclusive", field, field)
 			}
@@ -344,7 +345,7 @@ func validateNetwork(y *LimaYAML) error {
 			} else if err == nil && fi.Mode()&os.ModeSocket == 0 {
 				return fmt.Errorf("field `%s.socket` %q points to a non-socket file", field, nw.Socket)
 			}
-		} else if nw.VZNAT != nil && *nw.VZNAT {
+		case nw.VZNAT != nil && *nw.VZNAT:
 			if y.VMType == nil || *y.VMType != VZ {
 				return fmt.Errorf("field `%s.vzNAT` requires `vmType` to be %q", field, VZ)
 			}
@@ -354,7 +355,7 @@ func validateNetwork(y *LimaYAML) error {
 			if nw.Socket != "" {
 				return fmt.Errorf("field `%s.vzNAT` and field `%s.socket` are mutually exclusive", field, field)
 			}
-		} else {
+		default:
 			return fmt.Errorf("field `%s.lima` or  field `%s.socket must be set", field, field)
 		}
 		if nw.MACAddress != "" {

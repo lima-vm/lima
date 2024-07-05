@@ -96,10 +96,13 @@ linters-settings:
     - rangeValCopy
     - hugeParam
     - importShadow
-    - ifElseChain
     - sprintfQuotedString
     - builtinShadow
     - filepathJoin
+    settings:
+      ifElseChain:
+        # Min number of if-else blocks that makes the warning trigger.
+        minThreshold: 3
   errorlint:
     asserts: false
   revive:
