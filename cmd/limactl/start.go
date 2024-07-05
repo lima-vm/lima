@@ -128,9 +128,11 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 
 	const yBytesLimit = 4 * 1024 * 1024 // 4MiB
 
-	if ok, u := guessarg.SeemsTemplateURL(arg); ok {
+	isTemplateURL, templateURL := guessarg.SeemsTemplateURL(arg)
+	switch {
+	case isTemplateURL:
 		// No need to use SecureJoin here. https://github.com/lima-vm/lima/pull/805#discussion_r853411702
-		templateName := filepath.Join(u.Host, u.Path)
+		templateName := filepath.Join(templateURL.Host, templateURL.Path)
 		logrus.Debugf("interpreting argument %q as a template name %q", arg, templateName)
 		if st.instName == "" {
 			// e.g., templateName = "deprecated/centos-7" , st.instName = "centos-7"
@@ -140,7 +142,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 		if err != nil {
 			return nil, err
 		}
-	} else if guessarg.SeemsHTTPURL(arg) {
+	case guessarg.SeemsHTTPURL(arg):
 		if st.instName == "" {
 			st.instName, err = guessarg.InstNameFromURL(arg)
 			if err != nil {
@@ -161,7 +163,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 		if err != nil {
 			return nil, err
 		}
-	} else if guessarg.SeemsFileURL(arg) {
+	case guessarg.SeemsFileURL(arg):
 		if st.instName == "" {
 			st.instName, err = guessarg.InstNameFromURL(arg)
 			if err != nil {
@@ -178,7 +180,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 		if err != nil {
 			return nil, err
 		}
-	} else if guessarg.SeemsYAMLPath(arg) {
+	case guessarg.SeemsYAMLPath(arg):
 		if st.instName == "" {
 			st.instName, err = guessarg.InstNameFromYAMLPath(arg)
 			if err != nil {
@@ -195,7 +197,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 		if err != nil {
 			return nil, err
 		}
-	} else if arg == "-" {
+	case arg == "-":
 		if st.instName == "" {
 			return nil, errors.New("must pass instance name with --name when reading template from stdin")
 		}
@@ -209,7 +211,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 			return nil, errors.New("cannot use --tty=true and read template from stdin together")
 		}
 		tty = false
-	} else {
+	default:
 		if arg == "" {
 			if st.instName == "" {
 				st.instName = DefaultInstanceName

@@ -192,14 +192,15 @@ func inspectStatusWithPIDFiles(instDir string, inst *Instance, y *limayaml.LimaY
 	}
 
 	if inst.Status == StatusUnknown {
-		if inst.HostAgentPID > 0 && inst.DriverPID > 0 {
+		switch {
+		case inst.HostAgentPID > 0 && inst.DriverPID > 0:
 			inst.Status = StatusRunning
-		} else if inst.HostAgentPID == 0 && inst.DriverPID == 0 {
+		case inst.HostAgentPID == 0 && inst.DriverPID == 0:
 			inst.Status = StatusStopped
-		} else if inst.HostAgentPID > 0 && inst.DriverPID == 0 {
+		case inst.HostAgentPID > 0 && inst.DriverPID == 0:
 			inst.Errors = append(inst.Errors, errors.New("host agent is running but driver is not"))
 			inst.Status = StatusBroken
-		} else {
+		default:
 			inst.Errors = append(inst.Errors, fmt.Errorf("%s driver is running but host agent is not", inst.VMType))
 			inst.Status = StatusBroken
 		}
