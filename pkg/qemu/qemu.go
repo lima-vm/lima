@@ -524,7 +524,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	}
 
 	// CPU
-	cpu := y.CPUType[*y.Arch]
+	cpu := "virt" // y.CPUType[*y.Arch]
 	if runtime.GOOS == "darwin" && runtime.GOARCH == "amd64" {
 		switch {
 		case strings.HasPrefix(cpu, "host"), strings.HasPrefix(cpu, "max"):
