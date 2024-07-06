@@ -1049,18 +1049,18 @@ func Exe(arch limayaml.Arch) (exe string, args []string, err error) {
 }
 
 func Accel(arch limayaml.Arch) string {
-	if limayaml.IsNativeArch(arch) {
-		switch runtime.GOOS {
-		case "darwin":
-			return "hvf"
-		case "linux":
-			return "kvm"
-		case "netbsd":
-			return "nvmm"
-		case "windows":
-			return "whpx"
-		}
-	}
+	// if limayaml.IsNativeArch(arch) {
+	// 	switch runtime.GOOS {
+	// 	case "darwin":
+	// 		return "hvf"
+	// 	case "linux":
+	// 		return "kvm"
+	// 	case "netbsd":
+	// 		return "nvmm"
+	// 	case "windows":
+	// 		return "whpx"
+	// 	}
+	// }
 	return "tcg"
 }
 
