@@ -3,14 +3,7 @@
 
 name: Release
 on:
-  push:
-    branches:
-    - 'master'
-    tags:
-    - 'v*'
-  pull_request:
-    branches:
-    - 'master'
+  workflow_dispatch:
 env:
   GO111MODULE: on
 jobs:
