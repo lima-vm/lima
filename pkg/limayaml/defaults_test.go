@@ -6,10 +6,12 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/lima-vm/lima/pkg/localpathutil"
 	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/ptr"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
@@ -113,6 +115,13 @@ func TestFillDefault(t *testing.T) {
 		Reverse:        false,
 	}
 
+	// Override the default values
+	if runtime.GOOS == "windows" {
+		t.Setenv("TEMP", `C:\TEMP`)
+	} else { // darwin, linux, etc
+		t.Setenv("TMPDIR", "/var/tmp")
+	}
+
 	// ------------------------------------------------------------------------------------
 	// Builtin defaults are set when y is (mostly) empty
 
@@ -125,7 +134,7 @@ func TestFillDefault(t *testing.T) {
 			},
 		},
 		Mounts: []Mount{
-			{Location: "/tmp"},
+			{Location: "/tmp/lima"},
 		},
 		MountType: ptr.Of(NINEP),
 		Provision: []Provision{
@@ -194,7 +203,8 @@ func TestFillDefault(t *testing.T) {
 	}
 
 	expect.Mounts = y.Mounts
-	expect.Mounts[0].MountPoint = expect.Mounts[0].Location
+	expect.Mounts[0].MountPoint = strings.Replace(expect.Mounts[0].Location, "/tmp", localpathutil.Path(os.TempDir()), 1)
+	expect.Mounts[0].Location = strings.Replace(expect.Mounts[0].Location, "/tmp/", os.TempDir()+string(os.PathSeparator), 1)
 	expect.Mounts[0].Writable = ptr.Of(false)
 	expect.Mounts[0].SSHFS.Cache = ptr.Of(true)
 	expect.Mounts[0].SSHFS.FollowSymlinks = ptr.Of(false)

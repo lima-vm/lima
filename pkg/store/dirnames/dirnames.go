@@ -36,6 +36,15 @@ func LimaDir() (string, error) {
 	return realdir, nil
 }
 
+// Lima is a directory that appears under the temporary directory.
+const Lima = "lima"
+
+// LimaTmp returns the path of `/tmp/lima`
+func LimaTmp() string {
+	tmp := os.TempDir()
+	return filepath.Join(tmp, Lima)
+}
+
 // LimaConfigDir returns the path of the config directory, $LIMA_HOME/_config.
 func LimaConfigDir() (string, error) {
 	limaDir, err := LimaDir()
