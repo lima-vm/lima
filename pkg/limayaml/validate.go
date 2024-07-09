@@ -445,6 +445,9 @@ func warnExperimental(y *LimaYAML) {
 	if *y.VMType == VZ {
 		logrus.Warn("`vmType: vz` is experimental")
 	}
+	if *y.VMType == EXT {
+		logrus.Warn("`vmType: ext` is experimental")
+	}
 	if *y.Arch == RISCV64 {
 		logrus.Warn("`arch: riscv64` is experimental")
 	}
