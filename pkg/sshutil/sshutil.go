@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -119,6 +120,14 @@ var sshInfo struct {
 	aesAccelerated bool
 	// openSSHVersion is set to the version of OpenSSH, or semver.New("0.0.0") if the version cannot be determined.
 	openSSHVersion semver.Version
+}
+
+func IsLocalhost(address string) bool {
+	ip := net.ParseIP(address)
+	if ip == nil {
+		return false
+	}
+	return ip.IsLoopback()
 }
 
 // CommonOpts returns ssh option key-value pairs like {"IdentityFile=/path/to/id_foo"}.
@@ -238,7 +247,7 @@ func SSHOpts(instDir string, useDotSSH bool, hostAddress string, forwardAgent, f
 	if err != nil {
 		return nil, err
 	}
-	opts, err := CommonOpts(useDotSSH, hostAddress == "127.0.0.1")
+	opts, err := CommonOpts(useDotSSH, IsLocalhost(hostAddress))
 	if err != nil {
 		return nil, err
 	}

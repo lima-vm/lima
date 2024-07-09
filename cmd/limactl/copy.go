@@ -91,7 +91,7 @@ func copyAction(cmd *cobra.Command, args []string) error {
 			} else {
 				scpArgs = append(scpArgs, fmt.Sprintf("scp://%s@%s:%d/%s", u.Username, inst.SSHAddress, inst.SSHLocalPort, path[1]))
 			}
-			if inst.SSHAddress != "127.0.0.1" {
+			if !sshutil.IsLocalhost(inst.SSHAddress) {
 				instAddr = inst.SSHAddress
 				localhostOnly = false
 			}
