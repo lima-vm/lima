@@ -1,0 +1,34 @@
+# ls-lint configuration file.
+# https://ls-lint.org/2.2/configuration/the-basics.html
+ls:
+  .dir: kebab-case
+  .go: snake_case
+  .lima: snake_case
+  .sh: kebab-case
+  .TEMPLATE.yaml: kebab-case
+  .yaml: kebab-case
+  .yml: kebab-case
+
+  .github:
+    .yaml: snake_case
+
+  cmd/limactl:
+    # valid names are `show-ssh.go` or `show-ssh_test.go`
+    .go: kebab-case | regex:[a-z0-9-]+_test
+
+  docs:
+    .md: kebab-case
+
+  website/content:
+    .dir: lowercase
+
+ignore:
+- .git
+- .golangci.yml
+- .ls-lint.yml
+- '_output'
+- '**/*.pb\.go'
+- hack/common.inc.sh
+- pkg/cidata/cidata.TEMPLATE.d
+- pkg/cidata/cidata.TEMPLATE.d/util/compare_version.sh
+- website

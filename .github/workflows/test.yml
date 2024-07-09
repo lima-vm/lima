@@ -46,6 +46,8 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y shellcheck
+    - name: Run file and directory name linter
+      uses: ls-lint/action@v2.2.3
     - name: Run shellcheck
       run: find . -name '*.sh' | xargs shellcheck
     - name: Install shfmt
