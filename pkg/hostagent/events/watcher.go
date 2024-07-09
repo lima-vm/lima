@@ -44,6 +44,9 @@ loop:
 		case <-ctx.Done():
 			break loop
 		case line := <-haStdoutTail.Lines:
+			if line == nil {
+				break loop
+			}
 			if line.Err != nil {
 				logrus.Error(line.Err)
 			}
