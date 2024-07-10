@@ -36,6 +36,7 @@ users:
       - {{ printf "%q" $val }}
     {{- end }}
 
+{{- if .BootScripts }}
 write_files:
  - content: |
       #!/bin/sh
@@ -49,6 +50,7 @@ write_files:
    owner: root:root
    path: /var/lib/cloud/scripts/per-boot/00-lima.boot.sh
    permissions: '0755'
+{{- end }}
 
 {{- if .DNSAddresses }}
 # This has no effect on systems using systemd-resolved, but is used
@@ -63,6 +65,7 @@ resolv_conf:
   {{- end }}
 {{- end }}
 
+{{- if .CACerts.RemoveDefaults }}
 {{ with .CACerts }}
 ca_certs:
   remove_defaults: {{ .RemoveDefaults }}
@@ -72,6 +75,7 @@ ca_certs:
   - |
     {{- range $line := $cert.Lines }}
     {{ $line }}
+    {{- end }}
     {{- end }}
   {{- end }}
   {{- end }}

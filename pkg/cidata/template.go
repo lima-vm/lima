@@ -73,6 +73,7 @@ type TemplateArgs struct {
 	UDPDNSLocalPort                 int
 	TCPDNSLocalPort                 int
 	Env                             map[string]string
+	BootScripts                     bool
 	DNSAddresses                    []string
 	CACerts                         CACerts
 	HostHomeMountPoint              string
@@ -87,7 +88,7 @@ type TemplateArgs struct {
 	TimeZone                        string
 }
 
-func ValidateTemplateArgs(args TemplateArgs) error {
+func ValidateTemplateArgs(args *TemplateArgs) error {
 	if err := identifiers.Validate(args.Name); err != nil {
 		return err
 	}
@@ -112,13 +113,24 @@ func ValidateTemplateArgs(args TemplateArgs) error {
 			return fmt.Errorf("field mounts[%d] must be absolute, got %q", i, f)
 		}
 	}
-	if args.CACerts.RemoveDefaults == nil {
-		return errors.New("field CACerts.RemoveDefaults must be set")
-	}
 	return nil
 }
 
-func ExecuteTemplate(args TemplateArgs) ([]iso9660util.Entry, error) {
+func ExecuteTemplateCloudConfig(args *TemplateArgs) ([]byte, error) {
+	if err := ValidateTemplateArgs(args); err != nil {
+		return nil, err
+	}
+
+	userData, err := templateFS.ReadFile(path.Join(templateFSRoot, "user-data"))
+	if err != nil {
+		return nil, err
+	}
+
+	cloudConfigYaml := string(userData)
+	return textutil.ExecuteTemplate(cloudConfigYaml, args)
+}
+
+func ExecuteTemplateCIDataISO(args *TemplateArgs) ([]iso9660util.Entry, error) {
 	if err := ValidateTemplateArgs(args); err != nil {
 		return nil, err
 	}
