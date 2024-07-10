@@ -13,8 +13,7 @@ package_reboot_if_required: true
 
 {{- if or .RosettaEnabled (or (eq .MountType "9p") (eq .MountType "virtiofs")) }}
 mounts:
-  # Mount the rosetta volume before systemd-binfmt.service(8) starts
-  {{- if .RosettaEnabled }}
+  {{- if .RosettaEnabled }}{{/* Mount the rosetta volume before systemd-binfmt.service(8) starts */}}
 - ["vz-rosetta", "/mnt/lima-rosetta", "virtiofs", "context=\"system_u:object_r:nfs_t:s0\""]
   {{- end }}
   {{- if .Mounts }}
