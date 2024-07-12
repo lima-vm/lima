@@ -13,6 +13,7 @@ func FuzzLoadYAMLByFilePath(f *testing.F) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		_, _ = LoadYAMLByFilePath(localFile)
+		//nolint:errcheck // The test doesn't check the return value
+		LoadYAMLByFilePath(localFile)
 	})
 }
