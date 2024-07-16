@@ -15,7 +15,7 @@ require (
 	github.com/containers/gvisor-tap-vsock v0.7.3
 	github.com/coreos/go-semver v0.3.1
 	github.com/cpuguy83/go-md2man/v2 v2.0.4
-	github.com/cyphar/filepath-securejoin v0.2.5
+	github.com/cyphar/filepath-securejoin v0.3.0
 	github.com/digitalocean/go-qemu v0.0.0-20221209210016-f035778c97f7
 	github.com/diskfs/go-diskfs v1.4.0
 	github.com/docker/go-units v0.5.0
