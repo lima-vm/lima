@@ -8,10 +8,10 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-func dumpJSON(d interface{}) string {
+func dumpJSON(t *testing.T, d interface{}) string {
 	b, err := json.Marshal(d)
 	if err != nil {
-		return "ERROR"
+		t.Fatal(err)
 	}
 	return string(b)
 }
@@ -20,7 +20,7 @@ const emptyYAML = "images: []\n"
 
 func TestEmptyYAML(t *testing.T) {
 	var y LimaYAML
-	t.Log(dumpJSON(y))
+	t.Log(dumpJSON(t, y))
 	b, err := marshalYAML(y)
 	assert.NilError(t, err)
 	assert.Equal(t, string(b), emptyYAML)
@@ -36,7 +36,7 @@ func TestDefaultYAML(t *testing.T) {
 	assert.NilError(t, err)
 	y.Images = nil // remove default images
 	y.Mounts = nil // remove default mounts
-	t.Log(dumpJSON(y))
+	t.Log(dumpJSON(t, y))
 	b, err := marshalYAML(y)
 	assert.NilError(t, err)
 	assert.Equal(t, string(b), defaultYAML)
