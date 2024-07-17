@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/opencontainers/go-digest"
 	"gotest.tools/v3/assert"
@@ -25,6 +26,8 @@ func TestDownloadRemote(t *testing.T) {
 	t.Cleanup(ts.Close)
 	dummyRemoteFileURL := ts.URL + "/downloader.txt"
 	const dummyRemoteFileDigest = "sha256:380481d26f897403368be7cb86ca03a4bc14b125bfaf2b93bff809a5a2ad717e"
+	dummyRemoteFileStat, err := os.Stat(filepath.Join("testdata", "downloader.txt"))
+	assert.NilError(t, err)
 
 	t.Run("without cache", func(t *testing.T) {
 		t.Run("without digest", func(t *testing.T) {
@@ -104,6 +107,17 @@ func TestDownloadRemote(t *testing.T) {
 		wrongDigest := digest.Digest("sha256:8313944efb4f38570c689813f288058b674ea6c487017a5a4738dc674b65f9d9")
 		_, err = Cached(dummyRemoteFileURL, WithExpectedDigest(wrongDigest), WithCacheDir(cacheDir))
 		assert.ErrorContains(t, err, "expected digest")
+	})
+	t.Run("metadata", func(t *testing.T) {
+		_, err := Cached(dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest))
+		assert.ErrorContains(t, err, "cache directory to be specified")
+
+		cacheDir := filepath.Join(t.TempDir(), "cache")
+		r, err := Download(context.Background(), "", dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest), WithCacheDir(cacheDir))
+		assert.NilError(t, err)
+		assert.Equal(t, StatusDownloaded, r.Status)
+		assert.Equal(t, dummyRemoteFileStat.ModTime().Truncate(time.Second).UTC(), r.LastModified)
+		assert.Equal(t, "text/plain; charset=utf-8", r.ContentType)
 	})
 }
 
