@@ -6,6 +6,8 @@ import (
 	"fmt"
 
 	"github.com/Code-Hex/vz/v3"
+	"github.com/coreos/go-semver/semver"
+	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/sirupsen/logrus"
 )
 
@@ -32,6 +34,17 @@ func createRosettaDirectoryShareConfiguration() (*vz.VirtioFileSystemDeviceConfi
 	rosettaShare, err := vz.NewLinuxRosettaDirectoryShare()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create a new rosetta directory share: %w", err)
+	}
+	macOSProductVersion, err := osutil.ProductVersion()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get macOS product version: %w", err)
+	}
+	if !macOSProductVersion.LessThan(*semver.New("14.0.0")) {
+		cachingOption, err := vz.NewLinuxRosettaAbstractSocketCachingOptions("rosetta")
+		if err != nil {
+			return nil, fmt.Errorf("failed to create a new rosetta directory share caching option: %w", err)
+		}
+		rosettaShare.SetOptions(cachingOption)
 	}
 	config.SetDirectoryShare(rosettaShare)
 
