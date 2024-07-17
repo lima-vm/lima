@@ -11,13 +11,16 @@ package_upgrade: true
 package_reboot_if_required: true
 {{- end }}
 
-{{- if or (eq .MountType "9p") (eq .MountType "virtiofs") }}
-{{- if .Mounts }}
+{{- if or .RosettaEnabled (or (eq .MountType "9p") (eq .MountType "virtiofs")) }}
 mounts:
-  {{- range $m := $.Mounts}}
-- [{{$m.Tag}}, {{$m.MountPoint}}, {{$m.Type}}, "{{$m.Options}}", "0", "0"]
+  {{- if .RosettaEnabled }}{{/* Mount the rosetta volume before systemd-binfmt.service(8) starts */}}
+- [vz-rosetta, /mnt/lima-rosetta, virtiofs]
   {{- end }}
-{{- end }}
+  {{- if .Mounts }}
+    {{- range $m := $.Mounts}}
+- [{{$m.Tag}}, {{$m.MountPoint}}, {{$m.Type}}, "{{$m.Options}}", "0", "0"]
+    {{- end }}
+  {{- end }}
 {{- end }}
 
 {{- if .TimeZone }}
