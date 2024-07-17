@@ -7,6 +7,7 @@ if [ "$LIMA_CIDATA_ROSETTA_ENABLED" != "true" ]; then
 fi
 
 if [ -f /etc/alpine-release ]; then
+	rc-service procfs start --ifnotstarted
 	rc-service qemu-binfmt stop --ifstarted
 fi
 
