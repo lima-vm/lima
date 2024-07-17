@@ -20,7 +20,7 @@ os: null
 arch: null
 
 # OpenStack-compatible disk image.
-# 🟢 Builtin default: null (must be specified)
+# 🟢 Builtin default: none (must be specified)
 # 🔵 This file: Ubuntu images
 images:
 # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
@@ -50,7 +50,7 @@ memory: null
 disk: null
 
 # Expose host directories to the guest, the mount point might be accessible from all UIDs in the guest
-# 🟢 Builtin default: null (Mount nothing)
+# 🟢 Builtin default: [] (Mount nothing)
 # 🔵 This file: Mount the home as read-only, /tmp/lima as writable
 mounts:
 - location: "~"
@@ -111,7 +111,7 @@ mountInotify: null
 # instance, labeled by name. (e.g. if the disk is named "data", it will be labeled
 # "lima-data" inside the instance). The disk will be mounted inside the instance at
 # `/mnt/lima-${VOLUME}`.
-# 🟢 Builtin default: null
+# 🟢 Builtin default: []
 additionalDisks:
 # disks should either be a list of disk name strings, for example:
 # - "data"
@@ -194,7 +194,7 @@ containerd:
 # Provisioning scripts need to be idempotent because they might be called
 # multiple times, e.g. when the host VM is being restarted.
 # The scripts can use the following template variables: {{.Home}}, {{.UID}}, and {{.User}}
-# 🟢 Builtin default: null
+# 🟢 Builtin default: []
 # provision:
 # # `system` is executed with root privileges
 # - mode: system
@@ -235,7 +235,7 @@ containerd:
 #   playbook: playbook.yaml
 
 # Probe scripts to check readiness.
-# 🟢 Builtin default: null
+# 🟢 Builtin default: []
 # probes:
 # # Only `readiness` probes are supported right now.
 # - mode: readiness
@@ -322,7 +322,7 @@ video:
 
 # The instance can get routable IP addresses from the vmnet framework using
 # https://github.com/lima-vm/socket_vmnet.
-# 🟢 Builtin default: null
+# 🟢 Builtin default: []
 networks:
 # Lima can manage daemons for networks defined in $LIMA_HOME/_config/networks.yaml
 # automatically. The socket_vmnet binary must be installed into
@@ -405,7 +405,7 @@ networks:
 # The same template variables as for listing instances can be used, for example {{.Dir}}.
 # You can view the complete list of variables using `limactl list --list-fields` command.
 # It also includes {{.HostOS}} and {{.HostArch}} vars, for the runtime GOOS and GOARCH.
-# 🟢 Builtin default: null
+# 🟢 Builtin default: ""
 # message: |
 #   This will be shown to the user.
 
@@ -414,7 +414,7 @@ networks:
 # to /etc/environment.
 # If you set any of "ftp_proxy", "http_proxy", "https_proxy", or "no_proxy", then
 # Lima will automatically set an uppercase variant to the same value as well.
-# 🟢 Builtin default: null
+# 🟢 Builtin default: {}
 # env:
 #   KEY: value
 
@@ -440,7 +440,7 @@ hostResolver:
   # Static names can be defined here as an alternative to adding them to the hosts /etc/hosts.
   # Values can be either other hostnames, or IP addresses. The host.lima.internal name is
   # predefined to specify the gateway address to the host.
-  # 🟢 Builtin default: null
+  # 🟢 Builtin default: {}
   hosts:
     # guest.name: 127.1.1.1
     # host.name: host.lima.internal
@@ -452,7 +452,7 @@ hostResolver:
 # that has an IPv4 address, to the list. In case this still doesn't work (e.g. VPN
 # setups), the servers can be specified here explicitly. If nameservers are specified
 # here, then the configuration from network preferences will be ignored.
-# 🟢 Builtin default: null
+# 🟢 Builtin default: []
 # dns:
 # - 1.1.1.1
 # - 1.0.0.1
