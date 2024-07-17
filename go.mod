@@ -21,7 +21,7 @@ require (
 	github.com/docker/go-units v0.5.0
 	github.com/elastic/go-libaudit/v2 v2.5.0
 	github.com/foxcpp/go-mockdns v1.1.0
-	github.com/goccy/go-yaml v1.11.3
+	github.com/goccy/go-yaml v1.12.0
 	github.com/google/go-cmp v0.6.0
 	github.com/lima-vm/go-qcow2reader v0.1.1
 	github.com/lima-vm/sshocker v0.3.4
