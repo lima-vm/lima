@@ -75,7 +75,7 @@ func stopInstanceGracefully(inst *store.Instance) error {
 }
 
 func waitForHostAgentTermination(ctx context.Context, inst *store.Instance, begin time.Time) error {
-	ctx2, cancel := context.WithTimeout(ctx, 3*time.Minute)
+	ctx2, cancel := context.WithTimeout(ctx, 3*time.Minute+10*time.Second)
 	defer cancel()
 
 	var receivedExitingEvent bool
