@@ -10,15 +10,13 @@ import (
 )
 
 type options struct {
-	ctx *context.Context
+	ctx context.Context
 }
 
 type Opt func(*options) error
 
 // WithContext runs the command with CommandContext.
-//
-//nolint:gocritic // consider `ctx' to be of non-pointer type
-func WithContext(ctx *context.Context) Opt {
+func WithContext(ctx context.Context) Opt {
 	return func(o *options) error {
 		o.ctx = ctx
 		return nil
@@ -35,7 +33,7 @@ func RunUTF16leCommand(args []string, opts ...Opt) (string, error) {
 
 	var cmd *exec.Cmd
 	if o.ctx != nil {
-		cmd = exec.CommandContext(*o.ctx, args[0], args[1:]...)
+		cmd = exec.CommandContext(o.ctx, args[0], args[1:]...)
 	} else {
 		cmd = exec.Command(args[0], args[1:]...)
 	}

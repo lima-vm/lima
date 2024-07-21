@@ -23,7 +23,7 @@ func startVM(ctx context.Context, distroName string) error {
 		"wsl.exe",
 		"--distribution",
 		distroName,
-	}, executil.WithContext(&ctx))
+	}, executil.WithContext(ctx))
 	if err != nil {
 		return fmt.Errorf("failed to run `wsl.exe --distribution %s`: %w (out=%q)",
 			distroName, err, string(out))
@@ -41,7 +41,7 @@ func initVM(ctx context.Context, instanceDir, distroName string) error {
 		distroName,
 		instanceDir,
 		baseDisk,
-	}, executil.WithContext(&ctx))
+	}, executil.WithContext(ctx))
 	if err != nil {
 		return fmt.Errorf("failed to run `wsl.exe --import %s %s %s`: %w (out=%q)",
 			distroName, instanceDir, baseDisk, err, string(out))
@@ -55,7 +55,7 @@ func stopVM(ctx context.Context, distroName string) error {
 		"wsl.exe",
 		"--terminate",
 		distroName,
-	}, executil.WithContext(&ctx))
+	}, executil.WithContext(ctx))
 	if err != nil {
 		return fmt.Errorf("failed to run `wsl.exe --terminate %s`: %w (out=%q)",
 			distroName, err, string(out))
@@ -164,7 +164,7 @@ func unregisterVM(ctx context.Context, distroName string) error {
 		"wsl.exe",
 		"--unregister",
 		distroName,
-	}, executil.WithContext(&ctx))
+	}, executil.WithContext(ctx))
 	if err != nil {
 		return fmt.Errorf("failed to run `wsl.exe --unregister %s`: %w (out=%q)",
 			distroName, err, string(out))
