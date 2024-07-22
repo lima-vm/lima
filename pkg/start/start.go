@@ -371,17 +371,3 @@ func ShowMessage(inst *store.Instance) error {
 	}
 	return scanner.Err()
 }
-
-func Register(ctx context.Context, inst *store.Instance) error {
-	y, err := inst.LoadYAML()
-	if err != nil {
-		return err
-	}
-
-	limaDriver := driverutil.CreateTargetDriverInstance(&driver.BaseDriver{
-		Instance: inst,
-		Yaml:     y,
-	})
-
-	return limaDriver.Register(ctx)
-}
