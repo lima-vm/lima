@@ -48,14 +48,31 @@ provision:
     curl -fsSL https://get.docker.com | sh
     # NOTE: you may remove the lines below, if you prefer to use rootful docker, not rootless
     systemctl disable --now docker
-    apt-get install -y uidmap dbus-user-session
+    apt-get install -y dbus-user-session fuse3 jq uidmap
 - mode: user
   script: |
     #!/bin/bash
     set -eux -o pipefail
     systemctl --user start dbus
-    dockerd-rootless-setuptool.sh install
+    systemctl list-unit-files --user docker.service &>/dev/null || dockerd-rootless-setuptool.sh install
     docker context use rootless
+
+    readonly config="$HOME/.config/docker/daemon.json"
+    needs_restart=
+    function set_docker_daemon_json() {
+      function cat_config() { test -s "$config" && cat "$config" || echo "{}" ; }
+      local -r current=$(cat_config | jq -r "$1 // empty")
+      [ "$current" = "$2" ] && return 0
+      mkdir -p $(dirname "$config") && cat_config | jq "$1 = ${2:-empty}" | (sleep 0 && tee "$config") && needs_restart=1
+    }
+
+    # enable containerd image store
+    set_docker_daemon_json '.features."containerd-snapshotter"' "$(
+      [ "{{.Param.ContainerdImageStore}}" = "true" ] && echo 'true'
+    )"
+
+    # restart docker to apply the new configuration
+    [ -z "$needs_restart" ] || systemctl --user restart docker
 probes:
 - script: |
     #!/bin/bash
@@ -84,3 +101,5 @@ message: |
   docker context use lima-{{.Name}}
   docker run hello-world
   ------
+param:
+  ContainerdImageStore: false
