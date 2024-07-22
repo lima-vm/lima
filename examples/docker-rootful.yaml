@@ -75,10 +75,11 @@ provision:
       readonly systemctl="systemctl --user"
       readonly tee="tee"
 
-      sudo systemctl disable --now docker.socket docker
+      sudo systemctl disable --now docker
       if [ "$rootless_installed" != "true" ]; then
         sudo apt-get install -y dbus-user-session fuse3 uidmap
         $systemctl start dbus
+        [ ! -S /var/run/docker.sock ] || sudo rm /var/run/docker.sock
         dockerd-rootless-setuptool.sh install
       fi
       docker context use rootless
