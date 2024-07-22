@@ -86,6 +86,11 @@ func Load(b []byte, filePath string) (*LimaYAML, error) {
 		return nil, err
 	}
 
+	// It should be called before the `y` parameter is passed to FillDefault() that execute template.
+	if err := ValidateParamIsUsed(&y); err != nil {
+		return nil, err
+	}
+
 	FillDefault(&y, &d, &o, filePath)
 	return &y, nil
 }

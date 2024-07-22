@@ -34,6 +34,7 @@ type LimaYAML struct {
 	Networks           []Network     `yaml:"networks,omitempty" json:"networks,omitempty"`
 	// `network` was deprecated in Lima v0.7.0, removed in Lima v0.14.0. Use `networks` instead.
 	Env          map[string]string `yaml:"env,omitempty" json:"env,omitempty"`
+	Param        map[string]string `yaml:"param,omitempty" json:"param,omitempty"`
 	DNS          []net.IP          `yaml:"dns,omitempty" json:"dns,omitempty"`
 	HostResolver HostResolver      `yaml:"hostResolver,omitempty" json:"hostResolver,omitempty"`
 	// `useHostResolver` was deprecated in Lima v0.8.1, removed in Lima v0.14.0. Use `hostResolver.enabled` instead.

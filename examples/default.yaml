@@ -193,7 +193,7 @@ containerd:
 
 # Provisioning scripts need to be idempotent because they might be called
 # multiple times, e.g. when the host VM is being restarted.
-# The scripts can use the following template variables: {{.Home}}, {{.UID}}, and {{.User}}
+# The scripts can use the following template variables: {{.Home}}, {{.UID}}, {{.User}}, and {{.Param.Key}}
 # 🟢 Builtin default: null
 # provision:
 # # `system` is executed with root privileges
@@ -235,6 +235,7 @@ containerd:
 #   playbook: playbook.yaml
 
 # Probe scripts to check readiness.
+# The scripts can use the following template variables: {{.Home}}, {{.UID}}, {{.User}}, and {{.Param.Key}}
 # 🟢 Builtin default: null
 # probes:
 # # Only `readiness` probes are supported right now.
@@ -377,8 +378,8 @@ networks:
 # - guestSocket: "/run/user/{{.UID}}/my.sock"
 #   hostSocket: mysocket
 # # default: reverse: false
-# # "guestSocket" can include these template variables: {{.Home}}, {{.UID}}, and {{.User}}.
-# # "hostSocket" can include {{.Home}}, {{.Dir}}, {{.Name}}, {{.UID}}, and {{.User}}.
+# # "guestSocket" can include these template variables: {{.Home}}, {{.UID}}, {{.User}}, and {{.Param.Key}}.
+# # "hostSocket" can include {{.Home}}, {{.Dir}}, {{.Name}}, {{.UID}}, {{.User}}, and {{.Param.Key}}.
 # # "reverse" can only be used for unix sockets right now, not for tcp sockets.
 # # Put sockets into "{{.Dir}}/sock" to avoid collision with Lima internal sockets!
 # # Sockets can also be forwarded to ports and vice versa, but not to/from a range of ports.
@@ -397,8 +398,8 @@ networks:
 # - guest: "/etc/myconfig.cfg"
 #   host: "{{.Dir}}/copied-from-guest/myconfig"
 # # deleteOnStop: false
-# # "guest" can include these template variables: {{.Home}}, {{.UID}}, and {{.User}}.
-# # "host" can include {{.Home}}, {{.Dir}}, {{.Name}}, {{.UID}}, and {{.User}}.
+# # "guest" can include these template variables: {{.Home}}, {{.UID}}, {{.User}}, and {{.Param.Key}}.
+# # "host" can include {{.Home}}, {{.Dir}}, {{.Name}}, {{.UID}}, {{.User}}, and {{.Param.Key}}.
 # # "deleteOnStop" will delete the file from the host when the instance is stopped.
 
 # Message. Information to be shown to the user, given as a Go template for the instance.
@@ -417,6 +418,11 @@ networks:
 # 🟢 Builtin default: null
 # env:
 #   KEY: value
+
+# Defines variables used for customizing the functionality.
+# These variables can be referenced as {{.Param.Key}} in lima.yaml.
+# param:
+#   Key: value
 
 # Lima will override the proxy environment variables with values from the current process
 # environment (the environment in effect when you run `limactl start`). It will automatically

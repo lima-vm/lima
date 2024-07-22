@@ -394,7 +394,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		if provision.Mode == ProvisionModeDependency && provision.SkipDefaultDependencyResolution == nil {
 			provision.SkipDefaultDependencyResolution = ptr.Of(false)
 		}
-		if out, err := executeGuestTemplate(provision.Script, instDir); err == nil {
+		if out, err := executeGuestTemplate(provision.Script, instDir, y.Param); err == nil {
 			provision.Script = out.String()
 		} else {
 			logrus.WithError(err).Warnf("Couldn't process provisioning script %q as a template", provision.Script)
@@ -460,17 +460,22 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		if probe.Description == "" {
 			probe.Description = fmt.Sprintf("user probe %d/%d", i+1, len(y.Probes))
 		}
+		if out, err := executeGuestTemplate(probe.Script, instDir, y.Param); err == nil {
+			probe.Script = out.String()
+		} else {
+			logrus.WithError(err).Warnf("Couldn't process probing script %q as a template", probe.Script)
+		}
 	}
 
 	y.PortForwards = append(append(o.PortForwards, y.PortForwards...), d.PortForwards...)
 	for i := range y.PortForwards {
-		FillPortForwardDefaults(&y.PortForwards[i], instDir)
+		FillPortForwardDefaults(&y.PortForwards[i], instDir, y.Param)
 		// After defaults processing the singular HostPort and GuestPort values should not be used again.
 	}
 
 	y.CopyToHost = append(append(o.CopyToHost, y.CopyToHost...), d.CopyToHost...)
 	for i := range y.CopyToHost {
-		FillCopyToHostDefaults(&y.CopyToHost[i], instDir)
+		FillCopyToHostDefaults(&y.CopyToHost[i], instDir, y.Param)
 	}
 
 	if y.HostResolver.Enabled == nil {
@@ -669,6 +674,18 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 	}
 	y.Env = env
 
+	param := make(map[string]string)
+	for k, v := range d.Param {
+		param[k] = v
+	}
+	for k, v := range y.Param {
+		param[k] = v
+	}
+	for k, v := range o.Param {
+		param[k] = v
+	}
+	y.Param = param
+
 	if y.CACertificates.RemoveDefaults == nil {
 		y.CACertificates.RemoveDefaults = d.CACertificates.RemoveDefaults
 	}
@@ -735,15 +752,16 @@ func fixUpForPlainMode(y *LimaYAML) {
 	y.TimeZone = ptr.Of("")
 }
 
-func executeGuestTemplate(format, instDir string) (bytes.Buffer, error) {
+func executeGuestTemplate(format, instDir string, param map[string]string) (bytes.Buffer, error) {
 	tmpl, err := template.New("").Parse(format)
 	if err == nil {
 		user, _ := osutil.LimaUser(false)
-		data := map[string]string{
-			"Home": fmt.Sprintf("/home/%s.linux", user.Username),
-			"Name": filepath.Base(instDir),
-			"UID":  user.Uid,
-			"User": user.Username,
+		data := map[string]interface{}{
+			"Home":  fmt.Sprintf("/home/%s.linux", user.Username),
+			"Name":  filepath.Base(instDir),
+			"UID":   user.Uid,
+			"User":  user.Username,
+			"Param": param,
 		}
 		var out bytes.Buffer
 		if err := tmpl.Execute(&out, data); err == nil {
@@ -753,18 +771,19 @@ func executeGuestTemplate(format, instDir string) (bytes.Buffer, error) {
 	return bytes.Buffer{}, err
 }
 
-func executeHostTemplate(format, instDir string) (bytes.Buffer, error) {
+func executeHostTemplate(format, instDir string, param map[string]string) (bytes.Buffer, error) {
 	tmpl, err := template.New("").Parse(format)
 	if err == nil {
 		user, _ := osutil.LimaUser(false)
 		home, _ := os.UserHomeDir()
 		limaHome, _ := dirnames.LimaDir()
-		data := map[string]string{
-			"Dir":  instDir,
-			"Home": home,
-			"Name": filepath.Base(instDir),
-			"UID":  user.Uid,
-			"User": user.Username,
+		data := map[string]interface{}{
+			"Dir":   instDir,
+			"Home":  home,
+			"Name":  filepath.Base(instDir),
+			"UID":   user.Uid,
+			"User":  user.Username,
+			"Param": param,
 
 			"Instance": filepath.Base(instDir), // DEPRECATED, use `{{.Name}}`
 			"LimaHome": limaHome,               // DEPRECATED, use `{{.Dir}}` instead of `{{.LimaHome}}/{{.Instance}}`
@@ -777,7 +796,7 @@ func executeHostTemplate(format, instDir string) (bytes.Buffer, error) {
 	return bytes.Buffer{}, err
 }
 
-func FillPortForwardDefaults(rule *PortForward, instDir string) {
+func FillPortForwardDefaults(rule *PortForward, instDir string, param map[string]string) {
 	if rule.Proto == "" {
 		rule.Proto = TCP
 	}
@@ -809,14 +828,14 @@ func FillPortForwardDefaults(rule *PortForward, instDir string) {
 		}
 	}
 	if rule.GuestSocket != "" {
-		if out, err := executeGuestTemplate(rule.GuestSocket, instDir); err == nil {
+		if out, err := executeGuestTemplate(rule.GuestSocket, instDir, param); err == nil {
 			rule.GuestSocket = out.String()
 		} else {
 			logrus.WithError(err).Warnf("Couldn't process guestSocket %q as a template", rule.GuestSocket)
 		}
 	}
 	if rule.HostSocket != "" {
-		if out, err := executeHostTemplate(rule.HostSocket, instDir); err == nil {
+		if out, err := executeHostTemplate(rule.HostSocket, instDir, param); err == nil {
 			rule.HostSocket = out.String()
 		} else {
 			logrus.WithError(err).Warnf("Couldn't process hostSocket %q as a template", rule.HostSocket)
@@ -827,16 +846,16 @@ func FillPortForwardDefaults(rule *PortForward, instDir string) {
 	}
 }
 
-func FillCopyToHostDefaults(rule *CopyToHost, instDir string) {
+func FillCopyToHostDefaults(rule *CopyToHost, instDir string, param map[string]string) {
 	if rule.GuestFile != "" {
-		if out, err := executeGuestTemplate(rule.GuestFile, instDir); err == nil {
+		if out, err := executeGuestTemplate(rule.GuestFile, instDir, param); err == nil {
 			rule.GuestFile = out.String()
 		} else {
 			logrus.WithError(err).Warnf("Couldn't process guest %q as a template", rule.GuestFile)
 		}
 	}
 	if rule.HostFile != "" {
-		if out, err := executeHostTemplate(rule.HostFile, instDir); err == nil {
+		if out, err := executeHostTemplate(rule.HostFile, instDir, param); err == nil {
 			rule.HostFile = out.String()
 		} else {
 			logrus.WithError(err).Warnf("Couldn't process host %q as a template", rule.HostFile)

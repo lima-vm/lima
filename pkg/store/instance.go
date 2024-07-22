@@ -59,6 +59,7 @@ type Instance struct {
 	SSHAddress      string             `json:"sshAddress,omitempty"`
 	Protected       bool               `json:"protected"`
 	LimaVersion     string             `json:"limaVersion"`
+	Param           map[string]string  `json:"param,omitempty"`
 }
 
 func (inst *Instance) LoadYAML() (*limayaml.LimaYAML, error) {
@@ -180,6 +181,7 @@ func Inspect(instName string) (*Instance, error) {
 	} else if !errors.Is(err, os.ErrNotExist) {
 		inst.Errors = append(inst.Errors, err)
 	}
+	inst.Param = y.Param
 	return inst, nil
 }
 
