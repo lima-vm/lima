@@ -44,16 +44,63 @@ provision:
     #!/bin/bash
     set -eux -o pipefail
     command -v docker >/dev/null 2>&1 && exit 0
-    if [ ! -e /etc/systemd/system/docker.socket.d/override.conf ]; then
-      mkdir -p /etc/systemd/system/docker.socket.d
+    readonly override_conf=/etc/systemd/system/docker.socket.d/override.conf
+    if [ ! -e "$override_conf" ]; then
+      mkdir -p $(dirname "$override_conf")
       # Alternatively we could just add the user to the "docker" group, but that requires restarting the user session
-      cat <<-EOF >/etc/systemd/system/docker.socket.d/override.conf
-      [Socket]
-      SocketUser={{.User}}
+      cat <<EOF >"$override_conf"
+    [Socket]
+    SocketUser={{.User}}
     EOF
     fi
     export DEBIAN_FRONTEND=noninteractive
     curl -fsSL https://get.docker.com | sh
+- mode: user # configure docker under non-root user
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    command -v jq &>/dev/null || sudo apt-get install -y jq
+    readonly rootless_installed=$(systemctl --user list-unit-files docker.service &>/dev/null && echo true || echo false)
+
+    if [ "{{.Param.Rootful}}" = "true" ]; then
+      readonly config_dir="/etc/docker"
+      readonly systemctl="sudo systemctl"
+      readonly tee="sudo tee"
+
+      [ "$rootless_installed" != "true" ] || systemctl --user disable --now docker
+      docker context use default
+
+    else
+      readonly config_dir="$HOME/.config/docker"
+      readonly systemctl="systemctl --user"
+      readonly tee="tee"
+
+      sudo systemctl disable --now docker.socket docker
+      if [ "$rootless_installed" != "true" ]; then
+        sudo apt-get install -y dbus-user-session fuse3 uidmap
+        $systemctl start dbus
+        dockerd-rootless-setuptool.sh install
+      fi
+      docker context use rootless
+    fi
+    $systemctl enable --now docker
+
+    readonly config="$config_dir/daemon.json"
+    needs_restart=
+    function set_docker_daemon_json() {
+      function cat_config() { test -s "$config" && cat "$config" || echo "{}" ; }
+      local -r current=$(cat_config | jq -r "$1 // empty")
+      [ "$current" = "$2" ] && return 0
+      mkdir -p "$config_dir" && cat_config | jq "$1 = ${2:-empty}" | (sleep 0 && $tee "$config") && needs_restart=1
+    }
+
+    # enable containerd image store
+    set_docker_daemon_json '.features."containerd-snapshotter"' "$(
+      [ "{{.Param.ContainerdImageStore}}" = "true" ] && echo 'true'
+    )"
+
+    # restart docker to apply the new configuration
+    [ -z "$needs_restart" ] || $systemctl restart docker
 probes:
 - script: |
     #!/bin/bash
@@ -62,8 +109,15 @@ probes:
       echo >&2 "docker is not installed yet"
       exit 1
     fi
-    if ! timeout 30s bash -c "until pgrep dockerd; do sleep 3; done"; then
-      echo >&2 "dockerd is not running"
+    if [ "{{.Param.Rootful}}" = "true" ]; then
+      target=dockerd
+      target_description="dockerd"
+    else
+      target=rootlesskit
+      target_description="rootlesskit (used by rootless docker)"
+    fi
+    if ! timeout 30s bash -c "until pgrep $target; do sleep 3; done"; then
+      echo >&2 "$target_description is not running"
       exit 1
     fi
   hint: See "/var/log/cloud-init-output.log" in the guest
@@ -73,7 +127,7 @@ hostResolver:
   hosts:
     host.docker.internal: host.lima.internal
 portForwards:
-- guestSocket: "/var/run/docker.sock"
+- guestSocket: "{{if eq .Param.Rootful \"true\"}}/var/run{{else}}/run/user/{{.UID}}{{end}}/docker.sock"
   hostSocket: "{{.Dir}}/sock/docker.sock"
 message: |
   To run `docker` on the host (assumes docker-cli is installed), run the following commands:
@@ -82,3 +136,6 @@ message: |
   docker context use lima-{{.Name}}
   docker run hello-world
   ------
+param:
+  ContainerdImageStore: false
+  Rootful: true
