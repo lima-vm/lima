@@ -1,15 +1,14 @@
 package main
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"os"
 	"runtime"
 
 	"github.com/lima-vm/lima/pkg/autostart"
+	"github.com/lima-vm/lima/pkg/instance"
 	networks "github.com/lima-vm/lima/pkg/networks/reconcile"
-	"github.com/lima-vm/lima/pkg/stop"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -43,7 +42,7 @@ func deleteAction(cmd *cobra.Command, args []string) error {
 			}
 			return err
 		}
-		if err := deleteInstance(cmd.Context(), inst, force); err != nil {
+		if err := instance.Delete(cmd.Context(), inst, force); err != nil {
 			return fmt.Errorf("failed to delete instance %q: %w", instName, err)
 		}
 		if runtime.GOOS == "darwin" || runtime.GOOS == "linux" {
@@ -57,27 +56,6 @@ func deleteAction(cmd *cobra.Command, args []string) error {
 		logrus.Infof("Deleted %q (%q)", instName, inst.Dir)
 	}
 	return networks.Reconcile(cmd.Context(), "")
-}
-
-func deleteInstance(ctx context.Context, inst *store.Instance, force bool) error {
-	if inst.Protected {
-		return fmt.Errorf("instance is protected to prohibit accidental removal (Hint: use `limactl unprotect`)")
-	}
-	if !force && inst.Status != store.StatusStopped {
-		return fmt.Errorf("expected status %q, got %q", store.StatusStopped, inst.Status)
-	}
-
-	stopInstanceForcibly(inst)
-
-	if err := stop.Unregister(ctx, inst); err != nil {
-		return fmt.Errorf("failed to unregister %q: %w", inst.Dir, err)
-	}
-
-	if err := os.RemoveAll(inst.Dir); err != nil {
-		return fmt.Errorf("failed to remove %q: %w", inst.Dir, err)
-	}
-
-	return nil
 }
 
 func deleteBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {

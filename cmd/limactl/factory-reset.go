@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/lima-vm/lima/pkg/instance"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/sirupsen/logrus"
@@ -39,7 +40,7 @@ func factoryResetAction(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	stopInstanceForcibly(inst)
+	instance.StopForcibly(inst)
 
 	fi, err := os.ReadDir(inst.Dir)
 	if err != nil {
