@@ -162,7 +162,7 @@ jobs:
       with:
         path: ~/Library/Caches/lima/download
         # hashFiles do not seem to support symlinks
-        key: ${{ runner.os }}-${{ hashFiles('examples/*.yaml') }}
+        key: ${{ runner.os }}-${{ hashFiles('templates/default.yaml') }}
     - name: Unit tests
       run: go test -v ./...
     - name: Make
@@ -225,12 +225,15 @@ jobs:
     - uses: actions/setup-go@v5
       with:
         go-version: 1.22.x
+    - id: path_for_hashFiles
+      # It seems that `hashFiles` cannot use `..` as a path component, so generate a normalized path here.
+      run: echo "NORMALIZED=$(realpath --relative-to=$PWD examples/${{ matrix.template }})" >> "$GITHUB_OUTPUT"
     - uses: actions/cache@v4
       with:
         path: ~/.cache/lima/download
         # hashFiles do not seem to support symlinks
         # TODO: more fine-grained cache
-        key: ${{ runner.os }}-${{ hashFiles('examples/*.yaml') }}
+        key: ${{ runner.os }}-${{ hashFiles(steps.path_for_hashFiles.outputs.NORMALIZED) }}
     - name: Make
       run: make
     - name: Install
@@ -401,12 +404,15 @@ jobs:
     - uses: actions/setup-go@v5
       with:
         go-version: 1.22.x
+    - id: path_for_hashFiles
+      # It seems that `hashFiles` cannot use `..` as a path component, so generate a normalized path here.
+      run: echo "NORMALIZED=$(realpath examples/${{ matrix.template }})" >> "$GITHUB_OUTPUT"
     - name: Cache ~/Library/Caches/lima/download
       uses: actions/cache@v4
       with:
         path: ~/Library/Caches/lima/download
         # hashFiles do not seem to support symlinks
-        key: ${{ runner.os }}-${{ hashFiles('examples/*.yaml') }}
+        key: ${{ runner.os }}-${{ hashFiles(steps.path_for_hashFiles.outputs.NORMALIZED) }}
     - name: Make
       run: make
     - name: Install
