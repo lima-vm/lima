@@ -1,4 +1,4 @@
-package start
+package instance
 
 import (
 	"bufio"
