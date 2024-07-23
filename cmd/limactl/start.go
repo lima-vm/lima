@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -15,16 +14,14 @@ import (
 	"github.com/lima-vm/lima/cmd/limactl/editflags"
 	"github.com/lima-vm/lima/cmd/limactl/guessarg"
 	"github.com/lima-vm/lima/pkg/editutil"
+	"github.com/lima-vm/lima/pkg/instance"
 	"github.com/lima-vm/lima/pkg/ioutilx"
-	"github.com/lima-vm/lima/pkg/limayaml"
 	networks "github.com/lima-vm/lima/pkg/networks/reconcile"
-	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/start"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/lima-vm/lima/pkg/templatestore"
 	"github.com/lima-vm/lima/pkg/uiutil"
-	"github.com/lima-vm/lima/pkg/version"
 	"github.com/lima-vm/lima/pkg/yqutil"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -229,7 +226,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 		inst, err := store.Inspect(st.instName)
 		if err == nil {
 			if createOnly {
-				return nil, fmt.Errorf("Instance %q already exists", st.instName)
+				return nil, fmt.Errorf("instance %q already exists", st.instName)
 			}
 			logrus.Infof("Using the existing instance %q", st.instName)
 			yqExprs, err := editflags.YQExpressions(flags, false)
@@ -276,8 +273,8 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 			return nil, err
 		}
 	}
-	saveBrokenEditorBuffer := tty
-	return createInstance(cmd.Context(), st, saveBrokenEditorBuffer)
+	saveBrokenYAML := tty
+	return instance.Create(cmd.Context(), st.instName, st.yBytes, saveBrokenYAML)
 }
 
 func applyYQExpressionToExistingInstance(inst *store.Instance, yq string) (*store.Instance, error) {
@@ -311,66 +308,6 @@ func applyYQExpressionToExistingInstance(inst *store.Instance, yq string) (*stor
 	}
 	// Reload
 	return store.Inspect(inst.Name)
-}
-
-func createInstance(ctx context.Context, st *creatorState, saveBrokenEditorBuffer bool) (*store.Instance, error) {
-	if st.instName == "" {
-		return nil, errors.New("got empty st.instName")
-	}
-	if len(st.yBytes) == 0 {
-		return nil, errors.New("got empty st.yBytes")
-	}
-
-	instDir, err := store.InstanceDir(st.instName)
-	if err != nil {
-		return nil, err
-	}
-
-	// the full path of the socket name must be less than UNIX_PATH_MAX chars.
-	maxSockName := filepath.Join(instDir, filenames.LongestSock)
-	if len(maxSockName) >= osutil.UnixPathMax {
-		return nil, fmt.Errorf("instance name %q too long: %q must be less than UNIX_PATH_MAX=%d characters, but is %d",
-			st.instName, maxSockName, osutil.UnixPathMax, len(maxSockName))
-	}
-	if _, err := os.Stat(instDir); !errors.Is(err, os.ErrNotExist) {
-		return nil, fmt.Errorf("instance %q already exists (%q)", st.instName, instDir)
-	}
-	// limayaml.Load() needs to pass the store file path to limayaml.FillDefault() to calculate default MAC addresses
-	filePath := filepath.Join(instDir, filenames.LimaYAML)
-	y, err := limayaml.Load(st.yBytes, filePath)
-	if err != nil {
-		return nil, err
-	}
-	if err := limayaml.Validate(y, true); err != nil {
-		if !saveBrokenEditorBuffer {
-			return nil, err
-		}
-		rejectedYAML := "lima.REJECTED.yaml"
-		if writeErr := os.WriteFile(rejectedYAML, st.yBytes, 0o644); writeErr != nil {
-			return nil, fmt.Errorf("the YAML is invalid, attempted to save the buffer as %q but failed: %w: %w", rejectedYAML, writeErr, err)
-		}
-		return nil, fmt.Errorf("the YAML is invalid, saved the buffer as %q: %w", rejectedYAML, err)
-	}
-	if err := os.MkdirAll(instDir, 0o700); err != nil {
-		return nil, err
-	}
-	if err := os.WriteFile(filePath, st.yBytes, 0o644); err != nil {
-		return nil, err
-	}
-	if err := os.WriteFile(filepath.Join(instDir, filenames.LimaVersion), []byte(version.Version), 0o444); err != nil {
-		return nil, err
-	}
-
-	inst, err := store.Inspect(st.instName)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := start.Register(ctx, inst); err != nil {
-		return nil, err
-	}
-
-	return inst, nil
 }
 
 type creatorState struct {
