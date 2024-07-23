@@ -16,6 +16,7 @@ import (
 	"github.com/lima-vm/lima/pkg/editutil"
 	"github.com/lima-vm/lima/pkg/instance"
 	"github.com/lima-vm/lima/pkg/ioutilx"
+	"github.com/lima-vm/lima/pkg/limayaml"
 	networks "github.com/lima-vm/lima/pkg/networks/reconcile"
 	"github.com/lima-vm/lima/pkg/start"
 	"github.com/lima-vm/lima/pkg/store"
