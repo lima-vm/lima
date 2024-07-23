@@ -294,6 +294,18 @@ func applyYQExpressionToExistingInstance(inst *store.Instance, yq string) (*stor
 	if err != nil {
 		return nil, err
 	}
+	y, err := limayaml.Load(yBytes, filePath)
+	if err != nil {
+		return nil, err
+	}
+	if err := limayaml.Validate(y, true); err != nil {
+		rejectedYAML := "lima.REJECTED.yaml"
+		if writeErr := os.WriteFile(rejectedYAML, yBytes, 0o644); writeErr != nil {
+			return nil, fmt.Errorf("the YAML is invalid, attempted to save the buffer as %q but failed: %w: %w", rejectedYAML, writeErr, err)
+		}
+		// TODO: may need to support editing the rejected YAML
+		return nil, fmt.Errorf("the YAML is invalid, saved the buffer as %q: %w", rejectedYAML, err)
+	}
 	if err := os.WriteFile(filePath, yBytes, 0o644); err != nil {
 		return nil, err
 	}
