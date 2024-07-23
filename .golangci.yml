@@ -137,6 +137,9 @@ issues:
   max-issues-per-linter: 0
   # Maximum count of issues with the same text.
   max-same-issues: 0
+  include:
+  - EXC0013  # revive: package comment should be of the form "(.+)..."
+  - EXC0014  # revive: comment on exported (.+) should be of the form "(.+)..."
   exclude-rules:
   # Allow using Uid, Gid in pkg/osutil.
   - path: "pkg/osutil/"
@@ -145,3 +148,7 @@ issues:
   - path: _test\.go
     linters:
     - godot
+  # Disable revive.exported for constants.
+  - text: "exported: comment on exported const"
+    linters:
+    - revive

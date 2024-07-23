@@ -324,13 +324,13 @@ func watchHostAgentEvents(ctx context.Context, inst *store.Instance, haStdoutPat
 
 type watchHostAgentEventsTimeoutKey = struct{}
 
-// WithWatchHostAgentEventsTimeout sets the value of the timeout to use for
+// WithWatchHostAgentTimeout sets the value of the timeout to use for
 // watchHostAgentEvents in the given Context.
 func WithWatchHostAgentTimeout(ctx context.Context, timeout time.Duration) context.Context {
 	return context.WithValue(ctx, watchHostAgentEventsTimeoutKey{}, timeout)
 }
 
-// watchHostAgentEventsTimeout returns the value of the timeout to use for
+// watchHostAgentTimeout returns the value of the timeout to use for
 // watchHostAgentEvents contained in the given Context, or its default value.
 func watchHostAgentTimeout(ctx context.Context) time.Duration {
 	if timeout, ok := ctx.Value(watchHostAgentEventsTimeoutKey{}).(time.Duration); ok {
