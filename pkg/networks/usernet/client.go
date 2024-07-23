@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
+	"strconv"
 	"time"
 
 	gvproxyclient "github.com/containers/gvisor-tap-vsock/pkg/client"
@@ -74,11 +76,19 @@ func (c *Client) ResolveAndForwardSSH(ipAddr string, sshPort int) error {
 }
 
 func (c *Client) ResolveIPAddress(ctx context.Context, vmMacAddr string) (string, error) {
-	timeout := time.After(2 * time.Minute)
+	resolveIPAddressTimeout := 2 * time.Minute
+	resolveIPAddressTimeoutEnv := os.Getenv("LIMA_USERNET_RESOLVE_IP_ADDRESS_TIMEOUT")
+	if resolveIPAddressTimeoutEnv != "" {
+		if parsedTimeout, err := strconv.Atoi(resolveIPAddressTimeoutEnv); err == nil {
+			resolveIPAddressTimeout = time.Duration(parsedTimeout) * time.Minute
+		}
+	}
+	ctx, cancel := context.WithTimeout(ctx, resolveIPAddressTimeout)
+	defer cancel()
 	ticker := time.NewTicker(500 * time.Millisecond)
 	for {
 		select {
-		case <-timeout:
+		case <-ctx.Done():
 			return "", errors.New("usernet unable to resolve IP for SSH forwarding")
 		case <-ticker.C:
 			leases, err := c.Leases(ctx)
