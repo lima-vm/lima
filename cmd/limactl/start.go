@@ -18,7 +18,6 @@ import (
 	"github.com/lima-vm/lima/pkg/ioutilx"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	networks "github.com/lima-vm/lima/pkg/networks/reconcile"
-	"github.com/lima-vm/lima/pkg/start"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/lima-vm/lima/pkg/templatestore"
@@ -96,7 +95,7 @@ See the examples in 'limactl create --help'.
 	if runtime.GOOS != "windows" {
 		startCommand.Flags().Bool("foreground", false, "run the hostagent in the foreground")
 	}
-	startCommand.Flags().Duration("timeout", start.DefaultWatchHostAgentEventsTimeout, "duration to wait for the instance to be running before timing out")
+	startCommand.Flags().Duration("timeout", instance.DefaultWatchHostAgentEventsTimeout, "duration to wait for the instance to be running before timing out")
 	return startCommand
 }
 
@@ -449,7 +448,7 @@ func createAction(cmd *cobra.Command, args []string) error {
 	if len(inst.Errors) > 0 {
 		return fmt.Errorf("errors inspecting instance: %+v", inst.Errors)
 	}
-	if _, err = start.Prepare(cmd.Context(), inst); err != nil {
+	if _, err = instance.Prepare(cmd.Context(), inst); err != nil {
 		return err
 	}
 	logrus.Infof("Run `limactl start %s` to start the instance.", inst.Name)
@@ -472,7 +471,7 @@ func startAction(cmd *cobra.Command, args []string) error {
 	switch inst.Status {
 	case store.StatusRunning:
 		logrus.Infof("The instance %q is already running. Run `%s` to open the shell.",
-			inst.Name, start.LimactlShellCmd(inst.Name))
+			inst.Name, instance.LimactlShellCmd(inst.Name))
 		// Not an error
 		return nil
 	case store.StatusStopped:
@@ -499,10 +498,10 @@ func startAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	if timeout > 0 {
-		ctx = start.WithWatchHostAgentTimeout(ctx, timeout)
+		ctx = instance.WithWatchHostAgentTimeout(ctx, timeout)
 	}
 
-	return start.Start(ctx, inst, launchHostAgentForeground)
+	return instance.Start(ctx, inst, launchHostAgentForeground)
 }
 
 func createBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {

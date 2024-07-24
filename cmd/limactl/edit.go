@@ -9,9 +9,9 @@ import (
 
 	"github.com/lima-vm/lima/cmd/limactl/editflags"
 	"github.com/lima-vm/lima/pkg/editutil"
+	"github.com/lima-vm/lima/pkg/instance"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	networks "github.com/lima-vm/lima/pkg/networks/reconcile"
-	"github.com/lima-vm/lima/pkg/start"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/lima-vm/lima/pkg/uiutil"
@@ -42,13 +42,13 @@ func editAction(cmd *cobra.Command, args []string) error {
 	inst, err := store.Inspect(instName)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("Instance %q not found", instName)
+			return fmt.Errorf("instance %q not found", instName)
 		}
 		return err
 	}
 
 	if inst.Status == store.StatusRunning {
-		return errors.New("Cannot edit a running instance")
+		return errors.New("cannot edit a running instance")
 	}
 
 	filePath := filepath.Join(inst.Dir, filenames.LimaYAML)
@@ -123,7 +123,7 @@ func editAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	return start.Start(ctx, inst, false)
+	return instance.Start(ctx, inst, false)
 }
 
 func askWhetherToStart() (bool, error) {
