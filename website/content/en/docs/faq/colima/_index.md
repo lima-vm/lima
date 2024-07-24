@@ -11,12 +11,13 @@ that wraps Lima to provide an alternative user experience for launching containe
 The key difference is that Colima launches Docker by default,
 while Lima launches containerd by default.
 
-| Container  | Lima                              | Colima                              |
-|------------|-----------------------------------|-------------------------------------|
-| containerd | `limactl start`                   | `colima start --runtime=containerd` |
-| Docker     | `limactl start template://docker` | `colima start`                      |
-| Podman     | `limactl start template://podman` | -                                   |
-| Kubernetes | `limactl start template://k8s`    | `colima start --kubernetes`         |
+| Container            | Lima                              | Colima                              |
+|----------------------|-----------------------------------|-------------------------------------|
+| containerd           | `limactl start`                   | `colima start --runtime=containerd` |
+| Docker               | `limactl start template://docker` | `colima start`                      |
+| Podman               | `limactl start template://podman` | -                                   |
+| Kubernetes (k3s)     | `limactl start template://k3s`    | `colima start --kubernetes`         |
+| Kubernetes (kubeadm) | `limactl start template://k8s`    | -                                   |
 
 The `colima` CLI is similar to the `limactl` CLI, but there are subtle differences:
 
