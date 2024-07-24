@@ -998,7 +998,7 @@ func FindVirtiofsd(qemuExe string) (string, error) {
 		}
 	}
 
-	return "", errors.New("Failed to locate virtiofsd")
+	return "", errors.New("failed to locate virtiofsd")
 }
 
 func VirtiofsdCmdline(cfg Config, mountIndex int) ([]string, error) {

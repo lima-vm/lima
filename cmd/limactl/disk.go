@@ -27,7 +27,7 @@ func newDiskCommand() *cobra.Command {
 
   Delete a disk:
   $ limactl disk delete DISK
-  
+
   Resize a disk:
   $ limactl disk resize DISK --size SIZE`,
 		SilenceUsage:  true,
@@ -106,7 +106,7 @@ func diskCreateAction(cmd *cobra.Command, args []string) error {
 		if rerr != nil {
 			err = errors.Join(err, fmt.Errorf("failed to remove a directory %q: %w", diskDir, rerr))
 		}
-		return fmt.Errorf("Failed to create %s disk in %q: %w", format, diskDir, err)
+		return fmt.Errorf("failed to create %s disk in %q: %w", format, diskDir, err)
 	}
 
 	return nil

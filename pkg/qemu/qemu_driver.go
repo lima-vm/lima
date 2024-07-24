@@ -288,7 +288,7 @@ func (l *LimaQemuDriver) killVhosts() error {
 	var errs []error
 	for i, vhost := range l.vhostCmds {
 		if err := vhost.Process.Kill(); err != nil && !errors.Is(err, os.ErrProcessDone) {
-			errs = append(errs, fmt.Errorf("Failed to kill virtiofsd instance #%d: %w", i, err))
+			errs = append(errs, fmt.Errorf("failed to kill virtiofsd instance #%d: %w", i, err))
 		}
 	}
 
