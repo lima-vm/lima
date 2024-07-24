@@ -182,6 +182,7 @@ func (l *LimaVzDriver) RunGUI() error {
 	if l.CanRunGUI() {
 		return l.machine.StartGraphicApplication(1920, 1200)
 	}
+	//nolint:revive // error-strings
 	return fmt.Errorf("RunGUI is not supported for the given driver '%s' and display '%s'", "vz", *l.Yaml.Video.Display)
 }
 

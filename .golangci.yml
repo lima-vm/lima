@@ -106,6 +106,8 @@ linters-settings:
   errorlint:
     asserts: false
   revive:
+    # Set below 0.8 to enable error-strings
+    confidence: 0.6
     # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md
     rules:
     - name: blank-imports
