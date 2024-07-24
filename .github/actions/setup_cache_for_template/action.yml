@@ -1,0 +1,88 @@
+name: 'setup cache for template'
+description: 'setup cache for template'
+inputs:
+  arch:
+    description: arch to setup cache for
+    required: false
+  template:
+    description: template yaml file
+    required: true
+runs:
+  using: "composite"
+  steps:
+  - name: "detect platform for download directory"
+    id: detect-platform
+    run: |
+      if [[ "$(uname)" == "Darwin" ]]; then
+        download_dir=~/Library/Caches/lima/download
+      else
+        download_dir=~/.cache/lima/download
+      fi
+      echo "download-dir=$download_dir" >> "$GITHUB_OUTPUT"
+    shell: bash
+  - name: "create cache parameters from template"
+    if: always()
+    id: cache-params-from-template
+    run: |
+      set -eux
+      arch="${{ inputs.arch }}"
+      template="${{ inputs.template }}"
+      case "$template" in
+        https://*)
+          tmp_yaml=$(mktemp -d)/template.yaml
+          curl -sSLf "$template" > $tmp_yaml || exit 1
+          template=$tmp_yaml
+          ;;
+        *)
+          test -f "$template" || exit 1
+          ;;
+      esac
+
+      # detect arch from template if not provided
+      arch="${arch:-$(yq '.arch // ""' "$template")}"
+      arch="${arch:-$(uname -m)}"
+      # normalize arch. amd64 -> x86_64, arm64 -> aarch64
+      case "$arch" in
+        amd64) arch=x86_64 ;;
+        arm64) arch=aarch64 ;;
+      esac
+
+      # extract digest and location from template using arch
+      digest="$(yq ".images | map(select(.arch == \"$arch\")) | .[0].digest // \"\"" "$template")"
+      location="$(yq ".images | map(select(.arch == \"$arch\")) | .[0].location // \"\"" "$template")"
+      test -n "$location" || exit 1
+
+      # path to cache
+      if command -v sha256sum > /dev/null; then
+        sha256="$(echo -n "$location" | sha256sum | cut -d' ' -f1)"
+      elif command -v shasum > /dev/null; then
+        sha256="$(echo -n "$location" | shasum -a 256 | cut -d' ' -f1)"
+      else
+        echo "sha256sum or shasum not found" >&2
+        exit 1
+      fi
+      echo "path=.download/by-url-sha256/$sha256" >> "$GITHUB_OUTPUT"
+
+      # key for cache
+      key="${digest:+image-$digest}"
+      # fallback to os and hash of template file if digest not found
+      key="${key:-${{ runner.os }}-${{ hashFiles(inputs.template) }}}"
+      echo "key=$key" >> "$GITHUB_OUTPUT"
+    shell: bash
+
+  - name: "Cache ${{ steps.cache-params-from-template.outputs.path }}"
+    # avoid using `~` in path that will be expanded to platform specific home directory
+    uses: actions/cache@v4
+    with:
+      path: ${{ steps.cache-params-from-template.outputs.path }}
+      key: ${{ steps.cache-params-from-template.outputs.key }}
+      enableCrossOsArchive: true
+
+  - name: "Create symbolic link named ${{ steps.detect-platform.outputs.download-dir }} pointing to .download"
+    run: |
+      set -eux
+      [ -d .download ] || mkdir -p .download
+      path_to_cache=${{ steps.detect-platform.outputs.download-dir }}
+      mkdir -p $(dirname $path_to_cache)
+      ln -sfn $PWD/.download $path_to_cache
+    shell: bash
