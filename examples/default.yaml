@@ -5,7 +5,7 @@
 # Default values in this YAML file are specified by `null` instead of Lima's "builtin default" values,
 # so they can be overridden by the $LIMA_HOME/_config/default.yaml mechanism documented at the end of this file.
 
-# VM type: "qemu" or "vz" (on macOS 13 and later).
+# VM type: "qemu", "vz" (on macOS 13 and later), or "default".
 # The vmType can be specified only on creating the instance.
 # The vmType of existing instances cannot be changed.
 # 🟢 Builtin default: "qemu"
