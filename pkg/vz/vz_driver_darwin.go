@@ -80,7 +80,7 @@ func (l *LimaVzDriver) Validate() error {
 		return fmt.Errorf("field `mountType` must be %q or %q for VZ driver , got %q", limayaml.REVSSHFS, limayaml.VIRTIOFS, *l.Yaml.MountType)
 	}
 	if *l.Yaml.Firmware.LegacyBIOS {
-		return fmt.Errorf("`firmware.legacyBIOS` configuration is not supported for VZ driver")
+		logrus.Warnf("vmType %s: ignoring `firmware.legacyBIOS`", *l.Yaml.VMType)
 	}
 	for _, f := range l.Yaml.Firmware.Images {
 		switch f.VMType {

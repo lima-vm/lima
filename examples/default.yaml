@@ -281,7 +281,7 @@ rosetta:
 timezone: null
 
 firmware:
-  # Use legacy BIOS instead of UEFI. Ignored for aarch64.
+  # Use legacy BIOS instead of UEFI. Ignored for aarch64 and vz.
   # 🟢 Builtin default: false
   legacyBIOS: null
 #  # Override UEFI images
