@@ -97,7 +97,9 @@ function diagnose() {
 	tail "$HOME/.lima/${NAME}"/*.log
 	limactl shell "$NAME" systemctl --no-pager status
 	limactl shell "$NAME" systemctl --no-pager
-	limactl shell "$NAME" sudo cat /var/log/cloud-init-output.log
+	mkdir -p failure-logs
+	cp -pf "$HOME/.lima/${NAME}"/*.log failure-logs/
+	limactl shell "$NAME" sudo cat /var/log/cloud-init-output.log | tee failure-logs/cloud-init-output.log
 	set +x -e
 }
 
