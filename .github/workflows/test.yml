@@ -157,12 +157,10 @@ jobs:
     - uses: actions/setup-go@v5
       with:
         go-version: 1.23.x
-    - name: Cache ~/Library/Caches/lima/download
-      uses: actions/cache@v4
+    - name: Cache image used by default.yaml
+      uses: ./.github/actions/setup_cache_for_template
       with:
-        path: ~/Library/Caches/lima/download
-        # hashFiles do not seem to support symlinks
-        key: ${{ runner.os }}-${{ hashFiles('templates/default.yaml') }}
+        template: templates/default.yaml
     - name: Unit tests
       run: go test -v ./...
     - name: Make
@@ -230,15 +228,14 @@ jobs:
     - uses: actions/setup-go@v5
       with:
         go-version: 1.23.x
-    - id: path_for_hashFiles
-      # It seems that `hashFiles` cannot use `..` as a path component, so generate a normalized path here.
-      run: echo "NORMALIZED=$(realpath --relative-to=$PWD examples/${{ matrix.template }})" >> "$GITHUB_OUTPUT"
-    - uses: actions/cache@v4
+    - name: normalize template path
+      id: normalize_template_path
+      # `hashFiles` cannot use `..` as a path component, so generate a normalized path here.
+      run: echo "NORMALIZED=$(realpath templates/${{ matrix.template }})" >> "$GITHUB_OUTPUT"
+    - name: Cache image used by ${{ steps.normalize_template_path.outputs.NORMALIZED }}
+      uses: ./.github/actions/setup_cache_for_template
       with:
-        path: ~/.cache/lima/download
-        # hashFiles do not seem to support symlinks
-        # TODO: more fine-grained cache
-        key: ${{ runner.os }}-${{ hashFiles(steps.path_for_hashFiles.outputs.NORMALIZED) }}
+        template: ${{ steps.normalize_template_path.outputs.NORMALIZED }}
     - name: Make
       run: make
     - name: Install
@@ -331,12 +328,10 @@ jobs:
     - uses: actions/setup-go@v5
       with:
         go-version: 1.23.x
-    - name: Cache ~/Library/Caches/lima/download
-      uses: actions/cache@v4
+    - name: Cache image used by vmnet.yaml
+      uses: ./.github/actions/setup_cache_for_template
       with:
-        path: ~/Library/Caches/lima/download
-        # hashFiles do not seem to support symlinks
-        key: ${{ runner.os }}-${{ hashFiles('examples/vmnet.yaml') }}
+        template: templates/vmnet.yaml
     - name: Make
       run: make
     - name: Install
@@ -386,11 +381,10 @@ jobs:
     - uses: actions/setup-go@v5
       with:
         go-version: 1.23.x
-    - name: Cache ~/Library/Caches/lima/download
-      uses: actions/cache@v4
+    - name: Cache image used by ${{ matrix.oldver }}/examples/ubuntu-lts.yaml
+      uses: ./.github/actions/setup_cache_for_template
       with:
-        path: ~/Library/Caches/lima/download
-        key: ${{ runner.os }}-upgrade-${{ matrix.oldver }}
+        template: https://raw.githubusercontent.com/lima-vm/lima/${{ matrix.oldver }}/examples/ubuntu-lts.yaml
     - name: Install test dependencies
       run: brew install qemu bash coreutils
     - name: Test
@@ -420,15 +414,14 @@ jobs:
     - uses: actions/setup-go@v5
       with:
         go-version: 1.23.x
-    - id: path_for_hashFiles
-      # It seems that `hashFiles` cannot use `..` as a path component, so generate a normalized path here.
-      run: echo "NORMALIZED=$(realpath examples/${{ matrix.template }})" >> "$GITHUB_OUTPUT"
-    - name: Cache ~/Library/Caches/lima/download
-      uses: actions/cache@v4
+    - name: normalize template path
+      id: normalize_template_path
+      # `hashFiles` cannot use `..` as a path component, so generate a normalized path here.
+      run: echo "NORMALIZED=$(realpath templates/${{ matrix.template }})" >> "$GITHUB_OUTPUT"
+    - name: Cache image used by ${{ steps.normalize_template_path.outputs.NORMALIZED }}
+      uses: ./.github/actions/setup_cache_for_template
       with:
-        path: ~/Library/Caches/lima/download
-        # hashFiles do not seem to support symlinks
-        key: ${{ runner.os }}-${{ hashFiles(steps.path_for_hashFiles.outputs.NORMALIZED) }}
+        template: ${{ steps.normalize_template_path.outputs.NORMALIZED }}
     - name: Make
       run: make
     - name: Install
