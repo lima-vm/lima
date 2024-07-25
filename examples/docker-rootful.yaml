@@ -55,7 +55,7 @@ provision:
     fi
     export DEBIAN_FRONTEND=noninteractive
     curl -fsSL https://get.docker.com | sh
-- mode: user # configure docker under non-root user
+- mode: user  # configure docker under non-root user
   script: |
     #!/bin/bash
     set -eux -o pipefail
