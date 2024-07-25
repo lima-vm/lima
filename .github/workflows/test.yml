@@ -194,6 +194,8 @@ jobs:
     # GHA macOS is slow and flaky, so we only test default.yaml here.
     # Other yamls are tested on Linux instances.
     #
+    - if: always()
+      uses: ./.github/actions/upload_failure_logs_if_exists
     - name: "Show cache"
       if: always()
       run: ./hack/debug-cache.sh
@@ -258,6 +260,10 @@ jobs:
         retry_on: error
         max_attempts: 3
         command: ./hack/test-templates.sh templates/${{ matrix.template }}
+    - if: always()
+      uses: ./.github/actions/upload_failure_logs_if_exists
+      with:
+        suffix: ${{ matrix.template }}
     - name: "Show cache"
       run: ./hack/debug-cache.sh
 
@@ -357,6 +363,8 @@ jobs:
         retry_on: error
         max_attempts: 3
         command: ./hack/test-templates.sh templates/vmnet.yaml
+    - if: always()
+      uses: ./.github/actions/upload_failure_logs_if_exists
 
   upgrade:
     name: "Upgrade test"
@@ -425,3 +433,7 @@ jobs:
       env:
         LIMACTL_CREATE_ARGS: "--vm-type vz --mount-type virtiofs --rosetta --network vzNAT"
       run: ./hack/test-templates.sh templates/${{ matrix.template }}
+    - if: failure()
+      uses: ./.github/actions/upload_failure_logs_if_exists
+      with:
+        suffix: ${{ matrix.template }}
