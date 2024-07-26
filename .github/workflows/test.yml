@@ -394,6 +394,8 @@ jobs:
         retry_on: error
         max_attempts: 3
         command: ./hack/test-upgrade.sh ${{ matrix.oldver }} ${{ github.sha }}
+    - if: always()
+      uses: ./.github/actions/upload_failure_logs_if_exists
 
   vz:
     name: "vz"
