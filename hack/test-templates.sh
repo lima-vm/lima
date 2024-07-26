@@ -334,7 +334,11 @@ if [[ -n ${CHECKS["restart"]} ]]; then
 
 	export ftp_proxy=my.proxy:8021
 	INFO "Restarting \"$NAME\""
-	limactl start "$NAME"
+	if ! limactl start "$NAME"; then
+		ERROR "Failed to start \"$NAME\""
+		diagnose "$NAME"
+		exit 1
+	fi
 
 	INFO "Make sure proxy setting is updated"
 	got=$(limactl shell "$NAME" env | grep FTP_PROXY)
@@ -367,7 +371,11 @@ if [[ -n ${CHECKS["user-v2"]} ]]; then
 	INFO "Testing user-v2 network"
 	secondvm="$NAME-1"
 	"${LIMACTL_CREATE[@]}" "$FILE" --name "$secondvm"
-	limactl start "$secondvm"
+	if ! limactl start "$secondvm"; then
+		ERROR "Failed to start \"$secondvm\""
+		diagnose "$secondvm"
+		exit 1
+	fi
 	secondvmDNS="lima-$secondvm.internal"
 	INFO "DNS of $secondvm is $secondvmDNS"
 	set -x
