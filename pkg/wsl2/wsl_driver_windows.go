@@ -29,6 +29,7 @@ var knownYamlProperties = []string{
 	"Message",
 	"Mounts",
 	"MountType",
+	"Param",
 	"Plain",
 	"PortForwards",
 	"Probes",

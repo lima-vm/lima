@@ -30,3 +30,50 @@ func TestValidateDefault(t *testing.T) {
 	err = Validate(y, true)
 	assert.NilError(t, err)
 }
+
+func TestValidateParamIsUsed(t *testing.T) {
+	paramYaml := `param:
+  name: value`
+	_, err := Load([]byte(paramYaml), "paramIsNotUsed.yaml")
+	assert.Error(t, err, "field `param` key \"name\" is not used in any provision, probe, copyToHost, or portForward")
+
+	fieldsUsingParam := []string{
+		`provision: [{"script": "echo {{ .Param.name }}"}]`,
+		`probes: [{"script": "echo {{ .Param.name }}"}]`,
+		`copyToHost: [{"guest": "/tmp/{{ .Param.name }}", "host": "/tmp"}]`,
+		`copyToHost: [{"guest": "/tmp", "host": "/tmp/{{ .Param.name }}"}]`,
+		`portForwards: [{"guestSocket": "/tmp/{{ .Param.name }}", "hostSocket": "/tmp"}]`,
+		`portForwards: [{"guestSocket": "/tmp", "hostSocket": "/tmp/{{ .Param.name }}"}]`,
+	}
+	for _, fieldUsingParam := range fieldsUsingParam {
+		_, err = Load([]byte(fieldUsingParam+"\n"+paramYaml), "paramIsUsed.yaml")
+		//
+		assert.NilError(t, err)
+	}
+
+	// use "{{if .Param.rootful \"true\"}}{{else}}{{end}}"" in provision, probe, copyToHost, and portForward
+	rootfulYaml := `param:
+  rootful: true`
+	fieldsUsingIfParamRootfulTrue := []string{
+		`provision: [{"script": "echo {{if eq .Param.rootful \"true\"}}rootful{{else}}rootless{{end}}"}]`,
+		`probes: [{"script": "echo {{if eq .Param.rootful \"true\"}}rootful{{else}}rootless{{end}}"}]`,
+		`copyToHost: [{"guest": "/tmp/{{if eq .Param.rootful \"true\"}}rootful{{else}}rootless{{end}}", "host": "/tmp"}]`,
+		`copyToHost: [{"guest": "/tmp", "host": "/tmp/{{if eq .Param.rootful \"true\"}}rootful{{else}}rootless{{end}}"}]`,
+		`portForwards: [{"guestSocket": "{{if eq .Param.rootful \"true\"}}/var/run{{else}}/run/user/{{.UID}}{{end}}/docker.sock", "hostSocket": "{{.Dir}}/sock/docker.sock"}]`,
+		`portForwards: [{"guestSocket": "/var/run/docker.sock", "hostSocket": "{{.Dir}}/sock/docker-{{if eq .Param.rootful \"true\"}}rootfule{{else}}rootless{{end}}.sock"}]`,
+	}
+	for _, fieldUsingIfParamRootfulTrue := range fieldsUsingIfParamRootfulTrue {
+		_, err = Load([]byte(fieldUsingIfParamRootfulTrue+"\n"+rootfulYaml), "paramIsUsed.yaml")
+		//
+		assert.NilError(t, err)
+	}
+
+	// use rootFul instead of rootful
+	rootFulYaml := `param:
+  rootFul: true`
+	for _, fieldUsingIfParamRootfulTrue := range fieldsUsingIfParamRootfulTrue {
+		_, err = Load([]byte(fieldUsingIfParamRootfulTrue+"\n"+rootFulYaml), "paramIsUsed.yaml")
+		//
+		assert.Error(t, err, "field `param` key \"rootFul\" is not used in any provision, probe, copyToHost, or portForward")
+	}
+}

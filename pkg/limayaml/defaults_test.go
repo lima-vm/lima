@@ -129,10 +129,10 @@ func TestFillDefault(t *testing.T) {
 		},
 		MountType: ptr.Of(NINEP),
 		Provision: []Provision{
-			{Script: "#!/bin/true"},
+			{Script: "#!/bin/true # {{.Param.ONE}}"},
 		},
 		Probes: []Probe{
-			{Script: "#!/bin/false"},
+			{Script: "#!/bin/false # {{.Param.ONE}}"},
 		},
 		Networks: []Network{
 			{Lima: "shared"},
@@ -145,17 +145,20 @@ func TestFillDefault(t *testing.T) {
 			{GuestPort: 80},
 			{GuestPort: 8080, HostPort: 8888},
 			{
-				GuestSocket: "{{.Home}} | {{.UID}} | {{.User}}",
-				HostSocket:  "{{.Home}} | {{.Dir}} | {{.Name}} | {{.UID}} | {{.User}}",
+				GuestSocket: "{{.Home}} | {{.UID}} | {{.User}} | {{.Param.ONE}}",
+				HostSocket:  "{{.Home}} | {{.Dir}} | {{.Name}} | {{.UID}} | {{.User}} | {{.Param.ONE}}",
 			},
 		},
 		CopyToHost: []CopyToHost{
 			{
-				GuestFile: "{{.Home}} | {{.UID}} | {{.User}}",
-				HostFile:  "{{.Home}} | {{.Dir}} | {{.Name}} | {{.UID}} | {{.User}}",
+				GuestFile: "{{.Home}} | {{.UID}} | {{.User}} | {{.Param.ONE}}",
+				HostFile:  "{{.Home}} | {{.Dir}} | {{.Name}} | {{.UID}} | {{.User}} | {{.Param.ONE}}",
 			},
 		},
 		Env: map[string]string{
+			"ONE": "Eins",
+		},
+		Param: map[string]string{
 			"ONE": "Eins",
 		},
 		CACertificates: CACertificates{
@@ -212,10 +215,12 @@ func TestFillDefault(t *testing.T) {
 
 	expect.Provision = y.Provision
 	expect.Provision[0].Mode = ProvisionModeSystem
+	expect.Provision[0].Script = "#!/bin/true # Eins"
 
 	expect.Probes = y.Probes
 	expect.Probes[0].Mode = ProbeModeReadiness
 	expect.Probes[0].Description = "user probe 1/1"
+	expect.Probes[0].Script = "#!/bin/true # Eins"
 
 	expect.Networks = y.Networks
 	expect.Networks[0].MACAddress = MACAddress(fmt.Sprintf("%s#%d", filePath, 0))
@@ -243,13 +248,15 @@ func TestFillDefault(t *testing.T) {
 	expect.PortForwards[2].HostPort = 8888
 	expect.PortForwards[2].HostPortRange = [2]int{8888, 8888}
 
-	expect.PortForwards[3].GuestSocket = fmt.Sprintf("%s | %s | %s", guestHome, user.Uid, user.Username)
-	expect.PortForwards[3].HostSocket = fmt.Sprintf("%s | %s | %s | %s | %s", hostHome, instDir, instName, user.Uid, user.Username)
+	expect.PortForwards[3].GuestSocket = fmt.Sprintf("%s | %s | %s | %s", guestHome, user.Uid, user.Username, y.Param["ONE"])
+	expect.PortForwards[3].HostSocket = fmt.Sprintf("%s | %s | %s | %s | %s | %s", hostHome, instDir, instName, user.Uid, user.Username, y.Param["ONE"])
 
-	expect.CopyToHost[0].GuestFile = fmt.Sprintf("%s | %s | %s", guestHome, user.Uid, user.Username)
-	expect.CopyToHost[0].HostFile = fmt.Sprintf("%s | %s | %s | %s | %s", hostHome, instDir, instName, user.Uid, user.Username)
+	expect.CopyToHost[0].GuestFile = fmt.Sprintf("%s | %s | %s | %s", guestHome, user.Uid, user.Username, y.Param["ONE"])
+	expect.CopyToHost[0].HostFile = fmt.Sprintf("%s | %s | %s | %s | %s | %s", hostHome, instDir, instName, user.Uid, user.Username, y.Param["ONE"])
 
 	expect.Env = y.Env
+
+	expect.Param = y.Param
 
 	expect.CACertificates = CACertificates{
 		RemoveDefaults: ptr.Of(false),
@@ -380,6 +387,10 @@ func TestFillDefault(t *testing.T) {
 			"ONE": "one",
 			"TWO": "two",
 		},
+		Param: map[string]string{
+			"ONE": "one",
+			"TWO": "two",
+		},
 		CACertificates: CACertificates{
 			RemoveDefaults: ptr.Of(true),
 			Certs: []string{
@@ -458,6 +469,8 @@ func TestFillDefault(t *testing.T) {
 
 	// "TWO" does not exist in filledDefaults.Env, so is set from d.Env
 	expect.Env["TWO"] = d.Env["TWO"]
+
+	expect.Param["TWO"] = d.Param["TWO"]
 
 	FillDefault(&y, &d, &LimaYAML{}, filePath)
 	assert.DeepEqual(t, &y, &expect, opts...)
@@ -584,6 +597,10 @@ func TestFillDefault(t *testing.T) {
 			"TWO":   "deux",
 			"THREE": "trois",
 		},
+		Param: map[string]string{
+			"TWO":   "deux",
+			"THREE": "trois",
+		},
 		CACertificates: CACertificates{
 			RemoveDefaults: ptr.Of(true),
 		},
@@ -631,6 +648,8 @@ func TestFillDefault(t *testing.T) {
 
 	// ONE remains from filledDefaults.Env; the rest are set from o
 	expect.Env["ONE"] = y.Env["ONE"]
+
+	expect.Param["ONE"] = y.Param["ONE"]
 
 	expect.CACertificates.RemoveDefaults = ptr.Of(true)
 	expect.CACertificates.Files = []string{"ca.crt"}

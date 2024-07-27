@@ -42,6 +42,7 @@ var knownYamlProperties = []string{
 	"MountInotify",
 	"Networks",
 	"OS",
+	"Param",
 	"Plain",
 	"PortForwards",
 	"Probes",

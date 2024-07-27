@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 
@@ -252,7 +253,7 @@ func Validate(y *LimaYAML, warn bool) error {
 		}
 		if rule.GuestSocket != "" {
 			if !path.IsAbs(rule.GuestSocket) {
-				return fmt.Errorf("field `%s.guestSocket` must be an absolute path", field)
+				return fmt.Errorf("field `%s.guestSocket` must be an absolute path, but is %q", field, rule.GuestSocket)
 			}
 			if rule.HostSocket == "" && rule.HostPortRange[1]-rule.HostPortRange[0] > 0 {
 				return fmt.Errorf("field `%s.guestSocket` can only be mapped to a single port or socket. not a range", field)
@@ -287,7 +288,7 @@ func Validate(y *LimaYAML, warn bool) error {
 		field := fmt.Sprintf("CopyToHost[%d]", i)
 		if rule.GuestFile != "" {
 			if !path.IsAbs(rule.GuestFile) {
-				return fmt.Errorf("field `%s.guest` must be an absolute path", field)
+				return fmt.Errorf("field `%s.guest` must be an absolute path, but is %q", field, rule.GuestFile)
 			}
 		}
 		if rule.HostFile != "" {
@@ -381,6 +382,46 @@ func validateNetwork(y *LimaYAML) error {
 			return fmt.Errorf("field `%s.interface` value %q has already been used by field `networks[%d].interface`", field, nw.Interface, prev)
 		}
 		interfaceName[nw.Interface] = i
+	}
+	return nil
+}
+
+// ValidateParamIsUsed checks if the keys in the `param` field are used in any script, probe, copyToHost, or portForward.
+// It should be called before the `y` parameter is passed to FillDefault() that execute template.
+func ValidateParamIsUsed(y *LimaYAML) error {
+	for key := range y.Param {
+		re, err := regexp.Compile(`{{[^}]*\.Param\.` + key + `[^}]*}}`)
+		if err != nil {
+			return fmt.Errorf("field to compile regexp for key %q: %w", key, err)
+		}
+		keyIsUsed := false
+		for _, p := range y.Provision {
+			if re.MatchString(p.Script) {
+				keyIsUsed = true
+				break
+			}
+		}
+		for _, p := range y.Probes {
+			if re.MatchString(p.Script) {
+				keyIsUsed = true
+				break
+			}
+		}
+		for _, p := range y.CopyToHost {
+			if re.MatchString(p.GuestFile) || re.MatchString(p.HostFile) {
+				keyIsUsed = true
+				break
+			}
+		}
+		for _, p := range y.PortForwards {
+			if re.MatchString(p.GuestSocket) || re.MatchString(p.HostSocket) {
+				keyIsUsed = true
+				break
+			}
+		}
+		if !keyIsUsed {
+			return fmt.Errorf("field `param` key %q is not used in any provision, probe, copyToHost, or portForward", key)
+		}
 	}
 	return nil
 }
