@@ -45,10 +45,10 @@ provision:
     set -eux -o pipefail
     command -v docker >/dev/null 2>&1 && exit 0
     readonly override_conf=/etc/systemd/system/docker.socket.d/override.conf
-    if [ ! -e "$override_conf" ]; then
-      mkdir -p $(dirname "$override_conf")
+    if [ ! -e $override_conf ]; then
+      mkdir -p $(dirname $override_conf)
       # Alternatively we could just add the user to the "docker" group, but that requires restarting the user session
-      cat <<EOF >"$override_conf"
+      cat <<EOF >$override_conf
     [Socket]
     SocketUser={{.User}}
     EOF
@@ -58,50 +58,81 @@ provision:
 - mode: user  # configure docker under non-root user
   script: |
     #!/bin/bash
-    set -eux -o pipefail
-    command -v jq &>/dev/null || sudo apt-get install -y jq
-    readonly rootless_installed=$(systemctl --user list-unit-files docker.service &>/dev/null && echo true || echo false)
+    set -o errexit -o nounset -o pipefail -o xtrace
 
-    if [ "{{.Param.Rootful}}" = "true" ]; then
-      readonly config_dir="/etc/docker"
-      readonly systemctl="sudo systemctl"
-      readonly tee="sudo tee"
-
-      [ "$rootless_installed" != "true" ] || systemctl --user disable --now docker
-      docker context use default
-
+    if ! command -v jq &>/dev/null; then
+      sudo apt-get install --assume-yes jq
+    fi
+    if systemctl --user list-unit-files docker.service &>/dev/null; then
+      readonly rootless_installed=true
     else
-      readonly config_dir="$HOME/.config/docker"
-      readonly systemctl="systemctl --user"
-      readonly tee="tee"
+      readonly rootless_installed=false
+    fi
 
+    # Setting shell variable makes it easier to read cloud-init-output.log
+    readonly ROOTFUL="{{.Param.ROOTFUL}}"
+    if [ "$ROOTFUL" = true ]; then
+      if [ $rootless_installed = true ]; then
+        systemctl --user disable --now docker
+      fi
+
+      readonly config_dir=/etc/docker
+      readonly context=default
+      function systemctl_wrapper() { sudo systemctl "$@"; }
+      function tee_wrapper() { sudo tee "$@"; }
+    else
       sudo systemctl disable --now docker
-      if [ "$rootless_installed" != "true" ]; then
-        sudo apt-get install -y dbus-user-session fuse3 uidmap
-        $systemctl start dbus
-        [ ! -S /var/run/docker.sock ] || sudo rm /var/run/docker.sock
+      if [ $rootless_installed != true ]; then
+        sudo apt-get install --assume-yes dbus-user-session fuse3 uidmap
+        if [ -S /var/run/docker.sock ]; then
+          sudo rm /var/run/docker.sock
+        fi
         dockerd-rootless-setuptool.sh install
       fi
-      docker context use rootless
+
+      readonly config_dir="$HOME/.config/docker"
+      readonly context=rootless
+      function systemctl_wrapper() { systemctl --user "$@"; }
+      function tee_wrapper() { tee "$@"; }
     fi
-    $systemctl enable --now docker
+
+    systemctl_wrapper enable --now docker
+    docker context use $context
 
     readonly config="$config_dir/daemon.json"
-    needs_restart=
+    function print_config() {
+      if [ -s "$config" ]; then
+        cat "$config"
+      else
+        # print empty JSON object instead of empty string for jq to work
+        echo "{}"
+      fi
+    }
+    needs_restart=false
     function set_docker_daemon_json() {
-      function cat_config() { test -s "$config" && cat "$config" || echo "{}" ; }
-      local -r current=$(cat_config | jq -r "$1 // empty")
+      local -r current=$(print_config | jq --raw-output "$1 // empty")
       [ "$current" = "$2" ] && return 0
-      mkdir -p "$config_dir" && cat_config | jq "$1 = ${2:-empty}" | (sleep 0 && $tee "$config") && needs_restart=1
+      mkdir -p "$config_dir"
+      # sleep 0 is a trick to avoid tee_wrapper overwriting the file before reading it
+      if print_config | jq "$1 = ${2:-empty}" | (sleep 0 && tee_wrapper "$config"); then
+        needs_restart=true
+      fi
     }
 
+    # Setting shell variable makes it easier to read cloud-init-output.log
+    readonly CONTAINERD_IMAGE_STORE="{{.Param.CONTAINERD_IMAGE_STORE}}"
     # enable containerd image store
-    set_docker_daemon_json '.features."containerd-snapshotter"' "$(
-      [ "{{.Param.ContainerdImageStore}}" = "true" ] && echo 'true'
-    )"
+    if [ "$CONTAINERD_IMAGE_STORE" = true ]; then
+      set_docker_daemon_json '.features."containerd-snapshotter"' 'true'
+    else
+      # passing empty string to remove the key and use the default value
+      set_docker_daemon_json '.features."containerd-snapshotter"' ''
+    fi
 
     # restart docker to apply the new configuration
-    [ -z "$needs_restart" ] || $systemctl restart docker
+    if [ $needs_restart = true ]; then
+      systemctl_wrapper restart docker
+    fi
 probes:
 - script: |
     #!/bin/bash
@@ -110,9 +141,10 @@ probes:
       echo >&2 "docker is not installed yet"
       exit 1
     fi
-    if [ "{{.Param.Rootful}}" = "true" ]; then
+    readonly ROOTFUL="{{.Param.ROOTFUL}}"
+    if [ "$ROOTFUL" = true ]; then
       target=dockerd
-      target_description="dockerd"
+      target_description=dockerd
     else
       target=rootlesskit
       target_description="rootlesskit (used by rootless docker)"
@@ -128,7 +160,7 @@ hostResolver:
   hosts:
     host.docker.internal: host.lima.internal
 portForwards:
-- guestSocket: "{{if eq .Param.Rootful \"true\"}}/var/run{{else}}/run/user/{{.UID}}{{end}}/docker.sock"
+- guestSocket: "{{if eq .Param.ROOTFUL \"true\"}}/var/run{{else}}/run/user/{{.UID}}{{end}}/docker.sock"
   hostSocket: "{{.Dir}}/sock/docker.sock"
 message: |
   To run `docker` on the host (assumes docker-cli is installed), run the following commands:
@@ -138,5 +170,5 @@ message: |
   docker run hello-world
   ------
 param:
-  ContainerdImageStore: false
-  Rootful: true
+  CONTAINERD_IMAGE_STORE: false
+  ROOTFUL: true
