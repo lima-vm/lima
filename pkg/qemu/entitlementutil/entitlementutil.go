@@ -51,6 +51,7 @@ func Sign(qExe string) error {
   </dict>
 </plist>`
 	if _, err = ent.WriteString(entXML); err != nil {
+		ent.Close()
 		return fmt.Errorf("failed to write to a temporary file %q for signing QEMU binary: %w", entName, err)
 	}
 	ent.Close()

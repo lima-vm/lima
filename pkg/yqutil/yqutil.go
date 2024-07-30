@@ -22,6 +22,7 @@ func EvaluateExpression(expression string, content []byte) ([]byte, error) {
 	defer os.RemoveAll(tmpYAMLPath)
 	_, err = tmpYAMLFile.Write(content)
 	if err != nil {
+		tmpYAMLFile.Close()
 		return nil, err
 	}
 	if err = tmpYAMLFile.Close(); err != nil {

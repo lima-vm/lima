@@ -64,6 +64,7 @@ func OpenEditor(content []byte, hdr string) ([]byte, error) {
 	tmpYAMLPath := tmpYAMLFile.Name()
 	defer os.RemoveAll(tmpYAMLPath)
 	if _, err := tmpYAMLFile.Write(append([]byte(hdr), content...)); err != nil {
+		tmpYAMLFile.Close()
 		return nil, err
 	}
 	if err := tmpYAMLFile.Close(); err != nil {
