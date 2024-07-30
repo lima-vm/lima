@@ -49,6 +49,9 @@ function uninstall_lima() {
 
 function show_lima_log() {
 	tail -n 100 ~/.lima/"${LIMA_INSTANCE}"/*.log || true
+	mkdir -p failure-logs
+	cp -pf ~/.lima/"${LIMA_INSTANCE}"/*.log failure-logs/ || true
+	limactl shell "${LIMA_INSTANCE}" sudo cat /var/log/cloud-init-output.log | tee failure-logs/cloud-init-output.log || true
 }
 
 INFO "Uninstalling lima"
@@ -89,7 +92,7 @@ INFO "Installing the new Lima ${NEWVER}"
 install_lima "${NEWVER}"
 
 INFO "Restarting the instance"
-limactl start --tty=false "${LIMA_INSTANCE}"
+limactl start --tty=false "${LIMA_INSTANCE}" || show_lima_log
 lima nerdctl info
 
 INFO "Confirming that the host filesystem is still mounted"
