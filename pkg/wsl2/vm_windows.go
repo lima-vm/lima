@@ -81,6 +81,7 @@ func provisionVM(ctx context.Context, instanceDir, instanceName, distroName stri
 		return err
 	}
 	if _, err = limaBootFile.Write(limaBootB); err != nil {
+		limaBootFile.Close()
 		return err
 	}
 	limaBootFileWinPath := limaBootFile.Name()
