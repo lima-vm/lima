@@ -105,7 +105,7 @@ func hostagentAction(cmd *cobra.Command, args []string) error {
 	go func() {
 		defer os.RemoveAll(socket)
 		defer srv.Close()
-		if serveErr := srv.Serve(l); serveErr != nil {
+		if serveErr := srv.Serve(l); serveErr != http.ErrServerClosed {
 			logrus.WithError(serveErr).Warn("hostagent API server exited with an error")
 		}
 	}()
