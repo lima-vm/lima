@@ -1,5 +1,9 @@
 #!/bin/sh
 set -eu
+
+# Environment Variables
+# LIMA_INSTANCE: Specifies the name of the Lima instance to use. Default is "docker".
+
 : "${LIMA_INSTANCE:=docker}"
 : "${DOCKER:=docker}"
 

@@ -1,5 +1,12 @@
 #!/bin/sh
 set -eu
+
+# Environment Variables
+# LIMA_INSTANCE: Specifies the name of the Lima instance to use. Default is "default".
+# LIMA_SHELL: Specifies the shell interpreter to use inside the Lima instance. Default is the user's shell configured inside the instance.
+# LIMA_WORKDIR: Specifies the initial working directory inside the Lima instance. Default is the current directory from the host.
+# LIMACTL: Specifies the path to the limactl binary. Default is "limactl" in $PATH.
+
 : "${LIMA_INSTANCE:=default}"
 : "${LIMA_SHELL:=}"
 : "${LIMA_WORKDIR:=}"
