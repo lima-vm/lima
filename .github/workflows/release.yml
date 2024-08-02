@@ -43,6 +43,12 @@ jobs:
     runs-on: ubuntu-20.04
     needs: artifacts-darwin
     timeout-minutes: 20
+    # The maximum access is "read" for PRs from public forked repos
+    # https://docs.github.com/en/actions/security-guides/automatic-token-authentication#permissions-for-the-github_token
+    permissions:
+      contents: write  # for releases
+      id-token: write  # for provenances
+      attestations: write  # for provenances
     steps:
     - uses: actions/checkout@v4
     - uses: actions/download-artifact@v4
@@ -95,6 +101,10 @@ jobs:
         - - -
         Release manager: [ADD YOUR NAME HERE] (@[ADD YOUR GITHUB ID HERE])`
         EOF
+    - uses: actions/attest-build-provenance@v1
+      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+      with:
+        subject-path: _artifacts/*
     - name: "Create release"
       if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
       env:
