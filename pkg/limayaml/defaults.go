@@ -735,6 +735,16 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.Rosetta.BinFmt = ptr.Of(false)
 	}
 
+	if y.NestedVirtualization == nil {
+		y.NestedVirtualization = d.NestedVirtualization
+	}
+	if o.NestedVirtualization != nil {
+		y.NestedVirtualization = o.NestedVirtualization
+	}
+	if y.NestedVirtualization == nil {
+		y.NestedVirtualization = ptr.Of(false)
+	}
+
 	if y.Plain == nil {
 		y.Plain = d.Plain
 	}

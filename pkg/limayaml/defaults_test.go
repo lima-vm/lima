@@ -106,7 +106,8 @@ func TestFillDefault(t *testing.T) {
 		CACertificates: CACertificates{
 			RemoveDefaults: ptr.Of(false),
 		},
-		Plain: ptr.Of(false),
+		NestedVirtualization: ptr.Of(false),
+		Plain:                ptr.Of(false),
 	}
 
 	defaultPortForward := PortForward{
@@ -293,6 +294,8 @@ func TestFillDefault(t *testing.T) {
 		BinFmt:  ptr.Of(false),
 	}
 
+	expect.NestedVirtualization = ptr.Of(false)
+
 	FillDefault(&y, &LimaYAML{}, &LimaYAML{}, filePath)
 	assert.DeepEqual(t, &y, &expect, opts...)
 
@@ -420,6 +423,7 @@ func TestFillDefault(t *testing.T) {
 			Enabled: ptr.Of(true),
 			BinFmt:  ptr.Of(true),
 		},
+		NestedVirtualization: ptr.Of(true),
 	}
 
 	expect = d
@@ -634,6 +638,7 @@ func TestFillDefault(t *testing.T) {
 			Enabled: ptr.Of(false),
 			BinFmt:  ptr.Of(false),
 		},
+		NestedVirtualization: ptr.Of(false),
 	}
 
 	y = filledDefaults
@@ -689,6 +694,8 @@ func TestFillDefault(t *testing.T) {
 		BinFmt:  ptr.Of(false),
 	}
 	expect.Plain = ptr.Of(false)
+
+	expect.NestedVirtualization = ptr.Of(false)
 
 	FillDefault(&y, &d, &o, filePath)
 	assert.DeepEqual(t, &y, &expect, opts...)
