@@ -117,7 +117,7 @@ fi
 
 set -x
 # shellcheck disable=SC2086
-"${LIMACTL_CREATE[@]}" ${LIMACTL_CREATE_ARGS} "$FILE"
+"${LIMACTL_CREATE[@]}" ${LIMACTL_CREATE_ARGS:-} "$FILE"
 set +x
 
 if [[ -n ${CHECKS["mount-path-with-spaces"]} ]]; then
@@ -230,6 +230,13 @@ if [[ -n ${CHECKS["container-engine"]} ]]; then
 		set -x
 		limactl shell "$NAME" $CONTAINER_ENGINE pull --quiet ${alpine_image}
 		echo "random-content-${RANDOM}" >"$hometmp/random"
+		# make sure the new file is visible inside the VM
+		for _ in $(seq 10); do
+			if limactl shell "$NAME" cat "$hometmp/random" &>/dev/null; then
+				break
+			fi
+			sleep 5
+		done
 		expected="$(cat "$hometmp/random")"
 		got="$(limactl shell "$NAME" $CONTAINER_ENGINE run --rm -v "$hometmp/random":/mnt/foo ${alpine_image} cat /mnt/foo)"
 		INFO "$hometmp/random: expected=${expected}, got=${got}"
