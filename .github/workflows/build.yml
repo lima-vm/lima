@@ -1,0 +1,54 @@
+name: build lima
+run-name: build lima on ${{ inputs.runs-on }} using go ${{ inputs.go-version }}
+
+on:
+  workflow_call:
+    inputs:
+      go-version:
+        type: string
+        description: 'The version of Go to use'
+        required: false
+        default: '1.23.x'
+      runs-on:
+        type: string
+        description: 'The type of runner to use'
+        required: true
+    outputs:
+      artifact:
+        description: 'The name of the artifact'
+        value: ${{ jobs.build.outputs.artifact }}
+
+jobs:
+  build:
+    name: "Build on ${{ inputs.runs-on }} using go ${{ inputs.go-version }}"
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: 30
+    outputs:
+      artifact: ${{ steps.set-output.outputs.artifact }}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - uses: actions/setup-go@v5
+      with:
+        go-version: ${{ inputs.go-version }}
+    - name: Make
+      run: make
+    - name: Make install on Linux
+      if: runner.os == 'Linux'
+      run: sudo make install
+    - name: Make install on macOS
+      if: runner.os == 'macOS'
+      run: make install
+    - name: set output
+      id: set-output
+      run: echo "artifact=lima-${{ inputs.runs-on }}.tar.gz" >> $GITHUB_OUTPUT
+    - name: create archive
+      run: |
+        mkdir -p _artifacts
+        tar -C _output/ -czvf _artifacts/${{ steps.set-output.outputs.artifact }} ./
+    - name: upload archive
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ steps.set-output.outputs.artifact }}
+        path: _artifacts/${{ steps.set-output.outputs.artifact }}
