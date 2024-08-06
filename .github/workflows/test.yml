@@ -146,6 +146,12 @@ jobs:
       if: always()
       run: type C:\Users\runneradmin\.lima\wsl2\ha.stderr.log
 
+  build-on-macos-12:
+    name: "Build on macOS 12"
+    uses: ./.github/workflows/build.yml
+    with:
+      runs-on: macos-12
+
   integration:
     name: Integration tests
     runs-on: macos-12
@@ -198,10 +204,17 @@ jobs:
       if: always()
       run: ./hack/debug-cache.sh
 
+  build-on-ubuntu:
+    name: "Build on Ubuntu"
+    uses: ./.github/workflows/build.yml
+    with:
+      runs-on: ubuntu-22.04
+
   # Non-default templates are tested on Linux instances of GHA,
   # as they seem more stable than macOS instances.
   integration-linux:
     name: Integration tests (on Linux)
+    needs: build-on-ubuntu
     runs-on: ubuntu-22.04
     timeout-minutes: 120
     strategy:
@@ -222,13 +235,9 @@ jobs:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 1
-    - uses: actions/setup-go@v5
+    - uses: ./.github/actions/install_lima_from_artifact
       with:
-        go-version: 1.22.x
-    - name: Make
-      run: make
-    - name: Install
-      run: sudo make install
+        artifact: ${{ needs.build-on-ubuntu.outputs.artifact }}
     - name: Cache image used by templates/${{ matrix.template }}
       uses: ./.github/actions/setup_cache_for_template
       with:
@@ -262,6 +271,7 @@ jobs:
 
   colima:
     name: Colima
+    needs: build-on-ubuntu
     runs-on: ubuntu-22.04
     timeout-minutes: 120
     strategy:
@@ -280,10 +290,9 @@ jobs:
       with:
         path: ~/.cache/lima/download
         key: ${{ runner.os }}-colima-${{ matrix.colima-version }}
-    - name: Make
-      run: make
-    - name: Install
-      run: sudo make install
+    - uses: ./.github/actions/install_lima_from_artifact
+      with:
+        artifact: ${{ needs.build-on-ubuntu.outputs.artifact }}
     - name: Install colima
       run: |
         git clone https://github.com/abiosoft/colima
@@ -312,19 +321,16 @@ jobs:
 
   vmnet:
     name: "VMNet test"
+    needs: build-on-macos-12
     runs-on: macos-12
     timeout-minutes: 120
     steps:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 1
-    - uses: actions/setup-go@v5
+    - uses: ./.github/actions/install_lima_from_artifact
       with:
-        go-version: 1.22.x
-    - name: Make
-      run: make
-    - name: Install
-      run: make install
+        artifact: ${{ needs.build-on-macos-12.outputs.artifact }}
     - name: Cache image used by vmnet.yaml
       uses: ./.github/actions/setup_cache_for_template
       with:
@@ -388,8 +394,15 @@ jobs:
     - if: always()
       uses: ./.github/actions/upload_failure_logs_if_exists
 
+  build-on-macos-13:
+    name: "Build on macOS 13"
+    uses: ./.github/workflows/build.yml
+    with:
+      runs-on: macos-13
+
   vz:
     name: "vz"
+    needs: build-on-macos-13
     runs-on: macos-13
     timeout-minutes: 120
     strategy:
@@ -402,13 +415,9 @@ jobs:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 1
-    - uses: actions/setup-go@v5
+    - uses: ./.github/actions/install_lima_from_artifact
       with:
-        go-version: 1.22.x
-    - name: Make
-      run: make
-    - name: Install
-      run: make install
+        artifact: ${{ needs.build-on-macos-13.outputs.artifact }}
     - name: Cache image used by templates/${{ matrix.template }}
       uses: ./.github/actions/setup_cache_for_template
       with:
