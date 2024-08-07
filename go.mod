@@ -17,7 +17,7 @@ require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.4
 	github.com/cyphar/filepath-securejoin v0.3.1
 	github.com/digitalocean/go-qemu v0.0.0-20221209210016-f035778c97f7
-	github.com/diskfs/go-diskfs v1.4.0
+	github.com/diskfs/go-diskfs v1.4.1
 	github.com/docker/go-units v0.5.0
 	github.com/elastic/go-libaudit/v2 v2.5.0
 	github.com/foxcpp/go-mockdns v1.1.0
@@ -35,7 +35,7 @@ require (
 	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58
 	github.com/rjeczalik/notify v0.9.3
 	github.com/sethvargo/go-password v0.3.1
-	github.com/sirupsen/logrus v1.9.3
+	github.com/sirupsen/logrus v1.9.4-0.20230606125235-dd1b4c2e81af
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.5
 	golang.org/x/net v0.27.0
@@ -62,6 +62,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/digitalocean/go-libvirt v0.0.0-20220804181439-8648fbde413e // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
+	github.com/djherbis/times v1.6.0 // indirect
 	github.com/elliotchance/orderedmap v1.6.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.10.1 // indirect
 	github.com/evanphx/json-patch v5.6.0+incompatible // indirect
@@ -116,7 +117,6 @@ require (
 	golang.org/x/tools v0.22.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240528184218-531527333157 // indirect
-	gopkg.in/djherbis/times.v1 v1.3.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
