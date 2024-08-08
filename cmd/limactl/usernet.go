@@ -73,6 +73,9 @@ func usernetAction(cmd *cobra.Command, _ []string) error {
 	os.RemoveAll(qemuSocket)
 	os.RemoveAll(fdSocket)
 
+	// Environment Variables
+	// LIMA_USERNET_RESOLVE_IP_ADDRESS_TIMEOUT: Specifies the timeout duration for resolving IP addresses in minutes. Default is 2 minutes.
+
 	return usernet.StartGVisorNetstack(cmd.Context(), &usernet.GVisorNetstackOpts{
 		MTU:           mtu,
 		Endpoint:      endpoint,
