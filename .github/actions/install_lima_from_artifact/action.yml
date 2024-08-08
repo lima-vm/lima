@@ -1,0 +1,25 @@
+name: install lima from artifact
+description: install lima from artifact
+inputs:
+  artifact:
+    description: artifact to install
+    required: true
+runs:
+  using: "composite"
+  steps:
+  - uses: actions/download-artifact@v4
+    with:
+      name: ${{ inputs.artifact }}
+      path: _artifacts
+  - name: Install lima from downloaded archive on Linux
+    if: runner.os == 'Linux'
+    run: |
+      sudo make uninstall
+      sudo tar -C /usr/local -xvf _artifacts/${{ inputs.artifact }} --no-same-owner
+    shell: bash
+  - name: Install lima from downloaded archive on macOS
+    if: runner.os == 'macOS'
+    run: |
+      make uninstall || true
+      tar -C /usr/local -xvmf _artifacts/${{ inputs.artifact }} --no-same-owner
+    shell: bash
