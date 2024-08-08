@@ -40,6 +40,7 @@ var knownYamlProperties = []string{
 	"Mounts",
 	"MountType",
 	"MountInotify",
+	"NestedVirtualization",
 	"Networks",
 	"OS",
 	"Param",
