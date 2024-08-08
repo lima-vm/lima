@@ -1,5 +1,7 @@
 # This template requires Lima v0.17.0 or later and requires macOS >=13.0
 mountType: "virtiofs"
+# if for some reason these images don't load,
+# you can find the latest versions here: https://cdn.amazonlinux.com/al2023/os-images/latest/
 images:
 - location: "https://cdn.amazonlinux.com/al2023/os-images/2023.5.20240805.0/kvm/al2023-kvm-2023.5.20240805.0-kernel-6.1-x86_64.xfs.gpt.qcow2"
   arch: "x86_64"
