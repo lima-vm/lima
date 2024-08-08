@@ -78,11 +78,13 @@ func defaultContainerdArchives() []File {
 			Location: location("linux", "amd64"),
 			Arch:     X8664,
 			Digest:   "sha256:2c841e097fcfb5a1760bd354b3778cb695b44cd01f9f271c17507dc4a0b25606",
+			Cid:      "bafybeieipdaxd3fzy3j7syzzxdaqxramk65j7ajzcqgmi6b5jyq4jgbwue",
 		},
 		{
 			Location: location("linux", "arm64"),
 			Arch:     AARCH64,
 			Digest:   "sha256:77c747f09853ee3d229d77e8de0dd3c85622537d82be57433dc1fca4493bab95",
+			Cid:      "bafybeibptqoynryoxytxffgyuqjnmwpuujwp6wlps4spygapuwphzkeieq",
 		},
 		// No arm-v7
 		// No riscv64

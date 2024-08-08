@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -40,6 +41,7 @@ const (
 	StatusDownloaded Status = "downloaded"
 	StatusSkipped    Status = "skipped"
 	StatusUsedCache  Status = "used-cache"
+	StatusUsedIPFS   Status = "used-ipfs"
 )
 
 type Result struct {
@@ -55,6 +57,7 @@ type options struct {
 	decompress     bool   // default: false (keep compression)
 	description    string // default: url
 	expectedDigest digest.Digest
+	cid            string
 }
 
 type Opt func(*options) error
@@ -117,6 +120,13 @@ func WithExpectedDigest(expectedDigest digest.Digest) Opt {
 		}
 
 		o.expectedDigest = expectedDigest
+		return nil
+	}
+}
+
+func WithContentIdentifier(cid string) Opt {
+	return func(o *options) error {
+		o.cid = cid
 		return nil
 	}
 }
@@ -263,8 +273,20 @@ func Download(ctx context.Context, local, remote string, opts ...Opt) (*Result, 
 	if err := os.WriteFile(shadURL, []byte(remote), 0o644); err != nil {
 		return nil, err
 	}
-	if err := downloadHTTP(ctx, shadData, shadTime, shadType, remote, o.description, o.expectedDigest); err != nil {
-		return nil, err
+	status := StatusDownloaded
+	if o.cid != "" {
+		if err := downloadIPFS(ctx, shadData, fmt.Sprintf("ipfs://%s", o.cid), o.description, o.expectedDigest); err == nil {
+			status = StatusUsedIPFS
+		}
+	}
+	if IsIPFS(remote) {
+		if err := downloadIPFS(ctx, shadData, remote, o.description, o.expectedDigest); err != nil {
+			return nil, err
+		}
+	} else if status != StatusUsedIPFS {
+		if err := downloadHTTP(ctx, shadData, shadTime, shadType, remote, o.description, o.expectedDigest); err != nil {
+			return nil, err
+		}
 	}
 	// no need to pass the digest to copyLocal(), as we already verified the digest
 	if err := copyLocal(ctx, localPath, shadData, ext, o.decompress, "", ""); err != nil {
@@ -276,7 +298,7 @@ func Download(ctx context.Context, local, remote string, opts ...Opt) (*Result, 
 		}
 	}
 	res := &Result{
-		Status:          StatusDownloaded,
+		Status:          status,
 		CachePath:       shadData,
 		LastModified:    readTime(shadTime),
 		ContentType:     readFile(shadType),
@@ -360,6 +382,10 @@ func cacheDigestPath(shad string, expectedDigest digest.Digest) (string, error) 
 
 func IsLocal(s string) bool {
 	return !strings.Contains(s, "://") || strings.HasPrefix(s, "file://")
+}
+
+func IsIPFS(s string) bool {
+	return strings.HasPrefix(s, "ipfs://")
 }
 
 // canonicalLocalPath canonicalizes the local path string.
@@ -517,11 +543,7 @@ func validateLocalFileDigest(localPath string, expectedDigest digest.Digest) err
 	return nil
 }
 
-func downloadHTTP(ctx context.Context, localPath, lastModified, contentType, url, description string, expectedDigest digest.Digest) error {
-	if localPath == "" {
-		return fmt.Errorf("downloadHTTP: got empty localPath")
-	}
-	logrus.Debugf("downloading %q into %q", url, localPath)
+func download(reader io.Reader, size int64, localPath, url, description string, expectedDigest digest.Digest) error {
 	localPathTmp := localPath + ".tmp"
 	if err := os.RemoveAll(localPathTmp); err != nil {
 		return err
@@ -532,24 +554,7 @@ func downloadHTTP(ctx context.Context, localPath, lastModified, contentType, url
 	}
 	defer fileWriter.Close()
 
-	resp, err := httpclientutil.Get(ctx, http.DefaultClient, url)
-	if err != nil {
-		return err
-	}
-	if lastModified != "" {
-		lm := resp.Header.Get("Last-Modified")
-		if err := os.WriteFile(lastModified, []byte(lm), 0o644); err != nil {
-			return err
-		}
-	}
-	if contentType != "" {
-		ct := resp.Header.Get("Content-Type")
-		if err := os.WriteFile(contentType, []byte(ct), 0o644); err != nil {
-			return err
-		}
-	}
-	defer resp.Body.Close()
-	bar, err := progressbar.New(resp.ContentLength)
+	bar, err := progressbar.New(size)
 	if err != nil {
 		return err
 	}
@@ -578,7 +583,7 @@ func downloadHTTP(ctx context.Context, localPath, lastModified, contentType, url
 		fmt.Fprintf(os.Stderr, "Downloading %s\n", description)
 	}
 	bar.Start()
-	if _, err := io.Copy(multiWriter, bar.NewProxyReader(resp.Body)); err != nil {
+	if _, err := io.Copy(multiWriter, bar.NewProxyReader(reader)); err != nil {
 		return err
 	}
 	bar.Finish()
@@ -600,4 +605,73 @@ func downloadHTTP(ctx context.Context, localPath, lastModified, contentType, url
 		return err
 	}
 	return os.Rename(localPathTmp, localPath)
+}
+
+func downloadHTTP(ctx context.Context, localPath, lastModified, contentType, url, description string, expectedDigest digest.Digest) error {
+	if localPath == "" {
+		return fmt.Errorf("downloadHTTP: got empty localPath")
+	}
+	logrus.Debugf("downloading %q into %q", url, localPath)
+
+	resp, err := httpclientutil.Get(ctx, http.DefaultClient, url)
+	if err != nil {
+		return err
+	}
+	if lastModified != "" {
+		lm := resp.Header.Get("Last-Modified")
+		if err := os.WriteFile(lastModified, []byte(lm), 0o644); err != nil {
+			return err
+		}
+	}
+	if contentType != "" {
+		ct := resp.Header.Get("Content-Type")
+		if err := os.WriteFile(contentType, []byte(ct), 0o644); err != nil {
+			return err
+		}
+	}
+	defer resp.Body.Close()
+
+	return download(resp.Body, resp.ContentLength, localPath, url, description, expectedDigest)
+}
+
+func downloadIPFS(ctx context.Context, localPath, url, description string, expectedDigest digest.Digest) error {
+	if localPath == "" {
+		return fmt.Errorf("downloadIPFS: got empty localPath")
+	}
+	logrus.Debugf("downloading %q into %q", url, localPath)
+
+	address := strings.Replace(url, "ipfs://", "", 1)
+	address = strings.Split(address, "/")[0] // remove file name from path
+	cmd := exec.CommandContext(ctx, "ipfs", "ls", address)
+	cmd.Stderr = os.Stderr
+	out, err := cmd.Output()
+	if err != nil {
+		return err
+	}
+	size := int64(0)
+	for _, line := range strings.Split(string(out), "\n") {
+		// Hash Size Name
+		f := strings.Fields(line)
+		if len(f) >= 2 {
+			s, err := strconv.Atoi(f[1])
+			if err != nil {
+				return err
+			}
+			size += int64(s)
+		}
+	}
+
+	cmd = exec.CommandContext(ctx, "ipfs", "cat", "--progress=false", address)
+	cmd.Stderr = os.Stderr
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	if err := download(stdout, size, localPath, url, description, expectedDigest); err != nil {
+		return err
+	}
+	return cmd.Wait()
 }
