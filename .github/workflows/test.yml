@@ -157,18 +157,16 @@ jobs:
     - uses: actions/setup-go@v5
       with:
         go-version: 1.22.x
-    - name: Cache ~/Library/Caches/lima/download
-      uses: actions/cache@v4
-      with:
-        path: ~/Library/Caches/lima/download
-        # hashFiles do not seem to support symlinks
-        key: ${{ runner.os }}-${{ hashFiles('templates/default.yaml') }}
     - name: Unit tests
       run: go test -v ./...
     - name: Make
       run: make
     - name: Install
       run: make install
+    - name: Cache image used by default.yaml
+      uses: ./.github/actions/setup_cache_for_template
+      with:
+        template: templates/default.yaml
     - name: Validate templates
       run: find -L templates -name '*.yaml' | xargs limactl validate
     - name: Install test dependencies
@@ -227,19 +225,14 @@ jobs:
     - uses: actions/setup-go@v5
       with:
         go-version: 1.22.x
-    - id: path_for_hashFiles
-      # It seems that `hashFiles` cannot use `..` as a path component, so generate a normalized path here.
-      run: echo "NORMALIZED=$(realpath --relative-to=$PWD examples/${{ matrix.template }})" >> "$GITHUB_OUTPUT"
-    - uses: actions/cache@v4
-      with:
-        path: ~/.cache/lima/download
-        # hashFiles do not seem to support symlinks
-        # TODO: more fine-grained cache
-        key: ${{ runner.os }}-${{ hashFiles(steps.path_for_hashFiles.outputs.NORMALIZED) }}
     - name: Make
       run: make
     - name: Install
       run: sudo make install
+    - name: Cache image used by templates/${{ matrix.template }}
+      uses: ./.github/actions/setup_cache_for_template
+      with:
+        template: templates/${{ matrix.template }}
     - name: Install test dependencies
       run: |
         sudo apt-get update
@@ -328,16 +321,14 @@ jobs:
     - uses: actions/setup-go@v5
       with:
         go-version: 1.22.x
-    - name: Cache ~/Library/Caches/lima/download
-      uses: actions/cache@v4
-      with:
-        path: ~/Library/Caches/lima/download
-        # hashFiles do not seem to support symlinks
-        key: ${{ runner.os }}-${{ hashFiles('examples/vmnet.yaml') }}
     - name: Make
       run: make
     - name: Install
       run: make install
+    - name: Cache image used by vmnet.yaml
+      uses: ./.github/actions/setup_cache_for_template
+      with:
+        template: templates/vmnet.yaml
     - name: Install test dependencies
       run: brew install qemu bash coreutils iperf3
     - name: Install socket_vmnet
@@ -380,11 +371,11 @@ jobs:
     - uses: actions/setup-go@v5
       with:
         go-version: 1.22.x
-    - name: Cache ~/Library/Caches/lima/download
-      uses: actions/cache@v4
+    - name: Cache image used by ${{ matrix.oldver }}/examples/ubuntu-lts.yaml
+      uses: ./.github/actions/setup_cache_for_template
       with:
-        path: ~/Library/Caches/lima/download
-        key: ${{ runner.os }}-upgrade-${{ matrix.oldver }}
+        template: https://raw.githubusercontent.com/lima-vm/lima/${{ matrix.oldver }}/examples/ubuntu-lts.yaml
+        detect-containerd: "false"
     - name: Install test dependencies
       run: brew install qemu bash coreutils
     - name: Test
@@ -414,19 +405,14 @@ jobs:
     - uses: actions/setup-go@v5
       with:
         go-version: 1.22.x
-    - id: path_for_hashFiles
-      # It seems that `hashFiles` cannot use `..` as a path component, so generate a normalized path here.
-      run: echo "NORMALIZED=$(realpath examples/${{ matrix.template }})" >> "$GITHUB_OUTPUT"
-    - name: Cache ~/Library/Caches/lima/download
-      uses: actions/cache@v4
-      with:
-        path: ~/Library/Caches/lima/download
-        # hashFiles do not seem to support symlinks
-        key: ${{ runner.os }}-${{ hashFiles(steps.path_for_hashFiles.outputs.NORMALIZED) }}
     - name: Make
       run: make
     - name: Install
       run: make install
+    - name: Cache image used by templates/${{ matrix.template }}
+      uses: ./.github/actions/setup_cache_for_template
+      with:
+        template: templates/${{ matrix.template }}
     - name: Install test dependencies
       run: brew install bash coreutils jq
     - name: Uninstall qemu
