@@ -3,6 +3,7 @@ package limayaml
 import (
 	"bytes"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -23,6 +24,7 @@ import (
 	"github.com/lima-vm/lima/pkg/ptr"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/store/filenames"
+	"github.com/lima-vm/lima/pkg/version/versionutil"
 )
 
 const (
@@ -172,6 +174,15 @@ func defaultGuestInstallPrefix() string {
 //   - CACertificates Files and Certs are uniquely appended in d, y, o order
 func FillDefault(y, d, o *LimaYAML, filePath string) {
 	instDir := filepath.Dir(filePath)
+
+	var existingLimaVersion string // empty if the instance was created with Lima prior to v0.20
+	limaVersionFile := filepath.Join(instDir, filenames.LimaVersion)
+	if b, err := os.ReadFile(limaVersionFile); err == nil {
+		existingLimaVersion = strings.TrimSpace(string(b))
+	} else if !errors.Is(err, os.ErrNotExist) {
+		logrus.WithError(err).Warnf("Failed to read %q", limaVersionFile)
+	}
+
 	if y.VMType == nil {
 		y.VMType = d.VMType
 	}
@@ -556,9 +567,24 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.MountType = o.MountType
 	}
 	if y.MountType == nil || *y.MountType == "" {
-		if *y.VMType == VZ {
+		switch *y.VMType {
+		case VZ:
 			y.MountType = ptr.Of(VIRTIOFS)
-		} else {
+		case QEMU:
+			y.MountType = ptr.Of(NINEP)
+			// Use REVSSHFS if the instance was created with Lima prior to v1.0
+			if _, err := os.Stat(filePath); err == nil { // existing instance
+				switch {
+				case existingLimaVersion == "": // created with Lima < 0.20
+					y.MountType = ptr.Of(REVSSHFS)
+				case strings.TrimPrefix(existingLimaVersion, "v") == "1.0.0",
+					versionutil.GreaterThan(existingLimaVersion, "1.0.0"):
+					// NOP
+				default: // created with 0.20 <= Lima < 1.0
+					y.MountType = ptr.Of(REVSSHFS)
+				}
+			}
+		default:
 			y.MountType = ptr.Of(REVSSHFS)
 		}
 	}
