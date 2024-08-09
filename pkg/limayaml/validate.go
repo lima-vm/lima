@@ -194,8 +194,15 @@ func Validate(y *LimaYAML, warn bool) error {
 		}
 	}
 	needsContainerdArchives := (y.Containerd.User != nil && *y.Containerd.User) || (y.Containerd.System != nil && *y.Containerd.System)
-	if needsContainerdArchives && len(y.Containerd.Archives) == 0 {
-		return fmt.Errorf("field `containerd.archives` must be provided")
+	if needsContainerdArchives {
+		if len(y.Containerd.Archives) == 0 {
+			return fmt.Errorf("field `containerd.archives` must be provided")
+		}
+		for i, f := range y.Containerd.Archives {
+			if err := validateFileObject(f, fmt.Sprintf("containerd.archives[%d]", i)); err != nil {
+				return err
+			}
+		}
 	}
 	for i, p := range y.Probes {
 		switch p.Mode {
