@@ -15,7 +15,9 @@ type Kind = string
 const (
 	TCP  Kind = "tcp"
 	TCP6 Kind = "tcp6"
-	// TODO: "udp", "udp6", "udplite", "udplite6".
+	UDP  Kind = "udp"
+	UDP6 Kind = "udp6"
+	// TODO: "udplite", "udplite6".
 )
 
 type State = int
@@ -23,6 +25,7 @@ type State = int
 const (
 	TCPEstablished State = 0x1
 	TCPListen      State = 0xA
+	UDPEstablished State = 0x7
 )
 
 type Entry struct {
@@ -34,7 +37,7 @@ type Entry struct {
 
 func Parse(r io.Reader, kind Kind) ([]Entry, error) {
 	switch kind {
-	case TCP, TCP6:
+	case TCP, TCP6, UDP, UDP6:
 	default:
 		return nil, fmt.Errorf("unexpected kind %q", kind)
 	}

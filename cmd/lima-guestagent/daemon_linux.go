@@ -9,6 +9,7 @@ import (
 	"github.com/lima-vm/lima/pkg/guestagent"
 	"github.com/lima-vm/lima/pkg/guestagent/api/server"
 	"github.com/lima-vm/lima/pkg/guestagent/serialport"
+	"github.com/lima-vm/lima/pkg/portfwdserver"
 	"github.com/mdlayher/vsock"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -91,5 +92,5 @@ func daemonAction(cmd *cobra.Command, _ []string) error {
 		l = socketL
 		logrus.Infof("serving the guest agent on %q", socket)
 	}
-	return server.StartServer(l, &server.GuestServer{Agent: agent})
+	return server.StartServer(l, &server.GuestServer{Agent: agent, TunnelS: portfwdserver.NewTunnelServer()})
 }

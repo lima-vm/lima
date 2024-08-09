@@ -19,18 +19,18 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/lima-vm/lima/pkg/cidata"
 	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/driverutil"
-	"github.com/lima-vm/lima/pkg/networks"
-	"github.com/lima-vm/lima/pkg/osutil"
-
-	"github.com/lima-vm/lima/pkg/cidata"
 	guestagentapi "github.com/lima-vm/lima/pkg/guestagent/api"
 	guestagentclient "github.com/lima-vm/lima/pkg/guestagent/api/client"
 	hostagentapi "github.com/lima-vm/lima/pkg/hostagent/api"
 	"github.com/lima-vm/lima/pkg/hostagent/dns"
 	"github.com/lima-vm/lima/pkg/hostagent/events"
 	"github.com/lima-vm/lima/pkg/limayaml"
+	"github.com/lima-vm/lima/pkg/networks"
+	"github.com/lima-vm/lima/pkg/osutil"
+	"github.com/lima-vm/lima/pkg/portfwd"
 	"github.com/lima-vm/lima/pkg/sshutil"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
@@ -40,16 +40,18 @@ import (
 )
 
 type HostAgent struct {
-	y               *limayaml.LimaYAML
-	sshLocalPort    int
-	udpDNSLocalPort int
-	tcpDNSLocalPort int
-	instDir         string
-	instName        string
-	instSSHAddress  string
-	sshConfig       *ssh.SSHConfig
-	portForwarder   *portForwarder
-	onClose         []func() error // LIFO
+	y                 *limayaml.LimaYAML
+	sshLocalPort      int
+	udpDNSLocalPort   int
+	tcpDNSLocalPort   int
+	instDir           string
+	instName          string
+	instSSHAddress    string
+	sshConfig         *ssh.SSHConfig
+	portForwarder     *portForwarder
+	grpcPortForwarder *portfwd.Forwarder
+
+	onClose []func() error // LIFO
 
 	driver   driver.Driver
 	signalCh chan os.Signal
@@ -164,6 +166,11 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 	limayaml.FillPortForwardDefaults(&rule, inst.Dir, inst.Param)
 	rules = append(rules, rule)
 
+	env, _ := strconv.ParseBool(os.Getenv("LIMA_SSH_PORT_FORWARDER"))
+	if !env {
+		logrus.Warn("GRPC port forwarding is experimental")
+	}
+
 	limaDriver := driverutil.CreateTargetDriverInstance(&driver.BaseDriver{
 		Instance:     inst,
 		Yaml:         y,
@@ -182,6 +189,7 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 		instSSHAddress:    inst.SSHAddress,
 		sshConfig:         sshConfig,
 		portForwarder:     newPortForwarder(sshConfig, sshLocalPort, rules, inst.VMType),
+		grpcPortForwarder: portfwd.NewPortForwarder(rules),
 		driver:            limaDriver,
 		signalCh:          signalCh,
 		eventEnc:          json.NewEncoder(stdout),
@@ -671,7 +679,12 @@ func (a *HostAgent) processGuestAgentEvents(ctx context.Context, client *guestag
 		for _, f := range ev.Errors {
 			logrus.Warnf("received error from the guest: %q", f)
 		}
-		a.portForwarder.OnEvent(ctx, ev)
+		env, _ := strconv.ParseBool(os.Getenv("LIMA_SSH_PORT_FORWARDER"))
+		if env {
+			a.portForwarder.OnEvent(ctx, ev)
+		} else {
+			a.grpcPortForwarder.OnEvent(ctx, client, ev)
+		}
 	}
 
 	if err := client.Events(ctx, onEvent); err != nil {
