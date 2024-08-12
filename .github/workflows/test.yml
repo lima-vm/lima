@@ -213,7 +213,7 @@ jobs:
         - alpine.yaml
         - debian.yaml
         - fedora.yaml
-        # - archlinux.yaml temporarily disabled because it breaks CI
+        - archlinux.yaml
         - opensuse.yaml
         - experimental/net-user-v2.yaml
         - experimental/9p.yaml
