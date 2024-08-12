@@ -1,9 +1,9 @@
 # This template requires Lima v0.7.0 or later
 images:
 # Try to use yyyyMMdd.REV image if available. Note that yyyyMMdd.REV will be removed after several months.
-- location: "https://geo.mirror.pkgbuild.com/images/v20240501.233015/Arch-Linux-x86_64-cloudimg-20240501.233015.qcow2"
+- location: "https://geo.mirror.pkgbuild.com/images/v20240801.250900/Arch-Linux-x86_64-cloudimg-20240801.250900.qcow2"
   arch: "x86_64"
-  digest: "sha256:bf87b7c03d77bff13d8079eef70c05d14b7ebdb761d01b7f95c2d335b41e0e50"
+  digest: "sha256:f0e92eb32c15f4352d27662fdee90e8acc51902f50ded1843ee622e48e999eea"
 - location: "https://github.com/mcginty/arch-boxes-arm/releases/download/v20220323/Arch-Linux-aarch64-cloudimg-20220323.0.qcow2"
   arch: "aarch64"
   digest: "sha512:27524910bf41cb9b3223c8749c6e67fd2f2fdb8b70d40648708e64d6b03c0b4a01b3c5e72d51fefd3e0c3f58487dbb400a79ca378cde2da341a3a19873612be8"
@@ -16,8 +16,5 @@ mounts:
 - location: "~"
 - location: "/tmp/lima"
   writable: true
-# reverse-sshfs seems unstable with ArchLinux ?
-mountType: "9p"
-vmType: "qemu"
 firmware:
   legacyBIOS: true
