@@ -28,7 +28,7 @@ jobs:
         fetch-depth: 1
     - uses: actions/setup-go@v5
       with:
-        go-version: 1.22.x
+        go-version: 1.23.x
     - name: Install protoc
       run: |
         sudo apt-get update
@@ -72,7 +72,7 @@ jobs:
       fail-fast: false
       matrix:
         # For non-Homebrew we have to support an old release of Go
-        go-version: ["1.21.x", "1.22.x"]
+        go-version: ["1.22.x", "1.23.x"]
     steps:
     - name: Install test dependencies
       run: |
@@ -127,7 +127,7 @@ jobs:
         fetch-depth: 1
     - uses: actions/setup-go@v5
       with:
-        go-version: 1.22.x
+        go-version: 1.23.x
     - name: Unit tests
       run: go test -v ./...
     - name: Make
@@ -156,7 +156,7 @@ jobs:
         fetch-depth: 1
     - uses: actions/setup-go@v5
       with:
-        go-version: 1.22.x
+        go-version: 1.23.x
     - name: Cache ~/Library/Caches/lima/download
       uses: actions/cache@v4
       with:
@@ -226,7 +226,7 @@ jobs:
         fetch-depth: 1
     - uses: actions/setup-go@v5
       with:
-        go-version: 1.22.x
+        go-version: 1.23.x
     - id: path_for_hashFiles
       # It seems that `hashFiles` cannot use `..` as a path component, so generate a normalized path here.
       run: echo "NORMALIZED=$(realpath --relative-to=$PWD examples/${{ matrix.template }})" >> "$GITHUB_OUTPUT"
@@ -282,7 +282,7 @@ jobs:
         ref: ${{ github.event.pull_request.head.sha }}
     - uses: actions/setup-go@v5
       with:
-        go-version: 1.22.x
+        go-version: 1.23.x
     - uses: actions/cache@v4
       with:
         path: ~/.cache/lima/download
@@ -327,7 +327,7 @@ jobs:
         fetch-depth: 1
     - uses: actions/setup-go@v5
       with:
-        go-version: 1.22.x
+        go-version: 1.23.x
     - name: Cache ~/Library/Caches/lima/download
       uses: actions/cache@v4
       with:
@@ -379,7 +379,7 @@ jobs:
         fetch-depth: 0
     - uses: actions/setup-go@v5
       with:
-        go-version: 1.22.x
+        go-version: 1.23.x
     - name: Cache ~/Library/Caches/lima/download
       uses: actions/cache@v4
       with:
@@ -413,7 +413,7 @@ jobs:
         fetch-depth: 1
     - uses: actions/setup-go@v5
       with:
-        go-version: 1.22.x
+        go-version: 1.23.x
     - id: path_for_hashFiles
       # It seems that `hashFiles` cannot use `..` as a path component, so generate a normalized path here.
       run: echo "NORMALIZED=$(realpath examples/${{ matrix.template }})" >> "$GITHUB_OUTPUT"

@@ -30,7 +30,7 @@ jobs:
         fetch-depth: 1
     - uses: actions/setup-go@v5
       with:
-        go-version: 1.22.x
+        go-version: 1.23.x
     - name: Make darwin artifacts
       run: make artifacts-darwin
     - name: "Upload artifacts"
@@ -57,7 +57,7 @@ jobs:
         path: _artifacts/
     - uses: actions/setup-go@v5
       with:
-        go-version: 1.22.x
+        go-version: 1.23.x
     - name: Install gcc-x86-64-linux-gnu
       run: |
         sudo apt-get update
