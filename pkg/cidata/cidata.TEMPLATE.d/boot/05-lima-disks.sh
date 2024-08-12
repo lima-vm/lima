@@ -29,7 +29,7 @@ for i in $(seq 0 $((LIMA_CIDATA_DISKS - 1))); do
 	fi
 
 	mkdir -p "/mnt/lima-${DISK_NAME}"
-	mount -t $FORMAT_FSTYPE "/dev/${DEVICE_NAME}1" "/mnt/lima-${DISK_NAME}"
+	mount -t "$FORMAT_FSTYPE" "/dev/${DEVICE_NAME}1" "/mnt/lima-${DISK_NAME}"
 	if command -v growpart >/dev/null 2>&1 && command -v resize2fs >/dev/null 2>&1; then
 		growpart "/dev/${DEVICE_NAME}" 1 || true
 		# Only resize when filesystem is in a healthy state
