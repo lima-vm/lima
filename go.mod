@@ -23,7 +23,7 @@ require (
 	github.com/foxcpp/go-mockdns v1.1.0
 	github.com/goccy/go-yaml v1.12.0
 	github.com/google/go-cmp v0.6.0
-	github.com/lima-vm/go-qcow2reader v0.1.1
+	github.com/lima-vm/go-qcow2reader v0.1.2
 	github.com/lima-vm/sshocker v0.3.4
 	github.com/mattn/go-isatty v0.0.20
 	github.com/mattn/go-shellwords v1.0.12
