@@ -38,7 +38,7 @@ jobs:
     - name: Run golangci-lint
       uses: golangci/golangci-lint-action@v6.1.0
       with:
-        version: v1.59.1
+        version: v1.60.1
         args: --verbose --timeout=10m
     - name: Run yamllint
       run: yamllint .
