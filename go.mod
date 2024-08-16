@@ -1,6 +1,6 @@
 module github.com/lima-vm/lima
 
-go 1.21
+go 1.22
 
 require (
 	al.essio.dev/pkg/shellescape v1.5.0
