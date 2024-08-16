@@ -52,7 +52,7 @@ provision:
     set -eux -o pipefail
     test -d ~/usernetes && exit 0
     cd ~
-    git clone --branch=gen2-v20240203.0 https://github.com/rootless-containers/usernetes
+    git clone --branch=gen2-v20240814.0 https://github.com/rootless-containers/usernetes
 - mode: user
   script: |
     #!/bin/bash
