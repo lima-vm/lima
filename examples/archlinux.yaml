@@ -1,6 +1,10 @@
 # This template requires Lima v0.7.0 or later
 images:
 # Try to use yyyyMMdd.REV image if available. Note that yyyyMMdd.REV will be removed after several months.
+
+# NOTE: 20240815.255016 does not work due to "No space left on device"
+# Caused by https://github.com/canonical/cloud-init/issues/5614
+
 - location: "https://geo.mirror.pkgbuild.com/images/v20240801.250900/Arch-Linux-x86_64-cloudimg-20240801.250900.qcow2"
   arch: "x86_64"
   digest: "sha256:f0e92eb32c15f4352d27662fdee90e8acc51902f50ded1843ee622e48e999eea"
