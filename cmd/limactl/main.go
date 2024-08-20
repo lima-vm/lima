@@ -77,8 +77,9 @@ func newApp() *cobra.Command {
 			logrus.SetLevel(logrus.DebugLevel)
 		}
 
-		if osutil.IsBeingRosettaTranslated() {
+		if osutil.IsBeingRosettaTranslated() && cmd.Parent().Name() != "completion" && cmd.Name() != "generate-doc" && cmd.Name() != "validate" {
 			// running under rosetta would provide inappropriate runtime.GOARCH info, see: https://github.com/lima-vm/lima/issues/543
+			// allow commands that are used for packaging to run under rosetta to allow cross-architecture builds
 			return errors.New("limactl is running under rosetta, please reinstall lima with native arch")
 		}
 
