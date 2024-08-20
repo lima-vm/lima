@@ -4,19 +4,23 @@
 #
 # Answer to the question in https://github.com/lima-vm/lima/pull/2508#discussion_r1699798651
 
+scriptdir=$(dirname "${BASH_SOURCE[0]}")
+# shellcheck source=./common.inc.sh
+. "${scriptdir}/cache-common-inc.sh"
+
 # usage: [DEBUG=1] ./hack/calculate-cache.sh
 # DEBUG=1 will save the collected information in .calculate-cache-collected-info-{before,after}.yaml
 #
 # This script does:
 # 1. extracts `runs_on` and `template` from workflow file (.github/workflows/test.yml)
-# 2. check each template for image and nerdctl
-# 3. detect size of image and nerdctl (responses from remote are cached for faster iteration)
-#    save the response in .calculate-cache-response-cache.yaml
+# 2. check each template for image, kernel, initrd, and nerdctl
+# 3. detect size of image, kernel, initrd, and nerdctl (responses from remote are cached for faster iteration)
+#    save the response in .check_location-response-cache.yaml
 # 4. print content size, actual cache size (if available), by cache key
 #
 # The major differences for reducing cache usage are as follows:
 # - it is now cached `~/.cache/lima/download/by-url-sha256/$sha256` instead of caching `~/.cache/lima/download`
-# - the cache keys are now based on the image digest and nerdctl digest instead of the template file's hash
+# - the cache keys are now based on the image, kernel, initrd, and nerdctl digest instead of the template file's hash
 # - enables the use of cache regardless of the operating system used to execute CI.
 #
 # The script requires the following commands:
@@ -116,82 +120,6 @@ function runner_os_from_runner() {
 	esac
 }
 
-# check the remote location and return the http code and size.
-# The result is cached in .calculate-cache-response-cache.yaml
-# e.g.
-# ```console
-# $ check_location "https://cloud-images.ubuntu.com/releases/24.04/release-20240725/ubuntu-24.04-server-cloudimg-amd64.img"
-# 200 585498624
-# ```
-function check_location() {
-	location="$1"
-	readonly cache_file="./.calculate-cache-response-cache.yaml"
-	# check response_cache.yaml for the cache
-	if [[ -f ${cache_file} ]]; then
-		cached=$(yq -e eval ".[\"${location}\"]" "${cache_file}" 2>/dev/null) && echo "${cached}" && return
-	else
-		touch "${cache_file}"
-	fi
-	http_code_and_size=$(curl -sIL -w "%{http_code} %header{Content-Length}" "${location}" -o /dev/null)
-	yq eval ".[\"${location}\"] = \"${http_code_and_size}\"" -i "${cache_file}"
-	echo "${http_code_and_size}"
-}
-
-# print image location, digest, size, hash, containerd, containerd_location, containerd_digest, containerd_size from the template
-# e.g.
-# ```console
-# $ print_location_digest_size_hash_from_template "templates/default.yaml"
-# https://cloud-images.ubuntu.com/releases/24.04/release-20240725/ubuntu-24.04-server-cloudimg-amd64.img sha256:d2377667ea95222330ca2287817403c85178dad397e9fed768a9b4aec79d2a7f 585498624 49aa50a4872ded07ebf657c0eaf9e44ecc0c174d033a97c537ecd270f35b462f true https://github.com/containerd/nerdctl/releases/download/v1.7.6/nerdctl-full-1.7.6-linux-amd64.tar.gz sha256:2c841e097fcfb5a1760bd354b3778cb695b44cd01f9f271c17507dc4a0b25606 237465717
-# ```
-function print_location_digest_size_hash_from_template() {
-	readonly template=$1
-	case "${template}" in
-	http*)
-		template_yaml=$(curl -sSL "${template}")
-		;;
-	*)
-		template_yaml=$(<"${template}")
-		;;
-	esac
-	readonly yq_filter="
-		[
-			.images | map(select(.arch == \"${arch}\")) | [.[0,1].location, .[0,1].digest],
-			.containerd|[.system or .user],
-			.containerd.archives | map(select(.arch == \"${arch}\")) | [.[0].location, .[0].digest]
-		]|flatten|.[]
-	"
-	if command -v limactl &>/dev/null; then
-		parsed=$(limactl validate <(echo "${template_yaml}") --fill 2>/dev/null | yq eval "${yq_filter}")
-	else
-		parsed=$(yq eval "${yq_filter}" <<<"${template_yaml}")
-	fi
-	# macOS earlier than 15.0 uses bash 3.2.57, which does not support readarray -t
-	# readarray -t arr <<<"${parsed}"
-	while IFS= read -r line; do arr+=("${line}"); done <<<"${parsed}"
-	readonly locations=("${arr[@]:0:2}") digests=("${arr[@]:2:2}")
-	readonly containerd="${arr[4]}" containerd_location="${arr[5]}" containerd_digest="${arr[6]}"
-	declare location digest size hash
-	for ((i = 0; i < ${#locations[@]}; i++)); do
-		[[ ${locations[i]} != null ]] || continue
-		http_code_and_size=$(check_location "${locations[i]}")
-		read -r http_code size <<<"${http_code_and_size}"
-		if [[ ${http_code} -eq 200 ]]; then
-			location=${locations[i]}
-			digest=${digests[i]}
-			break
-		fi
-	done
-	if [[ -z ${location} ]]; then
-		echo "Failed to get the image location for ${template}" >&2
-		return 1
-	fi
-	hash=$(sha256sum <<<"${template_yaml}" | cut -d' ' -f1 | xxd -r -p | sha256sum | cut -d' ' -f1)
-	declare containerd_size
-	containerd_http_code_and_size=$(check_location "${containerd_location}")
-	read -r _containerd_http_code containerd_size <<<"${containerd_http_code_and_size}"
-	echo "${location} ${digest} ${size} ${hash} ${containerd} ${containerd_location} ${containerd_digest} ${containerd_size}"
-}
-
 # format first column to MiB
 # e.g.
 # ```console
@@ -258,29 +186,39 @@ for cache_method in before after; do
 		for workflow in "${workflows[@]}"; do
 			print_runs_on_template_from_workflow "${workflow}"
 		done | while IFS=$'\t' read -r runner template; do
-			runner_os=$(runner_os_from_runner "${runner}")
-			location_digest_size_hash=$(print_location_digest_size_hash_from_template "${template}") || continue
-			read -r location digest size hash containerd containerd_location containerd_digest containerd_size <<<"${location_digest_size_hash}"
+			template=$(download_template_if_needed "${template}") || continue
+			arch=$(detect_arch "${template}" "${arch}") || continue
+			index=$(print_image_locations_for_arch_from_template "${template}" "${arch}" | print_valid_image_index) || continue
+			image_kernel_initrd_info=$(print_image_kernel_initrd_locations_with_digest_for_arch_from_template_at_index "${template}" "${index}" "${arch}") || continue
+			# shellcheck disable=SC2034 # shellcheck does not detect dynamic variables usage
+			read -r image_location image_digest kernel_location kernel_digest initrd_location initrd_digest <<<"${image_kernel_initrd_info}"
+			containerd_info=$(print_containerd_config_for_arch_from_template "${template}" "${@:2}") || continue
+			# shellcheck disable=SC2034 # shellcheck does not detect dynamic variables usage
+			read -r _containerd_enabled containerd_location containerd_digest <<<"${containerd_info}"
+
 			if [[ ${cache_method} != after ]]; then
-				key=${runner_os}-${hash}
-			elif [[ ${digest} == null ]]; then
-				key=image:$(basename "${location}")-url-sha256:$(echo -n "${location}" | sha256sum | cut -d' ' -f1)
+				key=$(runner_os_from_runner "${runner}" || true)-$(hash_file "${template}")
 			else
-				key=image:$(basename "${location}")-${digest}
+				key=$(cache_key_from_prefix_location_and_digest image "${image_location}" "${image_digest}")
 			fi
-			if [[ ${containerd} == true ]]; then
+			size=$(size_from_location "${image_location}")
+			for prefix in containerd kernel initrd; do
+				location="${prefix}_location"
+				digest="${prefix}_digest"
+				[[ ${!location} != null ]] || continue
 				if [[ ${cache_method} != after ]]; then
-					# previous caching method packages the containerd archive with the image
-					size=$((size + containerd_size))
+					# previous caching method packages all files in download to a single cache key
+					size=$((size + $(size_from_location "${!location}")))
 				else
-					# new caching method packages the containerd archive separately
-					containerd_key=containerd:$(basename "${containerd_location}")-${containerd_digest}
+					# new caching method caches each file separately
+					key_for_prefix=$(cache_key_from_prefix_location_and_digest "${prefix}" "${!location}" "${!digest}")
+					size_for_prefix=$(size_from_location "${!location}")
 					printf -- "- key: %s\n  template: %s\n  location: %s\n  digest: %s\n  size: %s\n" \
-						"${containerd_key}" "${template}" "${containerd_location}" "${containerd_digest}" "${containerd_size}"
+						"${key_for_prefix}" "${template}" "${!location}" "${!digest}" "${size_for_prefix}"
 				fi
-			fi
+			done
 			printf -- "- key: %s\n  template: %s\n  location: %s\n  digest: %s\n  size: %s\n" \
-				"${key}" "${template}" "${location}" "${digest}" "${size}"
+				"${key}" "${template}" "${image_location}" "${image_digest}" "${size}"
 		done
 	)
 	output_json=$(yq -o=j . <<<"${output_yaml}")

@@ -7,10 +7,6 @@ inputs:
   template:
     description: template yaml file
     required: true
-  detect-containerd:
-    description: detect containerd usage from template by using limactl validate
-    required: false
-    default: 'true'
 runs:
   using: "composite"
   steps:
@@ -29,120 +25,35 @@ runs:
     id: cache-params-from-template
     run: |
       set -eux
-      arch="${{ inputs.arch }}"
-      template="${{ inputs.template }}"
-      detect_containerd="${{ inputs.detect-containerd }}"
-      if [[ $detect_containerd == "true" ]] && ! command -v limactl &>/dev/null; then
-        echo "containerd detection is disabled because limactl is not found" >&2
-        detect_containerd="false"
-      fi
-      case "$template" in
-        https://*)
-          tmp_yaml=$(mktemp -d)/template.yaml
-          curl -sSLf "$template" > "$tmp_yaml" || exit 1
-          template=$tmp_yaml
-          ;;
-        *)
-          test -f "$template" || exit 1
-          ;;
-      esac
-
-      # detect arch from template if not provided
-      arch="${arch:-$(yq '.arch // ""' "$template")}"
-      arch="${arch:-$(uname -m)}"
-      # normalize arch. amd64 -> x86_64, arm64 -> aarch64
-      case "$arch" in
-        amd64) arch=x86_64 ;;
-        arm64) arch=aarch64 ;;
-      esac
-
-      # extract digest, location and size by parsing template using arch
-      readonly yq_filter="
-        [
-          .images | map(select(.arch == \"${arch}\")) | [.[0,1].location, .[0,1].digest],
-          .containerd|[.system or .user],
-          .containerd.archives | map(select(.arch == \"${arch}\")) | [.[0].location, .[0].digest]
-        ]|flatten|.[]
-      "
-      if [[ $detect_containerd == "true" ]]; then
-        parsed=$(LIMA_HOME=$(mktemp -d) limactl validate "$template" --fill 2>/dev/null | yq eval "${yq_filter}")
-      else
-        parsed=$(yq eval "${yq_filter}" "$template")
-      fi
-      # macOS earlier than 15.0 uses bash 3.2.57, which does not support readarray -t
-      # readarray -t arr <<<"$parsed"
-      while IFS= read -r line; do arr+=("$line"); done <<<"${parsed}"
-      readonly locations=("${arr[@]:0:2}") digests=("${arr[@]:2:2}")
-      readonly containerd="${arr[4]}" containerd_location="${arr[5]}" containerd_digest="${arr[6]}"
-      for ((i = 0; i < ${#locations[@]}; i++)); do
-        [[ ${locations[i]} != "null" ]] || continue
-        http_code=$(curl -sIL -w "%{http_code}" "${locations[i]}" -o /dev/null)
-        if [[ ${http_code} -eq 200 ]]; then
-          location=${locations[i]}
-          digest=${digests[i]}
-          break
-        fi
-      done
-      if [[ -z ${location} ]]; then
-        echo "Failed to get the image location for ${template}" >&2
-        exit 1
-      fi
-
-      function location_to_sha256() {
-        local location=$1
-        if command -v sha256sum > /dev/null; then
-          sha256="$(echo -n "$location" | sha256sum | cut -d' ' -f1)"
-        elif command -v shasum > /dev/null; then
-          sha256="$(echo -n "$location" | shasum -a 256 | cut -d' ' -f1)"
-        else
-          echo "sha256sum or shasum not found" >&2
-          exit 1
-        fi
-        echo "$sha256"
-      }
-
-      function location_to_cache_path() {
-        local location=$1
-        sha256=$(location_to_sha256 "$location") && echo ".download/by-url-sha256/$sha256"
-      }
-
-      # path to cache
-      image_cache_path=$(location_to_cache_path "$location")
-      echo "path=$image_cache_path" >> "$GITHUB_OUTPUT"
-
-      # key for cache
-      image_basename=$(basename "$location")
-      if [[ "$digest" != "null" ]]; then
-        key="image:$image_basename-$digest"
-      else
-        # use sha256 of location as key if digest is not available
-        key="image:$image_basename-url-sha256:$(location_to_sha256 "$location")"
-      fi
-      echo "key=$key" >> "$GITHUB_OUTPUT"
-
-      # containerd path and key for cache
-      if [[ $containerd == "true" && "$containerd_location" != "null" ]]; then
-        containerd_basename=$(basename "$containerd_location")
-        if [[ ${containerd_digest} != "null" ]]; then
-          containerd_key="containerd:$containerd_basename-$containerd_digest"
-        else
-          containerd_key="containerd:$containerd_basename-url-sha256:$(sha256 "$containerd_location")"
-        fi
-        echo "containerd-key=$containerd_key" >> "$GITHUB_OUTPUT"
-        containerd_cache_path=$(location_to_cache_path "$containerd_location")
-        echo "containerd-path=$containerd_cache_path" >> "$GITHUB_OUTPUT"
-      else
-        echo "containerd-key=" >> "$GITHUB_OUTPUT"
-        echo "containerd-path=" >> "$GITHUB_OUTPUT"
-      fi
+      source hack/cache-common-inc.sh
+      print_cache_informations_from_template "${{ inputs.template }}" "${{ inputs.arch }}" >> "$GITHUB_OUTPUT"
     shell: bash
 
-  - name: "Cache ${{ steps.cache-params-from-template.outputs.path }}"
+  - name: "Cache ${{ steps.cache-params-from-template.outputs.image-path }}"
+    if: ${{ steps.cache-params-from-template.outputs.image-key != '' }}
     # avoid using `~` in path that will be expanded to platform specific home directory
     uses: actions/cache@v4
     with:
-      path: ${{ steps.cache-params-from-template.outputs.path }}
-      key: ${{ steps.cache-params-from-template.outputs.key }}
+      path: ${{ steps.cache-params-from-template.outputs.image-path }}
+      key: ${{ steps.cache-params-from-template.outputs.image-key }}
+      enableCrossOsArchive: true
+
+  - name: "Cache ${{ steps.cache-params-from-template.outputs.kernel-path }}"
+    if: ${{ steps.cache-params-from-template.outputs.kernel-key != '' }}
+    # avoid using `~` in path that will be expanded to platform specific home directory
+    uses: actions/cache@v4
+    with:
+      path: ${{ steps.cache-params-from-template.outputs.kernel-path }}
+      key: ${{ steps.cache-params-from-template.outputs.kernel-key }}
+      enableCrossOsArchive: true
+
+  - name: "Cache ${{ steps.cache-params-from-template.outputs.initrd-path }}"
+    if: ${{ steps.cache-params-from-template.outputs.initrd-key != '' }}
+    # avoid using `~` in path that will be expanded to platform specific home directory
+    uses: actions/cache@v4
+    with:
+      path: ${{ steps.cache-params-from-template.outputs.initrd-path }}
+      key: ${{ steps.cache-params-from-template.outputs.initrd-key }}
       enableCrossOsArchive: true
 
   - name: "Cache ${{ steps.cache-params-from-template.outputs.containerd-key }}"
