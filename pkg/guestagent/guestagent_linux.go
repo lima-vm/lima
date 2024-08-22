@@ -3,8 +3,10 @@ package guestagent
 import (
 	"context"
 	"errors"
+	"github.com/balajiv113/trackport"
 	"os"
 	"reflect"
+	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -190,24 +192,28 @@ func isEventEmpty(ev *api.Event) bool {
 
 func (a *agent) Events(ctx context.Context, ch chan *api.Event) {
 	defer close(ch)
-	tickerCh, tickerClose := a.newTicker()
-	defer tickerClose()
-	var st eventState
-	for {
-		var ev *api.Event
-		ev, st = a.collectEvent(ctx, st)
-		if !isEventEmpty(ev) {
+	events := make(chan *trackport.PortEvent)
+	go func() {
+		for event := range events {
+			logrus.Print(event)
+			port := make([]*api.IPPort, 1)
+			ev := &api.Event{Time: timestamppb.Now()}
+			atoi, _ := strconv.Atoi(event.Port)
+			if event.Action == trackport.OPEN {
+				port[0] = &api.IPPort{Ip: event.Ip.String(), Port: int32(atoi)}
+				ev.LocalPortsAdded = port
+			} else {
+				port[0] = &api.IPPort{Ip: event.Ip.String(), Port: int32(atoi)}
+				ev.LocalPortsRemoved = port
+			}
 			ch <- ev
 		}
-		select {
-		case <-ctx.Done():
-			return
-		case _, ok := <-tickerCh:
-			if !ok {
-				return
-			}
-			logrus.Debug("tick!")
-		}
+	}()
+
+	portMonitor := trackport.NewTracker(events, true)
+	err := portMonitor.Run(ctx)
+	if err != nil {
+		return
 	}
 }
 
