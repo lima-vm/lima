@@ -408,6 +408,10 @@ func copyLocal(ctx context.Context, dst, src, ext string, decompress bool, descr
 		if command != "" {
 			return decompressLocal(ctx, command, dstPath, srcPath, ext, description)
 		}
+		commandByMagic := decompressorByMagic(srcPath)
+		if commandByMagic != "" {
+			return decompressLocal(ctx, commandByMagic, dstPath, srcPath, ext, description)
+		}
 	}
 	// TODO: progress bar for copy
 	return fs.CopyFile(dstPath, srcPath)
@@ -426,6 +430,34 @@ func decompressor(ext string) string {
 	default:
 		return ""
 	}
+}
+
+func decompressorByMagic(file string) string {
+	f, err := os.Open(file)
+	if err != nil {
+		return ""
+	}
+	defer f.Close()
+	header := make([]byte, 6)
+	if _, err := f.Read(header); err != nil {
+		return ""
+	}
+	if _, err := f.Seek(0, io.SeekStart); err != nil {
+		return ""
+	}
+	if bytes.HasPrefix(header, []byte{0x1f, 0x8b}) {
+		return "gzip"
+	}
+	if bytes.HasPrefix(header, []byte{0x42, 0x5a}) {
+		return "bzip2"
+	}
+	if bytes.HasPrefix(header, []byte{0xfd, 0x37, 0x7a, 0x58, 0x5a, 0x00}) {
+		return "xz"
+	}
+	if bytes.HasPrefix(header, []byte{0x28, 0xb5, 0x2f, 0xfd}) {
+		return "zstd"
+	}
+	return ""
 }
 
 func decompressLocal(ctx context.Context, decompressCmd, dst, src, ext, description string) error {
