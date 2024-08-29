@@ -1,12 +1,13 @@
 # This template requires Lima v0.11.1 or later.
 
 images:
-- location: "https://dl.rockylinux.org/pub/rocky/9.4/images/x86_64/Rocky-9-GenericCloud-Base-9.4-20240523.0.x86_64.qcow2"
+- location: "https://dl.rockylinux.org/pub/rocky/9.4/images/x86_64/Rocky-9-GenericCloud-Base-9.4-20240609.1.x86_64.qcow2"
   arch: "x86_64"
-  digest: "sha256:39277948d53a10f1087454a1e0ed1c9bb48b48f6a4ddbf5113adc36f70be6730"
-- location: "https://dl.rockylinux.org/pub/rocky/9.4/images/aarch64/Rocky-9-GenericCloud-Base-9.4-20240523.0.aarch64.qcow2"
+  digest: "sha256:2179864f4fa9799f11c0824c439666c2451d6751450494e20034efd4f3fa0559"
+# No 20240609.1 for aarch64
+- location: "https://dl.rockylinux.org/pub/rocky/9.4/images/aarch64/Rocky-9-GenericCloud-Base-9.4-20240609.0.aarch64.qcow2"
   arch: "aarch64"
-  digest: "sha256:f3bd84cf2f2d25984003f85a9bd17258a729adf0e4f164fc398db701bdd35aca"
+  digest: "sha256:ad9dd95066212faaee19da392888ccb0db0b444141ba50cc44440558b9ee6f88"
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
 - location: "https://dl.rockylinux.org/pub/rocky/9/images/x86_64/Rocky-9-GenericCloud.latest.x86_64.qcow2"
