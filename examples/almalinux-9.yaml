@@ -1,12 +1,12 @@
 # This template requires Lima v0.11.1 or later.
 
 images:
-- location: "https://repo.almalinux.org/almalinux/9.4/cloud/x86_64/images/AlmaLinux-9-GenericCloud-9.4-20240507.x86_64.qcow2"
+- location: "https://repo.almalinux.org/almalinux/9.4/cloud/x86_64/images/AlmaLinux-9-GenericCloud-9.4-20240805.x86_64.qcow2"
   arch: "x86_64"
-  digest: "sha256:bff0885c804c01fff8aac4b70c9ca4f04e8c119f9ee102043838f33e06f58390"
-- location: "https://repo.almalinux.org/almalinux/9.4/cloud/aarch64/images/AlmaLinux-9-GenericCloud-9.4-20240507.aarch64.qcow2"
+  digest: "sha256:4f2984589020c0d82b9a410cf9e29715a607c948dfdca652025cdc79ddb5e816"
+- location: "https://repo.almalinux.org/almalinux/9.4/cloud/aarch64/images/AlmaLinux-9-GenericCloud-9.4-20240805.aarch64.qcow2"
   arch: "aarch64"
-  digest: "sha256:75b2e68f6aaa41c039274595ff15968201b7201a7f2f03b109af691f2d3687a1"
+  digest: "sha256:433e7a79b7c49007723851b7721c69a8f0a08be48969c04c1c9252cc16adc893"
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
 - location: "https://repo.almalinux.org/almalinux/9/cloud/x86_64/images/AlmaLinux-9-GenericCloud-latest.x86_64.qcow2"
