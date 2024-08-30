@@ -1,11 +1,9 @@
 package main
 
 import (
-	"crypto/sha256"
-	"fmt"
 	"os"
-	"path/filepath"
 
+	"github.com/lima-vm/lima/pkg/downloader"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/templatestore"
@@ -31,26 +29,13 @@ func pruneAction(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	ucd, err := os.UserCacheDir()
-	if err != nil {
-		return err
-	}
-	cacheDir := filepath.Join(ucd, "lima")
-	logrus.Infof("Pruning %q", cacheDir)
+	opt := downloader.WithCache()
 	if !keepReferred {
-		return os.RemoveAll(cacheDir)
+		return downloader.RemoveAllCacheDir(opt)
 	}
 
 	// Prune downloads that are not used by any instances or templates
-	downloadDir := filepath.Join(cacheDir, "download", "by-url-sha256")
-	_, err = os.Stat(downloadDir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
-		return err
-	}
-	cacheEntries, err := os.ReadDir(downloadDir)
+	cacheEntries, err := downloader.CacheEntries(opt)
 	if err != nil {
 		return err
 	}
@@ -58,13 +43,13 @@ func pruneAction(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	for _, entry := range cacheEntries {
-		if file, exists := knownLocations[entry.Name()]; exists {
-			logrus.Debugf("Keep %q caching %q", entry.Name(), file.Location)
+	for cacheKey, cachePath := range cacheEntries {
+		if file, exists := knownLocations[cacheKey]; exists {
+			logrus.Debugf("Keep %q caching %q", cacheKey, file.Location)
 		} else {
-			logrus.Debug("Deleting ", entry.Name())
-			if err := os.RemoveAll(filepath.Join(downloadDir, entry.Name())); err != nil {
-				logrus.Warnf("Failed to delete %q: %v", entry.Name(), err)
+			logrus.Debug("Deleting ", cacheKey)
+			if err := os.RemoveAll(cachePath); err != nil {
+				logrus.Warnf("Failed to delete %q: %v", cacheKey, err)
 				return err
 			}
 		}
@@ -114,23 +99,19 @@ func knownLocations() (map[string]limayaml.File, error) {
 func locationsFromLimaYAML(y *limayaml.LimaYAML) map[string]limayaml.File {
 	locations := make(map[string]limayaml.File)
 	for _, f := range y.Images {
-		locations[sha256OfURL(f.Location)] = f.File
+		locations[downloader.CacheKey(f.Location)] = f.File
 		if f.Kernel != nil {
-			locations[sha256OfURL(f.Kernel.Location)] = f.Kernel.File
+			locations[downloader.CacheKey(f.Kernel.Location)] = f.Kernel.File
 		}
 		if f.Initrd != nil {
-			locations[sha256OfURL(f.Initrd.Location)] = *f.Initrd
+			locations[downloader.CacheKey(f.Initrd.Location)] = *f.Initrd
 		}
 	}
 	for _, f := range y.Containerd.Archives {
-		locations[sha256OfURL(f.Location)] = f
+		locations[downloader.CacheKey(f.Location)] = f
 	}
 	for _, f := range y.Firmware.Images {
-		locations[sha256OfURL(f.Location)] = f.File
+		locations[downloader.CacheKey(f.Location)] = f.File
 	}
 	return locations
-}
-
-func sha256OfURL(url string) string {
-	return fmt.Sprintf("%x", sha256.Sum256([]byte(url)))
 }
