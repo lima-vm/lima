@@ -447,9 +447,6 @@ func warnExperimental(y *LimaYAML) {
 	if *y.MountType == VIRTIOFS && runtime.GOOS == "linux" {
 		logrus.Warn("`mountType: virtiofs` on Linux is experimental")
 	}
-	if *y.VMType == VZ {
-		logrus.Warn("`vmType: vz` is experimental")
-	}
 	if *y.Arch == RISCV64 {
 		logrus.Warn("`arch: riscv64` is experimental")
 	}

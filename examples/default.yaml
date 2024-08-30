@@ -5,10 +5,10 @@
 # Default values in this YAML file are specified by `null` instead of Lima's "builtin default" values,
 # so they can be overridden by the $LIMA_HOME/_config/default.yaml mechanism documented at the end of this file.
 
-# VM type: "qemu" or "vz" (on macOS 13 and later).
+# VM type: "qemu", "vz" (on macOS 13 and later), or "default".
 # The vmType can be specified only on creating the instance.
 # The vmType of existing instances cannot be changed.
-# 🟢 Builtin default: "qemu"
+# 🟢 Builtin default: "vz" (on macOS 13.5 and later), "qemu" (on others)
 vmType: null
 
 # OS: "Linux".
@@ -99,7 +99,7 @@ mounts:
   writable: true
 
 # Mount type for above mounts, such as "reverse-sshfs" (from sshocker), "9p" (EXPERIMENTAL, from QEMU’s virtio-9p-pci, aka virtfs),
-# or "virtiofs" (EXPERIMENTAL, needs `vmType: vz`)
+# or "virtiofs" (EXPERIMENTAL, needs `vmType: vz`; will graduate from experimental in Lima v1.0)
 # 🟢 Builtin default: "reverse-sshfs" (for QEMU), "virtiofs" (for vz)
 mountType: null
 
@@ -267,7 +267,7 @@ cpuType:
   # x86_64: "qemu64" # (or "host,-pdpe1gb" when running on x86_64 host)
 
 rosetta:
-  # Enable Rosetta for Linux (EXPERIMENTAL).
+  # Enable Rosetta for Linux (EXPERIMENTAL; will graduate from experimental in Lima v1.0).
   # Hint: try `softwareupdate --install-rosetta` if Lima gets stuck at `Installing rosetta...`
   # 🟢 Builtin default: false
   enabled: null
@@ -281,7 +281,7 @@ rosetta:
 timezone: null
 
 firmware:
-  # Use legacy BIOS instead of UEFI. Ignored for aarch64.
+  # Use legacy BIOS instead of UEFI. Ignored for aarch64 and vz.
   # 🟢 Builtin default: false
   legacyBIOS: null
 #  # Override UEFI images
@@ -343,7 +343,7 @@ networks:
 
 
 # The "vzNAT" IP address is accessible from the host, but not from other guests.
-# Needs `vmType: vz` (EXPERIMENTAL).
+# Needs `vmType: vz` (EXPERIMENTAL; will graduate from experimental in Lima v1.0).
 # - vzNAT: true
 
 # Port forwarding rules. Forwarding between ports 22 and ssh.localPort cannot be overridden.

@@ -3,6 +3,7 @@ package limayaml
 import (
 	"bytes"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/coreos/go-semver/semver"
 	"github.com/docker/go-units"
 	"github.com/pbnjay/memory"
 	"github.com/sirupsen/logrus"
@@ -178,7 +180,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 	if o.VMType != nil {
 		y.VMType = o.VMType
 	}
-	y.VMType = ptr.Of(ResolveVMType(y.VMType))
+	y.VMType = ptr.Of(ResolveVMType(y, d, o, filePath))
 	if y.OS == nil {
 		y.OS = d.OS
 	}
@@ -924,11 +926,96 @@ func NewVMType(driver string) VMType {
 	}
 }
 
-func ResolveVMType(s *string) VMType {
-	if s == nil || *s == "" || *s == "default" {
+func isExistingInstanceDir(dir string) bool {
+	// existence of "lima.yaml" does not signify existence of the instance,
+	// because the file is created during the initialization of the instance.
+	for _, f := range []string{
+		filenames.HostAgentStdoutLog, filenames.HostAgentStderrLog,
+		filenames.VzIdentifier, filenames.BaseDisk, filenames.DiffDisk, filenames.CIDataISO,
+	} {
+		file := filepath.Join(dir, f)
+		if _, err := os.Lstat(file); !errors.Is(err, os.ErrNotExist) {
+			return true
+		}
+	}
+	return false
+}
+
+func ResolveVMType(y, d, o *LimaYAML, filePath string) VMType {
+	// Check if the VMType is explicitly specified
+	for i, f := range []*LimaYAML{o, y, d} {
+		if f.VMType != nil && *f.VMType != "" && *f.VMType != "default" {
+			logrus.Debugf("ResolveVMType: resolved VMType %q (explicitly specified in []*LimaYAML{o,y,d}[%d])", *f.VMType, i)
+			return NewVMType(*f.VMType)
+		}
+	}
+
+	// If this is an existing instance, guess the VMType from the contents of the instance directory.
+	if dir, basename := filepath.Split(filePath); dir != "" && basename == filenames.LimaYAML && isExistingInstanceDir(dir) {
+		vzIdentifier := filepath.Join(dir, filenames.VzIdentifier) // since Lima v0.14
+		if _, err := os.Lstat(vzIdentifier); !errors.Is(err, os.ErrNotExist) {
+			logrus.Debugf("ResolveVMType: resolved VMType %q (existing instance, with %q)", VZ, vzIdentifier)
+			return VZ
+		}
+		logrus.Debugf("ResolveVMType: resolved VMType %q (existing instance, without %q)", QEMU, vzIdentifier)
 		return QEMU
 	}
-	return NewVMType(*s)
+
+	// Resolve the best type, depending on GOOS
+	switch runtime.GOOS {
+	case "darwin":
+		macOSProductVersion, err := osutil.ProductVersion()
+		if err != nil {
+			logrus.WithError(err).Warn("Failed to get macOS product version")
+			logrus.Debugf("ResolveVMType: resolved VMType %q (default for unknown version of macOS)", QEMU)
+			return QEMU
+		}
+		// Virtualization.framework in macOS prior to 13.5 could not boot Linux kernel v6.2 on Intel
+		// https://github.com/lima-vm/lima/issues/1577
+		if macOSProductVersion.LessThan(*semver.New("13.5.0")) {
+			logrus.Debugf("ResolveVMType: resolved VMType %q (default for macOS prior to 13.5)", QEMU)
+			return QEMU
+		}
+		// Use QEMU if the config depends on QEMU
+		for i, f := range []*LimaYAML{o, y, d} {
+			if f.Arch != nil && !IsNativeArch(*f.Arch) {
+				logrus.Debugf("ResolveVMType: resolved VMType %q (non-native arch=%q is specified in []*LimaYAML{o,y,d}[%d])", QEMU, *f.Arch, i)
+				return QEMU
+			}
+			if f.Firmware.LegacyBIOS != nil && *f.Firmware.LegacyBIOS {
+				logrus.Debugf("ResolveVMType: resolved VMType %q (firmware.legacyBIOS is specified in []*LimaYAML{o,y,d}[%d])", QEMU, i)
+				return QEMU
+			}
+			if f.MountType != nil && *f.MountType == NINEP {
+				logrus.Debugf("ResolveVMType: resolved VMType %q (mountType=%q is specified in []*LimaYAML{o,y,d}[%d])", QEMU, NINEP, i)
+				return QEMU
+			}
+			if f.Audio.Device != nil {
+				switch *f.Audio.Device {
+				case "", "none", "default", "vz":
+					// NOP
+				default:
+					logrus.Debugf("ResolveVMType: resolved VMType %q (audio.device=%q is specified in []*LimaYAML{o,y,d}[%d])", QEMU, *f.Audio.Device, i)
+					return QEMU
+				}
+			}
+			if f.Video.Display != nil {
+				switch *f.Video.Display {
+				case "", "none", "default", "vz":
+					// NOP
+				default:
+					logrus.Debugf("ResolveVMType: resolved VMType %q (video.display=%q is specified in []*LimaYAML{o,y,d}[%d])", QEMU, *f.Video.Display, i)
+					return QEMU
+				}
+			}
+		}
+		// Use VZ if the config is compatible with VZ
+		logrus.Debugf("ResolveVMType: resolved VMType %q (default for macOS 13.5 and later)", VZ)
+		return VZ
+	default:
+		logrus.Debugf("ResolveVMType: resolved VMType %q (default for GOOS=%q)", QEMU, runtime.GOOS)
+		return QEMU
+	}
 }
 
 func ResolveOS(s *string) OS {
