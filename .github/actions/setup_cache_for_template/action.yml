@@ -1,0 +1,74 @@
+name: 'setup cache for template'
+description: 'setup cache for template'
+inputs:
+  arch:
+    description: arch to setup cache for
+    required: false
+  template:
+    description: template yaml file
+    required: true
+runs:
+  using: "composite"
+  steps:
+  - name: "detect platform for download directory"
+    id: detect-platform
+    run: |
+      if [[ "$(uname)" == "Darwin" ]]; then
+        download_dir=~/Library/Caches/lima/download
+      else
+        download_dir=~/.cache/lima/download
+      fi
+      echo "download-dir=$download_dir" >> "$GITHUB_OUTPUT"
+    shell: bash
+  - name: "create cache parameters from template"
+    if: always()
+    id: cache-params-from-template
+    run: |
+      set -eux
+      source hack/cache-common-inc.sh
+      print_cache_informations_from_template "${{ inputs.template }}" "${{ inputs.arch }}" >> "$GITHUB_OUTPUT"
+    shell: bash
+
+  - name: "Cache ${{ steps.cache-params-from-template.outputs.image-path }}"
+    if: ${{ steps.cache-params-from-template.outputs.image-key != '' }}
+    # avoid using `~` in path that will be expanded to platform specific home directory
+    uses: actions/cache@v4
+    with:
+      path: ${{ steps.cache-params-from-template.outputs.image-path }}
+      key: ${{ steps.cache-params-from-template.outputs.image-key }}
+      enableCrossOsArchive: true
+
+  - name: "Cache ${{ steps.cache-params-from-template.outputs.kernel-path }}"
+    if: ${{ steps.cache-params-from-template.outputs.kernel-key != '' }}
+    # avoid using `~` in path that will be expanded to platform specific home directory
+    uses: actions/cache@v4
+    with:
+      path: ${{ steps.cache-params-from-template.outputs.kernel-path }}
+      key: ${{ steps.cache-params-from-template.outputs.kernel-key }}
+      enableCrossOsArchive: true
+
+  - name: "Cache ${{ steps.cache-params-from-template.outputs.initrd-path }}"
+    if: ${{ steps.cache-params-from-template.outputs.initrd-key != '' }}
+    # avoid using `~` in path that will be expanded to platform specific home directory
+    uses: actions/cache@v4
+    with:
+      path: ${{ steps.cache-params-from-template.outputs.initrd-path }}
+      key: ${{ steps.cache-params-from-template.outputs.initrd-key }}
+      enableCrossOsArchive: true
+
+  - name: "Cache ${{ steps.cache-params-from-template.outputs.containerd-key }}"
+    if: ${{ steps.cache-params-from-template.outputs.containerd-key != '' }}
+    uses: actions/cache@v4
+    with:
+      path: ${{ steps.cache-params-from-template.outputs.containerd-path }}
+      key: ${{ steps.cache-params-from-template.outputs.containerd-key }}
+      enableCrossOsArchive: true
+
+  - name: "Create symbolic link named ${{ steps.detect-platform.outputs.download-dir }} pointing to .download"
+    run: |
+      set -eux
+      [ -d .download ] || mkdir -p .download
+      path_to_cache=${{ steps.detect-platform.outputs.download-dir }}
+      mkdir -p "$(dirname "$path_to_cache")"
+      ln -sfn "$PWD/.download" "$path_to_cache"
+    shell: bash

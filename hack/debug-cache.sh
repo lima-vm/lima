@@ -4,7 +4,7 @@ cache_dir="${HOME}/Library/Caches"
 if [ "$(uname -s)" != "Darwin" ]; then
 	cache_dir="${HOME}/.cache"
 fi
-if [ ! -e "${cache_dir}/lima" ]; then
+if [ ! -e "${cache_dir}/lima/download/by-url-sha256" ]; then
 	echo "No cache"
 	exit 0
 fi
