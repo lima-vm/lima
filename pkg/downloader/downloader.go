@@ -619,7 +619,7 @@ func CacheEntries(opt ...Opt) (map[string]string, error) {
 	downloadDir := filepath.Join(o.cacheDir, "download", "by-url-sha256")
 	_, err := os.Stat(downloadDir)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, os.ErrNotExist) {
 			return entries, nil
 		}
 		return nil, err
