@@ -248,6 +248,7 @@ check-generated:
 lint: check-generated
 	golangci-lint run ./...
 	yamllint .
+	ls-lint
 	find . -name '*.sh' | xargs shellcheck
 	find . -name '*.sh' | xargs shfmt -s -d
 
