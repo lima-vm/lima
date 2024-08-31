@@ -6,4 +6,7 @@ import (
 	"syscall"
 )
 
-var SysProcAttr = &syscall.SysProcAttr{}
+var (
+	ForegroundSysProcAttr = &syscall.SysProcAttr{}
+	BackgroundSysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+)
