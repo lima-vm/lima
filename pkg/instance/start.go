@@ -189,7 +189,12 @@ func Start(ctx context.Context, inst *store.Instance, launchHostAgentForeground 
 	}
 	args = append(args, inst.Name)
 	haCmd := exec.CommandContext(ctx, self, args...)
-	haCmd.SysProcAttr = SysProcAttr
+
+	if launchHostAgentForeground {
+		haCmd.SysProcAttr = ForegroundSysProcAttr
+	} else {
+		haCmd.SysProcAttr = BackgroundSysProcAttr
+	}
 
 	haCmd.Stdout = haStdoutW
 	haCmd.Stderr = haStderrW
