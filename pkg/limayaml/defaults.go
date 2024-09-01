@@ -3,6 +3,7 @@ package limayaml
 import (
 	"bytes"
 	"crypto/sha256"
+	_ "embed"
 	"errors"
 	"fmt"
 	"net"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/coreos/go-semver/semver"
 	"github.com/docker/go-units"
+	"github.com/goccy/go-yaml"
 	"github.com/pbnjay/memory"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/cpu"
@@ -70,25 +72,20 @@ func defaultCPUType() CPUType {
 	return cpuType
 }
 
+//go:embed containerd.yaml
+var defaultContainerdYAML []byte
+
+type ContainerdYAML struct {
+	Archives []File
+}
+
 func defaultContainerdArchives() []File {
-	const nerdctlVersion = "1.7.6"
-	location := func(goos string, goarch string) string {
-		return "https://github.com/containerd/nerdctl/releases/download/v" + nerdctlVersion + "/nerdctl-full-" + nerdctlVersion + "-" + goos + "-" + goarch + ".tar.gz"
+	var containerd ContainerdYAML
+	err := yaml.UnmarshalWithOptions(defaultContainerdYAML, &containerd, yaml.Strict())
+	if err != nil {
+		panic(fmt.Errorf("failed to unmarshal as YAML: %w", err))
 	}
-	return []File{
-		{
-			Location: location("linux", "amd64"),
-			Arch:     X8664,
-			Digest:   "sha256:2c841e097fcfb5a1760bd354b3778cb695b44cd01f9f271c17507dc4a0b25606",
-		},
-		{
-			Location: location("linux", "arm64"),
-			Arch:     AARCH64,
-			Digest:   "sha256:77c747f09853ee3d229d77e8de0dd3c85622537d82be57433dc1fca4493bab95",
-		},
-		// No arm-v7
-		// No riscv64
-	}
+	return containerd.Archives
 }
 
 // FirstUsernetIndex gets the index of first usernet network under l.Network[]. Returns -1 if no usernet network found.
