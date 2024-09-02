@@ -1,5 +1,5 @@
-name: setup cache for go
-description: setup cache for go. export GOMODCACHE environment variable
+name: setup go with cache
+description: setup go with cache. export GOMODCACHE environment variable
 inputs:
   go-version:
     description: go version
@@ -13,6 +13,11 @@ inputs:
 runs:
   using: "composite"
   steps:
+  - id: setup-go
+    uses: actions/setup-go@v5
+    with:
+      cache: false
+      go-version: ${{ inputs.go-version }}
   - name: Set GOMODCACHE environment variable
     run: echo "GOMODCACHE=$(pwd)/.gomodcache" >> $GITHUB_ENV
     shell: bash
@@ -27,18 +32,18 @@ runs:
     uses: actions/cache@v4
     with:
       path: .gomodcache
-      key: go-modcache-${{ inputs.working-directory }}-${{ inputs.go-version }}-${{ hashFiles(steps.go-env.outputs.GOMOD) }}
+      key: go-modcache-${{ inputs.working-directory }}-${{ steps.setup-go.outputs.go-version }}-${{ hashFiles(steps.go-env.outputs.GOMOD) }}
       restore-keys: |
-        go-modcache-${{ inputs.working-directory }}-${{ inputs.go-version }}-
+        go-modcache-${{ inputs.working-directory }}-${{ steps.setup-go.outputs.go-version }}-
         go-modcache-${{ inputs.working-directory }}-
       enableCrossOsArchive: true
   - name: Cache go build cache
     uses: actions/cache@v4
     with:
       path: ${{ steps.go-env.outputs.GOCACHE }}
-      key: go-cache-${{ inputs.working-directory }}-${{ inputs.runs-on }}-${{ inputs.go-version }}-${{ hashFiles(steps.go-env.outputs.GOSUM) }}
+      key: go-cache-${{ inputs.working-directory }}-${{ inputs.runs-on }}-${{ steps.setup-go.outputs.go-version }}-${{ hashFiles(steps.go-env.outputs.GOSUM) }}
       restore-keys: |
-        go-cache-${{ inputs.working-directory }}-${{ inputs.runs-on }}-${{ inputs.go-version }}-
+        go-cache-${{ inputs.working-directory }}-${{ inputs.runs-on }}-${{ steps.setup-go.outputs.go-version }}-
         go-cache-${{ inputs.working-directory }}-${{ inputs.runs-on }}-
         go-cache-${{ inputs.working-directory }}-
   - name: Download dependencies

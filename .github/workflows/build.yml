@@ -29,14 +29,9 @@ jobs:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
-    - id: setup-go
-      uses: actions/setup-go@v5
+    - uses: ./.github/actions/setup_go_with_cache
       with:
-        cache: false
         go-version: ${{ inputs.go-version }}
-    - uses: ./.github/actions/setup_cache_for_go
-      with:
-        go-version: ${{ steps.setup-go.outputs.go-version }}
         runs-on: ${{ inputs.runs-on }}
     - name: Make
       run: make

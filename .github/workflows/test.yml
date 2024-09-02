@@ -82,14 +82,9 @@ jobs:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 1
-    - id: setup-go
-      uses: actions/setup-go@v5
+    - uses: ./.github/actions/setup_go_with_cache
       with:
-        cache: false
         go-version: ${{ matrix.go-version }}
-    - uses: ./.github/actions/setup_cache_for_go
-      with:
-        go-version: ${{ steps.setup-go.outputs.go-version }}
         runs-on: ubuntu-24.04
     - name: Unit tests
       run: go test -v ./...
@@ -173,14 +168,9 @@ jobs:
       with:
         # To avoid "failed to load YAML file \"templates/experimental/riscv64.yaml\": can't parse builtin Lima version \"3f3a6f6\": 3f3a6f6 is not in dotted-tri format"
         fetch-depth: 0
-    - id: setup-go
-      uses: actions/setup-go@v5
+    - uses: ./.github/actions/setup_go_with_cache
       with:
-        cache: false
         go-version: 1.23.x
-    - uses: ./.github/actions/setup_cache_for_go
-      with:
-        go-version: ${{ steps.setup-go.outputs.go-version }}
         runs-on: macos-12
     - name: Unit tests
       run: go test -v ./...
@@ -318,14 +308,9 @@ jobs:
         repository: abiosoft/colima
         ref: ${{ matrix.colima-version }}
         path: colima
-    - id: setup-go
-      uses: actions/setup-go@v5
+    - uses: ./.github/actions/setup_go_with_cache
       with:
-        cache: false
         go-version: 1.23.x
-    - uses: ./.github/actions/setup_cache_for_go
-      with:
-        go-version: ${{ steps.setup-go.outputs.go-version }}
         runs-on: macos-12
         working-directory: ./colima
     - name: Install colima
@@ -419,14 +404,9 @@ jobs:
         path: homebrew-core
         fetch-depth: 0
         filter: tree:0
-    - id: setup-go
-      uses: actions/setup-go@v5
+    - uses: ./.github/actions/setup_go_with_cache
       with:
-        cache: false
         go-version: 1.23.x
-    - uses: ./.github/actions/setup_cache_for_go
-      with:
-        go-version: ${{ steps.setup-go.outputs.go-version }}
         runs-on: macos-12
     - name: Cache image used by ${{ matrix.oldver }}/examples/ubuntu-lts.yaml
       uses: ./.github/actions/setup_cache_for_template
