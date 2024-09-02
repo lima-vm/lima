@@ -68,6 +68,16 @@ func ConvertToRaw(source, dest string, size *int64, allowSourceWithBackingFile b
 	defer os.RemoveAll(destTmp)
 	defer destTmpF.Close()
 
+	destSize := srcImg.Size()
+	if size != nil {
+		logrus.Infof("Expanding to %s", units.BytesSize(float64(*size)))
+		destSize = *size
+	}
+
+	if err := MakeSparse(destTmpF, destSize); err != nil {
+		return err
+	}
+
 	// Copy
 	srcImgR := io.NewSectionReader(srcImg, 0, srcImg.Size())
 	bar, err := progressbar.New(srcImg.Size())
@@ -82,13 +92,6 @@ func ConvertToRaw(source, dest string, size *int64, allowSourceWithBackingFile b
 		return fmt.Errorf("failed to call copySparse(), bufSize=%d, copied=%d: %w", bufSize, copied, err)
 	}
 
-	// Resize
-	if size != nil {
-		logrus.Infof("Expanding to %s", units.BytesSize(float64(*size)))
-		if err = MakeSparse(destTmpF, *size); err != nil {
-			return err
-		}
-	}
 	if err = destTmpF.Close(); err != nil {
 		return err
 	}
@@ -124,8 +127,8 @@ func convertRawToRaw(source, dest string, size *int64) error {
 
 func copySparse(w *os.File, r io.Reader, bufSize int64) (int64, error) {
 	var (
-		n              int64
-		eof, hasWrites bool
+		n   int64
+		eof bool
 	)
 
 	zeroBuf := make([]byte, bufSize)
@@ -139,20 +142,15 @@ func copySparse(w *os.File, r io.Reader, bufSize int64) (int64, error) {
 			}
 		}
 		// TODO: qcow2reader should have a method to notify whether buf is zero
-		if bytes.Equal(buf, zeroBuf) {
-			if _, sErr := w.Seek(int64(rN), io.SeekCurrent); sErr != nil {
-				return n, fmt.Errorf("failed seek: %w", sErr)
-			}
-			// no need to ftruncate here
+		if bytes.Equal(buf[:rN], zeroBuf[:rN]) {
 			n += int64(rN)
 		} else {
-			hasWrites = true
-			wN, wErr := w.Write(buf)
+			wN, wErr := w.WriteAt(buf[:rN], n)
 			if wN > 0 {
 				n += int64(wN)
 			}
 			if wErr != nil {
-				return n, fmt.Errorf("failed to read: %w", wErr)
+				return n, fmt.Errorf("failed to write: %w", wErr)
 			}
 			if wN != rN {
 				return n, fmt.Errorf("read %d, but wrote %d bytes", rN, wN)
@@ -160,10 +158,6 @@ func copySparse(w *os.File, r io.Reader, bufSize int64) (int64, error) {
 		}
 	}
 
-	// Ftruncate must be run if the file contains only zeros
-	if !hasWrites {
-		return n, MakeSparse(w, n)
-	}
 	return n, nil
 }
 
