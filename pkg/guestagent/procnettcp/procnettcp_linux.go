@@ -11,6 +11,8 @@ func ParseFiles() ([]Entry, error) {
 	files := map[string]Kind{
 		"/proc/net/tcp":  TCP,
 		"/proc/net/tcp6": TCP6,
+		"/proc/net/udp":  UDP,
+		"/proc/net/udp6": UDP6,
 	}
 	for file, kind := range files {
 		r, err := os.Open(file)
