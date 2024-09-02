@@ -60,6 +60,7 @@ func newApp() *cobra.Command {
 		DisableAutoGenTag: true,
 	}
 	rootCmd.PersistentFlags().String("log-level", "", "Set the logging level [trace, debug, info, warn, error]")
+	rootCmd.PersistentFlags().String("log-format", "text", "Set the logging format [text, json]")
 	rootCmd.PersistentFlags().Bool("debug", false, "debug mode")
 	// TODO: "survey" does not support using cygwin terminal on windows yet
 	rootCmd.PersistentFlags().Bool("tty", isatty.IsTerminal(os.Stdout.Fd()), "Enable TUI interactions such as opening an editor. Defaults to true when stdout is a terminal. Set to false for automation.")
@@ -72,6 +73,24 @@ func newApp() *cobra.Command {
 			}
 			logrus.SetLevel(lvl)
 		}
+
+		logFormat, _ := cmd.Flags().GetString("log-format")
+		switch logFormat {
+		case "json":
+			formatter := new(logrus.JSONFormatter)
+			logrus.StandardLogger().SetFormatter(formatter)
+		case "text":
+			// logrus use text format by default.
+			if runtime.GOOS == "windows" && isatty.IsCygwinTerminal(os.Stderr.Fd()) {
+				formatter := new(logrus.TextFormatter)
+				// the default setting does not recognize cygwin on windows
+				formatter.ForceColors = true
+				logrus.StandardLogger().SetFormatter(formatter)
+			}
+		default:
+			return fmt.Errorf("unsupported log-format: %q", logFormat)
+		}
+
 		debug, _ := cmd.Flags().GetBool("debug")
 		if debug {
 			logrus.SetLevel(logrus.DebugLevel)
@@ -83,12 +102,6 @@ func newApp() *cobra.Command {
 			return errors.New("limactl is running under rosetta, please reinstall lima with native arch")
 		}
 
-		if runtime.GOOS == "windows" && isatty.IsCygwinTerminal(os.Stdout.Fd()) {
-			formatter := new(logrus.TextFormatter)
-			// the default setting does not recognize cygwin on windows
-			formatter.ForceColors = true
-			logrus.StandardLogger().SetFormatter(formatter)
-		}
 		if os.Geteuid() == 0 && cmd.Name() != "generate-doc" {
 			return errors.New("must not run as the root user")
 		}
