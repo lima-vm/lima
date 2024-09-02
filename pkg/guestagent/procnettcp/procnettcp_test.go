@@ -56,3 +56,19 @@ func TestParseTCP6Zero(t *testing.T) {
 	assert.Equal(t, uint16(22), entries[0].Port)
 	assert.Equal(t, TCPListen, entries[0].State)
 }
+
+func TestParseUDP(t *testing.T) {
+	procNetTCP := `   sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode ref pointer drops            
+  716: 3600007F:0035 00000000:0000 07 00000000:00000000 00:00000000 00000000   991        0 2964 2 0000000000000000 0          
+  716: 3500007F:0035 00000000:0000 07 00000000:00000000 00:00000000 00000000   991        0 2962 2 0000000000000000 0          
+  731: 0369A8C0:0044 00000000:0000 07 00000000:00000000 00:00000000 00000000   998        0 29132 2 0000000000000000 0         
+  731: 0F05A8C0:0044 00000000:0000 07 00000000:00000000 00:00000000 00000000   998        0 4049 2 0000000000000000 0          
+ 1768: 00000000:1451 00000000:0000 07 00000000:00000000 00:00000000 00000000   502        0 28364 2 0000000000000000 0  `
+	entries, err := Parse(strings.NewReader(procNetTCP), UDP)
+	assert.NilError(t, err)
+	t.Log(entries)
+
+	assert.Check(t, net.ParseIP("127.0.0.54").Equal(entries[0].IP))
+	assert.Equal(t, uint16(53), entries[0].Port)
+	assert.Equal(t, UDPEstablished, entries[0].State)
+}

@@ -6,6 +6,7 @@ import (
 
 	"github.com/lima-vm/lima/pkg/guestagent"
 	"github.com/lima-vm/lima/pkg/guestagent/api"
+	"github.com/lima-vm/lima/pkg/portfwdserver"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -18,14 +19,15 @@ func StartServer(lis net.Listener, guest *GuestServer) error {
 
 type GuestServer struct {
 	api.UnimplementedGuestServiceServer
-	Agent guestagent.Agent
+	Agent   guestagent.Agent
+	TunnelS *portfwdserver.TunnelServer
 }
 
-func (s GuestServer) GetInfo(ctx context.Context, _ *emptypb.Empty) (*api.Info, error) {
+func (s *GuestServer) GetInfo(ctx context.Context, _ *emptypb.Empty) (*api.Info, error) {
 	return s.Agent.Info(ctx)
 }
 
-func (s GuestServer) GetEvents(_ *emptypb.Empty, stream api.GuestService_GetEventsServer) error {
+func (s *GuestServer) GetEvents(_ *emptypb.Empty, stream api.GuestService_GetEventsServer) error {
 	responses := make(chan *api.Event)
 	go s.Agent.Events(stream.Context(), responses)
 	for response := range responses {
@@ -37,7 +39,7 @@ func (s GuestServer) GetEvents(_ *emptypb.Empty, stream api.GuestService_GetEven
 	return nil
 }
 
-func (s GuestServer) PostInotify(server api.GuestService_PostInotifyServer) error {
+func (s *GuestServer) PostInotify(server api.GuestService_PostInotifyServer) error {
 	for {
 		recv, err := server.Recv()
 		if err != nil {
@@ -45,4 +47,8 @@ func (s GuestServer) PostInotify(server api.GuestService_PostInotifyServer) erro
 		}
 		s.Agent.HandleInotify(recv)
 	}
+}
+
+func (s *GuestServer) Tunnel(stream api.GuestService_TunnelServer) error {
+	return s.TunnelS.Start(stream)
 }

@@ -224,15 +224,25 @@ func (a *agent) LocalPorts(_ context.Context) ([]*api.IPPort, error) {
 	for _, f := range tcpParsed {
 		switch f.Kind {
 		case procnettcp.TCP, procnettcp.TCP6:
+			if f.State == procnettcp.TCPListen {
+				res = append(res,
+					&api.IPPort{
+						Ip:       f.IP.String(),
+						Port:     int32(f.Port),
+						Protocol: "tcp",
+					})
+			}
+		case procnettcp.UDP, procnettcp.UDP6:
+			if f.State == procnettcp.UDPEstablished {
+				res = append(res,
+					&api.IPPort{
+						Ip:       f.IP.String(),
+						Port:     int32(f.Port),
+						Protocol: "udp",
+					})
+			}
 		default:
 			continue
-		}
-		if f.State == procnettcp.TCPListen {
-			res = append(res,
-				&api.IPPort{
-					Ip:   f.IP.String(),
-					Port: int32(f.Port),
-				})
 		}
 	}
 
@@ -265,11 +275,14 @@ func (a *agent) LocalPorts(_ context.Context) ([]*api.IPPort, error) {
 			}
 		}
 		if !found {
-			res = append(res,
-				&api.IPPort{
-					Ip:   ipt.IP.String(),
-					Port: int32(ipt.Port),
-				})
+			if ipt.TCP {
+				res = append(res,
+					&api.IPPort{
+						Ip:       ipt.IP.String(),
+						Port:     int32(ipt.Port),
+						Protocol: "tcp",
+					})
+			}
 		}
 	}
 
@@ -285,8 +298,9 @@ func (a *agent) LocalPorts(_ context.Context) ([]*api.IPPort, error) {
 		if !found {
 			res = append(res,
 				&api.IPPort{
-					Ip:   entry.IP.String(),
-					Port: int32(entry.Port),
+					Ip:       entry.IP.String(),
+					Port:     int32(entry.Port),
+					Protocol: string(entry.Protocol),
 				})
 		}
 	}
