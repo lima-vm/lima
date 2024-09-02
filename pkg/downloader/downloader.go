@@ -341,7 +341,7 @@ func Cached(remote string, opts ...Opt) (*Result, error) {
 //   - "time" file contains the time (Last-Modified header)
 //   - "type" file contains the type (Content-Type header)
 func cacheDirectoryPath(cacheDir, remote string) string {
-	return filepath.Join(cacheDir, "download", "by-url-sha256", fmt.Sprintf("%x", sha256.Sum256([]byte(remote))))
+	return filepath.Join(cacheDir, "download", "by-url-sha256", CacheKey(remote))
 }
 
 // cacheDigestPath returns the cache digest file path.
@@ -600,4 +600,56 @@ func downloadHTTP(ctx context.Context, localPath, lastModified, contentType, url
 		return err
 	}
 	return os.Rename(localPathTmp, localPath)
+}
+
+// CacheEntries returns a map of cache entries.
+// The key is the SHA256 of the URL.
+// The value is the path to the cache entry.
+func CacheEntries(opt ...Opt) (map[string]string, error) {
+	entries := make(map[string]string)
+	var o options
+	for _, f := range opt {
+		if err := f(&o); err != nil {
+			return nil, err
+		}
+	}
+	if o.cacheDir == "" {
+		return entries, nil
+	}
+	downloadDir := filepath.Join(o.cacheDir, "download", "by-url-sha256")
+	_, err := os.Stat(downloadDir)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return entries, nil
+		}
+		return nil, err
+	}
+	cacheEntries, err := os.ReadDir(downloadDir)
+	if err != nil {
+		return nil, err
+	}
+	for _, entry := range cacheEntries {
+		entries[entry.Name()] = filepath.Join(downloadDir, entry.Name())
+	}
+	return entries, nil
+}
+
+// CacheKey returns the key for a cache entry of the remote URL.
+func CacheKey(remote string) string {
+	return fmt.Sprintf("%x", sha256.Sum256([]byte(remote)))
+}
+
+// RemoveAllCacheDir removes the cache directory.
+func RemoveAllCacheDir(opt ...Opt) error {
+	var o options
+	for _, f := range opt {
+		if err := f(&o); err != nil {
+			return err
+		}
+	}
+	if o.cacheDir == "" {
+		return nil
+	}
+	logrus.Infof("Pruning %q", o.cacheDir)
+	return os.RemoveAll(o.cacheDir)
 }
