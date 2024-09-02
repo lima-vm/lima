@@ -1,0 +1,47 @@
+name: setup cache for go
+description: setup cache for go. export GOMODCACHE environment variable
+inputs:
+  go-version:
+    description: go version
+    required: true
+  runs-on:
+    description: runs on
+    required: true
+  working-directory:
+    description: working directory
+    default: '.'
+runs:
+  using: "composite"
+  steps:
+  - name: Set GOMODCACHE environment variable
+    run: echo "GOMODCACHE=$(pwd)/.gomodcache" >> $GITHUB_ENV
+    shell: bash
+  - id: go-env
+    run: |
+      echo "GOCACHE=$(go env GOCACHE)" >> $GITHUB_OUTPUT
+      echo "GOMOD=$(go env GOMOD)" >> $GITHUB_OUTPUT
+      echo "GOSUM=$(realpath go.sum)" >> $GITHUB_OUTPUT
+    shell: bash
+    working-directory: ${{ inputs.working-directory }}
+  - name: Cache go modules
+    uses: actions/cache@v4
+    with:
+      path: .gomodcache
+      key: go-modcache-${{ inputs.working-directory }}-${{ inputs.go-version }}-${{ hashFiles(steps.go-env.outputs.GOMOD) }}
+      restore-keys: |
+        go-modcache-${{ inputs.working-directory }}-${{ inputs.go-version }}-
+        go-modcache-${{ inputs.working-directory }}-
+      enableCrossOsArchive: true
+  - name: Cache go build cache
+    uses: actions/cache@v4
+    with:
+      path: ${{ steps.go-env.outputs.GOCACHE }}
+      key: go-cache-${{ inputs.working-directory }}-${{ inputs.runs-on }}-${{ inputs.go-version }}-${{ hashFiles(steps.go-env.outputs.GOSUM) }}
+      restore-keys: |
+        go-cache-${{ inputs.working-directory }}-${{ inputs.runs-on }}-${{ inputs.go-version }}-
+        go-cache-${{ inputs.working-directory }}-${{ inputs.runs-on }}-
+        go-cache-${{ inputs.working-directory }}-
+  - name: Download dependencies
+    run: go mod download -x
+    shell: bash
+    working-directory: ${{ inputs.working-directory }}

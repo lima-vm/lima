@@ -82,9 +82,15 @@ jobs:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 1
-    - uses: actions/setup-go@v5
+    - id: setup-go
+      uses: actions/setup-go@v5
       with:
+        cache: false
         go-version: ${{ matrix.go-version }}
+    - uses: ./.github/actions/setup_cache_for_go
+      with:
+        go-version: ${{ steps.setup-go.outputs.go-version }}
+        runs-on: ubuntu-24.04
     - name: Unit tests
       run: go test -v ./...
     - name: Make
@@ -167,9 +173,15 @@ jobs:
       with:
         # To avoid "failed to load YAML file \"templates/experimental/riscv64.yaml\": can't parse builtin Lima version \"3f3a6f6\": 3f3a6f6 is not in dotted-tri format"
         fetch-depth: 0
-    - uses: actions/setup-go@v5
+    - id: setup-go
+      uses: actions/setup-go@v5
       with:
+        cache: false
         go-version: 1.23.x
+    - uses: ./.github/actions/setup_cache_for_go
+      with:
+        go-version: ${{ steps.setup-go.outputs.go-version }}
+        runs-on: macos-12
     - name: Unit tests
       run: go test -v ./...
     - name: Make
@@ -293,9 +305,6 @@ jobs:
         # fetch-depth is set to 0 to let `limactl --version` print semver-ish version
         fetch-depth: 0
         ref: ${{ github.event.pull_request.head.sha }}
-    - uses: actions/setup-go@v5
-      with:
-        go-version: 1.23.x
     - uses: actions/cache@v4
       with:
         path: ~/.cache/lima/download
@@ -303,13 +312,27 @@ jobs:
     - uses: ./.github/actions/install_lima_from_artifact
       with:
         artifact: ${{ needs.build-on-ubuntu.outputs.artifact }}
+    - name: Checkout colima
+      uses: actions/checkout@v4
+      with:
+        repository: abiosoft/colima
+        ref: ${{ matrix.colima-version }}
+        path: colima
+    - id: setup-go
+      uses: actions/setup-go@v5
+      with:
+        cache: false
+        go-version: 1.23.x
+    - uses: ./.github/actions/setup_cache_for_go
+      with:
+        go-version: ${{ steps.setup-go.outputs.go-version }}
+        runs-on: macos-12
+        working-directory: ./colima
     - name: Install colima
       run: |
-        git clone https://github.com/abiosoft/colima
-        cd colima
-        git checkout ${{ matrix.colima-version }}
         make
         sudo make install
+      working-directory: ./colima
     - name: Install test dependencies
       run: |
         sudo apt-get update
@@ -396,9 +419,15 @@ jobs:
         path: homebrew-core
         fetch-depth: 0
         filter: tree:0
-    - uses: actions/setup-go@v5
+    - id: setup-go
+      uses: actions/setup-go@v5
       with:
+        cache: false
         go-version: 1.23.x
+    - uses: ./.github/actions/setup_cache_for_go
+      with:
+        go-version: ${{ steps.setup-go.outputs.go-version }}
+        runs-on: macos-12
     - name: Cache image used by ${{ matrix.oldver }}/examples/ubuntu-lts.yaml
       uses: ./.github/actions/setup_cache_for_template
       with:
