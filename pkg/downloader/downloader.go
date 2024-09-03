@@ -29,8 +29,7 @@ var HideProgress bool
 
 // hideBar is used only for testing.
 func hideBar(bar *pb.ProgressBar) {
-	bar.Set(pb.ReturnSymbol, "")
-	bar.SetTemplateString("")
+	bar.Set(pb.Static, true)
 }
 
 type Status = string
