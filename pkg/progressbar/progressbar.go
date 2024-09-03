@@ -6,6 +6,7 @@ import (
 
 	"github.com/cheggaaa/pb/v3"
 	"github.com/mattn/go-isatty"
+	"github.com/sirupsen/logrus"
 )
 
 func New(size int64) (*pb.ProgressBar, error) {
@@ -13,11 +14,7 @@ func New(size int64) (*pb.ProgressBar, error) {
 
 	bar.Set(pb.Bytes, true)
 
-	// Both logrous and pb use stderr by default.
-	logFd := os.Stderr.Fd()
-
-	// Show progress only when logging to terminal.
-	if isatty.IsTerminal(logFd) || isatty.IsCygwinTerminal(logFd) {
+	if showProgress() {
 		bar.SetTemplateString(`{{counters . }} {{bar . | green }} {{percent .}} {{speed . "%s/s"}}`)
 		bar.SetRefreshRate(200 * time.Millisecond)
 	} else {
@@ -30,4 +27,15 @@ func New(size int64) (*pb.ProgressBar, error) {
 	}
 
 	return bar, nil
+}
+
+func showProgress() bool {
+	// Progress supports only text format fow now.
+	if _, ok := logrus.StandardLogger().Formatter.(*logrus.TextFormatter); !ok {
+		return false
+	}
+
+	// Both logrous and pb use stderr by default.
+	logFd := os.Stderr.Fd()
+	return isatty.IsTerminal(logFd) || isatty.IsCygwinTerminal(logFd)
 }
