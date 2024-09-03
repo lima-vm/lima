@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -201,7 +202,7 @@ func TestFillDefault(t *testing.T) {
 		"MY.Host": "host.lima.internal",
 	}
 
-	expect.Mounts = y.Mounts
+	expect.Mounts = slices.Clone(y.Mounts)
 	expect.Mounts[0].MountPoint = expect.Mounts[0].Location
 	expect.Mounts[0].Writable = ptr.Of(false)
 	expect.Mounts[0].SSHFS.Cache = ptr.Of(true)
@@ -218,20 +219,20 @@ func TestFillDefault(t *testing.T) {
 
 	expect.MountInotify = ptr.Of(false)
 
-	expect.Provision = y.Provision
+	expect.Provision = slices.Clone(y.Provision)
 	expect.Provision[0].Mode = ProvisionModeSystem
 	expect.Provision[0].Script = "#!/bin/true # Eins"
 
-	expect.Probes = y.Probes
+	expect.Probes = slices.Clone(y.Probes)
 	expect.Probes[0].Mode = ProbeModeReadiness
 	expect.Probes[0].Description = "user probe 1/1"
 	expect.Probes[0].Script = "#!/bin/true # Eins"
 
-	expect.Networks = y.Networks
+	expect.Networks = slices.Clone(y.Networks)
 	expect.Networks[0].MACAddress = MACAddress(fmt.Sprintf("%s#%d", filePath, 0))
 	expect.Networks[0].Interface = "lima0"
 
-	expect.DNS = y.DNS
+	expect.DNS = slices.Clone(y.DNS)
 	expect.PortForwards = []PortForward{
 		defaultPortForward,
 		defaultPortForward,
@@ -273,6 +274,7 @@ func TestFillDefault(t *testing.T) {
 
 	expect.TimeZone = y.TimeZone
 	expect.Firmware = y.Firmware
+	expect.Firmware.Images = slices.Clone(y.Firmware.Images)
 
 	expect.Rosetta = Rosetta{
 		Enabled: ptr.Of(false),
@@ -410,7 +412,9 @@ func TestFillDefault(t *testing.T) {
 
 	expect = d
 	// Also verify that archive arch is filled in
+	expect.Containerd.Archives = slices.Clone(d.Containerd.Archives)
 	expect.Containerd.Archives[0].Arch = *d.Arch
+	expect.Mounts = slices.Clone(d.Mounts)
 	expect.Mounts[0].MountPoint = expect.Mounts[0].Location
 	expect.Mounts[0].SSHFS.Cache = ptr.Of(true)
 	expect.Mounts[0].SSHFS.FollowSymlinks = ptr.Of(false)
@@ -651,7 +655,7 @@ func TestFillDefault(t *testing.T) {
 	expect.Networks[0].Lima = o.Networks[1].Lima
 
 	// Only highest prio DNS are retained
-	expect.DNS = o.DNS
+	expect.DNS = slices.Clone(o.DNS)
 
 	// ONE remains from filledDefaults.Env; the rest are set from o
 	expect.Env["ONE"] = y.Env["ONE"]
