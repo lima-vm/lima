@@ -19,7 +19,12 @@ runs:
       cache: false
       go-version: ${{ inputs.go-version }}
   - name: Set GOMODCACHE environment variable
+    if: runner.os != 'Windows'
     run: echo "GOMODCACHE=$(pwd)/.gomodcache" >> $GITHUB_ENV
+    shell: bash
+  - name: Set GOMODCACHE environment variable on Windows
+    if: runner.os == 'Windows'
+    run: echo "GOMODCACHE=$(cygpath -w $(pwd)/.gomodcache)" >> $GITHUB_ENV
     shell: bash
   - id: go-env
     run: |
