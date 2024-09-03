@@ -27,9 +27,12 @@ jobs:
       with:
         # To avoid "failed to load YAML file \"templates/experimental/riscv64.yaml\": can't parse builtin Lima version \"3f3a6f6\": 3f3a6f6 is not in dotted-tri format"
         fetch-depth: 0
-    - uses: actions/setup-go@v5
+    - uses: ./.github/actions/setup_go_with_cache
       with:
+        additional-cache-key: lints
         go-version: 1.23.x
+        ignore-go-mod-and-go-sum: true
+        runs-on: ubuntu-24.04
     - name: Install protoc
       run: |
         sudo apt-get update

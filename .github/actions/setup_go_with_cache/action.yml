@@ -7,6 +7,9 @@ inputs:
   go-version:
     description: go version
     required: true
+  ignore-go-mod-and-go-sum:
+    description: ignore go.mod and go.sum if true
+    required: false
   runs-on:
     description: runs on
     required: true
@@ -32,8 +35,18 @@ runs:
   - id: go-env
     run: |
       echo "GOCACHE=$(go env GOCACHE)" >> $GITHUB_OUTPUT
-      echo "GOMOD=$(go env GOMOD)" >> $GITHUB_OUTPUT
-      echo "GOSUM=$(go env GOMOD|sed 's/\.mod$/.sum/')" >> $GITHUB_OUTPUT
+      if [[ "${{ inputs.ignore-go-mod-and-go-sum }}" == "true" ]]; then
+        echo "GOMOD=" >> $GITHUB_OUTPUT
+        echo "GOSUM=" >> $GITHUB_OUTPUT
+      else
+        GOMOD=$(go env GOMOD)
+        case $GOMOD in
+          /dev/null|NUL) GOMOD= ;;
+        esac
+        GOSUM=${GOMOD/%.mod/.sum}
+        echo "GOMOD=${GOMOD}" >> $GITHUB_OUTPUT
+        echo "GOSUM=${GOSUM}" >> $GITHUB_OUTPUT
+      fi
     shell: bash
     working-directory: ${{ inputs.working-directory }}
   - id: base-key
@@ -59,6 +72,7 @@ runs:
         ${{ steps.base-key.outputs.gocache-key }}-${{ steps.setup-go.outputs.go-version }}-
         ${{ steps.base-key.outputs.gocache-key }}-
   - name: Download dependencies
+    if: inputs.ignore-go-mod-and-go-sum != 'true'
     run: go mod download -x
     shell: bash
     working-directory: ${{ inputs.working-directory }}
