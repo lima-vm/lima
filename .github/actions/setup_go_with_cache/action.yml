@@ -1,6 +1,9 @@
 name: setup go with cache
 description: setup go with cache. export GOMODCACHE environment variable
 inputs:
+  additional-cache-key:
+    description: additional cache key
+    required: false
   go-version:
     description: go version
     required: true
@@ -33,24 +36,28 @@ runs:
       echo "GOSUM=$(go env GOMOD|sed 's/\.mod$/.sum/')" >> $GITHUB_OUTPUT
     shell: bash
     working-directory: ${{ inputs.working-directory }}
+  - id: base-key
+    run: |
+      echo "gomodcache-key=go-modcache-${{ inputs.working-directory }}-${{ inputs.additional-cache-key }}" >> $GITHUB_OUTPUT
+      echo "gocache-key=go-cache-${{ inputs.working-directory }}-${{ inputs.runs-on }}-${{ inputs.additional-cache-key }}" >> $GITHUB_OUTPUT
+    shell: bash
   - name: Cache go modules
     uses: actions/cache@v4
     with:
       path: .gomodcache
-      key: go-modcache-${{ inputs.working-directory }}-${{ steps.setup-go.outputs.go-version }}-${{ hashFiles(steps.go-env.outputs.GOMOD) }}
+      key: ${{ steps.base-key.outputs.gomodcache-key }}-${{ steps.setup-go.outputs.go-version }}-${{ hashFiles(steps.go-env.outputs.GOMOD) }}
       restore-keys: |
-        go-modcache-${{ inputs.working-directory }}-${{ steps.setup-go.outputs.go-version }}-
-        go-modcache-${{ inputs.working-directory }}-
+        ${{ steps.base-key.outputs.gomodcache-key }}-${{ steps.setup-go.outputs.go-version }}-
+        ${{ steps.base-key.outputs.gomodcache-key }}-
       enableCrossOsArchive: true
   - name: Cache go build cache
     uses: actions/cache@v4
     with:
       path: ${{ steps.go-env.outputs.GOCACHE }}
-      key: go-cache-${{ inputs.working-directory }}-${{ inputs.runs-on }}-${{ steps.setup-go.outputs.go-version }}-${{ hashFiles(steps.go-env.outputs.GOSUM) }}
+      key: ${{ steps.base-key.outputs.gocache-key }}-${{ steps.setup-go.outputs.go-version }}-${{ hashFiles(steps.go-env.outputs.GOSUM) }}
       restore-keys: |
-        go-cache-${{ inputs.working-directory }}-${{ inputs.runs-on }}-${{ steps.setup-go.outputs.go-version }}-
-        go-cache-${{ inputs.working-directory }}-${{ inputs.runs-on }}-
-        go-cache-${{ inputs.working-directory }}-
+        ${{ steps.base-key.outputs.gocache-key }}-${{ steps.setup-go.outputs.go-version }}-
+        ${{ steps.base-key.outputs.gocache-key }}-
   - name: Download dependencies
     run: go mod download -x
     shell: bash
