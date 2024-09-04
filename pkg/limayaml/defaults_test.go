@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -201,7 +202,7 @@ func TestFillDefault(t *testing.T) {
 		"MY.Host": "host.lima.internal",
 	}
 
-	expect.Mounts = y.Mounts
+	expect.Mounts = slices.Clone(y.Mounts)
 	expect.Mounts[0].MountPoint = expect.Mounts[0].Location
 	expect.Mounts[0].Writable = ptr.Of(false)
 	expect.Mounts[0].SSHFS.Cache = ptr.Of(true)
@@ -211,27 +212,27 @@ func TestFillDefault(t *testing.T) {
 	expect.Mounts[0].NineP.ProtocolVersion = ptr.Of(Default9pProtocolVersion)
 	expect.Mounts[0].NineP.Msize = ptr.Of(Default9pMsize)
 	expect.Mounts[0].NineP.Cache = ptr.Of(Default9pCacheForRO)
-	expect.Mounts[0].Virtiofs.QueueSize = ptr.Of(DefaultVirtiofsQueueSize)
+	expect.Mounts[0].Virtiofs.QueueSize = nil
 	// Only missing Mounts field is Writable, and the default value is also the null value: false
 
 	expect.MountType = ptr.Of(NINEP)
 
 	expect.MountInotify = ptr.Of(false)
 
-	expect.Provision = y.Provision
+	expect.Provision = slices.Clone(y.Provision)
 	expect.Provision[0].Mode = ProvisionModeSystem
 	expect.Provision[0].Script = "#!/bin/true # Eins"
 
-	expect.Probes = y.Probes
+	expect.Probes = slices.Clone(y.Probes)
 	expect.Probes[0].Mode = ProbeModeReadiness
 	expect.Probes[0].Description = "user probe 1/1"
-	expect.Probes[0].Script = "#!/bin/true # Eins"
+	expect.Probes[0].Script = "#!/bin/false # Eins"
 
-	expect.Networks = y.Networks
+	expect.Networks = slices.Clone(y.Networks)
 	expect.Networks[0].MACAddress = MACAddress(fmt.Sprintf("%s#%d", filePath, 0))
 	expect.Networks[0].Interface = "lima0"
 
-	expect.DNS = y.DNS
+	expect.DNS = slices.Clone(y.DNS)
 	expect.PortForwards = []PortForward{
 		defaultPortForward,
 		defaultPortForward,
@@ -273,6 +274,7 @@ func TestFillDefault(t *testing.T) {
 
 	expect.TimeZone = y.TimeZone
 	expect.Firmware = y.Firmware
+	expect.Firmware.Images = slices.Clone(y.Firmware.Images)
 
 	expect.Rosetta = Rosetta{
 		Enabled: ptr.Of(false),
@@ -410,7 +412,9 @@ func TestFillDefault(t *testing.T) {
 
 	expect = d
 	// Also verify that archive arch is filled in
+	expect.Containerd.Archives = slices.Clone(d.Containerd.Archives)
 	expect.Containerd.Archives[0].Arch = *d.Arch
+	expect.Mounts = slices.Clone(d.Mounts)
 	expect.Mounts[0].MountPoint = expect.Mounts[0].Location
 	expect.Mounts[0].SSHFS.Cache = ptr.Of(true)
 	expect.Mounts[0].SSHFS.FollowSymlinks = ptr.Of(false)
@@ -419,7 +423,7 @@ func TestFillDefault(t *testing.T) {
 	expect.Mounts[0].NineP.ProtocolVersion = ptr.Of(Default9pProtocolVersion)
 	expect.Mounts[0].NineP.Msize = ptr.Of(Default9pMsize)
 	expect.Mounts[0].NineP.Cache = ptr.Of(Default9pCacheForRO)
-	expect.Mounts[0].Virtiofs.QueueSize = ptr.Of(DefaultVirtiofsQueueSize)
+	expect.Mounts[0].Virtiofs.QueueSize = nil
 	expect.HostResolver.Hosts = map[string]string{
 		"default": d.HostResolver.Hosts["default"],
 	}
@@ -447,6 +451,8 @@ func TestFillDefault(t *testing.T) {
 	FillDefault(&y, &d, &LimaYAML{}, filePath)
 	assert.DeepEqual(t, &y, &expect, opts...)
 
+	dExpect := expect
+
 	// ------------------------------------------------------------------------------------
 	// User-provided defaults should not override user-provided config values
 
@@ -456,26 +462,27 @@ func TestFillDefault(t *testing.T) {
 
 	expect = y
 
-	expect.Provision = append(append([]Provision{}, y.Provision...), d.Provision...)
-	expect.Probes = append(append([]Probe{}, y.Probes...), d.Probes...)
-	expect.PortForwards = append(append([]PortForward{}, y.PortForwards...), d.PortForwards...)
-	expect.CopyToHost = append(append([]CopyToHost{}, y.CopyToHost...), d.CopyToHost...)
-	expect.Containerd.Archives = append(append([]File{}, y.Containerd.Archives...), d.Containerd.Archives...)
-	expect.AdditionalDisks = append(append([]Disk{}, y.AdditionalDisks...), d.AdditionalDisks...)
-	expect.Firmware.Images = append(append([]FileWithVMType{}, y.Firmware.Images...), d.Firmware.Images...)
+	expect.Provision = append(append([]Provision{}, y.Provision...), dExpect.Provision...)
+	expect.Probes = append(append([]Probe{}, y.Probes...), dExpect.Probes...)
+	expect.PortForwards = append(append([]PortForward{}, y.PortForwards...), dExpect.PortForwards...)
+	expect.CopyToHost = append(append([]CopyToHost{}, y.CopyToHost...), dExpect.CopyToHost...)
+	expect.Containerd.Archives = append(append([]File{}, y.Containerd.Archives...), dExpect.Containerd.Archives...)
+	expect.Containerd.Archives[2].Arch = *expect.Arch
+	expect.AdditionalDisks = append(append([]Disk{}, y.AdditionalDisks...), dExpect.AdditionalDisks...)
+	expect.Firmware.Images = append(append([]FileWithVMType{}, y.Firmware.Images...), dExpect.Firmware.Images...)
 
 	// Mounts and Networks start with lowest priority first, so higher priority entries can overwrite
-	expect.Mounts = append(append([]Mount{}, d.Mounts...), y.Mounts...)
-	expect.Networks = append(append([]Network{}, d.Networks...), y.Networks...)
+	expect.Mounts = append(append([]Mount{}, dExpect.Mounts...), y.Mounts...)
+	expect.Networks = append(append([]Network{}, dExpect.Networks...), y.Networks...)
 
-	expect.HostResolver.Hosts["default"] = d.HostResolver.Hosts["default"]
+	expect.HostResolver.Hosts["default"] = dExpect.HostResolver.Hosts["default"]
 
-	// d.DNS will be ignored, and not appended to y.DNS
+	// dExpect.DNS will be ignored, and not appended to y.DNS
 
-	// "TWO" does not exist in filledDefaults.Env, so is set from d.Env
-	expect.Env["TWO"] = d.Env["TWO"]
+	// "TWO" does not exist in filledDefaults.Env, so is set from dExpect.Env
+	expect.Env["TWO"] = dExpect.Env["TWO"]
 
-	expect.Param["TWO"] = d.Param["TWO"]
+	expect.Param["TWO"] = dExpect.Param["TWO"]
 
 	t.Logf("d.vmType=%q, y.vmType=%q, expect.vmType=%q", *d.VMType, *y.VMType, *expect.VMType)
 
@@ -621,19 +628,20 @@ func TestFillDefault(t *testing.T) {
 
 	expect = o
 
-	expect.Provision = append(append(o.Provision, y.Provision...), d.Provision...)
-	expect.Probes = append(append(o.Probes, y.Probes...), d.Probes...)
-	expect.PortForwards = append(append(o.PortForwards, y.PortForwards...), d.PortForwards...)
-	expect.CopyToHost = append(append(o.CopyToHost, y.CopyToHost...), d.CopyToHost...)
-	expect.Containerd.Archives = append(append(o.Containerd.Archives, y.Containerd.Archives...), d.Containerd.Archives...)
-	expect.AdditionalDisks = append(append(o.AdditionalDisks, y.AdditionalDisks...), d.AdditionalDisks...)
-	expect.Firmware.Images = append(append(o.Firmware.Images, y.Firmware.Images...), d.Firmware.Images...)
+	expect.Provision = append(append(o.Provision, y.Provision...), dExpect.Provision...)
+	expect.Probes = append(append(o.Probes, y.Probes...), dExpect.Probes...)
+	expect.PortForwards = append(append(o.PortForwards, y.PortForwards...), dExpect.PortForwards...)
+	expect.CopyToHost = append(append(o.CopyToHost, y.CopyToHost...), dExpect.CopyToHost...)
+	expect.Containerd.Archives = append(append(o.Containerd.Archives, y.Containerd.Archives...), dExpect.Containerd.Archives...)
+	expect.Containerd.Archives[3].Arch = *expect.Arch
+	expect.AdditionalDisks = append(append(o.AdditionalDisks, y.AdditionalDisks...), dExpect.AdditionalDisks...)
+	expect.Firmware.Images = append(append(o.Firmware.Images, y.Firmware.Images...), dExpect.Firmware.Images...)
 
-	expect.HostResolver.Hosts["default"] = d.HostResolver.Hosts["default"]
-	expect.HostResolver.Hosts["MY.Host"] = d.HostResolver.Hosts["host.lima.internal"]
+	expect.HostResolver.Hosts["default"] = dExpect.HostResolver.Hosts["default"]
+	expect.HostResolver.Hosts["MY.Host"] = dExpect.HostResolver.Hosts["host.lima.internal"]
 
-	// o.Mounts just makes d.Mounts[0] writable because the Location matches
-	expect.Mounts = append(append([]Mount{}, d.Mounts...), y.Mounts...)
+	// o.Mounts just makes dExpect.Mounts[0] writable because the Location matches
+	expect.Mounts = append(append([]Mount{}, dExpect.Mounts...), y.Mounts...)
 	expect.Mounts[0].Writable = ptr.Of(true)
 	expect.Mounts[0].SSHFS.Cache = ptr.Of(false)
 	expect.Mounts[0].SSHFS.FollowSymlinks = ptr.Of(true)
@@ -646,12 +654,12 @@ func TestFillDefault(t *testing.T) {
 	expect.MountType = ptr.Of(NINEP)
 	expect.MountInotify = ptr.Of(true)
 
-	// o.Networks[1] is overriding the d.Networks[0].Lima entry for the "def0" interface
-	expect.Networks = append(append(d.Networks, y.Networks...), o.Networks[0])
+	// o.Networks[1] is overriding the dExpect.Networks[0].Lima entry for the "def0" interface
+	expect.Networks = append(append(dExpect.Networks, y.Networks...), o.Networks[0])
 	expect.Networks[0].Lima = o.Networks[1].Lima
 
 	// Only highest prio DNS are retained
-	expect.DNS = o.DNS
+	expect.DNS = slices.Clone(o.DNS)
 
 	// ONE remains from filledDefaults.Env; the rest are set from o
 	expect.Env["ONE"] = y.Env["ONE"]
