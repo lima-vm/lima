@@ -226,7 +226,7 @@ func TestFillDefault(t *testing.T) {
 	expect.Probes = slices.Clone(y.Probes)
 	expect.Probes[0].Mode = ProbeModeReadiness
 	expect.Probes[0].Description = "user probe 1/1"
-	expect.Probes[0].Script = "#!/bin/true # Eins"
+	expect.Probes[0].Script = "#!/bin/false # Eins"
 
 	expect.Networks = slices.Clone(y.Networks)
 	expect.Networks[0].MACAddress = MACAddress(fmt.Sprintf("%s#%d", filePath, 0))
