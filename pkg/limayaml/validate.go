@@ -426,6 +426,16 @@ func ValidateParamIsUsed(y *LimaYAML) error {
 				break
 			}
 		}
+		for _, p := range y.Mounts {
+			if re.MatchString(p.Location) {
+				keyIsUsed = true
+				break
+			}
+			if re.MatchString(p.MountPoint) {
+				keyIsUsed = true
+				break
+			}
+		}
 		if !keyIsUsed {
 			return fmt.Errorf("field `param` key %q is not used in any provision, probe, copyToHost, or portForward", key)
 		}

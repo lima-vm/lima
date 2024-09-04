@@ -38,6 +38,8 @@ func TestValidateParamIsUsed(t *testing.T) {
 	assert.Error(t, err, "field `param` key \"name\" is not used in any provision, probe, copyToHost, or portForward")
 
 	fieldsUsingParam := []string{
+		`mounts: [{"location": "/tmp/{{ .Param.name }}"}]`,
+		`mounts: [{"location": "/tmp", mountPoint: "/tmp/{{ .Param.name }}"}]`,
 		`provision: [{"script": "echo {{ .Param.name }}"}]`,
 		`probes: [{"script": "echo {{ .Param.name }}"}]`,
 		`copyToHost: [{"guest": "/tmp/{{ .Param.name }}", "host": "/tmp"}]`,
@@ -55,6 +57,8 @@ func TestValidateParamIsUsed(t *testing.T) {
 	rootfulYaml := `param:
   rootful: true`
 	fieldsUsingIfParamRootfulTrue := []string{
+		`mounts: [{"location": "/tmp/{{if eq .Param.rootful \"true\"}}rootful{{else}}rootless{{end}}", "mountPoint": "/tmp"}]`,
+		`mounts: [{"location": "/tmp", "mountPoint": "/tmp/{{if eq .Param.rootful \"true\"}}rootful{{else}}rootless{{end}}"}]`,
 		`provision: [{"script": "echo {{if eq .Param.rootful \"true\"}}rootful{{else}}rootless{{end}}"}]`,
 		`probes: [{"script": "echo {{if eq .Param.rootful \"true\"}}rootful{{else}}rootless{{end}}"}]`,
 		`copyToHost: [{"guest": "/tmp/{{if eq .Param.rootful \"true\"}}rootful{{else}}rootless{{end}}", "host": "/tmp"}]`,
