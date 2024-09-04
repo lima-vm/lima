@@ -212,7 +212,7 @@ func TestFillDefault(t *testing.T) {
 	expect.Mounts[0].NineP.ProtocolVersion = ptr.Of(Default9pProtocolVersion)
 	expect.Mounts[0].NineP.Msize = ptr.Of(Default9pMsize)
 	expect.Mounts[0].NineP.Cache = ptr.Of(Default9pCacheForRO)
-	expect.Mounts[0].Virtiofs.QueueSize = ptr.Of(DefaultVirtiofsQueueSize)
+	expect.Mounts[0].Virtiofs.QueueSize = nil
 	// Only missing Mounts field is Writable, and the default value is also the null value: false
 
 	expect.MountType = ptr.Of(NINEP)
@@ -423,7 +423,7 @@ func TestFillDefault(t *testing.T) {
 	expect.Mounts[0].NineP.ProtocolVersion = ptr.Of(Default9pProtocolVersion)
 	expect.Mounts[0].NineP.Msize = ptr.Of(Default9pMsize)
 	expect.Mounts[0].NineP.Cache = ptr.Of(Default9pCacheForRO)
-	expect.Mounts[0].Virtiofs.QueueSize = ptr.Of(DefaultVirtiofsQueueSize)
+	expect.Mounts[0].Virtiofs.QueueSize = nil
 	expect.HostResolver.Hosts = map[string]string{
 		"default": d.HostResolver.Hosts["default"],
 	}
