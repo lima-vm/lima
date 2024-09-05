@@ -573,7 +573,12 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 		}
 		args = appendArgsIfNoConflict(args, "-machine", machine)
 	case limayaml.RISCV64:
-		machine := "virt,accel=" + accel
+		// https://github.com/tianocore/edk2/blob/edk2-stable202408/OvmfPkg/RiscVVirt/README.md#test
+		// > Note: the `acpi=off` machine property is specified because Linux guest
+		// > support for ACPI (that is, the ACPI consumer side) is a work in progress.
+		// > Currently, `acpi=off` is recommended unless you are developing ACPI support
+		// > yourself.
+		machine := "virt,acpi=off,accel=" + accel
 		args = appendArgsIfNoConflict(args, "-machine", machine)
 	case limayaml.ARMV7L:
 		machine := "virt,accel=" + accel
@@ -613,7 +618,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 			firmware = downloadedFirmware
 			logrus.Infof("Using existing firmware (%q)", firmware)
 		}
-		if firmware == "" && *y.Arch != limayaml.RISCV64 {
+		if firmware == "" {
 			firmware, err = getFirmware(exe, *y.Arch)
 			if err != nil {
 				return "", nil, err
@@ -1031,6 +1036,14 @@ func qemuArch(arch limayaml.Arch) string {
 	return arch
 }
 
+// qemuEdk2 returns the arch string used by `/usr/local/share/qemu/edk2-*-code.fd`.
+func qemuEdk2Arch(arch limayaml.Arch) string {
+	if arch == limayaml.RISCV64 {
+		return "riscv"
+	}
+	return qemuArch(arch)
+}
+
 func Exe(arch limayaml.Arch) (exe string, args []string, err error) {
 	exeBase := "qemu-system-" + qemuArch(arch)
 	envK := "QEMU_SYSTEM_" + strings.ToUpper(qemuArch(arch))
@@ -1094,7 +1107,7 @@ func getQemuVersion(qemuExe string) (*semver.Version, error) {
 
 func getFirmware(qemuExe string, arch limayaml.Arch) (string, error) {
 	switch arch {
-	case limayaml.X8664, limayaml.AARCH64, limayaml.ARMV7L:
+	case limayaml.X8664, limayaml.AARCH64, limayaml.ARMV7L, limayaml.RISCV64:
 	default:
 		return "", fmt.Errorf("unexpected architecture: %q", arch)
 	}
@@ -1108,7 +1121,7 @@ func getFirmware(qemuExe string, arch limayaml.Arch) (string, error) {
 	localDir := filepath.Dir(binDir)                             // "/usr/local"
 	userLocalDir := filepath.Join(currentUser.HomeDir, ".local") // "$HOME/.local"
 
-	relativePath := fmt.Sprintf("share/qemu/edk2-%s-code.fd", qemuArch(arch))
+	relativePath := fmt.Sprintf("share/qemu/edk2-%s-code.fd", qemuEdk2Arch(arch))
 	candidates := []string{
 		filepath.Join(userLocalDir, relativePath), // XDG-like
 		filepath.Join(localDir, relativePath),     // macOS (homebrew)
@@ -1135,6 +1148,8 @@ func getFirmware(qemuExe string, arch limayaml.Arch) (string, error) {
 		// Debian package "qemu-efi-arm"
 		// Fedora package "edk2-arm"
 		candidates = append(candidates, "/usr/share/AAVMF/AAVMF32_CODE.fd")
+	case limayaml.RISCV64:
+		// NOP, as EDK2 for RISCV64 is not packaged yet in well-known distros.
 	}
 
 	logrus.Debugf("firmware candidates = %v", candidates)

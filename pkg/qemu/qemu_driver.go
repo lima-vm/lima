@@ -296,7 +296,8 @@ func (l *LimaQemuDriver) killVhosts() error {
 }
 
 func (l *LimaQemuDriver) shutdownQEMU(ctx context.Context, timeout time.Duration, qCmd *exec.Cmd, qWaitCh <-chan error) error {
-	logrus.Info("Shutting down QEMU with ACPI")
+	// "power button" refers to ACPI on the most archs, except RISC-V
+	logrus.Info("Shutting down QEMU with the power button")
 	if usernetIndex := limayaml.FirstUsernetIndex(l.Instance.Config); usernetIndex != -1 {
 		client := usernet.NewClientByName(l.Instance.Config.Networks[usernetIndex].Lima)
 		err := client.UnExposeSSH(l.SSHLocalPort)
