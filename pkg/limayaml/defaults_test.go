@@ -131,6 +131,7 @@ func TestFillDefault(t *testing.T) {
 		},
 		Mounts: []Mount{
 			{Location: "/tmp"},
+			{Location: "{{.Dir}}/{{.Param.ONE}}", MountPoint: "/mnt/{{.Param.ONE}}"},
 		},
 		MountType: ptr.Of(NINEP),
 		Provision: []Provision{
@@ -214,6 +215,17 @@ func TestFillDefault(t *testing.T) {
 	expect.Mounts[0].NineP.Cache = ptr.Of(Default9pCacheForRO)
 	expect.Mounts[0].Virtiofs.QueueSize = nil
 	// Only missing Mounts field is Writable, and the default value is also the null value: false
+	expect.Mounts[1].Location = fmt.Sprintf("%s/%s", instDir, y.Param["ONE"])
+	expect.Mounts[1].MountPoint = fmt.Sprintf("/mnt/%s", y.Param["ONE"])
+	expect.Mounts[1].Writable = ptr.Of(false)
+	expect.Mounts[1].SSHFS.Cache = ptr.Of(true)
+	expect.Mounts[1].SSHFS.FollowSymlinks = ptr.Of(false)
+	expect.Mounts[1].SSHFS.SFTPDriver = ptr.Of("")
+	expect.Mounts[1].NineP.SecurityModel = ptr.Of(Default9pSecurityModel)
+	expect.Mounts[1].NineP.ProtocolVersion = ptr.Of(Default9pProtocolVersion)
+	expect.Mounts[1].NineP.Msize = ptr.Of(Default9pMsize)
+	expect.Mounts[1].NineP.Cache = ptr.Of(Default9pCacheForRO)
+	expect.Mounts[1].Virtiofs.QueueSize = nil
 
 	expect.MountType = ptr.Of(NINEP)
 

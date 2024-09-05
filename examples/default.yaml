@@ -50,6 +50,8 @@ memory: null
 disk: null
 
 # Expose host directories to the guest, the mount point might be accessible from all UIDs in the guest
+# "location" can use these template variables: {{.Home}}, {{.Dir}}, {{.Name}}, {{.UID}}, {{.User}}, and {{.Param.Key}}.
+# "mountPoint" can use these template variables: {{.Home}}, {{.Name}}, {{.UID}}, {{.User}}, and {{.Param.Key}}
 # 🟢 Builtin default: null (Mount nothing)
 # 🔵 This file: Mount the home as read-only, /tmp/lima as writable
 mounts:
