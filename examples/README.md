@@ -14,6 +14,7 @@ Distro:
 - [`almalinux-8`](./almalinux-8.yaml): AlmaLinux 8
 - [`almalinux-9`](./almalinux-9.yaml), `almalinux.yaml`: AlmaLinux 9
 - [`alpine`](./alpine.yaml): ☆Alpine Linux
+- [`amazonlinux-2023`](./experimental/amazonlinux-2023.yaml): [experimental] Amazon Linux 2023
 - [`archlinux`](./archlinux.yaml): ⭐Arch Linux
 - [`centos-stream-9`](./centos-stream-9.yaml), `centos-stream.yaml`: CentOS Stream 9
 - [`debian-11`](./debian-11.yaml): Debian GNU/Linux 11(bullseye)

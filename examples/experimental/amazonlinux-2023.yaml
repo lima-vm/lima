@@ -1,0 +1,16 @@
+# This template requires Lima v0.17.0 or later and requires macOS >=13.0
+# reverse-sshfs & 9p are unsupported mount types.
+mountType: "virtiofs"
+# if for some reason these images don't load,
+# you can find the latest versions here: https://cdn.amazonlinux.com/al2023/os-images/latest/
+images:
+- location: "https://cdn.amazonlinux.com/al2023/os-images/2023.5.20240805.0/kvm/al2023-kvm-2023.5.20240805.0-kernel-6.1-x86_64.xfs.gpt.qcow2"
+  arch: "x86_64"
+  digest: "sha256:67450c39dee304247daff637f67a1365c2fe9e15265ae390584e81a12d146705"
+- location: "https://cdn.amazonlinux.com/al2023/os-images/2023.5.20240805.0/kvm-arm64/al2023-kvm-2023.5.20240805.0-kernel-6.1-arm64.xfs.gpt.qcow2"
+  arch: "aarch64"
+  digest: "sha256:8ddc0594fe99544a3d8d56a8c95fe863946c52500df6d14e288d1dd1ca6f5352"
+mounts:
+- location: "~"
+- location: "/tmp/lima"
+  writable: true
