@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/lima-vm/lima/cmd/limactl/editflags"
+	"github.com/lima-vm/lima/cmd/limactl/guessarg"
 	"github.com/lima-vm/lima/pkg/editutil"
 	"github.com/lima-vm/lima/pkg/instance"
 	"github.com/lima-vm/lima/pkg/limayaml"
@@ -22,8 +23,8 @@ import (
 
 func newEditCommand() *cobra.Command {
 	editCommand := &cobra.Command{
-		Use:               "edit INSTANCE",
-		Short:             "Edit an instance of Lima",
+		Use:               "edit INSTANCE|FILE.yaml",
+		Short:             "Edit an instance of Lima or a template",
 		Args:              WrapArgsError(cobra.MaximumNArgs(1)),
 		RunE:              editAction,
 		ValidArgsFunction: editBashComplete,
@@ -34,24 +35,43 @@ func newEditCommand() *cobra.Command {
 }
 
 func editAction(cmd *cobra.Command, args []string) error {
-	instName := DefaultInstanceName
+	var arg string
 	if len(args) > 0 {
-		instName = args[0]
+		arg = args[0]
 	}
 
-	inst, err := store.Inspect(instName)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("instance %q not found", instName)
+	var filePath string
+	var err error
+	var inst *store.Instance
+	switch {
+	case guessarg.SeemsYAMLPath(arg):
+		// absolute path is required for `limayaml.Validate`
+		filePath, err = filepath.Abs(arg)
+		if err != nil {
+			return err
 		}
-		return err
+	default:
+		var instName string
+		if arg != "" {
+			instName = arg
+		} else {
+			instName = DefaultInstanceName
+		}
+
+		inst, err = store.Inspect(instName)
+		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				return fmt.Errorf("instance %q not found", instName)
+			}
+			return err
+		}
+
+		if inst.Status == store.StatusRunning {
+			return errors.New("cannot edit a running instance")
+		}
+		filePath = filepath.Join(inst.Dir, filenames.LimaYAML)
 	}
 
-	if inst.Status == store.StatusRunning {
-		return errors.New("cannot edit a running instance")
-	}
-
-	filePath := filepath.Join(inst.Dir, filenames.LimaYAML)
 	yContent, err := os.ReadFile(filePath)
 	if err != nil {
 		return err
@@ -73,7 +93,12 @@ func editAction(cmd *cobra.Command, args []string) error {
 			return err
 		}
 	} else if tty {
-		hdr := fmt.Sprintf("# Please edit the following configuration for Lima instance %q\n", instName)
+		var hdr string
+		if inst != nil {
+			hdr = fmt.Sprintf("# Please edit the following configuration for Lima instance %q\n", inst.Name)
+		} else {
+			hdr = fmt.Sprintf("# Please edit the following configuration %q\n", filePath)
+		}
 		hdr += "# and an empty file will abort the edit.\n"
 		hdr += "\n"
 		hdr += editutil.GenerateEditorWarningHeader()
@@ -105,10 +130,16 @@ func editAction(cmd *cobra.Command, args []string) error {
 	if err := os.WriteFile(filePath, yBytes, 0o644); err != nil {
 		return err
 	}
-	logrus.Infof("Instance %q configuration edited", instName)
+	if inst != nil {
+		logrus.Infof("Instance %q configuration edited", inst.Name)
+	}
 
 	if !tty {
 		// use "start" to start it
+		return nil
+	}
+	if inst == nil {
+		// edited a limayaml file directly
 		return nil
 	}
 	startNow, err := askWhetherToStart()
