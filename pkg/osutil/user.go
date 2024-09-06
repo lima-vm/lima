@@ -110,6 +110,13 @@ func call(args []string) (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
+func IsBlockedUsername(username string, limaVersion string) bool {
+	if versionutil.GreaterThan(limaVersion, "0.23.2") {
+		return notAllowedUsernameRegex.MatchString(username)
+	}
+	return false
+}
+
 func LimaUser(warn bool, limaVersion string) (*user.User, error) {
 	cache.warnings = []string{}
 	cache.Do(func() {
@@ -117,13 +124,11 @@ func LimaUser(warn bool, limaVersion string) (*user.User, error) {
 		if cache.err == nil {
 
 			//	check if the username is blocked
-			if versionutil.GreaterThan(limaVersion, "0.23.2") {
-				if notAllowedUsernameRegex.MatchString(cache.u.Username) {
-					warning := fmt.Sprintf("local user %q is not a allowed (must not match %q); using %q username instead",
-						cache.u.Username, notAllowedUsernameRegex.String(), fallbackUser)
-					cache.warnings = append(cache.warnings, warning)
-					cache.u.Username = fallbackUser
-				}
+			if IsBlockedUsername(cache.u.Username, limaVersion) {
+				warning := fmt.Sprintf("local user %q is not a allowed (must not match %q); using %q username instead",
+					cache.u.Username, notAllowedUsernameRegex.String(), fallbackUser)
+				cache.warnings = append(cache.warnings, warning)
+				cache.u.Username = fallbackUser
 			}
 
 			if !regexUsername.MatchString(cache.u.Username) {

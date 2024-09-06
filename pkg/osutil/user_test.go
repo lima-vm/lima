@@ -45,9 +45,10 @@ func TestLimaHomeDir(t *testing.T) {
 	assert.Assert(t, path.IsAbs(user.HomeDir), user.HomeDir)
 }
 
-func TestLimaAdminUser(t *testing.T) {
-	user, err := LimaUser(false, "")
-	assert.NilError(t, err)
-	// check for absolute unix path (/home)
-	assert.Assert(t, path.IsAbs(user.HomeDir), user.HomeDir)
+func TestBlockedUsers(t *testing.T) {
+	//	admin is a blocked username
+	assert.Assert(t, IsBlockedUsername("admin", "0.23.1") == false, "testing on low version of lima")
+	assert.Assert(t, IsBlockedUsername("admin", "0.23.3") == true, "testing on high version of lima")
+	assert.Assert(t, IsBlockedUsername("randomuser", "0.23.1") == false, "testing on low version of lima")
+	assert.Assert(t, IsBlockedUsername("randomuser", "0.23.3") == false, "testing on low version of lima")
 }
