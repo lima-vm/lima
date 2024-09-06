@@ -110,7 +110,7 @@ func call(args []string) (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
-func IsBlockedUsername(username string, limaVersion string) bool {
+func IsBlockedUsername(username, limaVersion string) bool {
 	if versionutil.GreaterThan(limaVersion, "0.23.2") {
 		return notAllowedUsernameRegex.MatchString(username)
 	}
