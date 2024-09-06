@@ -1,6 +1,6 @@
 //go:build !windows
 
-package instance
+package executil
 
 import (
 	"syscall"
