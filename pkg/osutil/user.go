@@ -122,7 +122,6 @@ func LimaUser(warn bool, limaVersion string) (*user.User, error) {
 	cache.Do(func() {
 		cache.u, cache.err = user.Current()
 		if cache.err == nil {
-
 			//	check if the username is blocked
 			if IsBlockedUsername(cache.u.Username, limaVersion) {
 				warning := fmt.Sprintf("local user %q is not a allowed (must not match %q); using %q username instead",
