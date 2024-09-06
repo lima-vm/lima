@@ -27,6 +27,7 @@ import (
 	"github.com/lima-vm/lima/pkg/ptr"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/store/filenames"
+	"github.com/lima-vm/lima/pkg/version/versionutil"
 )
 
 const (
@@ -753,8 +754,10 @@ func fixUpForPlainMode(y *LimaYAML) {
 
 func executeGuestTemplate(format, instDir string, param map[string]string) (bytes.Buffer, error) {
 	tmpl, err := template.New("").Parse(format)
+	limaVersion := ReadInstLimaVersion(instDir)
+
 	if err == nil {
-		user, _ := osutil.LimaUser(false)
+		user, _ := osutil.LimaUser(false, limaVersion)
 		data := map[string]interface{}{
 			"Home":  fmt.Sprintf("/home/%s.linux", user.Username),
 			"Name":  filepath.Base(instDir),
@@ -771,9 +774,11 @@ func executeGuestTemplate(format, instDir string, param map[string]string) (byte
 }
 
 func executeHostTemplate(format, instDir string, param map[string]string) (bytes.Buffer, error) {
+	limaVersion := ReadInstLimaVersion(instDir)
+
 	tmpl, err := template.New("").Parse(format)
 	if err == nil {
-		user, _ := osutil.LimaUser(false)
+		user, _ := osutil.LimaUser(false, limaVersion)
 		home, _ := os.UserHomeDir()
 		limaHome, _ := dirnames.LimaDir()
 		data := map[string]interface{}{
@@ -1073,4 +1078,16 @@ func unique(s []string) []string {
 		}
 	}
 	return list
+}
+
+func ReadInstLimaVersion(instDir string) string {
+	limaVersionFile := filepath.Join(instDir, filenames.LimaVersion)
+	limaVersion := ""
+	if version, err := os.ReadFile(limaVersionFile); err == nil {
+		limaVersion = strings.TrimSpace(string(version))
+		if _, err = versionutil.Parse(limaVersion); err != nil {
+			logrus.Warnf("treating lima version %q from %q as very latest release", limaVersion, limaVersionFile)
+		}
+	}
+	return limaVersion
 }

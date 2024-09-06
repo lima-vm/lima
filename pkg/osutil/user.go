@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/lima-vm/lima/pkg/version/versionutil"
 	"github.com/sirupsen/logrus"
 )
 
@@ -109,17 +110,23 @@ func call(args []string) (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
-func LimaUser(warn bool) (*user.User, error) {
+func LimaUser(warn bool, limaVersion string) (*user.User, error) {
 	cache.warnings = []string{}
 	cache.Do(func() {
 		cache.u, cache.err = user.Current()
 		if cache.err == nil {
-			if notAllowedUsernameRegex.MatchString(cache.u.Username) {
-				warning := fmt.Sprintf("local user %q is not a allowed (must not match %q); using %q username instead",
-					cache.u.Username, notAllowedUsernameRegex.String(), fallbackUser)
-				cache.warnings = append(cache.warnings, warning)
-				cache.u.Username = fallbackUser
-			} else if !regexUsername.MatchString(cache.u.Username) {
+
+			//	check if the username is blocked
+			if versionutil.GreaterThan(limaVersion, "0.23.2") {
+				if notAllowedUsernameRegex.MatchString(cache.u.Username) {
+					warning := fmt.Sprintf("local user %q is not a allowed (must not match %q); using %q username instead",
+						cache.u.Username, notAllowedUsernameRegex.String(), fallbackUser)
+					cache.warnings = append(cache.warnings, warning)
+					cache.u.Username = fallbackUser
+				}
+			}
+
+			if !regexUsername.MatchString(cache.u.Username) {
 				warning := fmt.Sprintf("local user %q is not a valid Linux username (must match %q); using %q username instead",
 					cache.u.Username, regexUsername.String(), fallbackUser)
 				cache.warnings = append(cache.warnings, warning)

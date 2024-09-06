@@ -48,10 +48,7 @@ func copyAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	u, err := osutil.LimaUser(false)
-	if err != nil {
-		return err
-	}
+
 	instDirs := make(map[string]string)
 	scpFlags := []string{}
 	scpArgs := []string{}
@@ -85,6 +82,10 @@ func copyAction(cmd *cobra.Command, args []string) error {
 			}
 			if inst.Status == store.StatusStopped {
 				return fmt.Errorf("instance %q is stopped, run `limactl start %s` to start the instance", instName, instName)
+			}
+			u, err := osutil.LimaUser(false, inst.LimaVersion)
+			if err != nil {
+				return err
 			}
 			if legacySSH {
 				scpFlags = append(scpFlags, "-P", fmt.Sprintf("%d", inst.SSHLocalPort))

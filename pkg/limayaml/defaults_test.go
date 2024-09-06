@@ -14,6 +14,7 @@ import (
 	"github.com/lima-vm/lima/pkg/ptr"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/store/filenames"
+	"github.com/lima-vm/lima/pkg/version"
 	"github.com/sirupsen/logrus"
 	"gotest.tools/v3/assert"
 )
@@ -53,7 +54,7 @@ func TestFillDefault(t *testing.T) {
 	assert.NilError(t, err)
 	limaHome, err := dirnames.LimaDir()
 	assert.NilError(t, err)
-	user, err := osutil.LimaUser(false)
+	user, err := osutil.LimaUser(false, version.Version)
 	assert.NilError(t, err)
 
 	guestHome := fmt.Sprintf("/home/%s.linux", user.Username)
