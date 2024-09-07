@@ -41,9 +41,52 @@ func (a *HostAgent) waitForRequirements(label string, requirements []requirement
 	return errors.Join(errs...)
 }
 
+// prefixExportParam will modify a script to be executed by ssh.ExecuteScript so that it exports
+// all the variables from /mnt/lima-cidata/param.env before invoking the actual interpreter.
+//
+//   - The script is executed in user mode, so needs to read the file using `sudo`.
+//
+//   - `sudo cat param.env | while …; do export …; done` does not work because the piping
+//     creates a subshell, and the exported variables are not visible to the parent process.
+//
+//   - The `<<<"$string"` redirection is not available on alpine-lima, where /bin/bash is
+//     just a wrapper around busybox ash.
+//
+// A script that will start with `#!/usr/bin/env ruby` will be modified to look like this:
+//
+//	while read -r line; do
+//	    [ -n "$line" ] && export "$line"
+//	done<<EOF
+//	$(sudo cat /mnt/lima-cidata/param.env)
+//	EOF
+//	/usr/bin/env ruby
+//
+// ssh.ExecuteScript will strip the `#!` prefix from the first line and invoke the rest
+// of the line as the command. The full script is then passed via STDIN. We use the $' '
+// form of shell quoting to be able to use \n as newline escapes to fit everything on a
+// single line:
+//
+//	#!/bin/bash -c $'while … done<<EOF\n$(sudo …)\nEOF\n/usr/bin/env ruby'
+//	#!/usr/bin/env ruby
+//	…
+func prefixExportParam(script string) (string, error) {
+	interpreter, err := ssh.ParseScriptInterpreter(script)
+	if err != nil {
+		return "", err
+	}
+
+	// TODO we should have a symbolic constant for `/mnt/lima-cidata`
+	exportParam := `while read -r line; do [ -n "$line" ] && export "$line"; done<<EOF\n$(sudo cat /mnt/lima-cidata/param.env)\nEOF\n`
+	return fmt.Sprintf("#!/bin/bash -c $'%s%s'\n%s", exportParam, interpreter, script), nil
+}
+
 func (a *HostAgent) waitForRequirement(r requirement) error {
 	logrus.Debugf("executing script %q", r.description)
-	stdout, stderr, err := ssh.ExecuteScript(a.instSSHAddress, a.sshLocalPort, a.sshConfig, r.script, r.description)
+	script, err := prefixExportParam(r.script)
+	if err != nil {
+		return err
+	}
+	stdout, stderr, err := ssh.ExecuteScript(a.instSSHAddress, a.sshLocalPort, a.sshConfig, script, r.description)
 	logrus.Debugf("stdout=%q, stderr=%q, err=%v", stdout, stderr, err)
 	if err != nil {
 		return fmt.Errorf("stdout=%q, stderr=%q: %w", stdout, stderr, err)

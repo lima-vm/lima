@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+	"unicode"
 
 	"github.com/docker/go-units"
 	"github.com/lima-vm/lima/pkg/localpathutil"
@@ -205,11 +206,13 @@ func Validate(y *LimaYAML, warn bool) error {
 		}
 	}
 	for i, p := range y.Probes {
+		if !strings.HasPrefix(p.Script, "#!") {
+			return fmt.Errorf("field `probe[%d].script` must start with a '#!' line", i)
+		}
 		switch p.Mode {
 		case ProbeModeReadiness:
 		default:
-			return fmt.Errorf("field `probe[%d].mode` can only be %q",
-				i, ProbeModeReadiness)
+			return fmt.Errorf("field `probe[%d].mode` can only be %q", i, ProbeModeReadiness)
 		}
 	}
 	for i, rule := range y.PortForwards {
@@ -315,6 +318,21 @@ func Validate(y *LimaYAML, warn bool) error {
 	if warn {
 		warnExperimental(y)
 	}
+
+	// Validate Param settings
+	// Names must start with a letter, followed by any number of letters, digits, or underscores
+	validParamName := regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_]*$`)
+	for param, value := range y.Param {
+		if !validParamName.MatchString(param) {
+			return fmt.Errorf("param %q name does not match regex %q", param, validParamName.String())
+		}
+		for _, r := range value {
+			if !unicode.IsPrint(r) && r != '\t' && r != ' ' {
+				return fmt.Errorf("param %q value contains unprintable character %q", param, r)
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -397,7 +415,7 @@ func validateNetwork(y *LimaYAML) error {
 // It should be called before the `y` parameter is passed to FillDefault() that execute template.
 func ValidateParamIsUsed(y *LimaYAML) error {
 	for key := range y.Param {
-		re, err := regexp.Compile(`{{[^}]*\.Param\.` + key + `[^}]*}}`)
+		re, err := regexp.Compile(`{{[^}]*\.Param\.` + key + `[^}]*}}|\bPARAM_` + key + `\b`)
 		if err != nil {
 			return fmt.Errorf("field to compile regexp for key %q: %w", key, err)
 		}
