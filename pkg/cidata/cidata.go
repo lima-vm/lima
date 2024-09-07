@@ -140,6 +140,7 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 		VirtioPort:     virtioPort,
 		Plain:          *y.Plain,
 		TimeZone:       *y.TimeZone,
+		Param:          y.Param,
 	}
 
 	firstUsernetIndex := limayaml.FirstUsernetIndex(y)

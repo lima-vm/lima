@@ -237,6 +237,7 @@ containerd:
 #   playbook: playbook.yaml
 
 # Probe scripts to check readiness.
+# The scripts run in user mode. They must start with a '#!' line.
 # The scripts can use the following template variables: {{.Home}}, {{.UID}}, {{.User}}, and {{.Param.Key}}
 # 🟢 Builtin default: null
 # probes:
@@ -422,7 +423,12 @@ networks:
 #   KEY: value
 
 # Defines variables used for customizing the functionality.
+# Key names must start with an uppercase or lowercase letter followed by
+# any number of letters, digits, and underscores.
+# Values must not contain non-printable characters except for spaces and tabs.
 # These variables can be referenced as {{.Param.Key}} in lima.yaml.
+# In provisioning scripts and probes they are also available as predefined
+# environment variables, prefixed with "PARAM` (so `Key` → `$PARAM_Key`).
 # param:
 #   Key: value
 

@@ -157,6 +157,7 @@ See [Building Ansible inventories](https://docs.ansible.com/ansible/latest/inven
 - `meta-data`: [Cloud-init meta-data](https://docs.cloud-init.io/en/latest/explanation/instancedata.html)
 - `network-config`: [Cloud-init Networking Config Version 2](https://docs.cloud-init.io/en/latest/reference/network-config-format-v2.html)
 - `lima.env`: The `LIMA_CIDATA_*` environment variables (see below) available during `boot.sh` processing
+- `param.env`: The `PARAM_*` environment variables corresponding to the `param` settings from `lima.yaml`
 - `lima-guestagent`: Lima guest agent binary
 - `nerdctl-full.tgz`: [`nerdctl-full-<VERSION>-<OS>-<ARCH>.tar.gz`](https://github.com/containerd/nerdctl/releases)
 - `boot.sh`: Boot script

@@ -31,6 +31,84 @@ func TestValidateDefault(t *testing.T) {
 	assert.NilError(t, err)
 }
 
+func TestValidateProbes(t *testing.T) {
+	images := `images: [{"location": "/"}]`
+	validProbe := `probes: ["script": "#!foo"]`
+	y, err := Load([]byte(validProbe+"\n"+images), "lima.yaml")
+	assert.NilError(t, err)
+
+	err = Validate(y, false)
+	assert.NilError(t, err)
+
+	invalidProbe := `probes: ["script": "foo"]`
+	y, err = Load([]byte(invalidProbe+"\n"+images), "lima.yaml")
+	assert.NilError(t, err)
+
+	err = Validate(y, false)
+	assert.Error(t, err, "field `probe[0].script` must start with a '#!' line")
+}
+
+func TestValidateParamName(t *testing.T) {
+	images := `images: [{"location": "/"}]`
+	validProvision := `provision: [{"script": "echo $PARAM_name $PARAM_NAME $PARAM_Name_123"}]`
+	validParam := []string{
+		`param: {"name": "value"}`,
+		`param: {"NAME": "value"}`,
+		`param: {"Name_123": "value"}`,
+	}
+	for _, param := range validParam {
+		y, err := Load([]byte(param+"\n"+validProvision+"\n"+images), "lima.yaml")
+		assert.NilError(t, err)
+
+		err = Validate(y, false)
+		assert.NilError(t, err)
+	}
+
+	invalidProvision := `provision: [{"script": "echo $PARAM__Name $PARAM_3Name $PARAM_Last.Name"}]`
+	invalidParam := []string{
+		`param: {"_Name": "value"}`,
+		`param: {"3Name": "value"}`,
+		`param: {"Last.Name": "value"}`,
+	}
+	for _, param := range invalidParam {
+		y, err := Load([]byte(param+"\n"+invalidProvision+"\n"+images), "lima.yaml")
+		assert.NilError(t, err)
+
+		err = Validate(y, false)
+		assert.ErrorContains(t, err, "name does not match regex")
+	}
+}
+
+func TestValidateParamValue(t *testing.T) {
+	images := `images: [{"location": "/"}]`
+	provision := `provision: [{"script": "echo $PARAM_name"}]`
+	validParam := []string{
+		`param: {"name": ""}`,
+		`param: {"name": "foo bar"}`,
+		`param: {"name": "foo\tbar"}`,
+		`param: {"name": "Symbols ½ and emoji → 👀"}`,
+	}
+	for _, param := range validParam {
+		y, err := Load([]byte(param+"\n"+provision+"\n"+images), "lima.yaml")
+		assert.NilError(t, err)
+
+		err = Validate(y, false)
+		assert.NilError(t, err)
+	}
+
+	invalidParam := []string{
+		`param: {"name": "The end.\n"}`,
+		`param: {"name": "\r"}`,
+	}
+	for _, param := range invalidParam {
+		y, err := Load([]byte(param+"\n"+provision+"\n"+images), "lima.yaml")
+		assert.NilError(t, err)
+
+		err = Validate(y, false)
+		assert.ErrorContains(t, err, "value contains unprintable character")
+	}
+}
+
 func TestValidateParamIsUsed(t *testing.T) {
 	paramYaml := `param:
   name: value`
@@ -41,7 +119,9 @@ func TestValidateParamIsUsed(t *testing.T) {
 		`mounts: [{"location": "/tmp/{{ .Param.name }}"}]`,
 		`mounts: [{"location": "/tmp", mountPoint: "/tmp/{{ .Param.name }}"}]`,
 		`provision: [{"script": "echo {{ .Param.name }}"}]`,
+		`provision: [{"script": "echo $PARAM_name"}]`,
 		`probes: [{"script": "echo {{ .Param.name }}"}]`,
+		`probes: [{"script": "echo $PARAM_name"}]`,
 		`copyToHost: [{"guest": "/tmp/{{ .Param.name }}", "host": "/tmp"}]`,
 		`copyToHost: [{"guest": "/tmp", "host": "/tmp/{{ .Param.name }}"}]`,
 		`portForwards: [{"guestSocket": "/tmp/{{ .Param.name }}", "hostSocket": "/tmp"}]`,
@@ -53,7 +133,7 @@ func TestValidateParamIsUsed(t *testing.T) {
 		assert.NilError(t, err)
 	}
 
-	// use "{{if .Param.rootful \"true\"}}{{else}}{{end}}"" in provision, probe, copyToHost, and portForward
+	// use "{{if eq .Param.rootful \"true\"}}…{{else}}…{{end}}" in provision, probe, copyToHost, and portForward
 	rootfulYaml := `param:
   rootful: true`
 	fieldsUsingIfParamRootfulTrue := []string{
@@ -64,7 +144,7 @@ func TestValidateParamIsUsed(t *testing.T) {
 		`copyToHost: [{"guest": "/tmp/{{if eq .Param.rootful \"true\"}}rootful{{else}}rootless{{end}}", "host": "/tmp"}]`,
 		`copyToHost: [{"guest": "/tmp", "host": "/tmp/{{if eq .Param.rootful \"true\"}}rootful{{else}}rootless{{end}}"}]`,
 		`portForwards: [{"guestSocket": "{{if eq .Param.rootful \"true\"}}/var/run{{else}}/run/user/{{.UID}}{{end}}/docker.sock", "hostSocket": "{{.Dir}}/sock/docker.sock"}]`,
-		`portForwards: [{"guestSocket": "/var/run/docker.sock", "hostSocket": "{{.Dir}}/sock/docker-{{if eq .Param.rootful \"true\"}}rootfule{{else}}rootless{{end}}.sock"}]`,
+		`portForwards: [{"guestSocket": "/var/run/docker.sock", "hostSocket": "{{.Dir}}/sock/docker-{{if eq .Param.rootful \"true\"}}rootful{{else}}rootless{{end}}.sock"}]`,
 	}
 	for _, fieldUsingIfParamRootfulTrue := range fieldsUsingIfParamRootfulTrue {
 		_, err = Load([]byte(fieldUsingIfParamRootfulTrue+"\n"+rootfulYaml), "paramIsUsed.yaml")

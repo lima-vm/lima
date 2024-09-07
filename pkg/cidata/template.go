@@ -73,6 +73,7 @@ type TemplateArgs struct {
 	UDPDNSLocalPort                 int
 	TCPDNSLocalPort                 int
 	Env                             map[string]string
+	Param                           map[string]string
 	DNSAddresses                    []string
 	CACerts                         CACerts
 	HostHomeMountPoint              string

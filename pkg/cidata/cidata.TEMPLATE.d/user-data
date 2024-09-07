@@ -84,6 +84,12 @@ ca_certs:
 bootcmd:
   {{- range $cmd := $.BootCmds }}
 - |
+  # We need to embed the params.env as a here-doc because /mnt/lima-cidata is not yet mounted
+  while read -r line; do [ -n "$line" ] && export "$line"; done <<'EOF'
+    {{- range $key, $val := $.Param }}
+  PARAM_{{ $key }}={{ $val }}
+    {{- end }}
+  EOF
     {{- range $line := $cmd.Lines }}
   {{ $line }}
     {{- end }}

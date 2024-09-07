@@ -36,6 +36,7 @@ declare -A CHECKS=(
 	["user-v2"]=""
 	["mount-path-with-spaces"]=""
 	["provision-ansible"]=""
+	["param-env-variables"]=""
 )
 
 case "$NAME" in
@@ -64,6 +65,7 @@ case "$NAME" in
 	CHECKS["snapshot-offline"]="1"
 	CHECKS["mount-path-with-spaces"]="1"
 	CHECKS["provision-ansible"]="1"
+	CHECKS["param-env-variables"]="1"
 	;;
 "net-user-v2")
 	CHECKS["port-forwards"]=""
@@ -150,6 +152,15 @@ fi
 if [[ -n ${CHECKS["provision-ansible"]} ]]; then
 	INFO 'Testing that /tmp/ansible was created successfully on provision'
 	limactl shell "$NAME" test -e /tmp/ansible
+fi
+
+if [[ -n ${CHECKS["param-env-variables"]} ]]; then
+	INFO 'Testing that PARAM env variables are exported to all types of provisioning scripts and probes'
+	limactl shell "$NAME" test -e /tmp/param-boot
+	limactl shell "$NAME" test -e /tmp/param-dependency
+	limactl shell "$NAME" test -e /tmp/param-probe
+	limactl shell "$NAME" test -e /tmp/param-system
+	limactl shell "$NAME" test -e /tmp/param-user
 fi
 
 INFO "Testing proxy settings are imported"

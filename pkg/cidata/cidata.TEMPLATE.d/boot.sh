@@ -10,7 +10,9 @@ WARNING() {
 }
 
 # shellcheck disable=SC2163
-while read -r line; do export "$line"; done <"${LIMA_CIDATA_MNT}"/lima.env
+while read -r line; do [ -n "$line" ] && export "$line"; done <"${LIMA_CIDATA_MNT}"/lima.env
+# shellcheck disable=SC2163
+while read -r line; do [ -n "$line" ] && export "$line"; done <"${LIMA_CIDATA_MNT}"/param.env
 
 # shellcheck disable=SC2163
 while read -r line; do
@@ -61,12 +63,13 @@ if [ -d "${LIMA_CIDATA_MNT}"/provision.user ]; then
 	if [ ! -f /sbin/openrc-run ]; then
 		until [ -e "/run/user/${LIMA_CIDATA_UID}/systemd/private" ]; do sleep 3; done
 	fi
+	params=$(grep -o '^PARAM_[^=]*' "${LIMA_CIDATA_MNT}"/param.env | paste -sd ,)
 	for f in "${LIMA_CIDATA_MNT}"/provision.user/*; do
 		INFO "Executing $f (as user ${LIMA_CIDATA_USER})"
 		cp "$f" "${USER_SCRIPT}"
 		chown "${LIMA_CIDATA_USER}" "${USER_SCRIPT}"
 		chmod 755 "${USER_SCRIPT}"
-		if ! sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "${USER_SCRIPT}"; then
+		if ! sudo -iu "${LIMA_CIDATA_USER}" "--preserve-env=${params}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "${USER_SCRIPT}"; then
 			WARNING "Failed to execute $f (as user ${LIMA_CIDATA_USER})"
 			CODE=1
 		fi
