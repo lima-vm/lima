@@ -26,7 +26,7 @@ func (fw *Forwarder) OnEvent(ctx context.Context, client *guestagentclient.Guest
 	for _, f := range ev.LocalPortsAdded {
 		local, remote := fw.forwardingAddresses(f)
 		if local == "" {
-			logrus.Infof("Not forwarding %s %s", strings.ToUpper(f.Protocol), remote)
+			logrus.Debugf("Not forwarding %s %s", strings.ToUpper(f.Protocol), remote)
 			continue
 		}
 		logrus.Infof("Forwarding %s from %s to %s", strings.ToUpper(f.Protocol), remote, local)

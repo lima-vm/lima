@@ -94,7 +94,7 @@ func (pf *portForwarder) OnEvent(ctx context.Context, ev *api.Event) {
 		}
 		local, remote := pf.forwardingAddresses(f)
 		if local == "" {
-			logrus.Infof("Not forwarding TCP %s", remote)
+			logrus.Debugf("Not forwarding TCP %s", remote)
 			continue
 		}
 		logrus.Infof("Forwarding TCP from %s to %s", remote, local)

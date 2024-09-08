@@ -6,7 +6,7 @@
 # running to perform the tests:
 #
 # ./hack/test-port-forwarding.pl templates/default.yaml
-# limactl --tty=false start templates/default.yaml
+# limactl --tty=false --log-level debug start templates/default.yaml
 # git restore templates/default.yaml
 # ./hack/test-port-forwarding.pl default
 #
