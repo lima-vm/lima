@@ -2,7 +2,9 @@ package yqutil
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -10,6 +12,27 @@ import (
 	"github.com/sirupsen/logrus"
 	logging "gopkg.in/op/go-logging.v1"
 )
+
+// ValidateContent decodes the content yaml, to check it for syntax errors.
+func ValidateContent(content []byte) error {
+	memory := logging.NewMemoryBackend(0)
+	backend := logging.AddModuleLevel(memory)
+	logging.SetBackend(backend)
+	yqlib.InitExpressionParser()
+
+	decoder := yqlib.NewYamlDecoder(yqlib.ConfiguredYamlPreferences)
+
+	reader := bytes.NewReader(content)
+	err := decoder.Init(reader)
+	if err != nil {
+		return err
+	}
+	_, err = decoder.Decode()
+	if errors.Is(err, io.EOF) {
+		return nil
+	}
+	return err
+}
 
 // EvaluateExpression evaluates the yq expression, and returns the modified yaml.
 func EvaluateExpression(expression string, content []byte) ([]byte, error) {
