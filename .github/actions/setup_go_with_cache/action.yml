@@ -1,8 +1,8 @@
 name: setup go with cache
 description: setup go with cache. export GOMODCACHE environment variable
 inputs:
-  additional-cache-key:
-    description: additional cache key
+  additional-gocache-key:
+    description: additional cache key for GOCACHE
     required: false
   go-version:
     description: go version
@@ -51,8 +51,8 @@ runs:
     working-directory: ${{ inputs.working-directory }}
   - id: base-key
     run: |
-      echo "gomodcache-key=go-modcache-${{ inputs.working-directory }}-${{ inputs.additional-cache-key }}" >> $GITHUB_OUTPUT
-      echo "gocache-key=go-cache-${{ inputs.working-directory }}-${{ inputs.runs-on }}-${{ inputs.additional-cache-key }}" >> $GITHUB_OUTPUT
+      echo "gomodcache-key=go-modcache-${{ inputs.working-directory }}" >> $GITHUB_OUTPUT
+      echo "gocache-key=go-cache-${{ inputs.working-directory }}-${{ inputs.runs-on }}-${{ inputs.additional-gocache-key }}" >> $GITHUB_OUTPUT
     shell: bash
   - name: Cache go modules
     uses: actions/cache@v4
