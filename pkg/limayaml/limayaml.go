@@ -214,6 +214,7 @@ type Proto = string
 
 const (
 	TCP Proto = "tcp"
+	UDP Proto = "udp"
 )
 
 type PortForward struct {

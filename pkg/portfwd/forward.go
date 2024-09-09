@@ -15,18 +15,30 @@ var IPv4loopback1 = limayaml.IPv4loopback1
 
 type Forwarder struct {
 	rules             []limayaml.PortForward
+	ignoreTCP         bool
+	ignoreUDP         bool
 	closableListeners *ClosableListeners
 }
 
-func NewPortForwarder(rules []limayaml.PortForward) *Forwarder {
-	return &Forwarder{rules: rules, closableListeners: NewClosableListener()}
+func NewPortForwarder(rules []limayaml.PortForward, ignoreTCP, ignoreUDP bool) *Forwarder {
+	return &Forwarder{
+		rules:             rules,
+		ignoreTCP:         ignoreTCP,
+		ignoreUDP:         ignoreUDP,
+		closableListeners: NewClosableListener(),
+	}
 }
 
 func (fw *Forwarder) OnEvent(ctx context.Context, client *guestagentclient.GuestAgentClient, ev *api.Event) {
 	for _, f := range ev.LocalPortsAdded {
 		local, remote := fw.forwardingAddresses(f)
 		if local == "" {
-			logrus.Infof("Not forwarding %s %s", strings.ToUpper(f.Protocol), remote)
+			if !fw.ignoreTCP && f.Protocol == "tcp" {
+				logrus.Infof("Not forwarding TCP %s", remote)
+			}
+			if !fw.ignoreUDP && f.Protocol == "udp" {
+				logrus.Infof("Not forwarding UDP %s", remote)
+			}
 			continue
 		}
 		logrus.Infof("Forwarding %s from %s to %s", strings.ToUpper(f.Protocol), remote, local)
