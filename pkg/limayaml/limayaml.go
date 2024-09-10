@@ -213,8 +213,9 @@ type Probe struct {
 type Proto = string
 
 const (
-	TCP Proto = "tcp"
-	UDP Proto = "udp"
+	ProtoTCP Proto = "tcp"
+	ProtoUDP Proto = "udp"
+	ProtoAny Proto = "any"
 )
 
 type PortForward struct {

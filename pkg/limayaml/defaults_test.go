@@ -114,7 +114,7 @@ func TestFillDefault(t *testing.T) {
 		GuestPortRange: [2]int{1, 65535},
 		HostIP:         IPv4loopback1,
 		HostPortRange:  [2]int{1, 65535},
-		Proto:          TCP,
+		Proto:          ProtoTCP,
 		Reverse:        false,
 	}
 
@@ -399,7 +399,7 @@ func TestFillDefault(t *testing.T) {
 			HostIP:         IPv4loopback1,
 			HostPort:       80,
 			HostPortRange:  [2]int{80, 80},
-			Proto:          TCP,
+			Proto:          ProtoTCP,
 		}},
 		CopyToHost: []CopyToHost{{}},
 		Env: map[string]string{
@@ -616,7 +616,7 @@ func TestFillDefault(t *testing.T) {
 			HostIP:         IPv4loopback1,
 			HostPort:       8080,
 			HostPortRange:  [2]int{8080, 8080},
-			Proto:          TCP,
+			Proto:          ProtoTCP,
 		}},
 		CopyToHost: []CopyToHost{{}},
 		Env: map[string]string{

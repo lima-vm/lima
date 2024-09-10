@@ -158,12 +158,16 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 	for _, rule := range y.PortForwards {
 		if rule.Ignore && rule.GuestPortRange[0] == 1 && rule.GuestPortRange[1] == 65535 {
 			switch rule.Proto {
-			case limayaml.TCP:
+			case limayaml.ProtoTCP:
 				ignoreTCP = true
 				logrus.Info("TCP port forwarding is disabled (except for SSH)")
-			case limayaml.UDP:
+			case limayaml.ProtoUDP:
 				ignoreUDP = true
 				logrus.Info("UDP port forwarding is disabled")
+			case limayaml.ProtoAny:
+				ignoreTCP = true
+				ignoreUDP = true
+				logrus.Info("TCP (except for SSH) and UDP port forwarding is disabled")
 			}
 		} else {
 			break
