@@ -9,7 +9,7 @@ import (
 	"github.com/opencontainers/go-digest"
 )
 
-var a = digest.Algorithm("sha256")
+var algorithm = digest.Algorithm("sha256")
 
 func FuzzDownload(f *testing.F) {
 	f.Fuzz(func(t *testing.T, fileContents []byte, checkDigest bool) {
@@ -21,15 +21,10 @@ func FuzzDownload(f *testing.F) {
 		}
 		testLocalFileURL := "file://" + remoteFile
 		if checkDigest {
-			d := a.FromBytes(fileContents)
-			_, _ = Download(context.Background(),
-				localFile,
-				testLocalFileURL,
-				WithExpectedDigest(d))
+			d := algorithm.FromBytes(fileContents)
+			_, _ = Download(context.Background(), localFile, testLocalFileURL, WithExpectedDigest(d))
 		} else {
-			_, _ = Download(context.Background(),
-				localFile,
-				testLocalFileURL)
+			_, _ = Download(context.Background(), localFile, testLocalFileURL)
 		}
 	})
 }

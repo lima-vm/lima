@@ -13,7 +13,6 @@ func FuzzIsISO9660(f *testing.F) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		//nolint:errcheck // The test doesn't check the return value
-		IsISO9660(imageFile)
+		_, _ = IsISO9660(imageFile)
 	})
 }
