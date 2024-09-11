@@ -265,28 +265,34 @@ install-tools:
 generate:
 	go generate ./...
 
-.PHONY: artifacts-darwin
-artifacts-darwin:
-	mkdir -p _artifacts
-	GOOS=darwin GOARCH=amd64 make clean binaries
-	$(TAR) -C _output/ -czvf _artifacts/lima-$(VERSION_TRIMMED)-Darwin-x86_64.tar.gz ./
-	GOOS=darwin GOARCH=arm64 make clean binaries
-	$(TAR) -C _output -czvf _artifacts/lima-$(VERSION_TRIMMED)-Darwin-arm64.tar.gz ./
+.PHONY: artifacts-darwin artifact-darwin-aarch64 artifact-darwin-arm64 artifact-darwin-x86_64
+artifacts-darwin: artifact-darwin-x86_64 artifact-darwin-arm64
+artifact-darwin-arm64: ENVS=GOOS=darwin GOARCH=arm64
+artifact-darwin-arm64: _artifacts/lima-$(VERSION_TRIMMED)-Darwin-arm64.tar.gz
+artifact-darwin-aarch64: artifact-darwin-arm64
+artifact-darwin-x86_64: ENVS=GOOS=darwin GOARCH=amd64
+artifact-darwin-x86_64: _artifacts/lima-$(VERSION_TRIMMED)-Darwin-x86_64.tar.gz
 
-.PHONY: artifacts-linux
-artifacts-linux:
-	mkdir -p _artifacts
-	GOOS=linux GOARCH=amd64 CC=x86_64-linux-gnu-gcc make clean binaries
-	$(TAR) -C _output/ -czvf _artifacts/lima-$(VERSION_TRIMMED)-Linux-x86_64.tar.gz ./
-	GOOS=linux GOARCH=arm64 CC=aarch64-linux-gnu-gcc make clean binaries
-	$(TAR) -C _output/ -czvf _artifacts/lima-$(VERSION_TRIMMED)-Linux-aarch64.tar.gz ./
+.PHONY: artifacts-linux artifact-linux-aarch64 artifact-linux-arm64 artifact-linux-x86_64
+artifacts-linux: artifact-linux-x86_64 artifact-linux-aarch64
+artifact-linux-arm64: artifact-linux-aarch64
+artifact-linux-aarch64: ENVS=GOOS=linux GOARCH=arm64 CC=aarch64-linux-gnu-gcc
+artifact-linux-aarch64: _artifacts/lima-$(VERSION_TRIMMED)-Linux-aarch64.tar.gz
+artifact-linux-x86_64: ENVS=GOOS=linux GOARCH=amd64 CC=x86_64-linux-gnu-gcc
+artifact-linux-x86_64: _artifacts/lima-$(VERSION_TRIMMED)-Linux-x86_64.tar.gz
 
-.PHONY: artifacts-windows
-artifacts-windows:
-	mkdir -p _artifacts
-	GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc make clean binaries
-	$(TAR) -C _output/ -czvf _artifacts/lima-$(VERSION_TRIMMED)-Windows-x86_64.tar.gz ./
+.PHONY: artifacts-windows artifact-windows-x86_64
+artifacts-windows: artifact-windows-x86_64
+artifact-windows-x86_64: ENVS=GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc
+artifact-windows-x86_64: _artifacts/lima-$(VERSION_TRIMMED)-Windows-x86_64.tar.gz
 	cd _output && $(ZIP) -r ../_artifacts/lima-$(VERSION_TRIMMED)-Windows-x86_64.zip *
+
+_artifacts/lima-%.tar.gz: mkdir-artifacts
+	$(ENVS) make clean binaries
+	$(TAR) -C _output/ -czvf $@ ./
+
+mkdir-artifacts:
+	mkdir -p _artifacts
 
 .PHONY: artifacts-misc
 artifacts-misc:
