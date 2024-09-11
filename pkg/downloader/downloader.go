@@ -241,7 +241,7 @@ func Download(ctx context.Context, local, remote string, opts ...Opt) (*Result, 
 			}
 		} else {
 			if match, err := matchLastModified(ctx, shadTime, remote); err != nil {
-				return nil, err
+				logrus.WithError(err).Info("Failed to retrieve last-modified for cached digest-less image; using cached image.")
 			} else if match {
 				if err := copyLocal(ctx, localPath, shadData, ext, o.decompress, o.description, o.expectedDigest); err != nil {
 					return nil, err
