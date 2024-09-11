@@ -51,9 +51,14 @@ runs:
     working-directory: ${{ inputs.working-directory }}
   - id: base-key
     run: |
-      echo "gomodcache-key=go-modcache-${{ inputs.working-directory }}" >> $GITHUB_OUTPUT
-      echo "gocache-key=go-cache-${{ inputs.working-directory }}-${{ inputs.runs-on }}-${{ inputs.additional-gocache-key }}" >> $GITHUB_OUTPUT
+      echo "gomodcache-key=go-modcache-${WORKING_DIRECTORY}" >> $GITHUB_OUTPUT
+      echo "gocache-key=go-cache-${WORKING_DIRECTORY}-${RUNS_ON}-${ADDITIONAL_GOCACHE_KEY}-${GO_VERSION}" >> $GITHUB_OUTPUT
     shell: bash
+    env:
+      ADDITIONAL_GOCACHE_KEY: ${{ inputs.additional-gocache-key }}
+      GO_VERSION: ${{ steps.setup-go.outputs.go-version }}
+      RUNS_ON: ${{ inputs.runs-on }}
+      WORKING_DIRECTORY: ${{ inputs.working-directory }}
   - name: Cache go modules
     uses: actions/cache@v4
     with:
@@ -67,9 +72,8 @@ runs:
     uses: actions/cache@v4
     with:
       path: ${{ steps.go-env.outputs.GOCACHE }}
-      key: ${{ steps.base-key.outputs.gocache-key }}-${{ steps.setup-go.outputs.go-version }}-${{ hashFiles(steps.go-env.outputs.GOSUM) }}
+      key: ${{ steps.base-key.outputs.gocache-key }}-${{ hashFiles(steps.go-env.outputs.GOSUM) }}
       restore-keys: |
-        ${{ steps.base-key.outputs.gocache-key }}-${{ steps.setup-go.outputs.go-version }}-
         ${{ steps.base-key.outputs.gocache-key }}-
   - name: Download dependencies
     if: inputs.ignore-go-mod-and-go-sum != 'true'
