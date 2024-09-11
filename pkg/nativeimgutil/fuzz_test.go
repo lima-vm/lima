@@ -12,7 +12,7 @@ func FuzzConvertToRaw(f *testing.F) {
 		destPath := filepath.Join(t.TempDir(), "dest.img")
 		err := os.WriteFile(srcPath, imgData, 0o600)
 		if err != nil {
-			return
+			t.Fatal(err)
 		}
 		_ = ConvertToRaw(srcPath, destPath, &size, withBacking)
 	})
