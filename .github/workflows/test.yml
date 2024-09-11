@@ -68,6 +68,7 @@ jobs:
 
   unit:
     name: "Unit tests"
+    needs: build-lima-and-fill-cache-on-ubuntu
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     strategy:
@@ -85,7 +86,6 @@ jobs:
         fetch-depth: 1
     - uses: ./.github/actions/setup_go_with_cache
       with:
-        additional-gocache-key: unit
         go-version: ${{ matrix.go-version }}
         runs-on: ubuntu-24.04
     - name: Unit tests
@@ -135,7 +135,6 @@ jobs:
         fetch-depth: 1
     - uses: ./.github/actions/setup_go_with_cache
       with:
-        additional-gocache-key: windows
         go-version: 1.23.x
         runs-on: windows-2022-8-cores
     - name: Unit tests
@@ -156,15 +155,17 @@ jobs:
       if: always()
       run: type C:\Users\runneradmin\.lima\wsl2\ha.stderr.log
 
-  build-on-macos-12:
+  build-lima-and-fill-cache-on-macos-12:
     name: "Build on macOS 12"
-    uses: ./.github/workflows/build.yml
+    uses: ./.github/workflows/build_lima_and_fill_cache.yml
     with:
+      go-version: 1.23.x
       runs-on: macos-12
 
   integration:
     name: Integration tests
     # on macOS 12, the default vmType is QEMU
+    needs: build-lima-and-fill-cache-on-macos-12
     runs-on: macos-12
     timeout-minutes: 120
     steps:
@@ -174,7 +175,6 @@ jobs:
         fetch-depth: 0
     - uses: ./.github/actions/setup_go_with_cache
       with:
-        additional-gocache-key: integration
         go-version: 1.23.x
         runs-on: macos-12
     - name: Unit tests
@@ -221,17 +221,18 @@ jobs:
       if: always()
       run: ./hack/debug-cache.sh
 
-  build-on-ubuntu:
+  build-lima-and-fill-cache-on-ubuntu:
     name: "Build on Ubuntu"
-    uses: ./.github/workflows/build.yml
+    uses: ./.github/workflows/build_lima_and_fill_cache.yml
     with:
+      go-version: 1.23.x
       runs-on: ubuntu-24.04
 
   # Non-default templates are tested on Linux instances of GHA,
   # as they seem more stable than macOS instances.
   integration-linux:
     name: Integration tests (on Linux)
-    needs: build-on-ubuntu
+    needs: build-lima-and-fill-cache-on-ubuntu
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     strategy:
@@ -254,7 +255,7 @@ jobs:
         fetch-depth: 1
     - uses: ./.github/actions/install_lima_from_artifact
       with:
-        artifact: ${{ needs.build-on-ubuntu.outputs.artifact }}
+        artifact: ${{ needs.build-lima-and-fill-cache-on-ubuntu.outputs.artifact }}
     - name: Cache image used by templates/${{ matrix.template }}
       uses: ./.github/actions/setup_cache_for_template
       with:
@@ -288,7 +289,7 @@ jobs:
 
   colima:
     name: Colima
-    needs: build-on-ubuntu
+    needs: build-lima-and-fill-cache-on-ubuntu
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     strategy:
@@ -306,7 +307,7 @@ jobs:
         key: ${{ runner.os }}-colima-${{ matrix.colima-version }}
     - uses: ./.github/actions/install_lima_from_artifact
       with:
-        artifact: ${{ needs.build-on-ubuntu.outputs.artifact }}
+        artifact: ${{ needs.build-lima-and-fill-cache-on-ubuntu.outputs.artifact }}
     - name: Checkout colima
       uses: actions/checkout@v4
       with:
@@ -344,7 +345,7 @@ jobs:
 
   vmnet:
     name: "VMNet test"
-    needs: build-on-macos-12
+    needs: build-lima-and-fill-cache-on-macos-12
     runs-on: macos-12
     timeout-minutes: 120
     steps:
@@ -353,7 +354,7 @@ jobs:
         fetch-depth: 1
     - uses: ./.github/actions/install_lima_from_artifact
       with:
-        artifact: ${{ needs.build-on-macos-12.outputs.artifact }}
+        artifact: ${{ needs.build-lima-and-fill-cache-on-macos-12.outputs.artifact }}
     - name: "Inject `no_timer_check` to kernel cmdline"
       # workaround to https://github.com/lima-vm/lima/issues/84
       run: ./hack/inject-cmdline-to-template.sh templates/vmnet.yaml no_timer_check
@@ -397,6 +398,7 @@ jobs:
 
   upgrade:
     name: "Upgrade test"
+    needs: build-lima-and-fill-cache-on-macos-12
     runs-on: macos-12
     timeout-minutes: 120
     strategy:
@@ -438,15 +440,16 @@ jobs:
     - if: always()
       uses: ./.github/actions/upload_failure_logs_if_exists
 
-  build-on-macos-13:
+  build-lima-and-fill-cache-on-macos-13:
     name: "Build on macOS 13"
-    uses: ./.github/workflows/build.yml
+    uses: ./.github/workflows/build_lima_and_fill_cache.yml
     with:
+      go-version: 1.23.x
       runs-on: macos-13
 
   vz:
     name: "vz"
-    needs: build-on-macos-13
+    needs: build-lima-and-fill-cache-on-macos-13
     # on macOS 13, the default vmType is VZ
     runs-on: macos-13
     timeout-minutes: 120
@@ -462,7 +465,7 @@ jobs:
         fetch-depth: 1
     - uses: ./.github/actions/install_lima_from_artifact
       with:
-        artifact: ${{ needs.build-on-macos-13.outputs.artifact }}
+        artifact: ${{ needs.build-lima-and-fill-cache-on-macos-13.outputs.artifact }}
     - name: Cache image used by templates/${{ matrix.template }}
       uses: ./.github/actions/setup_cache_for_template
       with:

@@ -1,0 +1,70 @@
+name: build lima and fill cache
+run-name: build lima and fill cache on ${{ inputs.runs-on }} using go ${{ inputs.go-version }}
+
+on:
+  workflow_call:
+    inputs:
+      go-version:
+        type: string
+        description: 'The version of Go to use'
+        required: true
+      runs-on:
+        type: string
+        description: 'The type of runner to use'
+        required: true
+    outputs:
+      artifact:
+        description: 'The name of the artifact'
+        value: ${{ jobs.build.outputs.artifact }}
+
+jobs:
+  build:
+    name: "Build on ${{ inputs.runs-on }} using go ${{ inputs.go-version }}"
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: 30
+    outputs:
+      artifact: ${{ steps.make-artifacts.outputs.artifact }}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - uses: ./.github/actions/setup_go_with_cache
+      with:
+        go-version: ${{ inputs.go-version }}
+        runs-on: ${{ inputs.runs-on }}
+    - name: Install gcc for cross-compilation on Linux
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-aarch64-linux-gnu gcc-x86-64-linux-gnu
+    - name: go test to filling cache
+      run: go test ./... --run=nope
+      shell: bash
+    - name: make artifacts to filling cache
+      id: make-artifacts
+      run: |
+        case "${RUNNER_OS}" in
+          Linux)
+            make artifacts-linux VERSION_TRIMMED="${RUNS_ON}"
+            artifact=lima-${RUNS_ON}-Linux-$(uname -m).tar.gz
+            ;;
+          macOS)
+            make artifacts-darwin VERSION_TRIMMED="${RUNS_ON}"
+            artifact=lima-${RUNS_ON}-Darwin-$(uname -m).tar.gz
+            ;;
+          Windows)
+            make artifacts-windows VERSION_TRIMMED="${RUNS_ON}"
+            artifact=lima-${RUNS_ON}-Windows-x86_64.tar.gz
+            ;;
+          *)
+            echo "Unsupported OS: ${RUNNER_OS}"
+            exit 1 ;;
+        esac
+        echo "artifact=${artifact}" >> $GITHUB_OUTPUT
+      env:
+        RUNS_ON: ${{ inputs.runs-on }}
+    - name: upload archive
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ steps.make-artifacts.outputs.artifact }}
+        path: _artifacts/${{ steps.make-artifacts.outputs.artifact }}
