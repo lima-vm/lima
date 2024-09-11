@@ -229,6 +229,7 @@ func Download(ctx context.Context, local, remote string, opts ...Opt) (*Result, 
 	}
 	if _, err := os.Stat(shadData); err == nil {
 		logrus.Debugf("file %q is cached as %q", localPath, shadData)
+		useCache := true
 		if _, err := os.Stat(shadDigest); err == nil {
 			logrus.Debugf("Comparing digest %q with the cached digest file %q, not computing the actual digest of %q",
 				o.expectedDigest, shadDigest, shadData)
@@ -239,18 +240,27 @@ func Download(ctx context.Context, local, remote string, opts ...Opt) (*Result, 
 				return nil, err
 			}
 		} else {
-			if err := copyLocal(ctx, localPath, shadData, ext, o.decompress, o.description, o.expectedDigest); err != nil {
+			if match, err := matchLastModified(ctx, shadTime, remote); err != nil {
 				return nil, err
+			} else if match {
+				if err := copyLocal(ctx, localPath, shadData, ext, o.decompress, o.description, o.expectedDigest); err != nil {
+					return nil, err
+				}
+			} else {
+				logrus.Info("Re-downloading digest-less image: last-modified mismatch detected.")
+				useCache = false
 			}
 		}
-		res := &Result{
-			Status:          StatusUsedCache,
-			CachePath:       shadData,
-			LastModified:    readTime(shadTime),
-			ContentType:     readFile(shadType),
-			ValidatedDigest: o.expectedDigest != "",
+		if useCache {
+			res := &Result{
+				Status:          StatusUsedCache,
+				CachePath:       shadData,
+				LastModified:    readTime(shadTime),
+				ContentType:     readFile(shadType),
+				ValidatedDigest: o.expectedDigest != "",
+			}
+			return res, nil
 		}
-		return res, nil
 	}
 	if err := os.RemoveAll(shad); err != nil {
 		return nil, err
@@ -514,6 +524,27 @@ func validateLocalFileDigest(localPath string, expectedDigest digest.Digest) err
 		return fmt.Errorf("expected digest %q, got %q", expectedDigest, actualDigest)
 	}
 	return nil
+}
+
+func matchLastModified(ctx context.Context, lastModified, url string) (bool, error) {
+	if lastModified == "" {
+		return false, nil
+	}
+	resp, err := httpclientutil.Head(ctx, http.DefaultClient, url)
+	if err != nil {
+		return false, err
+	}
+	defer resp.Body.Close()
+	lm := resp.Header.Get("Last-Modified")
+	if lm == "" {
+		return false, nil
+	}
+	lmTime, err := time.Parse(http.TimeFormat, lm)
+	if err != nil {
+		return false, nil
+	}
+	lastModifiedTime := readTime(lastModified)
+	return lmTime.Equal(lastModifiedTime), nil
 }
 
 func downloadHTTP(ctx context.Context, localPath, lastModified, contentType, url, description string, expectedDigest digest.Digest) error {
