@@ -1,22 +1,10 @@
-# NOTE: Tumbleweed image is known to be broken as of April 2023:
-# https://github.com/lima-vm/lima/issues/1496
-#
 # This template requires Lima v0.11.3 or later
 images:
 # Hint: run `limactl prune` to invalidate the "Current" cache
 - location: "https://download.opensuse.org/tumbleweed/appliances/openSUSE-Tumbleweed-Minimal-VM.x86_64-Cloud.qcow2"
   arch: "x86_64"
-# JeOS is deprecated and will be removed probably, but Minimal-VM.aarch64-kvm-and-xen still lacks cloud-init
-# https://bugzilla.opensuse.org/show_bug.cgi?id=1210246
-- location: "https://download.opensuse.org/ports/aarch64/tumbleweed/appliances/openSUSE-Tumbleweed-ARM-JeOS-efi.aarch64.qcow2"
+- location: "https://download.opensuse.org/ports/aarch64/tumbleweed/appliances/openSUSE-Tumbleweed-Minimal-VM.aarch64-Cloud.qcow2"
   arch: "aarch64"
-# download.opensuse.org is inaccessible from Japan (500 Internal Server Error)
-# https://bugzilla.opensuse.org/show_bug.cgi?id=1210240
-- location: "https://provo-mirror.opensuse.org/tumbleweed/appliances/openSUSE-Tumbleweed-Minimal-VM.x86_64-Cloud.qcow2"
-  arch: "x86_64"
-- location: "https://provo-mirror.opensuse.org/ports/aarch64/tumbleweed/appliances/openSUSE-Tumbleweed-ARM-JeOS-efi.aarch64.qcow2"
-  arch: "aarch64"
-
 mounts:
 - location: "~"
 - location: "/tmp/lima"
