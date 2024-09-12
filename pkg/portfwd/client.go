@@ -1,6 +1,7 @@
 package portfwd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -9,8 +10,6 @@ import (
 	"github.com/lima-vm/lima/pkg/guestagent/api"
 	guestagentclient "github.com/lima-vm/lima/pkg/guestagent/api/client"
 	"github.com/sirupsen/logrus"
-
-	"golang.org/x/net/context"
 )
 
 func HandleTCPConnection(ctx context.Context, client *guestagentclient.GuestAgentClient, conn net.Conn, guestAddr string) {
