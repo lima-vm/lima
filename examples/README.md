@@ -19,7 +19,7 @@ Distro:
 - [`debian-11`](./debian-11.yaml): Debian GNU/Linux 11(bullseye)
 - [`debian-12`](./debian-12.yaml), `debian.yaml`: ⭐Debian GNU/Linux 12(bookworm)
 - [`fedora`](./fedora.yaml): ⭐Fedora
-- [`opensuse`](./opensuse.yaml): ⭐openSUSE Leap
+- [`opensuse-leap`](./opensuse-leap.yaml), `opensuse.yaml`: ⭐openSUSE Leap
 - [`oraclelinux-8`](./oraclelinux-8.yaml): Oracle Linux 8
 - [`oraclelinux-9`](./oraclelinux-9.yaml), `oraclelinux.yaml`: Oracle Linux 9
 - [`rocky-8`](./rocky-8.yaml): Rocky Linux 8
