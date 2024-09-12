@@ -21,7 +21,7 @@ run:
 linters:
   disable-all: true
   enable:
-  # - depguard # annoying since golangci-lint v1.53.1 https://github.com/golangci/golangci-lint/issues/3877
+  - depguard
   - gofmt
   - goimports
   - govet
@@ -81,6 +81,12 @@ linters:
   # - wrapcheck
   # - wsl
 linters-settings:
+  depguard:
+    rules:
+      main:
+        deny:
+        - pkg: "golang.org/x/net/context"
+          desc: "use the 'context' package from the standard library"
   gocritic:
     # See "Tags" section in https://github.com/go-critic/go-critic#usage
     enabled-tags:
