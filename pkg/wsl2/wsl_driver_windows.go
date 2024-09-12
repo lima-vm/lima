@@ -131,12 +131,12 @@ func (l *LimaWslDriver) Start(ctx context.Context) (chan error, error) {
 		l.BaseDriver.Instance.Dir,
 		l.BaseDriver.Instance.Name,
 		distroName,
-		&errCh,
+		errCh,
 	); err != nil {
 		return nil, err
 	}
 
-	keepAlive(ctx, distroName, &errCh)
+	keepAlive(ctx, distroName, errCh)
 
 	return errCh, err
 }
