@@ -67,7 +67,7 @@ func stopVM(ctx context.Context, distroName string) error {
 var limaBoot string
 
 // provisionVM starts Lima's boot process inside an already imported VM.
-func provisionVM(ctx context.Context, instanceDir, instanceName, distroName string, errCh *chan error) error {
+func provisionVM(ctx context.Context, instanceDir, instanceName, distroName string, errCh chan<- error) error {
 	ciDataPath := filepath.Join(instanceDir, filenames.CIDataISODir)
 	m := map[string]string{
 		"CIDataPath": ciDataPath,
@@ -120,7 +120,7 @@ func provisionVM(ctx context.Context, instanceDir, instanceName, distroName stri
 		os.RemoveAll(limaBootFileWinPath)
 		logrus.Debugf("%v: %q", cmd.Args, string(out))
 		if err != nil {
-			*errCh <- fmt.Errorf(
+			errCh <- fmt.Errorf(
 				"error running wslCommand that executes boot.sh (%v): %w, "+
 					"check /var/log/lima-init.log for more details (out=%q)", cmd.Args, err, string(out))
 		}
@@ -139,7 +139,7 @@ func provisionVM(ctx context.Context, instanceDir, instanceName, distroName stri
 }
 
 // keepAlive runs a background process which in order to keep the WSL2 VM running in the background after launch.
-func keepAlive(ctx context.Context, distroName string, errCh *chan error) {
+func keepAlive(ctx context.Context, distroName string, errCh chan<- error) {
 	keepAliveCmd := exec.CommandContext(
 		ctx,
 		"wsl.exe",
@@ -152,7 +152,7 @@ func keepAlive(ctx context.Context, distroName string, errCh *chan error) {
 
 	go func() {
 		if err := keepAliveCmd.Run(); err != nil {
-			*errCh <- fmt.Errorf(
+			errCh <- fmt.Errorf(
 				"error running wsl keepAlive command: %w", err)
 		}
 	}()

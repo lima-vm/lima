@@ -403,7 +403,7 @@ func (a *HostAgent) Run(ctx context.Context) error {
 	return a.startRoutinesAndWait(ctx, errCh)
 }
 
-func (a *HostAgent) startRoutinesAndWait(ctx context.Context, errCh chan error) error {
+func (a *HostAgent) startRoutinesAndWait(ctx context.Context, errCh <-chan error) error {
 	stBase := events.Status{
 		SSHLocalPort: a.sshLocalPort,
 	}
