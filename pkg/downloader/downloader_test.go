@@ -121,6 +121,69 @@ func TestDownloadRemote(t *testing.T) {
 	})
 }
 
+func TestRedownloadRemote(t *testing.T) {
+	remoteDir, err := os.MkdirTemp("", "redownloadRemote")
+	assert.NilError(t, err)
+	t.Cleanup(func() { _ = os.RemoveAll(remoteDir) })
+	ts := httptest.NewServer(http.FileServer(http.Dir(remoteDir)))
+	t.Cleanup(ts.Close)
+
+	cacheDir, err := os.MkdirTemp("", "redownloadCache")
+	assert.NilError(t, err)
+	t.Cleanup(func() { _ = os.RemoveAll(cacheDir) })
+
+	downloadDir, err := os.MkdirTemp("", "redownloadLocal")
+	assert.NilError(t, err)
+	t.Cleanup(func() { _ = os.RemoveAll(downloadDir) })
+
+	cacheOpt := WithCacheDir(cacheDir)
+
+	t.Run("digest-less", func(t *testing.T) {
+		remoteFile := filepath.Join(remoteDir, "digest-less.txt")
+		assert.NilError(t, os.WriteFile(remoteFile, []byte("digest-less"), 0o644))
+		assert.NilError(t, os.Chtimes(remoteFile, time.Now(), time.Now().Add(-time.Hour)))
+		opt := []Opt{cacheOpt}
+
+		r, err := Download(context.Background(), filepath.Join(downloadDir, "digest-less1.txt"), ts.URL+"/digest-less.txt", opt...)
+		assert.NilError(t, err)
+		assert.Equal(t, StatusDownloaded, r.Status)
+		r, err = Download(context.Background(), filepath.Join(downloadDir, "digest-less2.txt"), ts.URL+"/digest-less.txt", opt...)
+		assert.NilError(t, err)
+		assert.Equal(t, StatusUsedCache, r.Status)
+
+		// modifying remote file will cause redownload
+		assert.NilError(t, os.Chtimes(remoteFile, time.Now(), time.Now()))
+		r, err = Download(context.Background(), filepath.Join(downloadDir, "digest-less3.txt"), ts.URL+"/digest-less.txt", opt...)
+		assert.NilError(t, err)
+		assert.Equal(t, StatusDownloaded, r.Status)
+	})
+
+	t.Run("has-digest", func(t *testing.T) {
+		remoteFile := filepath.Join(remoteDir, "has-digest.txt")
+		bytes := []byte("has-digest")
+		assert.NilError(t, os.WriteFile(remoteFile, bytes, 0o644))
+		assert.NilError(t, os.Chtimes(remoteFile, time.Now(), time.Now().Add(-time.Hour)))
+
+		digester := digest.SHA256.Digester()
+		_, err := digester.Hash().Write(bytes)
+		assert.NilError(t, err)
+		opt := []Opt{cacheOpt, WithExpectedDigest(digester.Digest())}
+
+		r, err := Download(context.Background(), filepath.Join(downloadDir, "has-digest1.txt"), ts.URL+"/has-digest.txt", opt...)
+		assert.NilError(t, err)
+		assert.Equal(t, StatusDownloaded, r.Status)
+		r, err = Download(context.Background(), filepath.Join(downloadDir, "has-digest2.txt"), ts.URL+"/has-digest.txt", opt...)
+		assert.NilError(t, err)
+		assert.Equal(t, StatusUsedCache, r.Status)
+
+		// modifying remote file won't cause redownload because expected digest is provided
+		assert.NilError(t, os.Chtimes(remoteFile, time.Now(), time.Now()))
+		r, err = Download(context.Background(), filepath.Join(downloadDir, "has-digest3.txt"), ts.URL+"/has-digest.txt", opt...)
+		assert.NilError(t, err)
+		assert.Equal(t, StatusUsedCache, r.Status)
+	})
+}
+
 func TestDownloadLocal(t *testing.T) {
 	const emptyFileDigest = "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 	const testDownloadLocalDigest = "sha256:0c1e0fba69e8919b306d030bf491e3e0c46cf0a8140ff5d7516ba3a83cbea5b3"
