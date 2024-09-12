@@ -548,7 +548,7 @@ func matchLastModified(ctx context.Context, lastModifiedPath, url string) (match
 	defer resp.Body.Close()
 	lmRemote = resp.Header.Get("Last-Modified")
 	if lmRemote == "" {
-		return false, lmCached, "<missing header>", nil
+		return false, lmCached, "<missing Last-Modified header>", nil
 	}
 	lmCachedTime, errParsingCachedTime := time.Parse(http.TimeFormat, lmCached)
 	lmRemoteTime, errParsingRemoteTime := time.Parse(http.TimeFormat, lmRemote)
