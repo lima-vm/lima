@@ -265,17 +265,15 @@ install-tools:
 generate:
 	go generate ./...
 
-.PHONY: artifacts-darwin artifact-darwin-aarch64 artifact-darwin-arm64 artifact-darwin-x86_64
+.PHONY: artifacts-darwin artifact-darwin-arm64 artifact-darwin-x86_64
 artifacts-darwin: artifact-darwin-x86_64 artifact-darwin-arm64
 artifact-darwin-arm64: ENVS=GOOS=darwin GOARCH=arm64
 artifact-darwin-arm64: _artifacts/lima-$(VERSION_TRIMMED)-Darwin-arm64.tar.gz
-artifact-darwin-aarch64: artifact-darwin-arm64
 artifact-darwin-x86_64: ENVS=GOOS=darwin GOARCH=amd64
 artifact-darwin-x86_64: _artifacts/lima-$(VERSION_TRIMMED)-Darwin-x86_64.tar.gz
 
-.PHONY: artifacts-linux artifact-linux-aarch64 artifact-linux-arm64 artifact-linux-x86_64
+.PHONY: artifacts-linux artifact-linux-aarch64 artifact-linux-x86_64
 artifacts-linux: artifact-linux-x86_64 artifact-linux-aarch64
-artifact-linux-arm64: artifact-linux-aarch64
 artifact-linux-aarch64: ENVS=GOOS=linux GOARCH=arm64 CC=aarch64-linux-gnu-gcc
 artifact-linux-aarch64: _artifacts/lima-$(VERSION_TRIMMED)-Linux-aarch64.tar.gz
 artifact-linux-x86_64: ENVS=GOOS=linux GOARCH=amd64 CC=x86_64-linux-gnu-gcc
