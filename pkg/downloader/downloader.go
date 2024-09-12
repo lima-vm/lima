@@ -240,14 +240,14 @@ func Download(ctx context.Context, local, remote string, opts ...Opt) (*Result, 
 				return nil, err
 			}
 		} else {
-			if match, err := matchLastModified(ctx, shadTime, remote); err != nil {
+			if match, lmCached, lmRemote, err := matchLastModified(ctx, shadTime, remote); err != nil {
 				logrus.WithError(err).Info("Failed to retrieve last-modified for cached digest-less image; using cached image.")
 			} else if match {
 				if err := copyLocal(ctx, localPath, shadData, ext, o.decompress, o.description, o.expectedDigest); err != nil {
 					return nil, err
 				}
 			} else {
-				logrus.Info("Re-downloading digest-less image: last-modified mismatch detected.")
+				logrus.Infof("Re-downloading digest-less image: last-modified mismatch (cached: %q, remote: %q)", lmCached, lmRemote)
 				useCache = false
 			}
 		}
@@ -526,25 +526,41 @@ func validateLocalFileDigest(localPath string, expectedDigest digest.Digest) err
 	return nil
 }
 
-func matchLastModified(ctx context.Context, lastModified, url string) (bool, error) {
-	if lastModified == "" {
-		return false, nil
+// mathLastModified takes params:
+//   - ctx: context for calling httpclientutil.Head
+//   - lastModifiedPath: path of the cached last-modified time file
+//   - url: URL to fetch the last-modified time
+//
+// returns:
+//   - matched: whether the last-modified time matches
+//   - lmCached: last-modified time string from the lastModifiedPath
+//   - lmRemote: last-modified time string from the URL
+//   - err: error if fetching the last-modified time from the URL fails
+func matchLastModified(ctx context.Context, lastModifiedPath, url string) (matched bool, lmCached, lmRemote string, err error) {
+	lmCached = readFile(lastModifiedPath)
+	if lmCached == "" {
+		return false, "<not cached>", "<not checked>", nil
 	}
 	resp, err := httpclientutil.Head(ctx, http.DefaultClient, url)
 	if err != nil {
-		return false, err
+		return false, lmCached, "<failed to fetch remote>", err
 	}
 	defer resp.Body.Close()
-	lm := resp.Header.Get("Last-Modified")
-	if lm == "" {
-		return false, nil
+	lmRemote = resp.Header.Get("Last-Modified")
+	if lmRemote == "" {
+		return false, lmCached, "<missing header>", nil
 	}
-	lmTime, err := time.Parse(http.TimeFormat, lm)
-	if err != nil {
-		return false, nil
+	lmCachedTime, errParsingCachedTime := time.Parse(http.TimeFormat, lmCached)
+	lmRemoteTime, errParsingRemoteTime := time.Parse(http.TimeFormat, lmRemote)
+	if errParsingCachedTime != nil && errParsingRemoteTime != nil {
+		// both time strings are failed to parse, so compare them as strings
+		return lmCached == lmRemote, lmCached, lmRemote, nil
+	} else if errParsingCachedTime == nil && errParsingRemoteTime == nil {
+		// both time strings are successfully parsed, so compare them as times
+		return lmRemoteTime.Equal(lmCachedTime), lmCached, lmRemote, nil
 	}
-	lastModifiedTime := readTime(lastModified)
-	return lmTime.Equal(lastModifiedTime), nil
+	// ignore parsing errors for either time string and assume they are different
+	return false, lmCached, lmRemote, nil
 }
 
 func downloadHTTP(ctx context.Context, localPath, lastModified, contentType, url, description string, expectedDigest digest.Digest) error {
