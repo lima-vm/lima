@@ -1,11 +1,1 @@
-# This template requires Lima v0.7.0 or later
-images:
-# Hint: run `limactl prune` to invalidate the "Current" cache
-- location: "https://download.opensuse.org/distribution/leap/15.6/appliances/openSUSE-Leap-15.6-Minimal-VM.x86_64-Cloud.qcow2"
-  arch: "x86_64"
-- location: "https://download.opensuse.org/distribution/leap/15.6/appliances/openSUSE-Leap-15.6-Minimal-VM.aarch64-Cloud.qcow2"
-  arch: "aarch64"
-mounts:
-- location: "~"
-- location: "/tmp/lima"
-  writable: true
+opensuse-leap.yaml
