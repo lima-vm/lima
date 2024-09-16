@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/google/yamlfmt/formatters/basic"
 	"github.com/mikefarah/yq/v4/pkg/yqlib"
 	"github.com/sirupsen/logrus"
 	logging "gopkg.in/op/go-logging.v1"
@@ -69,7 +70,7 @@ func EvaluateExpression(expression string, content []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	return out.Bytes(), nil
+	return yamlfmt(out.Bytes())
 }
 
 func Join(yqExprs []string) string {
@@ -77,4 +78,19 @@ func Join(yqExprs []string) string {
 		return ""
 	}
 	return strings.Join(yqExprs, " | ")
+}
+
+func yamlfmt(content []byte) ([]byte, error) {
+	factory := basic.BasicFormatterFactory{}
+	config := map[string]interface{}{
+		"indentless_arrays":  true,
+		"line_ending":        "lf", // prefer LF even on Windows
+		"pad_line_comments":  2,
+		"retain_line_breaks": true, // does not affect to the output because yq removes empty lines before formatting
+	}
+	formatter, err := factory.NewFormatter(config)
+	if err != nil {
+		return nil, err
+	}
+	return formatter.Format(content)
 }
