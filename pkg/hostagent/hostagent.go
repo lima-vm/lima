@@ -56,8 +56,8 @@ type HostAgent struct {
 	driver   driver.Driver
 	signalCh chan os.Signal
 
-	eventEnc   *json.Encoder
 	eventEncMu sync.Mutex
+	eventEnc   *json.Encoder
 
 	vSockPort  int
 	virtioPort string

@@ -90,10 +90,12 @@ type agent struct {
 	// reload /proc/net/tcp.
 	newTicker func() (<-chan time.Time, func())
 
-	worthCheckingIPTables    bool
-	worthCheckingIPTablesMu  sync.RWMutex
-	latestIPTables           []iptables.Entry
-	latestIPTablesMu         sync.RWMutex
+	worthCheckingIPTablesMu sync.RWMutex
+	worthCheckingIPTables   bool
+
+	latestIPTablesMu sync.RWMutex
+	latestIPTables   []iptables.Entry
+
 	kubernetesServiceWatcher *kubernetesservice.ServiceWatcher
 }
 

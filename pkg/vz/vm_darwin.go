@@ -39,8 +39,8 @@ const diskImageCachingMode = vz.DiskImageCachingModeCached
 
 type virtualMachineWrapper struct {
 	*vz.VirtualMachine
-	mu      sync.Mutex
-	stopped bool
+	stoppedMu sync.Mutex
+	stopped   bool
 }
 
 // Hold all *os.File created via socketpair() so that they won't get garbage collected. f.FD() gets invalid if f gets garbage collected.
@@ -108,9 +108,9 @@ func startVM(ctx context.Context, driver *driver.BaseDriver) (*virtualMachineWra
 					}
 				case vz.VirtualMachineStateStopped:
 					logrus.Info("[VZ] - vm state change: stopped")
-					wrapper.mu.Lock()
+					wrapper.stoppedMu.Lock()
 					wrapper.stopped = true
-					wrapper.mu.Unlock()
+					wrapper.stoppedMu.Unlock()
 					_ = usernetClient.UnExposeSSH(driver.SSHLocalPort)
 					errCh <- errors.New("vz driver state stopped")
 				default:
