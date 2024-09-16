@@ -19,6 +19,7 @@ memory: null
 	expected := `
 # CPUs
 cpus: 2
+
 # Memory size
 memory: 2GiB
 `

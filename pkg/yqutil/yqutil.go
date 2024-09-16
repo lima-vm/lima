@@ -1,6 +1,7 @@
 package yqutil
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"os"
@@ -15,13 +16,17 @@ import (
 // EvaluateExpression evaluates the yq expression, and returns the modified yaml.
 func EvaluateExpression(expression string, content []byte) ([]byte, error) {
 	logrus.Debugf("Evaluating yq expression: %q", expression)
+	contentModified, err := replaceLineBreaksWithMagicString(content)
+	if err != nil {
+		return nil, err
+	}
 	tmpYAMLFile, err := os.CreateTemp("", "lima-yq-*.yaml")
 	if err != nil {
 		return nil, err
 	}
 	tmpYAMLPath := tmpYAMLFile.Name()
 	defer os.RemoveAll(tmpYAMLPath)
-	_, err = tmpYAMLFile.Write(content)
+	_, err = tmpYAMLFile.Write(contentModified)
 	if err != nil {
 		tmpYAMLFile.Close()
 		return nil, err
@@ -93,4 +98,42 @@ func yamlfmt(content []byte) ([]byte, error) {
 		return nil, err
 	}
 	return formatter.Format(content)
+}
+
+const yamlfmtLineBreakPlaceholder = "#magic___^_^___line"
+
+type paddinger struct {
+	strings.Builder
+}
+
+func (p *paddinger) adjust(txt string) {
+	var indentSize int
+	for i := 0; i < len(txt) && txt[i] == ' '; i++ { // yaml only allows space to indent.
+		indentSize++
+	}
+	// Grows if the given size is larger than us and always return the max padding.
+	for diff := indentSize - p.Len(); diff > 0; diff-- {
+		p.WriteByte(' ')
+	}
+}
+
+func replaceLineBreaksWithMagicString(content []byte) ([]byte, error) {
+	// hotfix: yq does not support line breaks in the middle of a string.
+	var buf bytes.Buffer
+	reader := bytes.NewReader(content)
+	scanner := bufio.NewScanner(reader)
+	var padding paddinger
+	for scanner.Scan() {
+		txt := scanner.Text()
+		padding.adjust(txt)
+		if strings.TrimSpace(txt) == "" { // line break or empty space line.
+			buf.WriteString(padding.String()) // prepend some padding incase literal multiline strings.
+			buf.WriteString(yamlfmtLineBreakPlaceholder)
+			buf.WriteString("\n")
+		} else {
+			buf.WriteString(txt)
+			buf.WriteString("\n")
+		}
+	}
+	return buf.Bytes(), scanner.Err()
 }
