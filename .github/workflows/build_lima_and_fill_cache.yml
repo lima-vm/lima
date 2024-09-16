@@ -32,11 +32,6 @@ jobs:
       with:
         go-version: ${{ inputs.go-version }}
         runs-on: ${{ inputs.runs-on }}
-    - name: Install gcc for cross-compilation on Linux
-      if: runner.os == 'Linux'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y gcc-aarch64-linux-gnu gcc-x86-64-linux-gnu
     - name: go test to filling cache
       run: go test ./... --run=nope
       shell: bash
@@ -45,16 +40,16 @@ jobs:
       run: |
         case "${RUNNER_OS}" in
           Linux)
-            make artifacts-linux VERSION_TRIMMED="${RUNS_ON}"
+            make artifact-linux-$(uname -m) VERSION_TRIMMED="${RUNS_ON}"
             artifact=lima-${RUNS_ON}-Linux-$(uname -m).tar.gz
             ;;
           macOS)
-            make artifacts-darwin VERSION_TRIMMED="${RUNS_ON}"
+            make artifact-darwin-$(uname -m) VERSION_TRIMMED="${RUNS_ON}"
             artifact=lima-${RUNS_ON}-Darwin-$(uname -m).tar.gz
             ;;
           Windows)
-            make artifacts-windows VERSION_TRIMMED="${RUNS_ON}"
-            artifact=lima-${RUNS_ON}-Windows-x86_64.tar.gz
+            make artifact-windows-$(uname -m) VERSION_TRIMMED="${RUNS_ON}"
+            artifact=lima-${RUNS_ON}-Windows-$(uname -m).tar.gz
             ;;
           *)
             echo "Unsupported OS: ${RUNNER_OS}"
