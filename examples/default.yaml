@@ -264,10 +264,10 @@ containerd:
 # Setting of instructions is supported like this: "qemu64,+ssse3".
 # 🟢 Builtin default: hard-coded arch map with type (see the output of `limactl info | jq .defaultTemplate.cpuType`)
 cpuType:
-  # aarch64: "cortex-a72" # (or "host" when running on aarch64 host)
-  # armv7l: "cortex-a7" # (or "host" when running on armv7l host)
-  # riscv64: "rv64" # (or "host" when running on riscv64 host)
-  # x86_64: "qemu64" # (or "host,-pdpe1gb" when running on x86_64 host)
+# aarch64: "cortex-a72" # (or "host" when running on aarch64 host)
+# armv7l: "cortex-a7" # (or "host" when running on armv7l host)
+# riscv64: "rv64" # (or "host" when running on riscv64 host)
+# x86_64: "qemu64" # (or "host,-pdpe1gb" when running on x86_64 host)
 
 rosetta:
   # Enable Rosetta for Linux (EXPERIMENTAL; will graduate from experimental in Lima v1.0).
@@ -456,8 +456,8 @@ hostResolver:
   # predefined to specify the gateway address to the host.
   # 🟢 Builtin default: null
   hosts:
-    # guest.name: 127.1.1.1
-    # host.name: host.lima.internal
+  # guest.name: 127.1.1.1
+  # host.name: host.lima.internal
 
 # If hostResolver.enabled is false, then the following rules apply for configuring dns:
 # Explicitly set DNS addresses for qemu user-mode networking. By default qemu picks *one*

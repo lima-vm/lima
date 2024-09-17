@@ -5,11 +5,11 @@
 # $ export BUILDKIT_HOST=$(limactl list buildkit --format 'unix://{{.Dir}}/sock/buildkitd.sock')
 # $ buildctl debug workers
 message: |
- To run `buildkit` on the host (assumes buildctl is installed), run the following commands:
- -------
- export BUILDKIT_HOST="unix://{{.Dir}}/sock/buildkitd.sock"
- buildctl debug workers
- -------
+  To run `buildkit` on the host (assumes buildctl is installed), run the following commands:
+  -------
+  export BUILDKIT_HOST="unix://{{.Dir}}/sock/buildkitd.sock"
+  buildctl debug workers
+  -------
 images:
 # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
 - location: "https://cloud-images.ubuntu.com/releases/24.04/release-20240821/ubuntu-24.04-server-cloudimg-amd64.img"
