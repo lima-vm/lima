@@ -17,6 +17,7 @@ import (
 	"github.com/coreos/go-semver/semver"
 	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/driverutil"
+	"github.com/lima-vm/lima/pkg/executil"
 	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/qemu"
 	"github.com/lima-vm/lima/pkg/qemu/entitlementutil"
@@ -191,9 +192,9 @@ func Start(ctx context.Context, inst *store.Instance, launchHostAgentForeground 
 	haCmd := exec.CommandContext(ctx, self, args...)
 
 	if launchHostAgentForeground {
-		haCmd.SysProcAttr = ForegroundSysProcAttr
+		haCmd.SysProcAttr = executil.ForegroundSysProcAttr
 	} else {
-		haCmd.SysProcAttr = BackgroundSysProcAttr
+		haCmd.SysProcAttr = executil.BackgroundSysProcAttr
 	}
 
 	haCmd.Stdout = haStdoutW

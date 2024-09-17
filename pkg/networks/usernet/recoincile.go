@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/lima-vm/lima/pkg/executil"
 	"github.com/lima-vm/lima/pkg/lockutil"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
@@ -81,6 +82,7 @@ func Start(ctx context.Context, name string) error {
 				args = append(args, "--leases", leasesString)
 			}
 			cmd := exec.CommandContext(ctx, self, args...)
+			cmd.SysProcAttr = executil.BackgroundSysProcAttr
 
 			stdoutPath := filepath.Join(usernetDir, fmt.Sprintf("%s.%s.%s.log", "usernet", name, "stdout"))
 			stderrPath := filepath.Join(usernetDir, fmt.Sprintf("%s.%s.%s.log", "usernet", name, "stderr"))
