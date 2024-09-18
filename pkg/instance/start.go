@@ -97,11 +97,10 @@ func Prepare(ctx context.Context, inst *store.Instance) (*Prepared, error) {
 	}
 
 	// Check if the instance has been created (the base disk already exists)
-	created := false
 	baseDisk := filepath.Join(inst.Dir, filenames.BaseDisk)
-	if _, err := os.Stat(baseDisk); err == nil {
-		created = true
-	}
+	_, err = os.Stat(baseDisk)
+	created := err == nil
+
 	if err := limaDriver.CreateDisk(ctx); err != nil {
 		return nil, err
 	}

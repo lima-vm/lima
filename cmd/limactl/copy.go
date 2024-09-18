@@ -65,10 +65,7 @@ func copyAction(cmd *cobra.Command, args []string) error {
 	if recursive {
 		scpFlags = append(scpFlags, "-r")
 	}
-	legacySSH := false
-	if sshutil.DetectOpenSSHVersion().LessThan(*semver.New("8.0.0")) {
-		legacySSH = true
-	}
+	legacySSH := sshutil.DetectOpenSSHVersion().LessThan(*semver.New("8.0.0"))
 	for _, arg := range args {
 		path := strings.Split(arg, ":")
 		switch len(path) {
