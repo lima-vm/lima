@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/google/yamlfmt"
 	"github.com/google/yamlfmt/formatters/basic"
 	"github.com/mikefarah/yq/v4/pkg/yqlib"
 	"github.com/sirupsen/logrus"
@@ -15,13 +16,26 @@ import (
 // EvaluateExpression evaluates the yq expression, and returns the modified yaml.
 func EvaluateExpression(expression string, content []byte) ([]byte, error) {
 	logrus.Debugf("Evaluating yq expression: %q", expression)
+	formatter, err := yamlfmtBasicFormatter()
+	if err != nil {
+		return nil, err
+	}
+	// `ApplyFeatures()` is being called directly before passing content to `yqlib`.
+	// This results in `ApplyFeatures()` being called twice with `FeatureApplyBefore`:
+	// once here and once inside `formatter.Format`.
+	// Currently, calling `ApplyFeatures()` with `FeatureApplyBefore` twice is not an issue,
+	// but future changes to `yamlfmt` might cause problems if it is called twice.
+	contentModified, err := formatter.Features.ApplyFeatures(content, yamlfmt.FeatureApplyBefore)
+	if err != nil {
+		return nil, err
+	}
 	tmpYAMLFile, err := os.CreateTemp("", "lima-yq-*.yaml")
 	if err != nil {
 		return nil, err
 	}
 	tmpYAMLPath := tmpYAMLFile.Name()
 	defer os.RemoveAll(tmpYAMLPath)
-	_, err = tmpYAMLFile.Write(content)
+	_, err = tmpYAMLFile.Write(contentModified)
 	if err != nil {
 		tmpYAMLFile.Close()
 		return nil, err
@@ -70,7 +84,7 @@ func EvaluateExpression(expression string, content []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	return yamlfmt(out.Bytes())
+	return formatter.Format(out.Bytes())
 }
 
 func Join(yqExprs []string) string {
@@ -80,17 +94,23 @@ func Join(yqExprs []string) string {
 	return strings.Join(yqExprs, " | ")
 }
 
-func yamlfmt(content []byte) ([]byte, error) {
+func yamlfmtBasicFormatter() (*basic.BasicFormatter, error) {
 	factory := basic.BasicFormatterFactory{}
 	config := map[string]interface{}{
-		"indentless_arrays":  true,
-		"line_ending":        "lf", // prefer LF even on Windows
-		"pad_line_comments":  2,
-		"retain_line_breaks": true, // does not affect to the output because yq removes empty lines before formatting
+		"indentless_arrays":         true,
+		"line_ending":               "lf", // prefer LF even on Windows
+		"pad_line_comments":         2,
+		"retain_line_breaks":        true,
+		"retain_line_breaks_single": false,
 	}
+
 	formatter, err := factory.NewFormatter(config)
 	if err != nil {
 		return nil, err
 	}
-	return formatter.Format(content)
+	basicFormatter, ok := formatter.(*basic.BasicFormatter)
+	if !ok {
+		return nil, fmt.Errorf("unexpected formatter type: %T", formatter)
+	}
+	return basicFormatter, nil
 }
