@@ -13,7 +13,7 @@ import (
 	"github.com/balajiv113/fd"
 
 	"github.com/sirupsen/logrus"
-	"inet.af/tcpproxy"
+	"inet.af/tcpproxy" // replaced to github.com/inetaf/tcpproxy in go.mod
 )
 
 func PassFDToUnix(unixSock string) (*os.File, error) {
