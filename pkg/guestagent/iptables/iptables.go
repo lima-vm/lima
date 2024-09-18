@@ -72,10 +72,7 @@ func parsePortsFromRules(rules []string) ([]Entry, error) {
 					return nil, err
 				}
 
-				istcp := false
-				if found[2] == "tcp" {
-					istcp = true
-				}
+				istcp := found[2] == "tcp"
 
 				// When no IP is present the rule applies to all interfaces.
 				ip := found[1]
