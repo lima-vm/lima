@@ -1,12 +1,12 @@
 package yqutil
 
 import (
-	"bufio"
 	"bytes"
 	"fmt"
 	"os"
 	"strings"
 
+	"github.com/google/yamlfmt"
 	"github.com/google/yamlfmt/formatters/basic"
 	"github.com/mikefarah/yq/v4/pkg/yqlib"
 	"github.com/sirupsen/logrus"
@@ -16,7 +16,16 @@ import (
 // EvaluateExpression evaluates the yq expression, and returns the modified yaml.
 func EvaluateExpression(expression string, content []byte) ([]byte, error) {
 	logrus.Debugf("Evaluating yq expression: %q", expression)
-	contentModified, err := replaceLineBreaksWithMagicString(content)
+	formatter, err := yamlfmtBasicFormatter()
+	if err != nil {
+		return nil, err
+	}
+	// `ApplyFeatures()` is being called directly before passing content to `yqlib`.
+	// This results in `ApplyFeatures()` being called twice with `FeatureApplyBefore`:
+	// once here and once inside `formatter.Format`.
+	// Currently, calling `ApplyFeatures()` with `FeatureApplyBefore` twice is not an issue,
+	// but future changes to `yamlfmt` might cause problems if it is called twice.
+	contentModified, err := formatter.Features.ApplyFeatures(content, yamlfmt.FeatureApplyBefore)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +84,7 @@ func EvaluateExpression(expression string, content []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	return yamlfmt(out.Bytes())
+	return formatter.Format(out.Bytes())
 }
 
 func Join(yqExprs []string) string {
@@ -85,55 +94,23 @@ func Join(yqExprs []string) string {
 	return strings.Join(yqExprs, " | ")
 }
 
-func yamlfmt(content []byte) ([]byte, error) {
+func yamlfmtBasicFormatter() (*basic.BasicFormatter, error) {
 	factory := basic.BasicFormatterFactory{}
 	config := map[string]interface{}{
-		"indentless_arrays":  true,
-		"line_ending":        "lf", // prefer LF even on Windows
-		"pad_line_comments":  2,
-		"retain_line_breaks": true, // does not affect to the output because yq removes empty lines before formatting
+		"indentless_arrays":         true,
+		"line_ending":               "lf", // prefer LF even on Windows
+		"pad_line_comments":         2,
+		"retain_line_breaks":        true,
+		"retain_line_breaks_single": false,
 	}
+
 	formatter, err := factory.NewFormatter(config)
 	if err != nil {
 		return nil, err
 	}
-	return formatter.Format(content)
-}
-
-const yamlfmtLineBreakPlaceholder = "#magic___^_^___line"
-
-type paddinger struct {
-	strings.Builder
-}
-
-func (p *paddinger) adjust(txt string) {
-	var indentSize int
-	for i := 0; i < len(txt) && txt[i] == ' '; i++ { // yaml only allows space to indent.
-		indentSize++
+	basicFormatter, ok := formatter.(*basic.BasicFormatter)
+	if !ok {
+		return nil, fmt.Errorf("unexpected formatter type: %T", formatter)
 	}
-	// Grows if the given size is larger than us and always return the max padding.
-	for diff := indentSize - p.Len(); diff > 0; diff-- {
-		p.WriteByte(' ')
-	}
-}
-
-func replaceLineBreaksWithMagicString(content []byte) ([]byte, error) {
-	// hotfix: yq does not support line breaks in the middle of a string.
-	var buf bytes.Buffer
-	reader := bytes.NewReader(content)
-	scanner := bufio.NewScanner(reader)
-	var padding paddinger
-	for scanner.Scan() {
-		txt := scanner.Text()
-		padding.adjust(txt)
-		if strings.TrimSpace(txt) == "" { // line break or empty space line.
-			buf.WriteString(padding.String()) // prepend some padding incase literal multiline strings.
-			buf.WriteString(yamlfmtLineBreakPlaceholder)
-			buf.WriteString("\n")
-		} else {
-			buf.WriteString(txt)
-			buf.WriteString("\n")
-		}
-	}
-	return buf.Bytes(), scanner.Err()
+	return basicFormatter, nil
 }
