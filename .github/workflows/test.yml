@@ -396,8 +396,8 @@ jobs:
 
   vz:
     name: "vz"
-    # on macOS 13, the default vmType is VZ
-    runs-on: macos-13
+    # on macOS >= 13, the default vmType is VZ
+    runs-on: macos-14-xlarge
     timeout-minutes: 120
     strategy:
       fail-fast: false
@@ -415,7 +415,7 @@ jobs:
     - name: Make
       run: make
     - name: Install
-      run: make install
+      run: sudo make install
     - name: Cache image used by templates/${{ matrix.template }}
       uses: ./.github/actions/setup_cache_for_template
       with:
