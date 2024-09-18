@@ -14,6 +14,7 @@ type portForwarder struct {
 	sshConfig   *ssh.SSHConfig
 	sshHostPort int
 	rules       []limayaml.PortForward
+	ignore      bool
 	vmType      limayaml.VMType
 }
 
@@ -21,11 +22,12 @@ const sshGuestPort = 22
 
 var IPv4loopback1 = limayaml.IPv4loopback1
 
-func newPortForwarder(sshConfig *ssh.SSHConfig, sshHostPort int, rules []limayaml.PortForward, vmType limayaml.VMType) *portForwarder {
+func newPortForwarder(sshConfig *ssh.SSHConfig, sshHostPort int, rules []limayaml.PortForward, ignore bool, vmType limayaml.VMType) *portForwarder {
 	return &portForwarder{
 		sshConfig:   sshConfig,
 		sshHostPort: sshHostPort,
 		rules:       rules,
+		ignore:      ignore,
 		vmType:      vmType,
 	}
 }
@@ -94,7 +96,9 @@ func (pf *portForwarder) OnEvent(ctx context.Context, ev *api.Event) {
 		}
 		local, remote := pf.forwardingAddresses(f)
 		if local == "" {
-			logrus.Infof("Not forwarding TCP %s", remote)
+			if !pf.ignore {
+				logrus.Infof("Not forwarding TCP %s", remote)
+			}
 			continue
 		}
 		logrus.Infof("Forwarding TCP from %s to %s", remote, local)

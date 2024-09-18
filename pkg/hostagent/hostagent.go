@@ -153,6 +153,22 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 		AdditionalArgs: sshutil.SSHArgsFromOpts(sshOpts),
 	}
 
+	ignoreTCP := false
+	ignoreUDP := false
+	for _, rule := range y.PortForwards {
+		if rule.Ignore && rule.GuestPortRange[0] == 1 && rule.GuestPortRange[1] == 65535 {
+			switch rule.Proto {
+			case limayaml.TCP:
+				ignoreTCP = true
+				logrus.Info("TCP port forwarding is disabled (except for SSH)")
+			case limayaml.UDP:
+				ignoreUDP = true
+				logrus.Info("UDP port forwarding is disabled")
+			}
+		} else {
+			break
+		}
+	}
 	rules := make([]limayaml.PortForward, 0, 3+len(y.PortForwards))
 	// Block ports 22 and sshLocalPort on all IPs
 	for _, port := range []int{sshGuestPort, sshLocalPort} {
@@ -188,8 +204,8 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 		instName:          instName,
 		instSSHAddress:    inst.SSHAddress,
 		sshConfig:         sshConfig,
-		portForwarder:     newPortForwarder(sshConfig, sshLocalPort, rules, inst.VMType),
-		grpcPortForwarder: portfwd.NewPortForwarder(rules),
+		portForwarder:     newPortForwarder(sshConfig, sshLocalPort, rules, ignoreTCP, inst.VMType),
+		grpcPortForwarder: portfwd.NewPortForwarder(rules, ignoreTCP, ignoreUDP),
 		driver:            limaDriver,
 		signalCh:          signalCh,
 		eventEnc:          json.NewEncoder(stdout),
