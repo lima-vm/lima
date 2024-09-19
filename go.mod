@@ -43,7 +43,7 @@ require (
 	golang.org/x/sync v0.8.0
 	golang.org/x/sys v0.25.0
 	golang.org/x/text v0.18.0
-	google.golang.org/grpc v1.66.0
+	google.golang.org/grpc v1.66.2
 	google.golang.org/protobuf v1.34.2
 	gopkg.in/op/go-logging.v1 v1.0.0-20160211212156-b2cb9fa56473
 	gotest.tools/v3 v3.5.1
