@@ -17,9 +17,9 @@ func EnsureFs(ctx context.Context, driver *driver.BaseDriver) error {
 	baseDisk := filepath.Join(driver.Instance.Dir, filenames.BaseDisk)
 	if _, err := os.Stat(baseDisk); errors.Is(err, os.ErrNotExist) {
 		var ensuredBaseDisk bool
-		errs := make([]error, len(driver.Yaml.Images))
-		for i, f := range driver.Yaml.Images {
-			if _, err := fileutils.DownloadFile(ctx, baseDisk, f.File, true, "the image", *driver.Yaml.Arch); err != nil {
+		errs := make([]error, len(driver.InstConfig.Images))
+		for i, f := range driver.InstConfig.Images {
+			if _, err := fileutils.DownloadFile(ctx, baseDisk, f.File, true, "the image", *driver.InstConfig.Arch); err != nil {
 				errs[i] = err
 				continue
 			}

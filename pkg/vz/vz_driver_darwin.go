@@ -76,70 +76,70 @@ func (l *LimaVzDriver) Validate() error {
 	if errors.Is(err, vz.ErrUnsupportedOSVersion) {
 		return fmt.Errorf("VZ driver requires macOS 13 or higher to run")
 	}
-	if *l.Yaml.MountType == limayaml.NINEP {
-		return fmt.Errorf("field `mountType` must be %q or %q for VZ driver , got %q", limayaml.REVSSHFS, limayaml.VIRTIOFS, *l.Yaml.MountType)
+	if *l.InstConfig.MountType == limayaml.NINEP {
+		return fmt.Errorf("field `mountType` must be %q or %q for VZ driver , got %q", limayaml.REVSSHFS, limayaml.VIRTIOFS, *l.InstConfig.MountType)
 	}
-	if *l.Yaml.Firmware.LegacyBIOS {
-		logrus.Warnf("vmType %s: ignoring `firmware.legacyBIOS`", *l.Yaml.VMType)
+	if *l.InstConfig.Firmware.LegacyBIOS {
+		logrus.Warnf("vmType %s: ignoring `firmware.legacyBIOS`", *l.InstConfig.VMType)
 	}
-	for _, f := range l.Yaml.Firmware.Images {
+	for _, f := range l.InstConfig.Firmware.Images {
 		switch f.VMType {
 		case "", limayaml.VZ:
-			if f.Arch == *l.Yaml.Arch {
+			if f.Arch == *l.InstConfig.Arch {
 				return fmt.Errorf("`firmware.images` configuration is not supported for VZ driver")
 			}
 		}
 	}
-	if unknown := reflectutil.UnknownNonEmptyFields(l.Yaml, knownYamlProperties...); len(unknown) > 0 {
-		logrus.Warnf("vmType %s: ignoring %+v", *l.Yaml.VMType, unknown)
+	if unknown := reflectutil.UnknownNonEmptyFields(l.InstConfig, knownYamlProperties...); len(unknown) > 0 {
+		logrus.Warnf("vmType %s: ignoring %+v", *l.InstConfig.VMType, unknown)
 	}
 
-	if !limayaml.IsNativeArch(*l.Yaml.Arch) {
-		return fmt.Errorf("unsupported arch: %q", *l.Yaml.Arch)
+	if !limayaml.IsNativeArch(*l.InstConfig.Arch) {
+		return fmt.Errorf("unsupported arch: %q", *l.InstConfig.Arch)
 	}
 
-	for k, v := range l.Yaml.CPUType {
+	for k, v := range l.InstConfig.CPUType {
 		if v != "" {
-			logrus.Warnf("vmType %s: ignoring cpuType[%q]: %q", *l.Yaml.VMType, k, v)
+			logrus.Warnf("vmType %s: ignoring cpuType[%q]: %q", *l.InstConfig.VMType, k, v)
 		}
 	}
 
-	for i, image := range l.Yaml.Images {
+	for i, image := range l.InstConfig.Images {
 		if unknown := reflectutil.UnknownNonEmptyFields(image, "File"); len(unknown) > 0 {
-			logrus.Warnf("vmType %s: ignoring images[%d]: %+v", *l.Yaml.VMType, i, unknown)
+			logrus.Warnf("vmType %s: ignoring images[%d]: %+v", *l.InstConfig.VMType, i, unknown)
 		}
 	}
 
-	for i, mount := range l.Yaml.Mounts {
+	for i, mount := range l.InstConfig.Mounts {
 		if unknown := reflectutil.UnknownNonEmptyFields(mount, "Location",
 			"MountPoint",
 			"Writable",
 			"SSHFS",
 			"NineP",
 		); len(unknown) > 0 {
-			logrus.Warnf("vmType %s: ignoring mounts[%d]: %+v", *l.Yaml.VMType, i, unknown)
+			logrus.Warnf("vmType %s: ignoring mounts[%d]: %+v", *l.InstConfig.VMType, i, unknown)
 		}
 	}
 
-	for i, network := range l.Yaml.Networks {
+	for i, network := range l.InstConfig.Networks {
 		if unknown := reflectutil.UnknownNonEmptyFields(network, "VZNAT",
 			"Lima",
 			"Socket",
 			"MACAddress",
 			"Interface",
 		); len(unknown) > 0 {
-			logrus.Warnf("vmType %s: ignoring networks[%d]: %+v", *l.Yaml.VMType, i, unknown)
+			logrus.Warnf("vmType %s: ignoring networks[%d]: %+v", *l.InstConfig.VMType, i, unknown)
 		}
 	}
 
-	switch audioDevice := *l.Yaml.Audio.Device; audioDevice {
+	switch audioDevice := *l.InstConfig.Audio.Device; audioDevice {
 	case "":
 	case "vz", "default", "none":
 	default:
 		logrus.Warnf("field `audio.device` must be \"vz\", \"default\", or \"none\" for VZ driver, got %q", audioDevice)
 	}
 
-	switch videoDisplay := *l.Yaml.Video.Display; videoDisplay {
+	switch videoDisplay := *l.InstConfig.Video.Display; videoDisplay {
 	case "vz", "default", "none":
 	default:
 		logrus.Warnf("field `video.display` must be \"vz\", \"default\", or \"none\" for VZ driver , got %q", videoDisplay)
@@ -171,7 +171,7 @@ func (l *LimaVzDriver) Start(ctx context.Context) (chan error, error) {
 }
 
 func (l *LimaVzDriver) CanRunGUI() bool {
-	switch *l.Yaml.Video.Display {
+	switch *l.InstConfig.Video.Display {
 	case "vz", "default":
 		return true
 	default:
@@ -184,7 +184,7 @@ func (l *LimaVzDriver) RunGUI() error {
 		return l.machine.StartGraphicApplication(1920, 1200)
 	}
 	//nolint:revive // error-strings
-	return fmt.Errorf("RunGUI is not supported for the given driver '%s' and display '%s'", "vz", *l.Yaml.Video.Display)
+	return fmt.Errorf("RunGUI is not supported for the given driver '%s' and display '%s'", "vz", *l.InstConfig.Video.Display)
 }
 
 func (l *LimaVzDriver) Stop(_ context.Context) error {
