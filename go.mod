@@ -48,7 +48,7 @@ require (
 	gopkg.in/op/go-logging.v1 v1.0.0-20160211212156-b2cb9fa56473
 	gopkg.in/yaml.v3 v3.0.1
 	gotest.tools/v3 v3.5.1
-	inet.af/tcpproxy v0.0.0-20221017015627-91f861402626
+	inet.af/tcpproxy v0.0.0-20221017015627-91f861402626 // replaced to github.com/inetaf/tcpproxy (see the bottom of this go.mod file)
 	k8s.io/api v0.31.0
 	k8s.io/apimachinery v0.31.0
 	k8s.io/client-go v0.31.0
@@ -134,3 +134,8 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
+
+// The inet.af domain was lost: https://github.com/inetaf/tcpproxy/issues/39
+// We can't just `require` github.com/inetaf/tcpproxy, as gvisor-tap-vsock
+// still imports inet.af/tcpproxy: https://github.com/containers/gvisor-tap-vsock/pull/399
+replace inet.af/tcpproxy => github.com/inetaf/tcpproxy v0.0.0-20240214030015-3ce58045626c
