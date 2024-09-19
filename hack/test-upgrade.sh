@@ -6,13 +6,14 @@ scriptdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${scriptdir}/common.inc.sh"
 cd "${scriptdir}/.."
 
-if [ "$#" -ne 2 ]; then
-	ERROR "Usage: $0 OLDVER NEWVER"
+if [ "$#" -ne 3 ]; then
+	ERROR "Usage: $0 OLDVER NEWVER TEMPLATEURL"
 	exit 1
 fi
 
 OLDVER="$1"
 NEWVER="$2"
+TEMPLATEURL="$3"
 
 PREFIX="/usr/local"
 function install_lima() {
@@ -64,7 +65,7 @@ export LIMA_INSTANCE="test-upgrade"
 
 INFO "Creating an instance \"${LIMA_INSTANCE}\" with the old Lima"
 defer "show_lima_log;limactl delete -f \"${LIMA_INSTANCE}\""
-limactl start --tty=false --name="${LIMA_INSTANCE}" template://ubuntu-lts || (
+limactl start --tty=false --name="${LIMA_INSTANCE}" "${TEMPLATEURL}" || (
 	show_lima_log
 	exit 1
 )

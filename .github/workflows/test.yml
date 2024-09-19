@@ -374,7 +374,7 @@ jobs:
     timeout-minutes: 120
     strategy:
       matrix:
-        oldver: ["v0.15.1"]
+        oldver: ["v0.23.2"]
     steps:
     - uses: actions/checkout@v4
       with:
@@ -382,10 +382,11 @@ jobs:
     - uses: actions/setup-go@v5
       with:
         go-version: 1.23.x
-    - name: Cache image used by ${{ matrix.oldver }}/examples/ubuntu-lts.yaml
+    - name: Cache image used by ${{ matrix.oldver }}/examples/default.yaml
       uses: ./.github/actions/setup_cache_for_template
       with:
-        template: https://raw.githubusercontent.com/lima-vm/lima/${{ matrix.oldver }}/examples/ubuntu-lts.yaml
+        # the template must not be a symlink: https://stackoverflow.com/a/60778918
+        template: https://raw.githubusercontent.com/lima-vm/lima/${{ matrix.oldver }}/examples/default.yaml
     - name: Install test dependencies
       run: brew install qemu bash coreutils
     - name: Test
@@ -394,7 +395,7 @@ jobs:
         timeout_minutes: 30
         retry_on: error
         max_attempts: 3
-        command: ./hack/test-upgrade.sh ${{ matrix.oldver }} ${{ github.sha }}
+        command: ./hack/test-upgrade.sh ${{ matrix.oldver }} ${{ github.sha }} template://default
     - if: always()
       uses: ./.github/actions/upload_failure_logs_if_exists
 
