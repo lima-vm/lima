@@ -153,7 +153,7 @@ jobs:
   integration:
     name: Integration tests
     # on macOS 12, the default vmType is QEMU
-    runs-on: macos-12
+    runs-on: macos-12  # Do not upgrade until GitHub removes macos-12
     timeout-minutes: 120
     steps:
     - uses: actions/checkout@v4
@@ -320,7 +320,7 @@ jobs:
 
   vmnet:
     name: "VMNet test"
-    runs-on: macos-12
+    runs-on: macos-14-large
     timeout-minutes: 120
     steps:
     - uses: actions/checkout@v4
@@ -370,7 +370,7 @@ jobs:
 
   upgrade:
     name: "Upgrade test"
-    runs-on: macos-12
+    runs-on: macos-14-large
     timeout-minutes: 120
     strategy:
       matrix:
@@ -400,8 +400,8 @@ jobs:
 
   vz:
     name: "vz"
-    # on macOS 13, the default vmType is VZ
-    runs-on: macos-13
+    # on macOS >= 13, the default vmType is VZ
+    runs-on: macos-14-large
     timeout-minutes: 120
     strategy:
       fail-fast: false

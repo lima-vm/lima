@@ -16,7 +16,7 @@ env:
 jobs:
   artifacts-darwin:
     name: Artifacts Darwin
-    runs-on: macos-12
+    runs-on: macos-12  # The oldest available version
     timeout-minutes: 20
     steps:
     - name: "Show xcode and SDK version"
