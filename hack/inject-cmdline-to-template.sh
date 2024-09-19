@@ -36,12 +36,17 @@ readonly yq_filter="
 parsed=$(yq eval "${yq_filter}" "${template}")
 
 # 3. get the image location
+function check_location() {
+	local location=$1 http_code
+	http_code=$(curl -sIL -w "%{http_code}" "${location}" -o /dev/null)
+	[[ ${http_code} -eq 200 ]]
+}
 while IFS= read -r line; do arr+=("${line}"); done <<<"${parsed}"
 readonly locations=("${arr[@]}")
 for ((i = 0; i < ${#locations[@]}; i++)); do
 	[[ ${locations[i]} != "null" ]] || continue
-	http_code=$(curl -sIL -w "%{http_code}" "${locations[i]}" -o /dev/null)
-	if [[ ${http_code} -eq 200 ]]; then
+	# shellcheck disable=SC2310
+	if check_location "${locations[i]}"; then
 		location=${locations[i]}
 		index=${i}
 		break
@@ -78,14 +83,18 @@ initrd_digest=$(awk "/${initrd_basename}/{print \"sha256:\"\$1}" <<<"${sha256sum
 initrd_location="${location_dirname}/${initrd_basename}"
 
 # 6. inject the kernel and initrd location, digest, and cmdline to the template
-yq -i eval "
-    [(.images.[] | select(.arch == \"${arch}\") | path)].[${index}] + \"kernel\" as \$path|
-    setpath(\$path; { \"location\": \"${kernel_location}\", \"digest\": \"${kernel_digest}\", \"cmdline\": \"${cmdline}\" })
-" "${template}"
-yq -i eval "
-    [(.images.[] | select(.arch == \"${arch}\") | path)].[${index}] + \"initrd\" as \$path|
-    setpath(\$path ; { \"location\": \"${initrd_location}\", \"digest\": \"${initrd_digest}\" })
-" "${template}"
+function inject_to() {
+	# shellcheck disable=SC2034
+	local template=$1 arch=$2 index=$3 key=$4 location=$5 digest=$6 cmdline=${7:-} fields=() IFS=,
+	# shellcheck disable=SC2310
+	check_location "${location}" || return 0
+	for field_name in location digest cmdline; do
+		[[ -z ${!field_name} ]] || fields+=("\"${field_name}\": \"${!field_name}\"")
+	done
+	yq -i -I 2 eval "setpath([(.images[] | select(.arch == \"${arch}\") | path)].[${index}] + \"${key}\"; { ${fields[*]}})" "${template}"
+}
+inject_to "${template}" "${arch}" "${index}" "kernel" "${kernel_location}" "${kernel_digest}" "${cmdline}"
+inject_to "${template}" "${arch}" "${index}" "initrd" "${initrd_location}" "${initrd_digest}"
 
 # 7. output kernel_location, kernel_digest, cmdline, initrd_location, initrd_digest
 readonly outputs=(kernel_location kernel_digest cmdline initrd_location initrd_digest)

@@ -203,12 +203,7 @@ func createVM(driver *driver.BaseDriver) (*vz.VirtualMachine, error) {
 }
 
 func createInitialConfig(driver *driver.BaseDriver) (*vz.VirtualMachineConfiguration, error) {
-	efiVariableStore, err := getEFI(driver)
-	if err != nil {
-		return nil, err
-	}
-
-	bootLoader, err := vz.NewEFIBootLoader(vz.WithEFIVariableStore(efiVariableStore))
+	bootLoader, err := bootLoader(driver)
 	if err != nil {
 		return nil, err
 	}
@@ -684,6 +679,47 @@ func getMachineIdentifier(driver *driver.BaseDriver) (*vz.GenericMachineIdentifi
 		return machineIdentifier, nil
 	}
 	return vz.NewGenericMachineIdentifierWithDataPath(identifier)
+}
+
+func bootLoader(driver *driver.BaseDriver) (vz.BootLoader, error) {
+	linuxBootLoder, err := linuxBootLoader(driver)
+	if linuxBootLoder != nil {
+		return linuxBootLoder, nil
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return nil, err
+	}
+
+	efiVariableStore, err := getEFI(driver)
+	if err != nil {
+		return nil, err
+	}
+	logrus.Debugf("Using EFI Boot Loader")
+	return vz.NewEFIBootLoader(vz.WithEFIVariableStore(efiVariableStore))
+}
+
+func linuxBootLoader(driver *driver.BaseDriver) (*vz.LinuxBootLoader, error) {
+	kernel := filepath.Join(driver.Instance.Dir, filenames.Kernel)
+	kernelCmdline := filepath.Join(driver.Instance.Dir, filenames.KernelCmdline)
+	initrd := filepath.Join(driver.Instance.Dir, filenames.Initrd)
+	if _, err := os.Stat(kernel); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			logrus.Debugf("Kernel file %q not found", kernel)
+		} else {
+			logrus.WithError(err).Debugf("Error while checking kernel file %q", kernel)
+		}
+		return nil, err
+	}
+	var opt []vz.LinuxBootLoaderOption
+	if b, err := os.ReadFile(kernelCmdline); err == nil {
+		logrus.Debugf("Using kernel command line %q", string(b))
+		opt = append(opt, vz.WithCommandLine(string(b)))
+	}
+	if _, err := os.Stat(initrd); err == nil {
+		logrus.Debugf("Using initrd %q", initrd)
+		opt = append(opt, vz.WithInitrd(initrd))
+	}
+	logrus.Debugf("Using Linux Boot Loader with kernel %q", kernel)
+	return vz.NewLinuxBootLoader(kernel, opt...)
 }
 
 func getEFI(driver *driver.BaseDriver) (*vz.EFIVariableStore, error) {

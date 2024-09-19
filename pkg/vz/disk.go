@@ -23,6 +23,9 @@ func EnsureDisk(ctx context.Context, driver *driver.BaseDriver) error {
 	}
 
 	baseDisk := filepath.Join(driver.Instance.Dir, filenames.BaseDisk)
+	kernel := filepath.Join(driver.Instance.Dir, filenames.Kernel)
+	kernelCmdline := filepath.Join(driver.Instance.Dir, filenames.KernelCmdline)
+	initrd := filepath.Join(driver.Instance.Dir, filenames.Initrd)
 	if _, err := os.Stat(baseDisk); errors.Is(err, os.ErrNotExist) {
 		var ensuredBaseDisk bool
 		errs := make([]error, len(driver.Yaml.Images))
@@ -30,6 +33,25 @@ func EnsureDisk(ctx context.Context, driver *driver.BaseDriver) error {
 			if _, err := fileutils.DownloadFile(ctx, baseDisk, f.File, true, "the image", *driver.Yaml.Arch); err != nil {
 				errs[i] = err
 				continue
+			}
+			if f.Kernel != nil {
+				// ensure decompress kernel because vz expects it to be decompressed
+				if _, err := fileutils.DownloadFile(ctx, kernel, f.Kernel.File, true, "the kernel", *driver.Yaml.Arch); err != nil {
+					errs[i] = err
+					continue
+				}
+				if f.Kernel.Cmdline != "" {
+					if err := os.WriteFile(kernelCmdline, []byte(f.Kernel.Cmdline), 0o644); err != nil {
+						errs[i] = err
+						continue
+					}
+				}
+			}
+			if f.Initrd != nil {
+				if _, err := fileutils.DownloadFile(ctx, initrd, *f.Initrd, false, "the initrd", *driver.Yaml.Arch); err != nil {
+					errs[i] = err
+					continue
+				}
 			}
 			ensuredBaseDisk = true
 			break
