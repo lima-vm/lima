@@ -32,6 +32,22 @@ func Get(ctx context.Context, c *http.Client, url string) (*http.Response, error
 	return resp, nil
 }
 
+func Head(ctx context.Context, c *http.Client, url string) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, "HEAD", url, http.NoBody)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := c.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	if err := Successful(resp); err != nil {
+		resp.Body.Close()
+		return nil, err
+	}
+	return resp, nil
+}
+
 func Post(ctx context.Context, c *http.Client, url string, body io.Reader) (*http.Response, error) {
 	req, err := http.NewRequestWithContext(ctx, "POST", url, body)
 	if err != nil {
