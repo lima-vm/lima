@@ -6,6 +6,25 @@ import (
 	"gotest.tools/v3/assert"
 )
 
+func TestValidateContent(t *testing.T) {
+	content := `
+# comment
+foo: bar
+`
+	err := ValidateContent([]byte(content))
+	assert.NilError(t, err)
+}
+
+func TestValidateContentError(t *testing.T) {
+	content := `
+- foo: bar
+  foo
+  bar
+`
+	err := ValidateContent([]byte(content))
+	assert.ErrorContains(t, err, "could not find expected")
+}
+
 func TestEvaluateExpressionSimple(t *testing.T) {
 	expression := `.cpus = 2 | .memory = "2GiB"`
 	content := `

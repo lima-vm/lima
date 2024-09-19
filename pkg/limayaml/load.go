@@ -9,8 +9,8 @@ import (
 	"github.com/goccy/go-yaml"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/store/filenames"
+	"github.com/lima-vm/lima/pkg/yqutil"
 	"github.com/sirupsen/logrus"
-	yamlv3 "gopkg.in/yaml.v3"
 )
 
 func unmarshalDisk(dst *Disk, b []byte) error {
@@ -22,24 +22,13 @@ func unmarshalDisk(dst *Disk, b []byte) error {
 	return yaml.Unmarshal(b, dst)
 }
 
-func (d *Disk) UnmarshalYAML(value *yamlv3.Node) error {
-	var v interface{}
-	if err := value.Decode(&v); err != nil {
-		return err
-	}
-	if s, ok := v.(string); ok {
-		*d = Disk{Name: s}
-	}
-	return nil
-}
-
 func unmarshalYAML(data []byte, v interface{}, comment string) error {
 	if err := yaml.UnmarshalWithOptions(data, v, yaml.DisallowDuplicateKey(), yaml.CustomUnmarshaler[Disk](unmarshalDisk)); err != nil {
 		return fmt.Errorf("failed to unmarshal YAML (%s): %w", comment, err)
 	}
 	// the go-yaml library doesn't catch all markup errors, unfortunately
 	// make sure to get a "second opinion", using the same library as "yq"
-	if err := yamlv3.Unmarshal(data, v); err != nil {
+	if err := yqutil.ValidateContent(data); err != nil {
 		return fmt.Errorf("failed to unmarshal YAML (%s): %w", comment, err)
 	}
 	if err := yaml.UnmarshalWithOptions(data, v, yaml.Strict(), yaml.CustomUnmarshaler[Disk](unmarshalDisk)); err != nil {
