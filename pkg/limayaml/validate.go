@@ -282,8 +282,10 @@ func Validate(y *LimaYAML, warn bool) error {
 			return fmt.Errorf("field `%s.hostSocket` must be less than UNIX_PATH_MAX=%d characters, but is %d",
 				field, osutil.UnixPathMax, len(rule.HostSocket))
 		}
-		if rule.Proto != TCP {
-			return fmt.Errorf("field `%s.proto` must be %q", field, TCP)
+		switch rule.Proto {
+		case ProtoTCP, ProtoUDP, ProtoAny:
+		default:
+			return fmt.Errorf("field `%s.proto` must be %q, %q, or %q", field, ProtoTCP, ProtoUDP, ProtoAny)
 		}
 		if rule.Reverse && rule.GuestSocket == "" {
 			return fmt.Errorf("field `%s.reverse` must be %t", field, false)

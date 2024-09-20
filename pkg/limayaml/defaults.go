@@ -807,7 +807,7 @@ func executeHostTemplate(format, instDir string, param map[string]string) (bytes
 
 func FillPortForwardDefaults(rule *PortForward, instDir string, param map[string]string) {
 	if rule.Proto == "" {
-		rule.Proto = TCP
+		rule.Proto = ProtoTCP
 	}
 	if rule.GuestIP == nil {
 		if rule.GuestIPMustBeZero {

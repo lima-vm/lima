@@ -52,6 +52,11 @@ func (pf *portForwarder) forwardingAddresses(guest *api.IPPort) (hostAddr, guest
 		if rule.GuestSocket != "" {
 			continue
 		}
+		switch rule.Proto {
+		case limayaml.ProtoTCP, limayaml.ProtoAny:
+		default:
+			continue
+		}
 		if guest.Port < int32(rule.GuestPortRange[0]) || guest.Port > int32(rule.GuestPortRange[1]) {
 			continue
 		}

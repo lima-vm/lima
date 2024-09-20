@@ -356,7 +356,7 @@ networks:
 #   hostIP: "0.0.0.0" # overrides the default value "127.0.0.1"; allows privileged port forwarding
 # # default: hostPort: 443 (same as guestPort)
 # # default: guestIP: "127.0.0.1" (also matches bind addresses "0.0.0.0", "::", and "::1")
-# # default: proto: "tcp" (only valid value right now)
+# # default: proto: "tcp" (other options: "udp, "any")
 #
 # - guestPortRange: [4000, 4999]
 #   hostIP:  "0.0.0.0" # overrides the default value "127.0.0.1"
