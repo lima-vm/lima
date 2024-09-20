@@ -43,9 +43,9 @@ func New(driver *driver.BaseDriver) *LimaQemuDriver {
 }
 
 func (l *LimaQemuDriver) Validate() error {
-	if *l.Yaml.MountType == limayaml.VIRTIOFS && runtime.GOOS != "linux" {
+	if *l.InstConfig.MountType == limayaml.VIRTIOFS && runtime.GOOS != "linux" {
 		return fmt.Errorf("field `mountType` must be %q or %q for QEMU driver on non-Linux, got %q",
-			limayaml.REVSSHFS, limayaml.NINEP, *l.Yaml.MountType)
+			limayaml.REVSSHFS, limayaml.NINEP, *l.InstConfig.MountType)
 	}
 	return nil
 }
@@ -54,7 +54,7 @@ func (l *LimaQemuDriver) CreateDisk(ctx context.Context) error {
 	qCfg := Config{
 		Name:        l.Instance.Name,
 		InstanceDir: l.Instance.Dir,
-		LimaYAML:    l.Yaml,
+		LimaYAML:    l.InstConfig,
 	}
 	return EnsureDisk(ctx, qCfg)
 }
@@ -70,7 +70,7 @@ func (l *LimaQemuDriver) Start(ctx context.Context) (chan error, error) {
 	qCfg := Config{
 		Name:         l.Instance.Name,
 		InstanceDir:  l.Instance.Dir,
-		LimaYAML:     l.Yaml,
+		LimaYAML:     l.InstConfig,
 		SSHLocalPort: l.SSHLocalPort,
 	}
 	qExe, qArgs, err := Cmdline(ctx, qCfg)
@@ -79,13 +79,13 @@ func (l *LimaQemuDriver) Start(ctx context.Context) (chan error, error) {
 	}
 
 	var vhostCmds []*exec.Cmd
-	if *l.Yaml.MountType == limayaml.VIRTIOFS {
+	if *l.InstConfig.MountType == limayaml.VIRTIOFS {
 		vhostExe, err := FindVirtiofsd(qExe)
 		if err != nil {
 			return nil, err
 		}
 
-		for i := range l.Yaml.Mounts {
+		for i := range l.InstConfig.Mounts {
 			args, err := VirtiofsdCmdline(qCfg, i)
 			if err != nil {
 				return nil, err
@@ -189,8 +189,8 @@ func (l *LimaQemuDriver) Start(ctx context.Context) (chan error, error) {
 	}()
 	l.vhostCmds = vhostCmds
 	go func() {
-		if usernetIndex := limayaml.FirstUsernetIndex(l.Yaml); usernetIndex != -1 {
-			client := usernet.NewClientByName(l.Yaml.Networks[usernetIndex].Lima)
+		if usernetIndex := limayaml.FirstUsernetIndex(l.InstConfig); usernetIndex != -1 {
+			client := usernet.NewClientByName(l.InstConfig.Networks[usernetIndex].Lima)
 			err := client.ConfigureDriver(ctx, l.BaseDriver)
 			if err != nil {
 				l.qWaitCh <- err
@@ -297,8 +297,8 @@ func (l *LimaQemuDriver) killVhosts() error {
 
 func (l *LimaQemuDriver) shutdownQEMU(ctx context.Context, timeout time.Duration, qCmd *exec.Cmd, qWaitCh <-chan error) error {
 	logrus.Info("Shutting down QEMU with ACPI")
-	if usernetIndex := limayaml.FirstUsernetIndex(l.Yaml); usernetIndex != -1 {
-		client := usernet.NewClientByName(l.Yaml.Networks[usernetIndex].Lima)
+	if usernetIndex := limayaml.FirstUsernetIndex(l.InstConfig); usernetIndex != -1 {
+		client := usernet.NewClientByName(l.InstConfig.Networks[usernetIndex].Lima)
 		err := client.UnExposeSSH(l.SSHLocalPort)
 		if err != nil {
 			logrus.Warnf("Failed to remove SSH binding for port %d", l.SSHLocalPort)
@@ -348,7 +348,7 @@ func (l *LimaQemuDriver) killQEMU(_ context.Context, _ time.Duration, qCmd *exec
 	} else {
 		logrus.Info("QEMU has already exited")
 	}
-	qemuPIDPath := filepath.Join(l.Instance.Dir, filenames.PIDFile(*l.Yaml.VMType))
+	qemuPIDPath := filepath.Join(l.Instance.Dir, filenames.PIDFile(*l.InstConfig.VMType))
 	_ = os.RemoveAll(qemuPIDPath)
 	_ = l.removeVNCFiles()
 	return errors.Join(qWaitErr, l.killVhosts())
@@ -366,7 +366,7 @@ func (l *LimaQemuDriver) DeleteSnapshot(_ context.Context, tag string) error {
 	qCfg := Config{
 		Name:        l.Instance.Name,
 		InstanceDir: l.Instance.Dir,
-		LimaYAML:    l.Yaml,
+		LimaYAML:    l.InstConfig,
 	}
 	return Del(qCfg, l.Instance.Status == store.StatusRunning, tag)
 }
@@ -375,7 +375,7 @@ func (l *LimaQemuDriver) CreateSnapshot(_ context.Context, tag string) error {
 	qCfg := Config{
 		Name:        l.Instance.Name,
 		InstanceDir: l.Instance.Dir,
-		LimaYAML:    l.Yaml,
+		LimaYAML:    l.InstConfig,
 	}
 	return Save(qCfg, l.Instance.Status == store.StatusRunning, tag)
 }
@@ -384,7 +384,7 @@ func (l *LimaQemuDriver) ApplySnapshot(_ context.Context, tag string) error {
 	qCfg := Config{
 		Name:        l.Instance.Name,
 		InstanceDir: l.Instance.Dir,
-		LimaYAML:    l.Yaml,
+		LimaYAML:    l.InstConfig,
 	}
 	return Load(qCfg, l.Instance.Status == store.StatusRunning, tag)
 }
@@ -393,7 +393,7 @@ func (l *LimaQemuDriver) ListSnapshots(_ context.Context) (string, error) {
 	qCfg := Config{
 		Name:        l.Instance.Name,
 		InstanceDir: l.Instance.Dir,
-		LimaYAML:    l.Yaml,
+		LimaYAML:    l.InstConfig,
 	}
 	return List(qCfg, l.Instance.Status == store.StatusRunning)
 }

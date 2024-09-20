@@ -72,8 +72,8 @@ type Driver interface {
 }
 
 type BaseDriver struct {
-	Instance *store.Instance
-	Yaml     *limayaml.LimaYAML
+	Instance   *store.Instance
+	InstConfig *limayaml.LimaYAML
 
 	SSHLocalPort int
 	VSockPort    int

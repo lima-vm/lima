@@ -67,7 +67,7 @@ func (a *HostAgent) startInotify(ctx context.Context) error {
 }
 
 func (a *HostAgent) setupWatchers(events chan notify.EventInfo) error {
-	for _, m := range a.y.Mounts {
+	for _, m := range a.instConfig.Mounts {
 		if !*m.Writable {
 			continue
 		}
