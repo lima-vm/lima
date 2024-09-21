@@ -370,6 +370,7 @@ jobs:
 
   upgrade:
     name: "Upgrade test"
+    # The QEMU bottle URL needs to be updated when the runner is upgraded from Monterey
     runs-on: macos-12
     timeout-minutes: 120
     strategy:
@@ -387,7 +388,15 @@ jobs:
       with:
         template: https://raw.githubusercontent.com/lima-vm/lima/${{ matrix.oldver }}/examples/ubuntu-lts.yaml
     - name: Install test dependencies
-      run: brew install qemu bash coreutils
+      run: |
+        brew install bash coreutils
+        # QEMU 9.1.0 seems to break on GitHub runners, both on Monterey and Ventura
+        # We revert back to 8.2.1, which seems to work fine
+        # The SHA1 for the Monterey bottle comes from https://github.com/Homebrew/homebrew-core/blob/4c7ffca/Formula/q/qemu.rb
+        brew uninstall --ignore-dependencies --force qemu
+        curl -L -o qemu-8.2.1.monterey.bottle.tar.gz -H "Authorization: Bearer QQ==" \
+            https://ghcr.io/v2/homebrew/core/qemu/blobs/sha256:41c77f6bac3e8c1664c665fbe2b19b19ee9da57f8e1ad6697348286710cc3575
+        brew install --ignore-dependencies ./qemu-8.2.1.monterey.bottle.tar.gz
     - name: Test
       uses: nick-fields/retry@v3
       with:
