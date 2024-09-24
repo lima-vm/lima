@@ -501,7 +501,7 @@ func startAction(cmd *cobra.Command, args []string) error {
 		ctx = instance.WithWatchHostAgentTimeout(ctx, timeout)
 	}
 
-	return instance.Start(ctx, inst, launchHostAgentForeground)
+	return instance.Start(ctx, inst, "", launchHostAgentForeground)
 }
 
 func createBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {

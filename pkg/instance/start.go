@@ -117,7 +117,7 @@ func Prepare(ctx context.Context, inst *store.Instance) (*Prepared, error) {
 
 // Start starts the instance.
 // Start calls Prepare by itself, so you do not need to call Prepare manually before calling Start.
-func Start(ctx context.Context, inst *store.Instance, launchHostAgentForeground bool) error {
+func Start(ctx context.Context, inst *store.Instance, limactl string, launchHostAgentForeground bool) error {
 	haPIDPath := filepath.Join(inst.Dir, filenames.HostAgentPID)
 	if _, err := os.Stat(haPIDPath); !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("instance %q seems running (hint: remove %q if the instance is not actually running)", inst.Name, haPIDPath)
@@ -150,9 +150,11 @@ func Start(ctx context.Context, inst *store.Instance, launchHostAgentForeground 
 		return err
 	}
 
-	self, err := os.Executable()
-	if err != nil {
-		return err
+	if limactl == "" {
+		limactl, err = os.Executable()
+		if err != nil {
+			return err
+		}
 	}
 	haStdoutPath := filepath.Join(inst.Dir, filenames.HostAgentStdoutLog)
 	haStderrPath := filepath.Join(inst.Dir, filenames.HostAgentStderrLog)
@@ -188,7 +190,7 @@ func Start(ctx context.Context, inst *store.Instance, launchHostAgentForeground 
 		args = append(args, "--nerdctl-archive", prepared.NerdctlArchiveCache)
 	}
 	args = append(args, inst.Name)
-	haCmd := exec.CommandContext(ctx, self, args...)
+	haCmd := exec.CommandContext(ctx, limactl, args...)
 
 	if launchHostAgentForeground {
 		haCmd.SysProcAttr = executil.ForegroundSysProcAttr
@@ -220,7 +222,7 @@ func Start(ctx context.Context, inst *store.Instance, launchHostAgentForeground 
 				return err
 			}
 		}
-		if err := syscall.Exec(self, haCmd.Args, haCmd.Environ()); err != nil {
+		if err := syscall.Exec(limactl, haCmd.Args, haCmd.Environ()); err != nil {
 			return err
 		}
 	} else if err := haCmd.Start(); err != nil {
