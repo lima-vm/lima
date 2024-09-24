@@ -36,6 +36,7 @@ func Dir() (string, error) {
 	// self:  /usr/local/bin/limactl
 	selfDir := filepath.Dir(self)
 	selfDirDir := filepath.Dir(selfDir)
+	selfDirDirDir := filepath.Dir(selfDirDir)
 	gaCandidates := []string{
 		// candidate 0:
 		// - self:  /Applications/Lima.app/Contents/MacOS/limactl
@@ -47,6 +48,11 @@ func Dir() (string, error) {
 		// - agent: /usr/local/share/lima/lima-guestagent.Linux-x86_64
 		// - dir:   /usr/local/share/lima
 		filepath.Join(selfDirDir, "share/lima/lima-guestagent."+ostype+"-"+arch),
+		// candidate 2: lauched by `~/go/bin/dlv dap`
+		// - self: ${workspaceFolder}/cmd/limactl/__debug_bin_XXXXXX
+		// - agent: ${workspaceFolder}/_output/share/lima/lima-guestagent.Linux-x86_64
+		// - dir:  ${workspaceFolder}/_output/share/lima
+		filepath.Join(selfDirDirDir, "_output/share/lima/lima-guestagent."+ostype+"-"+arch),
 		// TODO: support custom path
 	}
 	for _, gaCandidate := range gaCandidates {
