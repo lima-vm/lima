@@ -93,7 +93,9 @@ func StopForcibly(inst *store.Instance) {
 	}
 
 	suffixesToBeRemoved := []string{".pid", ".sock", ".tmp"}
-	logrus.Infof("Removing %s under %q", inst.Dir, strings.ReplaceAll(strings.Join(suffixesToBeRemoved, " "), ".", "*."))
+	globPatterns := strings.ReplaceAll(strings.Join(suffixesToBeRemoved, " "), ".", "*.")
+	logrus.Infof("Removing %s under %q", globPatterns, inst.Dir)
+
 	fi, err := os.ReadDir(inst.Dir)
 	if err != nil {
 		logrus.Error(err)
