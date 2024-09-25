@@ -107,7 +107,11 @@ func StopForcibly(inst *store.Instance) {
 			if strings.HasSuffix(path, suffix) {
 				logrus.Infof("Removing %q", path)
 				if err := os.Remove(path); err != nil {
-					logrus.Error(err)
+					if errors.Is(err, os.ErrNotExist) {
+						logrus.Debug(err.Error())
+					} else {
+						logrus.Error(err)
+					}
 				}
 			}
 		}
