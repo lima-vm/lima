@@ -6,6 +6,12 @@ ethernets:
       macaddress: '{{$nw.MACAddress}}'
     dhcp4: true
     set-name: {{$nw.Interface}}
+    dhcp4-overrides:
+    {{- if (eq $nw.Interface $.SlirpNICName) }}
+      route-metric: 200
+    {{- else }}
+      route-metric: 100
+    {{- end }}
     {{- if and (eq $nw.Interface $.SlirpNICName) (gt (len $.DNSAddresses) 0) }}
     nameservers:
       addresses:
