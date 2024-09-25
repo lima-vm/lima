@@ -1,5 +1,7 @@
 #!/bin/bash
-# This script only works for formulas in the homebrew-core
+# This script only works for formulas in the homebrew-core.
+# It assumes the homebrew-core has been checked out into ./homebrew-core.
+# It only needs commit messages, so the checkout can be filtered with tree:0.
 
 set -eu -o pipefail
 
@@ -15,8 +17,8 @@ if ! brew tap | grep -q "^${TAP}\$"; then
 	brew tap-new "$TAP"
 fi
 
-# Get the commit id for the commit that updated this bottle
-SHA=$(gh search commits --repo homebrew/homebrew-core "${FORMULA}: update ${VERSION} bottle" --json sha --jq "last|.sha")
+# Get the latest commit id for the commit that updated this bottle
+SHA=$(git -C homebrew-core log --max-count 1 --grep "^${FORMULA}: update ${VERSION} bottle" --format="%H")
 if [[ -z $SHA ]]; then
 	echo "${FORMULA} ${VERSION} not found"
 	exit 1
