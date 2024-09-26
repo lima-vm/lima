@@ -101,9 +101,9 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 	if err != nil {
 		return nil, err
 	}
-	// y is loaded with FillDefault() already, so no need to care about nil pointers.
+	// instConf is loaded with FillDefault() already, so no need to care about nil pointers.
 
-	sshLocalPort, err := determineSSHLocalPort(instConfig, instName)
+	sshLocalPort, err := determineSSHLocalPort(*instConfig.SSH.LocalPort, instName)
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +146,7 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 	if err != nil {
 		return nil, err
 	}
-	if err = writeSSHConfigFile(inst, inst.SSHAddress, sshLocalPort, sshOpts); err != nil {
+	if err = writeSSHConfigFile(inst.Name, inst.Dir, inst.SSHAddress, sshLocalPort, sshOpts); err != nil {
 		return nil, err
 	}
 	sshConfig := &ssh.SSHConfig{
@@ -220,9 +220,9 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 	return a, nil
 }
 
-func writeSSHConfigFile(inst *store.Instance, instSSHAddress string, sshLocalPort int, sshOpts []string) error {
-	if inst.Dir == "" {
-		return fmt.Errorf("directory is unknown for the instance %q", inst.Name)
+func writeSSHConfigFile(instName, instDir, instSSHAddress string, sshLocalPort int, sshOpts []string) error {
+	if instDir == "" {
+		return fmt.Errorf("directory is unknown for the instance %q", instName)
 	}
 	var b bytes.Buffer
 	if _, err := fmt.Fprintf(&b, `# This SSH config file can be passed to 'ssh -F'.
@@ -231,35 +231,33 @@ func writeSSHConfigFile(inst *store.Instance, instSSHAddress string, sshLocalPor
 `); err != nil {
 		return err
 	}
-	if err := sshutil.Format(&b, inst.Name, sshutil.FormatConfig,
+	if err := sshutil.Format(&b, instName, sshutil.FormatConfig,
 		append(sshOpts,
 			fmt.Sprintf("Hostname=%s", instSSHAddress),
 			fmt.Sprintf("Port=%d", sshLocalPort),
 		)); err != nil {
 		return err
 	}
-	fileName := filepath.Join(inst.Dir, filenames.SSHConfig)
+	fileName := filepath.Join(instDir, filenames.SSHConfig)
 	return os.WriteFile(fileName, b.Bytes(), 0o600)
 }
 
-func determineSSHLocalPort(y *limayaml.LimaYAML, instName string) (int, error) {
-	if *y.SSH.LocalPort > 0 {
-		return *y.SSH.LocalPort, nil
+func determineSSHLocalPort(confLocalPort int, instName string) (int, error) {
+	if confLocalPort > 0 {
+		return confLocalPort, nil
 	}
-	if *y.SSH.LocalPort < 0 {
-		return 0, fmt.Errorf("invalid ssh local port %d", y.SSH.LocalPort)
+	if confLocalPort < 0 {
+		return 0, fmt.Errorf("invalid ssh local port %d", confLocalPort)
 	}
-	switch instName {
-	case "default":
+	if instName == "default" {
 		// use hard-coded value for "default" instance, for backward compatibility
 		return 60022, nil
-	default:
-		sshLocalPort, err := findFreeTCPLocalPort()
-		if err != nil {
-			return 0, fmt.Errorf("failed to find a free port, try setting `ssh.localPort` manually: %w", err)
-		}
-		return sshLocalPort, nil
 	}
+	sshLocalPort, err := findFreeTCPLocalPort()
+	if err != nil {
+		return 0, fmt.Errorf("failed to find a free port, try setting `ssh.localPort` manually: %w", err)
+	}
+	return sshLocalPort, nil
 }
 
 func findFreeTCPLocalPort() (int, error) {
