@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/containerd/containerd/identifiers"
 	"github.com/sirupsen/logrus"
 )
 
@@ -31,11 +32,6 @@ var (
 	users  map[string]User
 	groups map[string]Group
 )
-
-// regexUsername matches user and group names to be valid for `useradd`.
-// `useradd` allows names with a trailing '$', but it feels prudent to map those
-// names to the fallback user as well, so the regex does not allow them.
-var regexUsername = regexp.MustCompile("^[a-z_][a-z0-9_-]*$")
 
 // regexPath detects valid Linux path.
 var regexPath = regexp.MustCompile("^[/a-zA-Z0-9_-]+$")
@@ -111,9 +107,8 @@ func LimaUser(warn bool) (*user.User, error) {
 	cache.Do(func() {
 		cache.u, cache.err = user.Current()
 		if cache.err == nil {
-			if !regexUsername.MatchString(cache.u.Username) {
-				warning := fmt.Sprintf("local user %q is not a valid Linux username (must match %q); using %q username instead",
-					cache.u.Username, regexUsername.String(), fallbackUser)
+			if err := identifiers.Validate(cache.u.Username); err != nil {
+				warning := fmt.Sprintf("%s; using %q username instead", err.Error(), fallbackUser)
 				cache.warnings = append(cache.warnings, warning)
 				cache.u.Username = fallbackUser
 			}

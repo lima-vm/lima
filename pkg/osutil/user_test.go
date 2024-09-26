@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/containerd/containerd/identifiers"
 	"gotest.tools/v3/assert"
 )
 
@@ -14,7 +15,7 @@ func TestLimaUserWarn(t *testing.T) {
 }
 
 func validUsername(username string) bool {
-	return regexUsername.MatchString(username)
+	return identifiers.Validate(username) == nil
 }
 
 func TestLimaUsername(t *testing.T) {
