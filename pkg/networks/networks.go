@@ -9,9 +9,10 @@ type YAML struct {
 }
 
 type Paths struct {
-	SocketVMNet string `yaml:"socketVMNet"`
-	VarRun      string `yaml:"varRun"`
-	Sudoers     string `yaml:"sudoers,omitempty"`
+	SocketVMNet         string `yaml:"socketVMNet"`
+	VarRun              string `yaml:"varRun"`
+	Sudoers             string `yaml:"sudoers,omitempty"`
+	RelaxedVerification bool   `yaml:"relaxedVerification,omitempty"`
 }
 
 const (

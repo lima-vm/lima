@@ -20,14 +20,20 @@ func (config *YAML) Validate() error {
 	paths := reflect.ValueOf(&config.Paths).Elem()
 	pathsMap := make(map[string]string, paths.NumField())
 	var socketVMNetNotFound bool
+	var relaxedVerification = config.Paths.RelaxedVerification
 	for i := 0; i < paths.NumField(); i++ {
 		// extract YAML name from struct tag; strip options like "omitempty"
 		name := paths.Type().Field(i).Tag.Get("yaml")
 		if i := strings.IndexRune(name, ','); i > -1 {
 			name = name[:i]
 		}
-		path := paths.Field(i).Interface().(string)
-		pathsMap[name] = path
+		var path string
+		if path, ok := paths.Field(i).Interface().(string); ok {
+			pathsMap[name] = path
+		} else {
+			// we only validate strings from the config.Paths
+			continue
+		}
 		// varPath will be created securely, but any existing parent directories must already be secure
 		if name == "varRun" {
 			path = findBaseDirectory(path)
@@ -44,11 +50,19 @@ func (config *YAML) Validate() error {
 					continue
 				}
 			}
-			return fmt.Errorf("networks.yaml field `paths.%s` error: %w", name, err)
+			if relaxedVerification {
+				fmt.Printf("networks.yaml field `paths.%s` error: %v\n", name, err)
+			} else {
+				return fmt.Errorf("networks.yaml field `paths.%s` error: %w", name, err)
+			}
 		}
 	}
 	if socketVMNetNotFound {
-		return fmt.Errorf("networks.yaml: %q (`paths.socketVMNet`) has to be installed", pathsMap["socketVMNet"])
+		if relaxedVerification {
+			fmt.Printf("networks.yaml: %q (`paths.socketVMNet`) has to be installed\n", pathsMap["socketVMNet"])
+		} else {
+			return fmt.Errorf("networks.yaml: %q (`paths.socketVMNet`) has to be installed", pathsMap["socketVMNet"])
+		}
 	}
 	// TODO(jandubois): validate network definitions
 	return nil
@@ -126,7 +140,7 @@ func validatePath(path string, allowDaemonGroupWritable bool) error {
 		}
 	}
 	if !ownerIsAdmin {
-		return fmt.Errorf(`%s %q owner %dis not an admin`, file, path, stat.Uid)
+		return fmt.Errorf(`%s %q owner %d is not an admin`, file, path, stat.Uid)
 	}
 	if allowDaemonGroupWritable {
 		daemon, err := osutil.LookupUser("daemon")
