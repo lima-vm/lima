@@ -344,7 +344,7 @@ jobs:
       run: brew install qemu bash coreutils iperf3
     - name: Install socket_vmnet
       env:
-        SOCKET_VMNET_VERSION: v1.1.1
+        SOCKET_VMNET_VERSION: v1.1.4
       run: |
         (
           cd ~
