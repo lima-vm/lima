@@ -19,8 +19,10 @@ import (
 	"github.com/lima-vm/lima/pkg/ioutilx"
 	"github.com/lima-vm/lima/pkg/lockutil"
 	"github.com/lima-vm/lima/pkg/osutil"
+	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/store/filenames"
+	"github.com/lima-vm/lima/pkg/version"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/cpu"
 )
@@ -228,7 +230,13 @@ func SSHOpts(instDir string, useDotSSH, forwardAgent, forwardX11, forwardX11Trus
 	if len(controlSock) >= osutil.UnixPathMax {
 		return nil, fmt.Errorf("socket path %q is too long: >= UNIX_PATH_MAX=%d", controlSock, osutil.UnixPathMax)
 	}
-	u, err := osutil.LimaUser(false)
+	instName := filepath.Base(instDir)
+	inst, err := store.Inspect(instName)
+	limaVersion := version.Version
+	if err == nil {
+		limaVersion = inst.LimaVersion
+	}
+	u, err := osutil.LimaUser(false, limaVersion)
 	if err != nil {
 		return nil, err
 	}

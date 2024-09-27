@@ -25,6 +25,7 @@ import (
 	"github.com/lima-vm/lima/pkg/sshutil"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/lima-vm/lima/pkg/usrlocalsharelima"
+	"github.com/lima-vm/lima/pkg/version"
 	"github.com/sirupsen/logrus"
 )
 
@@ -115,7 +116,7 @@ func GenerateISO9660(instDir, name string, y *limayaml.LimaYAML, udpDNSLocalPort
 	if err := limayaml.Validate(y, false); err != nil {
 		return err
 	}
-	u, err := osutil.LimaUser(true)
+	u, err := osutil.LimaUser(true, version.Version)
 	if err != nil {
 		return err
 	}

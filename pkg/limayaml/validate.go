@@ -16,6 +16,7 @@ import (
 	"github.com/lima-vm/lima/pkg/localpathutil"
 	"github.com/lima-vm/lima/pkg/networks"
 	"github.com/lima-vm/lima/pkg/osutil"
+	"github.com/lima-vm/lima/pkg/version"
 	"github.com/sirupsen/logrus"
 )
 
@@ -118,7 +119,7 @@ func Validate(y *LimaYAML, warn bool) error {
 		return fmt.Errorf("field `memory` has an invalid value: %w", err)
 	}
 
-	u, err := osutil.LimaUser(false)
+	u, err := osutil.LimaUser(false, version.Version)
 	if err != nil {
 		return fmt.Errorf("internal error (not an error of YAML): %w", err)
 	}
