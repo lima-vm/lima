@@ -14,11 +14,7 @@ import (
 )
 
 func runAnsibleProvision(ctx context.Context, inst *store.Instance) error {
-	y, err := inst.LoadYAML()
-	if err != nil {
-		return err
-	}
-	for _, f := range y.Provision {
+	for _, f := range inst.Config.Provision {
 		if f.Mode == limayaml.ProvisionModeAnsible {
 			logrus.Infof("Waiting for ansible playbook %q", f.Playbook)
 			if err := runAnsiblePlaybook(ctx, inst, f.Playbook); err != nil {

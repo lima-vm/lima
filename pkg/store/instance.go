@@ -62,14 +62,6 @@ type Instance struct {
 	Param           map[string]string  `json:"param,omitempty"`
 }
 
-func (inst *Instance) LoadYAML() (*limayaml.LimaYAML, error) {
-	if inst.Dir == "" {
-		return nil, errors.New("inst.Dir is empty")
-	}
-	yamlPath := filepath.Join(inst.Dir, filenames.LimaYAML)
-	return LoadYAMLByFilePath(yamlPath)
-}
-
 // Inspect returns err only when the instance does not exist (os.ErrNotExist).
 // Other errors are returned as *Instance.Errors.
 func Inspect(instName string) (*Instance, error) {

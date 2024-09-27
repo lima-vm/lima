@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/store"
 )
 
@@ -72,8 +71,7 @@ type Driver interface {
 }
 
 type BaseDriver struct {
-	Instance   *store.Instance
-	InstConfig *limayaml.LimaYAML
+	Instance *store.Instance
 
 	SSHLocalPort int
 	VSockPort    int

@@ -78,10 +78,6 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	if inst.Status == store.StatusStopped {
 		return fmt.Errorf("instance %q is stopped, run `limactl start %s` to start the instance", instName, instName)
 	}
-	y, err := inst.LoadYAML()
-	if err != nil {
-		return err
-	}
 
 	// When workDir is explicitly set, the shell MUST have workDir as the cwd, or exit with an error.
 	//
@@ -95,7 +91,7 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	if workDir != "" {
 		changeDirCmd = fmt.Sprintf("cd %s || exit 1", shellescape.Quote(workDir))
 		// FIXME: check whether y.Mounts contains the home, not just len > 0
-	} else if len(y.Mounts) > 0 {
+	} else if len(inst.Config.Mounts) > 0 {
 		hostCurrentDir, err := os.Getwd()
 		if err == nil {
 			changeDirCmd = fmt.Sprintf("cd %s", shellescape.Quote(hostCurrentDir))
@@ -169,7 +165,12 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	sshOpts, err := sshutil.SSHOpts(inst.Dir, *y.SSH.LoadDotSSHPubKeys, *y.SSH.ForwardAgent, *y.SSH.ForwardX11, *y.SSH.ForwardX11Trusted)
+	sshOpts, err := sshutil.SSHOpts(
+		inst.Dir,
+		*inst.Config.SSH.LoadDotSSHPubKeys,
+		*inst.Config.SSH.ForwardAgent,
+		*inst.Config.SSH.ForwardX11,
+		*inst.Config.SSH.ForwardX11Trusted)
 	if err != nil {
 		return err
 	}
