@@ -22,7 +22,7 @@ func Watch(ctx context.Context, haStdoutPath, haStderrPath string, begin time.Ti
 	}
 	defer func() {
 		_ = haStdoutTail.Stop()
-		haStdoutTail.Cleanup()
+		// Do NOT call haStdoutTail.Cleanup(), it prevents the process from ever tailing the file again
 	}()
 
 	haStderrTail, err := tail.TailFile(haStderrPath,
@@ -35,7 +35,7 @@ func Watch(ctx context.Context, haStdoutPath, haStderrPath string, begin time.Ti
 	}
 	defer func() {
 		_ = haStderrTail.Stop()
-		haStderrTail.Cleanup()
+		// Do NOT call haStderrTail.Cleanup(), it prevents the process from ever tailing the file again
 	}()
 
 loop:

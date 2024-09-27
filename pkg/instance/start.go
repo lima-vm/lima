@@ -115,7 +115,18 @@ func Prepare(ctx context.Context, inst *store.Instance) (*Prepared, error) {
 	}, nil
 }
 
-// Start starts the instance.
+// Start starts the hostagent in the background, which in turn will start the instance.
+// Start will listen to hostagent events and log them to STDOUT until either the instance
+// is running, or has failed to start.
+//
+// The `limactl` argument allows the caller to specify the full path of the `limactl` executable.
+// When called from inside limactl itself it will always be the empty string which uses the name
+// of the current executable instead.
+//
+// The `launchHostAgentForeground` argument makes the hostagent run in the foreground.
+// The function will continue to listen and log hostagent events until the instance is
+// shut down again.
+//
 // Start calls Prepare by itself, so you do not need to call Prepare manually before calling Start.
 func Start(ctx context.Context, inst *store.Instance, limactl string, launchHostAgentForeground bool) error {
 	haPIDPath := filepath.Join(inst.Dir, filenames.HostAgentPID)
