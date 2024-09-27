@@ -112,10 +112,23 @@ binaries: clean \
 	documentation create-links-in-doc-dir
 
 # _output/bin
-.PHONY: limactl _output/bin/limactl$(exe) lima helpers
+.PHONY: limactl lima helpers
 limactl: _output/bin/limactl$(exe) codesign lima
 
-_output/bin/limactl$(exe):
+# returns a list of files expanded from $(1) excluding directories.
+glob_excluding_dir = $(shell bash -c -O extglob -O globstar -O nullglob 'for f in $(1); do test -d $$f || echo $$f; done')
+FILES_IN_PKG = $(call glob_excluding_dir, ./pkg/**/!(*_test.go))
+
+# returns a list of files which are dependencies for the command $(1).
+dependencis_for_cmd = go.mod $(call glob_excluding_dir, ./cmd/$(1)/**/!(*_test.go)) $(FILES_IN_PKG)
+
+# dependencies for limactl
+DEPENDENCIES_FOR_LIMACTL = $(call dependencis_for_cmd,limactl)
+ifeq ($(GOOS),darwin)
+DEPENDENCIES_FOR_LIMACTL += vz.entitlements
+endif
+
+_output/bin/limactl$(exe): $(DEPENDENCIES_FOR_LIMACTL)
 	# The hostagent must be compiled with CGO_ENABLED=1 so that net.LookupIP() in the DNS server
 	# calls the native resolver library and not the simplistic version in the Go library.
 	CGO_ENABLED=1 $(GO_BUILD) -o $@ ./cmd/limactl
@@ -163,7 +176,7 @@ native-guestagent: $(NATIVE_GUESTAGENT)
 additional-guestagents: $(ADDITIONAL_GUESTAGENTS)
 %-guestagent:
 	@[ "$(findstring $(*),$(GUESTAGENT_ARCHS))" == "$(*)" ] && make _output/share/lima/lima-guestagent.Linux-$*
-_output/share/lima/lima-guestagent.Linux-%: | _output/share/lima
+_output/share/lima/lima-guestagent.Linux-%: $(call dependencis_for_cmd,lima-guestagent) | _output/share/lima
 	GOOS=linux $(GUESTAGENT_ARCH_ENVS_$*) CGO_ENABLED=0 $(GO_BUILD) -o $@ ./cmd/lima-guestagent
 	chmod 644 $@
 ifeq ($(CONFIG_GUESTAGENT_COMPRESS),y)
