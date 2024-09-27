@@ -7,7 +7,9 @@ import (
 )
 
 type LimaYAML struct {
+	MinimumLimaVersion *string       `yaml:"minimumLimaVersion,omitempty" json:"minimumLimaVersion,omitempty"`
 	VMType             *VMType       `yaml:"vmType,omitempty" json:"vmType,omitempty"`
+	VMOpts             VMOpts        `yaml:"vmOpts,omitempty" json:"vmOpts,omitempty"`
 	OS                 *OS           `yaml:"os,omitempty" json:"os,omitempty"`
 	Arch               *Arch         `yaml:"arch,omitempty" json:"arch,omitempty"`
 	Images             []Image       `yaml:"images" json:"images"` // REQUIRED
@@ -71,6 +73,14 @@ const (
 	VZ   VMType = "vz"
 	WSL2 VMType = "wsl2"
 )
+
+type VMOpts struct {
+	QEMU QEMUOpts `yaml:"qemu,omitempty" json:"qemu,omitempty"`
+}
+
+type QEMUOpts struct {
+	MinimumVersion *string `yaml:"minimumVersion,omitempty" json:"minimumVersion,omitempty"`
+}
 
 type Rosetta struct {
 	Enabled *bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`

@@ -496,6 +496,9 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 		if version.LessThan(*semver.New(MinimumQemuVersion)) {
 			logrus.Fatalf("QEMU %v is too old, %v or later required", version, MinimumQemuVersion)
 		}
+		if y.VMOpts.QEMU.MinimumVersion != nil && version.LessThan(*semver.New(*y.VMOpts.QEMU.MinimumVersion)) {
+			logrus.Fatalf("QEMU %v is too old, template requires %q or later", version, *y.VMOpts.QEMU.MinimumVersion)
+		}
 		if runtime.GOOS == "darwin" && runtime.GOARCH == "arm64" && version.Equal(*semver.New("8.2.0")) {
 			logrus.Fatal("QEMU 8.2.0 is no longer supported on ARM Mac due to <https://gitlab.com/qemu-project/qemu/-/issues/1990>. " +
 				"Please upgrade QEMU to v8.2.1 (or downgrade to v8.1.x).")
