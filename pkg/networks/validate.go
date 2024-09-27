@@ -20,7 +20,7 @@ func (config *YAML) Validate() error {
 	paths := reflect.ValueOf(&config.Paths).Elem()
 	pathsMap := make(map[string]string, paths.NumField())
 	var socketVMNetNotFound bool
-	var relaxedVerification = config.Paths.RelaxedVerification
+	relaxedVerification := config.Paths.RelaxedVerification
 	for i := 0; i < paths.NumField(); i++ {
 		// extract YAML name from struct tag; strip options like "omitempty"
 		name := paths.Type().Field(i).Tag.Get("yaml")
