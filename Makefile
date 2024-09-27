@@ -43,7 +43,8 @@ PACKAGE := github.com/lima-vm/lima
 VERSION=$(shell git describe --match 'v[0-9]*' --dirty='.m' --always --tags)
 VERSION_TRIMMED := $(VERSION:v%=%)
 
-GO_BUILD := $(GO) build -ldflags="-s -w -X $(PACKAGE)/pkg/version.Version=$(VERSION)" -tags "$(GO_BUILDTAGS)"
+LDFLAGS := -ldflags="-s -w -X $(PACKAGE)/pkg/version.Version=$(VERSION)"
+GO_BUILD := $(GO) build $(LDFLAGS) -tags "$(GO_BUILDTAGS)"
 
 .NOTPARALLEL:
 
@@ -121,6 +122,34 @@ FILES_IN_PKG = $(call glob_excluding_dir, ./pkg/**/!(*_test.go))
 
 # returns a list of files which are dependencies for the command $(1).
 dependencis_for_cmd = go.mod $(call glob_excluding_dir, ./cmd/$(1)/**/!(*_test.go)) $(FILES_IN_PKG)
+
+# returns GOVERSION, CGO*, GO*, and -ldflags build variables from the output of `go version -m $(1)`.
+# When CGO_* variables are not set, they are not included in the output.
+# Because the CGO_* variables are not set means that those values are default values,
+# it can be assumed that those values are same if the GOVERSION is same.
+extract_build_vars = $(shell \
+	($(GO) version -m $(1) 2>&- || echo $(1):) | \
+	awk 'FNR==1{print "GOVERSION="$$2}$$2~/^(CGO|GO|-ldflags)[^=]*=[^ ]+/{sub("^.*"$$2,$$2); print $$0}' \
+)
+
+# a list of build variables that the limactl binary was built with.
+limactl_build_vars = $(call extract_build_vars,_output/bin/limactl$(exe))
+
+# a list of keys of build variables that are used in limactl_build_vars.
+keys_in_limactl_build_vars = $(shell for i in $(limactl_build_vars); do echo $${i%%=*}; done)
+
+# a list of build variables that current Go build uses.
+current_go_build_vars = $(shell \
+	CGO_ENABLED=1 $(GO) env $(keys_in_limactl_build_vars) | \
+	awk '/ /{print "\""$$0"\""; next}{print}' | \
+	for k in $(keys_in_limactl_build_vars); do read -r v && echo "$$k=$${v}"; done | \
+	sed 's$$-ldflags=$$$(LDFLAGS)$$' \
+)
+
+# force build limactl if the build variables in the limactl binary is different from the current GO build variables.
+ifneq ($(filter-out $(current_go_build_vars),$(limactl_build_vars)),)
+.PHONY: _output/bin/limactl$(exe)
+endif
 
 # dependencies for limactl
 DEPENDENCIES_FOR_LIMACTL = $(call dependencis_for_cmd,limactl)
