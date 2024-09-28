@@ -1119,7 +1119,7 @@ func getFirmware(qemuExe string, arch limayaml.Arch) (string, error) {
 		// Fedora package "edk2-ovmf"
 		candidates = append(candidates, "/usr/share/edk2/ovmf/OVMF_CODE.fd")
 		// openSUSE package "qemu-ovmf-x86_64"
-		candidates = append(candidates, "/usr/share/qemu/ovmf-x86_64-code.bin")
+		candidates = append(candidates, "/usr/share/qemu/ovmf-x86_64.bin")
 		// Archlinux package "edk2-ovmf"
 		candidates = append(candidates, "/usr/share/edk2-ovmf/x64/OVMF_CODE.fd")
 	case limayaml.AARCH64:
