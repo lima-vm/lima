@@ -97,22 +97,17 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 		return nil, err
 	}
 
-	instConfig, err := inst.LoadYAML()
+	// inst.Config is loaded with FillDefault() already, so no need to care about nil pointers.
+	sshLocalPort, err := determineSSHLocalPort(*inst.Config.SSH.LocalPort, instName)
 	if err != nil {
 		return nil, err
 	}
-	// instConf is loaded with FillDefault() already, so no need to care about nil pointers.
-
-	sshLocalPort, err := determineSSHLocalPort(*instConfig.SSH.LocalPort, instName)
-	if err != nil {
-		return nil, err
-	}
-	if *instConfig.VMType == limayaml.WSL2 {
+	if *inst.Config.VMType == limayaml.WSL2 {
 		sshLocalPort = inst.SSHLocalPort
 	}
 
 	var udpDNSLocalPort, tcpDNSLocalPort int
-	if *instConfig.HostResolver.Enabled {
+	if *inst.Config.HostResolver.Enabled {
 		udpDNSLocalPort, err = findFreeUDPLocalPort()
 		if err != nil {
 			return nil, err
@@ -125,24 +120,29 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 
 	vSockPort := 0
 	virtioPort := ""
-	if *instConfig.VMType == limayaml.VZ {
+	if *inst.Config.VMType == limayaml.VZ {
 		vSockPort = 2222
-	} else if *instConfig.VMType == limayaml.WSL2 {
+	} else if *inst.Config.VMType == limayaml.WSL2 {
 		port, err := getFreeVSockPort()
 		if err != nil {
 			logrus.WithError(err).Error("failed to get free VSock port")
 		}
 		vSockPort = port
-	} else if *instConfig.VMType == limayaml.QEMU {
+	} else if *inst.Config.VMType == limayaml.QEMU {
 		// virtserialport doesn't seem to work reliably: https://github.com/lima-vm/lima/issues/2064
 		virtioPort = "" // filenames.VirtioPort
 	}
 
-	if err := cidata.GenerateISO9660(inst.Dir, instName, instConfig, udpDNSLocalPort, tcpDNSLocalPort, o.nerdctlArchive, vSockPort, virtioPort); err != nil {
+	if err := cidata.GenerateISO9660(inst.Dir, instName, inst.Config, udpDNSLocalPort, tcpDNSLocalPort, o.nerdctlArchive, vSockPort, virtioPort); err != nil {
 		return nil, err
 	}
 
-	sshOpts, err := sshutil.SSHOpts(inst.Dir, *instConfig.SSH.LoadDotSSHPubKeys, *instConfig.SSH.ForwardAgent, *instConfig.SSH.ForwardX11, *instConfig.SSH.ForwardX11Trusted)
+	sshOpts, err := sshutil.SSHOpts(
+		inst.Dir,
+		*inst.Config.SSH.LoadDotSSHPubKeys,
+		*inst.Config.SSH.ForwardAgent,
+		*inst.Config.SSH.ForwardX11,
+		*inst.Config.SSH.ForwardX11Trusted)
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +155,7 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 
 	ignoreTCP := false
 	ignoreUDP := false
-	for _, rule := range instConfig.PortForwards {
+	for _, rule := range inst.Config.PortForwards {
 		if rule.Ignore && rule.GuestPortRange[0] == 1 && rule.GuestPortRange[1] == 65535 {
 			switch rule.Proto {
 			case limayaml.ProtoTCP:
@@ -173,14 +173,14 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 			break
 		}
 	}
-	rules := make([]limayaml.PortForward, 0, 3+len(instConfig.PortForwards))
+	rules := make([]limayaml.PortForward, 0, 3+len(inst.Config.PortForwards))
 	// Block ports 22 and sshLocalPort on all IPs
 	for _, port := range []int{sshGuestPort, sshLocalPort} {
 		rule := limayaml.PortForward{GuestIP: net.IPv4zero, GuestPort: port, Ignore: true}
 		limayaml.FillPortForwardDefaults(&rule, inst.Dir, inst.Param)
 		rules = append(rules, rule)
 	}
-	rules = append(rules, instConfig.PortForwards...)
+	rules = append(rules, inst.Config.PortForwards...)
 	// Default forwards for all non-privileged ports from "127.0.0.1" and "::1"
 	rule := limayaml.PortForward{}
 	limayaml.FillPortForwardDefaults(&rule, inst.Dir, inst.Param)
@@ -193,14 +193,13 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 
 	limaDriver := driverutil.CreateTargetDriverInstance(&driver.BaseDriver{
 		Instance:     inst,
-		InstConfig:   instConfig,
 		SSHLocalPort: sshLocalPort,
 		VSockPort:    vSockPort,
 		VirtioPort:   virtioPort,
 	})
 
 	a := &HostAgent{
-		instConfig:        instConfig,
+		instConfig:        inst.Config,
 		sshLocalPort:      sshLocalPort,
 		udpDNSLocalPort:   udpDNSLocalPort,
 		tcpDNSLocalPort:   tcpDNSLocalPort,

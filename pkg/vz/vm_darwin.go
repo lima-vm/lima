@@ -90,7 +90,7 @@ func startVM(ctx context.Context, driver *driver.BaseDriver) (*virtualMachineWra
 			case newState := <-machine.StateChangedNotify():
 				switch newState {
 				case vz.VirtualMachineStateRunning:
-					pidFile := filepath.Join(driver.Instance.Dir, filenames.PIDFile(*driver.InstConfig.VMType))
+					pidFile := filepath.Join(driver.Instance.Dir, filenames.PIDFile(*driver.Instance.Config.VMType))
 					if _, err := os.Stat(pidFile); !errors.Is(err, os.ErrNotExist) {
 						logrus.Errorf("pidfile %q already exists", pidFile)
 						errCh <- err
@@ -124,8 +124,8 @@ func startVM(ctx context.Context, driver *driver.BaseDriver) (*virtualMachineWra
 }
 
 func startUsernet(ctx context.Context, driver *driver.BaseDriver) (*usernet.Client, error) {
-	if firstUsernetIndex := limayaml.FirstUsernetIndex(driver.InstConfig); firstUsernetIndex != -1 {
-		nwName := driver.InstConfig.Networks[firstUsernetIndex].Lima
+	if firstUsernetIndex := limayaml.FirstUsernetIndex(driver.Instance.Config); firstUsernetIndex != -1 {
+		nwName := driver.Instance.Config.Networks[firstUsernetIndex].Lima
 		return usernet.NewClientByName(nwName), nil
 	}
 	// Start a in-process gvisor-tap-vsock
@@ -208,14 +208,14 @@ func createInitialConfig(driver *driver.BaseDriver) (*vz.VirtualMachineConfigura
 		return nil, err
 	}
 
-	bytes, err := units.RAMInBytes(*driver.InstConfig.Memory)
+	bytes, err := units.RAMInBytes(*driver.Instance.Config.Memory)
 	if err != nil {
 		return nil, err
 	}
 
 	vmConfig, err := vz.NewVirtualMachineConfiguration(
 		bootLoader,
-		uint(*driver.InstConfig.CPUs),
+		uint(*driver.Instance.Config.CPUs),
 		uint64(bytes),
 	)
 	if err != nil {
@@ -280,7 +280,7 @@ func attachNetwork(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfigu
 	var configurations []*vz.VirtioNetworkDeviceConfiguration
 
 	// Configure default usernetwork with limayaml.MACAddress(driver.Instance.Dir) for eth0 interface
-	firstUsernetIndex := limayaml.FirstUsernetIndex(driver.InstConfig)
+	firstUsernetIndex := limayaml.FirstUsernetIndex(driver.Instance.Config)
 	if firstUsernetIndex == -1 {
 		// slirp network using gvisor netstack
 		vzSock, err := usernet.SockWithDirectory(driver.Instance.Dir, "", usernet.FDSock)
@@ -297,7 +297,7 @@ func attachNetwork(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfigu
 		}
 		configurations = append(configurations, networkConfig)
 	} else {
-		vzSock, err := usernet.Sock(driver.InstConfig.Networks[firstUsernetIndex].Lima, usernet.FDSock)
+		vzSock, err := usernet.Sock(driver.Instance.Config.Networks[firstUsernetIndex].Lima, usernet.FDSock)
 		if err != nil {
 			return err
 		}
@@ -445,7 +445,7 @@ func attachDisks(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfigura
 	}
 	configurations = append(configurations, diffDisk)
 
-	for _, d := range driver.InstConfig.AdditionalDisks {
+	for _, d := range driver.Instance.Config.AdditionalDisks {
 		diskName := d.Name
 		disk, err := store.InspectDisk(diskName)
 		if err != nil {
@@ -495,7 +495,7 @@ func attachDisks(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfigura
 }
 
 func attachDisplay(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfiguration) error {
-	switch *driver.InstConfig.Video.Display {
+	switch *driver.Instance.Config.Video.Display {
 	case "vz", "default":
 		graphicsDeviceConfiguration, err := vz.NewVirtioGraphicsDeviceConfiguration()
 		if err != nil {
@@ -514,14 +514,14 @@ func attachDisplay(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfigu
 	case "none":
 		return nil
 	default:
-		return fmt.Errorf("unexpected video display %q", *driver.InstConfig.Video.Display)
+		return fmt.Errorf("unexpected video display %q", *driver.Instance.Config.Video.Display)
 	}
 }
 
 func attachFolderMounts(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfiguration) error {
 	var mounts []vz.DirectorySharingDeviceConfiguration
-	if *driver.InstConfig.MountType == limayaml.VIRTIOFS {
-		for i, mount := range driver.InstConfig.Mounts {
+	if *driver.Instance.Config.MountType == limayaml.VIRTIOFS {
+		for i, mount := range driver.Instance.Config.Mounts {
 			expandedPath, err := localpathutil.Expand(mount.Location)
 			if err != nil {
 				return err
@@ -552,7 +552,7 @@ func attachFolderMounts(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineCo
 		}
 	}
 
-	if *driver.InstConfig.Rosetta.Enabled {
+	if *driver.Instance.Config.Rosetta.Enabled {
 		logrus.Info("Setting up Rosetta share")
 		directorySharingDeviceConfig, err := createRosettaDirectoryShareConfiguration()
 		if err != nil {
@@ -569,7 +569,7 @@ func attachFolderMounts(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineCo
 }
 
 func attachAudio(driver *driver.BaseDriver, config *vz.VirtualMachineConfiguration) error {
-	switch *driver.InstConfig.Audio.Device {
+	switch *driver.Instance.Config.Audio.Device {
 	case "vz", "default":
 		outputStream, err := vz.NewVirtioSoundDeviceHostOutputStreamConfiguration()
 		if err != nil {
@@ -587,7 +587,7 @@ func attachAudio(driver *driver.BaseDriver, config *vz.VirtualMachineConfigurati
 	case "", "none":
 		return nil
 	default:
-		return fmt.Errorf("unexpected audio device %q", *driver.InstConfig.Audio.Device)
+		return fmt.Errorf("unexpected audio device %q", *driver.Instance.Config.Audio.Device)
 	}
 }
 

@@ -32,14 +32,8 @@ func Delete(ctx context.Context, inst *store.Instance, force bool) error {
 }
 
 func unregister(ctx context.Context, inst *store.Instance) error {
-	instConfig, err := inst.LoadYAML()
-	if err != nil {
-		return err
-	}
-
 	limaDriver := driverutil.CreateTargetDriverInstance(&driver.BaseDriver{
-		Instance:   inst,
-		InstConfig: instConfig,
+		Instance: inst,
 	})
 
 	return limaDriver.Unregister(ctx)

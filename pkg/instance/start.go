@@ -78,14 +78,8 @@ type Prepared struct {
 
 // Prepare ensures the disk, the nerdctl archive, etc.
 func Prepare(ctx context.Context, inst *store.Instance) (*Prepared, error) {
-	instConfig, err := inst.LoadYAML()
-	if err != nil {
-		return nil, err
-	}
-
 	limaDriver := driverutil.CreateTargetDriverInstance(&driver.BaseDriver{
-		Instance:   inst,
-		InstConfig: instConfig,
+		Instance: inst,
 	})
 
 	if err := limaDriver.Validate(); err != nil {
@@ -98,13 +92,13 @@ func Prepare(ctx context.Context, inst *store.Instance) (*Prepared, error) {
 
 	// Check if the instance has been created (the base disk already exists)
 	baseDisk := filepath.Join(inst.Dir, filenames.BaseDisk)
-	_, err = os.Stat(baseDisk)
+	_, err := os.Stat(baseDisk)
 	created := err == nil
 
 	if err := limaDriver.CreateDisk(ctx); err != nil {
 		return nil, err
 	}
-	nerdctlArchiveCache, err := ensureNerdctlArchiveCache(ctx, instConfig, created)
+	nerdctlArchiveCache, err := ensureNerdctlArchiveCache(ctx, inst.Config, created)
 	if err != nil {
 		return nil, err
 	}
