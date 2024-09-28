@@ -54,16 +54,42 @@ all: binaries manpages
 help:
 	@echo  '  binaries        - Build all binaries'
 	@echo  '  manpages        - Build manual pages'
+	@echo
+	@echo  "  Use 'make help-targets' to see additional targets."
+
+.PHONY: help-targets
+help-targets:
+	@echo  '# Targets can be categorized by their location.'
+	@echo
+	@echo  'Targets for files in _output/bin/:'
+	@echo  '- limactl                   : Build limactl, and lima'
+	@echo  '- lima                      : Copy lima, and lima.bat'
+	@echo  '- helpers                   : Copy nerdctl.lima, apptainer.lima, docker.lima, podman.lima, and kubectl.lima'
+	@echo
+	@echo  'Targets for files in _output/share/lima/:'
+	@echo  '- guestagents               : Build guestagents for archs enabled by CONFIG_GUESTAGENT_ARCHS_*'
+	@echo  '- native-guestagent         : Build guestagent for native arch'
+	@echo  '- additional-guestagents    : Build guestagents for archs other than native arch'
+	@echo  '- <arch>-guestagent         : Build guestagent for <arch>: $(sort $(GUESTAGENT_ARCHS))'
+	@echo
+	@echo  'Targets for files in _output/share/lima/templates/:'
+	@echo  '- templates                 : Copy templates'
+	@echo  '- template_experimentals    : Copy experimental templates to experimental/'
+	@echo  '- default_template          : Copy default.yaml template'
+	@echo  '- create-examples-link      : Create a symlink at ../examples pointing to templates'
+	@echo
+	@echo  'Targets for files in _output/share/doc/lima:'
+	@echo  '- documentation             : Copy documentation to _output/share/doc/lima'
+	@echo  '- create-links-in-doc-dir   : Create some symlinks pointing ../../lima/templates'
+	@echo
+	@echo  '# e.g. to install limactl, helpers, native guestagent, and templates:'
+	@echo  '#   make native install'
 
 exe: _output/bin/limactl$(exe)
 
-.PHONY: minimal
-minimal: clean \
-	_output/bin/limactl$(exe) \
-	codesign \
-	_output/share/lima/lima-guestagent.Linux-$(shell uname -m | sed -e s/arm64/aarch64/)
-	mkdir -p _output/share/lima/templates
-	cp -aL examples/default.yaml _output/share/lima/templates/
+.PHONY: minimal native
+minimal: clean limactl native-guestagent default_template
+native: clean limactl helpers native-guestagent templates
 
 config: Kconfig
 	$(KCONFIG_CONF) $<
@@ -79,122 +105,137 @@ menuconfig: Kconfig
 
 -include .config
 
-HELPERS = \
-	_output/bin/nerdctl.lima \
-	_output/bin/apptainer.lima \
-	_output/bin/docker.lima \
-	_output/bin/podman.lima \
-	_output/bin/kubectl.lima
-
-ifeq ($(CONFIG_GUESTAGENT_COMPRESS),y)
-gz = .gz
-endif
-
-ifeq ($(CONFIG_GUESTAGENT_OS_LINUX),y)
-ifeq ($(CONFIG_GUESTAGENT_ARCH_X8664),y)
-GUESTAGENT += \
-	_output/share/lima/lima-guestagent.Linux-x86_64$(gz)
-endif
-ifeq ($(CONFIG_GUESTAGENT_ARCH_AARCH64),y)
-GUESTAGENT += \
-	_output/share/lima/lima-guestagent.Linux-aarch64$(gz)
-endif
-ifeq ($(CONFIG_GUESTAGENT_ARCH_ARMV7L),y)
-GUESTAGENT += \
-	_output/share/lima/lima-guestagent.Linux-armv7l$(gz)
-endif
-ifeq ($(CONFIG_GUESTAGENT_ARCH_RISCV64),y)
-GUESTAGENT += \
-	_output/share/lima/lima-guestagent.Linux-riscv64$(gz)
-endif
-endif
-
 .PHONY: binaries
 binaries: clean \
-	_output/bin/lima \
-	_output/bin/lima$(bat) \
-	_output/bin/limactl$(exe) \
-	codesign \
-	$(HELPERS) \
-	$(GUESTAGENT)
-	cp -aL examples _output/share/lima/templates
-ifneq ($(GOOS),windows)
-	ln -sf templates _output/share/lima/examples
-else
-	cp -aL examples _output/share/lima/examples
-endif
-	mkdir -p _output/share/doc/lima
-	cp -aL *.md LICENSE _output/share/doc/lima
-	echo "Moved to https://github.com/lima-vm/.github/blob/main/SECURITY.md" >_output/share/doc/lima/SECURITY.md
-ifneq ($(GOOS),windows)
-	ln -sf ../../lima/templates _output/share/doc/lima/templates
-	ln -sf templates _output/share/doc/lima/examples
-else
-	cp -aL examples _output/share/doc/lima/examples
-	cp -aL examples _output/share/doc/lima/templates
-endif
-	echo $(VERSION) > _output/share/doc/lima/VERSION
+	limactl helpers guestagents \
+	templates template_experimentals create-examples-link \
+	documentation create-links-in-doc-dir
 
-.PHONY: _output/bin/lima
-_output/bin/lima:
-	mkdir -p _output/bin
-	cp -a ./cmd/lima $@
+# _output/bin
+.PHONY: limactl _output/bin/limactl$(exe) lima helpers
+limactl: _output/bin/limactl$(exe) codesign lima
 
-.PHONY: _output/bin/lima.bat
-_output/bin/lima.bat:
-	mkdir -p _output/bin
-	cp -a ./cmd/lima.bat $@
-
-.PHONY: _output/bin/nerdctl.lima
-_output/bin/nerdctl.lima:
-	mkdir -p _output/bin
-	cp -a ./cmd/nerdctl.lima $@
-
-_output/bin/apptainer.lima: ./cmd/apptainer.lima
-	@mkdir -p _output/bin
-	cp -a $^ $@
-
-_output/bin/docker.lima: ./cmd/docker.lima
-	@mkdir -p _output/bin
-	cp -a $^ $@
-
-_output/bin/podman.lima: ./cmd/podman.lima
-	@mkdir -p _output/bin
-	cp -a $^ $@
-
-_output/bin/kubectl.lima: ./cmd/kubectl.lima
-	@mkdir -p _output/bin
-	cp -a $^ $@
-
-.PHONY: _output/bin/limactl$(exe)
 _output/bin/limactl$(exe):
 	# The hostagent must be compiled with CGO_ENABLED=1 so that net.LookupIP() in the DNS server
 	# calls the native resolver library and not the simplistic version in the Go library.
 	CGO_ENABLED=1 $(GO_BUILD) -o $@ ./cmd/limactl
 
-.PHONY: _output/share/lima/lima-guestagent.Linux-x86_64
-_output/share/lima/lima-guestagent.Linux-x86_64:
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 $(GO_BUILD) -o $@ ./cmd/lima-guestagent
+LIMA_CMDS = lima lima$(bat)
+lima: $(addprefix _output/bin/,$(LIMA_CMDS))
+
+HELPER_CMDS = nerdctl.lima apptainer.lima docker.lima podman.lima kubectl.lima
+helpers: $(addprefix _output/bin/,$(HELPER_CMDS))
+
+_output/bin/%: ./cmd/% | _output/bin
+	cp -a $< $@
+
+MKDIR_TARGETS += _output/bin
+
+# _output/share/lima/lima-guestagent
+# How to add architecure specific guestagent:
+# 1. Add the architecture to GUESTAGENT_ARCHS
+# 2. Add GUESTAGENT_ARCH_ENVS_<arch> to set GOARCH and other necessary environment variables
+ifeq ($(CONFIG_GUESTAGENT_OS_LINUX),y)
+GUESTAGENT_ARCHS = aarch64 armv7l riscv64 x86_64
+NATIVE_GUESTAGENT_ARCH = $(shell uname -m | sed -e s/arm64/aarch64/)
+ADDITIONAL_GUESTAGENT_ARCHS = $(filter-out $(NATIVE_GUESTAGENT_ARCH),$(GUESTAGENT_ARCHS))
+
+# CONFIG_GUESTAGENT_ARCH_<arch> naming convention: uppercase, remove '_'
+config_guestagent_arch_name = CONFIG_GUESTAGENT_ARCH_$(shell echo $(1)|tr -d _|tr a-z A-Z)
+
+# guestagent_path returns the path to the guestagent binary for the given architecture,
+# or an empty string if the CONFIG_GUESTAGENT_ARCH_<arch> is not set.
+guestagent_path = $(if $(findstring y,$($(call config_guestagent_arch_name,$(1)))),_output/share/lima/lima-guestagent.Linux-$(1))
+
+# apply CONFIG_GUESTAGENT_ARCH_*
+GUESTAGENTS = $(foreach arch,$(GUESTAGENT_ARCHS),$(call guestagent_path,$(arch)))
+GUESTAGENT_ARCH_ENVS_aarch64 = GOARCH=arm64
+GUESTAGENT_ARCH_ENVS_armv7l = GOARCH=arm GOARM=7
+GUESTAGENT_ARCH_ENVS_riscv64 = GOARCH=riscv64
+GUESTAGENT_ARCH_ENVS_x86_64 = GOARCH=amd64
+NATIVE_GUESTAGENT=_output/share/lima/lima-guestagent.Linux-$(NATIVE_GUESTAGENT_ARCH)
+ADDITIONAL_GUESTAGENTS=$(addprefix _output/share/lima/lima-guestagent.Linux-,$(ADDITIONAL_GUESTAGENT_ARCHS))
+endif
+
+.PHONY: guestagents native-guestagent additional-guestagents
+guestagents: $(GUESTAGENTS)
+native-guestagent: $(NATIVE_GUESTAGENT)
+additional-guestagents: $(ADDITIONAL_GUESTAGENTS)
+%-guestagent:
+	@[ "$(findstring $(*),$(GUESTAGENT_ARCHS))" == "$(*)" ] && make _output/share/lima/lima-guestagent.Linux-$*
+_output/share/lima/lima-guestagent.Linux-%: | _output/share/lima
+	GOOS=linux $(GUESTAGENT_ARCH_ENVS_$*) CGO_ENABLED=0 $(GO_BUILD) -o $@ ./cmd/lima-guestagent
 	chmod 644 $@
+ifeq ($(CONFIG_GUESTAGENT_COMPRESS),y)
+	gzip $@
+endif
 
-.PHONY: _output/share/lima/lima-guestagent.Linux-aarch64
-_output/share/lima/lima-guestagent.Linux-aarch64:
-	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 $(GO_BUILD) -o $@ ./cmd/lima-guestagent
-	chmod 644 $@
+MKDIR_TARGETS += _output/share/lima
 
-.PHONY: _output/share/lima/lima-guestagent.Linux-armv7l
-_output/share/lima/lima-guestagent.Linux-armv7l:
-	GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 $(GO_BUILD) -o $@ ./cmd/lima-guestagent
-	chmod 644 $@
+# _output/share/lima/templates
+TEMPLATES=$(addprefix _output/share/lima/templates/,$(filter-out experimental,$(notdir $(wildcard examples/*))))
+TEMPLATE_EXPERIMENTALS=$(addprefix _output/share/lima/templates/experimental/,$(notdir $(wildcard examples/experimental/*)))
 
-.PHONY: _output/share/lima/lima-guestagent.Linux-riscv64
-_output/share/lima/lima-guestagent.Linux-riscv64:
-	GOOS=linux GOARCH=riscv64 CGO_ENABLED=0 $(GO_BUILD) -o $@ ./cmd/lima-guestagent
-	chmod 644 $@
+.PHONY: default_template templates template_experimentals
+default_template: _output/share/lima/templates/default.yaml
+templates: $(TEMPLATES)
+template_experimentals: $(TEMPLATE_EXPERIMENTALS)
 
-_output/share/lima/lima-guestagent.%.gz: _output/share/lima/lima-guestagent.%
-	gzip $<
+$(TEMPLATES): | _output/share/lima/templates
+$(TEMPLATE_EXPERIMENTALS): | _output/share/lima/templates/experimental
+MKDIR_TARGETS += _output/share/lima/templates _output/share/lima/templates/experimental
 
+_output/share/lima/templates/%: examples/%
+	cp -aL $< $@
+
+
+# _output/share/lima/examples
+.PHONY: create-examples-link
+create-examples-link: _output/share/lima/examples
+_output/share/lima/examples: default_template # depends on minimal template target
+ifneq ($(GOOS),windows)
+	ln -sf templates $@
+else
+# copy from templates builded in build process
+	cp -aL _output/share/lima/templates $@
+endif
+
+# _output/share/doc/lima
+DOCUMENTATION=$(addprefix _output/share/doc/lima/,$(wildcard *.md) LICENSE SECURITY.md VERSION)
+
+.PHONY: documentation
+documentation: $(DOCUMENTATION)
+
+_output/share/doc/lima/SECURITY.md: | _output/share/doc/lima
+	echo "Moved to https://github.com/lima-vm/.github/blob/main/SECURITY.md" > $@
+
+_output/share/doc/lima/VERSION: | _output/share/doc/lima
+	echo $(VERSION) > $@
+
+_output/share/doc/lima/%: % | _output/share/doc/lima
+	cp -aL $< $@
+
+MKDIR_TARGETS += _output/share/doc/lima
+
+
+.PHONY: create-links-in-doc-dir
+create-links-in-doc-dir: _output/share/doc/lima/templates _output/share/doc/lima/examples
+_output/share/doc/lima/templates: default_template # depends on minimal template target
+ifneq ($(GOOS),windows)
+	ln -sf ../../lima/templates $@
+else
+# copy from templates builded in build process
+	cp -aL _output/share/lima/templates $@
+endif
+_output/share/doc/lima/examples: default_template # depends on minimal template target
+ifneq ($(GOOS),windows)
+	ln -sf templates $@
+else
+# copy from templates builded in build process
+	cp -aL _output/share/lima/templates $@
+endif
+
+# _output/share/man/man1
 .PHONY: manpages
 manpages: _output/bin/limactl$(exe)
 	@mkdir -p _output/share/man/man1
@@ -285,16 +326,14 @@ artifact-windows-x86_64: ENVS=GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gc
 artifact-windows-x86_64: _artifacts/lima-$(VERSION_TRIMMED)-Windows-x86_64.tar.gz
 	cd _output && $(ZIP) -r ../_artifacts/lima-$(VERSION_TRIMMED)-Windows-x86_64.zip *
 
-_artifacts/lima-%.tar.gz: mkdir-artifacts
+_artifacts/lima-%.tar.gz: | _artifacts
 	$(ENVS) make clean binaries
 	$(TAR) -C _output/ -czvf $@ ./
 
-mkdir-artifacts:
-	mkdir -p _artifacts
+MKDIR_TARGETS += _artifacts
 
 .PHONY: artifacts-misc
-artifacts-misc:
-	mkdir -p _artifacts
+artifacts-misc: | _artifacts
 	go mod vendor
 	$(TAR) -czf _artifacts/lima-$(VERSION_TRIMMED)-go-mod-vendor.tar.gz go.mod go.sum vendor
 
@@ -303,3 +342,8 @@ codesign:
 ifeq ($(GOOS),darwin)
 	codesign --entitlements vz.entitlements -s - ./_output/bin/limactl
 endif
+
+# This target must be placed after any changes to the `MKDIR_TARGETS` variable.
+# It seems that variable expansion in Makefile targets is not done recursively.
+$(MKDIR_TARGETS):
+	mkdir -p $@
