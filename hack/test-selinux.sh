@@ -20,8 +20,14 @@ NAME="$1"
 ## so keeping the label as nfs_t fits right. Package container-selinux by
 ## default adds rules for nfs_t context which allows container workloads to work as well.
 ## https://github.com/lima-vm/lima/pull/1965
+##
+## With integration[https://github.com/lima-vm/lima/pull/2474] with systemd-binfmt,
+## the existing "nfs_t" selinux label for Rosetta is causing issues while registering it.
+## This behaviour needs to be fixed by setting the label as "bin_t"
+## https://github.com/lima-vm/lima/pull/2630
 ##########################################################################################
-expected="context=system_u:object_r:nfs_t:s0"
+INFO "Testing secontext is set for rosetta"
+expected="context=system_u:object_r:bin_t:s0"
 #Skip Rosetta checks for x86 GHA mac runners
 if [[ "$(uname)" == "Darwin" && "$(arch)" == "arm64" ]]; then
 	INFO "Testing secontext is set for rosetta mounts"
@@ -33,6 +39,7 @@ if [[ "$(uname)" == "Darwin" && "$(arch)" == "arm64" ]]; then
 	fi
 fi
 INFO "Testing secontext is set for bind mounts"
+expected="context=system_u:object_r:nfs_t:s0"
 INFO "Checking in mounts"
 got=$(limactl shell "$NAME" mount | grep "$HOME" | awk '{print $6}')
 INFO "secontext ${HOME}: expected=${expected}, got=${got}"
