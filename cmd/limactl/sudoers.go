@@ -46,12 +46,20 @@ func sudoersAction(cmd *cobra.Command, args []string) error {
 	if runtime.GOOS != "darwin" {
 		return errors.New("sudoers command is only supported on macOS right now")
 	}
+	config, err := networks.Config()
+	if err != nil {
+		return err
+	}
+	// Make sure the current network configuration is secure
+	if err := config.Validate(); err != nil {
+		return err
+	}
 	check, err := cmd.Flags().GetBool("check")
 	if err != nil {
 		return err
 	}
 	if check {
-		return verifySudoAccess(args)
+		return verifySudoAccess(config, args)
 	}
 	switch len(args) {
 	case 0:
@@ -69,14 +77,7 @@ func sudoersAction(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func verifySudoAccess(args []string) error {
-	config, err := networks.Config()
-	if err != nil {
-		return err
-	}
-	if err := config.Validate(); err != nil {
-		return err
-	}
+func verifySudoAccess(config networks.YAML, args []string) error {
 	var file string
 	switch len(args) {
 	case 0:
