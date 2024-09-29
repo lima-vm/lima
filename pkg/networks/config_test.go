@@ -8,11 +8,10 @@ import (
 )
 
 func TestFillDefault(t *testing.T) {
-	nwYaml := YAML{}
-	newYaml, err := fillDefaults(nwYaml)
+	cfg, err := fillDefaults(Config{})
 	assert.NilError(t, err)
 
-	userNet := newYaml.Networks[ModeUserV2]
+	userNet := cfg.Networks[ModeUserV2]
 	assert.Equal(t, userNet.Mode, ModeUserV2)
 	assert.Equal(t, userNet.Interface, "")
 	assert.DeepEqual(t, userNet.NetMask, net.ParseIP("255.255.255.0"))
@@ -21,13 +20,13 @@ func TestFillDefault(t *testing.T) {
 }
 
 func TestFillDefaultWithV2(t *testing.T) {
-	nwYaml := YAML{Networks: map[string]Network{
+	cfg := Config{Networks: map[string]Network{
 		"user-v2": {Mode: ModeUserV2},
 	}}
-	newYaml, err := fillDefaults(nwYaml)
+	cfg, err := fillDefaults(cfg)
 	assert.NilError(t, err)
 
-	userNet := newYaml.Networks[ModeUserV2]
+	userNet := cfg.Networks[ModeUserV2]
 	assert.Equal(t, userNet.Mode, ModeUserV2)
 	assert.Equal(t, userNet.Interface, "")
 	assert.DeepEqual(t, userNet.NetMask, net.ParseIP("255.255.255.0"))
@@ -36,13 +35,13 @@ func TestFillDefaultWithV2(t *testing.T) {
 }
 
 func TestFillDefaultWithV2AndGateway(t *testing.T) {
-	nwYaml := YAML{Networks: map[string]Network{
+	cfg := Config{Networks: map[string]Network{
 		"user-v2": {Mode: ModeUserV2, Gateway: net.ParseIP("192.168.105.1")},
 	}}
-	newYaml, err := fillDefaults(nwYaml)
+	cfg, err := fillDefaults(cfg)
 	assert.NilError(t, err)
 
-	userNet := newYaml.Networks[ModeUserV2]
+	userNet := cfg.Networks[ModeUserV2]
 	assert.Equal(t, userNet.Mode, ModeUserV2)
 	assert.Equal(t, userNet.Interface, "")
 	assert.DeepEqual(t, userNet.NetMask, net.IP{})

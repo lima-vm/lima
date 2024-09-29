@@ -726,7 +726,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 
 	for i, nw := range y.Networks {
 		if nw.Lima != "" {
-			nwCfg, err := networks.Config()
+			nwCfg, err := networks.LoadConfig()
 			if err != nil {
 				return "", nil, err
 			}
@@ -956,48 +956,48 @@ func FindVirtiofsd(qemuExe string) (string, error) {
 		candidates = append(candidates, filepath.Join("/usr", relativePath))
 	}
 
-	for _, vhostConfigsDir := range candidates {
-		logrus.Debugf("Checking vhost directory %s", vhostConfigsDir)
+	for _, vhostCfgsDir := range candidates {
+		logrus.Debugf("Checking vhost directory %s", vhostCfgsDir)
 
-		configEntries, err := os.ReadDir(vhostConfigsDir)
+		cfgEntries, err := os.ReadDir(vhostCfgsDir)
 		if err != nil {
 			logrus.Debugf("Failed to list vhost directory: %v", err)
 			continue
 		}
 
-		for _, configEntry := range configEntries {
-			logrus.Debugf("Checking vhost config %s", configEntry.Name())
-			if !strings.HasSuffix(configEntry.Name(), ".json") {
+		for _, cfgEntry := range cfgEntries {
+			logrus.Debugf("Checking vhost vhostCfg %s", cfgEntry.Name())
+			if !strings.HasSuffix(cfgEntry.Name(), ".json") {
 				continue
 			}
 
-			var config vhostUserBackend
-			contents, err := os.ReadFile(filepath.Join(vhostConfigsDir, configEntry.Name()))
+			var vhostCfg vhostUserBackend
+			contents, err := os.ReadFile(filepath.Join(vhostCfgsDir, cfgEntry.Name()))
 			if err == nil {
-				err = json.Unmarshal(contents, &config)
+				err = json.Unmarshal(contents, &vhostCfg)
 			}
 
 			if err != nil {
-				logrus.Warnf("Failed to load vhost-user config %s: %v", configEntry.Name(), err)
+				logrus.Warnf("Failed to load vhost-user config %s: %v", cfgEntry.Name(), err)
 				continue
 			}
-			logrus.Debugf("%v", config)
+			logrus.Debugf("%v", vhostCfg)
 
-			if config.BackendType != "fs" {
+			if vhostCfg.BackendType != "fs" {
 				continue
 			}
 
 			// Only rust virtiofsd supports --version, so use that to make sure this isn't
 			// QEMU's virtiofsd, which requires running as root.
-			cmd := exec.Command(config.Binary, "--version")
+			cmd := exec.Command(vhostCfg.Binary, "--version")
 			output, err := cmd.CombinedOutput()
 			if err != nil {
 				logrus.Warnf("Failed to run %s --version (is this QEMU virtiofsd?): %s: %s",
-					config.Binary, err, output)
+					vhostCfg.Binary, err, output)
 				continue
 			}
 
-			return config.Binary, nil
+			return vhostCfg.Binary, nil
 		}
 	}
 

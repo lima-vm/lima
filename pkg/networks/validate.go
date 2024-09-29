@@ -15,9 +15,9 @@ import (
 	"github.com/lima-vm/lima/pkg/osutil"
 )
 
-func (config *YAML) Validate() error {
+func (c *Config) Validate() error {
 	// validate all paths.* values
-	paths := reflect.ValueOf(&config.Paths).Elem()
+	paths := reflect.ValueOf(&c.Paths).Elem()
 	pathsMap := make(map[string]string, paths.NumField())
 	var socketVMNetNotFound bool
 	for i := 0; i < paths.NumField(); i++ {

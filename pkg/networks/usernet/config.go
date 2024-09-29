@@ -52,15 +52,15 @@ func PIDFile(name string) (string, error) {
 
 // SubnetCIDR returns a subnet in form of net.IPNet for the given network name.
 func SubnetCIDR(name string) (*net.IPNet, error) {
-	config, err := networks.Config()
+	cfg, err := networks.LoadConfig()
 	if err != nil {
 		return nil, err
 	}
-	err = config.Check(name)
+	err = cfg.Check(name)
 	if err != nil {
 		return nil, err
 	}
-	_, ipNet, err := netmaskToCidr(config.Networks[name].Gateway, config.Networks[name].NetMask)
+	_, ipNet, err := netmaskToCidr(cfg.Networks[name].Gateway, cfg.Networks[name].NetMask)
 	if err != nil {
 		return nil, err
 	}
@@ -69,15 +69,15 @@ func SubnetCIDR(name string) (*net.IPNet, error) {
 
 // Subnet returns a subnet net.IP for the given network name.
 func Subnet(name string) (net.IP, error) {
-	config, err := networks.Config()
+	cfg, err := networks.LoadConfig()
 	if err != nil {
 		return nil, err
 	}
-	err = config.Check(name)
+	err = cfg.Check(name)
 	if err != nil {
 		return nil, err
 	}
-	_, ipNet, err := netmaskToCidr(config.Networks[name].Gateway, config.Networks[name].NetMask)
+	_, ipNet, err := netmaskToCidr(cfg.Networks[name].Gateway, cfg.Networks[name].NetMask)
 	if err != nil {
 		return nil, err
 	}

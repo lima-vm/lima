@@ -324,7 +324,7 @@ func attachNetwork(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfigu
 			}
 			configurations = append(configurations, networkConfig)
 		} else if nw.Lima != "" {
-			nwCfg, err := networks.Config()
+			nwCfg, err := networks.LoadConfig()
 			if err != nil {
 				return err
 			}

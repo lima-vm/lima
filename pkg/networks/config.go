@@ -51,109 +51,109 @@ func defaultConfigBytes() ([]byte, error) {
 	return textutil.ExecuteTemplate(defaultConfigTemplate, args)
 }
 
-func fillDefaults(nwYaml YAML) (YAML, error) {
+func fillDefaults(cfg Config) (Config, error) {
 	usernetFound := false
-	if nwYaml.Networks == nil {
-		nwYaml.Networks = make(map[string]Network)
+	if cfg.Networks == nil {
+		cfg.Networks = make(map[string]Network)
 	}
-	for nw := range nwYaml.Networks {
-		if nwYaml.Networks[nw].Mode == ModeUserV2 && nwYaml.Networks[nw].Gateway != nil {
+	for nw := range cfg.Networks {
+		if cfg.Networks[nw].Mode == ModeUserV2 && cfg.Networks[nw].Gateway != nil {
 			usernetFound = true
 		}
 	}
 	if !usernetFound {
-		defaultConfig, err := DefaultConfig()
+		defaultCfg, err := DefaultConfig()
 		if err != nil {
-			return nwYaml, err
+			return cfg, err
 		}
-		nwYaml.Networks[ModeUserV2] = defaultConfig.Networks[ModeUserV2]
+		cfg.Networks[ModeUserV2] = defaultCfg.Networks[ModeUserV2]
 	}
-	return nwYaml, nil
+	return cfg, nil
 }
 
-func DefaultConfig() (YAML, error) {
-	var config YAML
-	defaultConfig, err := defaultConfigBytes()
+func DefaultConfig() (Config, error) {
+	var cfg Config
+	b, err := defaultConfigBytes()
 	if err != nil {
-		return config, err
+		return cfg, err
 	}
-	err = yaml.UnmarshalWithOptions(defaultConfig, &config, yaml.Strict())
+	err = yaml.UnmarshalWithOptions(b, &cfg, yaml.Strict())
 	if err != nil {
-		return config, err
+		return cfg, err
 	}
-	return config, nil
+	return cfg, nil
 }
 
 var cache struct {
 	sync.Once
-	config YAML
-	err    error
+	cfg Config
+	err error
 }
 
 func ConfigFile() (string, error) {
-	configDir, err := dirnames.LimaConfigDir()
+	cfgDir, err := dirnames.LimaConfigDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(configDir, filenames.NetworksConfig), nil
+	return filepath.Join(cfgDir, filenames.NetworksConfig), nil
 }
 
 // loadCache loads the _config/networks.yaml file into the cache.
 func loadCache() {
 	cache.Do(func() {
-		var configFile string
-		configFile, cache.err = ConfigFile()
+		var cfgFile string
+		cfgFile, cache.err = ConfigFile()
 		if cache.err != nil {
 			return
 		}
-		_, cache.err = os.Stat(configFile)
+		_, cache.err = os.Stat(cfgFile)
 		if cache.err != nil {
 			if !errors.Is(cache.err, os.ErrNotExist) {
 				return
 			}
-			configDir := filepath.Dir(configFile)
-			cache.err = os.MkdirAll(configDir, 0o755)
+			cfgDir := filepath.Dir(cfgFile)
+			cache.err = os.MkdirAll(cfgDir, 0o755)
 			if cache.err != nil {
-				cache.err = fmt.Errorf("could not create %q directory: %w", configDir, cache.err)
+				cache.err = fmt.Errorf("could not create %q directory: %w", cfgDir, cache.err)
 				return
 			}
-			var defaultConfig []byte
-			defaultConfig, cache.err = defaultConfigBytes()
+			var b []byte
+			b, cache.err = defaultConfigBytes()
 			if cache.err != nil {
 				return
 			}
-			cache.err = os.WriteFile(configFile, defaultConfig, 0o644)
+			cache.err = os.WriteFile(cfgFile, b, 0o644)
 			if cache.err != nil {
 				return
 			}
 		}
 		var b []byte
-		b, cache.err = os.ReadFile(configFile)
+		b, cache.err = os.ReadFile(cfgFile)
 		if cache.err != nil {
 			return
 		}
-		cache.err = yaml.UnmarshalWithOptions(b, &cache.config, yaml.DisallowDuplicateKey())
+		cache.err = yaml.UnmarshalWithOptions(b, &cache.cfg, yaml.DisallowDuplicateKey())
 		if cache.err != nil {
-			cache.err = fmt.Errorf("cannot parse %q: %w", configFile, cache.err)
+			cache.err = fmt.Errorf("cannot parse %q: %w", cfgFile, cache.err)
 			return
 		}
-		var strictConfig YAML
-		if strictErr := yaml.UnmarshalWithOptions(b, &strictConfig, yaml.Strict()); strictErr != nil {
-			// Allow non-existing YAML fields, as a config created with Lima < v0.22 contains `vdeSwitch` and `vdeVMNet`.
+		var strictCfg Config
+		if strictErr := yaml.UnmarshalWithOptions(b, &strictCfg, yaml.Strict()); strictErr != nil {
+			// Allow non-existing YAML fields, as a cfg created with Lima < v0.22 contains `vdeSwitch` and `vdeVMNet`.
 			// These fields were removed in Lima v0.22.
-			logrus.WithError(strictErr).Warn("Non-strict YAML is deprecated and will be unsupported in a future version of Lima: " + configFile)
+			logrus.WithError(strictErr).Warn("Non-strict YAML is deprecated and will be unsupported in a future version of Lima: " + cfgFile)
 		}
-		cache.config, cache.err = fillDefaults(cache.config)
+		cache.cfg, cache.err = fillDefaults(cache.cfg)
 		if cache.err != nil {
-			cache.err = fmt.Errorf("cannot fill default %q: %w", configFile, cache.err)
+			cache.err = fmt.Errorf("cannot fill default %q: %w", cfgFile, cache.err)
 		}
 	})
 }
 
-// Config returns the network config from the _config/networks.yaml file.
-func Config() (YAML, error) {
+// LoadConfig returns the network cfg from the _config/networks.yaml file.
+func LoadConfig() (Config, error) {
 	loadCache()
-	return cache.config, cache.err
+	return cache.cfg, cache.err
 }
 
 // Sock returns a socket_vmnet socket.
@@ -162,13 +162,13 @@ func Sock(name string) (string, error) {
 	if cache.err != nil {
 		return "", cache.err
 	}
-	if err := cache.config.Check(name); err != nil {
+	if err := cache.cfg.Check(name); err != nil {
 		return "", err
 	}
-	if cache.config.Paths.SocketVMNet == "" {
+	if cache.cfg.Paths.SocketVMNet == "" {
 		return "", errors.New("socketVMNet is not set")
 	}
-	return cache.config.Sock(name), nil
+	return cache.cfg.Sock(name), nil
 }
 
 // IsUsernet returns true if the given network name is a usernet network.
@@ -178,7 +178,7 @@ func IsUsernet(name string) bool {
 	if cache.err != nil {
 		return false
 	}
-	isUsernet, err := cache.config.Usernet(name)
+	isUsernet, err := cache.cfg.Usernet(name)
 	if err != nil {
 		return false
 	}
