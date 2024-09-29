@@ -36,9 +36,9 @@ See %s for the usage.`, networksMD),
 		RunE:    sudoersAction,
 		GroupID: advancedCommand,
 	}
-	configFile, _ := networks.ConfigFile()
+	cfgFile, _ := networks.ConfigFile()
 	sudoersCommand.Flags().Bool("check", false,
-		fmt.Sprintf("check that the sudoers file is up-to-date with %q", configFile))
+		fmt.Sprintf("check that the sudoers file is up-to-date with %q", cfgFile))
 	return sudoersCommand
 }
 
@@ -46,12 +46,12 @@ func sudoersAction(cmd *cobra.Command, args []string) error {
 	if runtime.GOOS != "darwin" {
 		return errors.New("sudoers command is only supported on macOS right now")
 	}
-	config, err := networks.Config()
+	nwCfg, err := networks.LoadConfig()
 	if err != nil {
 		return err
 	}
 	// Make sure the current network configuration is secure
-	if err := config.Validate(); err != nil {
+	if err := nwCfg.Validate(); err != nil {
 		return err
 	}
 	check, err := cmd.Flags().GetBool("check")
@@ -59,7 +59,7 @@ func sudoersAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	if check {
-		return verifySudoAccess(config, args)
+		return verifySudoAccess(nwCfg, args)
 	}
 	switch len(args) {
 	case 0:
@@ -77,21 +77,21 @@ func sudoersAction(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func verifySudoAccess(config networks.YAML, args []string) error {
+func verifySudoAccess(nwCfg networks.Config, args []string) error {
 	var file string
 	switch len(args) {
 	case 0:
-		file = config.Paths.Sudoers
+		file = nwCfg.Paths.Sudoers
 		if file == "" {
-			configFile, _ := networks.ConfigFile()
-			return fmt.Errorf("no sudoers file defined in %q", configFile)
+			cfgFile, _ := networks.ConfigFile()
+			return fmt.Errorf("no sudoers file defined in %q", cfgFile)
 		}
 	case 1:
 		file = args[0]
 	default:
 		return errors.New("can check only a single sudoers file")
 	}
-	if err := config.VerifySudoAccess(file); err != nil {
+	if err := nwCfg.VerifySudoAccess(file); err != nil {
 		return err
 	}
 	fmt.Printf("%q is up-to-date (or sudo doesn't require a password)\n", file)

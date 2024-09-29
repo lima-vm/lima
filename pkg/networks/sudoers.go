@@ -12,17 +12,17 @@ import (
 )
 
 func Sudoers() (string, error) {
-	config, err := Config()
+	cfg, err := LoadConfig()
 	if err != nil {
 		return "", err
 	}
 
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("%%%s ALL=(root:wheel) NOPASSWD:NOSETENV: %s\n", config.Group, config.MkdirCmd()))
+	sb.WriteString(fmt.Sprintf("%%%s ALL=(root:wheel) NOPASSWD:NOSETENV: %s\n", cfg.Group, cfg.MkdirCmd()))
 
 	// names must be in stable order to be able to check if sudoers file needs updating
-	names := make([]string, 0, len(config.Networks))
-	for name, nw := range config.Networks {
+	names := make([]string, 0, len(cfg.Networks))
+	for name, nw := range cfg.Networks {
 		if nw.Mode == ModeUserV2 {
 			continue // no sudo needed
 		}
@@ -34,26 +34,26 @@ func Sudoers() (string, error) {
 		sb.WriteRune('\n')
 		sb.WriteString(fmt.Sprintf("# Manage %q network daemons\n", name))
 		for _, daemon := range []string{SocketVMNet} {
-			if ok, err := config.IsDaemonInstalled(daemon); err != nil {
+			if ok, err := cfg.IsDaemonInstalled(daemon); err != nil {
 				return "", err
 			} else if !ok {
 				continue
 			}
-			user, err := config.User(daemon)
+			user, err := cfg.User(daemon)
 			if err != nil {
 				return "", err
 			}
 			sb.WriteRune('\n')
 			sb.WriteString(fmt.Sprintf("%%%s ALL=(%s:%s) NOPASSWD:NOSETENV: \\\n",
-				config.Group, user.User, user.Group))
-			sb.WriteString(fmt.Sprintf("    %s, \\\n", config.StartCmd(name, daemon)))
-			sb.WriteString(fmt.Sprintf("    %s\n", config.StopCmd(name, daemon)))
+				cfg.Group, user.User, user.Group))
+			sb.WriteString(fmt.Sprintf("    %s, \\\n", cfg.StartCmd(name, daemon)))
+			sb.WriteString(fmt.Sprintf("    %s\n", cfg.StopCmd(name, daemon)))
 		}
 	}
 	return sb.String(), nil
 }
 
-func (config *YAML) passwordLessSudo() error {
+func (c *Config) passwordLessSudo() error {
 	// Flush cached sudo password
 	cmd := exec.Command("sudo", "-k")
 	if err := cmd.Run(); err != nil {
@@ -62,12 +62,12 @@ func (config *YAML) passwordLessSudo() error {
 	// Verify that user/groups for both daemons work without a password, e.g.
 	// %admin ALL = (ALL:ALL) NOPASSWD: ALL
 	for _, daemon := range []string{SocketVMNet} {
-		if ok, err := config.IsDaemonInstalled(daemon); err != nil {
+		if ok, err := c.IsDaemonInstalled(daemon); err != nil {
 			return err
 		} else if !ok {
 			continue
 		}
-		user, err := config.User(daemon)
+		user, err := c.User(daemon)
 		if err != nil {
 			return err
 		}
@@ -79,9 +79,9 @@ func (config *YAML) passwordLessSudo() error {
 	return nil
 }
 
-func (config *YAML) VerifySudoAccess(sudoersFile string) error {
+func (c *Config) VerifySudoAccess(sudoersFile string) error {
 	if sudoersFile == "" {
-		err := config.passwordLessSudo()
+		err := c.passwordLessSudo()
 		if err == nil {
 			logrus.Debug("sudo doesn't seem to require a password")
 			return nil
@@ -95,7 +95,7 @@ func (config *YAML) VerifySudoAccess(sudoersFile string) error {
 		// Default networks.yaml specifies /etc/sudoers.d/lima file. Don't throw an error when the
 		// file doesn't exist, as long as password-less sudo still works.
 		if errors.Is(err, os.ErrNotExist) {
-			err = config.passwordLessSudo()
+			err = c.passwordLessSudo()
 			if err == nil {
 				logrus.Debugf("%q does not exist, but sudo doesn't seem to require a password", sudoersFile)
 				return nil

@@ -2,7 +2,7 @@ package networks
 
 import "net"
 
-type YAML struct {
+type Config struct {
 	Paths    Paths              `yaml:"paths"`
 	Group    string             `yaml:"group,omitempty"` // default: "everyone"
 	Networks map[string]Network `yaml:"networks"`

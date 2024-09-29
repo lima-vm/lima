@@ -364,14 +364,14 @@ func validateNetwork(y *LimaYAML) error {
 		field := fmt.Sprintf("networks[%d]", i)
 		switch {
 		case nw.Lima != "":
-			config, err := networks.Config()
+			nwCfg, err := networks.LoadConfig()
 			if err != nil {
 				return err
 			}
-			if config.Check(nw.Lima) != nil {
+			if nwCfg.Check(nw.Lima) != nil {
 				return fmt.Errorf("field `%s.lima` references network %q which is not defined in networks.yaml", field, nw.Lima)
 			}
-			usernet, err := config.Usernet(nw.Lima)
+			usernet, err := nwCfg.Usernet(nw.Lima)
 			if err != nil {
 				return err
 			}
