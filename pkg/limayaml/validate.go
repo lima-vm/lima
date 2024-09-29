@@ -12,10 +12,13 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/coreos/go-semver/semver"
 	"github.com/docker/go-units"
 	"github.com/lima-vm/lima/pkg/localpathutil"
 	"github.com/lima-vm/lima/pkg/networks"
 	"github.com/lima-vm/lima/pkg/osutil"
+	"github.com/lima-vm/lima/pkg/version"
+	"github.com/lima-vm/lima/pkg/version/versionutil"
 	"github.com/sirupsen/logrus"
 )
 
@@ -43,6 +46,23 @@ func validateFileObject(f File, fieldName string) error {
 }
 
 func Validate(y *LimaYAML, warn bool) error {
+	if y.MinimumLimaVersion != nil {
+		if _, err := versionutil.Parse(*y.MinimumLimaVersion); err != nil {
+			return fmt.Errorf("field `minimumLimaVersion` must be a semvar value, got %q: %w", *y.MinimumLimaVersion, err)
+		}
+		limaVersion, err := versionutil.Parse(version.Version)
+		if err != nil {
+			return fmt.Errorf("can't parse builtin Lima version %q: %w", version.Version, err)
+		}
+		if versionutil.GreaterThan(*y.MinimumLimaVersion, limaVersion.String()) {
+			return fmt.Errorf("template requires Lima version %q; this is only %q", *y.MinimumLimaVersion, limaVersion.String())
+		}
+	}
+	if y.VMOpts.QEMU.MinimumVersion != nil {
+		if _, err := semver.NewVersion(*y.VMOpts.QEMU.MinimumVersion); err != nil {
+			return fmt.Errorf("field `vmOpts.qemu.minimumVersion` must be a semvar value, got %q: %w", *y.VMOpts.QEMU.MinimumVersion, err)
+		}
+	}
 	switch *y.OS {
 	case LINUX:
 	default:

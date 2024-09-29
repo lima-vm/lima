@@ -5,11 +5,23 @@
 # Default values in this YAML file are specified by `null` instead of Lima's "builtin default" values,
 # so they can be overridden by the $LIMA_HOME/_config/default.yaml mechanism documented at the end of this file.
 
+# A template should specify the minimum Lima version required to parse this template correctly.
+# It should not be set if the minimum version is less than 1.0.0
+# 🟢 Builtin default: not set
+minimumLimaVersion: null
+
 # VM type: "qemu", "vz" (on macOS 13 and later), or "default".
 # The vmType can be specified only on creating the instance.
 # The vmType of existing instances cannot be changed.
 # 🟢 Builtin default: "vz" (on macOS 13.5 and later), "qemu" (on others)
 vmType: null
+
+vmOpts:
+  qemu:
+    # Minimum version of QEMU required to create an instance of this template.
+    # Will be ignored if the vmType is not "qemu"
+    # 🟢 Builtin default: not set
+    minimumVersion: null
 
 # OS: "Linux".
 # 🟢 Builtin default: "Linux"
