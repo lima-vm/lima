@@ -114,7 +114,7 @@ Make sure that the YAML field "ssh.localPort" is not used by other processes on 
 If any private key under ~/.ssh is protected with a passphrase, you need to have ssh-agent to be running.
 `,
 		})
-	if *a.instConfig.Plain {
+	if *a.instCfg.Plain {
 		return req
 	}
 	req = append(req,
@@ -134,7 +134,7 @@ it must not be created until the session reset is done.
 `,
 		})
 
-	if *a.instConfig.MountType == limayaml.REVSSHFS && len(a.instConfig.Mounts) > 0 {
+	if *a.instCfg.MountType == limayaml.REVSSHFS && len(a.instCfg.Mounts) > 0 {
 		req = append(req, requirement{
 			description: "sshfs binary to be installed",
 			script: `#!/bin/bash
@@ -167,7 +167,7 @@ fi
 
 func (a *HostAgent) optionalRequirements() []requirement {
 	req := make([]requirement, 0)
-	if (*a.instConfig.Containerd.System || *a.instConfig.Containerd.User) && !*a.instConfig.Plain {
+	if (*a.instCfg.Containerd.System || *a.instCfg.Containerd.User) && !*a.instCfg.Plain {
 		req = append(req,
 			requirement{
 				description: "systemd must be available",
@@ -189,7 +189,7 @@ are set to 'false' in the config file.
 				description: "containerd binaries to be installed",
 				script: `#!/bin/bash
 set -eux -o pipefail
-if ! timeout 30s bash -c "until command -v nerdctl || test -x ` + *a.instConfig.GuestInstallPrefix + `/bin/nerdctl; do sleep 3; done"; then
+if ! timeout 30s bash -c "until command -v nerdctl || test -x ` + *a.instCfg.GuestInstallPrefix + `/bin/nerdctl; do sleep 3; done"; then
 	echo >&2 "nerdctl is not installed yet"
 	exit 1
 fi
@@ -200,7 +200,7 @@ Also see "/var/log/cloud-init-output.log" in the guest.
 `,
 			})
 	}
-	for _, probe := range a.instConfig.Probes {
+	for _, probe := range a.instCfg.Probes {
 		if probe.Mode == limayaml.ProbeModeReadiness {
 			req = append(req, requirement{
 				description: probe.Description,

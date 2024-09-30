@@ -98,7 +98,7 @@ func Prepare(ctx context.Context, inst *store.Instance) (*Prepared, error) {
 	if err := limaDriver.CreateDisk(ctx); err != nil {
 		return nil, err
 	}
-	nerdctlArchiveCache, err := ensureNerdctlArchiveCache(ctx, inst.Config, created)
+	nerdctlArchiveCache, err := ensureNerdctlArchiveCache(ctx, inst.Cfg, created)
 	if err != nil {
 		return nil, err
 	}
@@ -307,7 +307,7 @@ func watchHostAgentEvents(ctx context.Context, inst *store.Instance, haStdoutPat
 				err = xerr
 				return true
 			}
-			if *inst.Config.Plain {
+			if *inst.Cfg.Plain {
 				logrus.Infof("READY. Run `ssh -F %q lima-%s` to open the shell.", inst.SSHConfigFile, inst.Name)
 			} else {
 				logrus.Infof("READY. Run `%s` to open the shell.", LimactlShellCmd(inst.Name))

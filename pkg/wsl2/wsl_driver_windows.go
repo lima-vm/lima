@@ -52,51 +52,51 @@ func New(driver *driver.BaseDriver) *LimaWslDriver {
 }
 
 func (l *LimaWslDriver) Validate() error {
-	if *l.Instance.Config.MountType != limayaml.WSLMount {
-		return fmt.Errorf("field `mountType` must be %q for WSL2 driver, got %q", limayaml.WSLMount, *l.Instance.Config.MountType)
+	if *l.Instance.Cfg.MountType != limayaml.WSLMount {
+		return fmt.Errorf("field `mountType` must be %q for WSL2 driver, got %q", limayaml.WSLMount, *l.Instance.Cfg.MountType)
 	}
 	// TODO: revise this list for WSL2
-	if unknown := reflectutil.UnknownNonEmptyFields(l.Instance.Config, knownYamlProperties...); len(unknown) > 0 {
-		logrus.Warnf("Ignoring: vmType %s: %+v", *l.Instance.Config.VMType, unknown)
+	if unknown := reflectutil.UnknownNonEmptyFields(l.Instance.Cfg, knownYamlProperties...); len(unknown) > 0 {
+		logrus.Warnf("Ignoring: vmType %s: %+v", *l.Instance.Cfg.VMType, unknown)
 	}
 
-	if !limayaml.IsNativeArch(*l.Instance.Config.Arch) {
-		return fmt.Errorf("unsupported arch: %q", *l.Instance.Config.Arch)
+	if !limayaml.IsNativeArch(*l.Instance.Cfg.Arch) {
+		return fmt.Errorf("unsupported arch: %q", *l.Instance.Cfg.Arch)
 	}
 
-	for k, v := range l.Instance.Config.CPUType {
+	for k, v := range l.Instance.Cfg.CPUType {
 		if v != "" {
-			logrus.Warnf("Ignoring: vmType %s: cpuType[%q]: %q", *l.Instance.Config.VMType, k, v)
+			logrus.Warnf("Ignoring: vmType %s: cpuType[%q]: %q", *l.Instance.Cfg.VMType, k, v)
 		}
 	}
 
 	// TODO: real filetype checks
 	tarFileRegex := regexp.MustCompile(`.*tar\.*`)
-	for i, image := range l.Instance.Config.Images {
+	for i, image := range l.Instance.Cfg.Images {
 		if unknown := reflectutil.UnknownNonEmptyFields(image, "File"); len(unknown) > 0 {
-			logrus.Warnf("Ignoring: vmType %s: images[%d]: %+v", *l.Instance.Config.VMType, i, unknown)
+			logrus.Warnf("Ignoring: vmType %s: images[%d]: %+v", *l.Instance.Cfg.VMType, i, unknown)
 		}
 		match := tarFileRegex.MatchString(image.Location)
-		if image.Arch == *l.Instance.Config.Arch && !match {
-			return fmt.Errorf("unsupported image type for vmType: %s, tarball root file system required: %q", *l.Instance.Config.VMType, image.Location)
+		if image.Arch == *l.Instance.Cfg.Arch && !match {
+			return fmt.Errorf("unsupported image type for vmType: %s, tarball root file system required: %q", *l.Instance.Cfg.VMType, image.Location)
 		}
 	}
 
-	for i, mount := range l.Instance.Config.Mounts {
+	for i, mount := range l.Instance.Cfg.Mounts {
 		if unknown := reflectutil.UnknownNonEmptyFields(mount); len(unknown) > 0 {
-			logrus.Warnf("Ignoring: vmType %s: mounts[%d]: %+v", *l.Instance.Config.VMType, i, unknown)
+			logrus.Warnf("Ignoring: vmType %s: mounts[%d]: %+v", *l.Instance.Cfg.VMType, i, unknown)
 		}
 	}
 
-	for i, network := range l.Instance.Config.Networks {
+	for i, network := range l.Instance.Cfg.Networks {
 		if unknown := reflectutil.UnknownNonEmptyFields(network); len(unknown) > 0 {
-			logrus.Warnf("Ignoring: vmType %s: networks[%d]: %+v", *l.Instance.Config.VMType, i, unknown)
+			logrus.Warnf("Ignoring: vmType %s: networks[%d]: %+v", *l.Instance.Cfg.VMType, i, unknown)
 		}
 	}
 
-	audioDevice := *l.Instance.Config.Audio.Device
+	audioDevice := *l.Instance.Cfg.Audio.Device
 	if audioDevice != "" {
-		logrus.Warnf("Ignoring: vmType %s: `audio.device`: %+v", *l.Instance.Config.VMType, audioDevice)
+		logrus.Warnf("Ignoring: vmType %s: `audio.device`: %+v", *l.Instance.Cfg.VMType, audioDevice)
 	}
 
 	return nil
@@ -149,7 +149,7 @@ func (l *LimaWslDriver) CanRunGUI() bool {
 }
 
 func (l *LimaWslDriver) RunGUI() error {
-	return fmt.Errorf("RunGUI is not supported for the given driver '%s' and display '%s'", "wsl", *l.Instance.Config.Video.Display)
+	return fmt.Errorf("RunGUI is not supported for the given driver '%s' and display '%s'", "wsl", *l.Instance.Cfg.Video.Display)
 }
 
 func (l *LimaWslDriver) Stop(ctx context.Context) error {

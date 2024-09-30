@@ -55,7 +55,7 @@ type Instance struct {
 	HostAgentPID    int                `json:"hostAgentPID,omitempty"`
 	DriverPID       int                `json:"driverPID,omitempty"`
 	Errors          []error            `json:"errors,omitempty"`
-	Config          *limayaml.LimaYAML `json:"config,omitempty"`
+	Cfg             *limayaml.LimaYAML `json:"config,omitempty"`
 	SSHAddress      string             `json:"sshAddress,omitempty"`
 	Protected       bool               `json:"protected"`
 	LimaVersion     string             `json:"limaVersion"`
@@ -85,7 +85,7 @@ func Inspect(instName string) (*Instance, error) {
 		inst.Errors = append(inst.Errors, err)
 		return inst, nil
 	}
-	inst.Config = y
+	inst.Cfg = y
 	inst.Arch = *y.Arch
 	inst.VMType = *y.VMType
 	inst.CPUType = y.CPUType[*y.Arch]

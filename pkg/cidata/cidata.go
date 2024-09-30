@@ -38,14 +38,14 @@ var netLookupIP = func(host string) []net.IP {
 	return ips
 }
 
-func setupEnv(instConfigEnv map[string]string, propagateProxyEnv bool, slirpGateway string) (map[string]string, error) {
+func setupEnv(instCfgEnv map[string]string, propagateProxyEnv bool, slirpGateway string) (map[string]string, error) {
 	// Start with the proxy variables from the system settings.
 	env, err := osutil.ProxySettings()
 	if err != nil {
 		return env, err
 	}
 	// env.* settings from lima.yaml override system settings without giving a warning
-	for name, value := range instConfigEnv {
+	for name, value := range instCfgEnv {
 		env[name] = value
 	}
 	// Current process environment setting override both system settings and env.*
@@ -111,8 +111,8 @@ func setupEnv(instConfigEnv map[string]string, propagateProxyEnv bool, slirpGate
 	return env, nil
 }
 
-func GenerateISO9660(instDir, name string, instConfig *limayaml.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort int, nerdctlArchive string, vsockPort int, virtioPort string) error {
-	if err := limayaml.Validate(instConfig, false); err != nil {
+func GenerateISO9660(instDir, name string, instCfg *limayaml.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort int, nerdctlArchive string, vsockPort int, virtioPort string) error {
+	if err := limayaml.Validate(instCfg, false); err != nil {
 		return err
 	}
 	u, err := osutil.LimaUser(true)
@@ -128,26 +128,26 @@ func GenerateISO9660(instDir, name string, instConfig *limayaml.LimaYAML, udpDNS
 		User:               u.Username,
 		UID:                uid,
 		Home:               fmt.Sprintf("/home/%s.linux", u.Username),
-		GuestInstallPrefix: *instConfig.GuestInstallPrefix,
-		UpgradePackages:    *instConfig.UpgradePackages,
-		Containerd:         Containerd{System: *instConfig.Containerd.System, User: *instConfig.Containerd.User},
+		GuestInstallPrefix: *instCfg.GuestInstallPrefix,
+		UpgradePackages:    *instCfg.UpgradePackages,
+		Containerd:         Containerd{System: *instCfg.Containerd.System, User: *instCfg.Containerd.User},
 		SlirpNICName:       networks.SlirpNICName,
 
-		RosettaEnabled: *instConfig.Rosetta.Enabled,
-		RosettaBinFmt:  *instConfig.Rosetta.BinFmt,
-		VMType:         *instConfig.VMType,
+		RosettaEnabled: *instCfg.Rosetta.Enabled,
+		RosettaBinFmt:  *instCfg.Rosetta.BinFmt,
+		VMType:         *instCfg.VMType,
 		VSockPort:      vsockPort,
 		VirtioPort:     virtioPort,
-		Plain:          *instConfig.Plain,
-		TimeZone:       *instConfig.TimeZone,
-		Param:          instConfig.Param,
+		Plain:          *instCfg.Plain,
+		TimeZone:       *instCfg.TimeZone,
+		Param:          instCfg.Param,
 	}
 
-	firstUsernetIndex := limayaml.FirstUsernetIndex(instConfig)
+	firstUsernetIndex := limayaml.FirstUsernetIndex(instCfg)
 	var subnet net.IP
 
 	if firstUsernetIndex != -1 {
-		usernetName := instConfig.Networks[firstUsernetIndex].Lima
+		usernetName := instCfg.Networks[firstUsernetIndex].Lima
 		subnet, err = usernet.Subnet(usernetName)
 		if err != nil {
 			return err
@@ -160,7 +160,7 @@ func GenerateISO9660(instDir, name string, instConfig *limayaml.LimaYAML, udpDNS
 			return err
 		}
 		args.SlirpGateway = usernet.GatewayIP(subnet)
-		if *instConfig.VMType == limayaml.VZ {
+		if *instCfg.VMType == limayaml.VZ {
 			args.SlirpDNS = usernet.GatewayIP(subnet)
 		} else {
 			args.SlirpDNS = usernet.DNSIP(subnet)
@@ -171,7 +171,7 @@ func GenerateISO9660(instDir, name string, instConfig *limayaml.LimaYAML, udpDNS
 	// change instance id on every boot so network config will be processed again
 	args.IID = fmt.Sprintf("iid-%d", time.Now().Unix())
 
-	pubKeys, err := sshutil.DefaultPubKeys(*instConfig.SSH.LoadDotSSHPubKeys)
+	pubKeys, err := sshutil.DefaultPubKeys(*instCfg.SSH.LoadDotSSHPubKeys)
 	if err != nil {
 		return err
 	}
@@ -183,7 +183,7 @@ func GenerateISO9660(instDir, name string, instConfig *limayaml.LimaYAML, udpDNS
 	}
 
 	var fstype string
-	switch *instConfig.MountType {
+	switch *instCfg.MountType {
 	case limayaml.REVSSHFS:
 		fstype = "sshfs"
 	case limayaml.NINEP:
@@ -195,7 +195,7 @@ func GenerateISO9660(instDir, name string, instConfig *limayaml.LimaYAML, udpDNS
 	if err != nil {
 		return err
 	}
-	for i, f := range instConfig.Mounts {
+	for i, f := range instCfg.Mounts {
 		tag := fmt.Sprintf("mount%d", i)
 		location, err := localpathutil.Expand(f.Location)
 		if err != nil {
@@ -231,7 +231,7 @@ func GenerateISO9660(instDir, name string, instConfig *limayaml.LimaYAML, udpDNS
 		}
 	}
 
-	switch *instConfig.MountType {
+	switch *instCfg.MountType {
 	case limayaml.REVSSHFS:
 		args.MountType = "reverse-sshfs"
 	case limayaml.NINEP:
@@ -240,7 +240,7 @@ func GenerateISO9660(instDir, name string, instConfig *limayaml.LimaYAML, udpDNS
 		args.MountType = "virtiofs"
 	}
 
-	for i, d := range instConfig.AdditionalDisks {
+	for i, d := range instCfg.AdditionalDisks {
 		format := true
 		if d.Format != nil {
 			format = *d.Format
@@ -259,26 +259,26 @@ func GenerateISO9660(instDir, name string, instConfig *limayaml.LimaYAML, udpDNS
 	}
 
 	args.Networks = append(args.Networks, Network{MACAddress: limayaml.MACAddress(instDir), Interface: networks.SlirpNICName})
-	for i, nw := range instConfig.Networks {
+	for i, nw := range instCfg.Networks {
 		if i == firstUsernetIndex {
 			continue
 		}
 		args.Networks = append(args.Networks, Network{MACAddress: nw.MACAddress, Interface: nw.Interface})
 	}
 
-	args.Env, err = setupEnv(instConfig.Env, *instConfig.PropagateProxyEnv, args.SlirpGateway)
+	args.Env, err = setupEnv(instCfg.Env, *instCfg.PropagateProxyEnv, args.SlirpGateway)
 	if err != nil {
 		return err
 	}
 
 	switch {
-	case len(instConfig.DNS) > 0:
-		for _, addr := range instConfig.DNS {
+	case len(instCfg.DNS) > 0:
+		for _, addr := range instCfg.DNS {
 			args.DNSAddresses = append(args.DNSAddresses, addr.String())
 		}
-	case firstUsernetIndex != -1 || *instConfig.VMType == limayaml.VZ:
+	case firstUsernetIndex != -1 || *instCfg.VMType == limayaml.VZ:
 		args.DNSAddresses = append(args.DNSAddresses, args.SlirpDNS)
-	case *instConfig.HostResolver.Enabled:
+	case *instCfg.HostResolver.Enabled:
 		args.UDPDNSLocalPort = udpDNSLocalPort
 		args.TCPDNSLocalPort = tcpDNSLocalPort
 		args.DNSAddresses = append(args.DNSAddresses, args.SlirpDNS)
@@ -289,9 +289,9 @@ func GenerateISO9660(instDir, name string, instConfig *limayaml.LimaYAML, udpDNS
 		}
 	}
 
-	args.CACerts.RemoveDefaults = instConfig.CACertificates.RemoveDefaults
+	args.CACerts.RemoveDefaults = instCfg.CACertificates.RemoveDefaults
 
-	for _, path := range instConfig.CACertificates.Files {
+	for _, path := range instCfg.CACertificates.Files {
 		expanded, err := localpathutil.Expand(path)
 		if err != nil {
 			return err
@@ -306,14 +306,14 @@ func GenerateISO9660(instDir, name string, instConfig *limayaml.LimaYAML, udpDNS
 		args.CACerts.Trusted = append(args.CACerts.Trusted, cert)
 	}
 
-	for _, content := range instConfig.CACertificates.Certs {
+	for _, content := range instCfg.CACertificates.Certs {
 		cert := getCert(content)
 		args.CACerts.Trusted = append(args.CACerts.Trusted, cert)
 	}
 
-	args.BootCmds = getBootCmds(instConfig.Provision)
+	args.BootCmds = getBootCmds(instCfg.Provision)
 
-	for _, f := range instConfig.Provision {
+	for _, f := range instCfg.Provision {
 		if f.Mode == limayaml.ProvisionModeDependency && *f.SkipDefaultDependencyResolution {
 			args.SkipDefaultDependencyResolution = true
 		}
@@ -328,7 +328,7 @@ func GenerateISO9660(instDir, name string, instConfig *limayaml.LimaYAML, udpDNS
 		return err
 	}
 
-	for i, f := range instConfig.Provision {
+	for i, f := range instCfg.Provision {
 		switch f.Mode {
 		case limayaml.ProvisionModeSystem, limayaml.ProvisionModeUser, limayaml.ProvisionModeDependency:
 			layout = append(layout, iso9660util.Entry{
@@ -344,7 +344,7 @@ func GenerateISO9660(instDir, name string, instConfig *limayaml.LimaYAML, udpDNS
 		}
 	}
 
-	guestAgentBinary, err := usrlocalsharelima.GuestAgentBinary(*instConfig.OS, *instConfig.Arch)
+	guestAgentBinary, err := usrlocalsharelima.GuestAgentBinary(*instCfg.OS, *instCfg.Arch)
 	if err != nil {
 		return err
 	}

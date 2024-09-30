@@ -91,7 +91,7 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	if workDir != "" {
 		changeDirCmd = fmt.Sprintf("cd %s || exit 1", shellescape.Quote(workDir))
 		// FIXME: check whether y.Mounts contains the home, not just len > 0
-	} else if len(inst.Config.Mounts) > 0 {
+	} else if len(inst.Cfg.Mounts) > 0 {
 		hostCurrentDir, err := os.Getwd()
 		if err == nil {
 			changeDirCmd = fmt.Sprintf("cd %s", shellescape.Quote(hostCurrentDir))
@@ -167,10 +167,10 @@ func shellAction(cmd *cobra.Command, args []string) error {
 
 	sshOpts, err := sshutil.SSHOpts(
 		inst.Dir,
-		*inst.Config.SSH.LoadDotSSHPubKeys,
-		*inst.Config.SSH.ForwardAgent,
-		*inst.Config.SSH.ForwardX11,
-		*inst.Config.SSH.ForwardX11Trusted)
+		*inst.Cfg.SSH.LoadDotSSHPubKeys,
+		*inst.Cfg.SSH.ForwardAgent,
+		*inst.Cfg.SSH.ForwardX11,
+		*inst.Cfg.SSH.ForwardX11Trusted)
 	if err != nil {
 		return err
 	}

@@ -20,7 +20,7 @@ func (a *HostAgent) setupMounts() ([]*mount, error) {
 		res  []*mount
 		errs []error
 	)
-	for _, f := range a.instConfig.Mounts {
+	for _, f := range a.instCfg.Mounts {
 		m, err := a.setupMount(f)
 		if err != nil {
 			errs = append(errs, err)

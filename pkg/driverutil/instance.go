@@ -9,7 +9,7 @@ import (
 )
 
 func CreateTargetDriverInstance(base *driver.BaseDriver) driver.Driver {
-	limaDriver := base.Instance.Config.VMType
+	limaDriver := base.Instance.Cfg.VMType
 	if *limaDriver == limayaml.VZ {
 		return vz.New(base)
 	}

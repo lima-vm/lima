@@ -90,10 +90,10 @@ func showSSHAction(cmd *cobra.Command, args []string) error {
 		filepath.Join(inst.Dir, filenames.SSHConfig), inst.Name)
 	opts, err := sshutil.SSHOpts(
 		inst.Dir,
-		*inst.Config.SSH.LoadDotSSHPubKeys,
-		*inst.Config.SSH.ForwardAgent,
-		*inst.Config.SSH.ForwardX11,
-		*inst.Config.SSH.ForwardX11Trusted)
+		*inst.Cfg.SSH.LoadDotSSHPubKeys,
+		*inst.Cfg.SSH.ForwardAgent,
+		*inst.Cfg.SSH.ForwardX11,
+		*inst.Cfg.SSH.ForwardX11Trusted)
 	if err != nil {
 		return err
 	}

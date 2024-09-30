@@ -16,12 +16,12 @@ import (
 	"github.com/lima-vm/lima/pkg/version"
 )
 
-func Create(ctx context.Context, instName string, instConfig []byte, saveBrokenYAML bool) (*store.Instance, error) {
+func Create(ctx context.Context, instName string, instCfgBytes []byte, saveBrokenYAML bool) (*store.Instance, error) {
 	if instName == "" {
 		return nil, errors.New("got empty instName")
 	}
-	if len(instConfig) == 0 {
-		return nil, errors.New("got empty instConfig")
+	if len(instCfgBytes) == 0 {
+		return nil, errors.New("got empty instCfgBytes")
 	}
 
 	instDir, err := store.InstanceDir(instName)
@@ -40,16 +40,16 @@ func Create(ctx context.Context, instName string, instConfig []byte, saveBrokenY
 	}
 	// limayaml.Load() needs to pass the store file path to limayaml.FillDefault() to calculate default MAC addresses
 	filePath := filepath.Join(instDir, filenames.LimaYAML)
-	loadedInstConfig, err := limayaml.Load(instConfig, filePath)
+	instCfg, err := limayaml.Load(instCfgBytes, filePath)
 	if err != nil {
 		return nil, err
 	}
-	if err := limayaml.Validate(loadedInstConfig, true); err != nil {
+	if err := limayaml.Validate(instCfg, true); err != nil {
 		if !saveBrokenYAML {
 			return nil, err
 		}
 		rejectedYAML := "lima.REJECTED.yaml"
-		if writeErr := os.WriteFile(rejectedYAML, instConfig, 0o644); writeErr != nil {
+		if writeErr := os.WriteFile(rejectedYAML, instCfgBytes, 0o644); writeErr != nil {
 			return nil, fmt.Errorf("the YAML is invalid, attempted to save the buffer as %q but failed: %w: %w", rejectedYAML, writeErr, err)
 		}
 		return nil, fmt.Errorf("the YAML is invalid, saved the buffer as %q: %w", rejectedYAML, err)
@@ -57,7 +57,7 @@ func Create(ctx context.Context, instName string, instConfig []byte, saveBrokenY
 	if err := os.MkdirAll(instDir, 0o700); err != nil {
 		return nil, err
 	}
-	if err := os.WriteFile(filePath, instConfig, 0o644); err != nil {
+	if err := os.WriteFile(filePath, instCfgBytes, 0o644); err != nil {
 		return nil, err
 	}
 	if err := os.WriteFile(filepath.Join(instDir, filenames.LimaVersion), []byte(version.Version), 0o444); err != nil {
