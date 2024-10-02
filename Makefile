@@ -43,8 +43,11 @@ PACKAGE := github.com/lima-vm/lima
 VERSION=$(shell git describe --match 'v[0-9]*' --dirty='.m' --always --tags)
 VERSION_TRIMMED := $(VERSION:v%=%)
 
-LDFLAGS := -ldflags="-s -w -X $(PACKAGE)/pkg/version.Version=$(VERSION)"
-GO_BUILD := $(GO) build $(LDFLAGS) -tags "$(GO_BUILDTAGS)"
+GO_BUILD_LDFLAGS := -ldflags="-s -w -X $(PACKAGE)/pkg/version.Version=$(VERSION)"
+# `go -version -m` returns -tags with comma-separated list, because space-separated list is deprecated in go1.13.
+# converting to comma-separated list is useful for comparing with the output of `go version -m`.
+GO_BUILD_FLAG_TAGS := $(addprefix -tags=,$(shell echo "$(GO_BUILDTAGS)"|tr " " "\n"|paste -sd "," -))
+GO_BUILD := $(GO) build $(GO_BUILD_LDFLAGS) $(GO_BUILD_FLAG_TAGS)
 
 .NOTPARALLEL:
 
@@ -116,6 +119,8 @@ binaries: clean \
 .PHONY: limactl lima helpers
 limactl: _output/bin/limactl$(exe) codesign lima
 
+### Listing Dependencies
+
 # returns a list of files expanded from $(1) excluding directories.
 glob_excluding_dir = $(shell bash -c -O extglob -O globstar -O nullglob 'for f in $(1); do test -d $$f || echo $$f; done')
 FILES_IN_PKG = $(call glob_excluding_dir, ./pkg/**/!(*_test.go))
@@ -123,33 +128,45 @@ FILES_IN_PKG = $(call glob_excluding_dir, ./pkg/**/!(*_test.go))
 # returns a list of files which are dependencies for the command $(1).
 dependencis_for_cmd = go.mod $(call glob_excluding_dir, ./cmd/$(1)/**/!(*_test.go)) $(FILES_IN_PKG)
 
-# returns GOVERSION, CGO*, GO*, and -ldflags build variables from the output of `go version -m $(1)`.
+### Force Building Targets
+
+# returns GOVERSION, CGO*, GO*, -ldflags, and -tags build variables from the output of `go version -m $(1)`.
 # When CGO_* variables are not set, they are not included in the output.
 # Because the CGO_* variables are not set means that those values are default values,
 # it can be assumed that those values are same if the GOVERSION is same.
+# $(1): target binary
 extract_build_vars = $(shell \
 	($(GO) version -m $(1) 2>&- || echo $(1):) | \
-	awk 'FNR==1{print "GOVERSION="$$2}$$2~/^(CGO|GO|-ldflags)[^=]*=[^ ]+/{sub("^.*"$$2,$$2); print $$0}' \
+	awk 'FNR==1{print "GOVERSION="$$2}$$2~/^(CGO|GO|-ldflags|-tags).*=.+$$/{sub("^.*"$$2,$$2); print $$0}' \
 )
 
-# a list of build variables that the limactl binary was built with.
-limactl_build_vars = $(call extract_build_vars,_output/bin/limactl$(exe))
+# a list of keys from the GO build variables to be used for calling `go env`.
+# keys starting with '-' are excluded because `go env` does not support those keys.
+# $(1): extracted build variables from the binary
+keys_in_build_vars = $(filter-out -%,$(shell for i in $(1); do echo $${i%%=*}; done))
 
-# a list of keys of build variables that are used in limactl_build_vars.
-keys_in_limactl_build_vars = $(shell for i in $(limactl_build_vars); do echo $${i%%=*}; done)
-
-# a list of build variables that current Go build uses.
-current_go_build_vars = $(shell \
-	CGO_ENABLED=1 $(GO) env $(keys_in_limactl_build_vars) | \
+# a list of GO build variables to build the target binary.
+# $(1): target binary. expecting ENVS_$(2) is set to use the environment variables for the target binary.
+# $(2): key of the GO build variable to be used for calling `go env`.
+go_build_vars = $(shell \
+	$(ENVS_$(1)) $(GO) env $(2) | \
 	awk '/ /{print "\""$$0"\""; next}{print}' | \
-	for k in $(keys_in_limactl_build_vars); do read -r v && echo "$$k=$${v}"; done | \
-	sed 's$$-ldflags=$$$(LDFLAGS)$$' \
-)
+	for k in $(2); do read -r v && echo "$$k=$${v}"; done \
+) $(GO_BUILD_LDFLAGS) $(GO_BUILD_FLAG_TAGS)
 
-# force build limactl if the build variables in the limactl binary is different from the current GO build variables.
-ifneq ($(filter-out $(current_go_build_vars),$(limactl_build_vars)),)
-.PHONY: _output/bin/limactl$(exe)
-endif
+# returns the difference between $(1) and $(2).
+diff = $(filter-out $(2),$(1))$(filter-out $(1),$(2))
+
+# returns diff between the GO build variables in the binary $(1) and the building variables.
+# $(1): target binary
+# $(2): extracted GO build variables from the binary
+compare_build_vars = $(call diff,$(call go_build_vars,$(1),$(call keys_in_build_vars,$(2))),$(2))
+
+# returns "force" if the GO build variables in the binary $(1) is different from the building variables.
+# $(1): target binary. expecting ENVS_$(1) is set to use the environment variables for the target binary.
+force_build = $(if $(call compare_build_vars,$(1),$(call extract_build_vars,$(1))),force,)
+
+force: # placeholder for force build
 
 # dependencies for limactl
 DEPENDENCIES_FOR_LIMACTL = $(call dependencis_for_cmd,limactl)
@@ -157,10 +174,13 @@ ifeq ($(GOOS),darwin)
 DEPENDENCIES_FOR_LIMACTL += vz.entitlements
 endif
 
-_output/bin/limactl$(exe): $(DEPENDENCIES_FOR_LIMACTL)
+# environment variables for limactl. this variable is used for checking force build.
+ENVS__output/bin/limactl$(exe) = CGO_ENABLED=1 $(addprefix GOOS=,$(GOOS)) $(addprefix GOARCH=,$(GOARCH))
+
+_output/bin/limactl$(exe): $(DEPENDENCIES_FOR_LIMACTL) $(call force_build,_output/bin/limactl$(exe))
 	# The hostagent must be compiled with CGO_ENABLED=1 so that net.LookupIP() in the DNS server
 	# calls the native resolver library and not the simplistic version in the Go library.
-	CGO_ENABLED=1 $(GO_BUILD) -o $@ ./cmd/limactl
+	$(ENVS_$@) $(GO_BUILD) -o $@ ./cmd/limactl
 
 LIMA_CMDS = lima lima$(bat)
 lima: $(addprefix _output/bin/,$(LIMA_CMDS))
@@ -174,9 +194,11 @@ _output/bin/%: ./cmd/% | _output/bin
 MKDIR_TARGETS += _output/bin
 
 # _output/share/lima/lima-guestagent
+LINUX_GUESTAGENT_PATH_COMMON = _output/share/lima/lima-guestagent.Linux-
+
 # How to add architecure specific guestagent:
 # 1. Add the architecture to GUESTAGENT_ARCHS
-# 2. Add GUESTAGENT_ARCH_ENVS_<arch> to set GOARCH and other necessary environment variables
+# 2. Add ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)<arch> to set GOOS, GOARCH, and other necessary environment variables
 ifeq ($(CONFIG_GUESTAGENT_OS_LINUX),y)
 GUESTAGENT_ARCHS = aarch64 armv7l riscv64 x86_64
 NATIVE_GUESTAGENT_ARCH = $(shell uname -m | sed -e s/arm64/aarch64/)
@@ -187,16 +209,12 @@ config_guestagent_arch_name = CONFIG_GUESTAGENT_ARCH_$(shell echo $(1)|tr -d _|t
 
 # guestagent_path returns the path to the guestagent binary for the given architecture,
 # or an empty string if the CONFIG_GUESTAGENT_ARCH_<arch> is not set.
-guestagent_path = $(if $(findstring y,$($(call config_guestagent_arch_name,$(1)))),_output/share/lima/lima-guestagent.Linux-$(1))
+guestagent_path = $(if $(findstring y,$($(call config_guestagent_arch_name,$(1)))),$(LINUX_GUESTAGENT_PATH_COMMON)$(1))
 
 # apply CONFIG_GUESTAGENT_ARCH_*
 GUESTAGENTS = $(foreach arch,$(GUESTAGENT_ARCHS),$(call guestagent_path,$(arch)))
-GUESTAGENT_ARCH_ENVS_aarch64 = GOARCH=arm64
-GUESTAGENT_ARCH_ENVS_armv7l = GOARCH=arm GOARM=7
-GUESTAGENT_ARCH_ENVS_riscv64 = GOARCH=riscv64
-GUESTAGENT_ARCH_ENVS_x86_64 = GOARCH=amd64
-NATIVE_GUESTAGENT=_output/share/lima/lima-guestagent.Linux-$(NATIVE_GUESTAGENT_ARCH)
-ADDITIONAL_GUESTAGENTS=$(addprefix _output/share/lima/lima-guestagent.Linux-,$(ADDITIONAL_GUESTAGENT_ARCHS))
+NATIVE_GUESTAGENT=$(LINUX_GUESTAGENT_PATH_COMMON)$(NATIVE_GUESTAGENT_ARCH)
+ADDITIONAL_GUESTAGENTS=$(addprefix $(LINUX_GUESTAGENT_PATH_COMMON),$(ADDITIONAL_GUESTAGENT_ARCHS))
 endif
 
 .PHONY: guestagents native-guestagent additional-guestagents
@@ -204,9 +222,19 @@ guestagents: $(GUESTAGENTS)
 native-guestagent: $(NATIVE_GUESTAGENT)
 additional-guestagents: $(ADDITIONAL_GUESTAGENTS)
 %-guestagent:
-	@[ "$(findstring $(*),$(GUESTAGENT_ARCHS))" == "$(*)" ] && make _output/share/lima/lima-guestagent.Linux-$*
-_output/share/lima/lima-guestagent.Linux-%: $(call dependencis_for_cmd,lima-guestagent) | _output/share/lima
-	GOOS=linux $(GUESTAGENT_ARCH_ENVS_$*) CGO_ENABLED=0 $(GO_BUILD) -o $@ ./cmd/lima-guestagent
+	@[ "$(findstring $(*),$(GUESTAGENT_ARCHS))" == "$(*)" ] && make $(LINUX_GUESTAGENT_PATH_COMMON)$*
+
+# environment variables for linx-guestagent. these variable are used for checking force build.
+ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)aarch64 = GOOS=linux GOARCH=arm64 CGO_ENABLED=0
+ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)armv7l = GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0
+ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)riscv64 = GOOS=linux GOARCH=riscv64 CGO_ENABLED=0
+ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)x86_64 = GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+$(LINUX_GUESTAGENT_PATH_COMMON)aarch64: $(call force_build,$(LINUX_GUESTAGENT_PATH_COMMON)aarch64)
+$(LINUX_GUESTAGENT_PATH_COMMON)armv7l: $(call force_build,$(LINUX_GUESTAGENT_PATH_COMMON)armv7l)
+$(LINUX_GUESTAGENT_PATH_COMMON)riscv64: $(call force_build,$(LINUX_GUESTAGENT_PATH_COMMON)riscv64)
+$(LINUX_GUESTAGENT_PATH_COMMON)x86_64: $(call force_build,$(LINUX_GUESTAGENT_PATH_COMMON)x86_64)
+$(LINUX_GUESTAGENT_PATH_COMMON)%: $(call dependencis_for_cmd,lima-guestagent) | _output/share/lima
+	$(ENVS_$@) $(GO_BUILD) -o $@ ./cmd/lima-guestagent
 	chmod 644 $@
 ifeq ($(CONFIG_GUESTAGENT_COMPRESS),y)
 	gzip $@
