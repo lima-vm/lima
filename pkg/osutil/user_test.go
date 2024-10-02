@@ -13,15 +13,11 @@ func TestLimaUserWarn(t *testing.T) {
 	assert.NilError(t, err)
 }
 
-func validUsername(username string) bool {
-	return regexUsername.MatchString(username)
-}
-
 func TestLimaUsername(t *testing.T) {
 	user, err := LimaUser(false)
 	assert.NilError(t, err)
 	// check for reasonable unix user name
-	assert.Assert(t, validUsername(user.Username), user.Username)
+	assert.Assert(t, ValidateUsername(user.Username), user.Username)
 }
 
 func TestLimaUserUid(t *testing.T) {
