@@ -39,6 +39,9 @@ func factoryResetAction(_ *cobra.Command, args []string) error {
 		}
 		return err
 	}
+	if inst.Protected {
+		return errors.New("instance is protected to prohibit accidental factory-reset (Hint: use `limactl unprotect`)")
+	}
 
 	instance.StopForcibly(inst)
 
@@ -46,9 +49,14 @@ func factoryResetAction(_ *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	retain := map[string]struct{}{
+		filenames.LimaVersion:  {},
+		filenames.Protected:    {},
+		filenames.VzIdentifier: {},
+	}
 	for _, f := range fi {
 		path := filepath.Join(inst.Dir, f.Name())
-		if !strings.HasSuffix(path, ".yaml") && !strings.HasSuffix(path, ".yml") && f.Name() != filenames.VzIdentifier {
+		if _, ok := retain[f.Name()]; !ok && !strings.HasSuffix(path, ".yaml") && !strings.HasSuffix(path, ".yml") {
 			logrus.Infof("Removing %q", path)
 			if err := os.Remove(path); err != nil {
 				logrus.Error(err)
