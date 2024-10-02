@@ -39,6 +39,9 @@ func factoryResetAction(_ *cobra.Command, args []string) error {
 		}
 		return err
 	}
+	if inst.Protected {
+		return errors.New("instance is protected to prohibit accidental factory-reset (Hint: use `limactl unprotect`)")
+	}
 
 	instance.StopForcibly(inst)
 
