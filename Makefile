@@ -50,6 +50,7 @@ GO_BUILD_FLAG_TAGS := $(addprefix -tags=,$(shell echo "$(GO_BUILDTAGS)"|tr " " "
 GO_BUILD := $(GO) build $(GO_BUILD_LDFLAGS) $(GO_BUILD_FLAG_TAGS)
 
 .NOTPARALLEL:
+.SECONDEXPANSION:
 
 .PHONY: all
 all: binaries manpages
@@ -177,7 +178,7 @@ endif
 # environment variables for limactl. this variable is used for checking force build.
 ENVS__output/bin/limactl$(exe) = CGO_ENABLED=1 $(addprefix GOOS=,$(GOOS)) $(addprefix GOARCH=,$(GOARCH))
 
-_output/bin/limactl$(exe): $(DEPENDENCIES_FOR_LIMACTL) $(call force_build,_output/bin/limactl$(exe))
+_output/bin/limactl$(exe): $(DEPENDENCIES_FOR_LIMACTL) $$(call force_build,$$@)
 	# The hostagent must be compiled with CGO_ENABLED=1 so that net.LookupIP() in the DNS server
 	# calls the native resolver library and not the simplistic version in the Go library.
 	$(ENVS_$@) $(GO_BUILD) -o $@ ./cmd/limactl
@@ -229,11 +230,7 @@ ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)aarch64 = GOOS=linux GOARCH=arm64 CGO_ENABLE
 ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)armv7l = GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0
 ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)riscv64 = GOOS=linux GOARCH=riscv64 CGO_ENABLED=0
 ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)x86_64 = GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-$(LINUX_GUESTAGENT_PATH_COMMON)aarch64: $(call force_build,$(LINUX_GUESTAGENT_PATH_COMMON)aarch64)
-$(LINUX_GUESTAGENT_PATH_COMMON)armv7l: $(call force_build,$(LINUX_GUESTAGENT_PATH_COMMON)armv7l)
-$(LINUX_GUESTAGENT_PATH_COMMON)riscv64: $(call force_build,$(LINUX_GUESTAGENT_PATH_COMMON)riscv64)
-$(LINUX_GUESTAGENT_PATH_COMMON)x86_64: $(call force_build,$(LINUX_GUESTAGENT_PATH_COMMON)x86_64)
-$(LINUX_GUESTAGENT_PATH_COMMON)%: $(call dependencis_for_cmd,lima-guestagent) | _output/share/lima
+$(LINUX_GUESTAGENT_PATH_COMMON)%: $(call dependencis_for_cmd,lima-guestagent) $$(call force_build,$$@) | _output/share/lima
 	$(ENVS_$@) $(GO_BUILD) -o $@ ./cmd/lima-guestagent
 	chmod 644 $@
 ifeq ($(CONFIG_GUESTAGENT_COMPRESS),y)
@@ -376,29 +373,36 @@ install-tools:
 generate:
 	go generate ./...
 
-.PHONY: artifacts-darwin artifact-darwin-arm64 artifact-darwin-x86_64
+.PHONY: artifacts-darwin
 artifacts-darwin: artifact-darwin-x86_64 artifact-darwin-arm64
 artifact-darwin-arm64: ENVS=GOOS=darwin GOARCH=arm64
-artifact-darwin-arm64: _artifacts/lima-$(VERSION_TRIMMED)-Darwin-arm64.tar.gz
 artifact-darwin-x86_64: ENVS=GOOS=darwin GOARCH=amd64
-artifact-darwin-x86_64: _artifacts/lima-$(VERSION_TRIMMED)-Darwin-x86_64.tar.gz
 
-.PHONY: artifacts-linux artifact-linux-aarch64 artifact-linux-x86_64
+.PHONY: artifacts-linux
 artifacts-linux: artifact-linux-x86_64 artifact-linux-aarch64
 artifact-linux-aarch64: ENVS=GOOS=linux GOARCH=arm64 CC=aarch64-linux-gnu-gcc
-artifact-linux-aarch64: _artifacts/lima-$(VERSION_TRIMMED)-Linux-aarch64.tar.gz
 artifact-linux-x86_64: ENVS=GOOS=linux GOARCH=amd64 CC=x86_64-linux-gnu-gcc
-artifact-linux-x86_64: _artifacts/lima-$(VERSION_TRIMMED)-Linux-x86_64.tar.gz
 
-.PHONY: artifacts-windows artifact-windows-x86_64
+.PHONY: artifacts-windows
 artifacts-windows: artifact-windows-x86_64
 artifact-windows-x86_64: ENVS=GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc
-artifact-windows-x86_64: _artifacts/lima-$(VERSION_TRIMMED)-Windows-x86_64.tar.gz
-	cd _output && $(ZIP) -r ../_artifacts/lima-$(VERSION_TRIMMED)-Windows-x86_64.zip *
+artifact-windows-%: _artifacts/lima-$(VERSION_TRIMMED)-Windows-$$*.tar.gz _artifacts/lima-$(VERSION_TRIMMED)-Windows-$$*.zip
+	@true # do nothing
 
+# returns the capitalized string of $(1).
+capitalize = $(shell bash -c 'word="$(1)"; echo $${word^}')
+artifact-%: _artifacts/lima-$(VERSION_TRIMMED)-$$(call capitalize,$$*).tar.gz
+	@true # do nothing
+
+# avoid removing the artifacts on completion of the targets.
+.PRECIOUS: _artifacts/lima-%.tar.gz _artifacts/lima-%.zip
 _artifacts/lima-%.tar.gz: | _artifacts
 	$(ENVS) make clean binaries
 	$(TAR) -C _output/ -czvf $@ ./
+
+_artifacts/lima-%.zip: | _artifacts
+	$(ENVS) make clean binaries
+	cd _output && $(ZIP) -r ../$@ *
 
 MKDIR_TARGETS += _artifacts
 
