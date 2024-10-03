@@ -40,6 +40,10 @@ var regexUsername = regexp.MustCompile("^[a-z_][a-z0-9_-]*$")
 // regexPath detects valid Linux path.
 var regexPath = regexp.MustCompile("^[/a-zA-Z0-9_-]+$")
 
+func ValidateUsername(name string) bool {
+	return regexUsername.MatchString(name)
+}
+
 func LookupUser(name string) (User, error) {
 	if users == nil {
 		users = make(map[string]User)
@@ -111,7 +115,7 @@ func LimaUser(warn bool) (*user.User, error) {
 	cache.Do(func() {
 		cache.u, cache.err = user.Current()
 		if cache.err == nil {
-			if !regexUsername.MatchString(cache.u.Username) {
+			if !ValidateUsername(cache.u.Username) {
 				warning := fmt.Sprintf("local user %q is not a valid Linux username (must match %q); using %q username instead",
 					cache.u.Username, regexUsername.String(), fallbackUser)
 				cache.warnings = append(cache.warnings, warning)
