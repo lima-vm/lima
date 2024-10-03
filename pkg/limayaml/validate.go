@@ -208,6 +208,18 @@ func Validate(y *LimaYAML, warn bool) error {
 			return fmt.Errorf("field `provision[%d].mode` must one of %q, %q, %q, %q, or %q",
 				i, ProvisionModeSystem, ProvisionModeUser, ProvisionModeBoot, ProvisionModeDependency, ProvisionModeAnsible)
 		}
+		if p.Playbook != "" {
+			if p.Mode != ProvisionModeAnsible {
+				return fmt.Errorf("field `provision[%d].mode must be %q if playbook is set", i, ProvisionModeAnsible)
+			}
+			if p.Script != "" {
+				return fmt.Errorf("field `provision[%d].script must be empty if playbook is set", i)
+			}
+			playbook := p.Playbook
+			if _, err := os.Stat(playbook); err != nil {
+				return fmt.Errorf("field `provision[%d].playbook` refers to an inaccessible path: %q: %w", i, playbook, err)
+			}
+		}
 		if strings.Contains(p.Script, "LIMA_CIDATA") {
 			logrus.Warn("provisioning scripts should not reference the LIMA_CIDATA variables")
 		}
