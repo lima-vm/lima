@@ -259,12 +259,12 @@ _output/share/lima/templates/%: examples/%
 # _output/share/lima/examples
 .PHONY: create-examples-link
 create-examples-link: _output/share/lima/examples
-_output/share/lima/examples: default_template # depends on minimal template target
+_output/share/lima/examples: _output/share/lima/templates
 ifneq ($(GOOS),windows)
 	ln -sf templates $@
 else
-# copy from templates builded in build process
-	cp -aL _output/share/lima/templates $@
+# copy from templates built in build process
+	cp -aL $< $@
 endif
 
 # _output/share/doc/lima
@@ -287,19 +287,19 @@ MKDIR_TARGETS += _output/share/doc/lima
 
 .PHONY: create-links-in-doc-dir
 create-links-in-doc-dir: _output/share/doc/lima/templates _output/share/doc/lima/examples
-_output/share/doc/lima/templates: default_template # depends on minimal template target
+_output/share/doc/lima/templates: _output/share/lima/templates
 ifneq ($(GOOS),windows)
 	ln -sf ../../lima/templates $@
 else
-# copy from templates builded in build process
-	cp -aL _output/share/lima/templates $@
+# copy from templates built in build process
+	cp -aL $< $@
 endif
-_output/share/doc/lima/examples: default_template # depends on minimal template target
+_output/share/doc/lima/examples: _output/share/doc/lima/templates
 ifneq ($(GOOS),windows)
 	ln -sf templates $@
 else
-# copy from templates builded in build process
-	cp -aL _output/share/lima/templates $@
+# copy from templates built in build process
+	cp -aL $< $@
 endif
 
 # _output/share/man/man1
