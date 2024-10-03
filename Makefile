@@ -118,7 +118,7 @@ binaries: clean \
 
 # _output/bin
 .PHONY: limactl lima helpers
-limactl: _output/bin/limactl$(exe) codesign lima
+limactl: _output/bin/limactl$(exe) lima
 
 ### Listing Dependencies
 
@@ -182,6 +182,9 @@ _output/bin/limactl$(exe): $(DEPENDENCIES_FOR_LIMACTL) $$(call force_build,$$@)
 	# The hostagent must be compiled with CGO_ENABLED=1 so that net.LookupIP() in the DNS server
 	# calls the native resolver library and not the simplistic version in the Go library.
 	$(ENVS_$@) $(GO_BUILD) -o $@ ./cmd/limactl
+ifeq ($(GOOS),darwin)
+	codesign -f -v --entitlements vz.entitlements -s - $@
+endif
 
 LIMA_CMDS = lima lima$(bat)
 lima: $(addprefix _output/bin/,$(LIMA_CMDS))
@@ -412,9 +415,9 @@ artifacts-misc: | _artifacts
 	$(TAR) -czf _artifacts/lima-$(VERSION_TRIMMED)-go-mod-vendor.tar.gz go.mod go.sum vendor
 
 .PHONY: codesign
-codesign:
+codesign: _output/bin/limactl
 ifeq ($(GOOS),darwin)
-	codesign --entitlements vz.entitlements -s - ./_output/bin/limactl
+	codesign --entitlements vz.entitlements -s - $<
 endif
 
 # This target must be placed after any changes to the `MKDIR_TARGETS` variable.
