@@ -65,7 +65,7 @@ mountType: "virtiofs"
 - Virtualization.framework doesn't support running "intel guest on arm" and vice versa
 
 ### Known Issues
-- "vz" doesn't support `legacyBIOS: true` option, so guest machine like centos-stream, archlinux, oraclelinux will not work
+- "vz" doesn't support `legacyBIOS: true` option, so guest machine like centos-stream and oraclelinux will not work
 - When running lima using "vz", `${LIMA_HOME}/<INSTANCE>/serial.log` will not contain kernel boot logs
 - On Intel Mac with macOS prior to 13.5, Linux kernel v6.2 (used by Ubuntu 23.04, Fedora 38, etc.) is known to be unbootable on vz.
   kernel v6.3 and later should boot, as long as it is booted via GRUB.
