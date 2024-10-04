@@ -30,7 +30,7 @@ GO_BUILDTAGS += no_vz
 endif
 endif
 
-ifeq ($(GOOS),windows)
+ifeq ($(GOHOSTOS),windows)
 WINVER_MAJOR=$(shell powershell.exe "[System.Environment]::OSVersion.Version.Major")
 ifeq ($(WINVER_MAJOR),10)
 WINVER_BUILD=$(shell powershell.exe "[System.Environment]::OSVersion.Version.Build")
