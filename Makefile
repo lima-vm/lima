@@ -521,7 +521,7 @@ artifact-%: $$(call generate_manpages_if_needed)
 .PHONY: artifacts-misc
 artifacts-misc: | _artifacts
 	go mod vendor
-	$(TAR) -czf _artifacts/lima-$(VERSION_TRIMMED)-go-mod-vendor.tar.gz go.mod go.sum vendor
+	$(TAR) --no-xattrs -czf _artifacts/lima-$(VERSION_TRIMMED)-go-mod-vendor.tar.gz go.mod go.sum vendor
 
 MKDIR_TARGETS += _artifacts
 
