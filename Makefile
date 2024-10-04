@@ -23,7 +23,7 @@ endif
 
 GO_BUILDTAGS ?=
 ifeq ($(GOOS),darwin)
-MACOS_SDK_VERSION=$(shell xcrun --show-sdk-version | cut -d . -f 1)
+MACOS_SDK_VERSION = $(shell xcrun --show-sdk-version | cut -d . -f 1)
 ifeq ($(shell test $(MACOS_SDK_VERSION) -lt 13; echo $$?),0)
 # The "vz" mode needs macOS 13 SDK or later
 GO_BUILDTAGS += no_vz
@@ -43,7 +43,7 @@ endif
 
 PACKAGE := github.com/lima-vm/lima
 
-VERSION=$(shell git describe --match 'v[0-9]*' --dirty='.m' --always --tags)
+VERSION := $(shell git describe --match 'v[0-9]*' --dirty='.m' --always --tags)
 VERSION_TRIMMED := $(VERSION:v%=%)
 
 GO_BUILD_LDFLAGS := -ldflags="-s -w -X $(PACKAGE)/pkg/version.Version=$(VERSION)"
@@ -52,12 +52,17 @@ GO_BUILD_LDFLAGS := -ldflags="-s -w -X $(PACKAGE)/pkg/version.Version=$(VERSION)
 GO_BUILD_FLAG_TAGS := $(addprefix -tags=,$(shell echo "$(GO_BUILDTAGS)"|tr " " "\n"|paste -sd "," -))
 GO_BUILD := $(GO) build $(GO_BUILD_LDFLAGS) $(GO_BUILD_FLAG_TAGS)
 
+################################################################################
+# Features
 .NOTPARALLEL:
 .SECONDEXPANSION:
 
+################################################################################
 .PHONY: all
 all: binaries manpages
 
+################################################################################
+# Help
 .PHONY: help
 help:
 	@echo  '  binaries        - Build all binaries'
@@ -114,12 +119,16 @@ help-artifact:
 	@echo  'Targets for miscellaneous artifacts:'
 	@echo  '- artifacts-misc            : Build artifacts for go.mod, go.sum, and vendor'
 
+################################################################################
+# convenience targets
 exe: _output/bin/limactl$(exe)
 
 .PHONY: minimal native
 minimal: clean limactl native-guestagent default_template
 native: clean limactl helpers native-guestagent templates
 
+################################################################################
+# Kconfig
 config: Kconfig
 	$(KCONFIG_CONF) $<
 
@@ -134,11 +143,13 @@ menuconfig: Kconfig
 
 -include .config
 
+################################################################################
 .PHONY: binaries
 binaries: limactl helpers guestagents \
 	templates template_experimentals create-examples-link \
 	documentation create-links-in-doc-dir
 
+################################################################################
 # _output/bin
 .PHONY: limactl lima helpers
 limactl: _output/bin/limactl$(exe) lima
@@ -192,6 +203,9 @@ force_build = $(if $(call compare_build_vars,$(1),$(call extract_build_vars,$(1)
 
 force: # placeholder for force build
 
+################################################################################
+# _output/bin/limactl$(exe)
+
 # dependencies for limactl
 LIMACTL_DEPS = $(call dependencis_for_cmd,limactl)
 ifeq ($(GOOS),darwin)
@@ -228,6 +242,7 @@ _output/bin/%: ./cmd/% | _output/bin
 
 MKDIR_TARGETS += _output/bin
 
+################################################################################
 # _output/share/lima/lima-guestagent
 LINUX_GUESTAGENT_PATH_COMMON = _output/share/lima/lima-guestagent.Linux-
 
@@ -275,9 +290,10 @@ endif
 
 MKDIR_TARGETS += _output/share/lima
 
+################################################################################
 # _output/share/lima/templates
-TEMPLATES=$(addprefix _output/share/lima/templates/,$(filter-out experimental,$(notdir $(wildcard examples/*))))
-TEMPLATE_EXPERIMENTALS=$(addprefix _output/share/lima/templates/experimental/,$(notdir $(wildcard examples/experimental/*)))
+TEMPLATES = $(addprefix _output/share/lima/templates/,$(filter-out experimental,$(notdir $(wildcard examples/*))))
+TEMPLATE_EXPERIMENTALS = $(addprefix _output/share/lima/templates/experimental/,$(notdir $(wildcard examples/experimental/*)))
 
 .PHONY: default_template templates template_experimentals
 default_template: _output/share/lima/templates/default.yaml
@@ -296,6 +312,7 @@ _output/share/lima/templates/%: examples/%
 # On Windows, always copy to ensure the target has the same file as the source.
 force_link = $(if $(filter windows,$(GOOS)),force,$(shell test ! -L $(1) && echo force))
 
+################################################################################
 # _output/share/lima/examples
 .PHONY: create-examples-link
 create-examples-link: _output/share/lima/examples
@@ -309,8 +326,9 @@ else
 	cp -aL $< $@
 endif
 
+################################################################################
 # _output/share/doc/lima
-DOCUMENTATION=$(addprefix _output/share/doc/lima/,$(wildcard *.md) LICENSE SECURITY.md VERSION)
+DOCUMENTATION = $(addprefix _output/share/doc/lima/,$(wildcard *.md) LICENSE SECURITY.md VERSION)
 
 .PHONY: documentation
 documentation: $(DOCUMENTATION)
@@ -388,6 +406,7 @@ diagrams: docs/lima-sequence-diagram.png
 docs/lima-sequence-diagram.png: docs/images/lima-sequence-diagram.puml
 	$(PLANTUML) ./docs/images/lima-sequence-diagram.puml
 
+################################################################################
 .PHONY: install
 install: uninstall
 	mkdir -p "$(DEST)"
