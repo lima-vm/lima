@@ -135,8 +135,7 @@ menuconfig: Kconfig
 -include .config
 
 .PHONY: binaries
-binaries: clean \
-	limactl helpers guestagents \
+binaries: limactl helpers guestagents \
 	templates template_experimentals create-examples-link \
 	documentation create-links-in-doc-dir
 
