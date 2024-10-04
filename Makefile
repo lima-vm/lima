@@ -232,13 +232,16 @@ MKDIR_TARGETS += _output/bin
 # _output/share/lima/lima-guestagent
 LINUX_GUESTAGENT_PATH_COMMON = _output/share/lima/lima-guestagent.Linux-
 
+GUESTAGENT_ARCHS = aarch64 armv7l riscv64 x86_64
+NATIVE_GUESTAGENT_ARCH = $(shell uname -m | sed -e s/arm64/aarch64/)
+NATIVE_GUESTAGENT = $(LINUX_GUESTAGENT_PATH_COMMON)$(NATIVE_GUESTAGENT_ARCH)
+ADDITIONAL_GUESTAGENT_ARCHS = $(filter-out $(NATIVE_GUESTAGENT_ARCH),$(GUESTAGENT_ARCHS))
+ADDITIONAL_GUESTAGENTS = $(addprefix $(LINUX_GUESTAGENT_PATH_COMMON),$(ADDITIONAL_GUESTAGENT_ARCHS))
+
 # How to add architecure specific guestagent:
 # 1. Add the architecture to GUESTAGENT_ARCHS
 # 2. Add ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)<arch> to set GOOS, GOARCH, and other necessary environment variables
 ifeq ($(CONFIG_GUESTAGENT_OS_LINUX),y)
-GUESTAGENT_ARCHS = aarch64 armv7l riscv64 x86_64
-NATIVE_GUESTAGENT_ARCH = $(shell uname -m | sed -e s/arm64/aarch64/)
-ADDITIONAL_GUESTAGENT_ARCHS = $(filter-out $(NATIVE_GUESTAGENT_ARCH),$(GUESTAGENT_ARCHS))
 
 # CONFIG_GUESTAGENT_ARCH_<arch> naming convention: uppercase, remove '_'
 config_guestagent_arch_name = CONFIG_GUESTAGENT_ARCH_$(shell echo $(1)|tr -d _|tr a-z A-Z)
@@ -249,9 +252,8 @@ guestagent_path = $(if $(findstring y,$($(call config_guestagent_arch_name,$(1))
 
 # apply CONFIG_GUESTAGENT_ARCH_*
 GUESTAGENTS = $(foreach arch,$(GUESTAGENT_ARCHS),$(call guestagent_path,$(arch)))
-NATIVE_GUESTAGENT=$(LINUX_GUESTAGENT_PATH_COMMON)$(NATIVE_GUESTAGENT_ARCH)
-ADDITIONAL_GUESTAGENTS=$(addprefix $(LINUX_GUESTAGENT_PATH_COMMON),$(ADDITIONAL_GUESTAGENT_ARCHS))
 endif
+
 
 .PHONY: guestagents native-guestagent additional-guestagents
 guestagents: $(GUESTAGENTS)
