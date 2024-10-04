@@ -12,6 +12,9 @@ PLANTUML ?= plantuml # may also be "java -jar plantuml.jar" if installed elsewhe
 KCONFIG_CONF ?= $(shell command -v kconfig-conf || command -v kbuild-conf || echo oldconfig)
 KCONFIG_MCONF ?= $(shell command -v kconfig-mconf || command -v kbuild-mconf || echo menuconfig)
 
+GOARCH ?= $(shell $(GO) env GOARCH)
+GOHOSTARCH := $(shell $(GO) env GOHOSTARCH)
+GOHOSTOS := $(shell $(GO) env GOHOSTOS)
 GOOS ?= $(shell $(GO) env GOOS)
 ifeq ($(GOOS),windows)
 bat = .bat
@@ -20,14 +23,14 @@ endif
 
 GO_BUILDTAGS ?=
 ifeq ($(GOOS),darwin)
-MACOS_SDK_VERSION=$(shell xcrun --show-sdk-version | cut -d . -f 1)
+MACOS_SDK_VERSION = $(shell xcrun --show-sdk-version | cut -d . -f 1)
 ifeq ($(shell test $(MACOS_SDK_VERSION) -lt 13; echo $$?),0)
 # The "vz" mode needs macOS 13 SDK or later
 GO_BUILDTAGS += no_vz
 endif
 endif
 
-ifeq ($(GOOS),windows)
+ifeq ($(GOHOSTOS),windows)
 WINVER_MAJOR=$(shell powershell.exe "[System.Environment]::OSVersion.Version.Major")
 ifeq ($(WINVER_MAJOR),10)
 WINVER_BUILD=$(shell powershell.exe "[System.Environment]::OSVersion.Version.Build")
@@ -40,16 +43,26 @@ endif
 
 PACKAGE := github.com/lima-vm/lima
 
-VERSION=$(shell git describe --match 'v[0-9]*' --dirty='.m' --always --tags)
+VERSION := $(shell git describe --match 'v[0-9]*' --dirty='.m' --always --tags)
 VERSION_TRIMMED := $(VERSION:v%=%)
 
-GO_BUILD := $(GO) build -ldflags="-s -w -X $(PACKAGE)/pkg/version.Version=$(VERSION)" -tags "$(GO_BUILDTAGS)"
+GO_BUILD_LDFLAGS := -ldflags="-s -w -X $(PACKAGE)/pkg/version.Version=$(VERSION)"
+# `go -version -m` returns -tags with comma-separated list, because space-separated list is deprecated in go1.13.
+# converting to comma-separated list is useful for comparing with the output of `go version -m`.
+GO_BUILD_FLAG_TAGS := $(addprefix -tags=,$(shell echo "$(GO_BUILDTAGS)"|tr " " "\n"|paste -sd "," -))
+GO_BUILD := $(GO) build $(GO_BUILD_LDFLAGS) $(GO_BUILD_FLAG_TAGS)
 
+################################################################################
+# Features
 .NOTPARALLEL:
+.SECONDEXPANSION:
 
+################################################################################
 .PHONY: all
 all: binaries manpages
 
+################################################################################
+# Help
 .PHONY: help
 help:
 	@echo  '  binaries        - Build all binaries'
@@ -85,12 +98,37 @@ help-targets:
 	@echo  '# e.g. to install limactl, helpers, native guestagent, and templates:'
 	@echo  '#   make native install'
 
+.PHONY: help-artifact
+help-artifact:
+	@echo  '# Targets for building artifacts to _artifacts/'
+	@echo
+	@echo  'Targets to building multiple archs artifacts for GOOS:'
+	@echo  '- artifacts                 : Build artifacts for current OS and supported archs'
+	@echo  '- artifacts-<GOOS>          : Build artifacts for supported archs and <GOOS>: darwin, linux, or windows'
+	@echo
+	@echo  'Targets to building GOOS and ARCH (GOARCH, or uname -m) specific artifacts:'
+	@echo  '- artifact                  : Build artifacts for current GOOS and GOARCH'
+	@echo  '- artifact-<GOOS>           : Build artifacts for current GOARCH and <GOOS>: darwin, linux, or windows'
+	@echo  '- artifact-<ARCH>           : Build artifacts for current GOOS with <ARCH>: amd64, arm64, x86_64, or aarch64'
+	@echo  '- artifact-<GOOS>-<ARCH>    : Build artifacts for <GOOS> and <ARCH>'
+	@echo
+	@echo  '# GOOS and GOARCH can be specified with make parameters or environment variables.'
+	@echo  '# e.g. to build artifact for linux and arm64:'
+	@echo  '#   make GOOS=linux GOARCH=arm64 artifact'
+	@echo
+	@echo  'Targets for miscellaneous artifacts:'
+	@echo  '- artifacts-misc            : Build artifacts for go.mod, go.sum, and vendor'
+
+################################################################################
+# convenience targets
 exe: _output/bin/limactl$(exe)
 
 .PHONY: minimal native
 minimal: clean limactl native-guestagent default_template
 native: clean limactl helpers native-guestagent templates
 
+################################################################################
+# Kconfig
 config: Kconfig
 	$(KCONFIG_CONF) $<
 
@@ -105,66 +143,146 @@ menuconfig: Kconfig
 
 -include .config
 
+################################################################################
 .PHONY: binaries
-binaries: clean \
-	limactl helpers guestagents \
+binaries: limactl helpers guestagents \
 	templates template_experimentals create-examples-link \
 	documentation create-links-in-doc-dir
 
+################################################################################
 # _output/bin
-.PHONY: limactl _output/bin/limactl$(exe) lima helpers
-limactl: _output/bin/limactl$(exe) codesign lima
+.PHONY: limactl lima helpers
+limactl: _output/bin/limactl$(exe) lima
 
-_output/bin/limactl$(exe):
+### Listing Dependencies
+
+# returns a list of files expanded from $(1) excluding directories.
+glob_excluding_dir = $(shell bash -c -O extglob -O globstar -O nullglob 'for f in $(1); do test -d $$f || echo $$f; done')
+FILES_IN_PKG = $(call glob_excluding_dir, ./pkg/**/!(*_test.go))
+
+# returns a list of files which are dependencies for the command $(1).
+dependencis_for_cmd = go.mod $(call glob_excluding_dir, ./cmd/$(1)/**/!(*_test.go)) $(FILES_IN_PKG)
+
+### Force Building Targets
+
+# returns GOVERSION, CGO*, GO*, -ldflags, and -tags build variables from the output of `go version -m $(1)`.
+# When CGO_* variables are not set, they are not included in the output.
+# Because the CGO_* variables are not set means that those values are default values,
+# it can be assumed that those values are same if the GOVERSION is same.
+# $(1): target binary
+extract_build_vars = $(shell \
+	($(GO) version -m $(1) 2>&- || echo $(1):) | \
+	awk 'FNR==1{print "GOVERSION="$$2}$$2~/^(CGO|GO|-ldflags|-tags).*=.+$$/{sub("^.*"$$2,$$2); print $$0}' \
+)
+
+# a list of keys from the GO build variables to be used for calling `go env`.
+# keys starting with '-' are excluded because `go env` does not support those keys.
+# $(1): extracted build variables from the binary
+keys_in_build_vars = $(filter-out -%,$(shell for i in $(1); do echo $${i%%=*}; done))
+
+# a list of GO build variables to build the target binary.
+# $(1): target binary. expecting ENVS_$(2) is set to use the environment variables for the target binary.
+# $(2): key of the GO build variable to be used for calling `go env`.
+go_build_vars = $(shell \
+	$(ENVS_$(1)) $(GO) env $(2) | \
+	awk '/ /{print "\""$$0"\""; next}{print}' | \
+	for k in $(2); do read -r v && echo "$$k=$${v}"; done \
+) $(GO_BUILD_LDFLAGS) $(GO_BUILD_FLAG_TAGS)
+
+# returns the difference between $(1) and $(2).
+diff = $(filter-out $(2),$(1))$(filter-out $(1),$(2))
+
+# returns diff between the GO build variables in the binary $(1) and the building variables.
+# $(1): target binary
+# $(2): extracted GO build variables from the binary
+compare_build_vars = $(call diff,$(call go_build_vars,$(1),$(call keys_in_build_vars,$(2))),$(2))
+
+# returns "force" if the GO build variables in the binary $(1) is different from the building variables.
+# $(1): target binary. expecting ENVS_$(1) is set to use the environment variables for the target binary.
+force_build = $(if $(call compare_build_vars,$(1),$(call extract_build_vars,$(1))),force,)
+
+force: # placeholder for force build
+
+################################################################################
+# _output/bin/limactl$(exe)
+
+# dependencies for limactl
+LIMACTL_DEPS = $(call dependencis_for_cmd,limactl)
+ifeq ($(GOOS),darwin)
+LIMACTL_DEPS += vz.entitlements
+endif
+
+# environment variables for limactl. this variable is used for checking force build.
+ENVS__output/bin/limactl$(exe) = CGO_ENABLED=1 GOOS=$(GOOS) GOARCH=$(GOARCH) CC=$(CC)
+
+_output/bin/limactl$(exe): $(LIMACTL_DEPS) $$(call force_build,$$@)
+# If the previous cross-compilation was for GOOS=windows, limactl.exe might still be present.
+ifneq ($(GOOS),windows) # 
+	@rm -rf _output/bin/limactl.exe
+else
+	@rm -rf _output/bin/limactl
+endif
 	# The hostagent must be compiled with CGO_ENABLED=1 so that net.LookupIP() in the DNS server
 	# calls the native resolver library and not the simplistic version in the Go library.
-	CGO_ENABLED=1 $(GO_BUILD) -o $@ ./cmd/limactl
+	$(ENVS_$@) $(GO_BUILD) -o $@ ./cmd/limactl
+ifeq ($(GOOS),darwin)
+	codesign -f -v --entitlements vz.entitlements -s - $@
+endif
 
-LIMA_CMDS = lima lima$(bat)
-lima: $(addprefix _output/bin/,$(LIMA_CMDS))
+LIMA_CMDS = $(sort lima lima$(bat)) # $(sort ...) deduplicates the list
+LIMA_DEPS = $(addprefix _output/bin/,$(LIMA_CMDS))
+lima: $(LIMA_DEPS)
 
 HELPER_CMDS = nerdctl.lima apptainer.lima docker.lima podman.lima kubectl.lima
-helpers: $(addprefix _output/bin/,$(HELPER_CMDS))
+HELPERS_DEPS = $(addprefix _output/bin/,$(HELPER_CMDS))
+helpers: $(HELPERS_DEPS)
 
 _output/bin/%: ./cmd/% | _output/bin
 	cp -a $< $@
 
 MKDIR_TARGETS += _output/bin
 
+################################################################################
 # _output/share/lima/lima-guestagent
-# How to add architecure specific guestagent:
-# 1. Add the architecture to GUESTAGENT_ARCHS
-# 2. Add GUESTAGENT_ARCH_ENVS_<arch> to set GOARCH and other necessary environment variables
-ifeq ($(CONFIG_GUESTAGENT_OS_LINUX),y)
+LINUX_GUESTAGENT_PATH_COMMON = _output/share/lima/lima-guestagent.Linux-
+
 GUESTAGENT_ARCHS = aarch64 armv7l riscv64 x86_64
 NATIVE_GUESTAGENT_ARCH = $(shell uname -m | sed -e s/arm64/aarch64/)
+NATIVE_GUESTAGENT = $(LINUX_GUESTAGENT_PATH_COMMON)$(NATIVE_GUESTAGENT_ARCH)
 ADDITIONAL_GUESTAGENT_ARCHS = $(filter-out $(NATIVE_GUESTAGENT_ARCH),$(GUESTAGENT_ARCHS))
+ADDITIONAL_GUESTAGENTS = $(addprefix $(LINUX_GUESTAGENT_PATH_COMMON),$(ADDITIONAL_GUESTAGENT_ARCHS))
+
+# How to add architecure specific guestagent:
+# 1. Add the architecture to GUESTAGENT_ARCHS
+# 2. Add ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)<arch> to set GOOS, GOARCH, and other necessary environment variables
+ifeq ($(CONFIG_GUESTAGENT_OS_LINUX),y)
 
 # CONFIG_GUESTAGENT_ARCH_<arch> naming convention: uppercase, remove '_'
 config_guestagent_arch_name = CONFIG_GUESTAGENT_ARCH_$(shell echo $(1)|tr -d _|tr a-z A-Z)
 
 # guestagent_path returns the path to the guestagent binary for the given architecture,
 # or an empty string if the CONFIG_GUESTAGENT_ARCH_<arch> is not set.
-guestagent_path = $(if $(findstring y,$($(call config_guestagent_arch_name,$(1)))),_output/share/lima/lima-guestagent.Linux-$(1))
+guestagent_path = $(if $(findstring y,$($(call config_guestagent_arch_name,$(1)))),$(LINUX_GUESTAGENT_PATH_COMMON)$(1))
 
 # apply CONFIG_GUESTAGENT_ARCH_*
 GUESTAGENTS = $(foreach arch,$(GUESTAGENT_ARCHS),$(call guestagent_path,$(arch)))
-GUESTAGENT_ARCH_ENVS_aarch64 = GOARCH=arm64
-GUESTAGENT_ARCH_ENVS_armv7l = GOARCH=arm GOARM=7
-GUESTAGENT_ARCH_ENVS_riscv64 = GOARCH=riscv64
-GUESTAGENT_ARCH_ENVS_x86_64 = GOARCH=amd64
-NATIVE_GUESTAGENT=_output/share/lima/lima-guestagent.Linux-$(NATIVE_GUESTAGENT_ARCH)
-ADDITIONAL_GUESTAGENTS=$(addprefix _output/share/lima/lima-guestagent.Linux-,$(ADDITIONAL_GUESTAGENT_ARCHS))
 endif
+
 
 .PHONY: guestagents native-guestagent additional-guestagents
 guestagents: $(GUESTAGENTS)
 native-guestagent: $(NATIVE_GUESTAGENT)
 additional-guestagents: $(ADDITIONAL_GUESTAGENTS)
 %-guestagent:
-	@[ "$(findstring $(*),$(GUESTAGENT_ARCHS))" == "$(*)" ] && make _output/share/lima/lima-guestagent.Linux-$*
-_output/share/lima/lima-guestagent.Linux-%: | _output/share/lima
-	GOOS=linux $(GUESTAGENT_ARCH_ENVS_$*) CGO_ENABLED=0 $(GO_BUILD) -o $@ ./cmd/lima-guestagent
+	@[ "$(findstring $(*),$(GUESTAGENT_ARCHS))" == "$(*)" ] && make $(LINUX_GUESTAGENT_PATH_COMMON)$*
+
+# environment variables for linx-guestagent. these variable are used for checking force build.
+ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)aarch64 = GOOS=linux GOARCH=arm64 CGO_ENABLED=0
+ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)armv7l = GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0
+ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)riscv64 = GOOS=linux GOARCH=riscv64 CGO_ENABLED=0
+ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)x86_64 = GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+$(LINUX_GUESTAGENT_PATH_COMMON)%: $(call dependencis_for_cmd,lima-guestagent) $$(call force_build,$$@) | _output/share/lima
+	$(ENVS_$@) $(GO_BUILD) -o $@ ./cmd/lima-guestagent
 	chmod 644 $@
 ifeq ($(CONFIG_GUESTAGENT_COMPRESS),y)
 	gzip $@
@@ -172,9 +290,10 @@ endif
 
 MKDIR_TARGETS += _output/share/lima
 
+################################################################################
 # _output/share/lima/templates
-TEMPLATES=$(addprefix _output/share/lima/templates/,$(filter-out experimental,$(notdir $(wildcard examples/*))))
-TEMPLATE_EXPERIMENTALS=$(addprefix _output/share/lima/templates/experimental/,$(notdir $(wildcard examples/experimental/*)))
+TEMPLATES = $(addprefix _output/share/lima/templates/,$(filter-out experimental,$(notdir $(wildcard examples/*))))
+TEMPLATE_EXPERIMENTALS = $(addprefix _output/share/lima/templates/experimental/,$(notdir $(wildcard examples/experimental/*)))
 
 .PHONY: default_template templates template_experimentals
 default_template: _output/share/lima/templates/default.yaml
@@ -188,20 +307,28 @@ MKDIR_TARGETS += _output/share/lima/templates _output/share/lima/templates/exper
 _output/share/lima/templates/%: examples/%
 	cp -aL $< $@
 
+# returns "force" if GOOS==windows, or GOOS!=windows and the file $(1) is not a symlink.
+# $(1): target file
+# On Windows, always copy to ensure the target has the same file as the source.
+force_link = $(if $(filter windows,$(GOOS)),force,$(shell test ! -L $(1) && echo force))
 
+################################################################################
 # _output/share/lima/examples
 .PHONY: create-examples-link
 create-examples-link: _output/share/lima/examples
-_output/share/lima/examples: default_template # depends on minimal template target
+_output/share/lima/examples: _output/share/lima/templates $$(call force_link,$$@)
+# remove the existing directory or symlink
+	rm -rf $@
 ifneq ($(GOOS),windows)
 	ln -sf templates $@
 else
-# copy from templates builded in build process
-	cp -aL _output/share/lima/templates $@
+# copy from templates built in build process
+	cp -aL $< $@
 endif
 
+################################################################################
 # _output/share/doc/lima
-DOCUMENTATION=$(addprefix _output/share/doc/lima/,$(wildcard *.md) LICENSE SECURITY.md VERSION)
+DOCUMENTATION = $(addprefix _output/share/doc/lima/,$(wildcard *.md) LICENSE SECURITY.md VERSION)
 
 .PHONY: documentation
 documentation: $(DOCUMENTATION)
@@ -217,42 +344,69 @@ _output/share/doc/lima/%: % | _output/share/doc/lima
 
 MKDIR_TARGETS += _output/share/doc/lima
 
-
 .PHONY: create-links-in-doc-dir
 create-links-in-doc-dir: _output/share/doc/lima/templates _output/share/doc/lima/examples
-_output/share/doc/lima/templates: default_template # depends on minimal template target
+_output/share/doc/lima/templates: _output/share/lima/templates $$(call force_link,$$@)
+# remove the existing directory or symlink
+	rm -rf $@
 ifneq ($(GOOS),windows)
 	ln -sf ../../lima/templates $@
 else
-# copy from templates builded in build process
-	cp -aL _output/share/lima/templates $@
+# copy from templates built in build process
+	cp -aL $< $@
 endif
-_output/share/doc/lima/examples: default_template # depends on minimal template target
+_output/share/doc/lima/examples: _output/share/doc/lima/templates $$(call force_link,$$@)
+# remove the existing directory or symlink
+	rm -rf $@
 ifneq ($(GOOS),windows)
 	ln -sf templates $@
 else
-# copy from templates builded in build process
-	cp -aL _output/share/lima/templates $@
+# copy from templates built in build process
+	cp -aL $< $@
 endif
 
+################################################################################
+# returns difference between GOOS GOARCH and GOHOSTOS GOHOSTARCH.
+cross_compiling = $(call diff,$(GOOS) $(GOARCH),$(GOHOSTOS) $(GOHOSTARCH))
+# returns true if cross_compiling is empty.
+native_compiling = $(if $(cross_compiling),,true)
+
+################################################################################
 # _output/share/man/man1
 .PHONY: manpages
-manpages: _output/bin/limactl$(exe)
+# Set limactl.1 as explicit dependency. 
+# It's uncertain how many manpages will be generated by `make`, 
+# because `limactl` generates them without corresponding source code for the manpages.
+manpages: _output/share/man/man1/limactl.1
+_output/share/man/man1/limactl.1: _output/bin/limactl$(exe)
 	@mkdir -p _output/share/man/man1
+ifeq ($(native_compiling),true)
+# The manpages are generated by limactl, so the limactl binary must be native.
 	$< generate-doc _output/share/man/man1 \
 		--output _output --prefix $(PREFIX)
+endif
 
+################################################################################
 .PHONY: docsy
-docsy: _output/bin/limactl$(exe)
+# Set limactl.md as explicit dependency.
+# It's uncertain how many docsy pages will be generated by `make`, 
+# because `limactl` generates them without corresponding source code for the docsy pages.
+docsy: website/_output/docsy/limactl.md
+website/_output/docsy/limactl.md: _output/bin/limactl$(exe)
 	@mkdir -p website/_output/docsy
+ifeq ($(native_compiling),true)
+# The docs are generated by limactl, so the limactl binary must be native.
 	$< generate-doc --type docsy website/_output/docsy \
 		--output _output --prefix $(PREFIX)
+endif
 
+################################################################################
 .PHONY: diagrams
 diagrams: docs/lima-sequence-diagram.png
 docs/lima-sequence-diagram.png: docs/images/lima-sequence-diagram.puml
 	$(PLANTUML) ./docs/images/lima-sequence-diagram.puml
 
+################################################################################
 .PHONY: install
 install: uninstall
 	mkdir -p "$(DEST)"
@@ -306,41 +460,94 @@ install-tools:
 generate:
 	go generate ./...
 
-.PHONY: artifacts-darwin artifact-darwin-arm64 artifact-darwin-x86_64
-artifacts-darwin: artifact-darwin-x86_64 artifact-darwin-arm64
-artifact-darwin-arm64: ENVS=GOOS=darwin GOARCH=arm64
-artifact-darwin-arm64: _artifacts/lima-$(VERSION_TRIMMED)-Darwin-arm64.tar.gz
-artifact-darwin-x86_64: ENVS=GOOS=darwin GOARCH=amd64
-artifact-darwin-x86_64: _artifacts/lima-$(VERSION_TRIMMED)-Darwin-x86_64.tar.gz
+################################################################################
+# _artifacts/lima-$(VERSION_TRIMMED)-$(ARTIFACT_OS)-$(ARTIFACT_UNAME_M)
+.PHONY: artifact
 
-.PHONY: artifacts-linux artifact-linux-aarch64 artifact-linux-x86_64
-artifacts-linux: artifact-linux-x86_64 artifact-linux-aarch64
-artifact-linux-aarch64: ENVS=GOOS=linux GOARCH=arm64 CC=aarch64-linux-gnu-gcc
-artifact-linux-aarch64: _artifacts/lima-$(VERSION_TRIMMED)-Linux-aarch64.tar.gz
-artifact-linux-x86_64: ENVS=GOOS=linux GOARCH=amd64 CC=x86_64-linux-gnu-gcc
-artifact-linux-x86_64: _artifacts/lima-$(VERSION_TRIMMED)-Linux-x86_64.tar.gz
+# returns the capitalized string of $(1).
+capitalize = $(shell bash -c 'word="$(1)"; echo $${word^}')
 
-.PHONY: artifacts-windows artifact-windows-x86_64
-artifacts-windows: artifact-windows-x86_64
-artifact-windows-x86_64: ENVS=GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc
-artifact-windows-x86_64: _artifacts/lima-$(VERSION_TRIMMED)-Windows-x86_64.tar.gz
-	cd _output && $(ZIP) -r ../_artifacts/lima-$(VERSION_TRIMMED)-Windows-x86_64.zip *
+# returns the architecture name converted from GOARCH to GNU coreutils uname -m. 
+to_uname_m = $(foreach arch,$(1),$(shell echo $(arch) | sed 's/amd64/x86_64/' | sed 's/arm64/aarch64/'))
 
-_artifacts/lima-%.tar.gz: | _artifacts
-	$(ENVS) make clean binaries
-	$(TAR) -C _output/ -czvf $@ ./
+ARTIFACT_FILE_EXTENSIONS := .tar.gz
 
-MKDIR_TARGETS += _artifacts
+ifeq ($(GOOS),darwin)
+# returns the architecture name converted from GOARCH to macOS's uname -m.
+to_uname_m = $(foreach arch,$(1),$(shell echo $(arch) | sed 's/amd64/x86_64/'))
+else ifeq ($(GOOS),linux)
+# CC is required for cross-compiling on Linux.
+CC = $(call to_uname_m,$(GOARCH))-linux-gnu-gcc
+else ifeq ($(GOOS),windows)
+# artifact in zip format also provided for Windows.
+ARTIFACT_FILE_EXTENSIONS += .zip
+endif
+
+# artifacts: artifacts-$(GOOS)
+ARTIFACT_OS = $(call capitalize,$(GOOS))
+ARTIFACT_UNAME_M = $(call to_uname_m,$(GOARCH))
+ARTIFACT_PATH_COMMON = _artifacts/lima-$(VERSION_TRIMMED)-$(ARTIFACT_OS)-$(ARTIFACT_UNAME_M)
+
+artifact: $(addprefix $(ARTIFACT_PATH_COMMON),$(ARTIFACT_FILE_EXTENSIONS))
+
+ARTIFACT_DES =  _output/bin/limactl$(exe) $(LIMA_DEPS) $(HELPERS_DEPS) \
+	$(NATIVE_GUESTAGENT) $(ADDITIONAL_GUESTAGENTS) \
+	$(TEMPLATES) $(TEMPLATE_EXPERIMENTALS) _output/share/lima/examples \
+	$(DOCUMENTATION) _output/share/doc/lima/templates _output/share/doc/lima/examples \
+	_output/share/man/man1/limactl.1
+
+# file targets
+$(ARTIFACT_PATH_COMMON).tar.gz: $(ARTIFACT_DES) | _artifacts
+	$(TAR) -C _output/ --no-xattrs -czvf $@ ./
+
+$(ARTIFACT_PATH_COMMON).zip: $(ARTIFACT_DES) | _artifacts
+	cd _output && $(ZIP) -r ../$@ *
+
+# generate manpages using native limactl.
+manpages-using-native-limactl: GOOS = $(GOHOSTOS)
+manpages-using-native-limactl: GOARCH = $(GOHOSTARCH)
+manpages-using-native-limactl: manpages
+
+# returns "manpages-using-native-limactl" if $(1) is not equal to $(GOHOSTOS).
+# $(1): GOOS
+generate_manpages_if_needed = $(if $(filter $(if $(1),$(1),$(GOOS)),$(GOHOSTOS)),,manpages-using-native-limactl)
+
+# build native arch first, then build other archs.
+artifact_goarchs = arm64 amd64
+goarchs_native_and_others = $(GOHOSTARCH) $(filter-out $(GOHOSTARCH),$(artifact_goarchs))
+
+# artifacts is artifact bundles for each OS.
+# if target GOOS is native, build native arch first, generate manpages, then build other archs.
+# if target GOOS is not native, build native limactl, generate manpages, then build the target GOOS with archs.
+.PHONY: artifacts artifacts-darwin artifacts-linux artifacts-windows
+artifacts: $$(addprefix artifact-$$(GOOS)-,$$(goarchs_native_and_others))
+artifacts-darwin: $$(call generate_manpages_if_needed,darwin) $$(addprefix artifact-darwin-,$$(goarchs_native_and_others))
+artifacts-linux: $$(call generate_manpages_if_needed,linux) $$(addprefix artifact-linux-,$$(goarchs_native_and_others))
+artifacts-windows: $$(call generate_manpages_if_needed,windows) $$(addprefix artifact-windows-,$$(goarchs_native_and_others))
+
+# set variables for artifact variant targets.
+artifact-darwin% artifact-darwin: GOOS = darwin
+artifact-linux% artifact-linux: GOOS = linux
+artifact-windows% artifact-windows: GOOS = windows
+artifact-%-amd64 artifact-%-x86_64 artifact-amd64 artifact-x86_64: GOARCH = amd64
+artifact-%-arm64 artifact-%-aarch64 artifact-arm64 artifact-aarch64: GOARCH = arm64
+
+# build cross arch binaries.
+artifact-%: $$(call generate_manpages_if_needed)
+	make artifact GOOS=$(GOOS) GOARCH=$(GOARCH)
 
 .PHONY: artifacts-misc
 artifacts-misc: | _artifacts
 	go mod vendor
-	$(TAR) -czf _artifacts/lima-$(VERSION_TRIMMED)-go-mod-vendor.tar.gz go.mod go.sum vendor
+	$(TAR) --no-xattrs -czf _artifacts/lima-$(VERSION_TRIMMED)-go-mod-vendor.tar.gz go.mod go.sum vendor
 
+MKDIR_TARGETS += _artifacts
+
+################################################################################
 .PHONY: codesign
-codesign:
+codesign: _output/bin/limactl
 ifeq ($(GOOS),darwin)
-	codesign --entitlements vz.entitlements -s - ./_output/bin/limactl
+	codesign --entitlements vz.entitlements -s - $<
 endif
 
 # This target must be placed after any changes to the `MKDIR_TARGETS` variable.
