@@ -282,11 +282,17 @@ MKDIR_TARGETS += _output/share/lima/templates _output/share/lima/templates/exper
 _output/share/lima/templates/%: examples/%
 	cp -aL $< $@
 
+# returns "force" if GOOS==windows, or GOOS!=windows and the file $(1) is not a symlink.
+# $(1): target file
+# On Windows, always copy to ensure the target has the same file as the source.
+force_link = $(if $(filter windows,$(GOOS)),force,$(shell test ! -L $(1) && echo force))
 
 # _output/share/lima/examples
 .PHONY: create-examples-link
 create-examples-link: _output/share/lima/examples
-_output/share/lima/examples: _output/share/lima/templates
+_output/share/lima/examples: _output/share/lima/templates $$(call force_link,$$@)
+# remove the existing directory or symlink
+	rm -rf $@
 ifneq ($(GOOS),windows)
 	ln -sf templates $@
 else
@@ -311,17 +317,20 @@ _output/share/doc/lima/%: % | _output/share/doc/lima
 
 MKDIR_TARGETS += _output/share/doc/lima
 
-
 .PHONY: create-links-in-doc-dir
 create-links-in-doc-dir: _output/share/doc/lima/templates _output/share/doc/lima/examples
-_output/share/doc/lima/templates: _output/share/lima/templates
+_output/share/doc/lima/templates: _output/share/lima/templates $$(call force_link,$$@)
+# remove the existing directory or symlink
+	rm -rf $@
 ifneq ($(GOOS),windows)
 	ln -sf ../../lima/templates $@
 else
 # copy from templates built in build process
 	cp -aL $< $@
 endif
-_output/share/doc/lima/examples: _output/share/doc/lima/templates
+_output/share/doc/lima/examples: _output/share/doc/lima/templates $$(call force_link,$$@)
+# remove the existing directory or symlink
+	rm -rf $@
 ifneq ($(GOOS),windows)
 	ln -sf templates $@
 else
