@@ -194,15 +194,15 @@ force_build = $(if $(call compare_build_vars,$(1),$(call extract_build_vars,$(1)
 force: # placeholder for force build
 
 # dependencies for limactl
-DEPENDENCIES_FOR_LIMACTL = $(call dependencis_for_cmd,limactl)
+LIMACTL_DEPS = $(call dependencis_for_cmd,limactl)
 ifeq ($(GOOS),darwin)
-DEPENDENCIES_FOR_LIMACTL += vz.entitlements
+LIMACTL_DEPS += vz.entitlements
 endif
 
 # environment variables for limactl. this variable is used for checking force build.
 ENVS__output/bin/limactl$(exe) = CGO_ENABLED=1 GOOS=$(GOOS) GOARCH=$(GOARCH) CC=$(CC)
 
-_output/bin/limactl$(exe): $(DEPENDENCIES_FOR_LIMACTL) $$(call force_build,$$@)
+_output/bin/limactl$(exe): $(LIMACTL_DEPS) $$(call force_build,$$@)
 	# The hostagent must be compiled with CGO_ENABLED=1 so that net.LookupIP() in the DNS server
 	# calls the native resolver library and not the simplistic version in the Go library.
 	$(ENVS_$@) $(GO_BUILD) -o $@ ./cmd/limactl
@@ -210,11 +210,13 @@ ifeq ($(GOOS),darwin)
 	codesign -f -v --entitlements vz.entitlements -s - $@
 endif
 
-LIMA_CMDS = lima lima$(bat)
-lima: $(addprefix _output/bin/,$(LIMA_CMDS))
+LIMA_CMDS = $(sort lima lima$(bat)) # $(sort ...) deduplicates the list
+LIMA_DEPS = $(addprefix _output/bin/,$(LIMA_CMDS))
+lima: $(LIMA_DEPS)
 
 HELPER_CMDS = nerdctl.lima apptainer.lima docker.lima podman.lima kubectl.lima
-helpers: $(addprefix _output/bin/,$(HELPER_CMDS))
+HELPERS_DEPS = $(addprefix _output/bin/,$(HELPER_CMDS))
+helpers: $(HELPERS_DEPS)
 
 _output/bin/%: ./cmd/% | _output/bin
 	cp -a $< $@
@@ -462,11 +464,17 @@ ARTIFACT_PATH_COMMON = _artifacts/lima-$(VERSION_TRIMMED)-$(ARTIFACT_OS)-$(ARTIF
 
 artifact: $(addprefix $(ARTIFACT_PATH_COMMON),$(ARTIFACT_FILE_EXTENSIONS))
 
+ARTIFACT_DES =  _output/bin/limactl$(exe) $(LIMA_DEPS) $(HELPERS_DEPS) \
+	$(NATIVE_GUESTAGENT) $(ADDITIONAL_GUESTAGENTS) \
+	$(TEMPLATES) $(TEMPLATE_EXPERIMENTALS) _output/share/lima/examples \
+	$(DOCUMENTATION) _output/share/doc/lima/templates _output/share/doc/lima/examples \
+	_output/share/man/man1/limactl.1
+
 # file targets
-$(ARTIFACT_PATH_COMMON).tar.gz: binaries | _artifacts
+$(ARTIFACT_PATH_COMMON).tar.gz: $(ARTIFACT_DES) | _artifacts
 	$(TAR) -C _output/ --no-xattrs -czvf $@ ./
 
-$(ARTIFACT_PATH_COMMON).zip: binaries | _artifacts
+$(ARTIFACT_PATH_COMMON).zip: $(ARTIFACT_DES) | _artifacts
 	cd _output && $(ZIP) -r ../$@ *
 
 # generate manpages using native limactl.
