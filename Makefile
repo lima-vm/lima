@@ -285,7 +285,7 @@ $(LINUX_GUESTAGENT_PATH_COMMON)%: $(call dependencis_for_cmd,lima-guestagent) $$
 	$(ENVS_$@) $(GO_BUILD) -o $@ ./cmd/lima-guestagent
 	chmod 644 $@
 ifeq ($(CONFIG_GUESTAGENT_COMPRESS),y)
-	gzip $@
+	gzip -f $@
 endif
 
 MKDIR_TARGETS += _output/share/lima
