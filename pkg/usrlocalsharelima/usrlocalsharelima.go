@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"runtime/debug"
+	"strings"
 
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/sirupsen/logrus"
@@ -50,8 +52,11 @@ func Dir() (string, error) {
 		filepath.Join(selfDirDir, "share/lima/lima-guestagent."+ostype+"-"+arch),
 		// TODO: support custom path
 	}
-	if logrus.GetLevel() == logrus.DebugLevel {
-		// candidate 2: lauched by `~/go/bin/dlv dap`
+	isDebugBuildByDelve, err := isDebugBuildByDelve()
+	if err != nil {
+		return "", err
+	}
+	if isDebugBuildByDelve { // candidate 2: lauched by `~/go/bin/dlv dap`
 		// - self: ${workspaceFolder}/cmd/limactl/__debug_bin_XXXXXX
 		// - agent: ${workspaceFolder}/_output/share/lima/lima-guestagent.Linux-x86_64
 		// - dir:  ${workspaceFolder}/_output/share/lima
@@ -88,4 +93,24 @@ func GuestAgentBinary(ostype limayaml.OS, arch limayaml.Arch) (string, error) {
 		return "", err
 	}
 	return filepath.Join(dir, "lima-guestagent."+ostype+"-"+arch), nil
+}
+
+func isDebugBuildByDelve() (bool, error) {
+	buildInfo, ok := debug.ReadBuildInfo()
+	if ok {
+		for _, setting := range buildInfo.Settings {
+			// go-delve/delve adds `-gcflags="all=-N -l"` to the build settings.
+			// https://github.com/go-delve/delve/blob/4a5350fd1f2aab12d953f9266a9979034f415b8a/pkg/gobuild/gobuild.go#L85
+			if setting.Key == "-gcflags" && setting.Value == "all=-N -l" {
+				return true, nil
+			}
+		}
+	}
+	executable, err := os.Executable()
+	if err != nil {
+		return false, err
+	}
+	// go-delve/delve builds the debug binary with the prefix "__debug_bin_"
+	// https://github.com/go-delve/delve/blob/4a5350fd1f2aab12d953f9266a9979034f415b8a/service/dap/server.go#L985
+	return strings.HasPrefix(filepath.Base(executable), "__debug_bin_"), nil
 }
