@@ -299,10 +299,10 @@ additional-guestagents: $(ADDITIONAL_GUESTAGENTS)
 	@[ "$(findstring $(*),$(GUESTAGENT_ARCHS))" == "$(*)" ] && make $(call guestaget_path,$*)
 
 # environment variables for linx-guestagent. these variable are used for checking force build.
-ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)aarch64 = GOOS=linux GOARCH=arm64 CGO_ENABLED=0
-ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)armv7l = GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0
-ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)riscv64 = GOOS=linux GOARCH=riscv64 CGO_ENABLED=0
-ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)x86_64 = GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)aarch64 = CGO_ENABLED=0 GOOS=linux GOARCH=arm64
+ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)armv7l = CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7
+ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)riscv64 = CGO_ENABLED=0 GOOS=linux GOARCH=riscv64
+ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)x86_64 = CGO_ENABLED=0 GOOS=linux GOARCH=amd64
 $(ALL_GUESTAGENTS_NOT_COMPRESSED): $(call dependencis_for_cmd,lima-guestagent) $$(call force_build_with_gunzip,$$@) | _output/share/lima
 	$(ENVS_$@) $(GO_BUILD) -o $@ ./cmd/lima-guestagent
 	chmod 644 $@
