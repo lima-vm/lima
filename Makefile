@@ -156,12 +156,12 @@ limactl: _output/bin/limactl$(exe) lima
 
 ### Listing Dependencies
 
-# returns a list of files expanded from $(1) excluding directories.
-glob_excluding_dir = $(shell bash -c -O extglob -O globstar -O nullglob 'for f in $(1); do test -d $$f || echo $$f; done')
-FILES_IN_PKG = $(call glob_excluding_dir, ./pkg/**/!(*_test.go))
+# returns a list of files expanded from $(1) excluding directories and files ending with '_test.go'.
+find_files_excluding_dir_and_test = $(shell find $(1) ! -type d ! -name '*_test.go')
+FILES_IN_PKG = $(call find_files_excluding_dir_and_test, ./pkg)
 
 # returns a list of files which are dependencies for the command $(1).
-dependencis_for_cmd = go.mod $(call glob_excluding_dir, ./cmd/$(1)/**/!(*_test.go)) $(FILES_IN_PKG)
+dependencis_for_cmd = go.mod $(call find_files_excluding_dir_and_test, ./cmd/$(1)) $(FILES_IN_PKG)
 
 ### Force Building Targets
 
