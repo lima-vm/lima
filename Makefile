@@ -465,7 +465,7 @@ generate:
 .PHONY: artifact
 
 # returns the capitalized string of $(1).
-capitalize = $(shell bash -c 'word="$(1)"; echo $${word^}')
+capitalize = $(shell echo "$(1)"|awk '{print toupper(substr($$0,1,1)) tolower(substr($$0,2))}')
 
 # returns the architecture name converted from GOARCH to GNU coreutils uname -m. 
 to_uname_m = $(foreach arch,$(1),$(shell echo $(arch) | sed 's/amd64/x86_64/' | sed 's/arm64/aarch64/'))
