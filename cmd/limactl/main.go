@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/lima-vm/lima/pkg/debugutil"
 	"github.com/lima-vm/lima/pkg/fsutil"
 	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
@@ -94,6 +95,7 @@ func newApp() *cobra.Command {
 		debug, _ := cmd.Flags().GetBool("debug")
 		if debug {
 			logrus.SetLevel(logrus.DebugLevel)
+			debugutil.Debug = true
 		}
 
 		if osutil.IsBeingRosettaTranslated() && cmd.Parent().Name() != "completion" && cmd.Name() != "generate-doc" && cmd.Name() != "validate" {

@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"runtime"
 
+	"github.com/lima-vm/lima/pkg/debugutil"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/sirupsen/logrus"
 )
@@ -50,14 +51,14 @@ func Dir() (string, error) {
 		filepath.Join(selfDirDir, "share/lima/lima-guestagent."+ostype+"-"+arch),
 		// TODO: support custom path
 	}
-	if logrus.GetLevel() == logrus.DebugLevel {
+	if debugutil.Debug {
 		// candidate 2: lauched by `~/go/bin/dlv dap`
 		// - self: ${workspaceFolder}/cmd/limactl/__debug_bin_XXXXXX
 		// - agent: ${workspaceFolder}/_output/share/lima/lima-guestagent.Linux-x86_64
 		// - dir:  ${workspaceFolder}/_output/share/lima
 		candidateForDebugBuild := filepath.Join(filepath.Dir(selfDirDir), "_output/share/lima/lima-guestagent."+ostype+"-"+arch)
 		gaCandidates = append(gaCandidates, candidateForDebugBuild)
-		logrus.Infof("debug build detected, adding more guest agent candidates: %v", candidateForDebugBuild)
+		logrus.Infof("debug mode detected, adding more guest agent candidates: %v", candidateForDebugBuild)
 	}
 	for _, gaCandidate := range gaCandidates {
 		if _, err := os.Stat(gaCandidate); err == nil {
