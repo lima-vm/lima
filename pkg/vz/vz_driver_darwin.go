@@ -39,6 +39,7 @@ var knownYamlProperties = []string{
 	"Message",
 	"Mounts",
 	"MountType",
+	"MountTypesUnsupported",
 	"MountInotify",
 	"Networks",
 	"OS",

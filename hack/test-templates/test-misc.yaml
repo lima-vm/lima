@@ -1,5 +1,6 @@
 # The test template for testing misc configurations:
 # - disk
+# - snapshots
 # - (More to come)
 #
 # This template requires Lima v1.0.0-alpha.0 or later.
@@ -18,6 +19,8 @@ images:
 - location: "https://cloud-images.ubuntu.com/releases/24.04/release/ubuntu-24.04-server-cloudimg-arm64.img"
   arch: "aarch64"
 
+# 9p is not compatible with `limactl snapshot`
+mountTypesUnsupported: ["9p"]
 mounts:
 - location: "~"
   writable: true

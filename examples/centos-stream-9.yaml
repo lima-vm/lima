@@ -14,6 +14,7 @@ images:
   arch: "x86_64"
 - location: "https://cloud.centos.org/centos/9-stream/aarch64/images/CentOS-Stream-GenericCloud-9-latest.aarch64.qcow2"
   arch: "aarch64"
+mountTypesUnsupported: ["9p"]
 mounts:
 - location: "~"
 - location: "/tmp/lima"

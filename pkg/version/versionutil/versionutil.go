@@ -15,26 +15,34 @@ func Parse(version string) (*semver.Version, error) {
 	return semver.NewVersion(version)
 }
 
+func compare(limaVersion, oldVersion string) int {
+	if limaVersion == "" {
+		if oldVersion == "" {
+			return 0
+		}
+		return -1
+	}
+	version, err := Parse(limaVersion)
+	if err != nil {
+		return 1
+	}
+	cmp := version.Compare(*semver.New(oldVersion))
+	if cmp == 0 && strings.Contains(limaVersion, "-") {
+		cmp = 1
+	}
+	return cmp
+}
+
 // GreaterThan returns true if the Lima version used to create an instance is greater
 // than a specific older version. Always returns false if the Lima version is the empty string.
 // Unparsable lima versions (like SHA1 commit ids) are treated as the latest version and return true.
 // limaVersion is a `github describe` string, not a semantic version. So "0.19.1-16-gf3dc6ed.m"
 // will be considered greater than "0.19.1".
 func GreaterThan(limaVersion, oldVersion string) bool {
-	if limaVersion == "" {
-		return false
-	}
-	version, err := Parse(limaVersion)
-	if err != nil {
-		return true
-	}
-	switch version.Compare(*semver.New(oldVersion)) {
-	case -1:
-		return false
-	case +1:
-		return true
-	case 0:
-		return strings.Contains(limaVersion, "-")
-	}
-	panic("unreachable")
+	return compare(limaVersion, oldVersion) > 0
+}
+
+// GreaterEqual return true if limaVersion >= oldVersion.
+func GreaterEqual(limaVersion, oldVersion string) bool {
+	return compare(limaVersion, oldVersion) >= 0
 }

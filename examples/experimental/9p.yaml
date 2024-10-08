@@ -1,3 +1,11 @@
+# ⚠️ ⚠️ ⚠️ `template://experimental/9p` will be removed in Lima v1.0,
+# as 9p will graduate from experimental and will be the default mount type for QEMU.
+#
+# For Lima v1.0 and later, use the following command instead:
+# ```
+# limactl create --vm-type=qemu template://default
+# ```
+
 # This template requires Lima v0.10.0 or later.
 # On macOS hosts, QEMU needs to be v7.0.0 or later. Homebrew's QEMU v6.2.0_1 can be used too.
 # This template is planned to be merged to default.yaml in Lima v1.0 (ETA: 2022 Q2).

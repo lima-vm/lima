@@ -185,6 +185,12 @@ func Validate(y *LimaYAML, warn bool) error {
 		return fmt.Errorf("field `mountType` must be %q or %q or %q, or %q, got %q", REVSSHFS, NINEP, VIRTIOFS, WSLMount, *y.MountType)
 	}
 
+	for _, f := range y.MountTypesUnsupported {
+		if f == *y.MountType {
+			return fmt.Errorf("field `mountType` must not be one of %v (`mountTypesUnsupported`), got %q", y.MountTypesUnsupported, *y.MountType)
+		}
+	}
+
 	if warn && runtime.GOOS != "linux" {
 		for i, mount := range y.Mounts {
 			if mount.Virtiofs.QueueSize != nil {
@@ -508,9 +514,6 @@ func validatePort(field string, port int) error {
 }
 
 func warnExperimental(y *LimaYAML) {
-	if *y.MountType == NINEP {
-		logrus.Warn("`mountType: 9p` is experimental")
-	}
 	if *y.MountType == VIRTIOFS && runtime.GOOS == "linux" {
 		logrus.Warn("`mountType: virtiofs` on Linux is experimental")
 	}
