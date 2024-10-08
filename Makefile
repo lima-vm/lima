@@ -444,8 +444,8 @@ lint: check-generated
 	golangci-lint run ./...
 	yamllint .
 	ls-lint
-	find . -name '*.sh' | xargs shellcheck
-	find . -name '*.sh' | xargs shfmt -s -d
+	find . -name '*.sh' ! -path "./.git/*" | xargs shellcheck
+	find . -name '*.sh' ! -path "./.git/*" | xargs shfmt -s -d
 
 .PHONY: clean
 clean:
