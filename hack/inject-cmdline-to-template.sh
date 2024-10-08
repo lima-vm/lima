@@ -91,7 +91,7 @@ function inject_to() {
 	for field_name in location digest cmdline; do
 		[[ -z ${!field_name} ]] || fields+=("\"${field_name}\": \"${!field_name}\"")
 	done
-	yq -i -I 2 eval "setpath([(.images[] | select(.arch == \"${arch}\") | path)].[${index}] + \"${key}\"; { ${fields[*]}})" "${template}"
+	limactl edit --log-level error --set "setpath([(.images[] | select(.arch == \"${arch}\") | path)].[${index}] + \"${key}\"; { ${fields[*]}})" "${template}"
 }
 inject_to "${template}" "${arch}" "${index}" "kernel" "${kernel_location}" "${kernel_digest}" "${cmdline}"
 inject_to "${template}" "${arch}" "${index}" "initrd" "${initrd_location}" "${initrd_digest}"
