@@ -29,6 +29,8 @@ usermod -p '*' "${LIMA_CIDATA_USER}"
 
 # Alpine disables TCP forwarding, which is needed by the lima-guestagent
 sed -i 's/AllowTcpForwarding no/AllowTcpForwarding yes/g' /etc/ssh/sshd_config
+# Enable PAM so as to load /etc/environment via pam_env
+sed -i 's/#UsePAM no/UsePAM yes/g' /etc/ssh/sshd_config
 rc-service --ifstarted sshd reload
 
 # mount /sys/fs/cgroup
