@@ -155,7 +155,3 @@ func (plf *pseudoLoopbackForwarder) Close() error {
 	_ = plf.ln.Close()
 	return plf.onClose()
 }
-
-func getFreeVSockPort() (int, error) {
-	return 0, nil
-}
