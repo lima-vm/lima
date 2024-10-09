@@ -201,6 +201,14 @@ compare_build_vars = $(call diff,$(call go_build_vars,$(1),$(call keys_in_build_
 # $(1): target binary. expecting ENVS_$(1) is set to use the environment variables for the target binary.
 force_build = $(if $(call compare_build_vars,$(1),$(call extract_build_vars,$(1))),force,)
 
+# returns the file name without .gz extension. It also gunzips the file with .gz extension if exists.
+# $(1): target file
+gunzip_if_exists = $(shell f=$(1); f=$${f%.gz}; test -f "$${f}.gz" && (set -x; gunzip -f "$${f}.gz") ; echo "$${f}")
+
+# call force_build with passing output of gunzip_if_exists as an argument.
+# $(1): target file
+force_build_with_gunzip = $(call force_build,$(call gunzip_if_exists,$(1)))
+
 force: # placeholder for force build
 
 ################################################################################
@@ -246,47 +254,60 @@ MKDIR_TARGETS += _output/bin
 # _output/share/lima/lima-guestagent
 LINUX_GUESTAGENT_PATH_COMMON = _output/share/lima/lima-guestagent.Linux-
 
-GUESTAGENT_ARCHS = aarch64 armv7l riscv64 x86_64
-NATIVE_GUESTAGENT_ARCH = $(shell uname -m | sed -e s/arm64/aarch64/)
-NATIVE_GUESTAGENT = $(LINUX_GUESTAGENT_PATH_COMMON)$(NATIVE_GUESTAGENT_ARCH)
-ADDITIONAL_GUESTAGENT_ARCHS = $(filter-out $(NATIVE_GUESTAGENT_ARCH),$(GUESTAGENT_ARCHS))
-ADDITIONAL_GUESTAGENTS = $(addprefix $(LINUX_GUESTAGENT_PATH_COMMON),$(ADDITIONAL_GUESTAGENT_ARCHS))
-
 # How to add architecure specific guestagent:
 # 1. Add the architecture to GUESTAGENT_ARCHS
 # 2. Add ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)<arch> to set GOOS, GOARCH, and other necessary environment variables
-ifeq ($(CONFIG_GUESTAGENT_OS_LINUX),y)
+GUESTAGENT_ARCHS = aarch64 armv7l riscv64 x86_64
 
-# CONFIG_GUESTAGENT_ARCH_<arch> naming convention: uppercase, remove '_'
-config_guestagent_arch_name = CONFIG_GUESTAGENT_ARCH_$(shell echo $(1)|tr -d _|tr a-z A-Z)
-
-# guestagent_path returns the path to the guestagent binary for the given architecture,
-# or an empty string if the CONFIG_GUESTAGENT_ARCH_<arch> is not set.
-guestagent_path = $(if $(findstring y,$($(call config_guestagent_arch_name,$(1)))),$(LINUX_GUESTAGENT_PATH_COMMON)$(1))
-
-# apply CONFIG_GUESTAGENT_ARCH_*
-GUESTAGENTS = $(foreach arch,$(GUESTAGENT_ARCHS),$(call guestagent_path,$(arch)))
+ALL_GUESTAGENTS_NOT_COMPRESSED = $(addprefix $(LINUX_GUESTAGENT_PATH_COMMON),$(GUESTAGENT_ARCHS))
+ifeq ($(CONFIG_GUESTAGENT_COMPRESS),y)
+$(info Guestagents are unzipped each time to check the build configuration; they may be gunzipped afterward.)
+gz=.gz
 endif
 
+ALL_GUESTAGENTS = $(addsuffix $(gz),$(ALL_GUESTAGENTS_NOT_COMPRESSED))
+
+# guestagent path for the given architectures. it may has .gz extension if CONFIG_GUESTAGENT_COMPRESS is enabled.
+# $(1): list of architectures
+guestaget_path = $(foreach arch,$(1),$(LINUX_GUESTAGENT_PATH_COMMON)$(arch)$(gz))
+
+NATIVE_GUESTAGENT_ARCH = $(shell uname -m | sed -e s/arm64/aarch64/)
+NATIVE_GUESTAGENT = $(call guestaget_path,$(NATIVE_GUESTAGENT_ARCH))
+ADDITIONAL_GUESTAGENT_ARCHS = $(filter-out $(NATIVE_GUESTAGENT_ARCH),$(GUESTAGENT_ARCHS))
+ADDITIONAL_GUESTAGENTS = $(call guestaget_path,$(ADDITIONAL_GUESTAGENT_ARCHS))
+
+ifeq ($(CONFIG_GUESTAGENT_OS_LINUX),y)
+
+# config_guestagent_arch returns expanded value of CONFIG_GUESTAGENT_ARCH_<arch>
+# $(1): architecture
+# CONFIG_GUESTAGENT_ARCH_<arch> naming convention: uppercase, remove '_'
+config_guestagent_arch = $(filter y,$(CONFIG_GUESTAGENT_ARCH_$(shell echo $(1)|tr -d _|tr a-z A-Z)))
+
+# guestagent_path_enabled_by_config returns the path to the guestagent binary for the given architecture,
+# or an empty string if the CONFIG_GUESTAGENT_ARCH_<arch> is not set.
+guestagent_path_enabled_by_config = $(if $(call config_guestagent_arch,$(1)),$(call guestaget_path,$(1)))
+
+# apply CONFIG_GUESTAGENT_ARCH_*
+GUESTAGENTS = $(foreach arch,$(GUESTAGENT_ARCHS),$(call guestagent_path_enabled_by_config,$(arch)))
+endif
 
 .PHONY: guestagents native-guestagent additional-guestagents
 guestagents: $(GUESTAGENTS)
 native-guestagent: $(NATIVE_GUESTAGENT)
 additional-guestagents: $(ADDITIONAL_GUESTAGENTS)
 %-guestagent:
-	@[ "$(findstring $(*),$(GUESTAGENT_ARCHS))" == "$(*)" ] && make $(LINUX_GUESTAGENT_PATH_COMMON)$*
+	@[ "$(findstring $(*),$(GUESTAGENT_ARCHS))" == "$(*)" ] && make $(call guestaget_path,$*)
 
 # environment variables for linx-guestagent. these variable are used for checking force build.
-ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)aarch64 = GOOS=linux GOARCH=arm64 CGO_ENABLED=0
-ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)armv7l = GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0
-ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)riscv64 = GOOS=linux GOARCH=riscv64 CGO_ENABLED=0
-ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)x86_64 = GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-$(LINUX_GUESTAGENT_PATH_COMMON)%: $(call dependencis_for_cmd,lima-guestagent) $$(call force_build,$$@) | _output/share/lima
+ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)aarch64 = CGO_ENABLED=0 GOOS=linux GOARCH=arm64
+ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)armv7l = CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7
+ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)riscv64 = CGO_ENABLED=0 GOOS=linux GOARCH=riscv64
+ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)x86_64 = CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+$(ALL_GUESTAGENTS_NOT_COMPRESSED): $(call dependencis_for_cmd,lima-guestagent) $$(call force_build_with_gunzip,$$@) | _output/share/lima
 	$(ENVS_$@) $(GO_BUILD) -o $@ ./cmd/lima-guestagent
 	chmod 644 $@
-ifeq ($(CONFIG_GUESTAGENT_COMPRESS),y)
-	gzip -f $@
-endif
+$(LINUX_GUESTAGENT_PATH_COMMON)%.gz: $(LINUX_GUESTAGENT_PATH_COMMON)% $$(call force_build_with_gunzip,$$@)
+	@set -x; gzip $<
 
 MKDIR_TARGETS += _output/share/lima
 
@@ -491,7 +512,7 @@ ARTIFACT_PATH_COMMON = _artifacts/lima-$(VERSION_TRIMMED)-$(ARTIFACT_OS)-$(ARTIF
 artifact: $(addprefix $(ARTIFACT_PATH_COMMON),$(ARTIFACT_FILE_EXTENSIONS))
 
 ARTIFACT_DES =  _output/bin/limactl$(exe) $(LIMA_DEPS) $(HELPERS_DEPS) \
-	$(NATIVE_GUESTAGENT) $(ADDITIONAL_GUESTAGENTS) \
+	$(ALL_GUESTAGENTS) \
 	$(TEMPLATES) $(TEMPLATE_EXPERIMENTALS) _output/share/lima/examples \
 	$(DOCUMENTATION) _output/share/doc/lima/templates _output/share/doc/lima/examples \
 	_output/share/man/man1/limactl.1
