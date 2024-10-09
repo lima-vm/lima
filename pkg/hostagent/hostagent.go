@@ -22,6 +22,7 @@ import (
 	"github.com/lima-vm/lima/pkg/cidata"
 	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/driverutil"
+	"github.com/lima-vm/lima/pkg/freeport"
 	guestagentapi "github.com/lima-vm/lima/pkg/guestagent/api"
 	guestagentclient "github.com/lima-vm/lima/pkg/guestagent/api/client"
 	hostagentapi "github.com/lima-vm/lima/pkg/hostagent/api"
@@ -108,11 +109,11 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 
 	var udpDNSLocalPort, tcpDNSLocalPort int
 	if *inst.Config.HostResolver.Enabled {
-		udpDNSLocalPort, err = findFreeUDPLocalPort()
+		udpDNSLocalPort, err = freeport.UDP()
 		if err != nil {
 			return nil, err
 		}
-		tcpDNSLocalPort, err = findFreeTCPLocalPort()
+		tcpDNSLocalPort, err = freeport.TCP()
 		if err != nil {
 			return nil, err
 		}
@@ -123,7 +124,7 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 	if *inst.Config.VMType == limayaml.VZ {
 		vSockPort = 2222
 	} else if *inst.Config.VMType == limayaml.WSL2 {
-		port, err := getFreeVSockPort()
+		port, err := freeport.VSock()
 		if err != nil {
 			logrus.WithError(err).Error("failed to get free VSock port")
 		}
@@ -250,55 +251,11 @@ func determineSSHLocalPort(confLocalPort int, instName string) (int, error) {
 		// use hard-coded value for "default" instance, for backward compatibility
 		return 60022, nil
 	}
-	sshLocalPort, err := findFreeTCPLocalPort()
+	sshLocalPort, err := freeport.TCP()
 	if err != nil {
 		return 0, fmt.Errorf("failed to find a free port, try setting `ssh.localPort` manually: %w", err)
 	}
 	return sshLocalPort, nil
-}
-
-func findFreeTCPLocalPort() (int, error) {
-	lAddr0, err := net.ResolveTCPAddr("tcp4", "127.0.0.1:0")
-	if err != nil {
-		return 0, err
-	}
-	l, err := net.ListenTCP("tcp4", lAddr0)
-	if err != nil {
-		return 0, err
-	}
-	defer l.Close()
-	lAddr := l.Addr()
-	lTCPAddr, ok := lAddr.(*net.TCPAddr)
-	if !ok {
-		return 0, fmt.Errorf("expected *net.TCPAddr, got %v", lAddr)
-	}
-	port := lTCPAddr.Port
-	if port <= 0 {
-		return 0, fmt.Errorf("unexpected port %d", port)
-	}
-	return port, nil
-}
-
-func findFreeUDPLocalPort() (int, error) {
-	lAddr0, err := net.ResolveUDPAddr("udp4", "127.0.0.1:0")
-	if err != nil {
-		return 0, err
-	}
-	l, err := net.ListenUDP("udp4", lAddr0)
-	if err != nil {
-		return 0, err
-	}
-	defer l.Close()
-	lAddr := l.LocalAddr()
-	lUDPAddr, ok := lAddr.(*net.UDPAddr)
-	if !ok {
-		return 0, fmt.Errorf("expected *net.UDPAddr, got %v", lAddr)
-	}
-	port := lUDPAddr.Port
-	if port <= 0 {
-		return 0, fmt.Errorf("unexpected port %d", port)
-	}
-	return port, nil
 }
 
 func (a *HostAgent) emitEvent(_ context.Context, ev events.Event) {
