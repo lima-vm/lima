@@ -80,7 +80,7 @@ func TestFillDefault(t *testing.T) {
 		},
 		SSH: SSH{
 			LocalPort:         ptr.Of(0),
-			LoadDotSSHPubKeys: ptr.Of(true),
+			LoadDotSSHPubKeys: ptr.Of(false),
 			ForwardAgent:      ptr.Of(false),
 			ForwardX11:        ptr.Of(false),
 			ForwardX11Trusted: ptr.Of(false),

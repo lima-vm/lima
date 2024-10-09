@@ -350,7 +350,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.SSH.LoadDotSSHPubKeys = o.SSH.LoadDotSSHPubKeys
 	}
 	if y.SSH.LoadDotSSHPubKeys == nil {
-		y.SSH.LoadDotSSHPubKeys = ptr.Of(true)
+		y.SSH.LoadDotSSHPubKeys = ptr.Of(false) // was true before Lima v1.0
 	}
 
 	if y.SSH.ForwardAgent == nil {

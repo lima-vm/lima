@@ -148,7 +148,7 @@ ssh:
   # This option is useful when you want to use other SSH-based
   # applications such as rsync with the Lima instance.
   # If you have an insecure key under ~/.ssh, do not use this option.
-  # 🟢 Builtin default: true
+  # 🟢 Builtin default: false (since Lima v1.0)
   loadDotSSHPubKeys: null
   # Forward ssh agent into the instance.
   # The ssh agent socket can be mounted in a container at the path `/run/host-services/ssh-auth.sock`.
