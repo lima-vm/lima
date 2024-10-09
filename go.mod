@@ -139,3 +139,7 @@ require (
 // We can't just `require` github.com/inetaf/tcpproxy, as gvisor-tap-vsock
 // still imports inet.af/tcpproxy: https://github.com/containers/gvisor-tap-vsock/pull/399
 replace inet.af/tcpproxy => github.com/inetaf/tcpproxy v0.0.0-20240214030015-3ce58045626c
+
+// Nested virtualization support is yet to be merged into VZ https://github.com/Code-Hex/vz/pull/159.
+// We use our (temporary) fork to add the feature.
+replace github.com/Code-Hex/vz/v3 => github.com/lima-vm/vz/v3 v3.0.0-20241008080607-2a22b5e278ee

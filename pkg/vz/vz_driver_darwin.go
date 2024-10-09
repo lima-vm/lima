@@ -41,6 +41,7 @@ var knownYamlProperties = []string{
 	"MountType",
 	"MountTypesUnsupported",
 	"MountInotify",
+	"NestedVirtualization",
 	"Networks",
 	"OS",
 	"Param",

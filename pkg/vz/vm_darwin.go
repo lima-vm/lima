@@ -15,6 +15,7 @@ import (
 	"syscall"
 
 	"github.com/Code-Hex/vz/v3"
+	"github.com/coreos/go-semver/semver"
 	"github.com/docker/go-units"
 	"github.com/lima-vm/go-qcow2reader"
 	"github.com/lima-vm/go-qcow2reader/image/raw"
@@ -25,6 +26,7 @@ import (
 	"github.com/lima-vm/lima/pkg/nativeimgutil"
 	"github.com/lima-vm/lima/pkg/networks"
 	"github.com/lima-vm/lima/pkg/networks/usernet"
+	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/sirupsen/logrus"
@@ -234,6 +236,27 @@ func attachPlatformConfig(driver *driver.BaseDriver, vmConfig *vz.VirtualMachine
 	if err != nil {
 		return err
 	}
+
+	// nested virt
+	if *driver.Instance.Config.NestedVirtualization {
+		macOSProductVersion, err := osutil.ProductVersion()
+		if err != nil {
+			return fmt.Errorf("failed to get macOS product version: %w", err)
+		}
+
+		if macOSProductVersion.LessThan(*semver.New("15.0.0")) {
+			return errors.New("nested virtualization requires macOS 15 or newer")
+		}
+
+		if !vz.IsNestedVirtualizationSupported() {
+			return errors.New("nested virtualization is not supported on this device")
+		}
+
+		if err := platformConfig.SetNestedVirtualizationEnabled(true); err != nil {
+			return fmt.Errorf("cannot enable nested virtualization: %w", err)
+		}
+	}
+
 	vmConfig.SetPlatformVirtualMachineConfiguration(platformConfig)
 	return nil
 }
