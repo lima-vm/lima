@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/lima-vm/lima/pkg/cidata"
 	"github.com/lima-vm/lima/pkg/instance"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
@@ -63,6 +64,11 @@ func factoryResetAction(_ *cobra.Command, args []string) error {
 			}
 		}
 	}
+	// Regenerate the cloud-config.yaml, to reflect any changes to the global _config
+	if err := cidata.GenerateCloudConfig(inst.Dir, instName, inst.Config); err != nil {
+		logrus.Error(err)
+	}
+
 	logrus.Infof("Instance %q has been factory reset", instName)
 	return nil
 }
