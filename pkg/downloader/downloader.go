@@ -653,7 +653,18 @@ func downloadIPFS(ctx context.Context, localPath, url, description string, expec
 	logrus.Debugf("downloading %q into %q", url, localPath)
 
 	address := strings.Replace(url, "ipfs://", "", 1)
+
+	// Possibly use an ipfs getway such as "https://ipfs.io" or "http://127.0.0.1:8080"
+	if gateway := os.Getenv("IPFS_GATEWAY"); gateway != "" {
+		if strings.HasPrefix(gateway, "http") {
+			url = fmt.Sprintf("%s/ipfs/%s", gateway, address)
+			return downloadHTTP(ctx, localPath, "", "", url, description, expectedDigest)
+		}
+		return fmt.Errorf("unknown gateway: %q", gateway)
+	}
+
 	address = strings.Split(address, "/")[0] // remove file name from path
+
 	cmd := exec.CommandContext(ctx, "ipfs", "ls", address)
 	cmd.Stderr = os.Stderr
 	out, err := cmd.Output()
