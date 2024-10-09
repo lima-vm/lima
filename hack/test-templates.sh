@@ -44,7 +44,7 @@ case "$NAME" in
 	WARNING "Alpine does not support systemd"
 	CHECKS["systemd"]=
 	CHECKS["container-engine"]=
-	[ "$NAME" = "alpine-9p-writable" ] && CHECKS["mount-path-with-spaces"]="1"
+	[ "$NAME" = "alpine-iso-9p-writable" ] && CHECKS["mount-path-with-spaces"]="1"
 	;;
 "k3s")
 	ERROR "File \"$FILE\" is not testable with this script"
@@ -269,7 +269,7 @@ if [[ -n ${CHECKS["port-forwards"]} ]]; then
 	fi
 	"${scriptdir}/test-port-forwarding.pl" "${NAME}"
 
-	if [[ -n ${CHECKS["container-engine"]} || ${NAME} == "alpine" ]]; then
+	if [[ -n ${CHECKS["container-engine"]} || ${NAME} == "alpine"* ]]; then
 		INFO "Testing that \"${CONTAINER_ENGINE} run\" binds to 0.0.0.0 by default and is forwarded to the host"
 		if [ "$(uname)" = "Darwin" ]; then
 			# macOS runners seem to use `localhost` as the hostname, so the perl lookup just returns `127.0.0.1`
@@ -279,7 +279,7 @@ if [[ -n ${CHECKS["port-forwards"]} ]]; then
 		fi
 		if [ -n "${hostip}" ]; then
 			sudo=""
-			if [ "${NAME}" = "alpine" ]; then
+			if [[ ${NAME} == "alpine"* ]]; then
 				arch=$(limactl info | jq -r .defaultTemplate.arch)
 				nerdctl=$(limactl info | jq -r ".defaultTemplate.containerd.archives[] | select(.arch==\"$arch\").location")
 				curl -Lso nerdctl-full.tgz "${nerdctl}"

@@ -69,7 +69,7 @@ export LIMA_HOME
 # ubuntu-24.04    templates/experimental/net-user-v2.yaml
 # ubuntu-24.04    templates/experimental/9p.yaml
 # ubuntu-24.04    templates/docker.yaml
-# ubuntu-24.04    templates/../hack/test-templates/alpine-9p-writable.yaml
+# ubuntu-24.04    templates/../hack/test-templates/alpine-iso-9p-writable.yaml
 # ubuntu-24.04    templates/../hack/test-templates/test-misc.yaml
 # macos-12        templates/vmnet.yaml
 # macos-12        https://raw.githubusercontent.com/lima-vm/lima/v0.15.1/examples/ubuntu-lts.yaml

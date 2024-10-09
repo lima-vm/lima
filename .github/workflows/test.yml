@@ -226,7 +226,7 @@ jobs:
         - experimental/net-user-v2.yaml
         - experimental/9p.yaml
         - docker.yaml
-        - ../hack/test-templates/alpine-9p-writable.yaml
+        - ../hack/test-templates/alpine-iso-9p-writable.yaml  # Covers alpine-iso.yaml
         - ../hack/test-templates/test-misc.yaml
     steps:
     - uses: actions/checkout@v4
