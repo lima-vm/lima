@@ -310,6 +310,12 @@ rosetta:
 # 🟢 Builtin default: use name from /etc/timezone or deduce from symlink target of /etc/localtime
 timezone: null
 
+# Allow using IPFS for downloading files with a provided CID.
+# If set to `true`, this will try to use ipfs cid before the location url.
+# It requires either the "ipfs" tool (kubo), or setting the IPFS_GATEWAY.
+# 🟢 Builtin default: false
+ipfs: null
+
 firmware:
   # Use legacy BIOS instead of UEFI. Ignored for aarch64 and vz.
   # 🟢 Builtin default: false

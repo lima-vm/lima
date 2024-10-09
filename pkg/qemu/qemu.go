@@ -64,12 +64,12 @@ func EnsureDisk(ctx context.Context, cfg Config) error {
 		var ensuredBaseDisk bool
 		errs := make([]error, len(cfg.LimaYAML.Images))
 		for i, f := range cfg.LimaYAML.Images {
-			if _, err := fileutils.DownloadFile(ctx, baseDisk, f.File, true, "the image", *cfg.LimaYAML.Arch); err != nil {
+			if _, err := fileutils.DownloadFile(ctx, baseDisk, f.File, true, *cfg.LimaYAML.IPFS, "the image", *cfg.LimaYAML.Arch); err != nil {
 				errs[i] = err
 				continue
 			}
 			if f.Kernel != nil {
-				if _, err := fileutils.DownloadFile(ctx, kernel, f.Kernel.File, false, "the kernel", *cfg.LimaYAML.Arch); err != nil {
+				if _, err := fileutils.DownloadFile(ctx, kernel, f.Kernel.File, false, *cfg.LimaYAML.IPFS, "the kernel", *cfg.LimaYAML.Arch); err != nil {
 					errs[i] = err
 					continue
 				}
@@ -81,7 +81,7 @@ func EnsureDisk(ctx context.Context, cfg Config) error {
 				}
 			}
 			if f.Initrd != nil {
-				if _, err := fileutils.DownloadFile(ctx, initrd, *f.Initrd, false, "the initrd", *cfg.LimaYAML.Arch); err != nil {
+				if _, err := fileutils.DownloadFile(ctx, initrd, *f.Initrd, false, *cfg.LimaYAML.IPFS, "the initrd", *cfg.LimaYAML.Arch); err != nil {
 					errs[i] = err
 					continue
 				}
@@ -604,7 +604,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 				switch f.VMType {
 				case "", limayaml.QEMU:
 					if f.Arch == *y.Arch {
-						if _, err = fileutils.DownloadFile(ctx, downloadedFirmware, f.File, true, "UEFI code "+f.Location, *y.Arch); err != nil {
+						if _, err = fileutils.DownloadFile(ctx, downloadedFirmware, f.File, true, *y.IPFS, "UEFI code "+f.Location, *y.Arch); err != nil {
 							logrus.WithError(err).Warnf("failed to download %q", f.Location)
 							continue loop
 						}

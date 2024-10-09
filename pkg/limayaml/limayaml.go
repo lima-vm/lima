@@ -46,6 +46,7 @@ type LimaYAML struct {
 	Rosetta              Rosetta        `yaml:"rosetta,omitempty" json:"rosetta,omitempty"`
 	Plain                *bool          `yaml:"plain,omitempty" json:"plain,omitempty" jsonschema:"nullable"`
 	TimeZone             *string        `yaml:"timezone,omitempty" json:"timezone,omitempty" jsonschema:"nullable"`
+	IPFS                 *bool          `yaml:"ipfs,omitempty" json:"ipfs,omitempty" jsonschema:"nullable"`
 	NestedVirtualization *bool          `yaml:"nestedVirtualization,omitempty" json:"nestedVirtualization,omitempty" jsonschema:"nullable"`
 }
 

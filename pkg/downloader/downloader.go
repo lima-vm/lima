@@ -58,6 +58,7 @@ type options struct {
 	decompress     bool   // default: false (keep compression)
 	description    string // default: url
 	expectedDigest digest.Digest
+	ipfs           bool
 	cid            string
 }
 
@@ -121,6 +122,13 @@ func WithExpectedDigest(expectedDigest digest.Digest) Opt {
 		}
 
 		o.expectedDigest = expectedDigest
+		return nil
+	}
+}
+
+func WithIPFS(ipfs bool) Opt {
+	return func(o *options) error {
+		o.ipfs = ipfs
 		return nil
 	}
 }
@@ -282,7 +290,7 @@ func Download(ctx context.Context, local, remote string, opts ...Opt) (*Result, 
 		return nil, err
 	}
 	status := StatusDownloaded
-	if o.cid != "" {
+	if o.ipfs && o.cid != "" {
 		if err := downloadIPFS(ctx, shadData, fmt.Sprintf("ipfs://%s", o.cid), o.description, o.expectedDigest); err == nil {
 			status = StatusUsedIPFS
 		}

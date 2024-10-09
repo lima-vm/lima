@@ -86,6 +86,7 @@ func TestFillDefault(t *testing.T) {
 			ForwardX11Trusted: ptr.Of(false),
 		},
 		TimeZone: ptr.Of(hostTimeZone()),
+		IPFS:     ptr.Of(false),
 		Firmware: Firmware{
 			LegacyBIOS: ptr.Of(false),
 		},
@@ -175,6 +176,7 @@ func TestFillDefault(t *testing.T) {
 			},
 		},
 		TimeZone: ptr.Of("Antarctica/Troll"),
+		IPFS:     ptr.Of(true),
 		Firmware: Firmware{
 			LegacyBIOS: ptr.Of(false),
 			Images: []FileWithVMType{
@@ -286,6 +288,7 @@ func TestFillDefault(t *testing.T) {
 	}
 
 	expect.TimeZone = y.TimeZone
+	expect.IPFS = y.IPFS
 	expect.Firmware = y.Firmware
 	expect.Firmware.Images = slices.Clone(y.Firmware.Images)
 
@@ -338,6 +341,7 @@ func TestFillDefault(t *testing.T) {
 			ForwardX11Trusted: ptr.Of(false),
 		},
 		TimeZone: ptr.Of("Zulu"),
+		IPFS:     ptr.Of(true),
 		Firmware: Firmware{
 			LegacyBIOS: ptr.Of(true),
 			Images: []FileWithVMType{
@@ -545,6 +549,7 @@ func TestFillDefault(t *testing.T) {
 			ForwardX11Trusted: ptr.Of(false),
 		},
 		TimeZone: ptr.Of("Universal"),
+		IPFS:     ptr.Of(true),
 		Firmware: Firmware{
 			LegacyBIOS: ptr.Of(true),
 		},

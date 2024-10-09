@@ -30,13 +30,13 @@ func EnsureDisk(ctx context.Context, driver *driver.BaseDriver) error {
 		var ensuredBaseDisk bool
 		errs := make([]error, len(driver.Instance.Config.Images))
 		for i, f := range driver.Instance.Config.Images {
-			if _, err := fileutils.DownloadFile(ctx, baseDisk, f.File, true, "the image", *driver.Instance.Config.Arch); err != nil {
+			if _, err := fileutils.DownloadFile(ctx, baseDisk, f.File, true, *driver.Instance.Config.IPFS, "the image", *driver.Instance.Config.Arch); err != nil {
 				errs[i] = err
 				continue
 			}
 			if f.Kernel != nil {
 				// ensure decompress kernel because vz expects it to be decompressed
-				if _, err := fileutils.DownloadFile(ctx, kernel, f.Kernel.File, true, "the kernel", *driver.Instance.Config.Arch); err != nil {
+				if _, err := fileutils.DownloadFile(ctx, kernel, f.Kernel.File, true, *driver.Instance.Config.IPFS, "the kernel", *driver.Instance.Config.Arch); err != nil {
 					errs[i] = err
 					continue
 				}
@@ -48,7 +48,7 @@ func EnsureDisk(ctx context.Context, driver *driver.BaseDriver) error {
 				}
 			}
 			if f.Initrd != nil {
-				if _, err := fileutils.DownloadFile(ctx, initrd, *f.Initrd, false, "the initrd", *driver.Instance.Config.Arch); err != nil {
+				if _, err := fileutils.DownloadFile(ctx, initrd, *f.Initrd, false, *driver.Instance.Config.IPFS, "the initrd", *driver.Instance.Config.Arch); err != nil {
 					errs[i] = err
 					continue
 				}

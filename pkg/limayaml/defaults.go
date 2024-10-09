@@ -333,6 +333,16 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.TimeZone = ptr.Of(hostTimeZone())
 	}
 
+	if y.IPFS == nil {
+		y.IPFS = d.IPFS
+	}
+	if o.IPFS != nil {
+		y.IPFS = o.IPFS
+	}
+	if y.IPFS == nil {
+		y.IPFS = ptr.Of(false)
+	}
+
 	if y.SSH.LocalPort == nil {
 		y.SSH.LocalPort = d.SSH.LocalPort
 	}
