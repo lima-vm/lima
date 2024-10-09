@@ -11,11 +11,13 @@ import (
 )
 
 type ClosableListeners struct {
-	listenConfig   net.ListenConfig
-	listeners      map[string]net.Listener
+	listenConfig net.ListenConfig
+
+	listenersMu sync.Mutex
+	listeners   map[string]net.Listener
+
+	udpListenersMu sync.Mutex
 	udpListeners   map[string]net.PacketConn
-	listenersRW    sync.Mutex
-	udpListenersRW sync.Mutex
 }
 
 func NewClosableListener() *ClosableListeners {
@@ -45,16 +47,16 @@ func (p *ClosableListeners) Remove(_ context.Context, protocol, hostAddress, gue
 	key := key(protocol, hostAddress, guestAddress)
 	switch protocol {
 	case "tcp", "tcp6":
-		p.listenersRW.Lock()
-		defer p.listenersRW.Unlock()
+		p.listenersMu.Lock()
+		defer p.listenersMu.Unlock()
 		listener, ok := p.listeners[key]
 		if ok {
 			listener.Close()
 			delete(p.listeners, key)
 		}
 	case "udp", "udp6":
-		p.udpListenersRW.Lock()
-		defer p.udpListenersRW.Unlock()
+		p.udpListenersMu.Lock()
+		defer p.udpListenersMu.Unlock()
 		listener, ok := p.udpListeners[key]
 		if ok {
 			listener.Close()
@@ -67,20 +69,20 @@ func (p *ClosableListeners) forwardTCP(ctx context.Context, client *guestagentcl
 	key := key("tcp", hostAddress, guestAddress)
 	defer p.Remove(ctx, "tcp", hostAddress, guestAddress)
 
-	p.listenersRW.Lock()
+	p.listenersMu.Lock()
 	_, ok := p.listeners[key]
 	if ok {
-		p.listenersRW.Unlock()
+		p.listenersMu.Unlock()
 		return
 	}
 	tcpLis, err := Listen(ctx, p.listenConfig, hostAddress)
 	if err != nil {
 		logrus.Errorf("failed to accept TCP connection: %v", err)
-		p.listenersRW.Unlock()
+		p.listenersMu.Unlock()
 		return
 	}
 	p.listeners[key] = tcpLis
-	p.listenersRW.Unlock()
+	p.listenersMu.Unlock()
 	for {
 		conn, err := tcpLis.Accept()
 		if err != nil {
@@ -95,21 +97,21 @@ func (p *ClosableListeners) forwardUDP(ctx context.Context, client *guestagentcl
 	key := key("udp", hostAddress, guestAddress)
 	defer p.Remove(ctx, "udp", hostAddress, guestAddress)
 
-	p.udpListenersRW.Lock()
+	p.udpListenersMu.Lock()
 	_, ok := p.udpListeners[key]
 	if ok {
-		p.udpListenersRW.Unlock()
+		p.udpListenersMu.Unlock()
 		return
 	}
 
 	udpConn, err := ListenPacket(ctx, p.listenConfig, hostAddress)
 	if err != nil {
 		logrus.Errorf("failed to listen udp: %v", err)
-		p.udpListenersRW.Unlock()
+		p.udpListenersMu.Unlock()
 		return
 	}
 	p.udpListeners[key] = udpConn
-	p.udpListenersRW.Unlock()
+	p.udpListenersMu.Unlock()
 
 	HandleUDPConnection(ctx, client, udpConn, guestAddress)
 }
