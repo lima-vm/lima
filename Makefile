@@ -422,6 +422,14 @@ ifeq ($(native_compiling),true)
 endif
 
 ################################################################################
+schema-limayaml.json: _output/bin/limactl$(exe)
+	$< generate-jsonschema >$@
+
+.PHONY: check-jsonschema
+check-jsonschema: schema-limayaml.json
+	check-jsonschema --schemafile $< examples/default.yaml
+
+################################################################################
 .PHONY: diagrams
 diagrams: docs/lima-sequence-diagram.png
 docs/lima-sequence-diagram.png: docs/images/lima-sequence-diagram.puml

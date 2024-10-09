@@ -201,7 +201,7 @@ func GenerateISO9660(instDir, name string, instConfig *limayaml.LimaYAML, udpDNS
 		if err != nil {
 			return err
 		}
-		mountPoint, err := localpathutil.Expand(f.MountPoint)
+		mountPoint, err := localpathutil.Expand(*f.MountPoint)
 		if err != nil {
 			return err
 		}
