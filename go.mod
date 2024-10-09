@@ -3,7 +3,7 @@ module github.com/lima-vm/lima
 go 1.22.0
 
 require (
-	al.essio.dev/pkg/shellescape v1.5.0
+	al.essio.dev/pkg/shellescape v1.5.1
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/Code-Hex/vz/v3 v3.1.0
 	github.com/Microsoft/go-winio v0.6.2
