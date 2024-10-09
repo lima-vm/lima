@@ -15,7 +15,7 @@ import (
 var ErrSkipped = errors.New("skipped to download")
 
 // DownloadFile downloads a file to the cache, optionally copying it to the destination. Returns path in cache.
-func DownloadFile(ctx context.Context, dest string, f limayaml.File, decompress bool, description string, expectedArch limayaml.Arch) (string, error) {
+func DownloadFile(ctx context.Context, dest string, f limayaml.File, decompress, ipfs bool, description string, expectedArch limayaml.Arch) (string, error) {
 	if f.Arch != expectedArch {
 		return "", fmt.Errorf("%w: %q: unsupported arch: %q", ErrSkipped, f.Location, f.Arch)
 	}
@@ -26,6 +26,7 @@ func DownloadFile(ctx context.Context, dest string, f limayaml.File, decompress 
 		downloader.WithDecompress(decompress),
 		downloader.WithDescription(fmt.Sprintf("%s (%s)", description, path.Base(f.Location))),
 		downloader.WithExpectedDigest(f.Digest),
+		downloader.WithIPFS(ipfs),
 		downloader.WithContentIdentifier(f.Cid),
 	)
 	if err != nil {

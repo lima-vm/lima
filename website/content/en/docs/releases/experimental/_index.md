@@ -17,6 +17,7 @@ The following features are experimental and subject to change:
 - `audio.device`
 - `arch: armv7l`
 - `mountInotify: true`
+- `ipfs: true`
 
 The following commands are experimental and subject to change:
 
