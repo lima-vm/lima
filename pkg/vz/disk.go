@@ -74,7 +74,7 @@ func EnsureDisk(ctx context.Context, driver *driver.BaseDriver) error {
 		if err != nil {
 			return err
 		}
-		if err = nativeimgutil.MakeSparse(diffDiskF, diskSize); err != nil {
+		if err = diffDiskF.Truncate(diskSize); err != nil {
 			diffDiskF.Close()
 			return err
 		}

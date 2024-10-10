@@ -38,10 +38,6 @@ func Dup2(oldfd int, newfd syscall.Handle) (err error) {
 	return fmt.Errorf("unimplemented")
 }
 
-func Ftruncate(_ int, _ int64) (err error) {
-	return fmt.Errorf("unimplemented")
-}
-
 func SignalName(sig os.Signal) string {
 	switch sig {
 	case syscall.SIGINT:
