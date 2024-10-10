@@ -451,6 +451,11 @@ jobs:
       run: brew install bash coreutils jq
     - name: Uninstall qemu
       run: brew uninstall --ignore-dependencies --force qemu
+    - name: Setup RAM disk for ~/.lima
+      run: ./hack/setup-lima-home-ramdisk.sh
+    - name: "Adjust LIMACTL_CREATE_ARGS"
+      # use small disk that fits into the RAM disk because it will become non-sparse on conversion to raw
+      run: echo "LIMACTL_CREATE_ARGS=${LIMACTL_CREATE_ARGS} --disk 5" >>$GITHUB_ENV
     - name: Test
       run: ./hack/test-templates.sh templates/${{ matrix.template }}
     - if: failure()
