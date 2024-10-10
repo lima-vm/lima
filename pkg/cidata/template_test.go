@@ -10,8 +10,24 @@ import (
 
 var defaultRemoveDefaults = false
 
+func TestConfig(t *testing.T) {
+	args := &TemplateArgs{
+		Name: "default",
+		User: "foo",
+		UID:  501,
+		Home: "/home/foo.linux",
+		SSHPubKeys: []string{
+			"ssh-rsa dummy foo@example.com",
+		},
+		MountType: "reverse-sshfs",
+	}
+	config, err := ExecuteTemplateCloudConfig(args)
+	assert.NilError(t, err)
+	t.Log(string(config))
+}
+
 func TestTemplate(t *testing.T) {
-	args := TemplateArgs{
+	args := &TemplateArgs{
 		Name: "default",
 		User: "foo",
 		UID:  501,
@@ -29,7 +45,7 @@ func TestTemplate(t *testing.T) {
 			Trusted:        []Cert{},
 		},
 	}
-	layout, err := ExecuteTemplate(args)
+	layout, err := ExecuteTemplateCIDataISO(args)
 	assert.NilError(t, err)
 	for _, f := range layout {
 		t.Logf("=== %q ===", f.Path)
@@ -46,7 +62,7 @@ func TestTemplate(t *testing.T) {
 }
 
 func TestTemplate9p(t *testing.T) {
-	args := TemplateArgs{
+	args := &TemplateArgs{
 		Name: "default",
 		User: "foo",
 		UID:  501,
@@ -63,7 +79,7 @@ func TestTemplate9p(t *testing.T) {
 			RemoveDefaults: &defaultRemoveDefaults,
 		},
 	}
-	layout, err := ExecuteTemplate(args)
+	layout, err := ExecuteTemplateCIDataISO(args)
 	assert.NilError(t, err)
 	for _, f := range layout {
 		t.Logf("=== %q ===", f.Path)
