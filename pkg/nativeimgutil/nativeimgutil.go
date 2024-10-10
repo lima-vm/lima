@@ -81,15 +81,27 @@ func ConvertToRaw(source, dest string, size *int64, allowSourceWithBackingFile b
 		return fmt.Errorf("failed to call copySparse(), bufSize=%d, copied=%d: %w", bufSize, copied, err)
 	}
 
-	// Resize
-	if size != nil {
-		logrus.Infof("Expanding to %s", units.BytesSize(float64(*size)))
-		if err = destTmpF.Truncate(*size); err != nil {
-			return err
-		}
-	}
+	// fd has to be closed and reopened before resizing (specific to macOS? APFS?)
+	// https://github.com/lima-vm/lima/issues/2713
 	if err = destTmpF.Close(); err != nil {
 		return err
+	}
+
+	// Resize
+	if size != nil {
+		// Reopen the closed fd
+		destTmpF, err = os.OpenFile(destTmp, os.O_RDWR, 0o600)
+		if err != nil {
+			return err
+		}
+		logrus.Infof("Expanding to %s", units.BytesSize(float64(*size)))
+		if err = destTmpF.Truncate(*size); err != nil {
+			_ = destTmpF.Close()
+			return err
+		}
+		if err = destTmpF.Close(); err != nil {
+			return err
+		}
 	}
 
 	// Rename destTmp into dest
