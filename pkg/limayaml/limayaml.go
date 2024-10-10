@@ -46,6 +46,7 @@ type LimaYAML struct {
 	Rosetta              Rosetta        `yaml:"rosetta,omitempty" json:"rosetta,omitempty"`
 	Plain                *bool          `yaml:"plain,omitempty" json:"plain,omitempty"`
 	TimeZone             *string        `yaml:"timezone,omitempty" json:"timezone,omitempty"`
+	IPFS                 *bool          `yaml:"ipfs,omitempty" json:"ipfs,omitempty"`
 	NestedVirtualization *bool          `yaml:"nestedVirtualization,omitempty" json:"nestedVirtualization,omitempty"`
 }
 
@@ -93,6 +94,7 @@ type File struct {
 	Location string        `yaml:"location" json:"location"` // REQUIRED
 	Arch     Arch          `yaml:"arch,omitempty" json:"arch,omitempty"`
 	Digest   digest.Digest `yaml:"digest,omitempty" json:"digest,omitempty"`
+	Cid      string        `yaml:"cid,omitempty" json:"cid,omitempty"`
 }
 
 type FileWithVMType struct {
