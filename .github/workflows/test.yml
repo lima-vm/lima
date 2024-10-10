@@ -423,8 +423,8 @@ jobs:
 
   vz:
     name: "vz"
-    # on macOS 13, the default vmType is VZ
-    runs-on: macos-13
+    # on macOS >= 13, the default vmType is VZ
+    runs-on: macos-15-large  # Intel
     timeout-minutes: 120
     strategy:
       fail-fast: false
