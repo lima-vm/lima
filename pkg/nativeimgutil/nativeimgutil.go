@@ -14,7 +14,6 @@ import (
 	"github.com/lima-vm/go-qcow2reader"
 	"github.com/lima-vm/go-qcow2reader/image/qcow2"
 	"github.com/lima-vm/go-qcow2reader/image/raw"
-	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/progressbar"
 	"github.com/sirupsen/logrus"
 )
@@ -85,7 +84,7 @@ func ConvertToRaw(source, dest string, size *int64, allowSourceWithBackingFile b
 	// Resize
 	if size != nil {
 		logrus.Infof("Expanding to %s", units.BytesSize(float64(*size)))
-		if err = MakeSparse(destTmpF, *size); err != nil {
+		if err = destTmpF.Truncate(*size); err != nil {
 			return err
 		}
 	}
@@ -113,7 +112,7 @@ func convertRawToRaw(source, dest string, size *int64) error {
 		if err != nil {
 			return err
 		}
-		if err = MakeSparse(destF, *size); err != nil {
+		if err = destF.Truncate(*size); err != nil {
 			_ = destF.Close()
 			return err
 		}
@@ -162,14 +161,7 @@ func copySparse(w *os.File, r io.Reader, bufSize int64) (int64, error) {
 
 	// Ftruncate must be run if the file contains only zeros
 	if !hasWrites {
-		return n, MakeSparse(w, n)
+		return n, w.Truncate(n)
 	}
 	return n, nil
-}
-
-func MakeSparse(f *os.File, n int64) error {
-	if _, err := f.Seek(n, io.SeekStart); err != nil {
-		return err
-	}
-	return osutil.Ftruncate(int(f.Fd()), n)
 }
