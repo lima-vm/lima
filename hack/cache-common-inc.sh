@@ -218,13 +218,33 @@ function location_to_sha256() {
 
 # e.g.
 # ```console
+# $ cache_download_dir
+# .download # on GitHub Actions
+# /home/user/.cache/lima/download # on Linux
+# /Users/user/Library/Caches/lima/download # on macOS
+# /home/user/.cache/lima/download # on others
+# ```
+function cache_download_dir() {
+	if [[ ${GITHUB_ACTIONS:-false} == true ]]; then
+		echo ".download"
+	else
+		case "$(uname -s)" in
+		Linux) echo "${XDG_CACHE_HOME:-${HOME}/.cache}/lima/download" ;;
+		Darwin) echo "${HOME}/Library/Caches/lima/download" ;;
+		*) echo "${HOME}/.cache/lima/download" ;;
+		esac
+	fi
+}
+
+# e.g.
+# ```console
 # $ location_to_cache_path "https://cloud-images.ubuntu.com/releases/24.04/release-20240809/ubuntu-24.04-server-cloudimg-arm64.img"
 # .download/by-url-sha256/ae988d797c6de06b9c8a81a2b814904151135ccfd4616c22948057f6280477e8
 # ```
 function location_to_cache_path() {
 	local location=$1
 	[[ ${location} != "null" ]] || return
-	sha256=$(location_to_sha256 "${location}") && echo ".download/by-url-sha256/${sha256}"
+	sha256=$(location_to_sha256 "${location}") && download_dir=$(cache_download_dir) && echo "${download_dir}/by-url-sha256/${sha256}"
 }
 
 # e.g.
@@ -320,4 +340,49 @@ function hash_file() {
 		done
 		echo "${hash}" | xxd -r -p | sha256sum | cut -d' ' -f1
 	)
+}
+
+# Download the file to the cache directory and print the path.
+# e.g.
+# ```console
+# $ download_to_cache "https://cloud-images.ubuntu.com/releases/24.04/release-20240821/ubuntu-24.04-server-cloudimg-arm64.img"
+# .download/by-url-sha256/346ee1ff9e381b78ba08e2a29445960b5cd31c51f896fc346b82e26e345a5b9a/data # on GitHub Actions
+# /home/user/.cache/lima/download/by-url-sha256/346ee1ff9e381b78ba08e2a29445960b5cd31c51f896fc346b82e26e345a5b9a/data # on Linux
+# /Users/user/Library/Caches/lima/download/by-url-sha256/346ee1ff9e381b78ba08e2a29445960b5cd31c51f896fc346b82e26e345a5b9a/data # on macOS
+# /home/user/.cache/lima/download/by-url-sha256/346ee1ff9e381b78ba08e2a29445960b5cd31c51f896fc346b82e26e345a5b9a/data # on others
+function download_to_cache() {
+	local code_time_type_url
+	code_time_type_url=$(
+		curl -sSLI -w "%{http_code}\t%header{Last-Modified}\t%header{Content-Type}\t%{url_effective}" "$1" -o /dev/null
+	)
+
+	local code time type url
+	IFS=$'\t' read -r code time type url filename <<<"${code_time_type_url}"
+	[[ ${code} == 200 ]] || exit 1
+
+	local cache_path
+	cache_path=$(location_to_cache_path "${url}")
+	[[ -d ${cache_path} ]] || mkdir -p "${cache_path}"
+
+	local needs_download=0
+	[[ -f ${cache_path}/data ]] || needs_download=1
+	[[ -f ${cache_path}/time && "$(<"${cache_path}/time")" == "${time}" ]] || needs_download=1
+	[[ -f ${cache_path}/type && "$(<"${cache_path}/type")" == "${type}" ]] || needs_download=1
+	if [[ ${needs_download} -eq 1 ]]; then
+		local code_time_type_url_filename
+		code_time_type_url_filename=$(
+			echo "downloading ${url}" >&2
+			curl -SL -w "%{http_code}\t%header{Last-Modified}\t%header{Content-Type}\t%{url_effective}\t%{filename_effective}" --no-clobber -o "${cache_path}/data" "${url}"
+		)
+		local filename
+		IFS=$'\t' read -r code time type url filename <<<"${code_time_type_url_filename}"
+		[[ ${code} == 200 ]] || exit 1
+		[[ "${cache_path}/data" == "${filename}" ]] || mv "${filename}" "${cache_path}/data"
+		# sha256.digest seems existing if expected digest is available. so, not creating it here.
+		# sha256sum "${cache_path}/data" | awk '{print "sha256:"$1}' >"${cache_path}/sha256.digest"
+		echo -n "${time}" >"${cache_path}/time"
+	fi
+	[[ -f ${cache_path}/type ]] || echo -n "${type}" >"${cache_path}/type"
+	[[ -f ${cache_path}/url ]] || echo -n "${url}" >"${cache_path}/url"
+	echo "${cache_path}/data"
 }
