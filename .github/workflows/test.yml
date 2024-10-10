@@ -221,7 +221,8 @@ jobs:
         - alpine.yaml
         - debian.yaml
         - fedora.yaml
-        - archlinux.yaml
+        # cloud-init 24.3.1-1 package has a regression: https://github.com/lima-vm/lima/issues/2714
+        # - archlinux.yaml
         - opensuse.yaml
         - experimental/net-user-v2.yaml
         - experimental/9p.yaml
