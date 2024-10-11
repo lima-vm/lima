@@ -599,13 +599,6 @@ func downloadHTTP(ctx context.Context, localPath, lastModified, contentType, url
 	}
 	logrus.Debugf("downloading %q into %q", url, localPath)
 
-	localPathTmp := perProcessTempfile(localPath)
-	fileWriter, err := os.Create(localPathTmp)
-	if err != nil {
-		return err
-	}
-	defer fileWriter.Close()
-
 	resp, err := httpclientutil.Get(ctx, http.DefaultClient, url)
 	if err != nil {
 		return err
@@ -630,6 +623,14 @@ func downloadHTTP(ctx context.Context, localPath, lastModified, contentType, url
 	if HideProgress {
 		hideBar(bar)
 	}
+
+	localPathTmp := perProcessTempfile(localPath)
+	fileWriter, err := os.Create(localPathTmp)
+	if err != nil {
+		return err
+	}
+	defer fileWriter.Close()
+	defer os.RemoveAll(localPathTmp)
 
 	writers := []io.Writer{fileWriter}
 	var digester digest.Digester
