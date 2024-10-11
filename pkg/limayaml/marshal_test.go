@@ -7,12 +7,12 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-func TestSaveEmpty(t *testing.T) {
-	_, err := Save(&LimaYAML{})
+func TestMarshalEmpty(t *testing.T) {
+	_, err := Marshal(&LimaYAML{}, false)
 	assert.NilError(t, err)
 }
 
-func TestSaveTilde(t *testing.T) {
+func TestMarshalTilde(t *testing.T) {
 	y := LimaYAML{
 		Mounts: []Mount{
 			{Location: "~", Writable: ptr.Of(false)},
@@ -20,16 +20,18 @@ func TestSaveTilde(t *testing.T) {
 			{Location: "null"},
 		},
 	}
-	b, err := Save(&y)
+	b, err := Marshal(&y, true)
 	assert.NilError(t, err)
 	// yaml will load ~ (or null) as null
 	// make sure that it is always quoted
-	assert.Equal(t, string(b), `images: []
+	assert.Equal(t, string(b), `---
+images: []
 mounts:
 - location: "~"
   writable: false
 - location: /tmp/lima
   writable: true
 - location: "null"
+...
 `)
 }
