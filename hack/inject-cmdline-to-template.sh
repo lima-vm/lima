@@ -21,6 +21,8 @@ arch="${arch:-$(uname -m)}"
 case "${arch}" in
 amd64 | x86_64) arch=x86_64 ;;
 aarch64 | arm64) arch=aarch64 ;;
+armv7l | armhf) arch=armv7l ;;
+riscv64) arch=riscv64 ;;
 *)
 	echo "Unsupported arch: ${arch}" >&2
 	exit 1
