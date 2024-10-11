@@ -12,14 +12,15 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
-	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/cheggaaa/pb/v3"
 	"github.com/containerd/continuity/fs"
 	"github.com/lima-vm/lima/pkg/httpclientutil"
 	"github.com/lima-vm/lima/pkg/localpathutil"
+	"github.com/lima-vm/lima/pkg/lockutil"
 	"github.com/lima-vm/lima/pkg/progressbar"
 	"github.com/opencontainers/go-digest"
 	"github.com/sirupsen/logrus"
@@ -267,20 +268,20 @@ func Download(ctx context.Context, local, remote string, opts ...Opt) (*Result, 
 		return nil, err
 	}
 	shadURL := filepath.Join(shad, "url")
-	if err := atomicWrite(shadURL, []byte(remote), 0o644); err != nil {
+	if err := writeFirst(shadURL, []byte(remote), 0o644); err != nil {
 		return nil, err
 	}
 	if err := downloadHTTP(ctx, shadData, shadTime, shadType, remote, o.description, o.expectedDigest); err != nil {
 		return nil, err
 	}
+	if shadDigest != "" && o.expectedDigest != "" {
+		if err := writeFirst(shadDigest, []byte(o.expectedDigest.String()), 0o644); err != nil {
+			return nil, err
+		}
+	}
 	// no need to pass the digest to copyLocal(), as we already verified the digest
 	if err := copyLocal(ctx, localPath, shadData, ext, o.decompress, "", ""); err != nil {
 		return nil, err
-	}
-	if shadDigest != "" && o.expectedDigest != "" {
-		if err := atomicWrite(shadDigest, []byte(o.expectedDigest.String()), 0o644); err != nil {
-			return nil, err
-		}
 	}
 	res := &Result{
 		Status:          StatusDownloaded,
@@ -605,13 +606,13 @@ func downloadHTTP(ctx context.Context, localPath, lastModified, contentType, url
 	}
 	if lastModified != "" {
 		lm := resp.Header.Get("Last-Modified")
-		if err := atomicWrite(lastModified, []byte(lm), 0o644); err != nil {
+		if err := writeFirst(lastModified, []byte(lm), 0o644); err != nil {
 			return err
 		}
 	}
 	if contentType != "" {
 		ct := resp.Header.Get("Content-Type")
-		if err := atomicWrite(contentType, []byte(ct), 0o644); err != nil {
+		if err := writeFirst(contentType, []byte(ct), 0o644); err != nil {
 			return err
 		}
 	}
@@ -672,43 +673,43 @@ func downloadHTTP(ctx context.Context, localPath, lastModified, contentType, url
 		return err
 	}
 
-	return os.Rename(localPathTmp, localPath)
+	// If localPath was created by a parallel download keep it. Replacing it
+	// while another process is copying it to the destination may fail the
+	// clonefile syscall. We use a lock to ensure that only one process updates
+	// data, and when we return data file exists.
+
+	return lockutil.WithDirLock(filepath.Dir(localPath), func() error {
+		if _, err := os.Stat(localPath); err == nil {
+			return nil
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+		return os.Rename(localPathTmp, localPath)
+	})
 }
+
+var tempfileCount atomic.Uint64
 
 // To allow parallel download we use a per-process unique suffix for tempoary
 // files. Renaming the temporary file to the final file is safe without
 // synchronization on posix.
+// To make it easy to test we also include a counter ensuring that each
+// temporary file is unique in the same process.
 // https://github.com/lima-vm/lima/issues/2722
 func perProcessTempfile(path string) string {
-	return path + ".tmp." + strconv.FormatInt(int64(os.Getpid()), 10)
+	return fmt.Sprintf("%s.tmp.%d.%d", path, os.Getpid(), tempfileCount.Add(1))
 }
 
-// atomicWrite writes data to path, creating a new file or replacing existing
-// one. Multiple processess can write to the same path safely. Safe on posix and
-// likely safe on windows when using NTFS.
-func atomicWrite(path string, data []byte, perm os.FileMode) error {
-	tmpPath := perProcessTempfile(path)
-	tmp, err := os.OpenFile(tmpPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, perm)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err != nil {
-			tmp.Close()
-			os.RemoveAll(tmpPath)
+// writeFirst writes data to path unless path already exists.
+func writeFirst(path string, data []byte, perm os.FileMode) error {
+	return lockutil.WithDirLock(filepath.Dir(path), func() error {
+		if _, err := os.Stat(path); err == nil {
+			return nil
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return err
 		}
-	}()
-	if _, err = tmp.Write(data); err != nil {
-		return err
-	}
-	if err = tmp.Sync(); err != nil {
-		return err
-	}
-	if err = tmp.Close(); err != nil {
-		return err
-	}
-	err = os.Rename(tmpPath, path)
-	return err
+		return os.WriteFile(path, data, perm)
+	})
 }
 
 // CacheEntries returns a map of cache entries.
