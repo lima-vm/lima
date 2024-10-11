@@ -29,9 +29,7 @@ esac
 
 # 2. extract location by parsing template using arch
 readonly yq_filter="
-[
-    .images | map(select(.arch == \"${arch}\")) | [.[].location]
-]|flatten|.[]
+    .images[]|select(.arch == \"${arch}\")|.location
 "
 parsed=$(yq eval "${yq_filter}" "${template}")
 
