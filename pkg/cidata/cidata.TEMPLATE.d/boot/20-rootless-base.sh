@@ -63,7 +63,11 @@ fi
 
 # Set up subuid
 for f in /etc/subuid /etc/subgid; do
-	grep -qw "${LIMA_CIDATA_USER}" $f || echo "${LIMA_CIDATA_USER}:100000:65536" >>$f
+	# systemd-homed expects the subuid range to be within 524288-1878982656 (0x80000-0x6fff0000).
+	# See userdbctl.
+	# 1073741824 (1G) is just an arbitrary number.
+	# 1073741825-1878982656 is left blank for additional accounts.
+	grep -qw "${LIMA_CIDATA_USER}" $f || echo "${LIMA_CIDATA_USER}:524288:1073741824" >>$f
 done
 
 # Start systemd session
