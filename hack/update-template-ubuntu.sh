@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-function print_help() {
+function ubuntu_print_help() {
 	cat <<HELP
 $(basename "${BASH_SOURCE[0]}"): Update the Ubuntu image location in the specified templates
 
@@ -47,7 +47,7 @@ scriptdir=$(dirname "${BASH_SOURCE[0]}")
 
 set -eu -o pipefail
 
-readonly -A base_urls=(
+readonly -A ubuntu_base_urls=(
 	[minimal]=https://cloud-images.ubuntu.com/minimal/releases/
 	[server]=https://cloud-images.ubuntu.com/releases/
 )
@@ -74,19 +74,19 @@ function validate_url() {
 # ```
 function ubuntu_base_url() {
 	# shellcheck disable=SC2015
-	[[ -v base_urls[$1] ]] && echo "${base_urls[$1]}" || (
+	[[ -v ubuntu_base_urls[$1] ]] && echo "${ubuntu_base_urls[$1]}" || (
 		echo "Unsupported flavor: $1" >&2
 		exit 1
 	)
 }
 
-# downloaded_json downloads the JSON file for the given flavor and returns the path.
+# ubuntu_downloaded_json downloads the JSON file for the given flavor and returns the path.
 # e.g.
 # ```console
-# downloaded_json server
+# ubuntu_downloaded_json server
 # /Users/user/Library/Caches/lima/download/by-url-sha256/255f982f5bbda07f5377369093e21c506d7240f5ba901479bdadfa205ddafb01/data
 # ```
-function downloaded_json() {
+function ubuntu_downloaded_json() {
 	local flavor=$1 base_url json_url
 	json_url=$(ubuntu_base_url "${flavor}")streams/v1/com.ubuntu.cloud:released:download.json
 	download_to_cache "${json_url}"
@@ -106,10 +106,10 @@ function ubuntu_image_url_try_replace_release_with_version() {
 
 # ubuntu_image_url_latest returns the latest image URL and its digest for the given version, flavor, arch, and path suffix.
 function ubuntu_image_url_latest() {
-	local version=$1 flavor=$2 arch=$3 path_suffix=$4 base_url downloaded_json jq_filter location_digest_release
+	local version=$1 flavor=$2 arch=$3 path_suffix=$4 base_url ubuntu_downloaded_json jq_filter location_digest_release
 	base_url=$(ubuntu_base_url "${flavor}")
 	# shellcheck disable=SC2310
-	downloaded_json=$(downloaded_json "${flavor}") || return 0
+	ubuntu_downloaded_json=$(ubuntu_downloaded_json "${flavor}") || return 0
 	jq_filter="
         [
             .products[\"com.ubuntu.cloud:${flavor}:${version}:${arch}\"] |
@@ -118,7 +118,7 @@ function ubuntu_image_url_latest() {
             [\"${base_url}\"+.path, \"sha256:\"+.sha256, \$release] | @tsv
         ] | last
     "
-	location_digest_release=$(jq -e -r "${jq_filter}" "${downloaded_json}") || return 0
+	location_digest_release=$(jq -e -r "${jq_filter}" "${ubuntu_downloaded_json}") || return 0
 	local location digest release location_using_version
 	read -r location digest release <<<"${location_digest_release}"
 	# shellcheck disable=SC2310
@@ -132,7 +132,7 @@ function ubuntu_image_url_release() {
 	local version=$1 flavor=$2 arch=$3 path_suffix=$4 base_url
 	base_url=$(ubuntu_base_url "${flavor}")
 	# shellcheck disable=SC2310
-	downloaded_json=$(downloaded_json "${flavor}") || return 0
+	ubuntu_downloaded_json=$(ubuntu_downloaded_json "${flavor}") || return 0
 	local location release location_using_version
 	jq_filter="
 		[
@@ -141,7 +141,7 @@ function ubuntu_image_url_release() {
             .release
 		] | first
     "
-	release=$(jq -e -r "${jq_filter}" "${downloaded_json}") || return 0
+	release=$(jq -e -r "${jq_filter}" "${ubuntu_downloaded_json}") || return 0
 	# shellcheck disable=SC2310
 	location=$(validate_url "${base_url}${release}/release/ubuntu-${version}-${flavor}-cloudimg-${arch}${path_suffix}") || return 0
 	ubuntu_image_url_try_replace_release_with_version "${location}" "${release}" "${version}"
@@ -184,7 +184,7 @@ declare -a templates=()
 while [[ $# -gt 0 ]]; do
 	case "$1" in
 	-h | --help)
-		print_help
+		ubuntu_print_help
 		exit 0
 		;;
 	--flavor)
@@ -219,13 +219,13 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ ${#templates[@]} -eq 0 ]]; then
-	print_help
+	ubuntu_print_help
 	exit 0
 fi
 
 flavor=${flavor:-server}
-downloaded_json=$(downloaded_json "${flavor}")
-version="${version:-$(jq -r '[.products[]|.version|select(endswith(".04"))]|last' "${downloaded_json}")}"
+ubuntu_downloaded_json=$(ubuntu_downloaded_json "${flavor}")
+version="${version:-$(jq -r '[.products[]|.version|select(endswith(".04"))]|last' "${ubuntu_downloaded_json}")}"
 
 declare -A ubuntu_image_url_latest_cache=()
 declare -A ubuntu_image_url_release_cache=()
