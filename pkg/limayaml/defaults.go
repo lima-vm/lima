@@ -448,7 +448,12 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.Containerd.User = o.Containerd.User
 	}
 	if y.Containerd.User == nil {
-		y.Containerd.User = ptr.Of(true)
+		switch *y.Arch {
+		case X8664, AARCH64:
+			y.Containerd.User = ptr.Of(true)
+		default:
+			y.Containerd.User = ptr.Of(false)
+		}
 	}
 
 	y.Containerd.Archives = append(append(o.Containerd.Archives, y.Containerd.Archives...), d.Containerd.Archives...)
