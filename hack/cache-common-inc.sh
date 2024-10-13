@@ -351,6 +351,15 @@ function hash_file() {
 # /Users/user/Library/Caches/lima/download/by-url-sha256/346ee1ff9e381b78ba08e2a29445960b5cd31c51f896fc346b82e26e345a5b9a/data # on macOS
 # /home/user/.cache/lima/download/by-url-sha256/346ee1ff9e381b78ba08e2a29445960b5cd31c51f896fc346b82e26e345a5b9a/data # on others
 function download_to_cache() {
+	local cache_path
+	cache_path=$(location_to_cache_path "$1")
+	# before checking remote location, check if the data file is already downloaded and the time file is updated within 10 minutes
+	if [[ -f ${cache_path}/data && -n "$(find "${cache_path}/time" -mmin -10 || true)" ]]; then
+		echo "${cache_path}/data"
+		return
+	fi
+	
+	# check the remote location
 	local code_time_type_url
 	code_time_type_url=$(
 		curl -sSLI -w "%{http_code}\t%header{Last-Modified}\t%header{Content-Type}\t%{url_effective}" "$1" -o /dev/null
@@ -360,7 +369,6 @@ function download_to_cache() {
 	IFS=$'\t' read -r code time type url filename <<<"${code_time_type_url}"
 	[[ ${code} == 200 ]] || exit 1
 
-	local cache_path
 	cache_path=$(location_to_cache_path "${url}")
 	[[ -d ${cache_path} ]] || mkdir -p "${cache_path}"
 
@@ -381,6 +389,8 @@ function download_to_cache() {
 		# sha256.digest seems existing if expected digest is available. so, not creating it here.
 		# sha256sum "${cache_path}/data" | awk '{print "sha256:"$1}' >"${cache_path}/sha256.digest"
 		echo -n "${time}" >"${cache_path}/time"
+	else
+		touch "${cache_path}/time"
 	fi
 	[[ -f ${cache_path}/type ]] || echo -n "${type}" >"${cache_path}/type"
 	[[ -f ${cache_path}/url ]] || echo -n "${url}" >"${cache_path}/url"
