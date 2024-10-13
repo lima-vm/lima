@@ -104,9 +104,9 @@ function ubuntu_image_url_try_replace_release_with_version() {
 	fi
 }
 
-# ubuntu_image_url_latest returns the latest image URL and its digest for the given version, flavor, arch, and path suffix.
+# ubuntu_image_url_latest returns the latest image URL and its digest for the given flavor, version, arch, and path suffix.
 function ubuntu_image_url_latest() {
-	local version=$1 flavor=$2 arch=$3 path_suffix=$4 base_url ubuntu_downloaded_json jq_filter location_digest_release
+	local flavor=$1 version=$2 arch=$3 path_suffix=$4 base_url ubuntu_downloaded_json jq_filter location_digest_release
 	base_url=$(ubuntu_base_url "${flavor}")
 	# shellcheck disable=SC2310
 	ubuntu_downloaded_json=$(ubuntu_downloaded_json "${flavor}") || return 0
@@ -127,9 +127,9 @@ function ubuntu_image_url_latest() {
 	echo -e "${location}\t${digest}"
 }
 
-# ubuntu_image_url_release returns the release image URL for the given version, flavor, arch, and path suffix.
+# ubuntu_image_url_release returns the release image URL for the given flavor, version, arch, and path suffix.
 function ubuntu_image_url_release() {
-	local version=$1 flavor=$2 arch=$3 path_suffix=$4 base_url
+	local flavor=$1 version=$2 arch=$3 path_suffix=$4 base_url
 	base_url=$(ubuntu_base_url "${flavor}")
 	# shellcheck disable=SC2310
 	ubuntu_downloaded_json=$(ubuntu_downloaded_json "${flavor}") || return 0
@@ -271,7 +271,7 @@ for template in "${templates[@]}"; do
 			location_digest=$(
 				# shellcheck disable=SC2015
 				[[ -v ubuntu_image_url_latest_cache[${latest_cache_key}] ]] && echo "${ubuntu_image_url_latest_cache[${latest_cache_key}]}" ||
-					ubuntu_image_url_latest "${version}" "${flavor}" "${arch}" "${path_suffix}"
+					ubuntu_image_url_latest "${flavor}" "${version}" "${arch}" "${path_suffix}"
 			)
 			ubuntu_image_url_latest_cache[${latest_cache_key}]="${location_digest}"
 			read -r location digest <<<"${location_digest}"
@@ -301,7 +301,7 @@ for template in "${templates[@]}"; do
 			location=$(
 				# shellcheck disable=SC2015
 				[[ -v ubuntu_image_url_release_cache[${release_cache_key}] ]] && echo "${ubuntu_image_url_release_cache[${release_cache_key}]}" ||
-					ubuntu_image_url_release "${version}" "${flavor}" "${arch}" "${path_suffix}"
+					ubuntu_image_url_release "${flavor}" "${version}" "${arch}" "${path_suffix}"
 			)
 			ubuntu_image_url_release_cache[${release_cache_key}]="${location}"
 			if [[ -z ${location} ]]; then
