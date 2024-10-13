@@ -33,20 +33,37 @@ var (
 	procUnlockFileEx = modkernel32.NewProc("UnlockFileEx")
 )
 
+const (
+	// see https://msdn.microsoft.com/en-us/library/windows/desktop/aa365203(v=vs.85).aspx
+	LOCKFILE_EXCLUSIVE_LOCK   = 0x00000002
+	LOCKFILE_FAIL_IMMEDIATELY = 0x00000001
+)
+
 func WithDirLock(dir string, fn func() error) error {
 	dirFile, err := os.OpenFile(dir+".lock", os.O_CREATE, 0o644)
 	if err != nil {
 		return err
 	}
 	defer dirFile.Close()
-	// see https://msdn.microsoft.com/en-us/library/windows/desktop/aa365203(v=vs.85).aspx
-	// 1 lock immediately
-	if err := lockFileEx(syscall.Handle(dirFile.Fd()), 1, 0, 1, 0, &syscall.Overlapped{}); err != nil {
+	if err := lockFileEx(
+		syscall.Handle(dirFile.Fd()), // hFile
+		LOCKFILE_EXCLUSIVE_LOCK,      // dwFlags
+		0,                            // dwReserved
+		1,                            // nNumberOfBytesToLockLow
+		0,                            // nNumberOfBytesToLockHigh
+		&syscall.Overlapped{},        // lpOverlapped
+	); err != nil {
 		return fmt.Errorf("failed to lock %q: %w", dir, err)
 	}
 
 	defer func() {
-		if err := unlockFileEx(syscall.Handle(dirFile.Fd()), 0, 1, 0, &syscall.Overlapped{}); err != nil {
+		if err := unlockFileEx(
+			syscall.Handle(dirFile.Fd()), // hFile
+			0,                            // dwReserved
+			1,                            // nNumberOfBytesToLockLow
+			0,                            // nNumberOfBytesToLockHigh
+			&syscall.Overlapped{},        // lpOverlapped
+		); err != nil {
 			logrus.WithError(err).Errorf("failed to unlock %q", dir)
 		}
 	}()
