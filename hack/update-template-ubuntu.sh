@@ -180,7 +180,8 @@ function limayaml_arch() {
 }
 
 declare -a templates=()
-
+declare overriding_flavor=
+declare overriding_version=
 while [[ $# -gt 0 ]]; do
 	case "$1" in
 	-h | --help)
@@ -189,26 +190,26 @@ while [[ $# -gt 0 ]]; do
 		;;
 	--flavor)
 		if [[ -n $2 && $2 != -* ]]; then
-			flavor="$2"
+			overriding_flavor="$2"
 			shift
 		else
 			echo "Error: --flavor requires a value" >&2
 			exit 1
 		fi
 		;;
-	--flavor=*) flavor="${1#*=}" ;;
-	--minimal) flavor="minimal" ;;
-	--server) flavor="server" ;;
+	--flavor=*) overriding_flavor="${1#*=}" ;;
+	--minimal) overriding_flavor="minimal" ;;
+	--server) overriding_flavor="server" ;;
 	--version)
 		if [[ -n $2 && $2 != -* ]]; then
-			version="$2"
+			overriding_version="$2"
 			shift
 		else
 			echo "Error: --version requires a value" >&2
 			exit 1
 		fi
 		;;
-	--version=*) version="${1#*=}" ;;
+	--version=*) overriding_version="${1#*=}" ;;
 	*.yaml) templates+=("$1") ;;
 	*)
 		echo "Unknown argument: $1" >&2
@@ -222,10 +223,6 @@ if [[ ${#templates[@]} -eq 0 ]]; then
 	ubuntu_print_help
 	exit 0
 fi
-
-flavor=${flavor:-server}
-ubuntu_downloaded_json=$(ubuntu_downloaded_json "${flavor}")
-version="${version:-$(jq -r '[.products[]|.version|select(endswith(".04"))]|last' "${ubuntu_downloaded_json}")}"
 
 declare -A ubuntu_image_url_latest_cache=()
 declare -A ubuntu_image_url_release_cache=()
@@ -261,8 +258,8 @@ for template in "${templates[@]}"; do
 		esac
 
 		location_basename=$(basename "${location}")
-		version=${version:-$(echo "${location_basename}" | cut -d- -f2)}
-		flavor=${flavor:-$(echo "${location_basename}" | cut -d- -f3)}
+		version=${overriding_version:-$(echo "${location_basename}" | cut -d- -f2)}
+		flavor=${overriding_flavor:-$(echo "${location_basename}" | cut -d- -f3)}
 		arch=$(echo "${location_basename}" | cut -d- -f5 | cut -d. -f1)
 		path_suffix="${location_basename##*"${arch}"}"
 		limayaml_arch=$(limayaml_arch "${arch}")
