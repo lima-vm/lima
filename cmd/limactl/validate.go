@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/lima-vm/lima/cmd/limactl/guessarg"
+	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/spf13/cobra"
 
@@ -38,7 +39,7 @@ func validateAction(cmd *cobra.Command, args []string) error {
 		}
 		logrus.Infof("%q: OK", f)
 		if fill {
-			b, err := store.SaveYAML(y, len(args) > 1)
+			b, err := limayaml.Marshal(y, len(args) > 1)
 			if err != nil {
 				return err
 			}
