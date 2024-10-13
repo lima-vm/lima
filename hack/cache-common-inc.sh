@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 
+# print the error message and exit with status 1
+function error_exit() {
+	echo "Error: $*" >&2
+	exit 1
+}
+
 # e.g.
 # ```console
 # $ download_template_if_needed templates/default.yaml
@@ -97,7 +103,7 @@ function size_from_location() {
 	)
 }
 
-# Check the remote location and return the http code and size.
+# Check the remote location and print the http code and size.
 # If GITHUB_ACTIONS is true, the result is not cached.
 # e.g.
 # ```console
@@ -113,7 +119,7 @@ function check_location() {
 	fi
 }
 
-# Check the remote location and return the http code and size.
+# Check the remote location and print the http code and size.
 # The result is cached in .check_location-response-cache.yaml
 # e.g.
 # ```console
@@ -209,8 +215,7 @@ function location_to_sha256() {
 		elif command -v shasum >/dev/null; then
 			sha256="$(echo -n "${location}" | shasum -a 256 | cut -d' ' -f1)"
 		else
-			echo "sha256sum or shasum not found" >&2
-			exit 1
+			error_exit "sha256sum or shasum not found"
 		fi
 		echo "${sha256}"
 	)
@@ -351,16 +356,32 @@ function hash_file() {
 # /Users/user/Library/Caches/lima/download/by-url-sha256/346ee1ff9e381b78ba08e2a29445960b5cd31c51f896fc346b82e26e345a5b9a/data # on macOS
 # /home/user/.cache/lima/download/by-url-sha256/346ee1ff9e381b78ba08e2a29445960b5cd31c51f896fc346b82e26e345a5b9a/data # on others
 function download_to_cache() {
-	local code_time_type_url
-	code_time_type_url=$(
-		curl -sSLI -w "%{http_code}\t%header{Last-Modified}\t%header{Content-Type}\t%{url_effective}" "$1" -o /dev/null
-	)
+	local cache_path
+	cache_path=$(location_to_cache_path "$1")
+	# before checking remote location, check if the data file is already downloaded and the time file is updated within 10 minutes
+	if [[ -f ${cache_path}/data && -n "$(find "${cache_path}/time" -mmin -10 || true)" ]]; then
+		echo "${cache_path}/data"
+		return
+	fi
+
+	# check the remote location
+	local curl_info_json write_out
+	write_out='{
+		"http_code":%{http_code},
+		"last_modified":"%header{Last-Modified}",
+		"content_type":"%{content_type}",
+		"url":"%{url_effective}",
+		"filename":"%{filename_effective}"
+	}'
+	curl_info_json=$(curl -sSLI -w "${write_out}" "$1" -o /dev/null)
 
 	local code time type url
-	IFS=$'\t' read -r code time type url filename <<<"${code_time_type_url}"
-	[[ ${code} == 200 ]] || exit 1
+	code=$(jq -r '.http_code' <<<"${curl_info_json}")
+	time=$(jq -r '.last_modified' <<<"${curl_info_json}")
+	type=$(jq -r '.content_type' <<<"${curl_info_json}")
+	url=$(jq -r '.url' <<<"${curl_info_json}")
+	[[ ${code} == 200 ]] || error_exit "Failed to download $1"
 
-	local cache_path
 	cache_path=$(location_to_cache_path "${url}")
 	[[ -d ${cache_path} ]] || mkdir -p "${cache_path}"
 
@@ -369,18 +390,23 @@ function download_to_cache() {
 	[[ -f ${cache_path}/time && "$(<"${cache_path}/time")" == "${time}" ]] || needs_download=1
 	[[ -f ${cache_path}/type && "$(<"${cache_path}/type")" == "${type}" ]] || needs_download=1
 	if [[ ${needs_download} -eq 1 ]]; then
-		local code_time_type_url_filename
-		code_time_type_url_filename=$(
+		curl_info_json=$(
 			echo "downloading ${url}" >&2
-			curl -SL -w "%{http_code}\t%header{Last-Modified}\t%header{Content-Type}\t%{url_effective}\t%{filename_effective}" --no-clobber -o "${cache_path}/data" "${url}"
+			curl -SL -w "${write_out}" --no-clobber -o "${cache_path}/data" "${url}"
 		)
 		local filename
-		IFS=$'\t' read -r code time type url filename <<<"${code_time_type_url_filename}"
-		[[ ${code} == 200 ]] || exit 1
+		code=$(jq -r '.http_code' <<<"${curl_info_json}")
+		time=$(jq -r '.last_modified' <<<"${curl_info_json}")
+		type=$(jq -r '.content_type' <<<"${curl_info_json}")
+		url=$(jq -r '.url' <<<"${curl_info_json}")
+		filename=$(jq -r '.filename' <<<"${curl_info_json}")
+		[[ ${code} == 200 ]] || error_exit "Failed to download ${url}"
 		[[ "${cache_path}/data" == "${filename}" ]] || mv "${filename}" "${cache_path}/data"
 		# sha256.digest seems existing if expected digest is available. so, not creating it here.
 		# sha256sum "${cache_path}/data" | awk '{print "sha256:"$1}' >"${cache_path}/sha256.digest"
 		echo -n "${time}" >"${cache_path}/time"
+	else
+		touch "${cache_path}/time"
 	fi
 	[[ -f ${cache_path}/type ]] || echo -n "${type}" >"${cache_path}/type"
 	[[ -f ${cache_path}/url ]] || echo -n "${url}" >"${cache_path}/url"
