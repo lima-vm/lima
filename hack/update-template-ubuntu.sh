@@ -260,9 +260,6 @@ if [[ ${#templates[@]} -eq 0 ]]; then
 	exit 0
 fi
 
-declare -A ubuntu_image_url_latest_cache=()
-declare -A ubuntu_image_url_release_cache=()
-
 for template in "${templates[@]}"; do
 	echo "Processing ${template}"
 	# 1. extract location by parsing template using arch
@@ -290,13 +287,9 @@ for template in "${templates[@]}"; do
 		path_suffix="${location_basename##*"${arch}"}"
 		limayaml_arch=$(limayaml_arch "${arch}")
 		if [[ "${url_spec}" == "latest" ]]; then
-			latest_cache_key=${version}-${flavor}-${arch}-${path_suffix}
 			location_digest=$(
-				# shellcheck disable=SC2015
-				[[ -v ubuntu_image_url_latest_cache[${latest_cache_key}] ]] && echo "${ubuntu_image_url_latest_cache[${latest_cache_key}]}" ||
-					ubuntu_image_url_latest "${flavor}" "${version}" "${arch}" "${path_suffix}"
+				ubuntu_image_url_latest "${flavor}" "${version}" "${arch}" "${path_suffix}"
 			)
-			ubuntu_image_url_latest_cache[${latest_cache_key}]="${location_digest}"
 			read -r location digest <<<"${location_digest}"
 			if [[ -z ${location} ]]; then
 				echo "Failed to get the latest image location for ${location_basename}" >&2
@@ -320,13 +313,9 @@ for template in "${templates[@]}"; do
 				fi
 			fi
 		else
-			release_cache_key=${version}-${flavor}-${arch}-${path_suffix}
 			location=$(
-				# shellcheck disable=SC2015
-				[[ -v ubuntu_image_url_release_cache[${release_cache_key}] ]] && echo "${ubuntu_image_url_release_cache[${release_cache_key}]}" ||
-					ubuntu_image_url_release "${flavor}" "${version}" "${arch}" "${path_suffix}"
+				ubuntu_image_url_release "${flavor}" "${version}" "${arch}" "${path_suffix}"
 			)
-			ubuntu_image_url_release_cache[${release_cache_key}]="${location}"
 			if [[ -z ${location} ]]; then
 				echo "Failed to get the release image location for ${location_basename}" >&2
 				continue
