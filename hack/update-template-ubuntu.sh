@@ -151,8 +151,10 @@ function ubuntu_image_url_release() {
 }
 
 # ubuntu_kernel_info_for_image_url returns the kernel and initrd location and digest for the given location.
-function ubuntu_kernel_info_for_image_url() {
-	local location=$1 location_dirname sha256sums location_basename
+function ubuntu_kernel_info_for_image_entry() {
+	local image_entry=$1 location
+	location=$(jq -r '.location' <<<"${image_entry}")
+	local location_dirname sha256sums location_basename
 	location_dirname=$(dirname "${location}")/unpacked
 	sha256sums=$(download_to_cache "${location_dirname}/SHA256SUMS")
 	location_basename="$(basename "${location}" | cut -d- -f1-5 | cut -d. -f1-2)"
@@ -235,6 +237,34 @@ function ubuntu_location_url_spec() {
 	echo "${url_spec}"
 }
 
+function ubuntu_image_entry_for_image_kernel_flavor_version() {
+	local location=$1 kernel_location=$2 url_spec
+	# shellcheck disable=2310
+	url_spec=$(ubuntu_location_url_spec "${location}") || return 1
+	local flavor version arch path_suffix
+	flavor=${3:-$(ubuntu_flavor_from_location "${location}")}
+	version=${4:-$(ubuntu_version_from_location "${location}")}
+	arch=$(ubuntu_arch_from_location "${location}")
+	path_suffix=$(ubuntu_path_suffix_from_location "${location}")
+
+	local image_entry kernel_info
+	image_entry=$(ubuntu_image_url_"${url_spec}" "${flavor}" "${version}" "${arch}" "${path_suffix}")
+	if [[ -z ${image_entry} ]]; then
+		echo "Failed to get the ${url_spec} image location for ${location}" >&2
+		return 1
+	elif jq -e ".location == \"${location}\"" <<<"${image_entry}" >/dev/null; then
+		echo "Image location is up-to-date: ${location}" >&2
+		return 0
+	fi
+	if [[ ${kernel_location} != "null" ]]; then
+		kernel_info=$(ubuntu_kernel_info_for_image_entry "${image_entry}")
+		if [[ -n ${kernel_info} ]]; then
+			image_entry=$(jq -c ". + ${kernel_info}" <<<"${image_entry}")
+		fi
+	fi
+	echo "${image_entry}"
+}
+
 declare -a templates=()
 declare overriding_flavor=
 declare overriding_version=
@@ -295,34 +325,16 @@ for template in "${templates[@]}"; do
 	for ((index = 0; index < ${#locations[@]}; index++)); do
 		[[ ${locations[index]} != "null" ]] || continue
 		IFS=$'\t' read -r location kernel_location kernel_cmdline <<<"${locations[index]}"
-		location_before="${location}"
-
-		# shellcheck disable=2310
-		url_spec=$(ubuntu_location_url_spec "${location}") || continue
-
-		flavor=${overriding_flavor:-$(ubuntu_flavor_from_location "${location}")}
-		version=${overriding_version:-$(ubuntu_version_from_location "${location}")}
-		arch=$(ubuntu_arch_from_location "${location}")
-		path_suffix=$(ubuntu_path_suffix_from_location "${location}")
-		image_entry=$(ubuntu_image_url_"${url_spec}" "${flavor}" "${version}" "${arch}" "${path_suffix}")
-		if [[ -z ${image_entry} ]]; then
-			echo "Failed to get the ${url_spec} image location for ${location}" >&2
-			continue
-		elif location=$(jq -r .location <<<"${image_entry}") && [[ "${location}" == "${location_before}" ]]; then
-			continue
+		# shellcheck disable=SC2310
+		image_entry=$(ubuntu_image_entry_for_image_kernel_flavor_version "${location}" "${kernel_location}" "${overriding_flavor}" "${overriding_version}") || continue
+		echo "${image_entry}" | jq
+		if [[ -n "${image_entry}" ]]; then
+			[[ ${kernel_cmdline} != "null" ]] && image_entry=$(jq ".kernel.cmdline = \"${kernel_cmdline}\"" <<<"${image_entry}")
+			limactl edit --log-level error --set "
+				[(.images.[] | path)].[${index}] as \$path|
+				setpath(\$path; ${image_entry})
+				.images[${index}].[] style = \"double\"
+			" "${template}"
 		fi
-		if [[ ${kernel_location} != "null" ]]; then
-			kernel_info=$(ubuntu_kernel_info_for_image_url "${location}")
-			if [[ -n ${kernel_info} ]]; then
-				image_entry=$(jq -c ". + ${kernel_info}" <<<"${image_entry}")
-				[[ ${kernel_cmdline} != "null" ]] && image_entry=$(jq ".kernel.cmdline = \"${kernel_cmdline}\"" <<<"${image_entry}")
-			fi
-		fi
-		echo "${image_entry}"|jq
-		limactl edit --log-level error --set "
-			[(.images.[] | path)].[${index}] as \$path|
-			setpath(\$path; ${image_entry})
-			.images[${index}].[] style = \"double\"
-		" "${template}"
 	done
 done
