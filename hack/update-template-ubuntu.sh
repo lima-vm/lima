@@ -191,6 +191,18 @@ function ubuntu_version_from_location() {
 	echo "${location_basename}" | cut -d- -f2
 }
 
+function ubuntu_arch_from_location() {
+	local location=$1 location_basename
+	location_basename=$(basename "${location}")
+	echo "${location_basename}" | cut -d- -f5 | cut -d. -f1
+}
+
+function ubuntu_path_suffix_from_location() {
+	local location=$1 arch
+	arch=$(ubuntu_arch_from_location "${location}")
+	echo "${location##*"${arch}"}"
+}
+
 # ubuntu_location_url_spec returns the URL spec for the given location.
 # If the location is not supported, it returns 1.
 # e.g.
@@ -280,11 +292,10 @@ for template in "${templates[@]}"; do
 		# shellcheck disable=2310
 		url_spec=$(ubuntu_location_url_spec "${location}") || continue
 
-		location_basename=$(basename "${location}")
 		flavor=${overriding_flavor:-$(ubuntu_flavor_from_location "${location}")}
 		version=${overriding_version:-$(ubuntu_version_from_location "${location}")}
-		arch=$(echo "${location_basename}" | cut -d- -f5 | cut -d. -f1)
-		path_suffix="${location_basename##*"${arch}"}"
+		arch=$(ubuntu_arch_from_location "${location}")
+		path_suffix=$(ubuntu_path_suffix_from_location "${location}")
 		limayaml_arch=$(limayaml_arch "${arch}")
 		if [[ "${url_spec}" == "latest" ]]; then
 			location_digest=$(
@@ -292,7 +303,7 @@ for template in "${templates[@]}"; do
 			)
 			read -r location digest <<<"${location_digest}"
 			if [[ -z ${location} ]]; then
-				echo "Failed to get the latest image location for ${location_basename}" >&2
+				echo "Failed to get the latest image location for ${location}" >&2
 				continue
 			elif [[ ${location} == "${location_before}" ]]; then
 				continue
@@ -317,7 +328,7 @@ for template in "${templates[@]}"; do
 				ubuntu_image_url_release "${flavor}" "${version}" "${arch}" "${path_suffix}"
 			)
 			if [[ -z ${location} ]]; then
-				echo "Failed to get the release image location for ${location_basename}" >&2
+				echo "Failed to get the release image location for ${location}" >&2
 				continue
 			elif [[ ${location} == "${location_before}" ]]; then
 				continue
