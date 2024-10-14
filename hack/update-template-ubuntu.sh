@@ -179,6 +179,18 @@ function limayaml_arch() {
 	echo "${arch}"
 }
 
+function ubuntu_flavor_from_location() {
+	local location=$1 location_basename
+	location_basename=$(basename "${location}")
+	echo "${location_basename}" | cut -d- -f3
+}
+
+function ubuntu_version_from_location() {
+	local location=$1 location_basename
+	location_basename=$(basename "${location}")
+	echo "${location_basename}" | cut -d- -f2
+}
+
 declare -a templates=()
 declare overriding_flavor=
 declare overriding_version=
@@ -258,8 +270,8 @@ for template in "${templates[@]}"; do
 		esac
 
 		location_basename=$(basename "${location}")
-		version=${overriding_version:-$(echo "${location_basename}" | cut -d- -f2)}
-		flavor=${overriding_flavor:-$(echo "${location_basename}" | cut -d- -f3)}
+		flavor=${overriding_flavor:-$(ubuntu_flavor_from_location "${location}")}
+		version=${overriding_version:-$(ubuntu_version_from_location "${location}")}
 		arch=$(echo "${location_basename}" | cut -d- -f5 | cut -d. -f1)
 		path_suffix="${location_basename##*"${arch}"}"
 		limayaml_arch=$(limayaml_arch "${arch}")
