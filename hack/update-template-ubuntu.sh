@@ -191,6 +191,30 @@ function ubuntu_version_from_location() {
 	echo "${location_basename}" | cut -d- -f2
 }
 
+# ubuntu_location_url_spec returns the URL spec for the given location.
+# If the location is not supported, it returns 1.
+# e.g.
+# ```console
+# ubuntu_location_url_spec https://cloud-images.ubuntu.com/minimal/releases/24.04/release-20210914/ubuntu-24.04-minimal-cloudimg-amd64.img
+# latest
+# ubuntu_location_url_spec https://cloud-images.ubuntu.com/releases/24.04/release/ubuntu-24.04-server-cloudimg-amd64.img
+# release
+# ```
+function ubuntu_location_url_spec() {
+	local location=$1 url_spec
+	case "${location}" in
+	https://cloud-images.ubuntu.com/minimal/releases/*/release/*) url_spec=release ;;
+	https://cloud-images.ubuntu.com/minimal/releases/*/release-*/*) url_spec=latest ;;
+	https://cloud-images.ubuntu.com/releases/*/release/*) url_spec=release ;;
+	https://cloud-images.ubuntu.com/releases/*/release-*/*) url_spec=latest ;;
+	*)
+		# echo "Unsupported image location: ${location}" >&2
+		return 1
+		;;
+	esac
+	echo "${url_spec}"
+}
+
 declare -a templates=()
 declare overriding_flavor=
 declare overriding_version=
@@ -256,18 +280,8 @@ for template in "${templates[@]}"; do
 		IFS=$'\t' read -r location kernel_location kernel_cmdline initrd_location <<<"${locations[index]}"
 		location_before="${location}"
 
-		case "${location}" in
-		https://cloud-images.ubuntu.com/minimal/releases/*/release/*) use_latest=0 ;;&
-		https://cloud-images.ubuntu.com/minimal/releases/*/release-*/*) use_latest=1 ;;&
-		https://cloud-images.ubuntu.com/minimal/releases/*) flavor=${flavor:-minimal} ;;
-		https://cloud-images.ubuntu.com/releases/*/release/*) use_latest=0 ;;&
-		https://cloud-images.ubuntu.com/releases/*/release-*/*) use_latest=1 ;;&
-		https://cloud-images.ubuntu.com/releases/*) flavor=${flavor:-server} ;;
-		*)
-			# echo "Unsupported image location: ${location}" >&2
-			continue
-			;;
-		esac
+		# shellcheck disable=2310
+		url_spec=$(ubuntu_location_url_spec "${location}") || continue
 
 		location_basename=$(basename "${location}")
 		flavor=${overriding_flavor:-$(ubuntu_flavor_from_location "${location}")}
@@ -275,7 +289,7 @@ for template in "${templates[@]}"; do
 		arch=$(echo "${location_basename}" | cut -d- -f5 | cut -d. -f1)
 		path_suffix="${location_basename##*"${arch}"}"
 		limayaml_arch=$(limayaml_arch "${arch}")
-		if [[ ${use_latest} -eq 1 ]]; then
+		if [[ "${url_spec}" == "latest" ]]; then
 			latest_cache_key=${version}-${flavor}-${arch}-${path_suffix}
 			location_digest=$(
 				# shellcheck disable=SC2015
