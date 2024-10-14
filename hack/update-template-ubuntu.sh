@@ -154,7 +154,7 @@ function ubuntu_image_url_release() {
 function ubuntu_kernel_info_for_image_url() {
 	local location=$1 location_dirname sha256sums location_basename
 	location_dirname=$(dirname "${location}")/unpacked
-	sha256sums=$(curl -sSLf "${location_dirname}/SHA256SUMS")
+	sha256sums=$(download_to_cache "${location_dirname}/SHA256SUMS")
 	location_basename="$(basename "${location}" | cut -d- -f1-5 | cut -d. -f1-2)"
 
 	# kernel
@@ -162,13 +162,13 @@ function ubuntu_kernel_info_for_image_url() {
 	kernel_basename="${location_basename}-vmlinuz-generic"
 	# shellcheck disable=SC2310
 	kernel_location=$(validate_url "${location_dirname}/${kernel_basename}") || return 0
-	kernel_digest=${kernel_location+$(awk "/${kernel_basename}/{print \"sha256:\"\$1}" <<<"${sha256sums}")}
+	kernel_digest=${kernel_location+$(awk "/${kernel_basename}/{print \"sha256:\"\$1}" "${sha256sums}")}
 
 	# initrd
 	local initrd_basename initrd_location initrd_digest
 	initrd_basename="${location_basename}-initrd-generic"
 	initrd_location=$(validate_url "${location_dirname}/${initrd_basename}")
-	initrd_digest=${initrd_location+$(awk "/${initrd_basename}/{print \"sha256:\"\$1}" <<<"${sha256sums}")}
+	initrd_digest=${initrd_location+$(awk "/${initrd_basename}/{print \"sha256:\"\$1}" "${sha256sums}")}
 
 	json=$(jq -cn ".kernel={location:\"${kernel_location}\",digest:\"${kernel_digest}\"}")
 	if [[ -n "${initrd_location}" ]]; then
