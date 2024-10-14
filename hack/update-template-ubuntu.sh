@@ -304,39 +304,21 @@ for template in "${templates[@]}"; do
 		version=${overriding_version:-$(ubuntu_version_from_location "${location}")}
 		arch=$(ubuntu_arch_from_location "${location}")
 		path_suffix=$(ubuntu_path_suffix_from_location "${location}")
-		if [[ "${url_spec}" == "latest" ]]; then
-			image_entry=$(ubuntu_image_url_latest "${flavor}" "${version}" "${arch}" "${path_suffix}")
-			if [[ -z ${image_entry} ]]; then
-				echo "Failed to get the latest image location for ${location}" >&2
-				continue
-			elif location=$(jq -r .location <<<"${image_entry}") && [[ "${location}" == "${location_before}" ]]; then
-				continue
-			fi
-			if [[ ${kernel_location} != "null" ]]; then
-				kernel_info=$(ubuntu_kernel_info_for_image_url "${location}")
-				if [[ -n ${kernel_info} ]]; then
-					image_entry=$(jq -c ". + ${kernel_info}" <<<"${image_entry}")
-					[[ ${kernel_cmdline} != "null" ]] && image_entry=$(jq ".kernel.cmdline = \"${kernel_cmdline}\"" <<<"${image_entry}")
-				fi
-			fi
-			echo "${image_entry}"|jq
-		else
-			image_entry=$(ubuntu_image_url_release "${flavor}" "${version}" "${arch}" "${path_suffix}")
-			if [[ -z ${image_entry} ]]; then
-				echo "Failed to get the release image location for ${location}" >&2
-				continue
-			elif location=$(jq -r .location <<<"${image_entry}") && [[ "${location}" == "${location_before}" ]]; then
-				continue
-			fi
-			if [[ ${kernel_location} != "null" ]]; then
-				kernel_info=$(ubuntu_kernel_info_for_image_url "${location}")
-				if [[ -n ${kernel_info} ]]; then
-					image_entry=$(jq -c ". + ${kernel_info}" <<<"${image_entry}")
-					[[ ${kernel_cmdline} != "null" ]] && image_entry=$(jq ".kernel.cmdline = \"${kernel_cmdline}\"" <<<"${image_entry}")
-				fi
-			fi
-			echo "${image_entry}"|jq
+		image_entry=$(ubuntu_image_url_"${url_spec}" "${flavor}" "${version}" "${arch}" "${path_suffix}")
+		if [[ -z ${image_entry} ]]; then
+			echo "Failed to get the ${url_spec} image location for ${location}" >&2
+			continue
+		elif location=$(jq -r .location <<<"${image_entry}") && [[ "${location}" == "${location_before}" ]]; then
+			continue
 		fi
+		if [[ ${kernel_location} != "null" ]]; then
+			kernel_info=$(ubuntu_kernel_info_for_image_url "${location}")
+			if [[ -n ${kernel_info} ]]; then
+				image_entry=$(jq -c ". + ${kernel_info}" <<<"${image_entry}")
+				[[ ${kernel_cmdline} != "null" ]] && image_entry=$(jq ".kernel.cmdline = \"${kernel_cmdline}\"" <<<"${image_entry}")
+			fi
+		fi
+		echo "${image_entry}"|jq
 		limactl edit --log-level error --set "
 			[(.images.[] | path)].[${index}] as \$path|
 			setpath(\$path; ${image_entry})
