@@ -124,7 +124,8 @@ function ubuntu_image_url_latest() {
 	# shellcheck disable=SC2310
 	location=$(validate_url "${location}") || return 0
 	location=$(ubuntu_image_url_try_replace_release_with_version "${location}" "${release}" "${version}")
-	echo -e "${location}\t${digest}"
+	limayaml_arch=$(limayaml_arch "${arch}")
+	jq -cn "{location:\"${location}\",arch:\"${limayaml_arch}\",digest:\"${digest}\"}"
 }
 
 # ubuntu_image_url_release returns the release image URL for the given flavor, version, arch, and path suffix.
@@ -144,7 +145,9 @@ function ubuntu_image_url_release() {
 	release=$(jq -e -r "${jq_filter}" "${ubuntu_downloaded_json}") || return 0
 	# shellcheck disable=SC2310
 	location=$(validate_url "${base_url}${release}/release/ubuntu-${version}-${flavor}-cloudimg-${arch}${path_suffix}") || return 0
-	ubuntu_image_url_try_replace_release_with_version "${location}" "${release}" "${version}"
+	location=$(ubuntu_image_url_try_replace_release_with_version "${location}" "${release}" "${version}")
+	limayaml_arch=$(limayaml_arch "${arch}")
+	jq -cn "{location:\"${location}\",arch:\"${limayaml_arch}\"}"
 }
 
 # ubuntu_kernel_info_for_image_url returns the kernel and initrd location and digest for the given location.
@@ -167,7 +170,12 @@ function ubuntu_kernel_info_for_image_url() {
 	initrd_location=$(validate_url "${location_dirname}/${initrd_basename}")
 	initrd_digest=${initrd_location+$(awk "/${initrd_basename}/{print \"sha256:\"\$1}" <<<"${sha256sums}")}
 
-	echo -e "${kernel_location}\t${kernel_digest}\t${initrd_location}\t${initrd_digest}"
+	json=$(jq -cn ".kernel={location:\"${kernel_location}\",digest:\"${kernel_digest}\"}")
+	if [[ -n "${initrd_location}" ]]; then
+		jq -c ".initrd={location:\"${initrd_location}\",digest:\"${initrd_digest}\"}" <<<"${json}"
+	else
+		echo "${json}"
+	fi
 }
 
 # limayaml_arch returns the arch in the lima.yaml format
@@ -276,7 +284,7 @@ for template in "${templates[@]}"; do
 	echo "Processing ${template}"
 	# 1. extract location by parsing template using arch
 	yq_filter="
-		.images[] | [.location, .kernel.location, .kernel.cmdline, .initrd.location] | @tsv
+		.images[] | [.location, .kernel.location, .kernel.cmdline] | @tsv
 	"
 	parsed=$(yq eval "${yq_filter}" "${template}")
 
@@ -286,7 +294,7 @@ for template in "${templates[@]}"; do
 	locations=("${arr[@]}")
 	for ((index = 0; index < ${#locations[@]}; index++)); do
 		[[ ${locations[index]} != "null" ]] || continue
-		IFS=$'\t' read -r location kernel_location kernel_cmdline initrd_location <<<"${locations[index]}"
+		IFS=$'\t' read -r location kernel_location kernel_cmdline <<<"${locations[index]}"
 		location_before="${location}"
 
 		# shellcheck disable=2310
@@ -296,58 +304,38 @@ for template in "${templates[@]}"; do
 		version=${overriding_version:-$(ubuntu_version_from_location "${location}")}
 		arch=$(ubuntu_arch_from_location "${location}")
 		path_suffix=$(ubuntu_path_suffix_from_location "${location}")
-		limayaml_arch=$(limayaml_arch "${arch}")
 		if [[ "${url_spec}" == "latest" ]]; then
-			location_digest=$(
-				ubuntu_image_url_latest "${flavor}" "${version}" "${arch}" "${path_suffix}"
-			)
-			read -r location digest <<<"${location_digest}"
-			if [[ -z ${location} ]]; then
+			image_entry=$(ubuntu_image_url_latest "${flavor}" "${version}" "${arch}" "${path_suffix}")
+			if [[ -z ${image_entry} ]]; then
 				echo "Failed to get the latest image location for ${location}" >&2
 				continue
-			elif [[ ${location} == "${location_before}" ]]; then
+			elif location=$(jq -r .location <<<"${image_entry}") && [[ "${location}" == "${location_before}" ]]; then
 				continue
 			fi
-			image_entry="{\"location\": \"${location}\", \"arch\": \"${limayaml_arch}\", \"digest\": \"${digest}\"}"
-			echo -e "${location}\n${digest}"
 			if [[ ${kernel_location} != "null" ]]; then
 				kernel_info=$(ubuntu_kernel_info_for_image_url "${location}")
-				IFS=$'\t' read -r kernel_location kernel_digest initrd_location initrd_digest <<<"${kernel_info}"
-				if [[ -n ${kernel_location} ]]; then
-					image_entry=$(jq ". + {kernel: {location: \"${kernel_location}\", digest: \"${kernel_digest}\"}}" <<<"${image_entry}")
+				if [[ -n ${kernel_info} ]]; then
+					image_entry=$(jq -c ". + ${kernel_info}" <<<"${image_entry}")
 					[[ ${kernel_cmdline} != "null" ]] && image_entry=$(jq ".kernel.cmdline = \"${kernel_cmdline}\"" <<<"${image_entry}")
-					echo -e "${kernel_location}\n${kernel_digest}"
-				fi
-				if [[ -n ${initrd_location} ]]; then
-					image_entry=$(jq ". + {initrd: {location: \"${initrd_location}\", digest: \"${initrd_digest}\"}}" <<<"${image_entry}")
-					echo -e "${initrd_location}\n${initrd_digest}"
 				fi
 			fi
+			echo "${image_entry}"|jq
 		else
-			location=$(
-				ubuntu_image_url_release "${flavor}" "${version}" "${arch}" "${path_suffix}"
-			)
-			if [[ -z ${location} ]]; then
+			image_entry=$(ubuntu_image_url_release "${flavor}" "${version}" "${arch}" "${path_suffix}")
+			if [[ -z ${image_entry} ]]; then
 				echo "Failed to get the release image location for ${location}" >&2
 				continue
-			elif [[ ${location} == "${location_before}" ]]; then
+			elif location=$(jq -r .location <<<"${image_entry}") && [[ "${location}" == "${location_before}" ]]; then
 				continue
 			fi
-			image_entry="{\"location\": \"${location}\", \"arch\": \"${limayaml_arch}\"}"
-			echo "${location}"
 			if [[ ${kernel_location} != "null" ]]; then
 				kernel_info=$(ubuntu_kernel_info_for_image_url "${location}")
-				IFS=$'\t' read -r kernel_location kernel_digest initrd_location initrd_digest <<<"${kernel_info}"
-				if [[ -n ${kernel_location} ]]; then
-					image_entry=$(jq ". + {kernel: {location: \"${kernel_location}\"}}" <<<"${image_entry}")
+				if [[ -n ${kernel_info} ]]; then
+					image_entry=$(jq -c ". + ${kernel_info}" <<<"${image_entry}")
 					[[ ${kernel_cmdline} != "null" ]] && image_entry=$(jq ".kernel.cmdline = \"${kernel_cmdline}\"" <<<"${image_entry}")
-					echo "${kernel_location}"
-				fi
-				if [[ -n ${initrd_location} ]]; then
-					image_entry=$(jq ". + {initrd: {location: \"${initrd_location}\"}}" <<<"${image_entry}")
-					echo "${initrd_location}"
 				fi
 			fi
+			echo "${image_entry}"|jq
 		fi
 		limactl edit --log-level error --set "
 			[(.images.[] | path)].[${index}] as \$path|
