@@ -360,13 +360,21 @@ function download_to_cache() {
 	fi
 	
 	# check the remote location
-	local code_time_type_url
-	code_time_type_url=$(
-		curl -sSLI -w "%{http_code}\t%header{Last-Modified}\t%header{Content-Type}\t%{url_effective}" "$1" -o /dev/null
-	)
+	local curl_info_json write_out
+	write_out='{
+		"http_code":%{http_code},
+		"last_modified":"%header{Last-Modified}",
+		"content_type":"%{content_type}",
+		"url":"%{url_effective}",
+		"filename":"%{filename_effective}"
+	}'
+	curl_info_json=$(curl -sSLI -w "${write_out}" "$1" -o /dev/null)
 
 	local code time type url
-	IFS=$'\t' read -r code time type url filename <<<"${code_time_type_url}"
+	code=$(jq -r '.http_code' <<<"${curl_info_json}")
+	time=$(jq -r '.last_modified' <<<"${curl_info_json}")
+	type=$(jq -r '.content_type' <<<"${curl_info_json}")
+	url=$(jq -r '.url' <<<"${curl_info_json}")
 	[[ ${code} == 200 ]] || exit 1
 
 	cache_path=$(location_to_cache_path "${url}")
@@ -377,13 +385,16 @@ function download_to_cache() {
 	[[ -f ${cache_path}/time && "$(<"${cache_path}/time")" == "${time}" ]] || needs_download=1
 	[[ -f ${cache_path}/type && "$(<"${cache_path}/type")" == "${type}" ]] || needs_download=1
 	if [[ ${needs_download} -eq 1 ]]; then
-		local code_time_type_url_filename
-		code_time_type_url_filename=$(
+		curl_info_json=$(
 			echo "downloading ${url}" >&2
-			curl -SL -w "%{http_code}\t%header{Last-Modified}\t%header{Content-Type}\t%{url_effective}\t%{filename_effective}" --no-clobber -o "${cache_path}/data" "${url}"
+			curl -SL -w "${write_out}" --no-clobber -o "${cache_path}/data" "${url}"
 		)
 		local filename
-		IFS=$'\t' read -r code time type url filename <<<"${code_time_type_url_filename}"
+		code=$(jq -r '.http_code' <<<"${curl_info_json}")
+		time=$(jq -r '.last_modified' <<<"${curl_info_json}")
+		type=$(jq -r '.content_type' <<<"${curl_info_json}")
+		url=$(jq -r '.url' <<<"${curl_info_json}")
+		filename=$(jq -r '.filename' <<<"${curl_info_json}")
 		[[ ${code} == 200 ]] || exit 1
 		[[ "${cache_path}/data" == "${filename}" ]] || mv "${filename}" "${cache_path}/data"
 		# sha256.digest seems existing if expected digest is available. so, not creating it here.
