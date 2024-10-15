@@ -151,7 +151,14 @@ function ubuntu_image_url_release() {
 }
 
 # ubuntu_kernel_info_for_image_url returns the kernel and initrd location and digest for the given location.
-function ubuntu_kernel_info_for_image_entry() {
+# ubuntu_image_entry_with_kernel_info returns image entry with kernel and initrd info.
+# $1: image_entry
+# e.g.
+# ```console
+# ubuntu_image_entry_with_kernel_info '{"location":"https://cloud-images.ubuntu.com/minimal/releases/24.04/release-20210914/ubuntu-24.04-minimal-cloudimg-amd64.img"}'
+# {"location":"https://cloud-images.ubuntu.com/minimal/releases/24.04/release-20210914/ubuntu-24.04-minimal-cloudimg-amd64.img","kernel":{"location":"https://cloud-images.ubuntu.com/minimal/releases/24.04/release-20210914/ubuntu-24.04-minimal-cloudimg-vmlinuz-generic","digest":"sha256:..."}}
+# ```
+function ubuntu_image_entry_with_kernel_info() {
 	local image_entry=$1 location
 	location=$(jq -r '.location' <<<"${image_entry}")
 	local location_dirname sha256sums location_basename
@@ -172,7 +179,7 @@ function ubuntu_kernel_info_for_image_entry() {
 	initrd_location=$(validate_url "${location_dirname}/${initrd_basename}")
 	initrd_digest=${initrd_location+$(awk "/${initrd_basename}/{print \"sha256:\"\$1}" "${sha256sums}")}
 
-	json=$(jq -cn ".kernel={location:\"${kernel_location}\",digest:\"${kernel_digest}\"}")
+	json=$(jq -c ".kernel={location:\"${kernel_location}\",digest:\"${kernel_digest}\"}" <<<"${image_entry}")
 	if [[ -n "${initrd_location}" ]]; then
 		jq -c ".initrd={location:\"${initrd_location}\",digest:\"${initrd_digest}\"}" <<<"${json}"
 	else
@@ -247,7 +254,7 @@ function ubuntu_image_entry_for_image_kernel_flavor_version() {
 	arch=$(ubuntu_arch_from_location "${location}")
 	path_suffix=$(ubuntu_path_suffix_from_location "${location}")
 
-	local image_entry kernel_info
+	local image_entry
 	image_entry=$(ubuntu_image_url_"${url_spec}" "${flavor}" "${version}" "${arch}" "${path_suffix}")
 	if [[ -z ${image_entry} ]]; then
 		echo "Failed to get the ${url_spec} image location for ${location}" >&2
@@ -256,12 +263,7 @@ function ubuntu_image_entry_for_image_kernel_flavor_version() {
 		echo "Image location is up-to-date: ${location}" >&2
 		return 0
 	fi
-	if [[ ${kernel_location} != "null" ]]; then
-		kernel_info=$(ubuntu_kernel_info_for_image_entry "${image_entry}")
-		if [[ -n ${kernel_info} ]]; then
-			image_entry=$(jq -c ". + ${kernel_info}" <<<"${image_entry}")
-		fi
-	fi
+	[[ ${kernel_location} != "null" ]] && image_entry=$(ubuntu_image_entry_with_kernel_info "${image_entry}")
 	echo "${image_entry}"
 }
 
