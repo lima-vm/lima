@@ -49,11 +49,6 @@ Container orchestration:
 - [`experimental/u7s`](./experimental/u7s.yaml): [Usernetes](https://github.com/rootless-containers/usernetes): Rootless Kubernetes
 
 Optional feature enablers:
-- [`vmnet`](./vmnet.yaml): ⭐enable [`vmnet.framework`](../docs/network.md)
-- [`experimental/9p`](./experimental/9p.yaml): [experimental] use 9p mount type
-- [`experimental/virtiofs-linux`](./experimental/9p.yaml): [experimental] use virtiofs mount type for Linux
-- [`experimental/net-user-v2`](./experimental/net-user-v2.yaml): [experimental] user-v2 network
-  to enable VM-to-VM communication without root privilege
 - [`experimental/vnc`](./experimental/vnc.yaml): [experimental] use vnc display and xorg server
 - [`experimental/alsa`](./experimental/alsa.yaml): [experimental] use alsa and default audio device
 
@@ -68,8 +63,13 @@ Lost+found:
 - ~`nomad`~: Removed in Lima v0.17.1, as Nomad is [no longer free software](https://github.com/hashicorp/nomad/commit/b3e30b1dfa185d9437a25830522da47b91f78816)
 - ~`centos-stream-8`~: Remove in Lima v0.23.0, as CentOS Stream 8 reached [EOL](https://blog.centos.org/2023/04/end-dates-are-coming-for-centos-stream-8-and-centos-linux-7/).
 - ~`deprecated/centos-7`~: Remove in Lima v0.23.0, as CentOS 7 reached [EOL](https://blog.centos.org/2023/04/end-dates-are-coming-for-centos-stream-8-and-centos-linux-7/).
+- ~`experimental/vz`~: Merged into the default template in Lima v1.0. See also <https://lima-vm.io/docs/config/vmtype/>.
 - ~`experimental/armv7l`~: Merged into the `default` template in Lima v1.0. Use `limactl create --arch=armv7l template://default`.
 - ~`experimental/riscv64`~: Merged into the `default` template in Lima v1.0. Use `limactl create --arch=riscv64 template://default`.
+- ~`vmnet`~: Removed in Lima v1.0. Use `limactl create --network=lima:shared template://default` instead. See also <https://lima-vm.io/docs/config/network/>.
+- ~`experimental/net-user-v2`~: Removed in Lima v1.0. Use `limactl create --network=lima:user-v2 template://default` instead. See also <https://lima-vm.io/docs/config/network/>.
+- ~`experimental/9p`~: Removed in Lima v1.0. Use `limactl create --vm-type=qemu --mount-type=9p template://default` instead. See also <https://lima-vm.io/docs/config/mount/>.
+- ~`experimental/virtiofs-linux`~: Removed in Lima v1.0. Use `limactl create --mount-type=virtiofs-linux template://default` instead. See also <https://lima-vm.io/docs/config/mount/>.
 
 ## Tier
 

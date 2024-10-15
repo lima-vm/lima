@@ -56,9 +56,6 @@ case "$NAME" in
 	# ● run-r2b459797f5b04262bfa79984077a65c7.service                                       loaded failed failed    /usr/bin/systemctl start man-db-cache-update
 	CHECKS["systemd-strict"]=
 	;;
-"vmnet")
-	CHECKS["vmnet"]=1
-	;;
 "test-misc")
 	CHECKS["disk"]=1
 	CHECKS["snapshot-online"]="1"
@@ -66,10 +63,6 @@ case "$NAME" in
 	CHECKS["mount-path-with-spaces"]="1"
 	CHECKS["provision-ansible"]="1"
 	CHECKS["param-env-variables"]="1"
-	;;
-"net-user-v2")
-	CHECKS["port-forwards"]=""
-	CHECKS["user-v2"]=1
 	;;
 "docker")
 	CONTAINER_ENGINE="docker"
@@ -80,6 +73,22 @@ if limactl ls -q | grep -q "$NAME"; then
 	ERROR "Instance $NAME already exists"
 	exit 1
 fi
+
+# Create ${NAME}-tmp to inspect the enabled features.
+# TODO: skip downloading and converting the image here.
+# Probably `limactl create` should have "dry run" mode that just generates `lima.yaml`.
+# shellcheck disable=SC2086
+"${LIMACTL_CREATE[@]}" ${LIMACTL_CREATE_ARGS} --set ".additionalDisks=null" --name="${NAME}-tmp" "$FILE"
+case "$(yq '.networks[].lima' "${LIMA_HOME}/${NAME}-tmp/lima.yaml")" in
+"shared")
+	CHECKS["vmnet"]=1
+	;;
+"user-v2")
+	CHECKS["port-forwards"]=""
+	CHECKS["user-v2"]=1
+	;;
+esac
+limactl rm -f "${NAME}-tmp"
 
 if [[ -n ${CHECKS["port-forwards"]} ]]; then
 	tmpconfig="$HOME/lima-config-tmp"
@@ -381,7 +390,7 @@ fi
 if [[ -n ${CHECKS["user-v2"]} ]]; then
 	INFO "Testing user-v2 network"
 	secondvm="$NAME-1"
-	"${LIMACTL_CREATE[@]}" "$FILE" --name "$secondvm"
+	"${LIMACTL_CREATE[@]}" --set ".additionalDisks=null" "$FILE" --name "$secondvm"
 	if ! limactl start "$secondvm"; then
 		ERROR "Failed to start \"$secondvm\""
 		diagnose "$secondvm"

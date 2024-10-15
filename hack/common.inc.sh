@@ -22,3 +22,5 @@ if [[ ${BASH_VERSINFO:-0} -lt 4 ]]; then
 	ERROR "Bash version is too old: ${BASH_VERSION}"
 	exit 1
 fi
+
+: "${LIMA_HOME:=$HOME/.lima}"
