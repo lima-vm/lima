@@ -131,6 +131,12 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 		// No need to use SecureJoin here. https://github.com/lima-vm/lima/pull/805#discussion_r853411702
 		templateName := filepath.Join(templateURL.Host, templateURL.Path)
 		logrus.Debugf("interpreting argument %q as a template name %q", arg, templateName)
+		switch templateName {
+		case "experimental/riscv64":
+			logrus.Warn("template://experimental/riscv64 was merged into the default template in Lima v1.0. Use `limactl create --arch=riscv64 template://default` instead.")
+		case "experimental/armv7l":
+			logrus.Warn("template://experimental/armv7l was merged into the default template in Lima v1.0. Use `limactl create --arch=armv7l template://default` instead.")
+		}
 		if st.instName == "" {
 			// e.g., templateName = "deprecated/centos-7" , st.instName = "centos-7"
 			st.instName = filepath.Base(templateName)
