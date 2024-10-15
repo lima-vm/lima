@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -20,6 +21,20 @@ func TestMain(m *testing.M) {
 	HideProgress = true
 	os.Exit(m.Run())
 }
+
+type downloadResult struct {
+	r   *Result
+	err error
+}
+
+// We expect only few parallel downloads. Testing with larger number to find
+// races quicker. 20 parallel downloads take about 120 milliseocnds on M1 Pro.
+const parallelDownloads = 20
+
+// When downloading in parallel usually all downloads completed with
+// StatusDownload, but some may be delayed and find the data file when they
+// start. Can be reproduced locally using 100 parallel downloads.
+var parallelStatus = []Status{StatusDownloaded, StatusUsedCache}
 
 func TestDownloadRemote(t *testing.T) {
 	ts := httptest.NewServer(http.FileServer(http.Dir("testdata")))
@@ -57,38 +72,90 @@ func TestDownloadRemote(t *testing.T) {
 		})
 	})
 	t.Run("with cache", func(t *testing.T) {
-		cacheDir := filepath.Join(t.TempDir(), "cache")
-		localPath := filepath.Join(t.TempDir(), t.Name())
-		r, err := Download(context.Background(), localPath, dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest), WithCacheDir(cacheDir))
-		assert.NilError(t, err)
-		assert.Equal(t, StatusDownloaded, r.Status)
+		t.Run("serial", func(t *testing.T) {
+			cacheDir := filepath.Join(t.TempDir(), "cache")
+			localPath := filepath.Join(t.TempDir(), t.Name())
+			r, err := Download(context.Background(), localPath, dummyRemoteFileURL,
+				WithExpectedDigest(dummyRemoteFileDigest), WithCacheDir(cacheDir))
+			assert.NilError(t, err)
+			assert.Equal(t, StatusDownloaded, r.Status)
 
-		r, err = Download(context.Background(), localPath, dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest), WithCacheDir(cacheDir))
-		assert.NilError(t, err)
-		assert.Equal(t, StatusSkipped, r.Status)
+			r, err = Download(context.Background(), localPath, dummyRemoteFileURL,
+				WithExpectedDigest(dummyRemoteFileDigest), WithCacheDir(cacheDir))
+			assert.NilError(t, err)
+			assert.Equal(t, StatusSkipped, r.Status)
 
-		localPath2 := localPath + "-2"
-		r, err = Download(context.Background(), localPath2, dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest), WithCacheDir(cacheDir))
-		assert.NilError(t, err)
-		assert.Equal(t, StatusUsedCache, r.Status)
+			localPath2 := localPath + "-2"
+			r, err = Download(context.Background(), localPath2, dummyRemoteFileURL,
+				WithExpectedDigest(dummyRemoteFileDigest), WithCacheDir(cacheDir))
+			assert.NilError(t, err)
+			assert.Equal(t, StatusUsedCache, r.Status)
+		})
+		t.Run("parallel", func(t *testing.T) {
+			cacheDir := filepath.Join(t.TempDir(), "cache")
+			results := make(chan downloadResult, parallelDownloads)
+			for i := 0; i < parallelDownloads; i++ {
+				go func() {
+					// Parallel download is supported only for different instances with unique localPath.
+					localPath := filepath.Join(t.TempDir(), t.Name())
+					r, err := Download(context.Background(), localPath, dummyRemoteFileURL,
+						WithExpectedDigest(dummyRemoteFileDigest), WithCacheDir(cacheDir))
+					results <- downloadResult{r, err}
+				}()
+			}
+			// We must process all results before cleanup.
+			for i := 0; i < parallelDownloads; i++ {
+				result := <-results
+				if result.err != nil {
+					t.Errorf("Download failed: %s", result.err)
+				} else if !slices.Contains(parallelStatus, result.r.Status) {
+					t.Errorf("Expected download status %s, got %s", parallelStatus, result.r.Status)
+				}
+			}
+		})
 	})
 	t.Run("caching-only mode", func(t *testing.T) {
-		_, err := Download(context.Background(), "", dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest))
-		assert.ErrorContains(t, err, "cache directory to be specified")
+		t.Run("serial", func(t *testing.T) {
+			_, err := Download(context.Background(), "", dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest))
+			assert.ErrorContains(t, err, "cache directory to be specified")
 
-		cacheDir := filepath.Join(t.TempDir(), "cache")
-		r, err := Download(context.Background(), "", dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest), WithCacheDir(cacheDir))
-		assert.NilError(t, err)
-		assert.Equal(t, StatusDownloaded, r.Status)
+			cacheDir := filepath.Join(t.TempDir(), "cache")
+			r, err := Download(context.Background(), "", dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest),
+				WithCacheDir(cacheDir))
+			assert.NilError(t, err)
+			assert.Equal(t, StatusDownloaded, r.Status)
 
-		r, err = Download(context.Background(), "", dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest), WithCacheDir(cacheDir))
-		assert.NilError(t, err)
-		assert.Equal(t, StatusUsedCache, r.Status)
+			r, err = Download(context.Background(), "", dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest),
+				WithCacheDir(cacheDir))
+			assert.NilError(t, err)
+			assert.Equal(t, StatusUsedCache, r.Status)
 
-		localPath := filepath.Join(t.TempDir(), t.Name())
-		r, err = Download(context.Background(), localPath, dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest), WithCacheDir(cacheDir))
-		assert.NilError(t, err)
-		assert.Equal(t, StatusUsedCache, r.Status)
+			localPath := filepath.Join(t.TempDir(), t.Name())
+			r, err = Download(context.Background(), localPath, dummyRemoteFileURL,
+				WithExpectedDigest(dummyRemoteFileDigest), WithCacheDir(cacheDir))
+			assert.NilError(t, err)
+			assert.Equal(t, StatusUsedCache, r.Status)
+		})
+		t.Run("parallel", func(t *testing.T) {
+			cacheDir := filepath.Join(t.TempDir(), "cache")
+			results := make(chan downloadResult, parallelDownloads)
+			for i := 0; i < parallelDownloads; i++ {
+				go func() {
+					r, err := Download(context.Background(), "", dummyRemoteFileURL,
+						WithExpectedDigest(dummyRemoteFileDigest), WithCacheDir(cacheDir))
+					results <- downloadResult{r, err}
+				}()
+			}
+			// We must process all results before cleanup.
+			for i := 0; i < parallelDownloads; i++ {
+				result := <-results
+				if result.err != nil {
+					t.Errorf("Download failed: %s", result.err)
+				} else if !slices.Contains(parallelStatus, result.r.Status) {
+					t.Errorf("Expected download status %s, got %s", parallelStatus, result.r.Status)
+				}
+			}
+		})
 	})
 	t.Run("cached", func(t *testing.T) {
 		_, err := Cached(dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest))
