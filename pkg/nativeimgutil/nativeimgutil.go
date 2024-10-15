@@ -14,7 +14,6 @@ import (
 	"github.com/lima-vm/go-qcow2reader"
 	"github.com/lima-vm/go-qcow2reader/image/qcow2"
 	"github.com/lima-vm/go-qcow2reader/image/raw"
-	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/progressbar"
 	"github.com/sirupsen/logrus"
 )
@@ -169,5 +168,5 @@ func MakeSparse(f *os.File, n int64) error {
 	if _, err := f.Seek(n, io.SeekStart); err != nil {
 		return err
 	}
-	return osutil.Ftruncate(int(f.Fd()), n)
+	return f.Truncate(n)
 }
