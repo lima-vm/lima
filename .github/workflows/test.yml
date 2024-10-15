@@ -23,11 +23,11 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
       with:
         # To avoid "failed to load YAML file \"templates/experimental/riscv64.yaml\": can't parse builtin Lima version \"3f3a6f6\": 3f3a6f6 is not in dotted-tri format"
         fetch-depth: 0
-    - uses: actions/setup-go@v5
+    - uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
       with:
         go-version: 1.23.x
     - name: Install protoc
@@ -37,7 +37,7 @@ jobs:
     - name: Verify generated files
       run: make install-tools generate check-generated
     - name: Run golangci-lint
-      uses: golangci/golangci-lint-action@v6.1.1
+      uses: golangci/golangci-lint-action@971e284b6050e8a5849b72094c50ab08da042db8 # v6.1.1
       with:
         version: v1.60.1
         args: --verbose --timeout=10m
@@ -48,7 +48,7 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y shellcheck
     - name: Run file and directory name linter
-      uses: ls-lint/action@v2.2.3
+      uses: ls-lint/action@1887e6c0e7f2dfa81a2d67591f0eb7782720026f # v2.2.3
     - name: Run shellcheck
       run: find . -name '*.sh' | xargs shellcheck
     - name: Install shfmt
@@ -56,7 +56,7 @@ jobs:
     - name: Run shfmt
       run: find . -name '*.sh' | xargs shfmt -s -d
     - name: Check hyperlinks
-      uses: docker://dkhamsing/awesome_bot:latest
+      uses: docker://dkhamsing/awesome_bot:latest@sha256:a8adaeb3b3bd5745304743e4d8a6d512127646e420544a6d22d9f58a07f35884
       with:
         args: /github/workspace/README.md --allow-dupe --allow-redirect --request-delay 1 --white-list https://img.shields.io,http://127.0.0.1:8080,https://github.com/lima-vm/lima/releases/download,https://xbarapp.com,https://api.github.com
     - name: Install go-licenses
@@ -79,10 +79,10 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y --no-install-recommends qemu-utils
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
       with:
         fetch-depth: 1
-    - uses: actions/setup-go@v5
+    - uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
       with:
         go-version: ${{ matrix.go-version }}
     - name: Unit tests
@@ -127,10 +127,10 @@ jobs:
       run: |
         git config --global core.autocrlf false
         git config --global core.eol lf
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
       with:
         fetch-depth: 1
-    - uses: actions/setup-go@v5
+    - uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
       with:
         go-version: 1.23.x
     - name: Unit tests
@@ -157,11 +157,11 @@ jobs:
     runs-on: macos-12
     timeout-minutes: 120
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
       with:
         # To avoid "failed to load YAML file \"templates/experimental/riscv64.yaml\": can't parse builtin Lima version \"3f3a6f6\": 3f3a6f6 is not in dotted-tri format"
         fetch-depth: 0
-    - uses: actions/setup-go@v5
+    - uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
       with:
         go-version: 1.23.x
     - name: Unit tests
@@ -193,7 +193,7 @@ jobs:
     - name: "Show cache"
       run: ./hack/debug-cache.sh
     - name: "Test default.yaml"
-      uses: nick-fields/retry@v3
+      uses: nick-fields/retry@7152eba30c6575329ac0576536151aca5a72780e # v3.0.0
       with:
         timeout_minutes: 30
         retry_on: error
@@ -230,10 +230,10 @@ jobs:
         - ../hack/test-templates/alpine-iso-9p-writable.yaml  # Covers alpine-iso.yaml
         - ../hack/test-templates/test-misc.yaml
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
       with:
         fetch-depth: 1
-    - uses: actions/setup-go@v5
+    - uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
       with:
         go-version: 1.23.x
     - name: Make
@@ -267,7 +267,7 @@ jobs:
       run: echo "LIMACTL_CREATE_ARGS=${LIMACTL_CREATE_ARGS} --mount-type=reverse-sshfs" >>$GITHUB_ENV
       if: matrix.template == 'archlinux.yaml'
     - name: "Test"
-      uses: nick-fields/retry@v3
+      uses: nick-fields/retry@7152eba30c6575329ac0576536151aca5a72780e # v3.0.0
       with:
         timeout_minutes: 30
         retry_on: error
@@ -288,15 +288,15 @@ jobs:
       matrix:
         colima-version: ["v0.6.5"]
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
       with:
         # fetch-depth is set to 0 to let `limactl --version` print semver-ish version
         fetch-depth: 0
         ref: ${{ github.event.pull_request.head.sha }}
-    - uses: actions/setup-go@v5
+    - uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
       with:
         go-version: 1.23.x
-    - uses: actions/cache@v4
+    - uses: actions/cache@3624ceb22c1c5a301c8db4169662070a689d9ea8 # v4.1.1
       with:
         path: ~/.cache/lima/download
         key: ${{ runner.os }}-colima-${{ matrix.colima-version }}
@@ -321,7 +321,7 @@ jobs:
     - name: "Show cache"
       run: ./hack/debug-cache.sh
     - name: "Test"
-      uses: nick-fields/retry@v3
+      uses: nick-fields/retry@7152eba30c6575329ac0576536151aca5a72780e # v3.0.0
       with:
         timeout_minutes: 30
         retry_on: error
@@ -335,10 +335,10 @@ jobs:
     runs-on: macos-12
     timeout-minutes: 120
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
       with:
         fetch-depth: 1
-    - uses: actions/setup-go@v5
+    - uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
       with:
         go-version: 1.23.x
     - name: Make
@@ -371,7 +371,7 @@ jobs:
       # Set -count=1 to disable cache
       run: go test -v -count=1 ./pkg/networks/...
     - name: Test socket_vmnet
-      uses: nick-fields/retry@v3
+      uses: nick-fields/retry@7152eba30c6575329ac0576536151aca5a72780e # v3.0.0
       with:
         timeout_minutes: 30
         retry_on: error
@@ -388,18 +388,18 @@ jobs:
       matrix:
         oldver: ["v0.15.1"]
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
       with:
         fetch-depth: 0
     - name: Fetch homebrew-core commit messages
-      uses: actions/checkout@v4
+      uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
       with:
         # needed by ./hack/brew-install-version.sh
         repository: homebrew/homebrew-core
         path: homebrew-core
         fetch-depth: 0
         filter: tree:0
-    - uses: actions/setup-go@v5
+    - uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
       with:
         go-version: 1.23.x
     - name: Cache image used by ${{ matrix.oldver }}/examples/ubuntu-lts.yaml
@@ -413,7 +413,7 @@ jobs:
         # We revert back to 8.2.1, which seems to work fine
         ./hack/brew-install-version.sh qemu 8.2.1
     - name: Test
-      uses: nick-fields/retry@v3
+      uses: nick-fields/retry@7152eba30c6575329ac0576536151aca5a72780e # v3.0.0
       with:
         timeout_minutes: 30
         retry_on: error
@@ -434,10 +434,10 @@ jobs:
         - default.yaml
         - fedora.yaml
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
       with:
         fetch-depth: 1
-    - uses: actions/setup-go@v5
+    - uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
       with:
         go-version: 1.23.x
     - name: Make
