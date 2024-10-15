@@ -1,6 +1,6 @@
 # Path to socket_vmnet executable. Because socket_vmnet is invoked via sudo it should be
 # installed where only root can modify/replace it. This means also none of the
-# parent directories should be writable by the user.
+# parent directories can be writable by the user.
 #
 # The varRun directory also must not be writable by the user because it will
 # include the socket_vmnet pid file. Those will be terminated via sudo, so replacing
