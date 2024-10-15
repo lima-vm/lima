@@ -69,20 +69,38 @@ The configuration steps are different for each network type:
 #### Managed (192.168.105.0/24)
 
 [`socket_vmnet`](https://github.com/lima-vm/socket_vmnet) is required for adding another guest IP that is accessible from the host and other guests.
+It must be installed according to the instruction provided on https://github.com/lima-vm/socket_vmnet.
+
+Note that installation using Homebrew is not secure and not recommended by the Lima project.
+Homebrew installation will only work with Lima if password-less `sudo` is enabled for the current user.
+The `limactl sudoers` command requires that `socket_vmnet` is installed into a secure path only
+writable by `root` and will reject `socket_vmnet` installed by Homebrew into a user-writable location.
 
 ```bash
-# Install socket_vmnet
-brew install socket_vmnet
+# Install socket_vmnet as root from source to /opt/socket_vmnet
+# using instructions on https://github.com/lima-vm/socket_vmnet
+# This assumes that Xcode Command Line Tools are already installed
+git clone https://github.com/lima-vm/socket_vmnet
+cd socket_vmnet
+# Change "v1.1.5" to the actual latest release in https://github.com/lima-vm/socket_vmnet/releases
+git checkout v1.1.5
+make
+sudo make PREFIX=/opt/socket_vmnet install.bin
 
 # Set up the sudoers file for launching socket_vmnet from Lima
 limactl sudoers >etc_sudoers.d_lima
+less etc_sudoers.d_lima  # verify that the file looks correct
 sudo install -o root etc_sudoers.d_lima /etc/sudoers.d/lima
+rm etc_sudoers.d_lima
 ```
 
 > **Note**
 >
 > Lima before v0.12 used `vde_vmnet` for managing the networks.
 > `vde_vmnet` is no longer supported.
+>
+> Lima v0.14.0 and later used to also accept `socket_vmnet` installations if they were
+> owned by the `admin` user. Starting with v1.0.0 only `root` ownership is acceptable.
 
 The networks are defined in `$LIMA_HOME/_config/networks.yaml`. If this file doesn't already exist, it will be created with these default
 settings:
@@ -145,7 +163,7 @@ limactl start --network=lima:shared
 ```yaml
 networks:
   # Lima can manage the socket_vmnet daemon for networks defined in $LIMA_HOME/_config/networks.yaml automatically.
-  # The socket_vmnet binary must be installed into a secure location only alterable by the admin.
+  # The socket_vmnet binary must be installed into a secure location only alterable by the "root" user.
   # - lima: shared
   #   # MAC address of the instance; lima will pick one based on the instance name,
   #   # so DHCP assigned ip addresses should remain constant over instance restarts.
@@ -159,6 +177,17 @@ networks:
 The network daemon is started automatically when the first instance referencing them is started,
 and will stop automatically once the last instance has stopped. Daemon logs will be stored in the
 `$LIMA_HOME/_networks` directory.
+
+Since the commands to start and stop the `socket_vmnet` daemon requires root, the user either must
+have password-less `sudo` enabled, or add the required commands to a `sudoers` file. This can
+be done via:
+
+```shell
+limactl sudoers >etc_sudoers.d_lima
+less etc_sudoers.d_lima  # verify that the file looks correct
+sudo install -o root etc_sudoers.d_lima /etc/sudoers.d/lima
+rm etc_sudoers.d_lima
+```
 
 The IP address is automatically assigned by macOS's bootpd.
 If the IP address is not assigned, try the following commands:

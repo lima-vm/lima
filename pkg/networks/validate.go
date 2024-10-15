@@ -5,11 +5,9 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"os/user"
 	"path/filepath"
 	"reflect"
 	"runtime"
-	"strconv"
 	"strings"
 
 	"github.com/lima-vm/lima/pkg/osutil"
@@ -100,49 +98,24 @@ func validatePath(path string, allowDaemonGroupWritable bool) error {
 	if err != nil {
 		return err
 	}
-	adminGroup, err := user.LookupGroup("admin")
-	if err != nil {
-		return err
-	}
-	adminGid, err := strconv.Atoi(adminGroup.Gid)
-	if err != nil {
-		return err
-	}
-	owner, err := user.LookupId(strconv.Itoa(int(stat.Uid)))
-	if err != nil {
-		return err
-	}
-	ownerIsAdmin := owner.Uid == "0"
-	if !ownerIsAdmin {
-		ownerGroupIDs, err := owner.GroupIds()
-		if err != nil {
-			return err
-		}
-		for _, g := range ownerGroupIDs {
-			if g == adminGroup.Gid {
-				ownerIsAdmin = true
-				break
-			}
-		}
-	}
-	if !ownerIsAdmin {
-		return fmt.Errorf(`%s %q owner %dis not an admin`, file, path, stat.Uid)
+	if stat.Uid != root.Uid {
+		return fmt.Errorf(`%s %q is not owned by %q (uid: %d), but by uid %d`, file, path, root.User, root.Uid, stat.Uid)
 	}
 	if allowDaemonGroupWritable {
 		daemon, err := osutil.LookupUser("daemon")
 		if err != nil {
 			return err
 		}
-		if fi.Mode()&0o20 != 0 && stat.Gid != root.Gid && stat.Gid != uint32(adminGid) && stat.Gid != daemon.Gid {
-			return fmt.Errorf(`%s %q is group-writable and group %d is not one of [wheel, admin, daemon]`,
-				file, path, stat.Gid)
+		if fi.Mode()&0o20 != 0 && stat.Gid != root.Gid && stat.Gid != daemon.Gid {
+			return fmt.Errorf(`%s %q is group-writable and group is neither %q (gid: %d) nor %q (gid: %d), but is gid: %d`,
+				file, path, root.User, root.Gid, daemon.User, daemon.Gid, stat.Gid)
 		}
 		if fi.Mode().IsDir() && fi.Mode()&1 == 0 && (fi.Mode()&0o010 == 0 || stat.Gid != daemon.Gid) {
 			return fmt.Errorf(`%s %q is not executable by the %q (gid: %d)" group`, file, path, daemon.User, daemon.Gid)
 		}
-	} else if fi.Mode()&0o20 != 0 && stat.Gid != root.Gid && stat.Gid != uint32(adminGid) {
-		return fmt.Errorf(`%s %q is group-writable and group %d is not one of [wheel, admin]`,
-			file, path, stat.Gid)
+	} else if fi.Mode()&0o20 != 0 && stat.Gid != root.Gid {
+		return fmt.Errorf(`%s %q is group-writable and group is not %q (gid: %d), but is gid: %d`,
+			file, path, root.User, root.Gid, stat.Gid)
 	}
 	if fi.Mode()&0o02 != 0 {
 		return fmt.Errorf("%s %q is world-writable", file, path)

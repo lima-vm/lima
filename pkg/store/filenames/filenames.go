@@ -1,7 +1,7 @@
 // Package filenames defines the names of the files that appear under an instance dir
 // or inside the config directory.
 //
-// See docs/internal.md .
+// See https://lima-vm.io/docs/dev/internals/
 package filenames
 
 // Instance names starting with an underscore are reserved for lima internal usage

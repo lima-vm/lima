@@ -1,10 +1,6 @@
 # A template to enable vmnet.framework.
 
-# Usage:
-#   brew install socket_vmnet
-#   limactl sudoers >etc_sudoers.d_lima
-#   sudo install -o root etc_sudoers.d_lima /etc/sudoers.d/lima
-#   limactl start template://vmnet
+# Install socket_vmnet: https://lima-vm.io/docs/config/network/#socket_vmnet
 
 # This template requires Lima v0.7.0 or later.
 # Older versions of Lima were using a different syntax for supporting vmnet.framework.
