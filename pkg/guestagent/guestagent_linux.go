@@ -279,7 +279,7 @@ func (a *agent) LocalPorts(_ context.Context) ([]*api.IPPort, error) {
 				res = append(res,
 					&api.IPPort{
 						Ip:       ipt.IP.String(),
-						Port:     int32(ipt.Port),
+						Port:     int32(ipt.Port), // The port value is already ensured to be within int32 bounds in iptables.go
 						Protocol: "tcp",
 					})
 			}
