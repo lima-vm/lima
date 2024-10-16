@@ -13,6 +13,9 @@ on:
     - 'master'
 env:
   GO111MODULE: on
+permissions:
+  contents: read
+
 jobs:
   artifacts-darwin:
     name: Artifacts Darwin
