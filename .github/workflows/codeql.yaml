@@ -9,6 +9,9 @@ on:
   - cron: '33 19 * * 5'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
