@@ -17,6 +17,8 @@ on:
 env:
   LIMACTL_CREATE_ARGS: ""
 
+permissions: read-all
+
 jobs:
   lints:
     name: "Lints"
