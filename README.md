@@ -10,6 +10,7 @@
 # Lima: Linux Machines
 
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/6505/badge)](https://www.bestpractices.dev/projects/6505)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/lima-vm/lima/badge)](https://scorecard.dev/viewer/?uri=github.com/lima-vm/lima)
 
 [Lima](https://lima-vm.io/) launches Linux virtual machines with automatic file sharing and port forwarding (similar to WSL2).
 
