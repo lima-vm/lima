@@ -17,3 +17,13 @@ updates:
   schedule:
     interval: daily
   open-pull-requests-limit: 10
+
+- package-ecosystem: gomod
+  directory: /website
+  schedule:
+    interval: daily
+
+- package-ecosystem: npm
+  directory: /website
+  schedule:
+    interval: daily
