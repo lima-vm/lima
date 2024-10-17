@@ -7,12 +7,12 @@ Lima supports several methods for mounting the host filesystem into the guest.
 
 The default mount type is shown in the following table:
 
-| Lima Version     | Default                                                       |
-| ---------------- | ------------------------------------------------------------- |
-| < 0.10           | reverse-sshfs + Builtin SFTP server                           |
-| >= 0.10          | reverse-sshfs + OpenSSH SFTP server                           |
-| >= 0.17          | reverse-sshfs + OpenSSH SFTP server for QEMU, virtiofs for VZ |
-| >= 1.0 (Planned) | 9p for QEMU, virtiofs for VZ                                  |
+| Lima Version | Default                                                       |
+| ------------ | ------------------------------------------------------------- |
+| < 0.10       | reverse-sshfs + Builtin SFTP server                           |
+| >= 0.10      | reverse-sshfs + OpenSSH SFTP server                           |
+| >= 0.17      | reverse-sshfs + OpenSSH SFTP server for QEMU, virtiofs for VZ |
+| >= 1.0       | 9p for QEMU, virtiofs for VZ                                  |
 
 ## Mount types
 
@@ -62,8 +62,6 @@ Lima prior to v0.10 had used "builtin" as the SFTP driver.
 - A compromised `sshfs` process in the guest may have access to unexposed host directories.
 
 ### 9p
-> **Warning**
-> "9p" mode is experimental (will graduate from experimental in Lima v1.0)
 
 The "9p" mount type is implemented by using QEMU's virtio-9p-pci devices.
 virtio-9p-pci is also known as "virtfs", but note that this is unrelated to [virtio-fs](https://virtio-fs.gitlab.io/).
@@ -108,7 +106,7 @@ The "9p" mount type requires Lima v0.10.0 or later.
 
 ### virtiofs
 > **Warning**
-> "virtiofs" mode is experimental
+> "virtiofs" mode is experimental on Linux hosts
 
 | ⚡ Requirement | Lima >= 0.14, macOS >= 13.0 | Lima >= 0.17.0, Linux, QEMU 4.2.0+, virtiofsd (Rust version) |
 |-------------------|-----------------------------| ------------------------------------------------------------ |
