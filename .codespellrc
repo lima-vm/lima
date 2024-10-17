@@ -1,0 +1,12 @@
+# https://github.com/codespell-project/codespell#using-a-config-file
+
+[codespell]
+
+# Comma separated list of dirs to be skipped.
+skip = .git,*.pb.desc,*/node_modules/*,*/public/js/*,*/public/scss/*
+
+# Comma separated list of words to be ignored. Words must be lowercased.
+ignore-words-list = ans,distroname,testof,hda,ststr
+
+# Check file names as well.
+check-filenames = true
