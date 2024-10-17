@@ -34,8 +34,8 @@ type Entry struct {
 }
 
 type ServiceWatcher struct {
-	rwMutex         sync.RWMutex
-	serviceInformer cache.SharedIndexInformer
+	serviceInformerMu sync.RWMutex
+	serviceInformer   cache.SharedIndexInformer
 }
 
 func NewServiceWatcher() *ServiceWatcher {
@@ -43,14 +43,14 @@ func NewServiceWatcher() *ServiceWatcher {
 }
 
 func (s *ServiceWatcher) setServiceInformer(serviceInformer cache.SharedIndexInformer) {
-	s.rwMutex.Lock()
-	defer s.rwMutex.Unlock()
+	s.serviceInformerMu.Lock()
+	defer s.serviceInformerMu.Unlock()
 	s.serviceInformer = serviceInformer
 }
 
 func (s *ServiceWatcher) getServiceInformer() cache.SharedIndexInformer {
-	s.rwMutex.RLock()
-	defer s.rwMutex.RUnlock()
+	s.serviceInformerMu.RLock()
+	defer s.serviceInformerMu.RUnlock()
 	return s.serviceInformer
 }
 
