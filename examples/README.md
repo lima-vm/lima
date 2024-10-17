@@ -76,4 +76,4 @@ Lost+found:
 - "Tier 1" (marked with ⭐): Good stability. Regularly tested on the CI.
 - "Tier 2" (marked with ☆): Moderate stability. Regularly tested on the CI.
 
-Other yamls are tested only occasionally and manually.
+Other templates are tested only occasionally and manually.

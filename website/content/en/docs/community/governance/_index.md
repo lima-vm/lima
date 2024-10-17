@@ -76,7 +76,7 @@ Eligibility to be a release manager:
 - MUST protect the GPG key with a passphrase or a hardware token.
 
 Release steps:
-- Open an issue to propose making a new release. e.g., <https://github.com/lima-vm/lima/issues/2296>.
+- Open an issue to propose making a new release, e.g. <https://github.com/lima-vm/lima/issues/2296>.
   The proposal should be public, with an exception for vulnerability fixes.
   If this is the first time for you to take a role of release management,
   you SHOULD make a beta (or alpha, RC) release as an exercise before releasing GA.

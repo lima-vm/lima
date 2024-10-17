@@ -59,7 +59,7 @@ Lima prior to v0.10 had used "builtin" as the SFTP driver.
 
 #### Caveats
 - A mount is disabled when the SSH connection was shut down.
-- A compromised `sshfs` process in the guest may have an access to unexposed host directories.
+- A compromised `sshfs` process in the guest may have access to unexposed host directories.
 
 ### 9p
 > **Warning**
