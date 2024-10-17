@@ -28,7 +28,7 @@ type downloadResult struct {
 }
 
 // We expect only few parallel downloads. Testing with larger number to find
-// races quicker. 20 parallel downloads take about 120 milliseocnds on M1 Pro.
+// races quicker. 20 parallel downloads take about 120 milliseconds on M1 Pro.
 const parallelDownloads = 20
 
 // When downloading in parallel usually all downloads completed with

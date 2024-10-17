@@ -17,7 +17,7 @@ const (
 	wslDistroInfoPrefix       = `SOFTWARE\Microsoft\Windows\CurrentVersion\Lxss`
 )
 
-// AddVSockRegistryKey makes a vsock server running on the host acceessible in guests.
+// AddVSockRegistryKey makes a vsock server running on the host accessible in guests.
 func AddVSockRegistryKey(port int) error {
 	rootKey, err := getGuestCommunicationServicesKey(true)
 	if err != nil {
@@ -74,7 +74,7 @@ func RemoveVSockRegistryKey(port int) error {
 	return nil
 }
 
-// IsVSockPortFree determines if a VSock port has been registiered already.
+// IsVSockPortFree determines if a VSock port has been registered already.
 func IsVSockPortFree(port int) (bool, error) {
 	rootKey, err := getGuestCommunicationServicesKey(false)
 	if err != nil {
