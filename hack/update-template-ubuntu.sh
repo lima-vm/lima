@@ -359,6 +359,29 @@ function ubuntu_location_url_spec() {
 	echo "${url_spec}"
 }
 
+# ubuntu_cache_key_for_location_flavor_version returns the cache key for the given location, flavor, and version.
+# If the location is not supported, it returns 1.
+# e.g.
+# ```console
+# ubuntu_cache_key_for_location_flavor_version https://cloud-images.ubuntu.com/minimal/releases/24.04/release-20210914/ubuntu-24.04-minimal-cloudimg-amd64.img
+# ubuntu_latest_24.04-minimal-amd64-release-.img
+# ubuntu_cache_key_for_location_flavor_version https://cloud-images.ubuntu.com/releases/24.04/release/ubuntu-24.04-server-cloudimg-amd64.img
+# ubuntu_release_24.04-server-amd64-.img
+# ```
+function ubuntu_cache_key_for_location_flavor_version() {
+	local location=$1 url_spec flavor version arch path_suffix
+	url_spec=$(ubuntu_location_url_spec "${location}")
+	flavor=${2:-$(ubuntu_flavor_from_location "${location}")}
+	version=${3:-$(ubuntu_version_from_location "${location}")}
+	arch=$(ubuntu_arch_from_location "${location}")
+	path_suffix=$(ubuntu_path_suffix_from_location "${location}")
+	if [[ ${url_spec} == "latest" ]]; then
+		echo "ubuntu_latest_${version}-${flavor}-${arch}-${path_suffix}"
+	elif [[ ${url_spec} == "release" ]]; then
+		echo "ubuntu_release_${version}-${flavor}-${arch}-${path_suffix}"
+	fi
+}
+
 function ubuntu_image_entry_for_image_kernel_flavor_version() {
 	local location=$1 kernel_location=$2 url_spec
 	url_spec=$(ubuntu_location_url_spec "${location}")
@@ -424,6 +447,8 @@ if [[ ${#templates[@]} -eq 0 ]]; then
 	exit 0
 fi
 
+declare -A ubuntu_image_entry_cache=()
+
 for template in "${templates[@]}"; do
 	echo "Processing ${template}"
 	# 1. extract location by parsing template using arch
@@ -447,14 +472,25 @@ for template in "${templates[@]}"; do
 		) # Check exit status separately to prevent disabling 'set -e' by using the function call in the condition.
 		# shellcheck disable=2181
 		[[ $? -eq 0 ]] || continue
+		cache_key=$(
+			set -e # Enable 'set -e' for the next command.
+			ubuntu_cache_key_for_location_flavor_version "${location}" "${overriding_flavor}" "${overriding_version}"
+		) # Check exit status separately to prevent disabling 'set -e' by using the function call in the condition.
+		# shellcheck disable=2181
+		[[ $? -eq 0 ]] || continue
 		image_entry=$(
 			set -e # Enable 'set -e' for the next command.
-			ubuntu_image_entry_for_image_kernel_flavor_version "${location}" "${kernel_location}" "${overriding_flavor}" "${overriding_version}"
+			if [[ -v ubuntu_image_entry_cache[${cache_key}] ]]; then
+				echo "${ubuntu_image_entry_cache[${cache_key}]}"
+			else
+				ubuntu_image_entry_for_image_kernel_flavor_version "${location}" "${kernel_location}" "${overriding_flavor}" "${overriding_version}"
+			fi
 		) # Check exit status separately to prevent disabling 'set -e' by using the function call in the condition.
 		# shellcheck disable=2181
 		[[ $? -eq 0 ]] || continue
 		set -e
 		echo "${image_entry}" | jq
+		ubuntu_image_entry_cache[${cache_key}]="${image_entry}"
 		if [[ -n "${image_entry}" ]]; then
 			[[ ${kernel_cmdline} != "null" ]] && image_entry=$(jq ".kernel.cmdline = \"${kernel_cmdline}\"" <<<"${image_entry}")
 			limactl edit --log-level error --set "
