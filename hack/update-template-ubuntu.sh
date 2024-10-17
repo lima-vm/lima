@@ -104,6 +104,48 @@ function ubuntu_image_url_try_replace_release_with_version() {
 	fi
 }
 
+# json prints the JSON object with the given arguments.
+# json [key value ...]
+# if the value is empty, both key and value are omitted.
+# e.g.
+# ```console
+# json location https://cloud-images.ubuntu.com/minimal/releases/24.04/release-20210914/ubuntu-24.04-minimal-cloudimg-amd64.img arch amd64 digest sha256:...
+# {"location":"https://cloud-images.ubuntu.com/minimal/releases/24.04/release-20210914/ubuntu-24.04-minimal-cloudimg-amd64.img","arch":"amd64","digest":"sha256:..."}
+# ```
+function json() {
+	local args=() pattern='^(\[.*\]|\{.*\})$' value
+	[[ ! -p /dev/stdin ]] && args+=(--null-input)
+	while [[ $# -gt 0 ]]; do
+		value="${2-}"
+		if [[ ${value} =~ ${pattern} ]]; then
+			args+=(--argjson "${1}" "${value}")
+		elif [[ -n ${value} ]]; then
+			args+=(--arg "${1}" "${value}")
+		fi # omit empty values
+		shift
+		shift # shift 2 does not work when $# is 1
+	done
+	jq -c "${args[@]}" '. + $ARGS.named | if . == {} then empty else . end'
+}
+
+# json_vars prints the JSON object with the given variable names.
+# e.g.
+# ```console
+# location=https://cloud-images.ubuntu.com/minimal/releases/24.04/release-20210914/ubuntu-24.04-minimal-cloudimg-amd64.img
+# arch=amd64
+# digest=sha256:...
+# json_vars location arch digest
+# {"location":"https://cloud-images.ubuntu.com/minimal/releases/24.04/release-20210914/ubuntu-24.04-minimal-cloudimg-amd64.img","arch":"amd64","digest":"sha256:..."}
+# ```
+function json_vars() {
+	local args=() var
+	for var in "$@"; do
+		[[ -v ${var} ]] || error_exit "${var} is not set"
+		args+=("${var}" "${!var}")
+	done
+	json "${args[@]}"
+}
+
 # ubuntu_image_url_latest returns the latest image URL and its digest for the given flavor, version, arch, and path suffix.
 function ubuntu_image_url_latest() {
 	local flavor=$1 version=$2 arch=$3 path_suffix=$4 base_url ubuntu_downloaded_json jq_filter location_digest_release
@@ -124,8 +166,8 @@ function ubuntu_image_url_latest() {
 	# shellcheck disable=SC2310
 	location=$(validate_url "${location}") || return 0
 	location=$(ubuntu_image_url_try_replace_release_with_version "${location}" "${release}" "${version}")
-	limayaml_arch=$(limayaml_arch "${arch}")
-	jq -cn "{location:\"${location}\",arch:\"${limayaml_arch}\",digest:\"${digest}\"}"
+	arch=$(limayaml_arch "${arch}")
+	json_vars location arch digest
 }
 
 # ubuntu_image_url_release returns the release image URL for the given flavor, version, arch, and path suffix.
@@ -146,8 +188,19 @@ function ubuntu_image_url_release() {
 	# shellcheck disable=SC2310
 	location=$(validate_url "${base_url}${release}/release/ubuntu-${version}-${flavor}-cloudimg-${arch}${path_suffix}") || return 0
 	location=$(ubuntu_image_url_try_replace_release_with_version "${location}" "${release}" "${version}")
-	limayaml_arch=$(limayaml_arch "${arch}")
-	jq -cn "{location:\"${location}\",arch:\"${limayaml_arch}\"}"
+	arch=$(limayaml_arch "${arch}")
+	json_vars location arch
+}
+
+function ubuntu_file_info() {
+	local location=$1 location_dirname sha256sums location_basename digest
+	location=$(validate_url "${location}")
+	location_dirname=$(dirname "${location}")
+	sha256sums=$(download_to_cache "${location_dirname}/SHA256SUMS")
+	location_basename=$(basename "${location}")
+	# shellcheck disable=SC2034
+	digest=${location+$(awk "/${location_basename}/{print \"sha256:\"\$1}" "${sha256sums}")}
+	json_vars location digest
 }
 
 # ubuntu_kernel_info_for_image_url returns the kernel and initrd location and digest for the given location.
@@ -158,33 +211,19 @@ function ubuntu_image_url_release() {
 # ubuntu_image_entry_with_kernel_info '{"location":"https://cloud-images.ubuntu.com/minimal/releases/24.04/release-20210914/ubuntu-24.04-minimal-cloudimg-amd64.img"}'
 # {"location":"https://cloud-images.ubuntu.com/minimal/releases/24.04/release-20210914/ubuntu-24.04-minimal-cloudimg-amd64.img","kernel":{"location":"https://cloud-images.ubuntu.com/minimal/releases/24.04/release-20210914/ubuntu-24.04-minimal-cloudimg-vmlinuz-generic","digest":"sha256:..."}}
 # ```
+# shellcheck disable=SC2034
 function ubuntu_image_entry_with_kernel_info() {
 	local image_entry=$1 location
 	location=$(jq -r '.location' <<<"${image_entry}")
-	local location_dirname sha256sums location_basename
+	local location_dirname location_basename location_prefix
 	location_dirname=$(dirname "${location}")/unpacked
-	sha256sums=$(download_to_cache "${location_dirname}/SHA256SUMS")
 	location_basename="$(basename "${location}" | cut -d- -f1-5 | cut -d. -f1-2)"
-
-	# kernel
-	local kernel_basename kernel_location kernel_digest
-	kernel_basename="${location_basename}-vmlinuz-generic"
+	location_prefix="${location_dirname}/${location_basename}"
+	local kernel initrd
 	# shellcheck disable=SC2310
-	kernel_location=$(validate_url "${location_dirname}/${kernel_basename}") || return 0
-	kernel_digest=${kernel_location+$(awk "/${kernel_basename}/{print \"sha256:\"\$1}" "${sha256sums}")}
-
-	# initrd
-	local initrd_basename initrd_location initrd_digest
-	initrd_basename="${location_basename}-initrd-generic"
-	initrd_location=$(validate_url "${location_dirname}/${initrd_basename}")
-	initrd_digest=${initrd_location+$(awk "/${initrd_basename}/{print \"sha256:\"\$1}" "${sha256sums}")}
-
-	json=$(jq -c ".kernel={location:\"${kernel_location}\",digest:\"${kernel_digest}\"}" <<<"${image_entry}")
-	if [[ -n "${initrd_location}" ]]; then
-		jq -c ".initrd={location:\"${initrd_location}\",digest:\"${initrd_digest}\"}" <<<"${json}"
-	else
-		echo "${json}"
-	fi
+	kernel=$(ubuntu_file_info "${location_prefix}-vmlinuz-generic") || return
+	initrd=$(ubuntu_file_info "${location_prefix}-initrd-generic") # may not exist
+	json_vars kernel initrd <<<"${image_entry}"
 }
 
 # limayaml_arch returns the arch in the lima.yaml format
