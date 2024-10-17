@@ -48,6 +48,19 @@ scriptdir=$(dirname "${BASH_SOURCE[0]}")
 
 set -eu -o pipefail
 
+# print the error message and exit with status 1
+function error_exit() {
+	echo "Error: $*" >&2
+	exit 1
+}
+
+# Functions in this script assume error handling with 'set -e'.
+# To ensure 'set -e' works correctly:
+# - Use 'set +e' before assignments and '$(set -e; <function>)' to capture output without exiting on errors.
+# - Avoid calling functions directly in conditions to prevent disabling 'set -e'.
+# - Use 'shopt -s inherit_errexit' (Bash 4.4+) to avoid repeated 'set -e' in all '$(...)'.
+shopt -s inherit_errexit || error_exit "inherit_errexit not supported. Please use bash 4.4 or later."
+
 readonly -A ubuntu_base_urls=(
 	[minimal]=https://cloud-images.ubuntu.com/minimal/releases/
 	[server]=https://cloud-images.ubuntu.com/releases/
@@ -64,7 +77,8 @@ function validate_url() {
 	local url=$1
 	code_location=$(curl -sSL -o /dev/null -I -w "%{http_code}\t%{url_effective}" "${url}")
 	read -r code location <<<"${code_location}"
-	[[ ${code} -eq 200 ]] && echo "${location}"
+	[[ ${code} -eq 200 ]] || error_exit "[${code}]: The image is not available for download from ${location}"
+	echo "${location}"
 }
 
 # ubuntu_base_url returns the base URL for the given flavor.
@@ -74,11 +88,8 @@ function validate_url() {
 # https://cloud-images.ubuntu.com/minimal/releases/
 # ```
 function ubuntu_base_url() {
-	# shellcheck disable=SC2015
-	[[ -v ubuntu_base_urls[$1] ]] && echo "${ubuntu_base_urls[$1]}" || (
-		echo "Unsupported flavor: $1" >&2
-		exit 1
-	)
+	[[ -v ubuntu_base_urls[$1] ]] || error_exit "Unsupported flavor: $1"
+	echo "${ubuntu_base_urls[$1]}"
 }
 
 # ubuntu_downloaded_json downloads the JSON file for the given flavor and returns the path.
@@ -92,17 +103,22 @@ function ubuntu_downloaded_json() {
 	json_url=$(ubuntu_base_url "${flavor}")streams/v1/com.ubuntu.cloud:released:download.json
 	download_to_cache "${json_url}"
 }
-
 # ubuntu_image_url_try_replace_release_with_version tries to replace the release with the version in the URL.
 # If the URL is valid, it returns the URL with the version.
 function ubuntu_image_url_try_replace_release_with_version() {
 	local location=$1 release=$2 version=$3 location_using_version
-	# shellcheck disable=SC2310
-	if location_using_version=$(validate_url "${location/\/${release}\//\/${version}\/}"); then
+	set +e # Disable 'set -e' to avoid exiting on error for the next assignment.
+	location_using_version=$(
+		set -e
+		validate_url "${location/\/${release}\//\/${version}\/}" 2>/dev/null
+	) # Check exit status separately to prevent disabling 'set -e' by using the function call in the condition.
+	# shellcheck disable=2181
+	if [[ $? -eq 0 ]]; then
 		echo "${location_using_version}"
 	else
 		echo "${location}"
 	fi
+	set -e
 }
 
 # json prints the JSON object with the given arguments.
@@ -151,8 +167,7 @@ function json_vars() {
 function ubuntu_image_url_latest() {
 	local flavor=$1 version=$2 arch=$3 path_suffix=$4 base_url ubuntu_downloaded_json jq_filter location_digest_release
 	base_url=$(ubuntu_base_url "${flavor}")
-	# shellcheck disable=SC2310
-	ubuntu_downloaded_json=$(ubuntu_downloaded_json "${flavor}") || return 0
+	ubuntu_downloaded_json=$(ubuntu_downloaded_json "${flavor}")
 	jq_filter="
         [
             .products[\"com.ubuntu.cloud:${flavor}:${version}:${arch}\"] |
@@ -161,11 +176,11 @@ function ubuntu_image_url_latest() {
             [\"${base_url}\"+.path, \"sha256:\"+.sha256, \$release] | @tsv
         ] | last
     "
-	location_digest_release=$(jq -e -r "${jq_filter}" "${ubuntu_downloaded_json}") || return 0
+	location_digest_release=$(jq -e -r "${jq_filter}" "${ubuntu_downloaded_json}")
+
 	local location digest release location_using_version
 	read -r location digest release <<<"${location_digest_release}"
-	# shellcheck disable=SC2310
-	location=$(validate_url "${location}") || return 0
+	location=$(validate_url "${location}")
 	location=$(ubuntu_image_url_try_replace_release_with_version "${location}" "${release}" "${version}")
 	arch=$(limayaml_arch "${arch}")
 	json_vars location arch digest
@@ -175,9 +190,8 @@ function ubuntu_image_url_latest() {
 function ubuntu_image_url_release() {
 	local flavor=$1 version=$2 arch=$3 path_suffix=$4 base_url
 	base_url=$(ubuntu_base_url "${flavor}")
-	# shellcheck disable=SC2310
-	ubuntu_downloaded_json=$(ubuntu_downloaded_json "${flavor}") || return 0
-	local location release location_using_version
+	ubuntu_downloaded_json=$(ubuntu_downloaded_json "${flavor}")
+	local jq_filter release location
 	jq_filter="
 		[
             .products | to_entries[] as \$product_entry |
@@ -185,9 +199,8 @@ function ubuntu_image_url_release() {
             .release
 		] | first
     "
-	release=$(jq -e -r "${jq_filter}" "${ubuntu_downloaded_json}") || return 0
-	# shellcheck disable=SC2310
-	location=$(validate_url "${base_url}${release}/release/ubuntu-${version}-${flavor}-cloudimg-${arch}${path_suffix}") || return 0
+	release=$(jq -e -r "${jq_filter}" "${ubuntu_downloaded_json}")
+	location=$(validate_url "${base_url}${release}/release/ubuntu-${version}-${flavor}-cloudimg-${arch}${path_suffix}")
 	location=$(ubuntu_image_url_try_replace_release_with_version "${location}" "${release}" "${version}")
 	arch=$(limayaml_arch "${arch}")
 	json_vars location arch
@@ -215,15 +228,24 @@ function ubuntu_file_info() {
 # shellcheck disable=SC2034
 function ubuntu_image_entry_with_kernel_info() {
 	local image_entry=$1 location
-	location=$(jq -r '.location' <<<"${image_entry}")
+	location=$(jq -e -r '.location' <<<"${image_entry}")
 	local location_dirname location_basename location_prefix
 	location_dirname=$(dirname "${location}")/unpacked
 	location_basename="$(basename "${location}" | cut -d- -f1-5 | cut -d. -f1-2)"
 	location_prefix="${location_dirname}/${location_basename}"
 	local kernel initrd
-	# shellcheck disable=SC2310
-	kernel=$(ubuntu_file_info "${location_prefix}-vmlinuz-generic") || return
-	initrd=$(ubuntu_file_info "${location_prefix}-initrd-generic") # may not exist
+	set +e # Disable 'set -e' to avoid exiting on error for the next assignment.
+	kernel=$(
+		set -e
+		ubuntu_file_info "${location_prefix}-vmlinuz-generic"
+	) # Check exit status separately to prevent disabling 'set -e' by using the function call in the condition.
+	# shellcheck disable=2181
+	[[ $? -eq 0 ]] || error_exit "kernel image not found at ${location_prefix}-vmlinuz-generic"
+	initrd=$(
+		set -e
+		ubuntu_file_info "${location_prefix}-initrd-generic" 2>/dev/null
+	) # may not exist
+	set -e
 	json_vars kernel initrd <<<"${image_entry}"
 }
 
@@ -237,15 +259,19 @@ function limayaml_arch() {
 }
 
 function ubuntu_flavor_from_location() {
-	local location=$1 location_basename
+	local location=$1 location_basename flavor
 	location_basename=$(basename "${location}")
-	echo "${location_basename}" | cut -d- -f3
+	flavor=$(echo "${location_basename}" | cut -d- -f3)
+	[[ -n ${flavor} ]] || error_exit "Failed to get flavor from ${location}"
+	echo "${flavor}"
 }
 
 function ubuntu_version_from_location() {
-	local location=$1 location_basename
+	local location=$1 location_basename version
 	location_basename=$(basename "${location}")
-	echo "${location_basename}" | cut -d- -f2
+	version=$(echo "${location_basename}" | cut -d- -f2)
+	[[ -n ${version} ]] || error_exit "Failed to get version from ${location}"
+	echo "${version}"
 }
 
 # ubuntu_version_latest_lts returns the latest LTS version for the given flavor.
@@ -294,15 +320,19 @@ function ubuntu_version_resolve_aliases() {
 }
 
 function ubuntu_arch_from_location() {
-	local location=$1 location_basename
+	local location=$1 location_basename arch
 	location_basename=$(basename "${location}")
-	echo "${location_basename}" | cut -d- -f5 | cut -d. -f1
+	arch=$(echo "${location_basename}" | cut -d- -f5 | cut -d. -f1)
+	[[ -n ${arch} ]] || error_exit "Failed to get arch from ${location}"
+	echo "${arch}"
 }
 
 function ubuntu_path_suffix_from_location() {
-	local location=$1 arch
+	local location=$1 arch path_suffix
 	arch=$(ubuntu_arch_from_location "${location}")
-	echo "${location##*"${arch}"}"
+	path_suffix="${location##*"${arch}"}"
+	[[ -n ${path_suffix} ]] || error_exit "Failed to get path suffix from ${location}"
+	echo "${path_suffix}"
 }
 
 # ubuntu_location_url_spec returns the URL spec for the given location.
@@ -331,8 +361,8 @@ function ubuntu_location_url_spec() {
 
 function ubuntu_image_entry_for_image_kernel_flavor_version() {
 	local location=$1 kernel_location=$2 url_spec
-	# shellcheck disable=2310
-	url_spec=$(ubuntu_location_url_spec "${location}") || return 1
+	url_spec=$(ubuntu_location_url_spec "${location}")
+
 	local flavor version arch path_suffix
 	flavor=${3:-$(ubuntu_flavor_from_location "${location}")}
 	version=${4:-$(ubuntu_version_from_location "${location}")}
@@ -342,14 +372,14 @@ function ubuntu_image_entry_for_image_kernel_flavor_version() {
 	local image_entry
 	image_entry=$(ubuntu_image_url_"${url_spec}" "${flavor}" "${version}" "${arch}" "${path_suffix}")
 	if [[ -z ${image_entry} ]]; then
-		echo "Failed to get the ${url_spec} image location for ${location}" >&2
-		return 1
+		error_exit "Failed to get the ${url_spec} image location for ${location}"
 	elif jq -e ".location == \"${location}\"" <<<"${image_entry}" >/dev/null; then
 		echo "Image location is up-to-date: ${location}" >&2
-		return 0
+	elif [[ ${kernel_location} != "null" ]]; then
+		ubuntu_image_entry_with_kernel_info "${image_entry}"
+	else
+		echo "${image_entry}"
 	fi
-	[[ ${kernel_location} != "null" ]] && image_entry=$(ubuntu_image_entry_with_kernel_info "${image_entry}")
-	echo "${image_entry}"
 }
 
 declare -a templates=()
@@ -366,8 +396,7 @@ while [[ $# -gt 0 ]]; do
 			overriding_flavor="$2"
 			shift
 		else
-			echo "Error: --flavor requires a value" >&2
-			exit 1
+			error_exit "--flavor requires a value"
 		fi
 		;;
 	--flavor=*) overriding_flavor="${1#*=}" ;;
@@ -378,15 +407,13 @@ while [[ $# -gt 0 ]]; do
 			overriding_version="$2"
 			shift
 		else
-			echo "Error: --version requires a value" >&2
-			exit 1
+			error_exit "--version requires a value"
 		fi
 		;;
 	--version=*) overriding_version="${1#*=}" ;;
 	*.yaml) templates+=("$1") ;;
 	*)
-		echo "Unknown argument: $1" >&2
-		exit 1
+		error_exit "Unknown argument: $1"
 		;;
 	esac
 	shift
@@ -411,10 +438,22 @@ for template in "${templates[@]}"; do
 	locations=("${arr[@]}")
 	for ((index = 0; index < ${#locations[@]}; index++)); do
 		[[ ${locations[index]} != "null" ]] || continue
+		set -e
 		IFS=$'\t' read -r location kernel_location kernel_cmdline <<<"${locations[index]}"
-		overriding_version=$(ubuntu_version_resolve_aliases "${location}" "${overriding_flavor}" "${overriding_version}")
-		# shellcheck disable=SC2310
-		image_entry=$(ubuntu_image_entry_for_image_kernel_flavor_version "${location}" "${kernel_location}" "${overriding_flavor}" "${overriding_version}") || continue
+		set +e # Disable 'set -e' to avoid exiting on error for the next assignment.
+		overriding_version=$(
+			set -e # Enable 'set -e' for the next command.
+			ubuntu_version_resolve_aliases "${location}" "${overriding_flavor}" "${overriding_version}"
+		) # Check exit status separately to prevent disabling 'set -e' by using the function call in the condition.
+		# shellcheck disable=2181
+		[[ $? -eq 0 ]] || continue
+		image_entry=$(
+			set -e # Enable 'set -e' for the next command.
+			ubuntu_image_entry_for_image_kernel_flavor_version "${location}" "${kernel_location}" "${overriding_flavor}" "${overriding_version}"
+		) # Check exit status separately to prevent disabling 'set -e' by using the function call in the condition.
+		# shellcheck disable=2181
+		[[ $? -eq 0 ]] || continue
+		set -e
 		echo "${image_entry}" | jq
 		if [[ -n "${image_entry}" ]]; then
 			[[ ${kernel_cmdline} != "null" ]] && image_entry=$(jq ".kernel.cmdline = \"${kernel_cmdline}\"" <<<"${image_entry}")
