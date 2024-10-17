@@ -619,10 +619,12 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		} else {
 			logrus.WithError(err).Warnf("Couldn't process mount location %q as a template", mount.Location)
 		}
-		if out, err := executeGuestTemplate(mount.MountPoint, instDir, y.Param); err == nil {
-			mount.MountPoint = out.String()
-		} else {
-			logrus.WithError(err).Warnf("Couldn't process mount point %q as a template", mount.MountPoint)
+		if mount.MountPoint != nil {
+			if out, err := executeGuestTemplate(*mount.MountPoint, instDir, y.Param); err == nil {
+				mount.MountPoint = ptr.Of(out.String())
+			} else {
+				logrus.WithError(err).Warnf("Couldn't process mount point %q as a template", *mount.MountPoint)
+			}
 		}
 		if i, ok := location[mount.Location]; ok {
 			if mount.SSHFS.Cache != nil {
@@ -652,7 +654,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 			if mount.Writable != nil {
 				mounts[i].Writable = mount.Writable
 			}
-			if mount.MountPoint != "" {
+			if mount.MountPoint != nil {
 				mounts[i].MountPoint = mount.MountPoint
 			}
 		} else {
@@ -695,8 +697,8 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 				mounts[i].NineP.Cache = ptr.Of(Default9pCacheForRO)
 			}
 		}
-		if mount.MountPoint == "" {
-			mounts[i].MountPoint = mount.Location
+		if mount.MountPoint == nil {
+			mounts[i].MountPoint = ptr.Of(mount.Location)
 		}
 	}
 

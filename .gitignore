@@ -1,4 +1,5 @@
 _output/
 _artifacts/
 lima.REJECTED.yaml
+schema-limayaml.json
 .config
