@@ -36,6 +36,7 @@ Flags:
   --server             Shortcut for --flavor server
   --minimal            Shortcut for --flavor minimal
   --version <version>  Use the specified version
+                       The version can be an alias: latest, latest_lts, or lts.
   -h, --help           Print this help message
 HELP
 }
@@ -247,6 +248,51 @@ function ubuntu_version_from_location() {
 	echo "${location_basename}" | cut -d- -f2
 }
 
+# ubuntu_version_latest_lts returns the latest LTS version for the given flavor.
+# e.g.
+# ```console
+# ubuntu_version_latest_lts minimal
+# 24.04
+# ```
+function ubuntu_version_latest_lts() {
+	local flavor=${1:-server}
+	ubuntu_downloaded_json=$(ubuntu_downloaded_json "${flavor}")
+	jq -e -r '[.products[]|.version|select(endswith(".04"))]|last // empty' "${ubuntu_downloaded_json}"
+}
+
+# ubuntu_version_latest returns the latest version for the given flavor.
+# e.g.
+# ```console
+# ubuntu_version_latest minimal
+# 24.10
+# ```
+function ubuntu_version_latest() {
+	local flavor=${1:-server}
+	ubuntu_downloaded_json=$(ubuntu_downloaded_json "${flavor}")
+	jq -e -r '[.products[]|.version]|last // empty' "${ubuntu_downloaded_json}"
+}
+
+# ubuntu_version_resolve_aliases resolves the version aliases.
+# e.g.
+# ```console
+# ubuntu_version_resolve_aliases https://cloud-images.ubuntu.com/minimal/releases/24.04/release-20210914/ubuntu-24.04-minimal-cloudimg-amd64.img minimal latest
+# 24.10
+# ubuntu_version_resolve_aliases https://cloud-images.ubuntu.com/minimal/releases/24.04/release-20210914/ubuntu-24.04-minimal-cloudimg-amd64.img minimal latest_lts
+# 24.04
+# ubuntu_version_resolve_aliases https://cloud-images.ubuntu.com/minimal/releases/24.04/release-20210914/ubuntu-24.04-minimal-cloudimg-amd64.img
+#
+# ```
+function ubuntu_version_resolve_aliases() {
+	local location=$1 flavor version
+	flavor=${2:-$(ubuntu_flavor_from_location "${location}")}
+	version=${3:-}
+	case "${version}" in
+	latest_lts | lts) ubuntu_version_latest_lts "${flavor}" ;;
+	latest) ubuntu_version_latest "${flavor}" ;;
+	*) echo "${version}" ;;
+	esac
+}
+
 function ubuntu_arch_from_location() {
 	local location=$1 location_basename
 	location_basename=$(basename "${location}")
@@ -366,6 +412,7 @@ for template in "${templates[@]}"; do
 	for ((index = 0; index < ${#locations[@]}; index++)); do
 		[[ ${locations[index]} != "null" ]] || continue
 		IFS=$'\t' read -r location kernel_location kernel_cmdline <<<"${locations[index]}"
+		overriding_version=$(ubuntu_version_resolve_aliases "${location}" "${overriding_flavor}" "${overriding_version}")
 		# shellcheck disable=SC2310
 		image_entry=$(ubuntu_image_entry_for_image_kernel_flavor_version "${location}" "${kernel_location}" "${overriding_flavor}" "${overriding_version}") || continue
 		echo "${image_entry}" | jq
