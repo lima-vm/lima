@@ -458,9 +458,8 @@ for template in "${templates[@]}"; do
 		if [[ -n "${image_entry}" ]]; then
 			[[ ${kernel_cmdline} != "null" ]] && image_entry=$(jq ".kernel.cmdline = \"${kernel_cmdline}\"" <<<"${image_entry}")
 			limactl edit --log-level error --set "
-				[(.images.[] | path)].[${index}] as \$path|
-				setpath(\$path; ${image_entry})
-				.images[${index}].[] style = \"double\"
+				.images[${index}] = ${image_entry}|
+				(.images[${index}] | ..) style = \"double\"
 			" "${template}"
 		fi
 	done
