@@ -176,8 +176,9 @@ function ubuntu_image_url_latest() {
             [\"${base_url}\"+.path, \"sha256:\"+.sha256, \$release] | @tsv
         ] | last
     "
-	location_digest_release=$(jq -e -r "${jq_filter}" "${ubuntu_downloaded_json}")
-
+	location_digest_release=$(jq -r "${jq_filter}" "${ubuntu_downloaded_json}")
+	[[ ${location_digest_release} != "null" ]] ||
+		error_exit "The URL for ubuntu-${version}-${flavor}-cloudimg-${arch}${path_suffix} is not provided at ${ubuntu_base_urls[${flavor}]}."
 	local location digest release location_using_version
 	read -r location digest release <<<"${location_digest_release}"
 	location=$(validate_url "${location}")
@@ -199,7 +200,9 @@ function ubuntu_image_url_release() {
             .release
 		] | first
     "
-	release=$(jq -e -r "${jq_filter}" "${ubuntu_downloaded_json}")
+	release=$(jq -r "${jq_filter}" "${ubuntu_downloaded_json}")
+	[[ ${release} != "null" ]] ||
+		error_exit "The URL for ubuntu-${version}-${flavor}-cloudimg-${arch}${path_suffix} is not provided at ${ubuntu_base_urls[${flavor}]}."
 	location=$(validate_url "${base_url}${release}/release/ubuntu-${version}-${flavor}-cloudimg-${arch}${path_suffix}")
 	location=$(ubuntu_image_url_try_replace_release_with_version "${location}" "${release}" "${version}")
 	arch=$(limayaml_arch "${arch}")
