@@ -30,8 +30,6 @@ unless the config is incompatible with VZ. (e.g., legacyBIOS or 9p is enabled)
 "qemu" option makes use of QEMU to run guest operating system. 
 
 ## VZ
-> **Warning**
-> "vz" mode is experimental (will graduate from experimental in Lima v1.0)
 
 | ⚡ Requirement | Lima >= 0.14, macOS >= 13.0 |
 |-------------------|-----------------------------|

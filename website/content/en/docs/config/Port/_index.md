@@ -24,9 +24,6 @@ LIMA_SSH_PORT_FORWARDER=true limactl start
 
 ### Using GRPC (Default since Lima v1.0)
 
-> **Warning**
-> This mode is experimental
-
 | ⚡ Requirement | Lima >= 1.0 |
 |---------------|-------------|
 

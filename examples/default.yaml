@@ -126,8 +126,8 @@ mounts:
 # 🟢 Builtin default: null
 mountTypesUnsupported: null
 
-# Mount type for above mounts, such as "reverse-sshfs" (from sshocker), "9p" (EXPERIMENTAL until Lima v1.0, from QEMU’s virtio-9p-pci, aka virtfs),
-# or "virtiofs" (EXPERIMENTAL, needs `vmType: vz`; will graduate from experimental in Lima v1.0)
+# Mount type for above mounts, such as "reverse-sshfs" (from sshocker), "9p" (QEMU’s virtio-9p-pci, aka virtfs),
+# or "virtiofs" (experimental on Linux; needs `vmType: vz` on macOS).
 # 🟢 Builtin default: "default" (resolved to be "9p" for QEMU since Lima v1.0, "virtiofs" for vz)
 mountType: null
 
@@ -296,7 +296,7 @@ cpuType:
 #   x86_64: "qemu64" # (or "host,-pdpe1gb" when running on x86_64 host)
 
 rosetta:
-  # Enable Rosetta for Linux (EXPERIMENTAL; will graduate from experimental in Lima v1.0).
+  # Enable Rosetta inside the VM; needs `vmType: vz`
   # Hint: try `softwareupdate --install-rosetta` if Lima gets stuck at `Installing rosetta...`
   # 🟢 Builtin default: false
   enabled: null
@@ -372,7 +372,7 @@ networks:
 
 
 # The "vzNAT" IP address is accessible from the host, but not from other guests.
-# Needs `vmType: vz` (EXPERIMENTAL; will graduate from experimental in Lima v1.0).
+# Needs `vmType: vz`
 # - vzNAT: true
 
 # Port forwarding rules. Forwarding between ports 22 and ssh.localPort cannot be overridden.

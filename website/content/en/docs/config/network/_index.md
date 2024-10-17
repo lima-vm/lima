@@ -208,9 +208,6 @@ networks:
 
 ### vzNAT
 
-> **Warning**
-> "vz" mode is experimental (will graduate from experimental in Lima v1.0)
-
 | ⚡ Requirement | Lima >= 0.14, macOS >= 13.0 |
 |-------------------|-----------------------------|
 
@@ -239,9 +236,6 @@ The "vzNAT" network does not need the `socket_vmnet` binary and the `sudoers` fi
 |-------------------|----------------|
 
 user-v2 network provides a user-mode networking similar to the [default user-mode network](#user-mode-network--1921685024-) and also provides support for `vm -> vm` communication.
-
-> **Warning**
-> This network mode is experimental
 
 To enable this network mode, define a network with `mode: user-v2` in networks.yaml
 

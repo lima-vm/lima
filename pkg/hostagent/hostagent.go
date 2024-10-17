@@ -189,11 +189,6 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 	limayaml.FillPortForwardDefaults(&rule, inst.Dir, inst.Param)
 	rules = append(rules, rule)
 
-	env, _ := strconv.ParseBool(os.Getenv("LIMA_SSH_PORT_FORWARDER"))
-	if !env {
-		logrus.Warn("GRPC port forwarding is experimental")
-	}
-
 	limaDriver := driverutil.CreateTargetDriverInstance(&driver.BaseDriver{
 		Instance:     inst,
 		SSHLocalPort: sshLocalPort,
