@@ -21,7 +21,7 @@ The config directory contains global lima settings that apply to all instances.
 User identity:
 
 Lima creates a default identity and uses its public key as the authorized key
-to access all lima instances. In addition lima will also configure all public
+to access all lima instances. In addition, lima will also configure all public
 keys from `~/.ssh/*.pub` as well, so the user can use the ssh endpoint without
 having to specify an identity explicitly.
 - `user`: private key
@@ -176,7 +176,7 @@ The volume label is "cidata", as defined by [cloud-init NoCloud](https://docs.cl
 ### Environment variables
 - `LIMA_CIDATA_NAME`: the lima instance name
 - `LIMA_CIDATA_MNT`: the mount point of the disk. `/mnt/lima-cidata`.
-- `LIMA_CIDATA_USER`: the user name string
+- `LIMA_CIDATA_USER`: the username string
 - `LIMA_CIDATA_UID`: the numeric UID
 - `LIMA_CIDATA_HOME`: the guest home directory
 - `LIMA_CIDATA_HOSTHOME_MOUNTPOINT`: the mount point of the host home directory, or empty if not mounted

@@ -22,7 +22,7 @@ images:
   - location: "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-arm64.img"
     arch: "aarch64"
 
-# Disable mounts and containerd, otherwise booting up may timeout if the host is slow
+# Disable mounts and containerd, otherwise booting up may time out if the host is slow
 mounts: []
 containerd:
   system: false

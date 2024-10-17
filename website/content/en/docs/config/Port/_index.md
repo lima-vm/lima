@@ -47,7 +47,7 @@ LIMA_SSH_PORT_FORWARDER=true limactl start
 
 ### Benchmarks
 
-| Usecase     | GRPC           | SSH            |
+| Use case    | GRPC           | SSH            |
 |-------------|----------------|----------------|
 | TCP         | 3.80 Gbits/sec | 3.38 Gbits/sec |
 | TCP Reverse | 4.77 Gbits/sec | 3.08 Gbits/sec |

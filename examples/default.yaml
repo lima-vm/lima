@@ -327,7 +327,7 @@ audio:
   # QEMU audiodev, e.g., "none", "coreaudio", "pa", "alsa", "oss".
   # VZ driver, use "vz" as device name
   # Choosing "none" will mute the audio output, and not play any sound.
-  # Choosing "default" will pick a suitable of: coreudio, pa, dsound, oss.
+  # Choosing "default" will pick a suitable choice of: coreaudio, pa, dsound, oss.
   # As of QEMU v6.2 the default is to create a disconnected sound device
   # that is still visible in the guest but not connected to the host.
   # 🟢 Builtin default: ""
@@ -454,7 +454,7 @@ networks:
 # Values must not contain non-printable characters except for spaces and tabs.
 # These variables can be referenced as {{.Param.Key}} in lima.yaml.
 # In provisioning scripts and probes they are also available as predefined
-# environment variables, prefixed with "PARAM` (so `Key` → `$PARAM_Key`).
+# environment variables, prefixed with "PARAM_" (so `Key` → `$PARAM_Key`).
 # param:
 #   Key: value
 
@@ -463,13 +463,13 @@ networks:
 # replace the strings "localhost" and "127.0.0.1" with the host gateway address from inside
 # the VM, so it stays routable. Use of the process environment can be disabled by setting
 # propagateProxyEnv to false.
-# 🟢 Builtn default: true
+# 🟢 Builtin default: true
 propagateProxyEnv: null
 
 # The host agent implements a DNS server that looks up host names on the host
 # using the local system resolver. This means changing VPN and network settings
 # are reflected automatically into the guest, including conditional forward,
-# and mDNS lookup. By default only IPv4 addresses will be returned. IPv6 addresses
+# and mDNS lookup. By default, only IPv4 addresses will be returned. IPv6 addresses
 # can only work when using a vmnet network interface and the host has working
 # IPv6 configured as well.
 hostResolver:
@@ -486,7 +486,7 @@ hostResolver:
   #   host.name: host.lima.internal
 
 # If hostResolver.enabled is false, then the following rules apply for configuring dns:
-# Explicitly set DNS addresses for qemu user-mode networking. By default qemu picks *one*
+# Explicitly set DNS addresses for qemu user-mode networking. By default, qemu picks *one*
 # nameserver from the host config and forwards all queries to this server. On macOS
 # Lima adds the nameservers configured for the first host interface in service order,
 # that has an IPv4 address, to the list. In case this still doesn't work (e.g. VPN
@@ -519,7 +519,7 @@ plain: null
 
 # A similar mechanism is $LIMA_HOME/_config/override.yaml, which will take
 # precedence even over the settings in an instances lima.yaml file.
-# It too applies to ALL instances under the same $LIMA_HOME, and is applied
+# It also applies to ALL instances under the same $LIMA_HOME, and is applied
 # on each restart. It can be used to globally override settings, e.g. make
 # the mount of the home directory writable.
 
