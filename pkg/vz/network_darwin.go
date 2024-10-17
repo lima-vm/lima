@@ -88,7 +88,7 @@ type qemuPacketConn struct {
 }
 
 // Read reads a QEMU packet and returns the contained raw packet.  Returns (len,
-// nil) if a packet was read, and (0, err) on error. Errors means the prorocol
+// nil) if a packet was read, and (0, err) on error. Errors means the protocol
 // is broken and the socket must be closed.
 func (c *qemuPacketConn) Read(b []byte) (n int, err error) {
 	var size uint32

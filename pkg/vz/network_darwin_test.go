@@ -101,7 +101,7 @@ func TestDialQemu(t *testing.T) {
 			}
 		}
 	}
-	t.Logf("Recived and verified %d data packets", packetsCount)
+	t.Logf("Received and verified %d data packets", packetsCount)
 
 	for i := 0; i < 2; i++ {
 		err := <-errc

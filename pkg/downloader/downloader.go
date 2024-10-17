@@ -690,7 +690,7 @@ func downloadHTTP(ctx context.Context, localPath, lastModified, contentType, url
 
 var tempfileCount atomic.Uint64
 
-// To allow parallel download we use a per-process unique suffix for tempoary
+// To allow parallel download we use a per-process unique suffix for temporary
 // files. Renaming the temporary file to the final file is safe without
 // synchronization on posix.
 // To make it easy to test we also include a counter ensuring that each

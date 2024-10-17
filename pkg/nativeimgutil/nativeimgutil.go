@@ -68,7 +68,7 @@ func ConvertToRaw(source, dest string, size *int64, allowSourceWithBackingFile b
 	defer destTmpF.Close()
 
 	// Truncating before copy eliminates the seeks during copy and provide a
-	// hint to the file system that may minimize allocations and fragmanation
+	// hint to the file system that may minimize allocations and fragmentation
 	// of the file.
 	if err := MakeSparse(destTmpF, srcImg.Size()); err != nil {
 		return err

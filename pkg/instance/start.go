@@ -379,7 +379,7 @@ func ShowMessage(inst *store.Instance) error {
 	scanner := bufio.NewScanner(&b)
 	logrus.Infof("Message from the instance %q:", inst.Name)
 	for scanner.Scan() {
-		// Avoid prepending logrus "INFO" header, for ease of copypasting
+		// Avoid prepending logrus "INFO" header, for ease of copy pasting
 		fmt.Println(scanner.Text())
 	}
 	return scanner.Err()

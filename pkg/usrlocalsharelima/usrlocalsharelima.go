@@ -52,7 +52,7 @@ func Dir() (string, error) {
 		// TODO: support custom path
 	}
 	if debugutil.Debug {
-		// candidate 2: lauched by `~/go/bin/dlv dap`
+		// candidate 2: launched by `~/go/bin/dlv dap`
 		// - self: ${workspaceFolder}/cmd/limactl/__debug_bin_XXXXXX
 		// - agent: ${workspaceFolder}/_output/share/lima/lima-guestagent.Linux-x86_64
 		// - dir:  ${workspaceFolder}/_output/share/lima
