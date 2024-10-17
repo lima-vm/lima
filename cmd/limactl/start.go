@@ -132,10 +132,20 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 		templateName := filepath.Join(templateURL.Host, templateURL.Path)
 		logrus.Debugf("interpreting argument %q as a template name %q", arg, templateName)
 		switch templateName {
+		case "experimental/vz":
+			logrus.Warn("template://experimental/vz was merged into the default template in Lima v1.0. See also <https://lima-vm.io/docs/config/vmtype/>.")
 		case "experimental/riscv64":
 			logrus.Warn("template://experimental/riscv64 was merged into the default template in Lima v1.0. Use `limactl create --arch=riscv64 template://default` instead.")
 		case "experimental/armv7l":
 			logrus.Warn("template://experimental/armv7l was merged into the default template in Lima v1.0. Use `limactl create --arch=armv7l template://default` instead.")
+		case "vmnet":
+			logrus.Warn("template://vmnet was removed in Lima v1.0. Use `limactl create --network=lima:shared template://default` instead. See also <https://lima-vm.io/docs/config/network/>.")
+		case "experimental/net-user-v2":
+			logrus.Warn("template://experimental/net-user-v2 was removed in Lima v1.0. Use `limactl create --network=lima:user-v2 template://default` instead. See also <https://lima-vm.io/docs/config/network/>.")
+		case "experimental/9p":
+			logrus.Warn("template://experimental/9p was removed in Lima v1.0. Use `limactl create --vm-type=qemu --mount-type=9p template://default` instead. See also <https://lima-vm.io/docs/config/mount/>.")
+		case "experimental/virtiofs-linux":
+			logrus.Warn("template://experimental/virtiofs-linux was removed in Lima v1.0. Use `limactl create --mount-type=virtiofs template://default` instead. See also <https://lima-vm.io/docs/config/mount/>.")
 		}
 		if st.instName == "" {
 			// e.g., templateName = "deprecated/centos-7" , st.instName = "centos-7"
