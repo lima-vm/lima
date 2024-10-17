@@ -489,10 +489,12 @@ for template in "${templates[@]}"; do
 		# shellcheck disable=2181
 		[[ $? -eq 0 ]] || continue
 		set -e
-		echo "${image_entry}" | jq
 		ubuntu_image_entry_cache[${cache_key}]="${image_entry}"
-		if [[ -n "${image_entry}" ]]; then
-			[[ ${kernel_cmdline} != "null" ]] && image_entry=$(jq ".kernel.cmdline = \"${kernel_cmdline}\"" <<<"${image_entry}")
+		if [[ -n ${image_entry} ]]; then
+			[[ ${kernel_cmdline} != "null" ]] &&
+				jq -e 'has("kernel")' <<<"${image_entry}" >/dev/null &&
+				image_entry=$(jq ".kernel.cmdline = \"${kernel_cmdline}\"" <<<"${image_entry}")
+			echo "${image_entry}" | jq
 			limactl edit --log-level error --set "
 				.images[${index}] = ${image_entry}|
 				(.images[${index}] | ..) style = \"double\"
