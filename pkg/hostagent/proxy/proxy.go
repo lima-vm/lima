@@ -4,9 +4,7 @@ package proxy
 
 import (
 	"bufio"
-	"bytes"
 	"context"
-	"io"
 	"net"
 	"net/http"
 	"os"
@@ -61,11 +59,15 @@ func sendFile(req *http.Request, path string, lastModified time.Time, contentTyp
 	status := http.StatusOK
 	resp.StatusCode = status
 	resp.Status = http.StatusText(status)
-	b, err := os.ReadFile(path)
+	st, err := os.Stat(path)
 	if err != nil {
 		return nil, err
 	}
-	resp.Body = io.NopCloser(bytes.NewBuffer(b))
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	resp.Body = f
 	if contentType == "" {
 		contentType = "application/octet-stream"
 	}
@@ -73,7 +75,7 @@ func sendFile(req *http.Request, path string, lastModified time.Time, contentTyp
 	if !lastModified.IsZero() {
 		resp.Header.Set("Last-Modified", lastModified.Format(http.TimeFormat))
 	}
-	resp.ContentLength = int64(len(b))
+	resp.ContentLength = st.Size()
 	return resp, nil
 }
 
