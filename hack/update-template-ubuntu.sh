@@ -1,5 +1,14 @@
 #!/usr/bin/env bash
 
+set -eu -o pipefail
+
+# Functions in this script assume error handling with 'set -e'.
+# To ensure 'set -e' works correctly:
+# - Use 'set +e' before assignments and '$(set -e; <function>)' to capture output without exiting on errors.
+# - Avoid calling functions directly in conditions to prevent disabling 'set -e'.
+# - Use 'shopt -s inherit_errexit' (Bash 4.4+) to avoid repeated 'set -e' in all '$(...)'.
+shopt -s inherit_errexit || error_exit "inherit_errexit not supported. Please use bash 4.4 or later."
+
 function ubuntu_print_help() {
 	cat <<HELP
 $(basename "${BASH_SOURCE[0]}"): Update the Ubuntu image location in the specified templates
@@ -41,39 +50,10 @@ Flags:
 HELP
 }
 
-scriptdir=$(dirname "${BASH_SOURCE[0]}")
-# shellcheck source=./cache-common-inc.sh
-# shellcheck disable=SC1091
-. "${scriptdir}/cache-common-inc.sh"
-
-set -eu -o pipefail
-
-# Functions in this script assume error handling with 'set -e'.
-# To ensure 'set -e' works correctly:
-# - Use 'set +e' before assignments and '$(set -e; <function>)' to capture output without exiting on errors.
-# - Avoid calling functions directly in conditions to prevent disabling 'set -e'.
-# - Use 'shopt -s inherit_errexit' (Bash 4.4+) to avoid repeated 'set -e' in all '$(...)'.
-shopt -s inherit_errexit || error_exit "inherit_errexit not supported. Please use bash 4.4 or later."
-
 readonly -A ubuntu_base_urls=(
 	[minimal]=https://cloud-images.ubuntu.com/minimal/releases/
 	[server]=https://cloud-images.ubuntu.com/releases/
 )
-
-# validate_url checks if the URL is valid and returns the location if it is.
-# If the URL is redirected, it returns the redirected location.
-# e.g.
-# ```console
-# validate_url https://cloud-images.ubuntu.com/server/releases/24.04/release/ubuntu-24.04-server-cloudimg-amd64.img
-# https://cloud-images.ubuntu.com/releases/24.04/release/ubuntu-24.04-server-cloudimg-amd64.img
-# ```
-function validate_url() {
-	local url=$1
-	code_location=$(curl -sSL -o /dev/null -I -w "%{http_code}\t%{url_effective}" "${url}")
-	read -r code location <<<"${code_location}"
-	[[ ${code} -eq 200 ]] || error_exit "[${code}]: The image is not available for download from ${location}"
-	echo "${location}"
-}
 
 # ubuntu_base_url returns the base URL for the given flavor.
 # e.g.
@@ -113,48 +93,6 @@ function ubuntu_image_url_try_replace_release_with_version() {
 		echo "${location}"
 	fi
 	set -e
-}
-
-# json prints the JSON object with the given arguments.
-# json [key value ...]
-# if the value is empty, both key and value are omitted.
-# e.g.
-# ```console
-# json location https://cloud-images.ubuntu.com/minimal/releases/24.04/release-20210914/ubuntu-24.04-minimal-cloudimg-amd64.img arch amd64 digest sha256:...
-# {"location":"https://cloud-images.ubuntu.com/minimal/releases/24.04/release-20210914/ubuntu-24.04-minimal-cloudimg-amd64.img","arch":"amd64","digest":"sha256:..."}
-# ```
-function json() {
-	local args=() pattern='^(\[.*\]|\{.*\})$' value
-	[[ ! -p /dev/stdin ]] && args+=(--null-input)
-	while [[ $# -gt 0 ]]; do
-		value="${2-}"
-		if [[ ${value} =~ ${pattern} ]]; then
-			args+=(--argjson "${1}" "${value}")
-		elif [[ -n ${value} ]]; then
-			args+=(--arg "${1}" "${value}")
-		fi # omit empty values
-		shift
-		shift # shift 2 does not work when $# is 1
-	done
-	jq -c "${args[@]}" '. + $ARGS.named | if . == {} then empty else . end'
-}
-
-# json_vars prints the JSON object with the given variable names.
-# e.g.
-# ```console
-# location=https://cloud-images.ubuntu.com/minimal/releases/24.04/release-20210914/ubuntu-24.04-minimal-cloudimg-amd64.img
-# arch=amd64
-# digest=sha256:...
-# json_vars location arch digest
-# {"location":"https://cloud-images.ubuntu.com/minimal/releases/24.04/release-20210914/ubuntu-24.04-minimal-cloudimg-amd64.img","arch":"amd64","digest":"sha256:..."}
-# ```
-function json_vars() {
-	local args=() var
-	for var in "$@"; do
-		[[ -v ${var} ]] || error_exit "${var} is not set"
-		args+=("${var}" "${!var}")
-	done
-	json "${args[@]}"
 }
 
 # ubuntu_image_url_latest returns the latest image URL and its digest for the given flavor, version, arch, and path suffix.
@@ -244,15 +182,6 @@ function ubuntu_image_entry_with_kernel_info() {
 	) # may not exist
 	set -e
 	json_vars kernel initrd <<<"${image_entry}"
-}
-
-# limayaml_arch returns the arch in the lima.yaml format
-function limayaml_arch() {
-	local arch=$1
-	arch=${arch/amd64/x86_64}
-	arch=${arch/arm64/aarch64}
-	arch=${arch/armhf/armv7l}
-	echo "${arch}"
 }
 
 function ubuntu_flavor_from_location() {
@@ -402,6 +331,29 @@ function ubuntu_image_entry_for_image_kernel_flavor_version() {
 	fi
 }
 
+# check if the script is executed or sourced
+# shellcheck disable=SC1091
+if [[ ${BASH_SOURCE[0]} == "${0}" ]]; then
+	scriptdir=$(dirname "${BASH_SOURCE[0]}")
+	# shellcheck source=./cache-common-inc.sh
+	. "${scriptdir}/cache-common-inc.sh"
+
+	# shellcheck source=/dev/null # avoid shellcheck hangs on source looping
+	. "${scriptdir}/update-template.sh"
+else
+	# this script is sourced
+	if [[ -v SUPPORTED_DISTRIBUTIONS ]]; then
+		SUPPORTED_DISTRIBUTIONS+=("ubuntu")
+	else
+		declare -a SUPPORTED_DISTRIBUTIONS=("ubuntu")
+	fi
+	# required functions for Ubuntu
+	function ubuntu_cache_key_for_image_kernel() { ubuntu_cache_key_for_image_kernel_flavor_version "$@"; }
+	function ubuntu_image_entry_for_image_kernel() { ubuntu_image_entry_for_image_kernel_flavor_version "$@"; }
+
+	return 0
+fi
+
 declare -a templates=()
 declare overriding_flavor=
 declare overriding_version=
@@ -411,6 +363,7 @@ while [[ $# -gt 0 ]]; do
 		ubuntu_print_help
 		exit 0
 		;;
+	-d | --debug) set -x ;;
 	--flavor)
 		if [[ -n $2 && $2 != -* ]]; then
 			overriding_flavor="$2"
@@ -444,7 +397,7 @@ if [[ ${#templates[@]} -eq 0 ]]; then
 	exit 0
 fi
 
-declare -A ubuntu_image_entry_cache=()
+declare -A image_entry_cache=()
 
 for template in "${templates[@]}"; do
 	echo "Processing ${template}"
@@ -477,8 +430,8 @@ for template in "${templates[@]}"; do
 		[[ $? -eq 0 ]] || continue
 		image_entry=$(
 			set -e # Enable 'set -e' for the next command.
-			if [[ -v ubuntu_image_entry_cache[${cache_key}] ]]; then
-				echo "${ubuntu_image_entry_cache[${cache_key}]}"
+			if [[ -v image_entry_cache[${cache_key}] ]]; then
+				echo "${image_entry_cache[${cache_key}]}"
 			else
 				ubuntu_image_entry_for_image_kernel_flavor_version "${location}" "${kernel_location}" "${overriding_flavor}" "${overriding_version}"
 			fi
@@ -486,7 +439,7 @@ for template in "${templates[@]}"; do
 		# shellcheck disable=2181
 		[[ $? -eq 0 ]] || continue
 		set -e
-		ubuntu_image_entry_cache[${cache_key}]="${image_entry}"
+		image_entry_cache[${cache_key}]="${image_entry}"
 		if [[ -n ${image_entry} ]]; then
 			[[ ${kernel_cmdline} != "null" ]] &&
 				jq -e 'has("kernel")' <<<"${image_entry}" >/dev/null &&
