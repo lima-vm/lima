@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/lima-vm/lima/pkg/downloader"
@@ -92,7 +93,17 @@ func listenAndServe(opts ServerOptions) (*http.Server, error) {
 	proxy.OnRequest(goproxy.ReqHostMatches(regexp.MustCompile("^.*$"))).
 		HandleConnect(goproxy.AlwaysMitm)
 	proxy.OnRequest().DoFunc(func(req *http.Request, _ *goproxy.ProxyCtx) (*http.Request, *http.Response) {
-		url := req.URL.String()
+		u := req.URL
+		if strings.Contains(u.Host, ":") {
+			host, port, err := net.SplitHostPort(u.Host)
+			if err != nil {
+				return nil, nil
+			}
+			if u.Scheme == "http" && port == "80" || u.Scheme == "https" && port == "443" {
+				u.Host = host
+			}
+		}
+		url := u.String()
 		if res, err := downloader.Cached(url, downloader.WithCacheDir(cacheDir)); err == nil {
 			if resp, err := sendFile(req, res.CachePath, res.LastModified, res.ContentType); err == nil {
 				return nil, resp
