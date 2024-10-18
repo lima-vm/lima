@@ -529,3 +529,55 @@ func startBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobr
 	compTmpl, _ := bashCompleteTemplateNames(cmd)
 	return append(compInst, compTmpl...), cobra.ShellCompDirectiveDefault
 }
+
+// startInteractive starts the instance after a confirmation prompt.
+//
+// If newInst is set to true, this function creates the instance too.
+//
+// If mandatory is set to true, and the answer to the confirmation prompt is No,
+// the function returns an error that contains an instruction to start the instance manually.
+func startInteractive(cmd *cobra.Command, instName string, newInst, mandatory bool) (bool, error) {
+	flags := cmd.Flags()
+	tty, err := flags.GetBool("tty")
+	if err != nil {
+		return false, err
+	}
+	errS := fmt.Sprintf("instance %q is stopped, run `limactl start %s` to start the instance", instName, instName)
+	if newInst {
+		errS = fmt.Sprintf("instance %q does not exist, run `limactl create %s` to create a new instance", instName, instName)
+	}
+	if !tty {
+		if mandatory {
+			return false, errors.New(errS)
+		}
+		return false, nil
+	}
+	logrus.Error(errS)
+
+	message := fmt.Sprintf("Do you want to start the instance %q now?", instName)
+	if newInst {
+		message = fmt.Sprintf("Do you want to create and start the instance %q using the default template now?", instName)
+	}
+	ans, err := uiutil.Confirm(message, true)
+	if err != nil {
+		return false, err
+	}
+	if !ans {
+		if mandatory {
+			return ans, errors.New(errS)
+		}
+		return ans, nil
+	}
+	if newInst {
+		rootCmd := cmd.Root()
+		// The create command shows the template chooser UI, etc.
+		rootCmd.SetArgs([]string{"create", instName})
+		if err := rootCmd.Execute(); err != nil {
+			return ans, err
+		}
+	}
+	rootCmd := cmd.Root()
+	// The start command reconciliates the networks, etc.
+	rootCmd.SetArgs([]string{"start", instName})
+	return ans, rootCmd.Execute()
+}

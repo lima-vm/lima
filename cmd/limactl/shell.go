@@ -51,6 +51,7 @@ func newShellCommand() *cobra.Command {
 }
 
 func shellAction(cmd *cobra.Command, args []string) error {
+	os.Setenv("_LIMACTL_SHELL_IN_ACTION", "")
 	// simulate the behavior of double dash
 	newArg := []string{}
 	if len(args) >= 2 && args[1] == "--" {
@@ -71,12 +72,24 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	inst, err := store.Inspect(instName)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("instance %q does not exist, run `limactl create %s` to create a new instance", instName, instName)
+			_, err = startInteractive(cmd, instName, true, true)
+			if err != nil {
+				return err
+			}
+			inst, err = store.Inspect(instName)
 		}
-		return err
+		if err != nil {
+			return err
+		}
 	}
 	if inst.Status == store.StatusStopped {
-		return fmt.Errorf("instance %q is stopped, run `limactl start %s` to start the instance", instName, instName)
+		if _, err = startInteractive(cmd, instName, false, true); err != nil {
+			return err
+		}
+		inst, err = store.Inspect(instName)
+		if err != nil {
+			return err
+		}
 	}
 
 	// When workDir is explicitly set, the shell MUST have workDir as the cwd, or exit with an error.
