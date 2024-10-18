@@ -48,12 +48,6 @@ scriptdir=$(dirname "${BASH_SOURCE[0]}")
 
 set -eu -o pipefail
 
-# print the error message and exit with status 1
-function error_exit() {
-	echo "Error: $*" >&2
-	exit 1
-}
-
 # Functions in this script assume error handling with 'set -e'.
 # To ensure 'set -e' works correctly:
 # - Use 'set +e' before assignments and '$(set -e; <function>)' to capture output without exiting on errors.

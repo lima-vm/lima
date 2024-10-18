@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 
+# print the error message and exit with status 1
+function error_exit() {
+	echo "Error: $*" >&2
+	exit 1
+}
+
 # e.g.
 # ```console
 # $ download_template_if_needed templates/default.yaml
@@ -209,8 +215,7 @@ function location_to_sha256() {
 		elif command -v shasum >/dev/null; then
 			sha256="$(echo -n "${location}" | shasum -a 256 | cut -d' ' -f1)"
 		else
-			echo "sha256sum or shasum not found" >&2
-			exit 1
+			error_exit "sha256sum or shasum not found"
 		fi
 		echo "${sha256}"
 	)
@@ -358,7 +363,7 @@ function download_to_cache() {
 		echo "${cache_path}/data"
 		return
 	fi
-	
+
 	# check the remote location
 	local curl_info_json write_out
 	write_out='{
@@ -375,7 +380,7 @@ function download_to_cache() {
 	time=$(jq -r '.last_modified' <<<"${curl_info_json}")
 	type=$(jq -r '.content_type' <<<"${curl_info_json}")
 	url=$(jq -r '.url' <<<"${curl_info_json}")
-	[[ ${code} == 200 ]] || exit 1
+	[[ ${code} == 200 ]] || error_exit "Failed to download $1"
 
 	cache_path=$(location_to_cache_path "${url}")
 	[[ -d ${cache_path} ]] || mkdir -p "${cache_path}"
@@ -395,7 +400,7 @@ function download_to_cache() {
 		type=$(jq -r '.content_type' <<<"${curl_info_json}")
 		url=$(jq -r '.url' <<<"${curl_info_json}")
 		filename=$(jq -r '.filename' <<<"${curl_info_json}")
-		[[ ${code} == 200 ]] || exit 1
+		[[ ${code} == 200 ]] || error_exit "Failed to download ${url}"
 		[[ "${cache_path}/data" == "${filename}" ]] || mv "${filename}" "${cache_path}/data"
 		# sha256.digest seems existing if expected digest is available. so, not creating it here.
 		# sha256sum "${cache_path}/data" | awk '{print "sha256:"$1}' >"${cache_path}/sha256.digest"
