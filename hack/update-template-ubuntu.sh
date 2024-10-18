@@ -362,27 +362,27 @@ function ubuntu_location_url_spec() {
 	echo "${url_spec}"
 }
 
-# ubuntu_cache_key_for_location_flavor_version returns the cache key for the given location, flavor, and version.
-# If the location is not supported, it returns 1.
+# ubuntu_cache_key_for_image_kernel_flavor_version returns the cache key for the given location, kernel_location, flavor, and version.
+# If the image location is not supported, it returns 1.
+# kernel_location is not validated.
 # e.g.
 # ```console
-# ubuntu_cache_key_for_location_flavor_version https://cloud-images.ubuntu.com/minimal/releases/24.04/release-20210914/ubuntu-24.04-minimal-cloudimg-amd64.img
+# ubuntu_cache_key_for_image_kernel_flavor_version https://cloud-images.ubuntu.com/minimal/releases/24.04/release-20210914/ubuntu-24.04-minimal-cloudimg-amd64.img
 # ubuntu_latest_24.04-minimal-amd64-release-.img
-# ubuntu_cache_key_for_location_flavor_version https://cloud-images.ubuntu.com/releases/24.04/release/ubuntu-24.04-server-cloudimg-amd64.img
+# ubuntu_cache_key_for_image_kernel_flavor_version https://cloud-images.ubuntu.com/minimal/releases/24.04/release-20210914/ubuntu-24.04-minimal-cloudimg-amd64.img https://...
+# ubuntu_latest_with_kernel_24.04-minimal-amd64-release-.img
+# ubuntu_cache_key_for_image_kernel_flavor_version https://cloud-images.ubuntu.com/releases/24.04/release/ubuntu-24.04-server-cloudimg-amd64.img null
 # ubuntu_release_24.04-server-amd64-.img
 # ```
-function ubuntu_cache_key_for_location_flavor_version() {
-	local location=$1 url_spec flavor version arch path_suffix
+function ubuntu_cache_key_for_image_kernel_flavor_version() {
+	local location=$1 kernel_location=${2:-null} url_spec with_kernel='' flavor version arch path_suffix
 	url_spec=$(ubuntu_location_url_spec "${location}")
-	flavor=${2:-$(ubuntu_flavor_from_location "${location}")}
-	version=${3:-$(ubuntu_version_from_location "${location}")}
+	[[ ${kernel_location} != "null" ]] && with_kernel=_with_kernel
+	flavor=${3:-$(ubuntu_flavor_from_location "${location}")}
+	version=${4:-$(ubuntu_version_from_location "${location}")}
 	arch=$(ubuntu_arch_from_location "${location}")
 	path_suffix=$(ubuntu_path_suffix_from_location "${location}")
-	if [[ ${url_spec} == "latest" ]]; then
-		echo "ubuntu_latest_${version}-${flavor}-${arch}-${path_suffix}"
-	elif [[ ${url_spec} == "release" ]]; then
-		echo "ubuntu_release_${version}-${flavor}-${arch}-${path_suffix}"
-	fi
+	echo "ubuntu_${url_spec}${with_kernel}_${version}-${flavor}-${arch}-${path_suffix}"
 }
 
 function ubuntu_image_entry_for_image_kernel_flavor_version() {
@@ -477,7 +477,7 @@ for template in "${templates[@]}"; do
 		[[ $? -eq 0 ]] || continue
 		cache_key=$(
 			set -e # Enable 'set -e' for the next command.
-			ubuntu_cache_key_for_location_flavor_version "${location}" "${overriding_flavor}" "${overriding_version}"
+			ubuntu_cache_key_for_image_kernel_flavor_version "${location}" "${kernel_location}" "${overriding_flavor}" "${overriding_version}"
 		) # Check exit status separately to prevent disabling 'set -e' by using the function call in the condition.
 		# shellcheck disable=2181
 		[[ $? -eq 0 ]] || continue
