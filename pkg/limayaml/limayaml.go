@@ -40,6 +40,7 @@ type LimaYAML struct {
 	Param        map[string]string `yaml:"param,omitempty" json:"param,omitempty"`
 	DNS          []net.IP          `yaml:"dns,omitempty" json:"dns,omitempty"`
 	HostResolver HostResolver      `yaml:"hostResolver,omitempty" json:"hostResolver,omitempty"`
+	HostProxy    HostProxy         `yaml:"hostProxy,omitempty" json:"hostProxy,omitempty"`
 	// `useHostResolver` was deprecated in Lima v0.8.1, removed in Lima v0.14.0. Use `hostResolver.enabled` instead.
 	PropagateProxyEnv    *bool          `yaml:"propagateProxyEnv,omitempty" json:"propagateProxyEnv,omitempty"`
 	CACertificates       CACertificates `yaml:"caCerts,omitempty" json:"caCerts,omitempty"`
@@ -267,6 +268,10 @@ type HostResolver struct {
 	Enabled *bool             `yaml:"enabled,omitempty" json:"enabled,omitempty"`
 	IPv6    *bool             `yaml:"ipv6,omitempty" json:"ipv6,omitempty"`
 	Hosts   map[string]string `yaml:"hosts,omitempty" json:"hosts,omitempty"`
+}
+
+type HostProxy struct {
+	Enabled *bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
 }
 
 type CACertificates struct {
