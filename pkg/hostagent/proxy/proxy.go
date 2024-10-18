@@ -94,7 +94,9 @@ func listenAndServe(opts ServerOptions) (*http.Server, error) {
 	go func() {
 		logrus.Debugf("Start HTTP proxy listening on: %v", addr)
 		if e := s.ListenAndServe(); e != nil {
-			logrus.Fatal(e)
+			if e != http.ErrServerClosed {
+				logrus.Fatal(e)
+			}
 		}
 	}()
 
