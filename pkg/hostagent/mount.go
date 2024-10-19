@@ -37,7 +37,7 @@ func (a *HostAgent) setupMount(m limayaml.Mount) (*mount, error) {
 		return nil, err
 	}
 
-	mountPoint, err := localpathutil.Expand(m.MountPoint)
+	mountPoint, err := localpathutil.Expand(*m.MountPoint)
 	if err != nil {
 		return nil, err
 	}

@@ -202,7 +202,7 @@ func templateArgs(bootScripts bool, instDir, name string, instConfig *limayaml.L
 		if err != nil {
 			return nil, err
 		}
-		mountPoint, err := localpathutil.Expand(f.MountPoint)
+		mountPoint, err := localpathutil.Expand(*f.MountPoint)
 		if err != nil {
 			return nil, err
 		}

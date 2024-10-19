@@ -132,7 +132,7 @@ func TestFillDefault(t *testing.T) {
 		},
 		Mounts: []Mount{
 			{Location: "/tmp"},
-			{Location: "{{.Dir}}/{{.Param.ONE}}", MountPoint: "/mnt/{{.Param.ONE}}"},
+			{Location: "{{.Dir}}/{{.Param.ONE}}", MountPoint: ptr.Of("/mnt/{{.Param.ONE}}")},
 		},
 		MountType: ptr.Of(NINEP),
 		Provision: []Provision{
@@ -205,7 +205,7 @@ func TestFillDefault(t *testing.T) {
 	}
 
 	expect.Mounts = slices.Clone(y.Mounts)
-	expect.Mounts[0].MountPoint = expect.Mounts[0].Location
+	expect.Mounts[0].MountPoint = ptr.Of(expect.Mounts[0].Location)
 	expect.Mounts[0].Writable = ptr.Of(false)
 	expect.Mounts[0].SSHFS.Cache = ptr.Of(true)
 	expect.Mounts[0].SSHFS.FollowSymlinks = ptr.Of(false)
@@ -217,7 +217,7 @@ func TestFillDefault(t *testing.T) {
 	expect.Mounts[0].Virtiofs.QueueSize = nil
 	// Only missing Mounts field is Writable, and the default value is also the null value: false
 	expect.Mounts[1].Location = fmt.Sprintf("%s/%s", instDir, y.Param["ONE"])
-	expect.Mounts[1].MountPoint = fmt.Sprintf("/mnt/%s", y.Param["ONE"])
+	expect.Mounts[1].MountPoint = ptr.Of(fmt.Sprintf("/mnt/%s", y.Param["ONE"]))
 	expect.Mounts[1].Writable = ptr.Of(false)
 	expect.Mounts[1].SSHFS.Cache = ptr.Of(true)
 	expect.Mounts[1].SSHFS.FollowSymlinks = ptr.Of(false)
@@ -431,7 +431,7 @@ func TestFillDefault(t *testing.T) {
 	expect.Containerd.Archives = slices.Clone(d.Containerd.Archives)
 	expect.Containerd.Archives[0].Arch = *d.Arch
 	expect.Mounts = slices.Clone(d.Mounts)
-	expect.Mounts[0].MountPoint = expect.Mounts[0].Location
+	expect.Mounts[0].MountPoint = ptr.Of(expect.Mounts[0].Location)
 	expect.Mounts[0].SSHFS.Cache = ptr.Of(true)
 	expect.Mounts[0].SSHFS.FollowSymlinks = ptr.Of(false)
 	expect.Mounts[0].SSHFS.SFTPDriver = ptr.Of("")
