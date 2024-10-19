@@ -5,7 +5,7 @@ go 1.22.0
 require (
 	al.essio.dev/pkg/shellescape v1.5.1
 	github.com/AlecAivazis/survey/v2 v2.3.7
-	github.com/Code-Hex/vz/v3 v3.1.0
+	github.com/Code-Hex/vz/v3 v3.2.0
 	github.com/Microsoft/go-winio v0.6.2
 	github.com/apparentlymart/go-cidr v1.1.0
 	github.com/balajiv113/fd v0.0.0-20230330094840-143eec500f3e
@@ -139,7 +139,3 @@ require (
 // We can't just `require` github.com/inetaf/tcpproxy, as gvisor-tap-vsock
 // still imports inet.af/tcpproxy: https://github.com/containers/gvisor-tap-vsock/pull/399
 replace inet.af/tcpproxy => github.com/inetaf/tcpproxy v0.0.0-20240214030015-3ce58045626c
-
-// Nested virtualization support is yet to be merged into VZ https://github.com/Code-Hex/vz/pull/159.
-// We use our (temporary) fork to add the feature.
-replace github.com/Code-Hex/vz/v3 => github.com/lima-vm/vz/v3 v3.0.0-20241008080607-2a22b5e278ee
