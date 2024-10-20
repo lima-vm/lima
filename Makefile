@@ -423,7 +423,9 @@ endif
 
 ################################################################################
 schema-limayaml.json: _output/bin/limactl$(exe)
-	$< generate-jsonschema >$@
+ifeq ($(native_compiling),true)
+	$< generate-jsonschema --schemafile $@ examples/default.yaml
+endif
 
 .PHONY: check-jsonschema
 check-jsonschema: schema-limayaml.json
