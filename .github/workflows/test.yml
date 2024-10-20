@@ -186,6 +186,8 @@ jobs:
       run: make
     - name: Install
       run: make install
+    - name: Validate jsonschema
+      run: make schema-limayaml.json
     - name: Validate templates
       run: find -L templates -name '*.yaml' | xargs limactl validate
     - name: Install test dependencies
