@@ -142,3 +142,6 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
+
+// Temporary raplcement for testing https://github.com/lima-vm/go-qcow2reader/pull/36
+replace github.com/lima-vm/go-qcow2reader v0.2.1 => github.com/nirs/go-qcow2reader v0.0.0-20241024201800-161458137ac0
