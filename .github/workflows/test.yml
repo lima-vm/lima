@@ -185,7 +185,10 @@ jobs:
     - name: Make
       run: make
     - name: Install
-      run: make install
+      run:
+        # DO NOT MERGE
+        # See if macOS 15 build works on macOS 12
+        curl -fsSL https://github.com/lima-vm/lima/releases/download/v1.0.0-beta.0/lima-1.0.0-beta.0-Darwin_macOS15-x86_64.tar.gz | sudo tar Cxzvf /usr/local -
     - name: Validate jsonschema
       run: make schema-limayaml.json
     - name: Validate templates
