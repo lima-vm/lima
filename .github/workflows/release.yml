@@ -19,7 +19,13 @@ permissions:
 jobs:
   artifacts-darwin:
     name: Artifacts Darwin
-    runs-on: macos-12
+    # The latest release of macOS is used to enable new features.
+    # https://github.com/lima-vm/lima/issues/2767
+    #
+    # Apparently, a binary built on a newer version of macOS can still run on
+    # an older release of macOS without an error.
+    # This is quite different from Linux and glibc.
+    runs-on: macos-15
     timeout-minutes: 20
     steps:
     - name: "Show xcode and SDK version"
