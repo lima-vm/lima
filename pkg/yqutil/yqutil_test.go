@@ -25,6 +25,17 @@ func TestValidateContentError(t *testing.T) {
 	assert.ErrorContains(t, err, "could not find expected")
 }
 
+func TestEvaluateExpressionEmpty(t *testing.T) {
+	expression := ""
+	content := `
+foo: bar
+`
+	expected := content
+	out, err := EvaluateExpression(expression, []byte(content))
+	assert.NilError(t, err)
+	assert.Equal(t, expected, string(out))
+}
+
 func TestEvaluateExpressionSimple(t *testing.T) {
 	expression := `.cpus = 2 | .memory = "2GiB"`
 	content := `

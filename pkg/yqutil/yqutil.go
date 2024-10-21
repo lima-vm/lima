@@ -38,6 +38,9 @@ func ValidateContent(content []byte) error {
 
 // EvaluateExpression evaluates the yq expression, and returns the modified yaml.
 func EvaluateExpression(expression string, content []byte) ([]byte, error) {
+	if expression == "" {
+		return content, nil
+	}
 	logrus.Debugf("Evaluating yq expression: %q", expression)
 	formatter, err := yamlfmtBasicFormatter()
 	if err != nil {
