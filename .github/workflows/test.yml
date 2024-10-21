@@ -119,14 +119,22 @@ jobs:
     runs-on: windows-2022-8-cores
     timeout-minutes: 30
     steps:
-    - name: Enable WSL2
+    - name: "Windows: Stop unwanted services"
+      shell: pwsh
+      run: >-
+        Get-Service -ErrorAction Continue -Name
+        @('W3SVC', 'docker')
+        | Stop-Service
+    - name: "Windows: Update any pre-installed WSL"
+      shell: pwsh
       run: |
-        wsl --set-default-version 2
-        # Manually install the latest kernel from MSI
-        Invoke-WebRequest -Uri "https://wslstorestorage.blob.core.windows.net/wslblob/wsl_update_x64.msi" -OutFile "wsl_update_x64.msi"
-        $pwd = (pwd).Path
-        Start-Process msiexec.exe -Wait -ArgumentList "/I $pwd\wsl_update_x64.msi /quiet"
+        # Sometimes this results in a HTTP 403 for some reason; in that case, we
+        # need to retry.
+        do {
         wsl --update
+        } while ( -not $? )
+        # Setting the default version also lets WSL finish updating.
+        wsl --set-default-version 2
         wsl --status
         wsl --list --online
     - name: Install WSL2 distro
