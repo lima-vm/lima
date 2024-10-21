@@ -1008,12 +1008,16 @@ func ResolveVMType(y, d, o *LimaYAML, filePath string) VMType {
 
 	// If this is an existing instance, guess the VMType from the contents of the instance directory.
 	if dir, basename := filepath.Split(filePath); dir != "" && basename == filenames.LimaYAML && isExistingInstanceDir(dir) {
-		vzIdentifier := filepath.Join(dir, filenames.VzIdentifier) // since Lima v0.14
-		if _, err := os.Lstat(vzIdentifier); !errors.Is(err, os.ErrNotExist) {
-			logrus.Debugf("ResolveVMType: resolved VMType %q (existing instance, with %q)", VZ, vzIdentifier)
-			return VZ
+		if runtime.GOOS == "darwin" {
+			vzIdentifier := filepath.Join(dir, filenames.VzIdentifier) // since Lima v0.14
+			if _, err := os.Lstat(vzIdentifier); !errors.Is(err, os.ErrNotExist) {
+				logrus.Debugf("ResolveVMType: resolved VMType %q (existing instance, with %q)", VZ, vzIdentifier)
+				return VZ
+			}
+			logrus.Debugf("ResolveVMType: resolved VMType %q (existing instance, without %q)", QEMU, vzIdentifier)
+			return QEMU
 		}
-		logrus.Debugf("ResolveVMType: resolved VMType %q (existing instance, without %q)", QEMU, vzIdentifier)
+		logrus.Debugf("ResolveVMType: resolved VMType %q (existing instance)", QEMU)
 		return QEMU
 	}
 
