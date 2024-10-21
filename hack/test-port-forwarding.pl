@@ -20,7 +20,23 @@ use IO::Handle qw();
 use Socket qw(inet_ntoa);
 use Sys::Hostname qw(hostname);
 
+# check for nc
+sub check_netcat_installed {
+    my $nc_path = `which nc 2>/dev/null`;
+    chomp $nc_path;
+    unless ($nc_path) {
+        die "Error: 'nc' (netcat) is not installed on the host system.\n" .
+            "Please install netcat to run this test script:\n" .
+            "  - On macOS: brew install netcat\n" .
+            "  - On Ubuntu/Debian: sudo apt-get install netcat\n" .
+            "  - On RHEL/CentOS: sudo yum install nmap-ncat\n";
+    }
+}
+
 my $instance = shift;
+
+# Check for netcat before proceeding
+check_netcat_installed() unless -f $instance;
 
 my $addr = scalar gethostbyname(hostname());
 # If hostname address cannot be determines, use localhost to trigger fallback to system_profiler lookup
