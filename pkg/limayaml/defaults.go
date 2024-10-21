@@ -333,6 +333,16 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.TimeZone = ptr.Of(hostTimeZone())
 	}
 
+	if y.SSH.Address == nil {
+		y.SSH.Address = d.SSH.Address
+	}
+	if o.SSH.Address != nil {
+		y.SSH.Address = o.SSH.Address
+	}
+	if y.SSH.Address == nil {
+		y.SSH.Address = ptr.Of("127.0.0.1")
+	}
+
 	if y.SSH.LocalPort == nil {
 		y.SSH.LocalPort = d.SSH.LocalPort
 	}
@@ -976,6 +986,8 @@ func NewVMType(driver string) VMType {
 		return QEMU
 	case "wsl2":
 		return WSL2
+	case "ext":
+		return EXT
 	default:
 		logrus.Warnf("Unknown driver: %s", driver)
 		return driver
