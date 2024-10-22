@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/containers/gvisor-tap-vsock/pkg/transport"
 	"github.com/containers/gvisor-tap-vsock/pkg/types"
 	"github.com/containers/gvisor-tap-vsock/pkg/virtualnetwork"
+	"github.com/cybozu-go/usocksd/socks"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 )
@@ -22,9 +24,10 @@ import (
 type GVisorNetstackOpts struct {
 	MTU int
 
-	QemuSocket string
-	FdSocket   string
-	Endpoint   string
+	QemuSocket  string
+	FdSocket    string
+	SocksSocket string
+	Endpoint    string
 
 	Subnet string
 
@@ -113,6 +116,12 @@ func run(ctx context.Context, g *errgroup.Group, configuration *types.Configurat
 			return err
 		}
 	}
+	if opts.SocksSocket != "" {
+		err = listenSocks(vn)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -194,6 +203,32 @@ func listenFD(ctx context.Context, vn *virtualnetwork.VirtualNetwork) error {
 	}()
 
 	return nil
+}
+
+func listenSocks(vn *virtualnetwork.VirtualNetwork) error {
+	listener, err := net.Listen("unix", opts.SocksSocket)
+	if err != nil {
+		return err
+	}
+	dialer := &socksDialer{
+		vn: vn,
+	}
+	srv := &socks.Server{
+		Dialer: dialer,
+	}
+	srv.Serve(listener)
+	return nil
+}
+
+type socksDialer struct {
+	vn *virtualnetwork.VirtualNetwork
+}
+
+func (d *socksDialer) Dial(req *socks.Request) (net.Conn, error) {
+	// TODO: support looking up req.Hostname
+	// https://github.com/norouter/norouter/blob/v0.6.5/pkg/agent/socks/socks.go#L57-L75
+	addr := net.JoinHostPort(req.IP.String(), strconv.Itoa(req.Port))
+	return d.vn.DialContextTCP(req.Context(), addr)
 }
 
 func httpServe(ctx context.Context, g *errgroup.Group, ln net.Listener, mux http.Handler) {

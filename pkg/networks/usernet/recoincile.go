@@ -55,6 +55,11 @@ func Start(ctx context.Context, name string) error {
 			return err
 		}
 
+		socksSock, err := Sock(name, SocksSock)
+		if err != nil {
+			return err
+		}
+
 		subnet, err := SubnetCIDR(name)
 		if err != nil {
 			return err
@@ -77,6 +82,7 @@ func Start(ctx context.Context, name string) error {
 				"--listen-qemu", qemuSock,
 				"--listen", fdSock,
 				"--subnet", subnet.String(),
+				"--listen-socks", socksSock,
 			}
 			if leasesString != "" {
 				args = append(args, "--leases", leasesString)
