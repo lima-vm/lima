@@ -54,6 +54,17 @@ if (-f $instance) {
     exit;
 }
 
+# Check if netcat is available before running tests
+my $nc_path = `command -v nc 2>/dev/null`;
+chomp $nc_path;
+unless ($nc_path) {
+    die "Error: 'nc' (netcat) is not installed on the host system.\n" .
+        "Please install netcat to run this test script:\n" .
+        "  - On macOS: brew install netcat\n" .
+        "  - On Ubuntu/Debian: sudo apt-get install netcat\n" .
+        "  - On RHEL/CentOS: sudo yum install nmap-ncat\n";
+}
+
 # Otherwise $instance must be the name of an already running instance that has been
 # configured with our portForwards settings.
 
