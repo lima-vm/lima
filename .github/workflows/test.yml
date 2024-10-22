@@ -153,19 +153,22 @@ jobs:
       run: go test -v ./...
     - name: Make
       run: make
-    - name: Smoke test
-      # Make sure the path is set properly and then run limactl
-      run: |
-        $env:Path = 'C:\Program Files\Git\usr\bin;' + $env:Path
-        Set-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Session Manager\Environment' -Name PATH -Value $env:Path
-        .\_output\bin\limactl.exe start template://experimental/wsl2
-      # TODO: run the full integration tests
-    - name: Debug
-      if: always()
-      run: type C:\Users\runneradmin\.lima\wsl2\ha.stdout.log
-    - name: Debug
-      if: always()
-      run: type C:\Users\runneradmin\.lima\wsl2\ha.stderr.log
+# FIXME: Windows CI began to fail on Oct 21, 2024.
+# Something seems to have changed between win22/20241006.1 and win22/20241015.1.
+# https://github.com/lima-vm/lima/issues/2775
+#    - name: Smoke test
+#      # Make sure the path is set properly and then run limactl
+#      run: |
+#        $env:Path = 'C:\Program Files\Git\usr\bin;' + $env:Path
+#        Set-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Session Manager\Environment' -Name PATH -Value $env:Path
+#        .\_output\bin\limactl.exe start template://experimental/wsl2
+#      # TODO: run the full integration tests
+#    - name: Debug
+#      if: always()
+#      run: type C:\Users\runneradmin\.lima\wsl2\ha.stdout.log
+#    - name: Debug
+#      if: always()
+#      run: type C:\Users\runneradmin\.lima\wsl2\ha.stderr.log
 
   integration:
     name: Integration tests
