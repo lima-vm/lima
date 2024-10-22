@@ -575,12 +575,6 @@ artifacts-misc: | _artifacts
 MKDIR_TARGETS += _artifacts
 
 ################################################################################
-.PHONY: codesign
-codesign: _output/bin/limactl
-ifeq ($(GOOS),darwin)
-	codesign --entitlements vz.entitlements -s - $<
-endif
-
 # This target must be placed after any changes to the `MKDIR_TARGETS` variable.
 # It seems that variable expansion in Makefile targets is not done recursively.
 $(MKDIR_TARGETS):
