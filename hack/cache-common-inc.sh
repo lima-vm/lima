@@ -356,7 +356,7 @@ function hash_file() {
 # /Users/user/Library/Caches/lima/download/by-url-sha256/346ee1ff9e381b78ba08e2a29445960b5cd31c51f896fc346b82e26e345a5b9a/data # on macOS
 # /home/user/.cache/lima/download/by-url-sha256/346ee1ff9e381b78ba08e2a29445960b5cd31c51f896fc346b82e26e345a5b9a/data # on others
 function download_to_cache() {
-	local cache_path
+	local cache_path use_redirected_location=${2:-YES}
 	cache_path=$(location_to_cache_path "$1")
 	# before checking remote location, check if the data file is already downloaded and the time file is updated within 10 minutes
 	if [[ -f ${cache_path}/data && -n "$(find "${cache_path}/time" -mmin -10 || true)" ]]; then
@@ -379,7 +379,11 @@ function download_to_cache() {
 	code=$(jq -r '.http_code' <<<"${curl_info_json}")
 	time=$(jq -r '.last_modified' <<<"${curl_info_json}")
 	type=$(jq -r '.content_type' <<<"${curl_info_json}")
-	url=$(jq -r '.url' <<<"${curl_info_json}")
+	if [[ ${use_redirected_location} == "YES" ]]; then
+		url=$(jq -r '.url' <<<"${curl_info_json}")
+	else
+		url=$1
+	fi
 	[[ ${code} == 200 ]] || error_exit "Failed to download $1"
 
 	cache_path=$(location_to_cache_path "${url}")
@@ -411,4 +415,9 @@ function download_to_cache() {
 	[[ -f ${cache_path}/type ]] || echo -n "${type}" >"${cache_path}/type"
 	[[ -f ${cache_path}/url ]] || echo -n "${url}" >"${cache_path}/url"
 	echo "${cache_path}/data"
+}
+
+# Download the file to the cache directory without redirect and print the path.
+function download_to_cache_without_redirect() {
+	download_to_cache "$1" "NO"
 }
