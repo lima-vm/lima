@@ -22,6 +22,7 @@ func newUsernetCommand() *cobra.Command {
 	hostagentCommand.Flags().StringP("endpoint", "e", "", "exposes usernet api(s) on this endpoint")
 	hostagentCommand.Flags().String("listen-qemu", "", "listen for qemu connections")
 	hostagentCommand.Flags().String("listen", "", "listen on a Unix socket and receive Bess-compatible FDs as SCM_RIGHTS messages")
+	hostagentCommand.Flags().String("listen-socks", "", "listen for socks connectioss")
 	hostagentCommand.Flags().String("subnet", "192.168.5.0/24", "sets subnet value for the usernet network")
 	hostagentCommand.Flags().Int("mtu", 1500, "mtu")
 	hostagentCommand.Flags().StringToString("leases", nil, "pass default static leases for startup. Eg: '192.168.104.1=52:55:55:b3:bc:d9,192.168.104.2=5a:94:ef:e4:0c:df' ")
@@ -54,6 +55,10 @@ func usernetAction(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
+	socksSocket, err := cmd.Flags().GetString("listen-socks")
+	if err != nil {
+		return err
+	}
 	subnet, err := cmd.Flags().GetString("subnet")
 	if err != nil {
 		return err
@@ -72,6 +77,7 @@ func usernetAction(cmd *cobra.Command, _ []string) error {
 	os.RemoveAll(endpoint)
 	os.RemoveAll(qemuSocket)
 	os.RemoveAll(fdSocket)
+	os.RemoveAll(socksSocket)
 
 	// Environment Variables
 	// LIMA_USERNET_RESOLVE_IP_ADDRESS_TIMEOUT: Specifies the timeout duration for resolving IP addresses in minutes. Default is 2 minutes.
@@ -81,6 +87,7 @@ func usernetAction(cmd *cobra.Command, _ []string) error {
 		Endpoint:      endpoint,
 		QemuSocket:    qemuSocket,
 		FdSocket:      fdSocket,
+		SocksSocket:   socksSocket,
 		Subnet:        subnet,
 		DefaultLeases: leases,
 	})

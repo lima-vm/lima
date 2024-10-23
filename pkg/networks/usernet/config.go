@@ -17,6 +17,7 @@ const (
 	FDSock       = "fd"
 	QEMUSock     = "qemu"
 	EndpointSock = "ep"
+	SocksSock    = "socks"
 )
 
 // Sock returns a usernet socket based on name and sockType.
