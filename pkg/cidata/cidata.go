@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/docker/go-units"
+	"github.com/lima-vm/lima/pkg/debugutil"
 	"github.com/lima-vm/lima/pkg/iso9660util"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/localpathutil"
@@ -124,6 +125,7 @@ func templateArgs(bootScripts bool, instDir, name string, instConfig *limayaml.L
 		return nil, err
 	}
 	args := TemplateArgs{
+		Debug:              debugutil.Debug,
 		BootScripts:        bootScripts,
 		Name:               name,
 		User:               u.Username,

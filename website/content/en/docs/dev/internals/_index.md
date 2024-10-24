@@ -174,6 +174,7 @@ Max file name length = 30
 The volume label is "cidata", as defined by [cloud-init NoCloud](https://docs.cloud-init.io/en/latest/reference/datasources/nocloud.html).
 
 ### Environment variables
+- `LIMA_CIDATA_DEBUG`: the value of the `--debug` flag of the `limactl start` command.
 - `LIMA_CIDATA_NAME`: the lima instance name
 - `LIMA_CIDATA_MNT`: the mount point of the disk. `/mnt/lima-cidata`.
 - `LIMA_CIDATA_USER`: the username string

@@ -54,6 +54,7 @@ type Disk struct {
 	FSArgs []string
 }
 type TemplateArgs struct {
+	Debug                           bool
 	Name                            string // instance name
 	IID                             string // instance id
 	User                            string // user name
