@@ -6,7 +6,7 @@
 # $ export DOCKER_HOST=$(limactl list docker-rootful --format 'unix://{{.Dir}}/sock/docker.sock')
 # $ docker ...
 
-# This template requires Lima v0.20.0 or later
+# This template requires Lima v0.23.0 or later
 images:
 # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
 - location: "https://cloud-images.ubuntu.com/releases/24.04/release-20240821/ubuntu-24.04-server-cloudimg-amd64.img"
@@ -44,16 +44,95 @@ provision:
     #!/bin/bash
     set -eux -o pipefail
     command -v docker >/dev/null 2>&1 && exit 0
-    if [ ! -e /etc/systemd/system/docker.socket.d/override.conf ]; then
-      mkdir -p /etc/systemd/system/docker.socket.d
+    readonly override_conf=/etc/systemd/system/docker.socket.d/override.conf
+    if [ ! -e $override_conf ]; then
+      mkdir -p $(dirname $override_conf)
       # Alternatively we could just add the user to the "docker" group, but that requires restarting the user session
-      cat <<-EOF >/etc/systemd/system/docker.socket.d/override.conf
-      [Socket]
-      SocketUser={{.User}}
+      cat <<EOF >$override_conf
+    [Socket]
+    SocketUser={{.User}}
     EOF
     fi
     export DEBIAN_FRONTEND=noninteractive
     curl -fsSL https://get.docker.com | sh
+- mode: user  # configure docker under non-root user
+  script: |
+    #!/bin/bash
+    set -o errexit -o nounset -o pipefail -o xtrace
+
+    if ! command -v jq &>/dev/null; then
+      sudo apt-get install --assume-yes jq
+    fi
+    if systemctl --user list-unit-files docker.service &>/dev/null; then
+      readonly rootless_installed=true
+    else
+      readonly rootless_installed=false
+    fi
+
+    # Setting shell variable makes it easier to read cloud-init-output.log
+    readonly ROOTFUL="{{.Param.ROOTFUL}}"
+    if [ "$ROOTFUL" = true ]; then
+      if [ $rootless_installed = true ]; then
+        systemctl --user disable --now docker
+      fi
+
+      readonly config_dir=/etc/docker
+      readonly context=default
+      function systemctl_wrapper() { sudo systemctl "$@"; }
+      function tee_wrapper() { sudo tee "$@"; }
+    else
+      sudo systemctl disable --now docker
+      if [ $rootless_installed != true ]; then
+        sudo apt-get install --assume-yes dbus-user-session fuse3 uidmap
+        if [ -S /var/run/docker.sock ]; then
+          sudo rm /var/run/docker.sock
+        fi
+        dockerd-rootless-setuptool.sh install
+      fi
+
+      readonly config_dir="$HOME/.config/docker"
+      readonly context=rootless
+      function systemctl_wrapper() { systemctl --user "$@"; }
+      function tee_wrapper() { tee "$@"; }
+    fi
+
+    systemctl_wrapper enable --now docker
+    docker context use $context
+
+    readonly config="$config_dir/daemon.json"
+    function print_config() {
+      if [ -s "$config" ]; then
+        cat "$config"
+      else
+        # print empty JSON object instead of empty string for jq to work
+        echo "{}"
+      fi
+    }
+    needs_restart=false
+    function set_docker_daemon_json() {
+      local -r current=$(print_config | jq --raw-output "$1 // empty")
+      [ "$current" = "$2" ] && return 0
+      mkdir -p "$config_dir"
+      # sleep 0 is a trick to avoid tee_wrapper overwriting the file before reading it
+      if print_config | jq "$1 = ${2:-empty}" | (sleep 0 && tee_wrapper "$config"); then
+        needs_restart=true
+      fi
+    }
+
+    # Setting shell variable makes it easier to read cloud-init-output.log
+    readonly CONTAINERD_IMAGE_STORE="{{.Param.CONTAINERD_IMAGE_STORE}}"
+    # enable containerd image store
+    if [ "$CONTAINERD_IMAGE_STORE" = true ]; then
+      set_docker_daemon_json '.features."containerd-snapshotter"' 'true'
+    else
+      # passing empty string to remove the key and use the default value
+      set_docker_daemon_json '.features."containerd-snapshotter"' ''
+    fi
+
+    # restart docker to apply the new configuration
+    if [ $needs_restart = true ]; then
+      systemctl_wrapper restart docker
+    fi
 probes:
 - script: |
     #!/bin/bash
@@ -62,8 +141,16 @@ probes:
       echo >&2 "docker is not installed yet"
       exit 1
     fi
-    if ! timeout 30s bash -c "until pgrep dockerd; do sleep 3; done"; then
-      echo >&2 "dockerd is not running"
+    readonly ROOTFUL="{{.Param.ROOTFUL}}"
+    if [ "$ROOTFUL" = true ]; then
+      target=dockerd
+      target_description=dockerd
+    else
+      target=rootlesskit
+      target_description="rootlesskit (used by rootless docker)"
+    fi
+    if ! timeout 30s bash -c "until pgrep $target; do sleep 3; done"; then
+      echo >&2 "$target_description is not running"
       exit 1
     fi
   hint: See "/var/log/cloud-init-output.log" in the guest
@@ -73,7 +160,7 @@ hostResolver:
   hosts:
     host.docker.internal: host.lima.internal
 portForwards:
-- guestSocket: "/var/run/docker.sock"
+- guestSocket: "{{if eq .Param.ROOTFUL \"true\"}}/var/run{{else}}/run/user/{{.UID}}{{end}}/docker.sock"
   hostSocket: "{{.Dir}}/sock/docker.sock"
 message: |
   To run `docker` on the host (assumes docker-cli is installed), run the following commands:
@@ -82,3 +169,6 @@ message: |
   docker context use lima-{{.Name}}
   docker run hello-world
   ------
+param:
+  CONTAINERD_IMAGE_STORE: false
+  ROOTFUL: true
