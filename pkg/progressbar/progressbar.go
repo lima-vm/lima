@@ -1,6 +1,7 @@
 package progressbar
 
 import (
+	"io"
 	"os"
 	"time"
 
@@ -8,6 +9,17 @@ import (
 	"github.com/mattn/go-isatty"
 	"github.com/sirupsen/logrus"
 )
+
+type ProxyReaderAt struct {
+	io.ReaderAt
+	Bar *pb.ProgressBar
+}
+
+func (r *ProxyReaderAt) ReadAt(p []byte, off int64) (int, error) {
+	n, err := r.ReaderAt.ReadAt(p, off)
+	r.Bar.Add(n)
+	return n, err
+}
 
 func New(size int64) (*pb.ProgressBar, error) {
 	bar := pb.New64(size)
