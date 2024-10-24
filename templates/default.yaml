@@ -513,6 +513,20 @@ networks:
 #   hostPortRange: [1, 65535]
 # # Any port still not matched by a rule will not be forwarded (ignored)
 
+# portMonitors configures monitoring of container engine ports.
+# These are used to detect forwarded ports from Docker, containerd, or Kubernetes workloads.
+portMonitors:
+  # docker specifies a list of Unix sockets to monitor for Docker API port forwards.
+  docker:
+    sockets: []
+  # containerd specifies a list of Unix sockets to monitor for containerd workloads. If no sockets are specified, the default socket will be used
+  # using the containerd settings. If containerd user is enabled a user socket will be used, otherwise a system socket.
+  containerd:
+    sockets: []
+  # kubernetes specifies paths to kubeconfig files to watch for Kubernetes port-forwarded services.
+  kubernetes:
+    configs: []
+
 # Copy files from the guest to the host. Copied after provisioning scripts have been completed.
 # copyToHost:
 # - guest: "/etc/myconfig.cfg"

@@ -28,15 +28,24 @@ func newDaemonCommand() *cobra.Command {
 	daemonCommand.Flags().Duration("tick", 3*time.Second, "Tick for polling events")
 	daemonCommand.Flags().Int("vsock-port", 0, "Use vsock server instead a UNIX socket")
 	daemonCommand.Flags().String("virtio-port", "", "Use virtio server instead a UNIX socket")
+	daemonCommand.Flags().StringSlice("docker-sockets", []string{}, "Paths to Docker socket files to monitor for exposed ports")
+	daemonCommand.Flags().StringSlice("containerd-sockets", []string{}, "Paths to Containerd socket files to monitor for exposed ports")
+	daemonCommand.Flags().StringSlice("kubernetes-configs", []string{}, "Path to Kubernetes config file to monitor for ports")
 	return daemonCommand
 }
 
 func daemonAction(cmd *cobra.Command, _ []string) error {
 	ctx := cmd.Context()
+	if os.Geteuid() != 0 {
+		return errors.New("must run as the root user")
+	}
 	socket := "/run/lima-guestagent.sock"
 	tick, err := cmd.Flags().GetDuration("tick")
 	if err != nil {
 		return err
+	}
+	if tick == 0 {
+		return errors.New("tick must be specified")
 	}
 	vSockPort, err := cmd.Flags().GetInt("vsock-port")
 	if err != nil {
@@ -46,12 +55,19 @@ func daemonAction(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	if tick == 0 {
-		return errors.New("tick must be specified")
+	dockerSockets, err := cmd.Flags().GetStringSlice("docker-sockets")
+	if err != nil {
+		return err
 	}
-	if os.Geteuid() != 0 {
-		return errors.New("must run as the root user")
+	containerdSockets, err := cmd.Flags().GetStringSlice("containerd-sockets")
+	if err != nil {
+		return err
 	}
+	kubernetesConfig, err := cmd.Flags().GetStringSlice("kubernetes-configs")
+	if err != nil {
+		return err
+	}
+
 	logrus.Infof("event tick: %v", tick)
 
 	newTicker := func() (<-chan time.Time, func()) {
@@ -62,7 +78,14 @@ func daemonAction(cmd *cobra.Command, _ []string) error {
 		return ticker.C, ticker.Stop
 	}
 
-	agent, err := guestagent.New(ctx, newTicker, tick*20)
+	agent, err := guestagent.New(
+		&guestagent.Config{
+			Ticker:            newTicker,
+			IptablesIdle:      tick * 20,
+			DockerSockets:     dockerSockets,
+			ContainerdSockets: containerdSockets,
+			KubernetesConfigs: kubernetesConfig,
+		})
 	if err != nil {
 		return err
 	}

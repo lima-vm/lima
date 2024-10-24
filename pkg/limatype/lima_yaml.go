@@ -40,6 +40,7 @@ type LimaYAML struct {
 	GuestInstallPrefix    *string       `yaml:"guestInstallPrefix,omitempty" json:"guestInstallPrefix,omitempty" jsonschema:"nullable"`
 	Probes                []Probe       `yaml:"probes,omitempty" json:"probes,omitempty"`
 	PortForwards          []PortForward `yaml:"portForwards,omitempty" json:"portForwards,omitempty"`
+	PortMonitors          PortMonitor   `yaml:"portMonitors,omitempty" json:"portMonitors,omitempty"`
 	CopyToHost            []CopyToHost  `yaml:"copyToHost,omitempty" json:"copyToHost,omitempty"`
 	Message               string        `yaml:"message,omitempty" json:"message,omitempty"`
 	Networks              []Network     `yaml:"networks,omitempty" json:"networks,omitempty" jsonschema:"nullable"`
@@ -399,4 +400,20 @@ func DefaultDriver() VMType {
 	default:
 		return QEMU
 	}
+}
+
+// Engine is a list of container engine connection details.
+type Engine struct {
+	Sockets []string `yaml:"sockets,omitempty" json:"sockets,omitempty"`
+}
+
+type Kubernetes struct {
+	// Configs is a list of Kubernetes config files, e.g. "/etc/rancher/k3s/k3s.yaml"
+	Configs []string `yaml:"configs,omitempty" json:"configs,omitempty"`
+}
+
+type PortMonitor struct {
+	Docker     Engine     `yaml:"docker,omitempty" json:"docker,omitempty"`
+	Containerd Engine     `yaml:"containerd,omitempty" json:"containerd,omitempty"`
+	Kubernetes Kubernetes `yaml:"kubernetes,omitempty" json:"kubernetes,omitempty"`
 }

@@ -49,3 +49,7 @@ message: |
   export KUBECONFIG="{{.Dir}}/copied-from-guest/kubeconfig.yaml"
   kubectl ...
   ------
+portMonitors:
+  kubernetes:
+    configs:
+    - "/etc/rancher/k3s/k3s.yaml"

@@ -73,6 +73,13 @@ type Disk struct {
 	FSType string
 	FSArgs []string
 }
+
+type PortMonitor struct {
+	Docker     string
+	Containerd string
+	Kubernetes string
+}
+
 type TemplateArgs struct {
 	Debug                           bool
 	Name                            string // instance name
@@ -114,6 +121,7 @@ type TemplateArgs struct {
 	VirtioPort                      string
 	Plain                           bool
 	TimeZone                        string
+	PortMonitor                     PortMonitor
 }
 
 func ValidateTemplateArgs(args *TemplateArgs) error {

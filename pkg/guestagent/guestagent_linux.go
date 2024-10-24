@@ -18,16 +18,31 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/lima-vm/lima/v2/pkg/guestagent/api"
+	"github.com/lima-vm/lima/v2/pkg/guestagent/events"
 	"github.com/lima-vm/lima/v2/pkg/guestagent/iptables"
-	"github.com/lima-vm/lima/v2/pkg/guestagent/kubernetesservice"
 	"github.com/lima-vm/lima/v2/pkg/guestagent/procnettcp"
 	"github.com/lima-vm/lima/v2/pkg/guestagent/timesync"
 )
 
-func New(ctx context.Context, newTicker func() (<-chan time.Time, func()), iptablesIdle time.Duration) (Agent, error) {
+type Config struct {
+	Ticker            func() (<-chan time.Time, func())
+	IptablesIdle      time.Duration
+	DockerSockets     []string
+	ContainerdSockets []string
+	KubernetesConfigs []string
+}
+
+func New(cfg *Config) (Agent, error) {
+	dockerEventMonitor := events.NewDockerEventMonitor(cfg.DockerSockets)
+	containerdEventMonitor := events.NewContainerdEventMonitor(cfg.ContainerdSockets)
+	kubeServiceWatcher := events.NewKubeServiceWatcher(cfg.KubernetesConfigs)
+
 	a := &agent{
-		newTicker:                newTicker,
-		kubernetesServiceWatcher: kubernetesservice.NewServiceWatcher(),
+		newTicker:              cfg.Ticker,
+		IptablesIdle:           cfg.IptablesIdle,
+		dockerEventMonitor:     dockerEventMonitor,
+		containerdEventMonitor: containerdEventMonitor,
+		kubeServiceWatcher:     kubeServiceWatcher,
 	}
 
 	auditClient, err := libaudit.NewMulticastAuditClient(nil)
@@ -39,7 +54,7 @@ func New(ctx context.Context, newTicker func() (<-chan time.Time, func()), iptab
 			return nil, err
 		}
 		logrus.Infof("Auditing is not available: %s", err)
-		return startGuestAgentRoutines(ctx, a, false), nil
+		return startGuestAgentRoutines(a, false), nil
 	}
 
 	auditStatus, err := auditClient.GetStatus()
@@ -50,7 +65,7 @@ func New(ctx context.Context, newTicker func() (<-chan time.Time, func()), iptab
 			return nil, err
 		}
 		logrus.Infof("Auditing is not permitted: %s", err)
-		return startGuestAgentRoutines(ctx, a, false), nil
+		return startGuestAgentRoutines(a, false), nil
 	}
 
 	if auditStatus.Enabled == 0 {
@@ -67,13 +82,12 @@ func New(ctx context.Context, newTicker func() (<-chan time.Time, func()), iptab
 				return nil, err
 			}
 		}
-
-		go a.setWorthCheckingIPTablesRoutine(auditClient, iptablesIdle)
+		go a.setWorthCheckingIPTablesRoutine(auditClient)
 	} else {
 		a.worthCheckingIPTables = true
 	}
 	logrus.Infof("Auditing enabled (%d)", auditStatus.Enabled)
-	return startGuestAgentRoutines(ctx, a, true), nil
+	return startGuestAgentRoutines(a, true), nil
 }
 
 // startGuestAgentRoutines sets worthCheckingIPTables to true if auditing is not supported,
@@ -81,11 +95,10 @@ func New(ctx context.Context, newTicker func() (<-chan time.Time, func()), iptab
 //
 // Auditing is not supported in a kernels and is not currently supported outside of the initial namespace, so does not work
 // from inside a container or WSL2 instance, for example.
-func startGuestAgentRoutines(ctx context.Context, a *agent, supportsAuditing bool) *agent {
+func startGuestAgentRoutines(a *agent, supportsAuditing bool) *agent {
 	if !supportsAuditing {
 		a.worthCheckingIPTables = true
 	}
-	go a.kubernetesServiceWatcher.Start(ctx)
 	go a.fixSystemTimeSkew()
 
 	return a
@@ -97,11 +110,14 @@ type agent struct {
 	// reload /proc/net/tcp.
 	newTicker func() (<-chan time.Time, func())
 
-	worthCheckingIPTables    bool
-	worthCheckingIPTablesMu  sync.RWMutex
-	latestIPTables           []iptables.Entry
-	latestIPTablesMu         sync.RWMutex
-	kubernetesServiceWatcher *kubernetesservice.ServiceWatcher
+	worthCheckingIPTables   bool
+	worthCheckingIPTablesMu sync.RWMutex
+	IptablesIdle            time.Duration
+	latestIPTables          []iptables.Entry
+	latestIPTablesMu        sync.RWMutex
+	dockerEventMonitor      *events.DockerEventMonitor
+	containerdEventMonitor  *events.ContainerdEventMonitor
+	kubeServiceWatcher      *events.KubeServiceWatcher
 }
 
 // setWorthCheckingIPTablesRoutine sets worthCheckingIPTables to be true
@@ -109,16 +125,16 @@ type agent struct {
 //
 // setWorthCheckingIPTablesRoutine sets worthCheckingIPTables to be false
 // when no NETFILTER_CFG audit message was received for the iptablesIdle time.
-func (a *agent) setWorthCheckingIPTablesRoutine(auditClient *libaudit.AuditClient, iptablesIdle time.Duration) {
+func (a *agent) setWorthCheckingIPTablesRoutine(auditClient *libaudit.AuditClient) {
 	logrus.Info("setWorthCheckingIPTablesRoutine(): monitoring netfilter audit events")
 	var latestTrue time.Time
 	go func() {
 		for {
-			time.Sleep(iptablesIdle)
+			time.Sleep(a.IptablesIdle)
 			a.worthCheckingIPTablesMu.Lock()
 			// time is monotonic, see https://pkg.go.dev/time#hdr-Monotonic_Clocks
 			elapsedSinceLastTrue := time.Since(latestTrue)
-			if elapsedSinceLastTrue >= iptablesIdle {
+			if elapsedSinceLastTrue >= a.IptablesIdle {
 				logrus.Debug("setWorthCheckingIPTablesRoutine(): setting to false")
 				a.worthCheckingIPTables = false
 			}
@@ -197,6 +213,22 @@ func isEventEmpty(ev *api.Event) bool {
 
 func (a *agent) Events(ctx context.Context, ch chan *api.Event) {
 	defer close(ch)
+
+	errorCh := make(chan error)
+	if a.kubeServiceWatcher != nil {
+		go func() {
+			if err := a.kubeServiceWatcher.MonitorServices(ctx, ch); err != nil {
+				errorCh <- err
+			}
+		}()
+	}
+	if a.containerdEventMonitor != nil {
+		go a.containerdEventMonitor.MonitorPorts(ctx, ch)
+	}
+	if a.dockerEventMonitor != nil {
+		go a.dockerEventMonitor.MonitorPorts(ctx, ch)
+	}
+
 	tickerCh, tickerClose := a.newTicker()
 	defer tickerClose()
 	var st eventState
@@ -209,6 +241,8 @@ func (a *agent) Events(ctx context.Context, ch chan *api.Event) {
 		select {
 		case <-ctx.Done():
 			return
+		case err := <-errorCh:
+			logrus.Errorf("event monitoring failed: %s", err)
 		case _, ok := <-tickerCh:
 			if !ok {
 				return
@@ -288,25 +322,6 @@ func (a *agent) LocalPorts(ctx context.Context) ([]*api.IPPort, error) {
 						Protocol: "tcp",
 					})
 			}
-		}
-	}
-
-	kubernetesEntries := a.kubernetesServiceWatcher.GetPorts()
-	for _, entry := range kubernetesEntries {
-		found := false
-		for _, re := range res {
-			if re.Port == int32(entry.Port) {
-				found = true
-			}
-		}
-
-		if !found {
-			res = append(res,
-				&api.IPPort{
-					Ip:       entry.IP.String(),
-					Port:     int32(entry.Port),
-					Protocol: string(entry.Protocol),
-				})
 		}
 	}
 

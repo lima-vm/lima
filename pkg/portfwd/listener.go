@@ -71,7 +71,6 @@ func (p *ClosableListeners) Remove(_ context.Context, protocol, hostAddress, gue
 
 func (p *ClosableListeners) forwardTCP(ctx context.Context, client *guestagentclient.GuestAgentClient, hostAddress, guestAddress string) {
 	key := key("tcp", hostAddress, guestAddress)
-
 	p.listenersRW.Lock()
 	_, ok := p.listeners[key]
 	if ok {
@@ -84,9 +83,11 @@ func (p *ClosableListeners) forwardTCP(ctx context.Context, client *guestagentcl
 		p.listenersRW.Unlock()
 		return
 	}
+
 	defer p.Remove(ctx, "tcp", hostAddress, guestAddress)
 	p.listeners[key] = tcpLis
 	p.listenersRW.Unlock()
+
 	for {
 		conn, err := tcpLis.Accept()
 		if err != nil {

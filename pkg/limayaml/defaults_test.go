@@ -253,9 +253,6 @@ func TestFillDefault(t *testing.T) {
 		defaultPortForward,
 		defaultPortForward,
 	}
-	expect.CopyToHost = []limatype.CopyToHost{
-		{},
-	}
 
 	// Setting GuestPort and HostPort for DeepEqual(), but they are not supposed to be used
 	// after FillDefault() has been called and the ...PortRange fields have been set.
@@ -270,6 +267,14 @@ func TestFillDefault(t *testing.T) {
 
 	expect.PortForwards[3].GuestSocket = fmt.Sprintf("%s | %s | %s | %s", user.HomeDir, user.Uid, user.Username, y.Param["ONE"])
 	expect.PortForwards[3].HostSocket = fmt.Sprintf("%s | %s | %s | %s | %s | %s", hostHome, instDir, instName, currentUser.Uid, currentUser.Username, y.Param["ONE"])
+
+	expect.PortMonitors.Containerd.Sockets = []string{
+		fmt.Sprintf("/run/user/%s/containerd/containerd.sock", user.Uid),
+	}
+
+	expect.CopyToHost = []limatype.CopyToHost{
+		{},
+	}
 
 	expect.CopyToHost[0].GuestFile = fmt.Sprintf("%s | %s | %s | %s", user.HomeDir, user.Uid, user.Username, y.Param["ONE"])
 	expect.CopyToHost[0].HostFile = fmt.Sprintf("%s | %s | %s | %s | %s | %s", hostHome, instDir, instName, currentUser.Uid, currentUser.Username, y.Param["ONE"])
@@ -453,6 +458,10 @@ func TestFillDefault(t *testing.T) {
 
 	expect.Plain = ptr.Of(false)
 
+	expect.PortMonitors.Containerd.Sockets = []string{
+		"/run/containerd/containerd.sock",
+	}
+
 	y = limatype.LimaYAML{}
 	FillDefault(t.Context(), &y, &d, &limatype.LimaYAML{}, filePath, false)
 	assert.DeepEqual(t, &y, &expect, opts...)
@@ -635,6 +644,10 @@ func TestFillDefault(t *testing.T) {
 	expect.Provision = slices.Concat(o.Provision, y.Provision, dExpected.Provision)
 	expect.Probes = slices.Concat(o.Probes, y.Probes, dExpected.Probes)
 	expect.PortForwards = slices.Concat(o.PortForwards, y.PortForwards, dExpected.PortForwards)
+	expect.PortMonitors.Containerd.Sockets = []string{
+		fmt.Sprintf("/run/user/%s/containerd/containerd.sock", user.Uid),
+		"/run/containerd/containerd.sock",
+	}
 	expect.CopyToHost = slices.Concat(o.CopyToHost, y.CopyToHost, dExpected.CopyToHost)
 	expect.Containerd.Archives = slices.Concat(o.Containerd.Archives, y.Containerd.Archives, dExpected.Containerd.Archives)
 	expect.Containerd.Archives[3].Arch = *expect.Arch

@@ -144,6 +144,11 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 		Plain:      *instConfig.Plain,
 		TimeZone:   *instConfig.TimeZone,
 		Param:      instConfig.Param,
+		PortMonitor: PortMonitor{
+			Docker:     strings.Join(instConfig.PortMonitors.Docker.Sockets, ","),
+			Containerd: strings.Join(instConfig.PortMonitors.Containerd.Sockets, ","),
+			Kubernetes: strings.Join(instConfig.PortMonitors.Kubernetes.Configs, ","),
+		},
 	}
 
 	if instConfig.VMOpts.VZ.Rosetta.Enabled != nil {

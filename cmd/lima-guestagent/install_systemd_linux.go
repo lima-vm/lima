@@ -26,6 +26,9 @@ func newInstallSystemdCommand() *cobra.Command {
 	}
 	installSystemdCommand.Flags().Int("vsock-port", 0, "Use vsock server on specified port")
 	installSystemdCommand.Flags().String("virtio-port", "", "Use virtio server instead a UNIX socket")
+	installSystemdCommand.Flags().StringSlice("docker-sockets", []string{}, "Paths to Docker socket files to monitor for exposed ports")
+	installSystemdCommand.Flags().StringSlice("containerd-sockets", []string{}, "Paths to Containerd socket files to monitor for exposed ports")
+	installSystemdCommand.Flags().StringSlice("kubernetes-configs", []string{}, "Path to Kubernetes config files to monitor for ports")
 	return installSystemdCommand
 }
 
@@ -43,7 +46,25 @@ func installSystemdAction(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	unit, err := generateSystemdUnit(vsockPort, virtioPort, debug)
+	dockerSockets, err := cmd.Flags().GetStringSlice("docker-sockets")
+	if err != nil {
+		return err
+	}
+	containerdSockets, err := cmd.Flags().GetStringSlice("containerd-sockets")
+	if err != nil {
+		return err
+	}
+	kubernetesConfigs, err := cmd.Flags().GetStringSlice("kubernetes-configs")
+	if err != nil {
+		return err
+	}
+	unit, err := generateSystemdUnit(
+		vsockPort,
+		virtioPort,
+		dockerSockets,
+		containerdSockets,
+		kubernetesConfigs,
+		debug)
 	if err != nil {
 		return err
 	}
@@ -82,7 +103,7 @@ func installSystemdAction(cmd *cobra.Command, _ []string) error {
 //go:embed lima-guestagent.TEMPLATE.service
 var systemdUnitTemplate string
 
-func generateSystemdUnit(vsockPort int, virtioPort string, debug bool) ([]byte, error) {
+func generateSystemdUnit(vsockPort int, virtioPort string, dockerSockets, containerdSockets, kubeConfigs []string, debug bool) ([]byte, error) {
 	selfExeAbs, err := os.Executable()
 	if err != nil {
 		return nil, err
@@ -97,6 +118,15 @@ func generateSystemdUnit(vsockPort int, virtioPort string, debug bool) ([]byte, 
 	}
 	if debug {
 		args = append(args, "--debug")
+	}
+	if len(dockerSockets) > 0 {
+		args = append(args, "--docker-sockets", strings.Join(dockerSockets, ","))
+	}
+	if len(containerdSockets) > 0 {
+		args = append(args, "--containerd-sockets", strings.Join(containerdSockets, ","))
+	}
+	if len(kubeConfigs) > 0 {
+		args = append(args, "--kubernetes-configs", strings.Join(kubeConfigs, ","))
 	}
 
 	m := map[string]string{

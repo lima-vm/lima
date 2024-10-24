@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -362,6 +363,21 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 		// Not validating that the various GuestPortRanges and HostPortRanges are not overlapping. Rules will be
 		// processed sequentially and the first matching rule for a guest port determines forwarding behavior.
 	}
+
+	for i, socket := range y.PortMonitors.Containerd.Sockets {
+		field := fmt.Sprintf("portMonitor.containerd.sockets[%d]", i)
+		if err := validateSocket(field, socket); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	for i, socket := range y.PortMonitors.Docker.Sockets {
+		field := fmt.Sprintf("portMonitor.docker.sockets[%d]", i)
+		if err := validateSocket(field, socket); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
 	for i, rule := range y.CopyToHost {
 		field := fmt.Sprintf("CopyToHost[%d]", i)
 		if rule.GuestFile != "" {
@@ -643,4 +659,40 @@ func ValidateAgainstLatestConfig(ctx context.Context, yNew, yLatest []byte) erro
 	}
 
 	return errs
+}
+
+func validateSocket(field, socket string) error {
+	if socket == "" {
+		return fmt.Errorf("%s socket path must not be empty", field)
+	}
+
+	u, err := url.Parse(socket)
+	if err != nil {
+		return fmt.Errorf("%s socket path %q is not a valid URL: %w", field, socket, err)
+	}
+	// Treat empty scheme as a unix socket path
+	if u.Scheme == "" {
+		return validateUnixSocket(field, socket)
+	}
+	switch u.Scheme {
+	case "unix", "file":
+		if u.Path == "" {
+			return fmt.Errorf("%s socket path %q is not a valid URL: missing path", field, socket)
+		}
+		return validateUnixSocket(field, u.Path)
+	case "tcp":
+		if u.Host == "" {
+			return fmt.Errorf("%s socket path %q is not a valid URL: missing host", field, socket)
+		}
+		return nil
+	default:
+		return fmt.Errorf("%s socket path %q is not a valid URL: unsupported scheme %q", field, socket, u.Scheme)
+	}
+}
+
+func validateUnixSocket(field, socketPath string) error {
+	if !path.IsAbs(socketPath) {
+		return fmt.Errorf("field `%s` must be absolute, got %q", field, socketPath)
+	}
+	return nil
 }
