@@ -1,0 +1,25 @@
+# This template requires Lima v0.7.0 or later.
+images:
+# Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
+- location: "https://cloud-images.ubuntu.com/releases/focal/release-20240821/ubuntu-20.04-server-cloudimg-amd64.img"
+  arch: "x86_64"
+  digest: "sha256:500a4be0e6dda27d911a3b658ceaad09595b81f10b602b58afb630904a8b04f4"
+- location: "https://cloud-images.ubuntu.com/releases/focal/release-20240821/ubuntu-20.04-server-cloudimg-arm64.img"
+  arch: "aarch64"
+  digest: "sha256:f4b47dd0a608c9d69139af8a263801913ba87347925cc30dcad33b79a27f34d0"
+- location: "https://cloud-images.ubuntu.com/releases/focal/release-20240821/ubuntu-20.04-server-cloudimg-armhf.img"
+  arch: "armv7l"
+  digest: "sha256:74675e6b3b2c5a9e09cdd709971e0b2512483e0b04c89baef1dd8629502df7bd"
+# Fallback to the latest release image.
+# Hint: run `limactl prune` to invalidate the cache
+- location: "https://cloud-images.ubuntu.com/releases/focal/release/ubuntu-20.04-server-cloudimg-amd64.img"
+  arch: "x86_64"
+- location: "https://cloud-images.ubuntu.com/releases/focal/release/ubuntu-20.04-server-cloudimg-arm64.img"
+  arch: "aarch64"
+- location: "https://cloud-images.ubuntu.com/releases/focal/release/ubuntu-20.04-server-cloudimg-armhf.img"
+  arch: "armv7l"
+
+mounts:
+- location: "~"
+- location: "/tmp/lima"
+  writable: true
