@@ -324,6 +324,11 @@ const deltaLimit = 2 * time.Second
 
 func (a *agent) fixSystemTimeSkew() {
 	for {
+		ok, err := timesync.HasRTC()
+		if !ok {
+			logrus.Warnf("fixSystemTimeSkew: error: %s", err.Error())
+			break
+		}
 		ticker := time.NewTicker(10 * time.Second)
 		for now := range ticker.C {
 			rtc, err := timesync.GetRTCTime()
