@@ -369,6 +369,7 @@ function download_to_cache() {
 	write_out='{
 		"http_code":%{http_code},
 		"last_modified":"%header{Last-Modified}",
+		"date":"%header{Date}",
 		"content_type":"%{content_type}",
 		"url":"%{url_effective}",
 		"filename":"%{filename_effective}"
@@ -377,7 +378,7 @@ function download_to_cache() {
 
 	local code time type url
 	code=$(jq -r '.http_code' <<<"${curl_info_json}")
-	time=$(jq -r '.last_modified' <<<"${curl_info_json}")
+	time=$(jq -r '(.last_modified|select(length>1)) // .date' <<<"${curl_info_json}")
 	type=$(jq -r '.content_type' <<<"${curl_info_json}")
 	if [[ ${use_redirected_location} == "YES" ]]; then
 		url=$(jq -r '.url' <<<"${curl_info_json}")
@@ -400,7 +401,7 @@ function download_to_cache() {
 		)
 		local filename
 		code=$(jq -r '.http_code' <<<"${curl_info_json}")
-		time=$(jq -r '.last_modified' <<<"${curl_info_json}")
+		time=$(jq -r '(.last_modified|select(length>1)) // .date' <<<"${curl_info_json}")
 		type=$(jq -r '.content_type' <<<"${curl_info_json}")
 		url=$(jq -r '.url' <<<"${curl_info_json}")
 		filename=$(jq -r '.filename' <<<"${curl_info_json}")
