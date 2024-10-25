@@ -33,8 +33,6 @@ The loopback addresses of the host is `192.168.5.2` and is accessible from the g
 
 ### DNS (192.168.5.3)
 
-The DNS.
-
 If `hostResolver.enabled` in `lima.yaml` is true, then the hostagent is going to run a DNS server over tcp and udp - each on a separate randomly selected free port. This server does a local lookup using the native host resolver, so it will deal correctly with VPN configurations and split-DNS setups, as well as mDNS, local `/etc/hosts` etc. For this the hostagent has to be compiled with `CGO_ENABLED=1` as default Go resolver is [broken](https://github.com/golang/go/issues/12524).
 
 These tcp and udp ports are then forwarded via iptables rules to `192.168.5.3:53`, overriding the DNS provided by QEMU via slirp.
@@ -135,7 +133,8 @@ The "vzNAT" network does not need the `socket_vmnet` binary and the `sudoers` fi
 ### socket_vmnet
 #### Managed (192.168.105.0/24)
 
-[`socket_vmnet`](https://github.com/lima-vm/socket_vmnet) is required for adding another guest IP that is accessible from the host and other guests.
+[`socket_vmnet`](https://github.com/lima-vm/socket_vmnet) can be used for adding another guest IP that is accessible from the host and other guests,
+without depending on vz.
 It must be installed according to the instruction provided on https://github.com/lima-vm/socket_vmnet.
 
 Note that installation using Homebrew is not secure and not recommended by the Lima project.
@@ -264,11 +263,12 @@ sudo /usr/libexec/ApplicationFirewall/socketfilterfw --unblock /usr/libexec/boot
 ```
 
 #### Unmanaged
+Lima can also connect to "unmanaged" networks addressed by "socket". This
+means that the daemons will not be controlled by Lima, but must be started
+before the instance.  The interface type (host, shared, or bridged) is
+configured in `socket_vmnet` and not in lima.
+
 ```yaml
 networks:
-  # Lima can also connect to "unmanaged" networks addressed by "socket". This
-  # means that the daemons will not be controlled by Lima, but must be started
-  # before the instance.  The interface type (host, shared, or bridged) is
-  # configured in socket_vmnet and not in lima.
-  # - socket: "/var/run/socket_vmnet"
+  - socket: "/var/run/socket_vmnet"
 ```
