@@ -14,13 +14,7 @@ cpus: 2
 # Memory size
 memory: 2GiB
 `
-	// Note: emrichen currently removes empty lines, but not comments
-	expected :=
-`# CPUs
-cpus: 2
-# Memory size
-memory: 2GiB
-`
+	expected := content
 	out, err := EvaluateTemplate([]byte(content))
 	assert.NilError(t, err)
 	assert.Equal(t, expected, string(out))

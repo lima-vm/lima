@@ -5,6 +5,8 @@ import (
 	"errors"
 	"io"
 
+	"github.com/lima-vm/lima/pkg/yamlutil"
+
 	"github.com/go-go-golems/go-emrichen/pkg/emrichen"
 	"gopkg.in/yaml.v3"
 )
@@ -13,6 +15,14 @@ import (
 func EvaluateTemplate(data []byte) ([]byte, error) {
 	var vars map[string]interface{}
 	interpreter, err := emrichen.NewInterpreter(emrichen.WithVars(vars))
+	if err != nil {
+		return nil, err
+	}
+	formatter, err := yamlutil.NewFormatter()
+	if err != nil {
+		return nil, err
+	}
+	data, err = formatter.Before(data)
 	if err != nil {
 		return nil, err
 	}
@@ -42,5 +52,5 @@ func EvaluateTemplate(data []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return output, nil
+	return formatter.Format(output)
 }
