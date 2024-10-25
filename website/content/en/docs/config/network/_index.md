@@ -57,13 +57,80 @@ During initial cloud-init bootstrap, `iptables` may not yet be installed. In tha
 
 If `hostResolver.enabled` is false, then DNS servers can be configured manually in `lima.yaml` via the `dns` setting. If that list is empty, then Lima will either use the slirp DNS (on Linux), or the nameservers from the first host interface in service order that has an assigned IPv4 address (on macOS).
 
+## Lima user-v2 network
+
+| ⚡ Requirement | Lima >= 0.16.0 |
+|-------------------|----------------|
+
+user-v2 network provides a user-mode networking similar to the [default user-mode network](#user-mode-network--1921685024-) and also provides support for `vm -> vm` communication.
+
+To enable this network mode, define a network with `mode: user-v2` in networks.yaml
+
+By default, the below network configuration is already applied (Since v0.18).
+
+```yaml
+...
+networks:
+  user-v2:
+    mode: user-v2
+    gateway: 192.168.104.1
+    netmask: 255.255.255.0
+...
+```
+
+Instances can then reference these networks from their `lima.yaml` file:
+
+{{< tabpane text=true >}}
+{{% tab header="CLI" %}}
+```bash
+limactl start --network=lima:user-v2
+```
+{{% /tab %}}
+{{% tab header="YAML" %}}
+```yaml
+networks:
+   - lima: user-v2
+```
+{{% /tab %}}
+{{< /tabpane >}}
+
+An instance's IP address is resolvable from another instance as `lima-<NAME>.internal.` (e.g., `lima-default.internal.`).
+
+_Note_
+
+- Enabling this network will disable the [default user-mode network](#user-mode-network--1921685024-)
+
 ## VMNet networks
 
 VMNet assigns a "real" IP address that is reachable from the host.
 
 The configuration steps are different for each network type:
-- [socket_vmnet](#socket_vmnet)
 - [vzNAT](#vzNAT)
+- [socket_vmnet](#socket_vmnet)
+
+### vzNAT
+
+| ⚡ Requirement | Lima >= 0.14, macOS >= 13.0 |
+|-------------------|-----------------------------|
+
+For [VZ](../vmtype/#vz) instances, the "vzNAT" network can be configured as follows:
+{{< tabpane text=true >}}
+{{% tab header="CLI" %}}
+```bash
+limactl start --vm-type=vz --network=vzNAT
+```
+{{% /tab %}}
+{{% tab header="YAML" %}}
+```yaml
+networks:
+- vzNAT: true
+```
+{{% /tab %}}
+{{< /tabpane >}}
+
+The range of the IP address is not specifiable.
+
+The "vzNAT" network does not need the `socket_vmnet` binary and the `sudoers` file.
 
 ### socket_vmnet
 #### Managed (192.168.105.0/24)
@@ -205,70 +272,3 @@ networks:
   # configured in socket_vmnet and not in lima.
   # - socket: "/var/run/socket_vmnet"
 ```
-
-### vzNAT
-
-| ⚡ Requirement | Lima >= 0.14, macOS >= 13.0 |
-|-------------------|-----------------------------|
-
-For [VZ](../vmtype/#vz) instances, the "vzNAT" network can be configured as follows:
-{{< tabpane text=true >}}
-{{% tab header="CLI" %}}
-```bash
-limactl start --vm-type=vz --network=vzNAT
-```
-{{% /tab %}}
-{{% tab header="YAML" %}}
-```yaml
-networks:
-- vzNAT: true
-```
-{{% /tab %}}
-{{< /tabpane >}}
-
-The range of the IP address is not specifiable.
-
-The "vzNAT" network does not need the `socket_vmnet` binary and the `sudoers` file.
-
-## Lima user-v2 network
-
-| ⚡ Requirement | Lima >= 0.16.0 |
-|-------------------|----------------|
-
-user-v2 network provides a user-mode networking similar to the [default user-mode network](#user-mode-network--1921685024-) and also provides support for `vm -> vm` communication.
-
-To enable this network mode, define a network with `mode: user-v2` in networks.yaml
-
-By default, the below network configuration is already applied (Since v0.18).
-
-```yaml
-...
-networks:
-  user-v2:
-    mode: user-v2
-    gateway: 192.168.104.1
-    netmask: 255.255.255.0
-...
-```
-
-Instances can then reference these networks from their `lima.yaml` file:
-
-{{< tabpane text=true >}}
-{{% tab header="CLI" %}}
-```bash
-limactl start --network=lima:user-v2
-```
-{{% /tab %}}
-{{% tab header="YAML" %}}
-```yaml
-networks:
-   - lima: user-v2
-```
-{{% /tab %}}
-{{< /tabpane >}}
-
-An instance's IP address is resolvable from another instance as `lima-<NAME>.internal.` (e.g., `lima-default.internal.`).
-
-_Note_
-
-- Enabling this network will disable the [default user-mode network](#user-mode-network--1921685024-)
