@@ -45,7 +45,7 @@ cpus: null
 # Memory size
 memory: null
 `
-	// Note: yq currently removes empty lines, but not comments
+	// Note: yamlfmt will fix removal of empty lines
 	expected := `
 # CPUs
 cpus: 2

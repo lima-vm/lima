@@ -8,8 +8,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/google/yamlfmt"
-	"github.com/google/yamlfmt/formatters/basic"
+	"github.com/lima-vm/lima/pkg/yamlutil"
+
 	"github.com/mikefarah/yq/v4/pkg/yqlib"
 	"github.com/sirupsen/logrus"
 	logging "gopkg.in/op/go-logging.v1"
@@ -42,16 +42,11 @@ func EvaluateExpression(expression string, content []byte) ([]byte, error) {
 		return content, nil
 	}
 	logrus.Debugf("Evaluating yq expression: %q", expression)
-	formatter, err := yamlfmtBasicFormatter()
+	formatter, err := yamlutil.NewFormatter()
 	if err != nil {
 		return nil, err
 	}
-	// `ApplyFeatures()` is being called directly before passing content to `yqlib`.
-	// This results in `ApplyFeatures()` being called twice with `FeatureApplyBefore`:
-	// once here and once inside `formatter.Format`.
-	// Currently, calling `ApplyFeatures()` with `FeatureApplyBefore` twice is not an issue,
-	// but future changes to `yamlfmt` might cause problems if it is called twice.
-	contentModified, err := formatter.Features.ApplyFeatures(content, yamlfmt.FeatureApplyBefore)
+	contentModified, err := formatter.Before(content)
 	if err != nil {
 		return nil, err
 	}
@@ -118,25 +113,4 @@ func Join(yqExprs []string) string {
 		return ""
 	}
 	return strings.Join(yqExprs, " | ")
-}
-
-func yamlfmtBasicFormatter() (*basic.BasicFormatter, error) {
-	factory := basic.BasicFormatterFactory{}
-	config := map[string]interface{}{
-		"indentless_arrays":         true,
-		"line_ending":               "lf", // prefer LF even on Windows
-		"pad_line_comments":         2,
-		"retain_line_breaks":        true,
-		"retain_line_breaks_single": false,
-	}
-
-	formatter, err := factory.NewFormatter(config)
-	if err != nil {
-		return nil, err
-	}
-	basicFormatter, ok := formatter.(*basic.BasicFormatter)
-	if !ok {
-		return nil, fmt.Errorf("unexpected formatter type: %T", formatter)
-	}
-	return basicFormatter, nil
 }
