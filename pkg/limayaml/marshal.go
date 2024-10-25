@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/goccy/go-yaml"
+	"github.com/lima-vm/lima/pkg/emrichenutil"
 	"github.com/lima-vm/lima/pkg/yqutil"
 	"github.com/sirupsen/logrus"
 )
@@ -45,6 +46,10 @@ func unmarshalDisk(dst *Disk, b []byte) error {
 }
 
 func Unmarshal(data []byte, v interface{}, comment string) error {
+	data, err := emrichenutil.EvaluateTemplate(data)
+	if err != nil {
+		return err
+	}
 	if err := yaml.UnmarshalWithOptions(data, v, yaml.DisallowDuplicateKey(), yaml.CustomUnmarshaler[Disk](unmarshalDisk)); err != nil {
 		return fmt.Errorf("failed to unmarshal YAML (%s): %w", comment, err)
 	}
