@@ -205,11 +205,11 @@ enable = false
     source="docsy"
     target="content/docs/Reference"
     language="en"
-  # Import examples README.md from examples folder
+  # Import templates README.md from templates folder
   [[module.imports]]
     path="../.."
   [[module.imports.mounts]]
-    source="examples"
-    target="static/examples"
+    source="templates"
+    target="static/templates"
     language="en"
     includeFiles = "README.md"

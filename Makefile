@@ -89,7 +89,6 @@ help-targets:
 	@echo  '- templates                 : Copy templates'
 	@echo  '- template_experimentals    : Copy experimental templates to experimental/'
 	@echo  '- default_template          : Copy default.yaml template'
-	@echo  '- create-examples-link      : Create a symlink at ../examples pointing to templates'
 	@echo
 	@echo  'Targets for files in _output/share/doc/lima:'
 	@echo  '- documentation             : Copy documentation to _output/share/doc/lima'
@@ -146,7 +145,7 @@ menuconfig: Kconfig
 ################################################################################
 .PHONY: binaries
 binaries: limactl helpers guestagents \
-	templates template_experimentals create-examples-link \
+	templates template_experimentals \
 	documentation create-links-in-doc-dir
 
 ################################################################################
@@ -313,8 +312,8 @@ MKDIR_TARGETS += _output/share/lima
 
 ################################################################################
 # _output/share/lima/templates
-TEMPLATES = $(addprefix _output/share/lima/templates/,$(filter-out experimental,$(notdir $(wildcard examples/*))))
-TEMPLATE_EXPERIMENTALS = $(addprefix _output/share/lima/templates/experimental/,$(notdir $(wildcard examples/experimental/*)))
+TEMPLATES = $(addprefix _output/share/lima/templates/,$(filter-out experimental,$(notdir $(wildcard templates/*))))
+TEMPLATE_EXPERIMENTALS = $(addprefix _output/share/lima/templates/experimental/,$(notdir $(wildcard templates/experimental/*)))
 
 .PHONY: default_template templates template_experimentals
 default_template: _output/share/lima/templates/default.yaml
@@ -325,27 +324,13 @@ $(TEMPLATES): | _output/share/lima/templates
 $(TEMPLATE_EXPERIMENTALS): | _output/share/lima/templates/experimental
 MKDIR_TARGETS += _output/share/lima/templates _output/share/lima/templates/experimental
 
-_output/share/lima/templates/%: examples/%
+_output/share/lima/templates/%: templates/%
 	cp -aL $< $@
 
 # returns "force" if GOOS==windows, or GOOS!=windows and the file $(1) is not a symlink.
 # $(1): target file
 # On Windows, always copy to ensure the target has the same file as the source.
 force_link = $(if $(filter windows,$(GOOS)),force,$(shell test ! -L $(1) && echo force))
-
-################################################################################
-# _output/share/lima/examples
-.PHONY: create-examples-link
-create-examples-link: _output/share/lima/examples
-_output/share/lima/examples: _output/share/lima/templates $$(call force_link,$$@)
-# remove the existing directory or symlink
-	rm -rf $@
-ifneq ($(GOOS),windows)
-	ln -sf templates $@
-else
-# copy from templates built in build process
-	cp -aL $< $@
-endif
 
 ################################################################################
 # _output/share/doc/lima
@@ -366,21 +351,12 @@ _output/share/doc/lima/%: % | _output/share/doc/lima
 MKDIR_TARGETS += _output/share/doc/lima
 
 .PHONY: create-links-in-doc-dir
-create-links-in-doc-dir: _output/share/doc/lima/templates _output/share/doc/lima/examples
+create-links-in-doc-dir: _output/share/doc/lima/templates
 _output/share/doc/lima/templates: _output/share/lima/templates $$(call force_link,$$@)
 # remove the existing directory or symlink
 	rm -rf $@
 ifneq ($(GOOS),windows)
 	ln -sf ../../lima/templates $@
-else
-# copy from templates built in build process
-	cp -aL $< $@
-endif
-_output/share/doc/lima/examples: _output/share/doc/lima/templates $$(call force_link,$$@)
-# remove the existing directory or symlink
-	rm -rf $@
-ifneq ($(GOOS),windows)
-	ln -sf templates $@
 else
 # copy from templates built in build process
 	cp -aL $< $@
@@ -424,12 +400,12 @@ endif
 ################################################################################
 schema-limayaml.json: _output/bin/limactl$(exe)
 ifeq ($(native_compiling),true)
-	$< generate-jsonschema --schemafile $@ examples/default.yaml
+	$< generate-jsonschema --schemafile $@ templates/default.yaml
 endif
 
 .PHONY: check-jsonschema
 check-jsonschema: schema-limayaml.json
-	check-jsonschema --schemafile $< examples/default.yaml
+	check-jsonschema --schemafile $< templates/default.yaml
 
 ################################################################################
 .PHONY: diagrams
@@ -523,8 +499,8 @@ artifact: $(addprefix $(ARTIFACT_PATH_COMMON),$(ARTIFACT_FILE_EXTENSIONS))
 
 ARTIFACT_DES =  _output/bin/limactl$(exe) $(LIMA_DEPS) $(HELPERS_DEPS) \
 	$(ALL_GUESTAGENTS) \
-	$(TEMPLATES) $(TEMPLATE_EXPERIMENTALS) _output/share/lima/examples \
-	$(DOCUMENTATION) _output/share/doc/lima/templates _output/share/doc/lima/examples \
+	$(TEMPLATES) $(TEMPLATE_EXPERIMENTALS) \
+	$(DOCUMENTATION) _output/share/doc/lima/templates \
 	_output/share/man/man1/limactl.1
 
 # file targets

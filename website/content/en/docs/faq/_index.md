@@ -58,7 +58,7 @@ Yes, it should work, but not regularly tested on ARM (due to lack of CI).
 #### "Can I run non-Ubuntu guests?"
 AlmaLinux, Alpine, Arch Linux, Debian, Fedora, openSUSE, Oracle Linux, and Rocky are also known to work.
 {{% fixlinks %}}
-See [`./examples/`](./examples/).
+See [`./templates/`](./templates/).
 {{% /fixlinks %}}
 
 An image has to satisfy the following requirements:
@@ -75,17 +75,17 @@ An image has to satisfy the following requirements:
 {{% fixlinks %}}
 Yes, any container engine should work with Lima.
 
-Container runtime examples:
-- [`./examples/docker.yaml`](./examples/docker.yaml): Docker
-- [`./examples/podman.yaml`](./examples/podman.yaml): Podman
-- [`./examples/apptainer.yaml`](./examples/apptainer.yaml): Apptainer
+Container runtime templates:
+- [`./templates/docker.yaml`](./templates/docker.yaml): Docker
+- [`./templates/podman.yaml`](./templates/podman.yaml): Podman
+- [`./templates/apptainer.yaml`](./templates/apptainer.yaml): Apptainer
 
-Container image builder examples:
-- [`./examples/buildkit.yaml`](./examples/buildkit.yaml): BuildKit
+Container image builder templates:
+- [`./templates/buildkit.yaml`](./templates/buildkit.yaml): BuildKit
 
-Container orchestrator examples:
-- [`./examples/k3s.yaml`](./examples/k3s.yaml): Kubernetes (k3s)
-- [`./examples/k8s.yaml`](./examples/k8s.yaml): Kubernetes (kubeadm)
+Container orchestrator templates:
+- [`./templates/k3s.yaml`](./templates/k3s.yaml): Kubernetes (k3s)
+- [`./templates/k8s.yaml`](./templates/k8s.yaml): Kubernetes (kubeadm)
 
 The default Ubuntu image also contains LXD. Run `lima sudo lxc init` to set up LXD.
 

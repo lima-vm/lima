@@ -109,7 +109,7 @@ jobs:
       run: sudo make install
     - name: Verify templates match `limactl edit` format
       run: |
-        find examples -name '*.yaml' -exec limactl edit --set 'del(.nothing)' {} \;
+        find templates -name '*.yaml' -exec limactl edit --set 'del(.nothing)' {} \;
         git diff-index --exit-code HEAD
     - name: Uninstall
       run: sudo make uninstall
