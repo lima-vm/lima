@@ -1,4 +1,4 @@
-# This template requires Lima v0.7.0 or later.
+minimumLimaVersion: "1.0.0"
 images:
 # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
 - location: "https://cloud-images.ubuntu.com/releases/24.04/release-20240821/ubuntu-24.04-server-cloudimg-amd64.img"
