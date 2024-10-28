@@ -5,27 +5,11 @@
 # Default values in this YAML file are specified by `null` instead of Lima's "builtin default" values,
 # so they can be overridden by the $LIMA_HOME/_config/default.yaml mechanism documented at the end of this file.
 
-# A template should specify the minimum Lima version required to parse this template correctly.
-# It should not be set if the minimum version is less than 1.0.0
-# 🟢 Builtin default: not set
-minimumLimaVersion: null
-
 # VM type: "qemu", "vz" (on macOS 13 and later), or "default".
 # The vmType can be specified only on creating the instance.
 # The vmType of existing instances cannot be changed.
 # 🟢 Builtin default: "vz" (on macOS 13.5 and later), "qemu" (on others)
 vmType: null
-
-vmOpts:
-  qemu:
-    # Minimum version of QEMU required to create an instance of this template.
-    # Will be ignored if the vmType is not "qemu"
-    # 🟢 Builtin default: not set
-    minimumVersion: null
-
-# OS: "Linux".
-# 🟢 Builtin default: "Linux"
-os: null
 
 # Arch: "default", "x86_64", "aarch64".
 # 🟢 Builtin default: "default" (corresponds to the host architecture)
@@ -135,6 +119,10 @@ mountType: null
 # 🟢 Builtin default: Disabled by default
 mountInotify: null
 
+# ===================================================================== #
+# ADVANCED CONFIGURATION
+# ===================================================================== #
+
 # Lima disks to attach to the instance. The disks will be accessible from inside the
 # instance, labeled by name. (e.g. if the disk is named "data", it will be labeled
 # "lima-data" inside the instance). The disk will be mounted inside the instance at
@@ -172,10 +160,6 @@ ssh:
   # Trust forwarded X11 clients
   # 🟢 Builtin default: false
   forwardX11Trusted: null
-
-# ===================================================================== #
-# ADVANCED CONFIGURATION
-# ===================================================================== #
 
 caCerts:
   # If set to `true`, this will remove all the default trusted CA certificates that
@@ -284,6 +268,22 @@ containerd:
 # ===================================================================== #
 # FURTHER ADVANCED CONFIGURATION
 # ===================================================================== #
+
+# A template should specify the minimum Lima version required to parse this template correctly.
+# It should not be set if the minimum version is less than 1.0.0
+# 🟢 Builtin default: not set
+minimumLimaVersion: null
+
+vmOpts:
+  qemu:
+    # Minimum version of QEMU required to create an instance of this template.
+    # Will be ignored if the vmType is not "qemu"
+    # 🟢 Builtin default: not set
+    minimumVersion: null
+
+# OS: "Linux".
+# 🟢 Builtin default: "Linux"
+os: null
 
 # Specify desired QEMU CPU type for each arch.
 # You can see what options are available for host emulation with: `qemu-system-$(arch) -cpu help`.
