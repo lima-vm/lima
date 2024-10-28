@@ -45,6 +45,16 @@ func SeemsYAMLPath(arg string) bool {
 	return strings.HasSuffix(lower, ".yml") || strings.HasSuffix(lower, ".yaml")
 }
 
+func InstNameFromTemplateName(templateName string) (string, error) {
+	s := filepath.Base(templateName)
+	s = strings.ReplaceAll(s, ".", "-")
+	if err := identifiers.Validate(s); err != nil {
+		return "", fmt.Errorf("instance name %q (from template name %qI is invalid: %w",
+			s, templateName, err)
+	}
+	return s, nil
+}
+
 func InstNameFromURL(urlStr string) (string, error) {
 	u, err := url.Parse(urlStr)
 	if err != nil {

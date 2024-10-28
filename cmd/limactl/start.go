@@ -149,7 +149,11 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 		}
 		if st.instName == "" {
 			// e.g., templateName = "deprecated/centos-7" , st.instName = "centos-7"
-			st.instName = filepath.Base(templateName)
+			// e.g., templateName = "ubuntu-24.10" , st.instName = "ubuntu-24-10"
+			st.instName, err = guessarg.InstNameFromTemplateName(templateName)
+			if err != nil {
+				return nil, err
+			}
 		}
 		st.yBytes, err = templatestore.Read(templateName)
 		if err != nil {
