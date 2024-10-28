@@ -2,12 +2,12 @@
 # Using the Alpine 3.20 aarch64 image with vmType=vz requires macOS Ventura 13.3 or later.
 
 images:
-- location: "https://github.com/lima-vm/alpine-lima/releases/download/v0.2.39/alpine-lima-std-3.20.0-x86_64.iso"
+- location: "https://github.com/lima-vm/alpine-lima/releases/download/v0.2.40/alpine-lima-std-3.20.3-x86_64.iso"
   arch: "x86_64"
-  digest: "sha512:df013ba0666460c9e303e996e46e061e613ce546124a9de60060041874c702444ac7a90e67f1aed4756b85cc89d40c5ea4375dea62c98b9536ceb44f18874b67"
-- location: "https://github.com/lima-vm/alpine-lima/releases/download/v0.2.39/alpine-lima-std-3.20.0-aarch64.iso"
+  digest: "sha512:f9049c94d4aa7528f779ea8f2e4afc6f6050bf68c286ba3f969742d3fd8159bbad3595929fb2157e3b1d9c971d1bd821ade46f3f530762af696f038948f517e8"
+- location: "https://github.com/lima-vm/alpine-lima/releases/download/v0.2.40/alpine-lima-std-3.20.3-aarch64.iso"
   arch: "aarch64"
-  digest: "sha512:7ff023e354bbf78eaf44f32a5417bec3ca2af853691e4c64ee4aa819674acd22720897ce9f23e3e959679a72e8300a31f5c6aa12be1c3d8ae7eff3c25b8b5e36"
+  digest: "sha512:ee1c789d03556771141168f7c41d07e77ea8bfd550428e791c4f72d50a5c1c8890138eae5cc8cb74360a9a9d45b50db4305542fe16755dae73281a9b5b2dfe2a"
 
 mounts:
 - location: "~"
@@ -15,7 +15,7 @@ mounts:
   writable: true
 
 # The built-in containerd installer does not support Alpine currently.
-# Hint: use the "rd" ISO instead of the "std" ISO to enable containerd: https://github.com/lima-vm/alpine-lima/releases/
+# Use a provisioning script to install containerd, buildkit, and nerdctl.
 containerd:
   system: false
   user: false
