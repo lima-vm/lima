@@ -146,7 +146,7 @@ func tunnelAction(cmd *cobra.Command, args []string) error {
 	default:
 		fmt.Fprintf(stdout, "Set `ALL_PROXY=socks5h://127.0.0.1:%d`, etc.\n", port)
 	}
-	fmt.Fprintf(stdout, "The instance can be connected from the host as <http://lima-%s.internal> via a web browser.\n", inst.Name)
+	fmt.Fprintf(stdout, "The instance can be connected from the host as <http://%s.internal> via a web browser.\n", inst.Hostname)
 
 	// TODO: show the port in `limactl list --json` ?
 	// TODO: add `--stop` flag to shut down the tunnel

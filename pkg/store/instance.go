@@ -18,6 +18,7 @@ import (
 
 	"github.com/docker/go-units"
 	hostagentclient "github.com/lima-vm/lima/pkg/hostagent/api/client"
+	"github.com/lima-vm/lima/pkg/identifierutil"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/store/filenames"
@@ -38,7 +39,9 @@ const (
 )
 
 type Instance struct {
-	Name            string             `json:"name"`
+	Name string `json:"name"`
+	// Hostname, not HostName (corresponds to SSH's naming convention)
+	Hostname        string             `json:"hostname"`
 	Status          Status             `json:"status"`
 	Dir             string             `json:"dir"`
 	VMType          limayaml.VMType    `json:"vmType"`
@@ -66,8 +69,10 @@ type Instance struct {
 // Other errors are returned as *Instance.Errors.
 func Inspect(instName string) (*Instance, error) {
 	inst := &Instance{
-		Name:   instName,
-		Status: StatusUnknown,
+		Name: instName,
+		// TODO: support customizing hostname
+		Hostname: identifierutil.HostnameFromInstName(instName),
+		Status:   StatusUnknown,
 	}
 	// InstanceDir validates the instName but does not check whether the instance exists
 	instDir, err := InstanceDir(instName)

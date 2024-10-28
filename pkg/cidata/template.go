@@ -56,6 +56,7 @@ type Disk struct {
 type TemplateArgs struct {
 	Debug                           bool
 	Name                            string // instance name
+	Hostname                        string // instance hostname
 	IID                             string // instance id
 	User                            string // user name
 	Home                            string // home directory
