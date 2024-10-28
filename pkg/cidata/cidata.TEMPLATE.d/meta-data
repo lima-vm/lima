@@ -1,2 +1,2 @@
 instance-id: {{.IID}}
-local-hostname: lima-{{.Name}}
+local-hostname: {{.Hostname}}

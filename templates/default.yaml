@@ -56,7 +56,7 @@ disk: null
 
 # Expose host directories to the guest, the mount point might be accessible from all UIDs in the guest
 # "location" can use these template variables: {{.Home}}, {{.Dir}}, {{.Name}}, {{.UID}}, {{.User}}, and {{.Param.Key}}.
-# "mountPoint" can use these template variables: {{.Home}}, {{.Name}}, {{.UID}}, {{.User}}, and {{.Param.Key}}
+# "mountPoint" can use these template variables: {{.Home}}, {{.Name}}, {{.Hostname}}, {{.UID}}, {{.User}}, and {{.Param.Key}}
 # 🟢 Builtin default: [] (Mount nothing)
 # 🔵 This file: Mount the home as read-only, /tmp/lima as writable
 mounts:
@@ -205,7 +205,7 @@ containerd:
 
 # Provisioning scripts need to be idempotent because they might be called
 # multiple times, e.g. when the host VM is being restarted.
-# The scripts can use the following template variables: {{.Home}}, {{.UID}}, {{.User}}, and {{.Param.Key}}
+# The scripts can use the following template variables: {{.Home}}, {{.Name}}, {{.Hostname}}, {{.UID}}, {{.User}}, and {{.Param.Key}}
 # 🟢 Builtin default: []
 # provision:
 # # `system` is executed with root privileges
@@ -248,7 +248,7 @@ containerd:
 
 # Probe scripts to check readiness.
 # The scripts run in user mode. They must start with a '#!' line.
-# The scripts can use the following template variables: {{.Home}}, {{.UID}}, {{.User}}, and {{.Param.Key}}
+# The scripts can use the following template variables: {{.Home}}, {{.Name}}, {{.Hostname}}, {{.UID}}, {{.User}}, and {{.Param.Key}}
 # 🟢 Builtin default: []
 # probes:
 # # Only `readiness` probes are supported right now.
@@ -407,7 +407,7 @@ networks:
 # - guestSocket: "/run/user/{{.UID}}/my.sock"
 #   hostSocket: mysocket
 # # default: reverse: false
-# # "guestSocket" can include these template variables: {{.Home}}, {{.UID}}, {{.User}}, and {{.Param.Key}}.
+# # "guestSocket" can include these template variables: {{.Home}}, {{.Name}}, {{.Hostname}}, {{.UID}}, {{.User}}, and {{.Param.Key}}.
 # # "hostSocket" can include {{.Home}}, {{.Dir}}, {{.Name}}, {{.UID}}, {{.User}}, and {{.Param.Key}}.
 # # "reverse" can only be used for unix sockets right now, not for tcp sockets.
 # # Put sockets into "{{.Dir}}/sock" to avoid collision with Lima internal sockets!
@@ -427,7 +427,7 @@ networks:
 # - guest: "/etc/myconfig.cfg"
 #   host: "{{.Dir}}/copied-from-guest/myconfig"
 # # deleteOnStop: false
-# # "guest" can include these template variables: {{.Home}}, {{.UID}}, {{.User}}, and {{.Param.Key}}.
+# # "guest" can include these template variables: {{.Home}}, {{.Name}}, {{.Hostname}}, {{.UID}}, {{.User}}, and {{.Param.Key}}.
 # # "host" can include {{.Home}}, {{.Dir}}, {{.Name}}, {{.UID}}, {{.User}}, and {{.Param.Key}}.
 # # "deleteOnStop" will delete the file from the host when the instance is stopped.
 

@@ -56,7 +56,8 @@ func InstNameFromURL(urlStr string) (string, error) {
 func InstNameFromYAMLPath(yamlPath string) (string, error) {
 	s := strings.ToLower(filepath.Base(yamlPath))
 	s = strings.TrimSuffix(strings.TrimSuffix(s, ".yml"), ".yaml")
-	s = strings.ReplaceAll(s, ".", "-")
+	// "." is allowed in instance names, but replaced to "-" for hostnames.
+	// e.g., yaml: "ubuntu-24.04.yaml" , instance name: "ubuntu-24.04", hostname: "lima-ubuntu-24-04"
 	if err := identifiers.Validate(s); err != nil {
 		return "", fmt.Errorf("filename %q is invalid: %w", yamlPath, err)
 	}

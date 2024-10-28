@@ -22,6 +22,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/cpu"
 
+	"github.com/lima-vm/lima/pkg/identifierutil"
 	"github.com/lima-vm/lima/pkg/networks"
 	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/ptr"
@@ -814,12 +815,14 @@ func executeGuestTemplate(format, instDir string, param map[string]string) (byte
 	tmpl, err := template.New("").Parse(format)
 	if err == nil {
 		user, _ := osutil.LimaUser(false)
+		name := filepath.Base(instDir)
 		data := map[string]interface{}{
-			"Home":  fmt.Sprintf("/home/%s.linux", user.Username),
-			"Name":  filepath.Base(instDir),
-			"UID":   user.Uid,
-			"User":  user.Username,
-			"Param": param,
+			"Home":     fmt.Sprintf("/home/%s.linux", user.Username),
+			"Name":     name,
+			"Hostname": identifierutil.HostnameFromInstName(name), // TODO: support customization
+			"UID":      user.Uid,
+			"User":     user.Username,
+			"Param":    param,
 		}
 		var out bytes.Buffer
 		if err := tmpl.Execute(&out, data); err == nil {
@@ -836,9 +839,10 @@ func executeHostTemplate(format, instDir string, param map[string]string) (bytes
 		home, _ := os.UserHomeDir()
 		limaHome, _ := dirnames.LimaDir()
 		data := map[string]interface{}{
-			"Dir":   instDir,
-			"Home":  home,
-			"Name":  filepath.Base(instDir),
+			"Dir":  instDir,
+			"Home": home,
+			"Name": filepath.Base(instDir),
+			// TODO: add hostname fields for the host and the guest
 			"UID":   user.Uid,
 			"User":  user.Username,
 			"Param": param,

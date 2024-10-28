@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 	"strings"
+
+	"github.com/lima-vm/lima/pkg/identifierutil"
 )
 
 // FormatT specifies the format type.
@@ -57,7 +59,7 @@ func quoteOption(o string) string {
 
 // Format formats the ssh options.
 func Format(w io.Writer, instName string, format FormatT, opts []string) error {
-	fakeHostname := "lima-" + instName // corresponds to the default guest hostname
+	fakeHostname := identifierutil.HostnameFromInstName(instName) // TODO: support customization
 	switch format {
 	case FormatCmd:
 		args := []string{"ssh"}
