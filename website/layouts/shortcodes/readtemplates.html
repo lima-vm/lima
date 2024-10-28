@@ -1,6 +1,6 @@
 {{ $gh_repo := (.Site.Params.github_repo) -}}
 {{ $gh_docs := (printf "%s/tree/%s/docs/" $gh_repo $.Site.Params.version) -}}
-{{ $gh_examples := (printf "%s/tree/%s/examples/" $gh_repo $.Site.Params.version) -}}
+{{ $gh_templates := (printf "%s/tree/%s/templates/" $gh_repo $.Site.Params.version) -}}
 
 {{/* Store ordinal, to be retrieved by parent element */}}
 {{ if ge hugo.Version "0.93.0" }}
@@ -39,7 +39,7 @@ safeHTML ) (.Get "lang") "" -}}
 {{ else }}
 {{ $file_content := ($.Scratch.Get "filepath" | os.ReadFile) }}
 {{ $file_content = replace $file_content "../docs/" $gh_docs }}
-{{- replace $file_content "./" $gh_examples -}}
+{{- replace $file_content "./" $gh_templates -}}
 {{ end }}
 {{ else if eq (.Get "draft") "true" }}
 

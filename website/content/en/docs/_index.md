@@ -11,7 +11,7 @@ Lima launches Linux virtual machines with automatic file sharing and port forwar
 
 ✅ Automatic port forwarding
 
-✅ Built-in support for [containerd](https://containerd.io) ([Other container engines can be used too](./examples))
+✅ Built-in support for [containerd](https://containerd.io) ([Other container engines can be used too](./templates))
 
 ✅ Intel on Intel
 
@@ -21,7 +21,7 @@ Lima launches Linux virtual machines with automatic file sharing and port forwar
 
 ✅ [Intel on ARM](./docs/multi-arch.md)
 
-✅ Various guest Linux distributions: [AlmaLinux](./examples/almalinux.yaml), [Alpine](./examples/alpine.yaml), [Arch Linux](./examples/archlinux.yaml), [Debian](./examples/debian.yaml), [Fedora](./examples/fedora.yaml), [openSUSE](./examples/opensuse.yaml), [Oracle Linux](./examples/oraclelinux.yaml), [Rocky](./examples/rocky.yaml), [Ubuntu](./examples/ubuntu.yaml) (default), ...
+✅ Various guest Linux distributions: [AlmaLinux](./templates/almalinux.yaml), [Alpine](./templates/alpine.yaml), [Arch Linux](./templates/archlinux.yaml), [Debian](./templates/debian.yaml), [Fedora](./templates/fedora.yaml), [openSUSE](./templates/opensuse.yaml), [Oracle Linux](./templates/oraclelinux.yaml), [Rocky](./templates/rocky.yaml), [Ubuntu](./templates/ubuntu.yaml) (default), ...
 
 Related project: [sshocker (ssh with file sharing and port forwarding)](https://github.com/lima-vm/sshocker)
 
