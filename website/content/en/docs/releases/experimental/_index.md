@@ -17,6 +17,7 @@ The following features are experimental and subject to change:
 The following commands are experimental and subject to change:
 
 - `limactl snapshot *`
+- `limactl tunnel`
 
 ## Graduated
 
