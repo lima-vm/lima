@@ -124,8 +124,8 @@ function alpine_latest_image_entry_for_url_spec() {
 }
 
 function alpine_cache_key_for_image_kernel() {
-	local location=$1 overriding=${3:-"{}"} url_spec
-	url_spec=$(alpine_url_spec_from_location "${location}" | jq -r ". + ${overriding}")
+	local location=$1 url_spec
+	url_spec=$(alpine_url_spec_from_location "${location}")
 	jq -r '["alpine", .path_version, .target_vendor, .arch, .file_extension] | join(":")' <<<"${url_spec}"
 }
 
@@ -240,7 +240,7 @@ for template in "${templates[@]}"; do
 		set +e # Disable 'set -e' to avoid exiting on error for the next assignment.
 		cache_key=$(
 			set -e # Enable 'set -e' for the next command.
-			alpine_cache_key_for_image_kernel "${location}" "${kernel_location}" "${overriding}"
+			alpine_cache_key_for_image_kernel "${location}" "${kernel_location}"
 		) # Check exit status separately to prevent disabling 'set -e' by using the function call in the condition.
 		# shellcheck disable=2181
 		[[ $? -eq 0 ]] || continue
