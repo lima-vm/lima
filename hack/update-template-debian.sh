@@ -285,8 +285,8 @@ function debian_location_from_url_spec() {
 # debian_release_24.04-server-amd64-.img
 # ```
 function debian_cache_key_for_image_kernel_overriding() {
-	local location=$1 kernel_location=${2:-null} overriding=${3:-"{}"} url_spec with_kernel='' version backports arch daily timestamped file_extension
-	url_spec=$(debian_url_spec_from_location "${location}" | jq -r ". + ${overriding}")
+	local location=$1 kernel_location=${2:-null} url_spec with_kernel='' version backports arch daily timestamped file_extension
+	url_spec=$(debian_url_spec_from_location "${location}")
 	[[ ${kernel_location} != "null" ]] && with_kernel=_with_kernel
 	version=$(jq -r '.version|if . then "-\(.)" else empty end' <<<"${url_spec}")
 	backports=$(jq -r 'if .backports then "-backports" else empty end' <<<"${url_spec}")
@@ -407,7 +407,7 @@ for template in "${templates[@]}"; do
 		set +e # Disable 'set -e' to avoid exiting on error for the next assignment.
 		cache_key=$(
 			set -e # Enable 'set -e' for the next command.
-			debian_cache_key_for_image_kernel_overriding "${location}" "${kernel_location}" "${overriding}"
+			debian_cache_key_for_image_kernel_overriding "${location}" "${kernel_location}"
 		) # Check exit status separately to prevent disabling 'set -e' by using the function call in the condition.
 		# shellcheck disable=2181
 		[[ $? -eq 0 ]] || continue

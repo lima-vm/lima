@@ -261,7 +261,7 @@ for template in "${templates[@]}"; do
 		set +e # Disable 'set -e' to avoid exiting on error for the next assignment.
 		cache_key=$(
 			set -e # Enable 'set -e' for the next command.
-			archlinux_cache_key_for_image_kernel "${location}" "${kernel_location}" "${overriding}"
+			archlinux_cache_key_for_image_kernel "${location}" "${kernel_location}"
 		) # Check exit status separately to prevent disabling 'set -e' by using the function call in the condition.
 		# shellcheck disable=2181
 		[[ $? -eq 0 ]] || continue
