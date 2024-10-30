@@ -243,8 +243,7 @@ jobs:
         - alpine.yaml
         - debian.yaml  # reverse-sshfs
         - fedora.yaml
-        # cloud-init 24.3.1-1 package has a regression: https://github.com/lima-vm/lima/issues/2714
-        # - archlinux.yaml
+        - archlinux.yaml
         - opensuse.yaml
         - docker.yaml
         - ../hack/test-templates/alpine-iso-9p-writable.yaml  # Covers alpine-iso.yaml
@@ -278,15 +277,6 @@ jobs:
       if: matrix.template == '../hack/test-templates/test-misc.yaml'
     - name: "Show cache"
       run: ./hack/debug-cache.sh
-    - name: "Adjust LIMACTL_CREATE_ARGS"
-      # Change the mount type from 9p to reverse-sshfs, as a workaround for:
-      #
-      # > level=fatal msg="failed to get unprivileged mount flags for \"/home/runner/lima-container-engine-test-tmp/random\": stat /home/runner/lima-container-engine-test-tmp/random: no such file or directory"
-      #
-      # The issue is not reproducible on a local MacBook.
-      # https://github.com/lima-vm/lima/issues/2701
-      run: echo "LIMACTL_CREATE_ARGS=${LIMACTL_CREATE_ARGS} --mount-type=reverse-sshfs" >>$GITHUB_ENV
-      if: matrix.template == 'archlinux.yaml'
     - name: "Test"
       uses: nick-fields/retry@7152eba30c6575329ac0576536151aca5a72780e  # v3.0.0
       with:
