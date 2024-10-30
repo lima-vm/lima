@@ -14,7 +14,7 @@ function alpine_print_help() {
 $(basename "${BASH_SOURCE[0]}"): Update the Alpine Linux image location in the specified templates
 
 Usage:
-  $(basename "${BASH_SOURCE[0]}") [--version-major-minor (<major>.<minor>|latest-stable)] <template.yaml>...
+  $(basename "${BASH_SOURCE[0]}") [--version-major-minor (<major>.<minor>|latest-stable)|--version-major <major> --version-minor <minor>] <template.yaml>...
 
 Description:
   This script updates the Alpine Linux image location in the specified templates.
@@ -41,6 +41,7 @@ Examples:
 Flags:
   --version-major-minor (<major>.<minor>|latest-stable)  Use the specified <major>.<minor> version or alias "latest-stable".
                                                          The <major>.<minor> version must be 3.18 or later.
+  --version-major <major> --version-minor <minor>        Use the specified <major> and <minor> version.
   -h, --help                                             Print this help message
 HELP
 }
@@ -169,7 +170,8 @@ else
 fi
 
 declare -a templates=()
-declare overriding='{"path_version":"latest-stable"}'
+declare overriding='{}'
+declare version_major='' version_minor=''
 while [[ $# -gt 0 ]]; do
 	case "$1" in
 	-h | --help)
@@ -198,9 +200,32 @@ while [[ $# -gt 0 ]]; do
 			else
 				error_exit "--version-major-minor requires a value in the format <major>.<minor> or latest-stable"
 			fi
-			# shellcheck disable=2034
 			json_vars path_version <<<"${overriding}"
 		)
+		;;
+	--version-major)
+		if [[ -n ${2:-} && $2 != -* ]]; then
+			version_major="$2"
+			shift
+		else
+			error_exit "--version-major requires a value"
+		fi
+		;&
+	--version-major=*)
+		version_major=${version_major:-${1#*=}}
+		[[ ${version_major} =~ ^[0-9]+$ ]] || error_exit "Please specify --version-major in numbers"
+		;;
+	--version-minor)
+		if [[ -n ${2:-} && $2 != -* ]]; then
+			version_minor="$2"
+			shift
+		else
+			error_exit "--version-minor requires a value"
+		fi
+		;&
+	--version-minor=*)
+		version_minor=${version_minor:-${1#*=}}
+		[[ ${version_minor} =~ ^[0-9]+$ ]] || error_exit "Please specify --version-minor in numbers"
 		;;
 	*.yaml) templates+=("$1") ;;
 	*)
@@ -210,6 +235,22 @@ while [[ $# -gt 0 ]]; do
 	shift
 	[[ -z ${overriding} ]] && overriding="{}"
 done
+
+if ! jq -e '.path_version' <<<"${overriding}" >/dev/null; then # --version-major-minor is not specified
+	if [[ -n ${version_major} && -n ${version_minor} ]]; then
+		[[ ${version_major} -gt 3 || (${version_major} -eq 3 && ${version_minor} -ge 18) ]] || error_exit "Alpine Linux version must be 3.18 or later"
+		# shellcheck disable=2034
+		path_version="v${version_major}.${version_minor}"
+		overriding=$(json_vars path_version <<<"${overriding}")
+	elif [[ -n ${version_major} ]]; then
+		error_exit "--version-minor is required when --version-major is specified"
+	elif [[ -n ${version_minor} ]]; then
+		error_exit "--version-major is required when --version-minor is specified"
+	fi
+elif [[ -n ${version_major} || -n ${version_minor} ]]; then # --version-major-minor is specified
+	echo "Ignoring --version-major and --version-minor because --version-major-minor is specified" >&2
+fi
+[[ ${overriding} == "{}" ]] && overriding='{"path_version":"latest-stable"}'
 
 if [[ ${#templates[@]} -eq 0 ]]; then
 	alpine_print_help
