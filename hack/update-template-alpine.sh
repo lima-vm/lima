@@ -14,7 +14,7 @@ function alpine_print_help() {
 $(basename "${BASH_SOURCE[0]}"): Update the Alpine Linux image location in the specified templates
 
 Usage:
-  $(basename "${BASH_SOURCE[0]}") [--version-major-minor <major>.<minor>] <template.yaml>...
+  $(basename "${BASH_SOURCE[0]}") [--version-major-minor (<major>.<minor>|latest-stable)] <template.yaml>...
 
 Description:
   This script updates the Alpine Linux image location in the specified templates.
@@ -39,9 +39,9 @@ Examples:
   $ limactl factory-reset alpine
 
 Flags:
-  --version-major-minor <major>.<minor>  Use the specified <major>.<minor> version.
-                                         The version must be 3.18 or later.
-  -h, --help                             Print this help message
+  --version-major-minor (<major>.<minor>|latest-stable)  Use the specified <major>.<minor> version or alias "latest-stable".
+                                                         The <major>.<minor> version must be 3.18 or later.
+  -h, --help                                             Print this help message
 HELP
 }
 
@@ -178,30 +178,27 @@ while [[ $# -gt 0 ]]; do
 		;;
 	-d | --debug) set -x ;;
 	--version-major-minor)
-		if [[ -n $2 && $2 != -* ]]; then
-			overriding=$(
-				version="${2#v}"
-				[[ ${version} == "latest-stable" ]] && exit
-				version="$(echo "${version}" | cut -d. -f1-2)"
-				[[ ${version%%.*} -gt 3 || (${version%%.*} -eq 3 && ${version#*.} -ge 18) ]] || error_exit "Alpine Linux version must be 3.18 or later"
-				# shellcheck disable=2034
-				path_version="v${version}"
-				json_vars path_version <<<"${overriding}"
-			)
+		if [[ -n ${2:-} && $2 != -* ]]; then
+			version="$2"
 			shift
 		else
-			error_exit "--version requires a value"
+			error_exit "--version-major-minor requires a value"
 		fi
-		;;
+		;&
 	--version-major-minor=*)
+		version=${version:-${1#*=}}
 		overriding=$(
-			version="${1#*=}"
 			version="${version#v}"
-			[[ ${version} == "latest-stable" ]] && exit
-			version="$(echo "${version}" | cut -d. -f1-2)"
-			[[ ${version%%.*} -gt 3 || (${version%%.*} -eq 3 && ${version#*.} -ge 18) ]] || error_exit "Alpine Linux version must be 3.18 or later"
+			if [[ ${version} =~ ^v?[0-9]+.[0-9]+ ]]; then
+				version="$(echo "${version}" | cut -d. -f1-2)"
+				[[ ${version%%.*} -gt 3 || (${version%%.*} -eq 3 && ${version#*.} -ge 18) ]] || error_exit "Alpine Linux version must be 3.18 or later"
+				path_version="v${version}"
+			elif [[ ${version} == "latest-stable" ]]; then
+				path_version="latest-stable"
+			else
+				error_exit "--version-major-minor requires a value in the format <major>.<minor> or latest-stable"
+			fi
 			# shellcheck disable=2034
-			path_version="v${version}"
 			json_vars path_version <<<"${overriding}"
 		)
 		;;
