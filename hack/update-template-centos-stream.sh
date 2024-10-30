@@ -20,7 +20,7 @@ Description:
   This script updates the CentOS Stream image location in the specified templates.
   If the image location in the template contains a release date in the URL, the script replaces it with the latest available date.
 
-  Image location basename format: CentOS[Stream-GenericCloud-<version>-[latest|<date>.0].<arch>.qcow2
+  Image location basename format: CentOS-Stream-GenericCloud-<version>-[latest|<date>.0].<arch>.qcow2
 
   Published CentOS Stream image information is fetched from the following URLs:
 
@@ -121,8 +121,8 @@ function centos_latest_image_entry_for_url_spec() {
 }
 
 function centos_cache_key_for_image_kernel() {
-	local location=$1 overriding=${3:-"{}"} url_spec
-	url_spec=$(centos_url_spec_from_location "${location}" | jq -r ". + ${overriding}")
+	local location=$1 url_spec
+	url_spec=$(centos_url_spec_from_location "${location}")
 	jq -r '["centos", .version, .target_vendor,
 		if .date_and_ci_job_id then "timestamped" else "latest" end,
 		.arch, .file_extension] | join(":")' <<<"${url_spec}"
@@ -241,7 +241,7 @@ for template in "${templates[@]}"; do
 		set +e # Disable 'set -e' to avoid exiting on error for the next assignment.
 		cache_key=$(
 			set -e # Enable 'set -e' for the next command.
-			centos_cache_key_for_image_kernel "${location}" "${kernel_location}" "${overriding}"
+			centos_cache_key_for_image_kernel "${location}" "${kernel_location}"
 		) # Check exit status separately to prevent disabling 'set -e' by using the function call in the condition.
 		# shellcheck disable=2181
 		[[ $? -eq 0 ]] || continue

@@ -130,8 +130,8 @@ function almalinux_latest_image_entry_for_url_spec() {
 }
 
 function almalinux_cache_key_for_image_kernel() {
-	local location=$1 overriding=${3:-"{}"} url_spec
-	url_spec=$(almalinux_url_spec_from_location "${location}" | jq -r ". + ${overriding}")
+	local location=$1 url_spec
+	url_spec=$(almalinux_url_spec_from_location "${location}")
 	jq -r '["almalinux", .major_minor_version // .major_version, .target_vendor,
 		if .date then "timestamped" else "latest" end,
 		.arch, .file_extension] | join(":")' <<<"${url_spec}"
@@ -254,7 +254,7 @@ for template in "${templates[@]}"; do
 		set +e # Disable 'set -e' to avoid exiting on error for the next assignment.
 		cache_key=$(
 			set -e # Enable 'set -e' for the next command.
-			almalinux_cache_key_for_image_kernel "${location}" "${kernel_location}" "${overriding}"
+			almalinux_cache_key_for_image_kernel "${location}" "${kernel_location}"
 		) # Check exit status separately to prevent disabling 'set -e' by using the function call in the condition.
 		# shellcheck disable=2181
 		[[ $? -eq 0 ]] || continue

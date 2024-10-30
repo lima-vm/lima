@@ -156,6 +156,8 @@ if [[ ${BASH_SOURCE[0]} == "${0}" ]]; then
 	. "${scriptdir}/update-template-almalinux.sh"
 	# shellcheck source=./update-template-rocky.sh
 	. "${scriptdir}/update-template-rocky.sh"
+	# shellcheck source=./update-template-oraclelinux.sh
+	. "${scriptdir}/update-template-oraclelinux.sh"
 else
 	# this script is sourced
 	return 0

@@ -302,8 +302,8 @@ function ubuntu_cache_key_for_image_kernel_flavor_version() {
 	local location=$1 kernel_location=${2:-null} url_spec with_kernel='' flavor version arch path_suffix
 	url_spec=$(ubuntu_location_url_spec "${location}")
 	[[ ${kernel_location} != "null" ]] && with_kernel=_with_kernel
-	flavor=${3:-$(ubuntu_flavor_from_location_basename "${location}")}
-	version=${4:-$(ubuntu_version_from_location_basename "${location}")}
+	flavor=$(ubuntu_flavor_from_location_basename "${location}")
+	version=$(ubuntu_version_from_location_basename "${location}")
 	arch=$(ubuntu_arch_from_location_basename "${location}")
 	path_suffix=$(ubuntu_path_suffix_from_location_basename "${location}")
 	echo "ubuntu_${url_spec}${with_kernel}_${version}-${flavor}-${arch}-${path_suffix}"
@@ -425,7 +425,7 @@ for template in "${templates[@]}"; do
 		[[ $? -eq 0 ]] || continue
 		cache_key=$(
 			set -e # Enable 'set -e' for the next command.
-			ubuntu_cache_key_for_image_kernel_flavor_version "${location}" "${kernel_location}" "${overriding_flavor}" "${overriding_version}"
+			ubuntu_cache_key_for_image_kernel_flavor_version "${location}" "${kernel_location}"
 		) # Check exit status separately to prevent disabling 'set -e' by using the function call in the condition.
 		# shellcheck disable=2181
 		[[ $? -eq 0 ]] || continue
