@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -24,7 +25,7 @@ type Protocol string
 const (
 	// UDP/SCTP when lima port forwarding works on those protocols.
 
-	TCP Protocol = "TCP"
+	TCP Protocol = "tcp"
 )
 
 type Entry struct {
@@ -142,7 +143,7 @@ func (s *ServiceWatcher) GetPorts() []Entry {
 			}
 
 			entries = append(entries, Entry{
-				Protocol: Protocol(portEntry.Protocol),
+				Protocol: Protocol(strings.ToLower(string(portEntry.Protocol))),
 				IP:       net.ParseIP("0.0.0.0"),
 				Port:     uint16(port),
 			})
