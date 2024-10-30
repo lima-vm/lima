@@ -14,13 +14,13 @@ function oraclelinux_print_help() {
 $(basename "${BASH_SOURCE[0]}"): Update the Oracle Linux image location in the specified templates
 
 Usage:
-  $(basename "${BASH_SOURCE[0]}") [--version <version>] <template.yaml>...
+  $(basename "${BASH_SOURCE[0]}") [--version-major <major version>] <template.yaml>...
 
 Description:
   This script updates the Oracle Linux image location in the specified templates.
   Image location basename format:
 
-	OL<version>U<release>_<arch>-kvm[-cloud]-b<build number>.qcow2
+	OL<major version>U<minor version>_<arch>-kvm[-cloud]-b<build number>.qcow2
 
   Published Oracle Linux image information is fetched from the following URLs:
 
@@ -38,14 +38,14 @@ Examples:
   Update the Oracle Linux image location in templates/**.yaml:
   $ $(basename "${BASH_SOURCE[0]}") templates/**.yaml
 
-  Update the Oracle Linux image location to version 9 in ~/.lima/oraclelinux/lima.yaml:
-  $ $(basename "${BASH_SOURCE[0]}") --version 9 ~/.lima/oraclelinux/lima.yaml
+  Update the Oracle Linux image location to major version 9 in ~/.lima/oraclelinux/lima.yaml:
+  $ $(basename "${BASH_SOURCE[0]}") --version-major 9 ~/.lima/oraclelinux/lima.yaml
   $ limactl factory-reset oraclelinux
 
 Flags:
-  --version <version>  Use the specified Oracle Linux <version>.
-                       The version must be 7+ for x86_64 or 8+ for aarch64.
-  -h, --help           Print this help message
+  --version-major <major version>  Use the specified Oracle Linux <major version>.
+                                   The major version must be 7+ for x86_64 or 8+ for aarch64.
+  -h, --help                       Print this help message
 HELP
 }
 
@@ -53,8 +53,8 @@ HELP
 function oraclelinux_url_spec_from_location() {
 	local location=$1 jq_filter url_spec
 	jq_filter='capture("
-		^https://yum\\.oracle\\.com/templates/OracleLinux/OL(?<path_version>\\d+)/u(?<path_release>\\d+)/(?<path_arch>[^/]+)/
-		OL(?<version>\\d+)U(?<release>\\d+)_(?<arch>[^-]+)-(?<type>[^-]+)(?<cloud>-cloud)?-b(?<build_number>\\d+)\\.(?<file_extension>.*)$
+		^https://yum\\.oracle\\.com/templates/OracleLinux/OL(?<path_major_version>\\d+)/u(?<path_minor_version>\\d+)/(?<path_arch>[^/]+)/
+		OL(?<major_version>\\d+)U(?<minor_version>\\d+)_(?<arch>[^-]+)-(?<type>[^-]+)(?<cloud>-cloud)?-b(?<build_number>\\d+)\\.(?<file_extension>.*)$
 	";"x")
 	'
 	url_spec=$(jq -e -r "${jq_filter}" <<<"\"${location}\"")
@@ -63,7 +63,7 @@ function oraclelinux_url_spec_from_location() {
 
 readonly oraclelinux_jq_filter_json_url='
 	"https://yum.oracle.com/templates/OracleLinux/" +
-	"ol\(.path_version)\(if .path_arch != "x86_64" then "_" + .path_arch else "" end)\(.cloud // "")-template.json"
+	"ol\(.path_major_version)\(if .path_arch != "x86_64" then "_" + .path_arch else "" end)\(.cloud // "")-template.json"
 '
 
 function oraclelinux_json_url_from_url_spec() {
@@ -95,7 +95,7 @@ function oraclelinux_latest_image_entry_for_url_spec() {
 function oraclelinux_cache_key_for_image_kernel() {
 	local location=$1 overriding=${3:-"{}"} url_spec
 	url_spec=$(oraclelinux_url_spec_from_location "${location}" | jq -r ". + ${overriding}")
-	jq -r '["oraclelinux", .path_version, .type, .cloud // empty, .arch, .file_extension] | join(":")' <<<"${url_spec}"
+	jq -r '["oraclelinux", .path_major_version, .type, .cloud // empty, .arch, .file_extension] | join(":")' <<<"${url_spec}"
 }
 
 function oraclelinux_image_entry_for_image_kernel() {
@@ -141,27 +141,27 @@ while [[ $# -gt 0 ]]; do
 		exit 0
 		;;
 	-d | --debug) set -x ;;
-	--version)
+	--version-major)
 		if [[ -n $2 && $2 != -* ]]; then
 			overriding=$(
-				path_version="${2}"
-				[[ ${path_version} =~ ^[0-9]+$ ]] || error_exit "Oracle Linux version must be a number"
-				[[ ${path_version} -eq 7 ]] && echo 'Oracle Linux version 7 exists only for x86_64. It may fail for aarch64.' >&2
-				[[ ${path_version} -gt 7 ]] || error_exit "Oracle Linux version must be 7+ for x86_64 or 8+ for aarch64"
-				json_vars path_version <<<"${overriding}"
+				path_major_version="${2}"
+				[[ ${path_major_version} =~ ^[0-9]+$ ]] || error_exit "Oracle Linux major version must be a number"
+				[[ ${path_major_version} -eq 7 ]] && echo 'Oracle Linux major version 7 exists only for x86_64. It may fail for aarch64.' >&2
+				[[ ${path_major_version} -gt 7 ]] || error_exit "Oracle Linux major version must be 7+ for x86_64 or 8+ for aarch64"
+				json_vars path_major_version <<<"${overriding}"
 			)
 			shift
 		else
-			error_exit "--version requires a value"
+			error_exit "--version-major requires a value"
 		fi
 		;;
-	--version=*)
+	--version-major=*)
 		overriding=$(
-			path_version="${1#*=}"
-			[[ ${path_version} =~ ^[0-9]+$ ]] || error_exit "Oracle Linux version must be a number"
-			[[ ${path_version} -eq 7 ]] && echo 'Oracle Linux version 7 exists only for x86_64. It may fail for aarch64.' >&2
-			[[ ${path_version} -gt 7 ]] || error_exit "Oracle Linux version must be 7+ for x86_64 or 8+ for aarch64"
-			json_vars path_version <<<"${overriding}"
+			path_major_version="${1#*=}"
+			[[ ${path_major_version} =~ ^[0-9]+$ ]] || error_exit "Oracle Linux major version must be a number"
+			[[ ${path_major_version} -eq 7 ]] && echo 'Oracle Linux major version 7 exists only for x86_64. It may fail for aarch64.' >&2
+			[[ ${path_major_version} -gt 7 ]] || error_exit "Oracle Linux major version must be 7+ for x86_64 or 8+ for aarch64"
+			json_vars path_major_version <<<"${overriding}"
 		)
 		;;
 	*.yaml) templates+=("$1") ;;
