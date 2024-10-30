@@ -1,6 +1,7 @@
 package timesync
 
 import (
+	"errors"
 	"os"
 	"time"
 
@@ -8,6 +9,11 @@ import (
 )
 
 const rtc = "/dev/rtc"
+
+func HasRTC() (bool, error) {
+	_, err := os.Stat(rtc)
+	return !errors.Is(err, os.ErrNotExist), err
+}
 
 func GetRTCTime() (t time.Time, err error) {
 	f, err := os.Open(rtc)
