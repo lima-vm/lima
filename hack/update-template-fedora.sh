@@ -152,7 +152,7 @@ function fedora_cache_key_for_image_kernel() {
 }
 
 function fedora_image_entry_for_image_kernel() {
-	local location=$1 kernel_is_not_supported=$2 overriding=${3:-"{}"} url_spec image_entry=''
+	local location=$1 kernel_is_not_supported=$2 overriding=${3:-'{"path_version":"releases/\\d+"}'} url_spec image_entry=''
 	[[ ${kernel_is_not_supported} == "null" ]] || echo "Updating kernel information is not supported on Fedora Linux" >&2
 	url_spec=$(fedora_url_spec_from_location "${location}" | jq -r ". + ${overriding}")
 	image_entry=$(fedora_latest_image_entry_for_url_spec "${url_spec}")
@@ -186,7 +186,7 @@ else
 fi
 
 declare -a templates=()
-declare overriding='{"path_version":"releases/\\d+"}'
+declare overriding='{}'
 while [[ $# -gt 0 ]]; do
 	case "$1" in
 	-h | --help)
