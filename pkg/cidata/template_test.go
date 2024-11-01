@@ -12,10 +12,11 @@ var defaultRemoveDefaults = false
 
 func TestConfig(t *testing.T) {
 	args := &TemplateArgs{
-		Name: "default",
-		User: "foo",
-		UID:  501,
-		Home: "/home/foo.linux",
+		Name:  "default",
+		User:  "foo",
+		UID:   501,
+		GECOS: "Foo",
+		Home:  "/home/foo.linux",
 		SSHPubKeys: []string{
 			"ssh-rsa dummy foo@example.com",
 		},
@@ -29,10 +30,11 @@ func TestConfig(t *testing.T) {
 
 func TestConfigCACerts(t *testing.T) {
 	args := &TemplateArgs{
-		Name: "default",
-		User: "foo",
-		UID:  501,
-		Home: "/home/foo.linux",
+		Name:  "default",
+		User:  "foo",
+		UID:   501,
+		GECOS: "Foo",
+		Home:  "/home/foo.linux",
 		SSHPubKeys: []string{
 			"ssh-rsa dummy foo@example.com",
 		},

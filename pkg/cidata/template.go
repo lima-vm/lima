@@ -59,6 +59,7 @@ type TemplateArgs struct {
 	Hostname                        string // instance hostname
 	IID                             string // instance id
 	User                            string // user name
+	GECOS                           string // user information
 	Home                            string // home directory
 	UID                             int
 	SSHPubKeys                      []string
