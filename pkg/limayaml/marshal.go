@@ -8,14 +8,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func marshalString(s string) ([]byte, error) {
-	if s == "null" || s == "~" {
-		// work around go-yaml bugs
-		return []byte("\"" + s + "\""), nil
-	}
-	return yaml.Marshal(s)
-}
-
 const (
 	documentStart = "---\n"
 	documentEnd   = "...\n"
@@ -23,8 +15,7 @@ const (
 
 // Marshal the struct as a YAML document, optionally as a stream.
 func Marshal(y *LimaYAML, stream bool) ([]byte, error) {
-	options := []yaml.EncodeOption{yaml.CustomMarshaler[string](marshalString)}
-	b, err := yaml.MarshalWithOptions(y, options...)
+	b, err := yaml.Marshal(y)
 	if err != nil {
 		return nil, err
 	}
