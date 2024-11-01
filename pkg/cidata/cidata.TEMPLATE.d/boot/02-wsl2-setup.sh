@@ -4,7 +4,7 @@
 [ "$LIMA_CIDATA_VMTYPE" = "wsl2" ] || exit 0
 
 # create user
-sudo useradd -u "${LIMA_CIDATA_UID}" "${LIMA_CIDATA_USER}" -d "${LIMA_CIDATA_HOME}"
+sudo useradd -u "${LIMA_CIDATA_UID}" "${LIMA_CIDATA_USER}" -c "${LIMA_CIDATA_GECOS}" -d "${LIMA_CIDATA_HOME}"
 sudo mkdir "${LIMA_CIDATA_HOME}"/.ssh/
 sudo cp "${LIMA_CIDATA_MNT}"/ssh_authorized_keys "${LIMA_CIDATA_HOME}"/.ssh/authorized_keys
 sudo chown "${LIMA_CIDATA_USER}" "${LIMA_CIDATA_HOME}"/.ssh/authorized_keys

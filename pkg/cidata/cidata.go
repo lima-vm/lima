@@ -132,6 +132,7 @@ func templateArgs(bootScripts bool, instDir, name string, instConfig *limayaml.L
 		Hostname:           identifierutil.HostnameFromInstName(name), // TODO: support customization
 		User:               u.Username,
 		UID:                uid,
+		GECOS:              u.Name,
 		Home:               fmt.Sprintf("/home/%s.linux", u.Username),
 		GuestInstallPrefix: *instConfig.GuestInstallPrefix,
 		UpgradePackages:    *instConfig.UpgradePackages,

@@ -30,6 +30,9 @@ timezone: {{.TimeZone}}
 users:
   - name: "{{.User}}"
     uid: "{{.UID}}"
+{{- if .GECOS }}
+    gecos: {{ printf "%q" .GECOS }}
+{{- end }}
     homedir: "{{.Home}}"
     shell: /bin/bash
     sudo: ALL=(ALL) NOPASSWD:ALL

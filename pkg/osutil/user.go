@@ -19,6 +19,7 @@ type User struct {
 	Uid   uint32
 	Group string
 	Gid   uint32
+	Name  string // or Comment
 	Home  string
 }
 
@@ -65,7 +66,7 @@ func LookupUser(name string) (User, error) {
 		if err != nil {
 			return User{}, err
 		}
-		users[name] = User{User: u.Username, Uid: uid, Group: g.Name, Gid: gid, Home: u.HomeDir}
+		users[name] = User{User: u.Username, Uid: uid, Group: g.Name, Gid: gid, Name: u.Name, Home: u.HomeDir}
 	}
 	return users[name], nil
 }
