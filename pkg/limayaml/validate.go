@@ -136,13 +136,6 @@ func Validate(y *LimaYAML, warn bool) error {
 		return fmt.Errorf("field `memory` has an invalid value: %w", err)
 	}
 
-	u, err := osutil.LimaUser(false)
-	if err != nil {
-		return fmt.Errorf("internal error (not an error of YAML): %w", err)
-	}
-	// reservedHome is the home directory defined in "cidata.iso:/user-data"
-	reservedHome := fmt.Sprintf("/home/%s.linux", u.Username)
-
 	for i, f := range y.Mounts {
 		if !filepath.IsAbs(f.Location) && !strings.HasPrefix(f.Location, "~") {
 			return fmt.Errorf("field `mounts[%d].location` must be an absolute path, got %q",
@@ -155,8 +148,9 @@ func Validate(y *LimaYAML, warn bool) error {
 		switch loc {
 		case "/", "/bin", "/dev", "/etc", "/home", "/opt", "/sbin", "/tmp", "/usr", "/var":
 			return fmt.Errorf("field `mounts[%d].location` must not be a system path such as /etc or /usr", i)
-		case reservedHome:
-			return fmt.Errorf("field `mounts[%d].location` is internally reserved", i)
+		// home directory defined in "cidata.iso:/user-data"
+		case *y.User.Home:
+			return fmt.Errorf("field `mounts[%d].location` is the reserved internal home directory", i)
 		}
 
 		st, err := os.Stat(loc)

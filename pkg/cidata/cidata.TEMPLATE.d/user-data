@@ -30,8 +30,8 @@ timezone: {{.TimeZone}}
 users:
   - name: "{{.User}}"
     uid: "{{.UID}}"
-{{- if .GECOS }}
-    gecos: {{ printf "%q" .GECOS }}
+{{- if .Comment }}
+    gecos: {{ printf "%q" .Comment }}
 {{- end }}
     homedir: "{{.Home}}"
     shell: /bin/bash

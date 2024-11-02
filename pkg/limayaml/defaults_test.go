@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"slices"
+	"strconv"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -54,10 +55,14 @@ func TestFillDefault(t *testing.T) {
 	assert.NilError(t, err)
 	limaHome, err := dirnames.LimaDir()
 	assert.NilError(t, err)
-	user, err := osutil.LimaUser(false)
+	user := osutil.LimaUser("0.0.0", false)
+	if runtime.GOOS != "windows" {
+		// manual template expansion for "/home/{{.User}}.linux" (done by FillDefault)
+		user.HomeDir = fmt.Sprintf("/home/%s.linux", user.Username)
+	}
+	uid, err := strconv.ParseUint(user.Uid, 10, 32)
 	assert.NilError(t, err)
 
-	guestHome := fmt.Sprintf("/home/%s.linux", user.Username)
 	instName := "instance"
 	instDir := filepath.Join(limaHome, instName)
 	filePath := filepath.Join(instDir, filenames.LimaYAML)
@@ -108,6 +113,12 @@ func TestFillDefault(t *testing.T) {
 		},
 		NestedVirtualization: ptr.Of(false),
 		Plain:                ptr.Of(false),
+		User: User{
+			Name:    ptr.Of(user.Username),
+			Comment: ptr.Of(user.Name),
+			Home:    ptr.Of(user.HomeDir),
+			UID:     ptr.Of(uint32(uid)),
+		},
 	}
 
 	defaultPortForward := PortForward{
@@ -267,11 +278,11 @@ func TestFillDefault(t *testing.T) {
 	expect.PortForwards[2].HostPort = 8888
 	expect.PortForwards[2].HostPortRange = [2]int{8888, 8888}
 
-	expect.PortForwards[3].GuestSocket = fmt.Sprintf("%s | %s | %s | %s", guestHome, user.Uid, user.Username, y.Param["ONE"])
-	expect.PortForwards[3].HostSocket = fmt.Sprintf("%s | %s | %s | %s | %s | %s", hostHome, instDir, instName, user.Uid, user.Username, y.Param["ONE"])
+	expect.PortForwards[3].GuestSocket = fmt.Sprintf("%s | %s | %s | %s", user.HomeDir, user.Uid, user.Username, y.Param["ONE"])
+	expect.PortForwards[3].HostSocket = fmt.Sprintf("%s | %s | %s | %s | %s | %s", hostHome, instDir, instName, currentUser.Uid, currentUser.Username, y.Param["ONE"])
 
-	expect.CopyToHost[0].GuestFile = fmt.Sprintf("%s | %s | %s | %s", guestHome, user.Uid, user.Username, y.Param["ONE"])
-	expect.CopyToHost[0].HostFile = fmt.Sprintf("%s | %s | %s | %s | %s | %s", hostHome, instDir, instName, user.Uid, user.Username, y.Param["ONE"])
+	expect.CopyToHost[0].GuestFile = fmt.Sprintf("%s | %s | %s | %s", user.HomeDir, user.Uid, user.Username, y.Param["ONE"])
+	expect.CopyToHost[0].HostFile = fmt.Sprintf("%s | %s | %s | %s | %s | %s", hostHome, instDir, instName, currentUser.Uid, currentUser.Username, y.Param["ONE"])
 
 	expect.Env = y.Env
 
@@ -296,7 +307,7 @@ func TestFillDefault(t *testing.T) {
 
 	expect.NestedVirtualization = ptr.Of(false)
 
-	FillDefault(&y, &LimaYAML{}, &LimaYAML{}, filePath)
+	FillDefault(&y, &LimaYAML{}, &LimaYAML{}, filePath, false)
 	assert.DeepEqual(t, &y, &expect, opts...)
 
 	filledDefaults := y
@@ -424,6 +435,12 @@ func TestFillDefault(t *testing.T) {
 			BinFmt:  ptr.Of(true),
 		},
 		NestedVirtualization: ptr.Of(true),
+		User: User{
+			Name:    ptr.Of("xxx"),
+			Comment: ptr.Of("Foo Bar"),
+			Home:    ptr.Of("/tmp"),
+			UID:     ptr.Of(uint32(8080)),
+		},
 	}
 
 	expect = d
@@ -464,7 +481,7 @@ func TestFillDefault(t *testing.T) {
 	expect.Plain = ptr.Of(false)
 
 	y = LimaYAML{}
-	FillDefault(&y, &d, &LimaYAML{}, filePath)
+	FillDefault(&y, &d, &LimaYAML{}, filePath, false)
 	assert.DeepEqual(t, &y, &expect, opts...)
 
 	dExpect := expect
@@ -475,6 +492,7 @@ func TestFillDefault(t *testing.T) {
 	y = filledDefaults
 	y.DNS = []net.IP{net.ParseIP("8.8.8.8")}
 	y.AdditionalDisks = []Disk{{Name: "overridden"}}
+	y.User.Home = ptr.Of("/root")
 
 	expect = y
 
@@ -502,7 +520,7 @@ func TestFillDefault(t *testing.T) {
 
 	t.Logf("d.vmType=%q, y.vmType=%q, expect.vmType=%q", *d.VMType, *y.VMType, *expect.VMType)
 
-	FillDefault(&y, &d, &LimaYAML{}, filePath)
+	FillDefault(&y, &d, &LimaYAML{}, filePath, false)
 	assert.DeepEqual(t, &y, &expect, opts...)
 
 	// ------------------------------------------------------------------------------------
@@ -639,6 +657,12 @@ func TestFillDefault(t *testing.T) {
 			BinFmt:  ptr.Of(false),
 		},
 		NestedVirtualization: ptr.Of(false),
+		User: User{
+			Name:    ptr.Of("foo"),
+			Comment: ptr.Of("foo bar baz"),
+			Home:    ptr.Of("/override"),
+			UID:     ptr.Of(uint32(1122)),
+		},
 	}
 
 	y = filledDefaults
@@ -697,7 +721,7 @@ func TestFillDefault(t *testing.T) {
 
 	expect.NestedVirtualization = ptr.Of(false)
 
-	FillDefault(&y, &d, &o, filePath)
+	FillDefault(&y, &d, &o, filePath, false)
 	assert.DeepEqual(t, &y, &expect, opts...)
 }
 

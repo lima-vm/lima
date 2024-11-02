@@ -56,7 +56,7 @@ disk: null
 
 # Expose host directories to the guest, the mount point might be accessible from all UIDs in the guest
 # "location" can use these template variables: {{.Home}}, {{.Dir}}, {{.Name}}, {{.UID}}, {{.User}}, and {{.Param.Key}}.
-# "mountPoint" can use these template variables: {{.Home}}, {{.Name}}, {{.Hostname}}, {{.UID}}, {{.User}}, and {{.Param.Key}}
+# "mountPoint" can use these template variables: {{.Home}}, {{.Name}}, {{.Hostname}}, {{.UID}}, {{.User}}, and {{.Param.Key}}.
 # 🟢 Builtin default: [] (Mount nothing)
 # 🔵 This file: Mount the home as read-only, /tmp/lima as writable
 mounts:
@@ -210,7 +210,7 @@ containerd:
 
 # Provisioning scripts need to be idempotent because they might be called
 # multiple times, e.g. when the host VM is being restarted.
-# The scripts can use the following template variables: {{.Home}}, {{.Name}}, {{.Hostname}}, {{.UID}}, {{.User}}, and {{.Param.Key}}
+# The scripts can use the following template variables: {{.Home}}, {{.Name}}, {{.Hostname}}, {{.UID}}, {{.User}}, and {{.Param.Key}}.
 # 🟢 Builtin default: []
 # provision:
 # # `system` is executed with root privileges
@@ -253,7 +253,7 @@ containerd:
 
 # Probe scripts to check readiness.
 # The scripts run in user mode. They must start with a '#!' line.
-# The scripts can use the following template variables: {{.Home}}, {{.Name}}, {{.Hostname}}, {{.UID}}, {{.User}}, and {{.Param.Key}}
+# The scripts can use the following template variables: {{.Home}}, {{.Name}}, {{.Hostname}}, {{.UID}}, {{.User}}, and {{.Param.Key}}.
 # 🟢 Builtin default: []
 # probes:
 # # Only `readiness` probes are supported right now.
@@ -278,6 +278,22 @@ containerd:
 # It should not be set if the minimum version is less than 1.0.0
 # 🟢 Builtin default: not set
 minimumLimaVersion: null
+
+# User to be used inside the VM
+user:
+  # User name. An explicitly specified username is not validated by Lima.
+  # 🟢 Builtin default: same as the host username, if it is a valid Linux username, otherwise "lima"
+  name: null
+  # Full name or display name of the user.
+  # 🟢 Builtin default: user information from the host
+  comment: null
+  # Numeric user id. It is not currently possible to specify a group id.
+  # 🟢 Builtin default: same as the host user id of the current user (NOT a lookup of the specified "username").
+  uid: null
+  # Home directory inside the VM, NOT the mounted home directory of the host.
+  # It can use the following template variables: {{.Name}}, {{.Hostname}}, {{.UID}}, {{.User}}, and {{.Param.Key}}.
+  # 🟢 Builtin default: "/home/{{.User}}.linux"
+  home: null
 
 vmOpts:
   qemu:

@@ -41,7 +41,7 @@ func Create(ctx context.Context, instName string, instConfig []byte, saveBrokenY
 	}
 	// limayaml.Load() needs to pass the store file path to limayaml.FillDefault() to calculate default MAC addresses
 	filePath := filepath.Join(instDir, filenames.LimaYAML)
-	loadedInstConfig, err := limayaml.Load(instConfig, filePath)
+	loadedInstConfig, err := limayaml.LoadWithWarnings(instConfig, filePath)
 	if err != nil {
 		return nil, err
 	}

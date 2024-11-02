@@ -58,3 +58,9 @@ probes:
 # $ limactl disk create data --size 10G
 additionalDisks:
 - "data"
+
+user:
+  name: john
+  comment: John Doe
+  home: "/home/{{.User}}-{{.User}}"
+  uid: 4711

@@ -37,6 +37,7 @@ declare -A CHECKS=(
 	["mount-path-with-spaces"]=""
 	["provision-ansible"]=""
 	["param-env-variables"]=""
+	["set-user"]=""
 )
 
 case "$NAME" in
@@ -63,6 +64,7 @@ case "$NAME" in
 	CHECKS["mount-path-with-spaces"]="1"
 	CHECKS["provision-ansible"]="1"
 	CHECKS["param-env-variables"]="1"
+	CHECKS["set-user"]="1"
 	;;
 "docker")
 	CONTAINER_ENGINE="docker"
@@ -170,6 +172,11 @@ if [[ -n ${CHECKS["param-env-variables"]} ]]; then
 	limactl shell "$NAME" test -e /tmp/param-probe
 	limactl shell "$NAME" test -e /tmp/param-system
 	limactl shell "$NAME" test -e /tmp/param-user
+fi
+
+if [[ -n ${CHECKS["set-user"]} ]]; then
+	INFO 'Testing that user settings can be provided by lima.yaml'
+	limactl shell "$NAME" grep "^john:x:4711:4711:John Doe:/home/john-john" /etc/passwd
 fi
 
 INFO "Testing proxy settings are imported"

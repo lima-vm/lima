@@ -115,7 +115,7 @@ func editAction(cmd *cobra.Command, args []string) error {
 		logrus.Info("Aborting, no changes made to the instance")
 		return nil
 	}
-	y, err := limayaml.Load(yBytes, filePath)
+	y, err := limayaml.LoadWithWarnings(yBytes, filePath)
 	if err != nil {
 		return err
 	}

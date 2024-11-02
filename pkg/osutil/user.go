@@ -11,6 +11,8 @@ import (
 	"strings"
 	"sync"
 
+	. "github.com/lima-vm/lima/pkg/must"
+	"github.com/lima-vm/lima/pkg/version/versionutil"
 	"github.com/sirupsen/logrus"
 )
 
@@ -40,10 +42,6 @@ var regexUsername = regexp.MustCompile("^[a-z_][a-z0-9_-]*$")
 
 // regexPath detects valid Linux path.
 var regexPath = regexp.MustCompile("^[/a-zA-Z0-9_-]+$")
-
-func ValidateUsername(name string) bool {
-	return regexUsername.MatchString(name)
-}
 
 func LookupUser(name string) (User, error) {
 	if users == nil {
@@ -95,11 +93,89 @@ const (
 	fallbackGid  = 1000
 )
 
-var cache struct {
-	sync.Once
-	u        *user.User
-	err      error
+var currentUser = Must(user.Current())
+
+var (
+	once     = new(sync.Once)
+	limaUser *user.User
 	warnings []string
+)
+
+func LimaUser(limaVersion string, warn bool) *user.User {
+	once.Do(func() {
+		limaUser = currentUser
+		if !regexUsername.MatchString(limaUser.Username) {
+			warning := fmt.Sprintf("local username %q is not a valid Linux username (must match %q); using %q instead",
+				limaUser.Username, regexUsername.String(), fallbackUser)
+			warnings = append(warnings, warning)
+			limaUser.Username = fallbackUser
+		}
+		if runtime.GOOS != "windows" {
+			limaUser.HomeDir = "/home/{{.User}}.linux"
+		} else {
+			idu, err := call([]string{"id", "-u"})
+			if err != nil {
+				logrus.Debug(err)
+			}
+			uid, err := parseUidGid(idu)
+			if err != nil {
+				uid = fallbackUid
+			}
+			if _, err := parseUidGid(limaUser.Uid); err != nil {
+				warning := fmt.Sprintf("local uid %q is not a valid Linux uid (must be integer); using %d uid instead",
+					limaUser.Uid, uid)
+				warnings = append(warnings, warning)
+				limaUser.Uid = formatUidGid(uid)
+			}
+			idg, err := call([]string{"id", "-g"})
+			if err != nil {
+				logrus.Debug(err)
+			}
+			gid, err := parseUidGid(idg)
+			if err != nil {
+				gid = fallbackGid
+			}
+			if _, err := parseUidGid(limaUser.Gid); err != nil {
+				warning := fmt.Sprintf("local gid %q is not a valid Linux gid (must be integer); using %d gid instead",
+					limaUser.Gid, gid)
+				warnings = append(warnings, warning)
+				limaUser.Gid = formatUidGid(gid)
+			}
+			home, err := call([]string{"cygpath", limaUser.HomeDir})
+			if err != nil {
+				logrus.Debug(err)
+			}
+			if home == "" {
+				drive := filepath.VolumeName(limaUser.HomeDir)
+				home = filepath.ToSlash(limaUser.HomeDir)
+				// replace C: with /c
+				prefix := strings.ToLower(fmt.Sprintf("/%c", drive[0]))
+				home = strings.Replace(home, drive, prefix, 1)
+			}
+			if !regexPath.MatchString(limaUser.HomeDir) {
+				warning := fmt.Sprintf("local home %q is not a valid Linux path (must match %q); using %q home instead",
+					limaUser.HomeDir, regexPath.String(), home)
+				warnings = append(warnings, warning)
+				limaUser.HomeDir = home
+			}
+		}
+	})
+	if warn {
+		for _, warning := range warnings {
+			logrus.Warn(warning)
+		}
+	}
+	// Make sure we return a pointer to a COPY of limaUser
+	u := *limaUser
+	if versionutil.GreaterEqual(limaVersion, "1.0.0") {
+		if u.Username == "admin" {
+			if warn {
+				logrus.Warnf("local username %q is reserved; using %q instead", u.Username, fallbackUser)
+			}
+			u.Username = fallbackUser
+		}
+	}
+	return &u
 }
 
 func call(args []string) (string, error) {
@@ -109,74 +185,6 @@ func call(args []string) (string, error) {
 		return "", err
 	}
 	return strings.TrimSpace(string(out)), nil
-}
-
-func LimaUser(warn bool) (*user.User, error) {
-	cache.warnings = []string{}
-	cache.Do(func() {
-		cache.u, cache.err = user.Current()
-		if cache.err == nil {
-			if !ValidateUsername(cache.u.Username) {
-				warning := fmt.Sprintf("local user %q is not a valid Linux username (must match %q); using %q username instead",
-					cache.u.Username, regexUsername.String(), fallbackUser)
-				cache.warnings = append(cache.warnings, warning)
-				cache.u.Username = fallbackUser
-			}
-			if runtime.GOOS == "windows" {
-				idu, err := call([]string{"id", "-u"})
-				if err != nil {
-					logrus.Debug(err)
-				}
-				uid, err := parseUidGid(idu)
-				if err != nil {
-					uid = fallbackUid
-				}
-				if _, err := parseUidGid(cache.u.Uid); err != nil {
-					warning := fmt.Sprintf("local uid %q is not a valid Linux uid (must be integer); using %d uid instead",
-						cache.u.Uid, uid)
-					cache.warnings = append(cache.warnings, warning)
-					cache.u.Uid = formatUidGid(uid)
-				}
-				idg, err := call([]string{"id", "-g"})
-				if err != nil {
-					logrus.Debug(err)
-				}
-				gid, err := parseUidGid(idg)
-				if err != nil {
-					gid = fallbackGid
-				}
-				if _, err := parseUidGid(cache.u.Gid); err != nil {
-					warning := fmt.Sprintf("local gid %q is not a valid Linux gid (must be integer); using %d gid instead",
-						cache.u.Gid, gid)
-					cache.warnings = append(cache.warnings, warning)
-					cache.u.Gid = formatUidGid(gid)
-				}
-				home, err := call([]string{"cygpath", cache.u.HomeDir})
-				if err != nil {
-					logrus.Debug(err)
-				}
-				if home == "" {
-					drive := filepath.VolumeName(cache.u.HomeDir)
-					home = filepath.ToSlash(cache.u.HomeDir)
-					// replace C: with /c
-					prefix := strings.ToLower(fmt.Sprintf("/%c", drive[0]))
-					home = strings.Replace(home, drive, prefix, 1)
-				}
-				if !regexPath.MatchString(cache.u.HomeDir) {
-					warning := fmt.Sprintf("local home %q is not a valid Linux path (must match %q); using %q home instead",
-						cache.u.HomeDir, regexPath.String(), home)
-					cache.warnings = append(cache.warnings, warning)
-					cache.u.HomeDir = home
-				}
-			}
-		}
-	})
-	if warn && len(cache.warnings) > 0 {
-		for _, warning := range cache.warnings {
-			logrus.Warn(warning)
-		}
-	}
-	return cache.u, cache.err
 }
 
 // parseUidGid converts string value to Linux uid or gid.

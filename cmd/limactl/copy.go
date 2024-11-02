@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/coreos/go-semver/semver"
-	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/sshutil"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/sirupsen/logrus"
@@ -48,11 +47,7 @@ func copyAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	u, err := osutil.LimaUser(false)
-	if err != nil {
-		return err
-	}
-	instDirs := make(map[string]string)
+	instances := make(map[string]*store.Instance)
 	scpFlags := []string{}
 	scpArgs := []string{}
 	debug, err := cmd.Flags().GetBool("debug")
@@ -85,28 +80,28 @@ func copyAction(cmd *cobra.Command, args []string) error {
 			}
 			if legacySSH {
 				scpFlags = append(scpFlags, "-P", fmt.Sprintf("%d", inst.SSHLocalPort))
-				scpArgs = append(scpArgs, fmt.Sprintf("%s@127.0.0.1:%s", u.Username, path[1]))
+				scpArgs = append(scpArgs, fmt.Sprintf("%s@127.0.0.1:%s", *inst.Config.User.Name, path[1]))
 			} else {
-				scpArgs = append(scpArgs, fmt.Sprintf("scp://%s@127.0.0.1:%d/%s", u.Username, inst.SSHLocalPort, path[1]))
+				scpArgs = append(scpArgs, fmt.Sprintf("scp://%s@127.0.0.1:%d/%s", *inst.Config.User.Name, inst.SSHLocalPort, path[1]))
 			}
-			instDirs[instName] = inst.Dir
+			instances[instName] = inst
 		default:
 			return fmt.Errorf("path %q contains multiple colons", arg)
 		}
 	}
-	if legacySSH && len(instDirs) > 1 {
+	if legacySSH && len(instances) > 1 {
 		return fmt.Errorf("more than one (instance) host is involved in this command, this is only supported for openSSH v8.0 or higher")
 	}
 	scpFlags = append(scpFlags, "-3", "--")
 	scpArgs = append(scpFlags, scpArgs...)
 
 	var sshOpts []string
-	if len(instDirs) == 1 {
+	if len(instances) == 1 {
 		// Only one (instance) host is involved; we can use the instance-specific
 		// arguments such as ControlPath.  This is preferred as we can multiplex
 		// sessions without re-authenticating (MaxSessions permitting).
-		for _, instDir := range instDirs {
-			sshOpts, err = sshutil.SSHOpts(instDir, false, false, false, false)
+		for _, inst := range instances {
+			sshOpts, err = sshutil.SSHOpts(inst.Dir, *inst.Config.User.Name, false, false, false, false)
 			if err != nil {
 				return err
 			}
