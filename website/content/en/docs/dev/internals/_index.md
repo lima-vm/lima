@@ -179,7 +179,7 @@ The volume label is "cidata", as defined by [cloud-init NoCloud](https://docs.cl
 - `LIMA_CIDATA_MNT`: the mount point of the disk. `/mnt/lima-cidata`.
 - `LIMA_CIDATA_USER`: the username string
 - `LIMA_CIDATA_UID`: the numeric UID
-- `LIMA_CIDATA_GECOS`: the name or comment string
+- `LIMA_CIDATA_COMMENT`: the full name or comment string
 - `LIMA_CIDATA_HOME`: the guest home directory
 - `LIMA_CIDATA_HOSTHOME_MOUNTPOINT`: the mount point of the host home directory, or empty if not mounted
 - `LIMA_CIDATA_MOUNTS`: the number of the Lima mounts

@@ -11,7 +11,6 @@ import (
 	"path"
 	"path/filepath"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 
@@ -117,23 +116,15 @@ func templateArgs(bootScripts bool, instDir, name string, instConfig *limayaml.L
 	if err := limayaml.Validate(instConfig, false); err != nil {
 		return nil, err
 	}
-	u, err := osutil.LimaUser(true)
-	if err != nil {
-		return nil, err
-	}
-	uid, err := strconv.Atoi(u.Uid)
-	if err != nil {
-		return nil, err
-	}
 	args := TemplateArgs{
 		Debug:              debugutil.Debug,
 		BootScripts:        bootScripts,
 		Name:               name,
 		Hostname:           identifierutil.HostnameFromInstName(name), // TODO: support customization
-		User:               u.Username,
-		UID:                uid,
-		GECOS:              u.Name,
-		Home:               fmt.Sprintf("/home/%s.linux", u.Username),
+		User:               *instConfig.User.Name,
+		Comment:            *instConfig.User.Comment,
+		Home:               *instConfig.User.Home,
+		UID:                *instConfig.User.UID,
 		GuestInstallPrefix: *instConfig.GuestInstallPrefix,
 		UpgradePackages:    *instConfig.UpgradePackages,
 		Containerd:         Containerd{System: *instConfig.Containerd.System, User: *instConfig.Containerd.User},
@@ -151,6 +142,7 @@ func templateArgs(bootScripts bool, instDir, name string, instConfig *limayaml.L
 
 	firstUsernetIndex := limayaml.FirstUsernetIndex(instConfig)
 	var subnet net.IP
+	var err error
 
 	if firstUsernetIndex != -1 {
 		usernetName := instConfig.Networks[firstUsernetIndex].Lima

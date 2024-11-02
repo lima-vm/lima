@@ -223,14 +223,10 @@ func CommonOpts(useDotSSH bool) ([]string, error) {
 }
 
 // SSHOpts adds the following options to CommonOptions: User, ControlMaster, ControlPath, ControlPersist.
-func SSHOpts(instDir string, useDotSSH, forwardAgent, forwardX11, forwardX11Trusted bool) ([]string, error) {
+func SSHOpts(instDir, username string, useDotSSH, forwardAgent, forwardX11, forwardX11Trusted bool) ([]string, error) {
 	controlSock := filepath.Join(instDir, filenames.SSHSock)
 	if len(controlSock) >= osutil.UnixPathMax {
 		return nil, fmt.Errorf("socket path %q is too long: >= UNIX_PATH_MAX=%d", controlSock, osutil.UnixPathMax)
-	}
-	u, err := osutil.LimaUser(false)
-	if err != nil {
-		return nil, err
 	}
 	opts, err := CommonOpts(useDotSSH)
 	if err != nil {
@@ -242,7 +238,7 @@ func SSHOpts(instDir string, useDotSSH, forwardAgent, forwardX11, forwardX11Trus
 		controlPath = fmt.Sprintf(`ControlPath='%s'`, controlSock)
 	}
 	opts = append(opts,
-		fmt.Sprintf("User=%s", u.Username), // guest and host have the same username, but we should specify the username explicitly (#85)
+		fmt.Sprintf("User=%s", username), // guest and host have the same username, but we should specify the username explicitly (#85)
 		"ControlMaster=auto",
 		controlPath,
 		"ControlPersist=yes",

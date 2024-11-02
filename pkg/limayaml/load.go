@@ -15,6 +15,17 @@ import (
 //
 // Load does not validate. Use Validate for validation.
 func Load(b []byte, filePath string) (*LimaYAML, error) {
+	return load(b, filePath, false)
+}
+
+// LoadWithWarnings will call FillDefaults with warnings enabled (e.g. when
+// the username is not valid on Linux and must be replaced by "Lima").
+// It is called when creating or editing an instance.
+func LoadWithWarnings(b []byte, filePath string) (*LimaYAML, error) {
+	return load(b, filePath, true)
+}
+
+func load(b []byte, filePath string, warn bool) (*LimaYAML, error) {
 	var y, d, o LimaYAML
 
 	if err := Unmarshal(b, &y, fmt.Sprintf("main file %q", filePath)); err != nil {
@@ -52,6 +63,6 @@ func Load(b []byte, filePath string) (*LimaYAML, error) {
 		return nil, err
 	}
 
-	FillDefault(&y, &d, &o, filePath)
+	FillDefault(&y, &d, &o, filePath, warn)
 	return &y, nil
 }

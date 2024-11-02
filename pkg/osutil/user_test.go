@@ -3,40 +3,57 @@ package osutil
 import (
 	"path"
 	"strconv"
+	"sync"
 	"testing"
 
 	"gotest.tools/v3/assert"
 )
 
-func TestLimaUserWarn(t *testing.T) {
-	_, err := LimaUser(true)
-	assert.NilError(t, err)
+const limaVersion = "1.0.0"
+
+// "admin" is a reserved username in 1.0.0
+func TestLimaUserAdminNew(t *testing.T) {
+	currentUser.Username = "admin"
+	once = new(sync.Once)
+	user := LimaUser(limaVersion, false)
+	assert.Equal(t, user.Username, fallbackUser)
 }
 
-func TestLimaUsername(t *testing.T) {
-	user, err := LimaUser(false)
-	assert.NilError(t, err)
-	// check for reasonable unix user name
-	assert.Assert(t, ValidateUsername(user.Username), user.Username)
+// "admin" is allowed in older instances
+func TestLimaUserAdminOld(t *testing.T) {
+	currentUser.Username = "admin"
+	once = new(sync.Once)
+	user := LimaUser("0.23.0", false)
+	assert.Equal(t, user.Username, "admin")
+}
+
+func TestLimaUserInvalid(t *testing.T) {
+	currentUser.Username = "use@example.com"
+	once = new(sync.Once)
+	user := LimaUser(limaVersion, false)
+	assert.Equal(t, user.Username, fallbackUser)
 }
 
 func TestLimaUserUid(t *testing.T) {
-	user, err := LimaUser(false)
-	assert.NilError(t, err)
-	_, err = strconv.Atoi(user.Uid)
+	currentUser.Username = fallbackUser
+	once = new(sync.Once)
+	user := LimaUser(limaVersion, false)
+	_, err := strconv.Atoi(user.Uid)
 	assert.NilError(t, err)
 }
 
 func TestLimaUserGid(t *testing.T) {
-	user, err := LimaUser(false)
-	assert.NilError(t, err)
-	_, err = strconv.Atoi(user.Gid)
+	currentUser.Username = fallbackUser
+	once = new(sync.Once)
+	user := LimaUser(limaVersion, false)
+	_, err := strconv.Atoi(user.Gid)
 	assert.NilError(t, err)
 }
 
 func TestLimaHomeDir(t *testing.T) {
-	user, err := LimaUser(false)
-	assert.NilError(t, err)
+	currentUser.Username = fallbackUser
+	once = new(sync.Once)
+	user := LimaUser(limaVersion, false)
 	// check for absolute unix path (/home)
 	assert.Assert(t, path.IsAbs(user.HomeDir), user.HomeDir)
 }

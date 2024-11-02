@@ -11,7 +11,6 @@ import (
 	"github.com/lima-vm/lima/pkg/iso9660util"
 
 	"github.com/containerd/containerd/identifiers"
-	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/textutil"
 )
 
@@ -59,9 +58,9 @@ type TemplateArgs struct {
 	Hostname                        string // instance hostname
 	IID                             string // instance id
 	User                            string // user name
-	GECOS                           string // user information
+	Comment                         string // user information
 	Home                            string // home directory
-	UID                             int
+	UID                             uint32
 	SSHPubKeys                      []string
 	Mounts                          []Mount
 	MountType                       string
@@ -97,9 +96,8 @@ func ValidateTemplateArgs(args *TemplateArgs) error {
 	if err := identifiers.Validate(args.Name); err != nil {
 		return err
 	}
-	if !osutil.ValidateUsername(args.User) {
-		return errors.New("field User must be valid linux username")
-	}
+	// args.User is intentionally not validated here; the user can override with any name they want
+	// limayaml.FillDefault will validate the default (local) username, but not an explicit setting
 	if args.User == "root" {
 		return errors.New("field User must not be \"root\"")
 	}

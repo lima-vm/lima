@@ -121,6 +121,9 @@ linters-settings:
     - name: context-keys-type
     - name: deep-exit
     - name: dot-imports
+      arguments:
+      - allowedPackages:
+        - github.com/lima-vm/lima/pkg/must
     - name: empty-block
     - name: error-naming
     - name: error-return
