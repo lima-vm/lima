@@ -177,11 +177,11 @@ func snapshotListAction(cmd *cobra.Command, args []string) error {
 				continue
 			}
 			tag := fields[1]
-			fmt.Printf("%s\n", tag)
+			fmt.Fprintf(cmd.OutOrStdout(), "%s\n", tag)
 		}
 		return nil
 	}
-	fmt.Print(out)
+	fmt.Fprint(cmd.OutOrStdout(), out)
 	return nil
 }
 

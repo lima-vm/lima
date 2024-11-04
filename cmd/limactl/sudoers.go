@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
 	"runtime"
 
 	"github.com/lima-vm/lima/pkg/networks"
@@ -55,7 +56,7 @@ func sudoersAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	if check {
-		return verifySudoAccess(nwCfg, args)
+		return verifySudoAccess(nwCfg, args, cmd.OutOrStdout())
 	}
 	switch len(args) {
 	case 0:
@@ -69,11 +70,11 @@ func sudoersAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Print(sudoers)
+	fmt.Fprint(cmd.OutOrStdout(), sudoers)
 	return nil
 }
 
-func verifySudoAccess(nwCfg networks.Config, args []string) error {
+func verifySudoAccess(nwCfg networks.Config, args []string, stdout io.Writer) error {
 	var file string
 	switch len(args) {
 	case 0:
@@ -90,6 +91,6 @@ func verifySudoAccess(nwCfg networks.Config, args []string) error {
 	if err := nwCfg.VerifySudoAccess(file); err != nil {
 		return err
 	}
-	fmt.Printf("%q is up-to-date (or sudo doesn't require a password)\n", file)
+	fmt.Fprintf(stdout, "%q is up-to-date (or sudo doesn't require a password)\n", file)
 	return nil
 }
