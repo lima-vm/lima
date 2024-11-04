@@ -253,11 +253,9 @@ func diskDeleteAction(cmd *cobra.Command, args []string) error {
 			}
 			var refInstances []string
 			for _, inst := range instances {
-				if len(inst.AdditionalDisks) > 0 {
-					for _, d := range inst.AdditionalDisks {
-						if d.Name == diskName {
-							refInstances = append(refInstances, inst.Name)
-						}
+				for _, d := range inst.AdditionalDisks {
+					if d.Name == diskName {
+						refInstances = append(refInstances, inst.Name)
 					}
 				}
 			}
