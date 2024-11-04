@@ -334,7 +334,7 @@ if [[ -n ${CHECKS["vmnet"]} ]]; then
 	set -x
 	limactl shell "$NAME" sudo DEBIAN_FRONTEND=noninteractive apt-get install -y iperf3
 	limactl shell "$NAME" iperf3 -s -1 -D
-	iperf3 -c "$guestip"
+	${IPERF3} -c "$guestip"
 	set +x
 	# NOTE: we only test the shared interface here, as the bridged interface cannot be used on GHA (and systemd-networkd-wait-online.service will fail)
 fi
