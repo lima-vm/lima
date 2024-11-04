@@ -634,35 +634,33 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	baseDisk := filepath.Join(cfg.InstanceDir, filenames.BaseDisk)
 	diffDisk := filepath.Join(cfg.InstanceDir, filenames.DiffDisk)
 	extraDisks := []string{}
-	if len(y.AdditionalDisks) > 0 {
-		for _, d := range y.AdditionalDisks {
-			diskName := d.Name
-			disk, err := store.InspectDisk(diskName)
-			if err != nil {
-				logrus.Errorf("could not load disk %q: %q", diskName, err)
-				return "", nil, err
-			}
-
-			if disk.Instance != "" {
-				if disk.InstanceDir != cfg.InstanceDir {
-					logrus.Errorf("could not attach disk %q, in use by instance %q", diskName, disk.Instance)
-					return "", nil, err
-				}
-				err = disk.Unlock()
-				if err != nil {
-					logrus.Errorf("could not unlock disk %q to reuse in the same instance %q", diskName, cfg.Name)
-					return "", nil, err
-				}
-			}
-			logrus.Infof("Mounting disk %q on %q", diskName, disk.MountPoint)
-			err = disk.Lock(cfg.InstanceDir)
-			if err != nil {
-				logrus.Errorf("could not lock disk %q: %q", diskName, err)
-				return "", nil, err
-			}
-			dataDisk := filepath.Join(disk.Dir, filenames.DataDisk)
-			extraDisks = append(extraDisks, dataDisk)
+	for _, d := range y.AdditionalDisks {
+		diskName := d.Name
+		disk, err := store.InspectDisk(diskName)
+		if err != nil {
+			logrus.Errorf("could not load disk %q: %q", diskName, err)
+			return "", nil, err
 		}
+
+		if disk.Instance != "" {
+			if disk.InstanceDir != cfg.InstanceDir {
+				logrus.Errorf("could not attach disk %q, in use by instance %q", diskName, disk.Instance)
+				return "", nil, err
+			}
+			err = disk.Unlock()
+			if err != nil {
+				logrus.Errorf("could not unlock disk %q to reuse in the same instance %q", diskName, cfg.Name)
+				return "", nil, err
+			}
+		}
+		logrus.Infof("Mounting disk %q on %q", diskName, disk.MountPoint)
+		err = disk.Lock(cfg.InstanceDir)
+		if err != nil {
+			logrus.Errorf("could not lock disk %q: %q", diskName, err)
+			return "", nil, err
+		}
+		dataDisk := filepath.Join(disk.Dir, filenames.DataDisk)
+		extraDisks = append(extraDisks, dataDisk)
 	}
 
 	isBaseDiskCDROM, err := iso9660util.IsISO9660(baseDisk)
