@@ -2,6 +2,7 @@ package yqutil
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -51,7 +52,7 @@ func EvaluateExpression(expression string, content []byte) ([]byte, error) {
 	// once here and once inside `formatter.Format`.
 	// Currently, calling `ApplyFeatures()` with `FeatureApplyBefore` twice is not an issue,
 	// but future changes to `yamlfmt` might cause problems if it is called twice.
-	contentModified, err := formatter.Features.ApplyFeatures(content, yamlfmt.FeatureApplyBefore)
+	_, contentModified, err := formatter.Features.ApplyFeatures(context.Background(), content, yamlfmt.FeatureApplyBefore)
 	if err != nil {
 		return nil, err
 	}
