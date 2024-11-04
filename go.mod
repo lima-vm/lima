@@ -25,7 +25,7 @@ require (
 	github.com/google/go-cmp v0.6.0
 	github.com/google/yamlfmt v0.14.0
 	github.com/invopop/jsonschema v0.12.0
-	github.com/lima-vm/go-qcow2reader v0.3.0
+	github.com/lima-vm/go-qcow2reader v0.4.0
 	github.com/lima-vm/sshocker v0.3.4
 	github.com/mattn/go-isatty v0.0.20
 	github.com/mattn/go-shellwords v1.0.12
