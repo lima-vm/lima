@@ -47,7 +47,7 @@ func showProgress() bool {
 		return false
 	}
 
-	// Both logrous and pb use stderr by default.
+	// Both logrus and pb use stderr by default.
 	logFd := os.Stderr.Fd()
 	return isatty.IsTerminal(logFd) || isatty.IsCygwinTerminal(logFd)
 }
