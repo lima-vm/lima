@@ -108,7 +108,7 @@ func (c *qemuPacketConn) Read(b []byte) (n int, err error) {
 
 // Write writes a QEMU packet containing the raw packet. Returns (len(b), nil)
 // if a packet was written, and (0, err) if a packet was not fully written.
-// Errors means the prorocol is broken and the socket must be closed.
+// Errors means the protocol is broken and the socket must be closed.
 func (c *qemuPacketConn) Write(b []byte) (int, error) {
 	size := len(b)
 	header := uint32(size)

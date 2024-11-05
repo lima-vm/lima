@@ -705,9 +705,9 @@ func getMachineIdentifier(driver *driver.BaseDriver) (*vz.GenericMachineIdentifi
 }
 
 func bootLoader(driver *driver.BaseDriver) (vz.BootLoader, error) {
-	linuxBootLoder, err := linuxBootLoader(driver)
-	if linuxBootLoder != nil {
-		return linuxBootLoder, nil
+	linuxBootLoader, err := linuxBootLoader(driver)
+	if linuxBootLoader != nil {
+		return linuxBootLoader, nil
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return nil, err
 	}

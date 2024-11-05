@@ -160,7 +160,7 @@ find_files_excluding_dir_and_test = $(shell find $(1) ! -type d ! -name '*_test.
 FILES_IN_PKG = $(call find_files_excluding_dir_and_test, ./pkg)
 
 # returns a list of files which are dependencies for the command $(1).
-dependencis_for_cmd = go.mod $(call find_files_excluding_dir_and_test, ./cmd/$(1)) $(FILES_IN_PKG)
+dependencies_for_cmd = go.mod $(call find_files_excluding_dir_and_test, ./cmd/$(1)) $(FILES_IN_PKG)
 
 ### Force Building Targets
 
@@ -214,7 +214,7 @@ force: # placeholder for force build
 # _output/bin/limactl$(exe)
 
 # dependencies for limactl
-LIMACTL_DEPS = $(call dependencis_for_cmd,limactl)
+LIMACTL_DEPS = $(call dependencies_for_cmd,limactl)
 ifeq ($(GOOS),darwin)
 LIMACTL_DEPS += vz.entitlements
 endif
@@ -302,7 +302,7 @@ ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)aarch64 = CGO_ENABLED=0 GOOS=linux GOARCH=ar
 ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)armv7l = CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7
 ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)riscv64 = CGO_ENABLED=0 GOOS=linux GOARCH=riscv64
 ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)x86_64 = CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-$(ALL_GUESTAGENTS_NOT_COMPRESSED): $(call dependencis_for_cmd,lima-guestagent) $$(call force_build_with_gunzip,$$@) | _output/share/lima
+$(ALL_GUESTAGENTS_NOT_COMPRESSED): $(call dependencies_for_cmd,lima-guestagent) $$(call force_build_with_gunzip,$$@) | _output/share/lima
 	$(ENVS_$@) $(GO_BUILD) -o $@ ./cmd/lima-guestagent
 	chmod 644 $@
 $(LINUX_GUESTAGENT_PATH_COMMON)%.gz: $(LINUX_GUESTAGENT_PATH_COMMON)% $$(call force_build_with_gunzip,$$@)
