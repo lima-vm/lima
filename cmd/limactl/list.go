@@ -123,7 +123,7 @@ func listAction(cmd *cobra.Command, args []string) error {
 	if listFields {
 		names := fieldNames()
 		sort.Strings(names)
-		fmt.Println(strings.Join(names, "\n"))
+		fmt.Fprintln(cmd.OutOrStdout(), strings.Join(names, "\n"))
 		return nil
 	}
 

@@ -41,6 +41,7 @@ linters:
   # - exhaustivestruct
   # - exportloopref
   # - funlen
+  - forbidigo
   # - gci
   # - gochecknoglobals
   # - gochecknoinits
