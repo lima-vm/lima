@@ -37,6 +37,7 @@ var knownYamlProperties = []string{
 	"Images",
 	"Memory",
 	"Message",
+	"MinimumLimaVersion",
 	"Mounts",
 	"MountType",
 	"MountTypesUnsupported",
