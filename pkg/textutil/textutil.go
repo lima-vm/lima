@@ -26,15 +26,13 @@ func ExecuteTemplate(tmpl string, args interface{}) ([]byte, error) {
 
 // PrefixString adds prefix to beginning of each line.
 func PrefixString(prefix, text string) string {
-	result := []string{}
-	for _, line := range strings.Split(text, "\n") {
-		if line == "" {
-			result = append(result, "")
-			continue
+	lines := strings.Split(text, "\n")
+	for i, line := range lines {
+		if line != "" {
+			lines[i] = prefix + line
 		}
-		result = append(result, prefix+line)
 	}
-	return strings.Join(result, "\n")
+	return strings.Join(lines, "\n")
 }
 
 // IndentString add spaces to beginning of each line.
