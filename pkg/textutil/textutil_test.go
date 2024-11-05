@@ -9,8 +9,11 @@ import (
 )
 
 func TestPrefixString(t *testing.T) {
+	assert.Equal(t, "", PrefixString("- ", ""))
+	assert.Equal(t, "\n", PrefixString("- ", "\n"))
 	assert.Equal(t, "- foo", PrefixString("- ", "foo"))
 	assert.Equal(t, "- foo\n- bar\n", PrefixString("- ", "foo\nbar\n"))
+	assert.Equal(t, "- foo\n\n- bar\n", PrefixString("- ", "foo\n\nbar\n"))
 }
 
 func TestIndentString(t *testing.T) {
