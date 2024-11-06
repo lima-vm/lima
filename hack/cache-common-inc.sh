@@ -367,21 +367,17 @@ function download_to_cache() {
 	# check the remote location
 	local curl_info_json write_out
 	write_out='{
-		"http_code":%{http_code},
-		"last_modified":"%header{Last-Modified}",
-		"date":"%header{Date}",
-		"content_type":"%{content_type}",
-		"url":"%{url_effective}",
-		"filename":"%{filename_effective}"
+		"json":%{json},
+		"header":%{header_json}
 	}'
 	curl_info_json=$(curl -sSLI -w "${write_out}" "$1" -o /dev/null)
 
 	local code time type url
-	code=$(jq -r '.http_code' <<<"${curl_info_json}")
-	time=$(jq -r '(.last_modified|select(length>1)) // .date' <<<"${curl_info_json}")
-	type=$(jq -r '.content_type' <<<"${curl_info_json}")
+	code=$(jq -r '.json.http_code' <<<"${curl_info_json}")
+	time=$(jq -r '(.header["last-modified"]|first) // (.header["date"]|first) // empty' <<<"${curl_info_json}")
+	type=$(jq -r '.json.content_type' <<<"${curl_info_json}")
 	if [[ ${use_redirected_location} == "YES" ]]; then
-		url=$(jq -r '.url' <<<"${curl_info_json}")
+		url=$(jq -r '.json.url_effective' <<<"${curl_info_json}")
 	else
 		url=$1
 	fi
@@ -400,11 +396,11 @@ function download_to_cache() {
 			curl -SL -w "${write_out}" --no-clobber -o "${cache_path}/data" "${url}"
 		)
 		local filename
-		code=$(jq -r '.http_code' <<<"${curl_info_json}")
-		time=$(jq -r '(.last_modified|select(length>1)) // .date' <<<"${curl_info_json}")
-		type=$(jq -r '.content_type' <<<"${curl_info_json}")
-		url=$(jq -r '.url' <<<"${curl_info_json}")
-		filename=$(jq -r '.filename' <<<"${curl_info_json}")
+		code=$(jq -r '.json.http_code' <<<"${curl_info_json}")
+		time=$(jq -r '(.header["last-modified"]|first) // (.header["date"]|first) // empty' <<<"${curl_info_json}")
+		type=$(jq -r '.json.content_type' <<<"${curl_info_json}")
+		url=$(jq -r '.json.url_effective' <<<"${curl_info_json}")
+		filename=$(jq -r '.json.filename_effective' <<<"${curl_info_json}")
 		[[ ${code} == 200 ]] || error_exit "Failed to download ${url}"
 		[[ "${cache_path}/data" == "${filename}" ]] || mv "${filename}" "${cache_path}/data"
 		# sha256.digest seems existing if expected digest is available. so, not creating it here.
