@@ -21,6 +21,7 @@ func HandleTCPConnection(ctx context.Context, client *guestagentclient.GuestAgen
 	stream, err := client.Tunnel(ctx)
 	if err != nil {
 		logrus.Errorf("could not open tcp tunnel for id: %s error:%v", id, err)
+		return
 	}
 
 	g, _ := errgroup.WithContext(ctx)
@@ -54,6 +55,7 @@ func HandleUDPConnection(ctx context.Context, client *guestagentclient.GuestAgen
 	stream, err := client.Tunnel(ctx)
 	if err != nil {
 		logrus.Errorf("could not open udp tunnel for id: %s error:%v", id, err)
+		return
 	}
 
 	g, _ := errgroup.WithContext(ctx)
