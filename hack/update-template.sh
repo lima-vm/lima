@@ -162,6 +162,8 @@ if [[ ${BASH_SOURCE[0]} == "${0}" ]]; then
 	. "${scriptdir}/update-template-oraclelinux.sh"
 	# shellcheck source=./update-template-fedora.sh
 	. "${scriptdir}/update-template-fedora.sh"
+	# shellcheck source=./update-template-opensuse.sh
+	. "${scriptdir}/update-template-opensuse.sh"
 else
 	# this script is sourced
 	return 0
