@@ -57,6 +57,8 @@ done
 if [[ -z ${location} ]]; then
 	echo "Failed to get the image location for ${template}" >&2
 	exit 1
+elif [[ ${location} == https://cloud-images.ubuntu.com/minimal/* ]]; then
+	readonly default_cmdline="root=/dev/vda1 ro console=tty1 console=ttyAMA0"
 elif [[ ${location} == https://cloud-images.ubuntu.com/* ]]; then
 	readonly default_cmdline="root=LABEL=cloudimg-rootfs ro console=tty1 console=ttyAMA0"
 else
