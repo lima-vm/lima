@@ -7,11 +7,18 @@ Lima supports automatic port-forwarding of localhost ports from guest to host.
 
 ## Port forwarding types
 
+Lima supports two port forwarders: SSH and GRPC.
+
+The default port forwarder is SSH.
+
+The default was once changed to GRPC in Lima v1.0, but it was reverted to SSH in v1.0.1 due to stability reasons.
+In future, it is expected that GRPC will take over the default position again.
+
 ### Using SSH
 
-SSH based port forwarding is the default and current model that is supported in Lima prior to v1.0.
+SSH based port forwarding is the default and current model that is supported in Lima.
 
-To use SSH forwarding use the below command
+To explicitly use SSH forwarding use the below command
 
 ```bash
 LIMA_SSH_PORT_FORWARDER=true limactl start
@@ -22,7 +29,7 @@ LIMA_SSH_PORT_FORWARDER=true limactl start
 - Doesn't support UDP based port forwarding
 - Spans child process on host for running SSH master.
 
-### Using GRPC (Default since Lima v1.0)
+### Using GRPC
 
 | ⚡ Requirement | Lima >= 1.0 |
 |---------------|-------------|
@@ -30,10 +37,10 @@ LIMA_SSH_PORT_FORWARDER=true limactl start
 In this model, lima uses existing GRPC communication (Host <-> Guest) to tunnel port forwarding requests.
 For each port forwarding request, a GRPC tunnel is created and this will be used for transmitting data
 
-To disable this feature and use SSH forwarding use the following environment variable
+To enable this feature, set `LIMA_SSH_PORT_FORWARDER` to `false`:
 
 ```bash
-LIMA_SSH_PORT_FORWARDER=true limactl start
+LIMA_SSH_PORT_FORWARDER=false limactl start
 ```
 
 #### Advantages
