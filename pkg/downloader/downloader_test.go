@@ -19,7 +19,7 @@ import (
 
 func TestMain(m *testing.M) {
 	HideProgress = true
-	os.Exit(m.Run())
+	m.Run()
 }
 
 type downloadResult struct {
@@ -189,21 +189,13 @@ func TestDownloadRemote(t *testing.T) {
 }
 
 func TestRedownloadRemote(t *testing.T) {
-	remoteDir, err := os.MkdirTemp("", "redownloadRemote")
-	assert.NilError(t, err)
-	t.Cleanup(func() { _ = os.RemoveAll(remoteDir) })
+	remoteDir := t.TempDir()
 	ts := httptest.NewServer(http.FileServer(http.Dir(remoteDir)))
 	t.Cleanup(ts.Close)
 
-	cacheDir, err := os.MkdirTemp("", "redownloadCache")
-	assert.NilError(t, err)
-	t.Cleanup(func() { _ = os.RemoveAll(cacheDir) })
+	downloadDir := t.TempDir()
 
-	downloadDir, err := os.MkdirTemp("", "redownloadLocal")
-	assert.NilError(t, err)
-	t.Cleanup(func() { _ = os.RemoveAll(downloadDir) })
-
-	cacheOpt := WithCacheDir(cacheDir)
+	cacheOpt := WithCacheDir(t.TempDir())
 
 	t.Run("digest-less", func(t *testing.T) {
 		remoteFile := filepath.Join(remoteDir, "digest-less.txt")
@@ -283,8 +275,6 @@ func TestDownloadLocal(t *testing.T) {
 		r, err := Download(context.Background(), localPath, testLocalFileURL, WithExpectedDigest(testDownloadLocalDigest))
 		assert.NilError(t, err)
 		assert.Equal(t, StatusDownloaded, r.Status)
-
-		os.Remove(localTestFile)
 	})
 
 	t.Run("cached", func(t *testing.T) {
