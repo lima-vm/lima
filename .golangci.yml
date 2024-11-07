@@ -144,6 +144,11 @@ linters-settings:
     - name: unused-parameter
     - name: var-declaration
     - name: var-naming
+  staticcheck:
+    # https://staticcheck.dev/docs/configuration/options/#checks
+    checks:
+    - "all"
+    - "-SA3000"  # false positive for Go 1.15+. See https://github.com/golang/go/issues/34129
 issues:
   # Maximum issues count per one linter.
   max-issues-per-linter: 0
