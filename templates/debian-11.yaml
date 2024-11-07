@@ -18,3 +18,7 @@ mounts:
 - location: "~"
 - location: "/tmp/lima"
   writable: true
+
+# debian-11 seems incompatible with vz
+# https://github.com/lima-vm/lima/issues/2855
+vmType: "qemu"
