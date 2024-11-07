@@ -654,8 +654,18 @@ func (a *HostAgent) processGuestAgentEvents(ctx context.Context, client *guestag
 		for _, f := range ev.Errors {
 			logrus.Warnf("received error from the guest: %q", f)
 		}
-		env, _ := strconv.ParseBool(os.Getenv("LIMA_SSH_PORT_FORWARDER"))
-		if env {
+		// useSSHFwd was false by default in v1.0, but reverted to true by default in v1.0.1
+		// due to stability issues
+		useSSHFwd := true
+		if envVar := os.Getenv("LIMA_SSH_PORT_FORWARDER"); envVar != "" {
+			b, err := strconv.ParseBool(os.Getenv("LIMA_SSH_PORT_FORWARDER"))
+			if err != nil {
+				logrus.WithError(err).Warnf("invalid LIMA_SSH_PORT_FORWARDER value %q", envVar)
+			} else {
+				useSSHFwd = b
+			}
+		}
+		if useSSHFwd {
 			a.portForwarder.OnEvent(ctx, ev)
 		} else {
 			a.grpcPortForwarder.OnEvent(ctx, client, ev)
