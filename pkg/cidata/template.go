@@ -35,6 +35,7 @@ type Containerd struct {
 type Network struct {
 	MACAddress string
 	Interface  string
+	Metric     uint32
 }
 type Mount struct {
 	Tag        string

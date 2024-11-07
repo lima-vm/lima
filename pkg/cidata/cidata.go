@@ -256,12 +256,12 @@ func templateArgs(bootScripts bool, instDir, name string, instConfig *limayaml.L
 		})
 	}
 
-	args.Networks = append(args.Networks, Network{MACAddress: limayaml.MACAddress(instDir), Interface: networks.SlirpNICName})
+	args.Networks = append(args.Networks, Network{MACAddress: limayaml.MACAddress(instDir), Interface: networks.SlirpNICName, Metric: 200})
 	for i, nw := range instConfig.Networks {
 		if i == firstUsernetIndex {
 			continue
 		}
-		args.Networks = append(args.Networks, Network{MACAddress: nw.MACAddress, Interface: nw.Interface})
+		args.Networks = append(args.Networks, Network{MACAddress: nw.MACAddress, Interface: nw.Interface, Metric: *nw.Metric})
 	}
 
 	args.Env, err = setupEnv(instConfig.Env, *instConfig.PropagateProxyEnv, args.SlirpGateway)

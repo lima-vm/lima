@@ -609,6 +609,9 @@ func FillDefault(y, d, o *LimaYAML, filePath string, warn bool) {
 			if nw.MACAddress != "" {
 				networks[i].MACAddress = nw.MACAddress
 			}
+			if nw.Metric != nil {
+				networks[i].Metric = nw.Metric
+			}
 		} else {
 			// unnamed network definitions are not combined/overwritten
 			if nw.Interface != "" {
@@ -626,6 +629,9 @@ func FillDefault(y, d, o *LimaYAML, filePath string, warn bool) {
 		}
 		if nw.Interface == "" {
 			nw.Interface = "lima" + strconv.Itoa(i)
+		}
+		if nw.Metric == nil {
+			nw.Metric = ptr.Of(uint32(100))
 		}
 	}
 
