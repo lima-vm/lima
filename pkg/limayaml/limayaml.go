@@ -274,8 +274,9 @@ type Network struct {
 	// VZNAT uses VZNATNetworkDeviceAttachment. Needs VZ. No root privilege is required.
 	VZNAT *bool `yaml:"vzNAT,omitempty" json:"vzNAT,omitempty"`
 
-	MACAddress string `yaml:"macAddress,omitempty" json:"macAddress,omitempty"`
-	Interface  string `yaml:"interface,omitempty" json:"interface,omitempty"`
+	MACAddress string  `yaml:"macAddress,omitempty" json:"macAddress,omitempty"`
+	Interface  string  `yaml:"interface,omitempty" json:"interface,omitempty"`
+	Metric     *uint32 `yaml:"metric,omitempty" json:"metric,omitempty"`
 }
 
 type HostResolver struct {

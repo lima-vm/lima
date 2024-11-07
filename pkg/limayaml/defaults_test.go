@@ -255,6 +255,7 @@ func TestFillDefault(t *testing.T) {
 	expect.Networks = slices.Clone(y.Networks)
 	expect.Networks[0].MACAddress = MACAddress(fmt.Sprintf("%s#%d", filePath, 0))
 	expect.Networks[0].Interface = "lima0"
+	expect.Networks[0].Metric = ptr.Of(uint32(100))
 
 	expect.DNS = slices.Clone(y.DNS)
 	expect.PortForwards = []PortForward{
@@ -401,6 +402,7 @@ func TestFillDefault(t *testing.T) {
 			{
 				MACAddress: "11:22:33:44:55:66",
 				Interface:  "def0",
+				Metric:     ptr.Of(uint32(50)),
 			},
 		},
 		DNS: []net.IP{
@@ -622,6 +624,7 @@ func TestFillDefault(t *testing.T) {
 				Lima:       "shared",
 				MACAddress: "10:20:30:40:50:60",
 				Interface:  "def1",
+				Metric:     ptr.Of(uint32(25)),
 			},
 			{
 				Lima:      "bridged",

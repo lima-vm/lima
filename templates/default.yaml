@@ -384,6 +384,9 @@ networks:
 #   macAddress: ""
 #   # Interface name, defaults to "lima0", "lima1", etc.
 #   interface: ""
+#   # Interface metric, lowest metric becomes the preferred route.
+#   # Defaults to 100. Builtin SLIRP network uses 200.
+#   metric: 100
 #
 # Lima can also connect to "unmanaged" networks addressed by "socket". This
 # means that the daemons will not be controlled by Lima, but must be started
