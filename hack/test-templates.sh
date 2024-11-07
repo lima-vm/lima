@@ -286,7 +286,7 @@ if [[ -n ${CHECKS["port-forwards"]} ]]; then
 	"${scriptdir}/test-port-forwarding.pl" "${NAME}"
 
 	if [[ -n ${CHECKS["container-engine"]} || ${NAME} == "alpine"* ]]; then
-		INFO "Testing that \"${CONTAINER_ENGINE} run\" binds to 0.0.0.0 by default and is forwarded to the host"
+		INFO "Testing that \"${CONTAINER_ENGINE} run\" binds to 0.0.0.0 and is forwarded to the host (non-default behavior, configured via test-port-forwarding.pl)"
 		if [ "$(uname)" = "Darwin" ]; then
 			# macOS runners seem to use `localhost` as the hostname, so the perl lookup just returns `127.0.0.1`
 			hostip=$(system_profiler SPNetworkDataType -json | jq -r 'first(.SPNetworkDataType[] | select(.ip_address) | .ip_address) | first')
