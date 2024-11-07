@@ -10,8 +10,10 @@ import (
 	"testing"
 )
 
-const vmnetMaxPacketSize = 1514
-const packetsCount = 1000
+const (
+	vmnetMaxPacketSize = 1514
+	packetsCount       = 1000
+)
 
 func TestDialQemu(t *testing.T) {
 	listener, err := listenUnix(t.TempDir())
@@ -66,7 +68,7 @@ func TestDialQemu(t *testing.T) {
 
 		// quit packet format:
 		//     0-4:     "quit"
-		copy(buf[:4], []byte("quit"))
+		copy(buf[:4], "quit")
 		if _, err := vzConn.Write(buf[:4]); err != nil {
 			errc <- err
 			return
