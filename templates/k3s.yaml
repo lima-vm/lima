@@ -58,6 +58,9 @@ copyToHost:
 - guest: "/etc/rancher/k3s/k3s.yaml"
   host: "{{.Dir}}/copied-from-guest/kubeconfig.yaml"
   deleteOnStop: true
+- guest: "/var/lib/rancher/k3s/server/tls/server-ca.crt"
+  host: "{{.Dir}}/copied-from-guest/server-ca.crt"
+  deleteOnStop: true
 message: |
   To run `kubectl` on the host (assumes kubectl is installed), run the following commands:
   ------
