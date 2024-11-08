@@ -10,9 +10,7 @@ import (
 
 func dumpJSON(t *testing.T, d interface{}) string {
 	b, err := json.Marshal(d)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NilError(t, err)
 	return string(b)
 }
 

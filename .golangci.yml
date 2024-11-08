@@ -88,6 +88,15 @@ linters-settings:
         deny:
         - pkg: "golang.org/x/net/context"
           desc: "use the 'context' package from the standard library"
+  forbidigo:
+    analyze-types: true
+    forbid:
+    - p: ^print(ln)?$
+      msg: Do not use builtin print functions. It's for bootstrapping only and may be removed in the future.
+    - p: ^fmt\.Print.*$
+      msg: Do not use fmt.Print statements.
+    - p: ^testing.T.Fatal.*$
+      msg: Use assert functions from the gotest.tools/v3/assert package instead.
   gocritic:
     # See "Tags" section in https://github.com/go-critic/go-critic#usage
     enabled-tags:
