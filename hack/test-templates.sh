@@ -307,9 +307,17 @@ if [[ -n ${CHECKS["port-forwards"]} ]]; then
 			fi
 			limactl shell "$NAME" $sudo $CONTAINER_ENGINE info
 			limactl shell "$NAME" $sudo $CONTAINER_ENGINE pull --quiet ${nginx_image}
-			limactl shell "$NAME" $sudo $CONTAINER_ENGINE run -d --name nginx -p 8888:80 ${nginx_image}
 
+			limactl shell "$NAME" $sudo $CONTAINER_ENGINE run -d --name nginx -p 8888:80 ${nginx_image}
 			timeout 3m bash -euxc "until curl -f --retry 30 --retry-connrefused http://${hostip}:8888; do sleep 3; done"
+			limactl shell "$NAME" $sudo $CONTAINER_ENGINE rm -f nginx
+
+			if [ "$(uname)" = "Darwin" ]; then
+				# Only macOS can bind to port 80 without root
+				limactl shell "$NAME" $sudo $CONTAINER_ENGINE run -d --name nginx -p 127.0.0.1:80:80 ${nginx_image}
+				timeout 3m bash -euxc "until curl -f --retry 30 --retry-connrefused http://localhost:80; do sleep 3; done"
+				limactl shell "$NAME" $sudo $CONTAINER_ENGINE rm -f nginx
+			fi
 		fi
 	fi
 	set +x
