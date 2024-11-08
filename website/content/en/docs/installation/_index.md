@@ -2,9 +2,6 @@
 title: Installation
 weight: 1
 ---
-> **NOTE**
-> Lima is not regularly tested on ARM Mac (due to lack of CI).
-
 Prerequisite:
 
 - QEMU 7.0 or later (Required, only if QEMU driver is used)
