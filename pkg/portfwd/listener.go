@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"strings"
 	"sync"
 
 	guestagentclient "github.com/lima-vm/lima/pkg/guestagent/api/client"
@@ -42,6 +43,7 @@ func (p *ClosableListeners) Forward(ctx context.Context, client *guestagentclien
 }
 
 func (p *ClosableListeners) Remove(_ context.Context, protocol, hostAddress, guestAddress string) {
+	logrus.Debugf("removing listener for hostAddress: %s, guestAddress: %s", hostAddress, guestAddress)
 	key := key(protocol, hostAddress, guestAddress)
 	switch protocol {
 	case "tcp", "tcp6":
@@ -65,7 +67,6 @@ func (p *ClosableListeners) Remove(_ context.Context, protocol, hostAddress, gue
 
 func (p *ClosableListeners) forwardTCP(ctx context.Context, client *guestagentclient.GuestAgentClient, hostAddress, guestAddress string) {
 	key := key("tcp", hostAddress, guestAddress)
-	defer p.Remove(ctx, "tcp", hostAddress, guestAddress)
 
 	p.listenersRW.Lock()
 	_, ok := p.listeners[key]
@@ -75,16 +76,21 @@ func (p *ClosableListeners) forwardTCP(ctx context.Context, client *guestagentcl
 	}
 	tcpLis, err := Listen(ctx, p.listenConfig, hostAddress)
 	if err != nil {
-		logrus.Errorf("failed to accept TCP connection: %v", err)
+		logrus.Errorf("failed to listen to TCP connection: %v", err)
 		p.listenersRW.Unlock()
 		return
 	}
+	defer p.Remove(ctx, "tcp", hostAddress, guestAddress)
 	p.listeners[key] = tcpLis
 	p.listenersRW.Unlock()
 	for {
 		conn, err := tcpLis.Accept()
 		if err != nil {
 			logrus.Errorf("failed to accept TCP connection: %v", err)
+			if strings.Contains(err.Error(), "pseudoloopback") {
+				// don't stop forwarding because the forwarder has rejected a non-local address
+				continue
+			}
 			return
 		}
 		go HandleTCPConnection(ctx, client, conn, guestAddress)
