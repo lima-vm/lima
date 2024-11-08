@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/opencontainers/go-digest"
+	"gotest.tools/v3/assert"
 )
 
 var algorithm = digest.Algorithm("sha256")
@@ -16,9 +17,7 @@ func FuzzDownload(f *testing.F) {
 		localFile := filepath.Join(t.TempDir(), "localFile")
 		remoteFile := filepath.Join(t.TempDir(), "remoteFile")
 		err := os.WriteFile(remoteFile, fileContents, 0o600)
-		if err != nil {
-			t.Fatal(err)
-		}
+		assert.NilError(t, err)
 		testLocalFileURL := "file://" + remoteFile
 		if checkDigest {
 			d := algorithm.FromBytes(fileContents)

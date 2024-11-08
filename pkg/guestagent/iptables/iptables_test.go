@@ -3,6 +3,8 @@ package iptables
 import (
 	"strings"
 	"testing"
+
+	"gotest.tools/v3/assert"
 )
 
 // data is from a run of `iptables -t nat -S` with two containers running (started
@@ -74,14 +76,10 @@ func TestParsePortsFromRules(t *testing.T) {
 	}
 
 	res, err := parsePortsFromRules(rules)
-	if err != nil {
-		t.Errorf("parsing iptables ports failed with error: %s", err)
-	}
+	assert.NilError(t, err, "parsing iptables ports failed")
 
 	l := len(res)
-	if l != 2 {
-		t.Fatalf("expected 2 ports parsed from iptables but parsed %d", l)
-	}
+	assert.Equal(t, l, 2, "unexpected number of ports parsed from iptables")
 
 	if res[0].IP.String() != "0.0.0.0" || res[0].Port != 8082 || res[0].TCP != true {
 		t.Errorf("expected port 8082 on IP 0.0.0.0 with TCP true but got port %d on IP %s with TCP %t", res[0].Port, res[0].IP.String(), res[0].TCP)

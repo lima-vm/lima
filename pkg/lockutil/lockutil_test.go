@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"gotest.tools/v3/assert"
 )
 
 const parallel = 20
@@ -46,11 +48,7 @@ func TestWithDirLock(t *testing.T) {
 	}
 
 	data, err := os.ReadFile(log)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NilError(t, err)
 	lines := strings.Split(strings.Trim(string(data), "\n"), "\n")
-	if len(lines) != 1 {
-		t.Errorf("Expected one writer, got %v", lines)
-	}
+	assert.Equal(t, len(lines), 1, "unexpected number of writers")
 }
