@@ -1,6 +1,6 @@
 ---
 title: Port Forwarding
-weight: 50
+weight: 31
 ---
 
 Lima supports automatic port-forwarding of localhost ports from guest to host.

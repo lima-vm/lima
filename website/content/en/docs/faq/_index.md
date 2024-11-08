@@ -32,7 +32,7 @@ weight: 6
 - [Filesystem sharing](#filesystem-sharing)
   - ["Filesystem is slow"](#filesystem-is-slow)
   - ["Filesystem is not writable"](#filesystem-is-not-writable)
-  - ["Filesystem is unmounted after upgrading Lima to v1.0 (pre-release)"](#filesystem-is-unmounted-after-upgrading-lima-to-v10-pre-release)
+  - ["Filesystem is unmounted after upgrading Lima to v1.0"](#filesystem-is-unmounted-after-upgrading-lima-to-v10)
 - [External projects](#external-projects)
   - ["I am using Rancher Desktop. How to deal with the underlying Lima?"](#i-am-using-rancher-desktop-how-to-deal-with-the-underlying-lima)
 - ["Hints for debugging other problems?"](#hints-for-debugging-other-problems)
@@ -42,9 +42,9 @@ weight: 6
 ### Generic
 #### "How does Lima work?"
 
-- Hypervisor: [QEMU with HVF accelerator (default), or Virtualization.framework](../config/vmtype/)
-- Filesystem sharing: [Reverse SSHFS (default),  or virtio-9p-pci aka virtfs, or virtiofs](../config/mount/)
-- Port forwarding: `ssh -L`, automated by watching `/proc/net/tcp` and `iptables` events in the guest
+- Hypervisor: [QEMU (default on Linux), or Virtualization.framework (default on macOS)](../config/vmtype/)
+- Filesystem sharing: [Reverse SSHFS, virtio-9p-pci aka virtfs (default for QEMU), or virtiofs (default for Virtualization.framework)](../config/mount/)
+- Port forwarding: [`ssh -L`](../config/port), automated by watching `/proc/net/tcp` and `iptables` events in the guest
 
 #### "What's my login password?"
 Password is disabled and locked by default.
@@ -53,7 +53,7 @@ You have to use `limactl shell bash` (or `lima bash`) to open a shell.
 Alternatively, you may also directly ssh into the guest: `ssh -p 60022 -i ~/.lima/_config/user -o NoHostAuthenticationForLocalhost=yes 127.0.0.1`.
 
 #### "Does Lima work on ARM Mac?"
-Yes, it should work, but not regularly tested on ARM (due to lack of CI).
+Yes
 
 #### "Can I run non-Ubuntu guests?"
 AlmaLinux, Alpine, Arch Linux, Debian, Fedora, openSUSE, Oracle Linux, and Rocky are also known to work.
@@ -231,9 +231,9 @@ mounts:
 
 Run `limactl edit <INSTANCE>` to open the YAML editor for an existing instance.
 
-#### "Filesystem is unmounted after upgrading Lima to v1.0 (pre-release)"
+#### "Filesystem is unmounted after upgrading Lima to v1.0"
 
-Lima v1.0 (pre-release) changed the default mount type for QEMU from `reverse-sshfs` to `9p`.
+Lima v1.0 changed the default mount type for QEMU from `reverse-sshfs` to `9p`.
 
 The `9p` mount type is known to be incompatible with the following guest operating systems:
 - AlmaLinux, CentOS Stream, Oracle Linux, and RockyLinux
