@@ -3,6 +3,7 @@ package hostagent
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/lima-vm/lima/pkg/limayaml"
@@ -61,14 +62,17 @@ func (a *HostAgent) waitForRequirements(label string, requirements []requirement
 //	EOF
 //	/usr/bin/env ruby
 //
-// ssh.ExecuteScript will strip the `#!` prefix from the first line and invoke the rest
-// of the line as the command. The full script is then passed via STDIN. We use the $' '
-// form of shell quoting to be able to use \n as newline escapes to fit everything on a
+// ssh.ExecuteScript will strip the `#!` prefix from the first line and invoke the
+// rest of the line as the command. The full script is then passed via STDIN. We use
+// "$(printf '…')" to be able to use \n as newline escapes, to fit everything on a
 // single line:
 //
-//	#!/bin/bash -c $'while … done<<EOF\n$(sudo …)\nEOF\n/usr/bin/env ruby'
+//	#!/bin/bash -c "$(printf 'while … done<<EOF\n$(sudo …)\nEOF\n/usr/bin/env ruby')"
 //	#!/usr/bin/env ruby
 //	…
+//
+// An earlier implementation used $'…' for quoting, but that isn't supported if the
+// user switched the default shell to fish.
 func prefixExportParam(script string) (string, error) {
 	interpreter, err := ssh.ParseScriptInterpreter(script)
 	if err != nil {
@@ -77,7 +81,14 @@ func prefixExportParam(script string) (string, error) {
 
 	// TODO we should have a symbolic constant for `/mnt/lima-cidata`
 	exportParam := `while read -r line; do [ -n "$line" ] && export "$line"; done<<EOF\n$(sudo cat /mnt/lima-cidata/param.env)\nEOF\n`
-	return fmt.Sprintf("#!/bin/bash -c $'%s%s'\n%s", exportParam, interpreter, script), nil
+
+	// double up all '%' characters so we can pass them through unchanged in the format string of printf
+	interpreter = strings.ReplaceAll(interpreter, "%", "%%")
+	exportParam = strings.ReplaceAll(exportParam, "%", "%%")
+	// strings will be interpolated into single-quoted strings, so protect any existing single quotes
+	interpreter = strings.ReplaceAll(interpreter, "'", `'"'"'`)
+	exportParam = strings.ReplaceAll(exportParam, "'", `'"'"'`)
+	return fmt.Sprintf("#!/bin/bash -c \"$(printf '%s%s')\"\n%s", exportParam, interpreter, script), nil
 }
 
 func (a *HostAgent) waitForRequirement(r requirement) error {
