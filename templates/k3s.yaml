@@ -64,12 +64,6 @@ copyToHost:
 - guest: "/var/lib/rancher/k3s/server/tls/server-ca.key"
   host: "{{.Dir}}/copied-from-guest/server-ca.key"
   deleteOnStop: true
-- guest: "/var/lib/rancher/k3s/server/tls/cluster-ca.crt"
-  host: "{{.Dir}}/copied-from-guest/cluster-ca.crt"
-  deleteOnStop: true
-- guest: "/var/lib/rancher/k3s/server/tls/cluster-ca.key"
-  host: "{{.Dir}}/copied-from-guest/cluster-ca.key"
-  deleteOnStop: true
 message: |
   To run `kubectl` on the host (assumes kubectl is installed), run the following commands:
   ------
