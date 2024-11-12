@@ -32,6 +32,7 @@ linters:
   - typecheck
   # - asciicheck
   - bodyclose
+  - copyloopvar
   # - dogsled
   # - dupl
   - dupword

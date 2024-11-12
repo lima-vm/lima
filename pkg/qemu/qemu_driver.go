@@ -131,9 +131,6 @@ func (l *LimaQemuDriver) Start(ctx context.Context) (chan error, error) {
 	}
 
 	for i, vhostCmd := range vhostCmds {
-		i := i
-		vhostCmd := vhostCmd
-
 		logrus.Debugf("vhostCmd[%d].Args: %v", i, vhostCmd.Args)
 		if err := vhostCmd.Start(); err != nil {
 			return nil, err
