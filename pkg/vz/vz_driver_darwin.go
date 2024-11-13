@@ -17,6 +17,7 @@ import (
 	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/reflectutil"
+	"github.com/lima-vm/lima/pkg/store/filenames"
 )
 
 var knownYamlProperties = []string{
@@ -192,6 +193,13 @@ func (l *LimaVzDriver) RunGUI() error {
 }
 
 func (l *LimaVzDriver) Stop(_ context.Context) error {
+	machineStatePath := filepath.Join(l.Instance.Dir, filenames.VzMachineState)
+	if err := saveVM(l.machine.VirtualMachine, machineStatePath); err != nil {
+		logrus.WithError(err).Warn("Failed to save VZ. Falling back to shutdown")
+	} else {
+		return nil
+	}
+
 	logrus.Info("Shutting down VZ")
 	canStop := l.machine.CanRequestStop()
 

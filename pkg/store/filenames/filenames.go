@@ -56,6 +56,7 @@ const (
 	HostAgentStderrLog   = "ha.stderr.log"
 	VzIdentifier         = "vz-identifier"
 	VzEfi                = "vz-efi"           // efi variable store
+	VzMachineState       = "vz-machine-state" // machine state file
 	QemuEfiCodeFD        = "qemu-efi-code.fd" // efi code; not always created
 	AnsibleInventoryYAML = "ansible-inventory.yaml"
 
