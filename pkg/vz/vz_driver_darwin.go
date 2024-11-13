@@ -53,6 +53,7 @@ var knownYamlProperties = []string{
 	"PropagateProxyEnv",
 	"Provision",
 	"Rosetta",
+	"SaveOnStop",
 	"SSH",
 	"TimeZone",
 	"UpgradePackages",
@@ -67,11 +68,22 @@ type LimaVzDriver struct {
 	*driver.BaseDriver
 
 	machine *virtualMachineWrapper
+
+	// Runtime configuration
+	config LimaVzDriverRuntimeConfig
+}
+
+type LimaVzDriverRuntimeConfig struct {
+	// SaveOnStop is a flag to save the VM state on stop
+	SaveOnStop bool `json:"saveOnStop"`
 }
 
 func New(driver *driver.BaseDriver) *LimaVzDriver {
 	return &LimaVzDriver{
 		BaseDriver: driver,
+		config: LimaVzDriverRuntimeConfig{
+			SaveOnStop: *driver.Instance.Config.SaveOnStop,
+		},
 	}
 }
 
@@ -193,11 +205,13 @@ func (l *LimaVzDriver) RunGUI() error {
 }
 
 func (l *LimaVzDriver) Stop(_ context.Context) error {
-	machineStatePath := filepath.Join(l.Instance.Dir, filenames.VzMachineState)
-	if err := saveVM(l.machine.VirtualMachine, machineStatePath); err != nil {
-		logrus.WithError(err).Warn("Failed to save VZ. Falling back to shutdown")
-	} else {
-		return nil
+	if l.config.SaveOnStop {
+		machineStatePath := filepath.Join(l.Instance.Dir, filenames.VzMachineState)
+		if err := saveVM(l.machine.VirtualMachine, machineStatePath); err != nil {
+			logrus.WithError(err).Warn("Failed to save VZ. Falling back to shutdown")
+		} else {
+			return nil
+		}
 	}
 
 	logrus.Info("Shutting down VZ")

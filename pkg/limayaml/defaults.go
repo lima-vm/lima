@@ -855,6 +855,32 @@ func FillDefault(y, d, o *LimaYAML, filePath string, warn bool) {
 		y.NestedVirtualization = ptr.Of(false)
 	}
 
+	if y.SaveOnStop == nil {
+		y.SaveOnStop = d.SaveOnStop
+	}
+	if o.SaveOnStop != nil {
+		y.SaveOnStop = o.SaveOnStop
+	}
+	if y.SaveOnStop == nil {
+		y.SaveOnStop = ptr.Of(false)
+	}
+	if *y.SaveOnStop {
+		y.SaveOnStop = ptr.Of(false)
+		if *y.VMType != VZ {
+			logrus.Warn("saveOnStop is only supported for VM type vz")
+		} else if runtime.GOARCH != "arm64" {
+			logrus.Warn("saveOnStop is only supported for arm64 VM type vz")
+		} else if runtime.GOOS != "darwin" {
+			logrus.Warn("saveOnStop is only supported on macOS")
+		} else if macOSProductVersion, err := osutil.ProductVersion(); err != nil {
+			logrus.WithError(err).Warn("Failed to get macOS product version")
+		} else if macOSProductVersion.LessThan(*semver.New("14.0.0")) {
+			logrus.Warn("saveOnStop is not supported on macOS prior to 14.0")
+		} else {
+			y.SaveOnStop = ptr.Of(true)
+		}
+	}
+
 	if y.Plain == nil {
 		y.Plain = d.Plain
 	}
@@ -878,6 +904,7 @@ func fixUpForPlainMode(y *LimaYAML) {
 	y.Containerd.User = ptr.Of(false)
 	y.Rosetta.BinFmt = ptr.Of(false)
 	y.Rosetta.Enabled = ptr.Of(false)
+	y.SaveOnStop = ptr.Of(false)
 	y.TimeZone = ptr.Of("")
 }
 
