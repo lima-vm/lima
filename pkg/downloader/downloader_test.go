@@ -203,18 +203,26 @@ func TestRedownloadRemote(t *testing.T) {
 		assert.NilError(t, os.Chtimes(remoteFile, time.Now(), time.Now().Add(-time.Hour)))
 		opt := []Opt{cacheOpt}
 
-		r, err := Download(context.Background(), filepath.Join(downloadDir, "digest-less1.txt"), ts.URL+"/digest-less.txt", opt...)
+		// Download on the first call
+		r, err := Download(context.Background(), filepath.Join(downloadDir, "1"), ts.URL+"/digest-less.txt", opt...)
 		assert.NilError(t, err)
 		assert.Equal(t, StatusDownloaded, r.Status)
-		r, err = Download(context.Background(), filepath.Join(downloadDir, "digest-less2.txt"), ts.URL+"/digest-less.txt", opt...)
+
+		// Next download will use the cached download
+		r, err = Download(context.Background(), filepath.Join(downloadDir, "2"), ts.URL+"/digest-less.txt", opt...)
 		assert.NilError(t, err)
 		assert.Equal(t, StatusUsedCache, r.Status)
 
-		// modifying remote file will cause redownload
+		// Modifying remote file will cause redownload
 		assert.NilError(t, os.Chtimes(remoteFile, time.Now(), time.Now()))
-		r, err = Download(context.Background(), filepath.Join(downloadDir, "digest-less3.txt"), ts.URL+"/digest-less.txt", opt...)
+		r, err = Download(context.Background(), filepath.Join(downloadDir, "3"), ts.URL+"/digest-less.txt", opt...)
 		assert.NilError(t, err)
 		assert.Equal(t, StatusDownloaded, r.Status)
+
+		// Next download will use the cached download
+		r, err = Download(context.Background(), filepath.Join(downloadDir, "4"), ts.URL+"/digest-less.txt", opt...)
+		assert.NilError(t, err)
+		assert.Equal(t, StatusUsedCache, r.Status)
 	})
 
 	t.Run("has-digest", func(t *testing.T) {
