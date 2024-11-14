@@ -13,13 +13,22 @@ command -v systemctl >/dev/null 2>&1 || exit 0
 systemctl enable systemd-time-wait-sync.service
 
 # For the first boot, where the above setting is not yet active, wait for NTP synchronization here.
-until ntp_synchronized=$(timedatectl show --property=NTPSynchronized --value) && [ "${ntp_synchronized}" = "yes" ]; do
+max_retry=60 retry=0
+until ntp_synchronized=$(timedatectl show --property=NTPSynchronized --value) && [ "${ntp_synchronized}" = "yes" ] ||
+	[ "${retry}" -gt "${max_retry}" ]; do
 	time_usec=$(timedatectl show --property=TimeUSec)
 	echo "${time_usec}, Waiting for NTP synchronization..."
+	retry=$((retry + 1))
 	sleep 1
 done
 # Print the result of NTP synchronization
 ntp_message=$(timedatectl show-timesync --property=NTPMessage)
 time_usec=$(timedatectl show --property=TimeUSec)
-echo "${time_usec}, NTP synchronization complete."
-echo "${ntp_message}"
+if [ "${ntp_synchronized}" = "yes" ]; then
+	echo "${time_usec}, NTP synchronization complete."
+	echo "${ntp_message}"
+else
+	echo "${time_usec}, NTP synchronization timed out."
+	echo "${ntp_message}"
+	exit 1
+fi
