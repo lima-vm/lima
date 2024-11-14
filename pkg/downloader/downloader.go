@@ -58,6 +58,15 @@ type options struct {
 	expectedDigest digest.Digest
 }
 
+func (o *options) apply(opts []Opt) error {
+	for _, f := range opts {
+		if err := f(o); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 type Opt func(*options) error
 
 // WithCache enables caching using filepath.Join(os.UserCacheDir(), "lima") as the cache dir.
@@ -165,11 +174,10 @@ func readTime(path string) time.Time {
 // The local path can be an empty string for "caching only" mode.
 func Download(ctx context.Context, local, remote string, opts ...Opt) (*Result, error) {
 	var o options
-	for _, f := range opts {
-		if err := f(&o); err != nil {
-			return nil, err
-		}
+	if err := o.apply(opts); err != nil {
+		return nil, err
 	}
+
 	var localPath string
 	if local == "" {
 		if o.cacheDir == "" {
@@ -301,10 +309,8 @@ func Download(ctx context.Context, local, remote string, opts ...Opt) (*Result, 
 // When the cache path already exists, Cached returns Result with StatusUsedCache.
 func Cached(remote string, opts ...Opt) (*Result, error) {
 	var o options
-	for _, f := range opts {
-		if err := f(&o); err != nil {
-			return nil, err
-		}
+	if err := o.apply(opts); err != nil {
+		return nil, err
 	}
 	if o.cacheDir == "" {
 		return nil, fmt.Errorf("caching-only mode requires the cache directory to be specified")
@@ -715,13 +721,11 @@ func writeFirst(path string, data []byte, perm os.FileMode) error {
 // CacheEntries returns a map of cache entries.
 // The key is the SHA256 of the URL.
 // The value is the path to the cache entry.
-func CacheEntries(opt ...Opt) (map[string]string, error) {
+func CacheEntries(opts ...Opt) (map[string]string, error) {
 	entries := make(map[string]string)
 	var o options
-	for _, f := range opt {
-		if err := f(&o); err != nil {
-			return nil, err
-		}
+	if err := o.apply(opts); err != nil {
+		return nil, err
 	}
 	if o.cacheDir == "" {
 		return entries, nil
@@ -750,12 +754,10 @@ func CacheKey(remote string) string {
 }
 
 // RemoveAllCacheDir removes the cache directory.
-func RemoveAllCacheDir(opt ...Opt) error {
+func RemoveAllCacheDir(opts ...Opt) error {
 	var o options
-	for _, f := range opt {
-		if err := f(&o); err != nil {
-			return err
-		}
+	if err := o.apply(opts); err != nil {
+		return err
 	}
 	if o.cacheDir == "" {
 		return nil
