@@ -361,18 +361,33 @@ func Cached(remote string, opts ...Opt) (*Result, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// Checking if data file exists is safe without locking.
 	if _, err := os.Stat(shadData); err != nil {
 		return nil, err
 	}
-	if _, err := os.Stat(shadDigest); err != nil {
-		if err := validateCachedDigest(shadDigest, o.expectedDigest); err != nil {
-			return nil, err
-		}
-	} else {
-		if err := validateLocalFileDigest(shadData, o.expectedDigest); err != nil {
-			return nil, err
-		}
+
+	// But validating the digest or the data file must take the lock to avoid races
+	// with parallel downloads.
+	if err := os.MkdirAll(shad, 0o700); err != nil {
+		return nil, err
 	}
+	err = lockutil.WithDirLock(shad, func() error {
+		if _, err := os.Stat(shadDigest); err != nil {
+			if err := validateCachedDigest(shadDigest, o.expectedDigest); err != nil {
+				return err
+			}
+		} else {
+			if err := validateLocalFileDigest(shadData, o.expectedDigest); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	res := &Result{
 		Status:          StatusUsedCache,
 		CachePath:       shadData,
