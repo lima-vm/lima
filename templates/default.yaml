@@ -421,7 +421,7 @@ networks:
 # # default: hostPortRange: [1, 65535]
 #
 # - guestPort: 8888
-#   ignore: true (don't forward this port)
+#   ignore: true (don't forward this port, guestIP will default to 0.0.0.0 in this case since Lima 1.0.2)
 #
 # - guestPort: 7443
 #   guestIP: "0.0.0.0"       # Will match *any* interface

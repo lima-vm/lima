@@ -930,7 +930,7 @@ func FillPortForwardDefaults(rule *PortForward, instDir string, user User, param
 		rule.Proto = ProtoTCP
 	}
 	if rule.GuestIP == nil {
-		if rule.GuestIPMustBeZero {
+		if rule.GuestIPMustBeZero || rule.Ignore {
 			rule.GuestIP = net.IPv4zero
 		} else {
 			rule.GuestIP = IPv4loopback1

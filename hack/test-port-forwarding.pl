@@ -222,8 +222,7 @@ portForwards:
   hostPortRange: [2000, 2009]
   ignore: true
 
-- guestIP: 0.0.0.0
-  guestPortRange: [3010, 3019]
+- guestPortRange: [3010, 3019]
   hostPortRange: [2010, 2019]
   ignore: true
 
@@ -232,20 +231,22 @@ portForwards:
   hostPortRange: [2000, 2029]
 
 # The following rule is completely shadowed by the previous one and has no effect
-- guestIP: 0.0.0.0
-  guestPortRange: [3020, 3029]
+- guestPortRange: [3020, 3029]
   hostPortRange: [2020, 2029]
   ignore: true
 
   # ignore:  127.0.0.2 3000
-  # forward: 127.0.0.3 3001 → 127.0.0.1 2001
+  # forward: 127.0.0.1 3001 → 127.0.0.1 2001
+  # forward: 127.0.0.3 3003 → 127.0.0.1 2003
 
   # Blocking 127.0.0.2 cannot block forwarding from 0.0.0.0
   # forward: 0.0.0.0   3002 → 127.0.0.1 2002
 
   # Blocking 0.0.0.0 will block forwarding from any interface
+  # For "ignore" rules an unspecified guestIP defaults to 0.0.0.0 and not just 127.0.0.1
   # ignore: 0.0.0.0   3010
   # ignore: 127.0.0.1 3011
+  # ignore: 127.0.0.2 3012
 
   # Forwarding from 0.0.0.0 works for any interface (including IPv6)
   # The "ignore" rule above has no effect because the previous rule already matched.
