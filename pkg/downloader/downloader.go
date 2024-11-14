@@ -229,14 +229,25 @@ func Download(ctx context.Context, local, remote string, opts ...Opt) (*Result, 
 		return res, nil
 	}
 
-	res, err := getCached(ctx, localPath, remote, o)
-	if err != nil {
+	shad := cacheDirectoryPath(o.cacheDir, remote)
+	if err := os.MkdirAll(shad, 0o700); err != nil {
 		return nil, err
 	}
-	if res != nil {
-		return res, nil
-	}
-	return fetch(ctx, localPath, remote, o)
+
+	var res *Result
+	err := lockutil.WithDirLock(shad, func() error {
+		var err error
+		res, err = getCached(ctx, localPath, remote, o)
+		if err != nil {
+			return err
+		}
+		if res != nil {
+			return nil
+		}
+		res, err = fetch(ctx, localPath, remote, o)
+		return err
+	})
+	return res, err
 }
 
 // getCached tries to copy the file from the cache to local path. Return result,
@@ -298,18 +309,15 @@ func fetch(ctx context.Context, localPath, remote string, o options) (*Result, e
 		return nil, err
 	}
 	ext := path.Ext(remote)
-	if err := os.MkdirAll(shad, 0o700); err != nil {
-		return nil, err
-	}
 	shadURL := filepath.Join(shad, "url")
-	if err := writeFirst(shadURL, []byte(remote), 0o644); err != nil {
+	if err := os.WriteFile(shadURL, []byte(remote), 0o644); err != nil {
 		return nil, err
 	}
 	if err := downloadHTTP(ctx, shadData, shadTime, shadType, remote, o.description, o.expectedDigest); err != nil {
 		return nil, err
 	}
 	if shadDigest != "" && o.expectedDigest != "" {
-		if err := writeFirst(shadDigest, []byte(o.expectedDigest.String()), 0o644); err != nil {
+		if err := os.WriteFile(shadDigest, []byte(o.expectedDigest.String()), 0o644); err != nil {
 			return nil, err
 		}
 	}
@@ -638,13 +646,13 @@ func downloadHTTP(ctx context.Context, localPath, lastModified, contentType, url
 	}
 	if lastModified != "" {
 		lm := resp.Header.Get("Last-Modified")
-		if err := writeFirst(lastModified, []byte(lm), 0o644); err != nil {
+		if err := os.WriteFile(lastModified, []byte(lm), 0o644); err != nil {
 			return err
 		}
 	}
 	if contentType != "" {
 		ct := resp.Header.Get("Content-Type")
-		if err := writeFirst(contentType, []byte(ct), 0o644); err != nil {
+		if err := os.WriteFile(contentType, []byte(ct), 0o644); err != nil {
 			return err
 		}
 	}
@@ -705,19 +713,7 @@ func downloadHTTP(ctx context.Context, localPath, lastModified, contentType, url
 		return err
 	}
 
-	// If localPath was created by a parallel download keep it. Replacing it
-	// while another process is copying it to the destination may fail the
-	// clonefile syscall. We use a lock to ensure that only one process updates
-	// data, and when we return data file exists.
-
-	return lockutil.WithDirLock(filepath.Dir(localPath), func() error {
-		if _, err := os.Stat(localPath); err == nil {
-			return nil
-		} else if !errors.Is(err, os.ErrNotExist) {
-			return err
-		}
-		return os.Rename(localPathTmp, localPath)
-	})
+	return os.Rename(localPathTmp, localPath)
 }
 
 var tempfileCount atomic.Uint64
@@ -730,18 +726,6 @@ var tempfileCount atomic.Uint64
 // https://github.com/lima-vm/lima/issues/2722
 func perProcessTempfile(path string) string {
 	return fmt.Sprintf("%s.tmp.%d.%d", path, os.Getpid(), tempfileCount.Add(1))
-}
-
-// writeFirst writes data to path unless path already exists.
-func writeFirst(path string, data []byte, perm os.FileMode) error {
-	return lockutil.WithDirLock(filepath.Dir(path), func() error {
-		if _, err := os.Stat(path); err == nil {
-			return nil
-		} else if !errors.Is(err, os.ErrNotExist) {
-			return err
-		}
-		return os.WriteFile(path, data, perm)
-	})
 }
 
 // CacheEntries returns a map of cache entries.
