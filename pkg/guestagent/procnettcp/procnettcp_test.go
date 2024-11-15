@@ -72,3 +72,65 @@ func TestParseUDP(t *testing.T) {
 	assert.Equal(t, uint16(53), entries[0].Port)
 	assert.Equal(t, UDPEstablished, entries[0].State)
 }
+
+func TestParseAddress(t *testing.T) {
+	tests := []struct {
+		input             string
+		expectedIP        net.IP
+		expectedPort      uint16
+		expectedErrSubstr string
+	}{
+		{
+			input:        "0100007F:0050",
+			expectedIP:   net.IPv4(127, 0, 0, 1),
+			expectedPort: 80,
+		},
+		{
+			input:        "000080FE00000000FF57A6705DC771FE:0050",
+			expectedIP:   net.ParseIP("fe80::70a6:57ff:fe71:c75d"),
+			expectedPort: 80,
+		},
+		{
+			input:        "00000000000000000000000000000000:0050",
+			expectedIP:   net.IPv6zero,
+			expectedPort: 80,
+		},
+		{
+			input:             "0100007F",
+			expectedErrSubstr: `unparsable address "0100007F"`,
+		},
+		{
+			input:             "invalid:address",
+			expectedErrSubstr: `unparsable address "invalid:address", expected length of`,
+		},
+		{
+			input:             "0100007F:0050:00",
+			expectedErrSubstr: `unparsable address "0100007F:0050:00"`,
+		},
+		{
+			input:             "0100007G:0050", // Invalid hex character 'G'
+			expectedErrSubstr: `unparsable address "0100007G:0050": unparsable quartet "0100007G"`,
+		},
+		{
+			input:             "0100007F:",
+			expectedErrSubstr: `unparsable address "0100007F:": unparsable port ""`,
+		},
+		{
+			input:             "0100007F:invalid",
+			expectedErrSubstr: `unparsable address "0100007F:invalid": unparsable port "invalid"`,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.input, func(t *testing.T) {
+			ip, port, err := ParseAddress(test.input)
+			if test.expectedErrSubstr != "" {
+				assert.ErrorContains(t, err, test.expectedErrSubstr)
+			} else {
+				assert.NilError(t, err)
+				assert.DeepEqual(t, test.expectedIP, ip)
+				assert.Equal(t, test.expectedPort, port)
+			}
+		})
+	}
+}
