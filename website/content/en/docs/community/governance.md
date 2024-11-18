@@ -38,6 +38,7 @@ See also the [Contributing](../contributing) page.
 | Balaji Vijayakumar | Committer | [@balajiv113](https://github.com/balajiv113)     | [80E1 01FE 5C89 FCF6 6171  72C8 377C 6A63 934B 8E6E](https://github.com/balajiv113.gpg)   |
 | Oleksandr Redko    | Reviewer  | [@alexandear](https://github.com/alexandear)     | [50F8 9811 D8D8 3E79 3E7E  0680 A947 E3F1 1A61 2A57](https://github.com/alexandear.gpg)   |
 | Norio Nomura       | Reviewer  | [@norio-nomura](https://github.com/norio-nomura) | [0010 36FA 2504 DBFF 37BA  2EF8 D4A7 318E B7F7 138D](https://github.com/norio-nomura.gpg) |
+| Nir Soffer         | Reviewer  | [@nirs](https://github.com/nirs)                 | [6F81 B717 51A1 4171 4C09  AF19 4C67 29D7 B2DD 8AFF](https://github.com/nirs.gpg)         |
 
 ### Addition and promotion of Maintainers
 An active contributor to the project can be invited as a Reviewer,
