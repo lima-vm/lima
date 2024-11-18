@@ -9,18 +9,42 @@ import (
 	"strings"
 	"time"
 
+	hostagentclient "github.com/lima-vm/lima/pkg/hostagent/api/client"
 	hostagentevents "github.com/lima-vm/lima/pkg/hostagent/events"
+	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/sirupsen/logrus"
 )
 
-func StopGracefully(inst *store.Instance) error {
+func StopGracefully(inst *store.Instance, saveOnStop bool) error {
 	if inst.Status != store.StatusRunning {
 		return fmt.Errorf("expected status %q, got %q (maybe use `limactl stop -f`?)", store.StatusRunning, inst.Status)
 	}
 
+	if saveOnStop && inst.Saved {
+		logrus.Warn("saved VZ machine state is found. It will be overwritten by the new one.")
+	}
+
+	if inst.VMType == limayaml.VZ {
+		haSock := filepath.Join(inst.Dir, filenames.HostAgentSock)
+		haClient, err := hostagentclient.NewHostAgentClient(haSock)
+		if err != nil {
+			logrus.WithError(err).Error("Failed to create a host agent client")
+		}
+		ctx, cancel := context.WithTimeout(context.TODO(), 3*time.Second)
+		defer cancel()
+		disableSaveOnStopConfig := struct {
+			SaveOnStop bool `json:"saveOnStop"`
+		}{SaveOnStop: saveOnStop}
+		_, err = haClient.DriverConfig(ctx, disableSaveOnStopConfig)
+		if err != nil {
+			return fmt.Errorf("failed to disable saveOnStop: %w", err)
+		}
+	} else if saveOnStop {
+		return fmt.Errorf("save is not supported for %q", inst.VMType)
+	}
 	begin := time.Now() // used for logrus propagation
 	logrus.Infof("Sending SIGINT to hostagent process %d", inst.HostAgentPID)
 	if err := osutil.SysKill(inst.HostAgentPID, osutil.SigInt); err != nil {
