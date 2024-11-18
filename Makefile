@@ -220,6 +220,9 @@ LIMACTL_DEPS += vz.entitlements
 endif
 
 # environment variables for limactl. this variable is used for checking force build.
+#
+# The hostagent must be compiled with CGO_ENABLED=1 so that net.LookupIP() in the DNS server
+# calls the native resolver library and not the simplistic version in the Go library.
 ENVS__output/bin/limactl$(exe) = CGO_ENABLED=1 GOOS=$(GOOS) GOARCH=$(GOARCH) CC=$(CC)
 
 _output/bin/limactl$(exe): $(LIMACTL_DEPS) $$(call force_build,$$@)
@@ -229,8 +232,6 @@ ifneq ($(GOOS),windows) #
 else
 	@rm -rf _output/bin/limactl
 endif
-	# The hostagent must be compiled with CGO_ENABLED=1 so that net.LookupIP() in the DNS server
-	# calls the native resolver library and not the simplistic version in the Go library.
 	$(ENVS_$@) $(GO_BUILD) -o $@ ./cmd/limactl
 ifeq ($(GOOS),darwin)
 	codesign -f -v --entitlements vz.entitlements -s - $@
