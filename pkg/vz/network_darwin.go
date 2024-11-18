@@ -18,7 +18,11 @@ import (
 )
 
 func PassFDToUnix(unixSock string) (*os.File, error) {
-	unixConn, err := net.Dial("unix", unixSock)
+	unixAddr, err := net.ResolveUnixAddr("unix", unixSock)
+	if err != nil {
+		return nil, err
+	}
+	unixConn, err := net.DialUnix("unix", nil, unixAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -27,7 +31,7 @@ func PassFDToUnix(unixSock string) (*os.File, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = fd.Put(unixConn.(*net.UnixConn), server)
+	err = fd.Put(unixConn, server)
 	if err != nil {
 		return nil, err
 	}

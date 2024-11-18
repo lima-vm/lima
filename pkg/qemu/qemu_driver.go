@@ -417,9 +417,9 @@ func (a *qArgTemplateApplier) applyTemplate(qArg string) (string, error) {
 				if !ok {
 					return "", fmt.Errorf("non-string argument %+v", v)
 				}
-				addr := &net.UnixAddr{
-					Net:  "unix",
-					Name: s,
+				addr, err := net.ResolveUnixAddr("unix", s)
+				if err != nil {
+					return "", err
 				}
 				conn, err := net.DialUnix("unix", nil, addr)
 				if err != nil {

@@ -139,8 +139,9 @@ func NewClient(endpointSock string, subnet net.IP) *Client {
 func create(sock string, subnet net.IP, base string) *Client {
 	client := &http.Client{
 		Transport: &http.Transport{
-			DialContext: func(context.Context, string, string) (net.Conn, error) {
-				return net.Dial("unix", sock)
+			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+				var d net.Dialer
+				return d.DialContext(ctx, "unix", sock)
 			},
 		},
 	}
