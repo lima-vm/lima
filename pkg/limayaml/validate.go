@@ -523,4 +523,7 @@ func warnExperimental(y *LimaYAML) {
 	if y.MountInotify != nil && *y.MountInotify {
 		logrus.Warn("`mountInotify` is experimental")
 	}
+	if y.SaveOnStop != nil && *y.SaveOnStop {
+		logrus.Warn("`saveOnStop` is experimental")
+	}
 }

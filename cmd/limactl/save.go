@@ -4,13 +4,17 @@ import (
 	"github.com/lima-vm/lima/pkg/instance"
 	networks "github.com/lima-vm/lima/pkg/networks/reconcile"
 	"github.com/lima-vm/lima/pkg/store"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
 func newSaveCommand() *cobra.Command {
 	saveCmd := &cobra.Command{
-		Use:               "save INSTANCE",
-		Short:             "Save an instance",
+		Use:   "save INSTANCE",
+		Short: "Save an instance",
+		PersistentPreRun: func(*cobra.Command, []string) {
+			logrus.Warn("`limactl save` is experimental")
+		},
 		Args:              WrapArgsError(cobra.MaximumNArgs(1)),
 		RunE:              saveAction,
 		ValidArgsFunction: saveBashComplete,
