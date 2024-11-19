@@ -420,8 +420,9 @@ networks:
 # # default: guestPortRange: [1, 65535]
 # # default: hostPortRange: [1, 65535]
 #
-# - guestPort: 8888
-#   ignore: true (don't forward this port)
+# - guestIP: 0.0.0.0 # otherwise defaults to 127.0.0.1
+#   proto: any       # tcp and udp
+#   ignore: true     # don't forward these ports (guestPortRange, in this case 1-65535)
 #
 # - guestPort: 7443
 #   guestIP: "0.0.0.0"       # Will match *any* interface
