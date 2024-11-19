@@ -23,34 +23,40 @@ func saveVM(vm *vz.VirtualMachine, machineStatePath string) error {
 		return err
 	}
 
-	logrus.Info("Pausing VZ")
+	logrus.Info("Pausing VZ machine for saving the machine state")
 	if err := vm.Pause(); err != nil {
+		logrus.WithError(err).Error("Failed to pause the VZ machine")
 		return err
 	}
 
+	if err := savePausedVM(vm, machineStatePath); err != nil {
+		// If we fail to save the machine state, we should resume the machine before returning the error.
+		if resumeError := vm.Resume(); resumeError != nil {
+			logrus.WithError(resumeError).Error("Failed to resume the VZ machine after pausing")
+			return resumeError
+		}
+		return err
+	}
+
+	return nil
+}
+
+func savePausedVM(vm *vz.VirtualMachine, machineStatePath string) error {
 	// If we can't stop the machine after pausing, saving the machine state will be useless.
 	// So we should check this before saving the machine state.
 	if !vm.CanStop() {
-		return fmt.Errorf("can't stop the VZ machine after pausing")
+		return fmt.Errorf("can't stop the VZ machine")
 	}
 
-	logrus.Info("Saving VZ machine state for resuming later")
+	logrus.Info("Saving VZ machine state for restoring later")
 	if err := vm.SaveMachineStateToPath(machineStatePath); err != nil {
-		// If we fail to save the machine state, we should resume the machine to call RequestStop() later
 		logrus.WithError(err).Errorf("Failed to save the machine state to %q", machineStatePath)
-		if resumeError := vm.Resume(); resumeError != nil {
-			return resumeError
-		}
 		return err
 	}
 
-	logrus.Info("Stopping VZ")
+	logrus.Info("Stopping VZ machine after saving the machine state")
 	if err := vm.Stop(); err != nil {
-		// If we fail to stop the machine, we should resume the machine to call RequestStop() later
 		logrus.WithError(err).Error("Failed to stop the VZ machine")
-		if resumeError := vm.Resume(); resumeError != nil {
-			return resumeError
-		}
 		return err
 	}
 	return nil
@@ -60,7 +66,7 @@ func restoreVM(vm *vz.VirtualMachine, machineStatePath string) error {
 	if _, err := os.Stat(machineStatePath); err != nil {
 		return err
 	}
-	logrus.Info("Saved VZ machine state found, resuming VZ")
+	logrus.Infof("Resuming VZ machine from %q", machineStatePath)
 	if err := vm.RestoreMachineStateFromURL(machineStatePath); err != nil {
 		return err
 	}
