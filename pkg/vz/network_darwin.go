@@ -96,14 +96,7 @@ func (c *qemuPacketConn) Read(b []byte) (n int, err error) {
 		// Likely connection closed by peer.
 		return 0, err
 	}
-
-	reader := io.LimitReader(c.Conn, int64(size))
-	_, err = reader.Read(b)
-	if err != nil {
-		// Likely connection closed by peer.
-		return 0, err
-	}
-	return int(size), nil
+	return io.ReadFull(c.Conn, b[:size])
 }
 
 // Write writes a QEMU packet containing the raw packet. Returns (len(b), nil)
