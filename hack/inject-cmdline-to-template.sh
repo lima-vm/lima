@@ -21,6 +21,8 @@ arch="${arch:-$(uname -m)}"
 case "${arch}" in
 amd64 | x86_64) arch=x86_64 ;;
 aarch64 | arm64) arch=aarch64 ;;
+armv7l | armhf) arch=armv7l ;;
+riscv64) arch=riscv64 ;;
 *)
 	echo "Unsupported arch: ${arch}" >&2
 	exit 1
@@ -29,9 +31,7 @@ esac
 
 # 2. extract location by parsing template using arch
 readonly yq_filter="
-[
-    .images | map(select(.arch == \"${arch}\")) | [.[].location]
-]|flatten|.[]
+    .images[]|select(.arch == \"${arch}\")|.location
 "
 parsed=$(yq eval "${yq_filter}" "${template}")
 
@@ -57,6 +57,8 @@ done
 if [[ -z ${location} ]]; then
 	echo "Failed to get the image location for ${template}" >&2
 	exit 1
+elif [[ ${location} == https://cloud-images.ubuntu.com/minimal/* ]]; then
+	readonly default_cmdline="root=/dev/vda1 ro console=tty1 console=ttyAMA0"
 elif [[ ${location} == https://cloud-images.ubuntu.com/* ]]; then
 	readonly default_cmdline="root=LABEL=cloudimg-rootfs ro console=tty1 console=ttyAMA0"
 else
@@ -91,7 +93,7 @@ function inject_to() {
 	for field_name in location digest cmdline; do
 		[[ -z ${!field_name} ]] || fields+=("\"${field_name}\": \"${!field_name}\"")
 	done
-	yq -i -I 2 eval "setpath([(.images[] | select(.arch == \"${arch}\") | path)].[${index}] + \"${key}\"; { ${fields[*]}})" "${template}"
+	limactl edit --log-level error --set "setpath([(.images[] | select(.arch == \"${arch}\") | path)].[${index}] + \"${key}\"; { ${fields[*]}})" "${template}"
 }
 inject_to "${template}" "${arch}" "${index}" "kernel" "${kernel_location}" "${kernel_digest}" "${cmdline}"
 inject_to "${template}" "${arch}" "${index}" "initrd" "${initrd_location}" "${initrd_digest}"
