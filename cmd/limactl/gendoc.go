@@ -116,9 +116,9 @@ weight: 3
 	})
 }
 
-// replaceAll replaces all occurrences of new with old, for all files in dir.
-func replaceAll(dir, old, new string) error {
-	logrus.Infof("Replacing %q with %q", old, new)
+// replaceAll replaces all occurrences of text with replacement, for all files in dir.
+func replaceAll(dir, text, replacement string) error {
+	logrus.Infof("Replacing %q with %q", text, replacement)
 	return filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -133,7 +133,7 @@ func replaceAll(dir, old, new string) error {
 		if err != nil {
 			return err
 		}
-		out := bytes.ReplaceAll(in, []byte(old), []byte(new))
+		out := bytes.ReplaceAll(in, []byte(text), []byte(replacement))
 		err = os.WriteFile(path, out, 0o644)
 		if err != nil {
 			return err
