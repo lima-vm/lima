@@ -78,13 +78,8 @@ func ConvertToRaw(source, dest string, size *int64, allowSourceWithBackingFile b
 	if err != nil {
 		return err
 	}
-	conv, err := convert.New(convert.Options{})
-	if err != nil {
-		return err
-	}
 	bar.Start()
-	pra := progressbar.ProxyReaderAt{ReaderAt: srcImg, Bar: bar}
-	err = conv.Convert(destTmpF, &pra, srcImg.Size())
+	err = convert.Convert(destTmpF, srcImg, convert.Options{Progress: bar})
 	bar.Finish()
 	if err != nil {
 		return fmt.Errorf("failed to convert image: %w", err)

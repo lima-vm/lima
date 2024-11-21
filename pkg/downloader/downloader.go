@@ -30,7 +30,7 @@ import (
 var HideProgress bool
 
 // hideBar is used only for testing.
-func hideBar(bar *pb.ProgressBar) {
+func hideBar(bar *progressbar.ProgressBar) {
 	bar.Set(pb.Static, true)
 }
 
