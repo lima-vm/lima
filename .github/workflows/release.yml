@@ -31,6 +31,7 @@ jobs:
     - name: "Show xcode and SDK version"
       run: |
         # Xcode version
+        sudo xcode-select -s /Library/Developer/CommandLineTools
         xcodebuild -version
         # macOS SDK version
         xcrun --show-sdk-version
