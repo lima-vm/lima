@@ -28,7 +28,8 @@ package dnshosts
 import (
 	"fmt"
 	"net"
-	"sort"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/containers/gvisor-tap-vsock/pkg/types"
@@ -96,14 +97,6 @@ func Test_zoneHost(t *testing.T) {
 
 func TestExtractZones(t *testing.T) {
 	equalZones := func(za, zb []types.Zone) bool {
-		find := func(list []types.Zone, name string) (types.Zone, bool) {
-			for _, z := range list {
-				if z.Name == name {
-					return z, true
-				}
-			}
-			return types.Zone{}, false
-		}
 		equal := func(a, b types.Zone) bool {
 			if a.Name != b.Name {
 				return false
@@ -125,10 +118,11 @@ func TestExtractZones(t *testing.T) {
 		}
 
 		for _, a := range za {
-			b, ok := find(zb, a.Name)
-			if !ok {
+			ib := slices.IndexFunc(zb, func(z types.Zone) bool { return z.Name == a.Name })
+			if ib < 0 {
 				return false
 			}
+			b := zb[ib]
 			if !equal(a, b) {
 				return false
 			}
@@ -182,52 +176,13 @@ func TestExtractZones(t *testing.T) {
 		t.Run(fmt.Sprint(i), func(t *testing.T) {
 			gotZones := ExtractZones(hosts)
 			for _, zone := range gotZones {
-				sort.Sort(recordSorter(zone.Records))
+				slices.SortFunc(zone.Records, func(a, b types.Record) int { return strings.Compare(a.Name, b.Name) })
 			}
-			sort.Sort(zoneSorter(gotZones))
+			slices.SortFunc(gotZones, func(a, b types.Zone) int { return strings.Compare(a.Name, b.Name) })
 
 			if !equalZones(gotZones, tt.wantZones) {
 				t.Errorf("extractZones() = %+v, want %+v", gotZones, tt.wantZones)
 			}
 		})
 	}
-}
-
-var (
-	_ sort.Interface = recordSorter(nil)
-	_ sort.Interface = zoneSorter(nil)
-)
-
-type recordSorter []types.Record
-
-// Len implements sort.Interface
-func (r recordSorter) Len() int {
-	return len(r)
-}
-
-// Less implements sort.Interface
-func (r recordSorter) Less(i, j int) bool {
-	return r[i].Name < r[j].Name
-}
-
-// Swap implements sort.Interface
-func (r recordSorter) Swap(i, j int) {
-	r[i], r[j] = r[j], r[i]
-}
-
-type zoneSorter []types.Zone
-
-// Len implements sort.Interface
-func (z zoneSorter) Len() int {
-	return len(z)
-}
-
-// Less implements sort.Interface
-func (z zoneSorter) Less(i, j int) bool {
-	return z[i].Name < z[j].Name
-}
-
-// Swap implements sort.Interface
-func (z zoneSorter) Swap(i, j int) {
-	z[i], z[j] = z[j], z[i]
 }
