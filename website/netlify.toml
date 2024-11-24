@@ -10,3 +10,9 @@ GO_VERSION = "1.23.0"
 
 [context.production]
 command = "make -C .. docsy && npm run build:production"
+
+[[redirects]]
+from = "/community"
+to = "/docs/community"
+status = 301
+force = true

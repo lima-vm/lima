@@ -185,6 +185,9 @@ enable = false
   name = "GitHub"
   url = "https://github.com/lima-vm/lima"
   pre = '<i class="fab fa-github"></i>'
+[[menus.main]]
+  name = "Community"
+  url = "/docs/community"
 
 [module]
   # uncomment line below for temporary local development of module
