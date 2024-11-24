@@ -109,13 +109,12 @@ func (c *qemuPacketConn) Write(b []byte) (int, error) {
 		return 0, err
 	}
 
-	start := 0
-	for start < size {
-		nw, err := c.Conn.Write(b[start:])
+	for len(b) != 0 {
+		n, err := c.Conn.Write(b)
 		if err != nil {
 			return 0, err
 		}
-		start += nw
+		b = b[n:]
 	}
 	return size, nil
 }
