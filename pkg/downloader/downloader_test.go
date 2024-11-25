@@ -8,7 +8,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -30,11 +29,6 @@ type downloadResult struct {
 // We expect only few parallel downloads. Testing with larger number to find
 // races quicker. 20 parallel downloads take about 120 milliseconds on M1 Pro.
 const parallelDownloads = 20
-
-// When downloading in parallel usually all downloads completed with
-// StatusDownload, but some may be delayed and find the data file when they
-// start. Can be reproduced locally using 100 parallel downloads.
-var parallelStatus = []Status{StatusDownloaded, StatusUsedCache}
 
 func TestDownloadRemote(t *testing.T) {
 	ts := httptest.NewServer(http.FileServer(http.Dir("testdata")))
@@ -103,15 +97,10 @@ func TestDownloadRemote(t *testing.T) {
 					results <- downloadResult{r, err}
 				}()
 			}
-			// We must process all results before cleanup.
-			for i := 0; i < parallelDownloads; i++ {
-				result := <-results
-				if result.err != nil {
-					t.Errorf("Download failed: %s", result.err)
-				} else if !slices.Contains(parallelStatus, result.r.Status) {
-					t.Errorf("Expected download status %s, got %s", parallelStatus, result.r.Status)
-				}
-			}
+			// Only one thread should download, the rest should use the cache.
+			downloaded, cached := countResults(t, results)
+			assert.Equal(t, downloaded, 1)
+			assert.Equal(t, cached, parallelDownloads-1)
 		})
 	})
 	t.Run("caching-only mode", func(t *testing.T) {
@@ -146,15 +135,10 @@ func TestDownloadRemote(t *testing.T) {
 					results <- downloadResult{r, err}
 				}()
 			}
-			// We must process all results before cleanup.
-			for i := 0; i < parallelDownloads; i++ {
-				result := <-results
-				if result.err != nil {
-					t.Errorf("Download failed: %s", result.err)
-				} else if !slices.Contains(parallelStatus, result.r.Status) {
-					t.Errorf("Expected download status %s, got %s", parallelStatus, result.r.Status)
-				}
-			}
+			// Only one thread should download, the rest should use the cache.
+			downloaded, cached := countResults(t, results)
+			assert.Equal(t, downloaded, 1)
+			assert.Equal(t, cached, parallelDownloads-1)
 		})
 	})
 	t.Run("cached", func(t *testing.T) {
@@ -188,6 +172,26 @@ func TestDownloadRemote(t *testing.T) {
 	})
 }
 
+func countResults(t *testing.T, results chan downloadResult) (downloaded, cached int) {
+	t.Helper()
+	for i := 0; i < parallelDownloads; i++ {
+		result := <-results
+		if result.err != nil {
+			t.Errorf("Download failed: %s", result.err)
+		} else {
+			switch result.r.Status {
+			case StatusDownloaded:
+				downloaded++
+			case StatusUsedCache:
+				cached++
+			default:
+				t.Errorf("Unexpected download status %q", result.r.Status)
+			}
+		}
+	}
+	return downloaded, cached
+}
+
 func TestRedownloadRemote(t *testing.T) {
 	remoteDir := t.TempDir()
 	ts := httptest.NewServer(http.FileServer(http.Dir(remoteDir)))
@@ -203,18 +207,26 @@ func TestRedownloadRemote(t *testing.T) {
 		assert.NilError(t, os.Chtimes(remoteFile, time.Now(), time.Now().Add(-time.Hour)))
 		opt := []Opt{cacheOpt}
 
-		r, err := Download(context.Background(), filepath.Join(downloadDir, "digest-less1.txt"), ts.URL+"/digest-less.txt", opt...)
+		// Download on the first call
+		r, err := Download(context.Background(), filepath.Join(downloadDir, "1"), ts.URL+"/digest-less.txt", opt...)
 		assert.NilError(t, err)
 		assert.Equal(t, StatusDownloaded, r.Status)
-		r, err = Download(context.Background(), filepath.Join(downloadDir, "digest-less2.txt"), ts.URL+"/digest-less.txt", opt...)
+
+		// Next download will use the cached download
+		r, err = Download(context.Background(), filepath.Join(downloadDir, "2"), ts.URL+"/digest-less.txt", opt...)
 		assert.NilError(t, err)
 		assert.Equal(t, StatusUsedCache, r.Status)
 
-		// modifying remote file will cause redownload
+		// Modifying remote file will cause redownload
 		assert.NilError(t, os.Chtimes(remoteFile, time.Now(), time.Now()))
-		r, err = Download(context.Background(), filepath.Join(downloadDir, "digest-less3.txt"), ts.URL+"/digest-less.txt", opt...)
+		r, err = Download(context.Background(), filepath.Join(downloadDir, "3"), ts.URL+"/digest-less.txt", opt...)
 		assert.NilError(t, err)
 		assert.Equal(t, StatusDownloaded, r.Status)
+
+		// Next download will use the cached download
+		r, err = Download(context.Background(), filepath.Join(downloadDir, "4"), ts.URL+"/digest-less.txt", opt...)
+		assert.NilError(t, err)
+		assert.Equal(t, StatusUsedCache, r.Status)
 	})
 
 	t.Run("has-digest", func(t *testing.T) {
