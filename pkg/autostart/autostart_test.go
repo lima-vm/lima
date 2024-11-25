@@ -70,7 +70,7 @@ TimeoutSec=10
 Restart=on-failure
 
 [Install]
-WantedBy=multi-user.target`,
+WantedBy=default.target`,
 			GetExecutable: func() (string, error) {
 				return "/limactl", nil
 			},
