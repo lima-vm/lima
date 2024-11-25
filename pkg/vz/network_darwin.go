@@ -8,11 +8,11 @@ import (
 	"io"
 	"net"
 	"os"
-	"sync"
 	"syscall"
 	"time"
 
 	"github.com/balajiv113/fd"
+	"github.com/lima-vm/lima/pkg/bicopy"
 
 	"github.com/sirupsen/logrus"
 )
@@ -66,24 +66,13 @@ func forwardPackets(qemuConn *qemuPacketConn, vzConn *packetConn) {
 	defer qemuConn.Close()
 	defer vzConn.Close()
 
-	var wg sync.WaitGroup
-	wg.Add(2)
-
-	go func() {
-		defer wg.Done()
-		if _, err := io.Copy(qemuConn, vzConn); err != nil {
-			logrus.Errorf("Failed to forward packets from VZ to VMNET: %s", err)
-		}
-	}()
-
-	go func() {
-		defer wg.Done()
-		if _, err := io.Copy(vzConn, qemuConn); err != nil {
-			logrus.Errorf("Failed to forward packets from VMNET to VZ: %s", err)
-		}
-	}()
-
-	wg.Wait()
+	bicopy.Bicopy("forwarding packets", bicopy.NamedReadWriter{
+		ReadWriter: qemuConn,
+		Name:       "VMNET",
+	}, bicopy.NamedReadWriter{
+		ReadWriter: vzConn,
+		Name:       "VZ",
+	})
 }
 
 // qemuPacketConn converts raw network packet to a QEMU supported network packet.

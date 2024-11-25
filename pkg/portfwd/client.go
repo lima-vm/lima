@@ -29,7 +29,14 @@ func HandleTCPConnection(ctx context.Context, client *guestagentclient.GuestAgen
 	}
 
 	rw := &GrpcClientRW{stream: stream, id: id, addr: guestAddr, protocol: "tcp"}
-	bicopy.Bicopy(rw, conn, nil)
+
+	bicopy.Bicopy("tcp tunnel", bicopy.NamedReadWriter{
+		ReadWriter: rw,
+		Name:       guestAddr,
+	}, bicopy.NamedReadWriter{
+		ReadWriter: conn,
+		Name:       id,
+	})
 }
 
 func HandleUDPConnection(ctx context.Context, client *guestagentclient.GuestAgentClient, conn net.PacketConn, guestAddr string) {

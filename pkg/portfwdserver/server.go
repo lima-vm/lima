@@ -32,7 +32,14 @@ func (s *TunnelServer) Start(stream api.GuestService_TunnelServer) error {
 		return err
 	}
 	rw := &GRPCServerRW{stream: stream, id: in.Id}
-	bicopy.Bicopy(rw, conn, nil)
+
+	bicopy.Bicopy("tcp tunnel", bicopy.NamedReadWriter{
+		ReadWriter: rw,
+		Name:       in.Id,
+	}, bicopy.NamedReadWriter{
+		ReadWriter: conn,
+		Name:       in.GuestAddr,
+	})
 	return nil
 }
 

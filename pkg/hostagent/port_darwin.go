@@ -134,23 +134,26 @@ func (plf *pseudoLoopbackForwarder) Serve() error {
 			ac.Close()
 			continue
 		}
-		go func(ac *net.TCPConn) {
-			if fErr := plf.forward(ac); fErr != nil {
-				logrus.Error(fErr)
-			}
-		}(ac)
+		go plf.forward(ac)
 	}
 }
 
-func (plf *pseudoLoopbackForwarder) forward(ac *net.TCPConn) error {
+func (plf *pseudoLoopbackForwarder) forward(ac *net.TCPConn) {
 	defer ac.Close()
 	unixConn, err := net.DialUnix("unix", nil, plf.unixAddr)
 	if err != nil {
-		return err
+		logrus.WithError(err).Errorf("pseudoloopback forwarder: failed to dial %q", plf.unixAddr)
+		return
 	}
 	defer unixConn.Close()
-	bicopy.Bicopy(ac, unixConn, nil)
-	return nil
+
+	bicopy.Bicopy("pseudoloopback forwarder", bicopy.NamedReadWriter{
+		ReadWriter: ac,
+		Name:       "tcp",
+	}, bicopy.NamedReadWriter{
+		ReadWriter: unixConn,
+		Name:       "unix",
+	})
 }
 
 func (plf *pseudoLoopbackForwarder) Close() error {
