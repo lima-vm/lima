@@ -170,10 +170,9 @@ jobs:
 #      if: always()
 #      run: type C:\Users\runneradmin\.lima\wsl2\ha.stderr.log
 
-  integration:
-    name: Integration tests
-    # on macOS 12, the default vmType is QEMU
-    runs-on: macos-12
+  qemu:
+    name: "Integration tests (QEMU, macOS host)"
+    runs-on: macos-15-large  # Intel
     timeout-minutes: 120
     steps:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
@@ -199,11 +198,9 @@ jobs:
       # coreutils: required by test-templates.sh for the "timeout" command
       # curl:      required by test-templates.sh to download nerdctl for alpine
       # jq:        required by test-templates.sh to determine download URL for nerdctl
-      run: |
-        set -x
-        # GitHub runners seem to have lima installed by brew already; we don't want/need it
-        time brew uninstall --ignore-dependencies lima colima
-        time brew install qemu bash coreutils curl jq
+      run: brew install qemu bash coreutils curl jq
+    - name: "Adjust LIMACTL_CREATE_ARGS"
+      run: echo "LIMACTL_CREATE_ARGS=${LIMACTL_CREATE_ARGS} --vm-type=qemu" >>$GITHUB_ENV
     - name: "Inject `no_timer_check` to kernel cmdline"
       # workaround to https://github.com/lima-vm/lima/issues/84
       run: ./hack/inject-cmdline-to-template.sh templates/default.yaml no_timer_check
@@ -231,8 +228,8 @@ jobs:
 
   # Non-default templates are tested on Linux instances of GHA,
   # as they seem more stable than macOS instances.
-  integration-linux:
-    name: Integration tests (on Linux)
+  qemu-linux:
+    name: "Integration tests (QEMU, Linux host)"
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     strategy:
@@ -292,7 +289,7 @@ jobs:
       run: ./hack/debug-cache.sh
 
   colima:
-    name: Colima
+    name: "Colima tests (QEMU, Linux host)"
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     strategy:
@@ -342,8 +339,8 @@ jobs:
       run: ./hack/debug-cache.sh
 
   vmnet:
-    name: "VMNet test"
-    runs-on: macos-12
+    name: "VMNet tests (QEMU)"
+    runs-on: macos-15-large  # Intel
     timeout-minutes: 120
     steps:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
@@ -357,7 +354,7 @@ jobs:
     - name: Install
       run: make install
     - name: "Adjust LIMACTL_CREATE_ARGS"
-      run: echo "LIMACTL_CREATE_ARGS=${LIMACTL_CREATE_ARGS} --network=lima:shared" >>$GITHUB_ENV
+      run: echo "LIMACTL_CREATE_ARGS=${LIMACTL_CREATE_ARGS} --vm-type=qemu --network=lima:shared" >>$GITHUB_ENV
     - name: "Inject `no_timer_check` to kernel cmdline"
       # workaround to https://github.com/lima-vm/lima/issues/84
       run: ./hack/inject-cmdline-to-template.sh templates/default.yaml no_timer_check
@@ -366,7 +363,7 @@ jobs:
       with:
         template: templates/default.yaml
     - name: Install test dependencies
-      run: brew install qemu bash coreutils iperf3
+      run: brew install qemu bash coreutils
     - name: Install socket_vmnet
       env:
         SOCKET_VMNET_VERSION: v1.1.5
@@ -394,12 +391,12 @@ jobs:
       uses: ./.github/actions/upload_failure_logs_if_exists
 
   upgrade:
-    name: "Upgrade test"
-    runs-on: macos-12
+    name: "Upgrade tests (QEMU, macOS host)"
+    runs-on: macos-15-large  # Intel
     timeout-minutes: 120
     strategy:
       matrix:
-        oldver: ["v0.15.1"]
+        oldver: ["v0.15.1"]  # The default VM type was always QEMU until Lima v1.0
     steps:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
       with:
@@ -436,8 +433,7 @@ jobs:
       uses: ./.github/actions/upload_failure_logs_if_exists
 
   vz:
-    name: "vz"
-    # on macOS >= 13, the default vmType is VZ
+    name: "Integration tests (vz)"
     runs-on: macos-15-large  # Intel
     timeout-minutes: 120
     strategy:
