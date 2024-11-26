@@ -14,9 +14,6 @@ echo_with_time_usec() {
 	echo "${time_usec}, ${1}"
 }
 
-# Enable `systemd-time-wait-sync.service` to wait for NTP synchronization at an earlier stage.
-systemctl enable systemd-time-wait-sync.service
-
 # For the first boot, where the above setting is not yet active, wait for NTP synchronization here.
 max_retry=60 retry=0
 until ntp_synchronized=$(timedatectl show --property=NTPSynchronized --value) && [ "${ntp_synchronized}" = "yes" ] ||
