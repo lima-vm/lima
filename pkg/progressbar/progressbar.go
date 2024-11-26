@@ -1,7 +1,6 @@
 package progressbar
 
 import (
-	"io"
 	"os"
 	"time"
 
@@ -10,19 +9,17 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type ProxyReaderAt struct {
-	io.ReaderAt
-	Bar *pb.ProgressBar
+// ProgressBar adapts pb.ProgressBar to go-qcow2reader.convert.Updater interface.
+type ProgressBar struct {
+	*pb.ProgressBar
 }
 
-func (r *ProxyReaderAt) ReadAt(p []byte, off int64) (int, error) {
-	n, err := r.ReaderAt.ReadAt(p, off)
-	r.Bar.Add(n)
-	return n, err
+func (b *ProgressBar) Update(n int64) {
+	b.Add64(n)
 }
 
-func New(size int64) (*pb.ProgressBar, error) {
-	bar := pb.New64(size)
+func New(size int64) (*ProgressBar, error) {
+	bar := &ProgressBar{pb.New64(size)}
 
 	bar.Set(pb.Bytes, true)
 
