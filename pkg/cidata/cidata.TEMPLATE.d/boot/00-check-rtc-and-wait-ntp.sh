@@ -21,9 +21,12 @@ until ntp_synchronized=$(timedatectl show --property=NTPSynchronized --value) &&
 	if [ "${retry}" -eq 0 ]; then
 		# If /dev/rtc is not available, the system time set during the Linux kernel build is used.
 		# The larger the difference between this system time and the NTP server time, the longer the NTP synchronization will take.
-		# By setting the system time to the modification time of this script, which is likely to be closer to the actual time,
+		# By setting the system time to the modification time of the reference file, which is likely to be closer to the actual time,
+		reference_file="${LIMA_CIDATA_MNT:-/mnt/lima-cidata}/user-data"
+		[ -f "${reference_file}" ] || reference_file="${0}"
+
 		# the NTP synchronization time can be shortened.
-		echo_with_time_usec "Setting the system time to the modification time of ${0}."
+		echo_with_time_usec "Setting the system time to the modification time of ${reference_file}."
 
 		# To set the time to a specified time, it is necessary to stop systemd-timesyncd.
 		systemctl stop systemd-timesyncd
@@ -35,8 +38,8 @@ until ntp_synchronized=$(timedatectl show --property=NTPSynchronized --value) &&
 			sleep 1
 		done
 
-		# Set the system time to the modification time of this script.
-		modification_time=$(stat -c %y "${0}")
+		# Set the system time to the modification time of the reference file.
+		modification_time=$(stat -c %y "${reference_file}")
 		echo_with_time_usec "Setting the system time to ${modification_time}."
 		timedatectl set-time "${modification_time}"
 
