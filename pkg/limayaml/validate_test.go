@@ -33,14 +33,14 @@ func TestValidateDefault(t *testing.T) {
 
 func TestValidateProbes(t *testing.T) {
 	images := `images: [{"location": "/"}]`
-	validProbe := `probes: ["script": "#!foo"]`
+	validProbe := `probes: [{"script": "#!foo"}]`
 	y, err := Load([]byte(validProbe+"\n"+images), "lima.yaml")
 	assert.NilError(t, err)
 
 	err = Validate(y, false)
 	assert.NilError(t, err)
 
-	invalidProbe := `probes: ["script": "foo"]`
+	invalidProbe := `probes: [{"script": "foo"}]`
 	y, err = Load([]byte(invalidProbe+"\n"+images), "lima.yaml")
 	assert.NilError(t, err)
 
