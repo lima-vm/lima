@@ -36,7 +36,7 @@ func unmarshalDisk(dst *Disk, b []byte) error {
 }
 
 func Unmarshal(data []byte, v interface{}, comment string) error {
-	if err := yaml.UnmarshalWithOptions(data, v, yaml.DisallowDuplicateKey(), yaml.CustomUnmarshaler[Disk](unmarshalDisk)); err != nil {
+	if err := yaml.UnmarshalWithOptions(data, v, yaml.CustomUnmarshaler[Disk](unmarshalDisk)); err != nil {
 		return fmt.Errorf("failed to unmarshal YAML (%s): %w", comment, err)
 	}
 	// the go-yaml library doesn't catch all markup errors, unfortunately
