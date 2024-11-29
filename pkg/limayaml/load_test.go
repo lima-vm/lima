@@ -28,7 +28,7 @@ provision:
     echo three
 `
 	_, err := Load([]byte(s), "error.yaml")
-	assert.ErrorContains(t, err, "did not find expected key")
+	assert.ErrorContains(t, err, "map key-value is pre-defined")
 }
 
 func TestLoadDiskString(t *testing.T) {

@@ -132,7 +132,7 @@ func loadCache() {
 		if cache.err != nil {
 			return
 		}
-		cache.err = yaml.UnmarshalWithOptions(b, &cache.cfg, yaml.DisallowDuplicateKey())
+		cache.err = yaml.Unmarshal(b, &cache.cfg)
 		if cache.err != nil {
 			cache.err = fmt.Errorf("cannot parse %q: %w", cfgFile, cache.err)
 			return
