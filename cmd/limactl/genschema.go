@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 
@@ -71,7 +72,7 @@ func genschemaAction(cmd *cobra.Command, args []string) error {
 	}
 
 	if file == "" {
-		return fmt.Errorf("need --schemafile to validate")
+		return errors.New("need --schemafile to validate")
 	}
 	err = os.WriteFile(file, j, 0o644)
 	if err != nil {

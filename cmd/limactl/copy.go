@@ -90,7 +90,7 @@ func copyAction(cmd *cobra.Command, args []string) error {
 		}
 	}
 	if legacySSH && len(instances) > 1 {
-		return fmt.Errorf("more than one (instance) host is involved in this command, this is only supported for openSSH v8.0 or higher")
+		return errors.New("more than one (instance) host is involved in this command, this is only supported for openSSH v8.0 or higher")
 	}
 	scpFlags = append(scpFlags, "-3", "--")
 	scpArgs = append(scpFlags, scpArgs...)

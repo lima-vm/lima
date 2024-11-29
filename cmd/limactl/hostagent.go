@@ -52,7 +52,7 @@ func hostagentAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	if socket == "" {
-		return fmt.Errorf("socket must be specified (limactl version mismatch?)")
+		return errors.New("socket must be specified (limactl version mismatch?)")
 	}
 
 	instName := args[0]

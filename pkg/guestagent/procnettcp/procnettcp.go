@@ -3,6 +3,7 @@ package procnettcp
 import (
 	"bufio"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -59,10 +60,10 @@ func Parse(r io.Reader, kind Kind) ([]Entry, error) {
 				fieldNames[fields[j]] = j
 			}
 			if _, ok := fieldNames["local_address"]; !ok {
-				return nil, fmt.Errorf("field \"local_address\" not found")
+				return nil, errors.New("field \"local_address\" not found")
 			}
 			if _, ok := fieldNames["st"]; !ok {
-				return nil, fmt.Errorf("field \"st\" not found")
+				return nil, errors.New("field \"st\" not found")
 			}
 
 		default:

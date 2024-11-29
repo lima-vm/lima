@@ -91,7 +91,7 @@ func validatePath(path string, allowDaemonGroupWritable bool) error {
 		return fmt.Errorf("could not retrieve stat buffer for %q", path)
 	}
 	if runtime.GOOS != "darwin" {
-		return fmt.Errorf("vmnet code must not be called on non-Darwin") // TODO: move to *_darwin.go
+		return errors.New("vmnet code must not be called on non-Darwin") // TODO: move to *_darwin.go
 	}
 	// TODO: cache looked up UIDs/GIDs
 	root, err := osutil.LookupUser("root")

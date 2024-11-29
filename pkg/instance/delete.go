@@ -2,6 +2,7 @@ package instance
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 
@@ -12,7 +13,7 @@ import (
 
 func Delete(ctx context.Context, inst *store.Instance, force bool) error {
 	if inst.Protected {
-		return fmt.Errorf("instance is protected to prohibit accidental removal (Hint: use `limactl unprotect`)")
+		return errors.New("instance is protected to prohibit accidental removal (Hint: use `limactl unprotect`)")
 	}
 	if !force && inst.Status != store.StatusStopped {
 		return fmt.Errorf("expected status %q, got %q", store.StatusStopped, inst.Status)

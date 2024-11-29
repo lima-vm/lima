@@ -227,7 +227,7 @@ func Validate(y *LimaYAML, warn bool) error {
 	needsContainerdArchives := (y.Containerd.User != nil && *y.Containerd.User) || (y.Containerd.System != nil && *y.Containerd.System)
 	if needsContainerdArchives {
 		if len(y.Containerd.Archives) == 0 {
-			return fmt.Errorf("field `containerd.archives` must be provided")
+			return errors.New("field `containerd.archives` must be provided")
 		}
 		for i, f := range y.Containerd.Archives {
 			if err := validateFileObject(f, fmt.Sprintf("containerd.archives[%d]", i)); err != nil {
@@ -341,7 +341,7 @@ func Validate(y *LimaYAML, warn bool) error {
 	}
 
 	if y.HostResolver.Enabled != nil && *y.HostResolver.Enabled && len(y.DNS) > 0 {
-		return fmt.Errorf("field `dns` must be empty when field `HostResolver.Enabled` is true")
+		return errors.New("field `dns` must be empty when field `HostResolver.Enabled` is true")
 	}
 
 	if err := validateNetwork(y); err != nil {

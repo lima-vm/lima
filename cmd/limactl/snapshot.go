@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -56,7 +57,7 @@ func snapshotCreateAction(cmd *cobra.Command, args []string) error {
 	}
 
 	if tag == "" {
-		return fmt.Errorf("expected tag")
+		return errors.New("expected tag")
 	}
 
 	ctx := cmd.Context()
@@ -91,7 +92,7 @@ func snapshotDeleteAction(cmd *cobra.Command, args []string) error {
 	}
 
 	if tag == "" {
-		return fmt.Errorf("expected tag")
+		return errors.New("expected tag")
 	}
 
 	ctx := cmd.Context()
@@ -126,7 +127,7 @@ func snapshotApplyAction(cmd *cobra.Command, args []string) error {
 	}
 
 	if tag == "" {
-		return fmt.Errorf("expected tag")
+		return errors.New("expected tag")
 	}
 
 	ctx := cmd.Context()
