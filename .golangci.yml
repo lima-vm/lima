@@ -39,7 +39,6 @@ linters:
   - errcheck
   - errorlint
   # - exhaustive
-  # - exhaustivestruct
   # - exportloopref
   # - funlen
   - forbidigo
@@ -52,24 +51,18 @@ linters:
   # - gocyclo
   - godot
   # - godox
-  # - goerr113
   - gofumpt
   # - goheader
-  # - golint
-  # - gomnd
   # - gomodguard
   # - goprintffuncname
-  # - gosec (gas)
+  # - gosec
   - gosimple
-  # - interfacer
   # - lll
-  # - maligned
   # - nestif
   # - nlreturn
   - noctx
   - nolintlint
   # - rowserrcheck
-  # - scopelint
   # - sqlclosecheck
   - staticcheck
   # - stylecheck
