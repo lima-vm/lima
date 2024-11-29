@@ -62,7 +62,7 @@ func sudoersAction(cmd *cobra.Command, args []string) error {
 	case 0:
 		// NOP
 	case 1:
-		return fmt.Errorf("the file argument can be specified only for --check mode")
+		return errors.New("the file argument can be specified only for --check mode")
 	default:
 		return fmt.Errorf("unexpected arguments %v", args)
 	}

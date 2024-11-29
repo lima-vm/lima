@@ -181,7 +181,7 @@ func Download(ctx context.Context, local, remote string, opts ...Opt) (*Result, 
 	var localPath string
 	if local == "" {
 		if o.cacheDir == "" {
-			return nil, fmt.Errorf("caching-only mode requires the cache directory to be specified")
+			return nil, errors.New("caching-only mode requires the cache directory to be specified")
 		}
 	} else {
 		var err error
@@ -347,10 +347,10 @@ func Cached(remote string, opts ...Opt) (*Result, error) {
 		return nil, err
 	}
 	if o.cacheDir == "" {
-		return nil, fmt.Errorf("caching-only mode requires the cache directory to be specified")
+		return nil, errors.New("caching-only mode requires the cache directory to be specified")
 	}
 	if IsLocal(remote) {
-		return nil, fmt.Errorf("local files are not cached")
+		return nil, errors.New("local files are not cached")
 	}
 
 	shad := cacheDirectoryPath(o.cacheDir, remote)
@@ -431,7 +431,7 @@ func IsLocal(s string) bool {
 //   - Expand a leading `~`, or convert relative to absolute name
 func canonicalLocalPath(s string) (string, error) {
 	if s == "" {
-		return "", fmt.Errorf("got empty path")
+		return "", errors.New("got empty path")
 	}
 	if !IsLocal(s) {
 		return "", fmt.Errorf("got non-local path: %q", s)
@@ -588,7 +588,7 @@ func validateCachedDigest(shadDigest string, expectedDigest digest.Digest) error
 
 func validateLocalFileDigest(localPath string, expectedDigest digest.Digest) error {
 	if localPath == "" {
-		return fmt.Errorf("validateLocalFileDigest: got empty localPath")
+		return errors.New("validateLocalFileDigest: got empty localPath")
 	}
 	if expectedDigest == "" {
 		return nil
@@ -651,7 +651,7 @@ func matchLastModified(ctx context.Context, lastModifiedPath, url string) (match
 
 func downloadHTTP(ctx context.Context, localPath, lastModified, contentType, url, description string, expectedDigest digest.Digest) error {
 	if localPath == "" {
-		return fmt.Errorf("downloadHTTP: got empty localPath")
+		return errors.New("downloadHTTP: got empty localPath")
 	}
 	logrus.Debugf("downloading %q into %q", url, localPath)
 

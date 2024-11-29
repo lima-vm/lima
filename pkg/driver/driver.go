@@ -2,7 +2,7 @@ package driver
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"net"
 
 	"github.com/lima-vm/lima/pkg/store"
@@ -125,19 +125,19 @@ func (d *BaseDriver) GetDisplayConnection(_ context.Context) (string, error) {
 }
 
 func (d *BaseDriver) CreateSnapshot(_ context.Context, _ string) error {
-	return fmt.Errorf("unimplemented")
+	return errors.New("unimplemented")
 }
 
 func (d *BaseDriver) ApplySnapshot(_ context.Context, _ string) error {
-	return fmt.Errorf("unimplemented")
+	return errors.New("unimplemented")
 }
 
 func (d *BaseDriver) DeleteSnapshot(_ context.Context, _ string) error {
-	return fmt.Errorf("unimplemented")
+	return errors.New("unimplemented")
 }
 
 func (d *BaseDriver) ListSnapshots(_ context.Context) (string, error) {
-	return "", fmt.Errorf("unimplemented")
+	return "", errors.New("unimplemented")
 }
 
 func (d *BaseDriver) ForwardGuestAgent() bool {

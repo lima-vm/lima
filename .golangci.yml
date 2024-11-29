@@ -68,6 +68,7 @@ linters:
   # - nlreturn
   - noctx
   - nolintlint
+  - perfsprint
   # - rowserrcheck
   # - scopelint
   # - sqlclosecheck
@@ -122,6 +123,12 @@ linters-settings:
         minThreshold: 3
   errorlint:
     asserts: false
+  perfsprint:
+    int-conversion: false
+    err-error: false
+    errorf: true
+    sprintf1: false
+    strconcat: false
   revive:
     # Set below 0.8 to enable error-strings
     confidence: 0.6
@@ -179,3 +186,7 @@ issues:
   - text: "exported: comment on exported const"
     linters:
     - revive
+  # Disable perfsprint for fmt.Sprint until https://github.com/catenacyber/perfsprint/issues/39 gets fixed.
+  - text: "fmt.Sprint.* can be replaced with faster"
+    linters:
+    - perfsprint

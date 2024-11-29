@@ -78,7 +78,7 @@ func (l *LimaVzDriver) Validate() error {
 	// Calling NewEFIBootLoader to do required version check for latest APIs
 	_, err := vz.NewEFIBootLoader()
 	if errors.Is(err, vz.ErrUnsupportedOSVersion) {
-		return fmt.Errorf("VZ driver requires macOS 13 or higher to run")
+		return errors.New("VZ driver requires macOS 13 or higher to run")
 	}
 	if *l.Instance.Config.MountType == limayaml.NINEP {
 		return fmt.Errorf("field `mountType` must be %q or %q for VZ driver , got %q", limayaml.REVSSHFS, limayaml.VIRTIOFS, *l.Instance.Config.MountType)
@@ -90,7 +90,7 @@ func (l *LimaVzDriver) Validate() error {
 		switch f.VMType {
 		case "", limayaml.VZ:
 			if f.Arch == *l.Instance.Config.Arch {
-				return fmt.Errorf("`firmware.images` configuration is not supported for VZ driver")
+				return errors.New("`firmware.images` configuration is not supported for VZ driver")
 			}
 		}
 	}
@@ -228,5 +228,5 @@ func (l *LimaVzDriver) GuestAgentConn(_ context.Context) (net.Conn, error) {
 			return connect, nil
 		}
 	}
-	return nil, fmt.Errorf("unable to connect to guest agent via vsock port 2222")
+	return nil, errors.New("unable to connect to guest agent via vsock port 2222")
 }
