@@ -1,0 +1,46 @@
+name: Fedora
+
+on:
+  workflow_dispatch:
+  pull_request:
+
+jobs:
+  fedora:
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v4
+
+    - name: "Install QEMU"
+      run: |
+        set -eux
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends ovmf qemu-system-x86 qemu-utils
+        sudo modprobe kvm
+        # `sudo usermod -aG kvm $(whoami)` does not take an effect on GHA
+        sudo chown $(whoami) /dev/kvm
+
+    - name: "Install Lima"
+      run: |
+        set -eux
+        LIMA_VERSION=$(curl -fsSL https://api.github.com/repos/lima-vm/lima/releases/latest | jq -r .tag_name)
+        curl -fsSL https://github.com/lima-vm/lima/releases/download/${LIMA_VERSION}/lima-${LIMA_VERSION:1}-Linux-x86_64.tar.gz | sudo tar Cxzvf /usr/local -
+
+    - name: "Cache ~/.cache/lima"
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/lima
+        key: lima-${{ env.LIMA_VERSION }}
+
+    - name: "Start an instance of Fedora"
+      run: |
+        set -eux
+        limactl start --name=default --cpus=1 --memory=1 --network=lima:user-v2 template://fedora
+        lima sudo dnf install -y httpd
+        lima sudo systemctl enable --now httpd
+
+    - name: "Start another instance of Fedora"
+      run: |
+        set -eux
+        limactl start --name=another --cpus=1 --memory=1 --network=lima:user-v2 template://fedora
+        limactl shell another curl http://lima-default.internal
