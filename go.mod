@@ -12,7 +12,7 @@ require (
 	github.com/cheggaaa/pb/v3 v3.1.5
 	github.com/containerd/containerd v1.7.24
 	github.com/containerd/continuity v0.4.5
-	github.com/containers/gvisor-tap-vsock v0.8.0
+	github.com/containers/gvisor-tap-vsock v0.8.1
 	github.com/coreos/go-semver v0.3.1
 	github.com/cpuguy83/go-md2man/v2 v2.0.5
 	github.com/cyphar/filepath-securejoin v0.3.4
@@ -74,7 +74,7 @@ require (
 	github.com/elliotchance/orderedmap v1.6.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
 	github.com/fatih/color v1.18.0 // indirect
-	github.com/fsnotify/fsnotify v1.7.0 // indirect
+	github.com/fsnotify/fsnotify v1.8.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-openapi/jsonpointer v0.19.6 // indirect
