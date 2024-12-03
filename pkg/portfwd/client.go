@@ -29,16 +29,10 @@ func HandleTCPConnection(ctx context.Context, client *guestagentclient.GuestAgen
 	rw := &GrpcClientRW{stream: stream, id: id, addr: guestAddr}
 	g.Go(func() error {
 		_, err := io.Copy(rw, conn)
-		if errors.Is(err, io.EOF) {
-			return nil
-		}
 		return err
 	})
 	g.Go(func() error {
 		_, err := io.Copy(conn, rw)
-		if errors.Is(err, io.EOF) {
-			return nil
-		}
 		return err
 	})
 
@@ -64,10 +58,11 @@ func HandleUDPConnection(ctx context.Context, client *guestagentclient.GuestAgen
 		buf := make([]byte, 65507)
 		for {
 			n, addr, err := conn.ReadFrom(buf)
-			if errors.Is(err, io.EOF) {
-				return nil
-			}
 			if err != nil {
+				// https://pkg.go.dev/net#PacketConn does not mention io.EOF semantics.
+				if errors.Is(err, io.EOF) {
+					return nil
+				}
 				return err
 			}
 			msg := &api.TunnelMessage{
@@ -86,10 +81,10 @@ func HandleUDPConnection(ctx context.Context, client *guestagentclient.GuestAgen
 	g.Go(func() error {
 		for {
 			in, err := stream.Recv()
-			if errors.Is(err, io.EOF) {
-				return nil
-			}
 			if err != nil {
+				if errors.Is(err, io.EOF) {
+					return nil
+				}
 				return err
 			}
 			addr, err := net.ResolveUDPAddr("udp", in.UdpTargetAddr)
@@ -134,10 +129,10 @@ func (g GrpcClientRW) Write(p []byte) (n int, err error) {
 
 func (g GrpcClientRW) Read(p []byte) (n int, err error) {
 	in, err := g.stream.Recv()
-	if errors.Is(err, io.EOF) {
-		return 0, nil
-	}
 	if err != nil {
+		if errors.Is(err, io.EOF) {
+			return 0, nil
+		}
 		return 0, err
 	}
 	if len(in.Data) == 0 {
