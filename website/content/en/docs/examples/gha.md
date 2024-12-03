@@ -40,10 +40,16 @@ jobs:
         sudo chown $(whoami) /dev/kvm
 
     - name: "Install Lima"
+      env:
+        GITHUB_TOKEN: ${{ github.token }}  # required by `gh attestation verify`
       run: |
         set -eux
         LIMA_VERSION=$(curl -fsSL https://api.github.com/repos/lima-vm/lima/releases/latest | jq -r .tag_name)
-        curl -fsSL https://github.com/lima-vm/lima/releases/download/${LIMA_VERSION}/lima-${LIMA_VERSION:1}-Linux-x86_64.tar.gz | sudo tar Cxzvf /usr/local -
+        FILE="lima-${LIMA_VERSION:1}-Linux-x86_64.tar.gz"
+        curl -fOSL https://github.com/lima-vm/lima/releases/download/${LIMA_VERSION}/${FILE}
+        gh attestation verify --owner=lima-vm "${FILE}"
+        sudo tar Cxzvf /usr/local "${FILE}"
+        rm -f "${FILE}"
 
     - name: "Cache ~/.cache/lima"
       uses: actions/cache@v4
