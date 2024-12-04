@@ -148,8 +148,8 @@ writable by `root` and will reject `socket_vmnet` installed by Homebrew into a u
 # This assumes that Xcode Command Line Tools are already installed
 git clone https://github.com/lima-vm/socket_vmnet
 cd socket_vmnet
-# Change "v1.1.5" to the actual latest release in https://github.com/lima-vm/socket_vmnet/releases
-git checkout v1.1.5
+# Change "v1.2.0" to the actual latest release in https://github.com/lima-vm/socket_vmnet/releases
+git checkout v1.2.0
 make
 sudo make PREFIX=/opt/socket_vmnet install.bin
 
