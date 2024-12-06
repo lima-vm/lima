@@ -43,7 +43,10 @@ provision:
   script: |
     #!/bin/bash
     set -eux -o pipefail
-    command -v docker >/dev/null 2>&1 && exit 0
+    if command -v docker >/dev/null 2>&1; then
+        apt-get -y -qq install --only-upgrade 'docker-ce*'
+        exit 0
+    fi
     export DEBIAN_FRONTEND=noninteractive
     curl -fsSL https://get.docker.com | sh
     # NOTE: you may remove the lines below, if you prefer to use rootful docker, not rootless

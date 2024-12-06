@@ -43,7 +43,10 @@ provision:
   script: |
     #!/bin/bash
     set -eux -o pipefail
-    command -v docker >/dev/null 2>&1 && exit 0
+    if command -v docker >/dev/null 2>&1; then
+        apt-get -y -qq install --only-upgrade 'docker-ce*'
+        exit 0
+    fi
     if [ ! -e /etc/systemd/system/docker.socket.d/override.conf ]; then
       mkdir -p /etc/systemd/system/docker.socket.d
       # Alternatively we could just add the user to the "docker" group, but that requires restarting the user session

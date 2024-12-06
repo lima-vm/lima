@@ -31,7 +31,10 @@ provision:
   script: |
     #!/bin/bash
     set -eux -o pipefail
-    command -v podman >/dev/null 2>&1 && exit 0
+    if command -v podman >/dev/null 2>&1; then
+        dnf -y upgrade --setopt=metadata_expire=never podman
+        exit 0
+    fi
     if [ ! -e /etc/systemd/system/podman.socket.d/override.conf ]; then
       mkdir -p /etc/systemd/system/podman.socket.d
       cat <<-EOF >/etc/systemd/system/podman.socket.d/override.conf
