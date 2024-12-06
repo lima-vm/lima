@@ -1,69 +1,85 @@
 package portfwdserver
 
 import (
+	"context"
 	"errors"
 	"io"
 	"net"
+	"time"
 
+	"github.com/containers/gvisor-tap-vsock/pkg/tcpproxy"
 	"github.com/lima-vm/lima/pkg/guestagent/api"
 )
 
 type TunnelServer struct {
-	Conns map[string]net.Conn
 }
 
 func NewTunnelServer() *TunnelServer {
-	return &TunnelServer{
-		Conns: make(map[string]net.Conn),
-	}
+	return &TunnelServer{}
 }
 
 func (s *TunnelServer) Start(stream api.GuestService_TunnelServer) error {
-	for {
-		in, err := stream.Recv()
-		if errors.Is(err, io.EOF) {
-			return nil
-		}
-		if err != nil {
-			return err
-		}
-		if len(in.Data) == 0 {
-			continue
-		}
-
-		conn, ok := s.Conns[in.Id]
-		if !ok {
-			conn, err = net.Dial(in.Protocol, in.GuestAddr)
-			if err != nil {
-				return err
-			}
-			s.Conns[in.Id] = conn
-
-			writer := &GRPCServerWriter{id: in.Id, udpAddr: in.UdpTargetAddr, stream: stream}
-			go func() {
-				_, _ = io.Copy(writer, conn)
-				delete(s.Conns, writer.id)
-			}()
-		}
-		_, err = conn.Write(in.Data)
-		if err != nil {
-			return err
-		}
+	//Receive the handshake message to start tunnel
+	in, err := stream.Recv()
+	if errors.Is(err, io.EOF) {
+		return nil
 	}
+	if err != nil {
+		return err
+	}
+
+	//We simply forward data form GRPC stream to net.Conn for both tcp and udp. So simple tcpproxy is sufficient
+	rw := &GRPCServerRW{stream: stream, id: in.Id}
+	remote := tcpproxy.DialProxy{
+		DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
+			return net.Dial(in.Protocol, in.GuestAddr)
+		},
+	}
+	remote.HandleConn(rw)
+	return nil
 }
 
-type GRPCServerWriter struct {
-	id      string
-	udpAddr string
-	stream  api.GuestService_TunnelServer
+type GRPCServerRW struct {
+	id     string
+	stream api.GuestService_TunnelServer
 }
 
-var _ io.Writer = (*GRPCServerWriter)(nil)
+var _ net.Conn = (*GRPCServerRW)(nil)
 
-func (g GRPCServerWriter) Write(p []byte) (n int, err error) {
-	if len(p) == 0 {
-		return 0, nil
-	}
-	err = g.stream.Send(&api.TunnelMessage{Id: g.id, Data: p, UdpTargetAddr: g.udpAddr})
+func (g GRPCServerRW) Write(p []byte) (n int, err error) {
+	err = g.stream.Send(&api.TunnelMessage{Id: g.id, Data: p})
 	return len(p), err
+}
+
+func (g GRPCServerRW) Read(p []byte) (n int, err error) {
+	in, err := g.stream.Recv()
+	if err != nil {
+		return 0, err
+	}
+	copy(p, in.Data)
+	return len(in.Data), nil
+}
+
+func (g GRPCServerRW) Close() error {
+	return nil
+}
+
+func (g GRPCServerRW) LocalAddr() net.Addr {
+	return &net.UnixAddr{Name: "grpc", Net: "unixpacket"}
+}
+
+func (g GRPCServerRW) RemoteAddr() net.Addr {
+	return &net.UnixAddr{Name: "grpc", Net: "unixpacket"}
+}
+
+func (g GRPCServerRW) SetDeadline(t time.Time) error {
+	return nil
+}
+
+func (g GRPCServerRW) SetReadDeadline(t time.Time) error {
+	return nil
+}
+
+func (g GRPCServerRW) SetWriteDeadline(t time.Time) error {
+	return nil
 }
