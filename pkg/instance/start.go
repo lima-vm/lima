@@ -307,10 +307,17 @@ func watchHostAgentEvents(ctx context.Context, inst *store.Instance, haStdoutPat
 				err = xerr
 				return true
 			}
-			if *inst.Config.Plain {
-				logrus.Infof("READY. Run `ssh -F %q %s` to open the shell.", inst.SSHConfigFile, inst.Hostname)
+			// _LIMACTL_SHELL_IN_ACTION is set if `limactl shell` invoked `limactl start`.
+			// In this case we shouldn't print "Run `lima` to open the shell",
+			// because the user has already executed the `lima` command.
+			if _, limactlShellInAction := os.LookupEnv("_LIMACTL_SHELL_IN_ACTION"); limactlShellInAction {
+				logrus.Infof("READY.")
 			} else {
-				logrus.Infof("READY. Run `%s` to open the shell.", LimactlShellCmd(inst.Name))
+				if *inst.Config.Plain {
+					logrus.Infof("READY. Run `ssh -F %q %s` to open the shell.", inst.SSHConfigFile, inst.Hostname)
+				} else {
+					logrus.Infof("READY. Run `%s` to open the shell.", LimactlShellCmd(inst.Name))
+				}
 			}
 			_ = ShowMessage(inst)
 			err = nil
