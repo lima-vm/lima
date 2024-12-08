@@ -28,24 +28,24 @@ func New(newTicker func() (<-chan time.Time, func()), iptablesIdle time.Duration
 	}
 
 	auditClient, err := libaudit.NewMulticastAuditClient(nil)
-	switch {
-	// syscall.EPROTONOSUPPORT or syscall.EAFNOSUPPORT is returned when calling attempting to connect to NETLINK_AUDIT
-	// on a kernel built without auditing support.
-	// https://github.com/elastic/go-libaudit/blob/ec298e53a6841a1f7715abbc7122635622f349bd/audit.go#L112-L115
-	case errors.Is(err, syscall.EPROTONOSUPPORT), errors.Is(err, syscall.EAFNOSUPPORT):
-		return startGuestAgentRoutines(a, false)
-	case !errors.Is(err, nil):
-		return nil, err
+	if err != nil {
+		// syscall.EPROTONOSUPPORT or syscall.EAFNOSUPPORT is returned when calling attempting to connect to NETLINK_AUDIT
+		// on a kernel built without auditing support.
+		// https://github.com/elastic/go-libaudit/blob/ec298e53a6841a1f7715abbc7122635622f349bd/audit.go#L112-L115
+		if !errors.Is(err, syscall.EPROTONOSUPPORT) && !errors.Is(err, syscall.EAFNOSUPPORT) {
+			return nil, err
+		}
+		return startGuestAgentRoutines(a, false), nil
 	}
 
-	// syscall.EPERM is returned when using audit from a non-initial namespace
-	// https://github.com/torvalds/linux/blob/633b47cb009d09dc8f4ba9cdb3a0ca138809c7c7/kernel/audit.c#L1054-L1057
 	auditStatus, err := auditClient.GetStatus()
-	switch {
-	case errors.Is(err, syscall.EPERM):
-		return startGuestAgentRoutines(a, false)
-	case !errors.Is(err, nil):
-		return nil, err
+	if err != nil {
+		// syscall.EPERM is returned when using audit from a non-initial namespace
+		// https://github.com/torvalds/linux/blob/633b47cb009d09dc8f4ba9cdb3a0ca138809c7c7/kernel/audit.c#L1054-L1057
+		if !errors.Is(err, syscall.EPERM) {
+			return nil, err
+		}
+		return startGuestAgentRoutines(a, false), nil
 	}
 
 	if auditStatus.Enabled == 0 {
@@ -66,7 +66,7 @@ func New(newTicker func() (<-chan time.Time, func()), iptablesIdle time.Duration
 	} else {
 		a.worthCheckingIPTables = true
 	}
-	return startGuestAgentRoutines(a, true)
+	return startGuestAgentRoutines(a, true), nil
 }
 
 // startGuestAgentRoutines sets worthCheckingIPTables to true if auditing is not supported,
@@ -74,14 +74,14 @@ func New(newTicker func() (<-chan time.Time, func()), iptablesIdle time.Duration
 //
 // Auditing is not supported in a kernels and is not currently supported outside of the initial namespace, so does not work
 // from inside a container or WSL2 instance, for example.
-func startGuestAgentRoutines(a *agent, supportsAuditing bool) (*agent, error) {
+func startGuestAgentRoutines(a *agent, supportsAuditing bool) *agent {
 	if !supportsAuditing {
 		a.worthCheckingIPTables = true
 	}
 	go a.kubernetesServiceWatcher.Start()
 	go a.fixSystemTimeSkew()
 
-	return a, nil
+	return a
 }
 
 type agent struct {
