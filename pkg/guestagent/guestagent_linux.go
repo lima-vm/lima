@@ -35,6 +35,7 @@ func New(newTicker func() (<-chan time.Time, func()), iptablesIdle time.Duration
 		if !errors.Is(err, syscall.EPROTONOSUPPORT) && !errors.Is(err, syscall.EAFNOSUPPORT) {
 			return nil, err
 		}
+		logrus.Infof("Auditing is not available: %s", err)
 		return startGuestAgentRoutines(a, false), nil
 	}
 
@@ -45,10 +46,12 @@ func New(newTicker func() (<-chan time.Time, func()), iptablesIdle time.Duration
 		if !errors.Is(err, syscall.EPERM) {
 			return nil, err
 		}
+		logrus.Infof("Auditing is not permitted: %s", err)
 		return startGuestAgentRoutines(a, false), nil
 	}
 
 	if auditStatus.Enabled == 0 {
+		logrus.Info("Enabling auditing")
 		if err = auditClient.SetEnabled(true, libaudit.WaitForReply); err != nil {
 			return nil, err
 		}
@@ -66,6 +69,7 @@ func New(newTicker func() (<-chan time.Time, func()), iptablesIdle time.Duration
 	} else {
 		a.worthCheckingIPTables = true
 	}
+	logrus.Infof("Auditing enabled (%d)", auditStatus.Enabled)
 	return startGuestAgentRoutines(a, true), nil
 }
 
@@ -103,6 +107,7 @@ type agent struct {
 // setWorthCheckingIPTablesRoutine sets worthCheckingIPTables to be false
 // when no NETFILTER_CFG audit message was received for the iptablesIdle time.
 func (a *agent) setWorthCheckingIPTablesRoutine(auditClient *libaudit.AuditClient, iptablesIdle time.Duration) {
+	logrus.Info("setWorthCheckingIPTablesRoutine(): monitoring netfilter audit events")
 	var latestTrue time.Time
 	go func() {
 		for {
@@ -323,6 +328,7 @@ func (a *agent) Info(ctx context.Context) (*api.Info, error) {
 const deltaLimit = 2 * time.Second
 
 func (a *agent) fixSystemTimeSkew() {
+	logrus.Info("fixSystemTimeSkew(): monitoring system time skew")
 	for {
 		ok, err := timesync.HasRTC()
 		if !ok {
