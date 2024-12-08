@@ -120,7 +120,7 @@ provision:
     EOF
     kubeadm init --config kubeadm-config.yaml
     # Installing a Pod network add-on
-    kubectl apply -f https://github.com/flannel-io/flannel/releases/download/v0.26.0/kube-flannel.yml
+    kubectl apply -f https://github.com/flannel-io/flannel/releases/download/v0.26.1/kube-flannel.yml
     # Control plane node isolation
     kubectl taint nodes --all node-role.kubernetes.io/control-plane-
     # Replace the server address with localhost, so that it works also from the host
