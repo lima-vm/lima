@@ -102,12 +102,12 @@ provision:
     # Initializing your control-plane node
     cat <<EOF >kubeadm-config.yaml
     kind: InitConfiguration
-    apiVersion: kubeadm.k8s.io/v1beta3
+    apiVersion: kubeadm.k8s.io/v1beta4
     nodeRegistration:
       criSocket: unix:///run/containerd/containerd.sock
     ---
     kind: ClusterConfiguration
-    apiVersion: kubeadm.k8s.io/v1beta3
+    apiVersion: kubeadm.k8s.io/v1beta4
     apiServer:
       certSANs: # --apiserver-cert-extra-sans
       - "127.0.0.1"
