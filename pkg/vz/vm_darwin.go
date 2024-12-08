@@ -58,10 +58,17 @@ func startVM(ctx context.Context, driver *driver.BaseDriver) (*virtualMachineWra
 	if err != nil {
 		return nil, nil, err
 	}
-
-	err = machine.Start()
-	if err != nil {
-		return nil, nil, err
+	machineStatePath := filepath.Join(driver.Instance.Dir, filenames.VzMachineState)
+	if err := restoreVM(machine, machineStatePath); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			logrus.Info("Saved VZ machine state not found, starting VZ")
+		} else {
+			logrus.WithError(err).Warn("Failed to restore VZ. Falling back to starting")
+		}
+		err = machine.Start()
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 
 	wrapper := &virtualMachineWrapper{VirtualMachine: machine, stopped: false}

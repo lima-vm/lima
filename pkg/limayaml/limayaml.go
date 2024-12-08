@@ -48,6 +48,7 @@ type LimaYAML struct {
 	TimeZone             *string        `yaml:"timezone,omitempty" json:"timezone,omitempty" jsonschema:"nullable"`
 	NestedVirtualization *bool          `yaml:"nestedVirtualization,omitempty" json:"nestedVirtualization,omitempty" jsonschema:"nullable"`
 	User                 User           `yaml:"user,omitempty" json:"user,omitempty"`
+	SaveOnStop           *bool          `yaml:"saveOnStop,omitempty" json:"saveOnStop,omitempty" jsonschema:"nullable"`
 }
 
 type (

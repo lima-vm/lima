@@ -112,6 +112,7 @@ func TestFillDefault(t *testing.T) {
 			RemoveDefaults: ptr.Of(false),
 		},
 		NestedVirtualization: ptr.Of(false),
+		SaveOnStop:           ptr.Of(false),
 		Plain:                ptr.Of(false),
 		User: User{
 			Name:    ptr.Of(user.Username),
@@ -437,6 +438,7 @@ func TestFillDefault(t *testing.T) {
 			BinFmt:  ptr.Of(true),
 		},
 		NestedVirtualization: ptr.Of(true),
+		SaveOnStop:           ptr.Of(true),
 		User: User{
 			Name:    ptr.Of("xxx"),
 			Comment: ptr.Of("Foo Bar"),
@@ -474,11 +476,13 @@ func TestFillDefault(t *testing.T) {
 			Enabled: ptr.Of(true),
 			BinFmt:  ptr.Of(true),
 		}
+		expect.SaveOnStop = ptr.Of(true)
 	} else {
 		expect.Rosetta = Rosetta{
 			Enabled: ptr.Of(false),
 			BinFmt:  ptr.Of(true),
 		}
+		expect.SaveOnStop = ptr.Of(false)
 	}
 	expect.Plain = ptr.Of(false)
 
@@ -660,6 +664,7 @@ func TestFillDefault(t *testing.T) {
 			BinFmt:  ptr.Of(false),
 		},
 		NestedVirtualization: ptr.Of(false),
+		SaveOnStop:           ptr.Of(false),
 		User: User{
 			Name:    ptr.Of("foo"),
 			Comment: ptr.Of("foo bar baz"),
@@ -723,6 +728,7 @@ func TestFillDefault(t *testing.T) {
 	expect.Plain = ptr.Of(false)
 
 	expect.NestedVirtualization = ptr.Of(false)
+	expect.SaveOnStop = ptr.Of(false)
 
 	FillDefault(&y, &d, &o, filePath, false)
 	assert.DeepEqual(t, &y, &expect, opts...)
