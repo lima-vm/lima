@@ -33,6 +33,7 @@ func newCopyCommand() *cobra.Command {
 	}
 
 	copyCommand.Flags().BoolP("recursive", "r", false, "copy directories recursively")
+	copyCommand.Flags().BoolP("quiet", "q", false, "suppress output logs")
 
 	return copyCommand
 }
@@ -43,23 +44,33 @@ func copyAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	quiet, err := cmd.Flags().GetBool("quiet")
+	if err != nil {
+		return err
+	}
+
 	arg0, err := exec.LookPath("scp")
 	if err != nil {
 		return err
 	}
+
 	instances := make(map[string]*store.Instance)
 	scpFlags := []string{}
 	scpArgs := []string{}
+
 	debug, err := cmd.Flags().GetBool("debug")
 	if err != nil {
 		return err
 	}
-	if debug {
+
+	if debug && !quiet {
 		scpFlags = append(scpFlags, "-v")
 	}
+
 	if recursive {
 		scpFlags = append(scpFlags, "-r")
 	}
+
 	legacySSH := sshutil.DetectOpenSSHVersion().LessThan(*semver.New("8.0.0"))
 	for _, arg := range args {
 		path := strings.Split(arg, ":")
@@ -117,9 +128,17 @@ func copyAction(cmd *cobra.Command, args []string) error {
 
 	sshCmd := exec.Command(arg0, append(sshArgs, scpArgs...)...)
 	sshCmd.Stdin = cmd.InOrStdin()
-	sshCmd.Stdout = cmd.OutOrStdout()
-	sshCmd.Stderr = cmd.ErrOrStderr()
-	logrus.Debugf("executing scp (may take a long time)): %+v", sshCmd.Args)
+	if quiet {
+		sshCmd.Stdout = nil
+		sshCmd.Stderr = nil
+	} else {
+		sshCmd.Stdout = cmd.OutOrStdout()
+		sshCmd.Stderr = cmd.ErrOrStderr()
+	}
+
+	if debug && !quiet {
+		logrus.Debugf("executing scp (may take a long time)): %+v", sshCmd.Args)
+	}
 
 	// TODO: use syscall.Exec directly (results in losing tty?)
 	return sshCmd.Run()
