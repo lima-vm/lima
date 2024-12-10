@@ -11,22 +11,17 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var (
-	networkDataOnce   sync.Once
-	networkDataCached SPNetworkDataType
-	networkDataError  error
-)
-
-func NetworkData() ([]NetworkDataType, error) {
-	networkDataOnce.Do(func() {
-		var jsonBytes []byte
-		jsonBytes, networkDataError = SystemProfiler("SPNetworkDataType")
-		if networkDataError == nil {
-			networkDataError = json.Unmarshal(jsonBytes, &networkDataCached)
-		}
-	})
-	return networkDataCached.SPNetworkDataType, networkDataError
-}
+var NetworkData = sync.OnceValues(func() ([]NetworkDataType, error) {
+	b, err := SystemProfiler("SPNetworkDataType")
+	if err != nil {
+		return nil, err
+	}
+	var networkData SPNetworkDataType
+	if err := json.Unmarshal(b, &networkData); err != nil {
+		return nil, err
+	}
+	return networkData.SPNetworkDataType, nil
+})
 
 func SystemProfiler(dataType string) ([]byte, error) {
 	exe, err := exec.LookPath("system_profiler")
