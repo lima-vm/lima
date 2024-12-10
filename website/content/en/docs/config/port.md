@@ -27,7 +27,7 @@ LIMA_SSH_PORT_FORWARDER=true limactl start
 #### Caveats
 
 - Doesn't support UDP based port forwarding
-- Spans child process on host for running SSH master.
+- Spawns child process on host for running SSH master.
 
 ### Using GRPC
 
