@@ -128,10 +128,7 @@ func copyAction(cmd *cobra.Command, args []string) error {
 
 	sshCmd := exec.Command(arg0, append(sshArgs, scpArgs...)...)
 	sshCmd.Stdin = cmd.InOrStdin()
-	if quiet {
-		sshCmd.Stdout = nil
-		sshCmd.Stderr = nil
-	} else {
+	if !quiet {
 		sshCmd.Stdout = cmd.OutOrStdout()
 		sshCmd.Stderr = cmd.ErrOrStderr()
 	}
