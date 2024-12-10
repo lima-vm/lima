@@ -23,6 +23,7 @@ import (
 	"github.com/lima-vm/lima/pkg/templatestore"
 	"github.com/lima-vm/lima/pkg/uiutil"
 	"github.com/lima-vm/lima/pkg/yqutil"
+	"github.com/mattn/go-isatty"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -528,4 +529,56 @@ func startBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobr
 	compInst, _ := bashCompleteInstanceNames(cmd)
 	compTmpl, _ := bashCompleteTemplateNames(cmd)
 	return append(compInst, compTmpl...), cobra.ShellCompDirectiveDefault
+}
+
+// interactive returns true if --tty is true and both STDIN and STDOUT are terminals.
+func interactive(cmd *cobra.Command) (bool, error) {
+	flags := cmd.Flags()
+	tty, err := flags.GetBool("tty")
+	if err != nil {
+		return false, err
+	}
+	if !isatty.IsTerminal(os.Stdin.Fd()) && !isatty.IsCygwinTerminal(os.Stdin.Fd()) {
+		tty = false
+	}
+	if !isatty.IsTerminal(os.Stdout.Fd()) && !isatty.IsCygwinTerminal(os.Stdout.Fd()) {
+		tty = false
+	}
+	return tty, nil
+}
+
+func askToStart(cmd *cobra.Command, instName string, create bool) error {
+	template := "default"
+	templates, err := templatestore.Templates()
+	if err != nil {
+		return err
+	}
+	for _, t := range templates {
+		if t.Name == instName {
+			template = instName
+			break
+		}
+	}
+	var message string
+	if create {
+		message = fmt.Sprintf("Do you want to create and start the instance %q using the %q template now?", instName, template)
+	} else {
+		message = fmt.Sprintf("Do you want to start the instance %q now?", instName)
+	}
+	ans, err := uiutil.Confirm(message, true)
+	if !ans || err != nil {
+		return err
+	}
+
+	rootCmd := cmd.Root()
+	if create {
+		// The create command shows the template chooser UI, etc.
+		rootCmd.SetArgs([]string{"create", "template://" + template})
+		if err := rootCmd.Execute(); err != nil {
+			return err
+		}
+	}
+	// The start command reconciles the networks, etc.
+	rootCmd.SetArgs([]string{"start", instName})
+	return rootCmd.Execute()
 }
