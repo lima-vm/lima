@@ -68,6 +68,9 @@ type Driver interface {
 
 	// GuestAgentConn returns the guest agent connection, or nil (if forwarded by ssh).
 	GuestAgentConn(_ context.Context) (net.Conn, error)
+
+	// RuntimeConfig accepts config containing changes to the runtime configuration, and returns the updated runtime configuration.
+	RuntimeConfig(_ context.Context, config interface{}) (interface{}, error)
 }
 
 type BaseDriver struct {
@@ -148,4 +151,8 @@ func (d *BaseDriver) ForwardGuestAgent() bool {
 func (d *BaseDriver) GuestAgentConn(_ context.Context) (net.Conn, error) {
 	// use the unix socket forwarded by host agent
 	return nil, nil
+}
+
+func (d *BaseDriver) RuntimeConfig(_ context.Context, _ interface{}) (interface{}, error) {
+	return nil, fmt.Errorf("unimplemented")
 }

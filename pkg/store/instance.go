@@ -43,6 +43,7 @@ type Instance struct {
 	// Hostname, not HostName (corresponds to SSH's naming convention)
 	Hostname        string             `json:"hostname"`
 	Status          Status             `json:"status"`
+	Saved           bool               `json:"saved"`
 	Dir             string             `json:"dir"`
 	VMType          limayaml.VMType    `json:"vmType"`
 	Arch            limayaml.Arch      `json:"arch"`
@@ -147,6 +148,14 @@ func Inspect(instName string) (*Instance, error) {
 	}
 
 	inspectStatus(instDir, inst, y)
+	_, err = os.Stat(filepath.Join(instDir, filenames.VzMachineState))
+	if err == nil {
+		inst.Saved = true
+	} else if errors.Is(err, os.ErrNotExist) {
+		inst.Saved = false
+	} else {
+		inst.Errors = append(inst.Errors, fmt.Errorf("cannot determine whether the instance is saved: %w", err))
+	}
 
 	tmpl, err := template.New("format").Parse(y.Message)
 	if err != nil {
