@@ -10,12 +10,9 @@ import (
 	"github.com/lima-vm/lima/cmd/limactl/editflags"
 	"github.com/lima-vm/lima/cmd/limactl/guessarg"
 	"github.com/lima-vm/lima/pkg/editutil"
-	"github.com/lima-vm/lima/pkg/instance"
 	"github.com/lima-vm/lima/pkg/limayaml"
-	networks "github.com/lima-vm/lima/pkg/networks/reconcile"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
-	"github.com/lima-vm/lima/pkg/uiutil"
 	"github.com/lima-vm/lima/pkg/yqutil"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -132,34 +129,14 @@ func editAction(cmd *cobra.Command, args []string) error {
 	}
 	if inst != nil {
 		logrus.Infof("Instance %q configuration edited", inst.Name)
-	}
-
-	if !tty {
-		// use "start" to start it
-		return nil
-	}
-	if inst == nil {
-		// edited a limayaml file directly
-		return nil
-	}
-	startNow, err := askWhetherToStart()
-	if err != nil {
+		tty, err := interactive(cmd)
+		if tty && err == nil {
+			err = askToStart(cmd, inst.Name, false)
+		}
 		return err
 	}
-	if !startNow {
-		return nil
-	}
-	ctx := cmd.Context()
-	err = networks.Reconcile(ctx, inst.Name)
-	if err != nil {
-		return err
-	}
-	return instance.Start(ctx, inst, "", false)
-}
-
-func askWhetherToStart() (bool, error) {
-	message := "Do you want to start the instance now? "
-	return uiutil.Confirm(message, true)
+	// inst is nil if edited a limayaml file directly
+	return nil
 }
 
 func editBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
