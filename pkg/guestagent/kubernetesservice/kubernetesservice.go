@@ -56,6 +56,7 @@ func (s *ServiceWatcher) getServiceInformer() cache.SharedIndexInformer {
 }
 
 func (s *ServiceWatcher) Start() {
+	logrus.Info("Monitoring kubernetes services")
 	const retryInterval = 10 * time.Second
 	const pollImmediately = false
 	_ = wait.PollUntilContextCancel(context.TODO(), retryInterval, pollImmediately, func(ctx context.Context) (done bool, err error) {
