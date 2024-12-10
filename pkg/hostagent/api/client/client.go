@@ -4,9 +4,11 @@ package client
 // Apache License 2.0
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 
 	"github.com/lima-vm/lima/pkg/hostagent/api"
@@ -16,6 +18,7 @@ import (
 type HostAgentClient interface {
 	HTTPClient() *http.Client
 	Info(context.Context) (*api.Info, error)
+	DriverConfig(context.Context, interface{}) (interface{}, error)
 }
 
 // NewHostAgentClient creates a client.
@@ -61,4 +64,36 @@ func (c *client) Info(ctx context.Context) (*api.Info, error) {
 		return nil, err
 	}
 	return &info, nil
+}
+
+func (c *client) DriverConfig(ctx context.Context, config interface{}) (interface{}, error) {
+	u := fmt.Sprintf("http://%s/%s/driver/config", c.dummyHost, c.version)
+	method := "GET"
+	var body io.Reader
+	if config != nil {
+		method = "PATCH"
+		b, err := json.Marshal(config)
+		if err != nil {
+			return nil, err
+		}
+		body = bytes.NewBuffer(b)
+	}
+	req, err := http.NewRequestWithContext(ctx, method, u, body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := c.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if err := httpclientutil.Successful(resp); err != nil {
+		return nil, err
+	}
+	dec := json.NewDecoder(resp.Body)
+	if err := dec.Decode(&config); err != nil {
+		return nil, err
+	}
+	return &config, nil
 }
