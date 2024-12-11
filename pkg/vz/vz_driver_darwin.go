@@ -130,6 +130,7 @@ func (l *LimaVzDriver) Validate() error {
 			"Lima",
 			"Socket",
 			"MACAddress",
+			"Metric",
 			"Interface",
 		); len(unknown) > 0 {
 			logrus.Warnf("vmType %s: ignoring networks[%d]: %+v", *l.Instance.Config.VMType, i, unknown)
