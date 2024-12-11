@@ -1,6 +1,7 @@
 package yqutil
 
 import (
+	"strings"
 	"testing"
 
 	"gotest.tools/v3/assert"
@@ -94,4 +95,28 @@ func TestEvaluateExpressionError(t *testing.T) {
 	expression := `arch: aarch64`
 	_, err := EvaluateExpression(expression, []byte(""))
 	assert.ErrorContains(t, err, "invalid input text")
+}
+
+func TestEvaluateMergeExpression(t *testing.T) {
+	expression := `select(di == 0) * select(di == 1)`
+	content := `
+yolo: true
+foo:
+  bar: 1
+  baz: 2
+---
+foo:
+  bar: 3
+  fomo: false
+`
+	expected := `
+yolo: true
+foo:
+  bar: 3
+  baz: 2
+  fomo: false
+`
+	out, err := EvaluateExpression(expression, []byte(strings.TrimSpace(content)))
+	assert.NilError(t, err)
+	assert.Equal(t, strings.TrimSpace(expected), strings.TrimSpace(string(out)))
 }
