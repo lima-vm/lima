@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 
 	"github.com/google/yamlfmt"
@@ -37,7 +36,7 @@ func ValidateContent(content []byte) error {
 	return err
 }
 
-// EvaluateExpression evaluates the yq expression, and returns the modified yaml.
+// EvaluateExpression evaluates the yq expression and returns the modified yaml.
 func EvaluateExpression(expression string, content []byte) ([]byte, error) {
 	if expression == "" {
 		return content, nil
@@ -56,21 +55,6 @@ func EvaluateExpression(expression string, content []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	tmpYAMLFile, err := os.CreateTemp("", "lima-yq-*.yaml")
-	if err != nil {
-		return nil, err
-	}
-	tmpYAMLPath := tmpYAMLFile.Name()
-	defer os.RemoveAll(tmpYAMLPath)
-	_, err = tmpYAMLFile.Write(contentModified)
-	if err != nil {
-		tmpYAMLFile.Close()
-		return nil, err
-	}
-	if err = tmpYAMLFile.Close(); err != nil {
-		return nil, err
-	}
-
 	memory := logging.NewMemoryBackend(0)
 	backend := logging.AddModuleLevel(memory)
 	logging.SetBackend(backend)
@@ -80,13 +64,8 @@ func EvaluateExpression(expression string, content []byte) ([]byte, error) {
 	encoderPrefs.Indent = 2
 	encoderPrefs.ColorsEnabled = false
 	encoder := yqlib.NewYamlEncoder(encoderPrefs)
-	out := new(bytes.Buffer)
-	printer := yqlib.NewPrinter(encoder, yqlib.NewSinglePrinterWriter(out))
 	decoder := yqlib.NewYamlDecoder(yqlib.ConfiguredYamlPreferences)
-
-	streamEvaluator := yqlib.NewStreamEvaluator()
-	files := []string{tmpYAMLPath}
-	err = streamEvaluator.EvaluateFiles(expression, files, printer, decoder)
+	out, err := yqlib.NewStringEvaluator().EvaluateAll(expression, string(contentModified), encoder, decoder)
 	if err != nil {
 		logger := logrus.StandardLogger()
 		for node := memory.Head(); node != nil; node = node.Next() {
@@ -110,8 +89,7 @@ func EvaluateExpression(expression string, content []byte) ([]byte, error) {
 		}
 		return nil, err
 	}
-
-	return formatter.Format(out.Bytes())
+	return formatter.Format([]byte(out))
 }
 
 func Join(yqExprs []string) string {
