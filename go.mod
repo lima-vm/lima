@@ -26,7 +26,7 @@ require (
 	github.com/google/yamlfmt v0.14.0
 	github.com/invopop/jsonschema v0.12.0
 	github.com/lima-vm/go-qcow2reader v0.6.0
-	github.com/lima-vm/sshocker v0.3.4
+	github.com/lima-vm/sshocker v0.3.5
 	github.com/mattn/go-isatty v0.0.20
 	github.com/mattn/go-shellwords v1.0.12
 	github.com/mdlayher/vsock v1.2.1
@@ -110,7 +110,7 @@ require (
 	github.com/pelletier/go-toml/v2 v2.2.3 // indirect
 	github.com/pierrec/lz4/v4 v4.1.17 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/pkg/sftp v1.13.6 // indirect
+	github.com/pkg/sftp v1.13.7 // indirect
 	github.com/qdm12/dns/v2 v2.0.0-rc6 // indirect
 	github.com/qdm12/gosettings v0.4.1 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
