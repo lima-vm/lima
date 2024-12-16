@@ -87,7 +87,7 @@ elif command -v dnf >/dev/null 2>&1; then
 			dnf install ${dnf_install_flags} oracle-epel-release-el9
 			dnf config-manager --disable ol9_developer_EPEL >/dev/null 2>&1
 			dnf_install_flags="${dnf_install_flags} --enablerepo ol9_developer_EPEL"
-		elif grep -q "release 9" /etc/system-release; then
+		elif grep -q -E "release (9|10)" /etc/system-release; then
 			# shellcheck disable=SC2086
 			dnf install ${dnf_install_flags} epel-release
 			dnf config-manager --disable epel >/dev/null 2>&1
