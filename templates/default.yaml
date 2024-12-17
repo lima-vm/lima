@@ -526,6 +526,11 @@ hostResolver:
 # 🟢 Builtin default: /usr/local
 guestInstallPrefix: null
 
+# When "saveOnStop" is enabled, Lima saves the VM instead of shutting it down.
+# The VM can be restored with `limactl start` if the saved state is available.
+# 🟢 Builtin default: false
+saveOnStop: null
+
 # When the "plain" mode is enabled:
 # - the YAML properties for mounts, port forwarding, containerd, etc. will be ignored
 # - guest agent will not be running

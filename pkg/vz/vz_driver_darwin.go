@@ -8,15 +8,19 @@ import (
 	"fmt"
 	"net"
 	"path/filepath"
+	"runtime"
 	"time"
 
 	"github.com/Code-Hex/vz/v3"
+	"github.com/mitchellh/mapstructure"
 
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/limayaml"
+	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/reflectutil"
+	"github.com/lima-vm/lima/pkg/store/filenames"
 )
 
 var knownYamlProperties = []string{
@@ -52,6 +56,7 @@ var knownYamlProperties = []string{
 	"PropagateProxyEnv",
 	"Provision",
 	"Rosetta",
+	"SaveOnStop",
 	"SSH",
 	"TimeZone",
 	"UpgradePackages",
@@ -66,11 +71,22 @@ type LimaVzDriver struct {
 	*driver.BaseDriver
 
 	machine *virtualMachineWrapper
+
+	// Runtime configuration
+	config LimaVzDriverRuntimeConfig
+}
+
+type LimaVzDriverRuntimeConfig struct {
+	// SaveOnStop is a flag to save the VM state on stop
+	SaveOnStop bool `json:"saveOnStop"`
 }
 
 func New(driver *driver.BaseDriver) *LimaVzDriver {
 	return &LimaVzDriver{
 		BaseDriver: driver,
+		config: LimaVzDriverRuntimeConfig{
+			SaveOnStop: *driver.Instance.Config.SaveOnStop,
+		},
 	}
 }
 
@@ -192,7 +208,44 @@ func (l *LimaVzDriver) RunGUI() error {
 	return fmt.Errorf("RunGUI is not supported for the given driver '%s' and display '%s'", "vz", *l.Instance.Config.Video.Display)
 }
 
+func (l *LimaVzDriver) RuntimeConfig(_ context.Context, config interface{}) (interface{}, error) {
+	if config == nil {
+		return l.config, nil
+	}
+	var newConfig LimaVzDriverRuntimeConfig
+	err := mapstructure.Decode(config, &newConfig)
+	if err != nil {
+		return nil, err
+	}
+	if newConfig.SaveOnStop {
+		if runtime.GOARCH != "arm64" {
+			return nil, fmt.Errorf("saveOnStop is not supported on %s", runtime.GOARCH)
+		} else if runtime.GOOS != "darwin" {
+			return nil, fmt.Errorf("saveOnStop is not supported on %s", runtime.GOOS)
+		} else if macOSProductVersion, err := osutil.ProductVersion(); err != nil {
+			return nil, fmt.Errorf("failed to get macOS product version: %w", err)
+		} else if macOSProductVersion.Major < 14 {
+			return nil, fmt.Errorf("saveOnStop is not supported on macOS %d", macOSProductVersion.Major)
+		}
+		logrus.Info("VZ RuntimeConfiguration changed: SaveOnStop is enabled")
+		l.config.SaveOnStop = true
+	} else {
+		logrus.Info("VZ RuntimeConfiguration changed: SaveOnStop is disabled")
+		l.config.SaveOnStop = false
+	}
+	return l.config, nil
+}
+
 func (l *LimaVzDriver) Stop(_ context.Context) error {
+	if l.config.SaveOnStop {
+		machineStatePath := filepath.Join(l.Instance.Dir, filenames.VzMachineState)
+		if err := saveVM(l.machine.VirtualMachine, machineStatePath); err != nil {
+			logrus.WithError(err).Warn("Failed to save VZ. Falling back to shutdown")
+		} else {
+			return nil
+		}
+	}
+
 	logrus.Info("Shutting down VZ")
 	canStop := l.machine.CanRequestStop()
 

@@ -39,7 +39,7 @@ func stopAction(cmd *cobra.Command, args []string) error {
 	if force {
 		instance.StopForcibly(inst)
 	} else {
-		err = instance.StopGracefully(inst)
+		err = instance.StopGracefully(inst, false)
 	}
 	// TODO: should we also reconcile networks if graceful stop returned an error?
 	if err == nil {

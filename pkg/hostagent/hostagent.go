@@ -423,6 +423,10 @@ func (a *HostAgent) Info(_ context.Context) (*hostagentapi.Info, error) {
 	return info, nil
 }
 
+func (a *HostAgent) DriverRuntimeConfig(ctx context.Context, config interface{}) (interface{}, error) {
+	return a.driver.RuntimeConfig(ctx, config)
+}
+
 func (a *HostAgent) startHostAgentRoutines(ctx context.Context) error {
 	if *a.instConfig.Plain {
 		logrus.Info("Running in plain mode. Mounts, port forwarding, containerd, etc. will be ignored. Guest agent will not be running.")
