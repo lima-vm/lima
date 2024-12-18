@@ -51,6 +51,7 @@ func newShellCommand() *cobra.Command {
 }
 
 func shellAction(cmd *cobra.Command, args []string) error {
+	_ = os.Setenv("_LIMACTL_SHELL_IN_ACTION", "")
 	// simulate the behavior of double dash
 	newArg := []string{}
 	if len(args) >= 2 && args[1] == "--" {
@@ -68,15 +69,36 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	inst, err := store.Inspect(instName)
+	tty, err := interactive(cmd)
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("instance %q does not exist, run `limactl create %s` to create a new instance", instName, instName)
-		}
 		return err
 	}
-	if inst.Status == store.StatusStopped {
-		return fmt.Errorf("instance %q is stopped, run `limactl start %s` to start the instance", instName, instName)
+	inst, err := store.Inspect(instName)
+	if err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+		if !tty {
+			return fmt.Errorf("instance %q does not exist, run `limactl create %s` to create a new instance", instName, instName)
+		}
+		if err := askToStart(cmd, instName, true); err != nil {
+			return err
+		}
+		inst, err = store.Inspect(instName)
+	} else if inst.Status == store.StatusStopped {
+		if !tty {
+			return fmt.Errorf("instance %q is stopped, run `limactl start %s` to start the instance", instName, instName)
+		}
+		if err := askToStart(cmd, instName, false); err != nil {
+			return err
+		}
+		inst, err = store.Inspect(instName)
+	}
+	if err != nil {
+		return err
+	}
+	if inst.Status != store.StatusRunning {
+		return fmt.Errorf("instance %q status is not %q but %q", inst.Name, store.StatusRunning, inst.Status)
 	}
 
 	// When workDir is explicitly set, the shell MUST have workDir as the cwd, or exit with an error.
