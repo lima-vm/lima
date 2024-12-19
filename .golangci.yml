@@ -18,6 +18,7 @@
 ---
 run:
   concurrency: 6
+  timeout: 2m  # to avoid timeout locally
 linters:
   disable-all: true
   enable:
