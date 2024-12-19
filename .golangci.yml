@@ -18,6 +18,7 @@
 ---
 run:
   concurrency: 6
+  timeout: 2m
 linters:
   disable-all: true
   enable:
