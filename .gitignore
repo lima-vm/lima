@@ -3,3 +3,4 @@ _artifacts/
 lima.REJECTED.yaml
 schema-limayaml.json
 .config
+.idea/
