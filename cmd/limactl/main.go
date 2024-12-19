@@ -155,6 +155,7 @@ func newApp() *cobra.Command {
 		newProtectCommand(),
 		newUnprotectCommand(),
 		newTunnelCommand(),
+		newTemplateCommand(),
 	)
 	if runtime.GOOS == "darwin" || runtime.GOOS == "linux" {
 		rootCmd.AddCommand(startAtLoginCommand())
