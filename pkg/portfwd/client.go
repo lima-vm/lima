@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 
+	"github.com/lima-vm/lima/pkg/bicopy"
 	"github.com/lima-vm/lima/pkg/guestagent/api"
 	guestagentclient "github.com/lima-vm/lima/pkg/guestagent/api/client"
 	"github.com/sirupsen/logrus"
@@ -24,21 +25,15 @@ func HandleTCPConnection(ctx context.Context, client *guestagentclient.GuestAgen
 		return
 	}
 
-	g, _ := errgroup.WithContext(ctx)
-
 	rw := &GrpcClientRW{stream: stream, id: id, addr: guestAddr}
-	g.Go(func() error {
-		_, err := io.Copy(rw, conn)
-		return err
-	})
-	g.Go(func() error {
-		_, err := io.Copy(conn, rw)
-		return err
-	})
 
-	if err := g.Wait(); err != nil {
-		logrus.Debugf("error in tcp tunnel for id: %s error:%v", id, err)
-	}
+	bicopy.Bicopy("tcp tunnel", bicopy.NamedReadWriter{
+		ReadWriter: rw,
+		Name:       guestAddr,
+	}, bicopy.NamedReadWriter{
+		ReadWriter: conn,
+		Name:       id,
+	})
 }
 
 func HandleUDPConnection(ctx context.Context, client *guestagentclient.GuestAgentClient, conn net.PacketConn, guestAddr string) {
