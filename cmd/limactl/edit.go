@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 
 	"github.com/lima-vm/lima/cmd/limactl/editflags"
-	"github.com/lima-vm/lima/cmd/limactl/guessarg"
 	"github.com/lima-vm/lima/pkg/editutil"
 	"github.com/lima-vm/lima/pkg/instance"
+	"github.com/lima-vm/lima/pkg/limatmpl"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	networks "github.com/lima-vm/lima/pkg/networks/reconcile"
 	"github.com/lima-vm/lima/pkg/store"
@@ -44,7 +44,7 @@ func editAction(cmd *cobra.Command, args []string) error {
 	var err error
 	var inst *store.Instance
 	switch {
-	case guessarg.SeemsYAMLPath(arg):
+	case limatmpl.SeemsYAMLPath(arg):
 		// absolute path is required for `limayaml.Validate`
 		filePath, err = filepath.Abs(arg)
 		if err != nil {
