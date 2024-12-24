@@ -17,6 +17,7 @@ Distro:
 - [`alpine-iso`](./alpine-iso.yaml): ☆Alpine Linux (ISO9660 image). Compatible with the `alpine` template used in Lima prior to v1.0.
 - [`archlinux`](./archlinux.yaml): ☆Arch Linux
 - [`centos-stream-9`](./centos-stream-9.yaml), `centos-stream.yaml`: CentOS Stream 9
+- [`centos-stream-10`](./centos-stream-10.yaml): CentOS Stream 10
 - [`debian-11`](./debian-11.yaml): Debian GNU/Linux 11(bullseye)
 - [`debian-12`](./debian-12.yaml), `debian.yaml`: ⭐Debian GNU/Linux 12(bookworm)
 - [`fedora`](./fedora.yaml): ⭐Fedora

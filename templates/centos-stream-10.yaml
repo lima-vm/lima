@@ -1,0 +1,27 @@
+# minimumLimaVersion: "1.0.3"
+
+# NOTE: This template does not seem to work on Intel yet
+# https://github.com/lima-vm/lima/issues/3022
+
+images:
+# Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
+- location: "https://cloud.centos.org/centos/10-stream/x86_64/images/CentOS-Stream-GenericCloud-10-20241209.0.x86_64.qcow2"
+  arch: "x86_64"
+  digest: "sha256:cf4c2bf9f6fe1c730b407baa13a48b085bd3bd96a8ea019d3c4062d6b8f3264d"
+- location: "https://cloud.centos.org/centos/10-stream/aarch64/images/CentOS-Stream-GenericCloud-10-20241209.0.aarch64.qcow2"
+  arch: "aarch64"
+  digest: "sha256:732902370a694a91d0c5838abbeaeb35f270038368eea5c0f307c1aa725a1d6f"
+# Fallback to the latest release image.
+# Hint: run `limactl prune` to invalidate the cache
+- location: "https://cloud.centos.org/centos/10-stream/x86_64/images/CentOS-Stream-GenericCloud-10-latest.x86_64.qcow2"
+  arch: "x86_64"
+- location: "https://cloud.centos.org/centos/10-stream/aarch64/images/CentOS-Stream-GenericCloud-10-latest.aarch64.qcow2"
+  arch: "aarch64"
+mountTypesUnsupported: ["9p"]
+mounts:
+- location: "~"
+- location: "/tmp/lima"
+  writable: true
+firmware:
+  # CentOS Stream 10 still requires legacyBIOS
+  legacyBIOS: true
