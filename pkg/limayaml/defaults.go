@@ -14,6 +14,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"text/template"
 
 	"github.com/coreos/go-semver/semver"
@@ -1173,9 +1174,44 @@ func IsAccelOS() bool {
 	return false
 }
 
+var (
+	hasSMEDarwin     bool
+	hasSMEDarwinOnce sync.Once
+)
+
+func init() {
+	hasSMEDarwinOnce.Do(func() {
+		hasSMEDarwin = hasSMEDarwinFn()
+	})
+}
+
+func hasSMEDarwinFn() bool {
+	if runtime.GOOS != "darwin" || runtime.GOARCH != "arm64" {
+		return false
+	}
+	// golang.org/x/sys/cpu does not support inspecting the availability of SME yet
+	s, err := osutil.Sysctl("hw.optional.arm.FEAT_SME")
+	if err != nil {
+		logrus.WithError(err).Debug("failed to check hw.optional.arm.FEAT_SME")
+	}
+	return s == "1"
+}
+
 func HasHostCPU() bool {
 	switch runtime.GOOS {
-	case "darwin", "linux":
+	case "darwin":
+		if hasSMEDarwin {
+			// SME is available since Apple M4 running macOS 15.2.
+			//
+			// However, QEMU is not ready to handle SME yet.
+			//
+			// https://github.com/lima-vm/lima/issues/3032
+			// https://gitlab.com/qemu-project/qemu/-/issues/2665
+			// https://gitlab.com/qemu-project/qemu/-/issues/2721
+			return false
+		}
+		return true
+	case "linux":
 		return true
 	case "netbsd", "windows":
 		return false
@@ -1185,8 +1221,8 @@ func HasHostCPU() bool {
 }
 
 func HasMaxCPU() bool {
-	// WHPX: Unexpected VP exit code 4
-	return runtime.GOOS != "windows"
+	// windows: WHPX: Unexpected VP exit code 4
+	return HasHostCPU()
 }
 
 func IsNativeArch(arch Arch) bool {
