@@ -1,0 +1,34 @@
+# minimumLimaVersion: "1.0.3"
+
+images:
+# Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
+- location: "https://cloud.centos.org/centos/10-stream/x86_64/images/CentOS-Stream-GenericCloud-10-20241216.0.x86_64.qcow2"
+  arch: "x86_64"
+  digest: "sha256:94090f04d517b6b2d8e95f949ceb861fd5cd0a6f2076c20c906e44c6c43f566c"
+- location: "https://cloud.centos.org/centos/10-stream/aarch64/images/CentOS-Stream-GenericCloud-10-20241216.0.aarch64.qcow2"
+  arch: "aarch64"
+  digest: "sha256:1034f42dc140e5d4f517458ad584dcb03fdbefc3d5721946c79070b4fe2d796e"
+# Fallback to the latest release image.
+# Hint: run `limactl prune` to invalidate the cache
+- location: "https://cloud.centos.org/centos/10-stream/x86_64/images/CentOS-Stream-GenericCloud-10-latest.x86_64.qcow2"
+  arch: "x86_64"
+- location: "https://cloud.centos.org/centos/10-stream/aarch64/images/CentOS-Stream-GenericCloud-10-latest.aarch64.qcow2"
+  arch: "aarch64"
+mountTypesUnsupported: ["9p"]
+mounts:
+- location: "~"
+- location: "/tmp/lima"
+  writable: true
+firmware:
+  # CentOS Stream 10 still requires legacyBIOS
+  # https://issues.redhat.com/browse/CS-2672
+  legacyBIOS: true
+cpuType:
+  # When emulating Intel on ARM hosts, Lima uses the "qemu64" CPU by default (https://github.com/lima-vm/lima/pull/494).
+  # However, CentOS Stream 10 kernel reboots indefinitely due to lack of the support for x86_64-v3 instructions.
+  #
+  # On native Intel hosts Lima uses the "host" CPU by default, but it doesn't seem to work either,
+  # at least on MacBook Pro 2020 (Intel(R) Core(TM) i7-1068NG7 CPU @ 2.30GHz), due to
+  # `invalid opcode: 0000` in `chacha_8block_xor_avx512vl`.
+  # https://github.com/lima-vm/lima/issues/3022
+  x86_64: "Haswell-v4"
