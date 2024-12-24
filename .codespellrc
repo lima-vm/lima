@@ -6,7 +6,7 @@
 skip = .git,go.mod,go.sum,*.pb.desc,*/node_modules/*,*/public/js/*,*/public/scss/*
 
 # Comma separated list of words to be ignored. Words must be lowercased.
-ignore-words-list = ans,distroname,testof,hda,ststr,archtypes
+ignore-words-list = ans,distroname,testof,hda,ststr,archtypes,sme
 
 # Check file names as well.
 check-filenames = true
