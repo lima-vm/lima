@@ -31,7 +31,9 @@ provision:
   script: |
     #!/bin/bash
     set -eux -o pipefail
-    command -v podman >/dev/null 2>&1 && test -e /etc/lima-podman && exit 0
+    if command -v podman >/dev/null 2>&1 && test -e /etc/lima-podman; then
+      exit 0
+    fi
     dnf -y install --best podman && touch /etc/lima-podman
 - mode: user
   script: |
