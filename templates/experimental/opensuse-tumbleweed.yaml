@@ -5,7 +5,10 @@ images:
   arch: "x86_64"
 - location: "https://download.opensuse.org/ports/aarch64/tumbleweed/appliances/openSUSE-Tumbleweed-Minimal-VM.aarch64-Cloud.qcow2"
   arch: "aarch64"
-mountTypesUnsupported: ["9p"]
+# Hint: to allow 9p and virtiofs, replace the `kernel-default-base` package with `kernel-default` and reboot the VM.
+# https://github.com/lima-vm/lima/issues/3055
+mountType: "reverse-sshfs"
+mountTypesUnsupported: ["9p", "virtiofs"]
 mounts:
 - location: "~"
 - location: "/tmp/lima"
