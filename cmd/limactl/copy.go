@@ -33,12 +33,18 @@ func newCopyCommand() *cobra.Command {
 	}
 
 	copyCommand.Flags().BoolP("recursive", "r", false, "copy directories recursively")
+	copyCommand.Flags().BoolP("verbose", "v", false, "enable verbose output")
 
 	return copyCommand
 }
 
 func copyAction(cmd *cobra.Command, args []string) error {
 	recursive, err := cmd.Flags().GetBool("recursive")
+	if err != nil {
+		return err
+	}
+
+	verbose, err := cmd.Flags().GetBool("verbose")
 	if err != nil {
 		return err
 	}
@@ -54,9 +60,17 @@ func copyAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+
 	if debug {
-		scpFlags = append(scpFlags, "-v")
+		verbose = true
 	}
+
+	if verbose {
+		scpFlags = append(scpFlags, "-v")
+	} else {
+		scpFlags = append(scpFlags, "-q")
+	}
+
 	if recursive {
 		scpFlags = append(scpFlags, "-r")
 	}
@@ -119,7 +133,7 @@ func copyAction(cmd *cobra.Command, args []string) error {
 	sshCmd.Stdin = cmd.InOrStdin()
 	sshCmd.Stdout = cmd.OutOrStdout()
 	sshCmd.Stderr = cmd.ErrOrStderr()
-	logrus.Debugf("executing scp (may take a long time)): %+v", sshCmd.Args)
+	logrus.Debugf("executing scp (may take a long time): %+v", sshCmd.Args)
 
 	// TODO: use syscall.Exec directly (results in losing tty?)
 	return sshCmd.Run()
