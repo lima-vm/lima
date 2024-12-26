@@ -1,1 +1,1 @@
-../website/content/en/docs/dev/Internals/_index.md
+Moved to <https://lima-vm.io/docs/dev/internals/>
