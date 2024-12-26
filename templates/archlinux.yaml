@@ -17,7 +17,3 @@ mounts:
 - location: "~"
 - location: "/tmp/lima"
   writable: true
-
-# 9p is broken in Linux v6.9, v6.10, and v6.11.
-# The issue was fixed in Linux v6.12-rc5 (https://github.com/torvalds/linux/commit/be2ca38).
-mountTypesUnsupported: ["9p"]
