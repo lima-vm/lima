@@ -185,7 +185,7 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		sshArgs = append(sshArgs, "-o", "SendEnv=COLORTERM")
 	}
 	sshArgs = append(sshArgs, []string{
-		"-q",
+		"-o", "LogLevel=ERROR",
 		"-p", strconv.Itoa(inst.SSHLocalPort),
 		inst.SSHAddress,
 		"--",
