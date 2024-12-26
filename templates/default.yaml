@@ -534,6 +534,16 @@ guestInstallPrefix: null
 # 🟢 Builtin default: false
 plain: null
 
+# When the "nestedVirtualization" feature is enabled:
+# - Allows running a VM inside the guest VM.
+# - The guest VM must configure QEMU with the `-cpu host` parameters to run a nested VM:
+#   qemu-system-aarch64 -accel kvm -cpu host -M virt
+# - Without specifying `-cpu host`, nested virtualization may fail with the error:
+#   qemu-system-aarch64: kvm_init_vcpu: kvm_arch_init_vcpu failed (0): Invalid argument
+# - Only supported on Apple M3 or later with `vmType: vz`.
+# 🟢 Builtin default: false
+nestedVirtualization: null
+
 # ===================================================================== #
 # GLOBAL DEFAULTS AND OVERRIDES
 # ===================================================================== #
