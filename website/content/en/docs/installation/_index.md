@@ -2,8 +2,13 @@
 title: Installation
 weight: 1
 ---
-Prerequisite:
+Supported host OS:
+- macOS (the latest version is recommended)
+- Linux
+- NetBSD (untested)
+- Windows (untested)
 
+Prerequisite:
 - QEMU 7.0 or later (Required, only if QEMU driver is used)
 
 {{< tabpane text=true >}}
@@ -38,7 +43,6 @@ Download the binary archive of Lima from <https://github.com/lima-vm/lima/releas
 and extract it under `/usr/local` (or somewhere else). 
 
 ```bash
-brew install jq
 VERSION=$(curl -fsSL https://api.github.com/repos/lima-vm/lima/releases/latest | jq -r .tag_name)
 curl -fsSL "https://github.com/lima-vm/lima/releases/download/${VERSION}/lima-${VERSION:1}-$(uname -s)-$(uname -m).tar.gz" | tar Cxzvm /usr/local
 ```
@@ -54,12 +58,15 @@ make
 make install
 ```
 
-To change the build configuration, run `make config` or `make menuconfig`.
+The installation directory (`$PREFIX`) defaults to `/usr/local`.
+
+#### Advanced configuration with Kconfig tools
+(This step is not needed for most users)
+
+To change the build configuration such as the guest architectures, run `make config` or `make menuconfig`.
 
 This requires kconfig tools installed, it is also possible to edit `.config`.
 The default configuration can be found in the file `config.mk` (make syntax).
-
-## Kconfig tools
 
 The tools are available as either "kconfig-frontends" or "kbuild-standalone".
 There is one `conf` for the text, and one `mconf` for the menu interface.
