@@ -1,6 +1,7 @@
 package osutil
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -47,4 +48,8 @@ func SignalName(sig os.Signal) string {
 	default:
 		return fmt.Sprintf("Signal(%d)", sig)
 	}
+}
+
+func Sysctl(name string) (string, error) {
+	return "", errors.New("sysctl: unimplemented on Windows")
 }
