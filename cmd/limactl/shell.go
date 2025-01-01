@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"al.essio.dev/pkg/shellescape"
+	"github.com/coreos/go-semver/semver"
 	"github.com/lima-vm/lima/pkg/sshutil"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/mattn/go-isatty"
@@ -184,8 +185,15 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		// SendEnv config is cumulative, with already existing options in ssh_config
 		sshArgs = append(sshArgs, "-o", "SendEnv=COLORTERM")
 	}
+	logLevel := "ERROR"
+	// For versions older than OpenSSH 8.9p, LogLevel=QUIET was needed to
+	// avoid the "Shared connection to 127.0.0.1 closed." message with -t.
+	olderSSH := sshutil.DetectOpenSSHVersion().LessThan(*semver.New("8.9.0"))
+	if olderSSH {
+		logLevel = "QUIET"
+	}
 	sshArgs = append(sshArgs, []string{
-		"-o", "LogLevel=ERROR",
+		"-o", fmt.Sprintf("LogLevel=%s", logLevel),
 		"-p", strconv.Itoa(inst.SSHLocalPort),
 		inst.SSHAddress,
 		"--",
