@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -9,6 +11,7 @@ import (
 	"strings"
 
 	"al.essio.dev/pkg/shellescape"
+	"github.com/coreos/go-semver/semver"
 	"github.com/lima-vm/lima/pkg/sshutil"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/mattn/go-isatty"
@@ -184,6 +187,18 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		// SendEnv config is cumulative, with already existing options in ssh_config
 		sshArgs = append(sshArgs, "-o", "SendEnv=COLORTERM")
 	}
+	stderr := os.Stderr
+	// For versions older than OpenSSH 8.9p, LogLevel=QUIET was needed to
+	// avoid the "Shared connection to 127.0.0.1 closed." message with -t.
+	olderSSH := sshutil.DetectOpenSSHVersion().LessThan(*semver.New("8.9.0"))
+	if olderSSH {
+		logline := fmt.Sprintf("Shared connection to %s closed.", inst.SSHAddress)
+		logrus.Debugf("Doing workaround for older SSH, filtering %q from stderr", logline)
+		stderr, err = filter(os.Stderr, logline)
+		if err != nil {
+			return err
+		}
+	}
 	sshArgs = append(sshArgs, []string{
 		"-o", "LogLevel=ERROR",
 		"-p", strconv.Itoa(inst.SSHLocalPort),
@@ -194,11 +209,48 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	sshCmd := exec.Command(arg0, append(arg0Args, sshArgs...)...)
 	sshCmd.Stdin = os.Stdin
 	sshCmd.Stdout = os.Stdout
-	sshCmd.Stderr = os.Stderr
+	sshCmd.Stderr = stderr
 	logrus.Debugf("executing ssh (may take a long)): %+v", sshCmd.Args)
 
 	// TODO: use syscall.Exec directly (results in losing tty?)
 	return sshCmd.Run()
+}
+
+// split is a replacement for SplitLines that keeps the EOL (CR + LF) chars.
+func split(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	if atEOF && len(data) == 0 {
+		return 0, nil, nil
+	}
+	if i := bytes.IndexByte(data, '\n'); i >= 0 {
+		// We have a full newline-terminated line.
+		return i + 1, data[0 : i+1], nil
+	}
+	// If we're at EOF, we have a final, non-terminated line. Return it.
+	if atEOF {
+		return len(data), data, nil
+	}
+	// Request more data.
+	return 0, nil, nil
+}
+
+func filter(f *os.File, line string) (*os.File, error) {
+	r, w, err := os.Pipe()
+	if err != nil {
+		return nil, err
+	}
+	go func() {
+		s := bufio.NewScanner(r)
+		s.Split(split)
+		l := []byte(line)
+		l = append(l, '\r', '\n')
+		for s.Scan() {
+			b := s.Bytes()
+			if !bytes.Equal(b, l) {
+				_, err = f.Write(b)
+			}
+		}
+	}()
+	return w, nil
 }
 
 func shellBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
