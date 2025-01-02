@@ -165,7 +165,7 @@ Note: **Only** on macOS versions **before** 10.15.7 you might need to add this e
 #### "QEMU is slow"
 {{% fixlinks %}}
 - Make sure that HVF is enabled with `com.apple.security.hypervisor` entitlement. See ["QEMU crashes with `HV_ERROR`"](#qemu-crashes-with-hv_error).
-- Emulating non-native machines (ARM-on-Intel, Intel-on-ARM) is slow by design. See [`docs/multi-arch.md`](./docs/multi-arch.md) for a workaround.
+- Emulating non-native machines (ARM-on-Intel, Intel-on-ARM) is slow by design. See [`docs/multi-arch.md`]({{< ref "/docs/config/multi-arch" >}}) for a workaround.
 {{% /fixlinks %}}
 
 #### error "killed -9"
@@ -190,7 +190,7 @@ The default guest IP 192.168.5.15 is not accessible from the host and other gues
 
 To add another IP address that is accessible from the host and other virtual machines, enable [`socket_vmnet`](https://github.com/lima-vm/socket_vmnet) (since Lima v0.12).
 
-See [`./docs/network.md`](./docs/network.md).
+See [`docs/network.md`]({{< ref "/docs/config/network" >}}).
 {{% /fixlinks %}}
 
 #### "Ping shows duplicate packets and massive response times"
@@ -216,7 +216,7 @@ sudo /usr/libexec/ApplicationFirewall/socketfilterfw --unblock /usr/libexec/boot
 ### Filesystem sharing
 #### "Filesystem is slow"
 {{% fixlinks %}}
-Try virtiofs. See [`docs/mount.md`](./docs/mount.md)
+Try virtiofs. See [`docs/mount.md`]({{< ref "/docs/config/mount" >}})
 {{% /fixlinks %}}
 
 #### "Filesystem is not writable"
