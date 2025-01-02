@@ -15,11 +15,11 @@ Lima launches Linux virtual machines with automatic file sharing and port forwar
 
 ✅ Intel on Intel
 
-✅ [ARM on Intel](./docs/multi-arch.md)
+✅ [ARM on Intel]({{< ref "/docs/config/multi-arch" >}})
 
 ✅ ARM on ARM
 
-✅ [Intel on ARM](./docs/multi-arch.md)
+✅ [Intel on ARM]({{< ref "/docs/config/multi-arch" >}})
 
 ✅ Various guest Linux distributions: [AlmaLinux](./templates/almalinux.yaml), [Alpine](./templates/alpine.yaml), [Arch Linux](./templates/archlinux.yaml), [Debian](./templates/debian.yaml), [Fedora](./templates/fedora.yaml), [openSUSE](./templates/opensuse.yaml), [Oracle Linux](./templates/oraclelinux.yaml), [Rocky](./templates/rocky.yaml), [Ubuntu](./templates/ubuntu.yaml) (default), ...
 
