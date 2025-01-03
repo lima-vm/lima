@@ -18,7 +18,7 @@ type useAbsLocatorsTestCase struct {
 
 var useAbsLocatorsTestCases = []useAbsLocatorsTestCase{
 	{
-		"Template without basedOn or script file",
+		"Template without base or script file",
 		"template://foo",
 		`arch: aarch64`,
 		`arch: aarch64`,
@@ -26,38 +26,38 @@ var useAbsLocatorsTestCases = []useAbsLocatorsTestCase{
 	{
 		"Single string base template",
 		"template://foo",
-		`basedOn: bar.yaml`,
-		`basedOn: template://bar.yaml`,
+		`base: bar.yaml`,
+		`base: template://bar.yaml`,
 	},
 	{
 		"Flow style array of one base template",
 		"template://foo",
-		`basedOn: [bar.yaml]`,
-		`basedOn: ['template://bar.yaml']`,
+		`base: [bar.yaml]`,
+		`base: ['template://bar.yaml']`,
 	},
 	{
 		"Block style array of one base template",
 		"template://foo",
 		`
-basedOn:
+base:
 - bar.yaml
 `,
 		`
-basedOn:
+base:
 - template://bar.yaml`,
 	},
 	{
 		"Block style of four base templates",
 		"template://foo",
 		`
-basedOn:
+base:
 - bar.yaml
 - template://my
 - https://example.com/my.yaml
 - baz.yaml
 `,
 		`
-basedOn:
+base:
 - template://bar.yaml
 - template://my
 - https://example.com/my.yaml

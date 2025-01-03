@@ -38,7 +38,7 @@ func unmarshalDisk(dst *Disk, b []byte) error {
 	return yaml.Unmarshal(b, dst)
 }
 
-// unmarshalBaseTemplates unmarshalls `basedOn` which is either a string or a list of strings.
+// unmarshalBaseTemplates unmarshalls `base` which is either a string or a list of strings.
 func unmarshalBaseTemplates(dst *BaseTemplates, b []byte) error {
 	var s string
 	if err := yaml.Unmarshal(b, &s); err == nil {

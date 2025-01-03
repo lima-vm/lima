@@ -50,8 +50,8 @@ func validateFileObject(f File, fieldName string) error {
 }
 
 func Validate(y *LimaYAML, warn bool) error {
-	if len(y.BasedOn) > 0 {
-		return errors.New("field `basedOn` must be empty for YAML validation")
+	if len(y.Base) > 0 {
+		return errors.New("field `base` must be empty for YAML validation")
 	}
 	if y.MinimumLimaVersion != nil {
 		if _, err := versionutil.Parse(*y.MinimumLimaVersion); err != nil {

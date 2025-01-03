@@ -27,7 +27,7 @@ type embedTestCase struct {
 // * If the description starts with "TODO" then the test is expected to fail (until it is fixed).
 // * base is split on "---\n" and stored as base0.yaml, base1.yaml, ... in the same dir as the template.
 // * If any base template starts with "#!" then the extension will be .sh instead of .yaml.
-// * The template is automatically prefixed with "basedOn: base0.yaml" unless base0 is a script.
+// * The template is automatically prefixed with "base: base0.yaml" unless base0 is a script.
 // * All line comments will be separated by 2 spaces from the value on output.
 // * Merge order of additionalDisks, mounts, and networks depends on the logic in the
 //   combineListEntries() functions and will not follow the order of the base template(s).
@@ -173,7 +173,7 @@ mounts:
 arch: aarch64
 `,
 		`
-basedOn: base0.yaml
+base: base0.yaml
 # failure would mean this test loops forever, not that it fails the test
 vmType: qemu
 `,
@@ -187,10 +187,10 @@ vmType: qemu
 		"Bases are embedded depth-first",
 		`#`,
 		`
-basedOn: [base1.yaml, base2.yaml]
+base: [base1.yaml, base2.yaml]
 additionalDisks: [disk0]
 ---
-basedOn: base3.yaml
+base: base3.yaml
 additionalDisks: [disk1]
 ---
 additionalDisks: [disk2]
@@ -281,7 +281,7 @@ provision:
 `,
 	},
 	{
-		"Script files are embedded even when no basedOn property exists",
+		"Script files are embedded even when no base property exists",
 		"provision: [{file: base0.sh}]",
 		"#! my script",
 		`provision: [{script: "#! my script"}]`,
@@ -322,10 +322,10 @@ func RunEmbedTest(t *testing.T, tc embedTestCase) {
 		assert.NilError(t, err, tc.description)
 	}
 	tmpl := &limatmpl.Template{
-		Bytes:   []byte(fmt.Sprintf("basedOn: base0.yaml\n%s", tc.template)),
+		Bytes:   []byte(fmt.Sprintf("base: base0.yaml\n%s", tc.template)),
 		Locator: "tmpl.yaml",
 	}
-	// Don't include `basedOn` property if base0 is a script
+	// Don't include `base` property if base0 is a script
 	if strings.HasPrefix(tc.base, "#!") {
 		tmpl.Bytes = []byte(tc.template)
 	}

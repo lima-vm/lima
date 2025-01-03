@@ -10,7 +10,7 @@ import (
 )
 
 type LimaYAML struct {
-	BasedOn               BaseTemplates `yaml:"basedOn,omitempty" json:"basedOn,omitempty" jsonschema:"nullable"`
+	Base                  BaseTemplates `yaml:"base,omitempty" json:"base,omitempty" jsonschema:"nullable"`
 	MinimumLimaVersion    *string       `yaml:"minimumLimaVersion,omitempty" json:"minimumLimaVersion,omitempty" jsonschema:"nullable"`
 	VMType                *VMType       `yaml:"vmType,omitempty" json:"vmType,omitempty" jsonschema:"nullable"`
 	VMOpts                VMOpts        `yaml:"vmOpts,omitempty" json:"vmOpts,omitempty"`
