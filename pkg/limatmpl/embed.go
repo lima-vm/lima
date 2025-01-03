@@ -15,7 +15,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// Embed will recursively resolve all "basedOn" dependencies and update the
+// Embed will recursively resolve all "base" dependencies and update the
 // template with the merged result. It also inlines all external provisioning
 // and probe scripts.
 func (tmpl *Template) Embed(ctx context.Context) error {
@@ -51,19 +51,19 @@ func (tmpl *Template) embed(ctx context.Context, defaultBase bool, seen map[stri
 	if err := tmpl.Unmarshal(); err != nil {
 		return err
 	}
-	basedOn := tmpl.Config.BasedOn
+	bases := tmpl.Config.Base
 	if defaultBase {
-		// Prepend $LIMA_HOME/_config/base.yaml to basedOn list.
+		// Prepend $LIMA_HOME/_config/base.yaml to bases list.
 		configDir, err := dirnames.LimaConfigDir()
 		if err != nil {
 			return err
 		}
 		defaultBaseFilename := filepath.Join(configDir, filenames.Base)
 		if _, err := os.Stat(defaultBaseFilename); err == nil {
-			basedOn = append([]string{defaultBaseFilename}, basedOn...)
+			bases = append([]string{defaultBaseFilename}, bases...)
 		}
 	}
-	for _, baseLocator := range basedOn {
+	for _, baseLocator := range bases {
 		logrus.Debugf("Merging base template %q", baseLocator)
 		base, err := Read(ctx, "", baseLocator)
 		if err != nil {
@@ -154,7 +154,7 @@ func (tmpl *Template) mergeBase(base *Template) error {
 // * dns lists are not merged and only copied when the template doesn't have any dns entries at all.
 // * probes and provision scripts are appended in reverse order.
 // * mountTypesUnsupported have duplicate values removed.
-// * basedOn is removed from the template.
+// * base is removed from the template.
 const mergeDocuments = `
   select(document_index == 0) as $a
 | select(document_index == 1) as $b
@@ -195,7 +195,7 @@ const mergeDocuments = `
 # Make sure mountTypesUnsupported elements are unique.
 | $a | (select(.mountTypesUnsupported) | .mountTypesUnsupported) |= unique
 
-| del($a.basedOn)
+| del($a.base)
 
 # Remove the custom tags again so they do not clutter up the YAML output.
 | $a | .. tag = ""

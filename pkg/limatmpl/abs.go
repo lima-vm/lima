@@ -25,17 +25,17 @@ func (tmpl *Template) useAbsLocators() error {
 	if err != nil {
 		return err
 	}
-	for i, baseLocator := range tmpl.Config.BasedOn {
+	for i, baseLocator := range tmpl.Config.Base {
 		locator, err := absPath(baseLocator, basePath)
 		if err != nil {
 			return err
 		}
 		if i == 0 {
-			// basedOn can either be a single string, or a list of strings
-			tmpl.expr.WriteString(fmt.Sprintf("| ($a.basedOn | select(type == \"!!str\")) |= %q\n", locator))
-			tmpl.expr.WriteString(fmt.Sprintf("| ($a.basedOn | select(type == \"!!seq\") | .[0]) |= %q\n", locator))
+			// base can either be a single string, or a list of strings
+			tmpl.expr.WriteString(fmt.Sprintf("| ($a.base | select(type == \"!!str\")) |= %q\n", locator))
+			tmpl.expr.WriteString(fmt.Sprintf("| ($a.base | select(type == \"!!seq\") | .[0]) |= %q\n", locator))
 		} else {
-			tmpl.expr.WriteString(fmt.Sprintf("| $a.basedOn[%d] = %q\n", i, locator))
+			tmpl.expr.WriteString(fmt.Sprintf("| $a.base[%d] = %q\n", i, locator))
 		}
 	}
 	for i, p := range tmpl.Config.Probes {

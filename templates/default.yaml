@@ -285,7 +285,7 @@ minimumLimaVersion: null
 # This setting ca be either a single string, or a list of strings.
 # Any relative base template name will be resolved relative to the location of the main template.
 # 🟢 Builtin default: no base template
-basedOn: null
+base: null
 
 # User to be used inside the VM
 user:
@@ -570,7 +570,7 @@ nestedVirtualization: null
 # the mount of the home directory writable.
 
 # A third mechanism is $LIMA_HOME/_config/base.yaml. It is similar to
-# `default.yaml` but will be merged during the `basedOn` template assembly
+# `default.yaml` but will be merged during the `base` template embedding
 # when the instance is created, and not on every start. It becomes part
 # of the lima.yaml file.
 
