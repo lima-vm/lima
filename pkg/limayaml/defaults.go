@@ -1174,18 +1174,7 @@ func IsAccelOS() bool {
 	return false
 }
 
-var (
-	hasSMEDarwin     bool
-	hasSMEDarwinOnce sync.Once
-)
-
-func init() {
-	hasSMEDarwinOnce.Do(func() {
-		hasSMEDarwin = hasSMEDarwinFn()
-	})
-}
-
-func hasSMEDarwinFn() bool {
+var hasSMEDarwin = sync.OnceValue(func() bool {
 	if runtime.GOOS != "darwin" || runtime.GOARCH != "arm64" {
 		return false
 	}
@@ -1195,12 +1184,12 @@ func hasSMEDarwinFn() bool {
 		logrus.WithError(err).Debug("failed to check hw.optional.arm.FEAT_SME")
 	}
 	return s == "1"
-}
+})
 
 func HasHostCPU() bool {
 	switch runtime.GOOS {
 	case "darwin":
-		if hasSMEDarwin {
+		if hasSMEDarwin() {
 			// SME is available since Apple M4 running macOS 15.2.
 			//
 			// However, QEMU is not ready to handle SME yet.
