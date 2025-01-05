@@ -1,6 +1,8 @@
 package limatmpl
 
 import (
+	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -18,8 +20,8 @@ var useAbsLocatorsTestCases = []useAbsLocatorsTestCase{
 	{
 		"Template without basedOn or script file",
 		"template://foo",
-		`foo: bar`,
-		`foo: bar`,
+		`arch: aarch64`,
+		`arch: aarch64`,
 	},
 	{
 		"Single string base template",
@@ -102,98 +104,161 @@ func RunUseAbsLocatorTest(t *testing.T, tc useAbsLocatorsTestCase) {
 }
 
 func TestBasePath(t *testing.T) {
-	actual, err := basePath("/foo")
+	// On Windows the root will be something like "C:\"
+	root, err := filepath.Abs("/")
 	assert.NilError(t, err)
-	assert.Equal(t, actual, "/")
+	volume := filepath.VolumeName(root)
 
-	actual, err = basePath("/foo/bar")
-	assert.NilError(t, err)
-	assert.Equal(t, actual, "/foo")
+	t.Run("", func(t *testing.T) {
+		actual, err := basePath("/foo")
+		assert.NilError(t, err)
+		assert.Equal(t, actual, root)
+	})
 
-	actual, err = basePath("template://foo")
-	assert.NilError(t, err)
-	assert.Equal(t, actual, "template://")
+	t.Run("", func(t *testing.T) {
+		actual, err := basePath("/foo/bar")
+		assert.NilError(t, err)
+		assert.Equal(t, actual, filepath.Clean(volume+"/foo"))
+	})
 
-	actual, err = basePath("template://foo/bar")
-	assert.NilError(t, err)
-	assert.Equal(t, actual, "template://foo")
+	t.Run("", func(t *testing.T) {
+		actual, err := basePath("template://foo")
+		assert.NilError(t, err)
+		assert.Equal(t, actual, "template://")
+	})
 
-	actual, err = basePath("http://host/foo")
-	assert.NilError(t, err)
-	assert.Equal(t, actual, "http://host")
+	t.Run("", func(t *testing.T) {
+		actual, err := basePath("template://foo/bar")
+		assert.NilError(t, err)
+		assert.Equal(t, actual, "template://foo")
+	})
 
-	actual, err = basePath("http://host/foo/bar")
-	assert.NilError(t, err)
-	assert.Equal(t, actual, "http://host/foo")
+	t.Run("", func(t *testing.T) {
+		actual, err := basePath("http://host/foo")
+		assert.NilError(t, err)
+		assert.Equal(t, actual, "http://host")
+	})
 
-	actual, err = basePath("file:///foo")
-	assert.NilError(t, err)
-	assert.Equal(t, actual, "file:///")
+	t.Run("", func(t *testing.T) {
+		actual, err := basePath("http://host/foo/bar")
+		assert.NilError(t, err)
+		assert.Equal(t, actual, "http://host/foo")
+	})
 
-	actual, err = basePath("file:///foo/bar")
-	assert.NilError(t, err)
-	assert.Equal(t, actual, "file:///foo")
+	t.Run("", func(t *testing.T) {
+		actual, err := basePath("file:///foo")
+		assert.NilError(t, err)
+		assert.Equal(t, actual, "file:///")
+	})
+
+	t.Run("", func(t *testing.T) {
+		actual, err := basePath("file:///foo/bar")
+		assert.NilError(t, err)
+		assert.Equal(t, actual, "file:///foo")
+	})
 }
 
 func TestAbsPath(t *testing.T) {
-	// If the locator is already an absolute path, it is returned unchanged (no extension appended either)
-	actual, err := absPath("/foo", "/root")
+	root, err := filepath.Abs("/")
 	assert.NilError(t, err)
-	assert.Equal(t, actual, "/foo")
+	volume := filepath.VolumeName(root)
 
-	actual, err = absPath("template://foo", "/root")
-	assert.NilError(t, err)
-	assert.Equal(t, actual, "template://foo")
+	t.Run("If the locator is already an absolute path, it is returned unchanged", func(t *testing.T) {
+		actual, err := absPath(volume+"/foo", volume+"/root")
+		assert.NilError(t, err)
+		assert.Equal(t, actual, filepath.Clean(volume+"/foo"))
+	})
 
-	actual, err = absPath("http://host/foo", "/root")
-	assert.NilError(t, err)
-	assert.Equal(t, actual, "http://host/foo")
+	t.Run("If the locator is a rooted path without volume name, then the volume will be added", func(t *testing.T) {
+		actual, err := absPath("/foo", volume+"/root")
+		assert.NilError(t, err)
+		assert.Equal(t, actual, filepath.Clean(volume+"/foo"))
+	})
 
-	actual, err = absPath("file:///foo", "/root")
-	assert.NilError(t, err)
-	assert.Equal(t, actual, "file:///foo")
+	t.Run("", func(t *testing.T) {
+		actual, err := absPath("template://foo", volume+"/root")
+		assert.NilError(t, err)
+		assert.Equal(t, actual, "template://foo")
+	})
 
-	// Can't have relative path when reading from STDIN
-	_, err = absPath("foo", "-")
-	assert.ErrorContains(t, err, "STDIN")
+	t.Run("", func(t *testing.T) {
+		actual, err := absPath("http://host/foo", volume+"/root")
+		assert.NilError(t, err)
+		assert.Equal(t, actual, "http://host/foo")
+	})
 
-	// Relative paths must be underneath the basePath
-	_, err = absPath("../foo", "/root")
-	assert.ErrorContains(t, err, "'../'")
+	t.Run("", func(t *testing.T) {
+		actual, err := absPath("file:///foo", volume+"/root")
+		assert.NilError(t, err)
+		assert.Equal(t, actual, "file:///foo")
+	})
 
-	// basePath must not be empty
-	_, err = absPath("foo", "")
-	assert.ErrorContains(t, err, "empty")
+	t.Run("Can't have relative path when reading from STDIN", func(t *testing.T) {
+		_, err = absPath("foo", "-")
+		assert.ErrorContains(t, err, "STDIN")
+	})
 
-	_, err = absPath("./foo", "")
-	assert.ErrorContains(t, err, "empty")
+	t.Run("Relative paths must be underneath the basePath", func(t *testing.T) {
+		_, err = absPath("../foo", volume+"/root")
+		assert.ErrorContains(t, err, "'../'")
+	})
 
-	// Check relative paths with all the supported schemes
-	actual, err = absPath("./foo", "/root")
-	assert.NilError(t, err)
-	assert.Equal(t, actual, "/root/foo")
+	t.Run("basePath must not be empty", func(t *testing.T) {
+		_, err = absPath("foo", "")
+		assert.ErrorContains(t, err, "empty")
+	})
 
-	actual, err = absPath("foo", "template://")
-	assert.NilError(t, err)
-	assert.Equal(t, actual, "template://foo")
+	t.Run("", func(t *testing.T) {
+		_, err = absPath("./foo", "")
+		assert.ErrorContains(t, err, "empty")
+	})
 
-	actual, err = absPath("bar", "template://foo")
-	assert.NilError(t, err)
-	assert.Equal(t, actual, "template://foo/bar")
+	t.Run("", func(t *testing.T) {
+		actual, err := absPath("./foo", volume+"/root")
+		assert.NilError(t, err)
+		assert.Equal(t, actual, filepath.Clean(volume+"/root/foo"))
+	})
 
-	actual, err = absPath("foo", "http://host")
-	assert.NilError(t, err)
-	assert.Equal(t, actual, "http://host/foo")
+	if runtime.GOOS == "windows" {
+		t.Run("Relative locators must not include volume names", func(t *testing.T) {
+			_, err := absPath(volume+"foo", volume+"/root")
+			assert.ErrorContains(t, err, "volume")
+		})
+	}
+	
+	t.Run("", func(t *testing.T) {
+		actual, err := absPath("foo", "template://")
+		assert.NilError(t, err)
+		assert.Equal(t, actual, "template://foo")
+	})
 
-	actual, err = absPath("bar", "http://host/foo")
-	assert.NilError(t, err)
-	assert.Equal(t, actual, "http://host/foo/bar")
+	t.Run("", func(t *testing.T) {
+		actual, err := absPath("bar", "template://foo")
+		assert.NilError(t, err)
+		assert.Equal(t, actual, "template://foo/bar")
+	})
 
-	actual, err = absPath("foo", "file:///")
-	assert.NilError(t, err)
-	assert.Equal(t, actual, "file:///foo")
+	t.Run("", func(t *testing.T) {
+		actual, err := absPath("foo", "http://host")
+		assert.NilError(t, err)
+		assert.Equal(t, actual, "http://host/foo")
+	})
 
-	actual, err = absPath("bar", "file:///foo")
-	assert.NilError(t, err)
-	assert.Equal(t, actual, "file:///foo/bar")
+	t.Run("", func(t *testing.T) {
+		actual, err := absPath("bar", "http://host/foo")
+		assert.NilError(t, err)
+		assert.Equal(t, actual, "http://host/foo/bar")
+	})
+
+	t.Run("", func(t *testing.T) {
+		actual, err := absPath("foo", "file:///")
+		assert.NilError(t, err)
+		assert.Equal(t, actual, "file:///foo")
+	})
+
+	t.Run("", func(t *testing.T) {
+		actual, err := absPath("bar", "file:///foo")
+		assert.NilError(t, err)
+		assert.Equal(t, actual, "file:///foo/bar")
+	})
 }

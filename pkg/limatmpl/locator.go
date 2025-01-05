@@ -156,13 +156,14 @@ func SeemsYAMLPath(arg string) bool {
 	return strings.HasSuffix(lower, ".yml") || strings.HasSuffix(lower, ".yaml")
 }
 
-// SeemsFilePath returns true if arg either contains a slash or has a file extension that
+// SeemsFilePath returns true if arg either contains a path separator or has a file extension that
 // does not start with a digit. `my.yaml` is a file path, `ubuntu-20.10` is not.
 func SeemsFilePath(arg string) bool {
-	if u, err := url.Parse(arg); err == nil && u.Scheme != "" {
+	// Single-letter schemes will be drive names on Windows, e.g. "c:/foo.yaml"
+	if u, err := url.Parse(arg); err == nil && len(u.Scheme) > 1 {
 		return false
 	}
-	if strings.Contains(arg, "/") {
+	if strings.ContainsRune(arg, '/') || strings.ContainsRune(arg, filepath.Separator) {
 		return true
 	}
 	ext := filepath.Ext(arg)
