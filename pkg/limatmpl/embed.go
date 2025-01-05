@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"sync"
 
 	"github.com/coreos/go-semver/semver"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
@@ -14,6 +15,13 @@ import (
 	"github.com/lima-vm/lima/pkg/yqutil"
 	"github.com/sirupsen/logrus"
 )
+
+var warnBaseIsExperimental = sync.OnceFunc(func() {
+	logrus.Warn("`base` is experimental")
+})
+var warnFileIsExperimental = sync.OnceFunc(func() {
+	logrus.Warn("`provision[*].file` and `probes[*].file` are experimental")
+})
 
 // Embed will recursively resolve all "base" dependencies and update the
 // template with the merged result. It also inlines all external provisioning
@@ -64,6 +72,7 @@ func (tmpl *Template) embed(ctx context.Context, defaultBase bool, seen map[stri
 		}
 	}
 	for _, baseLocator := range bases {
+		warnBaseIsExperimental()
 		logrus.Debugf("Merging base template %q", baseLocator)
 		base, err := Read(ctx, "", baseLocator)
 		if err != nil {
@@ -497,6 +506,7 @@ func (tmpl *Template) embedAllScripts(ctx context.Context) error {
 	for i, p := range tmpl.Config.Probes {
 		// Don't overwrite existing file. This should throw an error during validation.
 		if p.File != nil && p.Script == "" {
+			warnFileIsExperimental()
 			scriptTmpl, err := Read(ctx, "", *p.File)
 			if err != nil {
 				return err
@@ -506,6 +516,7 @@ func (tmpl *Template) embedAllScripts(ctx context.Context) error {
 	}
 	for i, p := range tmpl.Config.Provision {
 		if p.File != nil && p.Script == "" {
+			warnFileIsExperimental()
 			scriptTmpl, err := Read(ctx, "", *p.File)
 			if err != nil {
 				return err
