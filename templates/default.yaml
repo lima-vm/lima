@@ -211,8 +211,9 @@ containerd:
 # Provisioning scripts need to be idempotent because they might be called
 # multiple times, e.g. when the host VM is being restarted.
 # The scripts can use the following template variables: {{.Home}}, {{.Name}}, {{.Hostname}}, {{.UID}}, {{.User}}, and {{.Param.Key}}.
-# Alternatively the script can be provided using the "file" property. This file is read when the instance is created and then
-# stored under the "script" property. When "file" is specified, then "script" must be empty.
+#
+# EXPERIMENTAL Alternatively the script can be provided using the "file" property. This file is read when the instance
+# is created and then stored under the "script" property. When "file" is specified "script" must be empty.
 # Relative script files will be resolved relative to the location of the template file.
 # 🟢 Builtin default: []
 # provision:
@@ -252,8 +253,8 @@ containerd:
 # Probe scripts to check readiness.
 # The scripts run in user mode. They must start with a '#!' line.
 # The scripts can use the following template variables: {{.Home}}, {{.Name}}, {{.Hostname}}, {{.UID}}, {{.User}}, and {{.Param.Key}}.
-# Alternatively the script can be provided using the "file" property. This file is read when the instance is created and then
-# stored under the "script" property. When "file" is specified, then "script" must be empty.
+# EXPERIMENTAL Alternatively the script can be provided using the "file" property. This file is read when the instance
+# is created and then stored under the "script" property. When "file" is specified "script" must be empty.
 # Relative script files will be resolved relative to the location of the template file.
 # 🟢 Builtin default: []
 # probes:
@@ -280,6 +281,7 @@ containerd:
 # 🟢 Builtin default: not set
 minimumLimaVersion: null
 
+# EXPERIMENTAL
 # Default settings can be imported from base templates. These will be merged in when the instance
 # is created, and the combined template is stored in the instance directory.
 # This setting ca be either a single string, or a list of strings.
@@ -569,6 +571,7 @@ nestedVirtualization: null
 # on each restart. It can be used to globally override settings, e.g. make
 # the mount of the home directory writable.
 
+# EXPERIMENTAL
 # A third mechanism is $LIMA_HOME/_config/base.yaml. It is similar to
 # `default.yaml` but will be merged during the `base` template embedding
 # when the instance is created, and not on every start. It becomes part

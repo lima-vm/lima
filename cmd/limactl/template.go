@@ -27,6 +27,9 @@ func newTemplateCommand() *cobra.Command {
 		// The template command is still hidden because the subcommands and options are still under development
 		// and subject to change at any time.
 		Hidden: true,
+		PreRun: func(*cobra.Command, []string) {
+			logrus.Warn("`limactl template` is experimental")
+		},
 	}
 	templateCommand.AddCommand(
 		newTemplateCopyCommand(),
