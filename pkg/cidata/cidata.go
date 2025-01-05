@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"slices"
@@ -116,6 +117,16 @@ func templateArgs(bootScripts bool, instDir, name string, instConfig *limayaml.L
 	if err := limayaml.Validate(instConfig, false); err != nil {
 		return nil, err
 	}
+	var archive string
+	var recompress bool
+	// check if the recompress program is available
+	if _, err := exec.LookPath("pzstd"); err == nil {
+		recompress = true
+		archive = "nerdctl-full.tar.zst"
+	} else {
+		recompress = false
+		archive = "nerdctl-full.tgz"
+	}
 	args := TemplateArgs{
 		Debug:              debugutil.Debug,
 		BootScripts:        bootScripts,
@@ -127,7 +138,7 @@ func templateArgs(bootScripts bool, instDir, name string, instConfig *limayaml.L
 		UID:                *instConfig.User.UID,
 		GuestInstallPrefix: *instConfig.GuestInstallPrefix,
 		UpgradePackages:    *instConfig.UpgradePackages,
-		Containerd:         Containerd{System: *instConfig.Containerd.System, User: *instConfig.Containerd.User},
+		Containerd:         Containerd{System: *instConfig.Containerd.System, User: *instConfig.Containerd.User, Archive: archive, Recompress: recompress},
 		SlirpNICName:       networks.SlirpNICName,
 
 		RosettaEnabled: *instConfig.Rosetta.Enabled,
@@ -407,14 +418,24 @@ func GenerateISO9660(instDir, name string, instConfig *limayaml.LimaYAML, udpDNS
 	})
 
 	if nerdctlArchive != "" {
-		nftgzR, err := os.Open(nerdctlArchive)
+		var nftgzR io.ReadCloser
+		nftgz := args.Containerd.Archive
+		nftgzR, err = os.Open(nerdctlArchive)
 		if err != nil {
 			return err
 		}
 		defer nftgzR.Close()
+		if args.Containerd.Recompress {
+			logrus.Debugf("Recompressing %s", nftgz)
+			nftgzR, err = recompress("pzstd", nftgzR)
+			if err != nil {
+				return err
+			}
+			defer nftgzR.Close()
+		}
 		layout = append(layout, iso9660util.Entry{
 			// ISO9660 requires len(Path) <= 30
-			Path:   "nerdctl-full.tgz",
+			Path:   nftgz,
 			Reader: nftgzR,
 		})
 	}
@@ -428,6 +449,24 @@ func GenerateISO9660(instDir, name string, instConfig *limayaml.LimaYAML, udpDNS
 	}
 
 	return iso9660util.Write(filepath.Join(instDir, filenames.CIDataISO), "cidata", layout)
+}
+
+// recompress will recompress a gzip stream with the given command
+func recompress(c string, z io.Reader) (io.ReadCloser, error) {
+	cmd := exec.Command(c)
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, err
+	}
+	r, err := gzip.NewReader(z)
+	if err != nil {
+		return nil, err
+	}
+	cmd.Stdin = r
+	if err := cmd.Start(); err != nil {
+		return nil, err
+	}
+	return stdout, err
 }
 
 func getCert(content string) Cert {
