@@ -116,6 +116,7 @@ func templateArgs(bootScripts bool, instDir, name string, instConfig *limayaml.L
 	if err := limayaml.Validate(instConfig, false); err != nil {
 		return nil, err
 	}
+	archive := "nerdctl-full.tgz"
 	args := TemplateArgs{
 		Debug:              debugutil.Debug,
 		BootScripts:        bootScripts,
@@ -127,7 +128,7 @@ func templateArgs(bootScripts bool, instDir, name string, instConfig *limayaml.L
 		UID:                *instConfig.User.UID,
 		GuestInstallPrefix: *instConfig.GuestInstallPrefix,
 		UpgradePackages:    *instConfig.UpgradePackages,
-		Containerd:         Containerd{System: *instConfig.Containerd.System, User: *instConfig.Containerd.User},
+		Containerd:         Containerd{System: *instConfig.Containerd.System, User: *instConfig.Containerd.User, Archive: archive},
 		SlirpNICName:       networks.SlirpNICName,
 
 		RosettaEnabled: *instConfig.Rosetta.Enabled,
@@ -407,6 +408,7 @@ func GenerateISO9660(instDir, name string, instConfig *limayaml.LimaYAML, udpDNS
 	})
 
 	if nerdctlArchive != "" {
+		nftgz := args.Containerd.Archive
 		nftgzR, err := os.Open(nerdctlArchive)
 		if err != nil {
 			return err
@@ -414,7 +416,7 @@ func GenerateISO9660(instDir, name string, instConfig *limayaml.LimaYAML, udpDNS
 		defer nftgzR.Close()
 		layout = append(layout, iso9660util.Entry{
 			// ISO9660 requires len(Path) <= 30
-			Path:   "nerdctl-full.tgz",
+			Path:   nftgz,
 			Reader: nftgzR,
 		})
 	}
