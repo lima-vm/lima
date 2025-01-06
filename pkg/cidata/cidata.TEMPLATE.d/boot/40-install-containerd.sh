@@ -14,7 +14,7 @@ command -v systemctl >/dev/null 2>&1 || exit 0
 # Extract bin/nerdctl and compare whether it is newer than the current /usr/local/bin/nerdctl (if already exists).
 # Takes 4-5 seconds. (FIXME: optimize)
 tmp_extract_nerdctl="$(mktemp -d)"
-tar Cxzf "${tmp_extract_nerdctl}" "${LIMA_CIDATA_MNT}"/nerdctl-full.tgz bin/nerdctl
+tar Cxaf "${tmp_extract_nerdctl}" "${LIMA_CIDATA_MNT}"/"${LIMA_CIDATA_CONTAINERD_ARCHIVE}" bin/nerdctl
 
 if [ ! -f "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/nerdctl ] || [[ "${tmp_extract_nerdctl}"/bin/nerdctl -nt "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/nerdctl ]]; then
 	if [ -f "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/nerdctl ]; then
@@ -28,7 +28,7 @@ if [ ! -f "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/nerdctl ] || [[ "${tmp_extra
 			sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "PATH=${PATH}" containerd-rootless-setuptool.sh uninstall
 		)
 	fi
-	tar Cxzf "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}" "${LIMA_CIDATA_MNT}"/nerdctl-full.tgz
+	tar Cxaf "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}" "${LIMA_CIDATA_MNT}"/"${LIMA_CIDATA_CONTAINERD_ARCHIVE}"
 
 	mkdir -p /etc/bash_completion.d
 	nerdctl completion bash >/etc/bash_completion.d/nerdctl

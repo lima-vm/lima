@@ -29,8 +29,9 @@ type Cert struct {
 }
 
 type Containerd struct {
-	System bool
-	User   bool
+	System  bool
+	User    bool
+	Archive string
 }
 type Network struct {
 	MACAddress string
