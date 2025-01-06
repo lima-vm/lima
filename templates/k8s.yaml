@@ -96,6 +96,14 @@ provision:
     {{if not ( and .Param.url .Param.token )}}
     systemctl stop kubelet
     kubeadm config images list
+    # Support adding archives of required images, for an "air-gapped" installation.
+    if [ -d /var/lib/kubernetes/images ]; then
+      for tar in /var/lib/kubernetes/images/*.tar*; do
+        # Also supports other compression formats. Delete the compressed layer copies.
+        zstdcat "$tar" | ctr -n k8s.io images import --local --discard-unpacked-layers -
+      done
+    fi
+    # This will use a pull policy of IfNotPresent, it will not pull existing images.
     kubeadm config images pull --cri-socket=unix:///run/containerd/containerd.sock
     systemctl start kubelet
     # Initializing your control-plane node
@@ -136,7 +144,10 @@ provision:
 
     {{if not ( and .Param.url .Param.token )}}
     # Installing a Pod network add-on
-    kubectl apply -f https://github.com/flannel-io/flannel/releases/download/v0.27.4/kube-flannel.yml
+    if [ ! -r kube-flannel.yml ]; then
+      curl -fsSL -O https://github.com/flannel-io/flannel/releases/download/v0.27.4/kube-flannel.yml
+    fi
+    kubectl apply -f kube-flannel.yml
     # Control plane node isolation
     kubectl taint nodes --all node-role.kubernetes.io/control-plane-
     # Symlink the kubeconfig file to the default location for kubectl
