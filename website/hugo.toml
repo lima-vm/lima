@@ -125,10 +125,6 @@ offlineSearch = true
 # Enable syntax highlighting and copy buttons on code blocks with Prism
 prism_syntax_highlighting = false
 
-[[params.versions]]
-version = "master"
-url = "https://lima-vm.io"
-
 # User interface configuration
 [params.ui]
 #  Set to true to disable breadcrumb navigation.
@@ -188,6 +184,9 @@ enable = false
 [[menus.main]]
   name = "Community"
   url = "/docs/community"
+[[menus.main]]
+  name = "Releases"
+  url = "https://github.com/lima-vm/lima/releases"  
 
 [module]
   # uncomment line below for temporary local development of module
