@@ -97,8 +97,10 @@ provision:
     set -eux -o pipefail
     test -e /etc/kubernetes/admin.conf && exit 0
     export KUBECONFIG=/etc/kubernetes/admin.conf
+    systemctl stop kubelet
     kubeadm config images list
     kubeadm config images pull --cri-socket=unix:///run/containerd/containerd.sock
+    systemctl start kubelet
     # Initializing your control-plane node
     cat <<EOF >kubeadm-config.yaml
     kind: InitConfiguration
@@ -145,6 +147,14 @@ probes:
     fi
   hint: |
     See "/var/log/cloud-init-output.log" in the guest
+- description: "kubernetes images to be pulled"
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    if ! timeout 30s bash -c "images=\"$(kubeadm config images list)\"; until for image in \$images; do sudo crictl image -q \$image | grep -q sha256; done; do sleep 3; done"; then
+      echo >&2 "k8s images are not pulled yet"
+      exit 1
+    fi
 - description: "kubeadm to be completed"
   script: |
     #!/bin/bash
