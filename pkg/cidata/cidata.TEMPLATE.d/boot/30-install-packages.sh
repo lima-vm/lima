@@ -90,7 +90,8 @@ elif command -v dnf >/dev/null 2>&1; then
 		elif grep -q -E "release (9|10)" /etc/system-release; then
 			# shellcheck disable=SC2086
 			dnf install ${dnf_install_flags} epel-release
-			dnf config-manager --disable epel >/dev/null 2>&1
+			# Disable the OpenH264 repository as well, by default
+			dnf config-manager --disable epel\* >/dev/null 2>&1
 			dnf_install_flags="${dnf_install_flags} --enablerepo epel"
 		fi
 		# shellcheck disable=SC2086
