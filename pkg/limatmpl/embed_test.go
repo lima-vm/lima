@@ -231,6 +231,35 @@ additionalDisks:
 `,
 	},
 	{
+		// This test fails because the yq commands don't handle comments properly; may need to be fixed in yq
+		"TODO additionalDisks will be upgraded from string to map",
+		`#
+additionalDisks:
+# my head comment
+- mine # my line comment
+`,
+		`
+# head comment
+additionalDisks: # line comment
+- name: "*"
+  format: true # formatting is good for you
+`,
+		`
+# head comment
+additionalDisks:  # line comment
+# my head comment
+- name: mine  # my line comment
+  format: true  # formatting is good for you
+`,
+	},
+	{
+		// This entry can be deleted when the previous one no longer fails
+		"additionalDisks will be upgraded from string to map (no comments version)",
+		`additionalDisks: [mine]`,
+		`additionalDisks: [{name: "*", format: true}]`,
+		`additionalDisks: [{name: mine, format: true}]`,
+	},
+	{
 		"networks without interface name are not merged",
 		`
 networks:
