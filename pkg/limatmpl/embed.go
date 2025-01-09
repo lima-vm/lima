@@ -272,6 +272,12 @@ func (tmpl *Template) deleteListEntry(list string, idx int) {
 	tmpl.expr.WriteString(fmt.Sprintf("| del($a.%s[%d], $b.%s[%d])\n", list, idx, list, idx))
 }
 
+// upgradeListEntryStringToMapField turns list[idx] from a string to a {field: list[idx]} map
+func (tmpl *Template) upgradeListEntryStringToMapField(list string, idx int, field string) {
+	// TODO the head_comment on the string becomes duplicated as a foot_comment on the new field; could be a yq bug?
+	tmpl.expr.WriteString(fmt.Sprintf("| ($a.%s[%d] | select(type == \"!!str\")) |= {\"%s\": .}\n", list, idx, field))
+}
+
 // combineListEntries combines entries based on a shared unique key.
 // If two entries share the same key, then any missing fields in the earlier entry are
 // filled in from the latter one. The latter one is then deleted.
@@ -322,18 +328,26 @@ func (tmpl *Template) combineAdditionalDisks() {
 			}
 		}
 		for dst := from; dst <= to; dst++ {
+			// upgrade additionalDisks[dst] from "disk" name string to {"name": "disk"} map so we can add fields
+			upgradeDiskToMap := sync.OnceFunc(func() {
+				tmpl.upgradeListEntryStringToMapField(additionalDisks, dst, "name")
+			})
+
 			dest := &tmpl.Config.AdditionalDisks[dst]
 			if dest.Format == nil && disk.Format != nil {
+				upgradeDiskToMap()
 				tmpl.copyListEntryField(additionalDisks, dst, src, "format")
 				dest.Format = disk.Format
 			}
 			// TODO: Does it make sense to merge "fsType" and "fsArgs" independently of each other?
 			if dest.FSType == nil && disk.FSType != nil {
+				upgradeDiskToMap()
 				tmpl.copyListEntryField(additionalDisks, dst, src, "fsType")
 				dest.FSType = disk.FSType
 			}
 			// "fsArgs" are inherited all-or-nothing; they are not appended
 			if len(dest.FSArgs) == 0 && len(disk.FSArgs) != 0 {
+				upgradeDiskToMap()
 				tmpl.copyListEntryField(additionalDisks, dst, src, "fsArgs")
 				dest.FSArgs = disk.FSArgs
 			}
