@@ -56,12 +56,14 @@ if head -c 4 "$(command -v apt-get)" | grep -qP '\x7fELF' >/dev/null 2>&1; then
 	fi
 elif command -v dnf >/dev/null 2>&1; then
 	pkgs=""
+	extrapkgs=""
 	if ! command -v tar >/dev/null 2>&1; then
 		pkgs="${pkgs} tar"
 	fi
 	if [ "${LIMA_CIDATA_MOUNTTYPE}" = "reverse-sshfs" ]; then
 		if [ "${LIMA_CIDATA_MOUNTS}" -gt 0 ] && ! command -v sshfs >/dev/null 2>&1; then
-			pkgs="${pkgs} fuse-sshfs"
+			# fuse-sshfs is not included in EL
+			extrapkgs="${extrapkgs} fuse-sshfs"
 		fi
 	fi
 	if [ "${INSTALL_IPTABLES}" = 1 ] && [ ! -e /usr/sbin/iptables ]; then
@@ -75,8 +77,9 @@ elif command -v dnf >/dev/null 2>&1; then
 			pkgs="${pkgs} fuse3"
 		fi
 	fi
-	if [ -n "${pkgs}" ]; then
+	if [ -n "${pkgs}" ] || [ -n "${extrapkgs}" ]; then
 		dnf_install_flags="-y --setopt=install_weak_deps=False"
+		epel_install_flags=""
 		if grep -q "Oracle Linux Server release 8" /etc/system-release; then
 			# repo flag instead of enable repo to reduce metadata syncing on slow Oracle repos
 			dnf_install_flags="${dnf_install_flags} --repo ol8_baseos_latest --repo ol8_codeready_builder"
@@ -86,16 +89,22 @@ elif command -v dnf >/dev/null 2>&1; then
 			# shellcheck disable=SC2086
 			dnf install ${dnf_install_flags} oracle-epel-release-el9
 			dnf config-manager --disable ol9_developer_EPEL >/dev/null 2>&1
-			dnf_install_flags="${dnf_install_flags} --enablerepo ol9_developer_EPEL"
+			epel_install_flags="${epel_install_flags} --enablerepo ol9_developer_EPEL"
 		elif grep -q -E "release (9|10)" /etc/system-release; then
 			# shellcheck disable=SC2086
 			dnf install ${dnf_install_flags} epel-release
 			# Disable the OpenH264 repository as well, by default
 			dnf config-manager --disable epel\* >/dev/null 2>&1
-			dnf_install_flags="${dnf_install_flags} --enablerepo epel"
+			epel_install_flags="${epel_install_flags} --enablerepo epel"
 		fi
-		# shellcheck disable=SC2086
-		dnf install ${dnf_install_flags} ${pkgs}
+		if [ -n "${pkgs}" ]; then
+			# shellcheck disable=SC2086
+			dnf install ${dnf_install_flags} ${pkgs}
+		fi
+		if [ -n "${extrapkgs}" ]; then
+			# shellcheck disable=SC2086
+			dnf install ${dnf_install_flags} ${epel_install_flags} ${extrapkgs}
+		fi
 	fi
 	if [ "${LIMA_CIDATA_CONTAINERD_USER}" = 1 ] && [ ! -e /usr/bin/fusermount ]; then
 		# Workaround for https://github.com/containerd/stargz-snapshotter/issues/340
