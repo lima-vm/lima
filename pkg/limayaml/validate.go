@@ -12,6 +12,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/containerd/containerd/identifiers"
 	"github.com/coreos/go-semver/semver"
 	"github.com/docker/go-units"
 	"github.com/lima-vm/lima/pkg/localpathutil"
@@ -134,6 +135,12 @@ func Validate(y *LimaYAML, warn bool) error {
 
 	if _, err := units.RAMInBytes(*y.Disk); err != nil {
 		return fmt.Errorf("field `memory` has an invalid value: %w", err)
+	}
+
+	for i, disk := range y.AdditionalDisks {
+		if err := identifiers.Validate(disk.Name); err != nil {
+			return fmt.Errorf("field `additionalDisks[%d].name is invalid`: %w", i, err)
+		}
 	}
 
 	for i, f := range y.Mounts {
