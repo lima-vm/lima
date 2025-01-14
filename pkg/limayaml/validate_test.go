@@ -48,6 +48,31 @@ func TestValidateProbes(t *testing.T) {
 	assert.Error(t, err, "field `probe[0].script` must start with a '#!' line")
 }
 
+func TestValidateAdditionalDisks(t *testing.T) {
+	images := `images: [{"location": "/"}]`
+
+	validDisks := `
+additionalDisks:
+  - name: "disk1"
+  - name: "disk2"
+`
+	y, err := Load([]byte(validDisks+"\n"+images), "lima.yaml")
+	assert.NilError(t, err)
+
+	err = Validate(y, false)
+	assert.NilError(t, err)
+
+	invalidDisks := `
+additionalDisks:
+  - name: ""
+`
+	y, err = Load([]byte(invalidDisks+"\n"+images), "lima.yaml")
+	assert.NilError(t, err)
+
+	err = Validate(y, false)
+	assert.Error(t, err, "field `additionalDisks[0].name is invalid`: identifier must not be empty: invalid argument")
+}
+
 func TestValidateParamName(t *testing.T) {
 	images := `images: [{"location": "/"}]`
 	validProvision := `provision: [{"script": "echo $PARAM_name $PARAM_NAME $PARAM_Name_123"}]`
