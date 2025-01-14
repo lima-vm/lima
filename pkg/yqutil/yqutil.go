@@ -101,7 +101,7 @@ func Join(yqExprs []string) string {
 
 func yamlfmtBasicFormatter() (*basic.BasicFormatter, error) {
 	factory := basic.BasicFormatterFactory{}
-	config := map[string]interface{}{
+	config := map[string]any{
 		"indentless_arrays":         true,
 		"line_ending":               "lf", // prefer LF even on Windows
 		"pad_line_comments":         2,

@@ -39,17 +39,17 @@ func runAnsiblePlaybook(ctx context.Context, inst *store.Instance, playbook stri
 }
 
 func createAnsibleInventory(inst *store.Instance) (string, error) {
-	vars := map[string]interface{}{
+	vars := map[string]any{
 		"ansible_connection":      "ssh",
 		"ansible_host":            inst.Hostname,
 		"ansible_ssh_common_args": "-F " + inst.SSHConfigFile,
 	}
-	hosts := map[string]interface{}{
+	hosts := map[string]any{
 		inst.Name: vars,
 	}
 	group := "lima"
-	data := map[string]interface{}{
-		group: map[string]interface{}{
+	data := map[string]any{
+		group: map[string]any{
 			"hosts": hosts,
 		},
 	}

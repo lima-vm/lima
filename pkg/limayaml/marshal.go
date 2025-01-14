@@ -35,7 +35,7 @@ func unmarshalDisk(dst *Disk, b []byte) error {
 	return yaml.Unmarshal(b, dst)
 }
 
-func Unmarshal(data []byte, v interface{}, comment string) error {
+func Unmarshal(data []byte, v any, comment string) error {
 	if err := yaml.UnmarshalWithOptions(data, v, yaml.CustomUnmarshaler[Disk](unmarshalDisk)); err != nil {
 		return fmt.Errorf("failed to unmarshal YAML (%s): %w", comment, err)
 	}

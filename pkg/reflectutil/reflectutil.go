@@ -19,7 +19,7 @@ import (
 	"reflect"
 )
 
-func UnknownNonEmptyFields(structOrStructPtr interface{}, knownNames ...string) []string {
+func UnknownNonEmptyFields(structOrStructPtr any, knownNames ...string) []string {
 	var unknown []string
 	knownNamesMap := make(map[string]struct{}, len(knownNames))
 	for _, name := range knownNames {
