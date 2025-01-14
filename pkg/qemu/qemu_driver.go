@@ -411,8 +411,8 @@ func (a *qArgTemplateApplier) applyTemplate(qArg string) (string, error) {
 		return qArg, nil
 	}
 	funcMap := template.FuncMap{
-		"fd_connect": func(v interface{}) string {
-			fn := func(v interface{}) (string, error) {
+		"fd_connect": func(v any) string {
+			fn := func(v any) (string, error) {
 				s, ok := v.(string)
 				if !ok {
 					return "", fmt.Errorf("non-string argument %+v", v)

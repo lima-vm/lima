@@ -12,7 +12,7 @@ import (
 )
 
 // ExecuteTemplate executes a text/template template.
-func ExecuteTemplate(tmpl string, args interface{}) ([]byte, error) {
+func ExecuteTemplate(tmpl string, args any) ([]byte, error) {
 	x, err := template.New("").Parse(tmpl)
 	if err != nil {
 		return nil, err
@@ -56,7 +56,7 @@ func MissingString(message, text string) string {
 
 // TemplateFuncMap is a text/template FuncMap.
 var TemplateFuncMap = template.FuncMap{
-	"json": func(v interface{}) string {
+	"json": func(v any) string {
 		var b bytes.Buffer
 		enc := json.NewEncoder(&b)
 		enc.SetEscapeHTML(false)
@@ -65,7 +65,7 @@ var TemplateFuncMap = template.FuncMap{
 		}
 		return strings.TrimSuffix(b.String(), "\n")
 	},
-	"yaml": func(v interface{}) string {
+	"yaml": func(v any) string {
 		var b bytes.Buffer
 		enc := yaml.NewEncoder(&b)
 		if err := enc.Encode(v); err != nil {
@@ -73,7 +73,7 @@ var TemplateFuncMap = template.FuncMap{
 		}
 		return "---\n" + strings.TrimSuffix(b.String(), "\n")
 	},
-	"indent": func(a ...interface{}) (string, error) {
+	"indent": func(a ...any) (string, error) {
 		if len(a) == 0 {
 			return "", errors.New("function takes at least one string argument")
 		}
@@ -93,7 +93,7 @@ var TemplateFuncMap = template.FuncMap{
 		}
 		return IndentString(size, text), nil
 	},
-	"missing": func(a ...interface{}) (string, error) {
+	"missing": func(a ...any) (string, error) {
 		if len(a) == 0 {
 			return "", errors.New("function takes at least one string argument")
 		}

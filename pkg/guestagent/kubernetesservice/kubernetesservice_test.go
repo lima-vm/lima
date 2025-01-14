@@ -28,7 +28,7 @@ func TestGetPorts(t *testing.T) {
 	kubeClient, informerFactory := newFakeKubeClient()
 	serviceInformer := informerFactory.Core().V1().Services().Informer()
 	_, err := serviceInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: func(interface{}) { serviceCreatedCh <- struct{}{} },
+		AddFunc: func(any) { serviceCreatedCh <- struct{}{} },
 	})
 	assert.NilError(t, err)
 	informerFactory.Start(ctx.Done())

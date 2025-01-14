@@ -886,7 +886,7 @@ func executeGuestTemplate(format, instDir string, user User, param map[string]st
 	tmpl, err := template.New("").Parse(format)
 	if err == nil {
 		name := filepath.Base(instDir)
-		data := map[string]interface{}{
+		data := map[string]any{
 			"Name":     name,
 			"Hostname": identifierutil.HostnameFromInstName(name), // TODO: support customization
 			"UID":      *user.UID,
@@ -906,7 +906,7 @@ func executeHostTemplate(format, instDir string, param map[string]string) (bytes
 	tmpl, err := template.New("").Parse(format)
 	if err == nil {
 		limaHome, _ := dirnames.LimaDir()
-		data := map[string]interface{}{
+		data := map[string]any{
 			"Dir":  instDir,
 			"Name": filepath.Base(instDir),
 			// TODO: add hostname fields for the host and the guest

@@ -88,7 +88,7 @@ func genschemaAction(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		var y interface{}
+		var y any
 		err = yaml.Unmarshal(b, &y)
 		if err != nil {
 			return err

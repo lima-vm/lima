@@ -8,7 +8,7 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-func dumpJSON(t *testing.T, d interface{}) string {
+func dumpJSON(t *testing.T, d any) string {
 	b, err := json.Marshal(d)
 	assert.NilError(t, err)
 	return string(b)
