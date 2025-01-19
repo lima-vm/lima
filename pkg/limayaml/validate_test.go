@@ -5,6 +5,7 @@ package limayaml
 
 import (
 	"errors"
+	"runtime"
 	"testing"
 
 	"gotest.tools/v3/assert"
@@ -386,5 +387,170 @@ func TestValidateAgainstLatestConfig(t *testing.T) {
 				assert.Error(t, err, tt.wantErr.Error())
 			}
 		})
+	}
+}
+
+func TestValidateRosetta(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("Skipping Rosetta validation test on non-macOS platform")
+	}
+
+	images := `images: [{"location": "/"}]`
+
+	nilData := ``
+	y, err := Load([]byte(nilData+"\n"+images), "lima.yaml")
+	assert.NilError(t, err)
+
+	err = Validate(y, false)
+	assert.NilError(t, err)
+
+	invalidRosetta := `rosetta:
+  enabled: true
+vmType: "qemu"
+` + images
+	y, err = Load([]byte(invalidRosetta), "lima.yaml")
+	assert.NilError(t, err)
+
+	err = Validate(y, false)
+	if IsNativeArch(AARCH64) {
+		assert.Error(t, err, "field `rosetta.enabled` can only be enabled for VMType \"vz\"; got \"qemu\"")
+	} else {
+		assert.NilError(t, err)
+	}
+
+	validRosetta := `rosetta:
+  enabled: true
+vmType: "vz"
+` + images
+	y, err = Load([]byte(validRosetta), "lima.yaml")
+	assert.NilError(t, err)
+
+	err = Validate(y, false)
+	assert.NilError(t, err)
+
+	rosettaDisabled := `rosetta:
+  enabled: false
+vmType: "qemu"
+` + images
+	y, err = Load([]byte(rosettaDisabled), "lima.yaml")
+	assert.NilError(t, err)
+
+	err = Validate(y, false)
+	assert.NilError(t, err)
+}
+
+func TestValidateNestedVirtualization(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("Skipping nested virtualization validation test on non-macOS platform")
+	}
+
+	images := `images: [{"location": "/"}]`
+
+	validYAML := `
+nestedVirtualization: true
+vmType: vz
+` + images
+
+	y, err := Load([]byte(validYAML), "lima.yaml")
+	assert.NilError(t, err)
+
+	err = Validate(y, false)
+	assert.NilError(t, err)
+
+	invalidYAML := `
+nestedVirtualization: true
+vmType: qemu
+` + images
+
+	y, err = Load([]byte(invalidYAML), "lima.yaml")
+	assert.NilError(t, err)
+
+	err = Validate(y, false)
+	assert.Error(t, err, "field `nestedVirtualization` can only be enabled for VMType \"vz\"; got \"qemu\"")
+}
+
+func TestValidateMountTypeOS(t *testing.T) {
+	images := `images: [{"location": "/"}]`
+
+	nilMountConf := ``
+	y, err := Load([]byte(nilMountConf+"\n"+images), "lima.yaml")
+	assert.NilError(t, err)
+
+	err = Validate(y, false)
+	assert.NilError(t, err)
+
+	inValidMountTypeLinux := `
+mountType: "random"
+`
+	y, err = Load([]byte(inValidMountTypeLinux+"\n"+images), "lima.yaml")
+	assert.NilError(t, err)
+
+	err = Validate(y, true)
+	assert.Error(t, err, "field `mountType` must be: \"reverse-sshfs\", \"9p\", \"virtiofs\", \"wsl2\"; got \"random\"")
+
+	// Skip macOS-specific tests on non-macOS platforms
+	if runtime.GOOS != "darwin" {
+		return
+	}
+
+	validMountTypeLinux := `
+mountType: "virtiofs"
+`
+	y, err = Load([]byte(validMountTypeLinux+"\n"+images), "lima.yaml")
+	assert.NilError(t, err)
+
+	err = Validate(y, true)
+	if IsNativeArch(AARCH64) {
+		assert.Error(t, err, "field `mountType` \"virtiofs\" on macOS requires vmType \"vz\"; got \"qemu\"")
+	} else {
+		assert.NilError(t, err)
+	}
+
+	validMountTypeMac := `
+mountType: "virtiofs"
+vmType: "vz"
+`
+	y, err = Load([]byte(validMountTypeMac+"\n"+images), "lima.yaml")
+	assert.NilError(t, err)
+
+	err = Validate(y, false)
+	assert.NilError(t, err)
+
+	invalidMountTypeMac := `
+mountType: "virtiofs"
+vmType: "qemu"
+`
+	y, err = Load([]byte(invalidMountTypeMac+"\n"+images), "lima.yaml")
+	assert.NilError(t, err)
+
+	err = Validate(y, false)
+	assert.Error(t, err, "field `mountType` \"virtiofs\" on macOS requires vmType \"vz\"; got \"qemu\"")
+}
+
+func TestValidateWindowsMountType(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("Skipping Windows-specific mount type validation test on non-Windows platform")
+	}
+
+	images := `images: [{"location": "/"}]`
+
+	invalidMountTypes := []string{"9p", "virtiofs"}
+	for _, mountType := range invalidMountTypes {
+		invalidMountTypeWindows := `mountType: "` + mountType + `"`
+		y, err := Load([]byte(invalidMountTypeWindows+"\n"+images), "lima.yaml")
+		assert.NilError(t, err)
+
+		err = Validate(y, false)
+		assert.Error(t, err, `field `+"`mountType`"+` on Windows must be "wsl2" or "reverse-sshfs"; got "`+mountType+`"`)
+	}
+
+	validMountTypes := []string{"wsl2", "reverse-sshfs"}
+	for _, mountType := range validMountTypes {
+		validMountTypeWindows := `mountType: "` + mountType + `"`
+		y, err := Load([]byte(validMountTypeWindows+"\n"+images), "lima.yaml")
+		assert.NilError(t, err)
+
+		err = Validate(y, false)
+		assert.NilError(t, err)
 	}
 }
