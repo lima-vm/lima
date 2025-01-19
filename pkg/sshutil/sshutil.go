@@ -277,18 +277,30 @@ func ParseOpenSSHVersion(version []byte) *semver.Version {
 	return &semver.Version{}
 }
 
+// sshVersions caches the parsed version of each ssh executable, if it is needed again.
+var sshVersions = map[string]*semver.Version{}
+
 func DetectOpenSSHVersion() semver.Version {
 	var (
 		v      semver.Version
 		stderr bytes.Buffer
 	)
-	cmd := exec.Command("ssh", "-V")
+	path, err := exec.LookPath("ssh")
+	if err != nil {
+		logrus.Warnf("failed to find ssh executable: %v", err)
+	} else {
+		if ver := sshVersions[path]; ver != nil {
+			return *ver
+		}
+	}
+	cmd := exec.Command(path, "-V")
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
 		logrus.Warnf("failed to run %v: stderr=%q", cmd.Args, stderr.String())
 	} else {
 		v = *ParseOpenSSHVersion(stderr.Bytes())
 		logrus.Debugf("OpenSSH version %s detected", v)
+		sshVersions[path] = &v
 	}
 	return v
 }
