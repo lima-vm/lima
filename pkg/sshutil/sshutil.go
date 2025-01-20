@@ -285,8 +285,11 @@ type sshExecutable struct {
 	ModTime time.Time
 }
 
-// sshVersions caches the parsed version of each ssh executable, if it is needed again.
-var sshVersions = map[sshExecutable]*semver.Version{}
+var (
+	// sshVersions caches the parsed version of each ssh executable, if it is needed again.
+	sshVersions   = map[sshExecutable]*semver.Version{}
+	sshVersionsRW sync.RWMutex
+)
 
 func DetectOpenSSHVersion(ssh string) semver.Version {
 	var (
@@ -300,7 +303,10 @@ func DetectOpenSSHVersion(ssh string) semver.Version {
 	} else {
 		st, _ := os.Stat(path)
 		exe = sshExecutable{Path: path, Size: st.Size(), ModTime: st.ModTime()}
-		if ver := sshVersions[exe]; ver != nil {
+		sshVersionsRW.RLock()
+		ver := sshVersions[exe]
+		sshVersionsRW.RUnlock()
+		if ver != nil {
 			return *ver
 		}
 	}
@@ -311,7 +317,9 @@ func DetectOpenSSHVersion(ssh string) semver.Version {
 	} else {
 		v = *ParseOpenSSHVersion(stderr.Bytes())
 		logrus.Debugf("OpenSSH version %s detected", v)
+		sshVersionsRW.Lock()
 		sshVersions[exe] = &v
+		sshVersionsRW.Unlock()
 	}
 	return v
 }
