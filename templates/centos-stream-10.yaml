@@ -26,9 +26,5 @@ firmware:
 cpuType:
   # When emulating Intel on ARM hosts, Lima uses the "qemu64" CPU by default (https://github.com/lima-vm/lima/pull/494).
   # However, CentOS Stream 10 kernel reboots indefinitely due to lack of the support for x86_64-v3 instructions.
-  #
-  # On native Intel hosts Lima uses the "host" CPU by default, but it doesn't seem to work either,
-  # at least on MacBook Pro 2020 (Intel(R) Core(TM) i7-1068NG7 CPU @ 2.30GHz), due to
-  # `invalid opcode: 0000` in `chacha_8block_xor_avx512vl`.
-  # https://github.com/lima-vm/lima/issues/3022
+  # This issue is tracked in <https://github.com/lima-vm/lima/issues/3063>.
   x86_64: "Haswell-v4"
