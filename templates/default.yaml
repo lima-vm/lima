@@ -20,18 +20,18 @@ arch: null
 # 🔵 This file: Ubuntu images
 images:
 # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
-- location: "https://cloud-images.ubuntu.com/releases/24.10/release-20241212/ubuntu-24.10-server-cloudimg-amd64.img"
+- location: "https://cloud-images.ubuntu.com/releases/24.10/release-20250110/ubuntu-24.10-server-cloudimg-amd64.img"
   arch: "x86_64"
-  digest: "sha256:457f02ad36ef64f8f2cbfcc4855a0d401294d9b4727ae239e21c4104cca0bae2"
-- location: "https://cloud-images.ubuntu.com/releases/24.10/release-20241212/ubuntu-24.10-server-cloudimg-arm64.img"
+  digest: "sha256:6a97773f28cdb5e2461ad13f4f959d4ff4b2705a1f150830b6f30360f1a2c435"
+- location: "https://cloud-images.ubuntu.com/releases/24.10/release-20250110/ubuntu-24.10-server-cloudimg-arm64.img"
   arch: "aarch64"
-  digest: "sha256:fb39312ffd2b47b97eaef6ff197912eaa3e0a215eb3eecfbf2a24acd96ee1125"
-- location: "https://cloud-images.ubuntu.com/releases/24.10/release-20241212/ubuntu-24.10-server-cloudimg-riscv64.img"
+  digest: "sha256:34c1b8c2fe220f67faa351a240d199987db52c574d1a100548386998641434c4"
+- location: "https://cloud-images.ubuntu.com/releases/24.10/release-20250110/ubuntu-24.10-server-cloudimg-riscv64.img"
   arch: "riscv64"
-  digest: "sha256:c85b26b69b742dca1541293d960e4b87713085567cf8942ade9029860ab0b195"
-- location: "https://cloud-images.ubuntu.com/releases/24.10/release-20241212/ubuntu-24.10-server-cloudimg-armhf.img"
+  digest: "sha256:171bf2612cc04f0a5fae7519c621184122a9ce262b18d7f1c405d5edbea56bf5"
+- location: "https://cloud-images.ubuntu.com/releases/24.10/release-20250110/ubuntu-24.10-server-cloudimg-armhf.img"
   arch: "armv7l"
-  digest: "sha256:229e893f4ca5f775fa8fda6d27caf78c86b13cc1b00bb9e002147cd1a04d98fc"
+  digest: "sha256:f1b5414467a84eb62c0da6e06c16fe5bf7a10111493460ae6b5e67592f657070"
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
 - location: "https://cloud-images.ubuntu.com/releases/24.10/release/ubuntu-24.10-server-cloudimg-amd64.img"

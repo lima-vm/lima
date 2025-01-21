@@ -1,10 +1,10 @@
 images:
-- location: "https://dl-cdn.alpinelinux.org/alpine/v3.21/releases/cloud/nocloud_alpine-3.21.0-x86_64-uefi-cloudinit-r0.qcow2"
+- location: "https://dl-cdn.alpinelinux.org/alpine/v3.21/releases/cloud/nocloud_alpine-3.21.2-x86_64-uefi-cloudinit-r0.qcow2"
   arch: "x86_64"
-  digest: "sha512:260cce52be3b9b190685f8445e390f1f30f45ed8ad5b6a49af07894807c2206947e0f8526c65f5d6abe3411adf5968b0b5bb1eef4fb52749f71b675bb5fd0c37"
-- location: "https://dl-cdn.alpinelinux.org/alpine/v3.21/releases/cloud/nocloud_alpine-3.21.0-aarch64-uefi-cloudinit-r0.qcow2"
+  digest: "sha512:1aaf22b4a584e69e228e6aa38a295159c0143d9ccebe7ad4928e92b414714066af3bfe5f9e0ca4d4d64a70ca9fea09033af90258a6f2344130d70b660151127a"
+- location: "https://dl-cdn.alpinelinux.org/alpine/v3.21/releases/cloud/nocloud_alpine-3.21.2-aarch64-uefi-cloudinit-r0.qcow2"
   arch: "aarch64"
-  digest: "sha512:e5298513e383e916e54271cbddece9c46588088ca2fa21275791b55df4d7dfe5cc5e01151fa382891727ba445540f102d385616f4bc82d4db87fac72ab8296fb"
+  digest: "sha512:08d340126b222abae651a20aa63c3ee3dc601d703de7879d2a6bc1fe82a3664d058a2c55ad0cf8a874327f7535e3af8a9384ce438217d6f32200cad1462a5b32"
 mounts:
 - location: "~"
 - location: "/tmp/lima"
