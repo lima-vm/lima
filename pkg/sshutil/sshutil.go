@@ -14,6 +14,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/coreos/go-semver/semver"
 	"github.com/lima-vm/lima/pkg/ioutilx"
@@ -156,7 +157,7 @@ var sshInfo struct {
 //
 // The result always contains the IdentityFile option.
 // The result never contains the Port option.
-func CommonOpts(useDotSSH bool) ([]string, error) {
+func CommonOpts(sshPath string, useDotSSH bool) ([]string, error) {
 	configDir, err := dirnames.LimaConfigDir()
 	if err != nil {
 		return nil, err
@@ -224,7 +225,7 @@ func CommonOpts(useDotSSH bool) ([]string, error) {
 
 	sshInfo.Do(func() {
 		sshInfo.aesAccelerated = detectAESAcceleration()
-		sshInfo.openSSHVersion = DetectOpenSSHVersion()
+		sshInfo.openSSHVersion = DetectOpenSSHVersion(sshPath)
 	})
 
 	// Only OpenSSH version 8.1 and later support adding ciphers to the front of the default set
@@ -253,12 +254,12 @@ func CommonOpts(useDotSSH bool) ([]string, error) {
 }
 
 // SSHOpts adds the following options to CommonOptions: User, ControlMaster, ControlPath, ControlPersist.
-func SSHOpts(instDir, username string, useDotSSH, forwardAgent, forwardX11, forwardX11Trusted bool) ([]string, error) {
+func SSHOpts(sshPath, instDir, username string, useDotSSH, forwardAgent, forwardX11, forwardX11Trusted bool) ([]string, error) {
 	controlSock := filepath.Join(instDir, filenames.SSHSock)
 	if len(controlSock) >= osutil.UnixPathMax {
 		return nil, fmt.Errorf("socket path %q is too long: >= UNIX_PATH_MAX=%d", controlSock, osutil.UnixPathMax)
 	}
-	opts, err := CommonOpts(useDotSSH)
+	opts, err := CommonOpts(sshPath, useDotSSH)
 	if err != nil {
 		return nil, err
 	}
@@ -307,18 +308,48 @@ func ParseOpenSSHVersion(version []byte) *semver.Version {
 	return &semver.Version{}
 }
 
-func DetectOpenSSHVersion() semver.Version {
+// sshExecutable beyond path also records size and mtime, in the case of ssh upgrades.
+type sshExecutable struct {
+	Path    string
+	Size    int64
+	ModTime time.Time
+}
+
+var (
+	// sshVersions caches the parsed version of each ssh executable, if it is needed again.
+	sshVersions   = map[sshExecutable]*semver.Version{}
+	sshVersionsRW sync.RWMutex
+)
+
+func DetectOpenSSHVersion(ssh string) semver.Version {
 	var (
 		v      semver.Version
+		exe    sshExecutable
 		stderr bytes.Buffer
 	)
-	cmd := exec.Command("ssh", "-V")
+	path, err := exec.LookPath(ssh)
+	if err != nil {
+		logrus.Warnf("failed to find ssh executable: %v", err)
+	} else {
+		st, _ := os.Stat(path)
+		exe = sshExecutable{Path: path, Size: st.Size(), ModTime: st.ModTime()}
+		sshVersionsRW.RLock()
+		ver := sshVersions[exe]
+		sshVersionsRW.RUnlock()
+		if ver != nil {
+			return *ver
+		}
+	}
+	cmd := exec.Command(path, "-V")
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
 		logrus.Warnf("failed to run %v: stderr=%q", cmd.Args, stderr.String())
 	} else {
 		v = *ParseOpenSSHVersion(stderr.Bytes())
 		logrus.Debugf("OpenSSH version %s detected", v)
+		sshVersionsRW.Lock()
+		sshVersions[exe] = &v
+		sshVersionsRW.Unlock()
 	}
 	return v
 }

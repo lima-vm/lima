@@ -84,6 +84,7 @@ func tunnelAction(cmd *cobra.Command, args []string) error {
 	}
 
 	sshOpts, err := sshutil.SSHOpts(
+		arg0,
 		inst.Dir,
 		*inst.Config.User.Name,
 		*inst.Config.SSH.LoadDotSSHPubKeys,
