@@ -149,7 +149,13 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 	if err != nil {
 		return nil, err
 	}
-	if len(tmpl.Bytes) == 0 {
+	if len(tmpl.Bytes) > 0 {
+		if createOnly {
+			if _, err := store.Inspect(tmpl.Name); err == nil {
+				return nil, fmt.Errorf("instance %q already exists", tmpl.Name)
+			}
+		}
+	} else {
 		if arg == "" {
 			if tmpl.Name == "" {
 				tmpl.Name = DefaultInstanceName
