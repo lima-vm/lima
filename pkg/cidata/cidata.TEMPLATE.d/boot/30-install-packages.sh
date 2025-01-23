@@ -53,6 +53,9 @@ if head -c 4 "$(command -v apt-get)" | grep -qP '\x7fELF' >/dev/null 2>&1; then
 	if [ "${LIMA_CIDATA_CONTAINERD_USER}" = 1 ] && ! command -v newuidmap >/dev/null 2>&1; then
 		pkgs="${pkgs} uidmap fuse3 dbus-user-session"
 	fi
+	if ! command -v rsync >/dev/null 2>&1; then
+		pkgs="${pkgs} rsync"
+	fi
 	if [ -n "${pkgs}" ]; then
 		DEBIAN_FRONTEND=noninteractive
 		export DEBIAN_FRONTEND
@@ -82,6 +85,9 @@ elif command -v dnf >/dev/null 2>&1; then
 		if ! command -v mount.fuse3 >/dev/null 2>&1; then
 			pkgs="${pkgs} fuse3"
 		fi
+	fi
+	if ! command -v rsync >/dev/null 2>&1; then
+		pkgs="${pkgs} rsync"
 	fi
 	if [ -n "${pkgs}" ] || [ -n "${extrapkgs}" ]; then
 		dnf_install_flags="-y --setopt=install_weak_deps=False"
@@ -148,6 +154,9 @@ elif command -v yum >/dev/null 2>&1; then
 			pkgs="${pkgs} fuse3"
 		fi
 	fi
+	if ! command -v rsync >/dev/null 2>&1; then
+		pkgs="${pkgs} rsync"
+	fi
 	if [ -n "${pkgs}" ]; then
 		# shellcheck disable=SC2086
 		yum install ${yum_install_flags} ${pkgs}
@@ -159,6 +168,9 @@ elif command -v pacman >/dev/null 2>&1; then
 		if [ "${LIMA_CIDATA_MOUNTS}" -gt 0 ] && ! command -v sshfs >/dev/null 2>&1; then
 			pkgs="${pkgs} sshfs"
 		fi
+	fi
+	if ! command -v rsync >/dev/null 2>&1; then
+		pkgs="${pkgs} rsync"
 	fi
 	# other dependencies are preinstalled on Arch Linux
 	if [ -n "${pkgs}" ]; then
@@ -178,6 +190,9 @@ elif command -v zypper >/dev/null 2>&1; then
 	if [ "${LIMA_CIDATA_CONTAINERD_USER}" = 1 ] && ! command -v mount.fuse3 >/dev/null 2>&1; then
 		pkgs="${pkgs} fuse3"
 	fi
+	if ! command -v rsync >/dev/null 2>&1; then
+		pkgs="${pkgs} rsync"
+	fi
 	if [ -n "${pkgs}" ]; then
 		# shellcheck disable=SC2086
 		zypper --non-interactive install -y --no-recommends ${pkgs}
@@ -191,6 +206,9 @@ elif command -v apk >/dev/null 2>&1; then
 	fi
 	if [ "${INSTALL_IPTABLES}" = 1 ] && ! command -v iptables >/dev/null 2>&1; then
 		pkgs="${pkgs} iptables"
+	fi
+	if ! command -v rsync >/dev/null 2>&1; then
+		pkgs="${pkgs} rsync"
 	fi
 	if [ -n "${pkgs}" ]; then
 		apk update
