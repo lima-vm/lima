@@ -149,7 +149,13 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 	if err != nil {
 		return nil, err
 	}
-	if len(tmpl.Bytes) == 0 {
+	if len(tmpl.Bytes) > 0 {
+		if createOnly {
+			if _, err := store.Inspect(tmpl.Name); err == nil {
+				return nil, fmt.Errorf("instance %q already exists", tmpl.Name)
+			}
+		}
+	} else {
 		if arg == "" {
 			if tmpl.Name == "" {
 				tmpl.Name = DefaultInstanceName
@@ -164,6 +170,28 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 		if err := identifiers.Validate(tmpl.Name); err != nil {
 			return nil, fmt.Errorf("argument must be either an instance name, a YAML file path, or a URL, got %q: %w", tmpl.Name, err)
 		}
+		inst, err := store.Inspect(tmpl.Name)
+		if err == nil {
+			if createOnly {
+				return nil, fmt.Errorf("instance %q already exists", tmpl.Name)
+			}
+			logrus.Infof("Using the existing instance %q", tmpl.Name)
+			yqExprs, err := editflags.YQExpressions(flags, false)
+			if err != nil {
+				return nil, err
+			}
+			if len(yqExprs) > 0 {
+				yq := yqutil.Join(yqExprs)
+				inst, err = applyYQExpressionToExistingInstance(inst, yq)
+				if err != nil {
+					return nil, fmt.Errorf("failed to apply yq expression %q to instance %q: %w", yq, tmpl.Name, err)
+				}
+			}
+			return inst, nil
+		}
+		if !errors.Is(err, os.ErrNotExist) {
+			return nil, err
+		}
 		if arg != "" && arg != DefaultInstanceName {
 			logrus.Infof("Creating an instance %q from template://default (Not from template://%s)", tmpl.Name, tmpl.Name)
 			logrus.Warnf("This form is deprecated. Use `limactl create --name=%s template://default` instead", tmpl.Name)
@@ -173,29 +201,6 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 		if err != nil {
 			return nil, err
 		}
-	}
-
-	inst, err := store.Inspect(tmpl.Name)
-	if err == nil {
-		if createOnly {
-			return nil, fmt.Errorf("instance %q already exists", tmpl.Name)
-		}
-		logrus.Infof("Using the existing instance %q", tmpl.Name)
-		yqExprs, err := editflags.YQExpressions(flags, false)
-		if err != nil {
-			return nil, err
-		}
-		if len(yqExprs) > 0 {
-			yq := yqutil.Join(yqExprs)
-			inst, err = applyYQExpressionToExistingInstance(inst, yq)
-			if err != nil {
-				return nil, fmt.Errorf("failed to apply yq expression %q to instance %q: %w", yq, tmpl.Name, err)
-			}
-		}
-		return inst, nil
-	}
-	if !errors.Is(err, os.ErrNotExist) {
-		return nil, err
 	}
 
 	yqExprs, err := editflags.YQExpressions(flags, true)
