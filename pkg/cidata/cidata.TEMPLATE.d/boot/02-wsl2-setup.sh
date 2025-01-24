@@ -12,6 +12,5 @@ sudo chown "${LIMA_CIDATA_USER}" "${LIMA_CIDATA_HOME}"/.ssh/authorized_keys
 # add $LIMA_CIDATA_USER to sudoers
 echo "${LIMA_CIDATA_USER} ALL=(ALL) NOPASSWD:ALL" | sudo tee -a /etc/sudoers.d/99_lima_sudoers
 
-# copy some CIDATA to the hardcoded path for requirement checks (TODO: make this not hardcoded)
-sudo mkdir -p /mnt/lima-cidata
-sudo cp "${LIMA_CIDATA_MNT}"/meta-data /mnt/lima-cidata/meta-data
+# symlink CIDATA to the hardcoded path for requirement checks (TODO: make this not hardcoded)
+sudo ln -sfFn "${LIMA_CIDATA_MNT}" /mnt/lima-cidata
