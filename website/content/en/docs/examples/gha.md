@@ -50,6 +50,8 @@ jobs:
         gh attestation verify --owner=lima-vm "${FILE}"
         sudo tar Cxzvf /usr/local "${FILE}"
         rm -f "${FILE}"
+        # Export LIMA_VERSION For the GHA cache key
+        echo "LIMA_VERSION=${LIMA_VERSION}" >>$GITHUB_ENV
 
     - name: "Cache ~/.cache/lima"
       uses: actions/cache@v4
