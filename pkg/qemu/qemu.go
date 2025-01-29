@@ -506,7 +506,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	}
 
 	// Architecture
-	accel := Accel(*y.Arch)
+	accel := y.AccelType[*y.Arch]
 	if !strings.Contains(string(features.AccelHelp), accel) {
 		return "", nil, fmt.Errorf("accelerator %q is not supported by %s", accel, exe)
 	}
@@ -1060,22 +1060,6 @@ func Exe(arch limayaml.Arch) (exe string, args []string, err error) {
 		return "", nil, err
 	}
 	return exe, args, nil
-}
-
-func Accel(arch limayaml.Arch) string {
-	if limayaml.IsNativeArch(arch) {
-		switch runtime.GOOS {
-		case "darwin":
-			return "hvf"
-		case "linux":
-			return "kvm"
-		case "netbsd":
-			return "nvmm"
-		case "windows":
-			return "whpx"
-		}
-	}
-	return "tcg"
 }
 
 func parseQemuVersion(output string) (*semver.Version, error) {

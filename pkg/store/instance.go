@@ -46,6 +46,7 @@ type Instance struct {
 	Dir             string             `json:"dir"`
 	VMType          limayaml.VMType    `json:"vmType"`
 	Arch            limayaml.Arch      `json:"arch"`
+	AccelType       string             `json:"accelType"`
 	CPUType         string             `json:"cpuType"`
 	CPUs            int                `json:"cpus,omitempty"`
 	Memory          int64              `json:"memory,omitempty"` // bytes
@@ -93,6 +94,7 @@ func Inspect(instName string) (*Instance, error) {
 	inst.Config = y
 	inst.Arch = *y.Arch
 	inst.VMType = *y.VMType
+	inst.AccelType = y.AccelType[*y.Arch]
 	inst.CPUType = y.CPUType[*y.Arch]
 	inst.SSHAddress = "127.0.0.1"
 	inst.SSHLocalPort = *y.SSH.LocalPort // maybe 0

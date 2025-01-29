@@ -54,6 +54,30 @@ var (
 	currentUser = Must(user.Current())
 )
 
+func Accel(arch Arch) string {
+        if IsNativeArch(arch) && IsAccelOS() {
+                switch runtime.GOOS {
+                case "darwin":
+                        return "hvf"
+                case "linux":
+                        return "kvm"
+                case "netbsd":
+                        return "nvmm"
+                case "windows":
+                        return "whpx"
+                }
+        }
+        return "tcg"
+}
+
+func defaultAccelType() AccelType {
+	accelType := map[Arch]string{}
+	for _, arch := range ArchTypes {
+		accelType[arch] = Accel(arch)
+	}
+	return accelType
+}
+
 func defaultCPUType() CPUType {
 	cpuType := map[Arch]string{
 		AARCH64: "cortex-a72",
@@ -311,6 +335,30 @@ func FillDefault(y, d, o *LimaYAML, filePath string, warn bool) {
 	}
 	if *y.VMType == QEMU || overrideCPUType {
 		y.CPUType = cpuType
+	}
+
+	accelType := defaultAccelType()
+	var overrideAccelType bool
+	for k, v := range d.AccelType {
+		if v != "" {
+			overrideAccelType = true
+			accelType[k] = v
+		}
+	}
+	for k, v := range y.AccelType {
+		if v != "" {
+			overrideAccelType = true
+			accelType[k] = v
+		}
+	}
+	for k, v := range o.AccelType {
+		if v != "" {
+			overrideAccelType = true
+			accelType[k] = v
+		}
+	}
+	if *y.VMType == QEMU || overrideAccelType {
+		y.AccelType = accelType
 	}
 
 	if y.CPUs == nil {

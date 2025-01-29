@@ -72,6 +72,7 @@ func TestFillDefault(t *testing.T) {
 		VMType:             &defaultVMType,
 		OS:                 ptr.Of(LINUX),
 		Arch:               ptr.Of(arch),
+		AccelType:          defaultAccelType(),
 		CPUType:            defaultCPUType(),
 		CPUs:               ptr.Of(defaultCPUs()),
 		Memory:             ptr.Of(defaultMemoryAsString()),
@@ -321,6 +322,12 @@ func TestFillDefault(t *testing.T) {
 		VMType: ptr.Of("vz"),
 		OS:     ptr.Of("unknown"),
 		Arch:   ptr.Of("unknown"),
+		AccelType: AccelType{
+			AARCH64: "tcg",
+			ARMV7L:  "tcg",
+			X8664:   "tcg",
+			RISCV64: "tcg",
+		},
 		CPUType: CPUType{
 			AARCH64: "arm64",
 			ARMV7L:  "armhf",
@@ -537,6 +544,12 @@ func TestFillDefault(t *testing.T) {
 			ARMV7L:  "armv8",
 			X8664:   "pentium",
 			RISCV64: "sifive-u54",
+		},
+		AccelType: AccelType{
+			AARCH64: "ess",
+			ARMV7L:  "sling",
+			X8664:   "cern",
+			RISCV64: "rocket",
 		},
 		CPUs:   ptr.Of(12),
 		Memory: ptr.Of("7GiB"),

@@ -144,7 +144,7 @@ func Start(ctx context.Context, inst *store.Instance, limactl string, launchHost
 			if err != nil {
 				return fmt.Errorf("failed to find the QEMU binary for the architecture %q: %w", inst.Arch, err)
 			}
-			if accel := qemu.Accel(inst.Arch); accel == "hvf" {
+			if inst.AccelType == "hvf" {
 				entitlementutil.AskToSignIfNotSignedProperly(qExe)
 			}
 		}

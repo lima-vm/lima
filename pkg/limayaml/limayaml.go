@@ -13,6 +13,7 @@ type LimaYAML struct {
 	OS                    *OS           `yaml:"os,omitempty" json:"os,omitempty" jsonschema:"nullable"`
 	Arch                  *Arch         `yaml:"arch,omitempty" json:"arch,omitempty" jsonschema:"nullable"`
 	Images                []Image       `yaml:"images" json:"images"` // REQUIRED
+	AccelType             AccelType     `yaml:"accelType,omitempty" json:"accelType,omitempty" jsonschema:"nullable"`
 	CPUType               CPUType       `yaml:"cpuType,omitempty" json:"cpuType,omitempty" jsonschema:"nullable"`
 	CPUs                  *int          `yaml:"cpus,omitempty" json:"cpus,omitempty" jsonschema:"nullable"`
 	Memory                *string       `yaml:"memory,omitempty" json:"memory,omitempty" jsonschema:"nullable"` // go-units.RAMInBytes
@@ -56,6 +57,8 @@ type (
 	MountType = string
 	VMType    = string
 )
+
+type AccelType = map[Arch]string
 
 type CPUType = map[Arch]string
 

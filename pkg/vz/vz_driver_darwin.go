@@ -20,6 +20,7 @@ import (
 )
 
 var knownYamlProperties = []string{
+	"AccelType",
 	"AdditionalDisks",
 	"Arch",
 	"Audio",
@@ -100,6 +101,12 @@ func (l *LimaVzDriver) Validate() error {
 
 	if !limayaml.IsNativeArch(*l.Instance.Config.Arch) {
 		return fmt.Errorf("unsupported arch: %q", *l.Instance.Config.Arch)
+	}
+
+	for k, v := range l.Instance.Config.AccelType {
+		if v != "" {
+			logrus.Warnf("vmType %s: ignoring accelType[%q]: %q", *l.Instance.Config.VMType, k, v)
+		}
 	}
 
 	for k, v := range l.Instance.Config.CPUType {

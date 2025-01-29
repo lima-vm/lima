@@ -306,6 +306,15 @@ vmOpts:
 # 🟢 Builtin default: "Linux"
 os: null
 
+# Specify desired QEMU Accelerator type for each arch.
+# You can see what options are available for host emulation with: `qemu-system-$(arch) -accel help`.
+# 🟢 Builtin default: hard-coded arch map with type (see the output of `limactl info | jq .defaultTemplate.accelType`)
+accelType:
+#   aarch64: "tcg" # (or OS default accelerator when running on aarch64 host)
+#   armv7l: "tcg" # (or OS default accelerator when running on armv7l host)
+#   riscv64: "tcg" # (or OS default accelerator when running on riscv64 host)
+#   x86_64: "tcg" # (or OS default accelerator when running on x86_64 host)
+
 # Specify desired QEMU CPU type for each arch.
 # You can see what options are available for host emulation with: `qemu-system-$(arch) -cpu help`.
 # Setting of instructions is supported like this: "qemu64,+ssse3".
