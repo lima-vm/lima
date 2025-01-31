@@ -2,7 +2,7 @@ package windows
 
 import (
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
 	"slices"
 	"sort"
 	"strconv"
@@ -168,7 +168,7 @@ func GetRandomFreeVSockPort(min, max int) (int, error) {
 		}
 	}
 
-	v := rand.Intn(max - min + 1 - len(used))
+	v := rand.IntN(max - min + 1 - len(used))
 
 	for len(tree) > 1 {
 		m := len(tree) / 2
