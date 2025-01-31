@@ -40,7 +40,7 @@ require (
 	github.com/sethvargo/go-password v0.3.1
 	github.com/sirupsen/logrus v1.9.4-0.20230606125235-dd1b4c2e81af
 	github.com/spf13/cobra v1.8.1
-	github.com/spf13/pflag v1.0.5
+	github.com/spf13/pflag v1.0.6
 	github.com/wk8/go-ordered-map/v2 v2.1.8
 	golang.org/x/net v0.34.0
 	golang.org/x/sync v0.10.0
