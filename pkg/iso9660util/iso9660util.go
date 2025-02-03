@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"runtime"
 
+	"github.com/diskfs/go-diskfs/backend/file"
 	"github.com/diskfs/go-diskfs/filesystem"
 	"github.com/diskfs/go-diskfs/filesystem/iso9660"
 	"github.com/sirupsen/logrus"
@@ -27,6 +28,7 @@ func Write(isoPath, label string, layout []Entry) error {
 		return err
 	}
 
+	backendFile := file.New(isoFile, false)
 	defer isoFile.Close()
 
 	workdir, err := os.MkdirTemp("", "diskfs_iso")
@@ -39,7 +41,7 @@ func Write(isoPath, label string, layout []Entry) error {
 	}
 	logrus.Debugf("Creating iso file %s", isoFile.Name())
 	logrus.Debugf("Using %s as workspace", workdir)
-	fs, err := iso9660.Create(isoFile, 0, 0, 0, workdir)
+	fs, err := iso9660.Create(backendFile, 0, 0, 0, workdir)
 	if err != nil {
 		return err
 	}
@@ -81,11 +83,12 @@ func IsISO9660(imagePath string) (bool, error) {
 		return false, err
 	}
 	defer imageFile.Close()
+	backendFile := file.New(imageFile, true)
 
 	fileInfo, err := imageFile.Stat()
 	if err != nil {
 		return false, err
 	}
-	_, err = iso9660.Read(imageFile, fileInfo.Size(), 0, 0)
+	_, err = iso9660.Read(backendFile, fileInfo.Size(), 0, 0)
 	return err == nil, nil
 }
