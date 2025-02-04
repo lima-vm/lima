@@ -1,18 +1,18 @@
 minimumLimaVersion: "1.0.0"
 images:
 # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
-- location: "https://cloud-images.ubuntu.com/releases/24.10/release-20250110/ubuntu-24.10-server-cloudimg-amd64.img"
+- location: "https://cloud-images.ubuntu.com/releases/24.10/release-20250129/ubuntu-24.10-server-cloudimg-amd64.img"
   arch: "x86_64"
-  digest: "sha256:6a97773f28cdb5e2461ad13f4f959d4ff4b2705a1f150830b6f30360f1a2c435"
-- location: "https://cloud-images.ubuntu.com/releases/24.10/release-20250110/ubuntu-24.10-server-cloudimg-arm64.img"
+  digest: "sha256:8831f96c39b987d4b793f44af0176890a5527ab89997da4a1eac979413e57631"
+- location: "https://cloud-images.ubuntu.com/releases/24.10/release-20250129/ubuntu-24.10-server-cloudimg-arm64.img"
   arch: "aarch64"
-  digest: "sha256:34c1b8c2fe220f67faa351a240d199987db52c574d1a100548386998641434c4"
-- location: "https://cloud-images.ubuntu.com/releases/24.10/release-20250110/ubuntu-24.10-server-cloudimg-riscv64.img"
+  digest: "sha256:d0237f183fb83cab4779e6f84099fea748ec3c8a14eec2be9392026da7ffd3d0"
+- location: "https://cloud-images.ubuntu.com/releases/24.10/release-20250129/ubuntu-24.10-server-cloudimg-riscv64.img"
   arch: "riscv64"
-  digest: "sha256:171bf2612cc04f0a5fae7519c621184122a9ce262b18d7f1c405d5edbea56bf5"
-- location: "https://cloud-images.ubuntu.com/releases/24.10/release-20250110/ubuntu-24.10-server-cloudimg-armhf.img"
+  digest: "sha256:5bd81f36bbb37265ccb02b1c93c1a714d6dd3e6c83c92821ae4cc03649ba96af"
+- location: "https://cloud-images.ubuntu.com/releases/24.10/release-20250129/ubuntu-24.10-server-cloudimg-armhf.img"
   arch: "armv7l"
-  digest: "sha256:f1b5414467a84eb62c0da6e06c16fe5bf7a10111493460ae6b5e67592f657070"
+  digest: "sha256:6a1ca78f06227ba060d11a88009cc9b65bdd42e17b84d444d204cb5c80f81552"
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
 - location: "https://cloud-images.ubuntu.com/releases/24.10/release/ubuntu-24.10-server-cloudimg-amd64.img"
