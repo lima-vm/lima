@@ -223,7 +223,7 @@ endif
 #
 # The hostagent must be compiled with CGO_ENABLED=1 so that net.LookupIP() in the DNS server
 # calls the native resolver library and not the simplistic version in the Go library.
-ENVS__output/bin/limactl$(exe) = CGO_ENABLED=1 GOOS=$(GOOS) GOARCH=$(GOARCH) CC=$(CC)
+ENVS__output/bin/limactl$(exe) = CGO_ENABLED=1 GOOS="$(GOOS)" GOARCH="$(GOARCH)" CC="$(CC)"
 
 _output/bin/limactl$(exe): $(LIMACTL_DEPS) $$(call force_build,$$@)
 # If the previous cross-compilation was for GOOS=windows, limactl.exe might still be present.
