@@ -1195,7 +1195,7 @@ func HasHostCPU() bool {
 	case "darwin":
 		if hasSMEDarwin() {
 			macOSProductVersion, err := osutil.ProductVersion()
-			if err != nil || macOSProductVersion.Equal(*semver.New("15.2")) {
+			if err != nil || (macOSProductVersion.Major == 15 && macOSProductVersion.Minor == 2) {
 				// SME is available since Apple M4 running macOS 15.2, but it was broken on macOS 15.2.
 				// It has been fixed in 15.3.
 				//
