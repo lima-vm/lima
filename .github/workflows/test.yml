@@ -67,6 +67,13 @@ jobs:
       # the allow list corresponds to https://github.com/cncf/foundation/blob/e5db022a0009f4db52b89d9875640cf3137153fe/allowed-third-party-license-policy.md
       run: go-licenses check --include_tests  ./... --allowed_licenses=Apache-2.0,BSD-2-Clause,BSD-2-Clause-FreeBSD,BSD-3-Clause,MIT,ISC,Python-2.0,PostgreSQL,X11,Zlib
 
+  security:
+    name: "Vulncheck"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+    - uses: golang/govulncheck-action@b625fbe08f3bccbe446d94fbf87fcc875a4f50ee  # v1.0.4
+
   spell:
     name: "Spell check"
     runs-on: ubuntu-24.04
