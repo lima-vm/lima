@@ -125,6 +125,7 @@ func templateArgs(bootScripts bool, instDir, name string, instConfig *limayaml.L
 		User:               *instConfig.User.Name,
 		Comment:            *instConfig.User.Comment,
 		Home:               *instConfig.User.Home,
+		Shell:              *instConfig.User.Shell,
 		UID:                *instConfig.User.UID,
 		GuestInstallPrefix: *instConfig.GuestInstallPrefix,
 		UpgradePackages:    *instConfig.UpgradePackages,

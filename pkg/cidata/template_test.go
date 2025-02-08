@@ -17,6 +17,7 @@ func TestConfig(t *testing.T) {
 		UID:     501,
 		Comment: "Foo",
 		Home:    "/home/foo.linux",
+		Shell:   "/bin/bash",
 		SSHPubKeys: []string{
 			"ssh-rsa dummy foo@example.com",
 		},
@@ -35,6 +36,7 @@ func TestConfigCACerts(t *testing.T) {
 		UID:     501,
 		Comment: "Foo",
 		Home:    "/home/foo.linux",
+		Shell:   "/bin/bash",
 		SSHPubKeys: []string{
 			"ssh-rsa dummy foo@example.com",
 		},
@@ -51,10 +53,11 @@ func TestConfigCACerts(t *testing.T) {
 
 func TestTemplate(t *testing.T) {
 	args := &TemplateArgs{
-		Name: "default",
-		User: "foo",
-		UID:  501,
-		Home: "/home/foo.linux",
+		Name:  "default",
+		User:  "foo",
+		UID:   501,
+		Home:  "/home/foo.linux",
+		Shell: "/bin/bash",
 		SSHPubKeys: []string{
 			"ssh-rsa dummy foo@example.com",
 		},
@@ -86,10 +89,11 @@ func TestTemplate(t *testing.T) {
 
 func TestTemplate9p(t *testing.T) {
 	args := &TemplateArgs{
-		Name: "default",
-		User: "foo",
-		UID:  501,
-		Home: "/home/foo.linux",
+		Name:  "default",
+		User:  "foo",
+		UID:   501,
+		Home:  "/home/foo.linux",
+		Shell: "/bin/bash",
 		SSHPubKeys: []string{
 			"ssh-rsa dummy foo@example.com",
 		},
