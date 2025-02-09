@@ -38,6 +38,14 @@ docker run -d --name nginx -p 127.0.0.1:8080:80 nginx:alpine
 ```
 {{% /tab %}}
 
+{{% tab header="Podman" %}}
+```bash
+limactl start template://podman
+export DOCKER_HOST=$(limactl list podman --format 'unix://{{.Dir}}/sock/podman.sock')
+docker run -d --name nginx -p 127.0.0.1:8080:80 nginx:alpine
+```
+{{% /tab %}}
+
 {{% tab header="Kubernetes" %}}
 ```bash
 limactl start template://k8s
