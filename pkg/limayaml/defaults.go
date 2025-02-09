@@ -209,6 +209,9 @@ func FillDefault(y, d, o *LimaYAML, filePath string, warn bool) {
 	if y.User.Home == nil {
 		y.User.Home = d.User.Home
 	}
+	if y.User.Shell == nil {
+		y.User.Shell = d.User.Shell
+	}
 	if y.User.UID == nil {
 		y.User.UID = d.User.UID
 	}
@@ -220,6 +223,9 @@ func FillDefault(y, d, o *LimaYAML, filePath string, warn bool) {
 	}
 	if o.User.Home != nil {
 		y.User.Home = o.User.Home
+	}
+	if o.User.Shell != nil {
+		y.User.Shell = o.User.Shell
 	}
 	if o.User.UID != nil {
 		y.User.UID = o.User.UID
@@ -235,6 +241,9 @@ func FillDefault(y, d, o *LimaYAML, filePath string, warn bool) {
 	if y.User.Home == nil {
 		y.User.Home = ptr.Of(osutil.LimaUser(existingLimaVersion, warn).HomeDir)
 		warn = false
+	}
+	if y.User.Shell == nil {
+		y.User.Shell = ptr.Of("/bin/bash")
 	}
 	if y.User.UID == nil {
 		uidString := osutil.LimaUser(existingLimaVersion, warn).Uid

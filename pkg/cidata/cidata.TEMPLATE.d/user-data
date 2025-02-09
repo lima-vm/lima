@@ -34,7 +34,7 @@ users:
     gecos: {{ printf "%q" .Comment }}
 {{- end }}
     homedir: "{{.Home}}"
-    shell: /bin/bash
+    shell: {{.Shell}}
     sudo: ALL=(ALL) NOPASSWD:ALL
     lock_passwd: true
     ssh-authorized-keys:

@@ -62,6 +62,7 @@ type TemplateArgs struct {
 	User                            string // user name
 	Comment                         string // user information
 	Home                            string // home directory
+	Shell                           string // login shell
 	UID                             uint32
 	SSHPubKeys                      []string
 	Mounts                          []Mount
@@ -108,6 +109,9 @@ func ValidateTemplateArgs(args *TemplateArgs) error {
 	}
 	if args.Home == "" {
 		return errors.New("field Home must be set")
+	}
+	if args.Shell == "" {
+		return errors.New("field Shell must be set")
 	}
 	if len(args.SSHPubKeys) == 0 {
 		return errors.New("field SSHPubKeys must be set")

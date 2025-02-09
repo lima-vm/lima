@@ -294,6 +294,9 @@ user:
   # It can use the following template variables: {{.Name}}, {{.Hostname}}, {{.UID}}, {{.User}}, and {{.Param.Key}}.
   # 🟢 Builtin default: "/home/{{.User}}.linux"
   home: null
+  # Shell. Needs to be an absolute path.
+  # 🟢 Builtin default: "/bin/bash"
+  shell: null
 
 vmOpts:
   qemu:

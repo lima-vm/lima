@@ -117,6 +117,7 @@ func TestFillDefault(t *testing.T) {
 			Name:    ptr.Of(user.Username),
 			Comment: ptr.Of(user.Name),
 			Home:    ptr.Of(user.HomeDir),
+			Shell:   ptr.Of("/bin/bash"),
 			UID:     ptr.Of(uint32(uid)),
 		},
 	}
@@ -441,6 +442,7 @@ func TestFillDefault(t *testing.T) {
 			Name:    ptr.Of("xxx"),
 			Comment: ptr.Of("Foo Bar"),
 			Home:    ptr.Of("/tmp"),
+			Shell:   ptr.Of("/bin/tcsh"),
 			UID:     ptr.Of(uint32(8080)),
 		},
 	}
@@ -664,6 +666,7 @@ func TestFillDefault(t *testing.T) {
 			Name:    ptr.Of("foo"),
 			Comment: ptr.Of("foo bar baz"),
 			Home:    ptr.Of("/override"),
+			Shell:   ptr.Of("/bin/sh"),
 			UID:     ptr.Of(uint32(1122)),
 		},
 	}
