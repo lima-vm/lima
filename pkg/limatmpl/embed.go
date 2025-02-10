@@ -26,19 +26,12 @@ var warnFileIsExperimental = sync.OnceFunc(func() {
 // Embed will recursively resolve all "base" dependencies and update the
 // template with the merged result. It also inlines all external provisioning
 // and probe scripts.
-func (tmpl *Template) Embed(ctx context.Context) error {
+func (tmpl *Template) Embed(ctx context.Context, embedAll, defaultBase bool) error {
 	if err := tmpl.UseAbsLocators(); err != nil {
 		return err
 	}
-	return tmpl.EmbedImpl(ctx, true)
-}
-
-// EmbedImpl is called with defaultBase set to false during testing, so that
-// an existing $LIMA_HOME/_config/base.yaml doesn't interfere with expected
-// test results.
-func (tmpl *Template) EmbedImpl(ctx context.Context, defaultBase bool) error {
 	seen := make(map[string]bool)
-	err := tmpl.embed(ctx, defaultBase, seen)
+	err := tmpl.embedAllBases(ctx, embedAll, defaultBase, seen)
 	// additionalDisks, mounts, and networks may combine entries based on a shared key
 	// This must be done after **all** base templates have been merged, so that wildcard keys can match
 	// against all earlier list entries, and not just against the direct parent template.
@@ -48,47 +41,83 @@ func (tmpl *Template) EmbedImpl(ctx context.Context, defaultBase bool) error {
 	return tmpl.ClearOnError(err)
 }
 
-func (tmpl *Template) embed(ctx context.Context, defaultBase bool, seen map[string]bool) error {
-	logrus.Debugf("Embedding template %q", tmpl.Locator)
-	if seen[tmpl.Locator] {
-		logrus.Infof("Template %q already included", tmpl.Locator)
-		return nil
-	}
-	seen[tmpl.Locator] = true
-
-	if err := tmpl.Unmarshal(); err != nil {
-		return err
-	}
-	bases := tmpl.Config.Base
+func (tmpl *Template) embedAllBases(ctx context.Context, embedAll, defaultBase bool, seen map[string]bool) error {
+	logrus.Debugf("Embedding templates into %q", tmpl.Locator)
 	if defaultBase {
-		// Prepend $LIMA_HOME/_config/base.yaml to bases list.
 		configDir, err := dirnames.LimaConfigDir()
 		if err != nil {
 			return err
 		}
 		defaultBaseFilename := filepath.Join(configDir, filenames.Base)
 		if _, err := os.Stat(defaultBaseFilename); err == nil {
-			bases = append([]string{defaultBaseFilename}, bases...)
+			// turn string into single element list
+			// empty concatenation works around bug https://github.com/mikefarah/yq/issues/2269
+			tmpl.expr.WriteString("| ($a.base | select(type == \"!!str\")) |= [\"\" + .]\n")
+			tmpl.expr.WriteString("| ($a.base | select(type == \"!!map\")) |= [[] + .]\n")
+			// prepend base template at the beginning of the list
+			tmpl.expr.WriteString(fmt.Sprintf("| $a.base = [%q, $a.base[]]\n", defaultBaseFilename))
+			if err := tmpl.evalExpr(); err != nil {
+				return err
+			}
 		}
 	}
-	for _, baseLocator := range bases {
-		warnBaseIsExperimental()
-		logrus.Debugf("Merging base template %q", baseLocator)
-		base, err := Read(ctx, "", baseLocator)
-		if err != nil {
+	for {
+		if err := tmpl.Unmarshal(); err != nil {
 			return err
 		}
-		if err := base.UseAbsLocators(); err != nil {
-			return err
+		if len(tmpl.Config.Base) == 0 {
+			break
 		}
-		if err := base.embed(ctx, false, seen); err != nil {
-			return err
+		baseLocator := tmpl.Config.Base[0]
+		isTemplate, _ := SeemsTemplateURL(baseLocator)
+		if isTemplate && !embedAll {
+			// Once we skip a template:// URL we can no longer embed any other base template
+			for i := 1; i < len(tmpl.Config.Base); i++ {
+				isTemplate, _ = SeemsTemplateURL(tmpl.Config.Base[i])
+				if !isTemplate {
+					return fmt.Errorf("cannot embed template %q after not embedding %q", tmpl.Config.Base[i], baseLocator)
+				}
+			}
+			break
+			// TODO should we track embedding of template:// URLs so we can warn if we embed a non-template:// URL afterwards?
 		}
-		if err := tmpl.merge(base); err != nil {
+
+		if seen[baseLocator] {
+			return fmt.Errorf("base template loop detected: template %q already included", baseLocator)
+		}
+		seen[baseLocator] = true
+
+		// remove base[0] from template before merging
+		if err := tmpl.embedBase(ctx, baseLocator, embedAll, seen); err != nil {
 			return err
 		}
 	}
-	if err := tmpl.embedAllScripts(ctx); err != nil {
+	if err := tmpl.embedAllScripts(ctx, embedAll); err != nil {
+		return err
+	}
+	if len(tmpl.Bytes) > yBytesLimit {
+		return fmt.Errorf("template %q embedding exceeded the size limit (%d bytes)", tmpl.Locator, yBytesLimit)
+	}
+	return nil
+}
+
+func (tmpl *Template) embedBase(ctx context.Context, baseLocator string, embedAll bool, seen map[string]bool) error {
+	warnBaseIsExperimental()
+	logrus.Debugf("Embedding base %q in template %q", baseLocator, tmpl.Locator)
+	if err := tmpl.Unmarshal(); err != nil {
+		return err
+	}
+	base, err := Read(ctx, "", baseLocator)
+	if err != nil {
+		return err
+	}
+	if err := base.UseAbsLocators(); err != nil {
+		return err
+	}
+	if err := base.embedAllBases(ctx, embedAll, false, seen); err != nil {
+		return err
+	}
+	if err := tmpl.merge(base); err != nil {
 		return err
 	}
 	if len(tmpl.Bytes) > yBytesLimit {
@@ -171,12 +200,21 @@ const mergeDocuments = `
 # $c will be mutilated to implement our own "merge only new fields" logic.
 | $b as $c
 
+# Delete the base that is being merged right now
+| $a | select(.base | tag == "!!seq") | del(.base[0])
+| $a | select(.base | (tag == "!!seq" and length == 0)) | del(.base)
+| $a | select(.base | tag == "!!str") | del(.base)
+
+# If $a.base is a list, then $b.base must be a list as well
+# (note $b, not $c, because we merge lists from $b)
+| $b | select((.base | tag == "!!str") and ($a.base | tag == "!!seq")) | .base = [ "" + .base ]
+
 # Delete base DNS entries if the template list is not empty.
 | $a | select(.dns) | del($b.dns, $c.dns)
 
 # Mark all new list fields with a custom tag. This is needed to avoid appending
 # newly copied lists to themselves again when we merge lists.
-| ($c | .. | select(tag == "!!seq") | tag) = "!!tag"
+| $c | .. | select(tag == "!!seq") tag = "!!tag"
 
 # Delete all nodes in $c that are in $a and not a map. This is necessary because
 # the yq "*n" operator (merge only new fields) does not copy all comments across.
@@ -188,10 +226,10 @@ const mergeDocuments = `
 # Find all elements that are existing lists. This will not match newly
 # copied lists because they have a custom !!tag instead of !!seq.
 # Append the elements from the same path in $b.
-# Exception: provision scripts and probes are prepended instead.
-| $a | (.. | select(tag == "!!seq" and (path[0] | test("^(provision|probes)$") | not))) |=
+# Exception: base templates, provision scripts and probes are prepended instead.
+| $a | (.. | select(tag == "!!seq" and (path[0] | test("^(base|provision|probes)$") | not))) |=
    (. + (path[] as $p ireduce ($b; .[$p])))
-| $a | (.. | select(tag == "!!seq" and (path[0] | test("^(provision|probes)$")))) |=
+| $a | (.. | select(tag == "!!seq" and (path[0] | test("^(base|provision|probes)$")))) |=
    ((path[] as $p ireduce ($b; .[$p])) + .)
 
 # Copy head and line comments for existing lists that do not already have comments.
@@ -203,8 +241,6 @@ const mergeDocuments = `
 
 # Make sure mountTypesUnsupported elements are unique.
 | $a | (select(.mountTypesUnsupported) | .mountTypesUnsupported) |= unique
-
-| del($a.base)
 
 # Remove the custom tags again so they do not clutter up the YAML output.
 | $a | .. tag = ""
@@ -513,29 +549,35 @@ func (tmpl *Template) updateScript(field string, idx int, script string) {
 }
 
 // embedAllScripts replaces all "provision" and "probes" file references with the actual script.
-func (tmpl *Template) embedAllScripts(ctx context.Context) error {
+func (tmpl *Template) embedAllScripts(ctx context.Context, embedAll bool) error {
 	if err := tmpl.Unmarshal(); err != nil {
 		return err
 	}
 	for i, p := range tmpl.Config.Probes {
-		// Don't overwrite existing file. This should throw an error during validation.
+		// Don't overwrite existing script. This should throw an error during validation.
 		if p.File != nil && p.Script == "" {
 			warnFileIsExperimental()
-			scriptTmpl, err := Read(ctx, "", *p.File)
-			if err != nil {
-				return err
+			isTemplate, _ := SeemsTemplateURL(*p.File)
+			if embedAll || !isTemplate {
+				scriptTmpl, err := Read(ctx, "", *p.File)
+				if err != nil {
+					return err
+				}
+				tmpl.updateScript("probes", i, string(scriptTmpl.Bytes))
 			}
-			tmpl.updateScript("probes", i, string(scriptTmpl.Bytes))
 		}
 	}
 	for i, p := range tmpl.Config.Provision {
 		if p.File != nil && p.Script == "" {
 			warnFileIsExperimental()
-			scriptTmpl, err := Read(ctx, "", *p.File)
-			if err != nil {
-				return err
+			isTemplate, _ := SeemsTemplateURL(*p.File)
+			if embedAll || !isTemplate {
+				scriptTmpl, err := Read(ctx, "", *p.File)
+				if err != nil {
+					return err
+				}
+				tmpl.updateScript("provision", i, string(scriptTmpl.Bytes))
 			}
-			tmpl.updateScript("provision", i, string(scriptTmpl.Bytes))
 		}
 	}
 	return tmpl.evalExpr()

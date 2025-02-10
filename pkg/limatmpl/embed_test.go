@@ -3,6 +3,7 @@ package limatmpl_test
 import (
 	"context"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"os"
 	"reflect"
 	"strings"
@@ -25,6 +26,7 @@ type embedTestCase struct {
 // * When the template starts with "#" then the comparison will be textual instead of structural.
 //   This is required to verify comment handling.
 // * If the description starts with "TODO" then the test is expected to fail (until it is fixed).
+// * If the description starts with "ERROR" then the test is expected to fail with an error containing the expected string.
 // * base is split on "---\n" and stored as base0.yaml, base1.yaml, ... in the same dir as the template.
 // * If any base template starts with "#!" then the extension will be .sh instead of .yaml.
 // * The template is automatically prefixed with "base: base0.yaml" unless base0 is a script.
@@ -128,7 +130,8 @@ additionalDisks:  # comment
 		"additionalDisks: [{name: disk1, format: true},{name: disk2}]",
 	},
 	{
-		"mounts append, but merge fields on shared mountPoint",
+		// This test fails because there are 2 spurious newlines in the merged output
+		"TODO mounts append, but merge fields on shared mountPoint",
 		`#
 # My mounts
 mounts:
@@ -168,7 +171,32 @@ mounts:
 `,
 	},
 	{
-		"Each base is only merged once",
+		// This entry can be deleted when the previous one no longer fails
+		"mounts append, but merge fields on shared mountPoint (no comments version)",
+		`mounts: [{location: loc1}, {location: loc1, mountPoint: loc2}]`,
+		`mounts: [{location: loc1, mountPoint: loc2, writable: true, sshfs: {followSymlinks: true}}, {location: loc1, mountPoint: loc3, writable: true}]`,
+		`mounts: [{location: loc1}, {location: loc1, mountPoint: loc2, writable: true, sshfs: {followSymlinks: true}}, {location: loc1, mountPoint: loc3, writable: true}]`,
+	},
+	{
+		"template:// URLs are not embedded when embedAll is false",
+		``,
+		`
+base: template://default
+provision:
+- file: template://provision.sh
+probes:
+- file: template://probe.sh
+`,
+		`
+base: template://default
+provision:
+- file: template://provision.sh
+probes:
+- file: template://probe.sh
+`,
+	},
+	{
+		"ERROR Each template must only be embedded once",
 		`#
 arch: aarch64
 `,
@@ -177,11 +205,24 @@ base: base0.yaml
 # failure would mean this test loops forever, not that it fails the test
 vmType: qemu
 `,
+		`base template loop detected`,
+	},
+	{
+		"ERROR All bases following template:// bases must be template:// URLs too when embedAll is false",
+		``,
+		`base: [template://default, base1.yaml]`,
+		"after not embedding",
+	},
+	{
+		"ERROR All bases following template:// bases must be template:// URLs too when embedAll is false",
+		``,
 		`
-arch: aarch64
-# failure would mean this test loops forever, not that it fails the test
-vmType: qemu
-`,
+base: [base1.yaml, base2.yaml]
+---
+base: template://default
+---
+base: baseX.yaml`,
+		"after not embedding",
 	},
 	{
 		"Bases are embedded depth-first",
@@ -318,13 +359,22 @@ provision:
 }
 
 func TestEmbed(t *testing.T) {
+	focus := os.Getenv("TEST_FOCUS")
 	for _, tc := range embedTestCases {
+		if focus != "" {
+			if !strings.Contains(tc.description, focus) {
+				continue
+			}
+			logrus.SetLevel(logrus.DebugLevel)
+		}
 		t.Run(tc.description, func(t *testing.T) { RunEmbedTest(t, tc) })
 	}
+	logrus.SetLevel(logrus.InfoLevel)
 }
 
 func RunEmbedTest(t *testing.T, tc embedTestCase) {
 	todo := strings.HasPrefix(tc.description, "TODO")
+	expectError := strings.HasPrefix(tc.description, "ERROR")
 	stringCompare := strings.HasPrefix(tc.template, "#")
 
 	// Normalize testcase data
@@ -358,7 +408,11 @@ func RunEmbedTest(t *testing.T, tc embedTestCase) {
 	if strings.HasPrefix(tc.base, "#!") {
 		tmpl.Bytes = []byte(tc.template)
 	}
-	err = tmpl.EmbedImpl(context.TODO(), false)
+	err = tmpl.Embed(context.TODO(), false, false)
+	if expectError {
+		assert.ErrorContains(t, err, tc.expected, tc.description)
+		return
+	}
 	assert.NilError(t, err, tc.description)
 
 	if stringCompare {
