@@ -63,7 +63,8 @@ func newTemplateCopyCommand() *cobra.Command {
 		Args:    WrapArgsError(cobra.ExactArgs(2)),
 		RunE:    templateCopyAction,
 	}
-	templateCopyCommand.Flags().Bool("embed", false, "embed dependencies into template")
+	templateCopyCommand.Flags().Bool("embed", false, "embed external dependencies into template")
+	templateCopyCommand.Flags().Bool("embed-all", false, "embed all dependencies into template")
 	templateCopyCommand.Flags().Bool("fill", false, "fill defaults")
 	templateCopyCommand.Flags().Bool("verbatim", false, "don't make locators absolute")
 	return templateCopyCommand
@@ -71,6 +72,10 @@ func newTemplateCopyCommand() *cobra.Command {
 
 func templateCopyAction(cmd *cobra.Command, args []string) error {
 	embed, err := cmd.Flags().GetBool("embed")
+	if err != nil {
+		return err
+	}
+	embedAll, err := cmd.Flags().GetBool("embed-all")
 	if err != nil {
 		return err
 	}
@@ -82,13 +87,15 @@ func templateCopyAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	if fill {
+		embedAll = true
+	}
+	if embedAll {
+		embed = true
+	}
 	if embed && verbatim {
-		return errors.New("--embed and --verbatim cannot be used together")
+		return errors.New("--verbatim cannot be used with any of --embed, --embed-all, or --fill")
 	}
-	if fill && verbatim {
-		return errors.New("--fill and --verbatim cannot be used together")
-	}
-
 	tmpl, err := limatmpl.Read(cmd.Context(), "", args[0])
 	if err != nil {
 		return err
@@ -98,7 +105,8 @@ func templateCopyAction(cmd *cobra.Command, args []string) error {
 	}
 	if !verbatim {
 		if embed {
-			if err := tmpl.Embed(cmd.Context()); err != nil {
+			// Embed default base.yaml only when fill is true.
+			if err := tmpl.Embed(cmd.Context(), embedAll, fill); err != nil {
 				return err
 			}
 		} else {
