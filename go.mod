@@ -23,7 +23,7 @@ require (
 	github.com/foxcpp/go-mockdns v1.1.0
 	github.com/goccy/go-yaml v1.15.17
 	github.com/google/go-cmp v0.6.0
-	github.com/google/yamlfmt v0.15.0
+	github.com/google/yamlfmt v0.16.0
 	github.com/invopop/jsonschema v0.13.0
 	github.com/lima-vm/go-qcow2reader v0.6.0
 	github.com/lima-vm/sshocker v0.3.5
@@ -62,7 +62,7 @@ require (
 	github.com/alecthomas/participle/v2 v2.1.1 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/bmatcuk/doublestar/v4 v4.7.1 // indirect
-	github.com/braydonk/yaml v0.7.0 // indirect
+	github.com/braydonk/yaml v0.9.0 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/containerd/errdefs v0.3.0 // indirect
 	github.com/containerd/log v0.1.0 // indirect
