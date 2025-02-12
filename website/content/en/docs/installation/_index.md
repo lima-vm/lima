@@ -9,7 +9,7 @@ Supported host OS:
 - Windows (untested)
 
 Prerequisite:
-- QEMU 7.0 or later (Required, only if QEMU driver is used)
+- QEMU 7.1 or later (Required, only if QEMU driver is used)
 
 {{< tabpane text=true >}}
 

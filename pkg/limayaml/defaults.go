@@ -56,7 +56,7 @@ var (
 
 func defaultCPUType() CPUType {
 	cpuType := map[Arch]string{
-		AARCH64: "cortex-a72",
+		AARCH64: "cortex-a76", // available since QEMU 7.1 (Aug 2022)
 		ARMV7L:  "cortex-a7",
 		// Since https://github.com/lima-vm/lima/pull/494, we use qemu64 cpu for better emulation of x86_64.
 		X8664:   "qemu64",
