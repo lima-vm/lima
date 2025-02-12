@@ -1158,8 +1158,9 @@ func getFirmware(qemuExe string, arch limayaml.Arch) (string, error) {
 		}
 	}
 
-	if arch == limayaml.X8664 {
-		return "", fmt.Errorf("could not find firmware for %q (hint: try setting `firmware.legacyBIOS` to `true`)", qemuExe)
-	}
-	return "", fmt.Errorf("could not find firmware for %q (hint: try copying the \"edk-%s-code.fd\" firmware to $HOME/.local/share/qemu/)", arch, qemuExe)
+if arch == limayaml.X8664 {
+    return "", fmt.Errorf("could not find firmware for %q (hint: try setting `firmware.legacyBIOS` to `true`)", arch)
+}
+qemuArch := strings.TrimPrefix(filepath.Base(qemuExe), "qemu-system-")
+return "", fmt.Errorf("could not find firmware for %q (hint: try copying the \"edk-%s-code.fd\" firmware to $HOME/.local/share/qemu/)", arch, qemuArch)
 }
