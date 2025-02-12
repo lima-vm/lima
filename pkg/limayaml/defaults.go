@@ -1203,16 +1203,19 @@ func HasHostCPU() bool {
 	switch runtime.GOOS {
 	case "darwin":
 		if hasSMEDarwin() {
-			macOSProductVersion, err := osutil.ProductVersion()
-			if err != nil || (macOSProductVersion.Major == 15 && macOSProductVersion.Minor == 2) {
-				// SME is available since Apple M4 running macOS 15.2, but it was broken on macOS 15.2.
-				// It has been fixed in 15.3.
-				//
-				// https://github.com/lima-vm/lima/issues/3032
-				// https://gitlab.com/qemu-project/qemu/-/issues/2665
-				// https://gitlab.com/qemu-project/qemu/-/issues/2721
-				return false
-			}
+			// [2025-02-05]
+			// SME is available since Apple M4 running macOS 15.2, but it was broken on macOS 15.2.
+			// It has been fixed in 15.3.
+			//
+			// https://github.com/lima-vm/lima/issues/3032
+			// https://gitlab.com/qemu-project/qemu/-/issues/2665
+			// https://gitlab.com/qemu-project/qemu/-/issues/2721
+
+			// [2025-02-12]
+			// SME got broken again after upgrading QEMU from 9.2.0 to 9.2.1 (Homebrew bottle).
+			// Possibly this regression happened in some build process rather than in QEMU itself?
+			// https://github.com/lima-vm/lima/issues/3226
+			return false
 		}
 		return true
 	case "linux":
