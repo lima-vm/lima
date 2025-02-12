@@ -339,7 +339,6 @@ type watchHostAgentEventsTimeoutKey = struct{}
 // WithWatchHostAgentTimeout sets the value of the timeout to use for
 // watchHostAgentEvents in the given Context.
 func WithWatchHostAgentTimeout(ctx context.Context, timeout time.Duration) context.Context {
-	//nolint:staticcheck // SA1029: should not use empty anonymous struct as key for value; define your own type to avoid collisions (staticcheck)
 	return context.WithValue(ctx, watchHostAgentEventsTimeoutKey{}, timeout)
 }
 
