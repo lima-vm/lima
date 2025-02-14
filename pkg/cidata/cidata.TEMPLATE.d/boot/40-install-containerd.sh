@@ -103,7 +103,9 @@ EOF
 			echo "Temporarily disabling SELinux, during installing containerd units"
 			setenforce 0
 		fi
-		sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" systemctl --user enable --now dbus
+		if [ "$(sudo -iu "${LIMA_CIDATA_USER}" sh -ec 'systemctl --user show --property=RefuseManualStart --value dbus')" != "yes" ]; then
+			sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" systemctl --user enable --now dbus
+		fi
 		sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "PATH=${PATH}" containerd-rootless-setuptool.sh install
 		sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "PATH=${PATH}" \
 			"CONTAINERD_NAMESPACE=${CONTAINERD_NAMESPACE}" "CONTAINERD_SNAPSHOTTER=${CONTAINERD_SNAPSHOTTER}" \
