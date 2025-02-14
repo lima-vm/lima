@@ -46,7 +46,12 @@ PACKAGE := github.com/lima-vm/lima
 VERSION := $(shell git describe --match 'v[0-9]*' --dirty='.m' --always --tags)
 VERSION_TRIMMED := $(VERSION:v%=%)
 
-GO_BUILD_LDFLAGS := -ldflags="-s -w -X $(PACKAGE)/pkg/version.Version=$(VERSION)"
+KEEP_SYMBOLS ?=
+GO_BUILD_LDFLAGS_S := true
+ifeq ($(KEEP_SYMBOLS),1)
+	GO_BUILD_LDFLAGS_S = false
+endif
+GO_BUILD_LDFLAGS := -ldflags="-s=$(GO_BUILD_LDFLAGS_S) -w -X $(PACKAGE)/pkg/version.Version=$(VERSION)"
 # `go -version -m` returns -tags with comma-separated list, because space-separated list is deprecated in go1.13.
 # converting to comma-separated list is useful for comparing with the output of `go version -m`.
 GO_BUILD_FLAG_TAGS := $(addprefix -tags=,$(shell echo "$(GO_BUILDTAGS)"|tr " " "\n"|paste -sd "," -))
@@ -68,7 +73,15 @@ help:
 	@echo  '  binaries        - Build all binaries'
 	@echo  '  manpages        - Build manual pages'
 	@echo
-	@echo  "  Use 'make help-targets' to see additional targets."
+	@echo  '  help-variables  - Show Makefile variables'
+	@echo  '  help-targets    - Show additional Makefile targets'
+
+.PHONY: help-varaibles
+help-variables:
+	@echo  '# Variables that can be overridden.'
+	@echo
+	@echo  '- PREFIX       (directory)  : Installation prefix (default: /usr/local)'
+	@echo  '- KEEP_SYMBOLS (1 or 0)     : Whether to keep symbols (default: 0)'
 
 .PHONY: help-targets
 help-targets:

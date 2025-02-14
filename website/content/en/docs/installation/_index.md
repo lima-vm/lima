@@ -60,6 +60,8 @@ make install
 
 The installation directory (`$PREFIX`) defaults to `/usr/local`.
 
+Run `make help-variables` to show other Makefile variables.
+
 #### Advanced configuration with Kconfig tools
 (This step is not needed for most users)
 
