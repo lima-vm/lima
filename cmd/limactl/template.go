@@ -179,6 +179,10 @@ func templateValidateAction(cmd *cobra.Command, args []string) error {
 		if tmpl.Name == "" {
 			return fmt.Errorf("can't determine instance name from template locator %q", arg)
 		}
+		// Embed default base.yaml only when fill is true.
+		if err := tmpl.Embed(cmd.Context(), true, fill); err != nil {
+			return err
+		}
 		// Load() will merge the template with override.yaml and default.yaml via FillDefaults().
 		// FillDefaults() needs the potential instance directory to validate host templates using {{.Dir}}.
 		filePath := filepath.Join(limaDir, tmpl.Name+".yaml")
