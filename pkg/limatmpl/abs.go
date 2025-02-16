@@ -26,7 +26,7 @@ func (tmpl *Template) useAbsLocators() error {
 		return err
 	}
 	for i, baseLocator := range tmpl.Config.Base {
-		locator, err := absPath(baseLocator, basePath)
+		locator, err := absPath(baseLocator.URL, basePath)
 		if err != nil {
 			return err
 		}
@@ -40,7 +40,7 @@ func (tmpl *Template) useAbsLocators() error {
 	}
 	for i, p := range tmpl.Config.Probes {
 		if p.File != nil {
-			locator, err := absPath(*p.File, basePath)
+			locator, err := absPath(p.File.URL, basePath)
 			if err != nil {
 				return err
 			}
@@ -49,7 +49,7 @@ func (tmpl *Template) useAbsLocators() error {
 	}
 	for i, p := range tmpl.Config.Provision {
 		if p.File != nil {
-			locator, err := absPath(*p.File, basePath)
+			locator, err := absPath(p.File.URL, basePath)
 			if err != nil {
 				return err
 			}
@@ -63,7 +63,7 @@ func (tmpl *Template) useAbsLocators() error {
 // On Windows filepath.Abs() only returns a "rooted" name, but does not add the volume name.
 // withVolume also normalizes all path separators to the platform native one.
 func withVolume(path string) (string, error) {
-	if runtime.GOOS == "windows" && len(filepath.VolumeName(path)) == 0 {
+	if runtime.GOOS == "windows" && filepath.VolumeName(path) == "" {
 		root, err := filepath.Abs("/")
 		if err != nil {
 			return "", err

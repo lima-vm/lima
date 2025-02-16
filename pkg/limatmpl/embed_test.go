@@ -3,7 +3,6 @@ package limatmpl_test
 import (
 	"context"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"os"
 	"reflect"
 	"strings"
@@ -11,6 +10,7 @@ import (
 
 	"github.com/lima-vm/lima/pkg/limatmpl"
 	"github.com/lima-vm/lima/pkg/limayaml"
+	"github.com/sirupsen/logrus"
 	"gotest.tools/v3/assert"
 	"gotest.tools/v3/assert/cmp"
 )
@@ -179,13 +179,16 @@ mounts:
 	},
 	{
 		"template:// URLs are not embedded when embedAll is false",
+		// also tests file.url format
 		``,
 		`
 base: template://default
 provision:
-- file: template://provision.sh
+- file:
+    url: template://provision.sh
 probes:
-- file: template://probe.sh
+- file:
+    url: template://probe.sh
 `,
 		`
 base: template://default
@@ -228,7 +231,7 @@ base: baseX.yaml`,
 		"Bases are embedded depth-first",
 		`#`,
 		`
-base: [base1.yaml, base2.yaml]
+base: [base1.yaml, {url: base2.yaml}] # also test file.url format
 additionalDisks: [disk0]
 ---
 base: base3.yaml

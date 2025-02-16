@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/coreos/go-semver/semver"
+	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/lima-vm/lima/pkg/version/versionutil"
@@ -19,6 +20,7 @@ import (
 var warnBaseIsExperimental = sync.OnceFunc(func() {
 	logrus.Warn("`base` is experimental")
 })
+
 var warnFileIsExperimental = sync.OnceFunc(func() {
 	logrus.Warn("`provision[*].file` and `probes[*].file` are experimental")
 })
@@ -69,23 +71,23 @@ func (tmpl *Template) embedAllBases(ctx context.Context, embedAll, defaultBase b
 			break
 		}
 		baseLocator := tmpl.Config.Base[0]
-		isTemplate, _ := SeemsTemplateURL(baseLocator)
+		isTemplate, _ := SeemsTemplateURL(baseLocator.URL)
 		if isTemplate && !embedAll {
 			// Once we skip a template:// URL we can no longer embed any other base template
 			for i := 1; i < len(tmpl.Config.Base); i++ {
-				isTemplate, _ = SeemsTemplateURL(tmpl.Config.Base[i])
+				isTemplate, _ = SeemsTemplateURL(tmpl.Config.Base[i].URL)
 				if !isTemplate {
-					return fmt.Errorf("cannot embed template %q after not embedding %q", tmpl.Config.Base[i], baseLocator)
+					return fmt.Errorf("cannot embed template %q after not embedding %q", tmpl.Config.Base[i].URL, baseLocator.URL)
 				}
 			}
 			break
 			// TODO should we track embedding of template:// URLs so we can warn if we embed a non-template:// URL afterwards?
 		}
 
-		if seen[baseLocator] {
-			return fmt.Errorf("base template loop detected: template %q already included", baseLocator)
+		if seen[baseLocator.URL] {
+			return fmt.Errorf("base template loop detected: template %q already included", baseLocator.URL)
 		}
-		seen[baseLocator] = true
+		seen[baseLocator.URL] = true
 
 		// remove base[0] from template before merging
 		if err := tmpl.embedBase(ctx, baseLocator, embedAll, seen); err != nil {
@@ -101,13 +103,13 @@ func (tmpl *Template) embedAllBases(ctx context.Context, embedAll, defaultBase b
 	return nil
 }
 
-func (tmpl *Template) embedBase(ctx context.Context, baseLocator string, embedAll bool, seen map[string]bool) error {
+func (tmpl *Template) embedBase(ctx context.Context, baseLocator limayaml.LocatorWithDigest, embedAll bool, seen map[string]bool) error {
 	warnBaseIsExperimental()
-	logrus.Debugf("Embedding base %q in template %q", baseLocator, tmpl.Locator)
+	logrus.Debugf("Embedding base %q in template %q", baseLocator.URL, tmpl.Locator)
 	if err := tmpl.Unmarshal(); err != nil {
 		return err
 	}
-	base, err := Read(ctx, "", baseLocator)
+	base, err := Read(ctx, "", baseLocator.URL)
 	if err != nil {
 		return err
 	}
@@ -308,7 +310,7 @@ func (tmpl *Template) deleteListEntry(list string, idx int) {
 	tmpl.expr.WriteString(fmt.Sprintf("| del($a.%s[%d], $b.%s[%d])\n", list, idx, list, idx))
 }
 
-// upgradeListEntryStringToMapField turns list[idx] from a string to a {field: list[idx]} map
+// upgradeListEntryStringToMapField turns list[idx] from a string to a {field: list[idx]} map.
 func (tmpl *Template) upgradeListEntryStringToMapField(list string, idx int, field string) {
 	// TODO the head_comment on the string becomes duplicated as a foot_comment on the new field; could be a yq bug?
 	tmpl.expr.WriteString(fmt.Sprintf("| ($a.%s[%d] | select(type == \"!!str\")) |= {\"%s\": .}\n", list, idx, field))
@@ -557,9 +559,9 @@ func (tmpl *Template) embedAllScripts(ctx context.Context, embedAll bool) error 
 		// Don't overwrite existing script. This should throw an error during validation.
 		if p.File != nil && p.Script == "" {
 			warnFileIsExperimental()
-			isTemplate, _ := SeemsTemplateURL(*p.File)
+			isTemplate, _ := SeemsTemplateURL(p.File.URL)
 			if embedAll || !isTemplate {
-				scriptTmpl, err := Read(ctx, "", *p.File)
+				scriptTmpl, err := Read(ctx, "", p.File.URL)
 				if err != nil {
 					return err
 				}
@@ -570,9 +572,9 @@ func (tmpl *Template) embedAllScripts(ctx context.Context, embedAll bool) error 
 	for i, p := range tmpl.Config.Provision {
 		if p.File != nil && p.Script == "" {
 			warnFileIsExperimental()
-			isTemplate, _ := SeemsTemplateURL(*p.File)
+			isTemplate, _ := SeemsTemplateURL(p.File.URL)
 			if embedAll || !isTemplate {
-				scriptTmpl, err := Read(ctx, "", *p.File)
+				scriptTmpl, err := Read(ctx, "", p.File.URL)
 				if err != nil {
 					return err
 				}
