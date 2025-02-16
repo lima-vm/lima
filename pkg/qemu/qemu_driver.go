@@ -72,6 +72,7 @@ func (l *LimaQemuDriver) Start(ctx context.Context) (chan error, error) {
 		InstanceDir:  l.Instance.Dir,
 		LimaYAML:     l.Instance.Config,
 		SSHLocalPort: l.SSHLocalPort,
+		SSHAddress:   l.Instance.SSHAddress,
 	}
 	qExe, qArgs, err := Cmdline(ctx, qCfg)
 	if err != nil {
