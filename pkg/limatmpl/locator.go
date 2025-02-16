@@ -75,7 +75,7 @@ func Read(ctx context.Context, name, locator string) (*Template, error) {
 				return nil, err
 			}
 		}
-		logrus.Debugf("interpreting argument %q as a file url for instance %q", locator, tmpl.Name)
+		logrus.Debugf("interpreting argument %q as a file URL for instance %q", locator, tmpl.Name)
 		filePath := strings.TrimPrefix(locator, "file://")
 		if !filepath.IsAbs(filePath) {
 			return nil, fmt.Errorf("file URL %q is not an absolute path", locator)

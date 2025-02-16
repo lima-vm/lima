@@ -225,7 +225,7 @@ func TestAbsPath(t *testing.T) {
 			assert.ErrorContains(t, err, "volume")
 		})
 	}
-	
+
 	t.Run("", func(t *testing.T) {
 		actual, err := absPath("foo", "template://")
 		assert.NilError(t, err)

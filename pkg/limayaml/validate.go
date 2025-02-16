@@ -209,8 +209,8 @@ func Validate(y *LimaYAML, warn bool) error {
 	// y.Firmware.LegacyBIOS is ignored for aarch64, but not a fatal error.
 
 	for i, p := range y.Provision {
-		if p.File != nil && *p.File != "" {
-			return fmt.Errorf("field `provision[%d].file` must be empty during validation (script should already be embedded)", i)
+		if p.File != nil && p.File.URL != "" {
+			return fmt.Errorf("field `provision[%d].file.url` must be empty during validation (script should already be embedded)", i)
 		}
 		switch p.Mode {
 		case ProvisionModeSystem, ProvisionModeUser, ProvisionModeBoot:
@@ -252,8 +252,8 @@ func Validate(y *LimaYAML, warn bool) error {
 		}
 	}
 	for i, p := range y.Probes {
-		if p.File != nil && *p.File != "" {
-			return fmt.Errorf("field `probes[%d].file` must be empty during validation (script should already be embedded)", i)
+		if p.File != nil && p.File.URL != "" {
+			return fmt.Errorf("field `probes[%d].file.url` must be empty during validation (script should already be embedded)", i)
 		}
 		if !strings.HasPrefix(p.Script, "#!") {
 			return fmt.Errorf("field `probe[%d].script` must start with a '#!' line", i)

@@ -54,7 +54,12 @@ type LimaYAML struct {
 	User                 User           `yaml:"user,omitempty" json:"user,omitempty"`
 }
 
-type BaseTemplates []string
+type BaseTemplates []LocatorWithDigest
+
+type LocatorWithDigest struct {
+	URL    string  `yaml:"url" json:"url"`
+	Digest *string `yaml:"digest,omitempty" json:"digest,omitempty" jsonschema:"nullable"` // TODO currently unused
+}
 
 type (
 	OS        = string
@@ -219,11 +224,11 @@ const (
 )
 
 type Provision struct {
-	Mode                            ProvisionMode `yaml:"mode,omitempty" json:"mode,omitempty" jsonschema:"default=system"`
-	SkipDefaultDependencyResolution *bool         `yaml:"skipDefaultDependencyResolution,omitempty" json:"skipDefaultDependencyResolution,omitempty"`
-	Script                          string        `yaml:"script" json:"script"`
-	File                            *string       `yaml:"file,omitempty" json:"file,omitempty" jsonschema:"nullable"`
-	Playbook                        string        `yaml:"playbook,omitempty" json:"playbook,omitempty"`
+	Mode                            ProvisionMode      `yaml:"mode,omitempty" json:"mode,omitempty" jsonschema:"default=system"`
+	SkipDefaultDependencyResolution *bool              `yaml:"skipDefaultDependencyResolution,omitempty" json:"skipDefaultDependencyResolution,omitempty"`
+	Script                          string             `yaml:"script" json:"script"`
+	File                            *LocatorWithDigest `yaml:"file,omitempty" json:"file,omitempty" jsonschema:"nullable"`
+	Playbook                        string             `yaml:"playbook,omitempty" json:"playbook,omitempty"`
 }
 
 type Containerd struct {
@@ -239,11 +244,11 @@ const (
 )
 
 type Probe struct {
-	Mode        ProbeMode `yaml:"mode,omitempty" json:"mode,omitempty" jsonschema:"default=readiness"`
-	Description string    `yaml:"description,omitempty" json:"description,omitempty"`
-	Script      string    `yaml:"script,omitempty" json:"script,omitempty"`
-	File        *string   `yaml:"file,omitempty" json:"file,omitempty" jsonschema:"nullable"`
-	Hint        string    `yaml:"hint,omitempty" json:"hint,omitempty"`
+	Mode        ProbeMode          `yaml:"mode,omitempty" json:"mode,omitempty" jsonschema:"default=readiness"`
+	Description string             `yaml:"description,omitempty" json:"description,omitempty"`
+	Script      string             `yaml:"script,omitempty" json:"script,omitempty"`
+	File        *LocatorWithDigest `yaml:"file,omitempty" json:"file,omitempty" jsonschema:"nullable"`
+	Hint        string             `yaml:"hint,omitempty" json:"hint,omitempty"`
 }
 
 type Proto = string

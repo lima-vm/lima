@@ -38,11 +38,21 @@ func unmarshalDisk(dst *Disk, b []byte) error {
 	return yaml.Unmarshal(b, dst)
 }
 
-// unmarshalBaseTemplates unmarshalls `base` which is either a string or a list of strings.
+// unmarshalBaseTemplates unmarshalls `base` which is either a string or a list of Locators.
 func unmarshalBaseTemplates(dst *BaseTemplates, b []byte) error {
 	var s string
 	if err := yaml.Unmarshal(b, &s); err == nil {
-		*dst = BaseTemplates{s}
+		*dst = BaseTemplates{LocatorWithDigest{URL: s}}
+		return nil
+	}
+	return yaml.UnmarshalWithOptions(b, dst, yaml.CustomUnmarshaler[LocatorWithDigest](unmarshalLocatorWithDigest))
+}
+
+// unmarshalLocator unmarshalls a locator which is either a string or a Locator struct.
+func unmarshalLocatorWithDigest(dst *LocatorWithDigest, b []byte) error {
+	var s string
+	if err := yaml.Unmarshal(b, &s); err == nil {
+		*dst = LocatorWithDigest{URL: s}
 		return nil
 	}
 	return yaml.Unmarshal(b, dst)
@@ -52,6 +62,7 @@ func Unmarshal(data []byte, y *LimaYAML, comment string) error {
 	opts := []yaml.DecodeOption{
 		yaml.CustomUnmarshaler[BaseTemplates](unmarshalBaseTemplates),
 		yaml.CustomUnmarshaler[Disk](unmarshalDisk),
+		yaml.CustomUnmarshaler[LocatorWithDigest](unmarshalLocatorWithDigest),
 	}
 	if err := yaml.UnmarshalWithOptions(data, y, opts...); err != nil {
 		return fmt.Errorf("failed to unmarshal YAML (%s): %w", comment, err)

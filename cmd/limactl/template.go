@@ -50,8 +50,9 @@ var templateCopyExample = `  Template locators are local files, file://, https:/
   # Copy default template to STDOUT
   limactl template copy template://default -
 
-  # Copy template from web location to local file
-  limactl template copy https://example.com/lima.yaml mighty-machine.yaml
+  # Copy template from web location to local file and embed all external references
+  # (this does not embed template:// references)
+  limactl template copy --embed https://example.com/lima.yaml mighty-machine.yaml
 `
 
 func newTemplateCopyCommand() *cobra.Command {
