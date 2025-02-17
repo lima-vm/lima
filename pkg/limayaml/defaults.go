@@ -835,6 +835,17 @@ func FillDefault(y, d, o *LimaYAML, filePath string, warn bool) {
 	caCerts := unique(append(append(d.CACertificates.Certs, y.CACertificates.Certs...), o.CACertificates.Certs...))
 	y.CACertificates.Certs = caCerts
 
+	if y.VMOpts.QEMU.VirtioGA == nil {
+		y.VMOpts.QEMU.VirtioGA = d.VMOpts.QEMU.VirtioGA
+	}
+	if o.VMOpts.QEMU.VirtioGA != nil {
+		y.VMOpts.QEMU.VirtioGA = o.VMOpts.QEMU.VirtioGA
+	}
+	if y.VMOpts.QEMU.VirtioGA == nil {
+		// virtserialport doesn't seem to work reliably, so, default to false: https://github.com/lima-vm/lima/issues/2064
+		y.VMOpts.QEMU.VirtioGA = ptr.Of(false)
+	}
+
 	if runtime.GOOS == "darwin" && IsNativeArch(AARCH64) {
 		if y.Rosetta.Enabled == nil {
 			y.Rosetta.Enabled = d.Rosetta.Enabled
