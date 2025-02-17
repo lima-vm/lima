@@ -134,8 +134,9 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 		}
 		vSockPort = port
 	} else if *inst.Config.VMType == limayaml.QEMU {
-		// virtserialport doesn't seem to work reliably: https://github.com/lima-vm/lima/issues/2064
-		virtioPort = "" // filenames.VirtioPort
+		if *inst.Config.VMOpts.QEMU.VirtioGA {
+			virtioPort = filenames.VirtioPort
+		}
 	}
 
 	if err := cidata.GenerateCloudConfig(inst.Dir, instName, inst.Config); err != nil {
