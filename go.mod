@@ -82,7 +82,7 @@ require (
 	github.com/goccy/go-json v0.10.4 // indirect; indirect // gomodjail:confined
 	github.com/gogo/protobuf v1.3.2 // indirect; indirect // gomodjail:confined
 	github.com/golang/protobuf v1.5.4 // indirect; indirect // gomodjail:confined
-	github.com/google/btree v1.1.2 // indirect; indirect // gomodjail:confined
+	github.com/google/btree v1.1.3 // indirect; indirect // gomodjail:confined
 	github.com/google/gnostic-models v0.6.8 // indirect; indirect // gomodjail:confined
 	github.com/google/gofuzz v1.2.0 // indirect; indirect // gomodjail:confined
 	github.com/google/gopacket v1.1.19 // indirect; indirect // gomodjail:confined
