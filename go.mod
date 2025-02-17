@@ -39,7 +39,7 @@ require (
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1 // gomodjail:confined
 	github.com/sethvargo/go-password v0.3.1 // gomodjail:confined
 	github.com/sirupsen/logrus v1.9.4-0.20230606125235-dd1b4c2e81af // gomodjail:confined
-	github.com/spf13/cobra v1.8.1
+	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.6 // gomodjail:confined
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // gomodjail:confined
 	golang.org/x/net v0.35.0 // gomodjail:confined
