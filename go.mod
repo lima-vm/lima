@@ -64,7 +64,7 @@ require (
 	github.com/bmatcuk/doublestar/v4 v4.7.1 // indirect; indirect // gomodjail:confined
 	github.com/braydonk/yaml v0.9.0 // indirect; indirect // gomodjail:confined
 	github.com/buger/jsonparser v1.1.1 // indirect; indirect // gomodjail:confined
-	github.com/containerd/errdefs v0.3.0 // indirect; indirect // gomodjail:confined
+	github.com/containerd/errdefs v1.0.0 // indirect; indirect // gomodjail:confined
 	github.com/containerd/log v0.1.0 // indirect; indirect // gomodjail:confined
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect; indirect // gomodjail:confined
 	github.com/digitalocean/go-libvirt v0.0.0-20220804181439-8648fbde413e // indirect; indirect // gomodjail:confined
