@@ -106,7 +106,7 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect; indirect // gomodjail:confined
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect; indirect // gomodjail:confined
 	github.com/pelletier/go-toml/v2 v2.2.3 // indirect; indirect // gomodjail:confined
-	github.com/pierrec/lz4/v4 v4.1.17 // indirect; indirect // gomodjail:confined
+	github.com/pierrec/lz4/v4 v4.1.22 // indirect; indirect // gomodjail:confined
 	github.com/pkg/errors v0.9.1 // indirect; indirect // gomodjail:confined
 	github.com/pkg/sftp v1.13.7 // indirect; indirect // gomodjail:confined
 	github.com/rivo/uniseg v0.2.0 // indirect; indirect // gomodjail:confined
