@@ -71,7 +71,7 @@ require (
 	github.com/dimchansky/utfbom v1.1.1 // indirect; indirect // gomodjail:confined
 	github.com/djherbis/times v1.6.0 // indirect; indirect // gomodjail:confined
 	github.com/elliotchance/orderedmap v1.7.1 // indirect; indirect // gomodjail:confined
-	github.com/emicklei/go-restful/v3 v3.11.0 // indirect; indirect // gomodjail:confined
+	github.com/emicklei/go-restful/v3 v3.12.1 // indirect; indirect // gomodjail:confined
 	github.com/fatih/color v1.18.0 // indirect; indirect // gomodjail:confined
 	github.com/fsnotify/fsnotify v1.8.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect; indirect // gomodjail:confined
