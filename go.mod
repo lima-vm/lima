@@ -96,7 +96,7 @@ require (
 	github.com/kr/fs v0.1.0 // indirect; indirect // gomodjail:confined
 	github.com/linuxkit/virtsock v0.0.0-20220523201153-1a23e78aa7a2 // indirect; indirect // gomodjail:confined
 	github.com/magiconair/properties v1.8.9 // indirect; indirect // gomodjail:confined
-	github.com/mailru/easyjson v0.7.7 // indirect; indirect // gomodjail:confined
+	github.com/mailru/easyjson v0.9.0 // indirect; indirect // gomodjail:confined
 	github.com/mattn/go-colorable v0.1.14 // indirect; indirect // gomodjail:confined
 	github.com/mattn/go-runewidth v0.0.16 // indirect; indirect // gomodjail:confined
 	github.com/mdlayher/socket v0.5.1 // indirect; indirect // gomodjail:confined
