@@ -1,6 +1,7 @@
 package limatmpl
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -130,10 +131,12 @@ func (tmpl *Template) embedBase(ctx context.Context, baseLocator limayaml.Locato
 
 // evalExprImpl evaluates tmpl.expr against one or more documents.
 // Called by evalExpr() and embedAllScripts() for single documents and merge() for 2 documents.
-func (tmpl *Template) evalExprImpl(prefix string, bytes []byte) error {
+func (tmpl *Template) evalExprImpl(prefix string, b []byte) error {
 	var err error
 	expr := prefix + tmpl.expr.String() + "| $a"
-	tmpl.Bytes, err = yqutil.EvaluateExpression(expr, bytes)
+	tmpl.Bytes, err = yqutil.EvaluateExpression(expr, b)
+	// Make sure the YAML ends with just a single newline
+	tmpl.Bytes = append(bytes.TrimRight(tmpl.Bytes, "\n"), '\n')
 	tmpl.Config = nil
 	tmpl.expr.Reset()
 	return tmpl.ClearOnError(err)

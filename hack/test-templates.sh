@@ -17,7 +17,8 @@ if [ "$#" -ne 1 ]; then
 	exit 1
 fi
 
-FILE="$1"
+# Resolve any ../ fragments in the filename because they are invalid in relative template locators
+FILE="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
 NAME="$(basename -s .yaml "$FILE")"
 OS_HOST="$(uname -o)"
 
@@ -134,6 +135,9 @@ if [[ -n ${CHECKS["port-forwards"]} ]]; then
 	INFO "Validating \"$FILE_HOST\""
 	limactl validate "$FILE_HOST"
 fi
+
+INFO "Make sure template embedding copies \"$FILE\" exactly"
+diff -u <(echo -n "base: $FILE" | limactl tmpl copy --embed - -) "$FILE"
 
 function diagnose() {
 	NAME="$1"
