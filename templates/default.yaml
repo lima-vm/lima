@@ -304,6 +304,10 @@ vmOpts:
     # Will be ignored if the vmType is not "qemu"
     # 🟢 Builtin default: not set
     minimumVersion: null
+    # Enable virtio port for GA. If disabled then will forward GA via SSH.
+    # Will be ignored if the vmType is not "qemu"
+    # 🟢 Builtin default: false
+    virtioGA : null
 
 # OS: "Linux".
 # 🟢 Builtin default: "Linux"
