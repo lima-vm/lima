@@ -4,7 +4,8 @@ weight: 33
 
 ---
 
-## VMNet networks
+| ⚡ Requirement    | macOS |
+|-------------------|-------|
 
 VMNet assigns a "real" IP address that is reachable from the host.
 
@@ -12,12 +13,12 @@ The configuration steps are different for each network type:
 - [vzNAT](#vzNAT)
 - [socket_vmnet](#socket_vmnet)
 
-### vzNAT
+## vzNAT
 
 | ⚡ Requirement | Lima >= 0.14, macOS >= 13.0 |
 |-------------------|-----------------------------|
 
-For [VZ](../vmtype/#vz) instances, the "vzNAT" network can be configured as follows:
+For [VZ]({{< ref "/docs/config/vmtype#vz" >}}) instances, the "vzNAT" network can be configured as follows:
 {{< tabpane text=true >}}
 {{% tab header="CLI" %}}
 ```bash
@@ -36,8 +37,8 @@ The range of the IP address is not specifiable.
 
 The "vzNAT" network does not need the `socket_vmnet` binary and the `sudoers` file.
 
-### socket_vmnet
-#### Managed (192.168.105.0/24)
+## socket_vmnet
+### Managed (192.168.105.0/24)
 
 [`socket_vmnet`](https://github.com/lima-vm/socket_vmnet) can be used for adding another guest IP that is accessible from the host and other guests,
 without depending on vz.
@@ -168,7 +169,7 @@ sudo /usr/libexec/ApplicationFirewall/socketfilterfw --add /usr/libexec/bootpd
 sudo /usr/libexec/ApplicationFirewall/socketfilterfw --unblock /usr/libexec/bootpd
 ```
 
-#### Unmanaged
+### Unmanaged
 Lima can also connect to "unmanaged" networks addressed by "socket". This
 means that the daemons will not be controlled by Lima, but must be started
 before the instance.  The interface type (host, shared, or bridged) is
