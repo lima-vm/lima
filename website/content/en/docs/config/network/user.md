@@ -4,23 +4,24 @@ weight: 30
 
 ---
 
-## Default user-mode network (192.168.5.0/24)
-
 By default Lima only enables the user-mode networking aka "slirp".
 
-### Guest IP (192.168.5.15)
+The subnet is hard-coded to `192.168.5.0/24`.
+Use [`user-v2`]]({{< ref "/docs/config/network/user-v2" >}}) network to customize the subnet.
+
+## Guest IP (192.168.5.15)
 
 The guest IP address is set to `192.168.5.15`.
 
 This IP address is not accessible from the host by design.
 
-Use VMNet (see below) to allow accessing the guest IP from the host and other guests.
+Use [VMNet]]({{< ref "/docs/config/network/vmnet" >}}) to allow accessing the guest IP from the host and other guests.
 
-### Host IP (192.168.5.2)
+## Host IP (192.168.5.2)
 
 The loopback addresses of the host is `192.168.5.2` and is accessible from the guest as `host.lima.internal`.
 
-### DNS (192.168.5.3)
+## DNS (192.168.5.3)
 
 If `hostResolver.enabled` in `lima.yaml` is true, then the hostagent is going to run a DNS server over tcp and udp - each on a separate randomly selected free port. This server does a local lookup using the native host resolver, so it will deal correctly with VPN configurations and split-DNS setups, as well as mDNS, local `/etc/hosts` etc. For this the hostagent has to be compiled with `CGO_ENABLED=1` as default Go resolver is [broken](https://github.com/golang/go/issues/12524).
 

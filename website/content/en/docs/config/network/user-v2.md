@@ -1,9 +1,7 @@
 ---
-title: Lima user-v2 network
+title: user-v2 network
 weight: 32
 ---
-
-## Lima user-v2 network
 
 | ⚡ Requirement | Lima >= 0.16.0 |
 |-------------------|----------------|
@@ -44,4 +42,4 @@ An instance's IP address is resolvable from another instance as `lima-<NAME>.int
 
 _Note_
 
-- Enabling this network will disable the [default user-mode network](#user-mode-network--1921685024-)
+- Enabling this network will disable the [default user-mode network]({{< ref "/docs/config/network/user" >}})
