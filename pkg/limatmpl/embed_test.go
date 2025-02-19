@@ -359,6 +359,18 @@ provision:
 		"#! my script",
 		`provision: [{script: "#! my script"}]`,
 	},
+	{
+		"ERROR base digest is not yet implemented (1)",
+		"",
+		"base: {url: base.yaml, digest: deafbad}",
+		"not yet implemented",
+	},
+	{
+		"ERROR base digest is not yet implemented (2)",
+		"",
+		"base: [{url: base.yaml, digest: deafbad}]",
+		"not yet implemented",
+	},
 }
 
 func TestEmbed(t *testing.T) {
