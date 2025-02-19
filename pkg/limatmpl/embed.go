@@ -72,6 +72,9 @@ func (tmpl *Template) embedAllBases(ctx context.Context, embedAll, defaultBase b
 			break
 		}
 		baseLocator := tmpl.Config.Base[0]
+		if baseLocator.Digest != nil {
+			return fmt.Errorf("base %q in %q has specified a digest; digest support is not yet implemented", baseLocator.URL, tmpl.Locator)
+		}
 		isTemplate, _ := SeemsTemplateURL(baseLocator.URL)
 		if isTemplate && !embedAll {
 			// Once we skip a template:// URL we can no longer embed any other base template

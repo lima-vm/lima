@@ -32,8 +32,21 @@ var useAbsLocatorsTestCases = []useAbsLocatorsTestCase{
 	{
 		"Flow style array of one base template",
 		"template://foo",
-		`base: [bar.yaml]`,
-		`base: ['template://bar.yaml']`,
+		`base: {url: bar.yaml, digest: deadbeef}`,
+		// not sure why the quotes around the URL were added; maybe because we don't copy the style from the source
+		`base: {url: 'template://bar.yaml', digest: deadbeef}`,
+	},
+	{
+		"Flow style array of sequence of two base URLs",
+		"template://foo",
+		`base: [bar.yaml, baz.yaml]`,
+		`base: ['template://bar.yaml', 'template://baz.yaml']`,
+	},
+	{
+		"Flow style array of sequence of two base locator objects",
+		"template://foo",
+		`base: [{url: bar.yaml, digest: deadbeef}, {url: baz.yaml, digest: decafbad}]`,
+		`base: [{url: 'template://bar.yaml', digest: deadbeef}, {url: 'template://baz.yaml', digest: decafbad}]`,
 	},
 	{
 		"Block style array of one base template",
@@ -70,16 +83,30 @@ base:
 		`
 provision:
 - mode: user
-  file: script.sh
+  file: userscript.sh
+- mode: system
+  file:
+    url: systemscript.sh
+    digest: abc123
 probes:
 - file: probe.sh
+- file:
+    url: probe.sh
+    digest: digest
 `,
 		`
 provision:
 - mode: user
-  file: template://experimental/script.sh
+  file: template://experimental/userscript.sh
+- mode: system
+  file:
+    url: template://experimental/systemscript.sh
+    digest: abc123
 probes:
 - file: template://experimental/probe.sh
+- file:
+    url: template://experimental/probe.sh
+    digest: digest
 `,
 	},
 }
@@ -203,9 +230,14 @@ func TestAbsPath(t *testing.T) {
 		assert.ErrorContains(t, err, "'../'")
 	})
 
+	t.Run("locator must not be empty", func(t *testing.T) {
+		_, err = absPath("", "foo")
+		assert.ErrorContains(t, err, "locator is empty")
+	})
+
 	t.Run("basePath must not be empty", func(t *testing.T) {
 		_, err = absPath("foo", "")
-		assert.ErrorContains(t, err, "empty")
+		assert.ErrorContains(t, err, "basePath is empty")
 	})
 
 	t.Run("", func(t *testing.T) {
