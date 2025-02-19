@@ -26,34 +26,39 @@ func (tmpl *Template) useAbsLocators() error {
 		return err
 	}
 	for i, baseLocator := range tmpl.Config.Base {
-		locator, err := absPath(baseLocator.URL, basePath)
+		absLocator, err := absPath(baseLocator.URL, basePath)
 		if err != nil {
 			return err
 		}
 		if i == 0 {
-			// base can either be a single string, or a list of strings
-			tmpl.expr.WriteString(fmt.Sprintf("| ($a.base | select(type == \"!!str\")) |= %q\n", locator))
-			tmpl.expr.WriteString(fmt.Sprintf("| ($a.base | select(type == \"!!seq\") | .[0]) |= %q\n", locator))
+			// base can be either a single string (URL), or a single locator object, or a list whose first element can be either a string or an object
+			tmpl.expr.WriteString(fmt.Sprintf("| ($a.base | select(type == \"!!str\")) |= %q\n", absLocator))
+			tmpl.expr.WriteString(fmt.Sprintf("| ($a.base | select(type == \"!!map\") | .url) |= %q\n", absLocator))
+			tmpl.expr.WriteString(fmt.Sprintf("| ($a.base | select(type == \"!!seq\" and (.[0] | type) == \"!!str\") | .[0]) |= %q\n", absLocator))
+			tmpl.expr.WriteString(fmt.Sprintf("| ($a.base | select(type == \"!!seq\" and (.[0] | type) == \"!!map\") | .[0].url) |= %q\n", absLocator))
 		} else {
-			tmpl.expr.WriteString(fmt.Sprintf("| $a.base[%d] = %q\n", i, locator))
+			tmpl.expr.WriteString(fmt.Sprintf("| ($a.base[%d] | select(type == \"!!str\")) |= %q\n", i, absLocator))
+			tmpl.expr.WriteString(fmt.Sprintf("| ($a.base[%d] | select(type == \"!!map\") | .url) |= %q\n", i, absLocator))
 		}
 	}
 	for i, p := range tmpl.Config.Probes {
 		if p.File != nil {
-			locator, err := absPath(p.File.URL, basePath)
+			absLocator, err := absPath(p.File.URL, basePath)
 			if err != nil {
 				return err
 			}
-			tmpl.expr.WriteString(fmt.Sprintf("| $a.probes[%d].file = %q\n", i, locator))
+			tmpl.expr.WriteString(fmt.Sprintf("| ($a.probes[%d].file | select(type == \"!!str\")) = %q\n", i, absLocator))
+			tmpl.expr.WriteString(fmt.Sprintf("| ($a.probes[%d].file | select(type == \"!!map\") | .url) = %q\n", i, absLocator))
 		}
 	}
 	for i, p := range tmpl.Config.Provision {
 		if p.File != nil {
-			locator, err := absPath(p.File.URL, basePath)
+			absLocator, err := absPath(p.File.URL, basePath)
 			if err != nil {
 				return err
 			}
-			tmpl.expr.WriteString(fmt.Sprintf("| $a.provision[%d].file = %q\n", i, locator))
+			tmpl.expr.WriteString(fmt.Sprintf("| ($a.provision[%d].file | select(type == \"!!str\")) = %q\n", i, absLocator))
+			tmpl.expr.WriteString(fmt.Sprintf("| ($a.provision[%d].file | select(type == \"!!map\") | .url) = %q\n", i, absLocator))
 		}
 	}
 	return tmpl.evalExpr()
@@ -90,6 +95,9 @@ func basePath(locator string) (string, error) {
 
 // absPath either returns the locator directly, or combines it with the basePath if the locator is a relative path.
 func absPath(locator, basePath string) (string, error) {
+	if locator == "" {
+		return "", errors.New("locator is empty")
+	}
 	u, err := url.Parse(locator)
 	if err == nil && len(u.Scheme) > 1 {
 		return locator, nil

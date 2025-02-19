@@ -49,6 +49,13 @@ func TestValidateProbes(t *testing.T) {
 
 	err = Validate(y, false)
 	assert.Error(t, err, "field `probe[0].script` must start with a '#!' line")
+
+	invalidProbe = `probes: [{file: {digest: decafbad}}]`
+	y, err = Load([]byte(invalidProbe+"\n"+images), "lima.yaml")
+	assert.NilError(t, err)
+
+	err = Validate(y, false)
+	assert.Error(t, err, "field `probe[0].file.digest` support is not yet implemented")
 }
 
 func TestValidateAdditionalDisks(t *testing.T) {

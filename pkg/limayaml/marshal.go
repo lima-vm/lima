@@ -45,6 +45,11 @@ func unmarshalBaseTemplates(dst *BaseTemplates, b []byte) error {
 		*dst = BaseTemplates{LocatorWithDigest{URL: s}}
 		return nil
 	}
+	var locator LocatorWithDigest
+	if err := yaml.Unmarshal(b, &locator); err == nil {
+		*dst = BaseTemplates{locator}
+		return nil
+	}
 	return yaml.UnmarshalWithOptions(b, dst, yaml.CustomUnmarshaler[LocatorWithDigest](unmarshalLocatorWithDigest))
 }
 
