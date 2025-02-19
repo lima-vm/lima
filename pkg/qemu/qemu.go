@@ -41,6 +41,7 @@ type Config struct {
 	InstanceDir  string
 	LimaYAML     *limayaml.LimaYAML
 	SSHLocalPort int
+	SSHAddress   string
 }
 
 // MinimumQemuVersion is the minimum supported QEMU version.
@@ -716,8 +717,8 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	// Configure default usernetwork with limayaml.MACAddress(driver.Instance.Dir) for eth0 interface
 	firstUsernetIndex := limayaml.FirstUsernetIndex(y)
 	if firstUsernetIndex == -1 {
-		args = append(args, "-netdev", fmt.Sprintf("user,id=net0,net=%s,dhcpstart=%s,hostfwd=tcp:127.0.0.1:%d-:22",
-			networks.SlirpNetwork, networks.SlirpIPAddress, cfg.SSHLocalPort))
+		args = append(args, "-netdev", fmt.Sprintf("user,id=net0,net=%s,dhcpstart=%s,hostfwd=tcp:%s:%d-:22",
+			networks.SlirpNetwork, networks.SlirpIPAddress, cfg.SSHAddress, cfg.SSHLocalPort))
 	} else {
 		qemuSock, err := usernet.Sock(y.Networks[firstUsernetIndex].Lima, usernet.QEMUSock)
 		if err != nil {
