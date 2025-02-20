@@ -166,7 +166,9 @@ func Validate(y *LimaYAML, warn bool) error {
 			return fmt.Errorf("field `mounts[%d].mountPoint` must not be a system path such as /etc or /usr", i)
 		// home directory defined in "cidata.iso:/user-data"
 		case *y.User.Home:
-			return fmt.Errorf("field `mounts[%d].mountPoint` is the reserved internal home directory %q", i, *y.User.Home)
+			if warn {
+				logrus.Warnf("field `mounts[%d].mountPoint` is the reserved internal home directory %q", i, *y.User.Home)
+			}
 		}
 
 		if _, err := units.RAMInBytes(*f.NineP.Msize); err != nil {
