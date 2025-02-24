@@ -23,7 +23,7 @@ require (
 	github.com/elastic/go-libaudit/v2 v2.6.1
 	github.com/foxcpp/go-mockdns v1.1.0
 	github.com/goccy/go-yaml v1.15.23
-	github.com/google/go-cmp v0.6.0
+	github.com/google/go-cmp v0.7.0
 	github.com/google/yamlfmt v0.16.0
 	github.com/invopop/jsonschema v0.13.0
 	github.com/lima-vm/go-qcow2reader v0.6.0
