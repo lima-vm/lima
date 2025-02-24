@@ -22,8 +22,6 @@ networks:
     mode: user-v2
     gateway: 192.168.104.1
     netmask: 255.255.255.0
-    # user-v2 network is experimental network mode which supports all functionalities of default usernet network and also allows vm -> vm communication.
-    # Doesn't support configuration of custom gateway; hardcoded to 192.168.5.0/24
   shared:
     mode: shared
     gateway: 192.168.105.1
