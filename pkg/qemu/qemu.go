@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -598,26 +599,44 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	}
 	if !legacyBIOS {
 		var firmware string
+		firmwareInBios := runtime.GOOS == "windows"
+		if envVar := os.Getenv("LIMA_QEMU_UEFI_IN_BIOS"); envVar != "" {
+			b, err := strconv.ParseBool(os.Getenv("LIMA_QEMU_UEFI_IN_BIOS"))
+			if err != nil {
+				logrus.WithError(err).Warnf("invalid LIMA_QEMU_UEFI_IN_BIOS value %q", envVar)
+			} else {
+				firmwareInBios = b
+			}
+		}
+		firmwareInBios = firmwareInBios && *y.Arch == limayaml.X8664
 		downloadedFirmware := filepath.Join(cfg.InstanceDir, filenames.QemuEfiCodeFD)
-		if _, stErr := os.Stat(downloadedFirmware); errors.Is(stErr, os.ErrNotExist) {
-		loop:
-			for _, f := range y.Firmware.Images {
-				switch f.VMType {
-				case "", limayaml.QEMU:
-					if f.Arch == *y.Arch {
-						if _, err = fileutils.DownloadFile(ctx, downloadedFirmware, f.File, true, "UEFI code "+f.Location, *y.Arch); err != nil {
-							logrus.WithError(err).Warnf("failed to download %q", f.Location)
-							continue loop
-						}
-						firmware = downloadedFirmware
-						logrus.Infof("Using firmware %q (downloaded from %q)", firmware, f.Location)
-						break loop
-					}
-				}
+		firmwareWithVars := filepath.Join(cfg.InstanceDir, filenames.QemuEfiFullFD)
+		if firmwareInBios {
+			if _, stErr := os.Stat(firmwareWithVars); stErr == nil {
+				firmware = firmwareWithVars
+				logrus.Infof("Using existing firmware (%q)", firmware)
 			}
 		} else {
-			firmware = downloadedFirmware
-			logrus.Infof("Using existing firmware (%q)", firmware)
+			if _, stErr := os.Stat(downloadedFirmware); errors.Is(stErr, os.ErrNotExist) {
+			loop:
+				for _, f := range y.Firmware.Images {
+					switch f.VMType {
+					case "", limayaml.QEMU:
+						if f.Arch == *y.Arch {
+							if _, err = fileutils.DownloadFile(ctx, downloadedFirmware, f.File, true, "UEFI code "+f.Location, *y.Arch); err != nil {
+								logrus.WithError(err).Warnf("failed to download %q", f.Location)
+								continue loop
+							}
+							firmware = downloadedFirmware
+							logrus.Infof("Using firmware %q (downloaded from %q)", firmware, f.Location)
+							break loop
+						}
+					}
+				}
+			} else {
+				firmware = downloadedFirmware
+				logrus.Infof("Using existing firmware (%q)", firmware)
+			}
 		}
 		if firmware == "" {
 			firmware, err = getFirmware(exe, *y.Arch)
@@ -625,9 +644,44 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 				return "", nil, err
 			}
 			logrus.Infof("Using system firmware (%q)", firmware)
+			if firmwareInBios {
+				firmwareVars, err := getFirmwareVars(exe, *y.Arch)
+				if err != nil {
+					return "", nil, err
+				}
+				logrus.Infof("Using system firmware vars (%q)", firmwareVars)
+				varsFile, err := os.Open(firmwareVars)
+				if err != nil {
+					return "", nil, err
+				}
+				defer varsFile.Close()
+				codeFile, err := os.Open(firmware)
+				if err != nil {
+					return "", nil, err
+				}
+				defer codeFile.Close()
+				resultFile, err := os.OpenFile(firmwareWithVars, os.O_CREATE|os.O_WRONLY, 0o644)
+				if err != nil {
+					return "", nil, err
+				}
+				defer resultFile.Close()
+				_, err = io.Copy(resultFile, varsFile)
+				if err != nil {
+					return "", nil, err
+				}
+				_, err = io.Copy(resultFile, codeFile)
+				if err != nil {
+					return "", nil, err
+				}
+				firmware = firmwareWithVars
+			}
 		}
 		if firmware != "" {
-			args = append(args, "-drive", fmt.Sprintf("if=pflash,format=raw,readonly=on,file=%s", firmware))
+			if firmwareInBios {
+				args = append(args, "-bios", firmware)
+			} else {
+				args = append(args, "-drive", fmt.Sprintf("if=pflash,format=raw,readonly=on,file=%s", firmware))
+			}
 		}
 	}
 
@@ -1121,9 +1175,11 @@ func getFirmware(qemuExe string, arch limayaml.Arch) (string, error) {
 	userLocalDir := filepath.Join(currentUser.HomeDir, ".local") // "$HOME/.local"
 
 	relativePath := fmt.Sprintf("share/qemu/edk2-%s-code.fd", qemuEdk2Arch(arch))
+	relativePathWin := fmt.Sprintf("share/edk2-%s-code.fd", qemuEdk2Arch(arch))
 	candidates := []string{
 		filepath.Join(userLocalDir, relativePath), // XDG-like
 		filepath.Join(localDir, relativePath),     // macOS (homebrew)
+		filepath.Join(binDir, relativePathWin),    // Windows installer
 	}
 
 	switch arch {
@@ -1164,4 +1220,41 @@ func getFirmware(qemuExe string, arch limayaml.Arch) (string, error) {
 	}
 	qemuArch := strings.TrimPrefix(filepath.Base(qemuExe), "qemu-system-")
 	return "", fmt.Errorf("could not find firmware for %q (hint: try copying the \"edk-%s-code.fd\" firmware to $HOME/.local/share/qemu/)", arch, qemuArch)
+}
+
+func getFirmwareVars(qemuExe string, arch limayaml.Arch) (string, error) {
+	var targetArch string
+	switch arch {
+	case limayaml.X8664:
+		targetArch = "i386" // vars are unified between i386 and x86_64 and normally only former is bundled
+	default:
+		return "", fmt.Errorf("unexpected architecture: %q", arch)
+	}
+
+	currentUser, err := user.Current()
+	if err != nil {
+		return "", err
+	}
+
+	binDir := filepath.Dir(qemuExe)                              // "/usr/local/bin"
+	localDir := filepath.Dir(binDir)                             // "/usr/local"
+	userLocalDir := filepath.Join(currentUser.HomeDir, ".local") // "$HOME/.local"
+
+	relativePath := fmt.Sprintf("share/qemu/edk2-%s-vars.fd", qemuEdk2Arch(targetArch))
+	relativePathWin := fmt.Sprintf("share/edk2-%s-vars.fd", qemuEdk2Arch(targetArch))
+	candidates := []string{
+		filepath.Join(userLocalDir, relativePath), // XDG-like
+		filepath.Join(localDir, relativePath),     // macOS (homebrew)
+		filepath.Join(binDir, relativePathWin),    // Windows installer
+	}
+
+	logrus.Debugf("firmware vars candidates = %v", candidates)
+
+	for _, f := range candidates {
+		if _, err := os.Stat(f); err == nil {
+			return f, nil
+		}
+	}
+
+	return "", fmt.Errorf("could not find firmware vars for %q", arch)
 }
