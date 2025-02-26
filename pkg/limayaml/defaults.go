@@ -284,7 +284,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string, warn bool) {
 	}
 	y.Arch = ptr.Of(ResolveArch(y.Arch))
 
-	y.Images = append(append(o.Images, y.Images...), d.Images...)
+	y.Images = slices.Concat(o.Images, y.Images, d.Images)
 	for i := range y.Images {
 		img := &y.Images[i]
 		if img.Arch == "" {
@@ -352,7 +352,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string, warn bool) {
 		y.Disk = ptr.Of(defaultDiskSizeAsString())
 	}
 
-	y.AdditionalDisks = append(append(o.AdditionalDisks, y.AdditionalDisks...), d.AdditionalDisks...)
+	y.AdditionalDisks = slices.Concat(o.AdditionalDisks, y.AdditionalDisks, d.AdditionalDisks)
 
 	if y.Audio.Device == nil {
 		y.Audio.Device = d.Audio.Device
@@ -394,7 +394,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string, warn bool) {
 		y.Firmware.LegacyBIOS = ptr.Of(false)
 	}
 
-	y.Firmware.Images = append(append(o.Firmware.Images, y.Firmware.Images...), d.Firmware.Images...)
+	y.Firmware.Images = slices.Concat(o.Firmware.Images, y.Firmware.Images, d.Firmware.Images)
 	for i := range y.Firmware.Images {
 		f := &y.Firmware.Images[i]
 		if f.Arch == "" {
@@ -475,7 +475,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string, warn bool) {
 	}
 	y.HostResolver.Hosts = hosts
 
-	y.Provision = append(append(o.Provision, y.Provision...), d.Provision...)
+	y.Provision = slices.Concat(o.Provision, y.Provision, d.Provision)
 	for i := range y.Provision {
 		provision := &y.Provision[i]
 		if provision.Mode == "" {
@@ -535,7 +535,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string, warn bool) {
 		}
 	}
 
-	y.Containerd.Archives = append(append(o.Containerd.Archives, y.Containerd.Archives...), d.Containerd.Archives...)
+	y.Containerd.Archives = slices.Concat(o.Containerd.Archives, y.Containerd.Archives, d.Containerd.Archives)
 	if len(y.Containerd.Archives) == 0 {
 		y.Containerd.Archives = defaultContainerdArchives()
 	}
@@ -546,7 +546,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string, warn bool) {
 		}
 	}
 
-	y.Probes = append(append(o.Probes, y.Probes...), d.Probes...)
+	y.Probes = slices.Concat(o.Probes, y.Probes, d.Probes)
 	for i := range y.Probes {
 		probe := &y.Probes[i]
 		if probe.Mode == "" {
@@ -562,13 +562,13 @@ func FillDefault(y, d, o *LimaYAML, filePath string, warn bool) {
 		}
 	}
 
-	y.PortForwards = append(append(o.PortForwards, y.PortForwards...), d.PortForwards...)
+	y.PortForwards = slices.Concat(o.PortForwards, y.PortForwards, d.PortForwards)
 	for i := range y.PortForwards {
 		FillPortForwardDefaults(&y.PortForwards[i], instDir, y.User, y.Param)
 		// After defaults processing the singular HostPort and GuestPort values should not be used again.
 	}
 
-	y.CopyToHost = append(append(o.CopyToHost, y.CopyToHost...), d.CopyToHost...)
+	y.CopyToHost = slices.Concat(o.CopyToHost, y.CopyToHost, d.CopyToHost)
 	for i := range y.CopyToHost {
 		FillCopyToHostDefaults(&y.CopyToHost[i], instDir, y.User, y.Param)
 	}
@@ -605,7 +605,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string, warn bool) {
 
 	networks := make([]Network, 0, len(d.Networks)+len(y.Networks)+len(o.Networks))
 	iface := make(map[string]int)
-	for _, nw := range append(append(d.Networks, y.Networks...), o.Networks...) {
+	for _, nw := range slices.Concat(d.Networks, y.Networks, o.Networks) {
 		if i, ok := iface[nw.Interface]; ok {
 			if nw.Socket != "" {
 				networks[i].Socket = nw.Socket
@@ -649,7 +649,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string, warn bool) {
 		}
 	}
 
-	y.MountTypesUnsupported = append(append(o.MountTypesUnsupported, y.MountTypesUnsupported...), d.MountTypesUnsupported...)
+	y.MountTypesUnsupported = slices.Concat(o.MountTypesUnsupported, y.MountTypesUnsupported, d.MountTypesUnsupported)
 	mountTypesUnsupported := make(map[string]struct{})
 	for _, f := range y.MountTypesUnsupported {
 		mountTypesUnsupported[f] = struct{}{}
@@ -698,7 +698,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string, warn bool) {
 	// Only works for exact matches; does not normalize case or resolve symlinks.
 	mounts := make([]Mount, 0, len(d.Mounts)+len(y.Mounts)+len(o.Mounts))
 	location := make(map[string]int)
-	for _, mount := range append(append(d.Mounts, y.Mounts...), o.Mounts...) {
+	for _, mount := range slices.Concat(d.Mounts, y.Mounts, o.Mounts) {
 		if out, err := executeHostTemplate(mount.Location, instDir, y.Param); err == nil {
 			mount.Location = out.String()
 		} else {
@@ -829,11 +829,8 @@ func FillDefault(y, d, o *LimaYAML, filePath string, warn bool) {
 		y.CACertificates.RemoveDefaults = ptr.Of(false)
 	}
 
-	caFiles := unique(append(append(d.CACertificates.Files, y.CACertificates.Files...), o.CACertificates.Files...))
-	y.CACertificates.Files = caFiles
-
-	caCerts := unique(append(append(d.CACertificates.Certs, y.CACertificates.Certs...), o.CACertificates.Certs...))
-	y.CACertificates.Certs = caCerts
+	y.CACertificates.Files = unique(slices.Concat(d.CACertificates.Files, y.CACertificates.Files, o.CACertificates.Files))
+	y.CACertificates.Certs = unique(slices.Concat(d.CACertificates.Certs, y.CACertificates.Certs, o.CACertificates.Certs))
 
 	if runtime.GOOS == "darwin" && IsNativeArch(AARCH64) {
 		if y.Rosetta.Enabled == nil {
