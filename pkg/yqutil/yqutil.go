@@ -93,9 +93,6 @@ func EvaluateExpression(expression string, content []byte) ([]byte, error) {
 }
 
 func Join(yqExprs []string) string {
-	if len(yqExprs) == 0 {
-		return ""
-	}
 	return strings.Join(yqExprs, " | ")
 }
 
