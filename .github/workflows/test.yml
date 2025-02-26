@@ -218,7 +218,7 @@ jobs:
     - name: "Show cache"
       run: ./hack/debug-cache.sh
     - name: "Test default.yaml"
-      uses: nick-fields/retry@c97818ca39074beaea45180dba704f92496a0082  # v3.0.1
+      uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08  # v3.0.2
       with:
         timeout_minutes: 30
         retry_on: error
@@ -282,7 +282,7 @@ jobs:
     - name: "Show cache"
       run: ./hack/debug-cache.sh
     - name: "Test"
-      uses: nick-fields/retry@c97818ca39074beaea45180dba704f92496a0082  # v3.0.1
+      uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08  # v3.0.2
       with:
         timeout_minutes: 30
         retry_on: error
@@ -336,7 +336,7 @@ jobs:
     - name: "Show cache"
       run: ./hack/debug-cache.sh
     - name: "Test"
-      uses: nick-fields/retry@c97818ca39074beaea45180dba704f92496a0082  # v3.0.1
+      uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08  # v3.0.2
       with:
         timeout_minutes: 30
         retry_on: error
@@ -388,7 +388,7 @@ jobs:
       # Set -count=1 to disable cache
       run: go test -v -count=1 ./pkg/networks/...
     - name: Test socket_vmnet
-      uses: nick-fields/retry@c97818ca39074beaea45180dba704f92496a0082  # v3.0.1
+      uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08  # v3.0.2
       with:
         timeout_minutes: 30
         retry_on: error
@@ -430,7 +430,7 @@ jobs:
         # We revert back to 8.2.1, which seems to work fine
         ./hack/brew-install-version.sh qemu 8.2.1
     - name: Test
-      uses: nick-fields/retry@c97818ca39074beaea45180dba704f92496a0082  # v3.0.1
+      uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08  # v3.0.2
       with:
         timeout_minutes: 30
         retry_on: error
