@@ -500,18 +500,18 @@ func TestFillDefault(t *testing.T) {
 
 	expect = y
 
-	expect.Provision = append(append([]Provision{}, y.Provision...), dExpect.Provision...)
-	expect.Probes = append(append([]Probe{}, y.Probes...), dExpect.Probes...)
-	expect.PortForwards = append(append([]PortForward{}, y.PortForwards...), dExpect.PortForwards...)
-	expect.CopyToHost = append(append([]CopyToHost{}, y.CopyToHost...), dExpect.CopyToHost...)
-	expect.Containerd.Archives = append(append([]File{}, y.Containerd.Archives...), dExpect.Containerd.Archives...)
+	expect.Provision = slices.Concat(y.Provision, dExpect.Provision)
+	expect.Probes = slices.Concat(y.Probes, dExpect.Probes)
+	expect.PortForwards = slices.Concat(y.PortForwards, dExpect.PortForwards)
+	expect.CopyToHost = slices.Concat(y.CopyToHost, dExpect.CopyToHost)
+	expect.Containerd.Archives = slices.Concat(y.Containerd.Archives, dExpect.Containerd.Archives)
 	expect.Containerd.Archives[2].Arch = *expect.Arch
-	expect.AdditionalDisks = append(append([]Disk{}, y.AdditionalDisks...), dExpect.AdditionalDisks...)
-	expect.Firmware.Images = append(append([]FileWithVMType{}, y.Firmware.Images...), dExpect.Firmware.Images...)
+	expect.AdditionalDisks = slices.Concat(y.AdditionalDisks, dExpect.AdditionalDisks)
+	expect.Firmware.Images = slices.Concat(y.Firmware.Images, dExpect.Firmware.Images)
 
 	// Mounts and Networks start with lowest priority first, so higher priority entries can overwrite
-	expect.Mounts = append(append([]Mount{}, dExpect.Mounts...), y.Mounts...)
-	expect.Networks = append(append([]Network{}, dExpect.Networks...), y.Networks...)
+	expect.Mounts = slices.Concat(dExpect.Mounts, y.Mounts)
+	expect.Networks = slices.Concat(dExpect.Networks, y.Networks)
 
 	expect.HostResolver.Hosts["default"] = dExpect.HostResolver.Hosts["default"]
 
@@ -675,20 +675,20 @@ func TestFillDefault(t *testing.T) {
 
 	expect = o
 
-	expect.Provision = append(append(o.Provision, y.Provision...), dExpect.Provision...)
-	expect.Probes = append(append(o.Probes, y.Probes...), dExpect.Probes...)
-	expect.PortForwards = append(append(o.PortForwards, y.PortForwards...), dExpect.PortForwards...)
-	expect.CopyToHost = append(append(o.CopyToHost, y.CopyToHost...), dExpect.CopyToHost...)
-	expect.Containerd.Archives = append(append(o.Containerd.Archives, y.Containerd.Archives...), dExpect.Containerd.Archives...)
+	expect.Provision = slices.Concat(o.Provision, y.Provision, dExpect.Provision)
+	expect.Probes = slices.Concat(o.Probes, y.Probes, dExpect.Probes)
+	expect.PortForwards = slices.Concat(o.PortForwards, y.PortForwards, dExpect.PortForwards)
+	expect.CopyToHost = slices.Concat(o.CopyToHost, y.CopyToHost, dExpect.CopyToHost)
+	expect.Containerd.Archives = slices.Concat(o.Containerd.Archives, y.Containerd.Archives, dExpect.Containerd.Archives)
 	expect.Containerd.Archives[3].Arch = *expect.Arch
-	expect.AdditionalDisks = append(append(o.AdditionalDisks, y.AdditionalDisks...), dExpect.AdditionalDisks...)
-	expect.Firmware.Images = append(append(o.Firmware.Images, y.Firmware.Images...), dExpect.Firmware.Images...)
+	expect.AdditionalDisks = slices.Concat(o.AdditionalDisks, y.AdditionalDisks, dExpect.AdditionalDisks)
+	expect.Firmware.Images = slices.Concat(o.Firmware.Images, y.Firmware.Images, dExpect.Firmware.Images)
 
 	expect.HostResolver.Hosts["default"] = dExpect.HostResolver.Hosts["default"]
 	expect.HostResolver.Hosts["MY.Host"] = dExpect.HostResolver.Hosts["host.lima.internal"]
 
 	// o.Mounts just makes dExpect.Mounts[0] writable because the Location matches
-	expect.Mounts = append(append([]Mount{}, dExpect.Mounts...), y.Mounts...)
+	expect.Mounts = slices.Concat(dExpect.Mounts, y.Mounts)
 	expect.Mounts[0].Writable = ptr.Of(true)
 	expect.Mounts[0].SSHFS.Cache = ptr.Of(false)
 	expect.Mounts[0].SSHFS.FollowSymlinks = ptr.Of(true)
@@ -702,7 +702,7 @@ func TestFillDefault(t *testing.T) {
 	expect.MountInotify = ptr.Of(true)
 
 	// o.Networks[1] is overriding the dExpect.Networks[0].Lima entry for the "def0" interface
-	expect.Networks = append(append(dExpect.Networks, y.Networks...), o.Networks[0])
+	expect.Networks = slices.Concat(dExpect.Networks, y.Networks, []Network{o.Networks[0]})
 	expect.Networks[0].Lima = o.Networks[1].Lima
 
 	// Only highest prio DNS are retained
