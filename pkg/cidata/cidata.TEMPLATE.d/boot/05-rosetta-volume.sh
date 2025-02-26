@@ -8,7 +8,7 @@ fi
 
 if [ -f /etc/alpine-release ]; then
 	rc-service procfs start --ifnotstarted
-	rc-service qemu-binfmt stop --ifstarted
+	rc-service qemu-binfmt stop --ifexists --ifstarted
 fi
 
 binfmt_entry=/proc/sys/fs/binfmt_misc/rosetta
