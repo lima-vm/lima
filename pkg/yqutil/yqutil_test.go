@@ -120,3 +120,39 @@ foo:
 	assert.NilError(t, err)
 	assert.Equal(t, strings.TrimSpace(expected), strings.TrimSpace(string(out)))
 }
+
+func TestJoin(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []string
+		expected string
+	}{
+		{
+			name:     "multiple values",
+			input:    []string{"foo", "bar", "baz"},
+			expected: "foo | bar | baz",
+		},
+		{
+			name:     "one value",
+			input:    []string{"foo"},
+			expected: "foo",
+		},
+		{
+			name:     "empty values",
+			input:    []string{},
+			expected: "",
+		},
+		{
+			name:     "nil values",
+			input:    nil,
+			expected: "",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			actual := Join(test.input)
+			assert.Equal(t, test.expected, actual)
+		})
+	}
+}
