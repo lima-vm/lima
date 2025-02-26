@@ -21,10 +21,11 @@ func Delete(ctx context.Context, inst *store.Instance, force bool) error {
 
 	StopForcibly(inst)
 
-	if err := unregister(ctx, inst); err != nil {
-		return fmt.Errorf("failed to unregister %q: %w", inst.Dir, err)
+	if len(inst.Errors) == 0 {
+		if err := unregister(ctx, inst); err != nil {
+			return fmt.Errorf("failed to unregister %q: %w", inst.Dir, err)
+		}
 	}
-
 	if err := os.RemoveAll(inst.Dir); err != nil {
 		return fmt.Errorf("failed to remove %q: %w", inst.Dir, err)
 	}
