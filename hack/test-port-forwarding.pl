@@ -129,7 +129,8 @@ EOF
 sleep 5;
 
 # Record current log size, so we can skip prior output
-$ENV{LIMA_HOME} ||= "$ENV{HOME}/.lima";
+$ENV{HOME_HOST} ||= "$ENV{HOME}";
+$ENV{LIMA_HOME} ||= "$ENV{HOME_HOST}/.lima";
 my $ha_log = "$ENV{LIMA_HOME}/$instance/ha.stderr.log";
 my $ha_log_size = -s $ha_log or die;
 
