@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+
+# SPDX-FileCopyrightText: Copyright The Lima Authors
+# SPDX-License-Identifier: Apache-2.0
+
 # This script calculates the expected content size, actual cached size, and cache-keys used in caching method before and after
 # implementation in https://github.com/lima-vm/lima/pull/2508
 #

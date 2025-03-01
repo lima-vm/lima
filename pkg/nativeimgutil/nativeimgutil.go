@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package nativeimgutil provides image utilities that do not depend on `qemu-img` binary.
 package nativeimgutil
 

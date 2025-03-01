@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: Copyright The Lima Authors
+# SPDX-License-Identifier: Apache-2.0
 # Files are installed under $(DESTDIR)/$(PREFIX)
 PREFIX ?= /usr/local
 DEST := $(shell echo "$(DESTDIR)/$(PREFIX)" | sed 's:///*:/:g; s://*$$::')

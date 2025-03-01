@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# SPDX-FileCopyrightText: Copyright The Lima Authors
+# SPDX-License-Identifier: Apache-2.0
+
 set -eux -o pipefail
 
 if [ "$LIMA_CIDATA_ROSETTA_ENABLED" != "true" ]; then

@@ -1,4 +1,8 @@
 #!/bin/bash
+
+# SPDX-FileCopyrightText: Copyright The Lima Authors
+# SPDX-License-Identifier: Apache-2.0
+
 set -eu -o pipefail
 cache_dir="${HOME}/Library/Caches"
 if [ "$(uname -s)" != "Darwin" ]; then

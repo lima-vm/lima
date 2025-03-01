@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# SPDX-FileCopyrightText: Copyright The Lima Authors
+# SPDX-License-Identifier: Apache-2.0
+
 # This script is used to wrap the compiler and linker commands in the build
 # process. It captures the output of the command and logs it to a file.
 # The script's primary purpose is codesigning the output of the linker command

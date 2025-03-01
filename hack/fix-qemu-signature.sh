@@ -1,4 +1,8 @@
 #!/bin/sh
+
+# SPDX-FileCopyrightText: Copyright The Lima Authors
+# SPDX-License-Identifier: Apache-2.0
+
 # This script fixes the signature of QEMU binary with the "com.apple.security.hypervisor" entitlement.
 #
 # A workaround for "QEMU (homebrew) is broken on Intel: `[hostagent] Driver stopped due to error: "signal: abort trap"` ..."

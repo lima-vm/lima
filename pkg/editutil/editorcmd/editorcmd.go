@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // From https://raw.githubusercontent.com/norouter/norouter/v0.6.5/cmd/norouter/editorcmd/editorcmd.go
 /*
    Copyright (C) NoRouter authors.

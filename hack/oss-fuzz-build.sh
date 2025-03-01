@@ -1,4 +1,8 @@
 #!/bin/bash -eu
+
+# SPDX-FileCopyrightText: Copyright The Lima Authors
+# SPDX-License-Identifier: Apache-2.0
+
 # This script is used by OSS-Fuzz to build and run Limas fuzz tests continuously.
 # Limas OSS-Fuzz integration can be found here: https://github.com/google/oss-fuzz/tree/master/projects/lima
 # Modify https://github.com/google/oss-fuzz/blob/master/projects/lima/project.yaml for access management to Limas OSS-Fuzz crashes.

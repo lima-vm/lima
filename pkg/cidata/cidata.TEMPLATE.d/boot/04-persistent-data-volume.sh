@@ -1,4 +1,8 @@
 #!/bin/bash
+
+# SPDX-FileCopyrightText: Copyright The Lima Authors
+# SPDX-License-Identifier: Apache-2.0
+
 # bash is used for enabling `set -o pipefail`.
 # NOTE: On Alpine, /bin/bash is ash with ASH_BASH_COMPAT, not GNU bash
 set -eux -o pipefail
