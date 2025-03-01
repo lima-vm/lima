@@ -25,6 +25,7 @@ The GitHub repo of Lima can be found at <https://github.com/lima-vm/lima>.
 - [Colima](https://github.com/abiosoft/colima): Docker (and Kubernetes) on macOS with minimal setup
 - [Finch](https://github.com/runfinch/finch): Finch is a command line client for local container development
 - [Podman Desktop](https://podman-desktop.io/): Podman Desktop GUI has a plug-in for Lima virtual machines
+- [Meridian](https://github.com/aoxn/meridian): Conformance Kubernetes and docker container environment management on desktop based on lima
 
 ### GUI
 - [Lima xbar plugin](https://github.com/unixorn/lima-xbar-plugin): [xbar](https://xbarapp.com/) plugin to start/stop VMs from the menu bar and see their running status.
