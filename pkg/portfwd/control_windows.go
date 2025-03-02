@@ -1,10 +1,9 @@
-//go:build windows
-
 package portfwd
 
 import (
-	"golang.org/x/sys/windows"
 	"syscall"
+
+	"golang.org/x/sys/windows"
 )
 
 func Control(_, _ string, c syscall.RawConn) (err error) {
