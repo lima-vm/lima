@@ -1,3 +1,19 @@
+/*
+Copyright The Lima Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package procnettcp
 
 import (
@@ -9,12 +25,12 @@ import (
 )
 
 func TestParseTCP(t *testing.T) {
-	procNetTCP := `  sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode                                                     
-   0: 0100007F:8AEF 00000000:0000 0A 00000000:00000000 00:00000000 00000000     0        0 28152 1 0000000000000000 100 0 0 10 0                     
-   1: 0103000A:0035 00000000:0000 0A 00000000:00000000 00:00000000 00000000     0        0 31474 1 0000000000000000 100 0 0 10 5                     
-   2: 3500007F:0035 00000000:0000 0A 00000000:00000000 00:00000000 00000000   102        0 30955 1 0000000000000000 100 0 0 10 0                     
-   3: 00000000:0016 00000000:0000 0A 00000000:00000000 00:00000000 00000000     0        0 32910 1 0000000000000000 100 0 0 10 0                     
-   4: 0100007F:053A 00000000:0000 0A 00000000:00000000 00:00000000 00000000     0        0 31430 1 0000000000000000 100 0 0 10 0                     
+	procNetTCP := `  sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode
+   0: 0100007F:8AEF 00000000:0000 0A 00000000:00000000 00:00000000 00000000     0        0 28152 1 0000000000000000 100 0 0 10 0
+   1: 0103000A:0035 00000000:0000 0A 00000000:00000000 00:00000000 00000000     0        0 31474 1 0000000000000000 100 0 0 10 5
+   2: 3500007F:0035 00000000:0000 0A 00000000:00000000 00:00000000 00000000   102        0 30955 1 0000000000000000 100 0 0 10 0
+   3: 00000000:0016 00000000:0000 0A 00000000:00000000 00:00000000 00000000     0        0 32910 1 0000000000000000 100 0 0 10 0
+   4: 0100007F:053A 00000000:0000 0A 00000000:00000000 00:00000000 00000000     0        0 31430 1 0000000000000000 100 0 0 10 0
    5: 0B3CA8C0:0016 690AA8C0:F705 01 00000000:00000000 02:00028D8B 00000000     0        0 32989 4 0000000000000000 20 4 31 10 19
 `
 	entries, err := Parse(strings.NewReader(procNetTCP), TCP)
@@ -58,11 +74,11 @@ func TestParseTCP6Zero(t *testing.T) {
 }
 
 func TestParseUDP(t *testing.T) {
-	procNetTCP := `   sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode ref pointer drops            
-  716: 3600007F:0035 00000000:0000 07 00000000:00000000 00:00000000 00000000   991        0 2964 2 0000000000000000 0          
-  716: 3500007F:0035 00000000:0000 07 00000000:00000000 00:00000000 00000000   991        0 2962 2 0000000000000000 0          
-  731: 0369A8C0:0044 00000000:0000 07 00000000:00000000 00:00000000 00000000   998        0 29132 2 0000000000000000 0         
-  731: 0F05A8C0:0044 00000000:0000 07 00000000:00000000 00:00000000 00000000   998        0 4049 2 0000000000000000 0          
+	procNetTCP := `   sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode ref pointer drops
+  716: 3600007F:0035 00000000:0000 07 00000000:00000000 00:00000000 00000000   991        0 2964 2 0000000000000000 0
+  716: 3500007F:0035 00000000:0000 07 00000000:00000000 00:00000000 00000000   991        0 2962 2 0000000000000000 0
+  731: 0369A8C0:0044 00000000:0000 07 00000000:00000000 00:00000000 00000000   998        0 29132 2 0000000000000000 0
+  731: 0F05A8C0:0044 00000000:0000 07 00000000:00000000 00:00000000 00000000   998        0 4049 2 0000000000000000 0
  1768: 00000000:1451 00000000:0000 07 00000000:00000000 00:00000000 00000000   502        0 28364 2 0000000000000000 0  `
 	entries, err := Parse(strings.NewReader(procNetTCP), UDP)
 	assert.NilError(t, err)
