@@ -10,7 +10,7 @@ require (
 	github.com/Microsoft/go-winio v0.6.2 // gomodjail:unconfined
 	github.com/apparentlymart/go-cidr v1.1.0
 	github.com/balajiv113/fd v0.0.0-20230330094840-143eec500f3e
-	github.com/cheggaaa/pb/v3 v3.1.6 // gomodjail:unconfined
+	github.com/cheggaaa/pb/v3 v3.1.7 // gomodjail:unconfined
 	github.com/containerd/containerd v1.7.26
 	github.com/containerd/continuity v0.4.5
 	github.com/containers/gvisor-tap-vsock v0.8.3 // gomodjail:unconfined
@@ -112,7 +112,7 @@ require (
 	github.com/pierrec/lz4/v4 v4.1.22 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pkg/sftp v1.13.7 // indirect
-	github.com/rivo/uniseg v0.2.0 // indirect
+	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06 // indirect
 	// gomodjail:unconfined
