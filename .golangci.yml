@@ -53,7 +53,7 @@ linters:
   - godot
   # - godox
   - gofumpt
-  # - goheader
+  - goheader
   # - gomodguard
   # - goprintffuncname
   # - gosec
@@ -117,6 +117,11 @@ linters-settings:
       ifElseChain:
         # Min number of if-else blocks that makes the warning trigger.
         minThreshold: 3
+  goheader:
+    # Run `golangci-lint run --fix --enable-only goheader` to fix headers.
+    template: |-
+      SPDX-FileCopyrightText: Copyright The Lima Authors
+      SPDX-License-Identifier: Apache-2.0
   errorlint:
     asserts: false
   perfsprint:
