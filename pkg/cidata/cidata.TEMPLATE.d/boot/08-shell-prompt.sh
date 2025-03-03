@@ -1,4 +1,8 @@
 #!/bin/sh
+
+# SPDX-FileCopyrightText: Copyright The Lima Authors
+# SPDX-License-Identifier: Apache-2.0
+
 set -eux
 
 # This script is only intended for the default.yaml image, which is based on Ubuntu LTS

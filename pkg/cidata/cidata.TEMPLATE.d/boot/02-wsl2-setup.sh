@@ -1,4 +1,8 @@
 #!/bin/sh
+
+# SPDX-FileCopyrightText: Copyright The Lima Authors
+# SPDX-License-Identifier: Apache-2.0
+
 # This script replaces the cloud-init functionality of creating a user and setting its SSH keys
 # when using a WSL2 VM.
 [ "$LIMA_CIDATA_VMTYPE" = "wsl2" ] || exit 0

@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# SPDX-FileCopyrightText: Copyright The Lima Authors
+# SPDX-License-Identifier: Apache-2.0
+
 set -eux -o pipefail
 
 test "$LIMA_CIDATA_DISKS" -gt 0 || exit 0

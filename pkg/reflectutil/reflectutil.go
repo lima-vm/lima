@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // This file has been adapted from https://github.com/containerd/nerdctl/blob/v1.0.0/pkg/reflectutil/reflectutil.go
 /*
    Copyright The containerd Authors.

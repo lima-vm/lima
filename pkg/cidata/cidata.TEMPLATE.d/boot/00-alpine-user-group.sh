@@ -1,4 +1,8 @@
 #!/bin/sh
+
+# SPDX-FileCopyrightText: Copyright The Lima Authors
+# SPDX-License-Identifier: Apache-2.0
+
 test -f /etc/alpine-release || exit 0
 
 # Make sure that root is in the sudoers file.

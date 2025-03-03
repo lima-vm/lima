@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package entitlementutil provides a workaround for https://github.com/lima-vm/lima/issues/1742
 package entitlementutil
 

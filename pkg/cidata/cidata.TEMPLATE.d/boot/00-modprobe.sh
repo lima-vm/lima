@@ -1,4 +1,8 @@
 #!/bin/sh
+
+# SPDX-FileCopyrightText: Copyright The Lima Authors
+# SPDX-License-Identifier: Apache-2.0
+
 # Load modules as soon as the cloud-init starts up.
 # Because Arch Linux removes kernel module files when the kernel package was updated during running cloud-init :(
 

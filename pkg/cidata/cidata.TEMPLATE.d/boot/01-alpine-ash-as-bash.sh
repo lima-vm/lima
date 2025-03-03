@@ -1,4 +1,8 @@
 #!/bin/sh
+
+# SPDX-FileCopyrightText: Copyright The Lima Authors
+# SPDX-License-Identifier: Apache-2.0
+
 # This script pretends that /bin/ash can be used as /bin/bash, so all following
 # cloud-init scripts can use `#!/bin/bash` and `set -o pipefail`.
 test -f /etc/alpine-release || exit 0

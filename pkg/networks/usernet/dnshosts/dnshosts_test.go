@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // From https://raw.githubusercontent.com/abiosoft/colima/v0.5.5/daemon/process/gvproxy/dnshosts_test.go
 /*
 	MIT License

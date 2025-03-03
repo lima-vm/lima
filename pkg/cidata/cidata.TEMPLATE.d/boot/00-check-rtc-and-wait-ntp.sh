@@ -1,4 +1,8 @@
 #!/bin/sh
+
+# SPDX-FileCopyrightText: Copyright The Lima Authors
+# SPDX-License-Identifier: Apache-2.0
+
 set -eu
 
 # In vz, the VM lacks an RTC when booting with a kernel image (see: https://developer.apple.com/forums/thread/760344).

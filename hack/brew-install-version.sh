@@ -1,4 +1,8 @@
 #!/bin/bash
+
+# SPDX-FileCopyrightText: Copyright The Lima Authors
+# SPDX-License-Identifier: Apache-2.0
+
 # This script only works for formulas in the homebrew-core.
 # It assumes the homebrew-core has been checked out into ./homebrew-core.
 # It only needs commit messages, so the checkout can be filtered with tree:0.

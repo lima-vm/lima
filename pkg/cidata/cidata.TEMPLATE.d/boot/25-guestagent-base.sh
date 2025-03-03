@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# SPDX-FileCopyrightText: Copyright The Lima Authors
+# SPDX-License-Identifier: Apache-2.0
+
 set -eux
 
 if [ "${LIMA_CIDATA_MOUNTTYPE}" = "reverse-sshfs" ]; then

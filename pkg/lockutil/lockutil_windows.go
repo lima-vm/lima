@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // From https://github.com/containerd/nerdctl/blob/v0.13.0/pkg/lockutil/lockutil_windows.go
 /*
    Copyright The containerd Authors.
