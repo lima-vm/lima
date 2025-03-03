@@ -147,6 +147,8 @@ func LimaUser(limaVersion string, warn bool) *user.User {
 			home, err := call([]string{"cygpath", limaUser.HomeDir})
 			if err != nil {
 				logrus.Debug(err)
+			} else {
+				home += ".linux"
 			}
 			if home == "" {
 				drive := filepath.VolumeName(limaUser.HomeDir)
@@ -154,6 +156,7 @@ func LimaUser(limaVersion string, warn bool) *user.User {
 				// replace C: with /c
 				prefix := strings.ToLower(fmt.Sprintf("/%c", drive[0]))
 				home = strings.Replace(home, drive, prefix, 1)
+				home += ".linux"
 			}
 			if !regexPath.MatchString(limaUser.HomeDir) {
 				warning := fmt.Sprintf("local home %q is not a valid Linux path (must match %q); using %q home instead",

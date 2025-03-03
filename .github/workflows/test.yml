@@ -135,12 +135,10 @@ jobs:
     - name: Enable WSL2
       run: |
         wsl --set-default-version 2
-        # Manually install the latest kernel from MSI
-        Invoke-WebRequest -Uri "https://wslstorestorage.blob.core.windows.net/wslblob/wsl_update_x64.msi" -OutFile "wsl_update_x64.msi"
-        $pwd = (pwd).Path
-        Start-Process msiexec.exe -Wait -ArgumentList "/I $pwd\wsl_update_x64.msi /quiet"
+        wsl --shutdown
         wsl --update
         wsl --status
+        wsl --version
         wsl --list --online
     - name: Install WSL2 distro
       timeout-minutes: 1
@@ -166,22 +164,15 @@ jobs:
       run: go test -v ./...
     - name: Make
       run: make
-# FIXME: Windows CI began to fail on Oct 21, 2024.
-# Something seems to have changed between win22/20241006.1 and win22/20241015.1.
-# https://github.com/lima-vm/lima/issues/2775
-#    - name: Smoke test
-#      # Make sure the path is set properly and then run limactl
-#      run: |
-#        $env:Path = 'C:\Program Files\Git\usr\bin;' + $env:Path
-#        Set-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Session Manager\Environment' -Name PATH -Value $env:Path
-#        .\_output\bin\limactl.exe start template://experimental/wsl2
-#      # TODO: run the full integration tests
-#    - name: Debug
-#      if: always()
-#      run: type C:\Users\runneradmin\.lima\wsl2\ha.stdout.log
-#    - name: Debug
-#      if: always()
-#      run: type C:\Users\runneradmin\.lima\wsl2\ha.stderr.log
+    - name: Integration tests (WSL2, Windows host)
+      run: |
+        $env:Path = "$pwd\_output\bin;" + 'C:\Program Files\Git\usr\bin;' + $env:Path
+        Set-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Session Manager\Environment' -Name PATH -Value $env:Path
+        $env:MSYS2_ENV_CONV_EXCL='HOME_HOST;HOME_GUEST'
+        $env:HOME_HOST=$(cygpath.exe "$env:USERPROFILE")
+        $env:HOME_GUEST="/mnt$env:HOME_HOST"
+        $env:LIMACTL_CREATE_ARGS='--vm-type=wsl2 --mount-type=wsl2 --containerd=system'
+        bash.exe -c "./hack/test-templates.sh templates/experimental/wsl2.yaml"
 
   qemu:
     name: "Integration tests (QEMU, macOS host)"
