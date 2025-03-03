@@ -136,8 +136,8 @@ if [[ -n ${CHECKS["port-forwards"]} ]]; then
 	limactl validate "$FILE_HOST"
 fi
 
-INFO "Make sure template embedding copies \"$FILE\" exactly"
-diff -u <(echo -n "base: $FILE" | limactl tmpl copy --embed - -) "$FILE"
+INFO "Make sure template embedding copies \"$FILE_HOST\" exactly"
+diff -u <(echo -n "base: $FILE_HOST" | limactl tmpl copy --embed - -) "$FILE_HOST"
 
 function diagnose() {
 	NAME="$1"
