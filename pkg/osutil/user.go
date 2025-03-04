@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os/exec"
 	"os/user"
+	"path"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -149,7 +150,19 @@ func LimaUser(limaVersion string, warn bool) *user.User {
 			if err != nil {
 				logrus.Debug(err)
 			} else {
-				home += ".linux"
+				// Trim mount prefix within Subsystem
+				// cygwin/msys2 cygpath could have prefix for drive mounts configured via /etc/fstab
+				// wsl wslpath could have prefix for drive mounts configured via [automount] section in wsl.conf
+				drivePath, err := ioutilx.WindowsSubsystemPath(filepath.VolumeName(limaUser.HomeDir) + "/")
+				if err != nil {
+					logrus.Debug(err)
+				} else {
+					prefix := path.Dir(strings.TrimSuffix(drivePath, "/"))
+					if prefix != "/" {
+						home = strings.TrimPrefix(home, prefix)
+					}
+					home += ".linux"
+				}
 			}
 			if home == "" {
 				drive := filepath.VolumeName(limaUser.HomeDir)
@@ -160,10 +173,6 @@ func LimaUser(limaVersion string, warn bool) *user.User {
 				home += ".linux"
 			}
 			if !regexPath.MatchString(limaUser.HomeDir) {
-				// Trim prefix of well known default mounts
-				if strings.HasPrefix(home, "/mnt/") {
-					home = strings.TrimPrefix(home, "/mnt")
-				}
 				warning := fmt.Sprintf("local home %q is not a valid Linux path (must match %q); using %q home instead",
 					limaUser.HomeDir, regexPath.String(), home)
 				warnings = append(warnings, warning)
