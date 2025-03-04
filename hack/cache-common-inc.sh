@@ -18,17 +18,18 @@ function error_exit() {
 # ```
 function download_template_if_needed() {
 	local template="$1"
-	case "${template}" in
-	https://*)
-		tmp_yaml=$(mktemp -d)/template.yaml
-		curl -sSLf "${template}" >"${tmp_yaml}" || return
-		echo "${tmp_yaml}"
-		;;
-	*)
-		test -f "${template}" || return
-		echo "${template}"
-		;;
-	esac
+	tmp_yaml="$(mktemp -d)/template.yaml"
+	# The upgrade test doesn't have limactl installed first. The old version wouldn't support `limactl tmpl` anyways.
+	if command -v limactl >/dev/null; then
+		limactl tmpl copy --embed-all "${template}" "${tmp_yaml}" || return
+	else
+		if [[ $template == https://* ]]; then
+			curl -sSLf "${template}" >"${tmp_yaml}" || return
+		else
+			cp "${template}" "${tmp_yaml}"
+		fi
+	fi
+	echo "${tmp_yaml}"
 }
 
 # e.g.

@@ -17,7 +17,8 @@ if [ "$#" -ne 1 ]; then
 	exit 1
 fi
 
-FILE="$1"
+# Resolve any ../ fragments in the filename because they are invalid in relative template locators
+FILE="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
 NAME="$(basename -s .yaml "$FILE")"
 OS_HOST="$(uname -o)"
 
@@ -135,6 +136,9 @@ if [[ -n ${CHECKS["port-forwards"]} ]]; then
 	limactl validate "$FILE_HOST"
 fi
 
+INFO "Make sure template embedding copies \"$FILE_HOST\" exactly"
+diff -u <(echo -n "base: $FILE_HOST" | limactl tmpl copy --embed - -) "$FILE_HOST"
+
 function diagnose() {
 	NAME="$1"
 	set -x +e
@@ -207,7 +211,7 @@ fi
 
 if [[ -n ${CHECKS["set-user"]} ]]; then
 	INFO 'Testing that user settings can be provided by lima.yaml'
-	limactl shell "$NAME" grep "^john:x:4711:4711:John Doe:/home/john-john" /etc/passwd
+	limactl shell "$NAME" grep "^john:x:4711:4711:John Doe:/home/john-john:/usr/bin/bash" /etc/passwd
 fi
 
 if [[ -n ${CHECKS["proxy-settings"]} ]]; then
