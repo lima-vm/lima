@@ -8,9 +8,12 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/coreos/go-semver/semver"
+	"github.com/lima-vm/lima/pkg/ioutilx"
 	"github.com/lima-vm/lima/pkg/sshutil"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/sirupsen/logrus"
@@ -80,6 +83,16 @@ func copyAction(cmd *cobra.Command, args []string) error {
 	// this assumes that ssh and scp come from the same place, but scp has no -V
 	legacySSH := sshutil.DetectOpenSSHVersion("ssh").LessThan(*semver.New("8.0.0"))
 	for _, arg := range args {
+		if runtime.GOOS == "windows" {
+			if filepath.IsAbs(arg) {
+				arg, err = ioutilx.WindowsSubsystemPath(arg)
+				if err != nil {
+					return err
+				}
+			} else {
+				arg = filepath.ToSlash(arg)
+			}
+		}
 		path := strings.Split(arg, ":")
 		switch len(path) {
 		case 1:

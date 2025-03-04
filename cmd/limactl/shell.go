@@ -8,11 +8,14 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
+	"runtime"
 	"strconv"
 	"strings"
 
 	"al.essio.dev/pkg/shellescape"
 	"github.com/coreos/go-semver/semver"
+	"github.com/lima-vm/lima/pkg/ioutilx"
 	"github.com/lima-vm/lima/pkg/sshutil"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/mattn/go-isatty"
@@ -92,6 +95,9 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		// FIXME: check whether y.Mounts contains the home, not just len > 0
 	} else if len(inst.Config.Mounts) > 0 {
 		hostCurrentDir, err := os.Getwd()
+		if err == nil && runtime.GOOS == "windows" {
+			hostCurrentDir, err = mountDirFromWindowsDir(hostCurrentDir)
+		}
 		if err == nil {
 			changeDirCmd = fmt.Sprintf("cd %s", shellescape.Quote(hostCurrentDir))
 		} else {
@@ -99,6 +105,9 @@ func shellAction(cmd *cobra.Command, args []string) error {
 			logrus.WithError(err).Warn("failed to get the current directory")
 		}
 		hostHomeDir, err := os.UserHomeDir()
+		if err == nil && runtime.GOOS == "windows" {
+			hostHomeDir, err = mountDirFromWindowsDir(hostHomeDir)
+		}
 		if err == nil {
 			changeDirCmd = fmt.Sprintf("%s || cd %s", changeDirCmd, shellescape.Quote(hostHomeDir))
 		} else {
@@ -187,6 +196,14 @@ func shellAction(cmd *cobra.Command, args []string) error {
 
 	// TODO: use syscall.Exec directly (results in losing tty?)
 	return sshCmd.Run()
+}
+
+func mountDirFromWindowsDir(dir string) (string, error) {
+	dir, err := ioutilx.WindowsSubsystemPath(dir)
+	if err == nil && !strings.HasPrefix(dir, "/mnt/") {
+		dir = path.Join("/mnt", dir)
+	}
+	return dir, err
 }
 
 func shellBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
