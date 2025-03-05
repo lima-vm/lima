@@ -18,7 +18,8 @@ param:
   DEPENDENCY: dependency
   PROBE: probe
   SYSTEM: system
-  USER: user
+# TODO re-enable once https://github.com/lima-vm/lima/issues/3308 is fixed
+# USER: user
 
 provision:
 - mode: ansible
@@ -29,8 +30,14 @@ provision:
   script: "touch /tmp/param-$PARAM_DEPENDENCY"
 - mode: system
   script: "touch /tmp/param-$PARAM_SYSTEM"
-- mode: user
-  script: "touch /tmp/param-$PARAM_USER"
+# TODO re-enable once https://github.com/lima-vm/lima/issues/3308 is fixed
+# - mode: user
+#   script: "touch /tmp/param-$PARAM_USER"
+- mode: data
+  path: /etc/sysctl.d/99-inotify.conf
+  content: |
+    fs.inotify.max_user_watches = 524288
+    fs.inotify.max_user_instances = 512
 
 probes:
 - mode: readiness
