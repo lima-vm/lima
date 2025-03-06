@@ -12,6 +12,7 @@ import (
 	"github.com/lima-vm/lima/pkg/limatmpl"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
+	"github.com/lima-vm/lima/pkg/yqutil"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -34,6 +35,7 @@ func newTemplateCommand() *cobra.Command {
 	templateCommand.AddCommand(
 		newTemplateCopyCommand(),
 		newTemplateValidateCommand(),
+		newTemplateYQCommand(),
 	)
 	return templateCommand
 }
@@ -71,7 +73,24 @@ func newTemplateCopyCommand() *cobra.Command {
 	return templateCopyCommand
 }
 
+func fillDefaults(tmpl *limatmpl.Template) error {
+	limaDir, err := dirnames.LimaDir()
+	if err != nil {
+		return err
+	}
+	// Load() will merge the template with override.yaml and default.yaml via FillDefaults().
+	// FillDefaults() needs the potential instance directory to validate host templates using {{.Dir}}.
+	filePath := filepath.Join(limaDir, tmpl.Name+".yaml")
+	tmpl.Config, err = limayaml.Load(tmpl.Bytes, filePath)
+	if err == nil {
+		tmpl.Bytes, err = limayaml.Marshal(tmpl.Config, false)
+	}
+	return err
+}
+
 func templateCopyAction(cmd *cobra.Command, args []string) error {
+	source := args[0]
+	target := args[1]
 	embed, err := cmd.Flags().GetBool("embed")
 	if err != nil {
 		return err
@@ -97,12 +116,12 @@ func templateCopyAction(cmd *cobra.Command, args []string) error {
 	if embed && verbatim {
 		return errors.New("--verbatim cannot be used with any of --embed, --embed-all, or --fill")
 	}
-	tmpl, err := limatmpl.Read(cmd.Context(), "", args[0])
+	tmpl, err := limatmpl.Read(cmd.Context(), "", source)
 	if err != nil {
 		return err
 	}
 	if len(tmpl.Bytes) == 0 {
-		return fmt.Errorf("don't know how to interpret %q as a template locator", args[0])
+		return fmt.Errorf("don't know how to interpret %q as a template locator", source)
 	}
 	if !verbatim {
 		if embed {
@@ -117,24 +136,11 @@ func templateCopyAction(cmd *cobra.Command, args []string) error {
 		}
 	}
 	if fill {
-		limaDir, err := dirnames.LimaDir()
-		if err != nil {
-			return err
-		}
-		// Load() will merge the template with override.yaml and default.yaml via FillDefaults().
-		// FillDefaults() needs the potential instance directory to validate host templates using {{.Dir}}.
-		filePath := filepath.Join(limaDir, tmpl.Name+".yaml")
-		tmpl.Config, err = limayaml.Load(tmpl.Bytes, filePath)
-		if err != nil {
-			return err
-		}
-		tmpl.Bytes, err = limayaml.Marshal(tmpl.Config, false)
-		if err != nil {
+		if err := fillDefaults(tmpl); err != nil {
 			return err
 		}
 	}
 	writer := cmd.OutOrStdout()
-	target := args[1]
 	if target != "-" {
 		file, err := os.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
 		if err != nil {
@@ -144,6 +150,51 @@ func templateCopyAction(cmd *cobra.Command, args []string) error {
 		writer = file
 	}
 	_, err = fmt.Fprint(writer, string(tmpl.Bytes))
+	return err
+}
+
+const templateYQHelp = `Use the builtin YQ evaluator to extract information from a template.
+External references are embedded and default values are filled in
+before the YQ expression is evaluated.
+
+Example:
+  limactl template yq template://default '.images[].location'
+
+The example command is equivalent to using an external yq command like this:
+  limactl template copy --fill template://default - | yq '.images[].location'
+`
+
+func newTemplateYQCommand() *cobra.Command {
+	templateYQCommand := &cobra.Command{
+		Use:   "yq TEMPLATE EXPR",
+		Short: "Query template expressions",
+		Long:  templateYQHelp,
+		Args:  WrapArgsError(cobra.ExactArgs(2)),
+		RunE:  templateYQAction,
+	}
+	return templateYQCommand
+}
+
+func templateYQAction(cmd *cobra.Command, args []string) error {
+	locator := args[0]
+	expr := args[1]
+	tmpl, err := limatmpl.Read(cmd.Context(), "", locator)
+	if err != nil {
+		return err
+	}
+	if len(tmpl.Bytes) == 0 {
+		return fmt.Errorf("don't know how to interpret %q as a template locator", locator)
+	}
+	if err := tmpl.Embed(cmd.Context(), true, true); err != nil {
+		return err
+	}
+	if err := fillDefaults(tmpl); err != nil {
+		return err
+	}
+	out, err := yqutil.EvaluateExpressionPlain(expr, string(tmpl.Bytes))
+	if err == nil {
+		_, err = fmt.Fprint(cmd.OutOrStdout(), out)
+	}
 	return err
 }
 

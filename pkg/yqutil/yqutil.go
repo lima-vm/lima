@@ -39,25 +39,12 @@ func ValidateContent(content []byte) error {
 	return err
 }
 
-// EvaluateExpression evaluates the yq expression and returns the modified yaml.
-func EvaluateExpression(expression string, content []byte) ([]byte, error) {
+// EvaluateExpressionPlain evaluates the yq expression and returns the yq result.
+func EvaluateExpressionPlain(expression, content string) (string, error) {
 	if expression == "" {
 		return content, nil
 	}
 	logrus.Debugf("Evaluating yq expression: %q", expression)
-	formatter, err := yamlfmtBasicFormatter()
-	if err != nil {
-		return nil, err
-	}
-	// `ApplyFeatures()` is being called directly before passing content to `yqlib`.
-	// This results in `ApplyFeatures()` being called twice with `FeatureApplyBefore`:
-	// once here and once inside `formatter.Format`.
-	// Currently, calling `ApplyFeatures()` with `FeatureApplyBefore` twice is not an issue,
-	// but future changes to `yamlfmt` might cause problems if it is called twice.
-	_, contentModified, err := formatter.Features.ApplyFeatures(context.Background(), content, yamlfmt.FeatureApplyBefore)
-	if err != nil {
-		return nil, err
-	}
 	memory := logging.NewMemoryBackend(0)
 	backend := logging.AddModuleLevel(memory)
 	logging.SetBackend(backend)
@@ -68,7 +55,7 @@ func EvaluateExpression(expression string, content []byte) ([]byte, error) {
 	encoderPrefs.ColorsEnabled = false
 	encoder := yqlib.NewYamlEncoder(encoderPrefs)
 	decoder := yqlib.NewYamlDecoder(yqlib.ConfiguredYamlPreferences)
-	out, err := yqlib.NewStringEvaluator().EvaluateAll(expression, string(contentModified), encoder, decoder)
+	out, err := yqlib.NewStringEvaluator().EvaluateAll(expression, content, encoder, decoder)
 	if err != nil {
 		logger := logrus.StandardLogger()
 		for node := memory.Head(); node != nil; node = node.Next() {
@@ -90,6 +77,32 @@ func EvaluateExpression(expression string, content []byte) ([]byte, error) {
 				entry.Debug(message)
 			}
 		}
+		return "", err
+	}
+	return out, nil
+}
+
+// EvaluateExpression evaluates the yq expression and returns the output formatted with yamlfmt.
+func EvaluateExpression(expression string, content []byte) ([]byte, error) {
+	if expression == "" {
+		return content, nil
+	}
+	formatter, err := yamlfmtBasicFormatter()
+	if err != nil {
+		return nil, err
+	}
+	// `ApplyFeatures()` is being called directly before passing content to `yqlib`.
+	// This results in `ApplyFeatures()` being called twice with `FeatureApplyBefore`:
+	// once here and once inside `formatter.Format`.
+	// Currently, calling `ApplyFeatures()` with `FeatureApplyBefore` twice is not an issue,
+	// but future changes to `yamlfmt` might cause problems if it is called twice.
+	_, contentModified, err := formatter.Features.ApplyFeatures(context.Background(), content, yamlfmt.FeatureApplyBefore)
+	if err != nil {
+		return nil, err
+	}
+
+	out, err := EvaluateExpressionPlain(expression, string(contentModified))
+	if err != nil {
 		return nil, err
 	}
 	return formatter.Format([]byte(out))
