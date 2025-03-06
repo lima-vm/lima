@@ -30,34 +30,15 @@ jobs:
     - name: Check out code
       uses: actions/checkout@v4
 
-    - name: "Install QEMU"
-      run: |
-        set -eux
-        sudo apt-get update
-        sudo apt-get install -y --no-install-recommends ovmf qemu-system-x86 qemu-utils
-        sudo modprobe kvm
-        # `sudo usermod -aG kvm $(whoami)` does not take an effect on GHA
-        sudo chown $(whoami) /dev/kvm
-
-    - name: "Install Lima"
-      env:
-        GITHUB_TOKEN: ${{ github.token }}  # required by `gh attestation verify`
-      run: |
-        set -eux
-        LIMA_VERSION=$(curl -fsSL https://api.github.com/repos/lima-vm/lima/releases/latest | jq -r .tag_name)
-        FILE="lima-${LIMA_VERSION:1}-Linux-x86_64.tar.gz"
-        curl -fOSL https://github.com/lima-vm/lima/releases/download/${LIMA_VERSION}/${FILE}
-        gh attestation verify --owner=lima-vm "${FILE}"
-        sudo tar Cxzvf /usr/local "${FILE}"
-        rm -f "${FILE}"
-        # Export LIMA_VERSION For the GHA cache key
-        echo "LIMA_VERSION=${LIMA_VERSION}" >>$GITHUB_ENV
+    - name: "Set up Lima"
+      uses: lima-vm/lima-actions/setup@v1
+      id: lima-actions-setup
 
     - name: "Cache ~/.cache/lima"
       uses: actions/cache@v4
       with:
         path: ~/.cache/lima
-        key: lima-${{ env.LIMA_VERSION }}
+        key: lima-${{ steps.lima-actions-setup.outputs.version }}
 
     - name: "Start an instance of Fedora"
       run: |
@@ -73,6 +54,8 @@ jobs:
         limactl shell another curl http://lima-default.internal
 ```
 
+See also <https://github.com/lima-vm/lima-actions>.
+
 ### Plain mode
 
 The `--plain` mode is useful when you want the VM instance to be as close as possible to a physical host:
@@ -82,14 +65,14 @@ The `--plain` mode is useful when you want the VM instance to be as close as pos
       # --plain is set to disable file sharing, port forwarding, built-in containerd, etc.
       run: limactl start --plain --name=default --cpus=1 --memory=1 --network=lima:user-v2 template://fedora
 
+    - name: "Set up SSH"
+      uses: lima-vm/lima-actions/ssh@v1
+
     - name: "Initialize Fedora"
       # plain old rsync and ssh are used for the initialization of the guest,
       # so that people who are not familiar with Lima can understand the initialization steps.
       run: |
         set -eux -o pipefail
-        # Initialize SSH
-        mkdir -p -m 0700 ~/.ssh
-        cat ~/.lima/default/ssh.config >> ~/.ssh/config
         # Sync the current directory to /tmp/repo in the guest
         rsync -a -e ssh . lima-default:/tmp/repo
         # Install packages
