@@ -25,6 +25,36 @@ Set up (on macOS):
 brew install lima
 limactl start
 ```
+on linux:
+See <https://lima-vm.io/docs/installation/> for the further information.
+
+To run vm on linux use qemu:
+```
+limactl start \ 
+  --name=default \ 
+  --cpus=1 \ 
+  --memory=1 \ 
+  --vm-type=qemu \ 
+  --rosetta \
+  --mount-type=virtiofs \
+  --mount-writable \
+  --network=lima:user-v2 \ 
+  template://default
+```
+
+To run vm on macos use vz:
+```
+limactl start \
+  --name=default \
+  --cpus=4 \
+  --memory=8 \
+  --vm-type=vz \
+  --rosetta \
+  --mount-type=virtiofs \
+  --mount-writable \
+  --network=vzNAT \
+  template://default
+```
 
 To run Linux commands:
 ```bash
