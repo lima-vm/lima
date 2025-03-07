@@ -102,26 +102,15 @@ if limactl ls -q | grep -q "$NAME"; then
 	exit 1
 fi
 
-# Create ${NAME}-tmp to inspect the enabled features.
-# TODO: skip downloading and converting the image here.
-# Probably `limactl create` should have "dry run" mode that just generates `lima.yaml`.
-# shellcheck disable=SC2086
-"${LIMACTL_CREATE[@]}" ${LIMACTL_CREATE_ARGS} --set ".additionalDisks=null" --name="${NAME}-tmp" "$FILE_HOST"
-# skipping the missing yq as it is not a fatal error because networks we are looking for are not supported on windows
-if command -v yq &>/dev/null; then
-	case "$(yq '.networks[].lima' "${LIMA_HOME}/${NAME}-tmp/lima.yaml")" in
-	"shared")
-		CHECKS["vmnet"]=1
-		;;
-	"user-v2")
-		CHECKS["port-forwards"]=""
-		CHECKS["user-v2"]=1
-		;;
-	esac
-else
-	WARNING "yq not found. Skipping network checks"
-fi
-limactl rm -f "${NAME}-tmp"
+case "$(limactl tmpl yq "$FILE_HOST" '.networks[].lima')" in
+"shared")
+	CHECKS["vmnet"]=1
+	;;
+"user-v2")
+	CHECKS["port-forwards"]=""
+	CHECKS["user-v2"]=1
+	;;
+esac
 
 if [[ -n ${CHECKS["port-forwards"]} ]]; then
 	tmpconfig="$HOME_HOST/lima-config-tmp"
