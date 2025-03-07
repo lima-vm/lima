@@ -42,8 +42,8 @@ github.com/containerd/errdefs v1.0.0 h1:tg5yIfIlQIrxYtu9ajqY42W3lpS19XqdxRQeEwYG
 github.com/containerd/errdefs v1.0.0/go.mod h1:+YBYIdtsnF4Iw6nWZhJcqGSg/dwvV7tyJ/kCkyJ2k+M=
 github.com/containerd/log v0.1.0 h1:TCJt7ioM2cr/tfR8GPbGf9/VRAX8D2B4PjzCpfX540I=
 github.com/containerd/log v0.1.0/go.mod h1:VRRf09a7mHDIRezVKTRCrOq78v577GXq3bSa3EhrzVo=
-github.com/containers/gvisor-tap-vsock v0.8.3 h1:Am3VdjXTn8Mn+dNhgkiRcCFOTSM8u9aWKLW3KTHOGjk=
-github.com/containers/gvisor-tap-vsock v0.8.3/go.mod h1:46MvrqNuRNbjV4ZsZ3mHVJjR2Eh+fpyRh72EvWWFFjU=
+github.com/containers/gvisor-tap-vsock v0.8.4 h1:z7MqcldnXYGaU6uTaKVl7RFxTmbhNsd2UL0CyM3fdBs=
+github.com/containers/gvisor-tap-vsock v0.8.4/go.mod h1:Guh8d/SiuJ9jlnuIyUjcKkFKQ2qpLhNKPGD1jMoIt2Q=
 github.com/coreos/go-semver v0.3.1 h1:yi21YpKnrx1gt5R+la8n5WgS0kCrsPp33dmEyHReZr4=
 github.com/coreos/go-semver v0.3.1/go.mod h1:irMmmIw/7yzSRPWryHsK7EYSg09caPQL03VsM8rvUec=
 github.com/cpuguy83/go-md2man/v2 v2.0.6 h1:XJtiaUW6dEEqVuZiMTn1ldk455QWwEIsMIJlo5vtkx0=
