@@ -27,7 +27,7 @@ require (
 	github.com/google/yamlfmt v0.16.0
 	github.com/invopop/jsonschema v0.13.0
 	github.com/lima-vm/go-qcow2reader v0.6.0
-	github.com/lima-vm/sshocker v0.3.5 // gomodjail:unconfined
+	github.com/lima-vm/sshocker v0.3.6 // gomodjail:unconfined
 	github.com/mattn/go-isatty v0.0.20
 	github.com/mattn/go-shellwords v1.0.12
 	github.com/mdlayher/vsock v1.2.1 // gomodjail:unconfined
