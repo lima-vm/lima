@@ -31,6 +31,12 @@ config GUESTAGENT_ARCH_RISCV64
 		Build lima-guestagent for "riscv64" Arch
 	default y
 
+config GUESTAGENT_ARCH_S390X
+	bool "guestagent Arch: s390x"
+	help
+		Build lima-guestagent for "s390x" Arch
+	default y
+
 config GUESTAGENT_COMPRESS
 	bool "guestagent compress"
 	help
