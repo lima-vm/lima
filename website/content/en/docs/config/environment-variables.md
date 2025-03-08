@@ -67,13 +67,27 @@ This page documents the environment variables used in Lima.
   export LIMA_USERNET_RESOLVE_IP_ADDRESS_TIMEOUT=5
   ```
 
-### `LIMA_QEMU_UEFI_IN_BIOS`
+### `_LIMA_QEMU_UEFI_IN_BIOS`
 
 - **Description**: Commands QEMU to load x86_64 UEFI images using `-bios` instead of `pflash` drives.
 - **Default**: `false` on Unix like hosts and `true` on Windows hosts
 - **Usage**: 
   ```sh
-  export LIMA_QEMU_UEFI_IN_BIOS=true
+  export _LIMA_QEMU_UEFI_IN_BIOS=true
   ```
 - **Note**: It is expected that this variable will be set to `false` by default in future
   when QEMU supports `pflash` UEFI for accelerated guests on Windows.
+
+### `_LIMA_WINDOWS_EXTRA_PATH`
+
+- **Description**: Additional directories which will be added to PATH by `limactl.exe` process to search for tools.
+  It is useful, when there is a need to prevent collisions between binaries available in active shell and ones
+  used by `limactl.exe` - injecting them only for the running process w/o altering PATH observed by user shell.
+  Is is Windows specific and does nothing for other platforms.
+- **Default**: unset
+- **Usage**:
+  ```bat
+  set _LIMA_WINDOWS_EXTRA_PATH=C:\Program Files\Git\usr\bin
+  ```
+- **Note**: It is an experimental setting and has no guarantees being ever promoted to stable. It may be removed
+  or changed at any stage of project development.
