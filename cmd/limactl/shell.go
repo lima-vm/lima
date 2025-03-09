@@ -4,6 +4,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -12,12 +13,15 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"al.essio.dev/pkg/shellescape"
 	"github.com/coreos/go-semver/semver"
+	"github.com/lima-vm/lima/pkg/instance"
 	"github.com/lima-vm/lima/pkg/ioutilx"
 	"github.com/lima-vm/lima/pkg/sshutil"
 	"github.com/lima-vm/lima/pkg/store"
+	"github.com/lima-vm/sshocker/pkg/ssh"
 	"github.com/mattn/go-isatty"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -32,6 +36,8 @@ A custom ssh alias can be used instead by setting the $` + sshutil.EnvShellSSH +
 
 Hint: try --debug to show the detailed logs, if it seems hanging (mostly due to some SSH issue).
 `
+
+var restart bool
 
 func newShellCommand() *cobra.Command {
 	shellCmd := &cobra.Command{
@@ -49,6 +55,7 @@ func newShellCommand() *cobra.Command {
 
 	shellCmd.Flags().String("shell", "", "shell interpreter, e.g. /bin/bash")
 	shellCmd.Flags().String("workdir", "", "working directory")
+	shellCmd.Flags().BoolVarP(&restart, "restart", "r", false, "restart a running instance")
 	return shellCmd
 }
 
@@ -79,6 +86,31 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	}
 	if inst.Status == store.StatusStopped {
 		return fmt.Errorf("instance %q is stopped, run `limactl start %s` to start the instance", instName, instName)
+	}
+
+	if restart {
+		ctx := context.Background()
+		logrus.Infof("Restarting the instance %q", instName)
+
+		sshConfig := &ssh.SSHConfig{
+			ConfigFile:     inst.SSHConfigFile,
+			Persist:        false,
+			AdditionalArgs: []string{},
+		}
+
+		if err := ssh.ExitMaster(inst.Hostname, inst.SSHLocalPort, sshConfig); err != nil {
+			return err
+		}
+
+		if err := instance.StopGracefully(inst); err != nil {
+			return err
+		}
+
+		launchHostAgentForeground := false
+		time.Sleep(500 * time.Millisecond)
+		if err := instance.Start(ctx, inst, "", launchHostAgentForeground); err != nil {
+			return err
+		}
 	}
 
 	// When workDir is explicitly set, the shell MUST have workDir as the cwd, or exit with an error.
