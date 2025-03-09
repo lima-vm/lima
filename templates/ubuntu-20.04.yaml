@@ -10,6 +10,9 @@ images:
 - location: "https://cloud-images.ubuntu.com/releases/focal/release-20250127/ubuntu-20.04-server-cloudimg-armhf.img"
   arch: "armv7l"
   digest: "sha256:027579b19db39e989a95129440fbbc495d9d7426fedde7548851dac1693f8312"
+- location: "https://cloud-images.ubuntu.com/releases/focal/release-20250127/ubuntu-20.04-server-cloudimg-s390x.img"
+  arch: "s390x"
+  digest: "sha256:20306930392db13ef3bf169d236b4d67cd1c84e606df05bc4539b0f55d00ad74"
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
 - location: "https://cloud-images.ubuntu.com/releases/focal/release/ubuntu-20.04-server-cloudimg-amd64.img"
@@ -18,6 +21,8 @@ images:
   arch: "aarch64"
 - location: "https://cloud-images.ubuntu.com/releases/focal/release/ubuntu-20.04-server-cloudimg-armhf.img"
   arch: "armv7l"
+- location: "https://cloud-images.ubuntu.com/releases/focal/release/ubuntu-20.04-server-cloudimg-s390x.img"
+  arch: "s390x"
 
 mounts:
 - location: "~"

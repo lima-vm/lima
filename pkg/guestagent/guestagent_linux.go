@@ -20,7 +20,6 @@ import (
 	"github.com/lima-vm/lima/pkg/guestagent/procnettcp"
 	"github.com/lima-vm/lima/pkg/guestagent/timesync"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/sys/cpu"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -220,9 +219,6 @@ func (a *agent) Events(ctx context.Context, ch chan *api.Event) {
 }
 
 func (a *agent) LocalPorts(_ context.Context) ([]*api.IPPort, error) {
-	if cpu.IsBigEndian {
-		return nil, errors.New("big endian architecture is unsupported, because I don't know how /proc/net/tcp looks like on big endian hosts")
-	}
 	var res []*api.IPPort
 	tcpParsed, err := procnettcp.ParseFiles()
 	if err != nil {
