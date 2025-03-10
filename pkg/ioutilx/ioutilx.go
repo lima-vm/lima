@@ -53,7 +53,16 @@ func WindowsSubsystemPath(orig string) (string, error) {
 	out, err := exec.Command("cygpath", filepath.ToSlash(orig)).CombinedOutput()
 	if err != nil {
 		logrus.WithError(err).Errorf("failed to convert path to mingw, maybe not using Git ssh?")
-		return orig, err
+		return "", err
+	}
+	return strings.TrimSpace(string(out)), nil
+}
+
+func WindowsSubsystemPathForLinux(orig, distro string) (string, error) {
+	out, err := exec.Command("wsl", "-d", distro, "--exec", "wslpath", filepath.ToSlash(orig)).CombinedOutput()
+	if err != nil {
+		logrus.WithError(err).Errorf("failed to convert path to mingw, maybe wsl command is not operational?")
+		return "", err
 	}
 	return strings.TrimSpace(string(out)), nil
 }
