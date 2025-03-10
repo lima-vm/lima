@@ -18,6 +18,7 @@ import (
 	"github.com/lima-vm/lima/pkg/ioutilx"
 	"github.com/lima-vm/lima/pkg/sshutil"
 	"github.com/lima-vm/lima/pkg/store"
+	"github.com/lima-vm/sshocker/pkg/ssh"
 	"github.com/mattn/go-isatty"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -37,6 +38,7 @@ func newShellCommand() *cobra.Command {
 	shellCmd := &cobra.Command{
 		Use:               "shell [flags] INSTANCE [COMMAND...]",
 		Short:             "Execute shell in Lima",
+		Aliases:           []string{"ssh"},
 		Long:              shellHelp,
 		Args:              WrapArgsError(cobra.MinimumNArgs(1)),
 		RunE:              shellAction,
@@ -49,6 +51,7 @@ func newShellCommand() *cobra.Command {
 
 	shellCmd.Flags().String("shell", "", "shell interpreter, e.g. /bin/bash")
 	shellCmd.Flags().String("workdir", "", "working directory")
+	shellCmd.Flags().BoolP("exit-session", "e", false, "exit a ssh session for the instance")
 	return shellCmd
 }
 
@@ -79,6 +82,26 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	}
 	if inst.Status == store.StatusStopped {
 		return fmt.Errorf("instance %q is stopped, run `limactl start %s` to start the instance", instName, instName)
+	}
+
+	exit, err := cmd.Flags().GetBool("exit-session")
+	if err != nil {
+		return err
+	}
+	if exit {
+		logrus.Infof("Exiting ssh session for the instance %q", instName)
+
+		sshConfig := &ssh.SSHConfig{
+			ConfigFile:     inst.SSHConfigFile,
+			Persist:        false,
+			AdditionalArgs: []string{},
+		}
+
+		if err := ssh.ExitMaster(inst.Hostname, inst.SSHLocalPort, sshConfig); err != nil {
+			return err
+		}
+
+		return nil
 	}
 
 	// When workDir is explicitly set, the shell MUST have workDir as the cwd, or exit with an error.
