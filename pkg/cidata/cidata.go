@@ -14,6 +14,7 @@ import (
 	"path"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -322,9 +323,18 @@ func templateArgs(bootScripts bool, instDir, name string, instConfig *limayaml.L
 
 	args.BootCmds = getBootCmds(instConfig.Provision)
 
-	for _, f := range instConfig.Provision {
+	for i, f := range instConfig.Provision {
 		if f.Mode == limayaml.ProvisionModeDependency && *f.SkipDefaultDependencyResolution {
 			args.SkipDefaultDependencyResolution = true
+		}
+		if f.Mode == limayaml.ProvisionModeData {
+			args.DataFiles = append(args.DataFiles, DataFile{
+				FileName:    fmt.Sprintf("%08d", i),
+				Overwrite:   strconv.FormatBool(*f.Overwrite),
+				Owner:       *f.Owner,
+				Path:        *f.Path,
+				Permissions: *f.Permissions,
+			})
 		}
 	}
 
@@ -375,6 +385,11 @@ func GenerateISO9660(instDir, name string, instConfig *limayaml.LimaYAML, udpDNS
 			layout = append(layout, iso9660util.Entry{
 				Path:   fmt.Sprintf("provision.%s/%08d", f.Mode, i),
 				Reader: strings.NewReader(f.Script),
+			})
+		case limayaml.ProvisionModeData:
+			layout = append(layout, iso9660util.Entry{
+				Path:   fmt.Sprintf("provision.%s/%08d", f.Mode, i),
+				Reader: strings.NewReader(*f.Content),
 			})
 		case limayaml.ProvisionModeBoot:
 			continue

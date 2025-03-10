@@ -221,6 +221,7 @@ const (
 	ProvisionModeBoot       ProvisionMode = "boot"
 	ProvisionModeDependency ProvisionMode = "dependency"
 	ProvisionModeAnsible    ProvisionMode = "ansible"
+	ProvisionModeData       ProvisionMode = "data"
 )
 
 type Provision struct {
@@ -229,6 +230,12 @@ type Provision struct {
 	Script                          string             `yaml:"script" json:"script"`
 	File                            *LocatorWithDigest `yaml:"file,omitempty" json:"file,omitempty" jsonschema:"nullable"`
 	Playbook                        string             `yaml:"playbook,omitempty" json:"playbook,omitempty"`
+	// The following fields must be nil unless Mode is ProvisionModeData
+	Content     *string `yaml:"content,omitempty" json:"content,omitempty" jsonschema:"nullable"`
+	Overwrite   *bool   `yaml:"overwrite,omitempty" json:"overwrite,omitempty" jsonschema:"nullable"`
+	Owner       *string `yaml:"owner,omitempty" json:"owner,omitempty"`
+	Path        *string `yaml:"path,omitempty" json:"path,omitempty"`
+	Permissions *string `yaml:"permissions,omitempty" json:"permissions,omitempty"`
 }
 
 type Containerd struct {
