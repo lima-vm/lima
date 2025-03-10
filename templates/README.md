@@ -30,6 +30,7 @@ Distro:
 - [`ubuntu-lts`](./ubuntu-lts.yaml): Ubuntu LTS (same as `ubuntu.yaml` but pinned to an LTS version)
 - [`experimental/gentoo`](./experimental/gentoo.yaml): [experimental] Gentoo
 - [`experimental/opensuse-tumbleweed`](./experimental/opensuse-tumbleweed.yaml): [experimental] openSUSE Tumbleweed
+- [`experimental/debian-sid`](./experimental/debian-sid.yaml): [experimental] Debian Sid
 
 Container engines:
 - [`apptainer`](./apptainer.yaml): Apptainer
