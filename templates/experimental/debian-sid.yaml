@@ -1,0 +1,11 @@
+# This template requires Lima v0.7.0 or later
+images:
+- location: "https://cloud.debian.org/images/cloud/sid/daily/latest/debian-sid-genericcloud-amd64-daily.qcow2"
+  arch: "x86_64"
+- location: "https://cloud.debian.org/images/cloud/sid/daily/latest/debian-sid-genericcloud-arm64-daily.qcow2"
+  arch: "aarch64"
+mountTypesUnsupported: ["9p"]
+mounts:
+- location: "~"
+- location: "/tmp/lima"
+  writable: true
