@@ -703,7 +703,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string, warn bool) {
 	location := make(map[string]int)
 	for _, mount := range slices.Concat(d.Mounts, y.Mounts, o.Mounts) {
 		if out, err := executeHostTemplate(mount.Location, instDir, y.Param); err == nil {
-			mount.Location = out.String()
+			mount.Location = filepath.Clean(out.String())
 		} else {
 			logrus.WithError(err).Warnf("Couldn't process mount location %q as a template", mount.Location)
 		}
@@ -927,6 +927,7 @@ func executeHostTemplate(format, instDir string, param map[string]string) (bytes
 			"User":  currentUser.Username,
 			"Home":  userHomeDir,
 			"Param": param,
+			"Temp":  os.TempDir(),
 
 			"Instance": filepath.Base(instDir), // DEPRECATED, use `{{.Name}}`
 			"LimaHome": limaHome,               // DEPRECATED, use `{{.Dir}}` instead of `{{.LimaHome}}/{{.Instance}}`

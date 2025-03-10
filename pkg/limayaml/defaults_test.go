@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"slices"
@@ -146,8 +147,8 @@ func TestFillDefault(t *testing.T) {
 			},
 		},
 		Mounts: []Mount{
-			{Location: "/tmp"},
-			{Location: "{{.Dir}}/{{.Param.ONE}}", MountPoint: ptr.Of("/mnt/{{.Param.ONE}}")},
+			{Location: filepath.Clean(os.TempDir())},
+			{Location: filepath.Clean("{{.Dir}}/{{.Param.ONE}}"), MountPoint: ptr.Of("/mnt/{{.Param.ONE}}")},
 		},
 		MountType: ptr.Of(NINEP),
 		Provision: []Provision{
@@ -231,8 +232,8 @@ func TestFillDefault(t *testing.T) {
 	expect.Mounts[0].NineP.Cache = ptr.Of(Default9pCacheForRO)
 	expect.Mounts[0].Virtiofs.QueueSize = nil
 	// Only missing Mounts field is Writable, and the default value is also the null value: false
-	expect.Mounts[1].Location = fmt.Sprintf("%s/%s", instDir, y.Param["ONE"])
-	expect.Mounts[1].MountPoint = ptr.Of(fmt.Sprintf("/mnt/%s", y.Param["ONE"]))
+	expect.Mounts[1].Location = filepath.Join(instDir, y.Param["ONE"])
+	expect.Mounts[1].MountPoint = ptr.Of(path.Join("/mnt", y.Param["ONE"]))
 	expect.Mounts[1].Writable = ptr.Of(false)
 	expect.Mounts[1].SSHFS.Cache = ptr.Of(true)
 	expect.Mounts[1].SSHFS.FollowSymlinks = ptr.Of(false)
@@ -385,7 +386,7 @@ func TestFillDefault(t *testing.T) {
 
 		Mounts: []Mount{
 			{
-				Location: "/var/log",
+				Location: filepath.Clean("/var/log"),
 				Writable: ptr.Of(false),
 			},
 		},
@@ -593,7 +594,7 @@ func TestFillDefault(t *testing.T) {
 
 		Mounts: []Mount{
 			{
-				Location: "/var/log",
+				Location: filepath.Clean("/var/log"),
 				Writable: ptr.Of(true),
 				SSHFS: SSHFS{
 					Cache:          ptr.Of(false),
