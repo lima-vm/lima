@@ -14,6 +14,7 @@ mounts:
   writable: true
 
 param:
+  ANSIBLE: ansible
   BOOT: boot
   DEPENDENCY: dependency
   PROBE: probe
