@@ -15,7 +15,9 @@ import (
 
 	"al.essio.dev/pkg/shellescape"
 	"github.com/coreos/go-semver/semver"
+	"github.com/lima-vm/lima/pkg/instance"
 	"github.com/lima-vm/lima/pkg/ioutilx"
+	networks "github.com/lima-vm/lima/pkg/networks/reconcile"
 	"github.com/lima-vm/lima/pkg/sshutil"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/mattn/go-isatty"
@@ -78,7 +80,31 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	if inst.Status == store.StatusStopped {
-		return fmt.Errorf("instance %q is stopped, run `limactl start %s` to start the instance", instName, instName)
+		startNow, err := askWhetherToStart()
+		if err != nil {
+			return err
+		}
+
+		if !startNow {
+			return nil
+		}
+
+		ctx := cmd.Context()
+
+		err = networks.Reconcile(ctx, inst.Name)
+		if err != nil {
+			return err
+		}
+
+		err = instance.Start(ctx, inst, "", false)
+		if err != nil {
+			return err
+		}
+
+		inst, err = store.Inspect(instName)
+		if err != nil {
+			return err
+		}
 	}
 
 	// When workDir is explicitly set, the shell MUST have workDir as the cwd, or exit with an error.
