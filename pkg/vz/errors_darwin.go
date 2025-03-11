@@ -7,5 +7,4 @@ package vz
 
 import "errors"
 
-//nolint:revive // error-strings
-var errRosettaUnsupported = errors.New("Rosetta is unsupported on non-ARM64 hosts")
+var errRosettaUnsupported = errors.New("rosetta is unsupported on non-ARM64 hosts")
