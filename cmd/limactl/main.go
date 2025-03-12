@@ -68,6 +68,7 @@ func newApp() *cobra.Command {
 	rootCmd.PersistentFlags().Bool("debug", false, "debug mode")
 	// TODO: "survey" does not support using cygwin terminal on windows yet
 	rootCmd.PersistentFlags().Bool("tty", isatty.IsTerminal(os.Stdout.Fd()), "Enable TUI interactions such as opening an editor. Defaults to true when stdout is a terminal. Set to false for automation.")
+	rootCmd.PersistentFlags().BoolP("yes", "y", false, "Alias of --tty=false")
 	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, _ []string) error {
 		l, _ := cmd.Flags().GetString("log-level")
 		if l != "" {
@@ -128,6 +129,22 @@ func newApp() *cobra.Command {
 		}
 		if nfs {
 			return errors.New("must not run on NFS dir")
+		}
+
+		if cmd.Flags().Changed("yes") && cmd.Flags().Changed("tty") {
+			return errors.New("cannot use both --tty and --yes flags at the same time")
+		}
+
+		if cmd.Flags().Changed("yes") {
+			// Sets the value of the yesValue flag by using the yes flag.
+			yesValue, _ := cmd.Flags().GetBool("yes")
+			if yesValue {
+				// Sets to the default value false
+				err := cmd.Flags().Set("tty", "false")
+				if err != nil {
+					return err
+				}
+			}
 		}
 		return nil
 	}
