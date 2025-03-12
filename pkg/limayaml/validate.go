@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"unicode"
 
@@ -218,20 +219,52 @@ func Validate(y *LimaYAML, warn bool) error {
 			}
 		}
 		switch p.Mode {
-		case ProvisionModeSystem, ProvisionModeUser, ProvisionModeBoot:
-			if p.SkipDefaultDependencyResolution != nil {
-				return fmt.Errorf("field `provision[%d].mode` cannot set skipDefaultDependencyResolution, only valid on scripts of type %q",
-					i, ProvisionModeDependency)
-			}
-		case ProvisionModeDependency:
-		case ProvisionModeAnsible:
+		case ProvisionModeSystem, ProvisionModeUser, ProvisionModeBoot, ProvisionModeData, ProvisionModeDependency, ProvisionModeAnsible:
 		default:
-			return fmt.Errorf("field `provision[%d].mode` must one of %q, %q, %q, %q, or %q",
-				i, ProvisionModeSystem, ProvisionModeUser, ProvisionModeBoot, ProvisionModeDependency, ProvisionModeAnsible)
+			return fmt.Errorf("field `provision[%d].mode` must one of %q, %q, %q, %q, %q, or %q",
+				i, ProvisionModeSystem, ProvisionModeUser, ProvisionModeBoot, ProvisionModeDependency, ProvisionModeAnsible, ProvisionModeAnsible)
+		}
+		if p.Mode != ProvisionModeDependency && p.SkipDefaultDependencyResolution != nil {
+			return fmt.Errorf("field `provision[%d].mode` cannot set skipDefaultDependencyResolution, only valid on scripts of type %q",
+				i, ProvisionModeDependency)
+		}
+		if p.Mode == ProvisionModeData {
+			if p.Path == nil {
+				return fmt.Errorf("field `provision[%d].path` must not be empty when mode is %q", i, ProvisionModeData)
+			}
+			if !path.IsAbs(*p.Path) {
+				return fmt.Errorf("field `provision[%d].path` must be an absolute path", i)
+			}
+			if p.Content == nil {
+				return fmt.Errorf("field `provision[%d].content` must not be empty when mode is %q", i, ProvisionModeData)
+			}
+			// FillDefaults makes sure that p.Permissions is not nil
+			if _, err := strconv.ParseInt(*p.Permissions, 8, 64); err != nil {
+				return fmt.Errorf("field `provision[%d].permissions` must be an octal number: %w", i, err)
+			}
+		} else {
+			if p.Script == "" && p.Mode != ProvisionModeAnsible {
+				return fmt.Errorf("field `provision[%d].script` must not be empty", i)
+			}
+			if p.Content != nil {
+				return fmt.Errorf("field `provision[%d].content` can only be set when mode is %q", i, ProvisionModeData)
+			}
+			if p.Overwrite != nil {
+				return fmt.Errorf("field `provision[%d].overwrite` can only be set when mode is %q", i, ProvisionModeData)
+			}
+			if p.Owner != nil {
+				return fmt.Errorf("field `provision[%d].owner` can only be set when mode is %q", i, ProvisionModeData)
+			}
+			if p.Path != nil {
+				return fmt.Errorf("field `provision[%d].path` can only be set when mode is %q", i, ProvisionModeData)
+			}
+			if p.Permissions != nil {
+				return fmt.Errorf("field `provision[%d].permissions` can only be set when mode is %q", i, ProvisionModeData)
+			}
 		}
 		if p.Playbook != "" {
 			if p.Mode != ProvisionModeAnsible {
-				return fmt.Errorf("field `provision[%d].mode must be %q if playbook is set", i, ProvisionModeAnsible)
+				return fmt.Errorf("field `provision[%d].playbook can only be set when mode is %q", i, ProvisionModeAnsible)
 			}
 			if p.Script != "" {
 				return fmt.Errorf("field `provision[%d].script must be empty if playbook is set", i)

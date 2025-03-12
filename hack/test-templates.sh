@@ -55,6 +55,7 @@ declare -A CHECKS=(
 	["user-v2"]=""
 	["mount-path-with-spaces"]=""
 	["provision-ansible"]=""
+	["provision-data"]=""
 	["param-env-variables"]=""
 	["set-user"]=""
 )
@@ -82,6 +83,7 @@ case "$NAME" in
 	CHECKS["snapshot-offline"]="1"
 	CHECKS["mount-path-with-spaces"]="1"
 	CHECKS["provision-ansible"]="1"
+	CHECKS["provision-data"]="1"
 	CHECKS["param-env-variables"]="1"
 	CHECKS["set-user"]="1"
 	;;
@@ -194,13 +196,19 @@ if [[ -n ${CHECKS["provision-ansible"]} ]]; then
 	limactl shell "$NAME" test -e /tmp/ansible
 fi
 
+if [[ -n ${CHECKS["provision-data"]} ]]; then
+	INFO 'Testing that /etc/sysctl.d/99-inotify.conf was created successfully on provision'
+	limactl shell "$NAME" grep -q fs.inotify.max_user_watches /etc/sysctl.d/99-inotify.conf
+fi
+
 if [[ -n ${CHECKS["param-env-variables"]} ]]; then
 	INFO 'Testing that PARAM env variables are exported to all types of provisioning scripts and probes'
 	limactl shell "$NAME" test -e /tmp/param-boot
 	limactl shell "$NAME" test -e /tmp/param-dependency
 	limactl shell "$NAME" test -e /tmp/param-probe
 	limactl shell "$NAME" test -e /tmp/param-system
-	limactl shell "$NAME" test -e /tmp/param-user
+	# TODO re-enable once https://github.com/lima-vm/lima/issues/3308 is fixed
+	# limactl shell "$NAME" test -e /tmp/param-user
 fi
 
 if [[ -n ${CHECKS["set-user"]} ]]; then

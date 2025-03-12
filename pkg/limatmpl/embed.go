@@ -552,11 +552,11 @@ func (tmpl *Template) combineNetworks() {
 	}
 }
 
-// updateScript replaces a "file" property with the actual script and then renames the field to "script".
-func (tmpl *Template) updateScript(field string, idx int, script string) {
+// updateScript replaces a "file" property with the actual script and then renames the field to newName ("script" or "content").
+func (tmpl *Template) updateScript(field string, idx int, newName, script string) {
 	entry := fmt.Sprintf("$a.%s[%d].file", field, idx)
 	// Assign script to the "file" field and then rename it to "script".
-	tmpl.expr.WriteString(fmt.Sprintf("| (%s) = %q | (%s | key) = \"script\"\n", entry, script, entry))
+	tmpl.expr.WriteString(fmt.Sprintf("| (%s) = %q | (%s | key) = %q\n", entry, script, entry, newName))
 }
 
 // embedAllScripts replaces all "provision" and "probes" file references with the actual script.
@@ -565,30 +565,47 @@ func (tmpl *Template) embedAllScripts(ctx context.Context, embedAll bool) error 
 		return err
 	}
 	for i, p := range tmpl.Config.Probes {
+		if p.File == nil {
+			continue
+		}
+		warnFileIsExperimental()
 		// Don't overwrite existing script. This should throw an error during validation.
-		if p.File != nil && p.Script == "" {
-			warnFileIsExperimental()
-			isTemplate, _ := SeemsTemplateURL(p.File.URL)
-			if embedAll || !isTemplate {
-				scriptTmpl, err := Read(ctx, "", p.File.URL)
-				if err != nil {
-					return err
-				}
-				tmpl.updateScript("probes", i, string(scriptTmpl.Bytes))
+		if p.Script != "" {
+			continue
+		}
+		isTemplate, _ := SeemsTemplateURL(p.File.URL)
+		if embedAll || !isTemplate {
+			scriptTmpl, err := Read(ctx, "", p.File.URL)
+			if err != nil {
+				return err
 			}
+			tmpl.updateScript("probes", i, "script", string(scriptTmpl.Bytes))
 		}
 	}
 	for i, p := range tmpl.Config.Provision {
-		if p.File != nil && p.Script == "" {
-			warnFileIsExperimental()
-			isTemplate, _ := SeemsTemplateURL(p.File.URL)
-			if embedAll || !isTemplate {
-				scriptTmpl, err := Read(ctx, "", p.File.URL)
-				if err != nil {
-					return err
-				}
-				tmpl.updateScript("provision", i, string(scriptTmpl.Bytes))
+		if p.File == nil {
+			continue
+		}
+		warnFileIsExperimental()
+		newName := "script"
+		switch p.Mode {
+		case limayaml.ProvisionModeData:
+			newName = "content"
+			if p.Content != nil {
+				continue
 			}
+		default:
+			if p.Script != "" {
+				continue
+			}
+		}
+		isTemplate, _ := SeemsTemplateURL(p.File.URL)
+		if embedAll || !isTemplate {
+			scriptTmpl, err := Read(ctx, "", p.File.URL)
+			if err != nil {
+				return err
+			}
+			tmpl.updateScript("provision", i, newName, string(scriptTmpl.Bytes))
 		}
 	}
 	return tmpl.evalExpr()
