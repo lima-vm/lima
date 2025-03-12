@@ -487,10 +487,47 @@ func FillDefault(y, d, o *LimaYAML, filePath string, warn bool) {
 		if provision.Mode == ProvisionModeDependency && provision.SkipDefaultDependencyResolution == nil {
 			provision.SkipDefaultDependencyResolution = ptr.Of(false)
 		}
-		if out, err := executeGuestTemplate(provision.Script, instDir, y.User, y.Param); err == nil {
-			provision.Script = out.String()
-		} else {
-			logrus.WithError(err).Warnf("Couldn't process provisioning script %q as a template", provision.Script)
+		if provision.Mode == ProvisionModeData {
+			if provision.Content == nil {
+				provision.Content = ptr.Of("")
+			} else {
+				if out, err := executeGuestTemplate(*provision.Content, instDir, y.User, y.Param); err == nil {
+					provision.Content = ptr.Of(out.String())
+				} else {
+					logrus.WithError(err).Warnf("Couldn't process data content %q as a template", *provision.Content)
+				}
+			}
+			if provision.Overwrite == nil {
+				provision.Overwrite = ptr.Of(true)
+			}
+			if provision.Owner == nil {
+				provision.Owner = ptr.Of("root:root")
+			} else {
+				if out, err := executeGuestTemplate(*provision.Owner, instDir, y.User, y.Param); err == nil {
+					provision.Owner = ptr.Of(out.String())
+				} else {
+					logrus.WithError(err).Warnf("Couldn't owner %q as a template", *provision.Owner)
+				}
+			}
+			// Path is required; validation will throw an error when it is nil
+			if provision.Path != nil {
+				if out, err := executeGuestTemplate(*provision.Path, instDir, y.User, y.Param); err == nil {
+					provision.Path = ptr.Of(out.String())
+				} else {
+					logrus.WithError(err).Warnf("Couldn't process path %q as a template", *provision.Path)
+				}
+			}
+			if provision.Permissions == nil {
+				provision.Permissions = ptr.Of("644")
+			}
+		}
+		// TODO Turn Script into a pointer; it is a plain string for historical reasons only
+		if provision.Script != "" {
+			if out, err := executeGuestTemplate(provision.Script, instDir, y.User, y.Param); err == nil {
+				provision.Script = out.String()
+			} else {
+				logrus.WithError(err).Warnf("Couldn't process provisioning script %q as a template", provision.Script)
+			}
 		}
 	}
 

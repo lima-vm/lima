@@ -253,6 +253,21 @@ containerd:
 # # See ansible docs, and `ansible-config`, for more info https://docs.ansible.com/ansible/latest/playbook_guide/
 # - mode: ansible
 #   playbook: playbook.yaml
+# # `data` is a file that is written to the guest filesystem and not executed at all.
+# # The file is written after the boot scripts, but before any other provisioning scripts are run.
+# # Note that reverse-sshfs mounts are not established at this time; other mount types are already mounted.
+# # The `path` and `content` properties are required. The `file` property can be used the same way as with
+# # other provisioning scripts, in which case `content` must be empty. The `owner` defaults to "root:root";
+# # the permissions default to 644. The `overwrite` property defaults to `true`, in which case the file will
+# # be overwritten on every boot.
+# # `path`, `contents`, and `owner` are evaluated as guest templates (see above).
+# - mode: data
+#   path: /etc/conf.d/example
+#   content: |
+#     FOO=bar
+#   owner: "root:root"
+#   permissions: 644
+#   overwrite: false
 
 # Probe scripts to check readiness.
 # The scripts run in user mode. They must start with a '#!' line.

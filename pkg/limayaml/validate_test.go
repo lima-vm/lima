@@ -58,6 +58,30 @@ func TestValidateProbes(t *testing.T) {
 	assert.Error(t, err, "field `probe[0].file.digest` support is not yet implemented")
 }
 
+func TestValidateProvisionData(t *testing.T) {
+	images := `images: [{location: /}]`
+	validData := `provision: [{mode: data, path: /tmp, content: hello}]`
+	y, err := Load([]byte(validData+"\n"+images), "lima.yaml")
+	assert.NilError(t, err)
+
+	err = Validate(y, false)
+	assert.NilError(t, err)
+
+	invalidData := `provision: [{mode: data, content: hello}]`
+	y, err = Load([]byte(invalidData+"\n"+images), "lima.yaml")
+	assert.NilError(t, err)
+
+	err = Validate(y, false)
+	assert.Error(t, err, "field `provision[0].path` must not be empty when mode is \"data\"")
+
+	invalidData = `provision: [{mode: data, path: /tmp, content: hello, permissions: 9}]`
+	y, err = Load([]byte(invalidData+"\n"+images), "lima.yaml")
+	assert.NilError(t, err)
+
+	err = Validate(y, false)
+	assert.ErrorContains(t, err, "provision[0].permissions` must be an octal number")
+}
+
 func TestValidateAdditionalDisks(t *testing.T) {
 	images := `images: [{"location": "/"}]`
 

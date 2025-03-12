@@ -52,6 +52,31 @@ else
 	done
 fi
 
+# indirect variable lookup, like ${!var} in bash
+deref() {
+	eval echo \$"$1"
+}
+
+if [ -d "${LIMA_CIDATA_MNT}"/provision.data ]; then
+	for f in "${LIMA_CIDATA_MNT}"/provision.data/*; do
+		filename=$(basename "$f")
+		overwrite=$(deref "LIMA_CIDATA_DATAFILE_${filename}_OVERWRITE")
+		owner=$(deref "LIMA_CIDATA_DATAFILE_${filename}_OWNER")
+		path=$(deref "LIMA_CIDATA_DATAFILE_${filename}_PATH")
+		permissions=$(deref "LIMA_CIDATA_DATAFILE_${filename}_PERMISSIONS")
+		if [ -e "$path" ] && [ "$overwrite" = "false" ]; then
+			INFO "Not overwriting $path"
+		else
+			INFO "Copying $f to $path"
+			# intermediate directories will be owned by root, regardless of OWNER setting
+			mkdir -p "$(dirname "$path")"
+			cp "$f" "$path"
+			chown "$owner" "$path"
+			chmod "$permissions" "$path"
+		fi
+	done
+fi
+
 if [ -d "${LIMA_CIDATA_MNT}"/provision.system ]; then
 	for f in "${LIMA_CIDATA_MNT}"/provision.system/*; do
 		INFO "Executing $f"

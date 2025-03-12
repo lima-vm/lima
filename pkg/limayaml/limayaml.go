@@ -221,6 +221,7 @@ const (
 	ProvisionModeBoot       ProvisionMode = "boot"
 	ProvisionModeDependency ProvisionMode = "dependency"
 	ProvisionModeAnsible    ProvisionMode = "ansible"
+	ProvisionModeData       ProvisionMode = "data"
 )
 
 type Provision struct {
@@ -229,6 +230,16 @@ type Provision struct {
 	Script                          string             `yaml:"script" json:"script"`
 	File                            *LocatorWithDigest `yaml:"file,omitempty" json:"file,omitempty" jsonschema:"nullable"`
 	Playbook                        string             `yaml:"playbook,omitempty" json:"playbook,omitempty"`
+	// All ProvisionData fields must be nil unless Mode is ProvisionModeData
+	ProvisionData `yaml:",inline"` // Flatten fields for "strict" YAML mode
+}
+
+type ProvisionData struct {
+	Content     *string `yaml:"content,omitempty" json:"content,omitempty" jsonschema:"nullable"`
+	Overwrite   *bool   `yaml:"overwrite,omitempty" json:"overwrite,omitempty" jsonschema:"nullable"`
+	Owner       *string `yaml:"owner,omitempty" json:"owner,omitempty"` // any owner string supported by `chown`, defaults to "root:root"
+	Path        *string `yaml:"path,omitempty" json:"path,omitempty"`
+	Permissions *string `yaml:"permissions,omitempty" json:"permissions,omitempty"`
 }
 
 type Containerd struct {
