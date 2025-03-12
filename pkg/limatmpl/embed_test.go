@@ -374,6 +374,12 @@ provision:
 		"base: [{url: base.yaml, digest: deafbad}]",
 		"not yet implemented",
 	},
+	{
+		"Image URLs will be converted into a template",
+		"",
+		"base: https://example.com/lima-linux-riscv64.img",
+		"{arch: riscv64, images: [{location: https://example.com/lima-linux-riscv64.img, arch: riscv64}]}",
+	},
 }
 
 func TestEmbed(t *testing.T) {
