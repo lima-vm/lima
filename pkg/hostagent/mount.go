@@ -9,7 +9,6 @@ import (
 	"os"
 
 	"github.com/lima-vm/lima/pkg/limayaml"
-	"github.com/lima-vm/lima/pkg/localpathutil"
 	"github.com/lima-vm/sshocker/pkg/reversesshfs"
 	"github.com/sirupsen/logrus"
 )
@@ -35,16 +34,7 @@ func (a *HostAgent) setupMounts() ([]*mount, error) {
 }
 
 func (a *HostAgent) setupMount(m limayaml.Mount) (*mount, error) {
-	location, err := localpathutil.Expand(m.Location)
-	if err != nil {
-		return nil, err
-	}
-
-	mountPoint, err := localpathutil.Expand(*m.MountPoint)
-	if err != nil {
-		return nil, err
-	}
-	if err := os.MkdirAll(location, 0o755); err != nil {
+	if err := os.MkdirAll(m.Location, 0o755); err != nil {
 		return nil, err
 	}
 	// NOTE: allow_other requires "user_allow_other" in /etc/fuse.conf
@@ -55,35 +45,35 @@ func (a *HostAgent) setupMount(m limayaml.Mount) (*mount, error) {
 	if *m.SSHFS.FollowSymlinks {
 		sshfsOptions += ",follow_symlinks"
 	}
-	logrus.Infof("Mounting %q on %q", location, mountPoint)
+	logrus.Infof("Mounting %q on %q", m.Location, *m.MountPoint)
 
 	rsf := &reversesshfs.ReverseSSHFS{
 		Driver:              *m.SSHFS.SFTPDriver,
 		SSHConfig:           a.sshConfig,
-		LocalPath:           location,
+		LocalPath:           m.Location,
 		Host:                "127.0.0.1",
 		Port:                a.sshLocalPort,
-		RemotePath:          mountPoint,
+		RemotePath:          *m.MountPoint,
 		Readonly:            !(*m.Writable),
 		SSHFSAdditionalArgs: []string{"-o", sshfsOptions},
 	}
 	if err := rsf.Prepare(); err != nil {
-		return nil, fmt.Errorf("failed to prepare reverse sshfs for %q on %q: %w", location, mountPoint, err)
+		return nil, fmt.Errorf("failed to prepare reverse sshfs for %q on %q: %w", m.Location, *m.MountPoint, err)
 	}
 	if err := rsf.Start(); err != nil {
-		logrus.WithError(err).Warnf("failed to mount reverse sshfs for %q on %q, retrying with `-o nonempty`", location, mountPoint)
+		logrus.WithError(err).Warnf("failed to mount reverse sshfs for %q on %q, retrying with `-o nonempty`", m.Location, *m.MountPoint)
 		// NOTE: nonempty is not supported for libfuse3: https://github.com/canonical/multipass/issues/1381
 		rsf.SSHFSAdditionalArgs = []string{"-o", "nonempty"}
 		if err := rsf.Start(); err != nil {
-			return nil, fmt.Errorf("failed to mount reverse sshfs for %q on %q: %w", location, mountPoint, err)
+			return nil, fmt.Errorf("failed to mount reverse sshfs for %q on %q: %w", m.Location, *m.MountPoint, err)
 		}
 	}
 
 	res := &mount{
 		close: func() error {
-			logrus.Infof("Unmounting %q", location)
-			if closeErr := rsf.Close(); closeErr != nil {
-				return fmt.Errorf("failed to unmount reverse sshfs for %q on %q: %w", location, mountPoint, err)
+			logrus.Infof("Unmounting %q", m.Location)
+			if err := rsf.Close(); err != nil {
+				return fmt.Errorf("failed to unmount reverse sshfs for %q on %q: %w", m.Location, *m.MountPoint, err)
 			}
 			return nil
 		},

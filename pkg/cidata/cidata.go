@@ -200,14 +200,6 @@ func templateArgs(bootScripts bool, instDir, name string, instConfig *limayaml.L
 	}
 	for i, f := range instConfig.Mounts {
 		tag := fmt.Sprintf("mount%d", i)
-		location, err := localpathutil.Expand(f.Location)
-		if err != nil {
-			return nil, err
-		}
-		mountPoint, err := localpathutil.Expand(*f.MountPoint)
-		if err != nil {
-			return nil, err
-		}
 		options := "defaults"
 		switch fstype {
 		case "9p", "virtiofs":
@@ -220,7 +212,7 @@ func templateArgs(bootScripts bool, instDir, name string, instConfig *limayaml.L
 				options += fmt.Sprintf(",version=%s", *f.NineP.ProtocolVersion)
 				msize, err := units.RAMInBytes(*f.NineP.Msize)
 				if err != nil {
-					return nil, fmt.Errorf("failed to parse msize for %q: %w", location, err)
+					return nil, fmt.Errorf("failed to parse msize for %q: %w", f.Location, err)
 				}
 				options += fmt.Sprintf(",msize=%d", msize)
 				options += fmt.Sprintf(",cache=%s", *f.NineP.Cache)
@@ -228,9 +220,9 @@ func templateArgs(bootScripts bool, instDir, name string, instConfig *limayaml.L
 			// don't fail the boot, if virtfs is not available
 			options += ",nofail"
 		}
-		args.Mounts = append(args.Mounts, Mount{Tag: tag, MountPoint: mountPoint, Type: fstype, Options: options})
-		if location == hostHome {
-			args.HostHomeMountPoint = mountPoint
+		args.Mounts = append(args.Mounts, Mount{Tag: tag, MountPoint: *f.MountPoint, Type: fstype, Options: options})
+		if f.Location == hostHome {
+			args.HostHomeMountPoint = *f.MountPoint
 		}
 	}
 

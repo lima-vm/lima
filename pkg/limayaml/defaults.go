@@ -29,6 +29,7 @@ import (
 	"golang.org/x/sys/cpu"
 
 	"github.com/lima-vm/lima/pkg/identifierutil"
+	"github.com/lima-vm/lima/pkg/localpathutil"
 	. "github.com/lima-vm/lima/pkg/must"
 	"github.com/lima-vm/lima/pkg/networks"
 	"github.com/lima-vm/lima/pkg/osutil"
@@ -785,8 +786,13 @@ func FillDefault(y, d, o *LimaYAML, filePath string, warn bool) {
 				mounts[i].NineP.Cache = ptr.Of(Default9pCacheForRO)
 			}
 		}
+		if location, err := localpathutil.Expand(mount.Location); err == nil {
+			mounts[i].Location = location
+		} else {
+			logrus.WithError(err).Warnf("Couldn't expand location %q", mount.Location)
+		}
 		if mount.MountPoint == nil {
-			mounts[i].MountPoint = ptr.Of(mount.Location)
+			mounts[i].MountPoint = ptr.Of(mounts[i].Location)
 		}
 	}
 

@@ -25,7 +25,6 @@ import (
 	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/iso9660util"
 	"github.com/lima-vm/lima/pkg/limayaml"
-	"github.com/lima-vm/lima/pkg/localpathutil"
 	"github.com/lima-vm/lima/pkg/nativeimgutil"
 	"github.com/lima-vm/lima/pkg/networks"
 	"github.com/lima-vm/lima/pkg/networks/usernet"
@@ -548,18 +547,14 @@ func attachFolderMounts(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineCo
 	var mounts []vz.DirectorySharingDeviceConfiguration
 	if *driver.Instance.Config.MountType == limayaml.VIRTIOFS {
 		for i, mount := range driver.Instance.Config.Mounts {
-			expandedPath, err := localpathutil.Expand(mount.Location)
-			if err != nil {
-				return err
-			}
-			if _, err := os.Stat(expandedPath); errors.Is(err, os.ErrNotExist) {
-				err := os.MkdirAll(expandedPath, 0o750)
+			if _, err := os.Stat(mount.Location); errors.Is(err, os.ErrNotExist) {
+				err := os.MkdirAll(mount.Location, 0o750)
 				if err != nil {
 					return err
 				}
 			}
 
-			directory, err := vz.NewSharedDirectory(expandedPath, !*mount.Writable)
+			directory, err := vz.NewSharedDirectory(mount.Location, !*mount.Writable)
 			if err != nil {
 				return err
 			}

@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	guestagentapi "github.com/lima-vm/lima/pkg/guestagent/api"
-	"github.com/lima-vm/lima/pkg/localpathutil"
 	"github.com/rjeczalik/notify"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -74,20 +73,16 @@ func (a *HostAgent) setupWatchers(events chan notify.EventInfo) error {
 		if !*m.Writable {
 			continue
 		}
-		location, err := localpathutil.Expand(m.Location)
+		symlink, err := filepath.EvalSymlinks(m.Location)
 		if err != nil {
 			return err
 		}
-		symlink, err := filepath.EvalSymlinks(location)
-		if err != nil {
-			return err
-		}
-		if location != symlink {
-			mountSymlinks[symlink] = location
+		if m.Location != symlink {
+			mountSymlinks[symlink] = m.Location
 		}
 
-		logrus.Infof("enable inotify for writable mount: %s", location)
-		err = notify.Watch(path.Join(location, "..."), events, GetNotifyEvent())
+		logrus.Infof("enable inotify for writable mount: %s", m.Location)
+		err = notify.Watch(path.Join(m.Location, "..."), events, GetNotifyEvent())
 		if err != nil {
 			return err
 		}

@@ -154,6 +154,7 @@ func Validate(y *LimaYAML, warn bool) error {
 			return fmt.Errorf("field `mounts[%d].location` must be an absolute path, got %q",
 				i, f.Location)
 		}
+		// f.Location has already been expanded in FillDefaults(), but that function cannot return errors.
 		loc, err := localpathutil.Expand(f.Location)
 		if err != nil {
 			return fmt.Errorf("field `mounts[%d].location` refers to an unexpandable path: %q: %w", i, f.Location, err)
@@ -173,6 +174,10 @@ func Validate(y *LimaYAML, warn bool) error {
 		// home directory defined in "cidata.iso:/user-data"
 		case *y.User.Home:
 			return fmt.Errorf("field `mounts[%d].mountPoint` is the reserved internal home directory %q", i, *y.User.Home)
+		}
+		// There is no tilde-expansion for guest filenames
+		if strings.HasPrefix(*f.MountPoint, "~") {
+			return fmt.Errorf("field `mounts[%d].mountPoint` must not start with \"~\"", i)
 		}
 
 		if _, err := units.RAMInBytes(*f.NineP.Msize); err != nil {
