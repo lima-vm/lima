@@ -91,8 +91,6 @@ case "$NAME" in
 	CONTAINER_ENGINE="docker"
 	;;
 "wsl2")
-	# TODO https://github.com/lima-vm/lima/issues/3267
-	CHECKS["systemd"]=
 	# TODO https://github.com/lima-vm/lima/issues/3268
 	CHECKS["proxy-settings"]=
 	CHECKS["port-forwards"]=
