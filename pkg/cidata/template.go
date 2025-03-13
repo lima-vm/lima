@@ -50,6 +50,15 @@ type Mount struct {
 type BootCmds struct {
 	Lines []string
 }
+
+type DataFile struct {
+	FileName    string
+	Overwrite   string
+	Owner       string
+	Path        string
+	Permissions string
+}
+
 type Disk struct {
 	Name   string
 	Device string
@@ -84,6 +93,7 @@ type TemplateArgs struct {
 	Env                             map[string]string
 	Param                           map[string]string
 	BootScripts                     bool
+	DataFiles                       []DataFile
 	DNSAddresses                    []string
 	CACerts                         CACerts
 	HostHomeMountPoint              string

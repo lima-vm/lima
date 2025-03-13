@@ -31,7 +31,6 @@ import (
 	"github.com/lima-vm/lima/pkg/fileutils"
 	"github.com/lima-vm/lima/pkg/iso9660util"
 	"github.com/lima-vm/lima/pkg/limayaml"
-	"github.com/lima-vm/lima/pkg/localpathutil"
 	"github.com/lima-vm/lima/pkg/networks"
 	"github.com/lima-vm/lima/pkg/qemu/imgutil"
 	"github.com/lima-vm/lima/pkg/store"
@@ -935,11 +934,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	if *y.MountType == limayaml.NINEP || *y.MountType == limayaml.VIRTIOFS {
 		for i, f := range y.Mounts {
 			tag := fmt.Sprintf("mount%d", i)
-			location, err := localpathutil.Expand(f.Location)
-			if err != nil {
-				return "", nil, err
-			}
-			if err := os.MkdirAll(location, 0o755); err != nil {
+			if err := os.MkdirAll(f.Location, 0o755); err != nil {
 				return "", nil, err
 			}
 
@@ -947,7 +942,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 			case limayaml.NINEP:
 				options := "local"
 				options += fmt.Sprintf(",mount_tag=%s", tag)
-				options += fmt.Sprintf(",path=%s", location)
+				options += fmt.Sprintf(",path=%s", f.Location)
 				options += fmt.Sprintf(",security_model=%s", *f.NineP.SecurityModel)
 				if !*f.Writable {
 					options += ",readonly"
@@ -1067,10 +1062,6 @@ func FindVirtiofsd(qemuExe string) (string, error) {
 
 func VirtiofsdCmdline(cfg Config, mountIndex int) ([]string, error) {
 	mount := cfg.LimaYAML.Mounts[mountIndex]
-	location, err := localpathutil.Expand(mount.Location)
-	if err != nil {
-		return nil, err
-	}
 
 	vhostSock := filepath.Join(cfg.InstanceDir, fmt.Sprintf(filenames.VhostSock, mountIndex))
 	// qemu_driver has to wait for the socket to appear, so make sure any old ones are removed here.
@@ -1080,7 +1071,7 @@ func VirtiofsdCmdline(cfg Config, mountIndex int) ([]string, error) {
 
 	return []string{
 		"--socket-path", vhostSock,
-		"--shared-dir", location,
+		"--shared-dir", mount.Location,
 	}, nil
 }
 

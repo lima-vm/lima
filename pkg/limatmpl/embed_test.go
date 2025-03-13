@@ -339,6 +339,10 @@ networks:
 provision:
 # This script will be merged from an external file
 - file: base1.sh # This comment will move to the "script" key
+# This is just a data file
+- mode: data
+  file: base1.sh # This comment will move to the "content" key
+  path: /tmp/data
 `,
 		`
 # base0.yaml is ignored
@@ -346,6 +350,7 @@ provision:
 #!/usr/bin/env bash
 echo "This is base1.sh"
 `,
+		// TODO: the empty line after the `path` is unexpected
 		`
 # Hi There!
 provision:
@@ -353,6 +358,13 @@ provision:
 - script: |-  # This comment will move to the "script" key
     #!/usr/bin/env bash
     echo "This is base1.sh"
+# This is just a data file
+- mode: data
+  content: |-  # This comment will move to the "content" key
+    #!/usr/bin/env bash
+    echo "This is base1.sh"
+  path: /tmp/data
+
 # base0.yaml is ignored
 `,
 	},
@@ -373,6 +385,12 @@ provision:
 		"",
 		"base: [{url: base.yaml, digest: deafbad}]",
 		"not yet implemented",
+	},
+	{
+		"Image URLs will be converted into a template",
+		"",
+		"base: https://example.com/lima-linux-riscv64.img",
+		"{arch: riscv64, images: [{location: https://example.com/lima-linux-riscv64.img, arch: riscv64}]}",
 	},
 }
 

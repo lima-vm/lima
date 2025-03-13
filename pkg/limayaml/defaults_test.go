@@ -146,7 +146,9 @@ func TestFillDefault(t *testing.T) {
 			},
 		},
 		Mounts: []Mount{
-			{Location: "/tmp"},
+			// Location will be passed through localpathutil.Expand() which will normalize the name
+			// (add a drive letter). So we must start with a valid local path to match it again later.
+			{Location: filepath.Clean(os.TempDir())},
 			{Location: "{{.Dir}}/{{.Param.ONE}}", MountPoint: ptr.Of("/mnt/{{.Param.ONE}}")},
 		},
 		MountType: ptr.Of(NINEP),
@@ -231,7 +233,7 @@ func TestFillDefault(t *testing.T) {
 	expect.Mounts[0].NineP.Cache = ptr.Of(Default9pCacheForRO)
 	expect.Mounts[0].Virtiofs.QueueSize = nil
 	// Only missing Mounts field is Writable, and the default value is also the null value: false
-	expect.Mounts[1].Location = fmt.Sprintf("%s/%s", instDir, y.Param["ONE"])
+	expect.Mounts[1].Location = filepath.Join(instDir, y.Param["ONE"])
 	expect.Mounts[1].MountPoint = ptr.Of(fmt.Sprintf("/mnt/%s", y.Param["ONE"]))
 	expect.Mounts[1].Writable = ptr.Of(false)
 	expect.Mounts[1].SSHFS.Cache = ptr.Of(true)
@@ -321,6 +323,9 @@ func TestFillDefault(t *testing.T) {
 	// User-provided defaults should override any builtin defaults
 
 	// Choose values that are different from the "builtin" defaults
+
+	// Calling filepath.Abs() to add a drive letter on Windows
+	varLog, _ := filepath.Abs("/var/log")
 	d = LimaYAML{
 		VMType: ptr.Of("vz"),
 		OS:     ptr.Of("unknown"),
@@ -385,7 +390,7 @@ func TestFillDefault(t *testing.T) {
 
 		Mounts: []Mount{
 			{
-				Location: "/var/log",
+				Location: varLog,
 				Writable: ptr.Of(false),
 			},
 		},
@@ -593,7 +598,7 @@ func TestFillDefault(t *testing.T) {
 
 		Mounts: []Mount{
 			{
-				Location: "/var/log",
+				Location: varLog,
 				Writable: ptr.Of(true),
 				SSHFS: SSHFS{
 					Cache:          ptr.Of(false),

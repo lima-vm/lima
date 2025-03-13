@@ -14,6 +14,7 @@ import (
 	"path"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -200,14 +201,6 @@ func templateArgs(bootScripts bool, instDir, name string, instConfig *limayaml.L
 	}
 	for i, f := range instConfig.Mounts {
 		tag := fmt.Sprintf("mount%d", i)
-		location, err := localpathutil.Expand(f.Location)
-		if err != nil {
-			return nil, err
-		}
-		mountPoint, err := localpathutil.Expand(*f.MountPoint)
-		if err != nil {
-			return nil, err
-		}
 		options := "defaults"
 		switch fstype {
 		case "9p", "virtiofs":
@@ -220,7 +213,7 @@ func templateArgs(bootScripts bool, instDir, name string, instConfig *limayaml.L
 				options += fmt.Sprintf(",version=%s", *f.NineP.ProtocolVersion)
 				msize, err := units.RAMInBytes(*f.NineP.Msize)
 				if err != nil {
-					return nil, fmt.Errorf("failed to parse msize for %q: %w", location, err)
+					return nil, fmt.Errorf("failed to parse msize for %q: %w", f.Location, err)
 				}
 				options += fmt.Sprintf(",msize=%d", msize)
 				options += fmt.Sprintf(",cache=%s", *f.NineP.Cache)
@@ -228,9 +221,9 @@ func templateArgs(bootScripts bool, instDir, name string, instConfig *limayaml.L
 			// don't fail the boot, if virtfs is not available
 			options += ",nofail"
 		}
-		args.Mounts = append(args.Mounts, Mount{Tag: tag, MountPoint: mountPoint, Type: fstype, Options: options})
-		if location == hostHome {
-			args.HostHomeMountPoint = mountPoint
+		args.Mounts = append(args.Mounts, Mount{Tag: tag, MountPoint: *f.MountPoint, Type: fstype, Options: options})
+		if f.Location == hostHome {
+			args.HostHomeMountPoint = *f.MountPoint
 		}
 	}
 
@@ -322,9 +315,18 @@ func templateArgs(bootScripts bool, instDir, name string, instConfig *limayaml.L
 
 	args.BootCmds = getBootCmds(instConfig.Provision)
 
-	for _, f := range instConfig.Provision {
+	for i, f := range instConfig.Provision {
 		if f.Mode == limayaml.ProvisionModeDependency && *f.SkipDefaultDependencyResolution {
 			args.SkipDefaultDependencyResolution = true
+		}
+		if f.Mode == limayaml.ProvisionModeData {
+			args.DataFiles = append(args.DataFiles, DataFile{
+				FileName:    fmt.Sprintf("%08d", i),
+				Overwrite:   strconv.FormatBool(*f.Overwrite),
+				Owner:       *f.Owner,
+				Path:        *f.Path,
+				Permissions: *f.Permissions,
+			})
 		}
 	}
 
@@ -375,6 +377,11 @@ func GenerateISO9660(instDir, name string, instConfig *limayaml.LimaYAML, udpDNS
 			layout = append(layout, iso9660util.Entry{
 				Path:   fmt.Sprintf("provision.%s/%08d", f.Mode, i),
 				Reader: strings.NewReader(f.Script),
+			})
+		case limayaml.ProvisionModeData:
+			layout = append(layout, iso9660util.Entry{
+				Path:   fmt.Sprintf("provision.%s/%08d", f.Mode, i),
+				Reader: strings.NewReader(*f.Content),
 			})
 		case limayaml.ProvisionModeBoot:
 			continue

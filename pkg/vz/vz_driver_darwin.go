@@ -112,7 +112,7 @@ func (l *LimaVzDriver) Validate() error {
 	}
 
 	for i, image := range l.Instance.Config.Images {
-		if unknown := reflectutil.UnknownNonEmptyFields(image, "File"); len(unknown) > 0 {
+		if unknown := reflectutil.UnknownNonEmptyFields(image, "File", "Kernel", "Initrd"); len(unknown) > 0 {
 			logrus.Warnf("vmType %s: ignoring images[%d]: %+v", *l.Instance.Config.VMType, i, unknown)
 		}
 	}

@@ -20,6 +20,7 @@ import (
 	networks "github.com/lima-vm/lima/pkg/networks/reconcile"
 	"github.com/lima-vm/lima/pkg/sshutil"
 	"github.com/lima-vm/lima/pkg/store"
+	"github.com/lima-vm/sshocker/pkg/ssh"
 	"github.com/mattn/go-isatty"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -51,6 +52,7 @@ func newShellCommand() *cobra.Command {
 
 	shellCmd.Flags().String("shell", "", "shell interpreter, e.g. /bin/bash")
 	shellCmd.Flags().String("workdir", "", "working directory")
+	shellCmd.Flags().Bool("reconnect", false, "reconnect to the SSH session")
 	return shellCmd
 }
 
@@ -103,6 +105,24 @@ func shellAction(cmd *cobra.Command, args []string) error {
 
 		inst, err = store.Inspect(instName)
 		if err != nil {
+			return err
+		}
+	}
+
+	restart, err := cmd.Flags().GetBool("reconnect")
+	if err != nil {
+		return err
+	}
+	if restart {
+		logrus.Infof("Exiting ssh session for the instance %q", instName)
+
+		sshConfig := &ssh.SSHConfig{
+			ConfigFile:     inst.SSHConfigFile,
+			Persist:        false,
+			AdditionalArgs: []string{},
+		}
+
+		if err := ssh.ExitMaster(inst.Hostname, inst.SSHLocalPort, sshConfig); err != nil {
 			return err
 		}
 	}

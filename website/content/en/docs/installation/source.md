@@ -39,7 +39,7 @@ After building Lima from source, you may want to package it for installation on 
 ```bash
 cd _output
 # Create a compressed archive
- tar czf lima-package.tar.gz *
+tar czf lima-package.tar.gz *
 ```
 
 This package can then be transferred and installed on the target system.

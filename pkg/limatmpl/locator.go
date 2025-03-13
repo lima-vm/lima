@@ -12,11 +12,14 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
+	"runtime"
 	"strings"
 	"unicode"
 
 	"github.com/containerd/containerd/identifiers"
 	"github.com/lima-vm/lima/pkg/ioutilx"
+	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/templatestore"
 	"github.com/sirupsen/logrus"
 )
@@ -28,6 +31,10 @@ func Read(ctx context.Context, name, locator string) (*Template, error) {
 	tmpl := &Template{
 		Name:    name,
 		Locator: locator,
+	}
+
+	if imageTemplate(tmpl, locator) {
+		return tmpl, nil
 	}
 
 	isTemplateURL, templateURL := SeemsTemplateURL(locator)
@@ -119,6 +126,97 @@ func Read(ctx context.Context, name, locator string) (*Template, error) {
 	// The only reason not to call tmpl.UseAbsLocators() here is that `limactl tmpl copy --verbatim …`
 	// should create an unmodified copy of the template.
 	return tmpl, nil
+}
+
+// Locators with an image file format extension, optionally followed by a compression method.
+// This regex is also used to remove the file format suffix from the instance name.
+var imageURLRegex = regexp.MustCompile(`\.(img|qcow2|raw|iso)(\.(gz|xz|bz2|zstd))?$`)
+
+// Image architecture will be guessed based on the presence of arch keywords.
+var archKeywords = map[string]limayaml.Arch{
+	"aarch64": limayaml.AARCH64,
+	"amd64":   limayaml.X8664,
+	"arm64":   limayaml.AARCH64,
+	"armhf":   limayaml.ARMV7L,
+	"armv7l":  limayaml.ARMV7L,
+	"riscv64": limayaml.RISCV64,
+	"x86_64":  limayaml.X8664,
+}
+
+// These generic tags will be stripped from an image name before turning it into an instance name.
+var genericTags = []string{
+	"base",         // Fedora, Rocky
+	"cloud",        // Fedora, openSUSE
+	"cloudimg",     // Ubuntu, Arch
+	"cloudinit",    // Alpine
+	"daily",        // Debian
+	"default",      // Gentoo
+	"generic",      // Fedora
+	"genericcloud", // CentOS, Debian, Rocky, Alma
+	"kvm",          // Oracle
+	"latest",       // Gentoo, CentOS, Rocky, Alma
+	"linux",        // Arch
+	"minimal",      // openSUSE
+	"openstack",    // Gentoo
+	"server",       // Ubuntu
+	"std",          // Alpine-Lima
+	"stream",       // CentOS
+	"uefi",         // Alpine
+	"vm",           // openSUSE
+}
+
+// imageTemplate checks if the locator specifies an image URL.
+// It will create a minimal template with the image URL and arch derived from the image name
+// and also set the default instance name to the image name, but stripped of generic tags.
+func imageTemplate(tmpl *Template, locator string) bool {
+	if !imageURLRegex.MatchString(locator) {
+		return false
+	}
+
+	var imageArch limayaml.Arch
+	for keyword, arch := range archKeywords {
+		pattern := fmt.Sprintf(`\b%s\b`, keyword)
+		if regexp.MustCompile(pattern).MatchString(locator) {
+			imageArch = arch
+			break
+		}
+	}
+	if imageArch == "" {
+		imageArch = limayaml.NewArch(runtime.GOARCH)
+		logrus.Warnf("cannot determine image arch from URL %q; assuming %q", locator, imageArch)
+	}
+	template := `arch: %q
+images:
+- location: %q
+  arch: %q
+`
+	tmpl.Bytes = []byte(fmt.Sprintf(template, imageArch, locator, imageArch))
+	tmpl.Name = InstNameFromImageURL(locator, imageArch)
+	return true
+}
+
+func InstNameFromImageURL(locator, imageArch string) string {
+	// We intentionally call both path.Base and filepath.Base in case we are running on Windows.
+	name := strings.ToLower(filepath.Base(path.Base(locator)))
+	// Remove file format and compression file types
+	name = imageURLRegex.ReplaceAllString(name, "")
+	// The Alpine "nocloud_" prefix does not fit the genericTags pattern
+	name = strings.TrimPrefix(name, "nocloud_")
+	for _, tag := range genericTags {
+		re := regexp.MustCompile(fmt.Sprintf(`[-_.]%s\b`, tag))
+		name = re.ReplaceAllString(name, "")
+	}
+	// Remove imageArch as well if it is the native arch
+	if limayaml.IsNativeArch(imageArch) {
+		re := regexp.MustCompile(fmt.Sprintf(`[-_.]%s\b`, imageArch))
+		name = re.ReplaceAllString(name, "")
+	}
+	// Remove timestamps from name: 8 digit date, optionally followed by
+	// a delimiter and one or more digits before a word boundary
+	name = regexp.MustCompile(`[-_.]20\d{6}([-_.]\d+)?\b`).ReplaceAllString(name, "")
+	// Normalize archlinux name
+	name = regexp.MustCompile(`^arch\b`).ReplaceAllString(name, "archlinux")
+	return name
 }
 
 func SeemsTemplateURL(arg string) (bool, *url.URL) {
