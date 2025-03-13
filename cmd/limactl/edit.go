@@ -20,6 +20,7 @@ import (
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/lima-vm/lima/pkg/uiutil"
 	"github.com/lima-vm/lima/pkg/yqutil"
+	"github.com/mattn/go-isatty"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -33,11 +34,25 @@ func newEditCommand() *cobra.Command {
 		ValidArgsFunction: editBashComplete,
 		GroupID:           basicCommand,
 	}
+	editCommand.PersistentFlags().BoolP("yes", "y", isatty.IsTerminal(os.Stdout.Fd()), "Alias of --tty=false")
 	editflags.RegisterEdit(editCommand)
 	return editCommand
 }
 
 func editAction(cmd *cobra.Command, args []string) error {
+	if cmd.Flags().Changed("yes") && cmd.Flags().Changed("tty") {
+		return errors.New("cannot use both --tty and --yes flags at the same time")
+	}
+
+	if cmd.Flags().Changed("yes") {
+		yesValue, _ := cmd.Flags().GetBool("yes")
+		if yesValue {
+			if err := cmd.Flags().Set("tty", "false"); err != nil {
+				return err
+			}
+		}
+	}
+
 	var arg string
 	if len(args) > 0 {
 		arg = args[0]
@@ -79,15 +94,12 @@ func editAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	flags := cmd.Flags()
-	tty, err := flags.GetBool("tty")
+
+	yqExprs, err := editflags.YQExpressions(cmd.Flags(), false)
 	if err != nil {
 		return err
 	}
-	yqExprs, err := editflags.YQExpressions(flags, false)
-	if err != nil {
-		return err
-	}
+
 	var yBytes []byte
 	if len(yqExprs) > 0 {
 		yq := yqutil.Join(yqExprs)
@@ -95,7 +107,7 @@ func editAction(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-	} else if tty {
+	} else {
 		var hdr string
 		if inst != nil {
 			hdr = fmt.Sprintf("# Please edit the following configuration for Lima instance %q\n", inst.Name)
@@ -137,7 +149,7 @@ func editAction(cmd *cobra.Command, args []string) error {
 		logrus.Infof("Instance %q configuration edited", inst.Name)
 	}
 
-	if !tty {
+	if !cmd.Flags().Changed("tty") {
 		// use "start" to start it
 		return nil
 	}
