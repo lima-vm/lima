@@ -23,6 +23,7 @@ import (
 	"github.com/coreos/go-semver/semver"
 	"github.com/docker/go-units"
 	"github.com/goccy/go-yaml"
+	"github.com/lima-vm/lima/pkg/ioutilx"
 	"github.com/lima-vm/lima/pkg/version"
 	"github.com/pbnjay/memory"
 	"github.com/sirupsen/logrus"
@@ -830,7 +831,15 @@ func FillDefault(y, d, o *LimaYAML, filePath string, warn bool) {
 			logrus.WithError(err).Warnf("Couldn't expand location %q", mount.Location)
 		}
 		if mount.MountPoint == nil {
-			mounts[i].MountPoint = ptr.Of(mounts[i].Location)
+			mountLocation := mounts[i].Location
+			if runtime.GOOS == "windows" {
+				var err error
+				mountLocation, err = ioutilx.WindowsSubsystemPath(mountLocation)
+				if err != nil {
+					logrus.WithError(err).Warnf("Couldn't convert location %q into mount target", mounts[i].Location)
+				}
+			}
+			mounts[i].MountPoint = ptr.Of(mountLocation)
 		}
 	}
 
