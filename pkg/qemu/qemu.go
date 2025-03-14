@@ -602,10 +602,10 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	if !legacyBIOS {
 		var firmware string
 		firmwareInBios := runtime.GOOS == "windows"
-		if envVar := os.Getenv("LIMA_QEMU_UEFI_IN_BIOS"); envVar != "" {
-			b, err := strconv.ParseBool(os.Getenv("LIMA_QEMU_UEFI_IN_BIOS"))
+		if envVar := os.Getenv("_LIMA_QEMU_UEFI_IN_BIOS"); envVar != "" {
+			b, err := strconv.ParseBool(os.Getenv("_LIMA_QEMU_UEFI_IN_BIOS"))
 			if err != nil {
-				logrus.WithError(err).Warnf("invalid LIMA_QEMU_UEFI_IN_BIOS value %q", envVar)
+				logrus.WithError(err).Warnf("invalid _LIMA_QEMU_UEFI_IN_BIOS value %q", envVar)
 			} else {
 				firmwareInBios = b
 			}
