@@ -587,6 +587,9 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	case limayaml.ARMV7L:
 		machine := "virt,accel=" + accel
 		args = appendArgsIfNoConflict(args, "-machine", machine)
+	case limayaml.S390X:
+		machine := "s390-ccw-virtio,accel=" + accel
+		args = appendArgsIfNoConflict(args, "-machine", machine)
 	}
 
 	// SMP
@@ -599,7 +602,8 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 		logrus.Warnf("field `firmware.legacyBIOS` is not supported for architecture %q, ignoring", *y.Arch)
 		legacyBIOS = false
 	}
-	if !legacyBIOS {
+	noFirmware := *y.Arch == limayaml.S390X || legacyBIOS
+	if !noFirmware {
 		var firmware string
 		firmwareInBios := runtime.GOOS == "windows"
 		if envVar := os.Getenv("LIMA_QEMU_UEFI_IN_BIOS"); envVar != "" {
@@ -782,7 +786,13 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 		}
 		args = append(args, "-netdev", fmt.Sprintf("socket,id=net0,fd={{ fd_connect %q }}", qemuSock))
 	}
-	args = append(args, "-device", "virtio-net-pci,netdev=net0,mac="+limayaml.MACAddress(cfg.InstanceDir))
+	virtioNet := "virtio-net-pci"
+	if *y.Arch == limayaml.S390X {
+		// virtio-net-pci does not work on EL, while it works on Ubuntu
+		// https://github.com/lima-vm/lima/pull/3319/files#r1986388345
+		virtioNet = "virtio-net-ccw"
+	}
+	args = append(args, "-device", virtioNet+",netdev=net0,mac="+limayaml.MACAddress(cfg.InstanceDir))
 
 	for i, nw := range y.Networks {
 		if nw.Lima != "" {
@@ -805,7 +815,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 					return "", nil, err
 				}
 				args = append(args, "-netdev", fmt.Sprintf("socket,id=net%d,fd={{ fd_connect %q }}", i+1, qemuSock))
-				args = append(args, "-device", fmt.Sprintf("virtio-net-pci,netdev=net%d,mac=%s", i+1, nw.MACAddress))
+				args = append(args, "-device", fmt.Sprintf("%s,netdev=net%d,mac=%s", virtioNet, i+1, nw.MACAddress))
 			} else {
 				if runtime.GOOS != "darwin" {
 					return "", nil, fmt.Errorf("networks.yaml '%s' configuration is only supported on macOS right now", nw.Lima)
@@ -824,7 +834,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 		} else {
 			return "", nil, fmt.Errorf("invalid network spec %+v", nw)
 		}
-		args = append(args, "-device", fmt.Sprintf("virtio-net-pci,netdev=net%d,mac=%s", i+1, nw.MACAddress))
+		args = append(args, "-device", fmt.Sprintf("%s,netdev=net%d,mac=%s", virtioNet, i+1, nw.MACAddress))
 	}
 
 	// virtio-rng-pci accelerates starting up the OS, according to https://wiki.gentoo.org/wiki/QEMU/Options
@@ -866,7 +876,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 		args = append(args, "-device", "virtio-keyboard-pci")
 		args = append(args, "-device", "virtio-"+input+"-pci")
 		args = append(args, "-device", "qemu-xhci,id=usb-bus")
-	case limayaml.AARCH64, limayaml.ARMV7L:
+	case limayaml.AARCH64, limayaml.ARMV7L, limayaml.S390X:
 		if features.VersionGEQ7 {
 			args = append(args, "-device", "virtio-gpu")
 			args = append(args, "-device", "virtio-keyboard-pci")
@@ -926,7 +936,11 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	const serialvChardev = "char-serial-virtio"
 	args = append(args, "-chardev", fmt.Sprintf("socket,id=%s,path=%s,server=on,wait=off,logfile=%s", serialvChardev, serialvSock, serialvLog))
 	// max_ports=1 is required for https://github.com/lima-vm/lima/issues/1689 https://github.com/lima-vm/lima/issues/1691
-	args = append(args, "-device", "virtio-serial-pci,id=virtio-serial0,max_ports=1")
+	serialvMaxPorts := 1
+	if *y.Arch == limayaml.S390X {
+		serialvMaxPorts++ // needed to avoid `virtio-serial-bus: Out-of-range port id specified, max. allowed: 0`
+	}
+	args = append(args, "-device", fmt.Sprintf("virtio-serial-pci,id=virtio-serial0,max_ports=%d", serialvMaxPorts))
 	args = append(args, "-device", fmt.Sprintf("virtconsole,chardev=%s,id=console0", serialvChardev))
 
 	// We also want to enable vsock here, but QEMU does not support vsock for macOS hosts

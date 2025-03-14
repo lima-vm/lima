@@ -13,6 +13,9 @@ images:
 - location: "https://cloud-images.ubuntu.com/releases/24.10/release-20250129/ubuntu-24.10-server-cloudimg-armhf.img"
   arch: "armv7l"
   digest: "sha256:6a1ca78f06227ba060d11a88009cc9b65bdd42e17b84d444d204cb5c80f81552"
+- location: "https://cloud-images.ubuntu.com/releases/24.10/release-20250129/ubuntu-24.10-server-cloudimg-s390x.img"
+  arch: "s390x"
+  digest: "sha256:940d835ebfb4de02ba93d46bce75ab5602f36f8a66c0865df579205aa02d28db"
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
 - location: "https://cloud-images.ubuntu.com/releases/24.10/release/ubuntu-24.10-server-cloudimg-amd64.img"
@@ -23,6 +26,8 @@ images:
   arch: "riscv64"
 - location: "https://cloud-images.ubuntu.com/releases/24.10/release/ubuntu-24.10-server-cloudimg-armhf.img"
   arch: "armv7l"
+- location: "https://cloud-images.ubuntu.com/releases/24.10/release/ubuntu-24.10-server-cloudimg-s390x.img"
+  arch: "s390x"
 mounts:
 - location: "~"
 - location: "/tmp/lima"

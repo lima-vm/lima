@@ -13,6 +13,9 @@ images:
 - location: "https://cloud-images.ubuntu.com/releases/22.04/release-20250128/ubuntu-22.04-server-cloudimg-armhf.img"
   arch: "armv7l"
   digest: "sha256:2a3fce7f82426204b1aa44312c3cfb2a107de2204eea6a0bf1221c2541ee7f3f"
+- location: "https://cloud-images.ubuntu.com/releases/22.04/release-20250128/ubuntu-22.04-server-cloudimg-s390x.img"
+  arch: "s390x"
+  digest: "sha256:fa287d4ab8ff236bfe0dc1e6253159ecfa0734b6d682d0006977a46a53984d67"
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
 - location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-amd64.img"
@@ -23,6 +26,8 @@ images:
   arch: "riscv64"
 - location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-armhf.img"
   arch: "armv7l"
+- location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-s390x.img"
+  arch: "s390x"
 
 mounts:
 - location: "~"

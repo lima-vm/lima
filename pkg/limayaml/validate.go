@@ -35,9 +35,9 @@ func validateFileObject(f File, fieldName string) error {
 		// f.Location does NOT need to be accessible, so we do NOT check os.Stat(f.Location)
 	}
 	switch f.Arch {
-	case X8664, AARCH64, ARMV7L, RISCV64:
+	case X8664, AARCH64, ARMV7L, RISCV64, S390X:
 	default:
-		return fmt.Errorf("field `arch` must be %q, %q, %q, or %q; got %q", X8664, AARCH64, ARMV7L, RISCV64, f.Arch)
+		return fmt.Errorf("field `arch` must be %q, %q, %q, %q, or %q; got %q", X8664, AARCH64, ARMV7L, RISCV64, S390X, f.Arch)
 	}
 	if f.Digest != "" {
 		if !f.Digest.Algorithm().Available() {
@@ -77,9 +77,9 @@ func Validate(y *LimaYAML, warn bool) error {
 		return fmt.Errorf("field `os` must be %q; got %q", LINUX, *y.OS)
 	}
 	switch *y.Arch {
-	case X8664, AARCH64, ARMV7L, RISCV64:
+	case X8664, AARCH64, ARMV7L, RISCV64, S390X:
 	default:
-		return fmt.Errorf("field `arch` must be %q, %q, %q or %q; got %q", X8664, AARCH64, ARMV7L, RISCV64, *y.Arch)
+		return fmt.Errorf("field `arch` must be %q, %q, %q, %q or %q; got %q", X8664, AARCH64, ARMV7L, RISCV64, S390X, *y.Arch)
 	}
 
 	switch *y.VMType {
@@ -125,7 +125,7 @@ func Validate(y *LimaYAML, warn bool) error {
 
 	for arch := range y.CPUType {
 		switch arch {
-		case AARCH64, X8664, ARMV7L, RISCV64:
+		case AARCH64, X8664, ARMV7L, RISCV64, S390X:
 			// these are the only supported architectures
 		default:
 			return fmt.Errorf("field `cpuType` uses unsupported arch %q", arch)
@@ -578,8 +578,9 @@ func warnExperimental(y *LimaYAML) {
 	if *y.MountType == VIRTIOFS && runtime.GOOS == "linux" {
 		logrus.Warn("`mountType: virtiofs` on Linux is experimental")
 	}
-	if *y.Arch == RISCV64 {
-		logrus.Warn("`arch: riscv64` is experimental")
+	switch *y.Arch {
+	case RISCV64, ARMV7L, S390X:
+		logrus.Warnf("`arch: %s ` is experimental", *y.Arch)
 	}
 	if y.Video.Display != nil && strings.Contains(*y.Video.Display, "vnc") {
 		logrus.Warn("`video.display: vnc` is experimental")

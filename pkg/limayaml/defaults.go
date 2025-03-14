@@ -65,6 +65,7 @@ func defaultCPUType() CPUType {
 		// Since https://github.com/lima-vm/lima/pull/494, we use qemu64 cpu for better emulation of x86_64.
 		X8664:   "qemu64",
 		RISCV64: "rv64", // FIXME: what is the right choice for riscv64?
+		S390X:   "qemu", // FIXME: what is the right choice for s390x?
 	}
 	for arch := range cpuType {
 		if IsNativeArch(arch) && IsAccelOS() {
@@ -1090,6 +1091,8 @@ func NewArch(arch string) Arch {
 		return arch
 	case "riscv64":
 		return RISCV64
+	case "s390x":
+		return S390X
 	default:
 		logrus.Warnf("Unknown arch: %s", arch)
 		return arch
@@ -1280,7 +1283,8 @@ func IsNativeArch(arch Arch) bool {
 	nativeAARCH64 := arch == AARCH64 && runtime.GOARCH == "arm64"
 	nativeARMV7L := arch == ARMV7L && runtime.GOARCH == "arm" && goarm() == 7
 	nativeRISCV64 := arch == RISCV64 && runtime.GOARCH == "riscv64"
-	return nativeX8664 || nativeAARCH64 || nativeARMV7L || nativeRISCV64
+	nativeS390X := arch == S390X && runtime.GOARCH == "s390x"
+	return nativeX8664 || nativeAARCH64 || nativeARMV7L || nativeRISCV64 || nativeS390X
 }
 
 func unique(s []string) []string {
