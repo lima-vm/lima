@@ -73,7 +73,7 @@ func Sign(qExe string) error {
 // The result can be used *ONLY* for controlling hint messages.
 // DO NOT change the behavior of Lima depending on this result.
 //
-//nolint:revive // underscores in this function name intentionally added
+//nolint:revive,staticcheck // underscores in this function name intentionally added
 func isColimaWrapper__useThisFunctionOnlyForPrintingHints__(qExe string) bool {
 	return strings.Contains(qExe, "/.colima/_wrapper/")
 }
