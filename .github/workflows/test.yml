@@ -166,13 +166,13 @@ jobs:
       run: make
     - name: Integration tests (WSL2, Windows host)
       run: |
-        $env:Path = "$pwd\_output\bin;" + 'C:\Program Files\Git\usr\bin;' + $env:Path
+        $env:Path = "$pwd\_output\bin;" + $env:Path
         Set-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Session Manager\Environment' -Name PATH -Value $env:Path
         $env:MSYS2_ENV_CONV_EXCL='HOME_HOST;HOME_GUEST'
-        $env:HOME_HOST=$(cygpath.exe "$env:USERPROFILE")
+        $env:HOME_HOST=$(& 'C:\Program Files\Git\usr\bin\cygpath.exe' "$env:USERPROFILE")
         $env:HOME_GUEST="/mnt$env:HOME_HOST"
         $env:LIMACTL_CREATE_ARGS='--vm-type=wsl2 --mount-type=wsl2 --containerd=system'
-        bash.exe -c "./hack/test-templates.sh templates/experimental/wsl2.yaml"
+        & 'C:\Program Files\Git\bin\bash.exe' -c './hack/test-templates.sh templates/experimental/wsl2.yaml'
 
   qemu:
     name: "Integration tests (QEMU, macOS host)"

@@ -414,8 +414,7 @@ if [[ -n ${CHECKS["restart"]} ]]; then
 	fi
 
 	INFO "Stopping \"$NAME\""
-	# TODO https://github.com/lima-vm/lima/issues/3221
-	limactl stop "$NAME" || [ "${OS_HOST}" = "Msys" ]
+	limactl stop "$NAME"
 	sleep 3
 
 	if [[ -n ${CHECKS["disk"]} ]]; then
@@ -529,8 +528,7 @@ if [[ $NAME == "fedora" && "$(limactl ls --json "$NAME" | jq -r .vmType)" == "vz
 fi
 
 INFO "Stopping \"$NAME\""
-# TODO https://github.com/lima-vm/lima/issues/3221
-limactl stop "$NAME" || [ "${OS_HOST}" = "Msys" ]
+limactl stop "$NAME"
 sleep 3
 
 INFO "Deleting \"$NAME\""
