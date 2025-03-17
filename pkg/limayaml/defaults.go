@@ -1222,7 +1222,7 @@ func ResolveArch(s *string) Arch {
 
 func IsAccelOS() bool {
 	switch runtime.GOOS {
-	case "darwin", "linux", "netbsd", "windows":
+	case "darwin", "linux", "netbsd", "windows", "dragonfly":
 		// Accelerator
 		return true
 	}
