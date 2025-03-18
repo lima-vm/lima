@@ -12,6 +12,8 @@ import (
 	"net"
 	"strconv"
 	"strings"
+
+	"golang.org/x/sys/cpu"
 )
 
 type Kind = string
@@ -40,6 +42,10 @@ type Entry struct {
 }
 
 func Parse(r io.Reader, kind Kind) ([]Entry, error) {
+	return ParseWithEndian(r, kind, cpu.IsBigEndian)
+}
+
+func ParseWithEndian(r io.Reader, kind Kind, isBE bool) ([]Entry, error) {
 	switch kind {
 	case TCP, TCP6, UDP, UDP6:
 	default:
@@ -72,7 +78,7 @@ func Parse(r io.Reader, kind Kind) ([]Entry, error) {
 		default:
 			// localAddress is like "0100007F:053A"
 			localAddress := fields[fieldNames["local_address"]]
-			ip, port, err := ParseAddress(localAddress)
+			ip, port, err := ParseAddressWithEndian(localAddress, isBE)
 			if err != nil {
 				return entries, err
 			}
@@ -99,17 +105,24 @@ func Parse(r io.Reader, kind Kind) ([]Entry, error) {
 	return entries, nil
 }
 
-// ParseAddress parses a string, e.g.,
+// ParseAddress parses a string.
+//
+// Little endian hosts:
 // "0100007F:0050"                         (127.0.0.1:80)
 // "000080FE00000000FF57A6705DC771FE:0050" ([fe80::70a6:57ff:fe71:c75d]:80)
 // "00000000000000000000000000000000:0050" (0.0.0.0:80)
 //
-// See https://serverfault.com/questions/592574/why-does-proc-net-tcp6-represents-1-as-1000
+// Big endian hosts:
+// "7F000001:0050"                         (127.0.0.1:80)
+// "FE8000000000000070A657FFFE71C75D:0050" ([fe80::70a6:57ff:fe71:c75d]:80)
+// "00000000000000000000000000000000:0050" (0.0.0.0:80)
 //
-// ParseAddress is expected to be used for /proc/net/{tcp,tcp6} entries on
-// little endian machines.
-// Not sure how those entries look like on big endian machines.
+// See https://serverfault.com/questions/592574/why-does-proc-net-tcp6-represents-1-as-1000
 func ParseAddress(s string) (net.IP, uint16, error) {
+	return ParseAddressWithEndian(s, cpu.IsBigEndian)
+}
+
+func ParseAddressWithEndian(s string, isBE bool) (net.IP, uint16, error) {
 	split := strings.SplitN(s, ":", 2)
 	if len(split) != 2 {
 		return nil, 0, fmt.Errorf("unparsable address %q", s)
@@ -124,12 +137,18 @@ func ParseAddress(s string) (net.IP, uint16, error) {
 	ipBytes := make([]byte, len(split[0])/2) // 4 bytes (8 chars) or 16 bytes (32 chars)
 	for i := 0; i < len(split[0])/8; i++ {
 		quartet := split[0][8*i : 8*(i+1)]
-		quartetLE, err := hex.DecodeString(quartet) // surprisingly little endian, per 4 bytes
+		quartetB, err := hex.DecodeString(quartet) // surprisingly little endian, per 4 bytes, on little endian hosts
 		if err != nil {
 			return nil, 0, fmt.Errorf("unparsable address %q: unparsable quartet %q: %w", s, quartet, err)
 		}
-		for j := 0; j < len(quartetLE); j++ {
-			ipBytes[4*i+len(quartetLE)-1-j] = quartetLE[j]
+		if isBE {
+			for j := 0; j < len(quartetB); j++ {
+				ipBytes[4*i+j] = quartetB[j]
+			}
+		} else {
+			for j := 0; j < len(quartetB); j++ {
+				ipBytes[4*i+len(quartetB)-1-j] = quartetB[j]
+			}
 		}
 	}
 	ip := net.IP(ipBytes)

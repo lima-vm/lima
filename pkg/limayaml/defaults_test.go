@@ -50,6 +50,8 @@ func TestFillDefault(t *testing.T) {
 		arch = ARMV7L
 	case "riscv64":
 		arch = RISCV64
+	case "s390x":
+		arch = S390X
 	default:
 		t.Skipf("unknown GOARCH: %s", runtime.GOARCH)
 	}
@@ -335,6 +337,7 @@ func TestFillDefault(t *testing.T) {
 			ARMV7L:  "armhf",
 			X8664:   "amd64",
 			RISCV64: "riscv64",
+			S390X:   "s390x",
 		},
 		CPUs:   ptr.Of(7),
 		Memory: ptr.Of("5GiB"),
@@ -547,6 +550,7 @@ func TestFillDefault(t *testing.T) {
 			ARMV7L:  "armv8",
 			X8664:   "pentium",
 			RISCV64: "sifive-u54",
+			S390X:   "z14",
 		},
 		CPUs:   ptr.Of(12),
 		Memory: ptr.Of("7GiB"),

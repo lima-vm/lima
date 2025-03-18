@@ -8,10 +8,9 @@ The following features are experimental and subject to change:
 
 - `mountType: virtiofs` on Linux
 - `vmType: wsl2` and relevant configurations (`mountType: wsl2`)
-- `arch: riscv64`
+- `arch: riscv64`, `arch: armv7l`, and `arch: s390x`
 - `video.display: vnc` and relevant configuration (`video.vnc.display`)
 - `audio.device`
-- `arch: armv7l`
 - `mountInotify: true`
 - `base:` and variations like `base[]:` and `base[].url`
 - `provision[].file:` and alternative `provision[].file.url:`  
