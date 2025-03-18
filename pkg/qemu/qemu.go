@@ -1134,6 +1134,8 @@ func Accel(arch limayaml.Arch) string {
 			return "kvm"
 		case "netbsd":
 			return "nvmm"
+		case "dragonfly":
+			return "nvmm"
 		case "windows":
 			return "whpx"
 		}
