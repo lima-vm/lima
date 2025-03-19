@@ -15,6 +15,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/lima-vm/lima/pkg/ioutilx"
 	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/ptr"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
@@ -225,6 +226,12 @@ func TestFillDefault(t *testing.T) {
 
 	expect.Mounts = slices.Clone(y.Mounts)
 	expect.Mounts[0].MountPoint = ptr.Of(expect.Mounts[0].Location)
+	if runtime.GOOS == "windows" {
+		mountLocation, err := ioutilx.WindowsSubsystemPath(expect.Mounts[0].Location)
+		if err == nil {
+			expect.Mounts[0].MountPoint = ptr.Of(mountLocation)
+		}
+	}
 	expect.Mounts[0].Writable = ptr.Of(false)
 	expect.Mounts[0].SSHFS.Cache = ptr.Of(true)
 	expect.Mounts[0].SSHFS.FollowSymlinks = ptr.Of(false)
@@ -464,6 +471,12 @@ func TestFillDefault(t *testing.T) {
 	expect.Containerd.Archives[0].Arch = *d.Arch
 	expect.Mounts = slices.Clone(d.Mounts)
 	expect.Mounts[0].MountPoint = ptr.Of(expect.Mounts[0].Location)
+	if runtime.GOOS == "windows" {
+		mountLocation, err := ioutilx.WindowsSubsystemPath(expect.Mounts[0].Location)
+		if err == nil {
+			expect.Mounts[0].MountPoint = ptr.Of(mountLocation)
+		}
+	}
 	expect.Mounts[0].SSHFS.Cache = ptr.Of(true)
 	expect.Mounts[0].SSHFS.FollowSymlinks = ptr.Of(false)
 	expect.Mounts[0].SSHFS.SFTPDriver = ptr.Of("")
