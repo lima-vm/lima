@@ -24,6 +24,7 @@ import (
 	"github.com/digitalocean/go-qemu/qmp"
 	"github.com/digitalocean/go-qemu/qmp/raw"
 	"github.com/lima-vm/lima/pkg/driver"
+	"github.com/lima-vm/lima/pkg/executil"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/networks/usernet"
 	"github.com/lima-vm/lima/pkg/store"
@@ -110,6 +111,7 @@ func (l *LimaQemuDriver) Start(ctx context.Context) (chan error, error) {
 	}
 	qCmd := exec.CommandContext(ctx, qExe, qArgsFinal...)
 	qCmd.ExtraFiles = append(qCmd.ExtraFiles, applier.files...)
+	qCmd.SysProcAttr = executil.BackgroundSysProcAttr
 	qStdout, err := qCmd.StdoutPipe()
 	if err != nil {
 		return nil, err
