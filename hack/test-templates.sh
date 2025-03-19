@@ -93,7 +93,6 @@ case "$NAME" in
 "wsl2")
 	# TODO https://github.com/lima-vm/lima/issues/3268
 	CHECKS["proxy-settings"]=
-	CHECKS["port-forwards"]=
 	;;
 esac
 

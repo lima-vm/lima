@@ -166,12 +166,13 @@ jobs:
       run: make
     - name: Integration tests (WSL2, Windows host)
       run: |
-        $env:Path = "$pwd\_output\bin;" + 'C:\Program Files\Git\usr\bin;' + $env:Path
-        Set-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Session Manager\Environment' -Name PATH -Value $env:Path
-        $env:MSYS2_ENV_CONV_EXCL='HOME_HOST;HOME_GUEST'
-        $env:HOME_HOST=$(cygpath.exe "$env:USERPROFILE")
-        $env:HOME_GUEST="/mnt$env:HOME_HOST"
-        $env:LIMACTL_CREATE_ARGS='--vm-type=wsl2 --mount-type=wsl2 --containerd=system'
+        $env:PATH = "$pwd\_output\bin;" + 'C:\msys64\usr\bin;' + $env:PATH
+        pacman -Sy --noconfirm openbsd-netcat diffutils
+        $env:MSYS2_ENV_CONV_EXCL = 'HOME_HOST;HOME_GUEST;_LIMA_WINDOWS_EXTRA_PATH'
+        $env:HOME_HOST = $(cygpath.exe "$env:USERPROFILE")
+        $env:HOME_GUEST = "/mnt$env:HOME_HOST"
+        $env:LIMACTL_CREATE_ARGS = '--vm-type=wsl2 --mount-type=wsl2 --containerd=system'
+        $env:_LIMA_WINDOWS_EXTRA_PATH = 'C:\Program Files\Git\usr\bin'
         bash.exe -c "./hack/test-templates.sh templates/experimental/wsl2.yaml"
 
   qemu:

@@ -68,6 +68,9 @@ unless ($nc_path) {
 # Otherwise $instance must be the name of an already running instance that has been
 # configured with our portForwards settings.
 
+my $instanceType = qx(limactl ls --json "$instance" | jq -r '.vmType' | sed s/x/x/);
+chomp $instanceType;
+
 # Get sshLocalPort for lima instance
 my $sshLocalPort;
 open(my $ls, "limactl ls --json |") or die;
@@ -96,12 +99,20 @@ while (<DATA>) {
     /^(forward|ignore):\s+([0-9.:]+)\s+(\d+)(?:\s+→)?(?:\s+([0-9.:]+)(?:\s+(\d+))?)?/;
     die "Cannot parse test '$_'" unless $1;
     my %test; @test{qw(mode guest_ip guest_port host_ip host_port)} = ($1, $2, $3, $4, $5);
+    $test{host_ip} ||= "127.0.0.1";
+    $test{host_port} ||= $test{guest_port};
     if ($test{mode} eq "forward" && $test{host_port} < 1024 && $Config{osname} ne "darwin") {
         printf "🚧 Not supported on $Config{osname}: # $_\n";
         next;
     }
-    $test{host_ip} ||= "127.0.0.1";
-    $test{host_port} ||= $test{guest_port};
+    if ($test{mode} eq "ignore" && ($test{guest_ip} eq "0.0.0.0" || $test{guest_ip} eq "127.0.0.1") && "$instanceType" eq "wsl2") {
+        printf "🚧 Not supported for $instanceType machines: # $_\n";
+        next;
+    }
+    if ($test{guest_ip} eq "192.168.5.15" && "$instanceType" eq "wsl2") {
+        printf "🚧 Not supported for $instanceType machines: # $_\n";
+        next;
+    }
 
     my $remote = JoinHostPort($test{guest_ip},$test{guest_port});
     my $local = JoinHostPort($test{host_ip},$test{host_port});
