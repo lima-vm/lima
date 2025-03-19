@@ -70,8 +70,8 @@ github.com/dlclark/regexp2 v1.11.0 h1:G/nrcoOa7ZXlpoa/91N3X7mM3r8eIlMBBJZvsz/mxK
 github.com/dlclark/regexp2 v1.11.0/go.mod h1:DHkYz0B9wPfa6wondMfaivmHpzrQ3v9q8cnmRbL6yW8=
 github.com/docker/go-units v0.5.0 h1:69rxXcBk27SvSaaxTtLh/8llcHD8vYHT7WSdRZ/jvr4=
 github.com/docker/go-units v0.5.0/go.mod h1:fgPhTUdO+D/Jk86RDLlptpiXQzgHJF7gydDDbaIK4Dk=
-github.com/elastic/go-libaudit/v2 v2.6.1 h1:eN7tobGizmB+OJpCuG7gvPX7Nxni//H47uvMDXlMrI0=
-github.com/elastic/go-libaudit/v2 v2.6.1/go.mod h1:8205nkf2oSrXFlO4H5j8/cyVMoSF3Y7jt+FjgS4ubQU=
+github.com/elastic/go-libaudit/v2 v2.6.2 h1:1PM6wVBTJHJQYsKl8jfA9/Aw9pFty5uUezPiUfKtOI4=
+github.com/elastic/go-libaudit/v2 v2.6.2/go.mod h1:8205nkf2oSrXFlO4H5j8/cyVMoSF3Y7jt+FjgS4ubQU=
 github.com/elastic/go-licenser v0.4.1 h1:1xDURsc8pL5zYT9R29425J3vkHdt4RT5TNEMeRN48x4=
 github.com/elastic/go-licenser v0.4.1/go.mod h1:V56wHMpmdURfibNBggaSBfqgPxyT1Tldns1i87iTEvU=
 github.com/elliotchance/orderedmap v1.7.1 h1:8SR2DB391dw0HVI9572ElrY+KU0Q89OCXYwWZx7aAZc=
