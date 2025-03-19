@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path"
 	"runtime"
 	"strconv"
 	"strings"
@@ -17,6 +16,7 @@ import (
 	"github.com/coreos/go-semver/semver"
 	"github.com/lima-vm/lima/pkg/instance"
 	"github.com/lima-vm/lima/pkg/ioutilx"
+	"github.com/lima-vm/lima/pkg/limayaml"
 	networks "github.com/lima-vm/lima/pkg/networks/reconcile"
 	"github.com/lima-vm/lima/pkg/sshutil"
 	"github.com/lima-vm/lima/pkg/store"
@@ -139,10 +139,10 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	if workDir != "" {
 		changeDirCmd = fmt.Sprintf("cd %s || exit 1", shellescape.Quote(workDir))
 		// FIXME: check whether y.Mounts contains the home, not just len > 0
-	} else if len(inst.Config.Mounts) > 0 {
+	} else if len(inst.Config.Mounts) > 0 || inst.VMType == limayaml.WSL2 {
 		hostCurrentDir, err := os.Getwd()
 		if err == nil && runtime.GOOS == "windows" {
-			hostCurrentDir, err = mountDirFromWindowsDir(hostCurrentDir)
+			hostCurrentDir, err = mountDirFromWindowsDir(inst, hostCurrentDir)
 		}
 		if err == nil {
 			changeDirCmd = fmt.Sprintf("cd %s", shellescape.Quote(hostCurrentDir))
@@ -152,7 +152,7 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		}
 		hostHomeDir, err := os.UserHomeDir()
 		if err == nil && runtime.GOOS == "windows" {
-			hostHomeDir, err = mountDirFromWindowsDir(hostHomeDir)
+			hostHomeDir, err = mountDirFromWindowsDir(inst, hostHomeDir)
 		}
 		if err == nil {
 			changeDirCmd = fmt.Sprintf("%s || cd %s", changeDirCmd, shellescape.Quote(hostHomeDir))
@@ -244,12 +244,12 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	return sshCmd.Run()
 }
 
-func mountDirFromWindowsDir(dir string) (string, error) {
-	dir, err := ioutilx.WindowsSubsystemPath(dir)
-	if err == nil && !strings.HasPrefix(dir, "/mnt/") {
-		dir = path.Join("/mnt", dir)
+func mountDirFromWindowsDir(inst *store.Instance, dir string) (string, error) {
+	if inst.VMType == limayaml.WSL2 {
+		distroName := "lima-" + inst.Name
+		return ioutilx.WindowsSubsystemPathForLinux(dir, distroName)
 	}
-	return dir, err
+	return ioutilx.WindowsSubsystemPath(dir)
 }
 
 func shellBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
