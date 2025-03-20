@@ -41,8 +41,11 @@ jobs:
     - name: Run golangci-lint
       uses: golangci/golangci-lint-action@55c2c1448f86e01eaae002a5a3a9624417608d84  # v6.5.2
       with:
-        version: v1.64.2
-        args: --verbose --timeout=10m
+        # TODO: change to v2.0.0 when it's released, remove `install-mode` and `verify`
+        version: main
+        install-mode: goinstall
+        verify: false
+        args: --verbose
     - name: Run yamllint
       run: yamllint .
     - name: Install shellcheck
