@@ -67,13 +67,13 @@ This page documents the environment variables used in Lima.
   export LIMA_USERNET_RESOLVE_IP_ADDRESS_TIMEOUT=5
   ```
 
-### `LIMA_QEMU_UEFI_IN_BIOS`
+### `_LIMA_QEMU_UEFI_IN_BIOS`
 
 - **Description**: Commands QEMU to load x86_64 UEFI images using `-bios` instead of `pflash` drives.
 - **Default**: `false` on Unix like hosts and `true` on Windows hosts
 - **Usage**: 
   ```sh
-  export LIMA_QEMU_UEFI_IN_BIOS=true
+  export _LIMA_QEMU_UEFI_IN_BIOS=true
   ```
 - **Note**: It is expected that this variable will be set to `false` by default in future
   when QEMU supports `pflash` UEFI for accelerated guests on Windows.
