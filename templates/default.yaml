@@ -20,27 +20,27 @@ arch: null
 # 🔵 This file: Ubuntu images
 images:
 # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
-- location: "https://cloud-images.ubuntu.com/releases/24.10/release-20250129/ubuntu-24.10-server-cloudimg-amd64.img"
+- location: "https://cloud-images.ubuntu.com/releases/oracular/release-20250305/ubuntu-24.10-server-cloudimg-amd64.img"
   arch: "x86_64"
-  digest: "sha256:8831f96c39b987d4b793f44af0176890a5527ab89997da4a1eac979413e57631"
-- location: "https://cloud-images.ubuntu.com/releases/24.10/release-20250129/ubuntu-24.10-server-cloudimg-arm64.img"
+  digest: "sha256:c2c3ed89097c5f5c90ebbe45216d1569e3ea2d3c8d0993eeae74f859f6467cdb"
+- location: "https://cloud-images.ubuntu.com/releases/oracular/release-20250305/ubuntu-24.10-server-cloudimg-arm64.img"
   arch: "aarch64"
-  digest: "sha256:d0237f183fb83cab4779e6f84099fea748ec3c8a14eec2be9392026da7ffd3d0"
-- location: "https://cloud-images.ubuntu.com/releases/24.10/release-20250129/ubuntu-24.10-server-cloudimg-riscv64.img"
+  digest: "sha256:9d8e0c98858d53866117d5c701a554a9d2434bedffec1c0ab7253691bfd2c70e"
+- location: "https://cloud-images.ubuntu.com/releases/oracular/release-20250305/ubuntu-24.10-server-cloudimg-riscv64.img"
   arch: "riscv64"
-  digest: "sha256:5bd81f36bbb37265ccb02b1c93c1a714d6dd3e6c83c92821ae4cc03649ba96af"
-- location: "https://cloud-images.ubuntu.com/releases/24.10/release-20250129/ubuntu-24.10-server-cloudimg-armhf.img"
+  digest: "sha256:be6109cfed964a2b745330681f7ec5b9ddc45bb180f41837b6e3969b4be9e8b5"
+- location: "https://cloud-images.ubuntu.com/releases/oracular/release-20250305/ubuntu-24.10-server-cloudimg-armhf.img"
   arch: "armv7l"
-  digest: "sha256:6a1ca78f06227ba060d11a88009cc9b65bdd42e17b84d444d204cb5c80f81552"
+  digest: "sha256:8f3a22d7392512b56ffbcbf30d4f5df0805b7d515f08fb86c5a8f87405ca7f02"
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
-- location: "https://cloud-images.ubuntu.com/releases/24.10/release/ubuntu-24.10-server-cloudimg-amd64.img"
+- location: "https://cloud-images.ubuntu.com/releases/oracular/release/ubuntu-24.10-server-cloudimg-amd64.img"
   arch: "x86_64"
-- location: "https://cloud-images.ubuntu.com/releases/24.10/release/ubuntu-24.10-server-cloudimg-arm64.img"
+- location: "https://cloud-images.ubuntu.com/releases/oracular/release/ubuntu-24.10-server-cloudimg-arm64.img"
   arch: "aarch64"
-- location: "https://cloud-images.ubuntu.com/releases/24.10/release/ubuntu-24.10-server-cloudimg-riscv64.img"
+- location: "https://cloud-images.ubuntu.com/releases/oracular/release/ubuntu-24.10-server-cloudimg-riscv64.img"
   arch: "riscv64"
-- location: "https://cloud-images.ubuntu.com/releases/24.10/release/ubuntu-24.10-server-cloudimg-armhf.img"
+- location: "https://cloud-images.ubuntu.com/releases/oracular/release/ubuntu-24.10-server-cloudimg-armhf.img"
   arch: "armv7l"
 # CPUs
 # 🟢 Builtin default: min(4, host CPU cores)
