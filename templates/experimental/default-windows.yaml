@@ -1,0 +1,591 @@
+# ===================================================================== #
+# BASIC CONFIGURATION
+# ===================================================================== #
+
+# Default values in this YAML file are specified by `null` instead of Lima's "builtin default" values,
+# so they can be overridden by the $LIMA_HOME/_config/default.yaml mechanism documented at the end of this file.
+
+# VM type: "qemu", "vz" (on macOS 13 and later), or "default".
+# The vmType can be specified only on creating the instance.
+# The vmType of existing instances cannot be changed.
+# 🟢 Builtin default: "vz" (on macOS 13.5 and later), "qemu" (on others)
+vmType: null
+
+# Arch: "default", "x86_64", "aarch64".
+# 🟢 Builtin default: "default" (corresponds to the host architecture)
+arch: null
+
+# OpenStack-compatible disk image.
+# 🟢 Builtin default: none (must be specified)
+# 🔵 This file: Ubuntu images
+images:
+# Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
+- location: "https://cloud-images.ubuntu.com/releases/oracular/release-20250305/ubuntu-24.10-server-cloudimg-amd64.img"
+  arch: "x86_64"
+  digest: "sha256:c2c3ed89097c5f5c90ebbe45216d1569e3ea2d3c8d0993eeae74f859f6467cdb"
+- location: "https://cloud-images.ubuntu.com/releases/oracular/release-20250305/ubuntu-24.10-server-cloudimg-arm64.img"
+  arch: "aarch64"
+  digest: "sha256:9d8e0c98858d53866117d5c701a554a9d2434bedffec1c0ab7253691bfd2c70e"
+- location: "https://cloud-images.ubuntu.com/releases/oracular/release-20250305/ubuntu-24.10-server-cloudimg-riscv64.img"
+  arch: "riscv64"
+  digest: "sha256:be6109cfed964a2b745330681f7ec5b9ddc45bb180f41837b6e3969b4be9e8b5"
+- location: "https://cloud-images.ubuntu.com/releases/oracular/release-20250305/ubuntu-24.10-server-cloudimg-armhf.img"
+  arch: "armv7l"
+  digest: "sha256:8f3a22d7392512b56ffbcbf30d4f5df0805b7d515f08fb86c5a8f87405ca7f02"
+- location: "https://cloud-images.ubuntu.com/releases/oracular/release-20250305/ubuntu-24.10-server-cloudimg-s390x.img"
+  arch: "s390x"
+  digest: "sha256:98b19fee0742b4cfccbfcc72fa82f274355f01dd0e5216263a9988e79e6d03ab"
+# Fallback to the latest release image.
+# Hint: run `limactl prune` to invalidate the cache
+- location: "https://cloud-images.ubuntu.com/releases/oracular/release/ubuntu-24.10-server-cloudimg-amd64.img"
+  arch: "x86_64"
+- location: "https://cloud-images.ubuntu.com/releases/oracular/release/ubuntu-24.10-server-cloudimg-arm64.img"
+  arch: "aarch64"
+- location: "https://cloud-images.ubuntu.com/releases/oracular/release/ubuntu-24.10-server-cloudimg-riscv64.img"
+  arch: "riscv64"
+- location: "https://cloud-images.ubuntu.com/releases/oracular/release/ubuntu-24.10-server-cloudimg-armhf.img"
+  arch: "armv7l"
+- location: "https://cloud-images.ubuntu.com/releases/oracular/release/ubuntu-24.10-server-cloudimg-s390x.img"
+  arch: "s390x"
+# CPUs
+# 🟢 Builtin default: min(4, host CPU cores)
+cpus: null
+
+# Memory size
+# 🟢 Builtin default: min("4GiB", half of host memory)
+memory: null
+
+# Disk size
+# 🟢 Builtin default: "100GiB"
+disk: null
+
+# List of mount types not supported by the kernel of this distro.
+# Also used to resolve the default mount type when not explicitly specified.
+#
+# NOTE: 9p is broken in Linux v6.9, v6.10, and v6.11.
+# The issue was fixed in Linux v6.12-rc5 (https://github.com/torvalds/linux/commit/be2ca38).
+#
+# 🟢 Builtin default: []
+# 🔵 This file: ["9p"] (as Ubuntu 24.10 uses kernel 6.11)
+mountTypesUnsupported:
+- "9p"
+
+# Mount type for above mounts, such as "reverse-sshfs" (from sshocker), "9p" (QEMU’s virtio-9p-pci, aka virtfs),
+# or "virtiofs" (experimental on Linux; needs `vmType: vz` on macOS).
+# 🟢 Builtin default: "default" (resolved to be "9p" for QEMU since Lima v1.0, "virtiofs" for vz)
+mountType: null
+
+# Enable inotify support for mounted directories (EXPERIMENTAL)
+# 🟢 Builtin default: Disabled by default
+mountInotify: null
+
+# ===================================================================== #
+# ADVANCED CONFIGURATION
+# ===================================================================== #
+
+# Lima disks to attach to the instance. The disks will be accessible from inside the
+# instance, labeled by name. (e.g. if the disk is named "data", it will be labeled
+# "lima-data" inside the instance). The disk will be mounted inside the instance at
+# `/mnt/lima-${VOLUME}`.
+# 🟢 Builtin default: []
+additionalDisks:
+# disks should either be a list of disk name strings, for example:
+# - "data"
+# or a list of disk objects with extra parameters, for example:
+# - name: "data"
+#   format: true
+#   fsType: "ext4"
+
+ssh:
+  # A localhost port of the host. Forwarded to port 22 of the guest.
+  # 🟢 Builtin default: 0 (automatically assigned to a free port)
+  # NOTE: when the instance name is "default", the builtin default value is set to
+  # 60022 for backward compatibility.
+  localPort: null
+  # Load ~/.ssh/*.pub in addition to $LIMA_HOME/_config/user.pub .
+  # This option is useful when you want to use other SSH-based
+  # applications such as rsync with the Lima instance.
+  # If you have an insecure key under ~/.ssh, do not use this option.
+  # 🟢 Builtin default: false (since Lima v1.0)
+  loadDotSSHPubKeys: null
+  # Forward ssh agent into the instance.
+  # The ssh agent socket can be mounted in a container at the path `/run/host-services/ssh-auth.sock`.
+  # Set the environment variable `SSH_AUTH_SOCK` value to the path above.
+  # The socket is accessible by the non-root user inside the Lima instance.
+  # 🟢 Builtin default: false
+  forwardAgent: null
+  # Forward X11 into the instance
+  # 🟢 Builtin default: false
+  forwardX11: null
+  # Trust forwarded X11 clients
+  # 🟢 Builtin default: false
+  forwardX11Trusted: null
+
+caCerts:
+  # If set to `true`, this will remove all the default trusted CA certificates that
+  # are normally shipped with the OS.
+  # 🟢 Builtin default: false
+  removeDefaults: null
+
+  # A list of trusted CA certificate files. The files will be read and passed to cloud-init.
+  files:
+  # - examples/hello.crt
+
+  # A list of trusted CA certificates. These are directly passed to cloud-init.
+  certs:
+  # - |
+  #   -----BEGIN CERTIFICATE-----
+  #   YOUR-ORGS-TRUSTED-CA-CERT-HERE
+  #   -----END CERTIFICATE-----
+  # - |
+  #   -----BEGIN CERTIFICATE-----
+  #   YOUR-ORGS-TRUSTED-CA-CERT-HERE
+  #   -----END CERTIFICATE-----
+
+# Upgrade the instance on boot
+# Reboot after upgrade if required
+# 🟢 Builtin default: false
+upgradePackages: null
+
+containerd:
+  # Enable system-wide (aka rootful)  containerd and its dependencies (BuildKit, Stargz Snapshotter)
+  # Note that `nerdctl.lima` only works in rootless mode; you have to use `lima sudo nerdctl ...`
+  # to use rootful containerd with nerdctl.
+  # 🟢 Builtin default: false
+  system: null
+  # Enable user-scoped (aka rootless) containerd and its dependencies
+  # 🟢 Builtin default: true (for x86_64 and aarch64)
+  user: null
+#  # Override containerd archive
+#  # 🟢 Builtin default: hard-coded URL with hard-coded digest (see the output of `limactl info | jq .defaultTemplate.containerd.archives`)
+#  archives:
+#  - location: "~/Downloads/nerdctl-full-X.Y.Z-linux-amd64.tar.gz"
+#    arch: "x86_64"
+#    digest: "sha256:..."
+
+# Provisioning scripts need to be idempotent because they might be called
+# multiple times, e.g. when the host VM is being restarted.
+# The scripts can use the following template variables: {{.Home}}, {{.Name}}, {{.Hostname}}, {{.UID}}, {{.User}}, and {{.Param.Key}}.
+#
+# EXPERIMENTAL Alternatively the script can be provided using the "file" property. This file is read when the instance
+# is created and then stored under the "script" property. When "file" is specified "script" must be empty.
+# The "file" property can either be a string (URL), or an object with a "url" and "digest" properties.
+# The "digest" property is currently unused.
+# Relative script files will be resolved relative to the location of the template file.
+# 🟢 Builtin default: []
+# provision:
+# # `system` is executed with root privileges
+# - mode: system
+#   script: |
+#     #!/bin/bash
+#     set -eux -o pipefail
+#     export DEBIAN_FRONTEND=noninteractive
+#     apt-get install -y vim
+# # `user` is executed without root privileges
+# - mode: user
+#   file:
+#     url: user-provisioning.sh
+#     digest: deadbeef
+# # `boot` is executed directly by /bin/sh as part of cloud-init-local.service's early boot process,
+# # which is why there is no hash-bang specified in the example
+# # See cloud-init docs for more info https://docs.cloud-init.io/en/latest/reference/examples.html#run-commands-on-first-boot
+# - mode: boot
+#   script: |
+#     systemctl disable NetworkManager-wait-online.service
+# # `dependency` is executed before the regular dependency resolution workflow in
+# # pkg/cidata/cidata.TEMPLATE.d/boot/30-install-packages.sh
+# # If skipDefaultDependencyResolution is set on at least one `dependency` mode provisioning script, the regular
+# # dependency resolution workflow in pkg/cidata/cidata.TEMPLATE.d/boot/30-install-packages.sh will be skipped.
+# - mode: dependency
+#   skipDefaultDependencyResolution: false
+#   script: |
+#     #!/bin/bash
+#     dnf config-manager --add-repo ...
+#     dnf install ...
+# # `ansible` is executed after other scripts are complete
+# # It requires `ansible-playbook` command to be installed.
+# # Environment variables such as ANSIBLE_CONFIG can be used, to control the behavior of the playbook execution.
+# # See ansible docs, and `ansible-config`, for more info https://docs.ansible.com/ansible/latest/playbook_guide/
+# - mode: ansible
+#   playbook: playbook.yaml
+# # `data` is a file that is written to the guest filesystem and not executed at all.
+# # The file is written after the boot scripts, but before any other provisioning scripts are run.
+# # Note that reverse-sshfs mounts are not established at this time; other mount types are already mounted.
+# # The `path` and `content` properties are required. The `file` property can be used the same way as with
+# # other provisioning scripts, in which case `content` must be empty. The `owner` defaults to "root:root";
+# # the permissions default to 644. The `overwrite` property defaults to `true`, in which case the file will
+# # be overwritten on every boot.
+# # `path`, `contents`, and `owner` are evaluated as guest templates (see above).
+# - mode: data
+#   path: /etc/conf.d/example
+#   content: |
+#     FOO=bar
+#   owner: "root:root"
+#   permissions: 644
+#   overwrite: false
+
+# Probe scripts to check readiness.
+# The scripts run in user mode. They must start with a '#!' line.
+# The scripts can use the following template variables: {{.Home}}, {{.Name}}, {{.Hostname}}, {{.UID}}, {{.User}}, and {{.Param.Key}}.
+# EXPERIMENTAL Alternatively the script can be provided using the "file" property. This file is read when the instance
+# is created and then stored under the "script" property. When "file" is specified "script" must be empty.
+# The "file" property can either be a string (URL), or an object with a "url" and "digest" properties.
+# The "digest" property is currently unused.
+# Relative script files will be resolved relative to the location of the template file.
+# 🟢 Builtin default: []
+# probes:
+# # Only `readiness` probes are supported right now.
+# - mode: readiness
+#   description: vim to be installed
+#   script: |
+#      #!/bin/bash
+#      set -eux -o pipefail
+#      if ! timeout 30s bash -c "until command -v vim; do sleep 3; done"; then
+#        echo >&2 "vim is not installed yet"
+#        exit 1
+#      fi
+#   hint: |
+#     vim was not installed in the guest. Make sure the package system is working correctly.
+#     Also see "/var/log/cloud-init-output.log" in the guest.
+
+# ===================================================================== #
+# FURTHER ADVANCED CONFIGURATION
+# ===================================================================== #
+
+# A template should specify the minimum Lima version required to parse this template correctly.
+# It should not be set if the minimum version is less than 1.0.0
+# 🟢 Builtin default: not set
+minimumLimaVersion: null
+
+# EXPERIMENTAL
+# Default settings can be imported from base templates. These will be merged in when the instance
+# is created, and the combined template is stored in the instance directory.
+# This setting ca be either a single string (URL), or a list of locators.
+# A locator is again either a string (URL), or an object with "url" and "digest" properties, e.g.
+# base: [{url: ./base.yaml, digest: decafbad}, …]
+# The "digest" property is currently unused.
+# Any relative base template name will be resolved relative to the location of the main template.
+# 🟢 Builtin default: no base template
+base: null
+
+# User to be used inside the VM
+user:
+  # User name. An explicitly specified username is not validated by Lima.
+  # 🟢 Builtin default: same as the host username, if it is a valid Linux username, otherwise "lima"
+  name: null
+  # Full name or display name of the user.
+  # 🟢 Builtin default: user information from the host
+  comment: null
+  # Numeric user id. It is not currently possible to specify a group id.
+  # 🟢 Builtin default: same as the host user id of the current user (NOT a lookup of the specified "username").
+  uid: null
+  # Home directory inside the VM, NOT the mounted home directory of the host.
+  # It can use the following template variables: {{.Name}}, {{.Hostname}}, {{.UID}}, {{.User}}, and {{.Param.Key}}.
+  # 🟢 Builtin default: "/home/{{.User}}.linux"
+  home: null
+  # Shell. Needs to be an absolute path.
+  # 🟢 Builtin default: "/bin/bash"
+  shell: null
+
+vmOpts:
+  qemu:
+    # Minimum version of QEMU required to create an instance of this template.
+    # Will be ignored if the vmType is not "qemu"
+    # 🟢 Builtin default: not set
+    minimumVersion: null
+    # Enable virtio port for GA. If disabled then will forward GA via SSH.
+    # Will be ignored if the vmType is not "qemu"
+    # 🟢 Builtin default: true on Windows and false otherwise
+    virtioGA: null
+
+# OS: "Linux".
+# 🟢 Builtin default: "Linux"
+os: null
+
+# Specify desired QEMU CPU type for each arch.
+# You can see what options are available for host emulation with: `qemu-system-$(arch) -cpu help`.
+# Setting of instructions is supported like this: "qemu64,+ssse3".
+# 🟢 Builtin default: hard-coded arch map with type (see the output of `limactl info | jq .defaultTemplate.cpuType`)
+cpuType:
+#   aarch64: "cortex-a76" # (or "host" when running on aarch64 host)
+#   armv7l: "cortex-a7" # (or "host" when running on armv7l host)
+#   riscv64: "rv64" # (or "host" when running on riscv64 host)
+#   x86_64: "qemu64" # (or "host,-pdpe1gb" when running on x86_64 host)
+
+rosetta:
+  # Enable Rosetta inside the VM; needs `vmType: vz`
+  # Hint: try `softwareupdate --install-rosetta` if Lima gets stuck at `Installing rosetta...`
+  # 🟢 Builtin default: false
+  enabled: null
+  # Register rosetta to /proc/sys/fs/binfmt_misc
+  # 🟢 Builtin default: false
+  binfmt: null
+
+# Specify the timezone name (as used by the zoneinfo database). Specify the empty string
+# to not set a timezone in the instance.
+# 🟢 Builtin default: use name from /etc/timezone or deduce from symlink target of /etc/localtime
+timezone: null
+
+firmware:
+  # Use legacy BIOS instead of UEFI. Ignored for aarch64 and vz.
+  # 🟢 Builtin default: false
+  legacyBIOS: null
+#  # Override UEFI images
+#  # 🟢 Builtin default: uses VM's default UEFI, except for qemu + aarch64.
+#  # See <https://lists.gnu.org/archive/html/qemu-devel/2023-12/msg01694.html>
+#  images:
+#  - location: "~/Downloads/edk2-aarch64-code.fd.gz"
+#    arch: "aarch64"
+#    digest: "sha256:..."
+#    vmType: "qemu"
+
+audio:
+  # EXPERIMENTAL
+  # QEMU audiodev, e.g., "none", "coreaudio", "pa", "alsa", "oss".
+  # VZ driver, use "vz" as device name
+  # Choosing "none" will mute the audio output, and not play any sound.
+  # Choosing "default" will pick a suitable choice of: coreaudio, pa, dsound, oss.
+  # As of QEMU v6.2 the default is to create a disconnected sound device
+  # that is still visible in the guest but not connected to the host.
+  # 🟢 Builtin default: ""
+  device: null
+
+video:
+  # QEMU display, e.g., "none", "cocoa", "sdl", "gtk", "vnc", "default".
+  # Choosing "none" will hide the video output, and not show any window.
+  # Choosing "vnc" will use a network server, and not show any window.
+  # Choosing "default" will pick the first available of: gtk, sdl, cocoa.
+  # As of QEMU v6.2, enabling anything but none or vnc is known to have negative impact
+  # on performance on macOS hosts: https://gitlab.com/qemu-project/qemu/-/issues/334
+  # 🟢 Builtin default: "none"
+  display: null
+  # VNC (Virtual Network Computing) is a platform-independent graphical
+  # desktop-sharing system that uses the Remote Frame Buffer protocol (RFB)
+  vnc:
+    # VNC display, e.g.,"to=L", "host:d", "unix:path", "none"
+    # By convention the TCP port is 5900+d, connections from any host.
+    # 🟢 Builtin default: "127.0.0.1:0,to=9"
+    display: null
+
+# The instance can get routable IP addresses from the vmnet framework using
+# https://github.com/lima-vm/socket_vmnet.
+# 🟢 Builtin default: []
+networks:
+# Lima can manage daemons for networks defined in $LIMA_HOME/_config/networks.yaml
+# automatically. The socket_vmnet binary must be installed into
+# secure locations only alterable by the "root" user.
+# - lima: shared
+#   # MAC address of the instance; lima will pick one based on the instance name,
+#   # so DHCP assigned ip addresses should remain constant over instance restarts.
+#   macAddress: ""
+#   # Interface name, defaults to "lima0", "lima1", etc.
+#   interface: ""
+#   # Interface metric, lowest metric becomes the preferred route.
+#   # Defaults to 100. Builtin SLIRP network uses 200.
+#   metric: 100
+#
+# Lima can also connect to "unmanaged" networks addressed by "socket". This
+# means that the daemons will not be controlled by Lima, but must be started
+# before the instance.  The interface type (host, shared, or bridged) is
+# configured in socket_vmnet and not in lima.
+# - socket: "/var/run/socket_vmnet"
+
+
+# The "vzNAT" IP address is accessible from the host, but not from other guests.
+# Needs `vmType: vz`
+# - vzNAT: true
+
+# Port forwarding rules. Forwarding between ports 22 and ssh.localPort cannot be overridden.
+# Rules are checked sequentially until the first one matches.
+# portForwards:
+# - guestPort: 443
+#   hostIP: "0.0.0.0" # overrides the default value "127.0.0.1"; allows privileged port forwarding
+# # default: hostPort: 443 (same as guestPort)
+# # default: guestIP: "127.0.0.1" (also matches bind addresses "0.0.0.0", "::", and "::1")
+# # default: proto: "tcp" (other options: "udp, "any")
+#
+# - guestPortRange: [4000, 4999]
+#   hostIP:  "0.0.0.0" # overrides the default value "127.0.0.1"
+# # default: hostPortRange: [4000, 4999] (must specify same number of ports as guestPortRange)
+#
+# - guestPort: 80
+#   hostPort: 8080 # overrides the default value 80
+#
+# - guestIP: "127.0.0.2" # overrides the default value "127.0.0.1"
+#   hostIP: "127.0.0.2" # overrides the default value "127.0.0.1"
+# # default: guestPortRange: [1, 65535]
+# # default: hostPortRange: [1, 65535]
+#
+# - guestIP: 0.0.0.0 # otherwise defaults to 127.0.0.1
+#   proto: any       # tcp and udp
+#   ignore: true     # don't forward these ports (guestPortRange, in this case 1-65535)
+#
+# - guestPort: 7443
+#   guestIP: "0.0.0.0"       # Will match *any* interface
+#   guestIPMustBeZero: true  # Restrict matching to 0.0.0.0 binds only
+#   hostIP: "0.0.0.0"        # Forwards to 0.0.0.0, exposing it externally
+#
+# - guestSocket: "/run/user/{{.UID}}/my.sock"
+#   hostSocket: mysocket
+# # default: reverse: false
+# # "guestSocket" can include these template variables: {{.Home}}, {{.Name}}, {{.Hostname}}, {{.UID}}, {{.User}}, and {{.Param.Key}}.
+# # "hostSocket" can include {{.Home}}, {{.Dir}}, {{.Name}}, {{.UID}}, {{.User}}, and {{.Param.Key}}.
+# # "reverse" can only be used for unix sockets right now, not for tcp sockets.
+# # Put sockets into "{{.Dir}}/sock" to avoid collision with Lima internal sockets!
+# # Sockets can also be forwarded to ports and vice versa, but not to/from a range of ports.
+# # Forwarding requires the lima user to have rw access to the "guestsocket",
+# # and the local user rwx access to the directory of the "hostsocket".
+#
+# # Lima internally appends this fallback rule at the end:
+# - guestIP: "127.0.0.1"
+#   guestPortRange: [1, 65535]
+#   hostIP: "127.0.0.1"
+#   hostPortRange: [1, 65535]
+# # Any port still not matched by a rule will not be forwarded (ignored)
+
+# Copy files from the guest to the host. Copied after provisioning scripts have been completed.
+# copyToHost:
+# - guest: "/etc/myconfig.cfg"
+#   host: "{{.Dir}}/copied-from-guest/myconfig"
+# # deleteOnStop: false
+# # "guest" can include these template variables: {{.Home}}, {{.Name}}, {{.Hostname}}, {{.UID}}, {{.User}}, and {{.Param.Key}}.
+# # "host" can include {{.Home}}, {{.Dir}}, {{.Name}}, {{.UID}}, {{.User}}, and {{.Param.Key}}.
+# # "deleteOnStop" will delete the file from the host when the instance is stopped.
+
+# Message. Information to be shown to the user, given as a Go template for the instance.
+# The same template variables as for listing instances can be used, for example {{.Dir}}.
+# You can view the complete list of variables using `limactl list --list-fields` command.
+# It also includes {{.HostOS}} and {{.HostArch}} vars, for the runtime GOOS and GOARCH.
+# 🟢 Builtin default: ""
+# message: |
+#   This will be shown to the user.
+
+# Extra environment variables that will be loaded into the VM at start up.
+# These variables are consumed by internal init scripts, and also added
+# to /etc/environment.
+# If you set any of "ftp_proxy", "http_proxy", "https_proxy", or "no_proxy", then
+# Lima will automatically set an uppercase variant to the same value as well.
+# 🟢 Builtin default: {}
+# env:
+#   KEY: value
+
+# Defines variables used for customizing the functionality.
+# Key names must start with an uppercase or lowercase letter followed by
+# any number of letters, digits, and underscores.
+# Values must not contain non-printable characters except for spaces and tabs.
+# These variables can be referenced as {{.Param.Key}} in lima.yaml.
+# In provisioning scripts and probes they are also available as predefined
+# environment variables, prefixed with "PARAM_" (so `Key` → `$PARAM_Key`).
+# param:
+#   Key: value
+
+# Lima will override the proxy environment variables with values from the current process
+# environment (the environment in effect when you run `limactl start`). It will automatically
+# replace the strings "localhost" and "127.0.0.1" with the host gateway address from inside
+# the VM, so it stays routable. Use of the process environment can be disabled by setting
+# propagateProxyEnv to false.
+# 🟢 Builtin default: true
+propagateProxyEnv: null
+
+# The host agent implements a DNS server that looks up host names on the host
+# using the local system resolver. This means changing VPN and network settings
+# are reflected automatically into the guest, including conditional forward,
+# and mDNS lookup. By default, only IPv4 addresses will be returned. IPv6 addresses
+# can only work when using a vmnet network interface and the host has working
+# IPv6 configured as well.
+hostResolver:
+  # 🟢 Builtin default: true
+  enabled: null
+  # 🟢 Builtin default: false
+  ipv6: null
+  # Static names can be defined here as an alternative to adding them to the hosts /etc/hosts.
+  # Values can be either other hostnames, or IP addresses. The host.lima.internal name is
+  # predefined to specify the gateway address to the host.
+  # 🟢 Builtin default: {}
+  hosts:
+  #   guest.name: 127.1.1.1
+  #   host.name: host.lima.internal
+
+# If hostResolver.enabled is false, then the following rules apply for configuring dns:
+# Explicitly set DNS addresses for qemu user-mode networking. By default, qemu picks *one*
+# nameserver from the host config and forwards all queries to this server. On macOS
+# Lima adds the nameservers configured for the first host interface in service order,
+# that has an IPv4 address, to the list. In case this still doesn't work (e.g. VPN
+# setups), the servers can be specified here explicitly. If nameservers are specified
+# here, then the configuration from network preferences will be ignored.
+# 🟢 Builtin default: []
+# dns:
+# - 1.1.1.1
+# - 1.0.0.1
+
+# Prefix to use for installing guest agent, and containerd with dependencies (if configured)
+# 🟢 Builtin default: /usr/local
+guestInstallPrefix: null
+
+# When the "plain" mode is enabled:
+# - the YAML properties for mounts, port forwarding, containerd, etc. will be ignored
+# - guest agent will not be running
+# - dependency packages like sshfs will not be installed into the VM
+# User-specified provisioning scripts will be still executed.
+# 🟢 Builtin default: false
+plain: null
+
+# When the "nestedVirtualization" feature is enabled:
+# - Allows running a VM inside the guest VM.
+# - The guest VM must configure QEMU with the `-cpu host` parameters to run a nested VM:
+#   qemu-system-aarch64 -accel kvm -cpu host -M virt
+# - Without specifying `-cpu host`, nested virtualization may fail with the error:
+#   qemu-system-aarch64: kvm_init_vcpu: kvm_arch_init_vcpu failed (0): Invalid argument
+# - Only supported on Apple M3 or later with `vmType: vz`.
+# 🟢 Builtin default: false
+nestedVirtualization: null
+
+# ===================================================================== #
+# GLOBAL DEFAULTS AND OVERRIDES
+# ===================================================================== #
+
+# The builtin defaults can be changed globally by creating a $LIMA_HOME/_config/default.yaml
+# file. It will be used by ALL instances under the same $LIMA_HOME, and it
+# will be applied on each `limactl start`, so can affect instance restarts.
+
+# A similar mechanism is $LIMA_HOME/_config/override.yaml, which will take
+# precedence even over the settings in an instances lima.yaml file.
+# It also applies to ALL instances under the same $LIMA_HOME, and is applied
+# on each restart. It can be used to globally override settings, e.g. make
+# the mount of the home directory writable.
+
+# EXPERIMENTAL
+# A third mechanism is $LIMA_HOME/_config/base.yaml. It is similar to
+# `default.yaml` but will be merged during the `base` template embedding
+# when the instance is created, and not on every start. It becomes part
+# of the lima.yaml file.
+
+# On each instance start the config settings are determined: If a value is
+# not set in `lima.yaml`, then the `default.yaml` is used. If that file
+# doesn't exist, or the value is not defined in the file, then the builtin
+# default is used. If `override.yaml` exists and defines the value, then
+# it overrides whatever has been chosen so far.
+
+# For slices (e.g. `mounts`, `provision`) and maps (`env`) the entries are
+# combined instead of replacing each other. Slices are produced from override
+# settings, followed by lima.yaml, followed by default.yaml (but NOT from
+# builtin defaults). Maps are produced starting with default.yaml values,
+# overwriting with lima.yaml ones, overwriting with override.yaml.
+
+# Exceptions:
+# - `dns` will use the list from the highest priority file; they are not
+#   combined. If override.yaml defines a list of `dns` entries, then the
+#   settings in default.yaml and lima.yaml are ignored.
+#
+# - `mounts` will update the `writable` setting when 2 entries have the
+#   same `location` value. For this reason they are processed in the opposite
+#   order: starting with default, followed by lima, and then override.
+#
+# -`networks` will replace lower priority entries with the same `interface`
+#   name with higher priority definitions. This does not apply if the
+#  `interface` field is empty. `networks` are therefore also processed
+#  in lowest to highest priority order.
+
+# ===================================================================== #
+# END OF TEMPLATE
+# ===================================================================== #

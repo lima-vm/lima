@@ -94,6 +94,9 @@ case "$NAME" in
 	# TODO https://github.com/lima-vm/lima/issues/3268
 	CHECKS["proxy-settings"]=
 	;;
+"default-windows")
+	CHECKS["mount-home"]=
+	;;
 esac
 
 if limactl ls -q | grep -q "$NAME"; then

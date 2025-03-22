@@ -174,6 +174,16 @@ jobs:
         $env:LIMACTL_CREATE_ARGS = '--vm-type=wsl2 --mount-type=wsl2 --containerd=system'
         $env:_LIMA_WINDOWS_EXTRA_PATH = 'C:\Program Files\Git\usr\bin'
         bash.exe -c "./hack/test-templates.sh templates/experimental/wsl2.yaml"
+    - name: Integration tests (QEMU, Windows host)
+      run: |
+        $env:PATH = "$pwd\_output\bin;" + 'C:\msys64\usr\bin;C:\msys64\clang64\bin;' + $env:PATH
+        pacman -Sy --noconfirm openbsd-netcat diffutils mingw-w64-clang-x86_64-qemu
+        $env:MSYS2_ENV_CONV_EXCL = 'HOME_HOST;HOME_GUEST;_LIMA_WINDOWS_EXTRA_PATH'
+        $env:HOME_HOST = $(cygpath.exe "$env:USERPROFILE")
+        $env:HOME_GUEST = $(cygpath.exe "$env:USERPROFILE")
+        $env:LIMACTL_CREATE_ARGS = '--vm-type=qemu'
+        $env:_LIMA_WINDOWS_EXTRA_PATH = 'C:\Program Files\Git\usr\bin'
+        bash.exe -c "./hack/test-templates.sh templates/experimental/default-windows.yaml"
 
   qemu:
     name: "Integration tests (QEMU, macOS host)"
