@@ -1,189 +1,147 @@
-#   Copyright The containerd Authors.
-
-#   Licensed under the Apache License, Version 2.0 (the "License");
-#   you may not use this file except in compliance with the License.
-#   You may obtain a copy of the License at
-
-#       http://www.apache.org/licenses/LICENSE-2.0
-
-#   Unless required by applicable law or agreed to in writing, software
-#   distributed under the License is distributed on an "AS IS" BASIS,
-#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#   See the License for the specific language governing permissions and
-#   limitations under the License.
-
-# -----------------------------------------------------------------------------
-# From https://github.com/containerd/nerdctl/blob/v0.12.1/.golangci.yml
-# -----------------------------------------------------------------------------
----
+# golangci-lint configuration file.
+# https://golangci-lint.run/usage/configuration/
+version: "2"
 run:
   concurrency: 6
-  timeout: 2m  # to avoid timeout locally
 linters:
-  disable-all: true
+  default: none
   enable:
+  - bodyclose
+  - copyloopvar
   - depguard
-  - gofmt
-  - goimports
+  - dupword
+  - errcheck
+  - errorlint
+  - forbidigo
+  - gocritic
+  - godot
   - govet
   - ineffassign
   - misspell
   - nakedret
-  # - prealloc
-  - typecheck
-  # - asciicheck
-  - bodyclose
-  - copyloopvar
-  # - dogsled
-  # - dupl
-  - dupword
-  - errcheck
-  - errorlint
-  # - exhaustive
-  # - exportloopref
-  # - funlen
-  - forbidigo
-  # - gci
-  # - gochecknoglobals
-  # - gochecknoinits
-  # - gocognit
-  # - goconst
-  - gocritic
-  # - gocyclo
-  - godot
-  # - godox
-  - gofumpt
-  # - goheader
-  # - gomodguard
-  # - goprintffuncname
-  # - gosec
-  - gosimple
-  # - lll
-  # - nestif
-  # - nlreturn
   - noctx
   - nolintlint
   - perfsprint
-  # - rowserrcheck
-  # - sqlclosecheck
-  - staticcheck
-  # - stylecheck
-  # - testpackage
-  # - tparallel
   - revive
-  # - unconvert
-  # - unparam
+  - staticcheck
   - unused
   - whitespace
-  # - wrapcheck
-  # - wsl
-linters-settings:
-  depguard:
+  settings:
+    depguard:
+      rules:
+        main:
+          deny:
+          - pkg: golang.org/x/net/context
+            desc: use the 'context' package from the standard library
+          - pkg: math/rand$
+            desc: use the 'math/rand/v2' package
+    errorlint:
+      asserts: false
+    forbidigo:
+      forbid:
+      - pattern: ^print(ln)?$
+        msg: Do not use builtin print functions. It's for bootstrapping only and may be removed in the future.
+      - pattern: ^fmt\.Print.*$
+        msg: Do not use fmt.Print statements.
+      - pattern: ^testing.T.Fatal.*$
+        msg: Use assert functions from the gotest.tools/v3/assert package instead.
+      analyze-types: true
+    gocritic:
+      disabled-checks:
+      - appendCombine
+      - sloppyReassign
+      - unlabelStmt
+      - rangeValCopy
+      - hugeParam
+      - importShadow
+      - sprintfQuotedString
+      - builtinShadow
+      - filepathJoin
+      # See "Tags" section in https://github.com/go-critic/go-critic#usage
+      enabled-tags:
+      - diagnostic
+      - performance
+      - style
+      - opinionated
+      - experimental
+      settings:
+        ifElseChain:
+          # Min number of if-else blocks that makes the warning trigger.
+          minThreshold: 3
+    perfsprint:
+      int-conversion: false
+      err-error: false
+      errorf: true
+      sprintf1: false
+      strconcat: false
+    revive:
+      # Set below 0.8 to enable error-strings
+      confidence: 0.6
+      # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md
+      rules:
+      - name: blank-imports
+      - name: context-as-argument
+      - name: context-keys-type
+      - name: deep-exit
+      - name: dot-imports
+        arguments:
+        - allowedPackages:
+          - github.com/lima-vm/lima/pkg/must
+      - name: empty-block
+      - name: error-naming
+      - name: error-return
+      - name: error-strings
+      - name: errorf
+      - name: exported
+        disabled: true
+      - name: increment-decrement
+      - name: indent-error-flow
+      - name: package-comments
+        disabled: true
+      - name: range
+      - name: receiver-naming
+      - name: redefines-builtin-id
+      - name: superfluous-else
+      - name: time-naming
+      - name: unexported-return
+      - name: unreachable-code
+      - name: unused-parameter
+      - name: use-any
+      - name: var-declaration
+      - name: var-naming
+    staticcheck:
+      # https://staticcheck.dev/docs/configuration/options/#checks
+      checks:
+      - all
+      - -QF*
+      - -SA3000  # false positive for Go 1.15+. See https://github.com/golang/go/issues/34129
+      - -ST1000
+      - -ST1001  # duplicates revive.dot-imports
+      - -ST1022
+  exclusions:
+    presets:
+    - common-false-positives
+    - legacy
+    - std-error-handling
     rules:
-      main:
-        deny:
-        - pkg: "golang.org/x/net/context"
-          desc: "use the 'context' package from the standard library"
-        - pkg: "math/rand$"
-          desc: "use the 'math/rand/v2' package"
-  forbidigo:
-    analyze-types: true
-    forbid:
-    - p: ^print(ln)?$
-      msg: Do not use builtin print functions. It's for bootstrapping only and may be removed in the future.
-    - p: ^fmt\.Print.*$
-      msg: Do not use fmt.Print statements.
-    - p: ^testing.T.Fatal.*$
-      msg: Use assert functions from the gotest.tools/v3/assert package instead.
-  gocritic:
-    # See "Tags" section in https://github.com/go-critic/go-critic#usage
-    enabled-tags:
-    - diagnostic
-    - performance
-    - style
-    - opinionated
-    - experimental
-    disabled-checks:
-    - appendCombine
-    - sloppyReassign
-    - unlabelStmt
-    - rangeValCopy
-    - hugeParam
-    - importShadow
-    - sprintfQuotedString
-    - builtinShadow
-    - filepathJoin
-    settings:
-      ifElseChain:
-        # Min number of if-else blocks that makes the warning trigger.
-        minThreshold: 3
-  errorlint:
-    asserts: false
-  perfsprint:
-    int-conversion: false
-    err-error: false
-    errorf: true
-    sprintf1: false
-    strconcat: false
-  revive:
-    # Set below 0.8 to enable error-strings
-    confidence: 0.6
-    # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md
-    rules:
-    - name: blank-imports
-    - name: context-as-argument
-    - name: context-keys-type
-    - name: deep-exit
-    - name: dot-imports
-      arguments:
-      - allowedPackages:
-        - github.com/lima-vm/lima/pkg/must
-    - name: empty-block
-    - name: error-naming
-    - name: error-return
-    - name: error-strings
-    - name: errorf
-    - name: exported
-    - name: increment-decrement
-    - name: indent-error-flow
-    - name: package-comments
-    - name: range
-    - name: receiver-naming
-    - name: redefines-builtin-id
-    - name: superfluous-else
-    - name: time-naming
-    - name: unexported-return
-    - name: unreachable-code
-    - name: unused-parameter
-    - name: use-any
-    - name: var-declaration
-    - name: var-naming
-  staticcheck:
-    # https://staticcheck.dev/docs/configuration/options/#checks
-    checks:
-    - "all"
-    - "-SA3000"  # false positive for Go 1.15+. See https://github.com/golang/go/issues/34129
+    # Allow using Uid, Gid in pkg/osutil.
+    - path: pkg/osutil/
+      text: '(?i)(uid)|(gid)'
+    # Disable some linters for test files.
+    - linters:
+      - godot
+      path: _test\.go
+    # Disable perfsprint for fmt.Sprint until https://github.com/catenacyber/perfsprint/issues/39 gets fixed.
+    - linters:
+      - perfsprint
+      text: fmt.Sprint.* can be replaced with faster
 issues:
   # Maximum issues count per one linter.
   max-issues-per-linter: 0
   # Maximum count of issues with the same text.
   max-same-issues: 0
-  include:
-  - EXC0013  # revive: package comment should be of the form "(.+)..."
-  - EXC0014  # revive: comment on exported (.+) should be of the form "(.+)..."
-  exclude-rules:
-  # Allow using Uid, Gid in pkg/osutil.
-  - path: "pkg/osutil/"
-    text: "uid"
-  # Disable some linters for test files.
-  - path: _test\.go
-    linters:
-    - godot
-  # Disable revive.exported for constants.
-  - text: "exported: comment on exported const"
-    linters:
-    - revive
-  # Disable perfsprint for fmt.Sprint until https://github.com/catenacyber/perfsprint/issues/39 gets fixed.
-  - text: "fmt.Sprint.* can be replaced with faster"
-    linters:
-    - perfsprint
+formatters:
+  enable:
+  - gofmt
+  - gofumpt
+  - goimports

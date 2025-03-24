@@ -39,10 +39,10 @@ jobs:
     - name: Verify generated files
       run: make install-tools generate check-generated
     - name: Run golangci-lint
-      uses: golangci/golangci-lint-action@55c2c1448f86e01eaae002a5a3a9624417608d84  # v6.5.2
+      uses: golangci/golangci-lint-action@dec74fa03096ff515422f71d18d41307cacde373  # v7.0.0
       with:
-        version: v1.64.2
-        args: --verbose --timeout=10m
+        version: v2.0.1
+        args: --verbose
     - name: Run yamllint
       run: yamllint .
     - name: Install shellcheck
