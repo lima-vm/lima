@@ -1,0 +1,176 @@
+syntax = "proto3";
+
+package plugins;
+
+option go_package = "github.com/lima-vm/lima/pkg/plugins";
+
+service VMDriver {
+    rpc GetMetadata(GetMetadataRequest) returns (GetMetadataResponse);
+    rpc StartVM(StartVMRequest) returns (StartVMResponse);
+    rpc StopVM(StopVMRequest) returns (StopVMResponse);
+    rpc Initialize(InitializeRequest) returns (InitializeResponse);
+    rpc CreateDisk(CreateDiskRequest) returns (CreateDiskResponse);
+    rpc Validate(ValidateRequest) returns (ValidateResponse);
+    rpc Register(RegisterRequest) returns (RegisterResponse);
+    rpc Unregister(UnregisterRequest) returns (UnregisterResponse);
+    rpc ChangeDisplayPassword(ChangeDisplayPasswordRequest) returns (ChangeDisplayPasswordResponse);
+    rpc GetDisplayConnection(GetDisplayConnectionRequest) returns (GetDisplayConnectionResponse);
+    rpc CreateSnapshot(CreateSnapshotRequest) returns (CreateSnapshotResponse);
+    rpc ApplySnapshot(ApplySnapshotRequest) returns (ApplySnapshotResponse);
+    rpc DeleteSnapshot(DeleteSnapshotRequest) returns (DeleteSnapshotResponse);
+    rpc ListSnapshots(ListSnapshotsRequest) returns (ListSnapshotsResponse);
+    rpc GetGuestAgentConnection(GetGuestAgentConnectionRequest) returns (GetGuestAgentConnectionResponse);
+}
+
+// Response is a common response type used by helper functions
+message Response {
+    bool success = 1;
+    string message = 2;
+}
+
+message GetMetadataRequest {}
+
+message GetMetadataResponse {
+    string name = 1;
+    string version = 2;
+    string description = 3;
+    repeated string supported_vm_types = 4;
+}
+
+message StartVMRequest {
+    string config = 1;  // Serialized config
+}
+
+message StartVMResponse {
+    bool success = 1;
+    string message = 2;
+    bool can_run_gui = 3;
+}
+
+message StopVMRequest {
+    string instance_id = 1;
+}
+
+message StopVMResponse {
+    bool success = 1;
+    string message = 2;
+}
+
+message InitializeRequest {
+    string instance_id = 1;
+    string config = 2;
+}
+
+message InitializeResponse {
+    bool success = 1;
+    string message = 2;
+}
+
+message CreateDiskRequest {
+    string instance_id = 1;
+    string config = 2;
+}
+
+message CreateDiskResponse {
+    bool success = 1;
+    string message = 2;
+}
+
+message ValidateRequest {
+    string config = 1;
+}
+
+message ValidateResponse {
+    bool success = 1;
+    string message = 2;
+}
+
+message RegisterRequest {
+    string instance_id = 1;
+    string config = 2;
+}
+
+message RegisterResponse {
+    bool success = 1;
+    string message = 2;
+}
+
+message UnregisterRequest {
+    string instance_id = 1;
+}
+
+message UnregisterResponse {
+    bool success = 1;
+    string message = 2;
+}
+
+message ChangeDisplayPasswordRequest {
+    string instance_id = 1;
+    string password = 2;
+}
+
+message ChangeDisplayPasswordResponse {
+    bool success = 1;
+    string message = 2;
+}
+
+message GetDisplayConnectionRequest {
+    string instance_id = 1;
+}
+
+message GetDisplayConnectionResponse {
+    bool success = 1;
+    string message = 2;
+    string connection = 3;
+}
+
+message CreateSnapshotRequest {
+    string instance_id = 1;
+    string tag = 2;
+}
+
+message CreateSnapshotResponse {
+    bool success = 1;
+    string message = 2;
+}
+
+message ApplySnapshotRequest {
+    string instance_id = 1;
+    string tag = 2;
+}
+
+message ApplySnapshotResponse {
+    bool success = 1;
+    string message = 2;
+}
+
+message DeleteSnapshotRequest {
+    string instance_id = 1;
+    string tag = 2;
+}
+
+message DeleteSnapshotResponse {
+    bool success = 1;
+    string message = 2;
+}
+
+message ListSnapshotsRequest {
+    string instance_id = 1;
+}
+
+message ListSnapshotsResponse {
+    bool success = 1;
+    string message = 2;
+    string snapshots = 3;
+}
+
+message GetGuestAgentConnectionRequest {
+    string instance_id = 1;
+}
+
+message GetGuestAgentConnectionResponse {
+    bool success = 1;
+    string message = 2;
+    bool forward_guest_agent = 3;
+    string connection_address = 4;
+}
