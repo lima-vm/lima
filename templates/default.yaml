@@ -367,6 +367,13 @@ rosetta:
   # 🟢 Builtin default: false
   binfmt: null
 
+# Specify communication transport to connect to GuestAgent.
+# Supported values are "virtio-ga", "vsock-ga" and "hostagent-ga".
+# If selected option will not be supported for VMType and Host OS a Warning will be shown and the
+# default mode will be selected.
+# 🟢 Builtin default: not set which results in VMType and Host OS specific behavior
+guestAgentTransportType: null
+
 # Specify the timezone name (as used by the zoneinfo database). Specify the empty string
 # to not set a timezone in the instance.
 # 🟢 Builtin default: use name from /etc/timezone or deduce from symlink target of /etc/localtime

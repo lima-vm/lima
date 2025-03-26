@@ -45,13 +45,14 @@ type LimaYAML struct {
 	DNS          []net.IP          `yaml:"dns,omitempty" json:"dns,omitempty"`
 	HostResolver HostResolver      `yaml:"hostResolver,omitempty" json:"hostResolver,omitempty"`
 	// `useHostResolver` was deprecated in Lima v0.8.1, removed in Lima v0.14.0. Use `hostResolver.enabled` instead.
-	PropagateProxyEnv    *bool          `yaml:"propagateProxyEnv,omitempty" json:"propagateProxyEnv,omitempty" jsonschema:"nullable"`
-	CACertificates       CACertificates `yaml:"caCerts,omitempty" json:"caCerts,omitempty"`
-	Rosetta              Rosetta        `yaml:"rosetta,omitempty" json:"rosetta,omitempty"`
-	Plain                *bool          `yaml:"plain,omitempty" json:"plain,omitempty" jsonschema:"nullable"`
-	TimeZone             *string        `yaml:"timezone,omitempty" json:"timezone,omitempty" jsonschema:"nullable"`
-	NestedVirtualization *bool          `yaml:"nestedVirtualization,omitempty" json:"nestedVirtualization,omitempty" jsonschema:"nullable"`
-	User                 User           `yaml:"user,omitempty" json:"user,omitempty"`
+	PropagateProxyEnv       *bool            `yaml:"propagateProxyEnv,omitempty" json:"propagateProxyEnv,omitempty" jsonschema:"nullable"`
+	CACertificates          CACertificates   `yaml:"caCerts,omitempty" json:"caCerts,omitempty"`
+	Rosetta                 Rosetta          `yaml:"rosetta,omitempty" json:"rosetta,omitempty"`
+	GuestAgentTransportType *GATransportType `yaml:"guestAgentTransportType,omitempty" json:"guestAgentTransportType,omitempty" jsonschema:"nullable"`
+	Plain                   *bool            `yaml:"plain,omitempty" json:"plain,omitempty" jsonschema:"nullable"`
+	TimeZone                *string          `yaml:"timezone,omitempty" json:"timezone,omitempty" jsonschema:"nullable"`
+	NestedVirtualization    *bool            `yaml:"nestedVirtualization,omitempty" json:"nestedVirtualization,omitempty" jsonschema:"nullable"`
+	User                    User             `yaml:"user,omitempty" json:"user,omitempty"`
 }
 
 type BaseTemplates []LocatorWithDigest
@@ -62,10 +63,11 @@ type LocatorWithDigest struct {
 }
 
 type (
-	OS        = string
-	Arch      = string
-	MountType = string
-	VMType    = string
+	OS              = string
+	Arch            = string
+	MountType       = string
+	VMType          = string
+	GATransportType = string
 )
 
 type CPUType = map[Arch]string
@@ -87,6 +89,10 @@ const (
 	QEMU VMType = "qemu"
 	VZ   VMType = "vz"
 	WSL2 VMType = "wsl2"
+
+	VIRTIOGA    GATransportType = "virtio-ga"
+	VSOCKGA     GATransportType = "vsock-ga"
+	HOSTAGENTGA GATransportType = "hostagent-ga"
 )
 
 var (

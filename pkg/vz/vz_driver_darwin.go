@@ -20,6 +20,7 @@ import (
 	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/reflectutil"
+	"github.com/lima-vm/lima/pkg/store/filenames"
 )
 
 var knownYamlProperties = []string{
@@ -36,6 +37,7 @@ var knownYamlProperties = []string{
 	"Env",
 	"Firmware",
 	"GuestInstallPrefix",
+	"GuestAgentTransportType",
 	"HostResolver",
 	"Images",
 	"Memory",
@@ -225,7 +227,12 @@ func (l *LimaVzDriver) Stop(_ context.Context) error {
 	return errors.New("vz: CanRequestStop is not supported")
 }
 
-func (l *LimaVzDriver) GuestAgentConn(_ context.Context) (net.Conn, error) {
+func (l *LimaVzDriver) GuestAgentConn(ctx context.Context) (net.Conn, error) {
+	if l.VSockPort == 0 {
+		var d net.Dialer
+		dialContext, err := d.DialContext(ctx, "unix", filepath.Join(l.Instance.Dir, filenames.GuestAgentSock))
+		return dialContext, err
+	}
 	for _, socket := range l.machine.SocketDevices() {
 		connect, err := socket.Connect(uint32(l.VSockPort))
 		if err == nil && connect.SourcePort() != 0 {
