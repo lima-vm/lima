@@ -75,7 +75,12 @@ func TestFillDefault(t *testing.T) {
 
 	// Builtin default values
 	builtin := LimaYAML{
-		VMType:             &defaultVMType,
+		VMType: &defaultVMType,
+		VMOpts: VMOpts{
+			QEMU: QEMUOpts{
+				VirtioGA: ptr.Of(runtime.GOOS == "windows"),
+			},
+		},
 		OS:                 ptr.Of(LINUX),
 		Arch:               ptr.Of(arch),
 		CPUType:            defaultCPUType(),
@@ -337,8 +342,13 @@ func TestFillDefault(t *testing.T) {
 	varLog, _ := filepath.Abs("/var/log")
 	d = LimaYAML{
 		VMType: ptr.Of("vz"),
-		OS:     ptr.Of("unknown"),
-		Arch:   ptr.Of("unknown"),
+		VMOpts: VMOpts{
+			QEMU: QEMUOpts{
+				VirtioGA: ptr.Of(runtime.GOOS == "windows"),
+			},
+		},
+		OS:   ptr.Of("unknown"),
+		Arch: ptr.Of("unknown"),
 		CPUType: CPUType{
 			AARCH64: "arm64",
 			ARMV7L:  "armhf",
@@ -556,8 +566,13 @@ func TestFillDefault(t *testing.T) {
 
 	o = LimaYAML{
 		VMType: ptr.Of("qemu"),
-		OS:     ptr.Of(LINUX),
-		Arch:   ptr.Of(arch),
+		VMOpts: VMOpts{
+			QEMU: QEMUOpts{
+				VirtioGA: ptr.Of(runtime.GOOS == "windows"),
+			},
+		},
+		OS:   ptr.Of(LINUX),
+		Arch: ptr.Of(arch),
 		CPUType: CPUType{
 			AARCH64: "uber-arm",
 			ARMV7L:  "armv8",

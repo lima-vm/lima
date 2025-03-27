@@ -110,6 +110,7 @@ type VMOpts struct {
 
 type QEMUOpts struct {
 	MinimumVersion *string `yaml:"minimumVersion,omitempty" json:"minimumVersion,omitempty" jsonschema:"nullable"`
+	VirtioGA       *bool   `yaml:"virtioGA,omitempty" json:"virtioGA,omitempty" jsonschema:"nullable"`
 }
 
 type Rosetta struct {
