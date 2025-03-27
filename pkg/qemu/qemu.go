@@ -45,6 +45,7 @@ type Config struct {
 	LimaYAML     *limayaml.LimaYAML
 	SSHLocalPort int
 	SSHAddress   string
+	VirtioGA     bool
 }
 
 // MinimumQemuVersion is the minimum supported QEMU version.
@@ -987,11 +988,13 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	args = append(args, "-chardev", fmt.Sprintf("socket,id=%s,path=%s,server=on,wait=off", qmpChardev, qmpSock))
 	args = append(args, "-qmp", "chardev:"+qmpChardev)
 
-	// Guest agent via serialport
-	guestSock := filepath.Join(cfg.InstanceDir, filenames.GuestAgentSock)
-	args = append(args, "-chardev", fmt.Sprintf("socket,path=%s,server=on,wait=off,id=qga0", guestSock))
-	args = append(args, "-device", "virtio-serial")
-	args = append(args, "-device", "virtserialport,chardev=qga0,name="+filenames.VirtioPort)
+	if cfg.VirtioGA {
+		// Guest agent via serialport
+		guestSock := filepath.Join(cfg.InstanceDir, filenames.GuestAgentSock)
+		args = append(args, "-chardev", fmt.Sprintf("socket,path=%s,server=on,wait=off,id=qga0", guestSock))
+		args = append(args, "-device", "virtio-serial")
+		args = append(args, "-device", "virtserialport,chardev=qga0,name="+filenames.VirtioPort)
+	}
 
 	// QEMU process
 	args = append(args, "-name", "lima-"+cfg.Name)

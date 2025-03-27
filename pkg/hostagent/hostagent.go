@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -127,15 +128,52 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 	virtioPort := ""
 	if *inst.Config.VMType == limayaml.VZ {
 		vSockPort = 2222
+		if inst.Config.GuestAgentTransportType != nil {
+			switch *inst.Config.GuestAgentTransportType {
+			case limayaml.VSOCKGA:
+			case limayaml.HOSTAGENTGA:
+				vSockPort = 0
+			default:
+				logrus.Warnf("Ignoring invalid for %s type GA transport %s", *inst.Config.VMType, *inst.Config.GuestAgentTransportType)
+			}
+		}
 	} else if *inst.Config.VMType == limayaml.WSL2 {
 		port, err := freeport.VSock()
 		if err != nil {
 			logrus.WithError(err).Error("failed to get free VSock port")
 		}
 		vSockPort = port
+		if inst.Config.GuestAgentTransportType != nil {
+			switch *inst.Config.GuestAgentTransportType {
+			case limayaml.VSOCKGA:
+			// TODO support hostagent forwarder https://github.com/lima-vm/lima/issues/3386
+			default:
+				logrus.Warnf("Ignoring invalid for %s type GA transport %s", *inst.Config.VMType, *inst.Config.GuestAgentTransportType)
+			}
+		}
 	} else if *inst.Config.VMType == limayaml.QEMU {
-		// virtserialport doesn't seem to work reliably: https://github.com/lima-vm/lima/issues/2064
-		virtioPort = "" // filenames.VirtioPort
+		if runtime.GOOS != "windows" {
+			// virtserialport doesn't seem to work reliably: https://github.com/lima-vm/lima/issues/2064
+			virtioPort = ""
+		} else {
+			// On Windows it is a more reasonable default
+			virtioPort = filenames.VirtioPort
+		}
+		if inst.Config.GuestAgentTransportType != nil {
+			switch *inst.Config.GuestAgentTransportType {
+			case limayaml.VIRTIOGA:
+				virtioPort = filenames.VirtioPort
+			case limayaml.HOSTAGENTGA:
+				if runtime.GOOS != "windows" {
+					virtioPort = ""
+				} else {
+					// TODO support hostagent forwarder https://github.com/lima-vm/lima/issues/3386
+					logrus.Warnf("Ignoring invalid for %s type GA transport %s", *inst.Config.VMType, *inst.Config.GuestAgentTransportType)
+				}
+			default:
+				logrus.Warnf("Ignoring invalid for %s type GA transport %s", *inst.Config.VMType, *inst.Config.GuestAgentTransportType)
+			}
+		}
 	}
 
 	if err := cidata.GenerateCloudConfig(inst.Dir, instName, inst.Config); err != nil {
