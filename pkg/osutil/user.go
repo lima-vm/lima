@@ -7,15 +7,12 @@ import (
 	"fmt"
 	"os/exec"
 	"os/user"
-	"path"
-	"path/filepath"
 	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
 	"sync"
 
-	"github.com/lima-vm/lima/pkg/ioutilx"
 	. "github.com/lima-vm/lima/pkg/must"
 	"github.com/lima-vm/lima/pkg/version/versionutil"
 	"github.com/sirupsen/logrus"
@@ -44,9 +41,6 @@ var (
 // `useradd` allows names with a trailing '$', but it feels prudent to map those
 // names to the fallback user as well, so the regex does not allow them.
 var regexUsername = regexp.MustCompile("^[a-z_][a-z0-9_-]*$")
-
-// regexPath detects valid Linux path.
-var regexPath = regexp.MustCompile("^[/a-zA-Z0-9_-]+$")
 
 func LookupUser(name string) (User, error) {
 	if users == nil {
@@ -115,9 +109,8 @@ func LimaUser(limaVersion string, warn bool) *user.User {
 			warnings = append(warnings, warning)
 			limaUser.Username = fallbackUser
 		}
-		if runtime.GOOS != "windows" {
-			limaUser.HomeDir = "/home/{{.User}}.linux"
-		} else {
+		limaUser.HomeDir = "/home/{{.User}}.linux"
+		if runtime.GOOS == "windows" {
 			idu, err := call([]string{"id", "-u"})
 			if err != nil {
 				logrus.Debug(err)
@@ -145,38 +138,6 @@ func LimaUser(limaVersion string, warn bool) *user.User {
 					limaUser.Gid, gid)
 				warnings = append(warnings, warning)
 				limaUser.Gid = formatUidGid(gid)
-			}
-			home, err := ioutilx.WindowsSubsystemPath(limaUser.HomeDir)
-			if err != nil {
-				logrus.Debug(err)
-			} else {
-				// Trim mount prefix within Subsystem
-				// cygwin/msys2 cygpath could have prefix for drive mounts configured via /etc/fstab
-				// wsl wslpath could have prefix for drive mounts configured via [automount] section in wsl.conf
-				drivePath, err := ioutilx.WindowsSubsystemPath(filepath.VolumeName(limaUser.HomeDir) + "/")
-				if err != nil {
-					logrus.Debug(err)
-				} else {
-					prefix := path.Dir(strings.TrimSuffix(drivePath, "/"))
-					if prefix != "/" {
-						home = strings.TrimPrefix(home, prefix)
-					}
-					home += ".linux"
-				}
-			}
-			if home == "" {
-				drive := filepath.VolumeName(limaUser.HomeDir)
-				home = filepath.ToSlash(limaUser.HomeDir)
-				// replace C: with /c
-				prefix := strings.ToLower(fmt.Sprintf("/%c", drive[0]))
-				home = strings.Replace(home, drive, prefix, 1)
-				home += ".linux"
-			}
-			if !regexPath.MatchString(limaUser.HomeDir) {
-				warning := fmt.Sprintf("local home %q is not a valid Linux path (must match %q); using %q home instead",
-					limaUser.HomeDir, regexPath.String(), home)
-				warnings = append(warnings, warning)
-				limaUser.HomeDir = home
 			}
 		}
 	})
