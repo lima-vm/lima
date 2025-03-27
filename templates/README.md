@@ -32,6 +32,9 @@ Distro:
 - [`experimental/opensuse-tumbleweed`](./experimental/opensuse-tumbleweed.yaml): [experimental] openSUSE Tumbleweed
 - [`experimental/debian-sid`](./experimental/debian-sid.yaml): [experimental] Debian Sid
 
+Provisioning:
+- [`ansible`](./ansible.yaml): Ansible, using [playbook.yaml](./ansible/playbook.yaml)
+
 Container engines:
 - [`apptainer`](./apptainer.yaml): Apptainer
 - [`apptainer-rootful`](./apptainer-rootful.yaml): Apptainer (rootful)
