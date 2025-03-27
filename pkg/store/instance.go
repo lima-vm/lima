@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/user"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -355,11 +354,10 @@ func PrintInstances(w io.Writer, instances []*Instance, format string, options *
 		}
 		fmt.Fprintln(w)
 
-		u, err := user.Current()
+		homeDir, err := os.UserHomeDir()
 		if err != nil {
 			return err
 		}
-		homeDir := u.HomeDir
 
 		for _, instance := range instances {
 			dir := instance.Dir
