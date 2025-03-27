@@ -68,6 +68,9 @@ func (a *HostAgent) setupMount(m limayaml.Mount) (*mount, error) {
 		Readonly:            !(*m.Writable),
 		SSHFSAdditionalArgs: []string{"-o", sshfsOptions},
 	}
+	if runtime.GOOS == "windows" {
+		rsf.SSHConfig.Persist = false
+	}
 	if err := rsf.Prepare(); err != nil {
 		return nil, fmt.Errorf("failed to prepare reverse sshfs for %q on %q: %w", resolvedLocation, *m.MountPoint, err)
 	}
