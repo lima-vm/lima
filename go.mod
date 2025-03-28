@@ -3,6 +3,8 @@ module github.com/lima-vm/lima
 
 go 1.23.0
 
+toolchain go1.24.1
+
 require (
 	al.essio.dev/pkg/shellescape v1.6.0
 	github.com/AlecAivazis/survey/v2 v2.3.7
@@ -43,7 +45,7 @@ require (
 	github.com/spf13/cobra v1.9.1 // gomodjail:unconfined
 	github.com/spf13/pflag v1.0.6
 	github.com/wk8/go-ordered-map/v2 v2.1.8
-	golang.org/x/net v0.37.0
+	golang.org/x/net v0.38.0
 	golang.org/x/sync v0.12.0
 	golang.org/x/sys v0.31.0 // gomodjail:unconfined
 	golang.org/x/text v0.23.0
