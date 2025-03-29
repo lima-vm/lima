@@ -5,7 +5,7 @@ package store
 
 import (
 	"bytes"
-	"os/user"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -85,10 +85,10 @@ func TestPrintInstanceTableEmu(t *testing.T) {
 
 func TestPrintInstanceTableHome(t *testing.T) {
 	var buf bytes.Buffer
-	u, err := user.Current()
+	homeDir, err := os.UserHomeDir()
 	assert.NilError(t, err)
 	instance1 := instance
-	instance1.Dir = filepath.Join(u.HomeDir, "dir")
+	instance1.Dir = filepath.Join(homeDir, "dir")
 	instances := []*Instance{&instance1}
 	err = PrintInstances(&buf, instances, "table", nil)
 	assert.NilError(t, err)
