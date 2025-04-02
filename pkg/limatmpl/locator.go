@@ -191,7 +191,7 @@ images:
 - location: %q
   arch: %q
 `
-	tmpl.Bytes = []byte(fmt.Sprintf(template, imageArch, locator, imageArch))
+	tmpl.Bytes = fmt.Appendf(nil, template, imageArch, locator, imageArch)
 	tmpl.Name = InstNameFromImageURL(locator, imageArch)
 	return true
 }

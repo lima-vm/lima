@@ -23,7 +23,7 @@ func (a *HostAgent) waitForRequirements(label string, requirements []requirement
 
 	for i, req := range requirements {
 	retryLoop:
-		for j := 0; j < retries; j++ {
+		for j := range retries {
 			logrus.Infof("Waiting for the %s requirement %d of %d: %q", label, i+1, len(requirements), req.description)
 			err := a.waitForRequirement(req)
 			if err == nil {

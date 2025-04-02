@@ -38,7 +38,7 @@ func UnknownNonEmptyFields(structOrStructPtr any, knownNames ...string) []string
 	default:
 		panic(fmt.Errorf("expected Ptr or Struct, got %+v", kind))
 	}
-	for i := 0; i < val.NumField(); i++ {
+	for i := range val.NumField() {
 		iField := val.Field(i)
 		if isEmpty(iField) {
 			continue

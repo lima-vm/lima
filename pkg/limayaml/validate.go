@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"unicode"
@@ -198,10 +199,8 @@ func Validate(y *LimaYAML, warn bool) error {
 		return fmt.Errorf("field `mountType` must be %q or %q or %q, or %q, got %q", REVSSHFS, NINEP, VIRTIOFS, WSLMount, *y.MountType)
 	}
 
-	for _, f := range y.MountTypesUnsupported {
-		if f == *y.MountType {
-			return fmt.Errorf("field `mountType` must not be one of %v (`mountTypesUnsupported`), got %q", y.MountTypesUnsupported, *y.MountType)
-		}
+	if slices.Contains(y.MountTypesUnsupported, *y.MountType) {
+		return fmt.Errorf("field `mountType` must not be one of %v (`mountTypesUnsupported`), got %q", y.MountTypesUnsupported, *y.MountType)
 	}
 
 	if warn && runtime.GOOS != "linux" {
@@ -341,7 +340,7 @@ func Validate(y *LimaYAML, warn bool) error {
 				return err
 			}
 		}
-		for j := 0; j < 2; j++ {
+		for j := range 2 {
 			if err := validatePort(fmt.Sprintf("%s.guestPortRange[%d]", field, j), rule.GuestPortRange[j]); err != nil {
 				return err
 			}
