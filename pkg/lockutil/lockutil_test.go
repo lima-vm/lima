@@ -21,7 +21,7 @@ func TestWithDirLock(t *testing.T) {
 	log := filepath.Join(dir, "log")
 
 	errc := make(chan error, 10)
-	for i := 0; i < parallel; i++ {
+	for i := range parallel {
 		go func() {
 			err := WithDirLock(dir, func() error {
 				if _, err := os.Stat(log); err == nil {
@@ -43,7 +43,7 @@ func TestWithDirLock(t *testing.T) {
 		}()
 	}
 
-	for i := 0; i < parallel; i++ {
+	for range parallel {
 		err := <-errc
 		if err != nil {
 			t.Error(err)

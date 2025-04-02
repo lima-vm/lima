@@ -21,7 +21,7 @@ func (c *Config) Validate() error {
 	paths := reflect.ValueOf(&c.Paths).Elem()
 	pathsMap := make(map[string]string, paths.NumField())
 	var socketVMNetNotFound bool
-	for i := 0; i < paths.NumField(); i++ {
+	for i := range paths.NumField() {
 		// extract YAML name from struct tag; strip options like "omitempty"
 		name := paths.Type().Field(i).Tag.Get("yaml")
 		if i := strings.IndexRune(name, ','); i > -1 {

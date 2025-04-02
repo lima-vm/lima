@@ -91,7 +91,7 @@ func TestDownloadRemote(t *testing.T) {
 		t.Run("parallel", func(t *testing.T) {
 			cacheDir := filepath.Join(t.TempDir(), "cache")
 			results := make(chan downloadResult, parallelDownloads)
-			for i := 0; i < parallelDownloads; i++ {
+			for range parallelDownloads {
 				go func() {
 					// Parallel download is supported only for different instances with unique localPath.
 					localPath := filepath.Join(t.TempDir(), t.Name())
@@ -131,7 +131,7 @@ func TestDownloadRemote(t *testing.T) {
 		t.Run("parallel", func(t *testing.T) {
 			cacheDir := filepath.Join(t.TempDir(), "cache")
 			results := make(chan downloadResult, parallelDownloads)
-			for i := 0; i < parallelDownloads; i++ {
+			for range parallelDownloads {
 				go func() {
 					r, err := Download(context.Background(), "", dummyRemoteFileURL,
 						WithExpectedDigest(dummyRemoteFileDigest), WithCacheDir(cacheDir))
@@ -177,7 +177,7 @@ func TestDownloadRemote(t *testing.T) {
 
 func countResults(t *testing.T, results chan downloadResult) (downloaded, cached int) {
 	t.Helper()
-	for i := 0; i < parallelDownloads; i++ {
+	for range parallelDownloads {
 		result := <-results
 		if result.err != nil {
 			t.Errorf("Download failed: %s", result.err)

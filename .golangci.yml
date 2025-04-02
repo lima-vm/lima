@@ -17,6 +17,7 @@ linters:
   - godot
   - govet
   - ineffassign
+  - intrange
   - misspell
   - nakedret
   - noctx

@@ -437,7 +437,7 @@ func RunEmbedTest(t *testing.T, tc embedTestCase) {
 		assert.NilError(t, err, tc.description)
 	}
 	tmpl := &limatmpl.Template{
-		Bytes:   []byte(fmt.Sprintf("base: base0.yaml\n%s", tc.template)),
+		Bytes:   fmt.Appendf(nil, "base: base0.yaml\n%s", tc.template),
 		Locator: "tmpl.yaml",
 	}
 	// Don't include `base` property if base0 is a script

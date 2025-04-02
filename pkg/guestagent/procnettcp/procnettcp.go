@@ -65,7 +65,7 @@ func ParseWithEndian(r io.Reader, kind Kind, isBE bool) ([]Entry, error) {
 		fields := strings.Fields(line)
 		switch i {
 		case 0:
-			for j := 0; j < len(fields); j++ {
+			for j := range fields {
 				fieldNames[fields[j]] = j
 			}
 			if _, ok := fieldNames["local_address"]; !ok {
@@ -135,18 +135,18 @@ func ParseAddressWithEndian(s string, isBE bool) (net.IP, uint16, error) {
 	}
 
 	ipBytes := make([]byte, len(split[0])/2) // 4 bytes (8 chars) or 16 bytes (32 chars)
-	for i := 0; i < len(split[0])/8; i++ {
+	for i := range len(split[0]) / 8 {
 		quartet := split[0][8*i : 8*(i+1)]
 		quartetB, err := hex.DecodeString(quartet) // surprisingly little endian, per 4 bytes, on little endian hosts
 		if err != nil {
 			return nil, 0, fmt.Errorf("unparsable address %q: unparsable quartet %q: %w", s, quartet, err)
 		}
 		if isBE {
-			for j := 0; j < len(quartetB); j++ {
+			for j := range quartetB {
 				ipBytes[4*i+j] = quartetB[j]
 			}
 		} else {
-			for j := 0; j < len(quartetB); j++ {
+			for j := range quartetB {
 				ipBytes[4*i+len(quartetB)-1-j] = quartetB[j]
 			}
 		}
