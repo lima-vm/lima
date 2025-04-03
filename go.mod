@@ -22,7 +22,7 @@ require (
 	github.com/docker/go-units v0.5.0
 	github.com/elastic/go-libaudit/v2 v2.6.2
 	github.com/foxcpp/go-mockdns v1.1.0
-	github.com/goccy/go-yaml v1.16.0
+	github.com/goccy/go-yaml v1.17.1
 	github.com/google/go-cmp v0.7.0
 	github.com/google/yamlfmt v0.16.0
 	github.com/invopop/jsonschema v0.13.0
