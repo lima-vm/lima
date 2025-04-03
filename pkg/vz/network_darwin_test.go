@@ -49,14 +49,14 @@ func TestDialQemu(t *testing.T) {
 	go func() {
 		t.Log("Sender started")
 		buf := make([]byte, vmnetMaxPacketSize)
-		for i := 0; i < vmnetMaxPacketSize; i++ {
+		for i := range vmnetMaxPacketSize {
 			buf[i] = 0x55
 		}
 
 		// data packet format:
 		//     0-4		packet number
 		//     4-1514	0x55 ...
-		for i := 0; i < packetsCount; i++ {
+		for i := range packetsCount {
 			binary.BigEndian.PutUint32(buf, uint32(i))
 			if _, err := vzConn.Write(buf); err != nil {
 				errc <- err
@@ -82,7 +82,7 @@ func TestDialQemu(t *testing.T) {
 	buf := make([]byte, vmnetMaxPacketSize)
 
 	t.Logf("Receiving and verifying data packets...")
-	for i := 0; i < packetsCount; i++ {
+	for i := range packetsCount {
 		n, err := vzConn.Read(buf)
 		assert.NilError(t, err)
 		assert.Assert(t, n >= vmnetMaxPacketSize, "unexpected number of bytes")
@@ -96,7 +96,7 @@ func TestDialQemu(t *testing.T) {
 	}
 	t.Logf("Received and verified %d data packets", packetsCount)
 
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		err := <-errc
 		assert.NilError(t, err)
 	}

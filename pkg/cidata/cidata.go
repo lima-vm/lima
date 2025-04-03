@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net"
 	"net/url"
 	"os"
@@ -50,9 +51,7 @@ func setupEnv(instConfigEnv map[string]string, propagateProxyEnv bool, slirpGate
 		return env, err
 	}
 	// env.* settings from lima.yaml override system settings without giving a warning
-	for name, value := range instConfigEnv {
-		env[name] = value
-	}
+	maps.Copy(env, instConfigEnv)
 	// Current process environment setting override both system settings and env.*
 	lowerVars := []string{"ftp_proxy", "http_proxy", "https_proxy", "no_proxy"}
 	upperVars := make([]string, len(lowerVars))

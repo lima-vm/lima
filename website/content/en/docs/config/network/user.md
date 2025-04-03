@@ -7,7 +7,7 @@ weight: 30
 By default Lima only enables the user-mode networking aka "slirp".
 
 The subnet is hard-coded to `192.168.5.0/24`.
-Use [`user-v2`]]({{< ref "/docs/config/network/user-v2" >}}) network to customize the subnet.
+Use [`user-v2`]({{< ref "/docs/config/network/user-v2" >}}) network to customize the subnet.
 
 ## Guest IP (192.168.5.15)
 

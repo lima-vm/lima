@@ -13,7 +13,6 @@ import (
 	"io/fs"
 	"os"
 	"os/exec"
-	"os/user"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -1006,16 +1005,16 @@ func FindVirtiofsd(qemuExe string) (string, error) {
 		Binary      string `json:"binary"`
 	}
 
-	currentUser, err := user.Current()
+	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
 
 	const relativePath = "share/qemu/vhost-user"
 
-	binDir := filepath.Dir(qemuExe)                              // "/usr/local/bin"
-	usrDir := filepath.Dir(binDir)                               // "/usr/local"
-	userLocalDir := filepath.Join(currentUser.HomeDir, ".local") // "$HOME/.local"
+	binDir := filepath.Dir(qemuExe)                  // "/usr/local/bin"
+	usrDir := filepath.Dir(binDir)                   // "/usr/local"
+	userLocalDir := filepath.Join(homeDir, ".local") // "$HOME/.local"
 
 	candidates := []string{
 		filepath.Join(userLocalDir, relativePath),
@@ -1175,14 +1174,14 @@ func getFirmware(qemuExe string, arch limayaml.Arch) (string, error) {
 		return "", fmt.Errorf("unexpected architecture: %q", arch)
 	}
 
-	currentUser, err := user.Current()
+	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
 
-	binDir := filepath.Dir(qemuExe)                              // "/usr/local/bin"
-	localDir := filepath.Dir(binDir)                             // "/usr/local"
-	userLocalDir := filepath.Join(currentUser.HomeDir, ".local") // "$HOME/.local"
+	binDir := filepath.Dir(qemuExe)                  // "/usr/local/bin"
+	localDir := filepath.Dir(binDir)                 // "/usr/local"
+	userLocalDir := filepath.Join(homeDir, ".local") // "$HOME/.local"
 
 	relativePath := fmt.Sprintf("share/qemu/edk2-%s-code.fd", qemuEdk2Arch(arch))
 	relativePathWin := fmt.Sprintf("share/edk2-%s-code.fd", qemuEdk2Arch(arch))
@@ -1241,14 +1240,14 @@ func getFirmwareVars(qemuExe string, arch limayaml.Arch) (string, error) {
 		return "", fmt.Errorf("unexpected architecture: %q", arch)
 	}
 
-	currentUser, err := user.Current()
+	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
 
-	binDir := filepath.Dir(qemuExe)                              // "/usr/local/bin"
-	localDir := filepath.Dir(binDir)                             // "/usr/local"
-	userLocalDir := filepath.Join(currentUser.HomeDir, ".local") // "$HOME/.local"
+	binDir := filepath.Dir(qemuExe)                  // "/usr/local/bin"
+	localDir := filepath.Dir(binDir)                 // "/usr/local"
+	userLocalDir := filepath.Join(homeDir, ".local") // "$HOME/.local"
 
 	relativePath := fmt.Sprintf("share/qemu/edk2-%s-vars.fd", qemuEdk2Arch(targetArch))
 	relativePathWin := fmt.Sprintf("share/edk2-%s-vars.fd", qemuEdk2Arch(targetArch))

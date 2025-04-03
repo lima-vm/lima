@@ -22,10 +22,10 @@ func fieldNames() []string {
 	names := []string{}
 	var data store.FormatData
 	t := reflect.TypeOf(data)
-	for i := 0; i < t.NumField(); i++ {
+	for i := range t.NumField() {
 		f := t.Field(i)
 		if f.Anonymous {
-			for j := 0; j < f.Type.NumField(); j++ {
+			for j := range f.Type.NumField() {
 				names = append(names, f.Type.Field(j).Name)
 			}
 		} else {

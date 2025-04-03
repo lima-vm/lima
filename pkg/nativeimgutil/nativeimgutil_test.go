@@ -13,6 +13,24 @@ import (
 	"gotest.tools/v3/assert"
 )
 
+func TestRoundUp(t *testing.T) {
+	tests := []struct {
+		Size    int
+		Rounded int
+	}{
+		{0, 0},
+		{1, 512},
+		{511, 512},
+		{512, 512},
+		{123456789, 123457024},
+	}
+	for _, tc := range tests {
+		if RoundUp(tc.Size) != tc.Rounded {
+			t.Errorf("expected %d, got %d", tc.Rounded, tc.Size)
+		}
+	}
+}
+
 func createImg(name, format, size string) error {
 	return exec.Command("qemu-img", "create", name, "-f", format, size).Run()
 }

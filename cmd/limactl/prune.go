@@ -4,6 +4,7 @@
 package main
 
 import (
+	"maps"
 	"os"
 
 	"github.com/lima-vm/lima/pkg/downloader"
@@ -73,9 +74,7 @@ func knownLocations() (map[string]limayaml.File, error) {
 		if err != nil {
 			return nil, err
 		}
-		for k, v := range locationsFromLimaYAML(instance.Config) {
-			locations[k] = v
-		}
+		maps.Copy(locations, locationsFromLimaYAML(instance.Config))
 	}
 
 	// Collect locations from templates
@@ -92,9 +91,7 @@ func knownLocations() (map[string]limayaml.File, error) {
 		if err != nil {
 			return nil, err
 		}
-		for k, v := range locationsFromLimaYAML(y) {
-			locations[k] = v
-		}
+		maps.Copy(locations, locationsFromLimaYAML(y))
 	}
 	return locations, nil
 }

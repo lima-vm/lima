@@ -9,6 +9,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"maps"
 	"net"
 	"os"
 	"os/user"
@@ -470,15 +471,9 @@ func FillDefault(y, d, o *LimaYAML, filePath string, warn bool) {
 
 	hosts := make(map[string]string)
 	// Values can be either names or IP addresses. Name values are canonicalized in the hostResolver.
-	for k, v := range d.HostResolver.Hosts {
-		hosts[k] = v
-	}
-	for k, v := range y.HostResolver.Hosts {
-		hosts[k] = v
-	}
-	for k, v := range o.HostResolver.Hosts {
-		hosts[k] = v
-	}
+	maps.Copy(hosts, d.HostResolver.Hosts)
+	maps.Copy(hosts, y.HostResolver.Hosts)
+	maps.Copy(hosts, o.HostResolver.Hosts)
 	y.HostResolver.Hosts = hosts
 
 	y.Provision = slices.Concat(o.Provision, y.Provision, d.Provision)
@@ -852,27 +847,15 @@ func FillDefault(y, d, o *LimaYAML, filePath string, warn bool) {
 	}
 
 	env := make(map[string]string)
-	for k, v := range d.Env {
-		env[k] = v
-	}
-	for k, v := range y.Env {
-		env[k] = v
-	}
-	for k, v := range o.Env {
-		env[k] = v
-	}
+	maps.Copy(env, d.Env)
+	maps.Copy(env, y.Env)
+	maps.Copy(env, o.Env)
 	y.Env = env
 
 	param := make(map[string]string)
-	for k, v := range d.Param {
-		param[k] = v
-	}
-	for k, v := range y.Param {
-		param[k] = v
-	}
-	for k, v := range o.Param {
-		param[k] = v
-	}
+	maps.Copy(param, d.Param)
+	maps.Copy(param, y.Param)
+	maps.Copy(param, o.Param)
 	y.Param = param
 
 	if y.CACertificates.RemoveDefaults == nil {

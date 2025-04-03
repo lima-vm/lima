@@ -23,6 +23,17 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Disk image size must be aigned to sector size. Qemu block layer is rounding
+// up the size to 512 bytes. Apple virtualization framework reject disks not
+// aligned to 512 bytes.
+const sectorSize = 512
+
+// RoundUp rounds size up to sectorSize.
+func RoundUp(size int) int {
+	sectors := (size + sectorSize - 1) / sectorSize
+	return sectors * sectorSize
+}
+
 // CreateRawDataDisk creates an empty raw data disk.
 func CreateRawDataDisk(dir string, size int) error {
 	dataDisk := filepath.Join(dir, filenames.DataDisk)
@@ -34,13 +45,15 @@ func CreateRawDataDisk(dir string, size int) error {
 		return err
 	}
 	defer f.Close()
-	return f.Truncate(int64(size))
+	roundedSize := RoundUp(size)
+	return f.Truncate(int64(roundedSize))
 }
 
 // ResizeRawDataDisk resizes a raw data disk.
 func ResizeRawDataDisk(dir string, size int) error {
 	dataDisk := filepath.Join(dir, filenames.DataDisk)
-	return os.Truncate(dataDisk, int64(size))
+	roundedSize := RoundUp(size)
+	return os.Truncate(dataDisk, int64(roundedSize))
 }
 
 // ConvertToRaw converts a source disk into a raw disk.

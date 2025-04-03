@@ -149,7 +149,7 @@ func (l *LimaQemuDriver) Start(ctx context.Context) (chan error, error) {
 
 		vhostSock := filepath.Join(l.Instance.Dir, fmt.Sprintf(filenames.VhostSock, i))
 		vhostSockExists := false
-		for attempt := 0; attempt < 5; attempt++ {
+		for attempt := range 5 {
 			logrus.Debugf("Try waiting for %s to appear (attempt %d)", vhostSock, attempt)
 
 			if _, err := os.Stat(vhostSock); err != nil {
