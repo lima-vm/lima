@@ -52,4 +52,12 @@ func TestInstNameFromImageURL(t *testing.T) {
 		name := limatmpl.InstNameFromImageURL(image, arch)
 		assert.Equal(t, name, "linux")
 	})
+	t.Run("removes redundant major version", func(t *testing.T) {
+		name := limatmpl.InstNameFromImageURL("rocky-8-8.10.raw", "unknown")
+		assert.Equal(t, name, "rocky-8.10")
+	})
+	t.Run("don't remove non-redundant major version", func(t *testing.T) {
+		name := limatmpl.InstNameFromImageURL("rocky-8-9.10.raw", "unknown")
+		assert.Equal(t, name, "rocky-8-9.10")
+	})
 }

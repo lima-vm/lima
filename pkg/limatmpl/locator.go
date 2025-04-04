@@ -199,24 +199,36 @@ images:
 func InstNameFromImageURL(locator, imageArch string) string {
 	// We intentionally call both path.Base and filepath.Base in case we are running on Windows.
 	name := strings.ToLower(filepath.Base(path.Base(locator)))
-	// Remove file format and compression file types
+	// Remove file format and compression file types.
 	name = imageURLRegex.ReplaceAllString(name, "")
-	// The Alpine "nocloud_" prefix does not fit the genericTags pattern
+	// The Alpine "nocloud_" prefix does not fit the genericTags pattern.
 	name = strings.TrimPrefix(name, "nocloud_")
 	for _, tag := range genericTags {
 		re := regexp.MustCompile(fmt.Sprintf(`[-_.]%s\b`, tag))
 		name = re.ReplaceAllString(name, "")
 	}
-	// Remove imageArch as well if it is the native arch
+	// Remove imageArch as well if it is the native arch.
 	if limayaml.IsNativeArch(imageArch) {
 		re := regexp.MustCompile(fmt.Sprintf(`[-_.]%s\b`, imageArch))
 		name = re.ReplaceAllString(name, "")
 	}
 	// Remove timestamps from name: 8 digit date, optionally followed by
-	// a delimiter and one or more digits before a word boundary
+	// a delimiter and one or more digits before a word boundary.
 	name = regexp.MustCompile(`[-_.]20\d{6}([-_.]\d+)?\b`).ReplaceAllString(name, "")
 	// Normalize archlinux name
 	name = regexp.MustCompile(`^arch\b`).ReplaceAllString(name, "archlinux")
+	// Remove redundant major version, e.g. "rocky-8-8.10" becomes "rocky-8.10".
+	// Unfortunately regexp doesn't support back references, so we have to
+	// check manually if both numbers are the same.
+	re := regexp.MustCompile(`-(\d+)-(\d+)\.`)
+	name = re.ReplaceAllStringFunc(name, func(match string) string {
+		submatch := re.FindStringSubmatch(match)
+		if submatch[1] == submatch[2] {
+			// Replace -X-X. with -X.
+			return "-" + submatch[1] + "."
+		}
+		return match
+	})
 	return name
 }
 
