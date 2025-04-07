@@ -19,8 +19,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func StopGracefully(inst *store.Instance) error {
+func StopGracefully(inst *store.Instance, isRestart bool) error {
 	if inst.Status != store.StatusRunning {
+		if isRestart {
+			logrus.Warn("The instance is not running, continuing with the restart")
+			return nil
+		}
 		return fmt.Errorf("expected status %q, got %q (maybe use `limactl stop -f`?)", store.StatusRunning, inst.Status)
 	}
 
@@ -31,7 +35,13 @@ func StopGracefully(inst *store.Instance) error {
 	}
 
 	logrus.Info("Waiting for the host agent and the driver processes to shut down")
-	return waitForHostAgentTermination(context.TODO(), inst, begin)
+	err := waitForHostAgentTermination(context.TODO(), inst, begin)
+	if err != nil {
+		return err
+	}
+
+	logrus.Info("Waiting for the instance to shut down")
+	return waitForInstanceShutdown(context.TODO(), inst)
 }
 
 func waitForHostAgentTermination(ctx context.Context, inst *store.Instance, begin time.Time) error {
@@ -62,6 +72,31 @@ func waitForHostAgentTermination(ctx context.Context, inst *store.Instance, begi
 	}
 
 	return nil
+}
+
+func waitForInstanceShutdown(ctx context.Context, inst *store.Instance) error {
+	ctx2, cancel := context.WithTimeout(ctx, 3*time.Minute)
+	defer cancel()
+
+	ticker := time.NewTicker(500 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			updatedInst, err := store.Inspect(inst.Name)
+			if err != nil {
+				return errors.New("failed to inspect instance status: " + err.Error())
+			}
+
+			if updatedInst.Status == store.StatusStopped {
+				logrus.Infof("The instance %s has shut down", updatedInst.Name)
+				return nil
+			}
+		case <-ctx2.Done():
+			return errors.New("timed out waiting for instance to shut down after 3 minutes")
+		}
+	}
 }
 
 func StopForcibly(inst *store.Instance) {
