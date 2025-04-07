@@ -39,7 +39,7 @@ jobs:
     - name: Verify generated files
       run: make install-tools generate check-generated
     - name: Run golangci-lint
-      uses: golangci/golangci-lint-action@a5307c8f68bcd21ff73283f8629eb09caa60d7a7  # v7.0.0
+      uses: golangci/golangci-lint-action@9551b25870123cbad297208ba05e4f0f2b0ffd59  # v7.0.0
       with:
         version: v2.0.1
         args: --verbose
