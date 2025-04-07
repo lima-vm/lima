@@ -31,7 +31,7 @@ require (
 	github.com/mattn/go-isatty v0.0.20
 	github.com/mattn/go-shellwords v1.0.12
 	github.com/mdlayher/vsock v1.2.1 // gomodjail:unconfined
-	github.com/miekg/dns v1.1.64 // gomodjail:unconfined
+	github.com/miekg/dns v1.1.65 // gomodjail:unconfined
 	github.com/mikefarah/yq/v4 v4.45.1
 	github.com/nxadm/tail v1.4.11 // gomodjail:unconfined
 	github.com/opencontainers/go-digest v1.0.0
