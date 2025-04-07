@@ -44,9 +44,9 @@ require (
 	github.com/spf13/pflag v1.0.6
 	github.com/wk8/go-ordered-map/v2 v2.1.8
 	golang.org/x/net v0.38.0
-	golang.org/x/sync v0.12.0
-	golang.org/x/sys v0.31.0 // gomodjail:unconfined
-	golang.org/x/text v0.23.0
+	golang.org/x/sync v0.13.0
+	golang.org/x/sys v0.32.0 // gomodjail:unconfined
+	golang.org/x/text v0.24.0
 	google.golang.org/grpc v1.71.1
 	google.golang.org/protobuf v1.36.6 // gomodjail:unconfined
 	gopkg.in/op/go-logging.v1 v1.0.0-20160211212156-b2cb9fa56473
