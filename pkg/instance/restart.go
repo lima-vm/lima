@@ -14,7 +14,7 @@ import (
 const launchHostAgentForeground = false
 
 func Restart(ctx context.Context, inst *store.Instance) error {
-	if err := StopGracefully(inst, true); err != nil {
+	if err := StopGracefully(ctx, inst, true); err != nil {
 		return err
 	}
 
