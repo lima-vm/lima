@@ -39,14 +39,15 @@ func stopAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	ctx := cmd.Context()
 	if force {
 		instance.StopForcibly(inst)
 	} else {
-		err = instance.StopGracefully(inst, false)
+		err = instance.StopGracefully(ctx, inst, false)
 	}
 	// TODO: should we also reconcile networks if graceful stop returned an error?
 	if err == nil {
-		err = networks.Reconcile(cmd.Context(), "")
+		err = networks.Reconcile(ctx, "")
 	}
 	return err
 }

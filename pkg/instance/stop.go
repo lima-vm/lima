@@ -19,7 +19,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func StopGracefully(inst *store.Instance, isRestart bool) error {
+func StopGracefully(ctx context.Context, inst *store.Instance, isRestart bool) error {
 	if inst.Status != store.StatusRunning {
 		if isRestart {
 			logrus.Warn("The instance is not running, continuing with the restart")
@@ -35,17 +35,17 @@ func StopGracefully(inst *store.Instance, isRestart bool) error {
 	}
 
 	logrus.Info("Waiting for the host agent and the driver processes to shut down")
-	err := waitForHostAgentTermination(context.TODO(), inst, begin)
+	err := waitForHostAgentTermination(ctx, inst, begin)
 	if err != nil {
 		return err
 	}
 
 	logrus.Info("Waiting for the instance to shut down")
-	return waitForInstanceShutdown(context.TODO(), inst)
+	return waitForInstanceShutdown(ctx, inst)
 }
 
 func waitForHostAgentTermination(ctx context.Context, inst *store.Instance, begin time.Time) error {
-	ctx2, cancel := context.WithTimeout(ctx, 3*time.Minute+10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Minute+10*time.Second)
 	defer cancel()
 
 	var receivedExitingEvent bool
@@ -63,7 +63,7 @@ func waitForHostAgentTermination(ctx context.Context, inst *store.Instance, begi
 	haStdoutPath := filepath.Join(inst.Dir, filenames.HostAgentStdoutLog)
 	haStderrPath := filepath.Join(inst.Dir, filenames.HostAgentStderrLog)
 
-	if err := hostagentevents.Watch(ctx2, haStdoutPath, haStderrPath, begin, onEvent); err != nil {
+	if err := hostagentevents.Watch(ctx, haStdoutPath, haStderrPath, begin, onEvent); err != nil {
 		return err
 	}
 
@@ -75,7 +75,7 @@ func waitForHostAgentTermination(ctx context.Context, inst *store.Instance, begi
 }
 
 func waitForInstanceShutdown(ctx context.Context, inst *store.Instance) error {
-	ctx2, cancel := context.WithTimeout(ctx, 3*time.Minute)
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Minute)
 	defer cancel()
 
 	ticker := time.NewTicker(500 * time.Millisecond)
@@ -93,7 +93,7 @@ func waitForInstanceShutdown(ctx context.Context, inst *store.Instance) error {
 				logrus.Infof("The instance %s has shut down", updatedInst.Name)
 				return nil
 			}
-		case <-ctx2.Done():
+		case <-ctx.Done():
 			return errors.New("timed out waiting for instance to shut down after 3 minutes")
 		}
 	}
