@@ -13,7 +13,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"strings"
 	"sync/atomic"
@@ -209,7 +208,7 @@ func Download(ctx context.Context, local, remote string, opts ...Opt) (*Result, 
 		}
 	}
 
-	ext := path.Ext(remote)
+	ext := filepath.Ext(remote)
 	if IsLocal(remote) {
 		if err := copyLocal(ctx, localPath, remote, ext, o.decompress, o.description, o.expectedDigest); err != nil {
 			return nil, err
@@ -268,7 +267,7 @@ func getCached(ctx context.Context, localPath, remote string, o options) (*Resul
 	if _, err := os.Stat(shadData); err != nil {
 		return nil, nil
 	}
-	ext := path.Ext(remote)
+	ext := filepath.Ext(remote)
 	logrus.Debugf("file %q is cached as %q", localPath, shadData)
 	if _, err := os.Stat(shadDigest); err == nil {
 		logrus.Debugf("Comparing digest %q with the cached digest file %q, not computing the actual digest of %q",
@@ -311,7 +310,7 @@ func fetch(ctx context.Context, localPath, remote string, o options) (*Result, e
 	if err != nil {
 		return nil, err
 	}
-	ext := path.Ext(remote)
+	ext := filepath.Ext(remote)
 	shadURL := filepath.Join(shad, "url")
 	if err := os.WriteFile(shadURL, []byte(remote), 0o644); err != nil {
 		return nil, err
