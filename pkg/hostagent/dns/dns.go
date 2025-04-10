@@ -11,18 +11,14 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/miekg/dns"
 	"github.com/sirupsen/logrus"
 )
 
-const (
-	// Truncate for avoiding "Parse error" from `busybox nslookup`
-	// https://github.com/lima-vm/lima/issues/380
-	truncateSize      = 512
-	ipv6ResponseDelay = time.Second
-)
+// Truncate for avoiding "Parse error" from `busybox nslookup`
+// https://github.com/lima-vm/lima/issues/380
+const truncateSize = 512
 
 var defaultFallbackIPs = []string{"8.8.8.8", "1.1.1.1"}
 
@@ -168,12 +164,6 @@ func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
 		switch q.Qtype {
 		case dns.TypeAAAA:
 			if !h.ipv6 {
-				// Unfortunately some older resolvers use a slow random source to set the Transaction ID.
-				// This creates a problem on M1 computers, which are too fast for that implementation:
-				// Both the A and AAAA queries might end up with the same id. Therefore, we wait for
-				// 1 second and then we return NODATA for AAAA. This will allow the client to receive
-				// the correct response even when both Transaction IDs are the same.
-				time.Sleep(ipv6ResponseDelay)
 				// See RFC 2308 section 2.2 which suggests that NODATA is indicated by setting the
 				// RCODE to NOERROR along with zero entries in the response.
 				reply.SetRcode(req, dns.RcodeSuccess)
