@@ -89,3 +89,16 @@ limactl start \
 - `--mount-writable`: Make the home mount (`/Users/<USERNAME>`) writable
 - `--network=vzNAT`: Make the VM reachable from the host by its IP address
 - `template://fedora`: Use Fedora
+
+## Configure Existing VM
+Use [limactl edit](../reference/limactl_edit) to configure a VM instance, like adjusting the disk size, CPUs, or memory.
+For now, the VM must be stopped before updating its configuration.
+```bash
+limactl stop default
+
+# Edit value in the YAML file
+limactl edit default
+
+# Edit using flags
+limactl edit default --cpus 2 
+```
