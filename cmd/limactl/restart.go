@@ -19,7 +19,7 @@ func newRestartCommand() *cobra.Command {
 		GroupID:           basicCommand,
 	}
 
-	restartCmd.Flags().BoolP("force", "f", false, "force stop and restart the instance")
+	restartCmd.Flags().BoolP("force", "f", false, "Force stop and restart the instance")
 	return restartCmd
 }
 

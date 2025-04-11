@@ -20,7 +20,7 @@ func newStopCommand() *cobra.Command {
 		GroupID:           basicCommand,
 	}
 
-	stopCmd.Flags().BoolP("force", "f", false, "force stop the instance")
+	stopCmd.Flags().BoolP("force", "f", false, "Force stop the instance")
 	return stopCmd
 }
 

@@ -29,8 +29,8 @@ import (
 
 func registerCreateFlags(cmd *cobra.Command, commentPrefix string) {
 	flags := cmd.Flags()
-	flags.String("name", "", commentPrefix+"override the instance name")
-	flags.Bool("list-templates", false, commentPrefix+"list available templates and exit")
+	flags.String("name", "", commentPrefix+"Override the instance name")
+	flags.Bool("list-templates", false, commentPrefix+"List available templates and exit")
 	editflags.RegisterCreate(cmd, commentPrefix)
 }
 
@@ -93,9 +93,9 @@ See the examples in 'limactl create --help'.
 	}
 	registerCreateFlags(startCommand, "[limactl create] ")
 	if runtime.GOOS != "windows" {
-		startCommand.Flags().Bool("foreground", false, "run the hostagent in the foreground")
+		startCommand.Flags().Bool("foreground", false, "Run the hostagent in the foreground")
 	}
-	startCommand.Flags().Duration("timeout", instance.DefaultWatchHostAgentEventsTimeout, "duration to wait for the instance to be running before timing out")
+	startCommand.Flags().Duration("timeout", instance.DefaultWatchHostAgentEventsTimeout, "Duration to wait for the instance to be running before timing out")
 	return startCommand
 }
 

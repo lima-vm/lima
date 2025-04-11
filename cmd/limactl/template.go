@@ -66,10 +66,10 @@ func newTemplateCopyCommand() *cobra.Command {
 		Args:    WrapArgsError(cobra.ExactArgs(2)),
 		RunE:    templateCopyAction,
 	}
-	templateCopyCommand.Flags().Bool("embed", false, "embed external dependencies into template")
-	templateCopyCommand.Flags().Bool("embed-all", false, "embed all dependencies into template")
-	templateCopyCommand.Flags().Bool("fill", false, "fill defaults")
-	templateCopyCommand.Flags().Bool("verbatim", false, "don't make locators absolute")
+	templateCopyCommand.Flags().Bool("embed", false, "Embed external dependencies into template")
+	templateCopyCommand.Flags().Bool("embed-all", false, "Embed all dependencies into template")
+	templateCopyCommand.Flags().Bool("fill", false, "Fill defaults")
+	templateCopyCommand.Flags().Bool("verbatim", false, "Don't make locators absolute")
 	return templateCopyCommand
 }
 
@@ -205,7 +205,7 @@ func newTemplateValidateCommand() *cobra.Command {
 		Args:  WrapArgsError(cobra.MinimumNArgs(1)),
 		RunE:  templateValidateAction,
 	}
-	templateValidateCommand.Flags().Bool("fill", false, "fill defaults")
+	templateValidateCommand.Flags().Bool("fill", false, "Fill defaults")
 	return templateValidateCommand
 }
 

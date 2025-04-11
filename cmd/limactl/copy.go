@@ -38,8 +38,8 @@ func newCopyCommand() *cobra.Command {
 		GroupID: advancedCommand,
 	}
 
-	copyCommand.Flags().BoolP("recursive", "r", false, "copy directories recursively")
-	copyCommand.Flags().BoolP("verbose", "v", false, "enable verbose output")
+	copyCommand.Flags().BoolP("recursive", "r", false, "Copy directories recursively")
+	copyCommand.Flags().BoolP("verbose", "v", false, "Enable verbose output")
 
 	return copyCommand
 }

@@ -50,9 +50,9 @@ func newShellCommand() *cobra.Command {
 
 	shellCmd.Flags().SetInterspersed(false)
 
-	shellCmd.Flags().String("shell", "", "shell interpreter, e.g. /bin/bash")
-	shellCmd.Flags().String("workdir", "", "working directory")
-	shellCmd.Flags().Bool("reconnect", false, "reconnect to the SSH session")
+	shellCmd.Flags().String("shell", "", "Shell interpreter, e.g. /bin/bash")
+	shellCmd.Flags().String("workdir", "", "Working directory")
+	shellCmd.Flags().Bool("reconnect", false, "Reconnect to the SSH session")
 	return shellCmd
 }
 

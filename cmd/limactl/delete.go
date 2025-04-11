@@ -21,13 +21,13 @@ func newDeleteCommand() *cobra.Command {
 	deleteCommand := &cobra.Command{
 		Use:               "delete INSTANCE [INSTANCE, ...]",
 		Aliases:           []string{"remove", "rm"},
-		Short:             "Delete an instance of Lima.",
+		Short:             "Delete an instance of Lima",
 		Args:              WrapArgsError(cobra.MinimumNArgs(1)),
 		RunE:              deleteAction,
 		ValidArgsFunction: deleteBashComplete,
 		GroupID:           basicCommand,
 	}
-	deleteCommand.Flags().BoolP("force", "f", false, "forcibly kill the processes")
+	deleteCommand.Flags().BoolP("force", "f", false, "Forcibly kill the processes")
 	return deleteCommand
 }
 

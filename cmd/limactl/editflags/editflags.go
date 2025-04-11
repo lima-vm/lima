@@ -24,7 +24,7 @@ func RegisterEdit(cmd *cobra.Command) {
 func registerEdit(cmd *cobra.Command, commentPrefix string) {
 	flags := cmd.Flags()
 
-	flags.Int("cpus", 0, commentPrefix+"number of CPUs") // Similar to colima's --cpu, but the flag name is slightly different (cpu vs cpus)
+	flags.Int("cpus", 0, commentPrefix+"Number of CPUs") // Similar to colima's --cpu, but the flag name is slightly different (cpu vs cpus)
 	_ = cmd.RegisterFlagCompletionFunc("cpus", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
 		var res []string
 		for _, f := range completeCPUs(runtime.NumCPU()) {
@@ -33,9 +33,9 @@ func registerEdit(cmd *cobra.Command, commentPrefix string) {
 		return res, cobra.ShellCompDirectiveNoFileComp
 	})
 
-	flags.IPSlice("dns", nil, commentPrefix+"specify custom DNS (disable host resolver)") // colima-compatible
+	flags.IPSlice("dns", nil, commentPrefix+"Specify custom DNS (disable host resolver)") // colima-compatible
 
-	flags.Float32("memory", 0, commentPrefix+"memory in GiB") // colima-compatible
+	flags.Float32("memory", 0, commentPrefix+"Memory in GiB") // colima-compatible
 	_ = cmd.RegisterFlagCompletionFunc("memory", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
 		var res []string
 		for _, f := range completeMemoryGiB(memory.TotalMemory()) {
@@ -44,28 +44,28 @@ func registerEdit(cmd *cobra.Command, commentPrefix string) {
 		return res, cobra.ShellCompDirectiveNoFileComp
 	})
 
-	flags.StringSlice("mount", nil, commentPrefix+"directories to mount, suffix ':w' for writable (Do not specify directories that overlap with the existing mounts)") // colima-compatible
+	flags.StringSlice("mount", nil, commentPrefix+"Directories to mount, suffix ':w' for writable (Do not specify directories that overlap with the existing mounts)") // colima-compatible
 
-	flags.String("mount-type", "", commentPrefix+"mount type (reverse-sshfs, 9p, virtiofs)") // Similar to colima's --mount-type=(sshfs|9p|virtiofs), but "reverse-sshfs" is Lima is called "sshfs" in colima
+	flags.String("mount-type", "", commentPrefix+"Mount type (reverse-sshfs, 9p, virtiofs)") // Similar to colima's --mount-type=(sshfs|9p|virtiofs), but "reverse-sshfs" is Lima is called "sshfs" in colima
 	_ = cmd.RegisterFlagCompletionFunc("mount-type", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
 		return []string{"reverse-sshfs", "9p", "virtiofs"}, cobra.ShellCompDirectiveNoFileComp
 	})
 
-	flags.Bool("mount-writable", false, commentPrefix+"make all mounts writable")
-	flags.Bool("mount-inotify", false, commentPrefix+"enable inotify for mounts")
+	flags.Bool("mount-writable", false, commentPrefix+"Make all mounts writable")
+	flags.Bool("mount-inotify", false, commentPrefix+"Enable inotify for mounts")
 
-	flags.StringSlice("network", nil, commentPrefix+"additional networks, e.g., \"vzNAT\" or \"lima:shared\" to assign vmnet IP")
+	flags.StringSlice("network", nil, commentPrefix+"Additional networks, e.g., \"vzNAT\" or \"lima:shared\" to assign vmnet IP")
 	_ = cmd.RegisterFlagCompletionFunc("network", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
 		// TODO: retrieve the lima:* network list from networks.yaml
 		return []string{"lima:shared", "lima:bridged", "lima:host", "lima:user-v2", "vzNAT"}, cobra.ShellCompDirectiveNoFileComp
 	})
 
-	flags.Bool("rosetta", false, commentPrefix+"enable Rosetta (for vz instances)")
+	flags.Bool("rosetta", false, commentPrefix+"Enable Rosetta (for vz instances)")
 
-	flags.String("set", "", commentPrefix+"modify the template inplace, using yq syntax")
+	flags.String("set", "", commentPrefix+"Modify the template inplace, using yq syntax")
 
 	// negative performance impact: https://gitlab.com/qemu-project/qemu/-/issues/334
-	flags.Bool("video", false, commentPrefix+"enable video output (has negative performance impact for QEMU)")
+	flags.Bool("video", false, commentPrefix+"Enable video output (has negative performance impact for QEMU)")
 }
 
 // RegisterCreate registers flags related to in-place YAML modification, for `limactl create`.
@@ -73,7 +73,7 @@ func RegisterCreate(cmd *cobra.Command, commentPrefix string) {
 	registerEdit(cmd, commentPrefix)
 	flags := cmd.Flags()
 
-	flags.String("arch", "", commentPrefix+"machine architecture (x86_64, aarch64, riscv64, armv7l, s390x)") // colima-compatible
+	flags.String("arch", "", commentPrefix+"Machine architecture (x86_64, aarch64, riscv64, armv7l, s390x)") // colima-compatible
 	_ = cmd.RegisterFlagCompletionFunc("arch", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
 		return []string{"x86_64", "aarch64", "riscv64", "armv7l", "s390x"}, cobra.ShellCompDirectiveNoFileComp
 	})
@@ -83,17 +83,17 @@ func RegisterCreate(cmd *cobra.Command, commentPrefix string) {
 		return []string{"user", "system", "user+system", "none"}, cobra.ShellCompDirectiveNoFileComp
 	})
 
-	flags.Float32("disk", 0, commentPrefix+"disk size in GiB") // colima-compatible
+	flags.Float32("disk", 0, commentPrefix+"Disk size in GiB") // colima-compatible
 	_ = cmd.RegisterFlagCompletionFunc("memory", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
 		return []string{"10", "30", "50", "100", "200"}, cobra.ShellCompDirectiveNoFileComp
 	})
 
-	flags.String("vm-type", "", commentPrefix+"virtual machine type (qemu, vz)") // colima-compatible
+	flags.String("vm-type", "", commentPrefix+"Virtual machine type (qemu, vz)") // colima-compatible
 	_ = cmd.RegisterFlagCompletionFunc("vm-type", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
 		return []string{"qemu", "vz"}, cobra.ShellCompDirectiveNoFileComp
 	})
 
-	flags.Bool("plain", false, commentPrefix+"plain mode. Disable mounts, port forwarding, containerd, etc.")
+	flags.Bool("plain", false, commentPrefix+"Plain mode. Disables mounts, port forwarding, containerd, etc.")
 }
 
 func defaultExprFunc(expr string) func(v *flag.Flag) (string, error) {
