@@ -169,7 +169,6 @@ func newApp() *cobra.Command {
 		newListCommand(),
 		newDeleteCommand(),
 		newValidateCommand(),
-		newSudoersCommand(),
 		newPruneCommand(),
 		newHostagentCommand(),
 		newInfoCommand(),
@@ -188,7 +187,11 @@ func newApp() *cobra.Command {
 		newTemplateCommand(),
 		newRestartCommand(),
 	)
-	if runtime.GOOS == "darwin" || runtime.GOOS == "linux" {
+	switch runtime.GOOS {
+	case "darwin":
+		rootCmd.AddCommand(startAtLoginCommand())
+		rootCmd.AddCommand(newSudoersCommand())
+	case "linux":
 		rootCmd.AddCommand(startAtLoginCommand())
 	}
 

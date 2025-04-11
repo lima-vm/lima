@@ -42,9 +42,6 @@ See %s for the usage.`, networksURL),
 }
 
 func sudoersAction(cmd *cobra.Command, args []string) error {
-	if runtime.GOOS != "darwin" {
-		return errors.New("sudoers command is only supported on macOS right now")
-	}
 	nwCfg, err := networks.LoadConfig()
 	if err != nil {
 		return err
