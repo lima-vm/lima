@@ -13,8 +13,8 @@ ls:
     .yaml: snake_case
 
   cmd/limactl:
-    # valid names are `show-ssh.go` or `show-ssh_test.go`
-    .go: kebab-case | regex:[a-z0-9-]+_test
+    # valid names are `show-ssh.go`, `show-ssh_windows.go` or `show-ssh_test.go`
+    .go: lowercase
 
   docs:
     .md: kebab-case
