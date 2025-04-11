@@ -24,7 +24,7 @@ func newApp() *cobra.Command {
 		Short:   "Do not launch manually",
 		Version: strings.TrimPrefix(version.Version, "v"),
 	}
-	rootCmd.PersistentFlags().Bool("debug", false, "debug mode")
+	rootCmd.PersistentFlags().Bool("debug", false, "Debug mode")
 	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, _ []string) error {
 		debug, _ := cmd.Flags().GetBool("debug")
 		if debug {

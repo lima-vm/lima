@@ -41,7 +41,7 @@ func newSnapshotCreateCommand() *cobra.Command {
 		RunE:              snapshotCreateAction,
 		ValidArgsFunction: snapshotBashComplete,
 	}
-	createCmd.Flags().String("tag", "", "name of the snapshot")
+	createCmd.Flags().String("tag", "", "Name of the snapshot")
 
 	return createCmd
 }
@@ -76,7 +76,7 @@ func newSnapshotDeleteCommand() *cobra.Command {
 		RunE:              snapshotDeleteAction,
 		ValidArgsFunction: snapshotBashComplete,
 	}
-	deleteCmd.Flags().String("tag", "", "name of the snapshot")
+	deleteCmd.Flags().String("tag", "", "Name of the snapshot")
 
 	return deleteCmd
 }
@@ -111,7 +111,7 @@ func newSnapshotApplyCommand() *cobra.Command {
 		RunE:              snapshotApplyAction,
 		ValidArgsFunction: snapshotBashComplete,
 	}
-	applyCmd.Flags().String("tag", "", "name of the snapshot")
+	applyCmd.Flags().String("tag", "", "Name of the snapshot")
 
 	return applyCmd
 }

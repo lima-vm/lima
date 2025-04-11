@@ -31,7 +31,7 @@ func newDebugDNSCommand() *cobra.Command {
 		Args:  WrapArgsError(cobra.RangeArgs(1, 2)),
 		RunE:  debugDNSAction,
 	}
-	cmd.Flags().BoolP("ipv6", "6", false, "lookup IPv6 addresses too")
+	cmd.Flags().BoolP("ipv6", "6", false, "Lookup IPv6 addresses too")
 	return cmd
 }
 
