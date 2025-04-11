@@ -24,15 +24,15 @@ import (
 func newHostagentCommand() *cobra.Command {
 	hostagentCommand := &cobra.Command{
 		Use:    "hostagent INSTANCE",
-		Short:  "run hostagent",
+		Short:  "Run hostagent",
 		Args:   WrapArgsError(cobra.ExactArgs(1)),
 		RunE:   hostagentAction,
 		Hidden: true,
 	}
-	hostagentCommand.Flags().StringP("pidfile", "p", "", "write pid to file")
-	hostagentCommand.Flags().String("socket", "", "hostagent socket")
-	hostagentCommand.Flags().Bool("run-gui", false, "run gui synchronously within hostagent")
-	hostagentCommand.Flags().String("nerdctl-archive", "", "local file path (not URL) of nerdctl-full-VERSION-GOOS-GOARCH.tar.gz")
+	hostagentCommand.Flags().StringP("pidfile", "p", "", "Write PID to file")
+	hostagentCommand.Flags().String("socket", "", "Hostagent socket")
+	hostagentCommand.Flags().Bool("run-gui", false, "Run GUI synchronously within hostagent")
+	hostagentCommand.Flags().String("nerdctl-archive", "", "Local file path (not URL) of nerdctl-full-VERSION-GOOS-GOARCH.tar.gz")
 	return hostagentCommand
 }
 

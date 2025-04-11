@@ -19,7 +19,7 @@ import (
 )
 
 const showSSHExample = `
-  "cmd" format (default): Full ssh command line.
+  "cmd" format (default): Full SSH command line
     $ limactl show-ssh --format=cmd default
     ssh -o IdentityFile="/Users/example/.lima/_config/user" -o User=example -o Hostname=127.0.0.1 -o Port=60022 lima-default
 
@@ -27,7 +27,7 @@ const showSSHExample = `
     $ limactl show-ssh --format=args default
     -o IdentityFile="/Users/example/.lima/_config/user" -o User=example -o Hostname=127.0.0.1 -o Port=60022
 
-  "options" format: ssh option key value pairs
+  "options" format: SSH option key value pairs
     $ limactl show-ssh --format=options default
     IdentityFile="/Users/example/.lima/_config/user"
     User=example
@@ -54,8 +54,8 @@ func newShowSSHCommand() *cobra.Command {
 	}
 	shellCmd := &cobra.Command{
 		Use:   "show-ssh [flags] INSTANCE",
-		Short: "Show the ssh command line (DEPRECATED; use `ssh -F` instead)",
-		Long: fmt.Sprintf(`Show the ssh command line (DEPRECATED)
+		Short: "Show the SSH command line (DEPRECATED; use `ssh -F` instead)",
+		Long: fmt.Sprintf(`Show the SSH command line (DEPRECATED)
 
 WARNING: 'limactl show-ssh' is deprecated.
 Instead, use 'ssh -F %s/default/ssh.config lima-default' .

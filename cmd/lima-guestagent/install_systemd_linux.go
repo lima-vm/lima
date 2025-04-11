@@ -20,11 +20,11 @@ import (
 func newInstallSystemdCommand() *cobra.Command {
 	installSystemdCommand := &cobra.Command{
 		Use:   "install-systemd",
-		Short: "install a systemd unit (user)",
+		Short: "Install a systemd unit (user)",
 		RunE:  installSystemdAction,
 	}
-	installSystemdCommand.Flags().Int("vsock-port", 0, "use vsock server on specified port")
-	installSystemdCommand.Flags().String("virtio-port", "", "use virtio server instead a UNIX socket")
+	installSystemdCommand.Flags().Int("vsock-port", 0, "Use vsock server on specified port")
+	installSystemdCommand.Flags().String("virtio-port", "", "Use virtio server instead a UNIX socket")
 	return installSystemdCommand
 }
 
