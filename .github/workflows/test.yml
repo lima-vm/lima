@@ -122,7 +122,7 @@ jobs:
       run: sudo make install
     - name: Verify templates match `limactl edit` format
       run: |
-        find templates -name '*.yaml' -exec limactl edit --set 'del(.nothing)' {} \;
+        find templates -name '*.yaml' -not \( -path "templates/ansible/*" -prune \) -exec limactl edit --set 'del(.nothing)' {} \;
         git diff-index --exit-code HEAD
     - name: Uninstall
       run: sudo make uninstall
@@ -196,7 +196,7 @@ jobs:
     - name: Validate jsonschema
       run: make schema-limayaml.json
     - name: Validate templates
-      run: find -L templates -name '*.yaml' | xargs limactl validate
+      run: find -L templates -name '*.yaml' -not \( -path "templates/ansible/*" -prune \) | xargs limactl validate
     - name: Install test dependencies
       # QEMU:      required by Lima itself
       # bash:      required by test-templates.sh (OS version of bash is too old)
