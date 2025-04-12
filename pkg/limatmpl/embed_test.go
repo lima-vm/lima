@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright The Lima Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package limatmpl_test
+package limatmpl
 
 import (
 	"context"
@@ -11,7 +11,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lima-vm/lima/pkg/limatmpl"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/sirupsen/logrus"
 	"gotest.tools/v3/assert"
@@ -392,6 +391,27 @@ provision:
 		"base: https://example.com/lima-linux-riscv64.img",
 		"{arch: riscv64, images: [{location: https://example.com/lima-linux-riscv64.img, arch: riscv64}]}",
 	},
+	{
+		"Binary files are base64 encoded",
+		`#
+provision:
+- mode: data
+  file: base1.sh # This comment will move to the "content" key
+  path: /tmp/data
+`,
+		// base1.sh is binary because it contains an audible bell character '\a'
+		"# base0.yaml is ignored\n---\n#!\a123456789012345678901234567890123456789012345678901234567890",
+		`
+provision:
+- mode: data
+  content: !!binary |  # This comment will move to the "content" key
+    IyEHMTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0
+    NTY3ODkw
+  path: /tmp/data
+
+# base0.yaml is ignored
+`,
+	},
 }
 
 func TestEmbed(t *testing.T) {
@@ -436,7 +456,7 @@ func RunEmbedTest(t *testing.T, tc embedTestCase) {
 		err := os.WriteFile(baseFilename, []byte(base), 0o600)
 		assert.NilError(t, err, tc.description)
 	}
-	tmpl := &limatmpl.Template{
+	tmpl := &Template{
 		Bytes:   fmt.Appendf(nil, "base: base0.yaml\n%s", tc.template),
 		Locator: "tmpl.yaml",
 	}
@@ -474,4 +494,21 @@ func RunEmbedTest(t *testing.T, tc embedTestCase) {
 	} else {
 		assert.Assert(t, cmp.DeepEqual(tmpl.Config, &expected), tc.description)
 	}
+}
+
+func TestEncodeScriptReason(t *testing.T) {
+	maxLineLength = 8
+	t.Run("regular script", func(t *testing.T) {
+		reason := encodeScriptReason("0123456\n")
+		assert.Equal(t, reason, "")
+	})
+	t.Run("binary script", func(t *testing.T) {
+		reason := encodeScriptReason("abc\a123")
+		assert.Equal(t, reason, "unprintable character '\\a' at offset 3")
+	})
+	t.Run("long line", func(t *testing.T) {
+		// newline character is included in character count
+		reason := encodeScriptReason("line 1\nline 2\n01234567\n")
+		assert.Equal(t, reason, "line 3 (offset 14) is longer than 8 characters")
+	})
 }
