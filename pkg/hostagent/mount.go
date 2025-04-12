@@ -68,6 +68,13 @@ func (a *HostAgent) setupMount(m limayaml.Mount) (*mount, error) {
 		Readonly:            !(*m.Writable),
 		SSHFSAdditionalArgs: []string{"-o", sshfsOptions},
 	}
+	if runtime.GOOS == "windows" {
+		// cygwin/msys2 doesn't support full feature set over mux socket, this has at least 2 side effects:
+		// 1. unnecessary pollutes output with error on errors encountered (ssh will try to tolerate them with fallbacks);
+		// 2. these errors still imply additional coms over mux socket, which resulted sftp-server to fail more often statistically during test runs.
+		// It is reasonable to disable this on Windows if required feature is not fully operational.
+		rsf.SSHConfig.Persist = false
+	}
 	if err := rsf.Prepare(); err != nil {
 		return nil, fmt.Errorf("failed to prepare reverse sshfs for %q on %q: %w", resolvedLocation, *m.MountPoint, err)
 	}
