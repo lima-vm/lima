@@ -59,9 +59,9 @@ $ limactl disk create DISK --size SIZE [--format qcow2]
 		Args:  WrapArgsError(cobra.ExactArgs(1)),
 		RunE:  diskCreateAction,
 	}
-	diskCreateCommand.Flags().String("size", "", "configure the disk size")
+	diskCreateCommand.Flags().String("size", "", "Configure the disk size")
 	_ = diskCreateCommand.MarkFlagRequired("size")
-	diskCreateCommand.Flags().String("format", "qcow2", "specify the disk format")
+	diskCreateCommand.Flags().String("format", "qcow2", "Specify the disk format")
 	return diskCreateCommand
 }
 
@@ -224,7 +224,7 @@ $ limactl disk delete DISK1 DISK2 ...
 		RunE:              diskDeleteAction,
 		ValidArgsFunction: diskBashComplete,
 	}
-	diskDeleteCommand.Flags().BoolP("force", "f", false, "force delete")
+	diskDeleteCommand.Flags().BoolP("force", "f", false, "Force delete")
 	return diskDeleteCommand
 }
 

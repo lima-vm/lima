@@ -21,12 +21,12 @@ import (
 func newDaemonCommand() *cobra.Command {
 	daemonCommand := &cobra.Command{
 		Use:   "daemon",
-		Short: "run the daemon",
+		Short: "Run the daemon",
 		RunE:  daemonAction,
 	}
-	daemonCommand.Flags().Duration("tick", 3*time.Second, "tick for polling events")
-	daemonCommand.Flags().Int("vsock-port", 0, "use vsock server instead a UNIX socket")
-	daemonCommand.Flags().String("virtio-port", "", "use virtio server instead a UNIX socket")
+	daemonCommand.Flags().Duration("tick", 3*time.Second, "Tick for polling events")
+	daemonCommand.Flags().Int("vsock-port", 0, "Use vsock server instead a UNIX socket")
+	daemonCommand.Flags().String("virtio-port", "", "Use virtio server instead a UNIX socket")
 	return daemonCommand
 }
 
