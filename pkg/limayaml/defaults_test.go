@@ -62,10 +62,7 @@ func TestFillDefault(t *testing.T) {
 	limaHome, err := dirnames.LimaDir()
 	assert.NilError(t, err)
 	user := osutil.LimaUser("0.0.0", false)
-	if runtime.GOOS != "windows" {
-		// manual template expansion for "/home/{{.User}}.linux" (done by FillDefault)
-		user.HomeDir = fmt.Sprintf("/home/%s.linux", user.Username)
-	}
+	user.HomeDir = fmt.Sprintf("/home/%s.linux", user.Username)
 	uid, err := strconv.ParseUint(user.Uid, 10, 32)
 	assert.NilError(t, err)
 
