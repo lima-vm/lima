@@ -12,6 +12,7 @@ import (
 	"github.com/Microsoft/go-winio"
 	"github.com/Microsoft/go-winio/pkg/guid"
 	"github.com/lima-vm/lima/pkg/driver"
+	"github.com/lima-vm/lima/pkg/freeport"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/reflectutil"
 	"github.com/lima-vm/lima/pkg/store"
@@ -49,6 +50,12 @@ type LimaWslDriver struct {
 }
 
 func New(driver *driver.BaseDriver) *LimaWslDriver {
+	port, err := freeport.VSock()
+	if err != nil {
+		logrus.WithError(err).Error("failed to get free VSock port")
+	}
+	driver.VSockPort = port
+	driver.VirtioPort = ""
 	return &LimaWslDriver{
 		BaseDriver: driver,
 	}
