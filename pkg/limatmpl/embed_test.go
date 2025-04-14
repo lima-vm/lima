@@ -497,7 +497,6 @@ func RunEmbedTest(t *testing.T, tc embedTestCase) {
 }
 
 func TestEncodeScriptReason(t *testing.T) {
-	maxLineLength = 8
 	t.Run("regular script", func(t *testing.T) {
 		reason := encodeScriptReason("0123456\n")
 		assert.Equal(t, reason, "")
@@ -508,7 +507,7 @@ func TestEncodeScriptReason(t *testing.T) {
 	})
 	t.Run("long line", func(t *testing.T) {
 		// newline character is included in character count
-		reason := encodeScriptReason("line 1\nline 2\n01234567\n")
-		assert.Equal(t, reason, "line 3 (offset 14) is longer than 8 characters")
+		reason := encodeScriptReason("line 1\nline 2\n" + strings.Repeat("0", 65001))
+		assert.Equal(t, reason, "line 3 (offset 14) is longer than 65000 characters")
 	})
 }
