@@ -6,11 +6,14 @@ package limatmpl
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"sync"
+	"unicode"
 
 	"github.com/coreos/go-semver/semver"
 	"github.com/lima-vm/lima/pkg/limayaml"
@@ -254,7 +257,7 @@ const mergeDocuments = `
 | $a | (select(.mountTypesUnsupported) | .mountTypesUnsupported) |= unique
 
 # Remove the custom tags again so they do not clutter up the YAML output.
-| $a | .. tag = ""
+| $a | .. | select(tag == "!!tag") tag = ""
 `
 
 // listFields returns dst and src fields like "list[idx].field".
@@ -552,11 +555,72 @@ func (tmpl *Template) combineNetworks() {
 	}
 }
 
+// yamlfmt will fail with a buffer overflow while trying to retain line breaks if the line
+// is longer than 64K. We will encode all text files that have a line that comes close.
+// maxLineLength is a constant; it is only a variable for the benefit of the unit tests.
+var maxLineLength = 65000
+
+// encodeScriptReason returns the reason why a script needs to be base64 encoded or the empty string if it doesn't.
+func encodeScriptReason(script string) string {
+	start := 0
+	line := 1
+	for i, r := range script {
+		if !(unicode.IsPrint(r) || r == '\n' || r == '\r' || r == '\t') {
+			return fmt.Sprintf("unprintable character %q at offset %d", r, i)
+		}
+		// maxLineLength includes final newline
+		if i-start >= maxLineLength {
+			return fmt.Sprintf("line %d (offset %d) is longer than %d characters", line, start, maxLineLength)
+		}
+		if r == '\n' {
+			line++
+			start = i + 1
+		}
+	}
+	return ""
+}
+
+// Break base64 strings into shorter chunks. Technically we could use maxLineLength here,
+// but shorter lines look better.
+const base64ChunkLength = 76
+
+// binaryString returns a base64 encoded version of the binary string, broken into chunks
+// of at most base64ChunkLength characters per line.
+func binaryString(s string) string {
+	encoded := base64.StdEncoding.EncodeToString([]byte(s))
+	if len(encoded) <= base64ChunkLength {
+		return encoded
+	}
+
+	// Estimate capacity: encoded length + number of newlines
+	lineCount := (len(encoded) + base64ChunkLength - 1) / base64ChunkLength
+	builder := strings.Builder{}
+	builder.Grow(len(encoded) + lineCount)
+
+	for i := 0; i < len(encoded); i += base64ChunkLength {
+		end := i + base64ChunkLength
+		if end > len(encoded) {
+			end = len(encoded)
+		}
+		builder.WriteString(encoded[i:end])
+		builder.WriteByte('\n')
+	}
+
+	return builder.String()
+}
+
 // updateScript replaces a "file" property with the actual script and then renames the field to newName ("script" or "content").
-func (tmpl *Template) updateScript(field string, idx int, newName, script string) {
+func (tmpl *Template) updateScript(field string, idx int, newName, script, file string) {
+	tag := ""
+	if reason := encodeScriptReason(script); reason != "" {
+		logrus.Infof("File %q is being base64 encoded: %s", file, reason)
+		script = binaryString(script)
+		tag = "!!binary"
+	}
 	entry := fmt.Sprintf("$a.%s[%d].file", field, idx)
-	// Assign script to the "file" field and then rename it to "script".
-	tmpl.expr.WriteString(fmt.Sprintf("| (%s) = %q | (%s | key) = %q\n", entry, script, entry, newName))
+	// Assign script to the "file" field and then rename it to "script" or "content".
+	tmpl.expr.WriteString(fmt.Sprintf("| (%s) = %q | (%s) tag = %q | (%s | key) = %q\n",
+		entry, script, entry, tag, entry, newName))
 }
 
 // embedAllScripts replaces all "provision" and "probes" file references with the actual script.
@@ -579,7 +643,7 @@ func (tmpl *Template) embedAllScripts(ctx context.Context, embedAll bool) error 
 			if err != nil {
 				return err
 			}
-			tmpl.updateScript("probes", i, "script", string(scriptTmpl.Bytes))
+			tmpl.updateScript("probes", i, "script", string(scriptTmpl.Bytes), p.File.URL)
 		}
 	}
 	for i, p := range tmpl.Config.Provision {
@@ -605,7 +669,7 @@ func (tmpl *Template) embedAllScripts(ctx context.Context, embedAll bool) error 
 			if err != nil {
 				return err
 			}
-			tmpl.updateScript("provision", i, newName, string(scriptTmpl.Bytes))
+			tmpl.updateScript("provision", i, newName, string(scriptTmpl.Bytes), p.File.URL)
 		}
 	}
 	return tmpl.evalExpr()
