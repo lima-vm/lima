@@ -8,6 +8,7 @@ The following features are deprecated:
 - CentOS 7 support
 - Loading non-strict YAMLs (i.e., YAMLs with unknown properties)
 - `limactl show-ssh` command (Use `ssh -F ~/.lima/default/ssh.config lima-default` instead)
+- `LIMA_SSH_PORT_FORWARDER=true` (since Lima v1.1)
 
 ## Removed features
 - YAML property `network`: deprecated in [Lima v0.7.0](https://github.com/lima-vm/lima/commit/07e68230e70b21108d2db3ca5e0efd0e43842fbd)
