@@ -71,7 +71,10 @@ for f in /etc/subuid /etc/subgid; do
 	# See userdbctl.
 	# 1073741824 (1G) is just an arbitrary number.
 	# 1073741825-1878982656 is left blank for additional accounts.
-	grep -qw "${LIMA_CIDATA_USER}" $f || echo "${LIMA_CIDATA_USER}:524288:1073741824" >>$f
+	subuid_begin=524288
+	# https://github.com/moby/moby/issues/49810#issuecomment-2808108191
+	[ "${LIMA_CIDATA_UID}" -ge "${subuid_begin}" ] && subuid_begin="$((LIMA_CIDATA_UID + 1))"
+	grep -qw "${LIMA_CIDATA_USER}" $f || echo "${LIMA_CIDATA_USER}:${subuid_begin}:1073741824" >>$f
 done
 
 # Start systemd session
