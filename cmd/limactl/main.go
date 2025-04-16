@@ -169,7 +169,6 @@ func newApp() *cobra.Command {
 		newListCommand(),
 		newDeleteCommand(),
 		newValidateCommand(),
-		newSudoersCommand(),
 		newPruneCommand(),
 		newHostagentCommand(),
 		newInfoCommand(),
@@ -188,8 +187,8 @@ func newApp() *cobra.Command {
 		newTemplateCommand(),
 		newRestartCommand(),
 	)
-	if runtime.GOOS == "darwin" || runtime.GOOS == "linux" {
-		rootCmd.AddCommand(startAtLoginCommand())
+	for _, cmd := range additionalAdvancedCommands() {
+		rootCmd.AddCommand(cmd)
 	}
 
 	return rootCmd
