@@ -244,7 +244,8 @@ jobs:
         template:
         - alpine.yaml
         - debian.yaml  # reverse-sshfs
-        - fedora.yaml
+        - fedora.yaml  # The default version of Fedora is still 41 due to https://github.com/lima-vm/lima/issues/3334
+        - fedora-42.yaml
         - archlinux.yaml
         - opensuse.yaml
         - docker.yaml

@@ -1,0 +1,16 @@
+# This template requires Lima v0.7.0 or later.
+images:
+- location: "https://download.fedoraproject.org/pub/fedora/linux/releases/42/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-42-1.1.x86_64.qcow2"
+  arch: "x86_64"
+  digest: "sha256:e401a4db2e5e04d1967b6729774faa96da629bcf3ba90b67d8d9cce9906bec0f"
+- location: "https://download.fedoraproject.org/pub/fedora/linux/releases/42/Cloud/aarch64/images/Fedora-Cloud-Base-Generic-42-1.1.aarch64.qcow2"
+  arch: "aarch64"
+  digest: "sha256:e10658419a8d50231037dc781c3155aa94180a8c7a74e5cac2a6b09eaa9342b7"
+mounts:
+- location: "~"
+- location: "/tmp/lima"
+  writable: true
+
+# # NOTE: Intel Mac requires setting vmType to qemu
+# # https://github.com/lima-vm/lima/issues/3334
+# vmType: qemu
