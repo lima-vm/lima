@@ -20,7 +20,8 @@ Distro:
 - [`centos-stream-10`](./centos-stream-10.yaml): CentOS Stream 10
 - [`debian-11`](./debian-11.yaml): Debian GNU/Linux 11(bullseye)
 - [`debian-12`](./debian-12.yaml), `debian.yaml`: ⭐Debian GNU/Linux 12(bookworm)
-- [`fedora`](./fedora.yaml): ⭐Fedora
+- [`fedora-41`](./fedora-41.yaml), `fedora.yaml`: ⭐Fedora 41
+- [`fedora-42`](./fedora-42.yaml): Fedora 42
 - [`opensuse-leap`](./opensuse-leap.yaml), `opensuse.yaml`: ⭐openSUSE Leap
 - [`oraclelinux-8`](./oraclelinux-8.yaml): Oracle Linux 8
 - [`oraclelinux-9`](./oraclelinux-9.yaml), `oraclelinux.yaml`: Oracle Linux 9
