@@ -72,6 +72,8 @@ type LimaVzDriver struct {
 }
 
 func New(driver *driver.BaseDriver) *LimaVzDriver {
+	driver.VSockPort = 2222
+	driver.VirtioPort = ""
 	return &LimaVzDriver{
 		BaseDriver: driver,
 	}

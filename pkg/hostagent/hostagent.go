@@ -123,20 +123,13 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 		}
 	}
 
-	vSockPort := 0
-	virtioPort := ""
-	if *inst.Config.VMType == limayaml.VZ {
-		vSockPort = 2222
-	} else if *inst.Config.VMType == limayaml.WSL2 {
-		port, err := freeport.VSock()
-		if err != nil {
-			logrus.WithError(err).Error("failed to get free VSock port")
-		}
-		vSockPort = port
-	} else if *inst.Config.VMType == limayaml.QEMU {
-		// virtserialport doesn't seem to work reliably: https://github.com/lima-vm/lima/issues/2064
-		virtioPort = "" // filenames.VirtioPort
+	baseDriver := driver.BaseDriver{
+		Instance:     inst,
+		SSHLocalPort: sshLocalPort,
 	}
+	limaDriver := driverutil.CreateTargetDriverInstance(&baseDriver)
+	vSockPort := baseDriver.VSockPort
+	virtioPort := baseDriver.VirtioPort
 
 	if err := cidata.GenerateCloudConfig(inst.Dir, instName, inst.Config); err != nil {
 		return nil, err
@@ -195,13 +188,6 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 	rule := limayaml.PortForward{}
 	limayaml.FillPortForwardDefaults(&rule, inst.Dir, inst.Config.User, inst.Param)
 	rules = append(rules, rule)
-
-	limaDriver := driverutil.CreateTargetDriverInstance(&driver.BaseDriver{
-		Instance:     inst,
-		SSHLocalPort: sshLocalPort,
-		VSockPort:    vSockPort,
-		VirtioPort:   virtioPort,
-	})
 
 	a := &HostAgent{
 		instConfig:        inst.Config,
