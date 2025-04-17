@@ -132,7 +132,6 @@ func Inspect(instName string) (*Instance, error) {
 	}
 	disk, err := units.RAMInBytes(*y.Disk)
 	if err == nil {
-		// logrus.Infof("Inst:%s changing size %d to %d \n", inst.Name, inst.Disk, disk)
 		inst.Disk = disk
 	}
 	inst.AdditionalDisks = y.AdditionalDisks

@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"text/tabwriter"
 	"path/filepath"
+	"text/tabwriter"
 
 	"github.com/docker/go-units"
 	"github.com/lima-vm/go-qcow2reader"
@@ -422,7 +422,6 @@ func diskBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra
 	return bashCompleteDiskNames(cmd)
 }
 
-// func newDiskRegisterCommand()
 func newDiskAddCommand() *cobra.Command {
 	diskAddCommand := &cobra.Command{
 		Use: "add existing DISK to Lima",
@@ -447,10 +446,10 @@ func diskAddAction(cmd *cobra.Command, args []string) error {
 	}
 
 	f, err := os.Open(fName)
-	defer f.Close()
 	if err != nil {
 		return err
 	}
+	defer f.Close()
 
 	img, err := qcow2reader.Open(f)
 	if err != nil {
@@ -458,8 +457,6 @@ func diskAddAction(cmd *cobra.Command, args []string) error {
 	}
 
 	diskName := args[0]
-	// diskName := filepath.Base(fName)
-	// diskName = strings.TrimSuffix(diskName, filepath.Ext(diskName))
 	diskSize := img.Size()
 	format := img.Type()
 
@@ -470,7 +467,11 @@ func diskAddAction(cmd *cobra.Command, args []string) error {
 	}
 
 	diskDir, err := store.DiskDir(diskName)
-	if err := os.MkdirAll(diskDir, 0755); err != nil {
+	if err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(diskDir, 0o755); err != nil {
 		return err
 	}
 
