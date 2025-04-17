@@ -53,7 +53,7 @@ type HostAgent struct {
 	instName          string
 	instSSHAddress    string
 	sshConfig         *ssh.SSHConfig
-	portForwarder     *portForwarder
+	portForwarder     *portForwarder // legacy SSH port forwarder (deprecated)
 	grpcPortForwarder *portfwd.Forwarder
 
 	onClose []func() error // LIFO
@@ -644,9 +644,12 @@ func (a *HostAgent) processGuestAgentEvents(ctx context.Context, client *guestag
 		for _, f := range ev.Errors {
 			logrus.Warnf("received error from the guest: %q", f)
 		}
-		// useSSHFwd was false by default in v1.0, but reverted to true by default in v1.0.1
-		// due to stability issues
-		useSSHFwd := true
+		// History of the default value of useSSHFwd:
+		// - v0.1.0:        true  (effectively)
+		// - v1.0.0:        false
+		// - v1.0.1:        true
+		// - v1.1.0-beta.0: false
+		useSSHFwd := false
 		if envVar := os.Getenv("LIMA_SSH_PORT_FORWARDER"); envVar != "" {
 			b, err := strconv.ParseBool(os.Getenv("LIMA_SSH_PORT_FORWARDER"))
 			if err != nil {
@@ -656,6 +659,7 @@ func (a *HostAgent) processGuestAgentEvents(ctx context.Context, client *guestag
 			}
 		}
 		if useSSHFwd {
+			logrus.Warn("LIMA_SSH_PORT_FORWARDER is deprecated")
 			a.portForwarder.OnEvent(ctx, ev)
 		} else {
 			a.grpcPortForwarder.OnEvent(ctx, client, ev)

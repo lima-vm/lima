@@ -446,9 +446,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-        - {template: default.yaml, ssh-port-forwarder: true}  # SSH port forwarder is currently still the default
-        - {template: fedora.yaml, ssh-port-forwarder: false}  # gRPC port forwarder will become default in the future
+        template:
+        - default.yaml
     steps:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
       with:
@@ -470,8 +469,6 @@ jobs:
       run: brew uninstall --ignore-dependencies --force qemu
     - name: Test
       run: ./hack/test-templates.sh templates/${{ matrix.template }}
-      env:
-        LIMA_SSH_PORT_FORWARDER: ${{ matrix.ssh-port-forwarder }}
     - if: failure()
       uses: ./.github/actions/upload_failure_logs_if_exists
       with:

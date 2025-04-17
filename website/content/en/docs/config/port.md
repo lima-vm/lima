@@ -9,14 +9,21 @@ Lima supports automatic port-forwarding of localhost ports from guest to host.
 
 Lima supports two port forwarders: SSH and GRPC.
 
-The default port forwarder is SSH.
+The default port forwarder is shown in the following table.
+
+| Version       | Default |
+| ------------- | ------- |
+| v0.1.0        | SSH     |
+| v1.0.0        | GRPC    |
+| v1.0.1        | SSH     |
+| v1.1.0-beta.0 | GRPC    |
 
 The default was once changed to GRPC in Lima v1.0, but it was reverted to SSH in v1.0.1 due to stability reasons.
-In future, it is expected that GRPC will take over the default position again.
+The default was further reverted to GRPC in Lima v1.1, as the stability issues were resolved.
 
 ### Using SSH
 
-SSH based port forwarding is the default and current model that is supported in Lima.
+SSH based port forwarding is the legacy mode that was previously default.
 
 To explicitly use SSH forwarding use the below command
 
