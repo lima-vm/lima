@@ -157,6 +157,14 @@ func editAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+
+  // Apply config from .ymal to store.instance
+  inst, err = store.Inspect(inst.Name)
+
+	if err := inst.ResizeGuestOSDisk(); err != nil {
+		return err
+	}
+
 	return instance.Start(ctx, inst, "", false)
 }
 

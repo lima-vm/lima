@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -131,6 +132,7 @@ func Inspect(instName string) (*Instance, error) {
 	}
 	disk, err := units.RAMInBytes(*y.Disk)
 	if err == nil {
+		// logrus.Infof("Inst:%s changing size %d to %d \n", inst.Name, inst.Disk, disk)
 		inst.Disk = disk
 	}
 	inst.AdditionalDisks = y.AdditionalDisks
@@ -435,5 +437,27 @@ func (inst *Instance) Unprotect() error {
 		return err
 	}
 	inst.Protected = false
+	return nil
+}
+
+func (inst *Instance) ResizeGuestOSDisk() error {
+	fName := filepath.Join(inst.Dir, filenames.DiffDisk)
+
+	cmd := exec.Command("limactl", "disk", "add", inst.Name, "--filename", fName)
+	if err := cmd.Run(); err != nil {
+		logrus.Fatalf("Failed to add disk: %v", err)
+	}
+
+	cmd = exec.Command("limactl", "disk", "resize", inst.Name, "--size", string(units.BytesSize(float64(inst.Disk))))
+	if err := cmd.Run(); err != nil {
+		logrus.Fatalf("Failed to resize disk: %v", err)
+	}
+
+	cmd = exec.Command("limactl", "disk", "delete", inst.Name)
+	if err := cmd.Run(); err != nil {
+		logrus.Fatalf("Failed to remove disk: %v", err)
+	}
+
+	logrus.Infof("Edit GuestOS size to %s", units.BytesSize(float64(inst.Disk)))
 	return nil
 }
