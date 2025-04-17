@@ -9,12 +9,16 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"text/tabwriter"
 
+	contfs "github.com/containerd/continuity/fs"
 	"github.com/docker/go-units"
+	"github.com/lima-vm/go-qcow2reader"
 	"github.com/lima-vm/lima/pkg/nativeimgutil"
 	"github.com/lima-vm/lima/pkg/qemu"
 	"github.com/lima-vm/lima/pkg/store"
+	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -44,6 +48,7 @@ func newDiskCommand() *cobra.Command {
 		newDiskDeleteCommand(),
 		newDiskUnlockCommand(),
 		newDiskResizeCommand(),
+		newDiskImportCommand(),
 	)
 	return diskCommand
 }
@@ -417,4 +422,65 @@ func diskResizeAction(cmd *cobra.Command, args []string) error {
 
 func diskBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 	return bashCompleteDiskNames(cmd)
+}
+
+func newDiskImportCommand() *cobra.Command {
+	diskImportCommand := &cobra.Command{
+		Use: "import DISK FILE",
+		Example: `
+Import a disk:
+$ limactl disk import DISK DISKPATH
+`,
+		Short:             "Import an existing disk to Lima",
+		Args:              WrapArgsError(cobra.ExactArgs(2)),
+		RunE:              diskImportAction,
+		ValidArgsFunction: diskBashComplete,
+	}
+	return diskImportCommand
+}
+
+func diskImportAction(_ *cobra.Command, args []string) error {
+	diskName := args[0]
+	fName := args[1]
+
+	diskDir, err := store.DiskDir(diskName)
+	if err != nil {
+		return err
+	}
+
+	if _, err := os.Stat(diskDir); !errors.Is(err, fs.ErrNotExist) {
+		return fmt.Errorf("disk %q already exists (%q)", diskName, diskDir)
+	}
+
+	f, err := os.Open(fName)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	img, err := qcow2reader.Open(f)
+	if err != nil {
+		return err
+	}
+
+	diskSize := img.Size()
+	format := img.Type()
+
+	switch format {
+	case "qcow2", "raw":
+	default:
+		return fmt.Errorf(`disk format %q not supported, use "qcow2" or "raw" instead`, format)
+	}
+
+	if err := os.MkdirAll(diskDir, 0o755); err != nil {
+		return err
+	}
+
+	if err := contfs.CopyFile(filepath.Join(diskDir, filenames.DataDisk), fName); err != nil {
+		return nil
+	}
+
+	logrus.Infof("Imported %s with size %s", diskName, units.BytesSize(float64(diskSize)))
+
+	return nil
 }
