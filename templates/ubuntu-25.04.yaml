@@ -1,0 +1,38 @@
+# This template requires Lima v0.7.0 or later.
+images:
+# Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
+- location: "https://cloud-images.ubuntu.com/releases/plucky/release-20250415/ubuntu-25.04-server-cloudimg-amd64.img"
+  arch: "x86_64"
+  digest: "sha256:6fb0299c53b8872c51b96c54947ee25383378ed5045f2ef18c751be0cab42ecd"
+- location: "https://cloud-images.ubuntu.com/releases/plucky/release-20250415/ubuntu-25.04-server-cloudimg-arm64.img"
+  arch: "aarch64"
+  digest: "sha256:d599b0769b6df1a2c9c6a04108beaa265a354f93db15f219c820567a42231486"
+- location: "https://cloud-images.ubuntu.com/releases/plucky/release-20250415/ubuntu-25.04-server-cloudimg-riscv64.img"
+  arch: "riscv64"
+  digest: "sha256:accc86a8fea04dff4599fe776fddcaa5ae7d498cbac69a0c25d4dd0292b79b38"
+- location: "https://cloud-images.ubuntu.com/releases/plucky/release-20250415/ubuntu-25.04-server-cloudimg-armhf.img"
+  arch: "armv7l"
+  digest: "sha256:28f9959f528f3c7e172b367fdae4032a09e75b4a8499283c6c4c611d91bf9699"
+- location: "https://cloud-images.ubuntu.com/releases/plucky/release-20250415/ubuntu-25.04-server-cloudimg-s390x.img"
+  arch: "s390x"
+  digest: "sha256:0ea6c52f2bbf3d35a767f92afe8adc4a648ebf0d31a325dfb97e21be6ef20c70"
+# Fallback to the latest release image.
+# Hint: run `limactl prune` to invalidate the cache
+- location: "https://cloud-images.ubuntu.com/releases/plucky/release/ubuntu-25.04-server-cloudimg-amd64.img"
+  arch: "x86_64"
+- location: "https://cloud-images.ubuntu.com/releases/plucky/release/ubuntu-25.04-server-cloudimg-arm64.img"
+  arch: "aarch64"
+- location: "https://cloud-images.ubuntu.com/releases/plucky/release/ubuntu-25.04-server-cloudimg-riscv64.img"
+  arch: "riscv64"
+- location: "https://cloud-images.ubuntu.com/releases/plucky/release/ubuntu-25.04-server-cloudimg-armhf.img"
+  arch: "armv7l"
+- location: "https://cloud-images.ubuntu.com/releases/plucky/release/ubuntu-25.04-server-cloudimg-s390x.img"
+  arch: "s390x"
+mounts:
+- location: "~"
+- location: "/tmp/lima"
+  writable: true
+
+# # NOTE: Intel Mac requires setting vmType to qemu
+# # https://github.com/lima-vm/lima/issues/3334
+# vmType: qemu
