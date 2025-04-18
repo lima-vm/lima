@@ -38,6 +38,8 @@ if [ "${LIMA_CIDATA_SKIP_DEFAULT_DEPENDENCY_RESOLUTION}" = 1 ]; then
 	exit 0
 fi
 
+REMOUNT_VIRTIOFS=0
+
 if head -c 4 "$(command -v apt-get)" | grep -qP '\x7fELF' >/dev/null 2>&1; then
 	pkgs=""
 	if [ "${LIMA_CIDATA_MOUNTTYPE}" = "reverse-sshfs" ]; then
@@ -100,6 +102,14 @@ elif command -v dnf >/dev/null 2>&1; then
 			# Disable the OpenH264 repository as well, by default
 			dnf config-manager --disable epel\* >/dev/null 2>&1
 			epel_install_flags="${epel_install_flags} --enablerepo epel"
+		fi
+		if grep -q "Oracle Linux Server" /etc/system-release && [ "${LIMA_CIDATA_MOUNTTYPE}" = "virtiofs" ]; then
+			# Enable repositories like "ol9_UEKR7"
+			for repo in $(dnf -q repolist | awk '/UEK/NR>1{print $1}'); do
+				epel_install_flags="${epel_install_flags} --enablerepo ${repo}"
+			done
+			extrapkgs="${extrapkgs} kernel-uek-modules-$(uname -r)"
+			REMOUNT_VIRTIOFS=1
 		fi
 		if [ -n "${pkgs}" ]; then
 			# shellcheck disable=SC2086
@@ -187,4 +197,8 @@ elif command -v apk >/dev/null 2>&1; then
 		# shellcheck disable=SC2086
 		apk add ${pkgs}
 	fi
+fi
+
+if [ "${REMOUNT_VIRTIOFS}" = 1 ]; then
+	mount -t virtiofs -a
 fi
