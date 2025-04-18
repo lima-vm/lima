@@ -1165,8 +1165,8 @@ func ResolveVMType(y, d, o *LimaYAML, filePath string) VMType {
 				logrus.Debugf("ResolveVMType: resolved VMType %q (non-native arch=%q is specified in []*LimaYAML{o,y,d}[%d])", QEMU, *f.Arch, i)
 				return QEMU
 			}
-			if f.Firmware.LegacyBIOS != nil && *f.Firmware.LegacyBIOS {
-				logrus.Debugf("ResolveVMType: resolved VMType %q (firmware.legacyBIOS is specified in []*LimaYAML{o,y,d}[%d])", QEMU, i)
+			if ResolveArch(f.Arch) == X8664 && f.Firmware.LegacyBIOS != nil && *f.Firmware.LegacyBIOS {
+				logrus.Debugf("ResolveVMType: resolved VMType %q (firmware.legacyBIOS is specified in []*LimaYAML{o,y,d}[%d], on x86_64)", QEMU, i)
 				return QEMU
 			}
 			if f.MountType != nil && *f.MountType == NINEP {
