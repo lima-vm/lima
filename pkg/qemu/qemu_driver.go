@@ -21,12 +21,15 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/coreos/go-semver/semver"
 	"github.com/digitalocean/go-qemu/qmp"
 	"github.com/digitalocean/go-qemu/qmp/raw"
 	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/executil"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/networks/usernet"
+	"github.com/lima-vm/lima/pkg/osutil"
+	"github.com/lima-vm/lima/pkg/qemu/entitlementutil"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/sirupsen/logrus"
@@ -54,6 +57,12 @@ func New(driver *driver.BaseDriver) *LimaQemuDriver {
 }
 
 func (l *LimaQemuDriver) Validate() error {
+	if runtime.GOOS == "darwin" {
+		if err := l.checkBinarySignature(); err != nil {
+			return err
+		}
+	}
+
 	if *l.Instance.Config.MountType == limayaml.VIRTIOFS && runtime.GOOS != "linux" {
 		return fmt.Errorf("field `mountType` must be %q or %q for QEMU driver on non-Linux, got %q",
 			limayaml.REVSSHFS, limayaml.NINEP, *l.Instance.Config.MountType)
@@ -238,6 +247,27 @@ func waitFileExists(path string, timeout time.Duration) error {
 		}
 		time.Sleep(500 * time.Millisecond)
 	}
+	return nil
+}
+
+// Ask the user to sign the qemu binary with the "com.apple.security.hypervisor" if needed.
+// Workaround for https://github.com/lima-vm/lima/issues/1742
+func (l *LimaQemuDriver) checkBinarySignature() error {
+	macOSProductVersion, err := osutil.ProductVersion()
+	if err != nil {
+		return err
+	}
+	// The codesign --xml option is only available on macOS Monterey and later
+	if !macOSProductVersion.LessThan(*semver.New("12.0.0")) {
+		qExe, _, err := Exe(l.BaseDriver.Instance.Arch)
+		if err != nil {
+			return fmt.Errorf("failed to find the QEMU binary for the architecture %q: %w", l.BaseDriver.Instance.Arch, err)
+		}
+		if accel := Accel(l.BaseDriver.Instance.Arch); accel == "hvf" {
+			entitlementutil.AskToSignIfNotSignedProperly(qExe)
+		}
+	}
+
 	return nil
 }
 
