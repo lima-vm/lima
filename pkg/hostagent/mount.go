@@ -62,7 +62,7 @@ func (a *HostAgent) setupMount(m limayaml.Mount) (*mount, error) {
 		Driver:              *m.SSHFS.SFTPDriver,
 		SSHConfig:           a.sshConfig,
 		LocalPath:           resolvedLocation,
-		Host:                "127.0.0.1",
+		Host:                a.instSSHAddress,
 		Port:                a.sshLocalPort,
 		RemotePath:          *m.MountPoint,
 		Readonly:            !(*m.Writable),

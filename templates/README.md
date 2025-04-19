@@ -33,6 +33,9 @@ Distro:
 - [`experimental/opensuse-tumbleweed`](./experimental/opensuse-tumbleweed.yaml): [experimental] openSUSE Tumbleweed
 - [`experimental/debian-sid`](./experimental/debian-sid.yaml): [experimental] Debian Sid
 
+External:
+- [`experimental/ext`](./experimental/ext.yaml): [experimental] External Raspberry Pi Zero
+
 Container engines:
 - [`apptainer`](./apptainer.yaml): Apptainer
 - [`apptainer-rootful`](./apptainer-rootful.yaml): Apptainer (rootful)
