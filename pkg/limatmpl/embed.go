@@ -557,8 +557,7 @@ func (tmpl *Template) combineNetworks() {
 
 // yamlfmt will fail with a buffer overflow while trying to retain line breaks if the line
 // is longer than 64K. We will encode all text files that have a line that comes close.
-// maxLineLength is a constant; it is only a variable for the benefit of the unit tests.
-var maxLineLength = 65000
+const maxLineLength = 65000
 
 // encodeScriptReason returns the reason why a script needs to be base64 encoded or the empty string if it doesn't.
 func encodeScriptReason(script string) string {
