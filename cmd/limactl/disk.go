@@ -9,9 +9,11 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"text/tabwriter"
 
 	"github.com/docker/go-units"
+	"github.com/lima-vm/go-qcow2reader"
 	"github.com/lima-vm/lima/pkg/nativeimgutil"
 	"github.com/lima-vm/lima/pkg/qemu"
 	"github.com/lima-vm/lima/pkg/store"
@@ -44,6 +46,7 @@ func newDiskCommand() *cobra.Command {
 		newDiskDeleteCommand(),
 		newDiskUnlockCommand(),
 		newDiskResizeCommand(),
+		newDiskAddCommand(),
 	)
 	return diskCommand
 }
@@ -417,4 +420,66 @@ func diskResizeAction(cmd *cobra.Command, args []string) error {
 
 func diskBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 	return bashCompleteDiskNames(cmd)
+}
+
+func newDiskAddCommand() *cobra.Command {
+	diskAddCommand := &cobra.Command{
+		Use: "add existing DISK to Lima",
+		Example: `
+Add a disk:
+$ limactl disk add DISK`,
+		Short:             "Add existing to Lima",
+		Args:              WrapArgsError(cobra.ExactArgs(1)),
+		RunE:              diskAddAction,
+		ValidArgsFunction: diskBashComplete,
+	}
+
+	diskAddCommand.Flags().String("filename", "", "Path to disk image")
+	_ = diskAddCommand.MarkFlagRequired("filename")
+	return diskAddCommand
+}
+
+func diskAddAction(cmd *cobra.Command, args []string) error {
+	fName, err := cmd.Flags().GetString("filename")
+	if err != nil {
+		return err
+	}
+
+	f, err := os.Open(fName)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	img, err := qcow2reader.Open(f)
+	if err != nil {
+		return err
+	}
+
+	diskName := args[0]
+	diskSize := img.Size()
+	format := img.Type()
+
+	switch format {
+	case "qcow2", "raw":
+	default:
+		return fmt.Errorf(`disk format %q not supported, use "qcow2" or "raw" instead`, format)
+	}
+
+	diskDir, err := store.DiskDir(diskName)
+	if err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(diskDir, 0o755); err != nil {
+		return err
+	}
+
+	if err := os.Symlink(fName, filepath.Join(diskDir, "datadisk")); err != nil {
+		return err
+	}
+
+	logrus.Infof("Add %s with size %s to Lima", diskName, units.BytesSize(float64(diskSize)))
+
+	return nil
 }
