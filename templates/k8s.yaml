@@ -112,6 +112,7 @@ provision:
     apiServer:
       certSANs: # --apiserver-cert-extra-sans
       - "127.0.0.1"
+      - "192.168.5.15"
     networking:
       podSubnet: "10.244.0.0/16" # --pod-network-cidr
     ---
