@@ -467,8 +467,6 @@ check-generated:
 		((git diff $$(find . -name '*.pb.desc') | cat) && \
 		(echo "Please run 'make generate' when making changes to proto files and check-in the generated file changes" && false))
 
-LICENSES = Apache-2.0,BSD-2-Clause,BSD-2-Clause-FreeBSD,BSD-3-Clause,MIT,ISC,Python-2.0,PostgreSQL,X11,Zlib
-
 .PHONY: lint
 lint: check-generated
 	golangci-lint run ./...
@@ -476,7 +474,7 @@ lint: check-generated
 	ls-lint
 	find . -name '*.sh' ! -path "./.git/*" | xargs shellcheck
 	find . -name '*.sh' ! -path "./.git/*" | xargs shfmt -s -d
-	go-licenses check --include_tests ./... --allowed_licenses=$(LICENSES)
+	go-licenses check --include_tests ./... --allowed_licenses=$$(cat ./hack/allowed-licenses.txt)
 	ltag -t ./hack/ltag --check -v
 
 .PHONY: clean
