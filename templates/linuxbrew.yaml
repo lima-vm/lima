@@ -1,0 +1,40 @@
+# Homebrew on Linux.
+#
+# Useful for sandboxing `brew` in an isolated environment.
+#
+# This template does not use macOS as the guest OS, because it seems hard to automate
+# provisioning macOS instances (accept EULA, skip enabling iCloud, set up SSH...).
+
+minimumLimaVersion: 1.1.0
+
+base:
+- template://_images/ubuntu-lts
+# Remove this line to disable the mounts
+- template://_default/mounts
+
+# containerd should be installed via Homebrew when Homebrew supports it
+containerd:
+  system: false
+  user: false
+
+provision:
+- mode: data
+  path: /etc/profile.d/99-linuxbrew.sh
+  # nofile is increased due to https://github.com/Homebrew/brew/issues/9120
+  content: |
+    ulimit -n 65536
+    [ -e /home/linuxbrew/.linuxbrew/bin/brew ] && eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    command -v gcc >/dev/null 2>&1 && exit 0
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update
+    apt-get install -y build-essential
+- mode: user
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    [ -e /home/linuxbrew ] && exit 0
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"

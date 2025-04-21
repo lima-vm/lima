@@ -33,6 +33,9 @@ Distro:
 - [`experimental/opensuse-tumbleweed`](./experimental/opensuse-tumbleweed.yaml): [experimental] openSUSE Tumbleweed
 - [`experimental/debian-sid`](./experimental/debian-sid.yaml): [experimental] Debian Sid
 
+Alternative package managers:
+- [`linuxbrew.yaml`](./linuxbrew.yaml): [Homebrew](https://brew.sh) on Linux (Ubuntu)
+
 Container engines:
 - [`apptainer`](./apptainer.yaml): Apptainer
 - [`apptainer-rootful`](./apptainer-rootful.yaml): Apptainer (rootful)
