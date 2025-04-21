@@ -277,6 +277,7 @@ func Validate(y *LimaYAML, warn bool) error {
 			if _, err := os.Stat(playbook); err != nil {
 				return fmt.Errorf("field `provision[%d].playbook` refers to an inaccessible path: %q: %w", i, playbook, err)
 			}
+			logrus.Warnf("provision mode %q is deprecated, use `ansible-playbook %q` instead", ProvisionModeAnsible, playbook)
 		}
 		if strings.Contains(p.Script, "LIMA_CIDATA") {
 			logrus.Warn("provisioning scripts should not reference the LIMA_CIDATA variables")

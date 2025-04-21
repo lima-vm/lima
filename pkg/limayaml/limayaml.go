@@ -221,7 +221,7 @@ const (
 	ProvisionModeUser       ProvisionMode = "user"
 	ProvisionModeBoot       ProvisionMode = "boot"
 	ProvisionModeDependency ProvisionMode = "dependency"
-	ProvisionModeAnsible    ProvisionMode = "ansible"
+	ProvisionModeAnsible    ProvisionMode = "ansible" // DEPRECATED
 	ProvisionModeData       ProvisionMode = "data"
 )
 
@@ -230,7 +230,7 @@ type Provision struct {
 	SkipDefaultDependencyResolution *bool              `yaml:"skipDefaultDependencyResolution,omitempty" json:"skipDefaultDependencyResolution,omitempty"`
 	Script                          string             `yaml:"script" json:"script"`
 	File                            *LocatorWithDigest `yaml:"file,omitempty" json:"file,omitempty" jsonschema:"nullable"`
-	Playbook                        string             `yaml:"playbook,omitempty" json:"playbook,omitempty"`
+	Playbook                        string             `yaml:"playbook,omitempty" json:"playbook,omitempty"` // DEPRECATED
 	// All ProvisionData fields must be nil unless Mode is ProvisionModeData
 	ProvisionData `yaml:",inline"` // Flatten fields for "strict" YAML mode
 }
