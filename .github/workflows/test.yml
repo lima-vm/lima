@@ -65,7 +65,7 @@ jobs:
       run: go install github.com/google/go-licenses@v1.6.0
     - name: Check licenses
       # the allow list corresponds to https://github.com/cncf/foundation/blob/e5db022a0009f4db52b89d9875640cf3137153fe/allowed-third-party-license-policy.md
-      run: go-licenses check --include_tests  ./... --allowed_licenses=Apache-2.0,BSD-2-Clause,BSD-2-Clause-FreeBSD,BSD-3-Clause,MIT,ISC,Python-2.0,PostgreSQL,X11,Zlib
+      run: go-licenses check --include_tests  ./... --allowed_licenses=$(cat ./hack/allowed-licenses.txt)
     - name: Install ltag
       # The GitHub repo has been moved from kunalkushwaha/ltag to containerd/ltag,
       # but the Go module name is not changed yet: https://github.com/containerd/ltag/issues/17
