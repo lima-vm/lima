@@ -313,6 +313,13 @@ func watchHostAgentEvents(ctx context.Context, inst *store.Instance, haStdoutPat
 			if *inst.Config.Plain {
 				logrus.Infof("READY. Run `ssh -F %q %s` to open the shell.", inst.SSHConfigFile, inst.Hostname)
 			} else {
+				// Check if a shell session is already running
+				if _, err := os.Stat(filepath.Join(inst.Dir, "ssh.pid")); err == nil {
+					// Shell session exists, skip the READY message
+					_ = ShowMessage(inst)
+					err = nil
+					return true
+				}
 				logrus.Infof("READY. Run `%s` to open the shell.", LimactlShellCmd(inst.Name))
 			}
 			_ = ShowMessage(inst)
