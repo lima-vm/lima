@@ -12,9 +12,6 @@ The following features are experimental and subject to change:
 - `video.display: vnc` and relevant configuration (`video.vnc.display`)
 - `audio.device`
 - `mountInotify: true`
-- `base:` and variations like `base[]:` and `base[].url`
-- `provision[].file:` and alternative `provision[].file.url:`  
-- `probes[].file:` and alternative `probes[].file.url:`
 
 The following commands are experimental and subject to change:
 
