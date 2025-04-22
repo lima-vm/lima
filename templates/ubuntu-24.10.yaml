@@ -1,38 +1,5 @@
-minimumLimaVersion: "1.0.0"
-images:
-# Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
-- location: "https://cloud-images.ubuntu.com/releases/oracular/release-20250305/ubuntu-24.10-server-cloudimg-amd64.img"
-  arch: "x86_64"
-  digest: "sha256:c2c3ed89097c5f5c90ebbe45216d1569e3ea2d3c8d0993eeae74f859f6467cdb"
-- location: "https://cloud-images.ubuntu.com/releases/oracular/release-20250305/ubuntu-24.10-server-cloudimg-arm64.img"
-  arch: "aarch64"
-  digest: "sha256:9d8e0c98858d53866117d5c701a554a9d2434bedffec1c0ab7253691bfd2c70e"
-- location: "https://cloud-images.ubuntu.com/releases/oracular/release-20250305/ubuntu-24.10-server-cloudimg-riscv64.img"
-  arch: "riscv64"
-  digest: "sha256:be6109cfed964a2b745330681f7ec5b9ddc45bb180f41837b6e3969b4be9e8b5"
-- location: "https://cloud-images.ubuntu.com/releases/oracular/release-20250305/ubuntu-24.10-server-cloudimg-armhf.img"
-  arch: "armv7l"
-  digest: "sha256:8f3a22d7392512b56ffbcbf30d4f5df0805b7d515f08fb86c5a8f87405ca7f02"
-- location: "https://cloud-images.ubuntu.com/releases/oracular/release-20250305/ubuntu-24.10-server-cloudimg-s390x.img"
-  arch: "s390x"
-  digest: "sha256:98b19fee0742b4cfccbfcc72fa82f274355f01dd0e5216263a9988e79e6d03ab"
-# Fallback to the latest release image.
-# Hint: run `limactl prune` to invalidate the cache
-- location: "https://cloud-images.ubuntu.com/releases/oracular/release/ubuntu-24.10-server-cloudimg-amd64.img"
-  arch: "x86_64"
-- location: "https://cloud-images.ubuntu.com/releases/oracular/release/ubuntu-24.10-server-cloudimg-arm64.img"
-  arch: "aarch64"
-- location: "https://cloud-images.ubuntu.com/releases/oracular/release/ubuntu-24.10-server-cloudimg-riscv64.img"
-  arch: "riscv64"
-- location: "https://cloud-images.ubuntu.com/releases/oracular/release/ubuntu-24.10-server-cloudimg-armhf.img"
-  arch: "armv7l"
-- location: "https://cloud-images.ubuntu.com/releases/oracular/release/ubuntu-24.10-server-cloudimg-s390x.img"
-  arch: "s390x"
-mounts:
-- location: "~"
-- location: "/tmp/lima"
-  writable: true
+minimumLimaVersion: 1.1.0
 
-# 9p is broken in Linux v6.9, v6.10, and v6.11 (used by Ubuntu 24.10).
-# The issue was fixed in Linux v6.12-rc5 (https://github.com/torvalds/linux/commit/be2ca38).
-mountTypesUnsupported: ["9p"]
+base:
+- template://_images/ubuntu-24.10
+- template://_default/mounts

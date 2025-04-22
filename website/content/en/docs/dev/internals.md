@@ -135,6 +135,10 @@ The directory contains the following files:
 - `$LIMA_SHELL`: `lima ...` is expanded to `limactl shell --shell ${LIMA_SHELL} ...`.
   - No default : will use the user's shell configured inside the instance
 
+- `$LIMA_TEMPLATES_PATH`: A list of directories to locate templates via
+  the `template://` schema.
+  - Default: the `/usr/local/share/lima/templates` directory.
+
 - `$LIMA_WORKDIR`: `lima ...` is expanded to `limactl shell --workdir ${LIMA_WORKDIR} ...`.
   - No default : will attempt to use the current directory from the host
 

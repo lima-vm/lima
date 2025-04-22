@@ -29,3 +29,9 @@ _IPERF3=iperf3
 # https://github.com/lima-vm/socket_vmnet/issues/85
 [ "$(uname -s)" = "Darwin" ] && _IPERF3="iperf3-darwin"
 : "${IPERF3:=$_IPERF3}"
+
+# Setup LIMA_TEMPLATES_PATH because the templates are not installed, but reference base templates
+# via template://_images/* and template://_default/*.
+templates_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/../templates" && pwd)"
+: "${LIMA_TEMPLATES_PATH:-$templates_dir}"
+export LIMA_TEMPLATES_PATH

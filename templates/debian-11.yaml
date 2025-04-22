@@ -1,24 +1,5 @@
-# This template requires Lima v0.7.0 or later
-images:
-# Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
-- location: "https://cloud.debian.org/images/cloud/bullseye/20250303-2040/debian-11-genericcloud-amd64-20250303-2040.qcow2"
-  arch: "x86_64"
-  digest: "sha512:3c08356d6860f987089c14b45953fb1f266d1b1b50dd086744925e2ed4113b804e848a8b1b46614febc48cde759f18e824b76bfb02618ed6b3d06ed15ea99283"
-- location: "https://cloud.debian.org/images/cloud/bullseye/20250303-2040/debian-11-genericcloud-arm64-20250303-2040.qcow2"
-  arch: "aarch64"
-  digest: "sha512:c1a1645cf37ce628a8734bb25dce09fcd0858865302635ce0ae88b2da23bb615da43d483984709d743cd6b6b45d56d88e9f6800f0b3110ba1b09c01b990342f3"
-# Fallback to the latest release image.
-# Hint: run `limactl prune` to invalidate the cache
-- location: "https://cloud.debian.org/images/cloud/bullseye/latest/debian-11-genericcloud-amd64.qcow2"
-  arch: "x86_64"
-- location: "https://cloud.debian.org/images/cloud/bullseye/latest/debian-11-genericcloud-arm64.qcow2"
-  arch: "aarch64"
-mountTypesUnsupported: ["9p"]
-mounts:
-- location: "~"
-- location: "/tmp/lima"
-  writable: true
+minimumLimaVersion: 1.1.0
 
-# debian-11 seems incompatible with vz
-# https://github.com/lima-vm/lima/issues/2855
-vmType: "qemu"
+base:
+- template://_images/debian-11
+- template://_default/mounts

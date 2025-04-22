@@ -1,16 +1,11 @@
-images:
-- location: "https://dl-cdn.alpinelinux.org/alpine/v3.21/releases/cloud/nocloud_alpine-3.21.2-x86_64-uefi-cloudinit-r0.qcow2"
-  arch: "x86_64"
-  digest: "sha512:1aaf22b4a584e69e228e6aa38a295159c0143d9ccebe7ad4928e92b414714066af3bfe5f9e0ca4d4d64a70ca9fea09033af90258a6f2344130d70b660151127a"
-- location: "https://dl-cdn.alpinelinux.org/alpine/v3.21/releases/cloud/nocloud_alpine-3.21.2-aarch64-uefi-cloudinit-r0.qcow2"
-  arch: "aarch64"
-  digest: "sha512:08d340126b222abae651a20aa63c3ee3dc601d703de7879d2a6bc1fe82a3664d058a2c55ad0cf8a874327f7535e3af8a9384ce438217d6f32200cad1462a5b32"
-mounts:
-- location: "~"
-- location: "/tmp/lima"
-  writable: true
+minimumLimaVersion: 1.1.0
+
+base:
+- template://_images/alpine
+- template://_default/mounts
 
 # The built-in containerd installer does not support Alpine currently.
+# Use a provisioning script to install containerd, buildkit, and nerdctl.
 containerd:
   system: false
   user: false

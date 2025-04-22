@@ -10,19 +10,12 @@
 # $ export DOCKER_HOST=$(limactl list podman-rootful --format 'unix://{{.Dir}}/sock/podman.sock')
 # $ docker ...
 
-# This template requires Lima v0.20.0 or later
-images:
-- location: "https://download.fedoraproject.org/pub/fedora/linux/releases/41/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-41-1.4.x86_64.qcow2"
-  arch: "x86_64"
-  digest: "sha256:6205ae0c524b4d1816dbd3573ce29b5c44ed26c9fbc874fbe48c41c89dd0bac2"
-- location: "https://download.fedoraproject.org/pub/fedora/linux/releases/41/Cloud/aarch64/images/Fedora-Cloud-Base-Generic-41-1.4.aarch64.qcow2"
-  arch: "aarch64"
-  digest: "sha256:085883b42c7e3b980e366a1fe006cd0ff15877f7e6e984426f3c6c67c7cc2faa"
+minimumLimaVersion: 1.1.0
 
-mounts:
-- location: "~"
-- location: "/tmp/lima"
-  writable: true
+base:
+- template://_images/fedora-41
+- template://_default/mounts
+
 containerd:
   system: false
   user: false
@@ -68,7 +61,3 @@ message: |
   podman system connection default lima-{{.Name}}
   podman{{if eq .HostOS "linux"}} --remote{{end}} run quay.io/podman/hello
   ------
-
-# 9p is broken in Linux v6.9, v6.10, and v6.11 (used by Fedora 41).
-# The issue was fixed in Linux v6.12-rc5 (https://github.com/torvalds/linux/commit/be2ca38).
-mountTypesUnsupported: ["9p"]

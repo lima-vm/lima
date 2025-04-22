@@ -1,21 +1,5 @@
-# This template requires Lima v0.11.1 or later.
+minimumLimaVersion: 1.1.0
 
-images:
-- location: "https://dl.rockylinux.org/pub/rocky/9.5/images/x86_64/Rocky-9-GenericCloud-Base-9.5-20241118.0.x86_64.qcow2"
-  arch: "x86_64"
-  digest: "sha256:069493fdc807300a22176540e9171fcff2227a92b40a7985a0c1c9e21aeebf57"
-# No 20240609.1 for aarch64
-- location: "https://dl.rockylinux.org/pub/rocky/9.5/images/aarch64/Rocky-9-GenericCloud-Base-9.5-20241118.0.aarch64.qcow2"
-  arch: "aarch64"
-  digest: "sha256:5443bcc0507fadc3d7bd3e8d266135ab8db6966c703216933f824164fd3252f1"
-# Fallback to the latest release image.
-# Hint: run `limactl prune` to invalidate the cache
-- location: "https://dl.rockylinux.org/pub/rocky/9/images/x86_64/Rocky-9-GenericCloud.latest.x86_64.qcow2"
-  arch: "x86_64"
-- location: "https://dl.rockylinux.org/pub/rocky/9/images/aarch64/Rocky-9-GenericCloud.latest.aarch64.qcow2"
-  arch: "aarch64"
-mountTypesUnsupported: ["9p"]
-mounts:
-- location: "~"
-- location: "/tmp/lima"
-  writable: true
+base:
+- template://_images/rocky-9
+- template://_default/mounts

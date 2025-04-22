@@ -1,0 +1,39 @@
+images:
+# Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
+
+- location: https://cloud.centos.org/centos/10-stream/x86_64/images/CentOS-Stream-GenericCloud-10-20250317.0.x86_64.qcow2
+  arch: x86_64
+  digest: sha256:24578ef181b03ab577acaa885cbc24b1c91fbae613d50152796cbe6c2e004aab
+
+- location: https://cloud.centos.org/centos/10-stream/aarch64/images/CentOS-Stream-GenericCloud-10-20250317.0.aarch64.qcow2
+  arch: aarch64
+  digest: sha256:5cfd6199d9f9ada1e4e44113938981b2dce96ba3e9e670549e6e1c1a8e74f167
+
+- location: https://cloud.centos.org/centos/10-stream/s390x/images/CentOS-Stream-GenericCloud-10-20250317.0.s390x.qcow2
+  arch: s390x
+  digest: sha256:903b47d726fa9a892853cfb805d52a0bf75a7fc710169619bdaae7c3e3a00296
+
+# Fallback to the latest release image.
+# Hint: run `limactl prune` to invalidate the cache
+
+- location: https://cloud.centos.org/centos/10-stream/x86_64/images/CentOS-Stream-GenericCloud-10-latest.x86_64.qcow2
+  arch: x86_64
+
+- location: https://cloud.centos.org/centos/10-stream/aarch64/images/CentOS-Stream-GenericCloud-10-latest.aarch64.qcow2
+  arch: aarch64
+
+- location: https://cloud.centos.org/centos/10-stream/s390x/images/CentOS-Stream-GenericCloud-10-latest.s390x.qcow2
+  arch: s390x
+
+mountTypesUnsupported: [9p]
+
+firmware:
+  # CentOS Stream 10 still requires legacyBIOS
+  # https://issues.redhat.com/browse/CS-2672
+  legacyBIOS: true
+
+cpuType:
+  # When emulating Intel on ARM hosts, Lima uses the "qemu64" CPU by default (https://github.com/lima-vm/lima/pull/494).
+  # However, CentOS Stream 10 kernel reboots indefinitely due to lack of the support for x86_64-v3 instructions.
+  # This issue is tracked in <https://github.com/lima-vm/lima/issues/3063>.
+  x86_64: "Haswell-v4"

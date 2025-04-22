@@ -1,0 +1,40 @@
+images:
+# Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
+
+- location: https://cloud-images.ubuntu.com/releases/noble/release-20250313/ubuntu-24.04-server-cloudimg-amd64.img
+  arch: x86_64
+  digest: sha256:eacac65efe9e9bae0cbcb3f9d5c2b5e8c5313fa78a3bc401c3fb28b2d48cefc0
+
+- location: https://cloud-images.ubuntu.com/releases/noble/release-20250313/ubuntu-24.04-server-cloudimg-arm64.img
+  arch: aarch64
+  digest: sha256:103f31c5a5b7f031a60ce3555c8fbd56317fd8ffbaaa7e17002879e6157d546d
+
+- location: https://cloud-images.ubuntu.com/releases/noble/release-20250313/ubuntu-24.04-server-cloudimg-riscv64.img
+  arch: riscv64
+  digest: sha256:bfd6a91a7ee84e26f33ce6b2df2e415b038214db67f009206b40cf2e9158fc3f
+
+- location: https://cloud-images.ubuntu.com/releases/noble/release-20250313/ubuntu-24.04-server-cloudimg-armhf.img
+  arch: armv7l
+  digest: sha256:0b862b6a4811f23c76e292ffe5a7cd90a4f03db9f48f664a2a943b02f83621c3
+
+- location: https://cloud-images.ubuntu.com/releases/noble/release-20250313/ubuntu-24.04-server-cloudimg-s390x.img
+  arch: s390x
+  digest: sha256:7e7080ed67f148373ac9645f48fc3f4206fc1e8b517c316f3fc03fca9c04713c
+
+# Fallback to the latest release image.
+# Hint: run `limactl prune` to invalidate the cache
+
+- location: https://cloud-images.ubuntu.com/releases/noble/release/ubuntu-24.04-server-cloudimg-amd64.img
+  arch: x86_64
+
+- location: https://cloud-images.ubuntu.com/releases/noble/release/ubuntu-24.04-server-cloudimg-arm64.img
+  arch: aarch64
+
+- location: https://cloud-images.ubuntu.com/releases/noble/release/ubuntu-24.04-server-cloudimg-riscv64.img
+  arch: riscv64
+
+- location: https://cloud-images.ubuntu.com/releases/noble/release/ubuntu-24.04-server-cloudimg-armhf.img
+  arch: armv7l
+
+- location: https://cloud-images.ubuntu.com/releases/noble/release/ubuntu-24.04-server-cloudimg-s390x.img
+  arch: s390x

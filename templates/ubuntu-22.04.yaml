@@ -1,34 +1,5 @@
-minimumLimaVersion: "1.0.0"
-images:
-# Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
-- location: "https://cloud-images.ubuntu.com/releases/jammy/release-20250305/ubuntu-22.04-server-cloudimg-amd64.img"
-  arch: "x86_64"
-  digest: "sha256:eb4707ac0dec191347bb5123ad2fd2b372077a66e5300ddb4c0d16444f619fa6"
-- location: "https://cloud-images.ubuntu.com/releases/jammy/release-20250305/ubuntu-22.04-server-cloudimg-arm64.img"
-  arch: "aarch64"
-  digest: "sha256:46113bedf45e3429bc7e0a74e9bca0a75768c595f61ee45d9cd0141838bda2ca"
-- location: "https://cloud-images.ubuntu.com/releases/jammy/release-20250305/ubuntu-22.04-server-cloudimg-riscv64.img"
-  arch: "riscv64"
-  digest: "sha256:0cede637b61ff3575a7648414573d1ee31e36b0d014d3755fb84c7a32bff0bf1"
-- location: "https://cloud-images.ubuntu.com/releases/jammy/release-20250305/ubuntu-22.04-server-cloudimg-armhf.img"
-  arch: "armv7l"
-  digest: "sha256:852da1f71a43c7e4a782fb2ae93379eb5810cdd445570f807ede118926a11d06"
-- location: "https://cloud-images.ubuntu.com/releases/jammy/release-20250305/ubuntu-22.04-server-cloudimg-s390x.img"
-  arch: "s390x"
-  digest: "sha256:5caf61c680e6aa0b82265d93e953a6b49a5f7961ee2f5cedf8070b6efc9a2339"
-# Fallback to the latest release image.
-# Hint: run `limactl prune` to invalidate the cache
-- location: "https://cloud-images.ubuntu.com/releases/jammy/release/ubuntu-22.04-server-cloudimg-amd64.img"
-  arch: "x86_64"
-- location: "https://cloud-images.ubuntu.com/releases/jammy/release/ubuntu-22.04-server-cloudimg-arm64.img"
-  arch: "aarch64"
-- location: "https://cloud-images.ubuntu.com/releases/jammy/release/ubuntu-22.04-server-cloudimg-riscv64.img"
-  arch: "riscv64"
-- location: "https://cloud-images.ubuntu.com/releases/jammy/release/ubuntu-22.04-server-cloudimg-armhf.img"
-  arch: "armv7l"
-- location: "https://cloud-images.ubuntu.com/releases/jammy/release/ubuntu-22.04-server-cloudimg-s390x.img"
-  arch: "s390x"
-mounts:
-- location: "~"
-- location: "/tmp/lima"
-  writable: true
+minimumLimaVersion: 1.1.0
+
+base:
+- template://_images/ubuntu-22.04
+- template://_default/mounts

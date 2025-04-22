@@ -419,14 +419,19 @@ ifeq ($(native_compiling),true)
 endif
 
 ################################################################################
-schema-limayaml.json: _output/bin/limactl$(exe)
+default-template.yaml: _output/bin/limactl$(exe)
 ifeq ($(native_compiling),true)
-	$< generate-jsonschema --schemafile $@ templates/default.yaml
+	$< tmpl copy --embed-all templates/default.yaml $@
+endif
+
+schema-limayaml.json: _output/bin/limactl$(exe) default-template.yaml
+ifeq ($(native_compiling),true)
+	$< generate-jsonschema --schemafile $@ default-template.yaml
 endif
 
 .PHONY: check-jsonschema
-check-jsonschema: schema-limayaml.json
-	check-jsonschema --schemafile $< templates/default.yaml
+check-jsonschema: schema-limayaml.json default-template.yaml
+	check-jsonschema --schemafile schema-limayaml.json default-template.yaml
 
 ################################################################################
 .PHONY: diagrams

@@ -1,0 +1,33 @@
+# NOTE: EL8-based distros are known not to work on M1 chips: https://github.com/lima-vm/lima/issues/841
+# EL9-based distros are known to work.
+images:
+- location: https://repo.almalinux.org/almalinux/8.10/cloud/x86_64/images/AlmaLinux-8-GenericCloud-8.10-20240819.x86_64.qcow2
+  arch: x86_64
+  digest: sha256:669bd580dcef5491d4dfd5724d252cce7cde1b2b33a3ca951e688d71386875e3
+
+- location: https://repo.almalinux.org/almalinux/8.10/cloud/aarch64/images/AlmaLinux-8-GenericCloud-8.10-20240819.aarch64.qcow2
+  arch: aarch64
+  digest: sha256:cec6736cbc562d06895e218b6f022621343c553bfa79192ca491381b4636c7b8
+
+- location: https://repo.almalinux.org/almalinux/8.10/cloud/s390x/images/AlmaLinux-8-GenericCloud-8.10-20240819.s390x.qcow2
+  arch: s390x
+  digest: sha256:7f8866a4247ad57c81f5d2c5a0fa64940691f9df1e858a1510d34a0de008eb16
+
+# Fallback to the latest release image.
+# Hint: run `limactl prune` to invalidate the cache
+
+- location: https://repo.almalinux.org/almalinux/8/cloud/x86_64/images/AlmaLinux-8-GenericCloud-latest.x86_64.qcow2
+  arch: x86_64
+
+- location: https://repo.almalinux.org/almalinux/8/cloud/aarch64/images/AlmaLinux-8-GenericCloud-latest.aarch64.qcow2
+  arch: aarch64
+
+- location: https://repo.almalinux.org/almalinux/8/cloud/s390x/images/AlmaLinux-8-GenericCloud-latest.s390x.qcow2
+  arch: s390x
+
+mountTypesUnsupported: [9p]
+
+cpuType:
+  # Workaround for "vmx_write_mem: mmu_gva_to_gpa XXXXXXXXXXXXXXXX failed" on Intel Mac
+  # https://bugs.launchpad.net/qemu/+bug/1838390
+  x86_64: Haswell-v4
