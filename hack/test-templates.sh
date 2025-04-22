@@ -22,8 +22,8 @@ FILE="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
 NAME="$(basename -s .yaml "$FILE")"
 OS_HOST="$(uname -o)"
 
-# On Windows $HOME of the bash runner, %USERPROFILE% of the host machine and mpunting point in the guest machine
-# are all different folders. This will handle path differences, when values are expilictly set.
+# On Windows $HOME of the bash runner, %USERPROFILE% of the host machine and mounting point in the guest machine
+# are all different folders. This will handle path differences, when values are explicitly set.
 HOME_HOST=${HOME_HOST:-$HOME}
 HOME_GUEST=${HOME_GUEST:-$HOME}
 FILE_HOST=$FILE

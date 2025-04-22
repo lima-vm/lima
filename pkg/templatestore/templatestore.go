@@ -4,6 +4,8 @@
 package templatestore
 
 import (
+	"errors"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -20,9 +22,15 @@ type Template struct {
 }
 
 func Read(name string) ([]byte, error) {
-	dir, err := usrlocalsharelima.Dir()
-	if err != nil {
-		return nil, err
+	var pathList []string
+	if tmplPath := os.Getenv("LIMA_TEMPLATES_PATH"); tmplPath != "" {
+		pathList = strings.Split(tmplPath, string(filepath.ListSeparator))
+	} else {
+		dir, err := usrlocalsharelima.Dir()
+		if err != nil {
+			return nil, err
+		}
+		pathList = []string{filepath.Join(dir, "templates")}
 	}
 	ext := filepath.Ext(name)
 	// Append .yaml extension if name doesn't have an extension, or if it starts with a digit.
@@ -30,11 +38,16 @@ func Read(name string) ([]byte, error) {
 	if len(ext) < 2 || unicode.IsDigit(rune(ext[1])) {
 		name += ".yaml"
 	}
-	filePath, err := securejoin.SecureJoin(filepath.Join(dir, "templates"), name)
-	if err != nil {
-		return nil, err
+	for _, path := range pathList {
+		filePath, err := securejoin.SecureJoin(path, name)
+		if err != nil {
+			return nil, err
+		}
+		if b, err := os.ReadFile(filePath); !errors.Is(err, os.ErrNotExist) {
+			return b, err
+		}
 	}
-	return os.ReadFile(filePath)
+	return nil, fmt.Errorf("template %q not found", name)
 }
 
 const Default = "default"

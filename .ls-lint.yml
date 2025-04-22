@@ -19,6 +19,10 @@ ls:
   docs:
     .md: kebab-case
 
+  templates:
+    # _default and _images have leading underscores
+    .dir: lowercase
+
   website/content:
     .dir: lowercase
 

@@ -1,0 +1,4 @@
+mounts:
+- location: "~"
+- location: "/tmp/lima"
+  writable: true

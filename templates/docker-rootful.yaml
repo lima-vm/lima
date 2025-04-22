@@ -6,25 +6,12 @@
 # $ export DOCKER_HOST=$(limactl list docker-rootful --format 'unix://{{.Dir}}/sock/docker.sock')
 # $ docker ...
 
-# This template requires Lima v0.20.0 or later
-images:
-# Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
-- location: "https://cloud-images.ubuntu.com/releases/noble/release-20250313/ubuntu-24.04-server-cloudimg-amd64.img"
-  arch: "x86_64"
-  digest: "sha256:eacac65efe9e9bae0cbcb3f9d5c2b5e8c5313fa78a3bc401c3fb28b2d48cefc0"
-- location: "https://cloud-images.ubuntu.com/releases/noble/release-20250313/ubuntu-24.04-server-cloudimg-arm64.img"
-  arch: "aarch64"
-  digest: "sha256:103f31c5a5b7f031a60ce3555c8fbd56317fd8ffbaaa7e17002879e6157d546d"
-# Fallback to the latest release image.
-# Hint: run `limactl prune` to invalidate the cache
-- location: "https://cloud-images.ubuntu.com/releases/noble/release/ubuntu-24.04-server-cloudimg-amd64.img"
-  arch: "x86_64"
-- location: "https://cloud-images.ubuntu.com/releases/noble/release/ubuntu-24.04-server-cloudimg-arm64.img"
-  arch: "aarch64"
-mounts:
-- location: "~"
-- location: "/tmp/lima"
-  writable: true
+minimumLimaVersion: 1.1.0
+
+base:
+- template://_images/ubuntu-lts
+- template://_default/mounts
+
 # containerd is managed by Docker, not by Lima, so the values are set to false here.
 containerd:
   system: false

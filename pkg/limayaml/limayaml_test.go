@@ -37,6 +37,8 @@ func TestDefaultYAML(t *testing.T) {
 	assert.NilError(t, err)
 	y.Images = nil                // remove default images
 	y.Mounts = nil                // remove default mounts
+	y.Base = nil                  // remove default base templates
+	y.MinimumLimaVersion = nil    // remove minimum Lima version
 	y.MountTypesUnsupported = nil // remove default workaround for kernel 6.9-6.11
 	t.Log(dumpJSON(t, y))
 	b, err := Marshal(&y, false)

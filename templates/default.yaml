@@ -16,37 +16,11 @@ vmType: null
 arch: null
 
 # OpenStack-compatible disk image.
+# Each image has a `location` URL for the disk image, an `arch` setting, and an optional `digest`.
 # 🟢 Builtin default: none (must be specified)
-# 🔵 This file: Ubuntu images
-images:
-# Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
-- location: "https://cloud-images.ubuntu.com/releases/oracular/release-20250305/ubuntu-24.10-server-cloudimg-amd64.img"
-  arch: "x86_64"
-  digest: "sha256:c2c3ed89097c5f5c90ebbe45216d1569e3ea2d3c8d0993eeae74f859f6467cdb"
-- location: "https://cloud-images.ubuntu.com/releases/oracular/release-20250305/ubuntu-24.10-server-cloudimg-arm64.img"
-  arch: "aarch64"
-  digest: "sha256:9d8e0c98858d53866117d5c701a554a9d2434bedffec1c0ab7253691bfd2c70e"
-- location: "https://cloud-images.ubuntu.com/releases/oracular/release-20250305/ubuntu-24.10-server-cloudimg-riscv64.img"
-  arch: "riscv64"
-  digest: "sha256:be6109cfed964a2b745330681f7ec5b9ddc45bb180f41837b6e3969b4be9e8b5"
-- location: "https://cloud-images.ubuntu.com/releases/oracular/release-20250305/ubuntu-24.10-server-cloudimg-armhf.img"
-  arch: "armv7l"
-  digest: "sha256:8f3a22d7392512b56ffbcbf30d4f5df0805b7d515f08fb86c5a8f87405ca7f02"
-- location: "https://cloud-images.ubuntu.com/releases/oracular/release-20250305/ubuntu-24.10-server-cloudimg-s390x.img"
-  arch: "s390x"
-  digest: "sha256:98b19fee0742b4cfccbfcc72fa82f274355f01dd0e5216263a9988e79e6d03ab"
-# Fallback to the latest release image.
-# Hint: run `limactl prune` to invalidate the cache
-- location: "https://cloud-images.ubuntu.com/releases/oracular/release/ubuntu-24.10-server-cloudimg-amd64.img"
-  arch: "x86_64"
-- location: "https://cloud-images.ubuntu.com/releases/oracular/release/ubuntu-24.10-server-cloudimg-arm64.img"
-  arch: "aarch64"
-- location: "https://cloud-images.ubuntu.com/releases/oracular/release/ubuntu-24.10-server-cloudimg-riscv64.img"
-  arch: "riscv64"
-- location: "https://cloud-images.ubuntu.com/releases/oracular/release/ubuntu-24.10-server-cloudimg-armhf.img"
-  arch: "armv7l"
-- location: "https://cloud-images.ubuntu.com/releases/oracular/release/ubuntu-24.10-server-cloudimg-s390x.img"
-  arch: "s390x"
+# 🔵 This file: Ubuntu images (inherited via the `base` mechanism later in this file)
+images: []
+
 # CPUs
 # 🟢 Builtin default: min(4, host CPU cores)
 cpus: null
@@ -63,51 +37,51 @@ disk: null
 # "location" can use these template variables: {{.Home}}, {{.Dir}}, {{.Name}}, {{.UID}}, {{.User}}, and {{.Param.Key}}.
 # "mountPoint" can use these template variables: {{.Home}}, {{.Name}}, {{.Hostname}}, {{.UID}}, {{.User}}, and {{.Param.Key}}.
 # 🟢 Builtin default: [] (Mount nothing)
-# 🔵 This file: Mount the home as read-only, /tmp/lima as writable
-mounts:
-- location: "~"
-  # Configure the mountPoint inside the guest.
-  # 🟢 Builtin default: value of location
-  mountPoint: null
-  # Setting `writable` to true is discouraged when mountType is set to "reverse-sshfs".
-  # 🟢 Builtin default: false
-  writable: null
-  sshfs:
-    # Enabling the SSHFS cache will increase performance of the mounted filesystem, at
-    # the cost of potentially not reflecting changes made on the host in a timely manner.
-    # Warning: It looks like PHP filesystem access does not work correctly when
-    # the cache is disabled.
-    # 🟢 Builtin default: true
-    cache: null
-    # SSHFS has an optional flag called 'follow_symlinks'. This allows mounts
-    # to be properly resolved in the guest os and allow for access to the
-    # contents of the symlink. As a result, symlinked files & folders on the Host
-    # system will look and feel like regular files directories in the Guest OS.
-    # 🟢 Builtin default: false
-    followSymlinks: null
-    # SFTP driver, "builtin" or "openssh-sftp-server". "openssh-sftp-server" is recommended.
-    # 🟢 Builtin default: "openssh-sftp-server" if OpenSSH SFTP Server binary is found, otherwise "builtin"
-    sftpDriver: null
-  9p:
-    # Supported security models are "passthrough", "mapped-xattr", "mapped-file" and "none".
-    # "mapped-xattr" and "mapped-file" are useful for persistent chown but incompatible with symlinks.
-    # 🟢 Builtin default: "none" (since Lima v0.13)
-    securityModel: null
-    # Select 9P protocol version. Valid options are: "9p2000" (legacy), "9p2000.u", "9p2000.L".
-    # 🟢 Builtin default: "9p2000.L"
-    protocolVersion: null
-    # The number of bytes to use for 9p packet payload, where 4KiB is the absolute minimum.
-    # 🟢 Builtin default: "128KiB"
-    msize: null
-    # Specifies a caching policy. Valid options are: "none", "loose", "fscache" and "mmap".
-    # Try choosing "mmap" or "none" if you see a stability issue with the default "fscache".
-    # See https://www.kernel.org/doc/Documentation/filesystems/9p.txt
-    # 🟢 Builtin default: "fscache" for non-writable mounts, "mmap" for writable mounts
-    cache: null
-- location: "/tmp/lima"
-  # 🟢 Builtin default: false
-  # 🔵 This file: true (only for "/tmp/lima")
-  writable: true
+# 🔵 This file: Mount the home as read-only, /tmp/lima as writable  (inherited via the `base` mechanism later in this file)
+mounts: []
+#- location: "~"
+#  # Configure the mountPoint inside the guest.
+#  # 🟢 Builtin default: value of location
+#  mountPoint: null
+#  # Setting `writable` to true is discouraged when mountType is set to "reverse-sshfs".
+#  # 🟢 Builtin default: false
+#  writable: null
+#  sshfs:
+#    # Enabling the SSHFS cache will increase performance of the mounted filesystem, at
+#    # the cost of potentially not reflecting changes made on the host in a timely manner.
+#    # Warning: It looks like PHP filesystem access does not work correctly when
+#    # the cache is disabled.
+#    # 🟢 Builtin default: true
+#    cache: null
+#    # SSHFS has an optional flag called 'follow_symlinks'. This allows mounts
+#    # to be properly resolved in the guest os and allow for access to the
+#    # contents of the symlink. As a result, symlinked files & folders on the Host
+#    # system will look and feel like regular files directories in the Guest OS.
+#    # 🟢 Builtin default: false
+#    followSymlinks: null
+#    # SFTP driver, "builtin" or "openssh-sftp-server". "openssh-sftp-server" is recommended.
+#    # 🟢 Builtin default: "openssh-sftp-server" if OpenSSH SFTP Server binary is found, otherwise "builtin"
+#    sftpDriver: null
+#  9p:
+#    # Supported security models are "passthrough", "mapped-xattr", "mapped-file" and "none".
+#    # "mapped-xattr" and "mapped-file" are useful for persistent chown but incompatible with symlinks.
+#    # 🟢 Builtin default: "none" (since Lima v0.13)
+#    securityModel: null
+#    # Select 9P protocol version. Valid options are: "9p2000" (legacy), "9p2000.u", "9p2000.L".
+#    # 🟢 Builtin default: "9p2000.L"
+#    protocolVersion: null
+#    # The number of bytes to use for 9p packet payload, where 4KiB is the absolute minimum.
+#    # 🟢 Builtin default: "128KiB"
+#    msize: null
+#    # Specifies a caching policy. Valid options are: "none", "loose", "fscache" and "mmap".
+#    # Try choosing "mmap" or "none" if you see a stability issue with the default "fscache".
+#    # See https://www.kernel.org/doc/Documentation/filesystems/9p.txt
+#    # 🟢 Builtin default: "fscache" for non-writable mounts, "mmap" for writable mounts
+#    cache: null
+#- location: "/tmp/lima"
+#  # 🟢 Builtin default: false
+#  # 🔵 This file: true (only for "/tmp/lima")
+#  writable: true
 
 # List of mount types not supported by the kernel of this distro.
 # Also used to resolve the default mount type when not explicitly specified.
@@ -305,7 +279,8 @@ containerd:
 # A template should specify the minimum Lima version required to parse this template correctly.
 # It should not be set if the minimum version is less than 1.0.0
 # 🟢 Builtin default: not set
-minimumLimaVersion: null
+# 🔵 This file: "1.1.0" to use the `base` templating mechanism
+minimumLimaVersion: 1.1.0
 
 # EXPERIMENTAL
 # Default settings can be imported from base templates. These will be merged in when the instance
@@ -316,7 +291,10 @@ minimumLimaVersion: null
 # The "digest" property is currently unused.
 # Any relative base template name will be resolved relative to the location of the main template.
 # 🟢 Builtin default: no base template
-base: null
+# 🔵 This file: Ubuntu images and default mount points
+base:
+- template://_images/ubuntu
+- template://_default/mounts
 
 # User to be used inside the VM
 user:

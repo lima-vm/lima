@@ -374,7 +374,10 @@ func createStartActionCommon(cmd *cobra.Command, _ []string) (exit bool, err err
 		if templates, err := templatestore.Templates(); err == nil {
 			w := cmd.OutOrStdout()
 			for _, f := range templates {
-				_, _ = fmt.Fprintln(w, f.Name)
+				// Don't show internal base templates like `_default/*` and `_images/*`.
+				if !strings.HasPrefix(f.Name, "_") {
+					_, _ = fmt.Fprintln(w, f.Name)
+				}
 			}
 			return true, nil
 		}
