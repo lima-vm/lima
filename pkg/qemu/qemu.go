@@ -1216,7 +1216,10 @@ func getFirmware(qemuExe string, arch limayaml.Arch) (string, error) {
 		// Fedora package "edk2-arm"
 		candidates = append(candidates, "/usr/share/AAVMF/AAVMF32_CODE.fd")
 	case limayaml.RISCV64:
-		// NOP, as EDK2 for RISCV64 is not packaged yet in well-known distros.
+		// Debian package "qemu-efi-riscv64"
+		candidates = append(candidates, "/usr/share/qemu-efi-riscv64/RISCV_VIRT_CODE.fd")
+		// Fedora package "edk2-riscv64"
+		candidates = append(candidates, "/usr/share/edk2/riscv/RISCV_VIRT_CODE.fd")
 	}
 
 	logrus.Debugf("firmware candidates = %v", candidates)
