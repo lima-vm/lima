@@ -148,7 +148,7 @@ func TestFillDefault(t *testing.T) {
 		Mounts: []Mount{
 			// Location will be passed through localpathutil.Expand() which will normalize the name
 			// (add a drive letter). So we must start with a valid local path to match it again later.
-			{Location: filepath.Clean(os.TempDir())},
+			{Location: filepath.Clean(t.TempDir())},
 			{Location: "{{.Dir}}/{{.Param.ONE}}", MountPoint: ptr.Of("/mnt/{{.Param.ONE}}")},
 		},
 		MountType: ptr.Of(NINEP),

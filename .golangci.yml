@@ -26,6 +26,7 @@ linters:
   - revive
   - staticcheck
   - unused
+  - usetesting
   - whitespace
   settings:
     depguard:
@@ -119,6 +120,8 @@ linters:
       - -ST1000
       - -ST1001  # duplicates revive.dot-imports
       - -ST1022
+    usetesting:
+      os-temp-dir: true
   exclusions:
     presets:
     - common-false-positives
