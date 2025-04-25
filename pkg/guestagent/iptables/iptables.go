@@ -68,29 +68,29 @@ func GetPorts() ([]Entry, error) {
 func parsePortsFromRules(rules []string) ([]Entry, error) {
 	var entries []Entry
 	for _, rule := range rules {
-		if found := findPortRegex.FindStringSubmatch(rule); found != nil {
-			if len(found) == 4 {
-				port64, err := strconv.ParseInt(found[3], 10, 32)
-				if err != nil {
-					return nil, err
-				}
-				port := int(port64)
-
-				istcp := found[2] == "tcp"
-
-				// When no IP is present the rule applies to all interfaces.
-				ip := found[1]
-				if ip == "" {
-					ip = "0.0.0.0"
-				}
-				ent := Entry{
-					IP:   net.ParseIP(ip),
-					Port: port,
-					TCP:  istcp,
-				}
-				entries = append(entries, ent)
-			}
+		found := findPortRegex.FindStringSubmatch(rule)
+		if len(found) != 4 {
+			continue
 		}
+		port64, err := strconv.ParseInt(found[3], 10, 32)
+		if err != nil {
+			return nil, err
+		}
+		port := int(port64)
+
+		isTCP := found[2] == "tcp"
+
+		// When no IP is present the rule applies to all interfaces.
+		ip := found[1]
+		if ip == "" {
+			ip = "0.0.0.0"
+		}
+		ent := Entry{
+			IP:   net.ParseIP(ip),
+			Port: port,
+			TCP:  isTCP,
+		}
+		entries = append(entries, ent)
 	}
 
 	return entries, nil
