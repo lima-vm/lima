@@ -24,14 +24,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var warnBaseIsExperimental = sync.OnceFunc(func() {
-	logrus.Warn("`base` is experimental")
-})
-
-var warnFileIsExperimental = sync.OnceFunc(func() {
-	logrus.Warn("`provision[*].file` and `probes[*].file` are experimental")
-})
-
 // Embed will recursively resolve all "base" dependencies and update the
 // template with the merged result. It also inlines all external provisioning
 // and probe scripts.
@@ -114,7 +106,6 @@ func (tmpl *Template) embedAllBases(ctx context.Context, embedAll, defaultBase b
 }
 
 func (tmpl *Template) embedBase(ctx context.Context, baseLocator limayaml.LocatorWithDigest, embedAll bool, seen map[string]bool) error {
-	warnBaseIsExperimental()
 	logrus.Debugf("Embedding base %q in template %q", baseLocator.URL, tmpl.Locator)
 	if err := tmpl.Unmarshal(); err != nil {
 		return err
@@ -632,7 +623,6 @@ func (tmpl *Template) embedAllScripts(ctx context.Context, embedAll bool) error 
 		if p.File == nil {
 			continue
 		}
-		warnFileIsExperimental()
 		// Don't overwrite existing script. This should throw an error during validation.
 		if p.Script != "" {
 			continue
@@ -650,7 +640,6 @@ func (tmpl *Template) embedAllScripts(ctx context.Context, embedAll bool) error 
 		if p.File == nil {
 			continue
 		}
-		warnFileIsExperimental()
 		newName := "script"
 		switch p.Mode {
 		case limayaml.ProvisionModeData:
