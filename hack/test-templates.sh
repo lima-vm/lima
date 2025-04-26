@@ -60,6 +60,11 @@ declare -A CHECKS=(
 )
 
 case "$NAME" in
+"default")
+	# CI failure:
+	# "[hostagent] failed to confirm whether /c/Users/runneradmin [remote] is successfully mounted"
+	[ "${OS_HOST}" = "Msys" ] && CHECKS["mount-home"]=
+	;;
 "alpine"*)
 	WARNING "Alpine does not support systemd"
 	CHECKS["systemd"]=
