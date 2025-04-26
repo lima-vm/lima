@@ -124,10 +124,15 @@ if [[ -n ${CHECKS["port-forwards"]} ]]; then
 	INFO "Setup port forwarding rules for testing in \"${FILE}\""
 	"${scriptdir}/test-port-forwarding.pl" "${FILE}"
 	INFO "Validating \"$FILE_HOST\""
+	echo "Tmpconfig dir ${tmpconfig}"
+	ls -l "${tmpconfig}"
 	limactl validate "$FILE_HOST"
+	ls -l "${tmpconfig}"
+	cat "$FILE_HOST"
 fi
 
 INFO "Make sure template embedding copies \"$FILE_HOST\" exactly"
+ls -l "/c/Users/runneradmin/lima-config-tmp"
 diff -u <(echo -n "base: $FILE_HOST" | limactl tmpl copy --embed - -) "$FILE_HOST"
 
 function diagnose() {
