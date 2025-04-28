@@ -11,10 +11,12 @@ import (
 
 // Parse parses a Lima version string by removing the leading "v" character and
 // stripping everything from the first "-" forward (which are `git describe` artifacts and
-// not semver pre-release markers). So "v0.19.1-16-gf3dc6ed.m" will be parsed as "0.19.1".
+// not semver pre-release markers) or cutting ".m" suffix from exact version.
+// So "v0.19.1-16-gf3dc6ed.m" will be parsed as "0.19.1".
 func Parse(version string) (*semver.Version, error) {
 	version = strings.TrimPrefix(version, "v")
 	version, _, _ = strings.Cut(version, "-")
+	version = strings.TrimSuffix(version, ".m")
 	return semver.NewVersion(version)
 }
 
