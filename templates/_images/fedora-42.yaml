@@ -7,6 +7,9 @@ images:
   arch: aarch64
   digest: sha256:e10658419a8d50231037dc781c3155aa94180a8c7a74e5cac2a6b09eaa9342b7
 
+- location: https://dl.fedoraproject.org/pub/alt/risc-v/release/42/Cloud/riscv64/images/Fedora-Cloud-Base-Generic-42.20250414-8635a3a5bfcd.riscv64.qcow2
+  arch: riscv64
+  digest: sha256:537c67710f4f1c9112fecaafafc293b649acd1d35b46619b97b5a5a0132241b0
 
 # # NOTE: Intel Mac requires setting vmType to qemu
 # # https://github.com/lima-vm/lima/issues/3334

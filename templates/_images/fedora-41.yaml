@@ -7,6 +7,10 @@ images:
   arch: aarch64
   digest: sha256:085883b42c7e3b980e366a1fe006cd0ff15877f7e6e984426f3c6c67c7cc2faa
 
+- location: https://dl.fedoraproject.org/pub/alt/risc-v/release/41/Cloud/riscv64/images/Fedora-Cloud-Base-Generic-41.20250224-1026a2d0e311.riscv64.qcow2
+  arch: riscv64
+  digest: sha256:6a8272a858d7f1498f49ce362b34f0b9b959885f63285158947e045abfeece40
+
 # 9p is broken in Linux v6.9, v6.10, and v6.11 (used by Fedora 41).
 # The issue was fixed in Linux v6.12-rc5 (https://github.com/torvalds/linux/commit/be2ca38).
 mountTypesUnsupported: [9p]
