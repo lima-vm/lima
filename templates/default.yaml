@@ -230,6 +230,8 @@ containerd:
 # # It requires `ansible-playbook` command to be installed.
 # # Environment variables such as ANSIBLE_CONFIG can be used, to control the behavior of the playbook execution.
 # # See ansible docs, and `ansible-config`, for more info https://docs.ansible.com/ansible/latest/playbook_guide/
+# # DEPRECATED The ansible mode is deprecated, and should not be used. Instead call ansible-playbook directly,
+# # either from the host after the instance is started or from the instance by running ansible locally instead.
 # - mode: ansible
 #   playbook: playbook.yaml
 # # `data` is a file that is written to the guest filesystem and not executed at all.
