@@ -454,12 +454,12 @@ func startAction(cmd *cobra.Command, args []string) error {
 	return instance.Start(ctx, inst, "", launchHostAgentForeground)
 }
 
-func createBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
-	return bashCompleteTemplateNames(cmd)
+func createBashComplete(cmd *cobra.Command, _ []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return bashCompleteTemplateNames(cmd, toComplete)
 }
 
-func startBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
+func startBashComplete(cmd *cobra.Command, _ []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 	compInst, _ := bashCompleteInstanceNames(cmd)
-	compTmpl, _ := bashCompleteTemplateNames(cmd)
+	compTmpl, _ := bashCompleteTemplateNames(cmd, toComplete)
 	return append(compInst, compTmpl...), cobra.ShellCompDirectiveDefault
 }
