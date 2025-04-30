@@ -4,6 +4,8 @@
 package main
 
 import (
+	"strings"
+
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/templatestore"
 	"github.com/spf13/cobra"
@@ -17,11 +19,25 @@ func bashCompleteInstanceNames(_ *cobra.Command) ([]string, cobra.ShellCompDirec
 	return instances, cobra.ShellCompDirectiveNoFileComp
 }
 
-func bashCompleteTemplateNames(_ *cobra.Command) ([]string, cobra.ShellCompDirective) {
+func bashCompleteTemplateNames(_ *cobra.Command, toComplete string) ([]string, cobra.ShellCompDirective) {
 	var comp []string
 	if templates, err := templatestore.Templates(); err == nil {
 		for _, f := range templates {
-			comp = append(comp, "template://"+f.Name)
+			name := "template://" + f.Name
+			if !strings.HasPrefix(name, toComplete) {
+				continue
+			}
+			if len(toComplete) == len(name) {
+				comp = append(comp, name)
+				continue
+			}
+
+			// Skip private snippets (beginning with '_') from completion.
+			if (name[len(toComplete)-1] == '/') && (name[len(toComplete)] == '_') {
+				continue
+			}
+
+			comp = append(comp, name)
 		}
 	}
 	return comp, cobra.ShellCompDirectiveDefault
