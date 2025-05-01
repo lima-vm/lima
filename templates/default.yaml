@@ -34,7 +34,8 @@ memory: null
 disk: null
 
 # Expose host directories to the guest, the mount point might be accessible from all UIDs in the guest
-# "location" can use these template variables: {{.Home}}, {{.Dir}}, {{.Name}}, {{.UID}}, {{.User}}, and {{.Param.Key}}.
+# "location" can use these template variables: {{.Home}}, {{.Dir}}, {{.Name}}, {{.UID}}, {{.User}}, {{.Param.Key}},
+# {{.GlobalTempDir}}, and {{.TempDir}}. The global temp dir is always "/tmp" on Unix.
 # "mountPoint" can use these template variables: {{.Home}}, {{.Name}}, {{.Hostname}}, {{.UID}}, {{.User}}, and {{.Param.Key}}.
 # 🟢 Builtin default: [] (Mount nothing)
 # 🔵 This file: Mount the home as read-only, /tmp/lima as writable  (inherited via the `base` mechanism later in this file)

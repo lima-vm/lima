@@ -738,7 +738,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string, warn bool) {
 	location := make(map[string]int)
 	for _, mount := range slices.Concat(d.Mounts, y.Mounts, o.Mounts) {
 		if out, err := executeHostTemplate(mount.Location, instDir, y.Param); err == nil {
-			mount.Location = out.String()
+			mount.Location = filepath.Clean(out.String())
 		} else {
 			logrus.WithError(err).Warnf("Couldn't process mount location %q as a template", mount.Location)
 		}
@@ -955,14 +955,22 @@ func executeHostTemplate(format, instDir string, param map[string]string) (bytes
 	tmpl, err := template.New("").Parse(format)
 	if err == nil {
 		limaHome, _ := dirnames.LimaDir()
+		globalTempDir := "/tmp"
+		if runtime.GOOS == "windows" {
+			// On Windows the global temp directory "%SystemRoot%\Temp" (normally "C:\Windows\Temp")
+			// is not writable by regular users.
+			globalTempDir = os.TempDir()
+		}
 		data := map[string]any{
 			"Dir":  instDir,
 			"Name": filepath.Base(instDir),
 			// TODO: add hostname fields for the host and the guest
-			"UID":   currentUser.Uid,
-			"User":  currentUser.Username,
-			"Home":  userHomeDir,
-			"Param": param,
+			"UID":           currentUser.Uid,
+			"User":          currentUser.Username,
+			"Home":          userHomeDir,
+			"Param":         param,
+			"GlobalTempDir": globalTempDir,
+			"TempDir":       os.TempDir(),
 
 			"Instance": filepath.Base(instDir), // DEPRECATED, use `{{.Name}}`
 			"LimaHome": limaHome,               // DEPRECATED, use `{{.Dir}}` instead of `{{.LimaHome}}/{{.Instance}}`

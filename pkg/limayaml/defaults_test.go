@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"slices"
@@ -146,10 +147,9 @@ func TestFillDefault(t *testing.T) {
 			},
 		},
 		Mounts: []Mount{
-			// Location will be passed through localpathutil.Expand() which will normalize the name
-			// (add a drive letter). So we must start with a valid local path to match it again later.
-			{Location: filepath.Clean(t.TempDir())},
-			{Location: "{{.Dir}}/{{.Param.ONE}}", MountPoint: ptr.Of("/mnt/{{.Param.ONE}}")},
+			//nolint:usetesting // We need the OS temp directory name here; it is not used to create temp files for testing
+			{Location: filepath.Clean(os.TempDir())},
+			{Location: filepath.Clean("{{.Dir}}/{{.Param.ONE}}"), MountPoint: ptr.Of("/mnt/{{.Param.ONE}}")},
 		},
 		MountType: ptr.Of(NINEP),
 		Provision: []Provision{
@@ -240,7 +240,7 @@ func TestFillDefault(t *testing.T) {
 	expect.Mounts[0].Virtiofs.QueueSize = nil
 	// Only missing Mounts field is Writable, and the default value is also the null value: false
 	expect.Mounts[1].Location = filepath.Join(instDir, y.Param["ONE"])
-	expect.Mounts[1].MountPoint = ptr.Of(fmt.Sprintf("/mnt/%s", y.Param["ONE"]))
+	expect.Mounts[1].MountPoint = ptr.Of(path.Join("/mnt", y.Param["ONE"]))
 	expect.Mounts[1].Writable = ptr.Of(false)
 	expect.Mounts[1].SSHFS.Cache = ptr.Of(true)
 	expect.Mounts[1].SSHFS.FollowSymlinks = ptr.Of(false)
