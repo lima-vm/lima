@@ -107,6 +107,12 @@ When using `vmType: vz` (Virtualization.framework), on boot, any qcow2 (default)
 
 `ls` will also only show the full/virtual size of the disks. To see the allocated space, `du -h disk_path` or `qemu-img info disk_path` can be used instead. See [#1405](https://github.com/lima-vm/lima/pull/1405) for more details.
 
+## Templates directory (`${LIMA_HOME}/_templates`)
+
+The templates directory can store additional template files that can be referenced with the `template://` schema.
+
+If the template directory exists (and `$LIMA_TEMPLATES_PATH` is not set), then this directory will be searched before the `/usr/local/share/lima/templates` default directory that contains all the templates bundled with Lima itself.
+
 ## Lima cache directory (`~/Library/Caches/lima`)
 
 Currently hard-coded to `~/Library/Caches/lima` on macOS.

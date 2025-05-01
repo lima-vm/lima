@@ -15,6 +15,7 @@ import (
 	"unicode"
 
 	securejoin "github.com/cyphar/filepath-securejoin"
+	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/usrlocalsharelima"
 )
 
@@ -24,17 +25,21 @@ type Template struct {
 }
 
 func TemplatesPaths() ([]string, error) {
-	var paths []string
 	if tmplPath := os.Getenv("LIMA_TEMPLATES_PATH"); tmplPath != "" {
-		paths = strings.Split(tmplPath, string(filepath.ListSeparator))
-	} else {
-		dir, err := usrlocalsharelima.Dir()
-		if err != nil {
-			return nil, err
-		}
-		paths = []string{filepath.Join(dir, "templates")}
+		return strings.Split(tmplPath, string(filepath.ListSeparator)), nil
 	}
-	return paths, nil
+	limaDir, err := dirnames.LimaDir()
+	if err != nil {
+		return nil, err
+	}
+	shareDir, err := usrlocalsharelima.Dir()
+	if err != nil {
+		return nil, err
+	}
+	return []string{
+		filepath.Join(limaDir, "_templates"),
+		filepath.Join(shareDir, "templates"),
+	}, nil
 }
 
 func Read(name string) ([]byte, error) {
@@ -70,6 +75,9 @@ func Templates() ([]Template, error) {
 
 	templates := make(map[string]string)
 	for _, templatesDir := range paths {
+		if _, err := os.Stat(templatesDir); os.IsNotExist(err) {
+			continue
+		}
 		walkDirFn := func(p string, _ fs.DirEntry, err error) error {
 			if err != nil {
 				return err
