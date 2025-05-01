@@ -65,3 +65,12 @@ func LimaDisksDir() (string, error) {
 	}
 	return filepath.Join(limaDir, filenames.DisksDir), nil
 }
+
+// LimaTemplatesDir returns the path of the templates directory, $LIMA_HOME/_templates.
+func LimaTemplatesDir() (string, error) {
+	limaDir, err := LimaDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(limaDir, filenames.TemplatesDir), nil
+}
