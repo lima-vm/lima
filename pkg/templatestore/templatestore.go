@@ -24,11 +24,11 @@ type Template struct {
 	Location string `json:"location"`
 }
 
-func TemplatesPaths() ([]string, error) {
+func templatesPaths() ([]string, error) {
 	if tmplPath := os.Getenv("LIMA_TEMPLATES_PATH"); tmplPath != "" {
 		return strings.Split(tmplPath, string(filepath.ListSeparator)), nil
 	}
-	limaDir, err := dirnames.LimaDir()
+	limaTemplatesDir, err := dirnames.LimaTemplatesDir()
 	if err != nil {
 		return nil, err
 	}
@@ -37,13 +37,13 @@ func TemplatesPaths() ([]string, error) {
 		return nil, err
 	}
 	return []string{
-		filepath.Join(limaDir, "_templates"),
+		limaTemplatesDir,
 		filepath.Join(shareDir, "templates"),
 	}, nil
 }
 
 func Read(name string) ([]byte, error) {
-	paths, err := TemplatesPaths()
+	paths, err := templatesPaths()
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +68,7 @@ func Read(name string) ([]byte, error) {
 const Default = "default"
 
 func Templates() ([]Template, error) {
-	paths, err := TemplatesPaths()
+	paths, err := templatesPaths()
 	if err != nil {
 		return nil, err
 	}

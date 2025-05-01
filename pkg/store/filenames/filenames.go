@@ -10,10 +10,11 @@ package filenames
 // Instance names starting with an underscore are reserved for lima internal usage
 
 const (
-	ConfigDir   = "_config"
-	CacheDir    = "_cache"    // not yet implemented
-	NetworksDir = "_networks" // network log files are stored here
-	DisksDir    = "_disks"    // disks are stored here
+	CacheDir     = "_cache" // not yet implemented
+	ConfigDir    = "_config"
+	DisksDir     = "_disks"     // disks are stored here
+	NetworksDir  = "_networks"  // network log files are stored here
+	TemplatesDir = "_templates" // user templates are stored here
 )
 
 // Filenames used inside the ConfigDir
