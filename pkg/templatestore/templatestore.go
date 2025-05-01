@@ -4,15 +4,18 @@
 package templatestore
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"unicode"
 
 	securejoin "github.com/cyphar/filepath-securejoin"
+	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/usrlocalsharelima"
 )
 
@@ -21,16 +24,28 @@ type Template struct {
 	Location string `json:"location"`
 }
 
-func Read(name string) ([]byte, error) {
-	var pathList []string
+func TemplatesPaths() ([]string, error) {
 	if tmplPath := os.Getenv("LIMA_TEMPLATES_PATH"); tmplPath != "" {
-		pathList = strings.Split(tmplPath, string(filepath.ListSeparator))
-	} else {
-		dir, err := usrlocalsharelima.Dir()
-		if err != nil {
-			return nil, err
-		}
-		pathList = []string{filepath.Join(dir, "templates")}
+		return strings.Split(tmplPath, string(filepath.ListSeparator)), nil
+	}
+	limaDir, err := dirnames.LimaDir()
+	if err != nil {
+		return nil, err
+	}
+	shareDir, err := usrlocalsharelima.Dir()
+	if err != nil {
+		return nil, err
+	}
+	return []string{
+		filepath.Join(limaDir, "_templates"),
+		filepath.Join(shareDir, "templates"),
+	}, nil
+}
+
+func Read(name string) ([]byte, error) {
+	paths, err := TemplatesPaths()
+	if err != nil {
+		return nil, err
 	}
 	ext := filepath.Ext(name)
 	// Append .yaml extension if name doesn't have an extension, or if it starts with a digit.
@@ -38,8 +53,8 @@ func Read(name string) ([]byte, error) {
 	if len(ext) < 2 || unicode.IsDigit(rune(ext[1])) {
 		name += ".yaml"
 	}
-	for _, path := range pathList {
-		filePath, err := securejoin.SecureJoin(path, name)
+	for _, templatesDir := range paths {
+		filePath, err := securejoin.SecureJoin(templatesDir, name)
 		if err != nil {
 			return nil, err
 		}
@@ -53,31 +68,39 @@ func Read(name string) ([]byte, error) {
 const Default = "default"
 
 func Templates() ([]Template, error) {
-	usrlocalsharelimaDir, err := usrlocalsharelima.Dir()
+	paths, err := TemplatesPaths()
 	if err != nil {
 		return nil, err
 	}
-	templatesDir := filepath.Join(usrlocalsharelimaDir, "templates")
 
-	var res []Template
-	walkDirFn := func(p string, _ fs.DirEntry, err error) error {
-		if err != nil {
-			return err
+	templates := make(map[string]string)
+	for _, templatesDir := range paths {
+		if _, err := os.Stat(templatesDir); os.IsNotExist(err) {
+			continue
 		}
-		base := filepath.Base(p)
-		if strings.HasPrefix(base, ".") || !strings.HasSuffix(base, ".yaml") {
+		walkDirFn := func(p string, _ fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			base := filepath.Base(p)
+			if strings.HasPrefix(base, ".") || !strings.HasSuffix(base, ".yaml") {
+				return nil
+			}
+			// Name is like "default", "debian", "deprecated/centos-7", ...
+			name := strings.TrimSuffix(strings.TrimPrefix(p, templatesDir+"/"), ".yaml")
+			if _, ok := templates[name]; !ok {
+				templates[name] = p
+			}
 			return nil
 		}
-		x := Template{
-			// Name is like "default", "debian", "deprecated/centos-7", ...
-			Name:     strings.TrimSuffix(strings.TrimPrefix(p, templatesDir+"/"), ".yaml"),
-			Location: p,
+		if err = filepath.WalkDir(templatesDir, walkDirFn); err != nil {
+			return nil, err
 		}
-		res = append(res, x)
-		return nil
 	}
-	if err = filepath.WalkDir(templatesDir, walkDirFn); err != nil {
-		return nil, err
+	var res []Template
+	for name, loc := range templates {
+		res = append(res, Template{Name: name, Location: loc})
 	}
+	slices.SortFunc(res, func(i, j Template) int { return cmp.Compare(i.Name, j.Name) })
 	return res, nil
 }
