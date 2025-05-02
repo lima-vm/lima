@@ -104,6 +104,7 @@ help-targets:
 	@echo  '- templates                 : Copy templates'
 	@echo  '- template_experimentals    : Copy experimental templates to experimental/'
 	@echo  '- default_template          : Copy default.yaml template'
+	@echo  '- update-templates          : Update templates'
 	@echo
 	@echo  'Targets for files in _output/share/doc/lima:'
 	@echo  '- documentation             : Copy documentation to _output/share/doc/lima'
@@ -352,6 +353,16 @@ _output/share/lima/templates/%: templates/%
 # $(1): target file
 # On Windows, always copy to ensure the target has the same file as the source.
 force_link = $(if $(filter windows,$(GOOS)),force,$(shell test ! -L $(1) && echo force))
+
+################################################################################
+# templates/_images
+
+# fedora-N.yaml should not be updated to refer to Fedora N+1 images
+TEMPLATES_TO_BE_UPDATED = $(filter-out $(wildcard templates/_images/fedora*.yaml),$(wildcard templates/_images/*.yaml))
+
+.PHONY: update-templates
+update-templates: $(TEMPLATES_TO_BE_UPDATED)
+	./hack/update-template.sh $^
 
 ################################################################################
 # _output/share/doc/lima
