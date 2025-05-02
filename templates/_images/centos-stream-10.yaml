@@ -10,6 +10,10 @@ images:
 - location: "https://cloud.centos.org/centos/10-stream/s390x/images/CentOS-Stream-GenericCloud-10-20250429.0.s390x.qcow2"
   arch: "s390x"
   digest: "sha256:d102c9ee9c1ff72d93f349ab30980c6901be5f85083ef2bfd5a882f164fcb692"
+- location: "https://cloud.centos.org/centos/10-stream/ppc64le/images/CentOS-Stream-GenericCloud-10-20250429.0.ppc64le.qcow2"
+  arch: "ppc64le"
+  digest: "sha256:75157ca6cdf43ad755f99904219c4b4285126df194ed38d558cd5de0f8f1cd97"
+
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
 
@@ -21,6 +25,9 @@ images:
 
 - location: https://cloud.centos.org/centos/10-stream/s390x/images/CentOS-Stream-GenericCloud-10-latest.s390x.qcow2
   arch: s390x
+
+- location: https://cloud.centos.org/centos/10-stream/ppc64le/images/CentOS-Stream-GenericCloud-10-latest.ppc64le.qcow2
+  arch: ppc64le
 
 mountTypesUnsupported: [9p]
 

@@ -16,6 +16,10 @@ images:
 - location: "https://cloud-images.ubuntu.com/releases/plucky/release-20250424/ubuntu-25.04-server-cloudimg-s390x.img"
   arch: "s390x"
   digest: "sha256:34020c9ced44598cd0d8ea77527aad61db4498f5151fac9fafdd1199cddf8919"
+- location: "https://cloud-images.ubuntu.com/releases/plucky/release-20250424/ubuntu-25.04-server-cloudimg-ppc64el.img"
+  arch: "ppc64le"
+  digest: "sha256:d1190f1db8eb6602d3f7de35f6f425fb671bb9ed953df821c0d1cc8cedbaa2ef"
+
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
 
@@ -33,6 +37,9 @@ images:
 
 - location: https://cloud-images.ubuntu.com/releases/plucky/release/ubuntu-25.04-server-cloudimg-s390x.img
   arch: s390x
+
+- location: https://cloud-images.ubuntu.com/releases/plucky/release/ubuntu-25.04-server-cloudimg-ppc64el.img
+  arch: ppc64le
 
 # # NOTE: Intel Mac requires setting vmType to qemu
 # # https://github.com/lima-vm/lima/issues/3334

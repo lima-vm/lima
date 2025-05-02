@@ -8,7 +8,7 @@ The following features are experimental and subject to change:
 
 - `mountType: virtiofs` on Linux
 - `vmType: wsl2` and relevant configurations (`mountType: wsl2`)
-- `arch: riscv64`, `arch: armv7l`, and `arch: s390x`
+- `arch`: `riscv64`, `armv7l`, `s390x`, and `ppc64le`
 - `video.display: vnc` and relevant configuration (`video.vnc.display`)
 - `audio.device`
 - `mountInotify: true`

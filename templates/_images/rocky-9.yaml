@@ -7,6 +7,10 @@ images:
   arch: aarch64
   digest: sha256:5443bcc0507fadc3d7bd3e8d266135ab8db6966c703216933f824164fd3252f1
 
+- location: https://dl.rockylinux.org/pub/rocky/9.5/images/ppc64le/Rocky-9-GenericCloud-Base-9.5-20241118.0.ppc64le.qcow2
+  arch: ppc64le
+  digest: sha256:814a5b80bacb370baa705766de40c4c96e44cc7fa03fcb6f41c8dfbc89aa971a
+
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
 
@@ -15,5 +19,8 @@ images:
 
 - location: https://dl.rockylinux.org/pub/rocky/9/images/aarch64/Rocky-9-GenericCloud.latest.aarch64.qcow2
   arch: aarch64
+
+- location: https://dl.rockylinux.org/pub/rocky/9/images/ppc64le/Rocky-9-GenericCloud.latest.ppc64le.qcow2
+  arch: ppc64le
 
 mountTypesUnsupported: [9p]

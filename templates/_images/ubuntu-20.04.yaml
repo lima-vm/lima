@@ -13,6 +13,10 @@ images:
 - location: "https://cloud-images.ubuntu.com/releases/focal/release-20250429/ubuntu-20.04-server-cloudimg-s390x.img"
   arch: "s390x"
   digest: "sha256:710fc0a25cf1c3684d87202cccf10761e5c6e690500e7a17f7da9a9965a1d35d"
+- location: "https://cloud-images.ubuntu.com/releases/focal/release-20250429/ubuntu-20.04-server-cloudimg-ppc64el.img"
+  arch: "ppc64le"
+  digest: "sha256:45e79fb0ae143fdad797802f586f318f1c98199d6a6f1366f3f64242ceb7c07e"
+
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
 
@@ -27,3 +31,6 @@ images:
 
 - location: https://cloud-images.ubuntu.com/releases/focal/release/ubuntu-20.04-server-cloudimg-s390x.img
   arch: s390x
+
+- location: https://cloud-images.ubuntu.com/releases/focal/release/ubuntu-20.04-server-cloudimg-ppc64el.img
+  arch: ppc64le

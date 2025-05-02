@@ -77,6 +77,7 @@ func defaultCPUType() CPUType {
 		AARCH64: "max",
 		ARMV7L:  "max",
 		X8664:   defaultX8664,
+		PPC64LE: "max",
 		RISCV64: "max",
 		S390X:   "max",
 	}
@@ -1095,6 +1096,8 @@ func NewArch(arch string) Arch {
 		}
 		logrus.Warnf("Unknown arm: %d", arm)
 		return arch
+	case "ppc64le":
+		return PPC64LE
 	case "riscv64":
 		return RISCV64
 	case "s390x":
@@ -1283,9 +1286,10 @@ func IsNativeArch(arch Arch) bool {
 	nativeX8664 := arch == X8664 && runtime.GOARCH == "amd64"
 	nativeAARCH64 := arch == AARCH64 && runtime.GOARCH == "arm64"
 	nativeARMV7L := arch == ARMV7L && runtime.GOARCH == "arm" && goarm() == 7
+	nativePPC64LE := arch == PPC64LE && runtime.GOARCH == "ppc64le"
 	nativeRISCV64 := arch == RISCV64 && runtime.GOARCH == "riscv64"
 	nativeS390X := arch == S390X && runtime.GOARCH == "s390x"
-	return nativeX8664 || nativeAARCH64 || nativeARMV7L || nativeRISCV64 || nativeS390X
+	return nativeX8664 || nativeAARCH64 || nativeARMV7L || nativePPC64LE || nativeRISCV64 || nativeS390X
 }
 
 func unique(s []string) []string {

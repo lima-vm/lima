@@ -26,6 +26,8 @@ case "${arch}" in
 amd64 | x86_64) arch=x86_64 ;;
 aarch64 | arm64) arch=aarch64 ;;
 armv7l | armhf) arch=armv7l ;;
+ppc64el | ppc64le) arch=ppc64le ;;
+s390x) arch=s390x ;;
 riscv64) arch=riscv64 ;;
 *)
 	echo "Unsupported arch: ${arch}" >&2

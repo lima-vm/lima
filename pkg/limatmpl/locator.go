@@ -139,6 +139,8 @@ var archKeywords = map[string]limayaml.Arch{
 	"arm64":   limayaml.AARCH64,
 	"armhf":   limayaml.ARMV7L,
 	"armv7l":  limayaml.ARMV7L,
+	"ppc64el": limayaml.PPC64LE,
+	"ppc64le": limayaml.PPC64LE,
 	"riscv64": limayaml.RISCV64,
 	"s390x":   limayaml.S390X,
 	"x86_64":  limayaml.X8664,

@@ -16,6 +16,10 @@ images:
 - location: "https://cloud-images.ubuntu.com/releases/oracular/release-20250430/ubuntu-24.10-server-cloudimg-s390x.img"
   arch: "s390x"
   digest: "sha256:dea8034b9401a0946dda898ceb61129d8f0d41de162f7cf143bdcc4664d3e831"
+- location: "https://cloud-images.ubuntu.com/releases/oracular/release-20250430/ubuntu-24.10-server-cloudimg-ppc64el.img"
+  arch: "ppc64le"
+  digest: "sha256:ec15e530f9b594c59a81ccebea1af26d3a61b18a84bfda048e6913cef034c19c"
+
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
 
@@ -33,6 +37,9 @@ images:
 
 - location: https://cloud-images.ubuntu.com/releases/oracular/release/ubuntu-24.10-server-cloudimg-s390x.img
   arch: s390x
+
+- location: https://cloud-images.ubuntu.com/releases/oracular/release/ubuntu-24.10-server-cloudimg-ppc64el.img
+  arch: ppc64le
 
 # 9p is broken in Linux v6.9, v6.10, and v6.11 (used by Ubuntu 24.10).
 # The issue was fixed in Linux v6.12-rc5 (https://github.com/torvalds/linux/commit/be2ca38).

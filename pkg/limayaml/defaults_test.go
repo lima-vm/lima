@@ -50,6 +50,8 @@ func TestFillDefault(t *testing.T) {
 			t.Skipf("unsupported GOARM: %d", arm)
 		}
 		arch = ARMV7L
+	case "ppc64le":
+		arch = PPC64LE
 	case "riscv64":
 		arch = RISCV64
 	case "s390x":
@@ -340,6 +342,7 @@ func TestFillDefault(t *testing.T) {
 			AARCH64: "arm64",
 			ARMV7L:  "armhf",
 			X8664:   "amd64",
+			PPC64LE: "ppc64le",
 			RISCV64: "riscv64",
 			S390X:   "s390x",
 		},
@@ -559,6 +562,7 @@ func TestFillDefault(t *testing.T) {
 			AARCH64: "uber-arm",
 			ARMV7L:  "armv8",
 			X8664:   "pentium",
+			PPC64LE: "power10",
 			RISCV64: "sifive-u54",
 			S390X:   "z14",
 		},

@@ -84,6 +84,7 @@ function limayaml_arch() {
 	arch=${arch/amd64/x86_64}
 	arch=${arch/arm64/aarch64}
 	arch=${arch/armhf/armv7l}
+	arch=${arch/ppc64el/ppc64le}
 	echo "${arch}"
 }
 

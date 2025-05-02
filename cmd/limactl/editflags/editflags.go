@@ -73,9 +73,9 @@ func RegisterCreate(cmd *cobra.Command, commentPrefix string) {
 	registerEdit(cmd, commentPrefix)
 	flags := cmd.Flags()
 
-	flags.String("arch", "", commentPrefix+"Machine architecture (x86_64, aarch64, riscv64, armv7l, s390x)") // colima-compatible
+	flags.String("arch", "", commentPrefix+"Machine architecture (x86_64, aarch64, riscv64, armv7l, s390x, ppc64le)") // colima-compatible
 	_ = cmd.RegisterFlagCompletionFunc("arch", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
-		return []string{"x86_64", "aarch64", "riscv64", "armv7l", "s390x"}, cobra.ShellCompDirectiveNoFileComp
+		return []string{"x86_64", "aarch64", "riscv64", "armv7l", "s390x", "ppc64le"}, cobra.ShellCompDirectiveNoFileComp
 	})
 
 	flags.String("containerd", "", commentPrefix+"containerd mode (user, system, user+system, none)")

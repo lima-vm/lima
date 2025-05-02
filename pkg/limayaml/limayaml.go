@@ -76,6 +76,7 @@ const (
 	X8664   Arch = "x86_64"
 	AARCH64 Arch = "aarch64"
 	ARMV7L  Arch = "armv7l"
+	PPC64LE Arch = "ppc64le"
 	RISCV64 Arch = "riscv64"
 	S390X   Arch = "s390x"
 
@@ -91,7 +92,7 @@ const (
 
 var (
 	OSTypes    = []OS{LINUX}
-	ArchTypes  = []Arch{X8664, AARCH64, ARMV7L, RISCV64, S390X}
+	ArchTypes  = []Arch{X8664, AARCH64, ARMV7L, PPC64LE, RISCV64, S390X}
 	MountTypes = []MountType{REVSSHFS, NINEP, VIRTIOFS, WSLMount}
 	VMTypes    = []VMType{QEMU, VZ, WSL2}
 )
