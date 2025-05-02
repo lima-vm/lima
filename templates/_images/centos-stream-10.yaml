@@ -28,9 +28,3 @@ firmware:
   # CentOS Stream 10 still requires legacyBIOS
   # https://issues.redhat.com/browse/CS-2672
   legacyBIOS: true
-
-cpuType:
-  # When emulating Intel on ARM hosts, Lima uses the "qemu64" CPU by default (https://github.com/lima-vm/lima/pull/494).
-  # However, CentOS Stream 10 kernel reboots indefinitely due to lack of the support for x86_64-v3 instructions.
-  # This issue is tracked in <https://github.com/lima-vm/lima/issues/3063>.
-  x86_64: "Haswell-v4"

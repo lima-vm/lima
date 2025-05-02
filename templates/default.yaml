@@ -334,10 +334,10 @@ os: null
 # Setting of instructions is supported like this: "qemu64,+ssse3".
 # 🟢 Builtin default: hard-coded arch map with type (see the output of `limactl info | jq .defaultTemplate.cpuType`)
 cpuType:
-#   aarch64: "cortex-a76" # (or "host" when running on aarch64 host)
-#   armv7l: "cortex-a7" # (or "host" when running on armv7l host)
-#   riscv64: "rv64" # (or "host" when running on riscv64 host)
-#   x86_64: "qemu64" # (or "host,-pdpe1gb" when running on x86_64 host)
+#   aarch64: "max" # (or "host" when running on aarch64 host)
+#   armv7l:  "max" # (or "host" when running on armv7l host)
+#   riscv64: "max" # (or "host" when running on riscv64 host)
+#   x86_64:  "max" # (or "host" when running on x86_64 host; additional options are appended on Intel Mac)
 
 rosetta:
   # Enable Rosetta inside the VM; needs `vmType: vz`

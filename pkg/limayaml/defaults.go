@@ -61,34 +61,40 @@ var (
 )
 
 func defaultCPUType() CPUType {
+	// x86_64 + TCG + max was previously unstable until 2021.
+	// https://bugzilla.redhat.com/show_bug.cgi?id=1999700
+	// https://bugs.launchpad.net/qemu/+bug/1748296
+	defaultX8664 := "max"
+	if runtime.GOOS == "windows" && runtime.GOARCH == "amd64" {
+		// https://github.com/lima-vm/lima/pull/3487#issuecomment-2846253560
+		// > #931 intentionally prevented the code from setting it to max when running on Windows,
+		// > and kept it at qemu64.
+		//
+		// TODO: remove this if "max" works with the latest qemu
+		defaultX8664 = "qemu64"
+	}
 	cpuType := map[Arch]string{
-		AARCH64: "cortex-a76", // available since QEMU 7.1 (Aug 2022)
-		ARMV7L:  "cortex-a7",
-		// Since https://github.com/lima-vm/lima/pull/494, we use qemu64 cpu for better emulation of x86_64.
-		X8664:   "qemu64",
+		AARCH64: "max",
+		ARMV7L:  "max",
+		X8664:   defaultX8664,
 		RISCV64: "max",
-		S390X:   "qemu", // FIXME: what is the right choice for s390x?
+		S390X:   "max",
 	}
 	for arch := range cpuType {
 		if IsNativeArch(arch) && IsAccelOS() {
 			if HasHostCPU() {
 				cpuType[arch] = "host"
-			} else if HasMaxCPU() {
-				cpuType[arch] = "max"
 			}
 		}
 		if arch == X8664 && runtime.GOOS == "darwin" {
-			switch cpuType[arch] {
-			case "host", "max":
-				// disable AVX-512, since it requires trapping instruction faults in guest
-				// Enterprise Linux requires either v2 (SSE4) or v3 (AVX2), but not yet v4.
-				cpuType[arch] += ",-avx512vl"
+			// disable AVX-512, since it requires trapping instruction faults in guest
+			// Enterprise Linux requires either v2 (SSE4) or v3 (AVX2), but not yet v4.
+			cpuType[arch] += ",-avx512vl"
 
-				// Disable pdpe1gb on Intel Mac
-				// https://github.com/lima-vm/lima/issues/1485
-				// https://stackoverflow.com/a/72863744/5167443
-				cpuType[arch] += ",-pdpe1gb"
-			}
+			// Disable pdpe1gb on Intel Mac
+			// https://github.com/lima-vm/lima/issues/1485
+			// https://stackoverflow.com/a/72863744/5167443
+			cpuType[arch] += ",-pdpe1gb"
 		}
 	}
 	return cpuType
@@ -1271,11 +1277,6 @@ func HasHostCPU() bool {
 	}
 	// Not reached
 	return false
-}
-
-func HasMaxCPU() bool {
-	// windows: WHPX: Unexpected VP exit code 4
-	return HasHostCPU()
 }
 
 func IsNativeArch(arch Arch) bool {

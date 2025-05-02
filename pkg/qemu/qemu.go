@@ -548,7 +548,8 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	// Machine
 	switch *y.Arch {
 	case limayaml.X8664:
-		if strings.HasPrefix(cpu, "qemu64") && runtime.GOOS != "windows" {
+		switch accel {
+		case "tcg":
 			// use q35 machine with vmware io port disabled.
 			args = appendArgsIfNoConflict(args, "-machine", "q35,vmport=off")
 			// use tcg accelerator with multi threading with 512MB translation block size
@@ -559,10 +560,10 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 			// This will disable CPU S3/S4 state.
 			args = append(args, "-global", "ICH9-LPC.disable_s3=1")
 			args = append(args, "-global", "ICH9-LPC.disable_s4=1")
-		} else if runtime.GOOS == "windows" && accel == "whpx" {
+		case "whpx":
 			// whpx: injection failed, MSI (0, 0) delivery: 0, dest_mode: 0, trigger mode: 0, vector: 0
 			args = appendArgsIfNoConflict(args, "-machine", "q35,accel="+accel+",kernel-irqchip=off")
-		} else {
+		default:
 			args = appendArgsIfNoConflict(args, "-machine", "q35,accel="+accel)
 		}
 	case limayaml.AARCH64:
