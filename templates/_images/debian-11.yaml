@@ -1,14 +1,12 @@
 images:
 # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
 
-- location: https://cloud.debian.org/images/cloud/bullseye/20250303-2040/debian-11-genericcloud-amd64-20250303-2040.qcow2
-  arch: x86_64
-  digest: sha512:3c08356d6860f987089c14b45953fb1f266d1b1b50dd086744925e2ed4113b804e848a8b1b46614febc48cde759f18e824b76bfb02618ed6b3d06ed15ea99283
-
-- location: https://cloud.debian.org/images/cloud/bullseye/20250303-2040/debian-11-genericcloud-arm64-20250303-2040.qcow2
-  arch: aarch64
-  digest: sha512:c1a1645cf37ce628a8734bb25dce09fcd0858865302635ce0ae88b2da23bb615da43d483984709d743cd6b6b45d56d88e9f6800f0b3110ba1b09c01b990342f3
-
+- location: "https://cloud.debian.org/images/cloud/bullseye/20250429-2097/debian-11-genericcloud-amd64-20250429-2097.qcow2"
+  arch: "x86_64"
+  digest: "sha512:6dc6a940c1e32375a9bd454bcc4ccc4ce4ae3a4b8b38ebe911359189be8c3f8eaf6b7136aa5edfb32df755c51a4e1c95a6ffee9a99265bad3e7835ed50ef037b"
+- location: "https://cloud.debian.org/images/cloud/bullseye/20250429-2097/debian-11-genericcloud-arm64-20250429-2097.qcow2"
+  arch: "aarch64"
+  digest: "sha512:f27fa0af9ab5edd232d8d418daa755ffe27d6382b25208f01c4959444c7968629e91f9ea112cbffc49ec29536dab02f30edcdacfdff588ccad16a99a572bba0f"
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
 

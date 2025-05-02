@@ -5,14 +5,12 @@
 # EL9-based distros are known to work.
 
 images:
-- location: https://yum.oracle.com/templates/OracleLinux/OL8/u10/x86_64/OL8U10_x86_64-kvm-b237.qcow2
-  arch: x86_64
-  digest: sha256:53a5eee27c59f335ba1bdb0afc2c3273895f128dd238b51a78f46ad515cbc662
-
-- location: https://yum.oracle.com/templates/OracleLinux/OL8/u10/aarch64/OL8U10_aarch64-kvm-cloud-b100.qcow2
-  arch: aarch64
-  digest: sha256:def7b8055e275507a593f07dc6076a2adc5967af046c003072b479e69f25f407
-
+- location: "https://yum.oracle.com/templates/OracleLinux/OL8/u10/x86_64/OL8U10_x86_64-kvm-b258.qcow2"
+  arch: "x86_64"
+  digest: "sha256:9b1f8a4eadc3f6094422674ec0794b292a28ee247593e74fe7310f77ecb8b9b9"
+- location: "https://yum.oracle.com/templates/OracleLinux/OL8/u10/aarch64/OL8U10_aarch64-kvm-cloud-b123.qcow2"
+  arch: "aarch64"
+  digest: "sha256:ae5dc67391af5e70d06730a1313a290771e9ad0f217c99d6e355bd4844cdda16"
 mountTypesUnsupported: [9p]
 
 firmware:
