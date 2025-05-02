@@ -66,7 +66,7 @@ func defaultCPUType() CPUType {
 		ARMV7L:  "cortex-a7",
 		// Since https://github.com/lima-vm/lima/pull/494, we use qemu64 cpu for better emulation of x86_64.
 		X8664:   "qemu64",
-		RISCV64: "rv64", // FIXME: what is the right choice for riscv64?
+		RISCV64: "max",
 		S390X:   "qemu", // FIXME: what is the right choice for s390x?
 	}
 	for arch := range cpuType {
