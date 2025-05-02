@@ -47,10 +47,42 @@ type Config struct {
 	VirtioGA     bool
 }
 
-// MinimumQemuVersion is the minimum supported QEMU version.
-const (
-	MinimumQemuVersion = "4.0.0"
-)
+// minimumQemuVersion returns hardMin and softMin.
+//
+// hardMin is the hard minimum version of QEMU.
+// The driver immediately returns the error when QEMU is older than this version.
+//
+// softMin is the oldest recommended version of QEMU.
+// softMin must be >= hardMin.
+//
+// When updating this function, make sure to update
+// `website/content/en/docs/config/vmtype.md` too.
+func minimumQemuVersion() (hardMin, softMin semver.Version) {
+	var h, s string
+	switch runtime.GOOS {
+	case "darwin":
+		switch runtime.GOARCH {
+		case "arm64":
+			// https://gitlab.com/qemu-project/qemu/-/issues/1990
+			h, s = "8.2.1", "8.2.1"
+		default:
+			// The code specific to QEMU < 7.0 on macOS (https://github.com/lima-vm/lima/pull/703)
+			// was removed in https://github.com/lima-vm/lima/pull/3491
+			h, s = "7.0.0", "8.2.1"
+		}
+	default:
+		// hardMin: Untested and maybe does not even work.
+		// softMin: Ubuntu 22.04's QEMU. The oldest version that can be easily tested on GitHub Actions.
+		h, s = "4.0.0", "6.2.0"
+	}
+	hardMin, softMin = *semver.New(h), *semver.New(s)
+	if softMin.LessThan(hardMin) {
+		// NOTREACHED
+		logrus.Fatalf("internal error: QEMU: soft minimum version %v must be >= hard minimum version %v",
+			softMin, hardMin)
+	}
+	return hardMin, softMin
+}
 
 // EnsureDisk also ensures the kernel and the initrd.
 func EnsureDisk(ctx context.Context, cfg Config) error {
@@ -287,9 +319,6 @@ type features struct {
 	// e.g. "Available CPUs:\n...\nx86 base...\nx86 host...\n...\n"
 	// Not machine-readable, but checking strings.Contains() should be fine.
 	CPUHelp []byte
-
-	// VersionGEQ7 is true when the QEMU version seems v7.0.0 or later
-	VersionGEQ7 bool
 }
 
 func inspectFeatures(exe, machine string) (*features, error) {
@@ -333,7 +362,6 @@ func inspectFeatures(exe, machine string) (*features, error) {
 			f.MachineHelp = stderr.Bytes()
 		}
 	}
-	f.VersionGEQ7 = strings.Contains(string(f.MachineHelp), "-7.0")
 
 	// Avoid error: "No machine specified, and there is no default"
 	cmd = exec.Command(exe, "-cpu", "help", "-machine", machine)
@@ -351,56 +379,15 @@ func inspectFeatures(exe, machine string) (*features, error) {
 	return &f, nil
 }
 
-// showDarwinARM64HVFQEMU620Warning shows a warning on M1 macOS when QEMU is older than 6.2.0_1.
-//
-// See:
-// - https://gitlab.com/qemu-project/qemu/-/issues/899
-// - https://github.com/Homebrew/homebrew-core/pull/96743
-// - https://github.com/lima-vm/lima/issues/712
-func showDarwinARM64HVFQEMU620Warning(exe, accel string, features *features) {
-	if runtime.GOOS != "darwin" {
-		return
-	}
-	if runtime.GOARCH != "arm64" {
-		return
-	}
-	if accel != "hvf" {
-		return
-	}
-	if features.VersionGEQ7 {
-		return
-	}
-	if exeFull, err := exec.LookPath(exe); err == nil {
-		if exeResolved, err2 := filepath.EvalSymlinks(exeFull); err2 == nil {
-			if strings.Contains(exeResolved, "Cellar/qemu/6.2.0_") {
-				// Homebrew's QEMU 6.2.0_1 or later
-				return
-			}
-		}
-	}
-	w := "This version of QEMU might not be able to boot recent Linux guests on M1 macOS hosts."
-	if _, err := exec.LookPath("brew"); err == nil {
-		w += "Run `brew upgrade` and make sure your QEMU version is 6.2.0_1 or later."
-	} else {
-		w += `Reinstall QEMU with the following commits (included in QEMU 7.0.0):
-- https://github.com/qemu/qemu/commit/ad99f64f "hvf: arm: Use macros for sysreg shift/masking"
-- https://github.com/qemu/qemu/commit/7f6c295c "hvf: arm: Handle unknown ID registers as RES0"
-`
-		w += "See https://github.com/Homebrew/homebrew-core/pull/96743 for the further information."
-	}
-	logrus.Warn(w)
-}
-
 // adjustMemBytesDarwinARM64HVF adjusts the memory to be <= 3 GiB, only when the following conditions are met:
 //
 // - Host OS   <  macOS 12.4
 // - Host Arch == arm64
 // - Accel     == hvf
-// - QEMU      >= 7.0
 //
 // This adjustment is required for avoiding host kernel panic. The issue was fixed in macOS 12.4 Beta 1.
 // See https://github.com/lima-vm/lima/issues/795 https://gitlab.com/qemu-project/qemu/-/issues/903#note_911000975
-func adjustMemBytesDarwinARM64HVF(memBytes int64, accel string, features *features) int64 {
+func adjustMemBytesDarwinARM64HVF(memBytes int64, accel string) int64 {
 	const safeSize = 3 * 1024 * 1024 * 1024 // 3 GiB
 	if memBytes <= safeSize {
 		return memBytes
@@ -414,9 +401,6 @@ func adjustMemBytesDarwinARM64HVF(memBytes int64, accel string, features *featur
 	if accel != "hvf" {
 		return memBytes
 	}
-	if !features.VersionGEQ7 {
-		return memBytes
-	}
 	macOSProductVersion, err := osutil.ProductVersion()
 	if err != nil {
 		logrus.Warn(err)
@@ -425,8 +409,8 @@ func adjustMemBytesDarwinARM64HVF(memBytes int64, accel string, features *featur
 	if !macOSProductVersion.LessThan(*semver.New("12.4.0")) {
 		return memBytes
 	}
-	logrus.Warnf("Reducing the guest memory from %s to %s, to avoid host kernel panic on macOS <= 12.3 with QEMU >= 7.0; "+
-		"Please update macOS to 12.4 or later, or downgrade QEMU to 6.2; "+
+	logrus.Warnf("Reducing the guest memory from %s to %s, to avoid host kernel panic on macOS <= 12.3; "+
+		"Please update macOS to 12.4 or later; "+
 		"See https://github.com/lima-vm/lima/issues/795 for the further background.",
 		units.BytesSize(float64(memBytes)), units.BytesSize(float64(safeSize)))
 	memBytes = safeSize
@@ -471,15 +455,15 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 		logrus.WithError(err).Warning("Failed to detect QEMU version")
 	} else {
 		logrus.Debugf("QEMU version %s detected", version.String())
-		if version.LessThan(*semver.New(MinimumQemuVersion)) {
-			logrus.Fatalf("QEMU %v is too old, %v or later required", version, MinimumQemuVersion)
+		hardMin, softMin := minimumQemuVersion()
+		if version.LessThan(hardMin) {
+			logrus.Fatalf("QEMU %v is too old, %v or later required", version, hardMin)
+		}
+		if version.LessThan(softMin) {
+			logrus.Warnf("QEMU %v is too old, %v or later is recommended", version, softMin)
 		}
 		if y.VMOpts.QEMU.MinimumVersion != nil && version.LessThan(*semver.New(*y.VMOpts.QEMU.MinimumVersion)) {
 			logrus.Fatalf("QEMU %v is too old, template requires %q or later", version, *y.VMOpts.QEMU.MinimumVersion)
-		}
-		if runtime.GOOS == "darwin" && runtime.GOARCH == "arm64" && version.Equal(*semver.New("8.2.0")) {
-			logrus.Fatal("QEMU 8.2.0 is no longer supported on ARM Mac due to <https://gitlab.com/qemu-project/qemu/-/issues/1990>. " +
-				"Please upgrade QEMU to v8.2.1 (or downgrade to v8.1.x).")
 		}
 	}
 
@@ -488,14 +472,13 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	if !strings.Contains(string(features.AccelHelp), accel) {
 		return "", nil, fmt.Errorf("accelerator %q is not supported by %s", accel, exe)
 	}
-	showDarwinARM64HVFQEMU620Warning(exe, accel, features)
 
 	// Memory
 	memBytes, err := units.RAMInBytes(*y.Memory)
 	if err != nil {
 		return "", nil, err
 	}
-	memBytes = adjustMemBytesDarwinARM64HVF(memBytes, accel, features)
+	memBytes = adjustMemBytesDarwinARM64HVF(memBytes, accel)
 	args = appendArgsIfNoConflict(args, "-m", strconv.Itoa(int(memBytes>>20)))
 
 	if *y.MountType == limayaml.VIRTIOFS {
@@ -543,14 +526,6 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 		}
 	case limayaml.AARCH64:
 		machine := "virt,accel=" + accel
-		// QEMU >= 7.0 requires highmem=off NOT to be set, otherwise fails with "Addressing limited to 32 bits, but memory exceeds it by 1073741824 bytes"
-		// QEMU <  7.0 requires highmem=off to be set, otherwise fails with "VCPU supports less PA bits (36) than requested by the memory map (40)"
-		// https://github.com/lima-vm/lima/issues/680
-		// https://github.com/lima-vm/lima/pull/24
-		// But when the memory size is <= 3 GiB, we can always set highmem=off.
-		if !features.VersionGEQ7 || memBytes <= 3*1024*1024*1024 {
-			machine += ",highmem=off"
-		}
 		args = appendArgsIfNoConflict(args, "-machine", machine)
 	case limayaml.RISCV64:
 		// https://github.com/tianocore/edk2/blob/edk2-stable202408/OvmfPkg/RiscVVirt/README.md#test
@@ -850,23 +825,15 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	}
 
 	switch *y.Arch {
+	// FIXME: use virtio-gpu on all the architectures
 	case limayaml.X8664, limayaml.RISCV64:
 		args = append(args, "-device", "virtio-vga")
-		args = append(args, "-device", "virtio-keyboard-pci")
-		args = append(args, "-device", "virtio-"+input+"-pci")
-		args = append(args, "-device", "qemu-xhci,id=usb-bus")
-	case limayaml.AARCH64, limayaml.ARMV7L, limayaml.PPC64LE, limayaml.S390X:
-		if features.VersionGEQ7 {
-			args = append(args, "-device", "virtio-gpu")
-			args = append(args, "-device", "virtio-keyboard-pci")
-			args = append(args, "-device", "virtio-"+input+"-pci")
-		} else { // kernel panic with virtio and old versions of QEMU
-			args = append(args, "-vga", "none", "-device", "ramfb")
-			args = append(args, "-device", "usb-kbd,bus=usb-bus")
-			args = append(args, "-device", "usb-"+input+",bus=usb-bus")
-		}
-		args = append(args, "-device", "qemu-xhci,id=usb-bus")
+	default:
+		args = append(args, "-device", "virtio-gpu")
 	}
+	args = append(args, "-device", "virtio-keyboard-pci")
+	args = append(args, "-device", "virtio-"+input+"-pci")
+	args = append(args, "-device", "qemu-xhci,id=usb-bus")
 
 	// Parallel
 	args = append(args, "-parallel", "none")

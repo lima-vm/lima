@@ -29,6 +29,10 @@ unless the config is incompatible with VZ. (e.g., legacyBIOS or 9p is enabled)
 ## QEMU
 "qemu" option makes use of QEMU to run guest operating system. 
 
+Recommended QEMU version:
+- v8.2.1 or later (macOS)
+- v6.2.0 or later (Linux)
+
 ## VZ
 
 | ⚡ Requirement | Lima >= 0.14, macOS >= 13.0 |
