@@ -12,4 +12,7 @@ images:
 - location: https://cloud.debian.org/images/cloud/sid/daily/latest/debian-sid-genericcloud-riscv64-daily.qcow2
   arch: riscv64
 
+- location: https://cloud.debian.org/images/cloud/sid/daily/latest/debian-sid-genericcloud-ppc64el-daily.qcow2
+  arch: ppc64le
+
 mountTypesUnsupported: [9p]

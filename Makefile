@@ -273,7 +273,7 @@ LINUX_GUESTAGENT_PATH_COMMON = _output/share/lima/lima-guestagent.Linux-
 # How to add architecture specific guestagent:
 # 1. Add the architecture to GUESTAGENT_ARCHS
 # 2. Add ENVS_$(*_GUESTAGENT_PATH_COMMON)<arch> to set GOOS, GOARCH, and other necessary environment variables
-LINUX_GUESTAGENT_ARCHS = aarch64 armv7l riscv64 s390x x86_64
+LINUX_GUESTAGENT_ARCHS = aarch64 armv7l ppc64le riscv64 s390x x86_64
 
 ifeq ($(CONFIG_GUESTAGENT_OS_LINUX),y)
 ALL_GUESTAGENTS_NOT_COMPRESSED += $(addprefix $(LINUX_GUESTAGENT_PATH_COMMON),$(LINUX_GUESTAGENT_ARCHS))
@@ -321,6 +321,7 @@ additional-guestagents: $(ADDITIONAL_GUESTAGENTS)
 # environment variables for linx-guestagent. these variable are used for checking force build.
 ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)aarch64 = CGO_ENABLED=0 GOOS=linux GOARCH=arm64
 ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)armv7l = CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7
+ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)ppc64le = CGO_ENABLED=0 GOOS=linux GOARCH=ppc64le
 ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)riscv64 = CGO_ENABLED=0 GOOS=linux GOARCH=riscv64
 ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)s390x = CGO_ENABLED=0 GOOS=linux GOARCH=s390x
 ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)x86_64 = CGO_ENABLED=0 GOOS=linux GOARCH=amd64

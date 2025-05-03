@@ -425,5 +425,5 @@ func detectAESAcceleration() bool {
 		logrus.Warn("Failed to detect CPU features. Assuming that AES acceleration is not available.")
 		return false
 	}
-	return cpu.ARM.HasAES || cpu.ARM64.HasAES || cpu.S390X.HasAES || cpu.X86.HasAES
+	return cpu.ARM.HasAES || cpu.ARM64.HasAES || cpu.PPC64.IsPOWER8 || cpu.S390X.HasAES || cpu.X86.HasAES
 }

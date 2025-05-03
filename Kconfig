@@ -37,6 +37,12 @@ config GUESTAGENT_ARCH_S390X
 		Build lima-guestagent for "s390x" Arch
 	default y
 
+config GUESTAGENT_ARCH_PPC64LE
+	bool "guestagent Arch: ppc64le"
+	help
+		Build lima-guestagent for "ppc64le" Arch
+	default y
+
 config GUESTAGENT_COMPRESS
 	bool "guestagent compress"
 	help

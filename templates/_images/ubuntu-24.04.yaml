@@ -16,6 +16,10 @@ images:
 - location: "https://cloud-images.ubuntu.com/releases/noble/release-20250430/ubuntu-24.04-server-cloudimg-s390x.img"
   arch: "s390x"
   digest: "sha256:f4b61d53b30e08b3e44ac99012c933b92d00620c789154511ef62d44fae15c04"
+- location: "https://cloud-images.ubuntu.com/releases/noble/release-20250430/ubuntu-24.04-server-cloudimg-ppc64el.img"
+  arch: "ppc64le"
+  digest: "sha256:36c52f130c91478b1069ee29bf4c70a4e44de986d0716dd56e3af165ac5a04fe"
+
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
 
@@ -33,3 +37,6 @@ images:
 
 - location: https://cloud-images.ubuntu.com/releases/noble/release/ubuntu-24.04-server-cloudimg-s390x.img
   arch: s390x
+
+- location: https://cloud-images.ubuntu.com/releases/noble/release/ubuntu-24.04-server-cloudimg-ppc64el.img
+  arch: ppc64le

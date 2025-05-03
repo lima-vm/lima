@@ -7,6 +7,10 @@ images:
 - location: "https://cloud.debian.org/images/cloud/bookworm/20250428-2096/debian-12-genericcloud-arm64-20250428-2096.qcow2"
   arch: "aarch64"
   digest: "sha512:a669b9b82fc3afc8c9ef84c7e9a38ffdec060b51b47fe33a66f2b65d0da9a742f9645a4fa24b5c8cb4e5a37123a0ae4ad810410c4160a6f6825c7189c296f5ec"
+- location: "https://cloud.debian.org/images/cloud/bookworm/20250428-2096/debian-12-genericcloud-ppc64el-20250428-2096.qcow2"
+  arch: "ppc64le"
+  digest: "sha512:a40a41d341e5e76ff189ffcc172a510617f1af46bb2a08e54b1570cd594e99c69912640b007a0581232c6e3a22e7a3d38de3babf70aced68ba902726146ee628"
+
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
 
@@ -15,5 +19,8 @@ images:
 
 - location: https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-genericcloud-arm64.qcow2
   arch: aarch64
+
+- location: https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-genericcloud-ppc64el.qcow2
+  arch: ppc64le
 
 mountTypesUnsupported: [9p]

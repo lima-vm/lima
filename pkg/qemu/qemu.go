@@ -540,7 +540,8 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 			}
 		}
 	}
-	if !strings.Contains(string(features.CPUHelp), strings.Split(cpu, ",")[0]) {
+	// `qemu-system-ppc64 -help` does not show "max", but it is actually accepted
+	if cpu != "max" && !strings.Contains(string(features.CPUHelp), strings.Split(cpu, ",")[0]) {
 		return "", nil, fmt.Errorf("cpu %q is not supported by %s", cpu, exe)
 	}
 	args = appendArgsIfNoConflict(args, "-cpu", cpu)
@@ -588,6 +589,9 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	case limayaml.ARMV7L:
 		machine := "virt,accel=" + accel
 		args = appendArgsIfNoConflict(args, "-machine", machine)
+	case limayaml.PPC64LE:
+		machine := "pseries,accel=" + accel
+		args = appendArgsIfNoConflict(args, "-machine", machine)
 	case limayaml.S390X:
 		machine := "s390-ccw-virtio,accel=" + accel
 		args = appendArgsIfNoConflict(args, "-machine", machine)
@@ -603,7 +607,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 		logrus.Warnf("field `firmware.legacyBIOS` is not supported for architecture %q, ignoring", *y.Arch)
 		legacyBIOS = false
 	}
-	noFirmware := *y.Arch == limayaml.S390X || legacyBIOS
+	noFirmware := *y.Arch == limayaml.PPC64LE || *y.Arch == limayaml.S390X || legacyBIOS
 	if !noFirmware {
 		var firmware string
 		firmwareInBios := runtime.GOOS == "windows"
@@ -877,7 +881,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 		args = append(args, "-device", "virtio-keyboard-pci")
 		args = append(args, "-device", "virtio-"+input+"-pci")
 		args = append(args, "-device", "qemu-xhci,id=usb-bus")
-	case limayaml.AARCH64, limayaml.ARMV7L, limayaml.S390X:
+	case limayaml.AARCH64, limayaml.ARMV7L, limayaml.PPC64LE, limayaml.S390X:
 		if features.VersionGEQ7 {
 			args = append(args, "-device", "virtio-gpu")
 			args = append(args, "-device", "virtio-keyboard-pci")
@@ -1094,10 +1098,14 @@ func VirtiofsdCmdline(cfg Config, mountIndex int) ([]string, error) {
 
 // qemuArch returns the arch string used by qemu.
 func qemuArch(arch limayaml.Arch) string {
-	if arch == limayaml.ARMV7L {
+	switch arch {
+	case limayaml.ARMV7L:
 		return "arm"
+	case limayaml.PPC64LE:
+		return "ppc64"
+	default:
+		return arch
 	}
-	return arch
 }
 
 // qemuEdk2 returns the arch string used by `/usr/local/share/qemu/edk2-*-code.fd`.

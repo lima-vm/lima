@@ -16,6 +16,10 @@ images:
 - location: "https://cloud-images.ubuntu.com/releases/jammy/release-20250429/ubuntu-22.04-server-cloudimg-s390x.img"
   arch: "s390x"
   digest: "sha256:dd2a7139ba741391fe62a2fb7f80beef72300126ac080d3e46c46e4f9dbafe20"
+- location: "https://cloud-images.ubuntu.com/releases/jammy/release-20250429/ubuntu-22.04-server-cloudimg-ppc64el.img"
+  arch: "ppc64le"
+  digest: "sha256:b1ece28847210487a452eb77601dbb89f613d8f31a8a971932d38b4eabc3f08d"
+
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
 
@@ -33,3 +37,6 @@ images:
 
 - location: https://cloud-images.ubuntu.com/releases/jammy/release/ubuntu-22.04-server-cloudimg-s390x.img
   arch: s390x
+
+- location: https://cloud-images.ubuntu.com/releases/jammy/release/ubuntu-22.04-server-cloudimg-ppc64el.img
+  arch: ppc64le

@@ -13,6 +13,10 @@ images:
   arch: s390x
   digest: sha256:7f8866a4247ad57c81f5d2c5a0fa64940691f9df1e858a1510d34a0de008eb16
 
+- location: https://repo.almalinux.org/almalinux/8.10/cloud/ppc64le/images/AlmaLinux-8-GenericCloud-8.10-20240819.ppc64le.qcow2
+  arch: ppc64le
+  digest: sha256:01acccc74009ebe8ddb13ea6a313479b85a372cb5b898f9090a12a2bd2d62520
+
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
 
@@ -24,6 +28,9 @@ images:
 
 - location: https://repo.almalinux.org/almalinux/8/cloud/s390x/images/AlmaLinux-8-GenericCloud-latest.s390x.qcow2
   arch: s390x
+
+- location: https://repo.almalinux.org/almalinux/8/cloud/ppc64le/images/AlmaLinux-8-GenericCloud-latest.ppc64le.qcow2
+  arch: ppc64le
 
 mountTypesUnsupported: [9p]
 
