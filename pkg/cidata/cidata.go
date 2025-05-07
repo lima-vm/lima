@@ -30,7 +30,6 @@ import (
 	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/sshutil"
 	"github.com/lima-vm/lima/pkg/store/filenames"
-	"github.com/lima-vm/lima/pkg/usrlocalsharelima"
 	"github.com/sirupsen/logrus"
 )
 
@@ -355,7 +354,7 @@ func GenerateCloudConfig(instDir, name string, instConfig *limayaml.LimaYAML) er
 	return os.WriteFile(filepath.Join(instDir, filenames.CloudConfig), config, 0o444)
 }
 
-func GenerateISO9660(instDir, name string, instConfig *limayaml.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort int, nerdctlArchive string, vsockPort int, virtioPort string) error {
+func GenerateISO9660(instDir, name string, instConfig *limayaml.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort int, guestAgentBinary, nerdctlArchive string, vsockPort int, virtioPort string) error {
 	args, err := templateArgs(true, instDir, name, instConfig, udpDNSLocalPort, tcpDNSLocalPort, vsockPort, virtioPort)
 	if err != nil {
 		return err
@@ -391,34 +390,32 @@ func GenerateISO9660(instDir, name string, instConfig *limayaml.LimaYAML, udpDNS
 		}
 	}
 
-	guestAgentBinary, err := usrlocalsharelima.GuestAgentBinary(*instConfig.OS, *instConfig.Arch)
-	if err != nil {
-		return err
-	}
-	var guestAgent io.ReadCloser
-	if strings.HasSuffix(guestAgentBinary, ".gz") {
-		logrus.Debugf("Decompressing %s", guestAgentBinary)
-		guestAgentGz, err := os.Open(guestAgentBinary)
-		if err != nil {
-			return err
+	if guestAgentBinary != "" {
+		var guestAgent io.ReadCloser
+		if strings.HasSuffix(guestAgentBinary, ".gz") {
+			logrus.Debugf("Decompressing %s", guestAgentBinary)
+			guestAgentGz, err := os.Open(guestAgentBinary)
+			if err != nil {
+				return err
+			}
+			defer guestAgentGz.Close()
+			guestAgent, err = gzip.NewReader(guestAgentGz)
+			if err != nil {
+				return err
+			}
+		} else {
+			guestAgent, err = os.Open(guestAgentBinary)
+			if err != nil {
+				return err
+			}
 		}
-		defer guestAgentGz.Close()
-		guestAgent, err = gzip.NewReader(guestAgentGz)
-		if err != nil {
-			return err
-		}
-	} else {
-		guestAgent, err = os.Open(guestAgentBinary)
-		if err != nil {
-			return err
-		}
-	}
 
-	defer guestAgent.Close()
-	layout = append(layout, iso9660util.Entry{
-		Path:   "lima-guestagent",
-		Reader: guestAgent,
-	})
+		defer guestAgent.Close()
+		layout = append(layout, iso9660util.Entry{
+			Path:   "lima-guestagent",
+			Reader: guestAgent,
+		})
+	}
 
 	if nerdctlArchive != "" {
 		nftgz := args.Containerd.Archive
