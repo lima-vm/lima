@@ -6,6 +6,7 @@ Supported host OS:
 - macOS (the latest version is recommended)
 - Linux
 - NetBSD (untested)
+- DragonFlyBSD (untested)
 - Windows (untested)
 
 Prerequisite:
