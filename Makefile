@@ -140,7 +140,7 @@ exe: _output/bin/limactl$(exe)
 
 .PHONY: minimal native
 minimal: clean limactl native-guestagent default_template
-native: clean limactl helpers native-guestagent templates
+native: clean limactl helpers native-guestagent templates template_experimentals
 
 ################################################################################
 # Kconfig
