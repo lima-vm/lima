@@ -396,21 +396,24 @@ func GenerateISO9660(instDir, name string, instConfig *limayaml.LimaYAML, udpDNS
 		return err
 	}
 	var guestAgent io.ReadCloser
-	guestAgent, err = os.Open(guestAgentBinary)
-	if err != nil {
-		if !errors.Is(err, os.ErrNotExist) {
-			return err
-		}
-		compressedGuestAgent, err := os.Open(guestAgentBinary + ".gz")
+	if strings.HasSuffix(guestAgentBinary, ".gz") {
+		logrus.Debugf("Decompressing %s", guestAgentBinary)
+		guestAgentGz, err := os.Open(guestAgentBinary)
 		if err != nil {
 			return err
 		}
-		logrus.Debugf("Decompressing %s.gz", guestAgentBinary)
-		guestAgent, err = gzip.NewReader(compressedGuestAgent)
+		defer guestAgentGz.Close()
+		guestAgent, err = gzip.NewReader(guestAgentGz)
+		if err != nil {
+			return err
+		}
+	} else {
+		guestAgent, err = os.Open(guestAgentBinary)
 		if err != nil {
 			return err
 		}
 	}
+
 	defer guestAgent.Close()
 	layout = append(layout, iso9660util.Entry{
 		Path:   "lima-guestagent",
