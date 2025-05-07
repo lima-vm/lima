@@ -509,6 +509,7 @@ generate:
 
 ################################################################################
 # _artifacts/lima-$(VERSION_TRIMMED)-$(ARTIFACT_OS)-$(ARTIFACT_UNAME_M)
+# _artifacts/lima-additional-guestagents-$(VERSION_TRIMMED)-$(ARTIFACT_OS)-$(ARTIFACT_UNAME_M)
 .PHONY: artifact
 
 # returns the capitalized string of $(1).
@@ -534,11 +535,13 @@ endif
 ARTIFACT_OS = $(call capitalize,$(GOOS))
 ARTIFACT_UNAME_M = $(call to_uname_m,$(GOARCH))
 ARTIFACT_PATH_COMMON = _artifacts/lima-$(VERSION_TRIMMED)-$(ARTIFACT_OS)-$(ARTIFACT_UNAME_M)
+ARTIFACT_ADDITIONAL_GUESTAGENTS_PATH_COMMON = _artifacts/lima-additional-guestagents-$(VERSION_TRIMMED)-$(ARTIFACT_OS)-$(ARTIFACT_UNAME_M)
 
-artifact: $(addprefix $(ARTIFACT_PATH_COMMON),$(ARTIFACT_FILE_EXTENSIONS))
+artifact: $(addprefix $(ARTIFACT_PATH_COMMON),$(ARTIFACT_FILE_EXTENSIONS)) \
+	$(addprefix $(ARTIFACT_ADDITIONAL_GUESTAGENTS_PATH_COMMON),$(ARTIFACT_FILE_EXTENSIONS))
 
 ARTIFACT_DES =  _output/bin/limactl$(exe) $(LIMA_DEPS) $(HELPERS_DEPS) \
-	$(ALL_GUESTAGENTS) \
+	$(NATIVE_GUESTAGENT) \
 	$(TEMPLATES) $(TEMPLATE_EXPERIMENTALS) \
 	$(DOCUMENTATION) _output/share/doc/lima/templates \
 	_output/share/man/man1/limactl.1
@@ -547,7 +550,16 @@ ARTIFACT_DES =  _output/bin/limactl$(exe) $(LIMA_DEPS) $(HELPERS_DEPS) \
 $(ARTIFACT_PATH_COMMON).tar.gz: $(ARTIFACT_DES) | _artifacts
 	$(TAR) -C _output/ --no-xattrs -czvf $@ ./
 
+$(ARTIFACT_ADDITIONAL_GUESTAGENTS_PATH_COMMON).tar.gz:
+	# FIXME: do not exec make from make
+	make clean additional-guestagents
+	$(TAR) -C _output/ --no-xattrs -czvf $@ ./
+
 $(ARTIFACT_PATH_COMMON).zip: $(ARTIFACT_DES) | _artifacts
+	cd _output && $(ZIP) -r ../$@ *
+
+$(ARTIFACT_ADDITIONAL_GUESTAGENTS_PATH_COMMON).zip:
+	make clean additional-guestagents
 	cd _output && $(ZIP) -r ../$@ *
 
 # generate manpages using native limactl.
