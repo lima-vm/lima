@@ -13,33 +13,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const networksURL = "https://lima-vm.io/docs/config/network/#socket_vmnet"
-
-func newSudoersCommand() *cobra.Command {
-	sudoersCommand := &cobra.Command{
-		Use: "sudoers [--check [SUDOERSFILE-TO-CHECK]]",
-		Example: `
-To generate the /etc/sudoers.d/lima file:
-$ limactl sudoers | sudo tee /etc/sudoers.d/lima
-
-To validate the existing /etc/sudoers.d/lima file:
-$ limactl sudoers --check /etc/sudoers.d/lima
-`,
-		Short: "Generate the content of the /etc/sudoers.d/lima file",
-		Long: fmt.Sprintf(`Generate the content of the /etc/sudoers.d/lima file for enabling vmnet.framework support.
-The content is written to stdout, NOT to the file.
-This command must not run as the root user.
-See %s for the usage.`, networksURL),
-		Args:    WrapArgsError(cobra.MaximumNArgs(1)),
-		RunE:    sudoersAction,
-		GroupID: advancedCommand,
-	}
-	cfgFile, _ := networks.ConfigFile()
-	sudoersCommand.Flags().Bool("check", false,
-		fmt.Sprintf("check that the sudoers file is up-to-date with %q", cfgFile))
-	return sudoersCommand
-}
-
 func sudoersAction(cmd *cobra.Command, args []string) error {
 	nwCfg, err := networks.LoadConfig()
 	if err != nil {
@@ -47,7 +20,7 @@ func sudoersAction(cmd *cobra.Command, args []string) error {
 	}
 	// Make sure the current network configuration is secure
 	if err := nwCfg.Validate(); err != nil {
-		logrus.Infof("Please check %s for more information.", networksURL)
+		logrus.Infof("Please check %s for more information.", socketVMNetURL)
 		return err
 	}
 	check, err := cmd.Flags().GetBool("check")

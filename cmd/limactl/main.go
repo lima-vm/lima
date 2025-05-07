@@ -186,10 +186,9 @@ func newApp() *cobra.Command {
 		newTunnelCommand(),
 		newTemplateCommand(),
 		newRestartCommand(),
+		newSudoersCommand(),
+		newStartAtLoginCommand(),
 	)
-	for _, cmd := range additionalAdvancedCommands() {
-		rootCmd.AddCommand(cmd)
-	}
 
 	return rootCmd
 }
