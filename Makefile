@@ -581,7 +581,7 @@ artifact-%-arm64 artifact-%-aarch64 artifact-arm64 artifact-aarch64: GOARCH = ar
 
 # build cross arch binaries.
 artifact-%: $$(call generate_manpages_if_needed)
-	make artifact GOOS=$(GOOS) GOARCH=$(GOARCH)
+	make clean artifact GOOS=$(GOOS) GOARCH=$(GOARCH)
 
 .PHONY: artifacts-misc
 artifacts-misc: | _artifacts
