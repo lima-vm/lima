@@ -291,7 +291,7 @@ ALL_GUESTAGENTS = $(addsuffix $(gz),$(ALL_GUESTAGENTS_NOT_COMPRESSED))
 guestagent_path = $(foreach arch,$(2),$($(1)_GUESTAGENT_PATH_COMMON)$(arch)$(gz))
 
 ifeq ($(CONFIG_GUESTAGENT_OS_LINUX),y)
-NATIVE_GUESTAGENT_ARCH = $(shell uname -m | sed -e s/arm64/aarch64/)
+NATIVE_GUESTAGENT_ARCH = $(shell echo $(GOARCH) | sed -e s/arm64/aarch64/ -e s/arm/armv7l/ -e s/amd64/x86_64/)
 NATIVE_GUESTAGENT = $(call guestagent_path,LINUX,$(NATIVE_GUESTAGENT_ARCH))
 ADDITIONAL_GUESTAGENT_ARCHS = $(filter-out $(NATIVE_GUESTAGENT_ARCH),$(LINUX_GUESTAGENT_ARCHS))
 ADDITIONAL_GUESTAGENTS = $(call guestagent_path,LINUX,$(ADDITIONAL_GUESTAGENT_ARCHS))
