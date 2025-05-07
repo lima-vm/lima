@@ -7,6 +7,16 @@ weight: 80
 
 This page documents the environment variables used in Lima.
 
+### `LIMA_HOME`
+
+- **Description**: Specifies the Lima home directory.
+- **Default**: `~/.lima`
+- **Usage**:
+  ```sh
+  export LIMA_HOME=~/.lima-custom
+  lima
+  ```
+
 ### `LIMA_INSTANCE`
 
 - **Description**: Specifies the name of the Lima instance to use.
@@ -107,3 +117,57 @@ This page documents the environment variables used in Lima.
   ```
 - **Note**: It is an experimental setting and has no guarantees being ever promoted to stable. It may be removed
   or changed at any stage of project development.
+
+### `QEMU_SYSTEM_AARCH64`
+
+- **Description**: Path to the `qemu-system-aarch64` binary.
+- **Default**: `qemu-system-aarch64` found in `$PATH`
+- **Usage**:
+  ```sh
+  export QEMU_SYSTEM_AARCH64=/usr/local/bin/qemu-system-aarch64
+  ```
+
+### `QEMU_SYSTEM_ARM`
+
+- **Description**: Path to the `qemu-system-arm` binary.
+- **Default**: `qemu-system-arm` found in `$PATH`
+- **Usage**:
+  ```sh
+  export QEMU_SYSTEM_ARM=/usr/local/bin/qemu-system-arm
+  ```
+
+### `QEMU_SYSTEM_PPC64`
+
+- **Description**: Path to the `qemu-system-ppc64` binary.  
+- **Default**: `qemu-system-ppc64` found in `$PATH`  
+- **Usage**:
+  ```sh
+  export QEMU_SYSTEM_PPC64=/usr/local/bin/qemu-system-ppc64
+  ```
+
+### `QEMU_SYSTEM_RISCV64`
+
+- **Description**: Path to the `qemu-system-riscv64` binary.  
+- **Default**: `qemu-system-riscv64` found in `$PATH`  
+- **Usage**:
+  ```sh
+  export QEMU_SYSTEM_RISCV64=/usr/local/bin/qemu-system-riscv64
+  ```
+
+### `QEMU_SYSTEM_S390X`
+
+- **Description**: Path to the `qemu-system-s390x` binary.  
+- **Default**: `qemu-system-s390x` found in `$PATH`  
+- **Usage**:
+  ```sh
+  export QEMU_SYSTEM_S390X=/usr/local/bin/qemu-system-s390x
+  ```
+
+### `QEMU_SYSTEM_X86_64`
+
+- **Description**: Path to the `qemu-system-x86_64` binary.
+- **Default**: `qemu-system-x86_64` found in `$PATH`
+- **Usage**:
+  ```sh
+  export QEMU_SYSTEM_X86_64=/usr/local/bin/qemu-system-x86_64
+  ```

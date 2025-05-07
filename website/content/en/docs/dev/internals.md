@@ -130,32 +130,6 @@ The directory contains the following files:
 - `<ALGO>.digest`: digest of the data, in OCI format.
    e.g., file name `sha256.digest`, with content `sha256:5ba3d476707d510fe3ca3928e9cda5d0b4ce527d42b343404c92d563f82ba967`
 
-## Environment variables
-
-- `$LIMA_HOME`: The "Lima home directory" (see above).
-  - Default : `~/.lima`
-
-- `$LIMA_INSTANCE`: `lima ...` is expanded to `limactl shell ${LIMA_INSTANCE} ...`.
-  - Default : `default`
-
-- `$LIMA_SHELL`: `lima ...` is expanded to `limactl shell --shell ${LIMA_SHELL} ...`.
-  - No default : will use the user's shell configured inside the instance
-
-- `$LIMA_TEMPLATES_PATH`: A list of directories to locate templates via
-  the `template://` schema.
-  - Default: the `/usr/local/share/lima/templates` directory.
-
-- `$LIMA_WORKDIR`: `lima ...` is expanded to `limactl shell --workdir ${LIMA_WORKDIR} ...`.
-  - No default : will attempt to use the current directory from the host
-
-- `$QEMU_SYSTEM_X86_64`: path of `qemu-system-x86_64`
-  - Default: `qemu-system-x86_64` in `$PATH`
-
-- `$QEMU_SYSTEM_AARCH64`: path of `qemu-system-aarch64`
-  - Default: `qemu-system-aarch64` in `$PATH`
-
-- `$QEMU_SYSTEM_ARM`: path of `qemu-system-arm`
-  - Default: `qemu-system-arm` in `$PATH`
 
 ## Ansible
 The instance directory contains an inventory file, that might be used with Ansible playbooks and commands.
