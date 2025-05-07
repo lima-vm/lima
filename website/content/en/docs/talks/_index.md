@@ -21,7 +21,7 @@ Read the [slides](https://www.slideshare.net/AkihiroSuda/cncf-tagruntime-2022100
 ## 2023
 ### DevOps Toolkit 2023-02-09
 
-[Anders Björklund](https://github.com/afbjorklund) presented Lima in [The DevOps Toolkit Series](https://www.devopstoolkitseries.com/).
+[Anders Björklund](https://github.com/afbjorklund) presented Lima in The DevOps Toolkit Series.
 
 Watch the [video](https://www.youtube.com/watch?v=GDInFocQJTU).
 
