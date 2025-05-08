@@ -16,7 +16,7 @@ import (
 	"github.com/docker/go-units"
 	"github.com/lima-vm/go-qcow2reader"
 	"github.com/lima-vm/lima/pkg/nativeimgutil"
-	"github.com/lima-vm/lima/pkg/qemu"
+	"github.com/lima-vm/lima/pkg/qemu/imgutil"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/sirupsen/logrus"
@@ -114,7 +114,7 @@ func diskCreateAction(cmd *cobra.Command, args []string) error {
 	if format == "raw" {
 		err = nativeimgutil.CreateRawDataDisk(diskDir, int(diskSize))
 	} else {
-		err = qemu.CreateDataDisk(diskDir, format, int(diskSize))
+		err = imgutil.CreateDataDisk(diskDir, format, int(diskSize))
 	}
 	if err != nil {
 		rerr := os.RemoveAll(diskDir)
@@ -410,7 +410,7 @@ func diskResizeAction(cmd *cobra.Command, args []string) error {
 	if disk.Format == "raw" {
 		err = nativeimgutil.ResizeRawDataDisk(disk.Dir, int(diskSize))
 	} else {
-		err = qemu.ResizeDataDisk(disk.Dir, disk.Format, int(diskSize))
+		err = imgutil.ResizeDataDisk(disk.Dir, disk.Format, int(diskSize))
 	}
 	if err != nil {
 		return fmt.Errorf("failed to resize disk %q: %w", diskName, err)
