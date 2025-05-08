@@ -31,7 +31,7 @@ require (
 	github.com/mattn/go-isatty v0.0.20
 	github.com/mattn/go-shellwords v1.0.12
 	github.com/mdlayher/vsock v1.2.1 // gomodjail:unconfined
-	github.com/miekg/dns v1.1.65 // gomodjail:unconfined
+	github.com/miekg/dns v1.1.66 // gomodjail:unconfined
 	github.com/mikefarah/yq/v4 v4.45.2
 	github.com/nxadm/tail v1.4.11 // gomodjail:unconfined
 	github.com/opencontainers/go-digest v1.0.0
@@ -124,7 +124,7 @@ require (
 	golang.org/x/oauth2 v0.26.0 // indirect
 	golang.org/x/term v0.32.0 // indirect
 	golang.org/x/time v0.7.0 // indirect
-	golang.org/x/tools v0.30.0 // indirect
+	golang.org/x/tools v0.32.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250218202821-56aae31c358a // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
