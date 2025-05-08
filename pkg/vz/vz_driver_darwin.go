@@ -107,6 +107,7 @@ func (l *LimaVzDriver) Validate() error {
 		return fmt.Errorf("unsupported arch: %q", *l.Instance.Config.Arch)
 	}
 
+	// TODO: This check should be removed when we completely eliminate `CPUType` from limayaml.
 	for k, v := range l.Instance.Config.CPUType {
 		if v != "" {
 			logrus.Warnf("vmType %s: ignoring cpuType[%q]: %q", *l.Instance.Config.VMType, k, v)

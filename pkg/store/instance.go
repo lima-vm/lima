@@ -95,7 +95,7 @@ func Inspect(instName string) (*Instance, error) {
 	inst.Config = y
 	inst.Arch = *y.Arch
 	inst.VMType = *y.VMType
-	inst.CPUType = y.CPUType[*y.Arch]
+	inst.CPUType = resolveCPUType(y)
 	inst.SSHAddress = "127.0.0.1"
 	inst.SSHLocalPort = *y.SSH.LocalPort // maybe 0
 	inst.SSHConfigFile = filepath.Join(instDir, filenames.SSHConfig)
@@ -182,6 +182,13 @@ func Inspect(instName string) (*Instance, error) {
 	}
 	inst.Param = y.Param
 	return inst, nil
+}
+
+func resolveCPUType(y *limayaml.LimaYAML) string {
+	if len(y.VMOpts.QEMU.CPUType) == 0 {
+		return y.CPUType[*y.Arch]
+	}
+	return y.VMOpts.QEMU.CPUType[*y.Arch]
 }
 
 func inspectStatusWithPIDFiles(instDir string, inst *Instance, y *limayaml.LimaYAML) {
