@@ -508,3 +508,18 @@ jobs:
         template: templates/default.yaml
     - name: Smoke test
       run: gomodjail run --go-mod=./go.mod -- limactl start --tty=false
+
+  cross:
+    name: "Cross-compile (NetBSD, DragonFlyBSD)"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      with:
+        # To avoid "failed to load YAML file \"templates/experimental/riscv64.yaml\": can't parse builtin Lima version \"3f3a6f6\": 3f3a6f6 is not in dotted-tri format"
+        fetch-depth: 0
+    - uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b  # v5.4.0
+      with:
+        go-version: 1.24.x
+    - run: GOOS=netbsd go build ./...
+    - run: GOOS=dragonfly go build ./...
