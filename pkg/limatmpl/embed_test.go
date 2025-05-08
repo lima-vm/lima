@@ -374,13 +374,7 @@ provision:
 		`provision: [{script: "#! my script"}]`,
 	},
 	{
-		"ERROR base digest is not yet implemented (1)",
-		"",
-		"base: {url: base.yaml, digest: deafbad}",
-		"not yet implemented",
-	},
-	{
-		"ERROR base digest is not yet implemented (2)",
+		"ERROR base digest is not yet implemented",
 		"",
 		"base: [{url: base.yaml, digest: deafbad}]",
 		"not yet implemented",

@@ -35,9 +35,9 @@ var useAbsLocatorsTestCases = []useAbsLocatorsTestCase{
 	{
 		"Flow style array of one base template",
 		"template://foo",
-		`base: {url: bar.yaml, digest: deadbeef}`,
+		`base: [{url: bar.yaml, digest: deadbeef}]`,
 		// not sure why the quotes around the URL were added; maybe because we don't copy the style from the source
-		`base: {url: 'template://bar.yaml', digest: deadbeef}`,
+		`base: [{url: 'template://bar.yaml', digest: deadbeef}]`,
 	},
 	{
 		"Flow style array of sequence of two base URLs",

@@ -60,6 +60,18 @@ func genschemaAction(cmd *cobra.Command, args []string) error {
 		{Type: "string"},
 		{Type: "object"},
 	}
+	// allow BaseTemplates to be either string (url) or array (array)
+	schema.Definitions["BaseTemplates"].Type = "" // was: "array"
+	schema.Definitions["BaseTemplates"].OneOf = []*jsonschema.Schema{
+		{Type: "string"},
+		{Type: "array"},
+	}
+	// allow LocatorWithDigest to be either string (url) or object (struct)
+	schema.Definitions["LocatorWithDigest"].Type = "" // was: "object"
+	schema.Definitions["LocatorWithDigest"].OneOf = []*jsonschema.Schema{
+		{Type: "string"},
+		{Type: "object"},
+	}
 	properties := schema.Definitions["LimaYAML"].Properties
 	getProp(properties, "os").Enum = toAny(limayaml.OSTypes)
 	getProp(properties, "arch").Enum = toAny(limayaml.ArchTypes)
