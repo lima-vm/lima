@@ -28,7 +28,6 @@ func TestMarshalTilde(t *testing.T) {
 	// yaml will load ~ (or null) as null
 	// make sure that it is always quoted
 	assert.Equal(t, string(b), `---
-images: []
 mounts:
 - location: "~"
   writable: false

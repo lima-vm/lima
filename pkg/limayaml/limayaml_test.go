@@ -17,7 +17,7 @@ func dumpJSON(t *testing.T, d any) string {
 	return string(b)
 }
 
-const emptyYAML = "images: []\n"
+const emptyYAML = "{}\n"
 
 func TestEmptyYAML(t *testing.T) {
 	var y LimaYAML
@@ -27,7 +27,7 @@ func TestEmptyYAML(t *testing.T) {
 	assert.Equal(t, string(b), emptyYAML)
 }
 
-const defaultYAML = "images: []\n"
+const defaultYAML = "{}\n"
 
 func TestDefaultYAML(t *testing.T) {
 	bytes, err := os.ReadFile("default.yaml")

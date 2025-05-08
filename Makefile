@@ -436,14 +436,15 @@ ifeq ($(native_compiling),true)
 	$< tmpl copy --embed-all templates/default.yaml $@
 endif
 
-schema-limayaml.json: _output/bin/limactl$(exe) default-template.yaml
+schema-limayaml.json: _output/bin/limactl$(exe) templates/default.yaml default-template.yaml
 ifeq ($(native_compiling),true)
-	$< generate-jsonschema --schemafile $@ default-template.yaml
+	# validate both the original template (with the "base" etc), and the embedded template
+	$< generate-jsonschema --schemafile $@ templates/default.yaml default-template.yaml
 endif
 
 .PHONY: check-jsonschema
-check-jsonschema: schema-limayaml.json default-template.yaml
-	check-jsonschema --schemafile schema-limayaml.json default-template.yaml
+check-jsonschema: schema-limayaml.json templates/default.yaml default-template.yaml
+	check-jsonschema --schemafile schema-limayaml.json templates/default.yaml default-template.yaml
 
 ################################################################################
 .PHONY: diagrams
