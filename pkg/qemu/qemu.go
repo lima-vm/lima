@@ -127,32 +127,6 @@ func EnsureDisk(ctx context.Context, cfg Config) error {
 	return nil
 }
 
-func CreateDataDisk(dir, format string, size int) error {
-	dataDisk := filepath.Join(dir, filenames.DataDisk)
-	if _, err := os.Stat(dataDisk); err == nil || !errors.Is(err, fs.ErrNotExist) {
-		// datadisk already exists
-		return err
-	}
-
-	args := []string{"create", "-f", format, dataDisk, strconv.Itoa(size)}
-	cmd := exec.Command("qemu-img", args...)
-	if out, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("failed to run %v: %q: %w", cmd.Args, string(out), err)
-	}
-	return nil
-}
-
-func ResizeDataDisk(dir, format string, size int) error {
-	dataDisk := filepath.Join(dir, filenames.DataDisk)
-
-	args := []string{"resize", "-f", format, dataDisk, strconv.Itoa(size)}
-	cmd := exec.Command("qemu-img", args...)
-	if out, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("failed to run %v: %q: %w", cmd.Args, string(out), err)
-	}
-	return nil
-}
-
 func newQmpClient(cfg Config) (*qmp.SocketMonitor, error) {
 	qmpSock := filepath.Join(cfg.InstanceDir, filenames.QMPSock)
 	qmpClient, err := qmp.NewSocketMonitor("unix", qmpSock, 5*time.Second)
