@@ -11,10 +11,8 @@ import (
 	"io/fs"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strconv"
 
-	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/sirupsen/logrus"
 )
 
@@ -28,14 +26,13 @@ type InfoFormatSpecific struct {
 	Data json.RawMessage `json:"data,omitempty"` // since QEMU 1.7
 }
 
-func CreateDataDisk(dir, format string, size int) error {
-	dataDisk := filepath.Join(dir, filenames.DataDisk)
-	if _, err := os.Stat(dataDisk); err == nil || !errors.Is(err, fs.ErrNotExist) {
-		// datadisk already exists
+func CreateDisk(disk, format string, size int) error {
+	if _, err := os.Stat(disk); err == nil || !errors.Is(err, fs.ErrNotExist) {
+		// disk already exists
 		return err
 	}
 
-	args := []string{"create", "-f", format, dataDisk, strconv.Itoa(size)}
+	args := []string{"create", "-f", format, disk, strconv.Itoa(size)}
 	cmd := exec.Command("qemu-img", args...)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to run %v: %q: %w", cmd.Args, string(out), err)
@@ -43,10 +40,8 @@ func CreateDataDisk(dir, format string, size int) error {
 	return nil
 }
 
-func ResizeDataDisk(dir, format string, size int) error {
-	dataDisk := filepath.Join(dir, filenames.DataDisk)
-
-	args := []string{"resize", "-f", format, dataDisk, strconv.Itoa(size)}
+func ResizeDisk(disk, format string, size int) error {
+	args := []string{"resize", "-f", format, disk, strconv.Itoa(size)}
 	cmd := exec.Command("qemu-img", args...)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to run %v: %q: %w", cmd.Args, string(out), err)

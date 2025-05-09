@@ -111,10 +111,11 @@ func diskCreateAction(cmd *cobra.Command, args []string) error {
 	}
 
 	// qemu may not be available, use it only if needed.
+	dataDisk := filepath.Join(diskDir, filenames.DataDisk)
 	if format == "raw" {
-		err = nativeimgutil.CreateRawDataDisk(diskDir, int(diskSize))
+		err = nativeimgutil.CreateRawDisk(dataDisk, int(diskSize))
 	} else {
-		err = imgutil.CreateDataDisk(diskDir, format, int(diskSize))
+		err = imgutil.CreateDisk(dataDisk, format, int(diskSize))
 	}
 	if err != nil {
 		rerr := os.RemoveAll(diskDir)
@@ -407,10 +408,11 @@ func diskResizeAction(cmd *cobra.Command, args []string) error {
 	}
 
 	// qemu may not be available, use it only if needed.
+	dataDisk := filepath.Join(disk.Dir, filenames.DataDisk)
 	if disk.Format == "raw" {
-		err = nativeimgutil.ResizeRawDataDisk(disk.Dir, int(diskSize))
+		err = nativeimgutil.ResizeRawDisk(dataDisk, int(diskSize))
 	} else {
-		err = imgutil.ResizeDataDisk(disk.Dir, disk.Format, int(diskSize))
+		err = imgutil.ResizeDisk(dataDisk, disk.Format, int(diskSize))
 	}
 	if err != nil {
 		return fmt.Errorf("failed to resize disk %q: %w", diskName, err)
