@@ -19,7 +19,6 @@ import (
 	"github.com/lima-vm/go-qcow2reader/image/qcow2"
 	"github.com/lima-vm/go-qcow2reader/image/raw"
 	"github.com/lima-vm/lima/pkg/progressbar"
-	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/sirupsen/logrus"
 )
 
@@ -34,13 +33,12 @@ func RoundUp(size int) int {
 	return sectors * sectorSize
 }
 
-// CreateRawDataDisk creates an empty raw data disk.
-func CreateRawDataDisk(dir string, size int) error {
-	dataDisk := filepath.Join(dir, filenames.DataDisk)
-	if _, err := os.Stat(dataDisk); err == nil || !errors.Is(err, fs.ErrNotExist) {
+// CreateRawDisk creates an empty raw data disk.
+func CreateRawDisk(disk string, size int) error {
+	if _, err := os.Stat(disk); err == nil || !errors.Is(err, fs.ErrNotExist) {
 		return err
 	}
-	f, err := os.Create(dataDisk)
+	f, err := os.Create(disk)
 	if err != nil {
 		return err
 	}
@@ -49,11 +47,10 @@ func CreateRawDataDisk(dir string, size int) error {
 	return f.Truncate(int64(roundedSize))
 }
 
-// ResizeRawDataDisk resizes a raw data disk.
-func ResizeRawDataDisk(dir string, size int) error {
-	dataDisk := filepath.Join(dir, filenames.DataDisk)
+// ResizeRawDisk resizes a raw data disk.
+func ResizeRawDisk(disk string, size int) error {
 	roundedSize := RoundUp(size)
-	return os.Truncate(dataDisk, int64(roundedSize))
+	return os.Truncate(disk, int64(roundedSize))
 }
 
 // ConvertToRaw converts a source disk into a raw disk.
