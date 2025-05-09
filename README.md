@@ -20,10 +20,21 @@ to Mac users, but Lima can be used for non-container applications as well.
 Lima also supports other container engines (Docker, Podman, Kubernetes, etc.) and non-macOS hosts (Linux, NetBSD, etc.).
 
 ## Getting started
-Set up (on macOS):
+Setup on macOS:
 ```bash
 brew install lima
 limactl start
+```
+On Linux with Nix:
+```
+nix-env -i lima
+```
+You can also use [home-manager](https://gist.github.com/ShalokShalom/aa49372b191833b7c5e2cea542abffae?permalink_comment_id=5371149#gistcomment-5371149).
+
+Or download the binary to /usr/local/
+```bash
+VERSION=$(curl -fsSL https://api.github.com/repos/lima-vm/lima/releases/latest | jq -r .tag_name)
+curl -fsSL "https://github.com/lima-vm/lima/releases/download/${VERSION}/lima-${VERSION:1}-$(uname -s)-$(uname -m).tar.gz" | tar Cxzvm /usr/local
 ```
 
 To run Linux commands:
