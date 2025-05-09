@@ -20,6 +20,7 @@ import (
 	"github.com/lima-vm/lima/pkg/driverutil"
 	"github.com/lima-vm/lima/pkg/executil"
 	"github.com/lima-vm/lima/pkg/osutil"
+	"github.com/lima-vm/lima/pkg/usrlocalsharelima"
 	"github.com/mattn/go-isatty"
 
 	"github.com/lima-vm/lima/pkg/downloader"
@@ -72,11 +73,20 @@ func ensureNerdctlArchiveCache(ctx context.Context, y *limayaml.LimaYAML, create
 
 type Prepared struct {
 	Driver              driver.Driver
+	GuestAgent          string
 	NerdctlArchiveCache string
 }
 
 // Prepare ensures the disk, the nerdctl archive, etc.
 func Prepare(ctx context.Context, inst *store.Instance) (*Prepared, error) {
+	var guestAgent string
+	if !*inst.Config.Plain {
+		var err error
+		guestAgent, err = usrlocalsharelima.GuestAgentBinary(*inst.Config.OS, *inst.Config.Arch)
+		if err != nil {
+			return nil, err
+		}
+	}
 	limaDriver := driverutil.CreateTargetDriverInstance(&driver.BaseDriver{
 		Instance: inst,
 	})
@@ -104,6 +114,7 @@ func Prepare(ctx context.Context, inst *store.Instance) (*Prepared, error) {
 
 	return &Prepared{
 		Driver:              limaDriver,
+		GuestAgent:          guestAgent,
 		NerdctlArchiveCache: nerdctlArchiveCache,
 	}, nil
 }
@@ -170,6 +181,9 @@ func Start(ctx context.Context, inst *store.Instance, limactl string, launchHost
 		"--socket", haSockPath)
 	if prepared.Driver.CanRunGUI() {
 		args = append(args, "--run-gui")
+	}
+	if prepared.GuestAgent != "" {
+		args = append(args, "--guestagent", prepared.GuestAgent)
 	}
 	if prepared.NerdctlArchiveCache != "" {
 		args = append(args, "--nerdctl-archive", prepared.NerdctlArchiveCache)

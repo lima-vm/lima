@@ -80,6 +80,7 @@ func Dir() (string, error) {
 		ostype, arch, self, gaCandidates)
 }
 
+// GuestAgentBinary returns the guest agent binary, possibly with ".gz" suffix.
 func GuestAgentBinary(ostype limayaml.OS, arch limayaml.Arch) (string, error) {
 	if ostype == "" {
 		return "", errors.New("os must be set")
@@ -91,5 +92,35 @@ func GuestAgentBinary(ostype limayaml.OS, arch limayaml.Arch) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(dir, "lima-guestagent."+ostype+"-"+arch), nil
+	uncomp := filepath.Join(dir, "lima-guestagent."+ostype+"-"+arch)
+	comp := uncomp + ".gz"
+	res, err := chooseGABinary([]string{comp, uncomp})
+	if err != nil {
+		logrus.Debug(err)
+		return "", fmt.Errorf("guest agent binary could not be found for %s-%s (Hint: try installing `lima-additional-guestagents` package)", ostype, arch)
+	}
+	return res, nil
+}
+
+func chooseGABinary(candidates []string) (string, error) {
+	var entries []string
+	for _, f := range candidates {
+		if _, err := os.Stat(f); err != nil {
+			if !errors.Is(err, fs.ErrNotExist) {
+				logrus.WithError(err).Warnf("failed to stat %q", f)
+			}
+			continue
+		}
+		entries = append(entries, f)
+	}
+	switch len(entries) {
+	case 0:
+		return "", fmt.Errorf("%w: attempted %v", fs.ErrNotExist, candidates)
+	case 1:
+		return entries[0], nil
+	default:
+		logrus.Warnf("multiple files found, choosing %q from %v; consider removing the other ones",
+			entries[0], candidates)
+		return entries[0], nil
+	}
 }

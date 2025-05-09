@@ -75,10 +75,18 @@ type HostAgent struct {
 }
 
 type options struct {
-	nerdctlArchive string // local path, not URL
+	guestAgentBinary string
+	nerdctlArchive   string // local path, not URL
 }
 
 type Opt func(*options) error
+
+func WithGuestAgentBinary(s string) Opt {
+	return func(o *options) error {
+		o.guestAgentBinary = s
+		return nil
+	}
+}
 
 func WithNerdctlArchive(s string) Opt {
 	return func(o *options) error {
@@ -134,7 +142,7 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 	if err := cidata.GenerateCloudConfig(inst.Dir, instName, inst.Config); err != nil {
 		return nil, err
 	}
-	if err := cidata.GenerateISO9660(inst.Dir, instName, inst.Config, udpDNSLocalPort, tcpDNSLocalPort, o.nerdctlArchive, vSockPort, virtioPort); err != nil {
+	if err := cidata.GenerateISO9660(inst.Dir, instName, inst.Config, udpDNSLocalPort, tcpDNSLocalPort, o.guestAgentBinary, o.nerdctlArchive, vSockPort, virtioPort); err != nil {
 		return nil, err
 	}
 
