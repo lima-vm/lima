@@ -140,7 +140,7 @@ exe: _output/bin/limactl$(exe)
 
 .PHONY: minimal native
 minimal: clean limactl native-guestagent default_template
-native: clean limactl helpers native-guestagent templates
+native: clean limactl helpers native-guestagent templates template_experimentals
 
 ################################################################################
 # Kconfig
@@ -291,7 +291,7 @@ ALL_GUESTAGENTS = $(addsuffix $(gz),$(ALL_GUESTAGENTS_NOT_COMPRESSED))
 guestagent_path = $(foreach arch,$(2),$($(1)_GUESTAGENT_PATH_COMMON)$(arch)$(gz))
 
 ifeq ($(CONFIG_GUESTAGENT_OS_LINUX),y)
-NATIVE_GUESTAGENT_ARCH = $(shell uname -m | sed -e s/arm64/aarch64/)
+NATIVE_GUESTAGENT_ARCH = $(shell echo $(GOARCH) | sed -e s/arm64/aarch64/ -e s/arm/armv7l/ -e s/amd64/x86_64/)
 NATIVE_GUESTAGENT = $(call guestagent_path,LINUX,$(NATIVE_GUESTAGENT_ARCH))
 ADDITIONAL_GUESTAGENT_ARCHS = $(filter-out $(NATIVE_GUESTAGENT_ARCH),$(LINUX_GUESTAGENT_ARCHS))
 ADDITIONAL_GUESTAGENTS = $(call guestagent_path,LINUX,$(ADDITIONAL_GUESTAGENT_ARCHS))
@@ -510,6 +510,7 @@ generate:
 
 ################################################################################
 # _artifacts/lima-$(VERSION_TRIMMED)-$(ARTIFACT_OS)-$(ARTIFACT_UNAME_M)
+# _artifacts/lima-additional-guestagents-$(VERSION_TRIMMED)-$(ARTIFACT_OS)-$(ARTIFACT_UNAME_M)
 .PHONY: artifact
 
 # returns the capitalized string of $(1).
@@ -535,11 +536,13 @@ endif
 ARTIFACT_OS = $(call capitalize,$(GOOS))
 ARTIFACT_UNAME_M = $(call to_uname_m,$(GOARCH))
 ARTIFACT_PATH_COMMON = _artifacts/lima-$(VERSION_TRIMMED)-$(ARTIFACT_OS)-$(ARTIFACT_UNAME_M)
+ARTIFACT_ADDITIONAL_GUESTAGENTS_PATH_COMMON = _artifacts/lima-additional-guestagents-$(VERSION_TRIMMED)-$(ARTIFACT_OS)-$(ARTIFACT_UNAME_M)
 
-artifact: $(addprefix $(ARTIFACT_PATH_COMMON),$(ARTIFACT_FILE_EXTENSIONS))
+artifact: $(addprefix $(ARTIFACT_PATH_COMMON),$(ARTIFACT_FILE_EXTENSIONS)) \
+	$(addprefix $(ARTIFACT_ADDITIONAL_GUESTAGENTS_PATH_COMMON),$(ARTIFACT_FILE_EXTENSIONS))
 
 ARTIFACT_DES =  _output/bin/limactl$(exe) $(LIMA_DEPS) $(HELPERS_DEPS) \
-	$(ALL_GUESTAGENTS) \
+	$(NATIVE_GUESTAGENT) \
 	$(TEMPLATES) $(TEMPLATE_EXPERIMENTALS) \
 	$(DOCUMENTATION) _output/share/doc/lima/templates \
 	_output/share/man/man1/limactl.1
@@ -548,7 +551,16 @@ ARTIFACT_DES =  _output/bin/limactl$(exe) $(LIMA_DEPS) $(HELPERS_DEPS) \
 $(ARTIFACT_PATH_COMMON).tar.gz: $(ARTIFACT_DES) | _artifacts
 	$(TAR) -C _output/ --no-xattrs -czvf $@ ./
 
+$(ARTIFACT_ADDITIONAL_GUESTAGENTS_PATH_COMMON).tar.gz:
+	# FIXME: do not exec make from make
+	make clean additional-guestagents
+	$(TAR) -C _output/ --no-xattrs -czvf $@ ./
+
 $(ARTIFACT_PATH_COMMON).zip: $(ARTIFACT_DES) | _artifacts
+	cd _output && $(ZIP) -r ../$@ *
+
+$(ARTIFACT_ADDITIONAL_GUESTAGENTS_PATH_COMMON).zip:
+	make clean additional-guestagents
 	cd _output && $(ZIP) -r ../$@ *
 
 # generate manpages using native limactl.
@@ -582,7 +594,7 @@ artifact-%-arm64 artifact-%-aarch64 artifact-arm64 artifact-aarch64: GOARCH = ar
 
 # build cross arch binaries.
 artifact-%: $$(call generate_manpages_if_needed)
-	make artifact GOOS=$(GOOS) GOARCH=$(GOARCH)
+	make clean artifact GOOS=$(GOOS) GOARCH=$(GOARCH)
 
 .PHONY: artifacts-misc
 artifacts-misc: | _artifacts
