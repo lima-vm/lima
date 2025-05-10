@@ -47,4 +47,4 @@ config GUESTAGENT_COMPRESS
 	bool "guestagent compress"
 	help
 		Compress lima-guestagent
-	default n
+	default y
