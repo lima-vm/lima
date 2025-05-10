@@ -133,6 +133,14 @@ func editAction(cmd *cobra.Command, args []string) error {
 	if err := os.WriteFile(filePath, yBytes, 0o644); err != nil {
 		return err
 	}
+
+	// store.Inspect() syncs values between inst.YAML and the store.
+	// This call applies the validated template to the store.
+	inst, err = store.Inspect(inst.Name)
+	if err != nil {
+		return err
+	}
+
 	if inst != nil {
 		logrus.Infof("Instance %q configuration edited", inst.Name)
 	}
