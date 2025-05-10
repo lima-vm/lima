@@ -13,14 +13,14 @@ import (
 
 	"github.com/lima-vm/lima/pkg/debugutil"
 	"github.com/lima-vm/lima/pkg/limayaml"
+	. "github.com/lima-vm/lima/pkg/must"
 	"github.com/sirupsen/logrus"
 )
 
+// Cache the executable path at package level.
+var self = Must(os.Executable())
+
 func Dir() (string, error) {
-	self, err := os.Executable()
-	if err != nil {
-		return "", err
-	}
 	selfSt, err := os.Stat(self)
 	if err != nil {
 		return "", err
