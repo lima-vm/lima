@@ -36,13 +36,21 @@ export PATH=$HOME/.local/bin:$PATH
 ## Packaging Lima for Distribution
 After building Lima from source, you may want to package it for installation on other machines:
 
+1. The package for the core component and the native guest agent:
 ```bash
+make clean native
 cd _output
-# Create a compressed archive
 tar czf lima-package.tar.gz *
 ```
 
-This package can then be transferred and installed on the target system.
+2. The package for the additional guest agents:
+```
+make clean additional-guestagents
+cd _output
+tar czf lima-additional-guestagents-package.tar.gz *
+```
+
+These packages can then be transferred and installed on the target system.
 
 ## Advanced Configuration with Kconfig Tools
 (This step is not needed for most users)
