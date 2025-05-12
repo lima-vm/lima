@@ -16,6 +16,7 @@ on:
     - "**.md"
 env:
   LIMACTL_CREATE_ARGS: ""
+  GOTOOLCHAIN: local
 
 permissions: read-all
 
