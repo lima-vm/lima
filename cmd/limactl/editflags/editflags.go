@@ -66,6 +66,11 @@ func registerEdit(cmd *cobra.Command, commentPrefix string) {
 
 	// negative performance impact: https://gitlab.com/qemu-project/qemu/-/issues/334
 	flags.Bool("video", false, commentPrefix+"Enable video output (has negative performance impact for QEMU)")
+
+	flags.Float32("disk", 0, commentPrefix+"Disk size in GiB") // colima-compatible
+	_ = cmd.RegisterFlagCompletionFunc("disk", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
+		return []string{"10", "30", "50", "100", "200"}, cobra.ShellCompDirectiveNoFileComp
+	})
 }
 
 // RegisterCreate registers flags related to in-place YAML modification, for `limactl create`.
@@ -81,11 +86,6 @@ func RegisterCreate(cmd *cobra.Command, commentPrefix string) {
 	flags.String("containerd", "", commentPrefix+"containerd mode (user, system, user+system, none)")
 	_ = cmd.RegisterFlagCompletionFunc("vm-type", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
 		return []string{"user", "system", "user+system", "none"}, cobra.ShellCompDirectiveNoFileComp
-	})
-
-	flags.Float32("disk", 0, commentPrefix+"Disk size in GiB") // colima-compatible
-	_ = cmd.RegisterFlagCompletionFunc("memory", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
-		return []string{"10", "30", "50", "100", "200"}, cobra.ShellCompDirectiveNoFileComp
 	})
 
 	flags.String("vm-type", "", commentPrefix+"Virtual machine type (qemu, vz)") // colima-compatible
@@ -241,7 +241,7 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 			true,
 			false,
 		},
-		{"disk", d(".disk= \"%sGiB\""), true, false},
+		{"disk", d(".disk= \"%sGiB\""), false, false},
 		{"vm-type", d(".vmType = %q"), true, false},
 		{"plain", d(".plain = %s"), true, false},
 	}
