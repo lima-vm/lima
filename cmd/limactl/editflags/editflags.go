@@ -68,7 +68,7 @@ func registerEdit(cmd *cobra.Command, commentPrefix string) {
 	flags.Bool("video", false, commentPrefix+"Enable video output (has negative performance impact for QEMU)")
 
 	flags.Float32("disk", 0, commentPrefix+"Disk size in GiB") // colima-compatible
-	_ = cmd.RegisterFlagCompletionFunc("memory", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
+	_ = cmd.RegisterFlagCompletionFunc("disk", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
 		return []string{"10", "30", "50", "100", "200"}, cobra.ShellCompDirectiveNoFileComp
 	})
 }
