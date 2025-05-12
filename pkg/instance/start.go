@@ -16,10 +16,14 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/docker/go-units"
+	"github.com/lima-vm/go-qcow2reader"
 	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/driverutil"
 	"github.com/lima-vm/lima/pkg/executil"
+	"github.com/lima-vm/lima/pkg/nativeimgutil"
 	"github.com/lima-vm/lima/pkg/osutil"
+	"github.com/lima-vm/lima/pkg/qemu/imgutil"
 	"github.com/lima-vm/lima/pkg/usrlocalsharelima"
 	"github.com/mattn/go-isatty"
 
@@ -107,6 +111,12 @@ func Prepare(ctx context.Context, inst *store.Instance) (*Prepared, error) {
 	if err := limaDriver.CreateDisk(ctx); err != nil {
 		return nil, err
 	}
+
+	// Ensure diffDisk size matches the store
+	if err := prepareDiffDisk(inst); err != nil {
+		return nil, err
+	}
+
 	nerdctlArchiveCache, err := ensureNerdctlArchiveCache(ctx, inst.Config, created)
 	if err != nil {
 		return nil, err
@@ -376,4 +386,56 @@ func ShowMessage(inst *store.Instance) error {
 		fmt.Fprintln(logrus.StandardLogger().Out, scanner.Text())
 	}
 	return scanner.Err()
+}
+
+// prepareDiffDisk checks the disk size difference between inst.Disk and yaml.Disk.
+// If there is no diffDisk, return nil (the instance has not been initialized or started yet).
+func prepareDiffDisk(inst *store.Instance) error {
+	diffDisk := filepath.Join(inst.Dir, filenames.DiffDisk)
+
+	// Handle the instance initialization
+	_, err := os.Stat(diffDisk)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+
+	f, err := os.Open(diffDisk)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	img, err := qcow2reader.Open(f)
+	if err != nil {
+		return err
+	}
+
+	diskSize := img.Size()
+	format := string(img.Type())
+
+	if inst.Disk == diskSize {
+		return nil
+	}
+
+	logrus.Infof("Resize instance %s's disk from %s to %s", inst.Name, units.BytesSize(float64(diskSize)), units.BytesSize(float64(inst.Disk)))
+
+	if inst.Disk < diskSize {
+		inst.Disk = diskSize
+		return errors.New("diffDisk: Shrinking is currently unavailable")
+	}
+
+	if format == "raw" {
+		err = nativeimgutil.ResizeRawDisk(diffDisk, int(inst.Disk))
+	} else {
+		err = imgutil.ResizeDisk(diffDisk, format, int(inst.Disk))
+	}
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
