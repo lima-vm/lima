@@ -11,14 +11,17 @@ import (
 	"fmt"
 	"net"
 	"path/filepath"
+	"runtime"
 	"time"
 
 	"github.com/Code-Hex/vz/v3"
+	"github.com/coreos/go-semver/semver"
 
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/limayaml"
+	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/reflectutil"
 )
 
@@ -80,10 +83,17 @@ func New(driver *driver.BaseDriver) *LimaVzDriver {
 }
 
 func (l *LimaVzDriver) Validate() error {
-	// Calling NewEFIBootLoader to do required version check for latest APIs
-	_, err := vz.NewEFIBootLoader()
-	if errors.Is(err, vz.ErrUnsupportedOSVersion) {
+	macOSProductVersion, err := osutil.ProductVersion()
+	if err != nil {
+		return err
+	}
+	if macOSProductVersion.LessThan(*semver.New("13.0.0")) {
 		return errors.New("VZ driver requires macOS 13 or higher to run")
+	}
+	if runtime.GOARCH == "amd64" && macOSProductVersion.LessThan(*semver.New("15.5.0")) {
+		logrus.Warnf("vmType %s: On Intel Mac, macOS 15.5 or later is required to run Linux 6.12 or later. "+
+			"Update macOS, or change vmType to \"qemu\" if the VM does not start up. (https://github.com/lima-vm/lima/issues/3334)",
+			*l.Instance.Config.VMType)
 	}
 	if *l.Instance.Config.MountType == limayaml.NINEP {
 		return fmt.Errorf("field `mountType` must be %q or %q for VZ driver , got %q", limayaml.REVSSHFS, limayaml.VIRTIOFS, *l.Instance.Config.MountType)

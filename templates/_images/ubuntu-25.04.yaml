@@ -41,6 +41,6 @@ images:
 - location: https://cloud-images.ubuntu.com/releases/plucky/release/ubuntu-25.04-server-cloudimg-ppc64el.img
   arch: ppc64le
 
-# # NOTE: Intel Mac requires setting vmType to qemu
+# # NOTE: Intel Mac with macOS prior to 15.5 requires setting vmType to qemu
 # # https://github.com/lima-vm/lima/issues/3334
 # vmType: qemu
