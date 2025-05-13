@@ -3,11 +3,14 @@
 # See also: package.json
 NPM ?= npm
 
-build serve: _output/docsy
+build serve: _output/docsy node_modules/.bin/hugo
 	$(NPM) run $@
 
 _output/docsy:
 	$(MAKE) -C .. docsy
+
+node_modules/.bin/hugo:
+	$(NPM) install
 
 clean:
 	$(NPM) run $@
