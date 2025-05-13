@@ -116,9 +116,6 @@ github_subdir = "website"
 # or specify a new value if you want to reference another branch in your GitHub links
 github_branch= "master"
 
-# Enable Algolia DocSearch
-algolia_docsearch = false
-
 # Enable Lunr.js offline search
 offlineSearch = true
 

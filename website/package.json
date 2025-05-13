@@ -1,6 +1,6 @@
 {
   "name": "lima-site",
-  "version": "0.7.1",
+  "version": "1.0",
   "description": "Lima website that uses Docsy theme for technical documentation.",
   "repository": "github:lima-vm/lima",
   "homepage": "https://lima-vm.io",
@@ -31,8 +31,8 @@
     "update:pkg:hugo": "npm install --save-dev --save-exact hugo-extended@latest"
   },
   "devDependencies": {
-    "autoprefixer": "^10.4.14",
-    "hugo-extended": "0.113.0",
-    "postcss-cli": "^10.1.0"
+    "autoprefixer": "^10.4.21",
+    "hugo-extended": "0.133.1",
+    "postcss-cli": "^11.0.1"
   }
 }
