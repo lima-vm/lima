@@ -11,6 +11,6 @@ images:
   arch: riscv64
   digest: sha256:537c67710f4f1c9112fecaafafc293b649acd1d35b46619b97b5a5a0132241b0
 
-# # NOTE: Intel Mac requires setting vmType to qemu
+# # NOTE: Intel Mac with macOS prior to 15.5 requires setting vmType to qemu
 # # https://github.com/lima-vm/lima/issues/3334
 # vmType: qemu
