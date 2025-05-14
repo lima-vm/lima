@@ -134,11 +134,11 @@ func listAction(cmd *cobra.Command, args []string) error {
 		logrus.Warnf("The directory %q does not look like a valid Lima directory: %v", store.Directory(), err)
 	}
 
-	allinstances, err := store.Instances()
+	allInstances, err := store.Instances()
 	if err != nil {
 		return err
 	}
-	if len(allinstances) == 0 {
+	if len(args) == 0 && len(allInstances) == 0 {
 		logrus.Warn("No instance found. Run `limactl create` to create an instance.")
 		return nil
 	}
@@ -147,7 +147,7 @@ func listAction(cmd *cobra.Command, args []string) error {
 	unmatchedInstances := false
 	if len(args) > 0 {
 		for _, arg := range args {
-			matches := instanceMatches(arg, allinstances)
+			matches := instanceMatches(arg, allInstances)
 			if len(matches) > 0 {
 				instanceNames = append(instanceNames, matches...)
 			} else {
@@ -156,7 +156,7 @@ func listAction(cmd *cobra.Command, args []string) error {
 			}
 		}
 	} else {
-		instanceNames = allinstances
+		instanceNames = allInstances
 	}
 
 	if quiet {
