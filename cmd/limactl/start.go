@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -118,8 +119,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 		return nil, err
 	}
 	if isTemplateURL, templateURL := limatmpl.SeemsTemplateURL(arg); isTemplateURL {
-		// No need to use SecureJoin here. https://github.com/lima-vm/lima/pull/805#discussion_r853411702
-		templateName := filepath.Join(templateURL.Host, templateURL.Path)
+		templateName := path.Join(templateURL.Host, templateURL.Path)
 		switch templateName {
 		case "experimental/vz":
 			logrus.Warn("template://experimental/vz was merged into the default template in Lima v1.0. See also <https://lima-vm.io/docs/config/vmtype/>.")

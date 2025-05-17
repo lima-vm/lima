@@ -14,7 +14,6 @@ import (
 	"strings"
 	"unicode"
 
-	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/usrlocalsharelima"
 )
@@ -42,7 +41,16 @@ func templatesPaths() ([]string, error) {
 	}, nil
 }
 
+// Read searches for template `name` in all template directories and returns the
+// contents of the first one found. Template names cannot contain the substring ".."
+// to make sure they don't reference files outside the template directories. We are
+// not using securejoin.SecureJoin because the actual template may be a symlink to a
+// directory elsewhere (e.g. when installed by Homebrew).
 func Read(name string) ([]byte, error) {
+	doubleDot := ".."
+	if strings.Contains(name, doubleDot) {
+		return nil, fmt.Errorf("template name %q must not contain %q", name, doubleDot)
+	}
 	paths, err := templatesPaths()
 	if err != nil {
 		return nil, err
@@ -54,10 +62,8 @@ func Read(name string) ([]byte, error) {
 		name += ".yaml"
 	}
 	for _, templatesDir := range paths {
-		filePath, err := securejoin.SecureJoin(templatesDir, name)
-		if err != nil {
-			return nil, err
-		}
+		// Normalize filePath for error messages because template names always use forward slashes
+		filePath := filepath.Clean(filepath.Join(templatesDir, name))
 		if b, err := os.ReadFile(filePath); !errors.Is(err, os.ErrNotExist) {
 			return b, err
 		}
@@ -67,6 +73,10 @@ func Read(name string) ([]byte, error) {
 
 const Default = "default"
 
+// Templates returns a list of Template structures containing the Name and Location for each template.
+// It searches all template directories, but only the first template of a given name is recorded.
+// Only non-hidden files with a ".yaml" file extension are considered templates.
+// The final result is sorted alphabetically by template name.
 func Templates() ([]Template, error) {
 	paths, err := templatesPaths()
 	if err != nil {
