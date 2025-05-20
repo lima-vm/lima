@@ -12,7 +12,7 @@ set -eu -o pipefail
 # - Use 'shopt -s inherit_errexit' (Bash 4.4+) to avoid repeated 'set -e' in all '$(...)'.
 shopt -s inherit_errexit || error_exit "inherit_errexit not supported. Please use bash 4.4 or later."
 
-function almalinux_print_help() {
+function almalinux_kitten_print_help() {
 	cat <<HELP
 $(basename "${BASH_SOURCE[0]}"): Update the AlmaLinux Kitten image location in the specified templates
 
@@ -54,7 +54,7 @@ HELP
 }
 
 # print the URL spec for the given location
-function almalinux_url_spec_from_location() {
+function almalinux_kitten_url_spec_from_location() {
 	local location=$1 jq_filter url_spec
 	jq_filter='capture(
 		"^https://kitten\\.repo\\.almalinux\\.org/(?<path_version>\\d+)-kitten/cloud/(?<path_arch>[^/]+)/images/" +
@@ -69,35 +69,35 @@ function almalinux_url_spec_from_location() {
 	echo "${url_spec}"
 }
 
-readonly almalinux_jq_filter_directory='"https://kitten.repo.almalinux.org/\(.path_version)-kitten/cloud/\(.path_arch)/images/"'
-readonly almalinux_jq_filter_filename='"AlmaLinux-Kitten-\(.target_vendor)-\(.major_version)-\(if .date then .date + ".0" else "latest" end).\(.arch).\(.file_extension)"'
+readonly almalinux_kitten_jq_filter_directory='"https://kitten.repo.almalinux.org/\(.path_version)-kitten/cloud/\(.path_arch)/images/"'
+readonly almalinux_kitten_jq_filter_filename='"AlmaLinux-Kitten-\(.target_vendor)-\(.major_version)-\(if .date then .date + ".0" else "latest" end).\(.arch).\(.file_extension)"'
 
 # print the location for the given URL spec
-function almalinux_location_from_url_spec() {
+function almalinux_kitten_location_from_url_spec() {
 	local -r url_spec=$1
-	jq -e -r "${almalinux_jq_filter_directory} + ${almalinux_jq_filter_filename}" <<<"${url_spec}" ||
+	jq -e -r "${almalinux_kitten_jq_filter_directory} + ${almalinux_kitten_jq_filter_filename}" <<<"${url_spec}" ||
 		error_exit "Failed to get the location for ${url_spec}"
 }
 
-function almalinux_image_directory_from_url_spec() {
+function almalinux_kitten_image_directory_from_url_spec() {
 	local -r url_spec=$1
-	jq -e -r "${almalinux_jq_filter_directory}" <<<"${url_spec}" ||
+	jq -e -r "${almalinux_kitten_jq_filter_directory}" <<<"${url_spec}" ||
 		error_exit "Failed to get the image directory for ${url_spec}"
 }
 
-function almalinux_image_filename_from_url_spec() {
+function almalinux_kitten_image_filename_from_url_spec() {
 	local -r url_spec=$1
-	jq -e -r "${almalinux_jq_filter_filename}" <<<"${url_spec}" ||
+	jq -e -r "${almalinux_kitten_jq_filter_filename}" <<<"${url_spec}" ||
 		error_exit "Failed to get the image filename for ${url_spec}"
 }
 
 #
-function almalinux_latest_image_entry_for_url_spec() {
+function almalinux_kitten_latest_image_entry_for_url_spec() {
 	local url_spec=$1 arch major_version_url_spec major_version_image_directory downloaded_page links_in_page latest_minor_version_info
 	arch=$(jq -r '.arch' <<<"${url_spec}")
 	# to detect minor version updates, we need to get the major version URL
 	major_version_url_spec=$(jq -e -r '.path_version = .major_version' <<<"${url_spec}")
-	major_version_image_directory=$(almalinux_image_directory_from_url_spec "${major_version_url_spec}")
+	major_version_image_directory=$(almalinux_kitten_image_directory_from_url_spec "${major_version_url_spec}")
 	downloaded_page=$(download_to_cache "${major_version_image_directory}")
 	if command -v htmlq >/dev/null; then
 		links_in_page=$(htmlq 'pre a' --attribute href <"${downloaded_page}")
@@ -122,34 +122,34 @@ function almalinux_latest_image_entry_for_url_spec() {
 	local newer_url_spec location directory checksum_location downloaded_sha256sum filename digest
 	# prefer the major_minor_version in the path
 	newer_url_spec=$(jq -e -r ". + ${latest_minor_version_info} | .path_version = .major_minor_version" <<<"${url_spec}")
-	location=$(almalinux_location_from_url_spec "${newer_url_spec}")
-	directory=$(almalinux_image_directory_from_url_spec "${newer_url_spec}")
+	location=$(almalinux_kitten_location_from_url_spec "${newer_url_spec}")
+	directory=$(almalinux_kitten_image_directory_from_url_spec "${newer_url_spec}")
 	checksum_location="${directory}CHECKSUM"
 	downloaded_sha256sum=$(download_to_cache "${checksum_location}")
-	filename=$(almalinux_image_filename_from_url_spec "${newer_url_spec}")
+	filename=$(almalinux_kitten_image_filename_from_url_spec "${newer_url_spec}")
 	digest=$(awk "/${filename}/{print \"sha256:\"\$1}" "${downloaded_sha256sum}")
 	[[ -n ${digest} ]] || error_exit "Failed to get the SHA256 digest for ${filename}"
 	json_vars location arch digest
 }
 
-function almalinux_cache_key_for_image_kernel() {
+function almalinux_kitten_cache_key_for_image_kernel() {
 	local location=$1 url_spec
-	url_spec=$(almalinux_url_spec_from_location "${location}")
+	url_spec=$(almalinux_kitten_url_spec_from_location "${location}")
 	jq -r '["almalinux-kitten", .major_minor_version // .major_version, .target_vendor,
 		if .date then "timestamped" else "latest" end,
 		.arch, .file_extension] | join(":")' <<<"${url_spec}"
 }
 
-function almalinux_image_entry_for_image_kernel() {
+function almalinux_kitten_image_entry_for_image_kernel() {
 	local location=$1 kernel_is_not_supported=$2 overriding=${3:-"{}"} url_spec image_entry=''
 	[[ ${kernel_is_not_supported} == "null" ]] || echo "Updating kernel information is not supported on AlmaLinux Kitten" >&2
-	url_spec=$(almalinux_url_spec_from_location "${location}" | jq -r ". + ${overriding}")
+	url_spec=$(almalinux_kitten_url_spec_from_location "${location}" | jq -r ". + ${overriding}")
 	if jq -e '.date' <<<"${url_spec}" >/dev/null; then
-		image_entry=$(almalinux_latest_image_entry_for_url_spec "${url_spec}")
+		image_entry=$(almalinux_kitten_latest_image_entry_for_url_spec "${url_spec}")
 	else
 		image_entry=$(
 			# shellcheck disable=SC2030
-			location=$(almalinux_location_from_url_spec "${url_spec}")
+			location=$(almalinux_kitten_location_from_url_spec "${url_spec}")
 			location=$(validate_url_without_redirect "${location}")
 			arch=$(jq -r '.path_arch' <<<"${url_spec}")
 			json_vars location arch
@@ -194,7 +194,7 @@ declare overriding="{}"
 while [[ $# -gt 0 ]]; do
 	case "$1" in
 	-h | --help)
-		almalinux_print_help
+		almalinux_kitten_print_help
 		exit 0
 		;;
 	-d | --debug) set -x ;;
@@ -232,7 +232,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ ${#templates[@]} -eq 0 ]]; then
-	almalinux_print_help
+	almalinux_kitten_print_help
 	exit 0
 fi
 
@@ -257,7 +257,7 @@ for template in "${templates[@]}"; do
 		set +e # Disable 'set -e' to avoid exiting on error for the next assignment.
 		cache_key=$(
 			set -e # Enable 'set -e' for the next command.
-			almalinux_cache_key_for_image_kernel "${location}" "${kernel_location}"
+			almalinux_kitten_cache_key_for_image_kernel "${location}" "${kernel_location}"
 		) # Check exit status separately to prevent disabling 'set -e' by using the function call in the condition.
 		# shellcheck disable=2181
 		[[ $? -eq 0 ]] || continue
@@ -266,7 +266,7 @@ for template in "${templates[@]}"; do
 			if [[ -v image_entry_cache[${cache_key}] ]]; then
 				echo "${image_entry_cache[${cache_key}]}"
 			else
-				almalinux_image_entry_for_image_kernel "${location}" "${kernel_location}" "${overriding}"
+				almalinux_kitten_image_entry_for_image_kernel "${location}" "${kernel_location}" "${overriding}"
 			fi
 		) # Check exit status separately to prevent disabling 'set -e' by using the function call in the condition.
 		# shellcheck disable=2181
