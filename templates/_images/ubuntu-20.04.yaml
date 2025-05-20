@@ -1,22 +1,21 @@
 images:
 # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
 
-- location: "https://cloud-images.ubuntu.com/releases/focal/release-20250429/ubuntu-20.04-server-cloudimg-amd64.img"
+- location: "https://cloud-images.ubuntu.com/releases/focal/release-20250516/ubuntu-20.04-server-cloudimg-amd64.img"
   arch: "x86_64"
-  digest: "sha256:d8099fc706ba63de95e1e3657a019ce46c4e8eface838319138d1a18f274ddb4"
-- location: "https://cloud-images.ubuntu.com/releases/focal/release-20250429/ubuntu-20.04-server-cloudimg-arm64.img"
+  digest: "sha256:3d5a77f8f6a240cd3478c24cc4d0a11a823236b03868d79a432906c394b835a9"
+- location: "https://cloud-images.ubuntu.com/releases/focal/release-20250516/ubuntu-20.04-server-cloudimg-arm64.img"
   arch: "aarch64"
-  digest: "sha256:1b341e3c9006660986b0c18b523948f3a53bb22e5e16d8e04bcf3ea8315b90c0"
-- location: "https://cloud-images.ubuntu.com/releases/focal/release-20250429/ubuntu-20.04-server-cloudimg-armhf.img"
+  digest: "sha256:c1fa8013924407283fbc25af7d50cb3cfd1811d7099bdb624bf699d91b3f1a41"
+- location: "https://cloud-images.ubuntu.com/releases/focal/release-20250516/ubuntu-20.04-server-cloudimg-armhf.img"
   arch: "armv7l"
-  digest: "sha256:0815f07d31c409551f792b64317f9ee5e29a9da41ba0b1ea4ba0e8628f047c4c"
-- location: "https://cloud-images.ubuntu.com/releases/focal/release-20250429/ubuntu-20.04-server-cloudimg-s390x.img"
+  digest: "sha256:709e58073d548ba4515c012314eda9528c73986b7f6f88b02becbe3daae9000d"
+- location: "https://cloud-images.ubuntu.com/releases/focal/release-20250516/ubuntu-20.04-server-cloudimg-s390x.img"
   arch: "s390x"
-  digest: "sha256:710fc0a25cf1c3684d87202cccf10761e5c6e690500e7a17f7da9a9965a1d35d"
-- location: "https://cloud-images.ubuntu.com/releases/focal/release-20250429/ubuntu-20.04-server-cloudimg-ppc64el.img"
+  digest: "sha256:fc6f187f301e4c2e35c01f106efe9c528c5ca2da50faafc0e0c586d8b8e368ff"
+- location: "https://cloud-images.ubuntu.com/releases/focal/release-20250516/ubuntu-20.04-server-cloudimg-ppc64el.img"
   arch: "ppc64le"
-  digest: "sha256:45e79fb0ae143fdad797802f586f318f1c98199d6a6f1366f3f64242ceb7c07e"
-
+  digest: "sha256:560d8b1532efb87bb1f105ac251428e789284cca3080d3d55bbce87982370cc2"
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
 
