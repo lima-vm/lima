@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/lima-vm/lima/pkg/infoutil"
+	"github.com/lima-vm/lima/pkg/limainfo"
 	"github.com/spf13/cobra"
 )
 
@@ -23,7 +23,7 @@ func newInfoCommand() *cobra.Command {
 }
 
 func infoAction(cmd *cobra.Command, _ []string) error {
-	info, err := infoutil.GetInfo()
+	info, err := limainfo.New()
 	if err != nil {
 		return err
 	}

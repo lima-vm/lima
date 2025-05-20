@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright The Lima Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package infoutil
+package limainfo
 
 import (
 	"errors"
@@ -16,7 +16,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type Info struct {
+type LimaInfo struct {
 	Version         string                       `json:"version"`
 	Templates       []templatestore.Template     `json:"templates"`
 	DefaultTemplate *limayaml.LimaYAML           `json:"defaultTemplate"`
@@ -29,7 +29,10 @@ type GuestAgent struct {
 	Location string `json:"location"` // since Lima v1.1.0
 }
 
-func GetInfo() (*Info, error) {
+// New returns a LimaInfo object with the Lima version, a list of all Templates and their location,
+// the DefaultTemplate corresponding to template://default with all defaults filled in, the
+// LimaHome location, a list of all supported VMTypes, and a map of GuestAgents for each architecture.
+func New() (*LimaInfo, error) {
 	b, err := templatestore.Read(templatestore.Default)
 	if err != nil {
 		return nil, err
@@ -38,7 +41,7 @@ func GetInfo() (*Info, error) {
 	if err != nil {
 		return nil, err
 	}
-	info := &Info{
+	info := &LimaInfo{
 		Version:         version.Version,
 		DefaultTemplate: y,
 		VMTypes:         driverutil.Drivers(),
