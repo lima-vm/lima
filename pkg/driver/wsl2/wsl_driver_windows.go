@@ -47,18 +47,33 @@ var knownYamlProperties = []string{
 const Enabled = true
 
 type LimaWslDriver struct {
-	*driver.BaseDriver
+	Instance *store.Instance
+
+	SSHLocalPort int
+	VSockPort    int
+	VirtioPort   string
 }
 
-func New(driver *driver.BaseDriver) *LimaWslDriver {
+var _ driver.Driver = (*LimaWslDriver)(nil)
+
+func New() *LimaWslDriver {
 	port, err := freeport.VSock()
 	if err != nil {
 		logrus.WithError(err).Error("failed to get free VSock port")
 	}
-	driver.VSockPort = port
-	driver.VirtioPort = ""
+
 	return &LimaWslDriver{
-		BaseDriver: driver,
+		VSockPort:  port,
+		VirtioPort: "",
+	}
+}
+
+func (l *LimaWslDriver) Configure(inst *store.Instance, sshLocalPort int) *driver.ConfiguredDriver {
+	l.Instance = inst
+	l.SSHLocalPort = sshLocalPort
+
+	return &driver.ConfiguredDriver{
+		Driver: l,
 	}
 }
 
@@ -123,10 +138,10 @@ func (l *LimaWslDriver) Start(ctx context.Context) (chan error, error) {
 	distroName := "lima-" + l.Instance.Name
 
 	if status == store.StatusUninitialized {
-		if err := EnsureFs(ctx, l.BaseDriver); err != nil {
+		if err := EnsureFs(ctx, l.Instance); err != nil {
 			return nil, err
 		}
-		if err := initVM(ctx, l.BaseDriver.Instance.Dir, distroName); err != nil {
+		if err := initVM(ctx, l.Instance.Dir, distroName); err != nil {
 			return nil, err
 		}
 	}
@@ -139,8 +154,8 @@ func (l *LimaWslDriver) Start(ctx context.Context) (chan error, error) {
 
 	if err := provisionVM(
 		ctx,
-		l.BaseDriver.Instance.Dir,
-		l.BaseDriver.Instance.Name,
+		l.Instance.Dir,
+		l.Instance.Name,
 		distroName,
 		errCh,
 	); err != nil {
@@ -154,7 +169,8 @@ func (l *LimaWslDriver) Start(ctx context.Context) (chan error, error) {
 
 // CanRunGUI requires WSLg, which requires specific version of WSL2 to be installed.
 // TODO: Add check and add support for WSLg (instead of VNC) to hostagent.
-func (l *LimaWslDriver) CanRunGUI() bool {
+func (l *LimaWslDriver) canRunGUI() bool {
+	// return *l.InstConfig.Video.Display == "wsl"
 	return false
 }
 
@@ -186,18 +202,35 @@ func (l *LimaWslDriver) Unregister(ctx context.Context) error {
 // GuestAgentConn returns the guest agent connection, or nil (if forwarded by ssh).
 // As of 08-01-2024, github.com/mdlayher/vsock does not natively support vsock on
 // Windows, so use the winio library to create the connection.
-func (l *LimaWslDriver) GuestAgentConn(ctx context.Context) (net.Conn, error) {
+func (l *LimaWslDriver) GuestAgentConn(ctx context.Context) (net.Conn, string, error) {
 	VMIDStr, err := windows.GetInstanceVMID(fmt.Sprintf("lima-%s", l.Instance.Name))
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	VMIDGUID, err := guid.FromString(VMIDStr)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	sockAddr := &winio.HvsockAddr{
 		VMID:      VMIDGUID,
 		ServiceID: winio.VsockServiceID(uint32(l.VSockPort)),
 	}
-	return winio.Dial(ctx, sockAddr)
+	conn, err := winio.Dial(ctx, sockAddr)
+	if err != nil {
+		return nil, "", err
+	}
+
+	return conn, "vsock", nil
+}
+
+func (l *LimaWslDriver) Info() driver.Info {
+	var info driver.Info
+	if l.Instance != nil && l.Instance.Dir != "" {
+		info.InstanceDir = l.Instance.Dir
+	}
+	info.DriverName = "wsl"
+	info.CanRunGUI = l.canRunGUI()
+	info.VirtioPort = l.VirtioPort
+	info.VsockPort = l.VSockPort
+	return info
 }
