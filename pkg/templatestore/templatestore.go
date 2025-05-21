@@ -31,14 +31,15 @@ func templatesPaths() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	shareDir, err := usrlocalsharelima.Dir()
+	shareDirs, err := usrlocalsharelima.Dirs()
 	if err != nil {
 		return nil, err
 	}
-	return []string{
-		limaTemplatesDir,
-		filepath.Join(shareDir, "templates"),
-	}, nil
+	res := []string{limaTemplatesDir}
+	for _, shareDir := range shareDirs {
+		res = append(res, filepath.Join(shareDir, "templates"))
+	}
+	return res, nil
 }
 
 // Read searches for template `name` in all template directories and returns the

@@ -311,10 +311,13 @@ ifeq ($(CONFIG_GUESTAGENT_OS_LINUX),y)
 GUESTAGENTS += $(foreach arch,$(LINUX_GUESTAGENT_ARCHS),$(call guestagent_path_enabled_by_config,LINUX,$(arch)))
 endif
 
+_output/bin/lima-additional-guestagents-path: ./cmd/lima-additional-guestagents-path | _output/bin
+	cp -a $< $@
+
 .PHONY: guestagents native-guestagent additional-guestagents
 guestagents: $(GUESTAGENTS)
 native-guestagent: $(NATIVE_GUESTAGENT)
-additional-guestagents: $(ADDITIONAL_GUESTAGENTS)
+additional-guestagents: $(ADDITIONAL_GUESTAGENTS) _output/bin/lima-additional-guestagents-path
 %-guestagent:
 	@[ "$(findstring $(*),$(LINUX_GUESTAGENT_ARCHS))" == "$(*)" ] && make $(call guestagent_path,LINUX,$*)
 
@@ -473,6 +476,7 @@ uninstall:
 		"$(DEST)/bin/docker.lima" \
 		"$(DEST)/bin/podman.lima" \
 		"$(DEST)/bin/kubectl.lima" \
+		"$(DEST)/bin/lima-additional-guestagents-path" \
 		"$(DEST)/share/man/man1/lima.1" \
 		"$(DEST)/share/man/man1/limactl"*".1" \
 		"$(DEST)/share/lima" "$(DEST)/share/doc/lima"

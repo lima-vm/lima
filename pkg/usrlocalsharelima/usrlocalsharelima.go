@@ -4,19 +4,25 @@
 package usrlocalsharelima
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
+	"sync"
 
 	"github.com/lima-vm/lima/pkg/debugutil"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/sirupsen/logrus"
 )
 
-func Dir() (string, error) {
+// primaryDir returns the primary guestagent directory that also contains templates.
+// FIXME: the code is terrible.
+var primaryDir = sync.OnceValues(func() (string, error) {
 	self, err := os.Executable()
 	if err != nil {
 		return "", err
@@ -78,6 +84,43 @@ func Dir() (string, error) {
 
 	return "", fmt.Errorf("failed to find \"lima-guestagent.%s-%s\" binary for %q, attempted %v",
 		ostype, arch, self, gaCandidates)
+})
+
+// additionalDir detects the guest agent directory path
+// via the `lima-additional-guestagents-path` helper script
+// included in the `lima-additional-guestagents` package.
+var additionalDir = sync.OnceValues(func() (string, error) {
+	script, err := exec.LookPath("lima-additional-guestagents-path")
+	if err != nil {
+		if errors.Is(err, exec.ErrNotFound) {
+			err = nil
+		}
+		return "", err
+	}
+	cmd := exec.Command(script)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err = cmd.Run(); err != nil {
+		return "", fmt.Errorf("%w (stderr=%q)", err, stderr.String())
+	}
+	return strings.TrimSpace(stdout.String()), nil
+})
+
+// Dirs returns directories that contains the guest agents.
+// When err is nil, the result contains at least 1 entry.
+// When err is not nil, the result may not contain any entry.
+func Dirs() ([]string, error) {
+	dir, err := primaryDir()
+	if err != nil {
+		return nil, err
+	}
+	res := []string{dir}
+	dir2, err := additionalDir()
+	if dir2 != "" {
+		res = append(res, dir2)
+	}
+	return res, err
 }
 
 // GuestAgentBinary returns the guest agent binary, possibly with ".gz" suffix.
@@ -88,15 +131,26 @@ func GuestAgentBinary(ostype limayaml.OS, arch limayaml.Arch) (string, error) {
 	if arch == "" {
 		return "", errors.New("arch must be set")
 	}
-	dir, err := Dir()
+	dirs, err := Dirs()
 	if err != nil {
-		return "", err
+		if len(dirs) == 0 {
+			return "", err
+		}
+		logrus.WithError(err).Warn("Failed to get guestagent directories")
 	}
-	uncomp := filepath.Join(dir, "lima-guestagent."+ostype+"-"+arch)
-	comp := uncomp + ".gz"
-	res, err := chooseGABinary([]string{comp, uncomp})
-	if err != nil {
-		logrus.Debug(err)
+	var res string
+	for _, dir := range dirs {
+		uncomp := filepath.Join(dir, "lima-guestagent."+ostype+"-"+arch)
+		comp := uncomp + ".gz"
+		res, err = chooseGABinary([]string{comp, uncomp})
+		if err != nil {
+			logrus.Debug(err)
+		}
+		if res != "" {
+			break
+		}
+	}
+	if res == "" {
 		return "", fmt.Errorf("guest agent binary could not be found for %s-%s (Hint: try installing `lima-additional-guestagents` package)", ostype, arch)
 	}
 	return res, nil

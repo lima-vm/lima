@@ -1,0 +1,13 @@
+#!/bin/sh
+
+# SPDX-FileCopyrightText: Copyright The Lima Authors
+# SPDX-License-Identifier: Apache-2.0
+
+set -eu
+
+# Script path: <PREFIX>/bin/lima-additional-guestagents-path
+# Result:      <PREFIX>/share/lima
+self="$(realpath "$0")"
+dir="$(dirname "$self")"
+dirdir="$(dirname "$dir")"
+exec realpath "$dirdir"/share/lima
