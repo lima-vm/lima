@@ -4,21 +4,23 @@
 package driverutil
 
 import (
+	"fmt"
+
+	"github.com/sirupsen/logrus"
+
 	"github.com/lima-vm/lima/pkg/driver"
-	"github.com/lima-vm/lima/pkg/driver/qemu"
-	"github.com/lima-vm/lima/pkg/driver/vz"
-	"github.com/lima-vm/lima/pkg/driver/wsl2"
-	"github.com/lima-vm/lima/pkg/limayaml"
+	"github.com/lima-vm/lima/pkg/registry"
 	"github.com/lima-vm/lima/pkg/store"
 )
 
-func CreateTargetDriverInstance(inst *store.Instance, sshLocalPort int) driver.Driver {
+// CreateConfiguredDriver creates a driver.ConfiguredDriver for the given instance.
+func CreateConfiguredDriver(inst *store.Instance, sshLocalPort int) (*driver.ConfiguredDriver, error) {
 	limaDriver := inst.Config.VMType
-	if *limaDriver == limayaml.VZ {
-		return vz.New(inst, sshLocalPort)
+	_, intDriver, exists := registry.Get(*limaDriver)
+	if !exists {
+		return nil, fmt.Errorf("unknown or unsupported VM type: %s", *limaDriver)
 	}
-	if *limaDriver == limayaml.WSL2 {
-		return wsl2.New(inst, sshLocalPort)
-	}
-	return qemu.New(inst, sshLocalPort)
+
+	logrus.Infof("Using internal driver %q", intDriver.Info().DriverName)
+	return intDriver.Configure(inst, sshLocalPort), nil
 }

@@ -14,9 +14,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/pkg/driver"
-	"github.com/lima-vm/lima/pkg/driver/vz"
-	"github.com/lima-vm/lima/pkg/driver/wsl2"
-	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/usrlocalsharelima"
 )
 
@@ -51,17 +48,6 @@ func List() map[string]string {
 	}
 	for name, d := range ExternalDrivers {
 		vmTypes[name] = d.Path
-	}
-
-	// This block will be removed while merging the internal driver pull request(#3693).
-	if len(vmTypes) == 0 {
-		vmTypes[limayaml.QEMU] = Internal
-		if vz.Enabled {
-			vmTypes[limayaml.VZ] = Internal
-		}
-		if wsl2.Enabled {
-			vmTypes[limayaml.WSL2] = Internal
-		}
 	}
 
 	return vmTypes
@@ -180,4 +166,12 @@ func registerDriverFile(path string) {
 
 func isExecutable(mode os.FileMode) bool {
 	return mode&0o111 != 0
+}
+
+func Register(driver driver.Driver) {
+	name := driver.Info().DriverName
+	if _, exists := internalDrivers[name]; exists {
+		return
+	}
+	internalDrivers[name] = driver
 }
