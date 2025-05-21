@@ -71,6 +71,9 @@ type Driver interface {
 
 	// GuestAgentConn returns the guest agent connection, or nil (if forwarded by ssh).
 	GuestAgentConn(_ context.Context) (net.Conn, error)
+
+	// Returns the driver name.
+	Name() string
 }
 
 type BaseDriver struct {
@@ -151,4 +154,8 @@ func (d *BaseDriver) ForwardGuestAgent() bool {
 func (d *BaseDriver) GuestAgentConn(_ context.Context) (net.Conn, error) {
 	// use the unix socket forwarded by host agent
 	return nil, nil
+}
+
+func (d *BaseDriver) Name() string {
+	return ""
 }
