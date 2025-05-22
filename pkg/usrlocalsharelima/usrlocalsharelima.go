@@ -8,28 +8,46 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
+	"sync"
 
 	"github.com/lima-vm/lima/pkg/debugutil"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/sirupsen/logrus"
 )
 
-func Dir() (string, error) {
-	self, err := os.Executable()
-	if err != nil {
-		return "", err
-	}
-	selfSt, err := os.Stat(self)
-	if err != nil {
-		return "", err
-	}
-	if selfSt.Mode()&fs.ModeSymlink != 0 {
-		self, err = os.Readlink(self)
-		if err != nil {
-			return "", err
+// executableViaArgs0 returns the absolute path to the executable used to start this process.
+// It will also append the file extension on Windows, if necessary.
+// This function is different from os.Executable(), which will use /proc/self/exe on Linux
+// and therefore will resolve any symlink used to locate the executable. This function will
+// return the symlink instead because we want to locate ../share/lima relative to the location
+// of the symlink, and not the actual executable. This is important when using Homebrew.
+//
+// If os.Args[0] is invalid, this function still falls back on os.Executable().
+var executableViaArgs0 = sync.OnceValues(func() (string, error) {
+	if os.Args[0] == "" {
+		logrus.Warn("os.Args[0] has not been set")
+	} else {
+		executable, err := exec.LookPath(os.Args[0])
+		if err == nil {
+			// LookPath() will add the `.exe` file extension on Windows, but will not return an
+			// absolute path if the argument contained any of `:/\` (or just `/` on Unix).
+			return filepath.Abs(executable)
 		}
+		logrus.Warnf("os.Args[0] is invalid: %v", err)
+	}
+	return os.Executable()
+})
+
+// Dir returns the location of the <PREFIX>/lima/share directory, relative to the location
+// of the current executable. It checks for multiple possible filesystem layouts and returns
+// the first candidate that contains the native guest agent binary.
+func Dir() (string, error) {
+	self, err := executableViaArgs0()
+	if err != nil {
+		return "", err
 	}
 
 	ostype := limayaml.NewOS("linux")
@@ -80,7 +98,7 @@ func Dir() (string, error) {
 		ostype, arch, self, gaCandidates)
 }
 
-// GuestAgentBinary returns the guest agent binary, possibly with ".gz" suffix.
+// GuestAgentBinary returns the absolute path of the guest agent binary, possibly with ".gz" suffix.
 func GuestAgentBinary(ostype limayaml.OS, arch limayaml.Arch) (string, error) {
 	if ostype == "" {
 		return "", errors.New("os must be set")
