@@ -21,6 +21,7 @@ import (
 	"github.com/lima-vm/lima/pkg/limatmpl"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	networks "github.com/lima-vm/lima/pkg/networks/reconcile"
+	"github.com/lima-vm/lima/pkg/registry"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/lima-vm/lima/pkg/templatestore"
@@ -32,6 +33,7 @@ func registerCreateFlags(cmd *cobra.Command, commentPrefix string) {
 	flags := cmd.Flags()
 	flags.String("name", "", commentPrefix+"Override the instance name")
 	flags.Bool("list-templates", false, commentPrefix+"List available templates and exit")
+	flags.Bool("list-drivers", false, commentPrefix+"List available drivers and exit")
 	editflags.RegisterCreate(cmd, commentPrefix)
 }
 
@@ -391,6 +393,14 @@ func createStartActionCommon(cmd *cobra.Command, _ []string) (exit bool, err err
 		w := cmd.OutOrStdout()
 		for _, f := range templates {
 			_, _ = fmt.Fprintln(w, f.Name)
+		}
+		return true, nil
+	} else if listDrivers, err := cmd.Flags().GetBool("list-drivers"); err != nil {
+		return true, err
+	} else if listDrivers {
+		w := cmd.OutOrStdout()
+		for k := range registry.List() {
+			_, _ = fmt.Fprintln(w, k)
 		}
 		return true, nil
 	}

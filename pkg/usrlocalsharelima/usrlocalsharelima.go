@@ -165,3 +165,11 @@ func chooseGABinary(candidates []string) (string, error) {
 		return entries[0], nil
 	}
 }
+
+func Prefix() (string, error) {
+	dir, err := Dir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Dir(filepath.Dir(dir)), nil
+}
