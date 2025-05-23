@@ -148,9 +148,16 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 		}
 		tty = false
 	}
-	tmpl, err := limatmpl.Read(cmd.Context(), name, arg)
-	if err != nil {
-		return nil, err
+	var tmpl *limatmpl.Template
+	// Only filenames ending in .yml or .yaml are template filenames; otherwise they are instance names.
+	// This check is necessary because limatmpl.Read() can also be used to read non-template files.
+	if limatmpl.SeemsFilePath(arg) && !(strings.HasSuffix(arg, ".yml") || strings.HasSuffix(arg, ".yaml")) {
+		tmpl = &limatmpl.Template{}
+	} else {
+		tmpl, err = limatmpl.Read(cmd.Context(), name, arg)
+		if err != nil {
+			return nil, err
+		}
 	}
 	if len(tmpl.Bytes) > 0 {
 		if createOnly {
