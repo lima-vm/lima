@@ -18,10 +18,10 @@ import (
 	"github.com/coreos/go-semver/semver"
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/reflectutil"
+	"github.com/lima-vm/lima/pkg/store"
 )
 
 var knownYamlProperties = []string{
@@ -68,16 +68,20 @@ var knownYamlProperties = []string{
 const Enabled = true
 
 type LimaVzDriver struct {
-	*driver.BaseDriver
+	Instance *store.Instance
+
+	SSHLocalPort int
+	VSockPort    int
+	VirtioPort   string
 
 	machine *virtualMachineWrapper
 }
 
-func New(driver *driver.BaseDriver) *LimaVzDriver {
-	driver.VSockPort = 2222
-	driver.VirtioPort = ""
+func New(inst *store.Instance) *LimaVzDriver {
 	return &LimaVzDriver{
-		BaseDriver: driver,
+		Instance:   inst,
+		VSockPort:  2222,
+		VirtioPort: "",
 	}
 }
 
@@ -167,17 +171,17 @@ func (l *LimaVzDriver) Validate() error {
 }
 
 func (l *LimaVzDriver) Initialize(_ context.Context) error {
-	_, err := getMachineIdentifier(l.BaseDriver)
+	_, err := getMachineIdentifier(l.Instance)
 	return err
 }
 
 func (l *LimaVzDriver) CreateDisk(ctx context.Context) error {
-	return EnsureDisk(ctx, l.BaseDriver)
+	return EnsureDisk(ctx, l.Instance)
 }
 
 func (l *LimaVzDriver) Start(ctx context.Context) (chan error, error) {
 	logrus.Infof("Starting VZ (hint: to watch the boot progress, see %q)", filepath.Join(l.Instance.Dir, "serial*.log"))
-	vm, errCh, err := startVM(ctx, l.BaseDriver)
+	vm, errCh, err := startVM(ctx, l.Instance, l.SSHLocalPort)
 	if err != nil {
 		if errors.Is(err, vz.ErrUnsupportedOSVersion) {
 			return nil, fmt.Errorf("vz driver requires macOS 13 or higher to run: %w", err)
