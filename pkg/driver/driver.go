@@ -6,10 +6,12 @@ package driver
 import (
 	"context"
 	"net"
+
+	"github.com/lima-vm/lima/pkg/store"
 )
 
-// Driver interface is used by hostagent for managing vm.
-type Driver interface {
+// Basic lifecycle operations
+type Lifecycle interface {
 	// Validate returns error if the current driver isn't support for given config
 	Validate() error
 
@@ -29,6 +31,13 @@ type Driver interface {
 	// The second argument may contain error occurred while starting driver
 	Start(_ context.Context) (chan error, error)
 
+	// Stop will terminate the running vm instance.
+	// It returns error if there are any errors during Stop
+	Stop(_ context.Context) error
+}
+
+// GUI-related operations
+type GUI interface {
 	// CanRunGUI returns bool to indicate if the hostagent need to run GUI synchronously
 	CanRunGUI() bool
 
@@ -36,36 +45,51 @@ type Driver interface {
 	// It returns error if there are any failures
 	RunGUI() error
 
-	// Stop will terminate the running vm instance.
-	// It returns error if there are any errors during Stop
-	Stop(_ context.Context) error
+	ChangeDisplayPassword(ctx context.Context, password string) error
+	GetDisplayConnection(ctx context.Context) (string, error)
+}
 
-	// Register will add an instance to a registry.
-	// It returns error if there are any errors during Register
-	Register(_ context.Context) error
+// Snapshot operations
+type Snapshot interface {
+	CreateSnapshot(ctx context.Context, tag string) error
+	ApplySnapshot(ctx context.Context, tag string) error
+	DeleteSnapshot(ctx context.Context, tag string) error
+	ListSnapshots(ctx context.Context) (string, error)
+}
 
-	// Unregister will perform any cleanup related to the vm instance.
-	// It returns error if there are any errors during Unregister
-	Unregister(_ context.Context) error
+// Registration operations
+type Registration interface {
+	Register(ctx context.Context) error
+	Unregister(ctx context.Context) error
+}
 
-	ChangeDisplayPassword(_ context.Context, password string) error
-
-	GetDisplayConnection(_ context.Context) (string, error)
-
-	CreateSnapshot(_ context.Context, tag string) error
-
-	ApplySnapshot(_ context.Context, tag string) error
-
-	DeleteSnapshot(_ context.Context, tag string) error
-
-	ListSnapshots(_ context.Context) (string, error)
-
+// Guest agent operations
+type GuestAgent interface {
 	// ForwardGuestAgent returns if the guest agent sock needs forwarding by host agent.
 	ForwardGuestAgent() bool
 
 	// GuestAgentConn returns the guest agent connection, or nil (if forwarded by ssh).
 	GuestAgentConn(_ context.Context) (net.Conn, error)
+}
 
-	// Returns the driver name.
+type Plugin interface {
+	// Name returns the name of the driver
 	Name() string
+
+	// Enabled returns whether this driver is available on the current platform.
+	// Also checks whether this driver can handle the given config
+	Enabled() bool
+
+	// NewDriver returns a new driver instance. Only to be used to embed internal drivers
+	NewDriver(ctx context.Context, inst *store.Instance, sshLocalPort int) Driver
+}
+
+// Driver interface is used by hostagent for managing vm.
+type Driver interface {
+	Lifecycle
+	GUI
+	Snapshot
+	Registration
+	GuestAgent
+	Plugin
 }
