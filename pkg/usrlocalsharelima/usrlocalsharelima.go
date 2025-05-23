@@ -115,7 +115,7 @@ func GuestAgentBinary(ostype limayaml.OS, arch limayaml.Arch) (string, error) {
 	res, err := chooseGABinary([]string{comp, uncomp})
 	if err != nil {
 		logrus.Debug(err)
-		return "", fmt.Errorf("guest agent binary could not be found for %s-%s (Hint: try installing `lima-additional-guestagents` package)", ostype, arch)
+		return "", fmt.Errorf("guest agent binary could not be found for %s-%s: %w (Hint: try installing `lima-additional-guestagents` package)", ostype, arch, err)
 	}
 	return res, nil
 }
