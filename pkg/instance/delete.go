@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/driverutil"
 	"github.com/lima-vm/lima/pkg/store"
 )
@@ -37,9 +36,7 @@ func Delete(ctx context.Context, inst *store.Instance, force bool) error {
 }
 
 func unregister(ctx context.Context, inst *store.Instance) error {
-	limaDriver := driverutil.CreateTargetDriverInstance(&driver.BaseDriver{
-		Instance: inst,
-	})
+	limaDriver := driverutil.CreateTargetDriverInstance(inst, 0)
 
 	return limaDriver.Unregister(ctx)
 }

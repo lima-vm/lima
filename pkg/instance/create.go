@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 
 	"github.com/lima-vm/lima/pkg/cidata"
-	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/driverutil"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/osutil"
@@ -76,9 +75,7 @@ func Create(ctx context.Context, instName string, instConfig []byte, saveBrokenY
 		return nil, err
 	}
 
-	limaDriver := driverutil.CreateTargetDriverInstance(&driver.BaseDriver{
-		Instance: inst,
-	})
+	limaDriver := driverutil.CreateTargetDriverInstance(inst, 0)
 
 	if err := limaDriver.Register(ctx); err != nil {
 		return nil, err

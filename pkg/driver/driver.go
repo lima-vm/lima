@@ -5,16 +5,10 @@ package driver
 
 import (
 	"context"
-	"errors"
 	"net"
-
-	"github.com/lima-vm/lima/pkg/store"
 )
 
 // Driver interface is used by hostagent for managing vm.
-//
-// This interface is extended by BaseDriver which provides default implementation.
-// All other driver definition must extend BaseDriver.
 type Driver interface {
 	// Validate returns error if the current driver isn't support for given config
 	Validate() error
@@ -74,88 +68,4 @@ type Driver interface {
 
 	// Returns the driver name.
 	Name() string
-}
-
-type BaseDriver struct {
-	Instance *store.Instance
-
-	SSHLocalPort int
-	VSockPort    int
-	VirtioPort   string
-}
-
-var _ Driver = (*BaseDriver)(nil)
-
-func (d *BaseDriver) Validate() error {
-	return nil
-}
-
-func (d *BaseDriver) Initialize(_ context.Context) error {
-	return nil
-}
-
-func (d *BaseDriver) CreateDisk(_ context.Context) error {
-	return nil
-}
-
-func (d *BaseDriver) Start(_ context.Context) (chan error, error) {
-	return nil, nil
-}
-
-func (d *BaseDriver) CanRunGUI() bool {
-	return false
-}
-
-func (d *BaseDriver) RunGUI() error {
-	return nil
-}
-
-func (d *BaseDriver) Stop(_ context.Context) error {
-	return nil
-}
-
-func (d *BaseDriver) Register(_ context.Context) error {
-	return nil
-}
-
-func (d *BaseDriver) Unregister(_ context.Context) error {
-	return nil
-}
-
-func (d *BaseDriver) ChangeDisplayPassword(_ context.Context, _ string) error {
-	return nil
-}
-
-func (d *BaseDriver) GetDisplayConnection(_ context.Context) (string, error) {
-	return "", nil
-}
-
-func (d *BaseDriver) CreateSnapshot(_ context.Context, _ string) error {
-	return errors.New("unimplemented")
-}
-
-func (d *BaseDriver) ApplySnapshot(_ context.Context, _ string) error {
-	return errors.New("unimplemented")
-}
-
-func (d *BaseDriver) DeleteSnapshot(_ context.Context, _ string) error {
-	return errors.New("unimplemented")
-}
-
-func (d *BaseDriver) ListSnapshots(_ context.Context) (string, error) {
-	return "", errors.New("unimplemented")
-}
-
-func (d *BaseDriver) ForwardGuestAgent() bool {
-	// if driver is not providing, use host agent
-	return d.VSockPort == 0 && d.VirtioPort == ""
-}
-
-func (d *BaseDriver) GuestAgentConn(_ context.Context) (net.Conn, error) {
-	// use the unix socket forwarded by host agent
-	return nil, nil
-}
-
-func (d *BaseDriver) Name() string {
-	return ""
 }

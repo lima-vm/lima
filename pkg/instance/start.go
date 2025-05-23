@@ -90,9 +90,7 @@ func Prepare(ctx context.Context, inst *store.Instance) (*Prepared, error) {
 			return nil, err
 		}
 	}
-	limaDriver := driverutil.CreateTargetDriverInstance(&driver.BaseDriver{
-		Instance: inst,
-	})
+	limaDriver := driverutil.CreateTargetDriverInstance(inst, 0)
 
 	if err := limaDriver.Validate(); err != nil {
 		return nil, err
