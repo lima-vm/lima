@@ -16,11 +16,10 @@ import (
 
 	gvproxyclient "github.com/containers/gvisor-tap-vsock/pkg/client"
 	"github.com/containers/gvisor-tap-vsock/pkg/types"
-
-	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/httpclientutil"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/networks/usernet/dnshosts"
+	"github.com/lima-vm/lima/pkg/store"
 )
 
 type Client struct {
@@ -32,18 +31,18 @@ type Client struct {
 	subnet   net.IP
 }
 
-func (c *Client) ConfigureDriver(ctx context.Context, driver *driver.BaseDriver) error {
-	macAddress := limayaml.MACAddress(driver.Instance.Dir)
+func (c *Client) ConfigureDriver(ctx context.Context, inst *store.Instance, sshLocalPort int) error {
+	macAddress := limayaml.MACAddress(inst.Dir)
 	ipAddress, err := c.ResolveIPAddress(ctx, macAddress)
 	if err != nil {
 		return err
 	}
-	err = c.ResolveAndForwardSSH(ipAddress, driver.SSHLocalPort)
+	err = c.ResolveAndForwardSSH(ipAddress, sshLocalPort)
 	if err != nil {
 		return err
 	}
-	hosts := driver.Instance.Config.HostResolver.Hosts
-	hosts[fmt.Sprintf("%s.internal", driver.Instance.Hostname)] = ipAddress
+	hosts := inst.Config.HostResolver.Hosts
+	hosts[fmt.Sprintf("%s.internal", inst.Hostname)] = ipAddress
 	err = c.AddDNSHosts(hosts)
 	return err
 }

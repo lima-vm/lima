@@ -26,7 +26,6 @@ import (
 	"github.com/digitalocean/go-qemu/qmp/raw"
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/executil"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/networks/usernet"
@@ -37,23 +36,29 @@ import (
 )
 
 type LimaQemuDriver struct {
-	*driver.BaseDriver
+	Instance     *store.Instance
+	SSHLocalPort int
+	VSockPort    int
+	VirtioPort   string
+
 	qCmd    *exec.Cmd
 	qWaitCh chan error
 
 	vhostCmds []*exec.Cmd
 }
 
-func New(driver *driver.BaseDriver) *LimaQemuDriver {
-	driver.VSockPort = 0
-	driver.VirtioPort = filenames.VirtioPort
+func New(inst *store.Instance) *LimaQemuDriver {
 	// virtserialport doesn't seem to work reliably: https://github.com/lima-vm/lima/issues/2064
 	// but on Windows default Unix socket forwarding is not available
+	var virtioPort string
+	virtioPort = filenames.VirtioPort
 	if runtime.GOOS != "windows" {
-		driver.VirtioPort = ""
+		virtioPort = ""
 	}
 	return &LimaQemuDriver{
-		BaseDriver: driver,
+		Instance:   inst,
+		VSockPort:  0,
+		VirtioPort: virtioPort,
 	}
 }
 
@@ -212,7 +217,7 @@ func (l *LimaQemuDriver) Start(ctx context.Context) (chan error, error) {
 	go func() {
 		if usernetIndex := limayaml.FirstUsernetIndex(l.Instance.Config); usernetIndex != -1 {
 			client := usernet.NewClientByName(l.Instance.Config.Networks[usernetIndex].Lima)
-			err := client.ConfigureDriver(ctx, l.BaseDriver)
+			err := client.ConfigureDriver(ctx, l.Instance, l.SSHLocalPort)
 			if err != nil {
 				l.qWaitCh <- err
 			}
@@ -260,11 +265,11 @@ func (l *LimaQemuDriver) checkBinarySignature() error {
 	}
 	// The codesign --xml option is only available on macOS Monterey and later
 	if !macOSProductVersion.LessThan(*semver.New("12.0.0")) {
-		qExe, _, err := Exe(l.BaseDriver.Instance.Arch)
+		qExe, _, err := Exe(l.Instance.Arch)
 		if err != nil {
-			return fmt.Errorf("failed to find the QEMU binary for the architecture %q: %w", l.BaseDriver.Instance.Arch, err)
+			return fmt.Errorf("failed to find the QEMU binary for the architecture %q: %w", l.Instance.Arch, err)
 		}
-		if accel := Accel(l.BaseDriver.Instance.Arch); accel == "hvf" {
+		if accel := Accel(l.Instance.Arch); accel == "hvf" {
 			entitlementutil.AskToSignIfNotSignedProperly(qExe)
 		}
 	}
