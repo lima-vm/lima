@@ -11,7 +11,6 @@ import (
 
 	"github.com/Microsoft/go-winio"
 	"github.com/Microsoft/go-winio/pkg/guid"
-	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/freeport"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/reflectutil"
@@ -46,18 +45,23 @@ var knownYamlProperties = []string{
 const Enabled = true
 
 type LimaWslDriver struct {
-	*driver.BaseDriver
+	Instance *store.Instance
+
+	SSHLocalPort int
+	VSockPort    int
+	VirtioPort   string
 }
 
-func New(driver *driver.BaseDriver) *LimaWslDriver {
+func New(inst *store.Instance) *LimaWslDriver {
 	port, err := freeport.VSock()
 	if err != nil {
 		logrus.WithError(err).Error("failed to get free VSock port")
 	}
-	driver.VSockPort = port
-	driver.VirtioPort = ""
+
 	return &LimaWslDriver{
-		BaseDriver: driver,
+		Instance:   inst,
+		VSockPort:  port,
+		VirtioPort: "",
 	}
 }
 
@@ -122,10 +126,10 @@ func (l *LimaWslDriver) Start(ctx context.Context) (chan error, error) {
 	distroName := "lima-" + l.Instance.Name
 
 	if status == store.StatusUninitialized {
-		if err := EnsureFs(ctx, l.BaseDriver); err != nil {
+		if err := EnsureFs(ctx, l.Instance); err != nil {
 			return nil, err
 		}
-		if err := initVM(ctx, l.BaseDriver.Instance.Dir, distroName); err != nil {
+		if err := initVM(ctx, l.Instance.Dir, distroName); err != nil {
 			return nil, err
 		}
 	}
@@ -138,8 +142,8 @@ func (l *LimaWslDriver) Start(ctx context.Context) (chan error, error) {
 
 	if err := provisionVM(
 		ctx,
-		l.BaseDriver.Instance.Dir,
-		l.BaseDriver.Instance.Name,
+		l.Instance.Dir,
+		l.Instance.Name,
 		distroName,
 		errCh,
 	); err != nil {
