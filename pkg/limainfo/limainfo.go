@@ -45,7 +45,7 @@ func New() (*LimaInfo, error) {
 	info := &LimaInfo{
 		Version:         version.Version,
 		DefaultTemplate: y,
-		VMTypes:         driverutil.Drivers(),
+		VMTypes:         driverutil.AvailableDrivers(),
 		GuestAgents:     make(map[limayaml.Arch]GuestAgent),
 	}
 	info.Templates, err = templatestore.Templates()

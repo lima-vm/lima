@@ -75,7 +75,10 @@ func Create(ctx context.Context, instName string, instConfig []byte, saveBrokenY
 		return nil, err
 	}
 
-	limaDriver := driverutil.CreateTargetDriverInstance(inst, 0)
+	limaDriver, err := driverutil.CreateTargetDriverInstance(inst, 0)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create driver instance: %w", err)
+	}
 
 	if err := limaDriver.Register(ctx); err != nil {
 		return nil, err
