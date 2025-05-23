@@ -5,6 +5,7 @@ package wsl2
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"regexp"
@@ -47,18 +48,26 @@ var knownYamlProperties = []string{
 const Enabled = true
 
 type LimaWslDriver struct {
-	*driver.BaseDriver
+	Instance *store.Instance
+
+	SSHLocalPort int
+	vSockPort    int
+	virtioPort   string
 }
 
-func New(driver *driver.BaseDriver) *LimaWslDriver {
+var _ driver.Driver = (*LimaWslDriver)(nil)
+
+func New(inst *store.Instance, sshLocalPort int) *LimaWslDriver {
 	port, err := freeport.VSock()
 	if err != nil {
 		logrus.WithError(err).Error("failed to get free VSock port")
 	}
-	driver.VSockPort = port
-	driver.VirtioPort = ""
+
 	return &LimaWslDriver{
-		BaseDriver: driver,
+		Instance:     inst,
+		vSockPort:    port,
+		virtioPort:   "",
+		SSHLocalPort: sshLocalPort,
 	}
 }
 
@@ -123,10 +132,10 @@ func (l *LimaWslDriver) Start(ctx context.Context) (chan error, error) {
 	distroName := "lima-" + l.Instance.Name
 
 	if status == store.StatusUninitialized {
-		if err := EnsureFs(ctx, l.BaseDriver); err != nil {
+		if err := EnsureFs(ctx, l.Instance); err != nil {
 			return nil, err
 		}
-		if err := initVM(ctx, l.BaseDriver.Instance.Dir, distroName); err != nil {
+		if err := initVM(ctx, l.Instance.Dir, distroName); err != nil {
 			return nil, err
 		}
 	}
@@ -139,8 +148,8 @@ func (l *LimaWslDriver) Start(ctx context.Context) (chan error, error) {
 
 	if err := provisionVM(
 		ctx,
-		l.BaseDriver.Instance.Dir,
-		l.BaseDriver.Instance.Name,
+		l.Instance.Dir,
+		l.Instance.Name,
 		distroName,
 		errCh,
 	); err != nil {
@@ -197,7 +206,56 @@ func (l *LimaWslDriver) GuestAgentConn(ctx context.Context) (net.Conn, error) {
 	}
 	sockAddr := &winio.HvsockAddr{
 		VMID:      VMIDGUID,
-		ServiceID: winio.VsockServiceID(uint32(l.VSockPort)),
+		ServiceID: winio.VsockServiceID(uint32(l.vSockPort)),
 	}
 	return winio.Dial(ctx, sockAddr)
+}
+
+func (l *LimaWslDriver) Initialize(_ context.Context) error {
+	return nil
+}
+
+func (l *LimaWslDriver) CreateDisk(_ context.Context) error {
+	return nil
+}
+
+func (l *LimaWslDriver) Register(_ context.Context) error {
+	return nil
+}
+
+func (l *LimaWslDriver) ChangeDisplayPassword(_ context.Context, _ string) error {
+	return nil
+}
+
+func (l *LimaWslDriver) GetDisplayConnection(_ context.Context) (string, error) {
+	return "", nil
+}
+
+func (l *LimaWslDriver) CreateSnapshot(_ context.Context, _ string) error {
+	return errors.New("unimplemented")
+}
+
+func (l *LimaWslDriver) ApplySnapshot(_ context.Context, _ string) error {
+	return errors.New("unimplemented")
+}
+
+func (l *LimaWslDriver) DeleteSnapshot(_ context.Context, _ string) error {
+	return errors.New("unimplemented")
+}
+
+func (l *LimaWslDriver) ListSnapshots(_ context.Context) (string, error) {
+	return "", errors.New("unimplemented")
+}
+
+func (l *LimaWslDriver) ForwardGuestAgent() bool {
+	// If driver is not providing, use host agent
+	return l.vSockPort == 0 && l.virtioPort == ""
+}
+
+func (l *LimaWslDriver) VSockPort() int {
+	return l.vSockPort
+}
+
+func (l *LimaWslDriver) VirtioPort() string {
+	return l.virtioPort
 }

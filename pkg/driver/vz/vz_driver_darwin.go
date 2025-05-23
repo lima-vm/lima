@@ -22,6 +22,7 @@ import (
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/reflectutil"
+	"github.com/lima-vm/lima/pkg/store"
 )
 
 var knownYamlProperties = []string{
@@ -68,16 +69,23 @@ var knownYamlProperties = []string{
 const Enabled = true
 
 type LimaVzDriver struct {
-	*driver.BaseDriver
+	Instance *store.Instance
+
+	SSHLocalPort int
+	vSockPort    int
+	virtioPort   string
 
 	machine *virtualMachineWrapper
 }
 
-func New(driver *driver.BaseDriver) *LimaVzDriver {
-	driver.VSockPort = 2222
-	driver.VirtioPort = ""
+var _ driver.Driver = (*LimaVzDriver)(nil)
+
+func New(inst *store.Instance, sshLocalPort int) *LimaVzDriver {
 	return &LimaVzDriver{
-		BaseDriver: driver,
+		Instance:     inst,
+		vSockPort:    2222,
+		virtioPort:   "",
+		SSHLocalPort: sshLocalPort,
 	}
 }
 
@@ -167,17 +175,17 @@ func (l *LimaVzDriver) Validate() error {
 }
 
 func (l *LimaVzDriver) Initialize(_ context.Context) error {
-	_, err := getMachineIdentifier(l.BaseDriver)
+	_, err := getMachineIdentifier(l.Instance)
 	return err
 }
 
 func (l *LimaVzDriver) CreateDisk(ctx context.Context) error {
-	return EnsureDisk(ctx, l.BaseDriver)
+	return EnsureDisk(ctx, l.Instance)
 }
 
 func (l *LimaVzDriver) Start(ctx context.Context) (chan error, error) {
 	logrus.Infof("Starting VZ (hint: to watch the boot progress, see %q)", filepath.Join(l.Instance.Dir, "serial*.log"))
-	vm, errCh, err := startVM(ctx, l.BaseDriver)
+	vm, errCh, err := startVM(ctx, l.Instance, l.SSHLocalPort)
 	if err != nil {
 		if errors.Is(err, vz.ErrUnsupportedOSVersion) {
 			return nil, fmt.Errorf("vz driver requires macOS 13 or higher to run: %w", err)
@@ -237,10 +245,55 @@ func (l *LimaVzDriver) Stop(_ context.Context) error {
 
 func (l *LimaVzDriver) GuestAgentConn(_ context.Context) (net.Conn, error) {
 	for _, socket := range l.machine.SocketDevices() {
-		connect, err := socket.Connect(uint32(l.VSockPort))
+		connect, err := socket.Connect(uint32(l.vSockPort))
 		if err == nil && connect.SourcePort() != 0 {
 			return connect, nil
 		}
 	}
 	return nil, errors.New("unable to connect to guest agent via vsock port 2222")
+}
+
+func (l *LimaVzDriver) Register(_ context.Context) error {
+	return nil
+}
+
+func (l *LimaVzDriver) Unregister(_ context.Context) error {
+	return nil
+}
+
+func (l *LimaVzDriver) ChangeDisplayPassword(_ context.Context, _ string) error {
+	return nil
+}
+
+func (l *LimaVzDriver) GetDisplayConnection(_ context.Context) (string, error) {
+	return "", nil
+}
+
+func (l *LimaVzDriver) CreateSnapshot(_ context.Context, _ string) error {
+	return errors.New("unimplemented")
+}
+
+func (l *LimaVzDriver) ApplySnapshot(_ context.Context, _ string) error {
+	return errors.New("unimplemented")
+}
+
+func (l *LimaVzDriver) DeleteSnapshot(_ context.Context, _ string) error {
+	return errors.New("unimplemented")
+}
+
+func (l *LimaVzDriver) ListSnapshots(_ context.Context) (string, error) {
+	return "", errors.New("unimplemented")
+}
+
+func (l *LimaVzDriver) ForwardGuestAgent() bool {
+	// If driver is not providing, use host agent
+	return l.vSockPort == 0 && l.virtioPort == ""
+}
+
+func (l *LimaVzDriver) VSockPort() int {
+	return l.vSockPort
+}
+
+func (l *LimaVzDriver) VirtioPort() string {
+	return l.virtioPort
 }

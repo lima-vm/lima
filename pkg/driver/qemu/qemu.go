@@ -28,12 +28,12 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/pkg/fileutils"
-	"github.com/lima-vm/lima/pkg/imgutil/qemuimgutil"
 	"github.com/lima-vm/lima/pkg/iso9660util"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/networks"
 	"github.com/lima-vm/lima/pkg/networks/usernet"
 	"github.com/lima-vm/lima/pkg/osutil"
+	"github.com/lima-vm/lima/pkg/qemuimgutil"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 )
@@ -85,7 +85,7 @@ func minimumQemuVersion() (hardMin, softMin semver.Version) {
 }
 
 // EnsureDisk also ensures the kernel and the initrd.
-func EnsureDisk(ctx context.Context, cfg Config) error {
+func EnsureDisk(_ context.Context, cfg Config) error {
 	diffDisk := filepath.Join(cfg.InstanceDir, filenames.DiffDisk)
 	if _, err := os.Stat(diffDisk); err == nil || !errors.Is(err, os.ErrNotExist) {
 		// disk is already ensured
@@ -93,42 +93,7 @@ func EnsureDisk(ctx context.Context, cfg Config) error {
 	}
 
 	baseDisk := filepath.Join(cfg.InstanceDir, filenames.BaseDisk)
-	kernel := filepath.Join(cfg.InstanceDir, filenames.Kernel)
-	kernelCmdline := filepath.Join(cfg.InstanceDir, filenames.KernelCmdline)
-	initrd := filepath.Join(cfg.InstanceDir, filenames.Initrd)
-	if _, err := os.Stat(baseDisk); errors.Is(err, os.ErrNotExist) {
-		var ensuredBaseDisk bool
-		errs := make([]error, len(cfg.LimaYAML.Images))
-		for i, f := range cfg.LimaYAML.Images {
-			if _, err := fileutils.DownloadFile(ctx, baseDisk, f.File, true, "the image", *cfg.LimaYAML.Arch); err != nil {
-				errs[i] = err
-				continue
-			}
-			if f.Kernel != nil {
-				if _, err := fileutils.DownloadFile(ctx, kernel, f.Kernel.File, false, "the kernel", *cfg.LimaYAML.Arch); err != nil {
-					errs[i] = err
-					continue
-				}
-				if f.Kernel.Cmdline != "" {
-					if err := os.WriteFile(kernelCmdline, []byte(f.Kernel.Cmdline), 0o644); err != nil {
-						errs[i] = err
-						continue
-					}
-				}
-			}
-			if f.Initrd != nil {
-				if _, err := fileutils.DownloadFile(ctx, initrd, *f.Initrd, false, "the initrd", *cfg.LimaYAML.Arch); err != nil {
-					errs[i] = err
-					continue
-				}
-			}
-			ensuredBaseDisk = true
-			break
-		}
-		if !ensuredBaseDisk {
-			return fileutils.Errors(errs)
-		}
-	}
+
 	diskSize, _ := units.RAMInBytes(*cfg.LimaYAML.Disk)
 	if diskSize == 0 {
 		return nil
