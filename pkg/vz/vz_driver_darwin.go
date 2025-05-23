@@ -77,11 +77,12 @@ type LimaVzDriver struct {
 	machine *virtualMachineWrapper
 }
 
-func New(inst *store.Instance) *LimaVzDriver {
+func New(inst *store.Instance, sshLocalPort int) *LimaVzDriver {
 	return &LimaVzDriver{
-		Instance:   inst,
-		VSockPort:  2222,
-		VirtioPort: "",
+		Instance:     inst,
+		VSockPort:    2222,
+		VirtioPort:   "",
+		SSHLocalPort: sshLocalPort,
 	}
 }
 
@@ -247,4 +248,45 @@ func (l *LimaVzDriver) GuestAgentConn(_ context.Context) (net.Conn, error) {
 		}
 	}
 	return nil, errors.New("unable to connect to guest agent via vsock port 2222")
+}
+
+func (l *LimaVzDriver) Name() string {
+	return "vz"
+}
+
+func (l *LimaVzDriver) Register(_ context.Context) error {
+	return nil
+}
+
+func (l *LimaVzDriver) Unregister(_ context.Context) error {
+	return nil
+}
+
+func (l *LimaVzDriver) ChangeDisplayPassword(_ context.Context, _ string) error {
+	return nil
+}
+
+func (l *LimaVzDriver) GetDisplayConnection(_ context.Context) (string, error) {
+	return "", nil
+}
+
+func (l *LimaVzDriver) CreateSnapshot(_ context.Context, _ string) error {
+	return errors.New("unimplemented")
+}
+
+func (l *LimaVzDriver) ApplySnapshot(_ context.Context, _ string) error {
+	return errors.New("unimplemented")
+}
+
+func (l *LimaVzDriver) DeleteSnapshot(_ context.Context, _ string) error {
+	return errors.New("unimplemented")
+}
+
+func (l *LimaVzDriver) ListSnapshots(_ context.Context) (string, error) {
+	return "", errors.New("unimplemented")
+}
+
+func (l *LimaVzDriver) ForwardGuestAgent() bool {
+	// If driver is not providing, use host agent
+	return l.VSockPort == 0 && l.VirtioPort == ""
 }

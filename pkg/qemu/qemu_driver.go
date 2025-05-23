@@ -47,7 +47,7 @@ type LimaQemuDriver struct {
 	vhostCmds []*exec.Cmd
 }
 
-func New(inst *store.Instance) *LimaQemuDriver {
+func New(inst *store.Instance, sshLocalPort int) *LimaQemuDriver {
 	// virtserialport doesn't seem to work reliably: https://github.com/lima-vm/lima/issues/2064
 	// but on Windows default Unix socket forwarding is not available
 	var virtioPort string
@@ -56,9 +56,10 @@ func New(inst *store.Instance) *LimaQemuDriver {
 		virtioPort = ""
 	}
 	return &LimaQemuDriver{
-		Instance:   inst,
-		VSockPort:  0,
-		VirtioPort: virtioPort,
+		Instance:     inst,
+		VSockPort:    0,
+		VirtioPort:   virtioPort,
+		SSHLocalPort: sshLocalPort,
 	}
 }
 
@@ -502,4 +503,33 @@ func (a *qArgTemplateApplier) applyTemplate(qArg string) (string, error) {
 		return "", err
 	}
 	return b.String(), nil
+}
+
+func (l *LimaQemuDriver) Name() string {
+	return "qemu"
+}
+
+func (l *LimaQemuDriver) Initialize(_ context.Context) error {
+	return nil
+}
+
+func (l *LimaQemuDriver) CanRunGUI() bool {
+	return false
+}
+
+func (l *LimaQemuDriver) RunGUI() error {
+	return nil
+}
+
+func (l *LimaQemuDriver) Register(_ context.Context) error {
+	return nil
+}
+
+func (l *LimaQemuDriver) Unregister(_ context.Context) error {
+	return nil
+}
+
+func (l *LimaQemuDriver) ForwardGuestAgent() bool {
+	// if driver is not providing, use host agent
+	return l.VSockPort == 0 && l.VirtioPort == ""
 }

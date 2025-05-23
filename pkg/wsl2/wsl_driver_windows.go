@@ -53,16 +53,17 @@ type LimaWslDriver struct {
 	VirtioPort   string
 }
 
-func New(inst *store.Instance) *LimaWslDriver {
+func New(inst *store.Instance, sshLocalPort int) *LimaWslDriver {
 	port, err := freeport.VSock()
 	if err != nil {
 		logrus.WithError(err).Error("failed to get free VSock port")
 	}
 
 	return &LimaWslDriver{
-		Instance:   inst,
-		VSockPort:  port,
-		VirtioPort: "",
+		Instance:     inst,
+		VSockPort:    port,
+		VirtioPort:   "",
+		SSHLocalPort: sshLocalPort,
 	}
 }
 
@@ -204,4 +205,49 @@ func (l *LimaWslDriver) GuestAgentConn(ctx context.Context) (net.Conn, error) {
 		ServiceID: winio.VsockServiceID(uint32(l.VSockPort)),
 	}
 	return winio.Dial(ctx, sockAddr)
+}
+
+func (l *LimaWslDriver) Name() string {
+	return "wsl2"
+}
+
+func (l *LimaWslDriver) Initialize(_ context.Context) error {
+	return nil
+}
+
+func (l *LimaWslDriver) CreateDisk(_ context.Context) error {
+	return nil
+}
+
+func (l *LimaWslDriver) Register(_ context.Context) error {
+	return nil
+}
+
+func (l *LimaWslDriver) ChangeDisplayPassword(_ context.Context, _ string) error {
+	return nil
+}
+
+func (l *LimaWslDriver) GetDisplayConnection(_ context.Context) (string, error) {
+	return "", nil
+}
+
+func (l *LimaWslDriver) CreateSnapshot(_ context.Context, _ string) error {
+	return fmt.Errorf("unimplemented")
+}
+
+func (l *LimaWslDriver) ApplySnapshot(_ context.Context, _ string) error {
+	return fmt.Errorf("unimplemented")
+}
+
+func (l *LimaWslDriver) DeleteSnapshot(_ context.Context, _ string) error {
+	return fmt.Errorf("unimplemented")
+}
+
+func (l *LimaWslDriver) ListSnapshots(_ context.Context) (string, error) {
+	return "", fmt.Errorf("unimplemented")
+}
+
+func (l *LimaWslDriver) ForwardGuestAgent() bool {
+	// If driver is not providing, use host agent
+	return l.VSockPort == 0 && l.VirtioPort == ""
 }
