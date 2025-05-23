@@ -68,14 +68,10 @@ jobs:
     - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5  # v5.5.0
       with:
         go-version: 1.24.x
-    - name: Install gcc-x86-64-linux-gnu
+    - name: Install gcc
       run: |
         sudo apt-get update
-        sudo apt-get install -y gcc-x86-64-linux-gnu
-    - name: Install gcc-aarch64-linux-gnu
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y gcc-aarch64-linux-gnu
+        sudo apt-get install -y gcc-x86-64-linux-gnu gcc-aarch64-linux-gnu
     - name: "Compile binaries"
       run: make artifacts-linux
     - name: "Make misc artifacts"
