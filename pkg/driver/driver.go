@@ -76,12 +76,8 @@ type Plugin interface {
 	// Name returns the name of the driver
 	Name() string
 
-	// Enabled returns whether this driver is available on the current platform.
-	// Also checks whether this driver can handle the given config
-	Enabled() bool
-
 	// NewDriver returns a new driver instance. Only to be used to embed internal drivers
-	NewDriver(ctx context.Context, inst *store.Instance, sshLocalPort int) Driver
+	NewDriver(inst *store.Instance, sshLocalPort int) Driver
 }
 
 // Driver interface is used by hostagent for managing vm.

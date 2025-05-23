@@ -131,7 +131,11 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 		}
 	}
 
-	limaDriver := driverutil.CreateTargetDriverInstance(inst, sshLocalPort)
+	limaDriver, err := driverutil.CreateTargetDriverInstance(inst, sshLocalPort)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create driver instance: %w", err)
+	}
+
 	var vSockPort int
 	var virtioPort string
 

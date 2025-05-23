@@ -36,7 +36,10 @@ func Delete(ctx context.Context, inst *store.Instance, force bool) error {
 }
 
 func unregister(ctx context.Context, inst *store.Instance) error {
-	limaDriver := driverutil.CreateTargetDriverInstance(inst, 0)
+	limaDriver, err := driverutil.CreateTargetDriverInstance(inst, 0)
+	if err != nil {
+		return fmt.Errorf("failed to create driver instance: %w", err)
+	}
 
 	return limaDriver.Unregister(ctx)
 }

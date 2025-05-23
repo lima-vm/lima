@@ -90,7 +90,10 @@ func Prepare(ctx context.Context, inst *store.Instance) (*Prepared, error) {
 			return nil, err
 		}
 	}
-	limaDriver := driverutil.CreateTargetDriverInstance(inst, 0)
+	limaDriver, err := driverutil.CreateTargetDriverInstance(inst, 0)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create driver instance: %w", err)
+	}
 
 	if err := limaDriver.Validate(); err != nil {
 		return nil, err
@@ -102,7 +105,7 @@ func Prepare(ctx context.Context, inst *store.Instance) (*Prepared, error) {
 
 	// Check if the instance has been created (the base disk already exists)
 	baseDisk := filepath.Join(inst.Dir, filenames.BaseDisk)
-	_, err := os.Stat(baseDisk)
+	_, err = os.Stat(baseDisk)
 	created := err == nil
 
 	if err := limaDriver.CreateDisk(ctx); err != nil {
