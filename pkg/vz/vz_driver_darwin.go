@@ -18,6 +18,7 @@ import (
 	"github.com/coreos/go-semver/semver"
 	"github.com/sirupsen/logrus"
 
+	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/reflectutil"
@@ -77,13 +78,26 @@ type LimaVzDriver struct {
 	machine *virtualMachineWrapper
 }
 
-func New(inst *store.Instance, sshLocalPort int) *LimaVzDriver {
+var _ driver.Driver = (*LimaVzDriver)(nil)
+
+func New() *LimaVzDriver {
 	return &LimaVzDriver{
-		Instance:     inst,
-		VSockPort:    2222,
-		VirtioPort:   "",
-		SSHLocalPort: sshLocalPort,
+		VSockPort:  2222,
+		VirtioPort: "",
 	}
+}
+
+func (l *LimaVzDriver) SetConfig(inst *store.Instance, sshLocalPort int) {
+	l.Instance = inst
+	l.SSHLocalPort = sshLocalPort
+}
+
+func (l *LimaVzDriver) GetVirtioPort() string {
+	return l.VirtioPort
+}
+
+func (l *LimaVzDriver) GetVSockPort() int {
+	return l.VSockPort
 }
 
 func (l *LimaVzDriver) Validate() error {
