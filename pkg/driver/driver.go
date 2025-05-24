@@ -77,7 +77,7 @@ type Plugin interface {
 	Name() string
 
 	// NewDriver returns a new driver instance. Only to be used to embed internal drivers
-	NewDriver(inst *store.Instance, sshLocalPort int) Driver
+	SetConfig(inst *store.Instance, sshLocalPort int)
 }
 
 // Driver interface is used by hostagent for managing vm.
@@ -88,4 +88,7 @@ type Driver interface {
 	Registration
 	GuestAgent
 	Plugin
+
+	GetVSockPort() int
+	GetVirtioPort() string
 }

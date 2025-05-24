@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/lima-vm/lima/pkg/driver"
-	"github.com/lima-vm/lima/pkg/store"
 )
 
 type Registry struct {
@@ -19,18 +18,6 @@ func NewRegistry() *Registry {
 	return &Registry{
 		drivers: make(map[string]driver.Driver),
 	}
-}
-
-func (r *Registry) Register(driver driver.Driver, inst *store.Instance, sshLocalPort int) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	name := driver.Name()
-	if _, exists := r.drivers[name]; exists {
-		return
-	}
-
-	r.drivers[name] = driver
 }
 
 func (r *Registry) List() []string {
@@ -53,6 +40,10 @@ func (r *Registry) Get(name string) (driver.Driver, bool) {
 }
 
 var DefaultRegistry *Registry
+
+func init() {
+	DefaultRegistry = NewRegistry()
+}
 
 func Register(driver driver.Driver) {
 	if DefaultRegistry != nil {
