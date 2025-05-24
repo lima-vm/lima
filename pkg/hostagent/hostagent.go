@@ -136,8 +136,8 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 		return nil, fmt.Errorf("failed to create driver instance: %w", err)
 	}
 
-	var vSockPort int
-	var virtioPort string
+	vSockPort := limaDriver.GetVSockPort()
+	virtioPort := limaDriver.GetVirtioPort()
 
 	if err := cidata.GenerateCloudConfig(inst.Dir, instName, inst.Config); err != nil {
 		return nil, err

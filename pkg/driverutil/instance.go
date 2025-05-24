@@ -19,9 +19,11 @@ func CreateTargetDriverInstance(inst *store.Instance, sshLocalPort int) (driver.
 		return nil, fmt.Errorf("unknown or unsupported VM type: %s", *limaDriver)
 	}
 
+	driver.SetConfig(inst, sshLocalPort)
+
 	if err := driver.Validate(); err != nil {
 		return nil, fmt.Errorf("driver validation failed: %w", err)
 	}
 
-	return driver.NewDriver(inst, sshLocalPort), nil
+	return driver, nil
 }
