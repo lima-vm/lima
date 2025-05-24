@@ -11,6 +11,7 @@ import (
 
 	"github.com/Microsoft/go-winio"
 	"github.com/Microsoft/go-winio/pkg/guid"
+	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/freeport"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/reflectutil"
@@ -52,18 +53,31 @@ type LimaWslDriver struct {
 	VirtioPort   string
 }
 
-func New(inst *store.Instance, sshLocalPort int) *LimaWslDriver {
+var _ driver.Driver = (*LimaWslDriver)(nil)
+
+func New() *LimaWslDriver {
 	port, err := freeport.VSock()
 	if err != nil {
 		logrus.WithError(err).Error("failed to get free VSock port")
 	}
 
 	return &LimaWslDriver{
-		Instance:     inst,
-		VSockPort:    port,
-		VirtioPort:   "",
-		SSHLocalPort: sshLocalPort,
+		VSockPort:  port,
+		VirtioPort: "",
 	}
+}
+
+func (l *LimaWslDriver) GetVirtioPort() string {
+	return l.VirtioPort
+}
+
+func (l *LimaWslDriver) GetVSockPort() int {
+	return l.VSockPort
+}
+
+func (l *LimaWslDriver) SetConfig(inst *store.Instance, sshLocalPort int) {
+	l.Instance = inst
+	l.SSHLocalPort = sshLocalPort
 }
 
 func (l *LimaWslDriver) Validate() error {

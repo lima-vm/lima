@@ -24,6 +24,7 @@ import (
 	"github.com/coreos/go-semver/semver"
 	"github.com/digitalocean/go-qemu/qmp"
 	"github.com/digitalocean/go-qemu/qmp/raw"
+	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/executil"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/networks/usernet"
@@ -46,7 +47,9 @@ type LimaQemuDriver struct {
 	vhostCmds []*exec.Cmd
 }
 
-func New(inst *store.Instance, sshLocalPort int) *LimaQemuDriver {
+var _ driver.Driver = (*LimaQemuDriver)(nil)
+
+func New() *LimaQemuDriver {
 	// virtserialport doesn't seem to work reliably: https://github.com/lima-vm/lima/issues/2064
 	// but on Windows default Unix socket forwarding is not available
 	var virtioPort string
@@ -55,11 +58,22 @@ func New(inst *store.Instance, sshLocalPort int) *LimaQemuDriver {
 		virtioPort = ""
 	}
 	return &LimaQemuDriver{
-		Instance:     inst,
-		VSockPort:    0,
-		VirtioPort:   virtioPort,
-		SSHLocalPort: sshLocalPort,
+		VSockPort:  0,
+		VirtioPort: virtioPort,
 	}
+}
+
+func (l *LimaQemuDriver) SetConfig(inst *store.Instance, sshLocalPort int) {
+	l.Instance = inst
+	l.SSHLocalPort = sshLocalPort
+}
+
+func (l *LimaQemuDriver) GetVirtioPort() string {
+	return l.VirtioPort
+}
+
+func (l *LimaQemuDriver) GetVSockPort() int {
+	return l.VSockPort
 }
 
 func (l *LimaQemuDriver) Validate() error {
