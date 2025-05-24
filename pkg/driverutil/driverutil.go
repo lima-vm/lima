@@ -4,19 +4,20 @@
 package driverutil
 
 import (
-	"github.com/lima-vm/lima/pkg/limayaml"
-	"github.com/lima-vm/lima/pkg/vz"
-	"github.com/lima-vm/lima/pkg/wsl2"
+	"github.com/lima-vm/lima/pkg/registry"
 )
 
-// Drivers returns the available drivers.
-func Drivers() []string {
-	drivers := []string{limayaml.QEMU}
-	if vz.Enabled {
-		drivers = append(drivers, limayaml.VZ)
+// AvailableDrivers returns a list of available driver names
+func AvailableDrivers() []string {
+	var available []string
+
+	for _, name := range registry.DefaultRegistry.List() {
+		driver, _ := registry.DefaultRegistry.Get(name)
+		if err := driver.Validate(); err == nil {
+			return available
+		}
+		available = append(available, name)
 	}
-	if wsl2.Enabled {
-		drivers = append(drivers, limayaml.WSL2)
-	}
-	return drivers
+
+	return available
 }

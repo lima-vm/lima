@@ -36,24 +36,44 @@ import (
 )
 
 type LimaQemuDriver struct {
-	*driver.BaseDriver
+	Instance     *store.Instance
+	SSHLocalPort int
+	VSockPort    int
+	VirtioPort   string
+
 	qCmd    *exec.Cmd
 	qWaitCh chan error
 
 	vhostCmds []*exec.Cmd
 }
 
-func New(driver *driver.BaseDriver) *LimaQemuDriver {
-	driver.VSockPort = 0
-	driver.VirtioPort = filenames.VirtioPort
+var _ driver.Driver = (*LimaQemuDriver)(nil)
+
+func New() *LimaQemuDriver {
 	// virtserialport doesn't seem to work reliably: https://github.com/lima-vm/lima/issues/2064
 	// but on Windows default Unix socket forwarding is not available
+	var virtioPort string
+	virtioPort = filenames.VirtioPort
 	if runtime.GOOS != "windows" {
-		driver.VirtioPort = ""
+		virtioPort = ""
 	}
 	return &LimaQemuDriver{
-		BaseDriver: driver,
+		VSockPort:  0,
+		VirtioPort: virtioPort,
 	}
+}
+
+func (l *LimaQemuDriver) SetConfig(inst *store.Instance, sshLocalPort int) {
+	l.Instance = inst
+	l.SSHLocalPort = sshLocalPort
+}
+
+func (l *LimaQemuDriver) GetVirtioPort() string {
+	return l.VirtioPort
+}
+
+func (l *LimaQemuDriver) GetVSockPort() int {
+	return l.VSockPort
 }
 
 func (l *LimaQemuDriver) Validate() error {
@@ -211,7 +231,7 @@ func (l *LimaQemuDriver) Start(ctx context.Context) (chan error, error) {
 	go func() {
 		if usernetIndex := limayaml.FirstUsernetIndex(l.Instance.Config); usernetIndex != -1 {
 			client := usernet.NewClientByName(l.Instance.Config.Networks[usernetIndex].Lima)
-			err := client.ConfigureDriver(ctx, l.BaseDriver)
+			err := client.ConfigureDriver(ctx, l.Instance, l.SSHLocalPort)
 			if err != nil {
 				l.qWaitCh <- err
 			}
@@ -259,11 +279,11 @@ func (l *LimaQemuDriver) checkBinarySignature() error {
 	}
 	// The codesign --xml option is only available on macOS Monterey and later
 	if !macOSProductVersion.LessThan(*semver.New("12.0.0")) {
-		qExe, _, err := Exe(l.BaseDriver.Instance.Arch)
+		qExe, _, err := Exe(l.Instance.Arch)
 		if err != nil {
-			return fmt.Errorf("failed to find the QEMU binary for the architecture %q: %w", l.BaseDriver.Instance.Arch, err)
+			return fmt.Errorf("failed to find the QEMU binary for the architecture %q: %w", l.Instance.Arch, err)
 		}
-		if accel := Accel(l.BaseDriver.Instance.Arch); accel == "hvf" {
+		if accel := Accel(l.Instance.Arch); accel == "hvf" {
 			entitlementutil.AskToSignIfNotSignedProperly(qExe)
 		}
 	}
@@ -496,4 +516,33 @@ func (a *qArgTemplateApplier) applyTemplate(qArg string) (string, error) {
 		return "", err
 	}
 	return b.String(), nil
+}
+
+func (l *LimaQemuDriver) Name() string {
+	return "qemu"
+}
+
+func (l *LimaQemuDriver) Initialize(_ context.Context) error {
+	return nil
+}
+
+func (l *LimaQemuDriver) CanRunGUI() bool {
+	return false
+}
+
+func (l *LimaQemuDriver) RunGUI() error {
+	return nil
+}
+
+func (l *LimaQemuDriver) Register(_ context.Context) error {
+	return nil
+}
+
+func (l *LimaQemuDriver) Unregister(_ context.Context) error {
+	return nil
+}
+
+func (l *LimaQemuDriver) ForwardGuestAgent() bool {
+	// if driver is not providing, use host agent
+	return l.VSockPort == 0 && l.VirtioPort == ""
 }

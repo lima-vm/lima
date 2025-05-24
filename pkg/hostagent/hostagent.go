@@ -131,13 +131,13 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 		}
 	}
 
-	baseDriver := driver.BaseDriver{
-		Instance:     inst,
-		SSHLocalPort: sshLocalPort,
+	limaDriver, err := driverutil.CreateTargetDriverInstance(inst, sshLocalPort)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create driver instance: %w", err)
 	}
-	limaDriver := driverutil.CreateTargetDriverInstance(&baseDriver)
-	vSockPort := baseDriver.VSockPort
-	virtioPort := baseDriver.VirtioPort
+
+	vSockPort := limaDriver.GetVSockPort()
+	virtioPort := limaDriver.GetVirtioPort()
 
 	if err := cidata.GenerateCloudConfig(inst.Dir, instName, inst.Config); err != nil {
 		return nil, err
