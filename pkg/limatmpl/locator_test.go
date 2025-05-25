@@ -61,3 +61,64 @@ func TestInstNameFromImageURL(t *testing.T) {
 		assert.Equal(t, name, "rocky-8-9.10")
 	})
 }
+
+func TestSeemsTemplateURL(t *testing.T) {
+	arg := "template://foo/bar"
+	t.Run(arg, func(t *testing.T) {
+		is, name := limatmpl.SeemsTemplateURL(arg)
+		assert.Equal(t, is, true)
+		assert.Equal(t, name, "foo/bar")
+	})
+	notTemplateURLs := []string{
+		"file:///foo",
+		"http://foo",
+		"https://foo",
+		"foo",
+	}
+	for _, arg := range notTemplateURLs {
+		t.Run(arg, func(t *testing.T) {
+			is, _ := limatmpl.SeemsTemplateURL(arg)
+			assert.Equal(t, is, false)
+		})
+	}
+}
+
+func TestSeemsHTTPURL(t *testing.T) {
+	httpURLs := []string{
+		"http://foo/",
+		"https://foo/",
+	}
+	for _, arg := range httpURLs {
+		t.Run(arg, func(t *testing.T) {
+			assert.Equal(t, limatmpl.SeemsHTTPURL(arg), true)
+		})
+	}
+	notHTTPURLs := []string{
+		"file:///foo",
+		"template://foo",
+		"foo",
+	}
+	for _, arg := range notHTTPURLs {
+		t.Run(arg, func(t *testing.T) {
+			assert.Equal(t, limatmpl.SeemsHTTPURL(arg), false)
+		})
+	}
+}
+
+func TestSeemsFileURL(t *testing.T) {
+	arg := "file:///foo"
+	t.Run(arg, func(t *testing.T) {
+		assert.Equal(t, limatmpl.SeemsFileURL(arg), true)
+	})
+	notFileURLs := []string{
+		"http://foo",
+		"https://foo",
+		"template://foo",
+		"foo",
+	}
+	for _, arg := range notFileURLs {
+		t.Run(arg, func(t *testing.T) {
+			assert.Equal(t, limatmpl.SeemsFileURL(arg), false)
+		})
+	}
+}

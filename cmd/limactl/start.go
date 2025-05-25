@@ -7,12 +7,10 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
 
-	"github.com/containerd/containerd/identifiers"
 	"github.com/lima-vm/lima/cmd/limactl/editflags"
 	"github.com/lima-vm/lima/pkg/editutil"
 	"github.com/lima-vm/lima/pkg/instance"
@@ -118,8 +116,13 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 	if err != nil {
 		return nil, err
 	}
-	if isTemplateURL, templateURL := limatmpl.SeemsTemplateURL(arg); isTemplateURL {
-		templateName := path.Join(templateURL.Host, templateURL.Path)
+	if name != "" {
+		err := store.ValidateInstName(name)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if isTemplateURL, templateName := limatmpl.SeemsTemplateURL(arg); isTemplateURL {
 		switch templateName {
 		case "experimental/vz":
 			logrus.Warn("template://experimental/vz was merged into the default template in Lima v1.0. See also <https://lima-vm.io/docs/config/vmtype/>.")
@@ -144,35 +147,25 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 		// see if the tty was set explicitly or not
 		ttySet := cmd.Flags().Changed("tty")
 		if ttySet && tty {
-			return nil, errors.New("cannot use --tty=true and read template from stdin together")
+			return nil, errors.New("cannot use --tty=true when reading template from stdin")
 		}
 		tty = false
 	}
-	tmpl, err := limatmpl.Read(cmd.Context(), name, arg)
-	if err != nil {
-		return nil, err
-	}
-	if len(tmpl.Bytes) > 0 {
-		if createOnly {
-			if _, err := store.Inspect(tmpl.Name); err == nil {
-				return nil, fmt.Errorf("instance %q already exists", tmpl.Name)
-			}
-		}
-	} else {
+	var tmpl *limatmpl.Template
+	if err := store.ValidateInstName(arg); arg == "" || err == nil {
+		tmpl = &limatmpl.Template{Name: name}
 		if arg == "" {
-			if tmpl.Name == "" {
+			if name == "" {
 				tmpl.Name = DefaultInstanceName
 			}
 		} else {
 			logrus.Debugf("interpreting argument %q as an instance name", arg)
-			if tmpl.Name != "" && tmpl.Name != arg {
+			if name != "" && name != arg {
 				return nil, fmt.Errorf("instance name %q and CLI flag --name=%q cannot be specified together", arg, tmpl.Name)
 			}
 			tmpl.Name = arg
 		}
-		if err := identifiers.Validate(tmpl.Name); err != nil {
-			return nil, fmt.Errorf("argument must be either an instance name, a YAML file path, or a URL, got %q: %w", tmpl.Name, err)
-		}
+		// store.Inspect() will validate the template name (in case it has been set to arg)
 		inst, err := store.Inspect(tmpl.Name)
 		if err == nil {
 			if createOnly {
@@ -204,7 +197,21 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 		if err != nil {
 			return nil, err
 		}
+	} else {
+		tmpl, err = limatmpl.Read(cmd.Context(), name, arg)
+		if err != nil {
+			return nil, err
+		}
+		if createOnly {
+			// store.Inspect() will also validate the instance name
+			if _, err := store.Inspect(tmpl.Name); err == nil {
+				return nil, fmt.Errorf("instance %q already exists", tmpl.Name)
+			}
+		} else if err := store.ValidateInstName(tmpl.Name); err != nil {
+			return nil, err
+		}
 	}
+
 	if err := tmpl.Embed(cmd.Context(), true, true); err != nil {
 		return nil, err
 	}

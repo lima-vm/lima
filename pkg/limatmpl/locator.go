@@ -15,7 +15,6 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
-	"unicode"
 
 	"github.com/containerd/containerd/identifiers"
 	"github.com/lima-vm/lima/pkg/ioutilx"
@@ -37,10 +36,9 @@ func Read(ctx context.Context, name, locator string) (*Template, error) {
 		return tmpl, nil
 	}
 
-	isTemplateURL, templateURL := SeemsTemplateURL(locator)
+	isTemplateURL, templateName := SeemsTemplateURL(locator)
 	switch {
 	case isTemplateURL:
-		templateName := path.Join(templateURL.Host, templateURL.Path)
 		logrus.Debugf("interpreting argument %q as a template name %q", locator, templateName)
 		if tmpl.Name == "" {
 			// e.g., templateName = "deprecated/centos-7.yaml" , tmpl.Name = "centos-7"
@@ -95,7 +93,12 @@ func Read(ctx context.Context, name, locator string) (*Template, error) {
 		if err != nil {
 			return nil, err
 		}
-	case SeemsFilePath(locator):
+	case locator == "-":
+		tmpl.Bytes, err = io.ReadAll(os.Stdin)
+		if err != nil {
+			return nil, fmt.Errorf("unexpected error reading stdin: %w", err)
+		}
+	default:
 		if tmpl.Name == "" {
 			tmpl.Name, err = InstNameFromYAMLPath(locator)
 			if err != nil {
@@ -115,11 +118,6 @@ func Read(ctx context.Context, name, locator string) (*Template, error) {
 		tmpl.Bytes, err = ioutilx.ReadAtMaximum(r, yBytesLimit)
 		if err != nil {
 			return nil, err
-		}
-	case locator == "-":
-		tmpl.Bytes, err = io.ReadAll(os.Stdin)
-		if err != nil {
-			return nil, fmt.Errorf("unexpected error reading stdin: %w", err)
 		}
 	}
 	// The only reason not to call tmpl.UseAbsLocators() here is that `limactl tmpl copy --verbatim …`
@@ -233,14 +231,20 @@ func InstNameFromImageURL(locator, imageArch string) string {
 	return name
 }
 
-func SeemsTemplateURL(arg string) (bool, *url.URL) {
+// SeemsTemplateURL returns true if the arg is a URL using the template scheme.
+// When it returns true, it also returns the template name.
+func SeemsTemplateURL(arg string) (isTemplate bool, templateName string) {
 	u, err := url.Parse(arg)
 	if err != nil {
-		return false, u
+		return false, ""
 	}
-	return u.Scheme == "template", u
+	if u.Scheme == "template" {
+		return true, path.Join(u.Host, u.Path)
+	}
+	return false, ""
 }
 
+// SeemsHTTPURL returns true if the arg is a URL using the http or https scheme.
 func SeemsHTTPURL(arg string) bool {
 	u, err := url.Parse(arg)
 	if err != nil {
@@ -252,34 +256,13 @@ func SeemsHTTPURL(arg string) bool {
 	return true
 }
 
+// SeemsFileURL returns true if the arg is a URL using the file scheme.
 func SeemsFileURL(arg string) bool {
 	u, err := url.Parse(arg)
 	if err != nil {
 		return false
 	}
 	return u.Scheme == "file"
-}
-
-func SeemsYAMLPath(arg string) bool {
-	if strings.Contains(arg, "/") {
-		return true
-	}
-	lower := strings.ToLower(arg)
-	return strings.HasSuffix(lower, ".yml") || strings.HasSuffix(lower, ".yaml")
-}
-
-// SeemsFilePath returns true if arg either contains a path separator or has a file extension that
-// does not start with a digit. `my.yaml` is a file path, `ubuntu-20.10` is not.
-func SeemsFilePath(arg string) bool {
-	// Single-letter schemes will be drive names on Windows, e.g. "c:/foo.yaml"
-	if u, err := url.Parse(arg); err == nil && len(u.Scheme) > 1 {
-		return false
-	}
-	if strings.ContainsRune(arg, '/') || strings.ContainsRune(arg, filepath.Separator) {
-		return true
-	}
-	ext := filepath.Ext(arg)
-	return len(ext) > 1 && !unicode.IsDigit(rune(ext[1]))
 }
 
 func InstNameFromURL(urlStr string) (string, error) {

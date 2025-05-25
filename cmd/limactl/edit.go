@@ -13,7 +13,6 @@ import (
 	"github.com/lima-vm/lima/cmd/limactl/editflags"
 	"github.com/lima-vm/lima/pkg/editutil"
 	"github.com/lima-vm/lima/pkg/instance"
-	"github.com/lima-vm/lima/pkg/limatmpl"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	networks "github.com/lima-vm/lima/pkg/networks/reconcile"
 	"github.com/lima-vm/lima/pkg/store"
@@ -46,33 +45,28 @@ func editAction(cmd *cobra.Command, args []string) error {
 	var filePath string
 	var err error
 	var inst *store.Instance
-	switch {
-	case limatmpl.SeemsYAMLPath(arg):
+
+	if arg == "" {
+		arg = DefaultInstanceName
+	}
+	if err := store.ValidateInstName(arg); err == nil {
+		inst, err = store.Inspect(arg)
+		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				return fmt.Errorf("instance %q not found", arg)
+			}
+			return err
+		}
+		if inst.Status == store.StatusRunning {
+			return errors.New("cannot edit a running instance")
+		}
+		filePath = filepath.Join(inst.Dir, filenames.LimaYAML)
+	} else {
 		// absolute path is required for `limayaml.Validate`
 		filePath, err = filepath.Abs(arg)
 		if err != nil {
 			return err
 		}
-	default:
-		var instName string
-		if arg != "" {
-			instName = arg
-		} else {
-			instName = DefaultInstanceName
-		}
-
-		inst, err = store.Inspect(instName)
-		if err != nil {
-			if errors.Is(err, os.ErrNotExist) {
-				return fmt.Errorf("instance %q not found", instName)
-			}
-			return err
-		}
-
-		if inst.Status == store.StatusRunning {
-			return errors.New("cannot edit a running instance")
-		}
-		filePath = filepath.Join(inst.Dir, filenames.LimaYAML)
 	}
 
 	yContent, err := os.ReadFile(filePath)
