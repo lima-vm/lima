@@ -30,7 +30,7 @@ import (
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/nativeimgutil"
 	"github.com/lima-vm/lima/pkg/osutil"
-	"github.com/lima-vm/lima/pkg/qemu/imgutil"
+	"github.com/lima-vm/lima/pkg/qemuimgutil"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/lima-vm/lima/pkg/usrlocalsharelima"
@@ -431,7 +431,7 @@ func prepareDiffDisk(inst *store.Instance) error {
 	if format == "raw" {
 		err = nativeimgutil.ResizeRawDisk(diffDisk, int(inst.Disk))
 	} else {
-		err = imgutil.ResizeDisk(diffDisk, format, int(inst.Disk))
+		err = qemuimgutil.ResizeDisk(diffDisk, format, int(inst.Disk))
 	}
 
 	if err != nil {

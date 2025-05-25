@@ -19,7 +19,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/lima-vm/lima/pkg/nativeimgutil"
-	"github.com/lima-vm/lima/pkg/qemu/imgutil"
+	"github.com/lima-vm/lima/pkg/qemuimgutil"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 )
@@ -116,7 +116,7 @@ func diskCreateAction(cmd *cobra.Command, args []string) error {
 	if format == "raw" {
 		err = nativeimgutil.CreateRawDisk(dataDisk, int(diskSize))
 	} else {
-		err = imgutil.CreateDisk(dataDisk, format, int(diskSize))
+		err = qemuimgutil.CreateDisk(dataDisk, format, int(diskSize))
 	}
 	if err != nil {
 		rerr := os.RemoveAll(diskDir)
@@ -413,7 +413,7 @@ func diskResizeAction(cmd *cobra.Command, args []string) error {
 	if disk.Format == "raw" {
 		err = nativeimgutil.ResizeRawDisk(dataDisk, int(diskSize))
 	} else {
-		err = imgutil.ResizeDisk(dataDisk, disk.Format, int(diskSize))
+		err = qemuimgutil.ResizeDisk(dataDisk, disk.Format, int(diskSize))
 	}
 	if err != nil {
 		return fmt.Errorf("failed to resize disk %q: %w", diskName, err)

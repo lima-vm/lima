@@ -27,11 +27,11 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/pkg/driver"
+	"github.com/lima-vm/lima/pkg/driver/qemu/entitlementutil"
 	"github.com/lima-vm/lima/pkg/executil"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/networks/usernet"
 	"github.com/lima-vm/lima/pkg/osutil"
-	"github.com/lima-vm/lima/pkg/qemu/entitlementutil"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 )
