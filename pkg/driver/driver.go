@@ -10,7 +10,7 @@ import (
 	"github.com/lima-vm/lima/pkg/store"
 )
 
-// Basic lifecycle operations
+// Lifecycle defines basic lifecycle operations.
 type Lifecycle interface {
 	// Validate returns error if the current driver isn't support for given config
 	Validate() error
@@ -36,7 +36,7 @@ type Lifecycle interface {
 	Stop(_ context.Context) error
 }
 
-// GUI-related operations
+// GUI defines GUI-related operations.
 type GUI interface {
 	// CanRunGUI returns bool to indicate if the hostagent need to run GUI synchronously
 	CanRunGUI() bool
@@ -49,7 +49,7 @@ type GUI interface {
 	GetDisplayConnection(ctx context.Context) (string, error)
 }
 
-// Snapshot operations
+// Snapshot defines operations for managing snapshots.
 type Snapshot interface {
 	CreateSnapshot(ctx context.Context, tag string) error
 	ApplySnapshot(ctx context.Context, tag string) error
@@ -57,13 +57,13 @@ type Snapshot interface {
 	ListSnapshots(ctx context.Context) (string, error)
 }
 
-// Registration operations
+// Registration defines operations for registering and unregistering the driver instance.
 type Registration interface {
 	Register(ctx context.Context) error
 	Unregister(ctx context.Context) error
 }
 
-// Guest agent operations
+// GuestAgent defines operations for the guest agent.
 type GuestAgent interface {
 	// ForwardGuestAgent returns if the guest agent sock needs forwarding by host agent.
 	ForwardGuestAgent() bool
@@ -76,7 +76,7 @@ type Plugin interface {
 	// Name returns the name of the driver
 	Name() string
 
-	// NewDriver returns a new driver instance. Only to be used to embed internal drivers
+	// SetConfig sets the configuration for the instance.
 	SetConfig(inst *store.Instance, sshLocalPort int)
 }
 

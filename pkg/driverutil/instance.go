@@ -11,7 +11,7 @@ import (
 	"github.com/lima-vm/lima/pkg/store"
 )
 
-// CreateTargetDriverInstance creates the appropriate driver for an instance
+// CreateTargetDriverInstance creates the appropriate driver for an instance.
 func CreateTargetDriverInstance(inst *store.Instance, sshLocalPort int) (driver.Driver, error) {
 	limaDriver := inst.Config.VMType
 	driver, exists := registry.DefaultRegistry.Get(string(*limaDriver))

@@ -9,8 +9,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/pkg/driverutil"
 	"github.com/lima-vm/lima/pkg/limayaml"
+	"github.com/lima-vm/lima/pkg/registry"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/templatestore"
 	"github.com/lima-vm/lima/pkg/usrlocalsharelima"
@@ -45,7 +45,7 @@ func New() (*LimaInfo, error) {
 	info := &LimaInfo{
 		Version:         version.Version,
 		DefaultTemplate: y,
-		VMTypes:         driverutil.AvailableDrivers(),
+		VMTypes:         registry.DefaultRegistry.List(),
 		GuestAgents:     make(map[limayaml.Arch]GuestAgent),
 	}
 	info.Templates, err = templatestore.Templates()
