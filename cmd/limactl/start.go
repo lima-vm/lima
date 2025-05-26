@@ -56,8 +56,6 @@ $ limactl create --set='.cpus = 2 | .memory = "2GiB"'
 To see the template list:
 $ limactl create --list-templates
 
-To see the drivers list:
-$ limactl create --list-drivers
 
 To create an instance "default" from a local file:
 $ limactl create --name=default /usr/local/share/lima/templates/fedora.yaml

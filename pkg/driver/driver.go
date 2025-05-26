@@ -49,8 +49,8 @@ type GUI interface {
 	GetDisplayConnection(ctx context.Context) (string, error)
 }
 
-// Snapshot defines operations for managing snapshots.
-type Snapshot interface {
+// SnapshotManager defines operations for managing snapshots.
+type SnapshotManager interface {
 	CreateSnapshot(ctx context.Context, tag string) error
 	ApplySnapshot(ctx context.Context, tag string) error
 	DeleteSnapshot(ctx context.Context, tag string) error
@@ -84,7 +84,7 @@ type Plugin interface {
 type Driver interface {
 	Lifecycle
 	GUI
-	Snapshot
+	SnapshotManager
 	Registration
 	GuestAgent
 	Plugin
