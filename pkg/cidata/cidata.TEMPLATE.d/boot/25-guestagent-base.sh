@@ -22,6 +22,9 @@ install -m 755 "${LIMA_CIDATA_MNT}"/lima-guestagent "${LIMA_CIDATA_GUEST_INSTALL
 
 # Launch the guestagent service
 if [ -f /sbin/openrc-run ]; then
+	# Convert .env to conf.d by wrapping values in double quotes.
+	# Split the variable and value at the first "=" to handle cases where the value contains additional "=" characters.
+	sed -E 's/^([^=]+)=(.*)/\1="\2"/' "${LIMA_CIDATA_MNT}/lima.env" >"/etc/conf.d/lima-guestagent"
 	# Install the openrc lima-guestagent service script
 	cat >/etc/init.d/lima-guestagent <<'EOF'
 #!/sbin/openrc-run
