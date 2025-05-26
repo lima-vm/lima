@@ -5,8 +5,7 @@
 
 package wsl2
 
-import "github.com/lima-vm/lima/pkg/registry"
+import "errors"
 
-func init() {
-	registry.Register(New())
-}
+//nolint:revive,staticcheck // false positives with proper nouns
+var errUnimplemented = errors.New("unimplemented")
