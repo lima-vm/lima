@@ -8,7 +8,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/lima-vm/lima/pkg/identifierutil"
+	instance "github.com/lima-vm/lima/pkg/instance/hostname"
 )
 
 // FormatT specifies the format type.
@@ -42,11 +42,11 @@ const (
 	//	  Port 60022
 	FormatConfig = FormatT("config")
 
-// TODO: consider supporting "url" format (ssh://USER@HOSTNAME:PORT)
-//
-// TODO: consider supporting "json" format
-// It is unclear whether we can just map ssh "config" into JSON, as "config" has duplicated keys.
-// (JSON supports duplicated keys too, but not all JSON implementations expect JSON with duplicated keys)
+	// TODO: consider supporting "url" format (ssh://USER@HOSTNAME:PORT).
+	//
+	// TODO: consider supporting "json" format.
+	// It is unclear whether we can just map ssh "config" into JSON, as "config" has duplicated keys.
+	// (JSON supports duplicated keys too, but not all JSON implementations expect JSON with duplicated keys).
 )
 
 // Formats is the list of the supported formats.
@@ -62,7 +62,7 @@ func quoteOption(o string) string {
 
 // Format formats the ssh options.
 func Format(w io.Writer, sshPath, instName string, format FormatT, opts []string) error {
-	fakeHostname := identifierutil.HostnameFromInstName(instName) // TODO: support customization
+	fakeHostname := instance.HostnameFromInstName(instName) // TODO: support customization
 	switch format {
 	case FormatCmd:
 		args := []string{sshPath}
