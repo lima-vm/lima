@@ -7,9 +7,10 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/lima-vm/lima/pkg/store"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+
+	"github.com/lima-vm/lima/pkg/store"
 )
 
 func newProtectCommand() *cobra.Command {

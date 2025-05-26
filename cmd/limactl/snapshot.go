@@ -8,11 +8,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
+
 	"github.com/lima-vm/lima/pkg/snapshot"
 	"github.com/lima-vm/lima/pkg/store"
-	"github.com/sirupsen/logrus"
-
-	"github.com/spf13/cobra"
 )
 
 func newSnapshotCommand() *cobra.Command {

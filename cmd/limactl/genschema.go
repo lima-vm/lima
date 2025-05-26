@@ -10,12 +10,12 @@ import (
 	"os"
 
 	"github.com/invopop/jsonschema"
-	"github.com/lima-vm/lima/pkg/jsonschemautil"
-	"github.com/lima-vm/lima/pkg/limayaml"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 
-	"github.com/sirupsen/logrus"
+	"github.com/lima-vm/lima/pkg/jsonschemautil"
+	"github.com/lima-vm/lima/pkg/limayaml"
 )
 
 func newGenSchemaCommand() *cobra.Command {

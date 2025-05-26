@@ -9,9 +9,10 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/store/filenames"
-	"github.com/sirupsen/logrus"
 )
 
 // Load loads the yaml and fulfills unspecified fields with the default values.

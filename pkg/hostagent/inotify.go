@@ -10,10 +10,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	guestagentapi "github.com/lima-vm/lima/pkg/guestagent/api"
 	"github.com/rjeczalik/notify"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/types/known/timestamppb"
+
+	guestagentapi "github.com/lima-vm/lima/pkg/guestagent/api"
 )
 
 const CacheSize = 10000

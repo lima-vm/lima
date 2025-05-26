@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/containerd/containerd/identifiers"
+
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/store/filenames"

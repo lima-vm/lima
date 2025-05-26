@@ -18,22 +18,22 @@ import (
 
 	"github.com/docker/go-units"
 	"github.com/lima-vm/go-qcow2reader"
+	"github.com/mattn/go-isatty"
+	"github.com/sirupsen/logrus"
+
+	"github.com/lima-vm/lima/pkg/downloader"
 	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/driverutil"
 	"github.com/lima-vm/lima/pkg/executil"
-	"github.com/lima-vm/lima/pkg/nativeimgutil"
-	"github.com/lima-vm/lima/pkg/osutil"
-	"github.com/lima-vm/lima/pkg/qemu/imgutil"
-	"github.com/lima-vm/lima/pkg/usrlocalsharelima"
-	"github.com/mattn/go-isatty"
-
-	"github.com/lima-vm/lima/pkg/downloader"
 	"github.com/lima-vm/lima/pkg/fileutils"
 	hostagentevents "github.com/lima-vm/lima/pkg/hostagent/events"
 	"github.com/lima-vm/lima/pkg/limayaml"
+	"github.com/lima-vm/lima/pkg/nativeimgutil"
+	"github.com/lima-vm/lima/pkg/osutil"
+	"github.com/lima-vm/lima/pkg/qemu/imgutil"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
-	"github.com/sirupsen/logrus"
+	"github.com/lima-vm/lima/pkg/usrlocalsharelima"
 )
 
 // DefaultWatchHostAgentEventsTimeout is the duration to wait for the instance

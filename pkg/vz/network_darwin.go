@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/balajiv113/fd"
-
 	"github.com/sirupsen/logrus"
 )
 

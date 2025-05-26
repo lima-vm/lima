@@ -8,9 +8,10 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/lima-vm/lima/pkg/networks"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+
+	"github.com/lima-vm/lima/pkg/networks"
 )
 
 func sudoersAction(cmd *cobra.Command, args []string) error {

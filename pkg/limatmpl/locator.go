@@ -17,10 +17,11 @@ import (
 	"strings"
 
 	"github.com/containerd/containerd/identifiers"
+	"github.com/sirupsen/logrus"
+
 	"github.com/lima-vm/lima/pkg/ioutilx"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/templatestore"
-	"github.com/sirupsen/logrus"
 )
 
 const yBytesLimit = 4 * 1024 * 1024 // 4MiB

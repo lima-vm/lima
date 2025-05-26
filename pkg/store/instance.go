@@ -19,6 +19,8 @@ import (
 	"time"
 
 	"github.com/docker/go-units"
+	"github.com/sirupsen/logrus"
+
 	hostagentclient "github.com/lima-vm/lima/pkg/hostagent/api/client"
 	instancehostname "github.com/lima-vm/lima/pkg/instance/hostname"
 	"github.com/lima-vm/lima/pkg/limayaml"
@@ -26,7 +28,6 @@ import (
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/lima-vm/lima/pkg/textutil"
 	"github.com/lima-vm/lima/pkg/version/versionutil"
-	"github.com/sirupsen/logrus"
 )
 
 type Status = string

@@ -6,10 +6,11 @@ package main
 import (
 	"strings"
 
-	"github.com/lima-vm/lima/pkg/debugutil"
-	"github.com/lima-vm/lima/pkg/version"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+
+	"github.com/lima-vm/lima/pkg/debugutil"
+	"github.com/lima-vm/lima/pkg/version"
 )
 
 func main() {

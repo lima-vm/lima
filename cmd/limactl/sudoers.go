@@ -6,8 +6,9 @@ package main
 import (
 	"fmt"
 
-	"github.com/lima-vm/lima/pkg/networks"
 	"github.com/spf13/cobra"
+
+	"github.com/lima-vm/lima/pkg/networks"
 )
 
 const socketVMNetURL = "https://lima-vm.io/docs/config/network/vmnet/#socket_vmnet"

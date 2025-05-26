@@ -4,9 +4,10 @@
 package main
 
 import (
+	"github.com/spf13/cobra"
+
 	"github.com/lima-vm/lima/pkg/instance"
 	"github.com/lima-vm/lima/pkg/store"
-	"github.com/spf13/cobra"
 )
 
 func newRestartCommand() *cobra.Command {

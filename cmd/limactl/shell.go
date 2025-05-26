@@ -14,16 +14,17 @@ import (
 
 	"al.essio.dev/pkg/shellescape"
 	"github.com/coreos/go-semver/semver"
+	"github.com/lima-vm/sshocker/pkg/ssh"
+	"github.com/mattn/go-isatty"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
+
 	"github.com/lima-vm/lima/pkg/instance"
 	"github.com/lima-vm/lima/pkg/ioutilx"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	networks "github.com/lima-vm/lima/pkg/networks/reconcile"
 	"github.com/lima-vm/lima/pkg/sshutil"
 	"github.com/lima-vm/lima/pkg/store"
-	"github.com/lima-vm/sshocker/pkg/ssh"
-	"github.com/mattn/go-isatty"
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
 )
 
 const shellHelp = `Execute shell in Lima

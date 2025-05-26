@@ -11,6 +11,9 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
+
 	"github.com/lima-vm/lima/cmd/limactl/editflags"
 	"github.com/lima-vm/lima/pkg/editutil"
 	"github.com/lima-vm/lima/pkg/instance"
@@ -22,8 +25,6 @@ import (
 	"github.com/lima-vm/lima/pkg/templatestore"
 	"github.com/lima-vm/lima/pkg/uiutil"
 	"github.com/lima-vm/lima/pkg/yqutil"
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
 )
 
 func registerCreateFlags(cmd *cobra.Command, commentPrefix string) {

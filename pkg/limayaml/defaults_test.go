@@ -16,13 +16,14 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/sirupsen/logrus"
+	"gotest.tools/v3/assert"
+
 	"github.com/lima-vm/lima/pkg/ioutilx"
 	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/ptr"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/store/filenames"
-	"github.com/sirupsen/logrus"
-	"gotest.tools/v3/assert"
 )
 
 func TestFillDefault(t *testing.T) {

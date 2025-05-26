@@ -9,9 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lima-vm/lima/pkg/networks"
-
 	"gotest.tools/v3/assert"
+
+	"github.com/lima-vm/lima/pkg/networks"
 )
 
 func fakeLookupIP(_ string) []net.IP {

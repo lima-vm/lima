@@ -6,9 +6,10 @@ package main
 import (
 	"strings"
 
+	"github.com/spf13/cobra"
+
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/templatestore"
-	"github.com/spf13/cobra"
 )
 
 func bashCompleteInstanceNames(_ *cobra.Command) ([]string, cobra.ShellCompDirective) {

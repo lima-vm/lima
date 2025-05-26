@@ -11,10 +11,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/sirupsen/logrus"
 	"gotest.tools/v3/assert"
 	"gotest.tools/v3/assert/cmp"
+
+	"github.com/lima-vm/lima/pkg/limayaml"
 )
 
 type embedTestCase struct {

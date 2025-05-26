@@ -16,12 +16,13 @@ import (
 	"unicode"
 
 	"github.com/coreos/go-semver/semver"
+	"github.com/sirupsen/logrus"
+
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/lima-vm/lima/pkg/version/versionutil"
 	"github.com/lima-vm/lima/pkg/yqutil"
-	"github.com/sirupsen/logrus"
 )
 
 // Embed will recursively resolve all "base" dependencies and update the

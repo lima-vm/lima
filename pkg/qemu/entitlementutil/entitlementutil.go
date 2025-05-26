@@ -10,10 +10,10 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/lima-vm/lima/pkg/uiutil"
-
 	"github.com/mattn/go-isatty"
 	"github.com/sirupsen/logrus"
+
+	"github.com/lima-vm/lima/pkg/uiutil"
 )
 
 // IsSigned returns an error if the binary is not signed, or the sign is invalid,

@@ -9,12 +9,13 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
+
 	"github.com/lima-vm/lima/pkg/autostart"
 	"github.com/lima-vm/lima/pkg/instance"
 	networks "github.com/lima-vm/lima/pkg/networks/reconcile"
 	"github.com/lima-vm/lima/pkg/store"
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
 )
 
 func newDeleteCommand() *cobra.Command {
