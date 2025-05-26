@@ -11,8 +11,7 @@ import (
 	"io/fs"
 	"path"
 
-	"github.com/containerd/containerd/identifiers"
-
+	"github.com/lima-vm/lima/pkg/identifiers"
 	"github.com/lima-vm/lima/pkg/iso9660util"
 	"github.com/lima-vm/lima/pkg/textutil"
 )

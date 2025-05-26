@@ -17,11 +17,11 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/containerd/containerd/identifiers"
 	"github.com/coreos/go-semver/semver"
 	"github.com/docker/go-units"
 	"github.com/sirupsen/logrus"
 
+	"github.com/lima-vm/lima/pkg/identifiers"
 	"github.com/lima-vm/lima/pkg/localpathutil"
 	"github.com/lima-vm/lima/pkg/networks"
 	"github.com/lima-vm/lima/pkg/osutil"

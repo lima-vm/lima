@@ -86,7 +86,7 @@ additionalDisks:
 	assert.NilError(t, err)
 
 	err = Validate(y, false)
-	assert.Error(t, err, "field `additionalDisks[0].name is invalid`: identifier must not be empty: invalid argument")
+	assert.Error(t, err, "field `additionalDisks[0].name is invalid`: identifier must not be empty")
 }
 
 func TestValidateParamName(t *testing.T) {
