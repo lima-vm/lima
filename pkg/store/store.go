@@ -5,6 +5,7 @@ package store
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -41,6 +42,19 @@ func Validate() error {
 		if _, err := os.Stat(yamlPath); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+// ValidateInstName checks if the name is a valid instance name. For this it needs to
+// be a valid identifier, and not end in .yml or .yaml (case insensitively).
+func ValidateInstName(name string) error {
+	if err := identifiers.Validate(name); err != nil {
+		return fmt.Errorf("instance name %q is not a valid identifier: %w", name, err)
+	}
+	lower := strings.ToLower(name)
+	if strings.HasSuffix(lower, ".yml") || strings.HasSuffix(lower, ".yaml") {
+		return fmt.Errorf("instance name %q must not end with .yml or .yaml suffix", name)
 	}
 	return nil
 }
@@ -93,7 +107,7 @@ func Disks() ([]string, error) {
 // InstanceDir returns the instance dir.
 // InstanceDir does not check whether the instance exists.
 func InstanceDir(name string) (string, error) {
-	if err := identifiers.Validate(name); err != nil {
+	if err := ValidateInstName(name); err != nil {
 		return "", err
 	}
 	limaDir, err := dirnames.LimaDir()
