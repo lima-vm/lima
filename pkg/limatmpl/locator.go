@@ -16,9 +16,9 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/containerd/containerd/identifiers"
 	"github.com/sirupsen/logrus"
 
+	"github.com/lima-vm/lima/pkg/identifiers"
 	"github.com/lima-vm/lima/pkg/ioutilx"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/templatestore"
