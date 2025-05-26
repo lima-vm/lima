@@ -146,6 +146,12 @@ issues:
   max-same-issues: 0
 formatters:
   enable:
+  - gci
   - gofmt
   - gofumpt
-  - goimports
+  settings:
+    gci:
+      sections:
+      - standard
+      - default
+      - localmodule

@@ -14,13 +14,14 @@ import (
 
 	"github.com/elastic/go-libaudit/v2"
 	"github.com/elastic/go-libaudit/v2/auparse"
+	"github.com/sirupsen/logrus"
+	"google.golang.org/protobuf/types/known/timestamppb"
+
 	"github.com/lima-vm/lima/pkg/guestagent/api"
 	"github.com/lima-vm/lima/pkg/guestagent/iptables"
 	"github.com/lima-vm/lima/pkg/guestagent/kubernetesservice"
 	"github.com/lima-vm/lima/pkg/guestagent/procnettcp"
 	"github.com/lima-vm/lima/pkg/guestagent/timesync"
-	"github.com/sirupsen/logrus"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func New(newTicker func() (<-chan time.Time, func()), iptablesIdle time.Duration) (Agent, error) {

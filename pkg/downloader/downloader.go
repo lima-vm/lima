@@ -21,12 +21,13 @@ import (
 
 	"github.com/cheggaaa/pb/v3"
 	"github.com/containerd/continuity/fs"
+	"github.com/opencontainers/go-digest"
+	"github.com/sirupsen/logrus"
+
 	"github.com/lima-vm/lima/pkg/httpclientutil"
 	"github.com/lima-vm/lima/pkg/localpathutil"
 	"github.com/lima-vm/lima/pkg/lockutil"
 	"github.com/lima-vm/lima/pkg/progressbar"
-	"github.com/opencontainers/go-digest"
-	"github.com/sirupsen/logrus"
 )
 
 // HideProgress is used only for testing.

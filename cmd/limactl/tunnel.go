@@ -11,11 +11,12 @@ import (
 	"runtime"
 	"strconv"
 
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
+
 	"github.com/lima-vm/lima/pkg/freeport"
 	"github.com/lima-vm/lima/pkg/sshutil"
 	"github.com/lima-vm/lima/pkg/store"
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
 )
 
 const tunnelHelp = `Create a tunnel for Lima

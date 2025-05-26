@@ -22,6 +22,8 @@ import (
 	"github.com/docker/go-units"
 	"github.com/lima-vm/go-qcow2reader"
 	"github.com/lima-vm/go-qcow2reader/image/raw"
+	"github.com/sirupsen/logrus"
+
 	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/iso9660util"
 	"github.com/lima-vm/lima/pkg/limayaml"
@@ -31,7 +33,6 @@ import (
 	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
-	"github.com/sirupsen/logrus"
 )
 
 // diskImageCachingMode is set to DiskImageCachingModeCached so as to avoid disk corruption on ARM:

@@ -11,14 +11,15 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/mattn/go-isatty"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
+
 	"github.com/lima-vm/lima/pkg/debugutil"
 	"github.com/lima-vm/lima/pkg/fsutil"
 	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/version"
-	"github.com/mattn/go-isatty"
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
 )
 
 const (

@@ -16,7 +16,6 @@ import (
 
 	"github.com/Code-Hex/vz/v3"
 	"github.com/coreos/go-semver/semver"
-
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/pkg/driver"

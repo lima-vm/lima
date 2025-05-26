@@ -7,13 +7,14 @@ import (
 	"errors"
 	"io/fs"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/lima-vm/lima/pkg/driverutil"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/templatestore"
 	"github.com/lima-vm/lima/pkg/usrlocalsharelima"
 	"github.com/lima-vm/lima/pkg/version"
-	"github.com/sirupsen/logrus"
 )
 
 type LimaInfo struct {

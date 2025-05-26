@@ -24,6 +24,10 @@ import (
 	"github.com/coreos/go-semver/semver"
 	"github.com/docker/go-units"
 	"github.com/goccy/go-yaml"
+	"github.com/pbnjay/memory"
+	"github.com/sirupsen/logrus"
+	"golang.org/x/sys/cpu"
+
 	instance "github.com/lima-vm/lima/pkg/instance/hostname"
 	"github.com/lima-vm/lima/pkg/ioutilx"
 	"github.com/lima-vm/lima/pkg/localpathutil"
@@ -35,9 +39,6 @@ import (
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/lima-vm/lima/pkg/version"
 	"github.com/lima-vm/lima/pkg/version/versionutil"
-	"github.com/pbnjay/memory"
-	"github.com/sirupsen/logrus"
-	"golang.org/x/sys/cpu"
 )
 
 const (

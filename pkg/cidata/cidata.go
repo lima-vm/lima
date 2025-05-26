@@ -20,6 +20,8 @@ import (
 	"time"
 
 	"github.com/docker/go-units"
+	"github.com/sirupsen/logrus"
+
 	"github.com/lima-vm/lima/pkg/debugutil"
 	instance "github.com/lima-vm/lima/pkg/instance/hostname"
 	"github.com/lima-vm/lima/pkg/iso9660util"
@@ -30,7 +32,6 @@ import (
 	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/sshutil"
 	"github.com/lima-vm/lima/pkg/store/filenames"
-	"github.com/sirupsen/logrus"
 )
 
 var netLookupIP = func(host string) []net.IP {

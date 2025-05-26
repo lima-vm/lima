@@ -9,9 +9,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/lima-vm/lima/pkg/logrusutil"
 	"github.com/nxadm/tail"
 	"github.com/sirupsen/logrus"
+
+	"github.com/lima-vm/lima/pkg/logrusutil"
 )
 
 func Watch(ctx context.Context, haStdoutPath, haStderrPath string, begin time.Time, onEvent func(Event) bool) error {

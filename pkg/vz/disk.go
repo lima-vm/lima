@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 
 	"github.com/docker/go-units"
+
 	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/fileutils"
 	"github.com/lima-vm/lima/pkg/iso9660util"

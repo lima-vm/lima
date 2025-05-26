@@ -13,10 +13,11 @@ import (
 	"sync"
 
 	"github.com/goccy/go-yaml"
+	"github.com/sirupsen/logrus"
+
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/lima-vm/lima/pkg/textutil"
-	"github.com/sirupsen/logrus"
 )
 
 //go:embed networks.TEMPLATE.yaml

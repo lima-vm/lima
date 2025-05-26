@@ -24,6 +24,8 @@ import (
 	"github.com/coreos/go-semver/semver"
 	"github.com/digitalocean/go-qemu/qmp"
 	"github.com/digitalocean/go-qemu/qmp/raw"
+	"github.com/sirupsen/logrus"
+
 	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/executil"
 	"github.com/lima-vm/lima/pkg/limayaml"
@@ -32,7 +34,6 @@ import (
 	"github.com/lima-vm/lima/pkg/qemu/entitlementutil"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
-	"github.com/sirupsen/logrus"
 )
 
 type LimaQemuDriver struct {

@@ -13,11 +13,12 @@ import (
 	"strings"
 
 	"github.com/coreos/go-semver/semver"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
+
 	"github.com/lima-vm/lima/pkg/ioutilx"
 	"github.com/lima-vm/lima/pkg/sshutil"
 	"github.com/lima-vm/lima/pkg/store"
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
 )
 
 const copyHelp = `Copy files between host and guest
