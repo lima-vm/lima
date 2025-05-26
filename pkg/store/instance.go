@@ -20,7 +20,7 @@ import (
 
 	"github.com/docker/go-units"
 	hostagentclient "github.com/lima-vm/lima/pkg/hostagent/api/client"
-	"github.com/lima-vm/lima/pkg/identifierutil"
+	instancehostname "github.com/lima-vm/lima/pkg/instance/hostname"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/store/filenames"
@@ -73,7 +73,7 @@ func Inspect(instName string) (*Instance, error) {
 	inst := &Instance{
 		Name: instName,
 		// TODO: support customizing hostname
-		Hostname: identifierutil.HostnameFromInstName(instName),
+		Hostname: instancehostname.HostnameFromInstName(instName),
 		Status:   StatusUnknown,
 	}
 	// InstanceDir validates the instName but does not check whether the instance exists

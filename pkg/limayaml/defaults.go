@@ -24,13 +24,8 @@ import (
 	"github.com/coreos/go-semver/semver"
 	"github.com/docker/go-units"
 	"github.com/goccy/go-yaml"
+	instance "github.com/lima-vm/lima/pkg/instance/hostname"
 	"github.com/lima-vm/lima/pkg/ioutilx"
-	"github.com/lima-vm/lima/pkg/version"
-	"github.com/pbnjay/memory"
-	"github.com/sirupsen/logrus"
-	"golang.org/x/sys/cpu"
-
-	"github.com/lima-vm/lima/pkg/identifierutil"
 	"github.com/lima-vm/lima/pkg/localpathutil"
 	. "github.com/lima-vm/lima/pkg/must"
 	"github.com/lima-vm/lima/pkg/networks"
@@ -38,7 +33,11 @@ import (
 	"github.com/lima-vm/lima/pkg/ptr"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/store/filenames"
+	"github.com/lima-vm/lima/pkg/version"
 	"github.com/lima-vm/lima/pkg/version/versionutil"
+	"github.com/pbnjay/memory"
+	"github.com/sirupsen/logrus"
+	"golang.org/x/sys/cpu"
 )
 
 const (
@@ -944,7 +943,7 @@ func executeGuestTemplate(format, instDir string, user User, param map[string]st
 		name := filepath.Base(instDir)
 		data := map[string]any{
 			"Name":     name,
-			"Hostname": identifierutil.HostnameFromInstName(name), // TODO: support customization
+			"Hostname": instance.HostnameFromInstName(name), // TODO: support customization
 			"UID":      *user.UID,
 			"User":     *user.Name,
 			"Home":     *user.Home,

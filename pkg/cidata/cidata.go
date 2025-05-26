@@ -21,7 +21,7 @@ import (
 
 	"github.com/docker/go-units"
 	"github.com/lima-vm/lima/pkg/debugutil"
-	"github.com/lima-vm/lima/pkg/identifierutil"
+	instance "github.com/lima-vm/lima/pkg/instance/hostname"
 	"github.com/lima-vm/lima/pkg/iso9660util"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/localpathutil"
@@ -123,7 +123,7 @@ func templateArgs(bootScripts bool, instDir, name string, instConfig *limayaml.L
 		Debug:              debugutil.Debug,
 		BootScripts:        bootScripts,
 		Name:               name,
-		Hostname:           identifierutil.HostnameFromInstName(name), // TODO: support customization
+		Hostname:           instance.HostnameFromInstName(name), // TODO: support customization
 		User:               *instConfig.User.Name,
 		Comment:            *instConfig.User.Comment,
 		Home:               *instConfig.User.Home,
