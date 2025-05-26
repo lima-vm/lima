@@ -285,19 +285,19 @@ func (l *LimaVzDriver) GetDisplayConnection(_ context.Context) (string, error) {
 }
 
 func (l *LimaVzDriver) CreateSnapshot(_ context.Context, _ string) error {
-	return errors.New("unimplemented")
+	return errUnimplemented
 }
 
 func (l *LimaVzDriver) ApplySnapshot(_ context.Context, _ string) error {
-	return errors.New("unimplemented")
+	return errUnimplemented
 }
 
 func (l *LimaVzDriver) DeleteSnapshot(_ context.Context, _ string) error {
-	return errors.New("unimplemented")
+	return errUnimplemented
 }
 
 func (l *LimaVzDriver) ListSnapshots(_ context.Context) (string, error) {
-	return "", errors.New("unimplemented")
+	return "", errUnimplemented
 }
 
 func (l *LimaVzDriver) ForwardGuestAgent() bool {

@@ -246,19 +246,19 @@ func (l *LimaWslDriver) GetDisplayConnection(_ context.Context) (string, error) 
 }
 
 func (l *LimaWslDriver) CreateSnapshot(_ context.Context, _ string) error {
-	return fmt.Errorf("unimplemented")
+	return errUnimplemented
 }
 
 func (l *LimaWslDriver) ApplySnapshot(_ context.Context, _ string) error {
-	return fmt.Errorf("unimplemented")
+	return errUnimplemented
 }
 
 func (l *LimaWslDriver) DeleteSnapshot(_ context.Context, _ string) error {
-	return fmt.Errorf("unimplemented")
+	return errUnimplemented
 }
 
 func (l *LimaWslDriver) ListSnapshots(_ context.Context) (string, error) {
-	return "", fmt.Errorf("unimplemented")
+	return "", errUnimplemented
 }
 
 func (l *LimaWslDriver) ForwardGuestAgent() bool {
