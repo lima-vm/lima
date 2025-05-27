@@ -1,0 +1,144 @@
+// [WIP]: Please do not review this file yet.
+
+syntax = "proto3";
+
+package driver;
+
+option go_package = "github.com/lima-vm/lima/pkg/driver/external/proto";
+
+import "google/protobuf/empty.proto";
+
+service Driver {
+    rpc Validate(google.protobuf.Empty) returns (ValidateResponse);
+    rpc Initialize(google.protobuf.Empty) returns (InitializeResponse);
+    rpc CreateDisk(google.protobuf.Empty) returns (CreateDiskResponse);
+    rpc Start(google.protobuf.Empty) returns (StartResponse);
+    rpc Stop(google.protobuf.Empty) returns (StopResponse);
+
+    rpc Name(google.protobuf.Empty) returns (NameResponse);
+    rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
+    
+    rpc GetVSockPort(google.protobuf.Empty) returns (GetVSockPortResponse);
+    rpc GetVirtioPort(google.protobuf.Empty) returns (GetVirtioPortResponse);
+}
+
+message Empty {}
+
+message InstanceConfig {
+    string id = 1;
+    string name = 2;
+    string dir = 3;
+    string arch = 4;
+    string cpuType = 5;
+    repeated string rosetta = 6;
+    int32 cpus = 7;
+    string memory = 8;
+    string disk = 9;
+    string kernel = 10;
+    string initrd = 11;
+    bool headless = 12;
+    bool mountHostUsers = 13;
+    bool enableSharing = 14;
+    string ssh = 15;
+    string sshLocalPort = 16;
+    repeated Mount mounts = 17;
+    repeated Port ports = 18;
+    repeated Network networks = 19;
+    string containerd = 20;
+    string containerdUser = 21;
+    string containerdNamespace = 22;
+    string vmType = 23;
+    repeated string requirements = 24;
+    repeated string firmware = 25;
+    repeated AdditionalDisk additionalDisks = 26;
+    ProxyCommand proxyCommand = 27;
+}
+
+message Mount {
+    string location = 1;
+    string mountPoint = 2;
+    bool writable = 3;
+    string sshfs = 4;
+    int32 ninep = 5;
+}
+
+message Port {
+    string guestPort = 1;
+    string hostPort = 2;
+    string proto = 3;
+}
+
+message Network {
+    string lima = 1;
+    string socket_vmnet = 2;
+}
+
+message AdditionalDisk {
+    string location = 1;
+    bool writable = 2;
+    string size = 3;
+}
+
+message ProxyCommand {
+    string command = 1;
+}
+
+message ValidateResponse {
+    bool valid = 1;
+    string error = 2;
+}
+
+message InitializeResponse {
+    bool success = 1;
+    string error = 2;
+}
+
+message CreateDiskResponse {
+    bool success = 1;
+    string error = 2;
+}
+
+message StartResponse {
+    bool success = 1;   
+    string error = 2;
+}
+
+message StopResponse {
+    bool success = 1;
+    string error = 2;
+}
+
+message RegisterResponse {
+    bool success = 1;
+    string error = 2;
+}
+
+
+message UnregisterResponse {
+    bool success = 1;
+    string error = 2;
+}
+
+message NameResponse {
+    string name = 1;
+}
+
+message SetConfigRequest {
+    bytes instance_config_json = 1;
+    int32 ssh_local_port = 3;
+}
+
+message SetConfigResponse {
+    bool success = 1;
+    string error = 2;
+}
+
+
+message GetVSockPortResponse {
+    int32 port = 1;
+}
+
+
+message GetVirtioPortResponse {
+    string port = 1;
+}
