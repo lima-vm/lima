@@ -9,16 +9,19 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/pkg/driver"
+	"github.com/lima-vm/lima/pkg/driver/external/client"
 	"github.com/lima-vm/lima/pkg/usrlocalsharelima"
 )
 
 const (
 	Internal = "internal"
+	External = "external"
 )
 
 type ExternalDriver struct {
@@ -26,6 +29,7 @@ type ExternalDriver struct {
 	InstanceName string
 	Command      *exec.Cmd
 	SocketPath   string
+	Client       *client.DriverClient // Client is the gRPC client for the external driver
 	Path         string
 	Ctx          context.Context
 	Logger       *logrus.Logger
@@ -51,6 +55,18 @@ func List() map[string]string {
 	}
 
 	return vmTypes
+}
+
+func CheckInternalOrExternal(name string) string {
+	extDriver, _, exists := Get(name)
+	if !exists {
+		return ""
+	}
+	if extDriver != nil {
+		return External
+	}
+
+	return Internal
 }
 
 func Get(name string) (*ExternalDriver, driver.Driver, bool) {
@@ -155,16 +171,26 @@ func discoverDriversInDir(dir string) error {
 
 func registerDriverFile(path string) {
 	base := filepath.Base(path)
-	if !strings.HasPrefix(base, "lima-driver-") {
+	name := ""
+	if runtime.GOOS == "windows" {
+		if strings.HasPrefix(base, "lima-driver-") && strings.HasSuffix(base, ".exe") {
+			name = strings.TrimSuffix(strings.TrimPrefix(base, "lima-driver-"), ".exe")
+		}
+	} else {
+		if strings.HasPrefix(base, "lima-driver-") {
+			name = strings.TrimPrefix(base, "lima-driver-")
+		}
+	}
+	if name == "" {
 		return
 	}
-
-	name := strings.TrimPrefix(base, "lima-driver-")
-
 	registerExternalDriver(name, path)
 }
 
 func isExecutable(mode os.FileMode) bool {
+	if runtime.GOOS == "windows" {
+		return true
+	}
 	return mode&0o111 != 0
 }
 
