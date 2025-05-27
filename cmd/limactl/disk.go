@@ -14,10 +14,10 @@ import (
 
 	contfs "github.com/containerd/continuity/fs"
 	"github.com/docker/go-units"
-	"github.com/lima-vm/go-qcow2reader"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
+	"github.com/lima-vm/go-qcow2reader"
 	"github.com/lima-vm/lima/pkg/imgutil/proxyimgutil"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
