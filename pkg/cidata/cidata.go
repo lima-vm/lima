@@ -23,7 +23,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/pkg/debugutil"
-	instance "github.com/lima-vm/lima/pkg/instance/hostname"
+	"github.com/lima-vm/lima/pkg/instance/hostname"
 	"github.com/lima-vm/lima/pkg/iso9660util"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/localpathutil"
@@ -124,7 +124,7 @@ func templateArgs(bootScripts bool, instDir, name string, instConfig *limayaml.L
 		Debug:              debugutil.Debug,
 		BootScripts:        bootScripts,
 		Name:               name,
-		Hostname:           instance.HostnameFromInstName(name), // TODO: support customization
+		Hostname:           hostname.FromInstName(name), // TODO: support customization
 		User:               *instConfig.User.Name,
 		Comment:            *instConfig.User.Comment,
 		Home:               *instConfig.User.Home,

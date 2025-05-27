@@ -8,7 +8,7 @@ import (
 	"io"
 	"strings"
 
-	instance "github.com/lima-vm/lima/pkg/instance/hostname"
+	"github.com/lima-vm/lima/pkg/instance/hostname"
 )
 
 // FormatT specifies the format type.
@@ -62,7 +62,7 @@ func quoteOption(o string) string {
 
 // Format formats the ssh options.
 func Format(w io.Writer, sshPath, instName string, format FormatT, opts []string) error {
-	fakeHostname := instance.HostnameFromInstName(instName) // TODO: support customization
+	fakeHostname := hostname.FromInstName(instName) // TODO: support customization
 	switch format {
 	case FormatCmd:
 		args := []string{sshPath}

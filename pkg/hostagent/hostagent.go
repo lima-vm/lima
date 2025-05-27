@@ -34,7 +34,7 @@ import (
 	hostagentapi "github.com/lima-vm/lima/pkg/hostagent/api"
 	"github.com/lima-vm/lima/pkg/hostagent/dns"
 	"github.com/lima-vm/lima/pkg/hostagent/events"
-	instance "github.com/lima-vm/lima/pkg/instance/hostname"
+	"github.com/lima-vm/lima/pkg/instance/hostname"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/networks"
 	"github.com/lima-vm/lima/pkg/osutil"
@@ -288,8 +288,8 @@ func (a *HostAgent) Run(ctx context.Context) error {
 	if limayaml.FirstUsernetIndex(a.instConfig) == -1 && *a.instConfig.HostResolver.Enabled {
 		hosts := a.instConfig.HostResolver.Hosts
 		hosts["host.lima.internal"] = networks.SlirpGateway
-		hostname := instance.HostnameFromInstName(a.instName) // TODO: support customization
-		hosts[hostname] = networks.SlirpIPAddress
+		name := hostname.FromInstName(a.instName) // TODO: support customization
+		hosts[name] = networks.SlirpIPAddress
 		srvOpts := dns.ServerOptions{
 			UDPPort: a.udpDNSLocalPort,
 			TCPPort: a.tcpDNSLocalPort,

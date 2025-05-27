@@ -28,7 +28,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/cpu"
 
-	instance "github.com/lima-vm/lima/pkg/instance/hostname"
+	"github.com/lima-vm/lima/pkg/instance/hostname"
 	"github.com/lima-vm/lima/pkg/ioutilx"
 	"github.com/lima-vm/lima/pkg/localpathutil"
 	. "github.com/lima-vm/lima/pkg/must"
@@ -944,7 +944,7 @@ func executeGuestTemplate(format, instDir string, user User, param map[string]st
 		name := filepath.Base(instDir)
 		data := map[string]any{
 			"Name":     name,
-			"Hostname": instance.HostnameFromInstName(name), // TODO: support customization
+			"Hostname": hostname.FromInstName(name), // TODO: support customization
 			"UID":      *user.UID,
 			"User":     *user.Name,
 			"Home":     *user.Home,
