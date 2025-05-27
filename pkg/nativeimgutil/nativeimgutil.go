@@ -23,7 +23,7 @@ import (
 	"github.com/lima-vm/lima/pkg/progressbar"
 )
 
-// Disk image size must be aigned to sector size. Qemu block layer is rounding
+// Disk image size must be aligned to sector size. Qemu block layer is rounding
 // up the size to 512 bytes. Apple virtualization framework reject disks not
 // aligned to 512 bytes.
 const sectorSize = 512

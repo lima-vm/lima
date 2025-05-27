@@ -78,7 +78,7 @@ help:
 	@echo  '  help-variables  - Show Makefile variables'
 	@echo  '  help-targets    - Show additional Makefile targets'
 
-.PHONY: help-varaibles
+.PHONY: help-variables
 help-variables:
 	@echo  '# Variables that can be overridden.'
 	@echo
@@ -318,7 +318,7 @@ additional-guestagents: $(ADDITIONAL_GUESTAGENTS)
 %-guestagent:
 	@[ "$(findstring $(*),$(LINUX_GUESTAGENT_ARCHS))" == "$(*)" ] && make $(call guestagent_path,LINUX,$*)
 
-# environment variables for linx-guestagent. these variable are used for checking force build.
+# environment variables for linux-guestagent. these variable are used for checking force build.
 ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)aarch64 = CGO_ENABLED=0 GOOS=linux GOARCH=arm64
 ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)armv7l = CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7
 ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)ppc64le = CGO_ENABLED=0 GOOS=linux GOARCH=ppc64le
