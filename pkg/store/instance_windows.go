@@ -25,12 +25,7 @@ func inspectStatus(instDir string, inst *Instance, y *limayaml.LimaYAML) {
 		inst.SSHLocalPort = 22
 
 		if inst.Status == StatusRunning {
-			sshAddr, err := GetSSHAddress(inst.Name)
-			if err == nil {
-				inst.SSHAddress = sshAddr
-			} else {
-				inst.Errors = append(inst.Errors, err)
-			}
+			inst.SSHAddress = InstanceSSHAddress
 		}
 	} else {
 		inspectStatusWithPIDFiles(instDir, inst, y)
@@ -75,7 +70,7 @@ func GetWslStatus(instName string) (string, error) {
 		return "", fmt.Errorf("failed to run `wsl --list --verbose`, err: %w (out=%q)", err, string(out))
 	}
 
-	if len(out) == 0 {
+	if out == "" {
 		return StatusBroken, fmt.Errorf("failed to read instance state for instance %q, try running `wsl --list --verbose` to debug, err: %w", instName, err)
 	}
 
@@ -114,8 +109,4 @@ func GetWslStatus(instName string) (string, error) {
 	}
 
 	return instState, nil
-}
-
-func GetSSHAddress(instName string) (string, error) {
-	return "127.0.0.1", nil
 }

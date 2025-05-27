@@ -152,10 +152,9 @@ func (l *LimaWslDriver) Start(ctx context.Context) (chan error, error) {
 	return errCh, err
 }
 
-// Requires WSLg, which requires specific version of WSL2 to be installed.
+// CanRunGUI requires WSLg, which requires specific version of WSL2 to be installed.
 // TODO: Add check and add support for WSLg (instead of VNC) to hostagent.
 func (l *LimaWslDriver) CanRunGUI() bool {
-	// return *l.InstConfig.Video.Display == "wsl"
 	return false
 }
 
