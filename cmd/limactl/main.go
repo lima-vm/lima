@@ -16,6 +16,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/lima-vm/lima/pkg/debugutil"
+	"github.com/lima-vm/lima/pkg/driver/external/server"
 	"github.com/lima-vm/lima/pkg/fsutil"
 	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
@@ -43,6 +44,8 @@ func main() {
 		handleExitCoder(err)
 		logrus.Fatal(err)
 	}
+
+	server.StopAllExternalDrivers()
 }
 
 func newApp() *cobra.Command {
