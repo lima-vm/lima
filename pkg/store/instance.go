@@ -22,7 +22,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	hostagentclient "github.com/lima-vm/lima/pkg/hostagent/api/client"
-	instancehostname "github.com/lima-vm/lima/pkg/instance/hostname"
+	"github.com/lima-vm/lima/pkg/instance/hostname"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/store/filenames"
@@ -74,7 +74,7 @@ func Inspect(instName string) (*Instance, error) {
 	inst := &Instance{
 		Name: instName,
 		// TODO: support customizing hostname
-		Hostname: instancehostname.HostnameFromInstName(instName),
+		Hostname: hostname.FromInstName(instName),
 		Status:   StatusUnknown,
 	}
 	// InstanceDir validates the instName but does not check whether the instance exists
