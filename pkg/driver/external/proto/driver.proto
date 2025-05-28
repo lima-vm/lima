@@ -15,72 +15,27 @@ service Driver {
     rpc Start(google.protobuf.Empty) returns (StartResponse);
     rpc Stop(google.protobuf.Empty) returns (StopResponse);
 
+    rpc CanRunGUI(google.protobuf.Empty) returns (CanRunGUIResponse);
+    rpc RunGUI(google.protobuf.Empty) returns (RunGUIResponse);
+    rpc ChangeDisplayPassword(ChangeDisplayPasswordRequest) returns (ChangeDisplayPasswordResponse);
+    rpc GetDisplayConnection(google.protobuf.Empty) returns (GetDisplayConnectionResponse);
+
+    rpc CreateSnapshot(CreateSnapshotRequest) returns (CreateSnapshotResponse);
+    rpc ApplySnapshot(ApplySnapshotRequest) returns (ApplySnapshotResponse);
+    rpc DeleteSnapshot(DeleteSnapshotRequest) returns (DeleteSnapshotResponse);
+    rpc ListSnapshots(google.protobuf.Empty) returns (ListSnapshotsResponse);
+
+    rpc Register(google.protobuf.Empty) returns (RegisterResponse);
+    rpc Unregister(google.protobuf.Empty) returns (UnregisterResponse);
+
+    rpc ForwardGuestAgent(google.protobuf.Empty) returns (ForwardGuestAgentResponse);
+    rpc GuestAgentConn(google.protobuf.Empty) returns (GuestAgentConnResponse);
+
     rpc Name(google.protobuf.Empty) returns (NameResponse);
     rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
     
     rpc GetVSockPort(google.protobuf.Empty) returns (GetVSockPortResponse);
     rpc GetVirtioPort(google.protobuf.Empty) returns (GetVirtioPortResponse);
-}
-
-message Empty {}
-
-message InstanceConfig {
-    string id = 1;
-    string name = 2;
-    string dir = 3;
-    string arch = 4;
-    string cpuType = 5;
-    repeated string rosetta = 6;
-    int32 cpus = 7;
-    string memory = 8;
-    string disk = 9;
-    string kernel = 10;
-    string initrd = 11;
-    bool headless = 12;
-    bool mountHostUsers = 13;
-    bool enableSharing = 14;
-    string ssh = 15;
-    string sshLocalPort = 16;
-    repeated Mount mounts = 17;
-    repeated Port ports = 18;
-    repeated Network networks = 19;
-    string containerd = 20;
-    string containerdUser = 21;
-    string containerdNamespace = 22;
-    string vmType = 23;
-    repeated string requirements = 24;
-    repeated string firmware = 25;
-    repeated AdditionalDisk additionalDisks = 26;
-    ProxyCommand proxyCommand = 27;
-}
-
-message Mount {
-    string location = 1;
-    string mountPoint = 2;
-    bool writable = 3;
-    string sshfs = 4;
-    int32 ninep = 5;
-}
-
-message Port {
-    string guestPort = 1;
-    string hostPort = 2;
-    string proto = 3;
-}
-
-message Network {
-    string lima = 1;
-    string socket_vmnet = 2;
-}
-
-message AdditionalDisk {
-    string location = 1;
-    bool writable = 2;
-    string size = 3;
-}
-
-message ProxyCommand {
-    string command = 1;
 }
 
 message ValidateResponse {
@@ -113,7 +68,6 @@ message RegisterResponse {
     string error = 2;
 }
 
-
 message UnregisterResponse {
     bool success = 1;
     string error = 2;
@@ -133,12 +87,80 @@ message SetConfigResponse {
     string error = 2;
 }
 
-
 message GetVSockPortResponse {
     int32 port = 1;
 }
 
-
 message GetVirtioPortResponse {
     string port = 1;
+}
+
+message CanRunGUIResponse {
+    bool can_run = 1;
+}
+
+message RunGUIResponse {
+    bool success = 1;
+    string error = 2;
+}
+
+message ChangeDisplayPasswordRequest {
+    string password = 1;
+}
+
+message ChangeDisplayPasswordResponse {
+    bool success = 1;
+    string error = 2;
+}
+
+message GetDisplayConnectionResponse {
+    string connection = 1;
+    string error = 2;
+}
+
+message CreateSnapshotRequest {
+    string tag = 1;
+}
+
+message CreateSnapshotResponse {
+    bool success = 1;
+    string error = 2;
+}
+
+message ApplySnapshotRequest {
+    string tag = 1;
+}
+
+message ApplySnapshotResponse {
+    bool success = 1;
+    string error = 2;
+}
+
+message DeleteSnapshotRequest {
+    string tag = 1;
+}
+
+message DeleteSnapshotResponse {
+    bool success = 1;
+    string error = 2;
+}
+
+message ListSnapshotsResponse {
+    string snapshots = 1;
+    string error = 2;
+}
+
+message ForwardGuestAgentResponse {
+    bool should_forward = 1;
+}
+
+message GuestAgentConnResponse {
+    string connection_id = 1;
+    string error = 2;
+}
+
+message ConnectionData {
+    string connection_id = 1;
+    bytes data = 2;
+    bool close = 3;
 }
