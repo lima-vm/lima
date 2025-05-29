@@ -1,10 +1,6 @@
-// [WIP]: Please do not review this file yet.
-
 syntax = "proto3";
 
-package driver;
-
-option go_package = "github.com/lima-vm/lima/pkg/driver/external/proto";
+option go_package = "github.com/lima-vm/lima/pkg/driver/external";
 
 import "google/protobuf/empty.proto";
 
@@ -12,7 +8,7 @@ service Driver {
     rpc Validate(google.protobuf.Empty) returns (ValidateResponse);
     rpc Initialize(google.protobuf.Empty) returns (InitializeResponse);
     rpc CreateDisk(google.protobuf.Empty) returns (CreateDiskResponse);
-    rpc Start(google.protobuf.Empty) returns (StartResponse);
+    rpc Start(google.protobuf.Empty) returns (stream StartResponse);
     rpc Stop(google.protobuf.Empty) returns (StopResponse);
 
     rpc CanRunGUI(google.protobuf.Empty) returns (CanRunGUIResponse);
@@ -29,7 +25,7 @@ service Driver {
     rpc Unregister(google.protobuf.Empty) returns (UnregisterResponse);
 
     rpc ForwardGuestAgent(google.protobuf.Empty) returns (ForwardGuestAgentResponse);
-    rpc GuestAgentConn(google.protobuf.Empty) returns (GuestAgentConnResponse);
+    rpc GuestAgentConn(google.protobuf.Empty) returns (stream GuestAgentConnResponse);
 
     rpc Name(google.protobuf.Empty) returns (NameResponse);
     rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
@@ -155,12 +151,6 @@ message ForwardGuestAgentResponse {
 }
 
 message GuestAgentConnResponse {
-    string connection_id = 1;
+    bytes net_conn = 1;
     string error = 2;
-}
-
-message ConnectionData {
-    string connection_id = 1;
-    bytes data = 2;
-    bool close = 3;
 }
