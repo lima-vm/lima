@@ -4,9 +4,15 @@
 package registry
 
 import (
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/lima-vm/lima/pkg/driver"
+	"github.com/lima-vm/lima/pkg/usrlocalsharelima"
 	"github.com/sirupsen/logrus"
 )
 
@@ -68,8 +74,92 @@ func (r *Registry) RegisterPlugin(name, path string) {
 }
 
 func (r *Registry) DiscoverPlugins() error {
-	// TODO: Implement plugin discovery logic
+	limaShareDir, err := usrlocalsharelima.Dir()
+	if err != nil {
+		return fmt.Errorf("failed to determine Lima share directory: %w", err)
+	}
+	stdPluginDir := filepath.Join(filepath.Dir(limaShareDir), "libexec", "lima", "drivers")
+
+	if _, err := os.Stat(stdPluginDir); err == nil {
+		if err := r.discoverPluginsInDir(stdPluginDir); err != nil {
+			logrus.Warnf("Error discovering plugins in %s: %v", stdPluginDir, err)
+		}
+	}
+
+	if pluginPaths := os.Getenv("LIMA_DRIVERS_PATH"); pluginPaths != "" {
+		paths := filepath.SplitList(pluginPaths)
+		for _, path := range paths {
+			if path == "" {
+				continue
+			}
+
+			info, err := os.Stat(path)
+			if err != nil {
+				logrus.Warnf("Error accessing plugin path %s: %v", path, err)
+				continue
+			}
+
+			if info.IsDir() {
+				if err := r.discoverPluginsInDir(path); err != nil {
+					logrus.Warnf("Error discovering plugins in %s: %v", path, err)
+				}
+			} else if isExecutable(info.Mode()) {
+				r.registerPluginFile(path)
+			}
+		}
+	}
+
 	return nil
+}
+
+func (r *Registry) discoverPluginsInDir(dir string) error {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return fmt.Errorf("failed to read plugin directory %s: %w", dir, err)
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		info, err := entry.Info()
+		if err != nil {
+			logrus.Warnf("Failed to get info for %s: %v", entry.Name(), err)
+			continue
+		}
+
+		if !isExecutable(info.Mode()) {
+			continue
+		}
+
+		pluginPath := filepath.Join(dir, entry.Name())
+		r.registerPluginFile(pluginPath)
+	}
+
+	return nil
+}
+
+func (r *Registry) registerPluginFile(path string) {
+	base := filepath.Base(path)
+	if !strings.HasPrefix(base, "lima-plugin-") {
+		return
+	}
+
+	name := strings.TrimPrefix(base, "lima-plugin-")
+	name = strings.TrimSuffix(name, filepath.Ext(name))
+
+	cmd := exec.Command(path, "--version")
+	if err := cmd.Run(); err != nil {
+		logrus.Warnf("Plugin %s failed version check: %v", path, err)
+		return
+	}
+
+	r.RegisterPlugin(name, path)
+}
+
+func isExecutable(mode os.FileMode) bool {
+	return mode&0111 != 0
 }
 
 var DefaultRegistry *Registry
