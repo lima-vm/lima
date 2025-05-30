@@ -4,6 +4,7 @@
 package limayaml
 
 import (
+	"errors"
 	"testing"
 
 	"gotest.tools/v3/assert"
@@ -263,4 +264,56 @@ provision:
 		"field `images` must be set\n"+
 		"field `provision[0].mode` must one of \"system\", \"user\", \"boot\", \"data\", \"dependency\", or \"ansible\"\n"+
 		"field `provision[1].path` must not be empty when mode is \"data\"")
+}
+
+func TestValidateYAMLAgainstLatestConfig(t *testing.T) {
+	tests := []struct {
+		name    string
+		yNew    string
+		yLatest string
+		wantErr error
+	}{
+		{
+			name:    "Valid disk size unchanged",
+			yNew:    `disk: 100GiB`,
+			yLatest: `disk: 100GiB`,
+		},
+		{
+			name:    "Valid disk size increased",
+			yNew:    `disk: 200GiB`,
+			yLatest: `disk: 100GiB`,
+		},
+		{
+			name:    "No disk field in both YAMLs",
+			yNew:    ``,
+			yLatest: ``,
+		},
+		{
+			name:    "No disk field in new YAMLs",
+			yNew:    ``,
+			yLatest: `disk: 100GiB`,
+		},
+		{
+			name:    "No disk field in latest YAMLs",
+			yNew:    `disk: 100GiB`,
+			yLatest: ``,
+		},
+		{
+			name:    "Disk size shrunk",
+			yNew:    `disk: 50GiB`,
+			yLatest: `disk: 100GiB`,
+			wantErr: errors.New("field `disk`: shrinking the disk (100GiB --> 50GiB) is not supported"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateYAMLAgainstLatestConfig([]byte(tt.yNew), []byte(tt.yLatest))
+			if tt.wantErr == nil {
+				assert.NilError(t, err)
+			} else {
+				assert.Error(t, err, tt.wantErr.Error())
+			}
+		})
+	}
 }
