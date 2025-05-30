@@ -47,21 +47,21 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type DriverClient interface {
-	Validate(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ValidateResponse, error)
-	Initialize(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*InitializeResponse, error)
-	CreateDisk(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*CreateDiskResponse, error)
+	Validate(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	Initialize(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	CreateDisk(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	Start(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (grpc.ServerStreamingClient[StartResponse], error)
-	Stop(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*StopResponse, error)
+	Stop(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	CanRunGUI(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*CanRunGUIResponse, error)
-	RunGUI(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*RunGUIResponse, error)
-	ChangeDisplayPassword(ctx context.Context, in *ChangeDisplayPasswordRequest, opts ...grpc.CallOption) (*ChangeDisplayPasswordResponse, error)
+	RunGUI(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	ChangeDisplayPassword(ctx context.Context, in *ChangeDisplayPasswordRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetDisplayConnection(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetDisplayConnectionResponse, error)
-	CreateSnapshot(ctx context.Context, in *CreateSnapshotRequest, opts ...grpc.CallOption) (*CreateSnapshotResponse, error)
-	ApplySnapshot(ctx context.Context, in *ApplySnapshotRequest, opts ...grpc.CallOption) (*ApplySnapshotResponse, error)
-	DeleteSnapshot(ctx context.Context, in *DeleteSnapshotRequest, opts ...grpc.CallOption) (*DeleteSnapshotResponse, error)
+	CreateSnapshot(ctx context.Context, in *CreateSnapshotRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	ApplySnapshot(ctx context.Context, in *ApplySnapshotRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	DeleteSnapshot(ctx context.Context, in *DeleteSnapshotRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	ListSnapshots(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ListSnapshotsResponse, error)
-	Register(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*RegisterResponse, error)
-	Unregister(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*UnregisterResponse, error)
+	Register(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	Unregister(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	ForwardGuestAgent(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ForwardGuestAgentResponse, error)
 	GuestAgentConn(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (grpc.ServerStreamingClient[GuestAgentConnResponse], error)
 	Name(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*NameResponse, error)
@@ -78,9 +78,9 @@ func NewDriverClient(cc grpc.ClientConnInterface) DriverClient {
 	return &driverClient{cc}
 }
 
-func (c *driverClient) Validate(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ValidateResponse, error) {
+func (c *driverClient) Validate(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ValidateResponse)
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, Driver_Validate_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -88,9 +88,9 @@ func (c *driverClient) Validate(ctx context.Context, in *emptypb.Empty, opts ...
 	return out, nil
 }
 
-func (c *driverClient) Initialize(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*InitializeResponse, error) {
+func (c *driverClient) Initialize(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(InitializeResponse)
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, Driver_Initialize_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -98,9 +98,9 @@ func (c *driverClient) Initialize(ctx context.Context, in *emptypb.Empty, opts .
 	return out, nil
 }
 
-func (c *driverClient) CreateDisk(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*CreateDiskResponse, error) {
+func (c *driverClient) CreateDisk(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CreateDiskResponse)
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, Driver_CreateDisk_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -127,9 +127,9 @@ func (c *driverClient) Start(ctx context.Context, in *emptypb.Empty, opts ...grp
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type Driver_StartClient = grpc.ServerStreamingClient[StartResponse]
 
-func (c *driverClient) Stop(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*StopResponse, error) {
+func (c *driverClient) Stop(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(StopResponse)
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, Driver_Stop_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -147,9 +147,9 @@ func (c *driverClient) CanRunGUI(ctx context.Context, in *emptypb.Empty, opts ..
 	return out, nil
 }
 
-func (c *driverClient) RunGUI(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*RunGUIResponse, error) {
+func (c *driverClient) RunGUI(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RunGUIResponse)
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, Driver_RunGUI_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -157,9 +157,9 @@ func (c *driverClient) RunGUI(ctx context.Context, in *emptypb.Empty, opts ...gr
 	return out, nil
 }
 
-func (c *driverClient) ChangeDisplayPassword(ctx context.Context, in *ChangeDisplayPasswordRequest, opts ...grpc.CallOption) (*ChangeDisplayPasswordResponse, error) {
+func (c *driverClient) ChangeDisplayPassword(ctx context.Context, in *ChangeDisplayPasswordRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ChangeDisplayPasswordResponse)
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, Driver_ChangeDisplayPassword_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -177,9 +177,9 @@ func (c *driverClient) GetDisplayConnection(ctx context.Context, in *emptypb.Emp
 	return out, nil
 }
 
-func (c *driverClient) CreateSnapshot(ctx context.Context, in *CreateSnapshotRequest, opts ...grpc.CallOption) (*CreateSnapshotResponse, error) {
+func (c *driverClient) CreateSnapshot(ctx context.Context, in *CreateSnapshotRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CreateSnapshotResponse)
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, Driver_CreateSnapshot_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -187,9 +187,9 @@ func (c *driverClient) CreateSnapshot(ctx context.Context, in *CreateSnapshotReq
 	return out, nil
 }
 
-func (c *driverClient) ApplySnapshot(ctx context.Context, in *ApplySnapshotRequest, opts ...grpc.CallOption) (*ApplySnapshotResponse, error) {
+func (c *driverClient) ApplySnapshot(ctx context.Context, in *ApplySnapshotRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ApplySnapshotResponse)
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, Driver_ApplySnapshot_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -197,9 +197,9 @@ func (c *driverClient) ApplySnapshot(ctx context.Context, in *ApplySnapshotReque
 	return out, nil
 }
 
-func (c *driverClient) DeleteSnapshot(ctx context.Context, in *DeleteSnapshotRequest, opts ...grpc.CallOption) (*DeleteSnapshotResponse, error) {
+func (c *driverClient) DeleteSnapshot(ctx context.Context, in *DeleteSnapshotRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(DeleteSnapshotResponse)
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, Driver_DeleteSnapshot_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -217,9 +217,9 @@ func (c *driverClient) ListSnapshots(ctx context.Context, in *emptypb.Empty, opt
 	return out, nil
 }
 
-func (c *driverClient) Register(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*RegisterResponse, error) {
+func (c *driverClient) Register(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RegisterResponse)
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, Driver_Register_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -227,9 +227,9 @@ func (c *driverClient) Register(ctx context.Context, in *emptypb.Empty, opts ...
 	return out, nil
 }
 
-func (c *driverClient) Unregister(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*UnregisterResponse, error) {
+func (c *driverClient) Unregister(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UnregisterResponse)
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, Driver_Unregister_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -310,21 +310,21 @@ func (c *driverClient) GetVirtioPort(ctx context.Context, in *emptypb.Empty, opt
 // All implementations must embed UnimplementedDriverServer
 // for forward compatibility.
 type DriverServer interface {
-	Validate(context.Context, *emptypb.Empty) (*ValidateResponse, error)
-	Initialize(context.Context, *emptypb.Empty) (*InitializeResponse, error)
-	CreateDisk(context.Context, *emptypb.Empty) (*CreateDiskResponse, error)
+	Validate(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
+	Initialize(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
+	CreateDisk(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	Start(*emptypb.Empty, grpc.ServerStreamingServer[StartResponse]) error
-	Stop(context.Context, *emptypb.Empty) (*StopResponse, error)
+	Stop(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	CanRunGUI(context.Context, *emptypb.Empty) (*CanRunGUIResponse, error)
-	RunGUI(context.Context, *emptypb.Empty) (*RunGUIResponse, error)
-	ChangeDisplayPassword(context.Context, *ChangeDisplayPasswordRequest) (*ChangeDisplayPasswordResponse, error)
+	RunGUI(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
+	ChangeDisplayPassword(context.Context, *ChangeDisplayPasswordRequest) (*emptypb.Empty, error)
 	GetDisplayConnection(context.Context, *emptypb.Empty) (*GetDisplayConnectionResponse, error)
-	CreateSnapshot(context.Context, *CreateSnapshotRequest) (*CreateSnapshotResponse, error)
-	ApplySnapshot(context.Context, *ApplySnapshotRequest) (*ApplySnapshotResponse, error)
-	DeleteSnapshot(context.Context, *DeleteSnapshotRequest) (*DeleteSnapshotResponse, error)
+	CreateSnapshot(context.Context, *CreateSnapshotRequest) (*emptypb.Empty, error)
+	ApplySnapshot(context.Context, *ApplySnapshotRequest) (*emptypb.Empty, error)
+	DeleteSnapshot(context.Context, *DeleteSnapshotRequest) (*emptypb.Empty, error)
 	ListSnapshots(context.Context, *emptypb.Empty) (*ListSnapshotsResponse, error)
-	Register(context.Context, *emptypb.Empty) (*RegisterResponse, error)
-	Unregister(context.Context, *emptypb.Empty) (*UnregisterResponse, error)
+	Register(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
+	Unregister(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	ForwardGuestAgent(context.Context, *emptypb.Empty) (*ForwardGuestAgentResponse, error)
 	GuestAgentConn(*emptypb.Empty, grpc.ServerStreamingServer[GuestAgentConnResponse]) error
 	Name(context.Context, *emptypb.Empty) (*NameResponse, error)
@@ -341,49 +341,49 @@ type DriverServer interface {
 // pointer dereference when methods are called.
 type UnimplementedDriverServer struct{}
 
-func (UnimplementedDriverServer) Validate(context.Context, *emptypb.Empty) (*ValidateResponse, error) {
+func (UnimplementedDriverServer) Validate(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Validate not implemented")
 }
-func (UnimplementedDriverServer) Initialize(context.Context, *emptypb.Empty) (*InitializeResponse, error) {
+func (UnimplementedDriverServer) Initialize(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Initialize not implemented")
 }
-func (UnimplementedDriverServer) CreateDisk(context.Context, *emptypb.Empty) (*CreateDiskResponse, error) {
+func (UnimplementedDriverServer) CreateDisk(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateDisk not implemented")
 }
 func (UnimplementedDriverServer) Start(*emptypb.Empty, grpc.ServerStreamingServer[StartResponse]) error {
 	return status.Errorf(codes.Unimplemented, "method Start not implemented")
 }
-func (UnimplementedDriverServer) Stop(context.Context, *emptypb.Empty) (*StopResponse, error) {
+func (UnimplementedDriverServer) Stop(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Stop not implemented")
 }
 func (UnimplementedDriverServer) CanRunGUI(context.Context, *emptypb.Empty) (*CanRunGUIResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CanRunGUI not implemented")
 }
-func (UnimplementedDriverServer) RunGUI(context.Context, *emptypb.Empty) (*RunGUIResponse, error) {
+func (UnimplementedDriverServer) RunGUI(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RunGUI not implemented")
 }
-func (UnimplementedDriverServer) ChangeDisplayPassword(context.Context, *ChangeDisplayPasswordRequest) (*ChangeDisplayPasswordResponse, error) {
+func (UnimplementedDriverServer) ChangeDisplayPassword(context.Context, *ChangeDisplayPasswordRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ChangeDisplayPassword not implemented")
 }
 func (UnimplementedDriverServer) GetDisplayConnection(context.Context, *emptypb.Empty) (*GetDisplayConnectionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetDisplayConnection not implemented")
 }
-func (UnimplementedDriverServer) CreateSnapshot(context.Context, *CreateSnapshotRequest) (*CreateSnapshotResponse, error) {
+func (UnimplementedDriverServer) CreateSnapshot(context.Context, *CreateSnapshotRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateSnapshot not implemented")
 }
-func (UnimplementedDriverServer) ApplySnapshot(context.Context, *ApplySnapshotRequest) (*ApplySnapshotResponse, error) {
+func (UnimplementedDriverServer) ApplySnapshot(context.Context, *ApplySnapshotRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ApplySnapshot not implemented")
 }
-func (UnimplementedDriverServer) DeleteSnapshot(context.Context, *DeleteSnapshotRequest) (*DeleteSnapshotResponse, error) {
+func (UnimplementedDriverServer) DeleteSnapshot(context.Context, *DeleteSnapshotRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteSnapshot not implemented")
 }
 func (UnimplementedDriverServer) ListSnapshots(context.Context, *emptypb.Empty) (*ListSnapshotsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListSnapshots not implemented")
 }
-func (UnimplementedDriverServer) Register(context.Context, *emptypb.Empty) (*RegisterResponse, error) {
+func (UnimplementedDriverServer) Register(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Register not implemented")
 }
-func (UnimplementedDriverServer) Unregister(context.Context, *emptypb.Empty) (*UnregisterResponse, error) {
+func (UnimplementedDriverServer) Unregister(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Unregister not implemented")
 }
 func (UnimplementedDriverServer) ForwardGuestAgent(context.Context, *emptypb.Empty) (*ForwardGuestAgentResponse, error) {
