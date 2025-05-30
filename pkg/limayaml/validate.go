@@ -595,3 +595,23 @@ func warnExperimental(y *LimaYAML) {
 		logrus.Warn("`mountInotify` is experimental")
 	}
 }
+
+// ValidateYAMLAgainstLatest validates the values between the latest YAML and the updated(New) YAML.
+func ValidateYAMLAgainstLatest(yNew, yLatest []byte) error {
+	var l, n LimaYAML
+	var err error
+	if err = Unmarshal(yLatest, &l, "Unmarshal latest YAML bytes"); err != nil {
+		return err
+	}
+	if err = Unmarshal(yNew, &n, "Unmarshal new YAML byte"); err != nil {
+		return err
+	}
+
+	nDisk, _ := units.RAMInBytes(*n.Disk)
+	lDisk, _ := units.RAMInBytes(*l.Disk)
+	if nDisk < lDisk {
+		return fmt.Errorf("field `disk`: shrinking the disk (%v --> %v) is not supported", *l.Disk, *n.Disk)
+	}
+
+	return nil
+}

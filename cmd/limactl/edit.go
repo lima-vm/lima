@@ -125,6 +125,11 @@ func editAction(cmd *cobra.Command, args []string) error {
 		// TODO: may need to support editing the rejected YAML
 		return fmt.Errorf("the YAML is invalid, saved the buffer as %q: %w", rejectedYAML, err)
 	}
+
+	if err := limayaml.ValidateYAMLAgainstLatest(yBytes, yContent); err != nil {
+		return saveRejectedYAML(yBytes, err)
+	}
+
 	if err := os.WriteFile(filePath, yBytes, 0o644); err != nil {
 		return err
 	}
@@ -170,4 +175,13 @@ func askWhetherToStart() (bool, error) {
 
 func editBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 	return bashCompleteInstanceNames(cmd)
+}
+
+func saveRejectedYAML(y []byte, origErr error) error {
+	rejectedYAML := "lima.REJECTED.yaml"
+	if writeErr := os.WriteFile(rejectedYAML, y, 0o644); writeErr != nil {
+		return fmt.Errorf("the YAML is invalid, attempted to save the buffer as %q but failed: %w: %w", rejectedYAML, writeErr, origErr)
+	}
+	// TODO: may need to support editing the rejected YAML
+	return fmt.Errorf("the YAML is invalid, saved the buffer as %q: %w", rejectedYAML, origErr)
 }
