@@ -118,13 +118,13 @@ func editAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	if err := limayaml.Validate(y, true); err != nil {
-		rejectedYAML := "lima.REJECTED.yaml"
-		if writeErr := os.WriteFile(rejectedYAML, yBytes, 0o644); writeErr != nil {
-			return fmt.Errorf("the YAML is invalid, attempted to save the buffer as %q but failed: %w: %w", rejectedYAML, writeErr, err)
-		}
-		// TODO: may need to support editing the rejected YAML
-		return fmt.Errorf("the YAML is invalid, saved the buffer as %q: %w", rejectedYAML, err)
+		return saveRejectedYAML(yBytes, err)
 	}
+
+	if err := limayaml.ValidateYAMLAgainstLatestConfig(yBytes, yContent); err != nil {
+		return saveRejectedYAML(yBytes, err)
+	}
+
 	if err := os.WriteFile(filePath, yBytes, 0o644); err != nil {
 		return err
 	}
@@ -170,4 +170,14 @@ func askWhetherToStart() (bool, error) {
 
 func editBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 	return bashCompleteInstanceNames(cmd)
+}
+
+// saveRejectedYAML writes the rejected config and returns an error.
+func saveRejectedYAML(y []byte, origErr error) error {
+	rejectedYAML := "lima.REJECTED.yaml"
+	if writeErr := os.WriteFile(rejectedYAML, y, 0o644); writeErr != nil {
+		return fmt.Errorf("the YAML is invalid, attempted to save the buffer as %q but failed: %w", rejectedYAML, errors.Join(writeErr, origErr))
+	}
+	// TODO: may need to support editing the rejected YAML
+	return fmt.Errorf("the YAML is invalid, saved the buffer as %q: %w", rejectedYAML, origErr)
 }
