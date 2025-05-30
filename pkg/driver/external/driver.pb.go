@@ -22,162 +22,6 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type ValidateResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Valid         bool                   `protobuf:"varint,1,opt,name=valid,proto3" json:"valid,omitempty"`
-	Error         string                 `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ValidateResponse) Reset() {
-	*x = ValidateResponse{}
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[0]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ValidateResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ValidateResponse) ProtoMessage() {}
-
-func (x *ValidateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[0]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ValidateResponse.ProtoReflect.Descriptor instead.
-func (*ValidateResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{0}
-}
-
-func (x *ValidateResponse) GetValid() bool {
-	if x != nil {
-		return x.Valid
-	}
-	return false
-}
-
-func (x *ValidateResponse) GetError() string {
-	if x != nil {
-		return x.Error
-	}
-	return ""
-}
-
-type InitializeResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
-	Error         string                 `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *InitializeResponse) Reset() {
-	*x = InitializeResponse{}
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[1]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *InitializeResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*InitializeResponse) ProtoMessage() {}
-
-func (x *InitializeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[1]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use InitializeResponse.ProtoReflect.Descriptor instead.
-func (*InitializeResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *InitializeResponse) GetSuccess() bool {
-	if x != nil {
-		return x.Success
-	}
-	return false
-}
-
-func (x *InitializeResponse) GetError() string {
-	if x != nil {
-		return x.Error
-	}
-	return ""
-}
-
-type CreateDiskResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
-	Error         string                 `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *CreateDiskResponse) Reset() {
-	*x = CreateDiskResponse{}
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[2]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *CreateDiskResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CreateDiskResponse) ProtoMessage() {}
-
-func (x *CreateDiskResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[2]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use CreateDiskResponse.ProtoReflect.Descriptor instead.
-func (*CreateDiskResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *CreateDiskResponse) GetSuccess() bool {
-	if x != nil {
-		return x.Success
-	}
-	return false
-}
-
-func (x *CreateDiskResponse) GetError() string {
-	if x != nil {
-		return x.Error
-	}
-	return ""
-}
-
 type StartResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
@@ -188,7 +32,7 @@ type StartResponse struct {
 
 func (x *StartResponse) Reset() {
 	*x = StartResponse{}
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[3]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -200,7 +44,7 @@ func (x *StartResponse) String() string {
 func (*StartResponse) ProtoMessage() {}
 
 func (x *StartResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[3]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -213,7 +57,7 @@ func (x *StartResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartResponse.ProtoReflect.Descriptor instead.
 func (*StartResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{3}
+	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *StartResponse) GetSuccess() bool {
@@ -230,162 +74,6 @@ func (x *StartResponse) GetError() string {
 	return ""
 }
 
-type StopResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
-	Error         string                 `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *StopResponse) Reset() {
-	*x = StopResponse{}
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[4]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *StopResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*StopResponse) ProtoMessage() {}
-
-func (x *StopResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[4]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use StopResponse.ProtoReflect.Descriptor instead.
-func (*StopResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{4}
-}
-
-func (x *StopResponse) GetSuccess() bool {
-	if x != nil {
-		return x.Success
-	}
-	return false
-}
-
-func (x *StopResponse) GetError() string {
-	if x != nil {
-		return x.Error
-	}
-	return ""
-}
-
-type RegisterResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
-	Error         string                 `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *RegisterResponse) Reset() {
-	*x = RegisterResponse{}
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[5]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *RegisterResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*RegisterResponse) ProtoMessage() {}
-
-func (x *RegisterResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[5]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use RegisterResponse.ProtoReflect.Descriptor instead.
-func (*RegisterResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{5}
-}
-
-func (x *RegisterResponse) GetSuccess() bool {
-	if x != nil {
-		return x.Success
-	}
-	return false
-}
-
-func (x *RegisterResponse) GetError() string {
-	if x != nil {
-		return x.Error
-	}
-	return ""
-}
-
-type UnregisterResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
-	Error         string                 `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *UnregisterResponse) Reset() {
-	*x = UnregisterResponse{}
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[6]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UnregisterResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UnregisterResponse) ProtoMessage() {}
-
-func (x *UnregisterResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[6]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use UnregisterResponse.ProtoReflect.Descriptor instead.
-func (*UnregisterResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{6}
-}
-
-func (x *UnregisterResponse) GetSuccess() bool {
-	if x != nil {
-		return x.Success
-	}
-	return false
-}
-
-func (x *UnregisterResponse) GetError() string {
-	if x != nil {
-		return x.Error
-	}
-	return ""
-}
-
 type NameResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -395,7 +83,7 @@ type NameResponse struct {
 
 func (x *NameResponse) Reset() {
 	*x = NameResponse{}
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[7]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -407,7 +95,7 @@ func (x *NameResponse) String() string {
 func (*NameResponse) ProtoMessage() {}
 
 func (x *NameResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[7]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -420,7 +108,7 @@ func (x *NameResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NameResponse.ProtoReflect.Descriptor instead.
 func (*NameResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{7}
+	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *NameResponse) GetName() string {
@@ -433,14 +121,14 @@ func (x *NameResponse) GetName() string {
 type SetConfigRequest struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
 	InstanceConfigJson []byte                 `protobuf:"bytes,1,opt,name=instance_config_json,json=instanceConfigJson,proto3" json:"instance_config_json,omitempty"`
-	SshLocalPort       int32                  `protobuf:"varint,3,opt,name=ssh_local_port,json=sshLocalPort,proto3" json:"ssh_local_port,omitempty"`
+	SshLocalPort       int64                  `protobuf:"varint,3,opt,name=ssh_local_port,json=sshLocalPort,proto3" json:"ssh_local_port,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
 
 func (x *SetConfigRequest) Reset() {
 	*x = SetConfigRequest{}
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[8]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -452,7 +140,7 @@ func (x *SetConfigRequest) String() string {
 func (*SetConfigRequest) ProtoMessage() {}
 
 func (x *SetConfigRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[8]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -465,7 +153,7 @@ func (x *SetConfigRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetConfigRequest.ProtoReflect.Descriptor instead.
 func (*SetConfigRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{8}
+	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *SetConfigRequest) GetInstanceConfigJson() []byte {
@@ -475,7 +163,7 @@ func (x *SetConfigRequest) GetInstanceConfigJson() []byte {
 	return nil
 }
 
-func (x *SetConfigRequest) GetSshLocalPort() int32 {
+func (x *SetConfigRequest) GetSshLocalPort() int64 {
 	if x != nil {
 		return x.SshLocalPort
 	}
@@ -492,7 +180,7 @@ type SetConfigResponse struct {
 
 func (x *SetConfigResponse) Reset() {
 	*x = SetConfigResponse{}
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[9]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -504,7 +192,7 @@ func (x *SetConfigResponse) String() string {
 func (*SetConfigResponse) ProtoMessage() {}
 
 func (x *SetConfigResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[9]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -517,7 +205,7 @@ func (x *SetConfigResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetConfigResponse.ProtoReflect.Descriptor instead.
 func (*SetConfigResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{9}
+	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *SetConfigResponse) GetSuccess() bool {
@@ -536,14 +224,14 @@ func (x *SetConfigResponse) GetError() string {
 
 type GetVSockPortResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Port          int32                  `protobuf:"varint,1,opt,name=port,proto3" json:"port,omitempty"`
+	Port          int64                  `protobuf:"varint,1,opt,name=port,proto3" json:"port,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetVSockPortResponse) Reset() {
 	*x = GetVSockPortResponse{}
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[10]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -555,7 +243,7 @@ func (x *GetVSockPortResponse) String() string {
 func (*GetVSockPortResponse) ProtoMessage() {}
 
 func (x *GetVSockPortResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[10]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -568,10 +256,10 @@ func (x *GetVSockPortResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetVSockPortResponse.ProtoReflect.Descriptor instead.
 func (*GetVSockPortResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{10}
+	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *GetVSockPortResponse) GetPort() int32 {
+func (x *GetVSockPortResponse) GetPort() int64 {
 	if x != nil {
 		return x.Port
 	}
@@ -587,7 +275,7 @@ type GetVirtioPortResponse struct {
 
 func (x *GetVirtioPortResponse) Reset() {
 	*x = GetVirtioPortResponse{}
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[11]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -599,7 +287,7 @@ func (x *GetVirtioPortResponse) String() string {
 func (*GetVirtioPortResponse) ProtoMessage() {}
 
 func (x *GetVirtioPortResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[11]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -612,7 +300,7 @@ func (x *GetVirtioPortResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetVirtioPortResponse.ProtoReflect.Descriptor instead.
 func (*GetVirtioPortResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{11}
+	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *GetVirtioPortResponse) GetPort() string {
@@ -631,7 +319,7 @@ type CanRunGUIResponse struct {
 
 func (x *CanRunGUIResponse) Reset() {
 	*x = CanRunGUIResponse{}
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[12]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -643,7 +331,7 @@ func (x *CanRunGUIResponse) String() string {
 func (*CanRunGUIResponse) ProtoMessage() {}
 
 func (x *CanRunGUIResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[12]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -656,7 +344,7 @@ func (x *CanRunGUIResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CanRunGUIResponse.ProtoReflect.Descriptor instead.
 func (*CanRunGUIResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{12}
+	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *CanRunGUIResponse) GetCanRun() bool {
@@ -664,58 +352,6 @@ func (x *CanRunGUIResponse) GetCanRun() bool {
 		return x.CanRun
 	}
 	return false
-}
-
-type RunGUIResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
-	Error         string                 `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *RunGUIResponse) Reset() {
-	*x = RunGUIResponse{}
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[13]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *RunGUIResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*RunGUIResponse) ProtoMessage() {}
-
-func (x *RunGUIResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[13]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use RunGUIResponse.ProtoReflect.Descriptor instead.
-func (*RunGUIResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{13}
-}
-
-func (x *RunGUIResponse) GetSuccess() bool {
-	if x != nil {
-		return x.Success
-	}
-	return false
-}
-
-func (x *RunGUIResponse) GetError() string {
-	if x != nil {
-		return x.Error
-	}
-	return ""
 }
 
 type ChangeDisplayPasswordRequest struct {
@@ -727,7 +363,7 @@ type ChangeDisplayPasswordRequest struct {
 
 func (x *ChangeDisplayPasswordRequest) Reset() {
 	*x = ChangeDisplayPasswordRequest{}
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[14]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -739,7 +375,7 @@ func (x *ChangeDisplayPasswordRequest) String() string {
 func (*ChangeDisplayPasswordRequest) ProtoMessage() {}
 
 func (x *ChangeDisplayPasswordRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[14]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -752,7 +388,7 @@ func (x *ChangeDisplayPasswordRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChangeDisplayPasswordRequest.ProtoReflect.Descriptor instead.
 func (*ChangeDisplayPasswordRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{14}
+	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ChangeDisplayPasswordRequest) GetPassword() string {
@@ -762,69 +398,16 @@ func (x *ChangeDisplayPasswordRequest) GetPassword() string {
 	return ""
 }
 
-type ChangeDisplayPasswordResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
-	Error         string                 `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ChangeDisplayPasswordResponse) Reset() {
-	*x = ChangeDisplayPasswordResponse{}
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[15]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ChangeDisplayPasswordResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ChangeDisplayPasswordResponse) ProtoMessage() {}
-
-func (x *ChangeDisplayPasswordResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[15]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ChangeDisplayPasswordResponse.ProtoReflect.Descriptor instead.
-func (*ChangeDisplayPasswordResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{15}
-}
-
-func (x *ChangeDisplayPasswordResponse) GetSuccess() bool {
-	if x != nil {
-		return x.Success
-	}
-	return false
-}
-
-func (x *ChangeDisplayPasswordResponse) GetError() string {
-	if x != nil {
-		return x.Error
-	}
-	return ""
-}
-
 type GetDisplayConnectionResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Connection    string                 `protobuf:"bytes,1,opt,name=connection,proto3" json:"connection,omitempty"`
-	Error         string                 `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetDisplayConnectionResponse) Reset() {
 	*x = GetDisplayConnectionResponse{}
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[16]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -836,7 +419,7 @@ func (x *GetDisplayConnectionResponse) String() string {
 func (*GetDisplayConnectionResponse) ProtoMessage() {}
 
 func (x *GetDisplayConnectionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[16]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -849,19 +432,12 @@ func (x *GetDisplayConnectionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetDisplayConnectionResponse.ProtoReflect.Descriptor instead.
 func (*GetDisplayConnectionResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{16}
+	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *GetDisplayConnectionResponse) GetConnection() string {
 	if x != nil {
 		return x.Connection
-	}
-	return ""
-}
-
-func (x *GetDisplayConnectionResponse) GetError() string {
-	if x != nil {
-		return x.Error
 	}
 	return ""
 }
@@ -875,7 +451,7 @@ type CreateSnapshotRequest struct {
 
 func (x *CreateSnapshotRequest) Reset() {
 	*x = CreateSnapshotRequest{}
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[17]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -887,7 +463,7 @@ func (x *CreateSnapshotRequest) String() string {
 func (*CreateSnapshotRequest) ProtoMessage() {}
 
 func (x *CreateSnapshotRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[17]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -900,64 +476,12 @@ func (x *CreateSnapshotRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateSnapshotRequest.ProtoReflect.Descriptor instead.
 func (*CreateSnapshotRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{17}
+	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *CreateSnapshotRequest) GetTag() string {
 	if x != nil {
 		return x.Tag
-	}
-	return ""
-}
-
-type CreateSnapshotResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
-	Error         string                 `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *CreateSnapshotResponse) Reset() {
-	*x = CreateSnapshotResponse{}
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[18]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *CreateSnapshotResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CreateSnapshotResponse) ProtoMessage() {}
-
-func (x *CreateSnapshotResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[18]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use CreateSnapshotResponse.ProtoReflect.Descriptor instead.
-func (*CreateSnapshotResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{18}
-}
-
-func (x *CreateSnapshotResponse) GetSuccess() bool {
-	if x != nil {
-		return x.Success
-	}
-	return false
-}
-
-func (x *CreateSnapshotResponse) GetError() string {
-	if x != nil {
-		return x.Error
 	}
 	return ""
 }
@@ -971,7 +495,7 @@ type ApplySnapshotRequest struct {
 
 func (x *ApplySnapshotRequest) Reset() {
 	*x = ApplySnapshotRequest{}
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[19]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -983,7 +507,7 @@ func (x *ApplySnapshotRequest) String() string {
 func (*ApplySnapshotRequest) ProtoMessage() {}
 
 func (x *ApplySnapshotRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[19]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -996,64 +520,12 @@ func (x *ApplySnapshotRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApplySnapshotRequest.ProtoReflect.Descriptor instead.
 func (*ApplySnapshotRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{19}
+	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ApplySnapshotRequest) GetTag() string {
 	if x != nil {
 		return x.Tag
-	}
-	return ""
-}
-
-type ApplySnapshotResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
-	Error         string                 `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ApplySnapshotResponse) Reset() {
-	*x = ApplySnapshotResponse{}
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[20]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ApplySnapshotResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ApplySnapshotResponse) ProtoMessage() {}
-
-func (x *ApplySnapshotResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[20]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ApplySnapshotResponse.ProtoReflect.Descriptor instead.
-func (*ApplySnapshotResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{20}
-}
-
-func (x *ApplySnapshotResponse) GetSuccess() bool {
-	if x != nil {
-		return x.Success
-	}
-	return false
-}
-
-func (x *ApplySnapshotResponse) GetError() string {
-	if x != nil {
-		return x.Error
 	}
 	return ""
 }
@@ -1067,7 +539,7 @@ type DeleteSnapshotRequest struct {
 
 func (x *DeleteSnapshotRequest) Reset() {
 	*x = DeleteSnapshotRequest{}
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[21]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1079,7 +551,7 @@ func (x *DeleteSnapshotRequest) String() string {
 func (*DeleteSnapshotRequest) ProtoMessage() {}
 
 func (x *DeleteSnapshotRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[21]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1092,7 +564,7 @@ func (x *DeleteSnapshotRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteSnapshotRequest.ProtoReflect.Descriptor instead.
 func (*DeleteSnapshotRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{21}
+	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *DeleteSnapshotRequest) GetTag() string {
@@ -1102,69 +574,16 @@ func (x *DeleteSnapshotRequest) GetTag() string {
 	return ""
 }
 
-type DeleteSnapshotResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
-	Error         string                 `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *DeleteSnapshotResponse) Reset() {
-	*x = DeleteSnapshotResponse{}
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[22]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DeleteSnapshotResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeleteSnapshotResponse) ProtoMessage() {}
-
-func (x *DeleteSnapshotResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[22]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use DeleteSnapshotResponse.ProtoReflect.Descriptor instead.
-func (*DeleteSnapshotResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{22}
-}
-
-func (x *DeleteSnapshotResponse) GetSuccess() bool {
-	if x != nil {
-		return x.Success
-	}
-	return false
-}
-
-func (x *DeleteSnapshotResponse) GetError() string {
-	if x != nil {
-		return x.Error
-	}
-	return ""
-}
-
 type ListSnapshotsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Snapshots     string                 `protobuf:"bytes,1,opt,name=snapshots,proto3" json:"snapshots,omitempty"`
-	Error         string                 `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListSnapshotsResponse) Reset() {
 	*x = ListSnapshotsResponse{}
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[23]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1176,7 +595,7 @@ func (x *ListSnapshotsResponse) String() string {
 func (*ListSnapshotsResponse) ProtoMessage() {}
 
 func (x *ListSnapshotsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[23]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1189,19 +608,12 @@ func (x *ListSnapshotsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSnapshotsResponse.ProtoReflect.Descriptor instead.
 func (*ListSnapshotsResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{23}
+	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ListSnapshotsResponse) GetSnapshots() string {
 	if x != nil {
 		return x.Snapshots
-	}
-	return ""
-}
-
-func (x *ListSnapshotsResponse) GetError() string {
-	if x != nil {
-		return x.Error
 	}
 	return ""
 }
@@ -1215,7 +627,7 @@ type ForwardGuestAgentResponse struct {
 
 func (x *ForwardGuestAgentResponse) Reset() {
 	*x = ForwardGuestAgentResponse{}
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[24]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1227,7 +639,7 @@ func (x *ForwardGuestAgentResponse) String() string {
 func (*ForwardGuestAgentResponse) ProtoMessage() {}
 
 func (x *ForwardGuestAgentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[24]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1240,7 +652,7 @@ func (x *ForwardGuestAgentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ForwardGuestAgentResponse.ProtoReflect.Descriptor instead.
 func (*ForwardGuestAgentResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{24}
+	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ForwardGuestAgentResponse) GetShouldForward() bool {
@@ -1253,14 +665,13 @@ func (x *ForwardGuestAgentResponse) GetShouldForward() bool {
 type GuestAgentConnResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	NetConn       []byte                 `protobuf:"bytes,1,opt,name=net_conn,json=netConn,proto3" json:"net_conn,omitempty"`
-	Error         string                 `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GuestAgentConnResponse) Reset() {
 	*x = GuestAgentConnResponse{}
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[25]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1272,7 +683,7 @@ func (x *GuestAgentConnResponse) String() string {
 func (*GuestAgentConnResponse) ProtoMessage() {}
 
 func (x *GuestAgentConnResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[25]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1285,7 +696,7 @@ func (x *GuestAgentConnResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GuestAgentConnResponse.ProtoReflect.Descriptor instead.
 func (*GuestAgentConnResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{25}
+	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *GuestAgentConnResponse) GetNetConn() []byte {
@@ -1295,109 +706,66 @@ func (x *GuestAgentConnResponse) GetNetConn() []byte {
 	return nil
 }
 
-func (x *GuestAgentConnResponse) GetError() string {
-	if x != nil {
-		return x.Error
-	}
-	return ""
-}
-
 var File_pkg_driver_external_driver_proto protoreflect.FileDescriptor
 
 const file_pkg_driver_external_driver_proto_rawDesc = "" +
 	"\n" +
-	" pkg/driver/external/driver.proto\x1a\x1bgoogle/protobuf/empty.proto\">\n" +
-	"\x10ValidateResponse\x12\x14\n" +
-	"\x05valid\x18\x01 \x01(\bR\x05valid\x12\x14\n" +
-	"\x05error\x18\x02 \x01(\tR\x05error\"D\n" +
-	"\x12InitializeResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x14\n" +
-	"\x05error\x18\x02 \x01(\tR\x05error\"D\n" +
-	"\x12CreateDiskResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x14\n" +
-	"\x05error\x18\x02 \x01(\tR\x05error\"?\n" +
+	" pkg/driver/external/driver.proto\x1a\x1bgoogle/protobuf/empty.proto\"?\n" +
 	"\rStartResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x14\n" +
-	"\x05error\x18\x02 \x01(\tR\x05error\">\n" +
-	"\fStopResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x14\n" +
-	"\x05error\x18\x02 \x01(\tR\x05error\"B\n" +
-	"\x10RegisterResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x14\n" +
-	"\x05error\x18\x02 \x01(\tR\x05error\"D\n" +
-	"\x12UnregisterResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x14\n" +
 	"\x05error\x18\x02 \x01(\tR\x05error\"\"\n" +
 	"\fNameResponse\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\"j\n" +
 	"\x10SetConfigRequest\x120\n" +
 	"\x14instance_config_json\x18\x01 \x01(\fR\x12instanceConfigJson\x12$\n" +
-	"\x0essh_local_port\x18\x03 \x01(\x05R\fsshLocalPort\"C\n" +
+	"\x0essh_local_port\x18\x03 \x01(\x03R\fsshLocalPort\"C\n" +
 	"\x11SetConfigResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x14\n" +
 	"\x05error\x18\x02 \x01(\tR\x05error\"*\n" +
 	"\x14GetVSockPortResponse\x12\x12\n" +
-	"\x04port\x18\x01 \x01(\x05R\x04port\"+\n" +
+	"\x04port\x18\x01 \x01(\x03R\x04port\"+\n" +
 	"\x15GetVirtioPortResponse\x12\x12\n" +
 	"\x04port\x18\x01 \x01(\tR\x04port\",\n" +
 	"\x11CanRunGUIResponse\x12\x17\n" +
-	"\acan_run\x18\x01 \x01(\bR\x06canRun\"@\n" +
-	"\x0eRunGUIResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x14\n" +
-	"\x05error\x18\x02 \x01(\tR\x05error\":\n" +
+	"\acan_run\x18\x01 \x01(\bR\x06canRun\":\n" +
 	"\x1cChangeDisplayPasswordRequest\x12\x1a\n" +
-	"\bpassword\x18\x01 \x01(\tR\bpassword\"O\n" +
-	"\x1dChangeDisplayPasswordResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x14\n" +
-	"\x05error\x18\x02 \x01(\tR\x05error\"T\n" +
+	"\bpassword\x18\x01 \x01(\tR\bpassword\">\n" +
 	"\x1cGetDisplayConnectionResponse\x12\x1e\n" +
 	"\n" +
 	"connection\x18\x01 \x01(\tR\n" +
-	"connection\x12\x14\n" +
-	"\x05error\x18\x02 \x01(\tR\x05error\")\n" +
+	"connection\")\n" +
 	"\x15CreateSnapshotRequest\x12\x10\n" +
-	"\x03tag\x18\x01 \x01(\tR\x03tag\"H\n" +
-	"\x16CreateSnapshotResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x14\n" +
-	"\x05error\x18\x02 \x01(\tR\x05error\"(\n" +
+	"\x03tag\x18\x01 \x01(\tR\x03tag\"(\n" +
 	"\x14ApplySnapshotRequest\x12\x10\n" +
-	"\x03tag\x18\x01 \x01(\tR\x03tag\"G\n" +
-	"\x15ApplySnapshotResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x14\n" +
-	"\x05error\x18\x02 \x01(\tR\x05error\")\n" +
+	"\x03tag\x18\x01 \x01(\tR\x03tag\")\n" +
 	"\x15DeleteSnapshotRequest\x12\x10\n" +
-	"\x03tag\x18\x01 \x01(\tR\x03tag\"H\n" +
-	"\x16DeleteSnapshotResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x14\n" +
-	"\x05error\x18\x02 \x01(\tR\x05error\"K\n" +
+	"\x03tag\x18\x01 \x01(\tR\x03tag\"5\n" +
 	"\x15ListSnapshotsResponse\x12\x1c\n" +
-	"\tsnapshots\x18\x01 \x01(\tR\tsnapshots\x12\x14\n" +
-	"\x05error\x18\x02 \x01(\tR\x05error\"B\n" +
+	"\tsnapshots\x18\x01 \x01(\tR\tsnapshots\"B\n" +
 	"\x19ForwardGuestAgentResponse\x12%\n" +
-	"\x0eshould_forward\x18\x01 \x01(\bR\rshouldForward\"I\n" +
+	"\x0eshould_forward\x18\x01 \x01(\bR\rshouldForward\"3\n" +
 	"\x16GuestAgentConnResponse\x12\x19\n" +
-	"\bnet_conn\x18\x01 \x01(\fR\anetConn\x12\x14\n" +
-	"\x05error\x18\x02 \x01(\tR\x05error2\x94\n" +
+	"\bnet_conn\x18\x01 \x01(\fR\anetConn2\xad\n" +
 	"\n" +
-	"\x06Driver\x125\n" +
-	"\bValidate\x12\x16.google.protobuf.Empty\x1a\x11.ValidateResponse\x129\n" +
+	"\x06Driver\x12:\n" +
+	"\bValidate\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x12<\n" +
 	"\n" +
-	"Initialize\x12\x16.google.protobuf.Empty\x1a\x13.InitializeResponse\x129\n" +
+	"Initialize\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x12<\n" +
 	"\n" +
-	"CreateDisk\x12\x16.google.protobuf.Empty\x1a\x13.CreateDiskResponse\x121\n" +
-	"\x05Start\x12\x16.google.protobuf.Empty\x1a\x0e.StartResponse0\x01\x12-\n" +
-	"\x04Stop\x12\x16.google.protobuf.Empty\x1a\r.StopResponse\x127\n" +
-	"\tCanRunGUI\x12\x16.google.protobuf.Empty\x1a\x12.CanRunGUIResponse\x121\n" +
-	"\x06RunGUI\x12\x16.google.protobuf.Empty\x1a\x0f.RunGUIResponse\x12V\n" +
-	"\x15ChangeDisplayPassword\x12\x1d.ChangeDisplayPasswordRequest\x1a\x1e.ChangeDisplayPasswordResponse\x12M\n" +
-	"\x14GetDisplayConnection\x12\x16.google.protobuf.Empty\x1a\x1d.GetDisplayConnectionResponse\x12A\n" +
-	"\x0eCreateSnapshot\x12\x16.CreateSnapshotRequest\x1a\x17.CreateSnapshotResponse\x12>\n" +
-	"\rApplySnapshot\x12\x15.ApplySnapshotRequest\x1a\x16.ApplySnapshotResponse\x12A\n" +
-	"\x0eDeleteSnapshot\x12\x16.DeleteSnapshotRequest\x1a\x17.DeleteSnapshotResponse\x12?\n" +
-	"\rListSnapshots\x12\x16.google.protobuf.Empty\x1a\x16.ListSnapshotsResponse\x125\n" +
-	"\bRegister\x12\x16.google.protobuf.Empty\x1a\x11.RegisterResponse\x129\n" +
+	"CreateDisk\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x121\n" +
+	"\x05Start\x12\x16.google.protobuf.Empty\x1a\x0e.StartResponse0\x01\x126\n" +
+	"\x04Stop\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x127\n" +
+	"\tCanRunGUI\x12\x16.google.protobuf.Empty\x1a\x12.CanRunGUIResponse\x128\n" +
+	"\x06RunGUI\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x12N\n" +
+	"\x15ChangeDisplayPassword\x12\x1d.ChangeDisplayPasswordRequest\x1a\x16.google.protobuf.Empty\x12M\n" +
+	"\x14GetDisplayConnection\x12\x16.google.protobuf.Empty\x1a\x1d.GetDisplayConnectionResponse\x12@\n" +
+	"\x0eCreateSnapshot\x12\x16.CreateSnapshotRequest\x1a\x16.google.protobuf.Empty\x12>\n" +
+	"\rApplySnapshot\x12\x15.ApplySnapshotRequest\x1a\x16.google.protobuf.Empty\x12@\n" +
+	"\x0eDeleteSnapshot\x12\x16.DeleteSnapshotRequest\x1a\x16.google.protobuf.Empty\x12?\n" +
+	"\rListSnapshots\x12\x16.google.protobuf.Empty\x1a\x16.ListSnapshotsResponse\x12:\n" +
+	"\bRegister\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x12<\n" +
 	"\n" +
-	"Unregister\x12\x16.google.protobuf.Empty\x1a\x13.UnregisterResponse\x12G\n" +
+	"Unregister\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x12G\n" +
 	"\x11ForwardGuestAgent\x12\x16.google.protobuf.Empty\x1a\x1a.ForwardGuestAgentResponse\x12C\n" +
 	"\x0eGuestAgentConn\x12\x16.google.protobuf.Empty\x1a\x17.GuestAgentConnResponse0\x01\x12-\n" +
 	"\x04Name\x12\x16.google.protobuf.Empty\x1a\r.NameResponse\x122\n" +
@@ -1417,79 +785,68 @@ func file_pkg_driver_external_driver_proto_rawDescGZIP() []byte {
 	return file_pkg_driver_external_driver_proto_rawDescData
 }
 
-var file_pkg_driver_external_driver_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
+var file_pkg_driver_external_driver_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_pkg_driver_external_driver_proto_goTypes = []any{
-	(*ValidateResponse)(nil),              // 0: ValidateResponse
-	(*InitializeResponse)(nil),            // 1: InitializeResponse
-	(*CreateDiskResponse)(nil),            // 2: CreateDiskResponse
-	(*StartResponse)(nil),                 // 3: StartResponse
-	(*StopResponse)(nil),                  // 4: StopResponse
-	(*RegisterResponse)(nil),              // 5: RegisterResponse
-	(*UnregisterResponse)(nil),            // 6: UnregisterResponse
-	(*NameResponse)(nil),                  // 7: NameResponse
-	(*SetConfigRequest)(nil),              // 8: SetConfigRequest
-	(*SetConfigResponse)(nil),             // 9: SetConfigResponse
-	(*GetVSockPortResponse)(nil),          // 10: GetVSockPortResponse
-	(*GetVirtioPortResponse)(nil),         // 11: GetVirtioPortResponse
-	(*CanRunGUIResponse)(nil),             // 12: CanRunGUIResponse
-	(*RunGUIResponse)(nil),                // 13: RunGUIResponse
-	(*ChangeDisplayPasswordRequest)(nil),  // 14: ChangeDisplayPasswordRequest
-	(*ChangeDisplayPasswordResponse)(nil), // 15: ChangeDisplayPasswordResponse
-	(*GetDisplayConnectionResponse)(nil),  // 16: GetDisplayConnectionResponse
-	(*CreateSnapshotRequest)(nil),         // 17: CreateSnapshotRequest
-	(*CreateSnapshotResponse)(nil),        // 18: CreateSnapshotResponse
-	(*ApplySnapshotRequest)(nil),          // 19: ApplySnapshotRequest
-	(*ApplySnapshotResponse)(nil),         // 20: ApplySnapshotResponse
-	(*DeleteSnapshotRequest)(nil),         // 21: DeleteSnapshotRequest
-	(*DeleteSnapshotResponse)(nil),        // 22: DeleteSnapshotResponse
-	(*ListSnapshotsResponse)(nil),         // 23: ListSnapshotsResponse
-	(*ForwardGuestAgentResponse)(nil),     // 24: ForwardGuestAgentResponse
-	(*GuestAgentConnResponse)(nil),        // 25: GuestAgentConnResponse
-	(*emptypb.Empty)(nil),                 // 26: google.protobuf.Empty
+	(*StartResponse)(nil),                // 0: StartResponse
+	(*NameResponse)(nil),                 // 1: NameResponse
+	(*SetConfigRequest)(nil),             // 2: SetConfigRequest
+	(*SetConfigResponse)(nil),            // 3: SetConfigResponse
+	(*GetVSockPortResponse)(nil),         // 4: GetVSockPortResponse
+	(*GetVirtioPortResponse)(nil),        // 5: GetVirtioPortResponse
+	(*CanRunGUIResponse)(nil),            // 6: CanRunGUIResponse
+	(*ChangeDisplayPasswordRequest)(nil), // 7: ChangeDisplayPasswordRequest
+	(*GetDisplayConnectionResponse)(nil), // 8: GetDisplayConnectionResponse
+	(*CreateSnapshotRequest)(nil),        // 9: CreateSnapshotRequest
+	(*ApplySnapshotRequest)(nil),         // 10: ApplySnapshotRequest
+	(*DeleteSnapshotRequest)(nil),        // 11: DeleteSnapshotRequest
+	(*ListSnapshotsResponse)(nil),        // 12: ListSnapshotsResponse
+	(*ForwardGuestAgentResponse)(nil),    // 13: ForwardGuestAgentResponse
+	(*GuestAgentConnResponse)(nil),       // 14: GuestAgentConnResponse
+	(*emptypb.Empty)(nil),                // 15: google.protobuf.Empty
 }
 var file_pkg_driver_external_driver_proto_depIdxs = []int32{
-	26, // 0: Driver.Validate:input_type -> google.protobuf.Empty
-	26, // 1: Driver.Initialize:input_type -> google.protobuf.Empty
-	26, // 2: Driver.CreateDisk:input_type -> google.protobuf.Empty
-	26, // 3: Driver.Start:input_type -> google.protobuf.Empty
-	26, // 4: Driver.Stop:input_type -> google.protobuf.Empty
-	26, // 5: Driver.CanRunGUI:input_type -> google.protobuf.Empty
-	26, // 6: Driver.RunGUI:input_type -> google.protobuf.Empty
-	14, // 7: Driver.ChangeDisplayPassword:input_type -> ChangeDisplayPasswordRequest
-	26, // 8: Driver.GetDisplayConnection:input_type -> google.protobuf.Empty
-	17, // 9: Driver.CreateSnapshot:input_type -> CreateSnapshotRequest
-	19, // 10: Driver.ApplySnapshot:input_type -> ApplySnapshotRequest
-	21, // 11: Driver.DeleteSnapshot:input_type -> DeleteSnapshotRequest
-	26, // 12: Driver.ListSnapshots:input_type -> google.protobuf.Empty
-	26, // 13: Driver.Register:input_type -> google.protobuf.Empty
-	26, // 14: Driver.Unregister:input_type -> google.protobuf.Empty
-	26, // 15: Driver.ForwardGuestAgent:input_type -> google.protobuf.Empty
-	26, // 16: Driver.GuestAgentConn:input_type -> google.protobuf.Empty
-	26, // 17: Driver.Name:input_type -> google.protobuf.Empty
-	8,  // 18: Driver.SetConfig:input_type -> SetConfigRequest
-	26, // 19: Driver.GetVSockPort:input_type -> google.protobuf.Empty
-	26, // 20: Driver.GetVirtioPort:input_type -> google.protobuf.Empty
-	0,  // 21: Driver.Validate:output_type -> ValidateResponse
-	1,  // 22: Driver.Initialize:output_type -> InitializeResponse
-	2,  // 23: Driver.CreateDisk:output_type -> CreateDiskResponse
-	3,  // 24: Driver.Start:output_type -> StartResponse
-	4,  // 25: Driver.Stop:output_type -> StopResponse
-	12, // 26: Driver.CanRunGUI:output_type -> CanRunGUIResponse
-	13, // 27: Driver.RunGUI:output_type -> RunGUIResponse
-	15, // 28: Driver.ChangeDisplayPassword:output_type -> ChangeDisplayPasswordResponse
-	16, // 29: Driver.GetDisplayConnection:output_type -> GetDisplayConnectionResponse
-	18, // 30: Driver.CreateSnapshot:output_type -> CreateSnapshotResponse
-	20, // 31: Driver.ApplySnapshot:output_type -> ApplySnapshotResponse
-	22, // 32: Driver.DeleteSnapshot:output_type -> DeleteSnapshotResponse
-	23, // 33: Driver.ListSnapshots:output_type -> ListSnapshotsResponse
-	5,  // 34: Driver.Register:output_type -> RegisterResponse
-	6,  // 35: Driver.Unregister:output_type -> UnregisterResponse
-	24, // 36: Driver.ForwardGuestAgent:output_type -> ForwardGuestAgentResponse
-	25, // 37: Driver.GuestAgentConn:output_type -> GuestAgentConnResponse
-	7,  // 38: Driver.Name:output_type -> NameResponse
-	9,  // 39: Driver.SetConfig:output_type -> SetConfigResponse
-	10, // 40: Driver.GetVSockPort:output_type -> GetVSockPortResponse
-	11, // 41: Driver.GetVirtioPort:output_type -> GetVirtioPortResponse
+	15, // 0: Driver.Validate:input_type -> google.protobuf.Empty
+	15, // 1: Driver.Initialize:input_type -> google.protobuf.Empty
+	15, // 2: Driver.CreateDisk:input_type -> google.protobuf.Empty
+	15, // 3: Driver.Start:input_type -> google.protobuf.Empty
+	15, // 4: Driver.Stop:input_type -> google.protobuf.Empty
+	15, // 5: Driver.CanRunGUI:input_type -> google.protobuf.Empty
+	15, // 6: Driver.RunGUI:input_type -> google.protobuf.Empty
+	7,  // 7: Driver.ChangeDisplayPassword:input_type -> ChangeDisplayPasswordRequest
+	15, // 8: Driver.GetDisplayConnection:input_type -> google.protobuf.Empty
+	9,  // 9: Driver.CreateSnapshot:input_type -> CreateSnapshotRequest
+	10, // 10: Driver.ApplySnapshot:input_type -> ApplySnapshotRequest
+	11, // 11: Driver.DeleteSnapshot:input_type -> DeleteSnapshotRequest
+	15, // 12: Driver.ListSnapshots:input_type -> google.protobuf.Empty
+	15, // 13: Driver.Register:input_type -> google.protobuf.Empty
+	15, // 14: Driver.Unregister:input_type -> google.protobuf.Empty
+	15, // 15: Driver.ForwardGuestAgent:input_type -> google.protobuf.Empty
+	15, // 16: Driver.GuestAgentConn:input_type -> google.protobuf.Empty
+	15, // 17: Driver.Name:input_type -> google.protobuf.Empty
+	2,  // 18: Driver.SetConfig:input_type -> SetConfigRequest
+	15, // 19: Driver.GetVSockPort:input_type -> google.protobuf.Empty
+	15, // 20: Driver.GetVirtioPort:input_type -> google.protobuf.Empty
+	15, // 21: Driver.Validate:output_type -> google.protobuf.Empty
+	15, // 22: Driver.Initialize:output_type -> google.protobuf.Empty
+	15, // 23: Driver.CreateDisk:output_type -> google.protobuf.Empty
+	0,  // 24: Driver.Start:output_type -> StartResponse
+	15, // 25: Driver.Stop:output_type -> google.protobuf.Empty
+	6,  // 26: Driver.CanRunGUI:output_type -> CanRunGUIResponse
+	15, // 27: Driver.RunGUI:output_type -> google.protobuf.Empty
+	15, // 28: Driver.ChangeDisplayPassword:output_type -> google.protobuf.Empty
+	8,  // 29: Driver.GetDisplayConnection:output_type -> GetDisplayConnectionResponse
+	15, // 30: Driver.CreateSnapshot:output_type -> google.protobuf.Empty
+	15, // 31: Driver.ApplySnapshot:output_type -> google.protobuf.Empty
+	15, // 32: Driver.DeleteSnapshot:output_type -> google.protobuf.Empty
+	12, // 33: Driver.ListSnapshots:output_type -> ListSnapshotsResponse
+	15, // 34: Driver.Register:output_type -> google.protobuf.Empty
+	15, // 35: Driver.Unregister:output_type -> google.protobuf.Empty
+	13, // 36: Driver.ForwardGuestAgent:output_type -> ForwardGuestAgentResponse
+	14, // 37: Driver.GuestAgentConn:output_type -> GuestAgentConnResponse
+	1,  // 38: Driver.Name:output_type -> NameResponse
+	3,  // 39: Driver.SetConfig:output_type -> SetConfigResponse
+	4,  // 40: Driver.GetVSockPort:output_type -> GetVSockPortResponse
+	5,  // 41: Driver.GetVirtioPort:output_type -> GetVirtioPortResponse
 	21, // [21:42] is the sub-list for method output_type
 	0,  // [0:21] is the sub-list for method input_type
 	0,  // [0:0] is the sub-list for extension type_name
@@ -1508,7 +865,7 @@ func file_pkg_driver_external_driver_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_pkg_driver_external_driver_proto_rawDesc), len(file_pkg_driver_external_driver_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   26,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

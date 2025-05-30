@@ -5,24 +5,24 @@ option go_package = "github.com/lima-vm/lima/pkg/driver/external";
 import "google/protobuf/empty.proto";
 
 service Driver {
-    rpc Validate(google.protobuf.Empty) returns (ValidateResponse);
-    rpc Initialize(google.protobuf.Empty) returns (InitializeResponse);
-    rpc CreateDisk(google.protobuf.Empty) returns (CreateDiskResponse);
+    rpc Validate(google.protobuf.Empty) returns (google.protobuf.Empty);
+    rpc Initialize(google.protobuf.Empty) returns (google.protobuf.Empty);
+    rpc CreateDisk(google.protobuf.Empty) returns (google.protobuf.Empty);
     rpc Start(google.protobuf.Empty) returns (stream StartResponse);
-    rpc Stop(google.protobuf.Empty) returns (StopResponse);
+    rpc Stop(google.protobuf.Empty) returns (google.protobuf.Empty);
 
     rpc CanRunGUI(google.protobuf.Empty) returns (CanRunGUIResponse);
-    rpc RunGUI(google.protobuf.Empty) returns (RunGUIResponse);
-    rpc ChangeDisplayPassword(ChangeDisplayPasswordRequest) returns (ChangeDisplayPasswordResponse);
+    rpc RunGUI(google.protobuf.Empty) returns (google.protobuf.Empty);
+    rpc ChangeDisplayPassword(ChangeDisplayPasswordRequest) returns (google.protobuf.Empty);
     rpc GetDisplayConnection(google.protobuf.Empty) returns (GetDisplayConnectionResponse);
 
-    rpc CreateSnapshot(CreateSnapshotRequest) returns (CreateSnapshotResponse);
-    rpc ApplySnapshot(ApplySnapshotRequest) returns (ApplySnapshotResponse);
-    rpc DeleteSnapshot(DeleteSnapshotRequest) returns (DeleteSnapshotResponse);
+    rpc CreateSnapshot(CreateSnapshotRequest) returns (google.protobuf.Empty);
+    rpc ApplySnapshot(ApplySnapshotRequest) returns (google.protobuf.Empty);
+    rpc DeleteSnapshot(DeleteSnapshotRequest) returns (google.protobuf.Empty);
     rpc ListSnapshots(google.protobuf.Empty) returns (ListSnapshotsResponse);
 
-    rpc Register(google.protobuf.Empty) returns (RegisterResponse);
-    rpc Unregister(google.protobuf.Empty) returns (UnregisterResponse);
+    rpc Register(google.protobuf.Empty) returns (google.protobuf.Empty);
+    rpc Unregister(google.protobuf.Empty) returns (google.protobuf.Empty);
 
     rpc ForwardGuestAgent(google.protobuf.Empty) returns (ForwardGuestAgentResponse);
     rpc GuestAgentConn(google.protobuf.Empty) returns (stream GuestAgentConnResponse);
@@ -34,38 +34,8 @@ service Driver {
     rpc GetVirtioPort(google.protobuf.Empty) returns (GetVirtioPortResponse);
 }
 
-message ValidateResponse {
-    bool valid = 1;
-    string error = 2;
-}
-
-message InitializeResponse {
-    bool success = 1;
-    string error = 2;
-}
-
-message CreateDiskResponse {
-    bool success = 1;
-    string error = 2;
-}
-
 message StartResponse {
     bool success = 1;   
-    string error = 2;
-}
-
-message StopResponse {
-    bool success = 1;
-    string error = 2;
-}
-
-message RegisterResponse {
-    bool success = 1;
-    string error = 2;
-}
-
-message UnregisterResponse {
-    bool success = 1;
     string error = 2;
 }
 
@@ -75,7 +45,7 @@ message NameResponse {
 
 message SetConfigRequest {
     bytes instance_config_json = 1;
-    int32 ssh_local_port = 3;
+    int64 ssh_local_port = 3;
 }
 
 message SetConfigResponse {
@@ -84,7 +54,7 @@ message SetConfigResponse {
 }
 
 message GetVSockPortResponse {
-    int32 port = 1;
+    int64 port = 1;
 }
 
 message GetVirtioPortResponse {
@@ -95,55 +65,28 @@ message CanRunGUIResponse {
     bool can_run = 1;
 }
 
-message RunGUIResponse {
-    bool success = 1;
-    string error = 2;
-}
-
 message ChangeDisplayPasswordRequest {
     string password = 1;
 }
 
-message ChangeDisplayPasswordResponse {
-    bool success = 1;
-    string error = 2;
-}
-
 message GetDisplayConnectionResponse {
     string connection = 1;
-    string error = 2;
 }
 
 message CreateSnapshotRequest {
     string tag = 1;
 }
 
-message CreateSnapshotResponse {
-    bool success = 1;
-    string error = 2;
-}
-
 message ApplySnapshotRequest {
     string tag = 1;
-}
-
-message ApplySnapshotResponse {
-    bool success = 1;
-    string error = 2;
 }
 
 message DeleteSnapshotRequest {
     string tag = 1;
 }
 
-message DeleteSnapshotResponse {
-    bool success = 1;
-    string error = 2;
-}
-
 message ListSnapshotsResponse {
     string snapshots = 1;
-    string error = 2;
 }
 
 message ForwardGuestAgentResponse {
@@ -152,5 +95,4 @@ message ForwardGuestAgentResponse {
 
 message GuestAgentConnResponse {
     bytes net_conn = 1;
-    string error = 2;
 }
