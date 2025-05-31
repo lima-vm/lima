@@ -607,6 +607,10 @@ func ValidateYAMLAgainstLatest(yNew, yLatest []byte) error {
 		return err
 	}
 
+	// Skip validation if both fields are unset.
+	if n.Disk == nil && l.Disk == nil {
+		return nil
+	}
 	nDisk, _ := units.RAMInBytes(*n.Disk)
 	lDisk, _ := units.RAMInBytes(*l.Disk)
 	if nDisk < lDisk {
