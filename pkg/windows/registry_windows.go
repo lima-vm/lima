@@ -146,7 +146,7 @@ func GetDistroID(name string) (string, error) {
 }
 
 // GetRandomFreeVSockPort gets a list of all registered VSock ports and returns a non-registered port.
-func GetRandomFreeVSockPort(min, max int) (int, error) {
+func GetRandomFreeVSockPort(minPort, maxPort int) (int, error) {
 	rootKey, err := getGuestCommunicationServicesKey(false)
 	if err != nil {
 		return 0, err
@@ -160,18 +160,18 @@ func GetRandomFreeVSockPort(min, max int) (int, error) {
 
 	type pair struct{ v, offset int }
 	tree := make([]pair, 1, len(used)+1)
-	tree[0] = pair{0, min}
+	tree[0] = pair{0, minPort}
 
 	sort.Ints(used)
 	for i, v := range used {
 		if tree[len(tree)-1].v+tree[len(tree)-1].offset == v {
 			tree[len(tree)-1].offset++
 		} else {
-			tree = append(tree, pair{v - min - i, min + i + 1})
+			tree = append(tree, pair{v - minPort - i, minPort + i + 1})
 		}
 	}
 
-	v := rand.IntN(max - min + 1 - len(used))
+	v := rand.IntN(maxPort - minPort + 1 - len(used))
 
 	for len(tree) > 1 {
 		m := len(tree) / 2

@@ -313,11 +313,7 @@ func (a *HostAgent) Run(ctx context.Context) error {
 
 	// WSL instance SSH address isn't known until after VM start
 	if *a.instConfig.VMType == limayaml.WSL2 {
-		sshAddr, err := store.GetSSHAddress(a.instName)
-		if err != nil {
-			return err
-		}
-		a.instSSHAddress = sshAddr
+		a.instSSHAddress = store.InstanceSSHAddress
 	}
 
 	if a.instConfig.Video.Display != nil && *a.instConfig.Video.Display == "vnc" {

@@ -39,6 +39,8 @@ const (
 	StatusBroken        Status = "Broken"
 	StatusStopped       Status = "Stopped"
 	StatusRunning       Status = "Running"
+
+	InstanceSSHAddress = "127.0.0.1"
 )
 
 type Instance struct {

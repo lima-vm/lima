@@ -29,7 +29,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// LockFile modified from https://github.com/boltdb/bolt/blob/v1.3.1/bolt_windows.go using MIT
+// LockFile modified from https://github.com/boltdb/bolt/blob/v1.3.1/bolt_windows.go using MIT.
 var (
 	modkernel32      = syscall.NewLazyDLL("kernel32.dll")
 	procLockFileEx   = modkernel32.NewProc("LockFileEx")
@@ -38,8 +38,8 @@ var (
 
 const (
 	// see https://msdn.microsoft.com/en-us/library/windows/desktop/aa365203(v=vs.85).aspx
-	LOCKFILE_EXCLUSIVE_LOCK   = 0x00000002
-	LOCKFILE_FAIL_IMMEDIATELY = 0x00000001
+	LOCKFILE_EXCLUSIVE_LOCK   = 0x00000002 //nolint:revive,staticcheck // var-naming: it's ok to use ALL_CAPS here
+	LOCKFILE_FAIL_IMMEDIATELY = 0x00000001 //nolint:revive,staticcheck // var-naming: it's ok to use ALL_CAPS here
 )
 
 func WithDirLock(dir string, fn func() error) error {
