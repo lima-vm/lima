@@ -163,6 +163,9 @@ func Validate(y *LimaYAML, warn bool) error {
 			if !errors.Is(err, os.ErrNotExist) {
 				errs = errors.Join(errs, fmt.Errorf("field `mounts[%d].location` refers to an inaccessible path: %q: %w", i, f.Location, err))
 			}
+			if warn {
+				logrus.Warnf("field `mounts[%d].location` refers to a non-existent directory: %q:", i, f.Location)
+			}
 		} else if !st.IsDir() {
 			errs = errors.Join(errs, fmt.Errorf("field `mounts[%d].location` refers to a non-directory path: %q: %w", i, f.Location, err))
 		}
