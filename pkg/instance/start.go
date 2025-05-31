@@ -30,7 +30,7 @@ import (
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/nativeimgutil"
 	"github.com/lima-vm/lima/pkg/osutil"
-	"github.com/lima-vm/lima/pkg/qemu/imgutil"
+	"github.com/lima-vm/lima/pkg/qemuimgutil"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/lima-vm/lima/pkg/usrlocalsharelima"
@@ -91,9 +91,10 @@ func Prepare(ctx context.Context, inst *store.Instance) (*Prepared, error) {
 			return nil, err
 		}
 	}
-	limaDriver := driverutil.CreateTargetDriverInstance(&driver.BaseDriver{
-		Instance: inst,
-	})
+	limaDriver, err := driverutil.CreateTargetDriverInstance(inst, 0)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create driver instance: %w", err)
+	}
 
 	if err := limaDriver.Validate(); err != nil {
 		return nil, err
@@ -105,7 +106,7 @@ func Prepare(ctx context.Context, inst *store.Instance) (*Prepared, error) {
 
 	// Check if the instance has been created (the base disk already exists)
 	baseDisk := filepath.Join(inst.Dir, filenames.BaseDisk)
-	_, err := os.Stat(baseDisk)
+	_, err = os.Stat(baseDisk)
 	created := err == nil
 
 	if err := limaDriver.CreateDisk(ctx); err != nil {
@@ -430,7 +431,7 @@ func prepareDiffDisk(inst *store.Instance) error {
 	if format == "raw" {
 		err = nativeimgutil.ResizeRawDisk(diffDisk, int(inst.Disk))
 	} else {
-		err = imgutil.ResizeDisk(diffDisk, format, int(inst.Disk))
+		err = qemuimgutil.ResizeDisk(diffDisk, format, int(inst.Disk))
 	}
 
 	if err != nil {

@@ -11,19 +11,19 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/fileutils"
+	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 )
 
 // EnsureFs downloads the root fs.
-func EnsureFs(ctx context.Context, driver *driver.BaseDriver) error {
-	baseDisk := filepath.Join(driver.Instance.Dir, filenames.BaseDisk)
+func EnsureFs(ctx context.Context, inst *store.Instance) error {
+	baseDisk := filepath.Join(inst.Dir, filenames.BaseDisk)
 	if _, err := os.Stat(baseDisk); errors.Is(err, os.ErrNotExist) {
 		var ensuredBaseDisk bool
-		errs := make([]error, len(driver.Instance.Config.Images))
-		for i, f := range driver.Instance.Config.Images {
-			if _, err := fileutils.DownloadFile(ctx, baseDisk, f.File, true, "the image", *driver.Instance.Config.Arch); err != nil {
+		errs := make([]error, len(inst.Config.Images))
+		for i, f := range inst.Config.Images {
+			if _, err := fileutils.DownloadFile(ctx, baseDisk, f.File, true, "the image", *inst.Config.Arch); err != nil {
 				errs[i] = err
 				continue
 			}
