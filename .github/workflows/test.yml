@@ -148,8 +148,15 @@ jobs:
         # otherwise `wsl --list --verbose` (called from Lima) fails:
         # https://github.com/lima-vm/lima/pull/1826#issuecomment-1729993334
         # The distro image itself is not consumed by Lima.
+        # Starting with WSL2 version 2.5.7.0 the distro will be rejected
+        # if it doesn't contain /bin/sh and /etc.
         # ------------------------------------------------------------------
-        wsl --import dummy $env:TEMP nul
+        mkdir dummy
+        mkdir dummy\bin
+        mkdir dummy\etc
+        echo "" >dummy\bin\sh
+        tar -cf dummy.tar --format ustar -C dummy .
+        wsl --import dummy $env:TEMP dummy.tar
         wsl --list --verbose
     - name: Set gitconfig
       run: |
