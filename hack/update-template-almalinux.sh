@@ -59,7 +59,7 @@ function almalinux_url_spec_from_location() {
 	jq_filter='capture(
 		"^https://repo\\.almalinux\\.org/almalinux/(?<path_version>\\d+(\\.\\d+)?)/cloud/(?<path_arch>[^/]+)/images/" +
 		"AlmaLinux-(?<major_version>\\d+)-(?<target_vendor>.*)-" +
-		"(latest|(?<major_minor_version>\\d+\\.\\d+)-(?<date>\\d{8}))\\.(?<arch>[^.]+).(?<file_extension>.*)$"
+		"(latest|(?<major_minor_version>\\d+\\.\\d+)-(?<date>\\d{8})(?:\\.\\d+)?)\\.(?<arch>[^.]+).(?<file_extension>.*)$"
 	;"x")
 	'
 	url_spec=$(jq -e -r "${jq_filter}" <<<"\"${location}\"")
@@ -112,7 +112,7 @@ function almalinux_latest_image_entry_for_url_spec() {
 			capture(
 				"^AlmaLinux-\($spec.major_version)-\($spec.target_vendor)-" +
 				"(?<major_minor_version>\($spec.major_version)\\.\\d+)-" +
-				"(?<date>\\d{8})\\.\($spec.arch)\\.\($spec.file_extension)$"
+				"(?<date>\\d{8}(?:\\.\\d)?)\\.\($spec.arch)\\.\($spec.file_extension)$"
 				;"x"
 			) |
 			.version_number_array = ([.major_minor_version | scan("\\d+") | tonumber])
