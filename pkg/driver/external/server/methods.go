@@ -5,20 +5,106 @@ package server
 
 import (
 	"context"
+	"encoding/json"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 
 	pb "github.com/lima-vm/lima/pkg/driver/external"
-	"google.golang.org/protobuf/types/known/emptypb"
+	"github.com/lima-vm/lima/pkg/store"
 )
 
-// TODO: Add more 3 functions Start, SetConfig & GuestAgentConn
+func (s *DriverServer) Start(empty *emptypb.Empty, stream pb.Driver_StartServer) error {
+	s.logger.Debug("Received Start request")
+	errChan, err := s.driver.Start(stream.Context())
+	if err != nil {
+		s.logger.Errorf("Start failed: %v", err)
+		return nil
+	}
+
+	for {
+		select {
+		case err, ok := <-errChan:
+			if !ok {
+				s.logger.Debug("Start error channel closed")
+				if err := stream.Send(&pb.StartResponse{Success: true}); err != nil {
+					s.logger.Errorf("Failed to send success response: %v", err)
+					return status.Errorf(codes.Internal, "failed to send success response: %v", err)
+				}
+				return nil
+			}
+			if err != nil {
+				s.logger.Errorf("Error during Start: %v", err)
+				if err := stream.Send(&pb.StartResponse{Error: err.Error(), Success: false}); err != nil {
+					s.logger.Errorf("Failed to send error response: %v", err)
+					return status.Errorf(codes.Internal, "failed to send error response: %v", err)
+				}
+			}
+		case <-stream.Context().Done():
+			s.logger.Debug("Stream context done, stopping Start")
+			return nil
+		}
+	}
+}
+
+func (s *DriverServer) SetConfig(ctx context.Context, req *pb.SetConfigRequest) (*emptypb.Empty, error) {
+	s.logger.Debugf("Received SetConfig request")
+	var inst *store.Instance
+
+	if err := json.Unmarshal(req.InstanceConfigJson, inst); err != nil {
+		s.logger.Errorf("Failed to unmarshal InstanceConfigJson: %v", err)
+		return &emptypb.Empty{}, err
+	}
+
+	s.driver.SetConfig(inst, int(req.SshLocalPort))
+
+	return &emptypb.Empty{}, nil
+}
+
+// TODO
+// func (s *DriverServer) GuestAgentConn(empty *emptypb.Empty, stream pb.Driver_GuestAgentConnServer) error {
+// 	s.logger.Debug("Received GuestAgentConn request")
+// 	conn, err := s.driver.GuestAgentConn(stream.Context())
+// 	if err != nil {
+// 		s.logger.Errorf("GuestAgentConn failed: %v", err)
+// 		return err
+// 	}
+
+// 	defer conn.Close()
+
+// 	buf := make([]byte, 1024)
+
+// 	for {
+// 		n, err := conn.Read(buf)
+// 		if err != nil {
+// 			if err == io.EOF {
+// 				return nil
+// 			}
+// 			return status.Errorf(codes.Internal, "error reading: %v", err)
+// 		}
+
+// 		msg := &pb.GuestAgentConnResponse{NetConn: buf[:n]}
+// 		if err := stream.Send(msg); err != nil {
+// 			return err
+// 		}
+// 	}
+// 	s.logger.Debug("GuestAgentConn succeeded")
+// 	return nil
+// }
 
 func (s *DriverServer) GetInfo(ctx context.Context, empty *emptypb.Empty) (*pb.InfoResponse, error) {
 	s.logger.Debug("Received GetInfo request")
+	info := s.driver.GetInfo()
+
+	infoJson, err := json.Marshal(info)
+	if err != nil {
+		s.logger.Errorf("Failed to marshal driver info: %v", err)
+		return nil, status.Errorf(codes.Internal, "failed to marshal driver info: %v", err)
+	}
+
 	return &pb.InfoResponse{
-		DriverName: s.driver.GetInfo().DriverName,
-		CanRunGui:  s.driver.GetInfo().CanRunGUI,
-		VsockPort:  int64(s.driver.GetInfo().VsockPort),
-		VirtioPort: s.driver.GetInfo().VirtioPort,
+		InfoJson: infoJson,
 	}, nil
 }
 
