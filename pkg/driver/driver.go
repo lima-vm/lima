@@ -38,9 +38,6 @@ type Lifecycle interface {
 
 // GUI defines GUI-related operations.
 type GUI interface {
-	// CanRunGUI returns bool to indicate if the hostagent need to run GUI synchronously
-	CanRunGUI() bool
-
 	// RunGUI is for starting GUI synchronously by hostagent. This method should be wait and return only after vm terminates
 	// It returns error if there are any failures
 	RunGUI() error
@@ -72,14 +69,6 @@ type GuestAgent interface {
 	GuestAgentConn(_ context.Context) (net.Conn, error)
 }
 
-type Plugin interface {
-	// Name returns the name of the driver
-	Name() string
-
-	// SetConfig sets the configuration for the instance.
-	SetConfig(inst *store.Instance, sshLocalPort int)
-}
-
 // Driver interface is used by hostagent for managing vm.
 type Driver interface {
 	Lifecycle
@@ -87,8 +76,16 @@ type Driver interface {
 	SnapshotManager
 	Registration
 	GuestAgent
-	Plugin
 
-	GetVSockPort() int
-	GetVirtioPort() string
+	GetInfo() Info
+
+	// SetConfig sets the configuration for the instance.
+	SetConfig(inst *store.Instance, sshLocalPort int)
+}
+
+type Info struct {
+	DriverName string
+	CanRunGUI  bool
+	VsockPort  int
+	VirtioPort string
 }
