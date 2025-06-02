@@ -11,7 +11,6 @@ service Driver {
     rpc Start(google.protobuf.Empty) returns (stream StartResponse);
     rpc Stop(google.protobuf.Empty) returns (google.protobuf.Empty);
 
-    rpc CanRunGUI(google.protobuf.Empty) returns (CanRunGUIResponse);
     rpc RunGUI(google.protobuf.Empty) returns (google.protobuf.Empty);
     rpc ChangeDisplayPassword(ChangeDisplayPasswordRequest) returns (google.protobuf.Empty);
     rpc GetDisplayConnection(google.protobuf.Empty) returns (GetDisplayConnectionResponse);
@@ -27,11 +26,13 @@ service Driver {
     rpc ForwardGuestAgent(google.protobuf.Empty) returns (ForwardGuestAgentResponse);
     rpc GuestAgentConn(google.protobuf.Empty) returns (stream GuestAgentConnResponse);
 
-    rpc Name(google.protobuf.Empty) returns (NameResponse);
-    rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
-    
-    rpc GetVSockPort(google.protobuf.Empty) returns (GetVSockPortResponse);
-    rpc GetVirtioPort(google.protobuf.Empty) returns (GetVirtioPortResponse);
+    rpc SetConfig(SetConfigRequest) returns (google.protobuf.Empty);
+
+    rpc GetInfo(google.protobuf.Empty) returns (InfoResponse);
+}
+
+message InfoResponse{
+    bytes info_json = 1;
 }
 
 message StartResponse {
@@ -39,30 +40,9 @@ message StartResponse {
     string error = 2;
 }
 
-message NameResponse {
-    string name = 1;
-}
-
 message SetConfigRequest {
     bytes instance_config_json = 1;
     int64 ssh_local_port = 3;
-}
-
-message SetConfigResponse {
-    bool success = 1;
-    string error = 2;
-}
-
-message GetVSockPortResponse {
-    int64 port = 1;
-}
-
-message GetVirtioPortResponse {
-    string port = 1;
-}
-
-message CanRunGUIResponse {
-    bool can_run = 1;
 }
 
 message ChangeDisplayPasswordRequest {

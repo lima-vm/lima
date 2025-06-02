@@ -25,7 +25,6 @@ const (
 	Driver_CreateDisk_FullMethodName            = "/Driver/CreateDisk"
 	Driver_Start_FullMethodName                 = "/Driver/Start"
 	Driver_Stop_FullMethodName                  = "/Driver/Stop"
-	Driver_CanRunGUI_FullMethodName             = "/Driver/CanRunGUI"
 	Driver_RunGUI_FullMethodName                = "/Driver/RunGUI"
 	Driver_ChangeDisplayPassword_FullMethodName = "/Driver/ChangeDisplayPassword"
 	Driver_GetDisplayConnection_FullMethodName  = "/Driver/GetDisplayConnection"
@@ -37,10 +36,8 @@ const (
 	Driver_Unregister_FullMethodName            = "/Driver/Unregister"
 	Driver_ForwardGuestAgent_FullMethodName     = "/Driver/ForwardGuestAgent"
 	Driver_GuestAgentConn_FullMethodName        = "/Driver/GuestAgentConn"
-	Driver_Name_FullMethodName                  = "/Driver/Name"
 	Driver_SetConfig_FullMethodName             = "/Driver/SetConfig"
-	Driver_GetVSockPort_FullMethodName          = "/Driver/GetVSockPort"
-	Driver_GetVirtioPort_FullMethodName         = "/Driver/GetVirtioPort"
+	Driver_GetInfo_FullMethodName               = "/Driver/GetInfo"
 )
 
 // DriverClient is the client API for Driver service.
@@ -52,7 +49,6 @@ type DriverClient interface {
 	CreateDisk(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	Start(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (grpc.ServerStreamingClient[StartResponse], error)
 	Stop(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	CanRunGUI(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*CanRunGUIResponse, error)
 	RunGUI(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	ChangeDisplayPassword(ctx context.Context, in *ChangeDisplayPasswordRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetDisplayConnection(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetDisplayConnectionResponse, error)
@@ -64,10 +60,8 @@ type DriverClient interface {
 	Unregister(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	ForwardGuestAgent(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ForwardGuestAgentResponse, error)
 	GuestAgentConn(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (grpc.ServerStreamingClient[GuestAgentConnResponse], error)
-	Name(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*NameResponse, error)
-	SetConfig(ctx context.Context, in *SetConfigRequest, opts ...grpc.CallOption) (*SetConfigResponse, error)
-	GetVSockPort(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetVSockPortResponse, error)
-	GetVirtioPort(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetVirtioPortResponse, error)
+	SetConfig(ctx context.Context, in *SetConfigRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	GetInfo(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*InfoResponse, error)
 }
 
 type driverClient struct {
@@ -131,16 +125,6 @@ func (c *driverClient) Stop(ctx context.Context, in *emptypb.Empty, opts ...grpc
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, Driver_Stop_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *driverClient) CanRunGUI(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*CanRunGUIResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CanRunGUIResponse)
-	err := c.cc.Invoke(ctx, Driver_CanRunGUI_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -266,19 +250,9 @@ func (c *driverClient) GuestAgentConn(ctx context.Context, in *emptypb.Empty, op
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type Driver_GuestAgentConnClient = grpc.ServerStreamingClient[GuestAgentConnResponse]
 
-func (c *driverClient) Name(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*NameResponse, error) {
+func (c *driverClient) SetConfig(ctx context.Context, in *SetConfigRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(NameResponse)
-	err := c.cc.Invoke(ctx, Driver_Name_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *driverClient) SetConfig(ctx context.Context, in *SetConfigRequest, opts ...grpc.CallOption) (*SetConfigResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SetConfigResponse)
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, Driver_SetConfig_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -286,20 +260,10 @@ func (c *driverClient) SetConfig(ctx context.Context, in *SetConfigRequest, opts
 	return out, nil
 }
 
-func (c *driverClient) GetVSockPort(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetVSockPortResponse, error) {
+func (c *driverClient) GetInfo(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*InfoResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetVSockPortResponse)
-	err := c.cc.Invoke(ctx, Driver_GetVSockPort_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *driverClient) GetVirtioPort(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetVirtioPortResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetVirtioPortResponse)
-	err := c.cc.Invoke(ctx, Driver_GetVirtioPort_FullMethodName, in, out, cOpts...)
+	out := new(InfoResponse)
+	err := c.cc.Invoke(ctx, Driver_GetInfo_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -315,7 +279,6 @@ type DriverServer interface {
 	CreateDisk(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	Start(*emptypb.Empty, grpc.ServerStreamingServer[StartResponse]) error
 	Stop(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
-	CanRunGUI(context.Context, *emptypb.Empty) (*CanRunGUIResponse, error)
 	RunGUI(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	ChangeDisplayPassword(context.Context, *ChangeDisplayPasswordRequest) (*emptypb.Empty, error)
 	GetDisplayConnection(context.Context, *emptypb.Empty) (*GetDisplayConnectionResponse, error)
@@ -327,10 +290,8 @@ type DriverServer interface {
 	Unregister(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	ForwardGuestAgent(context.Context, *emptypb.Empty) (*ForwardGuestAgentResponse, error)
 	GuestAgentConn(*emptypb.Empty, grpc.ServerStreamingServer[GuestAgentConnResponse]) error
-	Name(context.Context, *emptypb.Empty) (*NameResponse, error)
-	SetConfig(context.Context, *SetConfigRequest) (*SetConfigResponse, error)
-	GetVSockPort(context.Context, *emptypb.Empty) (*GetVSockPortResponse, error)
-	GetVirtioPort(context.Context, *emptypb.Empty) (*GetVirtioPortResponse, error)
+	SetConfig(context.Context, *SetConfigRequest) (*emptypb.Empty, error)
+	GetInfo(context.Context, *emptypb.Empty) (*InfoResponse, error)
 	mustEmbedUnimplementedDriverServer()
 }
 
@@ -355,9 +316,6 @@ func (UnimplementedDriverServer) Start(*emptypb.Empty, grpc.ServerStreamingServe
 }
 func (UnimplementedDriverServer) Stop(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Stop not implemented")
-}
-func (UnimplementedDriverServer) CanRunGUI(context.Context, *emptypb.Empty) (*CanRunGUIResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CanRunGUI not implemented")
 }
 func (UnimplementedDriverServer) RunGUI(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RunGUI not implemented")
@@ -392,17 +350,11 @@ func (UnimplementedDriverServer) ForwardGuestAgent(context.Context, *emptypb.Emp
 func (UnimplementedDriverServer) GuestAgentConn(*emptypb.Empty, grpc.ServerStreamingServer[GuestAgentConnResponse]) error {
 	return status.Errorf(codes.Unimplemented, "method GuestAgentConn not implemented")
 }
-func (UnimplementedDriverServer) Name(context.Context, *emptypb.Empty) (*NameResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Name not implemented")
-}
-func (UnimplementedDriverServer) SetConfig(context.Context, *SetConfigRequest) (*SetConfigResponse, error) {
+func (UnimplementedDriverServer) SetConfig(context.Context, *SetConfigRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetConfig not implemented")
 }
-func (UnimplementedDriverServer) GetVSockPort(context.Context, *emptypb.Empty) (*GetVSockPortResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetVSockPort not implemented")
-}
-func (UnimplementedDriverServer) GetVirtioPort(context.Context, *emptypb.Empty) (*GetVirtioPortResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetVirtioPort not implemented")
+func (UnimplementedDriverServer) GetInfo(context.Context, *emptypb.Empty) (*InfoResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetInfo not implemented")
 }
 func (UnimplementedDriverServer) mustEmbedUnimplementedDriverServer() {}
 func (UnimplementedDriverServer) testEmbeddedByValue()                {}
@@ -504,24 +456,6 @@ func _Driver_Stop_Handler(srv interface{}, ctx context.Context, dec func(interfa
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DriverServer).Stop(ctx, req.(*emptypb.Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Driver_CanRunGUI_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(emptypb.Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(DriverServer).CanRunGUI(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Driver_CanRunGUI_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DriverServer).CanRunGUI(ctx, req.(*emptypb.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -717,24 +651,6 @@ func _Driver_GuestAgentConn_Handler(srv interface{}, stream grpc.ServerStream) e
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type Driver_GuestAgentConnServer = grpc.ServerStreamingServer[GuestAgentConnResponse]
 
-func _Driver_Name_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(emptypb.Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(DriverServer).Name(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Driver_Name_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DriverServer).Name(ctx, req.(*emptypb.Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _Driver_SetConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(SetConfigRequest)
 	if err := dec(in); err != nil {
@@ -753,38 +669,20 @@ func _Driver_SetConfig_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Driver_GetVSockPort_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Driver_GetInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(DriverServer).GetVSockPort(ctx, in)
+		return srv.(DriverServer).GetInfo(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Driver_GetVSockPort_FullMethodName,
+		FullMethod: Driver_GetInfo_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DriverServer).GetVSockPort(ctx, req.(*emptypb.Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Driver_GetVirtioPort_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(emptypb.Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(DriverServer).GetVirtioPort(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Driver_GetVirtioPort_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DriverServer).GetVirtioPort(ctx, req.(*emptypb.Empty))
+		return srv.(DriverServer).GetInfo(ctx, req.(*emptypb.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -811,10 +709,6 @@ var Driver_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Stop",
 			Handler:    _Driver_Stop_Handler,
-		},
-		{
-			MethodName: "CanRunGUI",
-			Handler:    _Driver_CanRunGUI_Handler,
 		},
 		{
 			MethodName: "RunGUI",
@@ -857,20 +751,12 @@ var Driver_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Driver_ForwardGuestAgent_Handler,
 		},
 		{
-			MethodName: "Name",
-			Handler:    _Driver_Name_Handler,
-		},
-		{
 			MethodName: "SetConfig",
 			Handler:    _Driver_SetConfig_Handler,
 		},
 		{
-			MethodName: "GetVSockPort",
-			Handler:    _Driver_GetVSockPort_Handler,
-		},
-		{
-			MethodName: "GetVirtioPort",
-			Handler:    _Driver_GetVirtioPort_Handler,
+			MethodName: "GetInfo",
+			Handler:    _Driver_GetInfo_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

@@ -29,7 +29,7 @@ func Serve(driver driver.Driver) {
 	logger.SetFormatter(&logrus.TextFormatter{
 		FullTimestamp: true,
 	})
-	logger.Infof("Starting external driver server for %s", driver.Name())
+	logger.Infof("Starting external driver server for %s", driver.GetInfo().DriverName)
 
 	pipeConn := &PipeConn{
 		Reader: os.Stdin,

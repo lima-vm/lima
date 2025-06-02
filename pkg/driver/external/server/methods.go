@@ -12,22 +12,13 @@ import (
 
 // TODO: Add more 3 functions Start, SetConfig & GuestAgentConn
 
-func (s *DriverServer) Name(ctx context.Context, empty *emptypb.Empty) (*pb.NameResponse, error) {
-	s.logger.Debug("Received Name request")
-	return &pb.NameResponse{Name: s.driver.Name()}, nil
-}
-
-func (s *DriverServer) GetVirtioPort(ctx context.Context, empty *emptypb.Empty) (*pb.GetVirtioPortResponse, error) {
-	s.logger.Debug("Received GetVirtioPort request")
-	return &pb.GetVirtioPortResponse{
-		Port: s.driver.GetVirtioPort(),
-	}, nil
-}
-
-func (s *DriverServer) GetVSockPort(ctx context.Context, empty *emptypb.Empty) (*pb.GetVSockPortResponse, error) {
-	s.logger.Debug("Received GetVSockPort request")
-	return &pb.GetVSockPortResponse{
-		Port: int64(s.driver.GetVSockPort()),
+func (s *DriverServer) GetInfo(ctx context.Context, empty *emptypb.Empty) (*pb.InfoResponse, error) {
+	s.logger.Debug("Received GetInfo request")
+	return &pb.InfoResponse{
+		DriverName: s.driver.GetInfo().DriverName,
+		CanRunGui:  s.driver.GetInfo().CanRunGUI,
+		VsockPort:  int64(s.driver.GetInfo().VsockPort),
+		VirtioPort: s.driver.GetInfo().VirtioPort,
 	}, nil
 }
 
@@ -73,11 +64,6 @@ func (s *DriverServer) Stop(ctx context.Context, empty *emptypb.Empty) (*emptypb
 	}
 	s.logger.Debug("Stop succeeded")
 	return empty, nil
-}
-
-func (s *DriverServer) CanRunGUI(ctx context.Context, empty *emptypb.Empty) (*pb.CanRunGUIResponse, error) {
-	s.logger.Debug("Received CanRunGUI request")
-	return &pb.CanRunGUIResponse{CanRun: s.driver.CanRunGUI()}, nil
 }
 
 func (s *DriverServer) RunGUI(ctx context.Context, empty *emptypb.Empty) (*emptypb.Empty, error) {
