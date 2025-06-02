@@ -92,14 +92,6 @@ func (l *LimaVzDriver) SetConfig(inst *store.Instance, sshLocalPort int) {
 	l.SSHLocalPort = sshLocalPort
 }
 
-func (l *LimaVzDriver) GetVirtioPort() string {
-	return l.VirtioPort
-}
-
-func (l *LimaVzDriver) GetVSockPort() int {
-	return l.VSockPort
-}
-
 func (l *LimaVzDriver) Validate() error {
 	macOSProductVersion, err := osutil.ProductVersion()
 	if err != nil {
@@ -208,7 +200,7 @@ func (l *LimaVzDriver) Start(ctx context.Context) (chan error, error) {
 	return errCh, nil
 }
 
-func (l *LimaVzDriver) CanRunGUI() bool {
+func (l *LimaVzDriver) canRunGUI() bool {
 	switch *l.Instance.Config.Video.Display {
 	case "vz", "default":
 		return true
@@ -218,7 +210,7 @@ func (l *LimaVzDriver) CanRunGUI() bool {
 }
 
 func (l *LimaVzDriver) RunGUI() error {
-	if l.CanRunGUI() {
+	if l.canRunGUI() {
 		return l.machine.StartGraphicApplication(1920, 1200)
 	}
 	return fmt.Errorf("RunGUI is not supported for the given driver '%s' and display '%s'", "vz", *l.Instance.Config.Video.Display)
@@ -264,8 +256,16 @@ func (l *LimaVzDriver) GuestAgentConn(_ context.Context) (net.Conn, error) {
 	return nil, errors.New("unable to connect to guest agent via vsock port 2222")
 }
 
-func (l *LimaVzDriver) Name() string {
-	return "vz"
+func (l *LimaVzDriver) GetInfo() driver.Info {
+	var info driver.Info
+	if l.Instance != nil && l.Instance.Config != nil {
+		info.CanRunGUI = l.canRunGUI()
+	}
+
+	info.DriverName = "vz"
+	info.VsockPort = l.VSockPort
+	info.VirtioPort = l.VirtioPort
+	return info
 }
 
 func (l *LimaVzDriver) Register(_ context.Context) error {

@@ -69,14 +69,6 @@ func (l *LimaQemuDriver) SetConfig(inst *store.Instance, sshLocalPort int) {
 	l.SSHLocalPort = sshLocalPort
 }
 
-func (l *LimaQemuDriver) GetVirtioPort() string {
-	return l.VirtioPort
-}
-
-func (l *LimaQemuDriver) GetVSockPort() int {
-	return l.VSockPort
-}
-
 func (l *LimaQemuDriver) Validate() error {
 	if runtime.GOOS == "darwin" {
 		if err := l.checkBinarySignature(); err != nil {
@@ -519,16 +511,17 @@ func (a *qArgTemplateApplier) applyTemplate(qArg string) (string, error) {
 	return b.String(), nil
 }
 
-func (l *LimaQemuDriver) Name() string {
-	return "qemu"
+func (l *LimaQemuDriver) GetInfo() driver.Info {
+	return driver.Info{
+		DriverName: "qemu",
+		CanRunGUI:  false,
+		VsockPort:  l.VSockPort,
+		VirtioPort: l.VirtioPort,
+	}
 }
 
 func (l *LimaQemuDriver) Initialize(_ context.Context) error {
 	return nil
-}
-
-func (l *LimaQemuDriver) CanRunGUI() bool {
-	return false
 }
 
 func (l *LimaQemuDriver) RunGUI() error {

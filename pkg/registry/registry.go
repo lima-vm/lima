@@ -170,7 +170,7 @@ func init() {
 
 func Register(driver driver.Driver) {
 	if DefaultRegistry != nil {
-		name := driver.Name()
+		name := driver.GetInfo().DriverName
 		if _, exists := DefaultRegistry.drivers[name]; exists {
 			return
 		}

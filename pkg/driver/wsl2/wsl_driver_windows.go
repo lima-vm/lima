@@ -68,14 +68,6 @@ func New() *LimaWslDriver {
 	}
 }
 
-func (l *LimaWslDriver) GetVirtioPort() string {
-	return l.VirtioPort
-}
-
-func (l *LimaWslDriver) GetVSockPort() int {
-	return l.VSockPort
-}
-
 func (l *LimaWslDriver) SetConfig(inst *store.Instance, sshLocalPort int) {
 	l.Instance = inst
 	l.SSHLocalPort = sshLocalPort
@@ -173,7 +165,8 @@ func (l *LimaWslDriver) Start(ctx context.Context) (chan error, error) {
 
 // CanRunGUI requires WSLg, which requires specific version of WSL2 to be installed.
 // TODO: Add check and add support for WSLg (instead of VNC) to hostagent.
-func (l *LimaWslDriver) CanRunGUI() bool {
+func (l *LimaWslDriver) canRunGUI() bool {
+	// return *l.InstConfig.Video.Display == "wsl"
 	return false
 }
 
@@ -221,8 +214,13 @@ func (l *LimaWslDriver) GuestAgentConn(ctx context.Context) (net.Conn, error) {
 	return winio.Dial(ctx, sockAddr)
 }
 
-func (l *LimaWslDriver) Name() string {
-	return "wsl2"
+func (l *LimaWslDriver) GetInfo() driver.Info {
+	return driver.Info{
+		DriverName: "wsl",
+		CanRunGUI:  l.canRunGUI(),
+		VsockPort:  l.VSockPort,
+		VirtioPort: l.VirtioPort,
+	}
 }
 
 func (l *LimaWslDriver) Initialize(_ context.Context) error {
