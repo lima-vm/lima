@@ -4,7 +4,9 @@
 package registry
 
 import (
+	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,20 +14,31 @@ import (
 	"sync"
 
 	"github.com/lima-vm/lima/pkg/driver"
-	"github.com/lima-vm/lima/pkg/usrlocalsharelima"
+	"github.com/lima-vm/lima/pkg/driver/external/client"
 	"github.com/sirupsen/logrus"
 )
 
+type ExternalDriver struct {
+	Name       string
+	Command    *exec.Cmd
+	Stdin      io.WriteCloser
+	Stdout     io.ReadCloser
+	Client     *client.DriverClient // Client is the gRPC client for the external driver
+	Path       string
+	ctx        context.Context
+	cancelFunc context.CancelFunc
+}
+
 type Registry struct {
-	drivers         map[string]driver.Driver
-	externalDrivers map[string]string // For now mapping external driver names to paths
+	internalDrivers map[string]driver.Driver
+	externalDrivers map[string]*ExternalDriver
 	mu              sync.RWMutex
 }
 
 func NewRegistry() *Registry {
 	return &Registry{
-		drivers:         make(map[string]driver.Driver),
-		externalDrivers: make(map[string]string),
+		internalDrivers: make(map[string]driver.Driver),
+		externalDrivers: make(map[string]*ExternalDriver),
 	}
 }
 
@@ -34,10 +47,11 @@ func (r *Registry) List() []string {
 	defer r.mu.RUnlock()
 
 	var names []string
-	for name := range r.drivers {
+	for name := range r.internalDrivers {
 		names = append(names, name)
 	}
 
+	r.DiscoverDrivers()
 	for name := range r.externalDrivers {
 		names = append(names, name+" (external)")
 	}
@@ -48,46 +62,48 @@ func (r *Registry) Get(name string) (driver.Driver, bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	driver, exists := r.drivers[name]
+	driver, exists := r.internalDrivers[name]
+	if !exists {
+		externalDriver, exists := r.externalDrivers[name]
+		if exists {
+			return externalDriver.Client, true
+		}
+
+	}
 	return driver, exists
 }
 
-func (r *Registry) GetExternalDriver(name string) (string, bool) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	plugin, exists := r.externalDrivers[name]
-	return plugin, exists
-}
-
-func (r *Registry) RegisterPlugin(name, path string) {
+func (r *Registry) RegisterDriver(name, path string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	if _, exists := r.externalDrivers[name]; exists {
-		logrus.Debugf("Plugin %q is already registered, skipping", name)
+		logrus.Debugf("Driver %q is already registered, skipping", name)
 		return
 	}
 
-	r.externalDrivers[name] = path
-	logrus.Debugf("Registered plugin %q at %s", name, path)
+	r.externalDrivers[name].Path = path
+	logrus.Debugf("Registered driver %q at %s", name, path)
 }
 
-func (r *Registry) DiscoverPlugins() error {
-	limaShareDir, err := usrlocalsharelima.Dir()
-	if err != nil {
-		return fmt.Errorf("failed to determine Lima share directory: %w", err)
-	}
-	stdPluginDir := filepath.Join(filepath.Dir(limaShareDir), "libexec", "lima", "drivers")
+func (r *Registry) DiscoverDrivers() error {
+	// limaShareDir, err := usrlocalsharelima.Dir()
+	// if err != nil {
+	// 	return fmt.Errorf("failed to determine Lima share directory: %w", err)
+	// }
+	// fmt.Printf("Discovering drivers in %s\n", limaShareDir)
+	// stdDriverDir := filepath.Join(filepath.Dir(limaShareDir), "libexec", "lima", "drivers")
 
-	if _, err := os.Stat(stdPluginDir); err == nil {
-		if err := r.discoverPluginsInDir(stdPluginDir); err != nil {
-			logrus.Warnf("Error discovering plugins in %s: %v", stdPluginDir, err)
-		}
-	}
+	// if _, err := os.Stat(stdDriverDir); err == nil {
+	// 	if err := r.discoverDriversInDir(stdDriverDir); err != nil {
+	// 		logrus.Warnf("Error discovering drivers in %s: %v", stdDriverDir, err)
+	// 	}
+	// }
 
-	if pluginPaths := os.Getenv("LIMA_DRIVERS_PATH"); pluginPaths != "" {
-		paths := filepath.SplitList(pluginPaths)
+	if driverPaths := os.Getenv("LIMA_DRIVERS_PATH"); driverPaths != "" {
+		fmt.Printf("Discovering drivers in LIMA_DRIVERS_PATH: %s\n", driverPaths)
+		paths := filepath.SplitList(driverPaths)
+		fmt.Println("Driver paths:", paths)
 		for _, path := range paths {
 			if path == "" {
 				continue
@@ -95,16 +111,19 @@ func (r *Registry) DiscoverPlugins() error {
 
 			info, err := os.Stat(path)
 			if err != nil {
-				logrus.Warnf("Error accessing plugin path %s: %v", path, err)
+				logrus.Warnf("Error accessing driver path %s: %v", path, err)
 				continue
 			}
+			fmt.Printf("Info for %s: %+v\n", path, info)
+			fmt.Printf("IsExecutable: %v\n", isExecutable(info.Mode()))
+			fmt.Printf("IsDir: %v\n", info.IsDir())
 
 			if info.IsDir() {
-				if err := r.discoverPluginsInDir(path); err != nil {
-					logrus.Warnf("Error discovering plugins in %s: %v", path, err)
+				if err := r.discoverDriversInDir(path); err != nil {
+					logrus.Warnf("Error discovering drivers in %s: %v", path, err)
 				}
 			} else if isExecutable(info.Mode()) {
-				r.registerPluginFile(path)
+				r.registerDriverFile(path)
 			}
 		}
 	}
@@ -112,10 +131,10 @@ func (r *Registry) DiscoverPlugins() error {
 	return nil
 }
 
-func (r *Registry) discoverPluginsInDir(dir string) error {
+func (r *Registry) discoverDriversInDir(dir string) error {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
-		return fmt.Errorf("failed to read plugin directory %s: %w", dir, err)
+		return fmt.Errorf("failed to read driver directory %s: %w", dir, err)
 	}
 
 	for _, entry := range entries {
@@ -133,29 +152,29 @@ func (r *Registry) discoverPluginsInDir(dir string) error {
 			continue
 		}
 
-		pluginPath := filepath.Join(dir, entry.Name())
-		r.registerPluginFile(pluginPath)
+		driverPath := filepath.Join(dir, entry.Name())
+		r.registerDriverFile(driverPath)
 	}
 
 	return nil
 }
 
-func (r *Registry) registerPluginFile(path string) {
+func (r *Registry) registerDriverFile(path string) {
 	base := filepath.Base(path)
-	if !strings.HasPrefix(base, "lima-plugin-") {
+	if !strings.HasPrefix(base, "lima-driver-") {
 		return
 	}
 
-	name := strings.TrimPrefix(base, "lima-plugin-")
+	name := strings.TrimPrefix(base, "lima-driver-")
 	name = strings.TrimSuffix(name, filepath.Ext(name))
 
 	cmd := exec.Command(path, "--version")
 	if err := cmd.Run(); err != nil {
-		logrus.Warnf("Plugin %s failed version check: %v", path, err)
+		logrus.Warnf("driver %s failed version check: %v", path, err)
 		return
 	}
 
-	r.RegisterPlugin(name, path)
+	r.RegisterDriver(name, path)
 }
 
 func isExecutable(mode os.FileMode) bool {
@@ -166,15 +185,16 @@ var DefaultRegistry *Registry
 
 func init() {
 	DefaultRegistry = NewRegistry()
+	DefaultRegistry.DiscoverDrivers()
 }
 
 func Register(driver driver.Driver) {
 	if DefaultRegistry != nil {
 		name := driver.GetInfo().DriverName
-		if _, exists := DefaultRegistry.drivers[name]; exists {
+		if _, exists := DefaultRegistry.internalDrivers[name]; exists {
 			return
 		}
 
-		DefaultRegistry.drivers[name] = driver
+		DefaultRegistry.internalDrivers[name] = driver
 	}
 }
