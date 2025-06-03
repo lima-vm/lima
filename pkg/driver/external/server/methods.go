@@ -6,6 +6,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"io"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -62,36 +63,34 @@ func (s *DriverServer) SetConfig(ctx context.Context, req *pb.SetConfigRequest) 
 	return &emptypb.Empty{}, nil
 }
 
-// TODO
-// func (s *DriverServer) GuestAgentConn(empty *emptypb.Empty, stream pb.Driver_GuestAgentConnServer) error {
-// 	s.logger.Debug("Received GuestAgentConn request")
-// 	conn, err := s.driver.GuestAgentConn(stream.Context())
-// 	if err != nil {
-// 		s.logger.Errorf("GuestAgentConn failed: %v", err)
-// 		return err
-// 	}
+// NOTE: If this doesn't work, try with bidirectional streaming(like in buildkit) and see if that helps.
+func (s *DriverServer) GuestAgentConn(empty *emptypb.Empty, stream pb.Driver_GuestAgentConnServer) error {
+	s.logger.Debug("Received GuestAgentConn request")
+	conn, err := s.driver.GuestAgentConn(stream.Context())
+	if err != nil {
+		s.logger.Errorf("GuestAgentConn failed: %v", err)
+		return err
+	}
 
-// 	defer conn.Close()
+	defer conn.Close()
 
-// 	buf := make([]byte, 1024)
+	buf := make([]byte, 32*1<<10)
 
-// 	for {
-// 		n, err := conn.Read(buf)
-// 		if err != nil {
-// 			if err == io.EOF {
-// 				return nil
-// 			}
-// 			return status.Errorf(codes.Internal, "error reading: %v", err)
-// 		}
+	for {
+		n, err := conn.Read(buf)
+		if err != nil {
+			if err == io.EOF {
+				return nil
+			}
+			return status.Errorf(codes.Internal, "error reading: %v", err)
+		}
 
-// 		msg := &pb.GuestAgentConnResponse{NetConn: buf[:n]}
-// 		if err := stream.Send(msg); err != nil {
-// 			return err
-// 		}
-// 	}
-// 	s.logger.Debug("GuestAgentConn succeeded")
-// 	return nil
-// }
+		msg := &pb.GuestAgentConnResponse{NetConn: buf[:n]}
+		if err := stream.Send(msg); err != nil {
+			return err
+		}
+	}
+}
 
 func (s *DriverServer) GetInfo(ctx context.Context, empty *emptypb.Empty) (*pb.InfoResponse, error) {
 	s.logger.Debug("Received GetInfo request")
