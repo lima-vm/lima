@@ -5,17 +5,13 @@ package driver
 
 import (
 	"context"
-	"errors"
 	"net"
 
 	"github.com/lima-vm/lima/pkg/store"
 )
 
-// Driver interface is used by hostagent for managing vm.
-//
-// This interface is extended by BaseDriver which provides default implementation.
-// All other driver definition must extend BaseDriver.
-type Driver interface {
+// Lifecycle defines basic lifecycle operations.
+type Lifecycle interface {
 	// Validate returns error if the current driver isn't support for given config
 	Validate() error
 
@@ -35,37 +31,37 @@ type Driver interface {
 	// The second argument may contain error occurred while starting driver
 	Start(_ context.Context) (chan error, error)
 
-	// CanRunGUI returns bool to indicate if the hostagent need to run GUI synchronously
-	CanRunGUI() bool
+	// Stop will terminate the running vm instance.
+	// It returns error if there are any errors during Stop
+	Stop(_ context.Context) error
+}
 
+// GUI defines GUI-related operations.
+type GUI interface {
 	// RunGUI is for starting GUI synchronously by hostagent. This method should be wait and return only after vm terminates
 	// It returns error if there are any failures
 	RunGUI() error
 
-	// Stop will terminate the running vm instance.
-	// It returns error if there are any errors during Stop
-	Stop(_ context.Context) error
+	ChangeDisplayPassword(ctx context.Context, password string) error
+	GetDisplayConnection(ctx context.Context) (string, error)
+}
 
-	// Register will add an instance to a registry.
-	// It returns error if there are any errors during Register
-	Register(_ context.Context) error
+// SnapshotManager defines operations for managing snapshots.
+type SnapshotManager interface {
+	CreateSnapshot(ctx context.Context, tag string) error
+	ApplySnapshot(ctx context.Context, tag string) error
+	DeleteSnapshot(ctx context.Context, tag string) error
+	ListSnapshots(ctx context.Context) (string, error)
+}
 
-	// Unregister will perform any cleanup related to the vm instance.
-	// It returns error if there are any errors during Unregister
-	Unregister(_ context.Context) error
+// Registration defines operations for registering and unregistering the driver instance.
+type Registration interface {
+	Register(ctx context.Context) error
+	Unregister(ctx context.Context) error
+}
 
-	ChangeDisplayPassword(_ context.Context, password string) error
-
-	GetDisplayConnection(_ context.Context) (string, error)
-
-	CreateSnapshot(_ context.Context, tag string) error
-
-	ApplySnapshot(_ context.Context, tag string) error
-
-	DeleteSnapshot(_ context.Context, tag string) error
-
-	ListSnapshots(_ context.Context) (string, error)
-
+// GuestAgent defines operations for the guest agent.
+type GuestAgent interface {
 	// ForwardGuestAgent returns if the guest agent sock needs forwarding by host agent.
 	ForwardGuestAgent() bool
 
@@ -73,82 +69,23 @@ type Driver interface {
 	GuestAgentConn(_ context.Context) (net.Conn, error)
 }
 
-type BaseDriver struct {
-	Instance *store.Instance
+// Driver interface is used by hostagent for managing vm.
+type Driver interface {
+	Lifecycle
+	GUI
+	SnapshotManager
+	Registration
+	GuestAgent
 
-	SSHLocalPort int
-	VSockPort    int
-	VirtioPort   string
+	GetInfo() Info
+
+	// SetConfig sets the configuration for the instance.
+	SetConfig(inst *store.Instance, sshLocalPort int)
 }
 
-var _ Driver = (*BaseDriver)(nil)
-
-func (d *BaseDriver) Validate() error {
-	return nil
-}
-
-func (d *BaseDriver) Initialize(_ context.Context) error {
-	return nil
-}
-
-func (d *BaseDriver) CreateDisk(_ context.Context) error {
-	return nil
-}
-
-func (d *BaseDriver) Start(_ context.Context) (chan error, error) {
-	return nil, nil
-}
-
-func (d *BaseDriver) CanRunGUI() bool {
-	return false
-}
-
-func (d *BaseDriver) RunGUI() error {
-	return nil
-}
-
-func (d *BaseDriver) Stop(_ context.Context) error {
-	return nil
-}
-
-func (d *BaseDriver) Register(_ context.Context) error {
-	return nil
-}
-
-func (d *BaseDriver) Unregister(_ context.Context) error {
-	return nil
-}
-
-func (d *BaseDriver) ChangeDisplayPassword(_ context.Context, _ string) error {
-	return nil
-}
-
-func (d *BaseDriver) GetDisplayConnection(_ context.Context) (string, error) {
-	return "", nil
-}
-
-func (d *BaseDriver) CreateSnapshot(_ context.Context, _ string) error {
-	return errors.New("unimplemented")
-}
-
-func (d *BaseDriver) ApplySnapshot(_ context.Context, _ string) error {
-	return errors.New("unimplemented")
-}
-
-func (d *BaseDriver) DeleteSnapshot(_ context.Context, _ string) error {
-	return errors.New("unimplemented")
-}
-
-func (d *BaseDriver) ListSnapshots(_ context.Context) (string, error) {
-	return "", errors.New("unimplemented")
-}
-
-func (d *BaseDriver) ForwardGuestAgent() bool {
-	// if driver is not providing, use host agent
-	return d.VSockPort == 0 && d.VirtioPort == ""
-}
-
-func (d *BaseDriver) GuestAgentConn(_ context.Context) (net.Conn, error) {
-	// use the unix socket forwarded by host agent
-	return nil, nil
+type Info struct {
+	DriverName string `json:"driverName"`
+	CanRunGUI  bool   `json:"canRunGui,omitempty"`
+	VsockPort  int    `json:"vsockPort"`
+	VirtioPort string `json:"virtioPort"`
 }

@@ -131,13 +131,13 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 		}
 	}
 
-	baseDriver := driver.BaseDriver{
-		Instance:     inst,
-		SSHLocalPort: sshLocalPort,
+	limaDriver, err := driverutil.CreateTargetDriverInstance(inst, sshLocalPort)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create driver instance: %w", err)
 	}
-	limaDriver := driverutil.CreateTargetDriverInstance(&baseDriver)
-	vSockPort := baseDriver.VSockPort
-	virtioPort := baseDriver.VirtioPort
+
+	vSockPort := limaDriver.GetInfo().VsockPort
+	virtioPort := limaDriver.GetInfo().VirtioPort
 
 	if err := cidata.GenerateCloudConfig(inst.Dir, instName, inst.Config); err != nil {
 		return nil, err
@@ -364,7 +364,7 @@ func (a *HostAgent) Run(ctx context.Context) error {
 		logrus.Infof("VNC Password: `%s`", vncpwdfile)
 	}
 
-	if a.driver.CanRunGUI() {
+	if a.driver.GetInfo().CanRunGUI {
 		go func() {
 			err = a.startRoutinesAndWait(ctx, errCh)
 			if err != nil {

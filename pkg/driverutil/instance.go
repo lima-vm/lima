@@ -4,20 +4,22 @@
 package driverutil
 
 import (
+	"fmt"
+
 	"github.com/lima-vm/lima/pkg/driver"
-	"github.com/lima-vm/lima/pkg/limayaml"
-	"github.com/lima-vm/lima/pkg/qemu"
-	"github.com/lima-vm/lima/pkg/vz"
-	"github.com/lima-vm/lima/pkg/wsl2"
+	"github.com/lima-vm/lima/pkg/registry"
+	"github.com/lima-vm/lima/pkg/store"
 )
 
-func CreateTargetDriverInstance(base *driver.BaseDriver) driver.Driver {
-	limaDriver := base.Instance.Config.VMType
-	if *limaDriver == limayaml.VZ {
-		return vz.New(base)
+// CreateTargetDriverInstance creates the appropriate driver for an instance.
+func CreateTargetDriverInstance(inst *store.Instance, sshLocalPort int) (driver.Driver, error) {
+	limaDriver := inst.Config.VMType
+	driver, exists := registry.DefaultRegistry.Get(string(*limaDriver))
+	if !exists {
+		return nil, fmt.Errorf("unknown or unsupported VM type: %s", *limaDriver)
 	}
-	if *limaDriver == limayaml.WSL2 {
-		return wsl2.New(base)
-	}
-	return qemu.New(base)
+
+	driver.SetConfig(inst, sshLocalPort)
+
+	return driver, nil
 }

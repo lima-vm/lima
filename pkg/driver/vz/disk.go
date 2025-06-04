@@ -11,36 +11,35 @@ import (
 	"path/filepath"
 
 	"github.com/docker/go-units"
-
-	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/fileutils"
 	"github.com/lima-vm/lima/pkg/iso9660util"
 	"github.com/lima-vm/lima/pkg/nativeimgutil"
+	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 )
 
-func EnsureDisk(ctx context.Context, driver *driver.BaseDriver) error {
-	diffDisk := filepath.Join(driver.Instance.Dir, filenames.DiffDisk)
+func EnsureDisk(ctx context.Context, inst *store.Instance) error {
+	diffDisk := filepath.Join(inst.Dir, filenames.DiffDisk)
 	if _, err := os.Stat(diffDisk); err == nil || !errors.Is(err, os.ErrNotExist) {
 		// disk is already ensured
 		return err
 	}
 
-	baseDisk := filepath.Join(driver.Instance.Dir, filenames.BaseDisk)
-	kernel := filepath.Join(driver.Instance.Dir, filenames.Kernel)
-	kernelCmdline := filepath.Join(driver.Instance.Dir, filenames.KernelCmdline)
-	initrd := filepath.Join(driver.Instance.Dir, filenames.Initrd)
+	baseDisk := filepath.Join(inst.Dir, filenames.BaseDisk)
+	kernel := filepath.Join(inst.Dir, filenames.Kernel)
+	kernelCmdline := filepath.Join(inst.Dir, filenames.KernelCmdline)
+	initrd := filepath.Join(inst.Dir, filenames.Initrd)
 	if _, err := os.Stat(baseDisk); errors.Is(err, os.ErrNotExist) {
 		var ensuredBaseDisk bool
-		errs := make([]error, len(driver.Instance.Config.Images))
-		for i, f := range driver.Instance.Config.Images {
-			if _, err := fileutils.DownloadFile(ctx, baseDisk, f.File, true, "the image", *driver.Instance.Config.Arch); err != nil {
+		errs := make([]error, len(inst.Config.Images))
+		for i, f := range inst.Config.Images {
+			if _, err := fileutils.DownloadFile(ctx, baseDisk, f.File, true, "the image", *inst.Config.Arch); err != nil {
 				errs[i] = err
 				continue
 			}
 			if f.Kernel != nil {
 				// ensure decompress kernel because vz expects it to be decompressed
-				if _, err := fileutils.DownloadFile(ctx, kernel, f.Kernel.File, true, "the kernel", *driver.Instance.Config.Arch); err != nil {
+				if _, err := fileutils.DownloadFile(ctx, kernel, f.Kernel.File, true, "the kernel", *inst.Config.Arch); err != nil {
 					errs[i] = err
 					continue
 				}
@@ -52,7 +51,7 @@ func EnsureDisk(ctx context.Context, driver *driver.BaseDriver) error {
 				}
 			}
 			if f.Initrd != nil {
-				if _, err := fileutils.DownloadFile(ctx, initrd, *f.Initrd, false, "the initrd", *driver.Instance.Config.Arch); err != nil {
+				if _, err := fileutils.DownloadFile(ctx, initrd, *f.Initrd, false, "the initrd", *inst.Config.Arch); err != nil {
 					errs[i] = err
 					continue
 				}
@@ -64,7 +63,7 @@ func EnsureDisk(ctx context.Context, driver *driver.BaseDriver) error {
 			return fileutils.Errors(errs)
 		}
 	}
-	diskSize, _ := units.RAMInBytes(*driver.Instance.Config.Disk)
+	diskSize, _ := units.RAMInBytes(*inst.Config.Disk)
 	if diskSize == 0 {
 		return nil
 	}
