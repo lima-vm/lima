@@ -26,9 +26,6 @@ type DriverServer struct {
 func Serve(driver driver.Driver) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
-	logger.SetFormatter(&logrus.TextFormatter{
-		FullTimestamp: true,
-	})
 	logger.Infof("Starting external driver server for %s", driver.GetInfo().DriverName)
 
 	pipeConn := &PipeConn{
