@@ -8,6 +8,7 @@ import (
 	"github.com/lima-vm/lima/pkg/driver/qemu"
 )
 
+// To be used as an external driver for Lima.
 func main() {
 	driver := qemu.New()
 	server.Serve(driver)

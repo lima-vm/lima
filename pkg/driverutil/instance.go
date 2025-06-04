@@ -21,9 +21,5 @@ func CreateTargetDriverInstance(inst *store.Instance, sshLocalPort int) (driver.
 
 	driver.SetConfig(inst, sshLocalPort)
 
-	if err := driver.Validate(); err != nil {
-		return nil, fmt.Errorf("driver validation failed: %w", err)
-	}
-
 	return driver, nil
 }

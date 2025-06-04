@@ -26,11 +26,7 @@ type DriverClient struct {
 }
 
 func NewDriverClient(stdin io.WriteCloser, stdout io.ReadCloser, logger *logrus.Logger) (*DriverClient, error) {
-	pipeConn := &PipeConn{
-		Reader: stdout,
-		Writer: stdin,
-	}
-
+	pipeConn := newPipeConn(stdin, stdout)
 	opts := []grpc.DialOption{
 		grpc.WithDefaultCallOptions(
 			grpc.MaxCallRecvMsgSize(math.MaxInt64),
@@ -47,9 +43,15 @@ func NewDriverClient(stdin io.WriteCloser, stdout io.ReadCloser, logger *logrus.
 		}),
 	}
 
-	conn, err := grpc.NewClient("pipe://", opts...)
+	// conn, err := grpc.NewClient("pipe", opts...)
+	// if err != nil {
+	// 	logger.Errorf("failed to create gRPC driver client connection: %v", err)
+	// 	return nil, err
+	// }
+
+	conn, err := grpc.Dial("pipe", opts...)
 	if err != nil {
-		logger.Errorf("failed to create gRPC driver client connection: %v", err)
+		logger.Errorf("failed to dial gRPC driver client connection: %v", err)
 		return nil, err
 	}
 

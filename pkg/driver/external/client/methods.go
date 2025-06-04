@@ -51,9 +51,7 @@ func (d *DriverClient) Initialize(ctx context.Context) error {
 func (d *DriverClient) CreateDisk(ctx context.Context) error {
 	d.logger.Debug("Creating disk for the instance")
 
-	connCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-	_, err := d.DriverSvc.CreateDisk(connCtx, &emptypb.Empty{})
+	_, err := d.DriverSvc.CreateDisk(ctx, &emptypb.Empty{})
 	if err != nil {
 		d.logger.Errorf("Disk creation failed: %v", err)
 		return err
@@ -66,7 +64,7 @@ func (d *DriverClient) CreateDisk(ctx context.Context) error {
 func (d *DriverClient) Start(ctx context.Context) (chan error, error) {
 	d.logger.Debug("Starting driver instance")
 
-	connCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	connCtx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 	stream, err := d.DriverSvc.Start(connCtx, &emptypb.Empty{})
 	if err != nil {

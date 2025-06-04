@@ -51,14 +51,14 @@ func (s *DriverServer) Start(empty *emptypb.Empty, stream pb.Driver_StartServer)
 
 func (s *DriverServer) SetConfig(ctx context.Context, req *pb.SetConfigRequest) (*emptypb.Empty, error) {
 	s.logger.Debugf("Received SetConfig request")
-	var inst *store.Instance
+	var inst store.Instance
 
-	if err := json.Unmarshal(req.InstanceConfigJson, inst); err != nil {
+	if err := json.Unmarshal(req.InstanceConfigJson, &inst); err != nil {
 		s.logger.Errorf("Failed to unmarshal InstanceConfigJson: %v", err)
 		return &emptypb.Empty{}, err
 	}
 
-	s.driver.SetConfig(inst, int(req.SshLocalPort))
+	s.driver.SetConfig(&inst, int(req.SshLocalPort))
 
 	return &emptypb.Empty{}, nil
 }

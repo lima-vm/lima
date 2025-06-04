@@ -14,6 +14,13 @@ type PipeConn struct {
 	Writer io.Writer
 }
 
+func newPipeConn(writer io.WriteCloser, reader io.ReadCloser) *PipeConn {
+	return &PipeConn{
+		Reader: reader,
+		Writer: writer,
+	}
+}
+
 func (p *PipeConn) Read(b []byte) (n int, err error) {
 	return p.Reader.Read(b)
 }
