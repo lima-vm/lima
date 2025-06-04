@@ -4,6 +4,7 @@
 package registry
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -12,9 +13,11 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/driver/external/client"
+	"github.com/lima-vm/lima/pkg/usrlocalsharelima"
 	"github.com/sirupsen/logrus"
 )
 
@@ -26,6 +29,7 @@ type ExternalDriver struct {
 	Client     *client.DriverClient // Client is the gRPC client for the external driver
 	Path       string
 	ctx        context.Context
+	logger     *logrus.Logger
 	cancelFunc context.CancelFunc
 }
 
@@ -42,6 +46,64 @@ func NewRegistry() *Registry {
 	}
 }
 
+func (e *ExternalDriver) Start() error {
+	e.logger.Infof("Starting external driver at %s", e.Path)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cmd := exec.CommandContext(ctx, e.Path)
+
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		cancel()
+		return fmt.Errorf("failed to create stdin pipe: %w", err)
+	}
+
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		cancel()
+		return fmt.Errorf("failed to create stdout pipe: %w", err)
+	}
+
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		cancel()
+		return fmt.Errorf("failed to create stderr pipe: %w", err)
+	}
+
+	if err := cmd.Start(); err != nil {
+		cancel()
+		return fmt.Errorf("failed to start external driver: %w", err)
+	}
+
+	driverLogger := e.logger.WithField("driver", e.Name)
+
+	go func() {
+		scanner := bufio.NewScanner(stderr)
+		for scanner.Scan() {
+			driverLogger.Info(scanner.Text())
+		}
+	}()
+
+	time.Sleep(4 * time.Second)
+
+	driverClient, err := client.NewDriverClient(stdin, stdout, e.logger)
+	if err != nil {
+		cancel()
+		cmd.Process.Kill()
+		return fmt.Errorf("failed to create driver client: %w", err)
+	}
+
+	e.Command = cmd
+	e.Stdin = stdin
+	e.Stdout = stdout
+	e.Client = driverClient
+	e.ctx = ctx
+	e.cancelFunc = cancel
+
+	driverLogger.Infof("External driver %s started successfully", e.Name)
+	return nil
+}
+
 func (r *Registry) List() []string {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -51,7 +113,6 @@ func (r *Registry) List() []string {
 		names = append(names, name)
 	}
 
-	r.DiscoverDrivers()
 	for name := range r.externalDrivers {
 		names = append(names, name+" (external)")
 	}
@@ -66,6 +127,11 @@ func (r *Registry) Get(name string) (driver.Driver, bool) {
 	if !exists {
 		externalDriver, exists := r.externalDrivers[name]
 		if exists {
+			externalDriver.logger.Debugf("Using external driver %q", name)
+			if err := externalDriver.Start(); err != nil {
+				externalDriver.logger.Errorf("Failed to start external driver %q: %v", name, err)
+				return nil, false
+			}
 			return externalDriver.Client, true
 		}
 
@@ -77,33 +143,38 @@ func (r *Registry) RegisterDriver(name, path string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if _, exists := r.externalDrivers[name]; exists {
+	if _, exists := DefaultRegistry.externalDrivers[name]; exists {
 		logrus.Debugf("Driver %q is already registered, skipping", name)
 		return
 	}
 
-	r.externalDrivers[name].Path = path
-	logrus.Debugf("Registered driver %q at %s", name, path)
+	log := logrus.New()
+	log.SetFormatter(&logrus.TextFormatter{
+		FullTimestamp: true,
+	})
+
+	DefaultRegistry.externalDrivers[name] = &ExternalDriver{
+		Name:   name,
+		Path:   path,
+		logger: log,
+	}
 }
 
 func (r *Registry) DiscoverDrivers() error {
-	// limaShareDir, err := usrlocalsharelima.Dir()
-	// if err != nil {
-	// 	return fmt.Errorf("failed to determine Lima share directory: %w", err)
-	// }
-	// fmt.Printf("Discovering drivers in %s\n", limaShareDir)
-	// stdDriverDir := filepath.Join(filepath.Dir(limaShareDir), "libexec", "lima", "drivers")
+	limaShareDir, err := usrlocalsharelima.Dir()
+	if err != nil {
+		return fmt.Errorf("failed to determine Lima share directory: %w", err)
+	}
+	stdDriverDir := filepath.Join(filepath.Dir(limaShareDir), "libexec", "lima", "drivers")
 
-	// if _, err := os.Stat(stdDriverDir); err == nil {
-	// 	if err := r.discoverDriversInDir(stdDriverDir); err != nil {
-	// 		logrus.Warnf("Error discovering drivers in %s: %v", stdDriverDir, err)
-	// 	}
-	// }
+	if _, err := os.Stat(stdDriverDir); err == nil {
+		if err := r.discoverDriversInDir(stdDriverDir); err != nil {
+			logrus.Warnf("Error discovering drivers in %s: %v", stdDriverDir, err)
+		}
+	}
 
 	if driverPaths := os.Getenv("LIMA_DRIVERS_PATH"); driverPaths != "" {
-		fmt.Printf("Discovering drivers in LIMA_DRIVERS_PATH: %s\n", driverPaths)
 		paths := filepath.SplitList(driverPaths)
-		fmt.Println("Driver paths:", paths)
 		for _, path := range paths {
 			if path == "" {
 				continue
@@ -114,9 +185,6 @@ func (r *Registry) DiscoverDrivers() error {
 				logrus.Warnf("Error accessing driver path %s: %v", path, err)
 				continue
 			}
-			fmt.Printf("Info for %s: %+v\n", path, info)
-			fmt.Printf("IsExecutable: %v\n", isExecutable(info.Mode()))
-			fmt.Printf("IsDir: %v\n", info.IsDir())
 
 			if info.IsDir() {
 				if err := r.discoverDriversInDir(path); err != nil {
@@ -162,17 +230,12 @@ func (r *Registry) discoverDriversInDir(dir string) error {
 func (r *Registry) registerDriverFile(path string) {
 	base := filepath.Base(path)
 	if !strings.HasPrefix(base, "lima-driver-") {
+		fmt.Printf("Skipping %s: does not start with 'lima-driver-'\n", base)
 		return
 	}
 
 	name := strings.TrimPrefix(base, "lima-driver-")
 	name = strings.TrimSuffix(name, filepath.Ext(name))
-
-	cmd := exec.Command(path, "--version")
-	if err := cmd.Run(); err != nil {
-		logrus.Warnf("driver %s failed version check: %v", path, err)
-		return
-	}
 
 	r.RegisterDriver(name, path)
 }
@@ -185,7 +248,9 @@ var DefaultRegistry *Registry
 
 func init() {
 	DefaultRegistry = NewRegistry()
-	DefaultRegistry.DiscoverDrivers()
+	if err := DefaultRegistry.DiscoverDrivers(); err != nil {
+		logrus.Warnf("Error discovering drivers: %v", err)
+	}
 }
 
 func Register(driver driver.Driver) {
