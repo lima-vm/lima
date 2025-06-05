@@ -6,6 +6,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 
 	"google.golang.org/grpc/codes"
@@ -53,7 +54,7 @@ func (s *DriverServer) SetConfig(ctx context.Context, req *pb.SetConfigRequest) 
 	s.logger.Debugf("Received SetConfig request")
 	var inst store.Instance
 
-	if err := json.Unmarshal(req.InstanceConfigJson, &inst); err != nil {
+	if err := inst.UnmarshalJSON(req.InstanceConfigJson); err != nil {
 		s.logger.Errorf("Failed to unmarshal InstanceConfigJson: %v", err)
 		return &emptypb.Empty{}, err
 	}
@@ -79,7 +80,7 @@ func (s *DriverServer) GuestAgentConn(empty *emptypb.Empty, stream pb.Driver_Gue
 	for {
 		n, err := conn.Read(buf)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil
 			}
 			return status.Errorf(codes.Internal, "error reading: %v", err)

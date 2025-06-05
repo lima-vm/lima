@@ -20,7 +20,7 @@ import (
 func (d *DriverClient) Validate() error {
 	d.logger.Debug("Validating driver for the given config")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	_, err := d.DriverSvc.Validate(ctx, &emptypb.Empty{})
@@ -36,9 +36,7 @@ func (d *DriverClient) Validate() error {
 func (d *DriverClient) Initialize(ctx context.Context) error {
 	d.logger.Debug("Initializing driver instance")
 
-	connCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-	_, err := d.DriverSvc.Initialize(connCtx, &emptypb.Empty{})
+	_, err := d.DriverSvc.Initialize(ctx, &emptypb.Empty{})
 	if err != nil {
 		d.logger.Errorf("Initialization failed: %v", err)
 		return err
@@ -64,9 +62,7 @@ func (d *DriverClient) CreateDisk(ctx context.Context) error {
 func (d *DriverClient) Start(ctx context.Context) (chan error, error) {
 	d.logger.Debug("Starting driver instance")
 
-	connCtx, cancel := context.WithTimeout(ctx, time.Minute)
-	defer cancel()
-	stream, err := d.DriverSvc.Start(connCtx, &emptypb.Empty{})
+	stream, err := d.DriverSvc.Start(ctx, &emptypb.Empty{})
 	if err != nil {
 		d.logger.Errorf("Failed to start driver instance: %v", err)
 		return nil, err
@@ -97,7 +93,7 @@ func (d *DriverClient) Start(ctx context.Context) (chan error, error) {
 func (d *DriverClient) Stop(ctx context.Context) error {
 	d.logger.Debug("Stopping driver instance")
 
-	connCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	connCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	_, err := d.DriverSvc.Stop(connCtx, &emptypb.Empty{})
 	if err != nil {
@@ -112,7 +108,7 @@ func (d *DriverClient) Stop(ctx context.Context) error {
 func (d *DriverClient) RunGUI() error {
 	d.logger.Debug("Running GUI for the driver instance")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	_, err := d.DriverSvc.RunGUI(ctx, &emptypb.Empty{})
@@ -128,10 +124,7 @@ func (d *DriverClient) RunGUI() error {
 func (d *DriverClient) ChangeDisplayPassword(ctx context.Context, password string) error {
 	d.logger.Debug("Changing display password for the driver instance")
 
-	connCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
-	_, err := d.DriverSvc.ChangeDisplayPassword(connCtx, &pb.ChangeDisplayPasswordRequest{
+	_, err := d.DriverSvc.ChangeDisplayPassword(ctx, &pb.ChangeDisplayPasswordRequest{
 		Password: password,
 	})
 	if err != nil {
@@ -146,10 +139,7 @@ func (d *DriverClient) ChangeDisplayPassword(ctx context.Context, password strin
 func (d *DriverClient) GetDisplayConnection(ctx context.Context) (string, error) {
 	d.logger.Debug("Getting display connection for the driver instance")
 
-	connCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
-	resp, err := d.DriverSvc.GetDisplayConnection(connCtx, &emptypb.Empty{})
+	resp, err := d.DriverSvc.GetDisplayConnection(ctx, &emptypb.Empty{})
 	if err != nil {
 		d.logger.Errorf("Failed to get display connection: %v", err)
 		return "", err
@@ -162,10 +152,7 @@ func (d *DriverClient) GetDisplayConnection(ctx context.Context) (string, error)
 func (d *DriverClient) CreateSnapshot(ctx context.Context, tag string) error {
 	d.logger.Debugf("Creating snapshot with tag: %s", tag)
 
-	connCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
-	_, err := d.DriverSvc.CreateSnapshot(connCtx, &pb.CreateSnapshotRequest{
+	_, err := d.DriverSvc.CreateSnapshot(ctx, &pb.CreateSnapshotRequest{
 		Tag: tag,
 	})
 	if err != nil {
@@ -180,10 +167,7 @@ func (d *DriverClient) CreateSnapshot(ctx context.Context, tag string) error {
 func (d *DriverClient) ApplySnapshot(ctx context.Context, tag string) error {
 	d.logger.Debugf("Applying snapshot with tag: %s", tag)
 
-	connCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
-	_, err := d.DriverSvc.ApplySnapshot(connCtx, &pb.ApplySnapshotRequest{
+	_, err := d.DriverSvc.ApplySnapshot(ctx, &pb.ApplySnapshotRequest{
 		Tag: tag,
 	})
 	if err != nil {
@@ -198,10 +182,7 @@ func (d *DriverClient) ApplySnapshot(ctx context.Context, tag string) error {
 func (d *DriverClient) DeleteSnapshot(ctx context.Context, tag string) error {
 	d.logger.Debugf("Deleting snapshot with tag: %s", tag)
 
-	connCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
-	_, err := d.DriverSvc.DeleteSnapshot(connCtx, &pb.DeleteSnapshotRequest{
+	_, err := d.DriverSvc.DeleteSnapshot(ctx, &pb.DeleteSnapshotRequest{
 		Tag: tag,
 	})
 	if err != nil {
@@ -216,10 +197,7 @@ func (d *DriverClient) DeleteSnapshot(ctx context.Context, tag string) error {
 func (d *DriverClient) ListSnapshots(ctx context.Context) (string, error) {
 	d.logger.Debug("Listing snapshots")
 
-	connCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
-	resp, err := d.DriverSvc.ListSnapshots(connCtx, &emptypb.Empty{})
+	resp, err := d.DriverSvc.ListSnapshots(ctx, &emptypb.Empty{})
 	if err != nil {
 		d.logger.Errorf("Failed to list snapshots: %v", err)
 		return "", err
@@ -232,9 +210,7 @@ func (d *DriverClient) ListSnapshots(ctx context.Context) (string, error) {
 func (d *DriverClient) Register(ctx context.Context) error {
 	d.logger.Debug("Registering driver instance")
 
-	connCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-	_, err := d.DriverSvc.Register(connCtx, &emptypb.Empty{})
+	_, err := d.DriverSvc.Register(ctx, &emptypb.Empty{})
 	if err != nil {
 		d.logger.Errorf("Failed to register driver instance: %v", err)
 		return err
@@ -247,10 +223,7 @@ func (d *DriverClient) Register(ctx context.Context) error {
 func (d *DriverClient) Unregister(ctx context.Context) error {
 	d.logger.Debug("Unregistering driver instance")
 
-	connCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
-	_, err := d.DriverSvc.Unregister(connCtx, &emptypb.Empty{})
+	_, err := d.DriverSvc.Unregister(ctx, &emptypb.Empty{})
 	if err != nil {
 		d.logger.Errorf("Failed to unregister driver instance: %v", err)
 		return err
@@ -263,7 +236,7 @@ func (d *DriverClient) Unregister(ctx context.Context) error {
 func (d *DriverClient) ForwardGuestAgent() bool {
 	d.logger.Debug("Checking if guest agent needs to be forwarded")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	resp, err := d.DriverSvc.ForwardGuestAgent(ctx, &emptypb.Empty{})
@@ -280,10 +253,7 @@ func (d *DriverClient) ForwardGuestAgent() bool {
 func (d *DriverClient) GuestAgentConn(ctx context.Context) (net.Conn, error) {
 	d.logger.Debug("Getting guest agent connection")
 
-	connCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
-	connStream, err := d.DriverSvc.GuestAgentConn(connCtx, &emptypb.Empty{})
+	connStream, err := d.DriverSvc.GuestAgentConn(ctx, &emptypb.Empty{})
 	if err != nil {
 		d.logger.Errorf("Failed to get guest agent connection: %v", err)
 		return nil, err
@@ -295,7 +265,7 @@ func (d *DriverClient) GuestAgentConn(ctx context.Context) (net.Conn, error) {
 func (d *DriverClient) GetInfo() driver.Info {
 	d.logger.Debug("Getting driver info")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	resp, err := d.DriverSvc.GetInfo(ctx, &emptypb.Empty{})
@@ -317,13 +287,13 @@ func (d *DriverClient) GetInfo() driver.Info {
 func (d *DriverClient) SetConfig(inst *store.Instance, sshLocalPort int) {
 	d.logger.Debugf("Setting config for instance %s with SSH local port %d", inst.Name, sshLocalPort)
 
-	instJson, err := json.Marshal(inst)
+	instJson, err := inst.MarshalJSON()
 	if err != nil {
 		d.logger.Errorf("Failed to marshal instance config: %v", err)
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	_, err = d.DriverSvc.SetConfig(ctx, &pb.SetConfigRequest{

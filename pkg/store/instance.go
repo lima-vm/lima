@@ -5,6 +5,7 @@ package store
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -436,5 +437,40 @@ func (inst *Instance) Unprotect() error {
 		return err
 	}
 	inst.Protected = false
+	return nil
+}
+
+func (inst *Instance) MarshalJSON() ([]byte, error) {
+	type Alias Instance
+	errorsAsStrings := make([]string, len(inst.Errors))
+	for i, err := range inst.Errors {
+		if err != nil {
+			errorsAsStrings[i] = err.Error()
+		}
+	}
+	return json.Marshal(&struct {
+		*Alias
+		Errors []string `json:"errors,omitempty"`
+	}{
+		Alias:  (*Alias)(inst),
+		Errors: errorsAsStrings,
+	})
+}
+
+func (inst *Instance) UnmarshalJSON(data []byte) error {
+	type Alias Instance
+	aux := &struct {
+		*Alias
+		Errors []string `json:"errors,omitempty"`
+	}{
+		Alias: (*Alias)(inst),
+	}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	inst.Errors = nil
+	for _, msg := range aux.Errors {
+		inst.Errors = append(inst.Errors, errors.New(msg))
+	}
 	return nil
 }
