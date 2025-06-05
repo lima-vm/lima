@@ -4,7 +4,6 @@
 package registry
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -17,6 +16,7 @@ import (
 
 	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/driver/external/client"
+	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/lima-vm/lima/pkg/usrlocalsharelima"
 	"github.com/sirupsen/logrus"
 )
@@ -64,11 +64,20 @@ func (e *ExternalDriver) Start() error {
 		return fmt.Errorf("failed to create stdout pipe: %w", err)
 	}
 
-	stderr, err := cmd.StderrPipe()
+	sharedDir, err := usrlocalsharelima.Dir()
 	if err != nil {
 		cancel()
-		return fmt.Errorf("failed to create stderr pipe: %w", err)
+		return fmt.Errorf("failed to determine Lima share directory: %w", err)
 	}
+	logPath := filepath.Join(sharedDir, filenames.ExternalDriverStderrLog)
+	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		cancel()
+		return fmt.Errorf("failed to open external driver log file: %w", err)
+	}
+
+	// Redirect stderr to the log file
+	cmd.Stderr = logFile
 
 	if err := cmd.Start(); err != nil {
 		cancel()
@@ -77,14 +86,7 @@ func (e *ExternalDriver) Start() error {
 
 	driverLogger := e.logger.WithField("driver", e.Name)
 
-	go func() {
-		scanner := bufio.NewScanner(stderr)
-		for scanner.Scan() {
-			driverLogger.Info(scanner.Text())
-		}
-	}()
-
-	time.Sleep(4 * time.Second)
+	time.Sleep(time.Millisecond * 100)
 
 	driverClient, err := client.NewDriverClient(stdin, stdout, e.logger)
 	if err != nil {
@@ -148,15 +150,10 @@ func (r *Registry) RegisterDriver(name, path string) {
 		return
 	}
 
-	log := logrus.New()
-	log.SetFormatter(&logrus.TextFormatter{
-		FullTimestamp: true,
-	})
-
 	DefaultRegistry.externalDrivers[name] = &ExternalDriver{
 		Name:   name,
 		Path:   path,
-		logger: log,
+		logger: logrus.New(),
 	}
 }
 
