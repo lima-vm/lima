@@ -1,0 +1,5 @@
+minimumLimaVersion: 1.1.0
+
+base:
+- template://_images/almalinux-10
+- template://_default/mounts
