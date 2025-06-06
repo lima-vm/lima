@@ -59,7 +59,7 @@ type DriverClient interface {
 	Register(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	Unregister(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	ForwardGuestAgent(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ForwardGuestAgentResponse, error)
-	GuestAgentConn(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (grpc.ServerStreamingClient[GuestAgentConnResponse], error)
+	GuestAgentConn(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[GuestAgentConnStream, GuestAgentConnStream], error)
 	SetConfig(ctx context.Context, in *SetConfigRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetInfo(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*InfoResponse, error)
 }
@@ -231,24 +231,18 @@ func (c *driverClient) ForwardGuestAgent(ctx context.Context, in *emptypb.Empty,
 	return out, nil
 }
 
-func (c *driverClient) GuestAgentConn(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (grpc.ServerStreamingClient[GuestAgentConnResponse], error) {
+func (c *driverClient) GuestAgentConn(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[GuestAgentConnStream, GuestAgentConnStream], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	stream, err := c.cc.NewStream(ctx, &Driver_ServiceDesc.Streams[1], Driver_GuestAgentConn_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &grpc.GenericClientStream[emptypb.Empty, GuestAgentConnResponse]{ClientStream: stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
+	x := &grpc.GenericClientStream[GuestAgentConnStream, GuestAgentConnStream]{ClientStream: stream}
 	return x, nil
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type Driver_GuestAgentConnClient = grpc.ServerStreamingClient[GuestAgentConnResponse]
+type Driver_GuestAgentConnClient = grpc.BidiStreamingClient[GuestAgentConnStream, GuestAgentConnStream]
 
 func (c *driverClient) SetConfig(ctx context.Context, in *SetConfigRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
@@ -289,7 +283,7 @@ type DriverServer interface {
 	Register(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	Unregister(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	ForwardGuestAgent(context.Context, *emptypb.Empty) (*ForwardGuestAgentResponse, error)
-	GuestAgentConn(*emptypb.Empty, grpc.ServerStreamingServer[GuestAgentConnResponse]) error
+	GuestAgentConn(grpc.BidiStreamingServer[GuestAgentConnStream, GuestAgentConnStream]) error
 	SetConfig(context.Context, *SetConfigRequest) (*emptypb.Empty, error)
 	GetInfo(context.Context, *emptypb.Empty) (*InfoResponse, error)
 	mustEmbedUnimplementedDriverServer()
@@ -347,7 +341,7 @@ func (UnimplementedDriverServer) Unregister(context.Context, *emptypb.Empty) (*e
 func (UnimplementedDriverServer) ForwardGuestAgent(context.Context, *emptypb.Empty) (*ForwardGuestAgentResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ForwardGuestAgent not implemented")
 }
-func (UnimplementedDriverServer) GuestAgentConn(*emptypb.Empty, grpc.ServerStreamingServer[GuestAgentConnResponse]) error {
+func (UnimplementedDriverServer) GuestAgentConn(grpc.BidiStreamingServer[GuestAgentConnStream, GuestAgentConnStream]) error {
 	return status.Errorf(codes.Unimplemented, "method GuestAgentConn not implemented")
 }
 func (UnimplementedDriverServer) SetConfig(context.Context, *SetConfigRequest) (*emptypb.Empty, error) {
@@ -641,15 +635,11 @@ func _Driver_ForwardGuestAgent_Handler(srv interface{}, ctx context.Context, dec
 }
 
 func _Driver_GuestAgentConn_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(emptypb.Empty)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
-	}
-	return srv.(DriverServer).GuestAgentConn(m, &grpc.GenericServerStream[emptypb.Empty, GuestAgentConnResponse]{ServerStream: stream})
+	return srv.(DriverServer).GuestAgentConn(&grpc.GenericServerStream[GuestAgentConnStream, GuestAgentConnStream]{ServerStream: stream})
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type Driver_GuestAgentConnServer = grpc.ServerStreamingServer[GuestAgentConnResponse]
+type Driver_GuestAgentConnServer = grpc.BidiStreamingServer[GuestAgentConnStream, GuestAgentConnStream]
 
 func _Driver_SetConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(SetConfigRequest)
@@ -769,6 +759,7 @@ var Driver_ServiceDesc = grpc.ServiceDesc{
 			StreamName:    "GuestAgentConn",
 			Handler:       _Driver_GuestAgentConn_Handler,
 			ServerStreams: true,
+			ClientStreams: true,
 		},
 	},
 	Metadata: "pkg/driver/external/driver.proto",

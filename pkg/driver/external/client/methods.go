@@ -253,7 +253,7 @@ func (d *DriverClient) ForwardGuestAgent() bool {
 func (d *DriverClient) GuestAgentConn(ctx context.Context) (net.Conn, error) {
 	d.logger.Debug("Getting guest agent connection")
 
-	connStream, err := d.DriverSvc.GuestAgentConn(ctx, &emptypb.Empty{})
+	connStream, err := d.DriverSvc.GuestAgentConn(ctx)
 	if err != nil {
 		d.logger.Errorf("Failed to get guest agent connection: %v", err)
 		return nil, err

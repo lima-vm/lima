@@ -24,7 +24,7 @@ service Driver {
     rpc Unregister(google.protobuf.Empty) returns (google.protobuf.Empty);
 
     rpc ForwardGuestAgent(google.protobuf.Empty) returns (ForwardGuestAgentResponse);
-    rpc GuestAgentConn(google.protobuf.Empty) returns (stream GuestAgentConnResponse);
+    rpc GuestAgentConn(stream GuestAgentConnStream) returns (stream GuestAgentConnStream);
 
     rpc SetConfig(SetConfigRequest) returns (google.protobuf.Empty);
 
@@ -73,6 +73,6 @@ message ForwardGuestAgentResponse {
     bool should_forward = 1;
 }
 
-message GuestAgentConnResponse {
+message GuestAgentConnStream {
     bytes net_conn = 1;
 }

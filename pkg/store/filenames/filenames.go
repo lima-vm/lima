@@ -59,7 +59,7 @@ const (
 	HostAgentSock           = "ha.sock"
 	HostAgentStdoutLog      = "ha.stdout.log"
 	HostAgentStderrLog      = "ha.stderr.log"
-	ExternalDriverStderrLog = "ed.stderr.log"
+	ExternalDriverStderrLog = "driver.stderr.log"
 	VzIdentifier            = "vz-identifier"
 	VzEfi                   = "vz-efi"           // efi variable store
 	QemuEfiCodeFD           = "qemu-efi-code.fd" // efi code; not always created
