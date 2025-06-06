@@ -64,8 +64,7 @@ func (s *DriverServer) SetConfig(ctx context.Context, req *pb.SetConfigRequest) 
 	return &emptypb.Empty{}, nil
 }
 
-// NOTE: If this doesn't work, try with bidirectional streaming(like in buildkit) and see if that helps.
-func (s *DriverServer) GuestAgentConn(empty *emptypb.Empty, stream pb.Driver_GuestAgentConnServer) error {
+func (s *DriverServer) GuestAgentConn(stream pb.Driver_GuestAgentConnServer) error {
 	s.logger.Debug("Received GuestAgentConn request")
 	conn, err := s.driver.GuestAgentConn(stream.Context())
 	if err != nil {
@@ -73,10 +72,23 @@ func (s *DriverServer) GuestAgentConn(empty *emptypb.Empty, stream pb.Driver_Gue
 		return err
 	}
 
-	defer conn.Close()
+	go func() {
+		for {
+			msg, err := stream.Recv()
+			if err != nil {
+				return
+			}
+			if len(msg.NetConn) > 0 {
+				_, err = conn.Write(msg.NetConn)
+				if err != nil {
+					s.logger.Errorf("Error writing to connection: %v", err)
+					return
+				}
+			}
+		}
+	}()
 
 	buf := make([]byte, 32*1<<10)
-
 	for {
 		n, err := conn.Read(buf)
 		if err != nil {
@@ -86,7 +98,7 @@ func (s *DriverServer) GuestAgentConn(empty *emptypb.Empty, stream pb.Driver_Gue
 			return status.Errorf(codes.Internal, "error reading: %v", err)
 		}
 
-		msg := &pb.GuestAgentConnResponse{NetConn: buf[:n]}
+		msg := &pb.GuestAgentConnStream{NetConn: buf[:n]}
 		if err := stream.Send(msg); err != nil {
 			return err
 		}
