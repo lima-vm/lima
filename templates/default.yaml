@@ -40,7 +40,7 @@ disk: null
 # 🟢 Builtin default: [] (Mount nothing)
 # 🔵 This file: Mount the home as read-only, /tmp/lima as writable  (inherited via the `base` mechanism later in this file)
 mounts: []
-#- location: "~"
+# - location: "~"
 #  # Configure the mountPoint inside the guest.
 #  # 🟢 Builtin default: value of location
 #  mountPoint: null
@@ -79,7 +79,7 @@ mounts: []
 #    # See https://www.kernel.org/doc/Documentation/filesystems/9p.txt
 #    # 🟢 Builtin default: "fscache" for non-writable mounts, "mmap" for writable mounts
 #    cache: null
-#- location: "/tmp/lima"
+# - location: "/tmp/lima"
 #  # 🟢 Builtin default: false
 #  # 🔵 This file: true (only for "/tmp/lima")
 #  writable: true
