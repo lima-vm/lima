@@ -232,9 +232,7 @@ jobs:
       # QEMU:      required by Lima itself
       # bash:      required by test-templates.sh (OS version of bash is too old)
       # coreutils: required by test-templates.sh for the "timeout" command
-      # curl:      required by test-templates.sh to download nerdctl for alpine
-      # jq:        required by test-templates.sh to determine download URL for nerdctl
-      run: brew install qemu bash coreutils curl jq
+      run: brew install qemu bash coreutils
     - name: "Adjust LIMACTL_CREATE_ARGS"
       run: echo "LIMACTL_CREATE_ARGS=${LIMACTL_CREATE_ARGS} --vm-type=qemu" >>$GITHUB_ENV
     - name: "Inject `no_timer_check` to kernel cmdline"
@@ -497,7 +495,7 @@ jobs:
       with:
         template: templates/${{ matrix.template }}
     - name: Install test dependencies
-      run: brew install bash coreutils jq
+      run: brew install bash coreutils
     - name: Uninstall qemu
       run: brew uninstall --ignore-dependencies --force qemu
     - name: Test
