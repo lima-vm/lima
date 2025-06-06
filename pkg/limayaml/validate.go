@@ -144,6 +144,8 @@ func Validate(y *LimaYAML, warn bool) error {
 		}
 	}
 
+	var mountWarnings []string
+
 	for i, f := range y.Mounts {
 		if !filepath.IsAbs(f.Location) && !strings.HasPrefix(f.Location, "~") {
 			return fmt.Errorf("field `mounts[%d].location` must be an absolute path, got %q",
@@ -159,6 +161,7 @@ func Validate(y *LimaYAML, warn bool) error {
 			if !errors.Is(err, os.ErrNotExist) {
 				return fmt.Errorf("field `mounts[%d].location` refers to an inaccessible path: %q: %w", i, f.Location, err)
 			}
+			mountWarnings = append(mountWarnings, fmt.Sprintf("field `mounts[%d].location` non-existent directory: %q:", i, f.Location))
 		} else if !st.IsDir() {
 			return fmt.Errorf("field `mounts[%d].location` refers to a non-directory path: %q: %w", i, f.Location, err)
 		}
@@ -177,6 +180,12 @@ func Validate(y *LimaYAML, warn bool) error {
 
 		if _, err := units.RAMInBytes(*f.NineP.Msize); err != nil {
 			return fmt.Errorf("field `msize` has an invalid value: %w", err)
+		}
+	}
+
+	if warn && len(mountWarnings) > 0 {
+		for _, warning := range mountWarnings {
+			logrus.Warn(warning)
 		}
 	}
 
