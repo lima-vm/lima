@@ -15,7 +15,7 @@ The guest IP address is set to `192.168.5.15`.
 
 This IP address is not accessible from the host by design.
 
-Use [VMNet]]({{< ref "/docs/config/network/vmnet" >}}) to allow accessing the guest IP from the host and other guests.
+Use [VMNet]({{< ref "/docs/config/network/vmnet" >}}) to allow accessing the guest IP from the host and other guests.
 
 ## Host IP (192.168.5.2)
 
