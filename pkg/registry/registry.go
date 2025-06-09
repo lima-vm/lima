@@ -106,6 +106,52 @@ func (e *ExternalDriver) Start() error {
 	return nil
 }
 
+func (e *ExternalDriver) cleanup() {
+	if e.cancelFunc != nil {
+		e.cancelFunc()
+	}
+	if e.Stdin != nil {
+		e.Stdin.Close()
+	}
+	if e.Stdout != nil {
+		e.Stdout.Close()
+	}
+	e.Command = nil
+	e.Client = nil
+	e.ctx = nil
+	e.cancelFunc = nil
+}
+
+func (e *ExternalDriver) Stop() error {
+	if e.Command == nil || e.Command.Process == nil {
+		return fmt.Errorf("external driver %s is not running", e.Name)
+	}
+
+	e.logger.Infof("Stopping external driver %s", e.Name)
+	e.cleanup()
+
+	e.logger.Infof("External driver %s stopped successfully", e.Name)
+	return nil
+}
+
+func (r *Registry) StopAllExternalDrivers() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	for name, driver := range r.externalDrivers {
+		// Only try to stop if the driver is actually running
+		if driver.Command != nil && driver.Command.Process != nil {
+			if err := driver.Stop(); err != nil {
+				logrus.Errorf("Failed to stop external driver %s: %v", name, err)
+			} else {
+				logrus.Infof("External driver %s stopped successfully", name)
+			}
+		}
+		// Always remove from registry
+		delete(r.externalDrivers, name)
+	}
+}
+
 func (r *Registry) List() []string {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -130,13 +176,18 @@ func (r *Registry) Get(name string) (driver.Driver, bool) {
 		externalDriver, exists := r.externalDrivers[name]
 		if exists {
 			externalDriver.logger.Debugf("Using external driver %q", name)
-			if err := externalDriver.Start(); err != nil {
-				externalDriver.logger.Errorf("Failed to start external driver %q: %v", name, err)
-				return nil, false
+			if externalDriver.Client == nil || externalDriver.Command == nil || externalDriver.Command.Process == nil {
+				logrus.Infof("Starting new instance of external driver %q", name)
+				if err := externalDriver.Start(); err != nil {
+					externalDriver.logger.Errorf("Failed to start external driver %q: %v", name, err)
+					return nil, false
+				}
+			} else {
+				logrus.Infof("Reusing existing external driver %q instance", name)
 			}
+
 			return externalDriver.Client, true
 		}
-
 	}
 	return driver, exists
 }
