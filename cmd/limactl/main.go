@@ -19,6 +19,7 @@ import (
 	// _ "github.com/lima-vm/lima/pkg/driver/qemu" // register qemu driver for all platforms
 	"github.com/lima-vm/lima/pkg/fsutil"
 	"github.com/lima-vm/lima/pkg/osutil"
+	"github.com/lima-vm/lima/pkg/registry"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/version"
 )
@@ -44,6 +45,8 @@ func main() {
 		handleExitCoder(err)
 		logrus.Fatal(err)
 	}
+
+	defer registry.DefaultRegistry.StopAllExternalDrivers()
 }
 
 func newApp() *cobra.Command {
