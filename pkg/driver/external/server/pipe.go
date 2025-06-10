@@ -13,6 +13,7 @@ import (
 type PipeConn struct {
 	Reader io.Reader
 	Writer io.Writer
+	Closer io.Closer
 }
 
 func (p *PipeConn) Read(b []byte) (n int, err error) {
@@ -24,7 +25,7 @@ func (p *PipeConn) Write(b []byte) (n int, err error) {
 }
 
 func (p *PipeConn) Close() error {
-	return nil
+	return p.Closer.Close()
 }
 
 func (p *PipeConn) LocalAddr() net.Addr {

@@ -8,13 +8,11 @@ import (
 	"io"
 	"math"
 	"net"
-	"time"
 
 	pb "github.com/lima-vm/lima/pkg/driver/external"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/keepalive"
 )
 
 type DriverClient struct {
@@ -36,11 +34,6 @@ func NewDriverClient(stdin io.WriteCloser, stdout io.ReadCloser, logger *logrus.
 			return pipeConn, nil
 		}),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithKeepaliveParams(keepalive.ClientParameters{
-			Time:                10 * time.Second,
-			Timeout:             20 * time.Second,
-			PermitWithoutStream: true,
-		}),
 	}
 
 	// conn, err := grpc.NewClient("pipe", opts...)
@@ -48,6 +41,8 @@ func NewDriverClient(stdin io.WriteCloser, stdout io.ReadCloser, logger *logrus.
 	// 	logger.Errorf("failed to create gRPC driver client connection: %v", err)
 	// 	return nil, err
 	// }
+	// -> ERRO[2025-06-04T21:32:54+05:30] Failed to set config: rpc error: code =
+	// Unavailable desc = name resolver error: produced zero addresses
 
 	conn, err := grpc.Dial("pipe", opts...)
 	if err != nil {

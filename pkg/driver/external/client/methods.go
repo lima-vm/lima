@@ -14,6 +14,7 @@ import (
 
 	"github.com/lima-vm/lima/pkg/driver"
 	pb "github.com/lima-vm/lima/pkg/driver/external"
+	"github.com/lima-vm/lima/pkg/driver/external/client/grpchijack"
 	"github.com/lima-vm/lima/pkg/store"
 )
 
@@ -259,7 +260,7 @@ func (d *DriverClient) GuestAgentConn(ctx context.Context) (net.Conn, error) {
 		return nil, err
 	}
 
-	return streamToConn(connStream), nil
+	return grpchijack.StreamToConn(connStream), nil
 }
 
 func (d *DriverClient) GetInfo() driver.Info {

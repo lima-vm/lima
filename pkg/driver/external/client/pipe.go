@@ -12,9 +12,10 @@ import (
 type PipeConn struct {
 	Reader io.Reader
 	Writer io.Writer
+	Closer io.Closer
 }
 
-func newPipeConn(writer io.WriteCloser, reader io.ReadCloser) *PipeConn {
+func newPipeConn(writer io.WriteCloser, reader io.ReadCloser) net.Conn {
 	return &PipeConn{
 		Reader: reader,
 		Writer: writer,
@@ -30,16 +31,7 @@ func (p *PipeConn) Write(b []byte) (n int, err error) {
 }
 
 func (p *PipeConn) Close() error {
-	var err error
-	if closer, ok := p.Reader.(io.Closer); ok {
-		err = closer.Close()
-	}
-	if closer, ok := p.Writer.(io.Closer); ok {
-		if closeErr := closer.Close(); closeErr != nil && err == nil {
-			err = closeErr
-		}
-	}
-	return err
+	return p.Closer.Close()
 }
 
 func (p *PipeConn) LocalAddr() net.Addr {
