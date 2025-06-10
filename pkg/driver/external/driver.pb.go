@@ -478,27 +478,27 @@ func (x *ForwardGuestAgentResponse) GetShouldForward() bool {
 	return false
 }
 
-type GuestAgentConnStream struct {
+type BytesMessage struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	NetConn       []byte                 `protobuf:"bytes,1,opt,name=net_conn,json=netConn,proto3" json:"net_conn,omitempty"`
+	Data          []byte                 `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GuestAgentConnStream) Reset() {
-	*x = GuestAgentConnStream{}
+func (x *BytesMessage) Reset() {
+	*x = BytesMessage{}
 	mi := &file_pkg_driver_external_driver_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GuestAgentConnStream) String() string {
+func (x *BytesMessage) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GuestAgentConnStream) ProtoMessage() {}
+func (*BytesMessage) ProtoMessage() {}
 
-func (x *GuestAgentConnStream) ProtoReflect() protoreflect.Message {
+func (x *BytesMessage) ProtoReflect() protoreflect.Message {
 	mi := &file_pkg_driver_external_driver_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -510,14 +510,14 @@ func (x *GuestAgentConnStream) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GuestAgentConnStream.ProtoReflect.Descriptor instead.
-func (*GuestAgentConnStream) Descriptor() ([]byte, []int) {
+// Deprecated: Use BytesMessage.ProtoReflect.Descriptor instead.
+func (*BytesMessage) Descriptor() ([]byte, []int) {
 	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{10}
 }
 
-func (x *GuestAgentConnStream) GetNetConn() []byte {
+func (x *BytesMessage) GetData() []byte {
 	if x != nil {
-		return x.NetConn
+		return x.Data
 	}
 	return nil
 }
@@ -550,9 +550,9 @@ const file_pkg_driver_external_driver_proto_rawDesc = "" +
 	"\x15ListSnapshotsResponse\x12\x1c\n" +
 	"\tsnapshots\x18\x01 \x01(\tR\tsnapshots\"B\n" +
 	"\x19ForwardGuestAgentResponse\x12%\n" +
-	"\x0eshould_forward\x18\x01 \x01(\bR\rshouldForward\"1\n" +
-	"\x14GuestAgentConnStream\x12\x19\n" +
-	"\bnet_conn\x18\x01 \x01(\fR\anetConn2\xfa\b\n" +
+	"\x0eshould_forward\x18\x01 \x01(\bR\rshouldForward\"\"\n" +
+	"\fBytesMessage\x12\x12\n" +
+	"\x04data\x18\x01 \x01(\fR\x04data2\xea\b\n" +
 	"\x06Driver\x12:\n" +
 	"\bValidate\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x12<\n" +
 	"\n" +
@@ -571,8 +571,8 @@ const file_pkg_driver_external_driver_proto_rawDesc = "" +
 	"\bRegister\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x12<\n" +
 	"\n" +
 	"Unregister\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x12G\n" +
-	"\x11ForwardGuestAgent\x12\x16.google.protobuf.Empty\x1a\x1a.ForwardGuestAgentResponse\x12B\n" +
-	"\x0eGuestAgentConn\x12\x15.GuestAgentConnStream\x1a\x15.GuestAgentConnStream(\x010\x01\x126\n" +
+	"\x11ForwardGuestAgent\x12\x16.google.protobuf.Empty\x1a\x1a.ForwardGuestAgentResponse\x122\n" +
+	"\x0eGuestAgentConn\x12\r.BytesMessage\x1a\r.BytesMessage(\x010\x01\x126\n" +
 	"\tSetConfig\x12\x11.SetConfigRequest\x1a\x16.google.protobuf.Empty\x120\n" +
 	"\aGetInfo\x12\x16.google.protobuf.Empty\x1a\r.InfoResponseB-Z+github.com/lima-vm/lima/pkg/driver/externalb\x06proto3"
 
@@ -600,7 +600,7 @@ var file_pkg_driver_external_driver_proto_goTypes = []any{
 	(*DeleteSnapshotRequest)(nil),        // 7: DeleteSnapshotRequest
 	(*ListSnapshotsResponse)(nil),        // 8: ListSnapshotsResponse
 	(*ForwardGuestAgentResponse)(nil),    // 9: ForwardGuestAgentResponse
-	(*GuestAgentConnStream)(nil),         // 10: GuestAgentConnStream
+	(*BytesMessage)(nil),                 // 10: BytesMessage
 	(*emptypb.Empty)(nil),                // 11: google.protobuf.Empty
 }
 var file_pkg_driver_external_driver_proto_depIdxs = []int32{
@@ -619,7 +619,7 @@ var file_pkg_driver_external_driver_proto_depIdxs = []int32{
 	11, // 12: Driver.Register:input_type -> google.protobuf.Empty
 	11, // 13: Driver.Unregister:input_type -> google.protobuf.Empty
 	11, // 14: Driver.ForwardGuestAgent:input_type -> google.protobuf.Empty
-	10, // 15: Driver.GuestAgentConn:input_type -> GuestAgentConnStream
+	10, // 15: Driver.GuestAgentConn:input_type -> BytesMessage
 	2,  // 16: Driver.SetConfig:input_type -> SetConfigRequest
 	11, // 17: Driver.GetInfo:input_type -> google.protobuf.Empty
 	11, // 18: Driver.Validate:output_type -> google.protobuf.Empty
@@ -637,7 +637,7 @@ var file_pkg_driver_external_driver_proto_depIdxs = []int32{
 	11, // 30: Driver.Register:output_type -> google.protobuf.Empty
 	11, // 31: Driver.Unregister:output_type -> google.protobuf.Empty
 	9,  // 32: Driver.ForwardGuestAgent:output_type -> ForwardGuestAgentResponse
-	10, // 33: Driver.GuestAgentConn:output_type -> GuestAgentConnStream
+	10, // 33: Driver.GuestAgentConn:output_type -> BytesMessage
 	11, // 34: Driver.SetConfig:output_type -> google.protobuf.Empty
 	0,  // 35: Driver.GetInfo:output_type -> InfoResponse
 	18, // [18:36] is the sub-list for method output_type

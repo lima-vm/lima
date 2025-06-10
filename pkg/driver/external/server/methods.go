@@ -66,11 +66,12 @@ func (s *DriverServer) SetConfig(ctx context.Context, req *pb.SetConfigRequest) 
 
 func (s *DriverServer) GuestAgentConn(stream pb.Driver_GuestAgentConnServer) error {
 	s.logger.Debug("Received GuestAgentConn request")
-	conn, err := s.driver.GuestAgentConn(stream.Context())
+	conn, err := s.driver.GuestAgentConn(context.Background())
 	if err != nil {
 		s.logger.Errorf("GuestAgentConn failed: %v", err)
 		return err
 	}
+	s.logger.Debug("GuestAgentConn succeeded")
 
 	go func() {
 		for {
@@ -78,10 +79,12 @@ func (s *DriverServer) GuestAgentConn(stream pb.Driver_GuestAgentConnServer) err
 			if err != nil {
 				return
 			}
-			if len(msg.NetConn) > 0 {
-				_, err = conn.Write(msg.NetConn)
+			s.logger.Debugf("Received message from stream: %d bytes", len(msg.Data))
+			if len(msg.Data) > 0 {
+				_, err = conn.Write(msg.Data)
 				if err != nil {
 					s.logger.Errorf("Error writing to connection: %v", err)
+					conn.Close()
 					return
 				}
 			}
@@ -93,13 +96,16 @@ func (s *DriverServer) GuestAgentConn(stream pb.Driver_GuestAgentConnServer) err
 		n, err := conn.Read(buf)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
+				s.logger.Debugf("Connection closed by guest agent %v", err)
 				return nil
 			}
 			return status.Errorf(codes.Internal, "error reading: %v", err)
 		}
+		s.logger.Debugf("Sending %d bytes to stream", n)
 
-		msg := &pb.GuestAgentConnStream{NetConn: buf[:n]}
+		msg := &pb.BytesMessage{Data: buf[:n]}
 		if err := stream.Send(msg); err != nil {
+			s.logger.Errorf("Failed to send message to stream: %v", err)
 			return err
 		}
 	}
