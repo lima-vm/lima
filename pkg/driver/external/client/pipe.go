@@ -6,6 +6,7 @@ package client
 import (
 	"io"
 	"net"
+	"os"
 	"time"
 )
 
@@ -19,6 +20,7 @@ func newPipeConn(writer io.WriteCloser, reader io.ReadCloser) net.Conn {
 	return &PipeConn{
 		Reader: reader,
 		Writer: writer,
+		Closer: os.Stdout,
 	}
 }
 
