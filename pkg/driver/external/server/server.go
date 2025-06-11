@@ -31,6 +31,7 @@ func Serve(driver driver.Driver) {
 	pipeConn := &PipeConn{
 		Reader: os.Stdin,
 		Writer: os.Stdout,
+		Closer: os.Stdout,
 	}
 
 	listener := NewPipeListener(pipeConn)
