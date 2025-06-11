@@ -16,21 +16,23 @@ import (
 
 	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/driver/external/client"
+	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/lima-vm/lima/pkg/usrlocalsharelima"
 	"github.com/sirupsen/logrus"
 )
 
 type ExternalDriver struct {
-	Name       string
-	Command    *exec.Cmd
-	Stdin      io.WriteCloser
-	Stdout     io.ReadCloser
-	Client     *client.DriverClient // Client is the gRPC client for the external driver
-	Path       string
-	ctx        context.Context
-	logger     *logrus.Logger
-	cancelFunc context.CancelFunc
+	Name         string
+	InstanceName string
+	Command      *exec.Cmd
+	Stdin        io.WriteCloser
+	Stdout       io.ReadCloser
+	Client       *client.DriverClient // Client is the gRPC client for the external driver
+	Path         string
+	ctx          context.Context
+	logger       *logrus.Logger
+	cancelFunc   context.CancelFunc
 }
 
 type Registry struct {
@@ -46,8 +48,12 @@ func NewRegistry() *Registry {
 	}
 }
 
-func (e *ExternalDriver) Start() error {
+func (e *ExternalDriver) Start(instName string) error {
 	e.logger.Infof("Starting external driver at %s", e.Path)
+	if instName == "" {
+		return fmt.Errorf("instance name cannot be empty")
+	}
+	e.InstanceName = instName
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cmd := exec.CommandContext(ctx, e.Path)
@@ -64,12 +70,12 @@ func (e *ExternalDriver) Start() error {
 		return fmt.Errorf("failed to create stdout pipe: %w", err)
 	}
 
-	sharedDir, err := usrlocalsharelima.Dir()
+	instanceDir, err := store.InstanceDir(e.InstanceName)
 	if err != nil {
 		cancel()
-		return fmt.Errorf("failed to determine Lima share directory: %w", err)
+		return fmt.Errorf("failed to determine instance directory: %w", err)
 	}
-	logPath := filepath.Join(sharedDir, filenames.ExternalDriverStderrLog)
+	logPath := filepath.Join(instanceDir, filenames.ExternalDriverStderrLog)
 	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
 		cancel()
@@ -167,7 +173,7 @@ func (r *Registry) List() []string {
 	return names
 }
 
-func (r *Registry) Get(name string) (driver.Driver, bool) {
+func (r *Registry) Get(name, instName string) (driver.Driver, bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -178,12 +184,13 @@ func (r *Registry) Get(name string) (driver.Driver, bool) {
 			externalDriver.logger.Debugf("Using external driver %q", name)
 			if externalDriver.Client == nil || externalDriver.Command == nil || externalDriver.Command.Process == nil {
 				logrus.Infof("Starting new instance of external driver %q", name)
-				if err := externalDriver.Start(); err != nil {
+				if err := externalDriver.Start(instName); err != nil {
 					externalDriver.logger.Errorf("Failed to start external driver %q: %v", name, err)
 					return nil, false
 				}
 			} else {
 				logrus.Infof("Reusing existing external driver %q instance", name)
+				r.externalDrivers[name].InstanceName = instName
 			}
 
 			return externalDriver.Client, true

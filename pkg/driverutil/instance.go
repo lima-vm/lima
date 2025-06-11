@@ -14,7 +14,7 @@ import (
 // CreateTargetDriverInstance creates the appropriate driver for an instance.
 func CreateTargetDriverInstance(inst *store.Instance, sshLocalPort int) (driver.Driver, error) {
 	limaDriver := inst.Config.VMType
-	driver, exists := registry.DefaultRegistry.Get(string(*limaDriver))
+	driver, exists := registry.DefaultRegistry.Get(string(*limaDriver), inst.Name)
 	if !exists {
 		return nil, fmt.Errorf("unknown or unsupported VM type: %s", *limaDriver)
 	}
