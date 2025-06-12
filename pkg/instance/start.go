@@ -402,19 +402,31 @@ func prepareDiffDisk(inst *store.Instance) error {
 		return err
 	}
 
-	f, err := os.Open(diffDisk)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
+	var diskSize int64
+	var format string
+	if *inst.Config.VMType != limayaml.VBOX {
+		f, err := os.Open(diffDisk)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
 
-	img, err := qcow2reader.Open(f)
-	if err != nil {
-		return err
-	}
+		img, err := qcow2reader.Open(f)
+		if err != nil {
+			return err
+		}
 
-	diskSize := img.Size()
-	format := string(img.Type())
+		diskSize = img.Size()
+		format = string(img.Type())
+	} else {
+		info, err := imgutil.GetInfo(diffDisk)
+		if err != nil {
+			return err
+		}
+
+		diskSize = info.VSize
+		format = info.Format
+	}
 
 	if inst.Disk == diskSize {
 		return nil

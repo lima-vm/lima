@@ -1,0 +1,20 @@
+# A template to run ubuntu using vmType: vbox instead of qemu (Default)
+
+minimumLimaVersion: 1.1.0
+
+base:
+- template://_images/ubuntu-lts
+- template://_default/mounts
+
+vmType: vbox
+
+# Arch: "default", "x86_64", "aarch64".
+# 🟢 Builtin default: "default" (corresponds to the host architecture)
+arch: "x86_64"
+
+video:
+  # VirtualBox display, e.g., "none" (or "headless"), "default" (or "gui")
+  # Choosing "none" will hide the video output, and not show any window.
+  # Choosing "default" will show a window while the instance is running.
+  # 🟢 Builtin default: "none"
+  display: null
