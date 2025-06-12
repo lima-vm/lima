@@ -9,6 +9,7 @@
 
 # Lima: Linux Machines
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/lima-vm/lima)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/6505/badge)](https://www.bestpractices.dev/projects/6505)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/lima-vm/lima/badge)](https://scorecard.dev/viewer/?uri=github.com/lima-vm/lima)
 
