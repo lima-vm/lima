@@ -14,7 +14,6 @@ import (
 
 	"github.com/lima-vm/lima/pkg/driver"
 	pb "github.com/lima-vm/lima/pkg/driver/external"
-	"github.com/lima-vm/lima/pkg/driver/external/client/grpchijack"
 	"github.com/lima-vm/lima/pkg/store"
 )
 
@@ -240,27 +239,23 @@ func (d *DriverClient) ForwardGuestAgent() bool {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	resp, err := d.DriverSvc.ForwardGuestAgent(ctx, &emptypb.Empty{})
+	_, err := d.DriverSvc.ForwardGuestAgent(ctx, &emptypb.Empty{})
 	if err != nil {
 		d.logger.Errorf("Failed to check guest agent forwarding: %v", err)
 		return false
 	}
 
-	d.logger.Debugf("Guest agent forwarding status: %v", resp.ShouldForward)
-	return resp.ShouldForward
+	return true
 }
 
-// NOTE: This method is might not work correctly.
 func (d *DriverClient) GuestAgentConn(ctx context.Context) (net.Conn, error) {
-	d.logger.Debug("Getting guest agent connection")
-
-	connStream, err := d.DriverSvc.GuestAgentConn(ctx)
+	d.logger.Info("Getting guest agent connection")
+	_, err := d.DriverSvc.GuestAgentConn(ctx, &emptypb.Empty{})
 	if err != nil {
 		d.logger.Errorf("Failed to get guest agent connection: %v", err)
 		return nil, err
 	}
-
-	return grpchijack.StreamToConn(connStream), nil
+	return nil, nil
 }
 
 func (d *DriverClient) GetInfo() driver.Info {

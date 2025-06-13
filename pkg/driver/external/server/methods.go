@@ -6,8 +6,7 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"errors"
-	"io"
+	"path/filepath"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -15,6 +14,7 @@ import (
 
 	pb "github.com/lima-vm/lima/pkg/driver/external"
 	"github.com/lima-vm/lima/pkg/store"
+	"github.com/lima-vm/lima/pkg/store/filenames"
 )
 
 func (s *DriverServer) Start(empty *emptypb.Empty, stream pb.Driver_StartServer) error {
@@ -64,51 +64,17 @@ func (s *DriverServer) SetConfig(ctx context.Context, req *pb.SetConfigRequest) 
 	return &emptypb.Empty{}, nil
 }
 
-func (s *DriverServer) GuestAgentConn(stream pb.Driver_GuestAgentConnServer) error {
+func (s *DriverServer) GuestAgentConn(ctx context.Context, empty *emptypb.Empty) (*emptypb.Empty, error) {
 	s.logger.Debug("Received GuestAgentConn request")
-	conn, err := s.driver.GuestAgentConn(context.Background())
+	conn, err := s.driver.GuestAgentConn(ctx)
 	if err != nil {
 		s.logger.Errorf("GuestAgentConn failed: %v", err)
-		return err
+		return &emptypb.Empty{}, status.Errorf(codes.Internal, "failed to establish guest agent connection: %v", err)
 	}
-	s.logger.Debug("GuestAgentConn succeeded")
 
-	go func() {
-		for {
-			msg, err := stream.Recv()
-			if err != nil {
-				return
-			}
-			s.logger.Debugf("Received message from stream: %d bytes", len(msg.Data))
-			if len(msg.Data) > 0 {
-				_, err = conn.Write(msg.Data)
-				if err != nil {
-					s.logger.Errorf("Error writing to connection: %v", err)
-					conn.Close()
-					return
-				}
-			}
-		}
-	}()
-
-	buf := make([]byte, 32*1<<10)
-	for {
-		n, err := conn.Read(buf)
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				s.logger.Debugf("Connection closed by guest agent %v", err)
-				return nil
-			}
-			return status.Errorf(codes.Internal, "error reading: %v", err)
-		}
-		s.logger.Debugf("Sending %d bytes to stream", n)
-
-		msg := &pb.BytesMessage{Data: buf[:n]}
-		if err := stream.Send(msg); err != nil {
-			s.logger.Errorf("Failed to send message to stream: %v", err)
-			return err
-		}
-	}
+	go HandleProxyConnection(conn, filepath.Join("/Users/ansumansahoo/.lima/default/", filenames.GuestAgentSock))
+	s.logger.Debug("GuestAgentConn succeeded, connection handled")
+	return &emptypb.Empty{}, nil
 }
 
 func (s *DriverServer) GetInfo(ctx context.Context, empty *emptypb.Empty) (*pb.InfoResponse, error) {

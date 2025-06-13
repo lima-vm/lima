@@ -478,50 +478,6 @@ func (x *ForwardGuestAgentResponse) GetShouldForward() bool {
 	return false
 }
 
-type BytesMessage struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Data          []byte                 `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *BytesMessage) Reset() {
-	*x = BytesMessage{}
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[10]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *BytesMessage) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*BytesMessage) ProtoMessage() {}
-
-func (x *BytesMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[10]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use BytesMessage.ProtoReflect.Descriptor instead.
-func (*BytesMessage) Descriptor() ([]byte, []int) {
-	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{10}
-}
-
-func (x *BytesMessage) GetData() []byte {
-	if x != nil {
-		return x.Data
-	}
-	return nil
-}
-
 var File_pkg_driver_external_driver_proto protoreflect.FileDescriptor
 
 const file_pkg_driver_external_driver_proto_rawDesc = "" +
@@ -550,9 +506,7 @@ const file_pkg_driver_external_driver_proto_rawDesc = "" +
 	"\x15ListSnapshotsResponse\x12\x1c\n" +
 	"\tsnapshots\x18\x01 \x01(\tR\tsnapshots\"B\n" +
 	"\x19ForwardGuestAgentResponse\x12%\n" +
-	"\x0eshould_forward\x18\x01 \x01(\bR\rshouldForward\"\"\n" +
-	"\fBytesMessage\x12\x12\n" +
-	"\x04data\x18\x01 \x01(\fR\x04data2\xea\b\n" +
+	"\x0eshould_forward\x18\x01 \x01(\bR\rshouldForward2\xf8\b\n" +
 	"\x06Driver\x12:\n" +
 	"\bValidate\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x12<\n" +
 	"\n" +
@@ -571,8 +525,8 @@ const file_pkg_driver_external_driver_proto_rawDesc = "" +
 	"\bRegister\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x12<\n" +
 	"\n" +
 	"Unregister\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x12G\n" +
-	"\x11ForwardGuestAgent\x12\x16.google.protobuf.Empty\x1a\x1a.ForwardGuestAgentResponse\x122\n" +
-	"\x0eGuestAgentConn\x12\r.BytesMessage\x1a\r.BytesMessage(\x010\x01\x126\n" +
+	"\x11ForwardGuestAgent\x12\x16.google.protobuf.Empty\x1a\x1a.ForwardGuestAgentResponse\x12@\n" +
+	"\x0eGuestAgentConn\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x126\n" +
 	"\tSetConfig\x12\x11.SetConfigRequest\x1a\x16.google.protobuf.Empty\x120\n" +
 	"\aGetInfo\x12\x16.google.protobuf.Empty\x1a\r.InfoResponseB-Z+github.com/lima-vm/lima/pkg/driver/externalb\x06proto3"
 
@@ -588,7 +542,7 @@ func file_pkg_driver_external_driver_proto_rawDescGZIP() []byte {
 	return file_pkg_driver_external_driver_proto_rawDescData
 }
 
-var file_pkg_driver_external_driver_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_pkg_driver_external_driver_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_pkg_driver_external_driver_proto_goTypes = []any{
 	(*InfoResponse)(nil),                 // 0: InfoResponse
 	(*StartResponse)(nil),                // 1: StartResponse
@@ -600,45 +554,44 @@ var file_pkg_driver_external_driver_proto_goTypes = []any{
 	(*DeleteSnapshotRequest)(nil),        // 7: DeleteSnapshotRequest
 	(*ListSnapshotsResponse)(nil),        // 8: ListSnapshotsResponse
 	(*ForwardGuestAgentResponse)(nil),    // 9: ForwardGuestAgentResponse
-	(*BytesMessage)(nil),                 // 10: BytesMessage
-	(*emptypb.Empty)(nil),                // 11: google.protobuf.Empty
+	(*emptypb.Empty)(nil),                // 10: google.protobuf.Empty
 }
 var file_pkg_driver_external_driver_proto_depIdxs = []int32{
-	11, // 0: Driver.Validate:input_type -> google.protobuf.Empty
-	11, // 1: Driver.Initialize:input_type -> google.protobuf.Empty
-	11, // 2: Driver.CreateDisk:input_type -> google.protobuf.Empty
-	11, // 3: Driver.Start:input_type -> google.protobuf.Empty
-	11, // 4: Driver.Stop:input_type -> google.protobuf.Empty
-	11, // 5: Driver.RunGUI:input_type -> google.protobuf.Empty
+	10, // 0: Driver.Validate:input_type -> google.protobuf.Empty
+	10, // 1: Driver.Initialize:input_type -> google.protobuf.Empty
+	10, // 2: Driver.CreateDisk:input_type -> google.protobuf.Empty
+	10, // 3: Driver.Start:input_type -> google.protobuf.Empty
+	10, // 4: Driver.Stop:input_type -> google.protobuf.Empty
+	10, // 5: Driver.RunGUI:input_type -> google.protobuf.Empty
 	3,  // 6: Driver.ChangeDisplayPassword:input_type -> ChangeDisplayPasswordRequest
-	11, // 7: Driver.GetDisplayConnection:input_type -> google.protobuf.Empty
+	10, // 7: Driver.GetDisplayConnection:input_type -> google.protobuf.Empty
 	5,  // 8: Driver.CreateSnapshot:input_type -> CreateSnapshotRequest
 	6,  // 9: Driver.ApplySnapshot:input_type -> ApplySnapshotRequest
 	7,  // 10: Driver.DeleteSnapshot:input_type -> DeleteSnapshotRequest
-	11, // 11: Driver.ListSnapshots:input_type -> google.protobuf.Empty
-	11, // 12: Driver.Register:input_type -> google.protobuf.Empty
-	11, // 13: Driver.Unregister:input_type -> google.protobuf.Empty
-	11, // 14: Driver.ForwardGuestAgent:input_type -> google.protobuf.Empty
-	10, // 15: Driver.GuestAgentConn:input_type -> BytesMessage
+	10, // 11: Driver.ListSnapshots:input_type -> google.protobuf.Empty
+	10, // 12: Driver.Register:input_type -> google.protobuf.Empty
+	10, // 13: Driver.Unregister:input_type -> google.protobuf.Empty
+	10, // 14: Driver.ForwardGuestAgent:input_type -> google.protobuf.Empty
+	10, // 15: Driver.GuestAgentConn:input_type -> google.protobuf.Empty
 	2,  // 16: Driver.SetConfig:input_type -> SetConfigRequest
-	11, // 17: Driver.GetInfo:input_type -> google.protobuf.Empty
-	11, // 18: Driver.Validate:output_type -> google.protobuf.Empty
-	11, // 19: Driver.Initialize:output_type -> google.protobuf.Empty
-	11, // 20: Driver.CreateDisk:output_type -> google.protobuf.Empty
+	10, // 17: Driver.GetInfo:input_type -> google.protobuf.Empty
+	10, // 18: Driver.Validate:output_type -> google.protobuf.Empty
+	10, // 19: Driver.Initialize:output_type -> google.protobuf.Empty
+	10, // 20: Driver.CreateDisk:output_type -> google.protobuf.Empty
 	1,  // 21: Driver.Start:output_type -> StartResponse
-	11, // 22: Driver.Stop:output_type -> google.protobuf.Empty
-	11, // 23: Driver.RunGUI:output_type -> google.protobuf.Empty
-	11, // 24: Driver.ChangeDisplayPassword:output_type -> google.protobuf.Empty
+	10, // 22: Driver.Stop:output_type -> google.protobuf.Empty
+	10, // 23: Driver.RunGUI:output_type -> google.protobuf.Empty
+	10, // 24: Driver.ChangeDisplayPassword:output_type -> google.protobuf.Empty
 	4,  // 25: Driver.GetDisplayConnection:output_type -> GetDisplayConnectionResponse
-	11, // 26: Driver.CreateSnapshot:output_type -> google.protobuf.Empty
-	11, // 27: Driver.ApplySnapshot:output_type -> google.protobuf.Empty
-	11, // 28: Driver.DeleteSnapshot:output_type -> google.protobuf.Empty
+	10, // 26: Driver.CreateSnapshot:output_type -> google.protobuf.Empty
+	10, // 27: Driver.ApplySnapshot:output_type -> google.protobuf.Empty
+	10, // 28: Driver.DeleteSnapshot:output_type -> google.protobuf.Empty
 	8,  // 29: Driver.ListSnapshots:output_type -> ListSnapshotsResponse
-	11, // 30: Driver.Register:output_type -> google.protobuf.Empty
-	11, // 31: Driver.Unregister:output_type -> google.protobuf.Empty
+	10, // 30: Driver.Register:output_type -> google.protobuf.Empty
+	10, // 31: Driver.Unregister:output_type -> google.protobuf.Empty
 	9,  // 32: Driver.ForwardGuestAgent:output_type -> ForwardGuestAgentResponse
-	10, // 33: Driver.GuestAgentConn:output_type -> BytesMessage
-	11, // 34: Driver.SetConfig:output_type -> google.protobuf.Empty
+	10, // 33: Driver.GuestAgentConn:output_type -> google.protobuf.Empty
+	10, // 34: Driver.SetConfig:output_type -> google.protobuf.Empty
 	0,  // 35: Driver.GetInfo:output_type -> InfoResponse
 	18, // [18:36] is the sub-list for method output_type
 	0,  // [0:18] is the sub-list for method input_type
@@ -658,7 +611,7 @@ func file_pkg_driver_external_driver_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_pkg_driver_external_driver_proto_rawDesc), len(file_pkg_driver_external_driver_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   11,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

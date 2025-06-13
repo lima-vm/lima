@@ -4,6 +4,8 @@
 package server
 
 import (
+	"io"
+	"net"
 	"os"
 	"os/signal"
 	"syscall"
@@ -42,7 +44,7 @@ func Serve(driver driver.Driver) {
 	}
 
 	kaPolicy := keepalive.EnforcementPolicy{
-		MinTime:             2 * time.Second,
+		MinTime:             10 * time.Second,
 		PermitWithoutStream: true,
 	}
 
@@ -70,4 +72,34 @@ func Serve(driver driver.Driver) {
 	if err := server.Serve(listener); err != nil {
 		logger.Fatalf("Failed to serve: %v", err)
 	}
+}
+
+func HandleProxyConnection(conn net.Conn, unixSocketPath string) {
+	defer conn.Close()
+
+	logrus.Infof("Handling proxy connection from %s", conn.LocalAddr())
+
+	unixConn, err := net.Dial("unix", unixSocketPath)
+	if err != nil {
+		logrus.Errorf("Failed to connect to unix socket %s: %v", unixSocketPath, err)
+		return
+	}
+	defer unixConn.Close()
+
+	logrus.Infof("Successfully established proxy tunnel: %s <--> %s", conn.LocalAddr(), unixSocketPath)
+
+	go func() {
+		_, err := io.Copy(conn, unixConn)
+		if err != nil {
+			logrus.Errorf("Error copying from unix to vsock: %v", err)
+		}
+	}()
+
+	_, err = io.Copy(unixConn, conn)
+	if err != nil {
+		logrus.Errorf("Error copying from vsock to unix: %v", err)
+	}
+
+	logrus.Infof("Proxy session ended for %s", conn.LocalAddr())
+
 }
