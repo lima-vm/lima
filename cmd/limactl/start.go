@@ -338,7 +338,7 @@ func chooseNextCreatorState(tmpl *limatmpl.Template, yq string) (*limatmpl.Templ
 			}
 			return tmpl, nil
 		case 2: // "Choose another template..."
-			templates, err := templatestore.Templates()
+			templates, err := filterHiddenTemplates()
 			if err != nil {
 				return tmpl, err
 			}
@@ -379,20 +379,32 @@ func createStartActionCommon(cmd *cobra.Command, _ []string) (exit bool, err err
 	if listTemplates, err := cmd.Flags().GetBool("list-templates"); err != nil {
 		return true, err
 	} else if listTemplates {
-		templates, err := templatestore.Templates()
+		templates, err := filterHiddenTemplates()
 		if err != nil {
 			return true, err
 		}
 		w := cmd.OutOrStdout()
 		for _, f := range templates {
-			// Don't show internal base templates like `_default/*` and `_images/*`.
-			if !strings.HasPrefix(f.Name, "_") {
-				_, _ = fmt.Fprintln(w, f.Name)
-			}
+			_, _ = fmt.Fprintln(w, f.Name)
 		}
 		return true, nil
 	}
 	return false, nil
+}
+
+func filterHiddenTemplates() ([]templatestore.Template, error) {
+	templates, err := templatestore.Templates()
+	if err != nil {
+		return nil, err
+	}
+	var filtered []templatestore.Template
+	for _, f := range templates {
+		// Don't show internal base templates like `_default/*` and `_images/*`.
+		if !strings.HasPrefix(f.Name, "_") {
+			filtered = append(filtered, f)
+		}
+	}
+	return filtered, nil
 }
 
 func createAction(cmd *cobra.Command, args []string) error {
