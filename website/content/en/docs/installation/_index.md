@@ -36,7 +36,7 @@ Port: <https://ports.macports.org/port/lima/>
 nix-env -i lima
 ```
 
-Nix file: <https://github.com/NixOS/nixpkgs/blob/master/pkgs/applications/virtualization/lima/default.nix>
+Nix file: <https://github.com/NixOS/nixpkgs/blob/master/pkgs/by-name/li/lima/package.nix>
 {{% /tab %}}
 
 {{% tab header="Binary" %}}
