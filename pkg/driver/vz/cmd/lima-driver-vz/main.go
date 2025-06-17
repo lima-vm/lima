@@ -1,3 +1,5 @@
+//go:build (darwin && amd64) || (darwin && arm64)
+
 // SPDX-FileCopyrightText: Copyright The Lima Authors
 // SPDX-License-Identifier: Apache-2.0
 

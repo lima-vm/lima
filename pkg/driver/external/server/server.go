@@ -4,10 +4,12 @@
 package server
 
 import (
-	"io"
+	"context"
+	"fmt"
 	"net"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -15,6 +17,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
 
+	"github.com/lima-vm/lima/pkg/bicopy"
 	"github.com/lima-vm/lima/pkg/driver"
 	pb "github.com/lima-vm/lima/pkg/driver/external"
 )
@@ -28,15 +31,33 @@ type DriverServer struct {
 func Serve(driver driver.Driver) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
-	logger.Infof("Starting external driver server for %s", driver.GetInfo().DriverName)
+	// pipeConn := &PipeConn{
+	// 	Reader: os.Stdin,
+	// 	Writer: os.Stdout,
+	// 	Closer: os.Stdout,
+	// }
 
-	pipeConn := &PipeConn{
-		Reader: os.Stdin,
-		Writer: os.Stdout,
-		Closer: os.Stdout,
+	// listener := NewPipeListener(pipeConn)
+
+	socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("lima-driver-%s-%d.sock", driver.GetInfo().DriverName, os.Getpid()))
+
+	defer func() {
+		if err := os.Remove(socketPath); err != nil && !os.IsNotExist(err) {
+			logger.Warnf("Failed to remove socket file: %v", err)
+		}
+	}()
+
+	if err := os.Remove(socketPath); err != nil && !os.IsNotExist(err) {
+		logger.Fatalf("Failed to remove existing socket file: %v", err)
 	}
 
-	listener := NewPipeListener(pipeConn)
+	listener, err := net.Listen("unix", socketPath)
+	if err != nil {
+		logger.Fatalf("Failed to listen on Unix socket: %v", err)
+	}
+	defer listener.Close()
+
+	fmt.Println(socketPath)
 
 	kaProps := keepalive.ServerParameters{
 		Time:    10 * time.Second,
@@ -64,42 +85,30 @@ func Serve(driver driver.Driver) {
 	go func() {
 		<-sigs
 		logger.Info("Received shutdown signal, stopping server...")
-		server.Stop()
+		server.GracefulStop()
 		os.Exit(0)
 	}()
 
-	logger.Info("Server starting...")
+	logger.Infof("Starting external driver server for %s", driver.GetInfo().DriverName)
+	logger.Infof("Server starting on Unix socket: %s", socketPath)
 	if err := server.Serve(listener); err != nil {
 		logger.Fatalf("Failed to serve: %v", err)
 	}
 }
 
-func HandleProxyConnection(conn net.Conn, unixSocketPath string) {
-	defer conn.Close()
-
+func HandleProxyConnection(ctx context.Context, conn net.Conn, unixSocketPath string) {
 	logrus.Infof("Handling proxy connection from %s", conn.LocalAddr())
 
-	unixConn, err := net.Dial("unix", unixSocketPath)
+	var d net.Dialer
+	unixConn, err := d.DialContext(ctx, "unix", unixSocketPath)
 	if err != nil {
 		logrus.Errorf("Failed to connect to unix socket %s: %v", unixSocketPath, err)
 		return
 	}
-	defer unixConn.Close()
 
 	logrus.Infof("Successfully established proxy tunnel: %s <--> %s", conn.LocalAddr(), unixSocketPath)
 
-	go func() {
-		_, err := io.Copy(conn, unixConn)
-		if err != nil {
-			logrus.Errorf("Error copying from unix to vsock: %v", err)
-		}
-	}()
-
-	_, err = io.Copy(unixConn, conn)
-	if err != nil {
-		logrus.Errorf("Error copying from vsock to unix: %v", err)
-	}
+	go bicopy.Bicopy(unixConn, conn, nil)
 
 	logrus.Infof("Proxy session ended for %s", conn.LocalAddr())
-
 }

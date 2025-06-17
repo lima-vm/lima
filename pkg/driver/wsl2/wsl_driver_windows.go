@@ -215,12 +215,15 @@ func (l *LimaWslDriver) GuestAgentConn(ctx context.Context) (net.Conn, error) {
 }
 
 func (l *LimaWslDriver) GetInfo() driver.Info {
-	return driver.Info{
-		DriverName: "wsl",
-		CanRunGUI:  l.canRunGUI(),
-		VsockPort:  l.VSockPort,
-		VirtioPort: l.VirtioPort,
+	var info driver.Info
+	if l.Instance != nil && l.Instance.Dir != "" {
+		info.InstanceDir = l.Instance.Dir
 	}
+	info.DriverName = "wsl"
+	info.CanRunGUI = l.canRunGUI()
+	info.VirtioPort = l.VirtioPort
+	info.VsockPort = l.VSockPort
+	return info
 }
 
 func (l *LimaWslDriver) Initialize(_ context.Context) error {

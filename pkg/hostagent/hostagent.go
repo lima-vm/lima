@@ -379,7 +379,7 @@ func (a *HostAgent) startRoutinesAndWait(ctx context.Context, errCh <-chan error
 	}
 	stBooting := stBase
 	a.emitEvent(ctx, events.Event{Status: stBooting})
-	ctxHA, cancelHA := context.WithCancel(ctx)
+	ctxHA, cancelHA := context.WithCancelCause(ctx)
 	go func() {
 		stRunning := stBase
 		if haErr := a.startHostAgentRoutines(ctxHA); haErr != nil {
@@ -393,7 +393,7 @@ func (a *HostAgent) startRoutinesAndWait(ctx context.Context, errCh <-chan error
 		select {
 		case driverErr := <-errCh:
 			logrus.Infof("Driver stopped due to error: %q", driverErr)
-			cancelHA()
+			cancelHA(driverErr)
 			if closeErr := a.close(); closeErr != nil {
 				logrus.WithError(closeErr).Warn("an error during shutting down the host agent")
 			}
@@ -401,7 +401,7 @@ func (a *HostAgent) startRoutinesAndWait(ctx context.Context, errCh <-chan error
 			return err
 		case sig := <-a.signalCh:
 			logrus.Infof("Received %s, shutting down the host agent", osutil.SignalName(sig))
-			cancelHA()
+			cancelHA(nil) // no error, just a signal
 			if closeErr := a.close(); closeErr != nil {
 				logrus.WithError(closeErr).Warn("an error during shutting down the host agent")
 			}

@@ -4,9 +4,9 @@
 package registry
 
 import (
+	"bufio"
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -26,8 +26,7 @@ type ExternalDriver struct {
 	Name         string
 	InstanceName string
 	Command      *exec.Cmd
-	Stdin        io.WriteCloser
-	Stdout       io.ReadCloser
+	SocketPath   string
 	Client       *client.DriverClient // Client is the gRPC client for the external driver
 	Path         string
 	ctx          context.Context
@@ -58,16 +57,10 @@ func (e *ExternalDriver) Start(instName string) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	cmd := exec.CommandContext(ctx, e.Path)
 
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		cancel()
-		return fmt.Errorf("failed to create stdin pipe: %w", err)
-	}
-
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		cancel()
-		return fmt.Errorf("failed to create stdout pipe: %w", err)
+		return fmt.Errorf("failed to create stdout pipe for external driver: %w", err)
 	}
 
 	instanceDir, err := store.InstanceDir(e.InstanceName)
@@ -94,7 +87,18 @@ func (e *ExternalDriver) Start(instName string) error {
 
 	time.Sleep(time.Millisecond * 100)
 
-	driverClient, err := client.NewDriverClient(stdin, stdout, e.logger)
+	scanner := bufio.NewScanner(stdout)
+	var socketPath string
+	if scanner.Scan() {
+		socketPath = strings.TrimSpace(scanner.Text())
+	} else {
+		cancel()
+		cmd.Process.Kill()
+		return fmt.Errorf("failed to read socket path from driver")
+	}
+	e.SocketPath = socketPath
+
+	driverClient, err := client.NewDriverClient(e.SocketPath, e.logger)
 	if err != nil {
 		cancel()
 		cmd.Process.Kill()
@@ -102,8 +106,6 @@ func (e *ExternalDriver) Start(instName string) error {
 	}
 
 	e.Command = cmd
-	e.Stdin = stdin
-	e.Stdout = stdout
 	e.Client = driverClient
 	e.ctx = ctx
 	e.cancelFunc = cancel
@@ -116,12 +118,10 @@ func (e *ExternalDriver) cleanup() {
 	if e.cancelFunc != nil {
 		e.cancelFunc()
 	}
-	if e.Stdin != nil {
-		e.Stdin.Close()
+	if err := os.Remove(e.SocketPath); err != nil && !os.IsNotExist(err) {
+		e.logger.Warnf("Failed to remove socket file: %v", err)
 	}
-	if e.Stdout != nil {
-		e.Stdout.Close()
-	}
+
 	e.Command = nil
 	e.Client = nil
 	e.ctx = nil

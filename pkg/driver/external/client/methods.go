@@ -10,6 +10,8 @@ import (
 	"net"
 	"time"
 
+	// "google.golang.org/protobuf/proto"
+
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/lima-vm/lima/pkg/driver"

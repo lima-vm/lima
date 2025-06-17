@@ -31,6 +31,10 @@ service Driver {
     rpc GetInfo(google.protobuf.Empty) returns (InfoResponse);
 }
 
+// message NetConn {
+//     bytes data = 1;
+// }
+
 message InfoResponse{
     bytes info_json = 1;
 }

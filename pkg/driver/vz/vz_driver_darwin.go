@@ -265,6 +265,9 @@ func (l *LimaVzDriver) GetInfo() driver.Info {
 	info.DriverName = "vz"
 	info.VsockPort = l.VSockPort
 	info.VirtioPort = l.VirtioPort
+	if l.Instance != nil && l.Instance.Dir != "" {
+		info.InstanceDir = l.Instance.Dir
+	}
 	return info
 }
 
