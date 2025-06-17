@@ -9,13 +9,13 @@ Every commit must be signed off with the `Signed-off-by: REAL NAME <email@exampl
 
 Use the `git commit -s` command to add the Signed-off-by line.
 
-See also <https://github.com/cncf/foundation/blob/main/dco-guidelines.md>.
+See also <https://github.com/cncf/foundation/blob/main/policies-guidance/dco-guidelines.md>.
 
 ## Licensing
 
 Lima is licensed under the terms of [Apache License, Version 2.0](https://github.com/lima-vm/lima/blob/master/LICENSE).
 
-See also <https://github.com/cncf/foundation/blob/main/allowed-third-party-license-policy.md> for third-party dependencies.
+See also <https://github.com/cncf/foundation/blob/main/policies-guidance/allowed-third-party-license-policy.md> for third-party dependencies.
 
 ## Sending pull requests
 

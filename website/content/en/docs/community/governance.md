@@ -6,7 +6,7 @@ weight: 10
 <!-- The governance model is similar to https://github.com/containerd/project/blob/main/GOVERNANCE.md but simplified -->
 
 ## Code of Conduct
-Lima follows the [CNCF Code of Conduct](https://github.com/cncf/foundation/blob/master/code-of-conduct.md).
+Lima follows the [CNCF Code of Conduct](https://github.com/cncf/foundation/blob/main/code-of-conduct.md).
 
 ## Maintainership
 Lima is governed by Maintainers who are elected from active contributors.

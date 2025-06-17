@@ -73,7 +73,7 @@ GUI:
   - Login: <https://cloud-native.slack.com/>
 
 ### Code of Conduct
-Lima follows the [CNCF Code of Conduct](https://github.com/cncf/foundation/blob/master/code-of-conduct.md).
+Lima follows the [CNCF Code of Conduct](https://github.com/cncf/foundation/blob/main/code-of-conduct.md).
 
 - - -
 **We are a [Cloud Native Computing Foundation](https://cncf.io/) sandbox project.**
