@@ -37,7 +37,8 @@ func TestValidateProbes(t *testing.T) {
 	assert.NilError(t, err)
 
 	err = Validate(y, false)
-	assert.Error(t, err, "field `probe[0].file.digest` support is not yet implemented")
+	assert.Error(t, err, "field `probe[0].file.digest` support is not yet implemented\n"+
+		"field `probe[0].script` must start with a '#!' line")
 }
 
 func TestValidateProvisionMode(t *testing.T) {
@@ -68,7 +69,8 @@ func TestValidateProvisionMode(t *testing.T) {
 	assert.NilError(t, err)
 
 	err = Validate(y, false)
-	assert.Error(t, err, "field `provision[0].mode` must one of \"system\", \"user\", \"boot\", \"data\", \"dependency\", or \"ansible\"")
+	assert.Error(t, err, "field `provision[0].mode` must one of \"system\", \"user\", \"boot\", \"data\", \"dependency\", or \"ansible\"\n"+
+		"field `provision[0].script` must not be empty")
 }
 
 func TestValidateProvisionData(t *testing.T) {
@@ -232,4 +234,33 @@ func TestValidateParamIsUsed(t *testing.T) {
 		//
 		assert.Error(t, err, "field `param` key \"rootFul\" is not used in any provision, probe, copyToHost, or portForward")
 	}
+}
+
+func TestValidateMultipleErrors(t *testing.T) {
+	yamlWithMultipleErrors := `
+os: windows
+arch: unsupported_arch
+vmType: invalid_type
+portForwards:
+  - guestPort: 22
+    hostPort: 2222
+  - guestPort: 8080
+    hostPort: 65536
+provision:
+  - mode: invalid_mode
+    script: echo test
+  - mode: data
+    content: test
+`
+
+	y, err := Load([]byte(yamlWithMultipleErrors), "multiple-errors.yaml")
+	assert.NilError(t, err)
+	err = Validate(y, false)
+
+	assert.Error(t, err, "field `os` must be \"Linux\"; got \"windows\"\n"+
+		"field `arch` must be one of [x86_64 aarch64 armv7l ppc64le riscv64 s390x]; got \"unsupported_arch\"\n"+
+		"field `vmType` must be \"qemu\", \"vz\", \"wsl2\"; got \"invalid_type\"\n"+
+		"field `images` must be set\n"+
+		"field `provision[0].mode` must one of \"system\", \"user\", \"boot\", \"data\", \"dependency\", or \"ansible\"\n"+
+		"field `provision[1].path` must not be empty when mode is \"data\"")
 }
