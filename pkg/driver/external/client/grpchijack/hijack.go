@@ -50,7 +50,7 @@ package grpchijack
 // 		return n, nil
 // 	}
 
-// 	msg := new(pb.BytesMessage)
+// 	msg := new(pb.NetConn)
 // 	msg, err := c.stream.Recv()
 // 	if err != nil {
 // 		c.closed = true
@@ -77,7 +77,7 @@ package grpchijack
 // 		return 0, errors.New("connection closed")
 // 	}
 
-// 	err := c.stream.Send(&pb.BytesMessage{Data: b})
+// 	err := c.stream.Send(&pb.NetConn{Data: b})
 // 	if err != nil {
 // 		c.closed = true
 // 		return 0, fmt.Errorf("stream send error: %w", err)
@@ -103,7 +103,7 @@ package grpchijack
 
 // 		c.readMu.Lock()
 // 		for {
-// 			m := new(pb.BytesMessage)
+// 			m := new(pb.)
 // 			m.Data = c.readBuf
 // 			err := c.stream.RecvMsg(m)
 // 			if err != nil {

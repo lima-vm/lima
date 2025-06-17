@@ -5,8 +5,6 @@ package client
 
 import (
 	"context"
-	"io"
-	"math"
 	"net"
 
 	pb "github.com/lima-vm/lima/pkg/driver/external"
@@ -16,22 +14,19 @@ import (
 )
 
 type DriverClient struct {
-	Stdin     io.WriteCloser
-	Stdout    io.ReadCloser
-	Conn      *grpc.ClientConn
-	DriverSvc pb.DriverClient
-	logger    *logrus.Logger
+	socketPath string
+	Conn       *grpc.ClientConn
+	DriverSvc  pb.DriverClient
+	logger     *logrus.Logger
 }
 
-func NewDriverClient(stdin io.WriteCloser, stdout io.ReadCloser, logger *logrus.Logger) (*DriverClient, error) {
-	pipeConn := newPipeConn(stdin, stdout)
+func NewDriverClient(socketPath string, logger *logrus.Logger) (*DriverClient, error) {
+	// pipeConn := newPipeConn(stdin, stdout)
 	opts := []grpc.DialOption{
-		grpc.WithDefaultCallOptions(
-			grpc.MaxCallRecvMsgSize(math.MaxInt64),
-			grpc.MaxCallSendMsgSize(math.MaxInt64),
-		),
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(16 << 20)),
+		grpc.WithDefaultCallOptions(grpc.MaxCallSendMsgSize(16 << 20)),
 		grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) {
-			return pipeConn, nil
+			return net.Dial("unix", socketPath)
 		}),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
@@ -44,7 +39,7 @@ func NewDriverClient(stdin io.WriteCloser, stdout io.ReadCloser, logger *logrus.
 	// -> ERRO[2025-06-04T21:32:54+05:30] Failed to set config: rpc error: code =
 	// Unavailable desc = name resolver error: produced zero addresses
 
-	conn, err := grpc.Dial("pipe", opts...)
+	conn, err := grpc.Dial("unix://"+socketPath, opts...)
 	if err != nil {
 		logger.Errorf("failed to dial gRPC driver client connection: %v", err)
 		return nil, err
@@ -53,10 +48,9 @@ func NewDriverClient(stdin io.WriteCloser, stdout io.ReadCloser, logger *logrus.
 	driverSvc := pb.NewDriverClient(conn)
 
 	return &DriverClient{
-		Stdin:     stdin,
-		Stdout:    stdout,
-		Conn:      conn,
-		DriverSvc: driverSvc,
-		logger:    logger,
+		socketPath: socketPath,
+		Conn:       conn,
+		DriverSvc:  driverSvc,
+		logger:     logger,
 	}, nil
 }

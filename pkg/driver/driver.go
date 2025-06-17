@@ -84,8 +84,9 @@ type Driver interface {
 }
 
 type Info struct {
-	DriverName string `json:"driverName"`
-	CanRunGUI  bool   `json:"canRunGui,omitempty"`
-	VsockPort  int    `json:"vsockPort"`
-	VirtioPort string `json:"virtioPort"`
+	DriverName  string `json:"driverName"`
+	CanRunGUI   bool   `json:"canRunGui,omitempty"`
+	VsockPort   int    `json:"vsockPort"`
+	VirtioPort  string `json:"virtioPort"`
+	InstanceDir string `json:"instanceDir,omitempty"`
 }

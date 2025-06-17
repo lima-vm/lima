@@ -512,12 +512,15 @@ func (a *qArgTemplateApplier) applyTemplate(qArg string) (string, error) {
 }
 
 func (l *LimaQemuDriver) GetInfo() driver.Info {
-	return driver.Info{
-		DriverName: "qemu",
-		CanRunGUI:  false,
-		VsockPort:  l.VSockPort,
-		VirtioPort: l.VirtioPort,
+	var info driver.Info
+	if l.Instance != nil && l.Instance.Dir != "" {
+		info.InstanceDir = l.Instance.Dir
 	}
+	info.DriverName = "qemu"
+	info.CanRunGUI = false
+	info.VirtioPort = l.VirtioPort
+	info.VsockPort = l.VSockPort
+	return info
 }
 
 func (l *LimaQemuDriver) Initialize(_ context.Context) error {
