@@ -58,7 +58,7 @@ $ lima nerdctl build --platform=amd64,arm64 -t example.com/foo:latest .
 $ lima nerdctl push --all-platforms example.com/foo:latest
 ```
 
-See also https://github.com/containerd/nerdctl/blob/master/docs/multi-platform.md
+See also https://github.com/containerd/nerdctl/blob/main/docs/multi-platform.md
 
 ## [Fast mode 2 (Rosetta): Intel containers on ARM VM on ARM Host](#fast-mode-2)
 
