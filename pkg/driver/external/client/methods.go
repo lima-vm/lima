@@ -241,23 +241,30 @@ func (d *DriverClient) ForwardGuestAgent() bool {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	_, err := d.DriverSvc.ForwardGuestAgent(ctx, &emptypb.Empty{})
+	resp, err := d.DriverSvc.ForwardGuestAgent(ctx, &emptypb.Empty{})
 	if err != nil {
 		d.logger.Errorf("Failed to check guest agent forwarding: %v", err)
 		return false
 	}
 
-	return true
+	return resp.ShouldForward
 }
 
 func (d *DriverClient) GuestAgentConn(ctx context.Context) (net.Conn, error) {
 	d.logger.Info("Getting guest agent connection")
-	_, err := d.DriverSvc.GuestAgentConn(ctx, &emptypb.Empty{})
+	resp, err := d.DriverSvc.GuestAgentConn(ctx, &emptypb.Empty{})
 	if err != nil {
 		d.logger.Errorf("Failed to get guest agent connection: %v", err)
 		return nil, err
 	}
-	return nil, nil
+
+	var nd net.Dialer
+	unixConn, err := nd.DialContext(ctx, "unix", resp.SocketPath)
+	if err != nil {
+		d.logger.Errorf("Failed to connect to guest agent socket %s: %v", resp.SocketPath, err)
+		return nil, err
+	}
+	return unixConn, nil
 }
 
 func (d *DriverClient) GetInfo() driver.Info {
