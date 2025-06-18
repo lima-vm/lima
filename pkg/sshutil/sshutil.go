@@ -154,13 +154,22 @@ func DefaultPubKeys(loadDotSSH bool) ([]PubKey, error) {
 	return res, nil
 }
 
+type openSSHInfo struct {
+	// Version is set to the version of OpenSSH, or semver.New("0.0.0") if the version cannot be determined.
+	Version semver.Version
+
+	// Some distributions omit this feature by default, for example, Alpine, NixOS.
+	GSSAPISupported bool
+}
+
 var sshInfo struct {
 	sync.Once
 	// aesAccelerated is set to true when AES acceleration is available.
 	// Available on almost all modern Intel/AMD processors.
 	aesAccelerated bool
-	// openSSHVersion is set to the version of OpenSSH, or semver.New("0.0.0") if the version cannot be determined.
-	openSSHVersion semver.Version
+
+	// OpenSSH executable information for the version and supported options.
+	openSSH openSSHInfo
 }
 
 // CommonOpts returns ssh option key-value pairs like {"IdentityFile=/path/to/id_foo"}.
@@ -226,7 +235,6 @@ func CommonOpts(sshPath string, useDotSSH bool) ([]string, error) {
 		"StrictHostKeyChecking=no",
 		"UserKnownHostsFile=/dev/null",
 		"NoHostAuthenticationForLocalhost=yes",
-		"GSSAPIAuthentication=no",
 		"PreferredAuthentications=publickey",
 		"Compression=no",
 		"BatchMode=yes",
@@ -235,11 +243,15 @@ func CommonOpts(sshPath string, useDotSSH bool) ([]string, error) {
 
 	sshInfo.Do(func() {
 		sshInfo.aesAccelerated = detectAESAcceleration()
-		sshInfo.openSSHVersion = DetectOpenSSHVersion(sshPath)
+		sshInfo.openSSH = detectOpenSSHInfo(sshPath)
 	})
 
+	if sshInfo.openSSH.GSSAPISupported {
+		opts = append(opts, "GSSAPIAuthentication=no")
+	}
+
 	// Only OpenSSH version 8.1 and later support adding ciphers to the front of the default set
-	if !sshInfo.openSSHVersion.LessThan(*semver.New("8.1.0")) {
+	if !sshInfo.openSSH.Version.LessThan(*semver.New("8.1.0")) {
 		// By default, `ssh` choose chacha20-poly1305@openssh.com, even when AES accelerator is available.
 		// (OpenSSH_8.1p1, macOS 11.6, MacBookPro 2020, Core i7-1068NG7)
 		//
@@ -321,7 +333,7 @@ func SSHArgsFromOpts(opts []string) []string {
 }
 
 func ParseOpenSSHVersion(version []byte) *semver.Version {
-	regex := regexp.MustCompile(`^OpenSSH_(\d+\.\d+)(?:p(\d+))?\b`)
+	regex := regexp.MustCompile(`(?m)^OpenSSH_(\d+\.\d+)(?:p(\d+))?\b`)
 	matches := regex.FindSubmatch(version)
 	if len(matches) == 3 {
 		if len(matches[2]) == 0 {
@@ -332,6 +344,10 @@ func ParseOpenSSHVersion(version []byte) *semver.Version {
 	return &semver.Version{}
 }
 
+func parseOpenSSHGSSAPISupported(version string) bool {
+	return !strings.Contains(version, `Unsupported option "gssapiauthentication"`)
+}
+
 // sshExecutable beyond path also records size and mtime, in the case of ssh upgrades.
 type sshExecutable struct {
 	Path    string
@@ -340,14 +356,14 @@ type sshExecutable struct {
 }
 
 var (
-	// sshVersions caches the parsed version of each ssh executable, if it is needed again.
-	sshVersions   = map[sshExecutable]*semver.Version{}
-	sshVersionsRW sync.RWMutex
+	// openSSHInfos caches the parsed version and supported options of each ssh executable, if it is needed again.
+	openSSHInfos   = map[sshExecutable]*openSSHInfo{}
+	openSSHInfosRW sync.RWMutex
 )
 
-func DetectOpenSSHVersion(ssh string) semver.Version {
+func detectOpenSSHInfo(ssh string) openSSHInfo {
 	var (
-		v      semver.Version
+		info   openSSHInfo
 		exe    sshExecutable
 		stderr bytes.Buffer
 	)
@@ -357,25 +373,33 @@ func DetectOpenSSHVersion(ssh string) semver.Version {
 	} else {
 		st, _ := os.Stat(path)
 		exe = sshExecutable{Path: path, Size: st.Size(), ModTime: st.ModTime()}
-		sshVersionsRW.RLock()
-		ver := sshVersions[exe]
-		sshVersionsRW.RUnlock()
-		if ver != nil {
-			return *ver
+		openSSHInfosRW.RLock()
+		info := openSSHInfos[exe]
+		openSSHInfosRW.RUnlock()
+		if info != nil {
+			return *info
 		}
 	}
-	cmd := exec.Command(path, "-V")
+	// -V should be last
+	cmd := exec.Command(path, "-o", "GSSAPIAuthentication=no", "-V")
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
 		logrus.Warnf("failed to run %v: stderr=%q", cmd.Args, stderr.String())
 	} else {
-		v = *ParseOpenSSHVersion(stderr.Bytes())
-		logrus.Debugf("OpenSSH version %s detected", v)
-		sshVersionsRW.Lock()
-		sshVersions[exe] = &v
-		sshVersionsRW.Unlock()
+		info = openSSHInfo{
+			Version:         *ParseOpenSSHVersion(stderr.Bytes()),
+			GSSAPISupported: parseOpenSSHGSSAPISupported(stderr.String()),
+		}
+		logrus.Debugf("OpenSSH version %s detected, is GSSAPI supported: %t", info.Version, info.GSSAPISupported)
+		openSSHInfosRW.Lock()
+		openSSHInfos[exe] = &info
+		openSSHInfosRW.Unlock()
 	}
-	return v
+	return info
+}
+
+func DetectOpenSSHVersion(ssh string) semver.Version {
+	return detectOpenSSHInfo(ssh).Version
 }
 
 // detectValidPublicKey returns whether content represent a public key.

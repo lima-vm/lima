@@ -29,6 +29,16 @@ func TestParseOpenSSHVersion(t *testing.T) {
 
 	// OpenBSD 5.8
 	assert.Check(t, ParseOpenSSHVersion([]byte("OpenSSH_7.0, LibreSSL")).Equal(*semver.New("7.0.0")))
+
+	// NixOS 25.05
+	assert.Check(t, ParseOpenSSHVersion([]byte(`command-line line 0: Unsupported option "gssapiauthentication"
+OpenSSH_10.0p2, OpenSSL 3.4.1 11 Feb 2025`)).Equal(*semver.New("10.0.2")))
+}
+
+func TestParseOpenSSHGSSAPISupported(t *testing.T) {
+	assert.Check(t, parseOpenSSHGSSAPISupported("OpenSSH_8.4p1 Ubuntu"))
+	assert.Check(t, !parseOpenSSHGSSAPISupported(`command-line line 0: Unsupported option "gssapiauthentication"
+OpenSSH_10.0p2, OpenSSL 3.4.1 11 Feb 2025`))
 }
 
 func Test_detectValidPublicKey(t *testing.T) {
