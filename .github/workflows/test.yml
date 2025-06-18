@@ -151,8 +151,8 @@ jobs:
       run: sudo make uninstall
 
   windows:
-    name: "Windows tests"
-    runs-on: windows-2022-8-cores
+    name: "Windows tests (WSL2)"
+    runs-on: windows-2025-8-cores
     timeout-minutes: 30
     steps:
     - name: Enable WSL2
@@ -204,6 +204,40 @@ jobs:
         $env:LIMACTL_CREATE_ARGS = '--vm-type=wsl2 --mount-type=wsl2 --containerd=system'
         $env:_LIMA_WINDOWS_EXTRA_PATH = 'C:\Program Files\Git\usr\bin'
         bash.exe -c "./hack/test-templates.sh templates/experimental/wsl2.yaml"
+
+  windows-qemu:
+    name: "Windows tests (QEMU)"
+    runs-on: windows-2025
+    timeout-minutes: 30
+    steps:
+    - name: Set gitconfig
+      run: |
+        git config --global core.autocrlf false
+        git config --global core.eol lf
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      with:
+        # To avoid "can't parse builtin Lima version" errors
+        fetch-depth: 0
+    - uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b  # v5.4.0
+      with:
+        go-version: 1.24.x
+    - name: Unit tests
+      run: go test -v ./...
+    - name: Make
+      run: make
+    - name: Install QEMU
+      run: |
+        winget install --silent --accept-source-agreements --accept-package-agreements --disable-interactivity SoftwareFreedomConservancy.QEMU
+    - name: Integration tests (QEMU, Windows host)
+      run: |
+        $env:PATH = "$pwd\_output\bin;" + 'C:\msys64\usr\bin;' + 'C:\Program Files\QEMU;' + $env:PATH
+        pacman -Sy --noconfirm openbsd-netcat diffutils
+        $env:MSYS2_ENV_CONV_EXCL = 'HOME_HOST;HOME_GUEST;_LIMA_WINDOWS_EXTRA_PATH'
+        $env:HOME_HOST = $(cygpath.exe "$env:USERPROFILE")
+        $env:HOME_GUEST = "$env:HOME_HOST"
+        $env:LIMACTL_CREATE_ARGS = '--vm-type=qemu'
+        $env:_LIMA_WINDOWS_EXTRA_PATH = 'C:\Program Files\Git\usr\bin'
+        bash.exe -c "./hack/test-templates.sh templates/default.yaml"
 
   qemu:
     name: "Integration tests (QEMU, macOS host)"
