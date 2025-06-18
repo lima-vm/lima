@@ -1146,6 +1146,9 @@ func getFirmware(qemuExe string, arch limayaml.Arch) (string, error) {
 
 	switch arch {
 	case limayaml.X8664:
+		// Archlinux package "edk2-ovmf"
+		// @see: https://archlinux.org/packages/extra/any/edk2-ovmf/files
+		candidates = append(candidates, "/usr/share/edk2/x64/OVMF_CODE.4m.fd")
 		// Debian package "ovmf"
 		candidates = append(candidates, "/usr/share/OVMF/OVMF_CODE.fd")
 		candidates = append(candidates, "/usr/share/OVMF/OVMF_CODE_4M.fd")
@@ -1153,15 +1156,19 @@ func getFirmware(qemuExe string, arch limayaml.Arch) (string, error) {
 		candidates = append(candidates, "/usr/share/edk2/ovmf/OVMF_CODE.fd")
 		// openSUSE package "qemu-ovmf-x86_64"
 		candidates = append(candidates, "/usr/share/qemu/ovmf-x86_64.bin")
-		// Archlinux package "edk2-ovmf"
-		candidates = append(candidates, "/usr/share/edk2-ovmf/x64/OVMF_CODE.fd")
 	case limayaml.AARCH64:
+		// Archlinux package "edk2-aarch64"
+		// @see: https://archlinux.org/packages/extra/any/edk2-aarch64/files
+		candidates = append(candidates, "/usr/share/edk2/aarch64/QEMU_CODE.fd")
 		// Debian package "qemu-efi-aarch64"
 		// Fedora package "edk2-aarch64"
 		candidates = append(candidates, "/usr/share/AAVMF/AAVMF_CODE.fd")
 		// Debian package "qemu-efi-aarch64" (unpadded, backwards compatibility)
 		candidates = append(candidates, "/usr/share/qemu-efi-aarch64/QEMU_EFI.fd")
 	case limayaml.ARMV7L:
+		// Archlinux package "edk2-arm"
+		// @see: https://archlinux.org/packages/extra/any/edk2-arm/files
+		candidates = append(candidates, "/usr/share/edk2/arm/QEMU_CODE.fd")
 		// Debian package "qemu-efi-arm"
 		// Fedora package "edk2-arm"
 		candidates = append(candidates, "/usr/share/AAVMF/AAVMF32_CODE.fd")
