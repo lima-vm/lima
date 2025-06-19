@@ -40,6 +40,37 @@ func TestValidateProbes(t *testing.T) {
 	assert.Error(t, err, "field `probe[0].file.digest` support is not yet implemented")
 }
 
+func TestValidateProvisionMode(t *testing.T) {
+	images := `images: [{location: /}]`
+	provisionBoot := `provision: [{mode: boot, script: "touch /tmp/param-$PARAM_BOOT"}]`
+	y, err := Load([]byte(provisionBoot+"\n"+images), "lima.yaml")
+	assert.NilError(t, err)
+
+	err = Validate(y, false)
+	assert.NilError(t, err)
+
+	provisionUser := `provision: [{mode: user, script: "touch /tmp/param-$PARAM_USER"}]`
+	y, err = Load([]byte(provisionUser+"\n"+images), "lima.yaml")
+	assert.NilError(t, err)
+
+	err = Validate(y, false)
+	assert.NilError(t, err)
+
+	provisionDependency := `provision: [{mode: ansible, script: "touch /tmp/param-$PARAM_DEPENDENCY"}]`
+	y, err = Load([]byte(provisionDependency+"\n"+images), "lima.yaml")
+	assert.NilError(t, err)
+
+	err = Validate(y, false)
+	assert.NilError(t, err)
+
+	provisionInvalid := `provision: [{mode: invalid}]`
+	y, err = Load([]byte(provisionInvalid+"\n"+images), "lima.yaml")
+	assert.NilError(t, err)
+
+	err = Validate(y, false)
+	assert.Error(t, err, "field `provision[0].mode` must one of \"system\", \"user\", \"boot\", \"data\", \"dependency\", or \"ansible\"")
+}
+
 func TestValidateProvisionData(t *testing.T) {
 	images := `images: [{location: /}]`
 	validData := `provision: [{mode: data, path: /tmp, content: hello}]`
