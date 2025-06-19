@@ -6,9 +6,6 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"net"
-	"os"
-	"path/filepath"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -16,10 +13,8 @@ import (
 	// "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
 
-	"github.com/lima-vm/lima/pkg/bicopy"
 	pb "github.com/lima-vm/lima/pkg/driver/external"
 	"github.com/lima-vm/lima/pkg/store"
-	"github.com/lima-vm/lima/pkg/store/filenames"
 )
 
 func (s *DriverServer) Start(empty *emptypb.Empty, stream pb.Driver_StartServer) error {
@@ -69,37 +64,15 @@ func (s *DriverServer) SetConfig(ctx context.Context, req *pb.SetConfigRequest) 
 	return &emptypb.Empty{}, nil
 }
 
-func (s *DriverServer) GuestAgentConn(ctx context.Context, empty *emptypb.Empty) (*pb.GuestAgentConnResponse, error) {
+func (s *DriverServer) GuestAgentConn(ctx context.Context, empty *emptypb.Empty) (*emptypb.Empty, error) {
 	s.logger.Debug("Received GuestAgentConn request")
-	conn, err := s.driver.GuestAgentConn(ctx)
+	_, err := s.driver.GuestAgentConn(ctx)
 	if err != nil {
 		s.logger.Errorf("GuestAgentConn failed: %v", err)
 		return nil, err
 	}
 
-	proxySocketPath := filepath.Join(s.driver.GetInfo().InstanceDir, filenames.ExternalDriverSock)
-	os.Remove(proxySocketPath)
-
-	listener, err := net.Listen("unix", proxySocketPath)
-	if err != nil {
-		s.logger.Errorf("Failed to create proxy socket: %v", err)
-		return nil, err
-	}
-
-	go func() {
-		defer listener.Close()
-		defer conn.Close()
-
-		proxyConn, err := listener.Accept()
-		if err != nil {
-			s.logger.Errorf("Failed to accept proxy connection: %v", err)
-			return
-		}
-
-		bicopy.Bicopy(conn, proxyConn, nil)
-	}()
-
-	return &pb.GuestAgentConnResponse{SocketPath: proxySocketPath}, nil
+	return &emptypb.Empty{}, nil
 }
 
 func (s *DriverServer) GetInfo(ctx context.Context, empty *emptypb.Empty) (*pb.InfoResponse, error) {

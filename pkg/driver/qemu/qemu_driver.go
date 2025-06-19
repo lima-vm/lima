@@ -42,6 +42,8 @@ type LimaQemuDriver struct {
 	VSockPort    int
 	VirtioPort   string
 
+	DriverType driver.DriverType
+
 	qCmd    *exec.Cmd
 	qWaitCh chan error
 
@@ -50,7 +52,7 @@ type LimaQemuDriver struct {
 
 var _ driver.Driver = (*LimaQemuDriver)(nil)
 
-func New() *LimaQemuDriver {
+func New(driverType driver.DriverType) *LimaQemuDriver {
 	// virtserialport doesn't seem to work reliably: https://github.com/lima-vm/lima/issues/2064
 	// but on Windows default Unix socket forwarding is not available
 	var virtioPort string
@@ -61,6 +63,7 @@ func New() *LimaQemuDriver {
 	return &LimaQemuDriver{
 		VSockPort:  0,
 		VirtioPort: virtioPort,
+		DriverType: driverType,
 	}
 }
 

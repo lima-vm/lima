@@ -6,12 +6,13 @@
 package main
 
 import (
+	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/driver/external/server"
 	"github.com/lima-vm/lima/pkg/driver/vz"
 )
 
 // To be used as an external driver for Lima.
 func main() {
-	driver := vz.New()
+	driver := vz.New(driver.DriverTypeExternal)
 	server.Serve(driver)
 }

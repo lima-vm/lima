@@ -10,8 +10,6 @@ import (
 	"net"
 	"time"
 
-	// "google.golang.org/protobuf/proto"
-
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/lima-vm/lima/pkg/driver"
@@ -252,19 +250,13 @@ func (d *DriverClient) ForwardGuestAgent() bool {
 
 func (d *DriverClient) GuestAgentConn(ctx context.Context) (net.Conn, error) {
 	d.logger.Info("Getting guest agent connection")
-	resp, err := d.DriverSvc.GuestAgentConn(ctx, &emptypb.Empty{})
+	_, err := d.DriverSvc.GuestAgentConn(ctx, &emptypb.Empty{})
 	if err != nil {
 		d.logger.Errorf("Failed to get guest agent connection: %v", err)
 		return nil, err
 	}
 
-	var nd net.Dialer
-	unixConn, err := nd.DialContext(ctx, "unix", resp.SocketPath)
-	if err != nil {
-		d.logger.Errorf("Failed to connect to guest agent socket %s: %v", resp.SocketPath, err)
-		return nil, err
-	}
-	return unixConn, nil
+	return nil, nil
 }
 
 func (d *DriverClient) GetInfo() driver.Info {

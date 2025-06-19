@@ -7,17 +7,20 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"path/filepath"
 	"regexp"
 
 	"github.com/Microsoft/go-winio"
 	"github.com/Microsoft/go-winio/pkg/guid"
 	"github.com/sirupsen/logrus"
 
+	"github.com/lima-vm/lima/pkg/bicopy"
 	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/freeport"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/reflectutil"
 	"github.com/lima-vm/lima/pkg/store"
+	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/lima-vm/lima/pkg/windows"
 )
 
@@ -52,11 +55,13 @@ type LimaWslDriver struct {
 	SSHLocalPort int
 	VSockPort    int
 	VirtioPort   string
+
+	DriverType driver.DriverType
 }
 
 var _ driver.Driver = (*LimaWslDriver)(nil)
 
-func New() *LimaWslDriver {
+func New(driverType driver.DriverType) *LimaWslDriver {
 	port, err := freeport.VSock()
 	if err != nil {
 		logrus.WithError(err).Error("failed to get free VSock port")
@@ -65,6 +70,7 @@ func New() *LimaWslDriver {
 	return &LimaWslDriver{
 		VSockPort:  port,
 		VirtioPort: "",
+		DriverType: driverType,
 	}
 }
 
@@ -211,7 +217,34 @@ func (l *LimaWslDriver) GuestAgentConn(ctx context.Context) (net.Conn, error) {
 		VMID:      VMIDGUID,
 		ServiceID: winio.VsockServiceID(uint32(l.VSockPort)),
 	}
-	return winio.Dial(ctx, sockAddr)
+	conn, err := winio.Dial(ctx, sockAddr)
+	if err != nil {
+		return nil, err
+	}
+
+	if l.DriverType == driver.DriverTypeExternal {
+		proxySocketPath := filepath.Join(l.GetInfo().InstanceDir, filenames.GuestAgentSock)
+
+		listener, err := net.Listen("unix", proxySocketPath)
+		if err != nil {
+			logrus.Errorf("Failed to create proxy socket: %v", err)
+			return nil, err
+		}
+
+		go func() {
+			defer listener.Close()
+			defer conn.Close()
+
+			proxyConn, err := listener.Accept()
+			if err != nil {
+				logrus.Errorf("Failed to accept proxy connection: %v", err)
+				return
+			}
+
+			bicopy.Bicopy(conn, proxyConn, nil)
+		}()
+	}
+	return conn, nil
 }
 
 func (l *LimaWslDriver) GetInfo() driver.Info {
