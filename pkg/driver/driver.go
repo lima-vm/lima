@@ -90,3 +90,10 @@ type Info struct {
 	VirtioPort  string `json:"virtioPort"`
 	InstanceDir string `json:"instanceDir,omitempty"`
 }
+
+type DriverType = string
+
+const (
+	DriverTypeInternal DriverType = "internal"
+	DriverTypeExternal DriverType = "external"
+)

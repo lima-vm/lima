@@ -18,11 +18,13 @@ import (
 	"github.com/coreos/go-semver/semver"
 	"github.com/sirupsen/logrus"
 
+	"github.com/lima-vm/lima/pkg/bicopy"
 	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/reflectutil"
 	"github.com/lima-vm/lima/pkg/store"
+	"github.com/lima-vm/lima/pkg/store/filenames"
 )
 
 var knownYamlProperties = []string{
@@ -75,15 +77,18 @@ type LimaVzDriver struct {
 	VSockPort    int
 	VirtioPort   string
 
+	DriverType driver.DriverType
+
 	machine *virtualMachineWrapper
 }
 
 var _ driver.Driver = (*LimaVzDriver)(nil)
 
-func New() *LimaVzDriver {
+func New(driverType driver.DriverType) *LimaVzDriver {
 	return &LimaVzDriver{
 		VSockPort:  2222,
 		VirtioPort: "",
+		DriverType: driverType,
 	}
 }
 
@@ -250,9 +255,32 @@ func (l *LimaVzDriver) GuestAgentConn(_ context.Context) (net.Conn, error) {
 	for _, socket := range l.machine.SocketDevices() {
 		connect, err := socket.Connect(uint32(l.VSockPort))
 		if err == nil && connect.SourcePort() != 0 {
+			if l.DriverType == driver.DriverTypeExternal {
+				proxySocketPath := filepath.Join(l.GetInfo().InstanceDir, filenames.GuestAgentSock)
+
+				listener, err := net.Listen("unix", proxySocketPath)
+				if err != nil {
+					logrus.Errorf("Failed to create proxy socket: %v", err)
+					return nil, err
+				}
+
+				go func() {
+					defer listener.Close()
+					defer connect.Close()
+
+					proxyConn, err := listener.Accept()
+					if err != nil {
+						logrus.Errorf("Failed to accept proxy connection: %v", err)
+						return
+					}
+
+					bicopy.Bicopy(connect, proxyConn, nil)
+				}()
+			}
 			return connect, nil
 		}
 	}
+
 	return nil, errors.New("unable to connect to guest agent via vsock port 2222")
 }
 

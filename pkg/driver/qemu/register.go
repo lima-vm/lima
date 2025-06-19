@@ -3,8 +3,11 @@
 
 package qemu
 
-import "github.com/lima-vm/lima/pkg/registry"
+import (
+	"github.com/lima-vm/lima/pkg/driver"
+	"github.com/lima-vm/lima/pkg/registry"
+)
 
 func init() {
-	registry.Register(New())
+	registry.Register(New(driver.DriverTypeInternal))
 }

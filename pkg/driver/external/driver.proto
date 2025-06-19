@@ -24,15 +24,11 @@ service Driver {
     rpc Unregister(google.protobuf.Empty) returns (google.protobuf.Empty);
 
     rpc ForwardGuestAgent(google.protobuf.Empty) returns (ForwardGuestAgentResponse);
-    rpc GuestAgentConn(google.protobuf.Empty) returns (GuestAgentConnResponse);
+    rpc GuestAgentConn(google.protobuf.Empty) returns (google.protobuf.Empty);
 
     rpc SetConfig(SetConfigRequest) returns (google.protobuf.Empty);
 
     rpc GetInfo(google.protobuf.Empty) returns (InfoResponse);
-}
-
-message GuestAgentConnResponse {
-    string socket_path = 1;
 }
 
 message InfoResponse{
