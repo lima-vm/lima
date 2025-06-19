@@ -21,7 +21,6 @@ type DriverClient struct {
 }
 
 func NewDriverClient(socketPath string, logger *logrus.Logger) (*DriverClient, error) {
-	// pipeConn := newPipeConn(stdin, stdout)
 	opts := []grpc.DialOption{
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(16 << 20)),
 		grpc.WithDefaultCallOptions(grpc.MaxCallSendMsgSize(16 << 20)),
@@ -30,14 +29,6 @@ func NewDriverClient(socketPath string, logger *logrus.Logger) (*DriverClient, e
 		}),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
-
-	// conn, err := grpc.NewClient("pipe", opts...)
-	// if err != nil {
-	// 	logger.Errorf("failed to create gRPC driver client connection: %v", err)
-	// 	return nil, err
-	// }
-	// -> ERRO[2025-06-04T21:32:54+05:30] Failed to set config: rpc error: code =
-	// Unavailable desc = name resolver error: produced zero addresses
 
 	conn, err := grpc.Dial("unix://"+socketPath, opts...)
 	if err != nil {
