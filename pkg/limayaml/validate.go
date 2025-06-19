@@ -219,7 +219,7 @@ func Validate(y *LimaYAML, warn bool) error {
 		case ProvisionModeSystem, ProvisionModeUser, ProvisionModeBoot, ProvisionModeData, ProvisionModeDependency, ProvisionModeAnsible:
 		default:
 			return fmt.Errorf("field `provision[%d].mode` must one of %q, %q, %q, %q, %q, or %q",
-				i, ProvisionModeSystem, ProvisionModeUser, ProvisionModeBoot, ProvisionModeDependency, ProvisionModeAnsible, ProvisionModeAnsible)
+				i, ProvisionModeSystem, ProvisionModeUser, ProvisionModeBoot, ProvisionModeData, ProvisionModeDependency, ProvisionModeAnsible)
 		}
 		if p.Mode != ProvisionModeDependency && p.SkipDefaultDependencyResolution != nil {
 			return fmt.Errorf("field `provision[%d].mode` cannot set skipDefaultDependencyResolution, only valid on scripts of type %q",
