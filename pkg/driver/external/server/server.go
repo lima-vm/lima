@@ -4,7 +4,6 @@
 package server
 
 import (
-	"context"
 	"fmt"
 	"net"
 	"os"
@@ -17,7 +16,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
 
-	"github.com/lima-vm/lima/pkg/bicopy"
 	"github.com/lima-vm/lima/pkg/driver"
 	pb "github.com/lima-vm/lima/pkg/driver/external"
 )
@@ -31,13 +29,6 @@ type DriverServer struct {
 func Serve(driver driver.Driver) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
-	// pipeConn := &PipeConn{
-	// 	Reader: os.Stdin,
-	// 	Writer: os.Stdout,
-	// 	Closer: os.Stdout,
-	// }
-
-	// listener := NewPipeListener(pipeConn)
 
 	socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("lima-driver-%s-%d.sock", driver.GetInfo().DriverName, os.Getpid()))
 
@@ -94,21 +85,4 @@ func Serve(driver driver.Driver) {
 	if err := server.Serve(listener); err != nil {
 		logger.Fatalf("Failed to serve: %v", err)
 	}
-}
-
-func HandleProxyConnection(ctx context.Context, conn net.Conn, unixSocketPath string) {
-	logrus.Infof("Handling proxy connection from %s", conn.LocalAddr())
-
-	var d net.Dialer
-	unixConn, err := d.DialContext(ctx, "unix", unixSocketPath)
-	if err != nil {
-		logrus.Errorf("Failed to connect to unix socket %s: %v", unixSocketPath, err)
-		return
-	}
-
-	logrus.Infof("Successfully established proxy tunnel: %s <--> %s", conn.LocalAddr(), unixSocketPath)
-
-	go bicopy.Bicopy(unixConn, conn, nil)
-
-	logrus.Infof("Proxy session ended for %s", conn.LocalAddr())
 }

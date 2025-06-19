@@ -18,7 +18,6 @@ import (
 	"github.com/lima-vm/lima/pkg/driver/external/client"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
-	"github.com/lima-vm/lima/pkg/usrlocalsharelima"
 	"github.com/sirupsen/logrus"
 )
 
@@ -216,12 +215,13 @@ func (r *Registry) RegisterDriver(name, path string) {
 }
 
 func (r *Registry) DiscoverDrivers() error {
-	limaShareDir, err := usrlocalsharelima.Dir()
+	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return fmt.Errorf("failed to determine Lima share directory: %w", err)
+		return err
 	}
-	stdDriverDir := filepath.Join(filepath.Dir(limaShareDir), "libexec", "lima", "drivers")
+	stdDriverDir := filepath.Join(homeDir, ".local", "libexec", "lima", "drivers")
 
+	logrus.Infof("Discovering drivers in %s", stdDriverDir)
 	if _, err := os.Stat(stdDriverDir); err == nil {
 		if err := r.discoverDriversInDir(stdDriverDir); err != nil {
 			logrus.Warnf("Error discovering drivers in %s: %v", stdDriverDir, err)
