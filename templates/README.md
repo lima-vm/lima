@@ -34,6 +34,7 @@ Distro:
 - [`experimental/gentoo`](./experimental/gentoo.yaml): [experimental] Gentoo
 - [`experimental/opensuse-tumbleweed`](./experimental/opensuse-tumbleweed.yaml): [experimental] openSUSE Tumbleweed
 - [`experimental/debian-sid`](./experimental/debian-sid.yaml): [experimental] Debian Sid
+- [`experimental/debian-13`](./experimental/debian-13.yaml), `experimental/debian-testing`: [experimental] Debian GNU/Linux 13 (Trixie)
 
 Alternative package managers:
 - [`linuxbrew.yaml`](./linuxbrew.yaml): [Homebrew](https://brew.sh) on Linux (Ubuntu)
