@@ -12,7 +12,7 @@ import (
 )
 
 func Del(ctx context.Context, inst *store.Instance, tag string) error {
-	limaDriver, err := driverutil.CreateTargetDriverInstance(inst, 0)
+	limaDriver, err := driverutil.CreateConfiguredDriver(inst, 0)
 	if err != nil {
 		return fmt.Errorf("failed to create driver instance: %w", err)
 	}
@@ -21,7 +21,7 @@ func Del(ctx context.Context, inst *store.Instance, tag string) error {
 }
 
 func Save(ctx context.Context, inst *store.Instance, tag string) error {
-	limaDriver, err := driverutil.CreateTargetDriverInstance(inst, 0)
+	limaDriver, err := driverutil.CreateConfiguredDriver(inst, 0)
 	if err != nil {
 		return fmt.Errorf("failed to create driver instance: %w", err)
 	}
@@ -29,7 +29,7 @@ func Save(ctx context.Context, inst *store.Instance, tag string) error {
 }
 
 func Load(ctx context.Context, inst *store.Instance, tag string) error {
-	limaDriver, err := driverutil.CreateTargetDriverInstance(inst, 0)
+	limaDriver, err := driverutil.CreateConfiguredDriver(inst, 0)
 	if err != nil {
 		return fmt.Errorf("failed to create driver instance: %w", err)
 	}
@@ -37,7 +37,7 @@ func Load(ctx context.Context, inst *store.Instance, tag string) error {
 }
 
 func List(ctx context.Context, inst *store.Instance) (string, error) {
-	limaDriver, err := driverutil.CreateTargetDriverInstance(inst, 0)
+	limaDriver, err := driverutil.CreateConfiguredDriver(inst, 0)
 	if err != nil {
 		return "", fmt.Errorf("failed to create driver instance: %w", err)
 	}

@@ -43,7 +43,7 @@ type GUI interface {
 	RunGUI() error
 
 	ChangeDisplayPassword(ctx context.Context, password string) error
-	GetDisplayConnection(ctx context.Context) (string, error)
+	DisplayConnection(ctx context.Context) (string, error)
 }
 
 // SnapshotManager defines operations for managing snapshots.
@@ -66,7 +66,7 @@ type GuestAgent interface {
 	ForwardGuestAgent() bool
 
 	// GuestAgentConn returns the guest agent connection, or nil (if forwarded by ssh).
-	GuestAgentConn(_ context.Context) (net.Conn, error)
+	GuestAgentConn(_ context.Context) (net.Conn, string, error)
 }
 
 // Driver interface is used by hostagent for managing vm.
@@ -77,10 +77,14 @@ type Driver interface {
 	Registration
 	GuestAgent
 
-	GetInfo() Info
+	Info() Info
 
 	// SetConfig sets the configuration for the instance.
-	SetConfig(inst *store.Instance, sshLocalPort int)
+	Configure(inst *store.Instance, sshLocalPort int) *ConfiguredDriver
+}
+
+type ConfiguredDriver struct {
+	Driver
 }
 
 type Info struct {
@@ -90,10 +94,3 @@ type Info struct {
 	VirtioPort  string `json:"virtioPort"`
 	InstanceDir string `json:"instanceDir,omitempty"`
 }
-
-type DriverType = string
-
-const (
-	DriverTypeInternal DriverType = "internal"
-	DriverTypeExternal DriverType = "external"
-)

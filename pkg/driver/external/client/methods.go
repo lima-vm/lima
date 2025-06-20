@@ -136,7 +136,7 @@ func (d *DriverClient) ChangeDisplayPassword(ctx context.Context, password strin
 	return nil
 }
 
-func (d *DriverClient) GetDisplayConnection(ctx context.Context) (string, error) {
+func (d *DriverClient) DisplayConnection(ctx context.Context) (string, error) {
 	d.logger.Debug("Getting display connection for the driver instance")
 
 	resp, err := d.DriverSvc.GetDisplayConnection(ctx, &emptypb.Empty{})
@@ -248,18 +248,18 @@ func (d *DriverClient) ForwardGuestAgent() bool {
 	return resp.ShouldForward
 }
 
-func (d *DriverClient) GuestAgentConn(ctx context.Context) (net.Conn, error) {
+func (d *DriverClient) GuestAgentConn(ctx context.Context) (net.Conn, string, error) {
 	d.logger.Info("Getting guest agent connection")
 	_, err := d.DriverSvc.GuestAgentConn(ctx, &emptypb.Empty{})
 	if err != nil {
 		d.logger.Errorf("Failed to get guest agent connection: %v", err)
-		return nil, err
+		return nil, "", err
 	}
 
-	return nil, nil
+	return nil, "", nil
 }
 
-func (d *DriverClient) GetInfo() driver.Info {
+func (d *DriverClient) Info() driver.Info {
 	d.logger.Debug("Getting driver info")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -281,13 +281,13 @@ func (d *DriverClient) GetInfo() driver.Info {
 	return info
 }
 
-func (d *DriverClient) SetConfig(inst *store.Instance, sshLocalPort int) {
+func (d *DriverClient) Configure(inst *store.Instance, sshLocalPort int) *driver.ConfiguredDriver {
 	d.logger.Debugf("Setting config for instance %s with SSH local port %d", inst.Name, sshLocalPort)
 
 	instJson, err := inst.MarshalJSON()
 	if err != nil {
 		d.logger.Errorf("Failed to marshal instance config: %v", err)
-		return
+		return nil
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -299,8 +299,11 @@ func (d *DriverClient) SetConfig(inst *store.Instance, sshLocalPort int) {
 	})
 	if err != nil {
 		d.logger.Errorf("Failed to set config: %v", err)
-		return
+		return nil
 	}
 
 	d.logger.Debugf("Config set successfully for instance %s", inst.Name)
+	return &driver.ConfiguredDriver{
+		Driver: d,
+	}
 }
