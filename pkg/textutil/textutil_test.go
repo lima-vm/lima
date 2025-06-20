@@ -24,11 +24,6 @@ func TestIndentString(t *testing.T) {
 	assert.Equal(t, "  foo\n  bar\n", IndentString(2, "foo\nbar\n"))
 }
 
-func TestTrimString(t *testing.T) {
-	assert.Equal(t, "foo", TrimString("\n", "foo"))
-	assert.Equal(t, "bar", TrimString("\n", "bar\n"))
-}
-
 func TestMissingString(t *testing.T) {
 	assert.Equal(t, "no", MissingString("no", ""))
 	assert.Equal(t, "msg", MissingString("no", "msg"))

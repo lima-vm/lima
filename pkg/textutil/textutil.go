@@ -44,11 +44,6 @@ func IndentString(size int, text string) string {
 	return PrefixString(prefix, text)
 }
 
-// TrimString removes characters from beginning and end.
-func TrimString(cutset, text string) string {
-	return strings.Trim(text, cutset)
-}
-
 // MissingString returns message if the text is empty.
 func MissingString(message, text string) string {
 	if text == "" {
