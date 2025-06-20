@@ -305,7 +305,6 @@ jobs:
       matrix:
         # Most templates use 9p as the mount type
         template:
-        - ubuntu-25.04.yaml  # The default version of Ubuntu is still 24.10 due to https://github.com/lima-vm/lima/issues/3334
         - alpine.yaml
         - debian.yaml  # reverse-sshfs
         - fedora.yaml  # The default version of Fedora is still 41 due to https://github.com/lima-vm/lima/issues/3334
