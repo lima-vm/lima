@@ -699,6 +699,12 @@ func FillDefault(y, d, o *LimaYAML, filePath string, warn bool) {
 	for _, f := range y.MountTypesUnsupported {
 		mountTypesUnsupported[f] = struct{}{}
 	}
+
+	if runtime.GOOS == "windows" {
+		// QEMU for Windows does not support 9p
+		mountTypesUnsupported[NINEP] = struct{}{}
+	}
+
 	// MountType has to be resolved before resolving Mounts
 	if y.MountType == nil {
 		y.MountType = d.MountType
