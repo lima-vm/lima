@@ -235,6 +235,15 @@ func templateArgs(bootScripts bool, instDir, name string, instConfig *limayaml.L
 		args.MountType = "virtiofs"
 	}
 
+	switch *instConfig.VMType {
+	case limayaml.QEMU:
+		args.DiskType = "virtio"
+	case limayaml.VZ:
+		args.DiskType = "virtio"
+	case limayaml.VBOX:
+		args.DiskType = "sata"
+	}
+
 	for i, d := range instConfig.AdditionalDisks {
 		format := true
 		if d.Format != nil {
@@ -246,7 +255,7 @@ func templateArgs(bootScripts bool, instDir, name string, instConfig *limayaml.L
 		}
 		args.Disks = append(args.Disks, Disk{
 			Name:   d.Name,
-			Device: diskDeviceNameFromOrder(i),
+			Device: diskDeviceNameFromOrder(args.DiskType, i),
 			Format: format,
 			FSType: fstype,
 			FSArgs: d.FSArgs,
@@ -472,7 +481,10 @@ func getBootCmds(p []limayaml.Provision) []BootCmds {
 	return bootCmds
 }
 
-func diskDeviceNameFromOrder(order int) string {
+func diskDeviceNameFromOrder(diskType string, order int) string {
+	if diskType == "sata" {
+		return fmt.Sprintf("sd%c", int('b')+order)
+	} // diskType == "virtio"
 	return fmt.Sprintf("vd%c", int('b')+order)
 }
 

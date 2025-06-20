@@ -71,6 +71,11 @@ func (sp *InfoFormatSpecific) Vmdk() *InfoFormatSpecificDataVmdk {
 	return &x
 }
 
+func (sp *InfoFormatSpecific) Vdi() *InfoFormatSpecificDataVdi {
+	var x InfoFormatSpecificDataVdi
+	return &x
+}
+
 type InfoFormatSpecificDataQcow2 struct {
 	Compat          string `json:"compat,omitempty"`           // since QEMU 1.7
 	LazyRefcounts   bool   `json:"lazy-refcounts,omitempty"`   // since QEMU 1.7
@@ -94,6 +99,9 @@ type InfoFormatSpecificDataVmdkExtent struct {
 	ClusterSize int    `json:"cluster-size,omitempty"` // since QEMU 1.7
 }
 
+type InfoFormatSpecificDataVdi struct {
+}
+
 // Info corresponds to the output of `qemu-img info --output=json FILE`.
 type Info struct {
 	Filename              string              `json:"filename,omitempty"`                // since QEMU 1.3
@@ -112,6 +120,18 @@ type Info struct {
 func ConvertToRaw(source, dest string) error {
 	var stdout, stderr bytes.Buffer
 	cmd := exec.Command("qemu-img", "convert", "-O", "raw", source, dest)
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to run %v: stdout=%q, stderr=%q: %w",
+			cmd.Args, stdout.String(), stderr.String(), err)
+	}
+	return nil
+}
+
+func ConvertToVDI(source string, dest string) error {
+	var stdout, stderr bytes.Buffer
+	cmd := exec.Command("qemu-img", "convert", "-O", "vdi", source, dest)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
