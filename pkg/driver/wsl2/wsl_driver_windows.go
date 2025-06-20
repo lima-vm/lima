@@ -7,20 +7,17 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"path/filepath"
 	"regexp"
 
 	"github.com/Microsoft/go-winio"
 	"github.com/Microsoft/go-winio/pkg/guid"
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/pkg/bicopy"
 	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/freeport"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/reflectutil"
 	"github.com/lima-vm/lima/pkg/store"
-	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/lima-vm/lima/pkg/windows"
 )
 
@@ -55,13 +52,11 @@ type LimaWslDriver struct {
 	SSHLocalPort int
 	VSockPort    int
 	VirtioPort   string
-
-	DriverType driver.DriverType
 }
 
 var _ driver.Driver = (*LimaWslDriver)(nil)
 
-func New(driverType driver.DriverType) *LimaWslDriver {
+func New() *LimaWslDriver {
 	port, err := freeport.VSock()
 	if err != nil {
 		logrus.WithError(err).Error("failed to get free VSock port")
@@ -70,13 +65,16 @@ func New(driverType driver.DriverType) *LimaWslDriver {
 	return &LimaWslDriver{
 		VSockPort:  port,
 		VirtioPort: "",
-		DriverType: driverType,
 	}
 }
 
-func (l *LimaWslDriver) SetConfig(inst *store.Instance, sshLocalPort int) {
+func (l *LimaWslDriver) Configure(inst *store.Instance, sshLocalPort int) *driver.ConfiguredDriver {
 	l.Instance = inst
 	l.SSHLocalPort = sshLocalPort
+
+	return &driver.ConfiguredDriver{
+		Driver: l,
+	}
 }
 
 func (l *LimaWslDriver) Validate() error {
@@ -204,14 +202,14 @@ func (l *LimaWslDriver) Unregister(ctx context.Context) error {
 // GuestAgentConn returns the guest agent connection, or nil (if forwarded by ssh).
 // As of 08-01-2024, github.com/mdlayher/vsock does not natively support vsock on
 // Windows, so use the winio library to create the connection.
-func (l *LimaWslDriver) GuestAgentConn(ctx context.Context) (net.Conn, error) {
+func (l *LimaWslDriver) GuestAgentConn(ctx context.Context) (net.Conn, string, error) {
 	VMIDStr, err := windows.GetInstanceVMID(fmt.Sprintf("lima-%s", l.Instance.Name))
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	VMIDGUID, err := guid.FromString(VMIDStr)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	sockAddr := &winio.HvsockAddr{
 		VMID:      VMIDGUID,
@@ -219,35 +217,13 @@ func (l *LimaWslDriver) GuestAgentConn(ctx context.Context) (net.Conn, error) {
 	}
 	conn, err := winio.Dial(ctx, sockAddr)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
-	if l.DriverType == driver.DriverTypeExternal {
-		proxySocketPath := filepath.Join(l.GetInfo().InstanceDir, filenames.GuestAgentSock)
-
-		listener, err := net.Listen("unix", proxySocketPath)
-		if err != nil {
-			logrus.Errorf("Failed to create proxy socket: %v", err)
-			return nil, err
-		}
-
-		go func() {
-			defer listener.Close()
-			defer conn.Close()
-
-			proxyConn, err := listener.Accept()
-			if err != nil {
-				logrus.Errorf("Failed to accept proxy connection: %v", err)
-				return
-			}
-
-			bicopy.Bicopy(conn, proxyConn, nil)
-		}()
-	}
-	return conn, nil
+	return conn, "vsock", nil
 }
 
-func (l *LimaWslDriver) GetInfo() driver.Info {
+func (l *LimaWslDriver) Info() driver.Info {
 	var info driver.Info
 	if l.Instance != nil && l.Instance.Dir != "" {
 		info.InstanceDir = l.Instance.Dir
@@ -275,7 +251,7 @@ func (l *LimaWslDriver) ChangeDisplayPassword(_ context.Context, _ string) error
 	return nil
 }
 
-func (l *LimaWslDriver) GetDisplayConnection(_ context.Context) (string, error) {
+func (l *LimaWslDriver) DisplayConnection(_ context.Context) (string, error) {
 	return "", nil
 }
 

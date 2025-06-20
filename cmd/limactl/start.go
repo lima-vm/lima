@@ -400,8 +400,12 @@ func createStartActionCommon(cmd *cobra.Command, _ []string) (exit bool, err err
 		return true, err
 	} else if listDrivers {
 		w := cmd.OutOrStdout()
-		for _, d := range registry.DefaultRegistry.List() {
-			_, _ = fmt.Fprintln(w, d)
+		for k, v := range registry.List() {
+			if v != "internal" {
+				_, _ = fmt.Fprintln(w, k+"(external)")
+				continue
+			}
+			_, _ = fmt.Fprintln(w, k)
 		}
 		return true, nil
 	}

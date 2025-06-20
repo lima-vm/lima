@@ -131,13 +131,13 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 		}
 	}
 
-	limaDriver, err := driverutil.CreateTargetDriverInstance(inst, sshLocalPort)
+	limaDriver, err := driverutil.CreateConfiguredDriver(inst, sshLocalPort)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create driver instance: %w", err)
 	}
 
-	vSockPort := limaDriver.GetInfo().VsockPort
-	virtioPort := limaDriver.GetInfo().VirtioPort
+	vSockPort := limaDriver.Info().VsockPort
+	virtioPort := limaDriver.Info().VirtioPort
 
 	if err := cidata.GenerateCloudConfig(inst.Dir, instName, inst.Config); err != nil {
 		return nil, err
@@ -340,7 +340,7 @@ func (a *HostAgent) Run(ctx context.Context) error {
 			return err
 		}
 		if strings.Contains(vncoptions, "to=") {
-			vncport, err = a.driver.GetDisplayConnection(ctx)
+			vncport, err = a.driver.DisplayConnection(ctx)
 			if err != nil {
 				return err
 			}
@@ -361,7 +361,7 @@ func (a *HostAgent) Run(ctx context.Context) error {
 		logrus.Infof("VNC Password: `%s`", vncpwdfile)
 	}
 
-	if a.driver.GetInfo().CanRunGUI {
+	if a.driver.Info().CanRunGUI {
 		go func() {
 			err = a.startRoutinesAndWait(ctx, errCh)
 			if err != nil {
@@ -623,7 +623,7 @@ func (a *HostAgent) getOrCreateClient(ctx context.Context) (*guestagentclient.Gu
 }
 
 func (a *HostAgent) createConnection(ctx context.Context) (net.Conn, error) {
-	conn, err := a.driver.GuestAgentConn(ctx)
+	conn, _, err := a.driver.GuestAgentConn(ctx)
 	// default to forwarded sock
 	if conn == nil && err == nil {
 		var d net.Dialer

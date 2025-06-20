@@ -6,10 +6,9 @@
 package vz
 
 import (
-	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/registry"
 )
 
 func init() {
-	registry.Register(New(driver.DriverTypeInternal))
+	registry.Register(New())
 }

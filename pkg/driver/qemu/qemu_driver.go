@@ -42,8 +42,6 @@ type LimaQemuDriver struct {
 	VSockPort    int
 	VirtioPort   string
 
-	DriverType driver.DriverType
-
 	qCmd    *exec.Cmd
 	qWaitCh chan error
 
@@ -52,7 +50,7 @@ type LimaQemuDriver struct {
 
 var _ driver.Driver = (*LimaQemuDriver)(nil)
 
-func New(driverType driver.DriverType) *LimaQemuDriver {
+func New() *LimaQemuDriver {
 	// virtserialport doesn't seem to work reliably: https://github.com/lima-vm/lima/issues/2064
 	// but on Windows default Unix socket forwarding is not available
 	var virtioPort string
@@ -63,13 +61,16 @@ func New(driverType driver.DriverType) *LimaQemuDriver {
 	return &LimaQemuDriver{
 		VSockPort:  0,
 		VirtioPort: virtioPort,
-		DriverType: driverType,
 	}
 }
 
-func (l *LimaQemuDriver) SetConfig(inst *store.Instance, sshLocalPort int) {
+func (l *LimaQemuDriver) Configure(inst *store.Instance, sshLocalPort int) *driver.ConfiguredDriver {
 	l.Instance = inst
 	l.SSHLocalPort = sshLocalPort
+
+	return &driver.ConfiguredDriver{
+		Driver: l,
+	}
 }
 
 func (l *LimaQemuDriver) Validate() error {
@@ -244,7 +245,7 @@ func (l *LimaQemuDriver) ChangeDisplayPassword(_ context.Context, password strin
 	return l.changeVNCPassword(password)
 }
 
-func (l *LimaQemuDriver) GetDisplayConnection(_ context.Context) (string, error) {
+func (l *LimaQemuDriver) DisplayConnection(_ context.Context) (string, error) {
 	return l.getVNCDisplayPort()
 }
 
@@ -456,10 +457,10 @@ func (l *LimaQemuDriver) ListSnapshots(_ context.Context) (string, error) {
 	return List(qCfg, l.Instance.Status == store.StatusRunning)
 }
 
-func (l *LimaQemuDriver) GuestAgentConn(ctx context.Context) (net.Conn, error) {
+func (l *LimaQemuDriver) GuestAgentConn(ctx context.Context) (net.Conn, string, error) {
 	var d net.Dialer
 	dialContext, err := d.DialContext(ctx, "unix", filepath.Join(l.Instance.Dir, filenames.GuestAgentSock))
-	return dialContext, err
+	return dialContext, "unix", err
 }
 
 type qArgTemplateApplier struct {
@@ -514,7 +515,7 @@ func (a *qArgTemplateApplier) applyTemplate(qArg string) (string, error) {
 	return b.String(), nil
 }
 
-func (l *LimaQemuDriver) GetInfo() driver.Info {
+func (l *LimaQemuDriver) Info() driver.Info {
 	var info driver.Info
 	if l.Instance != nil && l.Instance.Dir != "" {
 		info.InstanceDir = l.Instance.Dir

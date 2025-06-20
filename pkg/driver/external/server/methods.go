@@ -6,6 +6,8 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"net"
+	"path/filepath"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -13,8 +15,11 @@ import (
 	// "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
 
+	"github.com/lima-vm/lima/pkg/bicopy"
 	pb "github.com/lima-vm/lima/pkg/driver/external"
 	"github.com/lima-vm/lima/pkg/store"
+	"github.com/lima-vm/lima/pkg/store/filenames"
+	"github.com/sirupsen/logrus"
 )
 
 func (s *DriverServer) Start(empty *emptypb.Empty, stream pb.Driver_StartServer) error {
@@ -59,17 +64,40 @@ func (s *DriverServer) SetConfig(ctx context.Context, req *pb.SetConfigRequest) 
 		return &emptypb.Empty{}, err
 	}
 
-	s.driver.SetConfig(&inst, int(req.SshLocalPort))
+	_ = s.driver.Configure(&inst, int(req.SshLocalPort))
 
 	return &emptypb.Empty{}, nil
 }
 
 func (s *DriverServer) GuestAgentConn(ctx context.Context, empty *emptypb.Empty) (*emptypb.Empty, error) {
 	s.logger.Debug("Received GuestAgentConn request")
-	_, err := s.driver.GuestAgentConn(ctx)
+	conn, connType, err := s.driver.GuestAgentConn(ctx)
 	if err != nil {
 		s.logger.Errorf("GuestAgentConn failed: %v", err)
 		return nil, err
+	}
+
+	if connType != "unix" {
+		proxySocketPath := filepath.Join(s.driver.Info().InstanceDir, filenames.GuestAgentSock)
+
+		listener, err := net.Listen("unix", proxySocketPath)
+		if err != nil {
+			logrus.Errorf("Failed to create proxy socket: %v", err)
+			return nil, err
+		}
+
+		go func() {
+			defer listener.Close()
+			defer conn.Close()
+
+			proxyConn, err := listener.Accept()
+			if err != nil {
+				logrus.Errorf("Failed to accept proxy connection: %v", err)
+				return
+			}
+
+			bicopy.Bicopy(conn, proxyConn, nil)
+		}()
 	}
 
 	return &emptypb.Empty{}, nil
@@ -77,7 +105,7 @@ func (s *DriverServer) GuestAgentConn(ctx context.Context, empty *emptypb.Empty)
 
 func (s *DriverServer) GetInfo(ctx context.Context, empty *emptypb.Empty) (*pb.InfoResponse, error) {
 	s.logger.Debug("Received GetInfo request")
-	info := s.driver.GetInfo()
+	info := s.driver.Info()
 
 	infoJson, err := json.Marshal(info)
 	if err != nil {
@@ -158,7 +186,7 @@ func (s *DriverServer) ChangeDisplayPassword(ctx context.Context, req *pb.Change
 
 func (s *DriverServer) GetDisplayConnection(ctx context.Context, empty *emptypb.Empty) (*pb.GetDisplayConnectionResponse, error) {
 	s.logger.Debug("Received GetDisplayConnection request")
-	conn, err := s.driver.GetDisplayConnection(ctx)
+	conn, err := s.driver.DisplayConnection(ctx)
 	if err != nil {
 		s.logger.Errorf("GetDisplayConnection failed: %v", err)
 		return nil, err

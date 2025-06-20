@@ -16,10 +16,10 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/lima-vm/lima/pkg/debugutil"
-	// _ "github.com/lima-vm/lima/pkg/driver/qemu" // register qemu driver for all platforms
+	"github.com/lima-vm/lima/pkg/driver/external/server"
+	_ "github.com/lima-vm/lima/pkg/driver/qemu" // register qemu driver for all platforms
 	"github.com/lima-vm/lima/pkg/fsutil"
 	"github.com/lima-vm/lima/pkg/osutil"
-	"github.com/lima-vm/lima/pkg/registry"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/lima-vm/lima/pkg/version"
 )
@@ -46,7 +46,7 @@ func main() {
 		logrus.Fatal(err)
 	}
 
-	defer registry.DefaultRegistry.StopAllExternalDrivers()
+	defer server.StopAllExternalDrivers()
 }
 
 func newApp() *cobra.Command {

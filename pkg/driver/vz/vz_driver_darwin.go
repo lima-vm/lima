@@ -18,13 +18,11 @@ import (
 	"github.com/coreos/go-semver/semver"
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/pkg/bicopy"
 	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/reflectutil"
 	"github.com/lima-vm/lima/pkg/store"
-	"github.com/lima-vm/lima/pkg/store/filenames"
 )
 
 var knownYamlProperties = []string{
@@ -77,24 +75,25 @@ type LimaVzDriver struct {
 	VSockPort    int
 	VirtioPort   string
 
-	DriverType driver.DriverType
-
 	machine *virtualMachineWrapper
 }
 
 var _ driver.Driver = (*LimaVzDriver)(nil)
 
-func New(driverType driver.DriverType) *LimaVzDriver {
+func New() *LimaVzDriver {
 	return &LimaVzDriver{
 		VSockPort:  2222,
 		VirtioPort: "",
-		DriverType: driverType,
 	}
 }
 
-func (l *LimaVzDriver) SetConfig(inst *store.Instance, sshLocalPort int) {
+func (l *LimaVzDriver) Configure(inst *store.Instance, sshLocalPort int) *driver.ConfiguredDriver {
 	l.Instance = inst
 	l.SSHLocalPort = sshLocalPort
+
+	return &driver.ConfiguredDriver{
+		Driver: l,
+	}
 }
 
 func (l *LimaVzDriver) Validate() error {
@@ -251,40 +250,16 @@ func (l *LimaVzDriver) Stop(_ context.Context) error {
 	return errors.New("vz: CanRequestStop is not supported")
 }
 
-func (l *LimaVzDriver) GuestAgentConn(_ context.Context) (net.Conn, error) {
+func (l *LimaVzDriver) GuestAgentConn(_ context.Context) (net.Conn, string, error) {
 	for _, socket := range l.machine.SocketDevices() {
 		connect, err := socket.Connect(uint32(l.VSockPort))
-		if err == nil && connect.SourcePort() != 0 {
-			if l.DriverType == driver.DriverTypeExternal {
-				proxySocketPath := filepath.Join(l.GetInfo().InstanceDir, filenames.GuestAgentSock)
-
-				listener, err := net.Listen("unix", proxySocketPath)
-				if err != nil {
-					logrus.Errorf("Failed to create proxy socket: %v", err)
-					return nil, err
-				}
-
-				go func() {
-					defer listener.Close()
-					defer connect.Close()
-
-					proxyConn, err := listener.Accept()
-					if err != nil {
-						logrus.Errorf("Failed to accept proxy connection: %v", err)
-						return
-					}
-
-					bicopy.Bicopy(connect, proxyConn, nil)
-				}()
-			}
-			return connect, nil
-		}
+		return connect, "vsock", err
 	}
 
-	return nil, errors.New("unable to connect to guest agent via vsock port 2222")
+	return nil, "", errors.New("unable to connect to guest agent via vsock port 2222")
 }
 
-func (l *LimaVzDriver) GetInfo() driver.Info {
+func (l *LimaVzDriver) Info() driver.Info {
 	var info driver.Info
 	if l.Instance != nil && l.Instance.Config != nil {
 		info.CanRunGUI = l.canRunGUI()
@@ -311,7 +286,7 @@ func (l *LimaVzDriver) ChangeDisplayPassword(_ context.Context, _ string) error 
 	return nil
 }
 
-func (l *LimaVzDriver) GetDisplayConnection(_ context.Context) (string, error) {
+func (l *LimaVzDriver) DisplayConnection(_ context.Context) (string, error) {
 	return "", nil
 }
 

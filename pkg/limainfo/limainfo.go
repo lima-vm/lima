@@ -22,7 +22,7 @@ type LimaInfo struct {
 	Templates       []templatestore.Template     `json:"templates"`
 	DefaultTemplate *limayaml.LimaYAML           `json:"defaultTemplate"`
 	LimaHome        string                       `json:"limaHome"`
-	VMTypes         []string                     `json:"vmTypes"`     // since Lima v0.14.2
+	VMTypes         map[string]string            `json:"vmTypes"`     // since Lima v0.14.2
 	GuestAgents     map[limayaml.Arch]GuestAgent `json:"guestAgents"` // since Lima v1.1.0
 }
 
@@ -45,7 +45,7 @@ func New() (*LimaInfo, error) {
 	info := &LimaInfo{
 		Version:         version.Version,
 		DefaultTemplate: y,
-		VMTypes:         registry.DefaultRegistry.List(),
+		VMTypes:         registry.List(),
 		GuestAgents:     make(map[limayaml.Arch]GuestAgent),
 	}
 	info.Templates, err = templatestore.Templates()
