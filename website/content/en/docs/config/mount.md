@@ -12,7 +12,7 @@ The default mount type is shown in the following table:
 | < 0.10       | reverse-sshfs + Builtin SFTP server                           |
 | >= 0.10      | reverse-sshfs + OpenSSH SFTP server                           |
 | >= 0.17      | reverse-sshfs + OpenSSH SFTP server for QEMU, virtiofs for VZ |
-| >= 1.0       | 9p for QEMU, virtiofs for VZ                                  |
+| >= 1.0       | 9p for QEMU (on non-Windows), virtiofs for VZ                 |
 
 ## Mount types
 
