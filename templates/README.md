@@ -31,6 +31,7 @@ Distro:
 - [`rocky-9`](./rocky-9.yaml), `rocky.yaml`: Rocky Linux 9
 - [`ubuntu`](./ubuntu.yaml): Ubuntu (same as `default.yaml` but without extra YAML lines)
 - [`ubuntu-lts`](./ubuntu-lts.yaml): Ubuntu LTS (same as `ubuntu.yaml` but pinned to an LTS version)
+- [`experimental/ubuntu-next`](./experimental/ubuntu-next.yaml): Ubuntu vNext
 - [`experimental/gentoo`](./experimental/gentoo.yaml): [experimental] Gentoo
 - [`experimental/opensuse-tumbleweed`](./experimental/opensuse-tumbleweed.yaml): [experimental] openSUSE Tumbleweed
 - [`experimental/debian-sid`](./experimental/debian-sid.yaml): [experimental] Debian Sid

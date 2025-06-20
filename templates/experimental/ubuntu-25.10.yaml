@@ -1,0 +1,17 @@
+minimumLimaVersion: 1.1.0
+
+base: template://_default/mounts
+
+images:
+- location: https://cloud-images.ubuntu.com/questing/current/questing-server-cloudimg-amd64.img
+  arch: x86_64
+- location: https://cloud-images.ubuntu.com/questing/current/questing-server-cloudimg-arm64.img
+  arch: aarch64
+- location: https://cloud-images.ubuntu.com/questing/current/questing-server-cloudimg-armhf.img
+  arch: armv7l
+- location: https://cloud-images.ubuntu.com/questing/current/questing-server-cloudimg-riscv64.img
+  arch: riscv64
+- location: https://cloud-images.ubuntu.com/questing/current/questing-server-cloudimg-s390x.img
+  arch: s390x
+- location: https://cloud-images.ubuntu.com/questing/current/questing-server-cloudimg-ppc64el.img
+  arch: ppc64le
