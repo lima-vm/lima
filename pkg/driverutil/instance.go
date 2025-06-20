@@ -12,14 +12,12 @@ import (
 )
 
 // CreateTargetDriverInstance creates the appropriate driver for an instance.
-func CreateTargetDriverInstance(inst *store.Instance, sshLocalPort int) (driver.Driver, error) {
+func CreateConfiguredDriver(inst *store.Instance, sshLocalPort int) (driver.ConfiguredDriver, error) {
 	limaDriver := inst.Config.VMType
-	driver, exists := registry.DefaultRegistry.Get(string(*limaDriver), inst.Name)
+	driver, exists := registry.Get(string(*limaDriver), inst.Name)
 	if !exists {
-		return nil, fmt.Errorf("unknown or unsupported VM type: %s", *limaDriver)
+		return driver.Configure(nil, 0), fmt.Errorf("unknown or unsupported VM type: %s", *limaDriver)
 	}
 
-	driver.SetConfig(inst, sshLocalPort)
-
-	return driver, nil
+	return driver.Configure(inst, sshLocalPort), nil
 }

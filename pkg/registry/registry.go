@@ -11,7 +11,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/lima-vm/lima/pkg/driver"
@@ -33,18 +32,10 @@ type ExternalDriver struct {
 	cancelFunc   context.CancelFunc
 }
 
-type Registry struct {
-	internalDrivers map[string]driver.Driver
-	externalDrivers map[string]*ExternalDriver
-	mu              sync.RWMutex
-}
-
-func NewRegistry() *Registry {
-	return &Registry{
-		internalDrivers: make(map[string]driver.Driver),
-		externalDrivers: make(map[string]*ExternalDriver),
-	}
-}
+var (
+	internalDrivers = make(map[string]driver.Driver)
+	externalDrivers = make(map[string]*ExternalDriver)
+)
 
 func (e *ExternalDriver) Start(instName string) error {
 	e.logger.Infof("Starting external driver at %s", e.Path)
@@ -139,12 +130,8 @@ func (e *ExternalDriver) Stop() error {
 	return nil
 }
 
-func (r *Registry) StopAllExternalDrivers() {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	for name, driver := range r.externalDrivers {
-		// Only try to stop if the driver is actually running
+func StopAllExternalDrivers() {
+	for name, driver := range externalDrivers {
 		if driver.Command != nil && driver.Command.Process != nil {
 			if err := driver.Stop(); err != nil {
 				logrus.Errorf("Failed to stop external driver %s: %v", name, err)
@@ -152,33 +139,25 @@ func (r *Registry) StopAllExternalDrivers() {
 				logrus.Infof("External driver %s stopped successfully", name)
 			}
 		}
-		// Always remove from registry
-		delete(r.externalDrivers, name)
+		delete(externalDrivers, name)
 	}
 }
 
-func (r *Registry) List() []string {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	var names []string
-	for name := range r.internalDrivers {
-		names = append(names, name)
+func List() map[string]string {
+	vmTypes := make(map[string]string)
+	for name := range internalDrivers {
+		vmTypes[name] = "internal"
 	}
-
-	for name := range r.externalDrivers {
-		names = append(names, name+" (external)")
+	for name, d := range externalDrivers {
+		vmTypes[name] = d.Path
 	}
-	return names
+	return vmTypes
 }
 
-func (r *Registry) Get(name, instName string) (driver.Driver, bool) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	driver, exists := r.internalDrivers[name]
+func Get(name, instName string) (driver.Driver, bool) {
+	driver, exists := internalDrivers[name]
 	if !exists {
-		externalDriver, exists := r.externalDrivers[name]
+		externalDriver, exists := externalDrivers[name]
 		if exists {
 			externalDriver.logger.Debugf("Using external driver %q", name)
 			if externalDriver.Client == nil || externalDriver.Command == nil || externalDriver.Command.Process == nil {
@@ -189,32 +168,27 @@ func (r *Registry) Get(name, instName string) (driver.Driver, bool) {
 				}
 			} else {
 				logrus.Infof("Reusing existing external driver %q instance", name)
-				r.externalDrivers[name].InstanceName = instName
+				externalDriver.InstanceName = instName
 			}
-
 			return externalDriver.Client, true
 		}
 	}
 	return driver, exists
 }
 
-func (r *Registry) RegisterDriver(name, path string) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	if _, exists := DefaultRegistry.externalDrivers[name]; exists {
+func RegisterDriver(name, path string) {
+	if _, exists := externalDrivers[name]; exists {
 		logrus.Debugf("Driver %q is already registered, skipping", name)
 		return
 	}
-
-	DefaultRegistry.externalDrivers[name] = &ExternalDriver{
+	externalDrivers[name] = &ExternalDriver{
 		Name:   name,
 		Path:   path,
 		logger: logrus.New(),
 	}
 }
 
-func (r *Registry) DiscoverDrivers() error {
+func DiscoverDrivers() error {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return err
@@ -223,7 +197,7 @@ func (r *Registry) DiscoverDrivers() error {
 
 	logrus.Infof("Discovering drivers in %s", stdDriverDir)
 	if _, err := os.Stat(stdDriverDir); err == nil {
-		if err := r.discoverDriversInDir(stdDriverDir); err != nil {
+		if err := discoverDriversInDir(stdDriverDir); err != nil {
 			logrus.Warnf("Error discovering drivers in %s: %v", stdDriverDir, err)
 		}
 	}
@@ -242,11 +216,11 @@ func (r *Registry) DiscoverDrivers() error {
 			}
 
 			if info.IsDir() {
-				if err := r.discoverDriversInDir(path); err != nil {
+				if err := discoverDriversInDir(path); err != nil {
 					logrus.Warnf("Error discovering drivers in %s: %v", path, err)
 				}
 			} else if isExecutable(info.Mode()) {
-				r.registerDriverFile(path)
+				registerDriverFile(path)
 			}
 		}
 	}
@@ -254,7 +228,7 @@ func (r *Registry) DiscoverDrivers() error {
 	return nil
 }
 
-func (r *Registry) discoverDriversInDir(dir string) error {
+func discoverDriversInDir(dir string) error {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return fmt.Errorf("failed to read driver directory %s: %w", dir, err)
@@ -276,13 +250,13 @@ func (r *Registry) discoverDriversInDir(dir string) error {
 		}
 
 		driverPath := filepath.Join(dir, entry.Name())
-		r.registerDriverFile(driverPath)
+		registerDriverFile(driverPath)
 	}
 
 	return nil
 }
 
-func (r *Registry) registerDriverFile(path string) {
+func registerDriverFile(path string) {
 	base := filepath.Base(path)
 	if !strings.HasPrefix(base, "lima-driver-") {
 		fmt.Printf("Skipping %s: does not start with 'lima-driver-'\n", base)
@@ -292,29 +266,23 @@ func (r *Registry) registerDriverFile(path string) {
 	name := strings.TrimPrefix(base, "lima-driver-")
 	name = strings.TrimSuffix(name, filepath.Ext(name))
 
-	r.RegisterDriver(name, path)
+	RegisterDriver(name, path)
 }
 
 func isExecutable(mode os.FileMode) bool {
 	return mode&0111 != 0
 }
 
-var DefaultRegistry *Registry
-
 func init() {
-	DefaultRegistry = NewRegistry()
-	if err := DefaultRegistry.DiscoverDrivers(); err != nil {
+	if err := DiscoverDrivers(); err != nil {
 		logrus.Warnf("Error discovering drivers: %v", err)
 	}
 }
 
 func Register(driver driver.Driver) {
-	if DefaultRegistry != nil {
-		name := driver.GetInfo().DriverName
-		if _, exists := DefaultRegistry.internalDrivers[name]; exists {
-			return
-		}
-
-		DefaultRegistry.internalDrivers[name] = driver
+	name := driver.Info().DriverName
+	if _, exists := internalDrivers[name]; exists {
+		return
 	}
+	internalDrivers[name] = driver
 }

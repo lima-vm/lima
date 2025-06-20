@@ -30,7 +30,7 @@ func Serve(driver driver.Driver) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 
-	socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("lima-driver-%s-%d.sock", driver.GetInfo().DriverName, os.Getpid()))
+	socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("lima-driver-%s-%d.sock", driver.Info().DriverName, os.Getpid()))
 
 	defer func() {
 		if err := os.Remove(socketPath); err != nil && !os.IsNotExist(err) {
@@ -80,7 +80,7 @@ func Serve(driver driver.Driver) {
 		os.Exit(0)
 	}()
 
-	logger.Infof("Starting external driver server for %s", driver.GetInfo().DriverName)
+	logger.Infof("Starting external driver server for %s", driver.Info().DriverName)
 	logger.Infof("Server starting on Unix socket: %s", socketPath)
 	if err := server.Serve(listener); err != nil {
 		logger.Fatalf("Failed to serve: %v", err)
