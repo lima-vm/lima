@@ -28,7 +28,8 @@ Distro:
 - [`oraclelinux-8`](./oraclelinux-8.yaml): Oracle Linux 8
 - [`oraclelinux-9`](./oraclelinux-9.yaml), `oraclelinux.yaml`: Oracle Linux 9
 - [`rocky-8`](./rocky-8.yaml): Rocky Linux 8
-- [`rocky-9`](./rocky-9.yaml), `rocky.yaml`: Rocky Linux 9
+- [`rocky-9`](./rocky-9.yaml): Rocky Linux 9
+- [`rocky-10`](./rocky-10.yaml), `rocky.yaml`: Rocky Linux 10
 - [`ubuntu`](./ubuntu.yaml): Ubuntu (same as `default.yaml` but without extra YAML lines)
 - [`ubuntu-lts`](./ubuntu-lts.yaml): Ubuntu LTS (same as `ubuntu.yaml` but pinned to an LTS version)
 - [`experimental/gentoo`](./experimental/gentoo.yaml): [experimental] Gentoo
