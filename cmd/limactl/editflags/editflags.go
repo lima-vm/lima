@@ -4,6 +4,7 @@
 package editflags
 
 import (
+	"errors"
 	"fmt"
 	"math/bits"
 	"runtime"
@@ -45,6 +46,7 @@ func registerEdit(cmd *cobra.Command, commentPrefix string) {
 	})
 
 	flags.StringSlice("mount", nil, commentPrefix+"Directories to mount, suffix ':w' for writable (Do not specify directories that overlap with the existing mounts)") // colima-compatible
+	flags.Bool("mount-none", false, commentPrefix+"Remove all mounts")
 
 	flags.String("mount-type", "", commentPrefix+"Mount type (reverse-sshfs, 9p, virtiofs)") // Similar to colima's --mount-type=(sshfs|9p|virtiofs), but "reverse-sshfs" is Lima is called "sshfs" in colima
 	_ = cmd.RegisterFlagCompletionFunc("mount-type", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
@@ -153,6 +155,21 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 				}
 				expr += `] | .mounts |= unique_by(.location)`
 				return expr, nil
+			},
+			false,
+			false,
+		},
+		{
+			"mount-none",
+			func(_ *flag.Flag) (string, error) {
+				ss, err := flags.GetStringSlice("mount")
+				if err != nil {
+					return "", err
+				}
+				if len(ss) > 0 {
+					return "", errors.New("flag `--mount-none` conflicts with `--mount`")
+				}
+				return ".mounts = null", nil
 			},
 			false,
 			false,
