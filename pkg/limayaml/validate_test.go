@@ -264,3 +264,28 @@ provision:
 		"field `provision[0].mode` must one of \"system\", \"user\", \"boot\", \"data\", \"dependency\", or \"ansible\"\n"+
 		"field `provision[1].path` must not be empty when mode is \"data\"")
 }
+
+// TestValidateAgainstLatestConfig ensures the new config is correctly validated against the latest config.
+// (e.g., disk shrinking is disallowed).
+func TestValidateAgainstLatestConfig(t *testing.T) {
+	validParam := [][]string{
+		{`disk: 100G`, `disk: 100G`},
+		{`disk: 200G`, `disk: 100G`},
+		{``, ``},
+	}
+	for _, param := range validParam {
+		n, l := param[0], param[1]
+		err := ValidateYAMLAgainstLatestConfig([]byte(n), []byte(l))
+		assert.NilError(t, err)
+	}
+
+	invalidParam := [][]string{
+		{`disk: 50G`, `disk: 100G`, `shrinking`},
+	}
+
+	for _, param := range invalidParam {
+		n, l := param[0], param[1]
+		err := ValidateYAMLAgainstLatestConfig([]byte(n), []byte(l))
+		assert.ErrorContains(t, err, param[2])
+	}
+}
