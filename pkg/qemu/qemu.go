@@ -28,12 +28,12 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/pkg/fileutils"
+	"github.com/lima-vm/lima/pkg/imgutil"
 	"github.com/lima-vm/lima/pkg/iso9660util"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/networks"
 	"github.com/lima-vm/lima/pkg/networks/usernet"
 	"github.com/lima-vm/lima/pkg/osutil"
-	"github.com/lima-vm/lima/pkg/qemu/imgutil"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 )
@@ -92,6 +92,11 @@ func EnsureDisk(ctx context.Context, cfg Config) error {
 		return err
 	}
 
+	_, infoProvider, err := imgutil.NewImageUtil("qcow2")
+	if err != nil {
+		return fmt.Errorf("failed to create image util: %w", err)
+	}
+
 	baseDisk := filepath.Join(cfg.InstanceDir, filenames.BaseDisk)
 	kernel := filepath.Join(cfg.InstanceDir, filenames.Kernel)
 	kernelCmdline := filepath.Join(cfg.InstanceDir, filenames.KernelCmdline)
@@ -137,11 +142,11 @@ func EnsureDisk(ctx context.Context, cfg Config) error {
 	if err != nil {
 		return err
 	}
-	baseDiskInfo, err := imgutil.GetInfo(baseDisk)
+	baseDiskInfo, err := infoProvider.GetInfo(baseDisk)
 	if err != nil {
 		return fmt.Errorf("failed to get the information of base disk %q: %w", baseDisk, err)
 	}
-	if err = imgutil.AcceptableAsBasedisk(baseDiskInfo); err != nil {
+	if err = infoProvider.AcceptableAsBasedisk(baseDiskInfo); err != nil {
 		return fmt.Errorf("file %q is not acceptable as the base disk: %w", baseDisk, err)
 	}
 	if baseDiskInfo.Format == "" {
@@ -678,6 +683,11 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 		extraDisks = append(extraDisks, dataDisk)
 	}
 
+	_, infoProvider, err := imgutil.NewImageUtil("qcow2")
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to create image util: %w", err)
+	}
+
 	isBaseDiskCDROM, err := iso9660util.IsISO9660(baseDisk)
 	if err != nil {
 		return "", nil, err
@@ -691,11 +701,11 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	if diskSize, _ := units.RAMInBytes(*cfg.LimaYAML.Disk); diskSize > 0 {
 		args = append(args, "-drive", fmt.Sprintf("file=%s,if=virtio,discard=on", diffDisk))
 	} else if !isBaseDiskCDROM {
-		baseDiskInfo, err := imgutil.GetInfo(baseDisk)
+		baseDiskInfo, err := infoProvider.GetInfo(baseDisk)
 		if err != nil {
 			return "", nil, fmt.Errorf("failed to get the information of %q: %w", baseDisk, err)
 		}
-		if err = imgutil.AcceptableAsBasedisk(baseDiskInfo); err != nil {
+		if err = infoProvider.AcceptableAsBasedisk(baseDiskInfo); err != nil {
 			return "", nil, fmt.Errorf("file %q is not acceptable as the base disk: %w", baseDisk, err)
 		}
 		if baseDiskInfo.Format == "" {

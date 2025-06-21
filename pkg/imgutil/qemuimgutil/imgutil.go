@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright The Lima Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package imgutil
+package qemuimgutil
 
 import (
 	"bytes"
@@ -26,7 +26,7 @@ type InfoFormatSpecific struct {
 	Data json.RawMessage `json:"data,omitempty"` // since QEMU 1.7
 }
 
-func CreateDisk(disk, format string, size int) error {
+func createDisk(disk, format string, size int) error {
 	if _, err := os.Stat(disk); err == nil || !errors.Is(err, fs.ErrNotExist) {
 		// disk already exists
 		return err
@@ -40,7 +40,7 @@ func CreateDisk(disk, format string, size int) error {
 	return nil
 }
 
-func ResizeDisk(disk, format string, size int) error {
+func resizeDisk(disk, format string, size int) error {
 	args := []string{"resize", "-f", format, disk, strconv.Itoa(size)}
 	cmd := exec.Command("qemu-img", args...)
 	if out, err := cmd.CombinedOutput(); err != nil {
@@ -109,7 +109,7 @@ type Info struct {
 	Children              []InfoChild         `json:"children,omitempty"`                // since QEMU 8.0
 }
 
-func ConvertToRaw(source, dest string) error {
+func convertToRaw(source, dest string) error {
 	var stdout, stderr bytes.Buffer
 	cmd := exec.Command("qemu-img", "convert", "-O", "raw", source, dest)
 	cmd.Stdout = &stdout
@@ -121,7 +121,7 @@ func ConvertToRaw(source, dest string) error {
 	return nil
 }
 
-func ParseInfo(b []byte) (*Info, error) {
+func parseInfo(b []byte) (*Info, error) {
 	var imgInfo Info
 	if err := json.Unmarshal(b, &imgInfo); err != nil {
 		return nil, err
@@ -129,7 +129,7 @@ func ParseInfo(b []byte) (*Info, error) {
 	return &imgInfo, nil
 }
 
-func GetInfo(f string) (*Info, error) {
+func getInfo(f string) (*Info, error) {
 	var stdout, stderr bytes.Buffer
 	cmd := exec.Command("qemu-img", "info", "--output=json", "--force-share", f)
 	cmd.Stdout = &stdout
@@ -138,10 +138,10 @@ func GetInfo(f string) (*Info, error) {
 		return nil, fmt.Errorf("failed to run %v: stdout=%q, stderr=%q: %w",
 			cmd.Args, stdout.String(), stderr.String(), err)
 	}
-	return ParseInfo(stdout.Bytes())
+	return parseInfo(stdout.Bytes())
 }
 
-func AcceptableAsBasedisk(info *Info) error {
+func acceptableAsBasedisk(info *Info) error {
 	switch info.Format {
 	case "qcow2", "raw":
 		// NOP
