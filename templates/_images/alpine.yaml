@@ -1,8 +1,7 @@
 images:
-- location: https://dl-cdn.alpinelinux.org/alpine/v3.21/releases/cloud/nocloud_alpine-3.21.2-x86_64-uefi-cloudinit-r0.qcow2
-  arch: x86_64
-  digest: sha512:1aaf22b4a584e69e228e6aa38a295159c0143d9ccebe7ad4928e92b414714066af3bfe5f9e0ca4d4d64a70ca9fea09033af90258a6f2344130d70b660151127a
-
-- location: https://dl-cdn.alpinelinux.org/alpine/v3.21/releases/cloud/nocloud_alpine-3.21.2-aarch64-uefi-cloudinit-r0.qcow2
-  arch: aarch64
-  digest: sha512:08d340126b222abae651a20aa63c3ee3dc601d703de7879d2a6bc1fe82a3664d058a2c55ad0cf8a874327f7535e3af8a9384ce438217d6f32200cad1462a5b32
+- location: "https://dl-cdn.alpinelinux.org/alpine/v3.22/releases/cloud/nocloud_alpine-3.22.0-x86_64-uefi-cloudinit-r0.qcow2"
+  arch: "x86_64"
+  digest: "sha512:2ebfc0d515dee0b8a0732d77c99f050bf2a413a5d6bc3634ac94cb48f7b31a3e59431f732810edccf4b39cc0045275a947496aff534804f2cac6e7e9d63c7c74"
+- location: "https://dl-cdn.alpinelinux.org/alpine/v3.22/releases/cloud/nocloud_alpine-3.22.0-aarch64-uefi-cloudinit-r0.qcow2"
+  arch: "aarch64"
+  digest: "sha512:30b347397387926eeb939d93c926e09833f5b49c6c6de5cc225ccdfe6e54aba88251c71da264c7e4260e78132b50e34b93409c8b4da2e843e68a4dc35fc6b155"
