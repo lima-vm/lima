@@ -35,6 +35,10 @@ var (
 )
 
 func List() map[string]string {
+	if err := discoverDrivers(); err != nil {
+		logrus.Warnf("Error discovering drivers: %v", err)
+	}
+
 	vmTypes := make(map[string]string)
 	for name := range internalDrivers {
 		vmTypes[name] = "internal"
@@ -46,6 +50,10 @@ func List() map[string]string {
 }
 
 func Get(name string) (*ExternalDriver, driver.Driver, bool) {
+	if err := discoverDrivers(); err != nil {
+		logrus.Warnf("Error discovering drivers: %v", err)
+	}
+
 	internalDriver, exists := internalDrivers[name]
 	if !exists {
 		externalDriver, exists := ExternalDrivers[name]
@@ -56,11 +64,16 @@ func Get(name string) (*ExternalDriver, driver.Driver, bool) {
 	return nil, internalDriver, exists
 }
 
-func RegisterExternalDriver(name, path string) {
+func registerExternalDriver(name, path string) {
 	if _, exists := ExternalDrivers[name]; exists {
-		logrus.Debugf("Driver %q is already registered, skipping", name)
 		return
 	}
+
+	if _, exists := internalDrivers[name]; exists {
+		logrus.Warnf("Driver %q is already registered as an internal driver, skipping external registration", name)
+		return
+	}
+
 	ExternalDrivers[name] = &ExternalDriver{
 		Name:   name,
 		Path:   path,
@@ -68,7 +81,7 @@ func RegisterExternalDriver(name, path string) {
 	}
 }
 
-func DiscoverDrivers() error {
+func discoverDrivers() error {
 	prefix, err := usrlocalsharelima.Prefix()
 	if err != nil {
 		return err
@@ -144,17 +157,11 @@ func registerDriverFile(path string) {
 
 	name := strings.TrimPrefix(base, "lima-driver-")
 
-	RegisterExternalDriver(name, path)
+	registerExternalDriver(name, path)
 }
 
 func isExecutable(mode os.FileMode) bool {
 	return mode&0111 != 0
-}
-
-func init() {
-	if err := DiscoverDrivers(); err != nil {
-		logrus.Warnf("Error discovering drivers: %v", err)
-	}
 }
 
 func Register(driver driver.Driver) {
