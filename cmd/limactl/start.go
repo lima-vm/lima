@@ -4,6 +4,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -223,7 +224,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 	yq := yqutil.Join(yqExprs)
 	if tty {
 		var err error
-		tmpl, err = chooseNextCreatorState(tmpl, yq)
+		tmpl, err = chooseNextCreatorState(cmd.Context(), tmpl, yq)
 		if err != nil {
 			return nil, err
 		}
@@ -294,7 +295,7 @@ func (exitSuccessError) ExitCode() int {
 	return 0
 }
 
-func chooseNextCreatorState(tmpl *limatmpl.Template, yq string) (*limatmpl.Template, error) {
+func chooseNextCreatorState(ctx context.Context, tmpl *limatmpl.Template, yq string) (*limatmpl.Template, error) {
 	for {
 		if err := modifyInPlace(tmpl, yq); err != nil {
 			logrus.WithError(err).Warn("Failed to evaluate yq expression")
@@ -361,7 +362,11 @@ func chooseNextCreatorState(tmpl *limatmpl.Template, yq string) (*limatmpl.Templ
 					return nil, err
 				}
 			}
-			tmpl.Bytes, err = os.ReadFile(yamlPath)
+			tmpl, err = limatmpl.Read(ctx, tmpl.Name, yamlPath)
+			if err != nil {
+				return nil, err
+			}
+			err = tmpl.Embed(ctx, true, true)
 			if err != nil {
 				return nil, err
 			}
