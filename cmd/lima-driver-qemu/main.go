@@ -10,6 +10,5 @@ import (
 
 // To be used as an external driver for Lima.
 func main() {
-	driver := qemu.New()
-	server.Serve(driver)
+	server.Serve(qemu.New())
 }

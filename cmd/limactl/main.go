@@ -17,7 +17,6 @@ import (
 
 	"github.com/lima-vm/lima/pkg/debugutil"
 	"github.com/lima-vm/lima/pkg/driver/external/server"
-	_ "github.com/lima-vm/lima/pkg/driver/qemu" // register qemu driver for all platforms
 	"github.com/lima-vm/lima/pkg/fsutil"
 	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/store/dirnames"

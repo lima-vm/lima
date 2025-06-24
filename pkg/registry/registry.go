@@ -70,7 +70,7 @@ func registerExternalDriver(name, path string) {
 	}
 
 	if _, exists := internalDrivers[name]; exists {
-		logrus.Warnf("Driver %q is already registered as an internal driver, skipping external registration", name)
+		logrus.Debugf("Driver %q is already registered as an internal driver, skipping external registration", name)
 		return
 	}
 
@@ -88,10 +88,10 @@ func discoverDrivers() error {
 	}
 	stdDriverDir := filepath.Join(prefix, "libexec", "lima")
 
-	logrus.Infof("Discovering drivers in %s", stdDriverDir)
+	logrus.Debugf("Discovering external drivers in %s", stdDriverDir)
 	if _, err := os.Stat(stdDriverDir); err == nil {
 		if err := discoverDriversInDir(stdDriverDir); err != nil {
-			logrus.Warnf("Error discovering drivers in %q: %v", stdDriverDir, err)
+			logrus.Warnf("Error discovering external drivers in %q: %v", stdDriverDir, err)
 		}
 	}
 
@@ -104,13 +104,13 @@ func discoverDrivers() error {
 
 			info, err := os.Stat(path)
 			if err != nil {
-				logrus.Warnf("Error accessing driver path %q: %v", path, err)
+				logrus.Warnf("Error accessing external driver path %q: %v", path, err)
 				continue
 			}
 
 			if info.IsDir() {
 				if err := discoverDriversInDir(path); err != nil {
-					logrus.Warnf("Error discovering drivers in %q: %v", path, err)
+					logrus.Warnf("Error discovering external drivers in %q: %v", path, err)
 				}
 			} else if isExecutable(info.Mode()) {
 				registerDriverFile(path)
