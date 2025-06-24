@@ -12,6 +12,5 @@ import (
 
 // To be used as an external driver for Lima.
 func main() {
-	driver := vz.New()
-	server.Serve(driver)
+	server.Serve(vz.New())
 }

@@ -1,4 +1,4 @@
-//go:build windows && !no_wsl
+//go:build windows
 
 // SPDX-FileCopyrightText: Copyright The Lima Authors
 // SPDX-License-Identifier: Apache-2.0
@@ -12,6 +12,5 @@ import (
 
 // To be used as an external driver for Lima.
 func main() {
-	driver := wsl2.New()
-	server.Serve(driver)
+	server.Serve(wsl2.New())
 }

@@ -167,7 +167,7 @@ binaries: limactl helpers guestagents \
 ################################################################################
 # _output/bin
 .PHONY: limactl lima helpers
-limactl: _output/bin/limactl$(exe) lima
+limactl: _output/bin/limactl$(exe) external-drivers lima
 
 ### Listing Dependencies
 
@@ -241,16 +241,44 @@ endif
 # calls the native resolver library and not the simplistic version in the Go library.
 ENVS__output/bin/limactl$(exe) = CGO_ENABLED=1 GOOS="$(GOOS)" GOARCH="$(GOARCH)" CC="$(CC)"
 
+LIMACTL_DRIVER_TAGS :=
+ifneq (,$(findstring vz,$(EXTERNAL_DRIVERS)))
+LIMACTL_DRIVER_TAGS += external_vz
+endif
+ifneq (,$(findstring qemu,$(EXTERNAL_DRIVERS)))
+LIMACTL_DRIVER_TAGS += external_qemu
+endif
+ifneq (,$(findstring wsl2,$(EXTERNAL_DRIVERS)))
+LIMACTL_DRIVER_TAGS += external_wsl2
+endif
+
+GO_BUILDTAGS ?=
+GO_BUILDTAGS_LIMACTL := $(strip $(GO_BUILDTAGS) $(LIMACTL_DRIVER_TAGS))
+
 _output/bin/limactl$(exe): $(LIMACTL_DEPS) $$(call force_build,$$@)
-# If the previous cross-compilation was for GOOS=windows, limactl.exe might still be present.
 ifneq ($(GOOS),windows) #
 	@rm -rf _output/bin/limactl.exe
 else
 	@rm -rf _output/bin/limactl
 endif
-	$(ENVS_$@) $(GO_BUILD) -o $@ ./cmd/limactl
+	$(ENVS_$@) $(GO_BUILD) -tags '$(GO_BUILDTAGS_LIMACTL)' -o $@ ./cmd/limactl
 ifeq ($(GOOS),darwin)
 	codesign -f -v --entitlements vz.entitlements -s - $@
+endif
+
+DRIVER_INSTALL_DIR := _output/libexec/lima
+
+.PHONY: external-drivers
+external-drivers:
+ifneq ($(EXTERNAL_DRIVERS),)
+	@mkdir -p $(DRIVER_INSTALL_DIR)
+	@for drv in $(EXTERNAL_DRIVERS); do \
+		echo "Building $$drv as external"; \
+		$(GO_BUILD) -o $(DRIVER_INSTALL_DIR)/lima-driver-$$drv ./cmd/lima-driver-$$drv; \
+		if [ "$$drv" = "vz" ]; then \
+            codesign -f -v --entitlements vz.entitlements -s - $(DRIVER_INSTALL_DIR)/lima-driver-vz; \
+        fi; \
+	done
 endif
 
 LIMA_CMDS = $(sort lima lima$(bat)) # $(sort ...) deduplicates the list
