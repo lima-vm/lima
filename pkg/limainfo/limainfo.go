@@ -22,10 +22,14 @@ type LimaInfo struct {
 	Templates       []templatestore.Template     `json:"templates"`
 	DefaultTemplate *limayaml.LimaYAML           `json:"defaultTemplate"`
 	LimaHome        string                       `json:"limaHome"`
-	VMTypes         map[string]string            `json:"vmTypes"`     // since Lima v0.14.2
+	VMTypes         []string                     `json:"vmTypes"` // since Lima v0.14.2
+	VMTypesEx       map[string]DriverExt         `json:"vmTypesEx"`
 	GuestAgents     map[limayaml.Arch]GuestAgent `json:"guestAgents"` // since Lima v1.1.0
 }
 
+type DriverExt struct {
+	Location string `json:"location"`
+}
 type GuestAgent struct {
 	Location string `json:"location"` // since Lima v1.1.0
 }
@@ -42,10 +46,24 @@ func New() (*LimaInfo, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	reg := registry.List()
+	if len(reg) == 0 {
+		return nil, errors.New("no VM types found; ensure that the drivers are properly registered")
+	}
+	var vmTypesEx = make(map[string]DriverExt)
+	var vmTypes []string
+	for name, path := range reg {
+		vmTypesEx[name] = DriverExt{
+			Location: path,
+		}
+		vmTypes = append(vmTypes, name)
+	}
 	info := &LimaInfo{
 		Version:         version.Version,
 		DefaultTemplate: y,
-		VMTypes:         registry.List(),
+		VMTypes:         vmTypes,
+		VMTypesEx:       vmTypesEx,
 		GuestAgents:     make(map[limayaml.Arch]GuestAgent),
 	}
 	info.Templates, err = templatestore.Templates()
