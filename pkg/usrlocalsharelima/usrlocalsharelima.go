@@ -57,8 +57,16 @@ func Dir() (string, error) {
 	selfViaOS, err := os.Executable()
 	if err != nil {
 		logrus.WithError(err).Warn("failed to find os.Executable()")
-	} else if len(selfPaths) == 0 || selfViaOS != selfPaths[0] {
-		selfPaths = append(selfPaths, selfViaOS)
+	} else {
+		selfFinalPathViaOS, err := filepath.EvalSymlinks(selfViaOS)
+		if err != nil {
+			logrus.WithError(err).Warn("failed to resolve symlinks")
+			selfFinalPathViaOS = selfViaOS // fallback to the original path
+		}
+
+		if len(selfPaths) == 0 || selfFinalPathViaOS != selfPaths[0] {
+			selfPaths = append(selfPaths, selfFinalPathViaOS)
+		}
 	}
 
 	ostype := limayaml.NewOS("linux")
