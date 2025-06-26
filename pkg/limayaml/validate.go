@@ -610,3 +610,40 @@ func warnExperimental(y *LimaYAML) {
 		logrus.Warn("`mountInotify` is experimental")
 	}
 }
+
+// ValidateYAMLAgainstLatestConfig validates the values between the latest YAML and the updated(New) YAML.
+// This validates configuration rules that disallow certain changes, such as shrinking the disk.
+func ValidateYAMLAgainstLatestConfig(yNew, yLatest []byte) error {
+	var n LimaYAML
+
+	// Load the latest YAML and fill in defaults
+	l, err := LoadWithWarnings(yLatest, "")
+	if err != nil {
+		return err
+	}
+	if err := Unmarshal(yNew, &n, "Unmarshal new YAML bytes"); err != nil {
+		return err
+	}
+
+	// Handle editing the template without a disk value
+	if n.Disk == nil || l.Disk == nil {
+		return nil
+	}
+
+	// Disk value must be provided, as it is required when creating an instance.
+	nDisk, err := units.RAMInBytes(*n.Disk)
+	if err != nil {
+		return err
+	}
+	lDisk, err := units.RAMInBytes(*l.Disk)
+	if err != nil {
+		return err
+	}
+
+	// Reject shrinking disk
+	if nDisk < lDisk {
+		return fmt.Errorf("field `disk`: shrinking the disk (%v --> %v) is not supported", *l.Disk, *n.Disk)
+	}
+
+	return nil
+}
