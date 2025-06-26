@@ -167,7 +167,7 @@ binaries: limactl helpers guestagents \
 ################################################################################
 # _output/bin
 .PHONY: limactl lima helpers
-limactl: _output/bin/limactl$(exe) external-drivers lima
+limactl: _output/bin/limactl$(exe) lima
 
 ### Listing Dependencies
 
@@ -242,13 +242,13 @@ endif
 ENVS__output/bin/limactl$(exe) = CGO_ENABLED=1 GOOS="$(GOOS)" GOARCH="$(GOARCH)" CC="$(CC)"
 
 LIMACTL_DRIVER_TAGS :=
-ifneq (,$(findstring vz,$(EXTERNAL_DRIVERS)))
+ifneq (,$(findstring vz,$(ADDITIONAL_DRIVERS)))
 LIMACTL_DRIVER_TAGS += external_vz
 endif
-ifneq (,$(findstring qemu,$(EXTERNAL_DRIVERS)))
+ifneq (,$(findstring qemu,$(ADDITIONAL_DRIVERS)))
 LIMACTL_DRIVER_TAGS += external_qemu
 endif
-ifneq (,$(findstring wsl2,$(EXTERNAL_DRIVERS)))
+ifneq (,$(findstring wsl2,$(ADDITIONAL_DRIVERS)))
 LIMACTL_DRIVER_TAGS += external_wsl2
 endif
 
@@ -268,18 +268,16 @@ endif
 
 DRIVER_INSTALL_DIR := _output/libexec/lima
 
-.PHONY: external-drivers
-external-drivers:
-ifneq ($(EXTERNAL_DRIVERS),)
+.PHONY: additional-drivers
+additional-drivers:
 	@mkdir -p $(DRIVER_INSTALL_DIR)
-	@for drv in $(EXTERNAL_DRIVERS); do \
+	@for drv in $(ADDITIONAL_DRIVERS); do \
 		echo "Building $$drv as external"; \
 		$(GO_BUILD) -o $(DRIVER_INSTALL_DIR)/lima-driver-$$drv ./cmd/lima-driver-$$drv; \
 		if [ "$$drv" = "vz" ]; then \
             codesign -f -v --entitlements vz.entitlements -s - $(DRIVER_INSTALL_DIR)/lima-driver-vz; \
         fi; \
 	done
-endif
 
 LIMA_CMDS = $(sort lima lima$(bat)) # $(sort ...) deduplicates the list
 LIMA_DEPS = $(addprefix _output/bin/,$(LIMA_CMDS))
