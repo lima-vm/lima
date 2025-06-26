@@ -252,6 +252,13 @@ limactl shell "$NAME" bash -c "echo 'foo \"bar\"'"
 
 if [[ -n ${CHECKS["systemd"]} ]]; then
 	set -x
+	# agetty segfaults on Ubuntu 25.04 (x86_64)
+	# > __strncmp_evex () at ../sysdeps/x86_64/multiarch/strcmp-evex.S:316
+	# Should be fixed in Ubuntu 25.10 with util-linux >= 2.41
+	# https://github.com/lima-vm/lima/pull/3643#issuecomment-3006788732
+	if limactl shell "$NAME" systemctl -q is-failed serial-getty@ttyS0.service; then
+		limactl shell "$NAME" sudo systemctl reset-failed serial-getty@ttyS0.service
+	fi
 	if ! limactl shell "$NAME" systemctl is-system-running --wait; then
 		ERROR '"systemctl is-system-running" failed'
 		diagnose "$NAME"
