@@ -108,6 +108,43 @@ func Prepare(ctx context.Context, inst *store.Instance) (*Prepared, error) {
 	_, err = os.Stat(baseDisk)
 	created := err == nil
 
+	kernel := filepath.Join(inst.Dir, filenames.Kernel)
+	kernelCmdline := filepath.Join(inst.Dir, filenames.KernelCmdline)
+	initrd := filepath.Join(inst.Dir, filenames.Initrd)
+	if _, err := os.Stat(baseDisk); errors.Is(err, os.ErrNotExist) {
+		var ensuredBaseDisk bool
+		errs := make([]error, len(inst.Config.Images))
+		for i, f := range inst.Config.Images {
+			if _, err := fileutils.DownloadFile(ctx, baseDisk, f.File, true, "the image", *inst.Config.Arch); err != nil {
+				errs[i] = err
+				continue
+			}
+			if f.Kernel != nil {
+				if _, err := fileutils.DownloadFile(ctx, kernel, f.Kernel.File, false, "the kernel", *inst.Config.Arch); err != nil {
+					errs[i] = err
+					continue
+				}
+				if f.Kernel.Cmdline != "" {
+					if err := os.WriteFile(kernelCmdline, []byte(f.Kernel.Cmdline), 0o644); err != nil {
+						errs[i] = err
+						continue
+					}
+				}
+			}
+			if f.Initrd != nil {
+				if _, err := fileutils.DownloadFile(ctx, initrd, *f.Initrd, false, "the initrd", *inst.Config.Arch); err != nil {
+					errs[i] = err
+					continue
+				}
+			}
+			ensuredBaseDisk = true
+			break
+		}
+		if !ensuredBaseDisk {
+			return nil, fileutils.Errors(errs)
+		}
+	}
+
 	if err := limaDriver.CreateDisk(ctx); err != nil {
 		return nil, err
 	}

@@ -94,42 +94,7 @@ func EnsureDisk(ctx context.Context, cfg Config) error {
 	}
 
 	baseDisk := filepath.Join(cfg.InstanceDir, filenames.BaseDisk)
-	kernel := filepath.Join(cfg.InstanceDir, filenames.Kernel)
-	kernelCmdline := filepath.Join(cfg.InstanceDir, filenames.KernelCmdline)
-	initrd := filepath.Join(cfg.InstanceDir, filenames.Initrd)
-	if _, err := os.Stat(baseDisk); errors.Is(err, os.ErrNotExist) {
-		var ensuredBaseDisk bool
-		errs := make([]error, len(cfg.LimaYAML.Images))
-		for i, f := range cfg.LimaYAML.Images {
-			if _, err := fileutils.DownloadFile(ctx, baseDisk, f.File, true, "the image", *cfg.LimaYAML.Arch); err != nil {
-				errs[i] = err
-				continue
-			}
-			if f.Kernel != nil {
-				if _, err := fileutils.DownloadFile(ctx, kernel, f.Kernel.File, false, "the kernel", *cfg.LimaYAML.Arch); err != nil {
-					errs[i] = err
-					continue
-				}
-				if f.Kernel.Cmdline != "" {
-					if err := os.WriteFile(kernelCmdline, []byte(f.Kernel.Cmdline), 0o644); err != nil {
-						errs[i] = err
-						continue
-					}
-				}
-			}
-			if f.Initrd != nil {
-				if _, err := fileutils.DownloadFile(ctx, initrd, *f.Initrd, false, "the initrd", *cfg.LimaYAML.Arch); err != nil {
-					errs[i] = err
-					continue
-				}
-			}
-			ensuredBaseDisk = true
-			break
-		}
-		if !ensuredBaseDisk {
-			return fileutils.Errors(errs)
-		}
-	}
+
 	diskSize, _ := units.RAMInBytes(*cfg.LimaYAML.Disk)
 	if diskSize == 0 {
 		return nil

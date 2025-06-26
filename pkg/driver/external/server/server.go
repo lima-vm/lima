@@ -167,7 +167,7 @@ func Stop(extDriver *registry.ExternalDriver) error {
 		return fmt.Errorf("external driver %s is not running", extDriver.Name)
 	}
 
-	extDriver.Logger.Infof("Stopping external driver %s", extDriver.Name)
+	extDriver.Logger.Debugf("Stopping external driver %s", extDriver.Name)
 	if extDriver.CancelFunc != nil {
 		extDriver.CancelFunc()
 	}
@@ -180,7 +180,7 @@ func Stop(extDriver *registry.ExternalDriver) error {
 	extDriver.Ctx = nil
 	extDriver.CancelFunc = nil
 
-	extDriver.Logger.Infof("External driver %s stopped successfully", extDriver.Name)
+	extDriver.Logger.Debugf("External driver %s stopped successfully", extDriver.Name)
 	return nil
 }
 
@@ -189,8 +189,6 @@ func StopAllExternalDrivers() {
 		if driver.Command != nil && driver.Command.Process != nil {
 			if err := Stop(driver); err != nil {
 				logrus.Errorf("Failed to stop external driver %s: %v", name, err)
-			} else {
-				logrus.Infof("External driver %s stopped successfully", name)
 			}
 		}
 		delete(registry.ExternalDrivers, name)

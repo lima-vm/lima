@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 
 	"github.com/docker/go-units"
-	"github.com/lima-vm/lima/pkg/fileutils"
 	"github.com/lima-vm/lima/pkg/imgutil/proxyimgutil"
 	"github.com/lima-vm/lima/pkg/iso9660util"
 	"github.com/lima-vm/lima/pkg/store"
@@ -28,43 +27,7 @@ func EnsureDisk(ctx context.Context, inst *store.Instance) error {
 	diskUtil := proxyimgutil.NewDiskUtil()
 
 	baseDisk := filepath.Join(inst.Dir, filenames.BaseDisk)
-	kernel := filepath.Join(inst.Dir, filenames.Kernel)
-	kernelCmdline := filepath.Join(inst.Dir, filenames.KernelCmdline)
-	initrd := filepath.Join(inst.Dir, filenames.Initrd)
-	if _, err := os.Stat(baseDisk); errors.Is(err, os.ErrNotExist) {
-		var ensuredBaseDisk bool
-		errs := make([]error, len(inst.Config.Images))
-		for i, f := range inst.Config.Images {
-			if _, err := fileutils.DownloadFile(ctx, baseDisk, f.File, true, "the image", *inst.Config.Arch); err != nil {
-				errs[i] = err
-				continue
-			}
-			if f.Kernel != nil {
-				// ensure decompress kernel because vz expects it to be decompressed
-				if _, err := fileutils.DownloadFile(ctx, kernel, f.Kernel.File, true, "the kernel", *inst.Config.Arch); err != nil {
-					errs[i] = err
-					continue
-				}
-				if f.Kernel.Cmdline != "" {
-					if err := os.WriteFile(kernelCmdline, []byte(f.Kernel.Cmdline), 0o644); err != nil {
-						errs[i] = err
-						continue
-					}
-				}
-			}
-			if f.Initrd != nil {
-				if _, err := fileutils.DownloadFile(ctx, initrd, *f.Initrd, false, "the initrd", *inst.Config.Arch); err != nil {
-					errs[i] = err
-					continue
-				}
-			}
-			ensuredBaseDisk = true
-			break
-		}
-		if !ensuredBaseDisk {
-			return fileutils.Errors(errs)
-		}
-	}
+
 	diskSize, _ := units.RAMInBytes(*inst.Config.Disk)
 	if diskSize == 0 {
 		return nil

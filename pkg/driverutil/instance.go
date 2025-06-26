@@ -30,7 +30,7 @@ func CreateConfiguredDriver(inst *store.Instance, sshLocalPort int) (*driver.Con
 				return nil, err
 			}
 		} else {
-			logrus.Infof("Reusing existing external driver %q instance", extDriver.Name)
+			logrus.Debugf("Reusing existing external driver %q instance", extDriver.Name)
 			extDriver.InstanceName = inst.Name
 		}
 
