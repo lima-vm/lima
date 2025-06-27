@@ -91,13 +91,11 @@ mounts: []
 # The issue was fixed in Linux v6.12-rc5 (https://github.com/torvalds/linux/commit/be2ca38).
 #
 # 🟢 Builtin default: []
-# 🔵 This file: ["9p"] (as Ubuntu 24.10 uses kernel 6.11)
-mountTypesUnsupported:
-- "9p"
+mountTypesUnsupported: null
 
 # Mount type for above mounts, such as "reverse-sshfs" (from sshocker), "9p" (QEMU’s virtio-9p-pci, aka virtfs),
 # or "virtiofs" (experimental on Linux; needs `vmType: vz` on macOS).
-# 🟢 Builtin default: "default" (resolved to be "9p" for QEMU since Lima v1.0, "virtiofs" for vz)
+# 🟢 Builtin default: "default" (resolved to be "9p" for QEMU since Lima v1.0 on non-Windows, "virtiofs" for vz)
 mountType: null
 
 # Enable inotify support for mounted directories (EXPERIMENTAL)
