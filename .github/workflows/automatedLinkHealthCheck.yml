@@ -1,21 +1,21 @@
-name: Link-rot-Checker
+name: Automated Link Health Check
 on:
-  repository_dispatch:
   workflow_dispatch:
   schedule:
-  - cron: "00 18 * * *"
+  - cron: "00 18 * * *" #Runs the cron at 1800 hrs UTC Everyday
 jobs:
   linkChecker:
     runs-on: ubuntu-latest
     permissions:
       issues: write
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 #v4.2.2
     - name: Link Checker
       id: lychee
-      uses: lycheeverse/lychee-action@v2
+      uses: lycheeverse/lychee-action@82202e5e9c2f4ef1a55a3d02563e1cb6041e5332
       with:
         fail: false
+        output: ./lychee/out.md
     - name: Create Issue From File
       if: steps.lychee.outputs.exit_code != 0
       uses: peter-evans/create-issue-from-file@v5
