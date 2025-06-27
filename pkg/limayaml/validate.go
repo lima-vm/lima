@@ -29,28 +29,6 @@ import (
 	"github.com/lima-vm/lima/pkg/version/versionutil"
 )
 
-func validateFileObject(f File, fieldName string) error {
-	var errs error
-	if !strings.Contains(f.Location, "://") {
-		if _, err := localpathutil.Expand(f.Location); err != nil {
-			errs = errors.Join(errs, fmt.Errorf("field `%s.location` refers to an invalid local file path: %q: %w", fieldName, f.Location, err))
-		}
-		// f.Location does NOT need to be accessible, so we do NOT check os.Stat(f.Location)
-	}
-	if !slices.Contains(ArchTypes, f.Arch) {
-		errs = errors.Join(errs, fmt.Errorf("field `arch` must be one of %v; got %q", ArchTypes, f.Arch))
-	}
-	if f.Digest != "" {
-		if !f.Digest.Algorithm().Available() {
-			errs = errors.Join(errs, fmt.Errorf("field `%s.digest` refers to an unavailable digest algorithm", fieldName))
-		}
-		if err := f.Digest.Validate(); err != nil {
-			errs = errors.Join(errs, fmt.Errorf("field `%s.digest` is invalid: %s: %w", fieldName, f.Digest.String(), err))
-		}
-	}
-	return errs
-}
-
 func Validate(y *LimaYAML, warn bool) error {
 	var errs error
 
@@ -441,6 +419,28 @@ func Validate(y *LimaYAML, warn bool) error {
 	return errs
 }
 
+func validateFileObject(f File, fieldName string) error {
+	var errs error
+	if !strings.Contains(f.Location, "://") {
+		if _, err := localpathutil.Expand(f.Location); err != nil {
+			errs = errors.Join(errs, fmt.Errorf("field `%s.location` refers to an invalid local file path: %q: %w", fieldName, f.Location, err))
+		}
+		// f.Location does NOT need to be accessible, so we do NOT check os.Stat(f.Location)
+	}
+	if !slices.Contains(ArchTypes, f.Arch) {
+		errs = errors.Join(errs, fmt.Errorf("field `arch` must be one of %v; got %q", ArchTypes, f.Arch))
+	}
+	if f.Digest != "" {
+		if !f.Digest.Algorithm().Available() {
+			errs = errors.Join(errs, fmt.Errorf("field `%s.digest` refers to an unavailable digest algorithm", fieldName))
+		}
+		if err := f.Digest.Validate(); err != nil {
+			errs = errors.Join(errs, fmt.Errorf("field `%s.digest` is invalid: %s: %w", fieldName, f.Digest.String(), err))
+		}
+	}
+	return errs
+}
+
 func validateNetwork(y *LimaYAML) error {
 	var errs error
 	interfaceName := make(map[string]int)
@@ -518,9 +518,9 @@ func validateNetwork(y *LimaYAML) error {
 	return errs
 }
 
-// ValidateParamIsUsed checks if the keys in the `param` field are used in any script, probe, copyToHost, or portForward.
+// validateParamIsUsed checks if the keys in the `param` field are used in any script, probe, copyToHost, or portForward.
 // It should be called before the `y` parameter is passed to FillDefault() that execute template.
-func ValidateParamIsUsed(y *LimaYAML) error {
+func validateParamIsUsed(y *LimaYAML) error {
 	for key := range y.Param {
 		re, err := regexp.Compile(`{{[^}]*\.Param\.` + key + `[^}]*}}|\bPARAM_` + key + `\b`)
 		if err != nil {
@@ -611,9 +611,9 @@ func warnExperimental(y *LimaYAML) {
 	}
 }
 
-// ValidateYAMLAgainstLatestConfig validates the values between the latest YAML and the updated(New) YAML.
+// ValidateAgainstLatestConfig validates the values between the latest YAML and the updated(New) YAML.
 // This validates configuration rules that disallow certain changes, such as shrinking the disk.
-func ValidateYAMLAgainstLatestConfig(yNew, yLatest []byte) error {
+func ValidateAgainstLatestConfig(yNew, yLatest []byte) error {
 	var n LimaYAML
 
 	// Load the latest YAML and fill in defaults
