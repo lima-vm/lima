@@ -121,7 +121,7 @@ func editAction(cmd *cobra.Command, args []string) error {
 		return saveRejectedYAML(yBytes, err)
 	}
 
-	if err := limayaml.ValidateYAMLAgainstLatestConfig(yBytes, yContent); err != nil {
+	if err := limayaml.ValidateAgainstLatestConfig(yBytes, yContent); err != nil {
 		return saveRejectedYAML(yBytes, err)
 	}
 

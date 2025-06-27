@@ -266,7 +266,7 @@ provision:
 		"field `provision[1].path` must not be empty when mode is \"data\"")
 }
 
-func TestValidateYAMLAgainstLatestConfig(t *testing.T) {
+func TestValidateAgainstLatestConfig(t *testing.T) {
 	tests := []struct {
 		name    string
 		yNew    string
@@ -308,7 +308,7 @@ func TestValidateYAMLAgainstLatestConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := ValidateYAMLAgainstLatestConfig([]byte(tt.yNew), []byte(tt.yLatest))
+			err := ValidateAgainstLatestConfig([]byte(tt.yNew), []byte(tt.yLatest))
 			if tt.wantErr == nil {
 				assert.NilError(t, err)
 			} else {
