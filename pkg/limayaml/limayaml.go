@@ -10,35 +10,36 @@ import (
 )
 
 type LimaYAML struct {
-	Base                  BaseTemplates `yaml:"base,omitempty" json:"base,omitempty"`
-	MinimumLimaVersion    *string       `yaml:"minimumLimaVersion,omitempty" json:"minimumLimaVersion,omitempty" jsonschema:"nullable"`
-	VMType                *VMType       `yaml:"vmType,omitempty" json:"vmType,omitempty" jsonschema:"nullable"`
-	VMOpts                VMOpts        `yaml:"vmOpts,omitempty" json:"vmOpts,omitempty"`
-	OS                    *OS           `yaml:"os,omitempty" json:"os,omitempty" jsonschema:"nullable"`
-	Arch                  *Arch         `yaml:"arch,omitempty" json:"arch,omitempty" jsonschema:"nullable"`
-	Images                []Image       `yaml:"images,omitempty" json:"images,omitempty" jsonschema:"nullable"`
-	CPUType               CPUType       `yaml:"cpuType,omitempty" json:"cpuType,omitempty" jsonschema:"nullable"`
-	CPUs                  *int          `yaml:"cpus,omitempty" json:"cpus,omitempty" jsonschema:"nullable"`
-	Memory                *string       `yaml:"memory,omitempty" json:"memory,omitempty" jsonschema:"nullable"` // go-units.RAMInBytes
-	Disk                  *string       `yaml:"disk,omitempty" json:"disk,omitempty" jsonschema:"nullable"`     // go-units.RAMInBytes
-	AdditionalDisks       []Disk        `yaml:"additionalDisks,omitempty" json:"additionalDisks,omitempty" jsonschema:"nullable"`
-	Mounts                []Mount       `yaml:"mounts,omitempty" json:"mounts,omitempty"`
-	MountTypesUnsupported []string      `yaml:"mountTypesUnsupported,omitempty" json:"mountTypesUnsupported,omitempty" jsonschema:"nullable"`
-	MountType             *MountType    `yaml:"mountType,omitempty" json:"mountType,omitempty" jsonschema:"nullable"`
-	MountInotify          *bool         `yaml:"mountInotify,omitempty" json:"mountInotify,omitempty" jsonschema:"nullable"`
-	SSH                   SSH           `yaml:"ssh,omitempty" json:"ssh,omitempty"` // REQUIRED (FIXME)
-	Firmware              Firmware      `yaml:"firmware,omitempty" json:"firmware,omitempty"`
-	Audio                 Audio         `yaml:"audio,omitempty" json:"audio,omitempty"`
-	Video                 Video         `yaml:"video,omitempty" json:"video,omitempty"`
-	Provision             []Provision   `yaml:"provision,omitempty" json:"provision,omitempty"`
-	UpgradePackages       *bool         `yaml:"upgradePackages,omitempty" json:"upgradePackages,omitempty" jsonschema:"nullable"`
-	Containerd            Containerd    `yaml:"containerd,omitempty" json:"containerd,omitempty"`
-	GuestInstallPrefix    *string       `yaml:"guestInstallPrefix,omitempty" json:"guestInstallPrefix,omitempty" jsonschema:"nullable"`
-	Probes                []Probe       `yaml:"probes,omitempty" json:"probes,omitempty"`
-	PortForwards          []PortForward `yaml:"portForwards,omitempty" json:"portForwards,omitempty"`
-	CopyToHost            []CopyToHost  `yaml:"copyToHost,omitempty" json:"copyToHost,omitempty"`
-	Message               string        `yaml:"message,omitempty" json:"message,omitempty"`
-	Networks              []Network     `yaml:"networks,omitempty" json:"networks,omitempty" jsonschema:"nullable"`
+	Labels                map[string]string `yaml:"labels,omitempty" json:"labels,omitempty"`
+	Base                  BaseTemplates     `yaml:"base,omitempty" json:"base,omitempty"`
+	MinimumLimaVersion    *string           `yaml:"minimumLimaVersion,omitempty" json:"minimumLimaVersion,omitempty" jsonschema:"nullable"`
+	VMType                *VMType           `yaml:"vmType,omitempty" json:"vmType,omitempty" jsonschema:"nullable"`
+	VMOpts                VMOpts            `yaml:"vmOpts,omitempty" json:"vmOpts,omitempty"`
+	OS                    *OS               `yaml:"os,omitempty" json:"os,omitempty" jsonschema:"nullable"`
+	Arch                  *Arch             `yaml:"arch,omitempty" json:"arch,omitempty" jsonschema:"nullable"`
+	Images                []Image           `yaml:"images,omitempty" json:"images,omitempty" jsonschema:"nullable"`
+	CPUType               CPUType           `yaml:"cpuType,omitempty" json:"cpuType,omitempty" jsonschema:"nullable"`
+	CPUs                  *int              `yaml:"cpus,omitempty" json:"cpus,omitempty" jsonschema:"nullable"`
+	Memory                *string           `yaml:"memory,omitempty" json:"memory,omitempty" jsonschema:"nullable"` // go-units.RAMInBytes
+	Disk                  *string           `yaml:"disk,omitempty" json:"disk,omitempty" jsonschema:"nullable"`     // go-units.RAMInBytes
+	AdditionalDisks       []Disk            `yaml:"additionalDisks,omitempty" json:"additionalDisks,omitempty" jsonschema:"nullable"`
+	Mounts                []Mount           `yaml:"mounts,omitempty" json:"mounts,omitempty"`
+	MountTypesUnsupported []string          `yaml:"mountTypesUnsupported,omitempty" json:"mountTypesUnsupported,omitempty" jsonschema:"nullable"`
+	MountType             *MountType        `yaml:"mountType,omitempty" json:"mountType,omitempty" jsonschema:"nullable"`
+	MountInotify          *bool             `yaml:"mountInotify,omitempty" json:"mountInotify,omitempty" jsonschema:"nullable"`
+	SSH                   SSH               `yaml:"ssh,omitempty" json:"ssh,omitempty"` // REQUIRED (FIXME)
+	Firmware              Firmware          `yaml:"firmware,omitempty" json:"firmware,omitempty"`
+	Audio                 Audio             `yaml:"audio,omitempty" json:"audio,omitempty"`
+	Video                 Video             `yaml:"video,omitempty" json:"video,omitempty"`
+	Provision             []Provision       `yaml:"provision,omitempty" json:"provision,omitempty"`
+	UpgradePackages       *bool             `yaml:"upgradePackages,omitempty" json:"upgradePackages,omitempty" jsonschema:"nullable"`
+	Containerd            Containerd        `yaml:"containerd,omitempty" json:"containerd,omitempty"`
+	GuestInstallPrefix    *string           `yaml:"guestInstallPrefix,omitempty" json:"guestInstallPrefix,omitempty" jsonschema:"nullable"`
+	Probes                []Probe           `yaml:"probes,omitempty" json:"probes,omitempty"`
+	PortForwards          []PortForward     `yaml:"portForwards,omitempty" json:"portForwards,omitempty"`
+	CopyToHost            []CopyToHost      `yaml:"copyToHost,omitempty" json:"copyToHost,omitempty"`
+	Message               string            `yaml:"message,omitempty" json:"message,omitempty"`
+	Networks              []Network         `yaml:"networks,omitempty" json:"networks,omitempty" jsonschema:"nullable"`
 	// `network` was deprecated in Lima v0.7.0, removed in Lima v0.14.0. Use `networks` instead.
 	Env          map[string]string `yaml:"env,omitempty" json:"env,omitempty"`
 	Param        map[string]string `yaml:"param,omitempty" json:"param,omitempty"`

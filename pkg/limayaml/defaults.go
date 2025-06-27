@@ -214,6 +214,12 @@ func FillDefault(y, d, o *LimaYAML, filePath string, warn bool) {
 		}
 	}
 
+	labels := make(map[string]string)
+	maps.Copy(labels, d.Labels)
+	maps.Copy(labels, y.Labels)
+	maps.Copy(labels, o.Labels)
+	y.Labels = labels
+
 	if y.User.Name == nil {
 		y.User.Name = d.User.Name
 	}

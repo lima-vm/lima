@@ -22,6 +22,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/pkg/identifiers"
+	"github.com/lima-vm/lima/pkg/labels"
 	"github.com/lima-vm/lima/pkg/localpathutil"
 	"github.com/lima-vm/lima/pkg/networks"
 	"github.com/lima-vm/lima/pkg/osutil"
@@ -53,6 +54,13 @@ func validateFileObject(f File, fieldName string) error {
 
 func Validate(y *LimaYAML, warn bool) error {
 	var errs error
+
+	for k := range y.Labels {
+		if err := labels.Validate(k); err != nil {
+			errs = errors.Join(errs, fmt.Errorf("field `labels` has an invalid label %q: %w", k, err))
+		}
+		// No validation for label values
+	}
 
 	if len(y.Base) > 0 {
 		errs = errors.Join(errs, errors.New("field `base` must be empty for YAML validation"))
