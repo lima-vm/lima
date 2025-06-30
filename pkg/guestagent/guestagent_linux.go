@@ -169,7 +169,7 @@ func comparePorts(old, neww []*api.IPPort) (added, removed []*api.IPPort) {
 			}
 		}
 	}
-	return
+	return added, removed
 }
 
 func (a *agent) collectEvent(ctx context.Context, st eventState) (*api.Event, eventState) {

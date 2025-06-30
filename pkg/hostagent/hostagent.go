@@ -222,14 +222,11 @@ func writeSSHConfigFile(sshPath, instName, instDir, instSSHAddress string, sshLo
 	if instDir == "" {
 		return fmt.Errorf("directory is unknown for the instance %q", instName)
 	}
-	var b bytes.Buffer
-	if _, err := fmt.Fprintf(&b, `# This SSH config file can be passed to 'ssh -F'.
+	b := bytes.NewBufferString(`# This SSH config file can be passed to 'ssh -F'.
 # This file is created by Lima, but not used by Lima itself currently.
 # Modifications to this file will be lost on restarting the Lima instance.
-`); err != nil {
-		return err
-	}
-	if err := sshutil.Format(&b, sshPath, instName, sshutil.FormatConfig,
+`)
+	if err := sshutil.Format(b, sshPath, instName, sshutil.FormatConfig,
 		append(sshOpts,
 			fmt.Sprintf("Hostname=%s", instSSHAddress),
 			fmt.Sprintf("Port=%d", sshLocalPort),

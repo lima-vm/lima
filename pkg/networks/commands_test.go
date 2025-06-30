@@ -49,7 +49,7 @@ func TestUser(t *testing.T) {
 
 	t.Run("socket_vmnet", func(t *testing.T) {
 		if ok, _ := config.IsDaemonInstalled(SocketVMNet); !ok {
-			t.Skipf("socket_vmnet is not installed")
+			t.Skip("socket_vmnet is not installed")
 		}
 		user, err := config.User(SocketVMNet)
 		assert.NilError(t, err)
@@ -80,7 +80,7 @@ func TestStartCmd(t *testing.T) {
 
 	t.Run("socket_vmnet", func(t *testing.T) {
 		if ok, _ := config.IsDaemonInstalled(SocketVMNet); !ok {
-			t.Skipf("socket_vmnet is not installed")
+			t.Skip("socket_vmnet is not installed")
 		}
 
 		cmd := config.StartCmd("shared", SocketVMNet)
