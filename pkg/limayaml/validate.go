@@ -44,7 +44,7 @@ func Validate(y *LimaYAML, warn bool) error {
 		if err != nil {
 			errs = errors.Join(errs, fmt.Errorf("can't parse builtin Lima version %q: %w", version.Version, err))
 		}
-		if versionutil.GreaterThan(*y.MinimumLimaVersion, limaVersion.String()) {
+		if limaVersion != nil && versionutil.GreaterThan(*y.MinimumLimaVersion, limaVersion.String()) {
 			errs = errors.Join(errs, fmt.Errorf("template requires Lima version %q; this is only %q", *y.MinimumLimaVersion, limaVersion.String()))
 		}
 	}
