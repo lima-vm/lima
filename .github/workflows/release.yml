@@ -92,12 +92,12 @@ jobs:
 
         ## Usage
         \`\`\`console
-        [macOS]$ limactl create
-        [macOS]$ limactl start
+        $ limactl create
+        $ limactl start
         ...
         INFO[0029] READY. Run \`lima\` to open the shell.
 
-        [macOS]$ lima uname
+        $ lima uname
         Linux
         \`\`\`
 

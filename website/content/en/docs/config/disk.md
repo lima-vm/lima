@@ -2,7 +2,7 @@
 title: Disks
 ---
 
-This guide explains how to increase the disk size of a Lima VM running on macOS when you've run out of space, as well as how to edit the disk size using the `limactl` CLI.
+This guide explains how to increase the disk size of a Lima VM when you've run out of space, as well as how to edit the disk size using the `limactl` CLI.
 
 ## Resize Disk Using limactl
 
