@@ -39,13 +39,13 @@ func Validate(y *LimaYAML, warn bool) error {
 	if y.MinimumLimaVersion != nil {
 		if _, err := versionutil.Parse(*y.MinimumLimaVersion); err != nil {
 			errs = errors.Join(errs, fmt.Errorf("field `minimumLimaVersion` must be a semvar value, got %q: %w", *y.MinimumLimaVersion, err))
-		}
-		limaVersion, err := versionutil.Parse(version.Version)
-		if err != nil {
-			errs = errors.Join(errs, fmt.Errorf("can't parse builtin Lima version %q: %w", version.Version, err))
-		}
-		if versionutil.GreaterThan(*y.MinimumLimaVersion, limaVersion.String()) {
-			errs = errors.Join(errs, fmt.Errorf("template requires Lima version %q; this is only %q", *y.MinimumLimaVersion, limaVersion.String()))
+		} else {
+			limaVersion, err := versionutil.Parse(version.Version)
+			if err != nil {
+				errs = errors.Join(errs, fmt.Errorf("can't parse builtin Lima version %q: %w", version.Version, err))
+			} else if versionutil.GreaterThan(*y.MinimumLimaVersion, limaVersion.String()) {
+				errs = errors.Join(errs, fmt.Errorf("template requires Lima version %q; this is only %q", *y.MinimumLimaVersion, limaVersion.String()))
+			}
 		}
 	}
 	if y.VMOpts.QEMU.MinimumVersion != nil {
