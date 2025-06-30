@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright The Lima Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package imgutil
+package qemuimgutil
 
 import (
 	"bytes"
@@ -14,11 +14,22 @@ import (
 	"strconv"
 
 	"github.com/sirupsen/logrus"
+
+	"github.com/lima-vm/lima/pkg/imgutil"
 )
 
+// QemuImageUtil is the QEMU implementation of the imgutil Interface.
+type QemuImageUtil struct {
+	// Default format to use when creating disks
+	DefaultFormat string
+}
+
+// QemuInfoProvider is the QEMU implementation of the imgutil InfoProvider.
+type QemuInfoProvider struct{}
+
 type InfoChild struct {
-	Name string `json:"name,omitempty"` // since QEMU 8.0
-	Info Info   `json:"info,omitempty"` // since QEMU 8.0
+	Name string       `json:"name,omitempty"` // since QEMU 8.0
+	Info imgutil.Info `json:"info,omitempty"` // since QEMU 8.0
 }
 
 type InfoFormatSpecific struct {
@@ -26,7 +37,7 @@ type InfoFormatSpecific struct {
 	Data json.RawMessage `json:"data,omitempty"` // since QEMU 1.7
 }
 
-func CreateDisk(disk, format string, size int) error {
+func createDisk(disk, format string, size int) error {
 	if _, err := os.Stat(disk); err == nil || !errors.Is(err, fs.ErrNotExist) {
 		// disk already exists
 		return err
@@ -40,7 +51,7 @@ func CreateDisk(disk, format string, size int) error {
 	return nil
 }
 
-func ResizeDisk(disk, format string, size int) error {
+func resizeDisk(disk, format string, size int) error {
 	args := []string{"resize", "-f", format, disk, strconv.Itoa(size)}
 	cmd := exec.Command("qemu-img", args...)
 	if out, err := cmd.CombinedOutput(); err != nil {
@@ -94,22 +105,7 @@ type InfoFormatSpecificDataVmdkExtent struct {
 	ClusterSize int    `json:"cluster-size,omitempty"` // since QEMU 1.7
 }
 
-// Info corresponds to the output of `qemu-img info --output=json FILE`.
-type Info struct {
-	Filename              string              `json:"filename,omitempty"`                // since QEMU 1.3
-	Format                string              `json:"format,omitempty"`                  // since QEMU 1.3
-	VSize                 int64               `json:"virtual-size,omitempty"`            // since QEMU 1.3
-	ActualSize            int64               `json:"actual-size,omitempty"`             // since QEMU 1.3
-	DirtyFlag             bool                `json:"dirty-flag,omitempty"`              // since QEMU 5.2
-	ClusterSize           int                 `json:"cluster-size,omitempty"`            // since QEMU 1.3
-	BackingFilename       string              `json:"backing-filename,omitempty"`        // since QEMU 1.3
-	FullBackingFilename   string              `json:"full-backing-filename,omitempty"`   // since QEMU 1.3
-	BackingFilenameFormat string              `json:"backing-filename-format,omitempty"` // since QEMU 1.3
-	FormatSpecific        *InfoFormatSpecific `json:"format-specific,omitempty"`         // since QEMU 1.7
-	Children              []InfoChild         `json:"children,omitempty"`                // since QEMU 8.0
-}
-
-func ConvertToRaw(source, dest string) error {
+func convertToRaw(source, dest string) error {
 	var stdout, stderr bytes.Buffer
 	cmd := exec.Command("qemu-img", "convert", "-O", "raw", source, dest)
 	cmd.Stdout = &stdout
@@ -121,15 +117,15 @@ func ConvertToRaw(source, dest string) error {
 	return nil
 }
 
-func ParseInfo(b []byte) (*Info, error) {
-	var imgInfo Info
+func parseInfo(b []byte) (*imgutil.Info, error) {
+	var imgInfo imgutil.Info
 	if err := json.Unmarshal(b, &imgInfo); err != nil {
 		return nil, err
 	}
 	return &imgInfo, nil
 }
 
-func GetInfo(f string) (*Info, error) {
+func getInfo(f string) (*imgutil.Info, error) {
 	var stdout, stderr bytes.Buffer
 	cmd := exec.Command("qemu-img", "info", "--output=json", "--force-share", f)
 	cmd.Stdout = &stdout
@@ -138,10 +134,10 @@ func GetInfo(f string) (*Info, error) {
 		return nil, fmt.Errorf("failed to run %v: stdout=%q, stderr=%q: %w",
 			cmd.Args, stdout.String(), stderr.String(), err)
 	}
-	return ParseInfo(stdout.Bytes())
+	return parseInfo(stdout.Bytes())
 }
 
-func AcceptableAsBasedisk(info *Info) error {
+func acceptableAsBasedisk(info *imgutil.Info) error {
 	switch info.Format {
 	case "qcow2", "raw":
 		// NOP

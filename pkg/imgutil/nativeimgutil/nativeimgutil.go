@@ -28,14 +28,17 @@ import (
 // aligned to 512 bytes.
 const sectorSize = 512
 
-// RoundUp rounds size up to sectorSize.
-func RoundUp(size int) int {
+// NativeImageUtil is the native implementation of the imgutil Interface.
+type NativeImageUtil struct{}
+
+// roundUp rounds size up to sectorSize.
+func roundUp(size int) int {
 	sectors := (size + sectorSize - 1) / sectorSize
 	return sectors * sectorSize
 }
 
-// CreateRawDisk creates an empty raw data disk.
-func CreateRawDisk(disk string, size int) error {
+// createRawDisk creates an empty raw data disk.
+func createRawDisk(disk string, size int) error {
 	if _, err := os.Stat(disk); err == nil || !errors.Is(err, fs.ErrNotExist) {
 		return err
 	}
@@ -44,20 +47,20 @@ func CreateRawDisk(disk string, size int) error {
 		return err
 	}
 	defer f.Close()
-	roundedSize := RoundUp(size)
+	roundedSize := roundUp(size)
 	return f.Truncate(int64(roundedSize))
 }
 
-// ResizeRawDisk resizes a raw data disk.
-func ResizeRawDisk(disk string, size int) error {
-	roundedSize := RoundUp(size)
+// resizeRawDisk resizes a raw data disk.
+func resizeRawDisk(disk string, size int) error {
+	roundedSize := roundUp(size)
 	return os.Truncate(disk, int64(roundedSize))
 }
 
-// ConvertToRaw converts a source disk into a raw disk.
+// convertToRaw converts a source disk into a raw disk.
 // source and dest may be same.
-// ConvertToRaw is a NOP if source == dest, and no resizing is needed.
-func ConvertToRaw(source, dest string, size *int64, allowSourceWithBackingFile bool) error {
+// convertToRaw is a NOP if source == dest, and no resizing is needed.
+func convertToRaw(source, dest string, size *int64, allowSourceWithBackingFile bool) error {
 	srcF, err := os.Open(source)
 	if err != nil {
 		return err
@@ -106,7 +109,7 @@ func ConvertToRaw(source, dest string, size *int64, allowSourceWithBackingFile b
 	// Truncating before copy eliminates the seeks during copy and provide a
 	// hint to the file system that may minimize allocations and fragmentation
 	// of the file.
-	if err := MakeSparse(destTmpF, srcImg.Size()); err != nil {
+	if err := makeSparse(destTmpF, srcImg.Size()); err != nil {
 		return err
 	}
 
@@ -125,7 +128,7 @@ func ConvertToRaw(source, dest string, size *int64, allowSourceWithBackingFile b
 	// Resize
 	if size != nil {
 		logrus.Infof("Expanding to %s", units.BytesSize(float64(*size)))
-		if err = MakeSparse(destTmpF, *size); err != nil {
+		if err = makeSparse(destTmpF, *size); err != nil {
 			return err
 		}
 	}
@@ -153,7 +156,7 @@ func convertRawToRaw(source, dest string, size *int64) error {
 		if err != nil {
 			return err
 		}
-		if err = MakeSparse(destF, *size); err != nil {
+		if err = makeSparse(destF, *size); err != nil {
 			_ = destF.Close()
 			return err
 		}
@@ -162,7 +165,7 @@ func convertRawToRaw(source, dest string, size *int64) error {
 	return nil
 }
 
-func MakeSparse(f *os.File, n int64) error {
+func makeSparse(f *os.File, n int64) error {
 	if _, err := f.Seek(n, io.SeekStart); err != nil {
 		return err
 	}
