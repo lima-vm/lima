@@ -49,6 +49,7 @@ declare -A CHECKS=(
 	# snapshot tests are too flaky (especially with archlinux)
 	["snapshot-online"]=""
 	["snapshot-offline"]=""
+	["clone"]=""
 	["port-forwards"]="1"
 	["vmnet"]=""
 	["disk"]=""
@@ -85,6 +86,7 @@ case "$NAME" in
 	CHECKS["disk"]=1
 	CHECKS["snapshot-online"]="1"
 	CHECKS["snapshot-offline"]="1"
+	CHECKS["clone"]="1"
 	CHECKS["mount-path-with-spaces"]="1"
 	CHECKS["provision-data"]="1"
 	CHECKS["param-env-variables"]="1"
@@ -525,6 +527,16 @@ if [[ -n ${CHECKS["snapshot-offline"]} ]]; then
 	fi
 	limactl snapshot apply "$NAME" --tag snap2
 	limactl snapshot delete "$NAME" --tag snap2
+	limactl start "$NAME"
+fi
+if [[ -n ${CHECKS["clone"]} ]]; then
+	INFO "Testing cloning"
+	limactl stop "$NAME"
+	sleep 3
+	# [hostagent] could not attach disk \"data\", in use by instance \"test-misc-clone\"
+	limactl clone --set '.additionalDisks = null' "$NAME" "${NAME}-clone"
+	limactl start "${NAME}-clone"
+	[ "$(limactl shell "${NAME}-clone" hostname)" = "lima-${NAME}-clone" ]
 	limactl start "$NAME"
 fi
 
