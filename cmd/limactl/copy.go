@@ -26,6 +26,8 @@ const copyHelp = `Copy files between host and guest
 Prefix guest filenames with the instance name and a colon.
 
 Example: limactl copy default:/etc/os-release .
+
+Not to be confused with 'limactl clone'.
 `
 
 func newCopyCommand() *cobra.Command {

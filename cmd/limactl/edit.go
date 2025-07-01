@@ -33,7 +33,7 @@ func newEditCommand() *cobra.Command {
 		ValidArgsFunction: editBashComplete,
 		GroupID:           basicCommand,
 	}
-	editflags.RegisterEdit(editCommand)
+	editflags.RegisterEdit(editCommand, "")
 	return editCommand
 }
 

@@ -692,7 +692,8 @@ func attachOtherDevices(_ *driver.BaseDriver, vmConfig *vz.VirtualMachineConfigu
 
 func getMachineIdentifier(driver *driver.BaseDriver) (*vz.GenericMachineIdentifier, error) {
 	identifier := filepath.Join(driver.Instance.Dir, filenames.VzIdentifier)
-	if _, err := os.Stat(identifier); os.IsNotExist(err) {
+	// Empty VzIdentifier can be created on cloning an instance.
+	if st, err := os.Stat(identifier); os.IsNotExist(err) || (st != nil && st.Size() == 0) {
 		machineIdentifier, err := vz.NewGenericMachineIdentifier()
 		if err != nil {
 			return nil, err
