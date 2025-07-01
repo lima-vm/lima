@@ -118,14 +118,14 @@ func tunnelAction(cmd *cobra.Command, args []string) error {
 
 	switch runtime.GOOS {
 	case "darwin":
-		fmt.Fprintf(stdout, "Open <System Settings> → <Network> → <Wi-Fi> (or whatever) → <Details> → <Proxies> → <SOCKS proxy>,\n")
-		fmt.Fprintf(stdout, "and specify the following configuration:\n")
-		fmt.Fprintf(stdout, "- Server: 127.0.0.1\n")
+		fmt.Fprint(stdout, "Open <System Settings> → <Network> → <Wi-Fi> (or whatever) → <Details> → <Proxies> → <SOCKS proxy>,\n")
+		fmt.Fprint(stdout, "and specify the following configuration:\n")
+		fmt.Fprint(stdout, "- Server: 127.0.0.1\n")
 		fmt.Fprintf(stdout, "- Port: %d\n", port)
 	case "windows":
-		fmt.Fprintf(stdout, "Open <Settings> → <Network & Internet> → <Proxy>,\n")
-		fmt.Fprintf(stdout, "and specify the following configuration:\n")
-		fmt.Fprintf(stdout, "- Address: socks=127.0.0.1\n")
+		fmt.Fprint(stdout, "Open <Settings> → <Network & Internet> → <Proxy>,\n")
+		fmt.Fprint(stdout, "and specify the following configuration:\n")
+		fmt.Fprint(stdout, "- Address: socks=127.0.0.1\n")
 		fmt.Fprintf(stdout, "- Port: %d\n", port)
 	default:
 		fmt.Fprintf(stdout, "Set `ALL_PROXY=socks5h://127.0.0.1:%d`, etc.\n", port)

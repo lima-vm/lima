@@ -81,7 +81,7 @@ func TestDialQemu(t *testing.T) {
 
 	buf := make([]byte, vmnetMaxPacketSize)
 
-	t.Logf("Receiving and verifying data packets...")
+	t.Log("Receiving and verifying data packets...")
 	for i := range packetsCount {
 		n, err := vzConn.Read(buf)
 		assert.NilError(t, err)

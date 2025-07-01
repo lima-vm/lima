@@ -18,18 +18,17 @@ func HasRTC() (bool, error) {
 	return !errors.Is(err, os.ErrNotExist), err
 }
 
-func GetRTCTime() (t time.Time, err error) {
+func GetRTCTime() (time.Time, error) {
 	f, err := os.Open(rtc)
 	if err != nil {
-		return
+		return time.Time{}, err
 	}
 	defer f.Close()
 	obj, err := unix.IoctlGetRTCTime(int(f.Fd()))
 	if err != nil {
-		return
+		return time.Time{}, err
 	}
-	t = time.Date(int(obj.Year+1900), time.Month(obj.Mon+1), int(obj.Mday), int(obj.Hour), int(obj.Min), int(obj.Sec), 0, time.UTC)
-	return t, nil
+	return time.Date(int(obj.Year+1900), time.Month(obj.Mon+1), int(obj.Mday), int(obj.Hour), int(obj.Min), int(obj.Sec), 0, time.UTC), nil
 }
 
 func SetSystemTime(t time.Time) error {

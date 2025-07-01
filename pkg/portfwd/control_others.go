@@ -26,5 +26,5 @@ func Control(_, _ string, c syscall.RawConn) (err error) {
 	if controlErr != nil {
 		err = controlErr
 	}
-	return
+	return err
 }
