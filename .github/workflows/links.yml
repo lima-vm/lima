@@ -2,7 +2,7 @@ name: Automated Link Health Check
 on:
   workflow_dispatch:
   schedule:
-  - cron: "00 18 * * *" #Runs the cron at 1800 hrs UTC Everyday
+  - cron: "00 18 * * *" # Runs the cron at 1800 hrs UTC Everyday
 jobs:
   linkChecker:
     runs-on: ubuntu-latest
@@ -18,7 +18,7 @@ jobs:
         output: ./lychee/out.md
     - name: Create Issue From File
       if: steps.lychee.outputs.exit_code != 0
-      uses: peter-evans/create-issue-from-file@e8ef132d6df98ed982188e460ebb3b5d4ef3a9cd #v5.0.1
+      uses: peter-evans/create-issue-from-file@e8ef132d6df98ed982188e460ebb3b5d4ef3a9cd # v5.0.1
       with:
         title: Link Checker Report
         content-filepath: ./lychee/out.md
