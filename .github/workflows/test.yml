@@ -63,7 +63,7 @@ jobs:
       # the allow list corresponds to https://github.com/cncf/foundation/blob/e5db022a0009f4db52b89d9875640cf3137153fe/allowed-third-party-license-policy.md
       run: go-licenses check --include_tests  ./... --allowed_licenses=$(cat ./hack/allowed-licenses.txt)
     - name: Install ltag
-      run: go install github.com/containerd/ltag@latest
+      run: go install github.com/containerd/ltag@v0.3.0
     - name: Check license boilerplates
       run: ltag -t ./hack/ltag --check -v
 
