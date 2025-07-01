@@ -25,9 +25,9 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/pkg/driver"
+	"github.com/lima-vm/lima/pkg/imgutil/proxyimgutil"
 	"github.com/lima-vm/lima/pkg/iso9660util"
 	"github.com/lima-vm/lima/pkg/limayaml"
-	"github.com/lima-vm/lima/pkg/nativeimgutil"
 	"github.com/lima-vm/lima/pkg/networks"
 	"github.com/lima-vm/lima/pkg/networks/usernet"
 	"github.com/lima-vm/lima/pkg/osutil"
@@ -471,6 +471,8 @@ func attachDisks(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfigura
 	}
 	configurations = append(configurations, diffDisk)
 
+	diskUtil := proxyimgutil.NewDiskUtil()
+
 	for _, d := range driver.Instance.Config.AdditionalDisks {
 		diskName := d.Name
 		disk, err := store.InspectDisk(diskName)
@@ -489,7 +491,8 @@ func attachDisks(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfigura
 		extraDiskPath := filepath.Join(disk.Dir, filenames.DataDisk)
 		// ConvertToRaw is a NOP if no conversion is needed
 		logrus.Debugf("Converting extra disk %q to a raw disk (if it is not a raw)", extraDiskPath)
-		if err = nativeimgutil.ConvertToRaw(extraDiskPath, extraDiskPath, nil, true); err != nil {
+
+		if err = diskUtil.ConvertToRaw(extraDiskPath, extraDiskPath, nil, true); err != nil {
 			return fmt.Errorf("failed to convert extra disk %q to a raw disk: %w", extraDiskPath, err)
 		}
 		extraDiskPathAttachment, err := vz.NewDiskImageStorageDeviceAttachmentWithCacheAndSync(extraDiskPath, false, diskImageCachingMode, vz.DiskImageSynchronizationModeFsync)

@@ -15,8 +15,8 @@ import (
 
 func TestRoundUp(t *testing.T) {
 	tests := []struct {
-		Size    int
-		Rounded int
+		Size    int64
+		Rounded int64
 	}{
 		{0, 0},
 		{1, 512},
@@ -25,7 +25,7 @@ func TestRoundUp(t *testing.T) {
 		{123456789, 123457024},
 	}
 	for _, tc := range tests {
-		if RoundUp(tc.Size) != tc.Rounded {
+		if roundUp(tc.Size) != tc.Rounded {
 			t.Errorf("expected %d, got %d", tc.Rounded, tc.Size)
 		}
 	}
@@ -63,7 +63,7 @@ func TestConvertToRaw(t *testing.T) {
 	t.Run("qcow without backing file", func(t *testing.T) {
 		resultImage := filepath.Join(tmpDir, strings.ReplaceAll(strings.ReplaceAll(t.Name(), string(os.PathSeparator), "_"), "/", "_"))
 
-		err = ConvertToRaw(qcowImage.Name(), resultImage, nil, false)
+		err = convertToRaw(qcowImage.Name(), resultImage, nil, false)
 		assert.NilError(t, err)
 		assertFileEquals(t, rawImage.Name(), resultImage)
 	})
@@ -71,7 +71,7 @@ func TestConvertToRaw(t *testing.T) {
 	t.Run("qcow with backing file", func(t *testing.T) {
 		resultImage := filepath.Join(tmpDir, strings.ReplaceAll(strings.ReplaceAll(t.Name(), string(os.PathSeparator), "_"), "/", "_"))
 
-		err = ConvertToRaw(qcowImage.Name(), resultImage, nil, true)
+		err = convertToRaw(qcowImage.Name(), resultImage, nil, true)
 		assert.NilError(t, err)
 		assertFileEquals(t, rawImage.Name(), resultImage)
 	})
@@ -80,7 +80,7 @@ func TestConvertToRaw(t *testing.T) {
 		resultImage := filepath.Join(tmpDir, strings.ReplaceAll(strings.ReplaceAll(t.Name(), string(os.PathSeparator), "_"), "/", "_"))
 
 		size := int64(2_097_152) // 2mb
-		err = ConvertToRaw(qcowImage.Name(), resultImage, &size, false)
+		err = convertToRaw(qcowImage.Name(), resultImage, &size, false)
 		assert.NilError(t, err)
 		assertFileEquals(t, rawImageExtended.Name(), resultImage)
 	})
@@ -88,7 +88,7 @@ func TestConvertToRaw(t *testing.T) {
 	t.Run("raw", func(t *testing.T) {
 		resultImage := filepath.Join(tmpDir, strings.ReplaceAll(strings.ReplaceAll(t.Name(), string(os.PathSeparator), "_"), "/", "_"))
 
-		err = ConvertToRaw(rawImage.Name(), resultImage, nil, false)
+		err = convertToRaw(rawImage.Name(), resultImage, nil, false)
 		assert.NilError(t, err)
 		assertFileEquals(t, rawImage.Name(), resultImage)
 	})

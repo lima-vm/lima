@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright The Lima Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package imgutil
+package qemuimgutil
 
 import (
 	"testing"
@@ -52,7 +52,7 @@ func TestParseInfo(t *testing.T) {
     "dirty-flag": false
 }`
 
-		info, err := ParseInfo([]byte(s))
+		info, err := parseInfo([]byte(s))
 		assert.NilError(t, err)
 		assert.Equal(t, 1, len(info.Children))
 		assert.Check(t, info.FormatSpecific != nil)
@@ -104,7 +104,7 @@ func TestParseInfo(t *testing.T) {
     "backing-filename": "foo.qcow2",
     "dirty-flag": false
 }`
-			info, err := ParseInfo([]byte(s))
+			info, err := parseInfo([]byte(s))
 			assert.NilError(t, err)
 			assert.Equal(t, 1, len(info.Children))
 			assert.Equal(t, "foo.qcow2", info.BackingFilename)
@@ -202,7 +202,7 @@ func TestParseInfo(t *testing.T) {
     },
     "dirty-flag": false
 }`
-			info, err := ParseInfo([]byte(s))
+			info, err := parseInfo([]byte(s))
 			assert.NilError(t, err)
 			assert.Equal(t, 3, len(info.Children))
 			assert.Equal(t, "foo.vmdk", info.Filename)
