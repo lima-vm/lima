@@ -54,7 +54,7 @@ Container image builders:
 - [`buildkit`](./buildkit.yaml): BuildKit
 
 Container orchestration:
-- [`faasd`](./faasd.yaml): [Faasd](https://docs.openfaas.com/deployment/faasd/)
+- [`faasd`](./faasd.yaml): [Faasd](https://docs.openfaas.com/deployment/edge/)
 - [`k3s`](./k3s.yaml): Kubernetes via k3s
 - [`k8s`](./k8s.yaml): Kubernetes via kubeadm
 - [`experimental/u7s`](./experimental/u7s.yaml): [Usernetes](https://github.com/rootless-containers/usernetes): Rootless Kubernetes
