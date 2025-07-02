@@ -59,6 +59,19 @@ $ limactl ls --format='{{.SSHConfigFile}}' default
 $ ssh -F /Users/example/.lima/default/ssh.config lima-default
 ```
 
+#### Using SSH without the `-F` flag
+
+To connect directly without specifying the config file, add this to your `~/.ssh/config`:
+
+```
+Include ~/.lima/*/ssh.config
+```
+
+Then you can connect directly:
+```bash
+ssh lima-default
+```
+
 ### Shell completion
 - To enable bash completion, add `source <(limactl completion bash)` to `~/.bash_profile`.
 - To enable zsh completion, see `limactl completion zsh --help`
