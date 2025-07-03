@@ -29,7 +29,7 @@ func GetProcessCommandLine(name string) ([]string, error) {
 	}
 
 	var outJSON CommandLineJSON
-	if err = json.Unmarshal([]byte(out), &outJSON); err != nil {
+	if err = json.Unmarshal(out, &outJSON); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal %q as %T: %w", out, outJSON, err)
 	}
 
