@@ -20,7 +20,6 @@ import (
 	"strings"
 	"sync"
 	"text/template"
-	"time"
 
 	"github.com/coreos/go-semver/semver"
 	"github.com/docker/go-units"
@@ -134,27 +133,6 @@ func MACAddress(uniqueID string) string {
 	// See also https://gitlab.com/wireshark/wireshark/-/blob/release-4.0/manuf to confirm the uniqueness of this prefix.
 	hw := append(net.HardwareAddr{0x52, 0x55, 0x55}, sha[0:3]...)
 	return hw.String()
-}
-
-func hostTimeZone() string {
-	// WSL2 will automatically set the timezone
-	if runtime.GOOS == "windows" {
-		return ""
-	}
-
-	if tzBytes, err := os.ReadFile("/etc/timezone"); err == nil {
-		if tz := strings.TrimSpace(string(tzBytes)); isValidTimezone(tz) {
-			return tz
-		}
-	}
-
-	if zoneinfoFile, err := filepath.EvalSymlinks("/etc/localtime"); err == nil {
-		if tz := extractTimezoneFromPath(zoneinfoFile); isValidTimezone(tz) {
-			return tz
-		}
-	}
-
-	return ""
 }
 
 func defaultCPUs() int {
@@ -1310,28 +1288,4 @@ func unique(s []string) []string {
 		}
 	}
 	return list
-}
-
-func isValidTimezone(tz string) bool {
-	if tz == "" {
-		return false
-	}
-	_, err := time.LoadLocation(tz)
-	if err != nil {
-		if len(tz) > 30 {
-			tz = tz[:30] + "..."
-		}
-		logrus.Warnf("invalid timezone %q", tz)
-		return false
-	}
-	return true
-}
-
-func extractTimezoneFromPath(zoneinfoFile string) string {
-	for baseDir := filepath.Dir(zoneinfoFile); baseDir != "/"; baseDir = filepath.Dir(baseDir) {
-		if _, err := os.Stat(filepath.Join(baseDir, "Etc/UTC")); err == nil {
-			return strings.TrimPrefix(zoneinfoFile, baseDir+string(os.PathSeparator))
-		}
-	}
-	return ""
 }
