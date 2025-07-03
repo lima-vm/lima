@@ -561,7 +561,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 		var firmware string
 		firmwareInBios := runtime.GOOS == "windows"
 		if envVar := os.Getenv("_LIMA_QEMU_UEFI_IN_BIOS"); envVar != "" {
-			b, err := strconv.ParseBool(os.Getenv("_LIMA_QEMU_UEFI_IN_BIOS"))
+			b, err := strconv.ParseBool(envVar)
 			if err != nil {
 				logrus.WithError(err).Warnf("invalid _LIMA_QEMU_UEFI_IN_BIOS value %q", envVar)
 			} else {
