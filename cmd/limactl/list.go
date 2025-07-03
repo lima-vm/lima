@@ -63,6 +63,7 @@ The following legacy flags continue to function:
 	listCommand.Flags().Bool("json", false, "JSONify output")
 	listCommand.Flags().BoolP("quiet", "q", false, "Only show names")
 	listCommand.Flags().Bool("all-fields", false, "Show all fields")
+	listCommand.Flags().StringToString("label", nil, "Filter instances by labels. Multiple labels can be specified (AND-match)")
 
 	return listCommand
 }
@@ -75,6 +76,16 @@ func instanceMatches(arg string, instances []string) []string {
 		}
 	}
 	return matches
+}
+
+// instanceMatchesAllLabels returns true if inst matches all labels, or, labels is nil.
+func instanceMatchesAllLabels(inst *store.Instance, labels map[string]string) bool {
+	for k, v := range labels {
+		if inst.Config.Labels[k] != v {
+			return false
+		}
+	}
+	return true
 }
 
 // unmatchedInstancesError is created when unmatched instance names found.
@@ -104,6 +115,10 @@ func listAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	jsonFormat, err := cmd.Flags().GetBool("json")
+	if err != nil {
+		return err
+	}
+	labels, err := cmd.Flags().GetStringToString("label")
 	if err != nil {
 		return err
 	}
@@ -177,7 +192,12 @@ func listAction(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return fmt.Errorf("unable to load instance %s: %w", instanceName, err)
 		}
-		instances = append(instances, instance)
+		if instanceMatchesAllLabels(instance, labels) {
+			instances = append(instances, instance)
+		}
+	}
+	if len(instances) == 0 {
+		return unmatchedInstancesError{}
 	}
 
 	for _, instance := range instances {

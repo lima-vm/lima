@@ -15,6 +15,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	flag "github.com/spf13/pflag"
+
+	"github.com/lima-vm/lima/pkg/labels"
 )
 
 // RegisterEdit registers flags related to in-place YAML modification, for `limactl edit`.
@@ -44,6 +46,8 @@ func registerEdit(cmd *cobra.Command, commentPrefix string) {
 		}
 		return res, cobra.ShellCompDirectiveNoFileComp
 	})
+
+	flags.StringToString("label", nil, commentPrefix+"Labels, e.g., \"category\"")
 
 	flags.StringSlice("mount", nil, commentPrefix+"Directories to mount, suffix ':w' for writable (Do not specify directories that overlap with the existing mounts)") // colima-compatible
 	flags.Bool("mount-none", false, commentPrefix+"Remove all mounts")
@@ -131,6 +135,27 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 				}
 				expr += `] | .dns |= unique | .hostResolver.enabled=false`
 				logrus.Warnf("Disabling HostResolver, as custom DNS addresses (%v) are specified", ipSlice)
+				return expr, nil
+			},
+			false,
+			false,
+		},
+		{
+			"label",
+			func(_ *flag.Flag) (string, error) {
+				m, err := flags.GetStringToString("label")
+				if err != nil {
+					return "", err
+				}
+				var expr string
+				for k, v := range m {
+					if err := labels.Validate(k); err != nil {
+						return "", fmt.Errorf("field `labels` has an invalid label %q: %w", k, err)
+					}
+					// No validation for label values
+					expr += fmt.Sprintf(".labels.%q = %q |", k, v)
+				}
+				expr = strings.TrimSuffix(expr, " |")
 				return expr, nil
 			},
 			false,
