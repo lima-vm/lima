@@ -163,7 +163,7 @@ func (n *NativeImageUtil) CreateDisk(disk string, size int64) error {
 	}
 	defer f.Close()
 	roundedSize := roundUp(size)
-	return f.Truncate(int64(roundedSize))
+	return f.Truncate(roundedSize)
 }
 
 // ConvertToRaw converts a disk image to raw format.

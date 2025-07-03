@@ -72,7 +72,7 @@ func GetWslStatus(instName string) (string, error) {
 		"--verbose",
 	})
 	if err != nil {
-		return "", fmt.Errorf("failed to run `wsl --list --verbose`, err: %w (out=%q)", err, string(out))
+		return "", fmt.Errorf("failed to run `wsl --list --verbose`, err: %w (out=%q)", err, out)
 	}
 
 	if out == "" {
@@ -80,9 +80,8 @@ func GetWslStatus(instName string) (string, error) {
 	}
 
 	// Check for edge cases first
-	outString := string(out)
-	if strings.Contains(outString, "Windows Subsystem for Linux has no installed distributions.") {
-		if strings.Contains(outString, "Wsl/WSL_E_DEFAULT_DISTRO_NOT_FOUND") {
+	if strings.Contains(out, "Windows Subsystem for Linux has no installed distributions.") {
+		if strings.Contains(out, "Wsl/WSL_E_DEFAULT_DISTRO_NOT_FOUND") {
 			return StatusBroken, fmt.Errorf(
 				"failed to read instance state for instance %q because no distro is installed,"+
 					"try running `wsl --install -d Ubuntu` and then re-running Lima", instName)
@@ -96,7 +95,7 @@ func GetWslStatus(instName string) (string, error) {
 	var instState string
 	wslListColsRegex := regexp.MustCompile(`\s+`)
 	// wsl --list --verbose may have different headers depending on localization, just split by line
-	for _, rows := range strings.Split(strings.ReplaceAll(string(out), "\r\n", "\n"), "\n") {
+	for _, rows := range strings.Split(strings.ReplaceAll(out, "\r\n", "\n"), "\n") {
 		cols := wslListColsRegex.Split(strings.TrimSpace(rows), -1)
 		nameIdx := 0
 		// '*' indicates default instance

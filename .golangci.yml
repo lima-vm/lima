@@ -25,6 +25,7 @@ linters:
   - perfsprint
   - revive
   - staticcheck
+  - unconvert
   - unused
   - usetesting
   - whitespace
