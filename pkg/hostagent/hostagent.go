@@ -656,7 +656,7 @@ func (a *HostAgent) processGuestAgentEvents(ctx context.Context, client *guestag
 		// - v1.1.0-beta.0: false
 		useSSHFwd := false
 		if envVar := os.Getenv("LIMA_SSH_PORT_FORWARDER"); envVar != "" {
-			b, err := strconv.ParseBool(os.Getenv("LIMA_SSH_PORT_FORWARDER"))
+			b, err := strconv.ParseBool(envVar)
 			if err != nil {
 				logrus.WithError(err).Warnf("invalid LIMA_SSH_PORT_FORWARDER value %q", envVar)
 			} else {
