@@ -18,8 +18,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/lima-vm/lima/pkg/nativeimgutil"
-	"github.com/lima-vm/lima/pkg/qemu/imgutil"
+	"github.com/lima-vm/lima/pkg/imgutil/proxyimgutil"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 )
@@ -113,11 +112,8 @@ func diskCreateAction(cmd *cobra.Command, args []string) error {
 
 	// qemu may not be available, use it only if needed.
 	dataDisk := filepath.Join(diskDir, filenames.DataDisk)
-	if format == "raw" {
-		err = nativeimgutil.CreateRawDisk(dataDisk, int(diskSize))
-	} else {
-		err = imgutil.CreateDisk(dataDisk, format, int(diskSize))
-	}
+	diskUtil := proxyimgutil.NewDiskUtil()
+	err = diskUtil.CreateDisk(dataDisk, diskSize)
 	if err != nil {
 		rerr := os.RemoveAll(diskDir)
 		if rerr != nil {
@@ -410,11 +406,8 @@ func diskResizeAction(cmd *cobra.Command, args []string) error {
 
 	// qemu may not be available, use it only if needed.
 	dataDisk := filepath.Join(disk.Dir, filenames.DataDisk)
-	if disk.Format == "raw" {
-		err = nativeimgutil.ResizeRawDisk(dataDisk, int(diskSize))
-	} else {
-		err = imgutil.ResizeDisk(dataDisk, disk.Format, int(diskSize))
-	}
+	diskUtil := proxyimgutil.NewDiskUtil()
+	err = diskUtil.ResizeDisk(dataDisk, diskSize)
 	if err != nil {
 		return fmt.Errorf("failed to resize disk %q: %w", diskName, err)
 	}

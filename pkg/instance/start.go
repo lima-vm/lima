@@ -27,10 +27,9 @@ import (
 	"github.com/lima-vm/lima/pkg/executil"
 	"github.com/lima-vm/lima/pkg/fileutils"
 	hostagentevents "github.com/lima-vm/lima/pkg/hostagent/events"
+	"github.com/lima-vm/lima/pkg/imgutil/proxyimgutil"
 	"github.com/lima-vm/lima/pkg/limayaml"
-	"github.com/lima-vm/lima/pkg/nativeimgutil"
 	"github.com/lima-vm/lima/pkg/osutil"
-	"github.com/lima-vm/lima/pkg/qemu/imgutil"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/lima-vm/lima/pkg/usrlocalsharelima"
@@ -414,7 +413,6 @@ func prepareDiffDisk(inst *store.Instance) error {
 	}
 
 	diskSize := img.Size()
-	format := string(img.Type())
 
 	if inst.Disk == diskSize {
 		return nil
@@ -427,12 +425,9 @@ func prepareDiffDisk(inst *store.Instance) error {
 		return errors.New("diffDisk: Shrinking is currently unavailable")
 	}
 
-	if format == "raw" {
-		err = nativeimgutil.ResizeRawDisk(diffDisk, int(inst.Disk))
-	} else {
-		err = imgutil.ResizeDisk(diffDisk, format, int(inst.Disk))
-	}
+	diskUtil := proxyimgutil.NewDiskUtil()
 
+	err = diskUtil.ResizeDisk(diffDisk, inst.Disk)
 	if err != nil {
 		return err
 	}
