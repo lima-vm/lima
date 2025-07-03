@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	"gotest.tools/v3/assert"
+
+	"github.com/lima-vm/lima/pkg/version"
 )
 
 func TestValidateEmpty(t *testing.T) {
@@ -15,6 +17,60 @@ func TestValidateEmpty(t *testing.T) {
 	assert.NilError(t, err)
 	err = Validate(y, false)
 	assert.Error(t, err, "field `images` must be set")
+}
+
+func TestValidateMinimumLimaVersion(t *testing.T) {
+	images := `images: [{"location": "/"}]`
+
+	tests := []struct {
+		name               string
+		currentVersion     string
+		minimumLimaVersion string
+		wantErr            string
+	}{
+		{
+			name:               "minimumLimaVersion less than current version",
+			currentVersion:     "1.1.1-114-g5bf5e513",
+			minimumLimaVersion: "1.1.0",
+			wantErr:            "",
+		},
+		{
+			name:               "minimumLimaVersion greater than current version",
+			currentVersion:     "1.1.1-114-g5bf5e513",
+			minimumLimaVersion: "1.1.2",
+			wantErr:            `template requires Lima version "1.1.2"; this is only "1.1.1"`,
+		},
+		{
+			name:               "invalid current version",
+			currentVersion:     "<unknown>",
+			minimumLimaVersion: "0.8.0",
+			wantErr:            `can't parse builtin Lima version "<unknown>": <unknown> is not in dotted-tri format`,
+		},
+		{
+			name:               "invalid minimumLimaVersion",
+			currentVersion:     "1.1.1-114-g5bf5e513",
+			minimumLimaVersion: "invalid",
+			wantErr:            "field `minimumLimaVersion` must be a semvar value, got \"invalid\": invalid is not in dotted-tri format\ntemplate requires Lima version \"invalid\"; this is only \"1.1.1\"",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			oldVersion := version.Version
+			version.Version = tt.currentVersion
+			t.Cleanup(func() { version.Version = oldVersion })
+
+			y, err := Load([]byte("minimumLimaVersion: "+tt.minimumLimaVersion+"\n"+images), "lima.yaml")
+			assert.NilError(t, err)
+
+			err = Validate(y, false)
+			if tt.wantErr == "" {
+				assert.NilError(t, err)
+			} else {
+				assert.Error(t, err, tt.wantErr)
+			}
+		})
+	}
 }
 
 func TestValidateProbes(t *testing.T) {
