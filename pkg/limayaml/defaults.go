@@ -135,26 +135,6 @@ func MACAddress(uniqueID string) string {
 	return hw.String()
 }
 
-func hostTimeZone() string {
-	// WSL2 will automatically set the timezone
-	if runtime.GOOS != "windows" {
-		tz, err := os.ReadFile("/etc/timezone")
-		if err == nil {
-			return strings.TrimSpace(string(tz))
-		}
-		zoneinfoFile, err := filepath.EvalSymlinks("/etc/localtime")
-		if err == nil {
-			for baseDir := filepath.Dir(zoneinfoFile); baseDir != "/"; baseDir = filepath.Dir(baseDir) {
-				if _, err = os.Stat(filepath.Join(baseDir, "Etc/UTC")); err == nil {
-					return strings.TrimPrefix(zoneinfoFile, baseDir+"/")
-				}
-			}
-			logrus.Warnf("could not locate zoneinfo directory from %q", zoneinfoFile)
-		}
-	}
-	return ""
-}
-
 func defaultCPUs() int {
 	const x = 4
 	if hostCPUs := runtime.NumCPU(); hostCPUs < x {
