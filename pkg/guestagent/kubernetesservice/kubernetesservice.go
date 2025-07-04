@@ -140,9 +140,10 @@ func (s *ServiceWatcher) GetPorts() []Entry {
 			}
 
 			var port int32
-			if service.Spec.Type == corev1.ServiceTypeNodePort {
+			switch service.Spec.Type {
+			case corev1.ServiceTypeNodePort:
 				port = portEntry.NodePort
-			} else if service.Spec.Type == corev1.ServiceTypeLoadBalancer {
+			case corev1.ServiceTypeLoadBalancer:
 				port = portEntry.Port
 			}
 

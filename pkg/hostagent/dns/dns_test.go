@@ -53,6 +53,9 @@ func TestDNSRecords(t *testing.T) {
 			"host.lima.internal": "10.10.0.34",
 			"my.host":            "host.lima.internal",
 			"default":            "my.domain.com",
+			"cycle1.example.com": "cycle2.example.com",
+			"cycle2.example.com": "cycle1.example.com",
+			"self.example.com":   "self.example.com",
 		},
 	}
 
@@ -111,6 +114,23 @@ func TestDNSRecords(t *testing.T) {
 		}{
 			{testDomain: "my.host", expectedCNAME: `my.host.\s+5\s+IN\s+CNAME\s+host.lima.internal.`},
 			{testDomain: "default", expectedCNAME: `default.\s+5\s+IN\s+CNAME\s+my.domain.com.`},
+		}
+
+		for _, tc := range tests {
+			req := new(dns.Msg)
+			req.SetQuestion(dns.Fqdn(tc.testDomain), dns.TypeCNAME)
+			h.ServeDNS(w, req)
+			assert.Assert(t, regexMatch(dnsResult.String(), tc.expectedCNAME))
+		}
+	})
+
+	t.Run("test cyclic CNAME records", func(t *testing.T) {
+		tests := []struct {
+			testDomain    string
+			expectedCNAME string
+		}{
+			{testDomain: "cycle1.example.com", expectedCNAME: `cycle1.example.com.`},
+			{testDomain: "self.example.com", expectedCNAME: `self.example.com.`},
 		}
 
 		for _, tc := range tests {
