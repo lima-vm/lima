@@ -4,12 +4,14 @@
 package portfwdserver
 
 import (
+	"context"
 	"errors"
 	"io"
 	"net"
 	"time"
 
-	"github.com/lima-vm/lima/pkg/bicopy"
+	"github.com/containers/gvisor-tap-vsock/pkg/tcpproxy"
+
 	"github.com/lima-vm/lima/pkg/guestagent/api"
 )
 
@@ -35,7 +37,10 @@ func (s *TunnelServer) Start(stream api.GuestService_TunnelServer) error {
 		return err
 	}
 	rw := &GRPCServerRW{stream: stream, id: in.Id}
-	bicopy.Bicopy(rw, conn, nil)
+	proxy := tcpproxy.DialProxy{DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
+		return conn, nil
+	}}
+	proxy.HandleConn(rw)
 	return nil
 }
 
