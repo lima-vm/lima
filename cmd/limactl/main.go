@@ -189,6 +189,7 @@ func newApp() *cobra.Command {
 		newRestartCommand(),
 		newSudoersCommand(),
 		newStartAtLoginCommand(),
+		newNetworkCommand(),
 	)
 
 	return rootCmd

@@ -141,11 +141,11 @@ $ limactl disk list
 	return diskListCommand
 }
 
-func diskMatches(diskName string, disks []string) []string {
+func nameMatches(nameName string, names []string) []string {
 	matches := []string{}
-	for _, disk := range disks {
-		if disk == diskName {
-			matches = append(matches, disk)
+	for _, name := range names {
+		if name == nameName {
+			matches = append(matches, name)
 		}
 	}
 	return matches
@@ -165,7 +165,7 @@ func diskListAction(cmd *cobra.Command, args []string) error {
 	disks := []string{}
 	if len(args) > 0 {
 		for _, arg := range args {
-			matches := diskMatches(arg, allDisks)
+			matches := nameMatches(arg, allDisks)
 			if len(matches) > 0 {
 				disks = append(disks, matches...)
 			} else {
