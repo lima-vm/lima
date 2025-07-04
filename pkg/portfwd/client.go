@@ -10,11 +10,11 @@ import (
 	"time"
 
 	"github.com/containers/gvisor-tap-vsock/pkg/services/forwarder"
-	"github.com/containers/gvisor-tap-vsock/pkg/tcpproxy"
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/pkg/guestagent/api"
 	guestagentclient "github.com/lima-vm/lima/pkg/guestagent/api/client"
+	"github.com/lima-vm/lima/pkg/tcpproxy"
 )
 
 func HandleTCPConnection(ctx context.Context, client *guestagentclient.GuestAgentClient, conn net.Conn, guestAddr string) {

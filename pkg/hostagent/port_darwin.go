@@ -15,8 +15,8 @@ import (
 	"github.com/lima-vm/sshocker/pkg/ssh"
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/pkg/bicopy"
 	"github.com/lima-vm/lima/pkg/portfwd"
+	"github.com/lima-vm/lima/pkg/tcpproxy"
 )
 
 // forwardTCP is not thread-safe.
@@ -153,7 +153,10 @@ func (plf *pseudoLoopbackForwarder) forward(ac *net.TCPConn) error {
 		return err
 	}
 	defer unixConn.Close()
-	bicopy.Bicopy(ac, unixConn, nil)
+	proxy := tcpproxy.DialProxy{DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
+		return unixConn, nil
+	}}
+	proxy.HandleConn(ac)
 	return nil
 }
 
