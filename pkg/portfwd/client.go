@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/containers/gvisor-tap-vsock/pkg/services/forwarder"
+	"github.com/containers/gvisor-tap-vsock/pkg/tcpproxy"
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/pkg/bicopy"
 	"github.com/lima-vm/lima/pkg/guestagent/api"
 	guestagentclient "github.com/lima-vm/lima/pkg/guestagent/api/client"
 )
@@ -33,7 +33,10 @@ func HandleTCPConnection(ctx context.Context, client *guestagentclient.GuestAgen
 	}
 
 	rw := &GrpcClientRW{stream: stream, id: id, addr: guestAddr, protocol: "tcp"}
-	bicopy.Bicopy(rw, conn, nil)
+	proxy := tcpproxy.DialProxy{DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
+		return conn, nil
+	}}
+	proxy.HandleConn(rw)
 }
 
 func HandleUDPConnection(ctx context.Context, client *guestagentclient.GuestAgentClient, conn net.PacketConn, guestAddr string) {
