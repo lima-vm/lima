@@ -78,11 +78,7 @@ func newStaticClientConfig(ips []string) (*dns.ClientConfig, error) {
 
 func (h *Handler) lookupCnameToHost(cname string) string {
 	seen := make(map[string]bool)
-	for {
-		// break cyclic definition
-		if seen[cname] {
-			break
-		}
+	for !seen[cname] { // break cyclic definition
 		if _, ok := h.cnameToHost[cname]; ok {
 			seen[cname] = true
 			cname = h.cnameToHost[cname]

@@ -118,7 +118,8 @@ linters:
       # https://staticcheck.dev/docs/configuration/options/#checks
       checks:
       - all
-      - -QF*
+      - -QF1001  # apply De Morgan's law
+      - -QF1008  # remove embedded field from selector
       - -SA3000  # false positive for Go 1.15+. See https://github.com/golang/go/issues/34129
       - -ST1000
       - -ST1001  # duplicates revive.dot-imports
