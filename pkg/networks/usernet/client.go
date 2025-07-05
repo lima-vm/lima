@@ -42,8 +42,11 @@ func (c *Client) ConfigureDriver(ctx context.Context, driver *driver.BaseDriver)
 	if err != nil {
 		return err
 	}
-	hosts := driver.Instance.Config.HostResolver.Hosts
-	hosts[fmt.Sprintf("%s.internal", driver.Instance.Hostname)] = ipAddress
+	hosts := inst.Config.HostResolver.Hosts
+	if hosts == nil {
+		hosts = make(map[string]string)
+	}
+	hosts[fmt.Sprintf("%s.internal", inst.Hostname)] = ipAddress
 	err = c.AddDNSHosts(hosts)
 	return err
 }
