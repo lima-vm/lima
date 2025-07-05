@@ -91,3 +91,17 @@ const LongestSock = SSHSock + ".1234567890123456"
 func PIDFile(name string) string {
 	return name + ".pid"
 }
+
+// SkipOnClone files should be skipped on cloning an instance.
+var SkipOnClone = []string{
+	Protected,
+}
+
+// NullifyOnClone files should be nullified on cloning an instance.
+// FIXME: this list should be provided by the VM driver.
+var NullifyOnClone = []string{
+	VzIdentifier,
+}
+
+// TmpFileSuffixes is the list of the tmp file suffixes.
+var TmpFileSuffixes = []string{".pid", ".sock", ".tmp"}

@@ -18,11 +18,7 @@ import (
 )
 
 // RegisterEdit registers flags related to in-place YAML modification, for `limactl edit`.
-func RegisterEdit(cmd *cobra.Command) {
-	registerEdit(cmd, "")
-}
-
-func registerEdit(cmd *cobra.Command, commentPrefix string) {
+func RegisterEdit(cmd *cobra.Command, commentPrefix string) {
 	flags := cmd.Flags()
 
 	flags.Int("cpus", 0, commentPrefix+"Number of CPUs") // Similar to colima's --cpu, but the flag name is slightly different (cpu vs cpus)
@@ -77,7 +73,7 @@ func registerEdit(cmd *cobra.Command, commentPrefix string) {
 
 // RegisterCreate registers flags related to in-place YAML modification, for `limactl create`.
 func RegisterCreate(cmd *cobra.Command, commentPrefix string) {
-	registerEdit(cmd, commentPrefix)
+	RegisterEdit(cmd, commentPrefix)
 	flags := cmd.Flags()
 
 	flags.String("arch", "", commentPrefix+"Machine architecture (x86_64, aarch64, riscv64, armv7l, s390x, ppc64le)") // colima-compatible
