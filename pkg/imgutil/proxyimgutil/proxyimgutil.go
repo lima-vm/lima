@@ -10,7 +10,7 @@ import (
 
 	"github.com/lima-vm/lima/pkg/imgutil"
 	"github.com/lima-vm/lima/pkg/imgutil/nativeimgutil"
-	"github.com/lima-vm/lima/pkg/imgutil/qemuimgutil"
+	"github.com/lima-vm/lima/pkg/qemuimgutil"
 )
 
 // ImageDiskManager is a proxy implementation of imgutil.ImageDiskManager that uses both QEMU and native image utilities.

@@ -4,9 +4,9 @@
 package driverutil
 
 import (
+	"github.com/lima-vm/lima/pkg/driver/vz"
+	"github.com/lima-vm/lima/pkg/driver/wsl2"
 	"github.com/lima-vm/lima/pkg/limayaml"
-	"github.com/lima-vm/lima/pkg/vz"
-	"github.com/lima-vm/lima/pkg/wsl2"
 )
 
 // Drivers returns the available drivers.
