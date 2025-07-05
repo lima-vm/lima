@@ -27,33 +27,49 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/pkg/driver"
+	"github.com/lima-vm/lima/pkg/driver/qemu/entitlementutil"
 	"github.com/lima-vm/lima/pkg/executil"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/networks/usernet"
 	"github.com/lima-vm/lima/pkg/osutil"
-	"github.com/lima-vm/lima/pkg/qemu/entitlementutil"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 )
 
 type LimaQemuDriver struct {
-	*driver.BaseDriver
+	Instance     *store.Instance
+	SSHLocalPort int
+	VSockPort    int
+	VirtioPort   string
+
 	qCmd    *exec.Cmd
 	qWaitCh chan error
 
 	vhostCmds []*exec.Cmd
 }
 
-func New(driver *driver.BaseDriver) *LimaQemuDriver {
-	driver.VSockPort = 0
-	driver.VirtioPort = filenames.VirtioPort
+var _ driver.Driver = (*LimaQemuDriver)(nil)
+
+func New() *LimaQemuDriver {
 	// virtserialport doesn't seem to work reliably: https://github.com/lima-vm/lima/issues/2064
 	// but on Windows default Unix socket forwarding is not available
+	var virtioPort string
+	virtioPort = filenames.VirtioPort
 	if runtime.GOOS != "windows" {
-		driver.VirtioPort = ""
+		virtioPort = ""
 	}
 	return &LimaQemuDriver{
-		BaseDriver: driver,
+		VSockPort:  0,
+		VirtioPort: virtioPort,
+	}
+}
+
+func (l *LimaQemuDriver) Configure(inst *store.Instance, sshLocalPort int) *driver.ConfiguredDriver {
+	l.Instance = inst
+	l.SSHLocalPort = sshLocalPort
+
+	return &driver.ConfiguredDriver{
+		Driver: l,
 	}
 }
 
@@ -212,7 +228,7 @@ func (l *LimaQemuDriver) Start(ctx context.Context) (chan error, error) {
 	go func() {
 		if usernetIndex := limayaml.FirstUsernetIndex(l.Instance.Config); usernetIndex != -1 {
 			client := usernet.NewClientByName(l.Instance.Config.Networks[usernetIndex].Lima)
-			err := client.ConfigureDriver(ctx, l.BaseDriver)
+			err := client.ConfigureDriver(ctx, l.Instance, l.SSHLocalPort)
 			if err != nil {
 				l.qWaitCh <- err
 			}
@@ -229,7 +245,7 @@ func (l *LimaQemuDriver) ChangeDisplayPassword(_ context.Context, password strin
 	return l.changeVNCPassword(password)
 }
 
-func (l *LimaQemuDriver) GetDisplayConnection(_ context.Context) (string, error) {
+func (l *LimaQemuDriver) DisplayConnection(_ context.Context) (string, error) {
 	return l.getVNCDisplayPort()
 }
 
@@ -260,11 +276,11 @@ func (l *LimaQemuDriver) checkBinarySignature() error {
 	}
 	// The codesign --xml option is only available on macOS Monterey and later
 	if !macOSProductVersion.LessThan(*semver.New("12.0.0")) {
-		qExe, _, err := Exe(l.BaseDriver.Instance.Arch)
+		qExe, _, err := Exe(l.Instance.Arch)
 		if err != nil {
-			return fmt.Errorf("failed to find the QEMU binary for the architecture %q: %w", l.BaseDriver.Instance.Arch, err)
+			return fmt.Errorf("failed to find the QEMU binary for the architecture %q: %w", l.Instance.Arch, err)
 		}
-		if accel := Accel(l.BaseDriver.Instance.Arch); accel == "hvf" {
+		if accel := Accel(l.Instance.Arch); accel == "hvf" {
 			entitlementutil.AskToSignIfNotSignedProperly(qExe)
 		}
 	}
@@ -441,10 +457,10 @@ func (l *LimaQemuDriver) ListSnapshots(_ context.Context) (string, error) {
 	return List(qCfg, l.Instance.Status == store.StatusRunning)
 }
 
-func (l *LimaQemuDriver) GuestAgentConn(ctx context.Context) (net.Conn, error) {
+func (l *LimaQemuDriver) GuestAgentConn(ctx context.Context) (net.Conn, string, error) {
 	var d net.Dialer
 	dialContext, err := d.DialContext(ctx, "unix", filepath.Join(l.Instance.Dir, filenames.GuestAgentSock))
-	return dialContext, err
+	return dialContext, "unix", err
 }
 
 type qArgTemplateApplier struct {
@@ -497,4 +513,37 @@ func (a *qArgTemplateApplier) applyTemplate(qArg string) (string, error) {
 		return "", err
 	}
 	return b.String(), nil
+}
+
+func (l *LimaQemuDriver) Info() driver.Info {
+	var info driver.Info
+	if l.Instance != nil && l.Instance.Dir != "" {
+		info.InstanceDir = l.Instance.Dir
+	}
+	info.DriverName = "qemu"
+	info.CanRunGUI = false
+	info.VirtioPort = l.VirtioPort
+	info.VsockPort = l.VSockPort
+	return info
+}
+
+func (l *LimaQemuDriver) Initialize(_ context.Context) error {
+	return nil
+}
+
+func (l *LimaQemuDriver) RunGUI() error {
+	return nil
+}
+
+func (l *LimaQemuDriver) Register(_ context.Context) error {
+	return nil
+}
+
+func (l *LimaQemuDriver) Unregister(_ context.Context) error {
+	return nil
+}
+
+func (l *LimaQemuDriver) ForwardGuestAgent() bool {
+	// if driver is not providing, use host agent
+	return l.VSockPort == 0 && l.VirtioPort == ""
 }

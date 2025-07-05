@@ -22,6 +22,7 @@ import (
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/reflectutil"
+	"github.com/lima-vm/lima/pkg/store"
 )
 
 var knownYamlProperties = []string{
@@ -68,16 +69,30 @@ var knownYamlProperties = []string{
 const Enabled = true
 
 type LimaVzDriver struct {
-	*driver.BaseDriver
+	Instance *store.Instance
+
+	SSHLocalPort int
+	VSockPort    int
+	VirtioPort   string
 
 	machine *virtualMachineWrapper
 }
 
-func New(driver *driver.BaseDriver) *LimaVzDriver {
-	driver.VSockPort = 2222
-	driver.VirtioPort = ""
+var _ driver.Driver = (*LimaVzDriver)(nil)
+
+func New() *LimaVzDriver {
 	return &LimaVzDriver{
-		BaseDriver: driver,
+		VSockPort:  2222,
+		VirtioPort: "",
+	}
+}
+
+func (l *LimaVzDriver) Configure(inst *store.Instance, sshLocalPort int) *driver.ConfiguredDriver {
+	l.Instance = inst
+	l.SSHLocalPort = sshLocalPort
+
+	return &driver.ConfiguredDriver{
+		Driver: l,
 	}
 }
 
@@ -167,17 +182,17 @@ func (l *LimaVzDriver) Validate() error {
 }
 
 func (l *LimaVzDriver) Initialize(_ context.Context) error {
-	_, err := getMachineIdentifier(l.BaseDriver)
+	_, err := getMachineIdentifier(l.Instance)
 	return err
 }
 
 func (l *LimaVzDriver) CreateDisk(ctx context.Context) error {
-	return EnsureDisk(ctx, l.BaseDriver)
+	return EnsureDisk(ctx, l.Instance)
 }
 
 func (l *LimaVzDriver) Start(ctx context.Context) (chan error, error) {
 	logrus.Infof("Starting VZ (hint: to watch the boot progress, see %q)", filepath.Join(l.Instance.Dir, "serial*.log"))
-	vm, errCh, err := startVM(ctx, l.BaseDriver)
+	vm, errCh, err := startVM(ctx, l.Instance, l.SSHLocalPort)
 	if err != nil {
 		if errors.Is(err, vz.ErrUnsupportedOSVersion) {
 			return nil, fmt.Errorf("vz driver requires macOS 13 or higher to run: %w", err)
@@ -189,7 +204,7 @@ func (l *LimaVzDriver) Start(ctx context.Context) (chan error, error) {
 	return errCh, nil
 }
 
-func (l *LimaVzDriver) CanRunGUI() bool {
+func (l *LimaVzDriver) canRunGUI() bool {
 	switch *l.Instance.Config.Video.Display {
 	case "vz", "default":
 		return true
@@ -199,7 +214,7 @@ func (l *LimaVzDriver) CanRunGUI() bool {
 }
 
 func (l *LimaVzDriver) RunGUI() error {
-	if l.CanRunGUI() {
+	if l.canRunGUI() {
 		return l.machine.StartGraphicApplication(1920, 1200)
 	}
 	return fmt.Errorf("RunGUI is not supported for the given driver '%s' and display '%s'", "vz", *l.Instance.Config.Video.Display)
@@ -235,12 +250,26 @@ func (l *LimaVzDriver) Stop(_ context.Context) error {
 	return errors.New("vz: CanRequestStop is not supported")
 }
 
-func (l *LimaVzDriver) GuestAgentConn(_ context.Context) (net.Conn, error) {
+func (l *LimaVzDriver) GuestAgentConn(_ context.Context) (net.Conn, string, error) {
 	for _, socket := range l.machine.SocketDevices() {
 		connect, err := socket.Connect(uint32(l.VSockPort))
-		if err == nil && connect.SourcePort() != 0 {
-			return connect, nil
-		}
+		return connect, "vsock", err
 	}
-	return nil, errors.New("unable to connect to guest agent via vsock port 2222")
+
+	return nil, "", errors.New("unable to connect to guest agent via vsock port 2222")
+}
+
+func (l *LimaVzDriver) Info() driver.Info {
+	var info driver.Info
+	if l.Instance != nil && l.Instance.Config != nil {
+		info.CanRunGUI = l.canRunGUI()
+	}
+
+	info.DriverName = "vz"
+	info.VsockPort = l.VSockPort
+	info.VirtioPort = l.VirtioPort
+	if l.Instance != nil && l.Instance.Dir != "" {
+		info.InstanceDir = l.Instance.Dir
+	}
+	return info
 }

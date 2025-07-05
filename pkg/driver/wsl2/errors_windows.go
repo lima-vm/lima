@@ -1,11 +1,11 @@
-//go:build darwin && !no_vz
+//go:build windows && !no_wsl
 
 // SPDX-FileCopyrightText: Copyright The Lima Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package vz
+package wsl2
 
 import "errors"
 
 //nolint:revive,staticcheck // false positives with proper nouns
-var errRosettaUnsupported = errors.New("Rosetta is unsupported on non-ARM64 hosts")
+var errUnimplemented = errors.New("unimplemented")
