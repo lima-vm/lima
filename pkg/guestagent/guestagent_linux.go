@@ -5,8 +5,10 @@ package guestagent
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
+	"os/exec"
 	"reflect"
 	"sync"
 	"syscall"
@@ -186,6 +188,24 @@ func (a *agent) collectEvent(ctx context.Context, st eventState) (*api.Event, ev
 	}
 	ev.LocalPortsAdded, ev.LocalPortsRemoved = comparePorts(st.ports, newSt.ports)
 	ev.Time = timestamppb.Now()
+
+	// Get network interfaces info
+	cmd := exec.Command("ip", "-j", "a")
+	output, err := cmd.Output()
+	if err != nil {
+		logrus.Errorf("Cannot execute command `ip -j a`")
+	}
+
+	// Wrap the output with a label key
+	// Since multiple outputs will be sent to the hostagent via this jsonBytes,
+	// this label acts as the key to identify each output separately.
+	var data any
+	if err := json.Unmarshal(output, &data); err != nil {
+		logrus.Errorf("Cannot parsing output")
+	}
+	b, _ := json.Marshal(map[string]any{"ip": data})
+	ev.JsonBytes = b
+
 	return ev, newSt
 }
 
