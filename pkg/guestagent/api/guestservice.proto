@@ -21,6 +21,7 @@ message Event {
   repeated IPPort local_ports_added = 2;
   repeated IPPort local_ports_removed = 3;
   repeated string errors = 4;
+  bytes json_bytes = 5;
 }
 
 message IPPort {

@@ -1,6 +1,3 @@
-// SPDX-FileCopyrightText: Copyright The Lima Authors
-// SPDX-License-Identifier: Apache-2.0
-
 package hostagent
 
 import (
@@ -514,6 +511,23 @@ sudo chown -R "${USER}" /run/host-services`
 		}
 		return errors.Join(rmErrs...)
 	})
+
+	// Get instance medata for Plain mode
+	if *a.instConfig.Plain {
+		output, err := executeSSH(ctx, a.sshConfig, a.sshLocalPort, "ip", "-j", "a")
+		if err != nil {
+			errs = append(errs, errors.New("failed to collect network info (iproute2)"))
+		}
+		var data any
+		if err := json.Unmarshal(output, &data); err != nil {
+			logrus.Errorf("Failed to parse output")
+		}
+		b, _ := json.Marshal(map[string]any{"ip": data})
+
+		if err := a.updateInstanceInfoIP(b); err != nil {
+			errs = append(errs, errors.New("failed to parse network info"))
+		}
+	}
 	return errors.Join(errs...)
 }
 
@@ -669,6 +683,11 @@ func (a *HostAgent) processGuestAgentEvents(ctx context.Context, client *guestag
 		} else {
 			a.grpcPortForwarder.OnEvent(ctx, client, ev)
 		}
+
+		// Update the instance info file with network information
+		if err := a.updateInstanceInfoIP(ev.JsonBytes); err != nil {
+			logrus.Warnf("received error from collecting network info")
+		}
 	}
 
 	if err := client.Events(ctx, onEvent); err != nil {
@@ -685,7 +704,7 @@ const (
 	verbCancel  = "cancel"
 )
 
-func executeSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, command ...string) error {
+func executeSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, command ...string) ([]byte, error) {
 	args := sshConfig.Args()
 	args = append(args,
 		"-p", strconv.Itoa(port),
@@ -694,10 +713,11 @@ func executeSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, command
 	)
 	args = append(args, command...)
 	cmd := exec.CommandContext(ctx, sshConfig.Binary(), args...)
-	if out, err := cmd.Output(); err != nil {
-		return fmt.Errorf("failed to run %v: %q: %w", cmd.Args, string(out), err)
+	out, err := cmd.Output()
+	if err != nil {
+		return out, fmt.Errorf("failed to run %v: %q: %w", cmd.Args, string(out), err)
 	}
-	return nil
+	return out, nil
 }
 
 func forwardSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, remote, verb string, reverse bool) error {
@@ -727,7 +747,7 @@ func forwardSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, 
 		case verbForward:
 			if reverse {
 				logrus.Infof("Forwarding %q (host) to %q (guest)", local, remote)
-				if err := executeSSH(ctx, sshConfig, port, "rm", "-f", remote); err != nil {
+				if _, err := executeSSH(ctx, sshConfig, port, "rm", "-f", remote); err != nil {
 					logrus.WithError(err).Warnf("Failed to clean up %q (guest) before setting up forwarding", remote)
 				}
 			} else {
@@ -742,7 +762,7 @@ func forwardSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, 
 		case verbCancel:
 			if reverse {
 				logrus.Infof("Stopping forwarding %q (host) to %q (guest)", local, remote)
-				if err := executeSSH(ctx, sshConfig, port, "rm", "-f", remote); err != nil {
+				if _, err := executeSSH(ctx, sshConfig, port, "rm", "-f", remote); err != nil {
 					logrus.WithError(err).Warnf("Failed to clean up %q (guest) after stopping forwarding", remote)
 				}
 			} else {
@@ -762,7 +782,7 @@ func forwardSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, 
 		if verb == verbForward && strings.HasPrefix(local, "/") {
 			if reverse {
 				logrus.WithError(err).Warnf("Failed to set up forward from %q (host) to %q (guest)", local, remote)
-				if err := executeSSH(ctx, sshConfig, port, "rm", "-f", remote); err != nil {
+				if _, err := executeSSH(ctx, sshConfig, port, "rm", "-f", remote); err != nil {
 					logrus.WithError(err).Warnf("Failed to clean up %q (guest) after forwarding failed", remote)
 				}
 			} else {
@@ -800,6 +820,79 @@ func copyToHost(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, 
 	}
 	if err := os.WriteFile(local, out, 0o600); err != nil {
 		return fmt.Errorf("can't write to local file %q: %w", local, err)
+	}
+	return nil
+}
+
+// updateInstanceInfoIP parses the given JSON data and updates the instance's IP address information.
+func (a *HostAgent) updateInstanceInfoIP(b []byte) error {
+	var data map[string]any
+	if err := json.Unmarshal(b, &data); err != nil {
+		return err
+	}
+	ipBytes, err := json.Marshal(data["ip"])
+	if err != nil {
+		return err
+	}
+	if ipBytes == nil {
+		return nil // No data to update
+	}
+
+	// Load an instance info
+	path := filepath.Join(a.instDir, filenames.InstInfo)
+	output := events.InstanceInfo{}
+	if err := createOrLoadInstanceInfo(path, a.instName, &output); err != nil {
+		return err
+	}
+
+	// Extract IP address
+	var ifaces []events.NetworkInterfaceInfo
+	if err := json.Unmarshal(ipBytes, &ifaces); err != nil {
+		return err
+	}
+
+	var eth0 events.NetworkInterfaceInfo
+	for _, iface := range ifaces {
+		if iface.IfName == "eth0" {
+			eth0 = iface
+			break
+		}
+	}
+	if eth0.IfName == "" {
+		return errors.New("eth0 not found in interface list")
+	}
+
+	// Update values
+	for _, addr := range eth0.AddrInfo {
+		if addr.Family == "inet" {
+			output.IPv4 = addr.Local
+		}
+		if addr.Family == "inet6" {
+			output.IPv6 = addr.Local
+		}
+	}
+
+	jsonOut, err := json.MarshalIndent(output, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(path, jsonOut, 0o644)
+}
+
+// createOrLoadInstanceInfo loads existing instance info from the given path, or create a new one.
+func createOrLoadInstanceInfo(path, instName string, output *events.InstanceInfo) error {
+	_, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		output.Name = instName
+	} else {
+		raw, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		if err := json.Unmarshal(raw, &output); err != nil {
+			return err
+		}
 	}
 	return nil
 }

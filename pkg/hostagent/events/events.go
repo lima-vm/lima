@@ -23,3 +23,23 @@ type Event struct {
 	Time   time.Time `json:"time,omitempty"`
 	Status Status    `json:"status,omitempty"`
 }
+
+// NetworkInterfaceInfo represents a network interface output from `iproute2`.
+type NetworkInterfaceInfo struct {
+	IfName   string     `json:"ifname"`
+	AddrInfo []AddrInfo `json:"addr_info"`
+}
+
+type AddrInfo struct {
+	Family string `json:"family"`
+	Local  string `json:"local"`
+}
+
+// InstanceInfo contains instance information.
+// Additional fields like CPU cores or instance name can be added here as needed.
+type InstanceInfo struct {
+	Name string `json:"Name"`
+	IPv4 string `json:"IPv4,omitempty"`
+	IPv6 string `json:"IPv6,omitempty"`
+	// other info: cores, name, ...
+}
