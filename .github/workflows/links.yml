@@ -21,6 +21,8 @@ jobs:
           --scheme http
         fail: false
         output: ./lychee/out.md
+    - name: Show Report
+      run: cat lychee/out.md
     - name: Create Issue From File
       if: steps.lychee.outputs.exit_code != 0
       uses: peter-evans/create-issue-from-file@e8ef132d6df98ed982188e460ebb3b5d4ef3a9cd # v5.0.1
