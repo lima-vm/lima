@@ -916,7 +916,6 @@ func fixUpForPlainMode(y *LimaYAML) {
 		return
 	}
 	y.Mounts = nil
-	y.PortForwards = nil
 	y.Containerd.System = ptr.Of(false)
 	y.Containerd.User = ptr.Of(false)
 	y.Rosetta.BinFmt = ptr.Of(false)

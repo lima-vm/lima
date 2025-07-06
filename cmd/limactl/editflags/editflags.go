@@ -96,6 +96,11 @@ func RegisterCreate(cmd *cobra.Command, commentPrefix string) {
 	})
 
 	flags.Bool("plain", false, commentPrefix+"Plain mode. Disables mounts, port forwarding, containerd, etc.")
+
+	flags.StringSlice("port-forward", nil, commentPrefix+"Port forwards (host:guest), works even in plain mode, e.g., '8080:80,2222:22'")
+	_ = cmd.RegisterFlagCompletionFunc("port-forward", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
+		return []string{"8080:80", "2222:22", "3000:3000"}, cobra.ShellCompDirectiveNoFileComp
+	})
 }
 
 func defaultExprFunc(expr string) func(v *flag.Flag) (string, error) {
@@ -206,6 +211,7 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 			false,
 			false,
 		},
+
 		{
 			"rosetta",
 			func(_ *flag.Flag) (string, error) {
@@ -261,6 +267,36 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 		{"disk", d(".disk= \"%sGiB\""), false, false},
 		{"vm-type", d(".vmType = %q"), true, false},
 		{"plain", d(".plain = %s"), true, false},
+		{
+			"port-forward",
+			func(_ *flag.Flag) (string, error) {
+				ss, err := flags.GetStringSlice("port-forward")
+				if err != nil {
+					return "", err
+				}
+				if len(ss) == 0 {
+					return "", nil
+				}
+
+				expr := `.portForwards = [`
+				for i, s := range ss {
+					parts := strings.Split(s, ":")
+					if len(parts) != 2 {
+						return "", fmt.Errorf("invalid port forward format %q, expected HOST:GUEST", s)
+					}
+					hostPort := strings.TrimSpace(parts[0])
+					guestPort := strings.TrimSpace(parts[1])
+					expr += fmt.Sprintf(`{"hostPort": %s, "guestPort": %s}`, hostPort, guestPort)
+					if i < len(ss)-1 {
+						expr += ","
+					}
+				}
+				expr += `]`
+				return expr, nil
+			},
+			false,
+			false,
+		},
 	}
 	var exprs []string
 	for _, def := range defs {
