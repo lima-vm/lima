@@ -191,9 +191,8 @@ func (a *agent) collectEvent(ctx context.Context, st eventState) (*api.Event, ev
 
 func isEventEmpty(ev *api.Event) bool {
 	empty := &api.Event{}
-	copied := ev
-	copied.Time = nil
-	return reflect.DeepEqual(empty, copied)
+	empty.Time = ev.Time
+	return reflect.DeepEqual(empty, ev)
 }
 
 func (a *agent) Events(ctx context.Context, ch chan *api.Event) {
