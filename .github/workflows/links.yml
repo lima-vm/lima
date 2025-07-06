@@ -14,6 +14,11 @@ jobs:
       id: lychee
       uses: lycheeverse/lychee-action@82202e5e9c2f4ef1a55a3d02563e1cb6041e5332 # v2.4.1
       with:
+        args: |
+          --max-concurrency 1 \
+          --no-progress \
+          --scheme https \
+          --scheme http
         fail: false
         output: ./lychee/out.md
     - name: Create Issue From File
