@@ -131,13 +131,13 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 		}
 	}
 
-	baseDriver := driver.BaseDriver{
-		Instance:     inst,
-		SSHLocalPort: sshLocalPort,
+	limaDriver, err := driverutil.CreateConfiguredDriver(inst, sshLocalPort)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create driver instance: %w", err)
 	}
-	limaDriver := driverutil.CreateTargetDriverInstance(&baseDriver)
-	vSockPort := baseDriver.VSockPort
-	virtioPort := baseDriver.VirtioPort
+
+	vSockPort := limaDriver.Info().VsockPort
+	virtioPort := limaDriver.Info().VirtioPort
 
 	if err := cidata.GenerateCloudConfig(inst.Dir, instName, inst.Config); err != nil {
 		return nil, err
@@ -340,7 +340,7 @@ func (a *HostAgent) Run(ctx context.Context) error {
 			return err
 		}
 		if strings.Contains(vncoptions, "to=") {
-			vncport, err = a.driver.GetDisplayConnection(ctx)
+			vncport, err = a.driver.DisplayConnection(ctx)
 			if err != nil {
 				return err
 			}
@@ -361,7 +361,7 @@ func (a *HostAgent) Run(ctx context.Context) error {
 		logrus.Infof("VNC Password: `%s`", vncpwdfile)
 	}
 
-	if a.driver.CanRunGUI() {
+	if a.driver.Info().CanRunGUI {
 		go func() {
 			err = a.startRoutinesAndWait(ctx, errCh)
 			if err != nil {
@@ -379,7 +379,7 @@ func (a *HostAgent) startRoutinesAndWait(ctx context.Context, errCh <-chan error
 	}
 	stBooting := stBase
 	a.emitEvent(ctx, events.Event{Status: stBooting})
-	ctxHA, cancelHA := context.WithCancel(ctx)
+	ctxHA, cancelHA := context.WithCancelCause(ctx)
 	go func() {
 		stRunning := stBase
 		if haErr := a.startHostAgentRoutines(ctxHA); haErr != nil {
@@ -393,7 +393,7 @@ func (a *HostAgent) startRoutinesAndWait(ctx context.Context, errCh <-chan error
 		select {
 		case driverErr := <-errCh:
 			logrus.Infof("Driver stopped due to error: %q", driverErr)
-			cancelHA()
+			cancelHA(driverErr)
 			if closeErr := a.close(); closeErr != nil {
 				logrus.WithError(closeErr).Warn("an error during shutting down the host agent")
 			}
@@ -401,7 +401,7 @@ func (a *HostAgent) startRoutinesAndWait(ctx context.Context, errCh <-chan error
 			return err
 		case sig := <-a.signalCh:
 			logrus.Infof("Received %s, shutting down the host agent", osutil.SignalName(sig))
-			cancelHA()
+			cancelHA(nil) // no error, just a signal
 			if closeErr := a.close(); closeErr != nil {
 				logrus.WithError(closeErr).Warn("an error during shutting down the host agent")
 			}
@@ -623,7 +623,7 @@ func (a *HostAgent) getOrCreateClient(ctx context.Context) (*guestagentclient.Gu
 }
 
 func (a *HostAgent) createConnection(ctx context.Context) (net.Conn, error) {
-	conn, err := a.driver.GuestAgentConn(ctx)
+	conn, _, err := a.driver.GuestAgentConn(ctx)
 	// default to forwarded sock
 	if conn == nil && err == nil {
 		var d net.Dialer
