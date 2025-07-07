@@ -758,6 +758,7 @@ func forwardSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, 
 		}
 	}
 	cmd := exec.CommandContext(ctx, sshConfig.Binary(), args...)
+	logrus.Debugf("Running %q", cmd)
 	if out, err := cmd.Output(); err != nil {
 		if verb == verbForward && strings.HasPrefix(local, "/") {
 			if reverse {
