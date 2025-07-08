@@ -252,7 +252,7 @@ type Conn struct {
 	// route, it will be the host header.  In the case of a fixed
 	// route, i.e. those created with AddRoute(), this will always be
 	// empty. This can be useful in the case where further routing decisions
-	// need to be made in the Target impementation.
+	// need to be made in the Target implementation.
 	HostName string
 
 	// Peeked are the bytes that have been read from Conn for the
