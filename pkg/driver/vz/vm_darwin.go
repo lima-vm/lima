@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"net"
 	"os"
 	"path/filepath"
@@ -691,7 +692,11 @@ func attachOtherDevices(_ *store.Instance, vmConfig *vz.VirtualMachineConfigurat
 
 func getMachineIdentifier(inst *store.Instance) (*vz.GenericMachineIdentifier, error) {
 	identifier := filepath.Join(inst.Dir, filenames.VzIdentifier)
-	if _, err := os.Stat(identifier); os.IsNotExist(err) {
+	// Empty VzIdentifier can be created on cloning an instance.
+	if st, err := os.Stat(identifier); err != nil || (st != nil && st.Size() == 0) {
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return nil, err
+		}
 		machineIdentifier, err := vz.NewGenericMachineIdentifier()
 		if err != nil {
 			return nil, err
