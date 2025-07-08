@@ -59,6 +59,8 @@
 //
 // This package makes no API stability promises. If you depend on it,
 // vendor it.
+//
+//nolint:gocritic
 package tcpproxy
 
 import (
