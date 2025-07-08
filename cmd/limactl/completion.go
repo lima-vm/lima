@@ -4,10 +4,14 @@
 package main
 
 import (
+	"maps"
+	"net"
+	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
 
+	"github.com/lima-vm/lima/pkg/networks"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/templatestore"
 )
@@ -50,4 +54,25 @@ func bashCompleteDiskNames(_ *cobra.Command) ([]string, cobra.ShellCompDirective
 		return nil, cobra.ShellCompDirectiveDefault
 	}
 	return disks, cobra.ShellCompDirectiveNoFileComp
+}
+
+func bashCompleteNetworkNames(_ *cobra.Command) ([]string, cobra.ShellCompDirective) {
+	config, err := networks.LoadConfig()
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveDefault
+	}
+	networks := slices.Sorted(maps.Keys(config.Networks))
+	return networks, cobra.ShellCompDirectiveNoFileComp
+}
+
+func bashFlagCompleteNetworkInterfaceNames(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
+	intf, err := net.Interfaces()
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveDefault
+	}
+	var intfNames []string
+	for _, f := range intf {
+		intfNames = append(intfNames, f.Name)
+	}
+	return intfNames, cobra.ShellCompDirectiveNoFileComp
 }
