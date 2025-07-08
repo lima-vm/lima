@@ -1,15 +1,15 @@
 images:
 # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
 
-- location: "https://cloud.debian.org/images/cloud/bookworm/20250519-2117/debian-12-genericcloud-amd64-20250519-2117.qcow2"
+- location: "https://cloud.debian.org/images/cloud/bookworm/20250703-2162/debian-12-genericcloud-amd64-20250703-2162.qcow2"
   arch: "x86_64"
-  digest: "sha512:ee35c87b8a0c67eb67a169beec3bef5d6868957c1d31374797ef37072650c5067094c50ca293d7b926a967d07515abf1845f515084e3a192c7c69df75e84c95a"
-- location: "https://cloud.debian.org/images/cloud/bookworm/20250519-2117/debian-12-genericcloud-arm64-20250519-2117.qcow2"
+  digest: "sha512:da702efced2cd98017790d0e00fee81f1e1404d3f990a4741f52e6f18bde9856d37799c053b3baa48805048a595d2a6a13c41b8287ec6f76ec27b7ef1b67a215"
+- location: "https://cloud.debian.org/images/cloud/bookworm/20250703-2162/debian-12-genericcloud-arm64-20250703-2162.qcow2"
   arch: "aarch64"
-  digest: "sha512:9282da6c8509e16191a3950c63174a4c94f8921ff2062ed54912f86aa8c986edf443d7f77f0e9d0937c2576f09fbacb2fd53459875ec2c7afb015c70d54c7e19"
-- location: "https://cloud.debian.org/images/cloud/bookworm/20250519-2117/debian-12-genericcloud-ppc64el-20250519-2117.qcow2"
+  digest: "sha512:95f72a3dbc9bbe261aee622ffe0c1b89085d843c9631b720738557a3640e229847deee7f0f87a29b566bf56ba7ecdc9010fb4b844c3477ca76a00865cf016fc1"
+- location: "https://cloud.debian.org/images/cloud/bookworm/20250703-2162/debian-12-genericcloud-ppc64el-20250703-2162.qcow2"
   arch: "ppc64le"
-  digest: "sha512:67dcadf2975455a2e3b32bf4025f1b2429b7b189a34db69214168f63ef977704a4eb03f3a28ae4a0f3799374ed302327fe6628e352c8043570f45b8f9fe9b88e"
+  digest: "sha512:fcf25e5d0e6a76e93c3abaecb8109a931380af29658586f51e30baec0f699a2f17de8a14de57acec80b13ab125fd165140893d814800144505a4982492256f19"
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
 
