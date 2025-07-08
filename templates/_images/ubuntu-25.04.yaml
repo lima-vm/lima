@@ -1,25 +1,24 @@
 images:
 # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
 
-- location: "https://cloud-images.ubuntu.com/releases/plucky/release-20250424/ubuntu-25.04-server-cloudimg-amd64.img"
+- location: "https://cloud-images.ubuntu.com/releases/plucky/release-20250701/ubuntu-25.04-server-cloudimg-amd64.img"
   arch: "x86_64"
-  digest: "sha256:ee752a88573fc8347b4082657293da54a7ba301e3d83cc935fedb4ab6d7129e2"
-- location: "https://cloud-images.ubuntu.com/releases/plucky/release-20250424/ubuntu-25.04-server-cloudimg-arm64.img"
+  digest: "sha256:92ad8714338b1d3be605b7981137a7c356b23527ff1aba8e80cf44bc3aa2f8da"
+- location: "https://cloud-images.ubuntu.com/releases/plucky/release-20250701/ubuntu-25.04-server-cloudimg-arm64.img"
   arch: "aarch64"
-  digest: "sha256:9594596f24b6b47aeda06328a79c4626cdb279c3490e05ac1a9113c19c8f161b"
-- location: "https://cloud-images.ubuntu.com/releases/plucky/release-20250424/ubuntu-25.04-server-cloudimg-riscv64.img"
+  digest: "sha256:26d0ac2236f12954923eb35ddfee8fa9fff3eab6111ba84786b98ab3b972c6d8"
+- location: "https://cloud-images.ubuntu.com/releases/plucky/release-20250701/ubuntu-25.04-server-cloudimg-riscv64.img"
   arch: "riscv64"
-  digest: "sha256:e4a83c1b4896726e765e0c29c1abcfe1aea62d564501ff8e4757b46c233d1cc9"
-- location: "https://cloud-images.ubuntu.com/releases/plucky/release-20250424/ubuntu-25.04-server-cloudimg-armhf.img"
+  digest: "sha256:66f420cb992e3076207ce933b7f96550d27b05ead561b7a5e48d281d01b151de"
+- location: "https://cloud-images.ubuntu.com/releases/plucky/release-20250701/ubuntu-25.04-server-cloudimg-armhf.img"
   arch: "armv7l"
-  digest: "sha256:69849590334a9dfec8def97a0bcb54744f136dca9eaac8d011dca22e84058c41"
-- location: "https://cloud-images.ubuntu.com/releases/plucky/release-20250424/ubuntu-25.04-server-cloudimg-s390x.img"
+  digest: "sha256:f37d82f55df80bdb09bbeb403f84e6921b8e4435610fed22ffec436af2e4dd6d"
+- location: "https://cloud-images.ubuntu.com/releases/plucky/release-20250701/ubuntu-25.04-server-cloudimg-s390x.img"
   arch: "s390x"
-  digest: "sha256:34020c9ced44598cd0d8ea77527aad61db4498f5151fac9fafdd1199cddf8919"
-- location: "https://cloud-images.ubuntu.com/releases/plucky/release-20250424/ubuntu-25.04-server-cloudimg-ppc64el.img"
+  digest: "sha256:1d03fedf3aea85438ce70d745edf611b80c6f88a049bb44167c24ae2ec9d4fda"
+- location: "https://cloud-images.ubuntu.com/releases/plucky/release-20250701/ubuntu-25.04-server-cloudimg-ppc64el.img"
   arch: "ppc64le"
-  digest: "sha256:d1190f1db8eb6602d3f7de35f6f425fb671bb9ed953df821c0d1cc8cedbaa2ef"
-
+  digest: "sha256:5922f8ea7958f15af5a5d8a4efec38d66af31c0a853fba5fb0790ec25562b53a"
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
 
