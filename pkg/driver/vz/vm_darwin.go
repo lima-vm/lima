@@ -24,7 +24,6 @@ import (
 	"github.com/lima-vm/go-qcow2reader/image/raw"
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/imgutil/proxyimgutil"
 	"github.com/lima-vm/lima/pkg/iso9660util"
 	"github.com/lima-vm/lima/pkg/limayaml"
@@ -51,13 +50,13 @@ type virtualMachineWrapper struct {
 // Hold all *os.File created via socketpair() so that they won't get garbage collected. f.FD() gets invalid if f gets garbage collected.
 var vmNetworkFiles = make([]*os.File, 1)
 
-func startVM(ctx context.Context, driver *driver.BaseDriver) (*virtualMachineWrapper, chan error, error) {
-	usernetClient, err := startUsernet(ctx, driver)
+func startVM(ctx context.Context, inst *store.Instance, sshLocalPort int) (*virtualMachineWrapper, chan error, error) {
+	usernetClient, err := startUsernet(ctx, inst)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	machine, err := createVM(driver)
+	machine, err := createVM(inst)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -95,7 +94,7 @@ func startVM(ctx context.Context, driver *driver.BaseDriver) (*virtualMachineWra
 			case newState := <-machine.StateChangedNotify():
 				switch newState {
 				case vz.VirtualMachineStateRunning:
-					pidFile := filepath.Join(driver.Instance.Dir, filenames.PIDFile(*driver.Instance.Config.VMType))
+					pidFile := filepath.Join(inst.Dir, filenames.PIDFile(*inst.Config.VMType))
 					if _, err := os.Stat(pidFile); !errors.Is(err, os.ErrNotExist) {
 						logrus.Errorf("pidfile %q already exists", pidFile)
 						errCh <- err
@@ -107,7 +106,7 @@ func startVM(ctx context.Context, driver *driver.BaseDriver) (*virtualMachineWra
 					filesToRemove[pidFile] = struct{}{}
 					logrus.Info("[VZ] - vm state change: running")
 
-					err := usernetClient.ConfigureDriver(ctx, driver)
+					err := usernetClient.ConfigureDriver(ctx, inst, sshLocalPort)
 					if err != nil {
 						errCh <- err
 					}
@@ -116,7 +115,7 @@ func startVM(ctx context.Context, driver *driver.BaseDriver) (*virtualMachineWra
 					wrapper.mu.Lock()
 					wrapper.stopped = true
 					wrapper.mu.Unlock()
-					_ = usernetClient.UnExposeSSH(driver.SSHLocalPort)
+					_ = usernetClient.UnExposeSSH(inst.SSHLocalPort)
 					errCh <- errors.New("vz driver state stopped")
 				default:
 					logrus.Debugf("[VZ] - vm state change: %q", newState)
@@ -128,17 +127,17 @@ func startVM(ctx context.Context, driver *driver.BaseDriver) (*virtualMachineWra
 	return wrapper, errCh, err
 }
 
-func startUsernet(ctx context.Context, driver *driver.BaseDriver) (*usernet.Client, error) {
-	if firstUsernetIndex := limayaml.FirstUsernetIndex(driver.Instance.Config); firstUsernetIndex != -1 {
-		nwName := driver.Instance.Config.Networks[firstUsernetIndex].Lima
+func startUsernet(ctx context.Context, inst *store.Instance) (*usernet.Client, error) {
+	if firstUsernetIndex := limayaml.FirstUsernetIndex(inst.Config); firstUsernetIndex != -1 {
+		nwName := inst.Config.Networks[firstUsernetIndex].Lima
 		return usernet.NewClientByName(nwName), nil
 	}
 	// Start a in-process gvisor-tap-vsock
-	endpointSock, err := usernet.SockWithDirectory(driver.Instance.Dir, "", usernet.EndpointSock)
+	endpointSock, err := usernet.SockWithDirectory(inst.Dir, "", usernet.EndpointSock)
 	if err != nil {
 		return nil, err
 	}
-	vzSock, err := usernet.SockWithDirectory(driver.Instance.Dir, "", usernet.FDSock)
+	vzSock, err := usernet.SockWithDirectory(inst.Dir, "", usernet.FDSock)
 	if err != nil {
 		return nil, err
 	}
@@ -150,7 +149,7 @@ func startUsernet(ctx context.Context, driver *driver.BaseDriver) (*usernet.Clie
 		FdSocket: vzSock,
 		Async:    true,
 		DefaultLeases: map[string]string{
-			networks.SlirpIPAddress: limayaml.MACAddress(driver.Instance.Dir),
+			networks.SlirpIPAddress: limayaml.MACAddress(inst.Dir),
 		},
 		Subnet: networks.SlirpNetwork,
 	})
@@ -161,41 +160,41 @@ func startUsernet(ctx context.Context, driver *driver.BaseDriver) (*usernet.Clie
 	return usernet.NewClient(endpointSock, subnetIP), err
 }
 
-func createVM(driver *driver.BaseDriver) (*vz.VirtualMachine, error) {
-	vmConfig, err := createInitialConfig(driver)
+func createVM(inst *store.Instance) (*vz.VirtualMachine, error) {
+	vmConfig, err := createInitialConfig(inst)
 	if err != nil {
 		return nil, err
 	}
 
-	if err = attachPlatformConfig(driver, vmConfig); err != nil {
+	if err = attachPlatformConfig(inst, vmConfig); err != nil {
 		return nil, err
 	}
 
-	if err = attachSerialPort(driver, vmConfig); err != nil {
+	if err = attachSerialPort(inst, vmConfig); err != nil {
 		return nil, err
 	}
 
-	if err = attachNetwork(driver, vmConfig); err != nil {
+	if err = attachNetwork(inst, vmConfig); err != nil {
 		return nil, err
 	}
 
-	if err = attachDisks(driver, vmConfig); err != nil {
+	if err = attachDisks(inst, vmConfig); err != nil {
 		return nil, err
 	}
 
-	if err = attachDisplay(driver, vmConfig); err != nil {
+	if err = attachDisplay(inst, vmConfig); err != nil {
 		return nil, err
 	}
 
-	if err = attachFolderMounts(driver, vmConfig); err != nil {
+	if err = attachFolderMounts(inst, vmConfig); err != nil {
 		return nil, err
 	}
 
-	if err = attachAudio(driver, vmConfig); err != nil {
+	if err = attachAudio(inst, vmConfig); err != nil {
 		return nil, err
 	}
 
-	if err = attachOtherDevices(driver, vmConfig); err != nil {
+	if err = attachOtherDevices(inst, vmConfig); err != nil {
 		return nil, err
 	}
 
@@ -207,20 +206,20 @@ func createVM(driver *driver.BaseDriver) (*vz.VirtualMachine, error) {
 	return vz.NewVirtualMachine(vmConfig)
 }
 
-func createInitialConfig(driver *driver.BaseDriver) (*vz.VirtualMachineConfiguration, error) {
-	bootLoader, err := bootLoader(driver)
+func createInitialConfig(inst *store.Instance) (*vz.VirtualMachineConfiguration, error) {
+	bootLoader, err := bootLoader(inst)
 	if err != nil {
 		return nil, err
 	}
 
-	bytes, err := units.RAMInBytes(*driver.Instance.Config.Memory)
+	bytes, err := units.RAMInBytes(*inst.Config.Memory)
 	if err != nil {
 		return nil, err
 	}
 
 	vmConfig, err := vz.NewVirtualMachineConfiguration(
 		bootLoader,
-		uint(*driver.Instance.Config.CPUs),
+		uint(*inst.Config.CPUs),
 		uint64(bytes),
 	)
 	if err != nil {
@@ -229,8 +228,8 @@ func createInitialConfig(driver *driver.BaseDriver) (*vz.VirtualMachineConfigura
 	return vmConfig, nil
 }
 
-func attachPlatformConfig(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfiguration) error {
-	machineIdentifier, err := getMachineIdentifier(driver)
+func attachPlatformConfig(inst *store.Instance, vmConfig *vz.VirtualMachineConfiguration) error {
+	machineIdentifier, err := getMachineIdentifier(inst)
 	if err != nil {
 		return err
 	}
@@ -241,7 +240,7 @@ func attachPlatformConfig(driver *driver.BaseDriver, vmConfig *vz.VirtualMachine
 	}
 
 	// nested virt
-	if *driver.Instance.Config.NestedVirtualization {
+	if *inst.Config.NestedVirtualization {
 		macOSProductVersion, err := osutil.ProductVersion()
 		if err != nil {
 			return fmt.Errorf("failed to get macOS product version: %w", err)
@@ -264,8 +263,8 @@ func attachPlatformConfig(driver *driver.BaseDriver, vmConfig *vz.VirtualMachine
 	return nil
 }
 
-func attachSerialPort(driver *driver.BaseDriver, config *vz.VirtualMachineConfiguration) error {
-	path := filepath.Join(driver.Instance.Dir, filenames.SerialVirtioLog)
+func attachSerialPort(inst *store.Instance, config *vz.VirtualMachineConfiguration) error {
+	path := filepath.Join(inst.Dir, filenames.SerialVirtioLog)
 	serialPortAttachment, err := vz.NewFileSerialPortAttachment(path, false)
 	if err != nil {
 		return err
@@ -302,14 +301,14 @@ func newVirtioNetworkDeviceConfiguration(attachment vz.NetworkDeviceAttachment, 
 	return networkConfig, nil
 }
 
-func attachNetwork(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfiguration) error {
+func attachNetwork(inst *store.Instance, vmConfig *vz.VirtualMachineConfiguration) error {
 	var configurations []*vz.VirtioNetworkDeviceConfiguration
 
-	// Configure default usernetwork with limayaml.MACAddress(driver.Instance.Dir) for eth0 interface
-	firstUsernetIndex := limayaml.FirstUsernetIndex(driver.Instance.Config)
+	// Configure default usernetwork with limayaml.MACAddress(inst.Dir) for eth0 interface
+	firstUsernetIndex := limayaml.FirstUsernetIndex(inst.Config)
 	if firstUsernetIndex == -1 {
 		// slirp network using gvisor netstack
-		vzSock, err := usernet.SockWithDirectory(driver.Instance.Dir, "", usernet.FDSock)
+		vzSock, err := usernet.SockWithDirectory(inst.Dir, "", usernet.FDSock)
 		if err != nil {
 			return err
 		}
@@ -317,13 +316,13 @@ func attachNetwork(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfigu
 		if err != nil {
 			return err
 		}
-		networkConfig, err := newVirtioFileNetworkDeviceConfiguration(networkConn, limayaml.MACAddress(driver.Instance.Dir))
+		networkConfig, err := newVirtioFileNetworkDeviceConfiguration(networkConn, limayaml.MACAddress(inst.Dir))
 		if err != nil {
 			return err
 		}
 		configurations = append(configurations, networkConfig)
 	} else {
-		vzSock, err := usernet.Sock(driver.Instance.Config.Networks[firstUsernetIndex].Lima, usernet.FDSock)
+		vzSock, err := usernet.Sock(inst.Config.Networks[firstUsernetIndex].Lima, usernet.FDSock)
 		if err != nil {
 			return err
 		}
@@ -331,14 +330,14 @@ func attachNetwork(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfigu
 		if err != nil {
 			return err
 		}
-		networkConfig, err := newVirtioFileNetworkDeviceConfiguration(networkConn, limayaml.MACAddress(driver.Instance.Dir))
+		networkConfig, err := newVirtioFileNetworkDeviceConfiguration(networkConn, limayaml.MACAddress(inst.Dir))
 		if err != nil {
 			return err
 		}
 		configurations = append(configurations, networkConfig)
 	}
 
-	for i, nw := range driver.Instance.Networks {
+	for i, nw := range inst.Networks {
 		if nw.VZNAT != nil && *nw.VZNAT {
 			attachment, err := vz.NewNATNetworkDeviceAttachment()
 			if err != nil {
@@ -434,10 +433,10 @@ func validateDiskFormat(diskPath string) error {
 	return nil
 }
 
-func attachDisks(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfiguration) error {
-	baseDiskPath := filepath.Join(driver.Instance.Dir, filenames.BaseDisk)
-	diffDiskPath := filepath.Join(driver.Instance.Dir, filenames.DiffDisk)
-	ciDataPath := filepath.Join(driver.Instance.Dir, filenames.CIDataISO)
+func attachDisks(inst *store.Instance, vmConfig *vz.VirtualMachineConfiguration) error {
+	baseDiskPath := filepath.Join(inst.Dir, filenames.BaseDisk)
+	diffDiskPath := filepath.Join(inst.Dir, filenames.DiffDisk)
+	ciDataPath := filepath.Join(inst.Dir, filenames.CIDataISO)
 	isBaseDiskCDROM, err := iso9660util.IsISO9660(baseDiskPath)
 	if err != nil {
 		return err
@@ -473,7 +472,7 @@ func attachDisks(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfigura
 
 	diskUtil := proxyimgutil.NewDiskUtil()
 
-	for _, d := range driver.Instance.Config.AdditionalDisks {
+	for _, d := range inst.Config.AdditionalDisks {
 		diskName := d.Name
 		disk, err := store.InspectDisk(diskName)
 		if err != nil {
@@ -484,7 +483,7 @@ func attachDisks(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfigura
 			return fmt.Errorf("failed to run attach disk %q, in use by instance %q", diskName, disk.Instance)
 		}
 		logrus.Infof("Mounting disk %q on %q", diskName, disk.MountPoint)
-		err = disk.Lock(driver.Instance.Dir)
+		err = disk.Lock(inst.Dir)
 		if err != nil {
 			return fmt.Errorf("failed to run lock disk %q: %w", diskName, err)
 		}
@@ -523,8 +522,8 @@ func attachDisks(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfigura
 	return nil
 }
 
-func attachDisplay(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfiguration) error {
-	switch *driver.Instance.Config.Video.Display {
+func attachDisplay(inst *store.Instance, vmConfig *vz.VirtualMachineConfiguration) error {
+	switch *inst.Config.Video.Display {
 	case "vz", "default":
 		graphicsDeviceConfiguration, err := vz.NewVirtioGraphicsDeviceConfiguration()
 		if err != nil {
@@ -543,14 +542,14 @@ func attachDisplay(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfigu
 	case "none":
 		return nil
 	default:
-		return fmt.Errorf("unexpected video display %q", *driver.Instance.Config.Video.Display)
+		return fmt.Errorf("unexpected video display %q", *inst.Config.Video.Display)
 	}
 }
 
-func attachFolderMounts(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineConfiguration) error {
+func attachFolderMounts(inst *store.Instance, vmConfig *vz.VirtualMachineConfiguration) error {
 	var mounts []vz.DirectorySharingDeviceConfiguration
-	if *driver.Instance.Config.MountType == limayaml.VIRTIOFS {
-		for i, mount := range driver.Instance.Config.Mounts {
+	if *inst.Config.MountType == limayaml.VIRTIOFS {
+		for i, mount := range inst.Config.Mounts {
 			if _, err := os.Stat(mount.Location); errors.Is(err, os.ErrNotExist) {
 				err := os.MkdirAll(mount.Location, 0o750)
 				if err != nil {
@@ -577,7 +576,7 @@ func attachFolderMounts(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineCo
 		}
 	}
 
-	if *driver.Instance.Config.Rosetta.Enabled {
+	if *inst.Config.Rosetta.Enabled {
 		logrus.Info("Setting up Rosetta share")
 		directorySharingDeviceConfig, err := createRosettaDirectoryShareConfiguration()
 		if err != nil {
@@ -593,8 +592,8 @@ func attachFolderMounts(driver *driver.BaseDriver, vmConfig *vz.VirtualMachineCo
 	return nil
 }
 
-func attachAudio(driver *driver.BaseDriver, config *vz.VirtualMachineConfiguration) error {
-	switch *driver.Instance.Config.Audio.Device {
+func attachAudio(inst *store.Instance, config *vz.VirtualMachineConfiguration) error {
+	switch *inst.Config.Audio.Device {
 	case "vz", "default":
 		outputStream, err := vz.NewVirtioSoundDeviceHostOutputStreamConfiguration()
 		if err != nil {
@@ -612,11 +611,11 @@ func attachAudio(driver *driver.BaseDriver, config *vz.VirtualMachineConfigurati
 	case "", "none":
 		return nil
 	default:
-		return fmt.Errorf("unexpected audio device %q", *driver.Instance.Config.Audio.Device)
+		return fmt.Errorf("unexpected audio device %q", *inst.Config.Audio.Device)
 	}
 }
 
-func attachOtherDevices(_ *driver.BaseDriver, vmConfig *vz.VirtualMachineConfiguration) error {
+func attachOtherDevices(_ *store.Instance, vmConfig *vz.VirtualMachineConfiguration) error {
 	entropyConfig, err := vz.NewVirtioEntropyDeviceConfiguration()
 	if err != nil {
 		return err
@@ -690,8 +689,8 @@ func attachOtherDevices(_ *driver.BaseDriver, vmConfig *vz.VirtualMachineConfigu
 	return nil
 }
 
-func getMachineIdentifier(driver *driver.BaseDriver) (*vz.GenericMachineIdentifier, error) {
-	identifier := filepath.Join(driver.Instance.Dir, filenames.VzIdentifier)
+func getMachineIdentifier(inst *store.Instance) (*vz.GenericMachineIdentifier, error) {
+	identifier := filepath.Join(inst.Dir, filenames.VzIdentifier)
 	if _, err := os.Stat(identifier); os.IsNotExist(err) {
 		machineIdentifier, err := vz.NewGenericMachineIdentifier()
 		if err != nil {
@@ -706,15 +705,15 @@ func getMachineIdentifier(driver *driver.BaseDriver) (*vz.GenericMachineIdentifi
 	return vz.NewGenericMachineIdentifierWithDataPath(identifier)
 }
 
-func bootLoader(driver *driver.BaseDriver) (vz.BootLoader, error) {
-	linuxBootLoader, err := linuxBootLoader(driver)
+func bootLoader(inst *store.Instance) (vz.BootLoader, error) {
+	linuxBootLoader, err := linuxBootLoader(inst)
 	if linuxBootLoader != nil {
 		return linuxBootLoader, nil
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return nil, err
 	}
 
-	efiVariableStore, err := getEFI(driver)
+	efiVariableStore, err := getEFI(inst)
 	if err != nil {
 		return nil, err
 	}
@@ -722,10 +721,10 @@ func bootLoader(driver *driver.BaseDriver) (vz.BootLoader, error) {
 	return vz.NewEFIBootLoader(vz.WithEFIVariableStore(efiVariableStore))
 }
 
-func linuxBootLoader(driver *driver.BaseDriver) (*vz.LinuxBootLoader, error) {
-	kernel := filepath.Join(driver.Instance.Dir, filenames.Kernel)
-	kernelCmdline := filepath.Join(driver.Instance.Dir, filenames.KernelCmdline)
-	initrd := filepath.Join(driver.Instance.Dir, filenames.Initrd)
+func linuxBootLoader(inst *store.Instance) (*vz.LinuxBootLoader, error) {
+	kernel := filepath.Join(inst.Dir, filenames.Kernel)
+	kernelCmdline := filepath.Join(inst.Dir, filenames.KernelCmdline)
+	initrd := filepath.Join(inst.Dir, filenames.Initrd)
 	if _, err := os.Stat(kernel); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			logrus.Debugf("Kernel file %q not found", kernel)
@@ -747,8 +746,8 @@ func linuxBootLoader(driver *driver.BaseDriver) (*vz.LinuxBootLoader, error) {
 	return vz.NewLinuxBootLoader(kernel, opt...)
 }
 
-func getEFI(driver *driver.BaseDriver) (*vz.EFIVariableStore, error) {
-	efi := filepath.Join(driver.Instance.Dir, filenames.VzEfi)
+func getEFI(inst *store.Instance) (*vz.EFIVariableStore, error) {
+	efi := filepath.Join(inst.Dir, filenames.VzEfi)
 	if _, err := os.Stat(efi); os.IsNotExist(err) {
 		return vz.NewEFIVariableStore(efi, vz.WithCreatingEFIVariableStore())
 	}

@@ -5,19 +5,20 @@ package driverutil
 
 import (
 	"github.com/lima-vm/lima/pkg/driver"
+	"github.com/lima-vm/lima/pkg/driver/qemu"
+	"github.com/lima-vm/lima/pkg/driver/vz"
+	"github.com/lima-vm/lima/pkg/driver/wsl2"
 	"github.com/lima-vm/lima/pkg/limayaml"
-	"github.com/lima-vm/lima/pkg/qemu"
-	"github.com/lima-vm/lima/pkg/vz"
-	"github.com/lima-vm/lima/pkg/wsl2"
+	"github.com/lima-vm/lima/pkg/store"
 )
 
-func CreateTargetDriverInstance(base *driver.BaseDriver) driver.Driver {
-	limaDriver := base.Instance.Config.VMType
+func CreateTargetDriverInstance(inst *store.Instance, sshLocalPort int) driver.Driver {
+	limaDriver := inst.Config.VMType
 	if *limaDriver == limayaml.VZ {
-		return vz.New(base)
+		return vz.New(inst, sshLocalPort)
 	}
 	if *limaDriver == limayaml.WSL2 {
-		return wsl2.New(base)
+		return wsl2.New(inst, sshLocalPort)
 	}
-	return qemu.New(base)
+	return qemu.New(inst, sshLocalPort)
 }
