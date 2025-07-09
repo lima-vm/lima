@@ -1,3 +1,5 @@
+# Kconfig is deprecated since Lima v1.2, and will be removed in Lima v2.0.
+# Use Makefile variables instead.
 
 mainmenu "Lima"
 

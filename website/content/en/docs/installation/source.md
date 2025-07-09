@@ -51,29 +51,3 @@ tar czf lima-additional-guestagents-package.tar.gz *
 ```
 
 These packages can then be transferred and installed on the target system.
-
-## Advanced Configuration with Kconfig Tools
-(This step is not needed for most users)
-
-To change the build configuration such as the guest architectures, run:
-
-```bash
-make config  # For text-based configuration
-make menuconfig  # For a menu-based configuration
-```
-
-This requires Kconfig tools to be installed. It is also possible to manually edit `.config`. The default configuration can be found in `config.mk` (which follows make syntax).
-
-The tools are available as either `kconfig-frontends` or `kbuild-standalone`. There are two interfaces:
-- `conf` for text-based configuration.
-- `mconf` for a menu-driven interface.
-
-A Python implementation is available at [Kconfiglib](https://pypi.org/project/kconfiglib). It can be installed with:
-
-```bash
-pip install --user kconfiglib
-```
-
-This also includes support for `guiconfig` (GUI-based configuration).
-
-
