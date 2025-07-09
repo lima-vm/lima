@@ -264,7 +264,8 @@ jobs:
       # QEMU:      required by Lima itself
       # bash:      required by test-templates.sh (OS version of bash is too old)
       # coreutils: required by test-templates.sh for the "timeout" command
-      run: brew install qemu bash coreutils
+      # w3m :      required by test-templates.sh for port forwarding tests
+      run: brew install qemu bash coreutils w3m
     - name: "Adjust LIMACTL_CREATE_ARGS"
       run: echo "LIMACTL_CREATE_ARGS=${LIMACTL_CREATE_ARGS} --vm-type=qemu" >>$GITHUB_ENV
     - name: "Inject `no_timer_check` to kernel cmdline"
@@ -331,7 +332,7 @@ jobs:
     - name: Install test dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y --no-install-recommends ovmf qemu-system-x86 qemu-utils
+        sudo apt-get install -y --no-install-recommends ovmf qemu-system-x86 qemu-utils w3m
         sudo modprobe kvm
         # `sudo usermod -aG kvm $(whoami)` does not take an effect on GHA
         sudo chown $(whoami) /dev/kvm
@@ -430,7 +431,7 @@ jobs:
       with:
         template: templates/default.yaml
     - name: Install test dependencies
-      run: brew install qemu bash coreutils
+      run: brew install qemu bash coreutils w3m
     - name: Install socket_vmnet
       env:
         SOCKET_VMNET_VERSION: v1.2.0
@@ -525,7 +526,7 @@ jobs:
       with:
         template: templates/${{ matrix.template }}
     - name: Install test dependencies
-      run: brew install bash coreutils
+      run: brew install bash coreutils w3m
     - name: Uninstall qemu
       run: brew uninstall --ignore-dependencies --force qemu
     - name: Test
