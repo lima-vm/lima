@@ -82,7 +82,7 @@ func RegisterCreate(cmd *cobra.Command, commentPrefix string) {
 	})
 
 	flags.String("containerd", "", commentPrefix+"containerd mode (user, system, user+system, none)")
-	_ = cmd.RegisterFlagCompletionFunc("vm-type", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
+	_ = cmd.RegisterFlagCompletionFunc("containerd", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
 		return []string{"user", "system", "user+system", "none"}, cobra.ShellCompDirectiveNoFileComp
 	})
 
