@@ -75,7 +75,6 @@ This page documents the environment variables used in Lima.
   ```sh
   export LIMA_SSH_PORT_FORWARDER=false
   ```
-- **Note**: Deprecated since v1.1. It is expected that this variable will be removed in future.
 - **The history of the default value**:
   | Version       | Default value       |
   |---------------|---------------------|
