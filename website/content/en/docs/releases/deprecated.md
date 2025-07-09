@@ -8,7 +8,6 @@ The following features are deprecated:
 - CentOS 7 support
 - Loading non-strict YAMLs (i.e., YAMLs with unknown properties)
 - `limactl show-ssh` command (Use `ssh -F ~/.lima/default/ssh.config lima-default` instead)
-- `LIMA_SSH_PORT_FORWARDER=true` (since Lima v1.1)
 - Ansible provisioning mode (Use `ansible-playbook playbook.yaml` after the start instead)
 
 ## Removed features

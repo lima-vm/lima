@@ -53,7 +53,7 @@ type HostAgent struct {
 	instName          string
 	instSSHAddress    string
 	sshConfig         *ssh.SSHConfig
-	portForwarder     *portForwarder // legacy SSH port forwarder (deprecated)
+	portForwarder     *portForwarder // legacy SSH port forwarder
 	grpcPortForwarder *portfwd.Forwarder
 
 	onClose []func() error // LIFO
@@ -660,7 +660,6 @@ func (a *HostAgent) processGuestAgentEvents(ctx context.Context, client *guestag
 			}
 		}
 		if useSSHFwd {
-			logrus.Warn("LIMA_SSH_PORT_FORWARDER is deprecated")
 			a.portForwarder.OnEvent(ctx, ev)
 		} else {
 			a.grpcPortForwarder.OnEvent(ctx, client, ev)
