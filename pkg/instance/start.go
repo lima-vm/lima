@@ -117,7 +117,8 @@ func Prepare(ctx context.Context, inst *store.Instance) (*Prepared, error) {
 				continue
 			}
 			if f.Kernel != nil {
-				if _, err := fileutils.DownloadFile(ctx, kernel, f.Kernel.File, false, "the kernel", *inst.Config.Arch); err != nil {
+				// ensure decompress kernel because vz expects it to be decompressed
+				if _, err := fileutils.DownloadFile(ctx, kernel, f.Kernel.File, true, "the kernel", *inst.Config.Arch); err != nil {
 					errs[i] = err
 					continue
 				}
@@ -129,6 +130,7 @@ func Prepare(ctx context.Context, inst *store.Instance) (*Prepared, error) {
 				}
 			}
 			if f.Initrd != nil {
+				// vz does not need initrd to be decompressed
 				if _, err := fileutils.DownloadFile(ctx, initrd, *f.Initrd, false, "the initrd", *inst.Config.Arch); err != nil {
 					errs[i] = err
 					continue
