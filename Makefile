@@ -145,9 +145,11 @@ native: clean limactl helpers native-guestagent templates template_experimentals
 ################################################################################
 # Kconfig
 config: Kconfig
+	$(warning Kconfig is deprecated since Lima v1.2 and will be removed in Lima v2.0.)
 	$(KCONFIG_CONF) $<
 
 menuconfig: Kconfig
+	$(warning Kconfig is deprecated since Lima v1.2 and will be removed in Lima v2.0.)
 	MENUCONFIG_STYLE=aquatic \
 	$(KCONFIG_MCONF) $<
 
