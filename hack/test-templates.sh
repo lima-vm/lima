@@ -381,6 +381,15 @@ if [[ -n ${CHECKS["port-forwards"]} ]]; then
 				limactl shell "$NAME" $sudo $CONTAINER_ENGINE rm -f nginx
 			fi
 		fi
+		if [[ ${NAME} != "alpine"* && ${NAME} != "wsl2"* ]] && command -v w3m >/dev/null; then
+			INFO "Testing https://github.com/lima-vm/lima/issues/3685 ([gRPC portfwd] client connection is not closed immediately when server closed the connection)"
+			# Skip the test on Alpine, as systemd-run is missing
+			# Skip the test on WSL2, as port forwarding is half broken https://github.com/lima-vm/lima/pull/3686#issuecomment-3034842616
+			limactl shell "$NAME" systemd-run --user python3 -m http.server 3685
+			# curl is not enough to reproduce https://github.com/lima-vm/lima/issues/3685
+			# `w3m -dump` exits with status code 0 even on "Can't load" error.
+			timeout 30s bash -euxc "until w3m -dump http://localhost:3685 | grep -v \"w3m: Can't load\"; do sleep 3; done"
+		fi
 	fi
 	set +x
 fi

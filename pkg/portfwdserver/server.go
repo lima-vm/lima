@@ -4,10 +4,15 @@
 package portfwdserver
 
 import (
+	"context"
 	"errors"
 	"io"
 	"net"
+	"os"
+	"strings"
 	"time"
+
+	"github.com/containers/gvisor-tap-vsock/pkg/tcpproxy"
 
 	"github.com/lima-vm/lima/pkg/bicopy"
 	"github.com/lima-vm/lima/pkg/guestagent/api"
@@ -35,7 +40,23 @@ func (s *TunnelServer) Start(stream api.GuestService_TunnelServer) error {
 		return err
 	}
 	rw := &GRPCServerRW{stream: stream, id: in.Id}
-	bicopy.Bicopy(rw, conn, nil)
+
+	// FIXME: consolidate bicopy and tcpproxy into one
+	//
+	// The bicopy package does not seem to work with `w3m -dump`:
+	// https://github.com/lima-vm/lima/issues/3685
+	//
+	// However, the tcpproxy package can't pass the CI for WSL2 (experimental):
+	// https://github.com/lima-vm/lima/pull/3686#issuecomment-3034842616
+	if wsl2, _ := seemsWSL2(); wsl2 {
+		bicopy.Bicopy(rw, conn, nil)
+	} else {
+		proxy := tcpproxy.DialProxy{DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
+			return conn, nil
+		}}
+		proxy.HandleConn(rw)
+	}
+
 	return nil
 }
 
@@ -82,4 +103,14 @@ func (g *GRPCServerRW) SetReadDeadline(_ time.Time) error {
 
 func (g *GRPCServerRW) SetWriteDeadline(_ time.Time) error {
 	return nil
+}
+
+// seemsWSL2 returns whether lima.env contains LIMA_CIDATA_VMTYPE=wsl2 .
+// This is a temporary workaround and has to be removed.
+func seemsWSL2() (bool, error) {
+	b, err := os.ReadFile("/mnt/lima-cidata/lima.env")
+	if err != nil {
+		return false, err
+	}
+	return strings.Contains(string(b), "LIMA_CIDATA_VMTYPE=wsl2"), nil
 }
