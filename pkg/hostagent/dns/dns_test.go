@@ -154,6 +154,11 @@ func (r TestResponseWriter) RemoteAddr() net.Addr {
 	return new(TestAddr)
 }
 
+// Network returns the value of the Net field of the Server (e.g., "tcp", "tcp-tls").
+func (r TestResponseWriter) Network() string {
+	return ""
+}
+
 // WriteMsg writes a reply back to the client.
 func (r TestResponseWriter) WriteMsg(newMsg *dns.Msg) error {
 	dnsResult = newMsg
