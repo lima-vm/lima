@@ -10,13 +10,14 @@ import (
 )
 
 type LimaYAML struct {
-	Base                  BaseTemplates `yaml:"base,omitempty" json:"base,omitempty"`
-	MinimumLimaVersion    *string       `yaml:"minimumLimaVersion,omitempty" json:"minimumLimaVersion,omitempty" jsonschema:"nullable"`
-	VMType                *VMType       `yaml:"vmType,omitempty" json:"vmType,omitempty" jsonschema:"nullable"`
-	VMOpts                VMOpts        `yaml:"vmOpts,omitempty" json:"vmOpts,omitempty"`
-	OS                    *OS           `yaml:"os,omitempty" json:"os,omitempty" jsonschema:"nullable"`
-	Arch                  *Arch         `yaml:"arch,omitempty" json:"arch,omitempty" jsonschema:"nullable"`
-	Images                []Image       `yaml:"images,omitempty" json:"images,omitempty" jsonschema:"nullable"`
+	Base               BaseTemplates `yaml:"base,omitempty" json:"base,omitempty"`
+	MinimumLimaVersion *string       `yaml:"minimumLimaVersion,omitempty" json:"minimumLimaVersion,omitempty" jsonschema:"nullable"`
+	VMType             *VMType       `yaml:"vmType,omitempty" json:"vmType,omitempty" jsonschema:"nullable"`
+	VMOpts             VMOpts        `yaml:"vmOpts,omitempty" json:"vmOpts,omitempty"`
+	OS                 *OS           `yaml:"os,omitempty" json:"os,omitempty" jsonschema:"nullable"`
+	Arch               *Arch         `yaml:"arch,omitempty" json:"arch,omitempty" jsonschema:"nullable"`
+	Images             []Image       `yaml:"images,omitempty" json:"images,omitempty" jsonschema:"nullable"`
+	// Deprecated: Use VMOpts.Qemu.CPUType instead.
 	CPUType               CPUType       `yaml:"cpuType,omitempty" json:"cpuType,omitempty" jsonschema:"nullable"`
 	CPUs                  *int          `yaml:"cpus,omitempty" json:"cpus,omitempty" jsonschema:"nullable"`
 	Memory                *string       `yaml:"memory,omitempty" json:"memory,omitempty" jsonschema:"nullable"` // go-units.RAMInBytes
@@ -111,6 +112,7 @@ type VMOpts struct {
 
 type QEMUOpts struct {
 	MinimumVersion *string `yaml:"minimumVersion,omitempty" json:"minimumVersion,omitempty" jsonschema:"nullable"`
+	CPUType        CPUType `yaml:"cpuType,omitempty" json:"cpuType,omitempty" jsonschema:"nullable"`
 }
 
 type Rosetta struct {

@@ -60,47 +60,6 @@ var (
 	currentUser = Must(user.Current())
 )
 
-func defaultCPUType() CPUType {
-	// x86_64 + TCG + max was previously unstable until 2021.
-	// https://bugzilla.redhat.com/show_bug.cgi?id=1999700
-	// https://bugs.launchpad.net/qemu/+bug/1748296
-	defaultX8664 := "max"
-	if runtime.GOOS == "windows" && runtime.GOARCH == "amd64" {
-		// https://github.com/lima-vm/lima/pull/3487#issuecomment-2846253560
-		// > #931 intentionally prevented the code from setting it to max when running on Windows,
-		// > and kept it at qemu64.
-		//
-		// TODO: remove this if "max" works with the latest qemu
-		defaultX8664 = "qemu64"
-	}
-	cpuType := map[Arch]string{
-		AARCH64: "max",
-		ARMV7L:  "max",
-		X8664:   defaultX8664,
-		PPC64LE: "max",
-		RISCV64: "max",
-		S390X:   "max",
-	}
-	for arch := range cpuType {
-		if IsNativeArch(arch) && IsAccelOS() {
-			if HasHostCPU() {
-				cpuType[arch] = "host"
-			}
-		}
-		if arch == X8664 && runtime.GOOS == "darwin" {
-			// disable AVX-512, since it requires trapping instruction faults in guest
-			// Enterprise Linux requires either v2 (SSE4) or v3 (AVX2), but not yet v4.
-			cpuType[arch] += ",-avx512vl"
-
-			// Disable pdpe1gb on Intel Mac
-			// https://github.com/lima-vm/lima/issues/1485
-			// https://stackoverflow.com/a/72863744/5167443
-			cpuType[arch] += ",-pdpe1gb"
-		}
-	}
-	return cpuType
-}
-
 //go:embed containerd.yaml
 var defaultContainerdYAML []byte
 
@@ -292,28 +251,25 @@ func FillDefault(y, d, o *LimaYAML, filePath string, warn bool) {
 		}
 	}
 
-	cpuType := defaultCPUType()
-	var overrideCPUType bool
-	for k, v := range d.CPUType {
-		if v != "" {
-			overrideCPUType = true
-			cpuType[k] = v
-		}
+	if y.VMOpts.QEMU.CPUType == nil {
+		y.VMOpts.QEMU.CPUType = CPUType{}
 	}
-	for k, v := range y.CPUType {
-		if v != "" {
-			overrideCPUType = true
-			cpuType[k] = v
+	// TODO: This check should be removed when we completely eliminate `CPUType` from limayaml.
+	if len(y.CPUType) > 0 {
+		if warn {
+			logrus.Warn("The top-level `cpuType` field is deprecated and will be removed in a future release. Please migrate to `vmOpts.qemu.cpuType`.")
 		}
-	}
-	for k, v := range o.CPUType {
-		if v != "" {
-			overrideCPUType = true
-			cpuType[k] = v
+		for arch, v := range y.CPUType {
+			if v == "" {
+				continue
+			}
+			if existing, ok := y.VMOpts.QEMU.CPUType[arch]; ok && existing != "" && existing != v {
+				logrus.Warnf("Conflicting cpuType for arch %q: top-level=%q, vmOpts.qemu=%q; using vmOpts.qemu value", arch, v, existing)
+				continue
+			}
+			y.VMOpts.QEMU.CPUType[arch] = v
 		}
-	}
-	if *y.VMType == QEMU || overrideCPUType {
-		y.CPUType = cpuType
+		y.CPUType = nil
 	}
 
 	if y.CPUs == nil {

@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -403,6 +404,67 @@ func audioDevice() string {
 	return "oss"
 }
 
+func defaultCPUType() limayaml.CPUType {
+	// x86_64 + TCG + max was previously unstable until 2021.
+	// https://bugzilla.redhat.com/show_bug.cgi?id=1999700
+	// https://bugs.launchpad.net/qemu/+bug/1748296
+	defaultX8664 := "max"
+	if runtime.GOOS == "windows" && runtime.GOARCH == "amd64" {
+		// https://github.com/lima-vm/lima/pull/3487#issuecomment-2846253560
+		// > #931 intentionally prevented the code from setting it to max when running on Windows,
+		// > and kept it at qemu64.
+		//
+		// TODO: remove this if "max" works with the latest qemu
+		defaultX8664 = "qemu64"
+	}
+	cpuType := map[limayaml.Arch]string{
+		limayaml.AARCH64: "max",
+		limayaml.ARMV7L:  "max",
+		limayaml.X8664:   defaultX8664,
+		limayaml.PPC64LE: "max",
+		limayaml.RISCV64: "max",
+		limayaml.S390X:   "max",
+	}
+	for arch := range cpuType {
+		if limayaml.IsNativeArch(arch) && limayaml.IsAccelOS() {
+			if limayaml.HasHostCPU() {
+				cpuType[arch] = "host"
+			}
+		}
+		if arch == limayaml.X8664 && runtime.GOOS == "darwin" {
+			// disable AVX-512, since it requires trapping instruction faults in guest
+			// Enterprise Linux requires either v2 (SSE4) or v3 (AVX2), but not yet v4.
+			cpuType[arch] += ",-avx512vl"
+
+			// Disable pdpe1gb on Intel Mac
+			// https://github.com/lima-vm/lima/issues/1485
+			// https://stackoverflow.com/a/72863744/5167443
+			cpuType[arch] += ",-pdpe1gb"
+		}
+	}
+	return cpuType
+}
+
+func resolveCPUType(y *limayaml.LimaYAML) string {
+	cpuType := defaultCPUType()
+	var overrideCPUType bool
+	for k, v := range y.VMOpts.QEMU.CPUType {
+		if !slices.Contains(limayaml.ArchTypes, *y.Arch) {
+			logrus.Warnf("field `vmOpts.qemu.cpuType` uses unsupported arch %q", k)
+			continue
+		}
+		if v != "" {
+			overrideCPUType = true
+			cpuType[k] = v
+		}
+	}
+	if overrideCPUType {
+		y.VMOpts.QEMU.CPUType = cpuType
+	}
+
+	return cpuType[*y.Arch]
+}
+
 func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err error) {
 	y := cfg.LimaYAML
 	exe, args, err = Exe(*y.Arch)
@@ -453,7 +515,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	}
 
 	// CPU
-	cpu := y.CPUType[*y.Arch]
+	cpu := resolveCPUType(y)
 	if runtime.GOOS == "darwin" && runtime.GOARCH == "amd64" {
 		switch {
 		case strings.HasPrefix(cpu, "host"), strings.HasPrefix(cpu, "max"):
