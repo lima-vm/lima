@@ -97,9 +97,13 @@ func RegisterCreate(cmd *cobra.Command, commentPrefix string) {
 
 	flags.Bool("plain", false, commentPrefix+"Plain mode. Disables mounts, port forwarding, containerd, etc.")
 
-	flags.StringSlice("port-forward", nil, commentPrefix+"Port forwards (host:guest), works even in plain mode, e.g., '8080:80,2222:22'")
+	flags.StringSlice("port-forward", nil, commentPrefix+"Port forwards (host:guest), e.g., '8080:80,2222:22'")
 	_ = cmd.RegisterFlagCompletionFunc("port-forward", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
-		return []string{"8080:80", "2222:22", "3000:3000"}, cobra.ShellCompDirectiveNoFileComp
+		return []string{"8080:80", "3000:3000"}, cobra.ShellCompDirectiveNoFileComp
+	})
+	flags.StringSlice("static-port-forward", nil, commentPrefix+"Static port forwards (host:guest), works even in plain mode, e.g., '8080:80,2222:22'")
+	_ = cmd.RegisterFlagCompletionFunc("static-port-forward", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
+		return []string{"8080:80", "3000:3000"}, cobra.ShellCompDirectiveNoFileComp
 	})
 }
 
@@ -268,9 +272,9 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 		{"vm-type", d(".vmType = %q"), true, false},
 		{"plain", d(".plain = %s"), true, false},
 		{
-			"port-forward",
+			"static-port-forward",
 			func(_ *flag.Flag) (string, error) {
-				ss, err := flags.GetStringSlice("port-forward")
+				ss, err := flags.GetStringSlice("static-port-forward")
 				if err != nil {
 					return "", err
 				}
@@ -278,15 +282,15 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 					return "", nil
 				}
 
-				expr := `.portForwards = [`
+				expr := `.portForwards += [`
 				for i, s := range ss {
 					parts := strings.Split(s, ":")
 					if len(parts) != 2 {
-						return "", fmt.Errorf("invalid port forward format %q, expected HOST:GUEST", s)
+						return "", fmt.Errorf("invalid static port forward format %q, expected HOST:GUEST", s)
 					}
 					hostPort := strings.TrimSpace(parts[0])
 					guestPort := strings.TrimSpace(parts[1])
-					expr += fmt.Sprintf(`{"hostPort": %s, "guestPort": %s}`, hostPort, guestPort)
+					expr += fmt.Sprintf(`{"hostPort": %s, "guestPort": %s, "static": true}`, hostPort, guestPort)
 					if i < len(ss)-1 {
 						expr += ","
 					}
