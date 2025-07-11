@@ -243,17 +243,47 @@ endif
 # calls the native resolver library and not the simplistic version in the Go library.
 ENVS__output/bin/limactl$(exe) = CGO_ENABLED=1 GOOS="$(GOOS)" GOARCH="$(GOARCH)" CC="$(CC)"
 
+LIMACTL_DRIVER_TAGS :=
+ifneq (,$(findstring vz,$(ADDITIONAL_DRIVERS)))
+LIMACTL_DRIVER_TAGS += external_vz
+endif
+ifneq (,$(findstring qemu,$(ADDITIONAL_DRIVERS)))
+LIMACTL_DRIVER_TAGS += external_qemu
+endif
+ifneq (,$(findstring wsl2,$(ADDITIONAL_DRIVERS)))
+LIMACTL_DRIVER_TAGS += external_wsl2
+endif
+
+GO_BUILDTAGS ?=
+GO_BUILDTAGS_LIMACTL := $(strip $(GO_BUILDTAGS) $(LIMACTL_DRIVER_TAGS))
+
 _output/bin/limactl$(exe): $(LIMACTL_DEPS) $$(call force_build,$$@)
-# If the previous cross-compilation was for GOOS=windows, limactl.exe might still be present.
 ifneq ($(GOOS),windows) #
 	@rm -rf _output/bin/limactl.exe
 else
 	@rm -rf _output/bin/limactl
 endif
-	$(ENVS_$@) $(GO_BUILD) -o $@ ./cmd/limactl
+	$(ENVS_$@) $(GO_BUILD) -tags '$(GO_BUILDTAGS_LIMACTL)' -o $@ ./cmd/limactl
 ifeq ($(GOOS),darwin)
 	codesign -f -v --entitlements vz.entitlements -s - $@
 endif
+
+DRIVER_INSTALL_DIR := _output/libexec/lima
+
+.PHONY: additional-drivers
+additional-drivers:
+	@mkdir -p $(DRIVER_INSTALL_DIR)
+	@for drv in $(ADDITIONAL_DRIVERS); do \
+		echo "Building $$drv as external"; \
+		if [ "$(GOOS)" = "windows" ]; then \
+			$(GO_BUILD) -o $(DRIVER_INSTALL_DIR)/lima-driver-$$drv.exe ./cmd/lima-driver-$$drv; \
+		else \
+			$(GO_BUILD) -o $(DRIVER_INSTALL_DIR)/lima-driver-$$drv ./cmd/lima-driver-$$drv; \
+			fi; \
+		if [ "$$drv" = "vz" ] && [ "$(GOOS)" = "darwin" ]; then \
+			codesign -f -v --entitlements vz.entitlements -s - $(DRIVER_INSTALL_DIR)/lima-driver-vz; \
+		fi; \
+	done
 
 LIMA_CMDS = $(sort lima lima$(bat)) # $(sort ...) deduplicates the list
 LIMA_DEPS = $(addprefix _output/bin/,$(LIMA_CMDS))

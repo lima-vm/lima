@@ -30,6 +30,7 @@ import (
 	"github.com/lima-vm/lima/pkg/imgutil/proxyimgutil"
 	"github.com/lima-vm/lima/pkg/limayaml"
 	"github.com/lima-vm/lima/pkg/osutil"
+	"github.com/lima-vm/lima/pkg/registry"
 	"github.com/lima-vm/lima/pkg/store"
 	"github.com/lima-vm/lima/pkg/store/filenames"
 	"github.com/lima-vm/lima/pkg/usrlocalsharelima"
@@ -90,7 +91,10 @@ func Prepare(ctx context.Context, inst *store.Instance) (*Prepared, error) {
 			return nil, err
 		}
 	}
-	limaDriver := driverutil.CreateTargetDriverInstance(inst, 0)
+	limaDriver, err := driverutil.CreateConfiguredDriver(inst, 0)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create driver instance: %w", err)
+	}
 
 	if err := limaDriver.Validate(); err != nil {
 		return nil, err
@@ -102,7 +106,7 @@ func Prepare(ctx context.Context, inst *store.Instance) (*Prepared, error) {
 
 	// Check if the instance has been created (the base disk already exists)
 	baseDisk := filepath.Join(inst.Dir, filenames.BaseDisk)
-	_, err := os.Stat(baseDisk)
+	_, err = os.Stat(baseDisk)
 	created := err == nil
 
 	kernel := filepath.Join(inst.Dir, filenames.Kernel)
@@ -183,7 +187,7 @@ func Start(ctx context.Context, inst *store.Instance, limactl string, launchHost
 	if _, err := os.Stat(haPIDPath); !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("instance %q seems running (hint: remove %q if the instance is not actually running)", inst.Name, haPIDPath)
 	}
-	logrus.Infof("Starting the instance %q with VM driver %q", inst.Name, inst.VMType)
+	logrus.Infof("Starting the instance %q with %s VM driver %q", inst.Name, registry.CheckInternalOrExternal(inst.VMType), inst.VMType)
 
 	haSockPath := filepath.Join(inst.Dir, filenames.HostAgentSock)
 
@@ -225,7 +229,7 @@ func Start(ctx context.Context, inst *store.Instance, limactl string, launchHost
 		"hostagent",
 		"--pidfile", haPIDPath,
 		"--socket", haSockPath)
-	if prepared.Driver.CanRunGUI() {
+	if prepared.Driver.Info().CanRunGUI {
 		args = append(args, "--run-gui")
 	}
 	if prepared.GuestAgent != "" {
