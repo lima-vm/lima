@@ -165,3 +165,12 @@ func chooseGABinary(candidates []string) (string, error) {
 		return entries[0], nil
 	}
 }
+
+// Prefix returns the <PREFIX> directory, which is two levels above the lima share directory.
+func Prefix() (string, error) {
+	dir, err := Dir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Dir(filepath.Dir(dir)), nil
+}
