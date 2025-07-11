@@ -288,9 +288,9 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 					if len(parts) != 2 {
 						return "", fmt.Errorf("invalid static port forward format %q, expected HOST:GUEST", s)
 					}
-					hostPort := strings.TrimSpace(parts[0])
-					guestPort := strings.TrimSpace(parts[1])
-					expr += fmt.Sprintf(`{"hostPort": %s, "guestPort": %s, "static": true}`, hostPort, guestPort)
+					guestPort := strings.TrimSpace(parts[0])
+					hostPort := strings.TrimSpace(parts[1])
+					expr += fmt.Sprintf(`{"guestPort": %s, "hostPort": %s}`, guestPort, hostPort)
 					if i < len(ss)-1 {
 						expr += ","
 					}

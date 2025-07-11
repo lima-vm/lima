@@ -422,7 +422,7 @@ networks:
 
 # Port forwarding rules. Forwarding between ports 22 and ssh.localPort cannot be overridden.
 # Rules are checked sequentially until the first one matches.
-#portForwards: null
+# portForwards:
 # - guestPort: 443
 #   hostIP: "0.0.0.0" # overrides the default value "127.0.0.1"; allows privileged port forwarding
 # # default: hostPort: 443 (same as guestPort)
