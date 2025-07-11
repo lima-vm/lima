@@ -833,8 +833,8 @@ func fixUpForPlainMode(y *limatype.LimaYAML) {
 }
 
 // deleteNonStaticPortForwards removes all non-static port forwarding rules in case of Plain mode.
-func deleteNonStaticPortForwards(portForwards *[]PortForward) {
-	staticPortForwards := make([]PortForward, 0, len(*portForwards))
+func deleteNonStaticPortForwards(portForwards *[]limatype.PortForward) {
+	staticPortForwards := make([]limatype.PortForward, 0, len(*portForwards))
 	for _, rule := range *portForwards {
 		if rule.Static {
 			staticPortForwards = append(staticPortForwards, rule)

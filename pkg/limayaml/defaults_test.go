@@ -692,14 +692,14 @@ func TestContainerdDefault(t *testing.T) {
 func TestStaticPortForwarding(t *testing.T) {
 	tests := []struct {
 		name     string
-		config   LimaYAML
-		expected []PortForward
+		config   limatype.LimaYAML
+		expected []limatype.PortForward
 	}{
 		{
 			name: "plain mode with static port forwards",
-			config: LimaYAML{
+			config: limatype.LimaYAML{
 				Plain: ptr.Of(true),
-				PortForwards: []PortForward{
+				PortForwards: []limatype.PortForward{
 					{
 						GuestPort: 8080,
 						HostPort:  8080,
@@ -716,7 +716,7 @@ func TestStaticPortForwarding(t *testing.T) {
 					},
 				},
 			},
-			expected: []PortForward{
+			expected: []limatype.PortForward{
 				{
 					GuestPort: 8080,
 					HostPort:  8080,
@@ -726,9 +726,9 @@ func TestStaticPortForwarding(t *testing.T) {
 		},
 		{
 			name: "non-plain mode with static port forwards",
-			config: LimaYAML{
+			config: limatype.LimaYAML{
 				Plain: ptr.Of(false),
-				PortForwards: []PortForward{
+				PortForwards: []limatype.PortForward{
 					{
 						GuestPort: 8080,
 						HostPort:  8080,
@@ -741,7 +741,7 @@ func TestStaticPortForwarding(t *testing.T) {
 					},
 				},
 			},
-			expected: []PortForward{
+			expected: []limatype.PortForward{
 				{
 					GuestPort: 8080,
 					HostPort:  8080,
@@ -756,9 +756,9 @@ func TestStaticPortForwarding(t *testing.T) {
 		},
 		{
 			name: "plain mode with no static port forwards",
-			config: LimaYAML{
+			config: limatype.LimaYAML{
 				Plain: ptr.Of(true),
-				PortForwards: []PortForward{
+				PortForwards: []limatype.PortForward{
 					{
 						GuestPort: 8080,
 						HostPort:  8080,
@@ -770,7 +770,7 @@ func TestStaticPortForwarding(t *testing.T) {
 					},
 				},
 			},
-			expected: []PortForward{},
+			expected: []limatype.PortForward{},
 		},
 	}
 
