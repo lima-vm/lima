@@ -24,7 +24,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/cpu"
 
-	"github.com/lima-vm/lima/pkg/ioutilx"
 	"github.com/lima-vm/lima/pkg/lockutil"
 	"github.com/lima-vm/lima/pkg/osutil"
 	"github.com/lima-vm/lima/pkg/store/dirnames"
@@ -99,12 +98,9 @@ func DefaultPubKeys(loadDotSSH bool) ([]PubKey, error) {
 		}
 		if err := lockutil.WithDirLock(configDir, func() error {
 			// no passphrase, no user@host comment
-			privPath := filepath.Join(configDir, filenames.UserPrivateKey)
-			if runtime.GOOS == "windows" {
-				privPath, err = ioutilx.WindowsSubsystemPath(privPath)
-				if err != nil {
-					return err
-				}
+			privPath, err := privPath(configDir)
+			if err != nil {
+				return err
 			}
 			keygenCmd := exec.Command("ssh-keygen", "-t", "ed25519", "-q", "-N", "",
 				"-C", "lima", "-f", privPath)
@@ -187,12 +183,11 @@ func CommonOpts(sshPath string, useDotSSH bool) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	var opts []string
 	idf, err := identityFileEntry(privateKeyPath)
 	if err != nil {
 		return nil, err
 	}
-	opts = []string{idf}
+	opts := []string{idf}
 
 	// Append all private keys corresponding to ~/.ssh/*.pub to keep old instances working
 	// that had been created before lima started using an internal identity.
@@ -258,32 +253,13 @@ func CommonOpts(sshPath string, useDotSSH bool) ([]string, error) {
 		// We prioritize AES algorithms when AES accelerator is available.
 		if sshInfo.aesAccelerated {
 			logrus.Debugf("AES accelerator seems available, prioritizing aes128-gcm@openssh.com and aes256-gcm@openssh.com")
-			if runtime.GOOS == "windows" {
-				opts = append(opts, "Ciphers=^aes128-gcm@openssh.com,aes256-gcm@openssh.com")
-			} else {
-				opts = append(opts, "Ciphers=\"^aes128-gcm@openssh.com,aes256-gcm@openssh.com\"")
-			}
+			opts = append(opts, sshCiphersOption("^aes128-gcm@openssh.com,aes256-gcm@openssh.com"))
 		} else {
 			logrus.Debugf("AES accelerator does not seem available, prioritizing chacha20-poly1305@openssh.com")
-			if runtime.GOOS == "windows" {
-				opts = append(opts, "Ciphers=^chacha20-poly1305@openssh.com")
-			} else {
-				opts = append(opts, "Ciphers=\"^chacha20-poly1305@openssh.com\"")
-			}
+			opts = append(opts, sshCiphersOption("^chacha20-poly1305@openssh.com"))
 		}
 	}
 	return opts, nil
-}
-
-func identityFileEntry(privateKeyPath string) (string, error) {
-	if runtime.GOOS == "windows" {
-		privateKeyPath, err := ioutilx.WindowsSubsystemPath(privateKeyPath)
-		if err != nil {
-			return "", err
-		}
-		return fmt.Sprintf(`IdentityFile='%s'`, privateKeyPath), nil
-	}
-	return fmt.Sprintf(`IdentityFile="%s"`, privateKeyPath), nil
 }
 
 // SSHOpts adds the following options to CommonOptions: User, ControlMaster, ControlPath, ControlPersist.
@@ -296,13 +272,9 @@ func SSHOpts(sshPath, instDir, username string, useDotSSH, forwardAgent, forward
 	if err != nil {
 		return nil, err
 	}
-	controlPath := fmt.Sprintf(`ControlPath="%s"`, controlSock)
-	if runtime.GOOS == "windows" {
-		controlSock, err = ioutilx.WindowsSubsystemPath(controlSock)
-		if err != nil {
-			return nil, err
-		}
-		controlPath = fmt.Sprintf(`ControlPath='%s'`, controlSock)
+	controlPath, err := controlPath(controlSock)
+	if err != nil {
+		return nil, err
 	}
 	opts = append(opts,
 		fmt.Sprintf("User=%s", username), // guest and host have the same username, but we should specify the username explicitly (#85)
