@@ -13,38 +13,38 @@
 minimumLimaVersion: 1.1.0
 
 base:
-  - template://_images/ubuntu-lts
-  - template://_default/mounts
+- template://_images/ubuntu-lts
+- template://_default/mounts
 
 containerd:
   system: false
   user: false
 provision:
-  - mode: system
-    script: |
-      #!/bin/bash
-      set -eux -o pipefail
-      command -v podman >/dev/null 2>&1 && test -e /etc/lima-podman && exit 0
-      export DEBIAN_FRONTEND=noninteractive
-      apt-get update
-      apt-get install -y podman && touch /etc/lima-podman
-  - mode: user
-    script: |
-      #!/bin/bash
-      set -eux -o pipefail
-      systemctl --user enable --now podman.socket
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    command -v podman >/dev/null 2>&1 && test -e /etc/lima-podman && exit 0
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update
+    apt-get install -y podman && touch /etc/lima-podman
+- mode: user
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    systemctl --user enable --now podman.socket
 probes:
-  - script: |
-      #!/bin/bash
-      set -eux -o pipefail
-      if ! timeout 30s bash -c "until command -v podman >/dev/null 2>&1; do sleep 3; done"; then
-        echo >&2 "podman is not installed yet"
-        exit 1
-      fi
-    hint: See "/var/log/cloud-init-output.log" in the guest
+- script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    if ! timeout 30s bash -c "until command -v podman >/dev/null 2>&1; do sleep 3; done"; then
+      echo >&2 "podman is not installed yet"
+      exit 1
+    fi
+  hint: See "/var/log/cloud-init-output.log" in the guest
 portForwards:
-  - guestSocket: "/run/user/{{.UID}}/podman/podman.sock"
-    hostSocket: "{{.Dir}}/sock/podman.sock"
+- guestSocket: '/run/user/{{.UID}}/podman/podman.sock'
+  hostSocket: '{{.Dir}}/sock/podman.sock'
 message: |
   To run `podman` on the host (assumes podman-remote is installed), run the following commands:
   ------
