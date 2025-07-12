@@ -8,4 +8,7 @@ package vz
 import "errors"
 
 //nolint:revive,staticcheck // false positives with proper nouns
-var errRosettaUnsupported = errors.New("Rosetta is unsupported on non-ARM64 hosts")
+var (
+	errRosettaUnsupported = errors.New("Rosetta is unsupported on non-ARM64 hosts")
+	errUnimplemented      = errors.New("unimplemented")
+)

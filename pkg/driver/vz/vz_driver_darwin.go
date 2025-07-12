@@ -80,12 +80,19 @@ type LimaVzDriver struct {
 
 var _ driver.Driver = (*LimaVzDriver)(nil)
 
-func New(inst *store.Instance, sshLocalPort int) *LimaVzDriver {
+func New() *LimaVzDriver {
 	return &LimaVzDriver{
-		Instance:     inst,
-		vSockPort:    2222,
-		virtioPort:   "",
-		SSHLocalPort: sshLocalPort,
+		vSockPort:  2222,
+		virtioPort: "",
+	}
+}
+
+func (l *LimaVzDriver) Configure(inst *store.Instance, sshLocalPort int) *driver.ConfiguredDriver {
+	l.Instance = inst
+	l.SSHLocalPort = sshLocalPort
+
+	return &driver.ConfiguredDriver{
+		Driver: l,
 	}
 }
 
@@ -197,7 +204,7 @@ func (l *LimaVzDriver) Start(ctx context.Context) (chan error, error) {
 	return errCh, nil
 }
 
-func (l *LimaVzDriver) CanRunGUI() bool {
+func (l *LimaVzDriver) canRunGUI() bool {
 	switch *l.Instance.Config.Video.Display {
 	case "vz", "default":
 		return true
@@ -207,7 +214,7 @@ func (l *LimaVzDriver) CanRunGUI() bool {
 }
 
 func (l *LimaVzDriver) RunGUI() error {
-	if l.CanRunGUI() {
+	if l.canRunGUI() {
 		return l.machine.StartGraphicApplication(1920, 1200)
 	}
 	return fmt.Errorf("RunGUI is not supported for the given driver '%s' and display '%s'", "vz", *l.Instance.Config.Video.Display)
@@ -243,14 +250,28 @@ func (l *LimaVzDriver) Stop(_ context.Context) error {
 	return errors.New("vz: CanRequestStop is not supported")
 }
 
-func (l *LimaVzDriver) GuestAgentConn(_ context.Context) (net.Conn, error) {
+func (l *LimaVzDriver) GuestAgentConn(_ context.Context) (net.Conn, string, error) {
 	for _, socket := range l.machine.SocketDevices() {
 		connect, err := socket.Connect(uint32(l.vSockPort))
-		if err == nil && connect.SourcePort() != 0 {
-			return connect, nil
-		}
+		return connect, "vsock", err
 	}
-	return nil, errors.New("unable to connect to guest agent via vsock port 2222")
+
+	return nil, "", errors.New("unable to connect to guest agent via vsock port 2222")
+}
+
+func (l *LimaVzDriver) Info() driver.Info {
+	var info driver.Info
+	if l.Instance != nil {
+		info.CanRunGUI = l.canRunGUI()
+	}
+
+	info.DriverName = "vz"
+	info.VsockPort = l.vSockPort
+	info.VirtioPort = l.virtioPort
+	if l.Instance != nil {
+		info.InstanceDir = l.Instance.Dir
+	}
+	return info
 }
 
 func (l *LimaVzDriver) Register(_ context.Context) error {
@@ -265,35 +286,27 @@ func (l *LimaVzDriver) ChangeDisplayPassword(_ context.Context, _ string) error 
 	return nil
 }
 
-func (l *LimaVzDriver) GetDisplayConnection(_ context.Context) (string, error) {
+func (l *LimaVzDriver) DisplayConnection(_ context.Context) (string, error) {
 	return "", nil
 }
 
 func (l *LimaVzDriver) CreateSnapshot(_ context.Context, _ string) error {
-	return errors.New("unimplemented")
+	return errUnimplemented
 }
 
 func (l *LimaVzDriver) ApplySnapshot(_ context.Context, _ string) error {
-	return errors.New("unimplemented")
+	return errUnimplemented
 }
 
 func (l *LimaVzDriver) DeleteSnapshot(_ context.Context, _ string) error {
-	return errors.New("unimplemented")
+	return errUnimplemented
 }
 
 func (l *LimaVzDriver) ListSnapshots(_ context.Context) (string, error) {
-	return "", errors.New("unimplemented")
+	return "", errUnimplemented
 }
 
 func (l *LimaVzDriver) ForwardGuestAgent() bool {
 	// If driver is not providing, use host agent
 	return l.vSockPort == 0 && l.virtioPort == ""
-}
-
-func (l *LimaVzDriver) VSockPort() int {
-	return l.vSockPort
-}
-
-func (l *LimaVzDriver) VirtioPort() string {
-	return l.virtioPort
 }
