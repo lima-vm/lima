@@ -479,11 +479,14 @@ sudo chown -R "${USER}" /run/host-services`
 		})
 	}
 
+	staticPortForwards, err := a.separateStaticPortForwards()
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	a.addStaticPortForwardsFromList(ctx, staticPortForwards)
 	if !*a.instConfig.Plain {
 		go a.watchGuestAgentEvents(ctx)
-	} else {
-		logrus.Info("Running in plain mode, skipping guest agent events watcher")
-		a.addStaticPortForwards(ctx)
 	}
 
 	if err := a.waitForRequirements("optional", a.optionalRequirements()); err != nil {
@@ -548,8 +551,6 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 		}
 	}
 
-	a.addStaticPortForwards(ctx)
-
 	localUnix := filepath.Join(a.instDir, filenames.GuestAgentSock)
 	remoteUnix := "/run/lima-guestagent.sock"
 
@@ -613,25 +614,45 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 	}
 }
 
-func (a *HostAgent) addStaticPortForwards(ctx context.Context) {
-	for _, rule := range a.instConfig.PortForwards {
-		if rule.Static {
-			if rule.GuestSocket == "" {
-				guest := &guestagentapi.IPPort{
-					Ip:       rule.GuestIP.String(),
-					Port:     int32(rule.GuestPort),
-					Protocol: rule.Proto,
-				}
-				local, remote := a.portForwarder.forwardingAddresses(guest)
-				if local != "" {
-					logrus.Infof("Setting up static TCP forwarding from %s to %s", remote, local)
-					if err := forwardTCP(ctx, a.sshConfig, a.sshLocalPort, local, remote, verbForward); err != nil {
-						logrus.WithError(err).Warnf("failed to set up static TCP forwarding %s -> %s", remote, local)
-					}
+func (a *HostAgent) addStaticPortForwardsFromList(ctx context.Context, staticPortForwards []limayaml.PortForward) {
+	for _, rule := range staticPortForwards {
+		if rule.GuestSocket == "" {
+			guest := &guestagentapi.IPPort{
+				Ip:       rule.GuestIP.String(),
+				Port:     int32(rule.GuestPort),
+				Protocol: rule.Proto,
+			}
+			local, remote := a.portForwarder.forwardingAddresses(guest)
+			if local != "" {
+				logrus.Infof("Setting up static TCP forwarding from %s to %s", remote, local)
+				if err := forwardTCP(ctx, a.sshConfig, a.sshLocalPort, local, remote, verbForward); err != nil {
+					logrus.WithError(err).Warnf("failed to set up static TCP forwarding %s -> %s", remote, local)
 				}
 			}
 		}
 	}
+}
+
+func (a *HostAgent) separateStaticPortForwards() ([]limayaml.PortForward, error) {
+	staticPortForwards := make([]limayaml.PortForward, 0, len(a.instConfig.PortForwards))
+	nonStaticPortForwards := make([]limayaml.PortForward, 0, len(a.instConfig.PortForwards))
+
+	for i := range len(a.instConfig.PortForwards) {
+		rule := a.instConfig.PortForwards[i]
+		if rule.Static {
+			logrus.Debugf("Found static port forward: guest=%d host=%d", rule.GuestPort, rule.HostPort)
+			staticPortForwards = append(staticPortForwards, rule)
+		} else {
+			logrus.Debugf("Found non-static port forward: guest=%d host=%d", rule.GuestPort, rule.HostPort)
+			nonStaticPortForwards = append(nonStaticPortForwards, rule)
+		}
+	}
+
+	logrus.Debugf("Static port forwards: %d, Non-static port forwards: %d", len(staticPortForwards), len(nonStaticPortForwards))
+
+	a.instConfig.PortForwards = nonStaticPortForwards
+
+	return staticPortForwards, nil
 }
 
 func isGuestAgentSocketAccessible(ctx context.Context, client *guestagentclient.GuestAgentClient) bool {

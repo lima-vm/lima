@@ -612,28 +612,3 @@ jobs:
         sudo chown $(whoami) /dev/kvm
     - name: Smoke test
       run: limactl start --tty=false
-
-  static-port-forwarding:
-    name: "Static Port Forwarding Tests"
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 1
-    - name: Install test dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y --no-install-recommends ovmf qemu-system-x86 qemu-utils
-        qemu-system-x86_64 --version
-        sudo modprobe kvm
-        # `sudo usermod -aG kvm $(whoami)` does not take an effect on GHA
-        sudo chown $(whoami) /dev/kvm
-    - name: Make
-      run: make
-    - name: Install
-      run: sudo make install
-    - name: Run plain mode static port forwarding test
-      run: bash hack/test-plain-static-port-forward.sh
-    - name: Run non-plain mode static port forwarding test
-      run: bash hack/test-nonplain-static-port-forward.sh

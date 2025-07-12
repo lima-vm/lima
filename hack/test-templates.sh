@@ -50,6 +50,7 @@ declare -A CHECKS=(
 	["snapshot-online"]=""
 	["snapshot-offline"]=""
 	["port-forwards"]="1"
+	["static-port-forwards"]=""
 	["vmnet"]=""
 	["disk"]=""
 	["user-v2"]=""
@@ -89,6 +90,12 @@ case "$NAME" in
 	CHECKS["provision-data"]="1"
 	CHECKS["param-env-variables"]="1"
 	CHECKS["set-user"]="1"
+	;;
+"static-port-forward")
+	CHECKS["static-port-forwards"]="1"
+	CHECKS["port-forwards"]=""
+	CHECKS["container-engine"]=""
+	CHECKS["restart"]=""
 	;;
 "docker")
 	CONTAINER_ENGINE="docker"
@@ -381,6 +388,13 @@ if [[ -n ${CHECKS["port-forwards"]} ]]; then
 		fi
 	fi
 	set +x
+fi
+
+if [[ -n ${CHECKS["static-port-forwards"]} ]]; then
+	INFO "Testing static port forwarding functionality"
+	"${scriptdir}/test-plain-static-port-forward.sh" "$NAME"
+	"${scriptdir}/test-nonplain-static-port-forward.sh" "$NAME"
+	INFO "All static port forwarding tests passed!"
 fi
 
 if [[ -n ${CHECKS["vmnet"]} ]]; then
