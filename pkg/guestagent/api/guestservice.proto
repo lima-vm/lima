@@ -10,6 +10,8 @@ service GuestService {
   rpc PostInotify(stream Inotify) returns (google.protobuf.Empty);
   
   rpc Tunnel(stream TunnelMessage) returns (stream TunnelMessage);
+  rpc GetIPv4(google.protobuf.Empty) returns (CommandOutput);
+  rpc GetIPv6(google.protobuf.Empty) returns (CommandOutput);
 }
 
 message Info {
@@ -27,6 +29,11 @@ message IPPort {
   string protocol = 1; //tcp, udp
   string ip = 2;
   int32 port = 3;
+}
+
+message CommandOutput {
+  bool is_json = 1;
+  bytes payload = 2;
 }
 
 message Inotify {

@@ -56,3 +56,11 @@ func (s *GuestServer) PostInotify(server api.GuestService_PostInotifyServer) err
 func (s *GuestServer) Tunnel(stream api.GuestService_TunnelServer) error {
 	return s.TunnelS.Start(stream)
 }
+
+func (s *GuestServer) GetIPv4(ctx context.Context, _ *emptypb.Empty) (*api.CommandOutput, error) {
+	return s.Agent.IPv4(ctx)
+}
+
+func (s *GuestServer) GetIPv6(ctx context.Context, _ *emptypb.Empty) (*api.CommandOutput, error) {
+	return s.Agent.IPv6(ctx)
+}
