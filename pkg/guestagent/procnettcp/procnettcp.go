@@ -31,7 +31,7 @@ type State = int
 const (
 	TCPEstablished State = 0x1
 	TCPListen      State = 0xA
-	UDPEstablished State = 0x7
+	UDPUnconnected State = 0x7
 )
 
 type Entry struct {
