@@ -38,7 +38,11 @@ func installSystemdAction(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	unit, err := generateSystemdUnit(vsockPort, virtioPort)
+	debug, err := cmd.Flags().GetBool("debug")
+	if err != nil {
+		return err
+	}
+	unit, err := generateSystemdUnit(vsockPort, virtioPort, debug)
 	if err != nil {
 		return err
 	}
@@ -77,7 +81,7 @@ func installSystemdAction(cmd *cobra.Command, _ []string) error {
 //go:embed lima-guestagent.TEMPLATE.service
 var systemdUnitTemplate string
 
-func generateSystemdUnit(vsockPort int, virtioPort string) ([]byte, error) {
+func generateSystemdUnit(vsockPort int, virtioPort string, debug bool) ([]byte, error) {
 	selfExeAbs, err := os.Executable()
 	if err != nil {
 		return nil, err
@@ -89,6 +93,9 @@ func generateSystemdUnit(vsockPort int, virtioPort string) ([]byte, error) {
 	}
 	if virtioPort != "" {
 		args = append(args, fmt.Sprintf("--virtio-port %s", virtioPort))
+	}
+	if debug {
+		args = append(args, "--debug")
 	}
 
 	m := map[string]string{

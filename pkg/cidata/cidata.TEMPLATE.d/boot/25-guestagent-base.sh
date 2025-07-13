@@ -54,10 +54,10 @@ else
 	rm -f "${LIMA_CIDATA_HOME}/.config/systemd/user/lima-guestagent.service"
 
 	if [ "${LIMA_CIDATA_VSOCK_PORT}" != "0" ]; then
-		sudo "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/lima-guestagent install-systemd --vsock-port "${LIMA_CIDATA_VSOCK_PORT}"
+		sudo "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/lima-guestagent install-systemd --debug="${LIMA_CIDATA_DEBUG}" --vsock-port "${LIMA_CIDATA_VSOCK_PORT}"
 	elif [ "${LIMA_CIDATA_VIRTIO_PORT}" != "" ]; then
-		sudo "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/lima-guestagent install-systemd --virtio-port "${LIMA_CIDATA_VIRTIO_PORT}"
+		sudo "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/lima-guestagent install-systemd --debug="${LIMA_CIDATA_DEBUG}" --virtio-port "${LIMA_CIDATA_VIRTIO_PORT}"
 	else
-		sudo "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/lima-guestagent install-systemd
+		sudo "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/lima-guestagent install-systemd --debug="${LIMA_CIDATA_DEBUG}"
 	fi
 fi
