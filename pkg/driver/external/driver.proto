@@ -1,0 +1,74 @@
+syntax = "proto3";
+
+option go_package = "github.com/lima-vm/lima/pkg/driver/external";
+
+import "google/protobuf/empty.proto";
+
+service Driver {
+    rpc Validate(google.protobuf.Empty) returns (google.protobuf.Empty);
+    rpc Initialize(google.protobuf.Empty) returns (google.protobuf.Empty);
+    rpc CreateDisk(google.protobuf.Empty) returns (google.protobuf.Empty);
+    rpc Start(google.protobuf.Empty) returns (stream StartResponse);
+    rpc Stop(google.protobuf.Empty) returns (google.protobuf.Empty);
+
+    rpc RunGUI(google.protobuf.Empty) returns (google.protobuf.Empty);
+    rpc ChangeDisplayPassword(ChangeDisplayPasswordRequest) returns (google.protobuf.Empty);
+    rpc GetDisplayConnection(google.protobuf.Empty) returns (GetDisplayConnectionResponse);
+
+    rpc CreateSnapshot(CreateSnapshotRequest) returns (google.protobuf.Empty);
+    rpc ApplySnapshot(ApplySnapshotRequest) returns (google.protobuf.Empty);
+    rpc DeleteSnapshot(DeleteSnapshotRequest) returns (google.protobuf.Empty);
+    rpc ListSnapshots(google.protobuf.Empty) returns (ListSnapshotsResponse);
+
+    rpc Register(google.protobuf.Empty) returns (google.protobuf.Empty);
+    rpc Unregister(google.protobuf.Empty) returns (google.protobuf.Empty);
+
+    rpc ForwardGuestAgent(google.protobuf.Empty) returns (ForwardGuestAgentResponse);
+    rpc GuestAgentConn(google.protobuf.Empty) returns (google.protobuf.Empty);
+
+    rpc SetConfig(SetConfigRequest) returns (google.protobuf.Empty);
+
+    rpc GetInfo(google.protobuf.Empty) returns (InfoResponse);
+}
+
+message InfoResponse{
+    bytes info_json = 1;
+}
+
+message StartResponse {
+    bool success = 1;   
+    string error = 2;
+}
+
+message SetConfigRequest {
+    bytes instance_config_json = 1;
+    int64 ssh_local_port = 3;
+}
+
+message ChangeDisplayPasswordRequest {
+    string password = 1;
+}
+
+message GetDisplayConnectionResponse {
+    string connection = 1;
+}
+
+message CreateSnapshotRequest {
+    string tag = 1;
+}
+
+message ApplySnapshotRequest {
+    string tag = 1;
+}
+
+message DeleteSnapshotRequest {
+    string tag = 1;
+}
+
+message ListSnapshotsResponse {
+    string snapshots = 1;
+}
+
+message ForwardGuestAgentResponse {
+    bool should_forward = 1;
+}
