@@ -9,7 +9,3 @@ images:
   arch: "aarch64"
   digest: "sha256:5453d4566783af42283cb3ab34970b87b6def2691137d4f9dcc042f145510986"
 mountTypesUnsupported: [9p]
-
-firmware:
-  # Oracle Linux 9 still requires legacyBIOS, while AlmaLinux 9 and Rocky Linux 9 do not.
-  legacyBIOS: true
