@@ -237,7 +237,7 @@ func (a *agent) LocalPorts(_ context.Context) ([]*api.IPPort, error) {
 					})
 			}
 		case procnettcp.UDP, procnettcp.UDP6:
-			if f.State == procnettcp.UDPEstablished {
+			if f.State == procnettcp.UDPUnconnected {
 				res = append(res,
 					&api.IPPort{
 						Ip:       f.IP.String(),

@@ -77,7 +77,7 @@ func TestParseUDP(t *testing.T) {
 
 	assert.Check(t, net.ParseIP("127.0.0.54").Equal(entries[0].IP))
 	assert.Equal(t, uint16(53), entries[0].Port)
-	assert.Equal(t, UDPEstablished, entries[0].State)
+	assert.Equal(t, UDPUnconnected, entries[0].State)
 }
 
 func TestParseAddress(t *testing.T) {
