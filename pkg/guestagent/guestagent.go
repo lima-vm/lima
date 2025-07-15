@@ -6,7 +6,7 @@ package guestagent
 import (
 	"context"
 
-	"github.com/lima-vm/lima/pkg/guestagent/api"
+	"github.com/lima-vm/lima/v2/pkg/guestagent/api"
 )
 
 type Agent interface {

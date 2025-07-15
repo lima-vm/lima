@@ -22,13 +22,13 @@ import (
 	"github.com/docker/go-units"
 	"github.com/sirupsen/logrus"
 
-	hostagentclient "github.com/lima-vm/lima/pkg/hostagent/api/client"
-	"github.com/lima-vm/lima/pkg/instance/hostname"
-	"github.com/lima-vm/lima/pkg/limayaml"
-	"github.com/lima-vm/lima/pkg/store/dirnames"
-	"github.com/lima-vm/lima/pkg/store/filenames"
-	"github.com/lima-vm/lima/pkg/textutil"
-	"github.com/lima-vm/lima/pkg/version/versionutil"
+	hostagentclient "github.com/lima-vm/lima/v2/pkg/hostagent/api/client"
+	"github.com/lima-vm/lima/v2/pkg/instance/hostname"
+	"github.com/lima-vm/lima/v2/pkg/limayaml"
+	"github.com/lima-vm/lima/v2/pkg/store/dirnames"
+	"github.com/lima-vm/lima/v2/pkg/store/filenames"
+	"github.com/lima-vm/lima/v2/pkg/textutil"
+	"github.com/lima-vm/lima/v2/pkg/version/versionutil"
 )
 
 type Status = string

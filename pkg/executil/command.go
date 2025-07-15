@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"os/exec"
 
-	"github.com/lima-vm/lima/pkg/ioutilx"
+	"github.com/lima-vm/lima/v2/pkg/ioutilx"
 )
 
 type options struct {

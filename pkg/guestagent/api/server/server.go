@@ -10,9 +10,9 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 
-	"github.com/lima-vm/lima/pkg/guestagent"
-	"github.com/lima-vm/lima/pkg/guestagent/api"
-	"github.com/lima-vm/lima/pkg/portfwdserver"
+	"github.com/lima-vm/lima/v2/pkg/guestagent"
+	"github.com/lima-vm/lima/v2/pkg/guestagent/api"
+	"github.com/lima-vm/lima/v2/pkg/portfwdserver"
 )
 
 func StartServer(lis net.Listener, guest *GuestServer) error {

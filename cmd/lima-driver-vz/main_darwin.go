@@ -4,8 +4,8 @@
 package main
 
 import (
-	"github.com/lima-vm/lima/pkg/driver/external/server"
-	"github.com/lima-vm/lima/pkg/driver/vz"
+	"github.com/lima-vm/lima/v2/pkg/driver/external/server"
+	"github.com/lima-vm/lima/v2/pkg/driver/vz"
 )
 
 // To be used as an external driver for Lima.

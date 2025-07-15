@@ -15,8 +15,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	. "github.com/lima-vm/lima/pkg/must"
-	"github.com/lima-vm/lima/pkg/version/versionutil"
+	. "github.com/lima-vm/lima/v2/pkg/must"
+	"github.com/lima-vm/lima/v2/pkg/version/versionutil"
 )
 
 type User struct {

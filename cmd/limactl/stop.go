@@ -6,9 +6,9 @@ package main
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/lima-vm/lima/pkg/instance"
-	networks "github.com/lima-vm/lima/pkg/networks/reconcile"
-	"github.com/lima-vm/lima/pkg/store"
+	"github.com/lima-vm/lima/v2/pkg/instance"
+	networks "github.com/lima-vm/lima/v2/pkg/networks/reconcile"
+	"github.com/lima-vm/lima/v2/pkg/store"
 )
 
 func newStopCommand() *cobra.Command {

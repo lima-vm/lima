@@ -10,9 +10,9 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/pkg/guestagent/api"
-	guestagentclient "github.com/lima-vm/lima/pkg/guestagent/api/client"
-	"github.com/lima-vm/lima/pkg/limayaml"
+	"github.com/lima-vm/lima/v2/pkg/guestagent/api"
+	guestagentclient "github.com/lima-vm/lima/v2/pkg/guestagent/api/client"
+	"github.com/lima-vm/lima/v2/pkg/limayaml"
 )
 
 var IPv4loopback1 = limayaml.IPv4loopback1

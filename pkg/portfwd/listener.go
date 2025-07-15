@@ -12,7 +12,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	guestagentclient "github.com/lima-vm/lima/pkg/guestagent/api/client"
+	guestagentclient "github.com/lima-vm/lima/v2/pkg/guestagent/api/client"
 )
 
 type ClosableListeners struct {

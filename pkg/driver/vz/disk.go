@@ -12,10 +12,10 @@ import (
 
 	"github.com/docker/go-units"
 
-	"github.com/lima-vm/lima/pkg/imgutil/proxyimgutil"
-	"github.com/lima-vm/lima/pkg/iso9660util"
-	"github.com/lima-vm/lima/pkg/store"
-	"github.com/lima-vm/lima/pkg/store/filenames"
+	"github.com/lima-vm/lima/v2/pkg/imgutil/proxyimgutil"
+	"github.com/lima-vm/lima/v2/pkg/iso9660util"
+	"github.com/lima-vm/lima/v2/pkg/store"
+	"github.com/lima-vm/lima/v2/pkg/store/filenames"
 )
 
 func EnsureDisk(_ context.Context, inst *store.Instance) error {

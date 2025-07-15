@@ -15,8 +15,8 @@ import (
 	"github.com/lima-vm/sshocker/pkg/ssh"
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/pkg/bicopy"
-	"github.com/lima-vm/lima/pkg/portfwd"
+	"github.com/lima-vm/lima/v2/pkg/bicopy"
+	"github.com/lima-vm/lima/v2/pkg/portfwd"
 )
 
 // forwardTCP is not thread-safe.

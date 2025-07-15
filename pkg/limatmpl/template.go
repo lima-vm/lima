@@ -6,7 +6,7 @@ package limatmpl
 import (
 	"strings"
 
-	"github.com/lima-vm/lima/pkg/limayaml"
+	"github.com/lima-vm/lima/v2/pkg/limayaml"
 )
 
 type Template struct {

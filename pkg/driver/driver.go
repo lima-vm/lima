@@ -7,7 +7,7 @@ import (
 	"context"
 	"net"
 
-	"github.com/lima-vm/lima/pkg/store"
+	"github.com/lima-vm/lima/v2/pkg/store"
 )
 
 // Lifecycle defines basic lifecycle operations.

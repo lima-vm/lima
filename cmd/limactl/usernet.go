@@ -11,7 +11,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/lima-vm/lima/pkg/networks/usernet"
+	"github.com/lima-vm/lima/v2/pkg/networks/usernet"
 )
 
 func newUsernetCommand() *cobra.Command {

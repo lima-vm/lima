@@ -1,5 +1,5 @@
 syntax = "proto3";
-option go_package = "github.com/lima-vm/lima/pkg/api";
+option go_package = "github.com/lima-vm/lima/v2/pkg/api";
 
 import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";

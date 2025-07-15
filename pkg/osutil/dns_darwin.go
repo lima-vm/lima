@@ -8,7 +8,7 @@ import (
 	"net"
 	"strings"
 
-	"github.com/lima-vm/lima/pkg/sysprof"
+	"github.com/lima-vm/lima/v2/pkg/sysprof"
 )
 
 func DNSAddresses() ([]string, error) {

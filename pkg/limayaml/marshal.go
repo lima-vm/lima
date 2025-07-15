@@ -9,7 +9,7 @@ import (
 	"github.com/goccy/go-yaml"
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/pkg/yqutil"
+	"github.com/lima-vm/lima/v2/pkg/yqutil"
 )
 
 const (

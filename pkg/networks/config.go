@@ -15,9 +15,9 @@ import (
 	"github.com/goccy/go-yaml"
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/pkg/store/dirnames"
-	"github.com/lima-vm/lima/pkg/store/filenames"
-	"github.com/lima-vm/lima/pkg/textutil"
+	"github.com/lima-vm/lima/v2/pkg/store/dirnames"
+	"github.com/lima-vm/lima/v2/pkg/store/filenames"
+	"github.com/lima-vm/lima/v2/pkg/textutil"
 )
 
 //go:embed networks.TEMPLATE.yaml

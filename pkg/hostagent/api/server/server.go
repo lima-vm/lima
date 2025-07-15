@@ -8,8 +8,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/lima-vm/lima/pkg/hostagent"
-	"github.com/lima-vm/lima/pkg/httputil"
+	"github.com/lima-vm/lima/v2/pkg/hostagent"
+	"github.com/lima-vm/lima/v2/pkg/httputil"
 )
 
 type Backend struct {

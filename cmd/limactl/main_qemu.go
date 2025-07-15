@@ -6,4 +6,4 @@
 package main
 
 // Import qemu driver to register it in the registry on all platforms.
-import _ "github.com/lima-vm/lima/pkg/driver/qemu"
+import _ "github.com/lima-vm/lima/v2/pkg/driver/qemu"

@@ -12,7 +12,7 @@ import (
 
 	"github.com/lima-vm/go-qcow2reader"
 
-	"github.com/lima-vm/lima/pkg/store/filenames"
+	"github.com/lima-vm/lima/v2/pkg/store/filenames"
 )
 
 type Disk struct {

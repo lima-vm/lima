@@ -8,7 +8,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/lima-vm/lima/pkg/instance/hostname"
+	"github.com/lima-vm/lima/v2/pkg/instance/hostname"
 )
 
 // FormatT specifies the format type.

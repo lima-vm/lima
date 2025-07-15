@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc/resolver"
 	"google.golang.org/protobuf/types/known/emptypb"
 
-	"github.com/lima-vm/lima/pkg/guestagent/api"
+	"github.com/lima-vm/lima/v2/pkg/guestagent/api"
 )
 
 type GuestAgentClient struct {

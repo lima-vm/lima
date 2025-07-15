@@ -8,8 +8,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	networks "github.com/lima-vm/lima/pkg/networks/reconcile"
-	"github.com/lima-vm/lima/pkg/store"
+	networks "github.com/lima-vm/lima/v2/pkg/networks/reconcile"
+	"github.com/lima-vm/lima/v2/pkg/store"
 )
 
 const launchHostAgentForeground = false

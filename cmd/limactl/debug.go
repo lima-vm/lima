@@ -10,7 +10,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/lima-vm/lima/pkg/hostagent/dns"
+	"github.com/lima-vm/lima/v2/pkg/hostagent/dns"
 )
 
 func newDebugCommand() *cobra.Command {

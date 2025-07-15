@@ -14,8 +14,8 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/lima-vm/lima/pkg/store/dirnames"
-	"github.com/lima-vm/lima/pkg/usrlocalsharelima"
+	"github.com/lima-vm/lima/v2/pkg/store/dirnames"
+	"github.com/lima-vm/lima/v2/pkg/usrlocalsharelima"
 )
 
 type Template struct {

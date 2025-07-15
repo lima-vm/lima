@@ -13,7 +13,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/lima-vm/lima/pkg/osutil"
+	"github.com/lima-vm/lima/v2/pkg/osutil"
 )
 
 func (c *Config) Validate() error {

@@ -14,10 +14,10 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	hostagentevents "github.com/lima-vm/lima/pkg/hostagent/events"
-	"github.com/lima-vm/lima/pkg/osutil"
-	"github.com/lima-vm/lima/pkg/store"
-	"github.com/lima-vm/lima/pkg/store/filenames"
+	hostagentevents "github.com/lima-vm/lima/v2/pkg/hostagent/events"
+	"github.com/lima-vm/lima/v2/pkg/osutil"
+	"github.com/lima-vm/lima/v2/pkg/store"
+	"github.com/lima-vm/lima/v2/pkg/store/filenames"
 )
 
 func StopGracefully(ctx context.Context, inst *store.Instance, isRestart bool) error {

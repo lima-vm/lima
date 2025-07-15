@@ -11,8 +11,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/pkg/downloader"
-	"github.com/lima-vm/lima/pkg/limayaml"
+	"github.com/lima-vm/lima/v2/pkg/downloader"
+	"github.com/lima-vm/lima/v2/pkg/limayaml"
 )
 
 // ErrSkipped is returned when the downloader did not attempt to download the specified file.
