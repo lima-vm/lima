@@ -9,11 +9,6 @@ TAR ?= tar
 ZIP ?= zip
 PLANTUML ?= plantuml # may also be "java -jar plantuml.jar" if installed elsewhere
 
-# The KCONFIG programs are only needed for re-generating the ".config" file.
-# You can install the python "kconfiglib", if you don't have kconfig/kbuild.
-KCONFIG_CONF ?= $(shell command -v kconfig-conf || command -v kbuild-conf || echo oldconfig)
-KCONFIG_MCONF ?= $(shell command -v kconfig-mconf || command -v kbuild-mconf || echo menuconfig)
-
 GOARCH ?= $(shell $(GO) env GOARCH)
 GOHOSTARCH := $(shell $(GO) env GOHOSTARCH)
 GOHOSTOS := $(shell $(GO) env GOHOSTOS)
@@ -95,7 +90,7 @@ help-targets:
 	@echo  '- helpers                   : Copy nerdctl.lima, apptainer.lima, docker.lima, podman.lima, and kubectl.lima'
 	@echo
 	@echo  'Targets for files in _output/share/lima/:'
-	@echo  '- guestagents               : Build guestagents for archs enabled by CONFIG_GUESTAGENT_ARCH_*'
+	@echo  '- guestagents               : Build guestagents'
 	@echo  '- native-guestagent         : Build guestagent for native arch'
 	@echo  '- additional-guestagents    : Build guestagents for archs other than native arch'
 	@echo  '- <arch>-guestagent         : Build guestagent for <arch>: $(sort $(LINUX_GUESTAGENT_ARCHS))'
@@ -143,22 +138,15 @@ minimal: clean limactl native-guestagent default_template
 native: clean limactl helpers native-guestagent templates template_experimentals
 
 ################################################################################
-# Kconfig
-config: Kconfig
-	$(warning Kconfig is deprecated since Lima v1.2 and will be removed in Lima v2.0.)
-	$(KCONFIG_CONF) $<
-
-menuconfig: Kconfig
-	$(warning Kconfig is deprecated since Lima v1.2 and will be removed in Lima v2.0.)
-	MENUCONFIG_STYLE=aquatic \
-	$(KCONFIG_MCONF) $<
-
-# Copy the default config, if not overridden locally
-# This is done to avoid a dependency on KCONFIG tools
-.config: config.mk
-	cp $^ $@
-
--include .config
+# These configs were once customizable but should no longer be changed.
+CONFIG_GUESTAGENT_OS_LINUX=y
+CONFIG_GUESTAGENT_ARCH_X8664=y
+CONFIG_GUESTAGENT_ARCH_AARCH64=y
+CONFIG_GUESTAGENT_ARCH_ARMV7L=y
+CONFIG_GUESTAGENT_ARCH_PPC64LE=y
+CONFIG_GUESTAGENT_ARCH_RISCV64=y
+CONFIG_GUESTAGENT_ARCH_S390X=y
+CONFIG_GUESTAGENT_COMPRESS=y
 
 ################################################################################
 .PHONY: binaries
