@@ -29,6 +29,7 @@ import (
 	"github.com/lima-vm/lima/pkg/driver"
 	"github.com/lima-vm/lima/pkg/driverutil"
 	"github.com/lima-vm/lima/pkg/freeport"
+	"github.com/lima-vm/lima/pkg/guestagent"
 	guestagentapi "github.com/lima-vm/lima/pkg/guestagent/api"
 	guestagentclient "github.com/lima-vm/lima/pkg/guestagent/api/client"
 	hostagentapi "github.com/lima-vm/lima/pkg/hostagent/api"
@@ -72,6 +73,9 @@ type HostAgent struct {
 
 	guestAgentAliveCh     chan struct{} // closed on establishing the connection
 	guestAgentAliveChOnce sync.Once
+
+	guestIPv4Address string
+	guestIPv6Address string
 }
 
 type options struct {
@@ -413,7 +417,9 @@ func (a *HostAgent) startRoutinesAndWait(ctx context.Context, errCh <-chan error
 
 func (a *HostAgent) Info(_ context.Context) (*hostagentapi.Info, error) {
 	info := &hostagentapi.Info{
-		SSHLocalPort: a.sshLocalPort,
+		SSHLocalPort:     a.sshLocalPort,
+		GuestIPv4Address: a.guestIPv4Address,
+		GuestIPv6Address: a.guestIPv6Address,
 	}
 	return info, nil
 }
@@ -514,6 +520,70 @@ sudo chown -R "${USER}" /run/host-services`
 		}
 		return errors.Join(rmErrs...)
 	})
+
+	// Get instance IP Address
+	if !*a.instConfig.Plain {
+		// Collect IP output from guestagent
+		out, err := a.client.IPv4(ctx)
+		if err != nil {
+			logrus.Warnf("Received error from guestagent on collecting IPv4")
+		}
+
+		// Update to hostagent struct
+		if err := a.setGuestIPv4Address(out); err != nil {
+			logrus.Warnf("Received error from parsing IPv4")
+		}
+
+		out, err = a.client.IPv6(ctx)
+		if err != nil {
+			logrus.Warnf("Received error from guestagent on collecting IPv6")
+		}
+
+		if err := a.setGuestIPv6Address(out); err != nil {
+			logrus.Warnf("Received error from parsing IPv6")
+		}
+	}
+
+	// Plain Mode: Get instance IP Address
+	if *a.instConfig.Plain {
+		ifaceIPv4, err := a.getDefaultInterfaceSSH(ctx, "4")
+		if err != nil {
+			errs = append(errs, err)
+		}
+		outIPv4, err := a.getInterfaceInfoSSH(ctx, "4", ifaceIPv4)
+		if err != nil {
+			errs = append(errs, err)
+		}
+
+		cmOutIPv4 := guestagentapi.CommandOutput{
+			IsJson:  true,
+			Payload: outIPv4,
+		}
+
+		if err := a.setGuestIPv4Address(&cmOutIPv4); err != nil {
+			logrus.Warnf("Received error from parsing IPv4")
+		}
+
+		// IPv6
+		ifaceIPv6, err := a.getDefaultInterfaceSSH(ctx, "6")
+		if err != nil {
+			errs = append(errs, err)
+		}
+		outIPv6, err := a.getInterfaceInfoSSH(ctx, "6", ifaceIPv6)
+		if err != nil {
+			errs = append(errs, err)
+		}
+
+		cmOutIPv6 := guestagentapi.CommandOutput{
+			IsJson:  true,
+			Payload: outIPv6,
+		}
+
+		if err := a.setGuestIPv6Address(&cmOutIPv6); err != nil {
+			logrus.Warnf("Received error from parsing IPv4")
+		}
+	}
+
 	return errors.Join(errs...)
 }
 
@@ -669,7 +739,6 @@ func (a *HostAgent) processGuestAgentEvents(ctx context.Context, client *guestag
 			a.grpcPortForwarder.OnEvent(ctx, client, ev)
 		}
 	}
-
 	if err := client.Events(ctx, onEvent); err != nil {
 		if status.Code(err) == codes.Canceled {
 			return context.Canceled
@@ -684,7 +753,7 @@ const (
 	verbCancel  = "cancel"
 )
 
-func executeSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, command ...string) error {
+func executeSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, command ...string) ([]byte, error) {
 	args := sshConfig.Args()
 	args = append(args,
 		"-p", strconv.Itoa(port),
@@ -693,10 +762,11 @@ func executeSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, command
 	)
 	args = append(args, command...)
 	cmd := exec.CommandContext(ctx, sshConfig.Binary(), args...)
-	if out, err := cmd.Output(); err != nil {
-		return fmt.Errorf("failed to run %v: %q: %w", cmd.Args, string(out), err)
+	out, err := cmd.Output()
+	if err != nil {
+		return out, fmt.Errorf("failed to run %v: %q: %w", cmd.Args, string(out), err)
 	}
-	return nil
+	return out, nil
 }
 
 func forwardSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, remote, verb string, reverse bool) error {
@@ -726,7 +796,7 @@ func forwardSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, 
 		case verbForward:
 			if reverse {
 				logrus.Infof("Forwarding %q (host) to %q (guest)", local, remote)
-				if err := executeSSH(ctx, sshConfig, port, "rm", "-f", remote); err != nil {
+				if _, err := executeSSH(ctx, sshConfig, port, "rm", "-f", remote); err != nil {
 					logrus.WithError(err).Warnf("Failed to clean up %q (guest) before setting up forwarding", remote)
 				}
 			} else {
@@ -741,7 +811,7 @@ func forwardSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, 
 		case verbCancel:
 			if reverse {
 				logrus.Infof("Stopping forwarding %q (host) to %q (guest)", local, remote)
-				if err := executeSSH(ctx, sshConfig, port, "rm", "-f", remote); err != nil {
+				if _, err := executeSSH(ctx, sshConfig, port, "rm", "-f", remote); err != nil {
 					logrus.WithError(err).Warnf("Failed to clean up %q (guest) after stopping forwarding", remote)
 				}
 			} else {
@@ -762,7 +832,7 @@ func forwardSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, 
 		if verb == verbForward && strings.HasPrefix(local, "/") {
 			if reverse {
 				logrus.WithError(err).Warnf("Failed to set up forward from %q (host) to %q (guest)", local, remote)
-				if err := executeSSH(ctx, sshConfig, port, "rm", "-f", remote); err != nil {
+				if _, err := executeSSH(ctx, sshConfig, port, "rm", "-f", remote); err != nil {
 					logrus.WithError(err).Warnf("Failed to clean up %q (guest) after forwarding failed", remote)
 				}
 			} else {
@@ -802,4 +872,102 @@ func copyToHost(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, 
 		return fmt.Errorf("can't write to local file %q: %w", local, err)
 	}
 	return nil
+}
+
+// NetworkInterfaceInfo represents a network interface output from `iproute2`.
+type NetworkInterfaceInfo struct {
+	IfName   string     `json:"ifname"`
+	AddrInfo []AddrInfo `json:"addr_info"`
+}
+
+type AddrInfo struct {
+	Family string `json:"family"`
+	Local  string `json:"local"`
+}
+
+// extractIP extracts the IP address from JSON output.
+func (a *HostAgent) extractIP(o *guestagentapi.CommandOutput) (string, error) {
+	if o == nil {
+		logrus.Warnf("There is no default interfaces")
+		return "", nil
+	}
+	if !o.IsJson {
+		return "", errors.New("IP Output must be in JSON format")
+	}
+
+	if len(o.Payload) == 0 {
+		return "", nil
+	}
+
+	var ifaceInfo []NetworkInterfaceInfo
+	if err := json.Unmarshal(o.Payload, &ifaceInfo); err != nil {
+		logrus.Infof("Err unmashalling ifaceInfo")
+		return "", err
+	}
+
+	return ifaceInfo[0].AddrInfo[0].Local, nil
+}
+
+// setGuestIPv4Address sets IPv4 info on the host agent.
+func (a *HostAgent) setGuestIPv4Address(o *guestagentapi.CommandOutput) error {
+	ip, err := a.extractIP(o)
+	if err != nil {
+		return err
+	}
+	a.guestIPv4Address = ip
+	return nil
+}
+
+// setGuestIPv6Address sets IPv6 info on the host agent.
+func (a *HostAgent) setGuestIPv6Address(o *guestagentapi.CommandOutput) error {
+	ip, err := a.extractIP(o)
+	if err != nil {
+		return err
+	}
+	a.guestIPv6Address = ip
+	return nil
+}
+
+// getDefaultInterfaceSSH fetches the default interface for IPv4 or IPv6 via SSH.
+func (a *HostAgent) getDefaultInterfaceSSH(ctx context.Context, ipVersion string) (string, error) {
+	args := []string{"-j", "route", "show", "default"}
+	if ipVersion == "6" {
+		args = append([]string{"-6"}, args...)
+	} else {
+		args = append([]string{"-4"}, args...)
+	}
+
+	cmd := "ip " + strings.Join(args, " ")
+	output, err := executeSSH(ctx, a.sshConfig, a.sshLocalPort, cmd)
+	if err != nil {
+		return "", errors.New("failed to run `ip route show default`")
+	}
+
+	var routes []guestagent.RouteEntry
+	if err := json.Unmarshal(output, &routes); err != nil {
+		return "", errors.New("failed to unmarshal route JSON")
+	}
+
+	// return nil if no default interface
+	if len(routes) == 0 || routes[0].Dev == "" {
+		return "", nil
+	}
+
+	return routes[0].Dev, nil
+}
+
+// getInterfaceInfoSSH fetches the interface information for IPv4 or IPv6 via SSH.
+func (a *HostAgent) getInterfaceInfoSSH(ctx context.Context, ipVersion, iface string) ([]byte, error) {
+	if iface == "" {
+		return nil, nil
+	}
+
+	args := []string{"-j", "address", "show", "dev", iface}
+	if ipVersion == "6" {
+		args = append([]string{"-6"}, args...)
+	} else {
+		args = append([]string{"-4"}, args...)
+	}
+	cmd := "ip " + strings.Join(args, " ")
+	return executeSSH(ctx, a.sshConfig, a.sshLocalPort, cmd)
 }

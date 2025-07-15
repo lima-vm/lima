@@ -5,8 +5,10 @@ package guestagent
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
+	"os/exec"
 	"reflect"
 	"sync"
 	"syscall"
@@ -186,6 +188,7 @@ func (a *agent) collectEvent(ctx context.Context, st eventState) (*api.Event, ev
 	}
 	ev.LocalPortsAdded, ev.LocalPortsRemoved = comparePorts(st.ports, newSt.ports)
 	ev.Time = timestamppb.Now()
+
 	return ev, newSt
 }
 
@@ -367,4 +370,78 @@ func (a *agent) HandleInotify(event *api.Inotify) {
 			logrus.Errorf("error in inotify handle. Event: %s, Error: %s", event, err)
 		}
 	}
+}
+
+func (a *agent) IPv4(ctx context.Context) (*api.CommandOutput, error) {
+	return a.getIPAddress(ctx, "4")
+}
+
+func (a *agent) IPv6(ctx context.Context) (*api.CommandOutput, error) {
+	return a.getIPAddress(ctx, "6")
+}
+
+// getIPAddress performs two steps:
+// (1) Identifies the default interface using "ip route show default".
+// (2) Retrieves interface details for IPv4 or IPv6.
+// Returns nil if no default interface is found.
+func (a *agent) getIPAddress(_ context.Context, ipVersion string) (*api.CommandOutput, error) {
+	// Get default interface
+	iface, err := getDefaultInterface(ipVersion)
+	if err != nil {
+		logrus.Errorf("Error getting default interface: %v", err)
+	}
+
+	// Get Interface info
+	output, err := getInterfaceInfo(ipVersion, iface)
+	if err != nil {
+		logrus.Errorf("Error getting interface info for %s: %v", iface, err)
+	}
+
+	return &api.CommandOutput{
+		IsJson:  true,
+		Payload: output,
+	}, err
+}
+
+// getDefaultInterface fetches the default interface for IPv4 or IPv6.
+func getDefaultInterface(ipVersion string) (string, error) {
+	args := []string{"-j", "route", "show", "default"}
+	if ipVersion == "6" {
+		args = append([]string{"-6"}, args...)
+	} else {
+		args = append([]string{"-4"}, args...)
+	}
+
+	output, err := exec.Command("ip", args...).Output()
+	if err != nil {
+		return "", errors.New("failed to run `ip route show default`")
+	}
+
+	var routes []RouteEntry
+	if err := json.Unmarshal(output, &routes); err != nil {
+		return "", errors.New("failed to unmarshal route JSON")
+	}
+
+	// return nil if no default interface
+	if len(routes) == 0 || routes[0].Dev == "" {
+		return "", nil
+	}
+
+	return routes[0].Dev, nil
+}
+
+// getInterfaceInfo fetches the interface information for IPv4 or IPv6.
+func getInterfaceInfo(ipVersion, iface string) ([]byte, error) {
+	// No default route found
+	if iface == "" {
+		return nil, nil
+	}
+
+	args := []string{"-j", "address", "show", "dev", iface}
+	if ipVersion == "6" {
+		args = append([]string{"-6"}, args...)
+	} else {
+		args = append([]string{"-4"}, args...)
+	}
+	return exec.Command("ip", args...).Output()
 }
