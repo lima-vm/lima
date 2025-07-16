@@ -15,7 +15,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/lima-vm/lima/pkg/textutil"
+	"github.com/lima-vm/lima/v2/pkg/textutil"
 )
 
 //go:embed lima-vm@INSTANCE.service

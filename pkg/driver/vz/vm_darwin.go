@@ -25,14 +25,14 @@ import (
 	"github.com/lima-vm/go-qcow2reader/image/raw"
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/pkg/imgutil/proxyimgutil"
-	"github.com/lima-vm/lima/pkg/iso9660util"
-	"github.com/lima-vm/lima/pkg/limayaml"
-	"github.com/lima-vm/lima/pkg/networks"
-	"github.com/lima-vm/lima/pkg/networks/usernet"
-	"github.com/lima-vm/lima/pkg/osutil"
-	"github.com/lima-vm/lima/pkg/store"
-	"github.com/lima-vm/lima/pkg/store/filenames"
+	"github.com/lima-vm/lima/v2/pkg/imgutil/proxyimgutil"
+	"github.com/lima-vm/lima/v2/pkg/iso9660util"
+	"github.com/lima-vm/lima/v2/pkg/limayaml"
+	"github.com/lima-vm/lima/v2/pkg/networks"
+	"github.com/lima-vm/lima/v2/pkg/networks/usernet"
+	"github.com/lima-vm/lima/v2/pkg/osutil"
+	"github.com/lima-vm/lima/v2/pkg/store"
+	"github.com/lima-vm/lima/v2/pkg/store/filenames"
 )
 
 // diskImageCachingMode is set to DiskImageCachingModeCached so as to avoid disk corruption on ARM:

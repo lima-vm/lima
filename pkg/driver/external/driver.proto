@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "github.com/lima-vm/lima/pkg/driver/external";
+option go_package = "github.com/lima-vm/lima/v2/pkg/driver/external";
 
 import "google/protobuf/empty.proto";
 

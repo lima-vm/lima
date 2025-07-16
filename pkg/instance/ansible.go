@@ -13,9 +13,9 @@ import (
 	"github.com/goccy/go-yaml"
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/pkg/limayaml"
-	"github.com/lima-vm/lima/pkg/store"
-	"github.com/lima-vm/lima/pkg/store/filenames"
+	"github.com/lima-vm/lima/v2/pkg/limayaml"
+	"github.com/lima-vm/lima/v2/pkg/store"
+	"github.com/lima-vm/lima/v2/pkg/store/filenames"
 )
 
 func runAnsibleProvision(ctx context.Context, inst *store.Instance) error {

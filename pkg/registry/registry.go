@@ -14,9 +14,9 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/pkg/driver"
-	"github.com/lima-vm/lima/pkg/driver/external/client"
-	"github.com/lima-vm/lima/pkg/usrlocalsharelima"
+	"github.com/lima-vm/lima/v2/pkg/driver"
+	"github.com/lima-vm/lima/v2/pkg/driver/external/client"
+	"github.com/lima-vm/lima/v2/pkg/usrlocalsharelima"
 )
 
 const (

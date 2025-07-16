@@ -12,8 +12,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/lima-vm/lima/pkg/hostagent/api"
-	"github.com/lima-vm/lima/pkg/httpclientutil"
+	"github.com/lima-vm/lima/v2/pkg/hostagent/api"
+	"github.com/lima-vm/lima/v2/pkg/httpclientutil"
 )
 
 type HostAgentClient interface {

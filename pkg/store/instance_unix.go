@@ -5,7 +5,7 @@
 
 package store
 
-import "github.com/lima-vm/lima/pkg/limayaml"
+import "github.com/lima-vm/lima/v2/pkg/limayaml"
 
 func inspectStatus(instDir string, inst *Instance, y *limayaml.LimaYAML) {
 	inspectStatusWithPIDFiles(instDir, inst, y)

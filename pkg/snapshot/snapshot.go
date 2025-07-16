@@ -7,8 +7,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/lima-vm/lima/pkg/driverutil"
-	"github.com/lima-vm/lima/pkg/store"
+	"github.com/lima-vm/lima/v2/pkg/driverutil"
+	"github.com/lima-vm/lima/v2/pkg/store"
 )
 
 func Del(ctx context.Context, inst *store.Instance, tag string) error {

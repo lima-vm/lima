@@ -13,7 +13,7 @@ import (
 
 	"gotest.tools/v3/assert"
 
-	"github.com/lima-vm/lima/pkg/limayaml"
+	"github.com/lima-vm/lima/v2/pkg/limayaml"
 )
 
 const separator = string(filepath.Separator)

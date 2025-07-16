@@ -17,11 +17,11 @@ import (
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/lima-vm/lima/pkg/guestagent/api"
-	"github.com/lima-vm/lima/pkg/guestagent/iptables"
-	"github.com/lima-vm/lima/pkg/guestagent/kubernetesservice"
-	"github.com/lima-vm/lima/pkg/guestagent/procnettcp"
-	"github.com/lima-vm/lima/pkg/guestagent/timesync"
+	"github.com/lima-vm/lima/v2/pkg/guestagent/api"
+	"github.com/lima-vm/lima/v2/pkg/guestagent/iptables"
+	"github.com/lima-vm/lima/v2/pkg/guestagent/kubernetesservice"
+	"github.com/lima-vm/lima/v2/pkg/guestagent/procnettcp"
+	"github.com/lima-vm/lima/v2/pkg/guestagent/timesync"
 )
 
 func New(newTicker func() (<-chan time.Time, func()), iptablesIdle time.Duration) (Agent, error) {

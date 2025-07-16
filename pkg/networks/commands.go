@@ -10,8 +10,8 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/lima-vm/lima/pkg/osutil"
-	"github.com/lima-vm/lima/pkg/store/dirnames"
+	"github.com/lima-vm/lima/v2/pkg/osutil"
+	"github.com/lima-vm/lima/v2/pkg/store/dirnames"
 )
 
 const (

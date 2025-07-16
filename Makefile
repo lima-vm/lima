@@ -38,7 +38,7 @@ endif
 endif
 endif
 
-PACKAGE := github.com/lima-vm/lima
+PACKAGE := github.com/lima-vm/lima/v2
 
 VERSION := $(shell git describe --match 'v[0-9]*' --dirty='.m' --always --tags)
 VERSION_TRIMMED := $(VERSION:v%=%)

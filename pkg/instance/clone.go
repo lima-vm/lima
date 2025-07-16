@@ -15,9 +15,9 @@ import (
 
 	continuityfs "github.com/containerd/continuity/fs"
 
-	"github.com/lima-vm/lima/pkg/osutil"
-	"github.com/lima-vm/lima/pkg/store"
-	"github.com/lima-vm/lima/pkg/store/filenames"
+	"github.com/lima-vm/lima/v2/pkg/osutil"
+	"github.com/lima-vm/lima/v2/pkg/store"
+	"github.com/lima-vm/lima/v2/pkg/store/filenames"
 )
 
 func Clone(_ context.Context, oldInst *store.Instance, newInstName string) (*store.Instance, error) {

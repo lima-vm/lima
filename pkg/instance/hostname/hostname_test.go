@@ -8,7 +8,7 @@ import (
 
 	"gotest.tools/v3/assert"
 
-	"github.com/lima-vm/lima/pkg/instance/hostname"
+	"github.com/lima-vm/lima/v2/pkg/instance/hostname"
 )
 
 func TestFromInstName(t *testing.T) {

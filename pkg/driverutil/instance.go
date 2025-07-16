@@ -8,10 +8,10 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/pkg/driver"
-	"github.com/lima-vm/lima/pkg/driver/external/server"
-	"github.com/lima-vm/lima/pkg/registry"
-	"github.com/lima-vm/lima/pkg/store"
+	"github.com/lima-vm/lima/v2/pkg/driver"
+	"github.com/lima-vm/lima/v2/pkg/driver/external/server"
+	"github.com/lima-vm/lima/v2/pkg/registry"
+	"github.com/lima-vm/lima/v2/pkg/store"
 )
 
 // CreateConfiguredDriver creates a driver.ConfiguredDriver for the given instance.

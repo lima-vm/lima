@@ -8,7 +8,7 @@ import (
 
 	"gotest.tools/v3/assert"
 
-	"github.com/lima-vm/lima/pkg/ptr"
+	"github.com/lima-vm/lima/v2/pkg/ptr"
 )
 
 func TestMarshalEmpty(t *testing.T) {

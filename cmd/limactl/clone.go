@@ -11,13 +11,13 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/lima-vm/lima/cmd/limactl/editflags"
-	"github.com/lima-vm/lima/pkg/instance"
-	"github.com/lima-vm/lima/pkg/limayaml"
-	networks "github.com/lima-vm/lima/pkg/networks/reconcile"
-	"github.com/lima-vm/lima/pkg/store"
-	"github.com/lima-vm/lima/pkg/store/filenames"
-	"github.com/lima-vm/lima/pkg/yqutil"
+	"github.com/lima-vm/lima/v2/cmd/limactl/editflags"
+	"github.com/lima-vm/lima/v2/pkg/instance"
+	"github.com/lima-vm/lima/v2/pkg/limayaml"
+	networks "github.com/lima-vm/lima/v2/pkg/networks/reconcile"
+	"github.com/lima-vm/lima/v2/pkg/store"
+	"github.com/lima-vm/lima/v2/pkg/store/filenames"
+	"github.com/lima-vm/lima/v2/pkg/yqutil"
 )
 
 func newCloneCommand() *cobra.Command {

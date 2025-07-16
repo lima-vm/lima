@@ -19,12 +19,12 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/lima-vm/lima/pkg/instance"
-	"github.com/lima-vm/lima/pkg/ioutilx"
-	"github.com/lima-vm/lima/pkg/limayaml"
-	networks "github.com/lima-vm/lima/pkg/networks/reconcile"
-	"github.com/lima-vm/lima/pkg/sshutil"
-	"github.com/lima-vm/lima/pkg/store"
+	"github.com/lima-vm/lima/v2/pkg/instance"
+	"github.com/lima-vm/lima/v2/pkg/ioutilx"
+	"github.com/lima-vm/lima/v2/pkg/limayaml"
+	networks "github.com/lima-vm/lima/v2/pkg/networks/reconcile"
+	"github.com/lima-vm/lima/v2/pkg/sshutil"
+	"github.com/lima-vm/lima/v2/pkg/store"
 )
 
 const shellHelp = `Execute shell in Lima

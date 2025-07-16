@@ -5,7 +5,7 @@
 
 package qemu
 
-import "github.com/lima-vm/lima/pkg/registry"
+import "github.com/lima-vm/lima/v2/pkg/registry"
 
 func init() {
 	registry.Register(New())

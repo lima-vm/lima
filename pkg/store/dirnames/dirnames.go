@@ -9,7 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/lima-vm/lima/pkg/store/filenames"
+	"github.com/lima-vm/lima/v2/pkg/store/filenames"
 )
 
 // DotLima is a directory that appears under the home directory.

@@ -22,16 +22,16 @@ import (
 	"github.com/docker/go-units"
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/pkg/debugutil"
-	"github.com/lima-vm/lima/pkg/instance/hostname"
-	"github.com/lima-vm/lima/pkg/iso9660util"
-	"github.com/lima-vm/lima/pkg/limayaml"
-	"github.com/lima-vm/lima/pkg/localpathutil"
-	"github.com/lima-vm/lima/pkg/networks"
-	"github.com/lima-vm/lima/pkg/networks/usernet"
-	"github.com/lima-vm/lima/pkg/osutil"
-	"github.com/lima-vm/lima/pkg/sshutil"
-	"github.com/lima-vm/lima/pkg/store/filenames"
+	"github.com/lima-vm/lima/v2/pkg/debugutil"
+	"github.com/lima-vm/lima/v2/pkg/instance/hostname"
+	"github.com/lima-vm/lima/v2/pkg/iso9660util"
+	"github.com/lima-vm/lima/v2/pkg/limayaml"
+	"github.com/lima-vm/lima/v2/pkg/localpathutil"
+	"github.com/lima-vm/lima/v2/pkg/networks"
+	"github.com/lima-vm/lima/v2/pkg/networks/usernet"
+	"github.com/lima-vm/lima/v2/pkg/osutil"
+	"github.com/lima-vm/lima/v2/pkg/sshutil"
+	"github.com/lima-vm/lima/v2/pkg/store/filenames"
 )
 
 var netLookupIP = func(host string) []net.IP {

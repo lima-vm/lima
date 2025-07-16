@@ -11,7 +11,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	pb "github.com/lima-vm/lima/pkg/driver/external"
+	pb "github.com/lima-vm/lima/v2/pkg/driver/external"
 )
 
 type DriverClient struct {

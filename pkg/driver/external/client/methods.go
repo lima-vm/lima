@@ -12,9 +12,9 @@ import (
 
 	"google.golang.org/protobuf/types/known/emptypb"
 
-	"github.com/lima-vm/lima/pkg/driver"
-	pb "github.com/lima-vm/lima/pkg/driver/external"
-	"github.com/lima-vm/lima/pkg/store"
+	"github.com/lima-vm/lima/v2/pkg/driver"
+	pb "github.com/lima-vm/lima/v2/pkg/driver/external"
+	"github.com/lima-vm/lima/v2/pkg/store"
 )
 
 func (d *DriverClient) Validate() error {

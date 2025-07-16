@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/lima-vm/lima/pkg/driverutil"
-	"github.com/lima-vm/lima/pkg/store"
+	"github.com/lima-vm/lima/v2/pkg/driverutil"
+	"github.com/lima-vm/lima/v2/pkg/store"
 )
 
 func Delete(ctx context.Context, inst *store.Instance, force bool) error {

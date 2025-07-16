@@ -12,7 +12,7 @@ import (
 	"github.com/coreos/go-semver/semver"
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/pkg/osutil"
+	"github.com/lima-vm/lima/v2/pkg/osutil"
 )
 
 func createRosettaDirectoryShareConfiguration() (*vz.VirtioFileSystemDeviceConfiguration, error) {

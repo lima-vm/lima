@@ -28,17 +28,17 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/cpu"
 
-	"github.com/lima-vm/lima/pkg/instance/hostname"
-	"github.com/lima-vm/lima/pkg/ioutilx"
-	"github.com/lima-vm/lima/pkg/localpathutil"
-	. "github.com/lima-vm/lima/pkg/must"
-	"github.com/lima-vm/lima/pkg/networks"
-	"github.com/lima-vm/lima/pkg/osutil"
-	"github.com/lima-vm/lima/pkg/ptr"
-	"github.com/lima-vm/lima/pkg/store/dirnames"
-	"github.com/lima-vm/lima/pkg/store/filenames"
-	"github.com/lima-vm/lima/pkg/version"
-	"github.com/lima-vm/lima/pkg/version/versionutil"
+	"github.com/lima-vm/lima/v2/pkg/instance/hostname"
+	"github.com/lima-vm/lima/v2/pkg/ioutilx"
+	"github.com/lima-vm/lima/v2/pkg/localpathutil"
+	. "github.com/lima-vm/lima/v2/pkg/must"
+	"github.com/lima-vm/lima/v2/pkg/networks"
+	"github.com/lima-vm/lima/v2/pkg/osutil"
+	"github.com/lima-vm/lima/v2/pkg/ptr"
+	"github.com/lima-vm/lima/v2/pkg/store/dirnames"
+	"github.com/lima-vm/lima/v2/pkg/store/filenames"
+	"github.com/lima-vm/lima/v2/pkg/version"
+	"github.com/lima-vm/lima/v2/pkg/version/versionutil"
 )
 
 const (

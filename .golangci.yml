@@ -90,7 +90,7 @@ linters:
       - name: dot-imports
         arguments:
         - allowedPackages:
-          - github.com/lima-vm/lima/pkg/must
+          - github.com/lima-vm/lima/v2/pkg/must
       - name: empty-block
       - name: error-naming
       - name: error-return

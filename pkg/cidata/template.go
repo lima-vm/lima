@@ -11,9 +11,9 @@ import (
 	"io/fs"
 	"path"
 
-	"github.com/lima-vm/lima/pkg/identifiers"
-	"github.com/lima-vm/lima/pkg/iso9660util"
-	"github.com/lima-vm/lima/pkg/textutil"
+	"github.com/lima-vm/lima/v2/pkg/identifiers"
+	"github.com/lima-vm/lima/v2/pkg/iso9660util"
+	"github.com/lima-vm/lima/v2/pkg/textutil"
 )
 
 //go:embed cidata.TEMPLATE.d

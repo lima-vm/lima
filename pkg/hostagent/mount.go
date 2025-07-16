@@ -12,8 +12,8 @@ import (
 	"github.com/lima-vm/sshocker/pkg/reversesshfs"
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/pkg/ioutilx"
-	"github.com/lima-vm/lima/pkg/limayaml"
+	"github.com/lima-vm/lima/v2/pkg/ioutilx"
+	"github.com/lima-vm/lima/v2/pkg/limayaml"
 )
 
 type mount struct {

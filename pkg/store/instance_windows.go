@@ -8,8 +8,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/lima-vm/lima/pkg/executil"
-	"github.com/lima-vm/lima/pkg/limayaml"
+	"github.com/lima-vm/lima/v2/pkg/executil"
+	"github.com/lima-vm/lima/v2/pkg/limayaml"
 )
 
 func inspectStatus(instDir string, inst *Instance, y *limayaml.LimaYAML) {

@@ -24,10 +24,10 @@ import (
 	"github.com/opencontainers/go-digest"
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/pkg/httpclientutil"
-	"github.com/lima-vm/lima/pkg/localpathutil"
-	"github.com/lima-vm/lima/pkg/lockutil"
-	"github.com/lima-vm/lima/pkg/progressbar"
+	"github.com/lima-vm/lima/v2/pkg/httpclientutil"
+	"github.com/lima-vm/lima/v2/pkg/localpathutil"
+	"github.com/lima-vm/lima/v2/pkg/lockutil"
+	"github.com/lima-vm/lima/v2/pkg/progressbar"
 )
 
 // HideProgress is used only for testing.

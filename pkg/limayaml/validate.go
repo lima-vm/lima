@@ -21,12 +21,12 @@ import (
 	"github.com/docker/go-units"
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/pkg/identifiers"
-	"github.com/lima-vm/lima/pkg/localpathutil"
-	"github.com/lima-vm/lima/pkg/networks"
-	"github.com/lima-vm/lima/pkg/osutil"
-	"github.com/lima-vm/lima/pkg/version"
-	"github.com/lima-vm/lima/pkg/version/versionutil"
+	"github.com/lima-vm/lima/v2/pkg/identifiers"
+	"github.com/lima-vm/lima/v2/pkg/localpathutil"
+	"github.com/lima-vm/lima/v2/pkg/networks"
+	"github.com/lima-vm/lima/v2/pkg/osutil"
+	"github.com/lima-vm/lima/v2/pkg/version"
+	"github.com/lima-vm/lima/v2/pkg/version/versionutil"
 )
 
 func Validate(y *LimaYAML, warn bool) error {

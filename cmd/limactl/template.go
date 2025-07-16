@@ -12,10 +12,10 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/lima-vm/lima/pkg/limatmpl"
-	"github.com/lima-vm/lima/pkg/limayaml"
-	"github.com/lima-vm/lima/pkg/store/dirnames"
-	"github.com/lima-vm/lima/pkg/yqutil"
+	"github.com/lima-vm/lima/v2/pkg/limatmpl"
+	"github.com/lima-vm/lima/v2/pkg/limayaml"
+	"github.com/lima-vm/lima/v2/pkg/store/dirnames"
+	"github.com/lima-vm/lima/v2/pkg/yqutil"
 )
 
 func newTemplateCommand() *cobra.Command {

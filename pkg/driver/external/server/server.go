@@ -21,12 +21,12 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
 
-	"github.com/lima-vm/lima/pkg/driver"
-	pb "github.com/lima-vm/lima/pkg/driver/external"
-	"github.com/lima-vm/lima/pkg/driver/external/client"
-	"github.com/lima-vm/lima/pkg/registry"
-	"github.com/lima-vm/lima/pkg/store"
-	"github.com/lima-vm/lima/pkg/store/filenames"
+	"github.com/lima-vm/lima/v2/pkg/driver"
+	pb "github.com/lima-vm/lima/v2/pkg/driver/external"
+	"github.com/lima-vm/lima/v2/pkg/driver/external/client"
+	"github.com/lima-vm/lima/v2/pkg/registry"
+	"github.com/lima-vm/lima/v2/pkg/store"
+	"github.com/lima-vm/lima/v2/pkg/store/filenames"
 )
 
 type DriverServer struct {
