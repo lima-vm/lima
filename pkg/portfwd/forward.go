@@ -35,6 +35,10 @@ func NewPortForwarder(rules []limayaml.PortForward, ignoreTCP, ignoreUDP bool) *
 
 func (fw *Forwarder) OnEvent(ctx context.Context, client *guestagentclient.GuestAgentClient, ev *api.Event) {
 	for _, f := range ev.LocalPortsAdded {
+		// Before forwarding, check if any static rule matches this port otherwise it will be forwarded twice and cause a port conflict
+		if fw.isPortStaticallyForwarded(f) {
+			continue
+		}
 		local, remote := fw.forwardingAddresses(f)
 		if local == "" {
 			if !fw.ignoreTCP && f.Protocol == "tcp" {
@@ -89,6 +93,18 @@ func (fw *Forwarder) forwardingAddresses(guest *api.IPPort) (hostAddr, guestAddr
 		return hostAddress(rule, guest), guest.HostString()
 	}
 	return "", guest.HostString()
+}
+
+func (fw *Forwarder) isPortStaticallyForwarded(guest *api.IPPort) bool {
+	for _, rule := range fw.rules {
+		if !rule.Static {
+			continue
+		}
+		if guest.Port >= int32(rule.GuestPortRange[0]) && guest.Port <= int32(rule.GuestPortRange[1]) {
+			return true
+		}
+	}
+	return false
 }
 
 func hostAddress(rule limayaml.PortForward, guest *api.IPPort) string {
