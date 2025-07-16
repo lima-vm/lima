@@ -1,0 +1,11 @@
+# This is the configuration for protolint.
+# See https://github.com/yoheimuta/protolint/blob/v0.55.6/_example/config/.protolint.yaml for details.
+---
+lint:
+  rules:
+    # Enable all default rules.
+    no_default: false
+  rules_option:
+    # MAX_LINE_LENGTH rule option.
+    max_line_length:
+      max_chars: 100

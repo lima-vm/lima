@@ -514,6 +514,7 @@ lint: check-generated
 	find . -name '*.sh' ! -path "./.git/*" | xargs shfmt -s -d
 	go-licenses check --include_tests ./... --allowed_licenses=$$(cat ./hack/allowed-licenses.txt)
 	ltag -t ./hack/ltag --check -v
+	protolint .
 
 .PHONY: clean
 clean:

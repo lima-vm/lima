@@ -34,7 +34,7 @@ func NewPortForwarder(rules []limayaml.PortForward, ignoreTCP, ignoreUDP bool) *
 }
 
 func (fw *Forwarder) OnEvent(ctx context.Context, client *guestagentclient.GuestAgentClient, ev *api.Event) {
-	for _, f := range ev.LocalPortsAdded {
+	for _, f := range ev.AddedLocalPorts {
 		local, remote := fw.forwardingAddresses(f)
 		if local == "" {
 			if !fw.ignoreTCP && f.Protocol == "tcp" {
@@ -48,7 +48,7 @@ func (fw *Forwarder) OnEvent(ctx context.Context, client *guestagentclient.Guest
 		logrus.Infof("Forwarding %s from %s to %s", strings.ToUpper(f.Protocol), remote, local)
 		fw.closableListeners.Forward(ctx, client, f.Protocol, local, remote)
 	}
-	for _, f := range ev.LocalPortsRemoved {
+	for _, f := range ev.RemovedLocalPorts {
 		local, remote := fw.forwardingAddresses(f)
 		if local == "" {
 			continue

@@ -1,14 +1,15 @@
 syntax = "proto3";
-option go_package = "github.com/lima-vm/lima/v2/pkg/api";
 
 import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/lima-vm/lima/v2/pkg/guestagent/api";
 
 service GuestService {
   rpc GetInfo(google.protobuf.Empty) returns (Info);
   rpc GetEvents(google.protobuf.Empty) returns (stream Event);
   rpc PostInotify(stream Inotify) returns (google.protobuf.Empty);
-  
+
   rpc Tunnel(stream TunnelMessage) returns (stream TunnelMessage);
 }
 
@@ -18,13 +19,13 @@ message Info {
 
 message Event {
   google.protobuf.Timestamp time = 1;
-  repeated IPPort local_ports_added = 2;
-  repeated IPPort local_ports_removed = 3;
+  repeated IPPort added_local_ports = 2;
+  repeated IPPort removed_local_ports = 3;
   repeated string errors = 4;
 }
 
 message IPPort {
-  string protocol = 1; //tcp, udp
+  string protocol = 1; // tcp, udp
   string ip = 2;
   int32 port = 3;
 }
@@ -36,8 +37,8 @@ message Inotify {
 
 message TunnelMessage {
   string id = 1;
-  string protocol = 2; //tcp, udp
+  string protocol = 2; // tcp, udp
   bytes data = 3;
-  string guestAddr = 4;
-  string udpTargetAddr = 5;
+  string guest_addr = 4;
+  string udp_target_addr = 5;
 }

@@ -66,6 +66,10 @@ jobs:
       run: go install github.com/containerd/ltag@v0.3.0
     - name: Check license boilerplates
       run: ltag -t ./hack/ltag --check -v
+    - name: Install protolint
+      run: go install github.com/yoheimuta/protolint/cmd/protolint@v0.55.6
+    - name: Check protobuf files
+      run: protolint .
 
   lint-go:
     name: "Lint Go"

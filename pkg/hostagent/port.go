@@ -86,7 +86,7 @@ func (pf *portForwarder) forwardingAddresses(guest *api.IPPort) (hostAddr, guest
 }
 
 func (pf *portForwarder) OnEvent(ctx context.Context, ev *api.Event) {
-	for _, f := range ev.LocalPortsRemoved {
+	for _, f := range ev.RemovedLocalPorts {
 		if f.Protocol != "tcp" {
 			continue
 		}
@@ -99,7 +99,7 @@ func (pf *portForwarder) OnEvent(ctx context.Context, ev *api.Event) {
 			logrus.WithError(err).Warnf("failed to stop forwarding tcp port %d", f.Port)
 		}
 	}
-	for _, f := range ev.LocalPortsAdded {
+	for _, f := range ev.AddedLocalPorts {
 		if f.Protocol != "tcp" {
 			continue
 		}

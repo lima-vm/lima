@@ -1,13 +1,13 @@
 
-÷
+…
 guestservice.protogoogle/protobuf/empty.protogoogle/protobuf/timestamp.proto"0
 Info(
 local_ports (2.IPPortR
 localPorts"½
 Event.
 time (2.google.protobuf.TimestampRtime3
-local_ports_added (2.IPPortRlocalPortsAdded7
-local_ports_removed (2.IPPortRlocalPortsRemoved
+added_local_ports (2.IPPortRaddedLocalPorts7
+removed_local_ports (2.IPPortRremovedLocalPorts
 errors (	Rerrors"H
 IPPort
 protocol (	Rprotocol
@@ -16,15 +16,16 @@ localPorts"½
 Inotify
 
 mount_path (	R	mountPath.
-time (2.google.protobuf.TimestampRtime"“
+time (2.google.protobuf.TimestampRtime"–
 TunnelMessage
 id (	Rid
 protocol (	Rprotocol
-data (Rdata
-	guestAddr (	R	guestAddr$
-udpTargetAddr (	RudpTargetAddr2È
+data (Rdata
+
+guest_addr (	R	guestAddr&
+udp_target_addr (	RudpTargetAddr2È
 GuestService(
 GetInfo.google.protobuf.Empty.Info-
 	GetEvents.google.protobuf.Empty.Event01
 PostInotify.Inotify.google.protobuf.Empty(,
-Tunnel.TunnelMessage.TunnelMessage(0B$Z"github.com/lima-vm/lima/v2/pkg/apibproto3
+Tunnel.TunnelMessage.TunnelMessage(0B/Z-github.com/lima-vm/lima/v2/pkg/guestagent/apibproto3
