@@ -184,7 +184,7 @@ func (a *agent) collectEvent(ctx context.Context, st eventState) (*api.Event, ev
 		ev.Time = timestamppb.Now()
 		return ev, newSt
 	}
-	ev.LocalPortsAdded, ev.LocalPortsRemoved = comparePorts(st.ports, newSt.ports)
+	ev.AddedLocalPorts, ev.RemovedLocalPorts = comparePorts(st.ports, newSt.ports)
 	ev.Time = timestamppb.Now()
 	return ev, newSt
 }
