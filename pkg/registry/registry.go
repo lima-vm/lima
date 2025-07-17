@@ -177,7 +177,7 @@ func registerDriverFile(path string) {
 			name = strings.TrimSuffix(strings.TrimPrefix(base, "lima-driver-"), ".exe")
 		}
 	} else {
-		if strings.HasPrefix(base, "lima-driver-") {
+		if strings.HasPrefix(base, "lima-driver-") && !strings.HasSuffix(base, ".exe") {
 			name = strings.TrimPrefix(base, "lima-driver-")
 		}
 	}
