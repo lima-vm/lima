@@ -64,9 +64,9 @@ func New() *LimaQemuDriver {
 	}
 }
 
-func (l *LimaQemuDriver) Configure(inst *store.Instance, sshLocalPort int) *driver.ConfiguredDriver {
+func (l *LimaQemuDriver) Configure(inst *store.Instance) *driver.ConfiguredDriver {
 	l.Instance = inst
-	l.SSHLocalPort = sshLocalPort
+	l.SSHLocalPort = inst.SSHLocalPort
 
 	return &driver.ConfiguredDriver{
 		Driver: l,

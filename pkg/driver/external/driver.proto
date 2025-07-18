@@ -42,7 +42,6 @@ message StartResponse {
 
 message SetConfigRequest {
   bytes instance_config_json = 1;
-  int64 ssh_local_port = 3;
 }
 
 message ChangeDisplayPasswordRequest {

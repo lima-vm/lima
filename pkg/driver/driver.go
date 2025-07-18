@@ -80,7 +80,7 @@ type Driver interface {
 	Info() Info
 
 	// SetConfig sets the configuration for the instance.
-	Configure(inst *store.Instance, sshLocalPort int) *ConfiguredDriver
+	Configure(inst *store.Instance) *ConfiguredDriver
 }
 
 type ConfiguredDriver struct {

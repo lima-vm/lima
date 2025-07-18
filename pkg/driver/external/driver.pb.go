@@ -121,7 +121,6 @@ func (x *StartResponse) GetError() string {
 type SetConfigRequest struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
 	InstanceConfigJson []byte                 `protobuf:"bytes,1,opt,name=instance_config_json,json=instanceConfigJson,proto3" json:"instance_config_json,omitempty"`
-	SshLocalPort       int64                  `protobuf:"varint,3,opt,name=ssh_local_port,json=sshLocalPort,proto3" json:"ssh_local_port,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -161,13 +160,6 @@ func (x *SetConfigRequest) GetInstanceConfigJson() []byte {
 		return x.InstanceConfigJson
 	}
 	return nil
-}
-
-func (x *SetConfigRequest) GetSshLocalPort() int64 {
-	if x != nil {
-		return x.SshLocalPort
-	}
-	return 0
 }
 
 type ChangeDisplayPasswordRequest struct {
@@ -487,10 +479,9 @@ const file_pkg_driver_external_driver_proto_rawDesc = "" +
 	"\tinfo_json\x18\x01 \x01(\fR\binfoJson\"?\n" +
 	"\rStartResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x14\n" +
-	"\x05error\x18\x02 \x01(\tR\x05error\"j\n" +
+	"\x05error\x18\x02 \x01(\tR\x05error\"D\n" +
 	"\x10SetConfigRequest\x120\n" +
-	"\x14instance_config_json\x18\x01 \x01(\fR\x12instanceConfigJson\x12$\n" +
-	"\x0essh_local_port\x18\x03 \x01(\x03R\fsshLocalPort\":\n" +
+	"\x14instance_config_json\x18\x01 \x01(\fR\x12instanceConfigJson\":\n" +
 	"\x1cChangeDisplayPasswordRequest\x12\x1a\n" +
 	"\bpassword\x18\x01 \x01(\tR\bpassword\">\n" +
 	"\x1cGetDisplayConnectionResponse\x12\x1e\n" +
@@ -528,7 +519,7 @@ const file_pkg_driver_external_driver_proto_rawDesc = "" +
 	"\x11ForwardGuestAgent\x12\x16.google.protobuf.Empty\x1a\x1a.ForwardGuestAgentResponse\x12@\n" +
 	"\x0eGuestAgentConn\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x126\n" +
 	"\tSetConfig\x12\x11.SetConfigRequest\x1a\x16.google.protobuf.Empty\x120\n" +
-	"\aGetInfo\x12\x16.google.protobuf.Empty\x1a\r.InfoResponseB-Z+github.com/lima-vm/lima/pkg/driver/externalb\x06proto3"
+	"\aGetInfo\x12\x16.google.protobuf.Empty\x1a\r.InfoResponseB0Z.github.com/lima-vm/lima/v2/pkg/driver/externalb\x06proto3"
 
 var (
 	file_pkg_driver_external_driver_proto_rawDescOnce sync.Once
