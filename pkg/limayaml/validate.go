@@ -181,6 +181,10 @@ func Validate(y *LimaYAML, warn bool) error {
 		errs = errors.Join(errs, fmt.Errorf("field `mountType` must not be one of %v (`mountTypesUnsupported`), got %q", y.MountTypesUnsupported, *y.MountType))
 	}
 
+	if *y.Plain && *y.PlainMounts && *y.MountType == REVSSHFS {
+		errs = errors.Join(errs, fmt.Errorf("field `mountType` must not be %v in plain mode", *y.MountType))
+	}
+
 	if warn && runtime.GOOS != "linux" {
 		for i, mount := range y.Mounts {
 			if mount.Virtiofs.QueueSize != nil {

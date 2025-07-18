@@ -555,6 +555,10 @@ guestInstallPrefix: null
 # 🟢 Builtin default: false
 plain: null
 
+# Keep the mounts, in "plain" mode.
+# 🟢 Builtin default: false
+plainMounts: null
+
 # When the "nestedVirtualization" feature is enabled:
 # - Allows running a VM inside the guest VM.
 # - The guest VM must configure QEMU with the `-cpu host` parameters to run a nested VM:

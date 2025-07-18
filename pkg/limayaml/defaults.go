@@ -908,6 +908,16 @@ func FillDefault(y, d, o *LimaYAML, filePath string, warn bool) {
 		y.Plain = ptr.Of(false)
 	}
 
+	if y.PlainMounts == nil {
+		y.PlainMounts = d.PlainMounts
+	}
+	if o.PlainMounts != nil {
+		y.PlainMounts = o.PlainMounts
+	}
+	if y.PlainMounts == nil {
+		y.PlainMounts = ptr.Of(false)
+	}
+
 	fixUpForPlainMode(y)
 }
 
@@ -915,7 +925,9 @@ func fixUpForPlainMode(y *LimaYAML) {
 	if !*y.Plain {
 		return
 	}
-	y.Mounts = nil
+	if !*y.PlainMounts {
+		y.Mounts = nil
+	}
 	y.PortForwards = nil
 	y.Containerd.System = ptr.Of(false)
 	y.Containerd.User = ptr.Of(false)

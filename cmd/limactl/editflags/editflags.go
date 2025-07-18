@@ -92,6 +92,7 @@ func RegisterCreate(cmd *cobra.Command, commentPrefix string) {
 	})
 
 	flags.Bool("plain", false, commentPrefix+"Plain mode. Disables mounts, port forwarding, containerd, etc.")
+	flags.Bool("plain-mounts", false, commentPrefix+"Keep any mounts, of the default type, in plain mode.")
 }
 
 func defaultExprFunc(expr string) func(v *flag.Flag) (string, error) {
@@ -257,6 +258,7 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 		{"disk", d(".disk= \"%sGiB\""), false, false},
 		{"vm-type", d(".vmType = %q"), true, false},
 		{"plain", d(".plain = %s"), true, false},
+		{"plain-mounts", d(".plainMounts = %s"), true, false},
 	}
 	var exprs []string
 	for _, def := range defs {
