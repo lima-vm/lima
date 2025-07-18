@@ -329,6 +329,7 @@ func chooseNextCreatorState(ctx context.Context, tmpl *limatmpl.Template, yq str
 			hdr += editutil.GenerateEditorWarningHeader()
 			var err error
 			tmpl.Bytes, err = editutil.OpenEditor(tmpl.Bytes, hdr)
+			tmpl.Config = nil
 			if err != nil {
 				return tmpl, err
 			}
@@ -336,6 +337,10 @@ func chooseNextCreatorState(ctx context.Context, tmpl *limatmpl.Template, yq str
 				const msg = "Aborting, as requested by saving the file with empty content"
 				logrus.Info(msg)
 				return nil, exitSuccessError{Msg: msg}
+			}
+			err = tmpl.Embed(ctx, true, true)
+			if err != nil {
+				return nil, err
 			}
 			return tmpl, nil
 		case 2: // "Choose another template..."
