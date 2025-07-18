@@ -103,6 +103,31 @@ type InfoFormatSpecificDataVmdkExtent struct {
 }
 
 func convertToRaw(source, dest string) error {
+	if source != dest {
+		return execQemuImgConvert(source, dest)
+	}
+
+	// If source == dest, we need to use a temporary file to avoid file locking issues
+
+	info, err := getInfo(source)
+	if err != nil {
+		return fmt.Errorf("failed to get info for source disk %q: %w", source, err)
+	}
+	if info.Format == "raw" {
+		return nil
+	}
+
+	tempFile := dest + ".lima-qemu-convert.tmp"
+	defer os.Remove(tempFile)
+
+	if err := execQemuImgConvert(source, tempFile); err != nil {
+		return err
+	}
+
+	return os.Rename(tempFile, dest)
+}
+
+func execQemuImgConvert(source, dest string) error {
 	var stdout, stderr bytes.Buffer
 	cmd := exec.Command("qemu-img", "convert", "-O", "raw", source, dest)
 	cmd.Stdout = &stdout

@@ -12,13 +12,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"syscall"
 	"text/template"
 	"time"
 
 	"github.com/docker/go-units"
 	"github.com/lima-vm/go-qcow2reader"
-	"github.com/mattn/go-isatty"
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/downloader"
@@ -29,7 +27,6 @@ import (
 	hostagentevents "github.com/lima-vm/lima/v2/pkg/hostagent/events"
 	"github.com/lima-vm/lima/v2/pkg/imgutil/proxyimgutil"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
-	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/registry"
 	"github.com/lima-vm/lima/v2/pkg/store"
 	"github.com/lima-vm/lima/v2/pkg/store/filenames"
@@ -253,25 +250,7 @@ func Start(ctx context.Context, inst *store.Instance, limactl string, launchHost
 	begin := time.Now() // used for logrus propagation
 
 	if launchHostAgentForeground {
-		logrus.Info("Running the host agent in the foreground")
-		if isatty.IsTerminal(os.Stdin.Fd()) || isatty.IsCygwinTerminal(os.Stdin.Fd()) {
-			// Write message to standard log files to avoid confusing users
-			message := "This log file is not used because `limactl start` was launched in the terminal with the `--foreground` option."
-			if _, err := haStdoutW.WriteString(message); err != nil {
-				return err
-			}
-			if _, err := haStderrW.WriteString(message); err != nil {
-				return err
-			}
-		} else {
-			if err := osutil.Dup2(int(haStdoutW.Fd()), syscall.Stdout); err != nil {
-				return err
-			}
-			if err := osutil.Dup2(int(haStderrW.Fd()), syscall.Stderr); err != nil {
-				return err
-			}
-		}
-		if err := syscall.Exec(limactl, haCmd.Args, haCmd.Environ()); err != nil {
+		if err := execHostAgentForeground(limactl, haCmd); err != nil {
 			return err
 		}
 	} else if err := haCmd.Start(); err != nil {
