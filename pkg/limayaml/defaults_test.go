@@ -120,6 +120,7 @@ func TestFillDefault(t *testing.T) {
 		},
 		NestedVirtualization: ptr.Of(false),
 		Plain:                ptr.Of(false),
+		PlainMounts:          ptr.Of(false),
 		User: User{
 			Name:    ptr.Of(user.Username),
 			Comment: ptr.Of(user.Name),
@@ -508,6 +509,7 @@ func TestFillDefault(t *testing.T) {
 		}
 	}
 	expect.Plain = ptr.Of(false)
+	expect.PlainMounts = ptr.Of(false)
 
 	y = LimaYAML{}
 	FillDefault(&y, &d, &LimaYAML{}, filePath, false)
@@ -751,6 +753,7 @@ func TestFillDefault(t *testing.T) {
 		BinFmt:  ptr.Of(false),
 	}
 	expect.Plain = ptr.Of(false)
+	expect.PlainMounts = ptr.Of(false)
 
 	expect.NestedVirtualization = ptr.Of(false)
 

@@ -49,6 +49,7 @@ type LimaYAML struct {
 	CACertificates       CACertificates `yaml:"caCerts,omitempty" json:"caCerts,omitempty"`
 	Rosetta              Rosetta        `yaml:"rosetta,omitempty" json:"rosetta,omitempty"`
 	Plain                *bool          `yaml:"plain,omitempty" json:"plain,omitempty" jsonschema:"nullable"`
+	PlainMounts          *bool          `yaml:"plainMounts,omitempty" json:"plainMounts,omitempty" jsonschema:"nullable"`
 	TimeZone             *string        `yaml:"timezone,omitempty" json:"timezone,omitempty" jsonschema:"nullable"`
 	NestedVirtualization *bool          `yaml:"nestedVirtualization,omitempty" json:"nestedVirtualization,omitempty" jsonschema:"nullable"`
 	User                 User           `yaml:"user,omitempty" json:"user,omitempty"`
