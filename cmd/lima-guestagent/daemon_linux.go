@@ -7,6 +7,8 @@ import (
 	"errors"
 	"net"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/mdlayher/vsock"
@@ -58,7 +60,43 @@ func daemonAction(cmd *cobra.Command, _ []string) error {
 		// without depending on `bpftrace` binary.
 		// The agent binary will need CAP_BPF file cap.
 		ticker := time.NewTicker(tick)
-		return ticker.C, ticker.Stop
+
+		logrus.Info("register for sighup notifications")
+		sighupC := make(chan os.Signal, 1)
+		signal.Notify(sighupC, syscall.SIGHUP)
+
+		c := make(chan time.Time, 1)
+		go func() {
+			defer close(c)
+			defer close(sighupC)
+			for {
+				select {
+				case _, ok := <-sighupC:
+					if !ok {
+						logrus.Info("Sighup channel closed")
+						sighupC = nil;
+					} else {
+						logrus.Debug("Sighup received")
+						c <- time.Now()
+					}
+				case now, ok := <-ticker.C:
+					if !ok {
+						break;
+					} else {
+						c <- now
+					}
+				}
+			}
+			logrus.Info("ticker stopped")
+		}()
+
+		stop := func() {
+			logrus.Info("stopping ticker")
+			ticker.Stop()
+			signal.Stop(sighupC)
+		}
+
+		return c, stop
 	}
 
 	agent, err := guestagent.New(newTicker, tick*20)
