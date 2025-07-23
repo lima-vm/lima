@@ -61,7 +61,9 @@ func daemonAction(cmd *cobra.Command, _ []string) error {
 		// The agent binary will need CAP_BPF file cap.
 		ticker := time.NewTicker(tick)
 
-		logrus.Info("register for sighup notifications")
+		logrus.Info("Registering SIGHUP handler for externally triggered port mapping updates")
+		// Sending SIGHUP allows external tools to trigger a port mapping update.
+		// E.g., a script reacting to Docker events can trigger a timely update.
 		sighupC := make(chan os.Signal, 1)
 		signal.Notify(sighupC, syscall.SIGHUP)
 
@@ -69,19 +71,19 @@ func daemonAction(cmd *cobra.Command, _ []string) error {
 		go func() {
 			defer close(c)
 			defer close(sighupC)
-			for {
+			for ticker.C != nil {
 				select {
 				case _, ok := <-sighupC:
 					if !ok {
 						logrus.Info("Sighup channel closed")
-						sighupC = nil;
+						sighupC = nil
 					} else {
 						logrus.Debug("Sighup received")
 						c <- time.Now()
 					}
 				case now, ok := <-ticker.C:
 					if !ok {
-						break;
+						ticker.C = nil
 					} else {
 						c <- now
 					}
