@@ -5,9 +5,11 @@
 
 package store
 
-import "github.com/lima-vm/lima/v2/pkg/limayaml"
+import (
+	"github.com/lima-vm/lima/v2/pkg/limatype"
+)
 
-func inspectStatus(instDir string, inst *Instance, y *limayaml.LimaYAML) {
+func inspectStatus(instDir string, inst *limatype.Instance, y *limatype.LimaYAML) {
 	inspectStatusWithPIDFiles(instDir, inst, y)
 }
 

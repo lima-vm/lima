@@ -10,12 +10,12 @@ import (
 
 	"github.com/lima-vm/lima/v2/pkg/driver"
 	"github.com/lima-vm/lima/v2/pkg/driver/external/server"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/registry"
-	"github.com/lima-vm/lima/v2/pkg/store"
 )
 
 // CreateConfiguredDriver creates a driver.ConfiguredDriver for the given instance.
-func CreateConfiguredDriver(inst *store.Instance, sshLocalPort int) (*driver.ConfiguredDriver, error) {
+func CreateConfiguredDriver(inst *limatype.Instance, sshLocalPort int) (*driver.ConfiguredDriver, error) {
 	limaDriver := inst.Config.VMType
 	extDriver, intDriver, exists := registry.Get(*limaDriver)
 	if !exists {

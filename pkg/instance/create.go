@@ -12,6 +12,7 @@ import (
 
 	"github.com/lima-vm/lima/v2/pkg/cidata"
 	"github.com/lima-vm/lima/v2/pkg/driverutil"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/store"
@@ -19,7 +20,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/version"
 )
 
-func Create(ctx context.Context, instName string, instConfig []byte, saveBrokenYAML bool) (*store.Instance, error) {
+func Create(ctx context.Context, instName string, instConfig []byte, saveBrokenYAML bool) (*limatype.Instance, error) {
 	if instName == "" {
 		return nil, errors.New("got empty instName")
 	}

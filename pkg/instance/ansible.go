@@ -13,14 +13,13 @@ import (
 	"github.com/goccy/go-yaml"
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/v2/pkg/limayaml"
-	"github.com/lima-vm/lima/v2/pkg/store"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/store/filenames"
 )
 
-func runAnsibleProvision(ctx context.Context, inst *store.Instance) error {
+func runAnsibleProvision(ctx context.Context, inst *limatype.Instance) error {
 	for _, f := range inst.Config.Provision {
-		if f.Mode == limayaml.ProvisionModeAnsible {
+		if f.Mode == limatype.ProvisionModeAnsible {
 			logrus.Infof("Waiting for ansible playbook %q", f.Playbook)
 			if err := runAnsiblePlaybook(ctx, inst, f.Playbook); err != nil {
 				return err
@@ -30,7 +29,7 @@ func runAnsibleProvision(ctx context.Context, inst *store.Instance) error {
 	return nil
 }
 
-func runAnsiblePlaybook(ctx context.Context, inst *store.Instance, playbook string) error {
+func runAnsiblePlaybook(ctx context.Context, inst *limatype.Instance, playbook string) error {
 	inventory, err := createAnsibleInventory(inst)
 	if err != nil {
 		return err
@@ -44,7 +43,7 @@ func runAnsiblePlaybook(ctx context.Context, inst *store.Instance, playbook stri
 	return cmd.Run()
 }
 
-func createAnsibleInventory(inst *store.Instance) (string, error) {
+func createAnsibleInventory(inst *limatype.Instance) (string, error) {
 	vars := map[string]any{
 		"ansible_connection":      "ssh",
 		"ansible_host":            inst.Hostname,
@@ -67,7 +66,7 @@ func createAnsibleInventory(inst *store.Instance) (string, error) {
 	return inventory, os.WriteFile(inventory, bytes, 0o644)
 }
 
-func getAnsibleEnvironment(inst *store.Instance) []string {
+func getAnsibleEnvironment(inst *limatype.Instance) []string {
 	env := os.Environ()
 	for key, val := range inst.Config.Param {
 		env = append(env, fmt.Sprintf("PARAM_%s=%s", key, val))

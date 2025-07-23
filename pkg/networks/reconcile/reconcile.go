@@ -16,6 +16,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/networks"
 	"github.com/lima-vm/lima/v2/pkg/networks/usernet"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
@@ -39,7 +40,7 @@ func Reconcile(ctx context.Context, newInst string) error {
 			return err
 		}
 		// newInst is about to be started, so its networks should be running
-		if instance.Status != store.StatusRunning && instName != newInst {
+		if instance.Status != limatype.StatusRunning && instName != newInst {
 			continue
 		}
 		for _, nw := range instance.Networks {
