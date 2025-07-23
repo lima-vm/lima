@@ -322,20 +322,22 @@ vmOpts:
     # Will be ignored if the vmType is not "qemu"
     # 🟢 Builtin default: not set
     minimumVersion: null
+    # Specify desired QEMU CPU type for each arch.
+    # You can see what options are available for host emulation with: `qemu-system-$(arch) -cpu help`.
+    # Setting of instructions is supported like this: "qemu64,+ssse3".
+    # 🟢 Builtin default: hard-coded arch map with type (see the output of `limactl info | jq .defaultTemplate.cpuType`)
+    cpuType:
+    #   aarch64: "max" # (or "host" when running on aarch64 host)
+    #   armv7l:  "max" # (or "host" when running on armv7l host)
+    #   riscv64: "max" # (or "host" when running on riscv64 host)
+    #   x86_64:  "max" # (or "host" when running on x86_64 host; additional options are appended on Intel Mac)
 
 # OS: "Linux".
 # 🟢 Builtin default: "Linux"
 os: null
 
-# Specify desired QEMU CPU type for each arch.
-# You can see what options are available for host emulation with: `qemu-system-$(arch) -cpu help`.
-# Setting of instructions is supported like this: "qemu64,+ssse3".
-# 🟢 Builtin default: hard-coded arch map with type (see the output of `limactl info | jq .defaultTemplate.cpuType`)
+# DEPRECATED: Use vmOpts.qemu.cpuType instead. See the vmOpts.qemu.cpuType section above for configuration.
 cpuType:
-#   aarch64: "max" # (or "host" when running on aarch64 host)
-#   armv7l:  "max" # (or "host" when running on armv7l host)
-#   riscv64: "max" # (or "host" when running on riscv64 host)
-#   x86_64:  "max" # (or "host" when running on x86_64 host; additional options are appended on Intel Mac)
 
 rosetta:
   # Enable Rosetta inside the VM; needs `vmType: vz`
