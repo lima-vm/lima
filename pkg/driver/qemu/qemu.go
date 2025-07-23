@@ -30,6 +30,7 @@ import (
 
 	"github.com/lima-vm/lima/v2/pkg/fileutils"
 	"github.com/lima-vm/lima/v2/pkg/iso9660util"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	"github.com/lima-vm/lima/v2/pkg/networks"
 	"github.com/lima-vm/lima/v2/pkg/networks/usernet"
@@ -42,7 +43,7 @@ import (
 type Config struct {
 	Name         string
 	InstanceDir  string
-	LimaYAML     *limayaml.LimaYAML
+	LimaYAML     *limatype.LimaYAML
 	SSHLocalPort int
 	SSHAddress   string
 	VirtioGA     bool
@@ -384,8 +385,8 @@ func adjustMemBytesDarwinARM64HVF(memBytes int64, accel string) int64 {
 }
 
 // qemuMachine returns string to use for -machine.
-func qemuMachine(arch limayaml.Arch) string {
-	if arch == limayaml.X8664 {
+func qemuMachine(arch limatype.Arch) string {
+	if arch == limatype.X8664 {
 		return "q35"
 	}
 	return "virt"
@@ -404,7 +405,7 @@ func audioDevice() string {
 	return "oss"
 }
 
-func defaultCPUType() limayaml.CPUType {
+func defaultCPUType() limatype.CPUType {
 	// x86_64 + TCG + max was previously unstable until 2021.
 	// https://bugzilla.redhat.com/show_bug.cgi?id=1999700
 	// https://bugs.launchpad.net/qemu/+bug/1748296
@@ -417,13 +418,13 @@ func defaultCPUType() limayaml.CPUType {
 		// TODO: remove this if "max" works with the latest qemu
 		defaultX8664 = "qemu64"
 	}
-	cpuType := map[limayaml.Arch]string{
-		limayaml.AARCH64: "max",
-		limayaml.ARMV7L:  "max",
-		limayaml.X8664:   defaultX8664,
-		limayaml.PPC64LE: "max",
-		limayaml.RISCV64: "max",
-		limayaml.S390X:   "max",
+	cpuType := map[limatype.Arch]string{
+		limatype.AARCH64: "max",
+		limatype.ARMV7L:  "max",
+		limatype.X8664:   defaultX8664,
+		limatype.PPC64LE: "max",
+		limatype.RISCV64: "max",
+		limatype.S390X:   "max",
 	}
 	for arch := range cpuType {
 		if limayaml.IsNativeArch(arch) && limayaml.IsAccelOS() {
@@ -431,7 +432,7 @@ func defaultCPUType() limayaml.CPUType {
 				cpuType[arch] = "host"
 			}
 		}
-		if arch == limayaml.X8664 && runtime.GOOS == "darwin" {
+		if arch == limatype.X8664 && runtime.GOOS == "darwin" {
 			// disable AVX-512, since it requires trapping instruction faults in guest
 			// Enterprise Linux requires either v2 (SSE4) or v3 (AVX2), but not yet v4.
 			cpuType[arch] += ",-avx512vl"
@@ -445,11 +446,11 @@ func defaultCPUType() limayaml.CPUType {
 	return cpuType
 }
 
-func resolveCPUType(y *limayaml.LimaYAML) string {
+func resolveCPUType(y *limatype.LimaYAML) string {
 	cpuType := defaultCPUType()
 	var overrideCPUType bool
 	for k, v := range y.VMOpts.QEMU.CPUType {
-		if !slices.Contains(limayaml.ArchTypes, *y.Arch) {
+		if !slices.Contains(limatype.ArchTypes, *y.Arch) {
 			logrus.Warnf("field `vmOpts.qemu.cpuType` uses unsupported arch %q", k)
 			continue
 		}
@@ -508,7 +509,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	memBytes = adjustMemBytesDarwinARM64HVF(memBytes, accel)
 	args = appendArgsIfNoConflict(args, "-m", strconv.Itoa(int(memBytes>>20)))
 
-	if *y.MountType == limayaml.VIRTIOFS {
+	if *y.MountType == limatype.VIRTIOFS {
 		args = appendArgsIfNoConflict(args, "-object",
 			fmt.Sprintf("memory-backend-file,id=virtiofs-shm,size=%s,mem-path=/dev/shm,share=on", strconv.Itoa(int(memBytes))))
 		args = appendArgsIfNoConflict(args, "-numa", "node,memdev=virtiofs-shm")
@@ -532,7 +533,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 
 	// Machine
 	switch *y.Arch {
-	case limayaml.X8664:
+	case limatype.X8664:
 		switch accel {
 		case "tcg":
 			// use q35 machine with vmware io port disabled.
@@ -551,10 +552,10 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 		default:
 			args = appendArgsIfNoConflict(args, "-machine", "q35,accel="+accel)
 		}
-	case limayaml.AARCH64:
+	case limatype.AARCH64:
 		machine := "virt,accel=" + accel
 		args = appendArgsIfNoConflict(args, "-machine", machine)
-	case limayaml.RISCV64:
+	case limatype.RISCV64:
 		// https://github.com/tianocore/edk2/blob/edk2-stable202408/OvmfPkg/RiscVVirt/README.md#test
 		// > Note: the `acpi=off` machine property is specified because Linux guest
 		// > support for ACPI (that is, the ACPI consumer side) is a work in progress.
@@ -562,13 +563,13 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 		// > yourself.
 		machine := "virt,acpi=off,accel=" + accel
 		args = appendArgsIfNoConflict(args, "-machine", machine)
-	case limayaml.ARMV7L:
+	case limatype.ARMV7L:
 		machine := "virt,accel=" + accel
 		args = appendArgsIfNoConflict(args, "-machine", machine)
-	case limayaml.PPC64LE:
+	case limatype.PPC64LE:
 		machine := "pseries,accel=" + accel
 		args = appendArgsIfNoConflict(args, "-machine", machine)
-	case limayaml.S390X:
+	case limatype.S390X:
 		machine := "s390-ccw-virtio,accel=" + accel
 		args = appendArgsIfNoConflict(args, "-machine", machine)
 	}
@@ -579,11 +580,11 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 
 	// Firmware
 	legacyBIOS := *y.Firmware.LegacyBIOS
-	if legacyBIOS && *y.Arch != limayaml.X8664 && *y.Arch != limayaml.ARMV7L {
+	if legacyBIOS && *y.Arch != limatype.X8664 && *y.Arch != limatype.ARMV7L {
 		logrus.Warnf("field `firmware.legacyBIOS` is not supported for architecture %q, ignoring", *y.Arch)
 		legacyBIOS = false
 	}
-	noFirmware := *y.Arch == limayaml.PPC64LE || *y.Arch == limayaml.S390X || legacyBIOS
+	noFirmware := *y.Arch == limatype.PPC64LE || *y.Arch == limatype.S390X || legacyBIOS
 	if !noFirmware {
 		var firmware string
 		firmwareInBios := runtime.GOOS == "windows"
@@ -595,7 +596,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 				firmwareInBios = b
 			}
 		}
-		firmwareInBios = firmwareInBios && *y.Arch == limayaml.X8664
+		firmwareInBios = firmwareInBios && *y.Arch == limatype.X8664
 		downloadedFirmware := filepath.Join(cfg.InstanceDir, filenames.QemuEfiCodeFD)
 		firmwareWithVars := filepath.Join(cfg.InstanceDir, filenames.QemuEfiFullFD)
 		if firmwareInBios {
@@ -608,7 +609,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 			loop:
 				for _, f := range y.Firmware.Images {
 					switch f.VMType {
-					case "", limayaml.QEMU:
+					case "", limatype.QEMU:
 						if f.Arch == *y.Arch {
 							if _, err = fileutils.DownloadFile(ctx, downloadedFirmware, f.File, true, "UEFI code "+f.Location, *y.Arch); err != nil {
 								logrus.WithError(err).Warnf("failed to download %q", f.Location)
@@ -768,7 +769,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 		args = append(args, "-netdev", fmt.Sprintf("socket,id=net0,fd={{ fd_connect %q }}", qemuSock))
 	}
 	virtioNet := "virtio-net-pci"
-	if *y.Arch == limayaml.S390X {
+	if *y.Arch == limatype.S390X {
 		// virtio-net-pci does not work on EL, while it works on Ubuntu
 		// https://github.com/lima-vm/lima/pull/3319/files#r1986388345
 		virtioNet = "virtio-net-ccw"
@@ -854,7 +855,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	if *y.Video.Display != "none" {
 		switch *y.Arch {
 		// FIXME: use virtio-gpu on all the architectures
-		case limayaml.X8664, limayaml.RISCV64:
+		case limatype.X8664, limatype.RISCV64:
 			args = append(args, "-device", "virtio-vga")
 		default:
 			args = append(args, "-device", "virtio-gpu")
@@ -885,7 +886,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	// On ARM, the default serial is ttyAMA0, this PCI serial is ttyS0.
 	// https://gitlab.com/qemu-project/qemu/-/issues/1801#note_1494720586
 	switch *y.Arch {
-	case limayaml.AARCH64, limayaml.ARMV7L:
+	case limatype.AARCH64, limatype.ARMV7L:
 		serialpSock := filepath.Join(cfg.InstanceDir, filenames.SerialPCISock)
 		if err := os.RemoveAll(serialpSock); err != nil {
 			return "", nil, err
@@ -912,7 +913,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	args = append(args, "-chardev", fmt.Sprintf("socket,id=%s,path=%s,server=on,wait=off,logfile=%s", serialvChardev, serialvSock, serialvLog))
 	// max_ports=1 is required for https://github.com/lima-vm/lima/issues/1689 https://github.com/lima-vm/lima/issues/1691
 	serialvMaxPorts := 1
-	if *y.Arch == limayaml.S390X {
+	if *y.Arch == limatype.S390X {
 		serialvMaxPorts++ // needed to avoid `virtio-serial-bus: Out-of-range port id specified, max. allowed: 0`
 	}
 	args = append(args, "-device", fmt.Sprintf("virtio-serial-pci,id=virtio-serial0,max_ports=%d", serialvMaxPorts))
@@ -920,7 +921,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 
 	// We also want to enable vsock here, but QEMU does not support vsock for macOS hosts
 
-	if *y.MountType == limayaml.NINEP || *y.MountType == limayaml.VIRTIOFS {
+	if *y.MountType == limatype.NINEP || *y.MountType == limatype.VIRTIOFS {
 		for i, f := range y.Mounts {
 			tag := fmt.Sprintf("mount%d", i)
 			if err := os.MkdirAll(f.Location, 0o755); err != nil {
@@ -928,7 +929,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 			}
 
 			switch *y.MountType {
-			case limayaml.NINEP:
+			case limatype.NINEP:
 				options := "local"
 				options += fmt.Sprintf(",mount_tag=%s", tag)
 				options += fmt.Sprintf(",path=%s", f.Location)
@@ -937,7 +938,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 					options += ",readonly"
 				}
 				args = append(args, "-virtfs", options)
-			case limayaml.VIRTIOFS:
+			case limatype.VIRTIOFS:
 				// Note that read-only mode is not supported on the QEMU/virtiofsd side yet:
 				// https://gitlab.com/virtio-fs/virtiofsd/-/issues/97
 				chardev := fmt.Sprintf("char-virtiofs-%d", i)
@@ -1067,11 +1068,11 @@ func VirtiofsdCmdline(cfg Config, mountIndex int) ([]string, error) {
 }
 
 // qemuArch returns the arch string used by qemu.
-func qemuArch(arch limayaml.Arch) string {
+func qemuArch(arch limatype.Arch) string {
 	switch arch {
-	case limayaml.ARMV7L:
+	case limatype.ARMV7L:
 		return "arm"
-	case limayaml.PPC64LE:
+	case limatype.PPC64LE:
 		return "ppc64"
 	default:
 		return arch
@@ -1079,14 +1080,14 @@ func qemuArch(arch limayaml.Arch) string {
 }
 
 // qemuEdk2 returns the arch string used by `/usr/local/share/qemu/edk2-*-code.fd`.
-func qemuEdk2Arch(arch limayaml.Arch) string {
-	if arch == limayaml.RISCV64 {
+func qemuEdk2Arch(arch limatype.Arch) string {
+	if arch == limatype.RISCV64 {
 		return "riscv"
 	}
 	return qemuArch(arch)
 }
 
-func Exe(arch limayaml.Arch) (exe string, args []string, err error) {
+func Exe(arch limatype.Arch) (exe string, args []string, err error) {
 	exeBase := "qemu-system-" + qemuArch(arch)
 	envK := "QEMU_SYSTEM_" + strings.ToUpper(qemuArch(arch))
 	if envV := os.Getenv(envK); envV != "" {
@@ -1106,7 +1107,7 @@ func Exe(arch limayaml.Arch) (exe string, args []string, err error) {
 	return exe, args, nil
 }
 
-func Accel(arch limayaml.Arch) string {
+func Accel(arch limatype.Arch) string {
 	if limayaml.IsNativeArch(arch) {
 		switch runtime.GOOS {
 		case "darwin":
@@ -1149,9 +1150,9 @@ func getQemuVersion(ctx context.Context, qemuExe string) (*semver.Version, error
 	return parseQemuVersion(stdout.String())
 }
 
-func getFirmware(qemuExe string, arch limayaml.Arch) (string, error) {
+func getFirmware(qemuExe string, arch limatype.Arch) (string, error) {
 	switch arch {
-	case limayaml.X8664, limayaml.AARCH64, limayaml.ARMV7L, limayaml.RISCV64:
+	case limatype.X8664, limatype.AARCH64, limatype.ARMV7L, limatype.RISCV64:
 	default:
 		return "", fmt.Errorf("unexpected architecture: %q", arch)
 	}
@@ -1174,7 +1175,7 @@ func getFirmware(qemuExe string, arch limayaml.Arch) (string, error) {
 	}
 
 	switch arch {
-	case limayaml.X8664:
+	case limatype.X8664:
 		// Archlinux package "edk2-ovmf"
 		// @see: https://archlinux.org/packages/extra/any/edk2-ovmf/files
 		candidates = append(candidates, "/usr/share/edk2/x64/OVMF_CODE.4m.fd")
@@ -1185,7 +1186,7 @@ func getFirmware(qemuExe string, arch limayaml.Arch) (string, error) {
 		candidates = append(candidates, "/usr/share/edk2/ovmf/OVMF_CODE.fd")
 		// openSUSE package "qemu-ovmf-x86_64"
 		candidates = append(candidates, "/usr/share/qemu/ovmf-x86_64.bin")
-	case limayaml.AARCH64:
+	case limatype.AARCH64:
 		// Archlinux package "edk2-aarch64"
 		// @see: https://archlinux.org/packages/extra/any/edk2-aarch64/files
 		candidates = append(candidates, "/usr/share/edk2/aarch64/QEMU_CODE.fd")
@@ -1194,14 +1195,14 @@ func getFirmware(qemuExe string, arch limayaml.Arch) (string, error) {
 		candidates = append(candidates, "/usr/share/AAVMF/AAVMF_CODE.fd")
 		// Debian package "qemu-efi-aarch64" (unpadded, backwards compatibility)
 		candidates = append(candidates, "/usr/share/qemu-efi-aarch64/QEMU_EFI.fd")
-	case limayaml.ARMV7L:
+	case limatype.ARMV7L:
 		// Archlinux package "edk2-arm"
 		// @see: https://archlinux.org/packages/extra/any/edk2-arm/files
 		candidates = append(candidates, "/usr/share/edk2/arm/QEMU_CODE.fd")
 		// Debian package "qemu-efi-arm"
 		// Fedora package "edk2-arm"
 		candidates = append(candidates, "/usr/share/AAVMF/AAVMF32_CODE.fd")
-	case limayaml.RISCV64:
+	case limatype.RISCV64:
 		// Debian package "qemu-efi-riscv64"
 		candidates = append(candidates, "/usr/share/qemu-efi-riscv64/RISCV_VIRT_CODE.fd")
 		// Fedora package "edk2-riscv64"
@@ -1216,17 +1217,17 @@ func getFirmware(qemuExe string, arch limayaml.Arch) (string, error) {
 		}
 	}
 
-	if arch == limayaml.X8664 {
+	if arch == limatype.X8664 {
 		return "", fmt.Errorf("could not find firmware for %q (hint: try setting `firmware.legacyBIOS` to `true`)", arch)
 	}
 	qemuArch := strings.TrimPrefix(filepath.Base(qemuExe), "qemu-system-")
 	return "", fmt.Errorf("could not find firmware for %q (hint: try copying the \"edk-%s-code.fd\" firmware to $HOME/.local/share/qemu/)", arch, qemuArch)
 }
 
-func getFirmwareVars(qemuExe string, arch limayaml.Arch) (string, error) {
+func getFirmwareVars(qemuExe string, arch limatype.Arch) (string, error) {
 	var targetArch string
 	switch arch {
-	case limayaml.X8664:
+	case limatype.X8664:
 		targetArch = "i386" // vars are unified between i386 and x86_64 and normally only former is bundled
 	default:
 		return "", fmt.Errorf("unexpected architecture: %q", arch)

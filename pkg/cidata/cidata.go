@@ -26,6 +26,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/debugutil"
 	"github.com/lima-vm/lima/v2/pkg/instance/hostname"
 	"github.com/lima-vm/lima/v2/pkg/iso9660util"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	"github.com/lima-vm/lima/v2/pkg/localpathutil"
 	"github.com/lima-vm/lima/v2/pkg/networks"
@@ -116,7 +117,7 @@ func setupEnv(instConfigEnv map[string]string, propagateProxyEnv bool, slirpGate
 	return env, nil
 }
 
-func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, instConfig *limayaml.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort, vsockPort int, virtioPort string) (*TemplateArgs, error) {
+func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, instConfig *limatype.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort, vsockPort int, virtioPort string) (*TemplateArgs, error) {
 	if err := limayaml.Validate(instConfig, false); err != nil {
 		return nil, err
 	}
@@ -164,7 +165,7 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 			return nil, err
 		}
 		args.SlirpGateway = usernet.GatewayIP(subnet)
-		if *instConfig.VMType == limayaml.VZ {
+		if *instConfig.VMType == limatype.VZ {
 			args.SlirpDNS = usernet.GatewayIP(subnet)
 		} else {
 			args.SlirpDNS = usernet.DNSIP(subnet)
@@ -188,11 +189,11 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 
 	var fstype string
 	switch *instConfig.MountType {
-	case limayaml.REVSSHFS:
+	case limatype.REVSSHFS:
 		fstype = "sshfs"
-	case limayaml.NINEP:
+	case limatype.NINEP:
 		fstype = "9p"
-	case limayaml.VIRTIOFS:
+	case limatype.VIRTIOFS:
 		fstype = "virtiofs"
 	}
 	hostHome, err := localpathutil.Expand("~")
@@ -228,11 +229,11 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 	}
 
 	switch *instConfig.MountType {
-	case limayaml.REVSSHFS:
+	case limatype.REVSSHFS:
 		args.MountType = "reverse-sshfs"
-	case limayaml.NINEP:
+	case limatype.NINEP:
 		args.MountType = "9p"
-	case limayaml.VIRTIOFS:
+	case limatype.VIRTIOFS:
 		args.MountType = "virtiofs"
 	}
 
@@ -272,7 +273,7 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 		for _, addr := range instConfig.DNS {
 			args.DNSAddresses = append(args.DNSAddresses, addr.String())
 		}
-	case firstUsernetIndex != -1 || *instConfig.VMType == limayaml.VZ:
+	case firstUsernetIndex != -1 || *instConfig.VMType == limatype.VZ:
 		args.DNSAddresses = append(args.DNSAddresses, args.SlirpDNS)
 	case *instConfig.HostResolver.Enabled:
 		args.UDPDNSLocalPort = udpDNSLocalPort
@@ -316,10 +317,10 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 	args.BootCmds = getBootCmds(instConfig.Provision)
 
 	for i, f := range instConfig.Provision {
-		if f.Mode == limayaml.ProvisionModeDependency && *f.SkipDefaultDependencyResolution {
+		if f.Mode == limatype.ProvisionModeDependency && *f.SkipDefaultDependencyResolution {
 			args.SkipDefaultDependencyResolution = true
 		}
-		if f.Mode == limayaml.ProvisionModeData {
+		if f.Mode == limatype.ProvisionModeData {
 			args.DataFiles = append(args.DataFiles, DataFile{
 				FileName:    fmt.Sprintf("%08d", i),
 				Overwrite:   strconv.FormatBool(*f.Overwrite),
@@ -333,7 +334,7 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 	return &args, nil
 }
 
-func GenerateCloudConfig(ctx context.Context, instDir, name string, instConfig *limayaml.LimaYAML) error {
+func GenerateCloudConfig(ctx context.Context, instDir, name string, instConfig *limatype.LimaYAML) error {
 	args, err := templateArgs(ctx, false, instDir, name, instConfig, 0, 0, 0, "")
 	if err != nil {
 		return err
@@ -356,7 +357,7 @@ func GenerateCloudConfig(ctx context.Context, instDir, name string, instConfig *
 	return os.WriteFile(filepath.Join(instDir, filenames.CloudConfig), config, 0o444)
 }
 
-func GenerateISO9660(ctx context.Context, instDir, name string, instConfig *limayaml.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort int, guestAgentBinary, nerdctlArchive string, vsockPort int, virtioPort string) error {
+func GenerateISO9660(ctx context.Context, instDir, name string, instConfig *limatype.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort int, guestAgentBinary, nerdctlArchive string, vsockPort int, virtioPort string) error {
 	args, err := templateArgs(ctx, true, instDir, name, instConfig, udpDNSLocalPort, tcpDNSLocalPort, vsockPort, virtioPort)
 	if err != nil {
 		return err
@@ -373,19 +374,19 @@ func GenerateISO9660(ctx context.Context, instDir, name string, instConfig *lima
 
 	for i, f := range instConfig.Provision {
 		switch f.Mode {
-		case limayaml.ProvisionModeSystem, limayaml.ProvisionModeUser, limayaml.ProvisionModeDependency:
+		case limatype.ProvisionModeSystem, limatype.ProvisionModeUser, limatype.ProvisionModeDependency:
 			layout = append(layout, iso9660util.Entry{
 				Path:   fmt.Sprintf("provision.%s/%08d", f.Mode, i),
 				Reader: strings.NewReader(f.Script),
 			})
-		case limayaml.ProvisionModeData:
+		case limatype.ProvisionModeData:
 			layout = append(layout, iso9660util.Entry{
 				Path:   fmt.Sprintf("provision.%s/%08d", f.Mode, i),
 				Reader: strings.NewReader(*f.Content),
 			})
-		case limayaml.ProvisionModeBoot:
+		case limatype.ProvisionModeBoot:
 			continue
-		case limayaml.ProvisionModeAnsible:
+		case limatype.ProvisionModeAnsible:
 			continue
 		default:
 			return fmt.Errorf("unknown provision mode %q", f.Mode)
@@ -433,7 +434,7 @@ func GenerateISO9660(ctx context.Context, instDir, name string, instConfig *lima
 		})
 	}
 
-	if args.VMType == limayaml.WSL2 {
+	if args.VMType == limatype.WSL2 {
 		layout = append(layout, iso9660util.Entry{
 			Path:   "ssh_authorized_keys",
 			Reader: strings.NewReader(strings.Join(args.SSHPubKeys, "\n")),
@@ -456,10 +457,10 @@ func getCert(content string) Cert {
 	return Cert{Lines: lines}
 }
 
-func getBootCmds(p []limayaml.Provision) []BootCmds {
+func getBootCmds(p []limatype.Provision) []BootCmds {
 	var bootCmds []BootCmds
 	for _, f := range p {
-		if f.Mode == limayaml.ProvisionModeBoot {
+		if f.Mode == limatype.ProvisionModeBoot {
 			lines := []string{}
 			for _, line := range strings.Split(f.Script, "\n") {
 				if line == "" {

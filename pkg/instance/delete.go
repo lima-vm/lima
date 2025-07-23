@@ -10,15 +10,15 @@ import (
 	"os"
 
 	"github.com/lima-vm/lima/v2/pkg/driverutil"
-	"github.com/lima-vm/lima/v2/pkg/store"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 )
 
-func Delete(ctx context.Context, inst *store.Instance, force bool) error {
+func Delete(ctx context.Context, inst *limatype.Instance, force bool) error {
 	if inst.Protected {
 		return errors.New("instance is protected to prohibit accidental removal (Hint: use `limactl unprotect`)")
 	}
-	if !force && inst.Status != store.StatusStopped {
-		return fmt.Errorf("expected status %q, got %q", store.StatusStopped, inst.Status)
+	if !force && inst.Status != limatype.StatusStopped {
+		return fmt.Errorf("expected status %q, got %q", limatype.StatusStopped, inst.Status)
 	}
 
 	StopForcibly(inst)
@@ -35,7 +35,7 @@ func Delete(ctx context.Context, inst *store.Instance, force bool) error {
 	return nil
 }
 
-func unregister(ctx context.Context, inst *store.Instance) error {
+func unregister(ctx context.Context, inst *limatype.Instance) error {
 	limaDriver, err := driverutil.CreateConfiguredDriver(inst, 0)
 	if err != nil {
 		return fmt.Errorf("failed to create driver instance: %w", err)

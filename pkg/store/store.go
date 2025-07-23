@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/lima-vm/lima/v2/pkg/identifiers"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	"github.com/lima-vm/lima/v2/pkg/store/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/store/filenames"
@@ -132,7 +133,7 @@ func DiskDir(name string) (string, error) {
 }
 
 // LoadYAMLByFilePath loads and validates the yaml.
-func LoadYAMLByFilePath(ctx context.Context, filePath string) (*limayaml.LimaYAML, error) {
+func LoadYAMLByFilePath(ctx context.Context, filePath string) (*limatype.LimaYAML, error) {
 	// We need to use the absolute path because it may be used to determine hostSocket locations.
 	absPath, err := filepath.Abs(filePath)
 	if err != nil {

@@ -27,6 +27,7 @@ import (
 
 	"github.com/lima-vm/lima/v2/pkg/imgutil/proxyimgutil"
 	"github.com/lima-vm/lima/v2/pkg/iso9660util"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	"github.com/lima-vm/lima/v2/pkg/networks"
 	"github.com/lima-vm/lima/v2/pkg/networks/usernet"
@@ -51,7 +52,7 @@ type virtualMachineWrapper struct {
 // Hold all *os.File created via socketpair() so that they won't get garbage collected. f.FD() gets invalid if f gets garbage collected.
 var vmNetworkFiles = make([]*os.File, 1)
 
-func startVM(ctx context.Context, inst *store.Instance, sshLocalPort int) (*virtualMachineWrapper, chan error, error) {
+func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int) (*virtualMachineWrapper, chan error, error) {
 	usernetClient, err := startUsernet(ctx, inst)
 	if err != nil {
 		return nil, nil, err
@@ -128,7 +129,7 @@ func startVM(ctx context.Context, inst *store.Instance, sshLocalPort int) (*virt
 	return wrapper, errCh, err
 }
 
-func startUsernet(ctx context.Context, inst *store.Instance) (*usernet.Client, error) {
+func startUsernet(ctx context.Context, inst *limatype.Instance) (*usernet.Client, error) {
 	if firstUsernetIndex := limayaml.FirstUsernetIndex(inst.Config); firstUsernetIndex != -1 {
 		nwName := inst.Config.Networks[firstUsernetIndex].Lima
 		return usernet.NewClientByName(nwName), nil
@@ -161,7 +162,7 @@ func startUsernet(ctx context.Context, inst *store.Instance) (*usernet.Client, e
 	return usernet.NewClient(endpointSock, subnetIP), err
 }
 
-func createVM(ctx context.Context, inst *store.Instance) (*vz.VirtualMachine, error) {
+func createVM(ctx context.Context, inst *limatype.Instance) (*vz.VirtualMachine, error) {
 	vmConfig, err := createInitialConfig(inst)
 	if err != nil {
 		return nil, err
@@ -207,7 +208,7 @@ func createVM(ctx context.Context, inst *store.Instance) (*vz.VirtualMachine, er
 	return vz.NewVirtualMachine(vmConfig)
 }
 
-func createInitialConfig(inst *store.Instance) (*vz.VirtualMachineConfiguration, error) {
+func createInitialConfig(inst *limatype.Instance) (*vz.VirtualMachineConfiguration, error) {
 	bootLoader, err := bootLoader(inst)
 	if err != nil {
 		return nil, err
@@ -229,7 +230,7 @@ func createInitialConfig(inst *store.Instance) (*vz.VirtualMachineConfiguration,
 	return vmConfig, nil
 }
 
-func attachPlatformConfig(inst *store.Instance, vmConfig *vz.VirtualMachineConfiguration) error {
+func attachPlatformConfig(inst *limatype.Instance, vmConfig *vz.VirtualMachineConfiguration) error {
 	machineIdentifier, err := getMachineIdentifier(inst)
 	if err != nil {
 		return err
@@ -264,7 +265,7 @@ func attachPlatformConfig(inst *store.Instance, vmConfig *vz.VirtualMachineConfi
 	return nil
 }
 
-func attachSerialPort(inst *store.Instance, config *vz.VirtualMachineConfiguration) error {
+func attachSerialPort(inst *limatype.Instance, config *vz.VirtualMachineConfiguration) error {
 	path := filepath.Join(inst.Dir, filenames.SerialVirtioLog)
 	serialPortAttachment, err := vz.NewFileSerialPortAttachment(path, false)
 	if err != nil {
@@ -302,7 +303,7 @@ func newVirtioNetworkDeviceConfiguration(attachment vz.NetworkDeviceAttachment, 
 	return networkConfig, nil
 }
 
-func attachNetwork(ctx context.Context, inst *store.Instance, vmConfig *vz.VirtualMachineConfiguration) error {
+func attachNetwork(ctx context.Context, inst *limatype.Instance, vmConfig *vz.VirtualMachineConfiguration) error {
 	var configurations []*vz.VirtioNetworkDeviceConfiguration
 
 	// Configure default usernetwork with limayaml.MACAddress(inst.Dir) for eth0 interface
@@ -434,7 +435,7 @@ func validateDiskFormat(diskPath string) error {
 	return nil
 }
 
-func attachDisks(ctx context.Context, inst *store.Instance, vmConfig *vz.VirtualMachineConfiguration) error {
+func attachDisks(ctx context.Context, inst *limatype.Instance, vmConfig *vz.VirtualMachineConfiguration) error {
 	baseDiskPath := filepath.Join(inst.Dir, filenames.BaseDisk)
 	diffDiskPath := filepath.Join(inst.Dir, filenames.DiffDisk)
 	ciDataPath := filepath.Join(inst.Dir, filenames.CIDataISO)
@@ -523,7 +524,7 @@ func attachDisks(ctx context.Context, inst *store.Instance, vmConfig *vz.Virtual
 	return nil
 }
 
-func attachDisplay(inst *store.Instance, vmConfig *vz.VirtualMachineConfiguration) error {
+func attachDisplay(inst *limatype.Instance, vmConfig *vz.VirtualMachineConfiguration) error {
 	switch *inst.Config.Video.Display {
 	case "vz", "default":
 		graphicsDeviceConfiguration, err := vz.NewVirtioGraphicsDeviceConfiguration()
@@ -547,9 +548,9 @@ func attachDisplay(inst *store.Instance, vmConfig *vz.VirtualMachineConfiguratio
 	}
 }
 
-func attachFolderMounts(inst *store.Instance, vmConfig *vz.VirtualMachineConfiguration) error {
+func attachFolderMounts(inst *limatype.Instance, vmConfig *vz.VirtualMachineConfiguration) error {
 	var mounts []vz.DirectorySharingDeviceConfiguration
-	if *inst.Config.MountType == limayaml.VIRTIOFS {
+	if *inst.Config.MountType == limatype.VIRTIOFS {
 		for i, mount := range inst.Config.Mounts {
 			if _, err := os.Stat(mount.Location); errors.Is(err, os.ErrNotExist) {
 				err := os.MkdirAll(mount.Location, 0o750)
@@ -593,7 +594,7 @@ func attachFolderMounts(inst *store.Instance, vmConfig *vz.VirtualMachineConfigu
 	return nil
 }
 
-func attachAudio(inst *store.Instance, config *vz.VirtualMachineConfiguration) error {
+func attachAudio(inst *limatype.Instance, config *vz.VirtualMachineConfiguration) error {
 	switch *inst.Config.Audio.Device {
 	case "vz", "default":
 		outputStream, err := vz.NewVirtioSoundDeviceHostOutputStreamConfiguration()
@@ -616,7 +617,7 @@ func attachAudio(inst *store.Instance, config *vz.VirtualMachineConfiguration) e
 	}
 }
 
-func attachOtherDevices(_ *store.Instance, vmConfig *vz.VirtualMachineConfiguration) error {
+func attachOtherDevices(_ *limatype.Instance, vmConfig *vz.VirtualMachineConfiguration) error {
 	entropyConfig, err := vz.NewVirtioEntropyDeviceConfiguration()
 	if err != nil {
 		return err
@@ -690,7 +691,7 @@ func attachOtherDevices(_ *store.Instance, vmConfig *vz.VirtualMachineConfigurat
 	return nil
 }
 
-func getMachineIdentifier(inst *store.Instance) (*vz.GenericMachineIdentifier, error) {
+func getMachineIdentifier(inst *limatype.Instance) (*vz.GenericMachineIdentifier, error) {
 	identifier := filepath.Join(inst.Dir, filenames.VzIdentifier)
 	// Empty VzIdentifier can be created on cloning an instance.
 	if st, err := os.Stat(identifier); err != nil || (st != nil && st.Size() == 0) {
@@ -710,7 +711,7 @@ func getMachineIdentifier(inst *store.Instance) (*vz.GenericMachineIdentifier, e
 	return vz.NewGenericMachineIdentifierWithDataPath(identifier)
 }
 
-func bootLoader(inst *store.Instance) (vz.BootLoader, error) {
+func bootLoader(inst *limatype.Instance) (vz.BootLoader, error) {
 	linuxBootLoader, err := linuxBootLoader(inst)
 	if linuxBootLoader != nil {
 		return linuxBootLoader, nil
@@ -726,7 +727,7 @@ func bootLoader(inst *store.Instance) (vz.BootLoader, error) {
 	return vz.NewEFIBootLoader(vz.WithEFIVariableStore(efiVariableStore))
 }
 
-func linuxBootLoader(inst *store.Instance) (*vz.LinuxBootLoader, error) {
+func linuxBootLoader(inst *limatype.Instance) (*vz.LinuxBootLoader, error) {
 	kernel := filepath.Join(inst.Dir, filenames.Kernel)
 	kernelCmdline := filepath.Join(inst.Dir, filenames.KernelCmdline)
 	initrd := filepath.Join(inst.Dir, filenames.Initrd)
@@ -751,7 +752,7 @@ func linuxBootLoader(inst *store.Instance) (*vz.LinuxBootLoader, error) {
 	return vz.NewLinuxBootLoader(kernel, opt...)
 }
 
-func getEFI(inst *store.Instance) (*vz.EFIVariableStore, error) {
+func getEFI(inst *limatype.Instance) (*vz.EFIVariableStore, error) {
 	efi := filepath.Join(inst.Dir, filenames.VzEfi)
 	if _, err := os.Stat(efi); os.IsNotExist(err) {
 		return vz.NewEFIVariableStore(efi, vz.WithCreatingEFIVariableStore())

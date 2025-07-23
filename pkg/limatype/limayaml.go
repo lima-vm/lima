@@ -1,12 +1,15 @@
 // SPDX-FileCopyrightText: Copyright The Lima Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package limayaml
+package limatype
 
 import (
 	"net"
+	"runtime"
 
 	"github.com/opencontainers/go-digest"
+	"github.com/sirupsen/logrus"
+	"golang.org/x/sys/cpu"
 )
 
 type LimaYAML struct {
@@ -318,4 +321,69 @@ type CACertificates struct {
 	RemoveDefaults *bool    `yaml:"removeDefaults,omitempty" json:"removeDefaults,omitempty" jsonschema:"nullable"` // default: false
 	Files          []string `yaml:"files,omitempty" json:"files,omitempty" jsonschema:"nullable"`
 	Certs          []string `yaml:"certs,omitempty" json:"certs,omitempty" jsonschema:"nullable"`
+}
+
+func NewOS(osname string) OS {
+	switch osname {
+	case "linux":
+		return LINUX
+	default:
+		logrus.Warnf("Unknown os: %s", osname)
+		return osname
+	}
+}
+
+func Goarm() int {
+	if runtime.GOOS != "linux" {
+		return 0
+	}
+	if runtime.GOARCH != "arm" {
+		return 0
+	}
+	if cpu.ARM.HasVFPv3 {
+		return 7
+	}
+	if cpu.ARM.HasVFP {
+		return 6
+	}
+	return 5 // default
+}
+
+func NewArch(arch string) Arch {
+	switch arch {
+	case "amd64":
+		return X8664
+	case "arm64":
+		return AARCH64
+	case "arm":
+		arm := Goarm()
+		if arm == 7 {
+			return ARMV7L
+		}
+		logrus.Warnf("Unknown arm: %d", arm)
+		return arch
+	case "ppc64le":
+		return PPC64LE
+	case "riscv64":
+		return RISCV64
+	case "s390x":
+		return S390X
+	default:
+		logrus.Warnf("Unknown arch: %s", arch)
+		return arch
+	}
+}
+
+func NewVMType(driver string) VMType {
+	switch driver {
+	case "vz":
+		return VZ
+	case "qemu":
+		return QEMU
+	case "wsl2":
+		return WSL2
+	default:
+		logrus.Warnf("Unknown driver: %s", driver)
+		return driver
+	}
 }

@@ -14,7 +14,7 @@ import (
 
 	"github.com/lima-vm/lima/v2/pkg/driver"
 	pb "github.com/lima-vm/lima/v2/pkg/driver/external"
-	"github.com/lima-vm/lima/v2/pkg/store"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 )
 
 func (d *DriverClient) Validate(ctx context.Context) error {
@@ -302,4 +302,8 @@ func (d *DriverClient) Configure(inst *store.Instance) *driver.ConfiguredDriver 
 	return &driver.ConfiguredDriver{
 		Driver: d,
 	}
+}
+
+func (d *DriverClient) AcceptConfig(cfg *limatype.LimaYAML, filepath string) error {
+	return errors.New("AcceptConfig not implemented in DriverClient")
 }

@@ -8,10 +8,10 @@ package store
 import (
 	"context"
 
-	"github.com/lima-vm/lima/v2/pkg/limayaml"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 )
 
-func inspectStatus(_ context.Context, instDir string, inst *Instance, y *limayaml.LimaYAML) {
+func inspectStatus(_ context.Context, instDir string, inst *limatype.Instance, y *limatype.LimaYAML) {
 	inspectStatusWithPIDFiles(instDir, inst, y)
 }
 

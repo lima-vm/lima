@@ -22,15 +22,14 @@ import (
 	"sync"
 	"text/template"
 
-	"github.com/coreos/go-semver/semver"
 	"github.com/docker/go-units"
 	"github.com/goccy/go-yaml"
 	"github.com/pbnjay/memory"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/sys/cpu"
 
 	"github.com/lima-vm/lima/v2/pkg/instance/hostname"
 	"github.com/lima-vm/lima/v2/pkg/ioutilx"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/localpathutil"
 	. "github.com/lima-vm/lima/v2/pkg/must"
 	"github.com/lima-vm/lima/v2/pkg/networks"
@@ -65,10 +64,10 @@ var (
 var defaultContainerdYAML []byte
 
 type ContainerdYAML struct {
-	Archives []File
+	Archives []limatype.File
 }
 
-func defaultContainerdArchives() []File {
+func defaultContainerdArchives() []limatype.File {
 	var containerd ContainerdYAML
 	err := yaml.UnmarshalWithOptions(defaultContainerdYAML, &containerd, yaml.Strict())
 	if err != nil {
@@ -78,8 +77,8 @@ func defaultContainerdArchives() []File {
 }
 
 // FirstUsernetIndex gets the index of first usernet network under l.Network[]. Returns -1 if no usernet network found.
-func FirstUsernetIndex(l *LimaYAML) int {
-	return slices.IndexFunc(l.Networks, func(network Network) bool { return networks.IsUsernet(network.Lima) })
+func FirstUsernetIndex(l *limatype.LimaYAML) int {
+	return slices.IndexFunc(l.Networks, func(network limatype.Network) bool { return networks.IsUsernet(network.Lima) })
 }
 
 func MACAddress(uniqueID string) string {
@@ -138,12 +137,12 @@ func defaultGuestInstallPrefix() string {
 //   - Networks are appended in d, y, o order
 //   - DNS are picked from the highest priority where DNS is not empty.
 //   - CACertificates Files and Certs are uniquely appended in d, y, o order
-func FillDefault(ctx context.Context, y, d, o *LimaYAML, filePath string, warn bool) {
+func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath string, warn bool) {
 	instDir := filepath.Dir(filePath)
 
 	// existingLimaVersion can be empty if the instance was created with Lima prior to v0.20,
 	var existingLimaVersion string
-	if !isExistingInstanceDir(instDir) {
+	if !IsExistingInstanceDir(instDir) {
 		existingLimaVersion = version.Version
 	} else {
 		limaVersionFile := filepath.Join(instDir, filenames.LimaVersion)
@@ -222,7 +221,7 @@ func FillDefault(ctx context.Context, y, d, o *LimaYAML, filePath string, warn b
 	if o.VMType != nil {
 		y.VMType = o.VMType
 	}
-	y.VMType = ptr.Of(ResolveVMType(y, d, o, filePath))
+
 	if y.OS == nil {
 		y.OS = d.OS
 	}
@@ -253,7 +252,7 @@ func FillDefault(ctx context.Context, y, d, o *LimaYAML, filePath string, warn b
 	}
 
 	if y.VMOpts.QEMU.CPUType == nil {
-		y.VMOpts.QEMU.CPUType = CPUType{}
+		y.VMOpts.QEMU.CPUType = limatype.CPUType{}
 	}
 	// TODO: This check should be removed when we completely eliminate `CPUType` from limayaml.
 	if len(y.CPUType) > 0 {
@@ -330,9 +329,6 @@ func FillDefault(ctx context.Context, y, d, o *LimaYAML, filePath string, warn b
 	}
 	if o.Video.VNC.Display != nil {
 		y.Video.VNC.Display = o.Video.VNC.Display
-	}
-	if (y.Video.VNC.Display == nil || *y.Video.VNC.Display == "") && *y.VMType == QEMU {
-		y.Video.VNC.Display = ptr.Of("127.0.0.1:0,to=9")
 	}
 
 	if y.Firmware.LegacyBIOS == nil {
@@ -424,12 +420,12 @@ func FillDefault(ctx context.Context, y, d, o *LimaYAML, filePath string, warn b
 	for i := range y.Provision {
 		provision := &y.Provision[i]
 		if provision.Mode == "" {
-			provision.Mode = ProvisionModeSystem
+			provision.Mode = limatype.ProvisionModeSystem
 		}
-		if provision.Mode == ProvisionModeDependency && provision.SkipDefaultDependencyResolution == nil {
+		if provision.Mode == limatype.ProvisionModeDependency && provision.SkipDefaultDependencyResolution == nil {
 			provision.SkipDefaultDependencyResolution = ptr.Of(false)
 		}
-		if provision.Mode == ProvisionModeData {
+		if provision.Mode == limatype.ProvisionModeData {
 			if provision.Content == nil {
 				provision.Content = ptr.Of("")
 			} else {
@@ -510,7 +506,7 @@ func FillDefault(ctx context.Context, y, d, o *LimaYAML, filePath string, warn b
 	}
 	if y.Containerd.User == nil {
 		switch *y.Arch {
-		case X8664, AARCH64:
+		case limatype.X8664, limatype.AARCH64:
 			y.Containerd.User = ptr.Of(true)
 		default:
 			y.Containerd.User = ptr.Of(false)
@@ -532,7 +528,7 @@ func FillDefault(ctx context.Context, y, d, o *LimaYAML, filePath string, warn b
 	for i := range y.Probes {
 		probe := &y.Probes[i]
 		if probe.Mode == "" {
-			probe.Mode = ProbeModeReadiness
+			probe.Mode = limatype.ProbeModeReadiness
 		}
 		if probe.Description == "" {
 			probe.Description = fmt.Sprintf("user probe %d/%d", i+1, len(y.Probes))
@@ -585,7 +581,7 @@ func FillDefault(ctx context.Context, y, d, o *LimaYAML, filePath string, warn b
 		y.PropagateProxyEnv = ptr.Of(true)
 	}
 
-	networks := make([]Network, 0, len(d.Networks)+len(y.Networks)+len(o.Networks))
+	networks := make([]limatype.Network, 0, len(d.Networks)+len(y.Networks)+len(o.Networks))
 	iface := make(map[string]int)
 	for _, nw := range slices.Concat(d.Networks, y.Networks, o.Networks) {
 		if i, ok := iface[nw.Interface]; ok {
@@ -639,7 +635,7 @@ func FillDefault(ctx context.Context, y, d, o *LimaYAML, filePath string, warn b
 
 	if runtime.GOOS == "windows" {
 		// QEMU for Windows does not support 9p
-		mountTypesUnsupported[NINEP] = struct{}{}
+		mountTypesUnsupported[limatype.NINEP] = struct{}{}
 	}
 
 	// MountType has to be resolved before resolving Mounts
@@ -651,19 +647,19 @@ func FillDefault(ctx context.Context, y, d, o *LimaYAML, filePath string, warn b
 	}
 	if y.MountType == nil || *y.MountType == "" || *y.MountType == "default" {
 		switch *y.VMType {
-		case VZ:
-			y.MountType = ptr.Of(VIRTIOFS)
-		case QEMU:
-			y.MountType = ptr.Of(NINEP)
-			if _, ok := mountTypesUnsupported[NINEP]; ok {
+		case limatype.VZ:
+			y.MountType = ptr.Of(limatype.VIRTIOFS)
+		case limatype.QEMU:
+			y.MountType = ptr.Of(limatype.NINEP)
+			if _, ok := mountTypesUnsupported[limatype.NINEP]; ok {
 				// Use REVSSHFS if the instance does not support 9p
-				y.MountType = ptr.Of(REVSSHFS)
-			} else if isExistingInstanceDir(instDir) && !versionutil.GreaterEqual(existingLimaVersion, "1.0.0") {
+				y.MountType = ptr.Of(limatype.REVSSHFS)
+			} else if IsExistingInstanceDir(instDir) && !versionutil.GreaterEqual(existingLimaVersion, "1.0.0") {
 				// Use REVSSHFS if the instance was created with Lima prior to v1.0
-				y.MountType = ptr.Of(REVSSHFS)
+				y.MountType = ptr.Of(limatype.REVSSHFS)
 			}
 		default:
-			y.MountType = ptr.Of(REVSSHFS)
+			y.MountType = ptr.Of(limatype.REVSSHFS)
 		}
 	}
 
@@ -684,7 +680,7 @@ func FillDefault(ctx context.Context, y, d, o *LimaYAML, filePath string, warn b
 
 	// Combine all mounts; highest priority entry determines writable status.
 	// Only works for exact matches; does not normalize case or resolve symlinks.
-	mounts := make([]Mount, 0, len(d.Mounts)+len(y.Mounts)+len(o.Mounts))
+	mounts := make([]limatype.Mount, 0, len(d.Mounts)+len(y.Mounts)+len(o.Mounts))
 	location := make(map[string]int)
 	for _, mount := range slices.Concat(d.Mounts, y.Mounts, o.Mounts) {
 		if out, err := executeHostTemplate(mount.Location, instDir, y.Param); err == nil {
@@ -757,7 +753,7 @@ func FillDefault(ctx context.Context, y, d, o *LimaYAML, filePath string, warn b
 		if mount.NineP.Msize == nil {
 			mounts[i].NineP.Msize = ptr.Of(Default9pMsize)
 		}
-		if mount.Virtiofs.QueueSize == nil && *y.VMType == QEMU && *y.MountType == VIRTIOFS {
+		if mount.Virtiofs.QueueSize == nil && *y.VMType == limatype.QEMU && *y.MountType == limatype.VIRTIOFS {
 			mounts[i].Virtiofs.QueueSize = ptr.Of(DefaultVirtiofsQueueSize)
 		}
 		if mount.Writable == nil {
@@ -821,7 +817,7 @@ func FillDefault(ctx context.Context, y, d, o *LimaYAML, filePath string, warn b
 	y.CACertificates.Files = unique(slices.Concat(d.CACertificates.Files, y.CACertificates.Files, o.CACertificates.Files))
 	y.CACertificates.Certs = unique(slices.Concat(d.CACertificates.Certs, y.CACertificates.Certs, o.CACertificates.Certs))
 
-	if runtime.GOOS == "darwin" && IsNativeArch(AARCH64) {
+	if runtime.GOOS == "darwin" && IsNativeArch(limatype.AARCH64) {
 		if y.Rosetta.Enabled == nil {
 			y.Rosetta.Enabled = d.Rosetta.Enabled
 		}
@@ -868,7 +864,7 @@ func FillDefault(ctx context.Context, y, d, o *LimaYAML, filePath string, warn b
 	fixUpForPlainMode(y)
 }
 
-func fixUpForPlainMode(y *LimaYAML) {
+func fixUpForPlainMode(y *limatype.LimaYAML) {
 	if !*y.Plain {
 		return
 	}
@@ -881,7 +877,7 @@ func fixUpForPlainMode(y *LimaYAML) {
 	y.TimeZone = ptr.Of("")
 }
 
-func executeGuestTemplate(format, instDir string, user User, param map[string]string) (bytes.Buffer, error) {
+func executeGuestTemplate(format, instDir string, user limatype.User, param map[string]string) (bytes.Buffer, error) {
 	tmpl, err := template.New("").Parse(format)
 	if err == nil {
 		name := filepath.Base(instDir)
@@ -933,9 +929,9 @@ func executeHostTemplate(format, instDir string, param map[string]string) (bytes
 	return bytes.Buffer{}, err
 }
 
-func FillPortForwardDefaults(rule *PortForward, instDir string, user User, param map[string]string) {
+func FillPortForwardDefaults(rule *limatype.PortForward, instDir string, user limatype.User, param map[string]string) {
 	if rule.Proto == "" {
-		rule.Proto = ProtoTCP
+		rule.Proto = limatype.ProtoTCP
 	}
 	if rule.GuestIP == nil {
 		if rule.GuestIPMustBeZero {
@@ -983,7 +979,7 @@ func FillPortForwardDefaults(rule *PortForward, instDir string, user User, param
 	}
 }
 
-func FillCopyToHostDefaults(rule *CopyToHost, instDir string, user User, param map[string]string) {
+func FillCopyToHostDefaults(rule *limatype.CopyToHost, instDir string, user limatype.User, param map[string]string) {
 	if rule.GuestFile != "" {
 		if out, err := executeGuestTemplate(rule.GuestFile, instDir, user, param); err == nil {
 			rule.GuestFile = out.String()
@@ -1000,72 +996,7 @@ func FillCopyToHostDefaults(rule *CopyToHost, instDir string, user User, param m
 	}
 }
 
-func NewOS(osname string) OS {
-	switch osname {
-	case "linux":
-		return LINUX
-	default:
-		logrus.Warnf("Unknown os: %s", osname)
-		return osname
-	}
-}
-
-func goarm() int {
-	if runtime.GOOS != "linux" {
-		return 0
-	}
-	if runtime.GOARCH != "arm" {
-		return 0
-	}
-	if cpu.ARM.HasVFPv3 {
-		return 7
-	}
-	if cpu.ARM.HasVFP {
-		return 6
-	}
-	return 5 // default
-}
-
-func NewArch(arch string) Arch {
-	switch arch {
-	case "amd64":
-		return X8664
-	case "arm64":
-		return AARCH64
-	case "arm":
-		arm := goarm()
-		if arm == 7 {
-			return ARMV7L
-		}
-		logrus.Warnf("Unknown arm: %d", arm)
-		return arch
-	case "ppc64le":
-		return PPC64LE
-	case "riscv64":
-		return RISCV64
-	case "s390x":
-		return S390X
-	default:
-		logrus.Warnf("Unknown arch: %s", arch)
-		return arch
-	}
-}
-
-func NewVMType(driver string) VMType {
-	switch driver {
-	case "vz":
-		return VZ
-	case "qemu":
-		return QEMU
-	case "wsl2":
-		return WSL2
-	default:
-		logrus.Warnf("Unknown driver: %s", driver)
-		return driver
-	}
-}
-
-func isExistingInstanceDir(dir string) bool {
+func IsExistingInstanceDir(dir string) bool {
 	// existence of "lima.yaml" does not signify existence of the instance,
 	// because the file is created during the initialization of the instance.
 	for _, f := range []string{
@@ -1080,97 +1011,16 @@ func isExistingInstanceDir(dir string) bool {
 	return false
 }
 
-func ResolveVMType(y, d, o *LimaYAML, filePath string) VMType {
-	// Check if the VMType is explicitly specified
-	for i, f := range []*LimaYAML{o, y, d} {
-		if f.VMType != nil && *f.VMType != "" && *f.VMType != "default" {
-			logrus.Debugf("ResolveVMType: resolved VMType %q (explicitly specified in []*LimaYAML{o,y,d}[%d])", *f.VMType, i)
-			return NewVMType(*f.VMType)
-		}
-	}
-
-	// If this is an existing instance, guess the VMType from the contents of the instance directory.
-	if dir, basename := filepath.Split(filePath); dir != "" && basename == filenames.LimaYAML && isExistingInstanceDir(dir) {
-		if runtime.GOOS == "darwin" {
-			vzIdentifier := filepath.Join(dir, filenames.VzIdentifier) // since Lima v0.14
-			if _, err := os.Lstat(vzIdentifier); !errors.Is(err, os.ErrNotExist) {
-				logrus.Debugf("ResolveVMType: resolved VMType %q (existing instance, with %q)", VZ, vzIdentifier)
-				return VZ
-			}
-			logrus.Debugf("ResolveVMType: resolved VMType %q (existing instance, without %q)", QEMU, vzIdentifier)
-			return QEMU
-		}
-		logrus.Debugf("ResolveVMType: resolved VMType %q (existing instance)", QEMU)
-		return QEMU
-	}
-
-	// Resolve the best type, depending on GOOS
-	switch runtime.GOOS {
-	case "darwin":
-		macOSProductVersion, err := osutil.ProductVersion()
-		if err != nil {
-			logrus.WithError(err).Warn("Failed to get macOS product version")
-			logrus.Debugf("ResolveVMType: resolved VMType %q (default for unknown version of macOS)", QEMU)
-			return QEMU
-		}
-		// Virtualization.framework in macOS prior to 13.5 could not boot Linux kernel v6.2 on Intel
-		// https://github.com/lima-vm/lima/issues/1577
-		if macOSProductVersion.LessThan(*semver.New("13.5.0")) {
-			logrus.Debugf("ResolveVMType: resolved VMType %q (default for macOS prior to 13.5)", QEMU)
-			return QEMU
-		}
-		// Use QEMU if the config depends on QEMU
-		for i, f := range []*LimaYAML{o, y, d} {
-			if f.Arch != nil && !IsNativeArch(*f.Arch) {
-				logrus.Debugf("ResolveVMType: resolved VMType %q (non-native arch=%q is specified in []*LimaYAML{o,y,d}[%d])", QEMU, *f.Arch, i)
-				return QEMU
-			}
-			if ResolveArch(f.Arch) == X8664 && f.Firmware.LegacyBIOS != nil && *f.Firmware.LegacyBIOS {
-				logrus.Debugf("ResolveVMType: resolved VMType %q (firmware.legacyBIOS is specified in []*LimaYAML{o,y,d}[%d], on x86_64)", QEMU, i)
-				return QEMU
-			}
-			if f.MountType != nil && *f.MountType == NINEP {
-				logrus.Debugf("ResolveVMType: resolved VMType %q (mountType=%q is specified in []*LimaYAML{o,y,d}[%d])", QEMU, NINEP, i)
-				return QEMU
-			}
-			if f.Audio.Device != nil {
-				switch *f.Audio.Device {
-				case "", "none", "default", "vz":
-					// NOP
-				default:
-					logrus.Debugf("ResolveVMType: resolved VMType %q (audio.device=%q is specified in []*LimaYAML{o,y,d}[%d])", QEMU, *f.Audio.Device, i)
-					return QEMU
-				}
-			}
-			if f.Video.Display != nil {
-				switch *f.Video.Display {
-				case "", "none", "default", "vz":
-					// NOP
-				default:
-					logrus.Debugf("ResolveVMType: resolved VMType %q (video.display=%q is specified in []*LimaYAML{o,y,d}[%d])", QEMU, *f.Video.Display, i)
-					return QEMU
-				}
-			}
-		}
-		// Use VZ if the config is compatible with VZ
-		logrus.Debugf("ResolveVMType: resolved VMType %q (default for macOS 13.5 and later)", VZ)
-		return VZ
-	default:
-		logrus.Debugf("ResolveVMType: resolved VMType %q (default for GOOS=%q)", QEMU, runtime.GOOS)
-		return QEMU
-	}
-}
-
-func ResolveOS(s *string) OS {
+func ResolveOS(s *string) limatype.OS {
 	if s == nil || *s == "" || *s == "default" {
-		return NewOS("linux")
+		return limatype.NewOS("linux")
 	}
 	return *s
 }
 
-func ResolveArch(s *string) Arch {
+func ResolveArch(s *string) limatype.Arch {
 	if s == nil || *s == "" || *s == "default" {
-		return NewArch(runtime.GOARCH)
+		return limatype.NewArch(runtime.GOARCH)
 	}
 	return *s
 }
@@ -1225,13 +1075,13 @@ func HasHostCPU() bool {
 	return false
 }
 
-func IsNativeArch(arch Arch) bool {
-	nativeX8664 := arch == X8664 && runtime.GOARCH == "amd64"
-	nativeAARCH64 := arch == AARCH64 && runtime.GOARCH == "arm64"
-	nativeARMV7L := arch == ARMV7L && runtime.GOARCH == "arm" && goarm() == 7
-	nativePPC64LE := arch == PPC64LE && runtime.GOARCH == "ppc64le"
-	nativeRISCV64 := arch == RISCV64 && runtime.GOARCH == "riscv64"
-	nativeS390X := arch == S390X && runtime.GOARCH == "s390x"
+func IsNativeArch(arch limatype.Arch) bool {
+	nativeX8664 := arch == limatype.X8664 && runtime.GOARCH == "amd64"
+	nativeAARCH64 := arch == limatype.AARCH64 && runtime.GOARCH == "arm64"
+	nativeARMV7L := arch == limatype.ARMV7L && runtime.GOARCH == "arm" && limatype.Goarm() == 7
+	nativePPC64LE := arch == limatype.PPC64LE && runtime.GOARCH == "ppc64le"
+	nativeRISCV64 := arch == limatype.RISCV64 && runtime.GOARCH == "riscv64"
+	nativeS390X := arch == limatype.S390X && runtime.GOARCH == "s390x"
 	return nativeX8664 || nativeAARCH64 || nativeARMV7L || nativePPC64LE || nativeRISCV64 || nativeS390X
 }
 

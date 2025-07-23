@@ -15,19 +15,20 @@ import (
 
 	continuityfs "github.com/containerd/continuity/fs"
 
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/store"
 	"github.com/lima-vm/lima/v2/pkg/store/filenames"
 )
 
-func Clone(ctx context.Context, oldInst *store.Instance, newInstName string) (*store.Instance, error) {
+func Clone(ctx context.Context, oldInst *limatype.Instance, newInstName string) (*limatype.Instance, error) {
 	if newInstName == "" {
 		return nil, errors.New("got empty instName")
 	}
 	if oldInst.Name == newInstName {
 		return nil, fmt.Errorf("new instance name %q must be different from %q", newInstName, oldInst.Name)
 	}
-	if oldInst.Status == store.StatusRunning {
+	if oldInst.Status == limatype.StatusRunning {
 		return nil, errors.New("cannot clone a running instance")
 	}
 

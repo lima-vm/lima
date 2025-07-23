@@ -15,18 +15,19 @@ import (
 	"github.com/sirupsen/logrus"
 
 	hostagentevents "github.com/lima-vm/lima/v2/pkg/hostagent/events"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/store"
 	"github.com/lima-vm/lima/v2/pkg/store/filenames"
 )
 
-func StopGracefully(ctx context.Context, inst *store.Instance, isRestart bool) error {
-	if inst.Status != store.StatusRunning {
+func StopGracefully(ctx context.Context, inst *limatype.Instance, isRestart bool) error {
+	if inst.Status != limatype.StatusRunning {
 		if isRestart {
 			logrus.Warn("The instance is not running, continuing with the restart")
 			return nil
 		}
-		return fmt.Errorf("expected status %q, got %q (maybe use `limactl stop -f`?)", store.StatusRunning, inst.Status)
+		return fmt.Errorf("expected status %q, got %q (maybe use `limactl stop -f`?)", limatype.StatusRunning, inst.Status)
 	}
 
 	begin := time.Now() // used for logrus propagation
@@ -45,7 +46,7 @@ func StopGracefully(ctx context.Context, inst *store.Instance, isRestart bool) e
 	return waitForInstanceShutdown(ctx, inst)
 }
 
-func waitForHostAgentTermination(ctx context.Context, inst *store.Instance, begin time.Time) error {
+func waitForHostAgentTermination(ctx context.Context, inst *limatype.Instance, begin time.Time) error {
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Minute+10*time.Second)
 	defer cancel()
 
@@ -75,7 +76,7 @@ func waitForHostAgentTermination(ctx context.Context, inst *store.Instance, begi
 	return nil
 }
 
-func waitForInstanceShutdown(ctx context.Context, inst *store.Instance) error {
+func waitForInstanceShutdown(ctx context.Context, inst *limatype.Instance) error {
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Minute)
 	defer cancel()
 
@@ -90,7 +91,7 @@ func waitForInstanceShutdown(ctx context.Context, inst *store.Instance) error {
 				return fmt.Errorf("failed to inspect instance status: %w", err)
 			}
 
-			if updatedInst.Status == store.StatusStopped {
+			if updatedInst.Status == limatype.StatusStopped {
 				logrus.Infof("The instance %s has shut down", updatedInst.Name)
 				return nil
 			}
@@ -100,7 +101,7 @@ func waitForInstanceShutdown(ctx context.Context, inst *store.Instance) error {
 	}
 }
 
-func StopForcibly(inst *store.Instance) {
+func StopForcibly(inst *limatype.Instance) {
 	if inst.DriverPID > 0 {
 		logrus.Infof("Sending SIGKILL to the %s driver process %d", inst.VMType, inst.DriverPID)
 		if err := osutil.SysKill(inst.DriverPID, osutil.SigKill); err != nil {
