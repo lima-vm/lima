@@ -18,7 +18,7 @@ import (
 	"github.com/coreos/go-semver/semver"
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/v2/pkg/limayaml"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/store/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/store/filenames"
 	"github.com/lima-vm/lima/v2/pkg/version/versionutil"
@@ -106,7 +106,7 @@ func (tmpl *Template) embedAllBases(ctx context.Context, embedAll, defaultBase b
 	return nil
 }
 
-func (tmpl *Template) embedBase(ctx context.Context, baseLocator limayaml.LocatorWithDigest, embedAll bool, seen map[string]bool) error {
+func (tmpl *Template) embedBase(ctx context.Context, baseLocator limatype.LocatorWithDigest, embedAll bool, seen map[string]bool) error {
 	logrus.Debugf("Embedding base %q in template %q", baseLocator.URL, tmpl.Locator)
 	if err := tmpl.Unmarshal(); err != nil {
 		return err
@@ -643,7 +643,7 @@ func (tmpl *Template) embedAllScripts(ctx context.Context, embedAll bool) error 
 		}
 		newName := "script"
 		switch p.Mode {
-		case limayaml.ProvisionModeData:
+		case limatype.ProvisionModeData:
 			newName = "content"
 			if p.Content != nil {
 				continue

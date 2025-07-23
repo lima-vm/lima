@@ -15,6 +15,7 @@ import (
 	"gotest.tools/v3/assert"
 	"gotest.tools/v3/assert/cmp"
 
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 )
 
@@ -479,7 +480,7 @@ func RunEmbedTest(t *testing.T, tc embedTestCase) {
 	err = tmpl.Unmarshal()
 	assert.NilError(t, err, tc.description)
 
-	var expected limayaml.LimaYAML
+	var expected limatype.LimaYAML
 	err = limayaml.Unmarshal([]byte(tc.expected), &expected, "expected")
 	assert.NilError(t, err, tc.description)
 
