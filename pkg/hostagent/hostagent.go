@@ -420,7 +420,11 @@ func (a *HostAgent) Info(_ context.Context) (*hostagentapi.Info, error) {
 
 func (a *HostAgent) startHostAgentRoutines(ctx context.Context) error {
 	if *a.instConfig.Plain {
-		logrus.Info("Running in plain mode. Mounts, port forwarding, containerd, etc. will be ignored. Guest agent will not be running.")
+		if *a.instConfig.PlainMounts {
+			logrus.Info("Running in plain mode, with mounts. Port forwarding, containerd, etc. will be ignored. Guest agent will not be running.")
+		} else {
+			logrus.Info("Running in plain mode. Mounts, port forwarding, containerd, etc. will be ignored. Guest agent will not be running.")
+		}
 	}
 	a.onClose = append(a.onClose, func() error {
 		logrus.Debugf("shutting down the SSH master")
