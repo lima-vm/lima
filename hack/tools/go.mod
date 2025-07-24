@@ -18,7 +18,7 @@ require (
 	github.com/yoheimuta/protolint v0.55.6
 	google.golang.org/grpc v1.73.0
 	google.golang.org/protobuf v1.36.6
-	mvdan.cc/sh/v3 v3.8.0
+	mvdan.cc/sh/v3 v3.12.0
 )
 
 require (
@@ -157,7 +157,6 @@ require (
 	github.com/oklog/run v1.2.0 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
-	github.com/pkg/diff v0.0.0-20210226163009-20ebb0f2a09e // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/polyfloyd/go-errorlint v1.8.0 // indirect
 	github.com/prometheus/client_golang v1.12.1 // indirect
