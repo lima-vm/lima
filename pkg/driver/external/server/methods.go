@@ -62,7 +62,7 @@ func (s *DriverServer) SetConfig(_ context.Context, req *pb.SetConfigRequest) (*
 		return &emptypb.Empty{}, err
 	}
 
-	_ = s.driver.Configure(&inst, int(req.SshLocalPort))
+	_ = s.driver.Configure(&inst)
 
 	return &emptypb.Empty{}, nil
 }
