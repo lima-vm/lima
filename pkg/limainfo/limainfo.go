@@ -9,6 +9,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	"github.com/lima-vm/lima/v2/pkg/registry"
 	"github.com/lima-vm/lima/v2/pkg/store/dirnames"
@@ -20,11 +21,11 @@ import (
 type LimaInfo struct {
 	Version         string                       `json:"version"`
 	Templates       []templatestore.Template     `json:"templates"`
-	DefaultTemplate *limayaml.LimaYAML           `json:"defaultTemplate"`
+	DefaultTemplate *limatype.LimaYAML           `json:"defaultTemplate"`
 	LimaHome        string                       `json:"limaHome"`
 	VMTypes         []string                     `json:"vmTypes"`     // since Lima v0.14.2
 	VMTypesEx       map[string]DriverExt         `json:"vmTypesEx"`   // since Lima v2.0.0
-	GuestAgents     map[limayaml.Arch]GuestAgent `json:"guestAgents"` // since Lima v1.1.0
+	GuestAgents     map[limatype.Arch]GuestAgent `json:"guestAgents"` // since Lima v1.1.0
 }
 
 type DriverExt struct {
@@ -66,7 +67,7 @@ func New() (*LimaInfo, error) {
 		DefaultTemplate: y,
 		VMTypes:         vmTypes,
 		VMTypesEx:       vmTypesEx,
-		GuestAgents:     make(map[limayaml.Arch]GuestAgent),
+		GuestAgents:     make(map[limatype.Arch]GuestAgent),
 	}
 	info.Templates, err = templatestore.Templates()
 	if err != nil {
@@ -76,8 +77,8 @@ func New() (*LimaInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	for _, arch := range limayaml.ArchTypes {
-		bin, err := usrlocalsharelima.GuestAgentBinary(limayaml.LINUX, arch)
+	for _, arch := range limatype.ArchTypes {
+		bin, err := usrlocalsharelima.GuestAgentBinary(limatype.LINUX, arch)
 		if err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
 				logrus.WithError(err).Debugf("Failed to resolve the guest agent binary for %q", arch)

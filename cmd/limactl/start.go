@@ -19,6 +19,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/editutil"
 	"github.com/lima-vm/lima/v2/pkg/instance"
 	"github.com/lima-vm/lima/v2/pkg/limatmpl"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	networks "github.com/lima-vm/lima/v2/pkg/networks/reconcile"
 	"github.com/lima-vm/lima/v2/pkg/registry"
@@ -102,7 +103,7 @@ See the examples in 'limactl create --help'.
 	return startCommand
 }
 
-func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*store.Instance, error) {
+func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*limatype.Instance, error) {
 	var arg string // can be empty
 	if len(args) > 0 {
 		arg = args[0]
@@ -240,7 +241,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 	return instance.Create(cmd.Context(), tmpl.Name, tmpl.Bytes, saveBrokenYAML)
 }
 
-func applyYQExpressionToExistingInstance(inst *store.Instance, yq string) (*store.Instance, error) {
+func applyYQExpressionToExistingInstance(inst *limatype.Instance, yq string) (*limatype.Instance, error) {
 	if strings.TrimSpace(yq) == "" {
 		return inst, nil
 	}
@@ -461,15 +462,15 @@ func startAction(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("errors inspecting instance: %+v", inst.Errors)
 	}
 	switch inst.Status {
-	case store.StatusRunning:
+	case limatype.StatusRunning:
 		logrus.Infof("The instance %q is already running. Run `%s` to open the shell.",
 			inst.Name, instance.LimactlShellCmd(inst.Name))
 		// Not an error
 		return nil
-	case store.StatusStopped:
+	case limatype.StatusStopped:
 		// NOP
 	default:
-		logrus.Warnf("expected status %q, got %q", store.StatusStopped, inst.Status)
+		logrus.Warnf("expected status %q, got %q", limatype.StatusStopped, inst.Status)
 	}
 	ctx := cmd.Context()
 	err = networks.Reconcile(ctx, inst.Name)

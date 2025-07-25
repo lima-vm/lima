@@ -1,22 +1,26 @@
 // SPDX-FileCopyrightText: Copyright The Lima Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package limayaml
+package limatype
 
 import (
 	"net"
+	"runtime"
 
 	"github.com/opencontainers/go-digest"
+	"github.com/sirupsen/logrus"
+	"golang.org/x/sys/cpu"
 )
 
 type LimaYAML struct {
-	Base                  BaseTemplates `yaml:"base,omitempty" json:"base,omitempty"`
-	MinimumLimaVersion    *string       `yaml:"minimumLimaVersion,omitempty" json:"minimumLimaVersion,omitempty" jsonschema:"nullable"`
-	VMType                *VMType       `yaml:"vmType,omitempty" json:"vmType,omitempty" jsonschema:"nullable"`
-	VMOpts                VMOpts        `yaml:"vmOpts,omitempty" json:"vmOpts,omitempty"`
-	OS                    *OS           `yaml:"os,omitempty" json:"os,omitempty" jsonschema:"nullable"`
-	Arch                  *Arch         `yaml:"arch,omitempty" json:"arch,omitempty" jsonschema:"nullable"`
-	Images                []Image       `yaml:"images,omitempty" json:"images,omitempty" jsonschema:"nullable"`
+	Base               BaseTemplates `yaml:"base,omitempty" json:"base,omitempty"`
+	MinimumLimaVersion *string       `yaml:"minimumLimaVersion,omitempty" json:"minimumLimaVersion,omitempty" jsonschema:"nullable"`
+	VMType             *VMType       `yaml:"vmType,omitempty" json:"vmType,omitempty" jsonschema:"nullable"`
+	VMOpts             VMOpts        `yaml:"vmOpts,omitempty" json:"vmOpts,omitempty"`
+	OS                 *OS           `yaml:"os,omitempty" json:"os,omitempty" jsonschema:"nullable"`
+	Arch               *Arch         `yaml:"arch,omitempty" json:"arch,omitempty" jsonschema:"nullable"`
+	Images             []Image       `yaml:"images,omitempty" json:"images,omitempty" jsonschema:"nullable"`
+	// Deprecated: Use VMOpts.Qemu.CPUType instead.
 	CPUType               CPUType       `yaml:"cpuType,omitempty" json:"cpuType,omitempty" jsonschema:"nullable"`
 	CPUs                  *int          `yaml:"cpus,omitempty" json:"cpus,omitempty" jsonschema:"nullable"`
 	Memory                *string       `yaml:"memory,omitempty" json:"memory,omitempty" jsonschema:"nullable"` // go-units.RAMInBytes
@@ -111,6 +115,7 @@ type VMOpts struct {
 
 type QEMUOpts struct {
 	MinimumVersion *string `yaml:"minimumVersion,omitempty" json:"minimumVersion,omitempty" jsonschema:"nullable"`
+	CPUType        CPUType `yaml:"cpuType,omitempty" json:"cpuType,omitempty" jsonschema:"nullable"`
 }
 
 type Rosetta struct {
@@ -316,4 +321,69 @@ type CACertificates struct {
 	RemoveDefaults *bool    `yaml:"removeDefaults,omitempty" json:"removeDefaults,omitempty" jsonschema:"nullable"` // default: false
 	Files          []string `yaml:"files,omitempty" json:"files,omitempty" jsonschema:"nullable"`
 	Certs          []string `yaml:"certs,omitempty" json:"certs,omitempty" jsonschema:"nullable"`
+}
+
+func NewOS(osname string) OS {
+	switch osname {
+	case "linux":
+		return LINUX
+	default:
+		logrus.Warnf("Unknown os: %s", osname)
+		return osname
+	}
+}
+
+func Goarm() int {
+	if runtime.GOOS != "linux" {
+		return 0
+	}
+	if runtime.GOARCH != "arm" {
+		return 0
+	}
+	if cpu.ARM.HasVFPv3 {
+		return 7
+	}
+	if cpu.ARM.HasVFP {
+		return 6
+	}
+	return 5 // default
+}
+
+func NewArch(arch string) Arch {
+	switch arch {
+	case "amd64":
+		return X8664
+	case "arm64":
+		return AARCH64
+	case "arm":
+		arm := Goarm()
+		if arm == 7 {
+			return ARMV7L
+		}
+		logrus.Warnf("Unknown arm: %d", arm)
+		return arch
+	case "ppc64le":
+		return PPC64LE
+	case "riscv64":
+		return RISCV64
+	case "s390x":
+		return S390X
+	default:
+		logrus.Warnf("Unknown arch: %s", arch)
+		return arch
+	}
+}
+
+func NewVMType(driver string) VMType {
+	switch driver {
+	case "vz":
+		return VZ
+	case "qemu":
+		return QEMU
+	case "wsl2":
+		return WSL2
+	default:
+		logrus.Warnf("Unknown driver: %s", driver)
+		return driver
+	}
 }

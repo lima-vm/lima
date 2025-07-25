@@ -8,13 +8,13 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 	networks "github.com/lima-vm/lima/v2/pkg/networks/reconcile"
-	"github.com/lima-vm/lima/v2/pkg/store"
 )
 
 const launchHostAgentForeground = false
 
-func Restart(ctx context.Context, inst *store.Instance) error {
+func Restart(ctx context.Context, inst *limatype.Instance) error {
 	if err := StopGracefully(ctx, inst, true); err != nil {
 		return err
 	}
@@ -30,7 +30,7 @@ func Restart(ctx context.Context, inst *store.Instance) error {
 	return nil
 }
 
-func RestartForcibly(ctx context.Context, inst *store.Instance) error {
+func RestartForcibly(ctx context.Context, inst *limatype.Instance) error {
 	logrus.Info("Restarting the instance forcibly")
 	StopForcibly(inst)
 
