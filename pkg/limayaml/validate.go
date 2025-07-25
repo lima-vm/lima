@@ -102,12 +102,6 @@ func Validate(y *LimaYAML, warn bool) error {
 		}
 	}
 
-	for arch := range y.CPUType {
-		if !slices.Contains(ArchTypes, arch) {
-			errs = errors.Join(errs, fmt.Errorf("field `cpuType` uses unsupported arch %q", arch))
-		}
-	}
-
 	if *y.CPUs == 0 {
 		errs = errors.Join(errs, errors.New("field `cpus` must be set"))
 	}
