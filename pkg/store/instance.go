@@ -67,6 +67,8 @@ type Instance struct {
 	Protected       bool               `json:"protected"`
 	LimaVersion     string             `json:"limaVersion"`
 	Param           map[string]string  `json:"param,omitempty"`
+	IPv4Address     string             `json:"ipv4,omitempty"`
+	IPv6Address     string             `json:"ipv6,omitempty"`
 }
 
 // Inspect returns err only when the instance does not exist (os.ErrNotExist).
@@ -122,6 +124,8 @@ func Inspect(instName string) (*Instance, error) {
 				inst.Errors = append(inst.Errors, fmt.Errorf("failed to get Info from %q: %w", haSock, err))
 			} else {
 				inst.SSHLocalPort = info.SSHLocalPort
+				inst.IPv4Address = info.GuestIPv4Address
+				inst.IPv6Address = info.GuestIPv6Address
 			}
 		}
 	}
