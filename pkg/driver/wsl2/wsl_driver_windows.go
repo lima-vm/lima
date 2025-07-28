@@ -90,12 +90,6 @@ func (l *LimaWslDriver) Validate() error {
 		return fmt.Errorf("unsupported arch: %q", *l.Instance.Config.Arch)
 	}
 
-	for k, v := range l.Instance.Config.CPUType {
-		if v != "" {
-			logrus.Warnf("Ignoring: vmType %s: cpuType[%q]: %q", *l.Instance.Config.VMType, k, v)
-		}
-	}
-
 	// TODO: real filetype checks
 	tarFileRegex := regexp.MustCompile(`.*tar\.*`)
 	for i, image := range l.Instance.Config.Images {
