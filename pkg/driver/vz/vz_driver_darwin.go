@@ -23,6 +23,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
+	"github.com/lima-vm/lima/v2/pkg/ptr"
 	"github.com/lima-vm/lima/v2/pkg/reflectutil"
 	"github.com/lima-vm/lima/v2/pkg/store/filenames"
 )
@@ -66,6 +67,7 @@ var knownYamlProperties = []string{
 	"User",
 	"Video",
 	"VMType",
+	"VMOpts",
 }
 
 const Enabled = true
@@ -93,12 +95,28 @@ func (l *LimaVzDriver) Configure(inst *limatype.Instance) *driver.ConfiguredDriv
 	l.Instance = inst
 	l.SSHLocalPort = inst.SSHLocalPort
 
+	if l.Instance.Config.MountType != nil {
+		mountTypesUnsupported := make(map[string]struct{})
+		for _, f := range l.Instance.Config.MountTypesUnsupported {
+			mountTypesUnsupported[f] = struct{}{}
+		}
+
+		if _, ok := mountTypesUnsupported[*l.Instance.Config.MountType]; ok {
+			// We cannot return an error here, but Validate() will return it.
+			logrus.Warnf("Unsupported mount type: %q", *l.Instance.Config.MountType)
+		}
+	}
+
 	return &driver.ConfiguredDriver{
 		Driver: l,
 	}
 }
 
 func (l *LimaVzDriver) AcceptConfig(cfg *limatype.LimaYAML, filePath string) error {
+	if cfg.MountType == nil {
+		cfg.MountType = ptr.Of(limatype.VIRTIOFS)
+	}
+
 	if dir, basename := filepath.Split(filePath); dir != "" && basename == filenames.LimaYAML && limayaml.IsExistingInstanceDir(dir) {
 		vzIdentifier := filepath.Join(dir, filenames.VzIdentifier) // since Lima v0.14
 		if _, err := os.Lstat(vzIdentifier); !errors.Is(err, os.ErrNotExist) {
@@ -111,9 +129,6 @@ func (l *LimaVzDriver) AcceptConfig(cfg *limatype.LimaYAML, filePath string) err
 		l.Instance = &limatype.Instance{}
 	}
 	l.Instance.Config = cfg
-	defer func() {
-		l.Instance.Config = nil
-	}()
 
 	if err := l.Validate(); err != nil {
 		return fmt.Errorf("config not supported by the VZ driver: %w", err)
@@ -135,7 +150,7 @@ func (l *LimaVzDriver) Validate(_ context.Context) error {
 			"Update macOS, or change vmType to \"qemu\" if the VM does not start up. (https://github.com/lima-vm/lima/issues/3334)",
 			*l.Instance.Config.VMType)
 	}
-	if *l.Instance.Config.MountType == limatype.NINEP {
+	if l.Instance.Config.MountType != nil && *l.Instance.Config.MountType == limatype.NINEP {
 		return fmt.Errorf("field `mountType` must be %q or %q for VZ driver , got %q", limatype.REVSSHFS, limatype.VIRTIOFS, *l.Instance.Config.MountType)
 	}
 	if *l.Instance.Config.Firmware.LegacyBIOS {
@@ -149,7 +164,7 @@ func (l *LimaVzDriver) Validate(_ context.Context) error {
 			}
 		}
 	}
-	if unknown := reflectutil.UnknownNonEmptyFields(l.Instance.Config, knownYamlProperties...); len(unknown) > 0 {
+	if unknown := reflectutil.UnknownNonEmptyFields(l.Instance.Config, knownYamlProperties...); l.Instance.Config.VMType != nil && len(unknown) > 0 {
 		logrus.Warnf("vmType %s: ignoring %+v", *l.Instance.Config.VMType, unknown)
 	}
 

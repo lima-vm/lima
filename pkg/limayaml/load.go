@@ -78,11 +78,16 @@ func load(ctx context.Context, b []byte, filePath string, warn bool) (*limatype.
 	}
 	y.VMType = ptr.Of(vmType)
 
+	if err := AcceptConfig(&y, filePath); err != nil {
+		logrus.WithError(err).Warnf("Failed to accept config for %q", filePath)
+		return nil, fmt.Errorf("failed to accept config for %q: %w", filePath, err)
+	}
+
 	return &y, nil
 }
 
-func ResolveVMType(y *limatype.LimaYAML, filePath string) (limatype.VMType, error) {
-	// Check if the VMType is explicitly specified
+// Check if the VMType is explicitly specified
+func CheckExplicitVM(y *limatype.LimaYAML, filePath string) (limatype.VMType, error) {
 	if y.VMType != nil && *y.VMType != "" && *y.VMType != "default" {
 		logrus.Debugf("ResolveVMType: VMType %q is explicitly specified in %q", *y.VMType, filePath)
 		_, _, exists := registry.Get(*y.VMType)
@@ -93,19 +98,24 @@ func ResolveVMType(y *limatype.LimaYAML, filePath string) (limatype.VMType, erro
 		return limatype.NewVMType(*y.VMType), nil
 	}
 
+	return "", nil
+}
+
+func AcceptConfig(y *limatype.LimaYAML, filePath string) error {
 	candidates := registry.List()
 	for vmType, location := range candidates {
-		if location != registry.External {
+		if location != registry.External && vmType == limatype.VZ {
 			// For now we only support internal drivers.
 			_, intDriver, _ := registry.Get(vmType)
 			if err := intDriver.AcceptConfig(y, filePath); err == nil {
 				logrus.Debugf("ResolveVMType: resolved VMType %q (from %q)", vmType, location)
-				return limatype.NewVMType(vmType), nil
+				y.VMType = ptr.Of(vmType)
+				return nil
 			} else {
 				logrus.Debugf("ResolveVMType: VMType %q is not accepted by the driver: %v", vmType, err)
+				return fmt.Errorf("VMType %q is not accepted by the driver: %w", vmType, err)
 			}
 		}
 	}
-
-	return "", errors.New("no driver can handle this config")
+	return fmt.Errorf("no VMType found for %q", filePath)
 }

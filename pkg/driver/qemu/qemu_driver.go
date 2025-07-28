@@ -35,6 +35,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/ptr"
 	"github.com/lima-vm/lima/v2/pkg/store/filenames"
+	"github.com/lima-vm/lima/v2/pkg/version/versionutil"
 )
 
 type LimaQemuDriver struct {
@@ -71,6 +72,39 @@ func (l *LimaQemuDriver) Configure(inst *store.Instance) *driver.ConfiguredDrive
 
 	if l.Instance.Config.Video.VNC.Display == nil || *l.Instance.Config.Video.VNC.Display == "" {
 		l.Instance.Config.Video.VNC.Display = ptr.Of("127.0.0.1:0,to=9")
+	}
+
+	mountTypesUnsupported := make(map[string]struct{})
+	for _, f := range l.Instance.Config.MountTypesUnsupported {
+		mountTypesUnsupported[f] = struct{}{}
+	}
+
+	if runtime.GOOS == "windows" {
+		// QEMU for Windows does not support 9p
+		mountTypesUnsupported[limatype.NINEP] = struct{}{}
+	}
+
+	if l.Instance.Config.MountType == nil || *l.Instance.Config.MountType == "" || *l.Instance.Config.MountType == "default" {
+		l.Instance.Config.MountType = ptr.Of(limatype.NINEP)
+		if _, ok := mountTypesUnsupported[limatype.NINEP]; ok {
+			// Use REVSSHFS if the instance does not support 9p
+			l.Instance.Config.MountType = ptr.Of(limatype.REVSSHFS)
+		} else if limayaml.IsExistingInstanceDir(l.Instance.Dir) && !versionutil.GreaterEqual(limayaml.ExistingLimaVersion(l.Instance.Dir), "1.0.0") {
+			// Use REVSSHFS if the instance was created with Lima prior to v1.0
+			l.Instance.Config.MountType = ptr.Of(limatype.REVSSHFS)
+		}
+	}
+
+	if _, ok := mountTypesUnsupported[*l.Instance.Config.MountType]; ok {
+		// We cannot return an error here, but Validate() will return it.
+		logrus.Warnf("Unsupported mount type: %q", *l.Instance.Config.MountType)
+	}
+
+	for i := range l.Instance.Config.Mounts {
+		mount := &l.Instance.Config.Mounts[i]
+		if mount.Virtiofs.QueueSize == nil && *l.Instance.Config.MountType == limatype.VIRTIOFS {
+			l.Instance.Config.Mounts[i].Virtiofs.QueueSize = ptr.Of(limayaml.DefaultVirtiofsQueueSize)
+		}
 	}
 
 	return &driver.ConfiguredDriver{

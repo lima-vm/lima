@@ -38,7 +38,6 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/store/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/store/filenames"
 	"github.com/lima-vm/lima/v2/pkg/version"
-	"github.com/lima-vm/lima/v2/pkg/version/versionutil"
 )
 
 const (
@@ -140,18 +139,7 @@ func defaultGuestInstallPrefix() string {
 func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath string, warn bool) {
 	instDir := filepath.Dir(filePath)
 
-	// existingLimaVersion can be empty if the instance was created with Lima prior to v0.20,
-	var existingLimaVersion string
-	if !IsExistingInstanceDir(instDir) {
-		existingLimaVersion = version.Version
-	} else {
-		limaVersionFile := filepath.Join(instDir, filenames.LimaVersion)
-		if b, err := os.ReadFile(limaVersionFile); err == nil {
-			existingLimaVersion = strings.TrimSpace(string(b))
-		} else if !errors.Is(err, os.ErrNotExist) {
-			logrus.WithError(err).Warnf("Failed to read %q", limaVersionFile)
-		}
-	}
+	existingLimaVersion := ExistingLimaVersion(instDir)
 
 	if y.User.Name == nil {
 		y.User.Name = d.User.Name
@@ -628,15 +616,6 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 	}
 
 	y.MountTypesUnsupported = slices.Concat(o.MountTypesUnsupported, y.MountTypesUnsupported, d.MountTypesUnsupported)
-	mountTypesUnsupported := make(map[string]struct{})
-	for _, f := range y.MountTypesUnsupported {
-		mountTypesUnsupported[f] = struct{}{}
-	}
-
-	if runtime.GOOS == "windows" {
-		// QEMU for Windows does not support 9p
-		mountTypesUnsupported[limatype.NINEP] = struct{}{}
-	}
 
 	// MountType has to be resolved before resolving Mounts
 	if y.MountType == nil {
@@ -644,28 +623,6 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 	}
 	if o.MountType != nil {
 		y.MountType = o.MountType
-	}
-	if y.MountType == nil || *y.MountType == "" || *y.MountType == "default" {
-		switch *y.VMType {
-		case limatype.VZ:
-			y.MountType = ptr.Of(limatype.VIRTIOFS)
-		case limatype.QEMU:
-			y.MountType = ptr.Of(limatype.NINEP)
-			if _, ok := mountTypesUnsupported[limatype.NINEP]; ok {
-				// Use REVSSHFS if the instance does not support 9p
-				y.MountType = ptr.Of(limatype.REVSSHFS)
-			} else if IsExistingInstanceDir(instDir) && !versionutil.GreaterEqual(existingLimaVersion, "1.0.0") {
-				// Use REVSSHFS if the instance was created with Lima prior to v1.0
-				y.MountType = ptr.Of(limatype.REVSSHFS)
-			}
-		default:
-			y.MountType = ptr.Of(limatype.REVSSHFS)
-		}
-	}
-
-	if _, ok := mountTypesUnsupported[*y.MountType]; ok {
-		// We cannot return an error here, but Validate() will return it.
-		logrus.Warnf("Unsupported mount type: %q", *y.MountType)
 	}
 
 	if y.MountInotify == nil {
@@ -752,9 +709,6 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		}
 		if mount.NineP.Msize == nil {
 			mounts[i].NineP.Msize = ptr.Of(Default9pMsize)
-		}
-		if mount.Virtiofs.QueueSize == nil && *y.VMType == limatype.QEMU && *y.MountType == limatype.VIRTIOFS {
-			mounts[i].Virtiofs.QueueSize = ptr.Of(DefaultVirtiofsQueueSize)
 		}
 		if mount.Writable == nil {
 			mount.Writable = ptr.Of(false)
@@ -862,6 +816,21 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 	}
 
 	fixUpForPlainMode(y)
+}
+
+// ExistingLimaVersion returns empty if the instance was created with Lima prior to v0.20,
+func ExistingLimaVersion(instDir string) string {
+	if !IsExistingInstanceDir(instDir) {
+		return version.Version
+	} else {
+		limaVersionFile := filepath.Join(instDir, filenames.LimaVersion)
+		if b, err := os.ReadFile(limaVersionFile); err == nil {
+			return strings.TrimSpace(string(b))
+		} else if !errors.Is(err, os.ErrNotExist) {
+			logrus.WithError(err).Warnf("Failed to read %q", limaVersionFile)
+		}
+	}
+	return version.Version
 }
 
 func fixUpForPlainMode(y *limatype.LimaYAML) {
