@@ -31,11 +31,7 @@ func TestFillDefault(t *testing.T) {
 	logrus.SetLevel(logrus.DebugLevel)
 	var d, y, o limatype.LimaYAML
 
-	defaultVMType, err := ResolveVMType(&y, "")
-	if err != nil {
-		t.Fatalf("Failed to resolve default VMType: %v", err)
-	}
-
+	defaultVMType := limatype.QEMU
 	opts := []cmp.Option{
 		// Consider nil slices and empty slices to be identical
 		cmpopts.EquateEmpty(),

@@ -35,6 +35,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/networks"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/ptr"
+	"github.com/lima-vm/lima/v2/pkg/registry"
 	"github.com/lima-vm/lima/v2/pkg/store/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/store/filenames"
 	"github.com/lima-vm/lima/v2/pkg/version"
@@ -208,6 +209,14 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 	}
 	if o.VMType != nil {
 		y.VMType = o.VMType
+	}
+	if y.VMType != nil && *y.VMType != "" && *y.VMType != "default" {
+		logrus.Debugf("ResolveVMType: VMType %q is explicitly specified in %q", *y.VMType, filePath)
+		_, _, exists := registry.Get(*y.VMType)
+		if !exists {
+			logrus.Warnf("ResolveVMType: VMType %q is not registered", *y.VMType)
+		}
+		*y.VMType = limatype.NewVMType(*y.VMType)
 	}
 
 	if y.OS == nil {

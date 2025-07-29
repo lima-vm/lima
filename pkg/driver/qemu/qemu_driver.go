@@ -70,43 +70,6 @@ func (l *LimaQemuDriver) Configure(inst *store.Instance) *driver.ConfiguredDrive
 	l.Instance = inst
 	l.SSHLocalPort = inst.SSHLocalPort
 
-	if l.Instance.Config.Video.VNC.Display == nil || *l.Instance.Config.Video.VNC.Display == "" {
-		l.Instance.Config.Video.VNC.Display = ptr.Of("127.0.0.1:0,to=9")
-	}
-
-	mountTypesUnsupported := make(map[string]struct{})
-	for _, f := range l.Instance.Config.MountTypesUnsupported {
-		mountTypesUnsupported[f] = struct{}{}
-	}
-
-	if runtime.GOOS == "windows" {
-		// QEMU for Windows does not support 9p
-		mountTypesUnsupported[limatype.NINEP] = struct{}{}
-	}
-
-	if l.Instance.Config.MountType == nil || *l.Instance.Config.MountType == "" || *l.Instance.Config.MountType == "default" {
-		l.Instance.Config.MountType = ptr.Of(limatype.NINEP)
-		if _, ok := mountTypesUnsupported[limatype.NINEP]; ok {
-			// Use REVSSHFS if the instance does not support 9p
-			l.Instance.Config.MountType = ptr.Of(limatype.REVSSHFS)
-		} else if limayaml.IsExistingInstanceDir(l.Instance.Dir) && !versionutil.GreaterEqual(limayaml.ExistingLimaVersion(l.Instance.Dir), "1.0.0") {
-			// Use REVSSHFS if the instance was created with Lima prior to v1.0
-			l.Instance.Config.MountType = ptr.Of(limatype.REVSSHFS)
-		}
-	}
-
-	if _, ok := mountTypesUnsupported[*l.Instance.Config.MountType]; ok {
-		// We cannot return an error here, but Validate() will return it.
-		logrus.Warnf("Unsupported mount type: %q", *l.Instance.Config.MountType)
-	}
-
-	for i := range l.Instance.Config.Mounts {
-		mount := &l.Instance.Config.Mounts[i]
-		if mount.Virtiofs.QueueSize == nil && *l.Instance.Config.MountType == limatype.VIRTIOFS {
-			l.Instance.Config.Mounts[i].Virtiofs.QueueSize = ptr.Of(limayaml.DefaultVirtiofsQueueSize)
-		}
-	}
-
 	return &driver.ConfiguredDriver{
 		Driver: l,
 	}
@@ -126,7 +89,46 @@ func (l *LimaQemuDriver) Validate(ctx context.Context) error {
 	return nil
 }
 
-func (l *LimaQemuDriver) AcceptConfig(cfg *limatype.LimaYAML, filepath string) error {
+func (l *LimaQemuDriver) AcceptConfig(cfg *limatype.LimaYAML, filePath string) error {
+	instDir := filepath.Dir(filePath)
+
+	if cfg.Video.VNC.Display == nil || *cfg.Video.VNC.Display == "" {
+		cfg.Video.VNC.Display = ptr.Of("127.0.0.1:0,to=9")
+	}
+
+	mountTypesUnsupported := make(map[string]struct{})
+	for _, f := range cfg.MountTypesUnsupported {
+		mountTypesUnsupported[f] = struct{}{}
+	}
+
+	if runtime.GOOS == "windows" {
+		// QEMU for Windows does not support 9p
+		mountTypesUnsupported[limatype.NINEP] = struct{}{}
+	}
+
+	if cfg.MountType == nil || *cfg.MountType == "" || *cfg.MountType == "default" {
+		cfg.MountType = ptr.Of(limatype.NINEP)
+		if _, ok := mountTypesUnsupported[limatype.NINEP]; ok {
+			// Use REVSSHFS if the instance does not support 9p
+			cfg.MountType = ptr.Of(limatype.REVSSHFS)
+		} else if limayaml.IsExistingInstanceDir(instDir) && !versionutil.GreaterEqual(limayaml.ExistingLimaVersion(instDir), "1.0.0") {
+			// Use REVSSHFS if the instance was created with Lima prior to v1.0
+			cfg.MountType = ptr.Of(limatype.REVSSHFS)
+		}
+	}
+
+	if _, ok := mountTypesUnsupported[*cfg.MountType]; ok {
+		// We cannot return an error here, but Validate() will return it.
+		logrus.Warnf("Unsupported mount type: %q", *cfg.MountType)
+	}
+
+	for i := range cfg.Mounts {
+		mount := &cfg.Mounts[i]
+		if mount.Virtiofs.QueueSize == nil && *cfg.MountType == limatype.VIRTIOFS {
+			cfg.Mounts[i].Virtiofs.QueueSize = ptr.Of(limayaml.DefaultVirtiofsQueueSize)
+		}
+	}
+
 	if runtime.GOOS == "darwin" {
 		if cfg.Arch != nil && !limayaml.IsNativeArch(*cfg.Arch) {
 			logrus.Debugf("ResolveVMType: resolved VMType %q (non-native arch=%q is specified in []*LimaYAML{o,y,d})", "qemu", *cfg.Arch)
@@ -162,9 +164,6 @@ func (l *LimaQemuDriver) AcceptConfig(cfg *limatype.LimaYAML, filepath string) e
 		l.Instance = &limatype.Instance{}
 	}
 	l.Instance.Config = cfg
-	defer func() {
-		l.Instance.Config = nil
-	}()
 
 	if err := l.Validate(); err != nil {
 		return fmt.Errorf("config not supported by the QEMU driver: %w", err)
@@ -362,7 +361,7 @@ func (l *LimaQemuDriver) checkBinarySignature(ctx context.Context) error {
 		return err
 	}
 	// The codesign --xml option is only available on macOS Monterey and later
-	if !macOSProductVersion.LessThan(*semver.New("12.0.0")) {
+	if !macOSProductVersion.LessThan(*semver.New("12.0.0")) && l.Instance.Arch != "" {
 		qExe, _, err := Exe(l.Instance.Arch)
 		if err != nil {
 			return fmt.Errorf("failed to find the QEMU binary for the architecture %q: %w", l.Instance.Arch, err)
