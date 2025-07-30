@@ -546,8 +546,10 @@ ifeq ($(GOOS),darwin)
 # returns the architecture name converted from GOARCH to macOS's uname -m.
 to_uname_m = $(foreach arch,$(1),$(shell echo $(arch) | sed 's/amd64/x86_64/'))
 else ifeq ($(GOOS),linux)
+ifeq ($cross_compiling),true)
 # CC is required for cross-compiling on Linux.
 CC = $(call to_uname_m,$(GOARCH))-linux-gnu-gcc
+endif
 else ifeq ($(GOOS),windows)
 # artifact in zip format also provided for Windows.
 ARTIFACT_FILE_EXTENSIONS += .zip
