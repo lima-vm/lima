@@ -29,15 +29,17 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/driver"
 	"github.com/lima-vm/lima/v2/pkg/driver/qemu/entitlementutil"
 	"github.com/lima-vm/lima/v2/pkg/executil"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	"github.com/lima-vm/lima/v2/pkg/networks/usernet"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
-	"github.com/lima-vm/lima/v2/pkg/store"
+	"github.com/lima-vm/lima/v2/pkg/ptr"
 	"github.com/lima-vm/lima/v2/pkg/store/filenames"
+	"github.com/lima-vm/lima/v2/pkg/version/versionutil"
 )
 
 type LimaQemuDriver struct {
-	Instance     *store.Instance
+	Instance     *limatype.Instance
 	SSHLocalPort int
 	vSockPort    int
 	virtioPort   string
@@ -64,7 +66,7 @@ func New() *LimaQemuDriver {
 	}
 }
 
-func (l *LimaQemuDriver) Configure(inst *store.Instance, sshLocalPort int) *driver.ConfiguredDriver {
+func (l *LimaQemuDriver) Configure(inst *limatype.Instance, sshLocalPort int) *driver.ConfiguredDriver {
 	l.Instance = inst
 	l.SSHLocalPort = sshLocalPort
 
@@ -80,10 +82,93 @@ func (l *LimaQemuDriver) Validate() error {
 		}
 	}
 
-	if *l.Instance.Config.MountType == limayaml.VIRTIOFS && runtime.GOOS != "linux" {
+	if *l.Instance.Config.MountType == limatype.VIRTIOFS && runtime.GOOS != "linux" {
 		return fmt.Errorf("field `mountType` must be %q or %q for QEMU driver on non-Linux, got %q",
-			limayaml.REVSSHFS, limayaml.NINEP, *l.Instance.Config.MountType)
+			limatype.REVSSHFS, limatype.NINEP, *l.Instance.Config.MountType)
 	}
+	return nil
+}
+
+func (l *LimaQemuDriver) AcceptConfig(cfg *limatype.LimaYAML, filePath string) error {
+	instDir := filepath.Dir(filePath)
+
+	if cfg.Video.VNC.Display == nil || *cfg.Video.VNC.Display == "" {
+		cfg.Video.VNC.Display = ptr.Of("127.0.0.1:0,to=9")
+	}
+
+	mountTypesUnsupported := make(map[string]struct{})
+	for _, f := range cfg.MountTypesUnsupported {
+		mountTypesUnsupported[f] = struct{}{}
+	}
+
+	if runtime.GOOS == "windows" {
+		// QEMU for Windows does not support 9p
+		mountTypesUnsupported[limatype.NINEP] = struct{}{}
+	}
+
+	if cfg.MountType == nil || *cfg.MountType == "" || *cfg.MountType == "default" {
+		cfg.MountType = ptr.Of(limatype.NINEP)
+		if _, ok := mountTypesUnsupported[limatype.NINEP]; ok {
+			// Use REVSSHFS if the instance does not support 9p
+			cfg.MountType = ptr.Of(limatype.REVSSHFS)
+		} else if limayaml.IsExistingInstanceDir(instDir) && !versionutil.GreaterEqual(limayaml.ExistingLimaVersion(instDir), "1.0.0") {
+			// Use REVSSHFS if the instance was created with Lima prior to v1.0
+			cfg.MountType = ptr.Of(limatype.REVSSHFS)
+		}
+	}
+
+	if _, ok := mountTypesUnsupported[*cfg.MountType]; ok {
+		// We cannot return an error here, but Validate() will return it.
+		logrus.Warnf("Unsupported mount type: %q", *cfg.MountType)
+	}
+
+	for i := range cfg.Mounts {
+		mount := &cfg.Mounts[i]
+		if mount.Virtiofs.QueueSize == nil && *cfg.MountType == limatype.VIRTIOFS {
+			cfg.Mounts[i].Virtiofs.QueueSize = ptr.Of(limayaml.DefaultVirtiofsQueueSize)
+		}
+	}
+
+	if runtime.GOOS == "darwin" {
+		if cfg.Arch != nil && !limayaml.IsNativeArch(*cfg.Arch) {
+			logrus.Debugf("ResolveVMType: resolved VMType %q (non-native arch=%q is specified in []*LimaYAML{o,y,d})", "qemu", *cfg.Arch)
+			return nil
+		}
+		if limayaml.ResolveArch(cfg.Arch) == limatype.X8664 && cfg.Firmware.LegacyBIOS != nil && *cfg.Firmware.LegacyBIOS {
+			logrus.Debugf("ResolveVMType: resolved VMType %q (firmware.legacyBIOS is specified in []*LimaYAML{o,y,d} on x86_64)", "qemu")
+			return nil
+		}
+		if cfg.MountType != nil && *cfg.MountType == limatype.NINEP {
+			logrus.Debugf("ResolveVMType: resolved VMType %q (mountType=%q is specified in []*LimaYAML{o,y,d})", "qemu", limatype.NINEP)
+			return nil
+		}
+		if cfg.Audio.Device != nil {
+			switch *cfg.Audio.Device {
+			case "", "none", "default", "vz":
+				// NOP
+			default:
+				logrus.Debugf("ResolveVMType: resolved VMType %q (audio.device=%q is specified in []*LimaYAML{o,y,d})", "qemu", *cfg.Audio.Device)
+				return nil
+			}
+		}
+		if cfg.Video.Display != nil {
+			display := *cfg.Video.Display
+			if display != "" && display != "none" && display != "default" && display != "vz" {
+				logrus.Debugf("ResolveVMType: resolved VMType %q (video.display=%q is specified in []*LimaYAML{o,y,d})", "qemu", display)
+				return nil
+			}
+		}
+	}
+
+	if l.Instance == nil {
+		l.Instance = &limatype.Instance{}
+	}
+	l.Instance.Config = cfg
+
+	if err := l.Validate(); err != nil {
+		return fmt.Errorf("config not supported by the QEMU driver: %w", err)
+	}
+
 	return nil
 }
 
@@ -118,7 +203,7 @@ func (l *LimaQemuDriver) Start(ctx context.Context) (chan error, error) {
 	}
 
 	var vhostCmds []*exec.Cmd
-	if *l.Instance.Config.MountType == limayaml.VIRTIOFS {
+	if *l.Instance.Config.MountType == limatype.VIRTIOFS {
 		vhostExe, err := FindVirtiofsd(qExe)
 		if err != nil {
 			return nil, err
@@ -275,7 +360,7 @@ func (l *LimaQemuDriver) checkBinarySignature() error {
 		return err
 	}
 	// The codesign --xml option is only available on macOS Monterey and later
-	if !macOSProductVersion.LessThan(*semver.New("12.0.0")) {
+	if !macOSProductVersion.LessThan(*semver.New("12.0.0")) && l.Instance.Arch != "" {
 		qExe, _, err := Exe(l.Instance.Arch)
 		if err != nil {
 			return fmt.Errorf("failed to find the QEMU binary for the architecture %q: %w", l.Instance.Arch, err)
@@ -427,7 +512,7 @@ func (l *LimaQemuDriver) DeleteSnapshot(_ context.Context, tag string) error {
 		InstanceDir: l.Instance.Dir,
 		LimaYAML:    l.Instance.Config,
 	}
-	return Del(qCfg, l.Instance.Status == store.StatusRunning, tag)
+	return Del(qCfg, l.Instance.Status == limatype.StatusRunning, tag)
 }
 
 func (l *LimaQemuDriver) CreateSnapshot(_ context.Context, tag string) error {
@@ -436,7 +521,7 @@ func (l *LimaQemuDriver) CreateSnapshot(_ context.Context, tag string) error {
 		InstanceDir: l.Instance.Dir,
 		LimaYAML:    l.Instance.Config,
 	}
-	return Save(qCfg, l.Instance.Status == store.StatusRunning, tag)
+	return Save(qCfg, l.Instance.Status == limatype.StatusRunning, tag)
 }
 
 func (l *LimaQemuDriver) ApplySnapshot(_ context.Context, tag string) error {
@@ -445,7 +530,7 @@ func (l *LimaQemuDriver) ApplySnapshot(_ context.Context, tag string) error {
 		InstanceDir: l.Instance.Dir,
 		LimaYAML:    l.Instance.Config,
 	}
-	return Load(qCfg, l.Instance.Status == store.StatusRunning, tag)
+	return Load(qCfg, l.Instance.Status == limatype.StatusRunning, tag)
 }
 
 func (l *LimaQemuDriver) ListSnapshots(_ context.Context) (string, error) {
@@ -454,7 +539,7 @@ func (l *LimaQemuDriver) ListSnapshots(_ context.Context) (string, error) {
 		InstanceDir: l.Instance.Dir,
 		LimaYAML:    l.Instance.Config,
 	}
-	return List(qCfg, l.Instance.Status == store.StatusRunning)
+	return List(qCfg, l.Instance.Status == limatype.StatusRunning)
 }
 
 func (l *LimaQemuDriver) GuestAgentConn(ctx context.Context) (net.Conn, string, error) {

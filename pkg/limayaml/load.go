@@ -11,6 +11,9 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/ptr"
+	"github.com/lima-vm/lima/v2/pkg/registry"
 	"github.com/lima-vm/lima/v2/pkg/store/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/store/filenames"
 )
@@ -18,19 +21,19 @@ import (
 // Load loads the yaml and fulfills unspecified fields with the default values.
 //
 // Load does not validate. Use Validate for validation.
-func Load(b []byte, filePath string) (*LimaYAML, error) {
+func Load(b []byte, filePath string) (*limatype.LimaYAML, error) {
 	return load(b, filePath, false)
 }
 
 // LoadWithWarnings will call FillDefaults with warnings enabled (e.g. when
 // the username is not valid on Linux and must be replaced by "Lima").
 // It is called when creating or editing an instance.
-func LoadWithWarnings(b []byte, filePath string) (*LimaYAML, error) {
+func LoadWithWarnings(b []byte, filePath string) (*limatype.LimaYAML, error) {
 	return load(b, filePath, true)
 }
 
-func load(b []byte, filePath string, warn bool) (*LimaYAML, error) {
-	var y, d, o LimaYAML
+func load(b []byte, filePath string, warn bool) (*limatype.LimaYAML, error) {
+	var y, d, o limatype.LimaYAML
 
 	if err := Unmarshal(b, &y, fmt.Sprintf("main file %q", filePath)); err != nil {
 		return nil, err
@@ -68,5 +71,47 @@ func load(b []byte, filePath string, warn bool) (*LimaYAML, error) {
 	}
 
 	FillDefault(&y, &d, &o, filePath, warn)
+
+	if err := ResolveVMType(&y, filePath); err != nil {
+		logrus.WithError(err).Warnf("Failed to accept config for %q", filePath)
+		return nil, fmt.Errorf("failed to accept config for %q: %w", filePath, err)
+	}
+
 	return &y, nil
+}
+
+func ResolveVMType(y *limatype.LimaYAML, filePath string) error {
+	if y.VMType != nil && *y.VMType != "" {
+		vmType := *y.VMType
+		_, intDriver, exists := registry.Get(vmType)
+		if !exists {
+			return fmt.Errorf("specified vmType %q is not a registered driver", vmType)
+		}
+		if intDriver == nil {
+			// For now we only support internal drivers.
+			return fmt.Errorf("specified vmType %q is not an internal driver", vmType)
+		}
+		if err := intDriver.AcceptConfig(y, filePath); err != nil {
+			return fmt.Errorf("vmType %q is not compatible with the configuration: %w", vmType, err)
+		}
+		logrus.Debugf("ResolveVMType: using explicitly specified VMType %q", vmType)
+		return nil
+	}
+
+	// If VMType is not specified, we try to resolve it by checking config with all the registered drivers.
+	candidates := registry.List()
+	for vmType, location := range candidates {
+		// For now we only support internal drivers.
+		if location == registry.Internal {
+			_, intDriver, _ := registry.Get(vmType)
+			if err := intDriver.AcceptConfig(y, filePath); err == nil {
+				logrus.Debugf("ResolveVMType: resolved VMType %q", vmType)
+				y.VMType = ptr.Of(vmType)
+				return nil
+			}
+		}
+
+	}
+
+	return fmt.Errorf("no VMType found for %q", filePath)
 }

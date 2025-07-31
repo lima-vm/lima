@@ -14,7 +14,7 @@ import (
 
 	"github.com/lima-vm/lima/v2/pkg/driver"
 	pb "github.com/lima-vm/lima/v2/pkg/driver/external"
-	"github.com/lima-vm/lima/v2/pkg/store"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 )
 
 func (d *DriverClient) Validate() error {
@@ -281,7 +281,7 @@ func (d *DriverClient) Info() driver.Info {
 	return info
 }
 
-func (d *DriverClient) Configure(inst *store.Instance, sshLocalPort int) *driver.ConfiguredDriver {
+func (d *DriverClient) Configure(inst *limatype.Instance, sshLocalPort int) *driver.ConfiguredDriver {
 	d.logger.Debugf("Setting config for instance %s with SSH local port %d", inst.Name, sshLocalPort)
 
 	instJSON, err := inst.MarshalJSON()
@@ -306,4 +306,8 @@ func (d *DriverClient) Configure(inst *store.Instance, sshLocalPort int) *driver
 	return &driver.ConfiguredDriver{
 		Driver: d,
 	}
+}
+
+func (d *DriverClient) AcceptConfig(cfg *limatype.LimaYAML, filepath string) error {
+	return errors.New("AcceptConfig not implemented in DriverClient")
 }
