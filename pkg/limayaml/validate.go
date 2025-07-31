@@ -425,9 +425,6 @@ func validateFileObject(f File, fieldName string) error {
 		errs = errors.Join(errs, fmt.Errorf("field `arch` must be one of %v; got %q", ArchTypes, f.Arch))
 	}
 	if f.Digest != "" {
-		if !f.Digest.Algorithm().Available() {
-			errs = errors.Join(errs, fmt.Errorf("field `%s.digest` refers to an unavailable digest algorithm", fieldName))
-		}
 		if err := f.Digest.Validate(); err != nil {
 			errs = errors.Join(errs, fmt.Errorf("field `%s.digest` is invalid: %s: %w", fieldName, f.Digest.String(), err))
 		}
