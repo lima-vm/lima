@@ -50,7 +50,8 @@ weight: 6
 Password is disabled and locked by default.
 You have to use `limactl shell bash` (or `lima bash`) to open a shell.
 
-Alternatively, you may also directly ssh into the guest: `ssh -p 60022 -i ~/.lima/_config/user -o NoHostAuthenticationForLocalhost=yes 127.0.0.1`.
+Alternatively, you may also directly ssh into the guest: `ssh -p <PORT> -i ~/.lima/_config/user -o NoHostAuthenticationForLocalhost=yes 127.0.0.1`.
+The port number can be inspected by running `limactl list`.
 
 #### "Does Lima work on ARM Mac?"
 Yes
