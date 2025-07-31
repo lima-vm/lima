@@ -56,3 +56,8 @@ func GreaterThan(limaVersion, oldVersion string) bool {
 func GreaterEqual(limaVersion, oldVersion string) bool {
 	return compare(limaVersion, oldVersion) >= 0
 }
+
+// LessThan returns true if limaVersion < oldVersion.
+func LessThan(limaVersion, oldVersion string) bool {
+	return !GreaterEqual(limaVersion, oldVersion)
+}
