@@ -59,6 +59,10 @@ func TestDownloadRemote(t *testing.T) {
 			_, err := Download(context.Background(), localPath, dummyRemoteFileURL, WithExpectedDigest(wrongDigest))
 			assert.ErrorContains(t, err, "expected digest")
 
+			wrongDigest2 := digest.Digest("8313944efb4f38570c689813f288058b674ea6c487017a5a4738dc674b65f9d9")
+			_, err = Download(context.Background(), localPath, dummyRemoteFileURL, WithExpectedDigest(wrongDigest2))
+			assert.ErrorContains(t, err, "invalid checksum digest format")
+
 			r, err := Download(context.Background(), localPath, dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest))
 			assert.NilError(t, err)
 			assert.Equal(t, StatusDownloaded, r.Status)

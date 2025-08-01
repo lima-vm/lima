@@ -122,9 +122,6 @@ func WithDecompress(decompress bool) Opt {
 func WithExpectedDigest(expectedDigest digest.Digest) Opt {
 	return func(o *options) error {
 		if expectedDigest != "" {
-			if !expectedDigest.Algorithm().Available() {
-				return fmt.Errorf("expected digest algorithm %q is not available", expectedDigest.Algorithm())
-			}
 			if err := expectedDigest.Validate(); err != nil {
 				return err
 			}
