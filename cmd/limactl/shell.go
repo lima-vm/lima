@@ -212,7 +212,8 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	sshArgs := sshutil.SSHArgsFromOpts(sshOpts)
+	sshArgs := append([]string{}, sshExe.Args...)
+	sshArgs = append(sshArgs, sshutil.SSHArgsFromOpts(sshOpts)...)
 	if isatty.IsTerminal(os.Stdout.Fd()) || isatty.IsCygwinTerminal(os.Stdout.Fd()) {
 		// required for showing the shell prompt: https://stackoverflow.com/a/626574
 		sshArgs = append(sshArgs, "-t")
@@ -235,8 +236,7 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		"--",
 		script,
 	}...)
-	allArgs := append(sshExe.Args, sshArgs...)
-	sshCmd := exec.Command(sshExe.Exe, allArgs...)
+	sshCmd := exec.Command(sshExe.Exe, sshArgs...)
 	sshCmd.Stdin = os.Stdin
 	sshCmd.Stdout = os.Stdout
 	sshCmd.Stderr = os.Stderr

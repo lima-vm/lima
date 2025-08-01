@@ -387,9 +387,10 @@ func detectOpenSSHInfo(sshExe SSHExe) openSSHInfo {
 			return *info
 		}
 	}
+	sshArgs := append([]string{}, sshExe.Args...)
 	// -V should be last
-	allArgs := append(sshExe.Args, "-o", "GSSAPIAuthentication=no", "-V")
-	cmd := exec.Command(sshExe.Exe, allArgs...)
+	sshArgs = append(sshArgs, "-o", "GSSAPIAuthentication=no", "-V")
+	cmd := exec.Command(sshExe.Exe, sshArgs...)
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
 		logrus.Warnf("failed to run %v: stderr=%q", cmd.Args, stderr.String())
