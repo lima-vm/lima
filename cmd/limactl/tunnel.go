@@ -82,7 +82,7 @@ func tunnelAction(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	sshExe, err := sshutil.SSHArguments()
+	sshExe, err := sshutil.NewSSHExe()
 	if err != nil {
 		return err
 	}
@@ -108,7 +108,7 @@ func tunnelAction(cmd *cobra.Command, args []string) error {
 		inst.SSHAddress,
 	}...)
 	allArgs := append(sshExe.Args, sshArgs...)
-	sshCmd := exec.Command(sshExe.Executable, allArgs...)
+	sshCmd := exec.Command(sshExe.Exe, allArgs...)
 	sshCmd.Stdout = stderr
 	sshCmd.Stderr = stderr
 	logrus.Debugf("executing ssh (may take a long)): %+v", sshCmd.Args)

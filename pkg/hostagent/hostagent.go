@@ -146,8 +146,12 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 		return nil, err
 	}
 
+	sshExe, err := sshutil.NewSSHExe()
+	if err != nil {
+		return nil, err
+	}
 	sshOpts, err := sshutil.SSHOpts(
-		sshutil.SSHExe{Executable: "ssh"},
+		sshExe,
 		inst.Dir,
 		*inst.Config.User.Name,
 		*inst.Config.SSH.LoadDotSSHPubKeys,

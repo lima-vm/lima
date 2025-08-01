@@ -36,11 +36,11 @@ import (
 const EnvShellSSH = "SSH"
 
 type SSHExe struct {
-	Executable string
-	Args       []string
+	Exe  string
+	Args []string
 }
 
-func SSHArguments() (SSHExe, error) {
+func NewSSHExe() (SSHExe, error) {
 	var sshExe SSHExe
 
 	if sshShell := os.Getenv(EnvShellSSH); sshShell != "" {
@@ -50,7 +50,7 @@ func SSHArguments() (SSHExe, error) {
 			logrus.WithError(err).Warnf("Failed to split %s variable into shell tokens. "+
 				"Falling back to 'ssh' command", EnvShellSSH)
 		case len(sshShellFields) > 0:
-			sshExe.Executable = sshShellFields[0]
+			sshExe.Exe = sshShellFields[0]
 			if len(sshShellFields) > 1 {
 				sshExe.Args = sshShellFields[1:]
 			}
@@ -62,7 +62,7 @@ func SSHArguments() (SSHExe, error) {
 	if err != nil {
 		return SSHExe{}, err
 	}
-	sshExe.Executable = executable
+	sshExe.Exe = executable
 
 	return sshExe, nil
 }
@@ -376,7 +376,7 @@ func detectOpenSSHInfo(sshExe SSHExe) openSSHInfo {
 	)
 	// TODO: Fix this function to properly handle complex SSH commands like "kitten ssh"
 	// The current LookPath, os.Stat, and caching logic doesn't work well for multi-word commands
-	path, err := exec.LookPath(sshExe.Executable)
+	path, err := exec.LookPath(sshExe.Exe)
 	if err != nil {
 		logrus.Warnf("failed to find ssh executable: %v", err)
 	} else {
@@ -391,7 +391,7 @@ func detectOpenSSHInfo(sshExe SSHExe) openSSHInfo {
 	}
 	// -V should be last
 	allArgs := append(sshExe.Args, "-o", "GSSAPIAuthentication=no", "-V")
-	cmd := exec.Command(sshExe.Executable, allArgs...)
+	cmd := exec.Command(sshExe.Exe, allArgs...)
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
 		logrus.Warnf("failed to run %v: stderr=%q", cmd.Args, stderr.String())
