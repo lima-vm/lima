@@ -35,7 +35,14 @@ import (
 // in place of the 'ssh' executable.
 const EnvShellSSH = "SSH"
 
-func SSHArguments() (arg0 string, arg0Args []string, err error) {
+type SSHExe struct {
+	Executable string
+	Args       []string
+}
+
+func SSHArguments() (SSHExe, error) {
+	var sshExe SSHExe
+
 	if sshShell := os.Getenv(EnvShellSSH); sshShell != "" {
 		sshShellFields, err := shellwords.Parse(sshShell)
 		switch {
@@ -43,21 +50,21 @@ func SSHArguments() (arg0 string, arg0Args []string, err error) {
 			logrus.WithError(err).Warnf("Failed to split %s variable into shell tokens. "+
 				"Falling back to 'ssh' command", EnvShellSSH)
 		case len(sshShellFields) > 0:
-			arg0 = sshShellFields[0]
+			sshExe.Executable = sshShellFields[0]
 			if len(sshShellFields) > 1 {
-				arg0Args = sshShellFields[1:]
+				sshExe.Args = sshShellFields[1:]
 			}
+			return sshExe, nil
 		}
 	}
 
-	if arg0 == "" {
-		arg0, err = exec.LookPath("ssh")
-		if err != nil {
-			return "", []string{""}, err
-		}
+	executable, err := exec.LookPath("ssh")
+	if err != nil {
+		return SSHExe{}, err
 	}
+	sshExe.Executable = executable
 
-	return arg0, arg0Args, nil
+	return sshExe, nil
 }
 
 type PubKey struct {
@@ -177,7 +184,7 @@ var sshInfo struct {
 //
 // The result always contains the IdentityFile option.
 // The result never contains the Port option.
-func CommonOpts(sshPath string, useDotSSH bool) ([]string, error) {
+func CommonOpts(sshExe SSHExe, useDotSSH bool) ([]string, error) {
 	configDir, err := dirnames.LimaConfigDir()
 	if err != nil {
 		return nil, err
@@ -243,7 +250,7 @@ func CommonOpts(sshPath string, useDotSSH bool) ([]string, error) {
 
 	sshInfo.Do(func() {
 		sshInfo.aesAccelerated = detectAESAcceleration()
-		sshInfo.openSSH = detectOpenSSHInfo(sshPath)
+		sshInfo.openSSH = detectOpenSSHInfo(sshExe)
 	})
 
 	if sshInfo.openSSH.GSSAPISupported {
@@ -287,12 +294,12 @@ func identityFileEntry(privateKeyPath string) (string, error) {
 }
 
 // SSHOpts adds the following options to CommonOptions: User, ControlMaster, ControlPath, ControlPersist.
-func SSHOpts(sshPath, instDir, username string, useDotSSH, forwardAgent, forwardX11, forwardX11Trusted bool) ([]string, error) {
+func SSHOpts(sshExe SSHExe, instDir, username string, useDotSSH, forwardAgent, forwardX11, forwardX11Trusted bool) ([]string, error) {
 	controlSock := filepath.Join(instDir, filenames.SSHSock)
 	if len(controlSock) >= osutil.UnixPathMax {
 		return nil, fmt.Errorf("socket path %q is too long: >= UNIX_PATH_MAX=%d", controlSock, osutil.UnixPathMax)
 	}
-	opts, err := CommonOpts(sshPath, useDotSSH)
+	opts, err := CommonOpts(sshExe, useDotSSH)
 	if err != nil {
 		return nil, err
 	}
@@ -361,13 +368,15 @@ var (
 	openSSHInfosRW sync.RWMutex
 )
 
-func detectOpenSSHInfo(ssh string) openSSHInfo {
+func detectOpenSSHInfo(sshExe SSHExe) openSSHInfo {
 	var (
 		info   openSSHInfo
 		exe    sshExecutable
 		stderr bytes.Buffer
 	)
-	path, err := exec.LookPath(ssh)
+	// TODO: Fix this function to properly handle complex SSH commands like "kitten ssh"
+	// The current LookPath, os.Stat, and caching logic doesn't work well for multi-word commands
+	path, err := exec.LookPath(sshExe.Executable)
 	if err != nil {
 		logrus.Warnf("failed to find ssh executable: %v", err)
 	} else {
@@ -381,7 +390,8 @@ func detectOpenSSHInfo(ssh string) openSSHInfo {
 		}
 	}
 	// -V should be last
-	cmd := exec.Command(path, "-o", "GSSAPIAuthentication=no", "-V")
+	allArgs := append(sshExe.Args, "-o", "GSSAPIAuthentication=no", "-V")
+	cmd := exec.Command(sshExe.Executable, allArgs...)
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
 		logrus.Warnf("failed to run %v: stderr=%q", cmd.Args, stderr.String())
@@ -398,8 +408,8 @@ func detectOpenSSHInfo(ssh string) openSSHInfo {
 	return info
 }
 
-func DetectOpenSSHVersion(ssh string) semver.Version {
-	return detectOpenSSHInfo(ssh).Version
+func DetectOpenSSHVersion(sshExe SSHExe) semver.Version {
+	return detectOpenSSHInfo(sshExe).Version
 }
 
 // detectValidPublicKey returns whether content represent a public key.

@@ -93,7 +93,7 @@ func showSSHAction(cmd *cobra.Command, args []string) error {
 	logrus.Warnf("`limactl show-ssh` is deprecated. Instead, use `ssh -F %s %s`.",
 		filepath.Join(inst.Dir, filenames.SSHConfig), inst.Hostname)
 	opts, err := sshutil.SSHOpts(
-		"ssh",
+		sshutil.SSHExe{Executable: "ssh"},
 		inst.Dir,
 		*inst.Config.User.Name,
 		*inst.Config.SSH.LoadDotSSHPubKeys,

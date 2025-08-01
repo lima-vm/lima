@@ -84,7 +84,7 @@ func copyAction(cmd *cobra.Command, args []string) error {
 		scpFlags = append(scpFlags, "-r")
 	}
 	// this assumes that ssh and scp come from the same place, but scp has no -V
-	legacySSH := sshutil.DetectOpenSSHVersion("ssh").LessThan(*semver.New("8.0.0"))
+	legacySSH := sshutil.DetectOpenSSHVersion(sshutil.SSHExe{Executable: "ssh"}).LessThan(*semver.New("8.0.0"))
 	for _, arg := range args {
 		if runtime.GOOS == "windows" {
 			if filepath.IsAbs(arg) {
@@ -135,14 +135,14 @@ func copyAction(cmd *cobra.Command, args []string) error {
 		// arguments such as ControlPath.  This is preferred as we can multiplex
 		// sessions without re-authenticating (MaxSessions permitting).
 		for _, inst := range instances {
-			sshOpts, err = sshutil.SSHOpts("ssh", inst.Dir, *inst.Config.User.Name, false, false, false, false)
+			sshOpts, err = sshutil.SSHOpts(sshutil.SSHExe{Executable: "ssh"}, inst.Dir, *inst.Config.User.Name, false, false, false, false)
 			if err != nil {
 				return err
 			}
 		}
 	} else {
 		// Copying among multiple hosts; we can't pass in host-specific options.
-		sshOpts, err = sshutil.CommonOpts("ssh", false)
+		sshOpts, err = sshutil.CommonOpts(sshutil.SSHExe{Executable: "ssh"}, false)
 		if err != nil {
 			return err
 		}
