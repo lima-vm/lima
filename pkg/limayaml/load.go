@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 
 	"github.com/sirupsen/logrus"
 
@@ -101,17 +102,22 @@ func ResolveVMType(y *limatype.LimaYAML, filePath string) error {
 
 	// If VMType is not specified, we try to resolve it by checking config with all the registered drivers.
 	candidates := registry.List()
-	for vmType, location := range candidates {
+	vmtypes := make([]string, 0, len(candidates))
+	for vmtype := range candidates {
+		vmtypes = append(vmtypes, vmtype)
+	}
+	sort.Strings(vmtypes)
+
+	for _, vmType := range vmtypes {
 		// For now we only support internal drivers.
-		if location == registry.Internal {
+		if registry.CheckInternalOrExternal(vmType) == registry.Internal {
 			_, intDriver, _ := registry.Get(vmType)
 			if err := intDriver.AcceptConfig(y, filePath); err == nil {
-				logrus.Debugf("ResolveVMType: resolved VMType %q", vmType)
+				logrus.Infof("ResolveVMType: resolved VMType %q", vmType)
 				y.VMType = ptr.Of(vmType)
 				return nil
 			}
 		}
-
 	}
 
 	return fmt.Errorf("no VMType found for %q", filePath)

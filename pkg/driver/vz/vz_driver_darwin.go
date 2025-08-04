@@ -113,6 +113,10 @@ func (l *LimaVzDriver) Configure(inst *limatype.Instance) *driver.ConfiguredDriv
 }
 
 func (l *LimaVzDriver) AcceptConfig(cfg *limatype.LimaYAML, filePath string) error {
+	if cfg.VMType == nil {
+		cfg.VMType = ptr.Of(limatype.VZ)
+	}
+
 	if cfg.MountType == nil {
 		cfg.MountType = ptr.Of(limatype.VIRTIOFS)
 	}
