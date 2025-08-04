@@ -73,6 +73,21 @@ func TestValidateMinimumLimaVersion(t *testing.T) {
 	}
 }
 
+func TestValidateDigest(t *testing.T) {
+	images := `images: [{"location": "https://cloud-images.ubuntu.com/releases/oracular/release-20250701/ubuntu-24.10-server-cloudimg-amd64.img",digest: "69f31d3208895e5f646e345fbc95190e5e311ecd1359a4d6ee2c0b6483ceca03"}]`
+	validProbe := `probes: [{"script": "#!foo"}]`
+	y, err := Load([]byte(validProbe+"\n"+images), "lima.yaml")
+	assert.NilError(t, err)
+	err = Validate(y, false)
+	assert.Error(t, err, "field `images[0].digest` is invalid: 69f31d3208895e5f646e345fbc95190e5e311ecd1359a4d6ee2c0b6483ceca03: invalid checksum digest format")
+
+	images2 := `images: [{"location": "https://cloud-images.ubuntu.com/releases/oracular/release-20250701/ubuntu-24.10-server-cloudimg-amd64.img",digest: "sha001:69f31d3208895e5f646e345fbc95190e5e311ecd1359a4d6ee2c0b6483ceca03"}]`
+	y2, err := Load([]byte(validProbe+"\n"+images2), "lima.yaml")
+	assert.NilError(t, err)
+	err = Validate(y2, false)
+	assert.Error(t, err, "field `images[0].digest` is invalid: sha001:69f31d3208895e5f646e345fbc95190e5e311ecd1359a4d6ee2c0b6483ceca03: unsupported digest algorithm")
+}
+
 func TestValidateProbes(t *testing.T) {
 	images := `images: [{"location": "/"}]`
 	validProbe := `probes: [{"script": "#!foo"}]`
