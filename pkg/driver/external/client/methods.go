@@ -281,8 +281,8 @@ func (d *DriverClient) Info() driver.Info {
 	return info
 }
 
-func (d *DriverClient) Configure(inst *store.Instance, sshLocalPort int) *driver.ConfiguredDriver {
-	d.logger.Debugf("Setting config for instance %s with SSH local port %d", inst.Name, sshLocalPort)
+func (d *DriverClient) Configure(inst *store.Instance) *driver.ConfiguredDriver {
+	d.logger.Debugf("Setting config for instance %s with SSH local port %d", inst.Name, inst.SSHLocalPort)
 
 	instJSON, err := inst.MarshalJSON()
 	if err != nil {
@@ -295,7 +295,6 @@ func (d *DriverClient) Configure(inst *store.Instance, sshLocalPort int) *driver
 
 	_, err = d.DriverSvc.SetConfig(ctx, &pb.SetConfigRequest{
 		InstanceConfigJson: instJSON,
-		SshLocalPort:       int64(sshLocalPort),
 	})
 	if err != nil {
 		d.logger.Errorf("Failed to set config: %v", err)
