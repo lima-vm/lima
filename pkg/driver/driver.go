@@ -83,6 +83,7 @@ type Driver interface {
 	Configure(inst *limatype.Instance, sshLocalPort int) *ConfiguredDriver
 
 	AcceptConfig(cfg *limatype.LimaYAML, filepath string) error
+	FillConfig(cfg *limatype.LimaYAML, filePath string) error
 }
 
 type ConfiguredDriver struct {

@@ -16,6 +16,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"text/template"
@@ -81,15 +82,40 @@ func (l *LimaQemuDriver) Validate(ctx context.Context) error {
 			return err
 		}
 	}
-
-	if *l.Instance.Config.MountType == limatype.VIRTIOFS && runtime.GOOS != "linux" {
-		return fmt.Errorf("field `mountType` must be %q or %q for QEMU driver on non-Linux, got %q",
-			limatype.REVSSHFS, limatype.NINEP, *l.Instance.Config.MountType)
+	if err := l.validateMountType(); err != nil {
+		return err
 	}
+
 	return nil
 }
 
-func (l *LimaQemuDriver) AcceptConfig(cfg *limatype.LimaYAML, filePath string) error {
+// Helper method for mount type validation
+func (l *LimaQemuDriver) validateMountType() error {
+	if l.Instance == nil || l.Instance.Config == nil {
+		return fmt.Errorf("instance configuration is not set")
+	}
+
+	cfg := l.Instance.Config
+
+	if cfg.MountType != nil && *cfg.MountType == limatype.VIRTIOFS && runtime.GOOS != "linux" {
+		return fmt.Errorf("field `mountType` must be %q or %q for QEMU driver on non-Linux, got %q",
+			limatype.REVSSHFS, limatype.NINEP, *cfg.MountType)
+	}
+	if slices.Contains(cfg.MountTypesUnsupported, *cfg.MountType) {
+		return fmt.Errorf("mount type %q is explicitly unsupported", *cfg.MountType)
+	}
+	if runtime.GOOS == "windows" && cfg.MountType != nil && *cfg.MountType == limatype.NINEP {
+		return fmt.Errorf("mount type %q is not supported on Windows", limatype.NINEP)
+	}
+
+	return nil
+}
+
+func (l *LimaQemuDriver) FillConfig(cfg *limatype.LimaYAML, filePath string) error {
+	if cfg.VMType == nil {
+		cfg.VMType = ptr.Of(limatype.QEMU)
+	}
+
 	instDir := filepath.Dir(filePath)
 
 	if cfg.Video.VNC.Display == nil || *cfg.Video.VNC.Display == "" {
@@ -117,11 +143,6 @@ func (l *LimaQemuDriver) AcceptConfig(cfg *limatype.LimaYAML, filePath string) e
 		}
 	}
 
-	if _, ok := mountTypesUnsupported[*cfg.MountType]; ok {
-		// We cannot return an error here, but Validate() will return it.
-		logrus.Warnf("Unsupported mount type: %q", *cfg.MountType)
-	}
-
 	for i := range cfg.Mounts {
 		mount := &cfg.Mounts[i]
 		if mount.Virtiofs.QueueSize == nil && *cfg.MountType == limatype.VIRTIOFS {
@@ -129,8 +150,25 @@ func (l *LimaQemuDriver) AcceptConfig(cfg *limatype.LimaYAML, filePath string) e
 		}
 	}
 
+	if _, ok := mountTypesUnsupported[*cfg.MountType]; ok {
+		return fmt.Errorf("mount type %q is explicitly unsupported", *cfg.MountType)
+	}
+
+	return nil
+}
+
+func (l *LimaQemuDriver) AcceptConfig(cfg *limatype.LimaYAML, filePath string) error {
+	if l.Instance == nil {
+		l.Instance = &limatype.Instance{}
+	}
+	l.Instance.Config = cfg
+
+	if err := l.Validate(); err != nil {
+		return fmt.Errorf("config not supported by the QEMU driver: %w", err)
+	}
+
 	if runtime.GOOS == "darwin" {
-		if cfg.Arch != nil && !limayaml.IsNativeArch(*cfg.Arch) {
+		if cfg.Arch != nil && limayaml.IsNativeArch(*cfg.Arch) {
 			logrus.Debugf("ResolveVMType: resolved VMType %q (non-native arch=%q is specified in []*LimaYAML{o,y,d})", "qemu", *cfg.Arch)
 			return nil
 		}
@@ -158,15 +196,6 @@ func (l *LimaQemuDriver) AcceptConfig(cfg *limatype.LimaYAML, filePath string) e
 				return nil
 			}
 		}
-	}
-
-	if l.Instance == nil {
-		l.Instance = &limatype.Instance{}
-	}
-	l.Instance.Config = cfg
-
-	if err := l.Validate(); err != nil {
-		return fmt.Errorf("config not supported by the QEMU driver: %w", err)
 	}
 
 	return nil

@@ -14,7 +14,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/limatype"
-	"github.com/lima-vm/lima/v2/pkg/ptr"
 	"github.com/lima-vm/lima/v2/pkg/registry"
 	"github.com/lima-vm/lima/v2/pkg/store/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/store/filenames"
@@ -75,7 +74,6 @@ func load(ctx context.Context, b []byte, filePath string, warn bool) (*limatype.
 	FillDefault(ctx, &y, &d, &o, filePath, warn)
 
 	if err := ResolveVMType(&y, filePath); err != nil {
-		logrus.WithError(err).Warnf("Failed to accept config for %q", filePath)
 		return nil, fmt.Errorf("failed to accept config for %q: %w", filePath, err)
 	}
 
@@ -96,6 +94,9 @@ func ResolveVMType(y *limatype.LimaYAML, filePath string) error {
 		if err := intDriver.AcceptConfig(y, filePath); err != nil {
 			return fmt.Errorf("vmType %q is not compatible with the configuration: %w", vmType, err)
 		}
+		if err := intDriver.FillConfig(y, filePath); err != nil {
+			return fmt.Errorf("unable to fill config for vmType %q: %w", vmType, err)
+		}
 		logrus.Debugf("ResolveVMType: using explicitly specified VMType %q", vmType)
 		return nil
 	}
@@ -113,8 +114,10 @@ func ResolveVMType(y *limatype.LimaYAML, filePath string) error {
 		if registry.CheckInternalOrExternal(vmType) == registry.Internal {
 			_, intDriver, _ := registry.Get(vmType)
 			if err := intDriver.AcceptConfig(y, filePath); err == nil {
-				logrus.Infof("ResolveVMType: resolved VMType %q", vmType)
-				y.VMType = ptr.Of(vmType)
+				logrus.Debugf("ResolveVMType: resolved VMType %q", vmType)
+				if err := intDriver.FillConfig(y, filePath); err != nil {
+					return fmt.Errorf("unable to fill config for VMType %q: %w", vmType, err)
+				}
 				return nil
 			}
 		}

@@ -111,8 +111,7 @@ func (l *LimaVzDriver) Configure(inst *limatype.Instance) *driver.ConfiguredDriv
 		Driver: l,
 	}
 }
-
-func (l *LimaVzDriver) AcceptConfig(cfg *limatype.LimaYAML, filePath string) error {
+func (l *LimaVzDriver) FillConfig(cfg *limatype.LimaYAML, filePath string) error {
 	if cfg.VMType == nil {
 		cfg.VMType = ptr.Of(limatype.VZ)
 	}
@@ -121,6 +120,10 @@ func (l *LimaVzDriver) AcceptConfig(cfg *limatype.LimaYAML, filePath string) err
 		cfg.MountType = ptr.Of(limatype.VIRTIOFS)
 	}
 
+	return nil
+}
+
+func (l *LimaVzDriver) AcceptConfig(cfg *limatype.LimaYAML, filePath string) error {
 	if dir, basename := filepath.Split(filePath); dir != "" && basename == filenames.LimaYAML && limayaml.IsExistingInstanceDir(dir) {
 		vzIdentifier := filepath.Join(dir, filenames.VzIdentifier) // since Lima v0.14
 		if _, err := os.Lstat(vzIdentifier); !errors.Is(err, os.ErrNotExist) {

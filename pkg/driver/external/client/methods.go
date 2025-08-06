@@ -307,3 +307,7 @@ func (d *DriverClient) Configure(inst *store.Instance) *driver.ConfiguredDriver 
 func (d *DriverClient) AcceptConfig(cfg *limatype.LimaYAML, filepath string) error {
 	return errors.New("AcceptConfig not implemented in DriverClient")
 }
+
+func (d *DriverClient) FillConfig(cfg *limatype.LimaYAML, filepath string) error {
+	return errors.New("AcceptConfig not implemented in DriverClient")
+}
