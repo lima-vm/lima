@@ -21,6 +21,7 @@ import (
 	"github.com/docker/go-units"
 	"github.com/sirupsen/logrus"
 
+	"github.com/lima-vm/lima/v2/pkg/driverutil"
 	"github.com/lima-vm/lima/v2/pkg/identifiers"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/localpathutil"
@@ -154,14 +155,17 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 		}
 	}
 
-	switch *y.MountType {
-	case limatype.REVSSHFS, limatype.NINEP, limatype.VIRTIOFS, limatype.WSLMount:
-	default:
-		errs = errors.Join(errs, fmt.Errorf("field `mountType` must be %q or %q or %q, or %q, got %q", limatype.REVSSHFS, limatype.NINEP, limatype.VIRTIOFS, limatype.WSLMount, *y.MountType))
-	}
+	if y.MountType != nil {
+		switch *y.MountType {
+		case limatype.REVSSHFS, limatype.NINEP, limatype.VIRTIOFS, limatype.WSLMount:
+		default:
+			errs = errors.Join(errs, fmt.Errorf("field `mountType` must be %q or %q or %q, or %q, got %q", limatype.REVSSHFS, limatype.NINEP, limatype.VIRTIOFS, limatype.WSLMount, *y.MountType))
+		}
 
-	if slices.Contains(y.MountTypesUnsupported, *y.MountType) {
-		errs = errors.Join(errs, fmt.Errorf("field `mountType` must not be one of %v (`mountTypesUnsupported`), got %q", y.MountTypesUnsupported, *y.MountType))
+		if slices.Contains(y.MountTypesUnsupported, *y.MountType) {
+			errs = errors.Join(errs, fmt.Errorf("field `mountType` must not be one of %v (`mountTypesUnsupported`), got %q", y.MountTypesUnsupported, *y.MountType))
+		}
+
 	}
 
 	if warn && runtime.GOOS != "linux" {
@@ -600,6 +604,9 @@ func ValidateAgainstLatestConfig(yNew, yLatest []byte) error {
 	l, err := LoadWithWarnings(yLatest, "")
 	if err != nil {
 		return err
+	}
+	if err := driverutil.ResolveVMType(l, ""); err != nil {
+		return fmt.Errorf("failed to accept config for %q: %w", "", err)
 	}
 	if err := Unmarshal(yNew, &n, "Unmarshal new YAML bytes"); err != nil {
 		return err

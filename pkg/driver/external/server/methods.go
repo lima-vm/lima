@@ -17,7 +17,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/bicopy"
 	pb "github.com/lima-vm/lima/v2/pkg/driver/external"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
-	"github.com/lima-vm/lima/v2/pkg/store/filenames"
+	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 )
 
 func (s *DriverServer) Start(_ *emptypb.Empty, stream pb.Driver_StartServer) error {

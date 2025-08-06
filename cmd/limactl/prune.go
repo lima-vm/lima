@@ -4,6 +4,7 @@
 package main
 
 import (
+	"fmt"
 	"maps"
 	"os"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/lima-vm/lima/v2/pkg/downloader"
+	"github.com/lima-vm/lima/v2/pkg/driverutil"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	"github.com/lima-vm/lima/v2/pkg/store"
@@ -92,6 +94,9 @@ func knownLocations() (map[string]limatype.File, error) {
 		y, err := limayaml.Load(b, t.Name)
 		if err != nil {
 			return nil, err
+		}
+		if err := driverutil.ResolveVMType(y, t.Name); err != nil {
+			return nil, fmt.Errorf("failed to accept config for %q: %w", t.Name, err)
 		}
 		maps.Copy(locations, locationsFromLimaYAML(y))
 	}

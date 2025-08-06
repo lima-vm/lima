@@ -31,11 +31,11 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/driver/qemu/entitlementutil"
 	"github.com/lima-vm/lima/v2/pkg/executil"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	"github.com/lima-vm/lima/v2/pkg/networks/usernet"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/ptr"
-	"github.com/lima-vm/lima/v2/pkg/store/filenames"
 	"github.com/lima-vm/lima/v2/pkg/version/versionutil"
 )
 
@@ -101,7 +101,7 @@ func (l *LimaQemuDriver) validateMountType() error {
 		return fmt.Errorf("field `mountType` must be %q or %q for QEMU driver on non-Linux, got %q",
 			limatype.REVSSHFS, limatype.NINEP, *cfg.MountType)
 	}
-	if slices.Contains(cfg.MountTypesUnsupported, *cfg.MountType) {
+	if cfg.MountTypesUnsupported != nil && slices.Contains(cfg.MountTypesUnsupported, *cfg.MountType) {
 		return fmt.Errorf("mount type %q is explicitly unsupported", *cfg.MountType)
 	}
 	if runtime.GOOS == "windows" && cfg.MountType != nil && *cfg.MountType == limatype.NINEP {

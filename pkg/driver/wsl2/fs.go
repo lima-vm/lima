@@ -13,7 +13,7 @@ import (
 
 	"github.com/lima-vm/lima/v2/pkg/fileutils"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
-	"github.com/lima-vm/lima/v2/pkg/store/filenames"
+	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 )
 
 // EnsureFs downloads the root fs.

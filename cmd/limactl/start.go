@@ -16,15 +16,17 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/lima-vm/lima/v2/cmd/limactl/editflags"
+	"github.com/lima-vm/lima/v2/pkg/driverutil"
 	"github.com/lima-vm/lima/v2/pkg/editutil"
 	"github.com/lima-vm/lima/v2/pkg/instance"
 	"github.com/lima-vm/lima/v2/pkg/limatmpl"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
+	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	networks "github.com/lima-vm/lima/v2/pkg/networks/reconcile"
 	"github.com/lima-vm/lima/v2/pkg/registry"
 	"github.com/lima-vm/lima/v2/pkg/store"
-	"github.com/lima-vm/lima/v2/pkg/store/filenames"
 	"github.com/lima-vm/lima/v2/pkg/templatestore"
 	"github.com/lima-vm/lima/v2/pkg/uiutil"
 	"github.com/lima-vm/lima/v2/pkg/yqutil"
@@ -122,7 +124,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 		return nil, err
 	}
 	if name != "" {
-		err := store.ValidateInstName(name)
+		err := dirnames.ValidateInstName(name)
 		if err != nil {
 			return nil, err
 		}
@@ -157,7 +159,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 		tty = false
 	}
 	var tmpl *limatmpl.Template
-	if err := store.ValidateInstName(arg); arg == "" || err == nil {
+	if err := dirnames.ValidateInstName(arg); arg == "" || err == nil {
 		tmpl = &limatmpl.Template{Name: name}
 		if arg == "" {
 			if name == "" {
@@ -212,7 +214,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 			if _, err := store.Inspect(tmpl.Name); err == nil {
 				return nil, fmt.Errorf("instance %q already exists", tmpl.Name)
 			}
-		} else if err := store.ValidateInstName(tmpl.Name); err != nil {
+		} else if err := dirnames.ValidateInstName(tmpl.Name); err != nil {
 			return nil, err
 		}
 	}
@@ -258,6 +260,9 @@ func applyYQExpressionToExistingInstance(inst *limatype.Instance, yq string) (*l
 	y, err := limayaml.Load(yBytes, filePath)
 	if err != nil {
 		return nil, err
+	}
+	if err := driverutil.ResolveVMType(y, filePath); err != nil {
+		return nil, fmt.Errorf("failed to accept config for %q: %w", filePath, err)
 	}
 	if err := limayaml.Validate(y, true); err != nil {
 		rejectedYAML := "lima.REJECTED.yaml"
