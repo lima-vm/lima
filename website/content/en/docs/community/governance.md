@@ -40,6 +40,9 @@ See also the [Contributing](../contributing) page.
 | Norio Nomura       | Reviewer  | [@norio-nomura](https://github.com/norio-nomura) | [0010 36FA 2504 DBFF 37BA  2EF8 D4A7 318E B7F7 138D](https://github.com/norio-nomura.gpg) |
 | Nir Soffer         | Reviewer  | [@nirs](https://github.com/nirs)                 | [6F81 B717 51A1 4171 4C09  AF19 4C67 29D7 B2DD 8AFF](https://github.com/nirs.gpg)         |
 
+### Emeritus maintainers
+(No emeritus maintainers yet)
+
 ### Addition and promotion of Maintainers
 An active contributor to the project can be invited as a Reviewer,
 and can be eventually promoted to a Committer after 2 months at least.
