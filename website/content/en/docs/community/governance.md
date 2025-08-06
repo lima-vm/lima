@@ -30,15 +30,17 @@ See also the [Contributing](../contributing) page.
 
 ### Current maintainers
 
-| Name               | Role      | GitHub ID (not X ID)                             | GPG fingerprint                                                                           |
-|--------------------|-----------|--------------------------------------------------|-------------------------------------------------------------------------------------------|
-| Akihiro Suda       | Committer | [@AkihiroSuda](https://github.com/AkihiroSuda)   | [C020 EA87 6CE4 E06C 7AB9  5AEF 4952 4C6F 9F63 8F1A](https://github.com/AkihiroSuda.gpg)  |
-| Jan Dubois         | Committer | [@jandubois](https://github.com/jandubois)       | [DBF6 DA01 BD81 2D63 3B77  300F A2CA E583 3B6A D416](https://github.com/jandubois.gpg)    |
-| Anders F Björklund | Committer | [@afbjorklund](https://github.com/afbjorklund)   | [5981 D2E8 4E4B 9197 95B3  2174 DC05 CAD2 E73B 0C92](https://github.com/afbjorklund.gpg)  |
-| Balaji Vijayakumar | Committer | [@balajiv113](https://github.com/balajiv113)     | [80E1 01FE 5C89 FCF6 6171  72C8 377C 6A63 934B 8E6E](https://github.com/balajiv113.gpg)   |
-| Oleksandr Redko    | Reviewer  | [@alexandear](https://github.com/alexandear)     | [50F8 9811 D8D8 3E79 3E7E  0680 A947 E3F1 1A61 2A57](https://github.com/alexandear.gpg)   |
-| Norio Nomura       | Reviewer  | [@norio-nomura](https://github.com/norio-nomura) | [0010 36FA 2504 DBFF 37BA  2EF8 D4A7 318E B7F7 138D](https://github.com/norio-nomura.gpg) |
-| Nir Soffer         | Reviewer  | [@nirs](https://github.com/nirs)                 | [6F81 B717 51A1 4171 4C09  AF19 4C67 29D7 B2DD 8AFF](https://github.com/nirs.gpg)         |
+<!-- When updating the affiliation, update https://github.com/cncf/foundation/blob/main/project-maintainers.csv too -->
+
+| Name               | Affiliation  | Role      | GitHub ID (not X ID)                             | GPG fingerprint                                                                           |
+|--------------------|--------------|-----------|--------------------------------------------------|-------------------------------------------------------------------------------------------|
+| Akihiro Suda       | NTT          | Committer | [@AkihiroSuda](https://github.com/AkihiroSuda)   | [C020 EA87 6CE4 E06C 7AB9  5AEF 4952 4C6F 9F63 8F1A](https://github.com/AkihiroSuda.gpg)  |
+| Jan Dubois         | SUSE         | Committer | [@jandubois](https://github.com/jandubois)       | [DBF6 DA01 BD81 2D63 3B77  300F A2CA E583 3B6A D416](https://github.com/jandubois.gpg)    |
+| Anders F Björklund | Individual   | Committer | [@afbjorklund](https://github.com/afbjorklund)   | [5981 D2E8 4E4B 9197 95B3  2174 DC05 CAD2 E73B 0C92](https://github.com/afbjorklund.gpg)  |
+| Balaji Vijayakumar | Thoughtworks | Committer | [@balajiv113](https://github.com/balajiv113)     | [80E1 01FE 5C89 FCF6 6171  72C8 377C 6A63 934B 8E6E](https://github.com/balajiv113.gpg)   |
+| Oleksandr Redko    | Individual   | Reviewer  | [@alexandear](https://github.com/alexandear)     | [50F8 9811 D8D8 3E79 3E7E  0680 A947 E3F1 1A61 2A57](https://github.com/alexandear.gpg)   |
+| Norio Nomura       | Individual   | Reviewer  | [@norio-nomura](https://github.com/norio-nomura) | [0010 36FA 2504 DBFF 37BA  2EF8 D4A7 318E B7F7 138D](https://github.com/norio-nomura.gpg) |
+| Nir Soffer         | IBM          | Reviewer  | [@nirs](https://github.com/nirs)                 | [6F81 B717 51A1 4171 4C09  AF19 4C67 29D7 B2DD 8AFF](https://github.com/nirs.gpg)         |
 
 ### Emeritus maintainers
 (No emeritus maintainers yet)
