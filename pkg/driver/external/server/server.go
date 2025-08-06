@@ -25,9 +25,9 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/driver"
 	pb "github.com/lima-vm/lima/v2/pkg/driver/external"
 	"github.com/lima-vm/lima/v2/pkg/driver/external/client"
+	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
+	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/registry"
-	"github.com/lima-vm/lima/v2/pkg/store"
-	"github.com/lima-vm/lima/v2/pkg/store/filenames"
 )
 
 type DriverServer struct {
@@ -164,7 +164,7 @@ func Start(extDriver *registry.ExternalDriver, instName string) error {
 		return fmt.Errorf("failed to create stdout pipe for external driver: %w", err)
 	}
 
-	instanceDir, err := store.InstanceDir(extDriver.InstanceName)
+	instanceDir, err := dirnames.InstanceDir(extDriver.InstanceName)
 	if err != nil {
 		cancel()
 		return fmt.Errorf("failed to determine instance directory: %w", err)

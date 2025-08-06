@@ -24,8 +24,8 @@ import (
 	hostagentclient "github.com/lima-vm/lima/v2/pkg/hostagent/api/client"
 	"github.com/lima-vm/lima/v2/pkg/instance/hostname"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
-	"github.com/lima-vm/lima/v2/pkg/store/dirnames"
-	"github.com/lima-vm/lima/v2/pkg/store/filenames"
+	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
+	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/textutil"
 	"github.com/lima-vm/lima/v2/pkg/version/versionutil"
 )
@@ -40,7 +40,7 @@ func Inspect(ctx context.Context, instName string) (*limatype.Instance, error) {
 		Status:   limatype.StatusUnknown,
 	}
 	// InstanceDir validates the instName but does not check whether the instance exists
-	instDir, err := InstanceDir(instName)
+	instDir, err := dirnames.InstanceDir(instName)
 	if err != nil {
 		return nil, err
 	}

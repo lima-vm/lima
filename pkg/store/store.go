@@ -11,11 +11,12 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/lima-vm/lima/v2/pkg/driverutil"
 	"github.com/lima-vm/lima/v2/pkg/identifiers"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
+	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
-	"github.com/lima-vm/lima/v2/pkg/store/dirnames"
-	"github.com/lima-vm/lima/v2/pkg/store/filenames"
 )
 
 // Directory returns the LimaDir.
@@ -44,19 +45,6 @@ func Validate() error {
 		if _, err := os.Stat(yamlPath); err != nil {
 			return err
 		}
-	}
-	return nil
-}
-
-// ValidateInstName checks if the name is a valid instance name. For this it needs to
-// be a valid identifier, and not end in .yml or .yaml (case insensitively).
-func ValidateInstName(name string) error {
-	if err := identifiers.Validate(name); err != nil {
-		return fmt.Errorf("instance name %q is not a valid identifier: %w", name, err)
-	}
-	lower := strings.ToLower(name)
-	if strings.HasSuffix(lower, ".yml") || strings.HasSuffix(lower, ".yaml") {
-		return fmt.Errorf("instance name %q must not end with .yml or .yaml suffix", name)
 	}
 	return nil
 }
@@ -106,20 +94,6 @@ func Disks() ([]string, error) {
 	return names, nil
 }
 
-// InstanceDir returns the instance dir.
-// InstanceDir does not check whether the instance exists.
-func InstanceDir(name string) (string, error) {
-	if err := ValidateInstName(name); err != nil {
-		return "", err
-	}
-	limaDir, err := dirnames.LimaDir()
-	if err != nil {
-		return "", err
-	}
-	dir := filepath.Join(limaDir, name)
-	return dir, nil
-}
-
 func DiskDir(name string) (string, error) {
 	if err := identifiers.Validate(name); err != nil {
 		return "", err
@@ -146,6 +120,9 @@ func LoadYAMLByFilePath(ctx context.Context, filePath string) (*limatype.LimaYAM
 	y, err := limayaml.Load(ctx, yContent, absPath)
 	if err != nil {
 		return nil, err
+	}
+	if err := driverutil.ResolveVMType(y, filePath); err != nil {
+		return nil, fmt.Errorf("failed to accept config for %q: %w", filePath, err)
 	}
 	if err := limayaml.Validate(y, false); err != nil {
 		return nil, err

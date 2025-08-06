@@ -6,14 +6,16 @@ package limainfo
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io/fs"
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/lima-vm/lima/v2/pkg/driverutil"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	"github.com/lima-vm/lima/v2/pkg/registry"
-	"github.com/lima-vm/lima/v2/pkg/store/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/templatestore"
 	"github.com/lima-vm/lima/v2/pkg/usrlocalsharelima"
 	"github.com/lima-vm/lima/v2/pkg/version"
@@ -48,6 +50,9 @@ func New(ctx context.Context) (*LimaInfo, error) {
 	y, err := limayaml.Load(ctx, b, "")
 	if err != nil {
 		return nil, err
+	}
+	if err := driverutil.ResolveVMType(y, ""); err != nil {
+		return nil, fmt.Errorf("failed to accept config for %q: %w", "", err)
 	}
 
 	reg := registry.List()

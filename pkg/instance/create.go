@@ -13,10 +13,11 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/cidata"
 	"github.com/lima-vm/lima/v2/pkg/driverutil"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
+	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/store"
-	"github.com/lima-vm/lima/v2/pkg/store/filenames"
 	"github.com/lima-vm/lima/v2/pkg/version"
 )
 
@@ -28,7 +29,7 @@ func Create(ctx context.Context, instName string, instConfig []byte, saveBrokenY
 		return nil, errors.New("got empty instConfig")
 	}
 
-	instDir, err := store.InstanceDir(instName)
+	instDir, err := dirnames.InstanceDir(instName)
 	if err != nil {
 		return nil, err
 	}
@@ -47,6 +48,9 @@ func Create(ctx context.Context, instName string, instConfig []byte, saveBrokenY
 	loadedInstConfig, err := limayaml.LoadWithWarnings(ctx, instConfig, filePath)
 	if err != nil {
 		return nil, err
+	}
+	if err := driverutil.ResolveVMType(loadedInstConfig, filePath); err != nil {
+		return nil, fmt.Errorf("failed to accept config for %q: %w", filePath, err)
 	}
 	if err := limayaml.Validate(loadedInstConfig, true); err != nil {
 		if !saveBrokenYAML {

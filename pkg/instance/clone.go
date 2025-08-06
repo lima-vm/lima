@@ -16,9 +16,10 @@ import (
 	continuityfs "github.com/containerd/continuity/fs"
 
 	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
+	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/store"
-	"github.com/lima-vm/lima/v2/pkg/store/filenames"
 )
 
 func Clone(ctx context.Context, oldInst *limatype.Instance, newInstName string) (*limatype.Instance, error) {
@@ -32,7 +33,7 @@ func Clone(ctx context.Context, oldInst *limatype.Instance, newInstName string) 
 		return nil, errors.New("cannot clone a running instance")
 	}
 
-	newInstDir, err := store.InstanceDir(newInstName)
+	newInstDir, err := dirnames.InstanceDir(newInstName)
 	if err != nil {
 		return nil, err
 	}
