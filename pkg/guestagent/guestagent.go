@@ -14,4 +14,10 @@ type Agent interface {
 	Events(ctx context.Context, ch chan *api.Event)
 	LocalPorts(ctx context.Context) ([]*api.IPPort, error)
 	HandleInotify(event *api.Inotify)
+	IPv4(ctx context.Context) (*api.CommandOutput, error)
+	IPv6(ctx context.Context) (*api.CommandOutput, error)
+}
+
+type RouteEntry struct {
+	Dev string `json:"dev"`
 }
