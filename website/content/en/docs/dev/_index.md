@@ -5,22 +5,24 @@ weight: 500
 
 Welcome to the Lima Developer Guide!
 
-If you’re new and want to help with Lima, you’re in the right place. Lima is a free tool that helps you run Linux virtual machines on macOS.
+Lima is a free tool that helps you run Linux virtual machines, mostly on macOS and Linux.
 
-Here’s how you can get started:
+Here’s how to get started:
 
 ## 📌 Quick Start for Contributors
 
-- **Learn about the code**: Visit [Lima on DeepWiki](https://deepwiki.com/lima-vm/lima) to see how things are set up.
-- **Know the main folders**: Look inside `cmd/`, `pkg/`, and `website/`. These are important parts of the project.
+- **Learn about the code**: Visit [Lima on DeepWiki](https://deepwiki.com/lima-vm/lima) to understand how things are set up.
+- **Know the main folders**:
+  - `cmd/` and `pkg/` — contain the main source code.
+  - `website/` — contains the documentation website ([lima-vm.io](https://lima-vm.io)).
 - **Read the guide**: Follow the steps in [`CONTRIBUTING.md`](https://github.com/lima-vm/.github/blob/main/CONTRIBUTING.md) to set up everything.
-- **Talk with others by joining the community**: You can ask questions or share your ideas on GitHub Issues or Discussions.
+- **Join the community**: You can ask questions or share ideas through GitHub Issues or Discussions.
 
 ## 🧠 Tips for First-Time Contributors
 
-- Start with small things: fix typos, improve docs, or make comments in code easier to understand.
-- Don’t worry if you’re not sure—just ask.
-- Use `make` to test or build the project if you're working with the command line.
+- Start small: fix typos, improve docs, or make code comments easier to understand.
+- Don’t be afraid to ask questions.
+- Use `make` to build or test the project from the command line.
 
 We’re happy you’re here. Every little bit of contribution counts!
 
