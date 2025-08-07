@@ -11,14 +11,14 @@ import (
 	"strings"
 
 	"github.com/lima-vm/lima/v2/pkg/executil"
-	"github.com/lima-vm/lima/v2/pkg/limayaml"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 )
 
-func inspectStatus(ctx context.Context, instDir string, inst *Instance, y *limayaml.LimaYAML) {
-	if inst.VMType == limayaml.WSL2 {
+func inspectStatus(ctx context.Context, instDir string, inst *limatype.Instance, y *limatype.LimaYAML) {
+	if inst.VMType == limatype.WSL2 {
 		status, err := GetWslStatus(inst.Name)
 		if err != nil {
-			inst.Status = StatusBroken
+			inst.Status = limatype.StatusBroken
 			inst.Errors = append(inst.Errors, err)
 		} else {
 			inst.Status = status
@@ -26,7 +26,7 @@ func inspectStatus(ctx context.Context, instDir string, inst *Instance, y *limay
 
 		inst.SSHLocalPort = 22
 
-		if inst.Status == StatusRunning {
+		if inst.Status == limatype.StatusRunning {
 			sshAddr, err := GetSSHAddress(ctx, inst.Name)
 			if err == nil {
 				inst.SSHAddress = sshAddr
@@ -78,17 +78,17 @@ func GetWslStatus(instName string) (string, error) {
 	}
 
 	if out == "" {
-		return StatusBroken, fmt.Errorf("failed to read instance state for instance %q, try running `wsl --list --verbose` to debug, err: %w", instName, err)
+		return limatype.StatusBroken, fmt.Errorf("failed to read instance state for instance %q, try running `wsl --list --verbose` to debug, err: %w", instName, err)
 	}
 
 	// Check for edge cases first
 	if strings.Contains(out, "Windows Subsystem for Linux has no installed distributions.") {
 		if strings.Contains(out, "Wsl/WSL_E_DEFAULT_DISTRO_NOT_FOUND") {
-			return StatusBroken, fmt.Errorf(
+			return limatype.StatusBroken, fmt.Errorf(
 				"failed to read instance state for instance %q because no distro is installed,"+
 					"try running `wsl --install -d Ubuntu` and then re-running Lima", instName)
 		}
-		return StatusBroken, fmt.Errorf(
+		return limatype.StatusBroken, fmt.Errorf(
 			"failed to read instance state for instance %q because there is no WSL kernel installed,"+
 				"this usually happens when WSL was installed for another user, but never for your user."+
 				"Try running `wsl --install -d Ubuntu` and `wsl --update`, and then re-running Lima", instName)
@@ -111,7 +111,7 @@ func GetWslStatus(instName string) (string, error) {
 	}
 
 	if instState == "" {
-		return StatusUninitialized, nil
+		return limatype.StatusUninitialized, nil
 	}
 
 	return instState, nil

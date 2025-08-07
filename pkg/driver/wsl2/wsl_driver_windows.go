@@ -15,7 +15,9 @@ import (
 
 	"github.com/lima-vm/lima/v2/pkg/driver"
 	"github.com/lima-vm/lima/v2/pkg/freeport"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
+	"github.com/lima-vm/lima/v2/pkg/ptr"
 	"github.com/lima-vm/lima/v2/pkg/reflectutil"
 	"github.com/lima-vm/lima/v2/pkg/store"
 	"github.com/lima-vm/lima/v2/pkg/windows"
@@ -47,7 +49,7 @@ var knownYamlProperties = []string{
 const Enabled = true
 
 type LimaWslDriver struct {
-	Instance *store.Instance
+	Instance *limatype.Instance
 
 	SSHLocalPort int
 	vSockPort    int
@@ -68,7 +70,7 @@ func New() *LimaWslDriver {
 	}
 }
 
-func (l *LimaWslDriver) Configure(inst *store.Instance) *driver.ConfiguredDriver {
+func (l *LimaWslDriver) Configure(inst *limatype.Instance) *driver.ConfiguredDriver {
 	l.Instance = inst
 	l.SSHLocalPort = inst.SSHLocalPort
 
@@ -77,9 +79,33 @@ func (l *LimaWslDriver) Configure(inst *store.Instance) *driver.ConfiguredDriver
 	}
 }
 
+func (l *LimaWslDriver) AcceptConfig(cfg *limatype.LimaYAML, filepath string) error {
+	if l.Instance == nil {
+		l.Instance = &limatype.Instance{}
+	}
+	l.Instance.Config = cfg
+
+	if err := l.Validate(); err != nil {
+		return fmt.Errorf("config not supported by the WSL2 driver: %w", err)
+	}
+
+	return nil
+}
+
+func (l *LimaWslDriver) FillConfig(cfg *limatype.LimaYAML, filePath string) error {
+	if cfg.VMType == nil {
+		cfg.VMType = ptr.Of(limatype.WSL2)
+	}
+	if cfg.MountType == nil {
+		cfg.MountType = ptr.Of(limatype.WSLMount)
+	}
+
+	return nil
+}
+
 func (l *LimaWslDriver) Validate(_ context.Context) error {
-	if *l.Instance.Config.MountType != limayaml.WSLMount {
-		return fmt.Errorf("field `mountType` must be %q for WSL2 driver, got %q", limayaml.WSLMount, *l.Instance.Config.MountType)
+	if *l.Instance.Config.MountType != limatype.WSLMount {
+		return fmt.Errorf("field `mountType` must be %q for WSL2 driver, got %q", limatype.WSLMount, *l.Instance.Config.MountType)
 	}
 	// TODO: revise this list for WSL2
 	if unknown := reflectutil.UnknownNonEmptyFields(l.Instance.Config, knownYamlProperties...); len(unknown) > 0 {
@@ -131,7 +157,7 @@ func (l *LimaWslDriver) Start(ctx context.Context) (chan error, error) {
 
 	distroName := "lima-" + l.Instance.Name
 
-	if status == store.StatusUninitialized {
+	if status == limatype.StatusUninitialized {
 		if err := EnsureFs(ctx, l.Instance); err != nil {
 			return nil, err
 		}
@@ -184,7 +210,7 @@ func (l *LimaWslDriver) Unregister(ctx context.Context) error {
 		return err
 	}
 	switch status {
-	case store.StatusRunning, store.StatusStopped, store.StatusBroken, store.StatusInstalling:
+	case limatype.StatusRunning, limatype.StatusStopped, limatype.StatusBroken, limatype.StatusInstalling:
 		return unregisterVM(ctx, distroName)
 	}
 
