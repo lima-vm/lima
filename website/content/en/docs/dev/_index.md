@@ -5,21 +5,22 @@ weight: 500
 
 Welcome to the Lima Developer Guide!
 
-If you're new to the project and want to contribute, you're in the right place. Lima is an open-source tool that helps you run Linux virtual machines on macOS with ease.
+If you’re new and want to help with Lima, you’re in the right place. Lima is a free tool that helps you run Linux virtual machines on macOS.
 
-Here are some helpful resources to get started:
+Here’s how you can get started:
 
 ## 📌 Quick Start for Contributors
 
-- **Explore the codebase**: Use [DeepWiki's Lima page](https://deepwiki.com/lima-vm/lima) to understand the structure and find references easily.
-- **Check the project structure**: Key directories include `cmd/`, `pkg/`, and `website/`.
-- **Follow the contributing guide**: Read [`CONTRIBUTING.md`](https://github.com/lima-vm/lima/blob/master/CONTRIBUTING.md) for setup instructions.
-- **Join the discussion**: Engage with the community via GitHub Issues or Discussions.
+- **Learn about the code**: Visit [Lima on DeepWiki](https://deepwiki.com/lima-vm/lima) to see how things are set up.
+- **Know the main folders**: Look inside `cmd/`, `pkg/`, and `website/`. These are important parts of the project.
+- **Read the guide**: Follow the steps in [`CONTRIBUTING.md`](https://github.com/lima-vm/.github/blob/main/CONTRIBUTING.md) to set up everything.
+- **Talk with others by joining the community**: You can ask questions or share your ideas on GitHub Issues or Discussions.
 
 ## 🧠 Tips for First-Time Contributors
 
-- Start small: Fix typos, update docs, or improve clarity in comments.
-- Don’t be afraid to ask questions.
-- Use `make` to build the project or run tests if you're exploring the CLI side.
+- Start with small things: fix typos, improve docs, or make comments in code easier to understand.
+- Don’t worry if you’re not sure—just ask.
+- Use `make` to test or build the project if you're working with the command line.
 
-We’re glad you’re here — every contribution counts!
+We’re happy you’re here. Every little bit of contribution counts!
+
