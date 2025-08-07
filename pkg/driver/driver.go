@@ -80,7 +80,7 @@ type Driver interface {
 	Info() Info
 
 	// SetConfig sets the configuration for the instance.
-	Configure(inst *limatype.Instance, sshLocalPort int) *ConfiguredDriver
+	Configure(inst *limatype.Instance) *ConfiguredDriver
 
 	AcceptConfig(cfg *limatype.LimaYAML, filepath string) error
 	FillConfig(cfg *limatype.LimaYAML, filePath string) error

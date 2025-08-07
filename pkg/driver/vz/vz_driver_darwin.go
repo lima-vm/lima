@@ -91,11 +91,7 @@ func New() *LimaVzDriver {
 	}
 }
 
-<<<<<<< HEAD
-func (l *LimaVzDriver) Configure(inst *store.Instance) *driver.ConfiguredDriver {
-=======
-func (l *LimaVzDriver) Configure(inst *limatype.Instance, sshLocalPort int) *driver.ConfiguredDriver {
->>>>>>> 4e814fb4 (resolve vmtype by using internal drivers)
+func (l *LimaVzDriver) Configure(inst *limatype.Instance) *driver.ConfiguredDriver {
 	l.Instance = inst
 	l.SSHLocalPort = inst.SSHLocalPort
 
