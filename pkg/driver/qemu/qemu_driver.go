@@ -67,7 +67,7 @@ func New() *LimaQemuDriver {
 	}
 }
 
-func (l *LimaQemuDriver) Configure(inst *store.Instance) *driver.ConfiguredDriver {
+func (l *LimaQemuDriver) Configure(inst *limatype.Instance) *driver.ConfiguredDriver {
 	l.Instance = inst
 	l.SSHLocalPort = inst.SSHLocalPort
 
@@ -101,7 +101,7 @@ func (l *LimaQemuDriver) validateMountType() error {
 		return fmt.Errorf("field `mountType` must be %q or %q for QEMU driver on non-Linux, got %q",
 			limatype.REVSSHFS, limatype.NINEP, *cfg.MountType)
 	}
-	if cfg.MountTypesUnsupported != nil && slices.Contains(cfg.MountTypesUnsupported, *cfg.MountType) {
+	if cfg.MountTypesUnsupported != nil && cfg.MountType != nil && slices.Contains(cfg.MountTypesUnsupported, *cfg.MountType) {
 		return fmt.Errorf("mount type %q is explicitly unsupported", *cfg.MountType)
 	}
 	if runtime.GOOS == "windows" && cfg.MountType != nil && *cfg.MountType == limatype.NINEP {

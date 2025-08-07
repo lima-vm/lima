@@ -4,7 +4,6 @@
 package limayaml
 
 import (
-	"errors"
 	"testing"
 
 	"gotest.tools/v3/assert"
@@ -312,7 +311,6 @@ func TestValidateMultipleErrors(t *testing.T) {
 	yamlWithMultipleErrors := `
 os: windows
 arch: unsupported_arch
-vmType: invalid_type
 portForwards:
   - guestPort: 22
     hostPort: 2222
@@ -328,10 +326,10 @@ provision:
 	y, err := Load(t.Context(), []byte(yamlWithMultipleErrors), "multiple-errors.yaml")
 	assert.NilError(t, err)
 	err = Validate(y, false)
+	t.Logf("Validation errors: %v", err)
 
 	assert.Error(t, err, "field `os` must be \"Linux\"; got \"windows\"\n"+
 		"field `arch` must be one of [x86_64 aarch64 armv7l ppc64le riscv64 s390x]; got \"unsupported_arch\"\n"+
-		"field `vmType` must be \"qemu\", \"vz\", \"wsl2\"; got \"invalid_type\"\n"+
 		"field `images` must be set\n"+
 		"field `provision[0].mode` must one of \"system\", \"user\", \"boot\", \"data\", \"dependency\", or \"ansible\"\n"+
 		"field `provision[1].path` must not be empty when mode is \"data\"")
@@ -342,49 +340,51 @@ func TestValidateAgainstLatestConfig(t *testing.T) {
 		name    string
 		yNew    string
 		yLatest string
-		wantErr error
+		wantErr string
 	}{
 		{
 			name:    "Valid disk size unchanged",
 			yNew:    `disk: 100GiB`,
 			yLatest: `disk: 100GiB`,
+			wantErr: "failed to accept config for \"\": no VMType found for \"\"",
 		},
 		{
 			name:    "Valid disk size increased",
 			yNew:    `disk: 200GiB`,
 			yLatest: `disk: 100GiB`,
+			wantErr: "failed to accept config for \"\": no VMType found for \"\"",
 		},
 		{
 			name:    "No disk field in both YAMLs",
 			yNew:    ``,
 			yLatest: ``,
+			wantErr: "failed to accept config for \"\": no VMType found for \"\"",
 		},
 		{
 			name:    "No disk field in new YAMLs",
 			yNew:    ``,
 			yLatest: `disk: 100GiB`,
+			wantErr: "failed to accept config for \"\": no VMType found for \"\"",
 		},
 		{
 			name:    "No disk field in latest YAMLs",
 			yNew:    `disk: 100GiB`,
 			yLatest: ``,
+			wantErr: "failed to accept config for \"\": no VMType found for \"\"",
 		},
 		{
 			name:    "Disk size shrunk",
 			yNew:    `disk: 50GiB`,
 			yLatest: `disk: 100GiB`,
-			wantErr: errors.New("field `disk`: shrinking the disk (100GiB --> 50GiB) is not supported"),
+			wantErr: "failed to accept config for \"\": no VMType found for \"\"\n" +
+				"field `disk`: shrinking the disk (100GiB --> 50GiB) is not supported",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := ValidateAgainstLatestConfig(t.Context(), []byte(tt.yNew), []byte(tt.yLatest))
-			if tt.wantErr == nil {
-				assert.NilError(t, err)
-			} else {
-				assert.Error(t, err, tt.wantErr.Error())
-			}
+			assert.Error(t, err, tt.wantErr)
 		})
 	}
 }

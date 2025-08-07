@@ -278,7 +278,7 @@ func (d *DriverClient) Info() driver.Info {
 	return info
 }
 
-func (d *DriverClient) Configure(inst *store.Instance) *driver.ConfiguredDriver {
+func (d *DriverClient) Configure(inst *limatype.Instance) *driver.ConfiguredDriver {
 	d.logger.Debugf("Setting config for instance %s with SSH local port %d", inst.Name, inst.SSHLocalPort)
 
 	instJSON, err := inst.MarshalJSON()

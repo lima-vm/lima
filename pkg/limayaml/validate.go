@@ -598,38 +598,43 @@ func warnExperimental(y *limatype.LimaYAML) {
 // This validates configuration rules that disallow certain changes, such as shrinking the disk.
 func ValidateAgainstLatestConfig(ctx context.Context, yNew, yLatest []byte) error {
 	var n limatype.LimaYAML
+	var errs error
 
 	// Load the latest YAML and fill in defaults
 	l, err := LoadWithWarnings(ctx, yLatest, "")
 	if err != nil {
-		return err
+		errs = errors.Join(errs, err)
 	}
 	if err := driverutil.ResolveVMType(l, ""); err != nil {
-		return fmt.Errorf("failed to accept config for %q: %w", "", err)
+		errs = errors.Join(errs, fmt.Errorf("failed to accept config for %q: %w", "", err))
 	}
 	if err := Unmarshal(yNew, &n, "Unmarshal new YAML bytes"); err != nil {
-		return err
+		errs = errors.Join(errs, err)
+	}
+
+	if (n.VMType != nil && l.VMType != nil) && *n.VMType != *l.VMType {
+		errs = errors.Join(errs, fmt.Errorf("cannot change VMType from %v to %v, please create a new instance with the desired VMType", *l.VMType, *n.VMType))
 	}
 
 	// Handle editing the template without a disk value
 	if n.Disk == nil || l.Disk == nil {
-		return nil
+		return errs
 	}
 
 	// Disk value must be provided, as it is required when creating an instance.
 	nDisk, err := units.RAMInBytes(*n.Disk)
 	if err != nil {
-		return err
+		errs = errors.Join(errs, err)
 	}
 	lDisk, err := units.RAMInBytes(*l.Disk)
 	if err != nil {
-		return err
+		errs = errors.Join(errs, err)
 	}
 
 	// Reject shrinking disk
 	if nDisk < lDisk {
-		return fmt.Errorf("field `disk`: shrinking the disk (%v --> %v) is not supported", *l.Disk, *n.Disk)
+		errs = errors.Join(errs, fmt.Errorf("field `disk`: shrinking the disk (%v --> %v) is not supported", *l.Disk, *n.Disk))
 	}
 
-	return nil
+	return errs
 }
