@@ -2,7 +2,6 @@ package driverutil
 
 import (
 	"fmt"
-	"sort"
 
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/registry"
@@ -11,46 +10,37 @@ import (
 
 func ResolveVMType(y *limatype.LimaYAML, filePath string) error {
 	if y.VMType != nil && *y.VMType != "" {
-		vmType := *y.VMType
-		_, intDriver, exists := registry.Get(vmType)
-		if !exists {
-			return fmt.Errorf("specified vmType %q is not a registered driver", vmType)
+		if err := validateConfigAgainstDriver(y, filePath, *y.VMType); err != nil {
+			return err
 		}
-		if intDriver == nil {
-			// For now we only support internal drivers.
-			return fmt.Errorf("specified vmType %q is not an internal driver", vmType)
-		}
-		if err := intDriver.AcceptConfig(y, filePath); err != nil {
-			return fmt.Errorf("vmType %q is not compatible with the configuration: %w", vmType, err)
-		}
-		if err := intDriver.FillConfig(y, filePath); err != nil {
-			return fmt.Errorf("unable to fill config for vmType %q: %w", vmType, err)
-		}
-		logrus.Debugf("ResolveVMType: using explicitly specified VMType %q", vmType)
+		logrus.Debugf("Using specified vmType %q for %q", *y.VMType, filePath)
 		return nil
 	}
 
-	// If VMType is not specified, we try to resolve it by checking config with all the registered drivers.
-	candidates := registry.List()
-	vmtypes := make([]string, 0, len(candidates))
-	for vmtype := range candidates {
-		vmtypes = append(vmtypes, vmtype)
+	// If VMType is not specified, we go with the default platform driver.
+	vmType := limatype.DefaultDriver()
+	if err := validateConfigAgainstDriver(y, filePath, vmType); err == nil {
+		return nil
+	} else {
+		return err
 	}
-	sort.Strings(vmtypes)
+}
 
-	for _, vmType := range vmtypes {
-		// For now we only support internal drivers.
-		if registry.CheckInternalOrExternal(vmType) == registry.Internal {
-			_, intDriver, _ := registry.Get(vmType)
-			if err := intDriver.AcceptConfig(y, filePath); err == nil {
-				logrus.Debugf("ResolveVMType: resolved VMType %q", vmType)
-				if err := intDriver.FillConfig(y, filePath); err != nil {
-					return fmt.Errorf("unable to fill config for VMType %q: %w", vmType, err)
-				}
-				return nil
-			}
-		}
+func validateConfigAgainstDriver(y *limatype.LimaYAML, filePath, vmType string) error {
+	_, intDriver, exists := registry.Get(vmType)
+	if !exists {
+		return fmt.Errorf("vmType %q is not a registered driver", vmType)
+	}
+	// For now we only support internal drivers.
+	if intDriver == nil {
+		return fmt.Errorf("vmType %q is not an internal driver", vmType)
+	}
+	if err := intDriver.AcceptConfig(y, filePath); err != nil {
+		return err
+	}
+	if err := intDriver.FillConfig(y, filePath); err != nil {
+		return err
 	}
 
-	return fmt.Errorf("no VMType found for %q", filePath)
+	return nil
 }

@@ -387,3 +387,14 @@ func NewVMType(driver string) VMType {
 		return driver
 	}
 }
+
+func DefaultDriver() VMType {
+	switch runtime.GOOS {
+	case "darwin":
+		return VZ
+	case "windows":
+		return WSL2
+	default:
+		return QEMU
+	}
+}
