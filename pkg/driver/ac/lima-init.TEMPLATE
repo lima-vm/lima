@@ -1,0 +1,8 @@
+#!/bin/bash
+set -eu
+export LOG_FILE=/var/log/lima-init.log
+exec > >(tee $LOG_FILE) 2>&1
+ln -sf rtc0 /dev/rtc
+chmod 666 /dev/fuse
+export LIMA_CIDATA_MNT="{{.CIDataPath}}"
+exec "$LIMA_CIDATA_MNT/boot.sh"
