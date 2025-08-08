@@ -4,10 +4,12 @@
 package limayaml
 
 import (
+	"fmt"
 	"testing"
 
 	"gotest.tools/v3/assert"
 
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/version"
 )
 
@@ -346,37 +348,37 @@ func TestValidateAgainstLatestConfig(t *testing.T) {
 			name:    "Valid disk size unchanged",
 			yNew:    `disk: 100GiB`,
 			yLatest: `disk: 100GiB`,
-			wantErr: "failed to accept config for \"\": no VMType found for \"\"",
+			wantErr: fmt.Sprintf("failed to accept config for \"\": vmType %q is not a registered driver", limatype.DefaultDriver()),
 		},
 		{
 			name:    "Valid disk size increased",
 			yNew:    `disk: 200GiB`,
 			yLatest: `disk: 100GiB`,
-			wantErr: "failed to accept config for \"\": no VMType found for \"\"",
+			wantErr: fmt.Sprintf("failed to accept config for \"\": vmType %q is not a registered driver", limatype.DefaultDriver()),
 		},
 		{
 			name:    "No disk field in both YAMLs",
 			yNew:    ``,
 			yLatest: ``,
-			wantErr: "failed to accept config for \"\": no VMType found for \"\"",
+			wantErr: fmt.Sprintf("failed to accept config for \"\": vmType %q is not a registered driver", limatype.DefaultDriver()),
 		},
 		{
 			name:    "No disk field in new YAMLs",
 			yNew:    ``,
 			yLatest: `disk: 100GiB`,
-			wantErr: "failed to accept config for \"\": no VMType found for \"\"",
+			wantErr: fmt.Sprintf("failed to accept config for \"\": vmType %q is not a registered driver", limatype.DefaultDriver()),
 		},
 		{
 			name:    "No disk field in latest YAMLs",
 			yNew:    `disk: 100GiB`,
 			yLatest: ``,
-			wantErr: "failed to accept config for \"\": no VMType found for \"\"",
+			wantErr: fmt.Sprintf("failed to accept config for \"\": vmType %q is not a registered driver", limatype.DefaultDriver()),
 		},
 		{
 			name:    "Disk size shrunk",
 			yNew:    `disk: 50GiB`,
 			yLatest: `disk: 100GiB`,
-			wantErr: "failed to accept config for \"\": no VMType found for \"\"\n" +
+			wantErr: fmt.Sprintf("failed to accept config for \"\": vmType %q is not a registered driver\n", limatype.DefaultDriver()) +
 				"field `disk`: shrinking the disk (100GiB --> 50GiB) is not supported",
 		},
 	}
