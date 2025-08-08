@@ -331,7 +331,7 @@ provision:
 
 	assert.Error(t, err, "field `os` must be \"Linux\"; got \"windows\"\n"+
 		"field `arch` must be one of [x86_64 aarch64 armv7l ppc64le riscv64 s390x]; got \"unsupported_arch\"\n"+
-		"field `vmType` must be \"qemu\", \"vz\", \"wsl2\"; got \"invalid_type\"\n"+
+		"field `vmType` must be \"qemu\", \"vz\", \"wsl2\", \"ac\"; got \"invalid_type\"\n"+
 		"field `images` must be set\n"+
 		"field `provision[0].mode` must one of \"system\", \"user\", \"boot\", \"data\", \"dependency\", or \"ansible\"\n"+
 		"field `provision[1].path` must not be empty when mode is \"data\"")
