@@ -1,10 +1,12 @@
---- Title: Developer's Guide
+--- 
+Title: Developer's Guide
 
- Weight: 500.
+Weight: 500.
+---
 
- Lima allows you to run Linux virtual machines on both macOS and Linux.
+Lima allows you to run Linux virtual machines on both macOS and Linux.
 
- ## Quick Start for Contributors
+## Quick Start for Contributors
 
  - For more information on the project architecture, visit [Lima on DeepWiki](https://deepwiki.com/lima-vm/lima).
  - The main source code is located in the 'cmd/' and 'pkg/' directories.
