@@ -127,9 +127,10 @@ func (s *DriverServer) Validate(_ context.Context, empty *emptypb.Empty) (*empty
 	return empty, nil
 }
 
+// TODO: Update the proto file
 func (s *DriverServer) Initialize(ctx context.Context, empty *emptypb.Empty) (*emptypb.Empty, error) {
 	s.logger.Debug("Received Initialize request")
-	err := s.driver.Initialize(ctx)
+	err := s.driver.Create(ctx)
 	if err != nil {
 		s.logger.Errorf("Initialization failed: %v", err)
 		return empty, err
@@ -237,27 +238,28 @@ func (s *DriverServer) ListSnapshots(ctx context.Context, _ *emptypb.Empty) (*pb
 	return &pb.ListSnapshotsResponse{Snapshots: snapshots}, nil
 }
 
-func (s *DriverServer) Register(ctx context.Context, empty *emptypb.Empty) (*emptypb.Empty, error) {
-	s.logger.Debug("Received Register request")
-	err := s.driver.Register(ctx)
-	if err != nil {
-		s.logger.Errorf("Register failed: %v", err)
-		return empty, err
-	}
-	s.logger.Debug("Register succeeded")
-	return empty, nil
-}
+// TODO: Delete these methods and update the proto file accordingly
+// func (s *DriverServer) Register(ctx context.Context, empty *emptypb.Empty) (*emptypb.Empty, error) {
+// 	s.logger.Debug("Received Register request")
+// 	err := s.driver.Register(ctx)
+// 	if err != nil {
+// 		s.logger.Errorf("Register failed: %v", err)
+// 		return empty, err
+// 	}
+// 	s.logger.Debug("Register succeeded")
+// 	return empty, nil
+// }
 
-func (s *DriverServer) Unregister(ctx context.Context, empty *emptypb.Empty) (*emptypb.Empty, error) {
-	s.logger.Debug("Received Unregister request")
-	err := s.driver.Unregister(ctx)
-	if err != nil {
-		s.logger.Errorf("Unregister failed: %v", err)
-		return empty, err
-	}
-	s.logger.Debug("Unregister succeeded")
-	return empty, nil
-}
+// func (s *DriverServer) Unregister(ctx context.Context, empty *emptypb.Empty) (*emptypb.Empty, error) {
+// 	s.logger.Debug("Received Unregister request")
+// 	err := s.driver.Unregister(ctx)
+// 	if err != nil {
+// 		s.logger.Errorf("Unregister failed: %v", err)
+// 		return empty, err
+// 	}
+// 	s.logger.Debug("Unregister succeeded")
+// 	return empty, nil
+// }
 
 func (s *DriverServer) ForwardGuestAgent(_ context.Context, _ *emptypb.Empty) (*pb.ForwardGuestAgentResponse, error) {
 	s.logger.Debug("Received ForwardGuestAgent request")
