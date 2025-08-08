@@ -223,7 +223,7 @@ func (l *LimaVzDriver) Validate(_ context.Context) error {
 	return nil
 }
 
-func (l *LimaVzDriver) Initialize(_ context.Context) error {
+func (l *LimaVzDriver) Create(_ context.Context) error {
 	_, err := getMachineIdentifier(l.Instance)
 	return err
 }
@@ -314,6 +314,10 @@ func (l *LimaVzDriver) Info() driver.Info {
 		info.InstanceDir = l.Instance.Dir
 	}
 	return info
+}
+
+func (l *LimaVzDriver) Delete(ctx context.Context) error {
+	return nil
 }
 
 func (l *LimaVzDriver) Register(_ context.Context) error {

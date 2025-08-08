@@ -32,7 +32,7 @@ func (d *DriverClient) Validate(ctx context.Context) error {
 	return nil
 }
 
-func (d *DriverClient) Initialize(ctx context.Context) error {
+func (d *DriverClient) Create(ctx context.Context) error {
 	d.logger.Debug("Initializing driver instance")
 
 	_, err := d.DriverSvc.Initialize(ctx, &emptypb.Empty{})
@@ -302,6 +302,10 @@ func (d *DriverClient) Configure(inst *limatype.Instance) *driver.ConfiguredDriv
 	return &driver.ConfiguredDriver{
 		Driver: d,
 	}
+}
+
+func (d *DriverClient) Delete(ctx context.Context) error {
+	return errors.New("AcceptConfig not implemented in DriverClient")
 }
 
 func (d *DriverClient) AcceptConfig(cfg *limatype.LimaYAML, filepath string) error {

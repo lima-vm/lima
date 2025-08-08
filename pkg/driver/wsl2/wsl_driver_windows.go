@@ -158,6 +158,21 @@ func (l *LimaWslDriver) Validate(_ context.Context) error {
 	return nil
 }
 
+func (l *LimaWslDriver) Delete(ctx context.Context) error {
+	distroName := "lima-" + l.Instance.Name
+	status, err := store.GetWslStatus(l.Instance.Name)
+	if err != nil {
+		return err
+	}
+	switch status {
+	case limatype.StatusRunning, limatype.StatusStopped, limatype.StatusBroken, limatype.StatusInstalling:
+		return unregisterVM(ctx, distroName)
+	}
+
+	logrus.Info("WSL VM is not running or does not exist, skipping deletion")
+	return nil
+}
+
 func (l *LimaWslDriver) Start(ctx context.Context) (chan error, error) {
 	logrus.Infof("Starting WSL VM")
 	status, err := store.GetWslStatus(l.Instance.Name)
@@ -213,21 +228,6 @@ func (l *LimaWslDriver) Stop(ctx context.Context) error {
 	return stopVM(ctx, distroName)
 }
 
-func (l *LimaWslDriver) Unregister(ctx context.Context) error {
-	distroName := "lima-" + l.Instance.Name
-	status, err := store.GetWslStatus(l.Instance.Name)
-	if err != nil {
-		return err
-	}
-	switch status {
-	case limatype.StatusRunning, limatype.StatusStopped, limatype.StatusBroken, limatype.StatusInstalling:
-		return unregisterVM(ctx, distroName)
-	}
-
-	logrus.Info("VM not registered, skipping unregistration")
-	return nil
-}
-
 // GuestAgentConn returns the guest agent connection, or nil (if forwarded by ssh).
 // As of 08-01-2024, github.com/mdlayher/vsock does not natively support vsock on
 // Windows, so use the winio library to create the connection.
@@ -264,15 +264,11 @@ func (l *LimaWslDriver) Info() driver.Info {
 	return info
 }
 
-func (l *LimaWslDriver) Initialize(_ context.Context) error {
+func (l *LimaWslDriver) Create(_ context.Context) error {
 	return nil
 }
 
 func (l *LimaWslDriver) CreateDisk(_ context.Context) error {
-	return nil
-}
-
-func (l *LimaWslDriver) Register(_ context.Context) error {
 	return nil
 }
 

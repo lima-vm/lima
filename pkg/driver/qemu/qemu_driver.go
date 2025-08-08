@@ -654,7 +654,11 @@ func (l *LimaQemuDriver) Info() driver.Info {
 	return info
 }
 
-func (l *LimaQemuDriver) Initialize(_ context.Context) error {
+func (l *LimaQemuDriver) Create(_ context.Context) error {
+	return nil
+}
+
+func (l *LimaQemuDriver) Delete(ctx context.Context) error {
 	return nil
 }
 
