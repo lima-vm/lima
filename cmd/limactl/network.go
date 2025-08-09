@@ -174,23 +174,23 @@ func networkCreateAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	switch mode {
-	case networks.ModeBridged:
+	if mode == networks.ModeBridged {
 		if gateway != "" {
 			return fmt.Errorf("network mode %q does not support specifying gateway", mode)
 		}
 		if intf == "" {
 			return fmt.Errorf("network mode %q requires specifying interface", mode)
 		}
-	default:
-		if gateway == "" {
-			return fmt.Errorf("network mode %q requires specifying gateway", mode)
-		}
-		if intf != "" {
-			return fmt.Errorf("network mode %q does not support specifying interface", mode)
-		}
+		yq := fmt.Sprintf(`.networks.%q = {"mode":%q,"interface":%q}`, name, mode, intf)
+		return networkApplyYQ(yq)
 	}
 
+	if gateway == "" {
+		return fmt.Errorf("network mode %q requires specifying gateway", mode)
+	}
+	if intf != "" {
+		return fmt.Errorf("network mode %q does not support specifying interface", mode)
+	}
 	if !strings.Contains(gateway, "/") {
 		gateway += "/24"
 	}
@@ -208,7 +208,6 @@ func networkCreateAction(cmd *cobra.Command, args []string) error {
 	// TODO: check IP range collision
 
 	yq := fmt.Sprintf(`.networks.%q = {"mode":%q,"gateway":%q,"netmask":%q,"interface":%q}`, name, mode, gwIP.String(), gwMaskStr, intf)
-
 	return networkApplyYQ(yq)
 }
 
