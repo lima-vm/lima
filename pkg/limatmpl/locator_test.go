@@ -11,7 +11,7 @@ import (
 	"gotest.tools/v3/assert"
 
 	"github.com/lima-vm/lima/v2/pkg/limatmpl"
-	"github.com/lima-vm/lima/v2/pkg/limayaml"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 )
 
 func TestInstNameFromImageURL(t *testing.T) {
@@ -48,7 +48,7 @@ func TestInstNameFromImageURL(t *testing.T) {
 		assert.Equal(t, name, "my-arch-aarch64")
 	})
 	t.Run("removes native arch", func(t *testing.T) {
-		arch := limayaml.NewArch(runtime.GOARCH)
+		arch := limatype.NewArch(runtime.GOARCH)
 		image := fmt.Sprintf("linux_cloudimg.base-%s.qcow2.gz", arch)
 		name := limatmpl.InstNameFromImageURL(image, arch)
 		assert.Equal(t, name, "linux")

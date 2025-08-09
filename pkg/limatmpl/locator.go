@@ -20,6 +20,7 @@ import (
 
 	"github.com/lima-vm/lima/v2/pkg/identifiers"
 	"github.com/lima-vm/lima/v2/pkg/ioutilx"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	"github.com/lima-vm/lima/v2/pkg/templatestore"
 )
@@ -131,17 +132,17 @@ func Read(ctx context.Context, name, locator string) (*Template, error) {
 var imageURLRegex = regexp.MustCompile(`\.(img|qcow2|raw|iso)(\.(gz|xz|bz2|zstd))?$`)
 
 // Image architecture will be guessed based on the presence of arch keywords.
-var archKeywords = map[string]limayaml.Arch{
-	"aarch64": limayaml.AARCH64,
-	"amd64":   limayaml.X8664,
-	"arm64":   limayaml.AARCH64,
-	"armhf":   limayaml.ARMV7L,
-	"armv7l":  limayaml.ARMV7L,
-	"ppc64el": limayaml.PPC64LE,
-	"ppc64le": limayaml.PPC64LE,
-	"riscv64": limayaml.RISCV64,
-	"s390x":   limayaml.S390X,
-	"x86_64":  limayaml.X8664,
+var archKeywords = map[string]limatype.Arch{
+	"aarch64": limatype.AARCH64,
+	"amd64":   limatype.X8664,
+	"arm64":   limatype.AARCH64,
+	"armhf":   limatype.ARMV7L,
+	"armv7l":  limatype.ARMV7L,
+	"ppc64el": limatype.PPC64LE,
+	"ppc64le": limatype.PPC64LE,
+	"riscv64": limatype.RISCV64,
+	"s390x":   limatype.S390X,
+	"x86_64":  limatype.X8664,
 }
 
 // These generic tags will be stripped from an image name before turning it into an instance name.
@@ -174,7 +175,7 @@ func imageTemplate(tmpl *Template, locator string) bool {
 		return false
 	}
 
-	var imageArch limayaml.Arch
+	var imageArch limatype.Arch
 	for keyword, arch := range archKeywords {
 		pattern := fmt.Sprintf(`\b%s\b`, keyword)
 		if regexp.MustCompile(pattern).MatchString(locator) {
@@ -183,7 +184,7 @@ func imageTemplate(tmpl *Template, locator string) bool {
 		}
 	}
 	if imageArch == "" {
-		imageArch = limayaml.NewArch(runtime.GOARCH)
+		imageArch = limatype.NewArch(runtime.GOARCH)
 		logrus.Warnf("cannot determine image arch from URL %q; assuming %q", locator, imageArch)
 	}
 	template := `arch: %q

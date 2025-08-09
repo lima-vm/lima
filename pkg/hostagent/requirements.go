@@ -12,7 +12,7 @@ import (
 	"github.com/lima-vm/sshocker/pkg/ssh"
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/v2/pkg/limayaml"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 )
 
 func (a *HostAgent) waitForRequirements(label string, requirements []requirement) error {
@@ -149,7 +149,7 @@ it must not be created until the session reset is done.
 `,
 		})
 
-	if *a.instConfig.MountType == limayaml.REVSSHFS && len(a.instConfig.Mounts) > 0 {
+	if *a.instConfig.MountType == limatype.REVSSHFS && len(a.instConfig.Mounts) > 0 {
 		req = append(req, requirement{
 			description: "sshfs binary to be installed",
 			script: `#!/bin/bash
@@ -216,7 +216,7 @@ Also see "/var/log/cloud-init-output.log" in the guest.
 			})
 	}
 	for _, probe := range a.instConfig.Probes {
-		if probe.Mode == limayaml.ProbeModeReadiness {
+		if probe.Mode == limatype.ProbeModeReadiness {
 			req = append(req, requirement{
 				description: probe.Description,
 				script:      probe.Script,

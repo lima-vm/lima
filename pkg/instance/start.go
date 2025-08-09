@@ -26,10 +26,10 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/fileutils"
 	hostagentevents "github.com/lima-vm/lima/v2/pkg/hostagent/events"
 	"github.com/lima-vm/lima/v2/pkg/imgutil/proxyimgutil"
-	"github.com/lima-vm/lima/v2/pkg/limayaml"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/registry"
 	"github.com/lima-vm/lima/v2/pkg/store"
-	"github.com/lima-vm/lima/v2/pkg/store/filenames"
 	"github.com/lima-vm/lima/v2/pkg/usrlocalsharelima"
 )
 
@@ -40,7 +40,7 @@ const DefaultWatchHostAgentEventsTimeout = 10 * time.Minute
 // ensureNerdctlArchiveCache prefetches the nerdctl-full-VERSION-GOOS-GOARCH.tar.gz archive
 // into the cache before launching the hostagent process, so that we can show the progress in tty.
 // https://github.com/lima-vm/lima/issues/326
-func ensureNerdctlArchiveCache(ctx context.Context, y *limayaml.LimaYAML, created bool) (string, error) {
+func ensureNerdctlArchiveCache(ctx context.Context, y *limatype.LimaYAML, created bool) (string, error) {
 	if !*y.Containerd.System && !*y.Containerd.User {
 		// nerdctl archive is not needed
 		return "", nil
@@ -79,7 +79,7 @@ type Prepared struct {
 }
 
 // Prepare ensures the disk, the nerdctl archive, etc.
-func Prepare(ctx context.Context, inst *store.Instance) (*Prepared, error) {
+func Prepare(ctx context.Context, inst *limatype.Instance) (*Prepared, error) {
 	var guestAgent string
 	if !*inst.Config.Plain {
 		var err error
@@ -97,7 +97,7 @@ func Prepare(ctx context.Context, inst *store.Instance) (*Prepared, error) {
 		return nil, err
 	}
 
-	if err := limaDriver.Initialize(ctx); err != nil {
+	if err := limaDriver.Create(ctx); err != nil {
 		return nil, err
 	}
 
@@ -179,7 +179,7 @@ func Prepare(ctx context.Context, inst *store.Instance) (*Prepared, error) {
 // shut down again.
 //
 // Start calls Prepare by itself, so you do not need to call Prepare manually before calling Start.
-func Start(ctx context.Context, inst *store.Instance, limactl string, launchHostAgentForeground bool) error {
+func Start(ctx context.Context, inst *limatype.Instance, limactl string, launchHostAgentForeground bool) error {
 	haPIDPath := filepath.Join(inst.Dir, filenames.HostAgentPID)
 	if _, err := os.Stat(haPIDPath); !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("instance %q seems running (hint: remove %q if the instance is not actually running)", inst.Name, haPIDPath)
@@ -297,7 +297,7 @@ func waitHostAgentStart(_ context.Context, haPIDPath, haStderrPath string) error
 	}
 }
 
-func watchHostAgentEvents(ctx context.Context, inst *store.Instance, haStdoutPath, haStderrPath string, begin time.Time) error {
+func watchHostAgentEvents(ctx context.Context, inst *limatype.Instance, haStdoutPath, haStderrPath string, begin time.Time) error {
 	ctx, cancel := context.WithTimeout(ctx, watchHostAgentTimeout(ctx))
 	defer cancel()
 
@@ -382,7 +382,7 @@ func LimactlShellCmd(instName string) string {
 	return shellCmd
 }
 
-func ShowMessage(inst *store.Instance) error {
+func ShowMessage(inst *limatype.Instance) error {
 	if inst.Message == "" {
 		return nil
 	}
@@ -409,7 +409,7 @@ func ShowMessage(inst *store.Instance) error {
 
 // prepareDiffDisk checks the disk size difference between inst.Disk and yaml.Disk.
 // If there is no diffDisk, return nil (the instance has not been initialized or started yet).
-func prepareDiffDisk(inst *store.Instance) error {
+func prepareDiffDisk(inst *limatype.Instance) error {
 	diffDisk := filepath.Join(inst.Dir, filenames.DiffDisk)
 
 	// Handle the instance initialization

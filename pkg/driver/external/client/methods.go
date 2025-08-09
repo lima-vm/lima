@@ -14,7 +14,7 @@ import (
 
 	"github.com/lima-vm/lima/v2/pkg/driver"
 	pb "github.com/lima-vm/lima/v2/pkg/driver/external"
-	"github.com/lima-vm/lima/v2/pkg/store"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 )
 
 func (d *DriverClient) Validate() error {
@@ -33,7 +33,7 @@ func (d *DriverClient) Validate() error {
 	return nil
 }
 
-func (d *DriverClient) Initialize(ctx context.Context) error {
+func (d *DriverClient) Create(ctx context.Context) error {
 	d.logger.Debug("Initializing driver instance")
 
 	_, err := d.DriverSvc.Initialize(ctx, &emptypb.Empty{})
@@ -281,7 +281,7 @@ func (d *DriverClient) Info() driver.Info {
 	return info
 }
 
-func (d *DriverClient) Configure(inst *store.Instance) *driver.ConfiguredDriver {
+func (d *DriverClient) Configure(inst *limatype.Instance) *driver.ConfiguredDriver {
 	d.logger.Debugf("Setting config for instance %s with SSH local port %d", inst.Name, inst.SSHLocalPort)
 
 	instJSON, err := inst.MarshalJSON()
@@ -305,4 +305,16 @@ func (d *DriverClient) Configure(inst *store.Instance) *driver.ConfiguredDriver 
 	return &driver.ConfiguredDriver{
 		Driver: d,
 	}
+}
+
+func (d *DriverClient) Delete(ctx context.Context) error {
+	return errors.New("AcceptConfig not implemented in DriverClient")
+}
+
+func (d *DriverClient) AcceptConfig(cfg *limatype.LimaYAML, filepath string) error {
+	return errors.New("AcceptConfig not implemented in DriverClient")
+}
+
+func (d *DriverClient) FillConfig(cfg *limatype.LimaYAML, filepath string) error {
+	return errors.New("AcceptConfig not implemented in DriverClient")
 }

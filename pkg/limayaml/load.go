@@ -11,26 +11,27 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/v2/pkg/store/dirnames"
-	"github.com/lima-vm/lima/v2/pkg/store/filenames"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
+	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 )
 
 // Load loads the yaml and fulfills unspecified fields with the default values.
 //
 // Load does not validate. Use Validate for validation.
-func Load(b []byte, filePath string) (*LimaYAML, error) {
+func Load(b []byte, filePath string) (*limatype.LimaYAML, error) {
 	return load(b, filePath, false)
 }
 
 // LoadWithWarnings will call FillDefaults with warnings enabled (e.g. when
 // the username is not valid on Linux and must be replaced by "Lima").
 // It is called when creating or editing an instance.
-func LoadWithWarnings(b []byte, filePath string) (*LimaYAML, error) {
+func LoadWithWarnings(b []byte, filePath string) (*limatype.LimaYAML, error) {
 	return load(b, filePath, true)
 }
 
-func load(b []byte, filePath string, warn bool) (*LimaYAML, error) {
-	var y, d, o LimaYAML
+func load(b []byte, filePath string, warn bool) (*limatype.LimaYAML, error) {
+	var y, d, o limatype.LimaYAML
 
 	if err := Unmarshal(b, &y, fmt.Sprintf("main file %q", filePath)); err != nil {
 		return nil, err
@@ -68,5 +69,6 @@ func load(b []byte, filePath string, warn bool) (*LimaYAML, error) {
 	}
 
 	FillDefault(&y, &d, &o, filePath, warn)
+
 	return &y, nil
 }
