@@ -30,6 +30,7 @@ func TestConfig(t *testing.T) {
 	assert.NilError(t, err)
 	t.Log(string(config))
 	assert.Assert(t, !strings.Contains(string(config), "ca_certs:"))
+	assert.Assert(t, !strings.Contains(string(config), "mounts:"))
 }
 
 func TestConfigCACerts(t *testing.T) {
@@ -52,6 +53,51 @@ func TestConfigCACerts(t *testing.T) {
 	assert.NilError(t, err)
 	t.Log(string(config))
 	assert.Assert(t, strings.Contains(string(config), "ca_certs:"))
+}
+
+var defaultMounts = []Mount{
+	{MountPoint: "/home/foo.linux", Tag: "mount0", Type: "virtiofs", Options: "ro"},
+	{MountPoint: "/tmp/lima", Tag: "mount1", Type: "virtiofs"},
+}
+
+func TestConfigMounts(t *testing.T) {
+	args := &TemplateArgs{
+		Name:    "default",
+		User:    "foo",
+		UID:     501,
+		Comment: "Foo",
+		Home:    "/home/foo.linux",
+		Shell:   "/bin/bash",
+		SSHPubKeys: []string{
+			"ssh-rsa dummy foo@example.com",
+		},
+		MountType: "virtiofs", // override
+		Mounts:    defaultMounts,
+	}
+	config, err := ExecuteTemplateCloudConfig(args)
+	assert.NilError(t, err)
+	t.Log(string(config))
+	assert.Assert(t, strings.Contains(string(config), "mounts:"))
+}
+
+func TestConfigMountsNone(t *testing.T) {
+	args := &TemplateArgs{
+		Name:    "default",
+		User:    "foo",
+		UID:     501,
+		Comment: "Foo",
+		Home:    "/home/foo.linux",
+		Shell:   "/bin/bash",
+		SSHPubKeys: []string{
+			"ssh-rsa dummy foo@example.com",
+		},
+		MountType: "virtiofs", // override
+		Mounts:    []Mount{},
+	}
+	config, err := ExecuteTemplateCloudConfig(args)
+	assert.NilError(t, err)
+	t.Log(string(config))
+	assert.Assert(t, !strings.Contains(string(config), "mounts:"))
 }
 
 func TestTemplate(t *testing.T) {
