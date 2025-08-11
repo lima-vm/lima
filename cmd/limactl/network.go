@@ -182,6 +182,8 @@ func networkCreateAction(cmd *cobra.Command, args []string) error {
 		if intf == "" {
 			return fmt.Errorf("network mode %q requires specifying interface", mode)
 		}
+		yq := fmt.Sprintf(`.networks.%q = {"mode":%q,"interface":%q}`, name, mode, intf)
+		return networkApplyYQ(yq)
 	default:
 		if gateway == "" {
 			return fmt.Errorf("network mode %q requires specifying gateway", mode)
@@ -189,27 +191,25 @@ func networkCreateAction(cmd *cobra.Command, args []string) error {
 		if intf != "" {
 			return fmt.Errorf("network mode %q does not support specifying interface", mode)
 		}
-	}
+		if !strings.Contains(gateway, "/") {
+			gateway += "/24"
+		}
+		gwIP, gwMask, err := net.ParseCIDR(gateway)
+		if err != nil {
+			return fmt.Errorf("failed to parse CIDR %q: %w", gateway, err)
+		}
+		if gwIP.IsUnspecified() || gwIP.IsLoopback() {
+			return fmt.Errorf("invalid IP address: %v", gwIP)
+		}
+		gwMaskStr := "255.255.255.0"
+		if gwMask != nil {
+			gwMaskStr = net.IP(gwMask.Mask).String()
+		}
+		// TODO: check IP range collision
 
-	if !strings.Contains(gateway, "/") {
-		gateway += "/24"
+		yq := fmt.Sprintf(`.networks.%q = {"mode":%q,"gateway":%q,"netmask":%q,"interface":%q}`, name, mode, gwIP.String(), gwMaskStr, intf)
+		return networkApplyYQ(yq)
 	}
-	gwIP, gwMask, err := net.ParseCIDR(gateway)
-	if err != nil {
-		return fmt.Errorf("failed to parse CIDR %q: %w", gateway, err)
-	}
-	if gwIP.IsUnspecified() || gwIP.IsLoopback() {
-		return fmt.Errorf("invalid IP address: %v", gwIP)
-	}
-	gwMaskStr := "255.255.255.0"
-	if gwMask != nil {
-		gwMaskStr = net.IP(gwMask.Mask).String()
-	}
-	// TODO: check IP range collision
-
-	yq := fmt.Sprintf(`.networks.%q = {"mode":%q,"gateway":%q,"netmask":%q,"interface":%q}`, name, mode, gwIP.String(), gwMaskStr, intf)
-
-	return networkApplyYQ(yq)
 }
 
 func networkApplyYQ(yq string) error {
