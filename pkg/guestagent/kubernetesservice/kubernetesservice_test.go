@@ -63,7 +63,7 @@ func TestGetPorts(t *testing.T) {
 			},
 			want: []Entry{{
 				Protocol: TCP,
-				IP:       net.ParseIP("0.0.0.0"),
+				IP:       net.IPv4zero,
 				Port:     8080,
 			}},
 		},
@@ -85,7 +85,7 @@ func TestGetPorts(t *testing.T) {
 			},
 			want: []Entry{{
 				Protocol: TCP,
-				IP:       net.ParseIP("0.0.0.0"),
+				IP:       net.IPv4zero,
 				Port:     8081,
 			}},
 		},
