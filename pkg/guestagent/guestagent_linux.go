@@ -271,10 +271,11 @@ func (a *agent) LocalPorts(_ context.Context) ([]*api.IPPort, error) {
 	}
 
 	for _, ipt := range ipts {
+		port := int32(ipt.AddrPort.Port())
 		// Make sure the port isn't already listed from procnettcp
 		found := false
 		for _, re := range res {
-			if re.Port == int32(ipt.Port) {
+			if re.Port == port {
 				found = true
 			}
 		}
@@ -282,8 +283,8 @@ func (a *agent) LocalPorts(_ context.Context) ([]*api.IPPort, error) {
 			if ipt.TCP {
 				res = append(res,
 					&api.IPPort{
-						Ip:       ipt.IP.String(),
-						Port:     int32(ipt.Port), // The port value is already ensured to be within int32 bounds in iptables.go
+						Ip:       ipt.AddrPort.Addr().String(),
+						Port:     port,
 						Protocol: "tcp",
 					})
 			}
