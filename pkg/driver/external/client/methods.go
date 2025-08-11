@@ -305,7 +305,7 @@ func (d *DriverClient) Configure(inst *limatype.Instance) *driver.ConfiguredDriv
 }
 
 func (d *DriverClient) Delete(ctx context.Context) error {
-	return errors.New("AcceptConfig not implemented in DriverClient")
+	return errors.New("Delete not implemented in DriverClient")
 }
 
 func (d *DriverClient) AcceptConfig(cfg *limatype.LimaYAML, filepath string) error {
@@ -313,5 +313,10 @@ func (d *DriverClient) AcceptConfig(cfg *limatype.LimaYAML, filepath string) err
 }
 
 func (d *DriverClient) FillConfig(cfg *limatype.LimaYAML, filepath string) error {
-	return errors.New("AcceptConfig not implemented in DriverClient")
+	return errors.New("FillConfig not implemented in DriverClient")
+}
+
+// TODO: Implement InspectStatus in DriverClient
+func (d *DriverClient) InspectStatus(_ context.Context, _ string) string {
+	return ""
 }

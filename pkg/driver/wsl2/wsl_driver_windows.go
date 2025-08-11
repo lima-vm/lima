@@ -158,9 +158,32 @@ func (l *LimaWslDriver) Validate(_ context.Context) error {
 	return nil
 }
 
+func (l *LimaWslDriver) InspectStatus(ctx context.Context, instName string) string {
+	status, err := getWslStatus(instName)
+	if err != nil {
+		l.Instance.Status = limatype.StatusBroken
+		l.Instance.Errors = append(l.Instance.Errors, err)
+	} else {
+		l.Instance.Status = status
+	}
+
+	l.Instance.SSHLocalPort = 22
+
+	if l.Instance.Status == limatype.StatusRunning {
+		sshAddr, err := store.GetSSHAddress(instName)
+		if err == nil {
+			l.Instance.SSHAddress = sshAddr
+		} else {
+			l.Instance.Errors = append(l.Instance.Errors, err)
+		}
+	}
+
+	return l.Instance.Status
+}
+
 func (l *LimaWslDriver) Delete(ctx context.Context) error {
 	distroName := "lima-" + l.Instance.Name
-	status, err := store.GetWslStatus(l.Instance.Name)
+	status, err := getWslStatus(l.Instance.Name)
 	if err != nil {
 		return err
 	}
@@ -175,7 +198,7 @@ func (l *LimaWslDriver) Delete(ctx context.Context) error {
 
 func (l *LimaWslDriver) Start(ctx context.Context) (chan error, error) {
 	logrus.Infof("Starting WSL VM")
-	status, err := store.GetWslStatus(l.Instance.Name)
+	status, err := getWslStatus(l.Instance.Name)
 	if err != nil {
 		return nil, err
 	}

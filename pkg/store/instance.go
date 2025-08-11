@@ -21,6 +21,7 @@ import (
 	"github.com/docker/go-units"
 	"github.com/sirupsen/logrus"
 
+	"github.com/lima-vm/lima/v2/pkg/driverutil"
 	hostagentclient "github.com/lima-vm/lima/v2/pkg/hostagent/api/client"
 	"github.com/lima-vm/lima/v2/pkg/instance/hostname"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
@@ -145,6 +146,27 @@ func Inspect(ctx context.Context, instName string) (*limatype.Instance, error) {
 	}
 	inst.Param = y.Param
 	return inst, nil
+}
+
+func inspectStatus(instDir string, inst *limatype.Instance, y *limatype.LimaYAML) {
+	driver, err := driverutil.CreateConfiguredDriver(inst, inst.SSHLocalPort)
+	if err != nil {
+		inst.Errors = append(inst.Errors, fmt.Errorf("failed to create driver instance: %w", err))
+		inst.Status = limatype.StatusBroken
+		return
+	}
+
+	status := driver.InspectStatus(context.Background(), inst.Name)
+	if status == "" {
+		inspectStatusWithPIDFiles(instDir, inst, y)
+		return
+	}
+
+	inst.Status = status
+}
+
+func GetSSHAddress(_ string) (string, error) {
+	return "127.0.0.1", nil
 }
 
 func inspectStatusWithPIDFiles(instDir string, inst *limatype.Instance, y *limatype.LimaYAML) {

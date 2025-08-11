@@ -36,6 +36,7 @@ type Lifecycle interface {
 	Stop(_ context.Context) error
 
 	Delete(_ context.Context) error
+	InspectStatus(_ context.Context, instName string) string
 }
 
 // GUI defines GUI-related operations.

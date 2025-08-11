@@ -654,6 +654,10 @@ func (l *LimaQemuDriver) Info() driver.Info {
 	return info
 }
 
+func (l *LimaQemuDriver) InspectStatus(_ context.Context, instName string) string {
+	return ""
+}
+
 func (l *LimaQemuDriver) Create(_ context.Context) error {
 	return nil
 }

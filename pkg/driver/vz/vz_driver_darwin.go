@@ -316,6 +316,10 @@ func (l *LimaVzDriver) Info() driver.Info {
 	return info
 }
 
+func (l *LimaVzDriver) InspectStatus(_ context.Context, instName string) string {
+	return ""
+}
+
 func (l *LimaVzDriver) Delete(ctx context.Context) error {
 	return nil
 }
