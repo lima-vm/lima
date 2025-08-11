@@ -149,7 +149,7 @@ func (s *ServiceWatcher) GetPorts() []Entry {
 
 			entries = append(entries, Entry{
 				Protocol: Protocol(strings.ToLower(string(portEntry.Protocol))),
-				IP:       net.ParseIP("0.0.0.0"),
+				IP:       net.IPv4zero,
 				Port:     uint16(port),
 			})
 		}
