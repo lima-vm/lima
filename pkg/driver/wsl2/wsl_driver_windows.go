@@ -19,7 +19,6 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	"github.com/lima-vm/lima/v2/pkg/ptr"
 	"github.com/lima-vm/lima/v2/pkg/reflectutil"
-	"github.com/lima-vm/lima/v2/pkg/store"
 	"github.com/lima-vm/lima/v2/pkg/windows"
 )
 
@@ -170,7 +169,7 @@ func (l *LimaWslDriver) InspectStatus(ctx context.Context, instName string) stri
 	l.Instance.SSHLocalPort = 22
 
 	if l.Instance.Status == limatype.StatusRunning {
-		sshAddr, err := store.GetSSHAddress(instName)
+		sshAddr, err := l.SSHAddress(ctx)
 		if err == nil {
 			l.Instance.SSHAddress = sshAddr
 		} else {
@@ -284,7 +283,16 @@ func (l *LimaWslDriver) Info() driver.Info {
 	info.CanRunGUI = l.canRunGUI()
 	info.VirtioPort = l.virtioPort
 	info.VsockPort = l.vSockPort
+
+	info.Features = driver.DriverFeatures{
+		DynamicSSHAddress:    true,
+		SkipSocketForwarding: true,
+	}
 	return info
+}
+
+func (l *LimaWslDriver) SSHAddress(_ context.Context) (string, error) {
+	return "127.0.0.1", nil
 }
 
 func (l *LimaWslDriver) Create(_ context.Context) error {

@@ -313,7 +313,15 @@ func (l *LimaVzDriver) Info() driver.Info {
 	if l.Instance != nil {
 		info.InstanceDir = l.Instance.Dir
 	}
+
+	info.Features = driver.DriverFeatures{
+		DynamicSSHAddress:    false,
+		SkipSocketForwarding: false,
+	}
 	return info
+}
+func (l *LimaVzDriver) SSHAddress(ctx context.Context) (string, error) {
+	return "127.0.0.1", nil
 }
 
 func (l *LimaVzDriver) InspectStatus(_ context.Context, instName string) string {
