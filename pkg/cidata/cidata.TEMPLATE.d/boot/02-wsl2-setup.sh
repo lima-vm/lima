@@ -8,6 +8,7 @@
 [ "$LIMA_CIDATA_VMTYPE" = "wsl2" ] || exit 0
 
 # create user
+# shellcheck disable=SC2153
 useradd -u "${LIMA_CIDATA_UID}" "${LIMA_CIDATA_USER}" -c "${LIMA_CIDATA_COMMENT}" -d "${LIMA_CIDATA_HOME}" -m -s "${LIMA_CIDATA_SHELL}"
 LIMA_CIDATA_GID=$(id -g "${LIMA_CIDATA_USER}")
 mkdir "${LIMA_CIDATA_HOME}"/.ssh/
