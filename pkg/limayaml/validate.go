@@ -68,12 +68,14 @@ func Validate(y *LimaYAML, warn bool) error {
 		// NOP
 	case AC:
 		// NOP
+	case DC:
+		// NOP
 	case VZ:
 		if !IsNativeArch(*y.Arch) {
 			errs = errors.Join(errs, fmt.Errorf("field `arch` must be %q for VZ; got %q", NewArch(runtime.GOARCH), *y.Arch))
 		}
 	default:
-		errs = errors.Join(errs, fmt.Errorf("field `vmType` must be %q, %q, %q, %q; got %q", QEMU, VZ, WSL2, AC, *y.VMType))
+		errs = errors.Join(errs, fmt.Errorf("field `vmType` must be %q, %q, %q, %q, %q; got %q", QEMU, VZ, WSL2, AC, DC, *y.VMType))
 	}
 
 	if len(y.Images) == 0 {

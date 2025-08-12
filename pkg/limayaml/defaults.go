@@ -1060,6 +1060,8 @@ func NewVMType(driver string) VMType {
 		return WSL2
 	case "ac":
 		return AC
+	case "dc":
+		return DC
 	default:
 		logrus.Warnf("Unknown driver: %s", driver)
 		return driver

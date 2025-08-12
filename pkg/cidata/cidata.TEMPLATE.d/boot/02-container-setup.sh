@@ -4,8 +4,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # This script replaces the cloud-init functionality of creating a user and setting its SSH keys
-# when using a WSL2 or AC VM.
-[ "$LIMA_CIDATA_VMTYPE" = "wsl2" ] || [ "$LIMA_CIDATA_VMTYPE" = "ac" ] || exit 0
+# when using a WSL2 or AC/DC VM.
+[ "$LIMA_CIDATA_VMTYPE" = "wsl2" ] || [ "$LIMA_CIDATA_VMTYPE" = "ac" ] || [ "$LIMA_CIDATA_VMTYPE" = "dc" ] || exit 0
 
 # create user
 # shellcheck disable=SC2153
