@@ -7,6 +7,9 @@
 # Because Arch Linux removes kernel module files when the kernel package was updated during running cloud-init :(
 
 set -eu
+
+command -v modprobe >/dev/null 2>&1 || exit 0
+
 for f in \
 	fuse \
 	tun tap \
