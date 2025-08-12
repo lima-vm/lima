@@ -466,7 +466,7 @@ func GenerateISO9660(ctx context.Context, drv driver.Driver, instDir, name strin
 		})
 	}
 
-	if args.VMType == limatype.WSL2 || args.VMType == limatype.AC {
+	if args.VMType == limatype.WSL2 || args.VMType == limatype.AC || args.VMType == limatype.DC {
 		layout = append(layout, iso9660util.Entry{
 			Path:   "ssh_authorized_keys",
 			Reader: strings.NewReader(strings.Join(args.SSHPubKeys, "\n")),
