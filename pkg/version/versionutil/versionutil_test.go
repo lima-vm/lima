@@ -41,3 +41,19 @@ func TestParse(t *testing.T) {
 	assert.Equal(t, v2.Minor, int64(19))
 	assert.Equal(t, v2.Patch, int64(1))
 }
+
+func TestCompareWithUnparsableOldVersion(t *testing.T) {
+	assert.Equal(t, GreaterThan("1.0.0", "invalid-version"), true)
+	assert.Equal(t, GreaterThan("0.1.0", "<unknown>"), true)
+	assert.Equal(t, GreaterThan("0.0.1", "commit-hash-abc123"), true)
+
+	assert.Equal(t, GreaterEqual("1.0.0", "invalid-version"), true)
+	assert.Equal(t, GreaterEqual("0.1.0", "<unknown>"), true)
+	assert.Equal(t, GreaterEqual("0.0.1", "commit-hash-abc123"), true)
+
+	assert.Equal(t, GreaterThan("invalid-lima-version", "1.0.0"), true)
+	assert.Equal(t, GreaterEqual("invalid-lima-version", "1.0.0"), true)
+
+	assert.Equal(t, GreaterThan("invalid-lima-version", "invalid-old-version"), true)
+	assert.Equal(t, GreaterEqual("invalid-lima-version", "invalid-old-version"), true)
+}

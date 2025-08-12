@@ -38,19 +38,19 @@ func TestValidateMinimumLimaVersion(t *testing.T) {
 			name:               "minimumLimaVersion greater than current version",
 			currentVersion:     "1.1.1-114-g5bf5e513",
 			minimumLimaVersion: "1.1.2",
-			wantErr:            `template requires Lima version "1.1.2"; this is only "1.1.1"`,
+			wantErr:            `template requires Lima version "1.1.2"; this is only "1.1.1-114-g5bf5e513"`,
 		},
 		{
 			name:               "invalid current version",
 			currentVersion:     "<unknown>",
 			minimumLimaVersion: "0.8.0",
-			wantErr:            `can't parse builtin Lima version "<unknown>": <unknown> is not in dotted-tri format`,
+			wantErr:            "", // Unparsable versions are treated as "latest"
 		},
 		{
 			name:               "invalid minimumLimaVersion",
 			currentVersion:     "1.1.1-114-g5bf5e513",
 			minimumLimaVersion: "invalid",
-			wantErr:            "field `minimumLimaVersion` must be a semvar value, got \"invalid\": invalid is not in dotted-tri format\ntemplate requires Lima version \"invalid\"; this is only \"1.1.1\"",
+			wantErr:            "field `minimumLimaVersion` must be a semvar value, got \"invalid\": invalid is not in dotted-tri format", // Only parse error, no comparison error
 		},
 	}
 

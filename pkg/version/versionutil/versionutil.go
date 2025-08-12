@@ -31,7 +31,12 @@ func compare(limaVersion, oldVersion string) int {
 	if err != nil {
 		return 1
 	}
-	cmp := version.Compare(*semver.New(oldVersion))
+	// Handle Unparsable oldVersion gracefully - treat as 0.0.0 so Unparsable limaVersion is always greater
+	oldVer, err := semver.NewVersion(oldVersion)
+	if err != nil {
+		return 1
+	}
+	cmp := version.Compare(*oldVer)
 	if cmp == 0 && strings.Contains(limaVersion, "-") {
 		cmp = 1
 	}
