@@ -294,11 +294,6 @@ func TestFillDefault(t *testing.T) {
 		Images:     nil,
 	}
 
-	expect.Rosetta = limatype.Rosetta{
-		Enabled: ptr.Of(false),
-		BinFmt:  ptr.Of(false),
-	}
-
 	expect.NestedVirtualization = ptr.Of(false)
 
 	FillDefault(t.Context(), &y, &limatype.LimaYAML{}, &limatype.LimaYAML{}, filePath, false)
@@ -413,10 +408,6 @@ func TestFillDefault(t *testing.T) {
 				"-----BEGIN CERTIFICATE-----\nYOUR-ORGS-TRUSTED-CA-CERT\n-----END CERTIFICATE-----\n",
 			},
 		},
-		Rosetta: limatype.Rosetta{
-			Enabled: ptr.Of(true),
-			BinFmt:  ptr.Of(true),
-		},
 		NestedVirtualization: ptr.Of(true),
 		User: limatype.User{
 			Name:    ptr.Of("xxx"),
@@ -460,17 +451,6 @@ func TestFillDefault(t *testing.T) {
 		"-----BEGIN CERTIFICATE-----\nYOUR-ORGS-TRUSTED-CA-CERT\n-----END CERTIFICATE-----\n",
 	}
 
-	if runtime.GOOS == "darwin" && IsNativeArch(limatype.AARCH64) {
-		expect.Rosetta = limatype.Rosetta{
-			Enabled: ptr.Of(true),
-			BinFmt:  ptr.Of(true),
-		}
-	} else {
-		expect.Rosetta = limatype.Rosetta{
-			Enabled: ptr.Of(false),
-			BinFmt:  ptr.Of(true),
-		}
-	}
 	expect.Plain = ptr.Of(false)
 
 	y = limatype.LimaYAML{}
@@ -638,10 +618,6 @@ func TestFillDefault(t *testing.T) {
 		CACertificates: limatype.CACertificates{
 			RemoveDefaults: ptr.Of(true),
 		},
-		Rosetta: limatype.Rosetta{
-			Enabled: ptr.Of(false),
-			BinFmt:  ptr.Of(false),
-		},
 		NestedVirtualization: ptr.Of(false),
 		User: limatype.User{
 			Name:    ptr.Of("foo"),
@@ -700,10 +676,6 @@ func TestFillDefault(t *testing.T) {
 		"-----BEGIN CERTIFICATE-----\nYOUR-ORGS-TRUSTED-CA-CERT\n-----END CERTIFICATE-----\n",
 	}
 
-	expect.Rosetta = limatype.Rosetta{
-		Enabled: ptr.Of(false),
-		BinFmt:  ptr.Of(false),
-	}
 	expect.Plain = ptr.Of(false)
 
 	expect.NestedVirtualization = ptr.Of(false)
