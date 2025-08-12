@@ -120,7 +120,27 @@ func (l *LimaVzDriver) FillConfig(cfg *limatype.LimaYAML, filePath string) error
 		cfg.MountType = ptr.Of(limatype.VIRTIOFS)
 	}
 
+	// Migrate old Rosetta config if needed
+	if (cfg.VMOpts.VZ.Rosetta.Enabled == nil && cfg.VMOpts.VZ.Rosetta.BinFmt == nil) && (!isEmpty(cfg.Rosetta)) {
+		logrus.Debug("Migrating top-level Rosetta configuration to vmOpts.vz.rosetta")
+		cfg.VMOpts.VZ.Rosetta = cfg.Rosetta
+	}
+	if (cfg.VMOpts.VZ.Rosetta.Enabled != nil && cfg.VMOpts.VZ.Rosetta.BinFmt != nil) && (!isEmpty(cfg.Rosetta)) {
+		logrus.Warn("Both top-level 'rosetta' and 'vmOpts.vz.rosetta' are configured. Using vmOpts.vz.rosetta. Top-level 'rosetta' is deprecated.")
+	}
+
+	if cfg.VMOpts.VZ.Rosetta.Enabled == nil {
+		cfg.VMOpts.VZ.Rosetta.Enabled = ptr.Of(false)
+	}
+	if cfg.VMOpts.VZ.Rosetta.BinFmt == nil {
+		cfg.VMOpts.VZ.Rosetta.BinFmt = ptr.Of(false)
+	}
+
 	return nil
+}
+
+func isEmpty(r limatype.Rosetta) bool {
+	return r.Enabled == nil && r.BinFmt == nil
 }
 
 func (l *LimaVzDriver) AcceptConfig(cfg *limatype.LimaYAML, filePath string) error {

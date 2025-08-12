@@ -136,8 +136,8 @@ func templateArgs(bootScripts bool, instDir, name string, instConfig *limatype.L
 		Containerd:         Containerd{System: *instConfig.Containerd.System, User: *instConfig.Containerd.User, Archive: archive},
 		SlirpNICName:       networks.SlirpNICName,
 
-		RosettaEnabled: *instConfig.Rosetta.Enabled,
-		RosettaBinFmt:  *instConfig.Rosetta.BinFmt,
+		RosettaEnabled: *instConfig.VMOpts.VZ.Rosetta.Enabled,
+		RosettaBinFmt:  *instConfig.VMOpts.VZ.Rosetta.BinFmt,
 		VMType:         *instConfig.VMType,
 		VSockPort:      vsockPort,
 		VirtioPort:     virtioPort,
