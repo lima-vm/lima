@@ -136,9 +136,6 @@ func New(ctx context.Context, instName string, stdout io.Writer, signalCh chan o
 	if err != nil {
 		return nil, err
 	}
-	if *inst.Config.VMType == limatype.WSL2 {
-		sshLocalPort = inst.SSHLocalPort
-	}
 
 	var udpDNSLocalPort, tcpDNSLocalPort int
 	if *inst.Config.HostResolver.Enabled {
@@ -155,6 +152,14 @@ func New(ctx context.Context, instName string, stdout io.Writer, signalCh chan o
 	limaDriver, err := driverutil.CreateConfiguredDriver(inst, sshLocalPort)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create driver instance: %w", err)
+	}
+
+	if limaDriver.Info().Features.DynamicSSHAddress {
+		sshLocalPort = inst.SSHLocalPort
+		limaDriver, err = driverutil.CreateConfiguredDriver(inst, sshLocalPort)
+		if err != nil {
+			return nil, fmt.Errorf("failed to recreate driver instance: %w", err)
+		}
 	}
 
 	vSockPort := limaDriver.Info().VsockPort
@@ -335,9 +340,8 @@ func (a *HostAgent) Run(ctx context.Context) error {
 		return err
 	}
 
-	// WSL instance SSH address isn't known until after VM start
-	if *a.instConfig.VMType == limatype.WSL2 {
-		sshAddr, err := store.GetSSHAddress(ctx, a.instName)
+	if a.driver.Info().Features.DynamicSSHAddress {
+		sshAddr, err := a.driver.SSHAddress(ctx)
 		if err != nil {
 			return err
 		}
@@ -572,7 +576,7 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 	// TODO: use vSock (when QEMU for macOS gets support for vSock)
 
 	// Setup all socket forwards and defer their teardown
-	if *a.instConfig.VMType != limatype.WSL2 {
+	if !a.driver.Info().Features.SkipSocketForwarding {
 		logrus.Debugf("Forwarding unix sockets")
 		for _, rule := range a.instConfig.PortForwards {
 			if rule.GuestSocket != "" {

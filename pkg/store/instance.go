@@ -165,10 +165,6 @@ func inspectStatus(instDir string, inst *limatype.Instance, y *limatype.LimaYAML
 	inst.Status = status
 }
 
-func GetSSHAddress(_ string) (string, error) {
-	return "127.0.0.1", nil
-}
-
 func inspectStatusWithPIDFiles(instDir string, inst *limatype.Instance, y *limatype.LimaYAML) {
 	var err error
 	inst.DriverPID, err = ReadPIDFile(filepath.Join(instDir, filenames.PIDFile(*y.VMType)))

@@ -320,3 +320,7 @@ func (d *DriverClient) FillConfig(cfg *limatype.LimaYAML, filepath string) error
 func (d *DriverClient) InspectStatus(_ context.Context, _ string) string {
 	return ""
 }
+
+func (d *DriverClient) SSHAddress(ctx context.Context) (string, error) {
+	return "", nil
+}

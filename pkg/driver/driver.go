@@ -80,6 +80,8 @@ type Driver interface {
 
 	AcceptConfig(cfg *limatype.LimaYAML, filepath string) error
 	FillConfig(cfg *limatype.LimaYAML, filePath string) error
+
+	SSHAddress(ctx context.Context) (string, error)
 }
 
 type ConfiguredDriver struct {
@@ -87,9 +89,15 @@ type ConfiguredDriver struct {
 }
 
 type Info struct {
-	DriverName  string `json:"driverName"`
-	CanRunGUI   bool   `json:"canRunGui,omitempty"`
-	VsockPort   int    `json:"vsockPort"`
-	VirtioPort  string `json:"virtioPort"`
-	InstanceDir string `json:"instanceDir,omitempty"`
+	DriverName  string         `json:"driverName"`
+	CanRunGUI   bool           `json:"canRunGui,omitempty"`
+	VsockPort   int            `json:"vsockPort"`
+	VirtioPort  string         `json:"virtioPort"`
+	InstanceDir string         `json:"instanceDir,omitempty"`
+	Features    DriverFeatures `json:"features"`
+}
+
+type DriverFeatures struct {
+	DynamicSSHAddress    bool `json:"dynamicSSHAddress"`
+	SkipSocketForwarding bool `json:"skipSocketForwarding"`
 }

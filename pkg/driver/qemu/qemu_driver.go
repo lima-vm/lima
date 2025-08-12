@@ -651,7 +651,16 @@ func (l *LimaQemuDriver) Info() driver.Info {
 	info.CanRunGUI = false
 	info.VirtioPort = l.virtioPort
 	info.VsockPort = l.vSockPort
+
+	info.Features = driver.DriverFeatures{
+		DynamicSSHAddress:    false,
+		SkipSocketForwarding: false,
+	}
 	return info
+}
+
+func (l *LimaQemuDriver) SSHAddress(ctx context.Context) (string, error) {
+	return "127.0.0.1", nil
 }
 
 func (l *LimaQemuDriver) InspectStatus(_ context.Context, instName string) string {
