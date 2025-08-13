@@ -122,6 +122,26 @@ func (l *LimaQemuDriver) FillConfig(cfg *limatype.LimaYAML, filePath string) err
 		cfg.Video.VNC.Display = ptr.Of("127.0.0.1:0,to=9")
 	}
 
+	if cfg.VMOpts.QEMU.CPUType == nil {
+		cfg.VMOpts.QEMU.CPUType = limatype.CPUType{}
+	}
+
+	// Migrate top-level CPUTYPE if needed
+	if len(cfg.CPUType) > 0 {
+		logrus.Warn("The top-level `cpuType` field is deprecated and will be removed in a future release. Please migrate to `vmOpts.qemu.cpuType`.")
+		for arch, v := range cfg.CPUType {
+			if v == "" {
+				continue
+			}
+			if existing, ok := cfg.VMOpts.QEMU.CPUType[arch]; ok && existing != "" && existing != v {
+				logrus.Warnf("Conflicting cpuType for arch %q: top-level=%q, vmOpts.qemu=%q; using vmOpts.qemu value", arch, v, existing)
+				continue
+			}
+			cfg.VMOpts.QEMU.CPUType[arch] = v
+		}
+		cfg.CPUType = nil
+	}
+
 	mountTypesUnsupported := make(map[string]struct{})
 	for _, f := range cfg.MountTypesUnsupported {
 		mountTypesUnsupported[f] = struct{}{}

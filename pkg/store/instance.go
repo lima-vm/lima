@@ -59,7 +59,6 @@ func Inspect(ctx context.Context, instName string) (*limatype.Instance, error) {
 	inst.Config = y
 	inst.Arch = *y.Arch
 	inst.VMType = *y.VMType
-	inst.CPUType = y.VMOpts.QEMU.CPUType[*y.Arch]
 	inst.SSHAddress = "127.0.0.1"
 	inst.SSHLocalPort = *y.SSH.LocalPort // maybe 0
 	inst.SSHConfigFile = filepath.Join(instDir, filenames.SSHConfig)

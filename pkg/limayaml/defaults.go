@@ -239,27 +239,6 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		}
 	}
 
-	if y.VMOpts.QEMU.CPUType == nil {
-		y.VMOpts.QEMU.CPUType = limatype.CPUType{}
-	}
-	// TODO: This check should be removed when we completely eliminate `CPUType` from limayaml.
-	if len(y.CPUType) > 0 {
-		if warn {
-			logrus.Warn("The top-level `cpuType` field is deprecated and will be removed in a future release. Please migrate to `vmOpts.qemu.cpuType`.")
-		}
-		for arch, v := range y.CPUType {
-			if v == "" {
-				continue
-			}
-			if existing, ok := y.VMOpts.QEMU.CPUType[arch]; ok && existing != "" && existing != v {
-				logrus.Warnf("Conflicting cpuType for arch %q: top-level=%q, vmOpts.qemu=%q; using vmOpts.qemu value", arch, v, existing)
-				continue
-			}
-			y.VMOpts.QEMU.CPUType[arch] = v
-		}
-		y.CPUType = nil
-	}
-
 	if y.CPUs == nil {
 		y.CPUs = d.CPUs
 	}
