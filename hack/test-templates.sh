@@ -163,7 +163,7 @@ fi
 
 set -x
 # shellcheck disable=SC2086
-"${LIMACTL_CREATE[@]}" ${LIMACTL_CREATE_ARGS} "$FILE_HOST"
+"${LIMACTL_CREATE[@]}" ${LIMACTL_CREATE_ARGS:-} "$FILE_HOST"
 set +x
 
 if [[ -n ${CHECKS["mount-path-with-spaces"]} ]]; then
