@@ -24,7 +24,11 @@ else
 fi
 
 if [ -f /sbin/openrc-run ]; then
-	rc-service --ifstarted sshd reload
+	if [ -f etc/init.d/ssh ]; then
+		rc-service --ifstarted ssh reload
+	elif [ -f etc/init.d/sshd ]; then
+		rc-service --ifstarted sshd reload
+	fi
 elif command -v systemctl >/dev/null 2>&1; then
 	if systemctl -q is-active ssh; then
 		systemctl reload ssh
