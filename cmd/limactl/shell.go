@@ -19,6 +19,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
+	"github.com/lima-vm/lima/v2/pkg/envutil"
 	"github.com/lima-vm/lima/v2/pkg/instance"
 	"github.com/lima-vm/lima/v2/pkg/ioutilx"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
@@ -54,6 +55,7 @@ func newShellCommand() *cobra.Command {
 	shellCmd.Flags().String("shell", "", "Shell interpreter, e.g. /bin/bash")
 	shellCmd.Flags().String("workdir", "", "Working directory")
 	shellCmd.Flags().Bool("reconnect", false, "Reconnect to the SSH session")
+	shellCmd.Flags().Bool("preserve-env", false, "Propagate environment variables to the shell")
 	return shellCmd
 }
 
@@ -178,7 +180,23 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	} else {
 		shell = shellescape.Quote(shell)
 	}
-	script := fmt.Sprintf("%s ; exec %s --login", changeDirCmd, shell)
+	// Handle environment variable propagation
+	var envPrefix string
+	preserveEnv, err := cmd.Flags().GetBool("preserve-env")
+	if err != nil {
+		return err
+	}
+	if preserveEnv {
+		filteredEnv := envutil.FilterEnvironment()
+		if len(filteredEnv) > 0 {
+			envPrefix = "env "
+			for _, envVar := range filteredEnv {
+				envPrefix += shellescape.Quote(envVar) + " "
+			}
+		}
+	}
+
+	script := fmt.Sprintf("%s ; exec %s%s --login", changeDirCmd, envPrefix, shell)
 	if len(args) > 1 {
 		quotedArgs := make([]string, len(args[1:]))
 		parsingEnv := true

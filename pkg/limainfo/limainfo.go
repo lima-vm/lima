@@ -9,6 +9,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/lima-vm/lima/v2/pkg/envutil"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	"github.com/lima-vm/lima/v2/pkg/registry"
 	"github.com/lima-vm/lima/v2/pkg/store/dirnames"
@@ -25,6 +26,7 @@ type LimaInfo struct {
 	VMTypes         []string                     `json:"vmTypes"`     // since Lima v0.14.2
 	VMTypesEx       map[string]DriverExt         `json:"vmTypesEx"`   // since Lima v2.0.0
 	GuestAgents     map[limayaml.Arch]GuestAgent `json:"guestAgents"` // since Lima v1.1.0
+	ShellEnvBlock   []string                     `json:"shellEnvBlock"`
 }
 
 type DriverExt struct {
@@ -67,6 +69,7 @@ func New() (*LimaInfo, error) {
 		VMTypes:         vmTypes,
 		VMTypesEx:       vmTypesEx,
 		GuestAgents:     make(map[limayaml.Arch]GuestAgent),
+		ShellEnvBlock:   envutil.GetDefaultBlockList(),
 	}
 	info.Templates, err = templatestore.Templates()
 	if err != nil {
