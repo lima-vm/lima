@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"errors"
 	"net"
+	"net/netip"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -15,9 +16,8 @@ import (
 )
 
 type Entry struct {
-	TCP  bool
-	IP   net.IP
-	Port int
+	TCP      bool
+	AddrPort netip.AddrPort
 }
 
 // This regex can detect a line in the iptables added by portmap to do the
@@ -72,23 +72,25 @@ func parsePortsFromRules(rules []string) ([]Entry, error) {
 		if len(found) != 4 {
 			continue
 		}
-		port64, err := strconv.ParseInt(found[3], 10, 32)
+		port16, err := strconv.ParseUint(found[3], 10, 16)
 		if err != nil {
 			return nil, err
 		}
-		port := int(port64)
+		port := uint16(port16)
 
 		isTCP := found[2] == "tcp"
 
 		// When no IP is present the rule applies to all interfaces.
-		ip := found[1]
-		if ip == "" {
-			ip = "0.0.0.0"
+		addr := netip.IPv4Unspecified()
+		if s := found[1]; s != "" {
+			addr, err = netip.ParseAddr(s)
+			if err != nil {
+				return nil, err
+			}
 		}
 		ent := Entry{
-			IP:   net.ParseIP(ip),
-			Port: port,
-			TCP:  isTCP,
+			AddrPort: netip.AddrPortFrom(addr, port),
+			TCP:      isTCP,
 		}
 		entries = append(entries, ent)
 	}
@@ -128,7 +130,7 @@ func checkPortsOpen(pts []Entry) ([]Entry, error) {
 	var entries []Entry
 	for _, pt := range pts {
 		if pt.TCP {
-			conn, err := net.DialTimeout("tcp", net.JoinHostPort(pt.IP.String(), strconv.Itoa(pt.Port)), time.Second)
+			conn, err := net.DialTimeout("tcp", pt.AddrPort.String(), time.Second)
 			if err == nil && conn != nil {
 				conn.Close()
 				entries = append(entries, pt)

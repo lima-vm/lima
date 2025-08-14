@@ -4,6 +4,7 @@
 package iptables
 
 import (
+	"net/netip"
 	"strings"
 	"testing"
 
@@ -84,10 +85,6 @@ func TestParsePortsFromRules(t *testing.T) {
 	l := len(res)
 	assert.Equal(t, l, 2, "unexpected number of ports parsed from iptables")
 
-	if res[0].IP.String() != "0.0.0.0" || res[0].Port != 8082 || res[0].TCP != true {
-		t.Errorf("expected port 8082 on IP 0.0.0.0 with TCP true but got port %d on IP %s with TCP %t", res[0].Port, res[0].IP.String(), res[0].TCP)
-	}
-	if res[1].IP.String() != "127.0.0.1" || res[1].Port != 8081 || res[1].TCP != true {
-		t.Errorf("expected port 8081 on IP 127.0.0.1 with TCP true but go port %d on IP %s with TCP %t", res[1].Port, res[1].IP.String(), res[1].TCP)
-	}
+	assert.Equal(t, res[0], Entry{AddrPort: netip.MustParseAddrPort("0.0.0.0:8082"), TCP: true})
+	assert.Equal(t, res[1], Entry{AddrPort: netip.MustParseAddrPort("127.0.0.1:8081"), TCP: true})
 }
