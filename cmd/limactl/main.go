@@ -131,12 +131,6 @@ func newApp() *cobra.Command {
 		if err != nil {
 			return err
 		}
-		// Make sure that directory is on a local filesystem, not on NFS
-		// if the directory does not yet exist, check the home directory
-		_, err = os.Stat(dir)
-		if errors.Is(err, os.ErrNotExist) {
-			dir = filepath.Dir(dir)
-		}
 		nfs, err := fsutil.IsNFS(dir)
 		if err != nil {
 			return err
