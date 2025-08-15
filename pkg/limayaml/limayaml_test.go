@@ -4,8 +4,11 @@
 package limayaml
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
+	"path/filepath"
+	"runtime"
 	"testing"
 
 	"gotest.tools/v3/assert"
@@ -30,10 +33,18 @@ func TestEmptyYAML(t *testing.T) {
 const defaultYAML = "{}\n"
 
 func TestDefaultYAML(t *testing.T) {
-	bytes, err := os.ReadFile("default.yaml")
+	content, err := os.ReadFile("default.yaml")
 	assert.NilError(t, err)
+	// if this is the unresolved symlink as a file, then make sure to resolve it
+	if runtime.GOOS == "windows" && bytes.HasPrefix(content, []byte{'.', '.'}) {
+		f, err := filepath.Rel(".", string(content))
+		assert.NilError(t, err)
+		content, err = os.ReadFile(f)
+		assert.NilError(t, err)
+	}
+
 	var y LimaYAML
-	err = Unmarshal(bytes, &y, "")
+	err = Unmarshal(content, &y, "")
 	assert.NilError(t, err)
 	y.Images = nil                // remove default images
 	y.Mounts = nil                // remove default mounts
