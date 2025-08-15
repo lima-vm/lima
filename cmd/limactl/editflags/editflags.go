@@ -62,6 +62,12 @@ func RegisterEdit(cmd *cobra.Command, commentPrefix string) {
 
 	flags.String("set", "", commentPrefix+"Modify the template inplace, using yq syntax")
 
+	flags.Uint16("ssh-port", 0, commentPrefix+"SSH port (0 for random)") // colima-compatible
+	_ = cmd.RegisterFlagCompletionFunc("ssh-port", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
+		// Until Lima v2.0, 60022 was the default SSH port for the instance named "default".
+		return []string{"60022"}, cobra.ShellCompDirectiveNoFileComp
+	})
+
 	// negative performance impact: https://gitlab.com/qemu-project/qemu/-/issues/334
 	flags.Bool("video", false, commentPrefix+"Enable video output (has negative performance impact for QEMU)")
 
@@ -230,6 +236,7 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 			false,
 			false,
 		},
+		{"ssh-port", d(".ssh.localPort = %s"), false, false},
 		{"arch", d(".arch = %q"), true, false},
 		{
 			"containerd",
