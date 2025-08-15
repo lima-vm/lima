@@ -14,6 +14,6 @@ func FuzzParse(f *testing.F) {
 		if tcp6 {
 			kind = TCP6
 		}
-		_, _ = Parse(bytes.NewReader(data), kind)
+		_, _ = parse(bytes.NewReader(data), kind)
 	})
 }

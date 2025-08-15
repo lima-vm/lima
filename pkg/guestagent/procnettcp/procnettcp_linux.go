@@ -25,7 +25,7 @@ func ParseFiles() ([]Entry, error) {
 			}
 			return res, err
 		}
-		parsed, err := Parse(r, kind)
+		parsed, err := parse(r, kind)
 		if err != nil {
 			_ = r.Close()
 			return res, err

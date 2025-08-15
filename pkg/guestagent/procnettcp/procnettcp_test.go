@@ -21,7 +21,7 @@ func TestParseTCP(t *testing.T) {
    4: 0100007F:053A 00000000:0000 0A 00000000:00000000 00:00000000 00000000     0        0 31430 1 0000000000000000 100 0 0 10 0                     
    5: 0B3CA8C0:0016 690AA8C0:F705 01 00000000:00000000 02:00028D8B 00000000     0        0 32989 4 0000000000000000 20 4 31 10 19
 `
-	entries, err := ParseWithEndian(strings.NewReader(procNetTCP), TCP, isBE)
+	entries, err := parseWithEndian(strings.NewReader(procNetTCP), TCP, isBE)
 	assert.NilError(t, err)
 	t.Log(entries)
 
@@ -38,7 +38,7 @@ func TestParseTCP6(t *testing.T) {
 	const isBE = false
 	procNetTCP := `  sl  local_address                         remote_address                        st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode
 	   0: 000080FE00000000FF57A6705DC771FE:0050 00000000000000000000000000000000:0000 0A 00000000:00000000 00:00000000 00000000     0        0 850222 1 0000000000000000 100 0 0 10 0`
-	entries, err := ParseWithEndian(strings.NewReader(procNetTCP), TCP6, isBE)
+	entries, err := parseWithEndian(strings.NewReader(procNetTCP), TCP6, isBE)
 	assert.NilError(t, err)
 	t.Log(entries)
 
@@ -54,7 +54,7 @@ func TestParseTCP6Zero(t *testing.T) {
    1: 00000000000000000000000000000000:006F 00000000000000000000000000000000:0000 0A 00000000:00000000 00:00000000 00000000     0        0 26772 1 0000000000000000 100 0 0 10 0
    2: 00000000000000000000000000000000:0050 00000000000000000000000000000000:0000 0A 00000000:00000000 00:00000000 00000000     0        0 1210901 1 0000000000000000 100 0 0 10 0
 `
-	entries, err := ParseWithEndian(strings.NewReader(procNetTCP), TCP6, isBE)
+	entries, err := parseWithEndian(strings.NewReader(procNetTCP), TCP6, isBE)
 	assert.NilError(t, err)
 	t.Log(entries)
 
@@ -71,7 +71,7 @@ func TestParseUDP(t *testing.T) {
   731: 0369A8C0:0044 00000000:0000 07 00000000:00000000 00:00000000 00000000   998        0 29132 2 0000000000000000 0         
   731: 0F05A8C0:0044 00000000:0000 07 00000000:00000000 00:00000000 00000000   998        0 4049 2 0000000000000000 0          
  1768: 00000000:1451 00000000:0000 07 00000000:00000000 00:00000000 00000000   502        0 28364 2 0000000000000000 0  `
-	entries, err := ParseWithEndian(strings.NewReader(procNetTCP), UDP, isBE)
+	entries, err := parseWithEndian(strings.NewReader(procNetTCP), UDP, isBE)
 	assert.NilError(t, err)
 	t.Log(entries)
 
@@ -149,7 +149,7 @@ func TestParseAddress(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.input, func(t *testing.T) {
-			ip, port, err := ParseAddressWithEndian(test.input, test.bigEndian)
+			ip, port, err := parseAddressWithEndian(test.input, test.bigEndian)
 			if test.expectedErrSubstr != "" {
 				assert.ErrorContains(t, err, test.expectedErrSubstr)
 			} else {
