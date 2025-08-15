@@ -12,7 +12,7 @@ require (
 	github.com/balajiv113/fd v0.0.0-20230330094840-143eec500f3e
 	github.com/cheggaaa/pb/v3 v3.1.7 // gomodjail:unconfined
 	github.com/containerd/continuity v0.4.5
-	github.com/containers/gvisor-tap-vsock v0.8.6 // gomodjail:unconfined
+	github.com/containers/gvisor-tap-vsock v0.8.7 // gomodjail:unconfined
 	github.com/coreos/go-semver v0.3.1
 	github.com/cpuguy83/go-md2man/v2 v2.0.7
 	github.com/digitalocean/go-qemu v0.0.0-20221209210016-f035778c97f7
@@ -116,7 +116,7 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/yuin/gopher-lua v1.1.1 // indirect
 	golang.org/x/crypto v0.41.0 // indirect
-	golang.org/x/mod v0.26.0 // indirect
+	golang.org/x/mod v0.27.0 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
 	golang.org/x/term v0.34.0 // indirect
 	golang.org/x/time v0.7.0 // indirect
