@@ -42,6 +42,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/sshutil"
 	"github.com/lima-vm/lima/v2/pkg/store"
 	"github.com/lima-vm/lima/v2/pkg/store/filenames"
+	"github.com/lima-vm/lima/v2/pkg/version/versionutil"
 )
 
 type HostAgent struct {
@@ -110,8 +111,16 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 		return nil, err
 	}
 
+	var limaVersion string
+	limaVersionFile := filepath.Join(inst.Dir, filenames.LimaVersion)
+	if b, err := os.ReadFile(limaVersionFile); err == nil {
+		limaVersion = strings.TrimSpace(string(b))
+	} else if !errors.Is(err, os.ErrNotExist) {
+		logrus.WithError(err).Warnf("Failed to read %q", limaVersionFile)
+	}
+
 	// inst.Config is loaded with FillDefault() already, so no need to care about nil pointers.
-	sshLocalPort, err := determineSSHLocalPort(*inst.Config.SSH.LocalPort, instName)
+	sshLocalPort, err := determineSSHLocalPort(*inst.Config.SSH.LocalPort, instName, limaVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -237,14 +246,14 @@ func writeSSHConfigFile(sshPath, instName, instDir, instSSHAddress string, sshLo
 	return os.WriteFile(fileName, b.Bytes(), 0o600)
 }
 
-func determineSSHLocalPort(confLocalPort int, instName string) (int, error) {
+func determineSSHLocalPort(confLocalPort int, instName, limaVersion string) (int, error) {
 	if confLocalPort > 0 {
 		return confLocalPort, nil
 	}
 	if confLocalPort < 0 {
 		return 0, fmt.Errorf("invalid ssh local port %d", confLocalPort)
 	}
-	if instName == "default" {
+	if versionutil.LessThan(limaVersion, "2.0.0") && instName == "default" {
 		// use hard-coded value for "default" instance, for backward compatibility
 		return 60022, nil
 	}
