@@ -5,6 +5,7 @@ package store
 
 import (
 	"fmt"
+	"os/exec"
 	"regexp"
 	"strings"
 
@@ -115,6 +116,18 @@ func GetWslStatus(instName string) (string, error) {
 	return instState, nil
 }
 
-func GetSSHAddress(_ string) (string, error) {
-	return "127.0.0.1", nil
+// GetSSHAddress runs a hostname command to get the IP from inside of a wsl2 VM.
+//
+// Expected output (whitespace preserved, [] for optional):
+// PS > wsl -d <distroName> bash -c hostname -I | cut -d' ' -f1
+// 168.1.1.1 [10.0.0.1]
+func GetSSHAddress(instName string) (string, error) {
+	distroName := "lima-" + instName
+	cmd := exec.Command("wsl.exe", "-d", distroName, "bash", "-c", `hostname -I | cut -d ' ' -f1`)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("failed to get hostname for instance %q, err: %w (out=%q)", instName, err, string(out))
+	}
+
+	return strings.TrimSpace(string(out)), nil
 }
