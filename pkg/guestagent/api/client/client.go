@@ -76,3 +76,11 @@ func (c *GuestAgentClient) Tunnel(ctx context.Context) (api.GuestService_TunnelC
 	}
 	return stream, nil
 }
+
+func (c *GuestAgentClient) IPv4(ctx context.Context) (*api.CommandOutput, error) {
+	return c.cli.GetIPv4(ctx, &emptypb.Empty{})
+}
+
+func (c *GuestAgentClient) IPv6(ctx context.Context) (*api.CommandOutput, error) {
+	return c.cli.GetIPv6(ctx, &emptypb.Empty{})
+}

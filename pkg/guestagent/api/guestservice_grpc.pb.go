@@ -27,6 +27,8 @@ type GuestServiceClient interface {
 	GetEvents(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (GuestService_GetEventsClient, error)
 	PostInotify(ctx context.Context, opts ...grpc.CallOption) (GuestService_PostInotifyClient, error)
 	Tunnel(ctx context.Context, opts ...grpc.CallOption) (GuestService_TunnelClient, error)
+	GetIPv4(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*CommandOutput, error)
+	GetIPv6(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*CommandOutput, error)
 }
 
 type guestServiceClient struct {
@@ -143,6 +145,24 @@ func (x *guestServiceTunnelClient) Recv() (*TunnelMessage, error) {
 	return m, nil
 }
 
+func (c *guestServiceClient) GetIPv4(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*CommandOutput, error) {
+	out := new(CommandOutput)
+	err := c.cc.Invoke(ctx, "/GuestService/GetIPv4", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *guestServiceClient) GetIPv6(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*CommandOutput, error) {
+	out := new(CommandOutput)
+	err := c.cc.Invoke(ctx, "/GuestService/GetIPv6", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // GuestServiceServer is the server API for GuestService service.
 // All implementations must embed UnimplementedGuestServiceServer
 // for forward compatibility
@@ -151,6 +171,8 @@ type GuestServiceServer interface {
 	GetEvents(*emptypb.Empty, GuestService_GetEventsServer) error
 	PostInotify(GuestService_PostInotifyServer) error
 	Tunnel(GuestService_TunnelServer) error
+	GetIPv4(context.Context, *emptypb.Empty) (*CommandOutput, error)
+	GetIPv6(context.Context, *emptypb.Empty) (*CommandOutput, error)
 	mustEmbedUnimplementedGuestServiceServer()
 }
 
@@ -169,6 +191,12 @@ func (UnimplementedGuestServiceServer) PostInotify(GuestService_PostInotifyServe
 }
 func (UnimplementedGuestServiceServer) Tunnel(GuestService_TunnelServer) error {
 	return status.Errorf(codes.Unimplemented, "method Tunnel not implemented")
+}
+func (UnimplementedGuestServiceServer) GetIPv4(context.Context, *emptypb.Empty) (*CommandOutput, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetIPv4 not implemented")
+}
+func (UnimplementedGuestServiceServer) GetIPv6(context.Context, *emptypb.Empty) (*CommandOutput, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetIPv6 not implemented")
 }
 func (UnimplementedGuestServiceServer) mustEmbedUnimplementedGuestServiceServer() {}
 
@@ -274,6 +302,42 @@ func (x *guestServiceTunnelServer) Recv() (*TunnelMessage, error) {
 	return m, nil
 }
 
+func _GuestService_GetIPv4_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GuestServiceServer).GetIPv4(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/GuestService/GetIPv4",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GuestServiceServer).GetIPv4(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GuestService_GetIPv6_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GuestServiceServer).GetIPv6(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/GuestService/GetIPv6",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GuestServiceServer).GetIPv6(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // GuestService_ServiceDesc is the grpc.ServiceDesc for GuestService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -284,6 +348,14 @@ var GuestService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetInfo",
 			Handler:    _GuestService_GetInfo_Handler,
+		},
+		{
+			MethodName: "GetIPv4",
+			Handler:    _GuestService_GetIPv4_Handler,
+		},
+		{
+			MethodName: "GetIPv6",
+			Handler:    _GuestService_GetIPv6_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
