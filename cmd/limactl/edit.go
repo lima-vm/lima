@@ -14,12 +14,15 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/lima-vm/lima/v2/cmd/limactl/editflags"
+	"github.com/lima-vm/lima/v2/pkg/driverutil"
 	"github.com/lima-vm/lima/v2/pkg/editutil"
 	"github.com/lima-vm/lima/v2/pkg/instance"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
+	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	networks "github.com/lima-vm/lima/v2/pkg/networks/reconcile"
 	"github.com/lima-vm/lima/v2/pkg/store"
-	"github.com/lima-vm/lima/v2/pkg/store/filenames"
 	"github.com/lima-vm/lima/v2/pkg/uiutil"
 	"github.com/lima-vm/lima/v2/pkg/yqutil"
 )
@@ -45,12 +48,12 @@ func editAction(cmd *cobra.Command, args []string) error {
 
 	var filePath string
 	var err error
-	var inst *store.Instance
+	var inst *limatype.Instance
 
 	if arg == "" {
 		arg = DefaultInstanceName
 	}
-	if err := store.ValidateInstName(arg); err == nil {
+	if err := dirnames.ValidateInstName(arg); err == nil {
 		inst, err = store.Inspect(arg)
 		if err != nil {
 			if errors.Is(err, os.ErrNotExist) {
@@ -58,7 +61,7 @@ func editAction(cmd *cobra.Command, args []string) error {
 			}
 			return err
 		}
-		if inst.Status == store.StatusRunning {
+		if inst.Status == limatype.StatusRunning {
 			return errors.New("cannot edit a running instance")
 		}
 		filePath = filepath.Join(inst.Dir, filenames.LimaYAML)
@@ -116,6 +119,9 @@ func editAction(cmd *cobra.Command, args []string) error {
 	y, err := limayaml.LoadWithWarnings(yBytes, filePath)
 	if err != nil {
 		return err
+	}
+	if err := driverutil.ResolveVMType(y, filePath); err != nil {
+		return fmt.Errorf("failed to accept config for %q: %w", filePath, err)
 	}
 	if err := limayaml.Validate(y, true); err != nil {
 		return saveRejectedYAML(yBytes, err)

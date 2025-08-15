@@ -35,17 +35,18 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/hostagent/dns"
 	"github.com/lima-vm/lima/v2/pkg/hostagent/events"
 	"github.com/lima-vm/lima/v2/pkg/instance/hostname"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	"github.com/lima-vm/lima/v2/pkg/networks"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/portfwd"
 	"github.com/lima-vm/lima/v2/pkg/sshutil"
 	"github.com/lima-vm/lima/v2/pkg/store"
-	"github.com/lima-vm/lima/v2/pkg/store/filenames"
 )
 
 type HostAgent struct {
-	instConfig        *limayaml.LimaYAML
+	instConfig        *limatype.LimaYAML
 	sshLocalPort      int
 	udpDNSLocalPort   int
 	tcpDNSLocalPort   int
@@ -115,9 +116,6 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 	if err != nil {
 		return nil, err
 	}
-	if *inst.Config.VMType == limayaml.WSL2 {
-		sshLocalPort = inst.SSHLocalPort
-	}
 
 	var udpDNSLocalPort, tcpDNSLocalPort int
 	if *inst.Config.HostResolver.Enabled {
@@ -134,6 +132,14 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 	limaDriver, err := driverutil.CreateConfiguredDriver(inst, sshLocalPort)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create driver instance: %w", err)
+	}
+
+	if limaDriver.Info().Features.DynamicSSHAddress {
+		sshLocalPort = inst.SSHLocalPort
+		limaDriver, err = driverutil.CreateConfiguredDriver(inst, sshLocalPort)
+		if err != nil {
+			return nil, fmt.Errorf("failed to recreate driver instance: %w", err)
+		}
 	}
 
 	vSockPort := limaDriver.Info().VsockPort
@@ -169,13 +175,13 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 	for _, rule := range inst.Config.PortForwards {
 		if rule.Ignore && rule.GuestPortRange[0] == 1 && rule.GuestPortRange[1] == 65535 {
 			switch rule.Proto {
-			case limayaml.ProtoTCP:
+			case limatype.ProtoTCP:
 				ignoreTCP = true
 				logrus.Info("TCP port forwarding is disabled (except for SSH)")
-			case limayaml.ProtoUDP:
+			case limatype.ProtoUDP:
 				ignoreUDP = true
 				logrus.Info("UDP port forwarding is disabled")
-			case limayaml.ProtoAny:
+			case limatype.ProtoAny:
 				ignoreTCP = true
 				ignoreUDP = true
 				logrus.Info("TCP (except for SSH) and UDP port forwarding is disabled")
@@ -184,16 +190,16 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 			break
 		}
 	}
-	rules := make([]limayaml.PortForward, 0, 3+len(inst.Config.PortForwards))
+	rules := make([]limatype.PortForward, 0, 3+len(inst.Config.PortForwards))
 	// Block ports 22 and sshLocalPort on all IPs
 	for _, port := range []int{sshGuestPort, sshLocalPort} {
-		rule := limayaml.PortForward{GuestIP: net.IPv4zero, GuestPort: port, Ignore: true}
+		rule := limatype.PortForward{GuestIP: net.IPv4zero, GuestPort: port, Ignore: true}
 		limayaml.FillPortForwardDefaults(&rule, inst.Dir, inst.Config.User, inst.Param)
 		rules = append(rules, rule)
 	}
 	rules = append(rules, inst.Config.PortForwards...)
 	// Default forwards for all non-privileged ports from "127.0.0.1" and "::1"
-	rule := limayaml.PortForward{}
+	rule := limatype.PortForward{}
 	limayaml.FillPortForwardDefaults(&rule, inst.Dir, inst.Config.User, inst.Param)
 	rules = append(rules, rule)
 
@@ -308,9 +314,8 @@ func (a *HostAgent) Run(ctx context.Context) error {
 		return err
 	}
 
-	// WSL instance SSH address isn't known until after VM start
-	if *a.instConfig.VMType == limayaml.WSL2 {
-		sshAddr, err := store.GetSSHAddress(a.instName)
+	if a.driver.Info().Features.DynamicSSHAddress {
+		sshAddr, err := a.driver.SSHAddress(ctx)
 		if err != nil {
 			return err
 		}
@@ -446,7 +451,7 @@ sudo chown -R "${USER}" /run/host-services`
 			errs = append(errs, fmt.Errorf("stdout=%q, stderr=%q: %w", stdout, stderr, err))
 		}
 	}
-	if *a.instConfig.MountType == limayaml.REVSSHFS && !*a.instConfig.Plain {
+	if *a.instConfig.MountType == limatype.REVSSHFS && !*a.instConfig.Plain {
 		mounts, err := a.setupMounts()
 		if err != nil {
 			errs = append(errs, err)
@@ -533,7 +538,7 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 	// TODO: use vSock (when QEMU for macOS gets support for vSock)
 
 	// Setup all socket forwards and defer their teardown
-	if *a.instConfig.VMType != limayaml.WSL2 {
+	if !a.driver.Info().Features.SkipSocketForwarding {
 		logrus.Debugf("Forwarding unix sockets")
 		for _, rule := range a.instConfig.PortForwards {
 			if rule.GuestSocket != "" {

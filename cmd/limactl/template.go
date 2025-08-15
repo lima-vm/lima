@@ -12,9 +12,10 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
+	"github.com/lima-vm/lima/v2/pkg/driverutil"
 	"github.com/lima-vm/lima/v2/pkg/limatmpl"
+	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
-	"github.com/lima-vm/lima/v2/pkg/store/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/yqutil"
 )
 
@@ -85,6 +86,9 @@ func fillDefaults(tmpl *limatmpl.Template) error {
 	tmpl.Config, err = limayaml.Load(tmpl.Bytes, filePath)
 	if err == nil {
 		tmpl.Bytes, err = limayaml.Marshal(tmpl.Config, false)
+	}
+	if err := driverutil.ResolveVMType(tmpl.Config, filePath); err != nil {
+		return fmt.Errorf("failed to accept config for %q: %w", filePath, err)
 	}
 	return err
 }
@@ -241,6 +245,9 @@ func templateValidateAction(cmd *cobra.Command, args []string) error {
 		y, err := limayaml.Load(tmpl.Bytes, filePath)
 		if err != nil {
 			return err
+		}
+		if err := driverutil.ResolveVMType(y, filePath); err != nil {
+			return fmt.Errorf("failed to accept config for %q: %w", filePath, err)
 		}
 		if err := limayaml.Validate(y, false); err != nil {
 			return fmt.Errorf("failed to validate YAML file %q: %w", arg, err)

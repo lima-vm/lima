@@ -10,9 +10,9 @@ import (
 
 	"github.com/apparentlymart/go-cidr/cidr"
 
+	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/networks"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
-	"github.com/lima-vm/lima/v2/pkg/store/dirnames"
 )
 
 type SockType = string
