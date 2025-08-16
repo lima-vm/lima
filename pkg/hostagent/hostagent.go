@@ -115,7 +115,7 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 	if err != nil {
 		return nil, err
 	}
-	if *inst.Config.VMType == limayaml.WSL2 {
+	if *inst.Config.VMType == limayaml.WSL2 || *inst.Config.VMType == limayaml.AC || *inst.Config.VMType == limayaml.DC {
 		sshLocalPort = inst.SSHLocalPort
 	}
 
@@ -309,7 +309,7 @@ func (a *HostAgent) Run(ctx context.Context) error {
 	}
 
 	// WSL instance SSH address isn't known until after VM start
-	if *a.instConfig.VMType == limayaml.WSL2 {
+	if *a.instConfig.VMType == limayaml.WSL2 || *a.instConfig.VMType == limayaml.AC || *a.instConfig.VMType == limayaml.DC {
 		sshAddr, err := store.GetSSHAddress(a.instName)
 		if err != nil {
 			return err
