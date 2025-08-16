@@ -64,7 +64,7 @@ func Serve(driver driver.Driver) {
 
 	kaProps := keepalive.ServerParameters{
 		Time:    10 * time.Second,
-		Timeout: 20 * time.Second,
+		Timeout: 30 * time.Second,
 	}
 
 	kaPolicy := keepalive.EnforcementPolicy{
@@ -85,17 +85,41 @@ func Serve(driver driver.Driver) {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
+	shutdownCh := make(chan struct{})
+
 	go func() {
 		<-sigs
 		logger.Info("Received shutdown signal, stopping server...")
-		server.GracefulStop()
+		close(shutdownCh)
 	}()
 
-	logger.Infof("Starting external driver server for %s", driver.Info().DriverName)
-	logger.Infof("Server starting on Unix socket: %s", socketPath)
-	if err := server.Serve(listener); err != nil {
-		logger.Fatalf("Failed to serve: %v", err)
-	}
+	go func() {
+		timer := time.NewTimer(60 * time.Second)
+		defer timer.Stop()
+
+		select {
+		case <-timer.C:
+			logger.Info("No client connected within 60 seconds, shutting down server...")
+			close(shutdownCh)
+		case <-shutdownCh:
+			return
+		}
+	}()
+
+	go func() {
+		logger.Infof("Starting external driver server for %s", driver.Info().DriverName)
+		logger.Infof("Server starting on Unix socket: %s", socketPath)
+		if err := server.Serve(listener); err != nil {
+			if errors.Is(err, grpc.ErrServerStopped) {
+				logger.Errorf("Server stopped: %v", err)
+			} else {
+				logger.Errorf("Failed to serve: %v", err)
+			}
+		}
+	}()
+
+	<-shutdownCh
+	server.GracefulStop()
 }
 
 func Start(extDriver *registry.ExternalDriver, instName string) error {
