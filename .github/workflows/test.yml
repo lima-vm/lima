@@ -27,9 +27,6 @@ jobs:
     timeout-minutes: 30
     steps:
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
-      with:
-        # To avoid "failed to load YAML file \"templates/experimental/riscv64.yaml\": can't parse builtin Lima version \"3f3a6f6\": 3f3a6f6 is not in dotted-tri format"
-        fetch-depth: 0
     - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5  # v5.5.0
       with:
         go-version: 1.24.x
@@ -218,9 +215,6 @@ jobs:
         git config --global core.autocrlf false
         git config --global core.eol lf
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
-      with:
-        # To avoid "can't parse builtin Lima version" errors
-        fetch-depth: 0
     - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5  # v5.5.0
       with:
         go-version: 1.24.x
@@ -246,9 +240,6 @@ jobs:
     timeout-minutes: 120
     steps:
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
-      with:
-        # To avoid "failed to load YAML file \"templates/experimental/riscv64.yaml\": can't parse builtin Lima version \"3f3a6f6\": 3f3a6f6 is not in dotted-tri format"
-        fetch-depth: 0
     - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5  # v5.5.0
       with:
         go-version: 1.24.x
@@ -318,9 +309,6 @@ jobs:
         - ../hack/test-templates/test-misc.yaml  # TODO: merge net-user-v2 into test-misc
     steps:
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
-      with:
-        # To avoid "failed to load YAML file \"templates/experimental/riscv64.yaml\": can't parse builtin Lima version \"3f3a6f6\": 3f3a6f6 is not in dotted-tri format"
-        fetch-depth: 0
     - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5  # v5.5.0
       with:
         go-version: 1.24.x
@@ -370,6 +358,8 @@ jobs:
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
       with:
         # fetch-depth is set to 0 to let `limactl --version` print semver-ish version
+        # fetch-depth: 0 is required for Colima integration test because Colima
+        # checks Lima's version and requires proper semantic version format
         fetch-depth: 0
         ref: ${{ github.event.pull_request.head.sha }}
     - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5  # v5.5.0
@@ -415,8 +405,6 @@ jobs:
     timeout-minutes: 120
     steps:
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
-      with:
-        fetch-depth: 0
     - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5  # v5.5.0
       with:
         go-version: 1.24.x
@@ -470,9 +458,6 @@ jobs:
         oldver: ["v0.15.1"]  # The default VM type was always QEMU until Lima v1.0
     steps:
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
-      with:
-        # To avoid "failed to load YAML file \"templates/experimental/riscv64.yaml\": can't parse builtin Lima version \"3f3a6f6\": 3f3a6f6 is not in dotted-tri format"
-        fetch-depth: 0
     - name: Fetch homebrew-core commit messages
       uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
       with:
@@ -515,8 +500,6 @@ jobs:
         - default.yaml
     steps:
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
-      with:
-        fetch-depth: 0
     - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5  # v5.5.0
       with:
         go-version: 1.24.x
@@ -550,8 +533,6 @@ jobs:
     timeout-minutes: 30
     steps:
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
-      with:
-        fetch-depth: 0
     - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5  # v5.5.0
       with:
         go-version: 1.24.x
@@ -577,9 +558,6 @@ jobs:
     timeout-minutes: 30
     steps:
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
-      with:
-        # To avoid "failed to load YAML file \"templates/experimental/riscv64.yaml\": can't parse builtin Lima version \"3f3a6f6\": 3f3a6f6 is not in dotted-tri format"
-        fetch-depth: 0
     - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5  # v5.5.0
       with:
         go-version: 1.24.x
@@ -592,9 +570,6 @@ jobs:
     timeout-minutes: 30
     steps:
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
-      with:
-        # To avoid "failed to load YAML file \"templates/experimental/riscv64.yaml\": can't parse builtin Lima version \"3f3a6f6\": 3f3a6f6 is not in dotted-tri format"
-        fetch-depth: 0
     - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5  # v5.5.0
       with:
         go-version: 1.24.x
