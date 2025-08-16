@@ -36,8 +36,6 @@ jobs:
         # macOS SDK version
         xcrun --show-sdk-version || true
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
-      with:
-        fetch-depth: 1
     - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5  # v5.5.0
       with:
         go-version: 1.24.x
