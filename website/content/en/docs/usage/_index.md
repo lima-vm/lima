@@ -127,6 +127,12 @@ This system allows you to:
 - Extend Lima's functionality without modifying the core application
 - Share custom commands with your team by distributing scripts
 
+## Understanding Lima's Operation Modes
+
+Lima operates in different modes that affect how it integrates with your host system. By default, Lima runs in "integrated mode" which automatically mounts your home directory, forwards ports, and sets up container engines. For users who prefer more control or isolation, "plain mode" is available.
+
+See [Operation Modes](./operation-modes) for a detailed explanation of these modes and when to use each one.
+
 ### Shell completion
 - To enable bash completion, add `source <(limactl completion bash)` to `~/.bash_profile`.
 - To enable zsh completion, see `limactl completion zsh --help`
