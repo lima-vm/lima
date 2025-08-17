@@ -35,6 +35,7 @@ func newHostagentCommand() *cobra.Command {
 	hostagentCommand.Flags().Bool("run-gui", false, "Run GUI synchronously within hostagent")
 	hostagentCommand.Flags().String("guestagent", "", "Local file path (not URL) of lima-guestagent.OS-ARCH[.gz]")
 	hostagentCommand.Flags().String("nerdctl-archive", "", "Local file path (not URL) of nerdctl-full-VERSION-GOOS-GOARCH.tar.gz")
+	hostagentCommand.Flags().Bool("progress", false, "Show provision script progress by monitoring cloud-init logs")
 	return hostagentCommand
 }
 
@@ -93,6 +94,13 @@ func hostagentAction(cmd *cobra.Command, args []string) error {
 	}
 	if nerdctlArchive != "" {
 		opts = append(opts, hostagent.WithNerdctlArchive(nerdctlArchive))
+	}
+	showProgress, err := cmd.Flags().GetBool("progress")
+	if err != nil {
+		return err
+	}
+	if showProgress {
+		opts = append(opts, hostagent.WithCloudInitProgress(showProgress))
 	}
 	ha, err := hostagent.New(instName, stdout, signalCh, opts...)
 	if err != nil {

@@ -12,7 +12,10 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/store"
 )
 
-const launchHostAgentForeground = false
+const (
+	launchHostAgentForeground = false
+	showProgress              = false
+)
 
 func Restart(ctx context.Context, inst *store.Instance) error {
 	if err := StopGracefully(ctx, inst, true); err != nil {
@@ -23,7 +26,7 @@ func Restart(ctx context.Context, inst *store.Instance) error {
 		return err
 	}
 
-	if err := Start(ctx, inst, "", launchHostAgentForeground); err != nil {
+	if err := Start(ctx, inst, "", launchHostAgentForeground, showProgress); err != nil {
 		return err
 	}
 
@@ -38,7 +41,7 @@ func RestartForcibly(ctx context.Context, inst *store.Instance) error {
 		return err
 	}
 
-	if err := Start(ctx, inst, "", launchHostAgentForeground); err != nil {
+	if err := Start(ctx, inst, "", launchHostAgentForeground, showProgress); err != nil {
 		return err
 	}
 

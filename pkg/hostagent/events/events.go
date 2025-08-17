@@ -17,6 +17,18 @@ type Status struct {
 	Errors []string `json:"errors,omitempty"`
 
 	SSHLocalPort int `json:"sshLocalPort,omitempty"`
+
+	// Cloud-init progress information
+	CloudInitProgress *CloudInitProgress `json:"cloudInitProgress,omitempty"`
+}
+
+type CloudInitProgress struct {
+	// Current log line from cloud-init
+	LogLine string `json:"logLine,omitempty"`
+	// Whether cloud-init has completed
+	Completed bool `json:"completed,omitempty"`
+	// Whether cloud-init monitoring is active
+	Active bool `json:"active,omitempty"`
 }
 
 type Event struct {

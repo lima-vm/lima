@@ -99,6 +99,7 @@ See the examples in 'limactl create --help'.
 		startCommand.Flags().Bool("foreground", false, "Run the hostagent in the foreground")
 	}
 	startCommand.Flags().Duration("timeout", instance.DefaultWatchHostAgentEventsTimeout, "Duration to wait for the instance to be running before timing out")
+	startCommand.Flags().Bool("progress", false, "Show provision script progress by tailing cloud-init logs")
 	return startCommand
 }
 
@@ -493,7 +494,12 @@ func startAction(cmd *cobra.Command, args []string) error {
 		ctx = instance.WithWatchHostAgentTimeout(ctx, timeout)
 	}
 
-	return instance.Start(ctx, inst, "", launchHostAgentForeground)
+	progress, err := cmd.Flags().GetBool("progress")
+	if err != nil {
+		return err
+	}
+
+	return instance.Start(ctx, inst, "", launchHostAgentForeground, progress)
 }
 
 func createBashComplete(cmd *cobra.Command, _ []string, toComplete string) ([]string, cobra.ShellCompDirective) {
