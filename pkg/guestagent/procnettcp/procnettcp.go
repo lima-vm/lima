@@ -41,11 +41,11 @@ type Entry struct {
 	State State  `json:"state"`
 }
 
-func parse(r io.Reader, kind Kind) ([]Entry, error) {
-	return parseWithEndian(r, kind, cpu.IsBigEndian)
+func Parse(r io.Reader, kind Kind) ([]Entry, error) {
+	return ParseWithEndian(r, kind, cpu.IsBigEndian)
 }
 
-func parseWithEndian(r io.Reader, kind Kind, isBE bool) ([]Entry, error) {
+func ParseWithEndian(r io.Reader, kind Kind, isBE bool) ([]Entry, error) {
 	switch kind {
 	case TCP, TCP6, UDP, UDP6:
 	default:
@@ -78,7 +78,7 @@ func parseWithEndian(r io.Reader, kind Kind, isBE bool) ([]Entry, error) {
 		default:
 			// localAddress is like "0100007F:053A"
 			localAddress := fields[fieldNames["local_address"]]
-			ip, port, err := parseAddressWithEndian(localAddress, isBE)
+			ip, port, err := ParseAddressWithEndian(localAddress, isBE)
 			if err != nil {
 				return entries, err
 			}
@@ -105,7 +105,7 @@ func parseWithEndian(r io.Reader, kind Kind, isBE bool) ([]Entry, error) {
 	return entries, nil
 }
 
-// parseAddressWithEndian parses a string.
+// ParseAddress parses a string.
 //
 // Little endian hosts:
 // "0100007F:0050"                         (127.0.0.1:80)
@@ -118,7 +118,11 @@ func parseWithEndian(r io.Reader, kind Kind, isBE bool) ([]Entry, error) {
 // "00000000000000000000000000000000:0050" (0.0.0.0:80)
 //
 // See https://serverfault.com/questions/592574/why-does-proc-net-tcp6-represents-1-as-1000
-func parseAddressWithEndian(s string, isBE bool) (net.IP, uint16, error) {
+func ParseAddress(s string) (net.IP, uint16, error) {
+	return ParseAddressWithEndian(s, cpu.IsBigEndian)
+}
+
+func ParseAddressWithEndian(s string, isBE bool) (net.IP, uint16, error) {
 	split := strings.SplitN(s, ":", 2)
 	if len(split) != 2 {
 		return nil, 0, fmt.Errorf("unparsable address %q", s)
