@@ -57,8 +57,8 @@ deref() {
 	eval echo \$"$1"
 }
 
-if [ -d "${LIMA_CIDATA_MNT}"/provision.data ]; then
-	for f in "${LIMA_CIDATA_MNT}"/provision.data/*; do
+if [ -d "${LIMA_CIDATA_MNT}"/provision/data ]; then
+	for f in "${LIMA_CIDATA_MNT}"/provision/data/*; do
 		filename=$(basename "$f")
 		overwrite=$(deref "LIMA_CIDATA_DATAFILE_${filename}_OVERWRITE")
 		owner=$(deref "LIMA_CIDATA_DATAFILE_${filename}_OWNER")
@@ -77,8 +77,8 @@ if [ -d "${LIMA_CIDATA_MNT}"/provision.data ]; then
 	done
 fi
 
-if [ -d "${LIMA_CIDATA_MNT}"/provision.system ]; then
-	for f in "${LIMA_CIDATA_MNT}"/provision.system/*; do
+if [ -d "${LIMA_CIDATA_MNT}"/provision/system ]; then
+	for f in "${LIMA_CIDATA_MNT}"/provision/system/*; do
 		INFO "Executing $f"
 		if ! "$f"; then
 			WARNING "Failed to execute $f"
@@ -88,12 +88,12 @@ if [ -d "${LIMA_CIDATA_MNT}"/provision.system ]; then
 fi
 
 USER_SCRIPT="${LIMA_CIDATA_HOME}/.lima-user-script"
-if [ -d "${LIMA_CIDATA_MNT}"/provision.user ]; then
+if [ -d "${LIMA_CIDATA_MNT}"/provision/user ]; then
 	if [ ! -f /sbin/openrc-run ]; then
 		until [ -e "/run/user/${LIMA_CIDATA_UID}/systemd/private" ]; do sleep 3; done
 	fi
 	params=$(grep -o '^PARAM_[^=]*' "${LIMA_CIDATA_MNT}"/param.env | paste -sd ,)
-	for f in "${LIMA_CIDATA_MNT}"/provision.user/*; do
+	for f in "${LIMA_CIDATA_MNT}"/provision/user/*; do
 		INFO "Executing $f (as user ${LIMA_CIDATA_USER})"
 		cp "$f" "${USER_SCRIPT}"
 		chown "${LIMA_CIDATA_USER}" "${USER_SCRIPT}"

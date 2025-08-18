@@ -375,12 +375,12 @@ func GenerateISO9660(ctx context.Context, instDir, name string, instConfig *lima
 		switch f.Mode {
 		case limayaml.ProvisionModeSystem, limayaml.ProvisionModeUser, limayaml.ProvisionModeDependency:
 			layout = append(layout, iso9660util.Entry{
-				Path:   fmt.Sprintf("provision.%s/%08d", f.Mode, i),
+				Path:   fmt.Sprintf("provision/%s/%08d", f.Mode, i),
 				Reader: strings.NewReader(f.Script),
 			})
 		case limayaml.ProvisionModeData:
 			layout = append(layout, iso9660util.Entry{
-				Path:   fmt.Sprintf("provision.%s/%08d", f.Mode, i),
+				Path:   fmt.Sprintf("provision/%s/%08d", f.Mode, i),
 				Reader: strings.NewReader(*f.Content),
 			})
 		case limayaml.ProvisionModeBoot:

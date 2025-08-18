@@ -15,10 +15,10 @@ fi
 
 # Install minimum dependencies
 # Run any user provided dependency scripts first
-if [ -d "${LIMA_CIDATA_MNT}"/provision.dependency ]; then
+if [ -d "${LIMA_CIDATA_MNT}"/provision/dependency ]; then
 	echo "Detected dependency provisioning scripts, running before default dependency installation"
 	CODE=0
-	for f in "${LIMA_CIDATA_MNT}"/provision.dependency/*; do
+	for f in "${LIMA_CIDATA_MNT}"/provision/dependency/*; do
 		if ! "$f"; then
 			CODE=1
 		fi
