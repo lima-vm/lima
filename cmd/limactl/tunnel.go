@@ -47,6 +47,7 @@ func newTunnelCommand() *cobra.Command {
 }
 
 func tunnelAction(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
 	flags := cmd.Flags()
 	tunnelType, err := flags.GetString("type")
 	if err != nil {
@@ -108,7 +109,7 @@ func tunnelAction(cmd *cobra.Command, args []string) error {
 		"-p", strconv.Itoa(inst.SSHLocalPort),
 		inst.SSHAddress,
 	}...)
-	sshCmd := exec.Command(sshExe.Exe, sshArgs...)
+	sshCmd := exec.CommandContext(ctx, sshExe.Exe, sshArgs...)
 	sshCmd.Stdout = stderr
 	sshCmd.Stderr = stderr
 	logrus.Debugf("executing ssh (may take a long)): %+v", sshCmd.Args)

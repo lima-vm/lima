@@ -40,6 +40,7 @@ func newHostagentCommand() *cobra.Command {
 }
 
 func hostagentAction(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
 	pidfile, err := cmd.Flags().GetString("pidfile")
 	if err != nil {
 		return err
@@ -117,7 +118,8 @@ func hostagentAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	l, err := net.Listen("unix", socket)
+	var lc net.ListenConfig
+	l, err := lc.Listen(ctx, "unix", socket)
 	logrus.Infof("hostagent socket created at %s", socket)
 	if err != nil {
 		return err

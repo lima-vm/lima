@@ -144,7 +144,7 @@ func Stop(ctx context.Context, name string) error {
 		}
 
 		var stdout, stderr bytes.Buffer
-		cmd := exec.Command("/usr/bin/pkill", "-F", pidFile)
+		cmd := exec.CommandContext(ctx, "/usr/bin/pkill", "-F", pidFile)
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
 		logrus.Debugf("Running: %v", cmd.Args)

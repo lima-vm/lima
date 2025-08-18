@@ -48,6 +48,7 @@ func newCopyCommand() *cobra.Command {
 }
 
 func copyAction(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
 	recursive, err := cmd.Flags().GetBool("recursive")
 	if err != nil {
 		return err
@@ -161,7 +162,7 @@ func copyAction(cmd *cobra.Command, args []string) error {
 	}
 	sshArgs := sshutil.SSHArgsFromOpts(sshOpts)
 
-	sshCmd := exec.Command(arg0, append(sshArgs, scpArgs...)...)
+	sshCmd := exec.CommandContext(ctx, arg0, append(sshArgs, scpArgs...)...)
 	sshCmd.Stdin = cmd.InOrStdin()
 	sshCmd.Stdout = cmd.OutOrStdout()
 	sshCmd.Stderr = cmd.ErrOrStderr()

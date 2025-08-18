@@ -32,6 +32,7 @@ func newDaemonCommand() *cobra.Command {
 }
 
 func daemonAction(cmd *cobra.Command, _ []string) error {
+	ctx := cmd.Context()
 	socket := "/run/lima-guestagent.sock"
 	tick, err := cmd.Flags().GetDuration("tick")
 	if err != nil {
@@ -86,7 +87,8 @@ func daemonAction(cmd *cobra.Command, _ []string) error {
 		l = vsockL
 		logrus.Infof("serving the guest agent on vsock port: %d", vSockPort)
 	} else {
-		socketL, err := net.Listen("unix", socket)
+		var lc net.ListenConfig
+		socketL, err := lc.Listen(ctx, "unix", socket)
 		if err != nil {
 			return err
 		}

@@ -5,6 +5,7 @@ package sysprof
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"os/exec"
@@ -27,13 +28,14 @@ var NetworkData = sync.OnceValues(func() ([]NetworkDataType, error) {
 })
 
 func SystemProfiler(dataType string) ([]byte, error) {
+	ctx := context.TODO()
 	exe, err := exec.LookPath("system_profiler")
 	if err != nil {
 		// $PATH may lack /usr/sbin
 		exe = "/usr/sbin/system_profiler"
 	}
 	var stdout, stderr bytes.Buffer
-	cmd := exec.Command(exe, dataType, "-json")
+	cmd := exec.CommandContext(ctx, exe, dataType, "-json")
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {

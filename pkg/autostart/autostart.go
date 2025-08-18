@@ -5,6 +5,7 @@
 package autostart
 
 import (
+	"context"
 	_ "embed"
 	"errors"
 	"fmt"
@@ -78,6 +79,7 @@ func GetFilePath(hostOS, instName string) string {
 }
 
 func enableDisableService(action, hostOS, serviceWithPath string) error {
+	ctx := context.TODO()
 	// Get filename without extension
 	filename := strings.TrimSuffix(path.Base(serviceWithPath), filepath.Ext(path.Base(serviceWithPath)))
 
@@ -97,7 +99,7 @@ func enableDisableService(action, hostOS, serviceWithPath string) error {
 			filename,
 		}...)
 	}
-	cmd := exec.Command(args[0], args[1:]...)
+	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()

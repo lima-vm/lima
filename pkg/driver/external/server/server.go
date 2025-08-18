@@ -51,6 +51,7 @@ func (t *listenerTracker) Accept() (net.Conn, error) {
 }
 
 func Serve(driver driver.Driver) {
+	ctx := context.TODO()
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 
@@ -66,7 +67,8 @@ func Serve(driver driver.Driver) {
 		logger.Fatalf("Failed to remove existing socket file: %v", err)
 	}
 
-	listener, err := net.Listen("unix", socketPath)
+	var lc net.ListenConfig
+	listener, err := lc.Listen(ctx, "unix", socketPath)
 	if err != nil {
 		logger.Fatalf("Failed to listen on Unix socket: %v", err)
 	}

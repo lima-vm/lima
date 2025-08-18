@@ -4,6 +4,7 @@
 package networks
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -57,8 +58,9 @@ func Sudoers() (string, error) {
 }
 
 func (c *Config) passwordLessSudo() error {
+	ctx := context.TODO()
 	// Flush cached sudo password
-	cmd := exec.Command("sudo", "-k")
+	cmd := exec.CommandContext(ctx, "sudo", "-k")
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to run %v: %w", cmd.Args, err)
 	}
@@ -74,7 +76,7 @@ func (c *Config) passwordLessSudo() error {
 		if err != nil {
 			return err
 		}
-		cmd = exec.Command("sudo", "--user", user.User, "--group", user.Group, "--non-interactive", "true")
+		cmd = exec.CommandContext(ctx, "sudo", "--user", user.User, "--group", user.Group, "--non-interactive", "true")
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("failed to run %v: %w", cmd.Args, err)
 		}

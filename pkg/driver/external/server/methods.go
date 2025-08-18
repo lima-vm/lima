@@ -78,7 +78,8 @@ func (s *DriverServer) GuestAgentConn(ctx context.Context, _ *emptypb.Empty) (*e
 	if connType != "unix" {
 		proxySocketPath := filepath.Join(s.driver.Info().InstanceDir, filenames.GuestAgentSock)
 
-		listener, err := net.Listen("unix", proxySocketPath)
+		var lc net.ListenConfig
+		listener, err := lc.Listen(ctx, "unix", proxySocketPath)
 		if err != nil {
 			logrus.Errorf("Failed to create proxy socket: %v", err)
 			return nil, err

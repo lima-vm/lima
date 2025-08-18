@@ -60,6 +60,7 @@ func newShellCommand() *cobra.Command {
 }
 
 func shellAction(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
 	// simulate the behavior of double dash
 	newArg := []string{}
 	if len(args) >= 2 && args[1] == "--" {
@@ -254,7 +255,7 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		"--",
 		script,
 	}...)
-	sshCmd := exec.Command(sshExe.Exe, sshArgs...)
+	sshCmd := exec.CommandContext(ctx, sshExe.Exe, sshArgs...)
 	sshCmd.Stdin = os.Stdin
 	sshCmd.Stdout = os.Stdout
 	sshCmd.Stderr = os.Stderr

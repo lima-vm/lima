@@ -316,11 +316,12 @@ func TestDownloadCompressed(t *testing.T) {
 	}
 
 	t.Run("gzip", func(t *testing.T) {
+		ctx := t.Context()
 		localPath := filepath.Join(t.TempDir(), t.Name())
 		localFile := filepath.Join(t.TempDir(), "test-file")
 		testDownloadCompressedContents := []byte("TestDownloadCompressed")
 		assert.NilError(t, os.WriteFile(localFile, testDownloadCompressedContents, 0o644))
-		assert.NilError(t, exec.Command("gzip", localFile).Run())
+		assert.NilError(t, exec.CommandContext(ctx, "gzip", localFile).Run())
 		localFile += ".gz"
 		testLocalFileURL := "file://" + localFile
 
@@ -334,11 +335,12 @@ func TestDownloadCompressed(t *testing.T) {
 	})
 
 	t.Run("bzip2", func(t *testing.T) {
+		ctx := t.Context()
 		localPath := filepath.Join(t.TempDir(), t.Name())
 		localFile := filepath.Join(t.TempDir(), "test-file")
 		testDownloadCompressedContents := []byte("TestDownloadCompressed")
 		assert.NilError(t, os.WriteFile(localFile, testDownloadCompressedContents, 0o644))
-		assert.NilError(t, exec.Command("bzip2", localFile).Run())
+		assert.NilError(t, exec.CommandContext(ctx, "bzip2", localFile).Run())
 		localFile += ".bz2"
 		testLocalFileURL := "file://" + localFile
 

@@ -120,7 +120,8 @@ func run(ctx context.Context, g *errgroup.Group, configuration *types.Configurat
 }
 
 func listenQEMU(ctx context.Context, vn *virtualnetwork.VirtualNetwork) error {
-	listener, err := net.Listen("unix", opts.QemuSocket)
+	var lc net.ListenConfig
+	listener, err := lc.Listen(ctx, "unix", opts.QemuSocket)
 	if err != nil {
 		return err
 	}
@@ -153,7 +154,8 @@ func listenQEMU(ctx context.Context, vn *virtualnetwork.VirtualNetwork) error {
 }
 
 func listenFD(ctx context.Context, vn *virtualnetwork.VirtualNetwork) error {
-	listener, err := net.Listen("unix", opts.FdSocket)
+	var lc net.ListenConfig
+	listener, err := lc.Listen(ctx, "unix", opts.FdSocket)
 	if err != nil {
 		return err
 	}
