@@ -55,6 +55,8 @@ It is highly suggested to add [tests](../../dev/testing/) for every non-trivial 
 A test can be implemented as a unit test rather than an integration test when it is possible,
 to avoid slowing the integration test CI.
 
+For tips on squashing commits and rebasing before submitting your pull request, see [Git Tips](../dev/git.md).
+
 ### Merging pull requests
 
 [Committers](../governance) can merge pull requests.
