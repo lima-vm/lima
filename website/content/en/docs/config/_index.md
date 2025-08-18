@@ -11,6 +11,6 @@ The current default spec:
 - Memory: 4 GiB
 - Disk: 100 GiB
 - Mounts: `~` (read-only), `/tmp/lima` (writable)
-- SSH: 127.0.0.1:60022
+- SSH: 127.0.0.1:<Random port>
 
 For environment variables, see [Environment Variables](./environment-variables/).
