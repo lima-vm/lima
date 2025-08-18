@@ -39,6 +39,17 @@ provision:
   script: |
     #!/bin/bash
     set -eux -o pipefail
+    daemon_json="{{.Home}}/.config/docker/daemon.json"
+    if [ ! -f "${daemon_json}" ]; then
+      mkdir -p "$(dirname "${daemon_json}")"
+      cat > "${daemon_json}" <<EOF
+    {
+      "features": {
+        "cdi": true
+      }
+    }
+    EOF
+    fi
     systemctl --user start dbus
     dockerd-rootless-setuptool.sh install
     docker context use rootless

@@ -38,6 +38,17 @@ provision:
       SocketUser={{.User}}
     EOF
     fi
+    daemon_json="/etc/docker/daemon.json"
+    if [ ! -f "${daemon_json}" ]; then
+      mkdir -p "$(dirname "${daemon_json}")"
+      cat > "${daemon_json}" <<EOF
+    {
+      "features": {
+        "cdi": true
+      }
+    }
+    EOF
+    fi
     export DEBIAN_FRONTEND=noninteractive
     curl -fsSL https://get.docker.com | sh
 probes:
