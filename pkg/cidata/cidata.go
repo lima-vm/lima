@@ -116,6 +116,11 @@ func setupEnv(instConfigEnv map[string]string, propagateProxyEnv bool, slirpGate
 	return env, nil
 }
 
+func useCloudInit(instConfig *limayaml.LimaYAML) bool {
+	// all drivers but WSL2 use cloud-init
+	return *instConfig.VMType != limayaml.WSL2
+}
+
 func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, instConfig *limayaml.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort, vsockPort int, virtioPort string) (*TemplateArgs, error) {
 	if err := limayaml.Validate(instConfig, false); err != nil {
 		return nil, err
@@ -143,6 +148,7 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 		VirtioPort:     virtioPort,
 		Plain:          *instConfig.Plain,
 		TimeZone:       *instConfig.TimeZone,
+		NoCloudInit:    !useCloudInit(instConfig),
 		Param:          instConfig.Param,
 	}
 
@@ -433,7 +439,7 @@ func GenerateISO9660(ctx context.Context, instDir, name string, instConfig *lima
 		})
 	}
 
-	if args.VMType == limayaml.WSL2 {
+	if !useCloudInit(instConfig) {
 		layout = append(layout, iso9660util.Entry{
 			Path:   "ssh_authorized_keys",
 			Reader: strings.NewReader(strings.Join(args.SSHPubKeys, "\n")),
