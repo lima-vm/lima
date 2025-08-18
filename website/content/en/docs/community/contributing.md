@@ -13,6 +13,26 @@ For reporting vulnerabilities, see <https://github.com/lima-vm/.github/blob/main
 
 ## Contributing code
 
+### Getting Involved
+
+We welcome new contributors! Here are some ways to get started and engage with the Lima community:
+
+#### Introduce Yourself
+
+- Join our [community communication channels](https://lima-vm.io/docs/community/#communication-channels) (Slack, GitHub Discussions, Zoom meetings) and say hello! Let us know your interests and how you’d like to help. Also share how your [organization](https://github.com/lima-vm/lima/discussions/2390) is involved with Lima.
+
+#### Learn Where Work Is Needed
+
+- Check the [Lima Roadmap](https://lima-vm.io/docs/community/roadmap/), related [issues](https://github.com/lima-vm/lima/issues), and [discussions](https://github.com/lima-vm/lima/discussions) to see ongoing and planned work.
+- Read through the [documentation](https://lima-vm.io/docs/) to understand the project’s goals and architecture.
+
+#### Find Open Issues
+
+- Browse [GitHub Issues](https://github.com/lima-vm/lima/issues) labeled as [`good first issue`](https://github.com/lima-vm/lima/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) for tasks that are great for new contributors.
+- If you’re unsure where to start, ask in the community channels or open a new discussion.
+
+We’re glad to have you here, your contributions make Lima better!
+
 ### Developer Certificate of Origin
 
 Every commit must be signed off with the `Signed-off-by: REAL NAME <email@example.com>` line.
