@@ -38,7 +38,9 @@ provision:
   expression: .Socket.SocketUser="{{.User}}"
 - mode: yq
   path: "/etc/docker/daemon.json"
-  expression: .features.containerd-snapshotter = {{.Param.containerdSnapshotter}}
+  expression: |
+    .features.cdi = true |
+    .features.containerd-snapshotter = {{.Param.containerdSnapshotter}}
 probes:
 - script: |
     #!/bin/bash

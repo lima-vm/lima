@@ -37,7 +37,9 @@ provision:
     apt-get install -y uidmap dbus-user-session
 - mode: yq
   path: "{{.Home}}/.config/docker/daemon.json"
-  expression: .features.containerd-snapshotter = {{.Param.containerdSnapshotter}}
+  expression: |
+    .features.cdi = true |
+    .features.containerd-snapshotter = {{.Param.containerdSnapshotter}}
   owner: "{{.User}}"
 - mode: user
   script: |
