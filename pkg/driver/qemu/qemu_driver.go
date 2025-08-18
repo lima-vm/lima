@@ -96,8 +96,8 @@ func (l *LimaQemuDriver) CreateDisk(ctx context.Context) error {
 	return EnsureDisk(ctx, qCfg)
 }
 
-func (l *LimaQemuDriver) Start(ctx context.Context) (chan error, error) {
-	ctx, cancel := context.WithCancel(ctx)
+func (l *LimaQemuDriver) Start(_ context.Context) (chan error, error) {
+	ctx, cancel := context.WithCancel(context.Background())
 	defer func() {
 		if l.qCmd == nil {
 			cancel()
@@ -220,8 +220,9 @@ func (l *LimaQemuDriver) Start(ctx context.Context) (chan error, error) {
 		return nil, err
 	}
 	l.qCmd = qCmd
-	l.qWaitCh = make(chan error)
+	l.qWaitCh = make(chan error, 1)
 	go func() {
+		defer close(l.qWaitCh)
 		l.qWaitCh <- qCmd.Wait()
 	}()
 	l.vhostCmds = vhostCmds
@@ -380,9 +381,16 @@ func (l *LimaQemuDriver) shutdownQEMU(ctx context.Context, timeout time.Duration
 		logrus.WithError(err).Warnf("failed to send system_powerdown command via the QMP socket %q, forcibly killing QEMU", qmpSockPath)
 		return l.killQEMU(ctx, timeout, qCmd, qWaitCh)
 	}
-	deadline := time.After(timeout)
+	timeoutCtx, timeoutCancel := context.WithTimeout(context.Background(), timeout)
+	defer timeoutCancel()
+
 	select {
-	case qWaitErr := <-qWaitCh:
+	case qWaitErr, ok := <-qWaitCh:
+		if !ok {
+			logrus.Info("QEMU wait channel was closed")
+			_ = l.removeVNCFiles()
+			return l.killVhosts()
+		}
 		entry := logrus.NewEntry(logrus.StandardLogger())
 		if qWaitErr != nil {
 			entry = entry.WithError(qWaitErr)
@@ -390,10 +398,15 @@ func (l *LimaQemuDriver) shutdownQEMU(ctx context.Context, timeout time.Duration
 		entry.Info("QEMU has exited")
 		_ = l.removeVNCFiles()
 		return errors.Join(qWaitErr, l.killVhosts())
-	case <-deadline:
+	case <-timeoutCtx.Done():
+		if qCmd.ProcessState != nil {
+			logrus.Info("QEMU has already exited")
+			_ = l.removeVNCFiles()
+			return l.killVhosts()
+		}
+		logrus.Warnf("QEMU did not exit in %v, forcibly killing QEMU", timeout)
+		return l.killQEMU(ctx, timeout, qCmd, qWaitCh)
 	}
-	logrus.Warnf("QEMU did not exit in %v, forcibly killing QEMU", timeout)
-	return l.killQEMU(ctx, timeout, qCmd, qWaitCh)
 }
 
 func (l *LimaQemuDriver) killQEMU(_ context.Context, _ time.Duration, qCmd *exec.Cmd, qWaitCh <-chan error) error {
