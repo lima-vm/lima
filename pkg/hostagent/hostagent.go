@@ -4,6 +4,7 @@
 package hostagent
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -73,11 +74,14 @@ type HostAgent struct {
 
 	guestAgentAliveCh     chan struct{} // closed on establishing the connection
 	guestAgentAliveChOnce sync.Once
+
+	showProgress bool // whether to show cloud-init progress
 }
 
 type options struct {
 	guestAgentBinary string
 	nerdctlArchive   string // local path, not URL
+	showProgress     bool
 }
 
 type Opt func(*options) error
@@ -92,6 +96,13 @@ func WithGuestAgentBinary(s string) Opt {
 func WithNerdctlArchive(s string) Opt {
 	return func(o *options) error {
 		o.nerdctlArchive = s
+		return nil
+	}
+}
+
+func WithCloudInitProgress(enabled bool) Opt {
+	return func(o *options) error {
+		o.showProgress = enabled
 		return nil
 	}
 }
@@ -227,6 +238,7 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 		vSockPort:         vSockPort,
 		virtioPort:        virtioPort,
 		guestAgentAliveCh: make(chan struct{}),
+		showProgress:      o.showProgress,
 	}
 	return a, nil
 }
@@ -493,6 +505,18 @@ sudo chown -R "${USER}" /run/host-services`
 	}
 	if !*a.instConfig.Plain {
 		go a.watchGuestAgentEvents(ctx)
+		if a.showProgress {
+			cloudInitDone := make(chan struct{})
+			go func() {
+				a.watchCloudInitProgress(ctx)
+				close(cloudInitDone)
+			}()
+
+			go func() {
+				<-cloudInitDone
+				logrus.Debug("Cloud-init monitoring completed, VM is fully ready")
+			}()
+		}
 	}
 	if err := a.waitForRequirements("optional", a.optionalRequirements()); err != nil {
 		errs = append(errs, err)
@@ -788,6 +812,141 @@ func forwardSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, 
 		return fmt.Errorf("failed to run %v: %q: %w", cmd.Args, string(out), err)
 	}
 	return nil
+}
+
+func (a *HostAgent) watchCloudInitProgress(ctx context.Context) {
+	logrus.Debug("Starting cloud-init progress monitoring")
+
+	a.emitEvent(ctx, events.Event{
+		Status: events.Status{
+			SSHLocalPort: a.sshLocalPort,
+			CloudInitProgress: &events.CloudInitProgress{
+				Active: true,
+			},
+		},
+	})
+
+	maxRetries := 30
+	retryDelay := time.Second
+	var sshReady bool
+
+	for i := 0; i < maxRetries && !sshReady; i++ {
+		if i > 0 {
+			time.Sleep(retryDelay)
+		}
+
+		// Test SSH connectivity
+		args := a.sshConfig.Args()
+		args = append(args,
+			"-p", strconv.Itoa(a.sshLocalPort),
+			"127.0.0.1",
+			"echo 'SSH Ready'",
+		)
+
+		cmd := exec.CommandContext(ctx, a.sshConfig.Binary(), args...)
+		if err := cmd.Run(); err == nil {
+			sshReady = true
+			logrus.Debug("SSH ready for cloud-init monitoring")
+		}
+	}
+
+	if !sshReady {
+		logrus.Warn("SSH not ready for cloud-init monitoring, proceeding anyway")
+	}
+
+	args := a.sshConfig.Args()
+	args = append(args,
+		"-p", strconv.Itoa(a.sshLocalPort),
+		"127.0.0.1",
+		"sudo", "tail", "-n", "+1", "-f", "/var/log/cloud-init-output.log",
+	)
+
+	cmd := exec.CommandContext(ctx, a.sshConfig.Binary(), args...)
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		logrus.WithError(err).Warn("Failed to create stdout pipe for cloud-init monitoring")
+		return
+	}
+
+	if err := cmd.Start(); err != nil {
+		logrus.WithError(err).Warn("Failed to start cloud-init monitoring command")
+		return
+	}
+
+	scanner := bufio.NewScanner(stdout)
+	cloudInitFinished := false
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+
+		if strings.Contains(line, "Cloud-init") && strings.Contains(line, "finished") {
+			cloudInitFinished = true
+		}
+
+		a.emitEvent(ctx, events.Event{
+			Status: events.Status{
+				SSHLocalPort: a.sshLocalPort,
+				CloudInitProgress: &events.CloudInitProgress{
+					Active:    !cloudInitFinished,
+					LogLine:   line,
+					Completed: cloudInitFinished,
+				},
+			},
+		})
+	}
+
+	if err := cmd.Wait(); err != nil {
+		logrus.WithError(err).Debug("SSH command finished (expected when cloud-init completes)")
+	}
+
+	if !cloudInitFinished {
+		logrus.Debug("Connection dropped, checking for any remaining cloud-init logs")
+
+		finalArgs := a.sshConfig.Args()
+		finalArgs = append(finalArgs,
+			"-p", strconv.Itoa(a.sshLocalPort),
+			"127.0.0.1",
+			"sudo", "tail", "-n", "20", "/var/log/cloud-init-output.log",
+		)
+
+		finalCmd := exec.CommandContext(ctx, a.sshConfig.Binary(), finalArgs...)
+		if finalOutput, err := finalCmd.Output(); err == nil {
+			lines := strings.Split(string(finalOutput), "\n")
+			for _, line := range lines {
+				if strings.TrimSpace(line) != "" {
+					if strings.Contains(line, "Cloud-init") && strings.Contains(line, "finished") {
+						cloudInitFinished = true
+					}
+
+					a.emitEvent(ctx, events.Event{
+						Status: events.Status{
+							SSHLocalPort: a.sshLocalPort,
+							CloudInitProgress: &events.CloudInitProgress{
+								Active:    !cloudInitFinished,
+								LogLine:   line,
+								Completed: cloudInitFinished,
+							},
+						},
+					})
+				}
+			}
+		}
+	}
+
+	a.emitEvent(ctx, events.Event{
+		Status: events.Status{
+			SSHLocalPort: a.sshLocalPort,
+			CloudInitProgress: &events.CloudInitProgress{
+				Active:    false,
+				Completed: true,
+			},
+		},
+	})
+
+	logrus.Debug("Cloud-init progress monitoring completed")
 }
 
 func copyToHost(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, remote string) error {

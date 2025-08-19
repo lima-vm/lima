@@ -179,7 +179,7 @@ func Prepare(ctx context.Context, inst *store.Instance) (*Prepared, error) {
 // shut down again.
 //
 // Start calls Prepare by itself, so you do not need to call Prepare manually before calling Start.
-func Start(ctx context.Context, inst *store.Instance, limactl string, launchHostAgentForeground bool) error {
+func Start(ctx context.Context, inst *store.Instance, limactl string, launchHostAgentForeground, showProgress bool) error {
 	haPIDPath := filepath.Join(inst.Dir, filenames.HostAgentPID)
 	if _, err := os.Stat(haPIDPath); !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("instance %q seems running (hint: remove %q if the instance is not actually running)", inst.Name, haPIDPath)
@@ -235,6 +235,9 @@ func Start(ctx context.Context, inst *store.Instance, limactl string, launchHost
 	if prepared.NerdctlArchiveCache != "" {
 		args = append(args, "--nerdctl-archive", prepared.NerdctlArchiveCache)
 	}
+	if showProgress {
+		args = append(args, "--progress")
+	}
 	args = append(args, inst.Name)
 	haCmd := exec.CommandContext(ctx, limactl, args...)
 
@@ -263,7 +266,7 @@ func Start(ctx context.Context, inst *store.Instance, limactl string, launchHost
 
 	watchErrCh := make(chan error)
 	go func() {
-		watchErrCh <- watchHostAgentEvents(ctx, inst, haStdoutPath, haStderrPath, begin)
+		watchErrCh <- watchHostAgentEvents(ctx, inst, haStdoutPath, haStderrPath, begin, showProgress)
 		close(watchErrCh)
 	}()
 	waitErrCh := make(chan error)
@@ -297,19 +300,39 @@ func waitHostAgentStart(_ context.Context, haPIDPath, haStderrPath string) error
 	}
 }
 
-func watchHostAgentEvents(ctx context.Context, inst *store.Instance, haStdoutPath, haStderrPath string, begin time.Time) error {
+func watchHostAgentEvents(ctx context.Context, inst *store.Instance, haStdoutPath, haStderrPath string, begin time.Time, showProgress bool) error {
 	ctx, cancel := context.WithTimeout(ctx, watchHostAgentTimeout(ctx))
 	defer cancel()
 
 	var (
 		printedSSHLocalPort  bool
 		receivedRunningEvent bool
+		cloudInitCompleted   bool
 		err                  error
 	)
+
 	onEvent := func(ev hostagentevents.Event) bool {
 		if !printedSSHLocalPort && ev.Status.SSHLocalPort != 0 {
 			logrus.Infof("SSH Local Port: %d", ev.Status.SSHLocalPort)
 			printedSSHLocalPort = true
+
+			// Update the instance's SSH port
+			inst.SSHLocalPort = ev.Status.SSHLocalPort
+		}
+
+		if showProgress && ev.Status.CloudInitProgress != nil {
+			progress := ev.Status.CloudInitProgress
+			if progress.Active && progress.LogLine == "" {
+				logrus.Infof("Cloud-init provisioning started...")
+			}
+
+			if progress.LogLine != "" {
+				logrus.Infof("[cloud-init] %s", progress.LogLine)
+			}
+
+			if progress.Completed {
+				cloudInitCompleted = true
+			}
 		}
 
 		if len(ev.Status.Errors) > 0 {
@@ -330,6 +353,12 @@ func watchHostAgentEvents(ctx context.Context, inst *store.Instance, haStdoutPat
 				err = xerr
 				return true
 			}
+
+			if showProgress && !cloudInitCompleted {
+				logrus.Infof("VM is running, waiting for cloud-init to complete...")
+				return false
+			}
+
 			if *inst.Config.Plain {
 				logrus.Infof("READY. Run `ssh -F %q %s` to open the shell.", inst.SSHConfigFile, inst.Hostname)
 			} else {
