@@ -108,8 +108,10 @@ func (l *LimaWslDriver) Validate(_ context.Context) error {
 		return fmt.Errorf("field `mountType` must be %q for WSL2 driver, got %q", limatype.WSLMount, *l.Instance.Config.MountType)
 	}
 	// TODO: revise this list for WSL2
-	if unknown := reflectutil.UnknownNonEmptyFields(l.Instance.Config, knownYamlProperties...); len(unknown) > 0 {
-		logrus.Warnf("Ignoring: vmType %s: %+v", *l.Instance.Config.VMType, unknown)
+	if l.Instance.Config.VMType != nil {
+		if unknown := reflectutil.UnknownNonEmptyFields(l.Instance.Config, knownYamlProperties...); len(unknown) > 0 {
+			logrus.Warnf("Ignoring: vmType %s: %+v", *l.Instance.Config.VMType, unknown)
+		}
 	}
 
 	if !limayaml.IsNativeArch(*l.Instance.Config.Arch) {
