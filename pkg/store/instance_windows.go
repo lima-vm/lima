@@ -4,6 +4,7 @@
 package store
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"regexp"
@@ -124,21 +125,22 @@ func GetWslStatus(instName string) (string, error) {
 // But busybox hostname does not implement --all-ip-addresses:
 // hostname: unrecognized option: I
 func GetSSHAddress(instName string) (string, error) {
+	ctx := context.TODO()
 	distroName := "lima-" + instName
 	// Ubuntu
-	cmd := exec.Command("wsl.exe", "-d", distroName, "bash", "-c", `hostname -I | cut -d ' ' -f1`)
+	cmd := exec.CommandContext(ctx, "wsl.exe", "-d", distroName, "bash", "-c", `hostname -I | cut -d ' ' -f1`)
 	out, err := cmd.CombinedOutput()
 	if err == nil {
 		return strings.TrimSpace(string(out)), nil
 	}
 	// Alpine
-	cmd = exec.Command("wsl.exe", "-d", distroName, "sh", "-c", `ip route get 1 | awk '{gsub("^.*src ",""); print $1; exit}'`)
+	cmd = exec.CommandContext(ctx, "wsl.exe", "-d", distroName, "sh", "-c", `ip route get 1 | awk '{gsub("^.*src ",""); print $1; exit}'`)
 	out, err = cmd.CombinedOutput()
 	if err == nil {
 		return strings.TrimSpace(string(out)), nil
 	}
 	// fallback
-	cmd = exec.Command("wsl.exe", "-d", distroName, "hostname", "-i")
+	cmd = exec.CommandContext(ctx, "wsl.exe", "-d", distroName, "hostname", "-i")
 	out, err = cmd.CombinedOutput()
 	if err != nil || strings.HasPrefix(string(out), "127.") {
 		return "", fmt.Errorf("failed to get hostname for instance %q, err: %w (out=%q)", instName, err, string(out))
