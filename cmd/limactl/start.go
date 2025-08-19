@@ -41,29 +41,29 @@ func newCreateCommand() *cobra.Command {
 	createCommand := &cobra.Command{
 		Use: "create FILE.yaml|URL",
 		Example: `
-To create an instance "default" from the default Ubuntu template:
-$ limactl create
+  To create an instance "default" from the default Ubuntu template:
+  $ limactl create
 
-To create an instance "default" from a template "docker":
-$ limactl create --name=default template://docker
+  To create an instance "default" from a template "docker":
+  $ limactl create --name=default template://docker
 
-To create an instance "default" with modified parameters:
-$ limactl create --cpus=2 --memory=2
+  To create an instance "default" with modified parameters:
+  $ limactl create --cpus=2 --memory=2
 
-To create an instance "default" with yq expressions:
-$ limactl create --set='.cpus = 2 | .memory = "2GiB"'
+  To create an instance "default" with yq expressions:
+  $ limactl create --set='.cpus = 2 | .memory = "2GiB"'
 
-To see the template list:
-$ limactl create --list-templates
+  To see the template list:
+  $ limactl create --list-templates
 
-To create an instance "default" from a local file:
-$ limactl create --name=default /usr/local/share/lima/templates/fedora.yaml
+  To create an instance "default" from a local file:
+  $ limactl create --name=default /usr/local/share/lima/templates/fedora.yaml
 
-To create an instance "default" from a remote URL (use carefully, with a trustable source):
-$ limactl create --name=default https://raw.githubusercontent.com/lima-vm/lima/master/templates/alpine.yaml
+  To create an instance "default" from a remote URL (use carefully, with a trustable source):
+  $ limactl create --name=default https://raw.githubusercontent.com/lima-vm/lima/master/templates/alpine.yaml
 
-To create an instance "local" from a template passed to stdin (--name parameter is required):
-$ cat template.yaml | limactl create --name=local -
+  To create an instance "local" from a template passed to stdin (--name parameter is required):
+  $ cat template.yaml | limactl create --name=local -
 `,
 		Short:             "Create an instance of Lima",
 		Args:              WrapArgsError(cobra.MaximumNArgs(1)),
@@ -79,11 +79,11 @@ func newStartCommand() *cobra.Command {
 	startCommand := &cobra.Command{
 		Use: "start NAME|FILE.yaml|URL",
 		Example: `
-To create an instance "default" (if not created yet) from the default Ubuntu template, and start it:
-$ limactl start
+  To create an instance "default" (if not created yet) from the default Ubuntu template, and start it:
+  $ limactl start
 
-To create an instance "default" from a template "docker", and start it:
-$ limactl start --name=default template://docker
+  To create an instance "default" from a template "docker", and start it:
+  $ limactl start --name=default template://docker
 
 'limactl start' also accepts the 'limactl create' flags such as '--set'.
 See the examples in 'limactl create --help'.
