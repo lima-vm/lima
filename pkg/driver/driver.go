@@ -36,7 +36,10 @@ type Lifecycle interface {
 	Stop(_ context.Context) error
 
 	Delete(_ context.Context) error
+
 	InspectStatus(_ context.Context, instName string) string
+
+	BootScripts() (map[string][]byte, error)
 }
 
 // GUI defines GUI-related operations.

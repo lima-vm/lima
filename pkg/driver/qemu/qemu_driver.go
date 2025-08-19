@@ -221,6 +221,10 @@ func (l *LimaQemuDriver) AcceptConfig(cfg *limatype.LimaYAML, filePath string) e
 	return nil
 }
 
+func (l *LimaQemuDriver) BootScripts() (map[string][]byte, error) {
+	return nil, nil
+}
+
 func (l *LimaQemuDriver) CreateDisk(ctx context.Context) error {
 	qCfg := Config{
 		Name:        l.Instance.Name,

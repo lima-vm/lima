@@ -168,7 +168,7 @@ func New(ctx context.Context, instName string, stdout io.Writer, signalCh chan o
 	if err := cidata.GenerateCloudConfig(ctx, inst.Dir, instName, inst.Config); err != nil {
 		return nil, err
 	}
-	if err := cidata.GenerateISO9660(ctx, inst.Dir, instName, inst.Config, udpDNSLocalPort, tcpDNSLocalPort, o.guestAgentBinary, o.nerdctlArchive, vSockPort, virtioPort); err != nil {
+	if err := cidata.GenerateISO9660(ctx, limaDriver, inst.Dir, instName, inst.Config, udpDNSLocalPort, tcpDNSLocalPort, o.guestAgentBinary, o.nerdctlArchive, vSockPort, virtioPort); err != nil {
 		return nil, err
 	}
 

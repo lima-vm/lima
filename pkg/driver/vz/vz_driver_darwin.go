@@ -7,6 +7,7 @@ package vz
 
 import (
 	"context"
+	"embed"
 	"errors"
 	"fmt"
 	"net"
@@ -141,6 +142,31 @@ func (l *LimaVzDriver) FillConfig(cfg *limatype.LimaYAML, filePath string) error
 
 func isEmpty(r limatype.Rosetta) bool {
 	return r.Enabled == nil && r.BinFmt == nil
+}
+
+//go:embed boot/*.sh
+var bootFS embed.FS
+
+func (l *LimaVzDriver) BootScripts() (map[string][]byte, error) {
+	scripts := make(map[string][]byte)
+
+	entries, err := bootFS.ReadDir("boot")
+	if err == nil {
+		for _, entry := range entries {
+			if entry.IsDir() {
+				continue
+			}
+
+			content, err := bootFS.ReadFile("boot/" + entry.Name())
+			if err != nil {
+				return nil, err
+			}
+
+			scripts[entry.Name()] = content
+		}
+	}
+
+	return scripts, nil
 }
 
 func (l *LimaVzDriver) AcceptConfig(cfg *limatype.LimaYAML, filePath string) error {

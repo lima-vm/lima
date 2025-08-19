@@ -24,6 +24,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/debugutil"
+	"github.com/lima-vm/lima/v2/pkg/driver"
 	"github.com/lima-vm/lima/v2/pkg/instance/hostname"
 	"github.com/lima-vm/lima/v2/pkg/iso9660util"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
@@ -362,8 +363,8 @@ func GenerateCloudConfig(ctx context.Context, instDir, name string, instConfig *
 	return os.WriteFile(filepath.Join(instDir, filenames.CloudConfig), config, 0o444)
 }
 
-func GenerateISO9660(ctx context.Context, instDir, name string, instConfig *limatype.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort int, guestAgentBinary, nerdctlArchive string, vsockPort int, virtioPort string) error {
-	args, err := templateArgs(ctx, true, instDir, name, instConfig, udpDNSLocalPort, tcpDNSLocalPort, vsockPort, virtioPort)
+func GenerateISO9660(ctx context.Context, drv driver.Driver, instDir, name string, instConfig *limatype.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort int, guestAgentBinary, nerdctlArchive string, vsockPort int, virtioPort string) error {
+	args, err := templateArgs(true, instDir, name, instConfig, udpDNSLocalPort, tcpDNSLocalPort, vsockPort, virtioPort)
 	if err != nil {
 		return err
 	}
@@ -375,6 +376,18 @@ func GenerateISO9660(ctx context.Context, instDir, name string, instConfig *lima
 	layout, err := ExecuteTemplateCIDataISO(args)
 	if err != nil {
 		return err
+	}
+
+	driverScripts, err := drv.BootScripts()
+	if err != nil {
+		return fmt.Errorf("failed to get boot scripts: %w", err)
+	}
+
+	for filename, content := range driverScripts {
+		layout = append(layout, iso9660util.Entry{
+			Path:   fmt.Sprintf("boot/%s", filename),
+			Reader: strings.NewReader(string(content)),
+		})
 	}
 
 	for i, f := range instConfig.Provision {

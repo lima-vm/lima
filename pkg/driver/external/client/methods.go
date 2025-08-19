@@ -324,3 +324,7 @@ func (d *DriverClient) InspectStatus(_ context.Context, _ string) string {
 func (d *DriverClient) SSHAddress(ctx context.Context) (string, error) {
 	return "", nil
 }
+
+func (d *DriverClient) BootScripts() (map[string][]byte, error) {
+	return nil, nil
+}

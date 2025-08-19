@@ -5,6 +5,7 @@ package wsl2
 
 import (
 	"context"
+	"embed"
 	"fmt"
 	"net"
 	"regexp"
@@ -155,6 +156,33 @@ func (l *LimaWslDriver) Validate(_ context.Context) error {
 	}
 
 	return nil
+}
+
+//go:embed boot/*.sh
+var bootFS embed.FS
+
+func (l *LimaWslDriver) BootScripts() (map[string][]byte, error) {
+	scripts := make(map[string][]byte)
+
+	entries, err := bootFS.ReadDir("boot")
+	if err != nil {
+		return scripts, err
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		content, err := bootFS.ReadFile("boot/" + entry.Name())
+		if err != nil {
+			return nil, err
+		}
+
+		scripts[entry.Name()] = content
+	}
+
+	return scripts, nil
 }
 
 func (l *LimaWslDriver) InspectStatus(ctx context.Context, instName string) string {
