@@ -93,9 +93,7 @@ func (d *DriverClient) Start(ctx context.Context) (chan error, error) {
 func (d *DriverClient) Stop(ctx context.Context) error {
 	d.logger.Debug("Stopping driver instance")
 
-	connCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-	_, err := d.DriverSvc.Stop(connCtx, &emptypb.Empty{})
+	_, err := d.DriverSvc.Stop(ctx, &emptypb.Empty{})
 	if err != nil {
 		d.logger.Errorf("Failed to stop driver instance: %v", err)
 		return err

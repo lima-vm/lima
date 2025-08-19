@@ -14,6 +14,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"sync"
 	"syscall"
 	"time"
 
@@ -33,6 +34,20 @@ type DriverServer struct {
 	pb.UnimplementedDriverServer
 	driver driver.Driver
 	logger *logrus.Logger
+}
+
+type listenerTracker struct {
+	net.Listener
+	connected chan struct{}
+	once      sync.Once
+}
+
+func (t *listenerTracker) Accept() (net.Conn, error) {
+	c, err := t.Listener.Accept()
+	if err == nil {
+		t.once.Do(func() { close(t.connected) })
+	}
+	return c, err
 }
 
 func Serve(driver driver.Driver) {
@@ -56,6 +71,11 @@ func Serve(driver driver.Driver) {
 		logger.Fatalf("Failed to listen on Unix socket: %v", err)
 	}
 	defer listener.Close()
+
+	tListener := &listenerTracker{
+		Listener:  listener,
+		connected: make(chan struct{}),
+	}
 
 	output := map[string]string{"socketPath": socketPath}
 	if err := json.NewEncoder(os.Stdout).Encode(output); err != nil {
@@ -86,11 +106,13 @@ func Serve(driver driver.Driver) {
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
 	shutdownCh := make(chan struct{})
+	var closeOnce sync.Once
+	closeShutdown := func() { closeOnce.Do(func() { close(shutdownCh) }) }
 
 	go func() {
 		<-sigs
 		logger.Info("Received shutdown signal, stopping server...")
-		close(shutdownCh)
+		closeShutdown()
 	}()
 
 	go func() {
@@ -98,9 +120,12 @@ func Serve(driver driver.Driver) {
 		defer timer.Stop()
 
 		select {
+		case <-tListener.connected:
+			logger.Debug("Client connected; disabling 60s startup shutdown")
+			return
 		case <-timer.C:
 			logger.Info("No client connected within 60 seconds, shutting down server...")
-			close(shutdownCh)
+			closeShutdown()
 		case <-shutdownCh:
 			return
 		}
@@ -109,7 +134,7 @@ func Serve(driver driver.Driver) {
 	go func() {
 		logger.Infof("Starting external driver server for %s", driver.Info().DriverName)
 		logger.Infof("Server starting on Unix socket: %s", socketPath)
-		if err := server.Serve(listener); err != nil {
+		if err := server.Serve(tListener); err != nil {
 			if errors.Is(err, grpc.ErrServerStopped) {
 				logger.Errorf("Server stopped: %v", err)
 			} else {
