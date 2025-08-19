@@ -6,6 +6,7 @@
 package dns
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"runtime"
@@ -143,6 +144,7 @@ func NewHandler(opts HandlerOptions) (dns.Handler, error) {
 
 func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
 	var (
+		ctx     = context.TODO()
 		reply   dns.Msg
 		handled bool
 	)
@@ -175,7 +177,7 @@ func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
 			if _, ok := h.hostToIP[cname]; ok {
 				addrs = []net.IP{h.hostToIP[cname]}
 			} else {
-				addrs, err = net.LookupIP(cname)
+				addrs, err = net.DefaultResolver.LookupIP(ctx, "ip", cname)
 				if err != nil {
 					logrus.WithError(err).Debug("handleQuery lookup IP failed")
 					continue
@@ -206,7 +208,7 @@ func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
 			cname := h.lookupCnameToHost(q.Name)
 			var err error
 			if _, ok := h.hostToIP[cname]; !ok {
-				cname, err = net.LookupCNAME(cname)
+				cname, err = net.DefaultResolver.LookupCNAME(ctx, cname)
 				if err != nil {
 					logrus.WithError(err).Debug("handleQuery lookup CNAME failed")
 					continue
@@ -222,7 +224,7 @@ func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
 				handled = true
 			}
 		case dns.TypeTXT:
-			txt, err := net.LookupTXT(q.Name)
+			txt, err := net.DefaultResolver.LookupTXT(ctx, q.Name)
 			if err != nil {
 				logrus.WithError(err).Debug("handleQuery lookup TXT failed")
 				continue
@@ -239,7 +241,7 @@ func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
 				handled = true
 			}
 		case dns.TypeNS:
-			ns, err := net.LookupNS(q.Name)
+			ns, err := net.DefaultResolver.LookupNS(ctx, q.Name)
 			if err != nil {
 				logrus.WithError(err).Debug("handleQuery lookup NS failed")
 				continue
@@ -255,7 +257,7 @@ func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
 				}
 			}
 		case dns.TypeMX:
-			mx, err := net.LookupMX(q.Name)
+			mx, err := net.DefaultResolver.LookupMX(ctx, q.Name)
 			if err != nil {
 				logrus.WithError(err).Debugf("handleQuery lookup MX failed")
 				continue
@@ -272,7 +274,7 @@ func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
 				}
 			}
 		case dns.TypeSRV:
-			_, addrs, err := net.LookupSRV("", "", q.Name)
+			_, addrs, err := net.DefaultResolver.LookupSRV(ctx, "", "", q.Name)
 			if err != nil {
 				logrus.WithError(err).Debug("handleQuery lookup SRV failed")
 				continue

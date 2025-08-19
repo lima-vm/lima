@@ -5,6 +5,7 @@ package sshutil
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/binary"
 	"errors"
@@ -91,6 +92,7 @@ func readPublicKey(f string) (PubKey, error) {
 // When loadDotSSH is true, ~/.ssh/*.pub will be appended to make the VM accessible without specifying
 // an identity explicitly.
 func DefaultPubKeys(loadDotSSH bool) ([]PubKey, error) {
+	ctx := context.TODO()
 	// Read $LIMA_HOME/_config/user.pub
 	configDir, err := dirnames.LimaConfigDir()
 	if err != nil {
@@ -113,7 +115,7 @@ func DefaultPubKeys(loadDotSSH bool) ([]PubKey, error) {
 					return err
 				}
 			}
-			keygenCmd := exec.Command("ssh-keygen", "-t", "ed25519", "-q", "-N", "",
+			keygenCmd := exec.CommandContext(ctx, "ssh-keygen", "-t", "ed25519", "-q", "-N", "",
 				"-C", "lima", "-f", privPath)
 			logrus.Debugf("executing %v", keygenCmd.Args)
 			if out, err := keygenCmd.CombinedOutput(); err != nil {
@@ -370,6 +372,7 @@ var (
 
 func detectOpenSSHInfo(sshExe SSHExe) openSSHInfo {
 	var (
+		ctx    = context.TODO()
 		info   openSSHInfo
 		exe    sshExecutable
 		stderr bytes.Buffer
@@ -390,7 +393,7 @@ func detectOpenSSHInfo(sshExe SSHExe) openSSHInfo {
 	sshArgs := append([]string{}, sshExe.Args...)
 	// -V should be last
 	sshArgs = append(sshArgs, "-o", "GSSAPIAuthentication=no", "-V")
-	cmd := exec.Command(sshExe.Exe, sshArgs...)
+	cmd := exec.CommandContext(ctx, sshExe.Exe, sshArgs...)
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
 		logrus.Warnf("failed to run %v: stderr=%q", cmd.Args, stderr.String())

@@ -35,11 +35,11 @@ func RunUTF16leCommand(args []string, opts ...Opt) (string, error) {
 	}
 
 	var cmd *exec.Cmd
-	if o.ctx != nil {
-		cmd = exec.CommandContext(o.ctx, args[0], args[1:]...)
-	} else {
-		cmd = exec.Command(args[0], args[1:]...)
+	ctx := o.ctx
+	if ctx == nil {
+		ctx = context.Background()
 	}
+	cmd = exec.CommandContext(ctx, args[0], args[1:]...)
 
 	outString := ""
 	out, err := cmd.CombinedOutput()

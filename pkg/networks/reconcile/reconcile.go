@@ -68,10 +68,11 @@ func Reconcile(ctx context.Context, newInst string) error {
 }
 
 func sudo(user, group, command string) error {
+	ctx := context.TODO()
 	args := []string{"--user", user, "--group", group, "--non-interactive"}
 	args = append(args, strings.Split(command, " ")...)
 	var stdout, stderr bytes.Buffer
-	cmd := exec.Command("sudo", args...)
+	cmd := exec.CommandContext(ctx, "sudo", args...)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	logrus.Debugf("Running: %v", cmd.Args)

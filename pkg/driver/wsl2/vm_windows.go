@@ -94,7 +94,8 @@ func provisionVM(ctx context.Context, instanceDir, instanceName, distroName stri
 	}
 	// path should be quoted and use \\ as separator
 	bootFileWSLPath := strconv.Quote(limaBootFileWinPath)
-	limaBootFilePathOnLinuxB, err := exec.Command(
+	limaBootFilePathOnLinuxB, err := exec.CommandContext(
+		ctx,
 		"wsl.exe",
 		"-d",
 		distroName,

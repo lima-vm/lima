@@ -86,7 +86,7 @@ func minimumQemuVersion() (hardMin, softMin semver.Version) {
 }
 
 // EnsureDisk also ensures the kernel and the initrd.
-func EnsureDisk(_ context.Context, cfg Config) error {
+func EnsureDisk(ctx context.Context, cfg Config) error {
 	diffDisk := filepath.Join(cfg.InstanceDir, filenames.DiffDisk)
 	if _, err := os.Stat(diffDisk); err == nil || !errors.Is(err, os.ErrNotExist) {
 		// disk is already ensured
@@ -118,7 +118,7 @@ func EnsureDisk(_ context.Context, cfg Config) error {
 		args = append(args, "-F", baseDiskInfo.Format, "-b", baseDisk)
 	}
 	args = append(args, diffDisk, strconv.Itoa(int(diskSize)))
-	cmd := exec.Command("qemu-img", args...)
+	cmd := exec.CommandContext(ctx, "qemu-img", args...)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to run %v: %q: %w", cmd.Args, string(out), err)
 	}
@@ -150,10 +150,11 @@ func sendHmpCommand(cfg Config, cmd, tag string) (string, error) {
 }
 
 func execImgCommand(cfg Config, args ...string) (string, error) {
+	ctx := context.TODO()
 	diffDisk := filepath.Join(cfg.InstanceDir, filenames.DiffDisk)
 	args = append(args, diffDisk)
 	logrus.Debugf("Running qemu-img %v command", args)
-	cmd := exec.Command("qemu-img", args...)
+	cmd := exec.CommandContext(ctx, "qemu-img", args...)
 	b, err := cmd.Output()
 	if err != nil {
 		return "", err
@@ -289,11 +290,12 @@ type features struct {
 
 func inspectFeatures(exe, machine string) (*features, error) {
 	var (
+		ctx    = context.TODO()
 		f      features
 		stdout bytes.Buffer
 		stderr bytes.Buffer
 	)
-	cmd := exec.Command(exe, "-M", "none", "-accel", "help")
+	cmd := exec.CommandContext(ctx, exe, "-M", "none", "-accel", "help")
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
@@ -305,7 +307,7 @@ func inspectFeatures(exe, machine string) (*features, error) {
 		f.AccelHelp = stderr.Bytes()
 	}
 
-	cmd = exec.Command(exe, "-M", "none", "-netdev", "help")
+	cmd = exec.CommandContext(ctx, exe, "-M", "none", "-netdev", "help")
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
@@ -317,7 +319,7 @@ func inspectFeatures(exe, machine string) (*features, error) {
 		}
 	}
 
-	cmd = exec.Command(exe, "-machine", "help")
+	cmd = exec.CommandContext(ctx, exe, "-machine", "help")
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
@@ -330,7 +332,7 @@ func inspectFeatures(exe, machine string) (*features, error) {
 	}
 
 	// Avoid error: "No machine specified, and there is no default"
-	cmd = exec.Command(exe, "-cpu", "help", "-machine", machine)
+	cmd = exec.CommandContext(ctx, exe, "-cpu", "help", "-machine", machine)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
@@ -976,6 +978,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 }
 
 func FindVirtiofsd(qemuExe string) (string, error) {
+	ctx := context.TODO()
 	type vhostUserBackend struct {
 		BackendType string `json:"type"`
 		Binary      string `json:"binary"`
@@ -1034,7 +1037,7 @@ func FindVirtiofsd(qemuExe string) (string, error) {
 
 			// Only rust virtiofsd supports --version, so use that to make sure this isn't
 			// QEMU's virtiofsd, which requires running as root.
-			cmd := exec.Command(vhostCfg.Binary, "--version")
+			cmd := exec.CommandContext(ctx, vhostCfg.Binary, "--version")
 			output, err := cmd.CombinedOutput()
 			if err != nil {
 				logrus.Warnf("Failed to run %s --version (is this QEMU virtiofsd?): %s: %s",
@@ -1134,10 +1137,11 @@ func parseQemuVersion(output string) (*semver.Version, error) {
 
 func getQemuVersion(qemuExe string) (*semver.Version, error) {
 	var (
+		ctx    = context.TODO()
 		stdout bytes.Buffer
 		stderr bytes.Buffer
 	)
-	cmd := exec.Command(qemuExe, "--version")
+	cmd := exec.CommandContext(ctx, qemuExe, "--version")
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {

@@ -5,6 +5,7 @@ package qemuimgutil
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -49,8 +50,9 @@ type InfoFormatSpecific struct {
 }
 
 func resizeDisk(disk, format string, size int64) error {
+	ctx := context.TODO()
 	args := []string{"resize", "-f", format, disk, strconv.FormatInt(size, 10)}
-	cmd := exec.Command("qemu-img", args...)
+	cmd := exec.CommandContext(ctx, "qemu-img", args...)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to run %v: %q: %w", cmd.Args, string(out), err)
 	}
@@ -128,8 +130,9 @@ func convertToRaw(source, dest string) error {
 }
 
 func execQemuImgConvert(source, dest string) error {
+	ctx := context.TODO()
 	var stdout, stderr bytes.Buffer
-	cmd := exec.Command("qemu-img", "convert", "-O", "raw", source, dest)
+	cmd := exec.CommandContext(ctx, "qemu-img", "convert", "-O", "raw", source, dest)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
@@ -148,8 +151,9 @@ func parseInfo(b []byte) (*Info, error) {
 }
 
 func getInfo(f string) (*Info, error) {
+	ctx := context.TODO()
 	var stdout, stderr bytes.Buffer
-	cmd := exec.Command("qemu-img", "info", "--output=json", "--force-share", f)
+	cmd := exec.CommandContext(ctx, "qemu-img", "info", "--output=json", "--force-share", f)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
@@ -161,13 +165,14 @@ func getInfo(f string) (*Info, error) {
 
 // CreateDisk creates a new disk image with the specified size.
 func (q *QemuImageUtil) CreateDisk(disk string, size int64) error {
+	ctx := context.TODO()
 	if _, err := os.Stat(disk); err == nil || !errors.Is(err, fs.ErrNotExist) {
 		// disk already exists
 		return err
 	}
 
 	args := []string{"create", "-f", q.DefaultFormat, disk, strconv.FormatInt(size, 10)}
-	cmd := exec.Command("qemu-img", args...)
+	cmd := exec.CommandContext(ctx, "qemu-img", args...)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to run %v: %q: %w", cmd.Args, string(out), err)
 	}

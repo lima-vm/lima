@@ -4,6 +4,7 @@
 package nativeimgutil
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -32,7 +33,8 @@ func TestRoundUp(t *testing.T) {
 }
 
 func createImg(name, format, size string) error {
-	return exec.Command("qemu-img", "create", name, "-f", format, size).Run()
+	ctx := context.TODO()
+	return exec.CommandContext(ctx, "qemu-img", "create", name, "-f", format, size).Run()
 }
 
 func TestConvertToRaw(t *testing.T) {

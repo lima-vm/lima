@@ -434,13 +434,7 @@ func RunEmbedTest(t *testing.T, tc embedTestCase) {
 	tc.expected = strings.TrimSpace(tc.expected)
 
 	// Change to temp directory so all template and script names don't include a slash.
-	cwd, err := os.Getwd()
-	assert.NilError(t, err, "Getting current working directory")
-	err = os.Chdir(t.TempDir())
-	assert.NilError(t, err, "Changing directory to t.TempDir()")
-	defer func() {
-		_ = os.Chdir(cwd)
-	}()
+	t.Chdir(t.TempDir())
 
 	for i, base := range strings.Split(tc.base, "---\n") {
 		extension := ".yaml"
@@ -459,7 +453,7 @@ func RunEmbedTest(t *testing.T, tc embedTestCase) {
 	if strings.HasPrefix(tc.base, "#!") {
 		tmpl.Bytes = []byte(tc.template)
 	}
-	err = tmpl.Embed(context.TODO(), false, false)
+	err := tmpl.Embed(context.TODO(), false, false)
 	if expectError {
 		assert.ErrorContains(t, err, tc.expected, tc.description)
 		return

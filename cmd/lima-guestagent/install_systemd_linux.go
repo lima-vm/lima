@@ -30,6 +30,7 @@ func newInstallSystemdCommand() *cobra.Command {
 }
 
 func installSystemdAction(cmd *cobra.Command, _ []string) error {
+	ctx := cmd.Context()
 	vsockPort, err := cmd.Flags().GetInt("vsock-port")
 	if err != nil {
 		return err
@@ -66,7 +67,7 @@ func installSystemdAction(cmd *cobra.Command, _ []string) error {
 		{"try-restart", "lima-guestagent.service"},
 	}
 	for _, args := range args {
-		cmd := exec.Command("systemctl", append([]string{"--system"}, args...)...)
+		cmd := exec.CommandContext(ctx, "systemctl", append([]string{"--system"}, args...)...)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		logrus.Infof("Executing: %s", strings.Join(cmd.Args, " "))

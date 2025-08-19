@@ -4,6 +4,7 @@
 package editutil
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -57,6 +58,7 @@ func GenerateEditorWarningHeader() string {
 //
 // OpenEditor returns nil when the file was saved as an empty file, optionally with whitespaces.
 func OpenEditor(content []byte, hdr string) ([]byte, error) {
+	ctx := context.TODO()
 	editor := editorcmd.Detect()
 	if editor == "" {
 		return nil, errors.New("could not detect a text editor binary, try setting $EDITOR")
@@ -75,7 +77,7 @@ func OpenEditor(content []byte, hdr string) ([]byte, error) {
 		return nil, err
 	}
 
-	editorCmd := exec.Command(editor, tmpYAMLPath)
+	editorCmd := exec.CommandContext(ctx, editor, tmpYAMLPath)
 	editorCmd.Env = os.Environ()
 	editorCmd.Stdin = os.Stdin
 	editorCmd.Stdout = os.Stdout

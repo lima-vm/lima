@@ -5,6 +5,7 @@ package osutil
 
 import (
 	"bytes"
+	"context"
 	"encoding/xml"
 	"fmt"
 	"io"
@@ -31,8 +32,9 @@ var MachineID = sync.OnceValue(func() string {
 })
 
 func machineID() (string, error) {
+	ctx := context.TODO()
 	if runtime.GOOS == "darwin" {
-		ioPlatformExpertDeviceCmd := exec.Command("/usr/sbin/ioreg", "-a", "-d2", "-c", "IOPlatformExpertDevice")
+		ioPlatformExpertDeviceCmd := exec.CommandContext(ctx, "/usr/sbin/ioreg", "-a", "-d2", "-c", "IOPlatformExpertDevice")
 		ioPlatformExpertDevice, err := ioPlatformExpertDeviceCmd.CombinedOutput()
 		if err != nil {
 			return "", err

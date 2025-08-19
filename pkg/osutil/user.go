@@ -4,6 +4,7 @@
 package osutil
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"os/user"
@@ -161,7 +162,8 @@ func LimaUser(limaVersion string, warn bool) *user.User {
 }
 
 func call(args []string) (string, error) {
-	cmd := exec.Command(args[0], args[1:]...)
+	ctx := context.TODO()
+	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
 	out, err := cmd.Output()
 	if err != nil {
 		return "", err

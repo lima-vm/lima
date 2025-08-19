@@ -5,6 +5,7 @@
 package entitlementutil
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -19,14 +20,15 @@ import (
 // IsSigned returns an error if the binary is not signed, or the sign is invalid,
 // or not associated with the "com.apple.security.hypervisor" entitlement.
 func IsSigned(qExe string) error {
-	cmd := exec.Command("codesign", "--verify", qExe)
+	ctx := context.TODO()
+	cmd := exec.CommandContext(ctx, "codesign", "--verify", qExe)
 	out, err := cmd.CombinedOutput()
 	logrus.WithError(err).Debugf("Executed %v: out=%q", cmd.Args, string(out))
 	if err != nil {
 		return fmt.Errorf("failed to run %v: %w (out=%q)", cmd.Args, err, string(out))
 	}
 
-	cmd = exec.Command("codesign", "--display", "--entitlements", "-", "--xml", qExe)
+	cmd = exec.CommandContext(ctx, "codesign", "--display", "--entitlements", "-", "--xml", qExe)
 	out, err = cmd.CombinedOutput()
 	logrus.WithError(err).Debugf("Executed %v: out=%q", cmd.Args, string(out))
 	if err != nil {
@@ -39,6 +41,7 @@ func IsSigned(qExe string) error {
 }
 
 func Sign(qExe string) error {
+	ctx := context.TODO()
 	ent, err := os.CreateTemp("", "lima-qemu-entitlements-*.xml")
 	if err != nil {
 		return fmt.Errorf("failed to create a temporary file for signing QEMU binary: %w", err)
@@ -58,7 +61,7 @@ func Sign(qExe string) error {
 		return fmt.Errorf("failed to write to a temporary file %q for signing QEMU binary: %w", entName, err)
 	}
 	ent.Close()
-	signCmd := exec.Command("codesign", "--sign", "-", "--entitlements", entName, "--force", qExe)
+	signCmd := exec.CommandContext(ctx, "codesign", "--sign", "-", "--entitlements", entName, "--force", qExe)
 	out, err := signCmd.CombinedOutput()
 	logrus.WithError(err).Debugf("Executed %v: out=%q", signCmd.Args, string(out))
 	if err != nil {

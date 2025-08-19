@@ -5,6 +5,7 @@ package iptables
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"net"
 	"net/netip"
@@ -127,10 +128,13 @@ func listNATRules(pth string) ([]string, error) {
 }
 
 func checkPortsOpen(pts []Entry) ([]Entry, error) {
+	ctx := context.TODO()
 	var entries []Entry
 	for _, pt := range pts {
 		if pt.TCP {
-			conn, err := net.DialTimeout("tcp", pt.AddrPort.String(), time.Second)
+			var dialer net.Dialer
+			dialer.Timeout = time.Second
+			conn, err := dialer.DialContext(ctx, "tcp", pt.AddrPort.String())
 			if err == nil && conn != nil {
 				conn.Close()
 				entries = append(entries, pt)

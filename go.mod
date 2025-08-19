@@ -1,7 +1,7 @@
 // gomodjail:confined
 module github.com/lima-vm/lima/v2
 
-go 1.23.0
+go 1.24.0
 
 require (
 	al.essio.dev/pkg/shellescape v1.6.0

@@ -25,8 +25,9 @@ func NewDriverClient(socketPath string, logger *logrus.Logger) (*DriverClient, e
 	opts := []grpc.DialOption{
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(16 << 20)),
 		grpc.WithDefaultCallOptions(grpc.MaxCallSendMsgSize(16 << 20)),
-		grpc.WithContextDialer(func(_ context.Context, _ string) (net.Conn, error) {
-			return net.Dial("unix", socketPath)
+		grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) {
+			var dialer net.Dialer
+			return dialer.DialContext(ctx, "unix", socketPath)
 		}),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}

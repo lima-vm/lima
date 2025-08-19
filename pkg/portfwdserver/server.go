@@ -25,6 +25,7 @@ func NewTunnelServer() *TunnelServer {
 }
 
 func (s *TunnelServer) Start(stream api.GuestService_TunnelServer) error {
+	ctx := stream.Context()
 	// Receive the handshake message to start tunnel
 	in, err := stream.Recv()
 	if err != nil {
@@ -35,7 +36,8 @@ func (s *TunnelServer) Start(stream api.GuestService_TunnelServer) error {
 	}
 
 	// We simply forward data form GRPC stream to net.Conn for both tcp and udp. So simple proxy is sufficient
-	conn, err := net.Dial(in.Protocol, in.GuestAddr)
+	var dialer net.Dialer
+	conn, err := dialer.DialContext(ctx, in.Protocol, in.GuestAddr)
 	if err != nil {
 		return err
 	}

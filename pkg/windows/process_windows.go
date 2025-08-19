@@ -4,6 +4,7 @@
 package windows
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os/exec"
@@ -15,7 +16,8 @@ type CommandLineJSON []struct {
 
 // GetProcessCommandLine returns a slice of string containing all commandlines for a given process name.
 func GetProcessCommandLine(name string) ([]string, error) {
-	out, err := exec.Command(
+	ctx := context.TODO()
+	out, err := exec.CommandContext(ctx,
 		"powershell.exe",
 		"-nologo",
 		"-noprofile",

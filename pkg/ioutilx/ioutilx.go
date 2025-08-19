@@ -4,6 +4,7 @@
 package ioutilx
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -50,7 +51,8 @@ func FromUTF16leToString(r io.Reader) (string, error) {
 }
 
 func WindowsSubsystemPath(orig string) (string, error) {
-	out, err := exec.Command("cygpath", filepath.ToSlash(orig)).CombinedOutput()
+	ctx := context.TODO()
+	out, err := exec.CommandContext(ctx, "cygpath", filepath.ToSlash(orig)).CombinedOutput()
 	if err != nil {
 		logrus.WithError(err).Errorf("failed to convert path to mingw, maybe not using Git ssh?")
 		return "", err
@@ -59,7 +61,8 @@ func WindowsSubsystemPath(orig string) (string, error) {
 }
 
 func WindowsSubsystemPathForLinux(orig, distro string) (string, error) {
-	out, err := exec.Command("wsl", "-d", distro, "--exec", "wslpath", filepath.ToSlash(orig)).CombinedOutput()
+	ctx := context.TODO()
+	out, err := exec.CommandContext(ctx, "wsl", "-d", distro, "--exec", "wslpath", filepath.ToSlash(orig)).CombinedOutput()
 	if err != nil {
 		logrus.WithError(err).Errorf("failed to convert path to mingw, maybe wsl command is not operational?")
 		return "", err

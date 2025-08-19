@@ -7,6 +7,7 @@ package osutil
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -25,8 +26,9 @@ func SignalName(sig os.Signal) string {
 }
 
 func Sysctl(name string) (string, error) {
+	ctx := context.TODO()
 	var stderrBuf bytes.Buffer
-	cmd := exec.Command("sysctl", "-n", name)
+	cmd := exec.CommandContext(ctx, "sysctl", "-n", name)
 	cmd.Stderr = &stderrBuf
 	stdout, err := cmd.Output()
 	if err != nil {
