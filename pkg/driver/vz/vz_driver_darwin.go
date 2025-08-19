@@ -178,6 +178,27 @@ func (l *LimaVzDriver) AcceptConfig(cfg *limatype.LimaYAML, filePath string) err
 		}
 	}
 
+	for i, nw := range cfg.Networks {
+		field := fmt.Sprintf("networks[%d]", i)
+		switch {
+		case nw.Lima != "":
+			if nw.VZNAT != nil && *nw.VZNAT {
+				return fmt.Errorf("field `%s.lima` and field `%s.vzNAT` are mutually exclusive", field, field)
+			}
+		case nw.Socket != "":
+			if nw.VZNAT != nil && *nw.VZNAT {
+				return fmt.Errorf("field `%s.socket` and field `%s.vzNAT` are mutually exclusive", field, field)
+			}
+		case nw.VZNAT != nil && *nw.VZNAT:
+			if nw.Lima != "" {
+				return fmt.Errorf("field `%s.vzNAT` and field `%s.lima` are mutually exclusive", field, field)
+			}
+			if nw.Socket != "" {
+				return fmt.Errorf("field `%s.vzNAT` and field `%s.socket` are mutually exclusive", field, field)
+			}
+		}
+	}
+
 	if l.Instance == nil {
 		l.Instance = &limatype.Instance{}
 	}

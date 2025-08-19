@@ -187,6 +187,12 @@ func (l *LimaQemuDriver) AcceptConfig(cfg *limatype.LimaYAML, filePath string) e
 		return fmt.Errorf("config not supported by the QEMU driver: %w", err)
 	}
 
+	if cfg.VMOpts.QEMU.MinimumVersion != nil {
+		if _, err := semver.NewVersion(*cfg.VMOpts.QEMU.MinimumVersion); err != nil {
+			return fmt.Errorf("field `vmOpts.qemu.minimumVersion` must be a semvar value, got %q: %w", *cfg.VMOpts.QEMU.MinimumVersion, err)
+		}
+	}
+
 	if runtime.GOOS == "darwin" {
 		if cfg.Arch != nil && limayaml.IsNativeArch(*cfg.Arch) {
 			logrus.Debugf("ResolveVMType: resolved VMType %q (non-native arch=%q is specified in []*LimaYAML{o,y,d})", "qemu", *cfg.Arch)

@@ -18,7 +18,6 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/coreos/go-semver/semver"
 	"github.com/docker/go-units"
 	"github.com/sirupsen/logrus"
 
@@ -49,11 +48,7 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 			errs = errors.Join(errs, fmt.Errorf("template requires Lima version %q; this is only %q", *y.MinimumLimaVersion, version.Version))
 		}
 	}
-	if y.VMOpts.QEMU.MinimumVersion != nil {
-		if _, err := semver.NewVersion(*y.VMOpts.QEMU.MinimumVersion); err != nil {
-			errs = errors.Join(errs, fmt.Errorf("field `vmOpts.qemu.minimumVersion` must be a semvar value, got %q: %w", *y.VMOpts.QEMU.MinimumVersion, err))
-		}
-	}
+
 	switch *y.OS {
 	case limatype.LINUX:
 	default:
@@ -448,27 +443,11 @@ func validateNetwork(y *limatype.LimaYAML) error {
 			if nw.Socket != "" {
 				errs = errors.Join(errs, fmt.Errorf("field `%s.lima` and field `%s.socket` are mutually exclusive", field, field))
 			}
-			if nw.VZNAT != nil && *nw.VZNAT {
-				errs = errors.Join(errs, fmt.Errorf("field `%s.lima` and field `%s.vzNAT` are mutually exclusive", field, field))
-			}
 		case nw.Socket != "":
-			if nw.VZNAT != nil && *nw.VZNAT {
-				errs = errors.Join(errs, fmt.Errorf("field `%s.socket` and field `%s.vzNAT` are mutually exclusive", field, field))
-			}
 			if fi, err := os.Stat(nw.Socket); err != nil && !errors.Is(err, os.ErrNotExist) {
 				errs = errors.Join(errs, err)
 			} else if err == nil && fi.Mode()&os.ModeSocket == 0 {
 				errs = errors.Join(errs, fmt.Errorf("field `%s.socket` %q points to a non-socket file", field, nw.Socket))
-			}
-		case nw.VZNAT != nil && *nw.VZNAT:
-			if y.VMType == nil || *y.VMType != limatype.VZ {
-				errs = errors.Join(errs, fmt.Errorf("field `%s.vzNAT` requires `vmType` to be %q", field, limatype.VZ))
-			}
-			if nw.Lima != "" {
-				errs = errors.Join(errs, fmt.Errorf("field `%s.vzNAT` and field `%s.lima` are mutually exclusive", field, field))
-			}
-			if nw.Socket != "" {
-				errs = errors.Join(errs, fmt.Errorf("field `%s.vzNAT` and field `%s.socket` are mutually exclusive", field, field))
 			}
 		default:
 			errs = errors.Join(errs, fmt.Errorf("field `%s.lima` or  field `%s.socket must be set", field, field))
