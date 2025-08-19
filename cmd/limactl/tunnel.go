@@ -82,13 +82,13 @@ func tunnelAction(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	arg0, arg0Args, err := sshutil.SSHArguments()
+	sshExe, err := sshutil.NewSSHExe()
 	if err != nil {
 		return err
 	}
 
 	sshOpts, err := sshutil.SSHOpts(
-		arg0,
+		sshExe,
 		inst.Dir,
 		*inst.Config.User.Name,
 		*inst.Config.SSH.LoadDotSSHPubKeys,
@@ -98,7 +98,8 @@ func tunnelAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	sshArgs := sshutil.SSHArgsFromOpts(sshOpts)
+	sshArgs := append([]string{}, sshExe.Args...)
+	sshArgs = append(sshArgs, sshutil.SSHArgsFromOpts(sshOpts)...)
 	sshArgs = append(sshArgs, []string{
 		"-q", // quiet
 		"-f", // background
@@ -107,7 +108,7 @@ func tunnelAction(cmd *cobra.Command, args []string) error {
 		"-p", strconv.Itoa(inst.SSHLocalPort),
 		inst.SSHAddress,
 	}...)
-	sshCmd := exec.Command(arg0, append(arg0Args, sshArgs...)...)
+	sshCmd := exec.Command(sshExe.Exe, sshArgs...)
 	sshCmd.Stdout = stderr
 	sshCmd.Stderr = stderr
 	logrus.Debugf("executing ssh (may take a long)): %+v", sshCmd.Args)
