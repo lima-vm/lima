@@ -191,6 +191,7 @@ func newApp() *cobra.Command {
 		newStartAtLoginCommand(),
 		newNetworkCommand(),
 		newCloneCommand(),
+		newMcpCommand(),
 	)
 
 	return rootCmd
