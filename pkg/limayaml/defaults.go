@@ -1058,6 +1058,8 @@ func NewVMType(driver string) VMType {
 		return QEMU
 	case "wsl2":
 		return WSL2
+	case "ac":
+		return AC
 	default:
 		logrus.Warnf("Unknown driver: %s", driver)
 		return driver

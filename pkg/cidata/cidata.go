@@ -432,7 +432,7 @@ func GenerateISO9660(instDir, name string, instConfig *limayaml.LimaYAML, udpDNS
 		})
 	}
 
-	if args.VMType == limayaml.WSL2 {
+	if args.VMType == limayaml.WSL2 || args.VMType == limayaml.AC {
 		layout = append(layout, iso9660util.Entry{
 			Path:   "ssh_authorized_keys",
 			Reader: strings.NewReader(strings.Join(args.SSHPubKeys, "\n")),
