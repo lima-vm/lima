@@ -111,7 +111,7 @@ func (l *LimaQemuDriver) validateMountType() error {
 	return nil
 }
 
-func (l *LimaQemuDriver) FillConfig(cfg *limatype.LimaYAML, filePath string) error {
+func (l *LimaQemuDriver) FillConfig(cfg *limatype.LimaYAML, filePath string) (limatype.LimaYAML, error) {
 	if cfg.VMType == nil {
 		cfg.VMType = ptr.Of(limatype.QEMU)
 	}
@@ -171,10 +171,10 @@ func (l *LimaQemuDriver) FillConfig(cfg *limatype.LimaYAML, filePath string) err
 	}
 
 	if _, ok := mountTypesUnsupported[*cfg.MountType]; ok {
-		return fmt.Errorf("mount type %q is explicitly unsupported", *cfg.MountType)
+		return limatype.LimaYAML{}, fmt.Errorf("mount type %q is explicitly unsupported", *cfg.MountType)
 	}
 
-	return nil
+	return *cfg, nil
 }
 
 func (l *LimaQemuDriver) AcceptConfig(cfg *limatype.LimaYAML, filePath string) error {

@@ -316,6 +316,9 @@ func (a *HostAgent) Run(ctx context.Context) error {
 
 	if limayaml.FirstUsernetIndex(a.instConfig) == -1 && *a.instConfig.HostResolver.Enabled {
 		hosts := a.instConfig.HostResolver.Hosts
+		if hosts == nil {
+			hosts = make(map[string]string)
+		}
 		hosts["host.lima.internal"] = networks.SlirpGateway
 		name := hostname.FromInstName(a.instName) // TODO: support customization
 		hosts[name] = networks.SlirpIPAddress

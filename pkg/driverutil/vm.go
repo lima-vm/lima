@@ -1,7 +1,9 @@
 package driverutil
 
 import (
+	"encoding/json"
 	"fmt"
+	"os/exec"
 
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/registry"
@@ -27,20 +29,69 @@ func ResolveVMType(y *limatype.LimaYAML, filePath string) error {
 }
 
 func validateConfigAgainstDriver(y *limatype.LimaYAML, filePath, vmType string) error {
-	_, intDriver, exists := registry.Get(vmType)
+	extDriver, intDriver, exists := registry.Get(vmType)
 	if !exists {
 		return fmt.Errorf("vmType %q is not a registered driver", vmType)
 	}
-	// For now we only support internal drivers.
-	if intDriver == nil {
-		return fmt.Errorf("vmType %q is not an internal driver", vmType)
+
+	if extDriver != nil {
+		if err := handlePreConfiguredDriverAction(y, extDriver.Path, filePath); err != nil {
+			return fmt.Errorf("error handling pre-configured driver action for %q: %w", extDriver.Name, err)
+		}
+
+		return nil
 	}
+
 	if err := intDriver.AcceptConfig(y, filePath); err != nil {
 		return err
 	}
-	if err := intDriver.FillConfig(y, filePath); err != nil {
+	if _, err := intDriver.FillConfig(y, filePath); err != nil {
 		return err
 	}
 
+	return nil
+}
+
+func handlePreConfiguredDriverAction(y *limatype.LimaYAML, extDriverPath, filePath string) error {
+	cmd := exec.Command(extDriverPath, "--pre-driver-action")
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		return err
+	}
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+
+	logrus.Infof("Arch Type: %s, Driver: %s", *y.Arch, extDriverPath)
+	encoder := json.NewEncoder(stdin)
+	if err := encoder.Encode(limatype.PreConfiguredDriverPayload{
+		Config:   *y,
+		FilePath: filePath,
+	}); err != nil {
+		return fmt.Errorf("error encoding payload for pre-configured driver action: %w", err)
+	}
+	stdin.Close()
+
+	decoder := json.NewDecoder(stdout)
+	var response limatype.PreConfiguredDriverResponse
+	if err := decoder.Decode(&response); err != nil {
+		return fmt.Errorf("error decoding response from pre-configured driver action: %w", err)
+	}
+
+	if err := cmd.Wait(); err != nil {
+		return err
+	}
+
+	if response.Error != "" {
+		return fmt.Errorf("error from pre-configured driver action: %s", response.Error)
+	}
+
+	logrus.Infof("Received response from pre-configured driver action: %s + %s", *response.Config.Arch, response.Error)
+	*y = response.Config
+	logrus.Debugf("Pre-configured driver action completed successfully for %q", extDriverPath)
 	return nil
 }

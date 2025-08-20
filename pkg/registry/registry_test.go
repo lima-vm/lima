@@ -47,10 +47,12 @@ func (m *mockDriver) GuestAgentConn(_ context.Context) (net.Conn, string, error)
 func (m *mockDriver) Info() driver.Info                                          { return driver.Info{DriverName: m.Name} }
 func (m *mockDriver) Configure(_ *limatype.Instance) *driver.ConfiguredDriver    { return nil }
 func (m *mockDriver) AcceptConfig(_ *limatype.LimaYAML, _ string) error          { return nil }
-func (m *mockDriver) FillConfig(_ *limatype.LimaYAML, _ string) error            { return nil }
-func (m *mockDriver) InspectStatus(_ context.Context, _ string) string           { return "" }
-func (m *mockDriver) SSHAddress(_ context.Context) (string, error)               { return "", nil }
-func (m *mockDriver) BootScripts() (map[string][]byte, error)                    { return nil, nil }
+func (m *mockDriver) FillConfig(_ *limatype.LimaYAML, _ string) (limatype.LimaYAML, error) {
+	return limatype.LimaYAML{}, nil
+}
+func (m *mockDriver) InspectStatus(_ context.Context, _ string) string { return "" }
+func (m *mockDriver) SSHAddress(_ context.Context) (string, error)     { return "", nil }
+func (m *mockDriver) BootScripts() (map[string][]byte, error)          { return nil, nil }
 
 func TestRegister(t *testing.T) {
 	BackupRegistry(t)

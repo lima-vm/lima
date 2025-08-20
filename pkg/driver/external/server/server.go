@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"net"
 	"os"
@@ -25,6 +26,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/driver"
 	pb "github.com/lima-vm/lima/v2/pkg/driver/external"
 	"github.com/lima-vm/lima/v2/pkg/driver/external/client"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/registry"
@@ -50,7 +52,15 @@ func (t *listenerTracker) Accept() (net.Conn, error) {
 	return c, err
 }
 
-func Serve(ctx context.Context, driver driver.Driver) {
+func Serve(driver driver.Driver) {
+	preConfiguredDriverAction := flag.Bool("pre-driver-action", false, "Run pre-driver action before starting the gRPC server")
+	flag.Parse()
+	if *preConfiguredDriverAction {
+		handlePreConfiguredDriverAction(driver)
+		return
+	}
+
+	ctx := context.Background()
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 
@@ -115,7 +125,6 @@ func Serve(ctx context.Context, driver driver.Driver) {
 		logger.Info("Received shutdown signal, stopping server...")
 		closeShutdown()
 	}()
-
 	go func() {
 		timer := time.NewTimer(60 * time.Second)
 		defer timer.Stop()
@@ -146,6 +155,56 @@ func Serve(ctx context.Context, driver driver.Driver) {
 
 	<-shutdownCh
 	server.GracefulStop()
+}
+
+func handlePreConfiguredDriverAction(driver driver.Driver) {
+	decoder := json.NewDecoder(os.Stdin)
+	encoder := json.NewEncoder(os.Stdout)
+
+	var payload limatype.PreConfiguredDriverPayload
+	if err := decoder.Decode(&payload); err != nil {
+		response := limatype.PreConfiguredDriverResponse{
+			Config: limatype.LimaYAML{},
+			Error:  fmt.Sprintf("Error decoding payload at server side: %v", err),
+		}
+		if err := encoder.Encode(response); err != nil {
+			logrus.Fatalf("Error encoding response: %v\n", err)
+		}
+		return
+	}
+
+	*payload.Config.Arch = limatype.X8664
+	if err := driver.AcceptConfig(&payload.Config, payload.FilePath); err != nil {
+		response := limatype.PreConfiguredDriverResponse{
+			Config: limatype.LimaYAML{},
+			Error:  fmt.Sprintf("Error accepting config: %v", err),
+		}
+		if err := encoder.Encode(response); err != nil {
+			logrus.Fatalf("Error encoding response: %v\n", err)
+		}
+		return
+	}
+
+	filledConfig, err := driver.FillConfig(&payload.Config, payload.FilePath)
+	if err != nil {
+		response := limatype.PreConfiguredDriverResponse{
+			Config: limatype.LimaYAML{},
+			Error:  fmt.Sprintf("Error filling config: %v", err),
+		}
+		if err := encoder.Encode(response); err != nil {
+			logrus.Fatalf("Error encoding response: %v\n", err)
+		}
+		return
+	}
+
+	response := limatype.PreConfiguredDriverResponse{
+		Config: filledConfig,
+		Error:  "",
+	}
+
+	if err := encoder.Encode(response); err != nil {
+		fmt.Fprintf(os.Stderr, "Error encoding response: %v\n", err)
+	}
 }
 
 func Start(extDriver *registry.ExternalDriver, instName string) error {

@@ -112,7 +112,7 @@ func (l *LimaVzDriver) Configure(inst *limatype.Instance) *driver.ConfiguredDriv
 		Driver: l,
 	}
 }
-func (l *LimaVzDriver) FillConfig(cfg *limatype.LimaYAML, filePath string) error {
+func (l *LimaVzDriver) FillConfig(cfg *limatype.LimaYAML, filePath string) (limatype.LimaYAML, error) {
 	if cfg.VMType == nil {
 		cfg.VMType = ptr.Of(limatype.VZ)
 	}
@@ -137,7 +137,7 @@ func (l *LimaVzDriver) FillConfig(cfg *limatype.LimaYAML, filePath string) error
 		cfg.VMOpts.VZ.Rosetta.BinFmt = ptr.Of(false)
 	}
 
-	return nil
+	return *cfg, nil
 }
 
 func isEmpty(r limatype.Rosetta) bool {

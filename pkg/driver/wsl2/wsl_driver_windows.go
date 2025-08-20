@@ -92,7 +92,7 @@ func (l *LimaWslDriver) AcceptConfig(cfg *limatype.LimaYAML, filepath string) er
 	return nil
 }
 
-func (l *LimaWslDriver) FillConfig(cfg *limatype.LimaYAML, filePath string) error {
+func (l *LimaWslDriver) FillConfig(cfg *limatype.LimaYAML, filePath string) (limatype.LimaYAML, error) {
 	if cfg.VMType == nil {
 		cfg.VMType = ptr.Of(limatype.WSL2)
 	}
@@ -100,7 +100,7 @@ func (l *LimaWslDriver) FillConfig(cfg *limatype.LimaYAML, filePath string) erro
 		cfg.MountType = ptr.Of(limatype.WSLMount)
 	}
 
-	return nil
+	return *cfg, nil
 }
 
 func (l *LimaWslDriver) Validate(_ context.Context) error {

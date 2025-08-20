@@ -78,11 +78,11 @@ type Driver interface {
 
 	Info() Info
 
-	// SetConfig sets the configuration for the instance.
+	// Configure sets the configuration for the instance.
 	Configure(inst *limatype.Instance) *ConfiguredDriver
 
 	AcceptConfig(cfg *limatype.LimaYAML, filepath string) error
-	FillConfig(cfg *limatype.LimaYAML, filePath string) error
+	FillConfig(cfg *limatype.LimaYAML, filePath string) (limatype.LimaYAML, error)
 
 	SSHAddress(ctx context.Context) (string, error)
 }

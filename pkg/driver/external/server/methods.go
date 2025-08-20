@@ -6,6 +6,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"maps"
 	"net"
 	"path/filepath"
 
@@ -53,7 +54,7 @@ func (s *DriverServer) Start(_ *emptypb.Empty, stream pb.Driver_StartServer) err
 	}
 }
 
-func (s *DriverServer) SetConfig(_ context.Context, req *pb.SetConfigRequest) (*emptypb.Empty, error) {
+func (s *DriverServer) Configure(_ context.Context, req *pb.SetConfigRequest) (*emptypb.Empty, error) {
 	s.logger.Debugf("Received SetConfig request")
 	var inst limatype.Instance
 
@@ -102,7 +103,7 @@ func (s *DriverServer) GuestAgentConn(ctx context.Context, _ *emptypb.Empty) (*e
 	return &emptypb.Empty{}, nil
 }
 
-func (s *DriverServer) GetInfo(_ context.Context, _ *emptypb.Empty) (*pb.InfoResponse, error) {
+func (s *DriverServer) Info(_ context.Context, _ *emptypb.Empty) (*pb.InfoResponse, error) {
 	s.logger.Debug("Received GetInfo request")
 	info := s.driver.Info()
 
@@ -173,6 +174,58 @@ func (s *DriverServer) RunGUI(_ context.Context, empty *emptypb.Empty) (*emptypb
 	return empty, nil
 }
 
+func (s *DriverServer) Delete(ctx context.Context, empty *emptypb.Empty) (*emptypb.Empty, error) {
+	s.logger.Debug("Received Delete request")
+	err := s.driver.Delete(ctx)
+	if err != nil {
+		s.logger.Errorf("Delete failed: %v", err)
+		return empty, err
+	}
+	s.logger.Debug("Delete succeeded")
+	return empty, nil
+}
+
+func (s *DriverServer) InspectStatus(ctx context.Context, req *pb.InspectStatusRequest) (*pb.InspectStatusResponse, error) {
+	s.logger.Debugf("Received InspectStatus request for instance: %s", req.InstanceName)
+	status := s.driver.InspectStatus(ctx, req.InstanceName)
+	if status == "" {
+		s.logger.Debug("No status information available")
+		return &pb.InspectStatusResponse{Status: ""}, nil
+	}
+	s.logger.Debugf("InspectStatus succeeded with status: %s", status)
+	return &pb.InspectStatusResponse{Status: status}, nil
+}
+
+func (s *DriverServer) BootScripts(_ context.Context, _ *emptypb.Empty) (*pb.BootScriptsResponse, error) {
+	s.logger.Debug("Received BootScripts request")
+	scripts, err := s.driver.BootScripts()
+	if err != nil {
+		s.logger.Errorf("BootScripts failed: %v", err)
+		return nil, err
+	}
+
+	resp := &pb.BootScriptsResponse{
+		Scripts: make(map[string][]byte),
+	}
+
+	maps.Copy(resp.Scripts, scripts)
+
+	s.logger.Debugf("BootScripts succeeded with %d scripts", len(resp.Scripts))
+	return resp, nil
+}
+
+func (s *DriverServer) SSHAddress(ctx context.Context, _ *emptypb.Empty) (*pb.SSHAddressResponse, error) {
+	s.logger.Debug("Received SSHAddress request")
+	address, err := s.driver.SSHAddress(ctx)
+	if err != nil {
+		s.logger.Errorf("SSHAddress failed: %v", err)
+		return nil, err
+	}
+
+	s.logger.Debugf("SSHAddress succeeded with address: %s", address)
+	return &pb.SSHAddressResponse{Address: address}, nil
+}
+
 func (s *DriverServer) ChangeDisplayPassword(ctx context.Context, req *pb.ChangeDisplayPasswordRequest) (*emptypb.Empty, error) {
 	s.logger.Debug("Received ChangeDisplayPassword request")
 	err := s.driver.ChangeDisplayPassword(ctx, req.Password)
@@ -238,29 +291,6 @@ func (s *DriverServer) ListSnapshots(ctx context.Context, _ *emptypb.Empty) (*pb
 	s.logger.Debug("ListSnapshots succeeded")
 	return &pb.ListSnapshotsResponse{Snapshots: snapshots}, nil
 }
-
-// TODO: Delete these methods and update the proto file accordingly
-// func (s *DriverServer) Register(ctx context.Context, empty *emptypb.Empty) (*emptypb.Empty, error) {
-// 	s.logger.Debug("Received Register request")
-// 	err := s.driver.Register(ctx)
-// 	if err != nil {
-// 		s.logger.Errorf("Register failed: %v", err)
-// 		return empty, err
-// 	}
-// 	s.logger.Debug("Register succeeded")
-// 	return empty, nil
-// }
-
-// func (s *DriverServer) Unregister(ctx context.Context, empty *emptypb.Empty) (*emptypb.Empty, error) {
-// 	s.logger.Debug("Received Unregister request")
-// 	err := s.driver.Unregister(ctx)
-// 	if err != nil {
-// 		s.logger.Errorf("Unregister failed: %v", err)
-// 		return empty, err
-// 	}
-// 	s.logger.Debug("Unregister succeeded")
-// 	return empty, nil
-// }
 
 func (s *DriverServer) ForwardGuestAgent(_ context.Context, _ *emptypb.Empty) (*pb.ForwardGuestAgentResponse, error) {
 	s.logger.Debug("Received ForwardGuestAgent request")
