@@ -32,8 +32,7 @@ func TestRoundUp(t *testing.T) {
 	}
 }
 
-func createImg(name, format, size string) error {
-	ctx := context.TODO()
+func createImg(ctx context.Context, name, format, size string) error {
 	return exec.CommandContext(ctx, "qemu-img", "create", name, "-f", format, size).Run()
 }
 
@@ -43,23 +42,24 @@ func TestConvertToRaw(t *testing.T) {
 		t.Skipf("qemu-img does not seem installed: %v", err)
 	}
 	tmpDir := t.TempDir()
+	ctx := t.Context()
 
 	qcowImage, err := os.Create(filepath.Join(tmpDir, "qcow.img"))
 	assert.NilError(t, err)
 	defer qcowImage.Close()
-	err = createImg(qcowImage.Name(), "qcow2", "1M")
+	err = createImg(ctx, qcowImage.Name(), "qcow2", "1M")
 	assert.NilError(t, err)
 
 	rawImage, err := os.Create(filepath.Join(tmpDir, "raw.img"))
 	assert.NilError(t, err)
 	defer rawImage.Close()
-	err = createImg(rawImage.Name(), "raw", "1M")
+	err = createImg(ctx, rawImage.Name(), "raw", "1M")
 	assert.NilError(t, err)
 
 	rawImageExtended, err := os.Create(filepath.Join(tmpDir, "raw_extended.img"))
 	assert.NilError(t, err)
 	defer rawImageExtended.Close()
-	err = createImg(rawImageExtended.Name(), "raw", "2M")
+	err = createImg(ctx, rawImageExtended.Name(), "raw", "2M")
 	assert.NilError(t, err)
 
 	t.Run("qcow without backing file", func(t *testing.T) {
