@@ -23,7 +23,7 @@ import (
 
 // startVM calls WSL to start a VM.
 func startVM(ctx context.Context, distroName string) error {
-	out, err := executil.RunUTF16leCommand([]string{
+	out, err := executil.RunUTF16leCommand(context.Background(), []string{
 		"wsl.exe",
 		"--distribution",
 		distroName,
@@ -39,7 +39,7 @@ func startVM(ctx context.Context, distroName string) error {
 func initVM(ctx context.Context, instanceDir, distroName string) error {
 	baseDisk := filepath.Join(instanceDir, filenames.BaseDisk)
 	logrus.Infof("Importing distro from %q to %q", baseDisk, instanceDir)
-	out, err := executil.RunUTF16leCommand([]string{
+	out, err := executil.RunUTF16leCommand(context.Background(), []string{
 		"wsl.exe",
 		"--import",
 		distroName,
@@ -55,7 +55,7 @@ func initVM(ctx context.Context, instanceDir, distroName string) error {
 
 // stopVM calls WSL to stop a running VM.
 func stopVM(ctx context.Context, distroName string) error {
-	out, err := executil.RunUTF16leCommand([]string{
+	out, err := executil.RunUTF16leCommand(context.Background(), []string{
 		"wsl.exe",
 		"--terminate",
 		distroName,
@@ -166,7 +166,7 @@ func keepAlive(ctx context.Context, distroName string, errCh chan<- error) {
 // unregisterVM calls WSL to unregister a VM.
 func unregisterVM(ctx context.Context, distroName string) error {
 	logrus.Info("Unregistering WSL2 VM")
-	out, err := executil.RunUTF16leCommand([]string{
+	out, err := executil.RunUTF16leCommand(context.Background(), []string{
 		"wsl.exe",
 		"--unregister",
 		distroName,

@@ -68,7 +68,7 @@ func inspectStatus(instDir string, inst *Instance, y *limayaml.LimaYAML) {
 // https://aka.ms/wslstore
 func GetWslStatus(instName string) (string, error) {
 	distroName := "lima-" + instName
-	out, err := executil.RunUTF16leCommand([]string{
+	out, err := executil.RunUTF16leCommand(context.Background(), []string{
 		"wsl.exe",
 		"--list",
 		"--verbose",

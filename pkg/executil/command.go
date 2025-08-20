@@ -26,7 +26,7 @@ func WithContext(ctx context.Context) Opt {
 	}
 }
 
-func RunUTF16leCommand(args []string, opts ...Opt) (string, error) {
+func RunUTF16leCommand(ctx context.Context, args []string, opts ...Opt) (string, error) {
 	var o options
 	for _, f := range opts {
 		if err := f(&o); err != nil {
@@ -34,12 +34,7 @@ func RunUTF16leCommand(args []string, opts ...Opt) (string, error) {
 		}
 	}
 
-	var cmd *exec.Cmd
-	ctx := o.ctx
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	cmd = exec.CommandContext(ctx, args[0], args[1:]...)
+	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
 
 	outString := ""
 	out, err := cmd.CombinedOutput()

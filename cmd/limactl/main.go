@@ -218,7 +218,7 @@ func executeWithPluginSupport(rootCmd *cobra.Command, args []string) error {
 		cmd, _, err := rootCmd.Find(args)
 		if err != nil || cmd == rootCmd {
 			// Function calls os.Exit() if it found and executed the plugin
-			runExternalPlugin(rootCmd.Context(), args[0], args[1:])
+			runExternalPlugin(context.Background(), args[0], args[1:])
 		}
 	}
 
@@ -227,10 +227,6 @@ func executeWithPluginSupport(rootCmd *cobra.Command, args []string) error {
 }
 
 func runExternalPlugin(ctx context.Context, name string, args []string) {
-	if ctx == nil {
-		ctx = context.Background()
-	}
-
 	if err := updatePathEnv(); err != nil {
 		logrus.Warnf("failed to update PATH environment: %v", err)
 		// PATH update failure shouldn't prevent plugin execution
