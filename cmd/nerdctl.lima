@@ -1,3 +1,4 @@
 #!/bin/sh
 set -eu
+# Use --preserve-env to pass through environment variables from host machine into guest instance
 exec limactl shell --preserve-env default nerdctl "$@"

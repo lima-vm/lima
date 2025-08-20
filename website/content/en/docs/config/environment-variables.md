@@ -57,6 +57,45 @@ This page documents the environment variables used in Lima.
   lima
   ```
 
+### `LIMA_SHELLENV_ALLOW`
+
+- **Description**: Specifies a comma-separated list of environment variable patterns to allow when propagating environment variables to the Lima instance with `--preserve-env`. When set, **only** variables matching these patterns will be passed through, completely overriding the default block list behavior. This feature only applies to Lima v2.0.0 or later.
+- **Default**: unset (when using `--preserve-env`, all variables are propagated except those matching the block list patterns)
+- **Usage**:
+  ```sh
+  export LIMA_SHELLENV_ALLOW="FPATH,XAUTHORITY,CUSTOM_*"
+  limactl shell --preserve-env default
+  ```
+- **Behavior**:
+  - **Without `--preserve-env`**: No environment variables are propagated (regardless of this setting)
+  - **With `--preserve-env` and `LIMA_SHELLENV_ALLOW` unset**: All variables are propagated except those in the block list
+  - **With `--preserve-env` and `LIMA_SHELLENV_ALLOW` set**: Only variables matching the allow patterns are propagated (block list is ignored)
+- **Note**: Patterns support wildcards using `*` at the end (e.g., `CUSTOM_*` matches `CUSTOM_VAR`, `CUSTOM_PATH`, etc.).
+
+### `LIMA_SHELLENV_BLOCK`
+
+- **Description**: Specifies a comma-separated list of environment variable patterns to block when propagating environment variables to the Lima instance with `--preserve-env`. Can either replace the default block list or extend it by prefixing with `+`. This feature only applies to Lima v2.0.0 or later.
+- **Default**: A predefined list of system and shell-specific variables that should not be propagated:
+  - Shell variables: `BASH*`, `SHELL`, `SHLVL`, `ZSH*`, `ZDOTDIR`, `FPATH`
+  - System paths: `PATH`, `PWD`, `OLDPWD`, `TMPDIR`
+  - User/system info: `HOME`, `USER`, `LOGNAME`, `UID`, `GID`, `EUID`, `GROUP`, `HOSTNAME`
+  - Display/terminal: `DISPLAY`, `TERM`, `TERMINFO`, `XAUTHORITY`, `XDG_*`
+  - SSH/security: `SSH_*`
+  - Dynamic linker: `DYLD_*`, `LD_*`
+  - Internal variables: `_*` (variables starting with underscore)
+  
+  See [`GetDefaultBlockList()`](https://github.com/lima-vm/lima/blob/master/pkg/envutil/envutil.go#L133) for the complete list.
+- **Usage**:
+  ```sh
+  # Replace default block list entirely (not recommended)
+  export LIMA_SHELLENV_BLOCK="SECRET_*,PRIVATE_*"
+  
+  # Extend default block list (recommended)
+  export LIMA_SHELLENV_BLOCK="+SECRET_*,PRIVATE_*"
+  limactl shell --preserve-env default
+  ```
+- **Note**: Patterns support wildcards using `*` at the end (e.g., `SSH_*` matches `SSH_AUTH_SOCK`, `SSH_AGENT_PID`). Use the `+` prefix to add to the default block list rather than replacing it entirely. This variable only affects the `--preserve-env` flag behavior.
+
 ### `LIMACTL`
 
 - **Description**: Specifies the path to the `limactl` binary.
