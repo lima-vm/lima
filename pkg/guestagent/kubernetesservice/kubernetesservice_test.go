@@ -25,7 +25,7 @@ func newFakeKubeClient() (clientSet.Interface, informers.SharedInformerFactory) 
 }
 
 func TestGetPorts(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	serviceCreatedCh := make(chan struct{}, 1)
 	kubeClient, informerFactory := newFakeKubeClient()

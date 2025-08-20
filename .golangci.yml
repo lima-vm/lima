@@ -126,6 +126,8 @@ linters:
       - -ST1022
     usetesting:
       os-temp-dir: true
+      context-background: true
+      context-todo: true
   exclusions:
     presets:
     - common-false-positives

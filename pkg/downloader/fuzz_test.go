@@ -4,7 +4,6 @@
 package downloader
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -24,9 +23,9 @@ func FuzzDownload(f *testing.F) {
 		testLocalFileURL := "file://" + remoteFile
 		if checkDigest {
 			d := algorithm.FromBytes(fileContents)
-			_, _ = Download(context.Background(), localFile, testLocalFileURL, WithExpectedDigest(d))
+			_, _ = Download(t.Context(), localFile, testLocalFileURL, WithExpectedDigest(d))
 		} else {
-			_, _ = Download(context.Background(), localFile, testLocalFileURL)
+			_, _ = Download(t.Context(), localFile, testLocalFileURL)
 		}
 	})
 }

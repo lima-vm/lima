@@ -4,7 +4,6 @@
 package limatmpl
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"reflect"
@@ -453,7 +452,7 @@ func RunEmbedTest(t *testing.T, tc embedTestCase) {
 	if strings.HasPrefix(tc.base, "#!") {
 		tmpl.Bytes = []byte(tc.template)
 	}
-	err := tmpl.Embed(context.TODO(), false, false)
+	err := tmpl.Embed(t.Context(), false, false)
 	if expectError {
 		assert.ErrorContains(t, err, tc.expected, tc.description)
 		return

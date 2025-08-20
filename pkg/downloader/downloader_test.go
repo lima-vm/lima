@@ -4,7 +4,6 @@
 package downloader
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -43,63 +42,67 @@ func TestDownloadRemote(t *testing.T) {
 
 	t.Run("without cache", func(t *testing.T) {
 		t.Run("without digest", func(t *testing.T) {
+			ctx := t.Context()
 			localPath := filepath.Join(t.TempDir(), t.Name())
-			r, err := Download(context.Background(), localPath, dummyRemoteFileURL)
+			r, err := Download(ctx, localPath, dummyRemoteFileURL)
 			assert.NilError(t, err)
 			assert.Equal(t, StatusDownloaded, r.Status)
 
 			// download again, make sure StatusSkippedIsReturned
-			r, err = Download(context.Background(), localPath, dummyRemoteFileURL)
+			r, err = Download(ctx, localPath, dummyRemoteFileURL)
 			assert.NilError(t, err)
 			assert.Equal(t, StatusSkipped, r.Status)
 		})
 		t.Run("with digest", func(t *testing.T) {
+			ctx := t.Context()
 			wrongDigest := digest.Digest("sha256:8313944efb4f38570c689813f288058b674ea6c487017a5a4738dc674b65f9d9")
 			localPath := filepath.Join(t.TempDir(), t.Name())
-			_, err := Download(context.Background(), localPath, dummyRemoteFileURL, WithExpectedDigest(wrongDigest))
+			_, err := Download(ctx, localPath, dummyRemoteFileURL, WithExpectedDigest(wrongDigest))
 			assert.ErrorContains(t, err, "expected digest")
 
 			wrongDigest2 := digest.Digest("8313944efb4f38570c689813f288058b674ea6c487017a5a4738dc674b65f9d9")
-			_, err = Download(context.Background(), localPath, dummyRemoteFileURL, WithExpectedDigest(wrongDigest2))
+			_, err = Download(ctx, localPath, dummyRemoteFileURL, WithExpectedDigest(wrongDigest2))
 			assert.ErrorContains(t, err, "invalid checksum digest format")
 
-			r, err := Download(context.Background(), localPath, dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest))
+			r, err := Download(ctx, localPath, dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest))
 			assert.NilError(t, err)
 			assert.Equal(t, StatusDownloaded, r.Status)
 
-			r, err = Download(context.Background(), localPath, dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest))
+			r, err = Download(ctx, localPath, dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest))
 			assert.NilError(t, err)
 			assert.Equal(t, StatusSkipped, r.Status)
 		})
 	})
 	t.Run("with cache", func(t *testing.T) {
 		t.Run("serial", func(t *testing.T) {
+			ctx := t.Context()
 			cacheDir := filepath.Join(t.TempDir(), "cache")
 			localPath := filepath.Join(t.TempDir(), t.Name())
-			r, err := Download(context.Background(), localPath, dummyRemoteFileURL,
+			r, err := Download(ctx, localPath, dummyRemoteFileURL,
 				WithExpectedDigest(dummyRemoteFileDigest), WithCacheDir(cacheDir))
 			assert.NilError(t, err)
 			assert.Equal(t, StatusDownloaded, r.Status)
 
-			r, err = Download(context.Background(), localPath, dummyRemoteFileURL,
+			r, err = Download(ctx, localPath, dummyRemoteFileURL,
 				WithExpectedDigest(dummyRemoteFileDigest), WithCacheDir(cacheDir))
 			assert.NilError(t, err)
 			assert.Equal(t, StatusSkipped, r.Status)
 
 			localPath2 := localPath + "-2"
-			r, err = Download(context.Background(), localPath2, dummyRemoteFileURL,
+			r, err = Download(ctx, localPath2, dummyRemoteFileURL,
 				WithExpectedDigest(dummyRemoteFileDigest), WithCacheDir(cacheDir))
 			assert.NilError(t, err)
 			assert.Equal(t, StatusUsedCache, r.Status)
 		})
 		t.Run("parallel", func(t *testing.T) {
+			ctx := t.Context()
 			cacheDir := filepath.Join(t.TempDir(), "cache")
 			results := make(chan downloadResult, parallelDownloads)
 			for range parallelDownloads {
 				go func() {
 					// Parallel download is supported only for different instances with unique localPath.
 					localPath := filepath.Join(t.TempDir(), t.Name())
-					r, err := Download(context.Background(), localPath, dummyRemoteFileURL,
+					r, err := Download(ctx, localPath, dummyRemoteFileURL,
 						WithExpectedDigest(dummyRemoteFileDigest), WithCacheDir(cacheDir))
 					results <- downloadResult{r, err}
 				}()
@@ -112,32 +115,34 @@ func TestDownloadRemote(t *testing.T) {
 	})
 	t.Run("caching-only mode", func(t *testing.T) {
 		t.Run("serial", func(t *testing.T) {
-			_, err := Download(context.Background(), "", dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest))
+			ctx := t.Context()
+			_, err := Download(ctx, "", dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest))
 			assert.ErrorContains(t, err, "cache directory to be specified")
 
 			cacheDir := filepath.Join(t.TempDir(), "cache")
-			r, err := Download(context.Background(), "", dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest),
+			r, err := Download(ctx, "", dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest),
 				WithCacheDir(cacheDir))
 			assert.NilError(t, err)
 			assert.Equal(t, StatusDownloaded, r.Status)
 
-			r, err = Download(context.Background(), "", dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest),
+			r, err = Download(ctx, "", dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest),
 				WithCacheDir(cacheDir))
 			assert.NilError(t, err)
 			assert.Equal(t, StatusUsedCache, r.Status)
 
 			localPath := filepath.Join(t.TempDir(), t.Name())
-			r, err = Download(context.Background(), localPath, dummyRemoteFileURL,
+			r, err = Download(ctx, localPath, dummyRemoteFileURL,
 				WithExpectedDigest(dummyRemoteFileDigest), WithCacheDir(cacheDir))
 			assert.NilError(t, err)
 			assert.Equal(t, StatusUsedCache, r.Status)
 		})
 		t.Run("parallel", func(t *testing.T) {
+			ctx := t.Context()
 			cacheDir := filepath.Join(t.TempDir(), "cache")
 			results := make(chan downloadResult, parallelDownloads)
 			for range parallelDownloads {
 				go func() {
-					r, err := Download(context.Background(), "", dummyRemoteFileURL,
+					r, err := Download(ctx, "", dummyRemoteFileURL,
 						WithExpectedDigest(dummyRemoteFileDigest), WithCacheDir(cacheDir))
 					results <- downloadResult{r, err}
 				}()
@@ -149,11 +154,12 @@ func TestDownloadRemote(t *testing.T) {
 		})
 	})
 	t.Run("cached", func(t *testing.T) {
+		ctx := t.Context()
 		_, err := Cached(dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest))
 		assert.ErrorContains(t, err, "cache directory to be specified")
 
 		cacheDir := filepath.Join(t.TempDir(), "cache")
-		r, err := Download(context.Background(), "", dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest), WithCacheDir(cacheDir))
+		r, err := Download(ctx, "", dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest), WithCacheDir(cacheDir))
 		assert.NilError(t, err)
 		assert.Equal(t, StatusDownloaded, r.Status)
 
@@ -167,11 +173,12 @@ func TestDownloadRemote(t *testing.T) {
 		assert.ErrorContains(t, err, "expected digest")
 	})
 	t.Run("metadata", func(t *testing.T) {
+		ctx := t.Context()
 		_, err := Cached(dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest))
 		assert.ErrorContains(t, err, "cache directory to be specified")
 
 		cacheDir := filepath.Join(t.TempDir(), "cache")
-		r, err := Download(context.Background(), "", dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest), WithCacheDir(cacheDir))
+		r, err := Download(ctx, "", dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest), WithCacheDir(cacheDir))
 		assert.NilError(t, err)
 		assert.Equal(t, StatusDownloaded, r.Status)
 		assert.Equal(t, dummyRemoteFileStat.ModTime().Truncate(time.Second).UTC(), r.LastModified)
@@ -209,34 +216,36 @@ func TestRedownloadRemote(t *testing.T) {
 	cacheOpt := WithCacheDir(t.TempDir())
 
 	t.Run("digest-less", func(t *testing.T) {
+		ctx := t.Context()
 		remoteFile := filepath.Join(remoteDir, "digest-less.txt")
 		assert.NilError(t, os.WriteFile(remoteFile, []byte("digest-less"), 0o644))
 		assert.NilError(t, os.Chtimes(remoteFile, time.Now(), time.Now().Add(-time.Hour)))
 		opt := []Opt{cacheOpt}
 
 		// Download on the first call
-		r, err := Download(context.Background(), filepath.Join(downloadDir, "1"), ts.URL+"/digest-less.txt", opt...)
+		r, err := Download(ctx, filepath.Join(downloadDir, "1"), ts.URL+"/digest-less.txt", opt...)
 		assert.NilError(t, err)
 		assert.Equal(t, StatusDownloaded, r.Status)
 
 		// Next download will use the cached download
-		r, err = Download(context.Background(), filepath.Join(downloadDir, "2"), ts.URL+"/digest-less.txt", opt...)
+		r, err = Download(ctx, filepath.Join(downloadDir, "2"), ts.URL+"/digest-less.txt", opt...)
 		assert.NilError(t, err)
 		assert.Equal(t, StatusUsedCache, r.Status)
 
 		// Modifying remote file will cause redownload
 		assert.NilError(t, os.Chtimes(remoteFile, time.Now(), time.Now()))
-		r, err = Download(context.Background(), filepath.Join(downloadDir, "3"), ts.URL+"/digest-less.txt", opt...)
+		r, err = Download(ctx, filepath.Join(downloadDir, "3"), ts.URL+"/digest-less.txt", opt...)
 		assert.NilError(t, err)
 		assert.Equal(t, StatusDownloaded, r.Status)
 
 		// Next download will use the cached download
-		r, err = Download(context.Background(), filepath.Join(downloadDir, "4"), ts.URL+"/digest-less.txt", opt...)
+		r, err = Download(ctx, filepath.Join(downloadDir, "4"), ts.URL+"/digest-less.txt", opt...)
 		assert.NilError(t, err)
 		assert.Equal(t, StatusUsedCache, r.Status)
 	})
 
 	t.Run("has-digest", func(t *testing.T) {
+		ctx := t.Context()
 		remoteFile := filepath.Join(remoteDir, "has-digest.txt")
 		bytes := []byte("has-digest")
 		assert.NilError(t, os.WriteFile(remoteFile, bytes, 0o644))
@@ -247,16 +256,16 @@ func TestRedownloadRemote(t *testing.T) {
 		assert.NilError(t, err)
 		opt := []Opt{cacheOpt, WithExpectedDigest(digester.Digest())}
 
-		r, err := Download(context.Background(), filepath.Join(downloadDir, "has-digest1.txt"), ts.URL+"/has-digest.txt", opt...)
+		r, err := Download(ctx, filepath.Join(downloadDir, "has-digest1.txt"), ts.URL+"/has-digest.txt", opt...)
 		assert.NilError(t, err)
 		assert.Equal(t, StatusDownloaded, r.Status)
-		r, err = Download(context.Background(), filepath.Join(downloadDir, "has-digest2.txt"), ts.URL+"/has-digest.txt", opt...)
+		r, err = Download(ctx, filepath.Join(downloadDir, "has-digest2.txt"), ts.URL+"/has-digest.txt", opt...)
 		assert.NilError(t, err)
 		assert.Equal(t, StatusUsedCache, r.Status)
 
 		// modifying remote file won't cause redownload because expected digest is provided
 		assert.NilError(t, os.Chtimes(remoteFile, time.Now(), time.Now()))
-		r, err = Download(context.Background(), filepath.Join(downloadDir, "has-digest3.txt"), ts.URL+"/has-digest.txt", opt...)
+		r, err = Download(ctx, filepath.Join(downloadDir, "has-digest3.txt"), ts.URL+"/has-digest.txt", opt...)
 		assert.NilError(t, err)
 		assert.Equal(t, StatusUsedCache, r.Status)
 	})
@@ -274,12 +283,13 @@ func TestDownloadLocal(t *testing.T) {
 		t.Cleanup(func() { _ = f.Close() })
 		testLocalFileURL := "file://" + localFile
 
-		r, err := Download(context.Background(), localPath, testLocalFileURL)
+		r, err := Download(t.Context(), localPath, testLocalFileURL)
 		assert.NilError(t, err)
 		assert.Equal(t, StatusDownloaded, r.Status)
 	})
 
 	t.Run("with file digest", func(t *testing.T) {
+		ctx := t.Context()
 		localPath := filepath.Join(t.TempDir(), t.Name())
 		localTestFile := filepath.Join(t.TempDir(), "some-file")
 		testDownloadFileContents := []byte("TestDownloadLocal")
@@ -288,10 +298,10 @@ func TestDownloadLocal(t *testing.T) {
 		testLocalFileURL := "file://" + localTestFile
 		wrongDigest := digest.Digest(emptyFileDigest)
 
-		_, err := Download(context.Background(), localPath, testLocalFileURL, WithExpectedDigest(wrongDigest))
+		_, err := Download(ctx, localPath, testLocalFileURL, WithExpectedDigest(wrongDigest))
 		assert.ErrorContains(t, err, "expected digest")
 
-		r, err := Download(context.Background(), localPath, testLocalFileURL, WithExpectedDigest(testDownloadLocalDigest))
+		r, err := Download(ctx, localPath, testLocalFileURL, WithExpectedDigest(testDownloadLocalDigest))
 		assert.NilError(t, err)
 		assert.Equal(t, StatusDownloaded, r.Status)
 	})
@@ -325,7 +335,7 @@ func TestDownloadCompressed(t *testing.T) {
 		localFile += ".gz"
 		testLocalFileURL := "file://" + localFile
 
-		r, err := Download(context.Background(), localPath, testLocalFileURL, WithDecompress(true))
+		r, err := Download(ctx, localPath, testLocalFileURL, WithDecompress(true))
 		assert.NilError(t, err)
 		assert.Equal(t, StatusDownloaded, r.Status)
 
@@ -344,7 +354,7 @@ func TestDownloadCompressed(t *testing.T) {
 		localFile += ".bz2"
 		testLocalFileURL := "file://" + localFile
 
-		r, err := Download(context.Background(), localPath, testLocalFileURL, WithDecompress(true))
+		r, err := Download(ctx, localPath, testLocalFileURL, WithDecompress(true))
 		assert.NilError(t, err)
 		assert.Equal(t, StatusDownloaded, r.Status)
 
@@ -360,7 +370,7 @@ func TestDownloadCompressed(t *testing.T) {
 		assert.NilError(t, os.WriteFile(localFile, testDownloadCompressedContents, 0o644))
 		testLocalFileURL := "file://" + localFile
 
-		r, err := Download(context.Background(), localPath, testLocalFileURL, WithDecompress(true))
+		r, err := Download(t.Context(), localPath, testLocalFileURL, WithDecompress(true))
 		assert.NilError(t, err)
 		assert.Equal(t, StatusDownloaded, r.Status)
 
