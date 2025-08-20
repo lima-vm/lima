@@ -89,7 +89,7 @@ EOF
 	mkdir -p /etc/cdi /var/run/cdi /etc/buildkit/cdi
 	cat >/etc/cdi/rosetta.yaml <<EOF
 cdiVersion: "0.6.0"
-kind: "lima.io/rosetta"
+kind: "lima-vm.io/rosetta"
 devices:
 - name: cached
   containerEdits:
