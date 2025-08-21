@@ -5,8 +5,12 @@
 
 package wsl2
 
-import "github.com/lima-vm/lima/v2/pkg/registry"
+import (
+	"context"
+
+	"github.com/lima-vm/lima/v2/pkg/registry"
+)
 
 func init() {
-	registry.Register(New())
+	registry.Register(context.Background(), New())
 }
