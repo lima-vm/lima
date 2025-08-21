@@ -88,9 +88,11 @@ func TestGetBlockAndAllowLists(t *testing.T) {
 		t.Setenv("LIMA_SHELLENV_BLOCK", "")
 		t.Setenv("LIMA_SHELLENV_ALLOW", "")
 
-		blockList := getBlockList()
-		allowList := getAllowList()
+		blockList, isBlockListSet := getBlockList()
+		allowList, isAllowListSet := getAllowList()
 
+		assert.Assert(t, !isBlockListSet)
+		assert.Assert(t, !isAllowListSet)
 		assert.Assert(t, isUsingDefaultBlockList())
 		assert.DeepEqual(t, blockList, defaultBlockList)
 		assert.Equal(t, len(allowList), 0)
@@ -99,7 +101,8 @@ func TestGetBlockAndAllowLists(t *testing.T) {
 	t.Run("custom blocklist", func(t *testing.T) {
 		t.Setenv("LIMA_SHELLENV_BLOCK", "PATH,HOME")
 
-		blockList := getBlockList()
+		blockList, isSet := getBlockList()
+		assert.Assert(t, isSet)
 		assert.Assert(t, !isUsingDefaultBlockList())
 		expected := []string{"PATH", "HOME"}
 		assert.DeepEqual(t, blockList, expected)
@@ -108,7 +111,8 @@ func TestGetBlockAndAllowLists(t *testing.T) {
 	t.Run("additive blocklist", func(t *testing.T) {
 		t.Setenv("LIMA_SHELLENV_BLOCK", "+CUSTOM_VAR")
 
-		blockList := getBlockList()
+		blockList, isSet := getBlockList()
+		assert.Assert(t, isSet)
 		assert.Assert(t, isUsingDefaultBlockList())
 		expected := slices.Concat(GetDefaultBlockList(), []string{"CUSTOM_VAR"})
 		assert.DeepEqual(t, blockList, expected)
@@ -117,7 +121,8 @@ func TestGetBlockAndAllowLists(t *testing.T) {
 	t.Run("allowlist", func(t *testing.T) {
 		t.Setenv("LIMA_SHELLENV_ALLOW", "FOO,BAR")
 
-		allowList := getAllowList()
+		allowList, isSet := getAllowList()
+		assert.Assert(t, isSet)
 		expected := []string{"FOO", "BAR"}
 		assert.DeepEqual(t, allowList, expected)
 	})
