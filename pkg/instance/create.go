@@ -43,7 +43,7 @@ func Create(ctx context.Context, instName string, instConfig []byte, saveBrokenY
 	}
 	// limayaml.Load() needs to pass the store file path to limayaml.FillDefault() to calculate default MAC addresses
 	filePath := filepath.Join(instDir, filenames.LimaYAML)
-	loadedInstConfig, err := limayaml.LoadWithWarnings(instConfig, filePath)
+	loadedInstConfig, err := limayaml.LoadWithWarnings(ctx, instConfig, filePath)
 	if err != nil {
 		return nil, err
 	}
@@ -63,14 +63,14 @@ func Create(ctx context.Context, instName string, instConfig []byte, saveBrokenY
 	if err := os.WriteFile(filePath, instConfig, 0o644); err != nil {
 		return nil, err
 	}
-	if err := cidata.GenerateCloudConfig(instDir, instName, loadedInstConfig); err != nil {
+	if err := cidata.GenerateCloudConfig(ctx, instDir, instName, loadedInstConfig); err != nil {
 		return nil, err
 	}
 	if err := os.WriteFile(filepath.Join(instDir, filenames.LimaVersion), []byte(version.Version), 0o444); err != nil {
 		return nil, err
 	}
 
-	inst, err := store.Inspect(instName)
+	inst, err := store.Inspect(ctx, instName)
 	if err != nil {
 		return nil, err
 	}

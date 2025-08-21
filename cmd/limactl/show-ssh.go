@@ -77,13 +77,14 @@ Instead, use 'ssh -F %s/default/ssh.config lima-default' .
 }
 
 func showSSHAction(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
 	format, err := cmd.Flags().GetString("format")
 	if err != nil {
 		return err
 	}
 	instName := args[0]
 	w := cmd.OutOrStdout()
-	inst, err := store.Inspect(instName)
+	inst, err := store.Inspect(ctx, instName)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("instance %q does not exist, run `limactl create %s` to create a new instance", instName, instName)
@@ -97,6 +98,7 @@ func showSSHAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	opts, err := sshutil.SSHOpts(
+		ctx,
 		sshExe,
 		inst.Dir,
 		*inst.Config.User.Name,

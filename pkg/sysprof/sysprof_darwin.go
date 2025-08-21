@@ -16,7 +16,7 @@ import (
 )
 
 var NetworkData = sync.OnceValues(func() ([]NetworkDataType, error) {
-	b, err := SystemProfiler("SPNetworkDataType")
+	b, err := SystemProfiler(context.Background(), "SPNetworkDataType")
 	if err != nil {
 		return nil, err
 	}
@@ -27,8 +27,7 @@ var NetworkData = sync.OnceValues(func() ([]NetworkDataType, error) {
 	return networkData.SPNetworkDataType, nil
 })
 
-func SystemProfiler(dataType string) ([]byte, error) {
-	ctx := context.TODO()
+func SystemProfiler(ctx context.Context, dataType string) ([]byte, error) {
 	exe, err := exec.LookPath("system_profiler")
 	if err != nil {
 		// $PATH may lack /usr/sbin

@@ -46,7 +46,7 @@ func cloneAction(cmd *cobra.Command, args []string) error {
 	}
 
 	oldInstName, newInstName := args[0], args[1]
-	oldInst, err := store.Inspect(oldInstName)
+	oldInst, err := store.Inspect(ctx, oldInstName)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("instance %q not found", oldInstName)
@@ -75,20 +75,20 @@ func cloneAction(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		y, err := limayaml.LoadWithWarnings(yBytes, filePath)
+		y, err := limayaml.LoadWithWarnings(ctx, yBytes, filePath)
 		if err != nil {
 			return err
 		}
 		if err := limayaml.Validate(y, true); err != nil {
 			return saveRejectedYAML(yBytes, err)
 		}
-		if err := limayaml.ValidateAgainstLatestConfig(yBytes, yContent); err != nil {
+		if err := limayaml.ValidateAgainstLatestConfig(ctx, yBytes, yContent); err != nil {
 			return saveRejectedYAML(yBytes, err)
 		}
 		if err := os.WriteFile(filePath, yBytes, 0o644); err != nil {
 			return err
 		}
-		newInst, err = store.Inspect(newInst.Name)
+		newInst, err = store.Inspect(ctx, newInst.Name)
 		if err != nil {
 			return err
 		}

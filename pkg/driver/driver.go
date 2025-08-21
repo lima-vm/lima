@@ -13,7 +13,7 @@ import (
 // Lifecycle defines basic lifecycle operations.
 type Lifecycle interface {
 	// Validate returns error if the current driver isn't support for given config
-	Validate() error
+	Validate(_ context.Context) error
 
 	// Initialize is called on creating the instance for initialization.
 	// (e.g., creating "vz-identifier" file)

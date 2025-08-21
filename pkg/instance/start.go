@@ -93,7 +93,7 @@ func Prepare(ctx context.Context, inst *store.Instance) (*Prepared, error) {
 		return nil, fmt.Errorf("failed to create driver instance: %w", err)
 	}
 
-	if err := limaDriver.Validate(); err != nil {
+	if err := limaDriver.Validate(ctx); err != nil {
 		return nil, err
 	}
 
@@ -150,7 +150,7 @@ func Prepare(ctx context.Context, inst *store.Instance) (*Prepared, error) {
 	}
 
 	// Ensure diffDisk size matches the store
-	if err := prepareDiffDisk(inst); err != nil {
+	if err := prepareDiffDisk(ctx, inst); err != nil {
 		return nil, err
 	}
 
@@ -438,7 +438,7 @@ func ShowMessage(inst *store.Instance) error {
 
 // prepareDiffDisk checks the disk size difference between inst.Disk and yaml.Disk.
 // If there is no diffDisk, return nil (the instance has not been initialized or started yet).
-func prepareDiffDisk(inst *store.Instance) error {
+func prepareDiffDisk(ctx context.Context, inst *store.Instance) error {
 	diffDisk := filepath.Join(inst.Dir, filenames.DiffDisk)
 
 	// Handle the instance initialization
@@ -474,9 +474,9 @@ func prepareDiffDisk(inst *store.Instance) error {
 		return errors.New("diffDisk: Shrinking is currently unavailable")
 	}
 
-	diskUtil := proxyimgutil.NewDiskUtil()
+	diskUtil := proxyimgutil.NewDiskUtil(ctx)
 
-	err = diskUtil.ResizeDisk(diffDisk, inst.Disk)
+	err = diskUtil.ResizeDisk(ctx, diffDisk, inst.Disk)
 	if err != nil {
 		return err
 	}

@@ -19,7 +19,7 @@ import (
 )
 
 var MachineID = sync.OnceValue(func() string {
-	x, err := machineID()
+	x, err := machineID(context.Background())
 	if err == nil && x != "" {
 		return x
 	}
@@ -31,8 +31,7 @@ var MachineID = sync.OnceValue(func() string {
 	return hostname
 })
 
-func machineID() (string, error) {
-	ctx := context.TODO()
+func machineID(ctx context.Context) (string, error) {
 	if runtime.GOOS == "darwin" {
 		ioPlatformExpertDeviceCmd := exec.CommandContext(ctx, "/usr/sbin/ioreg", "-a", "-d2", "-c", "IOPlatformExpertDevice")
 		ioPlatformExpertDevice, err := ioPlatformExpertDeviceCmd.CombinedOutput()

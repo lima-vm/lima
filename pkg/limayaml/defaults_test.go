@@ -65,7 +65,7 @@ func TestFillDefault(t *testing.T) {
 	assert.NilError(t, err)
 	limaHome, err := dirnames.LimaDir()
 	assert.NilError(t, err)
-	user := osutil.LimaUser("0.0.0", false)
+	user := osutil.LimaUser(t.Context(), "0.0.0", false)
 	user.HomeDir = fmt.Sprintf("/home/%s.linux", user.Username)
 	uid, err := strconv.ParseUint(user.Uid, 10, 32)
 	assert.NilError(t, err)
@@ -226,7 +226,7 @@ func TestFillDefault(t *testing.T) {
 	expect.Mounts = slices.Clone(y.Mounts)
 	expect.Mounts[0].MountPoint = ptr.Of(expect.Mounts[0].Location)
 	if runtime.GOOS == "windows" {
-		mountLocation, err := ioutilx.WindowsSubsystemPath(expect.Mounts[0].Location)
+		mountLocation, err := ioutilx.WindowsSubsystemPath(t.Context(), expect.Mounts[0].Location)
 		if err == nil {
 			expect.Mounts[0].MountPoint = ptr.Of(mountLocation)
 		}
@@ -322,7 +322,7 @@ func TestFillDefault(t *testing.T) {
 
 	expect.NestedVirtualization = ptr.Of(false)
 
-	FillDefault(&y, &LimaYAML{}, &LimaYAML{}, filePath, false)
+	FillDefault(t.Context(), &y, &LimaYAML{}, &LimaYAML{}, filePath, false)
 	assert.DeepEqual(t, &y, &expect, opts...)
 
 	filledDefaults := y
@@ -464,7 +464,7 @@ func TestFillDefault(t *testing.T) {
 	expect.Mounts = slices.Clone(d.Mounts)
 	expect.Mounts[0].MountPoint = ptr.Of(expect.Mounts[0].Location)
 	if runtime.GOOS == "windows" {
-		mountLocation, err := ioutilx.WindowsSubsystemPath(expect.Mounts[0].Location)
+		mountLocation, err := ioutilx.WindowsSubsystemPath(t.Context(), expect.Mounts[0].Location)
 		if err == nil {
 			expect.Mounts[0].MountPoint = ptr.Of(mountLocation)
 		}
@@ -501,7 +501,7 @@ func TestFillDefault(t *testing.T) {
 	expect.Plain = ptr.Of(false)
 
 	y = LimaYAML{}
-	FillDefault(&y, &d, &LimaYAML{}, filePath, false)
+	FillDefault(t.Context(), &y, &d, &LimaYAML{}, filePath, false)
 	assert.DeepEqual(t, &y, &expect, opts...)
 
 	dExpect := expect
@@ -540,7 +540,7 @@ func TestFillDefault(t *testing.T) {
 
 	t.Logf("d.vmType=%q, y.vmType=%q, expect.vmType=%q", *d.VMType, *y.VMType, *expect.VMType)
 
-	FillDefault(&y, &d, &LimaYAML{}, filePath, false)
+	FillDefault(t.Context(), &y, &d, &LimaYAML{}, filePath, false)
 	assert.DeepEqual(t, &y, &expect, opts...)
 
 	// ------------------------------------------------------------------------------------
@@ -737,7 +737,7 @@ func TestFillDefault(t *testing.T) {
 
 	expect.NestedVirtualization = ptr.Of(false)
 
-	FillDefault(&y, &d, &o, filePath, false)
+	FillDefault(t.Context(), &y, &d, &o, filePath, false)
 	assert.DeepEqual(t, &y, &expect, opts...)
 }
 

@@ -104,6 +104,7 @@ See the examples in 'limactl create --help'.
 }
 
 func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*store.Instance, error) {
+	ctx := cmd.Context()
 	var arg string // can be empty
 	if len(args) > 0 {
 		arg = args[0]
@@ -171,7 +172,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 			tmpl.Name = arg
 		}
 		// store.Inspect() will validate the template name (in case it has been set to arg)
-		inst, err := store.Inspect(tmpl.Name)
+		inst, err := store.Inspect(ctx, tmpl.Name)
 		if err == nil {
 			if createOnly {
 				return nil, fmt.Errorf("instance %q already exists", tmpl.Name)
@@ -183,7 +184,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 			}
 			if len(yqExprs) > 0 {
 				yq := yqutil.Join(yqExprs)
-				inst, err = applyYQExpressionToExistingInstance(inst, yq)
+				inst, err = applyYQExpressionToExistingInstance(ctx, inst, yq)
 				if err != nil {
 					return nil, fmt.Errorf("failed to apply yq expression %q to instance %q: %w", yq, tmpl.Name, err)
 				}
@@ -209,7 +210,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 		}
 		if createOnly {
 			// store.Inspect() will also validate the instance name
-			if _, err := store.Inspect(tmpl.Name); err == nil {
+			if _, err := store.Inspect(ctx, tmpl.Name); err == nil {
 				return nil, fmt.Errorf("instance %q already exists", tmpl.Name)
 			}
 		} else if err := store.ValidateInstName(tmpl.Name); err != nil {
@@ -241,7 +242,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 	return instance.Create(cmd.Context(), tmpl.Name, tmpl.Bytes, saveBrokenYAML)
 }
 
-func applyYQExpressionToExistingInstance(inst *store.Instance, yq string) (*store.Instance, error) {
+func applyYQExpressionToExistingInstance(ctx context.Context, inst *store.Instance, yq string) (*store.Instance, error) {
 	if strings.TrimSpace(yq) == "" {
 		return inst, nil
 	}
@@ -255,7 +256,7 @@ func applyYQExpressionToExistingInstance(inst *store.Instance, yq string) (*stor
 	if err != nil {
 		return nil, err
 	}
-	y, err := limayaml.Load(yBytes, filePath)
+	y, err := limayaml.Load(ctx, yBytes, filePath)
 	if err != nil {
 		return nil, err
 	}
@@ -271,7 +272,7 @@ func applyYQExpressionToExistingInstance(inst *store.Instance, yq string) (*stor
 		return nil, err
 	}
 	// Reload
-	return store.Inspect(inst.Name)
+	return store.Inspect(ctx, inst.Name)
 }
 
 func modifyInPlace(st *limatmpl.Template, yq string) error {
@@ -331,7 +332,7 @@ func chooseNextCreatorState(ctx context.Context, tmpl *limatmpl.Template, yq str
 			hdr += "\n"
 			hdr += editutil.GenerateEditorWarningHeader()
 			var err error
-			tmpl.Bytes, err = editutil.OpenEditor(tmpl.Bytes, hdr)
+			tmpl.Bytes, err = editutil.OpenEditor(ctx, tmpl.Bytes, hdr)
 			tmpl.Config = nil
 			if err != nil {
 				return tmpl, err

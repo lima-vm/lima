@@ -71,6 +71,7 @@ $ limactl disk create DISK --size SIZE [--format qcow2]
 }
 
 func diskCreateAction(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
 	size, err := cmd.Flags().GetString("size")
 	if err != nil {
 		return err
@@ -112,8 +113,8 @@ func diskCreateAction(cmd *cobra.Command, args []string) error {
 
 	// qemu may not be available, use it only if needed.
 	dataDisk := filepath.Join(diskDir, filenames.DataDisk)
-	diskUtil := proxyimgutil.NewDiskUtil()
-	err = diskUtil.CreateDisk(dataDisk, diskSize)
+	diskUtil := proxyimgutil.NewDiskUtil(ctx)
+	err = diskUtil.CreateDisk(ctx, dataDisk, diskSize)
 	if err != nil {
 		rerr := os.RemoveAll(diskDir)
 		if rerr != nil {
@@ -232,6 +233,7 @@ $ limactl disk delete DISK1 DISK2 ...
 }
 
 func diskDeleteAction(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
 	force, err := cmd.Flags().GetBool("force")
 	if err != nil {
 		return err
@@ -243,7 +245,7 @@ func diskDeleteAction(cmd *cobra.Command, args []string) error {
 	}
 	var instances []*store.Instance
 	for _, instName := range instNames {
-		inst, err := store.Inspect(instName)
+		inst, err := store.Inspect(ctx, instName)
 		if err != nil {
 			continue
 		}
@@ -319,7 +321,8 @@ $ limactl disk unlock DISK1 DISK2 ...
 	return diskUnlockCommand
 }
 
-func diskUnlockAction(_ *cobra.Command, args []string) error {
+func diskUnlockAction(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
 	for _, diskName := range args {
 		disk, err := store.InspectDisk(diskName)
 		if err != nil {
@@ -334,7 +337,7 @@ func diskUnlockAction(_ *cobra.Command, args []string) error {
 			continue
 		}
 		// if store.Inspect throws an error, the instance does not exist, and it is safe to unlock
-		inst, err := store.Inspect(disk.Instance)
+		inst, err := store.Inspect(ctx, disk.Instance)
 		if err == nil {
 			if len(inst.Errors) > 0 {
 				logrus.Warnf("Cannot unlock disk %q, attached instance %q has errors: %+v",
@@ -371,6 +374,7 @@ $ limactl disk resize DISK --size SIZE`,
 }
 
 func diskResizeAction(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
 	size, err := cmd.Flags().GetString("size")
 	if err != nil {
 		return err
@@ -396,7 +400,7 @@ func diskResizeAction(cmd *cobra.Command, args []string) error {
 	}
 
 	if disk.Instance != "" {
-		inst, err := store.Inspect(disk.Instance)
+		inst, err := store.Inspect(ctx, disk.Instance)
 		if err == nil {
 			if inst.Status == store.StatusRunning {
 				return fmt.Errorf("cannot resize disk %q used by running instance %q. Please stop the VM instance", diskName, disk.Instance)
@@ -406,8 +410,8 @@ func diskResizeAction(cmd *cobra.Command, args []string) error {
 
 	// qemu may not be available, use it only if needed.
 	dataDisk := filepath.Join(disk.Dir, filenames.DataDisk)
-	diskUtil := proxyimgutil.NewDiskUtil()
-	err = diskUtil.ResizeDisk(dataDisk, diskSize)
+	diskUtil := proxyimgutil.NewDiskUtil(ctx)
+	err = diskUtil.ResizeDisk(ctx, dataDisk, diskSize)
 	if err != nil {
 		return fmt.Errorf("failed to resize disk %q: %w", diskName, err)
 	}

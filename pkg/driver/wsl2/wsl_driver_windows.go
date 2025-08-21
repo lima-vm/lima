@@ -77,7 +77,7 @@ func (l *LimaWslDriver) Configure(inst *store.Instance) *driver.ConfiguredDriver
 	}
 }
 
-func (l *LimaWslDriver) Validate() error {
+func (l *LimaWslDriver) Validate(_ context.Context) error {
 	if *l.Instance.Config.MountType != limayaml.WSLMount {
 		return fmt.Errorf("field `mountType` must be %q for WSL2 driver, got %q", limayaml.WSLMount, *l.Instance.Config.MountType)
 	}
@@ -196,7 +196,7 @@ func (l *LimaWslDriver) Unregister(ctx context.Context) error {
 // As of 08-01-2024, github.com/mdlayher/vsock does not natively support vsock on
 // Windows, so use the winio library to create the connection.
 func (l *LimaWslDriver) GuestAgentConn(ctx context.Context) (net.Conn, string, error) {
-	VMIDStr, err := windows.GetInstanceVMID(fmt.Sprintf("lima-%s", l.Instance.Name))
+	VMIDStr, err := windows.GetInstanceVMID(ctx, fmt.Sprintf("lima-%s", l.Instance.Name))
 	if err != nil {
 		return nil, "", err
 	}

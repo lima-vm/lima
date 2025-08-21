@@ -47,9 +47,10 @@ func newSnapshotCreateCommand() *cobra.Command {
 }
 
 func snapshotCreateAction(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
 	instName := args[0]
 
-	inst, err := store.Inspect(instName)
+	inst, err := store.Inspect(ctx, instName)
 	if err != nil {
 		return err
 	}
@@ -63,7 +64,6 @@ func snapshotCreateAction(cmd *cobra.Command, args []string) error {
 		return errors.New("expected tag")
 	}
 
-	ctx := cmd.Context()
 	return snapshot.Save(ctx, inst, tag)
 }
 
@@ -82,9 +82,10 @@ func newSnapshotDeleteCommand() *cobra.Command {
 }
 
 func snapshotDeleteAction(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
 	instName := args[0]
 
-	inst, err := store.Inspect(instName)
+	inst, err := store.Inspect(ctx, instName)
 	if err != nil {
 		return err
 	}
@@ -98,7 +99,6 @@ func snapshotDeleteAction(cmd *cobra.Command, args []string) error {
 		return errors.New("expected tag")
 	}
 
-	ctx := cmd.Context()
 	return snapshot.Del(ctx, inst, tag)
 }
 
@@ -117,9 +117,10 @@ func newSnapshotApplyCommand() *cobra.Command {
 }
 
 func snapshotApplyAction(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
 	instName := args[0]
 
-	inst, err := store.Inspect(instName)
+	inst, err := store.Inspect(ctx, instName)
 	if err != nil {
 		return err
 	}
@@ -133,7 +134,6 @@ func snapshotApplyAction(cmd *cobra.Command, args []string) error {
 		return errors.New("expected tag")
 	}
 
-	ctx := cmd.Context()
 	return snapshot.Load(ctx, inst, tag)
 }
 
@@ -152,9 +152,10 @@ func newSnapshotListCommand() *cobra.Command {
 }
 
 func snapshotListAction(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
 	instName := args[0]
 
-	inst, err := store.Inspect(instName)
+	inst, err := store.Inspect(ctx, instName)
 	if err != nil {
 		return err
 	}
@@ -163,7 +164,6 @@ func snapshotListAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	ctx := cmd.Context()
 	out, err := snapshot.List(ctx, inst)
 	if err != nil {
 		return err

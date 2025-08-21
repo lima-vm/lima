@@ -24,7 +24,8 @@ func newInfoCommand() *cobra.Command {
 }
 
 func infoAction(cmd *cobra.Command, _ []string) error {
-	info, err := limainfo.New()
+	ctx := cmd.Context()
+	info, err := limainfo.New(ctx)
 	if err != nil {
 		return err
 	}

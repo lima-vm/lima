@@ -4,6 +4,7 @@
 package hostagent
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -20,13 +21,13 @@ type mount struct {
 	close func() error
 }
 
-func (a *HostAgent) setupMounts() ([]*mount, error) {
+func (a *HostAgent) setupMounts(ctx context.Context) ([]*mount, error) {
 	var (
 		res  []*mount
 		errs []error
 	)
 	for _, f := range a.instConfig.Mounts {
-		m, err := a.setupMount(f)
+		m, err := a.setupMount(ctx, f)
 		if err != nil {
 			errs = append(errs, err)
 			continue
@@ -36,7 +37,7 @@ func (a *HostAgent) setupMounts() ([]*mount, error) {
 	return res, errors.Join(errs...)
 }
 
-func (a *HostAgent) setupMount(m limayaml.Mount) (*mount, error) {
+func (a *HostAgent) setupMount(ctx context.Context, m limayaml.Mount) (*mount, error) {
 	if err := os.MkdirAll(m.Location, 0o755); err != nil {
 		return nil, err
 	}
@@ -53,7 +54,7 @@ func (a *HostAgent) setupMount(m limayaml.Mount) (*mount, error) {
 	resolvedLocation := m.Location
 	if runtime.GOOS == "windows" {
 		var err error
-		resolvedLocation, err = ioutilx.WindowsSubsystemPath(m.Location)
+		resolvedLocation, err = ioutilx.WindowsSubsystemPath(ctx, m.Location)
 		if err != nil {
 			return nil, err
 		}

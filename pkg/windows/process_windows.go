@@ -15,8 +15,7 @@ type CommandLineJSON []struct {
 }
 
 // GetProcessCommandLine returns a slice of string containing all commandlines for a given process name.
-func GetProcessCommandLine(name string) ([]string, error) {
-	ctx := context.TODO()
+func GetProcessCommandLine(ctx context.Context, name string) ([]string, error) {
 	out, err := exec.CommandContext(ctx,
 		"powershell.exe",
 		"-nologo",

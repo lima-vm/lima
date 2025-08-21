@@ -37,7 +37,7 @@ type Entry struct {
 // -j DNAT this tells us it's the line doing the port forwarding.
 var findPortRegex = regexp.MustCompile(`-A\s+CNI-DN-\w*\s+(?:-d ((?:\b25[0-5]|\b2[0-4][0-9]|\b[01]?[0-9][0-9]?)(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}))?(?:/32\s+)?-p (tcp)?.*--dport (\d+) -j DNAT`)
 
-func GetPorts() ([]Entry, error) {
+func GetPorts(ctx context.Context) ([]Entry, error) {
 	// TODO: add support for ipv6
 
 	// Detect the location of iptables. If it is not installed skip the lookup
@@ -63,7 +63,7 @@ func GetPorts() ([]Entry, error) {
 		return nil, err
 	}
 
-	return checkPortsOpen(pts)
+	return checkPortsOpen(ctx, pts)
 }
 
 func parsePortsFromRules(rules []string) ([]Entry, error) {
@@ -127,8 +127,7 @@ func listNATRules(pth string) ([]string, error) {
 	return rules, nil
 }
 
-func checkPortsOpen(pts []Entry) ([]Entry, error) {
-	ctx := context.TODO()
+func checkPortsOpen(ctx context.Context, pts []Entry) ([]Entry, error) {
 	var entries []Entry
 	for _, pt := range pts {
 		if pt.TCP {

@@ -4,6 +4,7 @@
 package main
 
 import (
+	"context"
 	"maps"
 	"os"
 
@@ -30,6 +31,7 @@ func newPruneCommand() *cobra.Command {
 }
 
 func pruneAction(cmd *cobra.Command, _ []string) error {
+	ctx := cmd.Context()
 	keepReferred, err := cmd.Flags().GetBool("keep-referred")
 	if err != nil {
 		return err
@@ -44,7 +46,7 @@ func pruneAction(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	knownLocations, err := knownLocations()
+	knownLocations, err := knownLocations(ctx)
 	if err != nil {
 		return err
 	}
@@ -62,7 +64,7 @@ func pruneAction(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func knownLocations() (map[string]limayaml.File, error) {
+func knownLocations(ctx context.Context) (map[string]limayaml.File, error) {
 	locations := make(map[string]limayaml.File)
 
 	// Collect locations from instances
@@ -71,7 +73,7 @@ func knownLocations() (map[string]limayaml.File, error) {
 		return nil, err
 	}
 	for _, instanceName := range instances {
-		instance, err := store.Inspect(instanceName)
+		instance, err := store.Inspect(ctx, instanceName)
 		if err != nil {
 			return nil, err
 		}
@@ -88,7 +90,7 @@ func knownLocations() (map[string]limayaml.File, error) {
 		if err != nil {
 			return nil, err
 		}
-		y, err := limayaml.Load(b, t.Name)
+		y, err := limayaml.Load(ctx, b, t.Name)
 		if err != nil {
 			return nil, err
 		}

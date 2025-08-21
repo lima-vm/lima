@@ -34,7 +34,7 @@ func Reconcile(ctx context.Context, newInst string) error {
 	}
 	activeNetwork := make(map[string]bool, 3)
 	for _, instName := range instances {
-		instance, err := store.Inspect(instName)
+		instance, err := store.Inspect(ctx, instName)
 		if err != nil {
 			return err
 		}
@@ -67,8 +67,7 @@ func Reconcile(ctx context.Context, newInst string) error {
 	return nil
 }
 
-func sudo(user, group, command string) error {
-	ctx := context.TODO()
+func sudo(ctx context.Context, user, group, command string) error {
 	args := []string{"--user", user, "--group", group, "--non-interactive"}
 	args = append(args, strings.Split(command, " ")...)
 	var stdout, stderr bytes.Buffer
@@ -83,8 +82,8 @@ func sudo(user, group, command string) error {
 	return nil
 }
 
-func makeVarRun(cfg *networks.Config) error {
-	err := sudo("root", "wheel", cfg.MkdirCmd())
+func makeVarRun(ctx context.Context, cfg *networks.Config) error {
+	err := sudo(ctx, "root", "wheel", cfg.MkdirCmd())
 	if err != nil {
 		return err
 	}
@@ -113,7 +112,7 @@ func makeVarRun(cfg *networks.Config) error {
 }
 
 func startDaemon(ctx context.Context, cfg *networks.Config, name, daemon string) error {
-	if err := makeVarRun(cfg); err != nil {
+	if err := makeVarRun(ctx, cfg); err != nil {
 		return err
 	}
 	networksDir, err := dirnames.LimaNetworksDir()
@@ -165,12 +164,12 @@ var validation struct {
 	err error
 }
 
-func validateConfig(cfg *networks.Config) error {
+func validateConfig(ctx context.Context, cfg *networks.Config) error {
 	validation.Do(func() {
 		// make sure all cfg.Paths.* are secure
 		validation.err = cfg.Validate()
 		if validation.err == nil {
-			validation.err = cfg.VerifySudoAccess(cfg.Paths.Sudoers)
+			validation.err = cfg.VerifySudoAccess(ctx, cfg.Paths.Sudoers)
 		}
 	})
 	return validation.err
@@ -195,7 +194,7 @@ func startNetwork(ctx context.Context, cfg *networks.Config, name string) error 
 		return nil
 	}
 
-	if err := validateConfig(cfg); err != nil {
+	if err := validateConfig(ctx, cfg); err != nil {
 		return err
 	}
 	var daemons []string
@@ -247,14 +246,14 @@ func stopNetwork(ctx context.Context, cfg *networks.Config, name string) error {
 		pid, _ := store.ReadPIDFile(cfg.PIDFile(name, daemon))
 		if pid != 0 {
 			logrus.Infof("Stopping %s daemon for %q network", daemon, name)
-			if err := validateConfig(cfg); err != nil {
+			if err := validateConfig(ctx, cfg); err != nil {
 				return err
 			}
 			user, err := cfg.User(daemon)
 			if err != nil {
 				return err
 			}
-			err = sudo(user.User, user.Group, cfg.StopCmd(name, daemon))
+			err = sudo(ctx, user.User, user.Group, cfg.StopCmd(name, daemon))
 			if err != nil {
 				return err
 			}

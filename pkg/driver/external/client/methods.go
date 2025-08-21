@@ -17,12 +17,11 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/store"
 )
 
-func (d *DriverClient) Validate() error {
+func (d *DriverClient) Validate(ctx context.Context) error {
 	d.logger.Debug("Validating driver for the given config")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-
 	_, err := d.DriverSvc.Validate(ctx, &emptypb.Empty{})
 	if err != nil {
 		d.logger.Errorf("Validation failed: %v", err)

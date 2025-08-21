@@ -43,8 +43,7 @@ func PassFDToUnix(unixSock string) (*os.File, error) {
 
 // DialQemu support connecting to QEMU supported network stack via unix socket.
 // Returns os.File, connected dgram connection to be used for vz.
-func DialQemu(unixSock string) (*os.File, error) {
-	ctx := context.TODO()
+func DialQemu(ctx context.Context, unixSock string) (*os.File, error) {
 	var dialer net.Dialer
 	unixConn, err := dialer.DialContext(ctx, "unix", unixSock)
 	if err != nil {

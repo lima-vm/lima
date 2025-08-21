@@ -103,7 +103,7 @@ func EnsureDisk(ctx context.Context, cfg Config) error {
 	if err != nil {
 		return err
 	}
-	baseDiskInfo, err := qemuimgutil.GetInfo(baseDisk)
+	baseDiskInfo, err := qemuimgutil.GetInfo(ctx, baseDisk)
 	if err != nil {
 		return fmt.Errorf("failed to get the information of base disk %q: %w", baseDisk, err)
 	}
@@ -149,8 +149,7 @@ func sendHmpCommand(cfg Config, cmd, tag string) (string, error) {
 	return rawClient.HumanMonitorCommand(hmc, nil)
 }
 
-func execImgCommand(cfg Config, args ...string) (string, error) {
-	ctx := context.TODO()
+func execImgCommand(ctx context.Context, cfg Config, args ...string) (string, error) {
 	diffDisk := filepath.Join(cfg.InstanceDir, filenames.DiffDisk)
 	args = append(args, diffDisk)
 	logrus.Debugf("Running qemu-img %v command", args)
@@ -162,7 +161,7 @@ func execImgCommand(cfg Config, args ...string) (string, error) {
 	return string(b), err
 }
 
-func Del(cfg Config, run bool, tag string) error {
+func Del(ctx context.Context, cfg Config, run bool, tag string) error {
 	if run {
 		out, err := sendHmpCommand(cfg, "delvm", tag)
 		// there can still be output, even if no error!
@@ -172,11 +171,11 @@ func Del(cfg Config, run bool, tag string) error {
 		return err
 	}
 	// -d  deletes a snapshot
-	_, err := execImgCommand(cfg, "snapshot", "-d", tag)
+	_, err := execImgCommand(ctx, cfg, "snapshot", "-d", tag)
 	return err
 }
 
-func Save(cfg Config, run bool, tag string) error {
+func Save(ctx context.Context, cfg Config, run bool, tag string) error {
 	if run {
 		out, err := sendHmpCommand(cfg, "savevm", tag)
 		// there can still be output, even if no error!
@@ -186,11 +185,11 @@ func Save(cfg Config, run bool, tag string) error {
 		return err
 	}
 	// -c  creates a snapshot
-	_, err := execImgCommand(cfg, "snapshot", "-c", tag)
+	_, err := execImgCommand(ctx, cfg, "snapshot", "-c", tag)
 	return err
 }
 
-func Load(cfg Config, run bool, tag string) error {
+func Load(ctx context.Context, cfg Config, run bool, tag string) error {
 	if run {
 		out, err := sendHmpCommand(cfg, "loadvm", tag)
 		// there can still be output, even if no error!
@@ -200,12 +199,12 @@ func Load(cfg Config, run bool, tag string) error {
 		return err
 	}
 	// -a  applies a snapshot
-	_, err := execImgCommand(cfg, "snapshot", "-a", tag)
+	_, err := execImgCommand(ctx, cfg, "snapshot", "-a", tag)
 	return err
 }
 
 // List returns a space-separated list of all snapshots, with header and newlines.
-func List(cfg Config, run bool) (string, error) {
+func List(ctx context.Context, cfg Config, run bool) (string, error) {
 	if run {
 		out, err := sendHmpCommand(cfg, "info", "snapshots")
 		if err == nil {
@@ -217,7 +216,7 @@ func List(cfg Config, run bool) (string, error) {
 	}
 	// -l  lists all snapshots
 	args := []string{"snapshot", "-l"}
-	out, err := execImgCommand(cfg, args...)
+	out, err := execImgCommand(ctx, cfg, args...)
 	if err == nil {
 		// remove the redundant heading, result is not machine-parseable
 		out = strings.Replace(out, "Snapshot list:\n", "", 1)
@@ -288,9 +287,8 @@ type features struct {
 	CPUHelp []byte
 }
 
-func inspectFeatures(exe, machine string) (*features, error) {
+func inspectFeatures(ctx context.Context, exe, machine string) (*features, error) {
 	var (
-		ctx    = context.TODO()
 		f      features
 		stdout bytes.Buffer
 		stderr bytes.Buffer
@@ -474,12 +472,12 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 		return "", nil, err
 	}
 
-	features, err := inspectFeatures(exe, qemuMachine(*y.Arch))
+	features, err := inspectFeatures(ctx, exe, qemuMachine(*y.Arch))
 	if err != nil {
 		return "", nil, err
 	}
 
-	version, err := getQemuVersion(exe)
+	version, err := getQemuVersion(ctx, exe)
 	if err != nil {
 		logrus.WithError(err).Warning("Failed to detect QEMU version")
 	} else {
@@ -720,7 +718,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	if diskSize, _ := units.RAMInBytes(*cfg.LimaYAML.Disk); diskSize > 0 {
 		args = append(args, "-drive", fmt.Sprintf("file=%s,if=virtio,discard=on", diffDisk))
 	} else if !isBaseDiskCDROM {
-		baseDiskInfo, err := qemuimgutil.GetInfo(baseDisk)
+		baseDiskInfo, err := qemuimgutil.GetInfo(ctx, baseDisk)
 		if err != nil {
 			return "", nil, fmt.Errorf("failed to get the information of %q: %w", baseDisk, err)
 		}
@@ -977,8 +975,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	return exe, args, nil
 }
 
-func FindVirtiofsd(qemuExe string) (string, error) {
-	ctx := context.TODO()
+func FindVirtiofsd(ctx context.Context, qemuExe string) (string, error) {
 	type vhostUserBackend struct {
 		BackendType string `json:"type"`
 		Binary      string `json:"binary"`
@@ -1135,9 +1132,8 @@ func parseQemuVersion(output string) (*semver.Version, error) {
 	return &semver.Version{}, fmt.Errorf("failed to parse %v", output)
 }
 
-func getQemuVersion(qemuExe string) (*semver.Version, error) {
+func getQemuVersion(ctx context.Context, qemuExe string) (*semver.Version, error) {
 	var (
-		ctx    = context.TODO()
 		stdout bytes.Buffer
 		stderr bytes.Buffer
 	)

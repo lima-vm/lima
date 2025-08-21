@@ -5,12 +5,16 @@
 
 package store
 
-import "github.com/lima-vm/lima/v2/pkg/limayaml"
+import (
+	"context"
 
-func inspectStatus(instDir string, inst *Instance, y *limayaml.LimaYAML) {
+	"github.com/lima-vm/lima/v2/pkg/limayaml"
+)
+
+func inspectStatus(_ context.Context, instDir string, inst *Instance, y *limayaml.LimaYAML) {
 	inspectStatusWithPIDFiles(instDir, inst, y)
 }
 
-func GetSSHAddress(_ string) (string, error) {
+func GetSSHAddress(_ context.Context, _ string) (string, error) {
 	return "127.0.0.1", nil
 }

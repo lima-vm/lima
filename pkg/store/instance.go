@@ -71,7 +71,7 @@ type Instance struct {
 
 // Inspect returns err only when the instance does not exist (os.ErrNotExist).
 // Other errors are returned as *Instance.Errors.
-func Inspect(instName string) (*Instance, error) {
+func Inspect(ctx context.Context, instName string) (*Instance, error) {
 	inst := &Instance{
 		Name: instName,
 		// TODO: support customizing hostname
@@ -86,7 +86,7 @@ func Inspect(instName string) (*Instance, error) {
 	// Make sure inst.Dir is set, even when YAML validation fails
 	inst.Dir = instDir
 	yamlPath := filepath.Join(instDir, filenames.LimaYAML)
-	y, err := LoadYAMLByFilePath(yamlPath)
+	y, err := LoadYAMLByFilePath(ctx, yamlPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return nil, err
@@ -114,7 +114,7 @@ func Inspect(instName string) (*Instance, error) {
 			inst.Status = StatusBroken
 			inst.Errors = append(inst.Errors, fmt.Errorf("failed to connect to %q: %w", haSock, err))
 		} else {
-			ctx, cancel := context.WithTimeout(context.TODO(), 3*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 			defer cancel()
 			info, err := haClient.Info(ctx)
 			if err != nil {
@@ -150,7 +150,7 @@ func Inspect(instName string) (*Instance, error) {
 		inst.Protected = true
 	}
 
-	inspectStatus(instDir, inst, y)
+	inspectStatus(ctx, instDir, inst, y)
 
 	tmpl, err := template.New("format").Parse(y.Message)
 	if err != nil {

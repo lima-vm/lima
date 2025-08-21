@@ -4,6 +4,7 @@
 package limainfo
 
 import (
+	"context"
 	"errors"
 	"io/fs"
 
@@ -40,12 +41,12 @@ type GuestAgent struct {
 // New returns a LimaInfo object with the Lima version, a list of all Templates and their location,
 // the DefaultTemplate corresponding to template://default with all defaults filled in, the
 // LimaHome location, a list of all supported VMTypes, and a map of GuestAgents for each architecture.
-func New() (*LimaInfo, error) {
+func New(ctx context.Context) (*LimaInfo, error) {
 	b, err := templatestore.Read(templatestore.Default)
 	if err != nil {
 		return nil, err
 	}
-	y, err := limayaml.Load(b, "")
+	y, err := limayaml.Load(ctx, b, "")
 	if err != nil {
 		return nil, err
 	}

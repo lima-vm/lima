@@ -20,7 +20,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/store/filenames"
 )
 
-func Clone(_ context.Context, oldInst *store.Instance, newInstName string) (*store.Instance, error) {
+func Clone(ctx context.Context, oldInst *store.Instance, newInstName string) (*store.Instance, error) {
 	if newInstName == "" {
 		return nil, errors.New("got empty instName")
 	}
@@ -86,5 +86,5 @@ func Clone(_ context.Context, oldInst *store.Instance, newInstName string) (*sto
 		return nil, err
 	}
 
-	return store.Inspect(newInstName)
+	return store.Inspect(ctx, newInstName)
 }

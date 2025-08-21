@@ -5,6 +5,7 @@ package cidata
 
 import (
 	"compress/gzip"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -115,7 +116,7 @@ func setupEnv(instConfigEnv map[string]string, propagateProxyEnv bool, slirpGate
 	return env, nil
 }
 
-func templateArgs(bootScripts bool, instDir, name string, instConfig *limayaml.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort, vsockPort int, virtioPort string) (*TemplateArgs, error) {
+func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, instConfig *limayaml.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort, vsockPort int, virtioPort string) (*TemplateArgs, error) {
 	if err := limayaml.Validate(instConfig, false); err != nil {
 		return nil, err
 	}
@@ -174,7 +175,7 @@ func templateArgs(bootScripts bool, instDir, name string, instConfig *limayaml.L
 	// change instance id on every boot so network config will be processed again
 	args.IID = fmt.Sprintf("iid-%d", time.Now().Unix())
 
-	pubKeys, err := sshutil.DefaultPubKeys(*instConfig.SSH.LoadDotSSHPubKeys)
+	pubKeys, err := sshutil.DefaultPubKeys(ctx, *instConfig.SSH.LoadDotSSHPubKeys)
 	if err != nil {
 		return nil, err
 	}
@@ -332,8 +333,8 @@ func templateArgs(bootScripts bool, instDir, name string, instConfig *limayaml.L
 	return &args, nil
 }
 
-func GenerateCloudConfig(instDir, name string, instConfig *limayaml.LimaYAML) error {
-	args, err := templateArgs(false, instDir, name, instConfig, 0, 0, 0, "")
+func GenerateCloudConfig(ctx context.Context, instDir, name string, instConfig *limayaml.LimaYAML) error {
+	args, err := templateArgs(ctx, false, instDir, name, instConfig, 0, 0, 0, "")
 	if err != nil {
 		return err
 	}
@@ -355,8 +356,8 @@ func GenerateCloudConfig(instDir, name string, instConfig *limayaml.LimaYAML) er
 	return os.WriteFile(filepath.Join(instDir, filenames.CloudConfig), config, 0o444)
 }
 
-func GenerateISO9660(instDir, name string, instConfig *limayaml.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort int, guestAgentBinary, nerdctlArchive string, vsockPort int, virtioPort string) error {
-	args, err := templateArgs(true, instDir, name, instConfig, udpDNSLocalPort, tcpDNSLocalPort, vsockPort, virtioPort)
+func GenerateISO9660(ctx context.Context, instDir, name string, instConfig *limayaml.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort int, guestAgentBinary, nerdctlArchive string, vsockPort int, virtioPort string) error {
+	args, err := templateArgs(ctx, true, instDir, name, instConfig, udpDNSLocalPort, tcpDNSLocalPort, vsockPort, virtioPort)
 	if err != nil {
 		return err
 	}

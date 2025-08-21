@@ -4,6 +4,7 @@
 package windows
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"strings"
@@ -13,13 +14,13 @@ import (
 var vmIDRegex = regexp.MustCompile(`--vm-id\s\{(?P<vmID>.{36})\}`)
 
 // GetInstanceVMID returns the VM ID of a running WSL instance.
-func GetInstanceVMID(instanceName string) (string, error) {
+func GetInstanceVMID(ctx context.Context, instanceName string) (string, error) {
 	distroID, err := GetDistroID(instanceName)
 	if err != nil {
 		return "", err
 	}
 
-	cmdLines, err := GetProcessCommandLine("wslhost.exe")
+	cmdLines, err := GetProcessCommandLine(ctx, "wslhost.exe")
 	if err != nil {
 		return "", err
 	}

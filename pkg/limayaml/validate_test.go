@@ -13,7 +13,7 @@ import (
 )
 
 func TestValidateEmpty(t *testing.T) {
-	y, err := Load([]byte{}, "empty.yaml")
+	y, err := Load(t.Context(), []byte{}, "empty.yaml")
 	assert.NilError(t, err)
 	err = Validate(y, false)
 	assert.Error(t, err, "field `images` must be set")
@@ -60,7 +60,7 @@ func TestValidateMinimumLimaVersion(t *testing.T) {
 			version.Version = tt.currentVersion
 			t.Cleanup(func() { version.Version = oldVersion })
 
-			y, err := Load([]byte("minimumLimaVersion: "+tt.minimumLimaVersion+"\n"+images), "lima.yaml")
+			y, err := Load(t.Context(), []byte("minimumLimaVersion: "+tt.minimumLimaVersion+"\n"+images), "lima.yaml")
 			assert.NilError(t, err)
 
 			err = Validate(y, false)
@@ -76,13 +76,13 @@ func TestValidateMinimumLimaVersion(t *testing.T) {
 func TestValidateDigest(t *testing.T) {
 	images := `images: [{"location": "https://cloud-images.ubuntu.com/releases/oracular/release-20250701/ubuntu-24.10-server-cloudimg-amd64.img",digest: "69f31d3208895e5f646e345fbc95190e5e311ecd1359a4d6ee2c0b6483ceca03"}]`
 	validProbe := `probes: [{"script": "#!foo"}]`
-	y, err := Load([]byte(validProbe+"\n"+images), "lima.yaml")
+	y, err := Load(t.Context(), []byte(validProbe+"\n"+images), "lima.yaml")
 	assert.NilError(t, err)
 	err = Validate(y, false)
 	assert.Error(t, err, "field `images[0].digest` is invalid: 69f31d3208895e5f646e345fbc95190e5e311ecd1359a4d6ee2c0b6483ceca03: invalid checksum digest format")
 
 	images2 := `images: [{"location": "https://cloud-images.ubuntu.com/releases/oracular/release-20250701/ubuntu-24.10-server-cloudimg-amd64.img",digest: "sha001:69f31d3208895e5f646e345fbc95190e5e311ecd1359a4d6ee2c0b6483ceca03"}]`
-	y2, err := Load([]byte(validProbe+"\n"+images2), "lima.yaml")
+	y2, err := Load(t.Context(), []byte(validProbe+"\n"+images2), "lima.yaml")
 	assert.NilError(t, err)
 	err = Validate(y2, false)
 	assert.Error(t, err, "field `images[0].digest` is invalid: sha001:69f31d3208895e5f646e345fbc95190e5e311ecd1359a4d6ee2c0b6483ceca03: unsupported digest algorithm")
@@ -91,21 +91,21 @@ func TestValidateDigest(t *testing.T) {
 func TestValidateProbes(t *testing.T) {
 	images := `images: [{"location": "/"}]`
 	validProbe := `probes: [{"script": "#!foo"}]`
-	y, err := Load([]byte(validProbe+"\n"+images), "lima.yaml")
+	y, err := Load(t.Context(), []byte(validProbe+"\n"+images), "lima.yaml")
 	assert.NilError(t, err)
 
 	err = Validate(y, false)
 	assert.NilError(t, err)
 
 	invalidProbe := `probes: [{"script": "foo"}]`
-	y, err = Load([]byte(invalidProbe+"\n"+images), "lima.yaml")
+	y, err = Load(t.Context(), []byte(invalidProbe+"\n"+images), "lima.yaml")
 	assert.NilError(t, err)
 
 	err = Validate(y, false)
 	assert.Error(t, err, "field `probe[0].script` must start with a '#!' line")
 
 	invalidProbe = `probes: [{file: {digest: decafbad}}]`
-	y, err = Load([]byte(invalidProbe+"\n"+images), "lima.yaml")
+	y, err = Load(t.Context(), []byte(invalidProbe+"\n"+images), "lima.yaml")
 	assert.NilError(t, err)
 
 	err = Validate(y, false)
@@ -116,28 +116,28 @@ func TestValidateProbes(t *testing.T) {
 func TestValidateProvisionMode(t *testing.T) {
 	images := `images: [{location: /}]`
 	provisionBoot := `provision: [{mode: boot, script: "touch /tmp/param-$PARAM_BOOT"}]`
-	y, err := Load([]byte(provisionBoot+"\n"+images), "lima.yaml")
+	y, err := Load(t.Context(), []byte(provisionBoot+"\n"+images), "lima.yaml")
 	assert.NilError(t, err)
 
 	err = Validate(y, false)
 	assert.NilError(t, err)
 
 	provisionUser := `provision: [{mode: user, script: "touch /tmp/param-$PARAM_USER"}]`
-	y, err = Load([]byte(provisionUser+"\n"+images), "lima.yaml")
+	y, err = Load(t.Context(), []byte(provisionUser+"\n"+images), "lima.yaml")
 	assert.NilError(t, err)
 
 	err = Validate(y, false)
 	assert.NilError(t, err)
 
 	provisionDependency := `provision: [{mode: ansible, script: "touch /tmp/param-$PARAM_DEPENDENCY"}]`
-	y, err = Load([]byte(provisionDependency+"\n"+images), "lima.yaml")
+	y, err = Load(t.Context(), []byte(provisionDependency+"\n"+images), "lima.yaml")
 	assert.NilError(t, err)
 
 	err = Validate(y, false)
 	assert.NilError(t, err)
 
 	provisionInvalid := `provision: [{mode: invalid}]`
-	y, err = Load([]byte(provisionInvalid+"\n"+images), "lima.yaml")
+	y, err = Load(t.Context(), []byte(provisionInvalid+"\n"+images), "lima.yaml")
 	assert.NilError(t, err)
 
 	err = Validate(y, false)
@@ -148,21 +148,21 @@ func TestValidateProvisionMode(t *testing.T) {
 func TestValidateProvisionData(t *testing.T) {
 	images := `images: [{location: /}]`
 	validData := `provision: [{mode: data, path: /tmp, content: hello}]`
-	y, err := Load([]byte(validData+"\n"+images), "lima.yaml")
+	y, err := Load(t.Context(), []byte(validData+"\n"+images), "lima.yaml")
 	assert.NilError(t, err)
 
 	err = Validate(y, false)
 	assert.NilError(t, err)
 
 	invalidData := `provision: [{mode: data, content: hello}]`
-	y, err = Load([]byte(invalidData+"\n"+images), "lima.yaml")
+	y, err = Load(t.Context(), []byte(invalidData+"\n"+images), "lima.yaml")
 	assert.NilError(t, err)
 
 	err = Validate(y, false)
 	assert.Error(t, err, "field `provision[0].path` must not be empty when mode is \"data\"")
 
 	invalidData = `provision: [{mode: data, path: /tmp, content: hello, permissions: 9}]`
-	y, err = Load([]byte(invalidData+"\n"+images), "lima.yaml")
+	y, err = Load(t.Context(), []byte(invalidData+"\n"+images), "lima.yaml")
 	assert.NilError(t, err)
 
 	err = Validate(y, false)
@@ -177,7 +177,7 @@ additionalDisks:
   - name: "disk1"
   - name: "disk2"
 `
-	y, err := Load([]byte(validDisks+"\n"+images), "lima.yaml")
+	y, err := Load(t.Context(), []byte(validDisks+"\n"+images), "lima.yaml")
 	assert.NilError(t, err)
 
 	err = Validate(y, false)
@@ -187,7 +187,7 @@ additionalDisks:
 additionalDisks:
   - name: ""
 `
-	y, err = Load([]byte(invalidDisks+"\n"+images), "lima.yaml")
+	y, err = Load(t.Context(), []byte(invalidDisks+"\n"+images), "lima.yaml")
 	assert.NilError(t, err)
 
 	err = Validate(y, false)
@@ -203,7 +203,7 @@ func TestValidateParamName(t *testing.T) {
 		`param: {"Name_123": "value"}`,
 	}
 	for _, param := range validParam {
-		y, err := Load([]byte(param+"\n"+validProvision+"\n"+images), "lima.yaml")
+		y, err := Load(t.Context(), []byte(param+"\n"+validProvision+"\n"+images), "lima.yaml")
 		assert.NilError(t, err)
 
 		err = Validate(y, false)
@@ -217,7 +217,7 @@ func TestValidateParamName(t *testing.T) {
 		`param: {"Last.Name": "value"}`,
 	}
 	for _, param := range invalidParam {
-		y, err := Load([]byte(param+"\n"+invalidProvision+"\n"+images), "lima.yaml")
+		y, err := Load(t.Context(), []byte(param+"\n"+invalidProvision+"\n"+images), "lima.yaml")
 		assert.NilError(t, err)
 
 		err = Validate(y, false)
@@ -235,7 +235,7 @@ func TestValidateParamValue(t *testing.T) {
 		`param: {"name": "Symbols ½ and emoji → 👀"}`,
 	}
 	for _, param := range validParam {
-		y, err := Load([]byte(param+"\n"+provision+"\n"+images), "lima.yaml")
+		y, err := Load(t.Context(), []byte(param+"\n"+provision+"\n"+images), "lima.yaml")
 		assert.NilError(t, err)
 
 		err = Validate(y, false)
@@ -247,7 +247,7 @@ func TestValidateParamValue(t *testing.T) {
 		`param: {"name": "\r"}`,
 	}
 	for _, param := range invalidParam {
-		y, err := Load([]byte(param+"\n"+provision+"\n"+images), "lima.yaml")
+		y, err := Load(t.Context(), []byte(param+"\n"+provision+"\n"+images), "lima.yaml")
 		assert.NilError(t, err)
 
 		err = Validate(y, false)
@@ -258,7 +258,7 @@ func TestValidateParamValue(t *testing.T) {
 func TestValidateParamIsUsed(t *testing.T) {
 	paramYaml := `param:
   name: value`
-	_, err := Load([]byte(paramYaml), "paramIsNotUsed.yaml")
+	_, err := Load(t.Context(), []byte(paramYaml), "paramIsNotUsed.yaml")
 	assert.Error(t, err, "field `param` key \"name\" is not used in any provision, probe, copyToHost, or portForward")
 
 	fieldsUsingParam := []string{
@@ -274,7 +274,7 @@ func TestValidateParamIsUsed(t *testing.T) {
 		`portForwards: [{"guestSocket": "/tmp", "hostSocket": "/tmp/{{ .Param.name }}"}]`,
 	}
 	for _, fieldUsingParam := range fieldsUsingParam {
-		_, err = Load([]byte(fieldUsingParam+"\n"+paramYaml), "paramIsUsed.yaml")
+		_, err = Load(t.Context(), []byte(fieldUsingParam+"\n"+paramYaml), "paramIsUsed.yaml")
 		//
 		assert.NilError(t, err)
 	}
@@ -293,7 +293,7 @@ func TestValidateParamIsUsed(t *testing.T) {
 		`portForwards: [{"guestSocket": "/var/run/docker.sock", "hostSocket": "{{.Dir}}/sock/docker-{{if eq .Param.rootful \"true\"}}rootful{{else}}rootless{{end}}.sock"}]`,
 	}
 	for _, fieldUsingIfParamRootfulTrue := range fieldsUsingIfParamRootfulTrue {
-		_, err = Load([]byte(fieldUsingIfParamRootfulTrue+"\n"+rootfulYaml), "paramIsUsed.yaml")
+		_, err = Load(t.Context(), []byte(fieldUsingIfParamRootfulTrue+"\n"+rootfulYaml), "paramIsUsed.yaml")
 		//
 		assert.NilError(t, err)
 	}
@@ -302,7 +302,7 @@ func TestValidateParamIsUsed(t *testing.T) {
 	rootFulYaml := `param:
   rootFul: true`
 	for _, fieldUsingIfParamRootfulTrue := range fieldsUsingIfParamRootfulTrue {
-		_, err = Load([]byte(fieldUsingIfParamRootfulTrue+"\n"+rootFulYaml), "paramIsUsed.yaml")
+		_, err = Load(t.Context(), []byte(fieldUsingIfParamRootfulTrue+"\n"+rootFulYaml), "paramIsUsed.yaml")
 		//
 		assert.Error(t, err, "field `param` key \"rootFul\" is not used in any provision, probe, copyToHost, or portForward")
 	}
@@ -325,7 +325,7 @@ provision:
     content: test
 `
 
-	y, err := Load([]byte(yamlWithMultipleErrors), "multiple-errors.yaml")
+	y, err := Load(t.Context(), []byte(yamlWithMultipleErrors), "multiple-errors.yaml")
 	assert.NilError(t, err)
 	err = Validate(y, false)
 
@@ -379,7 +379,7 @@ func TestValidateAgainstLatestConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := ValidateAgainstLatestConfig([]byte(tt.yNew), []byte(tt.yLatest))
+			err := ValidateAgainstLatestConfig(t.Context(), []byte(tt.yNew), []byte(tt.yLatest))
 			if tt.wantErr == nil {
 				assert.NilError(t, err)
 			} else {

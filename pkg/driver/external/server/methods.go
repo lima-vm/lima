@@ -117,9 +117,9 @@ func (s *DriverServer) GetInfo(_ context.Context, _ *emptypb.Empty) (*pb.InfoRes
 	}, nil
 }
 
-func (s *DriverServer) Validate(_ context.Context, empty *emptypb.Empty) (*emptypb.Empty, error) {
+func (s *DriverServer) Validate(ctx context.Context, empty *emptypb.Empty) (*emptypb.Empty, error) {
 	s.logger.Debugf("Received Validate request")
-	err := s.driver.Validate()
+	err := s.driver.Validate(ctx)
 	if err != nil {
 		s.logger.Errorf("Validation failed: %v", err)
 		return empty, err

@@ -26,7 +26,7 @@ var systemdTemplate string
 var launchdTemplate string
 
 // CreateStartAtLoginEntry respect host OS arch and create unit file.
-func CreateStartAtLoginEntry(hostOS, instName, workDir string) error {
+func CreateStartAtLoginEntry(ctx context.Context, hostOS, instName, workDir string) error {
 	unitPath := GetFilePath(hostOS, instName)
 	if _, err := os.Stat(unitPath); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
@@ -41,17 +41,17 @@ func CreateStartAtLoginEntry(hostOS, instName, workDir string) error {
 	if err := os.WriteFile(unitPath, tmpl, 0o644); err != nil {
 		return err
 	}
-	return enableDisableService("enable", hostOS, GetFilePath(hostOS, instName))
+	return enableDisableService(ctx, "enable", hostOS, GetFilePath(hostOS, instName))
 }
 
 // DeleteStartAtLoginEntry respect host OS arch and delete unit file.
 // Return true, nil if unit file has been deleted.
-func DeleteStartAtLoginEntry(hostOS, instName string) (bool, error) {
+func DeleteStartAtLoginEntry(ctx context.Context, hostOS, instName string) (bool, error) {
 	unitPath := GetFilePath(hostOS, instName)
 	if _, err := os.Stat(unitPath); err != nil {
 		return false, err
 	}
-	if err := enableDisableService("disable", hostOS, GetFilePath(hostOS, instName)); err != nil {
+	if err := enableDisableService(ctx, "disable", hostOS, GetFilePath(hostOS, instName)); err != nil {
 		return false, err
 	}
 	if err := os.Remove(unitPath); err != nil {
@@ -78,8 +78,7 @@ func GetFilePath(hostOS, instName string) string {
 	return fileTmpl
 }
 
-func enableDisableService(action, hostOS, serviceWithPath string) error {
-	ctx := context.TODO()
+func enableDisableService(ctx context.Context, action, hostOS, serviceWithPath string) error {
 	// Get filename without extension
 	filename := strings.TrimSuffix(path.Base(serviceWithPath), filepath.Ext(path.Base(serviceWithPath)))
 

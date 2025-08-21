@@ -5,6 +5,7 @@ package limayaml
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	_ "embed"
 	"errors"
@@ -137,7 +138,7 @@ func defaultGuestInstallPrefix() string {
 //   - Networks are appended in d, y, o order
 //   - DNS are picked from the highest priority where DNS is not empty.
 //   - CACertificates Files and Certs are uniquely appended in d, y, o order
-func FillDefault(y, d, o *LimaYAML, filePath string, warn bool) {
+func FillDefault(ctx context.Context, y, d, o *LimaYAML, filePath string, warn bool) {
 	instDir := filepath.Dir(filePath)
 
 	// existingLimaVersion can be empty if the instance was created with Lima prior to v0.20,
@@ -184,22 +185,22 @@ func FillDefault(y, d, o *LimaYAML, filePath string, warn bool) {
 		y.User.UID = o.User.UID
 	}
 	if y.User.Name == nil {
-		y.User.Name = ptr.Of(osutil.LimaUser(existingLimaVersion, warn).Username)
+		y.User.Name = ptr.Of(osutil.LimaUser(ctx, existingLimaVersion, warn).Username)
 		warn = false
 	}
 	if y.User.Comment == nil {
-		y.User.Comment = ptr.Of(osutil.LimaUser(existingLimaVersion, warn).Name)
+		y.User.Comment = ptr.Of(osutil.LimaUser(ctx, existingLimaVersion, warn).Name)
 		warn = false
 	}
 	if y.User.Home == nil {
-		y.User.Home = ptr.Of(osutil.LimaUser(existingLimaVersion, warn).HomeDir)
+		y.User.Home = ptr.Of(osutil.LimaUser(ctx, existingLimaVersion, warn).HomeDir)
 		warn = false
 	}
 	if y.User.Shell == nil {
 		y.User.Shell = ptr.Of("/bin/bash")
 	}
 	if y.User.UID == nil {
-		uidString := osutil.LimaUser(existingLimaVersion, warn).Uid
+		uidString := osutil.LimaUser(ctx, existingLimaVersion, warn).Uid
 		if uid, err := strconv.ParseUint(uidString, 10, 32); err == nil {
 			y.User.UID = ptr.Of(uint32(uid))
 		} else {
@@ -778,7 +779,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string, warn bool) {
 			mountLocation := mounts[i].Location
 			if runtime.GOOS == "windows" {
 				var err error
-				mountLocation, err = ioutilx.WindowsSubsystemPath(mountLocation)
+				mountLocation, err = ioutilx.WindowsSubsystemPath(ctx, mountLocation)
 				if err != nil {
 					logrus.WithError(err).Warnf("Couldn't convert location %q into mount target", mounts[i].Location)
 				}
@@ -1189,7 +1190,7 @@ var hasSMEDarwin = sync.OnceValue(func() bool {
 		return false
 	}
 	// golang.org/x/sys/cpu does not support inspecting the availability of SME yet
-	s, err := osutil.Sysctl("hw.optional.arm.FEAT_SME")
+	s, err := osutil.Sysctl(context.Background(), "hw.optional.arm.FEAT_SME")
 	if err != nil {
 		logrus.WithError(err).Debug("failed to check hw.optional.arm.FEAT_SME")
 	}

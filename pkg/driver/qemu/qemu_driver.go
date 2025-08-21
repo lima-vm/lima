@@ -73,9 +73,9 @@ func (l *LimaQemuDriver) Configure(inst *store.Instance) *driver.ConfiguredDrive
 	}
 }
 
-func (l *LimaQemuDriver) Validate() error {
+func (l *LimaQemuDriver) Validate(ctx context.Context) error {
 	if runtime.GOOS == "darwin" {
-		if err := l.checkBinarySignature(); err != nil {
+		if err := l.checkBinarySignature(ctx); err != nil {
 			return err
 		}
 	}
@@ -119,7 +119,7 @@ func (l *LimaQemuDriver) Start(_ context.Context) (chan error, error) {
 
 	var vhostCmds []*exec.Cmd
 	if *l.Instance.Config.MountType == limayaml.VIRTIOFS {
-		vhostExe, err := FindVirtiofsd(qExe)
+		vhostExe, err := FindVirtiofsd(ctx, qExe)
 		if err != nil {
 			return nil, err
 		}
@@ -270,7 +270,7 @@ func waitFileExists(path string, timeout time.Duration) error {
 
 // Ask the user to sign the qemu binary with the "com.apple.security.hypervisor" if needed.
 // Workaround for https://github.com/lima-vm/lima/issues/1742
-func (l *LimaQemuDriver) checkBinarySignature() error {
+func (l *LimaQemuDriver) checkBinarySignature(ctx context.Context) error {
 	macOSProductVersion, err := osutil.ProductVersion()
 	if err != nil {
 		return err
@@ -282,7 +282,7 @@ func (l *LimaQemuDriver) checkBinarySignature() error {
 			return fmt.Errorf("failed to find the QEMU binary for the architecture %q: %w", l.Instance.Arch, err)
 		}
 		if accel := Accel(l.Instance.Arch); accel == "hvf" {
-			entitlementutil.AskToSignIfNotSignedProperly(qExe)
+			entitlementutil.AskToSignIfNotSignedProperly(ctx, qExe)
 		}
 	}
 
@@ -434,40 +434,40 @@ func logPipeRoutine(r io.Reader, header string) {
 	}
 }
 
-func (l *LimaQemuDriver) DeleteSnapshot(_ context.Context, tag string) error {
+func (l *LimaQemuDriver) DeleteSnapshot(ctx context.Context, tag string) error {
 	qCfg := Config{
 		Name:        l.Instance.Name,
 		InstanceDir: l.Instance.Dir,
 		LimaYAML:    l.Instance.Config,
 	}
-	return Del(qCfg, l.Instance.Status == store.StatusRunning, tag)
+	return Del(ctx, qCfg, l.Instance.Status == store.StatusRunning, tag)
 }
 
-func (l *LimaQemuDriver) CreateSnapshot(_ context.Context, tag string) error {
+func (l *LimaQemuDriver) CreateSnapshot(ctx context.Context, tag string) error {
 	qCfg := Config{
 		Name:        l.Instance.Name,
 		InstanceDir: l.Instance.Dir,
 		LimaYAML:    l.Instance.Config,
 	}
-	return Save(qCfg, l.Instance.Status == store.StatusRunning, tag)
+	return Save(ctx, qCfg, l.Instance.Status == store.StatusRunning, tag)
 }
 
-func (l *LimaQemuDriver) ApplySnapshot(_ context.Context, tag string) error {
+func (l *LimaQemuDriver) ApplySnapshot(ctx context.Context, tag string) error {
 	qCfg := Config{
 		Name:        l.Instance.Name,
 		InstanceDir: l.Instance.Dir,
 		LimaYAML:    l.Instance.Config,
 	}
-	return Load(qCfg, l.Instance.Status == store.StatusRunning, tag)
+	return Load(ctx, qCfg, l.Instance.Status == store.StatusRunning, tag)
 }
 
-func (l *LimaQemuDriver) ListSnapshots(_ context.Context) (string, error) {
+func (l *LimaQemuDriver) ListSnapshots(ctx context.Context) (string, error) {
 	qCfg := Config{
 		Name:        l.Instance.Name,
 		InstanceDir: l.Instance.Dir,
 		LimaYAML:    l.Instance.Config,
 	}
-	return List(qCfg, l.Instance.Status == store.StatusRunning)
+	return List(ctx, qCfg, l.Instance.Status == store.StatusRunning)
 }
 
 func (l *LimaQemuDriver) GuestAgentConn(ctx context.Context) (net.Conn, string, error) {

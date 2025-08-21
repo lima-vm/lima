@@ -4,6 +4,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -74,7 +75,7 @@ func newTemplateCopyCommand() *cobra.Command {
 	return templateCopyCommand
 }
 
-func fillDefaults(tmpl *limatmpl.Template) error {
+func fillDefaults(ctx context.Context, tmpl *limatmpl.Template) error {
 	limaDir, err := dirnames.LimaDir()
 	if err != nil {
 		return err
@@ -82,7 +83,7 @@ func fillDefaults(tmpl *limatmpl.Template) error {
 	// Load() will merge the template with override.yaml and default.yaml via FillDefaults().
 	// FillDefaults() needs the potential instance directory to validate host templates using {{.Dir}}.
 	filePath := filepath.Join(limaDir, tmpl.Name+".yaml")
-	tmpl.Config, err = limayaml.Load(tmpl.Bytes, filePath)
+	tmpl.Config, err = limayaml.Load(ctx, tmpl.Bytes, filePath)
 	if err == nil {
 		tmpl.Bytes, err = limayaml.Marshal(tmpl.Config, false)
 	}
@@ -90,6 +91,7 @@ func fillDefaults(tmpl *limatmpl.Template) error {
 }
 
 func templateCopyAction(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
 	source := args[0]
 	target := args[1]
 	embed, err := cmd.Flags().GetBool("embed")
@@ -137,7 +139,7 @@ func templateCopyAction(cmd *cobra.Command, args []string) error {
 		}
 	}
 	if fill {
-		if err := fillDefaults(tmpl); err != nil {
+		if err := fillDefaults(ctx, tmpl); err != nil {
 			return err
 		}
 	}
@@ -177,6 +179,7 @@ func newTemplateYQCommand() *cobra.Command {
 }
 
 func templateYQAction(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
 	locator := args[0]
 	expr := args[1]
 	tmpl, err := limatmpl.Read(cmd.Context(), "", locator)
@@ -189,7 +192,7 @@ func templateYQAction(cmd *cobra.Command, args []string) error {
 	if err := tmpl.Embed(cmd.Context(), true, true); err != nil {
 		return err
 	}
-	if err := fillDefaults(tmpl); err != nil {
+	if err := fillDefaults(ctx, tmpl); err != nil {
 		return err
 	}
 	out, err := yqutil.EvaluateExpressionPlain(expr, string(tmpl.Bytes))
@@ -211,6 +214,7 @@ func newTemplateValidateCommand() *cobra.Command {
 }
 
 func templateValidateAction(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
 	fill, err := cmd.Flags().GetBool("fill")
 	if err != nil {
 		return err
@@ -238,7 +242,7 @@ func templateValidateAction(cmd *cobra.Command, args []string) error {
 		// Load() will merge the template with override.yaml and default.yaml via FillDefaults().
 		// FillDefaults() needs the potential instance directory to validate host templates using {{.Dir}}.
 		filePath := filepath.Join(limaDir, tmpl.Name+".yaml")
-		y, err := limayaml.Load(tmpl.Bytes, filePath)
+		y, err := limayaml.Load(ctx, tmpl.Bytes, filePath)
 		if err != nil {
 			return err
 		}

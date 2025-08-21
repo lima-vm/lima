@@ -14,7 +14,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 )
 
-func inspectStatus(instDir string, inst *Instance, y *limayaml.LimaYAML) {
+func inspectStatus(ctx context.Context, instDir string, inst *Instance, y *limayaml.LimaYAML) {
 	if inst.VMType == limayaml.WSL2 {
 		status, err := GetWslStatus(inst.Name)
 		if err != nil {
@@ -27,7 +27,7 @@ func inspectStatus(instDir string, inst *Instance, y *limayaml.LimaYAML) {
 		inst.SSHLocalPort = 22
 
 		if inst.Status == StatusRunning {
-			sshAddr, err := GetSSHAddress(inst.Name)
+			sshAddr, err := GetSSHAddress(ctx, inst.Name)
 			if err == nil {
 				inst.SSHAddress = sshAddr
 			} else {
@@ -124,8 +124,7 @@ func GetWslStatus(instName string) (string, error) {
 // 168.1.1.1 [10.0.0.1]
 // But busybox hostname does not implement --all-ip-addresses:
 // hostname: unrecognized option: I
-func GetSSHAddress(instName string) (string, error) {
-	ctx := context.TODO()
+func GetSSHAddress(ctx context.Context, instName string) (string, error) {
 	distroName := "lima-" + instName
 	// Ubuntu
 	cmd := exec.CommandContext(ctx, "wsl.exe", "-d", distroName, "bash", "-c", `hostname -I | cut -d ' ' -f1`)

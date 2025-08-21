@@ -102,7 +102,7 @@ var (
 	warnings []string
 )
 
-func LimaUser(limaVersion string, warn bool) *user.User {
+func LimaUser(ctx context.Context, limaVersion string, warn bool) *user.User {
 	once.Do(func() {
 		limaUser = currentUser
 		if !regexUsername.MatchString(limaUser.Username) {
@@ -113,7 +113,7 @@ func LimaUser(limaVersion string, warn bool) *user.User {
 		}
 		limaUser.HomeDir = "/home/{{.User}}.linux"
 		if runtime.GOOS == "windows" {
-			idu, err := call([]string{"id", "-u"})
+			idu, err := call(ctx, []string{"id", "-u"})
 			if err != nil {
 				logrus.Debug(err)
 			}
@@ -127,7 +127,7 @@ func LimaUser(limaVersion string, warn bool) *user.User {
 				warnings = append(warnings, warning)
 				limaUser.Uid = formatUidGid(uid)
 			}
-			idg, err := call([]string{"id", "-g"})
+			idg, err := call(ctx, []string{"id", "-g"})
 			if err != nil {
 				logrus.Debug(err)
 			}
@@ -161,8 +161,7 @@ func LimaUser(limaVersion string, warn bool) *user.User {
 	return &u
 }
 
-func call(args []string) (string, error) {
-	ctx := context.TODO()
+func call(ctx context.Context, args []string) (string, error) {
 	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
 	out, err := cmd.Output()
 	if err != nil {

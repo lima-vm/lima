@@ -30,13 +30,14 @@ func newFactoryResetCommand() *cobra.Command {
 	return resetCommand
 }
 
-func factoryResetAction(_ *cobra.Command, args []string) error {
+func factoryResetAction(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
 	instName := DefaultInstanceName
 	if len(args) > 0 {
 		instName = args[0]
 	}
 
-	inst, err := store.Inspect(instName)
+	inst, err := store.Inspect(ctx, instName)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			logrus.Infof("Instance %q not found", instName)
@@ -69,7 +70,7 @@ func factoryResetAction(_ *cobra.Command, args []string) error {
 		}
 	}
 	// Regenerate the cloud-config.yaml, to reflect any changes to the global _config
-	if err := cidata.GenerateCloudConfig(inst.Dir, instName, inst.Config); err != nil {
+	if err := cidata.GenerateCloudConfig(ctx, inst.Dir, instName, inst.Config); err != nil {
 		logrus.Error(err)
 	}
 
