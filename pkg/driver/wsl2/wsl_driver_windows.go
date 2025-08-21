@@ -71,7 +71,7 @@ func New() *LimaWslDriver {
 	}
 }
 
-func (l *LimaWslDriver) Configure(inst *limatype.Instance) *driver.ConfiguredDriver {
+func (l *LimaWslDriver) Configure(_ context.Context, inst *limatype.Instance) *driver.ConfiguredDriver {
 	l.Instance = inst
 	l.SSHLocalPort = inst.SSHLocalPort
 
@@ -264,7 +264,7 @@ func (l *LimaWslDriver) canRunGUI() bool {
 	return false
 }
 
-func (l *LimaWslDriver) RunGUI() error {
+func (l *LimaWslDriver) RunGUI(_ context.Context) error {
 	return fmt.Errorf("RunGUI is not supported for the given driver '%s' and display '%s'", "wsl", *l.Instance.Config.Video.Display)
 }
 
@@ -298,7 +298,7 @@ func (l *LimaWslDriver) GuestAgentConn(ctx context.Context) (net.Conn, string, e
 	return conn, "vsock", nil
 }
 
-func (l *LimaWslDriver) Info() driver.Info {
+func (l *LimaWslDriver) Info(_ context.Context) driver.Info {
 	var info driver.Info
 	info.Name = "wsl2"
 	if l.Instance != nil {
@@ -351,7 +351,7 @@ func (l *LimaWslDriver) ListSnapshots(_ context.Context) (string, error) {
 	return "", errUnimplemented
 }
 
-func (l *LimaWslDriver) ForwardGuestAgent() bool {
+func (l *LimaWslDriver) ForwardGuestAgent(_ context.Context) bool {
 	// If driver is not providing, use host agent
 	return l.vSockPort == 0 && l.virtioPort == ""
 }

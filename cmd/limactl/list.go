@@ -287,7 +287,7 @@ func listAction(cmd *cobra.Command, args []string) error {
 		}
 	} else {
 		var res []byte
-		if res, err = yqutil.EvaluateExpression(yqExpr, buf.Bytes()); err != nil {
+		if res, err = yqutil.EvaluateExpression(ctx, yqExpr, buf.Bytes()); err != nil {
 			return err
 		}
 		str = string(res)

@@ -47,7 +47,7 @@ func deleteAction(cmd *cobra.Command, args []string) error {
 			}
 			return err
 		}
-		if err := instance.Delete(cmd.Context(), inst, force); err != nil {
+		if err := instance.Delete(ctx, inst, force); err != nil {
 			return fmt.Errorf("failed to delete instance %q: %w", instName, err)
 		}
 		if runtime.GOOS == "darwin" || runtime.GOOS == "linux" {
@@ -60,7 +60,7 @@ func deleteAction(cmd *cobra.Command, args []string) error {
 		}
 		logrus.Infof("Deleted %q (%q)", instName, inst.Dir)
 	}
-	return networks.Reconcile(cmd.Context(), "")
+	return networks.Reconcile(ctx, "")
 }
 
 func deleteBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
