@@ -76,10 +76,14 @@ GUI:
 - [lima-gui](https://github.com/afbjorklund/lima-gui): Qt GUI for Lima
 
 ### Communication channels
+<!-- Duplicated from https://lima-vm.io/docs/community/ -->
 - [GitHub Discussions](https://github.com/lima-vm/lima/discussions)
 - `#lima` channel in the CNCF Slack
   - New account: <https://slack.cncf.io/>
   - Login: <https://cloud-native.slack.com/>
+- Zoom meetings (tentatively monthly)
+  - Meeting notes & agenda proposals: https://github.com/lima-vm/lima/discussions/categories/meetings
+  - Calendar: https://zoom-lfx.platform.linuxfoundation.org/meetings/lima
 
 ### Code of Conduct
 Lima follows the [CNCF Code of Conduct](https://github.com/cncf/foundation/blob/main/code-of-conduct.md).
