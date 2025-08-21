@@ -4,6 +4,7 @@
 package proxyimgutil
 
 import (
+	"context"
 	"errors"
 	"os"
 	"os/exec"
@@ -20,7 +21,7 @@ type ImageDiskManager struct {
 }
 
 // NewDiskUtil returns a new instance of ImageDiskManager that uses both QEMU and native image utilities.
-func NewDiskUtil() imgutil.ImageDiskManager {
+func NewDiskUtil(_ context.Context) imgutil.ImageDiskManager {
 	return &ImageDiskManager{
 		qemu:   &qemuimgutil.QemuImageUtil{DefaultFormat: qemuimgutil.QemuImgFormat},
 		native: &nativeimgutil.NativeImageUtil{},
@@ -28,48 +29,48 @@ func NewDiskUtil() imgutil.ImageDiskManager {
 }
 
 // CreateDisk creates a new disk image with the specified size.
-func (p *ImageDiskManager) CreateDisk(disk string, size int64) error {
-	err := p.qemu.CreateDisk(disk, size)
+func (p *ImageDiskManager) CreateDisk(ctx context.Context, disk string, size int64) error {
+	err := p.qemu.CreateDisk(ctx, disk, size)
 	if err == nil {
 		return nil
 	}
 	if errors.Is(err, exec.ErrNotFound) {
-		return p.native.CreateDisk(disk, size)
+		return p.native.CreateDisk(ctx, disk, size)
 	}
 	return err
 }
 
 // ResizeDisk resizes an existing disk image to the specified size.
-func (p *ImageDiskManager) ResizeDisk(disk string, size int64) error {
-	err := p.qemu.ResizeDisk(disk, size)
+func (p *ImageDiskManager) ResizeDisk(ctx context.Context, disk string, size int64) error {
+	err := p.qemu.ResizeDisk(ctx, disk, size)
 	if err == nil {
 		return nil
 	}
 	if errors.Is(err, exec.ErrNotFound) {
-		return p.native.ResizeDisk(disk, size)
+		return p.native.ResizeDisk(ctx, disk, size)
 	}
 	return err
 }
 
 // ConvertToRaw converts a disk image to raw format.
-func (p *ImageDiskManager) ConvertToRaw(source, dest string, size *int64, allowSourceWithBackingFile bool) error {
-	err := p.qemu.ConvertToRaw(source, dest, size, allowSourceWithBackingFile)
+func (p *ImageDiskManager) ConvertToRaw(ctx context.Context, source, dest string, size *int64, allowSourceWithBackingFile bool) error {
+	err := p.qemu.ConvertToRaw(ctx, source, dest, size, allowSourceWithBackingFile)
 	if err == nil {
 		return nil
 	}
 	if errors.Is(err, exec.ErrNotFound) {
-		return p.native.ConvertToRaw(source, dest, size, allowSourceWithBackingFile)
+		return p.native.ConvertToRaw(ctx, source, dest, size, allowSourceWithBackingFile)
 	}
 	return err
 }
 
-func (p *ImageDiskManager) MakeSparse(f *os.File, offset int64) error {
-	err := p.qemu.MakeSparse(f, offset)
+func (p *ImageDiskManager) MakeSparse(ctx context.Context, f *os.File, offset int64) error {
+	err := p.qemu.MakeSparse(ctx, f, offset)
 	if err == nil {
 		return nil
 	}
 	if errors.Is(err, exec.ErrNotFound) {
-		return p.native.MakeSparse(f, offset)
+		return p.native.MakeSparse(ctx, f, offset)
 	}
 	return err
 }

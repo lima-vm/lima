@@ -85,7 +85,7 @@ func waitForInstanceShutdown(ctx context.Context, inst *store.Instance) error {
 	for {
 		select {
 		case <-ticker.C:
-			updatedInst, err := store.Inspect(inst.Name)
+			updatedInst, err := store.Inspect(ctx, inst.Name)
 			if err != nil {
 				return fmt.Errorf("failed to inspect instance status: %w", err)
 			}

@@ -33,12 +33,13 @@ func newDeleteCommand() *cobra.Command {
 }
 
 func deleteAction(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
 	force, err := cmd.Flags().GetBool("force")
 	if err != nil {
 		return err
 	}
 	for _, instName := range args {
-		inst, err := store.Inspect(instName)
+		inst, err := store.Inspect(ctx, instName)
 		if err != nil {
 			if errors.Is(err, os.ErrNotExist) {
 				logrus.Warnf("Ignoring non-existent instance %q", instName)
@@ -50,7 +51,7 @@ func deleteAction(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("failed to delete instance %q: %w", instName, err)
 		}
 		if runtime.GOOS == "darwin" || runtime.GOOS == "linux" {
-			deleted, err := autostart.DeleteStartAtLoginEntry(runtime.GOOS, instName)
+			deleted, err := autostart.DeleteStartAtLoginEntry(ctx, runtime.GOOS, instName)
 			if err != nil && !errors.Is(err, os.ErrNotExist) {
 				logrus.WithError(err).Warnf("The autostart file for instance %q does not exist", instName)
 			} else if deleted {

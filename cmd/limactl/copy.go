@@ -89,11 +89,11 @@ func copyAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	legacySSH := sshutil.DetectOpenSSHVersion(sshExe).LessThan(*semver.New("8.0.0"))
+	legacySSH := sshutil.DetectOpenSSHVersion(ctx, sshExe).LessThan(*semver.New("8.0.0"))
 	for _, arg := range args {
 		if runtime.GOOS == "windows" {
 			if filepath.IsAbs(arg) {
-				arg, err = ioutilx.WindowsSubsystemPath(arg)
+				arg, err = ioutilx.WindowsSubsystemPath(ctx, arg)
 				if err != nil {
 					return err
 				}
@@ -107,7 +107,7 @@ func copyAction(cmd *cobra.Command, args []string) error {
 			scpArgs = append(scpArgs, arg)
 		case 2:
 			instName := path[0]
-			inst, err := store.Inspect(instName)
+			inst, err := store.Inspect(ctx, instName)
 			if err != nil {
 				if errors.Is(err, os.ErrNotExist) {
 					return fmt.Errorf("instance %q does not exist, run `limactl create %s` to create a new instance", instName, instName)
@@ -144,7 +144,7 @@ func copyAction(cmd *cobra.Command, args []string) error {
 			if err != nil {
 				return err
 			}
-			sshOpts, err = sshutil.SSHOpts(sshExe, inst.Dir, *inst.Config.User.Name, false, false, false, false)
+			sshOpts, err = sshutil.SSHOpts(ctx, sshExe, inst.Dir, *inst.Config.User.Name, false, false, false, false)
 			if err != nil {
 				return err
 			}
@@ -155,7 +155,7 @@ func copyAction(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		sshOpts, err = sshutil.CommonOpts(sshExe, false)
+		sshOpts, err = sshutil.CommonOpts(ctx, sshExe, false)
 		if err != nil {
 			return err
 		}

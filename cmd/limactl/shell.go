@@ -4,6 +4,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -78,7 +79,7 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	inst, err := store.Inspect(instName)
+	inst, err := store.Inspect(ctx, instName)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("instance %q does not exist, run `limactl create %s` to create a new instance", instName, instName)
@@ -95,8 +96,6 @@ func shellAction(cmd *cobra.Command, args []string) error {
 			return nil
 		}
 
-		ctx := cmd.Context()
-
 		err = networks.Reconcile(ctx, inst.Name)
 		if err != nil {
 			return err
@@ -107,7 +106,7 @@ func shellAction(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
-		inst, err = store.Inspect(instName)
+		inst, err = store.Inspect(ctx, instName)
 		if err != nil {
 			return err
 		}
@@ -146,7 +145,7 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	} else if len(inst.Config.Mounts) > 0 || inst.VMType == limayaml.WSL2 {
 		hostCurrentDir, err := os.Getwd()
 		if err == nil && runtime.GOOS == "windows" {
-			hostCurrentDir, err = mountDirFromWindowsDir(inst, hostCurrentDir)
+			hostCurrentDir, err = mountDirFromWindowsDir(ctx, inst, hostCurrentDir)
 		}
 		if err == nil {
 			changeDirCmd = fmt.Sprintf("cd %s", shellescape.Quote(hostCurrentDir))
@@ -156,7 +155,7 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		}
 		hostHomeDir, err := os.UserHomeDir()
 		if err == nil && runtime.GOOS == "windows" {
-			hostHomeDir, err = mountDirFromWindowsDir(inst, hostHomeDir)
+			hostHomeDir, err = mountDirFromWindowsDir(ctx, inst, hostHomeDir)
 		}
 		if err == nil {
 			changeDirCmd = fmt.Sprintf("%s || cd %s", changeDirCmd, shellescape.Quote(hostHomeDir))
@@ -221,6 +220,7 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	}
 
 	sshOpts, err := sshutil.SSHOpts(
+		ctx,
 		sshExe,
 		inst.Dir,
 		*inst.Config.User.Name,
@@ -244,7 +244,7 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	logLevel := "ERROR"
 	// For versions older than OpenSSH 8.9p, LogLevel=QUIET was needed to
 	// avoid the "Shared connection to 127.0.0.1 closed." message with -t.
-	olderSSH := sshutil.DetectOpenSSHVersion(sshExe).LessThan(*semver.New("8.9.0"))
+	olderSSH := sshutil.DetectOpenSSHVersion(ctx, sshExe).LessThan(*semver.New("8.9.0"))
 	if olderSSH {
 		logLevel = "QUIET"
 	}
@@ -265,12 +265,12 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	return sshCmd.Run()
 }
 
-func mountDirFromWindowsDir(inst *store.Instance, dir string) (string, error) {
+func mountDirFromWindowsDir(ctx context.Context, inst *store.Instance, dir string) (string, error) {
 	if inst.VMType == limayaml.WSL2 {
 		distroName := "lima-" + inst.Name
-		return ioutilx.WindowsSubsystemPathForLinux(dir, distroName)
+		return ioutilx.WindowsSubsystemPathForLinux(ctx, dir, distroName)
 	}
-	return ioutilx.WindowsSubsystemPath(dir)
+	return ioutilx.WindowsSubsystemPath(ctx, dir)
 }
 
 func shellBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {

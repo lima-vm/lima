@@ -36,7 +36,7 @@ func TestDialQemu(t *testing.T) {
 	}()
 
 	// Connect to the fake vmnet server.
-	client, err := DialQemu(listener.Addr().String())
+	client, err := DialQemu(t.Context(), listener.Addr().String())
 	assert.NilError(t, err)
 	t.Log("Connected to fake vment server")
 

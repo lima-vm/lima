@@ -49,8 +49,7 @@ type InfoFormatSpecific struct {
 	Data json.RawMessage `json:"data,omitempty"` // since QEMU 1.7
 }
 
-func resizeDisk(disk, format string, size int64) error {
-	ctx := context.TODO()
+func resizeDisk(ctx context.Context, disk, format string, size int64) error {
 	args := []string{"resize", "-f", format, disk, strconv.FormatInt(size, 10)}
 	cmd := exec.CommandContext(ctx, "qemu-img", args...)
 	if out, err := cmd.CombinedOutput(); err != nil {
@@ -104,14 +103,14 @@ type InfoFormatSpecificDataVmdkExtent struct {
 	ClusterSize int    `json:"cluster-size,omitempty"` // since QEMU 1.7
 }
 
-func convertToRaw(source, dest string) error {
+func convertToRaw(ctx context.Context, source, dest string) error {
 	if source != dest {
-		return execQemuImgConvert(source, dest)
+		return execQemuImgConvert(ctx, source, dest)
 	}
 
 	// If source == dest, we need to use a temporary file to avoid file locking issues
 
-	info, err := getInfo(source)
+	info, err := getInfo(ctx, source)
 	if err != nil {
 		return fmt.Errorf("failed to get info for source disk %q: %w", source, err)
 	}
@@ -122,15 +121,14 @@ func convertToRaw(source, dest string) error {
 	tempFile := dest + ".lima-qemu-convert.tmp"
 	defer os.Remove(tempFile)
 
-	if err := execQemuImgConvert(source, tempFile); err != nil {
+	if err := execQemuImgConvert(ctx, source, tempFile); err != nil {
 		return err
 	}
 
 	return os.Rename(tempFile, dest)
 }
 
-func execQemuImgConvert(source, dest string) error {
-	ctx := context.TODO()
+func execQemuImgConvert(ctx context.Context, source, dest string) error {
 	var stdout, stderr bytes.Buffer
 	cmd := exec.CommandContext(ctx, "qemu-img", "convert", "-O", "raw", source, dest)
 	cmd.Stdout = &stdout
@@ -150,8 +148,7 @@ func parseInfo(b []byte) (*Info, error) {
 	return &imgInfo, nil
 }
 
-func getInfo(f string) (*Info, error) {
-	ctx := context.TODO()
+func getInfo(ctx context.Context, f string) (*Info, error) {
 	var stdout, stderr bytes.Buffer
 	cmd := exec.CommandContext(ctx, "qemu-img", "info", "--output=json", "--force-share", f)
 	cmd.Stdout = &stdout
@@ -164,8 +161,7 @@ func getInfo(f string) (*Info, error) {
 }
 
 // CreateDisk creates a new disk image with the specified size.
-func (q *QemuImageUtil) CreateDisk(disk string, size int64) error {
-	ctx := context.TODO()
+func (q *QemuImageUtil) CreateDisk(ctx context.Context, disk string, size int64) error {
 	if _, err := os.Stat(disk); err == nil || !errors.Is(err, fs.ErrNotExist) {
 		// disk already exists
 		return err
@@ -180,22 +176,22 @@ func (q *QemuImageUtil) CreateDisk(disk string, size int64) error {
 }
 
 // ResizeDisk resizes an existing disk image to the specified size.
-func (q *QemuImageUtil) ResizeDisk(disk string, size int64) error {
-	info, err := getInfo(disk)
+func (q *QemuImageUtil) ResizeDisk(ctx context.Context, disk string, size int64) error {
+	info, err := getInfo(ctx, disk)
 	if err != nil {
 		return fmt.Errorf("failed to get info for disk %q: %w", disk, err)
 	}
-	return resizeDisk(disk, info.Format, size)
+	return resizeDisk(ctx, disk, info.Format, size)
 }
 
 // MakeSparse is a stub implementation as the qemu package doesn't provide this functionality.
-func (q *QemuImageUtil) MakeSparse(_ *os.File, _ int64) error {
+func (q *QemuImageUtil) MakeSparse(_ context.Context, _ *os.File, _ int64) error {
 	return nil
 }
 
 // GetInfo retrieves the information of a disk image.
-func GetInfo(path string) (*Info, error) {
-	qemuInfo, err := getInfo(path)
+func GetInfo(ctx context.Context, path string) (*Info, error) {
+	qemuInfo, err := getInfo(ctx, path)
 	if err != nil {
 		return nil, err
 	}
@@ -204,9 +200,9 @@ func GetInfo(path string) (*Info, error) {
 }
 
 // ConvertToRaw converts a disk image to raw format.
-func (q *QemuImageUtil) ConvertToRaw(source, dest string, size *int64, allowSourceWithBackingFile bool) error {
+func (q *QemuImageUtil) ConvertToRaw(ctx context.Context, source, dest string, size *int64, allowSourceWithBackingFile bool) error {
 	if !allowSourceWithBackingFile {
-		info, err := getInfo(source)
+		info, err := getInfo(ctx, source)
 		if err != nil {
 			return fmt.Errorf("failed to get info for source disk %q: %w", source, err)
 		}
@@ -215,18 +211,18 @@ func (q *QemuImageUtil) ConvertToRaw(source, dest string, size *int64, allowSour
 		}
 	}
 
-	if err := convertToRaw(source, dest); err != nil {
+	if err := convertToRaw(ctx, source, dest); err != nil {
 		return err
 	}
 
 	if size != nil {
-		destInfo, err := getInfo(dest)
+		destInfo, err := getInfo(ctx, dest)
 		if err != nil {
 			return fmt.Errorf("failed to get info for converted disk %q: %w", dest, err)
 		}
 
 		if *size > destInfo.VSize {
-			return resizeDisk(dest, "raw", *size)
+			return resizeDisk(ctx, dest, "raw", *size)
 		}
 	}
 

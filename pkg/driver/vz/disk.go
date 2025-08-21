@@ -18,14 +18,14 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/store/filenames"
 )
 
-func EnsureDisk(_ context.Context, inst *store.Instance) error {
+func EnsureDisk(ctx context.Context, inst *store.Instance) error {
 	diffDisk := filepath.Join(inst.Dir, filenames.DiffDisk)
 	if _, err := os.Stat(diffDisk); err == nil || !errors.Is(err, os.ErrNotExist) {
 		// disk is already ensured
 		return err
 	}
 
-	diskUtil := proxyimgutil.NewDiskUtil()
+	diskUtil := proxyimgutil.NewDiskUtil(ctx)
 
 	baseDisk := filepath.Join(inst.Dir, filenames.BaseDisk)
 
@@ -44,14 +44,14 @@ func EnsureDisk(_ context.Context, inst *store.Instance) error {
 			return err
 		}
 
-		err = diskUtil.MakeSparse(diffDiskF, 0)
+		err = diskUtil.MakeSparse(ctx, diffDiskF, 0)
 		if err != nil {
 			diffDiskF.Close()
 			return fmt.Errorf("failed to create sparse diff disk %q: %w", diffDisk, err)
 		}
 		return diffDiskF.Close()
 	}
-	if err = diskUtil.ConvertToRaw(baseDisk, diffDisk, &diskSize, false); err != nil {
+	if err = diskUtil.ConvertToRaw(ctx, baseDisk, diffDisk, &diskSize, false); err != nil {
 		return fmt.Errorf("failed to convert %q to a raw disk %q: %w", baseDisk, diffDisk, err)
 	}
 	return err

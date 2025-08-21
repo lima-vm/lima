@@ -24,7 +24,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/guestagent/timesync"
 )
 
-func New(newTicker func() (<-chan time.Time, func()), iptablesIdle time.Duration) (Agent, error) {
+func New(ctx context.Context, newTicker func() (<-chan time.Time, func()), iptablesIdle time.Duration) (Agent, error) {
 	a := &agent{
 		newTicker:                newTicker,
 		kubernetesServiceWatcher: kubernetesservice.NewServiceWatcher(),
@@ -39,7 +39,7 @@ func New(newTicker func() (<-chan time.Time, func()), iptablesIdle time.Duration
 			return nil, err
 		}
 		logrus.Infof("Auditing is not available: %s", err)
-		return startGuestAgentRoutines(a, false), nil
+		return startGuestAgentRoutines(ctx, a, false), nil
 	}
 
 	auditStatus, err := auditClient.GetStatus()
@@ -50,7 +50,7 @@ func New(newTicker func() (<-chan time.Time, func()), iptablesIdle time.Duration
 			return nil, err
 		}
 		logrus.Infof("Auditing is not permitted: %s", err)
-		return startGuestAgentRoutines(a, false), nil
+		return startGuestAgentRoutines(ctx, a, false), nil
 	}
 
 	if auditStatus.Enabled == 0 {
@@ -73,7 +73,7 @@ func New(newTicker func() (<-chan time.Time, func()), iptablesIdle time.Duration
 		a.worthCheckingIPTables = true
 	}
 	logrus.Infof("Auditing enabled (%d)", auditStatus.Enabled)
-	return startGuestAgentRoutines(a, true), nil
+	return startGuestAgentRoutines(ctx, a, true), nil
 }
 
 // startGuestAgentRoutines sets worthCheckingIPTables to true if auditing is not supported,
@@ -81,11 +81,11 @@ func New(newTicker func() (<-chan time.Time, func()), iptablesIdle time.Duration
 //
 // Auditing is not supported in a kernels and is not currently supported outside of the initial namespace, so does not work
 // from inside a container or WSL2 instance, for example.
-func startGuestAgentRoutines(a *agent, supportsAuditing bool) *agent {
+func startGuestAgentRoutines(ctx context.Context, a *agent, supportsAuditing bool) *agent {
 	if !supportsAuditing {
 		a.worthCheckingIPTables = true
 	}
-	go a.kubernetesServiceWatcher.Start()
+	go a.kubernetesServiceWatcher.Start(ctx)
 	go a.fixSystemTimeSkew()
 
 	return a
@@ -218,7 +218,7 @@ func (a *agent) Events(ctx context.Context, ch chan *api.Event) {
 	}
 }
 
-func (a *agent) LocalPorts(_ context.Context) ([]*api.IPPort, error) {
+func (a *agent) LocalPorts(ctx context.Context) ([]*api.IPPort, error) {
 	var res []*api.IPPort
 	tcpParsed, err := procnettcp.ParseFiles()
 	if err != nil {
@@ -257,7 +257,7 @@ func (a *agent) LocalPorts(_ context.Context) ([]*api.IPPort, error) {
 
 	var ipts []iptables.Entry
 	if a.worthCheckingIPTables {
-		ipts, err = iptables.GetPorts()
+		ipts, err = iptables.GetPorts(ctx)
 		if err != nil {
 			return res, err
 		}

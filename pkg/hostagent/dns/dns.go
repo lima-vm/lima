@@ -142,9 +142,8 @@ func NewHandler(opts HandlerOptions) (dns.Handler, error) {
 	return h, nil
 }
 
-func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
+func (h *Handler) handleQuery(ctx context.Context, w dns.ResponseWriter, req *dns.Msg) {
 	var (
-		ctx     = context.TODO()
 		reply   dns.Msg
 		handled bool
 	)
@@ -340,7 +339,7 @@ func (h *Handler) handleDefault(w dns.ResponseWriter, req *dns.Msg) {
 func (h *Handler) ServeDNS(w dns.ResponseWriter, req *dns.Msg) {
 	switch req.Opcode {
 	case dns.OpcodeQuery:
-		h.handleQuery(w, req)
+		h.handleQuery(context.Background(), w, req)
 	default:
 		h.handleDefault(w, req)
 	}

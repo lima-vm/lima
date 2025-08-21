@@ -57,7 +57,7 @@ func startVM(ctx context.Context, inst *store.Instance, sshLocalPort int) (*virt
 		return nil, nil, err
 	}
 
-	machine, err := createVM(inst)
+	machine, err := createVM(ctx, inst)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -161,7 +161,7 @@ func startUsernet(ctx context.Context, inst *store.Instance) (*usernet.Client, e
 	return usernet.NewClient(endpointSock, subnetIP), err
 }
 
-func createVM(inst *store.Instance) (*vz.VirtualMachine, error) {
+func createVM(ctx context.Context, inst *store.Instance) (*vz.VirtualMachine, error) {
 	vmConfig, err := createInitialConfig(inst)
 	if err != nil {
 		return nil, err
@@ -175,11 +175,11 @@ func createVM(inst *store.Instance) (*vz.VirtualMachine, error) {
 		return nil, err
 	}
 
-	if err = attachNetwork(inst, vmConfig); err != nil {
+	if err = attachNetwork(ctx, inst, vmConfig); err != nil {
 		return nil, err
 	}
 
-	if err = attachDisks(inst, vmConfig); err != nil {
+	if err = attachDisks(ctx, inst, vmConfig); err != nil {
 		return nil, err
 	}
 
@@ -302,7 +302,7 @@ func newVirtioNetworkDeviceConfiguration(attachment vz.NetworkDeviceAttachment, 
 	return networkConfig, nil
 }
 
-func attachNetwork(inst *store.Instance, vmConfig *vz.VirtualMachineConfiguration) error {
+func attachNetwork(ctx context.Context, inst *store.Instance, vmConfig *vz.VirtualMachineConfiguration) error {
 	var configurations []*vz.VirtioNetworkDeviceConfiguration
 
 	// Configure default usernetwork with limayaml.MACAddress(inst.Dir) for eth0 interface
@@ -390,7 +390,7 @@ func attachNetwork(inst *store.Instance, vmConfig *vz.VirtualMachineConfiguratio
 						return err
 					}
 
-					clientFile, err := DialQemu(sock)
+					clientFile, err := DialQemu(ctx, sock)
 					if err != nil {
 						return err
 					}
@@ -402,7 +402,7 @@ func attachNetwork(inst *store.Instance, vmConfig *vz.VirtualMachineConfiguratio
 				}
 			}
 		} else if nw.Socket != "" {
-			clientFile, err := DialQemu(nw.Socket)
+			clientFile, err := DialQemu(ctx, nw.Socket)
 			if err != nil {
 				return err
 			}
@@ -434,7 +434,7 @@ func validateDiskFormat(diskPath string) error {
 	return nil
 }
 
-func attachDisks(inst *store.Instance, vmConfig *vz.VirtualMachineConfiguration) error {
+func attachDisks(ctx context.Context, inst *store.Instance, vmConfig *vz.VirtualMachineConfiguration) error {
 	baseDiskPath := filepath.Join(inst.Dir, filenames.BaseDisk)
 	diffDiskPath := filepath.Join(inst.Dir, filenames.DiffDisk)
 	ciDataPath := filepath.Join(inst.Dir, filenames.CIDataISO)
@@ -471,7 +471,7 @@ func attachDisks(inst *store.Instance, vmConfig *vz.VirtualMachineConfiguration)
 	}
 	configurations = append(configurations, diffDisk)
 
-	diskUtil := proxyimgutil.NewDiskUtil()
+	diskUtil := proxyimgutil.NewDiskUtil(ctx)
 
 	for _, d := range inst.Config.AdditionalDisks {
 		diskName := d.Name
@@ -492,7 +492,7 @@ func attachDisks(inst *store.Instance, vmConfig *vz.VirtualMachineConfiguration)
 		// ConvertToRaw is a NOP if no conversion is needed
 		logrus.Debugf("Converting extra disk %q to a raw disk (if it is not a raw)", extraDiskPath)
 
-		if err = diskUtil.ConvertToRaw(extraDiskPath, extraDiskPath, nil, true); err != nil {
+		if err = diskUtil.ConvertToRaw(ctx, extraDiskPath, extraDiskPath, nil, true); err != nil {
 			return fmt.Errorf("failed to convert extra disk %q to a raw disk: %w", extraDiskPath, err)
 		}
 		extraDiskPathAttachment, err := vz.NewDiskImageStorageDeviceAttachmentWithCacheAndSync(extraDiskPath, false, diskImageCachingMode, vz.DiskImageSynchronizationModeFsync)

@@ -4,6 +4,7 @@
 package limayaml
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -602,11 +603,11 @@ func warnExperimental(y *LimaYAML) {
 
 // ValidateAgainstLatestConfig validates the values between the latest YAML and the updated(New) YAML.
 // This validates configuration rules that disallow certain changes, such as shrinking the disk.
-func ValidateAgainstLatestConfig(yNew, yLatest []byte) error {
+func ValidateAgainstLatestConfig(ctx context.Context, yNew, yLatest []byte) error {
 	var n LimaYAML
 
 	// Load the latest YAML and fill in defaults
-	l, err := LoadWithWarnings(yLatest, "")
+	l, err := LoadWithWarnings(ctx, yLatest, "")
 	if err != nil {
 		return err
 	}

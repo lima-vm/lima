@@ -5,6 +5,7 @@
 package nativeimgutil
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -153,7 +154,7 @@ func makeSparse(f *os.File, offset int64) error {
 }
 
 // CreateDisk creates a new disk image with the specified size.
-func (n *NativeImageUtil) CreateDisk(disk string, size int64) error {
+func (n *NativeImageUtil) CreateDisk(_ context.Context, disk string, size int64) error {
 	if _, err := os.Stat(disk); err == nil || !errors.Is(err, fs.ErrNotExist) {
 		return err
 	}
@@ -167,17 +168,17 @@ func (n *NativeImageUtil) CreateDisk(disk string, size int64) error {
 }
 
 // ConvertToRaw converts a disk image to raw format.
-func (n *NativeImageUtil) ConvertToRaw(source, dest string, size *int64, allowSourceWithBackingFile bool) error {
+func (n *NativeImageUtil) ConvertToRaw(_ context.Context, source, dest string, size *int64, allowSourceWithBackingFile bool) error {
 	return convertToRaw(source, dest, size, allowSourceWithBackingFile)
 }
 
 // ResizeDisk resizes an existing disk image to the specified size.
-func (n *NativeImageUtil) ResizeDisk(disk string, size int64) error {
+func (n *NativeImageUtil) ResizeDisk(_ context.Context, disk string, size int64) error {
 	roundedSize := roundUp(size)
 	return os.Truncate(disk, roundedSize)
 }
 
 // MakeSparse makes a file sparse, starting from the specified offset.
-func (n *NativeImageUtil) MakeSparse(f *os.File, offset int64) error {
+func (n *NativeImageUtil) MakeSparse(_ context.Context, f *os.File, offset int64) error {
 	return makeSparse(f, offset)
 }

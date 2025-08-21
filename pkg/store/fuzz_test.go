@@ -18,7 +18,7 @@ func FuzzLoadYAMLByFilePath(f *testing.F) {
 		localFile := filepath.Join(t.TempDir(), "yaml_file.yml")
 		err := os.WriteFile(localFile, fileContents, 0o600)
 		assert.NilError(t, err)
-		_, _ = LoadYAMLByFilePath(localFile)
+		_, _ = LoadYAMLByFilePath(t.Context(), localFile)
 	})
 }
 
@@ -34,6 +34,6 @@ func FuzzInspect(f *testing.F) {
 		assert.NilError(t, err)
 		err = os.WriteFile(limaVersionFile, limaVersion, 0o600)
 		assert.NilError(t, err)
-		_, _ = Inspect("fuzz-instance")
+		_, _ = Inspect(t.Context(), "fuzz-instance")
 	})
 }

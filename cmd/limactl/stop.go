@@ -26,12 +26,13 @@ func newStopCommand() *cobra.Command {
 }
 
 func stopAction(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
 	instName := DefaultInstanceName
 	if len(args) > 0 {
 		instName = args[0]
 	}
 
-	inst, err := store.Inspect(instName)
+	inst, err := store.Inspect(ctx, instName)
 	if err != nil {
 		return err
 	}
@@ -40,7 +41,6 @@ func stopAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	ctx := cmd.Context()
 	if force {
 		instance.StopForcibly(inst)
 	} else {

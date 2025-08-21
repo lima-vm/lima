@@ -18,12 +18,13 @@ import (
 )
 
 func startAtLoginAction(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
 	instName := DefaultInstanceName
 	if len(args) > 0 {
 		instName = args[0]
 	}
 
-	inst, err := store.Inspect(instName)
+	inst, err := store.Inspect(ctx, instName)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			logrus.Infof("Instance %q not found", instName)
@@ -38,13 +39,13 @@ func startAtLoginAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	if startAtLogin {
-		if err := autostart.CreateStartAtLoginEntry(runtime.GOOS, inst.Name, inst.Dir); err != nil {
+		if err := autostart.CreateStartAtLoginEntry(ctx, runtime.GOOS, inst.Name, inst.Dir); err != nil {
 			logrus.WithError(err).Warnf("Can't create an autostart file for instance %q", inst.Name)
 		} else {
 			logrus.Infof("The autostart file %q has been created or updated", autostart.GetFilePath(runtime.GOOS, inst.Name))
 		}
 	} else {
-		deleted, err := autostart.DeleteStartAtLoginEntry(runtime.GOOS, instName)
+		deleted, err := autostart.DeleteStartAtLoginEntry(ctx, runtime.GOOS, instName)
 		if err != nil {
 			logrus.WithError(err).Warnf("The autostart file %q could not be deleted", instName)
 		} else if deleted {

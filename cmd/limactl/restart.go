@@ -25,12 +25,13 @@ func newRestartCommand() *cobra.Command {
 }
 
 func restartAction(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
 	instName := DefaultInstanceName
 	if len(args) > 0 {
 		instName = args[0]
 	}
 
-	inst, err := store.Inspect(instName)
+	inst, err := store.Inspect(ctx, instName)
 	if err != nil {
 		return err
 	}
@@ -40,7 +41,6 @@ func restartAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	ctx := cmd.Context()
 	if force {
 		return instance.RestartForcibly(ctx, inst)
 	}

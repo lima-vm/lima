@@ -57,8 +57,7 @@ func GenerateEditorWarningHeader() string {
 // OpenEditor opens an editor, and returns the content (not path) of the modified yaml.
 //
 // OpenEditor returns nil when the file was saved as an empty file, optionally with whitespaces.
-func OpenEditor(content []byte, hdr string) ([]byte, error) {
-	ctx := context.TODO()
+func OpenEditor(ctx context.Context, content []byte, hdr string) ([]byte, error) {
 	editor := editorcmd.Detect()
 	if editor == "" {
 		return nil, errors.New("could not detect a text editor binary, try setting $EDITOR")

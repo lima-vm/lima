@@ -19,8 +19,7 @@ import (
 
 // IsSigned returns an error if the binary is not signed, or the sign is invalid,
 // or not associated with the "com.apple.security.hypervisor" entitlement.
-func IsSigned(qExe string) error {
-	ctx := context.TODO()
+func IsSigned(ctx context.Context, qExe string) error {
 	cmd := exec.CommandContext(ctx, "codesign", "--verify", qExe)
 	out, err := cmd.CombinedOutput()
 	logrus.WithError(err).Debugf("Executed %v: out=%q", cmd.Args, string(out))
@@ -40,8 +39,7 @@ func IsSigned(qExe string) error {
 	return nil
 }
 
-func Sign(qExe string) error {
-	ctx := context.TODO()
+func Sign(ctx context.Context, qExe string) error {
 	ent, err := os.CreateTemp("", "lima-qemu-entitlements-*.xml")
 	if err != nil {
 		return fmt.Errorf("failed to create a temporary file for signing QEMU binary: %w", err)
@@ -85,8 +83,8 @@ func isColimaWrapper__useThisFunctionOnlyForPrintingHints__(qExe string) bool {
 //
 // On Homebrew, QEMU binaries are usually already signed, but Homebrew's signing infrastructure is broken for Intel as of August 2023.
 // https://github.com/lima-vm/lima/issues/1742
-func AskToSignIfNotSignedProperly(qExe string) {
-	if isSignedErr := IsSigned(qExe); isSignedErr != nil {
+func AskToSignIfNotSignedProperly(ctx context.Context, qExe string) {
+	if isSignedErr := IsSigned(ctx, qExe); isSignedErr != nil {
 		logrus.WithError(isSignedErr).Warnf("QEMU binary %q does not seem properly signed with the \"com.apple.security.hypervisor\" entitlement", qExe)
 		if isColimaWrapper__useThisFunctionOnlyForPrintingHints__(qExe) {
 			logrus.Info("Hint: the warning above is usually negligible for colima ( Printed due to https://github.com/abiosoft/colima/issues/796 )")
@@ -101,7 +99,7 @@ func AskToSignIfNotSignedProperly(qExe string) {
 			}
 		}
 		if ans {
-			if signErr := Sign(qExe); signErr != nil {
+			if signErr := Sign(ctx, qExe); signErr != nil {
 				logrus.WithError(signErr).Warnf("Failed to sign %q", qExe)
 			} else {
 				logrus.Infof("Successfully signed %q with the \"com.apple.security.hypervisor\" entitlement", qExe)

@@ -4,6 +4,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -15,6 +16,7 @@ import (
 )
 
 func sudoersAction(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
 	nwCfg, err := networks.LoadConfig()
 	if err != nil {
 		return err
@@ -29,7 +31,7 @@ func sudoersAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	if check {
-		return verifySudoAccess(nwCfg, args, cmd.OutOrStdout())
+		return verifySudoAccess(ctx, nwCfg, args, cmd.OutOrStdout())
 	}
 	switch len(args) {
 	case 0:
@@ -47,7 +49,7 @@ func sudoersAction(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func verifySudoAccess(nwCfg networks.Config, args []string, stdout io.Writer) error {
+func verifySudoAccess(ctx context.Context, nwCfg networks.Config, args []string, stdout io.Writer) error {
 	var file string
 	switch len(args) {
 	case 0:
@@ -61,7 +63,7 @@ func verifySudoAccess(nwCfg networks.Config, args []string, stdout io.Writer) er
 	default:
 		return errors.New("can check only a single sudoers file")
 	}
-	if err := nwCfg.VerifySudoAccess(file); err != nil {
+	if err := nwCfg.VerifySudoAccess(ctx, file); err != nil {
 		return err
 	}
 	fmt.Fprintf(stdout, "%q is up-to-date (or sudo doesn't require a password)\n", file)

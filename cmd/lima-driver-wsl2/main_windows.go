@@ -4,11 +4,13 @@
 package main
 
 import (
+	"context"
+
 	"github.com/lima-vm/lima/v2/pkg/driver/external/server"
 	"github.com/lima-vm/lima/v2/pkg/driver/wsl2"
 )
 
 // To be used as an external driver for Lima.
 func main() {
-	server.Serve(wsl2.New())
+	server.Serve(context.Background(), wsl2.New())
 }

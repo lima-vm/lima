@@ -4,6 +4,7 @@
 package store
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -131,7 +132,7 @@ func DiskDir(name string) (string, error) {
 }
 
 // LoadYAMLByFilePath loads and validates the yaml.
-func LoadYAMLByFilePath(filePath string) (*limayaml.LimaYAML, error) {
+func LoadYAMLByFilePath(ctx context.Context, filePath string) (*limayaml.LimaYAML, error) {
 	// We need to use the absolute path because it may be used to determine hostSocket locations.
 	absPath, err := filepath.Abs(filePath)
 	if err != nil {
@@ -141,7 +142,7 @@ func LoadYAMLByFilePath(filePath string) (*limayaml.LimaYAML, error) {
 	if err != nil {
 		return nil, err
 	}
-	y, err := limayaml.Load(yContent, absPath)
+	y, err := limayaml.Load(ctx, yContent, absPath)
 	if err != nil {
 		return nil, err
 	}

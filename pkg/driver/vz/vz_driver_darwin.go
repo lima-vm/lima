@@ -96,7 +96,7 @@ func (l *LimaVzDriver) Configure(inst *store.Instance) *driver.ConfiguredDriver 
 	}
 }
 
-func (l *LimaVzDriver) Validate() error {
+func (l *LimaVzDriver) Validate(_ context.Context) error {
 	macOSProductVersion, err := osutil.ProductVersion()
 	if err != nil {
 		return err

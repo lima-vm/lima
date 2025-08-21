@@ -58,11 +58,11 @@ func (s *ServiceWatcher) getServiceInformer() cache.SharedIndexInformer {
 	return s.serviceInformer
 }
 
-func (s *ServiceWatcher) Start() {
+func (s *ServiceWatcher) Start(ctx context.Context) {
 	logrus.Info("Monitoring kubernetes services")
 	const retryInterval = 10 * time.Second
 	const pollImmediately = false
-	_ = wait.PollUntilContextCancel(context.TODO(), retryInterval, pollImmediately, func(ctx context.Context) (done bool, err error) {
+	_ = wait.PollUntilContextCancel(ctx, retryInterval, pollImmediately, func(ctx context.Context) (done bool, err error) {
 		kubeClient, err := tryGetKubeClient()
 		if err != nil {
 			logrus.Tracef("failed to get kube client: %v, will retry in %v", err, retryInterval)

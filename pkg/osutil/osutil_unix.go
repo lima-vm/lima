@@ -25,8 +25,7 @@ func SignalName(sig os.Signal) string {
 	return unix.SignalName(sig.(syscall.Signal))
 }
 
-func Sysctl(name string) (string, error) {
-	ctx := context.TODO()
+func Sysctl(ctx context.Context, name string) (string, error) {
 	var stderrBuf bytes.Buffer
 	cmd := exec.CommandContext(ctx, "sysctl", "-n", name)
 	cmd.Stderr = &stderrBuf

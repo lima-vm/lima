@@ -110,14 +110,14 @@ func WithCloudInitProgress(enabled bool) Opt {
 // New creates the HostAgent.
 //
 // stdout is for emitting JSON lines of Events.
-func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt) (*HostAgent, error) {
+func New(ctx context.Context, instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt) (*HostAgent, error) {
 	var o options
 	for _, f := range opts {
 		if err := f(&o); err != nil {
 			return nil, err
 		}
 	}
-	inst, err := store.Inspect(instName)
+	inst, err := store.Inspect(ctx, instName)
 	if err != nil {
 		return nil, err
 	}
@@ -159,10 +159,10 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 	vSockPort := limaDriver.Info().VsockPort
 	virtioPort := limaDriver.Info().VirtioPort
 
-	if err := cidata.GenerateCloudConfig(inst.Dir, instName, inst.Config); err != nil {
+	if err := cidata.GenerateCloudConfig(ctx, inst.Dir, instName, inst.Config); err != nil {
 		return nil, err
 	}
-	if err := cidata.GenerateISO9660(inst.Dir, instName, inst.Config, udpDNSLocalPort, tcpDNSLocalPort, o.guestAgentBinary, o.nerdctlArchive, vSockPort, virtioPort); err != nil {
+	if err := cidata.GenerateISO9660(ctx, inst.Dir, instName, inst.Config, udpDNSLocalPort, tcpDNSLocalPort, o.guestAgentBinary, o.nerdctlArchive, vSockPort, virtioPort); err != nil {
 		return nil, err
 	}
 
@@ -171,6 +171,7 @@ func New(instName string, stdout io.Writer, signalCh chan os.Signal, opts ...Opt
 		return nil, err
 	}
 	sshOpts, err := sshutil.SSHOpts(
+		ctx,
 		sshExe,
 		inst.Dir,
 		*inst.Config.User.Name,
@@ -335,7 +336,7 @@ func (a *HostAgent) Run(ctx context.Context) error {
 
 	// WSL instance SSH address isn't known until after VM start
 	if *a.instConfig.VMType == limayaml.WSL2 {
-		sshAddr, err := store.GetSSHAddress(a.instName)
+		sshAddr, err := store.GetSSHAddress(ctx, a.instName)
 		if err != nil {
 			return err
 		}
@@ -472,7 +473,7 @@ sudo chown -R "${USER}" /run/host-services`
 		}
 	}
 	if *a.instConfig.MountType == limayaml.REVSSHFS && !*a.instConfig.Plain {
-		mounts, err := a.setupMounts()
+		mounts, err := a.setupMounts(ctx)
 		if err != nil {
 			errs = append(errs, err)
 		}

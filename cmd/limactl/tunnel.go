@@ -65,7 +65,7 @@ func tunnelAction(cmd *cobra.Command, args []string) error {
 	}
 	stdout, stderr := cmd.OutOrStdout(), cmd.ErrOrStderr()
 	instName := args[0]
-	inst, err := store.Inspect(instName)
+	inst, err := store.Inspect(ctx, instName)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("instance %q does not exist, run `limactl create %s` to create a new instance", instName, instName)
@@ -89,6 +89,7 @@ func tunnelAction(cmd *cobra.Command, args []string) error {
 	}
 
 	sshOpts, err := sshutil.SSHOpts(
+		ctx,
 		sshExe,
 		inst.Dir,
 		*inst.Config.User.Name,

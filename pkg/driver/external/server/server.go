@@ -50,8 +50,7 @@ func (t *listenerTracker) Accept() (net.Conn, error) {
 	return c, err
 }
 
-func Serve(driver driver.Driver) {
-	ctx := context.TODO()
+func Serve(ctx context.Context, driver driver.Driver) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 

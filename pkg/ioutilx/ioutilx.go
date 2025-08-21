@@ -50,8 +50,7 @@ func FromUTF16leToString(r io.Reader) (string, error) {
 	return string(out), nil
 }
 
-func WindowsSubsystemPath(orig string) (string, error) {
-	ctx := context.TODO()
+func WindowsSubsystemPath(ctx context.Context, orig string) (string, error) {
 	out, err := exec.CommandContext(ctx, "cygpath", filepath.ToSlash(orig)).CombinedOutput()
 	if err != nil {
 		logrus.WithError(err).Errorf("failed to convert path to mingw, maybe not using Git ssh?")
@@ -60,8 +59,7 @@ func WindowsSubsystemPath(orig string) (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
-func WindowsSubsystemPathForLinux(orig, distro string) (string, error) {
-	ctx := context.TODO()
+func WindowsSubsystemPathForLinux(ctx context.Context, orig, distro string) (string, error) {
 	out, err := exec.CommandContext(ctx, "wsl", "-d", distro, "--exec", "wslpath", filepath.ToSlash(orig)).CombinedOutput()
 	if err != nil {
 		logrus.WithError(err).Errorf("failed to convert path to mingw, maybe wsl command is not operational?")

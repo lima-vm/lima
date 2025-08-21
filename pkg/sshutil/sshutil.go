@@ -91,8 +91,7 @@ func readPublicKey(f string) (PubKey, error) {
 //
 // When loadDotSSH is true, ~/.ssh/*.pub will be appended to make the VM accessible without specifying
 // an identity explicitly.
-func DefaultPubKeys(loadDotSSH bool) ([]PubKey, error) {
-	ctx := context.TODO()
+func DefaultPubKeys(ctx context.Context, loadDotSSH bool) ([]PubKey, error) {
 	// Read $LIMA_HOME/_config/user.pub
 	configDir, err := dirnames.LimaConfigDir()
 	if err != nil {
@@ -110,7 +109,7 @@ func DefaultPubKeys(loadDotSSH bool) ([]PubKey, error) {
 			// no passphrase, no user@host comment
 			privPath := filepath.Join(configDir, filenames.UserPrivateKey)
 			if runtime.GOOS == "windows" {
-				privPath, err = ioutilx.WindowsSubsystemPath(privPath)
+				privPath, err = ioutilx.WindowsSubsystemPath(ctx, privPath)
 				if err != nil {
 					return err
 				}
@@ -186,7 +185,7 @@ var sshInfo struct {
 //
 // The result always contains the IdentityFile option.
 // The result never contains the Port option.
-func CommonOpts(sshExe SSHExe, useDotSSH bool) ([]string, error) {
+func CommonOpts(ctx context.Context, sshExe SSHExe, useDotSSH bool) ([]string, error) {
 	configDir, err := dirnames.LimaConfigDir()
 	if err != nil {
 		return nil, err
@@ -197,7 +196,7 @@ func CommonOpts(sshExe SSHExe, useDotSSH bool) ([]string, error) {
 		return nil, err
 	}
 	var opts []string
-	idf, err := identityFileEntry(privateKeyPath)
+	idf, err := identityFileEntry(ctx, privateKeyPath)
 	if err != nil {
 		return nil, err
 	}
@@ -232,7 +231,7 @@ func CommonOpts(sshExe SSHExe, useDotSSH bool) ([]string, error) {
 				// Fail on permission-related and other path errors
 				return nil, err
 			}
-			idf, err = identityFileEntry(privateKeyPath)
+			idf, err = identityFileEntry(ctx, privateKeyPath)
 			if err != nil {
 				return nil, err
 			}
@@ -252,7 +251,7 @@ func CommonOpts(sshExe SSHExe, useDotSSH bool) ([]string, error) {
 
 	sshInfo.Do(func() {
 		sshInfo.aesAccelerated = detectAESAcceleration()
-		sshInfo.openSSH = detectOpenSSHInfo(sshExe)
+		sshInfo.openSSH = detectOpenSSHInfo(ctx, sshExe)
 	})
 
 	if sshInfo.openSSH.GSSAPISupported {
@@ -284,9 +283,9 @@ func CommonOpts(sshExe SSHExe, useDotSSH bool) ([]string, error) {
 	return opts, nil
 }
 
-func identityFileEntry(privateKeyPath string) (string, error) {
+func identityFileEntry(ctx context.Context, privateKeyPath string) (string, error) {
 	if runtime.GOOS == "windows" {
-		privateKeyPath, err := ioutilx.WindowsSubsystemPath(privateKeyPath)
+		privateKeyPath, err := ioutilx.WindowsSubsystemPath(ctx, privateKeyPath)
 		if err != nil {
 			return "", err
 		}
@@ -296,18 +295,18 @@ func identityFileEntry(privateKeyPath string) (string, error) {
 }
 
 // SSHOpts adds the following options to CommonOptions: User, ControlMaster, ControlPath, ControlPersist.
-func SSHOpts(sshExe SSHExe, instDir, username string, useDotSSH, forwardAgent, forwardX11, forwardX11Trusted bool) ([]string, error) {
+func SSHOpts(ctx context.Context, sshExe SSHExe, instDir, username string, useDotSSH, forwardAgent, forwardX11, forwardX11Trusted bool) ([]string, error) {
 	controlSock := filepath.Join(instDir, filenames.SSHSock)
 	if len(controlSock) >= osutil.UnixPathMax {
 		return nil, fmt.Errorf("socket path %q is too long: >= UNIX_PATH_MAX=%d", controlSock, osutil.UnixPathMax)
 	}
-	opts, err := CommonOpts(sshExe, useDotSSH)
+	opts, err := CommonOpts(ctx, sshExe, useDotSSH)
 	if err != nil {
 		return nil, err
 	}
 	controlPath := fmt.Sprintf(`ControlPath="%s"`, controlSock)
 	if runtime.GOOS == "windows" {
-		controlSock, err = ioutilx.WindowsSubsystemPath(controlSock)
+		controlSock, err = ioutilx.WindowsSubsystemPath(ctx, controlSock)
 		if err != nil {
 			return nil, err
 		}
@@ -370,9 +369,8 @@ var (
 	openSSHInfosRW sync.RWMutex
 )
 
-func detectOpenSSHInfo(sshExe SSHExe) openSSHInfo {
+func detectOpenSSHInfo(ctx context.Context, sshExe SSHExe) openSSHInfo {
 	var (
-		ctx    = context.TODO()
 		info   openSSHInfo
 		exe    sshExecutable
 		stderr bytes.Buffer
@@ -410,8 +408,8 @@ func detectOpenSSHInfo(sshExe SSHExe) openSSHInfo {
 	return info
 }
 
-func DetectOpenSSHVersion(sshExe SSHExe) semver.Version {
-	return detectOpenSSHInfo(sshExe).Version
+func DetectOpenSSHVersion(ctx context.Context, sshExe SSHExe) semver.Version {
+	return detectOpenSSHInfo(ctx, sshExe).Version
 }
 
 // detectValidPublicKey returns whether content represent a public key.

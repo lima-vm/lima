@@ -103,7 +103,7 @@ func hostagentAction(cmd *cobra.Command, args []string) error {
 	if showProgress {
 		opts = append(opts, hostagent.WithCloudInitProgress(showProgress))
 	}
-	ha, err := hostagent.New(instName, stdout, signalCh, opts...)
+	ha, err := hostagent.New(ctx, instName, stdout, signalCh, opts...)
 	if err != nil {
 		return err
 	}

@@ -91,6 +91,7 @@ func (unmatchedInstancesError) ExitCode() int {
 }
 
 func listAction(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
 	quiet, err := cmd.Flags().GetBool("quiet")
 	if err != nil {
 		return err
@@ -173,7 +174,7 @@ func listAction(cmd *cobra.Command, args []string) error {
 	// get the state and config for all the requested instances
 	var instances []*store.Instance
 	for _, instanceName := range instanceNames {
-		instance, err := store.Inspect(instanceName)
+		instance, err := store.Inspect(ctx, instanceName)
 		if err != nil {
 			return fmt.Errorf("unable to load instance %s: %w", instanceName, err)
 		}

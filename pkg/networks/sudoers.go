@@ -57,8 +57,7 @@ func Sudoers() (string, error) {
 	return sb.String(), nil
 }
 
-func (c *Config) passwordLessSudo() error {
-	ctx := context.TODO()
+func (c *Config) passwordLessSudo(ctx context.Context) error {
 	// Flush cached sudo password
 	cmd := exec.CommandContext(ctx, "sudo", "-k")
 	if err := cmd.Run(); err != nil {
@@ -84,9 +83,9 @@ func (c *Config) passwordLessSudo() error {
 	return nil
 }
 
-func (c *Config) VerifySudoAccess(sudoersFile string) error {
+func (c *Config) VerifySudoAccess(ctx context.Context, sudoersFile string) error {
 	if sudoersFile == "" {
-		err := c.passwordLessSudo()
+		err := c.passwordLessSudo(ctx)
 		if err == nil {
 			logrus.Debug("sudo doesn't seem to require a password")
 			return nil
@@ -100,7 +99,7 @@ func (c *Config) VerifySudoAccess(sudoersFile string) error {
 		// Default networks.yaml specifies /etc/sudoers.d/lima file. Don't throw an error when the
 		// file doesn't exist, as long as password-less sudo still works.
 		if errors.Is(err, os.ErrNotExist) {
-			err = c.passwordLessSudo()
+			err = c.passwordLessSudo(ctx)
 			if err == nil {
 				logrus.Debugf("%q does not exist, but sudo doesn't seem to require a password", sudoersFile)
 				return nil

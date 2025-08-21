@@ -38,6 +38,7 @@ func newEditCommand() *cobra.Command {
 }
 
 func editAction(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
 	var arg string
 	if len(args) > 0 {
 		arg = args[0]
@@ -51,7 +52,7 @@ func editAction(cmd *cobra.Command, args []string) error {
 		arg = DefaultInstanceName
 	}
 	if err := store.ValidateInstName(arg); err == nil {
-		inst, err = store.Inspect(arg)
+		inst, err = store.Inspect(ctx, arg)
 		if err != nil {
 			if errors.Is(err, os.ErrNotExist) {
 				return fmt.Errorf("instance %q not found", arg)
@@ -100,7 +101,7 @@ func editAction(cmd *cobra.Command, args []string) error {
 		hdr += "# and an empty file will abort the edit.\n"
 		hdr += "\n"
 		hdr += editutil.GenerateEditorWarningHeader()
-		yBytes, err = editutil.OpenEditor(yContent, hdr)
+		yBytes, err = editutil.OpenEditor(ctx, yContent, hdr)
 		if err != nil {
 			return err
 		}
@@ -113,7 +114,7 @@ func editAction(cmd *cobra.Command, args []string) error {
 		logrus.Info("Aborting, no changes made to the instance")
 		return nil
 	}
-	y, err := limayaml.LoadWithWarnings(yBytes, filePath)
+	y, err := limayaml.LoadWithWarnings(ctx, yBytes, filePath)
 	if err != nil {
 		return err
 	}
@@ -121,7 +122,7 @@ func editAction(cmd *cobra.Command, args []string) error {
 		return saveRejectedYAML(yBytes, err)
 	}
 
-	if err := limayaml.ValidateAgainstLatestConfig(yBytes, yContent); err != nil {
+	if err := limayaml.ValidateAgainstLatestConfig(ctx, yBytes, yContent); err != nil {
 		return saveRejectedYAML(yBytes, err)
 	}
 
@@ -148,7 +149,6 @@ func editAction(cmd *cobra.Command, args []string) error {
 	if !startNow {
 		return nil
 	}
-	ctx := cmd.Context()
 	err = networks.Reconcile(ctx, inst.Name)
 	if err != nil {
 		return err
@@ -156,7 +156,7 @@ func editAction(cmd *cobra.Command, args []string) error {
 
 	// store.Inspect() syncs values between inst.YAML and the store.
 	// This call applies the validated template to the store.
-	inst, err = store.Inspect(inst.Name)
+	inst, err = store.Inspect(ctx, inst.Name)
 	if err != nil {
 		return err
 	}
