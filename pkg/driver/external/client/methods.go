@@ -119,8 +119,8 @@ func (d *DriverClient) AcceptConfig(cfg *limatype.LimaYAML, filepath string) err
 	return errors.New("AcceptConfig not implemented in client driver")
 }
 
-func (d *DriverClient) FillConfig(cfg *limatype.LimaYAML, filepath string) (limatype.LimaYAML, error) {
-	return limatype.LimaYAML{}, errors.New("FillConfig not implemented in client driver")
+func (d *DriverClient) FillConfig(cfg *limatype.LimaYAML, filepath string) error {
+	return errors.New("FillConfig not implemented in client driver")
 }
 
 func (d *DriverClient) RunGUI() error {
@@ -299,19 +299,8 @@ func (d *DriverClient) Configure(inst *limatype.Instance) *driver.ConfiguredDriv
 	}
 }
 
-func (d *DriverClient) InspectStatus(ctx context.Context, instName string) string {
-	d.logger.Debug("Inspecting status of the driver instance")
-
-	resp, err := d.DriverSvc.InspectStatus(ctx, &pb.InspectStatusRequest{
-		InstanceName: instName,
-	})
-	if err != nil {
-		d.logger.Errorf("Failed to inspect status: %v", err)
-		return ""
-	}
-
-	d.logger.Debugf("Status inspected successfully for instance %s", instName)
-	return resp.Status
+func (d *DriverClient) InspectStatus(_ context.Context, _ *limatype.Instance) string {
+	return ""
 }
 
 func (d *DriverClient) SSHAddress(ctx context.Context) (string, error) {

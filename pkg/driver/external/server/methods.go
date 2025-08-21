@@ -185,17 +185,6 @@ func (s *DriverServer) Delete(ctx context.Context, empty *emptypb.Empty) (*empty
 	return empty, nil
 }
 
-func (s *DriverServer) InspectStatus(ctx context.Context, req *pb.InspectStatusRequest) (*pb.InspectStatusResponse, error) {
-	s.logger.Debugf("Received InspectStatus request for instance: %s", req.InstanceName)
-	status := s.driver.InspectStatus(ctx, req.InstanceName)
-	if status == "" {
-		s.logger.Debug("No status information available")
-		return &pb.InspectStatusResponse{Status: ""}, nil
-	}
-	s.logger.Debugf("InspectStatus succeeded with status: %s", status)
-	return &pb.InspectStatusResponse{Status: status}, nil
-}
-
 func (s *DriverServer) BootScripts(_ context.Context, _ *emptypb.Empty) (*pb.BootScriptsResponse, error) {
 	s.logger.Debug("Received BootScripts request")
 	scripts, err := s.driver.BootScripts()

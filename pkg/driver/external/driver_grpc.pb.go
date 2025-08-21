@@ -26,7 +26,6 @@ const (
 	Driver_Start_FullMethodName                 = "/Driver/Start"
 	Driver_Stop_FullMethodName                  = "/Driver/Stop"
 	Driver_Delete_FullMethodName                = "/Driver/Delete"
-	Driver_InspectStatus_FullMethodName         = "/Driver/InspectStatus"
 	Driver_BootScripts_FullMethodName           = "/Driver/BootScripts"
 	Driver_RunGUI_FullMethodName                = "/Driver/RunGUI"
 	Driver_ChangeDisplayPassword_FullMethodName = "/Driver/ChangeDisplayPassword"
@@ -52,7 +51,6 @@ type DriverClient interface {
 	Start(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (grpc.ServerStreamingClient[StartResponse], error)
 	Stop(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	Delete(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	InspectStatus(ctx context.Context, in *InspectStatusRequest, opts ...grpc.CallOption) (*InspectStatusResponse, error)
 	BootScripts(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*BootScriptsResponse, error)
 	RunGUI(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	ChangeDisplayPassword(ctx context.Context, in *ChangeDisplayPasswordRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
@@ -139,16 +137,6 @@ func (c *driverClient) Delete(ctx context.Context, in *emptypb.Empty, opts ...gr
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, Driver_Delete_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *driverClient) InspectStatus(ctx context.Context, in *InspectStatusRequest, opts ...grpc.CallOption) (*InspectStatusResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(InspectStatusResponse)
-	err := c.cc.Invoke(ctx, Driver_InspectStatus_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -295,7 +283,6 @@ type DriverServer interface {
 	Start(*emptypb.Empty, grpc.ServerStreamingServer[StartResponse]) error
 	Stop(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	Delete(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
-	InspectStatus(context.Context, *InspectStatusRequest) (*InspectStatusResponse, error)
 	BootScripts(context.Context, *emptypb.Empty) (*BootScriptsResponse, error)
 	RunGUI(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	ChangeDisplayPassword(context.Context, *ChangeDisplayPasswordRequest) (*emptypb.Empty, error)
@@ -336,9 +323,6 @@ func (UnimplementedDriverServer) Stop(context.Context, *emptypb.Empty) (*emptypb
 }
 func (UnimplementedDriverServer) Delete(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Delete not implemented")
-}
-func (UnimplementedDriverServer) InspectStatus(context.Context, *InspectStatusRequest) (*InspectStatusResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method InspectStatus not implemented")
 }
 func (UnimplementedDriverServer) BootScripts(context.Context, *emptypb.Empty) (*BootScriptsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method BootScripts not implemented")
@@ -497,24 +481,6 @@ func _Driver_Delete_Handler(srv interface{}, ctx context.Context, dec func(inter
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DriverServer).Delete(ctx, req.(*emptypb.Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Driver_InspectStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(InspectStatusRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(DriverServer).InspectStatus(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Driver_InspectStatus_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DriverServer).InspectStatus(ctx, req.(*InspectStatusRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -779,10 +745,6 @@ var Driver_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Delete",
 			Handler:    _Driver_Delete_Handler,
-		},
-		{
-			MethodName: "InspectStatus",
-			Handler:    _Driver_InspectStatus_Handler,
 		},
 		{
 			MethodName: "BootScripts",

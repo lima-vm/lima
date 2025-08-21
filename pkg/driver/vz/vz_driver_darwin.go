@@ -113,7 +113,7 @@ func (l *LimaVzDriver) Configure(inst *limatype.Instance) *driver.ConfiguredDriv
 	}
 }
 
-func (l *LimaVzDriver) FillConfig(cfg *limatype.LimaYAML, filePath string) (limatype.LimaYAML, error) {
+func (l *LimaVzDriver) FillConfig(cfg *limatype.LimaYAML, filePath string) error {
 	if cfg.VMType == nil {
 		cfg.VMType = ptr.Of(limatype.VZ)
 	}
@@ -138,7 +138,7 @@ func (l *LimaVzDriver) FillConfig(cfg *limatype.LimaYAML, filePath string) (lima
 		cfg.VMOpts.VZ.Rosetta.BinFmt = ptr.Of(false)
 	}
 
-	return *cfg, nil
+	return nil
 }
 
 func isEmpty(r limatype.Rosetta) bool {
@@ -387,15 +387,15 @@ func (l *LimaVzDriver) Info() driver.Info {
 	}
 	return info
 }
-func (l *LimaVzDriver) SSHAddress(ctx context.Context) (string, error) {
+func (l *LimaVzDriver) SSHAddress(_ context.Context) (string, error) {
 	return "127.0.0.1", nil
 }
 
-func (l *LimaVzDriver) InspectStatus(_ context.Context, instName string) string {
+func (l *LimaVzDriver) InspectStatus(_ context.Context, _ *limatype.Instance) string {
 	return ""
 }
 
-func (l *LimaVzDriver) Delete(ctx context.Context) error {
+func (l *LimaVzDriver) Delete(_ context.Context) error {
 	return nil
 }
 

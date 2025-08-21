@@ -92,7 +92,7 @@ func (l *LimaWslDriver) AcceptConfig(cfg *limatype.LimaYAML, filepath string) er
 	return nil
 }
 
-func (l *LimaWslDriver) FillConfig(cfg *limatype.LimaYAML, filePath string) (limatype.LimaYAML, error) {
+func (l *LimaWslDriver) FillConfig(cfg *limatype.LimaYAML, filePath string) error {
 	if cfg.VMType == nil {
 		cfg.VMType = ptr.Of(limatype.WSL2)
 	}
@@ -100,7 +100,7 @@ func (l *LimaWslDriver) FillConfig(cfg *limatype.LimaYAML, filePath string) (lim
 		cfg.MountType = ptr.Of(limatype.WSLMount)
 	}
 
-	return *cfg, nil
+	return nil
 }
 
 func (l *LimaWslDriver) Validate(_ context.Context) error {
@@ -187,27 +187,27 @@ func (l *LimaWslDriver) BootScripts() (map[string][]byte, error) {
 	return scripts, nil
 }
 
-func (l *LimaWslDriver) InspectStatus(ctx context.Context, instName string) string {
-	status, err := getWslStatus(instName)
+func (l *LimaWslDriver) InspectStatus(ctx context.Context, inst *limatype.Instance) string {
+	status, err := getWslStatus(inst.Name)
 	if err != nil {
-		l.Instance.Status = limatype.StatusBroken
-		l.Instance.Errors = append(l.Instance.Errors, err)
+		inst.Status = limatype.StatusBroken
+		inst.Errors = append(inst.Errors, err)
 	} else {
-		l.Instance.Status = status
+		inst.Status = status
 	}
 
-	l.Instance.SSHLocalPort = 22
+	inst.SSHLocalPort = 22
 
-	if l.Instance.Status == limatype.StatusRunning {
+	if inst.Status == limatype.StatusRunning {
 		sshAddr, err := l.SSHAddress(ctx)
 		if err == nil {
-			l.Instance.SSHAddress = sshAddr
+			inst.SSHAddress = sshAddr
 		} else {
-			l.Instance.Errors = append(l.Instance.Errors, err)
+			inst.Errors = append(inst.Errors, err)
 		}
 	}
 
-	return l.Instance.Status
+	return inst.Status
 }
 
 func (l *LimaWslDriver) Delete(ctx context.Context) error {

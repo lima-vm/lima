@@ -37,7 +37,7 @@ type Lifecycle interface {
 
 	Delete(_ context.Context) error
 
-	InspectStatus(_ context.Context, instName string) string
+	InspectStatus(_ context.Context, inst *limatype.Instance) string
 
 	BootScripts() (map[string][]byte, error)
 }
@@ -82,7 +82,7 @@ type Driver interface {
 	Configure(inst *limatype.Instance) *ConfiguredDriver
 
 	AcceptConfig(cfg *limatype.LimaYAML, filePath string) error
-	FillConfig(cfg *limatype.LimaYAML, filePath string) (limatype.LimaYAML, error)
+	FillConfig(cfg *limatype.LimaYAML, filePath string) error
 
 	SSHAddress(ctx context.Context) (string, error)
 }

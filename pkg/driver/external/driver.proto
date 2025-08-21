@@ -11,7 +11,6 @@ service Driver {
   rpc Start(google.protobuf.Empty) returns (stream StartResponse);
   rpc Stop(google.protobuf.Empty) returns (google.protobuf.Empty);
   rpc Delete(google.protobuf.Empty) returns (google.protobuf.Empty);
-  rpc InspectStatus(InspectStatusRequest) returns (InspectStatusResponse);
   rpc BootScripts(google.protobuf.Empty) returns (BootScriptsResponse);
 
   rpc RunGUI(google.protobuf.Empty) returns (google.protobuf.Empty);
@@ -33,14 +32,6 @@ service Driver {
 
 message BootScriptsResponse {
   map<string, bytes> scripts = 1;
-}
-
-message InspectStatusRequest {
-  string instance_name = 1;
-}
-
-message InspectStatusResponse {
-  string status = 1;
 }
 
 message SSHAddressResponse {

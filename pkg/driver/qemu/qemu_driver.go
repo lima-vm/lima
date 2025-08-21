@@ -111,7 +111,7 @@ func (l *LimaQemuDriver) validateMountType() error {
 	return nil
 }
 
-func (l *LimaQemuDriver) FillConfig(cfg *limatype.LimaYAML, filePath string) (limatype.LimaYAML, error) {
+func (l *LimaQemuDriver) FillConfig(cfg *limatype.LimaYAML, filePath string) error {
 	if cfg.VMType == nil {
 		cfg.VMType = ptr.Of(limatype.QEMU)
 	}
@@ -171,10 +171,10 @@ func (l *LimaQemuDriver) FillConfig(cfg *limatype.LimaYAML, filePath string) (li
 	}
 
 	if _, ok := mountTypesUnsupported[*cfg.MountType]; ok {
-		return limatype.LimaYAML{}, fmt.Errorf("mount type %q is explicitly unsupported", *cfg.MountType)
+		return fmt.Errorf("mount type %q is explicitly unsupported", *cfg.MountType)
 	}
 
-	return *cfg, nil
+	return nil
 }
 
 func (l *LimaQemuDriver) AcceptConfig(cfg *limatype.LimaYAML, filePath string) error {
@@ -689,11 +689,11 @@ func (l *LimaQemuDriver) Info() driver.Info {
 	return info
 }
 
-func (l *LimaQemuDriver) SSHAddress(ctx context.Context) (string, error) {
+func (l *LimaQemuDriver) SSHAddress(_ context.Context) (string, error) {
 	return "127.0.0.1", nil
 }
 
-func (l *LimaQemuDriver) InspectStatus(_ context.Context, instName string) string {
+func (l *LimaQemuDriver) InspectStatus(_ context.Context, _ *limatype.Instance) string {
 	return ""
 }
 
@@ -701,7 +701,7 @@ func (l *LimaQemuDriver) Create(_ context.Context) error {
 	return nil
 }
 
-func (l *LimaQemuDriver) Delete(ctx context.Context) error {
+func (l *LimaQemuDriver) Delete(_ context.Context) error {
 	return nil
 }
 
