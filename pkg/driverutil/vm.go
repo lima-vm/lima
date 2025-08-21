@@ -2,6 +2,7 @@ package driverutil
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os/exec"
 
@@ -36,7 +37,7 @@ func validateConfigAgainstDriver(y *limatype.LimaYAML, filePath, vmType string) 
 
 	if extDriver != nil {
 		if err := handlePreConfiguredDriverAction(y, extDriver.Path, filePath); err != nil {
-			return fmt.Errorf("error handling pre-configured driver action for %q: %w", extDriver.Name, err)
+			return err
 		}
 
 		return nil
@@ -66,20 +67,19 @@ func handlePreConfiguredDriverAction(y *limatype.LimaYAML, extDriverPath, filePa
 		return err
 	}
 
-	logrus.Infof("Arch Type: %s, Driver: %s", *y.Arch, extDriverPath)
 	encoder := json.NewEncoder(stdin)
 	if err := encoder.Encode(limatype.PreConfiguredDriverPayload{
 		Config:   *y,
 		FilePath: filePath,
 	}); err != nil {
-		return fmt.Errorf("error encoding payload for pre-configured driver action: %w", err)
+		return err
 	}
 	stdin.Close()
 
 	decoder := json.NewDecoder(stdout)
 	var response limatype.PreConfiguredDriverResponse
 	if err := decoder.Decode(&response); err != nil {
-		return fmt.Errorf("error decoding response from pre-configured driver action: %w", err)
+		return err
 	}
 
 	if err := cmd.Wait(); err != nil {
@@ -87,10 +87,9 @@ func handlePreConfiguredDriverAction(y *limatype.LimaYAML, extDriverPath, filePa
 	}
 
 	if response.Error != "" {
-		return fmt.Errorf("error from pre-configured driver action: %s", response.Error)
+		return errors.New(response.Error)
 	}
 
-	logrus.Infof("Received response from pre-configured driver action: %s + %s", *response.Config.Arch, response.Error)
 	*y = response.Config
 	logrus.Debugf("Pre-configured driver action completed successfully for %q", extDriverPath)
 	return nil

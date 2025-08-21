@@ -112,6 +112,7 @@ func (l *LimaVzDriver) Configure(inst *limatype.Instance) *driver.ConfiguredDriv
 		Driver: l,
 	}
 }
+
 func (l *LimaVzDriver) FillConfig(cfg *limatype.LimaYAML, filePath string) (limatype.LimaYAML, error) {
 	if cfg.VMType == nil {
 		cfg.VMType = ptr.Of(limatype.VZ)
@@ -174,7 +175,6 @@ func (l *LimaVzDriver) AcceptConfig(cfg *limatype.LimaYAML, filePath string) err
 		vzIdentifier := filepath.Join(dir, filenames.VzIdentifier) // since Lima v0.14
 		if _, err := os.Lstat(vzIdentifier); !errors.Is(err, os.ErrNotExist) {
 			logrus.Debugf("ResolveVMType: resolved VMType %q (existing instance, with %q)", "vz", vzIdentifier)
-			return nil
 		}
 	}
 

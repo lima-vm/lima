@@ -165,7 +165,7 @@ func handlePreConfiguredDriverAction(driver driver.Driver) {
 	if err := decoder.Decode(&payload); err != nil {
 		response := limatype.PreConfiguredDriverResponse{
 			Config: limatype.LimaYAML{},
-			Error:  fmt.Sprintf("Error decoding payload at server side: %v", err),
+			Error:  err.Error(),
 		}
 		if err := encoder.Encode(response); err != nil {
 			logrus.Fatalf("Error encoding response: %v\n", err)
@@ -173,11 +173,10 @@ func handlePreConfiguredDriverAction(driver driver.Driver) {
 		return
 	}
 
-	*payload.Config.Arch = limatype.X8664
 	if err := driver.AcceptConfig(&payload.Config, payload.FilePath); err != nil {
 		response := limatype.PreConfiguredDriverResponse{
 			Config: limatype.LimaYAML{},
-			Error:  fmt.Sprintf("Error accepting config: %v", err),
+			Error:  err.Error(),
 		}
 		if err := encoder.Encode(response); err != nil {
 			logrus.Fatalf("Error encoding response: %v\n", err)
@@ -189,7 +188,7 @@ func handlePreConfiguredDriverAction(driver driver.Driver) {
 	if err != nil {
 		response := limatype.PreConfiguredDriverResponse{
 			Config: limatype.LimaYAML{},
-			Error:  fmt.Sprintf("Error filling config: %v", err),
+			Error:  err.Error(),
 		}
 		if err := encoder.Encode(response); err != nil {
 			logrus.Fatalf("Error encoding response: %v\n", err)
