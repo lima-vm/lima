@@ -147,7 +147,7 @@ func Inspect(ctx context.Context, instName string) (*limatype.Instance, error) {
 	return inst, nil
 }
 
-func inspectStatus(instDir string, inst *limatype.Instance, y *limatype.LimaYAML) {
+func inspectStatus(ctx context.Context, instDir string, inst *limatype.Instance, y *limatype.LimaYAML) {
 	driver, err := driverutil.CreateConfiguredDriver(inst, inst.SSHLocalPort)
 	if err != nil {
 		inst.Errors = append(inst.Errors, fmt.Errorf("failed to create driver instance: %w", err))
@@ -155,7 +155,7 @@ func inspectStatus(instDir string, inst *limatype.Instance, y *limatype.LimaYAML
 		return
 	}
 
-	status := driver.InspectStatus(context.Background(), inst.Name)
+	status := driver.InspectStatus(ctx, inst.Name)
 	if status == "" {
 		inspectStatusWithPIDFiles(instDir, inst, y)
 		return

@@ -85,7 +85,7 @@ func (l *LimaWslDriver) AcceptConfig(cfg *limatype.LimaYAML, filepath string) er
 	}
 	l.Instance.Config = cfg
 
-	if err := l.Validate(); err != nil {
+	if err := l.Validate(context.Background()); err != nil {
 		return fmt.Errorf("config not supported by the WSL2 driver: %w", err)
 	}
 

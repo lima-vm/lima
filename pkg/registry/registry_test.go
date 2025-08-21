@@ -27,7 +27,7 @@ func newMockDriver(name string) *mockDriver {
 
 var _ driver.Driver = (*mockDriver)(nil)
 
-func (m *mockDriver) Validate() error                                            { return nil }
+func (m *mockDriver) Validate(_ context.Context) error                           { return nil }
 func (m *mockDriver) Create(_ context.Context) error                             { return nil }
 func (m *mockDriver) Delete(_ context.Context) error                             { return nil }
 func (m *mockDriver) CreateDisk(_ context.Context) error                         { return nil }

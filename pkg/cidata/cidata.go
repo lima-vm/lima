@@ -364,7 +364,7 @@ func GenerateCloudConfig(ctx context.Context, instDir, name string, instConfig *
 }
 
 func GenerateISO9660(ctx context.Context, drv driver.Driver, instDir, name string, instConfig *limatype.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort int, guestAgentBinary, nerdctlArchive string, vsockPort int, virtioPort string) error {
-	args, err := templateArgs(true, instDir, name, instConfig, udpDNSLocalPort, tcpDNSLocalPort, vsockPort, virtioPort)
+	args, err := templateArgs(ctx, true, instDir, name, instConfig, udpDNSLocalPort, tcpDNSLocalPort, vsockPort, virtioPort)
 	if err != nil {
 		return err
 	}

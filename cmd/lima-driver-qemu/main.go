@@ -4,13 +4,11 @@
 package main
 
 import (
-	"context"
-
 	"github.com/lima-vm/lima/v2/pkg/driver/external/server"
 	"github.com/lima-vm/lima/v2/pkg/driver/qemu"
 )
 
 // To be used as an external driver for Lima.
 func main() {
-	server.Serve(context.Background(), qemu.New())
+	server.Serve(qemu.New())
 }

@@ -204,7 +204,7 @@ func (l *LimaVzDriver) AcceptConfig(cfg *limatype.LimaYAML, filePath string) err
 	}
 	l.Instance.Config = cfg
 
-	if err := l.Validate(); err != nil {
+	if err := l.Validate(context.Background()); err != nil {
 		return fmt.Errorf("config not supported by the VZ driver: %w", err)
 	}
 

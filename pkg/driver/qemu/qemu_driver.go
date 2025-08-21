@@ -183,7 +183,7 @@ func (l *LimaQemuDriver) AcceptConfig(cfg *limatype.LimaYAML, filePath string) e
 	}
 	l.Instance.Config = cfg
 
-	if err := l.Validate(); err != nil {
+	if err := l.Validate(context.Background()); err != nil {
 		return fmt.Errorf("config not supported by the QEMU driver: %w", err)
 	}
 
