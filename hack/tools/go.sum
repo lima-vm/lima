@@ -632,8 +632,8 @@ github.com/ykadowak/zerologlint v0.1.5 h1:Gy/fMz1dFQN9JZTPjv1hxEk+sRWm05row04Yoo
 github.com/ykadowak/zerologlint v0.1.5/go.mod h1:KaUskqF3e/v59oPmdq1U1DnKcuHokl2/K1U4pmIELKg=
 github.com/yoheimuta/go-protoparser/v4 v4.14.2 h1:/P/LlX1CF9NaTWEltGcIZVvNlPbhABuAnBtAWpb3+74=
 github.com/yoheimuta/go-protoparser/v4 v4.14.2/go.mod h1:AHNNnSWnb0UoL4QgHPiOAg2BniQceFscPI5X/BZNHl8=
-github.com/yoheimuta/protolint v0.55.6 h1:vEDWGz768e3LDxMoOUC8fDQDdXnH9JKV/k9rlHD+ZhY=
-github.com/yoheimuta/protolint v0.55.6/go.mod h1:XrnOc0O5mckLR1GAOjqMPdb3R3ZEfLkMpLoq5RxxoG0=
+github.com/yoheimuta/protolint v0.56.1 h1:8HEt3JVlwt2wBnpK/+nctWU04F9k83KVYgbLHgRWIX0=
+github.com/yoheimuta/protolint v0.56.1/go.mod h1:XrnOc0O5mckLR1GAOjqMPdb3R3ZEfLkMpLoq5RxxoG0=
 github.com/yuin/goldmark v1.1.25/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.32/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
