@@ -12,6 +12,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
+	"strings"
 	"text/template"
 	"time"
 
@@ -46,16 +48,20 @@ func ensureNerdctlArchiveCache(ctx context.Context, y *limatype.LimaYAML, create
 		return "", nil
 	}
 
-	errs := make([]error, len(y.Containerd.Archives))
-	for i, f := range y.Containerd.Archives {
+	return ensureFileOfArchCache(ctx, y.Containerd.Archives, y.Arch, "the nerdctl archive", created)
+}
+
+func ensureFileOfArchCache(ctx context.Context, archives []limatype.File, arch *limatype.Arch, description string, created bool) (string, error) {
+	errs := make([]error, len(archives))
+	for i, f := range archives {
 		// Skip downloading again if the file is already in the cache
-		if created && f.Arch == *y.Arch && !downloader.IsLocal(f.Location) {
+		if created && f.Arch == *arch && !downloader.IsLocal(f.Location) {
 			path, err := fileutils.CachedFile(f)
 			if err == nil {
 				return path, nil
 			}
 		}
-		path, err := fileutils.DownloadFile(ctx, "", f, false, "the nerdctl archive", *y.Arch)
+		path, err := fileutils.DownloadFile(ctx, "", f, false, description, *arch)
 		if err != nil {
 			errs[i] = err
 			continue
@@ -72,10 +78,33 @@ func ensureNerdctlArchiveCache(ctx context.Context, y *limatype.LimaYAML, create
 	return "", fileutils.Errors(errs)
 }
 
+// ensureProvisionToolCache prefetches the provision tool binaries into the cache before launching the hostagent process.
+func ensureProvisionToolCache(ctx context.Context, y *limatype.LimaYAML, created bool) (map[string]string, error) {
+	if len(y.ProvisionTool) == 0 {
+		// no provision tool is needed
+		return nil, nil
+	}
+	result := make(map[string]string, len(y.ProvisionTool))
+	for tool, mode := range limatype.ProvisionToolKeyToMode {
+		if i := slices.IndexFunc(y.Provision, func(p limatype.Provision) bool { return p.Mode == mode }); i == -1 {
+			continue // not used
+		}
+		path, err := ensureFileOfArchCache(ctx, y.ProvisionTool[tool], y.Arch, fmt.Sprintf("the %s provision tool", tool), created)
+		if err != nil {
+			return result, err
+		}
+		if path != "" {
+			result[tool] = path
+		}
+	}
+	return result, nil
+}
+
 type Prepared struct {
 	Driver              driver.Driver
 	GuestAgent          string
 	NerdctlArchiveCache string
+	ProvisionTool       map[string]string
 }
 
 // Prepare ensures the disk, the nerdctl archive, etc.
@@ -159,10 +188,16 @@ func Prepare(ctx context.Context, inst *limatype.Instance) (*Prepared, error) {
 		return nil, err
 	}
 
+	provisionToolCache, err := ensureProvisionToolCache(ctx, inst.Config, created)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Prepared{
 		Driver:              limaDriver,
 		GuestAgent:          guestAgent,
 		NerdctlArchiveCache: nerdctlArchiveCache,
+		ProvisionTool:       provisionToolCache,
 	}, nil
 }
 
@@ -234,6 +269,13 @@ func Start(ctx context.Context, inst *limatype.Instance, limactl string, launchH
 	}
 	if prepared.NerdctlArchiveCache != "" {
 		args = append(args, "--nerdctl-archive", prepared.NerdctlArchiveCache)
+	}
+	if len(prepared.ProvisionTool) > 0 {
+		s := make([]string, 0, len(prepared.ProvisionTool))
+		for tool, path := range prepared.ProvisionTool {
+			s = append(s, tool+"="+path)
+		}
+		args = append(args, "--provision-tool", strings.Join(s, ","))
 	}
 	if showProgress {
 		args = append(args, "--progress")

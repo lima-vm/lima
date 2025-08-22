@@ -30,16 +30,15 @@ provision:
     #!/bin/bash
     set -eux -o pipefail
     command -v docker >/dev/null 2>&1 && exit 0
-    if [ ! -e /etc/systemd/system/docker.socket.d/override.conf ]; then
-      mkdir -p /etc/systemd/system/docker.socket.d
-      # Alternatively we could just add the user to the "docker" group, but that requires restarting the user session
-      cat <<-EOF >/etc/systemd/system/docker.socket.d/override.conf
-      [Socket]
-      SocketUser={{.User}}
-    EOF
-    fi
     export DEBIAN_FRONTEND=noninteractive
     curl -fsSL https://get.docker.com | sh
+- mode: yq
+  path: /etc/systemd/system/docker.service.d/override.conf
+  format: ini
+  expression: .Socket.SocketUser="{{.User}}"
+- mode: yq
+  path: "/etc/docker/daemon.json"
+  expression: .features.containerd-snapshotter = {{.Param.containerdSnapshotter}}
 probes:
 - script: |
     #!/bin/bash
@@ -68,3 +67,5 @@ message: |
   docker context use lima-{{.Name}}
   docker run hello-world
   ------
+param:
+  containerdSnapshotter: false

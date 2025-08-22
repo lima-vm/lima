@@ -1,0 +1,20 @@
+provisionTool:
+  yq:
+  - location: https://github.com/mikefarah/yq/releases/download/v4.47.1/yq_linux_amd64
+    arch: x86_64
+    digest: sha256:0fb28c6680193c41b364193d0c0fc4a03177aecde51cfc04d506b1517158c2fb
+  - location: https://github.com/mikefarah/yq/releases/download/v4.47.1/yq_linux_arm64
+    arch: aarch64
+    digest: sha256:b7f7c991abe262b0c6f96bbcb362f8b35429cefd59c8b4c2daa4811f1e9df599
+  - location: https://github.com/mikefarah/yq/releases/download/v4.47.1/yq_linux_riscv64
+    arch: riscv64
+    digest: sha256:b18eebe3fbb65d1ec4fa6e3ea593400e1d738bc3c807aa276498868f1725967b
+  - location: https://github.com/mikefarah/yq/releases/download/v4.47.1/yq_linux_arm
+    arch: armv7l
+    digest: sha256:1b1f2ac57668f97696df4b18cc847aa20017f9595d68926076b8e2f8d523601e
+  - location: https://github.com/mikefarah/yq/releases/download/v4.47.1/yq_linux_s390x
+    arch: s390x
+    digest: sha256:8e3d97c7d5afd427dd9fec16ef7bc7a31a5e5dc3e9aa0122b12a66e4c4b82f8f
+  - location: https://github.com/mikefarah/yq/releases/download/v4.47.1/yq_linux_ppc64le
+    arch: ppc64le
+    digest: sha256:9c8968b7158d1ec6f9c0b196ec1fea036f63f7cce0821800d61d73932a2870d9

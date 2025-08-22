@@ -78,6 +78,22 @@ func defaultContainerdArchives() []limatype.File {
 	return containerd.Archives
 }
 
+//go:embed provision-tool.yaml
+var defaultProvisionToolYAML []byte
+
+type ProvisionToolYAML struct {
+	ProvisionTool map[limatype.ProvisionToolKey][]limatype.File `yaml:"provisionTool,omitempty" json:"provisionTool,omitempty"`
+}
+
+func defaultProvisionTool() map[limatype.ProvisionToolKey][]limatype.File {
+	var provisionTool ProvisionToolYAML
+	err := yaml.UnmarshalWithOptions(defaultProvisionToolYAML, &provisionTool, yaml.Strict())
+	if err != nil {
+		panic(fmt.Errorf("failed to unmarshal as YAML: %w", err))
+	}
+	return provisionTool.ProvisionTool
+}
+
 // FirstUsernetIndex gets the index of first usernet network under l.Network[]. Returns -1 if no usernet network found.
 func FirstUsernetIndex(l *limatype.LimaYAML) int {
 	return slices.IndexFunc(l.Networks, func(network limatype.Network) bool { return networks.IsUsernet(network.Lima) })
@@ -453,6 +469,29 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 					logrus.WithError(err).Warnf("Couldn't owner %q as a template", *provision.Owner)
 				}
 			}
+		}
+		if provision.Mode == limatype.ProvisionModeYQ {
+			if provision.Expression != nil {
+				if out, err := executeGuestTemplate(*provision.Expression, instDir, y.User, y.Param); err == nil {
+					provision.Expression = ptr.Of(out.String())
+				} else {
+					logrus.WithError(err).Warnf("Couldn't process expression %q as a template", *provision.Expression)
+				}
+			}
+			if provision.Format == nil {
+				provision.Format = ptr.Of("auto")
+			}
+			if provision.User == nil {
+				provision.User = ptr.Of("root")
+			} else {
+				if out, err := executeGuestTemplate(*provision.User, instDir, y.User, y.Param); err == nil {
+					provision.User = ptr.Of(out.String())
+				} else {
+					logrus.WithError(err).Warnf("Couldn't process user %q as a template", *provision.User)
+				}
+			}
+		}
+		if provision.Mode == limatype.ProvisionModeData || provision.Mode == limatype.ProvisionModeYQ {
 			// Path is required; validation will throw an error when it is nil
 			if provision.Path != nil {
 				if out, err := executeGuestTemplate(*provision.Path, instDir, y.User, y.Param); err == nil {
@@ -527,6 +566,31 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		f := &y.Containerd.Archives[i]
 		if f.Arch == "" {
 			f.Arch = *y.Arch
+		}
+	}
+
+	if y.ProvisionTool == nil {
+		y.ProvisionTool = make(map[limatype.ProvisionToolKey][]limatype.File)
+	}
+	builtinProvisionTool := defaultProvisionTool()
+	provisionToolKeys := unique(slices.Concat(
+		slices.Collect(maps.Keys(o.ProvisionTool)),
+		slices.Collect(maps.Keys(y.ProvisionTool)),
+		slices.Collect(maps.Keys(d.ProvisionTool)),
+		slices.Collect(maps.Keys(builtinProvisionTool)),
+	))
+	for _, tool := range provisionToolKeys {
+		y.ProvisionTool[tool] = slices.Concat(o.ProvisionTool[tool], y.ProvisionTool[tool], d.ProvisionTool[tool])
+		if len(y.ProvisionTool[tool]) == 0 {
+			y.ProvisionTool[tool] = builtinProvisionTool[tool]
+		}
+	}
+	for _, tool := range y.ProvisionTool {
+		for i := range tool {
+			provisionTool := &tool[i]
+			if provisionTool.Arch == "" {
+				provisionTool.Arch = *y.Arch
+			}
 		}
 	}
 

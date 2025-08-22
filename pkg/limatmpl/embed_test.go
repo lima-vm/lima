@@ -343,6 +343,9 @@ provision:
 - mode: data
   file: base1.sh # This comment will move to the "content" key
   path: /tmp/data
+- mode: yq
+  file: base1.sh # This comment will move to the "expression" key
+  path: /tmp/yq
 `,
 		`
 # base0.yaml is ignored
@@ -364,6 +367,11 @@ provision:
     #!/usr/bin/env bash
     echo "This is base1.sh"
   path: /tmp/data
+- mode: yq
+  expression: |-  # This comment will move to the "expression" key
+    #!/usr/bin/env bash
+    echo "This is base1.sh"
+  path: /tmp/yq
 
 # base0.yaml is ignored
 `,

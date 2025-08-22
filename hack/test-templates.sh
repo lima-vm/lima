@@ -57,6 +57,7 @@ declare -A CHECKS=(
 	["mount-path-with-spaces"]=""
 	["provision-data"]=""
 	["param-env-variables"]=""
+	["provision-yq"]=""
 	["set-user"]=""
 )
 
@@ -90,6 +91,7 @@ case "$NAME" in
 	CHECKS["mount-path-with-spaces"]="1"
 	CHECKS["provision-data"]="1"
 	CHECKS["param-env-variables"]="1"
+	CHECKS["provision-yq"]="1"
 	CHECKS["set-user"]="1"
 	;;
 "docker")
@@ -206,6 +208,11 @@ if [[ -n ${CHECKS["param-env-variables"]} ]]; then
 	limactl shell "$NAME" test -e /tmp/param-probe
 	limactl shell "$NAME" test -e /tmp/param-system
 	limactl shell "$NAME" test -e /tmp/param-user
+fi
+
+if [[ -n ${CHECKS["provision-yq"]} ]]; then
+	INFO 'Testing that /tmp/param-yq.json was created successfully on provision'
+	limactl shell "$NAME" grep -q '"YQ": "yq"' /tmp/param-yq.json
 fi
 
 if [[ -n ${CHECKS["set-user"]} ]]; then

@@ -77,6 +77,64 @@ if [ -d "${LIMA_CIDATA_MNT}"/provision.data ]; then
 	done
 fi
 
+if [ -d "${LIMA_CIDATA_MNT}"/provision.yq ]; then
+	yq="${LIMA_CIDATA_MNT}"/provision.tool/yq
+	if [ -x "${yq}" ]; then
+		for expression in "${LIMA_CIDATA_MNT}"/provision.yq/*; do
+			filename=$(basename "${expression}")
+			format=$(deref "LIMA_CIDATA_YQ_PROVISION_${filename}_FORMAT")
+			path=$(deref "LIMA_CIDATA_YQ_PROVISION_${filename}_PATH")
+			permissions=$(deref "LIMA_CIDATA_YQ_PROVISION_${filename}_PERMISSIONS")
+			user=$(deref "LIMA_CIDATA_YQ_PROVISION_${filename}_USER")
+			if ! sudo -iu "${user}" mkdir -p "$(dirname "${path}")"; then
+				WARNING "Failed to create directory for ${path} (as user ${user})"
+				CODE=1
+				continue
+			fi
+			# Since CIDATA is mounted with dmode=700,fmode=700,
+			# provision.tool/yq cannot be executed by non-root users,
+			# and provision.yq/* files cannot be read by non-root users.
+			if [ -f "${path}" ]; then
+				INFO "Updating ${path}"
+				# Relies on the fact that yq does not change the owner of the existing file.
+				if ! "${yq}" --inplace --from-file "${expression}" --input-format "${format}" --output-format "${format}" "${path}"; then
+					WARNING "Failed to update ${path} (as user ${user})"
+					CODE=1
+					continue
+				fi
+			else
+				if [ "${format}" = "auto" ]; then
+					# yq can't determine the output format from non-existing files
+					case "${path}" in
+					*.ini) format=ini ;;
+					*.json) format=json ;;
+					*.properties) format=properties ;;
+					*.xml) format=xml ;;
+					*.yaml | *.yml) format=yaml ;;
+					*)
+						format=yaml
+						WARNING "Cannot determine file type for ${path}, using yaml format"
+						;;
+					esac
+				fi
+				INFO "Creating ${path}"
+				if ! "${yq}" --null-input --from-file "${expression}" --output-format "${format}" | sudo -iu "${user}" tee "${path}"; then
+					WARNING "Failed to create ${path} (as user ${user})"
+					CODE=1
+					continue
+				fi
+			fi
+			if ! sudo -iu "${user}" chmod "${permissions}" "${path}"; then
+				WARNING "Failed to set permissions for ${path} (as user ${user})"
+				CODE=1
+			fi
+		done
+	else
+		WARNING "${yq} is not executable, skipping yq provisioning"
+		CODE=1
+	fi
+fi
+
 if [ -d "${LIMA_CIDATA_MNT}"/provision.system ]; then
 	for f in "${LIMA_CIDATA_MNT}"/provision.system/*; do
 		INFO "Executing $f"

@@ -185,10 +185,10 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 			}
 		}
 		switch p.Mode {
-		case limatype.ProvisionModeSystem, limatype.ProvisionModeUser, limatype.ProvisionModeBoot, limatype.ProvisionModeData, limatype.ProvisionModeDependency, limatype.ProvisionModeAnsible:
+		case limatype.ProvisionModeSystem, limatype.ProvisionModeUser, limatype.ProvisionModeBoot, limatype.ProvisionModeData, limatype.ProvisionModeDependency, limatype.ProvisionModeAnsible, limatype.ProvisionModeYQ:
 		default:
-			errs = errors.Join(errs, fmt.Errorf("field `provision[%d].mode` must one of %q, %q, %q, %q, %q, or %q",
-				i, limatype.ProvisionModeSystem, limatype.ProvisionModeUser, limatype.ProvisionModeBoot, limatype.ProvisionModeData, limatype.ProvisionModeDependency, limatype.ProvisionModeAnsible))
+			errs = errors.Join(errs, fmt.Errorf("field `provision[%d].mode` must one of %q, %q, %q, %q, %q, %q, or %q",
+				i, limatype.ProvisionModeSystem, limatype.ProvisionModeUser, limatype.ProvisionModeBoot, limatype.ProvisionModeData, limatype.ProvisionModeDependency, limatype.ProvisionModeAnsible, limatype.ProvisionModeYQ))
 		}
 		if p.Mode != limatype.ProvisionModeDependency && p.SkipDefaultDependencyResolution != nil {
 			errs = errors.Join(errs, fmt.Errorf("field `provision[%d].mode` cannot set skipDefaultDependencyResolution, only valid on scripts of type %q",
@@ -196,7 +196,8 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 		}
 
 		// This can lead to fatal Panic if p.Path is nil, better to return an error here
-		if p.Mode == limatype.ProvisionModeData {
+		switch p.Mode {
+		case limatype.ProvisionModeData:
 			if p.Path == nil {
 				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].path` must not be empty when mode is %q", i, limatype.ProvisionModeData))
 				return errs
@@ -211,7 +212,22 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 			if _, err := strconv.ParseInt(*p.Permissions, 8, 64); err != nil {
 				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].permissions` must be an octal number: %w", i, err))
 			}
-		} else {
+		case limatype.ProvisionModeYQ:
+			if p.Path == nil {
+				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].path` must not be empty when mode is %q", i, limatype.ProvisionModeYQ))
+				return errs
+			}
+			if !path.IsAbs(*p.Path) {
+				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].path` must be an absolute path", i))
+			}
+			if p.Expression == nil {
+				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].expression` must not be empty when mode is %q", i, limatype.ProvisionModeYQ))
+			}
+			// FillDefaults makes sure that p.Permissions is not nil
+			if _, err := strconv.ParseInt(*p.Permissions, 8, 64); err != nil {
+				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].permissions` must be an octal number: %w", i, err))
+			}
+		default:
 			if p.Script == "" && p.Mode != limatype.ProvisionModeAnsible {
 				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].script` must not be empty", i))
 			}
@@ -225,10 +241,16 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].owner` can only be set when mode is %q", i, limatype.ProvisionModeData))
 			}
 			if p.Path != nil {
-				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].path` can only be set when mode is %q", i, limatype.ProvisionModeData))
+				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].path` can only be set when mode is %q, or %q", i, limatype.ProvisionModeData, limatype.ProvisionModeYQ))
 			}
 			if p.Permissions != nil {
-				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].permissions` can only be set when mode is %q", i, limatype.ProvisionModeData))
+				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].permissions` can only be set when mode is %q, or %q", i, limatype.ProvisionModeData, limatype.ProvisionModeYQ))
+			}
+			if p.Format != nil {
+				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].format` can only be set when mode is %q", i, limatype.ProvisionModeYQ))
+			}
+			if p.User != nil {
+				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].user` can only be set when mode is %q", i, limatype.ProvisionModeYQ))
 			}
 		}
 		if p.Playbook != "" {
@@ -260,6 +282,21 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 			}
 		}
 	}
+	for tool, mode := range limatype.ProvisionToolKeyToMode {
+		if i := slices.IndexFunc(y.Provision, func(p limatype.Provision) bool { return p.Mode == mode }); i == -1 {
+			continue
+		}
+		if len(y.ProvisionTool[tool]) == 0 {
+			errs = errors.Join(errs, fmt.Errorf("field `provisionTool[%q]` must be set when mode %q is used", tool, mode))
+		}
+		for i, f := range y.ProvisionTool[tool] {
+			err := validateFileObject(f, fmt.Sprintf("provisionTool[%q][%d]", tool, i))
+			if err != nil {
+				errs = errors.Join(errs, err)
+			}
+		}
+	}
+
 	for i, p := range y.Probes {
 		if p.File != nil {
 			if p.File.URL != "" {
@@ -513,9 +550,16 @@ func validateParamIsUsed(y *limatype.LimaYAML) error {
 				keyIsUsed = true
 				break
 			}
-			if p.Content != nil && re.MatchString(*p.Content) {
-				keyIsUsed = true
-				break
+			for _, ptr := range []*string{
+				// mode: data
+				p.Content, p.Owner, p.Path,
+				// mode: yq
+				p.Expression, p.Permissions, p.User,
+			} {
+				if ptr != nil && re.MatchString(*ptr) {
+					keyIsUsed = true
+					break
+				}
 			}
 			if p.Playbook != "" {
 				playbook, err := os.ReadFile(p.Playbook)

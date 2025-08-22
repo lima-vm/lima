@@ -114,6 +114,11 @@ func locationsFromLimaYAML(y *limatype.LimaYAML) map[string]limatype.File {
 	for _, f := range y.Containerd.Archives {
 		locations[downloader.CacheKey(f.Location)] = f
 	}
+	for _, files := range y.ProvisionTool {
+		for _, f := range files {
+			locations[downloader.CacheKey(f.Location)] = f
+		}
+	}
 	for _, f := range y.Firmware.Images {
 		locations[downloader.CacheKey(f.Location)] = f.File
 	}
