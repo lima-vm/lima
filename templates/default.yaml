@@ -329,6 +329,11 @@ vmOpts:
     #   armv7l:  "max" # (or "host" when running on armv7l host)
     #   riscv64: "max" # (or "host" when running on riscv64 host)
     #   x86_64:  "max" # (or "host" when running on x86_64 host; additional options are appended on Intel Mac)
+  docker:
+    # The container runtime to use when running.
+    # Will be ignored if the vmType is not "docker"
+    # 🟢 Builtin default: none (use daemon default)
+    runtime: null
 
 # OS: "Linux".
 # 🟢 Builtin default: "Linux"

@@ -107,12 +107,17 @@ type User struct {
 }
 
 type VMOpts struct {
-	QEMU QEMUOpts `yaml:"qemu,omitempty" json:"qemu,omitempty"`
+	QEMU   QEMUOpts   `yaml:"qemu,omitempty" json:"qemu,omitempty"`
+	Docker DockerOpts `yaml:"docker,omitempty" json:"docker,omitempty"`
 }
 
 type QEMUOpts struct {
 	MinimumVersion *string `yaml:"minimumVersion,omitempty" json:"minimumVersion,omitempty" jsonschema:"nullable"`
 	CPUType        CPUType `yaml:"cpuType,omitempty" json:"cpuType,omitempty" jsonschema:"nullable"`
+}
+
+type DockerOpts struct {
+	Runtime *string `yaml:"runtime,omitempty" json:"runtime,omitempty" jsonschema:"nullable"`
 }
 
 type Rosetta struct {
