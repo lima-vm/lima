@@ -851,16 +851,18 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 		args = appendArgsIfNoConflict(args, "-display", display)
 	}
 
-	switch *y.Arch {
-	// FIXME: use virtio-gpu on all the architectures
-	case limayaml.X8664, limayaml.RISCV64:
-		args = append(args, "-device", "virtio-vga")
-	default:
-		args = append(args, "-device", "virtio-gpu")
+	if *y.Video.Display != "none" {
+		switch *y.Arch {
+		// FIXME: use virtio-gpu on all the architectures
+		case limayaml.X8664, limayaml.RISCV64:
+			args = append(args, "-device", "virtio-vga")
+		default:
+			args = append(args, "-device", "virtio-gpu")
+		}
+		args = append(args, "-device", "virtio-keyboard-pci")
+		args = append(args, "-device", "virtio-"+input+"-pci")
+		args = append(args, "-device", "qemu-xhci,id=usb-bus")
 	}
-	args = append(args, "-device", "virtio-keyboard-pci")
-	args = append(args, "-device", "virtio-"+input+"-pci")
-	args = append(args, "-device", "qemu-xhci,id=usb-bus")
 
 	// Parallel
 	args = append(args, "-parallel", "none")
