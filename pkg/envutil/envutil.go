@@ -42,23 +42,27 @@ var defaultBlockList = []string{
 	"_*", // Variables starting with underscore are typically internal
 }
 
-func getBlockList() []string {
+// getBlockList returns the list of environment variable patterns to be blocked.
+// The second return value indicates whether the list was explicitly set via LIMA_SHELLENV_BLOCK.
+func getBlockList() ([]string, bool) {
 	blockEnv := os.Getenv("LIMA_SHELLENV_BLOCK")
 	if blockEnv == "" {
-		return defaultBlockList
+		return defaultBlockList, false
 	}
 	after, found := strings.CutPrefix(blockEnv, "+")
 	if !found {
-		return parseEnvList(blockEnv)
+		return parseEnvList(blockEnv), true
 	}
-	return slices.Concat(defaultBlockList, parseEnvList(after))
+	return slices.Concat(defaultBlockList, parseEnvList(after)), true
 }
 
-func getAllowList() []string {
+// getAllowList returns the list of environment variable patterns to be allowed.
+// The second return value indicates whether the list was explicitly set via LIMA_SHELLENV_ALLOW.
+func getAllowList() ([]string, bool) {
 	if allowEnv := os.Getenv("LIMA_SHELLENV_ALLOW"); allowEnv != "" {
-		return parseEnvList(allowEnv)
+		return parseEnvList(allowEnv), true
 	}
-	return nil
+	return nil, false
 }
 
 func parseEnvList(envList string) []string {
@@ -92,10 +96,17 @@ func matchesAnyPattern(name string, patterns []string) bool {
 // It returns a slice of environment variables that are not blocked by the current configuration.
 // The filtering is controlled by LIMA_SHELLENV_BLOCK and LIMA_SHELLENV_ALLOW environment variables.
 func FilterEnvironment() []string {
+	allowList, isAllowListSet := getAllowList()
+	blockList, isBlockListSet := getBlockList()
+
+	if isBlockListSet && isAllowListSet {
+		logrus.Warn("Both LIMA_SHELLENV_BLOCK and LIMA_SHELLENV_ALLOW are set. Block list will be ignored.")
+		blockList = nil
+	}
 	return filterEnvironmentWithLists(
 		os.Environ(),
-		getAllowList(),
-		getBlockList(),
+		allowList,
+		blockList,
 	)
 }
 
