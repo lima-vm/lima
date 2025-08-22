@@ -235,6 +235,7 @@ const (
 	ProvisionModeDependency ProvisionMode = "dependency"
 	ProvisionModeAnsible    ProvisionMode = "ansible" // DEPRECATED
 	ProvisionModeData       ProvisionMode = "data"
+	ProvisionModeYQ         ProvisionMode = "yq"
 )
 
 type Provision struct {
@@ -245,6 +246,9 @@ type Provision struct {
 	Playbook                        string             `yaml:"playbook,omitempty" json:"playbook,omitempty"` // DEPRECATED
 	// All ProvisionData fields must be nil unless Mode is ProvisionModeData
 	ProvisionData `yaml:",inline"` // Flatten fields for "strict" YAML mode
+	// ProvisionModeYQ borrows Owner, Path, and Permissions from ProvisionData
+	Expression *string `yaml:"expression,omitempty" json:"expression,omitempty" jsonschema:"nullable"`
+	Format     *string `yaml:"format,omitempty" json:"format,omitempty" jsonschema:"nullable"`
 }
 
 type ProvisionData struct {

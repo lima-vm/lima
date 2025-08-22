@@ -142,7 +142,7 @@ func TestValidateProvisionMode(t *testing.T) {
 	assert.NilError(t, err)
 
 	err = Validate(y, false)
-	assert.Error(t, err, "field `provision[0].mode` must one of \"system\", \"user\", \"boot\", \"data\", \"dependency\", or \"ansible\"\n"+
+	assert.Error(t, err, "field `provision[0].mode` must one of \"system\", \"user\", \"boot\", \"data\", \"dependency\", \"ansible\", or \"yq\"\n"+
 		"field `provision[0].script` must not be empty")
 }
 
@@ -166,6 +166,45 @@ func TestValidateProvisionData(t *testing.T) {
 	y, err = Load(t.Context(), []byte(invalidData+"\n"+images), "lima.yaml")
 	assert.NilError(t, err)
 
+	err = Validate(y, false)
+	assert.ErrorContains(t, err, "provision[0].permissions` must be an octal number")
+}
+
+func TestValidateProvisionYQ(t *testing.T) {
+	images := `images: [{location: /}]`
+	param := `param: {"cdi": "true"}`
+	// Valid
+	validYQProvision := `provision: [{mode: yq, expression: ".features.cdi={{.Param.cdi}}", path: /tmp}]`
+	y, err := Load(t.Context(), []byte(param+"\n"+validYQProvision+"\n"+images), "lima.yaml")
+	assert.NilError(t, err)
+	err = Validate(y, false)
+	assert.NilError(t, err)
+
+	// Missing path
+	invalidYQProvision := `provision: [{mode: yq, expression: ".features.cdi={{.Param.cdi}}"}]`
+	y, err = Load(t.Context(), []byte(param+"\n"+invalidYQProvision+"\n"+images), "lima.yaml")
+	assert.NilError(t, err)
+	err = Validate(y, false)
+	assert.ErrorContains(t, err, "field `provision[0].path` must not be empty when mode is \"yq\"")
+
+	// non-absolute path
+	invalidYQProvision = `provision: [{mode: yq, expression: ".features.cdi={{.Param.cdi}}", path: tmp}]`
+	y, err = Load(t.Context(), []byte(param+"\n"+invalidYQProvision+"\n"+images), "lima.yaml")
+	assert.NilError(t, err)
+	err = Validate(y, false)
+	assert.ErrorContains(t, err, "field `provision[0].path` must be an absolute path")
+
+	// Missing expression
+	invalidYQProvision = `provision: [{mode: yq, path: "/{{.Param.cdi}}"}]`
+	y, err = Load(t.Context(), []byte(param+"\n"+invalidYQProvision+"\n"+images), "lima.yaml")
+	assert.NilError(t, err)
+	err = Validate(y, false)
+	assert.ErrorContains(t, err, "field `provision[0].expression` must not be empty when mode is \"yq\"")
+
+	// Invalid permissions
+	invalidYQProvision = `provision: [{mode: yq, expression: ".features.cdi={{.Param.cdi}}", path: /tmp, permissions: 9}]`
+	y, err = Load(t.Context(), []byte(param+"\n"+invalidYQProvision+"\n"+images), "lima.yaml")
+	assert.NilError(t, err)
 	err = Validate(y, false)
 	assert.ErrorContains(t, err, "provision[0].permissions` must be an octal number")
 }
@@ -333,7 +372,7 @@ provision:
 	assert.Error(t, err, "field `os` must be \"Linux\"; got \"windows\"\n"+
 		"field `arch` must be one of [x86_64 aarch64 armv7l ppc64le riscv64 s390x]; got \"unsupported_arch\"\n"+
 		"field `images` must be set\n"+
-		"field `provision[0].mode` must one of \"system\", \"user\", \"boot\", \"data\", \"dependency\", or \"ansible\"\n"+
+		"field `provision[0].mode` must one of \"system\", \"user\", \"boot\", \"data\", \"dependency\", \"ansible\", or \"yq\"\n"+
 		"field `provision[1].path` must not be empty when mode is \"data\"")
 }
 

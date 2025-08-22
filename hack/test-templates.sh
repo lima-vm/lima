@@ -56,6 +56,7 @@ declare -A CHECKS=(
 	["user-v2"]=""
 	["mount-path-with-spaces"]=""
 	["provision-data"]=""
+	["provision-yq"]=""
 	["param-env-variables"]=""
 	["set-user"]=""
 	["preserve-env"]="1"
@@ -90,6 +91,7 @@ case "$NAME" in
 	CHECKS["clone"]="1"
 	CHECKS["mount-path-with-spaces"]="1"
 	CHECKS["provision-data"]="1"
+	CHECKS["provision-yq"]="1"
 	CHECKS["param-env-variables"]="1"
 	CHECKS["set-user"]="1"
 	;;
@@ -197,6 +199,11 @@ fi
 if [[ -n ${CHECKS["provision-data"]} ]]; then
 	INFO 'Testing that /etc/sysctl.d/99-inotify.conf was created successfully on provision'
 	limactl shell "$NAME" grep -q fs.inotify.max_user_watches /etc/sysctl.d/99-inotify.conf
+fi
+
+if [[ -n ${CHECKS["provision-yq"]} ]]; then
+	INFO 'Testing that /tmp/param-yq.json was created successfully on provision'
+	limactl shell "$NAME" grep -q '"YQ": "yq"' /tmp/param-yq.json
 fi
 
 if [[ -n ${CHECKS["param-env-variables"]} ]]; then

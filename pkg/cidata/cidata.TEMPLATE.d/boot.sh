@@ -64,15 +64,89 @@ if [ -d "${LIMA_CIDATA_MNT}"/provision.data ]; then
 		owner=$(deref "LIMA_CIDATA_DATAFILE_${filename}_OWNER")
 		path=$(deref "LIMA_CIDATA_DATAFILE_${filename}_PATH")
 		permissions=$(deref "LIMA_CIDATA_DATAFILE_${filename}_PERMISSIONS")
+		user="${owner%%:*}"
 		if [ -e "$path" ] && [ "$overwrite" = "false" ]; then
 			INFO "Not overwriting $path"
 		else
 			INFO "Copying $f to $path"
-			# intermediate directories will be owned by root, regardless of OWNER setting
-			mkdir -p "$(dirname "$path")"
+			if ! sudo -iu "${user}" mkdir -p "$(dirname "$path")"; then
+				WARNING "Failed to create directory for ${path} (as user ${user})"
+				WARNING "Falling back to creating directory as root to maintain compatibility"
+				mkdir -p "$(dirname "$path")"
+			fi
 			cp "$f" "$path"
 			chown "$owner" "$path"
 			chmod "$permissions" "$path"
+		fi
+	done
+fi
+
+if [ -d "${LIMA_CIDATA_MNT}"/provision.yq ]; then
+	yq="${LIMA_CIDATA_MNT}/lima-guestagent yq"
+	for f in "${LIMA_CIDATA_MNT}"/provision.yq/*; do
+		filename=$(basename "${f}")
+		format=$(deref "LIMA_CIDATA_YQ_PROVISION_${filename}_FORMAT")
+		owner=$(deref "LIMA_CIDATA_YQ_PROVISION_${filename}_OWNER")
+		path=$(deref "LIMA_CIDATA_YQ_PROVISION_${filename}_PATH")
+		permissions=$(deref "LIMA_CIDATA_YQ_PROVISION_${filename}_PERMISSIONS")
+		user="${owner%%:*}"
+		# Creating intermediate directories may fail if the user does not have permission.
+		# TODO: Create intermediate directories with the specified group ownership.
+		if ! sudo -iu "${user}" mkdir -p "$(dirname "${path}")"; then
+			WARNING "Failed to create directory for ${path} (as user ${user})"
+			CODE=1
+			continue
+		fi
+		# Since CIDATA is mounted with dmode=700,fmode=700,
+		# `lima-guestagent yq` cannot be executed by non-root users,
+		# and provision.yq/* files cannot be read by non-root users.
+		if [ -f "${path}" ]; then
+			INFO "Updating ${path}"
+			# If the user does not have write permission, it should fail.
+			# This avoids changes being made by the wrong user.
+			if ! sudo -iu "${user}" test -w "${path}"; then
+				WARNING "File ${path} is not writable by user ${user}"
+				CODE=1
+				continue
+			fi
+			# Relies on the fact that yq does not change the owner of the existing file.
+			if ! ${yq} --inplace --from-file "${f}" --input-format "${format}" --output-format "${format}" "${path}"; then
+				WARNING "Failed to update ${path} (as user ${user})"
+				CODE=1
+				continue
+			fi
+		else
+			if [ "${format}" = "auto" ]; then
+				# yq can't determine the output format from non-existing files
+				case "${path}" in
+				*.csv) format=csv ;;
+				*.ini) format=ini ;;
+				*.json) format=json ;;
+				*.properties) format=properties ;;
+				*.toml) format=toml ;;
+				*.tsv) format=tsv ;;
+				*.xml) format=xml ;;
+				*.yaml | *.yml) format=yaml ;;
+				*)
+					format=yaml
+					WARNING "Cannot determine file type for ${path}, using yaml format"
+					;;
+				esac
+			fi
+			INFO "Creating ${path}"
+			if ! ${yq} --null-input --from-file "${f}" --output-format "${format}" | sudo -iu "${user}" tee "${path}"; then
+				WARNING "Failed to create ${path} (as user ${user})"
+				CODE=1
+				continue
+			fi
+		fi
+		if ! sudo -iu "${user}" chown "${owner}" "${path}"; then
+			WARNING "Failed to set owner for ${path} (as user ${user})"
+			CODE=1
+		fi
+		if ! sudo -iu "${user}" chmod "${permissions}" "${path}"; then
+			WARNING "Failed to set permissions for ${path} (as user ${user})"
+			CODE=1
 		fi
 	done
 fi

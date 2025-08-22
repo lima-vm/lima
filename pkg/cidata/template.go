@@ -58,6 +58,14 @@ type DataFile struct {
 	Permissions string
 }
 
+type YQProvision struct {
+	FileName    string
+	Format      string
+	Owner       string
+	Path        string
+	Permissions string
+}
+
 type Disk struct {
 	Name   string
 	Device string
@@ -93,6 +101,7 @@ type TemplateArgs struct {
 	Param                           map[string]string
 	BootScripts                     bool
 	DataFiles                       []DataFile
+	YQProvisions                    []YQProvision
 	DNSAddresses                    []string
 	CACerts                         CACerts
 	HostHomeMountPoint              string
