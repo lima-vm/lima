@@ -14,11 +14,10 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
-
 	"github.com/lima-vm/lima/v2/pkg/networks"
 	"github.com/lima-vm/lima/v2/pkg/yqutil"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 )
 
 const networkCreateExample = `  Create a network:

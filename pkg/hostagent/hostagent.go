@@ -20,12 +20,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/lima-vm/sshocker/pkg/ssh"
-	"github.com/sethvargo/go-password/password"
-	"github.com/sirupsen/logrus"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	"github.com/lima-vm/lima/v2/pkg/cidata"
 	"github.com/lima-vm/lima/v2/pkg/driver"
 	"github.com/lima-vm/lima/v2/pkg/driverutil"
@@ -45,6 +39,11 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/sshutil"
 	"github.com/lima-vm/lima/v2/pkg/store"
 	"github.com/lima-vm/lima/v2/pkg/version/versionutil"
+	"github.com/lima-vm/sshocker/pkg/ssh"
+	"github.com/sethvargo/go-password/password"
+	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type HostAgent struct {

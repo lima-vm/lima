@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 
 	"github.com/lima-vm/go-qcow2reader"
-
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 )
 

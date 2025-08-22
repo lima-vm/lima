@@ -7,11 +7,10 @@ import (
 	"context"
 	"net"
 
+	pb "github.com/lima-vm/lima/v2/pkg/driver/external"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-
-	pb "github.com/lima-vm/lima/v2/pkg/driver/external"
 )
 
 type DriverClient struct {

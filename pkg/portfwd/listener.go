@@ -10,9 +10,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/sirupsen/logrus"
-
 	guestagentclient "github.com/lima-vm/lima/v2/pkg/guestagent/api/client"
+	"github.com/sirupsen/logrus"
 )
 
 type ClosableListeners struct {

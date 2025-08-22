@@ -9,9 +9,8 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/spf13/cobra"
-
 	"github.com/lima-vm/lima/v2/pkg/networks/usernet"
+	"github.com/spf13/cobra"
 )
 
 func newUsernetCommand() *cobra.Command {

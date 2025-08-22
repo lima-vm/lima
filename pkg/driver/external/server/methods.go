@@ -10,15 +10,14 @@ import (
 	"net"
 	"path/filepath"
 
-	"github.com/sirupsen/logrus"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/emptypb"
-
 	"github.com/lima-vm/lima/v2/pkg/bicopy"
 	pb "github.com/lima-vm/lima/v2/pkg/driver/external"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
+	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func (s *DriverServer) Start(_ *emptypb.Empty, stream pb.Driver_StartServer) error {
@@ -129,7 +128,7 @@ func (s *DriverServer) Validate(ctx context.Context, empty *emptypb.Empty) (*emp
 	return empty, nil
 }
 
-// TODO: Update the proto file
+// TODO: Update the proto file.
 func (s *DriverServer) Initialize(ctx context.Context, empty *emptypb.Empty) (*emptypb.Empty, error) {
 	s.logger.Debug("Received Initialize request")
 	err := s.driver.Create(ctx)

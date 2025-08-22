@@ -7,9 +7,8 @@ import (
 	"net"
 	"testing"
 
-	"gotest.tools/v3/assert"
-
 	"github.com/lima-vm/lima/v2/pkg/networks"
+	"gotest.tools/v3/assert"
 )
 
 func TestUsernetConfig(t *testing.T) {

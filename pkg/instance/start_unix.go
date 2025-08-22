@@ -11,10 +11,9 @@ import (
 	"os/exec"
 	"syscall"
 
+	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/mattn/go-isatty"
 	"github.com/sirupsen/logrus"
-
-	"github.com/lima-vm/lima/v2/pkg/osutil"
 )
 
 func execHostAgentForeground(limactl string, haCmd *exec.Cmd) error {

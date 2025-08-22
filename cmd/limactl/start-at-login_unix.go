@@ -10,11 +10,10 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
-
 	"github.com/lima-vm/lima/v2/pkg/autostart"
 	"github.com/lima-vm/lima/v2/pkg/store"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 )
 
 func startAtLoginAction(cmd *cobra.Command, args []string) error {

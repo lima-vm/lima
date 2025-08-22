@@ -18,8 +18,6 @@ import (
 
 	"github.com/Code-Hex/vz/v3"
 	"github.com/coreos/go-semver/semver"
-	"github.com/sirupsen/logrus"
-
 	"github.com/lima-vm/lima/v2/pkg/driver"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
@@ -27,6 +25,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/ptr"
 	"github.com/lima-vm/lima/v2/pkg/reflectutil"
+	"github.com/sirupsen/logrus"
 )
 
 var knownYamlProperties = []string{
@@ -122,7 +121,7 @@ func (l *LimaVzDriver) FillConfig(cfg *limatype.LimaYAML, filePath string) error
 		cfg.MountType = ptr.Of(limatype.VIRTIOFS)
 	}
 
-	// Migrate old Rosetta config if needed
+	//nolint:staticcheck // Migration of top-level Rosetta if specified
 	if (cfg.VMOpts.VZ.Rosetta.Enabled == nil && cfg.VMOpts.VZ.Rosetta.BinFmt == nil) && (!isEmpty(cfg.Rosetta)) {
 		logrus.Debug("Migrating top-level Rosetta configuration to vmOpts.vz.rosetta")
 		cfg.VMOpts.VZ.Rosetta = cfg.Rosetta
@@ -387,6 +386,7 @@ func (l *LimaVzDriver) Info() driver.Info {
 	}
 	return info
 }
+
 func (l *LimaVzDriver) SSHAddress(_ context.Context) (string, error) {
 	return "127.0.0.1", nil
 }

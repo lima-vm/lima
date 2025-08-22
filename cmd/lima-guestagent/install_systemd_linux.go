@@ -12,10 +12,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/lima-vm/lima/v2/pkg/textutil"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-
-	"github.com/lima-vm/lima/v2/pkg/textutil"
 )
 
 func newInstallSystemdCommand() *cobra.Command {

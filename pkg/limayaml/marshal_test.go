@@ -6,10 +6,9 @@ package limayaml
 import (
 	"testing"
 
-	"gotest.tools/v3/assert"
-
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/ptr"
+	"gotest.tools/v3/assert"
 )
 
 func TestMarshalEmpty(t *testing.T) {

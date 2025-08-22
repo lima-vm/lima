@@ -25,8 +25,6 @@ import (
 	"github.com/coreos/go-semver/semver"
 	"github.com/digitalocean/go-qemu/qmp"
 	"github.com/digitalocean/go-qemu/qmp/raw"
-	"github.com/sirupsen/logrus"
-
 	"github.com/lima-vm/lima/v2/pkg/driver"
 	"github.com/lima-vm/lima/v2/pkg/driver/qemu/entitlementutil"
 	"github.com/lima-vm/lima/v2/pkg/executil"
@@ -37,6 +35,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/ptr"
 	"github.com/lima-vm/lima/v2/pkg/version/versionutil"
+	"github.com/sirupsen/logrus"
 )
 
 type LimaQemuDriver struct {
@@ -89,10 +88,10 @@ func (l *LimaQemuDriver) Validate(ctx context.Context) error {
 	return nil
 }
 
-// Helper method for mount type validation
+// Helper method for mount type validation.
 func (l *LimaQemuDriver) validateMountType() error {
 	if l.Instance == nil || l.Instance.Config == nil {
-		return fmt.Errorf("instance configuration is not set")
+		return errors.New("instance configuration is not set")
 	}
 
 	cfg := l.Instance.Config
@@ -126,7 +125,7 @@ func (l *LimaQemuDriver) FillConfig(cfg *limatype.LimaYAML, filePath string) err
 		cfg.VMOpts.QEMU.CPUType = limatype.CPUType{}
 	}
 
-	// Migrate top-level CPUTYPE if needed
+	//nolint:staticcheck // Migration of top-level CPUTYPE if specified
 	if len(cfg.CPUType) > 0 {
 		logrus.Warn("The top-level `cpuType` field is deprecated and will be removed in a future release. Please migrate to `vmOpts.qemu.cpuType`.")
 		for arch, v := range cfg.CPUType {

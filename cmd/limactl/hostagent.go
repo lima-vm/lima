@@ -15,11 +15,10 @@ import (
 	"strconv"
 	"syscall"
 
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
-
 	"github.com/lima-vm/lima/v2/pkg/hostagent"
 	"github.com/lima-vm/lima/v2/pkg/hostagent/api/server"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 )
 
 func newHostagentCommand() *cobra.Command {

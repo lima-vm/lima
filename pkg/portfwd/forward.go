@@ -8,12 +8,11 @@ import (
 	"net"
 	"strings"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/lima-vm/lima/v2/pkg/guestagent/api"
 	guestagentclient "github.com/lima-vm/lima/v2/pkg/guestagent/api/client"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
+	"github.com/sirupsen/logrus"
 )
 
 var IPv4loopback1 = limayaml.IPv4loopback1

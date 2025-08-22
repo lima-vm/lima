@@ -7,10 +7,9 @@ import (
 	"fmt"
 	"testing"
 
-	"gotest.tools/v3/assert"
-
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/version"
+	"gotest.tools/v3/assert"
 )
 
 func TestValidateEmpty(t *testing.T) {

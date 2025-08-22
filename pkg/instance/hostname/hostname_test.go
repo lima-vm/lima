@@ -6,9 +6,8 @@ package hostname_test
 import (
 	"testing"
 
-	"gotest.tools/v3/assert"
-
 	"github.com/lima-vm/lima/v2/pkg/instance/hostname"
+	"gotest.tools/v3/assert"
 )
 
 func TestFromInstName(t *testing.T) {

@@ -24,9 +24,6 @@ import (
 
 	"github.com/docker/go-units"
 	"github.com/goccy/go-yaml"
-	"github.com/pbnjay/memory"
-	"github.com/sirupsen/logrus"
-
 	"github.com/lima-vm/lima/v2/pkg/instance/hostname"
 	"github.com/lima-vm/lima/v2/pkg/ioutilx"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
@@ -38,6 +35,8 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/ptr"
 	"github.com/lima-vm/lima/v2/pkg/version"
+	"github.com/pbnjay/memory"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -789,7 +788,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 	fixUpForPlainMode(y)
 }
 
-// ExistingLimaVersion returns empty if the instance was created with Lima prior to v0.20,
+// ExistingLimaVersion returns empty if the instance was created with Lima prior to v0.20.
 func ExistingLimaVersion(instDir string) string {
 	if !IsExistingInstanceDir(instDir) {
 		return version.Version

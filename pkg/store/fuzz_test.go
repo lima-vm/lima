@@ -8,9 +8,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"gotest.tools/v3/assert"
-
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
+	"gotest.tools/v3/assert"
 )
 
 func FuzzLoadYAMLByFilePath(f *testing.F) {

@@ -9,14 +9,13 @@ import (
 	"os"
 	"time"
 
-	"github.com/mdlayher/vsock"
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
-
 	"github.com/lima-vm/lima/v2/pkg/guestagent"
 	"github.com/lima-vm/lima/v2/pkg/guestagent/api/server"
 	"github.com/lima-vm/lima/v2/pkg/guestagent/serialport"
 	"github.com/lima-vm/lima/v2/pkg/portfwdserver"
+	"github.com/mdlayher/vsock"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 )
 
 func newDaemonCommand() *cobra.Command {

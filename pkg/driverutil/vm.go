@@ -55,7 +55,7 @@ func validateConfigAgainstDriver(y *limatype.LimaYAML, filePath, vmType string) 
 }
 
 func handlePreConfiguredDriverAction(y *limatype.LimaYAML, extDriverPath, filePath string) error {
-	cmd := exec.Command(extDriverPath, "--pre-driver-action")
+	cmd := exec.CommandContext(context.Background(), extDriverPath, "--pre-driver-action")
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return err
@@ -120,7 +120,7 @@ func InspectStatus(ctx context.Context, inst *limatype.Instance) (string, error)
 }
 
 func handleInspectStatusAction(inst *limatype.Instance, extDriverPath string) (string, error) {
-	cmd := exec.Command(extDriverPath, "--inspect-status")
+	cmd := exec.CommandContext(context.Background(), extDriverPath, "--inspect-status")
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return "", err

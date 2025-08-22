@@ -10,11 +10,10 @@ import (
 	"net"
 	"time"
 
-	"google.golang.org/protobuf/types/known/emptypb"
-
 	"github.com/lima-vm/lima/v2/pkg/driver"
 	pb "github.com/lima-vm/lima/v2/pkg/driver/external"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func (d *DriverClient) Validate(ctx context.Context) error {
