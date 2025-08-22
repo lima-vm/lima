@@ -68,7 +68,7 @@ export LIMA_INSTANCE="test-upgrade"
 
 INFO "Creating an instance \"${LIMA_INSTANCE}\" with the old Lima"
 defer "show_lima_log;limactl delete -f \"${LIMA_INSTANCE}\""
-limactl start --tty=false --name="${LIMA_INSTANCE}" template://ubuntu-lts || (
+limactl start --tty=false --name="${LIMA_INSTANCE}" --vm-type=qemu template://ubuntu-lts || (
 	show_lima_log
 	exit 1
 )

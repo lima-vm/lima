@@ -10,14 +10,13 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
-
 	"github.com/lima-vm/lima/v2/pkg/driverutil"
 	"github.com/lima-vm/lima/v2/pkg/limatmpl"
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	"github.com/lima-vm/lima/v2/pkg/yqutil"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 )
 
 func newTemplateCommand() *cobra.Command {
@@ -89,7 +88,8 @@ func fillDefaults(ctx context.Context, tmpl *limatmpl.Template) error {
 		tmpl.Bytes, err = limayaml.Marshal(tmpl.Config, false)
 	}
 	if err := driverutil.ResolveVMType(tmpl.Config, filePath); err != nil {
-		return fmt.Errorf("failed to accept config for %q: %w", filePath, err)
+		logrus.Warnf("failed to resolve VM type for %q: %v", filePath, err)
+		return nil
 	}
 	return err
 }
@@ -251,7 +251,8 @@ func templateValidateAction(cmd *cobra.Command, args []string) error {
 			return err
 		}
 		if err := driverutil.ResolveVMType(y, filePath); err != nil {
-			return fmt.Errorf("failed to accept config for %q: %w", filePath, err)
+			logrus.Warnf("failed to resolve VM type for %q: %v", filePath, err)
+			return nil
 		}
 		if err := limayaml.Validate(y, false); err != nil {
 			return fmt.Errorf("failed to validate YAML file %q: %w", arg, err)
