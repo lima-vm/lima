@@ -14,6 +14,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/lima-vm/lima/v2/cmd/limactl/editflags"
 	"github.com/lima-vm/lima/v2/pkg/editutil"
@@ -84,9 +85,6 @@ func newStartCommand() *cobra.Command {
 
   To create an instance "default" from a template "docker", and start it:
   $ limactl start --name=default template://docker
-
-'limactl start' also accepts the 'limactl create' flags such as '--set'.
-See the examples in 'limactl create --help'.
 `,
 		Short:             "Start an instance of Lima",
 		Args:              WrapArgsError(cobra.MaximumNArgs(1)),
@@ -100,7 +98,109 @@ See the examples in 'limactl create --help'.
 	}
 	startCommand.Flags().Duration("timeout", instance.DefaultWatchHostAgentEventsTimeout, "Duration to wait for the instance to be running before timing out")
 	startCommand.Flags().Bool("progress", false, "Show provision script progress by tailing cloud-init logs")
+	startCommand.SetHelpFunc(func(cmd *cobra.Command, _ []string) {
+		printCommandSummary(cmd)
+
+		allFlags, createFlags := collectFlags(cmd)
+		printFlags(allFlags, createFlags)
+
+		printGlobalFlags(cmd)
+	})
+
 	return startCommand
+}
+
+func printCommandSummary(cmd *cobra.Command) {
+	fmt.Fprintf(cmd.OutOrStdout(), "%s\n\n", cmd.Short)
+	fmt.Fprintf(cmd.OutOrStdout(), "Usage:\n  %s\n\n", cmd.UseLine())
+
+	if cmd.Example != "" {
+		fmt.Fprintf(cmd.OutOrStdout(), "Examples:\n%s\n\n", cmd.Example)
+	}
+}
+
+func getFlagType(flag *pflag.Flag) string {
+	switch flag.Value.Type() {
+	case "bool":
+		return ""
+	case "string":
+		return "string"
+	case "int":
+		return "int"
+	case "duration":
+		return "duration"
+	case "stringSlice", "stringArray":
+		return "strings"
+	case "ipSlice":
+		return "ipSlice"
+	case "uint16":
+		return "uint16"
+	case "float32":
+		return "float32"
+	default:
+		return flag.Value.Type()
+	}
+}
+
+func formatFlag(flag *pflag.Flag) (flagName, shorthand string) {
+	flagName = "--" + flag.Name
+
+	if flag.Shorthand != "" {
+		shorthand = "-" + flag.Shorthand
+	}
+
+	flagType := getFlagType(flag)
+	if flagType != "" {
+		flagName += " " + flagType
+	}
+
+	return flagName, shorthand
+}
+
+func collectFlags(cmd *cobra.Command) (allFlags, createFlags []string) {
+	cmd.LocalFlags().VisitAll(func(flag *pflag.Flag) {
+		flagName, shorthand := formatFlag(flag)
+		flagUsage := flag.Usage
+
+		var formattedFlag string
+		if shorthand != "" {
+			formattedFlag = fmt.Sprintf("  %s, %s", shorthand, flagName)
+		} else {
+			formattedFlag = fmt.Sprintf("      %s", flagName)
+		}
+
+		if strings.HasPrefix(flagUsage, "[limactl create]") {
+			cleanUsage := strings.TrimPrefix(flagUsage, "[limactl create] ")
+			createFlags = append(createFlags, fmt.Sprintf("%-25s %s", formattedFlag, cleanUsage))
+		} else {
+			allFlags = append(allFlags, fmt.Sprintf("%-25s %s", formattedFlag, flagUsage))
+		}
+	})
+	return allFlags, createFlags
+}
+
+func printFlags(allFlags, createFlags []string) {
+	if len(allFlags) > 0 {
+		fmt.Fprint(os.Stdout, "Flags:\n")
+		for _, flag := range allFlags {
+			fmt.Fprintln(os.Stdout, flag)
+		}
+		fmt.Fprint(os.Stdout, "\n")
+	}
+
+	if len(createFlags) > 0 {
+		fmt.Fprint(os.Stdout, "Flags inherited from `limactl create`:\n")
+		for _, flag := range createFlags {
+			fmt.Fprintln(os.Stdout, flag)
+		}
+		fmt.Fprint(os.Stdout, "\n")
+	}
+}
+
+func printGlobalFlags(cmd *cobra.Command) {
+	if cmd.HasAvailableInheritedFlags() {
+		fmt.Fprintf(cmd.OutOrStdout(), "Global Flags:\n%s", cmd.InheritedFlags().FlagUsages())
+	}
 }
 
 func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*store.Instance, error) {
