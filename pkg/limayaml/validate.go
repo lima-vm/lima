@@ -590,10 +590,6 @@ func ValidateAgainstLatestConfig(ctx context.Context, yNew, yLatest []byte) erro
 		errs = errors.Join(errs, err)
 	}
 
-	if (n.VMType != nil && l.VMType != nil) && *n.VMType != *l.VMType {
-		errs = errors.Join(errs, fmt.Errorf("cannot change VMType from %v to %v, please create a new instance with the desired VMType", *l.VMType, *n.VMType))
-	}
-
 	// Handle editing the template without a disk value
 	if n.Disk == nil || l.Disk == nil {
 		return errs

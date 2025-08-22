@@ -68,7 +68,7 @@ export LIMA_INSTANCE="test-upgrade"
 
 INFO "Creating an instance \"${LIMA_INSTANCE}\" with the old Lima"
 defer "show_lima_log;limactl delete -f \"${LIMA_INSTANCE}\""
-limactl start --tty=false --name="${LIMA_INSTANCE}" --vm-type=qemu template://ubuntu-lts || (
+limactl start --tty=false --name="${LIMA_INSTANCE}" template://ubuntu-lts || (
 	show_lima_log
 	exit 1
 )
@@ -95,8 +95,11 @@ INFO "==========================================================================
 INFO "Installing the new Lima ${NEWVER}"
 install_lima "${NEWVER}"
 
+INFO "Editing the instance to specify vm-type as qemu explicitly"
+limactl edit --vm-type=qemu "${LIMA_INSTANCE}"
+
 INFO "Restarting the instance"
-limactl start --tty=false "${LIMA_INSTANCE}" || show_lima_log
+limactl start --tty=false --vm-type=qemu "${LIMA_INSTANCE}" || show_lima_log
 lima nerdctl info
 
 INFO "Confirming that the host filesystem is still mounted"
