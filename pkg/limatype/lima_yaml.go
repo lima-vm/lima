@@ -146,9 +146,11 @@ type Kernel struct {
 }
 
 type Image struct {
-	File   `yaml:",inline"`
-	Kernel *Kernel `yaml:"kernel,omitempty" json:"kernel,omitempty"`
-	Initrd *File   `yaml:"initrd,omitempty" json:"initrd,omitempty"`
+	File       `yaml:",inline"`
+	Kernel     *Kernel `yaml:"kernel,omitempty" json:"kernel,omitempty"`
+	Initrd     *File   `yaml:"initrd,omitempty" json:"initrd,omitempty"`
+	Entrypoint *string `yaml:"entrypoint,omitempty" json:"entrypoint,omitempty"`
+	Stopsignal *string `yaml:"stopsignal,omitempty" json:"stopsignal,omitempty"`
 }
 
 type Disk struct {
