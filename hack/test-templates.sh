@@ -205,8 +205,7 @@ if [[ -n ${CHECKS["param-env-variables"]} ]]; then
 	limactl shell "$NAME" test -e /tmp/param-dependency
 	limactl shell "$NAME" test -e /tmp/param-probe
 	limactl shell "$NAME" test -e /tmp/param-system
-	# TODO re-enable once https://github.com/lima-vm/lima/issues/3308 is fixed
-	# limactl shell "$NAME" test -e /tmp/param-user
+	limactl shell "$NAME" test -e /tmp/param-user
 fi
 
 if [[ -n ${CHECKS["set-user"]} ]]; then
