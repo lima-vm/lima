@@ -47,9 +47,15 @@ func Validate(y *LimaYAML, warn bool) error {
 			errs = errors.Join(errs, fmt.Errorf("template requires Lima version %q; this is only %q", *y.MinimumLimaVersion, version.Version))
 		}
 	}
-	if y.VMOpts.QEMU.MinimumVersion != nil {
-		if _, err := semver.NewVersion(*y.VMOpts.QEMU.MinimumVersion); err != nil {
-			errs = errors.Join(errs, fmt.Errorf("field `vmOpts.qemu.minimumVersion` must be a semvar value, got %q: %w", *y.VMOpts.QEMU.MinimumVersion, err))
+	var qemuOpts QEMUOpts
+	if y.VMOpts[QEMU] != nil {
+		if err := Convert(y.VMOpts[QEMU], &qemuOpts, "vmOpts.qemu"); err != nil {
+			errs = errors.Join(errs, fmt.Errorf("field `vmOpts.qemu` must be a valid value, got %q: %w", y.VMOpts["qemu"], err))
+		}
+	}
+	if qemuOpts.MinimumVersion != nil {
+		if _, err := semver.NewVersion(*qemuOpts.MinimumVersion); err != nil {
+			errs = errors.Join(errs, fmt.Errorf("field `vmOpts.qemu.minimumVersion` must be a semver value, got %q: %w", *qemuOpts.MinimumVersion, err))
 		}
 	}
 	switch *y.OS {

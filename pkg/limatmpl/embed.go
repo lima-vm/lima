@@ -179,12 +179,22 @@ func (tmpl *Template) mergeBase(base *Template) error {
 			tmpl.copyField(minimumLimaVersion, minimumLimaVersion)
 		}
 	}
-	if tmpl.Config.VMOpts.QEMU.MinimumVersion != nil && base.Config.VMOpts.QEMU.MinimumVersion != nil {
-		tmplVersion := *semver.New(*tmpl.Config.VMOpts.QEMU.MinimumVersion)
-		baseVersion := *semver.New(*base.Config.VMOpts.QEMU.MinimumVersion)
-		if tmplVersion.LessThan(baseVersion) {
-			const minimumQEMUVersion = "vmOpts.qemu.minimumVersion"
-			tmpl.copyField(minimumQEMUVersion, minimumQEMUVersion)
+	if tmpl.Config.VMOpts[limayaml.QEMU] != nil && base.Config.VMOpts[limayaml.QEMU] != nil {
+		var tmplOpts limayaml.QEMUOpts
+		if err := limayaml.Convert(tmpl.Config.VMOpts[limayaml.QEMU], &tmplOpts, "vmOpts.qemu"); err != nil {
+			return err
+		}
+		var baseOpts limayaml.QEMUOpts
+		if err := limayaml.Convert(base.Config.VMOpts[limayaml.QEMU], &baseOpts, "vmOpts.qemu"); err != nil {
+			return err
+		}
+		if tmplOpts.MinimumVersion != nil && baseOpts.MinimumVersion != nil {
+			tmplVersion := *semver.New(*tmplOpts.MinimumVersion)
+			baseVersion := *semver.New(*baseOpts.MinimumVersion)
+			if tmplVersion.LessThan(baseVersion) {
+				const minimumQEMUVersion = "vmOpts.qemu.minimumVersion"
+				tmpl.copyField(minimumQEMUVersion, minimumQEMUVersion)
+			}
 		}
 	}
 	return nil

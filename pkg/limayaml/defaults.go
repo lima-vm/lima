@@ -252,24 +252,39 @@ func FillDefault(ctx context.Context, y, d, o *LimaYAML, filePath string, warn b
 		}
 	}
 
-	if y.VMOpts.QEMU.CPUType == nil {
-		y.VMOpts.QEMU.CPUType = CPUType{}
-	}
 	// TODO: This check should be removed when we completely eliminate `CPUType` from limayaml.
 	if len(y.CPUType) > 0 {
 		if warn {
 			logrus.Warn("The top-level `cpuType` field is deprecated and will be removed in a future release. Please migrate to `vmOpts.qemu.cpuType`.")
 		}
+		if y.VMOpts == nil {
+			y.VMOpts = VMOpts{}
+		}
+		if y.VMOpts[QEMU] == nil {
+			y.VMOpts[QEMU] = map[string]any{}
+		}
+		var qemuOpts QEMUOpts
+		if err := Convert(y.VMOpts[QEMU], &qemuOpts, "vmOpts.qemu"); err != nil {
+			logrus.WithError(err).Warnf("Couldn't convert %q", y.VMOpts[QEMU])
+		}
+		if qemuOpts.CPUType == nil {
+			qemuOpts.CPUType = CPUType{}
+		}
 		for arch, v := range y.CPUType {
 			if v == "" {
 				continue
 			}
-			if existing, ok := y.VMOpts.QEMU.CPUType[arch]; ok && existing != "" && existing != v {
+			if existing, ok := qemuOpts.CPUType[arch]; ok && existing != "" && existing != v {
 				logrus.Warnf("Conflicting cpuType for arch %q: top-level=%q, vmOpts.qemu=%q; using vmOpts.qemu value", arch, v, existing)
 				continue
 			}
-			y.VMOpts.QEMU.CPUType[arch] = v
+			qemuOpts.CPUType[arch] = v
 		}
+		var opts any
+		if err := Convert(qemuOpts, &opts, ""); err != nil {
+			logrus.WithError(err).Warnf("Couldn't convert %+v", qemuOpts)
+		}
+		y.VMOpts[QEMU] = opts
 		y.CPUType = nil
 	}
 
