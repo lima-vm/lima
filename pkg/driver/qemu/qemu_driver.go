@@ -25,6 +25,8 @@ import (
 	"github.com/coreos/go-semver/semver"
 	"github.com/digitalocean/go-qemu/qmp"
 	"github.com/digitalocean/go-qemu/qmp/raw"
+	"github.com/sirupsen/logrus"
+
 	"github.com/lima-vm/lima/v2/pkg/driver"
 	"github.com/lima-vm/lima/v2/pkg/driver/qemu/entitlementutil"
 	"github.com/lima-vm/lima/v2/pkg/executil"
@@ -35,7 +37,6 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/ptr"
 	"github.com/lima-vm/lima/v2/pkg/version/versionutil"
-	"github.com/sirupsen/logrus"
 )
 
 type LimaQemuDriver struct {
@@ -176,7 +177,7 @@ func (l *LimaQemuDriver) FillConfig(cfg *limatype.LimaYAML, filePath string) err
 	return nil
 }
 
-func (l *LimaQemuDriver) AcceptConfig(cfg *limatype.LimaYAML, filePath string) error {
+func (l *LimaQemuDriver) AcceptConfig(cfg *limatype.LimaYAML, _ string) error {
 	if l.Instance == nil {
 		l.Instance = &limatype.Instance{}
 	}

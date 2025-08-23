@@ -18,6 +18,8 @@ import (
 
 	"github.com/Code-Hex/vz/v3"
 	"github.com/coreos/go-semver/semver"
+	"github.com/sirupsen/logrus"
+
 	"github.com/lima-vm/lima/v2/pkg/driver"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
@@ -25,7 +27,6 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/ptr"
 	"github.com/lima-vm/lima/v2/pkg/reflectutil"
-	"github.com/sirupsen/logrus"
 )
 
 var knownYamlProperties = []string{
@@ -112,7 +113,7 @@ func (l *LimaVzDriver) Configure(inst *limatype.Instance) *driver.ConfiguredDriv
 	}
 }
 
-func (l *LimaVzDriver) FillConfig(cfg *limatype.LimaYAML, filePath string) error {
+func (l *LimaVzDriver) FillConfig(cfg *limatype.LimaYAML, _ string) error {
 	if cfg.VMType == nil {
 		cfg.VMType = ptr.Of(limatype.VZ)
 	}
@@ -126,6 +127,7 @@ func (l *LimaVzDriver) FillConfig(cfg *limatype.LimaYAML, filePath string) error
 		logrus.Debug("Migrating top-level Rosetta configuration to vmOpts.vz.rosetta")
 		cfg.VMOpts.VZ.Rosetta = cfg.Rosetta
 	}
+	//nolint:staticcheck // Warning about both top-level and vmOpts.vz.Rosetta being set
 	if (cfg.VMOpts.VZ.Rosetta.Enabled != nil && cfg.VMOpts.VZ.Rosetta.BinFmt != nil) && (!isEmpty(cfg.Rosetta)) {
 		logrus.Warn("Both top-level 'rosetta' and 'vmOpts.vz.rosetta' are configured. Using vmOpts.vz.rosetta. Top-level 'rosetta' is deprecated.")
 	}

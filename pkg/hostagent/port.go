@@ -7,11 +7,12 @@ import (
 	"context"
 	"net"
 
+	"github.com/lima-vm/sshocker/pkg/ssh"
+	"github.com/sirupsen/logrus"
+
 	"github.com/lima-vm/lima/v2/pkg/guestagent/api"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
-	"github.com/lima-vm/sshocker/pkg/ssh"
-	"github.com/sirupsen/logrus"
 )
 
 type portForwarder struct {

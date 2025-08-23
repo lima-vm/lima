@@ -9,9 +9,10 @@ import (
 	"fmt"
 	"path"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/lima-vm/lima/v2/pkg/downloader"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
-	"github.com/sirupsen/logrus"
 )
 
 // ErrSkipped is returned when the downloader did not attempt to download the specified file.

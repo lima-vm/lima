@@ -11,9 +11,10 @@ import (
 	"runtime"
 	"testing"
 
+	"gotest.tools/v3/assert"
+
 	"github.com/lima-vm/lima/v2/pkg/driver"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
-	"gotest.tools/v3/assert"
 )
 
 type mockDriver struct {

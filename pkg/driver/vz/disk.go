@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 
 	"github.com/docker/go-units"
+
 	"github.com/lima-vm/lima/v2/pkg/imgutil/proxyimgutil"
 	"github.com/lima-vm/lima/v2/pkg/iso9660util"
 	"github.com/lima-vm/lima/v2/pkg/limatype"

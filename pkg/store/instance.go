@@ -19,6 +19,8 @@ import (
 	"time"
 
 	"github.com/docker/go-units"
+	"github.com/sirupsen/logrus"
+
 	"github.com/lima-vm/lima/v2/pkg/driverutil"
 	hostagentclient "github.com/lima-vm/lima/v2/pkg/hostagent/api/client"
 	"github.com/lima-vm/lima/v2/pkg/instance/hostname"
@@ -27,7 +29,6 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/textutil"
 	"github.com/lima-vm/lima/v2/pkg/version/versionutil"
-	"github.com/sirupsen/logrus"
 )
 
 // Inspect returns err only when the instance does not exist (os.ErrNotExist).

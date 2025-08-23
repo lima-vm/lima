@@ -10,10 +10,11 @@ import (
 	"net"
 	"time"
 
+	"google.golang.org/protobuf/types/known/emptypb"
+
 	"github.com/lima-vm/lima/v2/pkg/driver"
 	pb "github.com/lima-vm/lima/v2/pkg/driver/external"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
-	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func (d *DriverClient) Validate(ctx context.Context) error {
@@ -34,7 +35,7 @@ func (d *DriverClient) Validate(ctx context.Context) error {
 func (d *DriverClient) Create(ctx context.Context) error {
 	d.logger.Debug("Initializing driver instance")
 
-	_, err := d.DriverSvc.Initialize(ctx, &emptypb.Empty{})
+	_, err := d.DriverSvc.Create(ctx, &emptypb.Empty{})
 	if err != nil {
 		d.logger.Errorf("Initialization failed: %v", err)
 		return err
@@ -114,12 +115,12 @@ func (d *DriverClient) Delete(ctx context.Context) error {
 	return nil
 }
 
-func (d *DriverClient) AcceptConfig(cfg *limatype.LimaYAML, filepath string) error {
-	return errors.New("AcceptConfig not implemented in client driver")
+func (d *DriverClient) AcceptConfig(_ *limatype.LimaYAML, _ string) error {
+	return errors.New("pre-configured driver action not implemented in client driver")
 }
 
-func (d *DriverClient) FillConfig(cfg *limatype.LimaYAML, filepath string) error {
-	return errors.New("FillConfig not implemented in client driver")
+func (d *DriverClient) FillConfig(_ *limatype.LimaYAML, _ string) error {
+	return errors.New("pre-configured driver action not implemented in client driver")
 }
 
 func (d *DriverClient) RunGUI() error {

@@ -14,9 +14,10 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/sirupsen/logrus"
+
 	. "github.com/lima-vm/lima/v2/pkg/must"
 	"github.com/lima-vm/lima/v2/pkg/version/versionutil"
-	"github.com/sirupsen/logrus"
 )
 
 type User struct {

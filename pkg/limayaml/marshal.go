@@ -7,9 +7,10 @@ import (
 	"fmt"
 
 	"github.com/goccy/go-yaml"
+	"github.com/sirupsen/logrus"
+
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/yqutil"
-	"github.com/sirupsen/logrus"
 )
 
 const (

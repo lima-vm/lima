@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	continuityfs "github.com/containerd/continuity/fs"
+
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"

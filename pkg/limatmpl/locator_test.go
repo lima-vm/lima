@@ -8,9 +8,10 @@ import (
 	"runtime"
 	"testing"
 
+	"gotest.tools/v3/assert"
+
 	"github.com/lima-vm/lima/v2/pkg/limatmpl"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
-	"gotest.tools/v3/assert"
 )
 
 func TestInstNameFromImageURL(t *testing.T) {

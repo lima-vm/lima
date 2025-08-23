@@ -25,6 +25,9 @@ import (
 	"github.com/digitalocean/go-qemu/qmp"
 	"github.com/digitalocean/go-qemu/qmp/raw"
 	"github.com/docker/go-units"
+	"github.com/mattn/go-shellwords"
+	"github.com/sirupsen/logrus"
+
 	"github.com/lima-vm/lima/v2/pkg/fileutils"
 	"github.com/lima-vm/lima/v2/pkg/iso9660util"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
@@ -35,8 +38,6 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/qemuimgutil"
 	"github.com/lima-vm/lima/v2/pkg/store"
-	"github.com/mattn/go-shellwords"
-	"github.com/sirupsen/logrus"
 )
 
 type Config struct {

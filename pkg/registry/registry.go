@@ -12,10 +12,11 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/lima-vm/lima/v2/pkg/driver"
 	"github.com/lima-vm/lima/v2/pkg/driver/external/client"
 	"github.com/lima-vm/lima/v2/pkg/usrlocalsharelima"
-	"github.com/sirupsen/logrus"
 )
 
 const (

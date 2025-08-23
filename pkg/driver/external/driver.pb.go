@@ -7,13 +7,12 @@
 package external
 
 import (
-	reflect "reflect"
-	sync "sync"
-	unsafe "unsafe"
-
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
+	reflect "reflect"
+	sync "sync"
+	unsafe "unsafe"
 )
 
 const (
@@ -593,11 +592,10 @@ const file_pkg_driver_external_driver_proto_rawDesc = "" +
 	"\x15ListSnapshotsResponse\x12\x1c\n" +
 	"\tsnapshots\x18\x01 \x01(\tR\tsnapshots\"B\n" +
 	"\x19ForwardGuestAgentResponse\x12%\n" +
-	"\x0eshould_forward\x18\x01 \x01(\bR\rshouldForward2\xad\t\n" +
+	"\x0eshould_forward\x18\x01 \x01(\bR\rshouldForward2\xa9\t\n" +
 	"\x06Driver\x12:\n" +
-	"\bValidate\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x12<\n" +
-	"\n" +
-	"Initialize\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x12<\n" +
+	"\bValidate\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x128\n" +
+	"\x06Create\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x12<\n" +
 	"\n" +
 	"CreateDisk\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x121\n" +
 	"\x05Start\x12\x16.google.protobuf.Empty\x1a\x0e.StartResponse0\x01\x126\n" +
@@ -650,7 +648,7 @@ var file_pkg_driver_external_driver_proto_goTypes = []any{
 var file_pkg_driver_external_driver_proto_depIdxs = []int32{
 	12, // 0: BootScriptsResponse.scripts:type_name -> BootScriptsResponse.ScriptsEntry
 	13, // 1: Driver.Validate:input_type -> google.protobuf.Empty
-	13, // 2: Driver.Initialize:input_type -> google.protobuf.Empty
+	13, // 2: Driver.Create:input_type -> google.protobuf.Empty
 	13, // 3: Driver.CreateDisk:input_type -> google.protobuf.Empty
 	13, // 4: Driver.Start:input_type -> google.protobuf.Empty
 	13, // 5: Driver.Stop:input_type -> google.protobuf.Empty
@@ -669,7 +667,7 @@ var file_pkg_driver_external_driver_proto_depIdxs = []int32{
 	13, // 18: Driver.Info:input_type -> google.protobuf.Empty
 	13, // 19: Driver.SSHAddress:input_type -> google.protobuf.Empty
 	13, // 20: Driver.Validate:output_type -> google.protobuf.Empty
-	13, // 21: Driver.Initialize:output_type -> google.protobuf.Empty
+	13, // 21: Driver.Create:output_type -> google.protobuf.Empty
 	13, // 22: Driver.CreateDisk:output_type -> google.protobuf.Empty
 	3,  // 23: Driver.Start:output_type -> StartResponse
 	13, // 24: Driver.Stop:output_type -> google.protobuf.Empty

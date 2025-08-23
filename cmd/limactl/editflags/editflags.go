@@ -11,11 +11,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/lima-vm/lima/v2/pkg/registry"
 	"github.com/pbnjay/memory"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	flag "github.com/spf13/pflag"
+
+	"github.com/lima-vm/lima/v2/pkg/registry"
 )
 
 // RegisterEdit registers flags related to in-place YAML modification, for `limactl edit`.

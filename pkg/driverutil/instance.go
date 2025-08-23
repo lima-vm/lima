@@ -6,11 +6,12 @@ package driverutil
 import (
 	"fmt"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/lima-vm/lima/v2/pkg/driver"
 	"github.com/lima-vm/lima/v2/pkg/driver/external/server"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/registry"
-	"github.com/sirupsen/logrus"
 )
 
 // CreateConfiguredDriver creates a driver.ConfiguredDriver for the given instance.

@@ -11,9 +11,10 @@ import (
 	"path/filepath"
 
 	"github.com/goccy/go-yaml"
+	"github.com/sirupsen/logrus"
+
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
-	"github.com/sirupsen/logrus"
 )
 
 func runAnsibleProvision(ctx context.Context, inst *limatype.Instance) error {

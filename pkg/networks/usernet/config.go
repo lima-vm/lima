@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	"github.com/apparentlymart/go-cidr/cidr"
+
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/networks"
 	"github.com/lima-vm/lima/v2/pkg/osutil"

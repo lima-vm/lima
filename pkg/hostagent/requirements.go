@@ -9,9 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/sshocker/pkg/ssh"
 	"github.com/sirupsen/logrus"
+
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 )
 
 func (a *HostAgent) waitForRequirements(label string, requirements []requirement) error {

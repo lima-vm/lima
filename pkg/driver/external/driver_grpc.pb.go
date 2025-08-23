@@ -8,7 +8,6 @@ package external
 
 import (
 	context "context"
-
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -22,7 +21,7 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	Driver_Validate_FullMethodName              = "/Driver/Validate"
-	Driver_Initialize_FullMethodName            = "/Driver/Initialize"
+	Driver_Create_FullMethodName                = "/Driver/Create"
 	Driver_CreateDisk_FullMethodName            = "/Driver/CreateDisk"
 	Driver_Start_FullMethodName                 = "/Driver/Start"
 	Driver_Stop_FullMethodName                  = "/Driver/Stop"
@@ -47,7 +46,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type DriverClient interface {
 	Validate(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	Initialize(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	Create(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	CreateDisk(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	Start(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (grpc.ServerStreamingClient[StartResponse], error)
 	Stop(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
@@ -85,10 +84,10 @@ func (c *driverClient) Validate(ctx context.Context, in *emptypb.Empty, opts ...
 	return out, nil
 }
 
-func (c *driverClient) Initialize(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (c *driverClient) Create(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, Driver_Initialize_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, Driver_Create_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -279,7 +278,7 @@ func (c *driverClient) SSHAddress(ctx context.Context, in *emptypb.Empty, opts .
 // for forward compatibility.
 type DriverServer interface {
 	Validate(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
-	Initialize(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
+	Create(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	CreateDisk(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	Start(*emptypb.Empty, grpc.ServerStreamingServer[StartResponse]) error
 	Stop(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
@@ -310,8 +309,8 @@ type UnimplementedDriverServer struct{}
 func (UnimplementedDriverServer) Validate(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Validate not implemented")
 }
-func (UnimplementedDriverServer) Initialize(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Initialize not implemented")
+func (UnimplementedDriverServer) Create(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Create not implemented")
 }
 func (UnimplementedDriverServer) CreateDisk(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateDisk not implemented")
@@ -403,20 +402,20 @@ func _Driver_Validate_Handler(srv interface{}, ctx context.Context, dec func(int
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Driver_Initialize_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Driver_Create_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(DriverServer).Initialize(ctx, in)
+		return srv.(DriverServer).Create(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Driver_Initialize_FullMethodName,
+		FullMethod: Driver_Create_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DriverServer).Initialize(ctx, req.(*emptypb.Empty))
+		return srv.(DriverServer).Create(ctx, req.(*emptypb.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -732,8 +731,8 @@ var Driver_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Driver_Validate_Handler,
 		},
 		{
-			MethodName: "Initialize",
-			Handler:    _Driver_Initialize_Handler,
+			MethodName: "Create",
+			Handler:    _Driver_Create_Handler,
 		},
 		{
 			MethodName: "CreateDisk",

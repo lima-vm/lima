@@ -6,8 +6,9 @@ package store
 import (
 	"testing"
 
-	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"gotest.tools/v3/assert"
+
+	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 )
 
 func TestValidateInstName(t *testing.T) {

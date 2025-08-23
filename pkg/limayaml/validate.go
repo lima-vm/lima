@@ -19,6 +19,8 @@ import (
 	"unicode"
 
 	"github.com/docker/go-units"
+	"github.com/sirupsen/logrus"
+
 	"github.com/lima-vm/lima/v2/pkg/driverutil"
 	"github.com/lima-vm/lima/v2/pkg/identifiers"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
@@ -27,7 +29,6 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/version"
 	"github.com/lima-vm/lima/v2/pkg/version/versionutil"
-	"github.com/sirupsen/logrus"
 )
 
 func Validate(y *limatype.LimaYAML, warn bool) error {
@@ -158,7 +159,6 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 		if slices.Contains(y.MountTypesUnsupported, *y.MountType) {
 			errs = errors.Join(errs, fmt.Errorf("field `mountType` must not be one of %v (`mountTypesUnsupported`), got %q", y.MountTypesUnsupported, *y.MountType))
 		}
-
 	}
 
 	if warn && runtime.GOOS != "linux" {

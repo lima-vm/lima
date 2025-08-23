@@ -17,6 +17,8 @@ import (
 
 	"github.com/docker/go-units"
 	"github.com/lima-vm/go-qcow2reader"
+	"github.com/sirupsen/logrus"
+
 	"github.com/lima-vm/lima/v2/pkg/downloader"
 	"github.com/lima-vm/lima/v2/pkg/driver"
 	"github.com/lima-vm/lima/v2/pkg/driverutil"
@@ -29,7 +31,6 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/registry"
 	"github.com/lima-vm/lima/v2/pkg/store"
 	"github.com/lima-vm/lima/v2/pkg/usrlocalsharelima"
-	"github.com/sirupsen/logrus"
 )
 
 // DefaultWatchHostAgentEventsTimeout is the duration to wait for the instance

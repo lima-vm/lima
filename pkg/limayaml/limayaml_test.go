@@ -11,8 +11,9 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"gotest.tools/v3/assert"
+
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 )
 
 func dumpJSON(t *testing.T, d any) string {

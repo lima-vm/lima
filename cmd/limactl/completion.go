@@ -9,10 +9,11 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/spf13/cobra"
+
 	"github.com/lima-vm/lima/v2/pkg/networks"
 	"github.com/lima-vm/lima/v2/pkg/store"
 	"github.com/lima-vm/lima/v2/pkg/templatestore"
-	"github.com/spf13/cobra"
 )
 
 func bashCompleteInstanceNames(_ *cobra.Command) ([]string, cobra.ShellCompDirective) {

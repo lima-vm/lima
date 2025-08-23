@@ -8,10 +8,11 @@ import (
 	"math"
 	"net"
 
-	"github.com/lima-vm/lima/v2/pkg/guestagent/api"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/resolver"
 	"google.golang.org/protobuf/types/known/emptypb"
+
+	"github.com/lima-vm/lima/v2/pkg/guestagent/api"
 )
 
 type GuestAgentClient struct {

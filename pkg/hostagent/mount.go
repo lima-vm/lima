@@ -10,10 +10,11 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/lima-vm/lima/v2/pkg/ioutilx"
-	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/sshocker/pkg/reversesshfs"
 	"github.com/sirupsen/logrus"
+
+	"github.com/lima-vm/lima/v2/pkg/ioutilx"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 )
 
 type mount struct {

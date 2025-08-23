@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/containers/gvisor-tap-vsock/pkg/tcpproxy"
+
 	"github.com/lima-vm/lima/v2/pkg/bicopy"
 	"github.com/lima-vm/lima/v2/pkg/guestagent/api"
 )

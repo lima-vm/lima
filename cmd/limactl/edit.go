@@ -10,6 +10,9 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
+
 	"github.com/lima-vm/lima/v2/cmd/limactl/editflags"
 	"github.com/lima-vm/lima/v2/pkg/driverutil"
 	"github.com/lima-vm/lima/v2/pkg/editutil"
@@ -22,8 +25,6 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/store"
 	"github.com/lima-vm/lima/v2/pkg/uiutil"
 	"github.com/lima-vm/lima/v2/pkg/yqutil"
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
 )
 
 func newEditCommand() *cobra.Command {

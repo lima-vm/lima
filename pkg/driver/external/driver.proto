@@ -6,7 +6,7 @@ option go_package = "github.com/lima-vm/lima/v2/pkg/driver/external";
 
 service Driver {
   rpc Validate(google.protobuf.Empty) returns (google.protobuf.Empty);
-  rpc Initialize(google.protobuf.Empty) returns (google.protobuf.Empty);
+  rpc Create(google.protobuf.Empty) returns (google.protobuf.Empty);
   rpc CreateDisk(google.protobuf.Empty) returns (google.protobuf.Empty);
   rpc Start(google.protobuf.Empty) returns (stream StartResponse);
   rpc Stop(google.protobuf.Empty) returns (google.protobuf.Empty);

@@ -16,11 +16,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/lima-vm/lima/v2/pkg/executil"
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/lockutil"
 	"github.com/lima-vm/lima/v2/pkg/store"
-	"github.com/sirupsen/logrus"
 )
 
 // Start starts a instance a usernet network with the given name.

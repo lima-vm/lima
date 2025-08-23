@@ -7,9 +7,10 @@ import (
 	"fmt"
 	"os/exec"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/registry"
-	"github.com/sirupsen/logrus"
 )
 
 func ResolveVMType(y *limatype.LimaYAML, filePath string) error {
@@ -23,11 +24,7 @@ func ResolveVMType(y *limatype.LimaYAML, filePath string) error {
 
 	// If VMType is not specified, we go with the default platform driver.
 	vmType := limatype.DefaultDriver()
-	if err := validateConfigAgainstDriver(y, filePath, vmType); err == nil {
-		return nil
-	} else {
-		return err
-	}
+	return validateConfigAgainstDriver(y, filePath, vmType)
 }
 
 func validateConfigAgainstDriver(y *limatype.LimaYAML, filePath, vmType string) error {
@@ -98,7 +95,7 @@ func handlePreConfiguredDriverAction(y *limatype.LimaYAML, extDriverPath, filePa
 
 func InspectStatus(ctx context.Context, inst *limatype.Instance) (string, error) {
 	if inst == nil || inst.Config == nil || inst.Config.VMType == nil {
-		return "", fmt.Errorf("instance or its configuration is not properly initialized")
+		return "", errors.New("instance or its configuration is not properly initialized")
 	}
 
 	extDriver, intDriver, exists := registry.Get(*inst.Config.VMType)

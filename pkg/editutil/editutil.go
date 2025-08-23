@@ -12,10 +12,11 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/lima-vm/lima/v2/pkg/editutil/editorcmd"
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
-	"github.com/sirupsen/logrus"
 )
 
 func fileWarning(filename string) string {

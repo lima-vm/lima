@@ -12,11 +12,12 @@ import (
 	"strings"
 
 	"github.com/cheggaaa/pb/v3/termutil"
-	"github.com/lima-vm/lima/v2/pkg/limatype"
-	"github.com/lima-vm/lima/v2/pkg/store"
 	"github.com/mattn/go-isatty"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+
+	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/store"
 )
 
 func fieldNames() []string {

@@ -6,9 +6,10 @@ package instance
 import (
 	"context"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	networks "github.com/lima-vm/lima/v2/pkg/networks/reconcile"
-	"github.com/sirupsen/logrus"
 )
 
 const (

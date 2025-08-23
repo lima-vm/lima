@@ -21,14 +21,15 @@ import (
 	"time"
 
 	"github.com/coreos/go-semver/semver"
+	"github.com/mattn/go-shellwords"
+	"github.com/sirupsen/logrus"
+	"golang.org/x/sys/cpu"
+
 	"github.com/lima-vm/lima/v2/pkg/ioutilx"
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/lockutil"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
-	"github.com/mattn/go-shellwords"
-	"github.com/sirupsen/logrus"
-	"golang.org/x/sys/cpu"
 )
 
 // Environment variable that allows configuring the command (alias) to execute

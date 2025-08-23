@@ -7,8 +7,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/lima-vm/lima/v2/pkg/limainfo"
 	"github.com/spf13/cobra"
+
+	"github.com/lima-vm/lima/v2/pkg/limainfo"
 )
 
 func newInfoCommand() *cobra.Command {

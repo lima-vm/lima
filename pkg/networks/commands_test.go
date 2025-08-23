@@ -8,8 +8,9 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"gotest.tools/v3/assert"
+
+	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 )
 
 func TestCheck(t *testing.T) {
