@@ -20,7 +20,7 @@ type LimaYAML struct {
 	OS                 *OS           `yaml:"os,omitempty" json:"os,omitempty" jsonschema:"nullable"`
 	Arch               *Arch         `yaml:"arch,omitempty" json:"arch,omitempty" jsonschema:"nullable"`
 	Images             []Image       `yaml:"images,omitempty" json:"images,omitempty" jsonschema:"nullable"`
-	// Deprecated: Use VMOpts.Qemu.CPUType instead.
+	// Deprecated: Use vmOpts.qemu.cpuType instead.
 	CPUType               CPUType       `yaml:"cpuType,omitempty" json:"cpuType,omitempty" jsonschema:"nullable"`
 	CPUs                  *int          `yaml:"cpus,omitempty" json:"cpus,omitempty" jsonschema:"nullable"`
 	Memory                *string       `yaml:"memory,omitempty" json:"memory,omitempty" jsonschema:"nullable"` // go-units.RAMInBytes
@@ -51,7 +51,7 @@ type LimaYAML struct {
 	// `useHostResolver` was deprecated in Lima v0.8.1, removed in Lima v0.14.0. Use `hostResolver.enabled` instead.
 	PropagateProxyEnv *bool          `yaml:"propagateProxyEnv,omitempty" json:"propagateProxyEnv,omitempty" jsonschema:"nullable"`
 	CACertificates    CACertificates `yaml:"caCerts,omitempty" json:"caCerts,omitempty"`
-	// Deprecated: Use VMOpts.VZ.Rosetta instead.
+	// Deprecated: Use vmOpts.vz.rosetta instead.
 	Rosetta              Rosetta `yaml:"rosetta,omitempty" json:"rosetta,omitempty"`
 	Plain                *bool   `yaml:"plain,omitempty" json:"plain,omitempty" jsonschema:"nullable"`
 	TimeZone             *string `yaml:"timezone,omitempty" json:"timezone,omitempty" jsonschema:"nullable"`
@@ -110,10 +110,7 @@ type User struct {
 	UID     *uint32 `yaml:"uid,omitempty" json:"uid,omitempty" jsonschema:"nullable"`
 }
 
-type VMOpts struct {
-	QEMU QEMUOpts `yaml:"qemu,omitempty" json:"qemu,omitempty"`
-	VZ   VZOpts   `yaml:"vz,omitempty" json:"vz,omitempty"`
-}
+type VMOpts map[VMType]any
 
 type QEMUOpts struct {
 	MinimumVersion *string `yaml:"minimumVersion,omitempty" json:"minimumVersion,omitempty" jsonschema:"nullable"`
