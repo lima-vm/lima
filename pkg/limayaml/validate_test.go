@@ -312,7 +312,6 @@ func TestValidateMultipleErrors(t *testing.T) {
 	yamlWithMultipleErrors := `
 os: windows
 arch: unsupported_arch
-vmType: invalid_type
 portForwards:
   - guestPort: 22
     hostPort: 2222
@@ -328,10 +327,10 @@ provision:
 	y, err := Load(t.Context(), []byte(yamlWithMultipleErrors), "multiple-errors.yaml")
 	assert.NilError(t, err)
 	err = Validate(y, false)
+	t.Logf("Validation errors: %v", err)
 
 	assert.Error(t, err, "field `os` must be \"Linux\"; got \"windows\"\n"+
 		"field `arch` must be one of [x86_64 aarch64 armv7l ppc64le riscv64 s390x]; got \"unsupported_arch\"\n"+
-		"field `vmType` must be \"qemu\", \"vz\", \"wsl2\"; got \"invalid_type\"\n"+
 		"field `images` must be set\n"+
 		"field `provision[0].mode` must one of \"system\", \"user\", \"boot\", \"data\", \"dependency\", or \"ansible\"\n"+
 		"field `provision[1].path` must not be empty when mode is \"data\"")

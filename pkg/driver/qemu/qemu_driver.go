@@ -29,15 +29,15 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/driver"
 	"github.com/lima-vm/lima/v2/pkg/driver/qemu/entitlementutil"
 	"github.com/lima-vm/lima/v2/pkg/executil"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	"github.com/lima-vm/lima/v2/pkg/networks/usernet"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
-	"github.com/lima-vm/lima/v2/pkg/store"
-	"github.com/lima-vm/lima/v2/pkg/store/filenames"
 )
 
 type LimaQemuDriver struct {
-	Instance     *store.Instance
+	Instance     *limatype.Instance
 	SSHLocalPort int
 	vSockPort    int
 	virtioPort   string
@@ -64,7 +64,7 @@ func New() *LimaQemuDriver {
 	}
 }
 
-func (l *LimaQemuDriver) Configure(inst *store.Instance) *driver.ConfiguredDriver {
+func (l *LimaQemuDriver) Configure(inst *limatype.Instance) *driver.ConfiguredDriver {
 	l.Instance = inst
 	l.SSHLocalPort = inst.SSHLocalPort
 
@@ -80,9 +80,9 @@ func (l *LimaQemuDriver) Validate(ctx context.Context) error {
 		}
 	}
 
-	if *l.Instance.Config.MountType == limayaml.VIRTIOFS && runtime.GOOS != "linux" {
+	if *l.Instance.Config.MountType == limatype.VIRTIOFS && runtime.GOOS != "linux" {
 		return fmt.Errorf("field `mountType` must be %q or %q for QEMU driver on non-Linux, got %q",
-			limayaml.REVSSHFS, limayaml.NINEP, *l.Instance.Config.MountType)
+			limatype.REVSSHFS, limatype.NINEP, *l.Instance.Config.MountType)
 	}
 	return nil
 }
@@ -118,7 +118,7 @@ func (l *LimaQemuDriver) Start(_ context.Context) (chan error, error) {
 	}
 
 	var vhostCmds []*exec.Cmd
-	if *l.Instance.Config.MountType == limayaml.VIRTIOFS {
+	if *l.Instance.Config.MountType == limatype.VIRTIOFS {
 		vhostExe, err := FindVirtiofsd(ctx, qExe)
 		if err != nil {
 			return nil, err
@@ -440,7 +440,7 @@ func (l *LimaQemuDriver) DeleteSnapshot(ctx context.Context, tag string) error {
 		InstanceDir: l.Instance.Dir,
 		LimaYAML:    l.Instance.Config,
 	}
-	return Del(ctx, qCfg, l.Instance.Status == store.StatusRunning, tag)
+	return Del(ctx, qCfg, l.Instance.Status == limatype.StatusRunning, tag)
 }
 
 func (l *LimaQemuDriver) CreateSnapshot(ctx context.Context, tag string) error {
@@ -449,7 +449,7 @@ func (l *LimaQemuDriver) CreateSnapshot(ctx context.Context, tag string) error {
 		InstanceDir: l.Instance.Dir,
 		LimaYAML:    l.Instance.Config,
 	}
-	return Save(ctx, qCfg, l.Instance.Status == store.StatusRunning, tag)
+	return Save(ctx, qCfg, l.Instance.Status == limatype.StatusRunning, tag)
 }
 
 func (l *LimaQemuDriver) ApplySnapshot(ctx context.Context, tag string) error {
@@ -458,7 +458,7 @@ func (l *LimaQemuDriver) ApplySnapshot(ctx context.Context, tag string) error {
 		InstanceDir: l.Instance.Dir,
 		LimaYAML:    l.Instance.Config,
 	}
-	return Load(ctx, qCfg, l.Instance.Status == store.StatusRunning, tag)
+	return Load(ctx, qCfg, l.Instance.Status == limatype.StatusRunning, tag)
 }
 
 func (l *LimaQemuDriver) ListSnapshots(ctx context.Context) (string, error) {
@@ -467,7 +467,7 @@ func (l *LimaQemuDriver) ListSnapshots(ctx context.Context) (string, error) {
 		InstanceDir: l.Instance.Dir,
 		LimaYAML:    l.Instance.Config,
 	}
-	return List(ctx, qCfg, l.Instance.Status == store.StatusRunning)
+	return List(ctx, qCfg, l.Instance.Status == limatype.StatusRunning)
 }
 
 func (l *LimaQemuDriver) GuestAgentConn(ctx context.Context) (net.Conn, string, error) {

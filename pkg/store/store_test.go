@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"gotest.tools/v3/assert"
+
+	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 )
 
 func TestValidateInstName(t *testing.T) {
@@ -22,7 +24,7 @@ func TestValidateInstName(t *testing.T) {
 	}
 	for _, arg := range instNames {
 		t.Run(arg, func(t *testing.T) {
-			err := ValidateInstName(arg)
+			err := dirnames.ValidateInstName(arg)
 			assert.NilError(t, err)
 		})
 	}
@@ -43,7 +45,7 @@ func TestValidateInstName(t *testing.T) {
 	}
 	for _, arg := range invalidIdentifiers {
 		t.Run(arg, func(t *testing.T) {
-			err := ValidateInstName(arg)
+			err := dirnames.ValidateInstName(arg)
 			assert.ErrorContains(t, err, "not a valid identifier")
 		})
 	}
@@ -54,7 +56,7 @@ func TestValidateInstName(t *testing.T) {
 	}
 	for _, arg := range yamlNames {
 		t.Run(arg, func(t *testing.T) {
-			err := ValidateInstName(arg)
+			err := dirnames.ValidateInstName(arg)
 			assert.ErrorContains(t, err, "must not end with .y")
 		})
 	}

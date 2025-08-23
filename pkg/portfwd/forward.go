@@ -12,19 +12,20 @@ import (
 
 	"github.com/lima-vm/lima/v2/pkg/guestagent/api"
 	guestagentclient "github.com/lima-vm/lima/v2/pkg/guestagent/api/client"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 )
 
 var IPv4loopback1 = limayaml.IPv4loopback1
 
 type Forwarder struct {
-	rules             []limayaml.PortForward
+	rules             []limatype.PortForward
 	ignoreTCP         bool
 	ignoreUDP         bool
 	closableListeners *ClosableListeners
 }
 
-func NewPortForwarder(rules []limayaml.PortForward, ignoreTCP, ignoreUDP bool) *Forwarder {
+func NewPortForwarder(rules []limatype.PortForward, ignoreTCP, ignoreUDP bool) *Forwarder {
 	return &Forwarder{
 		rules:             rules,
 		ignoreTCP:         ignoreTCP,
@@ -64,7 +65,7 @@ func (fw *Forwarder) forwardingAddresses(guest *api.IPPort) (hostAddr, guestAddr
 		if rule.GuestSocket != "" {
 			continue
 		}
-		if rule.Proto != limayaml.ProtoAny && rule.Proto != guest.Protocol {
+		if rule.Proto != limatype.ProtoAny && rule.Proto != guest.Protocol {
 			continue
 		}
 		if guest.Port < int32(rule.GuestPortRange[0]) || guest.Port > int32(rule.GuestPortRange[1]) {
@@ -91,7 +92,7 @@ func (fw *Forwarder) forwardingAddresses(guest *api.IPPort) (hostAddr, guestAddr
 	return "", guest.HostString()
 }
 
-func hostAddress(rule limayaml.PortForward, guest *api.IPPort) string {
+func hostAddress(rule limatype.PortForward, guest *api.IPPort) string {
 	if rule.HostSocket != "" {
 		return rule.HostSocket
 	}

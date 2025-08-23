@@ -19,10 +19,10 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/driver"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/reflectutil"
-	"github.com/lima-vm/lima/v2/pkg/store"
 )
 
 var knownYamlProperties = []string{
@@ -69,7 +69,7 @@ var knownYamlProperties = []string{
 const Enabled = true
 
 type LimaVzDriver struct {
-	Instance *store.Instance
+	Instance *limatype.Instance
 
 	SSHLocalPort int
 	vSockPort    int
@@ -87,7 +87,7 @@ func New() *LimaVzDriver {
 	}
 }
 
-func (l *LimaVzDriver) Configure(inst *store.Instance) *driver.ConfiguredDriver {
+func (l *LimaVzDriver) Configure(inst *limatype.Instance) *driver.ConfiguredDriver {
 	l.Instance = inst
 	l.SSHLocalPort = inst.SSHLocalPort
 
@@ -109,15 +109,15 @@ func (l *LimaVzDriver) Validate(_ context.Context) error {
 			"Update macOS, or change vmType to \"qemu\" if the VM does not start up. (https://github.com/lima-vm/lima/issues/3334)",
 			*l.Instance.Config.VMType)
 	}
-	if *l.Instance.Config.MountType == limayaml.NINEP {
-		return fmt.Errorf("field `mountType` must be %q or %q for VZ driver , got %q", limayaml.REVSSHFS, limayaml.VIRTIOFS, *l.Instance.Config.MountType)
+	if *l.Instance.Config.MountType == limatype.NINEP {
+		return fmt.Errorf("field `mountType` must be %q or %q for VZ driver , got %q", limatype.REVSSHFS, limatype.VIRTIOFS, *l.Instance.Config.MountType)
 	}
 	if *l.Instance.Config.Firmware.LegacyBIOS {
 		logrus.Warnf("vmType %s: ignoring `firmware.legacyBIOS`", *l.Instance.Config.VMType)
 	}
 	for _, f := range l.Instance.Config.Firmware.Images {
 		switch f.VMType {
-		case "", limayaml.VZ:
+		case "", limatype.VZ:
 			if f.Arch == *l.Instance.Config.Arch {
 				return errors.New("`firmware.images` configuration is not supported for VZ driver")
 			}

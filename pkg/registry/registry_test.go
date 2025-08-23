@@ -14,7 +14,7 @@ import (
 	"gotest.tools/v3/assert"
 
 	"github.com/lima-vm/lima/v2/pkg/driver"
-	"github.com/lima-vm/lima/v2/pkg/store"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 )
 
 type mockDriver struct {
@@ -44,7 +44,7 @@ func (m *mockDriver) Unregister(_ context.Context) error                        
 func (m *mockDriver) ForwardGuestAgent() bool                                    { return false }
 func (m *mockDriver) GuestAgentConn(_ context.Context) (net.Conn, string, error) { return nil, "", nil }
 func (m *mockDriver) Info() driver.Info                                          { return driver.Info{DriverName: m.Name} }
-func (m *mockDriver) Configure(_ *store.Instance) *driver.ConfiguredDriver       { return nil }
+func (m *mockDriver) Configure(_ *limatype.Instance) *driver.ConfiguredDriver    { return nil }
 
 func TestRegister(t *testing.T) {
 	BackupRegistry(t)

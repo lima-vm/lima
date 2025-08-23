@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/lima-vm/lima/v2/pkg/downloader"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	"github.com/lima-vm/lima/v2/pkg/store"
 	"github.com/lima-vm/lima/v2/pkg/templatestore"
@@ -64,8 +65,8 @@ func pruneAction(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func knownLocations(ctx context.Context) (map[string]limayaml.File, error) {
-	locations := make(map[string]limayaml.File)
+func knownLocations(ctx context.Context) (map[string]limatype.File, error) {
+	locations := make(map[string]limatype.File)
 
 	// Collect locations from instances
 	instances, err := store.Instances()
@@ -99,8 +100,8 @@ func knownLocations(ctx context.Context) (map[string]limayaml.File, error) {
 	return locations, nil
 }
 
-func locationsFromLimaYAML(y *limayaml.LimaYAML) map[string]limayaml.File {
-	locations := make(map[string]limayaml.File)
+func locationsFromLimaYAML(y *limatype.LimaYAML) map[string]limatype.File {
+	locations := make(map[string]limatype.File)
 	for _, f := range y.Images {
 		locations[downloader.CacheKey(f.Location)] = f.File
 		if f.Kernel != nil {

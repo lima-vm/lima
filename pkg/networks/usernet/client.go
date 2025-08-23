@@ -18,9 +18,9 @@ import (
 	"github.com/containers/gvisor-tap-vsock/pkg/types"
 
 	"github.com/lima-vm/lima/v2/pkg/httpclientutil"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	"github.com/lima-vm/lima/v2/pkg/networks/usernet/dnshosts"
-	"github.com/lima-vm/lima/v2/pkg/store"
 )
 
 type Client struct {
@@ -32,7 +32,7 @@ type Client struct {
 	subnet   net.IP
 }
 
-func (c *Client) ConfigureDriver(ctx context.Context, inst *store.Instance, sshLocalPort int) error {
+func (c *Client) ConfigureDriver(ctx context.Context, inst *limatype.Instance, sshLocalPort int) error {
 	macAddress := limayaml.MACAddress(inst.Dir)
 	ipAddress, err := c.ResolveIPAddress(ctx, macAddress)
 	if err != nil {

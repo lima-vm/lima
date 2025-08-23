@@ -14,8 +14,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/lima-vm/lima/v2/pkg/limatmpl"
+	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
-	"github.com/lima-vm/lima/v2/pkg/store/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/yqutil"
 )
 

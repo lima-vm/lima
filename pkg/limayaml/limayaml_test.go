@@ -12,6 +12,8 @@ import (
 	"testing"
 
 	"gotest.tools/v3/assert"
+
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 )
 
 func dumpJSON(t *testing.T, d any) string {
@@ -23,7 +25,7 @@ func dumpJSON(t *testing.T, d any) string {
 const emptyYAML = "{}\n"
 
 func TestEmptyYAML(t *testing.T) {
-	var y LimaYAML
+	var y limatype.LimaYAML
 	t.Log(dumpJSON(t, y))
 	b, err := Marshal(&y, false)
 	assert.NilError(t, err)
@@ -43,7 +45,7 @@ func TestDefaultYAML(t *testing.T) {
 		assert.NilError(t, err)
 	}
 
-	var y LimaYAML
+	var y limatype.LimaYAML
 	err = Unmarshal(content, &y, "")
 	assert.NilError(t, err)
 	y.Images = nil                // remove default images

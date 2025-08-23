@@ -15,7 +15,7 @@ import (
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 
 	"github.com/lima-vm/lima/v2/pkg/jsonschemautil"
-	"github.com/lima-vm/lima/v2/pkg/limayaml"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 )
 
 func newGenSchemaCommand() *cobra.Command {
@@ -52,7 +52,7 @@ func genschemaAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	schema := jsonschema.Reflect(&limayaml.LimaYAML{})
+	schema := jsonschema.Reflect(&limatype.LimaYAML{})
 	// allow Disk to be either string (name) or object (struct)
 	schema.Definitions["Disk"].Type = "" // was: "object"
 	schema.Definitions["Disk"].OneOf = []*jsonschema.Schema{
@@ -72,10 +72,10 @@ func genschemaAction(cmd *cobra.Command, args []string) error {
 		{Type: "object"},
 	}
 	properties := schema.Definitions["LimaYAML"].Properties
-	getProp(properties, "os").Enum = toAny(limayaml.OSTypes)
-	getProp(properties, "arch").Enum = toAny(limayaml.ArchTypes)
-	getProp(properties, "mountType").Enum = toAny(limayaml.MountTypes)
-	getProp(properties, "vmType").Enum = toAny(limayaml.VMTypes)
+	getProp(properties, "os").Enum = toAny(limatype.OSTypes)
+	getProp(properties, "arch").Enum = toAny(limatype.ArchTypes)
+	getProp(properties, "mountType").Enum = toAny(limatype.MountTypes)
+	getProp(properties, "vmType").Enum = toAny(limatype.VMTypes)
 	j, err := json.MarshalIndent(schema, "", "    ")
 	if err != nil {
 		return err

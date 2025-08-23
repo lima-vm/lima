@@ -15,6 +15,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/lima-vm/lima/v2/pkg/freeport"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/sshutil"
 	"github.com/lima-vm/lima/v2/pkg/store"
 )
@@ -72,7 +73,7 @@ func tunnelAction(cmd *cobra.Command, args []string) error {
 		}
 		return err
 	}
-	if inst.Status == store.StatusStopped {
+	if inst.Status == limatype.StatusStopped {
 		return fmt.Errorf("instance %q is stopped, run `limactl start %s` to start the instance", instName, instName)
 	}
 
