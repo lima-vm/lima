@@ -104,9 +104,13 @@ func validateConfig(cfg *limatype.LimaYAML) error {
 		}
 	}
 
-	if cfg.VMOpts.QEMU.MinimumVersion != nil {
-		if _, err := semver.NewVersion(*cfg.VMOpts.QEMU.MinimumVersion); err != nil {
-			return fmt.Errorf("field `vmOpts.qemu.minimumVersion` must be a semvar value, got %q: %w", *cfg.VMOpts.QEMU.MinimumVersion, err)
+	var qemuOpts limatype.QEMUOpts
+	if err := limayaml.Convert(cfg.VMOpts[limatype.QEMU], &qemuOpts, "vmOpts.qemu"); err != nil {
+		return err
+	}
+	if qemuOpts.MinimumVersion != nil {
+		if _, err := semver.NewVersion(*qemuOpts.MinimumVersion); err != nil {
+			return fmt.Errorf("field `vmOpts.qemu.minimumVersion` must be a semvar value, got %q: %w", *qemuOpts.MinimumVersion, err)
 		}
 	}
 
@@ -154,8 +158,12 @@ func (l *LimaQemuDriver) FillConfig(_ context.Context, cfg *limatype.LimaYAML, f
 		cfg.Video.VNC.Display = ptr.Of("127.0.0.1:0,to=9")
 	}
 
-	if cfg.VMOpts.QEMU.CPUType == nil {
-		cfg.VMOpts.QEMU.CPUType = limatype.CPUType{}
+	var qemuOpts limatype.QEMUOpts
+	if err := limayaml.Convert(cfg.VMOpts[limatype.QEMU], &qemuOpts, "vmOpts.qemu"); err != nil {
+		logrus.WithError(err).Warnf("Couldn't convert %q", cfg.VMOpts[limatype.QEMU])
+	}
+	if qemuOpts.CPUType == nil {
+		qemuOpts.CPUType = limatype.CPUType{}
 	}
 
 	//nolint:staticcheck // Migration of top-level CPUTYPE if specified
@@ -165,13 +173,22 @@ func (l *LimaQemuDriver) FillConfig(_ context.Context, cfg *limatype.LimaYAML, f
 			if v == "" {
 				continue
 			}
-			if existing, ok := cfg.VMOpts.QEMU.CPUType[arch]; ok && existing != "" && existing != v {
+			if existing, ok := qemuOpts.CPUType[arch]; ok && existing != "" && existing != v {
 				logrus.Warnf("Conflicting cpuType for arch %q: top-level=%q, vmOpts.qemu=%q; using vmOpts.qemu value", arch, v, existing)
 				continue
 			}
-			cfg.VMOpts.QEMU.CPUType[arch] = v
+			qemuOpts.CPUType[arch] = v
 		}
 		cfg.CPUType = nil
+
+		var opts any
+		if err := limayaml.Convert(qemuOpts, &opts, ""); err != nil {
+			logrus.WithError(err).Warnf("Couldn't convert %+v", qemuOpts)
+		}
+		if cfg.VMOpts == nil {
+			cfg.VMOpts = limatype.VMOpts{}
+		}
+		cfg.VMOpts[limatype.QEMU] = opts
 	}
 
 	mountTypesUnsupported := make(map[string]struct{})

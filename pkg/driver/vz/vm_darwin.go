@@ -602,7 +602,12 @@ func attachFolderMounts(inst *limatype.Instance, vmConfig *vz.VirtualMachineConf
 		}
 	}
 
-	if *inst.Config.VMOpts.VZ.Rosetta.Enabled {
+	var vzOpts limatype.VZOpts
+	if err := limayaml.Convert(inst.Config.VMOpts[limatype.VZ], &vzOpts, "vmOpts.vz"); err != nil {
+		logrus.WithError(err).Warnf("Couldn't convert %q", inst.Config.VMOpts[limatype.VZ])
+	}
+
+	if vzOpts.Rosetta.Enabled != nil && *vzOpts.Rosetta.Enabled {
 		logrus.Info("Setting up Rosetta share")
 		directorySharingDeviceConfig, err := createRosettaDirectoryShareConfiguration()
 		if err != nil {
