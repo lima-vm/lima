@@ -97,7 +97,7 @@ func Prepare(ctx context.Context, inst *limatype.Instance) (*Prepared, error) {
 		return nil, err
 	}
 
-	if err := limaDriver.Initialize(ctx); err != nil {
+	if err := limaDriver.Create(ctx); err != nil {
 		return nil, err
 	}
 

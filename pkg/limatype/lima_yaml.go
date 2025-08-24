@@ -49,13 +49,14 @@ type LimaYAML struct {
 	DNS          []net.IP          `yaml:"dns,omitempty" json:"dns,omitempty"`
 	HostResolver HostResolver      `yaml:"hostResolver,omitempty" json:"hostResolver,omitempty"`
 	// `useHostResolver` was deprecated in Lima v0.8.1, removed in Lima v0.14.0. Use `hostResolver.enabled` instead.
-	PropagateProxyEnv    *bool          `yaml:"propagateProxyEnv,omitempty" json:"propagateProxyEnv,omitempty" jsonschema:"nullable"`
-	CACertificates       CACertificates `yaml:"caCerts,omitempty" json:"caCerts,omitempty"`
-	Rosetta              Rosetta        `yaml:"rosetta,omitempty" json:"rosetta,omitempty"`
-	Plain                *bool          `yaml:"plain,omitempty" json:"plain,omitempty" jsonschema:"nullable"`
-	TimeZone             *string        `yaml:"timezone,omitempty" json:"timezone,omitempty" jsonschema:"nullable"`
-	NestedVirtualization *bool          `yaml:"nestedVirtualization,omitempty" json:"nestedVirtualization,omitempty" jsonschema:"nullable"`
-	User                 User           `yaml:"user,omitempty" json:"user,omitempty"`
+	PropagateProxyEnv *bool          `yaml:"propagateProxyEnv,omitempty" json:"propagateProxyEnv,omitempty" jsonschema:"nullable"`
+	CACertificates    CACertificates `yaml:"caCerts,omitempty" json:"caCerts,omitempty"`
+	// Deprecated: Use VMOpts.VZ.Rosetta instead.
+	Rosetta              Rosetta `yaml:"rosetta,omitempty" json:"rosetta,omitempty"`
+	Plain                *bool   `yaml:"plain,omitempty" json:"plain,omitempty" jsonschema:"nullable"`
+	TimeZone             *string `yaml:"timezone,omitempty" json:"timezone,omitempty" jsonschema:"nullable"`
+	NestedVirtualization *bool   `yaml:"nestedVirtualization,omitempty" json:"nestedVirtualization,omitempty" jsonschema:"nullable"`
+	User                 User    `yaml:"user,omitempty" json:"user,omitempty"`
 }
 
 type BaseTemplates []LocatorWithDigest
@@ -111,11 +112,16 @@ type User struct {
 
 type VMOpts struct {
 	QEMU QEMUOpts `yaml:"qemu,omitempty" json:"qemu,omitempty"`
+	VZ   VZOpts   `yaml:"vz,omitempty" json:"vz,omitempty"`
 }
 
 type QEMUOpts struct {
 	MinimumVersion *string `yaml:"minimumVersion,omitempty" json:"minimumVersion,omitempty" jsonschema:"nullable"`
 	CPUType        CPUType `yaml:"cpuType,omitempty" json:"cpuType,omitempty" jsonschema:"nullable"`
+}
+
+type VZOpts struct {
+	Rosetta Rosetta `yaml:"rosetta,omitempty" json:"rosetta,omitempty"`
 }
 
 type Rosetta struct {
@@ -323,6 +329,16 @@ type CACertificates struct {
 	Certs          []string `yaml:"certs,omitempty" json:"certs,omitempty" jsonschema:"nullable"`
 }
 
+type PreConfiguredDriverPayload struct {
+	Config   LimaYAML `json:"config"`
+	FilePath string   `json:"filePath"`
+}
+
+type PreConfiguredDriverResponse struct {
+	Config LimaYAML `json:"config"`
+	Error  string   `json:"error,omitempty"`
+}
+
 func NewOS(osname string) OS {
 	switch osname {
 	case "linux":
@@ -371,5 +387,16 @@ func NewArch(arch string) Arch {
 	default:
 		logrus.Warnf("Unknown arch: %s", arch)
 		return arch
+	}
+}
+
+func DefaultDriver() VMType {
+	switch runtime.GOOS {
+	case "darwin":
+		return VZ
+	case "windows":
+		return WSL2
+	default:
+		return QEMU
 	}
 }

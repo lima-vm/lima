@@ -15,6 +15,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	flag "github.com/spf13/pflag"
+
+	"github.com/lima-vm/lima/v2/pkg/registry"
 )
 
 // RegisterEdit registers flags related to in-place YAML modification, for `limactl edit`.
@@ -75,6 +77,15 @@ func RegisterEdit(cmd *cobra.Command, commentPrefix string) {
 	_ = cmd.RegisterFlagCompletionFunc("disk", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
 		return []string{"10", "30", "50", "100", "200"}, cobra.ShellCompDirectiveNoFileComp
 	})
+
+	flags.String("vm-type", "", commentPrefix+"Virtual machine type")
+	_ = cmd.RegisterFlagCompletionFunc("vm-type", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
+		var drivers []string
+		for k := range registry.List() {
+			drivers = append(drivers, k)
+		}
+		return drivers, cobra.ShellCompDirectiveNoFileComp
+	})
 }
 
 // RegisterCreate registers flags related to in-place YAML modification, for `limactl create`.
@@ -90,11 +101,6 @@ func RegisterCreate(cmd *cobra.Command, commentPrefix string) {
 	flags.String("containerd", "", commentPrefix+"containerd mode (user, system, user+system, none)")
 	_ = cmd.RegisterFlagCompletionFunc("containerd", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
 		return []string{"user", "system", "user+system", "none"}, cobra.ShellCompDirectiveNoFileComp
-	})
-
-	flags.String("vm-type", "", commentPrefix+"Virtual machine type (qemu, vz)") // colima-compatible
-	_ = cmd.RegisterFlagCompletionFunc("vm-type", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
-		return []string{"qemu", "vz"}, cobra.ShellCompDirectiveNoFileComp
 	})
 
 	flags.Bool("plain", false, commentPrefix+"Plain mode. Disables mounts, port forwarding, containerd, etc.")
@@ -177,6 +183,7 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 			false,
 		},
 		{"mount-type", d(".mountType = %q"), false, false},
+		{"vm-type", d(".vmType = %q"), false, false},
 		{"mount-inotify", d(".mountInotify = %s"), false, true},
 		{"mount-writable", d(".mounts[].writable = %s"), false, false},
 		{
@@ -262,7 +269,6 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 			false,
 		},
 		{"disk", d(".disk= \"%sGiB\""), false, false},
-		{"vm-type", d(".vmType = %q"), true, false},
 		{"plain", d(".plain = %s"), true, false},
 	}
 	var exprs []string

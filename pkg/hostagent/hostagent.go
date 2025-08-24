@@ -163,7 +163,7 @@ func New(ctx context.Context, instName string, stdout io.Writer, signalCh chan o
 	if err := cidata.GenerateCloudConfig(ctx, inst.Dir, instName, inst.Config); err != nil {
 		return nil, err
 	}
-	if err := cidata.GenerateISO9660(ctx, inst.Dir, instName, inst.Config, udpDNSLocalPort, tcpDNSLocalPort, o.guestAgentBinary, o.nerdctlArchive, vSockPort, virtioPort); err != nil {
+	if err := cidata.GenerateISO9660(ctx, limaDriver, inst.Dir, instName, inst.Config, udpDNSLocalPort, tcpDNSLocalPort, o.guestAgentBinary, o.nerdctlArchive, vSockPort, virtioPort); err != nil {
 		return nil, err
 	}
 
@@ -311,6 +311,9 @@ func (a *HostAgent) Run(ctx context.Context) error {
 
 	if limayaml.FirstUsernetIndex(a.instConfig) == -1 && *a.instConfig.HostResolver.Enabled {
 		hosts := a.instConfig.HostResolver.Hosts
+		if hosts == nil {
+			hosts = make(map[string]string)
+		}
 		hosts["host.lima.internal"] = networks.SlirpGateway
 		name := hostname.FromInstName(a.instName) // TODO: support customization
 		hosts[name] = networks.SlirpIPAddress
@@ -336,8 +339,8 @@ func (a *HostAgent) Run(ctx context.Context) error {
 	}
 
 	// WSL instance SSH address isn't known until after VM start
-	if *a.instConfig.VMType == limatype.WSL2 {
-		sshAddr, err := store.GetSSHAddress(ctx, a.instName)
+	if a.driver.Info().Features.DynamicSSHAddress {
+		sshAddr, err := a.driver.SSHAddress(ctx)
 		if err != nil {
 			return err
 		}
@@ -572,7 +575,7 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 	// TODO: use vSock (when QEMU for macOS gets support for vSock)
 
 	// Setup all socket forwards and defer their teardown
-	if *a.instConfig.VMType != limatype.WSL2 {
+	if !(a.driver.Info().Features.DynamicSSHAddress) {
 		logrus.Debugf("Forwarding unix sockets")
 		for _, rule := range a.instConfig.PortForwards {
 			if rule.GuestSocket != "" {

@@ -6,10 +6,12 @@ package store
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/lima-vm/lima/v2/pkg/driverutil"
 	"github.com/lima-vm/lima/v2/pkg/identifiers"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
@@ -118,6 +120,9 @@ func LoadYAMLByFilePath(ctx context.Context, filePath string) (*limatype.LimaYAM
 	y, err := limayaml.Load(ctx, yContent, absPath)
 	if err != nil {
 		return nil, err
+	}
+	if err := driverutil.ResolveVMType(y, filePath); err != nil {
+		return nil, fmt.Errorf("failed to accept config for %q: %w", filePath, err)
 	}
 	if err := limayaml.Validate(y, false); err != nil {
 		return nil, err

@@ -41,5 +41,5 @@ func unregister(ctx context.Context, inst *limatype.Instance) error {
 		return fmt.Errorf("failed to create driver instance: %w", err)
 	}
 
-	return limaDriver.Unregister(ctx)
+	return limaDriver.Delete(ctx)
 }

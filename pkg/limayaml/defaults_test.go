@@ -31,8 +31,6 @@ func TestFillDefault(t *testing.T) {
 	logrus.SetLevel(logrus.DebugLevel)
 	var d, y, o limatype.LimaYAML
 
-	defaultVMType := ResolveVMType(&y, &d, &o, "")
-
 	opts := []cmp.Option{
 		// Consider nil slices and empty slices to be identical
 		cmpopts.EquateEmpty(),
@@ -77,7 +75,6 @@ func TestFillDefault(t *testing.T) {
 
 	// Builtin default values
 	builtin := limatype.LimaYAML{
-		VMType:             &defaultVMType,
 		OS:                 ptr.Of(limatype.LINUX),
 		Arch:               ptr.Of(arch),
 		CPUs:               ptr.Of(defaultCPUs()),
@@ -106,9 +103,6 @@ func TestFillDefault(t *testing.T) {
 		},
 		Video: limatype.Video{
 			Display: ptr.Of("none"),
-			VNC: limatype.VNCOptions{
-				Display: ptr.Of("127.0.0.1:0,to=9"),
-			},
 		},
 		HostResolver: limatype.HostResolver{
 			Enabled: ptr.Of(true),
@@ -195,31 +189,11 @@ func TestFillDefault(t *testing.T) {
 			},
 		},
 		TimeZone: ptr.Of("Antarctica/Troll"),
-		Firmware: limatype.Firmware{
-			LegacyBIOS: ptr.Of(false),
-			Images: []limatype.FileWithVMType{
-				{
-					File: limatype.File{
-						Location: "https://gitlab.com/kraxel/qemu/-/raw/704f7cad5105246822686f65765ab92045f71a3b/pc-bios/edk2-aarch64-code.fd.bz2",
-						Arch:     limatype.AARCH64,
-						Digest:   "sha256:a5fc228623891297f2d82e22ea56ec57cde93fea5ec01abf543e4ed5cacaf277",
-					},
-					VMType: limatype.QEMU,
-				},
-				{
-					File: limatype.File{
-						Location: "https://github.com/AkihiroSuda/qemu/raw/704f7cad5105246822686f65765ab92045f71a3b/pc-bios/edk2-aarch64-code.fd.bz2",
-						Arch:     limatype.AARCH64,
-						Digest:   "sha256:a5fc228623891297f2d82e22ea56ec57cde93fea5ec01abf543e4ed5cacaf277",
-					},
-					VMType: limatype.QEMU,
-				},
-			},
-		},
 	}
 
 	expect := builtin
-	expect.VMType = ptr.Of(limatype.QEMU) // due to NINEP
+	// VMType should remain nil when not explicitly set (will be resolved by ValidateVMType later)
+	expect.VMType = nil
 	expect.HostResolver.Hosts = map[string]string{
 		"MY.Host": "host.lima.internal",
 	}
@@ -313,12 +287,11 @@ func TestFillDefault(t *testing.T) {
 	}
 
 	expect.TimeZone = y.TimeZone
-	expect.Firmware = y.Firmware
-	expect.Firmware.Images = slices.Clone(y.Firmware.Images)
-
-	expect.Rosetta = limatype.Rosetta{
-		Enabled: ptr.Of(false),
-		BinFmt:  ptr.Of(false),
+	// Set firmware expectations to match what FillDefault actually does
+	// FillDefault uses the builtin default values, which include LegacyBIOS: ptr.Of(false)
+	expect.Firmware = limatype.Firmware{
+		LegacyBIOS: ptr.Of(false), // This matches what FillDefault actually sets
+		Images:     nil,
 	}
 
 	expect.NestedVirtualization = ptr.Of(false)
@@ -336,7 +309,7 @@ func TestFillDefault(t *testing.T) {
 	// Calling filepath.Abs() to add a drive letter on Windows
 	varLog, _ := filepath.Abs("/var/log")
 	d = limatype.LimaYAML{
-		VMType: ptr.Of("vz"),
+		// Remove driver-specific VMType from defaults test
 		OS:     ptr.Of("unknown"),
 		Arch:   ptr.Of("unknown"),
 		CPUs:   ptr.Of(7),
@@ -364,23 +337,14 @@ func TestFillDefault(t *testing.T) {
 		TimeZone: ptr.Of("Zulu"),
 		Firmware: limatype.Firmware{
 			LegacyBIOS: ptr.Of(true),
-			Images: []limatype.FileWithVMType{
-				{
-					File: limatype.File{
-						Location: "/dummy",
-						Arch:     limatype.X8664,
-					},
-				},
-			},
+			// Remove driver-specific firmware images from defaults
 		},
 		Audio: limatype.Audio{
 			Device: ptr.Of("coreaudio"),
 		},
 		Video: limatype.Video{
 			Display: ptr.Of("cocoa"),
-			VNC: limatype.VNCOptions{
-				Display: ptr.Of("none"),
-			},
+			// Remove driver-specific VNC configuration
 		},
 		HostResolver: limatype.HostResolver{
 			Enabled: ptr.Of(false),
@@ -444,10 +408,6 @@ func TestFillDefault(t *testing.T) {
 				"-----BEGIN CERTIFICATE-----\nYOUR-ORGS-TRUSTED-CA-CERT\n-----END CERTIFICATE-----\n",
 			},
 		},
-		Rosetta: limatype.Rosetta{
-			Enabled: ptr.Of(true),
-			BinFmt:  ptr.Of(true),
-		},
 		NestedVirtualization: ptr.Of(true),
 		User: limatype.User{
 			Name:    ptr.Of("xxx"),
@@ -459,6 +419,8 @@ func TestFillDefault(t *testing.T) {
 	}
 
 	expect = d
+	// VMType should remain nil when not explicitly set
+	expect.VMType = nil
 	// Also verify that archive arch is filled in
 	expect.Containerd.Archives = slices.Clone(d.Containerd.Archives)
 	expect.Containerd.Archives[0].Arch = *d.Arch
@@ -481,31 +443,21 @@ func TestFillDefault(t *testing.T) {
 	expect.HostResolver.Hosts = map[string]string{
 		"default": d.HostResolver.Hosts["default"],
 	}
-	expect.MountType = ptr.Of(limatype.VIRTIOFS)
+	// Remove driver-specific mount type from defaults test
+	expect.MountType = nil
 	expect.MountInotify = ptr.Of(false)
 	expect.CACertificates.RemoveDefaults = ptr.Of(true)
 	expect.CACertificates.Certs = []string{
 		"-----BEGIN CERTIFICATE-----\nYOUR-ORGS-TRUSTED-CA-CERT\n-----END CERTIFICATE-----\n",
 	}
 
-	if runtime.GOOS == "darwin" && IsNativeArch(limatype.AARCH64) {
-		expect.Rosetta = limatype.Rosetta{
-			Enabled: ptr.Of(true),
-			BinFmt:  ptr.Of(true),
-		}
-	} else {
-		expect.Rosetta = limatype.Rosetta{
-			Enabled: ptr.Of(false),
-			BinFmt:  ptr.Of(true),
-		}
-	}
 	expect.Plain = ptr.Of(false)
 
 	y = limatype.LimaYAML{}
 	FillDefault(t.Context(), &y, &d, &limatype.LimaYAML{}, filePath, false)
 	assert.DeepEqual(t, &y, &expect, opts...)
 
-	dExpect := expect
+	dExpected := expect
 
 	// ------------------------------------------------------------------------------------
 	// User-provided defaults should not override user-provided config values
@@ -517,29 +469,29 @@ func TestFillDefault(t *testing.T) {
 
 	expect = y
 
-	expect.Provision = slices.Concat(y.Provision, dExpect.Provision)
-	expect.Probes = slices.Concat(y.Probes, dExpect.Probes)
-	expect.PortForwards = slices.Concat(y.PortForwards, dExpect.PortForwards)
-	expect.CopyToHost = slices.Concat(y.CopyToHost, dExpect.CopyToHost)
-	expect.Containerd.Archives = slices.Concat(y.Containerd.Archives, dExpect.Containerd.Archives)
+	expect.Provision = slices.Concat(y.Provision, dExpected.Provision)
+	expect.Probes = slices.Concat(y.Probes, dExpected.Probes)
+	expect.PortForwards = slices.Concat(y.PortForwards, dExpected.PortForwards)
+	expect.CopyToHost = slices.Concat(y.CopyToHost, dExpected.CopyToHost)
+	expect.Containerd.Archives = slices.Concat(y.Containerd.Archives, dExpected.Containerd.Archives)
 	expect.Containerd.Archives[2].Arch = *expect.Arch
-	expect.AdditionalDisks = slices.Concat(y.AdditionalDisks, dExpect.AdditionalDisks)
-	expect.Firmware.Images = slices.Concat(y.Firmware.Images, dExpect.Firmware.Images)
+	expect.AdditionalDisks = slices.Concat(y.AdditionalDisks, dExpected.AdditionalDisks)
+	expect.Firmware.Images = slices.Concat(y.Firmware.Images, dExpected.Firmware.Images)
 
 	// Mounts and Networks start with lowest priority first, so higher priority entries can overwrite
-	expect.Mounts = slices.Concat(dExpect.Mounts, y.Mounts)
-	expect.Networks = slices.Concat(dExpect.Networks, y.Networks)
+	expect.Mounts = slices.Concat(dExpected.Mounts, y.Mounts)
+	expect.Networks = slices.Concat(dExpected.Networks, y.Networks)
 
-	expect.HostResolver.Hosts["default"] = dExpect.HostResolver.Hosts["default"]
+	expect.HostResolver.Hosts["default"] = dExpected.HostResolver.Hosts["default"]
 
-	// dExpect.DNS will be ignored, and not appended to y.DNS
+	// dExpected.DNS will be ignored, and not appended to y.DNS
 
-	// "TWO" does not exist in filledDefaults.Env, so is set from dExpect.Env
-	expect.Env["TWO"] = dExpect.Env["TWO"]
+	// "TWO" does not exist in filledDefaults.Env, so is set from dExpected.Env
+	expect.Env["TWO"] = dExpected.Env["TWO"]
 
-	expect.Param["TWO"] = dExpect.Param["TWO"]
+	expect.Param["TWO"] = dExpected.Param["TWO"]
 
-	t.Logf("d.vmType=%q, y.vmType=%q, expect.vmType=%q", *d.VMType, *y.VMType, *expect.VMType)
+	t.Logf("d.vmType=%v, y.vmType=%v, expect.vmType=%v", d.VMType, y.VMType, expect.VMType)
 
 	FillDefault(t.Context(), &y, &d, &limatype.LimaYAML{}, filePath, false)
 	assert.DeepEqual(t, &y, &expect, opts...)
@@ -548,7 +500,7 @@ func TestFillDefault(t *testing.T) {
 	// User-provided overrides should override user-provided config settings
 
 	o = limatype.LimaYAML{
-		VMType: ptr.Of("qemu"),
+		// Remove driver-specific VMType from override test
 		OS:     ptr.Of(limatype.LINUX),
 		Arch:   ptr.Of(arch),
 		CPUs:   ptr.Of(12),
@@ -586,9 +538,7 @@ func TestFillDefault(t *testing.T) {
 		},
 		Video: limatype.Video{
 			Display: ptr.Of("cocoa"),
-			VNC: limatype.VNCOptions{
-				Display: ptr.Of("none"),
-			},
+			// Remove driver-specific VNC configuration
 		},
 		HostResolver: limatype.HostResolver{
 			Enabled: ptr.Of(false),
@@ -668,10 +618,6 @@ func TestFillDefault(t *testing.T) {
 		CACertificates: limatype.CACertificates{
 			RemoveDefaults: ptr.Of(true),
 		},
-		Rosetta: limatype.Rosetta{
-			Enabled: ptr.Of(false),
-			BinFmt:  ptr.Of(false),
-		},
 		NestedVirtualization: ptr.Of(false),
 		User: limatype.User{
 			Name:    ptr.Of("foo"),
@@ -686,20 +632,20 @@ func TestFillDefault(t *testing.T) {
 
 	expect = o
 
-	expect.Provision = slices.Concat(o.Provision, y.Provision, dExpect.Provision)
-	expect.Probes = slices.Concat(o.Probes, y.Probes, dExpect.Probes)
-	expect.PortForwards = slices.Concat(o.PortForwards, y.PortForwards, dExpect.PortForwards)
-	expect.CopyToHost = slices.Concat(o.CopyToHost, y.CopyToHost, dExpect.CopyToHost)
-	expect.Containerd.Archives = slices.Concat(o.Containerd.Archives, y.Containerd.Archives, dExpect.Containerd.Archives)
+	expect.Provision = slices.Concat(o.Provision, y.Provision, dExpected.Provision)
+	expect.Probes = slices.Concat(o.Probes, y.Probes, dExpected.Probes)
+	expect.PortForwards = slices.Concat(o.PortForwards, y.PortForwards, dExpected.PortForwards)
+	expect.CopyToHost = slices.Concat(o.CopyToHost, y.CopyToHost, dExpected.CopyToHost)
+	expect.Containerd.Archives = slices.Concat(o.Containerd.Archives, y.Containerd.Archives, dExpected.Containerd.Archives)
 	expect.Containerd.Archives[3].Arch = *expect.Arch
-	expect.AdditionalDisks = slices.Concat(o.AdditionalDisks, y.AdditionalDisks, dExpect.AdditionalDisks)
-	expect.Firmware.Images = slices.Concat(o.Firmware.Images, y.Firmware.Images, dExpect.Firmware.Images)
+	expect.AdditionalDisks = slices.Concat(o.AdditionalDisks, y.AdditionalDisks, dExpected.AdditionalDisks)
+	expect.Firmware.Images = slices.Concat(o.Firmware.Images, y.Firmware.Images, dExpected.Firmware.Images)
 
-	expect.HostResolver.Hosts["default"] = dExpect.HostResolver.Hosts["default"]
-	expect.HostResolver.Hosts["MY.Host"] = dExpect.HostResolver.Hosts["host.lima.internal"]
+	expect.HostResolver.Hosts["default"] = dExpected.HostResolver.Hosts["default"]
+	expect.HostResolver.Hosts["MY.Host"] = dExpected.HostResolver.Hosts["host.lima.internal"]
 
-	// o.Mounts just makes dExpect.Mounts[0] writable because the Location matches
-	expect.Mounts = slices.Concat(dExpect.Mounts, y.Mounts)
+	// o.Mounts just makes dExpected.Mounts[0] writable because the Location matches
+	expect.Mounts = slices.Concat(dExpected.Mounts, y.Mounts)
 	expect.Mounts[0].Writable = ptr.Of(true)
 	expect.Mounts[0].SSHFS.Cache = ptr.Of(false)
 	expect.Mounts[0].SSHFS.FollowSymlinks = ptr.Of(true)
@@ -712,8 +658,8 @@ func TestFillDefault(t *testing.T) {
 	expect.MountType = ptr.Of(limatype.NINEP)
 	expect.MountInotify = ptr.Of(true)
 
-	// o.Networks[1] is overriding the dExpect.Networks[0].Lima entry for the "def0" interface
-	expect.Networks = slices.Concat(dExpect.Networks, y.Networks, []limatype.Network{o.Networks[0]})
+	// o.Networks[1] is overriding the dExpected.Networks[0].Lima entry for the "def0" interface
+	expect.Networks = slices.Concat(dExpected.Networks, y.Networks, []limatype.Network{o.Networks[0]})
 	expect.Networks[0].Lima = o.Networks[1].Lima
 
 	// Only highest prio DNS are retained
@@ -730,10 +676,6 @@ func TestFillDefault(t *testing.T) {
 		"-----BEGIN CERTIFICATE-----\nYOUR-ORGS-TRUSTED-CA-CERT\n-----END CERTIFICATE-----\n",
 	}
 
-	expect.Rosetta = limatype.Rosetta{
-		Enabled: ptr.Of(false),
-		BinFmt:  ptr.Of(false),
-	}
 	expect.Plain = ptr.Of(false)
 
 	expect.NestedVirtualization = ptr.Of(false)

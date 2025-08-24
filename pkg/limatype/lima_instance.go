@@ -31,7 +31,6 @@ type Instance struct {
 	Dir             string            `json:"dir"`
 	VMType          VMType            `json:"vmType"`
 	Arch            Arch              `json:"arch"`
-	CPUType         string            `json:"cpuType"`
 	CPUs            int               `json:"cpus,omitempty"`
 	Memory          int64             `json:"memory,omitempty"` // bytes
 	Disk            int64             `json:"disk,omitempty"`   // bytes
