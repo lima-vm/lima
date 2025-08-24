@@ -23,7 +23,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/envutil"
 	"github.com/lima-vm/lima/v2/pkg/instance"
 	"github.com/lima-vm/lima/v2/pkg/ioutilx"
-	"github.com/lima-vm/lima/v2/pkg/limayaml"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 	networks "github.com/lima-vm/lima/v2/pkg/networks/reconcile"
 	"github.com/lima-vm/lima/v2/pkg/sshutil"
 	"github.com/lima-vm/lima/v2/pkg/store"
@@ -86,7 +86,7 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		}
 		return err
 	}
-	if inst.Status == store.StatusStopped {
+	if inst.Status == limatype.StatusStopped {
 		startNow, err := askWhetherToStart()
 		if err != nil {
 			return err
@@ -142,7 +142,7 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	if workDir != "" {
 		changeDirCmd = fmt.Sprintf("cd %s || exit 1", shellescape.Quote(workDir))
 		// FIXME: check whether y.Mounts contains the home, not just len > 0
-	} else if len(inst.Config.Mounts) > 0 || inst.VMType == limayaml.WSL2 {
+	} else if len(inst.Config.Mounts) > 0 || inst.VMType == limatype.WSL2 {
 		hostCurrentDir, err := os.Getwd()
 		if err == nil && runtime.GOOS == "windows" {
 			hostCurrentDir, err = mountDirFromWindowsDir(ctx, inst, hostCurrentDir)
@@ -265,8 +265,8 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	return sshCmd.Run()
 }
 
-func mountDirFromWindowsDir(ctx context.Context, inst *store.Instance, dir string) (string, error) {
-	if inst.VMType == limayaml.WSL2 {
+func mountDirFromWindowsDir(ctx context.Context, inst *limatype.Instance, dir string) (string, error) {
+	if inst.VMType == limatype.WSL2 {
 		distroName := "lima-" + inst.Name
 		return ioutilx.WindowsSubsystemPathForLinux(ctx, dir, distroName)
 	}

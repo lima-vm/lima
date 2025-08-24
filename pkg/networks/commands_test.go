@@ -10,7 +10,7 @@ import (
 
 	"gotest.tools/v3/assert"
 
-	"github.com/lima-vm/lima/v2/pkg/store/dirnames"
+	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 )
 
 func TestCheck(t *testing.T) {

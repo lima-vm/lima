@@ -6,10 +6,12 @@ option go_package = "github.com/lima-vm/lima/v2/pkg/driver/external";
 
 service Driver {
   rpc Validate(google.protobuf.Empty) returns (google.protobuf.Empty);
-  rpc Initialize(google.protobuf.Empty) returns (google.protobuf.Empty);
+  rpc Create(google.protobuf.Empty) returns (google.protobuf.Empty);
   rpc CreateDisk(google.protobuf.Empty) returns (google.protobuf.Empty);
   rpc Start(google.protobuf.Empty) returns (stream StartResponse);
   rpc Stop(google.protobuf.Empty) returns (google.protobuf.Empty);
+  rpc Delete(google.protobuf.Empty) returns (google.protobuf.Empty);
+  rpc BootScripts(google.protobuf.Empty) returns (BootScriptsResponse);
 
   rpc RunGUI(google.protobuf.Empty) returns (google.protobuf.Empty);
   rpc ChangeDisplayPassword(ChangeDisplayPasswordRequest) returns (google.protobuf.Empty);
@@ -20,15 +22,20 @@ service Driver {
   rpc DeleteSnapshot(DeleteSnapshotRequest) returns (google.protobuf.Empty);
   rpc ListSnapshots(google.protobuf.Empty) returns (ListSnapshotsResponse);
 
-  rpc Register(google.protobuf.Empty) returns (google.protobuf.Empty);
-  rpc Unregister(google.protobuf.Empty) returns (google.protobuf.Empty);
-
   rpc ForwardGuestAgent(google.protobuf.Empty) returns (ForwardGuestAgentResponse);
   rpc GuestAgentConn(google.protobuf.Empty) returns (google.protobuf.Empty);
 
-  rpc SetConfig(SetConfigRequest) returns (google.protobuf.Empty);
+  rpc Configure(SetConfigRequest) returns (google.protobuf.Empty);
+  rpc Info(google.protobuf.Empty) returns (InfoResponse);
+  rpc SSHAddress(google.protobuf.Empty) returns (SSHAddressResponse);
+}
 
-  rpc GetInfo(google.protobuf.Empty) returns (InfoResponse);
+message BootScriptsResponse {
+  map<string, bytes> scripts = 1;
+}
+
+message SSHAddressResponse {
+  string address = 1;
 }
 
 message InfoResponse{

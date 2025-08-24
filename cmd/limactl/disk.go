@@ -19,8 +19,9 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/lima-vm/lima/v2/pkg/imgutil/proxyimgutil"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/store"
-	"github.com/lima-vm/lima/v2/pkg/store/filenames"
 )
 
 func newDiskCommand() *cobra.Command {
@@ -243,7 +244,7 @@ func diskDeleteAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	var instances []*store.Instance
+	var instances []*limatype.Instance
 	for _, instName := range instNames {
 		inst, err := store.Inspect(ctx, instName)
 		if err != nil {
@@ -344,7 +345,7 @@ func diskUnlockAction(cmd *cobra.Command, args []string) error {
 					diskName, disk.Instance, inst.Errors)
 				continue
 			}
-			if inst.Status == store.StatusRunning {
+			if inst.Status == limatype.StatusRunning {
 				logrus.Warnf("Cannot unlock disk %q used by running instance %q", diskName, disk.Instance)
 				continue
 			}
@@ -402,7 +403,7 @@ func diskResizeAction(cmd *cobra.Command, args []string) error {
 	if disk.Instance != "" {
 		inst, err := store.Inspect(ctx, disk.Instance)
 		if err == nil {
-			if inst.Status == store.StatusRunning {
+			if inst.Status == limatype.StatusRunning {
 				return fmt.Errorf("cannot resize disk %q used by running instance %q. Please stop the VM instance", diskName, disk.Instance)
 			}
 		}

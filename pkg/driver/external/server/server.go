@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"net"
 	"os"
@@ -25,9 +26,10 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/driver"
 	pb "github.com/lima-vm/lima/v2/pkg/driver/external"
 	"github.com/lima-vm/lima/v2/pkg/driver/external/client"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
+	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/registry"
-	"github.com/lima-vm/lima/v2/pkg/store"
-	"github.com/lima-vm/lima/v2/pkg/store/filenames"
 )
 
 type DriverServer struct {
@@ -50,7 +52,20 @@ func (t *listenerTracker) Accept() (net.Conn, error) {
 	return c, err
 }
 
-func Serve(ctx context.Context, driver driver.Driver) {
+func Serve(driver driver.Driver) {
+	preConfiguredDriverAction := flag.Bool("pre-driver-action", false, "Run pre-driver action before starting the gRPC server")
+	inspectStatus := flag.Bool("inspect-status", false, "Inspect status of the driver")
+	flag.Parse()
+	if *preConfiguredDriverAction {
+		handlePreConfiguredDriverAction(driver)
+		return
+	}
+	if *inspectStatus {
+		handleInspectStatus(driver)
+		return
+	}
+
+	ctx := context.Background()
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 
@@ -115,7 +130,6 @@ func Serve(ctx context.Context, driver driver.Driver) {
 		logger.Info("Received shutdown signal, stopping server...")
 		closeShutdown()
 	}()
-
 	go func() {
 		timer := time.NewTimer(60 * time.Second)
 		defer timer.Stop()
@@ -148,6 +162,85 @@ func Serve(ctx context.Context, driver driver.Driver) {
 	server.GracefulStop()
 }
 
+func handleInspectStatus(driver driver.Driver) {
+	decoder := json.NewDecoder(os.Stdin)
+	encoder := json.NewEncoder(os.Stdout)
+
+	var payload []byte
+	if err := decoder.Decode(&payload); err != nil {
+		fmt.Fprintf(os.Stderr, "Error encoding response: %v\n", err)
+		return
+	}
+
+	var inst limatype.Instance
+	if err := inst.UnmarshalJSON(payload); err != nil {
+		fmt.Fprintf(os.Stderr, "Error unmarshalling instance: %v\n", err)
+	}
+
+	status := driver.InspectStatus(context.Background(), &inst)
+	inst.Status = status
+
+	resp, err := inst.MarshalJSON()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error marshalling instance: %v\n", err)
+		return
+	}
+
+	if err := encoder.Encode(resp); err != nil {
+		fmt.Fprintf(os.Stderr, "Error encoding response: %v\n", err)
+	}
+}
+
+func handlePreConfiguredDriverAction(driver driver.Driver) {
+	decoder := json.NewDecoder(os.Stdin)
+	encoder := json.NewEncoder(os.Stdout)
+
+	var payload limatype.PreConfiguredDriverPayload
+	if err := decoder.Decode(&payload); err != nil {
+		response := limatype.PreConfiguredDriverResponse{
+			Config: limatype.LimaYAML{},
+			Error:  err.Error(),
+		}
+		if err := encoder.Encode(response); err != nil {
+			fmt.Fprintf(os.Stderr, "Error encoding response: %v\n", err)
+		}
+		return
+	}
+
+	config := &payload.Config
+	if err := driver.AcceptConfig(config, payload.FilePath); err != nil {
+		response := limatype.PreConfiguredDriverResponse{
+			Config: limatype.LimaYAML{},
+			Error:  err.Error(),
+		}
+		if err := encoder.Encode(response); err != nil {
+			fmt.Fprintf(os.Stderr, "Error encoding response: %v\n", err)
+		}
+		return
+	}
+
+	err := driver.FillConfig(config, payload.FilePath)
+	if err != nil {
+		response := limatype.PreConfiguredDriverResponse{
+			Config: limatype.LimaYAML{},
+			Error:  err.Error(),
+		}
+		if err := encoder.Encode(response); err != nil {
+			fmt.Fprintf(os.Stderr, "Error encoding response: %v\n", err)
+		}
+		return
+	}
+
+	response := limatype.PreConfiguredDriverResponse{
+		Config: *config,
+		Error:  "",
+	}
+
+	if err := encoder.Encode(response); err != nil {
+		fmt.Fprintf(os.Stderr, "Error encoding response: %v\n", err)
+	}
+}
+
 func Start(extDriver *registry.ExternalDriver, instName string) error {
 	extDriver.Logger.Debugf("Starting external driver at %s", extDriver.Path)
 	if instName == "" {
@@ -164,7 +257,7 @@ func Start(extDriver *registry.ExternalDriver, instName string) error {
 		return fmt.Errorf("failed to create stdout pipe for external driver: %w", err)
 	}
 
-	instanceDir, err := store.InstanceDir(extDriver.InstanceName)
+	instanceDir, err := dirnames.InstanceDir(extDriver.InstanceName)
 	if err != nil {
 		cancel()
 		return fmt.Errorf("failed to determine instance directory: %w", err)

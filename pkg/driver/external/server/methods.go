@@ -6,6 +6,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"maps"
 	"net"
 	"path/filepath"
 
@@ -16,8 +17,8 @@ import (
 
 	"github.com/lima-vm/lima/v2/pkg/bicopy"
 	pb "github.com/lima-vm/lima/v2/pkg/driver/external"
-	"github.com/lima-vm/lima/v2/pkg/store"
-	"github.com/lima-vm/lima/v2/pkg/store/filenames"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 )
 
 func (s *DriverServer) Start(_ *emptypb.Empty, stream pb.Driver_StartServer) error {
@@ -53,9 +54,9 @@ func (s *DriverServer) Start(_ *emptypb.Empty, stream pb.Driver_StartServer) err
 	}
 }
 
-func (s *DriverServer) SetConfig(_ context.Context, req *pb.SetConfigRequest) (*emptypb.Empty, error) {
+func (s *DriverServer) Configure(_ context.Context, req *pb.SetConfigRequest) (*emptypb.Empty, error) {
 	s.logger.Debugf("Received SetConfig request")
-	var inst store.Instance
+	var inst limatype.Instance
 
 	if err := inst.UnmarshalJSON(req.InstanceConfigJson); err != nil {
 		s.logger.Errorf("Failed to unmarshal InstanceConfigJson: %v", err)
@@ -102,7 +103,7 @@ func (s *DriverServer) GuestAgentConn(ctx context.Context, _ *emptypb.Empty) (*e
 	return &emptypb.Empty{}, nil
 }
 
-func (s *DriverServer) GetInfo(_ context.Context, _ *emptypb.Empty) (*pb.InfoResponse, error) {
+func (s *DriverServer) Info(_ context.Context, _ *emptypb.Empty) (*pb.InfoResponse, error) {
 	s.logger.Debug("Received GetInfo request")
 	info := s.driver.Info()
 
@@ -128,9 +129,9 @@ func (s *DriverServer) Validate(ctx context.Context, empty *emptypb.Empty) (*emp
 	return empty, nil
 }
 
-func (s *DriverServer) Initialize(ctx context.Context, empty *emptypb.Empty) (*emptypb.Empty, error) {
+func (s *DriverServer) Create(ctx context.Context, empty *emptypb.Empty) (*emptypb.Empty, error) {
 	s.logger.Debug("Received Initialize request")
-	err := s.driver.Initialize(ctx)
+	err := s.driver.Create(ctx)
 	if err != nil {
 		s.logger.Errorf("Initialization failed: %v", err)
 		return empty, err
@@ -170,6 +171,47 @@ func (s *DriverServer) RunGUI(_ context.Context, empty *emptypb.Empty) (*emptypb
 	}
 	s.logger.Debug("RunGUI succeeded")
 	return empty, nil
+}
+
+func (s *DriverServer) Delete(ctx context.Context, empty *emptypb.Empty) (*emptypb.Empty, error) {
+	s.logger.Debug("Received Delete request")
+	err := s.driver.Delete(ctx)
+	if err != nil {
+		s.logger.Errorf("Delete failed: %v", err)
+		return empty, err
+	}
+	s.logger.Debug("Delete succeeded")
+	return empty, nil
+}
+
+func (s *DriverServer) BootScripts(_ context.Context, _ *emptypb.Empty) (*pb.BootScriptsResponse, error) {
+	s.logger.Debug("Received BootScripts request")
+	scripts, err := s.driver.BootScripts()
+	if err != nil {
+		s.logger.Errorf("BootScripts failed: %v", err)
+		return nil, err
+	}
+
+	resp := &pb.BootScriptsResponse{
+		Scripts: make(map[string][]byte),
+	}
+
+	maps.Copy(resp.Scripts, scripts)
+
+	s.logger.Debugf("BootScripts succeeded with %d scripts", len(resp.Scripts))
+	return resp, nil
+}
+
+func (s *DriverServer) SSHAddress(ctx context.Context, _ *emptypb.Empty) (*pb.SSHAddressResponse, error) {
+	s.logger.Debug("Received SSHAddress request")
+	address, err := s.driver.SSHAddress(ctx)
+	if err != nil {
+		s.logger.Errorf("SSHAddress failed: %v", err)
+		return nil, err
+	}
+
+	s.logger.Debugf("SSHAddress succeeded with address: %s", address)
+	return &pb.SSHAddressResponse{Address: address}, nil
 }
 
 func (s *DriverServer) ChangeDisplayPassword(ctx context.Context, req *pb.ChangeDisplayPasswordRequest) (*emptypb.Empty, error) {
@@ -236,28 +278,6 @@ func (s *DriverServer) ListSnapshots(ctx context.Context, _ *emptypb.Empty) (*pb
 	}
 	s.logger.Debug("ListSnapshots succeeded")
 	return &pb.ListSnapshotsResponse{Snapshots: snapshots}, nil
-}
-
-func (s *DriverServer) Register(ctx context.Context, empty *emptypb.Empty) (*emptypb.Empty, error) {
-	s.logger.Debug("Received Register request")
-	err := s.driver.Register(ctx)
-	if err != nil {
-		s.logger.Errorf("Register failed: %v", err)
-		return empty, err
-	}
-	s.logger.Debug("Register succeeded")
-	return empty, nil
-}
-
-func (s *DriverServer) Unregister(ctx context.Context, empty *emptypb.Empty) (*emptypb.Empty, error) {
-	s.logger.Debug("Received Unregister request")
-	err := s.driver.Unregister(ctx)
-	if err != nil {
-		s.logger.Errorf("Unregister failed: %v", err)
-		return empty, err
-	}
-	s.logger.Debug("Unregister succeeded")
-	return empty, nil
 }
 
 func (s *DriverServer) ForwardGuestAgent(_ context.Context, _ *emptypb.Empty) (*pb.ForwardGuestAgentResponse, error) {

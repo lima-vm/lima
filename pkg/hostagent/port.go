@@ -11,22 +11,23 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/guestagent/api"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 )
 
 type portForwarder struct {
 	sshConfig   *ssh.SSHConfig
 	sshHostPort int
-	rules       []limayaml.PortForward
+	rules       []limatype.PortForward
 	ignore      bool
-	vmType      limayaml.VMType
+	vmType      limatype.VMType
 }
 
 const sshGuestPort = 22
 
 var IPv4loopback1 = limayaml.IPv4loopback1
 
-func newPortForwarder(sshConfig *ssh.SSHConfig, sshHostPort int, rules []limayaml.PortForward, ignore bool, vmType limayaml.VMType) *portForwarder {
+func newPortForwarder(sshConfig *ssh.SSHConfig, sshHostPort int, rules []limatype.PortForward, ignore bool, vmType limatype.VMType) *portForwarder {
 	return &portForwarder{
 		sshConfig:   sshConfig,
 		sshHostPort: sshHostPort,
@@ -36,7 +37,7 @@ func newPortForwarder(sshConfig *ssh.SSHConfig, sshHostPort int, rules []limayam
 	}
 }
 
-func hostAddress(rule limayaml.PortForward, guest *api.IPPort) string {
+func hostAddress(rule limatype.PortForward, guest *api.IPPort) string {
 	if rule.HostSocket != "" {
 		return rule.HostSocket
 	}
@@ -57,7 +58,7 @@ func (pf *portForwarder) forwardingAddresses(guest *api.IPPort) (hostAddr, guest
 			continue
 		}
 		switch rule.Proto {
-		case limayaml.ProtoTCP, limayaml.ProtoAny:
+		case limatype.ProtoTCP, limatype.ProtoAny:
 		default:
 			continue
 		}

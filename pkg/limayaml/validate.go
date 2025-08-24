@@ -18,11 +18,12 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/coreos/go-semver/semver"
 	"github.com/docker/go-units"
 	"github.com/sirupsen/logrus"
 
+	"github.com/lima-vm/lima/v2/pkg/driverutil"
 	"github.com/lima-vm/lima/v2/pkg/identifiers"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/localpathutil"
 	"github.com/lima-vm/lima/v2/pkg/networks"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
@@ -30,7 +31,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/version/versionutil"
 )
 
-func Validate(y *LimaYAML, warn bool) error {
+func Validate(y *limatype.LimaYAML, warn bool) error {
 	var errs error
 
 	if len(y.Base) > 0 {
@@ -47,30 +48,14 @@ func Validate(y *LimaYAML, warn bool) error {
 			errs = errors.Join(errs, fmt.Errorf("template requires Lima version %q; this is only %q", *y.MinimumLimaVersion, version.Version))
 		}
 	}
-	if y.VMOpts.QEMU.MinimumVersion != nil {
-		if _, err := semver.NewVersion(*y.VMOpts.QEMU.MinimumVersion); err != nil {
-			errs = errors.Join(errs, fmt.Errorf("field `vmOpts.qemu.minimumVersion` must be a semvar value, got %q: %w", *y.VMOpts.QEMU.MinimumVersion, err))
-		}
-	}
+
 	switch *y.OS {
-	case LINUX:
+	case limatype.LINUX:
 	default:
-		errs = errors.Join(errs, fmt.Errorf("field `os` must be %q; got %q", LINUX, *y.OS))
+		errs = errors.Join(errs, fmt.Errorf("field `os` must be %q; got %q", limatype.LINUX, *y.OS))
 	}
-	if !slices.Contains(ArchTypes, *y.Arch) {
-		errs = errors.Join(errs, fmt.Errorf("field `arch` must be one of %v; got %q", ArchTypes, *y.Arch))
-	}
-	switch *y.VMType {
-	case QEMU:
-		// NOP
-	case WSL2:
-		// NOP
-	case VZ:
-		if !IsNativeArch(*y.Arch) {
-			errs = errors.Join(errs, fmt.Errorf("field `arch` must be %q for VZ; got %q", NewArch(runtime.GOARCH), *y.Arch))
-		}
-	default:
-		errs = errors.Join(errs, fmt.Errorf("field `vmType` must be %q, %q, %q; got %q", QEMU, VZ, WSL2, *y.VMType))
+	if !slices.Contains(limatype.ArchTypes, *y.Arch) {
+		errs = errors.Join(errs, fmt.Errorf("field `arch` must be one of %v; got %q", limatype.ArchTypes, *y.Arch))
 	}
 
 	if len(y.Images) == 0 {
@@ -164,14 +149,16 @@ func Validate(y *LimaYAML, warn bool) error {
 		}
 	}
 
-	switch *y.MountType {
-	case REVSSHFS, NINEP, VIRTIOFS, WSLMount:
-	default:
-		errs = errors.Join(errs, fmt.Errorf("field `mountType` must be %q or %q or %q, or %q, got %q", REVSSHFS, NINEP, VIRTIOFS, WSLMount, *y.MountType))
-	}
+	if y.MountType != nil {
+		switch *y.MountType {
+		case limatype.REVSSHFS, limatype.NINEP, limatype.VIRTIOFS, limatype.WSLMount:
+		default:
+			errs = errors.Join(errs, fmt.Errorf("field `mountType` must be %q or %q or %q, or %q, got %q", limatype.REVSSHFS, limatype.NINEP, limatype.VIRTIOFS, limatype.WSLMount, *y.MountType))
+		}
 
-	if slices.Contains(y.MountTypesUnsupported, *y.MountType) {
-		errs = errors.Join(errs, fmt.Errorf("field `mountType` must not be one of %v (`mountTypesUnsupported`), got %q", y.MountTypesUnsupported, *y.MountType))
+		if slices.Contains(y.MountTypesUnsupported, *y.MountType) {
+			errs = errors.Join(errs, fmt.Errorf("field `mountType` must not be one of %v (`mountTypesUnsupported`), got %q", y.MountTypesUnsupported, *y.MountType))
+		}
 	}
 
 	if warn && runtime.GOOS != "linux" {
@@ -194,55 +181,55 @@ func Validate(y *LimaYAML, warn bool) error {
 			}
 		}
 		switch p.Mode {
-		case ProvisionModeSystem, ProvisionModeUser, ProvisionModeBoot, ProvisionModeData, ProvisionModeDependency, ProvisionModeAnsible:
+		case limatype.ProvisionModeSystem, limatype.ProvisionModeUser, limatype.ProvisionModeBoot, limatype.ProvisionModeData, limatype.ProvisionModeDependency, limatype.ProvisionModeAnsible:
 		default:
 			errs = errors.Join(errs, fmt.Errorf("field `provision[%d].mode` must one of %q, %q, %q, %q, %q, or %q",
-				i, ProvisionModeSystem, ProvisionModeUser, ProvisionModeBoot, ProvisionModeData, ProvisionModeDependency, ProvisionModeAnsible))
+				i, limatype.ProvisionModeSystem, limatype.ProvisionModeUser, limatype.ProvisionModeBoot, limatype.ProvisionModeData, limatype.ProvisionModeDependency, limatype.ProvisionModeAnsible))
 		}
-		if p.Mode != ProvisionModeDependency && p.SkipDefaultDependencyResolution != nil {
+		if p.Mode != limatype.ProvisionModeDependency && p.SkipDefaultDependencyResolution != nil {
 			errs = errors.Join(errs, fmt.Errorf("field `provision[%d].mode` cannot set skipDefaultDependencyResolution, only valid on scripts of type %q",
-				i, ProvisionModeDependency))
+				i, limatype.ProvisionModeDependency))
 		}
 
 		// This can lead to fatal Panic if p.Path is nil, better to return an error here
-		if p.Mode == ProvisionModeData {
+		if p.Mode == limatype.ProvisionModeData {
 			if p.Path == nil {
-				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].path` must not be empty when mode is %q", i, ProvisionModeData))
+				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].path` must not be empty when mode is %q", i, limatype.ProvisionModeData))
 				return errs
 			}
 			if !path.IsAbs(*p.Path) {
 				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].path` must be an absolute path", i))
 			}
 			if p.Content == nil {
-				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].content` must not be empty when mode is %q", i, ProvisionModeData))
+				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].content` must not be empty when mode is %q", i, limatype.ProvisionModeData))
 			}
 			// FillDefaults makes sure that p.Permissions is not nil
 			if _, err := strconv.ParseInt(*p.Permissions, 8, 64); err != nil {
 				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].permissions` must be an octal number: %w", i, err))
 			}
 		} else {
-			if p.Script == "" && p.Mode != ProvisionModeAnsible {
+			if p.Script == "" && p.Mode != limatype.ProvisionModeAnsible {
 				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].script` must not be empty", i))
 			}
 			if p.Content != nil {
-				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].content` can only be set when mode is %q", i, ProvisionModeData))
+				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].content` can only be set when mode is %q", i, limatype.ProvisionModeData))
 			}
 			if p.Overwrite != nil {
-				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].overwrite` can only be set when mode is %q", i, ProvisionModeData))
+				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].overwrite` can only be set when mode is %q", i, limatype.ProvisionModeData))
 			}
 			if p.Owner != nil {
-				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].owner` can only be set when mode is %q", i, ProvisionModeData))
+				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].owner` can only be set when mode is %q", i, limatype.ProvisionModeData))
 			}
 			if p.Path != nil {
-				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].path` can only be set when mode is %q", i, ProvisionModeData))
+				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].path` can only be set when mode is %q", i, limatype.ProvisionModeData))
 			}
 			if p.Permissions != nil {
-				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].permissions` can only be set when mode is %q", i, ProvisionModeData))
+				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].permissions` can only be set when mode is %q", i, limatype.ProvisionModeData))
 			}
 		}
 		if p.Playbook != "" {
-			if p.Mode != ProvisionModeAnsible {
-				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].playbook can only be set when mode is %q", i, ProvisionModeAnsible))
+			if p.Mode != limatype.ProvisionModeAnsible {
+				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].playbook can only be set when mode is %q", i, limatype.ProvisionModeAnsible))
 			}
 			if p.Script != "" {
 				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].script must be empty if playbook is set", i))
@@ -251,7 +238,7 @@ func Validate(y *LimaYAML, warn bool) error {
 			if _, err := os.Stat(playbook); err != nil {
 				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].playbook` refers to an inaccessible path: %q: %w", i, playbook, err))
 			}
-			logrus.Warnf("provision mode %q is deprecated, use `ansible-playbook %q` instead", ProvisionModeAnsible, playbook)
+			logrus.Warnf("provision mode %q is deprecated, use `ansible-playbook %q` instead", limatype.ProvisionModeAnsible, playbook)
 		}
 		if strings.Contains(p.Script, "LIMA_CIDATA") {
 			logrus.Warn("provisioning scripts should not reference the LIMA_CIDATA variables")
@@ -282,9 +269,9 @@ func Validate(y *LimaYAML, warn bool) error {
 			errs = errors.Join(errs, fmt.Errorf("field `probe[%d].script` must start with a '#!' line", i))
 		}
 		switch p.Mode {
-		case ProbeModeReadiness:
+		case limatype.ProbeModeReadiness:
 		default:
-			errs = errors.Join(errs, fmt.Errorf("field `probe[%d].mode` can only be %q", i, ProbeModeReadiness))
+			errs = errors.Join(errs, fmt.Errorf("field `probe[%d].mode` can only be %q", i, limatype.ProbeModeReadiness))
 		}
 	}
 	for i, rule := range y.PortForwards {
@@ -355,9 +342,9 @@ func Validate(y *LimaYAML, warn bool) error {
 				field, osutil.UnixPathMax, len(rule.HostSocket)))
 		}
 		switch rule.Proto {
-		case ProtoTCP, ProtoUDP, ProtoAny:
+		case limatype.ProtoTCP, limatype.ProtoUDP, limatype.ProtoAny:
 		default:
-			errs = errors.Join(errs, fmt.Errorf("field `%s.proto` must be %q, %q, or %q", field, ProtoTCP, ProtoUDP, ProtoAny))
+			errs = errors.Join(errs, fmt.Errorf("field `%s.proto` must be %q, %q, or %q", field, limatype.ProtoTCP, limatype.ProtoUDP, limatype.ProtoAny))
 		}
 		if rule.Reverse && rule.GuestSocket == "" {
 			errs = errors.Join(errs, fmt.Errorf("field `%s.reverse` must be %t", field, false))
@@ -412,7 +399,7 @@ func Validate(y *LimaYAML, warn bool) error {
 	return errs
 }
 
-func validateFileObject(f File, fieldName string) error {
+func validateFileObject(f limatype.File, fieldName string) error {
 	var errs error
 	if !strings.Contains(f.Location, "://") {
 		if _, err := localpathutil.Expand(f.Location); err != nil {
@@ -420,8 +407,8 @@ func validateFileObject(f File, fieldName string) error {
 		}
 		// f.Location does NOT need to be accessible, so we do NOT check os.Stat(f.Location)
 	}
-	if !slices.Contains(ArchTypes, f.Arch) {
-		errs = errors.Join(errs, fmt.Errorf("field `arch` must be one of %v; got %q", ArchTypes, f.Arch))
+	if !slices.Contains(limatype.ArchTypes, f.Arch) {
+		errs = errors.Join(errs, fmt.Errorf("field `arch` must be one of %v; got %q", limatype.ArchTypes, f.Arch))
 	}
 	if f.Digest != "" {
 		if err := f.Digest.Validate(); err != nil {
@@ -431,7 +418,7 @@ func validateFileObject(f File, fieldName string) error {
 	return errs
 }
 
-func validateNetwork(y *LimaYAML) error {
+func validateNetwork(y *limatype.LimaYAML) error {
 	var errs error
 	interfaceName := make(map[string]int)
 	for i, nw := range y.Networks {
@@ -455,27 +442,11 @@ func validateNetwork(y *LimaYAML) error {
 			if nw.Socket != "" {
 				errs = errors.Join(errs, fmt.Errorf("field `%s.lima` and field `%s.socket` are mutually exclusive", field, field))
 			}
-			if nw.VZNAT != nil && *nw.VZNAT {
-				errs = errors.Join(errs, fmt.Errorf("field `%s.lima` and field `%s.vzNAT` are mutually exclusive", field, field))
-			}
 		case nw.Socket != "":
-			if nw.VZNAT != nil && *nw.VZNAT {
-				errs = errors.Join(errs, fmt.Errorf("field `%s.socket` and field `%s.vzNAT` are mutually exclusive", field, field))
-			}
 			if fi, err := os.Stat(nw.Socket); err != nil && !errors.Is(err, os.ErrNotExist) {
 				errs = errors.Join(errs, err)
 			} else if err == nil && fi.Mode()&os.ModeSocket == 0 {
 				errs = errors.Join(errs, fmt.Errorf("field `%s.socket` %q points to a non-socket file", field, nw.Socket))
-			}
-		case nw.VZNAT != nil && *nw.VZNAT:
-			if y.VMType == nil || *y.VMType != VZ {
-				errs = errors.Join(errs, fmt.Errorf("field `%s.vzNAT` requires `vmType` to be %q", field, VZ))
-			}
-			if nw.Lima != "" {
-				errs = errors.Join(errs, fmt.Errorf("field `%s.vzNAT` and field `%s.lima` are mutually exclusive", field, field))
-			}
-			if nw.Socket != "" {
-				errs = errors.Join(errs, fmt.Errorf("field `%s.vzNAT` and field `%s.socket` are mutually exclusive", field, field))
 			}
 		default:
 			errs = errors.Join(errs, fmt.Errorf("field `%s.lima` or  field `%s.socket must be set", field, field))
@@ -510,7 +481,7 @@ func validateNetwork(y *LimaYAML) error {
 
 // validateParamIsUsed checks if the keys in the `param` field are used in any script, probe, copyToHost, or portForward.
 // It should be called before the `y` parameter is passed to FillDefault() that execute template.
-func validateParamIsUsed(y *LimaYAML) error {
+func validateParamIsUsed(y *limatype.LimaYAML) error {
 	for key := range y.Param {
 		re, err := regexp.Compile(`{{[^}]*\.Param\.` + key + `[^}]*}}|\bPARAM_` + key + `\b`)
 		if err != nil {
@@ -582,12 +553,12 @@ func validatePort(field string, port int) error {
 	return nil
 }
 
-func warnExperimental(y *LimaYAML) {
-	if *y.MountType == VIRTIOFS && runtime.GOOS == "linux" {
+func warnExperimental(y *limatype.LimaYAML) {
+	if *y.MountType == limatype.VIRTIOFS && runtime.GOOS == "linux" {
 		logrus.Warn("`mountType: virtiofs` on Linux is experimental")
 	}
 	switch *y.Arch {
-	case RISCV64, ARMV7L, S390X, PPC64LE:
+	case limatype.RISCV64, limatype.ARMV7L, limatype.S390X, limatype.PPC64LE:
 		logrus.Warnf("`arch: %s ` is experimental", *y.Arch)
 	}
 	if y.Video.Display != nil && strings.Contains(*y.Video.Display, "vnc") {
@@ -604,36 +575,40 @@ func warnExperimental(y *LimaYAML) {
 // ValidateAgainstLatestConfig validates the values between the latest YAML and the updated(New) YAML.
 // This validates configuration rules that disallow certain changes, such as shrinking the disk.
 func ValidateAgainstLatestConfig(ctx context.Context, yNew, yLatest []byte) error {
-	var n LimaYAML
+	var n limatype.LimaYAML
+	var errs error
 
 	// Load the latest YAML and fill in defaults
 	l, err := LoadWithWarnings(ctx, yLatest, "")
 	if err != nil {
-		return err
+		errs = errors.Join(errs, err)
+	}
+	if err := driverutil.ResolveVMType(l, ""); err != nil {
+		errs = errors.Join(errs, fmt.Errorf("failed to accept config for %q: %w", "", err))
 	}
 	if err := Unmarshal(yNew, &n, "Unmarshal new YAML bytes"); err != nil {
-		return err
+		errs = errors.Join(errs, err)
 	}
 
 	// Handle editing the template without a disk value
 	if n.Disk == nil || l.Disk == nil {
-		return nil
+		return errs
 	}
 
 	// Disk value must be provided, as it is required when creating an instance.
 	nDisk, err := units.RAMInBytes(*n.Disk)
 	if err != nil {
-		return err
+		errs = errors.Join(errs, err)
 	}
 	lDisk, err := units.RAMInBytes(*l.Disk)
 	if err != nil {
-		return err
+		errs = errors.Join(errs, err)
 	}
 
 	// Reject shrinking disk
 	if nDisk < lDisk {
-		return fmt.Errorf("field `disk`: shrinking the disk (%v --> %v) is not supported", *l.Disk, *n.Disk)
+		errs = errors.Join(errs, fmt.Errorf("field `disk`: shrinking the disk (%v --> %v) is not supported", *l.Disk, *n.Disk))
 	}
 
-	return nil
+	return errs
 }

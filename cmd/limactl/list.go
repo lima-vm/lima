@@ -16,6 +16,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/store"
 )
 
@@ -172,7 +173,7 @@ func listAction(cmd *cobra.Command, args []string) error {
 	}
 
 	// get the state and config for all the requested instances
-	var instances []*store.Instance
+	var instances []*limatype.Instance
 	for _, instanceName := range instanceNames {
 		instance, err := store.Inspect(ctx, instanceName)
 		if err != nil {
