@@ -242,16 +242,18 @@ func runExternalPlugin(ctx context.Context, name string, args []string) {
 		return
 	}
 
-	logrus.Debugf("found external command: %s", execPath)
-
 	cmd := exec.CommandContext(ctx, execPath, args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Env = os.Environ()
 
-	handleExitCoder(cmd.Run())
-	os.Exit(0) //nolint:revive // it's intentional to call os.Exit in this function
+	err = cmd.Run()
+	handleExitCoder(err)
+	if err == nil {
+		os.Exit(0) //nolint:revive // it's intentional to call os.Exit in this function
+	}
+	logrus.Fatalf("external command %q failed: %v", execPath, err)
 }
 
 func updatePathEnv() error {
