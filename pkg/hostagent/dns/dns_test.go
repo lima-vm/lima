@@ -85,7 +85,7 @@ func TestDNSRecords(t *testing.T) {
 		for _, tc := range tests {
 			req := new(dns.Msg)
 			req.SetQuestion(dns.Fqdn(tc.testDomain), dns.TypeTXT)
-			h.ServeDNS(w, req)
+			h.ServeDNS(t.Context(), w, req)
 			assert.Assert(t, regexMatch(dnsResult.String(), tc.expectedTXTRecord))
 		}
 	})
@@ -102,7 +102,7 @@ func TestDNSRecords(t *testing.T) {
 		for _, tc := range tests {
 			req := new(dns.Msg)
 			req.SetQuestion(dns.Fqdn(tc.testDomain), dns.TypeA)
-			h.ServeDNS(w, req)
+			h.ServeDNS(t.Context(), w, req)
 			assert.Assert(t, regexMatch(dnsResult.String(), tc.expectedARecord))
 		}
 	})
@@ -119,7 +119,7 @@ func TestDNSRecords(t *testing.T) {
 		for _, tc := range tests {
 			req := new(dns.Msg)
 			req.SetQuestion(dns.Fqdn(tc.testDomain), dns.TypeCNAME)
-			h.ServeDNS(w, req)
+			h.ServeDNS(t.Context(), w, req)
 			assert.Assert(t, regexMatch(dnsResult.String(), tc.expectedCNAME))
 		}
 	})
@@ -136,7 +136,7 @@ func TestDNSRecords(t *testing.T) {
 		for _, tc := range tests {
 			req := new(dns.Msg)
 			req.SetQuestion(dns.Fqdn(tc.testDomain), dns.TypeCNAME)
-			h.ServeDNS(w, req)
+			h.ServeDNS(t.Context(), w, req)
 			assert.Assert(t, regexMatch(dnsResult.String(), tc.expectedCNAME))
 		}
 	})

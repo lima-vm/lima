@@ -151,13 +151,13 @@ func New(ctx context.Context, instName string, stdout io.Writer, signalCh chan o
 		}
 	}
 
-	limaDriver, err := driverutil.CreateConfiguredDriver(inst, sshLocalPort)
+	limaDriver, err := driverutil.CreateConfiguredDriver(ctx, inst, sshLocalPort)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create driver instance: %w", err)
 	}
 
-	vSockPort := limaDriver.Info().VsockPort
-	virtioPort := limaDriver.Info().VirtioPort
+	vSockPort := limaDriver.Info(ctx).VsockPort
+	virtioPort := limaDriver.Info(ctx).VirtioPort
 
 	if err := cidata.GenerateCloudConfig(ctx, inst.Dir, instName, inst.Config); err != nil {
 		return nil, err
@@ -387,14 +387,14 @@ func (a *HostAgent) Run(ctx context.Context) error {
 		logrus.Infof("VNC Password: `%s`", vncpwdfile)
 	}
 
-	if a.driver.Info().CanRunGUI {
+	if a.driver.Info(ctx).CanRunGUI {
 		go func() {
 			err = a.startRoutinesAndWait(ctx, errCh)
 			if err != nil {
 				logrus.Error(err)
 			}
 		}()
-		return a.driver.RunGUI()
+		return a.driver.RunGUI(ctx)
 	}
 	return a.startRoutinesAndWait(ctx, errCh)
 }
@@ -596,7 +596,7 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 				}
 			}
 		}
-		if a.driver.ForwardGuestAgent() {
+		if a.driver.ForwardGuestAgent(ctx) {
 			if err := forwardSSH(context.Background(), a.sshConfig, a.sshLocalPort, localUnix, remoteUnix, verbCancel, false); err != nil {
 				errs = append(errs, err)
 			}
@@ -607,7 +607,7 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 	go func() {
 		if a.instConfig.MountInotify != nil && *a.instConfig.MountInotify {
 			if a.client == nil || !isGuestAgentSocketAccessible(ctx, a.client) {
-				if a.driver.ForwardGuestAgent() {
+				if a.driver.ForwardGuestAgent(ctx) {
 					_ = forwardSSH(ctx, a.sshConfig, a.sshLocalPort, localUnix, remoteUnix, verbForward, false)
 				}
 			}
@@ -620,7 +620,7 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 
 	for {
 		if a.client == nil || !isGuestAgentSocketAccessible(ctx, a.client) {
-			if a.driver.ForwardGuestAgent() {
+			if a.driver.ForwardGuestAgent(ctx) {
 				_ = forwardSSH(ctx, a.sshConfig, a.sshLocalPort, localUnix, remoteUnix, verbForward, false)
 			}
 		}

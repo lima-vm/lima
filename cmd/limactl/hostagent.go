@@ -131,7 +131,7 @@ func hostagentAction(cmd *cobra.Command, args []string) error {
 			logrus.WithError(serveErr).Warn("hostagent API server exited with an error")
 		}
 	}()
-	return ha.Run(cmd.Context())
+	return ha.Run(ctx)
 }
 
 // syncer is implemented by *os.File.

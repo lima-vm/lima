@@ -4,6 +4,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -174,6 +175,8 @@ func networkCreateAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	ctx := cmd.Context()
+
 	switch mode {
 	case networks.ModeBridged:
 		if gateway != "" {
@@ -183,7 +186,7 @@ func networkCreateAction(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("network mode %q requires specifying interface", mode)
 		}
 		yq := fmt.Sprintf(`.networks.%q = {"mode":%q,"interface":%q}`, name, mode, intf)
-		return networkApplyYQ(yq)
+		return networkApplyYQ(ctx, yq)
 	default:
 		if gateway == "" {
 			return fmt.Errorf("network mode %q requires specifying gateway", mode)
@@ -208,11 +211,11 @@ func networkCreateAction(cmd *cobra.Command, args []string) error {
 		// TODO: check IP range collision
 
 		yq := fmt.Sprintf(`.networks.%q = {"mode":%q,"gateway":%q,"netmask":%q,"interface":%q}`, name, mode, gwIP.String(), gwMaskStr, intf)
-		return networkApplyYQ(yq)
+		return networkApplyYQ(ctx, yq)
 	}
 }
 
-func networkApplyYQ(yq string) error {
+func networkApplyYQ(ctx context.Context, yq string) error {
 	filePath, err := networks.ConfigFile()
 	if err != nil {
 		return err
@@ -221,7 +224,7 @@ func networkApplyYQ(yq string) error {
 	if err != nil {
 		return err
 	}
-	yBytes, err := yqutil.EvaluateExpression(yq, yContent)
+	yBytes, err := yqutil.EvaluateExpression(ctx, yq, yContent)
 	if err != nil {
 		return err
 	}
@@ -263,7 +266,7 @@ func networkDeleteAction(cmd *cobra.Command, args []string) error {
 			yq += " | "
 		}
 	}
-	return networkApplyYQ(yq)
+	return networkApplyYQ(cmd.Context(), yq)
 }
 
 func networkBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {

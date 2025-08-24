@@ -4,6 +4,7 @@
 package driverutil
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/sirupsen/logrus"
@@ -15,7 +16,7 @@ import (
 )
 
 // CreateConfiguredDriver creates a driver.ConfiguredDriver for the given instance.
-func CreateConfiguredDriver(inst *store.Instance, sshLocalPort int) (*driver.ConfiguredDriver, error) {
+func CreateConfiguredDriver(ctx context.Context, inst *store.Instance, sshLocalPort int) (*driver.ConfiguredDriver, error) {
 	limaDriver := inst.Config.VMType
 	extDriver, intDriver, exists := registry.Get(*limaDriver)
 	if !exists {
@@ -36,9 +37,9 @@ func CreateConfiguredDriver(inst *store.Instance, sshLocalPort int) (*driver.Con
 			extDriver.InstanceName = inst.Name
 		}
 
-		return extDriver.Client.Configure(inst), nil
+		return extDriver.Client.Configure(ctx, inst), nil
 	}
 
-	logrus.Debugf("Using internal driver %q", intDriver.Info().DriverName)
-	return intDriver.Configure(inst), nil
+	logrus.Debugf("Using internal driver %q", intDriver.Info(ctx).DriverName)
+	return intDriver.Configure(ctx, inst), nil
 }

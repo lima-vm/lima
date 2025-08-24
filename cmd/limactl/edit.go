@@ -87,7 +87,7 @@ func editAction(cmd *cobra.Command, args []string) error {
 	var yBytes []byte
 	if len(yqExprs) > 0 {
 		yq := yqutil.Join(yqExprs)
-		yBytes, err = yqutil.EvaluateExpression(yq, yContent)
+		yBytes, err = yqutil.EvaluateExpression(ctx, yq, yContent)
 		if err != nil {
 			return err
 		}

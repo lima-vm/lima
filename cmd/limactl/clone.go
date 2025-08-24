@@ -71,7 +71,7 @@ func cloneAction(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		yBytes, err := yqutil.EvaluateExpression(yq, yContent)
+		yBytes, err := yqutil.EvaluateExpression(ctx, yq, yContent)
 		if err != nil {
 			return err
 		}

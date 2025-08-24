@@ -125,7 +125,7 @@ func RunUseAbsLocatorTest(t *testing.T, tc useAbsLocatorsTestCase) {
 		Bytes:   []byte(strings.TrimSpace(tc.template)),
 		Locator: tc.locator,
 	}
-	err := tmpl.UseAbsLocators()
+	err := tmpl.UseAbsLocators(t.Context())
 	assert.NilError(t, err, tc.description)
 
 	actual := strings.TrimSpace(string(tmpl.Bytes))

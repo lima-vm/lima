@@ -40,7 +40,7 @@ type Lifecycle interface {
 type GUI interface {
 	// RunGUI is for starting GUI synchronously by hostagent. This method should be wait and return only after vm terminates
 	// It returns error if there are any failures
-	RunGUI() error
+	RunGUI(context.Context) error
 
 	ChangeDisplayPassword(ctx context.Context, password string) error
 	DisplayConnection(ctx context.Context) (string, error)
@@ -63,7 +63,7 @@ type Registration interface {
 // GuestAgent defines operations for the guest agent.
 type GuestAgent interface {
 	// ForwardGuestAgent returns if the guest agent sock needs forwarding by host agent.
-	ForwardGuestAgent() bool
+	ForwardGuestAgent(context.Context) bool
 
 	// GuestAgentConn returns the guest agent connection, or nil (if forwarded by ssh).
 	GuestAgentConn(_ context.Context) (net.Conn, string, error)
@@ -77,10 +77,10 @@ type Driver interface {
 	Registration
 	GuestAgent
 
-	Info() Info
+	Info(context.Context) Info
 
 	// SetConfig sets the configuration for the instance.
-	Configure(inst *store.Instance) *ConfiguredDriver
+	Configure(_ context.Context, inst *store.Instance) *ConfiguredDriver
 }
 
 type ConfiguredDriver struct {

@@ -29,7 +29,7 @@ import (
 // template with the merged result. It also inlines all external provisioning
 // and probe scripts.
 func (tmpl *Template) Embed(ctx context.Context, embedAll, defaultBase bool) error {
-	if err := tmpl.UseAbsLocators(); err != nil {
+	if err := tmpl.UseAbsLocators(ctx); err != nil {
 		return err
 	}
 	seen := make(map[string]bool)
@@ -38,7 +38,7 @@ func (tmpl *Template) Embed(ctx context.Context, embedAll, defaultBase bool) err
 	// This must be done after **all** base templates have been merged, so that wildcard keys can match
 	// against all earlier list entries, and not just against the direct parent template.
 	if err == nil {
-		err = tmpl.combineListEntries()
+		err = tmpl.combineListEntries(ctx)
 	}
 	return tmpl.ClearOnError(err)
 }
@@ -58,7 +58,7 @@ func (tmpl *Template) embedAllBases(ctx context.Context, embedAll, defaultBase b
 			tmpl.expr.WriteString("| ($a.base | select(type == \"!!map\")) |= [[] + .]\n")
 			// prepend base template at the beginning of the list
 			tmpl.expr.WriteString(fmt.Sprintf("| $a.base = [%q, $a.base[]]\n", defaultBaseFilename))
-			if err := tmpl.evalExpr(); err != nil {
+			if err := tmpl.evalExpr(ctx); err != nil {
 				return err
 			}
 		}
@@ -115,13 +115,13 @@ func (tmpl *Template) embedBase(ctx context.Context, baseLocator limayaml.Locato
 	if err != nil {
 		return err
 	}
-	if err := base.UseAbsLocators(); err != nil {
+	if err := base.UseAbsLocators(ctx); err != nil {
 		return err
 	}
 	if err := base.embedAllBases(ctx, embedAll, false, seen); err != nil {
 		return err
 	}
-	if err := tmpl.merge(base); err != nil {
+	if err := tmpl.merge(ctx, base); err != nil {
 		return err
 	}
 	if len(tmpl.Bytes) > yBytesLimit {
@@ -132,10 +132,10 @@ func (tmpl *Template) embedBase(ctx context.Context, baseLocator limayaml.Locato
 
 // evalExprImpl evaluates tmpl.expr against one or more documents.
 // Called by evalExpr() and embedAllScripts() for single documents and merge() for 2 documents.
-func (tmpl *Template) evalExprImpl(prefix string, b []byte) error {
+func (tmpl *Template) evalExprImpl(ctx context.Context, prefix string, b []byte) error {
 	var err error
 	expr := prefix + tmpl.expr.String() + "| $a"
-	tmpl.Bytes, err = yqutil.EvaluateExpression(expr, b)
+	tmpl.Bytes, err = yqutil.EvaluateExpression(ctx, expr, b)
 	// Make sure the YAML ends with just a single newline
 	tmpl.Bytes = append(bytes.TrimRight(tmpl.Bytes, "\n"), '\n')
 	tmpl.Config = nil
@@ -144,23 +144,23 @@ func (tmpl *Template) evalExprImpl(prefix string, b []byte) error {
 }
 
 // evalExpr evaluates tmpl.expr against the tmpl.Bytes document.
-func (tmpl *Template) evalExpr() error {
+func (tmpl *Template) evalExpr(ctx context.Context) error {
 	var err error
 	if tmpl.expr.Len() > 0 {
 		// There is just a single document; $a and $b are the same
 		singleDocument := "select(document_index == 0) as $a | $a as $b\n"
-		err = tmpl.evalExprImpl(singleDocument, tmpl.Bytes)
+		err = tmpl.evalExprImpl(ctx, singleDocument, tmpl.Bytes)
 	}
 	return err
 }
 
 // merge merges the base template into tmpl.
-func (tmpl *Template) merge(base *Template) error {
+func (tmpl *Template) merge(ctx context.Context, base *Template) error {
 	if err := tmpl.mergeBase(base); err != nil {
 		return tmpl.ClearOnError(err)
 	}
 	documents := fmt.Sprintf("%s\n---\n%s", string(tmpl.Bytes), string(base.Bytes))
-	return tmpl.evalExprImpl(mergeDocuments, []byte(documents))
+	return tmpl.evalExprImpl(ctx, mergeDocuments, []byte(documents))
 }
 
 // mergeBase generates a yq script to merge the template with a base.
@@ -328,7 +328,7 @@ func (tmpl *Template) upgradeListEntryStringToMapField(list string, idx int, fie
 // * The field order is not maintained when entries with a matching key are merged.
 // * The unique keys (and mount locations) are assumed to not be subject to Go templating.
 // * A wildcard key '*' matches all prior list entries.
-func (tmpl *Template) combineListEntries() error {
+func (tmpl *Template) combineListEntries(ctx context.Context) error {
 	if err := tmpl.Unmarshal(); err != nil {
 		return err
 	}
@@ -337,7 +337,7 @@ func (tmpl *Template) combineListEntries() error {
 	tmpl.combineMounts()
 	tmpl.combineNetworks()
 
-	return tmpl.evalExpr()
+	return tmpl.evalExpr(ctx)
 }
 
 // TODO: Maybe instead of hard-coding all the yaml names of LimaYAML struct fields we should
@@ -662,5 +662,5 @@ func (tmpl *Template) embedAllScripts(ctx context.Context, embedAll bool) error 
 			tmpl.updateScript("provision", i, newName, string(scriptTmpl.Bytes), p.File.URL)
 		}
 	}
-	return tmpl.evalExpr()
+	return tmpl.evalExpr(ctx)
 }

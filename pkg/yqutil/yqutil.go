@@ -83,7 +83,7 @@ func EvaluateExpressionPlain(expression, content string) (string, error) {
 }
 
 // EvaluateExpression evaluates the yq expression and returns the output formatted with yamlfmt.
-func EvaluateExpression(expression string, content []byte) ([]byte, error) {
+func EvaluateExpression(ctx context.Context, expression string, content []byte) ([]byte, error) {
 	if expression == "" {
 		return content, nil
 	}
@@ -96,7 +96,7 @@ func EvaluateExpression(expression string, content []byte) ([]byte, error) {
 	// once here and once inside `formatter.Format`.
 	// Currently, calling `ApplyFeatures()` with `FeatureApplyBefore` twice is not an issue,
 	// but future changes to `yamlfmt` might cause problems if it is called twice.
-	_, contentModified, err := formatter.Features.ApplyFeatures(context.Background(), content, yamlfmt.FeatureApplyBefore)
+	_, contentModified, err := formatter.Features.ApplyFeatures(ctx, content, yamlfmt.FeatureApplyBefore)
 	if err != nil {
 		return nil, err
 	}

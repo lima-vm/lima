@@ -53,6 +53,15 @@ type Handler struct {
 	hostToIP     map[string]net.IP
 }
 
+type DNSHandler interface {
+	ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg)
+}
+
+type DNSServer struct {
+	Server     dns.Server
+	DNSHandler DNSHandler
+}
+
 type Server struct {
 	udp *dns.Server
 	tcp *dns.Server
@@ -90,7 +99,7 @@ func (h *Handler) lookupCnameToHost(cname string) string {
 	return cname
 }
 
-func NewHandler(opts HandlerOptions) (dns.Handler, error) {
+func NewHandler(opts HandlerOptions) (DNSHandler, error) {
 	var cc *dns.ClientConfig
 	var err error
 	if len(opts.UpstreamServers) == 0 {
@@ -336,10 +345,10 @@ func (h *Handler) handleDefault(w dns.ResponseWriter, req *dns.Msg) {
 	}
 }
 
-func (h *Handler) ServeDNS(w dns.ResponseWriter, req *dns.Msg) {
+func (h *Handler) ServeDNS(ctx context.Context, w dns.ResponseWriter, req *dns.Msg) {
 	switch req.Opcode {
 	case dns.OpcodeQuery:
-		h.handleQuery(context.Background(), w, req)
+		h.handleQuery(ctx, w, req)
 	default:
 		h.handleDefault(w, req)
 	}
@@ -377,15 +386,15 @@ func listenAndServe(network Network, opts ServerOptions) (*dns.Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	s := &dns.Server{Net: string(network), Addr: addr, Handler: h}
+	s := &DNSServer{Server: dns.Server{Net: string(network), Addr: addr}, DNSHandler: h}
 	go func() {
 		logrus.Debugf("Start %v DNS listening on: %v", network, addr)
-		if e := s.ListenAndServe(); e != nil {
+		if e := s.Server.ListenAndServe(); e != nil {
 			panic(e)
 		}
 	}()
 
-	return s, nil
+	return &s.Server, nil
 }
 
 func chunkify(buffer string, limit int) []string {

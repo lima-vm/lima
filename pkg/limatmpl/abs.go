@@ -4,6 +4,7 @@
 package limatmpl
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/url"
@@ -15,12 +16,12 @@ import (
 
 // UseAbsLocators will replace all relative template locators with absolute ones, so this template
 // can be stored anywhere and still reference the same base templates and files.
-func (tmpl *Template) UseAbsLocators() error {
-	err := tmpl.useAbsLocators()
+func (tmpl *Template) UseAbsLocators(ctx context.Context) error {
+	err := tmpl.useAbsLocators(ctx)
 	return tmpl.ClearOnError(err)
 }
 
-func (tmpl *Template) useAbsLocators() error {
+func (tmpl *Template) useAbsLocators(ctx context.Context) error {
 	if err := tmpl.Unmarshal(); err != nil {
 		return err
 	}
@@ -64,7 +65,7 @@ func (tmpl *Template) useAbsLocators() error {
 			tmpl.expr.WriteString(fmt.Sprintf("| ($a.provision[%d].file | select(type == \"!!map\") | .url) = %q\n", i, absLocator))
 		}
 	}
-	return tmpl.evalExpr()
+	return tmpl.evalExpr(ctx)
 }
 
 // withVolume adds the volume name of the current working directory to a path without volume name.

@@ -119,7 +119,7 @@ func templateCopyAction(cmd *cobra.Command, args []string) error {
 	if embed && verbatim {
 		return errors.New("--verbatim cannot be used with any of --embed, --embed-all, or --fill")
 	}
-	tmpl, err := limatmpl.Read(cmd.Context(), "", source)
+	tmpl, err := limatmpl.Read(ctx, "", source)
 	if err != nil {
 		return err
 	}
@@ -129,11 +129,11 @@ func templateCopyAction(cmd *cobra.Command, args []string) error {
 	if !verbatim {
 		if embed {
 			// Embed default base.yaml only when fill is true.
-			if err := tmpl.Embed(cmd.Context(), embedAll, fill); err != nil {
+			if err := tmpl.Embed(ctx, embedAll, fill); err != nil {
 				return err
 			}
 		} else {
-			if err := tmpl.UseAbsLocators(); err != nil {
+			if err := tmpl.UseAbsLocators(ctx); err != nil {
 				return err
 			}
 		}
@@ -182,14 +182,14 @@ func templateYQAction(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	locator := args[0]
 	expr := args[1]
-	tmpl, err := limatmpl.Read(cmd.Context(), "", locator)
+	tmpl, err := limatmpl.Read(ctx, "", locator)
 	if err != nil {
 		return err
 	}
 	if len(tmpl.Bytes) == 0 {
 		return fmt.Errorf("don't know how to interpret %q as a template locator", locator)
 	}
-	if err := tmpl.Embed(cmd.Context(), true, true); err != nil {
+	if err := tmpl.Embed(ctx, true, true); err != nil {
 		return err
 	}
 	if err := fillDefaults(ctx, tmpl); err != nil {
@@ -225,7 +225,7 @@ func templateValidateAction(cmd *cobra.Command, args []string) error {
 	}
 
 	for _, arg := range args {
-		tmpl, err := limatmpl.Read(cmd.Context(), "", arg)
+		tmpl, err := limatmpl.Read(ctx, "", arg)
 		if err != nil {
 			return err
 		}
@@ -236,7 +236,7 @@ func templateValidateAction(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("can't determine instance name from template locator %q", arg)
 		}
 		// Embed default base.yaml only when fill is true.
-		if err := tmpl.Embed(cmd.Context(), true, fill); err != nil {
+		if err := tmpl.Embed(ctx, true, fill); err != nil {
 			return err
 		}
 		// Load() will merge the template with override.yaml and default.yaml via FillDefaults().

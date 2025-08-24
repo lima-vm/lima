@@ -54,7 +54,7 @@ func Serve(ctx context.Context, driver driver.Driver) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 
-	socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("lima-driver-%s-%d.sock", driver.Info().DriverName, os.Getpid()))
+	socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("lima-driver-%s-%d.sock", driver.Info(ctx).DriverName, os.Getpid()))
 
 	defer func() {
 		if err := os.Remove(socketPath); err != nil && !os.IsNotExist(err) {
@@ -132,8 +132,8 @@ func Serve(ctx context.Context, driver driver.Driver) {
 		}
 	}()
 
-	go func() {
-		logger.Infof("Starting external driver server for %s", driver.Info().DriverName)
+	go func(ctx context.Context) {
+		logger.Infof("Starting external driver server for %s", driver.Info(ctx).DriverName)
 		logger.Infof("Server starting on Unix socket: %s", socketPath)
 		if err := server.Serve(tListener); err != nil {
 			if errors.Is(err, grpc.ErrServerStopped) {
@@ -142,7 +142,7 @@ func Serve(ctx context.Context, driver driver.Driver) {
 				logger.Errorf("Failed to serve: %v", err)
 			}
 		}
-	}()
+	}(ctx)
 
 	<-shutdownCh
 	server.GracefulStop()
@@ -155,7 +155,7 @@ func Start(extDriver *registry.ExternalDriver, instName string) error {
 	}
 	extDriver.InstanceName = instName
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(extDriver.Ctx)
 	cmd := exec.CommandContext(ctx, extDriver.Path)
 
 	stdout, err := cmd.StdoutPipe()

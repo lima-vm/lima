@@ -102,10 +102,10 @@ func (d *DriverClient) Stop(ctx context.Context) error {
 	return nil
 }
 
-func (d *DriverClient) RunGUI() error {
+func (d *DriverClient) RunGUI(ctx context.Context) error {
 	d.logger.Debug("Running GUI for the driver instance")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	_, err := d.DriverSvc.RunGUI(ctx, &emptypb.Empty{})
@@ -230,10 +230,10 @@ func (d *DriverClient) Unregister(ctx context.Context) error {
 	return nil
 }
 
-func (d *DriverClient) ForwardGuestAgent() bool {
+func (d *DriverClient) ForwardGuestAgent(ctx context.Context) bool {
 	d.logger.Debug("Checking if guest agent needs to be forwarded")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	resp, err := d.DriverSvc.ForwardGuestAgent(ctx, &emptypb.Empty{})
@@ -256,10 +256,10 @@ func (d *DriverClient) GuestAgentConn(ctx context.Context) (net.Conn, string, er
 	return nil, "", nil
 }
 
-func (d *DriverClient) Info() driver.Info {
+func (d *DriverClient) Info(ctx context.Context) driver.Info {
 	d.logger.Debug("Getting driver info")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	resp, err := d.DriverSvc.GetInfo(ctx, &emptypb.Empty{})
@@ -278,7 +278,7 @@ func (d *DriverClient) Info() driver.Info {
 	return info
 }
 
-func (d *DriverClient) Configure(inst *store.Instance) *driver.ConfiguredDriver {
+func (d *DriverClient) Configure(ctx context.Context, inst *store.Instance) *driver.ConfiguredDriver {
 	d.logger.Debugf("Setting config for instance %s with SSH local port %d", inst.Name, inst.SSHLocalPort)
 
 	instJSON, err := inst.MarshalJSON()
@@ -287,7 +287,7 @@ func (d *DriverClient) Configure(inst *store.Instance) *driver.ConfiguredDriver 
 		return nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	_, err = d.DriverSvc.SetConfig(ctx, &pb.SetConfigRequest{

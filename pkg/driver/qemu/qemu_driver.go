@@ -64,7 +64,7 @@ func New() *LimaQemuDriver {
 	}
 }
 
-func (l *LimaQemuDriver) Configure(inst *store.Instance) *driver.ConfiguredDriver {
+func (l *LimaQemuDriver) Configure(_ context.Context, inst *store.Instance) *driver.ConfiguredDriver {
 	l.Instance = inst
 	l.SSHLocalPort = inst.SSHLocalPort
 
@@ -96,8 +96,8 @@ func (l *LimaQemuDriver) CreateDisk(ctx context.Context) error {
 	return EnsureDisk(ctx, qCfg)
 }
 
-func (l *LimaQemuDriver) Start(_ context.Context) (chan error, error) {
-	ctx, cancel := context.WithCancel(context.Background())
+func (l *LimaQemuDriver) Start(ctx context.Context) (chan error, error) {
+	ctx, cancel := context.WithCancel(ctx)
 	defer func() {
 		if l.qCmd == nil {
 			cancel()
@@ -381,7 +381,7 @@ func (l *LimaQemuDriver) shutdownQEMU(ctx context.Context, timeout time.Duration
 		logrus.WithError(err).Warnf("failed to send system_powerdown command via the QMP socket %q, forcibly killing QEMU", qmpSockPath)
 		return l.killQEMU(ctx, timeout, qCmd, qWaitCh)
 	}
-	timeoutCtx, timeoutCancel := context.WithTimeout(context.Background(), timeout)
+	timeoutCtx, timeoutCancel := context.WithTimeout(ctx, timeout)
 	defer timeoutCancel()
 
 	select {
@@ -528,7 +528,7 @@ func (a *qArgTemplateApplier) applyTemplate(qArg string) (string, error) {
 	return b.String(), nil
 }
 
-func (l *LimaQemuDriver) Info() driver.Info {
+func (l *LimaQemuDriver) Info(_ context.Context) driver.Info {
 	var info driver.Info
 	if l.Instance != nil && l.Instance.Dir != "" {
 		info.InstanceDir = l.Instance.Dir
@@ -544,7 +544,7 @@ func (l *LimaQemuDriver) Initialize(_ context.Context) error {
 	return nil
 }
 
-func (l *LimaQemuDriver) RunGUI() error {
+func (l *LimaQemuDriver) RunGUI(_ context.Context) error {
 	return nil
 }
 
@@ -556,7 +556,7 @@ func (l *LimaQemuDriver) Unregister(_ context.Context) error {
 	return nil
 }
 
-func (l *LimaQemuDriver) ForwardGuestAgent() bool {
+func (l *LimaQemuDriver) ForwardGuestAgent(_ context.Context) bool {
 	// if driver is not providing, use host agent
 	return l.vSockPort == 0 && l.virtioPort == ""
 }

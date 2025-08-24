@@ -304,7 +304,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 			return nil, err
 		}
 	} else {
-		tmpl, err = limatmpl.Read(cmd.Context(), name, arg)
+		tmpl, err = limatmpl.Read(ctx, name, arg)
 		if err != nil {
 			return nil, err
 		}
@@ -318,7 +318,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 		}
 	}
 
-	if err := tmpl.Embed(cmd.Context(), true, true); err != nil {
+	if err := tmpl.Embed(ctx, true, true); err != nil {
 		return nil, err
 	}
 	yqExprs, err := editflags.YQExpressions(flags, true)
@@ -328,18 +328,18 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 	yq := yqutil.Join(yqExprs)
 	if tty {
 		var err error
-		tmpl, err = chooseNextCreatorState(cmd.Context(), tmpl, yq)
+		tmpl, err = chooseNextCreatorState(ctx, tmpl, yq)
 		if err != nil {
 			return nil, err
 		}
 	} else {
 		logrus.Info("Terminal is not available, proceeding without opening an editor")
-		if err := modifyInPlace(tmpl, yq); err != nil {
+		if err := modifyInPlace(ctx, tmpl, yq); err != nil {
 			return nil, err
 		}
 	}
 	saveBrokenYAML := tty
-	return instance.Create(cmd.Context(), tmpl.Name, tmpl.Bytes, saveBrokenYAML)
+	return instance.Create(ctx, tmpl.Name, tmpl.Bytes, saveBrokenYAML)
 }
 
 func applyYQExpressionToExistingInstance(ctx context.Context, inst *store.Instance, yq string) (*store.Instance, error) {
@@ -352,7 +352,7 @@ func applyYQExpressionToExistingInstance(ctx context.Context, inst *store.Instan
 		return nil, err
 	}
 	logrus.Debugf("Applying yq expression %q to an existing instance %q", yq, inst.Name)
-	yBytes, err := yqutil.EvaluateExpression(yq, yContent)
+	yBytes, err := yqutil.EvaluateExpression(ctx, yq, yContent)
 	if err != nil {
 		return nil, err
 	}
@@ -375,8 +375,8 @@ func applyYQExpressionToExistingInstance(ctx context.Context, inst *store.Instan
 	return store.Inspect(ctx, inst.Name)
 }
 
-func modifyInPlace(st *limatmpl.Template, yq string) error {
-	out, err := yqutil.EvaluateExpression(yq, st.Bytes)
+func modifyInPlace(ctx context.Context, st *limatmpl.Template, yq string) error {
+	out, err := yqutil.EvaluateExpression(ctx, yq, st.Bytes)
 	if err != nil {
 		return err
 	}
@@ -401,7 +401,7 @@ func (exitSuccessError) ExitCode() int {
 
 func chooseNextCreatorState(ctx context.Context, tmpl *limatmpl.Template, yq string) (*limatmpl.Template, error) {
 	for {
-		if err := modifyInPlace(tmpl, yq); err != nil {
+		if err := modifyInPlace(ctx, tmpl, yq); err != nil {
 			logrus.WithError(err).Warn("Failed to evaluate yq expression")
 			return tmpl, err
 		}

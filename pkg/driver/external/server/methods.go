@@ -53,7 +53,7 @@ func (s *DriverServer) Start(_ *emptypb.Empty, stream pb.Driver_StartServer) err
 	}
 }
 
-func (s *DriverServer) SetConfig(_ context.Context, req *pb.SetConfigRequest) (*emptypb.Empty, error) {
+func (s *DriverServer) SetConfig(ctx context.Context, req *pb.SetConfigRequest) (*emptypb.Empty, error) {
 	s.logger.Debugf("Received SetConfig request")
 	var inst store.Instance
 
@@ -62,7 +62,7 @@ func (s *DriverServer) SetConfig(_ context.Context, req *pb.SetConfigRequest) (*
 		return &emptypb.Empty{}, err
 	}
 
-	_ = s.driver.Configure(&inst)
+	_ = s.driver.Configure(ctx, &inst)
 
 	return &emptypb.Empty{}, nil
 }
@@ -76,7 +76,7 @@ func (s *DriverServer) GuestAgentConn(ctx context.Context, _ *emptypb.Empty) (*e
 	}
 
 	if connType != "unix" {
-		proxySocketPath := filepath.Join(s.driver.Info().InstanceDir, filenames.GuestAgentSock)
+		proxySocketPath := filepath.Join(s.driver.Info(ctx).InstanceDir, filenames.GuestAgentSock)
 
 		var lc net.ListenConfig
 		listener, err := lc.Listen(ctx, "unix", proxySocketPath)
@@ -102,9 +102,9 @@ func (s *DriverServer) GuestAgentConn(ctx context.Context, _ *emptypb.Empty) (*e
 	return &emptypb.Empty{}, nil
 }
 
-func (s *DriverServer) GetInfo(_ context.Context, _ *emptypb.Empty) (*pb.InfoResponse, error) {
+func (s *DriverServer) GetInfo(ctx context.Context, _ *emptypb.Empty) (*pb.InfoResponse, error) {
 	s.logger.Debug("Received GetInfo request")
-	info := s.driver.Info()
+	info := s.driver.Info(ctx)
 
 	infoJSON, err := json.Marshal(info)
 	if err != nil {
@@ -161,9 +161,9 @@ func (s *DriverServer) Stop(ctx context.Context, empty *emptypb.Empty) (*emptypb
 	return empty, nil
 }
 
-func (s *DriverServer) RunGUI(_ context.Context, empty *emptypb.Empty) (*emptypb.Empty, error) {
+func (s *DriverServer) RunGUI(ctx context.Context, empty *emptypb.Empty) (*emptypb.Empty, error) {
 	s.logger.Debug("Received RunGUI request")
-	err := s.driver.RunGUI()
+	err := s.driver.RunGUI(ctx)
 	if err != nil {
 		s.logger.Errorf("RunGUI failed: %v", err)
 		return empty, err
@@ -260,7 +260,7 @@ func (s *DriverServer) Unregister(ctx context.Context, empty *emptypb.Empty) (*e
 	return empty, nil
 }
 
-func (s *DriverServer) ForwardGuestAgent(_ context.Context, _ *emptypb.Empty) (*pb.ForwardGuestAgentResponse, error) {
+func (s *DriverServer) ForwardGuestAgent(ctx context.Context, _ *emptypb.Empty) (*pb.ForwardGuestAgentResponse, error) {
 	s.logger.Debug("Received ForwardGuestAgent request")
-	return &pb.ForwardGuestAgentResponse{ShouldForward: s.driver.ForwardGuestAgent()}, nil
+	return &pb.ForwardGuestAgentResponse{ShouldForward: s.driver.ForwardGuestAgent(ctx)}, nil
 }
