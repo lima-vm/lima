@@ -395,6 +395,23 @@ func Validate(y *LimaYAML, warn bool) error {
 		warnExperimental(y)
 	}
 
+	if y.Rosetta.Enabled != nil && *y.Rosetta.Enabled {
+		if *y.VMType != VZ {
+			return fmt.Errorf("field `rosetta.enabled` can only be enabled for VMType %q; got %q", VZ, *y.VMType)
+		}
+		if !IsNativeArch(AARCH64) {
+			return fmt.Errorf("field `rosetta.enabled` can only be enabled on aarch64; got %q", *y.Arch)
+		}
+	}
+
+	if y.NestedVirtualization != nil && *y.NestedVirtualization && *y.VMType != VZ {
+		return fmt.Errorf("field `nestedVirtualization` can only be enabled for VMType %q; got %q", VZ, *y.VMType)
+	}
+
+	if err := validateMountType(y); err != nil {
+		return err
+	}
+
 	// Validate Param settings
 	// Names must start with a letter, followed by any number of letters, digits, or underscores
 	validParamName := regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_]*$`)
@@ -429,6 +446,30 @@ func validateFileObject(f File, fieldName string) error {
 		}
 	}
 	return errs
+}
+
+func validateMountType(y *LimaYAML) error {
+	validMountTypes := map[string]bool{
+		REVSSHFS: true,
+		NINEP:    true,
+		VIRTIOFS: true,
+		WSLMount: true,
+	}
+
+	if !validMountTypes[*y.MountType] {
+		return fmt.Errorf("field `mountType` must be: %q, %q, %q, %q; got %q", REVSSHFS, NINEP, VIRTIOFS, WSLMount, *y.MountType)
+	}
+
+	// On Windows, only WSL and reverse-sshfs mount types are valid
+	if runtime.GOOS == "windows" && *y.MountType != WSLMount && *y.MountType != REVSSHFS {
+		return fmt.Errorf("field `mountType` on Windows must be %q or %q; got %q", WSLMount, REVSSHFS, *y.MountType)
+	}
+
+	if *y.MountType == VIRTIOFS && runtime.GOOS == "darwin" && *y.VMType != VZ {
+		return fmt.Errorf("field `mountType` %q on macOS requires vmType %q; got %q", *y.MountType, VZ, *y.VMType)
+	}
+
+	return nil
 }
 
 func validateNetwork(y *LimaYAML) error {
@@ -488,6 +529,9 @@ func validateNetwork(y *LimaYAML) error {
 			if len(hw) != 6 {
 				errs = errors.Join(errs, fmt.Errorf("field `%s.macAddress` must be a 48 bit (6 bytes) MAC address; actual length of %q is %d bytes", field, nw.MACAddress, len(hw)))
 			}
+		}
+		if nw.VZNAT != nil && *nw.VZNAT && *y.VMType != VZ {
+			return fmt.Errorf("field `%s.vzNAT` requires vmType %q; got %q", field, VZ, *y.VMType)
 		}
 		// FillDefault() will make sure that nw.Interface is not the empty string
 		if len(nw.Interface) >= 16 {
