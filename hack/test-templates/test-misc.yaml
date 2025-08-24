@@ -19,8 +19,7 @@ param:
   DEPENDENCY: dependency
   PROBE: probe
   SYSTEM: system
-# TODO re-enable once https://github.com/lima-vm/lima/issues/3308 is fixed
-# USER: user
+  USER: user
 
 provision:
 - mode: ansible
@@ -31,9 +30,8 @@ provision:
   script: "touch /tmp/param-$PARAM_DEPENDENCY"
 - mode: system
   script: "touch /tmp/param-$PARAM_SYSTEM"
-# TODO re-enable once https://github.com/lima-vm/lima/issues/3308 is fixed
-# - mode: user
-#   script: "touch /tmp/param-$PARAM_USER"
+- mode: user
+  script: "touch /tmp/param-$PARAM_USER"
 - mode: data
   path: /etc/sysctl.d/99-inotify.conf
   content: |
