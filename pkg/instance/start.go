@@ -332,9 +332,9 @@ func watchHostAgentEvents(ctx context.Context, inst *store.Instance, haStdoutPat
 
 			if progress.Completed {
 				cloudInitCompleted = true
+				logrus.Infof("Cloud-init progress monitoring done.")
 			}
 		}
-
 		if len(ev.Status.Errors) > 0 {
 			logrus.Errorf("%+v", ev.Status.Errors)
 		}
@@ -355,7 +355,6 @@ func watchHostAgentEvents(ctx context.Context, inst *store.Instance, haStdoutPat
 			}
 
 			if showProgress && !cloudInitCompleted {
-				logrus.Infof("VM is running, waiting for cloud-init to complete...")
 				return false
 			}
 
