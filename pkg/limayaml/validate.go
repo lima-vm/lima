@@ -522,6 +522,10 @@ func validateParamIsUsed(y *LimaYAML) error {
 				keyIsUsed = true
 				break
 			}
+			if p.Content != nil && re.MatchString(*p.Content) {
+				keyIsUsed = true
+				break
+			}
 			if p.Playbook != "" {
 				playbook, err := os.ReadFile(p.Playbook)
 				if err != nil {
