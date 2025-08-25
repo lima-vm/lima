@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/mattn/go-isatty"
+	yq "github.com/mikefarah/yq/v4/cmd"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
@@ -32,6 +33,24 @@ const (
 )
 
 func main() {
+	// `limactl yq` executes the embedded `yq` command instead.
+	if len(os.Args) > 1 && os.Args[1] == "yq" {
+		os.Args = os.Args[1:]
+
+		cmd := yq.New()
+		args := os.Args[1:]
+		_, _, err := cmd.Find(args)
+		if err != nil && args[0] != "__complete" {
+			// default command when nothing matches...
+			newArgs := []string{"eval"}
+			cmd.SetArgs(append(newArgs, os.Args[1:]...))
+		}
+
+		if err := cmd.Execute(); err != nil {
+			os.Exit(1)
+		}
+		return
+	}
 	if runtime.GOOS == "windows" {
 		extras, hasExtra := os.LookupEnv("_LIMA_WINDOWS_EXTRA_PATH")
 		if hasExtra && strings.TrimSpace(extras) != "" {
