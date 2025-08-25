@@ -4,6 +4,7 @@
 package limatmpl
 
 import (
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -203,6 +204,15 @@ func TestAbsPath(t *testing.T) {
 		actual, err := absPath("/foo", volume+"/root")
 		assert.NilError(t, err)
 		assert.Equal(t, actual, filepath.Clean(volume+"/foo"))
+	})
+
+	t.Run("If the locator starts with ~/, then it will be expanded to an absolute path", func(t *testing.T) {
+		actual, err := absPath("~/foo", volume+"/root")
+		assert.NilError(t, err)
+		homeDir, err := os.UserHomeDir()
+		assert.NilError(t, err)
+		// homeDir already includes the volume
+		assert.Equal(t, actual, filepath.Join(homeDir, "foo"))
 	})
 
 	t.Run("", func(t *testing.T) {

@@ -11,6 +11,12 @@ import (
 	"strings"
 )
 
+// IsTildePath returns true if the path is "~" or starts with "~/".
+// This means Expand() can expand it with the home directory.
+func IsTildePath(path string) bool {
+	return path == "~" || strings.HasPrefix(path, "~/")
+}
+
 // Expand expands a path like "~", "~/", "~/foo".
 // Paths like "~foo/bar" are unsupported.
 //
@@ -20,13 +26,13 @@ func Expand(orig string) (string, error) {
 	if s == "" {
 		return "", errors.New("empty path")
 	}
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
 
 	if strings.HasPrefix(s, "~") {
-		if s == "~" || strings.HasPrefix(s, "~/") {
+		if IsTildePath(s) {
+			homeDir, err := os.UserHomeDir()
+			if err != nil {
+				return "", err
+			}
 			s = strings.Replace(s, "~", homeDir, 1)
 		} else {
 			// Paths like "~foo/bar" are unsupported.
