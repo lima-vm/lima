@@ -81,3 +81,16 @@ func Unmarshal(data []byte, y *LimaYAML, comment string) error {
 	}
 	return nil
 }
+
+// Convert converts from x to y, using YAML.
+func Convert(x, y any, comment string) error {
+	b, err := yaml.Marshal(x)
+	if err != nil {
+		return err
+	}
+	err = yaml.Unmarshal(b, y)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal YAML (%s): %w", comment, err)
+	}
+	return nil
+}

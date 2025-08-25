@@ -17,7 +17,7 @@ type LimaYAML struct {
 	OS                 *OS           `yaml:"os,omitempty" json:"os,omitempty" jsonschema:"nullable"`
 	Arch               *Arch         `yaml:"arch,omitempty" json:"arch,omitempty" jsonschema:"nullable"`
 	Images             []Image       `yaml:"images,omitempty" json:"images,omitempty" jsonschema:"nullable"`
-	// Deprecated: Use VMOpts.Qemu.CPUType instead.
+	// Deprecated: Use vmOpts.qemu.cpuType instead.
 	CPUType               CPUType       `yaml:"cpuType,omitempty" json:"cpuType,omitempty" jsonschema:"nullable"`
 	CPUs                  *int          `yaml:"cpus,omitempty" json:"cpus,omitempty" jsonschema:"nullable"`
 	Memory                *string       `yaml:"memory,omitempty" json:"memory,omitempty" jsonschema:"nullable"` // go-units.RAMInBytes
@@ -106,9 +106,7 @@ type User struct {
 	UID     *uint32 `yaml:"uid,omitempty" json:"uid,omitempty" jsonschema:"nullable"`
 }
 
-type VMOpts struct {
-	QEMU QEMUOpts `yaml:"qemu,omitempty" json:"qemu,omitempty"`
-}
+type VMOpts map[VMType]any
 
 type QEMUOpts struct {
 	MinimumVersion *string `yaml:"minimumVersion,omitempty" json:"minimumVersion,omitempty" jsonschema:"nullable"`
