@@ -207,7 +207,7 @@ func TestGetDefaultBlockList(t *testing.T) {
 
 	assert.DeepEqual(t, blocklist, defaultBlockList)
 
-	expectedItems := []string{"PATH", "HOME", "SSH_*"}
+	expectedItems := []string{"PATH", "HOME", "SSH_*", "USER"}
 	for _, item := range expectedItems {
 		found := slices.Contains(blocklist, item)
 		assert.Assert(t, found, "Expected builtin blocklist to contain %q", item)
