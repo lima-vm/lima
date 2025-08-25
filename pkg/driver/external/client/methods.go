@@ -32,8 +32,17 @@ func (d *DriverClient) Validate(ctx context.Context) error {
 	return nil
 }
 
-func (d *DriverClient) Create(_ context.Context) error {
-	return errors.New("create not implemented for external drivers")
+func (d *DriverClient) Create(ctx context.Context) error {
+	d.logger.Debug("Initializing driver instance")
+
+	_, err := d.DriverSvc.Create(ctx, &emptypb.Empty{})
+	if err != nil {
+		d.logger.Errorf("Initialization failed: %v", err)
+		return err
+	}
+
+	d.logger.Debug("Driver instance initialized successfully")
+	return nil
 }
 
 func (d *DriverClient) CreateDisk(ctx context.Context) error {
@@ -93,8 +102,17 @@ func (d *DriverClient) Stop(ctx context.Context) error {
 	return nil
 }
 
-func (d *DriverClient) Delete(_ context.Context) error {
-	return errors.New("delete not implemented for external drivers")
+func (d *DriverClient) Delete(ctx context.Context) error {
+	d.logger.Debug("Deleting driver instance")
+
+	_, err := d.DriverSvc.Delete(ctx, &emptypb.Empty{})
+	if err != nil {
+		d.logger.Errorf("Failed to delete driver instance: %v", err)
+		return err
+	}
+
+	d.logger.Debug("Driver instance deleted successfully")
+	return nil
 }
 
 func (d *DriverClient) AcceptConfig(_ *limatype.LimaYAML, _ string) error {
@@ -239,7 +257,7 @@ func (d *DriverClient) Info() driver.Info {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	resp, err := d.DriverSvc.GetInfo(ctx, &emptypb.Empty{})
+	resp, err := d.DriverSvc.Info(ctx, &emptypb.Empty{})
 	if err != nil {
 		d.logger.Errorf("Failed to get driver info: %v", err)
 		return driver.Info{}
@@ -267,7 +285,7 @@ func (d *DriverClient) Configure(inst *limatype.Instance) *driver.ConfiguredDriv
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	_, err = d.DriverSvc.SetConfig(ctx, &pb.SetConfigRequest{
+	_, err = d.DriverSvc.Configure(ctx, &pb.SetConfigRequest{
 		InstanceConfigJson: instJSON,
 	})
 	if err != nil {
@@ -285,10 +303,27 @@ func (d *DriverClient) InspectStatus(_ context.Context, _ *limatype.Instance) st
 	return ""
 }
 
-func (d *DriverClient) SSHAddress(_ context.Context) (string, error) {
-	return "", errors.New("sshAddress not implemented for external drivers")
+func (d *DriverClient) SSHAddress(ctx context.Context) (string, error) {
+	d.logger.Debug("Getting SSH address for the driver instance")
+
+	resp, err := d.DriverSvc.SSHAddress(ctx, &emptypb.Empty{})
+	if err != nil {
+		d.logger.Errorf("Failed to get SSH address: %v", err)
+		return "", err
+	}
+
+	d.logger.Debugf("SSH address retrieved: %s", resp.Address)
+	return resp.Address, nil
 }
 
 func (d *DriverClient) BootScripts() (map[string][]byte, error) {
-	return nil, errors.New("bootScripts not implemented for external drivers")
+	d.logger.Debug("Getting boot scripts for the driver instance")
+	resp, err := d.DriverSvc.BootScripts(context.Background(), &emptypb.Empty{})
+	if err != nil {
+		d.logger.Errorf("Failed to get boot scripts: %v", err)
+		return nil, err
+	}
+
+	d.logger.Debugf("Boot scripts retrieved successfully: %d scripts", len(resp.Scripts))
+	return resp.Scripts, nil
 }

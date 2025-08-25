@@ -49,8 +49,8 @@ func Create(ctx context.Context, instName string, instConfig []byte, saveBrokenY
 	if err != nil {
 		return nil, err
 	}
-	if err := driverutil.ResolveVMType(loadedInstConfig, filePath); err != nil {
-		return nil, fmt.Errorf("failed to accept config for %q: %w", filePath, err)
+	if err := driverutil.ResolveVMType(ctx, loadedInstConfig, filePath); err != nil {
+		return nil, fmt.Errorf("failed to resolve vm for %q: %w", filePath, err)
 	}
 	if err := limayaml.Validate(loadedInstConfig, true); err != nil {
 		if !saveBrokenYAML {

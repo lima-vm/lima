@@ -226,7 +226,7 @@ func Start(ctx context.Context, inst *limatype.Instance, limactl string, launchH
 		"hostagent",
 		"--pidfile", haPIDPath,
 		"--socket", haSockPath)
-	if prepared.Driver.Info().CanRunGUI {
+	if prepared.Driver.Info().Features.CanRunGUI {
 		args = append(args, "--run-gui")
 	}
 	if prepared.GuestAgent != "" {

@@ -21,10 +21,12 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	Driver_Validate_FullMethodName              = "/Driver/Validate"
-	Driver_Initialize_FullMethodName            = "/Driver/Initialize"
+	Driver_Create_FullMethodName                = "/Driver/Create"
 	Driver_CreateDisk_FullMethodName            = "/Driver/CreateDisk"
 	Driver_Start_FullMethodName                 = "/Driver/Start"
 	Driver_Stop_FullMethodName                  = "/Driver/Stop"
+	Driver_Delete_FullMethodName                = "/Driver/Delete"
+	Driver_BootScripts_FullMethodName           = "/Driver/BootScripts"
 	Driver_RunGUI_FullMethodName                = "/Driver/RunGUI"
 	Driver_ChangeDisplayPassword_FullMethodName = "/Driver/ChangeDisplayPassword"
 	Driver_GetDisplayConnection_FullMethodName  = "/Driver/GetDisplayConnection"
@@ -32,12 +34,11 @@ const (
 	Driver_ApplySnapshot_FullMethodName         = "/Driver/ApplySnapshot"
 	Driver_DeleteSnapshot_FullMethodName        = "/Driver/DeleteSnapshot"
 	Driver_ListSnapshots_FullMethodName         = "/Driver/ListSnapshots"
-	Driver_Register_FullMethodName              = "/Driver/Register"
-	Driver_Unregister_FullMethodName            = "/Driver/Unregister"
 	Driver_ForwardGuestAgent_FullMethodName     = "/Driver/ForwardGuestAgent"
 	Driver_GuestAgentConn_FullMethodName        = "/Driver/GuestAgentConn"
-	Driver_SetConfig_FullMethodName             = "/Driver/SetConfig"
-	Driver_GetInfo_FullMethodName               = "/Driver/GetInfo"
+	Driver_Configure_FullMethodName             = "/Driver/Configure"
+	Driver_Info_FullMethodName                  = "/Driver/Info"
+	Driver_SSHAddress_FullMethodName            = "/Driver/SSHAddress"
 )
 
 // DriverClient is the client API for Driver service.
@@ -45,10 +46,12 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type DriverClient interface {
 	Validate(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	Initialize(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	Create(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	CreateDisk(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	Start(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (grpc.ServerStreamingClient[StartResponse], error)
 	Stop(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	Delete(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	BootScripts(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*BootScriptsResponse, error)
 	RunGUI(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	ChangeDisplayPassword(ctx context.Context, in *ChangeDisplayPasswordRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetDisplayConnection(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetDisplayConnectionResponse, error)
@@ -56,12 +59,11 @@ type DriverClient interface {
 	ApplySnapshot(ctx context.Context, in *ApplySnapshotRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	DeleteSnapshot(ctx context.Context, in *DeleteSnapshotRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	ListSnapshots(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ListSnapshotsResponse, error)
-	Register(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	Unregister(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	ForwardGuestAgent(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ForwardGuestAgentResponse, error)
 	GuestAgentConn(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	SetConfig(ctx context.Context, in *SetConfigRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	GetInfo(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*InfoResponse, error)
+	Configure(ctx context.Context, in *SetConfigRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	Info(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*InfoResponse, error)
+	SSHAddress(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*SSHAddressResponse, error)
 }
 
 type driverClient struct {
@@ -82,10 +84,10 @@ func (c *driverClient) Validate(ctx context.Context, in *emptypb.Empty, opts ...
 	return out, nil
 }
 
-func (c *driverClient) Initialize(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (c *driverClient) Create(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, Driver_Initialize_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, Driver_Create_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -125,6 +127,26 @@ func (c *driverClient) Stop(ctx context.Context, in *emptypb.Empty, opts ...grpc
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, Driver_Stop_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *driverClient) Delete(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Driver_Delete_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *driverClient) BootScripts(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*BootScriptsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BootScriptsResponse)
+	err := c.cc.Invoke(ctx, Driver_BootScripts_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -201,26 +223,6 @@ func (c *driverClient) ListSnapshots(ctx context.Context, in *emptypb.Empty, opt
 	return out, nil
 }
 
-func (c *driverClient) Register(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, Driver_Register_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *driverClient) Unregister(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, Driver_Unregister_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *driverClient) ForwardGuestAgent(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ForwardGuestAgentResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ForwardGuestAgentResponse)
@@ -241,20 +243,30 @@ func (c *driverClient) GuestAgentConn(ctx context.Context, in *emptypb.Empty, op
 	return out, nil
 }
 
-func (c *driverClient) SetConfig(ctx context.Context, in *SetConfigRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (c *driverClient) Configure(ctx context.Context, in *SetConfigRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, Driver_SetConfig_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, Driver_Configure_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *driverClient) GetInfo(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*InfoResponse, error) {
+func (c *driverClient) Info(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*InfoResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(InfoResponse)
-	err := c.cc.Invoke(ctx, Driver_GetInfo_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, Driver_Info_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *driverClient) SSHAddress(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*SSHAddressResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SSHAddressResponse)
+	err := c.cc.Invoke(ctx, Driver_SSHAddress_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -266,10 +278,12 @@ func (c *driverClient) GetInfo(ctx context.Context, in *emptypb.Empty, opts ...g
 // for forward compatibility.
 type DriverServer interface {
 	Validate(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
-	Initialize(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
+	Create(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	CreateDisk(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	Start(*emptypb.Empty, grpc.ServerStreamingServer[StartResponse]) error
 	Stop(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
+	Delete(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
+	BootScripts(context.Context, *emptypb.Empty) (*BootScriptsResponse, error)
 	RunGUI(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	ChangeDisplayPassword(context.Context, *ChangeDisplayPasswordRequest) (*emptypb.Empty, error)
 	GetDisplayConnection(context.Context, *emptypb.Empty) (*GetDisplayConnectionResponse, error)
@@ -277,12 +291,11 @@ type DriverServer interface {
 	ApplySnapshot(context.Context, *ApplySnapshotRequest) (*emptypb.Empty, error)
 	DeleteSnapshot(context.Context, *DeleteSnapshotRequest) (*emptypb.Empty, error)
 	ListSnapshots(context.Context, *emptypb.Empty) (*ListSnapshotsResponse, error)
-	Register(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
-	Unregister(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	ForwardGuestAgent(context.Context, *emptypb.Empty) (*ForwardGuestAgentResponse, error)
 	GuestAgentConn(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
-	SetConfig(context.Context, *SetConfigRequest) (*emptypb.Empty, error)
-	GetInfo(context.Context, *emptypb.Empty) (*InfoResponse, error)
+	Configure(context.Context, *SetConfigRequest) (*emptypb.Empty, error)
+	Info(context.Context, *emptypb.Empty) (*InfoResponse, error)
+	SSHAddress(context.Context, *emptypb.Empty) (*SSHAddressResponse, error)
 	mustEmbedUnimplementedDriverServer()
 }
 
@@ -296,8 +309,8 @@ type UnimplementedDriverServer struct{}
 func (UnimplementedDriverServer) Validate(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Validate not implemented")
 }
-func (UnimplementedDriverServer) Initialize(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Initialize not implemented")
+func (UnimplementedDriverServer) Create(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Create not implemented")
 }
 func (UnimplementedDriverServer) CreateDisk(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateDisk not implemented")
@@ -307,6 +320,12 @@ func (UnimplementedDriverServer) Start(*emptypb.Empty, grpc.ServerStreamingServe
 }
 func (UnimplementedDriverServer) Stop(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Stop not implemented")
+}
+func (UnimplementedDriverServer) Delete(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Delete not implemented")
+}
+func (UnimplementedDriverServer) BootScripts(context.Context, *emptypb.Empty) (*BootScriptsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BootScripts not implemented")
 }
 func (UnimplementedDriverServer) RunGUI(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RunGUI not implemented")
@@ -329,23 +348,20 @@ func (UnimplementedDriverServer) DeleteSnapshot(context.Context, *DeleteSnapshot
 func (UnimplementedDriverServer) ListSnapshots(context.Context, *emptypb.Empty) (*ListSnapshotsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListSnapshots not implemented")
 }
-func (UnimplementedDriverServer) Register(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Register not implemented")
-}
-func (UnimplementedDriverServer) Unregister(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Unregister not implemented")
-}
 func (UnimplementedDriverServer) ForwardGuestAgent(context.Context, *emptypb.Empty) (*ForwardGuestAgentResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ForwardGuestAgent not implemented")
 }
 func (UnimplementedDriverServer) GuestAgentConn(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GuestAgentConn not implemented")
 }
-func (UnimplementedDriverServer) SetConfig(context.Context, *SetConfigRequest) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SetConfig not implemented")
+func (UnimplementedDriverServer) Configure(context.Context, *SetConfigRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Configure not implemented")
 }
-func (UnimplementedDriverServer) GetInfo(context.Context, *emptypb.Empty) (*InfoResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetInfo not implemented")
+func (UnimplementedDriverServer) Info(context.Context, *emptypb.Empty) (*InfoResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Info not implemented")
+}
+func (UnimplementedDriverServer) SSHAddress(context.Context, *emptypb.Empty) (*SSHAddressResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SSHAddress not implemented")
 }
 func (UnimplementedDriverServer) mustEmbedUnimplementedDriverServer() {}
 func (UnimplementedDriverServer) testEmbeddedByValue()                {}
@@ -386,20 +402,20 @@ func _Driver_Validate_Handler(srv interface{}, ctx context.Context, dec func(int
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Driver_Initialize_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Driver_Create_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(DriverServer).Initialize(ctx, in)
+		return srv.(DriverServer).Create(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Driver_Initialize_FullMethodName,
+		FullMethod: Driver_Create_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DriverServer).Initialize(ctx, req.(*emptypb.Empty))
+		return srv.(DriverServer).Create(ctx, req.(*emptypb.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -447,6 +463,42 @@ func _Driver_Stop_Handler(srv interface{}, ctx context.Context, dec func(interfa
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DriverServer).Stop(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Driver_Delete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DriverServer).Delete(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Driver_Delete_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DriverServer).Delete(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Driver_BootScripts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DriverServer).BootScripts(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Driver_BootScripts_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DriverServer).BootScripts(ctx, req.(*emptypb.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -577,42 +629,6 @@ func _Driver_ListSnapshots_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Driver_Register_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(emptypb.Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(DriverServer).Register(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Driver_Register_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DriverServer).Register(ctx, req.(*emptypb.Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Driver_Unregister_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(emptypb.Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(DriverServer).Unregister(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Driver_Unregister_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DriverServer).Unregister(ctx, req.(*emptypb.Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _Driver_ForwardGuestAgent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
@@ -649,38 +665,56 @@ func _Driver_GuestAgentConn_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Driver_SetConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Driver_Configure_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(SetConfigRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(DriverServer).SetConfig(ctx, in)
+		return srv.(DriverServer).Configure(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Driver_SetConfig_FullMethodName,
+		FullMethod: Driver_Configure_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DriverServer).SetConfig(ctx, req.(*SetConfigRequest))
+		return srv.(DriverServer).Configure(ctx, req.(*SetConfigRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Driver_GetInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Driver_Info_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(DriverServer).GetInfo(ctx, in)
+		return srv.(DriverServer).Info(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Driver_GetInfo_FullMethodName,
+		FullMethod: Driver_Info_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DriverServer).GetInfo(ctx, req.(*emptypb.Empty))
+		return srv.(DriverServer).Info(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Driver_SSHAddress_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DriverServer).SSHAddress(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Driver_SSHAddress_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DriverServer).SSHAddress(ctx, req.(*emptypb.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -697,8 +731,8 @@ var Driver_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Driver_Validate_Handler,
 		},
 		{
-			MethodName: "Initialize",
-			Handler:    _Driver_Initialize_Handler,
+			MethodName: "Create",
+			Handler:    _Driver_Create_Handler,
 		},
 		{
 			MethodName: "CreateDisk",
@@ -707,6 +741,14 @@ var Driver_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Stop",
 			Handler:    _Driver_Stop_Handler,
+		},
+		{
+			MethodName: "Delete",
+			Handler:    _Driver_Delete_Handler,
+		},
+		{
+			MethodName: "BootScripts",
+			Handler:    _Driver_BootScripts_Handler,
 		},
 		{
 			MethodName: "RunGUI",
@@ -737,14 +779,6 @@ var Driver_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Driver_ListSnapshots_Handler,
 		},
 		{
-			MethodName: "Register",
-			Handler:    _Driver_Register_Handler,
-		},
-		{
-			MethodName: "Unregister",
-			Handler:    _Driver_Unregister_Handler,
-		},
-		{
 			MethodName: "ForwardGuestAgent",
 			Handler:    _Driver_ForwardGuestAgent_Handler,
 		},
@@ -753,12 +787,16 @@ var Driver_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Driver_GuestAgentConn_Handler,
 		},
 		{
-			MethodName: "SetConfig",
-			Handler:    _Driver_SetConfig_Handler,
+			MethodName: "Configure",
+			Handler:    _Driver_Configure_Handler,
 		},
 		{
-			MethodName: "GetInfo",
-			Handler:    _Driver_GetInfo_Handler,
+			MethodName: "Info",
+			Handler:    _Driver_Info_Handler,
+		},
+		{
+			MethodName: "SSHAddress",
+			Handler:    _Driver_SSHAddress_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

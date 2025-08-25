@@ -309,14 +309,14 @@ func (l *LimaWslDriver) Info() driver.Info {
 	if l.Instance != nil {
 		info.InstanceDir = l.Instance.Dir
 	}
-	info.DriverName = "wsl2"
-	info.CanRunGUI = l.canRunGUI()
 	info.VirtioPort = l.virtioPort
 	info.VsockPort = l.vSockPort
 
 	info.Features = driver.DriverFeatures{
 		DynamicSSHAddress:    true,
 		SkipSocketForwarding: true,
+		DriverName:           "wsl2",
+		CanRunGUI:            l.canRunGUI(),
 	}
 	return info
 }

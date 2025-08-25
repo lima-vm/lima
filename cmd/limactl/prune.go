@@ -97,8 +97,8 @@ func knownLocations(ctx context.Context) (map[string]limatype.File, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err := driverutil.ResolveVMType(y, t.Name); err != nil {
-			return nil, fmt.Errorf("failed to accept config for %q: %w", t.Name, err)
+		if err := driverutil.ResolveVMType(ctx, y, t.Name); err != nil {
+			return nil, fmt.Errorf("failed to resolve vm for %q: %w", t.Name, err)
 		}
 		maps.Copy(locations, locationsFromLimaYAML(y))
 	}

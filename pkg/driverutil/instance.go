@@ -39,6 +39,6 @@ func CreateConfiguredDriver(inst *limatype.Instance, sshLocalPort int) (*driver.
 		return extDriver.Client.Configure(inst), nil
 	}
 
-	logrus.Debugf("Using internal driver %q", intDriver.Info().DriverName)
+	logrus.Debugf("Using internal driver %q", intDriver.Info().Features.DriverName)
 	return intDriver.Configure(inst), nil
 }

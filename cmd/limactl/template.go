@@ -88,7 +88,7 @@ func fillDefaults(ctx context.Context, tmpl *limatmpl.Template) error {
 	if err == nil {
 		tmpl.Bytes, err = limayaml.Marshal(tmpl.Config, false)
 	}
-	if err := driverutil.ResolveVMType(tmpl.Config, filePath); err != nil {
+	if err := driverutil.ResolveVMType(ctx, tmpl.Config, filePath); err != nil {
 		logrus.Warnf("failed to resolve VM type for %q: %v", filePath, err)
 		return nil
 	}
@@ -251,7 +251,7 @@ func templateValidateAction(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		if err := driverutil.ResolveVMType(y, filePath); err != nil {
+		if err := driverutil.ResolveVMType(ctx, y, filePath); err != nil {
 			logrus.Warnf("failed to resolve VM type for %q: %v", filePath, err)
 			return nil
 		}

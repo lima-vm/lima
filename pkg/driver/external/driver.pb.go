@@ -22,6 +22,94 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type BootScriptsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Scripts       map[string][]byte      `protobuf:"bytes,1,rep,name=scripts,proto3" json:"scripts,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BootScriptsResponse) Reset() {
+	*x = BootScriptsResponse{}
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BootScriptsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BootScriptsResponse) ProtoMessage() {}
+
+func (x *BootScriptsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BootScriptsResponse.ProtoReflect.Descriptor instead.
+func (*BootScriptsResponse) Descriptor() ([]byte, []int) {
+	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *BootScriptsResponse) GetScripts() map[string][]byte {
+	if x != nil {
+		return x.Scripts
+	}
+	return nil
+}
+
+type SSHAddressResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Address       string                 `protobuf:"bytes,1,opt,name=address,proto3" json:"address,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SSHAddressResponse) Reset() {
+	*x = SSHAddressResponse{}
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SSHAddressResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SSHAddressResponse) ProtoMessage() {}
+
+func (x *SSHAddressResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SSHAddressResponse.ProtoReflect.Descriptor instead.
+func (*SSHAddressResponse) Descriptor() ([]byte, []int) {
+	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *SSHAddressResponse) GetAddress() string {
+	if x != nil {
+		return x.Address
+	}
+	return ""
+}
+
 type InfoResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	InfoJson      []byte                 `protobuf:"bytes,1,opt,name=info_json,json=infoJson,proto3" json:"info_json,omitempty"`
@@ -31,7 +119,7 @@ type InfoResponse struct {
 
 func (x *InfoResponse) Reset() {
 	*x = InfoResponse{}
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[0]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -43,7 +131,7 @@ func (x *InfoResponse) String() string {
 func (*InfoResponse) ProtoMessage() {}
 
 func (x *InfoResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[0]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -56,7 +144,7 @@ func (x *InfoResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InfoResponse.ProtoReflect.Descriptor instead.
 func (*InfoResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{0}
+	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *InfoResponse) GetInfoJson() []byte {
@@ -76,7 +164,7 @@ type StartResponse struct {
 
 func (x *StartResponse) Reset() {
 	*x = StartResponse{}
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[1]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -88,7 +176,7 @@ func (x *StartResponse) String() string {
 func (*StartResponse) ProtoMessage() {}
 
 func (x *StartResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[1]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -101,7 +189,7 @@ func (x *StartResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartResponse.ProtoReflect.Descriptor instead.
 func (*StartResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{1}
+	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *StartResponse) GetSuccess() bool {
@@ -127,7 +215,7 @@ type SetConfigRequest struct {
 
 func (x *SetConfigRequest) Reset() {
 	*x = SetConfigRequest{}
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[2]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -139,7 +227,7 @@ func (x *SetConfigRequest) String() string {
 func (*SetConfigRequest) ProtoMessage() {}
 
 func (x *SetConfigRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[2]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -152,7 +240,7 @@ func (x *SetConfigRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetConfigRequest.ProtoReflect.Descriptor instead.
 func (*SetConfigRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{2}
+	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *SetConfigRequest) GetInstanceConfigJson() []byte {
@@ -171,7 +259,7 @@ type ChangeDisplayPasswordRequest struct {
 
 func (x *ChangeDisplayPasswordRequest) Reset() {
 	*x = ChangeDisplayPasswordRequest{}
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[3]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -183,7 +271,7 @@ func (x *ChangeDisplayPasswordRequest) String() string {
 func (*ChangeDisplayPasswordRequest) ProtoMessage() {}
 
 func (x *ChangeDisplayPasswordRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[3]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -196,7 +284,7 @@ func (x *ChangeDisplayPasswordRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChangeDisplayPasswordRequest.ProtoReflect.Descriptor instead.
 func (*ChangeDisplayPasswordRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{3}
+	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *ChangeDisplayPasswordRequest) GetPassword() string {
@@ -215,7 +303,7 @@ type GetDisplayConnectionResponse struct {
 
 func (x *GetDisplayConnectionResponse) Reset() {
 	*x = GetDisplayConnectionResponse{}
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[4]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -227,7 +315,7 @@ func (x *GetDisplayConnectionResponse) String() string {
 func (*GetDisplayConnectionResponse) ProtoMessage() {}
 
 func (x *GetDisplayConnectionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[4]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -240,7 +328,7 @@ func (x *GetDisplayConnectionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetDisplayConnectionResponse.ProtoReflect.Descriptor instead.
 func (*GetDisplayConnectionResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{4}
+	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *GetDisplayConnectionResponse) GetConnection() string {
@@ -259,7 +347,7 @@ type CreateSnapshotRequest struct {
 
 func (x *CreateSnapshotRequest) Reset() {
 	*x = CreateSnapshotRequest{}
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[5]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -271,7 +359,7 @@ func (x *CreateSnapshotRequest) String() string {
 func (*CreateSnapshotRequest) ProtoMessage() {}
 
 func (x *CreateSnapshotRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[5]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -284,7 +372,7 @@ func (x *CreateSnapshotRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateSnapshotRequest.ProtoReflect.Descriptor instead.
 func (*CreateSnapshotRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{5}
+	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *CreateSnapshotRequest) GetTag() string {
@@ -303,7 +391,7 @@ type ApplySnapshotRequest struct {
 
 func (x *ApplySnapshotRequest) Reset() {
 	*x = ApplySnapshotRequest{}
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[6]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -315,7 +403,7 @@ func (x *ApplySnapshotRequest) String() string {
 func (*ApplySnapshotRequest) ProtoMessage() {}
 
 func (x *ApplySnapshotRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[6]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -328,7 +416,7 @@ func (x *ApplySnapshotRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApplySnapshotRequest.ProtoReflect.Descriptor instead.
 func (*ApplySnapshotRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{6}
+	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ApplySnapshotRequest) GetTag() string {
@@ -347,7 +435,7 @@ type DeleteSnapshotRequest struct {
 
 func (x *DeleteSnapshotRequest) Reset() {
 	*x = DeleteSnapshotRequest{}
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[7]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -359,7 +447,7 @@ func (x *DeleteSnapshotRequest) String() string {
 func (*DeleteSnapshotRequest) ProtoMessage() {}
 
 func (x *DeleteSnapshotRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[7]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -372,7 +460,7 @@ func (x *DeleteSnapshotRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteSnapshotRequest.ProtoReflect.Descriptor instead.
 func (*DeleteSnapshotRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{7}
+	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *DeleteSnapshotRequest) GetTag() string {
@@ -391,7 +479,7 @@ type ListSnapshotsResponse struct {
 
 func (x *ListSnapshotsResponse) Reset() {
 	*x = ListSnapshotsResponse{}
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[8]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -403,7 +491,7 @@ func (x *ListSnapshotsResponse) String() string {
 func (*ListSnapshotsResponse) ProtoMessage() {}
 
 func (x *ListSnapshotsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[8]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -416,7 +504,7 @@ func (x *ListSnapshotsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSnapshotsResponse.ProtoReflect.Descriptor instead.
 func (*ListSnapshotsResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{8}
+	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ListSnapshotsResponse) GetSnapshots() string {
@@ -435,7 +523,7 @@ type ForwardGuestAgentResponse struct {
 
 func (x *ForwardGuestAgentResponse) Reset() {
 	*x = ForwardGuestAgentResponse{}
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[9]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -447,7 +535,7 @@ func (x *ForwardGuestAgentResponse) String() string {
 func (*ForwardGuestAgentResponse) ProtoMessage() {}
 
 func (x *ForwardGuestAgentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_driver_external_driver_proto_msgTypes[9]
+	mi := &file_pkg_driver_external_driver_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -460,7 +548,7 @@ func (x *ForwardGuestAgentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ForwardGuestAgentResponse.ProtoReflect.Descriptor instead.
 func (*ForwardGuestAgentResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{9}
+	return file_pkg_driver_external_driver_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *ForwardGuestAgentResponse) GetShouldForward() bool {
@@ -474,7 +562,14 @@ var File_pkg_driver_external_driver_proto protoreflect.FileDescriptor
 
 const file_pkg_driver_external_driver_proto_rawDesc = "" +
 	"\n" +
-	" pkg/driver/external/driver.proto\x1a\x1bgoogle/protobuf/empty.proto\"+\n" +
+	" pkg/driver/external/driver.proto\x1a\x1bgoogle/protobuf/empty.proto\"\x8e\x01\n" +
+	"\x13BootScriptsResponse\x12;\n" +
+	"\ascripts\x18\x01 \x03(\v2!.BootScriptsResponse.ScriptsEntryR\ascripts\x1a:\n" +
+	"\fScriptsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\fR\x05value:\x028\x01\".\n" +
+	"\x12SSHAddressResponse\x12\x18\n" +
+	"\aaddress\x18\x01 \x01(\tR\aaddress\"+\n" +
 	"\fInfoResponse\x12\x1b\n" +
 	"\tinfo_json\x18\x01 \x01(\fR\binfoJson\"?\n" +
 	"\rStartResponse\x12\x18\n" +
@@ -497,29 +592,29 @@ const file_pkg_driver_external_driver_proto_rawDesc = "" +
 	"\x15ListSnapshotsResponse\x12\x1c\n" +
 	"\tsnapshots\x18\x01 \x01(\tR\tsnapshots\"B\n" +
 	"\x19ForwardGuestAgentResponse\x12%\n" +
-	"\x0eshould_forward\x18\x01 \x01(\bR\rshouldForward2\xf8\b\n" +
+	"\x0eshould_forward\x18\x01 \x01(\bR\rshouldForward2\xa9\t\n" +
 	"\x06Driver\x12:\n" +
-	"\bValidate\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x12<\n" +
-	"\n" +
-	"Initialize\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x12<\n" +
+	"\bValidate\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x128\n" +
+	"\x06Create\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x12<\n" +
 	"\n" +
 	"CreateDisk\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x121\n" +
 	"\x05Start\x12\x16.google.protobuf.Empty\x1a\x0e.StartResponse0\x01\x126\n" +
 	"\x04Stop\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x128\n" +
+	"\x06Delete\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x12;\n" +
+	"\vBootScripts\x12\x16.google.protobuf.Empty\x1a\x14.BootScriptsResponse\x128\n" +
 	"\x06RunGUI\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x12N\n" +
 	"\x15ChangeDisplayPassword\x12\x1d.ChangeDisplayPasswordRequest\x1a\x16.google.protobuf.Empty\x12M\n" +
 	"\x14GetDisplayConnection\x12\x16.google.protobuf.Empty\x1a\x1d.GetDisplayConnectionResponse\x12@\n" +
 	"\x0eCreateSnapshot\x12\x16.CreateSnapshotRequest\x1a\x16.google.protobuf.Empty\x12>\n" +
 	"\rApplySnapshot\x12\x15.ApplySnapshotRequest\x1a\x16.google.protobuf.Empty\x12@\n" +
 	"\x0eDeleteSnapshot\x12\x16.DeleteSnapshotRequest\x1a\x16.google.protobuf.Empty\x12?\n" +
-	"\rListSnapshots\x12\x16.google.protobuf.Empty\x1a\x16.ListSnapshotsResponse\x12:\n" +
-	"\bRegister\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x12<\n" +
-	"\n" +
-	"Unregister\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x12G\n" +
+	"\rListSnapshots\x12\x16.google.protobuf.Empty\x1a\x16.ListSnapshotsResponse\x12G\n" +
 	"\x11ForwardGuestAgent\x12\x16.google.protobuf.Empty\x1a\x1a.ForwardGuestAgentResponse\x12@\n" +
 	"\x0eGuestAgentConn\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x126\n" +
-	"\tSetConfig\x12\x11.SetConfigRequest\x1a\x16.google.protobuf.Empty\x120\n" +
-	"\aGetInfo\x12\x16.google.protobuf.Empty\x1a\r.InfoResponseB0Z.github.com/lima-vm/lima/v2/pkg/driver/externalb\x06proto3"
+	"\tConfigure\x12\x11.SetConfigRequest\x1a\x16.google.protobuf.Empty\x12-\n" +
+	"\x04Info\x12\x16.google.protobuf.Empty\x1a\r.InfoResponse\x129\n" +
+	"\n" +
+	"SSHAddress\x12\x16.google.protobuf.Empty\x1a\x13.SSHAddressResponseB0Z.github.com/lima-vm/lima/v2/pkg/driver/externalb\x06proto3"
 
 var (
 	file_pkg_driver_external_driver_proto_rawDescOnce sync.Once
@@ -533,62 +628,68 @@ func file_pkg_driver_external_driver_proto_rawDescGZIP() []byte {
 	return file_pkg_driver_external_driver_proto_rawDescData
 }
 
-var file_pkg_driver_external_driver_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_pkg_driver_external_driver_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_pkg_driver_external_driver_proto_goTypes = []any{
-	(*InfoResponse)(nil),                 // 0: InfoResponse
-	(*StartResponse)(nil),                // 1: StartResponse
-	(*SetConfigRequest)(nil),             // 2: SetConfigRequest
-	(*ChangeDisplayPasswordRequest)(nil), // 3: ChangeDisplayPasswordRequest
-	(*GetDisplayConnectionResponse)(nil), // 4: GetDisplayConnectionResponse
-	(*CreateSnapshotRequest)(nil),        // 5: CreateSnapshotRequest
-	(*ApplySnapshotRequest)(nil),         // 6: ApplySnapshotRequest
-	(*DeleteSnapshotRequest)(nil),        // 7: DeleteSnapshotRequest
-	(*ListSnapshotsResponse)(nil),        // 8: ListSnapshotsResponse
-	(*ForwardGuestAgentResponse)(nil),    // 9: ForwardGuestAgentResponse
-	(*emptypb.Empty)(nil),                // 10: google.protobuf.Empty
+	(*BootScriptsResponse)(nil),          // 0: BootScriptsResponse
+	(*SSHAddressResponse)(nil),           // 1: SSHAddressResponse
+	(*InfoResponse)(nil),                 // 2: InfoResponse
+	(*StartResponse)(nil),                // 3: StartResponse
+	(*SetConfigRequest)(nil),             // 4: SetConfigRequest
+	(*ChangeDisplayPasswordRequest)(nil), // 5: ChangeDisplayPasswordRequest
+	(*GetDisplayConnectionResponse)(nil), // 6: GetDisplayConnectionResponse
+	(*CreateSnapshotRequest)(nil),        // 7: CreateSnapshotRequest
+	(*ApplySnapshotRequest)(nil),         // 8: ApplySnapshotRequest
+	(*DeleteSnapshotRequest)(nil),        // 9: DeleteSnapshotRequest
+	(*ListSnapshotsResponse)(nil),        // 10: ListSnapshotsResponse
+	(*ForwardGuestAgentResponse)(nil),    // 11: ForwardGuestAgentResponse
+	nil,                                  // 12: BootScriptsResponse.ScriptsEntry
+	(*emptypb.Empty)(nil),                // 13: google.protobuf.Empty
 }
 var file_pkg_driver_external_driver_proto_depIdxs = []int32{
-	10, // 0: Driver.Validate:input_type -> google.protobuf.Empty
-	10, // 1: Driver.Initialize:input_type -> google.protobuf.Empty
-	10, // 2: Driver.CreateDisk:input_type -> google.protobuf.Empty
-	10, // 3: Driver.Start:input_type -> google.protobuf.Empty
-	10, // 4: Driver.Stop:input_type -> google.protobuf.Empty
-	10, // 5: Driver.RunGUI:input_type -> google.protobuf.Empty
-	3,  // 6: Driver.ChangeDisplayPassword:input_type -> ChangeDisplayPasswordRequest
-	10, // 7: Driver.GetDisplayConnection:input_type -> google.protobuf.Empty
-	5,  // 8: Driver.CreateSnapshot:input_type -> CreateSnapshotRequest
-	6,  // 9: Driver.ApplySnapshot:input_type -> ApplySnapshotRequest
-	7,  // 10: Driver.DeleteSnapshot:input_type -> DeleteSnapshotRequest
-	10, // 11: Driver.ListSnapshots:input_type -> google.protobuf.Empty
-	10, // 12: Driver.Register:input_type -> google.protobuf.Empty
-	10, // 13: Driver.Unregister:input_type -> google.protobuf.Empty
-	10, // 14: Driver.ForwardGuestAgent:input_type -> google.protobuf.Empty
-	10, // 15: Driver.GuestAgentConn:input_type -> google.protobuf.Empty
-	2,  // 16: Driver.SetConfig:input_type -> SetConfigRequest
-	10, // 17: Driver.GetInfo:input_type -> google.protobuf.Empty
-	10, // 18: Driver.Validate:output_type -> google.protobuf.Empty
-	10, // 19: Driver.Initialize:output_type -> google.protobuf.Empty
-	10, // 20: Driver.CreateDisk:output_type -> google.protobuf.Empty
-	1,  // 21: Driver.Start:output_type -> StartResponse
-	10, // 22: Driver.Stop:output_type -> google.protobuf.Empty
-	10, // 23: Driver.RunGUI:output_type -> google.protobuf.Empty
-	10, // 24: Driver.ChangeDisplayPassword:output_type -> google.protobuf.Empty
-	4,  // 25: Driver.GetDisplayConnection:output_type -> GetDisplayConnectionResponse
-	10, // 26: Driver.CreateSnapshot:output_type -> google.protobuf.Empty
-	10, // 27: Driver.ApplySnapshot:output_type -> google.protobuf.Empty
-	10, // 28: Driver.DeleteSnapshot:output_type -> google.protobuf.Empty
-	8,  // 29: Driver.ListSnapshots:output_type -> ListSnapshotsResponse
-	10, // 30: Driver.Register:output_type -> google.protobuf.Empty
-	10, // 31: Driver.Unregister:output_type -> google.protobuf.Empty
-	9,  // 32: Driver.ForwardGuestAgent:output_type -> ForwardGuestAgentResponse
-	10, // 33: Driver.GuestAgentConn:output_type -> google.protobuf.Empty
-	10, // 34: Driver.SetConfig:output_type -> google.protobuf.Empty
-	0,  // 35: Driver.GetInfo:output_type -> InfoResponse
-	18, // [18:36] is the sub-list for method output_type
-	0,  // [0:18] is the sub-list for method input_type
-	0,  // [0:0] is the sub-list for extension type_name
-	0,  // [0:0] is the sub-list for extension extendee
-	0,  // [0:0] is the sub-list for field type_name
+	12, // 0: BootScriptsResponse.scripts:type_name -> BootScriptsResponse.ScriptsEntry
+	13, // 1: Driver.Validate:input_type -> google.protobuf.Empty
+	13, // 2: Driver.Create:input_type -> google.protobuf.Empty
+	13, // 3: Driver.CreateDisk:input_type -> google.protobuf.Empty
+	13, // 4: Driver.Start:input_type -> google.protobuf.Empty
+	13, // 5: Driver.Stop:input_type -> google.protobuf.Empty
+	13, // 6: Driver.Delete:input_type -> google.protobuf.Empty
+	13, // 7: Driver.BootScripts:input_type -> google.protobuf.Empty
+	13, // 8: Driver.RunGUI:input_type -> google.protobuf.Empty
+	5,  // 9: Driver.ChangeDisplayPassword:input_type -> ChangeDisplayPasswordRequest
+	13, // 10: Driver.GetDisplayConnection:input_type -> google.protobuf.Empty
+	7,  // 11: Driver.CreateSnapshot:input_type -> CreateSnapshotRequest
+	8,  // 12: Driver.ApplySnapshot:input_type -> ApplySnapshotRequest
+	9,  // 13: Driver.DeleteSnapshot:input_type -> DeleteSnapshotRequest
+	13, // 14: Driver.ListSnapshots:input_type -> google.protobuf.Empty
+	13, // 15: Driver.ForwardGuestAgent:input_type -> google.protobuf.Empty
+	13, // 16: Driver.GuestAgentConn:input_type -> google.protobuf.Empty
+	4,  // 17: Driver.Configure:input_type -> SetConfigRequest
+	13, // 18: Driver.Info:input_type -> google.protobuf.Empty
+	13, // 19: Driver.SSHAddress:input_type -> google.protobuf.Empty
+	13, // 20: Driver.Validate:output_type -> google.protobuf.Empty
+	13, // 21: Driver.Create:output_type -> google.protobuf.Empty
+	13, // 22: Driver.CreateDisk:output_type -> google.protobuf.Empty
+	3,  // 23: Driver.Start:output_type -> StartResponse
+	13, // 24: Driver.Stop:output_type -> google.protobuf.Empty
+	13, // 25: Driver.Delete:output_type -> google.protobuf.Empty
+	0,  // 26: Driver.BootScripts:output_type -> BootScriptsResponse
+	13, // 27: Driver.RunGUI:output_type -> google.protobuf.Empty
+	13, // 28: Driver.ChangeDisplayPassword:output_type -> google.protobuf.Empty
+	6,  // 29: Driver.GetDisplayConnection:output_type -> GetDisplayConnectionResponse
+	13, // 30: Driver.CreateSnapshot:output_type -> google.protobuf.Empty
+	13, // 31: Driver.ApplySnapshot:output_type -> google.protobuf.Empty
+	13, // 32: Driver.DeleteSnapshot:output_type -> google.protobuf.Empty
+	10, // 33: Driver.ListSnapshots:output_type -> ListSnapshotsResponse
+	11, // 34: Driver.ForwardGuestAgent:output_type -> ForwardGuestAgentResponse
+	13, // 35: Driver.GuestAgentConn:output_type -> google.protobuf.Empty
+	13, // 36: Driver.Configure:output_type -> google.protobuf.Empty
+	2,  // 37: Driver.Info:output_type -> InfoResponse
+	1,  // 38: Driver.SSHAddress:output_type -> SSHAddressResponse
+	20, // [20:39] is the sub-list for method output_type
+	1,  // [1:20] is the sub-list for method input_type
+	1,  // [1:1] is the sub-list for extension type_name
+	1,  // [1:1] is the sub-list for extension extendee
+	0,  // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_pkg_driver_external_driver_proto_init() }
@@ -602,7 +703,7 @@ func file_pkg_driver_external_driver_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_pkg_driver_external_driver_proto_rawDesc), len(file_pkg_driver_external_driver_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   10,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
