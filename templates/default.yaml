@@ -329,6 +329,15 @@ vmOpts:
     #   armv7l:  "max" # (or "host" when running on armv7l host)
     #   riscv64: "max" # (or "host" when running on riscv64 host)
     #   x86_64:  "max" # (or "host" when running on x86_64 host; additional options are appended on Intel Mac)
+  vz:
+    rosetta:
+      # Enable Rosetta inside the VM; needs `vmType: vz`
+      # Hint: try `softwareupdate --install-rosetta` if Lima gets stuck at `Installing rosetta...`
+      # 🟢 Builtin default: false
+      enabled: null
+      # Register rosetta to /proc/sys/fs/binfmt_misc
+      # 🟢 Builtin default: false
+      binfmt: null
 
 # OS: "Linux".
 # 🟢 Builtin default: "Linux"
@@ -337,13 +346,9 @@ os: null
 # DEPRECATED: Use vmOpts.qemu.cpuType instead. See the vmOpts.qemu.cpuType section above for configuration.
 cpuType:
 
+# DEPRECATED: Use vmOpts.vz.rosetta instead. See the vmOpts.qemu.cpuType section above for configuration.
 rosetta:
-  # Enable Rosetta inside the VM; needs `vmType: vz`
-  # Hint: try `softwareupdate --install-rosetta` if Lima gets stuck at `Installing rosetta...`
-  # 🟢 Builtin default: false
   enabled: null
-  # Register rosetta to /proc/sys/fs/binfmt_misc
-  # 🟢 Builtin default: false
   binfmt: null
 
 # Specify the timezone name (as used by the zoneinfo database). Specify the empty string
