@@ -16,8 +16,9 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/executil"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/store"
-	"github.com/lima-vm/lima/v2/pkg/store/filenames"
 	"github.com/lima-vm/lima/v2/pkg/textutil"
 )
 
@@ -134,7 +135,7 @@ func provisionVM(ctx context.Context, instanceDir, instanceName, distroName stri
 			<-ctx.Done()
 			logrus.Info("Context closed, stopping vm")
 			if status, err := store.GetWslStatus(instanceName); err == nil &&
-				status == store.StatusRunning {
+				status == limatype.StatusRunning {
 				_ = stopVM(ctx, distroName)
 			}
 		}

@@ -12,12 +12,12 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/fileutils"
-	"github.com/lima-vm/lima/v2/pkg/store"
-	"github.com/lima-vm/lima/v2/pkg/store/filenames"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 )
 
 // EnsureFs downloads the root fs.
-func EnsureFs(ctx context.Context, inst *store.Instance) error {
+func EnsureFs(ctx context.Context, inst *limatype.Instance) error {
 	baseDisk := filepath.Join(inst.Dir, filenames.BaseDisk)
 	if _, err := os.Stat(baseDisk); errors.Is(err, os.ErrNotExist) {
 		var ensuredBaseDisk bool

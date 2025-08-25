@@ -20,15 +20,16 @@ import (
 	"gotest.tools/v3/assert"
 
 	"github.com/lima-vm/lima/v2/pkg/ioutilx"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
+	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/ptr"
-	"github.com/lima-vm/lima/v2/pkg/store/dirnames"
-	"github.com/lima-vm/lima/v2/pkg/store/filenames"
 )
 
 func TestFillDefault(t *testing.T) {
 	logrus.SetLevel(logrus.DebugLevel)
-	var d, y, o LimaYAML
+	var d, y, o limatype.LimaYAML
 
 	defaultVMType := ResolveVMType(&y, &d, &o, "")
 
@@ -37,26 +38,26 @@ func TestFillDefault(t *testing.T) {
 		cmpopts.EquateEmpty(),
 	}
 
-	var arch Arch
+	var arch limatype.Arch
 	switch runtime.GOARCH {
 	case "amd64":
-		arch = X8664
+		arch = limatype.X8664
 	case "arm64":
-		arch = AARCH64
+		arch = limatype.AARCH64
 	case "arm":
 		if runtime.GOOS != "linux" {
 			t.Skipf("unsupported GOOS: %s", runtime.GOOS)
 		}
-		if arm := goarm(); arm < 7 {
+		if arm := limatype.Goarm(); arm < 7 {
 			t.Skipf("unsupported GOARM: %d", arm)
 		}
-		arch = ARMV7L
+		arch = limatype.ARMV7L
 	case "ppc64le":
-		arch = PPC64LE
+		arch = limatype.PPC64LE
 	case "riscv64":
-		arch = RISCV64
+		arch = limatype.RISCV64
 	case "s390x":
-		arch = S390X
+		arch = limatype.S390X
 	default:
 		t.Skipf("unknown GOARCH: %s", runtime.GOARCH)
 	}
@@ -75,21 +76,21 @@ func TestFillDefault(t *testing.T) {
 	filePath := filepath.Join(instDir, filenames.LimaYAML)
 
 	// Builtin default values
-	builtin := LimaYAML{
+	builtin := limatype.LimaYAML{
 		VMType:             &defaultVMType,
-		OS:                 ptr.Of(LINUX),
+		OS:                 ptr.Of(limatype.LINUX),
 		Arch:               ptr.Of(arch),
 		CPUs:               ptr.Of(defaultCPUs()),
 		Memory:             ptr.Of(defaultMemoryAsString()),
 		Disk:               ptr.Of(defaultDiskSizeAsString()),
 		GuestInstallPrefix: ptr.Of(defaultGuestInstallPrefix()),
 		UpgradePackages:    ptr.Of(false),
-		Containerd: Containerd{
+		Containerd: limatype.Containerd{
 			System:   ptr.Of(false),
 			User:     ptr.Of(true),
 			Archives: defaultContainerdArchives(),
 		},
-		SSH: SSH{
+		SSH: limatype.SSH{
 			LocalPort:         ptr.Of(0),
 			LoadDotSSHPubKeys: ptr.Of(false),
 			ForwardAgent:      ptr.Of(false),
@@ -97,29 +98,29 @@ func TestFillDefault(t *testing.T) {
 			ForwardX11Trusted: ptr.Of(false),
 		},
 		TimeZone: ptr.Of(hostTimeZone()),
-		Firmware: Firmware{
+		Firmware: limatype.Firmware{
 			LegacyBIOS: ptr.Of(false),
 		},
-		Audio: Audio{
+		Audio: limatype.Audio{
 			Device: ptr.Of(""),
 		},
-		Video: Video{
+		Video: limatype.Video{
 			Display: ptr.Of("none"),
-			VNC: VNCOptions{
+			VNC: limatype.VNCOptions{
 				Display: ptr.Of("127.0.0.1:0,to=9"),
 			},
 		},
-		HostResolver: HostResolver{
+		HostResolver: limatype.HostResolver{
 			Enabled: ptr.Of(true),
 			IPv6:    ptr.Of(false),
 		},
 		PropagateProxyEnv: ptr.Of(true),
-		CACertificates: CACertificates{
+		CACertificates: limatype.CACertificates{
 			RemoveDefaults: ptr.Of(false),
 		},
 		NestedVirtualization: ptr.Of(false),
 		Plain:                ptr.Of(false),
-		User: User{
+		User: limatype.User{
 			Name:    ptr.Of(user.Username),
 			Comment: ptr.Of(user.Name),
 			Home:    ptr.Of(user.HomeDir),
@@ -128,12 +129,12 @@ func TestFillDefault(t *testing.T) {
 		},
 	}
 
-	defaultPortForward := PortForward{
+	defaultPortForward := limatype.PortForward{
 		GuestIP:        IPv4loopback1,
 		GuestPortRange: [2]int{1, 65535},
 		HostIP:         IPv4loopback1,
 		HostPortRange:  [2]int{1, 65535},
-		Proto:          ProtoTCP,
+		Proto:          limatype.ProtoTCP,
 		Reverse:        false,
 	}
 
@@ -142,31 +143,31 @@ func TestFillDefault(t *testing.T) {
 
 	// All these slices and maps are empty in "builtin". Add minimal entries here to see that
 	// their values are retained and defaults for their fields are applied correctly.
-	y = LimaYAML{
-		HostResolver: HostResolver{
+	y = limatype.LimaYAML{
+		HostResolver: limatype.HostResolver{
 			Hosts: map[string]string{
 				"MY.Host": "host.lima.internal",
 			},
 		},
-		Mounts: []Mount{
+		Mounts: []limatype.Mount{
 			//nolint:usetesting // We need the OS temp directory name here; it is not used to create temp files for testing
 			{Location: filepath.Clean(os.TempDir())},
 			{Location: filepath.Clean("{{.Dir}}/{{.Param.ONE}}"), MountPoint: ptr.Of("/mnt/{{.Param.ONE}}")},
 		},
-		MountType: ptr.Of(NINEP),
-		Provision: []Provision{
+		MountType: ptr.Of(limatype.NINEP),
+		Provision: []limatype.Provision{
 			{Script: "#!/bin/true # {{.Param.ONE}}"},
 		},
-		Probes: []Probe{
+		Probes: []limatype.Probe{
 			{Script: "#!/bin/false # {{.Param.ONE}}"},
 		},
-		Networks: []Network{
+		Networks: []limatype.Network{
 			{Lima: "shared"},
 		},
 		DNS: []net.IP{
 			net.ParseIP("1.0.1.0"),
 		},
-		PortForwards: []PortForward{
+		PortForwards: []limatype.PortForward{
 			{},
 			{GuestPort: 80},
 			{GuestPort: 8080, HostPort: 8888},
@@ -175,7 +176,7 @@ func TestFillDefault(t *testing.T) {
 				HostSocket:  "{{.Home}} | {{.Dir}} | {{.Name}} | {{.UID}} | {{.User}} | {{.Param.ONE}}",
 			},
 		},
-		CopyToHost: []CopyToHost{
+		CopyToHost: []limatype.CopyToHost{
 			{
 				GuestFile: "{{.Home}} | {{.UID}} | {{.User}} | {{.Param.ONE}}",
 				HostFile:  "{{.Home}} | {{.Dir}} | {{.Name}} | {{.UID}} | {{.User}} | {{.Param.ONE}}",
@@ -187,38 +188,38 @@ func TestFillDefault(t *testing.T) {
 		Param: map[string]string{
 			"ONE": "Eins",
 		},
-		CACertificates: CACertificates{
+		CACertificates: limatype.CACertificates{
 			Files: []string{"ca.crt"},
 			Certs: []string{
 				"-----BEGIN CERTIFICATE-----\nYOUR-ORGS-TRUSTED-CA-CERT\n-----END CERTIFICATE-----\n",
 			},
 		},
 		TimeZone: ptr.Of("Antarctica/Troll"),
-		Firmware: Firmware{
+		Firmware: limatype.Firmware{
 			LegacyBIOS: ptr.Of(false),
-			Images: []FileWithVMType{
+			Images: []limatype.FileWithVMType{
 				{
-					File: File{
+					File: limatype.File{
 						Location: "https://gitlab.com/kraxel/qemu/-/raw/704f7cad5105246822686f65765ab92045f71a3b/pc-bios/edk2-aarch64-code.fd.bz2",
-						Arch:     AARCH64,
+						Arch:     limatype.AARCH64,
 						Digest:   "sha256:a5fc228623891297f2d82e22ea56ec57cde93fea5ec01abf543e4ed5cacaf277",
 					},
-					VMType: QEMU,
+					VMType: limatype.QEMU,
 				},
 				{
-					File: File{
+					File: limatype.File{
 						Location: "https://github.com/AkihiroSuda/qemu/raw/704f7cad5105246822686f65765ab92045f71a3b/pc-bios/edk2-aarch64-code.fd.bz2",
-						Arch:     AARCH64,
+						Arch:     limatype.AARCH64,
 						Digest:   "sha256:a5fc228623891297f2d82e22ea56ec57cde93fea5ec01abf543e4ed5cacaf277",
 					},
-					VMType: QEMU,
+					VMType: limatype.QEMU,
 				},
 			},
 		},
 	}
 
 	expect := builtin
-	expect.VMType = ptr.Of(QEMU) // due to NINEP
+	expect.VMType = ptr.Of(limatype.QEMU) // due to NINEP
 	expect.HostResolver.Hosts = map[string]string{
 		"MY.Host": "host.lima.internal",
 	}
@@ -253,16 +254,16 @@ func TestFillDefault(t *testing.T) {
 	expect.Mounts[1].NineP.Cache = ptr.Of(Default9pCacheForRO)
 	expect.Mounts[1].Virtiofs.QueueSize = nil
 
-	expect.MountType = ptr.Of(NINEP)
+	expect.MountType = ptr.Of(limatype.NINEP)
 
 	expect.MountInotify = ptr.Of(false)
 
 	expect.Provision = slices.Clone(y.Provision)
-	expect.Provision[0].Mode = ProvisionModeSystem
+	expect.Provision[0].Mode = limatype.ProvisionModeSystem
 	expect.Provision[0].Script = "#!/bin/true # Eins"
 
 	expect.Probes = slices.Clone(y.Probes)
-	expect.Probes[0].Mode = ProbeModeReadiness
+	expect.Probes[0].Mode = limatype.ProbeModeReadiness
 	expect.Probes[0].Description = "user probe 1/1"
 	expect.Probes[0].Script = "#!/bin/false # Eins"
 
@@ -272,13 +273,13 @@ func TestFillDefault(t *testing.T) {
 	expect.Networks[0].Metric = ptr.Of(uint32(100))
 
 	expect.DNS = slices.Clone(y.DNS)
-	expect.PortForwards = []PortForward{
+	expect.PortForwards = []limatype.PortForward{
 		defaultPortForward,
 		defaultPortForward,
 		defaultPortForward,
 		defaultPortForward,
 	}
-	expect.CopyToHost = []CopyToHost{
+	expect.CopyToHost = []limatype.CopyToHost{
 		{},
 	}
 
@@ -303,7 +304,7 @@ func TestFillDefault(t *testing.T) {
 
 	expect.Param = y.Param
 
-	expect.CACertificates = CACertificates{
+	expect.CACertificates = limatype.CACertificates{
 		RemoveDefaults: ptr.Of(false),
 		Files:          []string{"ca.crt"},
 		Certs: []string{
@@ -315,14 +316,14 @@ func TestFillDefault(t *testing.T) {
 	expect.Firmware = y.Firmware
 	expect.Firmware.Images = slices.Clone(y.Firmware.Images)
 
-	expect.Rosetta = Rosetta{
+	expect.Rosetta = limatype.Rosetta{
 		Enabled: ptr.Of(false),
 		BinFmt:  ptr.Of(false),
 	}
 
 	expect.NestedVirtualization = ptr.Of(false)
 
-	FillDefault(t.Context(), &y, &LimaYAML{}, &LimaYAML{}, filePath, false)
+	FillDefault(t.Context(), &y, &limatype.LimaYAML{}, &limatype.LimaYAML{}, filePath, false)
 	assert.DeepEqual(t, &y, &expect, opts...)
 
 	filledDefaults := y
@@ -334,26 +335,26 @@ func TestFillDefault(t *testing.T) {
 
 	// Calling filepath.Abs() to add a drive letter on Windows
 	varLog, _ := filepath.Abs("/var/log")
-	d = LimaYAML{
+	d = limatype.LimaYAML{
 		VMType: ptr.Of("vz"),
 		OS:     ptr.Of("unknown"),
 		Arch:   ptr.Of("unknown"),
 		CPUs:   ptr.Of(7),
 		Memory: ptr.Of("5GiB"),
 		Disk:   ptr.Of("105GiB"),
-		AdditionalDisks: []Disk{
+		AdditionalDisks: []limatype.Disk{
 			{Name: "data"},
 		},
 		GuestInstallPrefix: ptr.Of("/opt"),
 		UpgradePackages:    ptr.Of(true),
-		Containerd: Containerd{
+		Containerd: limatype.Containerd{
 			System: ptr.Of(true),
 			User:   ptr.Of(false),
-			Archives: []File{
+			Archives: []limatype.File{
 				{Location: "/tmp/nerdctl.tgz"},
 			},
 		},
-		SSH: SSH{
+		SSH: limatype.SSH{
 			LocalPort:         ptr.Of(888),
 			LoadDotSSHPubKeys: ptr.Of(false),
 			ForwardAgent:      ptr.Of(true),
@@ -361,27 +362,27 @@ func TestFillDefault(t *testing.T) {
 			ForwardX11Trusted: ptr.Of(false),
 		},
 		TimeZone: ptr.Of("Zulu"),
-		Firmware: Firmware{
+		Firmware: limatype.Firmware{
 			LegacyBIOS: ptr.Of(true),
-			Images: []FileWithVMType{
+			Images: []limatype.FileWithVMType{
 				{
-					File: File{
+					File: limatype.File{
 						Location: "/dummy",
-						Arch:     X8664,
+						Arch:     limatype.X8664,
 					},
 				},
 			},
 		},
-		Audio: Audio{
+		Audio: limatype.Audio{
 			Device: ptr.Of("coreaudio"),
 		},
-		Video: Video{
+		Video: limatype.Video{
 			Display: ptr.Of("cocoa"),
-			VNC: VNCOptions{
+			VNC: limatype.VNCOptions{
 				Display: ptr.Of("none"),
 			},
 		},
-		HostResolver: HostResolver{
+		HostResolver: limatype.HostResolver{
 			Enabled: ptr.Of(false),
 			IPv6:    ptr.Of(true),
 			Hosts: map[string]string{
@@ -390,26 +391,26 @@ func TestFillDefault(t *testing.T) {
 		},
 		PropagateProxyEnv: ptr.Of(false),
 
-		Mounts: []Mount{
+		Mounts: []limatype.Mount{
 			{
 				Location: varLog,
 				Writable: ptr.Of(false),
 			},
 		},
-		Provision: []Provision{
+		Provision: []limatype.Provision{
 			{
 				Script: "#!/bin/true",
-				Mode:   ProvisionModeUser,
+				Mode:   limatype.ProvisionModeUser,
 			},
 		},
-		Probes: []Probe{
+		Probes: []limatype.Probe{
 			{
 				Script:      "#!/bin/false",
-				Mode:        ProbeModeReadiness,
+				Mode:        limatype.ProbeModeReadiness,
 				Description: "User Probe",
 			},
 		},
-		Networks: []Network{
+		Networks: []limatype.Network{
 			{
 				MACAddress: "11:22:33:44:55:66",
 				Interface:  "def0",
@@ -419,16 +420,16 @@ func TestFillDefault(t *testing.T) {
 		DNS: []net.IP{
 			net.ParseIP("1.1.1.1"),
 		},
-		PortForwards: []PortForward{{
+		PortForwards: []limatype.PortForward{{
 			GuestIP:        IPv4loopback1,
 			GuestPort:      80,
 			GuestPortRange: [2]int{80, 80},
 			HostIP:         IPv4loopback1,
 			HostPort:       80,
 			HostPortRange:  [2]int{80, 80},
-			Proto:          ProtoTCP,
+			Proto:          limatype.ProtoTCP,
 		}},
-		CopyToHost: []CopyToHost{{}},
+		CopyToHost: []limatype.CopyToHost{{}},
 		Env: map[string]string{
 			"ONE": "one",
 			"TWO": "two",
@@ -437,18 +438,18 @@ func TestFillDefault(t *testing.T) {
 			"ONE": "one",
 			"TWO": "two",
 		},
-		CACertificates: CACertificates{
+		CACertificates: limatype.CACertificates{
 			RemoveDefaults: ptr.Of(true),
 			Certs: []string{
 				"-----BEGIN CERTIFICATE-----\nYOUR-ORGS-TRUSTED-CA-CERT\n-----END CERTIFICATE-----\n",
 			},
 		},
-		Rosetta: Rosetta{
+		Rosetta: limatype.Rosetta{
 			Enabled: ptr.Of(true),
 			BinFmt:  ptr.Of(true),
 		},
 		NestedVirtualization: ptr.Of(true),
-		User: User{
+		User: limatype.User{
 			Name:    ptr.Of("xxx"),
 			Comment: ptr.Of("Foo Bar"),
 			Home:    ptr.Of("/tmp"),
@@ -480,28 +481,28 @@ func TestFillDefault(t *testing.T) {
 	expect.HostResolver.Hosts = map[string]string{
 		"default": d.HostResolver.Hosts["default"],
 	}
-	expect.MountType = ptr.Of(VIRTIOFS)
+	expect.MountType = ptr.Of(limatype.VIRTIOFS)
 	expect.MountInotify = ptr.Of(false)
 	expect.CACertificates.RemoveDefaults = ptr.Of(true)
 	expect.CACertificates.Certs = []string{
 		"-----BEGIN CERTIFICATE-----\nYOUR-ORGS-TRUSTED-CA-CERT\n-----END CERTIFICATE-----\n",
 	}
 
-	if runtime.GOOS == "darwin" && IsNativeArch(AARCH64) {
-		expect.Rosetta = Rosetta{
+	if runtime.GOOS == "darwin" && IsNativeArch(limatype.AARCH64) {
+		expect.Rosetta = limatype.Rosetta{
 			Enabled: ptr.Of(true),
 			BinFmt:  ptr.Of(true),
 		}
 	} else {
-		expect.Rosetta = Rosetta{
+		expect.Rosetta = limatype.Rosetta{
 			Enabled: ptr.Of(false),
 			BinFmt:  ptr.Of(true),
 		}
 	}
 	expect.Plain = ptr.Of(false)
 
-	y = LimaYAML{}
-	FillDefault(t.Context(), &y, &d, &LimaYAML{}, filePath, false)
+	y = limatype.LimaYAML{}
+	FillDefault(t.Context(), &y, &d, &limatype.LimaYAML{}, filePath, false)
 	assert.DeepEqual(t, &y, &expect, opts...)
 
 	dExpect := expect
@@ -511,7 +512,7 @@ func TestFillDefault(t *testing.T) {
 
 	y = filledDefaults
 	y.DNS = []net.IP{net.ParseIP("8.8.8.8")}
-	y.AdditionalDisks = []Disk{{Name: "overridden"}}
+	y.AdditionalDisks = []limatype.Disk{{Name: "overridden"}}
 	y.User.Home = ptr.Of("/root")
 
 	expect = y
@@ -540,28 +541,28 @@ func TestFillDefault(t *testing.T) {
 
 	t.Logf("d.vmType=%q, y.vmType=%q, expect.vmType=%q", *d.VMType, *y.VMType, *expect.VMType)
 
-	FillDefault(t.Context(), &y, &d, &LimaYAML{}, filePath, false)
+	FillDefault(t.Context(), &y, &d, &limatype.LimaYAML{}, filePath, false)
 	assert.DeepEqual(t, &y, &expect, opts...)
 
 	// ------------------------------------------------------------------------------------
 	// User-provided overrides should override user-provided config settings
 
-	o = LimaYAML{
+	o = limatype.LimaYAML{
 		VMType: ptr.Of("qemu"),
-		OS:     ptr.Of(LINUX),
+		OS:     ptr.Of(limatype.LINUX),
 		Arch:   ptr.Of(arch),
 		CPUs:   ptr.Of(12),
 		Memory: ptr.Of("7GiB"),
 		Disk:   ptr.Of("117GiB"),
-		AdditionalDisks: []Disk{
+		AdditionalDisks: []limatype.Disk{
 			{Name: "test"},
 		},
 		GuestInstallPrefix: ptr.Of("/usr"),
 		UpgradePackages:    ptr.Of(true),
-		Containerd: Containerd{
+		Containerd: limatype.Containerd{
 			System: ptr.Of(true),
 			User:   ptr.Of(false),
-			Archives: []File{
+			Archives: []limatype.File{
 				{
 					Arch:     arch,
 					Location: "/tmp/nerdctl.tgz",
@@ -569,7 +570,7 @@ func TestFillDefault(t *testing.T) {
 				},
 			},
 		},
-		SSH: SSH{
+		SSH: limatype.SSH{
 			LocalPort:         ptr.Of(4433),
 			LoadDotSSHPubKeys: ptr.Of(true),
 			ForwardAgent:      ptr.Of(true),
@@ -577,19 +578,19 @@ func TestFillDefault(t *testing.T) {
 			ForwardX11Trusted: ptr.Of(false),
 		},
 		TimeZone: ptr.Of("Universal"),
-		Firmware: Firmware{
+		Firmware: limatype.Firmware{
 			LegacyBIOS: ptr.Of(true),
 		},
-		Audio: Audio{
+		Audio: limatype.Audio{
 			Device: ptr.Of("coreaudio"),
 		},
-		Video: Video{
+		Video: limatype.Video{
 			Display: ptr.Of("cocoa"),
-			VNC: VNCOptions{
+			VNC: limatype.VNCOptions{
 				Display: ptr.Of("none"),
 			},
 		},
-		HostResolver: HostResolver{
+		HostResolver: limatype.HostResolver{
 			Enabled: ptr.Of(false),
 			IPv6:    ptr.Of(false),
 			Hosts: map[string]string{
@@ -598,40 +599,40 @@ func TestFillDefault(t *testing.T) {
 		},
 		PropagateProxyEnv: ptr.Of(false),
 
-		Mounts: []Mount{
+		Mounts: []limatype.Mount{
 			{
 				Location: varLog,
 				Writable: ptr.Of(true),
-				SSHFS: SSHFS{
+				SSHFS: limatype.SSHFS{
 					Cache:          ptr.Of(false),
 					FollowSymlinks: ptr.Of(true),
 				},
-				NineP: NineP{
+				NineP: limatype.NineP{
 					SecurityModel:   ptr.Of("mapped-file"),
 					ProtocolVersion: ptr.Of("9p2000"),
 					Msize:           ptr.Of("8KiB"),
 					Cache:           ptr.Of("none"),
 				},
-				Virtiofs: Virtiofs{
+				Virtiofs: limatype.Virtiofs{
 					QueueSize: ptr.Of(2048),
 				},
 			},
 		},
 		MountInotify: ptr.Of(true),
-		Provision: []Provision{
+		Provision: []limatype.Provision{
 			{
 				Script: "#!/bin/true",
-				Mode:   ProvisionModeSystem,
+				Mode:   limatype.ProvisionModeSystem,
 			},
 		},
-		Probes: []Probe{
+		Probes: []limatype.Probe{
 			{
 				Script:      "#!/bin/false",
-				Mode:        ProbeModeReadiness,
+				Mode:        limatype.ProbeModeReadiness,
 				Description: "Another Probe",
 			},
 		},
-		Networks: []Network{
+		Networks: []limatype.Network{
 			{
 				Lima:       "shared",
 				MACAddress: "10:20:30:40:50:60",
@@ -646,16 +647,16 @@ func TestFillDefault(t *testing.T) {
 		DNS: []net.IP{
 			net.ParseIP("2.2.2.2"),
 		},
-		PortForwards: []PortForward{{
+		PortForwards: []limatype.PortForward{{
 			GuestIP:        IPv4loopback1,
 			GuestPort:      88,
 			GuestPortRange: [2]int{88, 88},
 			HostIP:         IPv4loopback1,
 			HostPort:       8080,
 			HostPortRange:  [2]int{8080, 8080},
-			Proto:          ProtoTCP,
+			Proto:          limatype.ProtoTCP,
 		}},
-		CopyToHost: []CopyToHost{{}},
+		CopyToHost: []limatype.CopyToHost{{}},
 		Env: map[string]string{
 			"TWO":   "deux",
 			"THREE": "trois",
@@ -664,15 +665,15 @@ func TestFillDefault(t *testing.T) {
 			"TWO":   "deux",
 			"THREE": "trois",
 		},
-		CACertificates: CACertificates{
+		CACertificates: limatype.CACertificates{
 			RemoveDefaults: ptr.Of(true),
 		},
-		Rosetta: Rosetta{
+		Rosetta: limatype.Rosetta{
 			Enabled: ptr.Of(false),
 			BinFmt:  ptr.Of(false),
 		},
 		NestedVirtualization: ptr.Of(false),
-		User: User{
+		User: limatype.User{
 			Name:    ptr.Of("foo"),
 			Comment: ptr.Of("foo bar baz"),
 			Home:    ptr.Of("/override"),
@@ -708,11 +709,11 @@ func TestFillDefault(t *testing.T) {
 	expect.Mounts[0].NineP.Cache = ptr.Of("none")
 	expect.Mounts[0].Virtiofs.QueueSize = ptr.Of(2048)
 
-	expect.MountType = ptr.Of(NINEP)
+	expect.MountType = ptr.Of(limatype.NINEP)
 	expect.MountInotify = ptr.Of(true)
 
 	// o.Networks[1] is overriding the dExpect.Networks[0].Lima entry for the "def0" interface
-	expect.Networks = slices.Concat(dExpect.Networks, y.Networks, []Network{o.Networks[0]})
+	expect.Networks = slices.Concat(dExpect.Networks, y.Networks, []limatype.Network{o.Networks[0]})
 	expect.Networks[0].Lima = o.Networks[1].Lima
 
 	// Only highest prio DNS are retained
@@ -729,7 +730,7 @@ func TestFillDefault(t *testing.T) {
 		"-----BEGIN CERTIFICATE-----\nYOUR-ORGS-TRUSTED-CA-CERT\n-----END CERTIFICATE-----\n",
 	}
 
-	expect.Rosetta = Rosetta{
+	expect.Rosetta = limatype.Rosetta{
 		Enabled: ptr.Of(false),
 		BinFmt:  ptr.Of(false),
 	}

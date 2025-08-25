@@ -6,6 +6,7 @@ package limatmpl
 import (
 	"strings"
 
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 )
 
@@ -15,7 +16,7 @@ type Template struct {
 
 	// The following fields are only used when the template represents a YAML config file.
 	Name   string // instance name, may be inferred from locator
-	Config *limayaml.LimaYAML
+	Config *limatype.LimaYAML
 
 	expr strings.Builder // yq expression to update template
 }
@@ -33,7 +34,7 @@ func (tmpl *Template) ClearOnError(err error) error {
 // tmpl.Bytes is expected to set tmpl.Config back to nil.
 func (tmpl *Template) Unmarshal() error {
 	if tmpl.Config == nil {
-		tmpl.Config = &limayaml.LimaYAML{}
+		tmpl.Config = &limatype.LimaYAML{}
 		if err := limayaml.Unmarshal(tmpl.Bytes, tmpl.Config, tmpl.Locator); err != nil {
 			tmpl.Config = nil
 			return err

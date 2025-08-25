@@ -12,14 +12,14 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/downloader"
-	"github.com/lima-vm/lima/v2/pkg/limayaml"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 )
 
 // ErrSkipped is returned when the downloader did not attempt to download the specified file.
 var ErrSkipped = errors.New("skipped to download")
 
 // DownloadFile downloads a file to the cache, optionally copying it to the destination. Returns path in cache.
-func DownloadFile(ctx context.Context, dest string, f limayaml.File, decompress bool, description string, expectedArch limayaml.Arch) (string, error) {
+func DownloadFile(ctx context.Context, dest string, f limatype.File, decompress bool, description string, expectedArch limatype.Arch) (string, error) {
 	if f.Arch != expectedArch {
 		return "", fmt.Errorf("%w: %q: unsupported arch: %q", ErrSkipped, f.Location, f.Arch)
 	}
@@ -47,7 +47,7 @@ func DownloadFile(ctx context.Context, dest string, f limayaml.File, decompress 
 }
 
 // CachedFile checks if a file is in the cache, validating the digest if it is available. Returns path in cache.
-func CachedFile(f limayaml.File) (string, error) {
+func CachedFile(f limatype.File) (string, error) {
 	res, err := downloader.Cached(f.Location,
 		downloader.WithCache(),
 		downloader.WithExpectedDigest(f.Digest))

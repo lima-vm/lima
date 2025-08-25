@@ -7,7 +7,7 @@ import (
 	"context"
 	"net"
 
-	"github.com/lima-vm/lima/v2/pkg/store"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 )
 
 // Lifecycle defines basic lifecycle operations.
@@ -80,7 +80,7 @@ type Driver interface {
 	Info() Info
 
 	// SetConfig sets the configuration for the instance.
-	Configure(inst *store.Instance) *ConfiguredDriver
+	Configure(inst *limatype.Instance) *ConfiguredDriver
 }
 
 type ConfiguredDriver struct {

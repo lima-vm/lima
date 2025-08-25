@@ -14,7 +14,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/lima-vm/lima/v2/pkg/store/dirnames"
+	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/usrlocalsharelima"
 )
 

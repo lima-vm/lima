@@ -12,14 +12,16 @@ import (
 
 	"github.com/lima-vm/lima/v2/pkg/cidata"
 	"github.com/lima-vm/lima/v2/pkg/driverutil"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
+	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/store"
-	"github.com/lima-vm/lima/v2/pkg/store/filenames"
 	"github.com/lima-vm/lima/v2/pkg/version"
 )
 
-func Create(ctx context.Context, instName string, instConfig []byte, saveBrokenYAML bool) (*store.Instance, error) {
+func Create(ctx context.Context, instName string, instConfig []byte, saveBrokenYAML bool) (*limatype.Instance, error) {
 	if instName == "" {
 		return nil, errors.New("got empty instName")
 	}
@@ -27,7 +29,7 @@ func Create(ctx context.Context, instName string, instConfig []byte, saveBrokenY
 		return nil, errors.New("got empty instConfig")
 	}
 
-	instDir, err := store.InstanceDir(instName)
+	instDir, err := dirnames.InstanceDir(instName)
 	if err != nil {
 		return nil, err
 	}

@@ -13,20 +13,20 @@ import (
 
 	"gotest.tools/v3/assert"
 
-	"github.com/lima-vm/lima/v2/pkg/limayaml"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 )
 
 const separator = string(filepath.Separator)
 
 var (
-	vmtype = limayaml.QEMU
-	goarch = limayaml.NewArch(runtime.GOARCH)
+	vmtype = limatype.QEMU
+	goarch = limatype.NewArch(runtime.GOARCH)
 	space  = strings.Repeat(" ", len(goarch)-4)
 )
 
-var instance = Instance{
+var instance = limatype.Instance{
 	Name:       "foo",
-	Status:     StatusStopped,
+	Status:     limatype.StatusStopped,
 	VMType:     vmtype,
 	Arch:       goarch,
 	Dir:        "dir",
@@ -68,7 +68,7 @@ var tableTwo = "NAME    STATUS     SSH            VMTYPE    ARCH       CPUS    M
 
 func TestPrintInstanceTable(t *testing.T) {
 	var buf bytes.Buffer
-	instances := []*Instance{&instance}
+	instances := []*limatype.Instance{&instance}
 	err := PrintInstances(&buf, instances, "table", nil)
 	assert.NilError(t, err)
 	assert.Equal(t, table, buf.String())
@@ -78,7 +78,7 @@ func TestPrintInstanceTableEmu(t *testing.T) {
 	var buf bytes.Buffer
 	instance1 := instance
 	instance1.Arch = "unknown"
-	instances := []*Instance{&instance1}
+	instances := []*limatype.Instance{&instance1}
 	err := PrintInstances(&buf, instances, "table", nil)
 	assert.NilError(t, err)
 	assert.Equal(t, tableEmu, buf.String())
@@ -90,7 +90,7 @@ func TestPrintInstanceTableHome(t *testing.T) {
 	assert.NilError(t, err)
 	instance1 := instance
 	instance1.Dir = filepath.Join(homeDir, "dir")
-	instances := []*Instance{&instance1}
+	instances := []*limatype.Instance{&instance1}
 	err = PrintInstances(&buf, instances, "table", nil)
 	assert.NilError(t, err)
 	assert.Equal(t, tableHome, buf.String())
@@ -98,7 +98,7 @@ func TestPrintInstanceTableHome(t *testing.T) {
 
 func TestPrintInstanceTable60(t *testing.T) {
 	var buf bytes.Buffer
-	instances := []*Instance{&instance}
+	instances := []*limatype.Instance{&instance}
 	options := PrintOptions{TerminalWidth: 60}
 	err := PrintInstances(&buf, instances, "table", &options)
 	assert.NilError(t, err)
@@ -107,7 +107,7 @@ func TestPrintInstanceTable60(t *testing.T) {
 
 func TestPrintInstanceTable80SameArch(t *testing.T) {
 	var buf bytes.Buffer
-	instances := []*Instance{&instance}
+	instances := []*limatype.Instance{&instance}
 	options := PrintOptions{TerminalWidth: 80}
 	err := PrintInstances(&buf, instances, "table", &options)
 	assert.NilError(t, err)
@@ -117,8 +117,8 @@ func TestPrintInstanceTable80SameArch(t *testing.T) {
 func TestPrintInstanceTable80DiffArch(t *testing.T) {
 	var buf bytes.Buffer
 	instance1 := instance
-	instance1.Arch = limayaml.NewArch("unknown")
-	instances := []*Instance{&instance1}
+	instance1.Arch = limatype.NewArch("unknown")
+	instances := []*limatype.Instance{&instance1}
 	options := PrintOptions{TerminalWidth: 80}
 	err := PrintInstances(&buf, instances, "table", &options)
 	assert.NilError(t, err)
@@ -127,7 +127,7 @@ func TestPrintInstanceTable80DiffArch(t *testing.T) {
 
 func TestPrintInstanceTable100(t *testing.T) {
 	var buf bytes.Buffer
-	instances := []*Instance{&instance}
+	instances := []*limatype.Instance{&instance}
 	options := PrintOptions{TerminalWidth: 100}
 	err := PrintInstances(&buf, instances, "table", &options)
 	assert.NilError(t, err)
@@ -136,7 +136,7 @@ func TestPrintInstanceTable100(t *testing.T) {
 
 func TestPrintInstanceTableAll(t *testing.T) {
 	var buf bytes.Buffer
-	instances := []*Instance{&instance}
+	instances := []*limatype.Instance{&instance}
 	options := PrintOptions{TerminalWidth: 40, AllFields: true}
 	err := PrintInstances(&buf, instances, "table", &options)
 	assert.NilError(t, err)
@@ -147,13 +147,13 @@ func TestPrintInstanceTableTwo(t *testing.T) {
 	var buf bytes.Buffer
 	instance1 := instance
 	instance1.Name = "foo"
-	instance1.VMType = limayaml.QEMU
-	instance1.Arch = limayaml.X8664
+	instance1.VMType = limatype.QEMU
+	instance1.Arch = limatype.X8664
 	instance2 := instance
 	instance2.Name = "bar"
-	instance2.VMType = limayaml.VZ
-	instance2.Arch = limayaml.AARCH64
-	instances := []*Instance{&instance1, &instance2}
+	instance2.VMType = limatype.VZ
+	instance2.Arch = limatype.AARCH64
+	instances := []*limatype.Instance{&instance1, &instance2}
 	options := PrintOptions{TerminalWidth: 80}
 	err := PrintInstances(&buf, instances, "table", &options)
 	assert.NilError(t, err)

@@ -14,7 +14,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/ioutilx"
-	"github.com/lima-vm/lima/v2/pkg/limayaml"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 )
 
 type mount struct {
@@ -37,7 +37,7 @@ func (a *HostAgent) setupMounts(ctx context.Context) ([]*mount, error) {
 	return res, errors.Join(errs...)
 }
 
-func (a *HostAgent) setupMount(ctx context.Context, m limayaml.Mount) (*mount, error) {
+func (a *HostAgent) setupMount(ctx context.Context, m limatype.Mount) (*mount, error) {
 	if err := os.MkdirAll(m.Location, 0o755); err != nil {
 		return nil, err
 	}

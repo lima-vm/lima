@@ -8,8 +8,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
-	"github.com/lima-vm/lima/v2/pkg/store/filenames"
+	"github.com/lima-vm/lima/v2/pkg/identifiers"
+	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 )
 
 // DotLima is a directory that appears under the home directory.
@@ -73,4 +75,31 @@ func LimaTemplatesDir() (string, error) {
 		return "", err
 	}
 	return filepath.Join(limaDir, filenames.TemplatesDir), nil
+}
+
+// InstanceDir returns the instance dir.
+// InstanceDir does not check whether the instance exists.
+func InstanceDir(name string) (string, error) {
+	if err := ValidateInstName(name); err != nil {
+		return "", err
+	}
+	limaDir, err := LimaDir()
+	if err != nil {
+		return "", err
+	}
+	dir := filepath.Join(limaDir, name)
+	return dir, nil
+}
+
+// ValidateInstName checks if the name is a valid instance name. For this it needs to
+// be a valid identifier, and not end in .yml or .yaml (case insensitively).
+func ValidateInstName(name string) error {
+	if err := identifiers.Validate(name); err != nil {
+		return fmt.Errorf("instance name %q is not a valid identifier: %w", name, err)
+	}
+	lower := strings.ToLower(name)
+	if strings.HasSuffix(lower, ".yml") || strings.HasSuffix(lower, ".yaml") {
+		return fmt.Errorf("instance name %q must not end with .yml or .yaml suffix", name)
+	}
+	return nil
 }

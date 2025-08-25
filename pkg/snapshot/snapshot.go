@@ -8,10 +8,10 @@ import (
 	"fmt"
 
 	"github.com/lima-vm/lima/v2/pkg/driverutil"
-	"github.com/lima-vm/lima/v2/pkg/store"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 )
 
-func Del(ctx context.Context, inst *store.Instance, tag string) error {
+func Del(ctx context.Context, inst *limatype.Instance, tag string) error {
 	limaDriver, err := driverutil.CreateConfiguredDriver(inst, 0)
 	if err != nil {
 		return fmt.Errorf("failed to create driver instance: %w", err)
@@ -20,7 +20,7 @@ func Del(ctx context.Context, inst *store.Instance, tag string) error {
 	return limaDriver.DeleteSnapshot(ctx, tag)
 }
 
-func Save(ctx context.Context, inst *store.Instance, tag string) error {
+func Save(ctx context.Context, inst *limatype.Instance, tag string) error {
 	limaDriver, err := driverutil.CreateConfiguredDriver(inst, 0)
 	if err != nil {
 		return fmt.Errorf("failed to create driver instance: %w", err)
@@ -28,7 +28,7 @@ func Save(ctx context.Context, inst *store.Instance, tag string) error {
 	return limaDriver.CreateSnapshot(ctx, tag)
 }
 
-func Load(ctx context.Context, inst *store.Instance, tag string) error {
+func Load(ctx context.Context, inst *limatype.Instance, tag string) error {
 	limaDriver, err := driverutil.CreateConfiguredDriver(inst, 0)
 	if err != nil {
 		return fmt.Errorf("failed to create driver instance: %w", err)
@@ -36,7 +36,7 @@ func Load(ctx context.Context, inst *store.Instance, tag string) error {
 	return limaDriver.ApplySnapshot(ctx, tag)
 }
 
-func List(ctx context.Context, inst *store.Instance) (string, error) {
+func List(ctx context.Context, inst *limatype.Instance) (string, error) {
 	limaDriver, err := driverutil.CreateConfiguredDriver(inst, 0)
 	if err != nil {
 		return "", fmt.Errorf("failed to create driver instance: %w", err)

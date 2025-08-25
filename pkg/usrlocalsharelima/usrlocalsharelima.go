@@ -16,7 +16,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/debugutil"
-	"github.com/lima-vm/lima/v2/pkg/limayaml"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 )
 
 // executableViaArgs0 returns the absolute path to the executable used to start this process.
@@ -69,8 +69,8 @@ func Dir() (string, error) {
 		}
 	}
 
-	ostype := limayaml.NewOS("linux")
-	arch := limayaml.NewArch(runtime.GOARCH)
+	ostype := limatype.NewOS("linux")
+	arch := limatype.NewArch(runtime.GOARCH)
 	if arch == "" {
 		return "", fmt.Errorf("failed to get arch for %q", runtime.GOARCH)
 	}
@@ -122,7 +122,7 @@ func Dir() (string, error) {
 }
 
 // GuestAgentBinary returns the absolute path of the guest agent binary, possibly with ".gz" suffix.
-func GuestAgentBinary(ostype limayaml.OS, arch limayaml.Arch) (string, error) {
+func GuestAgentBinary(ostype limatype.OS, arch limatype.Arch) (string, error) {
 	if ostype == "" {
 		return "", errors.New("os must be set")
 	}

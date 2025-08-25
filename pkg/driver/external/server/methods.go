@@ -16,8 +16,8 @@ import (
 
 	"github.com/lima-vm/lima/v2/pkg/bicopy"
 	pb "github.com/lima-vm/lima/v2/pkg/driver/external"
-	"github.com/lima-vm/lima/v2/pkg/store"
-	"github.com/lima-vm/lima/v2/pkg/store/filenames"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 )
 
 func (s *DriverServer) Start(_ *emptypb.Empty, stream pb.Driver_StartServer) error {
@@ -55,7 +55,7 @@ func (s *DriverServer) Start(_ *emptypb.Empty, stream pb.Driver_StartServer) err
 
 func (s *DriverServer) SetConfig(_ context.Context, req *pb.SetConfigRequest) (*emptypb.Empty, error) {
 	s.logger.Debugf("Received SetConfig request")
-	var inst store.Instance
+	var inst limatype.Instance
 
 	if err := inst.UnmarshalJSON(req.InstanceConfigJson); err != nil {
 		s.logger.Errorf("Failed to unmarshal InstanceConfigJson: %v", err)
