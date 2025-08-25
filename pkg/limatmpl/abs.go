@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/lima-vm/lima/v2/pkg/localpathutil"
 )
 
 // UseAbsLocators will replace all relative template locators with absolute ones, so this template
@@ -104,6 +106,13 @@ func absPath(locator, basePath string) (string, error) {
 	u, err := url.Parse(locator)
 	if err == nil && len(u.Scheme) > 1 {
 		return locator, nil
+	}
+	// Don't expand relative path to absolute. Tilde paths however are absolute paths already.
+	if localpathutil.IsTildePath(locator) {
+		locator, err = localpathutil.Expand(locator)
+		if err != nil {
+			return "", err
+		}
 	}
 	// Check for rooted locator; filepath.IsAbs() returns false on Windows when the volume name is missing
 	volumeLen := len(filepath.VolumeName(locator))
