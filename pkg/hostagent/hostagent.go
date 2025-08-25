@@ -81,7 +81,8 @@ type HostAgent struct {
 
 type options struct {
 	guestAgentBinary string
-	nerdctlArchive   string // local path, not URL
+	nerdctlArchive   string            // local path, not URL
+	provisionTool    map[string]string // {tool name: local path}
 	showProgress     bool
 }
 
@@ -97,6 +98,23 @@ func WithGuestAgentBinary(s string) Opt {
 func WithNerdctlArchive(s string) Opt {
 	return func(o *options) error {
 		o.nerdctlArchive = s
+		return nil
+	}
+}
+
+func WithProvisionTool(s string) Opt {
+	return func(o *options) error {
+		if o.provisionTool == nil {
+			o.provisionTool = make(map[string]string)
+		}
+		parts := strings.Split(s, ",")
+		for _, part := range parts {
+			kv := strings.SplitN(part, "=", 2)
+			if len(kv) != 2 {
+				return fmt.Errorf("invalid provision tool format: %q", part)
+			}
+			o.provisionTool[kv[0]] = kv[1]
+		}
 		return nil
 	}
 }
@@ -163,7 +181,7 @@ func New(ctx context.Context, instName string, stdout io.Writer, signalCh chan o
 	if err := cidata.GenerateCloudConfig(ctx, inst.Dir, instName, inst.Config); err != nil {
 		return nil, err
 	}
-	if err := cidata.GenerateISO9660(ctx, inst.Dir, instName, inst.Config, udpDNSLocalPort, tcpDNSLocalPort, o.guestAgentBinary, o.nerdctlArchive, vSockPort, virtioPort); err != nil {
+	if err := cidata.GenerateISO9660(ctx, inst.Dir, instName, inst.Config, udpDNSLocalPort, tcpDNSLocalPort, o.guestAgentBinary, o.nerdctlArchive, o.provisionTool, vSockPort, virtioPort); err != nil {
 		return nil, err
 	}
 

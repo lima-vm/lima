@@ -4,6 +4,7 @@
 package cidata
 
 import (
+	"bytes"
 	"compress/gzip"
 	"context"
 	"errors"
@@ -329,6 +330,15 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 				Permissions: *f.Permissions,
 			})
 		}
+		if f.Mode == limatype.ProvisionModeYQ {
+			args.YQProvisions = append(args.YQProvisions, YQProvision{
+				FileName:    fmt.Sprintf("%08d", i),
+				Format:      *f.Format,
+				Path:        *f.Path,
+				Permissions: *f.Permissions,
+				User:        *f.User,
+			})
+		}
 	}
 
 	return &args, nil
@@ -357,7 +367,7 @@ func GenerateCloudConfig(ctx context.Context, instDir, name string, instConfig *
 	return os.WriteFile(filepath.Join(instDir, filenames.CloudConfig), config, 0o444)
 }
 
-func GenerateISO9660(ctx context.Context, instDir, name string, instConfig *limatype.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort int, guestAgentBinary, nerdctlArchive string, vsockPort int, virtioPort string) error {
+func GenerateISO9660(ctx context.Context, instDir, name string, instConfig *limatype.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort int, guestAgentBinary, nerdctlArchive string, provisionTool map[string]string, vsockPort int, virtioPort string) error {
 	args, err := templateArgs(ctx, true, instDir, name, instConfig, udpDNSLocalPort, tcpDNSLocalPort, vsockPort, virtioPort)
 	if err != nil {
 		return err
@@ -383,6 +393,11 @@ func GenerateISO9660(ctx context.Context, instDir, name string, instConfig *lima
 			layout = append(layout, iso9660util.Entry{
 				Path:   fmt.Sprintf("provision.%s/%08d", f.Mode, i),
 				Reader: strings.NewReader(*f.Content),
+			})
+		case limatype.ProvisionModeYQ:
+			layout = append(layout, iso9660util.Entry{
+				Path:   fmt.Sprintf("provision.%s/%08d", f.Mode, i),
+				Reader: strings.NewReader(*f.Expression),
 			})
 		case limatype.ProvisionModeBoot:
 			continue
@@ -431,6 +446,28 @@ func GenerateISO9660(ctx context.Context, instDir, name string, instConfig *lima
 			// ISO9660 requires len(Path) <= 30
 			Path:   nftgz,
 			Reader: nftgzR,
+		})
+	}
+	for name, path := range provisionTool {
+		f, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		buf := new(bytes.Buffer)
+		_, err = io.Copy(buf, f)
+		if err != nil {
+			_ = f.Close()
+			return err
+		}
+		_ = f.Close()
+		layout = append(layout, iso9660util.Entry{
+			// Place it at "provision.tool/<name>" instead of "util/<name>".
+			// Because "util" is in PATH while "boot.sh" is executing,
+			// that may override <name> with the Linux distribution providing binaries in VM.
+			// If some provision scripts install <name> from the distribution,
+			// it may lead to unexpected behavior for the provision scripts.
+			Path:   fmt.Sprintf("provision.tool/%s", name),
+			Reader: buf,
 		})
 	}
 

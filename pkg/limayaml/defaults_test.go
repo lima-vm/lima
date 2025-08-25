@@ -5,6 +5,7 @@ package limayaml
 
 import (
 	"fmt"
+	"maps"
 	"net"
 	"os"
 	"path"
@@ -127,6 +128,7 @@ func TestFillDefault(t *testing.T) {
 			Shell:   ptr.Of("/bin/bash"),
 			UID:     ptr.Of(uint32(uid)),
 		},
+		ProvisionTool: defaultProvisionTool(),
 	}
 
 	defaultPortForward := limatype.PortForward{
@@ -456,6 +458,11 @@ func TestFillDefault(t *testing.T) {
 			Shell:   ptr.Of("/bin/tcsh"),
 			UID:     ptr.Of(uint32(8080)),
 		},
+		ProvisionTool: map[limatype.ProvisionToolKey][]limatype.File{
+			limatype.ProvisionToolYQ: {
+				{Location: "/tmp/yq"},
+			},
+		},
 	}
 
 	expect = d
@@ -500,6 +507,11 @@ func TestFillDefault(t *testing.T) {
 		}
 	}
 	expect.Plain = ptr.Of(false)
+	// ProvisionTool should be filled with defaults
+	expect.ProvisionTool = maps.Clone(d.ProvisionTool)
+	expect.ProvisionTool[limatype.ProvisionToolYQ] = slices.Clone(d.ProvisionTool[limatype.ProvisionToolYQ])
+	// Also verify that archive arch is filled in
+	expect.ProvisionTool[limatype.ProvisionToolYQ][0].Arch = *expect.Arch
 
 	y = limatype.LimaYAML{}
 	FillDefault(t.Context(), &y, &d, &limatype.LimaYAML{}, filePath, false)
@@ -538,6 +550,10 @@ func TestFillDefault(t *testing.T) {
 	expect.Env["TWO"] = dExpect.Env["TWO"]
 
 	expect.Param["TWO"] = dExpect.Param["TWO"]
+
+	expect.ProvisionTool = maps.Clone(y.ProvisionTool)
+	expect.ProvisionTool[limatype.ProvisionToolYQ] = slices.Concat(y.ProvisionTool[limatype.ProvisionToolYQ], dExpect.ProvisionTool[limatype.ProvisionToolYQ])
+	expect.ProvisionTool[limatype.ProvisionToolYQ][6].Arch = *expect.Arch
 
 	t.Logf("d.vmType=%q, y.vmType=%q, expect.vmType=%q", *d.VMType, *y.VMType, *expect.VMType)
 
@@ -680,6 +696,15 @@ func TestFillDefault(t *testing.T) {
 			Shell:   ptr.Of("/bin/sh"),
 			UID:     ptr.Of(uint32(1122)),
 		},
+		ProvisionTool: map[limatype.ProvisionToolKey][]limatype.File{
+			limatype.ProvisionToolYQ: {
+				{
+					Arch:     arch,
+					Location: "/tmp/yq",
+					Digest:   "$DIGEST",
+				},
+			},
+		},
 	}
 
 	y = filledDefaults
@@ -737,6 +762,10 @@ func TestFillDefault(t *testing.T) {
 	expect.Plain = ptr.Of(false)
 
 	expect.NestedVirtualization = ptr.Of(false)
+
+	expect.ProvisionTool = maps.Clone(o.ProvisionTool)
+	expect.ProvisionTool[limatype.ProvisionToolYQ] = slices.Concat(o.ProvisionTool[limatype.ProvisionToolYQ], y.ProvisionTool[limatype.ProvisionToolYQ], dExpect.ProvisionTool[limatype.ProvisionToolYQ])
+	expect.ProvisionTool[limatype.ProvisionToolYQ][8].Arch = *expect.Arch
 
 	FillDefault(t.Context(), &y, &d, &o, filePath, false)
 	assert.DeepEqual(t, &y, &expect, opts...)

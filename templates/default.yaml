@@ -246,6 +246,35 @@ containerd:
 #   owner: "root:root"
 #   permissions: 644
 #   overwrite: false
+# # `yq` creates or edits a file in the guest filesystem by using `/mnt/lima-cidata/provision.tool/yq`.
+# # `/mnt/lima-cidata/provision.tool/yq` is installed if `mode: yq` is specified in `provision`.
+# # The file specified by `path` will be updated with the specified `expression` using `yq --inplace`.
+# # If the file does not exist, it will be created using `yq --null-input`.
+# # `format` is optional and defaults to "auto", which is passed to `yq` by `--input-format <format>`, `--output-format <format>`.
+# # One of the following is expected to work:
+# #   "auto", "a", "ini", "i", "json", "j", "props", "p", "xml", "x", "yaml", "y"
+# # `yq` v4.47.1 can write .ini, .json, .properties, .xml, .yaml, and .yml files.
+# # See https://github.com/mikefarah/yq for more info.
+# # Any missing directories will be created as needed using `mkdir -p`.
+# # The file permissions will be set to the specified value using `chmod`.
+# # The file and directory creation will be performed with the specified user privileges.
+# # If the existing file is not writable by the specified user, the operation will fail.
+# # `path` and `expression` are required.
+# # `user` and `permissions` are optional. Defaults to "root" and 644.
+# - mode: yq
+#   path: "{{.Home}}/.config/docker/daemon.json"
+#   expression: ".features.containerd-snapshotter = {{.Param.containerdSnapshotter}}"
+#   format: auto
+#   user: "{{.User}}"
+#   permissions: 644
+#
+# # Override provisionTool
+# # 🟢 Builtin default: hard-coded URL with hard-coded digest (see the output of `limactl info | jq .defaultTemplate.provisionTool`)
+# provisionTool:
+#   yq:
+#   - location: "~/Downloads/yq_linux_amd64"
+#     arch: "x86_64"
+#     digest: "sha256:..."
 
 # Probe scripts to check readiness.
 # The scripts run in user mode. They must start with a '#!' line.

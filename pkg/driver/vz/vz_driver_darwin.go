@@ -57,6 +57,7 @@ var knownYamlProperties = []string{
 	"Probes",
 	"PropagateProxyEnv",
 	"Provision",
+	"ProvisionTool",
 	"Rosetta",
 	"SSH",
 	"TimeZone",

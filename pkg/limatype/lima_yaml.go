@@ -21,28 +21,29 @@ type LimaYAML struct {
 	Arch               *Arch         `yaml:"arch,omitempty" json:"arch,omitempty" jsonschema:"nullable"`
 	Images             []Image       `yaml:"images,omitempty" json:"images,omitempty" jsonschema:"nullable"`
 	// Deprecated: Use VMOpts.Qemu.CPUType instead.
-	CPUType               CPUType       `yaml:"cpuType,omitempty" json:"cpuType,omitempty" jsonschema:"nullable"`
-	CPUs                  *int          `yaml:"cpus,omitempty" json:"cpus,omitempty" jsonschema:"nullable"`
-	Memory                *string       `yaml:"memory,omitempty" json:"memory,omitempty" jsonschema:"nullable"` // go-units.RAMInBytes
-	Disk                  *string       `yaml:"disk,omitempty" json:"disk,omitempty" jsonschema:"nullable"`     // go-units.RAMInBytes
-	AdditionalDisks       []Disk        `yaml:"additionalDisks,omitempty" json:"additionalDisks,omitempty" jsonschema:"nullable"`
-	Mounts                []Mount       `yaml:"mounts,omitempty" json:"mounts,omitempty"`
-	MountTypesUnsupported []string      `yaml:"mountTypesUnsupported,omitempty" json:"mountTypesUnsupported,omitempty" jsonschema:"nullable"`
-	MountType             *MountType    `yaml:"mountType,omitempty" json:"mountType,omitempty" jsonschema:"nullable"`
-	MountInotify          *bool         `yaml:"mountInotify,omitempty" json:"mountInotify,omitempty" jsonschema:"nullable"`
-	SSH                   SSH           `yaml:"ssh,omitempty" json:"ssh,omitempty"` // REQUIRED (FIXME)
-	Firmware              Firmware      `yaml:"firmware,omitempty" json:"firmware,omitempty"`
-	Audio                 Audio         `yaml:"audio,omitempty" json:"audio,omitempty"`
-	Video                 Video         `yaml:"video,omitempty" json:"video,omitempty"`
-	Provision             []Provision   `yaml:"provision,omitempty" json:"provision,omitempty"`
-	UpgradePackages       *bool         `yaml:"upgradePackages,omitempty" json:"upgradePackages,omitempty" jsonschema:"nullable"`
-	Containerd            Containerd    `yaml:"containerd,omitempty" json:"containerd,omitempty"`
-	GuestInstallPrefix    *string       `yaml:"guestInstallPrefix,omitempty" json:"guestInstallPrefix,omitempty" jsonschema:"nullable"`
-	Probes                []Probe       `yaml:"probes,omitempty" json:"probes,omitempty"`
-	PortForwards          []PortForward `yaml:"portForwards,omitempty" json:"portForwards,omitempty"`
-	CopyToHost            []CopyToHost  `yaml:"copyToHost,omitempty" json:"copyToHost,omitempty"`
-	Message               string        `yaml:"message,omitempty" json:"message,omitempty"`
-	Networks              []Network     `yaml:"networks,omitempty" json:"networks,omitempty" jsonschema:"nullable"`
+	CPUType               CPUType                     `yaml:"cpuType,omitempty" json:"cpuType,omitempty" jsonschema:"nullable"`
+	CPUs                  *int                        `yaml:"cpus,omitempty" json:"cpus,omitempty" jsonschema:"nullable"`
+	Memory                *string                     `yaml:"memory,omitempty" json:"memory,omitempty" jsonschema:"nullable"` // go-units.RAMInBytes
+	Disk                  *string                     `yaml:"disk,omitempty" json:"disk,omitempty" jsonschema:"nullable"`     // go-units.RAMInBytes
+	AdditionalDisks       []Disk                      `yaml:"additionalDisks,omitempty" json:"additionalDisks,omitempty" jsonschema:"nullable"`
+	Mounts                []Mount                     `yaml:"mounts,omitempty" json:"mounts,omitempty"`
+	MountTypesUnsupported []string                    `yaml:"mountTypesUnsupported,omitempty" json:"mountTypesUnsupported,omitempty" jsonschema:"nullable"`
+	MountType             *MountType                  `yaml:"mountType,omitempty" json:"mountType,omitempty" jsonschema:"nullable"`
+	MountInotify          *bool                       `yaml:"mountInotify,omitempty" json:"mountInotify,omitempty" jsonschema:"nullable"`
+	SSH                   SSH                         `yaml:"ssh,omitempty" json:"ssh,omitempty"` // REQUIRED (FIXME)
+	Firmware              Firmware                    `yaml:"firmware,omitempty" json:"firmware,omitempty"`
+	Audio                 Audio                       `yaml:"audio,omitempty" json:"audio,omitempty"`
+	Video                 Video                       `yaml:"video,omitempty" json:"video,omitempty"`
+	Provision             []Provision                 `yaml:"provision,omitempty" json:"provision,omitempty"`
+	ProvisionTool         map[ProvisionToolKey][]File `yaml:"provisionTool,omitempty" json:"provisionTool,omitempty"`
+	UpgradePackages       *bool                       `yaml:"upgradePackages,omitempty" json:"upgradePackages,omitempty" jsonschema:"nullable"`
+	Containerd            Containerd                  `yaml:"containerd,omitempty" json:"containerd,omitempty"`
+	GuestInstallPrefix    *string                     `yaml:"guestInstallPrefix,omitempty" json:"guestInstallPrefix,omitempty" jsonschema:"nullable"`
+	Probes                []Probe                     `yaml:"probes,omitempty" json:"probes,omitempty"`
+	PortForwards          []PortForward               `yaml:"portForwards,omitempty" json:"portForwards,omitempty"`
+	CopyToHost            []CopyToHost                `yaml:"copyToHost,omitempty" json:"copyToHost,omitempty"`
+	Message               string                      `yaml:"message,omitempty" json:"message,omitempty"`
+	Networks              []Network                   `yaml:"networks,omitempty" json:"networks,omitempty" jsonschema:"nullable"`
 	// `network` was deprecated in Lima v0.7.0, removed in Lima v0.14.0. Use `networks` instead.
 	Env          map[string]string `yaml:"env,omitempty" json:"env,omitempty"`
 	Param        map[string]string `yaml:"param,omitempty" json:"param,omitempty"`
@@ -229,6 +230,7 @@ const (
 	ProvisionModeDependency ProvisionMode = "dependency"
 	ProvisionModeAnsible    ProvisionMode = "ansible" // DEPRECATED
 	ProvisionModeData       ProvisionMode = "data"
+	ProvisionModeYQ         ProvisionMode = "yq"
 )
 
 type Provision struct {
@@ -239,6 +241,10 @@ type Provision struct {
 	Playbook                        string             `yaml:"playbook,omitempty" json:"playbook,omitempty"` // DEPRECATED
 	// All ProvisionData fields must be nil unless Mode is ProvisionModeData
 	ProvisionData `yaml:",inline"` // Flatten fields for "strict" YAML mode
+	// ProvisionModeYQ borrows Path and Permissions from ProvisionData
+	Expression *string `yaml:"expression,omitempty" json:"expression,omitempty" jsonschema:"nullable"`
+	User       *string `yaml:"user,omitempty" json:"user,omitempty" jsonschema:"nullable"`
+	Format     *string `yaml:"format,omitempty" json:"format,omitempty" jsonschema:"nullable"`
 }
 
 type ProvisionData struct {
@@ -247,6 +253,16 @@ type ProvisionData struct {
 	Owner       *string `yaml:"owner,omitempty" json:"owner,omitempty"` // any owner string supported by `chown`, defaults to "root:root"
 	Path        *string `yaml:"path,omitempty" json:"path,omitempty"`
 	Permissions *string `yaml:"permissions,omitempty" json:"permissions,omitempty"`
+}
+
+type ProvisionToolKey = string
+
+const (
+	ProvisionToolYQ ProvisionToolKey = ProvisionModeYQ
+)
+
+var ProvisionToolKeyToMode = map[ProvisionToolKey]ProvisionMode{
+	ProvisionToolYQ: ProvisionModeYQ,
 }
 
 type Containerd struct {
