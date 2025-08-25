@@ -45,6 +45,8 @@ if [ "${LIMA_CIDATA_CONTAINERD_SYSTEM}" = 1 ]; then
 	mkdir -p /etc/containerd /etc/buildkit
 	cat >"/etc/containerd/config.toml" <<EOF
   version = 2
+  [plugins."io.containerd.grpc.v1.cri"]
+    enable_cdi = true
   [proxy_plugins]
     [proxy_plugins."stargz"]
       type = "snapshot"
@@ -67,6 +69,8 @@ if [ "${LIMA_CIDATA_CONTAINERD_USER}" = 1 ]; then
 		mkdir -p "${LIMA_CIDATA_HOME}/.config/containerd"
 		cat >"${LIMA_CIDATA_HOME}/.config/containerd/config.toml" <<EOF
   version = 2
+  [plugins."io.containerd.grpc.v1.cri"]
+    enable_cdi = true
   [proxy_plugins]
     [proxy_plugins."fuse-overlayfs"]
       type = "snapshot"

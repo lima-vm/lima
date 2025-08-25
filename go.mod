@@ -139,3 +139,7 @@ require (
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 )
+
+// To use Roseetta AOT Caching with CDI, it requires to fix vz.NewLinuxRosettaUnixSocketCachingOptions.
+// see: https://github.com/Code-Hex/vz/pull/195
+replace github.com/Code-Hex/vz/v3 => github.com/norio-nomura/vz/v3 v3.7.1-0.20250815045701-95b4b8c6ff35
