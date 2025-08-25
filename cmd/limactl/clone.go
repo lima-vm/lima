@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/lima-vm/lima/v2/cmd/limactl/editflags"
+	"github.com/lima-vm/lima/v2/pkg/driverutil"
 	"github.com/lima-vm/lima/v2/pkg/instance"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
@@ -78,6 +79,9 @@ func cloneAction(cmd *cobra.Command, args []string) error {
 		y, err := limayaml.LoadWithWarnings(ctx, yBytes, filePath)
 		if err != nil {
 			return err
+		}
+		if err := driverutil.ResolveVMType(y, filePath); err != nil {
+			return fmt.Errorf("failed to accept config for %q: %w", filePath, err)
 		}
 		if err := limayaml.Validate(y, true); err != nil {
 			return saveRejectedYAML(yBytes, err)

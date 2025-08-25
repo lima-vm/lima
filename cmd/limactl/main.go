@@ -44,6 +44,7 @@ func main() {
 	}
 	rootCmd := newApp()
 	if err := executeWithPluginSupport(rootCmd, os.Args[1:]); err != nil {
+		server.StopAllExternalDrivers()
 		handleExitCoder(err)
 		logrus.Fatal(err)
 	}

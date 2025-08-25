@@ -578,7 +578,7 @@ func attachFolderMounts(inst *limatype.Instance, vmConfig *vz.VirtualMachineConf
 		}
 	}
 
-	if *inst.Config.Rosetta.Enabled {
+	if *inst.Config.VMOpts.VZ.Rosetta.Enabled {
 		logrus.Info("Setting up Rosetta share")
 		directorySharingDeviceConfig, err := createRosettaDirectoryShareConfiguration()
 		if err != nil {

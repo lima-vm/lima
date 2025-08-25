@@ -7,9 +7,11 @@ package vz
 
 import (
 	"context"
+	"embed"
 	"errors"
 	"fmt"
 	"net"
+	"os"
 	"path/filepath"
 	"runtime"
 	"time"
@@ -20,8 +22,10 @@ import (
 
 	"github.com/lima-vm/lima/v2/pkg/driver"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
+	"github.com/lima-vm/lima/v2/pkg/ptr"
 	"github.com/lima-vm/lima/v2/pkg/reflectutil"
 )
 
@@ -64,6 +68,7 @@ var knownYamlProperties = []string{
 	"User",
 	"Video",
 	"VMType",
+	"VMOpts",
 }
 
 const Enabled = true
@@ -91,9 +96,120 @@ func (l *LimaVzDriver) Configure(inst *limatype.Instance) *driver.ConfiguredDriv
 	l.Instance = inst
 	l.SSHLocalPort = inst.SSHLocalPort
 
+	if l.Instance.Config.MountType != nil {
+		mountTypesUnsupported := make(map[string]struct{})
+		for _, f := range l.Instance.Config.MountTypesUnsupported {
+			mountTypesUnsupported[f] = struct{}{}
+		}
+
+		if _, ok := mountTypesUnsupported[*l.Instance.Config.MountType]; ok {
+			// We cannot return an error here, but Validate() will return it.
+			logrus.Warnf("Unsupported mount type: %q", *l.Instance.Config.MountType)
+		}
+	}
+
 	return &driver.ConfiguredDriver{
 		Driver: l,
 	}
+}
+
+func (l *LimaVzDriver) FillConfig(cfg *limatype.LimaYAML, _ string) error {
+	if cfg.VMType == nil {
+		cfg.VMType = ptr.Of(limatype.VZ)
+	}
+
+	if cfg.MountType == nil {
+		cfg.MountType = ptr.Of(limatype.VIRTIOFS)
+	}
+
+	//nolint:staticcheck // Migration of top-level Rosetta if specified
+	if (cfg.VMOpts.VZ.Rosetta.Enabled == nil && cfg.VMOpts.VZ.Rosetta.BinFmt == nil) && (!isEmpty(cfg.Rosetta)) {
+		logrus.Debug("Migrating top-level Rosetta configuration to vmOpts.vz.rosetta")
+		cfg.VMOpts.VZ.Rosetta = cfg.Rosetta
+	}
+	//nolint:staticcheck // Warning about both top-level and vmOpts.vz.Rosetta being set
+	if (cfg.VMOpts.VZ.Rosetta.Enabled != nil && cfg.VMOpts.VZ.Rosetta.BinFmt != nil) && (!isEmpty(cfg.Rosetta)) {
+		logrus.Warn("Both top-level 'rosetta' and 'vmOpts.vz.rosetta' are configured. Using vmOpts.vz.rosetta. Top-level 'rosetta' is deprecated.")
+	}
+
+	if cfg.VMOpts.VZ.Rosetta.Enabled == nil {
+		cfg.VMOpts.VZ.Rosetta.Enabled = ptr.Of(false)
+	}
+	if cfg.VMOpts.VZ.Rosetta.BinFmt == nil {
+		cfg.VMOpts.VZ.Rosetta.BinFmt = ptr.Of(false)
+	}
+
+	return nil
+}
+
+func isEmpty(r limatype.Rosetta) bool {
+	return r.Enabled == nil && r.BinFmt == nil
+}
+
+//go:embed boot/*.sh
+var bootFS embed.FS
+
+func (l *LimaVzDriver) BootScripts() (map[string][]byte, error) {
+	scripts := make(map[string][]byte)
+
+	entries, err := bootFS.ReadDir("boot")
+	if err == nil {
+		for _, entry := range entries {
+			if entry.IsDir() {
+				continue
+			}
+
+			content, err := bootFS.ReadFile("boot/" + entry.Name())
+			if err != nil {
+				return nil, err
+			}
+
+			scripts[entry.Name()] = content
+		}
+	}
+
+	return scripts, nil
+}
+
+func (l *LimaVzDriver) AcceptConfig(cfg *limatype.LimaYAML, filePath string) error {
+	if dir, basename := filepath.Split(filePath); dir != "" && basename == filenames.LimaYAML && limayaml.IsExistingInstanceDir(dir) {
+		vzIdentifier := filepath.Join(dir, filenames.VzIdentifier) // since Lima v0.14
+		if _, err := os.Lstat(vzIdentifier); !errors.Is(err, os.ErrNotExist) {
+			logrus.Debugf("ResolveVMType: resolved VMType %q (existing instance, with %q)", "vz", vzIdentifier)
+		}
+	}
+
+	for i, nw := range cfg.Networks {
+		field := fmt.Sprintf("networks[%d]", i)
+		switch {
+		case nw.Lima != "":
+			if nw.VZNAT != nil && *nw.VZNAT {
+				return fmt.Errorf("field `%s.lima` and field `%s.vzNAT` are mutually exclusive", field, field)
+			}
+		case nw.Socket != "":
+			if nw.VZNAT != nil && *nw.VZNAT {
+				return fmt.Errorf("field `%s.socket` and field `%s.vzNAT` are mutually exclusive", field, field)
+			}
+		case nw.VZNAT != nil && *nw.VZNAT:
+			if nw.Lima != "" {
+				return fmt.Errorf("field `%s.vzNAT` and field `%s.lima` are mutually exclusive", field, field)
+			}
+			if nw.Socket != "" {
+				return fmt.Errorf("field `%s.vzNAT` and field `%s.socket` are mutually exclusive", field, field)
+			}
+		}
+	}
+
+	if l.Instance == nil {
+		l.Instance = &limatype.Instance{}
+	}
+	l.Instance.Config = cfg
+
+	if err := l.Validate(context.Background()); err != nil {
+		return fmt.Errorf("config not supported by the VZ driver: %w", err)
+	}
+
+	return nil
 }
 
 func (l *LimaVzDriver) Validate(_ context.Context) error {
@@ -109,7 +225,7 @@ func (l *LimaVzDriver) Validate(_ context.Context) error {
 			"Update macOS, or change vmType to \"qemu\" if the VM does not start up. (https://github.com/lima-vm/lima/issues/3334)",
 			*l.Instance.Config.VMType)
 	}
-	if *l.Instance.Config.MountType == limatype.NINEP {
+	if l.Instance.Config.MountType != nil && *l.Instance.Config.MountType == limatype.NINEP {
 		return fmt.Errorf("field `mountType` must be %q or %q for VZ driver , got %q", limatype.REVSSHFS, limatype.VIRTIOFS, *l.Instance.Config.MountType)
 	}
 	if *l.Instance.Config.Firmware.LegacyBIOS {
@@ -123,7 +239,7 @@ func (l *LimaVzDriver) Validate(_ context.Context) error {
 			}
 		}
 	}
-	if unknown := reflectutil.UnknownNonEmptyFields(l.Instance.Config, knownYamlProperties...); len(unknown) > 0 {
+	if unknown := reflectutil.UnknownNonEmptyFields(l.Instance.Config, knownYamlProperties...); l.Instance.Config.VMType != nil && len(unknown) > 0 {
 		logrus.Warnf("vmType %s: ignoring %+v", *l.Instance.Config.VMType, unknown)
 	}
 
@@ -175,7 +291,7 @@ func (l *LimaVzDriver) Validate(_ context.Context) error {
 	return nil
 }
 
-func (l *LimaVzDriver) Initialize(_ context.Context) error {
+func (l *LimaVzDriver) Create(_ context.Context) error {
 	_, err := getMachineIdentifier(l.Instance)
 	return err
 }
@@ -265,7 +381,24 @@ func (l *LimaVzDriver) Info() driver.Info {
 	if l.Instance != nil {
 		info.InstanceDir = l.Instance.Dir
 	}
+
+	info.Features = driver.DriverFeatures{
+		DynamicSSHAddress:    false,
+		SkipSocketForwarding: false,
+	}
 	return info
+}
+
+func (l *LimaVzDriver) SSHAddress(_ context.Context) (string, error) {
+	return "127.0.0.1", nil
+}
+
+func (l *LimaVzDriver) InspectStatus(_ context.Context, _ *limatype.Instance) string {
+	return ""
+}
+
+func (l *LimaVzDriver) Delete(_ context.Context) error {
+	return nil
 }
 
 func (l *LimaVzDriver) Register(_ context.Context) error {

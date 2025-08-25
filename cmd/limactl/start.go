@@ -17,6 +17,7 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/lima-vm/lima/v2/cmd/limactl/editflags"
+	"github.com/lima-vm/lima/v2/pkg/driverutil"
 	"github.com/lima-vm/lima/v2/pkg/editutil"
 	"github.com/lima-vm/lima/v2/pkg/instance"
 	"github.com/lima-vm/lima/v2/pkg/limatmpl"
@@ -361,6 +362,9 @@ func applyYQExpressionToExistingInstance(ctx context.Context, inst *limatype.Ins
 	y, err := limayaml.Load(ctx, yBytes, filePath)
 	if err != nil {
 		return nil, err
+	}
+	if err := driverutil.ResolveVMType(y, filePath); err != nil {
+		return nil, fmt.Errorf("failed to accept config for %q: %w", filePath, err)
 	}
 	if err := limayaml.Validate(y, true); err != nil {
 		rejectedYAML := "lima.REJECTED.yaml"

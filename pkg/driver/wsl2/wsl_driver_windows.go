@@ -5,6 +5,7 @@ package wsl2
 
 import (
 	"context"
+	"embed"
 	"fmt"
 	"net"
 	"regexp"
@@ -17,8 +18,8 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/freeport"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
+	"github.com/lima-vm/lima/v2/pkg/ptr"
 	"github.com/lima-vm/lima/v2/pkg/reflectutil"
-	"github.com/lima-vm/lima/v2/pkg/store"
 	"github.com/lima-vm/lima/v2/pkg/windows"
 )
 
@@ -78,54 +79,155 @@ func (l *LimaWslDriver) Configure(inst *limatype.Instance) *driver.ConfiguredDri
 	}
 }
 
+func (l *LimaWslDriver) AcceptConfig(cfg *limatype.LimaYAML, _ string) error {
+	if l.Instance == nil {
+		l.Instance = &limatype.Instance{}
+	}
+	l.Instance.Config = cfg
+
+	if err := l.Validate(context.Background()); err != nil {
+		return fmt.Errorf("config not supported by the WSL2 driver: %w", err)
+	}
+
+	return nil
+}
+
+func (l *LimaWslDriver) FillConfig(cfg *limatype.LimaYAML, _ string) error {
+	if cfg.VMType == nil {
+		cfg.VMType = ptr.Of(limatype.WSL2)
+	}
+	if cfg.MountType == nil {
+		cfg.MountType = ptr.Of(limatype.WSLMount)
+	}
+
+	return nil
+}
+
 func (l *LimaWslDriver) Validate(_ context.Context) error {
-	if *l.Instance.Config.MountType != limatype.WSLMount {
+	if l.Instance.Config.MountType != nil && *l.Instance.Config.MountType != limatype.WSLMount {
 		return fmt.Errorf("field `mountType` must be %q for WSL2 driver, got %q", limatype.WSLMount, *l.Instance.Config.MountType)
 	}
 	// TODO: revise this list for WSL2
-	if unknown := reflectutil.UnknownNonEmptyFields(l.Instance.Config, knownYamlProperties...); len(unknown) > 0 {
-		logrus.Warnf("Ignoring: vmType %s: %+v", *l.Instance.Config.VMType, unknown)
+	if l.Instance.Config.VMType != nil {
+		if unknown := reflectutil.UnknownNonEmptyFields(l.Instance.Config, knownYamlProperties...); len(unknown) > 0 {
+			logrus.Warnf("Ignoring: vmType %s: %+v", *l.Instance.Config.VMType, unknown)
+		}
 	}
 
 	if !limayaml.IsNativeArch(*l.Instance.Config.Arch) {
 		return fmt.Errorf("unsupported arch: %q", *l.Instance.Config.Arch)
 	}
 
-	// TODO: real filetype checks
-	tarFileRegex := regexp.MustCompile(`.*tar\.*`)
-	for i, image := range l.Instance.Config.Images {
-		if unknown := reflectutil.UnknownNonEmptyFields(image, "File"); len(unknown) > 0 {
-			logrus.Warnf("Ignoring: vmType %s: images[%d]: %+v", *l.Instance.Config.VMType, i, unknown)
+	if l.Instance.Config.VMType != nil {
+		if l.Instance.Config.Images != nil && l.Instance.Config.Arch != nil {
+			// TODO: real filetype checks
+			tarFileRegex := regexp.MustCompile(`.*tar\.*`)
+			for i, image := range l.Instance.Config.Images {
+				if unknown := reflectutil.UnknownNonEmptyFields(image, "File"); len(unknown) > 0 {
+					logrus.Warnf("Ignoring: vmType %s: images[%d]: %+v", *l.Instance.Config.VMType, i, unknown)
+				}
+				match := tarFileRegex.MatchString(image.Location)
+				if image.Arch == *l.Instance.Config.Arch && !match {
+					return fmt.Errorf("unsupported image type for vmType: %s, tarball root file system required: %q", *l.Instance.Config.VMType, image.Location)
+				}
+			}
 		}
-		match := tarFileRegex.MatchString(image.Location)
-		if image.Arch == *l.Instance.Config.Arch && !match {
-			return fmt.Errorf("unsupported image type for vmType: %s, tarball root file system required: %q", *l.Instance.Config.VMType, image.Location)
-		}
-	}
 
-	for i, mount := range l.Instance.Config.Mounts {
-		if unknown := reflectutil.UnknownNonEmptyFields(mount); len(unknown) > 0 {
-			logrus.Warnf("Ignoring: vmType %s: mounts[%d]: %+v", *l.Instance.Config.VMType, i, unknown)
+		if l.Instance.Config.Mounts != nil {
+			for i, mount := range l.Instance.Config.Mounts {
+				if unknown := reflectutil.UnknownNonEmptyFields(mount); len(unknown) > 0 {
+					logrus.Warnf("Ignoring: vmType %s: mounts[%d]: %+v", *l.Instance.Config.VMType, i, unknown)
+				}
+			}
 		}
-	}
 
-	for i, network := range l.Instance.Config.Networks {
-		if unknown := reflectutil.UnknownNonEmptyFields(network); len(unknown) > 0 {
-			logrus.Warnf("Ignoring: vmType %s: networks[%d]: %+v", *l.Instance.Config.VMType, i, unknown)
+		if l.Instance.Config.Networks != nil {
+			for i, network := range l.Instance.Config.Networks {
+				if unknown := reflectutil.UnknownNonEmptyFields(network); len(unknown) > 0 {
+					logrus.Warnf("Ignoring: vmType %s: networks[%d]: %+v", *l.Instance.Config.VMType, i, unknown)
+				}
+			}
 		}
-	}
 
-	audioDevice := *l.Instance.Config.Audio.Device
-	if audioDevice != "" {
-		logrus.Warnf("Ignoring: vmType %s: `audio.device`: %+v", *l.Instance.Config.VMType, audioDevice)
+		if l.Instance.Config.Audio.Device != nil {
+			audioDevice := *l.Instance.Config.Audio.Device
+			if audioDevice != "" {
+				logrus.Warnf("Ignoring: vmType %s: `audio.device`: %+v", *l.Instance.Config.VMType, audioDevice)
+			}
+		}
 	}
 
 	return nil
 }
 
+//go:embed boot/*.sh
+var bootFS embed.FS
+
+func (l *LimaWslDriver) BootScripts() (map[string][]byte, error) {
+	scripts := make(map[string][]byte)
+
+	entries, err := bootFS.ReadDir("boot")
+	if err != nil {
+		return scripts, err
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		content, err := bootFS.ReadFile("boot/" + entry.Name())
+		if err != nil {
+			return nil, err
+		}
+
+		scripts[entry.Name()] = content
+	}
+
+	return scripts, nil
+}
+
+func (l *LimaWslDriver) InspectStatus(ctx context.Context, inst *limatype.Instance) string {
+	status, err := getWslStatus(inst.Name)
+	if err != nil {
+		inst.Status = limatype.StatusBroken
+		inst.Errors = append(inst.Errors, err)
+	} else {
+		inst.Status = status
+	}
+
+	inst.SSHLocalPort = 22
+
+	if inst.Status == limatype.StatusRunning {
+		sshAddr, err := l.SSHAddress(ctx)
+		if err == nil {
+			inst.SSHAddress = sshAddr
+		} else {
+			inst.Errors = append(inst.Errors, err)
+		}
+	}
+
+	return inst.Status
+}
+
+func (l *LimaWslDriver) Delete(ctx context.Context) error {
+	distroName := "lima-" + l.Instance.Name
+	status, err := getWslStatus(l.Instance.Name)
+	if err != nil {
+		return err
+	}
+	switch status {
+	case limatype.StatusRunning, limatype.StatusStopped, limatype.StatusBroken, limatype.StatusInstalling:
+		return unregisterVM(ctx, distroName)
+	}
+
+	logrus.Info("WSL VM is not running or does not exist, skipping deletion")
+	return nil
+}
+
 func (l *LimaWslDriver) Start(ctx context.Context) (chan error, error) {
 	logrus.Infof("Starting WSL VM")
-	status, err := store.GetWslStatus(l.Instance.Name)
+	status, err := getWslStatus(l.Instance.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -178,21 +280,6 @@ func (l *LimaWslDriver) Stop(ctx context.Context) error {
 	return stopVM(ctx, distroName)
 }
 
-func (l *LimaWslDriver) Unregister(ctx context.Context) error {
-	distroName := "lima-" + l.Instance.Name
-	status, err := store.GetWslStatus(l.Instance.Name)
-	if err != nil {
-		return err
-	}
-	switch status {
-	case limatype.StatusRunning, limatype.StatusStopped, limatype.StatusBroken, limatype.StatusInstalling:
-		return unregisterVM(ctx, distroName)
-	}
-
-	logrus.Info("VM not registered, skipping unregistration")
-	return nil
-}
-
 // GuestAgentConn returns the guest agent connection, or nil (if forwarded by ssh).
 // As of 08-01-2024, github.com/mdlayher/vsock does not natively support vsock on
 // Windows, so use the winio library to create the connection.
@@ -226,18 +313,23 @@ func (l *LimaWslDriver) Info() driver.Info {
 	info.CanRunGUI = l.canRunGUI()
 	info.VirtioPort = l.virtioPort
 	info.VsockPort = l.vSockPort
+
+	info.Features = driver.DriverFeatures{
+		DynamicSSHAddress:    true,
+		SkipSocketForwarding: true,
+	}
 	return info
 }
 
-func (l *LimaWslDriver) Initialize(_ context.Context) error {
+func (l *LimaWslDriver) SSHAddress(_ context.Context) (string, error) {
+	return "127.0.0.1", nil
+}
+
+func (l *LimaWslDriver) Create(_ context.Context) error {
 	return nil
 }
 
 func (l *LimaWslDriver) CreateDisk(_ context.Context) error {
-	return nil
-}
-
-func (l *LimaWslDriver) Register(_ context.Context) error {
 	return nil
 }
 

@@ -18,10 +18,10 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/coreos/go-semver/semver"
 	"github.com/docker/go-units"
 	"github.com/sirupsen/logrus"
 
+	"github.com/lima-vm/lima/v2/pkg/driverutil"
 	"github.com/lima-vm/lima/v2/pkg/identifiers"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/localpathutil"
@@ -48,11 +48,7 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 			errs = errors.Join(errs, fmt.Errorf("template requires Lima version %q; this is only %q", *y.MinimumLimaVersion, version.Version))
 		}
 	}
-	if y.VMOpts.QEMU.MinimumVersion != nil {
-		if _, err := semver.NewVersion(*y.VMOpts.QEMU.MinimumVersion); err != nil {
-			errs = errors.Join(errs, fmt.Errorf("field `vmOpts.qemu.minimumVersion` must be a semvar value, got %q: %w", *y.VMOpts.QEMU.MinimumVersion, err))
-		}
-	}
+
 	switch *y.OS {
 	case limatype.LINUX:
 	default:
@@ -446,27 +442,11 @@ func validateNetwork(y *limatype.LimaYAML) error {
 			if nw.Socket != "" {
 				errs = errors.Join(errs, fmt.Errorf("field `%s.lima` and field `%s.socket` are mutually exclusive", field, field))
 			}
-			if nw.VZNAT != nil && *nw.VZNAT {
-				errs = errors.Join(errs, fmt.Errorf("field `%s.lima` and field `%s.vzNAT` are mutually exclusive", field, field))
-			}
 		case nw.Socket != "":
-			if nw.VZNAT != nil && *nw.VZNAT {
-				errs = errors.Join(errs, fmt.Errorf("field `%s.socket` and field `%s.vzNAT` are mutually exclusive", field, field))
-			}
 			if fi, err := os.Stat(nw.Socket); err != nil && !errors.Is(err, os.ErrNotExist) {
 				errs = errors.Join(errs, err)
 			} else if err == nil && fi.Mode()&os.ModeSocket == 0 {
 				errs = errors.Join(errs, fmt.Errorf("field `%s.socket` %q points to a non-socket file", field, nw.Socket))
-			}
-		case nw.VZNAT != nil && *nw.VZNAT:
-			if y.VMType == nil || *y.VMType != limatype.VZ {
-				errs = errors.Join(errs, fmt.Errorf("field `%s.vzNAT` requires `vmType` to be %q", field, limatype.VZ))
-			}
-			if nw.Lima != "" {
-				errs = errors.Join(errs, fmt.Errorf("field `%s.vzNAT` and field `%s.lima` are mutually exclusive", field, field))
-			}
-			if nw.Socket != "" {
-				errs = errors.Join(errs, fmt.Errorf("field `%s.vzNAT` and field `%s.socket` are mutually exclusive", field, field))
 			}
 		default:
 			errs = errors.Join(errs, fmt.Errorf("field `%s.lima` or  field `%s.socket must be set", field, field))
@@ -600,35 +580,39 @@ func warnExperimental(y *limatype.LimaYAML) {
 // This validates configuration rules that disallow certain changes, such as shrinking the disk.
 func ValidateAgainstLatestConfig(ctx context.Context, yNew, yLatest []byte) error {
 	var n limatype.LimaYAML
+	var errs error
 
 	// Load the latest YAML and fill in defaults
 	l, err := LoadWithWarnings(ctx, yLatest, "")
 	if err != nil {
-		return err
+		errs = errors.Join(errs, err)
+	}
+	if err := driverutil.ResolveVMType(l, ""); err != nil {
+		errs = errors.Join(errs, fmt.Errorf("failed to accept config for %q: %w", "", err))
 	}
 	if err := Unmarshal(yNew, &n, "Unmarshal new YAML bytes"); err != nil {
-		return err
+		errs = errors.Join(errs, err)
 	}
 
 	// Handle editing the template without a disk value
 	if n.Disk == nil || l.Disk == nil {
-		return nil
+		return errs
 	}
 
 	// Disk value must be provided, as it is required when creating an instance.
 	nDisk, err := units.RAMInBytes(*n.Disk)
 	if err != nil {
-		return err
+		errs = errors.Join(errs, err)
 	}
 	lDisk, err := units.RAMInBytes(*l.Disk)
 	if err != nil {
-		return err
+		errs = errors.Join(errs, err)
 	}
 
 	// Reject shrinking disk
 	if nDisk < lDisk {
-		return fmt.Errorf("field `disk`: shrinking the disk (%v --> %v) is not supported", *l.Disk, *n.Disk)
+		errs = errors.Join(errs, fmt.Errorf("field `disk`: shrinking the disk (%v --> %v) is not supported", *l.Disk, *n.Disk))
 	}
 
-	return nil
+	return errs
 }

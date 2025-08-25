@@ -32,17 +32,8 @@ func (d *DriverClient) Validate(ctx context.Context) error {
 	return nil
 }
 
-func (d *DriverClient) Initialize(ctx context.Context) error {
-	d.logger.Debug("Initializing driver instance")
-
-	_, err := d.DriverSvc.Initialize(ctx, &emptypb.Empty{})
-	if err != nil {
-		d.logger.Errorf("Initialization failed: %v", err)
-		return err
-	}
-
-	d.logger.Debug("Driver instance initialized successfully")
-	return nil
+func (d *DriverClient) Create(_ context.Context) error {
+	return errors.New("create not implemented for external drivers")
 }
 
 func (d *DriverClient) CreateDisk(ctx context.Context) error {
@@ -100,6 +91,18 @@ func (d *DriverClient) Stop(ctx context.Context) error {
 
 	d.logger.Debug("Driver instance stopped successfully")
 	return nil
+}
+
+func (d *DriverClient) Delete(_ context.Context) error {
+	return errors.New("delete not implemented for external drivers")
+}
+
+func (d *DriverClient) AcceptConfig(_ *limatype.LimaYAML, _ string) error {
+	return errors.New("pre-configured driver action not implemented in client driver")
+}
+
+func (d *DriverClient) FillConfig(_ *limatype.LimaYAML, _ string) error {
+	return errors.New("pre-configured driver action not implemented in client driver")
 }
 
 func (d *DriverClient) RunGUI() error {
@@ -204,32 +207,6 @@ func (d *DriverClient) ListSnapshots(ctx context.Context) (string, error) {
 	return resp.Snapshots, nil
 }
 
-func (d *DriverClient) Register(ctx context.Context) error {
-	d.logger.Debug("Registering driver instance")
-
-	_, err := d.DriverSvc.Register(ctx, &emptypb.Empty{})
-	if err != nil {
-		d.logger.Errorf("Failed to register driver instance: %v", err)
-		return err
-	}
-
-	d.logger.Debug("Driver instance registered successfully")
-	return nil
-}
-
-func (d *DriverClient) Unregister(ctx context.Context) error {
-	d.logger.Debug("Unregistering driver instance")
-
-	_, err := d.DriverSvc.Unregister(ctx, &emptypb.Empty{})
-	if err != nil {
-		d.logger.Errorf("Failed to unregister driver instance: %v", err)
-		return err
-	}
-
-	d.logger.Debug("Driver instance unregistered successfully")
-	return nil
-}
-
 func (d *DriverClient) ForwardGuestAgent() bool {
 	d.logger.Debug("Checking if guest agent needs to be forwarded")
 
@@ -302,4 +279,16 @@ func (d *DriverClient) Configure(inst *limatype.Instance) *driver.ConfiguredDriv
 	return &driver.ConfiguredDriver{
 		Driver: d,
 	}
+}
+
+func (d *DriverClient) InspectStatus(_ context.Context, _ *limatype.Instance) string {
+	return ""
+}
+
+func (d *DriverClient) SSHAddress(_ context.Context) (string, error) {
+	return "", errors.New("sshAddress not implemented for external drivers")
+}
+
+func (d *DriverClient) BootScripts() (map[string][]byte, error) {
+	return nil, errors.New("bootScripts not implemented for external drivers")
 }

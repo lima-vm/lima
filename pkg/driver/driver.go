@@ -15,13 +15,13 @@ type Lifecycle interface {
 	// Validate returns error if the current driver isn't support for given config
 	Validate(_ context.Context) error
 
-	// Initialize is called on creating the instance for initialization.
+	// Create is called on creating the instance for the first time.
 	// (e.g., creating "vz-identifier" file)
 	//
-	// Initialize MUST return nil when it is called against an existing instance.
+	// Create MUST return nil when it is called against an existing instance.
 	//
-	// Initialize does not create the disks.
-	Initialize(_ context.Context) error
+	// Create does not create the disks.
+	Create(_ context.Context) error
 
 	// CreateDisk returns error if the current driver fails in creating disk
 	CreateDisk(_ context.Context) error
@@ -34,6 +34,12 @@ type Lifecycle interface {
 	// Stop will terminate the running vm instance.
 	// It returns error if there are any errors during Stop
 	Stop(_ context.Context) error
+
+	Delete(_ context.Context) error
+
+	InspectStatus(_ context.Context, inst *limatype.Instance) string
+
+	BootScripts() (map[string][]byte, error)
 }
 
 // GUI defines GUI-related operations.
@@ -54,12 +60,6 @@ type SnapshotManager interface {
 	ListSnapshots(ctx context.Context) (string, error)
 }
 
-// Registration defines operations for registering and unregistering the driver instance.
-type Registration interface {
-	Register(ctx context.Context) error
-	Unregister(ctx context.Context) error
-}
-
 // GuestAgent defines operations for the guest agent.
 type GuestAgent interface {
 	// ForwardGuestAgent returns if the guest agent sock needs forwarding by host agent.
@@ -74,13 +74,17 @@ type Driver interface {
 	Lifecycle
 	GUI
 	SnapshotManager
-	Registration
 	GuestAgent
 
 	Info() Info
 
-	// SetConfig sets the configuration for the instance.
+	// Configure sets the configuration for the instance.
 	Configure(inst *limatype.Instance) *ConfiguredDriver
+
+	AcceptConfig(cfg *limatype.LimaYAML, filePath string) error
+	FillConfig(cfg *limatype.LimaYAML, filePath string) error
+
+	SSHAddress(ctx context.Context) (string, error)
 }
 
 type ConfiguredDriver struct {
@@ -88,9 +92,15 @@ type ConfiguredDriver struct {
 }
 
 type Info struct {
-	DriverName  string `json:"driverName"`
-	CanRunGUI   bool   `json:"canRunGui,omitempty"`
-	VsockPort   int    `json:"vsockPort"`
-	VirtioPort  string `json:"virtioPort"`
-	InstanceDir string `json:"instanceDir,omitempty"`
+	DriverName  string         `json:"driverName"`
+	CanRunGUI   bool           `json:"canRunGui,omitempty"`
+	VsockPort   int            `json:"vsockPort"`
+	VirtioPort  string         `json:"virtioPort"`
+	InstanceDir string         `json:"instanceDir,omitempty"`
+	Features    DriverFeatures `json:"features"`
+}
+
+type DriverFeatures struct {
+	DynamicSSHAddress    bool `json:"dynamicSSHAddress"`
+	SkipSocketForwarding bool `json:"skipSocketForwarding"`
 }

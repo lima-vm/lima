@@ -49,6 +49,9 @@ func Create(ctx context.Context, instName string, instConfig []byte, saveBrokenY
 	if err != nil {
 		return nil, err
 	}
+	if err := driverutil.ResolveVMType(loadedInstConfig, filePath); err != nil {
+		return nil, fmt.Errorf("failed to accept config for %q: %w", filePath, err)
+	}
 	if err := limayaml.Validate(loadedInstConfig, true); err != nil {
 		if !saveBrokenYAML {
 			return nil, err
@@ -82,7 +85,7 @@ func Create(ctx context.Context, instName string, instConfig []byte, saveBrokenY
 		return nil, fmt.Errorf("failed to create driver instance: %w", err)
 	}
 
-	if err := limaDriver.Register(ctx); err != nil {
+	if err := limaDriver.Create(ctx); err != nil {
 		return nil, err
 	}
 

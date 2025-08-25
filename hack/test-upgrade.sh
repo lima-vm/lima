@@ -95,8 +95,11 @@ INFO "==========================================================================
 INFO "Installing the new Lima ${NEWVER}"
 install_lima "${NEWVER}"
 
+INFO "Editing the instance to specify vm-type as qemu explicitly"
+limactl edit --vm-type=qemu "${LIMA_INSTANCE}"
+
 INFO "Restarting the instance"
-limactl start --tty=false "${LIMA_INSTANCE}" || show_lima_log
+limactl start --tty=false --vm-type=qemu "${LIMA_INSTANCE}" || show_lima_log
 lima nerdctl info
 
 INFO "Confirming that the host filesystem is still mounted"

@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -18,7 +19,6 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/executil"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
-	"github.com/lima-vm/lima/v2/pkg/store"
 	"github.com/lima-vm/lima/v2/pkg/textutil"
 )
 
@@ -134,7 +134,7 @@ func provisionVM(ctx context.Context, instanceDir, instanceName, distroName stri
 		for {
 			<-ctx.Done()
 			logrus.Info("Context closed, stopping vm")
-			if status, err := store.GetWslStatus(instanceName); err == nil &&
+			if status, err := getWslStatus(instanceName); err == nil &&
 				status == limatype.StatusRunning {
 				_ = stopVM(ctx, distroName)
 			}
@@ -177,4 +177,55 @@ func unregisterVM(ctx context.Context, distroName string) error {
 			distroName, err, out)
 	}
 	return nil
+}
+
+func getWslStatus(instName string) (string, error) {
+	distroName := "lima-" + instName
+	out, err := executil.RunUTF16leCommand([]string{
+		"wsl.exe",
+		"--list",
+		"--verbose",
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to run `wsl --list --verbose`, err: %w (out=%q)", err, out)
+	}
+
+	if out == "" {
+		return limatype.StatusBroken, fmt.Errorf("failed to read instance state for instance %q, try running `wsl --list --verbose` to debug, err: %w", instName, err)
+	}
+
+	// Check for edge cases first
+	if strings.Contains(out, "Windows Subsystem for Linux has no installed distributions.") {
+		if strings.Contains(out, "Wsl/WSL_E_DEFAULT_DISTRO_NOT_FOUND") {
+			return limatype.StatusBroken, fmt.Errorf(
+				"failed to read instance state for instance %q because no distro is installed,"+
+					"try running `wsl --install -d Ubuntu` and then re-running Lima", instName)
+		}
+		return limatype.StatusBroken, fmt.Errorf(
+			"failed to read instance state for instance %q because there is no WSL kernel installed,"+
+				"this usually happens when WSL was installed for another user, but never for your user."+
+				"Try running `wsl --install -d Ubuntu` and `wsl --update`, and then re-running Lima", instName)
+	}
+
+	var instState string
+	wslListColsRegex := regexp.MustCompile(`\s+`)
+	// wsl --list --verbose may have different headers depending on localization, just split by line
+	for _, rows := range strings.Split(strings.ReplaceAll(out, "\r\n", "\n"), "\n") {
+		cols := wslListColsRegex.Split(strings.TrimSpace(rows), -1)
+		nameIdx := 0
+		// '*' indicates default instance
+		if cols[0] == "*" {
+			nameIdx = 1
+		}
+		if cols[nameIdx] == distroName {
+			instState = cols[nameIdx+1]
+			break
+		}
+	}
+
+	if instState == "" {
+		return limatype.StatusUninitialized, nil
+	}
+
+	return instState, nil
 }

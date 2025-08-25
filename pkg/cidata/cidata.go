@@ -24,6 +24,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/debugutil"
+	"github.com/lima-vm/lima/v2/pkg/driver"
 	"github.com/lima-vm/lima/v2/pkg/instance/hostname"
 	"github.com/lima-vm/lima/v2/pkg/iso9660util"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
@@ -137,14 +138,19 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 		Containerd:         Containerd{System: *instConfig.Containerd.System, User: *instConfig.Containerd.User, Archive: archive},
 		SlirpNICName:       networks.SlirpNICName,
 
-		RosettaEnabled: *instConfig.Rosetta.Enabled,
-		RosettaBinFmt:  *instConfig.Rosetta.BinFmt,
-		VMType:         *instConfig.VMType,
-		VSockPort:      vsockPort,
-		VirtioPort:     virtioPort,
-		Plain:          *instConfig.Plain,
-		TimeZone:       *instConfig.TimeZone,
-		Param:          instConfig.Param,
+		VMType:     *instConfig.VMType,
+		VSockPort:  vsockPort,
+		VirtioPort: virtioPort,
+		Plain:      *instConfig.Plain,
+		TimeZone:   *instConfig.TimeZone,
+		Param:      instConfig.Param,
+	}
+
+	if instConfig.VMOpts.VZ.Rosetta.Enabled != nil {
+		args.RosettaEnabled = *instConfig.VMOpts.VZ.Rosetta.Enabled
+	}
+	if instConfig.VMOpts.VZ.Rosetta.BinFmt != nil {
+		args.RosettaEnabled = *instConfig.VMOpts.VZ.Rosetta.BinFmt
 	}
 
 	firstUsernetIndex := limayaml.FirstUsernetIndex(instConfig)
@@ -357,7 +363,7 @@ func GenerateCloudConfig(ctx context.Context, instDir, name string, instConfig *
 	return os.WriteFile(filepath.Join(instDir, filenames.CloudConfig), config, 0o444)
 }
 
-func GenerateISO9660(ctx context.Context, instDir, name string, instConfig *limatype.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort int, guestAgentBinary, nerdctlArchive string, vsockPort int, virtioPort string) error {
+func GenerateISO9660(ctx context.Context, drv driver.Driver, instDir, name string, instConfig *limatype.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort int, guestAgentBinary, nerdctlArchive string, vsockPort int, virtioPort string) error {
 	args, err := templateArgs(ctx, true, instDir, name, instConfig, udpDNSLocalPort, tcpDNSLocalPort, vsockPort, virtioPort)
 	if err != nil {
 		return err
@@ -370,6 +376,18 @@ func GenerateISO9660(ctx context.Context, instDir, name string, instConfig *lima
 	layout, err := ExecuteTemplateCIDataISO(args)
 	if err != nil {
 		return err
+	}
+
+	driverScripts, err := drv.BootScripts()
+	if err != nil {
+		return fmt.Errorf("failed to get boot scripts: %w", err)
+	}
+
+	for filename, content := range driverScripts {
+		layout = append(layout, iso9660util.Entry{
+			Path:   fmt.Sprintf("boot/%s", filename),
+			Reader: strings.NewReader(string(content)),
+		})
 	}
 
 	for i, f := range instConfig.Provision {

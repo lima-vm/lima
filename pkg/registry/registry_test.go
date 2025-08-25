@@ -27,24 +27,30 @@ func newMockDriver(name string) *mockDriver {
 
 var _ driver.Driver = (*mockDriver)(nil)
 
-func (m *mockDriver) Validate(_ context.Context) error                           { return nil }
-func (m *mockDriver) Initialize(_ context.Context) error                         { return nil }
-func (m *mockDriver) CreateDisk(_ context.Context) error                         { return nil }
-func (m *mockDriver) Start(_ context.Context) (chan error, error)                { return nil, nil }
-func (m *mockDriver) Stop(_ context.Context) error                               { return nil }
-func (m *mockDriver) RunGUI() error                                              { return nil }
-func (m *mockDriver) ChangeDisplayPassword(_ context.Context, _ string) error    { return nil }
-func (m *mockDriver) DisplayConnection(_ context.Context) (string, error)        { return "", nil }
-func (m *mockDriver) CreateSnapshot(_ context.Context, _ string) error           { return nil }
-func (m *mockDriver) ApplySnapshot(_ context.Context, _ string) error            { return nil }
-func (m *mockDriver) DeleteSnapshot(_ context.Context, _ string) error           { return nil }
-func (m *mockDriver) ListSnapshots(_ context.Context) (string, error)            { return "", nil }
-func (m *mockDriver) Register(_ context.Context) error                           { return nil }
-func (m *mockDriver) Unregister(_ context.Context) error                         { return nil }
-func (m *mockDriver) ForwardGuestAgent() bool                                    { return false }
-func (m *mockDriver) GuestAgentConn(_ context.Context) (net.Conn, string, error) { return nil, "", nil }
-func (m *mockDriver) Info() driver.Info                                          { return driver.Info{DriverName: m.Name} }
-func (m *mockDriver) Configure(_ *limatype.Instance) *driver.ConfiguredDriver    { return nil }
+func (m *mockDriver) Validate(_ context.Context) error                             { return nil }
+func (m *mockDriver) Create(_ context.Context) error                               { return nil }
+func (m *mockDriver) Delete(_ context.Context) error                               { return nil }
+func (m *mockDriver) CreateDisk(_ context.Context) error                           { return nil }
+func (m *mockDriver) Start(_ context.Context) (chan error, error)                  { return nil, nil }
+func (m *mockDriver) Stop(_ context.Context) error                                 { return nil }
+func (m *mockDriver) RunGUI() error                                                { return nil }
+func (m *mockDriver) ChangeDisplayPassword(_ context.Context, _ string) error      { return nil }
+func (m *mockDriver) DisplayConnection(_ context.Context) (string, error)          { return "", nil }
+func (m *mockDriver) CreateSnapshot(_ context.Context, _ string) error             { return nil }
+func (m *mockDriver) ApplySnapshot(_ context.Context, _ string) error              { return nil }
+func (m *mockDriver) DeleteSnapshot(_ context.Context, _ string) error             { return nil }
+func (m *mockDriver) ListSnapshots(_ context.Context) (string, error)              { return "", nil }
+func (m *mockDriver) Register(_ context.Context) error                             { return nil }
+func (m *mockDriver) Unregister(_ context.Context) error                           { return nil }
+func (m *mockDriver) ForwardGuestAgent() bool                                      { return false }
+func (m *mockDriver) GuestAgentConn(_ context.Context) (net.Conn, string, error)   { return nil, "", nil }
+func (m *mockDriver) Info() driver.Info                                            { return driver.Info{DriverName: m.Name} }
+func (m *mockDriver) Configure(_ *limatype.Instance) *driver.ConfiguredDriver      { return nil }
+func (m *mockDriver) AcceptConfig(_ *limatype.LimaYAML, _ string) error            { return nil }
+func (m *mockDriver) FillConfig(_ *limatype.LimaYAML, _ string) error              { return nil }
+func (m *mockDriver) InspectStatus(_ context.Context, _ *limatype.Instance) string { return "" }
+func (m *mockDriver) SSHAddress(_ context.Context) (string, error)                 { return "", nil }
+func (m *mockDriver) BootScripts() (map[string][]byte, error)                      { return nil, nil }
 
 func TestRegister(t *testing.T) {
 	BackupRegistry(t)
