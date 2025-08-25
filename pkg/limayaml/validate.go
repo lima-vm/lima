@@ -69,11 +69,13 @@ func Validate(y *LimaYAML, warn bool) error {
 		if !IsNativeArch(*y.Arch) {
 			errs = errors.Join(errs, fmt.Errorf("field `arch` must be %q for VZ; got %q", NewArch(runtime.GOARCH), *y.Arch))
 		}
+	case EXT:
+		// NOP
 	default:
-		errs = errors.Join(errs, fmt.Errorf("field `vmType` must be %q, %q, %q; got %q", QEMU, VZ, WSL2, *y.VMType))
+		errs = errors.Join(errs, fmt.Errorf("field `vmType` must be %q, %q, %q, %q; got %q", QEMU, VZ, WSL2, EXT, *y.VMType))
 	}
 
-	if len(y.Images) == 0 {
+	if len(y.Images) == 0 && *y.VMType != EXT {
 		errs = errors.Join(errs, errors.New("field `images` must be set"))
 	}
 	for i, f := range y.Images {
@@ -158,6 +160,14 @@ func Validate(y *LimaYAML, warn bool) error {
 		}
 	}
 
+	if *y.SSH.Address == "127.0.0.1" && *y.VMType == EXT {
+		return errors.New("field `ssh.address` must be set, for ext")
+	}
+	if y.SSH.Address != nil {
+		if err := validateHost("ssh.address", *y.SSH.Address); err != nil {
+			return err
+		}
+	}
 	if *y.SSH.LocalPort != 0 {
 		if err := validatePort("ssh.localPort", *y.SSH.LocalPort); err != nil {
 			errs = errors.Join(errs, err)
@@ -572,6 +582,26 @@ func validateParamIsUsed(y *LimaYAML) error {
 	return nil
 }
 
+func lookupIP(host string) error {
+	if strings.HasSuffix(host, ".local") {
+		// allow offline or slow mDNS
+		return nil
+	}
+	ctx := context.Background()
+	_, err := net.DefaultResolver.LookupIP(ctx, "ip", host)
+	return err
+}
+
+func validateHost(field, host string) error {
+	if net.ParseIP(host) != nil {
+		return nil
+	}
+	if err := lookupIP(host); err != nil {
+		return fmt.Errorf("field `%s` must be IP: %w", field, err)
+	}
+	return nil
+}
+
 func validatePort(field string, port int) error {
 	switch {
 	case port < 0:
@@ -589,6 +619,9 @@ func validatePort(field string, port int) error {
 func warnExperimental(y *LimaYAML) {
 	if *y.MountType == VIRTIOFS && runtime.GOOS == "linux" {
 		logrus.Warn("`mountType: virtiofs` on Linux is experimental")
+	}
+	if *y.VMType == EXT {
+		logrus.Warn("`vmType: ext` is experimental")
 	}
 	switch *y.Arch {
 	case RISCV64, ARMV7L, S390X, PPC64LE:

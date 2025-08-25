@@ -90,6 +90,7 @@ func copyAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	legacySSH := sshutil.DetectOpenSSHVersion(ctx, sshExe).LessThan(*semver.New("8.0.0"))
+	localhostOnly := true
 	for _, arg := range args {
 		if runtime.GOOS == "windows" {
 			if filepath.IsAbs(arg) {
@@ -119,9 +120,12 @@ func copyAction(cmd *cobra.Command, args []string) error {
 			}
 			if legacySSH {
 				scpFlags = append(scpFlags, "-P", fmt.Sprintf("%d", inst.SSHLocalPort))
-				scpArgs = append(scpArgs, fmt.Sprintf("%s@127.0.0.1:%s", *inst.Config.User.Name, path[1]))
+				scpArgs = append(scpArgs, fmt.Sprintf("%s@%s:%s", *inst.Config.User.Name, inst.SSHAddress, path[1]))
 			} else {
-				scpArgs = append(scpArgs, fmt.Sprintf("scp://%s@127.0.0.1:%d/%s", *inst.Config.User.Name, inst.SSHLocalPort, path[1]))
+				scpArgs = append(scpArgs, fmt.Sprintf("scp://%s@%s:%d/%s", *inst.Config.User.Name, inst.SSHAddress, inst.SSHLocalPort, path[1]))
+			}
+			if !sshutil.IsLocalhost(inst.SSHAddress) {
+				localhostOnly = false
 			}
 			instances[instName] = inst
 		default:
@@ -144,7 +148,7 @@ func copyAction(cmd *cobra.Command, args []string) error {
 			if err != nil {
 				return err
 			}
-			sshOpts, err = sshutil.SSHOpts(ctx, sshExe, inst.Dir, *inst.Config.User.Name, false, false, false, false)
+			sshOpts, err = sshutil.SSHOpts(ctx, sshExe, inst.Dir, *inst.Config.User.Name, false, inst.SSHAddress, false, false, false)
 			if err != nil {
 				return err
 			}
@@ -155,7 +159,7 @@ func copyAction(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		sshOpts, err = sshutil.CommonOpts(ctx, sshExe, false)
+		sshOpts, err = sshutil.CommonOpts(ctx, sshExe, false, localhostOnly)
 		if err != nil {
 			return err
 		}
