@@ -27,7 +27,7 @@ if [ "$LIMA_CIDATA_ROSETTA_BINFMT" = "true" ]; then
 	[ ! -d "$(dirname "$binfmtd_conf")" ] || [ -f "$binfmtd_conf" ] || echo "$rosetta_binfmt" >"$binfmtd_conf"
 else
 	# unregister rosetta from binfmt_misc if it exists
-	[ ! -f "$binfmt_entry" ] || echo -1 | "$binfmt_entry"
+	[ ! -f "$binfmt_entry" ] || echo -1 >"$binfmt_entry"
 	# remove binfmt.d(5) configuration if it exists
 	[ ! -f "$binfmtd_conf" ] || rm "$binfmtd_conf"
 fi
