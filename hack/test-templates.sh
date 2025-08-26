@@ -58,6 +58,7 @@ declare -A CHECKS=(
 	["provision-data"]=""
 	["param-env-variables"]=""
 	["set-user"]=""
+	["preserve-env"]="1"
 )
 
 case "$NAME" in
@@ -274,6 +275,10 @@ fi
 
 if [[ -n ${CHECKS["mount-home"]} ]]; then
 	"${scriptdir}"/test-mount-home.sh "$NAME"
+fi
+
+if [[ -n ${CHECKS["preserve-env"]} ]]; then
+	"${scriptdir}"/test-preserve-env.sh "$NAME"
 fi
 
 # Use GHCR to avoid hitting Docker Hub rate limit

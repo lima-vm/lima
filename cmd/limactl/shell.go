@@ -36,6 +36,11 @@ lima command is provided as an alias for limactl shell $LIMA_INSTANCE. $LIMA_INS
 By default, the first 'ssh' executable found in the host's PATH is used to connect to the Lima instance.
 A custom ssh alias can be used instead by setting the $` + sshutil.EnvShellSSH + ` environment variable.
 
+Environment Variables:
+  --preserve-env: Propagates host environment variables to the guest instance.
+                  Use LIMA_SHELLENV_ALLOW to specify which variables to allow.
+                  Use LIMA_SHELLENV_BLOCK to specify which variables to block (extends default blocklist with +).
+
 Hint: try --debug to show the detailed logs, if it seems hanging (mostly due to some SSH issue).
 `
 
