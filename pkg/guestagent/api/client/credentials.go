@@ -41,6 +41,10 @@ func (c *secureTC) Clone() credentials.TransportCredentials {
 }
 
 func (c *secureTC) OverrideServerName(serverNameOverride string) error {
+	// SA1019: c.info.ServerName is deprecated:
+	// Users should use grpc.WithAuthority to override the authority on a channel instead of configuring the credentials.
+
+	//nolint:staticcheck // c.info.ServerName is used for compatibility reason
 	c.info.ServerName = serverNameOverride
 	return nil
 }
