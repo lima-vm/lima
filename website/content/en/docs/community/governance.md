@@ -26,6 +26,11 @@ Maintainers consist of two roles:
   A Reviewer is considered as a candidate to become a Committer.
   Reviewers are not recognized as Maintainers in <https://github.com/cncf/foundation/blob/main/project-maintainers.csv>.
 
+Access control is enforced via GitHub team membership:
+* All committers are members of the `@lima-vm/committers` team and have the `Maintain` role on all repos.
+* All reviewers are members of the `@lima-vm/reviewers` team and have the `Triage` role on all repos.
+* The `@lima-vm/maintainers` team includes both committers and reviewers, but doesn't grant any extra access.
+
 See also the [Contributing](../contributing) page.
 
 ### Current maintainers
