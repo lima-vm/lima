@@ -14,10 +14,9 @@ import (
 
 const (
 	launchHostAgentForeground = false
-	showProgress              = false
 )
 
-func Restart(ctx context.Context, inst *limatype.Instance) error {
+func Restart(ctx context.Context, inst *limatype.Instance, showProgress bool) error {
 	if err := StopGracefully(ctx, inst, true); err != nil {
 		return err
 	}
@@ -33,7 +32,7 @@ func Restart(ctx context.Context, inst *limatype.Instance) error {
 	return nil
 }
 
-func RestartForcibly(ctx context.Context, inst *limatype.Instance) error {
+func RestartForcibly(ctx context.Context, inst *limatype.Instance, showProgress bool) error {
 	logrus.Info("Restarting the instance forcibly")
 	StopForcibly(inst)
 
