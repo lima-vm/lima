@@ -21,6 +21,7 @@ func newRestartCommand() *cobra.Command {
 	}
 
 	restartCmd.Flags().BoolP("force", "f", false, "Force stop and restart the instance")
+	restartCmd.Flags().Bool("progress", false, "Show provision script progress by tailing cloud-init logs")
 	return restartCmd
 }
 
@@ -40,12 +41,16 @@ func restartAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-
-	if force {
-		return instance.RestartForcibly(ctx, inst)
+	progress, err := cmd.Flags().GetBool("progress")
+	if err != nil {
+		return err
 	}
 
-	return instance.Restart(ctx, inst)
+	if force {
+		return instance.RestartForcibly(ctx, inst, progress)
+	}
+
+	return instance.Restart(ctx, inst, progress)
 }
 
 func restartBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
