@@ -41,10 +41,7 @@ func validateConfigAgainstDriver(ctx context.Context, y *limatype.LimaYAML, file
 		return handlePreConfiguredDriverAction(ctx, y, extDriver.Path, filePath)
 	}
 
-	if err := intDriver.AcceptConfig(y, filePath); err != nil {
-		return err
-	}
-	if err := intDriver.FillConfig(y, filePath); err != nil {
+	if err := intDriver.FillConfig(ctx, y, filePath); err != nil {
 		return err
 	}
 
