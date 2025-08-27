@@ -77,6 +77,9 @@ type HostAgent struct {
 	guestAgentAliveChOnce sync.Once
 
 	showProgress bool // whether to show cloud-init progress
+
+	statusMu      sync.RWMutex
+	currentStatus events.Status
 }
 
 type options struct {
@@ -285,12 +288,28 @@ func determineSSHLocalPort(confLocalPort int, instName, limaVersion string) (int
 func (a *HostAgent) emitEvent(_ context.Context, ev events.Event) {
 	a.eventEncMu.Lock()
 	defer a.eventEncMu.Unlock()
+
+	a.statusMu.Lock()
+	a.currentStatus = ev.Status
+	a.statusMu.Unlock()
+
 	if ev.Time.IsZero() {
 		ev.Time = time.Now()
 	}
 	if err := a.eventEnc.Encode(ev); err != nil {
 		logrus.WithField("event", ev).WithError(err).Error("failed to emit an event")
 	}
+}
+
+func (a *HostAgent) emitCloudInitProgressEvent(ctx context.Context, progress *events.CloudInitProgress) {
+	a.statusMu.RLock()
+	currentStatus := a.currentStatus
+	a.statusMu.RUnlock()
+
+	currentStatus.CloudInitProgress = progress
+
+	ev := events.Event{Status: currentStatus}
+	a.emitEvent(ctx, ev)
 }
 
 func generatePassword(length int) (string, error) {
@@ -513,7 +532,10 @@ sudo chown -R "${USER}" /run/host-services`
 		if a.showProgress {
 			cloudInitDone := make(chan struct{})
 			go func() {
-				a.watchCloudInitProgress(ctx)
+				timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+				defer cancel()
+
+				a.watchCloudInitProgress(timeoutCtx)
 				close(cloudInitDone)
 			}()
 
@@ -820,15 +842,22 @@ func forwardSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, 
 }
 
 func (a *HostAgent) watchCloudInitProgress(ctx context.Context) {
+	exitReason := "Cloud-init monitoring completed successfully"
+	var cmd *exec.Cmd
+
+	defer func() {
+		a.emitCloudInitProgressEvent(context.Background(), &events.CloudInitProgress{
+			Active:    false,
+			Completed: true,
+			LogLine:   exitReason,
+		})
+		logrus.Debug("Cloud-init progress monitoring completed")
+	}()
+
 	logrus.Debug("Starting cloud-init progress monitoring")
 
-	a.emitEvent(ctx, events.Event{
-		Status: events.Status{
-			SSHLocalPort: a.sshLocalPort,
-			CloudInitProgress: &events.CloudInitProgress{
-				Active: true,
-			},
-		},
+	a.emitCloudInitProgressEvent(ctx, &events.CloudInitProgress{
+		Active: true,
 	})
 
 	maxRetries := 30
@@ -866,15 +895,17 @@ func (a *HostAgent) watchCloudInitProgress(ctx context.Context) {
 		"sudo", "tail", "-n", "+1", "-f", "/var/log/cloud-init-output.log",
 	)
 
-	cmd := exec.CommandContext(ctx, a.sshConfig.Binary(), args...)
+	cmd = exec.CommandContext(ctx, a.sshConfig.Binary(), args...)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		logrus.WithError(err).Warn("Failed to create stdout pipe for cloud-init monitoring")
+		exitReason = "Failed to create stdout pipe for cloud-init monitoring"
 		return
 	}
 
 	if err := cmd.Start(); err != nil {
 		logrus.WithError(err).Warn("Failed to start cloud-init monitoring command")
+		exitReason = "Failed to start cloud-init monitoring command"
 		return
 	}
 
@@ -887,23 +918,37 @@ func (a *HostAgent) watchCloudInitProgress(ctx context.Context) {
 			continue
 		}
 
-		if strings.Contains(line, "Cloud-init") && strings.Contains(line, "finished") {
-			cloudInitFinished = true
+		if !cloudInitFinished {
+			if isCloudInitFinished(line) {
+				logrus.Debug("Cloud-init completion detected via log pattern")
+				cloudInitFinished = true
+			}
 		}
 
-		a.emitEvent(ctx, events.Event{
-			Status: events.Status{
-				SSHLocalPort: a.sshLocalPort,
-				CloudInitProgress: &events.CloudInitProgress{
-					Active:    !cloudInitFinished,
-					LogLine:   line,
-					Completed: cloudInitFinished,
-				},
-			},
+		a.emitCloudInitProgressEvent(ctx, &events.CloudInitProgress{
+			Active:    !cloudInitFinished,
+			LogLine:   line,
+			Completed: cloudInitFinished,
 		})
+
+		if cloudInitFinished {
+			logrus.Debug("Breaking from cloud-init monitoring loop - completion detected")
+			if cmd.Process != nil {
+				logrus.Debug("Killing cloud-init monitoring process after completion")
+				if err := cmd.Process.Kill(); err != nil {
+					logrus.WithError(err).Debug("Failed to kill cloud-init monitoring process")
+				}
+			}
+			break
+		}
 	}
 
 	if err := cmd.Wait(); err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			logrus.Warn("Cloud-init monitoring timed out after 10 minutes")
+			exitReason = "Cloud-init monitoring timed out after 10 minutes"
+			return
+		}
 		logrus.WithError(err).Debug("SSH command finished (expected when cloud-init completes)")
 	}
 
@@ -922,36 +967,24 @@ func (a *HostAgent) watchCloudInitProgress(ctx context.Context) {
 			lines := strings.Split(string(finalOutput), "\n")
 			for _, line := range lines {
 				if strings.TrimSpace(line) != "" {
-					if strings.Contains(line, "Cloud-init") && strings.Contains(line, "finished") {
-						cloudInitFinished = true
+					if !cloudInitFinished {
+						cloudInitFinished = isCloudInitFinished(line)
 					}
 
-					a.emitEvent(ctx, events.Event{
-						Status: events.Status{
-							SSHLocalPort: a.sshLocalPort,
-							CloudInitProgress: &events.CloudInitProgress{
-								Active:    !cloudInitFinished,
-								LogLine:   line,
-								Completed: cloudInitFinished,
-							},
-						},
+					a.emitCloudInitProgressEvent(ctx, &events.CloudInitProgress{
+						Active:    !cloudInitFinished,
+						LogLine:   line,
+						Completed: cloudInitFinished,
 					})
 				}
 			}
 		}
 	}
+}
 
-	a.emitEvent(ctx, events.Event{
-		Status: events.Status{
-			SSHLocalPort: a.sshLocalPort,
-			CloudInitProgress: &events.CloudInitProgress{
-				Active:    false,
-				Completed: true,
-			},
-		},
-	})
-
-	logrus.Debug("Cloud-init progress monitoring completed")
+func isCloudInitFinished(line string) bool {
+	line = strings.ToLower(strings.TrimSpace(line))
+	return strings.Contains(line, "cloud-init") && strings.Contains(line, "finished")
 }
 
 func copyToHost(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, remote string) error {
