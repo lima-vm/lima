@@ -371,20 +371,23 @@ func (l *LimaVzDriver) GuestAgentConn(_ context.Context) (net.Conn, string, erro
 
 func (l *LimaVzDriver) Info() driver.Info {
 	var info driver.Info
-	if l.Instance != nil {
-		info.CanRunGUI = l.canRunGUI()
-	}
 
-	info.DriverName = "vz"
+	info.Features.DriverName = "vz"
 	info.VsockPort = l.vSockPort
 	info.VirtioPort = l.virtioPort
 	if l.Instance != nil {
 		info.InstanceDir = l.Instance.Dir
 	}
 
+	var guiFlag bool
+	if l.Instance != nil {
+		guiFlag = l.canRunGUI()
+	}
 	info.Features = driver.DriverFeatures{
 		DynamicSSHAddress:    false,
 		SkipSocketForwarding: false,
+		DriverName:           "vz",
+		CanRunGUI:            guiFlag,
 	}
 	return info
 }

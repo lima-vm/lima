@@ -348,37 +348,37 @@ func TestValidateAgainstLatestConfig(t *testing.T) {
 			name:    "Valid disk size unchanged",
 			yNew:    `disk: 100GiB`,
 			yLatest: `disk: 100GiB`,
-			wantErr: fmt.Sprintf("failed to accept config for \"\": vmType %q is not a registered driver", limatype.DefaultDriver()),
+			wantErr: fmt.Sprintf("failed to resolve vm for \"\": vmType %q is not a registered driver", limatype.DefaultDriver()),
 		},
 		{
 			name:    "Valid disk size increased",
 			yNew:    `disk: 200GiB`,
 			yLatest: `disk: 100GiB`,
-			wantErr: fmt.Sprintf("failed to accept config for \"\": vmType %q is not a registered driver", limatype.DefaultDriver()),
+			wantErr: fmt.Sprintf("failed to resolve vm for \"\": vmType %q is not a registered driver", limatype.DefaultDriver()),
 		},
 		{
 			name:    "No disk field in both YAMLs",
 			yNew:    ``,
 			yLatest: ``,
-			wantErr: fmt.Sprintf("failed to accept config for \"\": vmType %q is not a registered driver", limatype.DefaultDriver()),
+			wantErr: fmt.Sprintf("failed to resolve vm for \"\": vmType %q is not a registered driver", limatype.DefaultDriver()),
 		},
 		{
 			name:    "No disk field in new YAMLs",
 			yNew:    ``,
 			yLatest: `disk: 100GiB`,
-			wantErr: fmt.Sprintf("failed to accept config for \"\": vmType %q is not a registered driver", limatype.DefaultDriver()),
+			wantErr: fmt.Sprintf("failed to resolve vm for \"\": vmType %q is not a registered driver", limatype.DefaultDriver()),
 		},
 		{
 			name:    "No disk field in latest YAMLs",
 			yNew:    `disk: 100GiB`,
 			yLatest: ``,
-			wantErr: fmt.Sprintf("failed to accept config for \"\": vmType %q is not a registered driver", limatype.DefaultDriver()),
+			wantErr: fmt.Sprintf("failed to resolve vm for \"\": vmType %q is not a registered driver", limatype.DefaultDriver()),
 		},
 		{
 			name:    "Disk size shrunk",
 			yNew:    `disk: 50GiB`,
 			yLatest: `disk: 100GiB`,
-			wantErr: fmt.Sprintf("failed to accept config for \"\": vmType %q is not a registered driver\n", limatype.DefaultDriver()) +
+			wantErr: fmt.Sprintf("failed to resolve vm for \"\": vmType %q is not a registered driver\n", limatype.DefaultDriver()) +
 				"field `disk`: shrinking the disk (100GiB --> 50GiB) is not supported",
 		},
 	}

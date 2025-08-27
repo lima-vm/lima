@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"net"
 	"os"
@@ -25,6 +26,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/driver"
 	pb "github.com/lima-vm/lima/v2/pkg/driver/external"
 	"github.com/lima-vm/lima/v2/pkg/driver/external/client"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/registry"
@@ -51,10 +53,22 @@ func (t *listenerTracker) Accept() (net.Conn, error) {
 }
 
 func Serve(ctx context.Context, driver driver.Driver) {
+	preConfiguredDriverAction := flag.Bool("pre-driver-action", false, "Run pre-driver action before starting the gRPC server")
+	inspectStatus := flag.Bool("inspect-status", false, "Inspect status of the driver")
+	flag.Parse()
+	if *preConfiguredDriverAction {
+		handlePreConfiguredDriverAction(driver)
+		return
+	}
+	if *inspectStatus {
+		handleInspectStatus(driver)
+		return
+	}
+
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 
-	socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("lima-driver-%s-%d.sock", driver.Info().DriverName, os.Getpid()))
+	socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("lima-driver-%s-%d.sock", driver.Info().Features.DriverName, os.Getpid()))
 
 	defer func() {
 		if err := os.Remove(socketPath); err != nil && !os.IsNotExist(err) {
@@ -115,7 +129,6 @@ func Serve(ctx context.Context, driver driver.Driver) {
 		logger.Info("Received shutdown signal, stopping server...")
 		closeShutdown()
 	}()
-
 	go func() {
 		timer := time.NewTimer(60 * time.Second)
 		defer timer.Stop()
@@ -133,7 +146,7 @@ func Serve(ctx context.Context, driver driver.Driver) {
 	}()
 
 	go func() {
-		logger.Infof("Starting external driver server for %s", driver.Info().DriverName)
+		logger.Infof("Starting external driver server for %s", driver.Info().Features.DriverName)
 		logger.Infof("Server starting on Unix socket: %s", socketPath)
 		if err := server.Serve(tListener); err != nil {
 			if errors.Is(err, grpc.ErrServerStopped) {
@@ -146,6 +159,56 @@ func Serve(ctx context.Context, driver driver.Driver) {
 
 	<-shutdownCh
 	server.GracefulStop()
+}
+
+func handleInspectStatus(driver driver.Driver) {
+	decoder := json.NewDecoder(os.Stdin)
+	encoder := json.NewEncoder(os.Stdout)
+
+	var payload []byte
+	if err := decoder.Decode(&payload); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to decode instance payload from stdin: %v", err)
+	}
+
+	var inst limatype.Instance
+	if err := inst.UnmarshalJSON(payload); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to unmarshal instance: %v", err)
+	}
+
+	status := driver.InspectStatus(context.Background(), &inst)
+	inst.Status = status
+
+	resp, err := inst.MarshalJSON()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to marshal instance response: %v", err)
+	}
+
+	if err := encoder.Encode(resp); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to encode instance response: %v", err)
+	}
+}
+
+func handlePreConfiguredDriverAction(driver driver.Driver) {
+	decoder := json.NewDecoder(os.Stdin)
+	encoder := json.NewEncoder(os.Stdout)
+
+	var payload limatype.PreConfiguredDriverPayload
+	if err := decoder.Decode(&payload); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to decode pre-configured driver payload from stdin: %v", err)
+	}
+
+	config := &payload.Config
+	if err := driver.AcceptConfig(config, payload.FilePath); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to accept config: %v", err)
+	}
+
+	if err := driver.FillConfig(config, payload.FilePath); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to fill config: %v", err)
+	}
+
+	if err := encoder.Encode(*config); err != nil {
+		fmt.Fprintf(os.Stderr, "Error encoding response: %v", err)
+	}
 }
 
 func Start(extDriver *registry.ExternalDriver, instName string) error {

@@ -677,14 +677,14 @@ func (l *LimaQemuDriver) Info() driver.Info {
 	if l.Instance != nil && l.Instance.Dir != "" {
 		info.InstanceDir = l.Instance.Dir
 	}
-	info.DriverName = "qemu"
-	info.CanRunGUI = false
 	info.VirtioPort = l.virtioPort
 	info.VsockPort = l.vSockPort
 
 	info.Features = driver.DriverFeatures{
 		DynamicSSHAddress:    false,
 		SkipSocketForwarding: false,
+		DriverName:           "qemu",
+		CanRunGUI:            false,
 	}
 	return info
 }

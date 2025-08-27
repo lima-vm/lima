@@ -334,11 +334,6 @@ type PreConfiguredDriverPayload struct {
 	FilePath string   `json:"filePath"`
 }
 
-type PreConfiguredDriverResponse struct {
-	Config LimaYAML `json:"config"`
-	Error  string   `json:"error,omitempty"`
-}
-
 func NewOS(osname string) OS {
 	switch osname {
 	case "linux":

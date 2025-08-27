@@ -587,8 +587,8 @@ func ValidateAgainstLatestConfig(ctx context.Context, yNew, yLatest []byte) erro
 	if err != nil {
 		errs = errors.Join(errs, err)
 	}
-	if err := driverutil.ResolveVMType(l, ""); err != nil {
-		errs = errors.Join(errs, fmt.Errorf("failed to accept config for %q: %w", "", err))
+	if err := driverutil.ResolveVMType(ctx, l, ""); err != nil {
+		errs = errors.Join(errs, fmt.Errorf("failed to resolve vm for %q: %w", "", err))
 	}
 	if err := Unmarshal(yNew, &n, "Unmarshal new YAML bytes"); err != nil {
 		errs = errors.Join(errs, err)

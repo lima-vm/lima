@@ -80,8 +80,8 @@ func cloneAction(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		if err := driverutil.ResolveVMType(y, filePath); err != nil {
-			return fmt.Errorf("failed to accept config for %q: %w", filePath, err)
+		if err := driverutil.ResolveVMType(ctx, y, filePath); err != nil {
+			return fmt.Errorf("failed to resolve vm for %q: %w", filePath, err)
 		}
 		if err := limayaml.Validate(y, true); err != nil {
 			return saveRejectedYAML(yBytes, err)
