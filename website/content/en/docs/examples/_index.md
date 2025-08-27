@@ -5,8 +5,7 @@ weight: 3
 
 ## Running Linux commands
 ```bash
-lima sudo apt-get install -y neofetch
-lima neofetch
+lima uname -a
 ```
 
 ## Accessing host files
