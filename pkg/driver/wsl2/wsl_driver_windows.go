@@ -306,6 +306,7 @@ func (l *LimaWslDriver) GuestAgentConn(ctx context.Context) (net.Conn, string, e
 
 func (l *LimaWslDriver) Info() driver.Info {
 	var info driver.Info
+	info.Name = "wsl2"
 	if l.Instance != nil {
 		info.InstanceDir = l.Instance.Dir
 	}
@@ -315,7 +316,6 @@ func (l *LimaWslDriver) Info() driver.Info {
 	info.Features = driver.DriverFeatures{
 		DynamicSSHAddress:    true,
 		SkipSocketForwarding: true,
-		DriverName:           "wsl2",
 		CanRunGUI:            l.canRunGUI(),
 	}
 	return info

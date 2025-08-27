@@ -674,6 +674,7 @@ func (a *qArgTemplateApplier) applyTemplate(qArg string) (string, error) {
 
 func (l *LimaQemuDriver) Info() driver.Info {
 	var info driver.Info
+	info.Name = "qemu"
 	if l.Instance != nil && l.Instance.Dir != "" {
 		info.InstanceDir = l.Instance.Dir
 	}
@@ -683,7 +684,6 @@ func (l *LimaQemuDriver) Info() driver.Info {
 	info.Features = driver.DriverFeatures{
 		DynamicSSHAddress:    false,
 		SkipSocketForwarding: false,
-		DriverName:           "qemu",
 		CanRunGUI:            false,
 	}
 	return info
