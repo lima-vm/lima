@@ -17,6 +17,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
+	"github.com/lima-vm/lima/v2/cmd/yq"
 	"github.com/lima-vm/lima/v2/pkg/debugutil"
 	"github.com/lima-vm/lima/v2/pkg/driver/external/server"
 	"github.com/lima-vm/lima/v2/pkg/fsutil"
@@ -32,6 +33,7 @@ const (
 )
 
 func main() {
+	yq.MaybeRunYQ()
 	if runtime.GOOS == "windows" {
 		extras, hasExtra := os.LookupEnv("_LIMA_WINDOWS_EXTRA_PATH")
 		if hasExtra && strings.TrimSpace(extras) != "" {
