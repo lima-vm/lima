@@ -9,11 +9,13 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
+	"github.com/lima-vm/lima/v2/cmd/yq"
 	"github.com/lima-vm/lima/v2/pkg/debugutil"
 	"github.com/lima-vm/lima/v2/pkg/version"
 )
 
 func main() {
+	yq.MaybeRunYQ()
 	if err := newApp().Execute(); err != nil {
 		logrus.Fatal(err)
 	}
