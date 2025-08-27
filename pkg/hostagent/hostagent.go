@@ -892,7 +892,13 @@ func (a *HostAgent) watchCloudInitProgress(ctx context.Context) {
 	args = append(args,
 		"-p", strconv.Itoa(a.sshLocalPort),
 		"127.0.0.1",
-		"sudo", "tail", "-n", "+1", "-f", "/var/log/cloud-init-output.log",
+		"sh", "-c",
+		`"sudo tail -n +$(sudo awk '
+			BEGIN{b=1; e=1}
+			/^Cloud-init.* finished/{e=NR}
+			/.*/{if(NR>e){b=e+1}}
+			END{print b}
+		' /var/log/cloud-init-output.log) -f /var/log/cloud-init-output.log"`,
 	)
 
 	cmd = exec.CommandContext(ctx, a.sshConfig.Binary(), args...)
