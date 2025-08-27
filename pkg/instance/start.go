@@ -19,7 +19,7 @@ import (
 	"github.com/lima-vm/go-qcow2reader"
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/v2/pkg/downloader"
+	"github.com/lima-vm/lima/v2/pkg/cacheutil"
 	"github.com/lima-vm/lima/v2/pkg/driver"
 	"github.com/lima-vm/lima/v2/pkg/driverutil"
 	"github.com/lima-vm/lima/v2/pkg/executil"
@@ -36,41 +36,6 @@ import (
 // DefaultWatchHostAgentEventsTimeout is the duration to wait for the instance
 // to be running before timing out.
 const DefaultWatchHostAgentEventsTimeout = 10 * time.Minute
-
-// ensureNerdctlArchiveCache prefetches the nerdctl-full-VERSION-GOOS-GOARCH.tar.gz archive
-// into the cache before launching the hostagent process, so that we can show the progress in tty.
-// https://github.com/lima-vm/lima/issues/326
-func ensureNerdctlArchiveCache(ctx context.Context, y *limatype.LimaYAML, created bool) (string, error) {
-	if !*y.Containerd.System && !*y.Containerd.User {
-		// nerdctl archive is not needed
-		return "", nil
-	}
-
-	errs := make([]error, len(y.Containerd.Archives))
-	for i, f := range y.Containerd.Archives {
-		// Skip downloading again if the file is already in the cache
-		if created && f.Arch == *y.Arch && !downloader.IsLocal(f.Location) {
-			path, err := fileutils.CachedFile(f)
-			if err == nil {
-				return path, nil
-			}
-		}
-		path, err := fileutils.DownloadFile(ctx, "", f, false, "the nerdctl archive", *y.Arch)
-		if err != nil {
-			errs[i] = err
-			continue
-		}
-		if path == "" {
-			if downloader.IsLocal(f.Location) {
-				return f.Location, nil
-			}
-			return "", fmt.Errorf("cache did not contain %q", f.Location)
-		}
-		return path, nil
-	}
-
-	return "", fileutils.Errors(errs)
-}
 
 type Prepared struct {
 	Driver              driver.Driver
@@ -154,7 +119,7 @@ func Prepare(ctx context.Context, inst *limatype.Instance) (*Prepared, error) {
 		return nil, err
 	}
 
-	nerdctlArchiveCache, err := ensureNerdctlArchiveCache(ctx, inst.Config, created)
+	nerdctlArchiveCache, err := cacheutil.EnsureNerdctlArchiveCache(ctx, inst.Config, created)
 	if err != nil {
 		return nil, err
 	}
