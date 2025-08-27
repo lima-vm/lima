@@ -195,7 +195,7 @@ func isExecutable(mode os.FileMode) bool {
 }
 
 func Register(driver driver.Driver) {
-	name := driver.Info().Features.DriverName
+	name := driver.Info().Name
 	if _, exists := internalDrivers[name]; exists {
 		return
 	}

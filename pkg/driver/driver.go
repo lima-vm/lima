@@ -92,6 +92,7 @@ type ConfiguredDriver struct {
 }
 
 type Info struct {
+	Name        string         `json:"name"`
 	VsockPort   int            `json:"vsockPort"`
 	VirtioPort  string         `json:"virtioPort"`
 	InstanceDir string         `json:"instanceDir,omitempty"`
@@ -99,8 +100,7 @@ type Info struct {
 }
 
 type DriverFeatures struct {
-	DriverName           string `json:"driverName"`
-	CanRunGUI            bool   `json:"canRunGui,omitempty"`
-	DynamicSSHAddress    bool   `json:"dynamicSSHAddress"`
-	SkipSocketForwarding bool   `json:"skipSocketForwarding"`
+	CanRunGUI            bool `json:"canRunGui,omitempty"`
+	DynamicSSHAddress    bool `json:"dynamicSSHAddress"`
+	SkipSocketForwarding bool `json:"skipSocketForwarding"`
 }

@@ -45,7 +45,7 @@ func (m *mockDriver) Unregister(_ context.Context) error                        
 func (m *mockDriver) ForwardGuestAgent() bool                                    { return false }
 func (m *mockDriver) GuestAgentConn(_ context.Context) (net.Conn, string, error) { return nil, "", nil }
 func (m *mockDriver) Info() driver.Info {
-	return driver.Info{Features: driver.DriverFeatures{DriverName: m.Name}}
+	return driver.Info{Name: m.Name}
 }
 func (m *mockDriver) Configure(_ *limatype.Instance) *driver.ConfiguredDriver      { return nil }
 func (m *mockDriver) AcceptConfig(_ *limatype.LimaYAML, _ string) error            { return nil }
@@ -80,7 +80,7 @@ func TestRegister(t *testing.T) {
 	assert.Equal(t, exists, true)
 	assert.Assert(t, extDriver == nil)
 	assert.Assert(t, intDriver != nil)
-	assert.Equal(t, intDriver.Info().Features.DriverName, "test-driver")
+	assert.Equal(t, intDriver.Info().Name, "test-driver")
 
 	vmTypes := List()
 	assert.Equal(t, vmTypes["test-driver-2"], Internal)
