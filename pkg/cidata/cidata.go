@@ -150,7 +150,7 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 		args.RosettaEnabled = *instConfig.VMOpts.VZ.Rosetta.Enabled
 	}
 	if instConfig.VMOpts.VZ.Rosetta.BinFmt != nil {
-		args.RosettaEnabled = *instConfig.VMOpts.VZ.Rosetta.BinFmt
+		args.RosettaBinFmt = *instConfig.VMOpts.VZ.Rosetta.BinFmt
 	}
 
 	firstUsernetIndex := limayaml.FirstUsernetIndex(instConfig)
