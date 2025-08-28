@@ -20,6 +20,7 @@ param:
   PROBE: probe
   SYSTEM: system
   USER: user
+  YQ: yq
 
 provision:
 - mode: ansible
@@ -37,6 +38,10 @@ provision:
   content: |
     fs.inotify.max_user_watches = 524288
     fs.inotify.max_user_instances = 512
+- mode: yq
+  path: "/tmp/param-{{.Param.YQ}}.json"
+  expression: .YQ = "{{.Param.YQ}}"
+  user: "{{.User}}"
 
 probes:
 - mode: readiness

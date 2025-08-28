@@ -335,6 +335,15 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 				Permissions: *f.Permissions,
 			})
 		}
+		if f.Mode == limatype.ProvisionModeYQ {
+			args.YQProvisions = append(args.YQProvisions, YQProvision{
+				FileName:    fmt.Sprintf("%08d", i),
+				Format:      *f.Format,
+				Owner:       *f.Owner,
+				Path:        *f.Path,
+				Permissions: *f.Permissions,
+			})
+		}
 	}
 
 	return &args, nil
@@ -401,6 +410,11 @@ func GenerateISO9660(ctx context.Context, drv driver.Driver, instDir, name strin
 			layout = append(layout, iso9660util.Entry{
 				Path:   fmt.Sprintf("provision.%s/%08d", f.Mode, i),
 				Reader: strings.NewReader(*f.Content),
+			})
+		case limatype.ProvisionModeYQ:
+			layout = append(layout, iso9660util.Entry{
+				Path:   fmt.Sprintf("provision.%s/%08d", f.Mode, i),
+				Reader: strings.NewReader(*f.Expression),
 			})
 		case limatype.ProvisionModeBoot:
 			continue

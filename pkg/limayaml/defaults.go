@@ -405,13 +405,27 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 			if provision.Overwrite == nil {
 				provision.Overwrite = ptr.Of(true)
 			}
+		}
+		if provision.Mode == limatype.ProvisionModeYQ {
+			if provision.Expression != nil {
+				if out, err := executeGuestTemplate(*provision.Expression, instDir, y.User, y.Param); err == nil {
+					provision.Expression = ptr.Of(out.String())
+				} else {
+					logrus.WithError(err).Warnf("Couldn't process expression %q as a template", *provision.Expression)
+				}
+			}
+			if provision.Format == nil {
+				provision.Format = ptr.Of("auto")
+			}
+		}
+		if provision.Mode == limatype.ProvisionModeData || provision.Mode == limatype.ProvisionModeYQ {
 			if provision.Owner == nil {
 				provision.Owner = ptr.Of("root:root")
 			} else {
 				if out, err := executeGuestTemplate(*provision.Owner, instDir, y.User, y.Param); err == nil {
 					provision.Owner = ptr.Of(out.String())
 				} else {
-					logrus.WithError(err).Warnf("Couldn't owner %q as a template", *provision.Owner)
+					logrus.WithError(err).Warnf("Couldn't process owner %q as a template", *provision.Owner)
 				}
 			}
 			// Path is required; validation will throw an error when it is nil

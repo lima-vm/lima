@@ -148,8 +148,11 @@ See [Building Ansible inventories](https://docs.ansible.com/ansible/latest/inven
 - `boot.sh`: Boot script
 - `boot/*`: Boot script modules
 - `util/*`: Utility command scripts, executed in the boot script modules
+- `provision.data/*`: Custom provision files (data)
+- `provision.dependency/*`: Custom provision scripts (dependency)
 - `provision.system/*`: Custom provision scripts (system)
 - `provision.user/*`: Custom provision scripts (user)
+- `provision.yq/*`: Custom provision scripts (yq)
 - `etc_environment`: Environment variables to be added to `/etc/environment` (also loaded during `boot.sh`)
 
 Max file name length = 30

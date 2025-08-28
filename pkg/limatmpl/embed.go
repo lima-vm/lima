@@ -648,6 +648,11 @@ func (tmpl *Template) embedAllScripts(ctx context.Context, embedAll bool) error 
 			if p.Content != nil {
 				continue
 			}
+		case limatype.ProvisionModeYQ:
+			newName = "expression"
+			if p.Expression != nil {
+				continue
+			}
 		default:
 			if p.Script != "" {
 				continue

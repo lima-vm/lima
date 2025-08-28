@@ -246,6 +246,49 @@ containerd:
 #   owner: "root:root"
 #   permissions: 644
 #   overwrite: false
+# # Create or edit a file in the guest filesystem by using `yq`.
+# # The file specified by `path` will be updated by `expression`.
+# # An empty file of the required `format` will be created if it does not yet exist.
+# # `format` defaults to "auto" and will be detected by file extension of `path`.
+# # If the extension is not recognized by `yq` then `format` must be set to a
+# # value from this list:
+# #   "auto", "csv", "ini", "json", "props", "tsv", "toml", "xml", "yaml"
+# # See https://github.com/mikefarah/yq for more info.
+# # Any missing directories will be created as needed.
+# # The file permissions will be set to the specified value.
+# # The file and directory creation will be performed as the specified owner.
+# # If the existing file is not writable by the specified owner, the operation will fail.
+# # `path` and `expression` are required.
+# # `owner` and `permissions` are optional. Defaults to "root:root" and 644.
+# - mode: yq
+#   path: "{{.Home}}/.config/docker/daemon.json"
+#   expression: ".features.containerd-snapshotter = {{.Param.containerdSnapshotter}}"
+#   format: auto
+#   owner: "{{.User}}"
+#   permissions: 644
+#
+# Q. In what order are provision scripts executed?
+# A. All provisions are processed per boot by each module in stages of cloud-init as follows:
+#   1. cloud-init 'init' stage
+#     bootcmd:
+#     - `mode: boot` scripts are executed
+#
+#   2. cloud-init 'config' stage
+#     write_files:
+#     - `00-lima.boot.sh` is created, but not executed
+#
+#   3. cloud-init 'final' stage
+#     scripts_per_boot:
+#     - `00-lima.boot.sh` is executed; remaining provisions are processed in the following order:
+#       - LIMA pre-defined boot scripts:
+#         - `boot/{00-..., ..., 25-...}`
+#         - `boot/30-install-packages.sh`
+#           - `mode: dependency` scripts are executed
+#         - `boot/{35-..., ...}`
+#       - `mode: data` files are copied
+#       - `mode: yq` files are processed
+#       - `mode: system` scripts are executed
+#       - `mode: user` scripts are executed
 
 # Probe scripts to check readiness.
 # The scripts run in user mode. They must start with a '#!' line.
