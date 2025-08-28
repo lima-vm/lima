@@ -33,7 +33,7 @@ provision:
     export DEBIAN_FRONTEND=noninteractive
     curl -fsSL https://get.docker.com | sh
 - mode: yq
-  path: /etc/systemd/system/docker.service.d/override.conf
+  path: /etc/systemd/system/docker.socket.d/override.conf
   format: ini
   expression: .Socket.SocketUser="{{.User}}"
 - mode: yq
