@@ -12,6 +12,7 @@ The following features are experimental and subject to change:
 - `video.display: vnc` and relevant configuration (`video.vnc.display`)
 - `audio.device`
 - `mountInotify: true`
+- `External drivers`: building and using drivers as separate executables (see [Virtual Machine Drivers](../dev/drivers))
 
 The following commands are experimental and subject to change:
 
