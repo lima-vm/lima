@@ -469,11 +469,7 @@ func (a *HostAgent) Info(_ context.Context) (*hostagentapi.Info, error) {
 
 func (a *HostAgent) startHostAgentRoutines(ctx context.Context) error {
 	if *a.instConfig.Plain {
-		if len(a.instConfig.PortForwards) > 0 {
-			logrus.Info("Running in plain mode. Mounts, containerd, etc. will be ignored. Guest agent will not be running. Port forwarding is enabled via static SSH tunnels.")
-		} else {
-			logrus.Info("Running in plain mode. Mounts, port forwarding, containerd, etc. will be ignored. Guest agent will not be running.")
-		}
+		logrus.Info("Running in plain mode. Mounts, dynamic port forwarding, containerd, etc. will be ignored. Guest agent will not be running. Static port forwarding is allowed.")
 	}
 	a.onClose = append(a.onClose, func() error {
 		logrus.Debugf("shutting down the SSH master")
@@ -531,24 +527,14 @@ sudo chown -R "${USER}" /run/host-services`
 			return errors.Join(unlockErrs...)
 		})
 	}
-	if !*a.instConfig.Plain || len(a.instConfig.PortForwards) > 0 && *a.instConfig.Plain {
+
+	if !*a.instConfig.Plain {
 		go a.watchGuestAgentEvents(ctx)
-		if a.showProgress {
-			cloudInitDone := make(chan struct{})
-			go func() {
-				timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
-				defer cancel()
-
-				a.watchCloudInitProgress(timeoutCtx)
-				close(cloudInitDone)
-			}()
-
-			go func() {
-				<-cloudInitDone
-				logrus.Debug("Cloud-init monitoring completed, VM is fully ready")
-			}()
-		}
+	} else {
+		logrus.Info("Running in plain mode, skipping guest agent events watcher")
+		a.addStaticPortForwards(ctx)
 	}
+
 	if err := a.waitForRequirements("optional", a.optionalRequirements()); err != nil {
 		errs = append(errs, err)
 	}
@@ -611,25 +597,7 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 		}
 	}
 
-	if *a.instConfig.Plain {
-		logrus.Debugf("Setting up static TCP port forwarding for plain mode")
-		for _, rule := range a.instConfig.PortForwards {
-			if rule.GuestSocket == "" {
-				guest := &guestagentapi.IPPort{
-					Ip:       rule.GuestIP.String(),
-					Port:     int32(rule.GuestPort),
-					Protocol: rule.Proto,
-				}
-				local, remote := a.portForwarder.forwardingAddresses(guest)
-				if local != "" {
-					logrus.Infof("Setting up static TCP forwarding from %s to %s", remote, local)
-					if err := forwardTCP(ctx, a.sshConfig, a.sshLocalPort, local, remote, verbForward); err != nil {
-						logrus.WithError(err).Warnf("failed to set up static TCP forwarding %s -> %s", remote, local)
-					}
-				}
-			}
-		}
-	}
+	a.addStaticPortForwards(ctx)
 
 	localUnix := filepath.Join(a.instDir, filenames.GuestAgentSock)
 	remoteUnix := "/run/lima-guestagent.sock"
@@ -690,6 +658,27 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-time.After(10 * time.Second):
+		}
+	}
+}
+
+func (a *HostAgent) addStaticPortForwards(ctx context.Context) {
+	for _, rule := range a.instConfig.PortForwards {
+		if rule.Static {
+			if rule.GuestSocket == "" {
+				guest := &guestagentapi.IPPort{
+					Ip:       rule.GuestIP.String(),
+					Port:     int32(rule.GuestPort),
+					Protocol: rule.Proto,
+				}
+				local, remote := a.portForwarder.forwardingAddresses(guest)
+				if local != "" {
+					logrus.Infof("Setting up static TCP forwarding from %s to %s", remote, local)
+					if err := forwardTCP(ctx, a.sshConfig, a.sshLocalPort, local, remote, verbForward); err != nil {
+						logrus.WithError(err).Warnf("failed to set up static TCP forwarding %s -> %s", remote, local)
+					}
+				}
+			}
 		}
 	}
 }
