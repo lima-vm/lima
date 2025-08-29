@@ -6,6 +6,7 @@ package wsl2
 import (
 	"context"
 	"embed"
+	"errors"
 	"fmt"
 	"net"
 	"regexp"
@@ -79,80 +80,73 @@ func (l *LimaWslDriver) Configure(inst *limatype.Instance) *driver.ConfiguredDri
 	}
 }
 
-func (l *LimaWslDriver) AcceptConfig(cfg *limatype.LimaYAML, _ string) error {
-	if l.Instance == nil {
-		l.Instance = &limatype.Instance{}
-	}
-	l.Instance.Config = cfg
-
-	if err := l.Validate(context.Background()); err != nil {
-		return fmt.Errorf("config not supported by the WSL2 driver: %w", err)
-	}
-
-	return nil
-}
-
-func (l *LimaWslDriver) FillConfig(cfg *limatype.LimaYAML, _ string) error {
+func (l *LimaWslDriver) FillConfig(ctx context.Context, cfg *limatype.LimaYAML, _ string) error {
 	if cfg.VMType == nil {
 		cfg.VMType = ptr.Of(limatype.WSL2)
 	}
 	if cfg.MountType == nil {
 		cfg.MountType = ptr.Of(limatype.WSLMount)
 	}
-
-	return nil
+	return validateConfig(ctx, cfg)
 }
 
-func (l *LimaWslDriver) Validate(_ context.Context) error {
-	if l.Instance.Config.MountType != nil && *l.Instance.Config.MountType != limatype.WSLMount {
-		return fmt.Errorf("field `mountType` must be %q for WSL2 driver, got %q", limatype.WSLMount, *l.Instance.Config.MountType)
+func (l *LimaWslDriver) Validate(ctx context.Context) error {
+	return validateConfig(ctx, l.Instance.Config)
+}
+
+func validateConfig(_ context.Context, cfg *limatype.LimaYAML) error {
+	if cfg == nil {
+		return errors.New("configuration is nil")
+	}
+	if cfg.MountType != nil && *cfg.MountType != limatype.WSLMount {
+		return fmt.Errorf("field `mountType` must be %q for WSL2 driver, got %q", limatype.WSLMount, *cfg.MountType)
 	}
 	// TODO: revise this list for WSL2
-	if l.Instance.Config.VMType != nil {
-		if unknown := reflectutil.UnknownNonEmptyFields(l.Instance.Config, knownYamlProperties...); len(unknown) > 0 {
-			logrus.Warnf("Ignoring: vmType %s: %+v", *l.Instance.Config.VMType, unknown)
+	if cfg.VMType != nil {
+		if unknown := reflectutil.UnknownNonEmptyFields(cfg, knownYamlProperties...); len(unknown) > 0 {
+			logrus.Warnf("Ignoring: vmType %s: %+v", *cfg.VMType, unknown)
 		}
 	}
 
-	if !limayaml.IsNativeArch(*l.Instance.Config.Arch) {
-		return fmt.Errorf("unsupported arch: %q", *l.Instance.Config.Arch)
+	if !limayaml.IsNativeArch(*cfg.Arch) {
+		return fmt.Errorf("unsupported arch: %q", *cfg.Arch)
 	}
 
-	if l.Instance.Config.VMType != nil {
-		if l.Instance.Config.Images != nil && l.Instance.Config.Arch != nil {
+	if cfg.VMType != nil {
+		if cfg.Images != nil && cfg.Arch != nil {
 			// TODO: real filetype checks
 			tarFileRegex := regexp.MustCompile(`.*tar\.*`)
-			for i, image := range l.Instance.Config.Images {
+			for i, image := range cfg.Images {
 				if unknown := reflectutil.UnknownNonEmptyFields(image, "File"); len(unknown) > 0 {
-					logrus.Warnf("Ignoring: vmType %s: images[%d]: %+v", *l.Instance.Config.VMType, i, unknown)
+					logrus.Warnf("Ignoring: vmType %s: images[%d]: %+v", *cfg.VMType, i, unknown)
 				}
 				match := tarFileRegex.MatchString(image.Location)
-				if image.Arch == *l.Instance.Config.Arch && !match {
-					return fmt.Errorf("unsupported image type for vmType: %s, tarball root file system required: %q", *l.Instance.Config.VMType, image.Location)
+				if image.Arch == *cfg.Arch && !match {
+					return fmt.Errorf("unsupported image type for vmType: %s, tarball root file system required: %q", *cfg.VMType, image.Location)
 				}
 			}
 		}
 
-		if l.Instance.Config.Mounts != nil {
-			for i, mount := range l.Instance.Config.Mounts {
+		if cfg.Mounts != nil {
+			for i, mount := range cfg.Mounts {
 				if unknown := reflectutil.UnknownNonEmptyFields(mount); len(unknown) > 0 {
-					logrus.Warnf("Ignoring: vmType %s: mounts[%d]: %+v", *l.Instance.Config.VMType, i, unknown)
+					logrus.Warnf("Ignoring: vmType %s: mounts[%d]: %+v", *cfg.VMType, i, unknown)
 				}
 			}
 		}
 
-		if l.Instance.Config.Networks != nil {
-			for i, network := range l.Instance.Config.Networks {
+		if cfg.Networks != nil {
+			for i, network := range cfg.Networks {
 				if unknown := reflectutil.UnknownNonEmptyFields(network); len(unknown) > 0 {
-					logrus.Warnf("Ignoring: vmType %s: networks[%d]: %+v", *l.Instance.Config.VMType, i, unknown)
+					logrus.Warnf("Ignoring: vmType %s: networks[%d]: %+v", *cfg.VMType, i, unknown)
 				}
 			}
 		}
 
-		if l.Instance.Config.Audio.Device != nil {
-			audioDevice := *l.Instance.Config.Audio.Device
+		if cfg.Audio.Device != nil {
+			audioDevice := *cfg.Audio.Device
 			if audioDevice != "" {
-				logrus.Warnf("Ignoring: vmType %s: `audio.device`: %+v", *l.Instance.Config.VMType, audioDevice)
+				logrus.Warnf("Ignoring: vmType %s: `audio.device`: %+v", *cfg.VMType, audioDevice)
 			}
 		}
 	}

@@ -115,11 +115,7 @@ func (d *DriverClient) Delete(ctx context.Context) error {
 	return nil
 }
 
-func (d *DriverClient) AcceptConfig(_ *limatype.LimaYAML, _ string) error {
-	return errors.New("pre-configured driver action not implemented in client driver")
-}
-
-func (d *DriverClient) FillConfig(_ *limatype.LimaYAML, _ string) error {
+func (d *DriverClient) FillConfig(_ context.Context, _ *limatype.LimaYAML, _ string) error {
 	return errors.New("pre-configured driver action not implemented in client driver")
 }
 

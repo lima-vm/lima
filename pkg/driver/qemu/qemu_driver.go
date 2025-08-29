@@ -77,26 +77,37 @@ func (l *LimaQemuDriver) Configure(inst *limatype.Instance) *driver.ConfiguredDr
 }
 
 func (l *LimaQemuDriver) Validate(ctx context.Context) error {
+	return validateConfig(ctx, l.Instance.Config)
+}
+
+func validateConfig(ctx context.Context, cfg *limatype.LimaYAML) error {
+	if cfg == nil {
+		return errors.New("configuration is nil")
+	}
 	if runtime.GOOS == "darwin" {
-		if err := l.checkBinarySignature(ctx); err != nil {
+		var vmArch string
+		if cfg.Arch != nil {
+			vmArch = *cfg.Arch
+		}
+		if err := checkBinarySignature(ctx, vmArch); err != nil {
 			return err
 		}
 	}
-	if err := l.validateMountType(); err != nil {
+	if err := validateMountType(cfg); err != nil {
 		return err
+	}
+
+	if cfg.VMOpts.QEMU.MinimumVersion != nil {
+		if _, err := semver.NewVersion(*cfg.VMOpts.QEMU.MinimumVersion); err != nil {
+			return fmt.Errorf("field `vmOpts.qemu.minimumVersion` must be a semvar value, got %q: %w", *cfg.VMOpts.QEMU.MinimumVersion, err)
+		}
 	}
 
 	return nil
 }
 
 // Helper method for mount type validation.
-func (l *LimaQemuDriver) validateMountType() error {
-	if l.Instance == nil || l.Instance.Config == nil {
-		return errors.New("instance configuration is not set")
-	}
-
-	cfg := l.Instance.Config
-
+func validateMountType(cfg *limatype.LimaYAML) error {
 	if cfg.MountType != nil && *cfg.MountType == limatype.VIRTIOFS && runtime.GOOS != "linux" {
 		return fmt.Errorf("field `mountType` must be %q or %q for QEMU driver on non-Linux, got %q",
 			limatype.REVSSHFS, limatype.NINEP, *cfg.MountType)
@@ -111,7 +122,7 @@ func (l *LimaQemuDriver) validateMountType() error {
 	return nil
 }
 
-func (l *LimaQemuDriver) FillConfig(cfg *limatype.LimaYAML, filePath string) error {
+func (l *LimaQemuDriver) FillConfig(ctx context.Context, cfg *limatype.LimaYAML, filePath string) error {
 	if cfg.VMType == nil {
 		cfg.VMType = ptr.Of(limatype.QEMU)
 	}
@@ -174,57 +185,7 @@ func (l *LimaQemuDriver) FillConfig(cfg *limatype.LimaYAML, filePath string) err
 		return fmt.Errorf("mount type %q is explicitly unsupported", *cfg.MountType)
 	}
 
-	return nil
-}
-
-func (l *LimaQemuDriver) AcceptConfig(cfg *limatype.LimaYAML, _ string) error {
-	if l.Instance == nil {
-		l.Instance = &limatype.Instance{}
-	}
-	l.Instance.Config = cfg
-
-	if err := l.Validate(context.Background()); err != nil {
-		return fmt.Errorf("config not supported by the QEMU driver: %w", err)
-	}
-
-	if cfg.VMOpts.QEMU.MinimumVersion != nil {
-		if _, err := semver.NewVersion(*cfg.VMOpts.QEMU.MinimumVersion); err != nil {
-			return fmt.Errorf("field `vmOpts.qemu.minimumVersion` must be a semvar value, got %q: %w", *cfg.VMOpts.QEMU.MinimumVersion, err)
-		}
-	}
-
-	if runtime.GOOS == "darwin" {
-		if cfg.Arch != nil && limayaml.IsNativeArch(*cfg.Arch) {
-			logrus.Debugf("ResolveVMType: resolved VMType %q (non-native arch=%q is specified in []*LimaYAML{o,y,d})", "qemu", *cfg.Arch)
-			return nil
-		}
-		if limayaml.ResolveArch(cfg.Arch) == limatype.X8664 && cfg.Firmware.LegacyBIOS != nil && *cfg.Firmware.LegacyBIOS {
-			logrus.Debugf("ResolveVMType: resolved VMType %q (firmware.legacyBIOS is specified in []*LimaYAML{o,y,d} on x86_64)", "qemu")
-			return nil
-		}
-		if cfg.MountType != nil && *cfg.MountType == limatype.NINEP {
-			logrus.Debugf("ResolveVMType: resolved VMType %q (mountType=%q is specified in []*LimaYAML{o,y,d})", "qemu", limatype.NINEP)
-			return nil
-		}
-		if cfg.Audio.Device != nil {
-			switch *cfg.Audio.Device {
-			case "", "none", "default", "vz":
-				// NOP
-			default:
-				logrus.Debugf("ResolveVMType: resolved VMType %q (audio.device=%q is specified in []*LimaYAML{o,y,d})", "qemu", *cfg.Audio.Device)
-				return nil
-			}
-		}
-		if cfg.Video.Display != nil {
-			display := *cfg.Video.Display
-			if display != "" && display != "none" && display != "default" && display != "vz" {
-				logrus.Debugf("ResolveVMType: resolved VMType %q (video.display=%q is specified in []*LimaYAML{o,y,d})", "qemu", display)
-				return nil
-			}
-		}
-	}
-
-	return nil
+	return validateConfig(ctx, cfg)
 }
 
 func (l *LimaQemuDriver) BootScripts() (map[string][]byte, error) {
@@ -414,18 +375,18 @@ func waitFileExists(path string, timeout time.Duration) error {
 
 // Ask the user to sign the qemu binary with the "com.apple.security.hypervisor" if needed.
 // Workaround for https://github.com/lima-vm/lima/issues/1742
-func (l *LimaQemuDriver) checkBinarySignature(ctx context.Context) error {
+func checkBinarySignature(ctx context.Context, vmArch string) error {
 	macOSProductVersion, err := osutil.ProductVersion()
 	if err != nil {
 		return err
 	}
 	// The codesign --xml option is only available on macOS Monterey and later
-	if !macOSProductVersion.LessThan(*semver.New("12.0.0")) && l.Instance.Arch != "" {
-		qExe, _, err := Exe(l.Instance.Arch)
+	if !macOSProductVersion.LessThan(*semver.New("12.0.0")) && vmArch != "" {
+		qExe, _, err := Exe(vmArch)
 		if err != nil {
-			return fmt.Errorf("failed to find the QEMU binary for the architecture %q: %w", l.Instance.Arch, err)
+			return fmt.Errorf("failed to find the QEMU binary for the architecture %q: %w", vmArch, err)
 		}
-		if accel := Accel(l.Instance.Arch); accel == "hvf" {
+		if accel := Accel(vmArch); accel == "hvf" {
 			entitlementutil.AskToSignIfNotSignedProperly(ctx, qExe)
 		}
 	}

@@ -57,7 +57,7 @@ func Serve(ctx context.Context, driver driver.Driver) {
 	inspectStatus := flag.Bool("inspect-status", false, "Inspect status of the driver")
 	flag.Parse()
 	if *preConfiguredDriverAction {
-		handlePreConfiguredDriverAction(driver)
+		handlePreConfiguredDriverAction(ctx, driver)
 		return
 	}
 	if *inspectStatus {
@@ -188,7 +188,7 @@ func handleInspectStatus(driver driver.Driver) {
 	}
 }
 
-func handlePreConfiguredDriverAction(driver driver.Driver) {
+func handlePreConfiguredDriverAction(ctx context.Context, driver driver.Driver) {
 	decoder := json.NewDecoder(os.Stdin)
 	encoder := json.NewEncoder(os.Stdout)
 
@@ -198,11 +198,7 @@ func handlePreConfiguredDriverAction(driver driver.Driver) {
 	}
 
 	config := &payload.Config
-	if err := driver.AcceptConfig(config, payload.FilePath); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to accept config: %v", err)
-	}
-
-	if err := driver.FillConfig(config, payload.FilePath); err != nil {
+	if err := driver.FillConfig(ctx, config, payload.FilePath); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to fill config: %v", err)
 	}
 

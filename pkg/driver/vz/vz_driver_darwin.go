@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"os"
 	"path/filepath"
 	"runtime"
 	"time"
@@ -22,7 +21,6 @@ import (
 
 	"github.com/lima-vm/lima/v2/pkg/driver"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
-	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/ptr"
@@ -113,7 +111,7 @@ func (l *LimaVzDriver) Configure(inst *limatype.Instance) *driver.ConfiguredDriv
 	}
 }
 
-func (l *LimaVzDriver) FillConfig(cfg *limatype.LimaYAML, _ string) error {
+func (l *LimaVzDriver) FillConfig(ctx context.Context, cfg *limatype.LimaYAML, _ string) error {
 	if cfg.VMType == nil {
 		cfg.VMType = ptr.Of(limatype.VZ)
 	}
@@ -139,7 +137,7 @@ func (l *LimaVzDriver) FillConfig(cfg *limatype.LimaYAML, _ string) error {
 		cfg.VMOpts.VZ.Rosetta.BinFmt = ptr.Of(false)
 	}
 
-	return nil
+	return validateConfig(ctx, cfg)
 }
 
 func isEmpty(r limatype.Rosetta) bool {
@@ -171,15 +169,76 @@ func (l *LimaVzDriver) BootScripts() (map[string][]byte, error) {
 	return scripts, nil
 }
 
-func (l *LimaVzDriver) AcceptConfig(cfg *limatype.LimaYAML, filePath string) error {
-	if dir, basename := filepath.Split(filePath); dir != "" && basename == filenames.LimaYAML && limayaml.IsExistingInstanceDir(dir) {
-		vzIdentifier := filepath.Join(dir, filenames.VzIdentifier) // since Lima v0.14
-		if _, err := os.Lstat(vzIdentifier); !errors.Is(err, os.ErrNotExist) {
-			logrus.Debugf("ResolveVMType: resolved VMType %q (existing instance, with %q)", "vz", vzIdentifier)
+func (l *LimaVzDriver) Validate(ctx context.Context) error {
+	return validateConfig(ctx, l.Instance.Config)
+}
+
+func validateConfig(_ context.Context, cfg *limatype.LimaYAML) error {
+	if cfg == nil {
+		return errors.New("configuration is nil")
+	}
+	macOSProductVersion, err := osutil.ProductVersion()
+	if err != nil {
+		return err
+	}
+	if macOSProductVersion.LessThan(*semver.New("13.0.0")) {
+		return errors.New("VZ driver requires macOS 13 or higher to run")
+	}
+	if runtime.GOARCH == "amd64" && macOSProductVersion.LessThan(*semver.New("15.5.0")) {
+		logrus.Warnf("vmType %s: On Intel Mac, macOS 15.5 or later is required to run Linux 6.12 or later. "+
+			"Update macOS, or change vmType to \"qemu\" if the VM does not start up. (https://github.com/lima-vm/lima/issues/3334)",
+			*cfg.VMType)
+	}
+	if cfg.MountType != nil && *cfg.MountType == limatype.NINEP {
+		return fmt.Errorf("field `mountType` must be %q or %q for VZ driver , got %q", limatype.REVSSHFS, limatype.VIRTIOFS, *cfg.MountType)
+	}
+	if *cfg.Firmware.LegacyBIOS {
+		logrus.Warnf("vmType %s: ignoring `firmware.legacyBIOS`", *cfg.VMType)
+	}
+	for _, f := range cfg.Firmware.Images {
+		switch f.VMType {
+		case "", limatype.VZ:
+			if f.Arch == *cfg.Arch {
+				return errors.New("`firmware.images` configuration is not supported for VZ driver")
+			}
+		}
+	}
+	if unknown := reflectutil.UnknownNonEmptyFields(cfg, knownYamlProperties...); cfg.VMType != nil && len(unknown) > 0 {
+		logrus.Warnf("vmType %s: ignoring %+v", *cfg.VMType, unknown)
+	}
+
+	if !limayaml.IsNativeArch(*cfg.Arch) {
+		return fmt.Errorf("unsupported arch: %q", *cfg.Arch)
+	}
+
+	for i, image := range cfg.Images {
+		if unknown := reflectutil.UnknownNonEmptyFields(image, "File", "Kernel", "Initrd"); len(unknown) > 0 {
+			logrus.Warnf("vmType %s: ignoring images[%d]: %+v", *cfg.VMType, i, unknown)
+		}
+	}
+
+	for i, mount := range cfg.Mounts {
+		if unknown := reflectutil.UnknownNonEmptyFields(mount, "Location",
+			"MountPoint",
+			"Writable",
+			"SSHFS",
+			"NineP",
+		); len(unknown) > 0 {
+			logrus.Warnf("vmType %s: ignoring mounts[%d]: %+v", *cfg.VMType, i, unknown)
 		}
 	}
 
 	for i, nw := range cfg.Networks {
+		if unknown := reflectutil.UnknownNonEmptyFields(nw, "VZNAT",
+			"Lima",
+			"Socket",
+			"MACAddress",
+			"Metric",
+			"Interface",
+		); len(unknown) > 0 {
+			logrus.Warnf("vmType %s: ignoring networks[%d]: %+v", *cfg.VMType, i, unknown)
+		}
+
 		field := fmt.Sprintf("networks[%d]", i)
 		switch {
 		case nw.Lima != "":
@@ -200,90 +259,14 @@ func (l *LimaVzDriver) AcceptConfig(cfg *limatype.LimaYAML, filePath string) err
 		}
 	}
 
-	if l.Instance == nil {
-		l.Instance = &limatype.Instance{}
-	}
-	l.Instance.Config = cfg
-
-	if err := l.Validate(context.Background()); err != nil {
-		return fmt.Errorf("config not supported by the VZ driver: %w", err)
-	}
-
-	return nil
-}
-
-func (l *LimaVzDriver) Validate(_ context.Context) error {
-	macOSProductVersion, err := osutil.ProductVersion()
-	if err != nil {
-		return err
-	}
-	if macOSProductVersion.LessThan(*semver.New("13.0.0")) {
-		return errors.New("VZ driver requires macOS 13 or higher to run")
-	}
-	if runtime.GOARCH == "amd64" && macOSProductVersion.LessThan(*semver.New("15.5.0")) {
-		logrus.Warnf("vmType %s: On Intel Mac, macOS 15.5 or later is required to run Linux 6.12 or later. "+
-			"Update macOS, or change vmType to \"qemu\" if the VM does not start up. (https://github.com/lima-vm/lima/issues/3334)",
-			*l.Instance.Config.VMType)
-	}
-	if l.Instance.Config.MountType != nil && *l.Instance.Config.MountType == limatype.NINEP {
-		return fmt.Errorf("field `mountType` must be %q or %q for VZ driver , got %q", limatype.REVSSHFS, limatype.VIRTIOFS, *l.Instance.Config.MountType)
-	}
-	if *l.Instance.Config.Firmware.LegacyBIOS {
-		logrus.Warnf("vmType %s: ignoring `firmware.legacyBIOS`", *l.Instance.Config.VMType)
-	}
-	for _, f := range l.Instance.Config.Firmware.Images {
-		switch f.VMType {
-		case "", limatype.VZ:
-			if f.Arch == *l.Instance.Config.Arch {
-				return errors.New("`firmware.images` configuration is not supported for VZ driver")
-			}
-		}
-	}
-	if unknown := reflectutil.UnknownNonEmptyFields(l.Instance.Config, knownYamlProperties...); l.Instance.Config.VMType != nil && len(unknown) > 0 {
-		logrus.Warnf("vmType %s: ignoring %+v", *l.Instance.Config.VMType, unknown)
-	}
-
-	if !limayaml.IsNativeArch(*l.Instance.Config.Arch) {
-		return fmt.Errorf("unsupported arch: %q", *l.Instance.Config.Arch)
-	}
-
-	for i, image := range l.Instance.Config.Images {
-		if unknown := reflectutil.UnknownNonEmptyFields(image, "File", "Kernel", "Initrd"); len(unknown) > 0 {
-			logrus.Warnf("vmType %s: ignoring images[%d]: %+v", *l.Instance.Config.VMType, i, unknown)
-		}
-	}
-
-	for i, mount := range l.Instance.Config.Mounts {
-		if unknown := reflectutil.UnknownNonEmptyFields(mount, "Location",
-			"MountPoint",
-			"Writable",
-			"SSHFS",
-			"NineP",
-		); len(unknown) > 0 {
-			logrus.Warnf("vmType %s: ignoring mounts[%d]: %+v", *l.Instance.Config.VMType, i, unknown)
-		}
-	}
-
-	for i, network := range l.Instance.Config.Networks {
-		if unknown := reflectutil.UnknownNonEmptyFields(network, "VZNAT",
-			"Lima",
-			"Socket",
-			"MACAddress",
-			"Metric",
-			"Interface",
-		); len(unknown) > 0 {
-			logrus.Warnf("vmType %s: ignoring networks[%d]: %+v", *l.Instance.Config.VMType, i, unknown)
-		}
-	}
-
-	switch audioDevice := *l.Instance.Config.Audio.Device; audioDevice {
+	switch audioDevice := *cfg.Audio.Device; audioDevice {
 	case "":
 	case "vz", "default", "none":
 	default:
 		logrus.Warnf("field `audio.device` must be \"vz\", \"default\", or \"none\" for VZ driver, got %q", audioDevice)
 	}
 
-	switch videoDisplay := *l.Instance.Config.Video.Display; videoDisplay {
+	switch videoDisplay := *cfg.Video.Display; videoDisplay {
 	case "vz", "default", "none":
 	default:
 		logrus.Warnf("field `video.display` must be \"vz\", \"default\", or \"none\" for VZ driver , got %q", videoDisplay)
