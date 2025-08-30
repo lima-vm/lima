@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -32,6 +33,11 @@ func Read(ctx context.Context, name, locator string) (*Template, error) {
 	tmpl := &Template{
 		Name:    name,
 		Locator: locator,
+	}
+
+	locator, err = transformCustomURL(ctx, locator)
+	if err != nil {
+		return nil, err
 	}
 
 	if imageTemplate(tmpl, locator) {
@@ -284,4 +290,34 @@ func InstNameFromYAMLPath(yamlPath string) (string, error) {
 		return "", fmt.Errorf("filename %q is invalid: %w", yamlPath, err)
 	}
 	return s, nil
+}
+
+func transformCustomURL(ctx context.Context, locator string) (string, error) {
+	u, err := url.Parse(locator)
+	if err != nil || len(u.Scheme) <= 1 {
+		return locator, nil
+	}
+
+	// TODO we should call main.updatePathEnv() here (after moving it to some pkg)
+	externalCmd := "limactl-url-" + u.Scheme
+	execPath, err := exec.LookPath(externalCmd)
+	if err != nil {
+		return locator, nil
+	}
+
+	cmd := exec.CommandContext(ctx, execPath, strings.TrimPrefix(u.String(), u.Scheme+":"))
+	cmd.Env = os.Environ()
+
+	stdout, err := cmd.Output()
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			stderrMsg := string(exitErr.Stderr)
+			if stderrMsg != "" {
+				return "", fmt.Errorf("command %q failed: %s", cmd.String(), strings.TrimSpace(stderrMsg))
+			}
+		}
+		return "", fmt.Errorf("command %q failed: %w", cmd.String(), err)
+	}
+
+	return strings.TrimSpace(string(stdout)), nil
 }
