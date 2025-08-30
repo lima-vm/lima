@@ -76,5 +76,22 @@ message: |
   docker context use lima-{{.Name}}
   docker run hello-world
   ------
+  {{- if .Instance.Config.VMOpts.VZ.Rosetta.Enabled}}
+  Rosetta is enabled in this VM, so you can run x86_64 containers on Apple Silicon.
+  You can use Rosetta AOT Caching with the CDI spec:
+  - To run a container, add `--device=lima-vm.io/rosetta=cached` to your `docker run` command:
+    ------
+    docker run --platform=linux/amd64 --device=lima-vm.io/rosetta=cached ...
+    ------
+  - To build an image, add `# syntax=docker/dockerfile:1-labs` at the top of your Dockerfile,
+    and use `--device=lima-vm.io/rosetta=cached` in the `RUN` command:
+    ------
+    # syntax=docker/dockerfile:1-labs
+    FROM ...
+    ...
+    RUN --device=lima-vm.io/rosetta=cached <your amd64 command>
+    ------
+  See: https://lima-vm.io/docs/config/multi-arch/#rosetta-aot-caching
+  {{- end}}
 param:
   containerdSnapshotter: false
