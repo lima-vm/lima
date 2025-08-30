@@ -47,7 +47,7 @@ func main() {
 	rootCmd := newApp()
 	if err := executeWithPluginSupport(rootCmd, os.Args[1:]); err != nil {
 		server.StopAllExternalDrivers()
-		handleExitCoder(err)
+		handleExitError(err)
 		logrus.Fatal(err)
 	}
 
@@ -200,17 +200,13 @@ func newApp() *cobra.Command {
 	return rootCmd
 }
 
-type ExitCoder interface {
-	error
-	ExitCode() int
-}
-
-func handleExitCoder(err error) {
+func handleExitError(err error) {
 	if err == nil {
 		return
 	}
 
-	if exitErr, ok := err.(ExitCoder); ok {
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) {
 		os.Exit(exitErr.ExitCode()) //nolint:revive // it's intentional to call os.Exit in this function
 		return
 	}
@@ -253,7 +249,7 @@ func runExternalPlugin(ctx context.Context, name string, args []string) {
 	cmd.Env = os.Environ()
 
 	err = cmd.Run()
-	handleExitCoder(err)
+	handleExitError(err)
 	if err == nil {
 		os.Exit(0) //nolint:revive // it's intentional to call os.Exit in this function
 	}
