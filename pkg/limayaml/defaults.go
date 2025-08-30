@@ -823,13 +823,24 @@ func fixUpForPlainMode(y *limatype.LimaYAML) {
 	if !*y.Plain {
 		return
 	}
+	deleteNonStaticPortForwards(&y.PortForwards)
 	y.Mounts = nil
-	y.PortForwards = nil
 	y.Containerd.System = ptr.Of(false)
 	y.Containerd.User = ptr.Of(false)
 	y.VMOpts.VZ.Rosetta.BinFmt = ptr.Of(false)
 	y.VMOpts.VZ.Rosetta.Enabled = ptr.Of(false)
 	y.TimeZone = ptr.Of("")
+}
+
+// deleteNonStaticPortForwards removes all non-static port forwarding rules in case of Plain mode.
+func deleteNonStaticPortForwards(portForwards *[]limatype.PortForward) {
+	staticPortForwards := make([]limatype.PortForward, 0, len(*portForwards))
+	for _, rule := range *portForwards {
+		if rule.Static {
+			staticPortForwards = append(staticPortForwards, rule)
+		}
+	}
+	*portForwards = staticPortForwards
 }
 
 func executeGuestTemplate(format, instDir string, user limatype.User, param map[string]string) (bytes.Buffer, error) {

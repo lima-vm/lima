@@ -300,6 +300,7 @@ type PortForward struct {
 	Proto             Proto  `yaml:"proto,omitempty" json:"proto,omitempty"`
 	Reverse           bool   `yaml:"reverse,omitempty" json:"reverse,omitempty"`
 	Ignore            bool   `yaml:"ignore,omitempty" json:"ignore,omitempty"`
+	Static            bool   `yaml:"static,omitempty" json:"static,omitempty"`
 }
 
 type CopyToHost struct {

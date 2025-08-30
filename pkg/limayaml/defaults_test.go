@@ -688,3 +688,120 @@ func TestContainerdDefault(t *testing.T) {
 	archives := defaultContainerdArchives()
 	assert.Assert(t, len(archives) > 0)
 }
+
+func TestStaticPortForwarding(t *testing.T) {
+	tests := []struct {
+		name     string
+		config   limatype.LimaYAML
+		expected []limatype.PortForward
+	}{
+		{
+			name: "plain mode with static port forwards",
+			config: limatype.LimaYAML{
+				Plain: ptr.Of(true),
+				PortForwards: []limatype.PortForward{
+					{
+						GuestPort: 8080,
+						HostPort:  8080,
+						Static:    true,
+					},
+					{
+						GuestPort: 9000,
+						HostPort:  9000,
+						Static:    false,
+					},
+					{
+						GuestPort: 8081,
+						HostPort:  8081,
+					},
+				},
+			},
+			expected: []limatype.PortForward{
+				{
+					GuestPort: 8080,
+					HostPort:  8080,
+					Static:    true,
+				},
+			},
+		},
+		{
+			name: "non-plain mode with static port forwards",
+			config: limatype.LimaYAML{
+				Plain: ptr.Of(false),
+				PortForwards: []limatype.PortForward{
+					{
+						GuestPort: 8080,
+						HostPort:  8080,
+						Static:    true,
+					},
+					{
+						GuestPort: 9000,
+						HostPort:  9000,
+						Static:    false,
+					},
+				},
+			},
+			expected: []limatype.PortForward{
+				{
+					GuestPort: 8080,
+					HostPort:  8080,
+					Static:    true,
+				},
+				{
+					GuestPort: 9000,
+					HostPort:  9000,
+					Static:    false,
+				},
+			},
+		},
+		{
+			name: "plain mode with no static port forwards",
+			config: limatype.LimaYAML{
+				Plain: ptr.Of(true),
+				PortForwards: []limatype.PortForward{
+					{
+						GuestPort: 8080,
+						HostPort:  8080,
+						Static:    false,
+					},
+					{
+						GuestPort: 9000,
+						HostPort:  9000,
+					},
+				},
+			},
+			expected: []limatype.PortForward{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fixUpForPlainMode(&tt.config)
+
+			if *tt.config.Plain {
+				for _, pf := range tt.config.PortForwards {
+					if !pf.Static {
+						t.Errorf("Non-static port forward found in plain mode: %+v", pf)
+					}
+				}
+			}
+
+			assert.Equal(t, len(tt.config.PortForwards), len(tt.expected),
+				"Expected %d port forwards, got %d", len(tt.expected), len(tt.config.PortForwards))
+
+			for i, expected := range tt.expected {
+				if i >= len(tt.config.PortForwards) {
+					t.Errorf("Missing port forward at index %d", i)
+					continue
+				}
+				actual := tt.config.PortForwards[i]
+				assert.Equal(t, expected.Static, actual.Static,
+					"Port forward %d: expected Static=%v, got %v", i, expected.Static, actual.Static)
+				assert.Equal(t, expected.GuestPort, actual.GuestPort,
+					"Port forward %d: expected GuestPort=%d, got %d", i, expected.GuestPort, actual.GuestPort)
+				assert.Equal(t, expected.HostPort, actual.HostPort,
+					"Port forward %d: expected HostPort=%d, got %d", i, expected.HostPort, actual.HostPort)
+			}
+		})
+	}
+}
