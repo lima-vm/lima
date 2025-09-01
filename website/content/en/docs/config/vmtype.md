@@ -10,6 +10,9 @@ Lima supports two ways of running guest machines:
 The vmType can be specified only on creating the instance.
 The vmType of existing instances cannot be changed.
 
+> **💡 For developers**: See [Virtual Machine Drivers](../../dev/drivers) for technical details about driver architecture and creating custom drivers.
+
+
 See the following flowchart to choose the best vmType for you:
 ```mermaid
 flowchart
