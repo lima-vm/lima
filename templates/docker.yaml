@@ -75,4 +75,4 @@ message: |
   docker run hello-world
   ------
 param:
-  containerdSnapshotter: false
+  containerdSnapshotter: true
