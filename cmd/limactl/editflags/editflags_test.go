@@ -23,3 +23,137 @@ func TestCompleteMemoryGiB(t *testing.T) {
 	assert.DeepEqual(t, []float32{1, 2, 4}, completeMemoryGiB(8<<30))
 	assert.DeepEqual(t, []float32{1, 2, 4, 8, 10}, completeMemoryGiB(20<<30))
 }
+
+func TestBuildPortForwardExpression(t *testing.T) {
+	tests := []struct {
+		name         string
+		portForwards []string
+		expected     string
+		expectError  bool
+	}{
+		{
+			name:         "empty port forwards",
+			portForwards: []string{},
+			expected:     "",
+		},
+		{
+			name:         "single dynamic port forward",
+			portForwards: []string{"8080:80"},
+			expected:     `.portForwards += [{"guestPort": "80", "hostPort": "8080", "static": false}]`,
+		},
+		{
+			name:         "single static port forward",
+			portForwards: []string{"8080:80,static=true"},
+			expected:     `.portForwards += [{"guestPort": "80", "hostPort": "8080", "static": true}]`,
+		},
+		{
+			name:         "multiple mixed port forwards",
+			portForwards: []string{"8080:80", "2222:22,static=true", "3000:3000"},
+			expected:     `.portForwards += [{"guestPort": "80", "hostPort": "8080", "static": false},{"guestPort": "22", "hostPort": "2222", "static": true},{"guestPort": "3000", "hostPort": "3000", "static": false}]`,
+		},
+		{
+			name:         "invalid format - missing colon",
+			portForwards: []string{"8080"},
+			expectError:  true,
+		},
+		{
+			name:         "invalid format - too many colons",
+			portForwards: []string{"8080:80:extra"},
+			expectError:  true,
+		},
+		{
+			name:         "invalid static parameter",
+			portForwards: []string{"8080:80,invalid=true"},
+			expectError:  true,
+		},
+		{
+			name:         "too many parameters",
+			portForwards: []string{"8080:80,static=true,extra=value"},
+			expectError:  true,
+		},
+		{
+			name:         "whitespace handling",
+			portForwards: []string{" 8080 : 80 , static=true "},
+			expected:     `.portForwards += [{"guestPort": "80", "hostPort": "8080", "static": true}]`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := BuildPortForwardExpression(tt.portForwards)
+			if tt.expectError {
+				assert.Check(t, err != nil)
+			} else {
+				assert.NilError(t, err)
+				assert.Equal(t, tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestParsePortForward(t *testing.T) {
+	tests := []struct {
+		name        string
+		spec        string
+		hostPort    string
+		guestPort   string
+		isStatic    bool
+		expectError bool
+	}{
+		{
+			name:      "dynamic port forward",
+			spec:      "8080:80",
+			hostPort:  "8080",
+			guestPort: "80",
+			isStatic:  false,
+		},
+		{
+			name:      "static port forward",
+			spec:      "8080:80,static=true",
+			hostPort:  "8080",
+			guestPort: "80",
+			isStatic:  true,
+		},
+		{
+			name:      "whitespace handling",
+			spec:      " 8080 : 80 , static=true ",
+			hostPort:  "8080",
+			guestPort: "80",
+			isStatic:  true,
+		},
+		{
+			name:        "invalid format - missing colon",
+			spec:        "8080",
+			expectError: true,
+		},
+		{
+			name:        "invalid format - too many colons",
+			spec:        "8080:80:extra",
+			expectError: true,
+		},
+		{
+			name:        "invalid parameter",
+			spec:        "8080:80,invalid=true",
+			expectError: true,
+		},
+		{
+			name:        "too many parameters",
+			spec:        "8080:80,static=true,extra=value",
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			hostPort, guestPort, isStatic, err := ParsePortForward(tt.spec)
+			if tt.expectError {
+				assert.Check(t, err != nil)
+			} else {
+				assert.NilError(t, err)
+				assert.Equal(t, tt.hostPort, hostPort)
+				assert.Equal(t, tt.guestPort, guestPort)
+				assert.Equal(t, tt.isStatic, isStatic)
+			}
+		})
+	}
+}

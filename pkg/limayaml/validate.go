@@ -402,6 +402,16 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 			}
 		}
 	}
+	if y.Plain != nil && *y.Plain {
+		const portRangeWarnThreshold = 10
+		for i, rule := range y.PortForwards {
+			guestRange := rule.GuestPortRange[1] - rule.GuestPortRange[0] + 1
+			hostRange := rule.HostPortRange[1] - rule.HostPortRange[0] + 1
+			if guestRange > portRangeWarnThreshold || hostRange > portRangeWarnThreshold {
+				logrus.Warnf("[plain mode] portForwards[%d] covers a range of more than %d ports (guest: %d, host: %d). All ports will be forwarded unconditionally, which may be inefficient.", i, portRangeWarnThreshold, guestRange, hostRange)
+			}
+		}
+	}
 
 	return errs
 }

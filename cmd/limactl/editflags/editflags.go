@@ -104,12 +104,67 @@ func RegisterCreate(cmd *cobra.Command, commentPrefix string) {
 	})
 
 	flags.Bool("plain", false, commentPrefix+"Plain mode. Disables mounts, port forwarding, containerd, etc.")
+
+	flags.StringArray("port-forward", nil, commentPrefix+"Port forwards (host:guest), e.g., '8080:80' or '9090:9090,static=true' for static port-forwards")
+	_ = cmd.RegisterFlagCompletionFunc("port-forward", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
+		return []string{"8080:80", "3000:3000", "8080:80,static=true"}, cobra.ShellCompDirectiveNoFileComp
+	})
 }
 
 func defaultExprFunc(expr string) func(v *flag.Flag) (string, error) {
 	return func(v *flag.Flag) (string, error) {
 		return fmt.Sprintf(expr, v.Value), nil
 	}
+}
+
+func ParsePortForward(spec string) (hostPort, guestPort string, isStatic bool, err error) {
+	parts := strings.Split(spec, ",")
+	if len(parts) > 2 {
+		return "", "", false, fmt.Errorf("invalid port forward format %q, expected HOST:GUEST or HOST:GUEST,static=true", spec)
+	}
+
+	portParts := strings.Split(strings.TrimSpace(parts[0]), ":")
+	if len(portParts) != 2 {
+		return "", "", false, fmt.Errorf("invalid port forward format %q, expected HOST:GUEST", parts[0])
+	}
+
+	hostPort = strings.TrimSpace(portParts[0])
+	guestPort = strings.TrimSpace(portParts[1])
+
+	if len(parts) == 2 {
+		staticPart := strings.TrimSpace(parts[1])
+		if strings.HasPrefix(staticPart, "static=") {
+			staticValue := strings.TrimPrefix(staticPart, "static=")
+			isStatic, err = strconv.ParseBool(staticValue)
+			if err != nil {
+				return "", "", false, fmt.Errorf("invalid value for static parameter: %q", staticValue)
+			}
+		} else {
+			return "", "", false, fmt.Errorf("invalid parameter %q, expected 'static=' followed by a boolean value", staticPart)
+		}
+	}
+
+	return hostPort, guestPort, isStatic, nil
+}
+
+func BuildPortForwardExpression(portForwards []string) (string, error) {
+	if len(portForwards) == 0 {
+		return "", nil
+	}
+
+	expr := `.portForwards += [`
+	for i, spec := range portForwards {
+		hostPort, guestPort, isStatic, err := ParsePortForward(spec)
+		if err != nil {
+			return "", err
+		}
+		expr += fmt.Sprintf(`{"guestPort": %q, "hostPort": %q, "static": %v}`, guestPort, hostPort, isStatic)
+		if i < len(portForwards)-1 {
+			expr += ","
+		}
+	}
+	expr += `]`
+	return expr, nil
 }
 
 // YQExpressions returns YQ expressions.
@@ -215,6 +270,7 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 			false,
 			false,
 		},
+
 		{
 			"rosetta",
 			func(_ *flag.Flag) (string, error) {
@@ -270,6 +326,18 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 		},
 		{"disk", d(".disk= \"%sGiB\""), false, false},
 		{"plain", d(".plain = %s"), true, false},
+		{
+			"port-forward",
+			func(_ *flag.Flag) (string, error) {
+				ss, err := flags.GetStringArray("port-forward")
+				if err != nil {
+					return "", err
+				}
+				return BuildPortForwardExpression(ss)
+			},
+			false,
+			false,
+		},
 	}
 	var exprs []string
 	for _, def := range defs {
