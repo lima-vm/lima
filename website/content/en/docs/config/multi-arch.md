@@ -86,3 +86,52 @@ rosetta:
 ```
 {{% /tab %}}
 {{< /tabpane >}}
+
+### [Enable Rosetta AOT Caching with CDI spec](#rosetta-aot-caching)
+| ⚡ Requirement | Lima >= 2.0, macOS >= 14.0, ARM |
+|-------------------|----------------------------------|
+
+Rosetta AOT Caching speeds up containers by saving translated binaries, so they don't need to be translated again.  
+Learn more: [WWDC2023 video](https://developer.apple.com/videos/play/wwdc2023/10007/?time=721)
+
+**How to use Rosetta AOT Caching:**
+
+- **Run a container:**  
+  Add `--device=lima-vm.io/rosetta=cached` to your `docker run` command:
+  ```bash
+  docker run --platform=linux/amd64 --device=lima-vm.io/rosetta=cached ...
+  ```
+
+- **Build an image:**  
+  Add `# syntax=docker/dockerfile:1-labs` at the top of your Dockerfile to enable the `--device` option.  
+  Use `--device=lima-vm.io/rosetta=cached` in your `RUN` command:
+  ```Dockerfile
+  # syntax=docker/dockerfile:1-labs
+  FROM ...
+  ...
+  RUN --device=lima-vm.io/rosetta=cached <your amd64 command>
+  ```
+
+- **Check if caching works:**  
+  Look for cache files in the VM:
+  ```bash
+  limactl shell {{.Name}} ls -la /var/cache/rosettad
+  docker run --platform linux/amd64 --device=lima-vm.io/rosetta=cached ubuntu echo hello
+  limactl shell {{.Name}} ls -la /var/cache/rosettad
+  # You should see *.aotcache files here
+  ```
+
+- **Check if Docker recognizes the CDI device:**  
+  Look for CDI info in the output of `docker info`:
+  ```console
+  docker info
+  ...
+  CDI spec directories:
+    /etc/cdi
+    /var/run/cdi
+  Discovered Devices:
+    cdi: lima-vm.io/rosetta=cached
+  ```
+
+- **Learn more about CDI:**  
+  [CDI spec documentation](https://github.com/cncf-tags/container-device-interface/blob/main/SPEC.md)
