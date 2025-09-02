@@ -36,6 +36,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/networks/usernet"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/ptr"
+	"github.com/lima-vm/lima/v2/pkg/reflectutil"
 	"github.com/lima-vm/lima/v2/pkg/version/versionutil"
 )
 
@@ -95,6 +96,18 @@ func validateConfig(ctx context.Context, cfg *limatype.LimaYAML) error {
 	}
 	if err := validateMountType(cfg); err != nil {
 		return err
+	}
+
+	for i, nw := range cfg.Networks {
+		if unknown := reflectutil.UnknownNonEmptyFields(nw,
+			"Lima",
+			"Socket",
+			"MACAddress",
+			"Metric",
+			"Interface",
+		); len(unknown) > 0 {
+			logrus.Warnf("vmType %s: ignoring networks[%d]: %+v", *cfg.VMType, i, unknown)
+		}
 	}
 
 	if cfg.VMOpts.QEMU.MinimumVersion != nil {
