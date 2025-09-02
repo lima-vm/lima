@@ -449,11 +449,24 @@ func validateNetwork(y *limatype.LimaYAML) error {
 			if nw.Socket != "" {
 				errs = errors.Join(errs, fmt.Errorf("field `%s.lima` and field `%s.socket` are mutually exclusive", field, field))
 			}
+			if nw.VZNAT != nil && *nw.VZNAT {
+				errs = errors.Join(errs, fmt.Errorf("field `%s.lima` and field `%s.vzNAT` are mutually exclusive", field, field))
+			}
 		case nw.Socket != "":
+			if nw.VZNAT != nil && *nw.VZNAT {
+				errs = errors.Join(errs, fmt.Errorf("field `%s.socket` and field `%s.vzNAT` are mutually exclusive", field, field))
+			}
 			if fi, err := os.Stat(nw.Socket); err != nil && !errors.Is(err, os.ErrNotExist) {
 				errs = errors.Join(errs, err)
 			} else if err == nil && fi.Mode()&os.ModeSocket == 0 {
 				errs = errors.Join(errs, fmt.Errorf("field `%s.socket` %q points to a non-socket file", field, nw.Socket))
+			}
+		case nw.VZNAT != nil && *nw.VZNAT:
+			if nw.Lima != "" {
+				errs = errors.Join(errs, fmt.Errorf("field `%s.vzNAT` and field `%s.lima` are mutually exclusive", field, field))
+			}
+			if nw.Socket != "" {
+				errs = errors.Join(errs, fmt.Errorf("field `%s.vzNAT` and field `%s.socket` are mutually exclusive", field, field))
 			}
 		default:
 			errs = errors.Join(errs, fmt.Errorf("field `%s.lima` or  field `%s.socket must be set", field, field))

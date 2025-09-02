@@ -238,25 +238,6 @@ func validateConfig(_ context.Context, cfg *limatype.LimaYAML) error {
 		); len(unknown) > 0 {
 			logrus.Warnf("vmType %s: ignoring networks[%d]: %+v", *cfg.VMType, i, unknown)
 		}
-
-		field := fmt.Sprintf("networks[%d]", i)
-		switch {
-		case nw.Lima != "":
-			if nw.VZNAT != nil && *nw.VZNAT {
-				return fmt.Errorf("field `%s.lima` and field `%s.vzNAT` are mutually exclusive", field, field)
-			}
-		case nw.Socket != "":
-			if nw.VZNAT != nil && *nw.VZNAT {
-				return fmt.Errorf("field `%s.socket` and field `%s.vzNAT` are mutually exclusive", field, field)
-			}
-		case nw.VZNAT != nil && *nw.VZNAT:
-			if nw.Lima != "" {
-				return fmt.Errorf("field `%s.vzNAT` and field `%s.lima` are mutually exclusive", field, field)
-			}
-			if nw.Socket != "" {
-				return fmt.Errorf("field `%s.vzNAT` and field `%s.socket` are mutually exclusive", field, field)
-			}
-		}
 	}
 
 	switch audioDevice := *cfg.Audio.Device; audioDevice {
