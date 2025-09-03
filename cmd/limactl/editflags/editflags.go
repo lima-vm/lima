@@ -16,6 +16,7 @@ import (
 	"github.com/spf13/cobra"
 	flag "github.com/spf13/pflag"
 
+	"github.com/lima-vm/lima/v2/pkg/localpathutil"
 	"github.com/lima-vm/lima/v2/pkg/registry"
 )
 
@@ -174,6 +175,10 @@ func buildMountListExpression(ss []string) (string, error) {
 	for i, s := range ss {
 		writable := strings.HasSuffix(s, ":w")
 		loc := strings.TrimSuffix(s, ":w")
+		loc, err := localpathutil.Expand(loc)
+		if err != nil {
+			return "", err
+		}
 		expr += fmt.Sprintf(`{"location": %q, "writable": %v}`, loc, writable)
 		if i < len(ss)-1 {
 			expr += ","

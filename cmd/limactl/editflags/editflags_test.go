@@ -4,10 +4,13 @@
 package editflags
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/spf13/cobra"
 	"gotest.tools/v3/assert"
+
+	"github.com/lima-vm/lima/v2/pkg/localpathutil"
 )
 
 func TestCompleteCPUs(t *testing.T) {
@@ -160,6 +163,13 @@ func TestParsePortForward(t *testing.T) {
 }
 
 func TestYQExpressions(t *testing.T) {
+	expand := func(s string) string {
+		s, err := localpathutil.Expand(s)
+		assert.NilError(t, err)
+		// `D:\foo` -> `D:\\foo` (appears in YAML)
+		s = strings.ReplaceAll(s, "\\", "\\\\")
+		return s
+	}
 	tests := []struct {
 		name        string
 		args        []string
@@ -169,15 +179,15 @@ func TestYQExpressions(t *testing.T) {
 	}{
 		{
 			name:        "mount",
-			args:        []string{"--mount", "/foo", "--mount", "/bar:w"},
+			args:        []string{"--mount", "/foo", "--mount", "./bar:w"},
 			newInstance: false,
-			expected:    []string{`.mounts += [{"location": "/foo", "writable": false},{"location": "/bar", "writable": true}] | .mounts |= unique_by(.location)`},
+			expected:    []string{`.mounts += [{"location": "` + expand("/foo") + `", "writable": false},{"location": "` + expand("./bar") + `", "writable": true}] | .mounts |= unique_by(.location)`},
 		},
 		{
 			name:        "mount-only",
 			args:        []string{"--mount-only", "/foo", "--mount-only", "/bar:w"},
 			newInstance: false,
-			expected:    []string{`.mounts = [{"location": "/foo", "writable": false},{"location": "/bar", "writable": true}]`},
+			expected:    []string{`.mounts = [{"location": "` + expand("/foo") + `", "writable": false},{"location": "` + expand("/bar") + `", "writable": true}]`},
 		},
 		{
 			name:        "mixture of mount and mount-only",
