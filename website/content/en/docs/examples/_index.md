@@ -10,7 +10,7 @@ lima uname -a
 
 ## Accessing host files
 
-By default, the VM has read-only accesses to `/Users/<USERNAME>` and read-write accesses to `/tmp/lima`.
+By default, the VM has read-only accesses to `/Users/<USERNAME>`.
 
 To allow writing to `/Users/<USERNAME>`:
 ```bash
@@ -19,6 +19,14 @@ limactl edit --mount-writable --mount-type=virtiofs
 
 Specifying `--mount-type=virtiofs` is not necessary here, but it is highly recommended
 for the best performance and stability.
+
+{{% alert title="Hint" color=success %}}
+Lima prior to v2.0 mounts `/tmp/lima` too in read-write mode.
+
+This directory is no longer mounted by default since Lima v2.0.
+To mount `/tmp/lima` in Lima v2.0 and later, set `--mount /tmp/lima:w`.
+The `:w` suffix indicates read-write mode.
+{{% /alert %}}
 
 ## Running containers
 {{< tabpane text=true >}}

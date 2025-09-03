@@ -67,7 +67,7 @@ func TestEvaluateExpressionComplex(t *testing.T) {
 	content := `
 # Expose host directories to the guest, the mount point might be accessible from all UIDs in the guest
 # 🟢 Builtin default: null (Mount nothing)
-# 🔵 This file: Mount the home as read-only, /tmp/lima as writable
+# 🔵 This file: Mount the home as read-only
 mounts:
 - location: "~"
   # Configure the mountPoint inside the guest.
@@ -80,7 +80,7 @@ mounts:
 	expected := `
 # Expose host directories to the guest, the mount point might be accessible from all UIDs in the guest
 # 🟢 Builtin default: null (Mount nothing)
-# 🔵 This file: Mount the home as read-only, /tmp/lima as writable
+# 🔵 This file: Mount the home as read-only
 mounts:
 - location: "~"
   # Configure the mountPoint inside the guest.
