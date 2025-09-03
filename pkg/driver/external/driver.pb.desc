@@ -1,0 +1,55 @@
+
+ý
+driver.protogoogle/protobuf/empty.proto"Ž
+BootScriptsResponse;
+scripts (2!.BootScriptsResponse.ScriptsEntryRscripts:
+ScriptsEntry
+key (	Rkey
+value (Rvalue:8".
+SSHAddressResponse
+address (	Raddress"+
+InfoResponse
+	info_json (RinfoJson"?
+StartResponse
+success (Rsuccess
+error (	Rerror"D
+SetConfigRequest0
+instance_config_json (RinstanceConfigJson":
+ChangeDisplayPasswordRequest
+password (	Rpassword">
+GetDisplayConnectionResponse
+
+connection (	R
+connection")
+CreateSnapshotRequest
+tag (	Rtag"(
+ApplySnapshotRequest
+tag (	Rtag")
+DeleteSnapshotRequest
+tag (	Rtag"5
+ListSnapshotsResponse
+	snapshots (	R	snapshots"B
+ForwardGuestAgentResponse%
+should_forward (RshouldForward2©	
+Driver:
+Validate.google.protobuf.Empty.google.protobuf.Empty8
+Create.google.protobuf.Empty.google.protobuf.Empty<
+
+CreateDisk.google.protobuf.Empty.google.protobuf.Empty1
+Start.google.protobuf.Empty.StartResponse06
+Stop.google.protobuf.Empty.google.protobuf.Empty8
+Delete.google.protobuf.Empty.google.protobuf.Empty;
+BootScripts.google.protobuf.Empty.BootScriptsResponse8
+RunGUI.google.protobuf.Empty.google.protobuf.EmptyN
+ChangeDisplayPassword.ChangeDisplayPasswordRequest.google.protobuf.EmptyM
+GetDisplayConnection.google.protobuf.Empty.GetDisplayConnectionResponse@
+CreateSnapshot.CreateSnapshotRequest.google.protobuf.Empty>
+ApplySnapshot.ApplySnapshotRequest.google.protobuf.Empty@
+DeleteSnapshot.DeleteSnapshotRequest.google.protobuf.Empty?
+ListSnapshots.google.protobuf.Empty.ListSnapshotsResponseG
+ForwardGuestAgent.google.protobuf.Empty.ForwardGuestAgentResponse@
+GuestAgentConn.google.protobuf.Empty.google.protobuf.Empty6
+	Configure.SetConfigRequest.google.protobuf.Empty-
+Info.google.protobuf.Empty.InfoResponse9
+
+SSHAddress.google.protobuf.Empty.SSHAddressResponseB0Z.github.com/lima-vm/lima/v2/pkg/driver/externalbproto3
