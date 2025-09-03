@@ -53,7 +53,7 @@ type virtualMachineWrapper struct {
 var vmNetworkFiles = make([]*os.File, 1)
 
 func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int) (*virtualMachineWrapper, chan error, error) {
-	usernetClient, err := startUsernet(ctx, inst)
+	usernetClient, stopUsernet, err := startUsernet(ctx, inst)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -118,6 +118,7 @@ func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int) (*v
 					wrapper.stopped = true
 					wrapper.mu.Unlock()
 					_ = usernetClient.UnExposeSSH(inst.SSHLocalPort)
+					stopUsernet()
 					errCh <- errors.New("vz driver state stopped")
 				default:
 					logrus.Debugf("[VZ] - vm state change: %q", newState)
@@ -129,22 +130,23 @@ func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int) (*v
 	return wrapper, errCh, err
 }
 
-func startUsernet(ctx context.Context, inst *limatype.Instance) (*usernet.Client, error) {
+func startUsernet(ctx context.Context, inst *limatype.Instance) (*usernet.Client, context.CancelFunc, error) {
 	if firstUsernetIndex := limayaml.FirstUsernetIndex(inst.Config); firstUsernetIndex != -1 {
 		nwName := inst.Config.Networks[firstUsernetIndex].Lima
-		return usernet.NewClientByName(nwName), nil
+		return usernet.NewClientByName(nwName), nil, nil
 	}
 	// Start a in-process gvisor-tap-vsock
 	endpointSock, err := usernet.SockWithDirectory(inst.Dir, "", usernet.EndpointSock)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	vzSock, err := usernet.SockWithDirectory(inst.Dir, "", usernet.FDSock)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	os.RemoveAll(endpointSock)
 	os.RemoveAll(vzSock)
+	ctx, cancel := context.WithCancel(ctx)
 	err = usernet.StartGVisorNetstack(ctx, &usernet.GVisorNetstackOpts{
 		MTU:      1500,
 		Endpoint: endpointSock,
@@ -156,10 +158,11 @@ func startUsernet(ctx context.Context, inst *limatype.Instance) (*usernet.Client
 		Subnet: networks.SlirpNetwork,
 	})
 	if err != nil {
-		return nil, err
+		defer cancel()
+		return nil, nil, err
 	}
 	subnetIP, _, err := net.ParseCIDR(networks.SlirpNetwork)
-	return usernet.NewClient(endpointSock, subnetIP), err
+	return usernet.NewClient(endpointSock, subnetIP), cancel, err
 }
 
 func createVM(ctx context.Context, inst *limatype.Instance) (*vz.VirtualMachine, error) {
