@@ -3,8 +3,8 @@ title: Virtual Machine Drivers
 weight: 15
 ---
 
- | ⚡ Requirement | Lima >= 0.16.0 | 
- |-------------------|----------------| 
+ | ⚡ Requirement | Lima >= 2.0 |
+ |----------------|-------------|
 
 Lima supports two types of drivers: **internal** and **external**. This architecture allows for extensibility and platform-specific implementations. Drivers are unware whether they are internal or external.
 
