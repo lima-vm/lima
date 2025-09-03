@@ -44,6 +44,8 @@ func RegisterEdit(cmd *cobra.Command, commentPrefix string) {
 	})
 
 	flags.StringSlice("mount", nil, commentPrefix+"Directories to mount, suffix ':w' for writable (Do not specify directories that overlap with the existing mounts)") // colima-compatible
+	flags.StringSlice("mount-only", nil, commentPrefix+"Similar to --mount, but overrides the existing mounts")
+
 	flags.Bool("mount-none", false, commentPrefix+"Remove all mounts")
 
 	flags.String("mount-type", "", commentPrefix+"Mount type (reverse-sshfs, 9p, virtiofs)") // Similar to colima's --mount-type=(sshfs|9p|virtiofs), but "reverse-sshfs" is Lima is called "sshfs" in colima
@@ -167,6 +169,20 @@ func BuildPortForwardExpression(portForwards []string) (string, error) {
 	return expr, nil
 }
 
+func buildMountListExpression(ss []string) (string, error) {
+	expr := `[`
+	for i, s := range ss {
+		writable := strings.HasSuffix(s, ":w")
+		loc := strings.TrimSuffix(s, ":w")
+		expr += fmt.Sprintf(`{"location": %q, "writable": %v}`, loc, writable)
+		if i < len(ss)-1 {
+			expr += ","
+		}
+	}
+	expr += `]`
+	return expr, nil
+}
+
 // YQExpressions returns YQ expressions.
 func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 	type def struct {
@@ -207,16 +223,35 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 				if err != nil {
 					return "", err
 				}
-				expr := `.mounts += [`
-				for i, s := range ss {
-					writable := strings.HasSuffix(s, ":w")
-					loc := strings.TrimSuffix(s, ":w")
-					expr += fmt.Sprintf(`{"location": %q, "writable": %v}`, loc, writable)
-					if i < len(ss)-1 {
-						expr += ","
-					}
+				mountListExpr, err := buildMountListExpression(ss)
+				if err != nil {
+					return "", err
 				}
-				expr += `] | .mounts |= unique_by(.location)`
+				expr := `.mounts += ` + mountListExpr + ` | .mounts |= unique_by(.location)`
+				mountOnly, err := flags.GetStringSlice("mount-only")
+				if err != nil {
+					return "", err
+				}
+				if len(mountOnly) > 0 {
+					return "", errors.New("flag `--mount` conflicts with `--mount-only`")
+				}
+				return expr, nil
+			},
+			false,
+			false,
+		},
+		{
+			"mount-only",
+			func(_ *flag.Flag) (string, error) {
+				ss, err := flags.GetStringSlice("mount-only")
+				if err != nil {
+					return "", err
+				}
+				mountListExpr, err := buildMountListExpression(ss)
+				if err != nil {
+					return "", err
+				}
+				expr := `.mounts = ` + mountListExpr
 				return expr, nil
 			},
 			false,
@@ -225,12 +260,15 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 		{
 			"mount-none",
 			func(_ *flag.Flag) (string, error) {
-				ss, err := flags.GetStringSlice("mount")
-				if err != nil {
-					return "", err
-				}
-				if len(ss) > 0 {
-					return "", errors.New("flag `--mount-none` conflicts with `--mount`")
+				incompatibleFlagNames := []string{"mount", "mount-only"}
+				for _, name := range incompatibleFlagNames {
+					ss, err := flags.GetStringSlice(name)
+					if err != nil {
+						return "", err
+					}
+					if len(ss) > 0 {
+						return "", errors.New("flag `--mount-none` conflicts with `" + name + "`")
+					}
 				}
 				return ".mounts = null", nil
 			},

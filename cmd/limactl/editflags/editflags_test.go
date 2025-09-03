@@ -6,6 +6,7 @@ package editflags
 import (
 	"testing"
 
+	"github.com/spf13/cobra"
 	"gotest.tools/v3/assert"
 )
 
@@ -153,6 +154,49 @@ func TestParsePortForward(t *testing.T) {
 				assert.Equal(t, tt.hostPort, hostPort)
 				assert.Equal(t, tt.guestPort, guestPort)
 				assert.Equal(t, tt.isStatic, isStatic)
+			}
+		})
+	}
+}
+
+func TestYQExpressions(t *testing.T) {
+	tests := []struct {
+		name        string
+		args        []string
+		newInstance bool
+		expected    []string
+		expectError string
+	}{
+		{
+			name:        "mount",
+			args:        []string{"--mount", "/foo", "--mount", "/bar:w"},
+			newInstance: false,
+			expected:    []string{`.mounts += [{"location": "/foo", "writable": false},{"location": "/bar", "writable": true}] | .mounts |= unique_by(.location)`},
+		},
+		{
+			name:        "mount-only",
+			args:        []string{"--mount-only", "/foo", "--mount-only", "/bar:w"},
+			newInstance: false,
+			expected:    []string{`.mounts = [{"location": "/foo", "writable": false},{"location": "/bar", "writable": true}]`},
+		},
+		{
+			name:        "mixture of mount and mount-only",
+			args:        []string{"--mount", "/foo", "--mount-only", "/bar:w"},
+			newInstance: false,
+			expectError: "flag `--mount` conflicts with `--mount-only`",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := &cobra.Command{}
+			RegisterEdit(cmd, "")
+			assert.NilError(t, cmd.ParseFlags(tt.args))
+			expr, err := YQExpressions(cmd.Flags(), tt.newInstance)
+			if tt.expectError != "" {
+				assert.ErrorContains(t, err, tt.expectError)
+			} else {
+				assert.NilError(t, err)
+				assert.DeepEqual(t, tt.expected, expr)
 			}
 		})
 	}
