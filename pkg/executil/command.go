@@ -7,9 +7,14 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/ioutilx"
+	"github.com/lima-vm/lima/v2/pkg/usrlocalsharelima"
 )
 
 type options struct {
@@ -51,4 +56,36 @@ func RunUTF16leCommand(args []string, opts ...Opt) (string, error) {
 		outString = s
 	}
 	return outString, err
+}
+
+// WithExecutablePath prepends the directory containing the current executable to the PATH
+// and appends "/usr/local/libexec/lima" to the end before calling fn().
+//
+// This can be used to prefer plugins from the same directory over ones on the PATH and also works if the
+// directory containing the executable itself is not on the path (e.g. "./_output/bin/limactl").
+//
+// It means if plugins call limactl they will invoke back the executable that called them.
+func WithExecutablePath(fn func() error) error {
+	exe, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("failed to get executable path: %w", err)
+	}
+
+	currentPath := os.Getenv("PATH")
+	defer os.Setenv("PATH", currentPath)
+	newPath := filepath.Dir(exe) + string(filepath.ListSeparator) + currentPath
+
+	prefixDir, err := usrlocalsharelima.Prefix()
+	if err == nil {
+		newPath += string(filepath.ListSeparator) + filepath.Join(prefixDir, "libexec", "lima")
+	} else {
+		// This happens in Go unit tests: https://github.com/lima-vm/lima/issues/3208
+		logrus.Warnf("Couldn't locate libexec path: %v", err)
+	}
+
+	if err := os.Setenv("PATH", newPath); err != nil {
+		return fmt.Errorf("failed to set PATH environment: %w", err)
+	}
+
+	return fn()
 }
