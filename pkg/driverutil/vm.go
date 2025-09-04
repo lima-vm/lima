@@ -90,7 +90,7 @@ func handlePreConfiguredDriverAction(ctx context.Context, y *limatype.LimaYAML, 
 	}
 
 	if stderrBuf.Len() > 0 {
-		return fmt.Errorf("external driver stderr: %s", stderrBuf.String())
+		logrus.Debugf("external driver stderr: %s", stderrBuf.String())
 	}
 
 	*y = res
@@ -168,7 +168,7 @@ func handleInspectStatusAction(ctx context.Context, inst *limatype.Instance, ext
 	}
 
 	if stderrBuf.Len() > 0 {
-		return "", fmt.Errorf("external driver stderr: %s", stderrBuf.String())
+		logrus.Debugf("external driver stderr: %s", stderrBuf.String())
 	}
 
 	*inst = respInst
