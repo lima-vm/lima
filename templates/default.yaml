@@ -11,6 +11,16 @@
 # 🟢 Builtin default: "vz" (on macOS 13.5 and later), "qemu" (on others)
 vmType: null
 
+# Host OS compatibility: List of host operating systems this template supports.
+# Valid values: "darwin" (macOS), "linux", "windows", "freebsd"
+# If not specified or empty, the template can run on any supported host OS.
+# 🟢 Builtin default: [] (runs on all supported host OSes)
+# 🔵 Examples:
+#   supportedHostOS: ["darwin"]           # macOS only
+#   supportedHostOS: ["darwin", "linux"]  # macOS and Linux only
+#   supportedHostOS: []                   # All supported OSes (same as not specifying)
+supportedHostOS: []
+
 # Arch: "default", "x86_64", "aarch64".
 # 🟢 Builtin default: "default" (corresponds to the host architecture)
 arch: null

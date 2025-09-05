@@ -17,9 +17,16 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/registry"
 )
 
-func ResolveVMType(ctx context.Context, y *limatype.LimaYAML, filePath string) error {
+// ResolveVMType sets the VMType field in the given LimaYAML if not already set.
+// It validates the configuration against the specified or default VMType.
+// If 'warn' is true, it logs warnings instead of returning errors for driver validation issues.
+func ResolveVMType(ctx context.Context, y *limatype.LimaYAML, filePath string, warn bool) error {
 	if y.VMType != nil && *y.VMType != "" {
 		if err := validateConfigAgainstDriver(ctx, y, filePath, *y.VMType); err != nil {
+			if warn {
+				logrus.Warn(err)
+				return nil
+			}
 			return err
 		}
 		logrus.Debugf("Using specified vmType %q for %q", *y.VMType, filePath)
@@ -28,7 +35,14 @@ func ResolveVMType(ctx context.Context, y *limatype.LimaYAML, filePath string) e
 
 	// If VMType is not specified, we go with the default platform driver.
 	vmType := limatype.DefaultDriver()
-	return validateConfigAgainstDriver(ctx, y, filePath, vmType)
+	if err := validateConfigAgainstDriver(ctx, y, filePath, vmType); err != nil {
+		if warn {
+			logrus.Warn(err)
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
 func validateConfigAgainstDriver(ctx context.Context, y *limatype.LimaYAML, filePath, vmType string) error {

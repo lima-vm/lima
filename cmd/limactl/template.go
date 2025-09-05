@@ -9,12 +9,14 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	"github.com/lima-vm/lima/v2/pkg/driverutil"
 	"github.com/lima-vm/lima/v2/pkg/limatmpl"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	"github.com/lima-vm/lima/v2/pkg/yqutil"
@@ -88,9 +90,12 @@ func fillDefaults(ctx context.Context, tmpl *limatmpl.Template) error {
 	if err == nil {
 		tmpl.Bytes, err = limayaml.Marshal(tmpl.Config, false)
 	}
-	if err := driverutil.ResolveVMType(ctx, tmpl.Config, filePath); err != nil {
-		logrus.Warnf("failed to resolve VM type for %q: %v", filePath, err)
+	if !limatype.SupportedHostOS(tmpl.Config) {
+		logrus.Warnf("current host OS %q is not supported by this template", runtime.GOOS)
 		return nil
+	}
+	if err := driverutil.ResolveVMType(ctx, tmpl.Config, filePath, false); err != nil {
+		return fmt.Errorf("failed to resolve VM type for %q: %w", filePath, err)
 	}
 	return err
 }
@@ -251,9 +256,12 @@ func templateValidateAction(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		if err := driverutil.ResolveVMType(ctx, y, filePath); err != nil {
-			logrus.Warnf("failed to resolve VM type for %q: %v", filePath, err)
+		if !limatype.SupportedHostOS(y) {
+			logrus.Warnf("current host OS %q is not supported by this template", runtime.GOOS)
 			return nil
+		}
+		if err := driverutil.ResolveVMType(ctx, y, filePath, true); err != nil {
+			return fmt.Errorf("failed to resolve VM type for %q: %w", filePath, err)
 		}
 		if err := limayaml.Validate(y, false); err != nil {
 			return fmt.Errorf("failed to validate YAML file %q: %w", arg, err)

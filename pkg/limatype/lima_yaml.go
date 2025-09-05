@@ -6,6 +6,7 @@ package limatype
 import (
 	"net"
 	"runtime"
+	"slices"
 
 	"github.com/opencontainers/go-digest"
 	"github.com/sirupsen/logrus"
@@ -17,6 +18,7 @@ type LimaYAML struct {
 	MinimumLimaVersion *string       `yaml:"minimumLimaVersion,omitempty" json:"minimumLimaVersion,omitempty" jsonschema:"nullable"`
 	VMType             *VMType       `yaml:"vmType,omitempty" json:"vmType,omitempty" jsonschema:"nullable"`
 	VMOpts             VMOpts        `yaml:"vmOpts,omitempty" json:"vmOpts,omitempty"`
+	SupportedHostOS    []string      `yaml:"supportedHostOS,omitempty" json:"supportedHostOS,omitempty" jsonschema:"nullable"`
 	OS                 *OS           `yaml:"os,omitempty" json:"os,omitempty" jsonschema:"nullable"`
 	Arch               *Arch         `yaml:"arch,omitempty" json:"arch,omitempty" jsonschema:"nullable"`
 	Images             []Image       `yaml:"images,omitempty" json:"images,omitempty" jsonschema:"nullable"`
@@ -394,9 +396,15 @@ func DefaultDriver() VMType {
 	switch runtime.GOOS {
 	case "darwin":
 		return VZ
-	case "windows":
-		return WSL2
 	default:
+		// Since WSL2 is experimental, we use QEMU as the default on Windows.
 		return QEMU
 	}
+}
+
+func SupportedHostOS(y *LimaYAML) bool {
+	if y.SupportedHostOS == nil {
+		return true
+	}
+	return slices.Contains(y.SupportedHostOS, runtime.GOOS)
 }

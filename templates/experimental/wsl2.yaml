@@ -15,3 +15,5 @@ mountType: wsl2
 containerd:
   system: true
   user: false
+
+supportedHostOS: [windows]

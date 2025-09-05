@@ -210,6 +210,8 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		y.VMType = o.VMType
 	}
 
+	y.SupportedHostOS = slices.Concat(o.SupportedHostOS, y.SupportedHostOS, d.SupportedHostOS)
+
 	if y.OS == nil {
 		y.OS = d.OS
 	}

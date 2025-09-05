@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"maps"
 	"os"
+	"runtime"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -97,7 +98,11 @@ func knownLocations(ctx context.Context) (map[string]limatype.File, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err := driverutil.ResolveVMType(ctx, y, t.Name); err != nil {
+		if !limatype.SupportedHostOS(y) {
+			logrus.Warnf("Skipping template %q: current host OS %q is not supported by this template", t.Name, runtime.GOOS)
+			continue
+		}
+		if err := driverutil.ResolveVMType(ctx, y, t.Name, true); err != nil {
 			return nil, fmt.Errorf("failed to resolve vm for %q: %w", t.Name, err)
 		}
 		maps.Copy(locations, locationsFromLimaYAML(y))

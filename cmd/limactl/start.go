@@ -363,7 +363,7 @@ func applyYQExpressionToExistingInstance(ctx context.Context, inst *limatype.Ins
 	if err != nil {
 		return nil, err
 	}
-	if err := driverutil.ResolveVMType(ctx, y, filePath); err != nil {
+	if err := driverutil.ResolveVMType(ctx, y, filePath, false); err != nil {
 		return nil, fmt.Errorf("failed to resolve vm for %q: %w", filePath, err)
 	}
 	if err := limayaml.Validate(y, true); err != nil {

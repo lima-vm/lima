@@ -49,7 +49,7 @@ func Create(ctx context.Context, instName string, instConfig []byte, saveBrokenY
 	if err != nil {
 		return nil, err
 	}
-	if err := driverutil.ResolveVMType(ctx, loadedInstConfig, filePath); err != nil {
+	if err := driverutil.ResolveVMType(ctx, loadedInstConfig, filePath, false); err != nil {
 		return nil, fmt.Errorf("failed to resolve vm for %q: %w", filePath, err)
 	}
 	if err := limayaml.Validate(loadedInstConfig, true); err != nil {
