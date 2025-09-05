@@ -501,9 +501,8 @@ uninstall:
 
 .PHONY: check-generated
 check-generated:
-	@test -z "$$(git status --short | grep ".pb.desc" | tee /dev/stderr)" || \
-		((git diff $$(find . -name '*.pb.desc') | cat) && \
-		(echo "Please run 'make generate' when making changes to proto files and check-in the generated file changes" && false))
+	git diff --exit-code || \
+		(echo "Please run 'make generate' when making changes to proto files and check-in the generated file changes" && false)
 
 .PHONY: lint
 lint: check-generated
