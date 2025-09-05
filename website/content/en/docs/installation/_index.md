@@ -19,6 +19,9 @@ Prerequisite:
 brew install lima
 ```
 
+Hint: specify `--HEAD` to install the HEAD (master) version.
+The HEAD version provides early access to the latest features and improvements before they are officially released.
+
 Homebrew formula is available [here](https://github.com/Homebrew/homebrew-core/blob/master/Formula/l/lima.rb).
 Supports macOS and Linux.
 {{% /tab %}}
