@@ -713,10 +713,14 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 				mounts[i].NineP.Cache = ptr.Of(Default9pCacheForRO)
 			}
 		}
-		if location, err := localpathutil.Expand(mount.Location); err == nil {
-			mounts[i].Location = location
-		} else {
-			logrus.WithError(err).Warnf("Couldn't expand location %q", mount.Location)
+
+		// Expand a path that begins with `~`. Relative paths are not modified, and rejected by Validate() later.
+		if localpathutil.IsTildePath(mount.Location) {
+			if location, err := localpathutil.Expand(mount.Location); err == nil {
+				mounts[i].Location = location
+			} else {
+				logrus.WithError(err).Warnf("Couldn't expand location %q", mount.Location)
+			}
 		}
 		if mount.MountPoint == nil {
 			mountLocation := mounts[i].Location
