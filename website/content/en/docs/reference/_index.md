@@ -1,4 +1,4 @@
 ---
 title: Command Reference
-weight: 5
+weight: 999
 ---
