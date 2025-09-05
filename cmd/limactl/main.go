@@ -23,6 +23,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/fsutil"
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
+	"github.com/lima-vm/lima/v2/pkg/plugin"
 	"github.com/lima-vm/lima/v2/pkg/version"
 )
 
@@ -164,6 +165,24 @@ func newApp() *cobra.Command {
 	}
 	rootCmd.AddGroup(&cobra.Group{ID: "basic", Title: "Basic Commands:"})
 	rootCmd.AddGroup(&cobra.Group{ID: "advanced", Title: "Advanced Commands:"})
+
+	// Add custom help function to show plugins
+	originalHelpFunc := rootCmd.HelpFunc()
+	rootCmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
+		originalHelpFunc(cmd, args)
+
+		plugins, err := plugin.DiscoverPlugins()
+		if err == nil && len(plugins) > 0 {
+			fmt.Fprint(cmd.OutOrStdout(), "\nAvailable Plugins:\n")
+			for _, p := range plugins {
+				if p.Description != "" {
+					fmt.Fprintf(cmd.OutOrStdout(), "  %-20s %s\n", p.Name, p.Description)
+				} else {
+					fmt.Fprintf(cmd.OutOrStdout(), "  %s\n", p.Name)
+				}
+			}
+		}
+	})
 	rootCmd.AddCommand(
 		newCreateCommand(),
 		newStartCommand(),
@@ -231,7 +250,7 @@ func runExternalPlugin(ctx context.Context, name string, args []string) {
 		ctx = context.Background()
 	}
 
-	if err := updatePathEnv(); err != nil {
+	if err := plugin.UpdatePathForPlugins(); err != nil {
 		logrus.Warnf("failed to update PATH environment: %v", err)
 		// PATH update failure shouldn't prevent plugin execution
 	}
@@ -254,25 +273,6 @@ func runExternalPlugin(ctx context.Context, name string, args []string) {
 		os.Exit(0) //nolint:revive // it's intentional to call os.Exit in this function
 	}
 	logrus.Fatalf("external command %q failed: %v", execPath, err)
-}
-
-func updatePathEnv() error {
-	exe, err := os.Executable()
-	if err != nil {
-		return fmt.Errorf("failed to get executable path: %w", err)
-	}
-
-	binDir := filepath.Dir(exe)
-	currentPath := os.Getenv("PATH")
-	newPath := binDir + string(filepath.ListSeparator) + currentPath
-
-	if err := os.Setenv("PATH", newPath); err != nil {
-		return fmt.Errorf("failed to set PATH environment: %w", err)
-	}
-
-	logrus.Debugf("updated PATH to prioritize %s", binDir)
-
-	return nil
 }
 
 // WrapArgsError annotates cobra args error with some context, so the error message is more user-friendly.
