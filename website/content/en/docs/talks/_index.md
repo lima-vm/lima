@@ -30,3 +30,33 @@ Watch the [video](https://www.youtube.com/watch?v=GDInFocQJTU).
 [Akihiro Suda](https://github.com/AkihiroSuda) presented Lima in the CNCF project pavilion.
 
 Read the [slides](https://www.slideshare.net/AkihiroSuda/kubeconeu2023-lima-pavilion).
+
+### KubeCon + CloudNativeCon North America 2023
+
+[Akihiro Suda](https://github.com/AkihiroSuda) presented Lima in the CNCF project pavilion.
+
+Read the [slides](https://github.com/AkihiroSuda/AkihiroSuda/blob/master/slides/2023/20231107%20%5BKubeCon%20NA%20Pavilion%5D%20Lima.pdf).
+
+## 2024
+### KubeCon + CloudNativeCon Europe 2024
+
+[Akihiro Suda](https://github.com/AkihiroSuda) presented Lima in the CNCF project pavilion.
+
+Read the [slides](https://github.com/AkihiroSuda/AkihiroSuda/blob/master/slides/2024/20240321%20%5BKubeCon%20EU%20Pavilion%5D%20Lima.pdf).
+
+### KubeCon + CloudNativeCon North America 2024
+
+[Akihiro Suda](https://github.com/AkihiroSuda) presented Lima in the CNCF project pavilion.
+
+Read the [slides](https://github.com/AkihiroSuda/AkihiroSuda/blob/master/slides/2024/20241115%20%5BKubeCon%20NA%20Pavilion%5D%20Lima.pdf).
+
+He also mentioned Lima in the presentation "What’s Going on in the Containerd Neighborhood?" in the context of case study of nerdctl.
+
+Read the [slides](https://static.sched.com/hosted_files/kccncna2024/74/KCCNC-SLC-24-Containerd-session.pdf)or watch the [video](https://www.youtube.com/watch?v=kCNhgNXVdxw).
+
+## 2025
+### KubeCon + CloudNativeCon Europe 2025
+
+[Akihiro Suda](https://github.com/AkihiroSuda) presented Lima in the CNCF project pavilion.
+
+Read the [slides](https://github.com/AkihiroSuda/AkihiroSuda/blob/master/slides/2025/20250402%20%5BKubeCon%20EU%20Pavilion%5D%20Lima.pdf).
