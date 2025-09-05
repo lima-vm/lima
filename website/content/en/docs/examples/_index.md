@@ -14,11 +14,8 @@ By default, the VM has read-only accesses to `/Users/<USERNAME>`.
 
 To allow writing to `/Users/<USERNAME>`:
 ```bash
-limactl edit --mount-writable --mount-type=virtiofs
+limactl edit --mount-writable
 ```
-
-Specifying `--mount-type=virtiofs` is not necessary here, but it is highly recommended
-for the best performance and stability.
 
 {{% alert title="Hint" color=success %}}
 Lima prior to v2.0 mounts `/tmp/lima` too in read-write mode.
@@ -81,7 +78,6 @@ limactl start \
   --memory=8 \
   --vm-type=vz \
   --rosetta \
-  --mount-type=virtiofs \
   --mount-writable \
   --network=vzNAT \
   template://fedora
@@ -92,7 +88,6 @@ limactl start \
 - `--memory=8`: Set the amount of the memory to 8 GiB
 - `--vm-type=vz`: Use Apple's Virtualization.framework (vz) to enable Rosetta, virtiofs, and vzNAT
 - `--rosetta`: Allow running Intel (AMD) binaries on ARM
-- `--mount-type=virtiofs`: Use virtiofs for better performance
 - `--mount-writable`: Make the home mount (`/Users/<USERNAME>`) writable
 - `--network=vzNAT`: Make the VM reachable from the host by its IP address
 - `template://fedora`: Use Fedora

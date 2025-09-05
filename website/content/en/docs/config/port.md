@@ -11,12 +11,12 @@ Lima supports two port forwarders: SSH and GRPC.
 
 The default port forwarder is shown in the following table.
 
-| Version       | Default |
-| ------------- | ------- |
-| v0.1.0        | SSH     |
-| v1.0.0        | GRPC    |
-| v1.0.1        | SSH     |
-| v1.1.0-beta.0 | GRPC    |
+| Version | Default |
+| --------| ------- |
+| v0.1.0  | SSH     |
+| v1.0.0  | GRPC    |
+| v1.0.1  | SSH     |
+| v1.1.0  | GRPC    |
 
 The default was once changed to GRPC in Lima v1.0, but it was reverted to SSH in v1.0.1 due to stability reasons.
 The default was further reverted to GRPC in Lima v1.1, as the stability issues were resolved.
