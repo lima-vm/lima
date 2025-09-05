@@ -47,7 +47,7 @@ An example configuration:
 {{< tabpane text=true >}}
 {{% tab header="CLI" %}}
 ```bash
-limactl start --vm-type=vz --mount-type=virtiofs
+limactl start --vm-type=vz
 ```
 {{% /tab %}}
 {{% tab header="YAML" %}}
@@ -61,7 +61,6 @@ images:
   arch: "aarch64"
 mounts:
   - location: "~"
-mountType: "virtiofs"
 ```
 {{% /tab %}}
 {{< /tabpane >}}
