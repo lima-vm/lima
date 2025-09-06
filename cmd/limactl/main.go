@@ -20,6 +20,7 @@ import (
 	"github.com/lima-vm/lima/v2/cmd/yq"
 	"github.com/lima-vm/lima/v2/pkg/debugutil"
 	"github.com/lima-vm/lima/v2/pkg/driver/external/server"
+	"github.com/lima-vm/lima/v2/pkg/executil"
 	"github.com/lima-vm/lima/v2/pkg/fsutil"
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
@@ -217,8 +218,11 @@ func executeWithPluginSupport(rootCmd *cobra.Command, args []string) error {
 	if len(args) > 0 {
 		cmd, _, err := rootCmd.Find(args)
 		if err != nil || cmd == rootCmd {
-			// Function calls os.Exit() if it found and executed the plugin
-			runExternalPlugin(rootCmd.Context(), args[0], args[1:])
+			_ = executil.WithExecutablePath(func() error {
+				// Function calls os.Exit() if it found and executed the plugin
+				runExternalPlugin(rootCmd.Context(), args[0], args[1:])
+				return nil
+			})
 		}
 	}
 
@@ -229,11 +233,6 @@ func executeWithPluginSupport(rootCmd *cobra.Command, args []string) error {
 func runExternalPlugin(ctx context.Context, name string, args []string) {
 	if ctx == nil {
 		ctx = context.Background()
-	}
-
-	if err := updatePathEnv(); err != nil {
-		logrus.Warnf("failed to update PATH environment: %v", err)
-		// PATH update failure shouldn't prevent plugin execution
 	}
 
 	externalCmd := "limactl-" + name
@@ -254,25 +253,6 @@ func runExternalPlugin(ctx context.Context, name string, args []string) {
 		os.Exit(0) //nolint:revive // it's intentional to call os.Exit in this function
 	}
 	logrus.Fatalf("external command %q failed: %v", execPath, err)
-}
-
-func updatePathEnv() error {
-	exe, err := os.Executable()
-	if err != nil {
-		return fmt.Errorf("failed to get executable path: %w", err)
-	}
-
-	binDir := filepath.Dir(exe)
-	currentPath := os.Getenv("PATH")
-	newPath := binDir + string(filepath.ListSeparator) + currentPath
-
-	if err := os.Setenv("PATH", newPath); err != nil {
-		return fmt.Errorf("failed to set PATH environment: %w", err)
-	}
-
-	logrus.Debugf("updated PATH to prioritize %s", binDir)
-
-	return nil
 }
 
 // WrapArgsError annotates cobra args error with some context, so the error message is more user-friendly.
