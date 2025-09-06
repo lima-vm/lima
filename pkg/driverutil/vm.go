@@ -17,6 +17,8 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/registry"
 )
 
+// ResolveVMType sets the VMType field in the given LimaYAML if not already set.
+// It validates the configuration against the specified or default VMType.
 func ResolveVMType(ctx context.Context, y *limatype.LimaYAML, filePath string) error {
 	if y.VMType != nil && *y.VMType != "" {
 		if err := validateConfigAgainstDriver(ctx, y, filePath, *y.VMType); err != nil {

@@ -5,7 +5,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"maps"
 	"os"
 
@@ -80,6 +79,10 @@ func knownLocations(ctx context.Context) (map[string]limatype.File, error) {
 		if err != nil {
 			return nil, err
 		}
+		if instance.Errors != nil {
+			logrus.Warnf("skipping instance %q because it has errors: %v", instanceName, instance.Errors)
+			continue
+		}
 		maps.Copy(locations, locationsFromLimaYAML(instance.Config))
 	}
 
@@ -98,7 +101,8 @@ func knownLocations(ctx context.Context) (map[string]limatype.File, error) {
 			return nil, err
 		}
 		if err := driverutil.ResolveVMType(ctx, y, t.Name); err != nil {
-			return nil, fmt.Errorf("failed to resolve vm for %q: %w", t.Name, err)
+			logrus.Warnf("failed to resolve vm for %q: %v", t.Name, err)
+			continue
 		}
 		maps.Copy(locations, locationsFromLimaYAML(y))
 	}
