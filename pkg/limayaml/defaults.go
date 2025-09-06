@@ -922,14 +922,6 @@ func FillPortForwardDefaults(rule *limatype.PortForward, instDir string, user li
 			rule.GuestPortRange[1] = rule.GuestPort
 		}
 	}
-	if rule.HostPortRange[0] == 0 && rule.HostPortRange[1] == 0 {
-		if rule.HostPort == 0 {
-			rule.HostPortRange = rule.GuestPortRange
-		} else {
-			rule.HostPortRange[0] = rule.HostPort
-			rule.HostPortRange[1] = rule.HostPort
-		}
-	}
 	if rule.GuestSocket != "" {
 		if out, err := executeGuestTemplate(rule.GuestSocket, instDir, user, param); err == nil {
 			rule.GuestSocket = out.String()
@@ -945,6 +937,13 @@ func FillPortForwardDefaults(rule *limatype.PortForward, instDir string, user li
 		}
 		if !filepath.IsAbs(rule.HostSocket) {
 			rule.HostSocket = filepath.Join(instDir, filenames.SocketDir, rule.HostSocket)
+		}
+	} else if rule.HostPortRange[0] == 0 && rule.HostPortRange[1] == 0 {
+		if rule.HostPort == 0 {
+			rule.HostPortRange = rule.GuestPortRange
+		} else {
+			rule.HostPortRange[0] = rule.HostPort
+			rule.HostPortRange[1] = rule.HostPort
 		}
 	}
 }
