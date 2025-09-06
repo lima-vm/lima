@@ -948,12 +948,16 @@ func (a *HostAgent) watchCloudInitProgress(ctx context.Context) {
 		"-p", strconv.Itoa(a.sshLocalPort),
 		"127.0.0.1",
 		"sh", "-c",
-		`"sudo tail -n +$(sudo awk '
-			BEGIN{b=1; e=1}
-			/^Cloud-init.* finished/{e=NR}
-			/.*/{if(NR>e){b=e+1}}
-			END{print b}
-		' /var/log/cloud-init-output.log) -f /var/log/cloud-init-output.log"`,
+		`"if command -v systemctl >/dev/null 2>&1 && systemctl is-enabled -q cloud-init-main.service; then
+			sudo journalctl -u cloud-init-main.service -b -S @0 -o cat -f
+		else
+			sudo tail -n +$(sudo awk '
+				BEGIN{b=1; e=1}
+				/^Cloud-init.* finished/{e=NR}
+				/.*/{if(NR>e){b=e+1}}
+				END{print b}
+			' /var/log/cloud-init-output.log) -f /var/log/cloud-init-output.log
+		fi"`,
 	)
 
 	cmd = exec.CommandContext(ctx, a.sshConfig.Binary(), args...)
@@ -971,6 +975,7 @@ func (a *HostAgent) watchCloudInitProgress(ctx context.Context) {
 	}
 
 	scanner := bufio.NewScanner(stdout)
+	cloudInitMainServiceStarted := false
 	cloudInitFinished := false
 
 	for scanner.Scan() {
@@ -979,11 +984,19 @@ func (a *HostAgent) watchCloudInitProgress(ctx context.Context) {
 			continue
 		}
 
-		if !cloudInitFinished {
-			if isCloudInitFinished(line) {
-				logrus.Debug("Cloud-init completion detected via log pattern")
-				cloudInitFinished = true
+		if !cloudInitMainServiceStarted {
+			if isStartedCloudInitMainService(line) {
+				logrus.Debug("cloud-init-main.service started detected via log pattern")
+				cloudInitMainServiceStarted = true
+			} else if !cloudInitFinished {
+				if isCloudInitFinished(line) {
+					logrus.Debug("Cloud-init completion detected via log pattern")
+					cloudInitFinished = true
+				}
 			}
+		} else if !cloudInitFinished && isDeactivatedCloudInitMainService(line) {
+			logrus.Debug("cloud-init-main.service deactivated detected via log pattern")
+			cloudInitFinished = true
 		}
 
 		a.emitCloudInitProgressEvent(ctx, &events.CloudInitProgress{
@@ -1046,6 +1059,17 @@ func (a *HostAgent) watchCloudInitProgress(ctx context.Context) {
 func isCloudInitFinished(line string) bool {
 	line = strings.ToLower(strings.TrimSpace(line))
 	return strings.Contains(line, "cloud-init") && strings.Contains(line, "finished")
+}
+
+func isStartedCloudInitMainService(line string) bool {
+	line = strings.ToLower(strings.TrimSpace(line))
+	return strings.HasPrefix(line, "started cloud-init-main.service")
+}
+
+func isDeactivatedCloudInitMainService(line string) bool {
+	line = strings.ToLower(strings.TrimSpace(line))
+	// Deactivated event lines end with a line reporting consumed CPU time, etc.
+	return strings.HasPrefix(line, "cloud-init-main.service: consumed")
 }
 
 func copyToHost(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, remote string) error {
