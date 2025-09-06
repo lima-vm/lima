@@ -193,7 +193,7 @@ func (l *LimaWslDriver) InspectStatus(ctx context.Context, inst *limatype.Instan
 	inst.SSHLocalPort = 22
 
 	if inst.Status == limatype.StatusRunning {
-		sshAddr, err := l.SSHAddress(ctx)
+		sshAddr, err := getSSHAddress(ctx, inst.Name)
 		if err == nil {
 			inst.SSHAddress = sshAddr
 		} else {
