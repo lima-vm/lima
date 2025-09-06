@@ -8,6 +8,8 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -145,4 +147,14 @@ func (p *ClosableListeners) forwardUDP(ctx context.Context, client *guestagentcl
 
 func key(protocol, hostAddress, guestAddress string) string {
 	return fmt.Sprintf("%s-%s-%s", protocol, hostAddress, guestAddress)
+}
+
+func prepareUnixSocket(hostSocket string) error {
+	if err := os.RemoveAll(hostSocket); err != nil {
+		return fmt.Errorf("can't clean up %q: %w", hostSocket, err)
+	}
+	if err := os.MkdirAll(filepath.Dir(hostSocket), 0o755); err != nil {
+		return fmt.Errorf("can't create directory for local socket %q: %w", hostSocket, err)
+	}
+	return nil
 }

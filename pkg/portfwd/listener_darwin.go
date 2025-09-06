@@ -7,12 +7,26 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"path/filepath"
 	"strconv"
 
 	"github.com/sirupsen/logrus"
 )
 
 func Listen(ctx context.Context, listenConfig net.ListenConfig, hostAddress string) (net.Listener, error) {
+	if filepath.IsAbs(hostAddress) {
+		// Handle Unix domain sockets
+		if err := prepareUnixSocket(hostAddress); err != nil {
+			return nil, err
+		}
+		var lc net.ListenConfig
+		unixLis, err := lc.Listen(ctx, "unix", hostAddress)
+		if err != nil {
+			logrus.WithError(err).Errorf("failed to listen unix: %v", hostAddress)
+			return nil, err
+		}
+		return unixLis, nil
+	}
 	localIPStr, localPortStr, _ := net.SplitHostPort(hostAddress)
 	localIP := net.ParseIP(localIPStr)
 	localPort, _ := strconv.Atoi(localPortStr)
