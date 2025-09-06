@@ -301,6 +301,11 @@ jobs:
         - ../hack/test-templates/test-misc.yaml  # TODO: merge net-user-v2 into test-misc
     steps:
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
+      with:
+        # BATS tests don't expect lima version warnings like:
+        # msg="treating lima version \"ea336ae\" from \"/Users/runner/.lima-bats/dummy/lima-version\" as very latest release"
+        fetch-depth: 0
+        submodules: true
     - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00  # v6.0.0
       with:
         go-version: 1.25.x
@@ -319,6 +324,9 @@ jobs:
         sudo modprobe kvm
         # `sudo usermod -aG kvm $(whoami)` does not take an effect on GHA
         sudo chown $(whoami) /dev/kvm
+    - name: "Run BATS integration tests"
+      run: make bats
+      if: matrix.template == '../hack/test-templates/test-misc.yaml'
     - name: Install ansible-playbook
       run: |
         sudo apt-get install -y --no-install-recommends ansible
