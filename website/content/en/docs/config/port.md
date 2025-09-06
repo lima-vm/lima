@@ -36,6 +36,20 @@ LIMA_SSH_PORT_FORWARDER=true limactl start
 - Doesn't support UDP based port forwarding
 - Spawns child process on host for running SSH master.
 
+#### SSH over AF_VSOCK
+
+| ⚡ Requirement | Lima >= 2.0 |
+|---------------|-------------|
+
+If VM is VZ based and systemd is v256 or later (e.g. Ubuntu 24.10+), Lima uses AF_VSOCK for communication between host and guest.
+SSH based port forwarding is much faster when using AF_VSOCK compared to traditional virtual network based port forwarding.
+
+To disable this feature, set `LIMA_SSH_OVER_VSOCK` to `false`:
+
+```bash
+export LIMA_SSH_OVER_VSOCK=false
+```
+
 ### Using GRPC
 
 | ⚡ Requirement | Lima >= 1.0 |
