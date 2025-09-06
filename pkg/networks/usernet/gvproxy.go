@@ -40,12 +40,12 @@ var opts *GVisorNetstackOpts
 
 const gatewayMacAddr = "5a:94:ef:e4:0c:dd"
 
-func StartGVisorNetstack(ctx context.Context, gVisorOpts *GVisorNetstackOpts) error {
+func StartGVisorNetstack(ctx context.Context, gVisorOpts *GVisorNetstackOpts) (*virtualnetwork.VirtualNetwork, error) {
 	opts = gVisorOpts
 
 	ip, ipNet, err := net.ParseCIDR(opts.Subnet)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	gatewayIP := GatewayIP(ip)
 
@@ -82,41 +82,41 @@ func StartGVisorNetstack(ctx context.Context, gVisorOpts *GVisorNetstackOpts) er
 	}
 
 	groupErrs, ctx := errgroup.WithContext(ctx)
-	err = run(ctx, groupErrs, &config)
+	vn, err := run(ctx, groupErrs, &config)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if opts.Async {
-		return err
+		return vn, nil
 	}
-	return groupErrs.Wait()
+	return vn, groupErrs.Wait()
 }
 
-func run(ctx context.Context, g *errgroup.Group, configuration *types.Configuration) error {
+func run(ctx context.Context, g *errgroup.Group, configuration *types.Configuration) (*virtualnetwork.VirtualNetwork, error) {
 	vn, err := virtualnetwork.New(configuration)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	ln, err := transport.Listen(fmt.Sprintf("unix://%s", opts.Endpoint))
 	if err != nil {
-		return err
+		return nil, err
 	}
 	httpServe(ctx, g, ln, vn.Mux())
 
 	if opts.QemuSocket != "" {
 		err = listenQEMU(ctx, vn)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 	if opts.FdSocket != "" {
 		err = listenFD(ctx, vn)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
-	return nil
+	return vn, nil
 }
 
 func listenQEMU(ctx context.Context, vn *virtualnetwork.VirtualNetwork) error {
