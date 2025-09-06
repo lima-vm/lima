@@ -35,6 +35,21 @@ func NewClosableListener() *ClosableListeners {
 	}
 }
 
+func (p *ClosableListeners) Close() {
+	p.listenersRW.Lock()
+	defer p.listenersRW.Unlock()
+	for _, listener := range p.listeners {
+		listener.Close()
+	}
+	clear(p.listeners)
+	p.udpListenersRW.Lock()
+	defer p.udpListenersRW.Unlock()
+	for _, listener := range p.udpListeners {
+		listener.Close()
+	}
+	clear(p.udpListeners)
+}
+
 func (p *ClosableListeners) Forward(ctx context.Context, client *guestagentclient.GuestAgentClient,
 	protocol string, hostAddress string, guestAddress string,
 ) {
@@ -90,6 +105,9 @@ func (p *ClosableListeners) forwardTCP(ctx context.Context, client *guestagentcl
 	for {
 		conn, err := tcpLis.Accept()
 		if err != nil {
+			if opErr, ok := err.(*net.OpError); ok && opErr.Err.Error() == "use of closed network connection" {
+				return
+			}
 			logrus.Errorf("failed to accept TCP connection: %v", err)
 			if strings.Contains(err.Error(), "pseudoloopback") {
 				// don't stop forwarding because the forwarder has rejected a non-local address
