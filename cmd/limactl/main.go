@@ -33,6 +33,10 @@ const (
 )
 
 func main() {
+	if os.Geteuid() == 0 && (len(os.Args) < 2 || os.Args[1] != "generate-doc") {
+		panic("must not run as the root user")
+	}
+
 	yq.MaybeRunYQ()
 	if runtime.GOOS == "windows" {
 		extras, hasExtra := os.LookupEnv("_LIMA_WINDOWS_EXTRA_PATH")
@@ -128,9 +132,6 @@ func newApp() *cobra.Command {
 			return errors.New("limactl is running under rosetta, please reinstall lima with native arch")
 		}
 
-		if os.Geteuid() == 0 && cmd.Name() != "generate-doc" {
-			return errors.New("must not run as the root user")
-		}
 		// Make sure either $HOME or $LIMA_HOME is defined, so we don't need
 		// to check for errors later
 		dir, err := dirnames.LimaDir()
