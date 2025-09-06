@@ -1,0 +1,16 @@
+[submodule "hack/bats/lib/bats-core"]
+	path = hack/bats/lib/bats-core
+	url = https://github.com/lima-vm/bats-core.git
+	branch = master
+[submodule "hack/bats/lib/bats-file"]
+	path = hack/bats/lib/bats-file
+	url = https://github.com/lima-vm/bats-file.git
+	branch = master
+[submodule "hack/bats/lib/bats-assert"]
+	path = hack/bats/lib/bats-assert
+	url = https://github.com/lima-vm/bats-assert.git
+	branch = master
+[submodule "hack/bats/lib/bats-support"]
+	path = hack/bats/lib/bats-support
+	url = https://github.com/lima-vm/bats-support.git
+	branch = master
