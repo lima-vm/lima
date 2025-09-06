@@ -14,6 +14,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
+	"github.com/lima-vm/lima/v2/pkg/plugin"
 	"github.com/lima-vm/lima/v2/pkg/registry"
 	"github.com/lima-vm/lima/v2/pkg/templatestore"
 	"github.com/lima-vm/lima/v2/pkg/usrlocalsharelima"
@@ -29,6 +30,7 @@ type LimaInfo struct {
 	VMTypesEx       map[string]DriverExt         `json:"vmTypesEx"`   // since Lima v2.0.0
 	GuestAgents     map[limatype.Arch]GuestAgent `json:"guestAgents"` // since Lima v1.1.0
 	ShellEnvBlock   []string                     `json:"shellEnvBlock"`
+	Plugins         []plugin.Plugin              `json:"plugins"`
 }
 
 type DriverExt struct {
@@ -95,5 +97,15 @@ func New(ctx context.Context) (*LimaInfo, error) {
 			Location: bin,
 		}
 	}
+
+	plugins, err := plugin.DiscoverPlugins()
+	if err != nil {
+		logrus.WithError(err).Debug("Failed to discover plugins")
+		// Don't fail the entire info command if plugin discovery fails
+		info.Plugins = []plugin.Plugin{}
+	} else {
+		info.Plugins = plugins
+	}
+
 	return info, nil
 }
