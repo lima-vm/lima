@@ -108,10 +108,35 @@ func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int) (*v
 					filesToRemove[pidFile] = struct{}{}
 					logrus.Info("[VZ] - vm state change: running")
 
-					err := usernetClient.ConfigureDriver(ctx, inst, sshLocalPort)
-					if err != nil {
-						errCh <- err
-					}
+					go func() {
+						sshLocalPort := sshLocalPort
+						useSSHOverVsock := true
+						if envVar := os.Getenv("LIMA_SSH_OVER_VSOCK"); envVar != "" {
+							b, err := strconv.ParseBool(envVar)
+							if err != nil {
+								logrus.WithError(err).Warnf("invalid LIMA_SSH_OVER_VSOCK value %q", envVar)
+							} else {
+								useSSHOverVsock = b
+							}
+						}
+						if !useSSHOverVsock {
+							logrus.Info("LIMA_SSH_OVER_VSOCK is false, skipping detection of SSH server on vsock port")
+						} else if err := usernetClient.WaitOpeningSSHPort(ctx, inst); err == nil {
+							if err := wrapper.startVsockForwarder(ctx, 22, uint32(sshLocalPort)); err == nil {
+								logrus.Infof("Detected SSH server is listening on the vsock port; changed localhost:%d to proxy for the vsock port", sshLocalPort)
+								sshLocalPort = 0 // disable gvisor ssh port forwarding
+							} else {
+								logrus.WithError(err).Warn("Failed to detect SSH server on vsock port, falling back to gvisor's forwarder")
+							}
+						} else {
+							logrus.WithError(err).Warn("Failed to wait for the guest SSH server to become available, falling back to gvisor's forwarder")
+						}
+						err := usernetClient.ConfigureDriver(ctx, inst, sshLocalPort)
+						if err != nil {
+							errCh <- err
+						}
+					}()
+
 				case vz.VirtualMachineStateStopped:
 					logrus.Info("[VZ] - vm state change: stopped")
 					wrapper.mu.Lock()
@@ -147,7 +172,7 @@ func startUsernet(ctx context.Context, inst *limatype.Instance) (*usernet.Client
 	os.RemoveAll(endpointSock)
 	os.RemoveAll(vzSock)
 	ctx, cancel := context.WithCancel(ctx)
-	err = usernet.StartGVisorNetstack(ctx, &usernet.GVisorNetstackOpts{
+	vn, err := usernet.StartGVisorNetstack(ctx, &usernet.GVisorNetstackOpts{
 		MTU:      1500,
 		Endpoint: endpointSock,
 		FdSocket: vzSock,
@@ -162,7 +187,7 @@ func startUsernet(ctx context.Context, inst *limatype.Instance) (*usernet.Client
 		return nil, nil, err
 	}
 	subnetIP, _, err := net.ParseCIDR(networks.SlirpNetwork)
-	return usernet.NewClient(endpointSock, subnetIP), cancel, err
+	return usernet.NewClient(endpointSock, subnetIP, vn), cancel, err
 }
 
 func createVM(ctx context.Context, inst *limatype.Instance) (*vz.VirtualMachine, error) {

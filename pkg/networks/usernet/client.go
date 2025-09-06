@@ -16,6 +16,8 @@ import (
 
 	gvproxyclient "github.com/containers/gvisor-tap-vsock/pkg/client"
 	"github.com/containers/gvisor-tap-vsock/pkg/types"
+	"github.com/containers/gvisor-tap-vsock/pkg/virtualnetwork"
+	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/httpclientutil"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
@@ -30,6 +32,8 @@ type Client struct {
 	delegate *gvproxyclient.Client
 	base     string
 	subnet   net.IP
+
+	vn *virtualnetwork.VirtualNetwork
 }
 
 func (c *Client) ConfigureDriver(ctx context.Context, inst *limatype.Instance, sshLocalPort int) error {
@@ -38,9 +42,11 @@ func (c *Client) ConfigureDriver(ctx context.Context, inst *limatype.Instance, s
 	if err != nil {
 		return err
 	}
-	err = c.ResolveAndForwardSSH(ipAddress, sshLocalPort)
-	if err != nil {
-		return err
+	if sshLocalPort != 0 {
+		err = c.ResolveAndForwardSSH(ipAddress, sshLocalPort)
+		if err != nil {
+			return err
+		}
 	}
 	hosts := inst.Config.HostResolver.Hosts
 	if hosts == nil {
@@ -127,6 +133,37 @@ func (c *Client) Leases(ctx context.Context) (map[string]string, error) {
 	return leases, nil
 }
 
+// WaitOpeningSSHPort Wait until the guest ssh server is available.
+func (c *Client) WaitOpeningSSHPort(ctx context.Context, inst *limatype.Instance) error {
+	if c.vn == nil {
+		return errors.New("internal error: vn is nil")
+	}
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	macAddress := limayaml.MACAddress(inst.Dir)
+	ipAddr, err := c.ResolveIPAddress(ctx, macAddress)
+	if err != nil {
+		return err
+	}
+	// Wait until the guest ssh server is available.
+	for {
+		conn, err := c.vn.DialContextTCP(ctx, fmt.Sprintf("%s:22", ipAddr))
+		if err == nil {
+			conn.Close()
+			logrus.Infof("Guest SSH server is available on %s:22", ipAddr)
+			break
+		}
+		select {
+		case <-ctx.Done():
+			return errors.New("timed out waiting for SSH server to be available")
+		default:
+		}
+		logrus.Infof("Waiting for guest ssh server to be available on %s:22", ipAddr)
+		time.Sleep(500 * time.Millisecond)
+	}
+	return nil
+}
+
 func NewClientByName(nwName string) *Client {
 	endpointSock, err := Sock(nwName, EndpointSock)
 	if err != nil {
@@ -136,14 +173,14 @@ func NewClientByName(nwName string) *Client {
 	if err != nil {
 		return nil
 	}
-	return NewClient(endpointSock, subnet)
+	return NewClient(endpointSock, subnet, nil)
 }
 
-func NewClient(endpointSock string, subnet net.IP) *Client {
-	return create(endpointSock, subnet, "http://lima")
+func NewClient(endpointSock string, subnet net.IP, vn *virtualnetwork.VirtualNetwork) *Client {
+	return create(endpointSock, subnet, "http://lima", vn)
 }
 
-func create(sock string, subnet net.IP, base string) *Client {
+func create(sock string, subnet net.IP, base string, vn *virtualnetwork.VirtualNetwork) *Client {
 	client := &http.Client{
 		Transport: &http.Transport{
 			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
@@ -158,5 +195,6 @@ func create(sock string, subnet net.IP, base string) *Client {
 		delegate: delegate,
 		base:     base,
 		subnet:   subnet,
+		vn:       vn,
 	}
 }
