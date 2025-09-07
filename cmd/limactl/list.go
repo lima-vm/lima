@@ -28,10 +28,14 @@ func fieldNames() []string {
 		f := t.Field(i)
 		if f.Anonymous {
 			for j := range f.Type.NumField() {
-				names = append(names, f.Type.Field(j).Name)
+				if tag := f.Tag.Get("lima"); tag != "deprecated" {
+					names = append(names, f.Type.Field(j).Name)
+				}
 			}
 		} else {
-			names = append(names, t.Field(i).Name)
+			if tag := f.Tag.Get("lima"); tag != "deprecated" {
+				names = append(names, t.Field(i).Name)
+			}
 		}
 	}
 	return names

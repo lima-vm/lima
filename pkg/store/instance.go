@@ -227,10 +227,12 @@ func ReadPIDFile(path string) (int, error) {
 type FormatData struct {
 	limatype.Instance `yaml:",inline"`
 
-	HostOS       string `json:"HostOS" yaml:"HostOS"`
-	HostArch     string `json:"HostArch" yaml:"HostArch"`
-	LimaHome     string `json:"LimaHome" yaml:"LimaHome"`
-	IdentityFile string `json:"IdentityFile" yaml:"IdentityFile"`
+	// Using these host attributes is deprecated; they will be removed in Lima 3.0
+	// The values are available from `limactl info` as hostOS, hostArch, limaHome, and identifyFile.
+	HostOS       string `json:"HostOS" yaml:"HostOS" lima:"deprecated"`
+	HostArch     string `json:"HostArch" yaml:"HostArch" lima:"deprecated"`
+	LimaHome     string `json:"LimaHome" yaml:"LimaHome" lima:"deprecated"`
+	IdentityFile string `json:"IdentityFile" yaml:"IdentityFile" lima:"deprecated"`
 }
 
 var FormatHelp = "\n" +
