@@ -17,6 +17,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/limatmpl"
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
+	"github.com/lima-vm/lima/v2/pkg/uiutil"
 	"github.com/lima-vm/lima/v2/pkg/yqutil"
 )
 
@@ -148,6 +149,15 @@ func templateCopyAction(cmd *cobra.Command, args []string) error {
 			return err
 		}
 	}
+	if target == "-" && uiutil.OutputIsTTY(cmd.OutOrStdout()) {
+		// run the output through YQ to colorize it
+		out, err := yqutil.EvaluateExpressionPlain(".", string(tmpl.Bytes), true)
+		if err == nil {
+			_, err = fmt.Fprint(cmd.OutOrStdout(), out)
+		}
+		return err
+	}
+
 	writer := cmd.OutOrStdout()
 	if target != "-" {
 		file, err := os.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
@@ -200,7 +210,8 @@ func templateYQAction(cmd *cobra.Command, args []string) error {
 	if err := fillDefaults(ctx, tmpl); err != nil {
 		return err
 	}
-	out, err := yqutil.EvaluateExpressionPlain(expr, string(tmpl.Bytes))
+	colorsEnabled := uiutil.OutputIsTTY(cmd.OutOrStdout())
+	out, err := yqutil.EvaluateExpressionPlain(expr, string(tmpl.Bytes), colorsEnabled)
 	if err == nil {
 		_, err = fmt.Fprint(cmd.OutOrStdout(), out)
 	}

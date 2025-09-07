@@ -7,9 +7,12 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/mikefarah/yq/v4/pkg/yqlib"
 	"github.com/spf13/cobra"
 
 	"github.com/lima-vm/lima/v2/pkg/limainfo"
+	"github.com/lima-vm/lima/v2/pkg/uiutil"
+	"github.com/lima-vm/lima/v2/pkg/yqutil"
 )
 
 func newInfoCommand() *cobra.Command {
@@ -20,11 +23,19 @@ func newInfoCommand() *cobra.Command {
 		RunE:    infoAction,
 		GroupID: advancedCommand,
 	}
+	infoCommand.Flags().String("yq", ".", "Apply yq expression to output")
+
 	return infoCommand
 }
 
 func infoAction(cmd *cobra.Command, _ []string) error {
 	ctx := cmd.Context()
+
+	yq, err := cmd.Flags().GetString("yq")
+	if err != nil {
+		return err
+	}
+
 	info, err := limainfo.New(ctx)
 	if err != nil {
 		return err
@@ -33,6 +44,14 @@ func infoAction(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	_, err = fmt.Fprintln(cmd.OutOrStdout(), string(j))
+
+	encoderPrefs := yqlib.ConfiguredJSONPreferences.Copy()
+	encoderPrefs.Indent = 4
+	encoderPrefs.ColorsEnabled = uiutil.OutputIsTTY(cmd.OutOrStdout())
+	encoder := yqlib.NewJSONEncoder(encoderPrefs)
+	str, err := yqutil.EvaluateExpressionWithEncoder(yq, string(j), encoder)
+	if err == nil {
+		_, err = fmt.Fprint(cmd.OutOrStdout(), str)
+	}
 	return err
 }
