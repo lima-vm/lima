@@ -118,7 +118,7 @@ func setupEnv(instConfigEnv map[string]string, propagateProxyEnv bool, slirpGate
 	return env, nil
 }
 
-func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, instConfig *limatype.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort, vsockPort int, virtioPort string, noCloudInit bool) (*TemplateArgs, error) {
+func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, instConfig *limatype.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort, vsockPort int, virtioPort string, noCloudInit, rosettaEnabled, rosettaBinFmt bool) (*TemplateArgs, error) {
 	if err := limayaml.Validate(instConfig, false); err != nil {
 		return nil, err
 	}
@@ -138,20 +138,15 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 		Containerd:         Containerd{System: *instConfig.Containerd.System, User: *instConfig.Containerd.User, Archive: archive},
 		SlirpNICName:       networks.SlirpNICName,
 
-		VMType:      *instConfig.VMType,
-		VSockPort:   vsockPort,
-		VirtioPort:  virtioPort,
-		Plain:       *instConfig.Plain,
-		TimeZone:    *instConfig.TimeZone,
-		NoCloudInit: noCloudInit,
-		Param:       instConfig.Param,
-	}
-
-	if instConfig.VMOpts.VZ.Rosetta.Enabled != nil {
-		args.RosettaEnabled = *instConfig.VMOpts.VZ.Rosetta.Enabled
-	}
-	if instConfig.VMOpts.VZ.Rosetta.BinFmt != nil {
-		args.RosettaBinFmt = *instConfig.VMOpts.VZ.Rosetta.BinFmt
+		VMType:         *instConfig.VMType,
+		VSockPort:      vsockPort,
+		VirtioPort:     virtioPort,
+		RosettaEnabled: rosettaEnabled,
+		RosettaBinFmt:  rosettaBinFmt,
+		Plain:          *instConfig.Plain,
+		TimeZone:       *instConfig.TimeZone,
+		NoCloudInit:    noCloudInit,
+		Param:          instConfig.Param,
 	}
 
 	firstUsernetIndex := limayaml.FirstUsernetIndex(instConfig)
@@ -351,7 +346,7 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 }
 
 func GenerateCloudConfig(ctx context.Context, instDir, name string, instConfig *limatype.LimaYAML) error {
-	args, err := templateArgs(ctx, false, instDir, name, instConfig, 0, 0, 0, "", false)
+	args, err := templateArgs(ctx, false, instDir, name, instConfig, 0, 0, 0, "", false, false, false)
 	if err != nil {
 		return err
 	}
@@ -373,8 +368,8 @@ func GenerateCloudConfig(ctx context.Context, instDir, name string, instConfig *
 	return os.WriteFile(filepath.Join(instDir, filenames.CloudConfig), config, 0o444)
 }
 
-func GenerateISO9660(ctx context.Context, drv driver.Driver, instDir, name string, instConfig *limatype.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort int, guestAgentBinary, nerdctlArchive string, vsockPort int, virtioPort string, noCloudInit bool) error {
-	args, err := templateArgs(ctx, true, instDir, name, instConfig, udpDNSLocalPort, tcpDNSLocalPort, vsockPort, virtioPort, noCloudInit)
+func GenerateISO9660(ctx context.Context, drv driver.Driver, instDir, name string, instConfig *limatype.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort int, guestAgentBinary, nerdctlArchive string, vsockPort int, virtioPort string, noCloudInit, rosettaEnabled, rosettaBinFmt bool) error {
+	args, err := templateArgs(ctx, true, instDir, name, instConfig, udpDNSLocalPort, tcpDNSLocalPort, vsockPort, virtioPort, noCloudInit, rosettaEnabled, rosettaBinFmt)
 	if err != nil {
 		return err
 	}
