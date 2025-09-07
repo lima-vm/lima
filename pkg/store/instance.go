@@ -225,11 +225,12 @@ func ReadPIDFile(path string) (int, error) {
 }
 
 type FormatData struct {
-	limatype.Instance
-	HostOS       string
-	HostArch     string
-	LimaHome     string
-	IdentityFile string
+	limatype.Instance `yaml:",inline"`
+
+	HostOS       string `json:"HostOS" yaml:"HostOS"`
+	HostArch     string `json:"HostArch" yaml:"HostArch"`
+	LimaHome     string `json:"LimaHome" yaml:"LimaHome"`
+	IdentityFile string `json:"IdentityFile" yaml:"IdentityFile"`
 }
 
 var FormatHelp = "\n" +
