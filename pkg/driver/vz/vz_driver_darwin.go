@@ -74,9 +74,11 @@ const Enabled = true
 type LimaVzDriver struct {
 	Instance *limatype.Instance
 
-	SSHLocalPort int
-	vSockPort    int
-	virtioPort   string
+	SSHLocalPort   int
+	vSockPort      int
+	virtioPort     string
+	rosettaEnabled bool
+	rosettaBinFmt  bool
 
 	machine *virtualMachineWrapper
 }
@@ -104,6 +106,15 @@ func (l *LimaVzDriver) Configure(inst *limatype.Instance) *driver.ConfiguredDriv
 			// We cannot return an error here, but Validate() will return it.
 			logrus.Warnf("Unsupported mount type: %q", *l.Instance.Config.MountType)
 		}
+	}
+
+	if runtime.GOOS == "darwin" && limayaml.IsNativeArch(limatype.AARCH64) {
+		if l.Instance.Config.VMOpts.VZ.Rosetta.Enabled != nil {
+			l.rosettaEnabled = *l.Instance.Config.VMOpts.VZ.Rosetta.Enabled
+		}
+	}
+	if l.Instance.Config.VMOpts.VZ.Rosetta.BinFmt != nil {
+		l.rosettaBinFmt = *l.Instance.Config.VMOpts.VZ.Rosetta.BinFmt
 	}
 
 	return &driver.ConfiguredDriver{
@@ -351,6 +362,8 @@ func (l *LimaVzDriver) Info() driver.Info {
 		DynamicSSHAddress:    false,
 		SkipSocketForwarding: false,
 		CanRunGUI:            guiFlag,
+		RosettaEnabled:       l.rosettaEnabled,
+		RosettaBinFmt:        l.rosettaBinFmt,
 	}
 	return info
 }

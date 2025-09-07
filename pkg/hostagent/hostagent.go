@@ -163,10 +163,18 @@ func New(ctx context.Context, instName string, stdout io.Writer, signalCh chan o
 	vSockPort := limaDriver.Info().VsockPort
 	virtioPort := limaDriver.Info().VirtioPort
 
+	rosettaEnabled := limaDriver.Info().Features.RosettaEnabled
+	rosettaBinFmt := limaDriver.Info().Features.RosettaBinFmt
+	// Disable Rosetta in Plain mode
+	if *inst.Config.Plain {
+		rosettaEnabled = false
+		rosettaBinFmt = false
+	}
+
 	if err := cidata.GenerateCloudConfig(ctx, inst.Dir, instName, inst.Config); err != nil {
 		return nil, err
 	}
-	if err := cidata.GenerateISO9660(ctx, limaDriver, inst.Dir, instName, inst.Config, udpDNSLocalPort, tcpDNSLocalPort, o.guestAgentBinary, o.nerdctlArchive, vSockPort, virtioPort); err != nil {
+	if err := cidata.GenerateISO9660(ctx, limaDriver, inst.Dir, instName, inst.Config, udpDNSLocalPort, tcpDNSLocalPort, o.guestAgentBinary, o.nerdctlArchive, vSockPort, virtioPort, rosettaEnabled, rosettaBinFmt); err != nil {
 		return nil, err
 	}
 
