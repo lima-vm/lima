@@ -107,7 +107,5 @@ func AskToSignIfNotSignedProperly(ctx context.Context, qExe string) {
 		} else {
 			logrus.Warn("If QEMU does not start up, you may have to sign the QEMU binary with the \"com.apple.security.hypervisor\" entitlement manually. See https://github.com/lima-vm/lima/issues/1742 .")
 		}
-	} else {
-		logrus.Infof("QEMU binary %q seems properly signed with the \"com.apple.security.hypervisor\" entitlement", qExe)
 	}
 }
