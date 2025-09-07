@@ -386,7 +386,7 @@ os: null
 # DEPRECATED: Use vmOpts.qemu.cpuType instead. See the vmOpts.qemu.cpuType section above for configuration.
 cpuType:
 
-# DEPRECATED: Use vmOpts.vz.rosetta instead. See the vmOpts.qemu.cpuType section above for configuration.
+# DEPRECATED: Use vmOpts.vz.rosetta instead. See the vmOpts.vz.rosetta section above for configuration.
 rosetta:
   enabled: null
   binfmt: null
