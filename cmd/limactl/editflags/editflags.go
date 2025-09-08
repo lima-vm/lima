@@ -321,7 +321,7 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 				if err != nil {
 					return "", err
 				}
-				return fmt.Sprintf(".rosetta.enabled = %v | .rosetta.binfmt = %v", b, b), nil
+				return fmt.Sprintf(".vmOpts.vz.rosetta.enabled = %v | .vmOpts.vz.rosetta.binfmt = %v", b, b), nil
 			},
 			false,
 			false,
