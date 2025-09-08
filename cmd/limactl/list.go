@@ -4,20 +4,23 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
-	"os"
 	"reflect"
 	"sort"
 	"strings"
 
 	"github.com/cheggaaa/pb/v3/termutil"
-	"github.com/mattn/go-isatty"
+	"github.com/mikefarah/yq/v4/pkg/yqlib"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/store"
+	"github.com/lima-vm/lima/v2/pkg/uiutil"
+	"github.com/lima-vm/lima/v2/pkg/yqutil"
 )
 
 func fieldNames() []string {
@@ -64,6 +67,7 @@ The following legacy flags continue to function:
 	listCommand.Flags().Bool("json", false, "JSONify output")
 	listCommand.Flags().BoolP("quiet", "q", false, "Only show names")
 	listCommand.Flags().Bool("all-fields", false, "Show all fields")
+	listCommand.Flags().String("yq", "", "Apply yq expression to each instance")
 
 	return listCommand
 }
@@ -109,6 +113,10 @@ func listAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	yq, err := cmd.Flags().GetString("yq")
+	if err != nil {
+		return err
+	}
 
 	if jsonFormat {
 		format = "json"
@@ -120,6 +128,14 @@ func listAction(cmd *cobra.Command, args []string) error {
 	}
 	if listFields && cmd.Flags().Changed("format") {
 		return errors.New("option --list-fields conflicts with option --format")
+	}
+	if yq != "" {
+		if cmd.Flags().Changed("format") && format != "json" && format != "yaml" {
+			return errors.New("option --yq only works with --format json or yaml")
+		}
+		if listFields {
+			return errors.New("option --list-fields conflicts with option --yq")
+		}
 	}
 
 	if quiet && format != "table" {
@@ -194,16 +210,80 @@ func listAction(cmd *cobra.Command, args []string) error {
 	}
 
 	options := store.PrintOptions{AllFields: allFields}
-	out := cmd.OutOrStdout()
-	if out == os.Stdout {
-		if isatty.IsTerminal(os.Stdout.Fd()) || isatty.IsCygwinTerminal(os.Stdout.Fd()) {
-			if w, err := termutil.TerminalWidth(); err == nil {
-				options.TerminalWidth = w
-			}
+	isTTY := uiutil.OutputIsTTY(cmd.OutOrStdout())
+	if isTTY {
+		if w, err := termutil.TerminalWidth(); err == nil {
+			options.TerminalWidth = w
 		}
 	}
+	// --yq implies --format json unless --format yaml has been explicitly specified
+	if yq != "" && !cmd.Flags().Changed("format") {
+		format = "json"
+	}
+	// Always pipe JSON and YAML through yq to colorize it if isTTY
+	if yq == "" && (format == "json" || format == "yaml") {
+		yq = "."
+	}
 
-	err = store.PrintInstances(out, instances, format, &options)
+	if yq == "" {
+		err = store.PrintInstances(cmd.OutOrStdout(), instances, format, &options)
+		if err == nil && unmatchedInstances {
+			return unmatchedInstancesError{}
+		}
+		return err
+	}
+
+	buf := new(bytes.Buffer)
+	err = store.PrintInstances(buf, instances, format, &options)
+	if err != nil {
+		return err
+	}
+
+	if format == "json" {
+		encoderPrefs := yqlib.ConfiguredJSONPreferences.Copy()
+		if isTTY {
+			// Using non-0 indent means the instance will be printed over multiple lines,
+			// so is no longer in JSON Lines format. This is a compromise for readability.
+			encoderPrefs.Indent = 4
+			encoderPrefs.ColorsEnabled = true
+		} else {
+			encoderPrefs.Indent = 0
+			encoderPrefs.ColorsEnabled = false
+		}
+		encoder := yqlib.NewJSONEncoder(encoderPrefs)
+
+		// Each line contains the JSON object for one Lima instance.
+		scanner := bufio.NewScanner(buf)
+		for scanner.Scan() {
+			var str string
+			if str, err = yqutil.EvaluateExpressionWithEncoder(yq, scanner.Text(), encoder); err != nil {
+				return err
+			}
+			if _, err = fmt.Fprint(cmd.OutOrStdout(), str); err != nil {
+				return err
+			}
+		}
+		err = scanner.Err()
+		if err == nil && unmatchedInstances {
+			return unmatchedInstancesError{}
+		}
+		return err
+	}
+
+	var str string
+	if isTTY {
+		// This branch is trading the better formatting from yamlfmt for colorizing from yqlib.
+		if str, err = yqutil.EvaluateExpressionPlain(yq, buf.String(), true); err != nil {
+			return err
+		}
+	} else {
+		var res []byte
+		if res, err = yqutil.EvaluateExpression(yq, buf.Bytes()); err != nil {
+			return err
+		}
+		str = string(res)
+	}
+	_, err = fmt.Fprint(cmd.OutOrStdout(), str)
 	if err == nil && unmatchedInstances {
 		return unmatchedInstancesError{}
 	}

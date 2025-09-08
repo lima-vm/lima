@@ -39,8 +39,8 @@ func ValidateContent(content []byte) error {
 	return err
 }
 
-// EvaluateExpressionPlain evaluates the yq expression and returns the yq result.
-func EvaluateExpressionPlain(expression, content string) (string, error) {
+// EvaluateExpressionWithEncoder evaluates the yq expression and returns the yq result using a custom encoder.
+func EvaluateExpressionWithEncoder(expression, content string, encoder yqlib.Encoder) (string, error) {
 	if expression == "" {
 		return content, nil
 	}
@@ -50,10 +50,6 @@ func EvaluateExpressionPlain(expression, content string) (string, error) {
 	logging.SetBackend(backend)
 	yqlib.InitExpressionParser()
 
-	encoderPrefs := yqlib.ConfiguredYamlPreferences.Copy()
-	encoderPrefs.Indent = 2
-	encoderPrefs.ColorsEnabled = false
-	encoder := yqlib.NewYamlEncoder(encoderPrefs)
 	decoder := yqlib.NewYamlDecoder(yqlib.ConfiguredYamlPreferences)
 	out, err := yqlib.NewStringEvaluator().EvaluateAll(expression, content, encoder, decoder)
 	if err != nil {
@@ -82,6 +78,15 @@ func EvaluateExpressionPlain(expression, content string) (string, error) {
 	return out, nil
 }
 
+// EvaluateExpressionPlain evaluates the yq expression and returns the yq result.
+func EvaluateExpressionPlain(expression, content string, colorsEnabled bool) (string, error) {
+	encoderPrefs := yqlib.ConfiguredYamlPreferences.Copy()
+	encoderPrefs.Indent = 2
+	encoderPrefs.ColorsEnabled = colorsEnabled
+	encoder := yqlib.NewYamlEncoder(encoderPrefs)
+	return EvaluateExpressionWithEncoder(expression, content, encoder)
+}
+
 // EvaluateExpression evaluates the yq expression and returns the output formatted with yamlfmt.
 func EvaluateExpression(expression string, content []byte) ([]byte, error) {
 	if expression == "" {
@@ -101,7 +106,7 @@ func EvaluateExpression(expression string, content []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	out, err := EvaluateExpressionPlain(expression, string(contentModified))
+	out, err := EvaluateExpressionPlain(expression, string(contentModified), false)
 	if err != nil {
 		return nil, err
 	}

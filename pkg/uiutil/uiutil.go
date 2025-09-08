@@ -4,8 +4,12 @@
 package uiutil
 
 import (
+	"io"
+	"os"
+
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/AlecAivazis/survey/v2/terminal"
+	"github.com/mattn/go-isatty"
 )
 
 var InterruptErr = terminal.InterruptErr
@@ -35,4 +39,15 @@ func Select(message string, options []string) (int, error) {
 		return -1, err
 	}
 	return ans, nil
+}
+
+// OutputIsTTY returns true if writer is going to stdout, and stdout is a terminal device,
+// not a regular file, stream, or pipe etc.
+func OutputIsTTY(writer io.Writer) bool {
+	// This setting is needed so we can write integration tests for the TTY output.
+	// It is probably not useful otherwise.
+	if os.Getenv("_LIMA_OUTPUT_IS_TTY") != "" {
+		return true
+	}
+	return writer == os.Stdout && (isatty.IsTerminal(os.Stdout.Fd()) || isatty.IsCygwinTerminal(os.Stdout.Fd()))
 }
