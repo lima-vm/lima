@@ -187,8 +187,8 @@ github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b/go.mod h1:01TrycV0kFyex
 github.com/miekg/dns v1.1.57/go.mod h1:uqRjCRUuEAA6qsOiJvDd+CFo/vW+y5WR6SNmHE55hZk=
 github.com/miekg/dns v1.1.68 h1:jsSRkNozw7G/mnmXULynzMNIsgY2dHC8LO6U6Ij2JEA=
 github.com/miekg/dns v1.1.68/go.mod h1:fujopn7TB3Pu3JM69XaawiU0wqjpL9/8xGop5UrTPps=
-github.com/mikefarah/yq/v4 v4.47.1 h1:qdGJCWt4B+q3kEuEu2CJJKOojfdc3/0Qx0Xai6jRsds=
-github.com/mikefarah/yq/v4 v4.47.1/go.mod h1:+WQ438aOXAHcpWAJxhXXesdVpYR0pb8JszUMFymzeqQ=
+github.com/mikefarah/yq/v4 v4.47.2 h1:Jb5fHlvgK5eeaPbreG9UJs1E5w6l5hUzXjeaY6LTTWY=
+github.com/mikefarah/yq/v4 v4.47.2/go.mod h1:ulYbZUzGJsBDDwO5ohvk/KOW4vW5Iddd/DBeAY1Q09g=
 github.com/mitchellh/mapstructure v1.5.0 h1:jeMsZIYE/09sWLaz43PL7Gy6RuMjD2eJVyuac5Z2hdY=
 github.com/mitchellh/mapstructure v1.5.0/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RRV2QTWOzhPopBRo=
 github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421/go.mod h1:6dJC0mAP4ikYIbvyc7fijjWJddQyLn8Ig3JB5CqoB9Q=
