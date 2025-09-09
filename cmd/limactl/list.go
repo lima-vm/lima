@@ -71,7 +71,7 @@ The following legacy flags continue to function:
 	listCommand.Flags().Bool("json", false, "JSONify output")
 	listCommand.Flags().BoolP("quiet", "q", false, "Only show names")
 	listCommand.Flags().Bool("all-fields", false, "Show all fields")
-	listCommand.Flags().String("yq", "", "Apply yq expression to each instance")
+	listCommand.Flags().StringArray("yq", nil, "Apply yq expression to each instance")
 
 	return listCommand
 }
@@ -117,7 +117,7 @@ func listAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	yq, err := cmd.Flags().GetString("yq")
+	yq, err := cmd.Flags().GetStringArray("yq")
 	if err != nil {
 		return err
 	}
@@ -133,7 +133,7 @@ func listAction(cmd *cobra.Command, args []string) error {
 	if listFields && cmd.Flags().Changed("format") {
 		return errors.New("option --list-fields conflicts with option --format")
 	}
-	if yq != "" {
+	if len(yq) != 0 {
 		if cmd.Flags().Changed("format") && format != "json" && format != "yaml" {
 			return errors.New("option --yq only works with --format json or yaml")
 		}
@@ -182,7 +182,7 @@ func listAction(cmd *cobra.Command, args []string) error {
 		instanceNames = allInstances
 	}
 
-	if quiet {
+	if quiet && len(yq) == 0 {
 		for _, instName := range instanceNames {
 			fmt.Fprintln(cmd.OutOrStdout(), instName)
 		}
@@ -221,21 +221,26 @@ func listAction(cmd *cobra.Command, args []string) error {
 		}
 	}
 	// --yq implies --format json unless --format yaml has been explicitly specified
-	if yq != "" && !cmd.Flags().Changed("format") {
+	if len(yq) != 0 && !cmd.Flags().Changed("format") {
 		format = "json"
 	}
 	// Always pipe JSON and YAML through yq to colorize it if isTTY
-	if yq == "" && (format == "json" || format == "yaml") {
-		yq = "."
+	if len(yq) == 0 && (format == "json" || format == "yaml") {
+		yq = append(yq, ".")
 	}
 
-	if yq == "" {
+	if len(yq) == 0 {
 		err = store.PrintInstances(cmd.OutOrStdout(), instances, format, &options)
 		if err == nil && unmatchedInstances {
 			return unmatchedInstancesError{}
 		}
 		return err
 	}
+
+	if quiet {
+		yq = append(yq, ".name")
+	}
+	yqExpr := strings.Join(yq, " | ")
 
 	buf := new(bytes.Buffer)
 	err = store.PrintInstances(buf, instances, format, &options)
@@ -260,7 +265,7 @@ func listAction(cmd *cobra.Command, args []string) error {
 		scanner := bufio.NewScanner(buf)
 		for scanner.Scan() {
 			var str string
-			if str, err = yqutil.EvaluateExpressionWithEncoder(yq, scanner.Text(), encoder); err != nil {
+			if str, err = yqutil.EvaluateExpressionWithEncoder(yqExpr, scanner.Text(), encoder); err != nil {
 				return err
 			}
 			if _, err = fmt.Fprint(cmd.OutOrStdout(), str); err != nil {
@@ -277,12 +282,12 @@ func listAction(cmd *cobra.Command, args []string) error {
 	var str string
 	if isTTY {
 		// This branch is trading the better formatting from yamlfmt for colorizing from yqlib.
-		if str, err = yqutil.EvaluateExpressionPlain(yq, buf.String(), true); err != nil {
+		if str, err = yqutil.EvaluateExpressionPlain(yqExpr, buf.String(), true); err != nil {
 			return err
 		}
 	} else {
 		var res []byte
-		if res, err = yqutil.EvaluateExpression(yq, buf.Bytes()); err != nil {
+		if res, err = yqutil.EvaluateExpression(yqExpr, buf.Bytes()); err != nil {
 			return err
 		}
 		str = string(res)
