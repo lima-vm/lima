@@ -44,7 +44,7 @@ var executableViaArgs0 = sync.OnceValues(func() (string, error) {
 // Dir returns the location of the <PREFIX>/lima/share directory, relative to the location
 // of the current executable. It checks for multiple possible filesystem layouts and returns
 // the first candidate that contains the native guest agent binary.
-func Dir() (string, error) {
+var Dir = sync.OnceValues(func() (string, error) {
 	selfPaths := []string{}
 
 	selfViaArgs0, err := executableViaArgs0()
@@ -119,7 +119,7 @@ func Dir() (string, error) {
 
 	return "", fmt.Errorf("failed to find \"lima-guestagent.%s-%s\" binary for %v, attempted %v",
 		ostype, arch, selfPaths, gaCandidates)
-}
+})
 
 // GuestAgentBinary returns the absolute path of the guest agent binary, possibly with ".gz" suffix.
 func GuestAgentBinary(ostype limatype.OS, arch limatype.Arch) (string, error) {
