@@ -13,6 +13,7 @@ import (
 
 	"github.com/lima-vm/lima/v2/pkg/downloader"
 	"github.com/lima-vm/lima/v2/pkg/driverutil"
+	"github.com/lima-vm/lima/v2/pkg/limatmpl"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	"github.com/lima-vm/lima/v2/pkg/store"
@@ -92,11 +93,14 @@ func knownLocations(ctx context.Context) (map[string]limatype.File, error) {
 		return nil, err
 	}
 	for _, t := range templates {
-		b, err := templatestore.Read(t.Name)
+		tmpl, err := limatmpl.Read(ctx, "", t.Location)
 		if err != nil {
 			return nil, err
 		}
-		y, err := limayaml.Load(ctx, b, t.Name)
+		if err := tmpl.Embed(ctx, true, true); err != nil {
+			return nil, err
+		}
+		y, err := limayaml.Load(ctx, tmpl.Bytes, tmpl.Name)
 		if err != nil {
 			return nil, err
 		}
