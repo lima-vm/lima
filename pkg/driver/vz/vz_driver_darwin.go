@@ -31,6 +31,7 @@ var knownYamlProperties = []string{
 	"AdditionalDisks",
 	"Arch",
 	"Audio",
+	"Base",
 	"CACertificates",
 	"Containerd",
 	"CopyToHost",
