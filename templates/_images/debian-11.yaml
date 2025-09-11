@@ -1,3 +1,4 @@
+# DEPRECATED: Debian 11 (Bullseye) is deprecated. Use debian-12 (Bookworm) or debian-13 (Trixie) instead.
 images:
 # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
 
