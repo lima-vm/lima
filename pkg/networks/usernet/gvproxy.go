@@ -6,6 +6,7 @@ package usernet
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -128,9 +129,16 @@ func listenQEMU(ctx context.Context, vn *virtualnetwork.VirtualNetwork) error {
 
 	go func() {
 		defer listener.Close()
+		<-ctx.Done()
+	}()
+
+	go func() {
 		for {
 			conn, err := listener.Accept()
 			if err != nil {
+				if errors.Is(err, net.ErrClosed) {
+					return
+				}
 				logrus.Error("QEMU accept failed", err)
 			}
 
@@ -162,10 +170,18 @@ func listenFD(ctx context.Context, vn *virtualnetwork.VirtualNetwork) error {
 
 	go func() {
 		defer listener.Close()
+		<-ctx.Done()
+	}()
+
+	go func() {
 		for {
 			conn, err := listener.Accept()
 			if err != nil {
+				if errors.Is(err, net.ErrClosed) {
+					return
+				}
 				logrus.Error("FD accept failed", err)
+				continue // since conn is nil
 			}
 
 			files, err := fd.Get(conn.(*net.UnixConn), 1, []string{"client"})
@@ -202,20 +218,20 @@ func listenFD(ctx context.Context, vn *virtualnetwork.VirtualNetwork) error {
 }
 
 func httpServe(ctx context.Context, g *errgroup.Group, ln net.Listener, mux http.Handler) {
+	s := &http.Server{
+		Handler:      mux,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+	}
 	g.Go(func() error {
 		<-ctx.Done()
-		return ln.Close()
+		return s.Close()
 	})
 	g.Go(func() error {
-		s := &http.Server{
-			Handler:      mux,
-			ReadTimeout:  10 * time.Second,
-			WriteTimeout: 10 * time.Second,
-		}
 		err := s.Serve(ln)
 		if err != nil {
-			if err != http.ErrServerClosed {
-				return err
+			if err == http.ErrServerClosed {
+				return nil
 			}
 			return err
 		}
