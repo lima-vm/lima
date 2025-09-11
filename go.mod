@@ -45,7 +45,7 @@ require (
 	golang.org/x/sync v0.17.0
 	golang.org/x/sys v0.36.0 // gomodjail:unconfined
 	golang.org/x/text v0.29.0
-	google.golang.org/grpc v1.75.0
+	google.golang.org/grpc v1.75.1
 	google.golang.org/protobuf v1.36.9 // gomodjail:unconfined
 	gopkg.in/op/go-logging.v1 v1.0.0-20160211212156-b2cb9fa56473
 	gotest.tools/v3 v3.5.2
