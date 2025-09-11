@@ -20,8 +20,8 @@ Distro:
 - [`archlinux`](./archlinux.yaml): ☆Arch Linux
 - [`centos-stream-9`](./centos-stream-9.yaml), `centos-stream.yaml`: CentOS Stream 9
 - [`centos-stream-10`](./centos-stream-10.yaml): CentOS Stream 10
-- [`debian-11`](./debian-11.yaml): Debian GNU/Linux 11(bullseye)
-- [`debian-12`](./debian-12.yaml), `debian.yaml`: ⭐Debian GNU/Linux 12(bookworm)
+- [`debian-12`](./debian-12.yaml): Debian GNU/Linux 12(bookworm)
+- [`debian-13`](./debian-13.yaml), `debian.yaml`: ⭐Debian GNU/Linux 13(trixie)
 - [`fedora-41`](./fedora-41.yaml): Fedora 41
 - [`fedora-42`](./fedora-42.yaml), `fedora.yaml`: ⭐Fedora 42
 - [`opensuse-leap`](./opensuse-leap.yaml), `opensuse.yaml`: ⭐openSUSE Leap
