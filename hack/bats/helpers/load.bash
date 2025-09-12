@@ -60,5 +60,3 @@ teardown() {
 assert_output_lines_count() {
     assert_equal "${#lines[@]}" "$1"
 }
-
-
