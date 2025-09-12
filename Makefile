@@ -88,6 +88,8 @@ help-targets:
 	@echo  '- limactl                   : Build limactl, and lima'
 	@echo  '- lima                      : Copy lima, and lima.bat'
 	@echo  '- helpers                   : Copy nerdctl.lima, apptainer.lima, docker.lima, podman.lima, and kubectl.lima'
+	# TODO: move CLI plugins to _output/libexec/lima/
+	@echo  '- limactl-plugins           : Build limactl-* CLI plugins'
 	@echo
 	@echo  'Targets for files in _output/share/lima/:'
 	@echo  '- guestagents               : Build guestagents'
@@ -150,7 +152,7 @@ CONFIG_GUESTAGENT_COMPRESS=y
 
 ################################################################################
 .PHONY: binaries
-binaries: limactl helpers guestagents \
+binaries: limactl helpers limactl-plugins guestagents \
 	templates template_experimentals \
 	documentation create-links-in-doc-dir
 
@@ -255,6 +257,11 @@ endif
 ifeq ($(GOOS),darwin)
 	codesign -f -v --entitlements vz.entitlements -s - $@
 endif
+
+limactl-plugins: _output/bin/limactl-mcp$(exe)
+
+_output/bin/limactl-mcp$(exe): $(call dependencies_for_cmd,limactl-mcp) $$(call force_build,$$@)
+	$(ENVS_$@) $(GO_BUILD) -o $@ ./cmd/limactl-mcp
 
 DRIVER_INSTALL_DIR := _output/libexec/lima
 
