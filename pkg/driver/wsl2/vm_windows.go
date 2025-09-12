@@ -229,3 +229,27 @@ func getWslStatus(instName string) (string, error) {
 
 	return instState, nil
 }
+
+func getSSHAddress(ctx context.Context, instName string) (string, error) {
+	distroName := "lima-" + instName
+	// Ubuntu
+	cmd := exec.CommandContext(ctx, "wsl.exe", "-d", distroName, "bash", "-c", `hostname -I | cut -d ' ' -f1`)
+	out, err := cmd.CombinedOutput()
+	if err == nil {
+		return strings.TrimSpace(string(out)), nil
+	}
+	// Alpine
+	cmd = exec.CommandContext(ctx, "wsl.exe", "-d", distroName, "sh", "-c", `ip route get 1 | awk '{gsub("^.*src ",""); print $1; exit}'`)
+	out, err = cmd.CombinedOutput()
+	if err == nil {
+		return strings.TrimSpace(string(out)), nil
+	}
+	// fallback
+	cmd = exec.CommandContext(ctx, "wsl.exe", "-d", distroName, "hostname", "-i")
+	out, err = cmd.CombinedOutput()
+	if err != nil || strings.HasPrefix(string(out), "127.") {
+		return "", fmt.Errorf("failed to get hostname for instance %q, err: %w (out=%q)", instName, err, string(out))
+	}
+
+	return strings.TrimSpace(string(out)), nil
+}
