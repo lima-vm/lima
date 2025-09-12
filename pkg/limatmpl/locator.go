@@ -5,11 +5,13 @@ package limatmpl
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -18,6 +20,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/lima-vm/lima/v2/pkg/executil"
 	"github.com/lima-vm/lima/v2/pkg/identifiers"
 	"github.com/lima-vm/lima/v2/pkg/ioutilx"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
@@ -28,10 +31,14 @@ import (
 const yBytesLimit = 4 * 1024 * 1024 // 4MiB
 
 func Read(ctx context.Context, name, locator string) (*Template, error) {
-	var err error
 	tmpl := &Template{
 		Name:    name,
 		Locator: locator,
+	}
+
+	locator, err := TransformCustomURL(ctx, locator)
+	if err != nil {
+		return nil, err
 	}
 
 	if imageTemplate(tmpl, locator) {
@@ -284,4 +291,44 @@ func InstNameFromYAMLPath(yamlPath string) (string, error) {
 		return "", fmt.Errorf("filename %q is invalid: %w", yamlPath, err)
 	}
 	return s, nil
+}
+
+func transformCustomURL(ctx context.Context, locator string) (string, error) {
+	u, err := url.Parse(locator)
+	if err != nil || len(u.Scheme) <= 1 {
+		return locator, nil
+	}
+
+	// TODO we should call main.updatePathEnv() here (after moving it to some pkg)
+	externalCmd := "limactl-url-" + u.Scheme
+	execPath, err := exec.LookPath(externalCmd)
+	if err != nil {
+		return locator, nil
+	}
+
+	cmd := exec.CommandContext(ctx, execPath, strings.TrimPrefix(u.String(), u.Scheme+":"))
+	cmd.Env = os.Environ()
+
+	stdout, err := cmd.Output()
+	if err != nil {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			stderrMsg := string(exitErr.Stderr)
+			if stderrMsg != "" {
+				return "", fmt.Errorf("command %q failed: %s", cmd.String(), strings.TrimSpace(stderrMsg))
+			}
+		}
+		return "", fmt.Errorf("command %q failed: %w", cmd.String(), err)
+	}
+
+	return strings.TrimSpace(string(stdout)), nil
+}
+
+func TransformCustomURL(ctx context.Context, locator string) (string, error) {
+	err := executil.WithExecutablePath(func() error {
+		var err error
+		locator, err = transformCustomURL(ctx, locator)
+		return err
+	})
+	return locator, err
 }
