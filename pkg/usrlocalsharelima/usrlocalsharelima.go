@@ -19,14 +19,14 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 )
 
-// executableViaArgs0 returns the absolute path to the executable used to start this process.
+// ExecutableViaArgs0 returns the absolute path to the executable used to start this process.
 // It will also append the file extension on Windows, if necessary.
 // This function is different from os.Executable(), which will use /proc/self/exe on Linux
 // and therefore will resolve any symlink used to locate the executable. This function will
 // return the symlink instead because we want to be able to locate ../share/lima relative
 // to the location of the symlink, and not the actual executable. This is important when
 // using Homebrew.
-var executableViaArgs0 = sync.OnceValues(func() (string, error) {
+var ExecutableViaArgs0 = sync.OnceValues(func() (string, error) {
 	if os.Args[0] == "" {
 		return "", errors.New("os.Args[0] has not been set")
 	}
@@ -41,17 +41,17 @@ var executableViaArgs0 = sync.OnceValues(func() (string, error) {
 	return executable, nil
 })
 
-// Dir returns the location of the <PREFIX>/lima/share directory, relative to the location
-// of the current executable. It checks for multiple possible filesystem layouts and returns
-// the first candidate that contains the native guest agent binary.
-var Dir = sync.OnceValues(func() (string, error) {
-	selfPaths := []string{}
+// SelfDirs returns a list of directory paths where the current executable might be located.
+// It checks both os.Args[0] and os.Executable() methods and returns directories containing
+// the executable, resolving symlinks as needed.
+func SelfDirs() []string {
+	var selfPaths []string
 
-	selfViaArgs0, err := executableViaArgs0()
+	selfViaArgs0, err := ExecutableViaArgs0()
 	if err != nil {
 		logrus.WithError(err).Warn("failed to find executable from os.Args[0]")
 	} else {
-		selfPaths = append(selfPaths, selfViaArgs0)
+		selfPaths = append(selfPaths, filepath.Dir(selfViaArgs0))
 	}
 
 	selfViaOS, err := os.Executable()
@@ -64,10 +64,20 @@ var Dir = sync.OnceValues(func() (string, error) {
 			selfFinalPathViaOS = selfViaOS // fallback to the original path
 		}
 
-		if len(selfPaths) == 0 || selfFinalPathViaOS != selfPaths[0] {
-			selfPaths = append(selfPaths, selfFinalPathViaOS)
+		selfDir := filepath.Dir(selfFinalPathViaOS)
+		if len(selfPaths) == 0 || selfDir != selfPaths[0] {
+			selfPaths = append(selfPaths, selfDir)
 		}
 	}
+
+	return selfPaths
+}
+
+// Dir returns the location of the <PREFIX>/lima/share directory, relative to the location
+// of the current executable. It checks for multiple possible filesystem layouts and returns
+// the first candidate that contains the native guest agent binary.
+func Dir() (string, error) {
+	selfDirs := SelfDirs()
 
 	ostype := limatype.NewOS("linux")
 	arch := limatype.NewArch(runtime.GOARCH)
@@ -76,9 +86,8 @@ var Dir = sync.OnceValues(func() (string, error) {
 	}
 
 	gaCandidates := []string{}
-	for _, self := range selfPaths {
-		// self:  /usr/local/bin/limactl
-		selfDir := filepath.Dir(self)
+	for _, selfDir := range selfDirs {
+		// selfDir:  /usr/local/bin
 		selfDirDir := filepath.Dir(selfDir)
 		gaCandidates = append(gaCandidates,
 			// candidate 0:
@@ -118,8 +127,8 @@ var Dir = sync.OnceValues(func() (string, error) {
 	}
 
 	return "", fmt.Errorf("failed to find \"lima-guestagent.%s-%s\" binary for %v, attempted %v",
-		ostype, arch, selfPaths, gaCandidates)
-})
+		ostype, arch, selfDirs, gaCandidates)
+}
 
 // GuestAgentBinary returns the absolute path of the guest agent binary, possibly with ".gz" suffix.
 func GuestAgentBinary(ostype limatype.OS, arch limatype.Arch) (string, error) {
@@ -173,4 +182,13 @@ func Prefix() (string, error) {
 		return "", err
 	}
 	return filepath.Dir(filepath.Dir(dir)), nil
+}
+
+// LibexecLima returns the <PREFIX>/libexec/lima directory.
+func LibexecLima() (string, error) {
+	prefix, err := Prefix()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(prefix, "libexec", "lima"), nil
 }

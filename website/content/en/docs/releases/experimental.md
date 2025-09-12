@@ -19,6 +19,7 @@ The following commands are experimental and subject to change:
 - `limactl snapshot *`
 - `limactl tunnel`
 - `limactl template *`
+- `limactl plugins` plugin mechanism (see [CLI plugins](../config/plugin/cli))
 
 ## Graduated
 

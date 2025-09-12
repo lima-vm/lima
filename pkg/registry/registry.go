@@ -102,11 +102,10 @@ func registerExternalDriver(name, path string) {
 }
 
 func discoverDrivers() error {
-	prefix, err := usrlocalsharelima.Prefix()
+	stdDriverDir, err := usrlocalsharelima.LibexecLima()
 	if err != nil {
 		return err
 	}
-	stdDriverDir := filepath.Join(prefix, "libexec", "lima")
 
 	logrus.Debugf("Discovering external drivers in %s", stdDriverDir)
 	if _, err := os.Stat(stdDriverDir); err == nil {
