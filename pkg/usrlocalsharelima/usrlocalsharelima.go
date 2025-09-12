@@ -19,14 +19,14 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 )
 
-// executableViaArgs0 returns the absolute path to the executable used to start this process.
+// ExecutableViaArgs0 returns the absolute path to the executable used to start this process.
 // It will also append the file extension on Windows, if necessary.
 // This function is different from os.Executable(), which will use /proc/self/exe on Linux
 // and therefore will resolve any symlink used to locate the executable. This function will
 // return the symlink instead because we want to be able to locate ../share/lima relative
 // to the location of the symlink, and not the actual executable. This is important when
 // using Homebrew.
-var executableViaArgs0 = sync.OnceValues(func() (string, error) {
+var ExecutableViaArgs0 = sync.OnceValues(func() (string, error) {
 	if os.Args[0] == "" {
 		return "", errors.New("os.Args[0] has not been set")
 	}
@@ -47,7 +47,7 @@ var executableViaArgs0 = sync.OnceValues(func() (string, error) {
 var Dir = sync.OnceValues(func() (string, error) {
 	selfPaths := []string{}
 
-	selfViaArgs0, err := executableViaArgs0()
+	selfViaArgs0, err := ExecutableViaArgs0()
 	if err != nil {
 		logrus.WithError(err).Warn("failed to find executable from os.Args[0]")
 	} else {
