@@ -67,3 +67,7 @@ message: |
   export KUBECONFIG="{{.Dir}}/copied-from-guest/kubeconfig.yaml"
   kubectl ...
   ------
+portMonitors:
+  kubernetes:
+    configs:
+    - "/var/lib/k0s/pki/admin.conf"
