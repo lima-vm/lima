@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: Copyright The Lima Authors
+# SPDX-License-Identifier: Apache-2.0
+
 set -o errexit -o nounset -o pipefail
 
 # Don't run the tests in ~/.lima because they may destroy _config, _templates etc.
@@ -17,7 +20,14 @@ source "$PATH_BATS_ROOT/lib/bats-support/load.bash"
 source "$PATH_BATS_ROOT/lib/bats-assert/load.bash"
 source "$PATH_BATS_ROOT/lib/bats-file/load.bash"
 
+source "$PATH_BATS_HELPERS/limactl.bash"
+source "$PATH_BATS_HELPERS/logs.bash"
+
 bats_require_minimum_version 1.5.0
+
+run_e() {
+    run --separate-stderr "$@"
+}
 
 # If called from foo() this function will call local_foo() if it exist.
 call_local_function() {
@@ -46,3 +56,9 @@ setup() {
 teardown() {
     call_local_function
 }
+
+assert_output_lines_count() {
+    assert_equal "${#lines[@]}" "$1"
+}
+
+
