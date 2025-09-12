@@ -7,7 +7,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
 
 	"github.com/spf13/cobra"
 
@@ -77,10 +79,13 @@ func usernetAction(cmd *cobra.Command, _ []string) error {
 	os.RemoveAll(qemuSocket)
 	os.RemoveAll(fdSocket)
 
+	ctx, cancel := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+
 	// Environment Variables
 	// LIMA_USERNET_RESOLVE_IP_ADDRESS_TIMEOUT: Specifies the timeout duration for resolving IP addresses in minutes. Default is 2 minutes.
 
-	return usernet.StartGVisorNetstack(cmd.Context(), &usernet.GVisorNetstackOpts{
+	return usernet.StartGVisorNetstack(ctx, &usernet.GVisorNetstackOpts{
 		MTU:           mtu,
 		Endpoint:      endpoint,
 		QemuSocket:    qemuSocket,

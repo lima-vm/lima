@@ -16,8 +16,7 @@ type UDPFileConn struct {
 func (conn *UDPFileConn) Read(b []byte) (n int, err error) {
 	// Check if the connection has been closed
 	if err := conn.SetReadDeadline(time.Time{}); err != nil {
-		var opErr *net.OpError
-		if errors.As(err, &opErr) && opErr.Err.Error() == "use of closed network connection" {
+		if errors.Is(err, net.ErrClosed) {
 			return 0, errors.New("UDPFileConn connection closed")
 		}
 	}
