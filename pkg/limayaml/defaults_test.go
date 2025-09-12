@@ -268,6 +268,7 @@ func TestFillDefault(t *testing.T) {
 	expect.PortForwards[2].HostPort = 8888
 	expect.PortForwards[2].HostPortRange = [2]int{8888, 8888}
 
+	expect.PortForwards[3].HostPortRange = [2]int{0, 0}
 	expect.PortForwards[3].GuestSocket = fmt.Sprintf("%s | %s | %s | %s", user.HomeDir, user.Uid, user.Username, y.Param["ONE"])
 	expect.PortForwards[3].HostSocket = fmt.Sprintf("%s | %s | %s | %s | %s | %s", hostHome, instDir, instName, currentUser.Uid, currentUser.Username, y.Param["ONE"])
 

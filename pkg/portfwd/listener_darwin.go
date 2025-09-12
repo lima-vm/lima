@@ -7,12 +7,26 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
+	"path/filepath"
 	"strconv"
 
 	"github.com/sirupsen/logrus"
 )
 
 func Listen(ctx context.Context, listenConfig net.ListenConfig, hostAddress string) (net.Listener, error) {
+	if filepath.IsAbs(hostAddress) {
+		// Handle Unix domain sockets
+		if err := prepareUnixSocket(hostAddress); err != nil {
+			return nil, err
+		}
+		unixLis, err := listenConfig.Listen(ctx, "unix", hostAddress)
+		if err != nil {
+			logrus.WithError(err).Errorf("failed to listen unix: %v", hostAddress)
+			return nil, err
+		}
+		return unixLis, nil
+	}
 	localIPStr, localPortStr, _ := net.SplitHostPort(hostAddress)
 	localIP := net.ParseIP(localIPStr)
 	localPort, _ := strconv.Atoi(localPortStr)
@@ -34,6 +48,18 @@ func Listen(ctx context.Context, listenConfig net.ListenConfig, hostAddress stri
 }
 
 func ListenPacket(ctx context.Context, listenConfig net.ListenConfig, hostAddress string) (net.PacketConn, error) {
+	if filepath.IsAbs(hostAddress) {
+		// Handle Unix domain sockets
+		if err := prepareUnixSocket(hostAddress); err != nil {
+			return nil, err
+		}
+		unixLis, err := listenConfig.ListenPacket(ctx, "unix", hostAddress)
+		if err != nil {
+			logrus.WithError(err).Errorf("failed to listen unix: %v", hostAddress)
+			return nil, err
+		}
+		return unixLis, nil
+	}
 	localIPStr, localPortStr, _ := net.SplitHostPort(hostAddress)
 	localIP := net.ParseIP(localIPStr)
 	localPort, _ := strconv.Atoi(localPortStr)
@@ -52,6 +78,16 @@ func ListenPacket(ctx context.Context, listenConfig net.ListenConfig, hostAddres
 		return nil, err
 	}
 	return &pseudoLoopbackPacketConn{udpConn}, nil
+}
+
+func prepareUnixSocket(hostSocket string) error {
+	if err := os.RemoveAll(hostSocket); err != nil {
+		return fmt.Errorf("can't clean up %q: %w", hostSocket, err)
+	}
+	if err := os.MkdirAll(filepath.Dir(hostSocket), 0o755); err != nil {
+		return fmt.Errorf("can't create directory for local socket %q: %w", hostSocket, err)
+	}
+	return nil
 }
 
 type pseudoLoopbackListener struct {
