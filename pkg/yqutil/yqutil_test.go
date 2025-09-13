@@ -35,7 +35,7 @@ func TestEvaluateExpressionEmpty(t *testing.T) {
 foo: bar
 `
 	expected := content
-	out, err := EvaluateExpression(expression, []byte(content))
+	out, err := EvaluateExpression(t.Context(), expression, []byte(content))
 	assert.NilError(t, err)
 	assert.Equal(t, expected, string(out))
 }
@@ -57,7 +57,7 @@ cpus: 2
 # Memory size
 memory: 2GiB
 `
-	out, err := EvaluateExpression(expression, []byte(content))
+	out, err := EvaluateExpression(t.Context(), expression, []byte(content))
 	assert.NilError(t, err)
 	assert.Equal(t, expected, string(out))
 }
@@ -89,14 +89,14 @@ mounts:
 - location: foo
   mountPoint: bar
 `
-	out, err := EvaluateExpression(expression, []byte(content))
+	out, err := EvaluateExpression(t.Context(), expression, []byte(content))
 	assert.NilError(t, err)
 	assert.Equal(t, expected, string(out))
 }
 
 func TestEvaluateExpressionError(t *testing.T) {
 	expression := `arch: aarch64`
-	_, err := EvaluateExpression(expression, []byte(""))
+	_, err := EvaluateExpression(t.Context(), expression, []byte(""))
 	assert.ErrorContains(t, err, "invalid input text")
 }
 
@@ -119,7 +119,7 @@ foo:
   baz: 2
   fomo: false
 `
-	out, err := EvaluateExpression(expression, []byte(strings.TrimSpace(content)))
+	out, err := EvaluateExpression(t.Context(), expression, []byte(strings.TrimSpace(content)))
 	assert.NilError(t, err)
 	assert.Equal(t, strings.TrimSpace(expected), strings.TrimSpace(string(out)))
 }

@@ -8,7 +8,7 @@ import (
 )
 
 func FuzzEvaluateExpression(f *testing.F) {
-	f.Fuzz(func(_ *testing.T, expression string, content []byte) {
-		_, _ = EvaluateExpression(expression, content)
+	f.Fuzz(func(t *testing.T, expression string, content []byte) {
+		_, _ = EvaluateExpression(t.Context(), expression, content)
 	})
 }

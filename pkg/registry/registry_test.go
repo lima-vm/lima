@@ -33,7 +33,7 @@ func (m *mockDriver) Delete(_ context.Context) error                            
 func (m *mockDriver) CreateDisk(_ context.Context) error                         { return nil }
 func (m *mockDriver) Start(_ context.Context) (chan error, error)                { return nil, nil }
 func (m *mockDriver) Stop(_ context.Context) error                               { return nil }
-func (m *mockDriver) RunGUI() error                                              { return nil }
+func (m *mockDriver) RunGUI(_ context.Context) error                             { return nil }
 func (m *mockDriver) ChangeDisplayPassword(_ context.Context, _ string) error    { return nil }
 func (m *mockDriver) DisplayConnection(_ context.Context) (string, error)        { return "", nil }
 func (m *mockDriver) CreateSnapshot(_ context.Context, _ string) error           { return nil }
@@ -42,12 +42,12 @@ func (m *mockDriver) DeleteSnapshot(_ context.Context, _ string) error          
 func (m *mockDriver) ListSnapshots(_ context.Context) (string, error)            { return "", nil }
 func (m *mockDriver) Register(_ context.Context) error                           { return nil }
 func (m *mockDriver) Unregister(_ context.Context) error                         { return nil }
-func (m *mockDriver) ForwardGuestAgent() bool                                    { return false }
+func (m *mockDriver) ForwardGuestAgent(_ context.Context) bool                   { return false }
 func (m *mockDriver) GuestAgentConn(_ context.Context) (net.Conn, string, error) { return nil, "", nil }
-func (m *mockDriver) Info() driver.Info {
-	return driver.Info{Name: m.Name}
+func (m *mockDriver) Info(_ context.Context) driver.Info                         { return driver.Info{Name: m.Name} }
+func (m *mockDriver) Configure(_ context.Context, _ *limatype.Instance) *driver.ConfiguredDriver {
+	return nil
 }
-func (m *mockDriver) Configure(_ *limatype.Instance) *driver.ConfiguredDriver            { return nil }
 func (m *mockDriver) FillConfig(_ context.Context, _ *limatype.LimaYAML, _ string) error { return nil }
 func (m *mockDriver) InspectStatus(_ context.Context, _ *limatype.Instance) string       { return "" }
 func (m *mockDriver) SSHAddress(_ context.Context) (string, error)                       { return "", nil }
@@ -56,10 +56,11 @@ func (m *mockDriver) BootScripts() (map[string][]byte, error)                   
 func TestRegister(t *testing.T) {
 	BackupRegistry(t)
 
+	ctx := t.Context()
 	mockDrv := newMockDriver("test-driver")
 	mockDrv2 := newMockDriver("test-driver-2")
-	Register(mockDrv)
-	Register(mockDrv2)
+	Register(ctx, mockDrv)
+	Register(ctx, mockDrv2)
 
 	assert.Equal(t, len(internalDrivers), 2)
 	assert.Equal(t, internalDrivers["test-driver"], mockDrv)
@@ -67,7 +68,7 @@ func TestRegister(t *testing.T) {
 
 	// Test registering duplicate driver (should not overwrite)
 	mockDrv3 := newMockDriver("test-driver")
-	Register(mockDrv3)
+	Register(ctx, mockDrv3)
 
 	assert.Equal(t, len(internalDrivers), 2)
 	assert.Equal(t, internalDrivers["test-driver"], mockDrv)
@@ -79,7 +80,7 @@ func TestRegister(t *testing.T) {
 	assert.Equal(t, exists, true)
 	assert.Assert(t, extDriver == nil)
 	assert.Assert(t, intDriver != nil)
-	assert.Equal(t, intDriver.Info().Name, "test-driver")
+	assert.Equal(t, intDriver.Info(ctx).Name, "test-driver")
 
 	vmTypes := List()
 	assert.Equal(t, vmTypes["test-driver-2"], Internal)
@@ -183,7 +184,7 @@ func TestGet(t *testing.T) {
 	BackupRegistry(t)
 
 	mockDrv := newMockDriver("internal-test")
-	Register(mockDrv)
+	Register(t.Context(), mockDrv)
 
 	extDriver, intDriver, exists := Get("internal-test")
 	assert.Equal(t, exists, true)
@@ -211,7 +212,7 @@ func TestList(t *testing.T) {
 	assert.Equal(t, len(vmTypes), 0)
 
 	mockDrv := newMockDriver("internal-test")
-	Register(mockDrv)
+	Register(t.Context(), mockDrv)
 
 	vmTypes = List()
 	assert.Equal(t, len(vmTypes), 1)
