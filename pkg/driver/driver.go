@@ -106,4 +106,5 @@ type DriverFeatures struct {
 	CanRunGUI            bool `json:"canRunGui,omitempty"`
 	DynamicSSHAddress    bool `json:"dynamicSSHAddress"`
 	SkipSocketForwarding bool `json:"skipSocketForwarding"`
+	NoCloudInit          bool `json:"noCloudInit"`
 }

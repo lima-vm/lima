@@ -22,4 +22,4 @@ chmod 600 "${LIMA_CIDATA_HOME}"/.ssh/authorized_keys
 echo "${LIMA_CIDATA_USER} ALL=(ALL) NOPASSWD:ALL" | tee -a /etc/sudoers.d/99_lima_sudoers
 
 # symlink CIDATA to the hardcoded path for requirement checks (TODO: make this not hardcoded)
-ln -sfFn "${LIMA_CIDATA_MNT}" /mnt/lima-cidata
+[ "$LIMA_CIDATA_MNT" = "/mnt/lima-cidata" ] || ln -sfFn "${LIMA_CIDATA_MNT}" /mnt/lima-cidata

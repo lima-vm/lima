@@ -118,12 +118,7 @@ func setupEnv(instConfigEnv map[string]string, propagateProxyEnv bool, slirpGate
 	return env, nil
 }
 
-func useCloudInit(instConfig *limayaml.LimaYAML) bool {
-	// all drivers but WSL2 use cloud-init
-	return *instConfig.VMType != limayaml.WSL2
-}
-
-func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, instConfig *limatype.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort, vsockPort int, virtioPort string) (*TemplateArgs, error) {
+func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, instConfig *limatype.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort, vsockPort int, virtioPort string, noCloudInit bool) (*TemplateArgs, error) {
 	if err := limayaml.Validate(instConfig, false); err != nil {
 		return nil, err
 	}
@@ -148,7 +143,7 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 		VirtioPort:  virtioPort,
 		Plain:       *instConfig.Plain,
 		TimeZone:    *instConfig.TimeZone,
-		NoCloudInit: !useCloudInit(instConfig),
+		NoCloudInit: noCloudInit,
 		Param:       instConfig.Param,
 	}
 
@@ -356,7 +351,7 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 }
 
 func GenerateCloudConfig(ctx context.Context, instDir, name string, instConfig *limatype.LimaYAML) error {
-	args, err := templateArgs(ctx, false, instDir, name, instConfig, 0, 0, 0, "")
+	args, err := templateArgs(ctx, false, instDir, name, instConfig, 0, 0, 0, "", false)
 	if err != nil {
 		return err
 	}
@@ -378,8 +373,8 @@ func GenerateCloudConfig(ctx context.Context, instDir, name string, instConfig *
 	return os.WriteFile(filepath.Join(instDir, filenames.CloudConfig), config, 0o444)
 }
 
-func GenerateISO9660(ctx context.Context, drv driver.Driver, instDir, name string, instConfig *limatype.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort int, guestAgentBinary, nerdctlArchive string, vsockPort int, virtioPort string) error {
-	args, err := templateArgs(ctx, true, instDir, name, instConfig, udpDNSLocalPort, tcpDNSLocalPort, vsockPort, virtioPort)
+func GenerateISO9660(ctx context.Context, drv driver.Driver, instDir, name string, instConfig *limatype.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort int, guestAgentBinary, nerdctlArchive string, vsockPort int, virtioPort string, noCloudInit bool) error {
+	args, err := templateArgs(ctx, true, instDir, name, instConfig, udpDNSLocalPort, tcpDNSLocalPort, vsockPort, virtioPort, noCloudInit)
 	if err != nil {
 		return err
 	}
@@ -472,7 +467,7 @@ func GenerateISO9660(ctx context.Context, drv driver.Driver, instDir, name strin
 		})
 	}
 
-	if !useCloudInit(instConfig) {
+	if noCloudInit {
 		layout = append(layout, iso9660util.Entry{
 			Path:   "ssh_authorized_keys",
 			Reader: strings.NewReader(strings.Join(args.SSHPubKeys, "\n")),
