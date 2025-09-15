@@ -495,7 +495,11 @@ uninstall:
 		"$(DEST)/bin/kubectl.lima" \
 		"$(DEST)/share/man/man1/lima.1" \
 		"$(DEST)/share/man/man1/limactl"*".1" \
-		"$(DEST)/share/lima" "$(DEST)/share/doc/lima"
+		"$(DEST)/share/lima" \
+		"$(DEST)/share/doc/lima" \
+		"$(DEST)/libexec/lima/lima-driver-qemu$(exe)" \
+		"$(DEST)/libexec/lima/lima-driver-vz$(exe)" \
+		"$(DEST)/libexec/lima/lima-driver-wsl2$(exe)"
 	if [ "$$(readlink "$(DEST)/bin/nerdctl")" = "nerdctl.lima" ]; then rm "$(DEST)/bin/nerdctl"; fi
 	if [ "$$(readlink "$(DEST)/bin/apptainer")" = "apptainer.lima" ]; then rm "$(DEST)/bin/apptainer"; fi
 
