@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math/bits"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -179,7 +180,7 @@ func buildMountListExpression(ss []string) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		expr += fmt.Sprintf(`{"location": %q, "writable": %v}`, loc, writable)
+		expr += fmt.Sprintf(`{"location": %q, "mountPoint": %q, "writable": %v}`, loc, loc, writable)
 		if i < len(ss)-1 {
 			expr += ","
 		}
@@ -225,6 +226,7 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 			"mount",
 			func(_ *flag.Flag) (string, error) {
 				ss, err := flags.GetStringSlice("mount")
+				slices.Reverse(ss)
 				if err != nil {
 					return "", err
 				}
@@ -232,7 +234,8 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 				if err != nil {
 					return "", err
 				}
-				expr := `.mounts += ` + mountListExpr + ` | .mounts |= unique_by(.location)`
+				// mount options take precedence over template settings
+				expr := fmt.Sprintf(".mounts = %s + .mounts", mountListExpr)
 				mountOnly, err := flags.GetStringSlice("mount-only")
 				if err != nil {
 					return "", err
