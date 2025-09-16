@@ -935,7 +935,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 				options += fmt.Sprintf(",path=%s", f.Location)
 				options += fmt.Sprintf(",security_model=%s", *f.NineP.SecurityModel)
 				if !*f.Writable {
-					options += ",readonly"
+					options += ",readonly=on"
 				}
 				args = append(args, "-virtfs", options)
 			case limatype.VIRTIOFS:
