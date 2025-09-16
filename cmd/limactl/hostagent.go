@@ -130,7 +130,7 @@ func hostagentAction(cmd *cobra.Command, args []string) error {
 		}
 	}()
 	defer srv.Close()
-	return ha.Run(cmd.Context())
+	return ha.Run(ctx)
 }
 
 // syncer is implemented by *os.File.

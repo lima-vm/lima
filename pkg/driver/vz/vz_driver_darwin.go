@@ -90,7 +90,7 @@ func New() *LimaVzDriver {
 	}
 }
 
-func (l *LimaVzDriver) Configure(inst *limatype.Instance) *driver.ConfiguredDriver {
+func (l *LimaVzDriver) Configure(_ context.Context, inst *limatype.Instance) *driver.ConfiguredDriver {
 	l.Instance = inst
 	l.SSHLocalPort = inst.SSHLocalPort
 
@@ -287,7 +287,7 @@ func (l *LimaVzDriver) canRunGUI() bool {
 	}
 }
 
-func (l *LimaVzDriver) RunGUI() error {
+func (l *LimaVzDriver) RunGUI(_ context.Context) error {
 	if l.canRunGUI() {
 		return l.machine.StartGraphicApplication(1920, 1200)
 	}
@@ -333,7 +333,7 @@ func (l *LimaVzDriver) GuestAgentConn(_ context.Context) (net.Conn, string, erro
 	return nil, "", errors.New("unable to connect to guest agent via vsock port 2222")
 }
 
-func (l *LimaVzDriver) Info() driver.Info {
+func (l *LimaVzDriver) Info(_ context.Context) driver.Info {
 	var info driver.Info
 
 	info.Name = "vz"
@@ -399,7 +399,7 @@ func (l *LimaVzDriver) ListSnapshots(_ context.Context) (string, error) {
 	return "", errUnimplemented
 }
 
-func (l *LimaVzDriver) ForwardGuestAgent() bool {
+func (l *LimaVzDriver) ForwardGuestAgent(_ context.Context) bool {
 	// If driver is not providing, use host agent
 	return l.vSockPort == 0 && l.virtioPort == ""
 }
