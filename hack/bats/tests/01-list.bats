@@ -79,10 +79,10 @@ local_setup() {
 }
 
 @test '--json is shorthand for --format json' {
-    run -0 limactl ls --format json foo bar
+    run -0 limactl ls foo bar --format json
     format_json=$output
 
-    run -0 limactl ls --json foo bar
+    run -0 limactl ls foo bar --json
     assert_output "$format_json"
 }
 
@@ -91,7 +91,7 @@ local_setup() {
     run -0 limactl ls foo bar --format json
     json=$output
 
-    run -0 limactl ls --format yaml foo bar
+    run -0 limactl ls foo bar --format yaml
     yaml=$output
 
     assert_line --regexp '^name: foo'
