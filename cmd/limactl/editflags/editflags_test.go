@@ -181,13 +181,13 @@ func TestYQExpressions(t *testing.T) {
 			name:        "mount",
 			args:        []string{"--mount", "/foo", "--mount", "./bar:w"},
 			newInstance: false,
-			expected:    []string{`.mounts += [{"location": "` + expand("/foo") + `", "writable": false},{"location": "` + expand("./bar") + `", "writable": true}] | .mounts |= unique_by(.location)`},
+			expected:    []string{`.mounts = [{"location": "` + expand("./bar") + `", "mountPoint": "` + expand("./bar") + `", "writable": true},{"location": "` + expand("/foo") + `", "mountPoint": "` + expand("/foo") + `", "writable": false}] + .mounts`},
 		},
 		{
 			name:        "mount-only",
 			args:        []string{"--mount-only", "/foo", "--mount-only", "/bar:w"},
 			newInstance: false,
-			expected:    []string{`.mounts = [{"location": "` + expand("/foo") + `", "writable": false},{"location": "` + expand("/bar") + `", "writable": true}]`},
+			expected:    []string{`.mounts = [{"location": "` + expand("/foo") + `", "mountPoint": "` + expand("/foo") + `", "writable": false},{"location": "` + expand("/bar") + `", "mountPoint": "` + expand("/bar") + `", "writable": true}]`},
 		},
 		{
 			name:        "mixture of mount and mount-only",
