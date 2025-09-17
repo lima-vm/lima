@@ -631,21 +631,39 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 	// Combine all mounts; highest priority entry determines writable status.
 	// Only works for exact matches; does not normalize case or resolve symlinks.
 	mounts := make([]limatype.Mount, 0, len(d.Mounts)+len(y.Mounts)+len(o.Mounts))
-	location := make(map[string]int)
+	mountPoint := make(map[string]int)
 	for _, mount := range slices.Concat(d.Mounts, y.Mounts, o.Mounts) {
 		if out, err := executeHostTemplate(mount.Location, instDir, y.Param); err == nil {
 			mount.Location = filepath.Clean(out.String())
 		} else {
 			logrus.WithError(err).Warnf("Couldn't process mount location %q as a template", mount.Location)
 		}
-		if mount.MountPoint != nil {
+		// Expand a path that begins with `~`. Relative paths are not modified, and rejected by Validate() later.
+		if localpathutil.IsTildePath(mount.Location) {
+			if location, err := localpathutil.Expand(mount.Location); err == nil {
+				mount.Location = location
+			} else {
+				logrus.WithError(err).Warnf("Couldn't expand location %q", mount.Location)
+			}
+		}
+		if mount.MountPoint == nil {
+			mountLocation := mount.Location
+			if runtime.GOOS == "windows" {
+				var err error
+				mountLocation, err = ioutilx.WindowsSubsystemPath(ctx, mountLocation)
+				if err != nil {
+					logrus.WithError(err).Warnf("Couldn't convert location %q into mount target", mount.Location)
+				}
+			}
+			mount.MountPoint = ptr.Of(mountLocation)
+		} else {
 			if out, err := executeGuestTemplate(*mount.MountPoint, instDir, y.User, y.Param); err == nil {
 				mount.MountPoint = ptr.Of(out.String())
 			} else {
 				logrus.WithError(err).Warnf("Couldn't process mount point %q as a template", *mount.MountPoint)
 			}
 		}
-		if i, ok := location[mount.Location]; ok {
+		if i, ok := mountPoint[*mount.MountPoint]; ok {
 			if mount.SSHFS.Cache != nil {
 				mounts[i].SSHFS.Cache = mount.SSHFS.Cache
 			}
@@ -677,7 +695,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 				mounts[i].MountPoint = mount.MountPoint
 			}
 		} else {
-			location[mount.Location] = len(mounts)
+			mountPoint[*mount.MountPoint] = len(mounts)
 			mounts = append(mounts, mount)
 		}
 	}
@@ -712,26 +730,6 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 			} else {
 				mounts[i].NineP.Cache = ptr.Of(Default9pCacheForRO)
 			}
-		}
-
-		// Expand a path that begins with `~`. Relative paths are not modified, and rejected by Validate() later.
-		if localpathutil.IsTildePath(mount.Location) {
-			if location, err := localpathutil.Expand(mount.Location); err == nil {
-				mounts[i].Location = location
-			} else {
-				logrus.WithError(err).Warnf("Couldn't expand location %q", mount.Location)
-			}
-		}
-		if mount.MountPoint == nil {
-			mountLocation := mounts[i].Location
-			if runtime.GOOS == "windows" {
-				var err error
-				mountLocation, err = ioutilx.WindowsSubsystemPath(ctx, mountLocation)
-				if err != nil {
-					logrus.WithError(err).Warnf("Couldn't convert location %q into mount target", mounts[i].Location)
-				}
-			}
-			mounts[i].MountPoint = ptr.Of(mountLocation)
 		}
 	}
 
