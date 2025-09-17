@@ -380,16 +380,20 @@ MKDIR_TARGETS += _output/share/lima
 ################################################################################
 # _output/share/lima/templates
 TEMPLATES = $(addprefix _output/share/lima/templates/,$(filter-out experimental,$(notdir $(wildcard templates/*))))
+TEMPLATE_DEFAULTS = ${addprefix _output/share/lima/templates/_default/,$(notdir $(wildcard templates/_default/*))}
+TEMPLATE_IMAGES = $(addprefix _output/share/lima/templates/_images/,$(notdir $(wildcard templates/_images/*)))
 TEMPLATE_EXPERIMENTALS = $(addprefix _output/share/lima/templates/experimental/,$(notdir $(wildcard templates/experimental/*)))
 
 .PHONY: default_template templates template_experimentals
 default_template: _output/share/lima/templates/default.yaml
-templates: $(TEMPLATES)
+templates: $(TEMPLATES) $(TEMPLATE_DEFAULTS) $(TEMPLATE_IMAGES)
 template_experimentals: $(TEMPLATE_EXPERIMENTALS)
 
 $(TEMPLATES): | _output/share/lima/templates
+$(TEMPLATE_DEFAULTS): | _output/share/lima/templates/_default
+$(TEMPLATE_IMAGES): | _output/share/lima/templates/_images
 $(TEMPLATE_EXPERIMENTALS): | _output/share/lima/templates/experimental
-MKDIR_TARGETS += _output/share/lima/templates _output/share/lima/templates/experimental
+MKDIR_TARGETS += _output/share/lima/templates _output/share/lima/templates/_default _output/share/lima/templates/_images _output/share/lima/templates/experimental
 
 _output/share/lima/templates/%: templates/%
 	cp -aL $< $@
