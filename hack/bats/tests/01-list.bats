@@ -20,20 +20,6 @@ local_setup() {
     export LIMA_HOME="${LOCAL_LIMA_HOME:?}"
 }
 
-# In Go templates "{{json .}}" will encode empty maps (e.g. "foo": {}) even if the
-# map has the "json:",omitempty" tag. "{{yaml .}}" does omit empty maps, so remove
-# them from the JSON output to make it comparable to the YAML one.
-#
-# TODO should we modify `limactl list` to remove empty maps by default
-# since we pass the output through yq anyways?
-canonical_json() {
-    local empty_maps='.. | select(tag == "!!map" and length == 0)'
-    while limactl yq --exit-status --input-format json "[${empty_maps}] | length > 0" <<<"$output" >/dev/null 2>&1; do
-        run -0 limactl yq --input-format json --output-format json --indent 0 "del(${empty_maps})" <<<"$output"
-    done
-
-}
-
 @test 'list with no running instances shows a warning and exits without error' {
     export LIMA_HOME="$BATS_TEST_TMPDIR"
     run_e -0 limactl list
@@ -101,9 +87,8 @@ canonical_json() {
 }
 
 @test '--format YAML returns YAML documents' {
-    # save canonical JSON output with empty maps removed, for comparison
+    # save JSON output for comparison
     run -0 limactl ls foo bar --format json
-    canonical_json
     json=$output
 
     run -0 limactl ls --format yaml foo bar
@@ -121,7 +106,7 @@ canonical_json() {
     run -0 limactl yq --input-format yaml --output-format json  --indent 0 "." <<<"$yaml"
     assert_output_lines_count 2
 
-    # verify it matches the canonical JSON output
+    # verify it matches the JSON output
     assert_output "$json"
 
 }
@@ -148,14 +133,13 @@ canonical_json() {
     run -0 limactl yq --input-format json --output-format json  --indent 0 "." <<<"$output"
     assert_output_lines_count 2
 
-    # compare to the regular --format json output
+    # compare to the plain (uncolorized) json output
     assert_output "$json"
 }
 
 @test 'YAML output to terminal is colorized, but semantically identical' {
-    # save canonical output without colors and empty maps removed
+    # save uncolorized JSON output
     run -0 limactl ls foo bar --format json
-    canonical_json
     json=$output
 
     # colorize output even when stdout is not a tty
@@ -179,7 +163,7 @@ canonical_json() {
     run -0 limactl yq --indent 0 --input-format yaml --output-format json "." <<<"$yaml"
     assert_output_lines_count 2
 
-    # verify it matches the canonical JSON output
+    # verify it matches the JSON output
     assert_output "$json"
 }
 
