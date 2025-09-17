@@ -20,6 +20,7 @@ import (
 
 	"github.com/lima-vm/lima/v2/pkg/hostagent"
 	"github.com/lima-vm/lima/v2/pkg/hostagent/api/server"
+	"github.com/lima-vm/lima/v2/pkg/store"
 )
 
 func newHostagentCommand() *cobra.Command {
@@ -46,8 +47,10 @@ func hostagentAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	if pidfile != "" {
-		if _, err := os.Stat(pidfile); !errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("pidfile %q already exists", pidfile)
+		if existingPID, err := store.ReadPIDFile(pidfile); existingPID != 0 {
+			return fmt.Errorf("another hostagent may already be running with pid %d (pidfile %q)", existingPID, pidfile)
+		} else if err != nil {
+			return fmt.Errorf("failed to determine if another hostagent is running: %w", err)
 		}
 		if err := os.WriteFile(pidfile, []byte(strconv.Itoa(os.Getpid())+"\n"), 0o644); err != nil {
 			return err
