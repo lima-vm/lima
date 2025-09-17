@@ -176,3 +176,7 @@ message: |
   export KUBECONFIG="{{.Dir}}/copied-from-guest/kubeconfig.yaml"
   kubectl ...
   ------
+portMonitors:
+  kubernetes:
+    configs:
+    - "/etc/kubernetes/admin.conf"

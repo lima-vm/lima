@@ -527,6 +527,54 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		// After defaults processing the singular HostPort and GuestPort values should not be used again.
 	}
 
+	// Manage PortMonitors sockets for Docker
+	y.PortMonitors.Docker.Sockets = slices.Concat(
+		o.PortMonitors.Docker.Sockets,
+		y.PortMonitors.Docker.Sockets,
+		d.PortMonitors.Docker.Sockets)
+
+	for i := range y.PortMonitors.Docker.Sockets {
+		socket := &y.PortMonitors.Docker.Sockets[i]
+		if out, err := executeGuestTemplate(*socket, instDir, y.User, y.Param); err == nil {
+			*socket = out.String()
+		} else {
+			logrus.WithError(err).Warnf("Couldn't process Docker socket %q as a template", *socket)
+		}
+	}
+
+	// Manage PortMonitors sockets for Containerd
+	y.PortMonitors.Containerd.Sockets = slices.Concat(
+		o.PortMonitors.Containerd.Sockets,
+		y.PortMonitors.Containerd.Sockets,
+		d.PortMonitors.Containerd.Sockets)
+
+	for i := range y.PortMonitors.Containerd.Sockets {
+		socket := &y.PortMonitors.Containerd.Sockets[i]
+		if out, err := executeGuestTemplate(*socket, instDir, y.User, y.Param); err == nil {
+			*socket = out.String()
+		} else {
+			logrus.WithError(err).Warnf("Couldn't process Containerd socket %q as a template", *socket)
+		}
+	}
+
+	if y.Containerd.System != nil && *y.Containerd.System {
+		y.PortMonitors.Containerd.Sockets = unique(append(y.PortMonitors.Containerd.Sockets, "/run/containerd/containerd.sock"))
+	}
+	if y.Containerd.User != nil && *y.Containerd.User {
+		socket := "/run/user/{{.UID}}/containerd/containerd.sock"
+		if out, err := executeGuestTemplate(socket, instDir, y.User, y.Param); err == nil {
+			y.PortMonitors.Containerd.Sockets = unique(append(y.PortMonitors.Containerd.Sockets, out.String()))
+		} else {
+			logrus.WithError(err).Warnf("Couldn't process Containerd user socket %q as template", socket)
+		}
+	}
+
+	// Manage PortMonitors config for kubernetes
+	y.PortMonitors.Kubernetes.Configs = unique(slices.Concat(
+		o.PortMonitors.Kubernetes.Configs,
+		y.PortMonitors.Kubernetes.Configs,
+		d.PortMonitors.Kubernetes.Configs))
+
 	y.CopyToHost = slices.Concat(o.CopyToHost, y.CopyToHost, d.CopyToHost)
 	for i := range y.CopyToHost {
 		FillCopyToHostDefaults(&y.CopyToHost[i], instDir, y.User, y.Param)

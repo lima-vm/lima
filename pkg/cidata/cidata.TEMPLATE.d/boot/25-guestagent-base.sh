@@ -41,7 +41,12 @@ name="lima-guestagent"
 description="Forward ports to the lima-hostagent"
 
 command=${LIMA_CIDATA_GUEST_INSTALL_PREFIX}/bin/lima-guestagent
-command_args="daemon --debug=${LIMA_CIDATA_DEBUG} --vsock-port \"${LIMA_CIDATA_VSOCK_PORT}\" --virtio-port \"${LIMA_CIDATA_VIRTIO_PORT}\""
+command_args="daemon --debug=${LIMA_CIDATA_DEBUG} \
+--docker-sockets \"${LIMA_CIDATA_PORT_MONITOR_DOCKER}\" \
+--containerd-sockets \"${LIMA_CIDATA_PORT_MONITOR_CONTAINERD}\" \
+--kubernetes-configs \"${LIMA_CIDATA_PORT_MONITOR_KUBERNETES}\" \
+--vsock-port \"${LIMA_CIDATA_VSOCK_PORT}\" \
+--virtio-port \"${LIMA_CIDATA_VIRTIO_PORT}\""
 command_background=true
 pidfile="/run/lima-guestagent.pid"
 EOF
@@ -53,11 +58,29 @@ else
 	# Remove legacy systemd service
 	rm -f "${LIMA_CIDATA_HOME}/.config/systemd/user/lima-guestagent.service"
 
+	docker_args="--docker-sockets=${LIMA_CIDATA_PORT_MONITOR_DOCKER}"
+	containerd_args="--containerd-sockets=${LIMA_CIDATA_PORT_MONITOR_CONTAINERD}"
+	kubernetes_args="--kubernetes-configs=${LIMA_CIDATA_PORT_MONITOR_KUBERNETES}"
+
 	if [ "${LIMA_CIDATA_VSOCK_PORT}" != "0" ]; then
-		sudo "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/lima-guestagent install-systemd --debug="${LIMA_CIDATA_DEBUG}" --vsock-port "${LIMA_CIDATA_VSOCK_PORT}"
-	elif [ "${LIMA_CIDATA_VIRTIO_PORT}" != "" ]; then
-		sudo "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/lima-guestagent install-systemd --debug="${LIMA_CIDATA_DEBUG}" --virtio-port "${LIMA_CIDATA_VIRTIO_PORT}"
+		sudo "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}/bin/lima-guestagent" install-systemd \
+			--debug="${LIMA_CIDATA_DEBUG}" \
+			"${docker_args}" \
+			"${containerd_args}" \
+			"${kubernetes_args}" \
+			--vsock-port "${LIMA_CIDATA_VSOCK_PORT}"
+	elif [ -n "${LIMA_CIDATA_VIRTIO_PORT}" ]; then
+		sudo "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}/bin/lima-guestagent" install-systemd \
+			--debug="${LIMA_CIDATA_DEBUG}" \
+			"${docker_args}" \
+			"${containerd_args}" \
+			"${kubernetes_args}" \
+			--virtio-port "${LIMA_CIDATA_VIRTIO_PORT}"
 	else
-		sudo "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/lima-guestagent install-systemd --debug="${LIMA_CIDATA_DEBUG}"
+		sudo "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}/bin/lima-guestagent" install-systemd \
+			--debug="${LIMA_CIDATA_DEBUG}" \
+			"${docker_args}" \
+			"${containerd_args}" \
+			"${kubernetes_args}"
 	fi
 fi
