@@ -4,8 +4,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # This script replaces the cloud-init functionality of creating a user and setting its SSH keys
-# when using a WSL2 VM.
-[ "$LIMA_CIDATA_VMTYPE" = "wsl2" ] || exit 0
+# when cloud-init is not available
+[ "$LIMA_CIDATA_NO_CLOUD_INIT" = "1" ] || exit 0
 
 # create user
 # shellcheck disable=SC2153
@@ -22,4 +22,4 @@ chmod 600 "${LIMA_CIDATA_HOME}"/.ssh/authorized_keys
 echo "${LIMA_CIDATA_USER} ALL=(ALL) NOPASSWD:ALL" | tee -a /etc/sudoers.d/99_lima_sudoers
 
 # symlink CIDATA to the hardcoded path for requirement checks (TODO: make this not hardcoded)
-ln -sfFn "${LIMA_CIDATA_MNT}" /mnt/lima-cidata
+[ "$LIMA_CIDATA_MNT" = "/mnt/lima-cidata" ] || ln -sfFn "${LIMA_CIDATA_MNT}" /mnt/lima-cidata

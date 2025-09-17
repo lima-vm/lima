@@ -162,11 +162,12 @@ func New(ctx context.Context, instName string, stdout io.Writer, signalCh chan o
 
 	vSockPort := limaDriver.Info().VsockPort
 	virtioPort := limaDriver.Info().VirtioPort
+	noCloudInit := limaDriver.Info().Features.NoCloudInit
 
 	if err := cidata.GenerateCloudConfig(ctx, inst.Dir, instName, inst.Config); err != nil {
 		return nil, err
 	}
-	if err := cidata.GenerateISO9660(ctx, limaDriver, inst.Dir, instName, inst.Config, udpDNSLocalPort, tcpDNSLocalPort, o.guestAgentBinary, o.nerdctlArchive, vSockPort, virtioPort); err != nil {
+	if err := cidata.GenerateISO9660(ctx, limaDriver, inst.Dir, instName, inst.Config, udpDNSLocalPort, tcpDNSLocalPort, o.guestAgentBinary, o.nerdctlArchive, vSockPort, virtioPort, noCloudInit); err != nil {
 		return nil, err
 	}
 
