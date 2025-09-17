@@ -43,16 +43,38 @@ PACKAGE := github.com/lima-vm/lima/v2
 VERSION := $(shell git describe --match 'v[0-9]*' --dirty='.m' --always --tags)
 VERSION_TRIMMED := $(VERSION:v%=%)
 
+# `DEBUG` flag to build binaries with debug information for use by `dlv exec`.
+# This implies KEEP_DWARF=1 and KEEP_SYMBOLS=1.
+DEBUG ?=
+GO_BUILD_GCFLAGS ?=
+KEEP_DWARF ?=
 KEEP_SYMBOLS ?=
+ifeq ($(DEBUG),1)
+	# Disable optimizations and inlining to make debugging easier.
+	GO_BUILD_GCFLAGS = -gcflags="all=-N -l"
+	# Keep the symbol table
+	KEEP_DWARF = 1
+	# Enable DWARF generation
+	KEEP_SYMBOLS = 1
+endif
+
+GO_BUILD_LDFLAGS_W := true
+ifeq ($(KEEP_DWARF),1)
+	GO_BUILD_LDFLAGS_W = false
+endif
+
 GO_BUILD_LDFLAGS_S := true
 ifeq ($(KEEP_SYMBOLS),1)
 	GO_BUILD_LDFLAGS_S = false
 endif
-GO_BUILD_LDFLAGS := -ldflags="-s=$(GO_BUILD_LDFLAGS_S) -w -X $(PACKAGE)/pkg/version.Version=$(VERSION)"
+# `-s`: Strip the symbol table according to the KEEP_SYMBOLS config
+# `-w`: Disable DWARF generation according to the KEEP_DWARF config
+# `-X`: Embed version information.
+GO_BUILD_LDFLAGS := -ldflags="-s=$(GO_BUILD_LDFLAGS_S) -w=$(GO_BUILD_LDFLAGS_W) -X $(PACKAGE)/pkg/version.Version=$(VERSION)"
 # `go -version -m` returns -tags with comma-separated list, because space-separated list is deprecated in go1.13.
 # converting to comma-separated list is useful for comparing with the output of `go version -m`.
 GO_BUILD_FLAG_TAGS := $(addprefix -tags=,$(shell echo "$(GO_BUILDTAGS)"|tr " " "\n"|paste -sd "," -))
-GO_BUILD := $(GO) build $(GO_BUILD_LDFLAGS) $(GO_BUILD_FLAG_TAGS)
+GO_BUILD := $(strip $(GO) build $(GO_BUILD_GCFLAGS) $(GO_BUILD_LDFLAGS) $(GO_BUILD_FLAG_TAGS))
 
 ################################################################################
 # Features
@@ -78,7 +100,9 @@ help-variables:
 	@echo  '# Variables that can be overridden.'
 	@echo
 	@echo  '- PREFIX       (directory)  : Installation prefix (default: /usr/local)'
+	@echo  '- KEEP_DWARF   (1 or 0)     : Whether to keep DWARF information (default: 0)'
 	@echo  '- KEEP_SYMBOLS (1 or 0)     : Whether to keep symbols (default: 0)'
+	@echo  '- DEBUG        (1 or 0)     : Whether to build with debug information (default: 0)'
 
 .PHONY: help-targets
 help-targets:
@@ -177,7 +201,7 @@ dependencies_for_cmd = go.mod $(call find_files_excluding_dir_and_test, ./cmd/$(
 # $(1): target binary
 extract_build_vars = $(shell \
 	($(GO) version -m $(1) 2>&- || echo $(1):) | \
-	awk 'FNR==1{print "GOVERSION="$$2}$$2~/^(CGO|GO|-ldflags|-tags).*=.+$$/{sub("^.*"$$2,$$2); print $$0}' \
+	awk 'FNR==1{print "GOVERSION="$$2}$$2~/^(CGO|GO|-gcflags|-ldflags|-tags).*=.+$$/{sub("^.*"$$2,$$2); print $$0}' \
 )
 
 # a list of keys from the GO build variables to be used for calling `go env`.
@@ -192,7 +216,7 @@ go_build_vars = $(shell \
 	$(ENVS_$(1)) $(GO) env $(2) | \
 	awk '/ /{print "\""$$0"\""; next}{print}' | \
 	for k in $(2); do read -r v && echo "$$k=$${v}"; done \
-) $(GO_BUILD_LDFLAGS) $(GO_BUILD_FLAG_TAGS)
+) $(GO_BUILD_GCFLAGS) $(GO_BUILD_LDFLAGS) $(GO_BUILD_FLAG_TAGS)
 
 # returns the difference between $(1) and $(2).
 diff = $(filter-out $(2),$(1))$(filter-out $(1),$(2))
