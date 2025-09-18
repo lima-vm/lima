@@ -789,6 +789,7 @@ func (a *HostAgent) processGuestAgentEvents(ctx context.Context, client *guestag
 			a.grpcPortForwarder.OnEvent(ctx, client, ev)
 		}
 	}
+	defer a.grpcPortForwarder.Close()
 
 	if err := client.Events(ctx, onEvent); err != nil {
 		if status.Code(err) == codes.Canceled {
