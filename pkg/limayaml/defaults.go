@@ -901,7 +901,7 @@ func executeHostTemplate(format, instDir string, param map[string]string) (bytes
 
 func FillPortForwardDefaults(rule *limatype.PortForward, instDir string, user limatype.User, param map[string]string) {
 	if rule.Proto == "" {
-		rule.Proto = limatype.ProtoTCP
+		rule.Proto = limatype.ProtoAny
 	}
 	if rule.GuestIP == nil {
 		if rule.GuestIPMustBeZero {
