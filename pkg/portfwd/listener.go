@@ -5,6 +5,7 @@ package portfwd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"strings"
@@ -105,7 +106,7 @@ func (p *ClosableListeners) forwardTCP(ctx context.Context, client *guestagentcl
 	for {
 		conn, err := tcpLis.Accept()
 		if err != nil {
-			if opErr, ok := err.(*net.OpError); ok && opErr.Err.Error() == "use of closed network connection" {
+			if errors.Is(err, net.ErrClosed) {
 				return
 			}
 			logrus.Errorf("failed to accept TCP connection: %v", err)
