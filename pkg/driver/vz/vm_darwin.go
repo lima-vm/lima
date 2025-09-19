@@ -72,12 +72,6 @@ func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int) (*v
 
 	errCh := make(chan error)
 
-	filesToRemove := make(map[string]struct{})
-	defer func() {
-		for f := range filesToRemove {
-			_ = os.RemoveAll(f)
-		}
-	}()
 	waitSSHLocalPortAccessible := make(chan struct{})
 	defer close(waitSSHLocalPortAccessible)
 	go func() {
@@ -107,7 +101,6 @@ func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int) (*v
 						logrus.Errorf("error writing to pid fil %q", pidFile)
 						errCh <- err
 					}
-					filesToRemove[pidFile] = struct{}{}
 					logrus.Info("[VZ] - vm state change: running")
 
 					usernetSSHLocalPort := sshLocalPort
