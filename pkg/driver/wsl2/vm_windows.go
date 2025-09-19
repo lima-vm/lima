@@ -282,9 +282,12 @@ func getSSHAddress(ctx context.Context, instName string) (string, error) {
 	// fallback
 	cmd = exec.CommandContext(ctx, "wsl.exe", "-d", distroName, "hostname", "-i")
 	out, err = cmd.CombinedOutput()
-	if err != nil || strings.HasPrefix(string(out), "127.") {
-		return "", fmt.Errorf("failed to get hostname for instance %q, err: %w (out=%q)", instName, err, string(out))
+	if err == nil {
+		ip := net.ParseIP(strings.TrimSpace(string(out)))
+		// some distributions use "127.0.1.1" as the host IP, but we want something that we can route to here
+		if ip != nil && !ip.IsLoopback() {
+			return strings.TrimSpace(string(out)), nil
+		}
 	}
-
-	return strings.TrimSpace(string(out)), nil
+	return "", fmt.Errorf("failed to get hostname for instance %q, err: %w (out=%q)", instName, err, string(out))
 }
