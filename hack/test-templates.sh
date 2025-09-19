@@ -51,7 +51,6 @@ declare -A CHECKS=(
 	["snapshot-offline"]=""
 	["clone"]=""
 	["port-forwards"]="1"
-	["static-port-forwards"]=""
 	["vmnet"]=""
 	["disk"]=""
 	["user-v2"]=""
@@ -61,6 +60,7 @@ declare -A CHECKS=(
 	["param-env-variables"]=""
 	["set-user"]=""
 	["preserve-env"]="1"
+	["static-port-forwards"]=""
 )
 
 case "$NAME" in
@@ -95,12 +95,7 @@ case "$NAME" in
 	CHECKS["provision-yq"]="1"
 	CHECKS["param-env-variables"]="1"
 	CHECKS["set-user"]="1"
-	;;
-"static-port-forward")
 	CHECKS["static-port-forwards"]="1"
-	CHECKS["port-forwards"]=""
-	CHECKS["container-engine"]=""
-	CHECKS["restart"]=""
 	;;
 "docker")
 	CONTAINER_ENGINE="docker"
@@ -463,13 +458,6 @@ if [[ -n ${CHECKS["port-forwards"]} ]]; then
 	set +x
 fi
 
-if [[ -n ${CHECKS["static-port-forwards"]} ]]; then
-	INFO "Testing static port forwarding functionality"
-	"${scriptdir}/test-plain-static-port-forward.sh" "$NAME"
-	"${scriptdir}/test-nonplain-static-port-forward.sh" "$NAME"
-	INFO "All static port forwarding tests passed!"
-fi
-
 if [[ -n ${CHECKS["vmnet"]} ]]; then
 	INFO "Testing vmnet functionality"
 	guestip="$(limactl shell "$NAME" ip -4 -j addr show dev lima0 | jq -r '.[0].addr_info[0].local')"
@@ -638,4 +626,11 @@ limactl delete "$NAME"
 
 if [[ -n ${CHECKS["mount-path-with-spaces"]} ]]; then
 	rm -rf "/tmp/lima test dir with spaces"
+fi
+
+if [[ -n ${CHECKS["static-port-forwards"]} ]]; then
+	INFO "Testing static port forwarding functionality"
+	"${scriptdir}/test-plain-static-port-forward.sh" "$NAME"
+	"${scriptdir}/test-nonplain-static-port-forward.sh" "$NAME"
+	INFO "All static port forwarding tests passed!"
 fi

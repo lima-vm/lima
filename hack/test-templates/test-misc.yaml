@@ -30,7 +30,57 @@ provision:
 - mode: dependency
   script: "touch /tmp/param-$PARAM_DEPENDENCY"
 - mode: system
-  script: "touch /tmp/param-$PARAM_SYSTEM"
+  script: |
+    touch /tmp/param-$PARAM_SYSTEM
+
+    # port forwarding test setup
+    apt-get update
+    apt-get install -y nginx python3
+    systemctl enable nginx
+    systemctl start nginx
+
+    cat > /etc/systemd/system/test-server-9080.service << 'EOF'
+    [Unit]
+    Description=Test Server on Port 9080
+    After=network.target
+
+    [Service]
+    Type=simple
+    User=root
+    ExecStart=/usr/bin/python3 -m http.server 9080 --bind 127.0.0.1
+    Restart=always
+
+    [Install]
+    WantedBy=multi-user.target
+    EOF
+
+    cat > /etc/systemd/system/test-server-9070.service << 'EOF'
+    [Unit]
+    Description=Test Server on Port 9070
+    After=network.target
+
+    [Service]
+    Type=simple
+    User=root
+    ExecStart=/usr/bin/python3 -m http.server 9070 --bind 127.0.0.1
+    Restart=always
+
+    [Install]
+    WantedBy=multi-user.target
+    EOF
+
+    mkdir -p /var/www/html-9080
+    mkdir -p /var/www/html-9070
+
+    echo '<html><body><h1>Dynamic port 9080</h1></body></html>' > /var/www/html-9080/index.html
+    echo '<html><body><h1>Dynamic port 9070</h1></body></html>' > /var/www/html-9070/index.html
+
+    systemctl daemon-reload
+    systemctl enable test-server-9080
+    systemctl enable test-server-9070
+    systemctl start test-server-9080
+    systemctl start test-server-9070
+
 - mode: user
   script: "touch /tmp/param-$PARAM_USER"
 - mode: data
@@ -41,7 +91,6 @@ provision:
 - mode: yq
   path: "/tmp/param-{{.Param.YQ}}.json"
   expression: .YQ = "{{.Param.YQ}}"
-  user: "{{.User}}"
 
 probes:
 - mode: readiness
@@ -61,3 +110,14 @@ user:
   uid: 4711
   # Ubuntu has identical /bin/bash and /usr/bin/bash
   shell: /usr/bin/bash
+
+portForwards:
+- guestPort: 80
+  hostPort: 9090
+  static: true
+- guestPort: 9080
+  hostPort: 29080
+  static: false
+- guestPort: 9070
+  hostPort: 29070
+  static: false
