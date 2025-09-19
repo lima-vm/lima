@@ -135,7 +135,7 @@ func provisionVM(ctx context.Context, instanceDir, instanceName, distroName stri
 		for {
 			<-ctx.Done()
 			logrus.Info("Context closed, stopping vm")
-			if status, err := getWslStatus(instanceName); err == nil &&
+			if status, err := getWslStatus(ctx, instanceName); err == nil &&
 				status == limatype.StatusRunning {
 				_ = stopVM(ctx, distroName)
 			}
@@ -207,13 +207,13 @@ func unregisterVM(ctx context.Context, distroName string) error {
 // Windows Subsystem for Linux has no installed distributions.
 // Distributions can be installed by visiting the Microsoft Store:
 // https://aka.ms/wslstore
-func getWslStatus(instName string) (string, error) {
+func getWslStatus(ctx context.Context, instName string) (string, error) {
 	distroName := "lima-" + instName
 	out, err := executil.RunUTF16leCommand([]string{
 		"wsl.exe",
 		"--list",
 		"--verbose",
-	})
+	}, executil.WithContext(ctx))
 	if err != nil {
 		return "", fmt.Errorf("failed to run `wsl --list --verbose`, err: %w (out=%q)", err, out)
 	}
