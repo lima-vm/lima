@@ -78,6 +78,8 @@ func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int) (*v
 			_ = os.RemoveAll(f)
 		}
 	}()
+	waitSSHLocalPortAccessible := make(chan struct{})
+	defer close(waitSSHLocalPortAccessible)
 	go func() {
 		// Handle errors via errCh and handle stop vm during context close
 		defer func() {
@@ -135,6 +137,7 @@ func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int) (*v
 					if err != nil {
 						errCh <- err
 					}
+					waitSSHLocalPortAccessible <- struct{}{}
 				case vz.VirtualMachineStateStopped:
 					logrus.Info("[VZ] - vm state change: stopped")
 					wrapper.mu.Lock()
@@ -151,7 +154,7 @@ func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int) (*v
 			}
 		}
 	}()
-
+	<-waitSSHLocalPortAccessible
 	return wrapper, errCh, err
 }
 
