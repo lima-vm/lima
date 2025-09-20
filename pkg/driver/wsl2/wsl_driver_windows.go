@@ -182,7 +182,7 @@ func (l *LimaWslDriver) BootScripts() (map[string][]byte, error) {
 }
 
 func (l *LimaWslDriver) InspectStatus(ctx context.Context, inst *limatype.Instance) string {
-	status, err := getWslStatus(inst.Name)
+	status, err := getWslStatus(ctx, inst.Name)
 	if err != nil {
 		inst.Status = limatype.StatusBroken
 		inst.Errors = append(inst.Errors, err)
@@ -193,7 +193,7 @@ func (l *LimaWslDriver) InspectStatus(ctx context.Context, inst *limatype.Instan
 	inst.SSHLocalPort = 22
 
 	if inst.Status == limatype.StatusRunning {
-		sshAddr, err := l.SSHAddress(ctx)
+		sshAddr, err := getSSHAddress(ctx, inst.Name)
 		if err == nil {
 			inst.SSHAddress = sshAddr
 		} else {
@@ -206,7 +206,7 @@ func (l *LimaWslDriver) InspectStatus(ctx context.Context, inst *limatype.Instan
 
 func (l *LimaWslDriver) Delete(ctx context.Context) error {
 	distroName := "lima-" + l.Instance.Name
-	status, err := getWslStatus(l.Instance.Name)
+	status, err := getWslStatus(ctx, l.Instance.Name)
 	if err != nil {
 		return err
 	}
@@ -221,7 +221,7 @@ func (l *LimaWslDriver) Delete(ctx context.Context) error {
 
 func (l *LimaWslDriver) Start(ctx context.Context) (chan error, error) {
 	logrus.Infof("Starting WSL VM")
-	status, err := getWslStatus(l.Instance.Name)
+	status, err := getWslStatus(ctx, l.Instance.Name)
 	if err != nil {
 		return nil, err
 	}
