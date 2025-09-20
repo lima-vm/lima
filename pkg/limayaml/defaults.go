@@ -768,22 +768,6 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 	y.CACertificates.Files = unique(slices.Concat(d.CACertificates.Files, y.CACertificates.Files, o.CACertificates.Files))
 	y.CACertificates.Certs = unique(slices.Concat(d.CACertificates.Certs, y.CACertificates.Certs, o.CACertificates.Certs))
 
-	if runtime.GOOS == "darwin" && IsNativeArch(limatype.AARCH64) {
-		if y.VMOpts.VZ.Rosetta.Enabled == nil {
-			y.VMOpts.VZ.Rosetta.Enabled = d.VMOpts.VZ.Rosetta.Enabled
-		}
-		if o.VMOpts.VZ.Rosetta.Enabled != nil {
-			y.VMOpts.VZ.Rosetta.Enabled = o.VMOpts.VZ.Rosetta.Enabled
-		}
-	}
-
-	if y.VMOpts.VZ.Rosetta.BinFmt == nil {
-		y.VMOpts.VZ.Rosetta.BinFmt = d.VMOpts.VZ.Rosetta.BinFmt
-	}
-	if o.VMOpts.VZ.Rosetta.BinFmt != nil {
-		y.VMOpts.VZ.Rosetta.BinFmt = o.VMOpts.VZ.Rosetta.BinFmt
-	}
-
 	if y.NestedVirtualization == nil {
 		y.NestedVirtualization = d.NestedVirtualization
 	}
@@ -831,8 +815,6 @@ func fixUpForPlainMode(y *limatype.LimaYAML) {
 	y.Mounts = nil
 	y.Containerd.System = ptr.Of(false)
 	y.Containerd.User = ptr.Of(false)
-	y.VMOpts.VZ.Rosetta.BinFmt = ptr.Of(false)
-	y.VMOpts.VZ.Rosetta.Enabled = ptr.Of(false)
 	y.TimeZone = ptr.Of("")
 }
 

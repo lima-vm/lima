@@ -107,4 +107,6 @@ type DriverFeatures struct {
 	DynamicSSHAddress    bool `json:"dynamicSSHAddress"`
 	SkipSocketForwarding bool `json:"skipSocketForwarding"`
 	NoCloudInit          bool `json:"noCloudInit"`
+	RosettaEnabled       bool `json:"rosettaEnabled"`
+	RosettaBinFmt        bool `json:"rosettaBinFmt"`
 }
