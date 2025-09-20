@@ -61,6 +61,7 @@ declare -A CHECKS=(
 	["set-user"]=""
 	["preserve-env"]="1"
 	["static-port-forwards"]=""
+	["ssh-over-vsock"]=""
 )
 
 case "$NAME" in
@@ -68,6 +69,7 @@ case "$NAME" in
 	# CI failure:
 	# "[hostagent] failed to confirm whether /c/Users/runneradmin [remote] is successfully mounted"
 	[ "${OS_HOST}" = "Msys" ] && CHECKS["mount-home"]=
+	[ "${OS_HOST}" = "Darwin" ] && CHECKS["ssh-over-vsock"]="1"
 	;;
 "alpine"*)
 	WARNING "Alpine does not support systemd"
@@ -341,6 +343,38 @@ if [[ -n ${CHECKS["preserve-env"]} ]]; then
 	"${scriptdir}"/test-preserve-env.sh "$NAME"
 fi
 
+if [[ -n ${CHECKS["ssh-over-vsock"]} ]]; then
+	if [[ "$(limactl ls "${NAME}" --yq .vmType)" == "vz" ]]; then
+		INFO "Testing SSH over vsock"
+		set -x
+		INFO "Testing LIMA_SSH_OVER_VSOCK=true environment"
+		limactl stop "${NAME}"
+		if ! LIMA_SSH_OVER_VSOCK=true limactl start "${NAME}" 2>&1 | grep -i "started vsock forwarder"; then
+			set +x
+			diagnose "${NAME}"
+			ERROR "LIMA_SSH_OVER_VSOCK=true did not enable vsock forwarder"
+			exit 1
+		fi
+		INFO 'Testing LIMA_SSH_OVER_VSOCK="" environment'
+		limactl stop "${NAME}"
+		if ! LIMA_SSH_OVER_VSOCK="" limactl start "${NAME}" 2>&1 | grep -i "started vsock forwarder"; then
+			set +x
+			diagnose "${NAME}"
+			ERROR "LIMA_SSH_OVER_VSOCK= did not enable vsock forwarder"
+			exit 1
+		fi
+		INFO "Testing LIMA_SSH_OVER_VSOCK=false environment"
+		limactl stop "${NAME}"
+		if ! LIMA_SSH_OVER_VSOCK=false limactl start "${NAME}" 2>&1 | grep -i "skipping detection of SSH server on vsock port"; then
+			set +x
+			diagnose "${NAME}"
+			ERROR "LIMA_SSH_OVER_VSOCK=false did not disable vsock forwarder"
+			exit 1
+		fi
+		set +x
+	fi
+fi
+
 # Use GHCR to avoid hitting Docker Hub rate limit
 nginx_image="ghcr.io/stargz-containers/nginx:1.19-alpine-org"
 alpine_image="ghcr.io/containerd/alpine:3.14.0"
@@ -348,7 +382,7 @@ alpine_image="ghcr.io/containerd/alpine:3.14.0"
 if [[ -n ${CHECKS["container-engine"]} ]]; then
 	sudo=""
 	# Currently WSL2 machines only support privileged engine. This requirement might be lifted in the future.
-	if [[ "$(limactl ls --json "${NAME}" | jq -r .vmType)" == "wsl2" ]]; then
+	if [[ "$(limactl ls "${NAME}" --yq .vmType)" == "wsl2" ]]; then
 		sudo="sudo"
 	fi
 	INFO "Run a nginx container with port forwarding 127.0.0.1:8080"
@@ -428,7 +462,7 @@ if [[ -n ${CHECKS["port-forwards"]} ]]; then
 				sudo="sudo"
 			fi
 			# Currently WSL2 machines only support privileged engine. This requirement might be lifted in the future.
-			if [[ "$(limactl ls --json "${NAME}" | jq -r .vmType)" == "wsl2" ]]; then
+			if [[ "$(limactl ls "${NAME}" --yq .vmType)" == "wsl2" ]]; then
 				sudo="sudo"
 			fi
 			limactl shell "$NAME" $sudo $CONTAINER_ENGINE info
@@ -613,7 +647,7 @@ if [[ -n ${CHECKS["clone"]} ]]; then
 	limactl start "$NAME"
 fi
 
-if [[ $NAME == "fedora" && "$(limactl ls --json "$NAME" | jq -r .vmType)" == "vz" ]]; then
+if [[ $NAME == "fedora" && "$(limactl ls "${NAME}" --yq .vmType)" == "vz" ]]; then
 	"${scriptdir}"/test-selinux.sh "$NAME"
 fi
 

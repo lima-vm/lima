@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -103,7 +104,8 @@ func run(ctx context.Context, g *errgroup.Group, configuration *types.Configurat
 	if err != nil {
 		return err
 	}
-	httpServe(ctx, g, ln, vn.Mux())
+
+	httpServe(ctx, g, ln, muxWithExtension(vn))
 
 	if opts.QemuSocket != "" {
 		err = listenQEMU(ctx, vn)
@@ -237,6 +239,58 @@ func httpServe(ctx context.Context, g *errgroup.Group, ln net.Listener, mux http
 		}
 		return nil
 	})
+}
+
+func muxWithExtension(n *virtualnetwork.VirtualNetwork) *http.ServeMux {
+	m := n.Mux()
+	m.HandleFunc("/extension/wait_port", func(w http.ResponseWriter, r *http.Request) {
+		ip := r.URL.Query().Get("ip")
+		if net.ParseIP(ip) == nil {
+			msg := fmt.Sprintf("invalid ip address: %s", ip)
+			http.Error(w, msg, http.StatusBadRequest)
+			return
+		}
+		port16, err := strconv.ParseUint(r.URL.Query().Get("port"), 10, 16)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		port := uint16(port16)
+		addr := fmt.Sprintf("%s:%d", ip, port)
+
+		timeoutSeconds := 10
+		if timeoutString := r.URL.Query().Get("timeout"); timeoutString != "" {
+			timeout16, err := strconv.ParseUint(timeoutString, 10, 16)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			timeoutSeconds = int(timeout16)
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutSeconds)*time.Second)
+		defer cancel()
+		// Wait until the port is available.
+		for {
+			conn, err := n.DialContextTCP(ctx, addr)
+			if err == nil {
+				conn.Close()
+				logrus.Debugf("Port is available on %s", addr)
+				w.WriteHeader(http.StatusOK)
+				break
+			}
+			select {
+			case <-ctx.Done():
+				msg := fmt.Sprintf("timed out waiting for port to become available on %s", addr)
+				logrus.Warn(msg)
+				http.Error(w, msg, http.StatusRequestTimeout)
+				return
+			default:
+			}
+			logrus.Debugf("Waiting for port to become available on %s", addr)
+			time.Sleep(1 * time.Second)
+		}
+	})
+	return m
 }
 
 func searchDomains() []string {

@@ -38,9 +38,11 @@ func (c *Client) ConfigureDriver(ctx context.Context, inst *limatype.Instance, s
 	if err != nil {
 		return err
 	}
-	err = c.ResolveAndForwardSSH(ipAddress, sshLocalPort)
-	if err != nil {
-		return err
+	if sshLocalPort != 0 {
+		err = c.ResolveAndForwardSSH(ipAddress, sshLocalPort)
+		if err != nil {
+			return err
+		}
 	}
 	hosts := inst.Config.HostResolver.Hosts
 	if hosts == nil {
@@ -125,6 +127,30 @@ func (c *Client) Leases(ctx context.Context) (map[string]string, error) {
 		return nil, err
 	}
 	return leases, nil
+}
+
+// WaitOpeningSSHPort Wait until the guest ssh server is available.
+func (c *Client) WaitOpeningSSHPort(ctx context.Context, inst *limatype.Instance) error {
+	// This timeout is based on the maximum wait time for the first essential requirement.
+	timeoutSeconds := 600
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(timeoutSeconds)*time.Second)
+	defer cancel()
+	macAddress := limayaml.MACAddress(inst.Dir)
+	ipAddr, err := c.ResolveIPAddress(ctx, macAddress)
+	if err != nil {
+		return err
+	}
+	// -1 avoids both sides timing out simultaneously.
+	u := fmt.Sprintf("%s/extension/wait_port?ip=%s&port=22&timeout=%d", c.base, ipAddr, timeoutSeconds-1)
+	res, err := httpclientutil.Get(ctx, c.client, u)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		return errors.New("failed to wait for SSH port")
+	}
+	return nil
 }
 
 func NewClientByName(nwName string) *Client {

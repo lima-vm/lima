@@ -72,12 +72,8 @@ func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int) (*v
 
 	errCh := make(chan error)
 
-	filesToRemove := make(map[string]struct{})
-	defer func() {
-		for f := range filesToRemove {
-			_ = os.RemoveAll(f)
-		}
-	}()
+	waitSSHLocalPortAccessible := make(chan struct{})
+	defer close(waitSSHLocalPortAccessible)
 	go func() {
 		// Handle errors via errCh and handle stop vm during context close
 		defer func() {
@@ -105,13 +101,36 @@ func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int) (*v
 						logrus.Errorf("error writing to pid fil %q", pidFile)
 						errCh <- err
 					}
-					filesToRemove[pidFile] = struct{}{}
 					logrus.Info("[VZ] - vm state change: running")
 
-					err := usernetClient.ConfigureDriver(ctx, inst, sshLocalPort)
+					usernetSSHLocalPort := sshLocalPort
+					useSSHOverVsock := true
+					if envVar := os.Getenv("LIMA_SSH_OVER_VSOCK"); envVar != "" {
+						b, err := strconv.ParseBool(envVar)
+						if err != nil {
+							logrus.WithError(err).Warnf("invalid LIMA_SSH_OVER_VSOCK value %q", envVar)
+						} else {
+							useSSHOverVsock = b
+						}
+					}
+					if !useSSHOverVsock {
+						logrus.Info("LIMA_SSH_OVER_VSOCK is false, skipping detection of SSH server on vsock port")
+					} else if err := usernetClient.WaitOpeningSSHPort(ctx, inst); err == nil {
+						hostAddress := net.JoinHostPort(inst.SSHAddress, strconv.Itoa(usernetSSHLocalPort))
+						if err := wrapper.startVsockForwarder(ctx, 22, hostAddress); err == nil {
+							logrus.Infof("Detected SSH server is listening on the vsock port; changed %s to proxy for the vsock port", hostAddress)
+							usernetSSHLocalPort = 0 // disable gvisor ssh port forwarding
+						} else {
+							logrus.WithError(err).Warn("Failed to detect SSH server on vsock port, falling back to usernet forwarder")
+						}
+					} else {
+						logrus.WithError(err).Warn("Failed to wait for the guest SSH server to become available, falling back to usernet forwarder")
+					}
+					err := usernetClient.ConfigureDriver(ctx, inst, usernetSSHLocalPort)
 					if err != nil {
 						errCh <- err
 					}
+					waitSSHLocalPortAccessible <- struct{}{}
 				case vz.VirtualMachineStateStopped:
 					logrus.Info("[VZ] - vm state change: stopped")
 					wrapper.mu.Lock()
@@ -128,7 +147,7 @@ func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int) (*v
 			}
 		}
 	}()
-
+	<-waitSSHLocalPortAccessible
 	return wrapper, errCh, err
 }
 
