@@ -16,6 +16,7 @@ use strict;
 use warnings;
 
 use Config qw(%Config);
+use File::Spec::Functions qw(catfile);
 use IO::Handle qw();
 use Socket qw(inet_ntoa);
 use Sys::Hostname qw(hostname);
@@ -32,6 +33,11 @@ if ($ipv4 eq "127.0.0.1" && $Config{osname} eq "darwin") {
     $ipv4 = qx(system_profiler SPNetworkDataType -json | jq -r 'first(.SPNetworkDataType[] | select(.ip_address) | .ip_address) | first');
     chomp $ipv4;
 }
+
+my $instDir = qx(limactl list "$instance" --yq .dir);
+chomp $instDir;
+# platform independent way to add trailing path separator
+my $sockDir = catfile($instDir, "sock", "");
 
 # If $instance is a filename, add our portForwards to it to enable testing
 if (-f $instance) {
@@ -94,14 +100,17 @@ while (<DATA>) {
     s/sshLocalPort/$sshLocalPort/g;
     s/ipv4/$ipv4/g;
     s/ipv6/$ipv6/g;
+    s/sockDir\//$sockDir/g;
     # forward: 127.0.0.1 899 → 127.0.0.1 799
     # ignore: 127.0.0.2 8888
-    /^(forward|ignore):\s+([0-9.:]+)\s+(\d+)(?:\s+→)?(?:\s+([0-9.:]+)(?:\s+(\d+))?)?/;
+    /^(forward|ignore):\s+([0-9.:]+)\s+(\d+)(?:\s+→)?(?:\s+(?:([0-9.:]+)(?:\s+(\d+))|(\S+))?)?/;
     die "Cannot parse test '$_'" unless $1;
-    my %test; @test{qw(mode guest_ip guest_port host_ip host_port)} = ($1, $2, $3, $4, $5);
+    my %test; @test{qw(mode guest_ip guest_port host_ip host_port host_socket)} = ($1, $2, $3, $4, $5, $6);
+     
     $test{host_ip} ||= "127.0.0.1";
     $test{host_port} ||= $test{guest_port};
-    if ($test{mode} eq "forward" && $test{host_port} < 1024 && $Config{osname} ne "darwin") {
+    $test{host_socket} ||= "";
+    if ($test{mode} eq "forward" && $test{host_socket} eq "" && $test{host_port} < 1024 && $Config{osname} ne "darwin") {
         printf "🚧 Not supported on $Config{osname}: # $_\n";
         next;
     }
@@ -113,9 +122,13 @@ while (<DATA>) {
         printf "🚧 Not supported for $instanceType machines: # $_\n";
         next;
     }
+    if ($test{host_socket} ne "" && $Config{osname} eq "cygwin") {
+        printf "🚧 Not supported on $Config{osname}: # $_\n";
+        next;
+    }
 
     my $remote = JoinHostPort($test{guest_ip},$test{guest_port});
-    my $local = JoinHostPort($test{host_ip},$test{host_port});
+    my $local = $test{host_socket} eq "" ? JoinHostPort($test{host_ip},$test{host_port}) : $test{host_socket};
     if ($test{mode} eq "ignore") {
         $test{log_msg} = "Not forwarding TCP $remote";
     }
@@ -163,7 +176,7 @@ sleep 5;
 # Try to reach each listener from the host
 foreach my $test (@test) {
     next if $test->{host_port} == $sshLocalPort;
-    my $nc = "nc -w 1 $test->{host_ip} $test->{host_port}";
+    my $nc = $test->{host_socket} eq "" ? "nc -w 1 $test->{host_ip} $test->{host_port}" : "nc -w 1 -U $test->{host_socket}";
     open(my $netcat, "| $nc") or die "Can't run '$nc': $!";
     print $netcat "$test->{log_msg}\n";
     # Don't check for errors on close; macOS nc seems to return non-zero exit code even on success
@@ -175,7 +188,7 @@ open(my $log, "< $ha_log") or die "Can't read $ha_log: $!";
 seek($log, $ha_log_size, 0) or die "Can't seek $ha_log to $ha_log_size: $!";
 my %seen;
 while (<$log>) {
-    $seen{$1}++ if /(Forwarding TCP from .*? to (\d.*?|\[.*?\]):\d+)/;
+    $seen{$1}++ if /(Forwarding TCP from .*? to ((\d.*?|\[.*?\]):\d+|\/[^"]+))/;
     $seen{$1}++ if /(Not forwarding TCP .*?:\d+)/;
 }
 close $log or die;
@@ -342,3 +355,8 @@ portForwards:
 - guestIPMustBeZero: true
   guestPort: 8888
   hostIP: 0.0.0.0
+
+- guestPort: 5000
+  hostSocket: port5000.sock
+
+  # forward: 127.0.0.1 5000 → sockDir/port5000.sock
