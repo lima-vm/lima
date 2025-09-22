@@ -69,7 +69,7 @@ jobs:
     timeout-minutes: 30
     strategy:
       matrix:
-        runs-on: [ubuntu-24.04, macos-15, windows-2025]
+        runs-on: [ubuntu-24.04, macos-26, windows-2025]
     runs-on: ${{ matrix.runs-on }}
     steps:
     - name: Force git to use LF
