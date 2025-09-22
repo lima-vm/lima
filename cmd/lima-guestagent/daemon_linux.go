@@ -16,6 +16,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/guestagent"
 	"github.com/lima-vm/lima/v2/pkg/guestagent/api/server"
 	"github.com/lima-vm/lima/v2/pkg/guestagent/serialport"
+	"github.com/lima-vm/lima/v2/pkg/guestagent/ticker"
 	"github.com/lima-vm/lima/v2/pkg/portfwdserver"
 )
 
@@ -52,17 +53,20 @@ func daemonAction(cmd *cobra.Command, _ []string) error {
 	if os.Geteuid() != 0 {
 		return errors.New("must run as the root user")
 	}
-	logrus.Infof("event tick: %v", tick)
 
-	newTicker := func() (<-chan time.Time, func()) {
-		// TODO: use an equivalent of `bpftrace -e 'tracepoint:syscalls:sys_*_bind { printf("tick\n"); }')`,
-		// without depending on `bpftrace` binary.
-		// The agent binary will need CAP_BPF file cap.
-		ticker := time.NewTicker(tick)
-		return ticker.C, ticker.Stop
+	logrus.Infof("event tick: %v", tick)
+	simpleTicker := ticker.NewSimpleTicker(time.NewTicker(tick))
+	tickerInst := simpleTicker
+	// See /sys/kernel/debug/tracing/available_events for the list of available tracepoints
+	tracepoints := []string{"syscalls:sys_exit_bind"}
+	if ebpfTicker, err := ticker.NewEbpfTicker(tracepoints); err != nil {
+		logrus.WithError(err).Warn("failed to create eBPF ticker, falling back to simple ticker")
+	} else {
+		logrus.Infof("using eBPF ticker with tracepoints: %v", tracepoints)
+		tickerInst = ticker.NewCompoundTicker(simpleTicker, ebpfTicker)
 	}
 
-	agent, err := guestagent.New(ctx, newTicker, tick*20)
+	agent, err := guestagent.New(ctx, tickerInst, tick*20)
 	if err != nil {
 		return err
 	}

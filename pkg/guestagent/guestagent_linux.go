@@ -21,12 +21,13 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/guestagent/iptables"
 	"github.com/lima-vm/lima/v2/pkg/guestagent/kubernetesservice"
 	"github.com/lima-vm/lima/v2/pkg/guestagent/procnettcp"
+	"github.com/lima-vm/lima/v2/pkg/guestagent/ticker"
 	"github.com/lima-vm/lima/v2/pkg/guestagent/timesync"
 )
 
-func New(ctx context.Context, newTicker func() (<-chan time.Time, func()), iptablesIdle time.Duration) (Agent, error) {
+func New(ctx context.Context, ticker ticker.Ticker, iptablesIdle time.Duration) (Agent, error) {
 	a := &agent{
-		newTicker:                newTicker,
+		ticker:                   ticker,
 		kubernetesServiceWatcher: kubernetesservice.NewServiceWatcher(),
 	}
 
@@ -95,7 +96,7 @@ type agent struct {
 	// Ticker is like time.Ticker.
 	// We can't use inotify for /proc/net/tcp, so we need this ticker to
 	// reload /proc/net/tcp.
-	newTicker func() (<-chan time.Time, func())
+	ticker ticker.Ticker
 
 	worthCheckingIPTables    bool
 	worthCheckingIPTablesMu  sync.RWMutex
@@ -197,8 +198,8 @@ func isEventEmpty(ev *api.Event) bool {
 
 func (a *agent) Events(ctx context.Context, ch chan *api.Event) {
 	defer close(ch)
-	tickerCh, tickerClose := a.newTicker()
-	defer tickerClose()
+	tickerCh := a.ticker.Chan()
+	defer a.ticker.Stop()
 	var st eventState
 	for {
 		var ev *api.Event
