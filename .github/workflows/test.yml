@@ -493,14 +493,19 @@ jobs:
 
   vz:
     name: "Integration tests (vz)"
-    runs-on: macos-15-large  # Intel
+    runs-on: ${{ matrix.runs-on }}
     timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
         template:
         - default.yaml
+        runs-on:
+        - macos-15-large  # Intel
+        - macos-26
+        - macos-26-xlarge
     steps:
+    - run: sysctl -a | grep cpu
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
     - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00  # v6.0.0
       with:
@@ -508,7 +513,7 @@ jobs:
     - name: Make
       run: make
     - name: Install
-      run: make install
+      run: sudo make install
     - name: Cache image used by templates/${{ matrix.template }}
       uses: ./.github/actions/setup_cache_for_template
       with:
