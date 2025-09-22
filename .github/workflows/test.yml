@@ -228,7 +228,7 @@ jobs:
 
   qemu:
     name: "Integration tests (QEMU, macOS host)"
-    runs-on: macos-15-large  # Intel
+    runs-on: macos-15-intel
     timeout-minutes: 120
     steps:
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
@@ -401,7 +401,7 @@ jobs:
 
   vmnet:
     name: "VMNet tests (QEMU)"
-    runs-on: macos-15-large  # Intel
+    runs-on: macos-15-intel
     timeout-minutes: 120
     steps:
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
@@ -451,7 +451,7 @@ jobs:
 
   upgrade:
     name: "Upgrade tests (QEMU, macOS host)"
-    runs-on: macos-15-large  # Intel
+    runs-on: macos-15-intel
     timeout-minutes: 120
     strategy:
       matrix:
@@ -493,7 +493,7 @@ jobs:
 
   vz:
     name: "Integration tests (vz)"
-    runs-on: macos-15-large  # Intel
+    runs-on: macos-15-intel
     timeout-minutes: 120
     strategy:
       fail-fast: false
@@ -531,7 +531,7 @@ jobs:
   # CI failures that only occurs with gomodjail shall not block merging PRs.
   gomodjail:
     name: "gomodjail (experimental; failures shall not block merging PRs)"
-    runs-on: macos-15-large  # Intel
+    runs-on: macos-15-intel
     timeout-minutes: 30
     steps:
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
