@@ -314,8 +314,10 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 			if err := validatePort(fmt.Sprintf("%s.guestPortRange[%d]", field, j), rule.GuestPortRange[j]); err != nil {
 				errs = errors.Join(errs, err)
 			}
-			if err := validatePort(fmt.Sprintf("%s.hostPortRange[%d]", field, j), rule.HostPortRange[j]); err != nil {
-				errs = errors.Join(errs, err)
+			if rule.HostSocket == "" {
+				if err := validatePort(fmt.Sprintf("%s.hostPortRange[%d]", field, j), rule.HostPortRange[j]); err != nil {
+					errs = errors.Join(errs, err)
+				}
 			}
 		}
 		if rule.GuestPortRange[0] > rule.GuestPortRange[1] {
@@ -323,9 +325,6 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 		}
 		if rule.HostPortRange[0] > rule.HostPortRange[1] {
 			errs = errors.Join(errs, fmt.Errorf("field `%s.hostPortRange[1]` must be greater than or equal to field `%s.hostPortRange[0]`", field, field))
-		}
-		if rule.GuestPortRange[1]-rule.GuestPortRange[0] != rule.HostPortRange[1]-rule.HostPortRange[0] {
-			errs = errors.Join(errs, fmt.Errorf("field `%s.hostPortRange` must specify the same number of ports as field `%s.guestPortRange`", field, field))
 		}
 		if rule.GuestSocket != "" {
 			if !path.IsAbs(rule.GuestSocket) {
@@ -343,7 +342,10 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 			if rule.GuestSocket == "" && rule.GuestPortRange[1]-rule.GuestPortRange[0] > 0 {
 				errs = errors.Join(errs, fmt.Errorf("field `%s.hostSocket` can only be mapped from a single port or socket. not a range", field))
 			}
+		} else if rule.GuestPortRange[1]-rule.GuestPortRange[0] != rule.HostPortRange[1]-rule.HostPortRange[0] {
+			errs = errors.Join(errs, fmt.Errorf("field `%s.hostPortRange` must specify the same number of ports as field `%s.guestPortRange`", field, field))
 		}
+
 		if len(rule.HostSocket) >= osutil.UnixPathMax {
 			errs = errors.Join(errs, fmt.Errorf("field `%s.hostSocket` must be less than UNIX_PATH_MAX=%d characters, but is %d",
 				field, osutil.UnixPathMax, len(rule.HostSocket)))
