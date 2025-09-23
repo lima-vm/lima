@@ -51,7 +51,6 @@ declare -A CHECKS=(
 	["snapshot-offline"]=""
 	["clone"]=""
 	["port-forwards"]="1"
-	["static-port-forwards"]=""
 	["vmnet"]=""
 	["disk"]=""
 	["user-v2"]=""
@@ -61,6 +60,7 @@ declare -A CHECKS=(
 	["param-env-variables"]=""
 	["set-user"]=""
 	["preserve-env"]="1"
+	["static-port-forwards"]=""
 )
 
 case "$NAME" in
@@ -95,12 +95,7 @@ case "$NAME" in
 	CHECKS["provision-yq"]="1"
 	CHECKS["param-env-variables"]="1"
 	CHECKS["set-user"]="1"
-	;;
-"static-port-forward")
 	CHECKS["static-port-forwards"]="1"
-	CHECKS["port-forwards"]=""
-	CHECKS["container-engine"]=""
-	CHECKS["restart"]=""
 	;;
 "docker")
 	CONTAINER_ENGINE="docker"
@@ -260,6 +255,57 @@ if [ "$got" != "$expected" ]; then
 	exit 1
 fi
 
+INFO "Testing limactl copy command with scp backend"
+tmpfile_scp="$tmpdir/lima-hostname-scp"
+rm -f "$tmpfile_scp"
+tmpfile_scp_host=$tmpfile_scp
+if [ "${OS_HOST}" = "Msys" ]; then
+	tmpfile_scp_host="$(cygpath -w "$tmpfile_scp")"
+fi
+limactl cp --backend=scp "$NAME":/etc/hostname "$tmpfile_scp_host"
+expected="$(limactl shell "$NAME" cat /etc/hostname)"
+got="$(cat "$tmpfile_scp")"
+INFO "/etc/hostname (scp): expected=${expected}, got=${got}"
+if [ "$got" != "$expected" ]; then
+	ERROR "copy command with scp backend did not fetch the file"
+	exit 1
+fi
+
+if command -v rsync >/dev/null && limactl shell "$NAME" command -v rsync >/dev/null 2>&1; then
+	INFO "Testing limactl copy command with rsync backend"
+	tmpfile_rsync="$tmpdir/lima-hostname-rsync"
+	rm -f "$tmpfile_rsync"
+	tmpfile_rsync_host=$tmpfile_rsync
+	if [ "${OS_HOST}" = "Msys" ]; then
+		tmpfile_rsync_host="$(cygpath -w "$tmpfile_rsync")"
+	fi
+	limactl cp --backend=rsync "$NAME":/etc/hostname "$tmpfile_rsync_host"
+	expected="$(limactl shell "$NAME" cat /etc/hostname)"
+	got="$(cat "$tmpfile_rsync")"
+	INFO "/etc/hostname (rsync): expected=${expected}, got=${got}"
+	if [ "$got" != "$expected" ]; then
+		ERROR "copy command with rsync backend did not fetch the file"
+		exit 1
+	fi
+
+	INFO "Testing limactl copy command with rsync backend (verbose, recursive)"
+	testdir="$tmpdir/test-rsync-dir"
+	mkdir -p "$testdir"
+	echo "test content" >"$testdir/testfile.txt"
+	limactl cp --backend=rsync -r -v "$testdir" "$NAME":/tmp/
+	if ! limactl shell "$NAME" test -f /tmp/test-rsync-dir/testfile.txt; then
+		ERROR "rsync recursive copy failed"
+		exit 1
+	fi
+	rsync_content="$(limactl shell "$NAME" cat /tmp/test-rsync-dir/testfile.txt)"
+	if [ "$rsync_content" != "test content" ]; then
+		ERROR "rsync file content mismatch"
+		exit 1
+	fi
+else
+	INFO "Skipping rsync backend test (rsync not available on host or guest)"
+fi
+
 INFO "Testing limactl command with escaped characters"
 limactl shell "$NAME" bash -c "$(echo -e '\n\techo foo\n\techo bar')"
 
@@ -410,13 +456,6 @@ if [[ -n ${CHECKS["port-forwards"]} ]]; then
 		fi
 	fi
 	set +x
-fi
-
-if [[ -n ${CHECKS["static-port-forwards"]} ]]; then
-	INFO "Testing static port forwarding functionality"
-	"${scriptdir}/test-plain-static-port-forward.sh" "$NAME"
-	"${scriptdir}/test-nonplain-static-port-forward.sh" "$NAME"
-	INFO "All static port forwarding tests passed!"
 fi
 
 if [[ -n ${CHECKS["vmnet"]} ]]; then
@@ -587,4 +626,11 @@ limactl delete "$NAME"
 
 if [[ -n ${CHECKS["mount-path-with-spaces"]} ]]; then
 	rm -rf "/tmp/lima test dir with spaces"
+fi
+
+if [[ -n ${CHECKS["static-port-forwards"]} ]]; then
+	INFO "Testing static port forwarding functionality"
+	"${scriptdir}/test-plain-static-port-forward.sh" "$NAME"
+	"${scriptdir}/test-nonplain-static-port-forward.sh" "$NAME"
+	INFO "All static port forwarding tests passed!"
 fi

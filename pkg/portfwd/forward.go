@@ -34,6 +34,10 @@ func NewPortForwarder(rules []limatype.PortForward, ignoreTCP, ignoreUDP bool) *
 	}
 }
 
+func (fw *Forwarder) Close() {
+	fw.closableListeners.Close()
+}
+
 func (fw *Forwarder) OnEvent(ctx context.Context, client *guestagentclient.GuestAgentClient, ev *api.Event) {
 	for _, f := range ev.AddedLocalPorts {
 		// Before forwarding, check if any static rule matches this port otherwise it will be forwarded twice and cause a port conflict

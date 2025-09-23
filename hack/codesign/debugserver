@@ -1,0 +1,113 @@
+#!/bin/bash
+
+# SPDX-FileCopyrightText: Copyright The Lima Authors
+# SPDX-License-Identifier: Apache-2.0
+
+# # `hack/codesign/debugserver`
+#
+# This script wraps the LLDB `debugserver` to `codesign` the target executable.
+# This is needed for [Delve](https://github.com/go-delve/delve) to work properly
+# on macOS with the virtualization framework.
+#
+# ## How to use this script with Delve
+#
+# ### Use `DELVE_DEBUGSERVER_PATH` environment variable
+#
+# Override `debugserver` by setting the `DELVE_DEBUGSERVER_PATH` environment variable.
+# Ref: [Environment variables - Using Delve](https://github.com/go-delve/delve/blob/master/Documentation/usage/README.md#environment-variables)
+#
+# e.g. in `.vscode/launch.json`:
+# ```jsonc
+# {
+#     "version": "0.2.0",
+#     "configurations": [
+#         {
+#             "name": "hostagent for input instance",
+#             "type": "go",
+#             "request": "launch",
+#             "mode": "debug",
+#             // Use integratedTerminal to stop using ctrl+C
+#             "console": "integratedTerminal",
+#             "program": "${workspaceFolder}/cmd/limactl",
+#             "buildFlags": [
+#                 "-ldflags=-X github.com/lima-vm/lima/pkg/version.Version=2.0.0-alpha.0",
+#             ],
+#             "env": {
+#                 "CGO_ENABLED": "1",
+#                 "DELVE_DEBUGSERVER_PATH": "${workspaceFolder}/hack/codesign/debugserver",
+#                 "LIMA_SSH_PORT_FORWARDER": "true",
+#             },
+#             "cwd": "${userHome}/.lima/${input:targetInstance}",
+#             "args": [
+#                 "--debug",
+#                 "hostagent",
+#                 "--pidfile", "ha.pid",
+#                 "--socket", "ha.sock",
+#                 "--guestagent", "${workspaceFolder}/_output/share/lima/lima-guestagent.Linux-aarch64",
+#                 "${input:targetInstance}"
+#             ],
+# 		},
+#     ],
+#     "inputs": [
+#         {
+#             "id": "targetInstance",
+#             "type": "promptString",
+#             "description": "Input target instance parameter for `limactl` command",
+#         }
+#     ]
+# }
+# ```
+#
+# ### Override `debugserver` in the PATH
+#
+# You can also override the `debugserver` in the PATH environment variable.
+#
+# e.g. in `.vscode/launch.json`:
+# ```diff
+#              "env": {
+#                  "CGO_ENABLED": "1",
+# -                "DELVE_DEBUGSERVER_PATH": "${workspaceFolder}/hack/codesign/debugserver",
+# +                "PATH": "${workspaceFolder}/hack/codesign:${env:PATH}",
+#              },
+# ```
+
+set -eu -o pipefail
+
+script_dir="$(dirname "$0")"
+
+# Codesign the target executable if vz.entitlements exists
+entitlements="${script_dir}/../../vz.entitlements"
+if [ -f "${entitlements}" ]; then
+	prev_arg=
+	for arg in "$@"; do
+		# find the target executable in the args next to "--"
+		if [ "${prev_arg}" = "--" ]; then
+			codesign --entitlements "${entitlements}" --force -s - -v "${arg}" || {
+				echo "error: codesign failed" >&2
+				exit 1
+			}
+			break
+		fi
+		prev_arg="${arg}"
+	done
+fi
+
+# Simulate how Delve locates debugserver
+# https://github.com/go-delve/delve/blob/65a6830eb7f0b882e0c52df0ef9585945ed55470/pkg/proc/gdbserial/gdbserver.go#L103-L129
+# 1. PATH (in this script, excluding the directory of this script to avoid recursion)
+candidate_paths="$(echo "${PATH}" | tr ':' '\n' | grep --fixed-strings --invert-match --line-regexp "${script_dir}" | paste -sd: -)"
+# 2. CommandLineTools LLDB path
+CLT_path="/Library/Developer/CommandLineTools"
+candidate_paths="${candidate_paths}:${CLT_path}/Library/PrivateFrameworks/LLDB.framework/Versions/A/Resources/"
+# 3. Xcode LLDB path (if Xcode is installed)
+if developer_dir=$(xcode-select --print-path 2>/dev/null) && [ "${developer_dir}" != "${CLT_path}" ]; then
+	# Xcode is installed
+	candidate_paths="${candidate_paths}:${developer_dir}/../SharedFrameworks/LLDB.framework/Versions/A/Resources/"
+fi
+# Find debugserver in the candidate paths
+debugserver=$(PATH="${candidate_paths}" command -v debugserver) || {
+	echo "error: debugserver not found" >&2
+	exit 1
+}
+# Execute debugserver with the original arguments
+exec "${debugserver}" "$@"

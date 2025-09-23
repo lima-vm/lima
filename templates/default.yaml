@@ -508,6 +508,7 @@ networks:
 #
 # # Lima internally appends this fallback rule at the end:
 # - guestIP: "127.0.0.1"
+#   proto: "any"
 #   guestPortRange: [1, 65535]
 #   hostIP: "127.0.0.1"
 #   hostPortRange: [1, 65535]

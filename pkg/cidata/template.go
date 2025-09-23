@@ -114,6 +114,7 @@ type TemplateArgs struct {
 	VirtioPort                      string
 	Plain                           bool
 	TimeZone                        string
+	NoCloudInit                     bool
 }
 
 func ValidateTemplateArgs(args *TemplateArgs) error {

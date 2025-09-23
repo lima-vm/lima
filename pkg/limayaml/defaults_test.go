@@ -128,7 +128,7 @@ func TestFillDefault(t *testing.T) {
 		GuestPortRange: [2]int{1, 65535},
 		HostIP:         IPv4loopback1,
 		HostPortRange:  [2]int{1, 65535},
-		Proto:          limatype.ProtoTCP,
+		Proto:          limatype.ProtoAny,
 		Reverse:        false,
 	}
 

@@ -162,11 +162,20 @@ func New(ctx context.Context, instName string, stdout io.Writer, signalCh chan o
 
 	vSockPort := limaDriver.Info().VsockPort
 	virtioPort := limaDriver.Info().VirtioPort
+	noCloudInit := limaDriver.Info().Features.NoCloudInit
+	rosettaEnabled := limaDriver.Info().Features.RosettaEnabled
+	rosettaBinFmt := limaDriver.Info().Features.RosettaBinFmt
+
+	// Disable Rosetta in Plain mode
+	if *inst.Config.Plain {
+		rosettaEnabled = false
+		rosettaBinFmt = false
+	}
 
 	if err := cidata.GenerateCloudConfig(ctx, inst.Dir, instName, inst.Config); err != nil {
 		return nil, err
 	}
-	if err := cidata.GenerateISO9660(ctx, limaDriver, inst.Dir, instName, inst.Config, udpDNSLocalPort, tcpDNSLocalPort, o.guestAgentBinary, o.nerdctlArchive, vSockPort, virtioPort); err != nil {
+	if err := cidata.GenerateISO9660(ctx, limaDriver, inst.Dir, instName, inst.Config, udpDNSLocalPort, tcpDNSLocalPort, o.guestAgentBinary, o.nerdctlArchive, vSockPort, virtioPort, noCloudInit, rosettaEnabled, rosettaBinFmt); err != nil {
 		return nil, err
 	}
 
@@ -535,13 +544,10 @@ sudo chown -R "${USER}" /run/host-services`
 		})
 	}
 
-	if !*a.instConfig.Plain {
-		staticPortForwards, err := a.separateStaticPortForwards()
-		if err != nil {
-			errs = append(errs, err)
-		}
-		a.addStaticPortForwardsFromList(ctx, staticPortForwards)
+	staticPortForwards := a.separateStaticPortForwards()
+	a.addStaticPortForwardsFromList(ctx, staticPortForwards)
 
+	if !*a.instConfig.Plain {
 		go a.watchGuestAgentEvents(ctx)
 		if a.showProgress {
 			cloudInitDone := make(chan struct{})
@@ -703,7 +709,10 @@ func (a *HostAgent) addStaticPortForwardsFromList(ctx context.Context, staticPor
 	}
 }
 
-func (a *HostAgent) separateStaticPortForwards() ([]limatype.PortForward, error) {
+// separateStaticPortForwards separates static port forwards from a.instConfig.PortForwards,
+// updates a.instConfig.PortForwards to contain only non-static port forwards,
+// and returns the list of static port forwards.
+func (a *HostAgent) separateStaticPortForwards() []limatype.PortForward {
 	staticPortForwards := make([]limatype.PortForward, 0, len(a.instConfig.PortForwards))
 	nonStaticPortForwards := make([]limatype.PortForward, 0, len(a.instConfig.PortForwards))
 
@@ -721,8 +730,7 @@ func (a *HostAgent) separateStaticPortForwards() ([]limatype.PortForward, error)
 	logrus.Debugf("Static port forwards: %d, Non-static port forwards: %d", len(staticPortForwards), len(nonStaticPortForwards))
 
 	a.instConfig.PortForwards = nonStaticPortForwards
-
-	return staticPortForwards, nil
+	return staticPortForwards
 }
 
 func isGuestAgentSocketAccessible(ctx context.Context, client *guestagentclient.GuestAgentClient) bool {
@@ -788,6 +796,7 @@ func (a *HostAgent) processGuestAgentEvents(ctx context.Context, client *guestag
 			a.grpcPortForwarder.OnEvent(ctx, client, ev)
 		}
 	}
+	defer a.grpcPortForwarder.Close()
 
 	if err := client.Events(ctx, onEvent); err != nil {
 		if status.Code(err) == codes.Canceled {

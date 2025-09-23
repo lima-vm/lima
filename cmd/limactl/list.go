@@ -249,24 +249,42 @@ func listAction(cmd *cobra.Command, args []string) error {
 	}
 
 	if format == "json" {
+		// The JSON encoder will create empty objects (YAML maps), even when they have the ",omitempty" tag.
+		deleteEmptyObjects := `del(.. | select(tag == "!!map" and length == 0))`
+		yqExpr += " | " + deleteEmptyObjects
+
 		encoderPrefs := yqlib.ConfiguredJSONPreferences.Copy()
-		if isTTY {
-			// Using non-0 indent means the instance will be printed over multiple lines,
-			// so is no longer in JSON Lines format. This is a compromise for readability.
-			encoderPrefs.Indent = 4
-			encoderPrefs.ColorsEnabled = true
-		} else {
-			encoderPrefs.Indent = 0
-			encoderPrefs.ColorsEnabled = false
-		}
-		encoder := yqlib.NewJSONEncoder(encoderPrefs)
+		encoderPrefs.ColorsEnabled = false
+		encoderPrefs.Indent = 0
+		plainEncoder := yqlib.NewJSONEncoder(encoderPrefs)
+		// Using non-0 indent means the instance will be printed over multiple lines,
+		// so is no longer in JSON Lines format. This is a compromise for readability.
+		encoderPrefs.Indent = 4
+		encoderPrefs.ColorsEnabled = true
+		colorEncoder := yqlib.NewJSONEncoder(encoderPrefs)
 
 		// Each line contains the JSON object for one Lima instance.
 		scanner := bufio.NewScanner(buf)
 		for scanner.Scan() {
 			var str string
-			if str, err = yqutil.EvaluateExpressionWithEncoder(yqExpr, scanner.Text(), encoder); err != nil {
+			if str, err = yqutil.EvaluateExpressionWithEncoder(yqExpr, scanner.Text(), plainEncoder); err != nil {
 				return err
+			}
+			// Repeatedly delete empty objects until there are none left.
+			for {
+				length := len(str)
+				if str, err = yqutil.EvaluateExpressionWithEncoder(deleteEmptyObjects, str, plainEncoder); err != nil {
+					return err
+				}
+				if len(str) >= length {
+					break
+				}
+			}
+			if isTTY {
+				// pretty-print and colorize the output
+				if str, err = yqutil.EvaluateExpressionWithEncoder(".", str, colorEncoder); err != nil {
+					return err
+				}
 			}
 			if _, err = fmt.Fprint(cmd.OutOrStdout(), str); err != nil {
 				return err
