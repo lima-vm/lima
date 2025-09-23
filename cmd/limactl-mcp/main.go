@@ -4,9 +4,12 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -38,6 +41,7 @@ func newApp() *cobra.Command {
 	cmd.AddCommand(
 		newMcpInfoCommand(),
 		newMcpServeCommand(),
+		newMcpGenDocCommand(),
 		// TODO: `limactl-mcp configure gemini` ?
 	)
 	return cmd
@@ -77,40 +81,9 @@ func newMcpInfoCommand() *cobra.Command {
 
 func mcpInfoAction(cmd *cobra.Command, _ []string) error {
 	ctx := cmd.Context()
-	limactl, err := limactlutil.Path()
+	info, err := inspectInfo(ctx)
 	if err != nil {
 		return err
-	}
-	ts, err := toolset.New(limactl)
-	if err != nil {
-		return err
-	}
-	server := newServer()
-	if err = ts.RegisterServer(server); err != nil {
-		return err
-	}
-	serverTransport, clientTransport := mcp.NewInMemoryTransports()
-	serverSession, err := server.Connect(ctx, serverTransport, nil)
-	if err != nil {
-		return err
-	}
-	client := mcp.NewClient(&mcp.Implementation{Name: "client"}, nil)
-	clientSession, err := client.Connect(ctx, clientTransport, nil)
-	if err != nil {
-		return err
-	}
-	toolsResult, err := clientSession.ListTools(ctx, &mcp.ListToolsParams{})
-	if err != nil {
-		return err
-	}
-	if err = clientSession.Close(); err != nil {
-		return err
-	}
-	if err = serverSession.Wait(); err != nil {
-		return err
-	}
-	info := &Info{
-		Tools: toolsResult.Tools,
 	}
 	j, err := json.MarshalIndent(info, "", "    ")
 	if err != nil {
@@ -118,6 +91,41 @@ func mcpInfoAction(cmd *cobra.Command, _ []string) error {
 	}
 	_, err = fmt.Fprint(cmd.OutOrStdout(), string(j))
 	return err
+}
+
+func inspectInfo(ctx context.Context) (*Info, error) {
+	ts, err := toolset.New("")
+	if err != nil {
+		return nil, err
+	}
+	server := newServer()
+	if err = ts.RegisterServer(server); err != nil {
+		return nil, err
+	}
+	serverTransport, clientTransport := mcp.NewInMemoryTransports()
+	serverSession, err := server.Connect(ctx, serverTransport, nil)
+	if err != nil {
+		return nil, err
+	}
+	client := mcp.NewClient(&mcp.Implementation{Name: "client"}, nil)
+	clientSession, err := client.Connect(ctx, clientTransport, nil)
+	if err != nil {
+		return nil, err
+	}
+	toolsResult, err := clientSession.ListTools(ctx, &mcp.ListToolsParams{})
+	if err != nil {
+		return nil, err
+	}
+	if err = clientSession.Close(); err != nil {
+		return nil, err
+	}
+	if err = serverSession.Wait(); err != nil {
+		return nil, err
+	}
+	info := &Info{
+		Tools: toolsResult.Tools,
+	}
+	return info, nil
 }
 
 type Info struct {
@@ -169,4 +177,77 @@ func mcpServeAction(cmd *cobra.Command, args []string) error {
 	}
 	transport := &mcp.StdioTransport{}
 	return server.Run(ctx, transport)
+}
+
+func newMcpGenDocCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:    "generate-doc DIR",
+		Short:  "Generate documentation pages",
+		Args:   cobra.MinimumNArgs(1),
+		RunE:   mcpGenDocAction,
+		Hidden: true,
+	}
+	return cmd
+}
+
+func mcpGenDocAction(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
+	dir := args[0]
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	fName := filepath.Join(dir, "mcp.md")
+	f, err := os.Create(fName)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	fmt.Fprint(f, `---
+title: MCP tools
+weight: 99
+---
+Lima implements the "MCP Sandbox Interface" (tentative name):
+https://pkg.go.dev/github.com/lima-vm/lima/v2/pkg/mcp/msi
+
+MCP Sandbox Interface defines MCP (Model Context Protocol) tools
+that can be used for reading, writing, and executing local files
+with an appropriate sandboxing technology, such as Lima.
+
+The sandboxing technology can be more secure and/or efficient than
+the default tools provided by an AI agent.
+
+MCP Sandbox Interface was inspired by
+[Google Gemini CLI's built-in tools](https://github.com/google-gemini/gemini-cli/tree/main/docs/tools).
+
+`)
+	info, err := inspectInfo(ctx)
+	if err != nil {
+		return err
+	}
+	for _, tool := range info.Tools {
+		fmt.Fprintf(f, "## `%s`\n\n", tool.Name)
+		if tool.Title != "" {
+			fmt.Fprintf(f, "### Title\n\n%s\n\n", tool.Title)
+		}
+		if tool.Description != "" {
+			fmt.Fprintf(f, "### Description\n\n%s\n\n", tool.Description)
+		}
+		if tool.InputSchema != nil {
+			fmt.Fprint(f, "### Input Schema\n\n")
+			schema, err := json.MarshalIndent(tool.InputSchema, "", "    ")
+			if err != nil {
+				return err
+			}
+			fmt.Fprintf(f, "```json\n%s\n```\n\n", string(schema))
+		}
+		if tool.OutputSchema != nil {
+			fmt.Fprint(f, "### Output Schema\n\n")
+			schema, err := json.MarshalIndent(tool.OutputSchema, "", "    ")
+			if err != nil {
+				return err
+			}
+			fmt.Fprintf(f, "```json\n%s\n```\n\n", string(schema))
+		}
+	}
+	return f.Close()
 }

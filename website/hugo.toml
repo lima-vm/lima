@@ -204,6 +204,10 @@ enable = false
     source="docsy"
     target="content/docs/Reference"
     language="en"
+  [[module.imports.mounts]]
+    source="docsy-mcp"
+    target="content/docs/config/ai/outside"
+    language="en"
   # Import templates README.md from templates folder
   [[module.imports]]
     path="../.."
