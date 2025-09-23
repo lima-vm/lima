@@ -4,11 +4,9 @@
 package main
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -23,6 +21,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/fsutil"
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
+	"github.com/lima-vm/lima/v2/pkg/plugin"
 	"github.com/lima-vm/lima/v2/pkg/version"
 )
 
@@ -49,13 +48,12 @@ func main() {
 		}
 	}
 	rootCmd := newApp()
-	if err := executeWithPluginSupport(rootCmd, os.Args[1:]); err != nil {
-		server.StopAllExternalDrivers()
-		handleExitError(err)
+	err := executeWithPluginSupport(rootCmd, os.Args[1:])
+	server.StopAllExternalDrivers()
+	osutil.HandleExitError(err)
+	if err != nil {
 		logrus.Fatal(err)
 	}
-
-	server.StopAllExternalDrivers()
 }
 
 func newApp() *cobra.Command {
@@ -120,12 +118,6 @@ func newApp() *cobra.Command {
 			return fmt.Errorf("unsupported log-format: %q", logFormat)
 		}
 
-		debug, _ := cmd.Flags().GetBool("debug")
-		if debug {
-			logrus.SetLevel(logrus.DebugLevel)
-			debugutil.Debug = true
-		}
-
 		if osutil.IsBeingRosettaTranslated() && cmd.Parent().Name() != "completion" && cmd.Name() != "generate-doc" && cmd.Name() != "validate" {
 			// running under rosetta would provide inappropriate runtime.GOARCH info, see: https://github.com/lima-vm/lima/issues/543
 			// allow commands that are used for packaging to run under rosetta to allow cross-architecture builds
@@ -165,6 +157,8 @@ func newApp() *cobra.Command {
 	}
 	rootCmd.AddGroup(&cobra.Group{ID: "basic", Title: "Basic Commands:"})
 	rootCmd.AddGroup(&cobra.Group{ID: "advanced", Title: "Advanced Commands:"})
+	rootCmd.AddGroup(&cobra.Group{ID: "plugin", Title: "Available Plugins (Experimental):"})
+
 	rootCmd.AddCommand(
 		newCreateCommand(),
 		newStartCommand(),
@@ -201,79 +195,45 @@ func newApp() *cobra.Command {
 	return rootCmd
 }
 
-func handleExitError(err error) {
-	if err == nil {
-		return
-	}
-
-	var exitErr *exec.ExitError
-	if errors.As(err, &exitErr) {
-		os.Exit(exitErr.ExitCode()) //nolint:revive // it's intentional to call os.Exit in this function
-		return
-	}
-}
-
-// executeWithPluginSupport handles command execution with plugin support.
 func executeWithPluginSupport(rootCmd *cobra.Command, args []string) error {
-	if len(args) > 0 {
-		cmd, _, err := rootCmd.Find(args)
-		if err != nil || cmd == rootCmd {
-			// Function calls os.Exit() if it found and executed the plugin
-			runExternalPlugin(rootCmd.Context(), args[0], args[1:])
+	rootCmd.SetArgs(args)
+
+	if err := rootCmd.ParseFlags(args); err == nil {
+		if debug, _ := rootCmd.Flags().GetBool("debug"); debug {
+			logrus.SetLevel(logrus.DebugLevel)
+			debugutil.Debug = true
 		}
 	}
 
-	rootCmd.SetArgs(args)
+	addPluginCommands(rootCmd)
+
 	return rootCmd.Execute()
 }
 
-func runExternalPlugin(ctx context.Context, name string, args []string) {
-	if ctx == nil {
-		ctx = context.Background()
-	}
-
-	if err := updatePathEnv(); err != nil {
-		logrus.Warnf("failed to update PATH environment: %v", err)
-		// PATH update failure shouldn't prevent plugin execution
-	}
-
-	externalCmd := "limactl-" + name
-	execPath, err := exec.LookPath(externalCmd)
+func addPluginCommands(rootCmd *cobra.Command) {
+	plugins, err := plugin.DiscoverPlugins()
 	if err != nil {
+		logrus.Warnf("Failed to discover plugins: %v", err)
 		return
 	}
 
-	cmd := exec.CommandContext(ctx, execPath, args...)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Env = os.Environ()
+	for _, p := range plugins {
+		pluginName := p.Name
+		pluginCmd := &cobra.Command{
+			Use:                pluginName,
+			Short:              p.Description,
+			GroupID:            "plugin",
+			DisableFlagParsing: true,
+			Run: func(cmd *cobra.Command, args []string) {
+				plugin.RunExternalPlugin(cmd.Context(), pluginName, args)
+			},
+		}
 
-	err = cmd.Run()
-	handleExitError(err)
-	if err == nil {
-		os.Exit(0) //nolint:revive // it's intentional to call os.Exit in this function
+		pluginCmd.SilenceUsage = true
+		pluginCmd.SilenceErrors = true
+
+		rootCmd.AddCommand(pluginCmd)
 	}
-	logrus.Fatalf("external command %q failed: %v", execPath, err)
-}
-
-func updatePathEnv() error {
-	exe, err := os.Executable()
-	if err != nil {
-		return fmt.Errorf("failed to get executable path: %w", err)
-	}
-
-	binDir := filepath.Dir(exe)
-	currentPath := os.Getenv("PATH")
-	newPath := binDir + string(filepath.ListSeparator) + currentPath
-
-	if err := os.Setenv("PATH", newPath); err != nil {
-		return fmt.Errorf("failed to set PATH environment: %w", err)
-	}
-
-	logrus.Debugf("updated PATH to prioritize %s", binDir)
-
-	return nil
 }
 
 // WrapArgsError annotates cobra args error with some context, so the error message is more user-friendly.
