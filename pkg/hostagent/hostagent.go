@@ -140,9 +140,6 @@ func New(ctx context.Context, instName string, stdout io.Writer, signalCh chan o
 	if err != nil {
 		return nil, err
 	}
-	if *inst.Config.VMType == limatype.WSL2 {
-		sshLocalPort = inst.SSHLocalPort
-	}
 
 	var udpDNSLocalPort, tcpDNSLocalPort int
 	if *inst.Config.HostResolver.Enabled {
@@ -160,6 +157,7 @@ func New(ctx context.Context, instName string, stdout io.Writer, signalCh chan o
 	if err != nil {
 		return nil, fmt.Errorf("failed to create driver instance: %w", err)
 	}
+	sshLocalPort = inst.SSHLocalPort
 
 	vSockPort := limaDriver.Info().VsockPort
 	virtioPort := limaDriver.Info().VirtioPort
