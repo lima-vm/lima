@@ -106,6 +106,15 @@ This page documents the environment variables used in Lima.
   lima
   ```
 
+### `LIMA_SSH_OVER_VSOCK`
+- **Description**: Specifies to use vsock for SSH connection instead of port forwarding.
+- **Default**: `true` (since v2.0.0)
+- **Usage**: 
+  ```sh
+  export LIMA_SSH_OVER_VSOCK=true
+  ```
+- **Note**: This variable is effective only if the VM is VZ based and systemd is v256 or later (e.g. Ubuntu 24.10+).
+
 ### `LIMA_SSH_PORT_FORWARDER`
 
 - **Description**: Specifies to use the SSH port forwarder (slow) instead of gRPC (fast, previously unstable)
