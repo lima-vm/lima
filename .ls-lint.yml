@@ -32,6 +32,8 @@ ignore:
 - .ls-lint.yml
 - '_output'
 - '**/*.pb\.go'
+- docs/README.md
+- hack/bats/lib
 - hack/common.inc.sh
 - pkg/cidata/cidata.TEMPLATE.d
 - pkg/cidata/cidata.TEMPLATE.d/util/compare_version.sh
