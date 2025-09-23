@@ -240,7 +240,7 @@ jobs:
     - name: Make
       run: make
     - name: Install
-      run: make install
+      run: sudo make install
     - name: Validate jsonschema
       run: make schema-limayaml.json
     - name: Validate templates
@@ -411,7 +411,7 @@ jobs:
     - name: Make
       run: make
     - name: Install
-      run: make install
+      run: sudo make install
     - name: "Adjust LIMACTL_CREATE_ARGS"
       run: echo "LIMACTL_CREATE_ARGS=${LIMACTL_CREATE_ARGS} --vm-type=qemu --network=lima:shared" >>$GITHUB_ENV
     - name: "Inject `no_timer_check` to kernel cmdline"
@@ -508,7 +508,7 @@ jobs:
     - name: Make
       run: make
     - name: Install
-      run: make install
+      run: sudo make install
     - name: Cache image used by templates/${{ matrix.template }}
       uses: ./.github/actions/setup_cache_for_template
       with:
@@ -546,7 +546,9 @@ jobs:
         make binaries install
     - name: Install Lima
       # gomodjail depends on symbols
-      run: make KEEP_SYMBOLS=1 binaries install
+      run: |
+        make KEEP_SYMBOLS=1 binaries
+        sudo make install
     - name: Cache image used by templates/default.yaml
       uses: ./.github/actions/setup_cache_for_template
       with:

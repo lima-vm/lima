@@ -24,7 +24,7 @@ function install_lima() {
 	git checkout "${ver}"
 	make clean
 	make
-	if [ -w "${PREFIX}/bin" ] && [ -w "${PREFIX}/share" ]; then
+	if [ -w "${PREFIX}/bin" ] && [ -w "${PREFIX}/share" ] && [ -w "${PREFIX}/libexec" ]; then
 		make install
 	else
 		sudo make install
@@ -34,15 +34,15 @@ function install_lima() {
 function install_lima_binary() {
 	ver="$1"
 	tar="tar"
-	if [ ! -w "${PREFIX}/bin" ] || [ ! -w "${PREFIX}/share" ]; then
+	if [ ! -w "${PREFIX}/bin" ] || [ ! -w "${PREFIX}/share" ] || [ ! -w "${PREFIX}/libexec" ]; then
 		tar="sudo ${tar}"
 	fi
 	curl -fsSL "https://github.com/lima-vm/lima/releases/download/${ver}/lima-${ver:1}-$(uname -s)-$(uname -m).tar.gz" | ${tar} Cxzvm "${PREFIX}"
 }
 
 function uninstall_lima() {
-	files="${PREFIX}/bin/lima ${PREFIX}/bin/limactl ${PREFIX}/share/lima ${PREFIX}/share/doc/lima"
-	if [ -w "${PREFIX}/bin" ] && [ -w "${PREFIX}/share" ]; then
+	files="${PREFIX}/bin/lima ${PREFIX}/bin/limactl ${PREFIX}/share/lima ${PREFIX}/share/doc/lima ${PREFIX}/libexec/lima"
+	if [ -w "${PREFIX}/bin" ] && [ -w "${PREFIX}/share" ] && [ -w "${PREFIX}/libexec" ]; then
 		# shellcheck disable=SC2086
 		rm -rf $files
 	else
