@@ -112,7 +112,8 @@ help-targets:
 	@echo  '- limactl                   : Build limactl, and lima'
 	@echo  '- lima                      : Copy lima, and lima.bat'
 	@echo  '- helpers                   : Copy nerdctl.lima, apptainer.lima, docker.lima, podman.lima, and kubectl.lima'
-	# TODO: move CLI plugins to _output/libexec/lima/
+	@echo
+	@echo  'Targets for files in _output/libexec/lima/:'
 	@echo  '- limactl-plugins           : Build limactl-* CLI plugins'
 	@echo
 	@echo  'Targets for files in _output/share/lima/:'
@@ -282,25 +283,26 @@ ifeq ($(GOOS),darwin)
 	codesign -f -v --entitlements vz.entitlements -s - $@
 endif
 
-limactl-plugins: _output/bin/limactl-mcp$(exe)
+LIBEXEC_LIMA := _output/libexec/lima
 
-_output/bin/limactl-mcp$(exe): $(call dependencies_for_cmd,limactl-mcp) $$(call force_build,$$@)
+limactl-plugins: $(LIBEXEC_LIMA)/limactl-mcp$(exe)
+
+$(LIBEXEC_LIMA)/limactl-mcp$(exe): $(call dependencies_for_cmd,limactl-mcp) $$(call force_build,$$@)
+	@mkdir -p $(LIBEXEC_LIMA)
 	$(ENVS_$@) $(GO_BUILD) -o $@ ./cmd/limactl-mcp
-
-DRIVER_INSTALL_DIR := _output/libexec/lima
 
 .PHONY: additional-drivers
 additional-drivers:
-	@mkdir -p $(DRIVER_INSTALL_DIR)
+	@mkdir -p $(LIBEXEC_LIMA)
 	@for drv in $(ADDITIONAL_DRIVERS); do \
 		echo "Building $$drv as external"; \
 		if [ "$(GOOS)" = "windows" ]; then \
-			$(GO_BUILD) -o $(DRIVER_INSTALL_DIR)/lima-driver-$$drv.exe ./cmd/lima-driver-$$drv; \
+			$(GO_BUILD) -o $(LIBEXEC_LIMA)/lima-driver-$$drv.exe ./cmd/lima-driver-$$drv; \
 		else \
-			$(GO_BUILD) -o $(DRIVER_INSTALL_DIR)/lima-driver-$$drv ./cmd/lima-driver-$$drv; \
+			$(GO_BUILD) -o $(LIBEXEC_LIMA)/lima-driver-$$drv ./cmd/lima-driver-$$drv; \
 			fi; \
 		if [ "$$drv" = "vz" ] && [ "$(GOOS)" = "darwin" ]; then \
-			codesign -f -v --entitlements vz.entitlements -s - $(DRIVER_INSTALL_DIR)/lima-driver-vz; \
+			codesign -f -v --entitlements vz.entitlements -s - $(LIBEXEC_LIMA)/lima-driver-vz; \
 		fi; \
 	done
 
@@ -523,7 +525,6 @@ uninstall:
 		"$(DEST)/bin/lima" \
 		"$(DEST)/bin/lima$(bat)" \
 		"$(DEST)/bin/limactl$(exe)" \
-		"$(DEST)/bin/limactl-mcp$(exe)" \
 		"$(DEST)/bin/nerdctl.lima" \
 		"$(DEST)/bin/apptainer.lima" \
 		"$(DEST)/bin/docker.lima" \
@@ -533,6 +534,7 @@ uninstall:
 		"$(DEST)/share/man/man1/limactl"*".1" \
 		"$(DEST)/share/lima" \
 		"$(DEST)/share/doc/lima" \
+		"$(DEST)/libexec/lima/limactl-mcp$(exe)" \
 		"$(DEST)/libexec/lima/lima-driver-qemu$(exe)" \
 		"$(DEST)/libexec/lima/lima-driver-vz$(exe)" \
 		"$(DEST)/libexec/lima/lima-driver-wsl2$(exe)"

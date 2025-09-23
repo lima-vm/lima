@@ -16,9 +16,6 @@ ls:
     # valid names are `show-ssh.go`, `show-ssh_windows.go` or `show-ssh_test.go`
     .go: lowercase
 
-  docs:
-    .md: kebab-case
-
   templates:
     # _default and _images have leading underscores
     .dir: lowercase
