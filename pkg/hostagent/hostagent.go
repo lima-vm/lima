@@ -924,34 +924,6 @@ func (a *HostAgent) watchCloudInitProgress(ctx context.Context) {
 		Active: true,
 	})
 
-	maxRetries := 30
-	retryDelay := time.Second
-	var sshReady bool
-
-	for i := 0; i < maxRetries && !sshReady; i++ {
-		if i > 0 {
-			time.Sleep(retryDelay)
-		}
-
-		// Test SSH connectivity
-		args := a.sshConfig.Args()
-		args = append(args,
-			"-p", strconv.Itoa(a.sshLocalPort),
-			"127.0.0.1",
-			"echo 'SSH Ready'",
-		)
-
-		cmd := exec.CommandContext(ctx, a.sshConfig.Binary(), args...)
-		if err := cmd.Run(); err == nil {
-			sshReady = true
-			logrus.Debug("SSH ready for cloud-init monitoring")
-		}
-	}
-
-	if !sshReady {
-		logrus.Warn("SSH not ready for cloud-init monitoring, proceeding anyway")
-	}
-
 	args := a.sshConfig.Args()
 	args = append(args,
 		"-p", strconv.Itoa(a.sshLocalPort),
