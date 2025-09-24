@@ -463,26 +463,19 @@ func (a *HostAgent) startRoutinesAndWait(ctx context.Context, errCh <-chan error
 		stRunning.Running = true
 		a.emitEvent(ctx, events.Event{Status: stRunning})
 	}()
-	for {
-		select {
-		case driverErr := <-errCh:
-			logrus.Infof("Driver stopped due to error: %q", driverErr)
-			cancelHA()
-			if closeErr := a.close(); closeErr != nil {
-				logrus.WithError(closeErr).Warn("an error during shutting down the host agent")
-			}
-			err := a.driver.Stop(ctx)
-			return err
-		case sig := <-a.signalCh:
-			logrus.Infof("Received %s, shutting down the host agent", osutil.SignalName(sig))
-			cancelHA()
-			if closeErr := a.close(); closeErr != nil {
-				logrus.WithError(closeErr).Warn("an error during shutting down the host agent")
-			}
-			err := a.driver.Stop(ctx)
-			return err
-		}
+	// wait for either the driver to stop or a signal to shut down
+	select {
+	case driverErr := <-errCh:
+		logrus.Infof("Driver stopped due to error: %q", driverErr)
+	case sig := <-a.signalCh:
+		logrus.Infof("Received %s, shutting down the host agent", osutil.SignalName(sig))
 	}
+	// close the host agent routines before cancelling the context
+	if closeErr := a.close(); closeErr != nil {
+		logrus.WithError(closeErr).Warn("an error during shutting down the host agent")
+	}
+	cancelHA()
+	return a.driver.Stop(ctx)
 }
 
 func (a *HostAgent) Info(_ context.Context) (*hostagentapi.Info, error) {
@@ -618,6 +611,7 @@ sudo chown -R "${USER}" /run/host-services`
 }
 
 // cleanUp registers a cleanup function to be called when the host agent is stopped.
+// The cleanup functions are called before the context is cancelled, in the reverse order of their registration.
 func (a *HostAgent) cleanUp(fn func() error) {
 	a.onCloseMu.Lock()
 	defer a.onCloseMu.Unlock()
@@ -688,6 +682,9 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 			}
 		}
 	}()
+
+	// ensure close before ctx is cancelled
+	a.cleanUp(a.grpcPortForwarder.Close)
 
 	for {
 		if a.client == nil || !isGuestAgentSocketAccessible(ctx, a.client) {
@@ -821,7 +818,6 @@ func (a *HostAgent) processGuestAgentEvents(ctx context.Context, client *guestag
 			a.grpcPortForwarder.OnEvent(ctx, client, ev)
 		}
 	}
-	defer a.grpcPortForwarder.Close()
 
 	if err := client.Events(ctx, onEvent); err != nil {
 		if status.Code(err) == codes.Canceled {
