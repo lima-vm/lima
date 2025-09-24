@@ -15,6 +15,7 @@ import (
 
 	"github.com/lima-vm/lima/v2/pkg/ioutilx"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/sshutil"
 )
 
 type mount struct {
@@ -76,6 +77,10 @@ func (a *HostAgent) setupMount(ctx context.Context, m limatype.Mount) (*mount, e
 		// 2. these errors still imply additional coms over mux socket, which resulted sftp-server to fail more often statistically during test runs.
 		// It is reasonable to disable this on Windows if required feature is not fully operational.
 		rsf.SSHConfig.Persist = false
+
+		// HostAgent's `sshConfig` already has some ControlMaster related args in `AdditionalArgs`,
+		// so it is necessary to remove them to avoid overrides above `Persist=false`.
+		rsf.SSHConfig.AdditionalArgs = sshutil.DisableControlMasterOptsFromSSHArgs(rsf.SSHConfig.AdditionalArgs)
 	}
 	if err := rsf.Prepare(); err != nil {
 		return nil, fmt.Errorf("failed to prepare reverse sshfs for %q on %q: %w", resolvedLocation, *m.MountPoint, err)
