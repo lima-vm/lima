@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -292,6 +293,36 @@ func identityFileEntry(ctx context.Context, privateKeyPath string) (string, erro
 		return fmt.Sprintf(`IdentityFile='%s'`, privateKeyPath), nil
 	}
 	return fmt.Sprintf(`IdentityFile="%s"`, privateKeyPath), nil
+}
+
+// DisableControlMasterOptsFromSSHArgs returns ssh args that disable ControlMaster, ControlPath, and ControlPersist.
+func DisableControlMasterOptsFromSSHArgs(sshArgs []string) []string {
+	argsForOverridingConfigFile := []string{
+		"-o", "ControlMaster=no",
+		"-o", "ControlPath=none",
+		"-o", "ControlPersist=no",
+	}
+	return append(argsForOverridingConfigFile, removeOptsFromSSHArgs(sshArgs, "ControlMaster", "ControlPath", "ControlPersist")...)
+}
+
+func removeOptsFromSSHArgs(sshArgs []string, removeOpts ...string) []string {
+	res := make([]string, 0, len(sshArgs))
+	isOpt := false
+	for _, arg := range sshArgs {
+		if isOpt {
+			isOpt = false
+			if !slices.ContainsFunc(removeOpts, func(opt string) bool {
+				return strings.HasPrefix(arg, opt)
+			}) {
+				res = append(res, "-o", arg)
+			}
+		} else if arg == "-o" {
+			isOpt = true
+		} else {
+			res = append(res, arg)
+		}
+	}
+	return res
 }
 
 // SSHOpts adds the following options to CommonOptions: User, ControlMaster, ControlPath, ControlPersist.
