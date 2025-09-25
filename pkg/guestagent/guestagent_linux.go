@@ -68,11 +68,11 @@ func New(ctx context.Context, ticker ticker.Ticker, iptablesIdle time.Duration) 
 				return nil, err
 			}
 		}
-
-		go a.setWorthCheckingIPTablesRoutine(auditClient, iptablesIdle)
-	} else {
-		a.worthCheckingIPTables = true
 	}
+
+	a.worthCheckingIPTables = true // allow initial iptables scan
+	go a.setWorthCheckingIPTablesRoutine(auditClient, iptablesIdle)
+
 	logrus.Infof("Auditing enabled (%d)", auditStatus.Enabled)
 	return startGuestAgentRoutines(ctx, a, true), nil
 }
@@ -112,7 +112,8 @@ type agent struct {
 // when no NETFILTER_CFG audit message was received for the iptablesIdle time.
 func (a *agent) setWorthCheckingIPTablesRoutine(auditClient *libaudit.AuditClient, iptablesIdle time.Duration) {
 	logrus.Info("setWorthCheckingIPTablesRoutine(): monitoring netfilter audit events")
-	var latestTrue time.Time
+	// Initialize to now so the first sleeper loop does not immediately mark it false.
+	latestTrue := time.Now()
 	go func() {
 		for {
 			time.Sleep(iptablesIdle)
