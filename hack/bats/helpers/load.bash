@@ -3,6 +3,11 @@
 
 set -o errexit -o nounset -o pipefail
 
+# Make sure run() will execute all functions with errexit enabled.
+# This enables the functionality from https://github.com/lima-vm/bats-core/commit/507da84de75fa78798d53eceb42e68851ef5c48b
+# The upstream PR https://github.com/bats-core/bats-core/pull/1118 is still open, so our submodule points to the PR commit.
+export BATS_RUN_ERREXIT=1
+
 # Don't run the tests in ~/.lima because they may destroy _config, _templates etc.
 export LIMA_HOME=${LIMA_BATS_LIMA_HOME:-$HOME/.lima-bats}
 
