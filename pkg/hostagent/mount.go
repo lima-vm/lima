@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"slices"
+	"strings"
 
 	"github.com/lima-vm/sshocker/pkg/reversesshfs"
 	"github.com/sirupsen/logrus"
@@ -76,6 +78,17 @@ func (a *HostAgent) setupMount(ctx context.Context, m limatype.Mount) (*mount, e
 		// 2. these errors still imply additional coms over mux socket, which resulted sftp-server to fail more often statistically during test runs.
 		// It is reasonable to disable this on Windows if required feature is not fully operational.
 		rsf.SSHConfig.Persist = false
+
+		// HostAgent's `sshConfig` already has some ControlMaster related args in `AdditionalArgs`,
+		// so it is necessary to remove them to avoid overrides above `Persist=false`.
+		removePrefixedAdditionalArgs := func(prefix string) {
+			if i := slices.IndexFunc(rsf.SSHConfig.AdditionalArgs, func(s string) bool { return strings.HasPrefix(s, prefix) }); i >= 0 {
+				rsf.SSHConfig.AdditionalArgs = slices.Delete(rsf.SSHConfig.AdditionalArgs, i-1, i+1)
+			}
+		}
+		removePrefixedAdditionalArgs("ControlMaster=")
+		removePrefixedAdditionalArgs("ControlPath=")
+		removePrefixedAdditionalArgs("ControlPersist=")
 	}
 	if err := rsf.Prepare(); err != nil {
 		return nil, fmt.Errorf("failed to prepare reverse sshfs for %q on %q: %w", resolvedLocation, *m.MountPoint, err)
