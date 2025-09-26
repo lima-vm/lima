@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright The Lima Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package plugin
+package plugins
 
 import (
 	"cmp"
@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/sirupsen/logrus"
 
@@ -28,7 +29,7 @@ type Plugin struct {
 	Description string `json:"description,omitempty"`
 }
 
-func DiscoverPlugins() ([]Plugin, error) {
+var Discover = sync.OnceValues(func() ([]Plugin, error) {
 	var plugins []Plugin
 	seen := make(map[string]bool)
 
@@ -47,9 +48,9 @@ func DiscoverPlugins() ([]Plugin, error) {
 		})
 
 	return plugins, nil
-}
+})
 
-func getPluginDirectories() []string {
+var getPluginDirectories = sync.OnceValue(func() []string {
 	dirs := usrlocalsharelima.SelfDirs()
 
 	pathEnv := os.Getenv("PATH")
@@ -65,7 +66,7 @@ func getPluginDirectories() []string {
 	}
 
 	return dirs
-}
+})
 
 // isWindowsExecutableExt checks if the given extension is a valid Windows executable extension
 // according to PATHEXT environment variable.
@@ -74,20 +75,9 @@ func isWindowsExecutableExt(ext string) bool {
 		return false
 	}
 
-	pathExt := os.Getenv("PATHEXT")
-	if pathExt == "" {
-		pathExt = defaultPathExt
-	}
-
+	pathExt := cmp.Or(os.Getenv("PATHEXT"), defaultPathExt)
 	extensions := strings.Split(strings.ToUpper(pathExt), ";")
-	extUpper := strings.ToUpper(ext)
-
-	for _, validExt := range extensions {
-		if validExt == extUpper {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(extensions, strings.ToUpper(ext))
 }
 
 func isExecutable(path string) bool {
@@ -104,18 +94,7 @@ func isExecutable(path string) bool {
 		return info.Mode()&0o111 != 0
 	}
 
-	ext := strings.ToLower(filepath.Ext(path))
-	pathExt := os.Getenv("PATHEXT")
-	if pathExt == "" {
-		pathExt = defaultPathExt
-	}
-
-	for _, e := range strings.Split(strings.ToLower(pathExt), ";") {
-		if e == ext {
-			return true
-		}
-	}
-	return false
+	return isWindowsExecutableExt(filepath.Ext(path))
 }
 
 func scanDirectory(dir string) []Plugin {
@@ -168,46 +147,24 @@ func scanDirectory(dir string) []Plugin {
 	return plugins
 }
 
-func RunExternalPlugin(ctx context.Context, name string, args []string) {
-	if ctx == nil {
-		ctx = context.Background()
-	}
-
-	if err := UpdatePathForPlugins(); err != nil {
+func (plugin *Plugin) Run(ctx context.Context, args []string) {
+	if err := UpdatePath(); err != nil {
 		logrus.Warnf("failed to update PATH environment: %v", err)
 		// PATH update failure shouldn't prevent plugin execution
 	}
 
-	plugins, err := DiscoverPlugins()
-	if err != nil {
-		logrus.Warnf("failed to discover plugins: %v", err)
-		return
-	}
-
-	var execPath string
-	for _, plugin := range plugins {
-		if plugin.Name == name {
-			execPath = plugin.Path
-			break
-		}
-	}
-
-	if execPath == "" {
-		return
-	}
-
-	cmd := exec.CommandContext(ctx, execPath, args...)
+	cmd := exec.CommandContext(ctx, plugin.Path, args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Env = os.Environ()
 
-	err = cmd.Run()
+	err := cmd.Run()
 	osutil.HandleExitError(err)
 	if err == nil {
 		os.Exit(0) //nolint:revive // it's intentional to call os.Exit in this function
 	}
-	logrus.Fatalf("external command %q failed: %v", execPath, err)
+	logrus.Fatalf("external command %q failed: %v", plugin.Path, err)
 }
 
 var descRegex = regexp.MustCompile(`<limactl-desc>(.*?)</limactl-desc>`)
@@ -235,7 +192,7 @@ func extractDescFromScript(path string) string {
 	return desc
 }
 
-func UpdatePathForPlugins() error {
+func UpdatePath() error {
 	pluginDirs := getPluginDirectories()
 	newPath := strings.Join(pluginDirs, string(filepath.ListSeparator))
 	return os.Setenv("PATH", newPath)
