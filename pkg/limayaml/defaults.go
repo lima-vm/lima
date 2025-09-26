@@ -538,9 +538,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 	if o.HostResolver.Enabled != nil {
 		y.HostResolver.Enabled = o.HostResolver.Enabled
 	}
-	if y.HostResolver.Enabled == nil {
-		y.HostResolver.Enabled = ptr.Of(true)
-	}
+	// Default will be filled in by driver (false, except for QEMU)
 
 	if y.HostResolver.IPv6 == nil {
 		y.HostResolver.IPv6 = d.HostResolver.IPv6
