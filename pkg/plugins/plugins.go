@@ -192,6 +192,21 @@ func extractDescFromScript(path string) string {
 	return desc
 }
 
+// Find locates a plugin by name and returns a pointer to a copy.
+func Find(name string) (*Plugin, error) {
+	allPlugins, err := Discover()
+	if err != nil {
+		return nil, err
+	}
+	for _, plugin := range allPlugins {
+		if name == plugin.Name {
+			pluginCopy := plugin
+			return &pluginCopy, nil
+		}
+	}
+	return nil, nil
+}
+
 func UpdatePath() error {
 	pluginDirs := getPluginDirectories()
 	newPath := strings.Join(pluginDirs, string(filepath.ListSeparator))
