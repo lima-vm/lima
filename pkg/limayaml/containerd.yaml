@@ -1,9 +1,9 @@
 archives:
-- location: https://github.com/containerd/nerdctl/releases/download/v2.1.4/nerdctl-full-2.1.4-linux-amd64.tar.gz
+- location: https://github.com/containerd/nerdctl/releases/download/v2.1.5/nerdctl-full-2.1.5-linux-amd64.tar.gz
   arch: x86_64
-  digest: sha256:03c1a3194b6e5fec02d866a35d0029c694b4cedb865b28f931187aa0c85dd125
-- location: https://github.com/containerd/nerdctl/releases/download/v2.1.4/nerdctl-full-2.1.4-linux-arm64.tar.gz
+  digest: sha256:f2a96cf2a9612cc0945da04beda29df7b1d75173cb7ca96275b3352f04a2e416
+- location: https://github.com/containerd/nerdctl/releases/download/v2.1.5/nerdctl-full-2.1.5-linux-arm64.tar.gz
   arch: aarch64
-  digest: sha256:124b171778f8cc9bb317e094e5a92de5faf6d1bb5f5c9ded4b82a55df2c3c295
+  digest: sha256:f1c9bbc4c2116c997030f6b003c73cf505bc1156b6e668227079d190b7256fe3
 # No arm-v7
 # No riscv64
