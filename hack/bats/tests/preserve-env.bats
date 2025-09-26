@@ -93,13 +93,13 @@ local_setup() {
     assert_line BAR=bar
 }
 
-@test 'wildcard does only work at the end of the pattern' {
+@test 'wildcard works at the start of the pattern' {
     export LIMA_SHELLENV_BLOCK="*FOO"
     export FOO=foo
     export BARFOO=barfoo
     run -0 limactl shell --preserve-env "$NAME" printenv
-    assert_line FOO=foo
-    assert_line BARFOO=barfoo
+    refute_line --regexp '^BARFOO='
+    refute_line --regexp '^FOO='
 }
 
 @test 'block list can use a , separated list with whitespace ignored' {
@@ -114,16 +114,6 @@ local_setup() {
     assert_line BARBAZ=barbaz
 }
 
-@test 'allow list overrides block list but blocks everything else' {
-    export LIMA_SHELLENV_ALLOW=SSH_FOO
-    export SSH_FOO=ssh_foo
-    export SSH_BAR=ssh_bar
-    export BAR=bar
-    run -0 limactl shell --preserve-env "$NAME" printenv
-    assert_line SSH_FOO=ssh_foo
-    refute_line --regexp '^SSH_BAR='
-    refute_line --regexp '^BAR='
-}
 
 @test 'allow list can use a , separated list with whitespace ignored' {
     export LIMA_SHELLENV_ALLOW="FOO*, , BAR"
@@ -135,16 +125,93 @@ local_setup() {
     assert_line FOO=foo
     assert_line FOOBAR=foobar
     assert_line BAR=bar
-    refute_line --regexp '^BARBAZ='
+    assert_line BARBAZ=barbaz
 }
 
-@test 'setting both allow list and block list generates a warning' {
-    export LIMA_SHELLENV_ALLOW=FOO
-    export LIMA_SHELLENV_BLOCK=BAR
+@test 'wildcard patterns work in all positions and combinations' {
+    # Test wildcard at middle, and other combinations
+    export LIMA_SHELLENV_BLOCK="FOO*BAR,*FOO*BAR*,*TEST*,*SUFFIX"
     export FOO=foo
-    run -0 --separate-stderr limactl shell --preserve-env "$NAME" printenv FOO
-    assert_output foo
-    assert_stderr --regexp 'level=warning msg="Both LIMA_SHELLENV_BLOCK and LIMA_SHELLENV_ALLOW are set'
+    export FOOBAR=foobar
+    export FOOXYZBAR=fooxyzbar
+    export FOOBAZ=foobaz
+    export BAZBAR=bazbar
+    export BAR=bar
+    export XFOOYBARZDOTCOM=xfooybarzdotcom
+    export PREFIX_TEST_VAR=prefix_test_var
+    export VAR_SUFFIX=var_suffix
+    export NORMAL_VAR=normal_var
+    export UNRELATED=unrelated
+    run -0 limactl shell --preserve-env "$NAME" printenv
+    
+    # Should block FOO*BAR pattern
+    refute_line --regexp '^FOOBAR='
+    refute_line --regexp '^FOOXYZBAR='
+    
+    # Should block *FOO*BAR* pattern
+    refute_line --regexp '^XFOOYBARZDOTCOM='
+    
+    # Should block *TEST* and *SUFFIX patterns
+    refute_line --regexp '^PREFIX_TEST_VAR='
+    refute_line --regexp '^VAR_SUFFIX='
+    
+    # Should allow variables that don't match any pattern
+    assert_line FOO=foo
+    assert_line FOOBAZ=foobaz
+    assert_line BAZBAR=bazbar
+    assert_line BAR=bar
+    assert_line NORMAL_VAR=normal_var
+    assert_line UNRELATED=unrelated
+}
+
+@test 'comprehensive allow/block interaction with wildcards and default blocklist' {
+    # Test allowlist with wildcards, and other test rules
+    export LIMA_SHELLENV_ALLOW="SSH_FOO,CUSTOM*,FOO*,*PREFIX,MIDDLE*PATTERN,SUFFIX*"
+    export LIMA_SHELLENV_BLOCK="+*TOKEN"
+    export SSH_FOO=ssh_foo
+    export SSH_BAR=ssh_bar
+    export CUSTOM_VAR=custom_var
+    export MY_TOKEN=my_token
+    export SECRET_TOKEN=secret_token
+    export FOO=foo
+    export FOOBAR=foobar
+    export BAR=bar
+    export BARBAZ=barbaz
+    export TEST_PREFIX=test_prefix
+    export MIDDLE_TEST_PATTERN=middle_test_pattern
+    export SUFFIX_TEST=suffix_test
+    export OTHER_VAR=other_var
+    export NORMAL_VAR=normal_var
+    run -0 limactl shell --preserve-env "$NAME" printenv
+    
+    # Should allow items in allowlist even if they match default blocklist
+    assert_line SSH_FOO=ssh_foo
+    assert_line CUSTOM_VAR=custom_var
+    assert_line FOO=foo
+    assert_line FOOBAR=foobar
+    assert_line TEST_PREFIX=test_prefix
+    assert_line MIDDLE_TEST_PATTERN=middle_test_pattern
+    assert_line SUFFIX_TEST=suffix_test
+    
+    # Should block SSH_BAR (default blocklist, not in allowlist)
+    refute_line --regexp '^SSH_BAR='
+    
+    # Should block *TOKEN (additive pattern)
+    refute_line --regexp '^MY_TOKEN='
+    refute_line --regexp '^SECRET_TOKEN='
+    
+    # Should allow other variables not in blocklist
+    assert_line BAR=bar
+    assert_line BARBAZ=barbaz
+    assert_line OTHER_VAR=other_var
+    assert_line NORMAL_VAR=normal_var
+}
+
+@test 'invalid characters in patterns cause fatal errors' {
+    export LIMA_SHELLENV_BLOCK="FOO-BAR"
+    run ! limactl shell --preserve-env "$NAME" printenv
+    assert_output --partial "Invalid LIMA_SHELLENV_BLOCK pattern"
+    assert_output --partial "contains invalid character"
 }
 
 @test 'limactl info includes the default block list' {
