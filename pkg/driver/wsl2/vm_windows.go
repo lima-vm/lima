@@ -7,6 +7,7 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -134,7 +135,7 @@ func provisionVM(ctx context.Context, instanceDir, instanceName, distroName stri
 		for {
 			<-ctx.Done()
 			logrus.Info("Context closed, stopping vm")
-			if status, err := getWslStatus(instanceName); err == nil &&
+			if status, err := getWslStatus(ctx, instanceName); err == nil &&
 				status == limatype.StatusRunning {
 				_ = stopVM(ctx, distroName)
 			}
@@ -179,13 +180,40 @@ func unregisterVM(ctx context.Context, distroName string) error {
 	return nil
 }
 
-func getWslStatus(instName string) (string, error) {
+// GetWslStatus runs `wsl --list --verbose` and parses its output.
+// There are several possible outputs, all listed with their whitespace preserved output below.
+//
+// (1) Expected output if at least one distro is installed:
+// PS > wsl --list --verbose
+//
+//	NAME      STATE           VERSION
+//
+// * Ubuntu    Stopped         2
+//
+// (2) Expected output when no distros are installed, but WSL is configured properly:
+// PS > wsl --list --verbose
+// Windows Subsystem for Linux has no installed distributions.
+//
+// Use 'wsl.exe --list --online' to list available distributions
+// and 'wsl.exe --install <Distro>' to install.
+//
+// Distributions can also be installed by visiting the Microsoft Store:
+// https://aka.ms/wslstore
+// Error code: Wsl/WSL_E_DEFAULT_DISTRO_NOT_FOUND
+//
+// (3) Expected output when no distros are installed, and WSL2 has no kernel installed:
+//
+// PS > wsl --list --verbose
+// Windows Subsystem for Linux has no installed distributions.
+// Distributions can be installed by visiting the Microsoft Store:
+// https://aka.ms/wslstore
+func getWslStatus(ctx context.Context, instName string) (string, error) {
 	distroName := "lima-" + instName
 	out, err := executil.RunUTF16leCommand([]string{
 		"wsl.exe",
 		"--list",
 		"--verbose",
-	})
+	}, executil.WithContext(ctx))
 	if err != nil {
 		return "", fmt.Errorf("failed to run `wsl --list --verbose`, err: %w (out=%q)", err, out)
 	}
@@ -228,4 +256,38 @@ func getWslStatus(instName string) (string, error) {
 	}
 
 	return instState, nil
+}
+
+// GetSSHAddress runs a hostname command to get the IP from inside of a wsl2 VM.
+//
+// Expected output (whitespace preserved, [] for optional):
+// PS > wsl -d <distroName> bash -c hostname -I | cut -d' ' -f1
+// 168.1.1.1 [10.0.0.1]
+// But busybox hostname does not implement --all-ip-addresses:
+// hostname: unrecognized option: I
+func getSSHAddress(ctx context.Context, instName string) (string, error) {
+	distroName := "lima-" + instName
+	// Ubuntu
+	cmd := exec.CommandContext(ctx, "wsl.exe", "-d", distroName, "bash", "-c", `hostname -I | cut -d ' ' -f1`)
+	out, err := cmd.CombinedOutput()
+	if err == nil {
+		return strings.TrimSpace(string(out)), nil
+	}
+	// Alpine
+	cmd = exec.CommandContext(ctx, "wsl.exe", "-d", distroName, "sh", "-c", `ip route get 1 | awk '{gsub("^.*src ",""); print $1; exit}'`)
+	out, err = cmd.CombinedOutput()
+	if err == nil {
+		return strings.TrimSpace(string(out)), nil
+	}
+	// fallback
+	cmd = exec.CommandContext(ctx, "wsl.exe", "-d", distroName, "hostname", "-i")
+	out, err = cmd.CombinedOutput()
+	if err == nil {
+		ip := net.ParseIP(strings.TrimSpace(string(out)))
+		// some distributions use "127.0.1.1" as the host IP, but we want something that we can route to here
+		if ip != nil && !ip.IsLoopback() {
+			return strings.TrimSpace(string(out)), nil
+		}
+	}
+	return "", fmt.Errorf("failed to get hostname for instance %q, err: %w (out=%q)", instName, err, string(out))
 }
