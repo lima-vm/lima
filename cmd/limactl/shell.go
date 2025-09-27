@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -235,6 +236,22 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		*inst.Config.SSH.ForwardX11Trusted)
 	if err != nil {
 		return err
+	}
+	if runtime.GOOS == "windows" {
+		// Remove ControlMaster, ControlPath, and ControlPersist options,
+		// because Cygwin-based SSH clients do not support multiplexing when executing commands.
+		// References:
+		//   https://inbox.sourceware.org/cygwin/c98988a5-7e65-4282-b2a1-bb8e350d5fab@acm.org/T/
+		//   https://stackoverflow.com/questions/20959792/is-ssh-controlmaster-with-cygwin-on-windows-actually-possible
+		// By removing these options:
+		//   - Avoids execution failures when the control master is not yet available.
+		//   - Prevents error messages such as:
+		//     > mux_client_request_session: read from master failed: Connection reset by peer
+		//     > ControlSocket ....sock already exists, disabling multiplexing
+		// Only remove these options when writing the SSH config file and executing `limactl shell`, since multiplexing seems to work with port forwarding.
+		sshOpts = slices.DeleteFunc(sshOpts, func(s string) bool {
+			return strings.HasPrefix(s, "ControlMaster") || strings.HasPrefix(s, "ControlPath") || strings.HasPrefix(s, "ControlPersist")
+		})
 	}
 	sshArgs := append([]string{}, sshExe.Args...)
 	sshArgs = append(sshArgs, sshutil.SSHArgsFromOpts(sshOpts)...)
