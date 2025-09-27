@@ -38,19 +38,25 @@ func NewClosableListener() *ClosableListeners {
 	}
 }
 
-func (p *ClosableListeners) Close() {
+func (p *ClosableListeners) Close() error {
 	p.listenersRW.Lock()
 	defer p.listenersRW.Unlock()
+	var errs []error
 	for _, listener := range p.listeners {
-		listener.Close()
+		if err := listener.Close(); err != nil {
+			errs = append(errs, err)
+		}
 	}
 	clear(p.listeners)
 	p.udpListenersRW.Lock()
 	defer p.udpListenersRW.Unlock()
 	for _, listener := range p.udpListeners {
-		listener.Close()
+		if err := listener.Close(); err != nil {
+			errs = append(errs, err)
+		}
 	}
 	clear(p.udpListeners)
+	return errors.Join(errs...)
 }
 
 func (p *ClosableListeners) Forward(ctx context.Context, client *guestagentclient.GuestAgentClient,
