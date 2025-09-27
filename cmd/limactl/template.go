@@ -40,6 +40,7 @@ func newTemplateCommand() *cobra.Command {
 		newTemplateCopyCommand(),
 		newTemplateValidateCommand(),
 		newTemplateYQCommand(),
+		newTemplateURLCommand(),
 	)
 	return templateCommand
 }
@@ -280,4 +281,23 @@ func templateValidateAction(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
+}
+
+func newTemplateURLCommand() *cobra.Command {
+	templateURLCommand := &cobra.Command{
+		Use:   "url CUSTOM_URL",
+		Short: "Transform custom template URLs to regular file or https URLs",
+		Args:  WrapArgsError(cobra.ExactArgs(1)),
+		RunE:  templateURLAction,
+	}
+	return templateURLCommand
+}
+
+func templateURLAction(cmd *cobra.Command, args []string) error {
+	url, err := limatmpl.TransformCustomURL(cmd.Context(), args[0])
+	if err != nil {
+		return err
+	}
+	_, err = fmt.Fprintln(cmd.OutOrStdout(), url)
+	return err
 }
