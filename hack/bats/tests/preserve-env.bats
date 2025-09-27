@@ -93,13 +93,13 @@ local_setup() {
     assert_line BAR=bar
 }
 
-@test 'wildcard does only work at the end of the pattern' {
+@test 'wildcard works at the start of the pattern' {
     export LIMA_SHELLENV_BLOCK="*FOO"
     export FOO=foo
     export BARFOO=barfoo
     run -0 limactl shell --preserve-env "$NAME" printenv
-    assert_line FOO=foo
-    assert_line BARFOO=barfoo
+    refute_line --regexp '^BARFOO='
+    refute_line --regexp '^FOO='
 }
 
 @test 'block list can use a , separated list with whitespace ignored' {
@@ -136,15 +136,6 @@ local_setup() {
     assert_line FOOBAR=foobar
     assert_line BAR=bar
     refute_line --regexp '^BARBAZ='
-}
-
-@test 'setting both allow list and block list generates a warning' {
-    export LIMA_SHELLENV_ALLOW=FOO
-    export LIMA_SHELLENV_BLOCK=BAR
-    export FOO=foo
-    run -0 --separate-stderr limactl shell --preserve-env "$NAME" printenv FOO
-    assert_output foo
-    assert_stderr --regexp 'level=warning msg="Both LIMA_SHELLENV_BLOCK and LIMA_SHELLENV_ALLOW are set'
 }
 
 @test 'limactl info includes the default block list' {

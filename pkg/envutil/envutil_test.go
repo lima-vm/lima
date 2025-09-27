@@ -88,11 +88,9 @@ func TestGetBlockAndAllowLists(t *testing.T) {
 		t.Setenv("LIMA_SHELLENV_BLOCK", "")
 		t.Setenv("LIMA_SHELLENV_ALLOW", "")
 
-		blockList, isBlockListSet := getBlockList()
-		allowList, isAllowListSet := getAllowList()
+		blockList := getBlockList()
+		allowList := getAllowList()
 
-		assert.Assert(t, !isBlockListSet)
-		assert.Assert(t, !isAllowListSet)
 		assert.Assert(t, isUsingDefaultBlockList())
 		assert.DeepEqual(t, blockList, defaultBlockList)
 		assert.Equal(t, len(allowList), 0)
@@ -101,8 +99,7 @@ func TestGetBlockAndAllowLists(t *testing.T) {
 	t.Run("custom blocklist", func(t *testing.T) {
 		t.Setenv("LIMA_SHELLENV_BLOCK", "PATH,HOME")
 
-		blockList, isSet := getBlockList()
-		assert.Assert(t, isSet)
+		blockList := getBlockList()
 		assert.Assert(t, !isUsingDefaultBlockList())
 		expected := []string{"PATH", "HOME"}
 		assert.DeepEqual(t, blockList, expected)
@@ -111,8 +108,7 @@ func TestGetBlockAndAllowLists(t *testing.T) {
 	t.Run("additive blocklist", func(t *testing.T) {
 		t.Setenv("LIMA_SHELLENV_BLOCK", "+CUSTOM_VAR")
 
-		blockList, isSet := getBlockList()
-		assert.Assert(t, isSet)
+		blockList := getBlockList()
 		assert.Assert(t, isUsingDefaultBlockList())
 		expected := slices.Concat(GetDefaultBlockList(), []string{"CUSTOM_VAR"})
 		assert.DeepEqual(t, blockList, expected)
@@ -121,8 +117,7 @@ func TestGetBlockAndAllowLists(t *testing.T) {
 	t.Run("allowlist", func(t *testing.T) {
 		t.Setenv("LIMA_SHELLENV_ALLOW", "FOO,BAR")
 
-		allowList, isSet := getAllowList()
-		assert.Assert(t, isSet)
+		allowList := getAllowList()
 		expected := []string{"FOO", "BAR"}
 		assert.DeepEqual(t, allowList, expected)
 	})
@@ -211,5 +206,55 @@ func TestGetDefaultBlockList(t *testing.T) {
 	for _, item := range expectedItems {
 		found := slices.Contains(blocklist, item)
 		assert.Assert(t, found, "Expected builtin blocklist to contain %q", item)
+	}
+}
+
+func TestValidatePattern(t *testing.T) {
+	tests := []struct {
+		name    string
+		pattern string
+		valid   bool
+	}{
+		{"simple alphanumeric", "FOO", true},
+		{"with underscore", "FOO_BAR", true},
+		{"with numbers", "VAR123", true},
+		{"with trailing asterisk", "FOO*", true},
+		{"with multiple asterisks", "FOO*BAR*", true},
+		{"asterisk at beginning", "*FOO", true},
+		{"asterisk in middle", "FOO*BAR", true},
+		{"only asterisk", "*", true},
+		{"with dash", "FOO-BAR", false},
+		{"with dot", "FOO.BAR", false},
+		{"with space", "FOO BAR", false},
+		{"with slash", "FOO/BAR", false},
+		{"with at symbol", "FOO@BAR", false},
+		{"with dollar", "$FOO", false},
+		{"with percent", "FOO%", false},
+		{"with hash", "#FOO", false},
+		{"with exclamation", "FOO!", false},
+		{"with colon", "FOO:BAR", false},
+		{"with semicolon", "FOO;BAR", false},
+		{"with parentheses", "FOO(BAR)", false},
+		{"with brackets", "FOO[BAR]", false},
+		{"with braces", "FOO{BAR}", false},
+		{"with plus", "FOO+BAR", false},
+		{"with equals", "FOO=BAR", false},
+		{"with pipe", "FOO|BAR", false},
+		{"with backslash", "FOO/BAR", false},
+		{"with question mark", "FOO?", false},
+		{"with less than", "FOO<BAR", false},
+		{"with greater than", "FOO>BAR", false},
+		{"with comma", "FOO,BAR", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validatePattern(tt.pattern)
+			if tt.valid {
+				assert.NilError(t, err, "Expected pattern %q to be valid", tt.pattern)
+			} else {
+				assert.Error(t, err, "pattern \""+tt.pattern+"\" contains invalid characters. Only alphanumeric characters, underscores, and asterisk are allowed")
+			}
+		})
 	}
 }
