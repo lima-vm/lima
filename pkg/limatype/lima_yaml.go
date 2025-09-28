@@ -52,11 +52,12 @@ type LimaYAML struct {
 	PropagateProxyEnv *bool          `yaml:"propagateProxyEnv,omitempty" json:"propagateProxyEnv,omitempty" jsonschema:"nullable"`
 	CACertificates    CACertificates `yaml:"caCerts,omitempty" json:"caCerts,omitempty"`
 	// Deprecated: Use VMOpts.VZ.Rosetta instead.
-	Rosetta              Rosetta `yaml:"rosetta,omitempty" json:"rosetta,omitempty"`
-	Plain                *bool   `yaml:"plain,omitempty" json:"plain,omitempty" jsonschema:"nullable"`
-	TimeZone             *string `yaml:"timezone,omitempty" json:"timezone,omitempty" jsonschema:"nullable"`
-	NestedVirtualization *bool   `yaml:"nestedVirtualization,omitempty" json:"nestedVirtualization,omitempty" jsonschema:"nullable"`
-	User                 User    `yaml:"user,omitempty" json:"user,omitempty"`
+	Rosetta              Rosetta        `yaml:"rosetta,omitempty" json:"rosetta,omitempty"`
+	Plain                *bool          `yaml:"plain,omitempty" json:"plain,omitempty" jsonschema:"nullable"`
+	TimeZone             *string        `yaml:"timezone,omitempty" json:"timezone,omitempty" jsonschema:"nullable"`
+	NestedVirtualization *bool          `yaml:"nestedVirtualization,omitempty" json:"nestedVirtualization,omitempty" jsonschema:"nullable"`
+	User                 User           `yaml:"user,omitempty" json:"user,omitempty"`
+	Meta                 map[string]any `yaml:"meta,omitempty" json:"meta,omitempty" jsonschema:"nullable"`
 }
 
 type BaseTemplates []LocatorWithDigest

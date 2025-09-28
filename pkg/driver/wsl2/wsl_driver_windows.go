@@ -35,6 +35,7 @@ var knownYamlProperties = []string{
 	"HostResolver",
 	"Images",
 	"Message",
+	"Meta",
 	"Mounts",
 	"MountType",
 	"Param",
