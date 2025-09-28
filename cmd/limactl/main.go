@@ -254,7 +254,10 @@ func addPluginCommands(rootCmd *cobra.Command) {
 				// unreachable
 			},
 		}
-
+		// Don't show the url scheme helper in the help output.
+		if strings.HasPrefix(plugin.Name, "url-") {
+			pluginCmd.Hidden = true
+		}
 		rootCmd.AddCommand(pluginCmd)
 	}
 }
