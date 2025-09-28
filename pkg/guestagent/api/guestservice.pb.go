@@ -323,6 +323,94 @@ func (x *TunnelMessage) GetUdpTargetAddr() string {
 	return ""
 }
 
+type GetIPRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	IpVersion     string                 `protobuf:"bytes,1,opt,name=ip_version,json=ipVersion,proto3" json:"ip_version,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetIPRequest) Reset() {
+	*x = GetIPRequest{}
+	mi := &file_guestservice_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetIPRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetIPRequest) ProtoMessage() {}
+
+func (x *GetIPRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_guestservice_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetIPRequest.ProtoReflect.Descriptor instead.
+func (*GetIPRequest) Descriptor() ([]byte, []int) {
+	return file_guestservice_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *GetIPRequest) GetIpVersion() string {
+	if x != nil {
+		return x.IpVersion
+	}
+	return ""
+}
+
+type GetIPRespond struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Ip            string                 `protobuf:"bytes,1,opt,name=ip,proto3" json:"ip,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetIPRespond) Reset() {
+	*x = GetIPRespond{}
+	mi := &file_guestservice_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetIPRespond) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetIPRespond) ProtoMessage() {}
+
+func (x *GetIPRespond) ProtoReflect() protoreflect.Message {
+	mi := &file_guestservice_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetIPRespond.ProtoReflect.Descriptor instead.
+func (*GetIPRespond) Descriptor() ([]byte, []int) {
+	return file_guestservice_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *GetIPRespond) GetIp() string {
+	if x != nil {
+		return x.Ip
+	}
+	return ""
+}
+
 var File_guestservice_proto protoreflect.FileDescriptor
 
 const file_guestservice_proto_rawDesc = "" +
@@ -350,12 +438,18 @@ const file_guestservice_proto_rawDesc = "" +
 	"\x04data\x18\x03 \x01(\fR\x04data\x12\x1d\n" +
 	"\n" +
 	"guest_addr\x18\x04 \x01(\tR\tguestAddr\x12&\n" +
-	"\x0fudp_target_addr\x18\x05 \x01(\tR\rudpTargetAddr2\xc8\x01\n" +
+	"\x0fudp_target_addr\x18\x05 \x01(\tR\rudpTargetAddr\"-\n" +
+	"\fGetIPRequest\x12\x1d\n" +
+	"\n" +
+	"ip_version\x18\x01 \x01(\tR\tipVersion\"\x1e\n" +
+	"\fGetIPRespond\x12\x0e\n" +
+	"\x02ip\x18\x01 \x01(\tR\x02ip2\xef\x01\n" +
 	"\fGuestService\x12(\n" +
 	"\aGetInfo\x12\x16.google.protobuf.Empty\x1a\x05.Info\x12-\n" +
 	"\tGetEvents\x12\x16.google.protobuf.Empty\x1a\x06.Event0\x01\x121\n" +
 	"\vPostInotify\x12\b.Inotify\x1a\x16.google.protobuf.Empty(\x01\x12,\n" +
-	"\x06Tunnel\x12\x0e.TunnelMessage\x1a\x0e.TunnelMessage(\x010\x01B/Z-github.com/lima-vm/lima/v2/pkg/guestagent/apib\x06proto3"
+	"\x06Tunnel\x12\x0e.TunnelMessage\x1a\x0e.TunnelMessage(\x010\x01\x12%\n" +
+	"\x05GetIP\x12\r.GetIPRequest\x1a\r.GetIPRespondB/Z-github.com/lima-vm/lima/v2/pkg/guestagent/apib\x06proto3"
 
 var (
 	file_guestservice_proto_rawDescOnce sync.Once
@@ -369,35 +463,39 @@ func file_guestservice_proto_rawDescGZIP() []byte {
 	return file_guestservice_proto_rawDescData
 }
 
-var file_guestservice_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_guestservice_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_guestservice_proto_goTypes = []any{
 	(*Info)(nil),                  // 0: Info
 	(*Event)(nil),                 // 1: Event
 	(*IPPort)(nil),                // 2: IPPort
 	(*Inotify)(nil),               // 3: Inotify
 	(*TunnelMessage)(nil),         // 4: TunnelMessage
-	(*timestamppb.Timestamp)(nil), // 5: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),         // 6: google.protobuf.Empty
+	(*GetIPRequest)(nil),          // 5: GetIPRequest
+	(*GetIPRespond)(nil),          // 6: GetIPRespond
+	(*timestamppb.Timestamp)(nil), // 7: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),         // 8: google.protobuf.Empty
 }
 var file_guestservice_proto_depIdxs = []int32{
-	2, // 0: Info.local_ports:type_name -> IPPort
-	5, // 1: Event.time:type_name -> google.protobuf.Timestamp
-	2, // 2: Event.added_local_ports:type_name -> IPPort
-	2, // 3: Event.removed_local_ports:type_name -> IPPort
-	5, // 4: Inotify.time:type_name -> google.protobuf.Timestamp
-	6, // 5: GuestService.GetInfo:input_type -> google.protobuf.Empty
-	6, // 6: GuestService.GetEvents:input_type -> google.protobuf.Empty
-	3, // 7: GuestService.PostInotify:input_type -> Inotify
-	4, // 8: GuestService.Tunnel:input_type -> TunnelMessage
-	0, // 9: GuestService.GetInfo:output_type -> Info
-	1, // 10: GuestService.GetEvents:output_type -> Event
-	6, // 11: GuestService.PostInotify:output_type -> google.protobuf.Empty
-	4, // 12: GuestService.Tunnel:output_type -> TunnelMessage
-	9, // [9:13] is the sub-list for method output_type
-	5, // [5:9] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	2,  // 0: Info.local_ports:type_name -> IPPort
+	7,  // 1: Event.time:type_name -> google.protobuf.Timestamp
+	2,  // 2: Event.added_local_ports:type_name -> IPPort
+	2,  // 3: Event.removed_local_ports:type_name -> IPPort
+	7,  // 4: Inotify.time:type_name -> google.protobuf.Timestamp
+	8,  // 5: GuestService.GetInfo:input_type -> google.protobuf.Empty
+	8,  // 6: GuestService.GetEvents:input_type -> google.protobuf.Empty
+	3,  // 7: GuestService.PostInotify:input_type -> Inotify
+	4,  // 8: GuestService.Tunnel:input_type -> TunnelMessage
+	5,  // 9: GuestService.GetIP:input_type -> GetIPRequest
+	0,  // 10: GuestService.GetInfo:output_type -> Info
+	1,  // 11: GuestService.GetEvents:output_type -> Event
+	8,  // 12: GuestService.PostInotify:output_type -> google.protobuf.Empty
+	4,  // 13: GuestService.Tunnel:output_type -> TunnelMessage
+	6,  // 14: GuestService.GetIP:output_type -> GetIPRespond
+	10, // [10:15] is the sub-list for method output_type
+	5,  // [5:10] is the sub-list for method input_type
+	5,  // [5:5] is the sub-list for extension type_name
+	5,  // [5:5] is the sub-list for extension extendee
+	0,  // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_guestservice_proto_init() }
@@ -411,7 +509,7 @@ func file_guestservice_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_guestservice_proto_rawDesc), len(file_guestservice_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   5,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

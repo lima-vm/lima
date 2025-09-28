@@ -80,6 +80,8 @@ type HostAgent struct {
 
 	statusMu      sync.RWMutex
 	currentStatus events.Status
+
+	guestIPv4Address string
 }
 
 type options struct {
@@ -472,6 +474,7 @@ func (a *HostAgent) startRoutinesAndWait(ctx context.Context, errCh <-chan error
 func (a *HostAgent) Info(_ context.Context) (*hostagentapi.Info, error) {
 	info := &hostagentapi.Info{
 		SSHLocalPort: a.sshLocalPort,
+		GuestIPv4Address:      a.guestIPv4Address,
 	}
 	return info, nil
 }
@@ -598,6 +601,15 @@ sudo chown -R "${USER}" /run/host-services`
 		}
 		return errors.Join(rmErrs...)
 	})
+
+	if !*a.instConfig.Plain {
+		out, err := a.client.GetIP(ctx, &guestagentapi.GetIPRequest{IpVersion: "4"})
+		if err != nil {
+			logrus.Warnf("Received error from guestagent on collecting IPv4 %s", err)
+		}
+		a.guestIPv4Address = out.Ip
+	}
+
 	return errors.Join(errs...)
 }
 

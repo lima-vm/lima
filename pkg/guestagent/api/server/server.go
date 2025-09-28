@@ -56,3 +56,7 @@ func (s *GuestServer) PostInotify(server api.GuestService_PostInotifyServer) err
 func (s *GuestServer) Tunnel(stream api.GuestService_TunnelServer) error {
 	return s.TunnelS.Start(stream)
 }
+
+func (s *GuestServer) GetIP(ctx context.Context, req *api.GetIPRequest) (*api.GetIPRespond, error) {
+	return s.Agent.IP(ctx, req.IpVersion)
+}

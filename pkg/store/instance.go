@@ -83,6 +83,7 @@ func Inspect(ctx context.Context, instName string) (*limatype.Instance, error) {
 				inst.Errors = append(inst.Errors, fmt.Errorf("failed to get Info from %q: %w", haSock, err))
 			} else {
 				inst.SSHLocalPort = info.SSHLocalPort
+				inst.IPv4Address = info.GuestIPv4Address
 			}
 		}
 	}
@@ -144,6 +145,7 @@ func Inspect(ctx context.Context, instName string) (*limatype.Instance, error) {
 		inst.Errors = append(inst.Errors, err)
 	}
 	inst.Param = y.Param
+
 	return inst, nil
 }
 

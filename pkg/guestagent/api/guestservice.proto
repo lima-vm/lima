@@ -11,11 +11,11 @@ service GuestService {
   rpc PostInotify(stream Inotify) returns (google.protobuf.Empty);
 
   rpc Tunnel(stream TunnelMessage) returns (stream TunnelMessage);
+
+  rpc GetIP(GetIPRequest) returns (GetIPRespond);
 }
 
-message Info {
-  repeated IPPort local_ports = 1;
-}
+message Info { repeated IPPort local_ports = 1; }
 
 message Event {
   google.protobuf.Timestamp time = 1;
@@ -42,3 +42,6 @@ message TunnelMessage {
   string guest_addr = 4;
   string udp_target_addr = 5;
 }
+
+message GetIPRequest { string ip_version = 1; }
+message GetIPRespond { string ip = 1; }

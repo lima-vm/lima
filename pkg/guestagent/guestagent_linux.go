@@ -20,6 +20,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/guestagent/api"
 	"github.com/lima-vm/lima/v2/pkg/guestagent/iptables"
 	"github.com/lima-vm/lima/v2/pkg/guestagent/kubernetesservice"
+	"github.com/lima-vm/lima/v2/pkg/guestagent/metricutil"
 	"github.com/lima-vm/lima/v2/pkg/guestagent/procnettcp"
 	"github.com/lima-vm/lima/v2/pkg/guestagent/ticker"
 	"github.com/lima-vm/lima/v2/pkg/guestagent/timesync"
@@ -45,8 +46,7 @@ func New(ctx context.Context, ticker ticker.Ticker, iptablesIdle time.Duration) 
 
 	auditStatus, err := auditClient.GetStatus()
 	if err != nil {
-		// syscall.EPERM is returned when using audit from a non-initial namespace
-		// https://github.com/torvalds/linux/blob/633b47cb009d09dc8f4ba9cdb3a0ca138809c7c7/kernel/audit.c#L1054-L1057
+		// syscall.EPERM is returned when using audit from a non-initial namespace https://github.com/torvalds/linux/blob/633b47cb009d09dc8f4ba9cdb3a0ca138809c7c7/kernel/audit.c#L1054-L1057
 		if !errors.Is(err, syscall.EPERM) {
 			return nil, err
 		}
@@ -370,4 +370,9 @@ func (a *agent) HandleInotify(event *api.Inotify) {
 			logrus.Errorf("error in inotify handle. Event: %s, Error: %s", event, err)
 		}
 	}
+}
+
+func (a *agent) IP(ctx context.Context, ipVersion string) (*api.GetIPRespond, error) {
+	out, err := metricutil.GetDefaultIP(ipVersion)
+	return &api.GetIPRespond{Ip: out}, err
 }

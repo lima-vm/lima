@@ -14,4 +14,5 @@ type Agent interface {
 	Events(ctx context.Context, ch chan *api.Event)
 	LocalPorts(ctx context.Context) ([]*api.IPPort, error)
 	HandleInotify(event *api.Inotify)
+	IP(ctx context.Context, ipVersion string) (*api.GetIPRespond, error)
 }

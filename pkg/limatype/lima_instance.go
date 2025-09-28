@@ -47,6 +47,7 @@ type Instance struct {
 	Protected       bool              `json:"protected"`
 	LimaVersion     string            `json:"limaVersion"`
 	Param           map[string]string `json:"param,omitempty"`
+	IPv4Address     string            `json:"ipv4,omitempty"`
 }
 
 // Protect protects the instance to prohibit accidental removal.
