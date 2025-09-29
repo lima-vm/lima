@@ -155,6 +155,11 @@ func newApp() *cobra.Command {
 		}
 
 		if cmd.Flags().Changed("yes") {
+			switch cmd.Name() {
+			case "clone", "edit", "rename":
+				logrus.Warn("--yes flag is deprecated (--tty=false is still supported and works in the same way. Also consider using --start)")
+			}
+
 			// Sets the value of the yesValue flag by using the yes flag.
 			yesValue, _ := cmd.Flags().GetBool("yes")
 			if yesValue {

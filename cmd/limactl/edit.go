@@ -36,6 +36,7 @@ func newEditCommand() *cobra.Command {
 		ValidArgsFunction: editBashComplete,
 		GroupID:           basicCommand,
 	}
+	editCommand.Flags().Bool("start", false, "Start the instance after editing")
 	editflags.RegisterEdit(editCommand, "")
 	return editCommand
 }
@@ -140,19 +141,23 @@ func editAction(cmd *cobra.Command, args []string) error {
 		logrus.Infof("Instance %q configuration edited", inst.Name)
 	}
 
-	if !tty {
-		// use "start" to start it
-		return nil
-	}
 	if inst == nil {
 		// edited a limayaml file directly
 		return nil
 	}
-	startNow, err := askWhetherToStart()
+
+	start, err := flags.GetBool("start")
 	if err != nil {
 		return err
 	}
-	if !startNow {
+
+	if tty && !flags.Changed("start") {
+		start, err = askWhetherToStart()
+		if err != nil {
+			return err
+		}
+	}
+	if !start {
 		return nil
 	}
 	err = reconcile.Reconcile(ctx, inst.Name)
