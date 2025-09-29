@@ -42,8 +42,9 @@ fi
 rm -rf "${tmp_extract_nerdctl}"
 
 if [ "${LIMA_CIDATA_CONTAINERD_SYSTEM}" = 1 ]; then
-	mkdir -p /etc/containerd /etc/buildkit
-	cat >"/etc/containerd/config.toml" <<EOF
+	if [ ! -e /etc/containerd/config.toml ]; then
+		mkdir -p /etc/containerd
+		cat >"/etc/containerd/config.toml" <<EOF
   version = 2
   [plugins."io.containerd.grpc.v1.cri"]
     enable_cdi = true
@@ -52,7 +53,10 @@ if [ "${LIMA_CIDATA_CONTAINERD_SYSTEM}" = 1 ]; then
       type = "snapshot"
       address = "/run/containerd-stargz-grpc/containerd-stargz-grpc.sock"
 EOF
-	cat >"/etc/buildkit/buildkitd.toml" <<EOF
+	fi
+	if [ ! -e /etc/buildkit/buildkitd.toml ]; then
+		mkdir -p /etc/buildkit
+		cat >"/etc/buildkit/buildkitd.toml" <<EOF
 [worker.oci]
   enabled = false
 
@@ -61,6 +65,7 @@ EOF
   namespace = "${CONTAINERD_NAMESPACE}"
   snapshotter = "${CONTAINERD_SNAPSHOTTER}"
 EOF
+	fi
 	systemctl enable --now containerd buildkit stargz-snapshotter
 fi
 
