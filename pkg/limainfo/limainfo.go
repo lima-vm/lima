@@ -17,7 +17,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
-	"github.com/lima-vm/lima/v2/pkg/plugin"
+	"github.com/lima-vm/lima/v2/pkg/plugins"
 	"github.com/lima-vm/lima/v2/pkg/registry"
 	"github.com/lima-vm/lima/v2/pkg/templatestore"
 	"github.com/lima-vm/lima/v2/pkg/usrlocalsharelima"
@@ -36,7 +36,7 @@ type LimaInfo struct {
 	HostOS          string                       `json:"hostOS"`       // since Lima v2.0.0
 	HostArch        string                       `json:"hostArch"`     // since Lima v2.0.0
 	IdentityFile    string                       `json:"identityFile"` // since Lima v2.0.0
-	Plugins         []plugin.Plugin              `json:"plugins"`      // since Lima v2.0.0
+	Plugins         []plugins.Plugin             `json:"plugins"`      // since Lima v2.0.0
 }
 
 type DriverExt struct {
@@ -48,7 +48,7 @@ type GuestAgent struct {
 }
 
 // New returns a LimaInfo object with the Lima version, a list of all Templates and their location,
-// the DefaultTemplate corresponding to template://default with all defaults filled in, the
+// the DefaultTemplate corresponding to template:default with all defaults filled in, the
 // LimaHome location, a list of all supported VMTypes, and a map of GuestAgents for each architecture.
 func New(ctx context.Context) (*LimaInfo, error) {
 	b, err := templatestore.Read(templatestore.Default)
@@ -111,13 +111,10 @@ func New(ctx context.Context) (*LimaInfo, error) {
 		}
 	}
 
-	plugins, err := plugin.DiscoverPlugins()
+	info.Plugins, err = plugins.Discover()
 	if err != nil {
-		logrus.WithError(err).Warn("Failed to discover plugins")
 		// Don't fail the entire info command if plugin discovery fails.
-		info.Plugins = []plugin.Plugin{}
-	} else {
-		info.Plugins = plugins
+		logrus.WithError(err).Warn("Failed to discover plugins")
 	}
 
 	return info, nil

@@ -3,7 +3,7 @@
 # - snapshots
 # - (More to come)
 #
-base: template://ubuntu-22.04
+base: template:ubuntu-22.04
 
 # 9p is not compatible with `limactl snapshot`
 mountTypesUnsupported: ["9p"]

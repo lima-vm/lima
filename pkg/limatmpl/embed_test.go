@@ -181,24 +181,24 @@ mounts:
 		`mounts: [{location: loc1}, {location: loc1, mountPoint: loc2, writable: true, sshfs: {followSymlinks: true}}, {location: loc1, mountPoint: loc3, writable: true}]`,
 	},
 	{
-		"template:// URLs are not embedded when embedAll is false",
+		"template: URLs are not embedded when embedAll is false",
 		// also tests file.url format
 		``,
 		`
-base: template://default
+base: template:default
 provision:
 - file:
-    url: template://provision.sh
+    url: template:provision.sh
 probes:
 - file:
-    url: template://probe.sh
+    url: template:probe.sh
 `,
 		`
-base: template://default
+base: template:default
 provision:
-- file: template://provision.sh
+- file: template:provision.sh
 probes:
-- file: template://probe.sh
+- file: template:probe.sh
 `,
 	},
 	{
@@ -214,18 +214,18 @@ vmType: qemu
 		`base template loop detected`,
 	},
 	{
-		"ERROR All bases following template:// bases must be template:// URLs too when embedAll is false",
+		"ERROR All bases following template: bases must be template: URLs too when embedAll is false",
 		``,
-		`base: [template://default, base1.yaml]`,
+		`base: [template:default, base1.yaml]`,
 		"after not embedding",
 	},
 	{
-		"ERROR All bases following template:// bases must be template:// URLs too when embedAll is false",
+		"ERROR All bases following template: bases must be template: URLs too when embedAll is false",
 		``,
 		`
 base: [base1.yaml, base2.yaml]
 ---
-base: template://default
+base: template:default
 ---
 base: baseX.yaml`,
 		"after not embedding",

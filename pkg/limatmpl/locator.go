@@ -5,11 +5,13 @@ package limatmpl
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -22,16 +24,21 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/ioutilx"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
+	"github.com/lima-vm/lima/v2/pkg/plugins"
 	"github.com/lima-vm/lima/v2/pkg/templatestore"
 )
 
 const yBytesLimit = 4 * 1024 * 1024 // 4MiB
 
 func Read(ctx context.Context, name, locator string) (*Template, error) {
-	var err error
 	tmpl := &Template{
 		Name:    name,
 		Locator: locator,
+	}
+
+	locator, err := TransformCustomURL(ctx, locator)
+	if err != nil {
+		return nil, err
 	}
 
 	if imageTemplate(tmpl, locator) {
@@ -241,7 +248,10 @@ func SeemsTemplateURL(arg string) (isTemplate bool, templateName string) {
 		return false, ""
 	}
 	if u.Scheme == "template" {
-		return true, path.Join(u.Host, u.Path)
+		if u.Opaque == "" {
+			return true, path.Join(u.Host, u.Path)
+		}
+		return true, u.Opaque
 	}
 	return false, ""
 }
@@ -284,4 +294,56 @@ func InstNameFromYAMLPath(yamlPath string) (string, error) {
 		return "", fmt.Errorf("filename %q is invalid: %w", yamlPath, err)
 	}
 	return s, nil
+}
+
+func TransformCustomURL(ctx context.Context, locator string) (string, error) {
+	u, err := url.Parse(locator)
+	if err != nil || len(u.Scheme) <= 1 {
+		return locator, nil
+	}
+
+	if u.Scheme == "template" {
+		if u.Opaque != "" {
+			return locator, nil
+		}
+		// Fix malformed "template:" URLs.
+		newLocator := "template:" + path.Join(u.Host, u.Path)
+		logrus.Warnf("Template locator %q should be written %q since Lima v2.0", locator, newLocator)
+		return newLocator, nil
+	}
+
+	plugin, err := plugins.Find("url-" + u.Scheme)
+	if err != nil {
+		return "", err
+	}
+	if plugin == nil {
+		return locator, nil
+	}
+
+	currentPath := os.Getenv("PATH")
+	defer os.Setenv("PATH", currentPath)
+	err = plugins.UpdatePath()
+	if err != nil {
+		return "", err
+	}
+
+	cmd := exec.CommandContext(ctx, plugin.Path, strings.TrimPrefix(u.String(), u.Scheme+":"))
+	cmd.Env = os.Environ()
+
+	stdout, err := cmd.Output()
+	if err != nil {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			stderrMsg := string(exitErr.Stderr)
+			if stderrMsg != "" {
+				return "", fmt.Errorf("command %q failed: %s", cmd.String(), strings.TrimSpace(stderrMsg))
+			}
+		}
+		return "", fmt.Errorf("command %q failed: %w", cmd.String(), err)
+	}
+	newLocator := strings.TrimSpace(string(stdout))
+	if newLocator != locator {
+		logrus.Debugf("Custom locator %q replaced with %q", locator, newLocator)
+	}
+	return newLocator, nil
 }

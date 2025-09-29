@@ -28,7 +28,7 @@ func bashCompleteTemplateNames(_ *cobra.Command, toComplete string) ([]string, c
 	var comp []string
 	if templates, err := templatestore.Templates(); err == nil {
 		for _, f := range templates {
-			name := "template://" + f.Name
+			name := "template:" + f.Name
 			if !strings.HasPrefix(name, toComplete) {
 				continue
 			}
