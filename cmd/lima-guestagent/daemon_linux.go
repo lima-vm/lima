@@ -12,6 +12,7 @@ import (
 	"github.com/mdlayher/vsock"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"golang.org/x/time/rate"
 
 	"github.com/lima-vm/lima/v2/pkg/guestagent"
 	"github.com/lima-vm/lima/v2/pkg/guestagent/api/server"
@@ -59,7 +60,8 @@ func daemonAction(cmd *cobra.Command, _ []string) error {
 	tickerInst := simpleTicker
 	// See /sys/kernel/debug/tracing/available_events for the list of available tracepoints
 	tracepoints := []string{"syscalls:sys_exit_bind"}
-	if ebpfTicker, err := ticker.NewEbpfTicker(tracepoints); err != nil {
+	const ebpfRateLimit = 3
+	if ebpfTicker, err := ticker.NewEbpfTicker(ctx, tracepoints, rate.NewLimiter(rate.Limit(ebpfRateLimit), ebpfRateLimit)); err != nil {
 		logrus.WithError(err).Warn("failed to create eBPF ticker, falling back to simple ticker")
 	} else {
 		logrus.Infof("using eBPF ticker with tracepoints: %v", tracepoints)

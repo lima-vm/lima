@@ -4,6 +4,7 @@
 package ticker
 
 import (
+	"context"
 	"strings"
 	"time"
 
@@ -12,9 +13,10 @@ import (
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/ringbuf"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/time/rate"
 )
 
-func NewEbpfTicker(tracepoints []string) (Ticker, error) {
+func NewEbpfTicker(ctx context.Context, tracepoints []string, limiter *rate.Limiter) (Ticker, error) {
 	var (
 		ticker ebpfTicker
 		err    error
@@ -54,6 +56,9 @@ func NewEbpfTicker(tracepoints []string) (Ticker, error) {
 	ticker.ch = make(chan time.Time)
 	go func() {
 		for {
+			if waitErr := limiter.Wait(ctx); waitErr != nil {
+				logrus.WithError(waitErr).Warn("ebpfTicker: limiter wait failed")
+			}
 			_, rdErr := ticker.reader.Read()
 			if rdErr != nil {
 				logrus.WithError(rdErr).Warn("ebpfTicker: failed to read ringbuf")
