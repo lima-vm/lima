@@ -248,7 +248,10 @@ func SeemsTemplateURL(arg string) (isTemplate bool, templateName string) {
 		return false, ""
 	}
 	if u.Scheme == "template" {
-		return true, path.Join(u.Host, u.Path)
+		if u.Opaque == "" {
+			return true, path.Join(u.Host, u.Path)
+		}
+		return true, u.Opaque
 	}
 	return false, ""
 }
@@ -297,6 +300,16 @@ func TransformCustomURL(ctx context.Context, locator string) (string, error) {
 	u, err := url.Parse(locator)
 	if err != nil || len(u.Scheme) <= 1 {
 		return locator, nil
+	}
+
+	if u.Scheme == "template" {
+		if u.Opaque != "" {
+			return locator, nil
+		}
+		// Fix malformed "template:" URLs.
+		newLocator := "template:" + path.Join(u.Host, u.Path)
+		logrus.Warnf("Template locator %q should be written %q since Lima v2.0", locator, newLocator)
+		return newLocator, nil
 	}
 
 	plugin, err := plugins.Find("url-" + u.Scheme)

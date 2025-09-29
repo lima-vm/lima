@@ -49,7 +49,7 @@ func newCreateCommand() *cobra.Command {
   $ limactl create
 
   To create an instance "default" from a template "docker":
-  $ limactl create --name=default template://docker
+  $ limactl create --name=default template:docker
 
   To create an instance "default" with modified parameters:
   $ limactl create --cpus=2 --memory=2
@@ -87,7 +87,7 @@ func newStartCommand() *cobra.Command {
   $ limactl start
 
   To create an instance "default" from a template "docker", and start it:
-  $ limactl start --name=default template://docker
+  $ limactl start --name=default template:docker
 `,
 		Short:             "Start an instance of Lima",
 		Args:              WrapArgsError(cobra.MaximumNArgs(1)),
@@ -234,19 +234,19 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 	if isTemplateURL, templateName := limatmpl.SeemsTemplateURL(arg); isTemplateURL {
 		switch templateName {
 		case "experimental/vz":
-			logrus.Warn("template://experimental/vz was merged into the default template in Lima v1.0. See also <https://lima-vm.io/docs/config/vmtype/>.")
+			logrus.Warn("template:experimental/vz was merged into the default template in Lima v1.0. See also <https://lima-vm.io/docs/config/vmtype/>.")
 		case "experimental/riscv64":
-			logrus.Warn("template://experimental/riscv64 was merged into the default template in Lima v1.0. Use `limactl create --arch=riscv64 template://default` instead.")
+			logrus.Warn("template:experimental/riscv64 was merged into the default template in Lima v1.0. Use `limactl create --arch=riscv64 template:default` instead.")
 		case "experimental/armv7l":
-			logrus.Warn("template://experimental/armv7l was merged into the default template in Lima v1.0. Use `limactl create --arch=armv7l template://default` instead.")
+			logrus.Warn("template:experimental/armv7l was merged into the default template in Lima v1.0. Use `limactl create --arch=armv7l template:default` instead.")
 		case "vmnet":
-			logrus.Warn("template://vmnet was removed in Lima v1.0. Use `limactl create --network=lima:shared template://default` instead. See also <https://lima-vm.io/docs/config/network/>.")
+			logrus.Warn("template:vmnet was removed in Lima v1.0. Use `limactl create --network=lima:shared template:default` instead. See also <https://lima-vm.io/docs/config/network/>.")
 		case "experimental/net-user-v2":
-			logrus.Warn("template://experimental/net-user-v2 was removed in Lima v1.0. Use `limactl create --network=lima:user-v2 template://default` instead. See also <https://lima-vm.io/docs/config/network/>.")
+			logrus.Warn("template:experimental/net-user-v2 was removed in Lima v1.0. Use `limactl create --network=lima:user-v2 template:default` instead. See also <https://lima-vm.io/docs/config/network/>.")
 		case "experimental/9p":
-			logrus.Warn("template://experimental/9p was removed in Lima v1.0. Use `limactl create --vm-type=qemu --mount-type=9p template://default` instead. See also <https://lima-vm.io/docs/config/mount/>.")
+			logrus.Warn("template:experimental/9p was removed in Lima v1.0. Use `limactl create --vm-type=qemu --mount-type=9p template:default` instead. See also <https://lima-vm.io/docs/config/mount/>.")
 		case "experimental/virtiofs-linux":
-			logrus.Warn("template://experimental/virtiofs-linux was removed in Lima v1.0. Use `limactl create --mount-type=virtiofs template://default` instead. See also <https://lima-vm.io/docs/config/mount/>.")
+			logrus.Warn("template:experimental/virtiofs-linux was removed in Lima v1.0. Use `limactl create --mount-type=virtiofs template:default` instead. See also <https://lima-vm.io/docs/config/mount/>.")
 		}
 	}
 	if arg == "-" {
@@ -298,8 +298,8 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 			return nil, err
 		}
 		if arg != "" && arg != DefaultInstanceName {
-			logrus.Infof("Creating an instance %q from template://default (Not from template://%s)", tmpl.Name, tmpl.Name)
-			logrus.Warnf("This form is deprecated. Use `limactl create --name=%s template://default` instead", tmpl.Name)
+			logrus.Infof("Creating an instance %q from template:default (Not from template:%s)", tmpl.Name, tmpl.Name)
+			logrus.Warnf("This form is deprecated. Use `limactl create --name=%s template:default` instead", tmpl.Name)
 		}
 		// Read the default template for creating a new instance
 		tmpl.Bytes, err = templatestore.Read(templatestore.Default)

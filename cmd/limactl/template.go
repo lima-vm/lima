@@ -52,13 +52,13 @@ func newValidateCommand() *cobra.Command {
 	return validateCommand
 }
 
-var templateCopyExample = `  Template locators are local files, file://, https://, or template:// URLs
+var templateCopyExample = `  Template locators are local files, file://, https://, or template: URLs
 
   # Copy default template to STDOUT
-  limactl template copy template://default -
+  limactl template copy template:default -
 
   # Copy template from web location to local file and embed all external references
-  # (this does not embed template:// references)
+  # (this does not embed template: references)
   limactl template copy --embed https://example.com/lima.yaml mighty-machine.yaml
 `
 
@@ -177,10 +177,10 @@ External references are embedded and default values are filled in
 before the YQ expression is evaluated.
 
 Example:
-  limactl template yq template://default '.images[].location'
+  limactl template yq template:default '.images[].location'
 
 The example command is equivalent to using an external yq command like this:
-  limactl template copy --fill template://default - | yq '.images[].location'
+  limactl template copy --fill template:default - | yq '.images[].location'
 `
 
 func newTemplateYQCommand() *cobra.Command {

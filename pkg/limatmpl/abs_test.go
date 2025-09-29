@@ -23,67 +23,73 @@ type useAbsLocatorsTestCase struct {
 var useAbsLocatorsTestCases = []useAbsLocatorsTestCase{
 	{
 		"Template without base or script file",
-		"template://foo",
+		"template:foo",
 		`arch: aarch64`,
 		`arch: aarch64`,
 	},
 	{
 		"Single string base template",
+		"template:foo",
+		`base: bar.yaml`,
+		`base: template:bar.yaml`,
+	},
+	{
+		"Legacy template:// base template",
 		"template://foo",
 		`base: bar.yaml`,
-		`base: template://bar.yaml`,
+		`base: template:bar.yaml`,
 	},
 	{
 		"Flow style array of one base template",
-		"template://foo",
+		"template:foo",
 		`base: [{url: bar.yaml, digest: deadbeef}]`,
 		// not sure why the quotes around the URL were added; maybe because we don't copy the style from the source
-		`base: [{url: 'template://bar.yaml', digest: deadbeef}]`,
+		`base: [{url: 'template:bar.yaml', digest: deadbeef}]`,
 	},
 	{
 		"Flow style array of sequence of two base URLs",
-		"template://foo",
+		"template:foo",
 		`base: [bar.yaml, baz.yaml]`,
-		`base: ['template://bar.yaml', 'template://baz.yaml']`,
+		`base: ['template:bar.yaml', 'template:baz.yaml']`,
 	},
 	{
 		"Flow style array of sequence of two base locator objects",
-		"template://foo",
+		"template:foo",
 		`base: [{url: bar.yaml, digest: deadbeef}, {url: baz.yaml, digest: decafbad}]`,
-		`base: [{url: 'template://bar.yaml', digest: deadbeef}, {url: 'template://baz.yaml', digest: decafbad}]`,
+		`base: [{url: 'template:bar.yaml', digest: deadbeef}, {url: 'template:baz.yaml', digest: decafbad}]`,
 	},
 	{
 		"Block style array of one base template",
-		"template://foo",
+		"template:foo",
 		`
 base:
 - bar.yaml
 `,
 		`
 base:
-- template://bar.yaml`,
+- template:bar.yaml`,
 	},
 	{
 		"Block style of four base templates",
-		"template://foo",
+		"template:foo",
 		`
 base:
 - bar.yaml
-- template://my
+- template:my
 - https://example.com/my.yaml
 - baz.yaml
 `,
 		`
 base:
-- template://bar.yaml
-- template://my
+- template:bar.yaml
+- template:my
 - https://example.com/my.yaml
-- template://baz.yaml
+- template:baz.yaml
 `,
 	},
 	{
 		"Provisioning and probe scripts",
-		"template://experimental/foo",
+		"template:experimental/foo",
 		`
 provision:
 - mode: user
@@ -101,15 +107,15 @@ probes:
 		`
 provision:
 - mode: user
-  file: template://experimental/userscript.sh
+  file: template:experimental/userscript.sh
 - mode: system
   file:
-    url: template://experimental/systemscript.sh
+    url: template:experimental/systemscript.sh
     digest: abc123
 probes:
-- file: template://experimental/probe.sh
+- file: template:experimental/probe.sh
 - file:
-    url: template://experimental/probe.sh
+    url: template:experimental/probe.sh
     digest: digest
 `,
 	},
@@ -153,15 +159,15 @@ func TestBasePath(t *testing.T) {
 	})
 
 	t.Run("", func(t *testing.T) {
-		actual, err := basePath("template://foo")
+		actual, err := basePath("template:foo")
 		assert.NilError(t, err)
-		assert.Equal(t, actual, "template://")
+		assert.Equal(t, actual, "template:")
 	})
 
 	t.Run("", func(t *testing.T) {
-		actual, err := basePath("template://foo/bar")
+		actual, err := basePath("template:foo/bar")
 		assert.NilError(t, err)
-		assert.Equal(t, actual, "template://foo")
+		assert.Equal(t, actual, "template:foo")
 	})
 
 	t.Run("", func(t *testing.T) {
@@ -216,9 +222,9 @@ func TestAbsPath(t *testing.T) {
 	})
 
 	t.Run("", func(t *testing.T) {
-		actual, err := absPath("template://foo", volume+"/root")
+		actual, err := absPath("template:foo", volume+"/root")
 		assert.NilError(t, err)
-		assert.Equal(t, actual, "template://foo")
+		assert.Equal(t, actual, "template:foo")
 	})
 
 	t.Run("", func(t *testing.T) {
@@ -272,15 +278,15 @@ func TestAbsPath(t *testing.T) {
 	}
 
 	t.Run("", func(t *testing.T) {
-		actual, err := absPath("foo", "template://")
+		actual, err := absPath("foo", "template:")
 		assert.NilError(t, err)
-		assert.Equal(t, actual, "template://foo")
+		assert.Equal(t, actual, "template:foo")
 	})
 
 	t.Run("", func(t *testing.T) {
-		actual, err := absPath("bar", "template://foo")
+		actual, err := absPath("bar", "template:foo")
 		assert.NilError(t, err)
-		assert.Equal(t, actual, "template://foo/bar")
+		assert.Equal(t, actual, "template:foo/bar")
 	})
 
 	t.Run("", func(t *testing.T) {

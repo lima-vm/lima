@@ -89,6 +89,9 @@ func basePath(locator string) (string, error) {
 	// Single-letter schemes will be drive names on Windows, e.g. "c:/foo"
 	if err == nil && len(u.Scheme) > 1 {
 		// path.Dir("") returns ".", which must be removed for url.JoinPath() to do the right thing later
+		if u.Opaque != "" {
+			return u.Scheme + ":" + strings.TrimSuffix(path.Dir(u.Opaque), "."), nil
+		}
 		return u.Scheme + "://" + strings.TrimSuffix(path.Dir(path.Join(u.Host, u.Path)), "."), nil
 	}
 	base, err := filepath.Abs(filepath.Dir(locator))
@@ -132,6 +135,10 @@ func absPath(locator, basePath string) (string, error) {
 			return "", err
 		}
 		if len(u.Scheme) > 1 {
+			// Treat empty "template:" URL as opaque
+			if u.Opaque != "" || (u.Scheme == "template" && u.Host == "") {
+				return u.Scheme + ":" + path.Join(u.Opaque, locator), nil
+			}
 			return u.JoinPath(locator).String(), nil
 		}
 		locator = filepath.Join(basePath, locator)

@@ -76,7 +76,7 @@ func (tmpl *Template) embedAllBases(ctx context.Context, embedAll, defaultBase b
 		}
 		isTemplate, _ := SeemsTemplateURL(baseLocator.URL)
 		if isTemplate && !embedAll {
-			// Once we skip a template:// URL we can no longer embed any other base template
+			// Once we skip a template: URL we can no longer embed any other base template
 			for i := 1; i < len(tmpl.Config.Base); i++ {
 				isTemplate, _ = SeemsTemplateURL(tmpl.Config.Base[i].URL)
 				if !isTemplate {
@@ -84,7 +84,7 @@ func (tmpl *Template) embedAllBases(ctx context.Context, embedAll, defaultBase b
 				}
 			}
 			break
-			// TODO should we track embedding of template:// URLs so we can warn if we embed a non-template:// URL afterwards?
+			// TODO should we track embedding of template: URLs so we can warn if we embed a non-template: URL afterwards?
 		}
 
 		if seen[baseLocator.URL] {
