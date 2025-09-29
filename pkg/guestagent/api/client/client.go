@@ -76,3 +76,7 @@ func (c *GuestAgentClient) Tunnel(ctx context.Context) (api.GuestService_TunnelC
 	}
 	return stream, nil
 }
+
+func (c *GuestAgentClient) GetIP(ctx context.Context, req *api.GetIPRequest) (*api.GetIPRespond, error) {
+	return c.cli.GetIP(ctx, req)
+}

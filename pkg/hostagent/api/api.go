@@ -4,5 +4,6 @@
 package api
 
 type Info struct {
-	SSHLocalPort int `json:"sshLocalPort,omitempty"`
+	SSHLocalPort int    `json:"sshLocalPort,omitempty"`
+	GuestIPv4Address      string `json:"guestIPv4Address,omitempty"`
 }
