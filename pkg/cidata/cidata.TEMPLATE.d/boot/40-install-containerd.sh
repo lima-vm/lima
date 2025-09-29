@@ -46,6 +46,9 @@ if [ "${LIMA_CIDATA_CONTAINERD_SYSTEM}" = 1 ]; then
 		mkdir -p /etc/containerd
 		cat >"/etc/containerd/config.toml" <<EOF
   version = 2
+  # TODO: remove imports after upgrading containerd to v2.2, as
+  # conf.d is set by default since v2.2.
+  imports = ['/etc/containerd/conf.d/*.toml']
   [plugins."io.containerd.grpc.v1.cri"]
     enable_cdi = true
   [proxy_plugins]

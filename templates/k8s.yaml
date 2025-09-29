@@ -10,7 +10,7 @@
 # NAME       STATUS   ROLES                  AGE   VERSION
 # lima-k8s   Ready    control-plane,master   44s   v1.22.3
 
-minimumLimaVersion: 1.1.0
+minimumLimaVersion: 2.0.0
 
 base: template://_images/ubuntu-lts
 
@@ -62,11 +62,12 @@ provision:
   script: |
     #!/bin/bash
     set -eux -o pipefail
-    grep SystemdCgroup /etc/containerd/config.toml && exit 0
+    [ -e /etc/containerd/conf.d/k8s.toml ] && exit 0
     grep "version = 2" /etc/containerd/config.toml || exit 1
+    mkdir -p /etc/containerd/conf.d
     # Configuring the systemd cgroup driver
     # Overriding the sandbox (pause) image
-    cat <<EOF >>/etc/containerd/config.toml
+    cat <<EOF >>/etc/containerd/conf.d/k8s.toml
       [plugins]
         [plugins."io.containerd.grpc.v1.cri"]
           sandbox_image = "$(kubeadm config images list | grep pause | sort -r | head -n1)"
