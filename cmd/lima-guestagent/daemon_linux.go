@@ -66,7 +66,7 @@ func daemonAction(cmd *cobra.Command, _ []string) error {
 		tickerInst = ticker.NewCompoundTicker(simpleTicker, ebpfTicker)
 	}
 
-	agent, err := guestagent.New(ctx, tickerInst, tick*20)
+	agent, err := guestagent.New(ctx, tickerInst)
 	if err != nil {
 		return err
 	}
