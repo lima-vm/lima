@@ -5,91 +5,30 @@ package guestagent
 
 import (
 	"context"
-	"errors"
 	"os"
 	"reflect"
-	"sync"
-	"syscall"
 	"time"
 
-	"github.com/elastic/go-libaudit/v2"
-	"github.com/elastic/go-libaudit/v2/auparse"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/lima-vm/lima/v2/pkg/guestagent/api"
-	"github.com/lima-vm/lima/v2/pkg/guestagent/iptables"
 	"github.com/lima-vm/lima/v2/pkg/guestagent/kubernetesservice"
 	"github.com/lima-vm/lima/v2/pkg/guestagent/sockets"
 	"github.com/lima-vm/lima/v2/pkg/guestagent/ticker"
 	"github.com/lima-vm/lima/v2/pkg/guestagent/timesync"
 )
 
-func New(ctx context.Context, ticker ticker.Ticker, iptablesIdle time.Duration) (Agent, error) {
+func New(ctx context.Context, ticker ticker.Ticker) (Agent, error) {
 	a := &agent{
 		ticker:                   ticker,
 		kubernetesServiceWatcher: kubernetesservice.NewServiceWatcher(),
 	}
 
-	auditClient, err := libaudit.NewMulticastAuditClient(nil)
-	if err != nil {
-		// syscall.EPROTONOSUPPORT or syscall.EAFNOSUPPORT is returned when calling attempting to connect to NETLINK_AUDIT
-		// on a kernel built without auditing support.
-		// https://github.com/elastic/go-libaudit/blob/ec298e53a6841a1f7715abbc7122635622f349bd/audit.go#L112-L115
-		if !errors.Is(err, syscall.EPROTONOSUPPORT) && !errors.Is(err, syscall.EAFNOSUPPORT) {
-			return nil, err
-		}
-		logrus.Infof("Auditing is not available: %s", err)
-		return startGuestAgentRoutines(ctx, a, false), nil
-	}
-
-	auditStatus, err := auditClient.GetStatus()
-	if err != nil {
-		// syscall.EPERM is returned when using audit from a non-initial namespace
-		// https://github.com/torvalds/linux/blob/633b47cb009d09dc8f4ba9cdb3a0ca138809c7c7/kernel/audit.c#L1054-L1057
-		if !errors.Is(err, syscall.EPERM) {
-			return nil, err
-		}
-		logrus.Infof("Auditing is not permitted: %s", err)
-		return startGuestAgentRoutines(ctx, a, false), nil
-	}
-
-	if auditStatus.Enabled == 0 {
-		logrus.Info("Enabling auditing")
-		if err = auditClient.SetEnabled(true, libaudit.WaitForReply); err != nil {
-			return nil, err
-		}
-		auditStatus, err := auditClient.GetStatus()
-		if err != nil {
-			return nil, err
-		}
-		if auditStatus.Enabled == 0 {
-			if err = auditClient.SetEnabled(true, libaudit.WaitForReply); err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	a.worthCheckingIPTables = true // allow initial iptables scan
-	go a.setWorthCheckingIPTablesRoutine(auditClient, iptablesIdle)
-
-	logrus.Infof("Auditing enabled (%d)", auditStatus.Enabled)
-	return startGuestAgentRoutines(ctx, a, true), nil
-}
-
-// startGuestAgentRoutines sets worthCheckingIPTables to true if auditing is not supported,
-// instead of using setWorthCheckingIPTablesRoutine to dynamically set the value.
-//
-// Auditing is not supported in a kernels and is not currently supported outside of the initial namespace, so does not work
-// from inside a container or WSL2 instance, for example.
-func startGuestAgentRoutines(ctx context.Context, a *agent, supportsAuditing bool) *agent {
-	if !supportsAuditing {
-		a.worthCheckingIPTables = true
-	}
 	go a.kubernetesServiceWatcher.Start(ctx)
 	go a.fixSystemTimeSkew()
 
-	return a
+	return a, nil
 }
 
 type agent struct {
@@ -98,49 +37,7 @@ type agent struct {
 	// reload /proc/net/tcp.
 	ticker ticker.Ticker
 
-	worthCheckingIPTables    bool
-	worthCheckingIPTablesMu  sync.RWMutex
-	latestIPTables           []iptables.Entry
-	latestIPTablesMu         sync.RWMutex
 	kubernetesServiceWatcher *kubernetesservice.ServiceWatcher
-}
-
-// setWorthCheckingIPTablesRoutine sets worthCheckingIPTables to be true
-// when received NETFILTER_CFG audit message.
-//
-// setWorthCheckingIPTablesRoutine sets worthCheckingIPTables to be false
-// when no NETFILTER_CFG audit message was received for the iptablesIdle time.
-func (a *agent) setWorthCheckingIPTablesRoutine(auditClient *libaudit.AuditClient, iptablesIdle time.Duration) {
-	logrus.Info("setWorthCheckingIPTablesRoutine(): monitoring netfilter audit events")
-	// Initialize to now so the first sleeper loop does not immediately mark it false.
-	latestTrue := time.Now()
-	go func() {
-		for {
-			time.Sleep(iptablesIdle)
-			a.worthCheckingIPTablesMu.Lock()
-			// time is monotonic, see https://pkg.go.dev/time#hdr-Monotonic_Clocks
-			elapsedSinceLastTrue := time.Since(latestTrue)
-			if elapsedSinceLastTrue >= iptablesIdle {
-				logrus.Debug("setWorthCheckingIPTablesRoutine(): setting to false")
-				a.worthCheckingIPTables = false
-			}
-			a.worthCheckingIPTablesMu.Unlock()
-		}
-	}()
-	for {
-		msg, err := auditClient.Receive(false)
-		if err != nil {
-			logrus.Error(err)
-			continue
-		}
-		if msg.Type == auparse.AUDIT_NETFILTER_CFG {
-			a.worthCheckingIPTablesMu.Lock()
-			logrus.Debug("setWorthCheckingIPTablesRoutine(): setting to true")
-			a.worthCheckingIPTables = true
-			latestTrue = time.Now()
-			a.worthCheckingIPTablesMu.Unlock()
-		}
-	}
 }
 
 type eventState struct {
@@ -220,7 +117,7 @@ func (a *agent) Events(ctx context.Context, ch chan *api.Event) {
 	}
 }
 
-func (a *agent) LocalPorts(ctx context.Context) ([]*api.IPPort, error) {
+func (a *agent) LocalPorts(_ context.Context) ([]*api.IPPort, error) {
 	var res []*api.IPPort
 	socketsList, err := sockets.List()
 	if err != nil {
@@ -249,47 +146,6 @@ func (a *agent) LocalPorts(ctx context.Context) ([]*api.IPPort, error) {
 			}
 		default:
 			continue
-		}
-	}
-
-	a.worthCheckingIPTablesMu.RLock()
-	worthCheckingIPTables := a.worthCheckingIPTables
-	a.worthCheckingIPTablesMu.RUnlock()
-	logrus.Debugf("LocalPorts(): worthCheckingIPTables=%v", worthCheckingIPTables)
-
-	var ipts []iptables.Entry
-	if a.worthCheckingIPTables {
-		ipts, err = iptables.GetPorts(ctx)
-		if err != nil {
-			return res, err
-		}
-		a.latestIPTablesMu.Lock()
-		a.latestIPTables = ipts
-		a.latestIPTablesMu.Unlock()
-	} else {
-		a.latestIPTablesMu.RLock()
-		ipts = a.latestIPTables
-		a.latestIPTablesMu.RUnlock()
-	}
-
-	for _, ipt := range ipts {
-		port := int32(ipt.AddrPort.Port())
-		// Make sure the port isn't already listed from sockets
-		found := false
-		for _, re := range res {
-			if re.Port == port {
-				found = true
-			}
-		}
-		if !found {
-			if ipt.TCP {
-				res = append(res,
-					&api.IPPort{
-						Ip:       ipt.AddrPort.Addr().String(),
-						Port:     port,
-						Protocol: "tcp",
-					})
-			}
 		}
 	}
 

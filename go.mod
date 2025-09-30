@@ -19,7 +19,6 @@ require (
 	github.com/digitalocean/go-qemu v0.0.0-20221209210016-f035778c97f7
 	github.com/diskfs/go-diskfs v1.7.0 // gomodjail:unconfined
 	github.com/docker/go-units v0.5.0
-	github.com/elastic/go-libaudit/v2 v2.6.2
 	github.com/foxcpp/go-mockdns v1.1.0
 	github.com/goccy/go-yaml v1.18.0
 	github.com/google/go-cmp v0.7.0

@@ -1,9 +1,11 @@
+# nerdctl version must be >= 2.1.6 since Lima v2.0.0.
+# Port forwarding in rootful mode no longer works with older versions of nerdctl.
 archives:
-- location: https://github.com/containerd/nerdctl/releases/download/v2.1.5/nerdctl-full-2.1.5-linux-amd64.tar.gz
+- location: https://github.com/containerd/nerdctl/releases/download/v2.1.6/nerdctl-full-2.1.6-linux-amd64.tar.gz
   arch: x86_64
-  digest: sha256:f2a96cf2a9612cc0945da04beda29df7b1d75173cb7ca96275b3352f04a2e416
-- location: https://github.com/containerd/nerdctl/releases/download/v2.1.5/nerdctl-full-2.1.5-linux-arm64.tar.gz
+  digest: sha256:c30545867913696210991fe055761ae2e2d36344da2a351bcd1073fb5c71e232
+- location: https://github.com/containerd/nerdctl/releases/download/v2.1.6/nerdctl-full-2.1.6-linux-arm64.tar.gz
   arch: aarch64
-  digest: sha256:f1c9bbc4c2116c997030f6b003c73cf505bc1156b6e668227079d190b7256fe3
+  digest: sha256:2f98346ed3dcaf47cfd6461a5685e582284329a1ece1d952ade881b9fe7491e8
 # No arm-v7
 # No riscv64
