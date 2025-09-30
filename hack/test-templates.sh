@@ -375,9 +375,10 @@ if [[ -n ${CHECKS["ssh-over-vsock"]} ]]; then
 	fi
 fi
 
-# Use GHCR to avoid hitting Docker Hub rate limit
+# Use GHCR and ECR to avoid hitting Docker Hub rate limit
 nginx_image="ghcr.io/stargz-containers/nginx:1.19-alpine-org"
 alpine_image="ghcr.io/containerd/alpine:3.14.0"
+coredns_image="public.ecr.aws/eks-distro/coredns/coredns:v1.12.2-eks-1-31-latest"
 
 if [[ -n ${CHECKS["container-engine"]} ]]; then
 	sudo=""
@@ -398,6 +399,16 @@ if [[ -n ${CHECKS["container-engine"]} ]]; then
 	timeout 3m bash -euxc "until curl -f --retry 30 --retry-connrefused http://127.0.0.1:8080; do sleep 3; done"
 
 	limactl shell "$NAME" $sudo $CONTAINER_ENGINE rm -f nginx
+
+	if [ "${OS_HOST}" != "Msys" ]; then
+		# TODO: support UDP on Windows
+		INFO "Run a coredns container with port forwarding 127.0.0.1:10053/udp"
+		limactl shell "$NAME" $sudo $CONTAINER_ENGINE pull --quiet ${coredns_image}
+		limactl shell "$NAME" $sudo $CONTAINER_ENGINE run -d --name coredns -p 127.0.0.1:10053:53/udp ${coredns_image}
+		dig @127.0.0.1 -p 10053 lima-vm.io
+		limactl shell "$NAME" $sudo $CONTAINER_ENGINE rm -f coredns
+	fi
+
 	set +x
 	if [[ -n ${CHECKS["mount-home"]} ]]; then
 		hometmp="$HOME_HOST/lima-container-engine-test-tmp"
