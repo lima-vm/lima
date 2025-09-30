@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -338,6 +339,13 @@ func SSHArgsFromOpts(opts []string) []string {
 		args = append(args, "-o", o)
 	}
 	return args
+}
+
+// SSHOptsRemovingControlPath removes ControlMaster, ControlPath, and ControlPersist options from SSH options.
+func SSHOptsRemovingControlPath(opts []string) []string {
+	return slices.DeleteFunc(opts, func(s string) bool {
+		return strings.HasPrefix(s, "ControlMaster") || strings.HasPrefix(s, "ControlPath") || strings.HasPrefix(s, "ControlPersist")
+	})
 }
 
 func ParseOpenSSHVersion(version []byte) *semver.Version {

@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -265,6 +266,20 @@ func writeSSHConfigFile(sshPath, instName, instDir, instSSHAddress string, sshLo
 # This file is created by Lima, but not used by Lima itself currently.
 # Modifications to this file will be lost on restarting the Lima instance.
 `)
+	if runtime.GOOS == "windows" {
+		// Remove ControlMaster, ControlPath, and ControlPersist options,
+		// because Cygwin-based SSH clients do not support multiplexing when executing commands.
+		// References:
+		//   https://inbox.sourceware.org/cygwin/c98988a5-7e65-4282-b2a1-bb8e350d5fab@acm.org/T/
+		//   https://stackoverflow.com/questions/20959792/is-ssh-controlmaster-with-cygwin-on-windows-actually-possible
+		// By removing these options:
+		//   - Avoids execution failures when the control master is not yet available.
+		//   - Prevents error messages such as:
+		//     > mux_client_request_session: read from master failed: Connection reset by peer
+		//     > ControlSocket ....sock already exists, disabling multiplexing
+		// Only remove these options when writing the SSH config file and executing `limactl shell`, since multiplexing seems to work with port forwarding.
+		sshOpts = sshutil.SSHOptsRemovingControlPath(sshOpts)
+	}
 	if err := sshutil.Format(b, sshPath, instName, sshutil.FormatConfig,
 		append(sshOpts,
 			fmt.Sprintf("Hostname=%s", instSSHAddress),
