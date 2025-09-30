@@ -29,6 +29,7 @@ require (
 	github.com/lima-vm/sshocker v0.3.8 // gomodjail:unconfined
 	github.com/mattn/go-isatty v0.0.20
 	github.com/mattn/go-shellwords v1.0.12
+	github.com/mdlayher/netlink v1.8.0
 	github.com/mdlayher/vsock v1.2.1 // gomodjail:unconfined
 	github.com/miekg/dns v1.1.68 // gomodjail:unconfined
 	github.com/mikefarah/yq/v4 v4.47.2

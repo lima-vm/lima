@@ -20,7 +20,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/guestagent/api"
 	"github.com/lima-vm/lima/v2/pkg/guestagent/iptables"
 	"github.com/lima-vm/lima/v2/pkg/guestagent/kubernetesservice"
-	"github.com/lima-vm/lima/v2/pkg/guestagent/procnettcp"
+	"github.com/lima-vm/lima/v2/pkg/guestagent/sockets"
 	"github.com/lima-vm/lima/v2/pkg/guestagent/ticker"
 	"github.com/lima-vm/lima/v2/pkg/guestagent/timesync"
 )
@@ -222,15 +222,15 @@ func (a *agent) Events(ctx context.Context, ch chan *api.Event) {
 
 func (a *agent) LocalPorts(ctx context.Context) ([]*api.IPPort, error) {
 	var res []*api.IPPort
-	tcpParsed, err := procnettcp.ParseFiles()
+	socketsList, err := sockets.List()
 	if err != nil {
 		return res, err
 	}
 
-	for _, f := range tcpParsed {
+	for _, f := range socketsList {
 		switch f.Kind {
-		case procnettcp.TCP, procnettcp.TCP6:
-			if f.State == procnettcp.TCPListen {
+		case sockets.TCP, sockets.TCP6:
+			if f.State == sockets.TCPListen {
 				res = append(res,
 					&api.IPPort{
 						Ip:       f.IP.String(),
@@ -238,8 +238,8 @@ func (a *agent) LocalPorts(ctx context.Context) ([]*api.IPPort, error) {
 						Protocol: "tcp",
 					})
 			}
-		case procnettcp.UDP, procnettcp.UDP6:
-			if f.State == procnettcp.UDPUnconnected {
+		case sockets.UDP, sockets.UDP6:
+			if f.State == sockets.UDPUnconnected {
 				res = append(res,
 					&api.IPPort{
 						Ip:       f.IP.String(),
@@ -274,7 +274,7 @@ func (a *agent) LocalPorts(ctx context.Context) ([]*api.IPPort, error) {
 
 	for _, ipt := range ipts {
 		port := int32(ipt.AddrPort.Port())
-		// Make sure the port isn't already listed from procnettcp
+		// Make sure the port isn't already listed from sockets
 		found := false
 		for _, re := range res {
 			if re.Port == port {
