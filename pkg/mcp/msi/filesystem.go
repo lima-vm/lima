@@ -42,6 +42,10 @@ var ReadFile = &mcp.Tool{
 	Description: `Reads and returns the content of a specified file.`,
 }
 
+type ReadFileResult struct {
+	Content string `json:"content" jsonschema:"The content of the file."`
+}
+
 type ReadFileParams struct {
 	Path string `json:"path" jsonschema:"The absolute path to the file to read."`
 	// TODO: Offset *int   `json:"offset,omitempty" jsonschema:"For text files, the 0-based line number to start reading from. Requires limit to be set."`
@@ -51,6 +55,10 @@ type ReadFileParams struct {
 var WriteFile = &mcp.Tool{
 	Name:        "write_file",
 	Description: `Writes content to a specified file. If the file exists, it will be overwritten. If the file doesn't exist, it (and any necessary parent directories) will be created.`,
+}
+
+type WriteFileResult struct {
+	// Empty for now
 }
 
 type WriteFileParams struct {
@@ -69,6 +77,10 @@ type GlobParams struct {
 	// TODO: CaseSensitive bool    `json:"case_sensitive,omitempty" jsonschema:": Whether the search should be case-sensitive. Defaults to false."`
 }
 
+type GlobResult struct {
+	Matches []string `json:"matches" jsonschema:"A list of absolute file paths that match the provided glob pattern."`
+}
+
 var SearchFileContent = &mcp.Tool{
 	Name:        "search_file_content",
 	Description: `Searches for a regular expression pattern within the content of files in a specified directory. Internally calls 'git grep -n --no-index'.`,
@@ -78,6 +90,10 @@ type SearchFileContentParams struct {
 	Pattern string  `json:"pattern" jsonschema:"The regular expression (regex) to search for (e.g., 'function\\s+myFunction')."`
 	Path    *string `json:"path,omitempty" jsonschema:"The absolute path to the directory to search within. Defaults to the current working directory."`
 	Include *string `json:"include,omitempty" jsonschema:"A glob pattern to filter which files are searched (e.g., '*.js', 'src/**/*.{ts,tsx}'). If omitted, searches most files (respecting common ignores)."`
+}
+
+type SearchFileContentResult struct {
+	GitGrepOutput string `json:"git_grep_output" jsonschema:"The raw output from the 'git grep -n --no-index' command, containing matching lines with filenames and line numbers."`
 }
 
 // TODO: implement Replace
