@@ -4,6 +4,7 @@
 package ticker
 
 import (
+	"os"
 	"strings"
 	"time"
 
@@ -99,6 +100,11 @@ func (ticker *ebpfTicker) Stop() {
 
 func buildEbpfProg(events *ebpf.Map) (*ebpf.Program, error) {
 	inst := asm.Instructions{
+		// ignore events from the guestagent process itself
+		asm.FnGetCurrentPidTgid.Call(),
+		asm.RSh.Imm(asm.R0, 32),
+		asm.JEq.Imm(asm.R0, int32(os.Getpid()), "ret"),
+
 		// ringbuf = &map
 		asm.LoadMapPtr(asm.R1, events.FD()),
 
@@ -120,7 +126,7 @@ func buildEbpfProg(events *ebpf.Map) (*ebpf.Program, error) {
 		asm.FnRingbufOutput.Call(),
 
 		// return 0
-		asm.Mov.Imm(asm.R0, 0),
+		asm.Mov.Imm(asm.R0, 0).WithSymbol("ret"),
 		asm.Return(),
 	}
 
