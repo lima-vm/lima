@@ -4,23 +4,23 @@
 package kubernetesservice
 
 import (
+	"bufio"
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
-	"net/url"
 	"os"
+	"os/exec"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/informers"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/apimachinery/pkg/watch"
 )
 
 type Protocol string
@@ -38,96 +38,161 @@ type Entry struct {
 }
 
 type ServiceWatcher struct {
-	rwMutex         sync.RWMutex
-	serviceInformer cache.SharedIndexInformer
+	rwMutex sync.RWMutex
+	// key: namespace/name
+	services map[string]*corev1.Service
 }
 
 func NewServiceWatcher() *ServiceWatcher {
-	return &ServiceWatcher{}
-}
-
-func (s *ServiceWatcher) setServiceInformer(serviceInformer cache.SharedIndexInformer) {
-	s.rwMutex.Lock()
-	defer s.rwMutex.Unlock()
-	s.serviceInformer = serviceInformer
-}
-
-func (s *ServiceWatcher) getServiceInformer() cache.SharedIndexInformer {
-	s.rwMutex.RLock()
-	defer s.rwMutex.RUnlock()
-	return s.serviceInformer
+	return &ServiceWatcher{services: make(map[string]*corev1.Service)}
 }
 
 func (s *ServiceWatcher) Start(ctx context.Context) {
 	logrus.Info("Monitoring kubernetes services")
 	const retryInterval = 10 * time.Second
-	const pollImmediately = false
-	_ = wait.PollUntilContextCancel(ctx, retryInterval, pollImmediately, func(ctx context.Context) (done bool, err error) {
-		kubeClient, err := tryGetKubeClient()
-		if err != nil {
-			logrus.Tracef("failed to get kube client: %v, will retry in %v", err, retryInterval)
-			return false, nil
+
+	go func() {
+		for i := 0; ; i++ {
+			if i > 0 {
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(retryInterval):
+				}
+			}
+
+			kubectl, err := exec.LookPath("kubectl")
+			if err != nil {
+				logrus.WithError(err).Debugf("kubectl not available; will retry")
+				continue
+			}
+			kubeconfig := chooseKubeconfig()
+			// TODO: ensure that kubeconfig points to a local cluster
+			if err := canGetServices(ctx, kubectl, kubeconfig); err != nil {
+				logrus.WithError(err).Debugf("kubectl auth can-i ... failed; will retry")
+				continue
+			}
+			cmd := exec.CommandContext(ctx, kubectl,
+				"get", "--all-namespaces", "service", "--watch", "--output-watch-events", "--output", "json")
+
+			if kubeconfig != "" {
+				cmd.Env = append(os.Environ(), "KUBECONFIG="+kubeconfig)
+			}
+			if err := s.startAndStreamKubectl(cmd); err != nil {
+				logrus.WithError(err).Warn("kubectl watch failed; will retry")
+			}
 		}
-
-		informerFactory := informers.NewSharedInformerFactory(kubeClient, time.Hour)
-		serviceInformer := informerFactory.Core().V1().Services().Informer()
-		informerFactory.Start(ctx.Done())
-		cache.WaitForCacheSync(ctx.Done(), serviceInformer.HasSynced)
-
-		s.setServiceInformer(serviceInformer)
-		return true, nil
-	})
+	}()
 }
 
-func tryGetKubeClient() (kubernetes.Interface, error) {
+func chooseKubeconfig() string {
+	if kubeconfig := os.Getenv("KUBECONFIG"); kubeconfig != "" {
+		return kubeconfig
+	}
 	candidateKubeConfigs := []string{
 		"/etc/rancher/k3s/k3s.yaml",
 		"/root/.kube/config",
 	}
-
-	for _, kubeconfig := range candidateKubeConfigs {
-		_, err := os.Stat(kubeconfig)
-		if err != nil {
-			if os.IsNotExist(err) {
-				continue
-			}
-
-			return nil, fmt.Errorf("stat kubeconfig %s failed: %w", kubeconfig, err)
+	for _, kc := range candidateKubeConfigs {
+		if _, err := os.Stat(kc); !errors.Is(err, os.ErrNotExist) {
+			return kc
 		}
+	}
+	return ""
+}
 
-		restConfig, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
-		if err != nil {
-			return nil, fmt.Errorf("build kubeconfig from %s failed: %w", kubeconfig, err)
-		}
-		u, err := url.Parse(restConfig.Host)
-		if err != nil {
-			return nil, fmt.Errorf("parse kubeconfig host %s failed: %w", restConfig.Host, err)
-		}
-		if u.Hostname() != "127.0.0.1" { // might need to support IPv6
-			// ensures the kubeconfig points to local k8s
+func canGetServices(ctx context.Context, kubectl, kubeconfig string) error {
+	cmd := exec.CommandContext(ctx, kubectl, "auth", "can-i", "get", "service")
+	if kubeconfig != "" {
+		cmd.Env = append(os.Environ(), "KUBECONFIG="+kubeconfig)
+	}
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to run %v: %w; stdout=%q, stderr=%q", cmd.Args, err, stdout.String(), stderr.String())
+	}
+	if strings.TrimSpace(stdout.String()) != "yes" {
+		return fmt.Errorf("failed to run %v: expected \"yes\", got %q", cmd.Args, stdout.String())
+	}
+	return nil
+}
+
+func (s *ServiceWatcher) startAndStreamKubectl(cmd *exec.Cmd) error {
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("failed to run %v: %w; stderr=%q", cmd.Args, err, stderr.String())
+	}
+
+	readErr := s.readKubectlStream(stdout)
+	waitErr := cmd.Wait()
+	if waitErr != nil {
+		waitErr = fmt.Errorf("failed to run %v: %w; stderr=%q", cmd.Args, waitErr, stderr.String())
+	}
+	return errors.Join(readErr, waitErr)
+}
+
+// readKubectlStream reads kubectl JSON watch events from r and updates the internal
+// services map. The stream is newline-delimited JSON objects representing "WatchEvent".
+func (s *ServiceWatcher) readKubectlStream(r io.Reader) error {
+	scanner := bufio.NewScanner(r)
+	// increase buffer in case of large JSON objects
+	const maxBuf = 10 * 1024 * 1024
+	buf := make([]byte, 0, 64*1024)
+	scanner.Buffer(buf, maxBuf)
+
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		line = bytes.TrimSpace(line)
+		if len(line) == 0 {
 			continue
 		}
 
-		kubeClient, err := kubernetes.NewForConfig(restConfig)
-		if err != nil {
-			return nil, err
+		var ev struct {
+			Type   watch.EventType `json:"type"`
+			Object json.RawMessage `json:"object"`
+		}
+		if err := json.Unmarshal(line, &ev); err != nil {
+			return fmt.Errorf("failed to unmarshal line %q: %w", string(line), err)
 		}
 
-		return kubeClient, nil
+		var svc corev1.Service
+		if err := json.Unmarshal(ev.Object, &svc); err != nil {
+			return fmt.Errorf("failed to unmarshal service object: %w (line=%q)", err, line)
+		}
+
+		key := svc.Namespace + "/" + svc.Name
+		s.rwMutex.Lock()
+		switch ev.Type {
+		case watch.Added, watch.Modified:
+			s.services[key] = &svc
+		case watch.Deleted:
+			delete(s.services, key)
+		default:
+			// NOP
+		}
+		s.rwMutex.Unlock()
 	}
 
-	return nil, errors.New("no valid kubeconfig found")
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("failed to scan kubectl event stream: %w", err)
+	}
+	return nil
 }
 
 func (s *ServiceWatcher) GetPorts() []Entry {
-	serviceInformer := s.getServiceInformer()
-	if serviceInformer == nil {
-		return nil
-	}
+	s.rwMutex.RLock()
+	defer s.rwMutex.RUnlock()
 
 	var entries []Entry
-	for _, obj := range serviceInformer.GetStore().List() {
-		service := obj.(*corev1.Service)
+	for _, service := range s.services {
 		if service.Spec.Type != corev1.ServiceTypeNodePort &&
 			service.Spec.Type != corev1.ServiceTypeLoadBalancer {
 			continue
