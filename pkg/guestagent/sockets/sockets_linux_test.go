@@ -104,7 +104,10 @@ func TestParseMessages_ShortDataSkipped(t *testing.T) {
 }
 
 func TestListS_Integration(t *testing.T) {
-	_, err := List()
+	lister, err := NewLister()
+	assert.NilError(t, err, "NewLister error")
+	defer lister.Close()
+	_, err = lister.List()
 	if err != nil {
 		t.Skipf("skipping: cannot query netlink inet_diag (%v)", err)
 	}

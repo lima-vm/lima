@@ -97,21 +97,26 @@ func parseMessages(msgs []netlink.Message, proto int) ([]Socket, error) {
 	return sockets, nil
 }
 
-func List() ([]Socket, error) {
-	// open NETLINK_INET_DIAG once and reuse
-	var sockets []Socket
+func NewLister() (*Lister, error) {
 	conn, err := netlink.Dial(unix.NETLINK_SOCK_DIAG, nil)
 	if err != nil {
-		return sockets, fmt.Errorf("failed to open netlink connection: %w", err)
+		return nil, fmt.Errorf("failed to open netlink connection: %w", err)
 	}
-	defer conn.Close()
+	return &Lister{conn: conn}, nil
+}
 
+type Lister struct {
+	conn *netlink.Conn
+}
+
+func (lister *Lister) List() ([]Socket, error) {
 	protos := []int{unix.IPPROTO_TCP, unix.IPPROTO_UDP}
 	families := []int{unix.AF_INET, unix.AF_INET6}
 
+	var sockets []Socket
 	for _, proto := range protos {
 		for _, fam := range families {
-			msgs, err := query(conn, fam, proto)
+			msgs, err := query(lister.conn, fam, proto)
 			if err != nil {
 				continue
 			}
@@ -123,4 +128,8 @@ func List() ([]Socket, error) {
 		}
 	}
 	return sockets, nil
+}
+
+func (lister *Lister) Close() error {
+	return lister.conn.Close()
 }
