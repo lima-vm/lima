@@ -74,6 +74,8 @@ func Prepare(ctx context.Context, inst *limatype.Instance) (*Prepared, error) {
 	kernel := filepath.Join(inst.Dir, filenames.Kernel)
 	kernelCmdline := filepath.Join(inst.Dir, filenames.KernelCmdline)
 	initrd := filepath.Join(inst.Dir, filenames.Initrd)
+	entrypoint := filepath.Join(inst.Dir, filenames.Entrypoint)
+	stopsignal := filepath.Join(inst.Dir, filenames.StopSignal)
 	if _, err := os.Stat(baseDisk); errors.Is(err, os.ErrNotExist) {
 		var ensuredBaseDisk bool
 		errs := make([]error, len(inst.Config.Images))
@@ -98,6 +100,18 @@ func Prepare(ctx context.Context, inst *limatype.Instance) (*Prepared, error) {
 			if f.Initrd != nil {
 				// vz does not need initrd to be decompressed
 				if _, err := fileutils.DownloadFile(ctx, initrd, *f.Initrd, false, "the initrd", *inst.Config.Arch); err != nil {
+					errs[i] = err
+					continue
+				}
+			}
+			if f.Entrypoint != nil {
+				if err := os.WriteFile(entrypoint, []byte(*f.Entrypoint), 0o644); err != nil {
+					errs[i] = err
+					continue
+				}
+			}
+			if f.Stopsignal != nil {
+				if err := os.WriteFile(stopsignal, []byte(*f.Stopsignal), 0o644); err != nil {
 					errs[i] = err
 					continue
 				}
