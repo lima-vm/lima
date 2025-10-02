@@ -7,8 +7,8 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"os"
-	"runtime"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -38,18 +38,24 @@ func startAtLoginAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	if startAtLogin {
-		if err := autostart.CreateStartAtLoginEntry(ctx, runtime.GOOS, inst.Name, inst.Dir); err != nil {
-			logrus.WithError(err).Warnf("Can't create an autostart file for instance %q", inst.Name)
-		} else {
-			logrus.Infof("The autostart file %q has been created or updated", autostart.GetFilePath(runtime.GOOS, inst.Name))
+	if registered, err := autostart.IsRegistered(ctx, inst); err != nil {
+		return fmt.Errorf("failed to check if the autostart entry for instance %q is registered: %w", inst.Name, err)
+	} else if startAtLogin {
+		verb := "create"
+		if registered {
+			verb = "update"
 		}
+		if err := autostart.RegisterToStartAtLogin(ctx, inst); err != nil {
+			return fmt.Errorf("failed to %s the autostart entry for instance %q: %w", verb, inst.Name, err)
+		}
+		logrus.Infof("The autostart entry for instance %q has been %sd", inst.Name, verb)
 	} else {
-		deleted, err := autostart.DeleteStartAtLoginEntry(ctx, runtime.GOOS, instName)
-		if err != nil {
-			logrus.WithError(err).Warnf("The autostart file %q could not be deleted", instName)
-		} else if deleted {
-			logrus.Infof("The autostart file %q has been deleted", autostart.GetFilePath(runtime.GOOS, instName))
+		if !registered {
+			logrus.Infof("The autostart entry for instance %q is not registered", inst.Name)
+		} else if err := autostart.UnregisterFromStartAtLogin(ctx, inst); err != nil {
+			return fmt.Errorf("failed to unregister the autostart entry for instance %q: %w", inst.Name, err)
+		} else {
+			logrus.Infof("The autostart entry for instance %q has been unregistered", inst.Name)
 		}
 	}
 
