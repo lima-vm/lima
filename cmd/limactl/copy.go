@@ -28,25 +28,25 @@ const copyHelp = `Copy files between host and guest
 Prefix guest filenames with the instance name and a colon.
 
 Backends:
-  auto   - Automatically selects the best available backend (rsync preferred, falls back to scp)
-  rsync  - Uses rsync for faster transfers with resume capability (requires rsync on both host and guest)
-  scp    - Uses scp for reliable transfers (always available)
+  - **auto**: Automatically selects the best available backend (rsync preferred, falls back to scp)
+  - **rsync**: Uses rsync for faster transfers with resume capability (requires rsync on both host and guest)
+  - **scp**: Uses scp for reliable transfers (always available)
 
 Examples:
-  # Copy file from guest to host (auto backend)
-  limactl copy default:/etc/os-release .
+  #### Copy file from guest to host (auto backend)
+    limactl copy default:/etc/os-release .
 
-  # Copy file from host to guest with verbose output
-  limactl copy -v myfile.txt default:/tmp/
+  #### Copy file from host to guest with verbose output
+    limactl copy -v myfile.txt default:/tmp/
 
-  # Copy directory recursively using rsync backend
-  limactl copy --backend=rsync -r ./mydir default:/tmp/
+  #### Copy directory recursively using rsync backend
+    limactl copy --backend=rsync -r ./mydir default:/tmp/
 
-  # Copy using scp backend specifically
-  limactl copy --backend=scp default:/var/log/app.log ./logs/
+  #### Copy using scp backend specifically
+    limactl copy --backend=scp default:/var/log/app.log ./logs/
 
-  # Copy multiple files
-  limactl copy file1.txt file2.txt default:/tmp/
+  #### Copy multiple files
+    limactl copy file1.txt file2.txt default:/tmp/
 
 Not to be confused with 'limactl clone'.
 `
