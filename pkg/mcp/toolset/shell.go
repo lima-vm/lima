@@ -6,7 +6,6 @@ package toolset
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"os/exec"
 
@@ -18,7 +17,7 @@ import (
 
 func (ts *ToolSet) RunShellCommand(ctx context.Context,
 	_ *mcp.CallToolRequest, args msi.RunShellCommandParams,
-) (*mcp.CallToolResult, any, error) {
+) (*mcp.CallToolResult, *msi.RunShellCommandResult, error) {
 	if ts.inst == nil {
 		return nil, nil, errors.New("instance not registered")
 	}
@@ -33,7 +32,7 @@ func (ts *ToolSet) RunShellCommand(ctx context.Context,
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	cmdErr := cmd.Run()
-	res := msi.RunShellCommandResult{
+	res := &msi.RunShellCommandResult{
 		Stdout: stdout.String(),
 		Stderr: stderr.String(),
 	}
@@ -45,11 +44,7 @@ func (ts *ToolSet) RunShellCommand(ctx context.Context,
 			res.ExitCode = ptr.Of(st.ExitCode())
 		}
 	}
-	resJ, err := json.Marshal(res)
-	if err != nil {
-		return nil, nil, err
-	}
 	return &mcp.CallToolResult{
-		Content: []mcp.Content{&mcp.TextContent{Text: string(resJ)}},
-	}, nil, nil
+		StructuredContent: res,
+	}, res, nil
 }
