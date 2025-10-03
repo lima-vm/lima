@@ -70,6 +70,8 @@ func daemonAction(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
+	defer agent.Close()
+
 	err = os.RemoveAll(socket)
 	if err != nil {
 		return err

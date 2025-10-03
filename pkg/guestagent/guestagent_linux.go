@@ -20,8 +20,13 @@ import (
 )
 
 func New(ctx context.Context, ticker ticker.Ticker) (Agent, error) {
+	socketsLister, err := sockets.NewLister()
+	if err != nil {
+		return nil, err
+	}
 	a := &agent{
 		ticker:                   ticker,
+		socketLister:             socketsLister,
 		kubernetesServiceWatcher: kubernetesservice.NewServiceWatcher(),
 	}
 
@@ -35,8 +40,8 @@ type agent struct {
 	// Ticker is like time.Ticker.
 	// We can't use inotify for /proc/net/tcp, so we need this ticker to
 	// reload /proc/net/tcp.
-	ticker ticker.Ticker
-
+	ticker                   ticker.Ticker
+	socketLister             *sockets.Lister
 	kubernetesServiceWatcher *kubernetesservice.ServiceWatcher
 }
 
@@ -119,7 +124,7 @@ func (a *agent) Events(ctx context.Context, ch chan *api.Event) {
 
 func (a *agent) LocalPorts(_ context.Context) ([]*api.IPPort, error) {
 	var res []*api.IPPort
-	socketsList, err := sockets.List()
+	socketsList, err := a.socketLister.List()
 	if err != nil {
 		return res, err
 	}
@@ -226,4 +231,13 @@ func (a *agent) HandleInotify(event *api.Inotify) {
 			logrus.Errorf("error in inotify handle. Event: %s, Error: %s", event, err)
 		}
 	}
+}
+
+func (a *agent) Close() error {
+	if a.socketLister != nil {
+		if err := a.socketLister.Close(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
