@@ -101,7 +101,26 @@ and $LIMA_WORKDIR.
 	return doc.GenManTree(cmd.Root(), header, dir)
 }
 
+func escapeMarkdown(text string) string {
+	lines := strings.Split(text, "\n")
+	for i := range lines {
+		// Need to escape backticks first, before adding more
+		for _, c := range strings.Split("\\`*_[]()#+-.|", "") {
+			lines[i] = strings.ReplaceAll(lines[i], c, "\\"+c)
+		}
+		if i < len(lines)-1 {
+			if lines[i] != "" && lines[i+1] != "" {
+				lines[i] += "  " // line break
+			}
+		}
+	}
+	return strings.Join(lines, "\n")
+}
+
 func genDocsy(cmd *cobra.Command, dir string) error {
+	for _, c := range cmd.Root().Commands() {
+		c.Long = escapeMarkdown(c.Long)
+	}
 	return doc.GenMarkdownTreeCustom(cmd.Root(), dir, func(s string) string {
 		// Replace limactl_completion_bash to completion bash for docsy title
 		name := filepath.Base(s)

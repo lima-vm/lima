@@ -32,7 +32,10 @@ Backends:
   rsync  - Uses rsync for faster transfers with resume capability (requires rsync on both host and guest)
   scp    - Uses scp for reliable transfers (always available)
 
-Examples:
+Not to be confused with 'limactl clone'.
+`
+
+const copyExample = `
   # Copy file from guest to host (auto backend)
   limactl copy default:/etc/os-release .
 
@@ -47,8 +50,6 @@ Examples:
 
   # Copy multiple files
   limactl copy file1.txt file2.txt default:/tmp/
-
-Not to be confused with 'limactl clone'.
 `
 
 type copyTool string
@@ -72,6 +73,7 @@ func newCopyCommand() *cobra.Command {
 		Aliases: []string{"cp"},
 		Short:   "Copy files between host and guest",
 		Long:    copyHelp,
+		Example: copyExample,
 		Args:    WrapArgsError(cobra.MinimumNArgs(2)),
 		RunE:    copyAction,
 		GroupID: advancedCommand,
