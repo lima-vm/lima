@@ -113,7 +113,7 @@ func cloneAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	return instance.Start(ctx, newInst, "", false, false)
+	return instance.Start(ctx, newInst, false, false)
 }
 
 func cloneBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {

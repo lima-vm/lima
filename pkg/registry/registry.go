@@ -70,12 +70,11 @@ func CheckInternalOrExternal(name string) string {
 }
 
 func Get(name string) (*ExternalDriver, driver.Driver, bool) {
-	if err := discoverDrivers(); err != nil {
-		logrus.Warnf("Error discovering drivers: %v", err)
-	}
-
 	internalDriver, exists := internalDrivers[name]
 	if !exists {
+		if err := discoverDrivers(); err != nil {
+			logrus.Warnf("Error discovering drivers: %v", err)
+		}
 		externalDriver, exists := ExternalDrivers[name]
 		if exists {
 			return externalDriver, nil, exists
@@ -102,18 +101,6 @@ func registerExternalDriver(name, path string) {
 }
 
 func discoverDrivers() error {
-	stdDriverDir, err := usrlocalsharelima.LibexecLima()
-	if err != nil {
-		return err
-	}
-
-	logrus.Debugf("Discovering external drivers in %s", stdDriverDir)
-	if _, err := os.Stat(stdDriverDir); err == nil {
-		if err := discoverDriversInDir(stdDriverDir); err != nil {
-			logrus.Warnf("Error discovering external drivers in %q: %v", stdDriverDir, err)
-		}
-	}
-
 	if driverPaths := os.Getenv("LIMA_DRIVERS_PATH"); driverPaths != "" {
 		paths := filepath.SplitList(driverPaths)
 		for _, path := range paths {
@@ -137,6 +124,17 @@ func discoverDrivers() error {
 		}
 	}
 
+	stdDriverDir, err := usrlocalsharelima.LibexecLima()
+	if err != nil {
+		return err
+	}
+
+	logrus.Debugf("Discovering external drivers in %s", stdDriverDir)
+	if _, err := os.Stat(stdDriverDir); err == nil {
+		if err := discoverDriversInDir(stdDriverDir); err != nil {
+			logrus.Warnf("Error discovering external drivers in %q: %v", stdDriverDir, err)
+		}
+	}
 	return nil
 }
 

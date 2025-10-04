@@ -166,7 +166,7 @@ func editAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	return instance.Start(ctx, inst, "", false, false)
+	return instance.Start(ctx, inst, false, false)
 }
 
 func askWhetherToStart() (bool, error) {

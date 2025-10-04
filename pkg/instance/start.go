@@ -44,9 +44,8 @@ type Prepared struct {
 }
 
 // Prepare ensures the disk, the nerdctl archive, etc.
-func Prepare(ctx context.Context, inst *limatype.Instance) (*Prepared, error) {
-	var guestAgent string
-	if !*inst.Config.Plain {
+func Prepare(ctx context.Context, inst *limatype.Instance, guestAgent string) (*Prepared, error) {
+	if !*inst.Config.Plain && guestAgent == "" {
 		var err error
 		guestAgent, err = usrlocalsharelima.GuestAgentBinary(*inst.Config.OS, *inst.Config.Arch)
 		if err != nil {
@@ -131,20 +130,24 @@ func Prepare(ctx context.Context, inst *limatype.Instance) (*Prepared, error) {
 	}, nil
 }
 
-// Start starts the hostagent in the background, which in turn will start the instance.
-// Start will listen to hostagent events and log them to STDOUT until either the instance
+// StartWithPaths starts the hostagent in the background, which in turn will start the instance.
+// StartWithPaths will listen to hostagent events and log them to STDOUT until either the instance
 // is running, or has failed to start.
 //
-// The `limactl` argument allows the caller to specify the full path of the `limactl` executable.
-// When called from inside limactl itself it will always be the empty string which uses the name
-// of the current executable instead.
-//
-// The `launchHostAgentForeground` argument makes the hostagent run in the foreground.
+// The launchHostAgentForeground argument makes the hostagent run in the foreground.
 // The function will continue to listen and log hostagent events until the instance is
 // shut down again.
 //
-// Start calls Prepare by itself, so you do not need to call Prepare manually before calling Start.
-func Start(ctx context.Context, inst *limatype.Instance, limactl string, launchHostAgentForeground, showProgress bool) error {
+// The showProgress argument tells the hostagent to show provision script progress by tailing cloud-init logs.
+//
+// The limactl argument allows the caller to specify the full path of the limactl executable.
+// The guestAgent argument allows the caller to specify the full path of the guest agent executable.
+// Inside limactl this function is only called by Start, which passes empty strings for both
+// limactl and guestAgent, in which case the location of the current executable is used for
+// limactl and the guest agent is located from the corresponding <prefix>/share/lima directory.
+//
+// StartWithPaths calls Prepare by itself, so you do not need to call Prepare manually before calling Start.
+func StartWithPaths(ctx context.Context, inst *limatype.Instance, launchHostAgentForeground, showProgress bool, limactl, guestAgent string) error {
 	haPIDPath := filepath.Join(inst.Dir, filenames.HostAgentPID)
 	if _, err := os.Stat(haPIDPath); !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("instance %q seems running (hint: remove %q if the instance is not actually running)", inst.Name, haPIDPath)
@@ -153,7 +156,7 @@ func Start(ctx context.Context, inst *limatype.Instance, limactl string, launchH
 
 	haSockPath := filepath.Join(inst.Dir, filenames.HostAgentSock)
 
-	prepared, err := Prepare(ctx, inst)
+	prepared, err := Prepare(ctx, inst, guestAgent)
 	if err != nil {
 		return err
 	}
@@ -249,6 +252,10 @@ func Start(ctx context.Context, inst *limatype.Instance, limactl string, launchH
 		// waitErr should not be nil
 		return fmt.Errorf("host agent process has exited: %w", waitErr)
 	}
+}
+
+func Start(ctx context.Context, inst *limatype.Instance, launchHostAgentForeground, showProgress bool) error {
+	return StartWithPaths(ctx, inst, launchHostAgentForeground, showProgress, "", "")
 }
 
 func waitHostAgentStart(_ context.Context, haPIDPath, haStderrPath string) error {

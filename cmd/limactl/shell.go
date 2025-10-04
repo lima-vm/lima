@@ -106,7 +106,7 @@ func shellAction(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
-		err = instance.Start(ctx, inst, "", false, false)
+		err = instance.Start(ctx, inst, false, false)
 		if err != nil {
 			return err
 		}

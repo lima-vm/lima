@@ -548,7 +548,7 @@ func createAction(cmd *cobra.Command, args []string) error {
 	if len(inst.Errors) > 0 {
 		return fmt.Errorf("errors inspecting instance: %+v", inst.Errors)
 	}
-	if _, err = instance.Prepare(cmd.Context(), inst); err != nil {
+	if _, err = instance.Prepare(cmd.Context(), inst, ""); err != nil {
 		return err
 	}
 	logrus.Infof("Run `limactl start %s` to start the instance.", inst.Name)
@@ -606,7 +606,7 @@ func startAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	return instance.Start(ctx, inst, "", launchHostAgentForeground, progress)
+	return instance.Start(ctx, inst, launchHostAgentForeground, progress)
 }
 
 func createBashComplete(cmd *cobra.Command, _ []string, toComplete string) ([]string, cobra.ShellCompDirective) {
