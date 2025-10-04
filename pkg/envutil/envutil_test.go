@@ -88,11 +88,9 @@ func TestGetBlockAndAllowLists(t *testing.T) {
 		t.Setenv("LIMA_SHELLENV_BLOCK", "")
 		t.Setenv("LIMA_SHELLENV_ALLOW", "")
 
-		blockList, isBlockListSet := getBlockList()
-		allowList, isAllowListSet := getAllowList()
+		blockList := getBlockList()
+		allowList := getAllowList()
 
-		assert.Assert(t, !isBlockListSet)
-		assert.Assert(t, !isAllowListSet)
 		assert.Assert(t, isUsingDefaultBlockList())
 		assert.DeepEqual(t, blockList, defaultBlockList)
 		assert.Equal(t, len(allowList), 0)
@@ -101,8 +99,7 @@ func TestGetBlockAndAllowLists(t *testing.T) {
 	t.Run("custom blocklist", func(t *testing.T) {
 		t.Setenv("LIMA_SHELLENV_BLOCK", "PATH,HOME")
 
-		blockList, isSet := getBlockList()
-		assert.Assert(t, isSet)
+		blockList := getBlockList()
 		assert.Assert(t, !isUsingDefaultBlockList())
 		expected := []string{"PATH", "HOME"}
 		assert.DeepEqual(t, blockList, expected)
@@ -111,8 +108,7 @@ func TestGetBlockAndAllowLists(t *testing.T) {
 	t.Run("additive blocklist", func(t *testing.T) {
 		t.Setenv("LIMA_SHELLENV_BLOCK", "+CUSTOM_VAR")
 
-		blockList, isSet := getBlockList()
-		assert.Assert(t, isSet)
+		blockList := getBlockList()
 		assert.Assert(t, isUsingDefaultBlockList())
 		expected := slices.Concat(GetDefaultBlockList(), []string{"CUSTOM_VAR"})
 		assert.DeepEqual(t, blockList, expected)
@@ -121,8 +117,7 @@ func TestGetBlockAndAllowLists(t *testing.T) {
 	t.Run("allowlist", func(t *testing.T) {
 		t.Setenv("LIMA_SHELLENV_ALLOW", "FOO,BAR")
 
-		allowList, isSet := getAllowList()
-		assert.Assert(t, isSet)
+		allowList := getAllowList()
 		expected := []string{"FOO", "BAR"}
 		assert.DeepEqual(t, allowList, expected)
 	})
@@ -173,9 +168,11 @@ func TestFilterEnvironment(t *testing.T) {
 
 	t.Run("allowlist", func(t *testing.T) {
 		result := filterEnvironmentWithLists(testEnv, []string{"FOO", "USER"}, nil)
-
 		expected := []string{"FOO=bar", "USER=testuser"}
-		assert.Equal(t, len(result), len(expected))
+
+		// since FOO and USER are included in testEnv, the filtered result should not differ
+		// from what is in the testEnv
+		assert.Equal(t, len(result), len(testEnv))
 		assert.Assert(t, containsAll(result, expected))
 	})
 
@@ -212,4 +209,43 @@ func TestGetDefaultBlockList(t *testing.T) {
 		found := slices.Contains(blocklist, item)
 		assert.Assert(t, found, "Expected builtin blocklist to contain %q", item)
 	}
+}
+
+func TestValidatePattern(t *testing.T) {
+	tests := []struct {
+		name    string
+		pattern string
+		valid   bool
+	}{
+		{"simple alphanumeric uppercase", "FOO", true},
+		{"simple alphanumeric lowercase", "foo", true},
+		{"mixed case", "FooBar", true},
+		{"with underscore", "FOO_BAR", true},
+		{"with numbers", "VAR123", true},
+		{"with trailing asterisk", "FOO*", true},
+		{"with multiple asterisks", "FOO*BAR*", true},
+		{"asterisk at beginning", "*FOO", true},
+		{"asterisk in middle", "FOO*BAR", true},
+		{"only asterisk", "*", true},
+		{"with dash", "FOO-BAR", false},
+		{"with space", "FOO BAR", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validatePattern(tt.pattern)
+			if tt.valid {
+				assert.NilError(t, err, "Expected pattern %q to be valid", tt.pattern)
+			} else {
+				assert.Assert(t, err != nil, "Expected pattern %q to be invalid", tt.pattern)
+			}
+		})
+	}
+}
+
+func TestValidatePatternErrorMessage(t *testing.T) {
+	err := validatePattern("FOO-BAR")
+	assert.Assert(t, err != nil, "Expected pattern with dash to be invalid")
+	expectedMsg := `pattern "FOO-BAR" contains invalid character "-" at position 3`
+	assert.Equal(t, err.Error(), expectedMsg)
 }

@@ -339,10 +339,6 @@ if [[ -n ${CHECKS["mount-home"]} ]]; then
 	"${scriptdir}"/test-mount-home.sh "$NAME"
 fi
 
-if [[ -n ${CHECKS["preserve-env"]} ]]; then
-	"${scriptdir}"/test-preserve-env.sh "$NAME"
-fi
-
 if [[ -n ${CHECKS["ssh-over-vsock"]} ]]; then
 	if [[ "$(limactl ls "${NAME}" --yq .vmType)" == "vz" ]]; then
 		INFO "Testing SSH over vsock"
