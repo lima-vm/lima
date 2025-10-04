@@ -25,13 +25,10 @@ func newTemplateCommand() *cobra.Command {
 	templateCommand := &cobra.Command{
 		Use:           "template",
 		Aliases:       []string{"tmpl"},
-		Short:         "Lima template management",
+		Short:         "Lima template management (EXPERIMENTAL)",
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		GroupID:       advancedCommand,
-		// The template command is still hidden because the subcommands and options are still under development
-		// and subject to change at any time.
-		Hidden: true,
 		PreRun: func(*cobra.Command, []string) {
 			logrus.Warn("`limactl template` is experimental")
 		},
