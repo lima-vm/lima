@@ -25,7 +25,7 @@ func Restart(ctx context.Context, inst *limatype.Instance, showProgress bool) er
 		return err
 	}
 
-	if err := Start(ctx, inst, "", launchHostAgentForeground, showProgress); err != nil {
+	if err := Start(ctx, inst, launchHostAgentForeground, showProgress); err != nil {
 		return err
 	}
 
@@ -40,7 +40,7 @@ func RestartForcibly(ctx context.Context, inst *limatype.Instance, showProgress 
 		return err
 	}
 
-	if err := Start(ctx, inst, "", launchHostAgentForeground, showProgress); err != nil {
+	if err := Start(ctx, inst, launchHostAgentForeground, showProgress); err != nil {
 		return err
 	}
 

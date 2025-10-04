@@ -40,8 +40,8 @@ This creates external driver binaries in `_output/libexec/lima/` with the naming
 
 Lima discovers external drivers from these locations:
 
-1. **Standard directory**: `<LIMA-PREFIX>/libexec/lima/`, where `<LIMA_PREFIX>` is the location path where the Lima binary is present
-2. **Custom directories**: Set path to the external driver's directory via `LIMA_DRIVERS_PATH` environment variable
+1. **Custom directories**: Set path to the external driver's directory via `LIMA_DRIVERS_PATH` environment variable
+2. **Standard directory**: `<LIMA-PREFIX>/libexec/lima/`, where `<LIMA_PREFIX>` is the location path where the Lima binary is present
 
 The discovery process is handled by [`pkg/registry/registry.go`.](https://github.com/lima-vm/lima/blob/master/pkg/registry/registry.go)
 
