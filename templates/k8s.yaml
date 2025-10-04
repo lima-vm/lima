@@ -10,6 +10,12 @@
 # NAME       STATUS   ROLES                  AGE   VERSION
 # lima-k8s   Ready    control-plane,master   44s   v1.22.3
 
+# Multi-node clusters can be created by starting multiple instances of this template connected via the `lima:user-v2` network.
+# $ limactl start --name k8s-0 --network lima:user-v2 template:k8s
+# $ limactl shell k8s-0 sudo kubeadm token create --print-join-command
+# $ limactl start --name k8s-1 --network lima:user-v2 --set '.param.kubeadmInit="false"' template:k8s
+# $ limactl shell k8s-1 sudo <JOIN_COMMAND_FROM_ABOVE>
+
 minimumLimaVersion: 2.0.0
 
 base: template://_images/ubuntu-lts
@@ -109,14 +115,17 @@ provision:
     apiVersion: kubelet.config.k8s.io/v1beta1
     cgroupDriver: systemd
     EOF
+    {{if eq .Param.kubeadmInit "true"}}
     kubeadm init --config kubeadm-config.yaml
     # Installing a Pod network add-on
     kubectl apply -f https://github.com/flannel-io/flannel/releases/download/v0.26.7/kube-flannel.yml
     # Control plane node isolation
     kubectl taint nodes --all node-role.kubernetes.io/control-plane-
+    # Copy the kubeconfig file to the default location
+    mkdir -p ${HOME:-/root}/.kube && cp -f $KUBECONFIG ${HOME:-/root}/.kube/config
     # Replace the server address with localhost, so that it works also from the host
     sed -e "/server:/ s|https://.*:\([0-9]*\)$|https://127.0.0.1:\1|" -i $KUBECONFIG
-    mkdir -p ${HOME:-/root}/.kube && cp -f $KUBECONFIG ${HOME:-/root}/.kube/config
+    {{end}}
 - mode: system
   script: |
     #!/bin/bash
@@ -136,44 +145,75 @@ probes:
     fi
   hint: |
     See "/var/log/cloud-init-output.log" in the guest
-- description: "kubernetes images to be pulled"
+# FIXME: probes[].description doesn't seem to recognize .Param.kubeadmInit
+- description: "{{if eq .Param.kubeadmInit \"true\"}}kubernetes images to be pulled{{else}}skipping the k8s images check since kubeadmInit is set to false{{end}}"
   script: |
     #!/bin/bash
     set -eux -o pipefail
+    {{if eq .Param.kubeadmInit "true"}}
     if ! timeout 30s bash -c "images=\"$(kubeadm config images list)\"; until for image in \$images; do sudo crictl image -q \$image | grep -q sha256; done; do sleep 3; done"; then
       echo >&2 "k8s images are not pulled yet"
       exit 1
     fi
-- description: "kubeadm to be completed"
+    {{else}}
+    echo >&2 "skipping the k8s images check since kubeadmInit is set to false"
+    {{end}}
+- description: "{{if eq .Param.kubeadmInit \"true\"}}kubeadm to be completed{{else}}skipping the kubeadm completion check since kubeadmInit is set to false{{end}}"
   script: |
     #!/bin/bash
     set -eux -o pipefail
+    {{if eq .Param.kubeadmInit "true"}}
     if ! timeout 300s bash -c "until test -f /etc/kubernetes/admin.conf; do sleep 3; done"; then
       echo >&2 "k8s is not running yet"
       exit 1
     fi
+    {{else}}
+    echo >&2 "skipping the kubeadm completion check since kubeadmInit is set to false"
+    {{end}}
   hint: |
     The k8s kubeconfig file has not yet been created.
-- description: "kubernetes cluster to be running"
+- description: "{{if eq .Param.kubeadmInit \"true\"}}kubernetes cluster to be running{{else}}skipping the kubernetes cluster check since kubeadmInit is set to false{{end}}"
   script: |
     #!/bin/bash
     set -eux -o pipefail
+    {{if eq .Param.kubeadmInit "true"}}
     if ! timeout 300s bash -c "until kubectl version >/dev/null 2>&1; do sleep 3; done"; then
       echo >&2 "kubernetes cluster is not up and running yet"
       exit 1
     fi
-- description: "coredns deployment to be running"
+    {{else}}
+    echo >&2 "skipping the kubernetes cluster check since kubeadmInit is set to false"
+    {{end}}
+- description: "{{if eq .Param.kubeadmInit \"true\"}}coredns deployment to be running{{else}}skipping the coredns deployment check since kubeadmInit is set to false{{end}}"
   script: |
     #!/bin/bash
     set -eux -o pipefail
+    {{if eq .Param.kubeadmInit "true"}}
     kubectl wait -n kube-system --timeout=180s --for=condition=available deploy coredns
+    {{else}}
+    echo >&2 "skipping the coredns deployment check since kubeadmInit is set to false"
+    {{end}}
 copyToHost:
-- guest: "/etc/kubernetes/admin.conf"
-  host: "{{.Dir}}/copied-from-guest/kubeconfig.yaml"
+- guest: "{{if eq .Param.kubeadmInit \"true\"}}/etc/kubernetes/admin.conf{{else}}/dev/null{{end}}"
+  host: "{{if eq .Param.kubeadmInit \"true\"}}{{.Dir}}/copied-from-guest/kubeconfig.yaml{{else}}{{.Dir}}/copied-from-guest/null{{end}}"
   deleteOnStop: true
+# FIXME: set .portForwards[].ignore when kubeadmInit is false
+param:
+  # Set to false for `kubeadm join`
+  kubeadmInit: true
+# FIXME: message doesn't seem to recognize .Param.kubeadmInit
 message: |
+  {{if eq .Param.kubeadmInit "true"}}
   To run `kubectl` on the host (assumes kubectl is installed), run the following commands:
   ------
   export KUBECONFIG="{{.Dir}}/copied-from-guest/kubeconfig.yaml"
   kubectl ...
   ------
+  {{else}}
+  To join this node to an existing cluster, run the following commands:
+  ------
+  limactl shell <CONTROL_PLANE> sudo kubeadm token create --print-join-command
+  limactl shell {{.Name}} sudo <JOIN_COMMAND_FROM_ABOVE>
+  ------
+  Make sure that this node is connected to the control plane node via the network (e.g. `lima:user-v2`).
+  {{end}}
