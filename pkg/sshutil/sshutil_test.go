@@ -53,3 +53,87 @@ func Test_detectValidPublicKey(t *testing.T) {
 	assert.Check(t, !detectValidPublicKey("arbitrary content"))
 	assert.Check(t, !detectValidPublicKey(""))
 }
+
+func Test_DisableControlMasterOptsFromSSHArgs(t *testing.T) {
+	tests := []struct {
+		name    string
+		sshArgs []string
+		want    []string
+	}{
+		{
+			name: "no ControlMaster options",
+			sshArgs: []string{
+				"-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null",
+			},
+			want: []string{
+				"-o", "ControlMaster=no", "-o", "ControlPath=none", "-o", "ControlPersist=no",
+				"-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null",
+			},
+		},
+		{
+			name: "ControlMaster=yes",
+			sshArgs: []string{
+				"-o", "ControlMaster=yes", "-o", "UserKnownHostsFile=/dev/null",
+			},
+			want: []string{
+				"-o", "ControlMaster=no", "-o", "ControlPath=none", "-o", "ControlPersist=no",
+				"-o", "UserKnownHostsFile=/dev/null",
+			},
+		},
+		{
+			name: "ControlMaster=auto",
+			sshArgs: []string{
+				"-o", "ControlMaster=auto", "-o", "UserKnownHostsFile=/dev/null",
+			},
+			want: []string{
+				"-o", "ControlMaster=no", "-o", "ControlPath=none", "-o", "ControlPersist=no",
+				"-o", "UserKnownHostsFile=/dev/null",
+			},
+		},
+		{
+			name: "ControlMaster=auto with ControlPath",
+			sshArgs: []string{
+				"-o", "ControlMaster=auto", "-o", "ControlPath=/tmp/ssh-%r@%h:%p", "-o", "UserKnownHostsFile=/dev/null",
+			},
+			want: []string{
+				"-o", "ControlMaster=no", "-o", "ControlPath=none", "-o", "ControlPersist=no",
+				"-o", "UserKnownHostsFile=/dev/null",
+			},
+		},
+		{
+			name: "ControlPath only",
+			sshArgs: []string{
+				"-o", "ControlPath=/tmp/ssh-%r@%h:%p", "-o", "UserKnownHostsFile=/dev/null",
+			},
+			want: []string{
+				"-o", "ControlMaster=no", "-o", "ControlPath=none", "-o", "ControlPersist=no",
+				"-o", "UserKnownHostsFile=/dev/null",
+			},
+		},
+		{
+			name: "ControlMaster=no",
+			sshArgs: []string{
+				"-o", "ControlMaster=no", "-o", "UserKnownHostsFile=/dev/null",
+			},
+			want: []string{
+				"-o", "ControlMaster=no", "-o", "ControlPath=none", "-o", "ControlPersist=no",
+				"-o", "UserKnownHostsFile=/dev/null",
+			},
+		},
+		{
+			name: "ControlMaster=auto with other options",
+			sshArgs: []string{
+				"-o", "ControlMaster=auto", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null",
+			},
+			want: []string{
+				"-o", "ControlMaster=no", "-o", "ControlPath=none", "-o", "ControlPersist=no",
+				"-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.DeepEqual(t, DisableControlMasterOptsFromSSHArgs(tt.sshArgs), tt.want)
+		})
+	}
+}

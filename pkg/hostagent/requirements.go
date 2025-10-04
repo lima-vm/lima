@@ -13,6 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/sshutil"
 )
 
 func (a *HostAgent) waitForRequirements(label string, requirements []requirement) error {
@@ -101,7 +102,15 @@ func (a *HostAgent) waitForRequirement(r requirement) error {
 	if err != nil {
 		return err
 	}
-	stdout, stderr, err := ssh.ExecuteScript(a.instSSHAddress, a.sshLocalPort, a.sshConfig, script, r.description)
+	sshConfig := a.sshConfig
+	if r.noMaster {
+		sshConfig = &ssh.SSHConfig{
+			ConfigFile:     sshConfig.ConfigFile,
+			Persist:        false,
+			AdditionalArgs: sshutil.DisableControlMasterOptsFromSSHArgs(sshConfig.AdditionalArgs),
+		}
+	}
+	stdout, stderr, err := ssh.ExecuteScript(a.instSSHAddress, a.sshLocalPort, sshConfig, script, r.description)
 	logrus.Debugf("stdout=%q, stderr=%q, err=%v", stdout, stderr, err)
 	if err != nil {
 		return fmt.Errorf("stdout=%q, stderr=%q: %w", stdout, stderr, err)
@@ -114,6 +123,7 @@ type requirement struct {
 	script      string
 	debugHint   string
 	fatal       bool
+	noMaster    bool
 }
 
 func (a *HostAgent) essentialRequirements() []requirement {
@@ -128,8 +138,17 @@ true
 Make sure that the YAML field "ssh.localPort" is not used by other processes on the host.
 If any private key under ~/.ssh is protected with a passphrase, you need to have ssh-agent to be running.
 `,
+			noMaster: true,
 		})
+	startControlMasterReq := requirement{
+		description: "Explicitly start ssh ControlMaster",
+		script: `#!/bin/bash
+true
+`,
+		debugHint: `The persistent ssh ControlMaster should be started immediately.`,
+	}
 	if *a.instConfig.Plain {
+		req = append(req, startControlMasterReq)
 		return req
 	}
 	req = append(req,
@@ -147,6 +166,7 @@ fi
 Terminating the session will break the persistent SSH tunnel, so
 it must not be created until the session reset is done.
 `,
+			noMaster: true,
 		})
 
 	if *a.instConfig.MountType == limatype.REVSSHFS && len(a.instConfig.Mounts) > 0 {
@@ -176,6 +196,8 @@ fi
 `,
 			debugHint: `Append "user_allow_other" to /etc/fuse.conf (/etc/fuse3.conf) in the guest`,
 		})
+	} else {
+		req = append(req, startControlMasterReq)
 	}
 	return req
 }
