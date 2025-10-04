@@ -80,4 +80,18 @@ The `--plain` mode is useful when you want the VM instance to be as close as pos
 ```
 
 ### Full examples
-- https://github.com/kubernetes-sigs/kind/blob/v0.25.0/.github/workflows/vm.yaml#L47-L84
+Kubernetes:
+- [kind, for running tests with SELinux using Fedora](https://github.com/kubernetes-sigs/kind/blob/v0.30.0/.github/workflows/vm.yaml#L46-L71)
+- [Usernetes, for running tests with multiple nodes](https://github.com/rootless-containers/usernetes/blob/gen2-v20250828.0/.github/workflows/reusable-multi-node.yaml#L52-L61)
+
+Container engines:
+- [Docker (Moby), for running tests with cgroup v1 using Oracle Linux 8 ](https://github.com/moby/moby/blob/master/.github/workflows/.vm.yml)
+- [nerdctl, for running tests with cgroup v1 using AlmaLinux 8](https://github.com/containerd/nerdctl/blob/v2.1.6/.github/workflows/job-test-in-lima.yml)
+
+Container runtimes:
+- [runc, for running tests with SELinux using Fedora](https://github.com/opencontainers/runc/blob/v1.3.2/.github/workflows/test.yml#L182-L202)
+- [opencontainers/selinux, for running tests with SELinux using AlmaLinux, CentOS Stream, Fedora, and openSUSE](https://github.com/opencontainers/selinux/blob/v1.12.0/.github/workflows/validate.yml#L106-L133)
+- [youki, for running tests with cgroup v1 using AlmaLinux 8](https://github.com/youki-dev/youki/blob/v0.5.5/.github/workflows/e2e.yaml#L206-L227)
+
+Others:
+- [uutils coreutils, for running tests with SELinux using Fedora](https://github.com/uutils/coreutils/blob/0.2.2/.github/workflows/GnuTests.yml#L190-L225)
