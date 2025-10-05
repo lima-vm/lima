@@ -58,7 +58,7 @@ type Config struct {
 // softMin must be >= hardMin.
 //
 // When updating this function, make sure to update
-// `website/content/en/docs/config/vmtype.md` too.
+// `website/content/en/docs/config/vmtype/qemu.md` too.
 func minimumQemuVersion() (hardMin, softMin semver.Version) {
 	var h, s string
 	switch runtime.GOOS {
