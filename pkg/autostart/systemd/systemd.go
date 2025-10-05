@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 
 	"github.com/sirupsen/logrus"
+
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 )
 
 //go:embed lima-vm@INSTANCE.service
@@ -48,4 +50,27 @@ func systemctl(ctx context.Context, args ...string) error {
 	cmd.Stderr = os.Stderr
 	logrus.Debugf("running command: %v", cmd.Args)
 	return cmd.Run()
+}
+
+// AutoStartedUnitName returns the systemd service name if the instance is started by systemd.
+func AutoStartedUnitName() string {
+	return CurrentUnitName()
+}
+
+func RequestStart(ctx context.Context, inst *limatype.Instance) error {
+	if err := systemctl(ctx, "--user", "start", UnitNameFrom(inst.Name)); err != nil {
+		return fmt.Errorf("failed to start the instance %q via systemctl: %w", inst.Name, err)
+	}
+	return nil
+}
+
+func RequestStop(ctx context.Context, inst *limatype.Instance) (bool, error) {
+	if inst.AutoStartedIdentifier == UnitNameFrom(inst.Name) {
+		logrus.Infof("Stopping the instance %q started by systemd", inst.Name)
+		if err := systemctl(ctx, "--user", "stop", inst.AutoStartedIdentifier); err != nil {
+			return false, fmt.Errorf("failed to stop the instance %q via systemctl: %w", inst.Name, err)
+		}
+		return true, nil
+	}
+	return false, nil
 }

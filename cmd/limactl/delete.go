@@ -49,7 +49,7 @@ func deleteAction(cmd *cobra.Command, args []string) error {
 		if err := instance.Delete(cmd.Context(), inst, force); err != nil {
 			return fmt.Errorf("failed to delete instance %q: %w", instName, err)
 		}
-		if registered, err := autostart.IsRegistered(ctx, inst); err != nil {
+		if registered, err := autostart.IsRegistered(ctx, inst); err != nil && !errors.Is(err, autostart.ErrNotSupported) {
 			logrus.WithError(err).Warnf("Failed to check if the autostart entry for instance %q is registered", instName)
 		} else if registered {
 			if err := autostart.UnregisterFromStartAtLogin(ctx, inst); err != nil {

@@ -17,6 +17,7 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/lima-vm/lima/v2/cmd/limactl/editflags"
+	"github.com/lima-vm/lima/v2/pkg/autostart"
 	"github.com/lima-vm/lima/v2/pkg/driverutil"
 	"github.com/lima-vm/lima/v2/pkg/editutil"
 	"github.com/lima-vm/lima/v2/pkg/instance"
@@ -580,9 +581,14 @@ func startAction(cmd *cobra.Command, args []string) error {
 		logrus.Warnf("expected status %q, got %q", limatype.StatusStopped, inst.Status)
 	}
 	ctx := cmd.Context()
-	err = reconcile.Reconcile(ctx, inst.Name)
-	if err != nil {
-		return err
+	// Network reconciliation will be performed by the process launched by the autostart manager
+	if registered, err := autostart.IsRegistered(ctx, inst); err != nil && !errors.Is(err, autostart.ErrNotSupported) {
+		return fmt.Errorf("failed to check if the autostart entry for instance %q is registered: %w", inst.Name, err)
+	} else if !registered {
+		err = reconcile.Reconcile(ctx, inst.Name)
+		if err != nil {
+			return err
+		}
 	}
 
 	launchHostAgentForeground := false

@@ -26,27 +26,28 @@ const (
 type Instance struct {
 	Name string `json:"name"`
 	// Hostname, not HostName (corresponds to SSH's naming convention)
-	Hostname        string            `json:"hostname"`
-	Status          Status            `json:"status"`
-	Dir             string            `json:"dir"`
-	VMType          VMType            `json:"vmType"`
-	Arch            Arch              `json:"arch"`
-	CPUs            int               `json:"cpus,omitempty"`
-	Memory          int64             `json:"memory,omitempty"` // bytes
-	Disk            int64             `json:"disk,omitempty"`   // bytes
-	Message         string            `json:"message,omitempty"`
-	AdditionalDisks []Disk            `json:"additionalDisks,omitempty"`
-	Networks        []Network         `json:"network,omitempty"`
-	SSHLocalPort    int               `json:"sshLocalPort,omitempty"`
-	SSHConfigFile   string            `json:"sshConfigFile,omitempty"`
-	HostAgentPID    int               `json:"hostAgentPID,omitempty"`
-	DriverPID       int               `json:"driverPID,omitempty"`
-	Errors          []error           `json:"errors,omitempty"`
-	Config          *LimaYAML         `json:"config,omitempty"`
-	SSHAddress      string            `json:"sshAddress,omitempty"`
-	Protected       bool              `json:"protected"`
-	LimaVersion     string            `json:"limaVersion"`
-	Param           map[string]string `json:"param,omitempty"`
+	Hostname              string            `json:"hostname"`
+	Status                Status            `json:"status"`
+	Dir                   string            `json:"dir"`
+	VMType                VMType            `json:"vmType"`
+	Arch                  Arch              `json:"arch"`
+	CPUs                  int               `json:"cpus,omitempty"`
+	Memory                int64             `json:"memory,omitempty"` // bytes
+	Disk                  int64             `json:"disk,omitempty"`   // bytes
+	Message               string            `json:"message,omitempty"`
+	AdditionalDisks       []Disk            `json:"additionalDisks,omitempty"`
+	Networks              []Network         `json:"network,omitempty"`
+	SSHLocalPort          int               `json:"sshLocalPort,omitempty"`
+	SSHConfigFile         string            `json:"sshConfigFile,omitempty"`
+	HostAgentPID          int               `json:"hostAgentPID,omitempty"`
+	DriverPID             int               `json:"driverPID,omitempty"`
+	Errors                []error           `json:"errors,omitempty"`
+	Config                *LimaYAML         `json:"config,omitempty"`
+	SSHAddress            string            `json:"sshAddress,omitempty"`
+	Protected             bool              `json:"protected"`
+	LimaVersion           string            `json:"limaVersion"`
+	Param                 map[string]string `json:"param,omitempty"`
+	AutoStartedIdentifier string            `json:"autoStartedIdentifier,omitempty"`
 }
 
 // Protect protects the instance to prohibit accidental removal.
