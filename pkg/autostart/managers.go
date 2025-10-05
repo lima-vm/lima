@@ -6,6 +6,7 @@ package autostart
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -19,44 +20,65 @@ import (
 
 type notSupportedManager struct{}
 
-var NotSupportedError = fmt.Errorf("autostart is not supported on %s", runtime.GOOS)
+var ErrNotSupported = fmt.Errorf("autostart is not supported on %s", runtime.GOOS)
 
 func (*notSupportedManager) IsRegistered(_ context.Context, _ *limatype.Instance) (bool, error) {
-	return false, NotSupportedError
+	return false, ErrNotSupported
 }
 
 func (*notSupportedManager) RegisterToStartAtLogin(_ context.Context, _ *limatype.Instance) error {
-	return NotSupportedError
+	return ErrNotSupported
 }
 
 func (*notSupportedManager) UnregisterFromStartAtLogin(_ context.Context, _ *limatype.Instance) error {
-	return NotSupportedError
+	return ErrNotSupported
+}
+
+func (*notSupportedManager) AutoStartedIdentifier() string {
+	return ""
+}
+
+func (*notSupportedManager) RequestStart(_ context.Context, _ *limatype.Instance) error {
+	return ErrNotSupported
+}
+
+func (*notSupportedManager) RequestStop(_ context.Context, _ *limatype.Instance) (bool, error) {
+	return false, ErrNotSupported
 }
 
 // Launchd is the autostart manager for macOS.
 var Launchd = &TemplateFileBasedManager{
-	filePath: launchd.GetPlistPath,
-	template: launchd.Template,
-	enabler:  launchd.EnableDisableService,
+	filePath:              launchd.GetPlistPath,
+	template:              launchd.Template,
+	enabler:               launchd.EnableDisableService,
+	autoStartedIdentifier: launchd.AutoStartedServiceName,
+	requestStart:          launchd.RequestStart,
+	requestStop:           launchd.RequestStop,
 }
 
 // Systemd is the autostart manager for Linux.
 var Systemd = &TemplateFileBasedManager{
-	filePath: systemd.GetUnitPath,
-	template: systemd.Template,
-	enabler:  systemd.EnableDisableUnit,
+	filePath:              systemd.GetUnitPath,
+	template:              systemd.Template,
+	enabler:               systemd.EnableDisableUnit,
+	autoStartedIdentifier: systemd.AutoStartedUnitName,
+	requestStart:          systemd.RequestStart,
+	requestStop:           systemd.RequestStop,
 }
 
 // TemplateFileBasedManager is an autostart manager that uses a template file to create the autostart entry.
 type TemplateFileBasedManager struct {
-	enabler  func(ctx context.Context, enable bool, instName string) error
-	filePath func(instName string) string
-	template string
+	enabler               func(ctx context.Context, enable bool, instName string) error
+	filePath              func(instName string) string
+	template              string
+	autoStartedIdentifier func() string
+	requestStart          func(ctx context.Context, inst *limatype.Instance) error
+	requestStop           func(ctx context.Context, inst *limatype.Instance) (bool, error)
 }
 
-func (t *TemplateFileBasedManager) IsRegistered(ctx context.Context, inst *limatype.Instance) (bool, error) {
+func (t *TemplateFileBasedManager) IsRegistered(_ context.Context, inst *limatype.Instance) (bool, error) {
 	if t.filePath == nil {
-		return false, fmt.Errorf("no filePath function available")
+		return false, errors.New("no filePath function available")
 	}
 	autostartFilePath := t.filePath(inst.Name)
 	if _, err := os.Stat(autostartFilePath); err != nil {
@@ -68,58 +90,78 @@ func (t *TemplateFileBasedManager) IsRegistered(ctx context.Context, inst *limat
 	return true, nil
 }
 
-func (m *TemplateFileBasedManager) RegisterToStartAtLogin(ctx context.Context, inst *limatype.Instance) error {
-	if _, err := m.IsRegistered(ctx, inst); err != nil {
+func (t *TemplateFileBasedManager) RegisterToStartAtLogin(ctx context.Context, inst *limatype.Instance) error {
+	if _, err := t.IsRegistered(ctx, inst); err != nil {
 		return fmt.Errorf("failed to check if the autostart entry for instance %q is registered: %w", inst.Name, err)
 	}
-	content, err := m.renderTemplate(inst.Name, inst.Dir, os.Executable)
+	content, err := t.renderTemplate(inst.Name, inst.Dir, os.Executable)
 	if err != nil {
 		return fmt.Errorf("failed to render the autostart entry for instance %q: %w", inst.Name, err)
 	}
-	entryFilePath := m.filePath(inst.Name)
+	entryFilePath := t.filePath(inst.Name)
 	if err := os.MkdirAll(filepath.Dir(entryFilePath), os.ModePerm); err != nil {
 		return fmt.Errorf("failed to create the directory for the autostart entry for instance %q: %w", inst.Name, err)
 	}
 	if err := os.WriteFile(entryFilePath, content, 0o644); err != nil {
 		return fmt.Errorf("failed to write the autostart entry for instance %q: %w", inst.Name, err)
 	}
-	if m.enabler != nil {
-		return m.enabler(ctx, true, inst.Name)
-	} else {
-		return nil
+	if t.enabler != nil {
+		return t.enabler(ctx, true, inst.Name)
 	}
+	return nil
 }
 
-func (m *TemplateFileBasedManager) UnregisterFromStartAtLogin(ctx context.Context, inst *limatype.Instance) error {
-	if registered, err := m.IsRegistered(ctx, inst); err != nil {
+func (t *TemplateFileBasedManager) UnregisterFromStartAtLogin(ctx context.Context, inst *limatype.Instance) error {
+	if registered, err := t.IsRegistered(ctx, inst); err != nil {
 		return fmt.Errorf("failed to check if the autostart entry for instance %q is registered: %w", inst.Name, err)
 	} else if !registered {
 		return nil
 	}
-	if m.enabler != nil {
-		if err := m.enabler(ctx, false, inst.Name); err != nil {
+	if t.enabler != nil {
+		if err := t.enabler(ctx, false, inst.Name); err != nil {
 			return fmt.Errorf("failed to disable the autostart entry for instance %q: %w", inst.Name, err)
 		}
 	}
-	if err := os.Remove(m.filePath(inst.Name)); err != nil {
+	if err := os.Remove(t.filePath(inst.Name)); err != nil {
 		return fmt.Errorf("failed to remove the autostart entry for instance %q: %w", inst.Name, err)
 	}
 	return nil
 }
 
-func (m *TemplateFileBasedManager) renderTemplate(instName, workDir string, getExecutable func() (string, error)) ([]byte, error) {
-	if m.template == "" {
-		return nil, fmt.Errorf("no template available")
+func (t *TemplateFileBasedManager) renderTemplate(instName, workDir string, getExecutable func() (string, error)) ([]byte, error) {
+	if t.template == "" {
+		return nil, errors.New("no template available")
 	}
 	selfExeAbs, err := getExecutable()
 	if err != nil {
 		return nil, err
 	}
 	return textutil.ExecuteTemplate(
-		m.template,
+		t.template,
 		map[string]string{
 			"Binary":   selfExeAbs,
 			"Instance": instName,
 			"WorkDir":  workDir,
 		})
+}
+
+func (t *TemplateFileBasedManager) AutoStartedIdentifier() string {
+	if t.autoStartedIdentifier != nil {
+		return t.autoStartedIdentifier()
+	}
+	return ""
+}
+
+func (t *TemplateFileBasedManager) RequestStart(ctx context.Context, inst *limatype.Instance) error {
+	if t.requestStart == nil {
+		return errors.New("no RequestStart function available")
+	}
+	return t.requestStart(ctx, inst)
+}
+
+func (t *TemplateFileBasedManager) RequestStop(ctx context.Context, inst *limatype.Instance) (bool, error) {
+	if t.requestStop == nil {
+		return false, errors.New("no RequestStop function available")
+	}
+	return t.requestStop(ctx, inst)
 }

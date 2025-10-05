@@ -83,6 +83,7 @@ func Inspect(ctx context.Context, instName string) (*limatype.Instance, error) {
 				inst.Errors = append(inst.Errors, fmt.Errorf("failed to get Info from %q: %w", haSock, err))
 			} else {
 				inst.SSHLocalPort = info.SSHLocalPort
+				inst.AutoStartedIdentifier = info.AutoStartedIdentifier
 			}
 		}
 	}
