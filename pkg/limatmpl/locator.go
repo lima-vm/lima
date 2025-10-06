@@ -312,6 +312,15 @@ func TransformCustomURL(ctx context.Context, locator string) (string, error) {
 		return newLocator, nil
 	}
 
+	if u.Scheme == "github" {
+		newLocator, err := transformGitHubURL(ctx, u.Opaque)
+		if err != nil {
+			return "", err
+		}
+		logrus.Warnf("GitHub locator %q replaced with %q is still EXPERIMENTAL", locator, newLocator)
+		return newLocator, nil
+	}
+
 	plugin, err := plugins.Find("url-" + u.Scheme)
 	if err != nil {
 		return "", err
