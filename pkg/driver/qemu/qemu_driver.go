@@ -78,21 +78,15 @@ func (l *LimaQemuDriver) Configure(inst *limatype.Instance) *driver.ConfiguredDr
 }
 
 func (l *LimaQemuDriver) Validate(ctx context.Context) error {
-	return validateConfig(ctx, l.Instance.Config)
+	if err := validateArch(ctx, l.Instance.Config); err != nil {
+		return err
+	}
+	return validateConfig(l.Instance.Config)
 }
 
-func validateConfig(ctx context.Context, cfg *limatype.LimaYAML) error {
+func validateConfig(cfg *limatype.LimaYAML) error {
 	if cfg == nil {
 		return errors.New("configuration is nil")
-	}
-	if runtime.GOOS == "darwin" {
-		var vmArch string
-		if cfg.Arch != nil {
-			vmArch = *cfg.Arch
-		}
-		if err := checkBinarySignature(ctx, vmArch); err != nil {
-			return err
-		}
 	}
 	if err := validateMountType(cfg); err != nil {
 		return err
@@ -119,6 +113,20 @@ func validateConfig(ctx context.Context, cfg *limatype.LimaYAML) error {
 	return nil
 }
 
+// Helper method for checking the binary signature on macOS.
+func validateArch(ctx context.Context, cfg *limatype.LimaYAML) error {
+	if runtime.GOOS == "darwin" {
+		var vmArch string
+		if cfg.Arch != nil {
+			vmArch = *cfg.Arch
+		}
+		if err := checkBinarySignature(ctx, vmArch); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Helper method for mount type validation.
 func validateMountType(cfg *limatype.LimaYAML) error {
 	if cfg.MountType != nil && *cfg.MountType == limatype.VIRTIOFS && runtime.GOOS != "linux" {
@@ -135,7 +143,7 @@ func validateMountType(cfg *limatype.LimaYAML) error {
 	return nil
 }
 
-func (l *LimaQemuDriver) FillConfig(ctx context.Context, cfg *limatype.LimaYAML, filePath string) error {
+func (l *LimaQemuDriver) FillConfig(_ context.Context, cfg *limatype.LimaYAML, filePath string) error {
 	if cfg.VMType == nil {
 		cfg.VMType = ptr.Of(limatype.QEMU)
 	}
@@ -198,7 +206,7 @@ func (l *LimaQemuDriver) FillConfig(ctx context.Context, cfg *limatype.LimaYAML,
 		return fmt.Errorf("mount type %q is explicitly unsupported", *cfg.MountType)
 	}
 
-	return validateConfig(ctx, cfg)
+	return validateConfig(cfg)
 }
 
 func (l *LimaQemuDriver) BootScripts() (map[string][]byte, error) {
