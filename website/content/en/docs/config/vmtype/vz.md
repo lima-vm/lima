@@ -8,7 +8,9 @@ weight: 2
 
 "vz" option makes use of native virtualization support provided by macOS Virtualization.Framework.
 
-An example configuration:
+"vz" has been the default driver for macOS hosts since Lima v1.0.
+
+An example configuration (no need to be specified manually):
 {{< tabpane text=true >}}
 {{% tab header="CLI" %}}
 ```bash
@@ -17,15 +19,11 @@ limactl start --vm-type=vz
 {{% /tab %}}
 {{% tab header="YAML" %}}
 ```yaml
-# Example to run ubuntu using vmType: vz instead of qemu (Default)
 vmType: "vz"
-images:
-- location: "https://cloud-images.ubuntu.com/releases/24.04/release/ubuntu-24.04-server-cloudimg-amd64.img"
-  arch: "x86_64"
-- location: "https://cloud-images.ubuntu.com/releases/24.04/release/ubuntu-24.04-server-cloudimg-arm64.img"
-  arch: "aarch64"
-mounts:
-  - location: "~"
+
+base:
+- template://_images/ubuntu
+- template://_default/mounts
 ```
 {{% /tab %}}
 {{< /tabpane >}}
