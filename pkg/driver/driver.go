@@ -105,6 +105,7 @@ type Info struct {
 type DriverFeatures struct {
 	CanRunGUI            bool `json:"canRunGui,omitempty"`
 	DynamicSSHAddress    bool `json:"dynamicSSHAddress"`
+	StaticSSHPort        bool `json:"staticSSHPort"`
 	SkipSocketForwarding bool `json:"skipSocketForwarding"`
 	NoCloudInit          bool `json:"noCloudInit"`
 	RosettaEnabled       bool `json:"rosettaEnabled"`

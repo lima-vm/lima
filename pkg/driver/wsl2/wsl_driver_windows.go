@@ -309,6 +309,7 @@ func (l *LimaWslDriver) Info() driver.Info {
 
 	info.Features = driver.DriverFeatures{
 		DynamicSSHAddress:    true,
+		StaticSSHPort:        true,
 		SkipSocketForwarding: true,
 		NoCloudInit:          true,
 		CanRunGUI:            l.canRunGUI(),
