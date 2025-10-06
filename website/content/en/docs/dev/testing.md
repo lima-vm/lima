@@ -17,10 +17,33 @@ The unit tests do not execute actual virtual machines.
 
 The integration tests incurs actual execution of virtual machines.
 
-The integration tests are written in bash and partially in Perl.
+The integration tests are written in [BATS (Bash Automated Testing System)](https://github.com/bats-core/bats-core).
+
+Run the following commands to run the BATS tests:
+
+```bash
+git submodule update --init --recursive
+make bats
+```
+
+The BATS tests are located located under [`hack/bats/tests`](https://github.com/lima-vm/lima/tree/master/hack/bats/tests).
+
+### Extra tests
+There are also extra tests ([`hack/bats/extras`](https://github.com/lima-vm/lima/tree/master/hack/bats/extras)) that are not automatically
+invoked from `make bats`.
+
+Run the following command to run the extra BATS tests:
+
+```bash
+./hack/bats/lib/bats-core/bin/bats ./hack/bats/extras
+```
+
+## Template-specific tests
+
+Tests that are specific to template files are written in bash and partially in Perl.
 
 Use [`hack/test-templates.sh`](https://github.com/lima-vm/lima/blob/master/hack/test-templates.sh)
-to execute integration tests, with a virtual machine template file, e.g.,:
+to execute tests, with a virtual machine template file, e.g.,:
 
 ```bash
 ./hack/test-templates.sh ./templates/default.yaml
@@ -31,9 +54,9 @@ to execute integration tests, with a virtual machine template file, e.g.,:
 ## CI
 
 [`.github/workflows/test.yml`](https://github.com/lima-vm/lima/blob/master/.github/workflows/test.yml)
-executes the unit tests and the integration tests on the GitHub Actions with the ["Tier 1"](../../templates/) templates.
+executes the tests on the GitHub Actions with the ["Tier 1"](../../templates/) templates.
 
-Most integration tests are executed on Linux runners, as macOS runners are slow and flaky.
+Most tests are executed on Linux runners, as macOS runners are slow and flaky.
 
 The tests about macOS-specific features (e.g., vz and vmnet) are still executed on macOS runners.
 
