@@ -46,6 +46,12 @@ func launchctl(ctx context.Context, args ...string) error {
 	return cmd.Run()
 }
 
+func launchctlWithoutOutput(ctx context.Context, args ...string) error {
+	cmd := exec.CommandContext(ctx, "launchctl", args...)
+	logrus.Debugf("running command without output: %v", cmd.Args)
+	return cmd.Run()
+}
+
 // AutoStartedServiceName returns the launchd service name if the instance is started by launchd.
 func AutoStartedServiceName() string {
 	// Assume the instance is started by launchd if XPC_SERVICE_NAME is set and not "0".
@@ -67,7 +73,10 @@ func serviceTarget(instName string) string {
 }
 
 func RequestStart(ctx context.Context, inst *limatype.Instance) error {
-	// If disabled, bootstrap will fail.
+	// Call `launchctl bootout` first, because instance may be stopped without unloading the plist file.
+	// If the plist file is not unloaded, `launchctl bootstrap` will fail.
+	_ = launchctlWithoutOutput(ctx, "bootout", serviceTarget(inst.Name))
+	// If disabled, `launchctl bootstrap` will fail.
 	_ = EnableDisableService(ctx, true, inst.Name)
 	if err := launchctl(ctx, "bootstrap", domainTarget(), GetPlistPath(inst.Name)); err != nil {
 		return fmt.Errorf("failed to start the instance %q via launchctl: %w", inst.Name, err)
