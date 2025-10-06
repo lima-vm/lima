@@ -54,7 +54,7 @@ See also <https://github.com/Aider-AI/aider>.
 ```
 lima sudo snap install node --classic
 lima sudo npm install -g @anthropic-ai/claude-code
-lima codex
+lima claude
 ```
 
 Follow the guide shown in the first session for authentication.
