@@ -130,6 +130,9 @@ func convertRawToRaw(source, dest string, size *int64) error {
 		if err := containerdfs.CopyFile(dest, source); err != nil {
 			return fmt.Errorf("failed to copy %q into %q: %w", source, dest, err)
 		}
+		if err := os.Chmod(dest, 0o644); err != nil {
+			return fmt.Errorf("failed to set permissions on %q: %w", dest, err)
+		}
 	}
 	if size != nil {
 		logrus.Infof("Expanding to %s", units.BytesSize(float64(*size)))
