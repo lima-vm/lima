@@ -23,13 +23,17 @@ The default was further reverted to GRPC in Lima v1.1, as the stability issues w
 
 ### Using SSH
 
-SSH based port forwarding is the legacy mode that was previously default.
+SSH based port forwarding was previously the default mode.
 
 To explicitly use SSH forwarding use the below command
 
 ```bash
 LIMA_SSH_PORT_FORWARDER=true limactl start
 ```
+
+#### Advantages
+
+- Outperforms GRPC when VSOCK is available
 
 #### Caveats
 
@@ -67,15 +71,17 @@ LIMA_SSH_PORT_FORWARDER=false limactl start
 #### Advantages
 
 - Supports both TCP and UDP based port forwarding
-- Performs faster compared to SSH based forwarding
+- Performs faster compared to SSH based forwarding, when VSOCK is not available
 - No additional child process for port forwarding
 
 ### Benchmarks
 
-| Use case    | GRPC           | SSH            |
-|-------------|----------------|----------------|
-| TCP         | 3.80 Gbits/sec | 3.38 Gbits/sec |
-| TCP Reverse | 4.77 Gbits/sec | 3.08 Gbits/sec |
+<!-- When updating the benchmark result, make sure to update the benchmarking environment too -->
+
+| Use case    | GRPC           | **SSH (w/ VSOCK)** | SSH (w/o VSOCK) |
+|-------------|----------------|--------------------|-----------------|
+| TCP         | 5.37 Gbits/sec | 6.32 Gbits/sec     | 4.06 Gbits/sec  |
+| TCP Reverse | 7.11 Gbits/sec | 7.47 Gbits/sec     | 3.84 Gbits/sec  |
 
 The benchmarks detail above are obtained using the following commands
 
@@ -84,7 +90,22 @@ Host -> limactl start vz
 
 VZ Guest -> iperf3 -s
 
-Host -> iperf3 -c 127.0.0.1 //Benchmark for TCP 
-Host -> iperf3 -c 127.0.0.1 -R //Benchmark for TCP Reverse
+Host -> iperf3 -c 127.0.0.1 //Benchmark for TCP (average of "sender" and "receiver")
+Host -> iperf3 -c 127.0.0.1 -R //Benchmark for TCP Reverse (same as above)
 ```
 
+<details>
+<summary>Benchmarking environment</summary>
+<p>
+
+- Lima version: 2.0.0-alpha.2
+- Guest: Ubuntu 25.04
+  - OpenSSH 9.9p1
+  - iperf 3.18
+- Host: macOS 26.0.1
+  - OpenSSH 10.0p2
+  - iperf 3.19.1 (Homebrew)
+- Hardware: MacBook Pro 2024 (M4 Max, 128 GiB)
+
+</p>
+</details>
