@@ -296,6 +296,7 @@ jobs:
         - archlinux.yaml
         - opensuse.yaml
         - docker.yaml
+        - k8s.yaml
         - ../hack/test-templates/alpine-iso-9p-writable.yaml  # Covers alpine-iso.yaml
         - ../hack/test-templates/net-user-v2.yaml
         - ../hack/test-templates/test-misc.yaml  # TODO: merge net-user-v2 into test-misc

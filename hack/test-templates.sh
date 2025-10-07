@@ -44,6 +44,7 @@ declare -A CHECKS=(
 	["systemd-strict"]="1"
 	["mount-home"]="1"
 	["container-engine"]="1"
+	["k8s"]=""
 	["restart"]="1"
 	# snapshot tests are too flaky (especially with archlinux)
 	["snapshot-online"]=""
@@ -63,6 +64,12 @@ declare -A CHECKS=(
 	["ssh-over-vsock"]=""
 )
 
+clear_checks() {
+	for k in "${!CHECKS[@]}"; do
+		CHECKS["$k"]=""
+	done
+}
+
 case "$NAME" in
 "default")
 	# CI failure:
@@ -76,9 +83,10 @@ case "$NAME" in
 	CHECKS["container-engine"]=
 	[ "$NAME" = "alpine-iso-9p-writable" ] && CHECKS["mount-path-with-spaces"]="1"
 	;;
-"k3s")
-	ERROR "File \"$FILE\" is not testable with this script"
-	exit 1
+"k0s" | "k3s" | "k8s")
+	# Disable all checks except k8s
+	clear_checks
+	CHECKS["k8s"]="1"
 	;;
 "fedora")
 	WARNING "Relaxing systemd tests for fedora (For avoiding CI failure)"
@@ -429,6 +437,18 @@ if [[ -n ${CHECKS["container-engine"]} ]]; then
 		fi
 		set +x
 	fi
+fi
+
+if [[ -n ${CHECKS["k8s"]} ]]; then
+	INFO "Testing Kubernetes"
+	set -x
+	limactl shell "$NAME" kubectl get nodes -o wide
+	limactl shell "$NAME" kubectl create deployment nginx --image="${nginx_image}"
+	limactl shell "$NAME" kubectl create service nodeport nginx --node-port=31080 --tcp=80:80
+	timeout 3m bash -euxc "until curl -f --retry 30 --retry-connrefused http://127.0.0.1:31080; do sleep 3; done"
+	limactl shell "$NAME" kubectl delete service nginx
+	limactl shell "$NAME" kubectl delete deployment nginx
+	set +x
 fi
 
 if [[ -n ${CHECKS["port-forwards"]} ]]; then

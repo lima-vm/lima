@@ -57,7 +57,7 @@ Container orchestration:
 - [`faasd`](./faasd.yaml): [Faasd](https://docs.openfaas.com/deployment/edge/)
 - [`k0s`](./k0s.yaml): [k0s](https://k0sproject.io/) Zero Friction Kubernetes
 - [`k3s`](./k3s.yaml): Kubernetes via k3s
-- [`k8s`](./k8s.yaml): Kubernetes via kubeadm
+- [`k8s`](./k8s.yaml): ⭐Kubernetes via kubeadm
 - [`experimental/u7s`](./experimental/u7s.yaml): [Usernetes](https://github.com/rootless-containers/usernetes): Rootless Kubernetes
 
 Optional feature enablers:
