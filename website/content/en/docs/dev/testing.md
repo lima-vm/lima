@@ -26,7 +26,7 @@ git submodule update --init --recursive
 make bats
 ```
 
-The BATS tests are located located under [`hack/bats/tests`](https://github.com/lima-vm/lima/tree/master/hack/bats/tests).
+The BATS tests are located under [`hack/bats/tests`](https://github.com/lima-vm/lima/tree/master/hack/bats/tests).
 
 ### Extra tests
 There are also extra tests ([`hack/bats/extras`](https://github.com/lima-vm/lima/tree/master/hack/bats/extras)) that are not automatically
