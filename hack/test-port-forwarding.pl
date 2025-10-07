@@ -187,9 +187,11 @@ foreach my $test (@test) {
 open(my $log, "< $ha_log") or die "Can't read $ha_log: $!";
 seek($log, $ha_log_size, 0) or die "Can't seek $ha_log to $ha_log_size: $!";
 my %seen;
+my %failed_to_listen_tcp;
 while (<$log>) {
     $seen{$1}++ if /(Forwarding TCP from .*? to ((\d.*?|\[.*?\]):\d+|\/[^"]+))/;
     $seen{$1}++ if /(Not forwarding TCP .*?:\d+)/;
+    $failed_to_listen_tcp{$2}=$1 if /(failed to listen tcp: listen tcp (.*?:\d+):[^"]+)/;
 }
 close $log or die;
 
@@ -218,6 +220,24 @@ foreach (keys %seen) {
     next if $expected{$_};
     # Should this be an error? Really should only happen if something else failed as well.
     print "😕 Unexpected log message: $_\n";
+}
+
+if (%failed_to_listen_tcp) {
+    foreach (keys %failed_to_listen_tcp) {
+        print "⚠️  $failed_to_listen_tcp{$_}\n";
+    }
+    my @tcp_list = keys %failed_to_listen_tcp; 
+    if ($Config{osname} eq "darwin") {
+        my @lsof_args = map { "-iTCP\@$_" } @tcp_list;
+        print `lsof -P @lsof_args`;
+    } elsif ($Config{osname} eq "linux") {
+        my @lss_args = map { "src = $_" } @tcp_list;
+        my $ss_expression = join(" or ", @lss_args);
+        print `sudo ss -lnpt "$ss_expression"`;
+    } elsif ($Config{osname} eq "cygwin") {
+        my @awk_args = map { "-e'/$_/'" } @tcp_list;
+        print `netstat -aon | awk -e'/^ +Proto/' @awk_args`;
+    }
 }
 
 # Cleanup remaining netcat instances (and port forwards)
