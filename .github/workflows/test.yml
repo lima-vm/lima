@@ -315,10 +315,8 @@ jobs:
     - name: Install test dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y --no-install-recommends ovmf qemu-system-x86 qemu-utils w3m
-        sudo modprobe kvm
-        # `sudo usermod -aG kvm $(whoami)` does not take an effect on GHA
-        sudo chown $(whoami) /dev/kvm
+        sudo ./hack/install-qemu.sh
+        sudo apt-get install -y --no-install-recommends w3m
     - name: Install ansible-playbook
       run: |
         sudo apt-get install -y --no-install-recommends ansible
@@ -360,10 +358,7 @@ jobs:
     - name: Install test dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y --no-install-recommends ovmf qemu-system-x86 qemu-utils
-        sudo modprobe kvm
-        # `sudo usermod -aG kvm $(whoami)` does not take an effect on GHA
-        sudo chown $(whoami) /dev/kvm
+        sudo ./hack/install-qemu.sh
     - name: Cache image used by templates/default.yaml
       uses: ./.github/actions/setup_cache_for_template
       with:
@@ -407,10 +402,7 @@ jobs:
     - name: Install test dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y --no-install-recommends ovmf qemu-system-x86 qemu-utils
-        sudo modprobe kvm
-        # `sudo usermod -aG kvm $(whoami)` does not take an effect on GHA
-        sudo chown $(whoami) /dev/kvm
+        sudo ./hack/install-qemu.sh
     - name: "Show cache"
       run: ./hack/debug-cache.sh
     - name: "Test"
@@ -615,10 +607,6 @@ jobs:
     - name: Install test dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y --no-install-recommends ovmf qemu-system-x86 qemu-utils
-        qemu-system-x86_64 --version
-        sudo modprobe kvm
-        # `sudo usermod -aG kvm $(whoami)` does not take an effect on GHA
-        sudo chown $(whoami) /dev/kvm
+        sudo ./hack/install-qemu.sh
     - name: Smoke test
       run: limactl start --tty=false
