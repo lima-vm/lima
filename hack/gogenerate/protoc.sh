@@ -26,4 +26,4 @@ protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=p
 # +// - protoc version [omitted for reproducibility]
 #
 # perl is used because `sed -i` is not portable across BSD (macOS) and GNU.
-perl -pi -E 's@(^//.*)protoc[[:blank:]]+v[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+@\1protoc version [omitted for reproducibility]@g' "$PB_GO" "$GRPC_PB_GO"
+perl -pi -E 's@(^//.*protoc.*)[[:blank:]]+v[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+@\1 [version omitted for reproducibility]@g' "$PB_GO" "$GRPC_PB_GO"
