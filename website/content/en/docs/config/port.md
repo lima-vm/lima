@@ -74,14 +74,33 @@ LIMA_SSH_PORT_FORWARDER=false limactl start
 - Performs faster compared to SSH based forwarding, when VSOCK is not available
 - No additional child process for port forwarding
 
+
+## Accessing ports by IP address
+
+To access a guest's ports by its IP address, connect the guest to the `vzNAT` or the `lima:shared` network.
+
+The `vzNAT` network is extremely faster and easier to use, however, `vzNAT` is only available for [VZ](./vmtype/vz.md) guests.
+
+```bash
+limactl start --network vzNAT
+lima ip addr show lima0
+```
+
+See [Config » Network » VMNet networks](./network/vmnet.md) for the further information.
+
 ### Benchmarks
 
 <!-- When updating the benchmark result, make sure to update the benchmarking environment too -->
 
-| Use case    | GRPC           | **SSH (w/ VSOCK)** | SSH (w/o VSOCK) |
-|-------------|----------------|--------------------|-----------------|
-| TCP         | 5.37 Gbits/sec | 6.32 Gbits/sec     | 4.06 Gbits/sec  |
-| TCP Reverse | 7.11 Gbits/sec | 7.47 Gbits/sec     | 3.84 Gbits/sec  |
+| By localhost | SSH (w/o VSOCK) | GRPC           | SSH (w/ VSOCK)  |
+|--------------|-----------------|----------------|-----------------|
+| TCP          | 4.06 Gbits/sec  | 5.37 Gbits/sec | 6.32 Gbits/sec  |
+| TCP Reverse  | 3.84 Gbits/sec  | 7.11 Gbits/sec | 7.47 Gbits/sec  |
+
+| By IP address | lima:shared    | vzNAT          |
+|---------------|----------------|----------------|
+| TCP           | 3.46 Gbits/sec | 59.2 Gbits/sec |
+| TCP Reverse   | 2.35 Gbits/sec | 130  Gbits/sec |
 
 The benchmarks detail above are obtained using the following commands
 
@@ -93,6 +112,8 @@ VZ Guest -> iperf3 -s
 Host -> iperf3 -c 127.0.0.1 //Benchmark for TCP (average of "sender" and "receiver")
 Host -> iperf3 -c 127.0.0.1 -R //Benchmark for TCP Reverse (same as above)
 ```
+
+The benchmark result, especially the throughput of vzNAT, highly depends on the performance of the hardware.
 
 <details>
 <summary>Benchmarking environment</summary>

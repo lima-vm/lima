@@ -37,6 +37,8 @@ The range of the IP address is not specifiable.
 
 The "vzNAT" network does not need the `socket_vmnet` binary and the `sudoers` file.
 
+The "vzNAT" network also has a significant advantage in the throughput. See the [benchmark result](../port.md#benchmarks).
+
 ## socket_vmnet
 ### Managed (192.168.105.0/24)
 
