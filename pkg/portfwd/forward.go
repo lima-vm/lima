@@ -34,8 +34,8 @@ func NewPortForwarder(rules []limatype.PortForward, ignoreTCP, ignoreUDP bool) *
 	}
 }
 
-func (fw *Forwarder) Close() {
-	fw.closableListeners.Close()
+func (fw *Forwarder) Close() error {
+	return fw.closableListeners.Close()
 }
 
 func (fw *Forwarder) OnEvent(ctx context.Context, client *guestagentclient.GuestAgentClient, ev *api.Event) {
