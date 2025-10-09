@@ -177,7 +177,7 @@ jobs:
     - name: Integration tests (WSL2, Windows host)
       run: |
         $env:PATH = "$pwd\_output\bin;" + 'C:\msys64\usr\bin;' + $env:PATH
-        pacman -Sy --noconfirm openbsd-netcat diffutils
+        pacman -Sy --noconfirm openbsd-netcat diffutils socat
         $env:MSYS2_ENV_CONV_EXCL = 'HOME_HOST;HOME_GUEST;_LIMA_WINDOWS_EXTRA_PATH'
         $env:HOME_HOST = $(cygpath.exe "$env:USERPROFILE")
         $env:HOME_GUEST = "/mnt$env:HOME_HOST"
@@ -206,7 +206,7 @@ jobs:
     - name: Integration tests (QEMU, Windows host)
       run: |
         $env:PATH = "$pwd\_output\bin;" + 'C:\msys64\usr\bin;' + 'C:\Program Files\QEMU;' + $env:PATH
-        pacman -Sy --noconfirm openbsd-netcat diffutils
+        pacman -Sy --noconfirm openbsd-netcat diffutils socat
         $env:MSYS2_ENV_CONV_EXCL = 'HOME_HOST;HOME_GUEST;_LIMA_WINDOWS_EXTRA_PATH'
         $env:HOME_HOST = $(cygpath.exe "$env:USERPROFILE")
         $env:HOME_GUEST = "$env:HOME_HOST"
@@ -239,7 +239,8 @@ jobs:
       # bash:      required by test-templates.sh (OS version of bash is too old)
       # coreutils: required by test-templates.sh for the "timeout" command
       # w3m :      required by test-templates.sh for port forwarding tests
-      run: brew install qemu bash coreutils w3m
+      # socat:     required by test-templates.sh for port forwarding tests
+      run: brew install qemu bash coreutils w3m socat
     - name: "Adjust LIMACTL_CREATE_ARGS"
       run: echo "LIMACTL_CREATE_ARGS=${LIMACTL_CREATE_ARGS} --vm-type=qemu" >>$GITHUB_ENV
     - name: "Inject `no_timer_check` to kernel cmdline"
@@ -304,7 +305,7 @@ jobs:
       run: |
         sudo apt-get update
         sudo ./hack/install-qemu.sh
-        sudo apt-get install -y --no-install-recommends w3m
+        sudo apt-get install -y --no-install-recommends socat w3m
     - name: Install ansible-playbook
       run: |
         sudo apt-get install -y --no-install-recommends ansible
@@ -426,7 +427,7 @@ jobs:
       with:
         template: templates/default.yaml
     - name: Install test dependencies
-      run: brew install qemu bash coreutils w3m
+      run: brew install qemu bash coreutils w3m socat
     - name: Install socket_vmnet
       env:
         SOCKET_VMNET_VERSION: v1.2.0
@@ -521,7 +522,7 @@ jobs:
       with:
         template: templates/${{ matrix.template }}
     - name: Install test dependencies
-      run: brew install bash coreutils w3m
+      run: brew install bash coreutils w3m socat
     - name: Uninstall qemu
       run: brew uninstall --ignore-dependencies --force qemu
     - name: Test

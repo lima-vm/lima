@@ -8,7 +8,7 @@
 # ./hack/test-port-forwarding.pl templates/default.yaml
 # limactl --tty=false start templates/default.yaml
 # git restore templates/default.yaml
-# ./hack/test-port-forwarding.pl default
+# ./hack/test-port-forwarding.pl default [nc|socat [nc|socat]] [timeout]
 #
 # TODO: support for ipv6 host addresses
 
@@ -21,7 +21,23 @@ use IO::Handle qw();
 use Socket qw(inet_ntoa);
 use Sys::Hostname qw(hostname);
 
+my $connectionTimeout = 1; # seconds
+
 my $instance = shift;
+my $listener;
+my $writer;
+while (my $arg = shift) {
+    if ($arg eq "nc" || $arg eq "socat") {
+        $listener = $arg unless defined $listener;
+        $writer = $arg if defined $listener && !defined $writer;
+    } elsif ($arg =~ /^\d+$/) {
+        $connectionTimeout = $arg;
+    } else {
+        die "Usage: $0 [instance|yaml-file] [nc|socat [nc|socat]] [timeout]\n";
+    }
+}
+$listener ||= "nc";
+$writer ||= $listener;
 
 my $addr = scalar gethostbyname(hostname());
 # If hostname address cannot be determines, use localhost to trigger fallback to system_profiler lookup
@@ -146,7 +162,8 @@ print $lima <<'EOF';
 set -e
 cd $HOME
 sudo pkill -x nc || true
-rm -f nc.*
+sudo pkill -x socat || true
+rm -f nc.* socat.*
 EOF
 
 # Give the hostagent some time to remove any port forwards from a previous (crashed?) test run
@@ -161,13 +178,19 @@ my $ha_log_size = -s $ha_log or die;
 # Setup a netcat listener on the guest for each test
 foreach my $id (0..@test-1) {
     my $test = $test[$id];
-    my $nc = "nc -l $test->{guest_ip} $test->{guest_port}";
-    if ($instance =~ /^alpine/) {
-        $nc = "nc -l -s $test->{guest_ip} -p $test->{guest_port}";
+    my $cmd;
+    if ($listener eq "nc") {
+        $cmd = "nc -l $test->{guest_ip} $test->{guest_port}";
+        if ($instance =~ /^alpine/) {
+            $cmd = "nc -l -s $test->{guest_ip} -p $test->{guest_port}";
+        }
+    } elsif ($listener eq "socat") {
+        my $proto = $test->{guest_ip} =~ /:/ ? "TCP6" : "TCP";
+        $cmd = "socat -u $proto-LISTEN:$test->{guest_port},bind=$test->{guest_ip} STDOUT";
     }
 
     my $sudo = $test->{guest_port} < 1024 ? "sudo " : "";
-    print $lima "${sudo}${nc} >nc.${id} 2>/dev/null &\n";
+    print $lima "${sudo}${cmd} >$listener.${id} 2>/dev/null &\n";
 }
 
 # Make sure the guest- and hostagents had enough time to set up the forwards
@@ -176,8 +199,20 @@ sleep 5;
 # Try to reach each listener from the host
 foreach my $test (@test) {
     next if $test->{host_port} == $sshLocalPort;
-    my $nc = $test->{host_socket} eq "" ? "nc -w 1 $test->{host_ip} $test->{host_port}" : "nc -w 1 -U $test->{host_socket}";
-    open(my $netcat, "| $nc") or die "Can't run '$nc': $!";
+    my $cmd;
+    if ($writer eq "nc") {
+        if ($Config{osname} eq "darwin") {
+            # macOS nc doesn't support -w for connection timeout, so use -G instead
+            $cmd = $test->{host_socket} eq "" ? "nc -G $connectionTimeout $test->{host_ip} $test->{host_port}" : "nc -G $connectionTimeout -U $test->{host_socket}";
+        } else {
+            $cmd = $test->{host_socket} eq "" ? "nc -w $connectionTimeout $test->{host_ip} $test->{host_port}" : "nc -w $connectionTimeout -U $test->{host_socket}";
+        }
+    } elsif ($writer eq "socat") {
+        my $tcp_dest = $test->{host_ip} =~ /:/ ? "TCP6:[$test->{host_ip}]:$test->{host_port}" : "TCP:$test->{host_ip}:$test->{host_port}";
+        $cmd = $test->{host_socket} eq "" ? "socat -u STDIN $tcp_dest,connect-timeout=$connectionTimeout" : "socat -u STDIN UNIX-CONNECT:$test->{host_socket}";
+    }
+    print "Running: $cmd\n";
+    open(my $netcat, "| $cmd") or die "Can't run '$cmd': $!";
     print $netcat "$test->{log_msg}\n";
     # Don't check for errors on close; macOS nc seems to return non-zero exit code even on success
     close($netcat);
@@ -204,7 +239,7 @@ foreach my $id (0..@test-1) {
     unless ($seen{$test->{log_msg}}) {
         $err .= "\n   Message missing from ha.stderr.log";
     }
-    my $log = qx(limactl shell --workdir / $instance sh -c "cd; cat nc.$id");
+    my $log = qx(limactl shell --workdir / $instance sh -c "cd; cat $listener.$id");
     chomp $log;
     if ($test->{mode} eq "forward" && $test->{log_msg} ne $log) {
         $err .= "\n   Guest received: '$log'";
@@ -241,7 +276,7 @@ if (%failed_to_listen_tcp) {
 }
 
 # Cleanup remaining netcat instances (and port forwards)
-print $lima "sudo pkill -x nc";
+print $lima "sudo pkill -x $listener";
 
 exit $rc;
 

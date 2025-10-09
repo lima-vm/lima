@@ -152,6 +152,7 @@ function diagnose() {
 	mkdir -p failure-logs
 	cp -pf "$HOME_HOST/.lima/${NAME}"/*.log failure-logs/
 	limactl shell "$NAME" sudo cat /var/log/cloud-init-output.log | tee failure-logs/cloud-init-output.log
+	limactl shell "$NAME" sh -c "command -v journalctl >/dev/null && sudo journalctl -b --no-pager" >failure-logs/journal.log
 	set +x -e
 }
 
@@ -432,24 +433,34 @@ if [[ -n ${CHECKS["container-engine"]} ]]; then
 fi
 
 if [[ -n ${CHECKS["port-forwards"]} ]]; then
-	INFO "Testing port forwarding rules using netcat"
+	PORT_FORWARDING_CONNECTION_TIMEOUT=1
+	INFO "Testing port forwarding rules using netcat and socat with connection timeout ${PORT_FORWARDING_CONNECTION_TIMEOUT}s"
 	set -x
-	if [ "${NAME}" = "archlinux" ]; then
-		limactl shell "$NAME" sudo pacman -Syu --noconfirm openbsd-netcat
+	if [[ ${NAME} == "alpine"* ]]; then
+		limactl shell "${NAME}" sudo apk add socat
 	fi
-	if [ "${NAME}" = "debian" ]; then
-		limactl shell "$NAME" sudo apt-get install -y netcat-openbsd
+	if [[ ${NAME} == "archlinux" ]]; then
+		limactl shell "${NAME}" sudo pacman -Syu --noconfirm openbsd-netcat socat
 	fi
-	if [ "${NAME}" == "fedora" ]; then
-		limactl shell "$NAME" sudo dnf install -y nc
+	if [[ ${NAME} == "debian" || ${NAME} == "default" || ${NAME} == "docker" || ${NAME} == "test-misc" ]]; then
+		limactl shell "${NAME}" sudo apt-get install -y netcat-openbsd socat
 	fi
-	if [ "${NAME}" = "opensuse" ]; then
-		limactl shell "$NAME" sudo zypper in -y netcat-openbsd
+	if [[ ${NAME} == "fedora" || ${NAME} == "wsl2" ]]; then
+		limactl shell "${NAME}" sudo dnf install -y nc socat
 	fi
-	if limactl shell "$NAME" command -v dnf; then
-		limactl shell "$NAME" sudo dnf install -y nc
+	if [[ ${NAME} == "opensuse" ]]; then
+		limactl shell "${NAME}" sudo zypper in -y netcat-openbsd socat
 	fi
-	"${scriptdir}/test-port-forwarding.pl" "${NAME}"
+	if limactl shell "${NAME}" command -v dnf; then
+		limactl shell "${NAME}" sudo dnf install -y nc socat
+	fi
+	if "${scriptdir}/test-port-forwarding.pl" "${NAME}" socat $PORT_FORWARDING_CONNECTION_TIMEOUT; then
+		INFO "Port forwarding rules work"
+	else
+		ERROR "Port forwarding rules do not work with socat"
+		diagnose "$NAME"
+		exit 1
+	fi
 
 	if [[ -n ${CHECKS["container-engine"]} || ${NAME} == "alpine"* ]]; then
 		INFO "Testing that \"${CONTAINER_ENGINE} run\" binds to 0.0.0.0 and is forwarded to the host (non-default behavior, configured via test-port-forwarding.pl)"
