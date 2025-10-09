@@ -152,6 +152,7 @@ function diagnose() {
 	mkdir -p failure-logs
 	cp -pf "$HOME_HOST/.lima/${NAME}"/*.log failure-logs/
 	limactl shell "$NAME" sudo cat /var/log/cloud-init-output.log | tee failure-logs/cloud-init-output.log
+	limactl shell "$NAME" sh -c "command -v journalctl >/dev/null && sudo journalctl -b --no-pager" >failure-logs/journal.log
 	set +x -e
 }
 
