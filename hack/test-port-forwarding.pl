@@ -201,7 +201,12 @@ foreach my $test (@test) {
     next if $test->{host_port} == $sshLocalPort;
     my $cmd;
     if ($writer eq "nc") {
-        $cmd = $test->{host_socket} eq "" ? "nc -w $connectionTimeout $test->{host_ip} $test->{host_port}" : "nc -w $connectionTimeout -U $test->{host_socket}";
+        if ($Config{osname} eq "darwin") {
+            # macOS nc doesn't support -w for connection timeout, so use -G instead
+            $cmd = $test->{host_socket} eq "" ? "nc -G $connectionTimeout $test->{host_ip} $test->{host_port}" : "nc -G $connectionTimeout -U $test->{host_socket}";
+        } else {
+            $cmd = $test->{host_socket} eq "" ? "nc -w $connectionTimeout $test->{host_ip} $test->{host_port}" : "nc -w $connectionTimeout -U $test->{host_socket}";
+        }
     } elsif ($writer eq "socat") {
         my $tcp_dest = $test->{host_ip} =~ /:/ ? "TCP6:[$test->{host_ip}]:$test->{host_port}" : "TCP:$test->{host_ip}:$test->{host_port}";
         $cmd = $test->{host_socket} eq "" ? "socat -u STDIN $tcp_dest,connect-timeout=$connectionTimeout" : "socat -u STDIN UNIX-CONNECT:$test->{host_socket}";
