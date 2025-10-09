@@ -433,7 +433,7 @@ if [[ -n ${CHECKS["container-engine"]} ]]; then
 fi
 
 if [[ -n ${CHECKS["port-forwards"]} ]]; then
-	PORT_FORWARDING_CONNECTION_TIMEOUT=3
+	PORT_FORWARDING_CONNECTION_TIMEOUT=1
 	INFO "Testing port forwarding rules using netcat and socat with connection timeout ${PORT_FORWARDING_CONNECTION_TIMEOUT}s"
 	set -x
 	if [[ ${NAME} == "alpine"* ]]; then
@@ -454,17 +454,10 @@ if [[ -n ${CHECKS["port-forwards"]} ]]; then
 	if limactl shell "${NAME}" command -v dnf; then
 		limactl shell "${NAME}" sudo dnf install -y nc socat
 	fi
-	if "${scriptdir}/test-port-forwarding.pl" "${NAME}" $PORT_FORWARDING_CONNECTION_TIMEOUT; then
-		if "${scriptdir}/test-port-forwarding.pl" "${NAME}" socat $PORT_FORWARDING_CONNECTION_TIMEOUT; then
-			INFO "Port forwarding rules work"
-		else
-			ERROR "Port forwarding rules do not work with socat"
-			diagnose "$NAME"
-			exit 1
-		fi
+	if "${scriptdir}/test-port-forwarding.pl" "${NAME}" socat $PORT_FORWARDING_CONNECTION_TIMEOUT; then
+		INFO "Port forwarding rules work"
 	else
-		"${scriptdir}/test-port-forwarding.pl" "${NAME}" socat $PORT_FORWARDING_CONNECTION_TIMEOUT
-		ERROR "Port forwarding rules do not work"
+		ERROR "Port forwarding rules do not work with socat"
 		diagnose "$NAME"
 		exit 1
 	fi
