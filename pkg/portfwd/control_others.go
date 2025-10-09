@@ -17,11 +17,6 @@ func Control(_, _ string, c syscall.RawConn) (err error) {
 		if err != nil {
 			return
 		}
-
-		err = unix.SetsockoptInt(int(fd), unix.SOL_SOCKET, unix.SO_REUSEPORT, 1)
-		if err != nil {
-			return
-		}
 	})
 	if controlErr != nil {
 		err = controlErr
