@@ -449,7 +449,11 @@ func defaultCPUType() limatype.CPUType {
 func resolveCPUType(y *limatype.LimaYAML) string {
 	cpuType := defaultCPUType()
 	var overrideCPUType bool
-	for k, v := range y.VMOpts.QEMU.CPUType {
+	var qemuOpts limatype.QEMUOpts
+	if err := limayaml.Convert(y.VMOpts[limatype.QEMU], &qemuOpts, "vmOpts.qemu"); err != nil {
+		logrus.WithError(err).Warnf("Couldn't convert %q", y.VMOpts[limatype.QEMU])
+	}
+	for k, v := range qemuOpts.CPUType {
 		if !slices.Contains(limatype.ArchTypes, *y.Arch) {
 			logrus.Warnf("field `vmOpts.qemu.cpuType` uses unsupported arch %q", k)
 			continue
@@ -460,7 +464,11 @@ func resolveCPUType(y *limatype.LimaYAML) string {
 		}
 	}
 	if overrideCPUType {
-		y.VMOpts.QEMU.CPUType = cpuType
+		qemuOpts.CPUType = cpuType
+		if y.VMOpts == nil {
+			y.VMOpts = limatype.VMOpts{}
+		}
+		y.VMOpts[limatype.QEMU] = qemuOpts
 	}
 
 	return cpuType[*y.Arch]
@@ -490,8 +498,12 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 		if version.LessThan(softMin) {
 			logrus.Warnf("QEMU %v is too old, %v or later is recommended", version, softMin)
 		}
-		if y.VMOpts.QEMU.MinimumVersion != nil && version.LessThan(*semver.New(*y.VMOpts.QEMU.MinimumVersion)) {
-			logrus.Fatalf("QEMU %v is too old, template requires %q or later", version, *y.VMOpts.QEMU.MinimumVersion)
+		var qemuOpts limatype.QEMUOpts
+		if err := limayaml.Convert(y.VMOpts[limatype.QEMU], &qemuOpts, "vmOpts.qemu"); err != nil {
+			logrus.WithError(err).Warnf("Couldn't convert %q", y.VMOpts[limatype.QEMU])
+		}
+		if qemuOpts.MinimumVersion != nil && version.LessThan(*semver.New(*qemuOpts.MinimumVersion)) {
+			logrus.Fatalf("QEMU %v is too old, template requires %q or later", version, *qemuOpts.MinimumVersion)
 		}
 	}
 

@@ -21,6 +21,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
+	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	"github.com/lima-vm/lima/v2/pkg/version/versionutil"
 	"github.com/lima-vm/lima/v2/pkg/yqutil"
 )
@@ -179,9 +180,17 @@ func (tmpl *Template) mergeBase(base *Template) error {
 			tmpl.copyField(minimumLimaVersion, minimumLimaVersion)
 		}
 	}
-	if tmpl.Config.VMOpts.QEMU.MinimumVersion != nil && base.Config.VMOpts.QEMU.MinimumVersion != nil {
-		tmplVersion := *semver.New(*tmpl.Config.VMOpts.QEMU.MinimumVersion)
-		baseVersion := *semver.New(*base.Config.VMOpts.QEMU.MinimumVersion)
+	var tmplOpts limatype.QEMUOpts
+	if err := limayaml.Convert(tmpl.Config.VMOpts[limatype.QEMU], &tmplOpts, "vmOpts.qemu"); err != nil {
+		return err
+	}
+	var baseOpts limatype.QEMUOpts
+	if err := limayaml.Convert(base.Config.VMOpts[limatype.QEMU], &baseOpts, "vmOpts.qemu"); err != nil {
+		return err
+	}
+	if tmplOpts.MinimumVersion != nil && baseOpts.MinimumVersion != nil {
+		tmplVersion := *semver.New(*tmplOpts.MinimumVersion)
+		baseVersion := *semver.New(*baseOpts.MinimumVersion)
 		if tmplVersion.LessThan(baseVersion) {
 			const minimumQEMUVersion = "vmOpts.qemu.minimumVersion"
 			tmpl.copyField(minimumQEMUVersion, minimumQEMUVersion)

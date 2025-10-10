@@ -108,13 +108,20 @@ func (l *LimaVzDriver) Configure(inst *limatype.Instance) *driver.ConfiguredDriv
 		}
 	}
 
-	if runtime.GOOS == "darwin" && limayaml.IsNativeArch(limatype.AARCH64) {
-		if l.Instance.Config.VMOpts.VZ.Rosetta.Enabled != nil {
-			l.rosettaEnabled = *l.Instance.Config.VMOpts.VZ.Rosetta.Enabled
+	var vzOpts limatype.VZOpts
+	if l.Instance.Config.VMOpts[limatype.VZ] != nil {
+		if err := limayaml.Convert(l.Instance.Config.VMOpts[limatype.VZ], &vzOpts, "vmOpts.vz"); err != nil {
+			logrus.WithError(err).Warnf("Couldn't convert %q", l.Instance.Config.VMOpts[limatype.VZ])
 		}
 	}
-	if l.Instance.Config.VMOpts.VZ.Rosetta.BinFmt != nil {
-		l.rosettaBinFmt = *l.Instance.Config.VMOpts.VZ.Rosetta.BinFmt
+
+	if runtime.GOOS == "darwin" && limayaml.IsNativeArch(limatype.AARCH64) {
+		if vzOpts.Rosetta.Enabled != nil {
+			l.rosettaEnabled = *vzOpts.Rosetta.Enabled
+		}
+	}
+	if vzOpts.Rosetta.BinFmt != nil {
+		l.rosettaBinFmt = *vzOpts.Rosetta.BinFmt
 	}
 
 	return &driver.ConfiguredDriver{
@@ -131,22 +138,36 @@ func (l *LimaVzDriver) FillConfig(ctx context.Context, cfg *limatype.LimaYAML, _
 		cfg.MountType = ptr.Of(limatype.VIRTIOFS)
 	}
 
+	var vzOpts limatype.VZOpts
+	if err := limayaml.Convert(cfg.VMOpts[limatype.VZ], &vzOpts, "vmOpts.vz"); err != nil {
+		logrus.WithError(err).Warnf("Couldn't convert %q", cfg.VMOpts[limatype.VZ])
+	}
+
 	//nolint:staticcheck // Migration of top-level Rosetta if specified
-	if (cfg.VMOpts.VZ.Rosetta.Enabled == nil && cfg.VMOpts.VZ.Rosetta.BinFmt == nil) && (!isEmpty(cfg.Rosetta)) {
+	if (vzOpts.Rosetta.Enabled == nil && vzOpts.Rosetta.BinFmt == nil) && (!isEmpty(cfg.Rosetta)) {
 		logrus.Debug("Migrating top-level Rosetta configuration to vmOpts.vz.rosetta")
-		cfg.VMOpts.VZ.Rosetta = cfg.Rosetta
+		vzOpts.Rosetta = cfg.Rosetta
 	}
 	//nolint:staticcheck // Warning about both top-level and vmOpts.vz.Rosetta being set
-	if (cfg.VMOpts.VZ.Rosetta.Enabled != nil && cfg.VMOpts.VZ.Rosetta.BinFmt != nil) && (!isEmpty(cfg.Rosetta)) {
+	if (vzOpts.Rosetta.Enabled != nil && vzOpts.Rosetta.BinFmt != nil) && (!isEmpty(cfg.Rosetta)) {
 		logrus.Warn("Both top-level 'rosetta' and 'vmOpts.vz.rosetta' are configured. Using vmOpts.vz.rosetta. Top-level 'rosetta' is deprecated.")
 	}
 
-	if cfg.VMOpts.VZ.Rosetta.Enabled == nil {
-		cfg.VMOpts.VZ.Rosetta.Enabled = ptr.Of(false)
+	if vzOpts.Rosetta.Enabled == nil {
+		vzOpts.Rosetta.Enabled = ptr.Of(false)
 	}
-	if cfg.VMOpts.VZ.Rosetta.BinFmt == nil {
-		cfg.VMOpts.VZ.Rosetta.BinFmt = ptr.Of(false)
+	if vzOpts.Rosetta.BinFmt == nil {
+		vzOpts.Rosetta.BinFmt = ptr.Of(false)
 	}
+
+	var opts any
+	if err := limayaml.Convert(vzOpts, &opts, ""); err != nil {
+		logrus.WithError(err).Warnf("Couldn't convert %+v", vzOpts)
+	}
+	if cfg.VMOpts == nil {
+		cfg.VMOpts = limatype.VMOpts{}
+	}
+	cfg.VMOpts[limatype.VZ] = opts
 
 	return validateConfig(ctx, cfg)
 }
