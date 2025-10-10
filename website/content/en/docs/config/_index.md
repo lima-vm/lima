@@ -12,5 +12,3 @@ The current default spec:
 - Disk: 100 GiB
 - Mounts: `~` (read-only), `/tmp/lima` (writable; removed in Lima v2.0)
 - SSH: 127.0.0.1:<Random port>
-
-For environment variables, see [Environment Variables](./environment-variables/).
