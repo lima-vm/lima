@@ -290,6 +290,7 @@ func watchHostAgentEvents(ctx context.Context, inst *limatype.Instance, haStdout
 
 	var (
 		printedSSHLocalPort  bool
+		printedGuestIP       bool
 		receivedRunningEvent bool
 		cloudInitCompleted   bool
 		err                  error
@@ -302,6 +303,14 @@ func watchHostAgentEvents(ctx context.Context, inst *limatype.Instance, haStdout
 
 			// Update the instance's SSH port
 			inst.SSHLocalPort = ev.Status.SSHLocalPort
+		}
+
+		if !printedGuestIP && ev.Status.GuestIP != nil {
+			logrus.Infof("Guest IP Address: %s", ev.Status.GuestIP.String())
+			printedGuestIP = true
+
+			// Update the instance's Guest IP address
+			inst.GuestIP = ev.Status.GuestIP
 		}
 
 		if showProgress && ev.Status.CloudInitProgress != nil {

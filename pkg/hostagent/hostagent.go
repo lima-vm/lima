@@ -362,6 +362,17 @@ func (a *HostAgent) emitCloudInitProgressEvent(ctx context.Context, progress *ev
 	a.emitEvent(ctx, ev)
 }
 
+func (a *HostAgent) emitGuestIPEvent(ctx context.Context, ip string) {
+	a.statusMu.RLock()
+	currentStatus := a.currentStatus
+	a.statusMu.RUnlock()
+
+	currentStatus.GuestIP = net.ParseIP(ip)
+
+	ev := events.Event{Status: currentStatus}
+	a.emitEvent(ctx, ev)
+}
+
 func generatePassword(length int) (string, error) {
 	// avoid any special symbols, to make it easier to copy/paste
 	return password.Generate(length, length/4, 0, false, false)

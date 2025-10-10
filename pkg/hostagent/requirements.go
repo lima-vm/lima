@@ -381,5 +381,6 @@ func (a *HostAgent) detectGuestIPAddress(stdout string) error {
 	a.guestIPv6 = guestIPv6
 	a.guestIPMu.Unlock()
 	ctx := context.Background()
+	a.emitGuestIPEvent(ctx, a.GuestIP().String())
 	return a.WriteSSHConfigFile(ctx)
 }
