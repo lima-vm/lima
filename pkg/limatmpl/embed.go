@@ -18,6 +18,7 @@ import (
 	"github.com/coreos/go-semver/semver"
 	"github.com/sirupsen/logrus"
 
+	"github.com/lima-vm/lima/v2/pkg/driver/qemu"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
@@ -180,11 +181,11 @@ func (tmpl *Template) mergeBase(base *Template) error {
 			tmpl.copyField(minimumLimaVersion, minimumLimaVersion)
 		}
 	}
-	var tmplOpts limatype.QEMUOpts
+	var tmplOpts qemu.Opts
 	if err := limayaml.Convert(tmpl.Config.VMOpts[limatype.QEMU], &tmplOpts, "vmOpts.qemu"); err != nil {
 		return err
 	}
-	var baseOpts limatype.QEMUOpts
+	var baseOpts qemu.Opts
 	if err := limayaml.Convert(base.Config.VMOpts[limatype.QEMU], &baseOpts, "vmOpts.qemu"); err != nil {
 		return err
 	}

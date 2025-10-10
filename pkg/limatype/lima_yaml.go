@@ -73,6 +73,7 @@ type (
 	VMType    = string
 )
 
+// Deprecated: qemu driver internal
 type CPUType = map[Arch]string
 
 const (
@@ -112,15 +113,7 @@ type User struct {
 
 type VMOpts map[VMType]any
 
-type QEMUOpts struct {
-	MinimumVersion *string `yaml:"minimumVersion,omitempty" json:"minimumVersion,omitempty" jsonschema:"nullable"`
-	CPUType        CPUType `yaml:"cpuType,omitempty" json:"cpuType,omitempty" jsonschema:"nullable"`
-}
-
-type VZOpts struct {
-	Rosetta Rosetta `yaml:"rosetta,omitempty" json:"rosetta,omitempty"`
-}
-
+// Deprecated: vz driver internal
 type Rosetta struct {
 	Enabled *bool `yaml:"enabled,omitempty" json:"enabled,omitempty" jsonschema:"nullable"`
 	BinFmt  *bool `yaml:"binfmt,omitempty" json:"binfmt,omitempty" jsonschema:"nullable"`

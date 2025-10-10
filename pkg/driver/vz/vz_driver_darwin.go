@@ -71,6 +71,16 @@ var knownYamlProperties = []string{
 
 const Enabled = true
 
+type Opts struct {
+	Rosetta limatype.Rosetta `yaml:"rosetta,omitempty" json:"rosetta,omitempty"`
+}
+
+// TODO: move from globals to Config.
+var (
+	RosettaEnabled *bool
+	RosettaBinFmt  *bool
+)
+
 type LimaVzDriver struct {
 	Instance *limatype.Instance
 
@@ -108,7 +118,7 @@ func (l *LimaVzDriver) Configure(inst *limatype.Instance) *driver.ConfiguredDriv
 		}
 	}
 
-	var vzOpts limatype.VZOpts
+	var vzOpts Opts
 	if l.Instance.Config.VMOpts[limatype.VZ] != nil {
 		if err := limayaml.Convert(l.Instance.Config.VMOpts[limatype.VZ], &vzOpts, "vmOpts.vz"); err != nil {
 			logrus.WithError(err).Warnf("Couldn't convert %q", l.Instance.Config.VMOpts[limatype.VZ])
@@ -138,7 +148,7 @@ func (l *LimaVzDriver) FillConfig(ctx context.Context, cfg *limatype.LimaYAML, _
 		cfg.MountType = ptr.Of(limatype.VIRTIOFS)
 	}
 
-	var vzOpts limatype.VZOpts
+	var vzOpts Opts
 	if err := limayaml.Convert(cfg.VMOpts[limatype.VZ], &vzOpts, "vmOpts.vz"); err != nil {
 		logrus.WithError(err).Warnf("Couldn't convert %q", cfg.VMOpts[limatype.VZ])
 	}
@@ -168,6 +178,9 @@ func (l *LimaVzDriver) FillConfig(ctx context.Context, cfg *limatype.LimaYAML, _
 		cfg.VMOpts = limatype.VMOpts{}
 	}
 	cfg.VMOpts[limatype.VZ] = opts
+
+	RosettaEnabled = vzOpts.Rosetta.Enabled
+	RosettaBinFmt = vzOpts.Rosetta.BinFmt
 
 	return validateConfig(ctx, cfg)
 }
