@@ -364,6 +364,7 @@ func (a *HostAgent) detectGuestIPAddress(stdout string) error {
 				a.guestIPAddressMu.Unlock()
 				logrus.Infof("The guest IP address on the interface %q is %q", a.guestIfnameOnSameSubnetAsHost, addr.Local)
 				ctx := context.Background()
+				a.emitGuestIPAddressEvent(ctx, addr.Local)
 				return a.WriteSSHConfigFile(ctx)
 			}
 		}
