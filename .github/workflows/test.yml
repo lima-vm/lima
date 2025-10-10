@@ -354,6 +354,19 @@ jobs:
         template: templates/default.yaml
     - name: "Run BATS integration tests"
       run: make bats
+    - name: Cache image used by templates/k8s.yaml
+      uses: ./.github/actions/setup_cache_for_template
+      with:
+        template: templates/k8s.yaml
+    - name: "Run BATS k8s tests"
+      # Wish we could use BATS_TEST_RETRIES=3 as an environment variable here,
+      # but bats does not seem to support it.
+      uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08  # v3.0.2
+      with:
+        timeout_minutes: 30
+        retry_on: error
+        max_attempts: 3
+        command: ./hack/bats/lib/bats-core/bin/bats --timing ./hack/bats/extras/k8s.bats
 
   colima:
     name: "Colima tests (QEMU, Linux host)"

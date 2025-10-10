@@ -65,3 +65,9 @@ teardown() {
 assert_output_lines_count() {
     assert_equal "${#lines[@]}" "$1"
 }
+
+# Use GHCR and ECR to avoid hitting Docker Hub rate limit.
+# NOTE: keep this list in sync with hack/test-templates.sh .
+declare -A -g TEST_CONTAINER_IMAGES=(
+    ["nginx"]="ghcr.io/stargz-containers/nginx:1.19-alpine-org"
+)
