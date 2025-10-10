@@ -296,7 +296,7 @@ func InstNameFromYAMLPath(yamlPath string) (string, error) {
 	return s, nil
 }
 
-func TransformCustomURL(ctx context.Context, locator string) (string, error) {
+func transformCustomURL(ctx context.Context, locator string) (string, error) {
 	u, err := url.Parse(locator)
 	if err != nil || len(u.Scheme) <= 1 {
 		return locator, nil
@@ -313,12 +313,7 @@ func TransformCustomURL(ctx context.Context, locator string) (string, error) {
 	}
 
 	if u.Scheme == "github" {
-		newLocator, err := transformGitHubURL(ctx, u.Opaque)
-		if err != nil {
-			return "", err
-		}
-		logrus.Warnf("GitHub locator %q replaced with %q is still EXPERIMENTAL", locator, newLocator)
-		return newLocator, nil
+		return transformGitHubURL(ctx, u.Opaque)
 	}
 
 	plugin, err := plugins.Find("url-" + u.Scheme)
@@ -350,9 +345,31 @@ func TransformCustomURL(ctx context.Context, locator string) (string, error) {
 		}
 		return "", fmt.Errorf("command %q failed: %w", cmd.String(), err)
 	}
-	newLocator := strings.TrimSpace(string(stdout))
-	if newLocator != locator {
-		logrus.Debugf("Custom locator %q replaced with %q", locator, newLocator)
+	return strings.TrimSpace(string(stdout)), nil
+}
+
+func TransformCustomURL(ctx context.Context, locator string) (string, error) {
+	seen := make(map[string]bool)
+	origLocator := locator
+	githubSchemeDetected := false
+
+	for !seen[locator] {
+		seen[locator] = true
+		if strings.HasPrefix(locator, "github:") {
+			githubSchemeDetected = true
+		}
+		newLocator, err := transformCustomURL(ctx, locator)
+		if err != nil {
+			return "", err
+		}
+		if newLocator == locator {
+			if githubSchemeDetected {
+				logrus.Warn("The github: scheme is still EXPERIMENTAL")
+			}
+			return newLocator, nil
+		}
+		logrus.Debugf("Locator %q replaced with %q", locator, newLocator)
+		locator = newLocator
 	}
-	return newLocator, nil
+	return "", fmt.Errorf("custom locator %q has a redirect loop", origLocator)
 }
