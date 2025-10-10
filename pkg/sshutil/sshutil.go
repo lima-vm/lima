@@ -325,6 +325,13 @@ func removeOptsFromSSHArgs(sshArgs []string, removeOpts ...string) []string {
 	return res
 }
 
+// IsControlMasterExisting returns true if the control socket file exists.
+func IsControlMasterExisting(instDir string) bool {
+	controlSock := filepath.Join(instDir, filenames.SSHSock)
+	_, err := os.Stat(controlSock)
+	return err == nil
+}
+
 // SSHOpts adds the following options to CommonOptions: User, ControlMaster, ControlPath, ControlPersist.
 func SSHOpts(ctx context.Context, sshExe SSHExe, instDir, username string, useDotSSH, forwardAgent, forwardX11, forwardX11Trusted bool) ([]string, error) {
 	controlSock := filepath.Join(instDir, filenames.SSHSock)
