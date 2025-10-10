@@ -518,7 +518,9 @@ func (a *HostAgent) GuestIP() net.IP {
 }
 
 func (a *HostAgent) Info(_ context.Context) (*hostagentapi.Info, error) {
+	guestIP := a.GuestIP()
 	info := &hostagentapi.Info{
+		GuestIP:      guestIP,
 		SSHLocalPort: a.sshLocalPort,
 	}
 	return info, nil
