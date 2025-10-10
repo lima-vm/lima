@@ -552,7 +552,7 @@ check-generated:
 		(echo "Please run 'make generate' when making changes to proto files and check-in the generated file changes" && false)
 
 .PHONY: bats
-bats: native
+bats: native limactl-plugins
 	PATH=$$PWD/_output/bin:$$PATH ./hack/bats/lib/bats-core/bin/bats --timing ./hack/bats/tests
 
 .PHONY: lint
