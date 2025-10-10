@@ -4,6 +4,7 @@
 package events
 
 import (
+	"net"
 	"time"
 )
 
@@ -17,7 +18,7 @@ type Status struct {
 	Errors []string `json:"errors,omitempty"`
 
 	// Guest IP address directly accessible from the host.
-	GuestIPAddress string `json:"guestIPAddress,omitempty"`
+	GuestIP net.IP `json:"guestIP,omitempty"`
 	// SSH local port on the host forwarded to the guest's port 22.
 	SSHLocalPort int `json:"sshLocalPort,omitempty"`
 

@@ -86,8 +86,8 @@ type HostAgent struct {
 	// Guest interface name on the same subnet as the host,
 	guestIfnameOnSameSubnetAsHost string
 	// Guest IP address on the same subnet as the host.
-	guestIPAddress   string
-	guestIPAddressMu sync.RWMutex
+	guestIP   net.IP
+	guestIPMu sync.RWMutex
 }
 
 type options struct {
@@ -367,7 +367,7 @@ func (a *HostAgent) emitGuestIPAddressEvent(ctx context.Context, ip string) {
 	currentStatus := a.currentStatus
 	a.statusMu.RUnlock()
 
-	currentStatus.GuestIPAddress = ip
+	currentStatus.GuestIP = net.ParseIP(ip)
 
 	ev := events.Event{Status: currentStatus}
 	a.emitEvent(ctx, ev)
@@ -515,22 +515,22 @@ func (a *HostAgent) startRoutinesAndWait(ctx context.Context, errCh <-chan error
 }
 
 func (a *HostAgent) Info(_ context.Context) (*hostagentapi.Info, error) {
-	a.guestIPAddressMu.RLock()
-	defer a.guestIPAddressMu.RUnlock()
+	a.guestIPMu.RLock()
+	defer a.guestIPMu.RUnlock()
 	info := &hostagentapi.Info{
-		GuestIPAddress: a.guestIPAddress,
-		SSHLocalPort:   a.sshLocalPort,
+		GuestIP:      a.guestIP,
+		SSHLocalPort: a.sshLocalPort,
 	}
 	return info, nil
 }
 
 func (a *HostAgent) sshAddressPort() (sshAddress string, sshPort int) {
-	a.guestIPAddressMu.RLock()
-	defer a.guestIPAddressMu.RUnlock()
+	a.guestIPMu.RLock()
+	defer a.guestIPMu.RUnlock()
 	sshAddress = a.instSSHAddress
 	sshPort = a.sshLocalPort
-	if a.guestIPAddress != "" {
-		sshAddress = a.guestIPAddress
+	if a.guestIP != nil {
+		sshAddress = a.guestIP.String()
 		sshPort = 22
 		logrus.Debugf("Using the guest IP address %q directly", sshAddress)
 	}

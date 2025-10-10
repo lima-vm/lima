@@ -326,9 +326,9 @@ func (a *HostAgent) detectGuestIfnameOnSameSubnetAtHost(stdout string) error {
 			if ifi.HardwareAddr.String() != neighbor.LLADDR {
 				continue
 			}
-			a.guestIPAddressMu.Lock()
+			a.guestIPMu.Lock()
 			a.guestIfnameOnSameSubnetAsHost = neighbor.DEV
-			a.guestIPAddressMu.Unlock()
+			a.guestIPMu.Unlock()
 			logrus.Infof("Detected the guest has interface %q in same subnet on the host", a.guestIfnameOnSameSubnetAsHost)
 			return nil
 		}
@@ -359,9 +359,9 @@ func (a *HostAgent) detectGuestIPAddress(stdout string) error {
 				if addr.Family != "inet" {
 					continue
 				}
-				a.guestIPAddressMu.Lock()
-				a.guestIPAddress = addr.Local
-				a.guestIPAddressMu.Unlock()
+				a.guestIPMu.Lock()
+				a.guestIP = net.ParseIP(addr.Local)
+				a.guestIPMu.Unlock()
 				logrus.Infof("The guest IP address on the interface %q is %q", a.guestIfnameOnSameSubnetAsHost, addr.Local)
 				ctx := context.Background()
 				a.emitGuestIPAddressEvent(ctx, addr.Local)

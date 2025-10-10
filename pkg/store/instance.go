@@ -82,7 +82,7 @@ func Inspect(ctx context.Context, instName string) (*limatype.Instance, error) {
 				inst.Status = limatype.StatusBroken
 				inst.Errors = append(inst.Errors, fmt.Errorf("failed to get Info from %q: %w", haSock, err))
 			} else {
-				inst.GuestIPAddress = info.GuestIPAddress
+				inst.GuestIP = info.GuestIP
 				inst.SSHLocalPort = info.SSHLocalPort
 			}
 		}

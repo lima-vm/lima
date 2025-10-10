@@ -6,6 +6,7 @@ package limatype
 import (
 	"encoding/json"
 	"errors"
+	"net"
 	"os"
 	"path/filepath"
 
@@ -48,7 +49,7 @@ type Instance struct {
 	LimaVersion     string            `json:"limaVersion"`
 	Param           map[string]string `json:"param,omitempty"`
 	// Guest IP address directly accessible from the host.
-	GuestIPAddress string `json:"guestIPAddress,omitempty"`
+	GuestIP net.IP `json:"guestIP,omitempty"`
 }
 
 // Protect protects the instance to prohibit accidental removal.
@@ -113,8 +114,8 @@ func (inst *Instance) UnmarshalJSON(data []byte) error {
 func (inst *Instance) SSHAddressPort() (sshAddress string, sshPort int) {
 	sshAddress = inst.SSHAddress
 	sshPort = inst.SSHLocalPort
-	if inst.GuestIPAddress != "" {
-		sshAddress = inst.GuestIPAddress
+	if inst.GuestIP != nil {
+		sshAddress = inst.GuestIP.String()
 		sshPort = 22
 	}
 	return sshAddress, sshPort

@@ -293,12 +293,12 @@ func watchHostAgentEvents(ctx context.Context, inst *limatype.Instance, haStdout
 			inst.SSHLocalPort = ev.Status.SSHLocalPort
 		}
 
-		if !printedGuestIPAddress && ev.Status.GuestIPAddress != "" {
-			logrus.Infof("Guest IP Address: %s", ev.Status.GuestIPAddress)
+		if !printedGuestIPAddress && ev.Status.GuestIP != nil {
+			logrus.Infof("Guest IP Address: %s", ev.Status.GuestIP.String())
 			printedGuestIPAddress = true
 
 			// Update the instance's Guest IP address
-			inst.GuestIPAddress = ev.Status.GuestIPAddress
+			inst.GuestIP = ev.Status.GuestIP
 		}
 
 		if showProgress && ev.Status.CloudInitProgress != nil {
