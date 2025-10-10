@@ -40,6 +40,17 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/version/versionutil"
 )
 
+type Opts struct {
+	MinimumVersion *string          `yaml:"minimumVersion,omitempty" json:"minimumVersion,omitempty" jsonschema:"nullable"`
+	CPUType        limatype.CPUType `yaml:"cpuType,omitempty" json:"cpuType,omitempty" jsonschema:"nullable"`
+}
+
+// TODO: move from globals to Config.
+var (
+	MinimumVersion *string
+	CPUType        limatype.CPUType
+)
+
 type LimaQemuDriver struct {
 	Instance     *limatype.Instance
 	SSHLocalPort int
@@ -104,7 +115,7 @@ func validateConfig(cfg *limatype.LimaYAML) error {
 		}
 	}
 
-	var qemuOpts limatype.QEMUOpts
+	var qemuOpts Opts
 	if err := limayaml.Convert(cfg.VMOpts[limatype.QEMU], &qemuOpts, "vmOpts.qemu"); err != nil {
 		return err
 	}
@@ -158,7 +169,7 @@ func (l *LimaQemuDriver) FillConfig(_ context.Context, cfg *limatype.LimaYAML, f
 		cfg.Video.VNC.Display = ptr.Of("127.0.0.1:0,to=9")
 	}
 
-	var qemuOpts limatype.QEMUOpts
+	var qemuOpts Opts
 	if err := limayaml.Convert(cfg.VMOpts[limatype.QEMU], &qemuOpts, "vmOpts.qemu"); err != nil {
 		logrus.WithError(err).Warnf("Couldn't convert %q", cfg.VMOpts[limatype.QEMU])
 	}
@@ -222,6 +233,9 @@ func (l *LimaQemuDriver) FillConfig(_ context.Context, cfg *limatype.LimaYAML, f
 	if _, ok := mountTypesUnsupported[*cfg.MountType]; ok {
 		return fmt.Errorf("mount type %q is explicitly unsupported", *cfg.MountType)
 	}
+
+	MinimumVersion = qemuOpts.MinimumVersion
+	CPUType = qemuOpts.CPUType
 
 	return validateConfig(cfg)
 }

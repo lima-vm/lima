@@ -86,41 +86,6 @@ vmType: null
 	t.Log(dumpYAML(t, o))
 }
 
-func TestQEMUOpts(t *testing.T) {
-	text := `
-vmType: "qemu"
-vmOpts:
-  qemu:
-    minimumVersion: null
-    cpuType:
-`
-	var y limatype.LimaYAML
-	err := Unmarshal([]byte(text), &y, "lima.yaml")
-	assert.NilError(t, err)
-	var o limatype.QEMUOpts
-	err = Convert(y.VMOpts[limatype.QEMU], &o, "vmOpts.qemu")
-	assert.NilError(t, err)
-	t.Log(dumpYAML(t, o))
-}
-
-func TestVZOpts(t *testing.T) {
-	text := `
-vmType: "vz"
-vmOpts:
-  vz:
-    rosetta:
-      enabled: null
-      binfmt: null
-`
-	var y limatype.LimaYAML
-	err := Unmarshal([]byte(text), &y, "lima.yaml")
-	assert.NilError(t, err)
-	var o limatype.VZOpts
-	err = Convert(y.VMOpts[limatype.VZ], &o, "vmOpts.vz")
-	assert.NilError(t, err)
-	t.Log(dumpYAML(t, o))
-}
-
 func TestVMOptsNull(t *testing.T) {
 	text := `
 vmOpts: null
@@ -130,12 +95,6 @@ vmOpts: null
 	assert.NilError(t, err)
 	var o limatype.VMOpts
 	err = Convert(y.VMOpts, &o, "vmOpts")
-	assert.NilError(t, err)
-	var oq limatype.QEMUOpts
-	err = Convert(y.VMOpts[limatype.QEMU], &oq, "vmOpts.qemu")
-	assert.NilError(t, err)
-	var ov limatype.VZOpts
-	err = Convert(y.VMOpts[limatype.VZ], &ov, "vmOpts.vz")
 	assert.NilError(t, err)
 }
 
