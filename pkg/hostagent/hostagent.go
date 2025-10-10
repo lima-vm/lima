@@ -504,8 +504,11 @@ func (a *HostAgent) startRoutinesAndWait(ctx context.Context, errCh <-chan error
 }
 
 func (a *HostAgent) Info(_ context.Context) (*hostagentapi.Info, error) {
+	a.guestIPAddressMu.RLock()
+	defer a.guestIPAddressMu.RUnlock()
 	info := &hostagentapi.Info{
-		SSHLocalPort: a.sshLocalPort,
+		GuestIPAddress: a.guestIPAddress,
+		SSHLocalPort:   a.sshLocalPort,
 	}
 	return info, nil
 }

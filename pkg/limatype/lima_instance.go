@@ -47,6 +47,8 @@ type Instance struct {
 	Protected       bool              `json:"protected"`
 	LimaVersion     string            `json:"limaVersion"`
 	Param           map[string]string `json:"param,omitempty"`
+	// Guest IP address directly accessible from the host.
+	GuestIPAddress string `json:"guestIPAddress,omitempty"`
 }
 
 // Protect protects the instance to prohibit accidental removal.
@@ -106,4 +108,14 @@ func (inst *Instance) UnmarshalJSON(data []byte) error {
 		inst.Errors = append(inst.Errors, errors.New(msg))
 	}
 	return nil
+}
+
+func (inst *Instance) SSHAddressPort() (sshAddress string, sshPort int) {
+	sshAddress = inst.SSHAddress
+	sshPort = inst.SSHLocalPort
+	if inst.GuestIPAddress != "" {
+		sshAddress = inst.GuestIPAddress
+		sshPort = 22
+	}
+	return sshAddress, sshPort
 }
