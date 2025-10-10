@@ -82,6 +82,12 @@ type HostAgent struct {
 
 	statusMu      sync.RWMutex
 	currentStatus events.Status
+
+	// Guest interface name on the same subnet as the host,
+	guestIfnameOnSameSubnetAsHost string
+	// Guest IP address on the same subnet as the host.
+	guestIPAddress   string
+	guestIPAddressMu sync.RWMutex
 }
 
 type options struct {
@@ -255,6 +261,27 @@ func New(ctx context.Context, instName string, stdout io.Writer, signalCh chan o
 		showProgress:      o.showProgress,
 	}
 	return a, nil
+}
+
+func (a *HostAgent) WriteSSHConfigFile(ctx context.Context) error {
+	sshExe, err := sshutil.NewSSHExe()
+	if err != nil {
+		return err
+	}
+	sshOpts, err := sshutil.SSHOpts(
+		ctx,
+		sshExe,
+		a.instDir,
+		*a.instConfig.User.Name,
+		*a.instConfig.SSH.LoadDotSSHPubKeys,
+		*a.instConfig.SSH.ForwardAgent,
+		*a.instConfig.SSH.ForwardX11,
+		*a.instConfig.SSH.ForwardX11Trusted)
+	if err != nil {
+		return err
+	}
+	sshAddress, sshPort := a.sshAddressPort()
+	return writeSSHConfigFile(sshExe.Exe, a.instName, a.instDir, sshAddress, sshPort, sshOpts)
 }
 
 func writeSSHConfigFile(sshPath, instName, instDir, instSSHAddress string, sshLocalPort int, sshOpts []string) error {
@@ -483,6 +510,19 @@ func (a *HostAgent) Info(_ context.Context) (*hostagentapi.Info, error) {
 	return info, nil
 }
 
+func (a *HostAgent) sshAddressPort() (sshAddress string, sshPort int) {
+	a.guestIPAddressMu.RLock()
+	defer a.guestIPAddressMu.RUnlock()
+	sshAddress = a.instSSHAddress
+	sshPort = a.sshLocalPort
+	if a.guestIPAddress != "" {
+		sshAddress = a.guestIPAddress
+		sshPort = 22
+		logrus.Debugf("Using the guest IP address %q directly", sshAddress)
+	}
+	return sshAddress, sshPort
+}
+
 func (a *HostAgent) startHostAgentRoutines(ctx context.Context) error {
 	if *a.instConfig.Plain {
 		msg := "Running in plain mode. Mounts, dynamic port forwarding, containerd, etc. will be ignored. Guest agent will not be running."
@@ -496,7 +536,8 @@ func (a *HostAgent) startHostAgentRoutines(ctx context.Context) error {
 	}
 	a.cleanUp(func() error {
 		logrus.Debugf("shutting down the SSH master")
-		if exitMasterErr := ssh.ExitMaster(a.instSSHAddress, a.sshLocalPort, a.sshConfig); exitMasterErr != nil {
+		sshAddress, sshPort := a.sshAddressPort()
+		if exitMasterErr := ssh.ExitMaster(sshAddress, sshPort, a.sshConfig); exitMasterErr != nil {
 			logrus.WithError(exitMasterErr).Warn("failed to exit SSH master")
 		}
 		return nil
@@ -512,7 +553,8 @@ sudo mkdir -p -m 700 /run/host-services
 sudo ln -sf "${SSH_AUTH_SOCK}" /run/host-services/ssh-auth.sock
 sudo chown -R "${USER}" /run/host-services`
 		faDesc := "linking ssh auth socket to static location /run/host-services/ssh-auth.sock"
-		stdout, stderr, err := ssh.ExecuteScript(a.instSSHAddress, a.sshLocalPort, a.sshConfig, faScript, faDesc)
+		sshAddress, sshPort := a.sshAddressPort()
+		stdout, stderr, err := ssh.ExecuteScript(sshAddress, sshPort, a.sshConfig, faScript, faDesc)
 		logrus.Debugf("stdout=%q, stderr=%q, err=%v", stdout, stderr, err)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("stdout=%q, stderr=%q: %w", stdout, stderr, err))

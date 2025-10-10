@@ -4,8 +4,12 @@
 package hostagent
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
+	"runtime"
 	"strings"
 	"time"
 
@@ -110,20 +114,25 @@ func (a *HostAgent) waitForRequirement(r requirement) error {
 			AdditionalArgs: sshutil.DisableControlMasterOptsFromSSHArgs(sshConfig.AdditionalArgs),
 		}
 	}
-	stdout, stderr, err := ssh.ExecuteScript(a.instSSHAddress, a.sshLocalPort, sshConfig, script, r.description)
+	sshAddress, sshPort := a.sshAddressPort()
+	stdout, stderr, err := ssh.ExecuteScript(sshAddress, sshPort, sshConfig, script, r.description)
 	logrus.Debugf("stdout=%q, stderr=%q, err=%v", stdout, stderr, err)
 	if err != nil {
 		return fmt.Errorf("stdout=%q, stderr=%q: %w", stdout, stderr, err)
+	}
+	if r.stdoutParser != nil {
+		return r.stdoutParser(stdout)
 	}
 	return nil
 }
 
 type requirement struct {
-	description string
-	script      string
-	debugHint   string
-	fatal       bool
-	noMaster    bool
+	description  string
+	script       string
+	debugHint    string
+	fatal        bool
+	noMaster     bool
+	stdoutParser func(string) error
 }
 
 func (a *HostAgent) essentialRequirements() []requirement {
@@ -139,7 +148,35 @@ Make sure that the YAML field "ssh.localPort" is not used by other processes on 
 If any private key under ~/.ssh is protected with a passphrase, you need to have ssh-agent to be running.
 `,
 			noMaster: true,
-		})
+		},
+	)
+	if runtime.GOOS == "darwin" {
+		// Limit the Guest IP address detection only to macOS for now.
+		req = append(req,
+			requirement{
+				description: "detect guest interface on same subnet as the host",
+				script: `#!/bin/bash
+ip -j neighbor
+`,
+				debugHint: `Detecting the guest has interface in same subnet on the host.
+This is only supported on macOS for now.
+If the guest does not have interface in same subnet on the host, SSH connection against the guest OS will be made via the localhost port forwarding.`,
+				noMaster:     true,
+				stdoutParser: a.detectGuestIfnameOnSameSubnetAtHost,
+			},
+			requirement{
+				description: "detect guest IP address",
+				script: `#!/bin/bash
+ip -4 -j addr
+`,
+				debugHint: `Detecting the guest IP address on the interface in same subnet on the host.
+This is only supported on macOS for now.
+If the interface does not have IPv4 address, SSH connection against the guest OS will be made via the localhost port forwarding.`,
+				noMaster:     true,
+				stdoutParser: a.detectGuestIPAddress,
+			},
+		)
+	}
 	startControlMasterReq := requirement{
 		description: "Explicitly start ssh ControlMaster",
 		script: `#!/bin/bash
@@ -267,4 +304,70 @@ Check "/var/log/cloud-init-output.log" in the guest to see where the process is 
 `,
 		})
 	return req
+}
+
+// detectGuestIfnameOnSameSubnetAtHost detects the guest interface name on the same subnet on the host
+// by comparing the MAC addresses of the host network interfaces and the output of "ip -j neighbor" command in the guest.
+func (a *HostAgent) detectGuestIfnameOnSameSubnetAtHost(stdout string) error {
+	var neighbors []struct {
+		DST    string `json:"dst"`
+		DEV    string `json:"dev"`
+		LLADDR string `json:"lladdr"`
+	}
+	if err := json.Unmarshal([]byte(stdout), &neighbors); err != nil {
+		return fmt.Errorf("failed to parse ip neighbor output %q: %w", stdout, err)
+	}
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		return fmt.Errorf("failed to get network interfaces: %w", err)
+	}
+	for _, neighbor := range neighbors {
+		for _, ifi := range interfaces {
+			if ifi.HardwareAddr.String() != neighbor.LLADDR {
+				continue
+			}
+			a.guestIPAddressMu.Lock()
+			a.guestIfnameOnSameSubnetAsHost = neighbor.DEV
+			a.guestIPAddressMu.Unlock()
+			logrus.Infof("Detected the guest has interface %q in same subnet on the host", a.guestIfnameOnSameSubnetAsHost)
+			return nil
+		}
+	}
+	logrus.Info("The guest does not have interface in same subnet on the host")
+	return nil
+}
+
+// detectGuestIPAddress detects the guest IP address on the interface in same subnet on the host
+// by parsing the output of "ip -j addr" command in the guest.
+func (a *HostAgent) detectGuestIPAddress(stdout string) error {
+	if a.guestIfnameOnSameSubnetAsHost == "" {
+		return nil
+	}
+	var addrs []struct {
+		IFNAME string `json:"ifname"`
+		ADDRS  []struct {
+			Family string `json:"family"`
+			Local  string `json:"local"`
+		} `json:"addr_info"`
+	}
+	if err := json.Unmarshal([]byte(stdout), &addrs); err != nil {
+		return fmt.Errorf("failed to parse ip addr output %q: %w", stdout, err)
+	}
+	for _, addr := range addrs {
+		if addr.IFNAME == a.guestIfnameOnSameSubnetAsHost {
+			for _, addr := range addr.ADDRS {
+				if addr.Family != "inet" {
+					continue
+				}
+				a.guestIPAddressMu.Lock()
+				a.guestIPAddress = addr.Local
+				a.guestIPAddressMu.Unlock()
+				logrus.Infof("The guest IP address on the interface %q is %q", a.guestIfnameOnSameSubnetAsHost, addr.Local)
+				ctx := context.Background()
+				return a.WriteSSHConfigFile(ctx)
+			}
+		}
+	}
+	logrus.Infof("The interface %q does not have IPv4 address", a.guestIfnameOnSameSubnetAsHost)
+	return nil
 }
