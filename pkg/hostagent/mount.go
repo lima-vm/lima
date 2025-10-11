@@ -61,12 +61,13 @@ func (a *HostAgent) setupMount(ctx context.Context, m limatype.Mount) (*mount, e
 		}
 	}
 
+	sshAddress, sshPort := a.sshAddressPort()
 	rsf := &reversesshfs.ReverseSSHFS{
 		Driver:              *m.SSHFS.SFTPDriver,
 		SSHConfig:           a.sshConfig,
 		LocalPath:           resolvedLocation,
-		Host:                "127.0.0.1",
-		Port:                a.sshLocalPort,
+		Host:                sshAddress,
+		Port:                sshPort,
 		RemotePath:          *m.MountPoint,
 		Readonly:            !(*m.Writable),
 		SSHFSAdditionalArgs: []string{"-o", sshfsOptions},
