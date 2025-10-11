@@ -10,24 +10,42 @@ Lima supports several modes for running Intel-on-ARM and ARM-on-Intel:
 
 ## [Slow mode: Intel VM on ARM Host / ARM VM on Intel Host](#slow-mode)
 
-Lima can run a VM with a foreign architecture, just by specifying `arch` in the YAML.
+| ⚡ Requirement | QEMU, lima-additional-guestagents |
+|---------------|-----------------------------------|
 
-```yaml
-arch: "x86_64"
-# arch: "aarch64"
+Lima can run a VM with a foreign architecture, using [QEMU](./vmtype/qemu.md).
 
-images:
-  - location: "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img"
-    arch: "x86_64"
-  - location: "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-arm64.img"
-    arch: "aarch64"
+For [port forwarding](./port.md), the [`lima-additional-guestagents](../installation/) package has to be installed on the host.
 
-# Disable mounts and containerd, otherwise booting up may time out if the host is slow
-mounts: []
-containerd:
-  system: false
-  user: false
+An example configuration:
+{{< tabpane text=true >}}
+{{% tab header="CLI" %}}
+```bash
+limactl start --vm-type=qemu --arch=x86_64 --plain
 ```
+
+See the YAML tab for the explanation of the corresponding CLI flags.
+{{% /tab %}}
+{{% tab header="YAML" %}}
+```yaml
+# Starting with Lima v2.0, `vmType` has to be expclitly set to "qemu" on non-Linux hosts.
+vmType: "qemu"
+
+# Supported architectures:
+#   Non-experimental: aarch64, x86_64
+#   Experimental:     armv7l, ppc64le, riscv64, s390x
+#
+# containerd is not automatically installed for the experimental architectures.
+arch: "x86_64"
+
+# A slow host may need `plain` to disable mounts, port forwards, and containerd, so as to avoid timeout.
+plain: true
+
+base:
+- template://_images/ubuntu
+```
+{{% /tab %}}
+{{< /tabpane >}}
 
 Running a VM with a foreign architecture is extremely slow.
 Consider using [Fast mode](#fast-mode) or [Fast mode 2](#fast-mode-2) whenever possible.
@@ -40,7 +58,7 @@ QEMU User Mode Emulation is significantly faster than QEMU System Mode Emulation
 Set up:
 ```bash
 lima sudo systemctl start containerd
-lima sudo nerdctl run --privileged --rm tonistiigi/binfmt:qemu-v7.0.0-28@sha256:66e11bea77a5ea9d6f0fe79b57cd2b189b5d15b93a2bdb925be22949232e4e55 --install all
+lima sudo nerdctl run --privileged --rm tonistiigi/binfmt:qemu-v10.0.4-56@sha256:30cc9a4d03765acac9be2ed0afc23af1ad018aed2c28ea4be8c2eb9afe03fbd1 --install all
 ```
 
 Run containers:
