@@ -109,8 +109,9 @@ func showSSHAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	opts = append(opts, "Hostname=127.0.0.1")
-	opts = append(opts, fmt.Sprintf("Port=%d", inst.SSHLocalPort))
+	sshAddress, sshPort := inst.SSHAddressPort()
+	opts = append(opts, fmt.Sprintf("Hostname=%s", sshAddress))
+	opts = append(opts, fmt.Sprintf("Port=%d", sshPort))
 	return sshutil.Format(w, "ssh", instName, format, opts)
 }
 
