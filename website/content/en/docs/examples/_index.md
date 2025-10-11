@@ -54,7 +54,8 @@ docker run -d --name nginx -p 127.0.0.1:8080:80 nginx:alpine
 ```bash
 limactl start template://k8s
 export KUBECONFIG=$(limactl list k8s --format 'unix://{{.Dir}}/copied-from-guest/kubeconfig.yaml')
-kubectl apply -f ...
+kubectl create deployment nginx --image nginx:alpine
+kubectl create service nodeport nginx --node-port=31080 --tcp=80:80
 ```
 {{% /tab %}}
 
@@ -62,12 +63,7 @@ kubectl apply -f ...
 
 - <http://127.0.0.1:8080> is accessible from the host, as well as from the VM.
 
-- For the usage of containerd and nerdctl (contaiNERD ctl), visit <https://github.com/containerd/containerd>
-and <https://github.com/containerd/nerdctl>.
-
-- If you have installed Lima by `make install`, the `nerdctl.lima` command is also available as `nerdctl`.
-  If you have installed Lima by `brew install lima`, you may make an alias (or a symlink) by yourself:
-  `alias nerdctl=nerdctl.lima`
+- See more [examples](./containers/).
 
 ## Advanced configuration
 

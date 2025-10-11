@@ -11,7 +11,7 @@ Lima launches Linux virtual machines with automatic file sharing and port forwar
 
 ✅ Automatic port forwarding
 
-✅ Built-in support for [containerd](https://containerd.io) ([Other container engines can be used too](./templates))
+✅ Built-in support for [containerd](https://containerd.io) ([Other container engines can be used too]({{< ref "/docs/examples/containers" >}}))
 
 ✅ Intel on Intel
 
