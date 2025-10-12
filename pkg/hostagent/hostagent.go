@@ -531,6 +531,13 @@ func (a *HostAgent) GuestIP() net.IP {
 	return nil
 }
 
+// GuestIPs returns the guest's IPv4 and IPv6 addresses if available; otherwise nil.
+func (a *HostAgent) GuestIPs() (ipv4, ipv6 net.IP) {
+	a.guestIPMu.RLock()
+	defer a.guestIPMu.RUnlock()
+	return a.guestIPv4, a.guestIPv6
+}
+
 func (a *HostAgent) Info(_ context.Context) (*hostagentapi.Info, error) {
 	guestIP := a.GuestIP()
 	info := &hostagentapi.Info{
@@ -896,7 +903,38 @@ func (a *HostAgent) processGuestAgentEvents(ctx context.Context, client *guestag
 		if useSSHFwd {
 			a.portForwarder.OnEvent(ctx, ev)
 		} else {
-			dialContext := portfwd.DialContextToGRPCTunnel(client)
+			dialContext := func(ctx context.Context, network, guestAddress string) (net.Conn, error) {
+				guestIPv4, guestIPv6 := a.GuestIPs()
+				if guestIPv4 == nil && guestIPv6 == nil {
+					return portfwd.DialContextToGRPCTunnel(client)(ctx, network, guestAddress)
+				}
+				// Check if the host part of guestAddress is either unspecified address or matches the known guest IP.
+				// If so, replace it with the known guest IP to avoid issues with dual-stack setups and DNS resolution.
+				// Otherwise, fall back to the gRPC tunnel.
+				if host, _, err := net.SplitHostPort(guestAddress); err != nil {
+					return nil, err
+				} else if ip := net.ParseIP(host); ip.IsUnspecified() || ip.Equal(guestIPv4) || ip.Equal(guestIPv6) {
+					if ip.To4() != nil {
+						if guestIPv4 != nil {
+							conn, err := DialContextToGuestIP(guestIPv4)(ctx, network, guestAddress)
+							if err == nil {
+								return conn, nil
+							}
+							logrus.WithError(err).Warn("failed to connect to the guest IPv4 directly, falling back to gRPC tunnel")
+						}
+					} else if ip.To16() != nil {
+						if guestIPv6 != nil {
+							conn, err := DialContextToGuestIP(guestIPv6)(ctx, network, guestAddress)
+							if err == nil {
+								return conn, nil
+							}
+							logrus.WithError(err).Warn("failed to connect to the guest IPv6 directly, falling back to gRPC tunnel")
+						}
+					}
+					// If we reach here, it means we couldn't find a suitable guest IP
+				}
+				return portfwd.DialContextToGRPCTunnel(client)(ctx, network, guestAddress)
+			}
 			a.grpcPortForwarder.OnEvent(ctx, dialContext, ev)
 		}
 	}
@@ -908,6 +946,24 @@ func (a *HostAgent) processGuestAgentEvents(ctx context.Context, client *guestag
 		return err
 	}
 	return io.EOF
+}
+
+// DialContextToGuestIP returns a DialContext function that connects to the guest IP directly.
+// If the guest IP is not known, it returns nil.
+func DialContextToGuestIP(guestIP net.IP) func(ctx context.Context, network, address string) (net.Conn, error) {
+	if guestIP == nil {
+		return nil
+	}
+	return func(ctx context.Context, network, address string) (net.Conn, error) {
+		var d net.Dialer
+		_, port, err := net.SplitHostPort(address)
+		if err != nil {
+			return nil, err
+		}
+		// Host part of address is ignored, because it already has been checked by forwarding rules
+		// and we want to connect to the guest IP directly.
+		return d.DialContext(ctx, network, net.JoinHostPort(guestIP.String(), port))
+	}
 }
 
 const (
