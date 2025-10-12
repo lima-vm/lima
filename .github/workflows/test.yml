@@ -516,10 +516,13 @@ jobs:
       matrix:
         template:
         - default.yaml
+        create_arg:
+        - ""
+        - "--network=vzNAT"
     steps:
     - name: "Adjust LIMACTL_CREATE_ARGS"
       # --cpus=1 is needed for running vz on GHA: https://github.com/lima-vm/lima/pull/1511#issuecomment-1574937888
-      run: echo "LIMACTL_CREATE_ARGS=${LIMACTL_CREATE_ARGS} --cpus 1 --memory 1" >>$GITHUB_ENV
+      run: echo "LIMACTL_CREATE_ARGS=${LIMACTL_CREATE_ARGS} --cpus 1 --memory 1 ${{ matrix.create_arg }}" >>$GITHUB_ENV
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
     - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00  # v6.0.0
       with:
@@ -541,7 +544,7 @@ jobs:
     - if: failure()
       uses: ./.github/actions/upload_failure_logs_if_exists
       with:
-        suffix: ${{ matrix.template }}
+        suffix: ${{ matrix.template }}${{ matrix.create_arg }}
 
   # gomodjail is a library sandbox for Go
   # https://github.com/AkihiroSuda/gomodjail
