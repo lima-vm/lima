@@ -634,7 +634,7 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 	// TODO: use vSock (when QEMU for macOS gets support for vSock)
 
 	// Setup all socket forwards and defer their teardown
-	if !(a.driver.Info().Features.DynamicSSHAddress) {
+	if !(a.driver.Info().Features.SkipSocketForwarding) {
 		logrus.Debugf("Forwarding unix sockets")
 		for _, rule := range a.instConfig.PortForwards {
 			if rule.GuestSocket != "" {
