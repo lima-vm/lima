@@ -1,10 +1,11 @@
+//go:build !windows
+
 // SPDX-FileCopyrightText: Copyright The Lima Authors
 // SPDX-License-Identifier: Apache-2.0
 
 package systemd
 
 import (
-	"runtime"
 	"strings"
 	"testing"
 
@@ -12,9 +13,6 @@ import (
 )
 
 func TestGetUnitPath(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("skipping testing on windows host")
-	}
 	tests := []struct {
 		Name         string
 		InstanceName string
