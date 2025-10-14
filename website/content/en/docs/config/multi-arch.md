@@ -15,7 +15,7 @@ Lima supports several modes for running Intel-on-ARM and ARM-on-Intel:
 
 Lima can run a VM with a foreign architecture, using [QEMU](./vmtype/qemu.md).
 
-For [port forwarding](./port.md), the [`lima-additional-guestagents](../installation/) package has to be installed on the host.
+For [port forwarding](./port.md), the [`lima-additional-guestagents`](../installation/) package has to be installed on the host.
 
 An example configuration:
 {{< tabpane text=true >}}
