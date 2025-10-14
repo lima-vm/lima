@@ -65,9 +65,6 @@ The `--plain` mode is useful when you want the VM instance to be as close as pos
       # --plain is set to disable file sharing, port forwarding, built-in containerd, etc.
       run: limactl start --plain --name=default --cpus=1 --memory=1 --network=lima:user-v2 template://fedora
 
-    - name: "Set up SSH"
-      uses: lima-vm/lima-actions/ssh@v1
-
     - name: "Initialize Fedora"
       # plain old rsync and ssh are used for the initialization of the guest,
       # so that people who are not familiar with Lima can understand the initialization steps.
