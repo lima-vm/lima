@@ -47,14 +47,6 @@ provision:
     echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v${VERSION}/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
     curl -fsSL https://pkgs.k8s.io/core:/stable:/v${VERSION}/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
     apt-get update
-    # cri-tools
-    apt-get install -y cri-tools
-    cat  <<EOF | sudo tee /etc/crictl.yaml
-    runtime-endpoint: unix:///run/containerd/containerd.sock
-    EOF
-    # cni-plugins
-    apt-get install -y kubernetes-cni
-    rm -f /etc/cni/net.d/*.conf*
     apt-get install -y kubelet kubeadm kubectl && apt-mark hold kubelet kubeadm kubectl
     systemctl enable --now kubelet
 # See <https://kubernetes.io/docs/setup/production-environment/container-runtimes/>
@@ -77,6 +69,8 @@ provision:
               runtime_type = "io.containerd.runc.v2"
               [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
                 SystemdCgroup = true
+      [plugins."io.containerd.cri.v1.runtime".cni]
+        bin_dirs = ["/usr/local/libexec/cni","/opt/cni/bin"]
     EOF
     systemctl restart containerd
 # See <https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/>
@@ -140,7 +134,7 @@ probes:
   script: |
     #!/bin/bash
     set -eux -o pipefail
-    if ! timeout 30s bash -c "images=\"$(kubeadm config images list)\"; until for image in \$images; do sudo crictl image -q \$image | grep -q sha256; done; do sleep 3; done"; then
+    if ! timeout 30s bash -c "images=\"$(kubeadm config images list)\"; until for image in \$images; do sudo ctr -n k8s.io image inspect \$image >/dev/null; done; do sleep 3; done"; then
       echo >&2 "k8s images are not pulled yet"
       exit 1
     fi
