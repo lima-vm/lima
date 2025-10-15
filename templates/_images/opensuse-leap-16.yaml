@@ -1,0 +1,12 @@
+images:
+# Hint: run `limactl prune` to invalidate the Current cache
+
+- location: https://download.opensuse.org/distribution/leap/16.0/appliances/Leap-16.0-Minimal-VM.x86_64-Cloud.qcow2
+  arch: x86_64
+
+- location: https://download.opensuse.org/distribution/leap/16.0/appliances/Leap-16.0-Minimal-VM.aarch64-Cloud.qcow2
+  arch: aarch64
+
+# s390x image will not boot until https://bugzilla.suse.com/show_bug.cgi?id=1252096 is resolved
+- location: https://download.opensuse.org/distribution/leap/16.0/appliances/Leap-16.0-Minimal-VM.s390x-s390x-Cloud.qcow2
+  arch: s390x
