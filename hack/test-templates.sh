@@ -435,6 +435,13 @@ if [[ -n ${CHECKS["port-forwards"]} ]]; then
 	if limactl shell "${NAME}" command -v dnf; then
 		limactl shell "${NAME}" sudo dnf install -y nc socat
 	fi
+	# print routing table for debugging
+	case "${OS_HOST}" in
+	"Darwin") netstat -rn ;;
+	"GNU/Linux") ip route show ;;
+	"Msys") route print ;;
+	*) ;;
+	esac
 	if "${scriptdir}/test-port-forwarding.pl" "${NAME}" socat $PORT_FORWARDING_CONNECTION_TIMEOUT; then
 		INFO "Port forwarding rules work"
 	else
