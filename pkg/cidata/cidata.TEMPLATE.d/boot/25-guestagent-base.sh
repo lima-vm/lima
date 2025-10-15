@@ -18,6 +18,7 @@ if [ "${LIMA_CIDATA_MOUNTTYPE}" = "reverse-sshfs" ]; then
 fi
 
 # Install or update the guestagent binary
+mkdir -p "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin
 install -m 755 "${LIMA_CIDATA_MNT}"/lima-guestagent "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/lima-guestagent
 
 # Launch the guestagent service
