@@ -36,8 +36,8 @@ const (
 	CIDataISO               = "cidata.iso"
 	CIDataISODir            = "cidata"
 	CloudConfig             = "cloud-config.yaml"
-	BaseDisk                = "basedisk"
-	DiffDisk                = "diffdisk"
+	BaseDisk                = "basedisk" // usually immediately converted/renamed to diffDisk by the VM driver
+	DiffDisk                = "diffdisk" // misnomer; actually a full disk since Lima v2.1
 	Kernel                  = "kernel"
 	KernelCmdline           = "kernel.cmdline"
 	Initrd                  = "initrd"

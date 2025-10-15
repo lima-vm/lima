@@ -111,18 +111,21 @@ func TestEnsureDisk_WithNonISOBaseImage(t *testing.T) {
 	base := filepath.Join(instDir, filenames.BaseDisk)
 	diff := filepath.Join(instDir, filenames.DiffDisk)
 
-	writeNonISO(t, base)
-	isISO, err := iso9660util.IsISO9660(base)
-	assert.NilError(t, err)
-	assert.Assert(t, !isISO)
-
 	formats := []image.Type{typeRAW}
 	if isMacOS26OrHigher() {
 		formats = append(formats, typeASIF)
 	}
 
 	for _, format := range formats {
+		writeNonISO(t, base)
+		isISO, err := iso9660util.IsISO9660(base)
+		assert.NilError(t, err)
+		assert.Assert(t, !isISO)
+
 		assert.NilError(t, EnsureDisk(t.Context(), instDir, "2MiB", format))
+		_, err = os.Stat(base)
+		// Starting with Lima v2.1, the base disk is removed after creating the "diff disk" (misnomer).
+		assert.ErrorIs(t, err, os.ErrNotExist)
 		checkDisk(t, diff, format)
 		assert.NilError(t, os.Remove(diff))
 	}

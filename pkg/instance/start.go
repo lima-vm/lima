@@ -29,6 +29,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/imgutil/proxyimgutil"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
+	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	"github.com/lima-vm/lima/v2/pkg/registry"
 	"github.com/lima-vm/lima/v2/pkg/store"
 	"github.com/lima-vm/lima/v2/pkg/usrlocal"
@@ -66,11 +67,12 @@ func Prepare(ctx context.Context, inst *limatype.Instance, guestAgent string) (*
 		return nil, err
 	}
 
-	// Check if the instance has been created (the base disk already exists)
-	baseDisk := filepath.Join(inst.Dir, filenames.BaseDisk)
-	_, err = os.Stat(baseDisk)
-	created := err == nil
+	// Check if the instance has been created
+	created := limayaml.IsExistingInstanceDir(inst.Dir)
 
+	// baseDisk is usually immediately renamed to diffDisk (misnomer) by the VM driver,
+	// except when baseDisk is an ISO9660 image.
+	baseDisk := filepath.Join(inst.Dir, filenames.BaseDisk)
 	kernel := filepath.Join(inst.Dir, filenames.Kernel)
 	kernelCmdline := filepath.Join(inst.Dir, filenames.KernelCmdline)
 	initrd := filepath.Join(inst.Dir, filenames.Initrd)

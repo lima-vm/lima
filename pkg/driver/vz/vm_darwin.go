@@ -489,9 +489,15 @@ func attachDisks(ctx context.Context, inst *limatype.Instance, vmConfig *vz.Virt
 	baseDiskPath := filepath.Join(inst.Dir, filenames.BaseDisk)
 	diffDiskPath := filepath.Join(inst.Dir, filenames.DiffDisk)
 	ciDataPath := filepath.Join(inst.Dir, filenames.CIDataISO)
-	isBaseDiskCDROM, err := iso9660util.IsISO9660(baseDiskPath)
-	if err != nil {
-		return err
+	var (
+		isBaseDiskCDROM bool
+		err             error
+	)
+	if _, stErr := os.Stat(baseDiskPath); !errors.Is(stErr, os.ErrNotExist) {
+		isBaseDiskCDROM, err = iso9660util.IsISO9660(baseDiskPath)
+		if err != nil {
+			return err
+		}
 	}
 	var configurations []vz.StorageDeviceConfiguration
 
