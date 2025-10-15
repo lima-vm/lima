@@ -22,7 +22,11 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/store"
 )
 
-func Clone(ctx context.Context, oldInst *limatype.Instance, newInstName string) (*limatype.Instance, error) {
+func CloneOrRename(ctx context.Context, oldInst *limatype.Instance, newInstName string, rename bool) (*limatype.Instance, error) {
+	verb := "clone"
+	if rename {
+		verb = "rename"
+	}
 	if newInstName == "" {
 		return nil, errors.New("got empty instName")
 	}
@@ -30,7 +34,7 @@ func Clone(ctx context.Context, oldInst *limatype.Instance, newInstName string) 
 		return nil, fmt.Errorf("new instance name %q must be different from %q", newInstName, oldInst.Name)
 	}
 	if oldInst.Status == limatype.StatusRunning {
-		return nil, errors.New("cannot clone a running instance")
+		return nil, errors.New("cannot " + verb + " a running instance")
 	}
 
 	newInstDir, err := dirnames.InstanceDir(newInstName)
@@ -80,6 +84,9 @@ func Clone(ctx context.Context, oldInst *limatype.Instance, newInstName string) 
 		if slices.Contains(filenames.NullifyOnClone, base) {
 			return os.WriteFile(dst, nil, 0o666)
 		}
+		if rename {
+			return os.Rename(path, dst)
+		}
 		// CopyFile attempts copy-on-write when supported by the filesystem
 		return continuityfs.CopyFile(dst, path)
 	}
@@ -87,6 +94,10 @@ func Clone(ctx context.Context, oldInst *limatype.Instance, newInstName string) 
 	if err = filepath.WalkDir(oldInst.Dir, walkDirFn); err != nil {
 		return nil, err
 	}
-
+	if rename {
+		if err = os.RemoveAll(oldInst.Dir); err != nil {
+			return nil, err
+		}
+	}
 	return store.Inspect(ctx, newInstName)
 }
