@@ -293,7 +293,6 @@ func PrintInstances(w io.Writer, instances []*limatype.Instance, format string, 
 
 		columns := 1 // NAME
 		columns += 2 // STATUS
-		columns += 2 // SSH
 		// can we still fit the remaining columns (7)
 		if width == 0 || (columns+7)*columnWidth > width && !all {
 			hideType = len(types) == 1
@@ -323,7 +322,7 @@ func PrintInstances(w io.Writer, instances []*limatype.Instance, format string, 
 		_ = columns
 
 		w := tabwriter.NewWriter(w, 4, 8, 4, ' ', 0)
-		fmt.Fprint(w, "NAME\tSTATUS\tSSH")
+		fmt.Fprint(w, "NAME\tSTATUS")
 		if !hideType {
 			fmt.Fprint(w, "\tVMTYPE")
 		}
@@ -346,10 +345,9 @@ func PrintInstances(w io.Writer, instances []*limatype.Instance, format string, 
 			if strings.HasPrefix(dir, homeDir) {
 				dir = strings.Replace(dir, homeDir, "~", 1)
 			}
-			fmt.Fprintf(w, "%s\t%s\t%s",
+			fmt.Fprintf(w, "%s\t%s",
 				instance.Name,
 				instance.Status,
-				fmt.Sprintf("%s:%d", instance.SSHAddress, instance.SSHLocalPort),
 			)
 			if !hideType {
 				fmt.Fprintf(w, "\t%s",
