@@ -1124,8 +1124,13 @@ func Accel(arch limatype.Arch) string {
 	if limayaml.IsNativeArch(arch) {
 		switch runtime.GOOS {
 		case "darwin":
+			// TODO: return "tcg" if HVF is not available
 			return "hvf"
 		case "linux":
+			if _, err := os.Stat("/dev/kvm"); err != nil {
+				logrus.WithError(err).Warn("/dev/kvm is not available. Disabling KVM. Expect very poor performance.")
+				return "tcg"
+			}
 			return "kvm"
 		case "netbsd":
 			return "nvmm"
