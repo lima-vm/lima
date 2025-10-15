@@ -19,7 +19,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"sync"
 	"text/template"
 
 	"github.com/docker/go-units"
@@ -972,56 +971,6 @@ func ResolveArch(s *string) limatype.Arch {
 		return limatype.NewArch(runtime.GOARCH)
 	}
 	return *s
-}
-
-func IsAccelOS() bool {
-	switch runtime.GOOS {
-	case "darwin", "linux", "netbsd", "windows", "dragonfly":
-		// Accelerator
-		return true
-	}
-	// Using TCG
-	return false
-}
-
-var hasSMEDarwin = sync.OnceValue(func() bool {
-	if runtime.GOOS != "darwin" || runtime.GOARCH != "arm64" {
-		return false
-	}
-	// golang.org/x/sys/cpu does not support inspecting the availability of SME yet
-	s, err := osutil.Sysctl(context.Background(), "hw.optional.arm.FEAT_SME")
-	if err != nil {
-		logrus.WithError(err).Debug("failed to check hw.optional.arm.FEAT_SME")
-	}
-	return s == "1"
-})
-
-func HasHostCPU() bool {
-	switch runtime.GOOS {
-	case "darwin":
-		if hasSMEDarwin() {
-			// [2025-02-05]
-			// SME is available since Apple M4 running macOS 15.2, but it was broken on macOS 15.2.
-			// It has been fixed in 15.3.
-			//
-			// https://github.com/lima-vm/lima/issues/3032
-			// https://gitlab.com/qemu-project/qemu/-/issues/2665
-			// https://gitlab.com/qemu-project/qemu/-/issues/2721
-
-			// [2025-02-12]
-			// SME got broken again after upgrading QEMU from 9.2.0 to 9.2.1 (Homebrew bottle).
-			// Possibly this regression happened in some build process rather than in QEMU itself?
-			// https://github.com/lima-vm/lima/issues/3226
-			return false
-		}
-		return true
-	case "linux":
-		return true
-	case "netbsd", "windows":
-		return false
-	}
-	// Not reached
-	return false
 }
 
 func IsNativeArch(arch limatype.Arch) bool {
