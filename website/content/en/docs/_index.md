@@ -27,9 +27,16 @@ Related project: [sshocker (ssh with file sharing and port forwarding)](https://
 
 This project is unrelated to [The Lima driver project (driver for ARM Mali GPUs)](https://gitlab.freedesktop.org/lima).
 
-## Motivation
+## Project history
 
-The original goal of Lima was to promote [containerd](https://containerd.io) including [nerdctl (contaiNERD ctl)](https://github.com/containerd/nerdctl)
-to Mac users, but Lima can be used for non-container applications as well.
+Lima began in May 2021, aiming at promoting [containerd](https://containerd.io) including [nerdctl (contaiNERD ctl)](https://github.com/containerd/nerdctl)
+to Mac users.
+Later the project scope was expanded to support other containers
+and non-container applications as well.
 Lima also supports non-macOS hosts (Linux, NetBSD, etc.).
+
+Lima joined the [Cloud Native Computing Foundation (CNCF)](https://cncf.io)
+in September 2022 as a Sandbox project.
+The project was promoted to the Incubating level in October 2025.
+
 {{% /fixlinks %}}
