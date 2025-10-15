@@ -52,6 +52,10 @@ kernel:
 - `kernel.cmdline`: the kernel cmdline
 - `initrd`: the initrd
 
+container:
+- `entrypoint`: the entrypoint to use (optional)
+- `stopsignal`: the stopsignal to use (optional)
+
 QEMU:
 - `qemu.pid`: QEMU PID
 - `qmp.sock`: QMP socket
