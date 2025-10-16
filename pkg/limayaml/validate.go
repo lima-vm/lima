@@ -212,7 +212,7 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].permissions` must be an octal number: %w", i, err))
 			}
 		default:
-			if p.Script == "" && p.Mode != limatype.ProvisionModeAnsible {
+			if (p.Script == nil || *p.Script == "") && p.Mode != limatype.ProvisionModeAnsible {
 				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].script` must not be empty", i))
 			}
 			if p.Content != nil {
@@ -238,7 +238,7 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 			if p.Mode != limatype.ProvisionModeAnsible {
 				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].playbook can only be set when mode is %q", i, limatype.ProvisionModeAnsible))
 			}
-			if p.Script != "" {
+			if p.Script != nil && *p.Script != "" {
 				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].script must be empty if playbook is set", i))
 			}
 			playbook := p.Playbook
@@ -247,8 +247,10 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 			}
 			logrus.Warnf("provision mode %q is deprecated, use `ansible-playbook %q` instead", limatype.ProvisionModeAnsible, playbook)
 		}
-		if strings.Contains(p.Script, "LIMA_CIDATA") {
-			logrus.Warn("provisioning scripts should not reference the LIMA_CIDATA variables")
+		if p.Script != nil {
+			if strings.Contains(*p.Script, "LIMA_CIDATA") {
+				logrus.Warn("provisioning scripts should not reference the LIMA_CIDATA variables")
+			}
 		}
 	}
 	needsContainerdArchives := (y.Containerd.User != nil && *y.Containerd.User) || (y.Containerd.System != nil && *y.Containerd.System)
@@ -521,7 +523,7 @@ func validateParamIsUsed(y *limatype.LimaYAML) error {
 		}
 		keyIsUsed := false
 		for _, p := range y.Provision {
-			for _, ptr := range []*string{&p.Script, p.Content, p.Expression, p.Owner, p.Path, p.Permissions} {
+			for _, ptr := range []*string{p.Script, p.Content, p.Expression, p.Owner, p.Path, p.Permissions} {
 				if ptr != nil && re.MatchString(*ptr) {
 					keyIsUsed = true
 					break

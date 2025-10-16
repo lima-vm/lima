@@ -663,7 +663,7 @@ func (tmpl *Template) embedAllScripts(ctx context.Context, embedAll bool) error 
 				continue
 			}
 		default:
-			if p.Script != "" {
+			if p.Script != nil && *p.Script != "" {
 				continue
 			}
 		}

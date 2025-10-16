@@ -238,7 +238,7 @@ const (
 type Provision struct {
 	Mode                            ProvisionMode      `yaml:"mode,omitempty" json:"mode,omitempty" jsonschema:"default=system"`
 	SkipDefaultDependencyResolution *bool              `yaml:"skipDefaultDependencyResolution,omitempty" json:"skipDefaultDependencyResolution,omitempty"`
-	Script                          string             `yaml:"script,omitempty" json:"script,omitempty"`
+	Script                          *string            `yaml:"script,omitempty" json:"script,omitempty"`
 	File                            *LocatorWithDigest `yaml:"file,omitempty" json:"file,omitempty" jsonschema:"nullable"`
 	Playbook                        string             `yaml:"playbook,omitempty" json:"playbook,omitempty"` // DEPRECATED
 	// All ProvisionData fields must be nil unless Mode is ProvisionModeData
