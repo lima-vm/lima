@@ -400,7 +400,7 @@ func GenerateISO9660(ctx context.Context, drv driver.Driver, instDir, name strin
 		case limatype.ProvisionModeSystem, limatype.ProvisionModeUser, limatype.ProvisionModeDependency:
 			layout = append(layout, iso9660util.Entry{
 				Path:   fmt.Sprintf("provision.%s/%08d", f.Mode, i),
-				Reader: strings.NewReader(f.Script),
+				Reader: strings.NewReader(*f.Script),
 			})
 		case limatype.ProvisionModeData:
 			layout = append(layout, iso9660util.Entry{
@@ -490,7 +490,7 @@ func getBootCmds(p []limatype.Provision) []BootCmds {
 	for _, f := range p {
 		if f.Mode == limatype.ProvisionModeBoot {
 			lines := []string{}
-			for _, line := range strings.Split(f.Script, "\n") {
+			for _, line := range strings.Split(*f.Script, "\n") {
 				if line == "" {
 					continue
 				}

@@ -439,12 +439,11 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 				provision.Permissions = ptr.Of("644")
 			}
 		}
-		// TODO Turn Script into a pointer; it is a plain string for historical reasons only
-		if provision.Script != "" {
-			if out, err := executeGuestTemplate(provision.Script, instDir, y.User, y.Param); err == nil {
-				provision.Script = out.String()
+		if provision.Script != nil && *provision.Script != "" {
+			if out, err := executeGuestTemplate(*provision.Script, instDir, y.User, y.Param); err == nil {
+				*provision.Script = out.String()
 			} else {
-				logrus.WithError(err).Warnf("Couldn't process provisioning script %q as a template", provision.Script)
+				logrus.WithError(err).Warnf("Couldn't process provisioning script %q as a template", *provision.Script)
 			}
 		}
 	}

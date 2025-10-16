@@ -150,7 +150,7 @@ func TestFillDefault(t *testing.T) {
 		},
 		MountType: ptr.Of(limatype.NINEP),
 		Provision: []limatype.Provision{
-			{Script: "#!/bin/true # {{.Param.ONE}}"},
+			{Script: ptr.Of("#!/bin/true # {{.Param.ONE}}")},
 		},
 		Probes: []limatype.Probe{
 			{Script: "#!/bin/false # {{.Param.ONE}}"},
@@ -234,7 +234,7 @@ func TestFillDefault(t *testing.T) {
 
 	expect.Provision = slices.Clone(y.Provision)
 	expect.Provision[0].Mode = limatype.ProvisionModeSystem
-	expect.Provision[0].Script = "#!/bin/true # Eins"
+	expect.Provision[0].Script = ptr.Of("#!/bin/true # Eins")
 
 	expect.Probes = slices.Clone(y.Probes)
 	expect.Probes[0].Mode = limatype.ProbeModeReadiness
@@ -364,7 +364,7 @@ func TestFillDefault(t *testing.T) {
 		},
 		Provision: []limatype.Provision{
 			{
-				Script: "#!/bin/true",
+				Script: ptr.Of("#!/bin/true"),
 				Mode:   limatype.ProvisionModeUser,
 			},
 		},
@@ -572,7 +572,7 @@ func TestFillDefault(t *testing.T) {
 		MountInotify: ptr.Of(true),
 		Provision: []limatype.Provision{
 			{
-				Script: "#!/bin/true",
+				Script: ptr.Of("#!/bin/true"),
 				Mode:   limatype.ProvisionModeSystem,
 			},
 		},
