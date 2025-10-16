@@ -30,7 +30,7 @@ func newCloneCommand() *cobra.Command {
 Not to be confused with 'limactl copy' ('limactl cp').
 `,
 		Args:              WrapArgsError(cobra.ExactArgs(2)),
-		RunE:              cloneAction,
+		RunE:              cloneOrRenameAction,
 		ValidArgsFunction: cloneBashComplete,
 		GroupID:           advancedCommand,
 	}
@@ -38,7 +38,22 @@ Not to be confused with 'limactl copy' ('limactl cp').
 	return cloneCommand
 }
 
-func cloneAction(cmd *cobra.Command, args []string) error {
+func newRenameCommand() *cobra.Command {
+	renameCommand := &cobra.Command{
+		Use: "rename OLDINST NEWINST",
+		// No "mv" alias, to avoid confusion with a theoretical equivalent of `limactl cp` but s/cp/mv/.
+		Short:             "Rename an instance of Lima",
+		Args:              WrapArgsError(cobra.ExactArgs(2)),
+		RunE:              cloneOrRenameAction,
+		ValidArgsFunction: cloneBashComplete,
+		GroupID:           advancedCommand,
+	}
+	editflags.RegisterEdit(renameCommand, "[limactl edit] ")
+	return renameCommand
+}
+
+func cloneOrRenameAction(cmd *cobra.Command, args []string) error {
+	rename := cmd.Name() == "rename"
 	ctx := cmd.Context()
 	flags := cmd.Flags()
 	tty, err := flags.GetBool("tty")
@@ -55,7 +70,7 @@ func cloneAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	newInst, err := instance.Clone(ctx, oldInst, newInstName)
+	newInst, err := instance.CloneOrRename(ctx, oldInst, newInstName, rename)
 	if err != nil {
 		return err
 	}
