@@ -9,6 +9,7 @@ The following features are deprecated:
 - Loading non-strict YAMLs (i.e., YAMLs with unknown properties)
 - `limactl show-ssh` command (Use `ssh -F ~/.lima/default/ssh.config lima-default` instead)
 - Ansible provisioning mode (Use `ansible-playbook playbook.yaml` after the start instead)
+- `LIMA_SSH_PORT_FORWARDER` environment variable: deprecated in Lima v2.0, in favor of [the new "dual" port forwarder](../config/port.md) that mixes SSH and gRPC implementations.
 
 ## Removed features
 - YAML property `network`: deprecated in [Lima v0.7.0](https://github.com/lima-vm/lima/commit/07e68230e70b21108d2db3ca5e0efd0e43842fbd)

@@ -121,6 +121,10 @@ func TestFillDefault(t *testing.T) {
 			Shell:   ptr.Of("/bin/bash"),
 			UID:     ptr.Of(uint32(uid)),
 		},
+		PortForwardTypes: map[limatype.Proto]limatype.PortForwardType{
+			limatype.ProtoTCP: limatype.PortForwardTypeSSH,
+			limatype.ProtoUDP: limatype.PortForwardTypeGRPC,
+		},
 	}
 
 	defaultPortForward := limatype.PortForward{
@@ -247,6 +251,10 @@ func TestFillDefault(t *testing.T) {
 	expect.Networks[0].Metric = ptr.Of(uint32(100))
 
 	expect.DNS = slices.Clone(y.DNS)
+	expect.PortForwardTypes = map[limatype.Proto]limatype.PortForwardType{
+		limatype.ProtoTCP: limatype.PortForwardTypeSSH,
+		limatype.ProtoUDP: limatype.PortForwardTypeGRPC,
+	}
 	expect.PortForwards = []limatype.PortForward{
 		defaultPortForward,
 		defaultPortForward,
@@ -384,6 +392,10 @@ func TestFillDefault(t *testing.T) {
 		},
 		DNS: []net.IP{
 			net.ParseIP("1.1.1.1"),
+		},
+		PortForwardTypes: map[limatype.Proto]limatype.PortForwardType{
+			limatype.ProtoTCP: limatype.PortForwardTypeSSH,
+			limatype.ProtoUDP: limatype.PortForwardTypeGRPC,
 		},
 		PortForwards: []limatype.PortForward{{
 			GuestIP:        IPv4loopback1,
@@ -597,6 +609,10 @@ func TestFillDefault(t *testing.T) {
 		},
 		DNS: []net.IP{
 			net.ParseIP("2.2.2.2"),
+		},
+		PortForwardTypes: map[limatype.Proto]limatype.PortForwardType{
+			limatype.ProtoTCP: limatype.PortForwardTypeSSH,
+			limatype.ProtoUDP: limatype.PortForwardTypeGRPC,
 		},
 		PortForwards: []limatype.PortForward{{
 			GuestIP:        IPv4loopback1,

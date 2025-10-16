@@ -117,12 +117,13 @@ This page documents the environment variables used in Lima.
 
 ### `LIMA_SSH_PORT_FORWARDER`
 
-- **Description**: Specifies to use the SSH port forwarder (slow) instead of gRPC (fast, previously unstable)
-- **Default**: `false` (since v1.1.0)
+- **Description**: Specifies to disable the gRPC port forwarder. See [Port Forwarding](./port.md) for the details.
+- **Default**: not set (since v2.0.0)
 - **Usage**: 
   ```sh
   export LIMA_SSH_PORT_FORWARDER=false
   ```
+- **Note**: Deprecated since v2.0.0.
 - **The history of the default value**:
   | Version | Default value       |
   |---------|---------------------|
@@ -130,6 +131,7 @@ This page documents the environment variables used in Lima.
   | v1.0.0  | `false`             |
   | v1.0.1  | `true`              |
   | v1.1.0  | `false`             |
+  | v2.0.0  | not set             |
 
 ### `LIMA_USERNET_RESOLVE_IP_ADDRESS_TIMEOUT`
 

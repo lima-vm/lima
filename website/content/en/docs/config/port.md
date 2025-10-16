@@ -7,29 +7,56 @@ Lima supports automatic port-forwarding of localhost ports from guest to host.
 
 ## Port forwarding types
 
-Lima supports two port forwarders: SSH and GRPC.
+Lima supports the following port forwarders:
+- Dual (SSH for TCP, GRPC for UDP)
+- SSH
+- GRPC
 
 The default port forwarder is shown in the following table.
 
-| Version | Default |
-| --------| ------- |
-| v0.1.0  | SSH     |
-| v1.0.0  | GRPC    |
-| v1.0.1  | SSH     |
-| v1.1.0  | GRPC    |
+| Version | Default | Reason to change the default                             |
+| --------| ------- | -------------------------------------------------------- |
+| v0.1.0  | SSH     | (The initial implementation.)                            |
+| v1.0.0  | GRPC    | GRPC implementation outperforms SSH.                     |
+| v1.0.1  | SSH     | GRPC implementation turned out to have stability issues. |
+| v1.1.0  | GRPC    | The stability issues were fixed.                         |
+| v2.0.0  | Dual    | SSH outperforms GRPC when VSOCK is available.            |
 
-The default was once changed to GRPC in Lima v1.0, but it was reverted to SSH in v1.0.1 due to stability reasons.
-The default was further reverted to GRPC in Lima v1.1, as the stability issues were resolved.
+### Using Dual forwarder
+
+| ⚡ Requirement | Lima >= 2.0 |
+|---------------|-------------|
+
+The dual forwarder uses SSH for TCP and GRPC for UDP to mix the advantages of the both forwarders.
+
+```yaml
+portForwardTypes:
+  tcp: ssh
+  udp: grpc
+```
+
+This is the default mode since Lima v2.0.
 
 ### Using SSH
 
-SSH based port forwarding was previously the default mode.
+SSH-only port forwarding was previously the default mode.
 
-To explicitly use SSH forwarding use the below command
-
-```bash
-LIMA_SSH_PORT_FORWARDER=true limactl start
+{{< tabpane text=true >}}
+{{% tab header="Lima v2.0+" %}}
+```yaml
+portForwardTypes:
+  tcp: ssh
+  udp: none
 ```
+{{% /tab %}}
+{{% tab header="Lima v1.x" %}}
+```bash
+# Deprecated
+export LIMA_SSH_PORT_FORWARDER=true
+limactl start
+```
+{{% /tab %}}
+{{< /tabpane >}}
 
 #### Advantages
 
@@ -62,11 +89,21 @@ export LIMA_SSH_OVER_VSOCK=false
 In this model, lima uses existing GRPC communication (Host <-> Guest) to tunnel port forwarding requests.
 For each port forwarding request, a GRPC tunnel is created and this will be used for transmitting data
 
-To enable this feature, set `LIMA_SSH_PORT_FORWARDER` to `false`:
-
-```bash
-LIMA_SSH_PORT_FORWARDER=false limactl start
+{{< tabpane text=true >}}
+{{% tab header="Lima v2.0+" %}}
+```yaml
+portForwardTypes:
+  any: grpc
 ```
+{{% /tab %}}
+{{% tab header="Lima v1.x" %}}
+```bash
+# Deprecated
+export LIMA_SSH_PORT_FORWARDER=false
+limactl start
+```
+{{% /tab %}}
+{{< /tabpane >}}
 
 #### Advantages
 
