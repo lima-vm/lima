@@ -286,7 +286,7 @@ func PrintInstances(w io.Writer, instances []*limatype.Instance, format string, 
 		if options != nil {
 			width = options.TerminalWidth
 		}
-		columnWidth := 8
+		columnWidth := 9
 		hideType := false
 		hideArch := false
 		hideDir := false

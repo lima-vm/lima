@@ -50,15 +50,19 @@ var table60 = "NAME    STATUS     SSH            CPUS    MEMORY    DISK\n" +
 	"foo     Stopped    127.0.0.1:0    0       0B        0B\n"
 
 // for width 80, identical is hidden (type/arch)
-var table80i = "NAME    STATUS     SSH            CPUS    MEMORY    DISK    DIR\n" +
-	"foo     Stopped    127.0.0.1:0    0       0B        0B      dir\n"
+var table80i = "NAME    STATUS     SSH            CPUS    MEMORY    DISK\n" +
+	"foo     Stopped    127.0.0.1:0    0       0B        0B\n"
 
-// for width 80, different arch is still shown (not dir)
+// for width 80, different arch is still shown
 var table80d = "NAME    STATUS     SSH            ARCH       CPUS    MEMORY    DISK\n" +
 	"foo     Stopped    127.0.0.1:0    unknown    0       0B        0B\n"
 
-// for width 100, nothing is hidden
-var table100 = "NAME    STATUS     SSH            VMTYPE    ARCH" + space + "    CPUS    MEMORY    DISK    DIR\n" +
+// for width 100, vmtype is hidden
+var table100 = "NAME    STATUS     SSH            ARCH" + space + "    CPUS    MEMORY    DISK    DIR\n" +
+	"foo     Stopped    127.0.0.1:0    " + goarch + "    0       0B        0B      dir\n"
+
+// for width 120, nothing is hidden
+var table120 = "NAME    STATUS     SSH            VMTYPE    ARCH" + space + "    CPUS    MEMORY    DISK    DIR\n" +
 	"foo     Stopped    127.0.0.1:0    " + vmtype + "      " + goarch + "    0       0B        0B      dir\n"
 
 // for width 80, directory is hidden (if not identical)
@@ -132,6 +136,15 @@ func TestPrintInstanceTable100(t *testing.T) {
 	err := PrintInstances(&buf, instances, "table", &options)
 	assert.NilError(t, err)
 	assert.Equal(t, table100, buf.String())
+}
+
+func TestPrintInstanceTable120(t *testing.T) {
+	var buf bytes.Buffer
+	instances := []*limatype.Instance{&instance}
+	options := PrintOptions{TerminalWidth: 120}
+	err := PrintInstances(&buf, instances, "table", &options)
+	assert.NilError(t, err)
+	assert.Equal(t, table120, buf.String())
 }
 
 func TestPrintInstanceTableAll(t *testing.T) {
