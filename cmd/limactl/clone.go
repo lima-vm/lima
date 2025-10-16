@@ -16,7 +16,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/instance"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
-	networks "github.com/lima-vm/lima/v2/pkg/networks/reconcile"
+	"github.com/lima-vm/lima/v2/pkg/networks/reconcile"
 	"github.com/lima-vm/lima/v2/pkg/store"
 	"github.com/lima-vm/lima/v2/pkg/yqutil"
 )
@@ -124,7 +124,7 @@ func cloneOrRenameAction(cmd *cobra.Command, args []string) error {
 	if !startNow {
 		return nil
 	}
-	err = networks.Reconcile(ctx, newInst.Name)
+	err = reconcile.Reconcile(ctx, newInst.Name)
 	if err != nil {
 		return err
 	}

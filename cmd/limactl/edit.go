@@ -21,7 +21,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
-	networks "github.com/lima-vm/lima/v2/pkg/networks/reconcile"
+	"github.com/lima-vm/lima/v2/pkg/networks/reconcile"
 	"github.com/lima-vm/lima/v2/pkg/store"
 	"github.com/lima-vm/lima/v2/pkg/uiutil"
 	"github.com/lima-vm/lima/v2/pkg/yqutil"
@@ -155,7 +155,7 @@ func editAction(cmd *cobra.Command, args []string) error {
 	if !startNow {
 		return nil
 	}
-	err = networks.Reconcile(ctx, inst.Name)
+	err = reconcile.Reconcile(ctx, inst.Name)
 	if err != nil {
 		return err
 	}

@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/lima-vm/lima/v2/pkg/instance"
-	networks "github.com/lima-vm/lima/v2/pkg/networks/reconcile"
+	"github.com/lima-vm/lima/v2/pkg/networks/reconcile"
 	"github.com/lima-vm/lima/v2/pkg/store"
 )
 
@@ -48,7 +48,7 @@ func stopAction(cmd *cobra.Command, args []string) error {
 	}
 	// TODO: should we also reconcile networks if graceful stop returned an error?
 	if err == nil {
-		err = networks.Reconcile(ctx, "")
+		err = reconcile.Reconcile(ctx, "")
 	}
 	return err
 }
