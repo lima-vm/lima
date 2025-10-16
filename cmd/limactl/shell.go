@@ -24,7 +24,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/instance"
 	"github.com/lima-vm/lima/v2/pkg/ioutilx"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
-	networks "github.com/lima-vm/lima/v2/pkg/networks/reconcile"
+	"github.com/lima-vm/lima/v2/pkg/networks/reconcile"
 	"github.com/lima-vm/lima/v2/pkg/sshutil"
 	"github.com/lima-vm/lima/v2/pkg/store"
 )
@@ -101,7 +101,7 @@ func shellAction(cmd *cobra.Command, args []string) error {
 			return nil
 		}
 
-		err = networks.Reconcile(ctx, inst.Name)
+		err = reconcile.Reconcile(ctx, inst.Name)
 		if err != nil {
 			return err
 		}

@@ -14,7 +14,7 @@ import (
 
 	"github.com/lima-vm/lima/v2/pkg/autostart"
 	"github.com/lima-vm/lima/v2/pkg/instance"
-	networks "github.com/lima-vm/lima/v2/pkg/networks/reconcile"
+	"github.com/lima-vm/lima/v2/pkg/networks/reconcile"
 	"github.com/lima-vm/lima/v2/pkg/store"
 )
 
@@ -60,7 +60,7 @@ func deleteAction(cmd *cobra.Command, args []string) error {
 		}
 		logrus.Infof("Deleted %q (%q)", instName, inst.Dir)
 	}
-	return networks.Reconcile(cmd.Context(), "")
+	return reconcile.Reconcile(cmd.Context(), "")
 }
 
 func deleteBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {

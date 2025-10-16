@@ -9,7 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/limatype"
-	networks "github.com/lima-vm/lima/v2/pkg/networks/reconcile"
+	"github.com/lima-vm/lima/v2/pkg/networks/reconcile"
 )
 
 const (
@@ -21,7 +21,7 @@ func Restart(ctx context.Context, inst *limatype.Instance, showProgress bool) er
 		return err
 	}
 
-	if err := networks.Reconcile(ctx, inst.Name); err != nil {
+	if err := reconcile.Reconcile(ctx, inst.Name); err != nil {
 		return err
 	}
 
@@ -36,7 +36,7 @@ func RestartForcibly(ctx context.Context, inst *limatype.Instance, showProgress 
 	logrus.Info("Restarting the instance forcibly")
 	StopForcibly(inst)
 
-	if err := networks.Reconcile(ctx, inst.Name); err != nil {
+	if err := reconcile.Reconcile(ctx, inst.Name); err != nil {
 		return err
 	}
 

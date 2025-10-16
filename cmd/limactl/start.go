@@ -25,7 +25,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
-	networks "github.com/lima-vm/lima/v2/pkg/networks/reconcile"
+	"github.com/lima-vm/lima/v2/pkg/networks/reconcile"
 	"github.com/lima-vm/lima/v2/pkg/registry"
 	"github.com/lima-vm/lima/v2/pkg/store"
 	"github.com/lima-vm/lima/v2/pkg/templatestore"
@@ -580,7 +580,7 @@ func startAction(cmd *cobra.Command, args []string) error {
 		logrus.Warnf("expected status %q, got %q", limatype.StatusStopped, inst.Status)
 	}
 	ctx := cmd.Context()
-	err = networks.Reconcile(ctx, inst.Name)
+	err = reconcile.Reconcile(ctx, inst.Name)
 	if err != nil {
 		return err
 	}
