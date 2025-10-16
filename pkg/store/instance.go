@@ -275,9 +275,13 @@ func PrintInstances(w io.Writer, instances []*limatype.Instance, format string, 
 	case "yaml":
 		format = "{{yaml .}}"
 	case "table":
+		ips := map[string]int{}
 		types := map[string]int{}
 		archs := map[string]int{}
 		for _, instance := range instances {
+			if instance.SSHAddress != "127.0.0.1" {
+				ips[instance.SSHAddress]++
+			}
 			types[instance.VMType]++
 			archs[instance.Arch]++
 		}
@@ -296,7 +300,7 @@ func PrintInstances(w io.Writer, instances []*limatype.Instance, format string, 
 		columns += 2 // STATUS
 		// can we still fit the remaining columns (9)
 		if width != 0 && (columns+9)*columnWidth > width && !all {
-			hideSSH = true
+			hideSSH = len(ips) == 0
 		}
 		if !hideSSH {
 			columns += 2 // SSH

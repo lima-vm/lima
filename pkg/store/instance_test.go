@@ -65,6 +65,10 @@ var table80 = "NAME    STATUS     CPUS    MEMORY    DISK    DIR\n" +
 var table100 = "NAME    STATUS     VMTYPE    ARCH" + space + "    CPUS    MEMORY    DISK    DIR\n" +
 	"foo     Stopped    " + vmtype + "      " + goarch + "    0       0B        0B      dir\n"
 
+// for width 100, different ssh is still shown
+var table100d = "NAME    STATUS     SSH          ARCH" + space + "    CPUS    MEMORY    DISK    DIR\n" +
+	"foo     Stopped    1.2.3.4:0    " + goarch + "    0       0B        0B      dir\n"
+
 // for width 120, nothing is hidden
 var table120 = "NAME    STATUS     SSH            VMTYPE    ARCH" + space + "    CPUS    MEMORY    DISK    DIR\n" +
 	"foo     Stopped    127.0.0.1:0    " + vmtype + "      " + goarch + "    0       0B        0B      dir\n"
@@ -142,13 +146,24 @@ func TestPrintInstanceTable80(t *testing.T) {
 	assert.Equal(t, table80, buf.String())
 }
 
-func TestPrintInstanceTable100(t *testing.T) {
+func TestPrintInstanceTable100Localhost(t *testing.T) {
 	var buf bytes.Buffer
 	instances := []*limatype.Instance{&instance}
 	options := PrintOptions{TerminalWidth: 100}
 	err := PrintInstances(&buf, instances, "table", &options)
 	assert.NilError(t, err)
 	assert.Equal(t, table100, buf.String())
+}
+
+func TestPrintInstanceTable100IPAddress(t *testing.T) {
+	var buf bytes.Buffer
+	instance1 := instance
+	instance1.SSHAddress = "1.2.3.4"
+	instances := []*limatype.Instance{&instance1}
+	options := PrintOptions{TerminalWidth: 100}
+	err := PrintInstances(&buf, instances, "table", &options)
+	assert.NilError(t, err)
+	assert.Equal(t, table100d, buf.String())
 }
 
 func TestPrintInstanceTable120(t *testing.T) {
