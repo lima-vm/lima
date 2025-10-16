@@ -283,6 +283,11 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 			errs = errors.Join(errs, fmt.Errorf("field `probe[%d].mode` can only be %q", i, limatype.ProbeModeReadiness))
 		}
 	}
+
+	if err := ValidatePortForwardTypes(y.PortForwardTypes); err != nil {
+		errs = errors.Join(errs, fmt.Errorf("field `portForwardTypes` is invalid: %w", err))
+	}
+
 	for i, rule := range y.PortForwards {
 		field := fmt.Sprintf("portForwards[%d]", i)
 		if *rule.GuestIPMustBeZero && !rule.GuestIP.Equal(net.IPv4zero) {
@@ -647,4 +652,35 @@ func ValidateAgainstLatestConfig(ctx context.Context, yNew, yLatest []byte) erro
 	}
 
 	return errs
+}
+
+func ValidatePortForwardTypes(m map[limatype.Proto]limatype.PortForwardType) error {
+	for k, v := range m {
+		switch k {
+		case limatype.ProtoTCP:
+			// NOP
+		case limatype.ProtoUDP:
+			if v == limatype.PortForwardTypeSSH {
+				return errors.New("port forward type \"ssh\" does not support protocol udp")
+			}
+		case limatype.ProtoAny:
+			if v == limatype.PortForwardTypeSSH {
+				return errors.New("port forward type \"ssh\" does not support protocol \"any\", due to lack of udp support")
+			}
+			for _, kk := range []limatype.Proto{limatype.ProtoTCP, limatype.ProtoUDP} {
+				if vv, ok := m[kk]; ok && vv != v {
+					return fmt.Errorf("conflicting port forward types for proto %q:%q vs %q:%q", k, v, kk, vv)
+				}
+			}
+		default:
+			return fmt.Errorf("invalid port forward type proto: %q", k)
+		}
+		switch v {
+		case limatype.PortForwardTypeSSH, limatype.PortForwardTypeGRPC, limatype.PortForwardTypeNone:
+		// NOP
+		default:
+			return fmt.Errorf("invalid port forward type: %q for proto %q", v, k)
+		}
+	}
+	return nil
 }

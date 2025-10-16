@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net"
 	"os"
 	"os/exec"
@@ -113,6 +114,82 @@ func WithCloudInitProgress(enabled bool) Opt {
 	}
 }
 
+// resolvePortForwardTypes resolves port forwarding types.
+// The returned result may not contain [limatype.ProtoAny] keys, and [limatype.PortForwardTypeNone] values.
+func resolvePortForwardTypes(portForwardTypes map[limatype.Proto]limatype.PortForwardType, portForwards []limatype.PortForward) (map[limatype.Proto]limatype.PortForwardType, error) {
+	// The default port forwarding mode since Lima v2.0 is "dual": {tcp: ssh, udp: grpc}.
+	// The default values are set in [limayaml.FillDefault], not here.
+	if err := limayaml.ValidatePortForwardTypes(portForwardTypes); err != nil {
+		return nil, err
+	}
+
+	res := maps.Clone(portForwardTypes)
+
+	// Fix up keys
+	for k, v := range res {
+		if k == limatype.ProtoAny {
+			for _, proto := range []limatype.Proto{limatype.ProtoTCP, limatype.ProtoUDP} {
+				if res[proto] != limatype.PortForwardTypeNone {
+					res[proto] = v
+				}
+			}
+			delete(res, k)
+		}
+	}
+
+	// Fix up values
+	for k, v := range res {
+		if v == limatype.PortForwardTypeNone {
+			delete(res, k)
+		}
+	}
+
+	// Apply "ignore all ports" rules from portForwards
+	for _, rule := range portForwards {
+		if rule.Ignore && rule.GuestPortRange[0] == 1 && rule.GuestPortRange[1] == 65535 {
+			switch rule.Proto {
+			case limatype.ProtoTCP:
+				delete(res, limatype.ProtoTCP)
+			case limatype.ProtoUDP:
+				delete(res, limatype.ProtoUDP)
+			case limatype.ProtoAny:
+				delete(res, limatype.ProtoTCP)
+				delete(res, limatype.ProtoUDP)
+			}
+		} else {
+			break
+		}
+	}
+
+	// Apply LIMA_SSH_PORT_FORWARDER env var for backward compatibility
+	if envVar := os.Getenv("LIMA_SSH_PORT_FORWARDER"); envVar != "" {
+		logrus.WithField("LIMA_SSH_PORT_FORWARDER", envVar).Warnf("LIMA_SSH_PORT_FORWARDER=false is deprecated; use portForwardTypes config instead")
+		b, err := strconv.ParseBool(envVar)
+		if err != nil {
+			return nil, fmt.Errorf("invalid LIMA_SSH_PORT_FORWARDER value %q", envVar)
+		}
+		if b {
+			if _, ok := res[limatype.ProtoTCP]; ok {
+				res[limatype.ProtoTCP] = limatype.PortForwardTypeSSH
+			}
+			// No UDP support in SSH port forwarder
+			delete(res, limatype.ProtoUDP)
+		} else {
+			for _, proto := range []limatype.Proto{limatype.ProtoTCP, limatype.ProtoUDP} {
+				if _, ok := res[proto]; ok {
+					res[proto] = limatype.PortForwardTypeGRPC
+				}
+			}
+		}
+	}
+
+	if err := limayaml.ValidatePortForwardTypes(res); err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
 // New creates the HostAgent.
 //
 // stdout is for emitting JSON lines of Events.
@@ -202,26 +279,15 @@ func New(ctx context.Context, instName string, stdout io.Writer, signalCh chan o
 		AdditionalArgs: sshutil.SSHArgsFromOpts(sshOpts),
 	}
 
-	ignoreTCP := false
-	ignoreUDP := false
-	for _, rule := range inst.Config.PortForwards {
-		if rule.Ignore && rule.GuestPortRange[0] == 1 && rule.GuestPortRange[1] == 65535 {
-			switch rule.Proto {
-			case limatype.ProtoTCP:
-				ignoreTCP = true
-				logrus.Info("TCP port forwarding is disabled (except for SSH)")
-			case limatype.ProtoUDP:
-				ignoreUDP = true
-				logrus.Info("UDP port forwarding is disabled")
-			case limatype.ProtoAny:
-				ignoreTCP = true
-				ignoreUDP = true
-				logrus.Info("TCP (except for SSH) and UDP port forwarding is disabled")
-			}
-		} else {
-			break
-		}
+	portForwardTypes, err := resolvePortForwardTypes(inst.Config.PortForwardTypes, inst.Config.PortForwards)
+	if err != nil {
+		return nil, err
 	}
+	logrus.WithField("portForwardTypes", portForwardTypes).Info("Resolved port forwarding types")
+	sshFwdIgnoreTCP := portForwardTypes[limatype.ProtoTCP] != limatype.PortForwardTypeSSH
+	grpcFwdIgnoreTCP := portForwardTypes[limatype.ProtoTCP] != limatype.PortForwardTypeGRPC
+	grpcFwdIgnoreUDP := portForwardTypes[limatype.ProtoUDP] != limatype.PortForwardTypeGRPC
+
 	rules := make([]limatype.PortForward, 0, 3+len(inst.Config.PortForwards))
 	// Block ports 22 and sshLocalPort on all IPs
 	for _, port := range []int{sshGuestPort, sshLocalPort} {
@@ -244,8 +310,8 @@ func New(ctx context.Context, instName string, stdout io.Writer, signalCh chan o
 		instName:          instName,
 		instSSHAddress:    inst.SSHAddress,
 		sshConfig:         sshConfig,
-		portForwarder:     newPortForwarder(sshConfig, sshLocalPort, rules, ignoreTCP, inst.VMType),
-		grpcPortForwarder: portfwd.NewPortForwarder(rules, ignoreTCP, ignoreUDP),
+		portForwarder:     newPortForwarder(sshConfig, sshLocalPort, rules, sshFwdIgnoreTCP, inst.VMType),
+		grpcPortForwarder: portfwd.NewPortForwarder(rules, grpcFwdIgnoreTCP, grpcFwdIgnoreUDP),
 		driver:            limaDriver,
 		signalCh:          signalCh,
 		eventEnc:          json.NewEncoder(stdout),
@@ -796,26 +862,10 @@ func (a *HostAgent) processGuestAgentEvents(ctx context.Context, client *guestag
 		for _, f := range ev.Errors {
 			logrus.Warnf("received error from the guest: %q", f)
 		}
-		// History of the default value of useSSHFwd:
-		// - v0.1.0:        true  (effectively)
-		// - v1.0.0:        false
-		// - v1.0.1:        true
-		// - v1.1.0-beta.0: false
-		useSSHFwd := false
-		if envVar := os.Getenv("LIMA_SSH_PORT_FORWARDER"); envVar != "" {
-			b, err := strconv.ParseBool(envVar)
-			if err != nil {
-				logrus.WithError(err).Warnf("invalid LIMA_SSH_PORT_FORWARDER value %q", envVar)
-			} else {
-				useSSHFwd = b
-			}
-		}
-		if useSSHFwd {
-			a.portForwarder.OnEvent(ctx, ev)
-		} else {
-			dialContext := portfwd.DialContextToGRPCTunnel(client)
-			a.grpcPortForwarder.OnEvent(ctx, dialContext, ev)
-		}
+
+		a.portForwarder.OnEvent(ctx, ev)
+		dialContext := portfwd.DialContextToGRPCTunnel(client)
+		a.grpcPortForwarder.OnEvent(ctx, dialContext, ev)
 	}
 
 	if err := client.Events(ctx, onEvent); err != nil {

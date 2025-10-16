@@ -465,6 +465,10 @@ networks:
 # Needs `vmType: vz`
 # - vzNAT: true
 
+# Port forwarder types.
+# 🟢 Builtin default: {tcp: ssh, udp: grpc}
+portForwardTypes: null
+
 # Port forwarding rules. Forwarding between ports 22 and ssh.localPort cannot be overridden.
 # Rules are checked sequentially until the first one matches.
 # portForwards:

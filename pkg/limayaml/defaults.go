@@ -519,6 +519,18 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		}
 	}
 
+	portForwardTypes := make(map[limatype.Proto]limatype.PortForwardType)
+	maps.Copy(portForwardTypes, d.PortForwardTypes)
+	maps.Copy(portForwardTypes, y.PortForwardTypes)
+	maps.Copy(portForwardTypes, o.PortForwardTypes)
+	if portForwardTypes[limatype.ProtoTCP] == "" && portForwardTypes[limatype.ProtoAny] == "" {
+		portForwardTypes[limatype.ProtoTCP] = limatype.PortForwardTypeSSH
+	}
+	if portForwardTypes[limatype.ProtoUDP] == "" && portForwardTypes[limatype.ProtoAny] == "" {
+		portForwardTypes[limatype.ProtoUDP] = limatype.PortForwardTypeGRPC
+	}
+	y.PortForwardTypes = portForwardTypes
+
 	y.PortForwards = slices.Concat(o.PortForwards, y.PortForwards, d.PortForwards)
 	for i := range y.PortForwards {
 		FillPortForwardDefaults(&y.PortForwards[i], instDir, y.User, y.Param)

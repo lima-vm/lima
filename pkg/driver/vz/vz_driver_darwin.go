@@ -55,6 +55,7 @@ var knownYamlProperties = []string{
 	"OS",
 	"Param",
 	"Plain",
+	"PortForwardTypes",
 	"PortForwards",
 	"Probes",
 	"PropagateProxyEnv",
