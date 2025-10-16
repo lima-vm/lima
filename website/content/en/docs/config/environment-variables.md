@@ -140,6 +140,19 @@ This page documents the environment variables used in Lima.
   export LIMA_USERNET_RESOLVE_IP_ADDRESS_TIMEOUT=5
   ```
 
+### `_LIMA_DIRECT_IP_PORT_FORWARDER`
+
+- **Description**: Specifies to use direct IP port forwarding instead of gRPC.
+- **Default**: `false`
+- **Usage**: 
+  ```sh
+  export _LIMA_DIRECT_IP_PORT_FORWARDER=true
+  ```
+- **Note**: Direct IP port forwarding may fall back to gRPC port forwarding in some cases:
+  - If the guest's IP address is not available, Lima falls back to gRPC port forwarding.
+  - If the guest's IP address is available but the connection to the guest's IP address fails, Lima also falls back to gRPC port forwarding.
+  - If the guest's IP address is not accessible from the host (e.g. localhost on guest), Lima falls back to gRPC port forwarding as well.
+
 ### `_LIMA_QEMU_UEFI_IN_BIOS`
 
 - **Description**: Commands QEMU to load x86_64 UEFI images using `-bios` instead of `pflash` drives.
