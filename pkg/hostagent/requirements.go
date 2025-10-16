@@ -161,6 +161,7 @@ If any private key under ~/.ssh is protected with a passphrase, you need to have
 			noMaster: true,
 		},
 	)
+
 	if runtime.GOOS == "darwin" {
 		// Limit the Guest IP address detection only to macOS for now.
 		req = append(req,

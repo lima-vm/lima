@@ -903,37 +903,52 @@ func (a *HostAgent) processGuestAgentEvents(ctx context.Context, client *guestag
 		if useSSHFwd {
 			a.portForwarder.OnEvent(ctx, ev)
 		} else {
-			dialContext := func(ctx context.Context, network, guestAddress string) (net.Conn, error) {
-				guestIPv4, guestIPv6 := a.GuestIPs()
-				if guestIPv4 == nil && guestIPv6 == nil {
+			useDirectIPPortForwarding := false
+			if envVar := os.Getenv("_LIMA_DIRECT_IP_PORT_FORWARDER"); envVar != "" {
+				b, err := strconv.ParseBool(envVar)
+				if err != nil {
+					logrus.WithError(err).Warnf("invalid _LIMA_DIRECT_IP_PORT_FORWARDER value %q", envVar)
+				} else {
+					useDirectIPPortForwarding = b
+				}
+			}
+			var dialContext func(ctx context.Context, network string, guestAddress string) (net.Conn, error)
+			if useDirectIPPortForwarding {
+				logrus.Warn("Direct IP Port forwarding is enabled. It may fall back to GRPC Port Forwarding in some cases.")
+				dialContext = func(ctx context.Context, network, guestAddress string) (net.Conn, error) {
+					guestIPv4, guestIPv6 := a.GuestIPs()
+					if guestIPv4 == nil && guestIPv6 == nil {
+						return portfwd.DialContextToGRPCTunnel(client)(ctx, network, guestAddress)
+					}
+					// Check if the host part of guestAddress is either unspecified address or matches the known guest IP.
+					// If so, replace it with the known guest IP to avoid issues with dual-stack setups and DNS resolution.
+					// Otherwise, fall back to the gRPC tunnel.
+					if host, _, err := net.SplitHostPort(guestAddress); err != nil {
+						return nil, err
+					} else if ip := net.ParseIP(host); ip.IsUnspecified() || ip.Equal(guestIPv4) || ip.Equal(guestIPv6) {
+						if ip.To4() != nil {
+							if guestIPv4 != nil {
+								conn, err := DialContextToGuestIP(guestIPv4)(ctx, network, guestAddress)
+								if err == nil {
+									return conn, nil
+								}
+								logrus.WithError(err).Warn("failed to connect to the guest IPv4 directly, falling back to gRPC tunnel")
+							}
+						} else if ip.To16() != nil {
+							if guestIPv6 != nil {
+								conn, err := DialContextToGuestIP(guestIPv6)(ctx, network, guestAddress)
+								if err == nil {
+									return conn, nil
+								}
+								logrus.WithError(err).Warn("failed to connect to the guest IPv6 directly, falling back to gRPC tunnel")
+							}
+						}
+						// If we reach here, it means we couldn't find a suitable guest IP
+					}
 					return portfwd.DialContextToGRPCTunnel(client)(ctx, network, guestAddress)
 				}
-				// Check if the host part of guestAddress is either unspecified address or matches the known guest IP.
-				// If so, replace it with the known guest IP to avoid issues with dual-stack setups and DNS resolution.
-				// Otherwise, fall back to the gRPC tunnel.
-				if host, _, err := net.SplitHostPort(guestAddress); err != nil {
-					return nil, err
-				} else if ip := net.ParseIP(host); ip.IsUnspecified() || ip.Equal(guestIPv4) || ip.Equal(guestIPv6) {
-					if ip.To4() != nil {
-						if guestIPv4 != nil {
-							conn, err := DialContextToGuestIP(guestIPv4)(ctx, network, guestAddress)
-							if err == nil {
-								return conn, nil
-							}
-							logrus.WithError(err).Warn("failed to connect to the guest IPv4 directly, falling back to gRPC tunnel")
-						}
-					} else if ip.To16() != nil {
-						if guestIPv6 != nil {
-							conn, err := DialContextToGuestIP(guestIPv6)(ctx, network, guestAddress)
-							if err == nil {
-								return conn, nil
-							}
-							logrus.WithError(err).Warn("failed to connect to the guest IPv6 directly, falling back to gRPC tunnel")
-						}
-					}
-					// If we reach here, it means we couldn't find a suitable guest IP
-				}
-				return portfwd.DialContextToGRPCTunnel(client)(ctx, network, guestAddress)
+			} else {
+				dialContext = portfwd.DialContextToGRPCTunnel(client)
 			}
 			a.grpcPortForwarder.OnEvent(ctx, dialContext, ev)
 		}
