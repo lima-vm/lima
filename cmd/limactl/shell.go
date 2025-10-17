@@ -20,6 +20,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
+	"github.com/lima-vm/lima/v2/pkg/autostart"
 	"github.com/lima-vm/lima/v2/pkg/envutil"
 	"github.com/lima-vm/lima/v2/pkg/instance"
 	"github.com/lima-vm/lima/v2/pkg/ioutilx"
@@ -101,9 +102,14 @@ func shellAction(cmd *cobra.Command, args []string) error {
 			return nil
 		}
 
-		err = reconcile.Reconcile(ctx, inst.Name)
-		if err != nil {
-			return err
+		// Network reconciliation will be performed by the process launched by the autostart manager
+		if registered, err := autostart.IsRegistered(ctx, inst); err != nil && !errors.Is(err, autostart.ErrNotSupported) {
+			return fmt.Errorf("failed to check if the autostart entry for instance %q is registered: %w", inst.Name, err)
+		} else if !registered {
+			err = reconcile.Reconcile(ctx, inst.Name)
+			if err != nil {
+				return err
+			}
 		}
 
 		err = instance.Start(ctx, inst, false, false)
