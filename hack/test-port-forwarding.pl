@@ -303,16 +303,19 @@ portForwards:
   ignore: true
 
 - guestIP: 0.0.0.0
+  guestIPMustBeZero: false
   guestPortRange: [3010, 3019]
   hostPortRange: [2010, 2019]
   ignore: true
 
 - guestIP: 0.0.0.0
+  guestIPMustBeZero: false
   guestPortRange: [3000, 3029]
   hostPortRange: [2000, 2029]
 
 # The following rule is completely shadowed by the previous one and has no effect
 - guestIP: 0.0.0.0
+  guestIPMustBeZero: false
   guestPortRange: [3020, 3029]
   hostPortRange: [2020, 2029]
   ignore: true
@@ -323,7 +326,7 @@ portForwards:
   # Blocking 127.0.0.2 cannot block forwarding from 0.0.0.0
   # forward: 0.0.0.0   3002 → 127.0.0.1 2002
 
-  # Blocking 0.0.0.0 will block forwarding from any interface
+  # Blocking 0.0.0.0 will block forwarding from any interface because guestIPMustBeZero is false
   # ignore: 0.0.0.0   3010
   # ignore: 127.0.0.1 3011
 
@@ -382,6 +385,7 @@ portForwards:
   # forward: ::1          4025 → ipv4 4025
 
 - guestIP: "0.0.0.0"
+  guestIPMustBeZero: false
   guestPortRange: [4030, 4039]
   hostIP: "ipv4"
 
@@ -396,6 +400,7 @@ portForwards:
   guestPortRange: [4040, 4049]
 
 - guestIP: "0.0.0.0"
+  guestIPMustBeZero: false
   guestPortRange: [4040, 4049]
   ignore: true
 
