@@ -177,6 +177,8 @@ If the interface does not have IPv4 address, SSH connection against the guest OS
 				stdoutParser: a.detectGuestIPAddress,
 			},
 		)
+	} else {
+		logrus.Info("Skipping the guest IP address detection because it is only tested on macOS for now")
 	}
 	startControlMasterReq := requirement{
 		description: "Explicitly start ssh ControlMaster",
