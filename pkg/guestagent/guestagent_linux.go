@@ -5,7 +5,10 @@ package guestagent
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"os"
+	"path/filepath"
 	"reflect"
 	"time"
 
@@ -19,7 +22,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/guestagent/timesync"
 )
 
-func New(ctx context.Context, ticker ticker.Ticker) (Agent, error) {
+func New(ctx context.Context, ticker ticker.Ticker, runtimeDir string) (Agent, error) {
 	socketsLister, err := sockets.NewLister()
 	if err != nil {
 		return nil, err
@@ -28,13 +31,24 @@ func New(ctx context.Context, ticker ticker.Ticker) (Agent, error) {
 		ticker:                   ticker,
 		socketLister:             socketsLister,
 		kubernetesServiceWatcher: kubernetesservice.NewServiceWatcher(),
+		runtimeDir:               runtimeDir,
 	}
 
 	go a.kubernetesServiceWatcher.Start(ctx)
-	go a.fixSystemTimeSkew()
+	go a.fixSystemTimeSkew(ctx)
+
+	go func() {
+		<-ctx.Done()
+		logrus.Debug("Closing the agent")
+		if err := a.Close(); err != nil {
+			logrus.Errorf("error on agent.Close(): %v", err)
+		}
+	}()
 
 	return a, nil
 }
+
+var _ Agent = (*agent)(nil)
 
 type agent struct {
 	// Ticker is like time.Ticker.
@@ -43,10 +57,11 @@ type agent struct {
 	ticker                   ticker.Ticker
 	socketLister             *sockets.Lister
 	kubernetesServiceWatcher *kubernetesservice.ServiceWatcher
+	runtimeDir               string
 }
 
 type eventState struct {
-	ports []*api.IPPort
+	Ports []*api.IPPort `json:"ports,omitempty"`
 }
 
 func comparePorts(old, neww []*api.IPPort) (added, removed []*api.IPPort) {
@@ -82,13 +97,13 @@ func (a *agent) collectEvent(ctx context.Context, st eventState) (*api.Event, ev
 		err error
 	)
 	newSt := st
-	newSt.ports, err = a.LocalPorts(ctx)
+	newSt.Ports, err = a.LocalPorts(ctx)
 	if err != nil {
 		ev.Errors = append(ev.Errors, err.Error())
 		ev.Time = timestamppb.Now()
 		return ev, newSt
 	}
-	ev.AddedLocalPorts, ev.RemovedLocalPorts = comparePorts(st.ports, newSt.ports)
+	ev.AddedLocalPorts, ev.RemovedLocalPorts = comparePorts(st.Ports, newSt.Ports)
 	ev.Time = timestamppb.Now()
 	return ev, newSt
 }
@@ -102,8 +117,16 @@ func isEventEmpty(ev *api.Event) bool {
 func (a *agent) Events(ctx context.Context, ch chan *api.Event) {
 	defer close(ch)
 	tickerCh := a.ticker.Chan()
-	defer a.ticker.Stop()
-	var st eventState
+
+	st, err := a.LoadEventState()
+	if err != nil {
+		logrus.Errorf("failed to load state: %v", err)
+	}
+	defer func() {
+		if err := a.SaveEventState(st); err != nil {
+			logrus.Errorf("failed to save state: %v", err)
+		}
+	}()
 	for {
 		var ev *api.Event
 		ev, st = a.collectEvent(ctx, st)
@@ -115,6 +138,7 @@ func (a *agent) Events(ctx context.Context, ch chan *api.Event) {
 			return
 		case _, ok := <-tickerCh:
 			if !ok {
+				logrus.Debug("ticker channel closed")
 				return
 			}
 			logrus.Debug("tick!")
@@ -190,7 +214,7 @@ func (a *agent) Info(ctx context.Context) (*api.Info, error) {
 
 const deltaLimit = 2 * time.Second
 
-func (a *agent) fixSystemTimeSkew() {
+func (a *agent) fixSystemTimeSkew(ctx context.Context) {
 	logrus.Info("fixSystemTimeSkew(): monitoring system time skew")
 	for {
 		ok, err := timesync.HasRTC()
@@ -217,6 +241,13 @@ func (a *agent) fixSystemTimeSkew() {
 				logrus.Infof("fixSystemTimeSkew: system time synchronized with rtc")
 				break
 			}
+			select {
+			case <-ctx.Done():
+				logrus.Debug("fixSystemTimeSkew: context done, exiting")
+				ticker.Stop()
+				return
+			default:
+			}
 		}
 		ticker.Stop()
 	}
@@ -239,5 +270,42 @@ func (a *agent) Close() error {
 			return err
 		}
 	}
+	a.ticker.Stop()
 	return nil
+}
+
+const eventStateFileName = "event-state.json"
+
+// LoadEventState loads the event state from a file in JSON format.
+// If the file does not exist, it returns an empty eventState with no error.
+// The saved eventState is expected to be removed on OS restart.
+func (a *agent) LoadEventState() (eventState, error) {
+	logrus.Debug("Loading event state")
+	path := filepath.Join(a.runtimeDir, eventStateFileName)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return eventState{}, nil
+		}
+		return eventState{}, err
+	}
+	var st eventState
+	if err := json.Unmarshal(data, &st); err != nil {
+		return eventState{}, err
+	}
+	// We don't remove the file after loading for debugging purposes.
+	return st, nil
+}
+
+// SaveEventState saves the event state to a file in JSON format.
+// It overwrites the file if it already exists.
+// The saved eventState is expected to be removed on OS restart.
+func (a *agent) SaveEventState(st eventState) error {
+	logrus.Debug("Saving event state")
+	data, err := json.Marshal(st)
+	if err != nil {
+		return err
+	}
+	path := filepath.Join(a.runtimeDir, eventStateFileName)
+	return os.WriteFile(path, data, 0o644)
 }
