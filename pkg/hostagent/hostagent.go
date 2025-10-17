@@ -82,6 +82,13 @@ type HostAgent struct {
 
 	statusMu      sync.RWMutex
 	currentStatus events.Status
+
+	// Guest interface name on the same subnet as the host,
+	guestIfnameOnSameSubnetAsHost string
+	// Guest IP address on the same subnet as the host.
+	guestIPv4 net.IP
+	guestIPv6 net.IP
+	guestIPMu sync.RWMutex
 }
 
 type options struct {
@@ -244,7 +251,6 @@ func New(ctx context.Context, instName string, stdout io.Writer, signalCh chan o
 		instName:          instName,
 		instSSHAddress:    inst.SSHAddress,
 		sshConfig:         sshConfig,
-		portForwarder:     newPortForwarder(sshConfig, sshLocalPort, rules, ignoreTCP, inst.VMType),
 		grpcPortForwarder: portfwd.NewPortForwarder(rules, ignoreTCP, ignoreUDP),
 		driver:            limaDriver,
 		signalCh:          signalCh,
@@ -254,7 +260,29 @@ func New(ctx context.Context, instName string, stdout io.Writer, signalCh chan o
 		guestAgentAliveCh: make(chan struct{}),
 		showProgress:      o.showProgress,
 	}
+	a.portForwarder = newPortForwarder(sshConfig, a.sshAddressPort, rules, ignoreTCP, inst.VMType)
 	return a, nil
+}
+
+func (a *HostAgent) WriteSSHConfigFile(ctx context.Context) error {
+	sshExe, err := sshutil.NewSSHExe()
+	if err != nil {
+		return err
+	}
+	sshOpts, err := sshutil.SSHOpts(
+		ctx,
+		sshExe,
+		a.instDir,
+		*a.instConfig.User.Name,
+		*a.instConfig.SSH.LoadDotSSHPubKeys,
+		*a.instConfig.SSH.ForwardAgent,
+		*a.instConfig.SSH.ForwardX11,
+		*a.instConfig.SSH.ForwardX11Trusted)
+	if err != nil {
+		return err
+	}
+	sshAddress, sshPort := a.sshAddressPort()
+	return writeSSHConfigFile(sshExe.Exe, a.instName, a.instDir, sshAddress, sshPort, sshOpts)
 }
 
 func writeSSHConfigFile(sshPath, instName, instDir, instSSHAddress string, sshLocalPort int, sshOpts []string) error {
@@ -330,6 +358,17 @@ func (a *HostAgent) emitCloudInitProgressEvent(ctx context.Context, progress *ev
 	a.statusMu.RUnlock()
 
 	currentStatus.CloudInitProgress = progress
+
+	ev := events.Event{Status: currentStatus}
+	a.emitEvent(ctx, ev)
+}
+
+func (a *HostAgent) emitGuestIPEvent(ctx context.Context, ip string) {
+	a.statusMu.RLock()
+	currentStatus := a.currentStatus
+	a.statusMu.RUnlock()
+
+	currentStatus.GuestIP = net.ParseIP(ip)
 
 	ev := events.Event{Status: currentStatus}
 	a.emitEvent(ctx, ev)
@@ -476,11 +515,45 @@ func (a *HostAgent) startRoutinesAndWait(ctx context.Context, errCh <-chan error
 	return a.driver.Stop(ctx)
 }
 
+// GuestIP returns the guest's IPv4 address if available; otherwise the IPv6 address.
+// It returns nil if the guest is not reachable by a direct IP.
+func (a *HostAgent) GuestIP() net.IP {
+	a.guestIPMu.RLock()
+	defer a.guestIPMu.RUnlock()
+	if a.guestIPv4 != nil {
+		return a.guestIPv4
+	} else if a.guestIPv6 != nil {
+		return a.guestIPv6
+	}
+	return nil
+}
+
+// GuestIPs returns the guest's IPv4 and IPv6 addresses if available; otherwise nil.
+func (a *HostAgent) GuestIPs() (ipv4, ipv6 net.IP) {
+	a.guestIPMu.RLock()
+	defer a.guestIPMu.RUnlock()
+	return a.guestIPv4, a.guestIPv6
+}
+
 func (a *HostAgent) Info(_ context.Context) (*hostagentapi.Info, error) {
+	guestIP := a.GuestIP()
 	info := &hostagentapi.Info{
+		GuestIP:      guestIP,
 		SSHLocalPort: a.sshLocalPort,
 	}
 	return info, nil
+}
+
+func (a *HostAgent) sshAddressPort() (sshAddress string, sshPort int) {
+	sshAddress = a.instSSHAddress
+	sshPort = a.sshLocalPort
+	guestIP := a.GuestIP()
+	if guestIP != nil {
+		sshAddress = guestIP.String()
+		sshPort = 22
+		logrus.Debugf("Using the guest IP address %q directly", sshAddress)
+	}
+	return sshAddress, sshPort
 }
 
 func (a *HostAgent) startHostAgentRoutines(ctx context.Context) error {
@@ -496,7 +569,8 @@ func (a *HostAgent) startHostAgentRoutines(ctx context.Context) error {
 	}
 	a.cleanUp(func() error {
 		logrus.Debugf("shutting down the SSH master")
-		if exitMasterErr := ssh.ExitMaster(a.instSSHAddress, a.sshLocalPort, a.sshConfig); exitMasterErr != nil {
+		sshAddress, sshPort := a.sshAddressPort()
+		if exitMasterErr := ssh.ExitMaster(sshAddress, sshPort, a.sshConfig); exitMasterErr != nil {
 			logrus.WithError(exitMasterErr).Warn("failed to exit SSH master")
 		}
 		return nil
@@ -512,7 +586,8 @@ sudo mkdir -p -m 700 /run/host-services
 sudo ln -sf "${SSH_AUTH_SOCK}" /run/host-services/ssh-auth.sock
 sudo chown -R "${USER}" /run/host-services`
 		faDesc := "linking ssh auth socket to static location /run/host-services/ssh-auth.sock"
-		stdout, stderr, err := ssh.ExecuteScript(a.instSSHAddress, a.sshLocalPort, a.sshConfig, faScript, faDesc)
+		sshAddress, sshPort := a.sshAddressPort()
+		stdout, stderr, err := ssh.ExecuteScript(sshAddress, sshPort, a.sshConfig, faScript, faDesc)
 		logrus.Debugf("stdout=%q, stderr=%q, err=%v", stdout, stderr, err)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("stdout=%q, stderr=%q: %w", stdout, stderr, err))
@@ -589,7 +664,8 @@ sudo chown -R "${USER}" /run/host-services`
 	}
 	// Copy all config files _after_ the requirements are done
 	for _, rule := range a.instConfig.CopyToHost {
-		if err := copyToHost(ctx, a.sshConfig, a.sshLocalPort, rule.HostFile, rule.GuestFile); err != nil {
+		sshAddress, sshPort := a.sshAddressPort()
+		if err := copyToHost(ctx, a.sshConfig, sshAddress, sshPort, rule.HostFile, rule.GuestFile); err != nil {
 			errs = append(errs, err)
 		}
 	}
@@ -636,10 +712,11 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 	// Setup all socket forwards and defer their teardown
 	if !(a.driver.Info().Features.SkipSocketForwarding) {
 		logrus.Debugf("Forwarding unix sockets")
+		sshAddress, sshPort := a.sshAddressPort()
 		for _, rule := range a.instConfig.PortForwards {
 			if rule.GuestSocket != "" {
 				local := hostAddress(rule, &guestagentapi.IPPort{})
-				_ = forwardSSH(ctx, a.sshConfig, a.sshLocalPort, local, rule.GuestSocket, verbForward, rule.Reverse)
+				_ = forwardSSH(ctx, a.sshConfig, sshAddress, sshPort, local, rule.GuestSocket, verbForward, rule.Reverse)
 			}
 		}
 	}
@@ -650,17 +727,18 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 	a.cleanUp(func() error {
 		logrus.Debugf("Stop forwarding unix sockets")
 		var errs []error
+		sshAddress, sshPort := a.sshAddressPort()
 		for _, rule := range a.instConfig.PortForwards {
 			if rule.GuestSocket != "" {
 				local := hostAddress(rule, &guestagentapi.IPPort{})
 				// using ctx.Background() because ctx has already been cancelled
-				if err := forwardSSH(context.Background(), a.sshConfig, a.sshLocalPort, local, rule.GuestSocket, verbCancel, rule.Reverse); err != nil {
+				if err := forwardSSH(context.Background(), a.sshConfig, sshAddress, sshPort, local, rule.GuestSocket, verbCancel, rule.Reverse); err != nil {
 					errs = append(errs, err)
 				}
 			}
 		}
 		if a.driver.ForwardGuestAgent() {
-			if err := forwardSSH(context.Background(), a.sshConfig, a.sshLocalPort, localUnix, remoteUnix, verbCancel, false); err != nil {
+			if err := forwardSSH(context.Background(), a.sshConfig, sshAddress, sshPort, localUnix, remoteUnix, verbCancel, false); err != nil {
 				errs = append(errs, err)
 			}
 		}
@@ -671,7 +749,8 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 		if a.instConfig.MountInotify != nil && *a.instConfig.MountInotify {
 			if a.client == nil || !isGuestAgentSocketAccessible(ctx, a.client) {
 				if a.driver.ForwardGuestAgent() {
-					_ = forwardSSH(ctx, a.sshConfig, a.sshLocalPort, localUnix, remoteUnix, verbForward, false)
+					sshAddress, sshPort := a.sshAddressPort()
+					_ = forwardSSH(ctx, a.sshConfig, sshAddress, sshPort, localUnix, remoteUnix, verbForward, false)
 				}
 			}
 			err := a.startInotify(ctx)
@@ -687,7 +766,8 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 	for {
 		if a.client == nil || !isGuestAgentSocketAccessible(ctx, a.client) {
 			if a.driver.ForwardGuestAgent() {
-				_ = forwardSSH(ctx, a.sshConfig, a.sshLocalPort, localUnix, remoteUnix, verbForward, false)
+				sshAddress, sshPort := a.sshAddressPort()
+				_ = forwardSSH(ctx, a.sshConfig, sshAddress, sshPort, localUnix, remoteUnix, verbForward, false)
 			}
 		}
 		client, err := a.getOrCreateClient(ctx)
@@ -711,6 +791,7 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 }
 
 func (a *HostAgent) addStaticPortForwardsFromList(ctx context.Context, staticPortForwards []limatype.PortForward) {
+	sshAddress, sshPort := a.sshAddressPort()
 	for _, rule := range staticPortForwards {
 		if rule.GuestSocket == "" {
 			guest := &guestagentapi.IPPort{
@@ -721,7 +802,7 @@ func (a *HostAgent) addStaticPortForwardsFromList(ctx context.Context, staticPor
 			local, remote := a.portForwarder.forwardingAddresses(guest)
 			if local != "" {
 				logrus.Infof("Setting up static TCP forwarding from %s to %s", remote, local)
-				if err := forwardTCP(ctx, a.sshConfig, a.sshLocalPort, local, remote, verbForward); err != nil {
+				if err := forwardTCP(ctx, a.sshConfig, sshAddress, sshPort, local, remote, verbForward); err != nil {
 					logrus.WithError(err).Warnf("failed to set up static TCP forwarding %s -> %s", remote, local)
 				}
 			}
@@ -813,7 +894,54 @@ func (a *HostAgent) processGuestAgentEvents(ctx context.Context, client *guestag
 		if useSSHFwd {
 			a.portForwarder.OnEvent(ctx, ev)
 		} else {
-			a.grpcPortForwarder.OnEvent(ctx, client, ev)
+			useDirectIPPortForwarding := false
+			if envVar := os.Getenv("_LIMA_DIRECT_IP_PORT_FORWARDER"); envVar != "" {
+				b, err := strconv.ParseBool(envVar)
+				if err != nil {
+					logrus.WithError(err).Warnf("invalid _LIMA_DIRECT_IP_PORT_FORWARDER value %q", envVar)
+				} else {
+					useDirectIPPortForwarding = b
+				}
+			}
+			var dialContext func(ctx context.Context, network string, guestAddress string) (net.Conn, error)
+			if useDirectIPPortForwarding {
+				logrus.Warn("Direct IP Port forwarding is enabled. It may fall back to GRPC Port Forwarding in some cases.")
+				dialContext = func(ctx context.Context, network, guestAddress string) (net.Conn, error) {
+					guestIPv4, guestIPv6 := a.GuestIPs()
+					if guestIPv4 == nil && guestIPv6 == nil {
+						return portfwd.DialContextToGRPCTunnel(client)(ctx, network, guestAddress)
+					}
+					// Check if the host part of guestAddress is either unspecified address or matches the known guest IP.
+					// If so, replace it with the known guest IP to avoid issues with dual-stack setups and DNS resolution.
+					// Otherwise, fall back to the gRPC tunnel.
+					if host, _, err := net.SplitHostPort(guestAddress); err != nil {
+						return nil, err
+					} else if ip := net.ParseIP(host); ip.IsUnspecified() || ip.Equal(guestIPv4) || ip.Equal(guestIPv6) {
+						if ip.To4() != nil {
+							if guestIPv4 != nil {
+								conn, err := DialContextToGuestIP(guestIPv4)(ctx, network, guestAddress)
+								if err == nil {
+									return conn, nil
+								}
+								logrus.WithError(err).Warn("failed to connect to the guest IPv4 directly, falling back to gRPC tunnel")
+							}
+						} else if ip.To16() != nil {
+							if guestIPv6 != nil {
+								conn, err := DialContextToGuestIP(guestIPv6)(ctx, network, guestAddress)
+								if err == nil {
+									return conn, nil
+								}
+								logrus.WithError(err).Warn("failed to connect to the guest IPv6 directly, falling back to gRPC tunnel")
+							}
+						}
+						// If we reach here, it means we couldn't find a suitable guest IP
+					}
+					return portfwd.DialContextToGRPCTunnel(client)(ctx, network, guestAddress)
+				}
+			} else {
+				dialContext = portfwd.DialContextToGRPCTunnel(client)
+			}
+			a.grpcPortForwarder.OnEvent(ctx, dialContext, ev)
 		}
 	}
 
@@ -826,16 +954,34 @@ func (a *HostAgent) processGuestAgentEvents(ctx context.Context, client *guestag
 	return io.EOF
 }
 
+// DialContextToGuestIP returns a DialContext function that connects to the guest IP directly.
+// If the guest IP is not known, it returns nil.
+func DialContextToGuestIP(guestIP net.IP) func(ctx context.Context, network, address string) (net.Conn, error) {
+	if guestIP == nil {
+		return nil
+	}
+	return func(ctx context.Context, network, address string) (net.Conn, error) {
+		var d net.Dialer
+		_, port, err := net.SplitHostPort(address)
+		if err != nil {
+			return nil, err
+		}
+		// Host part of address is ignored, because it already has been checked by forwarding rules
+		// and we want to connect to the guest IP directly.
+		return d.DialContext(ctx, network, net.JoinHostPort(guestIP.String(), port))
+	}
+}
+
 const (
 	verbForward = "forward"
 	verbCancel  = "cancel"
 )
 
-func executeSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, command ...string) error {
+func executeSSH(ctx context.Context, sshConfig *ssh.SSHConfig, sshAddress string, sshPort int, command ...string) error {
 	args := sshConfig.Args()
 	args = append(args,
-		"-p", strconv.Itoa(port),
-		"127.0.0.1",
+		"-p", strconv.Itoa(sshPort),
+		sshAddress,
 		"--",
 	)
 	args = append(args, command...)
@@ -846,7 +992,7 @@ func executeSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, command
 	return nil
 }
 
-func forwardSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, remote, verb string, reverse bool) error {
+func forwardSSH(ctx context.Context, sshConfig *ssh.SSHConfig, sshAddress string, sshPort int, local, remote, verb string, reverse bool) error {
 	args := sshConfig.Args()
 	args = append(args,
 		"-T",
@@ -864,8 +1010,8 @@ func forwardSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, 
 	args = append(args,
 		"-N",
 		"-f",
-		"-p", strconv.Itoa(port),
-		"127.0.0.1",
+		"-p", strconv.Itoa(sshPort),
+		sshAddress,
 		"--",
 	)
 	if strings.HasPrefix(local, "/") {
@@ -873,7 +1019,7 @@ func forwardSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, 
 		case verbForward:
 			if reverse {
 				logrus.Infof("Forwarding %q (host) to %q (guest)", local, remote)
-				if err := executeSSH(ctx, sshConfig, port, "rm", "-f", remote); err != nil {
+				if err := executeSSH(ctx, sshConfig, sshAddress, sshPort, "rm", "-f", remote); err != nil {
 					logrus.WithError(err).Warnf("Failed to clean up %q (guest) before setting up forwarding", remote)
 				}
 			} else {
@@ -888,7 +1034,7 @@ func forwardSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, 
 		case verbCancel:
 			if reverse {
 				logrus.Infof("Stopping forwarding %q (host) to %q (guest)", local, remote)
-				if err := executeSSH(ctx, sshConfig, port, "rm", "-f", remote); err != nil {
+				if err := executeSSH(ctx, sshConfig, sshAddress, sshPort, "rm", "-f", remote); err != nil {
 					logrus.WithError(err).Warnf("Failed to clean up %q (guest) after stopping forwarding", remote)
 				}
 			} else {
@@ -909,7 +1055,7 @@ func forwardSSH(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, 
 		if verb == verbForward && strings.HasPrefix(local, "/") {
 			if reverse {
 				logrus.WithError(err).Warnf("Failed to set up forward from %q (host) to %q (guest)", local, remote)
-				if err := executeSSH(ctx, sshConfig, port, "rm", "-f", remote); err != nil {
+				if err := executeSSH(ctx, sshConfig, sshAddress, sshPort, "rm", "-f", remote); err != nil {
 					logrus.WithError(err).Warnf("Failed to clean up %q (guest) after forwarding failed", remote)
 				}
 			} else {
@@ -943,10 +1089,11 @@ func (a *HostAgent) watchCloudInitProgress(ctx context.Context) {
 		Active: true,
 	})
 
+	sshAddress, sshPort := a.sshAddressPort()
 	args := a.sshConfig.Args()
 	args = append(args,
-		"-p", strconv.Itoa(a.sshLocalPort),
-		"127.0.0.1",
+		"-p", strconv.Itoa(sshPort),
+		sshAddress,
 		"sh", "-c",
 		`"if command -v systemctl >/dev/null 2>&1 && systemctl is-enabled -q cloud-init-main.service; then
 			sudo journalctl -u cloud-init-main.service -b -S @0 -o cat -f
@@ -1031,8 +1178,8 @@ func (a *HostAgent) watchCloudInitProgress(ctx context.Context) {
 
 		finalArgs := a.sshConfig.Args()
 		finalArgs = append(finalArgs,
-			"-p", strconv.Itoa(a.sshLocalPort),
-			"127.0.0.1",
+			"-p", strconv.Itoa(sshPort),
+			sshAddress,
 			"sudo", "tail", "-n", "20", "/var/log/cloud-init-output.log",
 		)
 
@@ -1072,11 +1219,11 @@ func isDeactivatedCloudInitMainService(line string) bool {
 	return strings.HasPrefix(line, "cloud-init-main.service: consumed")
 }
 
-func copyToHost(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, remote string) error {
+func copyToHost(ctx context.Context, sshConfig *ssh.SSHConfig, sshAddress string, sshPort int, local, remote string) error {
 	args := sshConfig.Args()
 	args = append(args,
-		"-p", strconv.Itoa(port),
-		"127.0.0.1",
+		"-p", strconv.Itoa(sshPort),
+		sshAddress,
 		"--",
 	)
 	args = append(args,
