@@ -4,6 +4,7 @@
 package ticker
 
 import (
+	"errors"
 	"os"
 	"strings"
 	"time"
@@ -20,19 +21,22 @@ func NewEbpfTicker(tracepoints []string) (Ticker, error) {
 		ticker ebpfTicker
 		err    error
 	)
+	defer func() {
+		if err != nil {
+			ticker.Stop()
+		}
+	}()
 	ticker.events, err = ebpf.NewMap(&ebpf.MapSpec{
 		Name:       "lima_ticker_events",
 		Type:       ebpf.RingBuf,
 		MaxEntries: 1 << 20,
 	})
 	if err != nil {
-		ticker.Stop()
 		return nil, err
 	}
 
 	ticker.prog, err = buildEbpfProg(ticker.events)
 	if err != nil {
-		ticker.Stop()
 		return nil, err
 	}
 
@@ -40,7 +44,6 @@ func NewEbpfTicker(tracepoints []string) (Ticker, error) {
 		tpPair := strings.SplitN(tp, ":", 2)
 		tpLink, err := link.Tracepoint(tpPair[0], tpPair[1], ticker.prog, nil)
 		if err != nil {
-			ticker.Stop()
 			return nil, err
 		}
 		ticker.links = append(ticker.links, tpLink)
@@ -48,17 +51,19 @@ func NewEbpfTicker(tracepoints []string) (Ticker, error) {
 
 	ticker.reader, err = ringbuf.NewReader(ticker.events)
 	if err != nil {
-		ticker.Stop()
 		return nil, err
 	}
 
 	ticker.ch = make(chan time.Time)
 	go func() {
+		defer close(ticker.ch)
 		for {
 			_, rdErr := ticker.reader.Read()
 			if rdErr != nil {
-				logrus.WithError(rdErr).Warn("ebpfTicker: failed to read ringbuf")
-				ticker.Stop()
+				if !errors.Is(rdErr, ringbuf.ErrClosed) {
+					logrus.WithError(rdErr).Warn("ebpfTicker: failed to read ringbuf")
+				}
+				logrus.Debug("ebpfTicker: exiting")
 				return
 			}
 			ticker.ch <- time.Now()
@@ -67,6 +72,8 @@ func NewEbpfTicker(tracepoints []string) (Ticker, error) {
 
 	return &ticker, nil
 }
+
+var _ Ticker = (*ebpfTicker)(nil)
 
 type ebpfTicker struct {
 	events *ebpf.Map
@@ -93,9 +100,7 @@ func (ticker *ebpfTicker) Stop() {
 	if ticker.reader != nil {
 		_ = ticker.reader.Close()
 	}
-	if ticker.ch != nil {
-		close(ticker.ch)
-	}
+	// ticker.ch will be closed in go routine in NewEbpfTicker() to avoid sending on closed channel
 }
 
 func buildEbpfProg(events *ebpf.Map) (*ebpf.Program, error) {

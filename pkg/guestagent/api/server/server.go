@@ -7,6 +7,7 @@ import (
 	"context"
 	"net"
 
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 
@@ -15,10 +16,22 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/portfwdserver"
 )
 
-func StartServer(lis net.Listener, guest *GuestServer) error {
+func StartServer(ctx context.Context, lis net.Listener, guest *GuestServer) error {
 	server := grpc.NewServer()
 	api.RegisterGuestServiceServer(server, guest)
-	return server.Serve(lis)
+	go func() {
+		<-ctx.Done()
+		logrus.Debug("Stopping the gRPC server")
+		server.GracefulStop()
+		logrus.Debug("Closing the listener used by the gRPC server")
+		lis.Close()
+	}()
+	err := server.Serve(lis)
+	// grpc.Server.Serve() expects to return a non-nil error caused by lis.Accept()
+	if opErr, ok := err.(*net.OpError); ok && opErr.Err.Error() == "use of closed network connection" {
+		return nil
+	}
+	return err
 }
 
 type GuestServer struct {
@@ -33,6 +46,7 @@ func (s *GuestServer) GetInfo(ctx context.Context, _ *emptypb.Empty) (*api.Info,
 
 func (s *GuestServer) GetEvents(_ *emptypb.Empty, stream api.GuestService_GetEventsServer) error {
 	responses := make(chan *api.Event)
+	// expects Events() to close the channel when stream.Context() is done or ticker stops
 	go s.Agent.Events(stream.Context(), responses)
 	for response := range responses {
 		err := stream.Send(response)

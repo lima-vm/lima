@@ -7,6 +7,8 @@ import (
 	"errors"
 	"net"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/mdlayher/vsock"
@@ -26,6 +28,7 @@ func newDaemonCommand() *cobra.Command {
 		Short: "Run the daemon",
 		RunE:  daemonAction,
 	}
+	daemonCommand.Flags().String("runtime-dir", "/run/lima-guestagent", "Directory to store runtime state")
 	daemonCommand.Flags().Duration("tick", 3*time.Second, "Tick for polling events")
 	daemonCommand.Flags().Int("vsock-port", 0, "Use vsock server instead a UNIX socket")
 	daemonCommand.Flags().String("virtio-port", "", "Use virtio server instead a UNIX socket")
@@ -34,6 +37,13 @@ func newDaemonCommand() *cobra.Command {
 
 func daemonAction(cmd *cobra.Command, _ []string) error {
 	ctx := cmd.Context()
+	runtimeDir, err := cmd.Flags().GetString("runtime-dir")
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(runtimeDir, 0o755); err != nil {
+		return err
+	}
 	socket := "/run/lima-guestagent.sock"
 	tick, err := cmd.Flags().GetDuration("tick")
 	if err != nil {
@@ -66,11 +76,16 @@ func daemonAction(cmd *cobra.Command, _ []string) error {
 		tickerInst = ticker.NewCompoundTicker(simpleTicker, ebpfTicker)
 	}
 
-	agent, err := guestagent.New(ctx, tickerInst)
+	ctx, stop := signal.NotifyContext(ctx, syscall.SIGTERM)
+	defer stop()
+	go func() {
+		<-ctx.Done()
+		logrus.Debug("Received SIGTERM, shutting down the guest agent")
+	}()
+	agent, err := guestagent.New(ctx, tickerInst, runtimeDir)
 	if err != nil {
 		return err
 	}
-	defer agent.Close()
 
 	err = os.RemoveAll(socket)
 	if err != nil {
@@ -104,5 +119,6 @@ func daemonAction(cmd *cobra.Command, _ []string) error {
 		l = socketL
 		logrus.Infof("serving the guest agent on %q", socket)
 	}
-	return server.StartServer(l, &server.GuestServer{Agent: agent, TunnelS: portfwdserver.NewTunnelServer()})
+	defer logrus.Debug("exiting lima-guestagent daemon")
+	return server.StartServer(ctx, l, &server.GuestServer{Agent: agent, TunnelS: portfwdserver.NewTunnelServer()})
 }
