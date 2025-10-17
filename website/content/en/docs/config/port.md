@@ -88,7 +88,7 @@ lima ip addr show lima0
 
 See [Config » Network » VMNet networks](./network/vmnet.md) for the further information.
 
-### Benchmarks
+## Benchmarks
 
 <!-- When updating the benchmark result, make sure to update the benchmarking environment too -->
 

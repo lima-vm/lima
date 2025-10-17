@@ -104,6 +104,8 @@ After creating this alias:
 ```bash
 limactl sh default           # Equivalent to: limactl shell default
 limactl sh myinstance bash   # Equivalent to: limactl shell myinstance bash
+```
+
 ## How It Works
 
 1. When you run `limactl <unknown-command>`, Lima first tries to find a built-in command
