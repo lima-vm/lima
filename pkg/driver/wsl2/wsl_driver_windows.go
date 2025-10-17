@@ -39,6 +39,7 @@ var knownYamlProperties = []string{
 	"MountType",
 	"Param",
 	"Plain",
+	"PortForwardTypes",
 	"PortForwards",
 	"Probes",
 	"PropagateProxyEnv",

@@ -429,3 +429,79 @@ func TestValidateAgainstLatestConfig(t *testing.T) {
 		})
 	}
 }
+
+func TestValidatePortForwardTypes(t *testing.T) {
+	tests := []struct {
+		name            string
+		m               map[limatype.Proto]limatype.PortForwardType
+		wantErr         string
+		wantErrContains bool
+	}{
+		{
+			name: "tcp: ssh, udp: grpc",
+			m: map[limatype.Proto]limatype.PortForwardType{
+				limatype.ProtoTCP: limatype.PortForwardTypeSSH,
+				limatype.ProtoUDP: limatype.PortForwardTypeGRPC,
+			},
+		},
+		{
+			name: "any: none",
+			m: map[limatype.Proto]limatype.PortForwardType{
+				limatype.ProtoAny: limatype.PortForwardTypeNone,
+			},
+		},
+		{
+			name: "udp: ssh",
+			m: map[limatype.Proto]limatype.PortForwardType{
+				limatype.ProtoUDP: limatype.PortForwardTypeSSH,
+			},
+			wantErr: "port forward type \"ssh\" does not support protocol udp",
+		},
+		{
+			name: "any: ssh",
+			m: map[limatype.Proto]limatype.PortForwardType{
+				limatype.ProtoAny: limatype.PortForwardTypeSSH,
+			},
+			wantErr: "port forward type \"ssh\" does not support protocol \"any\", due to lack of udp support",
+		},
+		{
+			name: "any: grpc, tcp: ssh",
+			m: map[limatype.Proto]limatype.PortForwardType{
+				limatype.ProtoAny: limatype.PortForwardTypeGRPC,
+				limatype.ProtoTCP: limatype.PortForwardTypeSSH,
+			},
+			wantErr:         "conflicting port forward types",
+			wantErrContains: true,
+		},
+		{
+			name: "invalid key",
+			m: map[limatype.Proto]limatype.PortForwardType{
+				limatype.Proto("invalid"): limatype.PortForwardTypeGRPC,
+			},
+			wantErr: "invalid port forward type proto: \"invalid\"",
+		},
+		{
+			name: "invalid value",
+			m: map[limatype.Proto]limatype.PortForwardType{
+				limatype.ProtoTCP: limatype.PortForwardType("invalid"),
+			},
+			wantErr:         "invalid port forward type",
+			wantErrContains: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			err := ValidatePortForwardTypes(tc.m)
+			if tc.wantErr == "" {
+				assert.NilError(t, err)
+				return
+			}
+			if tc.wantErrContains {
+				assert.ErrorContains(t, err, tc.wantErr)
+				return
+			}
+			assert.Error(t, err, tc.wantErr)
+		})
+	}
+}

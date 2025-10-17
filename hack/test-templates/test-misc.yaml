@@ -111,6 +111,9 @@ user:
   # Ubuntu has identical /bin/bash and /usr/bin/bash
   shell: /usr/bin/bash
 
+portForwardTypes:
+  any: grpc
+
 portForwards:
 - guestPort: 80
   hostPort: 9090
