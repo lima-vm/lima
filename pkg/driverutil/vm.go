@@ -14,6 +14,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/ptr"
 	"github.com/lima-vm/lima/v2/pkg/registry"
 )
 
@@ -45,6 +46,10 @@ func validateConfigAgainstDriver(ctx context.Context, y *limatype.LimaYAML, file
 
 	if err := intDriver.FillConfig(ctx, y, filePath); err != nil {
 		return err
+	}
+
+	if y.HostResolver.Enabled == nil {
+		y.HostResolver.Enabled = ptr.Of(false)
 	}
 
 	return nil
