@@ -114,20 +114,24 @@ func knownLocations(ctx context.Context) (map[string]limatype.File, error) {
 
 func locationsFromLimaYAML(y *limatype.LimaYAML) map[string]limatype.File {
 	locations := make(map[string]limatype.File)
-	for _, f := range y.Images {
-		locations[downloader.CacheKey(f.Location)] = f.File
-		if f.Kernel != nil {
-			locations[downloader.CacheKey(f.Kernel.Location)] = f.Kernel.File
+	// decompress=false and decompress=true are cached separately
+	// because the same URL may be used for both compressed and uncompressed files.
+	for _, decompress := range []bool{false, true} {
+		for _, f := range y.Images {
+			locations[downloader.CacheKey(f.Location, decompress)] = f.File
+			if f.Kernel != nil {
+				locations[downloader.CacheKey(f.Kernel.Location, decompress)] = f.Kernel.File
+			}
+			if f.Initrd != nil {
+				locations[downloader.CacheKey(f.Initrd.Location, decompress)] = *f.Initrd
+			}
 		}
-		if f.Initrd != nil {
-			locations[downloader.CacheKey(f.Initrd.Location)] = *f.Initrd
+		for _, f := range y.Containerd.Archives {
+			locations[downloader.CacheKey(f.Location, decompress)] = f
 		}
-	}
-	for _, f := range y.Containerd.Archives {
-		locations[downloader.CacheKey(f.Location)] = f
-	}
-	for _, f := range y.Firmware.Images {
-		locations[downloader.CacheKey(f.Location)] = f.File
+		for _, f := range y.Firmware.Images {
+			locations[downloader.CacheKey(f.Location, decompress)] = f.File
+		}
 	}
 	return locations
 }
