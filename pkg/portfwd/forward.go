@@ -83,9 +83,9 @@ func (fw *Forwarder) forwardingAddresses(guest *api.IPPort) (hostAddr, guestAddr
 		case guestIP.IsUnspecified():
 		case guestIP.Equal(rule.GuestIP):
 		case guestIP.Equal(net.IPv6loopback) && rule.GuestIP.Equal(IPv4loopback1):
-		case rule.GuestIP.IsUnspecified() && !rule.GuestIPMustBeZero:
+		case rule.GuestIP.IsUnspecified() && !*rule.GuestIPMustBeZero:
 			// When GuestIPMustBeZero is true, then 0.0.0.0 must be an exact match, which is already
-			// handled above by the guest.IP.IsUnspecified() condition.
+			// handled above by the guestIP.IsUnspecified() condition.
 		default:
 			continue
 		}

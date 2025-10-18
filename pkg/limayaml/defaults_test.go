@@ -124,12 +124,13 @@ func TestFillDefault(t *testing.T) {
 	}
 
 	defaultPortForward := limatype.PortForward{
-		GuestIP:        IPv4loopback1,
-		GuestPortRange: [2]int{1, 65535},
-		HostIP:         IPv4loopback1,
-		HostPortRange:  [2]int{1, 65535},
-		Proto:          limatype.ProtoAny,
-		Reverse:        false,
+		GuestIP:           IPv4loopback1,
+		GuestIPMustBeZero: ptr.Of(false),
+		GuestPortRange:    [2]int{1, 65535},
+		HostIP:            IPv4loopback1,
+		HostPortRange:     [2]int{1, 65535},
+		Proto:             limatype.ProtoAny,
+		Reverse:           false,
 	}
 
 	// ------------------------------------------------------------------------------------
@@ -386,13 +387,14 @@ func TestFillDefault(t *testing.T) {
 			net.ParseIP("1.1.1.1"),
 		},
 		PortForwards: []limatype.PortForward{{
-			GuestIP:        IPv4loopback1,
-			GuestPort:      80,
-			GuestPortRange: [2]int{80, 80},
-			HostIP:         IPv4loopback1,
-			HostPort:       80,
-			HostPortRange:  [2]int{80, 80},
-			Proto:          limatype.ProtoTCP,
+			GuestIP:           IPv4loopback1,
+			GuestIPMustBeZero: ptr.Of(false),
+			GuestPort:         80,
+			GuestPortRange:    [2]int{80, 80},
+			HostIP:            IPv4loopback1,
+			HostPort:          80,
+			HostPortRange:     [2]int{80, 80},
+			Proto:             limatype.ProtoTCP,
 		}},
 		CopyToHost: []limatype.CopyToHost{{}},
 		Env: map[string]string{
@@ -599,13 +601,14 @@ func TestFillDefault(t *testing.T) {
 			net.ParseIP("2.2.2.2"),
 		},
 		PortForwards: []limatype.PortForward{{
-			GuestIP:        IPv4loopback1,
-			GuestPort:      88,
-			GuestPortRange: [2]int{88, 88},
-			HostIP:         IPv4loopback1,
-			HostPort:       8080,
-			HostPortRange:  [2]int{8080, 8080},
-			Proto:          limatype.ProtoTCP,
+			GuestIP:           IPv4loopback1,
+			GuestIPMustBeZero: ptr.Of(false),
+			GuestPort:         88,
+			GuestPortRange:    [2]int{88, 88},
+			HostIP:            IPv4loopback1,
+			HostPort:          8080,
+			HostPortRange:     [2]int{8080, 8080},
+			Proto:             limatype.ProtoTCP,
 		}},
 		CopyToHost: []limatype.CopyToHost{{}},
 		Env: map[string]string{
