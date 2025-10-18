@@ -5,6 +5,8 @@ package ticker
 
 import (
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 func NewCompoundTicker(t1, t2 Ticker) Ticker {
@@ -15,10 +17,13 @@ type compoundTicker struct {
 	t1, t2 Ticker
 }
 
+var _ Ticker = (*compoundTicker)(nil)
+
 func (ticker *compoundTicker) Chan() <-chan time.Time {
 	ch := make(chan time.Time)
 	go func() {
-		defer ticker.Stop()
+		defer close(ch)
+		defer logrus.Debug("compoundTicker: exiting")
 		for {
 			select {
 			case v, ok := <-ticker.t1.Chan():
