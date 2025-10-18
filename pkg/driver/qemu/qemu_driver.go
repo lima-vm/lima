@@ -720,3 +720,7 @@ func (l *LimaQemuDriver) ForwardGuestAgent() bool {
 	// if driver is not providing, use host agent
 	return l.vSockPort == 0 && l.virtioPort == ""
 }
+
+func (l *LimaQemuDriver) SetTargetMemory(_ int64) error {
+	return errUnimplemented
+}

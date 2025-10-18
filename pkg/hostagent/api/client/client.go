@@ -11,6 +11,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/lima-vm/lima/v2/pkg/hostagent/api"
 	"github.com/lima-vm/lima/v2/pkg/httpclientutil"
@@ -19,6 +21,7 @@ import (
 type HostAgentClient interface {
 	HTTPClient() *http.Client
 	Info(context.Context) (*api.Info, error)
+	SetTargetMemory(context.Context, int64) error
 }
 
 // NewHostAgentClient creates a client.
@@ -64,4 +67,16 @@ func (c *client) Info(ctx context.Context) (*api.Info, error) {
 		return nil, err
 	}
 	return &info, nil
+}
+
+func (c *client) SetTargetMemory(ctx context.Context, memory int64) error {
+	u := fmt.Sprintf("http://%s/%s/memory", c.dummyHost, c.version)
+	body := strconv.FormatInt(memory, 10)
+	b := strings.NewReader(body)
+	resp, err := httpclientutil.Put(ctx, c.HTTPClient(), u, b)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	return nil
 }

@@ -203,6 +203,7 @@ func newApp() *cobra.Command {
 		newNetworkCommand(),
 		newCloneCommand(),
 		newRenameCommand(),
+		newMemoryCommand(),
 	)
 	addPluginCommands(rootCmd)
 

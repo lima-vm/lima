@@ -67,6 +67,22 @@ func Post(ctx context.Context, c *http.Client, url string, body io.Reader) (*htt
 	return resp, nil
 }
 
+func Put(ctx context.Context, c *http.Client, url string, body io.Reader) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, "PUT", url, body)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := c.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	if err := Successful(resp); err != nil {
+		resp.Body.Close()
+		return nil, err
+	}
+	return resp, nil
+}
+
 func readAtMost(r io.Reader, maxBytes int) ([]byte, error) {
 	lr := &io.LimitedReader{
 		R: r,

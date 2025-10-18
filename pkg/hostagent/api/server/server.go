@@ -6,7 +6,9 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/lima-vm/lima/v2/pkg/hostagent"
 	"github.com/lima-vm/lima/v2/pkg/httputil"
@@ -53,6 +55,33 @@ func (b *Backend) GetInfo(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(m)
 }
 
+// SetMemory is the handler for PUT /v1/memory.
+func (b *Backend) SetMemory(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		b.onError(w, err, http.StatusInternalServerError)
+		return
+	}
+	memory, err := strconv.ParseInt(string(body), 10, 64)
+	if err != nil {
+		b.onError(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	err = b.Agent.SetTargetMemory(memory)
+	if err != nil {
+		b.onError(w, err, http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
 func AddRoutes(r *http.ServeMux, b *Backend) {
 	r.Handle("/v1/info", http.HandlerFunc(b.GetInfo))
+	r.Handle("/v1/memory", http.HandlerFunc(b.SetMemory))
 }

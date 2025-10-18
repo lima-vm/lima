@@ -323,3 +323,7 @@ func (d *DriverClient) BootScripts() (map[string][]byte, error) {
 	d.logger.Debugf("Boot scripts retrieved successfully: %d scripts", len(resp.Scripts))
 	return resp.Scripts, nil
 }
+
+func (d *DriverClient) SetTargetMemory(_ int64) error {
+	return errors.New("unavailable")
+}
