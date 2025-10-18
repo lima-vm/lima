@@ -451,5 +451,7 @@ func (l *LimaVzDriver) SetTargetMemory(memory int64) error {
 		return errors.New("unexpected type of balloon")
 	}
 	balloon.SetTargetVirtualMachineMemorySize(uint64(memory))
+	// avoid segfault, when trying to Release
+	runtime.SetFinalizer(balloon, nil)
 	return nil
 }
