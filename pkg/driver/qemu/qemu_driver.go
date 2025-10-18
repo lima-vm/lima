@@ -25,6 +25,7 @@ import (
 	"github.com/coreos/go-semver/semver"
 	"github.com/digitalocean/go-qemu/qmp"
 	"github.com/digitalocean/go-qemu/qmp/raw"
+	"github.com/docker/go-units"
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/driver"
@@ -721,6 +722,21 @@ func (l *LimaQemuDriver) ForwardGuestAgent() bool {
 	return l.vSockPort == 0 && l.virtioPort == ""
 }
 
-func (l *LimaQemuDriver) SetTargetMemory(_ int64) error {
-	return errUnimplemented
+func (l *LimaQemuDriver) SetTargetMemory(memory int64) error {
+	qmpSockPath := filepath.Join(l.Instance.Dir, filenames.QMPSock)
+	qmpClient, err := qmp.NewSocketMonitor("unix", qmpSockPath, 5*time.Second)
+	if err != nil {
+		return err
+	}
+	if err := qmpClient.Connect(); err != nil {
+		return err
+	}
+	defer func() { _ = qmpClient.Disconnect() }()
+	rawClient := raw.NewMonitor(qmpClient)
+	logrus.Infof("Balloon target size: %s", units.BytesSize(float64(memory)))
+	err = rawClient.Balloon(memory)
+	if err != nil {
+		return err
+	}
+	return nil
 }
