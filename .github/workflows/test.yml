@@ -354,6 +354,9 @@ jobs:
         template: templates/default.yaml
     - name: "Run BATS integration tests"
       run: make bats
+      env:
+        # The url-github.bats tests makes GitHub API requests
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - name: Cache image used by templates/k8s.yaml
       uses: ./.github/actions/setup_cache_for_template
       with:
