@@ -66,7 +66,7 @@ func RegisterEdit(cmd *cobra.Command, commentPrefix string) {
 
 	flags.Bool("rosetta", false, commentPrefix+"Enable Rosetta (for vz instances)")
 
-	flags.String("set", "", commentPrefix+"Modify the template inplace, using yq syntax")
+	flags.StringArray("set", []string{}, commentPrefix+"Modify the template inplace, using yq syntax. Can be passed multiple times.")
 
 	flags.Uint16("ssh-port", 0, commentPrefix+"SSH port (0 for random)") // colima-compatible
 	_ = cmd.RegisterFlagCompletionFunc("ssh-port", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
@@ -115,9 +115,9 @@ func RegisterCreate(cmd *cobra.Command, commentPrefix string) {
 	})
 }
 
-func defaultExprFunc(expr string) func(v *flag.Flag) (string, error) {
-	return func(v *flag.Flag) (string, error) {
-		return fmt.Sprintf(expr, v.Value), nil
+func defaultExprFunc(expr string) func(v *flag.Flag) ([]string, error) {
+	return func(v *flag.Flag) ([]string, error) {
+		return []string{fmt.Sprintf(expr, v.Value)}, nil
 	}
 }
 
@@ -193,7 +193,7 @@ func buildMountListExpression(ss []string) (string, error) {
 func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 	type def struct {
 		flagName                 string
-		exprFunc                 func(*flag.Flag) (string, error)
+		exprFunc                 func(*flag.Flag) ([]string, error)
 		onlyValidForNewInstances bool
 		experimental             bool
 	}
@@ -202,10 +202,10 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 		{"cpus", d(".cpus = %s"), false, false},
 		{
 			"dns",
-			func(_ *flag.Flag) (string, error) {
+			func(_ *flag.Flag) ([]string, error) {
 				ipSlice, err := flags.GetIPSlice("dns")
 				if err != nil {
-					return "", err
+					return nil, err
 				}
 				expr := `.dns += [`
 				for i, ip := range ipSlice {
@@ -216,7 +216,7 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 				}
 				expr += `] | .dns |= unique | .hostResolver.enabled=false`
 				logrus.Warnf("Disabling HostResolver, as custom DNS addresses (%v) are specified", ipSlice)
-				return expr, nil
+				return []string{expr}, nil
 			},
 			false,
 			false,
@@ -224,61 +224,61 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 		{"memory", d(".memory = \"%sGiB\""), false, false},
 		{
 			"mount",
-			func(_ *flag.Flag) (string, error) {
+			func(_ *flag.Flag) ([]string, error) {
 				ss, err := flags.GetStringSlice("mount")
 				slices.Reverse(ss)
 				if err != nil {
-					return "", err
+					return nil, err
 				}
 				mountListExpr, err := buildMountListExpression(ss)
 				if err != nil {
-					return "", err
+					return nil, err
 				}
 				// mount options take precedence over template settings
 				expr := fmt.Sprintf(".mounts = %s + .mounts", mountListExpr)
 				mountOnly, err := flags.GetStringSlice("mount-only")
 				if err != nil {
-					return "", err
+					return nil, err
 				}
 				if len(mountOnly) > 0 {
-					return "", errors.New("flag `--mount` conflicts with `--mount-only`")
+					return nil, errors.New("flag `--mount` conflicts with `--mount-only`")
 				}
-				return expr, nil
+				return []string{expr}, nil
 			},
 			false,
 			false,
 		},
 		{
 			"mount-only",
-			func(_ *flag.Flag) (string, error) {
+			func(_ *flag.Flag) ([]string, error) {
 				ss, err := flags.GetStringSlice("mount-only")
 				if err != nil {
-					return "", err
+					return nil, err
 				}
 				mountListExpr, err := buildMountListExpression(ss)
 				if err != nil {
-					return "", err
+					return nil, err
 				}
 				expr := `.mounts = ` + mountListExpr
-				return expr, nil
+				return []string{expr}, nil
 			},
 			false,
 			false,
 		},
 		{
 			"mount-none",
-			func(_ *flag.Flag) (string, error) {
+			func(_ *flag.Flag) ([]string, error) {
 				incompatibleFlagNames := []string{"mount", "mount-only"}
 				for _, name := range incompatibleFlagNames {
 					ss, err := flags.GetStringSlice(name)
 					if err != nil {
-						return "", err
+						return nil, err
 					}
 					if len(ss) > 0 {
-						return "", errors.New("flag `--mount-none` conflicts with `" + name + "`")
+						return nil, errors.New("flag `--mount-none` conflicts with `" + name + "`")
 					}
 				}
-				return ".mounts = null", nil
+				return []string{".mounts = null"}, nil
 			},
 			false,
 			false,
@@ -289,10 +289,10 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 		{"mount-writable", d(".mounts[].writable = %s"), false, false},
 		{
 			"network",
-			func(_ *flag.Flag) (string, error) {
+			func(_ *flag.Flag) ([]string, error) {
 				ss, err := flags.GetStringSlice("network")
 				if err != nil {
-					return "", err
+					return nil, err
 				}
 				expr := `.networks += [`
 				for i, s := range ss {
@@ -304,14 +304,14 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 						network := strings.TrimPrefix(s, "lima:")
 						expr += fmt.Sprintf(`{"lima": %q}`, network)
 					default:
-						return "", fmt.Errorf("network name must be \"vzNAT\" or \"lima:*\", got %q", s)
+						return nil, fmt.Errorf("network name must be \"vzNAT\" or \"lima:*\", got %q", s)
 					}
 					if i < len(ss)-1 {
 						expr += ","
 					}
 				}
 				expr += `] | .networks |= unique_by(.lima)`
-				return expr, nil
+				return []string{expr}, nil
 			},
 			false,
 			false,
@@ -319,28 +319,30 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 
 		{
 			"rosetta",
-			func(_ *flag.Flag) (string, error) {
+			func(_ *flag.Flag) ([]string, error) {
 				b, err := flags.GetBool("rosetta")
 				if err != nil {
-					return "", err
+					return nil, err
 				}
-				return fmt.Sprintf(".vmOpts.vz.rosetta.enabled = %v | .vmOpts.vz.rosetta.binfmt = %v", b, b), nil
+				return []string{fmt.Sprintf(".vmOpts.vz.rosetta.enabled = %v | .vmOpts.vz.rosetta.binfmt = %v", b, b)}, nil
 			},
 			false,
 			false,
 		},
-		{"set", d("%s"), false, false},
+		{"set", func(v *flag.Flag) ([]string, error) {
+			return v.Value.(flag.SliceValue).GetSlice(), nil
+		}, false, false},
 		{
 			"video",
-			func(_ *flag.Flag) (string, error) {
+			func(_ *flag.Flag) ([]string, error) {
 				b, err := flags.GetBool("video")
 				if err != nil {
-					return "", err
+					return nil, err
 				}
 				if b {
-					return ".video.display = \"default\"", nil
+					return []string{".video.display = \"default\""}, nil
 				}
-				return ".video.display = \"none\"", nil
+				return []string{".video.display = \"none\""}, nil
 			},
 			false,
 			false,
@@ -349,22 +351,22 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 		{"arch", d(".arch = %q"), true, false},
 		{
 			"containerd",
-			func(_ *flag.Flag) (string, error) {
+			func(_ *flag.Flag) ([]string, error) {
 				s, err := flags.GetString("containerd")
 				if err != nil {
-					return "", err
+					return nil, err
 				}
 				switch s {
 				case "user":
-					return `.containerd.user = true | .containerd.system = false`, nil
+					return []string{`.containerd.user = true | .containerd.system = false`}, nil
 				case "system":
-					return `.containerd.user = false | .containerd.system = true`, nil
+					return []string{`.containerd.user = false | .containerd.system = true`}, nil
 				case "user+system", "system+user":
-					return `.containerd.user = true | .containerd.system = true`, nil
+					return []string{`.containerd.user = true | .containerd.system = true`}, nil
 				case "none":
-					return `.containerd.user = false | .containerd.system = false`, nil
+					return []string{`.containerd.user = false | .containerd.system = false`}, nil
 				default:
-					return "", fmt.Errorf(`expected one of ["user", "system", "user+system", "none"], got %q`, s)
+					return nil, fmt.Errorf(`expected one of ["user", "system", "user+system", "none"], got %q`, s)
 				}
 			},
 			true,
@@ -374,12 +376,16 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 		{"plain", d(".plain = %s"), true, false},
 		{
 			"port-forward",
-			func(_ *flag.Flag) (string, error) {
+			func(_ *flag.Flag) ([]string, error) {
 				ss, err := flags.GetStringArray("port-forward")
 				if err != nil {
-					return "", err
+					return nil, err
 				}
-				return BuildPortForwardExpression(ss)
+				value, err := BuildPortForwardExpression(ss)
+				if err != nil {
+					return nil, err
+				}
+				return []string{value}, nil
 			},
 			false,
 			false,
@@ -397,11 +403,11 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 					def.flagName, def.flagName, v.Value.String())
 				continue
 			}
-			expr, err := def.exprFunc(v)
+			newExprs, err := def.exprFunc(v)
 			if err != nil {
 				return exprs, fmt.Errorf("error while processing flag %q: %w", def.flagName, err)
 			}
-			exprs = append(exprs, expr)
+			exprs = append(exprs, newExprs...)
 		}
 	}
 	return exprs, nil
