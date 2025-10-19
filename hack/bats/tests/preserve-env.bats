@@ -93,13 +93,13 @@ local_setup() {
     assert_line BAR=bar
 }
 
-@test 'wildcard does only work at the end of the pattern' {
+@test 'wildcard works at the start of the pattern' {
     export LIMA_SHELLENV_BLOCK="*FOO"
     export FOO=foo
     export BARFOO=barfoo
     run -0 limactl shell --preserve-env "$NAME" printenv
-    assert_line FOO=foo
-    assert_line BARFOO=barfoo
+    refute_line --regexp '^BARFOO='
+    refute_line --regexp '^FOO='
 }
 
 @test 'block list can use a , separated list with whitespace ignored' {
@@ -114,37 +114,72 @@ local_setup() {
     assert_line BARBAZ=barbaz
 }
 
-@test 'allow list overrides block list but blocks everything else' {
-    export LIMA_SHELLENV_ALLOW=SSH_FOO
+@test 'allow list can use a , separated list with whitespace ignored' {
+    export LIMA_SHELLENV_ALLOW="SSH_FOO, , BAR*, LD_UID"
     export SSH_FOO=ssh_foo
     export SSH_BAR=ssh_bar
-    export BAR=bar
-    run -0 limactl shell --preserve-env "$NAME" printenv
-    assert_line SSH_FOO=ssh_foo
-    refute_line --regexp '^SSH_BAR='
-    refute_line --regexp '^BAR='
-}
-
-@test 'allow list can use a , separated list with whitespace ignored' {
-    export LIMA_SHELLENV_ALLOW="FOO*, , BAR"
-    export FOO=foo
-    export FOOBAR=foobar
+    export SSH_BLOCK=ssh_block
     export BAR=bar
     export BARBAZ=barbaz
+    export LD_UID=randomuid
     run -0 limactl shell --preserve-env "$NAME" printenv
-    assert_line FOO=foo
-    assert_line FOOBAR=foobar
+    
+    assert_line SSH_FOO=ssh_foo
     assert_line BAR=bar
-    refute_line --regexp '^BARBAZ='
+    assert_line BARBAZ=barbaz
+    assert_line LD_UID=randomuid
+    
+    refute_line --regexp '^SSH_BAR='
+    refute_line --regexp '^SSH_BLOCK='
 }
 
-@test 'setting both allow list and block list generates a warning' {
-    export LIMA_SHELLENV_ALLOW=FOO
-    export LIMA_SHELLENV_BLOCK=BAR
+@test 'wildcard patterns work in all positions' {
+    export LIMA_SHELLENV_BLOCK="*FOO*BAR*"
     export FOO=foo
-    run -0 --separate-stderr limactl shell --preserve-env "$NAME" printenv FOO
-    assert_output foo
-    assert_stderr --regexp 'level=warning msg="Both LIMA_SHELLENV_BLOCK and LIMA_SHELLENV_ALLOW are set'
+    export FOOBAR=foobar
+    export FOOXYZBAR=fooxyzbar
+    export FOOBAZ=foobaz
+    export BAZBAR=bazbar
+    export BAR=bar
+    export XFOOYBARZDOTCOM=xfooybarzdotcom
+    export NORMAL_VAR=normal_var
+    export UNRELATED=unrelated
+    run -0 limactl shell --preserve-env "$NAME" printenv
+    
+    refute_line --regexp '^FOOBAR='
+    refute_line --regexp '^FOOXYZBAR='    
+    refute_line --regexp '^XFOOYBARZDOTCOM='
+    
+    assert_line FOOBAZ=foobaz
+    assert_line NORMAL_VAR=normal_var
+    assert_line UNRELATED=unrelated
+    assert_line BAZBAR=bazbar
+    assert_line BAR=bar
+    assert_line FOO=foo
+}
+
+@test 'allowlist overrides default blocklist with wildcards' {
+    export LIMA_SHELLENV_ALLOW="SSH_*,CUSTOM*"
+    export LIMA_SHELLENV_BLOCK="+*TOKEN"
+    export SSH_AUTH_SOCK=ssh_auth_sock
+    export SSH_CONNECTION=ssh_connection
+    export CUSTOM_VAR=custom_var
+    export MY_TOKEN=my_token
+    export UNRELATED=unrelated
+    run -0 limactl shell --preserve-env "$NAME" printenv
+    
+    assert_line SSH_AUTH_SOCK=ssh_auth_sock
+    assert_line SSH_CONNECTION=ssh_connection
+    assert_line CUSTOM_VAR=custom_var
+    refute_line --regexp '^MY_TOKEN='
+    assert_line UNRELATED=unrelated
+}
+
+@test 'invalid characters in patterns cause fatal errors' {
+    export LIMA_SHELLENV_BLOCK="FOO-BAR"
+    run ! limactl shell --preserve-env "$NAME" printenv
+    assert_output --partial "Invalid LIMA_SHELLENV_BLOCK pattern"
+    assert_output --partial "contains invalid character"
 }
 
 @test 'limactl info includes the default block list' {
