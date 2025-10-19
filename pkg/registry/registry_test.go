@@ -51,6 +51,7 @@ func (m *mockDriver) Configure(_ *limatype.Instance) *driver.ConfiguredDriver   
 func (m *mockDriver) FillConfig(_ context.Context, _ *limatype.LimaYAML, _ string) error { return nil }
 func (m *mockDriver) InspectStatus(_ context.Context, _ *limatype.Instance) string       { return "" }
 func (m *mockDriver) SSHAddress(_ context.Context) (string, error)                       { return "", nil }
+func (m *mockDriver) GetCurrentMemory() (int64, error)                                   { return 0, nil }
 func (m *mockDriver) SetTargetMemory(int64) error                                        { return nil }
 func (m *mockDriver) BootScripts() (map[string][]byte, error)                            { return nil, nil }
 

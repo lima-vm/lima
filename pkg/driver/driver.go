@@ -89,6 +89,8 @@ type Driver interface {
 
 	SSHAddress(ctx context.Context) (string, error)
 
+	GetCurrentMemory() (int64, error)
+
 	SetTargetMemory(memory int64) error
 }
 

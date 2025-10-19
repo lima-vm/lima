@@ -438,6 +438,24 @@ func (l *LimaVzDriver) ForwardGuestAgent() bool {
 	return l.vSockPort == 0 && l.virtioPort == ""
 }
 
+func (l *LimaVzDriver) GetCurrentMemory() (int64, error) {
+	if l.machine == nil {
+		return 0, errors.New("no machine")
+	}
+	balloons := l.machine.MemoryBalloonDevices()
+	if len(balloons) != 1 {
+		return 0, fmt.Errorf("unexpected number of devices: %d", len(balloons))
+	}
+	balloon := vz.AsVirtioTraditionalMemoryBalloonDevice(balloons[0])
+	if balloon == nil {
+		return 0, errors.New("unexpected type of balloon")
+	}
+	// avoid segfault, when trying to Release
+	runtime.SetFinalizer(balloon, nil)
+	memory := balloon.GetTargetVirtualMachineMemorySize()
+	return int64(memory), nil
+}
+
 func (l *LimaVzDriver) SetTargetMemory(memory int64) error {
 	if l.machine == nil {
 		return errors.New("no machine")

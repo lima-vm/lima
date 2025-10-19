@@ -358,6 +358,10 @@ func (l *LimaWslDriver) ForwardGuestAgent() bool {
 	return l.vSockPort == 0 && l.virtioPort == ""
 }
 
+func (l *LimaWslDriver) GetCurrentMemory() (int64, error) {
+	return 0, errUnimplemented
+}
+
 func (l *LimaWslDriver) SetTargetMemory(_ int64) error {
 	return errUnimplemented
 }

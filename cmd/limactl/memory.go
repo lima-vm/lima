@@ -51,8 +51,10 @@ func memoryGetAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	_ = inst
-	mem := 0 // TODO: implement
+	mem, err := memory.GetCurrent(ctx, inst)
+	if err != nil {
+		return err
+	}
 	fmt.Fprintf(cmd.OutOrStdout(), "%d\n", mem>>20)
 	return nil
 }

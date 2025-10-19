@@ -722,6 +722,25 @@ func (l *LimaQemuDriver) ForwardGuestAgent() bool {
 	return l.vSockPort == 0 && l.virtioPort == ""
 }
 
+func (l *LimaQemuDriver) GetCurrentMemory() (int64, error) {
+	qmpSockPath := filepath.Join(l.Instance.Dir, filenames.QMPSock)
+	qmpClient, err := qmp.NewSocketMonitor("unix", qmpSockPath, 5*time.Second)
+	if err != nil {
+		return 0, err
+	}
+	if err := qmpClient.Connect(); err != nil {
+		return 0, err
+	}
+	defer func() { _ = qmpClient.Disconnect() }()
+	rawClient := raw.NewMonitor(qmpClient)
+	info, err := rawClient.QueryBalloon()
+	if err != nil {
+		return 0, err
+	}
+	logrus.Infof("Balloon actual size: %s", units.BytesSize(float64(info.Actual)))
+	return info.Actual, nil
+}
+
 func (l *LimaQemuDriver) SetTargetMemory(memory int64) error {
 	qmpSockPath := filepath.Join(l.Instance.Dir, filenames.QMPSock)
 	qmpClient, err := qmp.NewSocketMonitor("unix", qmpSockPath, 5*time.Second)

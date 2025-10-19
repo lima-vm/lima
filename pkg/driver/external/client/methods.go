@@ -324,6 +324,10 @@ func (d *DriverClient) BootScripts() (map[string][]byte, error) {
 	return resp.Scripts, nil
 }
 
+func (d *DriverClient) GetCurrentMemory() (int64, error) {
+	return 0, errors.New("unavailable")
+}
+
 func (d *DriverClient) SetTargetMemory(_ int64) error {
 	return errors.New("unavailable")
 }
