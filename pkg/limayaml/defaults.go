@@ -439,7 +439,10 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 				provision.Permissions = ptr.Of("644")
 			}
 		}
-		if provision.Script != nil && *provision.Script != "" {
+		if provision.Script == nil {
+			provision.Script = ptr.Of("")
+		}
+		if *provision.Script != "" {
 			if out, err := executeGuestTemplate(*provision.Script, instDir, y.User, y.Param); err == nil {
 				*provision.Script = out.String()
 			} else {
