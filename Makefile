@@ -597,7 +597,17 @@ ifeq ($(GOOS),darwin)
 to_uname_m = $(foreach arch,$(1),$(shell echo $(arch) | sed 's/amd64/x86_64/'))
 else ifeq ($(GOOS),linux)
 # CC is required for cross-compiling on Linux.
-CC = $(call to_uname_m,$(GOARCH))-linux-gnu-gcc
+# On Debian, Ubuntu, and related distributions, compilers are named like x86_64-linux-gnu-gcc
+# On Fedora, RHEL, and related distributions, the equivalent is x86_64-redhat-linux-gcc
+# On openSUSE and as a generic fallback, gcc is used
+CC := $(shell \
+	if command -v $(call to_uname_m,$(GOARCH))-redhat-linux-gcc >/dev/null 2>&1; then \
+		echo $(call to_uname_m,$(GOARCH))-redhat-linux-gcc; \
+	elif command -v $(call to_uname_m,$(GOARCH))-linux-gnu-gcc >/dev/null 2>&1; then \
+		echo $(call to_uname_m,$(GOARCH))-linux-gnu-gcc; \
+	else \
+		echo gcc; \
+	fi)
 else ifeq ($(GOOS),windows)
 # artifact in zip format also provided for Windows.
 ARTIFACT_FILE_EXTENSIONS += .zip
