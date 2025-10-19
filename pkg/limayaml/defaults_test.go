@@ -153,7 +153,7 @@ func TestFillDefault(t *testing.T) {
 			{Script: ptr.Of("#!/bin/true # {{.Param.ONE}}")},
 		},
 		Probes: []limatype.Probe{
-			{Script: "#!/bin/false # {{.Param.ONE}}"},
+			{Script: ptr.Of("#!/bin/false # {{.Param.ONE}}")},
 		},
 		Networks: []limatype.Network{
 			{Lima: "shared"},
@@ -239,7 +239,7 @@ func TestFillDefault(t *testing.T) {
 	expect.Probes = slices.Clone(y.Probes)
 	expect.Probes[0].Mode = limatype.ProbeModeReadiness
 	expect.Probes[0].Description = "user probe 1/1"
-	expect.Probes[0].Script = "#!/bin/false # Eins"
+	expect.Probes[0].Script = ptr.Of("#!/bin/false # Eins")
 
 	expect.Networks = slices.Clone(y.Networks)
 	expect.Networks[0].MACAddress = MACAddress(fmt.Sprintf("%s#%d", filePath, 0))
@@ -370,7 +370,7 @@ func TestFillDefault(t *testing.T) {
 		},
 		Probes: []limatype.Probe{
 			{
-				Script:      "#!/bin/false",
+				Script:      ptr.Of("#!/bin/false"),
 				Mode:        limatype.ProbeModeReadiness,
 				Description: "User Probe",
 			},
@@ -578,7 +578,7 @@ func TestFillDefault(t *testing.T) {
 		},
 		Probes: []limatype.Probe{
 			{
-				Script:      "#!/bin/false",
+				Script:      ptr.Of("#!/bin/false"),
 				Mode:        limatype.ProbeModeReadiness,
 				Description: "Another Probe",
 			},

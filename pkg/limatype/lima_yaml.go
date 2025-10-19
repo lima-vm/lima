@@ -271,7 +271,7 @@ const (
 type Probe struct {
 	Mode        ProbeMode          `yaml:"mode,omitempty" json:"mode,omitempty" jsonschema:"default=readiness"`
 	Description string             `yaml:"description,omitempty" json:"description,omitempty"`
-	Script      string             `yaml:"script,omitempty" json:"script,omitempty"`
+	Script      *string            `yaml:"script,omitempty" json:"script,omitempty"`
 	File        *LocatorWithDigest `yaml:"file,omitempty" json:"file,omitempty" jsonschema:"nullable"`
 	Hint        string             `yaml:"hint,omitempty" json:"hint,omitempty"`
 }
