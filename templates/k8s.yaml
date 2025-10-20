@@ -10,6 +10,17 @@
 # NAME       STATUS   ROLES                  AGE   VERSION
 # lima-k8s   Ready    control-plane,master   44s   v1.22.3
 
+# A multi-node cluster can be created by starting multiple instances of this template
+# connected via the `lima:user-v2` network.
+#
+# $ limactl start --name k8s-0 --network lima:user-v2 template:k8s
+# $ limactl shell k8s-0 sudo kubeadm token create --print-join-command
+# (The join command printed here)
+#
+# $ limactl start --name k8s-1 --network lima:user-v2 template:k8s
+# $ limactl shell k8s-1 sudo kubeadm reset --force
+# $ limactl shell k8s-1 sudo <JOIN_COMMAND_FROM_ABOVE>
+
 minimumLimaVersion: 2.0.0
 
 base: template://_images/ubuntu-lts
@@ -108,9 +119,12 @@ provision:
     kubectl apply -f https://github.com/flannel-io/flannel/releases/download/v0.26.7/kube-flannel.yml
     # Control plane node isolation
     kubectl taint nodes --all node-role.kubernetes.io/control-plane-
-    # Replace the server address with localhost, so that it works also from the host
-    sed -e "/server:/ s|https://.*:\([0-9]*\)$|https://127.0.0.1:\1|" -i $KUBECONFIG
-    mkdir -p ${HOME:-/root}/.kube && cp -f $KUBECONFIG ${HOME:-/root}/.kube/config
+    # Symlink the kubeconfig file to the default location for kubectl
+    mkdir -p /root/.kube && ln -sf $KUBECONFIG /root/.kube/config
+    # Replace the server address with localhost, so that it works from the host.
+    # The original kubeconfig is kept unmodified, so that `kubeadm token create --print-join-command`
+    # can still print the reachable address.
+    sed -e "/server:/ s|https://.*:\([0-9]*\)$|https://127.0.0.1:\1|" $KUBECONFIG >/root/.kube/config.localhost
 - mode: system
   script: |
     #!/bin/bash
@@ -162,7 +176,7 @@ probes:
     set -eux -o pipefail
     kubectl wait -n kube-system --timeout=180s --for=condition=available deploy coredns
 copyToHost:
-- guest: "/etc/kubernetes/admin.conf"
+- guest: "/root/.kube/config.localhost"
   host: "{{.Dir}}/copied-from-guest/kubeconfig.yaml"
   deleteOnStop: true
 message: |
