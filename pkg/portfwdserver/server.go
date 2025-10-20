@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/containers/gvisor-tap-vsock/pkg/tcpproxy"
+	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/bicopy"
 	"github.com/lima-vm/lima/v2/pkg/guestagent/api"
@@ -41,7 +42,11 @@ func (s *TunnelServer) Start(stream api.GuestService_TunnelServer) error {
 	if err != nil {
 		return err
 	}
-	rw := &GRPCServerRW{stream: stream, id: in.Id}
+	rw := &GRPCServerRW{stream: stream, id: in.Id, closeCh: make(chan any, 1)}
+	go func() {
+		<-ctx.Done()
+		rw.Close()
+	}()
 
 	// FIXME: consolidate bicopy and tcpproxy into one
 	//
@@ -51,20 +56,26 @@ func (s *TunnelServer) Start(stream api.GuestService_TunnelServer) error {
 	// However, the tcpproxy package can't pass the CI for WSL2 (experimental):
 	// https://github.com/lima-vm/lima/pull/3686#issuecomment-3034842616
 	if wsl2, _ := seemsWSL2(); wsl2 {
-		bicopy.Bicopy(rw, conn, nil)
+		go bicopy.Bicopy(rw, conn, nil)
 	} else {
 		proxy := tcpproxy.DialProxy{DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
 			return conn, nil
 		}}
-		proxy.HandleConn(rw)
+		go proxy.HandleConn(rw)
 	}
+	// The stream will be closed when this function returns.
+	// Wait here until rw.Close(), rw.CloseRead(), or rw.CloseWrite() is called.
+	// We can't close rw.closeCh since the calling order of Close* methods is not guaranteed.
+	<-rw.closeCh
+	logrus.Debugf("closed GRPCServerRW for id: %s", in.Id)
 
 	return nil
 }
 
 type GRPCServerRW struct {
-	id     string
-	stream api.GuestService_TunnelServer
+	id      string
+	stream  api.GuestService_TunnelServer
+	closeCh chan any
 }
 
 var _ net.Conn = (*GRPCServerRW)(nil)
@@ -84,6 +95,23 @@ func (g *GRPCServerRW) Read(p []byte) (n int, err error) {
 }
 
 func (g *GRPCServerRW) Close() error {
+	logrus.Debugf("closing GRPCServerRW for id: %s", g.id)
+	g.closeCh <- struct{}{}
+	return nil
+}
+
+// By adding CloseRead and CloseWrite methods, GRPCServerRW can work with
+// other than containers/gvisor-tap-vsock/pkg/tcpproxy, e.g., inetaf/tcpproxy, bicopy.Bicopy.
+
+func (g *GRPCServerRW) CloseRead() error {
+	logrus.Debugf("closing read GRPCServerRW for id: %s", g.id)
+	g.closeCh <- struct{}{}
+	return nil
+}
+
+func (g *GRPCServerRW) CloseWrite() error {
+	logrus.Debugf("closing write GRPCServerRW for id: %s", g.id)
+	g.closeCh <- struct{}{}
 	return nil
 }
 
