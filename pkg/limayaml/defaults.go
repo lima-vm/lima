@@ -882,11 +882,14 @@ func FillPortForwardDefaults(rule *limatype.PortForward, instDir string, user li
 		rule.Proto = limatype.ProtoAny
 	}
 	if rule.GuestIP == nil {
-		if rule.GuestIPMustBeZero {
+		if rule.GuestIPMustBeZero != nil && *rule.GuestIPMustBeZero {
 			rule.GuestIP = net.IPv4zero
 		} else {
 			rule.GuestIP = IPv4loopback1
 		}
+	}
+	if rule.GuestIPMustBeZero == nil {
+		rule.GuestIPMustBeZero = ptr.Of(rule.GuestIP.Equal(net.IPv4zero))
 	}
 	if rule.HostIP == nil {
 		rule.HostIP = IPv4loopback1
