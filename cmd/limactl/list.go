@@ -57,9 +57,7 @@ The output can be presented in one of several formats, using the --format <forma
   --format yaml  - Output in YAML format
   --format table - Output in table format
   --format '{{ <go template> }}' - If the format begins and ends with '{{ }}', then it is used as a go template.
-` + store.FormatHelp + `
-The following legacy flags continue to function:
-  --json - equal to '--format json'`,
+` + store.FormatHelp,
 		Args:              WrapArgsError(cobra.ArbitraryArgs),
 		RunE:              listAction,
 		ValidArgsFunction: listBashComplete,
@@ -68,7 +66,7 @@ The following legacy flags continue to function:
 
 	listCommand.Flags().StringP("format", "f", "table", "Output format, one of: json, yaml, table, go-template")
 	listCommand.Flags().Bool("list-fields", false, "List fields available for format")
-	listCommand.Flags().Bool("json", false, "JSONify output")
+	listCommand.Flags().Bool("json", false, "Same as --format=json")
 	listCommand.Flags().BoolP("quiet", "q", false, "Only show names")
 	listCommand.Flags().Bool("all-fields", false, "Show all fields")
 	listCommand.Flags().StringArray("yq", nil, "Apply yq expression to each instance")
