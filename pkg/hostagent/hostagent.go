@@ -813,7 +813,8 @@ func (a *HostAgent) processGuestAgentEvents(ctx context.Context, client *guestag
 		if useSSHFwd {
 			a.portForwarder.OnEvent(ctx, ev)
 		} else {
-			a.grpcPortForwarder.OnEvent(ctx, client, ev)
+			dialContext := portfwd.DialContextToGRPCTunnel(client)
+			a.grpcPortForwarder.OnEvent(ctx, dialContext, ev)
 		}
 	}
 
