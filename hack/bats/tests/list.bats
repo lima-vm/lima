@@ -264,3 +264,26 @@ local_setup() {
     run -0 limactl ls --quiet --yq 'select(.name == "foo")'
     assert_output "foo"
 }
+
+@test '--filter option filters instances' {
+    run -0 limactl ls --filter '.name == "foo"'
+    assert_line --index 0 --regexp '^NAME'
+    assert_line --index 1 --regexp '^foo'
+    assert_output_lines_count 2
+}
+
+@test '--filter option works with all output formats' {
+    run -0 limactl ls --filter '.name == "foo"'
+    assert_line --index 1 --regexp '^foo'
+    
+    run -0 limactl ls --filter '.name == "foo"' --format json
+    assert_line --index 0 --regexp '^\{"name":"foo",'
+    
+    run -0 limactl ls --filter '.name == "foo"' --format '{{.Name}}'
+    assert_output "foo"
+}
+
+@test '--filter option is incompatible with --yq' {
+    run_e -1 limactl ls --filter '.name == "foo"' --yq '.name'
+    assert_fatal "option --filter conflicts with option --yq"
+}
