@@ -347,14 +347,41 @@ portForwards:
   # forward: ::        3032 → ipv4 2032
   # forward: ::1       3033 → ipv4 2033
 
-- guestPortRange: [300, 309]
+- guestPortRange: [300, 304]
 
-  # forward: 127.0.0.1 300 → 127.0.0.1 300
+  # forward: 127.0.0.1    300 → 127.0.0.1 300
+  # forward: 0.0.0.0      301 → 127.0.0.1 301
+  # forward: ::           302 → 127.0.0.1 302
+  # forward: ::1          303 → 127.0.0.1 303
+  # ignore:  192.168.5.15 304 → 127.0.0.1 304
 
-- guestPortRange: [310, 319]
+- guestPortRange: [305, 309]
+  guestIPMustBeZero: false
+
+  # forward: 127.0.0.1    325 → 127.0.0.1 325
+  # forward: 0.0.0.0      326 → 127.0.0.1 326
+  # forward: ::           327 → 127.0.0.1 327
+  # forward: ::1          328 → 127.0.0.1 328
+  # ignore:  192.168.5.15 329 → 127.0.0.1 329
+
+- guestPortRange: [310, 314]
   hostIP: 0.0.0.0
 
-  # forward: 127.0.0.1 310 → 0.0.0.0 310
+  # forward: 127.0.0.1    310 → 0.0.0.0 310
+  # forward: 0.0.0.0      311 → 0.0.0.0 311
+  # forward: ::           312 → 0.0.0.0 312
+  # forward: ::1          313 → 0.0.0.0 313
+  # ignore:  192.168.5.15 314 → 0.0.0.0 314
+
+- guestPortRange: [315, 319]
+  guestIPMustBeZero: false
+  hostIP: 0.0.0.0
+
+  # forward: 127.0.0.1    315 → 0.0.0.0 315
+  # forward: 0.0.0.0      316 → 0.0.0.0 316
+  # forward: ::           317 → 0.0.0.0 317
+  # forward: ::1          318 → 0.0.0.0 318
+  # ignore:  192.168.5.15 319 → 0.0.0.0 319
 
   # Things we can't test:
   # - Accessing a forward from a different interface (e.g. connect to ipv4 to connect to 0.0.0.0)
@@ -419,4 +446,21 @@ portForwards:
 - guestPort: 5000
   hostSocket: port5000.sock
 
-  # forward: 127.0.0.1 5000 → sockDir/port5000.sock
+  # forward: 127.0.0.1    5000 → sockDir/port5000.sock
+
+- guestPort: 5001
+  hostSocket: port5001.sock
+
+  # ignore:  192.168.5.15 5001 → sockDir/port5001.sock
+
+- guestPort: 5002
+  guestIPMustBeZero: false
+  hostSocket: port5002.sock
+
+  # forward: 127.0.0.1    5002 → sockDir/port5002.sock
+
+- guestPort: 5003
+  guestIPMustBeZero: false
+  hostSocket: port5003.sock
+
+  # ignore:  192.168.5.15 5003 → sockDir/port5003.sock
