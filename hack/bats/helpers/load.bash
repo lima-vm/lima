@@ -70,4 +70,5 @@ assert_output_lines_count() {
 # NOTE: keep this list in sync with hack/test-templates.sh .
 declare -A -g TEST_CONTAINER_IMAGES=(
     ["nginx"]="ghcr.io/stargz-containers/nginx:1.19-alpine-org"
+    ["coredns"]="public.ecr.aws/eks-distro/coredns/coredns:v1.12.2-eks-1-31-latest"
 )

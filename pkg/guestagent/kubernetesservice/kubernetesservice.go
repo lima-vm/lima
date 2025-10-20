@@ -26,9 +26,8 @@ import (
 type Protocol string
 
 const (
-	// UDP/SCTP when lima port forwarding works on those protocols.
-
 	TCP Protocol = "tcp"
+	UDP Protocol = "udp"
 )
 
 type Entry struct {
@@ -134,8 +133,12 @@ func (s *ServiceWatcher) GetPorts() []Entry {
 		}
 
 		for _, portEntry := range service.Spec.Ports {
-			if portEntry.Protocol != corev1.ProtocolTCP {
-				// currently only TCP port can be forwarded
+			switch portEntry.Protocol {
+			case corev1.ProtocolTCP, corev1.ProtocolUDP:
+				// NOP
+			default:
+				logrus.Debugf("unsupported protocol %s for service %s/%s, skipping",
+					portEntry.Protocol, service.Namespace, service.Name)
 				continue
 			}
 
