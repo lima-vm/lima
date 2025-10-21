@@ -11,7 +11,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/guestagent/api"
-	guestagentclient "github.com/lima-vm/lima/v2/pkg/guestagent/api/client"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 )
@@ -38,7 +37,7 @@ func (fw *Forwarder) Close() error {
 	return fw.closableListeners.Close()
 }
 
-func (fw *Forwarder) OnEvent(ctx context.Context, client *guestagentclient.GuestAgentClient, ev *api.Event) {
+func (fw *Forwarder) OnEvent(ctx context.Context, dialContext func(ctx context.Context, network string, addr string) (net.Conn, error), ev *api.Event) {
 	for _, f := range ev.AddedLocalPorts {
 		// Before forwarding, check if any static rule matches this port otherwise it will be forwarded twice and cause a port conflict
 		if fw.isPortStaticallyForwarded(f) {
@@ -55,7 +54,7 @@ func (fw *Forwarder) OnEvent(ctx context.Context, client *guestagentclient.Guest
 			continue
 		}
 		logrus.Infof("Forwarding %s from %s to %s", strings.ToUpper(f.Protocol), remote, local)
-		fw.closableListeners.Forward(ctx, client, f.Protocol, local, remote)
+		fw.closableListeners.Forward(ctx, dialContext, f.Protocol, local, remote)
 	}
 	for _, f := range ev.RemovedLocalPorts {
 		local, remote := fw.forwardingAddresses(f)

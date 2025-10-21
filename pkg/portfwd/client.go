@@ -18,61 +18,50 @@ import (
 	guestagentclient "github.com/lima-vm/lima/v2/pkg/guestagent/api/client"
 )
 
-func HandleTCPConnection(ctx context.Context, client *guestagentclient.GuestAgentClient, conn net.Conn, guestAddr string) {
-	id := fmt.Sprintf("tcp-%s-%s", conn.LocalAddr().String(), conn.RemoteAddr().String())
-
-	stream, err := client.Tunnel(ctx)
-	if err != nil {
-		logrus.Errorf("could not open tcp tunnel for id: %s error:%v", id, err)
-		return
-	}
-
-	// Handshake message to start tunnel
-	if err := stream.Send(&api.TunnelMessage{Id: id, Protocol: "tcp", GuestAddr: guestAddr}); err != nil {
-		logrus.Errorf("could not start tcp tunnel for id: %s error:%v", id, err)
-		return
-	}
-
-	rw := &GrpcClientRW{stream: stream, id: id, addr: guestAddr, protocol: "tcp"}
-	proxy := tcpproxy.DialProxy{DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
-		return conn, nil
-	}}
-	proxy.HandleConn(rw)
+func HandleTCPConnection(_ context.Context, dialContext func(ctx context.Context, network string, addr string) (net.Conn, error), conn net.Conn, guestAddr string) {
+	proxy := tcpproxy.DialProxy{Addr: guestAddr, DialContext: dialContext}
+	proxy.HandleConn(conn)
 }
 
-func HandleUDPConnection(ctx context.Context, client *guestagentclient.GuestAgentClient, conn net.PacketConn, guestAddr string) {
-	var udpConnectionCounter atomic.Uint32
-	initialID := fmt.Sprintf("udp-%s", conn.LocalAddr().String())
-
-	// gvisor-tap-vsock's UDPProxy demultiplexes client connections internally based on their source address.
-	// It calls this dialer function only when it receives a datagram from a new, unrecognized client.
-	// For each new client, we must return a new net.Conn, which in our case is a new gRPC stream.
-	// The atomic counter ensures that each stream has a unique ID to distinguish them on the server side.
+func HandleUDPConnection(ctx context.Context, dialContext func(ctx context.Context, network string, addr string) (net.Conn, error), conn net.PacketConn, guestAddr string) {
 	proxy, err := forwarder.NewUDPProxy(conn, func() (net.Conn, error) {
-		id := fmt.Sprintf("%s-%d", initialID, udpConnectionCounter.Add(1))
-		stream, err := client.Tunnel(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("could not open udp tunnel for id: %s error:%w", id, err)
-		}
-		// Handshake message to start tunnel
-		if err := stream.Send(&api.TunnelMessage{Id: id, Protocol: "udp", GuestAddr: guestAddr}); err != nil {
-			return nil, fmt.Errorf("could not start udp tunnel for id: %s error:%w", id, err)
-		}
-		rw := &GrpcClientRW{stream: stream, id: id, addr: guestAddr, protocol: "udp"}
-		return rw, nil
+		return dialContext(ctx, "udp", guestAddr)
 	})
 	if err != nil {
-		logrus.Errorf("error in udp tunnel proxy for id: %s error:%v", initialID, err)
+		logrus.WithError(err).Error("error in udp tunnel proxy")
 		return
 	}
 
 	defer func() {
 		err := proxy.Close()
 		if err != nil {
-			logrus.Errorf("error in closing udp tunnel proxy for id: %s error:%v", initialID, err)
+			logrus.WithError(err).Error("error in closing udp tunnel proxy")
 		}
 	}()
 	proxy.Run()
+}
+
+func DialContextToGRPCTunnel(client *guestagentclient.GuestAgentClient) func(ctx context.Context, network, addr string) (net.Conn, error) {
+	// gvisor-tap-vsock's UDPProxy demultiplexes client connections internally based on their source address.
+	// It calls this dialer function only when it receives a datagram from a new, unrecognized client.
+	// For each new client, we must return a new net.Conn, which in our case is a new gRPC stream.
+	// The atomic counter ensures that each stream has a unique ID to distinguish them on the server side.
+	var connectionCounter atomic.Uint32
+	return func(_ context.Context, network, addr string) (net.Conn, error) {
+		// Passed context.Context is used for timeout on initiate connection, not for the lifetime of the connection.
+		// We use context.Background() here to avoid unexpected cancellation.
+		stream, err := client.Tunnel(context.Background())
+		if err != nil {
+			return nil, fmt.Errorf("could not open tunnel for addr: %s error:%w", addr, err)
+		}
+		// Handshake message to start tunnel
+		id := fmt.Sprintf("%s-%s-%d", network, addr, connectionCounter.Add(1))
+		if err := stream.Send(&api.TunnelMessage{Id: id, Protocol: network, GuestAddr: addr}); err != nil {
+			return nil, fmt.Errorf("could not start tunnel for id: %s addr: %s error:%w", id, addr, err)
+		}
+		rw := &GrpcClientRW{stream: stream, id: id, addr: addr, protocol: network}
+		return rw, nil
+	}
 }
 
 type GrpcClientRW struct {

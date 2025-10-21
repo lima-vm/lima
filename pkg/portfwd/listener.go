@@ -14,8 +14,6 @@ import (
 	"sync"
 
 	"github.com/sirupsen/logrus"
-
-	guestagentclient "github.com/lima-vm/lima/v2/pkg/guestagent/api/client"
 )
 
 type ClosableListeners struct {
@@ -59,14 +57,14 @@ func (p *ClosableListeners) Close() error {
 	return errors.Join(errs...)
 }
 
-func (p *ClosableListeners) Forward(ctx context.Context, client *guestagentclient.GuestAgentClient,
+func (p *ClosableListeners) Forward(ctx context.Context, dialContext func(ctx context.Context, network string, addr string) (net.Conn, error),
 	protocol string, hostAddress string, guestAddress string,
 ) {
 	switch protocol {
 	case "tcp", "tcp6":
-		go p.forwardTCP(ctx, client, hostAddress, guestAddress)
+		go p.forwardTCP(ctx, dialContext, hostAddress, guestAddress)
 	case "udp", "udp6":
-		go p.forwardUDP(ctx, client, hostAddress, guestAddress)
+		go p.forwardUDP(ctx, dialContext, hostAddress, guestAddress)
 	}
 }
 
@@ -93,7 +91,7 @@ func (p *ClosableListeners) Remove(_ context.Context, protocol, hostAddress, gue
 	}
 }
 
-func (p *ClosableListeners) forwardTCP(ctx context.Context, client *guestagentclient.GuestAgentClient, hostAddress, guestAddress string) {
+func (p *ClosableListeners) forwardTCP(ctx context.Context, dialContext func(ctx context.Context, network string, addr string) (net.Conn, error), hostAddress, guestAddress string) {
 	key := key("tcp", hostAddress, guestAddress)
 
 	p.listenersRW.Lock()
@@ -124,11 +122,11 @@ func (p *ClosableListeners) forwardTCP(ctx context.Context, client *guestagentcl
 			}
 			return
 		}
-		go HandleTCPConnection(ctx, client, conn, guestAddress)
+		go HandleTCPConnection(ctx, dialContext, conn, guestAddress)
 	}
 }
 
-func (p *ClosableListeners) forwardUDP(ctx context.Context, client *guestagentclient.GuestAgentClient, hostAddress, guestAddress string) {
+func (p *ClosableListeners) forwardUDP(ctx context.Context, dialContext func(ctx context.Context, network string, addr string) (net.Conn, error), hostAddress, guestAddress string) {
 	key := key("udp", hostAddress, guestAddress)
 	defer p.Remove(ctx, "udp", hostAddress, guestAddress)
 
@@ -148,7 +146,7 @@ func (p *ClosableListeners) forwardUDP(ctx context.Context, client *guestagentcl
 	p.udpListeners[key] = udpConn
 	p.udpListenersRW.Unlock()
 
-	HandleUDPConnection(ctx, client, udpConn, guestAddress)
+	HandleUDPConnection(ctx, dialContext, udpConn, guestAddress)
 }
 
 func key(protocol, hostAddress, guestAddress string) string {
