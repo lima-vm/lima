@@ -183,6 +183,7 @@ jobs:
         $env:HOME_GUEST = "/mnt$env:HOME_HOST"
         $env:LIMACTL_CREATE_ARGS = '--vm-type=wsl2 --mount-type=wsl2 --containerd=system'
         $env:_LIMA_WINDOWS_EXTRA_PATH = 'C:\Program Files\Git\usr\bin'
+        $env:LIMA_SSH_PORT_FORWARDER = 'true'
         bash.exe -c "./hack/test-templates.sh templates/experimental/wsl2.yaml"
 
   windows-qemu:
@@ -212,6 +213,7 @@ jobs:
         $env:HOME_GUEST = "$env:HOME_HOST"
         $env:LIMACTL_CREATE_ARGS = '--vm-type=qemu'
         $env:_LIMA_WINDOWS_EXTRA_PATH = 'C:\Program Files\Git\usr\bin'
+        $env:LIMA_SSH_PORT_FORWARDER = 'true'
         bash.exe -c "./hack/test-templates.sh templates/default.yaml"
 
   qemu:
