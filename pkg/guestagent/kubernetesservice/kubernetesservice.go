@@ -82,6 +82,7 @@ func (s *ServiceWatcher) Start(ctx context.Context) {
 func tryGetKubeClient() (kubernetes.Interface, error) {
 	candidateKubeConfigs := []string{
 		"/etc/rancher/k3s/k3s.yaml",
+		"/root/.kube/config.localhost", // Created by template:k8s
 		"/root/.kube/config",
 	}
 

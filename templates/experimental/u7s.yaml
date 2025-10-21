@@ -54,7 +54,7 @@ provision:
     set -eux -o pipefail
     test -e ~/usernetes/kubeconfig && exit 0
     cd ~/usernetes
-    export KUBECONFIG=./kubeconfig
+    export KUBECONFIG="$(pwd)/kubeconfig"
     patch --forward -r - kubeadm-config.yaml <<EOF
     @@ -7,6 +7,9 @@
      ---
@@ -75,9 +75,12 @@ provision:
     # Control plane node isolation
     make kubeconfig
     kubectl taint nodes --all node-role.kubernetes.io/control-plane-
-    # Replace the server address with localhost, so that it works also from the host
-    sed -e "/server:/ s|https://.*:\([0-9]*\)$|https://127.0.0.1:\1|" -i $KUBECONFIG
-    mkdir -p ~/.kube && cp -f $KUBECONFIG ~/.kube/config
+    # Symlink the kubeconfig file to the default location for kubectl
+    mkdir -p ~/.kube && ln -sf $KUBECONFIG ~/.kube/config
+    # Replace the server address with localhost, so that it works from the host.
+    # The original kubeconfig is kept unmodified, so that `kubeadm token create --print-join-command`
+    # can still print the reachable address.
+    sed -e "/server:/ s|https://.*:\([0-9]*\)$|https://127.0.0.1:\1|" $KUBECONFIG >kubeconfig.localhost
 probes:
 - description: "kubectl to be installed"
   script: |
@@ -113,7 +116,7 @@ probes:
     set -eux -o pipefail
     kubectl wait -n kube-system --timeout=180s --for=condition=available deploy coredns
 copyToHost:
-- guest: "{{.Home}}/usernetes/kubeconfig"
+- guest: "{{.Home}}/usernetes/kubeconfig.localhost"
   host: "{{.Dir}}/copied-from-guest/kubeconfig.yaml"
   deleteOnStop: true
 message: |
