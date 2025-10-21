@@ -102,6 +102,15 @@ elif command -v dnf >/dev/null 2>&1; then
 			dnf install ${dnf_install_flags} oracle-epel-release-el9
 			dnf config-manager --disable ol9_developer_EPEL >/dev/null 2>&1
 			epel_install_flags="${epel_install_flags} --enablerepo ol9_developer_EPEL"
+		elif grep -q "Oracle Linux Server release 10" /etc/system-release; then
+			oraclelinux_version="$(awk '{print $5}' /etc/system-release)"
+			oraclelinux_version_major=$(echo "$oraclelinux_version" | cut -d. -f1)
+			oraclelinux_version_minor=$(echo "$oraclelinux_version" | cut -d. -f2)
+			oraclelinux_epel_repo="ol${oraclelinux_version_major}_u${oraclelinux_version_minor}_developer_EPEL"
+			# shellcheck disable=SC2086
+			dnf install ${dnf_install_flags} oracle-epel-release-el${oraclelinux_version_major}
+			dnf config-manager --disable "$oraclelinux_epel_repo" >/dev/null 2>&1 || true
+			epel_install_flags="${epel_install_flags} --enablerepo $oraclelinux_epel_repo"
 		elif grep -q -E "release (9|10)" /etc/system-release; then
 			# shellcheck disable=SC2086
 			dnf install ${dnf_install_flags} epel-release

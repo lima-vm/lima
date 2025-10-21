@@ -27,7 +27,8 @@ Distro:
 - [`opensuse-leap-15`](./opensuse-leap-15.yaml): openSUSE Leap 15
 - [`opensuse-leap-16`](./opensuse-leap-16.yaml), `opensuse-leap.yaml`, `opensuse.yaml`: ⭐openSUSE Leap 16
 - [`oraclelinux-8`](./oraclelinux-8.yaml): Oracle Linux 8
-- [`oraclelinux-9`](./oraclelinux-9.yaml), `oraclelinux.yaml`: Oracle Linux 9
+- [`oraclelinux-9`](./oraclelinux-9.yaml): Oracle Linux 9
+- [`oraclelinux-10`](./oraclelinux-10.yaml), `oraclelinux.yaml`: Oracle Linux 10
 - [`rocky-8`](./rocky-8.yaml): Rocky Linux 8
 - [`rocky-9`](./rocky-9.yaml): Rocky Linux 9
 - [`rocky-10`](./rocky-10.yaml), `rocky.yaml`: Rocky Linux 10
