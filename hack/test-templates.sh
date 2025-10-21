@@ -489,7 +489,7 @@ if [[ -n ${CHECKS["port-forwards"]} ]]; then
 				limactl shell "$NAME" $sudo $CONTAINER_ENGINE rm -f nginx
 			fi
 		fi
-		if [[ ${NAME} != "alpine"* && ${NAME} != "wsl2"* ]] && command -v w3m >/dev/null; then
+		if [[ ${NAME} != "alpine"* ]] && command -v w3m >/dev/null; then
 			INFO "Testing https://github.com/lima-vm/lima/issues/3685 ([gRPC portfwd] client connection is not closed immediately when server closed the connection)"
 			# Skip the test on Alpine, as systemd-run is missing
 			# Skip the test on WSL2, as port forwarding is half broken https://github.com/lima-vm/lima/pull/3686#issuecomment-3034842616
