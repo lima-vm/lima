@@ -1,0 +1,11 @@
+# Oracle image license: https://www.oracle.com/downloads/licenses/oracle-linux-license.html
+# Image source: https://yum.oracle.com/oracle-linux-templates.html
+
+images:
+- location: "https://yum.oracle.com/templates/OracleLinux/OL10/u0/x86_64/OL10U0_x86_64-kvm-b266.qcow2"
+  arch: "x86_64"
+  digest: "sha256:f88b0f73a5a48cbcb23a72cae33c93847c10fd183de6527ddf1ae807a84ca19e"
+- location: "https://yum.oracle.com/templates/OracleLinux/OL10/u0/aarch64/OL10U0_aarch64-kvm-cloud-b143.qcow2"
+  arch: "aarch64"
+  digest: "sha256:cd6c154d08c61630160791ba247a0fc61a613dd7c5addec8b91672252fe49ed2"
+mountTypesUnsupported: [9p]

@@ -27,13 +27,17 @@ Description:
 
   Published Oracle Linux image information is fetched from the following URLs:
 
-    OL8:
+	OL8:
 	  x86_64: https://yum.oracle.com/templates/OracleLinux/ol8-template.json
 	  aarch64: https://yum.oracle.com/templates/OracleLinux/ol8_aarch64-cloud-template.json
 	  
 	OL9:
 	  x86_64: https://yum.oracle.com/templates/OracleLinux/ol9-template.json
 	  aarch64: https://yum.oracle.com/templates/OracleLinux/ol9_aarch64-cloud-template.json
+
+	OL10:
+	  x86_64: https://yum.oracle.com/templates/OracleLinux/ol10-template.json
+	  aarch64: https://yum.oracle.com/templates/OracleLinux/ol10_aarch64-cloud-template.json
 
   The downloaded files will be cached in the Lima cache directory.
 
