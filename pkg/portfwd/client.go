@@ -21,6 +21,7 @@ import (
 func HandleTCPConnection(_ context.Context, dialContext func(ctx context.Context, network string, addr string) (net.Conn, error), conn net.Conn, guestAddr string) {
 	proxy := tcpproxy.DialProxy{Addr: guestAddr, DialContext: dialContext}
 	proxy.HandleConn(conn)
+	logrus.Debugf("tcp proxy for guestAddr: %s closed", guestAddr)
 }
 
 func HandleUDPConnection(ctx context.Context, dialContext func(ctx context.Context, network string, addr string) (net.Conn, error), conn net.PacketConn, guestAddr string) {
@@ -39,6 +40,7 @@ func HandleUDPConnection(ctx context.Context, dialContext func(ctx context.Conte
 		}
 	}()
 	proxy.Run()
+	logrus.Debugf("udp proxy for guestAddr: %s closed", guestAddr)
 }
 
 func DialContextToGRPCTunnel(client *guestagentclient.GuestAgentClient) func(ctx context.Context, network, addr string) (net.Conn, error) {
@@ -97,6 +99,7 @@ func (g *GrpcClientRW) Read(p []byte) (n int, err error) {
 }
 
 func (g *GrpcClientRW) Close() error {
+	logrus.Debugf("closing GrpcClientRW for id: %s", g.id)
 	return g.stream.CloseSend()
 }
 
