@@ -21,14 +21,18 @@ type GuestAgentClient struct {
 
 func NewGuestAgentClient(dialFn func(ctx context.Context) (net.Conn, error)) (*GuestAgentClient, error) {
 	opts := []grpc.DialOption{
+		grpc.WithTransportCredentials(NewCredentials()),
+		grpc.WithInitialWindowSize(512 << 20),
+		grpc.WithInitialConnWindowSize(512 << 20),
+		grpc.WithReadBufferSize(8 << 20),
+		grpc.WithWriteBufferSize(8 << 20),
 		grpc.WithDefaultCallOptions(
-			grpc.MaxCallRecvMsgSize(math.MaxInt64),
-			grpc.MaxCallSendMsgSize(math.MaxInt64),
+			grpc.MaxCallRecvMsgSize(math.MaxInt32),
+			grpc.MaxCallSendMsgSize(math.MaxInt32),
 		),
 		grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) {
 			return dialFn(ctx)
 		}),
-		grpc.WithTransportCredentials(NewCredentials()),
 	}
 
 	resolver.SetDefaultScheme("passthrough")

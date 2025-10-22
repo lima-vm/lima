@@ -8,6 +8,7 @@ import (
 	"net"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/keepalive"
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/lima-vm/lima/v2/pkg/guestagent"
@@ -16,7 +17,14 @@ import (
 )
 
 func StartServer(lis net.Listener, guest *GuestServer) error {
-	server := grpc.NewServer()
+	server := grpc.NewServer(
+		grpc.InitialWindowSize(512<<20),
+		grpc.InitialConnWindowSize(512<<20),
+		grpc.ReadBufferSize(8<<20),
+		grpc.WriteBufferSize(8<<20),
+		grpc.MaxConcurrentStreams(2048),
+		grpc.KeepaliveParams(keepalive.ServerParameters{Time: 0, Timeout: 0, MaxConnectionIdle: 0}),
+	)
 	api.RegisterGuestServiceServer(server, guest)
 	return server.Serve(lis)
 }
