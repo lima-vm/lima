@@ -3,23 +3,7 @@
 
 name: Release
 on:
-  # paths-ignore should be kept in sync with test.yml
-  push:
-    branches:
-    - 'master'
-    tags:
-    - 'v*'
-    paths-ignore:
-    - "docs/**"
-    - "website/**"
-    - "**.md"
-  pull_request:
-    branches:
-    - 'master'
-    paths-ignore:
-    - "docs/**"
-    - "website/**"
-    - "**.md"
+  workflow_dispatch:
 env:
   GO111MODULE: on
   GOTOOLCHAIN: local

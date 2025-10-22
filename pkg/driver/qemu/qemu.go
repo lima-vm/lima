@@ -529,7 +529,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	}
 
 	// CPU
-	cpu := resolveCPUType(y)
+    cpu := "max,pauth=off"
 	if runtime.GOOS == "darwin" && runtime.GOARCH == "amd64" {
 		switch {
 		case strings.HasPrefix(cpu, "host"), strings.HasPrefix(cpu, "max"):
@@ -1121,25 +1121,6 @@ func Exe(arch limatype.Arch) (exe string, args []string, err error) {
 }
 
 func Accel(arch limatype.Arch) string {
-	if limayaml.IsNativeArch(arch) {
-		switch runtime.GOOS {
-		case "darwin":
-			// TODO: return "tcg" if HVF is not available
-			return "hvf"
-		case "linux":
-			if _, err := os.Stat("/dev/kvm"); err != nil {
-				logrus.WithError(err).Warn("/dev/kvm is not available. Disabling KVM. Expect very poor performance.")
-				return "tcg"
-			}
-			return "kvm"
-		case "netbsd":
-			return "nvmm"
-		case "dragonfly":
-			return "nvmm"
-		case "windows":
-			return "whpx"
-		}
-	}
 	return "tcg"
 }
 
