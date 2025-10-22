@@ -28,6 +28,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/textutil"
+	current "github.com/lima-vm/lima/v2/pkg/version"
 	"github.com/lima-vm/lima/v2/pkg/version/versionutil"
 )
 
@@ -135,9 +136,11 @@ func Inspect(ctx context.Context, instName string) (*limatype.Instance, error) {
 	}
 
 	limaVersionFile := filepath.Join(instDir, filenames.LimaVersion)
-	if version, err := os.ReadFile(limaVersionFile); err == nil {
-		inst.LimaVersion = strings.TrimSpace(string(version))
-		if _, err = versionutil.Parse(inst.LimaVersion); err != nil {
+	if versionBytes, err := os.ReadFile(limaVersionFile); err == nil {
+		inst.LimaVersion = strings.TrimSpace(string(versionBytes))
+		if inst.LimaVersion == current.Version { // revive:disable-line:empty-block
+			// Suppress the warning when the instance was created with the current version.
+		} else if _, err = versionutil.Parse(inst.LimaVersion); err != nil {
 			logrus.Warnf("treating lima version %q from %q as very latest release", inst.LimaVersion, limaVersionFile)
 		}
 	} else if !errors.Is(err, os.ErrNotExist) {
