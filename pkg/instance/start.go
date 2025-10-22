@@ -104,7 +104,7 @@ func Prepare(ctx context.Context, inst *limatype.Instance, guestAgent string) (*
 			ensuredBaseDisk = true
 			break
 		}
-		if !ensuredBaseDisk {
+		if !ensuredBaseDisk && *inst.Config.VMType != limatype.EXT {
 			return nil, fileutils.Errors(errs)
 		}
 	}
@@ -116,6 +116,11 @@ func Prepare(ctx context.Context, inst *limatype.Instance, guestAgent string) (*
 	// Ensure diffDisk size matches the store
 	if err := prepareDiffDisk(ctx, inst); err != nil {
 		return nil, err
+	}
+
+	if *inst.Config.VMType == limatype.EXT {
+		// Created externally
+		created = true
 	}
 
 	nerdctlArchiveCache, err := cacheutil.EnsureNerdctlArchiveCache(ctx, inst.Config, created)
@@ -285,7 +290,13 @@ func watchHostAgentEvents(ctx context.Context, inst *limatype.Instance, haStdout
 
 	onEvent := func(ev hostagentevents.Event) bool {
 		if !printedSSHLocalPort && ev.Status.SSHLocalPort != 0 {
-			logrus.Infof("SSH Local Port: %d", ev.Status.SSHLocalPort)
+			if ev.Status.SSHIPAddress == "127.0.0.1" {
+				logrus.Infof("SSH Local Port: %d", ev.Status.SSHLocalPort)
+			} else if ev.Status.SSHLocalPort == 22 {
+				logrus.Infof("SSH IP Address: %s", ev.Status.SSHIPAddress)
+			} else {
+				logrus.Infof("SSH IP Address: %s Port: %d", ev.Status.SSHIPAddress, ev.Status.SSHLocalPort)
+			}
 			printedSSHLocalPort = true
 
 			// Update the instance's SSH port
