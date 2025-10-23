@@ -373,7 +373,9 @@ func SSHArgsFromOpts(opts []string) []string {
 
 // SSHOptsRemovingControlPath removes ControlMaster, ControlPath, and ControlPersist options from SSH options.
 func SSHOptsRemovingControlPath(opts []string) []string {
-	return slices.DeleteFunc(opts, func(s string) bool {
+	// Create a copy of opts to avoid modifying the original slice, since slices.DeleteFunc modifies the slice in place.
+	copiedOpts := slices.Clone(opts)
+	return slices.DeleteFunc(copiedOpts, func(s string) bool {
 		return strings.HasPrefix(s, "ControlMaster") || strings.HasPrefix(s, "ControlPath") || strings.HasPrefix(s, "ControlPersist")
 	})
 }
