@@ -52,28 +52,26 @@ type virtualMachineWrapper struct {
 // Hold all *os.File created via socketpair() so that they won't get garbage collected. f.FD() gets invalid if f gets garbage collected.
 var vmNetworkFiles = make([]*os.File, 1)
 
-func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int) (*virtualMachineWrapper, chan error, error) {
+func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int) (*virtualMachineWrapper, <-chan any, chan error, error) {
 	usernetClient, stopUsernet, err := startUsernet(ctx, inst)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	machine, err := createVM(ctx, inst)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	err = machine.Start()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	wrapper := &virtualMachineWrapper{VirtualMachine: machine, stopped: false}
-
+	waitSSHLocalPortAccessible := make(chan any)
 	errCh := make(chan error)
 
-	waitSSHLocalPortAccessible := make(chan struct{})
-	defer close(waitSSHLocalPortAccessible)
 	go func() {
 		// Handle errors via errCh and handle stop vm during context close
 		defer func() {
@@ -103,34 +101,36 @@ func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int) (*v
 					}
 					logrus.Info("[VZ] - vm state change: running")
 
-					usernetSSHLocalPort := sshLocalPort
-					useSSHOverVsock := true
-					if envVar := os.Getenv("LIMA_SSH_OVER_VSOCK"); envVar != "" {
-						b, err := strconv.ParseBool(envVar)
+					go func() {
+						defer close(waitSSHLocalPortAccessible)
+						usernetSSHLocalPort := sshLocalPort
+						useSSHOverVsock := true
+						if envVar := os.Getenv("LIMA_SSH_OVER_VSOCK"); envVar != "" {
+							b, err := strconv.ParseBool(envVar)
+							if err != nil {
+								logrus.WithError(err).Warnf("invalid LIMA_SSH_OVER_VSOCK value %q", envVar)
+							} else {
+								useSSHOverVsock = b
+							}
+						}
+						if !useSSHOverVsock {
+							logrus.Info("LIMA_SSH_OVER_VSOCK is false, skipping detection of SSH server on vsock port")
+						} else if err := usernetClient.WaitOpeningSSHPort(ctx, inst); err == nil {
+							hostAddress := net.JoinHostPort(inst.SSHAddress, strconv.Itoa(usernetSSHLocalPort))
+							if err := wrapper.startVsockForwarder(ctx, 22, hostAddress); err == nil {
+								logrus.Infof("Detected SSH server is listening on the vsock port; changed %s to proxy for the vsock port", hostAddress)
+								usernetSSHLocalPort = 0 // disable gvisor ssh port forwarding
+							} else {
+								logrus.WithError(err).Warn("Failed to detect SSH server on vsock port, falling back to usernet forwarder")
+							}
+						} else {
+							logrus.WithError(err).Warn("Failed to wait for the guest SSH server to become available, falling back to usernet forwarder")
+						}
+						err := usernetClient.ConfigureDriver(ctx, inst, usernetSSHLocalPort)
 						if err != nil {
-							logrus.WithError(err).Warnf("invalid LIMA_SSH_OVER_VSOCK value %q", envVar)
-						} else {
-							useSSHOverVsock = b
+							errCh <- err
 						}
-					}
-					if !useSSHOverVsock {
-						logrus.Info("LIMA_SSH_OVER_VSOCK is false, skipping detection of SSH server on vsock port")
-					} else if err := usernetClient.WaitOpeningSSHPort(ctx, inst); err == nil {
-						hostAddress := net.JoinHostPort(inst.SSHAddress, strconv.Itoa(usernetSSHLocalPort))
-						if err := wrapper.startVsockForwarder(ctx, 22, hostAddress); err == nil {
-							logrus.Infof("Detected SSH server is listening on the vsock port; changed %s to proxy for the vsock port", hostAddress)
-							usernetSSHLocalPort = 0 // disable gvisor ssh port forwarding
-						} else {
-							logrus.WithError(err).Warn("Failed to detect SSH server on vsock port, falling back to usernet forwarder")
-						}
-					} else {
-						logrus.WithError(err).Warn("Failed to wait for the guest SSH server to become available, falling back to usernet forwarder")
-					}
-					err := usernetClient.ConfigureDriver(ctx, inst, usernetSSHLocalPort)
-					if err != nil {
-						errCh <- err
-					}
-					waitSSHLocalPortAccessible <- struct{}{}
+					}()
 				case vz.VirtualMachineStateStopped:
 					logrus.Info("[VZ] - vm state change: stopped")
 					wrapper.mu.Lock()
@@ -147,8 +147,7 @@ func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int) (*v
 			}
 		}
 	}()
-	<-waitSSHLocalPortAccessible
-	return wrapper, errCh, err
+	return wrapper, waitSSHLocalPortAccessible, errCh, err
 }
 
 func startUsernet(ctx context.Context, inst *limatype.Instance) (*usernet.Client, context.CancelFunc, error) {
