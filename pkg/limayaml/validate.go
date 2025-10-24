@@ -274,7 +274,7 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 				errs = errors.Join(errs, fmt.Errorf("field `probe[%d].file.digest` support is not yet implemented", i))
 			}
 		}
-		if !strings.HasPrefix(p.Script, "#!") {
+		if p.Script != nil && !strings.HasPrefix(*p.Script, "#!") {
 			errs = errors.Join(errs, fmt.Errorf("field `probe[%d].script` must start with a '#!' line", i))
 		}
 		switch p.Mode {
@@ -541,7 +541,7 @@ func validateParamIsUsed(y *limatype.LimaYAML) error {
 			}
 		}
 		for _, p := range y.Probes {
-			if re.MatchString(p.Script) {
+			if p.Script != nil && re.MatchString(*p.Script) {
 				keyIsUsed = true
 				break
 			}

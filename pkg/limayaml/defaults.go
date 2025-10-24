@@ -439,7 +439,10 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 				provision.Permissions = ptr.Of("644")
 			}
 		}
-		if provision.Script != nil && *provision.Script != "" {
+		if provision.Script == nil {
+			provision.Script = ptr.Of("")
+		}
+		if *provision.Script != "" {
 			if out, err := executeGuestTemplate(*provision.Script, instDir, y.User, y.Param); err == nil {
 				*provision.Script = out.String()
 			} else {
@@ -512,10 +515,13 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		if probe.Description == "" {
 			probe.Description = fmt.Sprintf("user probe %d/%d", i+1, len(y.Probes))
 		}
-		if out, err := executeGuestTemplate(probe.Script, instDir, y.User, y.Param); err == nil {
-			probe.Script = out.String()
+		if probe.Script == nil {
+			probe.Script = ptr.Of("")
+		}
+		if out, err := executeGuestTemplate(*probe.Script, instDir, y.User, y.Param); err == nil {
+			probe.Script = ptr.Of(out.String())
 		} else {
-			logrus.WithError(err).Warnf("Couldn't process probing script %q as a template", probe.Script)
+			logrus.WithError(err).Warnf("Couldn't process probing script %q as a template", *probe.Script)
 		}
 	}
 

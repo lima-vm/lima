@@ -241,7 +241,7 @@ Also see "/var/log/cloud-init-output.log" in the guest.
 		if probe.Mode == limatype.ProbeModeReadiness {
 			req = append(req, requirement{
 				description: probe.Description,
-				script:      probe.Script,
+				script:      *probe.Script,
 				debugHint:   probe.Hint,
 			})
 		}
