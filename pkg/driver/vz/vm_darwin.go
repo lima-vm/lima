@@ -52,7 +52,7 @@ type virtualMachineWrapper struct {
 // Hold all *os.File created via socketpair() so that they won't get garbage collected. f.FD() gets invalid if f gets garbage collected.
 var vmNetworkFiles = make([]*os.File, 1)
 
-func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int) (*virtualMachineWrapper, <-chan any, chan error, error) {
+func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int) (vm *virtualMachineWrapper, waitSSHLocalPortAccessible <-chan any, errCh chan error, err error) {
 	usernetClient, stopUsernet, err := startUsernet(ctx, inst)
 	if err != nil {
 		return nil, nil, nil, err
@@ -69,8 +69,8 @@ func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int) (*v
 	}
 
 	wrapper := &virtualMachineWrapper{VirtualMachine: machine, stopped: false}
-	waitSSHLocalPortAccessible := make(chan any)
-	errCh := make(chan error)
+	notifySSHLocalPortAccessible := make(chan any)
+	sendErrCh := make(chan error)
 
 	go func() {
 		// Handle errors via errCh and handle stop vm during context close
@@ -93,16 +93,16 @@ func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int) (*v
 					pidFile := filepath.Join(inst.Dir, filenames.PIDFile(*inst.Config.VMType))
 					if _, err := os.Stat(pidFile); !errors.Is(err, os.ErrNotExist) {
 						logrus.Errorf("pidfile %q already exists", pidFile)
-						errCh <- err
+						sendErrCh <- err
 					}
 					if err := os.WriteFile(pidFile, []byte(strconv.Itoa(os.Getpid())+"\n"), 0o644); err != nil {
 						logrus.Errorf("error writing to pid fil %q", pidFile)
-						errCh <- err
+						sendErrCh <- err
 					}
 					logrus.Info("[VZ] - vm state change: running")
 
 					go func() {
-						defer close(waitSSHLocalPortAccessible)
+						defer close(notifySSHLocalPortAccessible)
 						usernetSSHLocalPort := sshLocalPort
 						useSSHOverVsock := true
 						if envVar := os.Getenv("LIMA_SSH_OVER_VSOCK"); envVar != "" {
@@ -128,7 +128,7 @@ func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int) (*v
 						}
 						err := usernetClient.ConfigureDriver(ctx, inst, usernetSSHLocalPort)
 						if err != nil {
-							errCh <- err
+							sendErrCh <- err
 						}
 					}()
 				case vz.VirtualMachineStateStopped:
@@ -140,14 +140,14 @@ func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int) (*v
 					if stopUsernet != nil {
 						stopUsernet()
 					}
-					errCh <- errors.New("vz driver state stopped")
+					sendErrCh <- errors.New("vz driver state stopped")
 				default:
 					logrus.Debugf("[VZ] - vm state change: %q", newState)
 				}
 			}
 		}
 	}()
-	return wrapper, waitSSHLocalPortAccessible, errCh, err
+	return wrapper, notifySSHLocalPortAccessible, sendErrCh, err
 }
 
 func startUsernet(ctx context.Context, inst *limatype.Instance) (*usernet.Client, context.CancelFunc, error) {
