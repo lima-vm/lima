@@ -9,10 +9,7 @@ base:
 #
 # NOTE: Starting with Lima v2.0, nerdctl version must be v2.1.6 or later to
 # enable port forwarding in rootful mode.
-# As of the time of releasing Lima v2.0, nerdctl v2.1.6 or later is not yet
-# available in the official Alpine package repository (`apk add`).
-# See <https://github.com/containerd/nerdctl/releases> for installing
-# the latest version of nerdctl from the binary or the source.
+# Available in apk since Alpine 3.22.
 containerd:
   system: false
   user: false
