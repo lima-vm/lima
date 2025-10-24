@@ -50,15 +50,35 @@ k() {
 
 # bats test_tags=nodes:1
 @test 'Single-node' {
-    k create deployment nginx --image="${TEST_CONTAINER_IMAGES["nginx"]}"
-    k rollout status deployment nginx --timeout 60s
+    # Deploy test services
+    services=(nginx coredns)
+    for svc in "${services[@]}"; do
+        k create deployment "$svc" --image="${TEST_CONTAINER_IMAGES["$svc"]}"
+    done
+    for svc in "${services[@]}"; do
+        k rollout status deployment "$svc" --timeout 60s
+    done
+
+    # Test TCP port forwarding
     k create service nodeport nginx --node-port=31080 --tcp=80:80
     run curl --fail --silent --show-error --retry 30 --retry-all-errors http://localhost:31080
     assert_success
     assert_output --partial "Welcome to nginx"
-    # TODO: support UDP
-    k delete service nginx
-    k delete deployment nginx
+
+    # Test UDP port forwarding
+    #
+    # `kubectl create service nodeport` does not support UDP, so use `kubectl expose` instead.
+    # https://github.com/kubernetes/kubernetes/issues/134732
+    k expose deployment coredns --port=53 --type=NodePort \
+        --overrides='{"spec":{"ports":[{"port":53,"protocol":"UDP","targetPort":53,"nodePort":32053}]}}'
+    run dig @127.0.0.1 -p 32053 lima-vm.io
+    assert_success
+
+    # Cleanup
+    for svc in "${services[@]}"; do
+        k delete service "$svc"
+        k delete deployment "$svc"
+    done
 }
 
 # TODO: add a test for multi-node

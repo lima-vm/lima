@@ -58,6 +58,13 @@ func TestGetPorts(t *testing.T) {
 							TargetPort: intstr.FromInt(80),
 							NodePort:   8080,
 						},
+						{
+							Name:       "dns",
+							Protocol:   corev1.ProtocolUDP,
+							Port:       53,
+							TargetPort: intstr.FromInt(53),
+							NodePort:   5353,
+						},
 					},
 				},
 			},
@@ -65,6 +72,10 @@ func TestGetPorts(t *testing.T) {
 				Protocol: TCP,
 				IP:       net.IPv4zero,
 				Port:     8080,
+			}, {
+				Protocol: UDP,
+				IP:       net.IPv4zero,
+				Port:     5353,
 			}},
 		},
 		{
