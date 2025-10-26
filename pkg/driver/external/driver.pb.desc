@@ -1,5 +1,5 @@
 
-ý
+Æ
 driver.protogoogle/protobuf/empty.proto"Ž
 BootScriptsResponse;
 scripts (2!.BootScriptsResponse.ScriptsEntryRscripts:
@@ -30,7 +30,7 @@ connection")
 ListSnapshotsResponse
 	snapshots (	R	snapshots"B
 ForwardGuestAgentResponse%
-should_forward (RshouldForward2©	
+should_forward (RshouldForward2ò	
 Driver:
 Validate.google.protobuf.Empty.google.protobuf.Empty8
 Create.google.protobuf.Empty.google.protobuf.Empty<
@@ -52,4 +52,5 @@ CreateDisk.google.protobuf.Empty.google.protobuf.Empty1
 	Configure.SetConfigRequest.google.protobuf.Empty-
 Info.google.protobuf.Empty.InfoResponse9
 
-SSHAddress.google.protobuf.Empty.SSHAddressResponseB0Z.github.com/lima-vm/lima/v2/pkg/driver/externalbproto3
+SSHAddress.google.protobuf.Empty.SSHAddressResponseG
+AdditionalSetupForSSH.google.protobuf.Empty.google.protobuf.EmptyB0Z.github.com/lima-vm/lima/v2/pkg/driver/externalbproto3

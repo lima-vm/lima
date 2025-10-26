@@ -52,6 +52,7 @@ func (m *mockDriver) FillConfig(_ context.Context, _ *limatype.LimaYAML, _ strin
 func (m *mockDriver) InspectStatus(_ context.Context, _ *limatype.Instance) string       { return "" }
 func (m *mockDriver) SSHAddress(_ context.Context) (string, error)                       { return "", nil }
 func (m *mockDriver) BootScripts() (map[string][]byte, error)                            { return nil, nil }
+func (m *mockDriver) AdditionalSetupForSSH(_ context.Context) error                      { return nil }
 
 func TestRegister(t *testing.T) {
 	BackupRegistry(t)

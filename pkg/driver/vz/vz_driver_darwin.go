@@ -80,7 +80,8 @@ type LimaVzDriver struct {
 	rosettaEnabled bool
 	rosettaBinFmt  bool
 
-	machine *virtualMachineWrapper
+	machine                    *virtualMachineWrapper
+	waitSSHLocalPortAccessible <-chan any
 }
 
 var _ driver.Driver = (*LimaVzDriver)(nil)
@@ -298,7 +299,7 @@ func (l *LimaVzDriver) CreateDisk(ctx context.Context) error {
 
 func (l *LimaVzDriver) Start(ctx context.Context) (chan error, error) {
 	logrus.Infof("Starting VZ (hint: to watch the boot progress, see %q)", filepath.Join(l.Instance.Dir, "serial*.log"))
-	vm, errCh, err := startVM(ctx, l.Instance, l.SSHLocalPort)
+	vm, waitSSHLocalPortAccessible, errCh, err := startVM(ctx, l.Instance, l.SSHLocalPort)
 	if err != nil {
 		if errors.Is(err, vz.ErrUnsupportedOSVersion) {
 			return nil, fmt.Errorf("vz driver requires macOS 13 or higher to run: %w", err)
@@ -306,6 +307,7 @@ func (l *LimaVzDriver) Start(ctx context.Context) (chan error, error) {
 		return nil, err
 	}
 	l.machine = vm
+	l.waitSSHLocalPortAccessible = waitSSHLocalPortAccessible
 
 	return errCh, nil
 }
@@ -436,4 +438,9 @@ func (l *LimaVzDriver) ListSnapshots(_ context.Context) (string, error) {
 func (l *LimaVzDriver) ForwardGuestAgent() bool {
 	// If driver is not providing, use host agent
 	return l.vSockPort == 0 && l.virtioPort == ""
+}
+
+func (l *LimaVzDriver) AdditionalSetupForSSH(_ context.Context) error {
+	<-l.waitSSHLocalPortAccessible
+	return nil
 }

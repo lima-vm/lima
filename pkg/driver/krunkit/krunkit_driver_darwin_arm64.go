@@ -353,3 +353,7 @@ func (l *LimaKrunkitDriver) Unregister(_ context.Context) error {
 func (l *LimaKrunkitDriver) GuestAgentConn(_ context.Context) (net.Conn, string, error) {
 	return nil, "unix", nil
 }
+
+func (l *LimaKrunkitDriver) AdditionalSetupForSSH(_ context.Context) error {
+	return nil
+}

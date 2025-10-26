@@ -592,7 +592,7 @@ const file_driver_proto_rawDesc = "" +
 	"\x15ListSnapshotsResponse\x12\x1c\n" +
 	"\tsnapshots\x18\x01 \x01(\tR\tsnapshots\"B\n" +
 	"\x19ForwardGuestAgentResponse\x12%\n" +
-	"\x0eshould_forward\x18\x01 \x01(\bR\rshouldForward2\xa9\t\n" +
+	"\x0eshould_forward\x18\x01 \x01(\bR\rshouldForward2\xf2\t\n" +
 	"\x06Driver\x12:\n" +
 	"\bValidate\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x128\n" +
 	"\x06Create\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x12<\n" +
@@ -614,7 +614,8 @@ const file_driver_proto_rawDesc = "" +
 	"\tConfigure\x12\x11.SetConfigRequest\x1a\x16.google.protobuf.Empty\x12-\n" +
 	"\x04Info\x12\x16.google.protobuf.Empty\x1a\r.InfoResponse\x129\n" +
 	"\n" +
-	"SSHAddress\x12\x16.google.protobuf.Empty\x1a\x13.SSHAddressResponseB0Z.github.com/lima-vm/lima/v2/pkg/driver/externalb\x06proto3"
+	"SSHAddress\x12\x16.google.protobuf.Empty\x1a\x13.SSHAddressResponse\x12G\n" +
+	"\x15AdditionalSetupForSSH\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.EmptyB0Z.github.com/lima-vm/lima/v2/pkg/driver/externalb\x06proto3"
 
 var (
 	file_driver_proto_rawDescOnce sync.Once
@@ -666,27 +667,29 @@ var file_driver_proto_depIdxs = []int32{
 	4,  // 17: Driver.Configure:input_type -> SetConfigRequest
 	13, // 18: Driver.Info:input_type -> google.protobuf.Empty
 	13, // 19: Driver.SSHAddress:input_type -> google.protobuf.Empty
-	13, // 20: Driver.Validate:output_type -> google.protobuf.Empty
-	13, // 21: Driver.Create:output_type -> google.protobuf.Empty
-	13, // 22: Driver.CreateDisk:output_type -> google.protobuf.Empty
-	3,  // 23: Driver.Start:output_type -> StartResponse
-	13, // 24: Driver.Stop:output_type -> google.protobuf.Empty
-	13, // 25: Driver.Delete:output_type -> google.protobuf.Empty
-	0,  // 26: Driver.BootScripts:output_type -> BootScriptsResponse
-	13, // 27: Driver.RunGUI:output_type -> google.protobuf.Empty
-	13, // 28: Driver.ChangeDisplayPassword:output_type -> google.protobuf.Empty
-	6,  // 29: Driver.GetDisplayConnection:output_type -> GetDisplayConnectionResponse
-	13, // 30: Driver.CreateSnapshot:output_type -> google.protobuf.Empty
-	13, // 31: Driver.ApplySnapshot:output_type -> google.protobuf.Empty
-	13, // 32: Driver.DeleteSnapshot:output_type -> google.protobuf.Empty
-	10, // 33: Driver.ListSnapshots:output_type -> ListSnapshotsResponse
-	11, // 34: Driver.ForwardGuestAgent:output_type -> ForwardGuestAgentResponse
-	13, // 35: Driver.GuestAgentConn:output_type -> google.protobuf.Empty
-	13, // 36: Driver.Configure:output_type -> google.protobuf.Empty
-	2,  // 37: Driver.Info:output_type -> InfoResponse
-	1,  // 38: Driver.SSHAddress:output_type -> SSHAddressResponse
-	20, // [20:39] is the sub-list for method output_type
-	1,  // [1:20] is the sub-list for method input_type
+	13, // 20: Driver.AdditionalSetupForSSH:input_type -> google.protobuf.Empty
+	13, // 21: Driver.Validate:output_type -> google.protobuf.Empty
+	13, // 22: Driver.Create:output_type -> google.protobuf.Empty
+	13, // 23: Driver.CreateDisk:output_type -> google.protobuf.Empty
+	3,  // 24: Driver.Start:output_type -> StartResponse
+	13, // 25: Driver.Stop:output_type -> google.protobuf.Empty
+	13, // 26: Driver.Delete:output_type -> google.protobuf.Empty
+	0,  // 27: Driver.BootScripts:output_type -> BootScriptsResponse
+	13, // 28: Driver.RunGUI:output_type -> google.protobuf.Empty
+	13, // 29: Driver.ChangeDisplayPassword:output_type -> google.protobuf.Empty
+	6,  // 30: Driver.GetDisplayConnection:output_type -> GetDisplayConnectionResponse
+	13, // 31: Driver.CreateSnapshot:output_type -> google.protobuf.Empty
+	13, // 32: Driver.ApplySnapshot:output_type -> google.protobuf.Empty
+	13, // 33: Driver.DeleteSnapshot:output_type -> google.protobuf.Empty
+	10, // 34: Driver.ListSnapshots:output_type -> ListSnapshotsResponse
+	11, // 35: Driver.ForwardGuestAgent:output_type -> ForwardGuestAgentResponse
+	13, // 36: Driver.GuestAgentConn:output_type -> google.protobuf.Empty
+	13, // 37: Driver.Configure:output_type -> google.protobuf.Empty
+	2,  // 38: Driver.Info:output_type -> InfoResponse
+	1,  // 39: Driver.SSHAddress:output_type -> SSHAddressResponse
+	13, // 40: Driver.AdditionalSetupForSSH:output_type -> google.protobuf.Empty
+	21, // [21:41] is the sub-list for method output_type
+	1,  // [1:21] is the sub-list for method input_type
 	1,  // [1:1] is the sub-list for extension type_name
 	1,  // [1:1] is the sub-list for extension extendee
 	0,  // [0:1] is the sub-list for field type_name
