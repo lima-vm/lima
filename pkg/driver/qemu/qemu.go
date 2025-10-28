@@ -835,6 +835,8 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	// virtio-rng-pci accelerates starting up the OS, according to https://wiki.gentoo.org/wiki/QEMU/Options
 	args = append(args, "-device", "virtio-rng-pci")
 
+	args = append(args, "-device", "virtio-balloon")
+
 	// Input
 	input := "mouse"
 

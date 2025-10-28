@@ -445,6 +445,14 @@ func (a *HostAgent) Run(ctx context.Context) error {
 	return a.startRoutinesAndWait(ctx, errCh)
 }
 
+func (a *HostAgent) GetCurrentMemory() (int64, error) {
+	return a.driver.GetCurrentMemory()
+}
+
+func (a *HostAgent) SetTargetMemory(memory int64) error {
+	return a.driver.SetTargetMemory(memory)
+}
+
 func (a *HostAgent) startRoutinesAndWait(ctx context.Context, errCh <-chan error) error {
 	stBase := events.Status{
 		SSHLocalPort: a.sshLocalPort,

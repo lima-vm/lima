@@ -88,6 +88,10 @@ type Driver interface {
 	FillConfig(ctx context.Context, cfg *limatype.LimaYAML, filePath string) error
 
 	SSHAddress(ctx context.Context) (string, error)
+
+	GetCurrentMemory() (int64, error)
+
+	SetTargetMemory(memory int64) error
 }
 
 type ConfiguredDriver struct {
