@@ -116,7 +116,7 @@ provision:
     EOF
     kubeadm init --config kubeadm-config.yaml
     # Installing a Pod network add-on
-    kubectl apply -f https://github.com/flannel-io/flannel/releases/download/v0.26.7/kube-flannel.yml
+    kubectl apply -f https://github.com/flannel-io/flannel/releases/download/v0.27.4/kube-flannel.yml
     # Control plane node isolation
     kubectl taint nodes --all node-role.kubernetes.io/control-plane-
     # Symlink the kubeconfig file to the default location for kubectl
