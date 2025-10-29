@@ -60,3 +60,9 @@ Read the [slides](https://static.sched.com/hosted_files/kccncna2024/74/KCCNC-SLC
 [Akihiro Suda](https://github.com/AkihiroSuda) presented Lima in the CNCF project pavilion.
 
 Read the [slides](https://github.com/AkihiroSuda/AkihiroSuda/blob/master/slides/2025/20250402%20%5BKubeCon%20EU%20Pavilion%5D%20Lima.pdf).
+
+### EuroBSDCon 2025
+
+[Leonardo Taccari](https://github.com/iamleot) presented Lima in the NetBSD devsummit at EuroBSDCon 2025.
+
+Read the [slides](https://www.NetBSD.org/gallery/presentations/leot/eurobsdcon2025-devsummit-lima/lima.pdf).
