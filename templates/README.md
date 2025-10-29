@@ -23,7 +23,8 @@ Distro:
 - [`debian-12`](./debian-12.yaml): Debian GNU/Linux 12(bookworm)
 - [`debian-13`](./debian-13.yaml), `debian.yaml`: ⭐Debian GNU/Linux 13(trixie)
 - [`fedora-41`](./fedora-41.yaml): Fedora 41
-- [`fedora-42`](./fedora-42.yaml), `fedora.yaml`: ⭐Fedora 42
+- [`fedora-42`](./fedora-42.yaml): Fedora 42
+- [`fedora-43`](./fedora-43.yaml), `fedora.yaml`: ⭐Fedora 43
 - [`opensuse-leap-15`](./opensuse-leap-15.yaml): openSUSE Leap 15
 - [`opensuse-leap-16`](./opensuse-leap-16.yaml), `opensuse-leap.yaml`, `opensuse.yaml`: ⭐openSUSE Leap 16
 - [`oraclelinux-8`](./oraclelinux-8.yaml): Oracle Linux 8
