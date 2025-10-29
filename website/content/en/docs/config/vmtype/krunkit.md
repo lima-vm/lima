@@ -85,4 +85,5 @@ sudo install-vulkan-gpu.sh
 - macOS Ventura or later on Apple Silicon is required.
 - GPU mode requires a Fedora image/template; Fedora 40+ recommended for Mesa/Vulkan (Venus).
 - To verify GPU/Vulkan in the guest, use tools like `vulkaninfo` after running the install script.
+- `Libkrun` and [`Ramalama`](https://github.com/containers/ramalama)(a tool that simplifies running AI models locally) use CPU inferencing as of **July 2, 2025** and are actively working to support GPU inferencing. [More info](https://developers.redhat.com/articles/2025/07/02/supercharging-ai-isolation-microvms-ramalama-libkrun#current_limitations_and_future_directions__gpu_enablement).
 - Driver architecture details: see [Virtual Machine Drivers](../../dev/drivers).
