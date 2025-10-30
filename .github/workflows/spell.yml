@@ -8,6 +8,9 @@ on:
     - 'release/**'
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   spell:
     name: "Spell check"
