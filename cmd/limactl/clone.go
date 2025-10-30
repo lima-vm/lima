@@ -34,6 +34,7 @@ Not to be confused with 'limactl copy' ('limactl cp').
 		ValidArgsFunction: cloneBashComplete,
 		GroupID:           advancedCommand,
 	}
+	cloneCommand.Flags().Bool("start", false, "Start the instance after cloning")
 	editflags.RegisterEdit(cloneCommand, "[limactl edit] ")
 	return cloneCommand
 }
@@ -48,6 +49,7 @@ func newRenameCommand() *cobra.Command {
 		ValidArgsFunction: cloneBashComplete,
 		GroupID:           advancedCommand,
 	}
+	renameCommand.Flags().Bool("start", false, "Start the instance after renaming")
 	editflags.RegisterEdit(renameCommand, "[limactl edit] ")
 	return renameCommand
 }
@@ -113,15 +115,18 @@ func cloneOrRenameAction(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	if !tty {
-		// use "start" to start it
-		return nil
-	}
-	startNow, err := askWhetherToStart()
+	start, err := flags.GetBool("start")
 	if err != nil {
 		return err
 	}
-	if !startNow {
+
+	if tty && !flags.Changed("start") {
+		start, err = askWhetherToStart()
+		if err != nil {
+			return err
+		}
+	}
+	if !start {
 		return nil
 	}
 	err = reconcile.Reconcile(ctx, newInst.Name)
