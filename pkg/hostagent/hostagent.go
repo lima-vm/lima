@@ -380,6 +380,10 @@ func (a *HostAgent) Run(ctx context.Context) error {
 		return err
 	}
 
+	if err := a.driver.AdditionalSetupForSSH(ctx); err != nil {
+		return err
+	}
+
 	// WSL instance SSH address isn't known until after VM start
 	if a.driver.Info().Features.DynamicSSHAddress {
 		sshAddr, err := a.driver.SSHAddress(ctx)

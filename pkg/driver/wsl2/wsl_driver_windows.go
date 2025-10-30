@@ -357,3 +357,7 @@ func (l *LimaWslDriver) ForwardGuestAgent() bool {
 	// If driver is not providing, use host agent
 	return l.vSockPort == 0 && l.virtioPort == ""
 }
+
+func (l *LimaWslDriver) AdditionalSetupForSSH(_ context.Context) error {
+	return nil
+}

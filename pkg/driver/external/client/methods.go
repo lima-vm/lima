@@ -323,3 +323,16 @@ func (d *DriverClient) BootScripts() (map[string][]byte, error) {
 	d.logger.Debugf("Boot scripts retrieved successfully: %d scripts", len(resp.Scripts))
 	return resp.Scripts, nil
 }
+
+func (d *DriverClient) AdditionalSetupForSSH(ctx context.Context) error {
+	d.logger.Debug("Performing additional setup for SSH connection")
+
+	_, err := d.DriverSvc.AdditionalSetupForSSH(ctx, &emptypb.Empty{})
+	if err != nil {
+		d.logger.Errorf("Failed to perform additional setup for SSH: %v", err)
+		return err
+	}
+
+	d.logger.Debug("Additional setup for SSH completed successfully")
+	return nil
+}

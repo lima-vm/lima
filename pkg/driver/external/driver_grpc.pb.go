@@ -39,6 +39,7 @@ const (
 	Driver_Configure_FullMethodName             = "/Driver/Configure"
 	Driver_Info_FullMethodName                  = "/Driver/Info"
 	Driver_SSHAddress_FullMethodName            = "/Driver/SSHAddress"
+	Driver_AdditionalSetupForSSH_FullMethodName = "/Driver/AdditionalSetupForSSH"
 )
 
 // DriverClient is the client API for Driver service.
@@ -64,6 +65,9 @@ type DriverClient interface {
 	Configure(ctx context.Context, in *SetConfigRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	Info(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*InfoResponse, error)
 	SSHAddress(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*SSHAddressResponse, error)
+	// AdditionalSetupForSSH provides additional setup required for SSH connection.
+	// It is called after VM is started, before first SSH connection.
+	AdditionalSetupForSSH(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type driverClient struct {
@@ -273,6 +277,16 @@ func (c *driverClient) SSHAddress(ctx context.Context, in *emptypb.Empty, opts .
 	return out, nil
 }
 
+func (c *driverClient) AdditionalSetupForSSH(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Driver_AdditionalSetupForSSH_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // DriverServer is the server API for Driver service.
 // All implementations must embed UnimplementedDriverServer
 // for forward compatibility.
@@ -296,6 +310,9 @@ type DriverServer interface {
 	Configure(context.Context, *SetConfigRequest) (*emptypb.Empty, error)
 	Info(context.Context, *emptypb.Empty) (*InfoResponse, error)
 	SSHAddress(context.Context, *emptypb.Empty) (*SSHAddressResponse, error)
+	// AdditionalSetupForSSH provides additional setup required for SSH connection.
+	// It is called after VM is started, before first SSH connection.
+	AdditionalSetupForSSH(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	mustEmbedUnimplementedDriverServer()
 }
 
@@ -362,6 +379,9 @@ func (UnimplementedDriverServer) Info(context.Context, *emptypb.Empty) (*InfoRes
 }
 func (UnimplementedDriverServer) SSHAddress(context.Context, *emptypb.Empty) (*SSHAddressResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SSHAddress not implemented")
+}
+func (UnimplementedDriverServer) AdditionalSetupForSSH(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AdditionalSetupForSSH not implemented")
 }
 func (UnimplementedDriverServer) mustEmbedUnimplementedDriverServer() {}
 func (UnimplementedDriverServer) testEmbeddedByValue()                {}
@@ -719,6 +739,24 @@ func _Driver_SSHAddress_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Driver_AdditionalSetupForSSH_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DriverServer).AdditionalSetupForSSH(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Driver_AdditionalSetupForSSH_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DriverServer).AdditionalSetupForSSH(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Driver_ServiceDesc is the grpc.ServiceDesc for Driver service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -797,6 +835,10 @@ var Driver_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SSHAddress",
 			Handler:    _Driver_SSHAddress_Handler,
+		},
+		{
+			MethodName: "AdditionalSetupForSSH",
+			Handler:    _Driver_AdditionalSetupForSSH_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

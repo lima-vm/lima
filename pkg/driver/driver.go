@@ -88,6 +88,11 @@ type Driver interface {
 	FillConfig(ctx context.Context, cfg *limatype.LimaYAML, filePath string) error
 
 	SSHAddress(ctx context.Context) (string, error)
+
+	// AdditionalSetupForSSH provides additional setup required for SSH connection.
+	// It is called after VM is started, before first SSH connection.
+	// It returns an error if the setup fails.
+	AdditionalSetupForSSH(ctx context.Context) error
 }
 
 type ConfiguredDriver struct {

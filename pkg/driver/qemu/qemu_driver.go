@@ -720,3 +720,7 @@ func (l *LimaQemuDriver) ForwardGuestAgent() bool {
 	// if driver is not providing, use host agent
 	return l.vSockPort == 0 && l.virtioPort == ""
 }
+
+func (l *LimaQemuDriver) AdditionalSetupForSSH(_ context.Context) error {
+	return nil
+}

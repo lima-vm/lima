@@ -284,3 +284,14 @@ func (s *DriverServer) ForwardGuestAgent(_ context.Context, _ *emptypb.Empty) (*
 	s.logger.Debug("Received ForwardGuestAgent request")
 	return &pb.ForwardGuestAgentResponse{ShouldForward: s.driver.ForwardGuestAgent()}, nil
 }
+
+func (s *DriverServer) AdditionalSetupForSSH(ctx context.Context, _ *emptypb.Empty) (*emptypb.Empty, error) {
+	s.logger.Debug("Received AdditionalSetupForSSH request")
+	err := s.driver.AdditionalSetupForSSH(ctx)
+	if err != nil {
+		s.logger.Errorf("AdditionalSetupForSSH failed: %v", err)
+		return &emptypb.Empty{}, err
+	}
+	s.logger.Debug("AdditionalSetupForSSH succeeded")
+	return &emptypb.Empty{}, nil
+}

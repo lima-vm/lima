@@ -28,6 +28,10 @@ service Driver {
   rpc Configure(SetConfigRequest) returns (google.protobuf.Empty);
   rpc Info(google.protobuf.Empty) returns (InfoResponse);
   rpc SSHAddress(google.protobuf.Empty) returns (SSHAddressResponse);
+
+  // AdditionalSetupForSSH provides additional setup required for SSH connection.
+  // It is called after VM is started, before first SSH connection.
+  rpc AdditionalSetupForSSH(google.protobuf.Empty) returns (google.protobuf.Empty);
 }
 
 message BootScriptsResponse {
