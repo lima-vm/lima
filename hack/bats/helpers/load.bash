@@ -8,6 +8,16 @@ set -o errexit -o nounset -o pipefail
 # The upstream PR https://github.com/bats-core/bats-core/pull/1118 is still open, so our submodule points to the PR commit.
 export BATS_RUN_ERREXIT=1
 
+# BATS_TEST_RETRIES must be set for the individual test and cannot be imported from the
+# parent environment because the BATS test runner sets it to 0 before running the test.
+BATS_TEST_RETRIES=${LIMA_BATS_ALL_TESTS_RETRIES:-0}
+
+# Known flaky tests should call `flaky` inside the @test to allow retries up to
+# LIMA_BATS_FLAKY_TESTS_RETRIES even when the LIMA_BATS_ALL_TESTS_RETRIES is lower.
+flaky() {
+    BATS_TEST_RETRIES=${LIMA_BATS_FLAKY_TESTS_RETRIES:-$BATS_TEST_RETRIES}
+}
+
 # Don't run the tests in ~/.lima because they may destroy _config, _templates etc.
 export LIMA_HOME=${LIMA_BATS_LIMA_HOME:-$HOME/.lima-bats}
 
