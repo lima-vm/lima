@@ -31,59 +31,52 @@ go build -o <PREFIX>/libexec/lima/lima-driver-krunkit ./cmd/lima-driver-krunkit/
 limactl info   # "vmTypes" should include "krunkit"
 ```
 
-
 ## Quick start
 
-- Non‑GPU (general workloads)
-```bash
-limactl start default --vm-type=krunkit
-```
-
-- GPU (Vulkan via Venus)
-  - Recommended distro: Fedora 40+ (smoothest Mesa/Vulkan setup; uses COPR “slp/mesa-krunkit” for patched mesa-vulkan-drivers).
-  - Start from the krunkit template and follow the logs to complete GPU setup.
+Start a krunkit VM with rootful containerd (required for granting containers access to `/dev/dri` and the Vulkan API):
 
 {{< tabpane text=true >}}
 {{% tab header="CLI" %}}
 ```bash
-# GPU (Vulkan via Venus on Fedora)
-limactl start template:experimental/krunkit
+limactl start default --vm-type=krunkit --containerd=system
+limactl shell default
 ```
 {{% /tab %}}
 {{% tab header="YAML" %}}
 ```yaml
 vmType: krunkit
 
-# For AI workloads, at least 4GiB memory and 4 CPUs are recommended.
-memory: 4GiB
-cpus: 4
-arch: aarch64
-
-# Fedora 40+ is preferred for Mesa & Vulkan (Venus) support
 base:
-- template://_images/fedora
+- template://_images/ubuntu
+- template://_default/mounts
 
-mounts:
-- location: "~"
-  writable: true
-
-mountType: virtiofs
-
-vmOpts:
-  krunkit:
-    gpuAccel: true
+containerd:
+  system: true
 ```
 {{% /tab %}}
 {{< /tabpane >}}
 
-After the VM is READY, inside the VM:
+Run AI models with [`llama.cpp`](https://github.com/ggml-org/llama.cpp) in a container using `nerdctl`:
+
+1) Place a `.gguf` model inside the VM, e.g. `~/models/YourModel.gguf` or download it from [Hugging Face](https://huggingface.co/models?library=gguf)
+
+2) Launch the container with GPU device nodes and bind‑mount the model directory:
+
 ```bash
-sudo install-vulkan-gpu.sh
+sudo nerdctl run --rm -ti \
+  --device /dev/dri \
+  -v ~/models:/models \
+  quay.io/slopezpa/fedora-vgpu-llama
+```
+
+3) Inside the container, run llama.cpp:
+
+```bash
+llama-cli -m /models/YourModel.gguf -b 512 -ngl 99 -p "Introduce yourself"
 ```
 
 ## Notes and caveats
 - macOS Ventura or later on Apple Silicon is required.
-- GPU mode requires a Fedora image/template; Fedora 40+ recommended for Mesa/Vulkan (Venus).
-- To verify GPU/Vulkan in the guest, use tools like `vulkaninfo` after running the install script.
-- `Libkrun` and [`Ramalama`](https://github.com/containers/ramalama)(a tool that simplifies running AI models locally) use CPU inferencing as of **July 2, 2025** and are actively working to support GPU inferencing. [More info](https://developers.redhat.com/articles/2025/07/02/supercharging-ai-isolation-microvms-ramalama-libkrun#current_limitations_and_future_directions__gpu_enablement).
+- Rootful containerd (`--containerd=system`) is necessary to pass through /dev/dri to containers.
+- To verify GPU/Vulkan in the guest container, use tools like `vulkaninfo`.
 - Driver architecture details: see [Virtual Machine Drivers](../../dev/drivers).
