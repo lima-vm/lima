@@ -57,8 +57,6 @@ func deleteAction(cmd *cobra.Command, args []string) error {
 			} else {
 				logrus.Infof("The autostart entry for instance %q has been unregistered", instName)
 			}
-		} else {
-			logrus.Infof("The autostart entry for instance %q is not registered", instName)
 		}
 		logrus.Infof("Deleted %q (%q)", instName, inst.Dir)
 	}

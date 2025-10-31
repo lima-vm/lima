@@ -10,7 +10,6 @@
 		<string>start</string>
 		<string>{{ .Instance }}</string>
 		<string>--foreground</string>
-		<string>--progress</string>
 	</array>
 	<key>RunAtLoad</key>
 	<true/>

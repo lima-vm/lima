@@ -38,7 +38,6 @@ func TestRenderTemplate(t *testing.T) {
 		<string>start</string>
 		<string>default</string>
 		<string>--foreground</string>
-		<string>--progress</string>
 	</array>
 	<key>RunAtLoad</key>
 	<true/>
@@ -66,7 +65,7 @@ Description=Lima - Linux virtual machines, with a focus on running containers.
 Documentation=man:lima(1)
 
 [Service]
-ExecStart=/limactl start %i --foreground --progress
+ExecStart=/limactl start %i --foreground
 WorkingDirectory=%h
 Type=simple
 TimeoutSec=10
