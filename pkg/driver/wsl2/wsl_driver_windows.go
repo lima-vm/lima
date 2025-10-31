@@ -190,6 +190,13 @@ func (l *LimaWslDriver) InspectStatus(ctx context.Context, inst *limatype.Instan
 		inst.Status = status
 	}
 
+	return inst.Status
+}
+
+func (l *LimaWslDriver) SSHAddress(ctx context.Context) (string, error) {
+	inst := l.Instance
+	var err error
+
 	inst.SSHLocalPort = 22
 
 	if inst.Status == limatype.StatusRunning {
@@ -201,7 +208,7 @@ func (l *LimaWslDriver) InspectStatus(ctx context.Context, inst *limatype.Instan
 		}
 	}
 
-	return inst.Status
+	return inst.SSHAddress, err
 }
 
 func (l *LimaWslDriver) Delete(ctx context.Context) error {
@@ -315,10 +322,6 @@ func (l *LimaWslDriver) Info() driver.Info {
 		CanRunGUI:            l.canRunGUI(),
 	}
 	return info
-}
-
-func (l *LimaWslDriver) SSHAddress(_ context.Context) (string, error) {
-	return "127.0.0.1", nil
 }
 
 func (l *LimaWslDriver) Create(_ context.Context) error {
