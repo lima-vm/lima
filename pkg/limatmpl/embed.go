@@ -566,7 +566,7 @@ func encodeScriptReason(script string) string {
 	start := 0
 	line := 1
 	for i, r := range script {
-		if !(unicode.IsPrint(r) || r == '\n' || r == '\r' || r == '\t') {
+		if !(unicode.IsPrint(r) || r == '\n') {
 			return fmt.Sprintf("unprintable character %q at offset %d", r, i)
 		}
 		// maxLineLength includes final newline

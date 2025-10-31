@@ -503,6 +503,11 @@ func TestEncodeScriptReason(t *testing.T) {
 		reason := encodeScriptReason("abc\a123")
 		assert.Equal(t, reason, "unprintable character '\\a' at offset 3")
 	})
+	t.Run("contains a tab character", func(t *testing.T) {
+		// newline character is included in character count
+		reason := encodeScriptReason("foo\tbar")
+		assert.Equal(t, reason, "unprintable character '\\t' at offset 3")
+	})
 	t.Run("long line", func(t *testing.T) {
 		// newline character is included in character count
 		reason := encodeScriptReason("line 1\nline 2\n01234567\n")
