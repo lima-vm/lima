@@ -5,7 +5,7 @@ package krunkit
 
 import (
 	"context"
-	_ "embed"
+	"embed"
 	"errors"
 	"fmt"
 	"net"
@@ -37,19 +37,6 @@ type LimaKrunkitDriver struct {
 	stopUsernet   context.CancelFunc
 	krunkitCmd    *exec.Cmd
 	krunkitWaitCh chan error
-}
-
-type KrunkitOpts struct {
-	GPUAccel *bool `yaml:"gpuAccel,omitempty"`
-}
-
-func NewKrunkitOpts(cfg *limatype.LimaYAML) (*KrunkitOpts, error) {
-	var krunkitOpts KrunkitOpts
-	if err := limayaml.Convert(cfg.VMOpts[vmType], &krunkitOpts, "vmOpts.krunkit"); err != nil {
-		return nil, err
-	}
-
-	return &krunkitOpts, nil
 }
 
 var (
@@ -188,17 +175,6 @@ func validateConfig(cfg *limatype.LimaYAML) error {
 		return fmt.Errorf("field `mountType` must be %q or %q for krunkit driver, got %q", limatype.VIRTIOFS, limatype.REVSSHFS, *cfg.MountType)
 	}
 
-	// If GPU acceleration is requested, ensure Fedora image/template is used
-	krunkitOpts, err := NewKrunkitOpts(cfg)
-	if err != nil {
-		return err
-	}
-	if krunkitOpts.GPUAccel != nil && *krunkitOpts.GPUAccel {
-		if !isFedoraConfigured(cfg) {
-			logrus.Warn("gpuAccel: true requires a Fedora image (use a Fedora base template or image)")
-		}
-	}
-
 	return nil
 }
 
@@ -231,16 +207,7 @@ func (l *LimaKrunkitDriver) FillConfig(_ context.Context, cfg *limatype.LimaYAML
 
 	cfg.VMType = ptr.Of(vmType)
 
-	krunkitOpts, err := NewKrunkitOpts(cfg)
-	if err != nil {
-		return err
-	}
-
-	if krunkitOpts.GPUAccel == nil {
-		krunkitOpts.GPUAccel = ptr.Of(false)
-	}
-
-	if *krunkitOpts.GPUAccel {
+	if isFedoraConfigured(cfg) {
 		gpuInstallScript := limatype.Provision{
 			Mode:   limatype.ProvisionModeData,
 			Script: ptr.Of(gpuProvisionScript),
@@ -252,30 +219,46 @@ func (l *LimaKrunkitDriver) FillConfig(_ context.Context, cfg *limatype.LimaYAML
 				Owner:       cfg.User.Name,
 			},
 		}
+
 		cfg.Provision = append(cfg.Provision, gpuInstallScript)
-		cfg.Message = "To enable GPU support for krunkit, run the following command inside the VM:\n\033[32msudo install-vulkan-gpu.sh\033[0m\n"
+		cfg.Message = `To enable GPU support (Vulkan) for Krunkit to use AI models without containers, run the following command inside the VM:
+    ` + "\x1b[32m" + `sudo install-vulkan-gpu.sh` + "\x1b[0m" + `
+` + "\x1b[31m" + `Ignore this if already done` + "\x1b[0m" + "\n"
 	}
 
 	return validateConfig(cfg)
 }
 
+//go:embed boot/*.sh
+var bootFS embed.FS
+
 func (l *LimaKrunkitDriver) BootScripts() (map[string][]byte, error) {
-	// Override default reboot-if-required with a no-op because Fedora does not support this well and
-	// takes a long time to start up.
-	krunkitOpts, err := NewKrunkitOpts(l.Instance.Config)
-	if err != nil {
-		return nil, err
+	scripts := make(map[string][]byte)
+
+	entries, err := bootFS.ReadDir("boot")
+	if err == nil && !isFedoraConfigured(l.Instance.Config) {
+		for _, entry := range entries {
+			if entry.IsDir() {
+				continue
+			}
+
+			content, err := bootFS.ReadFile("boot/" + entry.Name())
+			if err != nil {
+				return nil, err
+			}
+
+			scripts[entry.Name()] = content
+		}
 	}
-	if krunkitOpts.GPUAccel == nil || !*krunkitOpts.GPUAccel {
-		return nil, nil
-	}
-	scripts := map[string][]byte{
-		"00-reboot-if-required.sh": []byte(`#!/bin/sh
+
+	// Disabled by krunkit driver for Fedora to make boot time faster
+	if isFedoraConfigured(l.Instance.Config) {
+		scripts["00-reboot-if-required.sh"] = []byte(`#!/bin/sh
 set -eu
-# Disabled by krunkit driver
 exit 0
-`),
+`)
 	}
+
 	return scripts, nil
 }
 
