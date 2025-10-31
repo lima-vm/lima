@@ -103,13 +103,14 @@ func tunnelAction(cmd *cobra.Command, args []string) error {
 	}
 	sshArgs := append([]string{}, sshExe.Args...)
 	sshArgs = append(sshArgs, sshutil.SSHArgsFromOpts(sshOpts)...)
+	sshAddress, sshPort := inst.SSHAddressPort()
 	sshArgs = append(sshArgs, []string{
 		"-q", // quiet
 		"-f", // background
 		"-N", // no command
 		"-D", fmt.Sprintf("127.0.0.1:%d", port),
-		"-p", strconv.Itoa(inst.SSHLocalPort),
-		inst.SSHAddress,
+		"-p", strconv.Itoa(sshPort),
+		sshAddress,
 	}...)
 	sshCmd := exec.CommandContext(ctx, sshExe.Exe, sshArgs...)
 	sshCmd.Stdout = stderr
