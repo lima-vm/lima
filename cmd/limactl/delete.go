@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"runtime"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -50,12 +49,13 @@ func deleteAction(cmd *cobra.Command, args []string) error {
 		if err := instance.Delete(cmd.Context(), inst, force); err != nil {
 			return fmt.Errorf("failed to delete instance %q: %w", instName, err)
 		}
-		if runtime.GOOS == "darwin" || runtime.GOOS == "linux" {
-			deleted, err := autostart.DeleteStartAtLoginEntry(ctx, runtime.GOOS, instName)
-			if err != nil && !errors.Is(err, os.ErrNotExist) {
-				logrus.WithError(err).Warnf("The autostart file for instance %q does not exist", instName)
-			} else if deleted {
-				logrus.Infof("The autostart file %q has been deleted", autostart.GetFilePath(runtime.GOOS, instName))
+		if registered, err := autostart.IsRegistered(ctx, inst); err != nil && !errors.Is(err, autostart.ErrNotSupported) {
+			logrus.WithError(err).Warnf("Failed to check if the autostart entry for instance %q is registered", instName)
+		} else if registered {
+			if err := autostart.UnregisterFromStartAtLogin(ctx, inst); err != nil {
+				logrus.WithError(err).Warnf("Failed to unregister the autostart entry for instance %q", instName)
+			} else {
+				logrus.Infof("The autostart entry for instance %q has been unregistered", instName)
 			}
 		}
 		logrus.Infof("Deleted %q (%q)", instName, inst.Dir)

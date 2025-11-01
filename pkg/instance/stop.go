@@ -14,6 +14,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/lima-vm/lima/v2/pkg/autostart"
 	hostagentevents "github.com/lima-vm/lima/v2/pkg/hostagent/events"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
@@ -31,9 +32,13 @@ func StopGracefully(ctx context.Context, inst *limatype.Instance, isRestart bool
 	}
 
 	begin := time.Now() // used for logrus propagation
-	logrus.Infof("Sending SIGINT to hostagent process %d", inst.HostAgentPID)
-	if err := osutil.SysKill(inst.HostAgentPID, osutil.SigInt); err != nil {
-		logrus.Error(err)
+	if requested, err := autostart.RequestStop(ctx, inst); err != nil && !errors.Is(err, autostart.ErrNotSupported) {
+		return fmt.Errorf("failed to request stop via autostart manager: %w", err)
+	} else if !requested {
+		logrus.Infof("Sending SIGINT to hostagent process %d", inst.HostAgentPID)
+		if err := osutil.SysKill(inst.HostAgentPID, osutil.SigInt); err != nil {
+			logrus.Error(err)
+		}
 	}
 
 	logrus.Info("Waiting for the host agent and the driver processes to shut down")

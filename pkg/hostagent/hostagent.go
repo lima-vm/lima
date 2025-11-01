@@ -27,6 +27,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/lima-vm/lima/v2/pkg/autostart"
 	"github.com/lima-vm/lima/v2/pkg/cidata"
 	"github.com/lima-vm/lima/v2/pkg/driver"
 	"github.com/lima-vm/lima/v2/pkg/driverutil"
@@ -482,7 +483,8 @@ func (a *HostAgent) startRoutinesAndWait(ctx context.Context, errCh <-chan error
 
 func (a *HostAgent) Info(_ context.Context) (*hostagentapi.Info, error) {
 	info := &hostagentapi.Info{
-		SSHLocalPort: a.sshLocalPort,
+		AutoStartedIdentifier: autostart.AutoStartedIdentifier(),
+		SSHLocalPort:          a.sshLocalPort,
 	}
 	return info, nil
 }
