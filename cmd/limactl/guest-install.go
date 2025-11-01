@@ -7,12 +7,12 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -86,11 +86,8 @@ func guestInstallAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	guestAgentFilename := filepath.Base(guestAgentBinary)
-	if _, err := os.Stat(guestAgentBinary); err != nil {
-		if !errors.Is(err, os.ErrNotExist) {
-			return err
-		}
-		compressedGuestAgent, err := os.Open(guestAgentBinary + ".gz")
+	if filepath.Ext(guestAgentBinary) == ".gz" {
+		compressedGuestAgent, err := os.Open(guestAgentBinary)
 		if err != nil {
 			return err
 		}
@@ -99,7 +96,7 @@ func guestInstallAction(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		logrus.Debugf("Decompressing %s.gz", guestAgentBinary)
+		logrus.Debugf("Decompressing %s", guestAgentBinary)
 		guestAgent, err := gzip.NewReader(compressedGuestAgent)
 		if err != nil {
 			return err
@@ -112,6 +109,7 @@ func guestInstallAction(cmd *cobra.Command, args []string) error {
 		tmpGuestAgent.Close()
 		guestAgentBinary = tmpGuestAgent.Name()
 		defer os.RemoveAll(guestAgentBinary)
+		guestAgentFilename = strings.TrimSuffix(guestAgentFilename, ".gz")
 	}
 	tmpname := "lima-guestagent"
 	tmp, err := shell(ctx, sshExe, sshFlags, hostname, "mktemp", "-t", "lima-guestagent.XXXXXX")
