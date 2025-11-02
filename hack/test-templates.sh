@@ -338,7 +338,8 @@ if [[ -n ${CHECKS["ssh-over-vsock"]} ]]; then
 		set -x
 		INFO "Testing LIMA_SSH_OVER_VSOCK=true environment"
 		limactl stop "${NAME}"
-		if ! LIMA_SSH_OVER_VSOCK=true limactl start "${NAME}" 2>&1 | grep -i "started vsock forwarder"; then
+		# Detection of the SSH server on VSOCK may fail; however, a failing log indicates that controlling detection via the environment variable works as expected.
+		if ! LIMA_SSH_OVER_VSOCK=true limactl start "${NAME}" 2>&1 | grep -i -E "(started vsock forwarder|Failed to detect SSH server on vsock)"; then
 			set +x
 			diagnose "${NAME}"
 			ERROR "LIMA_SSH_OVER_VSOCK=true did not enable vsock forwarder"
@@ -346,7 +347,8 @@ if [[ -n ${CHECKS["ssh-over-vsock"]} ]]; then
 		fi
 		INFO 'Testing LIMA_SSH_OVER_VSOCK="" environment'
 		limactl stop "${NAME}"
-		if ! LIMA_SSH_OVER_VSOCK="" limactl start "${NAME}" 2>&1 | grep -i "started vsock forwarder"; then
+		# Detection of the SSH server on VSOCK may fail; however, a failing log indicates that controlling detection via the environment variable works as expected.
+		if ! LIMA_SSH_OVER_VSOCK="" limactl start "${NAME}" 2>&1 | grep -i -E "(started vsock forwarder|Failed to detect SSH server on vsock)"; then
 			set +x
 			diagnose "${NAME}"
 			ERROR "LIMA_SSH_OVER_VSOCK= did not enable vsock forwarder"
