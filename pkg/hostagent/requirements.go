@@ -85,7 +85,7 @@ func prefixExportParam(script string) (string, error) {
 	}
 
 	// TODO we should have a symbolic constant for `/mnt/lima-cidata`
-	exportParam := `while read -r line; do [ -n "$line" ] && export "$line"; done<<EOF\n$(sudo cat /mnt/lima-cidata/param.env)\nEOF\n`
+	exportParam := `param_env="$(sudo cat /mnt/lima-cidata/param.env)"; while read -r line; do [ -n "$line" ] && export "$line"; done<<EOF\n${param_env}\nEOF\n`
 
 	// double up all '%' characters so we can pass them through unchanged in the format string of printf
 	interpreter = strings.ReplaceAll(interpreter, "%", "%%")
