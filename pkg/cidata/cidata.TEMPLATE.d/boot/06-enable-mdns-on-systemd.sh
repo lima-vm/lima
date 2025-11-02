@@ -12,7 +12,6 @@ fi
 
 # It depends on systemd-resolved
 command -v systemctl >/dev/null 2>&1 || exit 0
-systemctl is-enabled -q systemd-resolved.service || exit 0
 command -v resolvectl >/dev/null 2>&1 || exit 0
 
 # Configure systemd-resolved to enable mDNS resolution globally
