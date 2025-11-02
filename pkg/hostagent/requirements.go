@@ -6,6 +6,7 @@ package hostagent
 import (
 	"errors"
 	"fmt"
+	"runtime"
 	"strings"
 	"time"
 
@@ -103,7 +104,18 @@ func (a *HostAgent) waitForRequirement(r requirement) error {
 		return err
 	}
 	sshConfig := a.sshConfig
-	if r.noMaster {
+	if r.noMaster || runtime.GOOS == "windows" {
+		// Remove ControlMaster, ControlPath, and ControlPersist options,
+		// because Cygwin-based SSH clients do not support multiplexing when executing commands.
+		// References:
+		//   https://inbox.sourceware.org/cygwin/c98988a5-7e65-4282-b2a1-bb8e350d5fab@acm.org/T/
+		//   https://stackoverflow.com/questions/20959792/is-ssh-controlmaster-with-cygwin-on-windows-actually-possible
+		// By removing these options:
+		//   - Avoids execution failures when the control master is not yet available.
+		//   - Prevents error messages such as:
+		//     > mux_client_request_session: read from master failed: Connection reset by peer
+		//     > ControlSocket ....sock already exists, disabling multiplexing
+		//     > mm_send_fd: sendmsg(2): Connection reset by peer\\r\\nmux_client_request_session: send fds failed\\r\\n
 		sshConfig = &ssh.SSHConfig{
 			ConfigFile:     sshConfig.ConfigFile,
 			Persist:        false,
