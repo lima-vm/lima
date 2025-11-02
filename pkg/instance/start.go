@@ -19,6 +19,7 @@ import (
 	"github.com/lima-vm/go-qcow2reader"
 	"github.com/sirupsen/logrus"
 
+	"github.com/lima-vm/lima/v2/pkg/autostart"
 	"github.com/lima-vm/lima/v2/pkg/cacheutil"
 	"github.com/lima-vm/lima/v2/pkg/driver"
 	"github.com/lima-vm/lima/v2/pkg/driverutil"
@@ -169,63 +170,70 @@ func StartWithPaths(ctx context.Context, inst *limatype.Instance, launchHostAgen
 	}
 	haStdoutPath := filepath.Join(inst.Dir, filenames.HostAgentStdoutLog)
 	haStderrPath := filepath.Join(inst.Dir, filenames.HostAgentStderrLog)
-	if err := os.RemoveAll(haStdoutPath); err != nil {
-		return err
-	}
-	if err := os.RemoveAll(haStderrPath); err != nil {
-		return err
-	}
-	haStdoutW, err := os.Create(haStdoutPath)
-	if err != nil {
-		return err
-	}
-	// no defer haStdoutW.Close()
-	haStderrW, err := os.Create(haStderrPath)
-	if err != nil {
-		return err
-	}
-	// no defer haStderrW.Close()
-
-	var args []string
-	if logrus.GetLevel() >= logrus.DebugLevel {
-		args = append(args, "--debug")
-	}
-	args = append(args,
-		"hostagent",
-		"--pidfile", haPIDPath,
-		"--socket", haSockPath)
-	if prepared.Driver.Info().Features.CanRunGUI {
-		args = append(args, "--run-gui")
-	}
-	if prepared.GuestAgent != "" {
-		args = append(args, "--guestagent", prepared.GuestAgent)
-	}
-	if prepared.NerdctlArchiveCache != "" {
-		args = append(args, "--nerdctl-archive", prepared.NerdctlArchiveCache)
-	}
-	if showProgress {
-		args = append(args, "--progress")
-	}
-	args = append(args, inst.Name)
-	haCmd := exec.CommandContext(ctx, limactl, args...)
-
-	if launchHostAgentForeground {
-		haCmd.SysProcAttr = executil.ForegroundSysProcAttr
-	} else {
-		haCmd.SysProcAttr = executil.BackgroundSysProcAttr
-	}
-
-	haCmd.Stdout = haStdoutW
-	haCmd.Stderr = haStderrW
 
 	begin := time.Now() // used for logrus propagation
-
-	if launchHostAgentForeground {
-		if err := execHostAgentForeground(limactl, haCmd); err != nil {
+	var haCmd *exec.Cmd
+	if isRegisteredToAutoStart, err := autostart.IsRegistered(ctx, inst); err != nil && !errors.Is(err, autostart.ErrNotSupported) {
+		return fmt.Errorf("failed to check autostart registration: %w", err)
+	} else if !isRegisteredToAutoStart || launchHostAgentForeground {
+		if err := os.RemoveAll(haStdoutPath); err != nil {
 			return err
 		}
-	} else if err := haCmd.Start(); err != nil {
-		return err
+		if err := os.RemoveAll(haStderrPath); err != nil {
+			return err
+		}
+		haStdoutW, err := os.Create(haStdoutPath)
+		if err != nil {
+			return err
+		}
+		// no defer haStdoutW.Close()
+		haStderrW, err := os.Create(haStderrPath)
+		if err != nil {
+			return err
+		}
+		// no defer haStderrW.Close()
+
+		var args []string
+		if logrus.GetLevel() >= logrus.DebugLevel {
+			args = append(args, "--debug")
+		}
+		args = append(args,
+			"hostagent",
+			"--pidfile", haPIDPath,
+			"--socket", haSockPath)
+		if prepared.Driver.Info().Features.CanRunGUI {
+			args = append(args, "--run-gui")
+		}
+		if prepared.GuestAgent != "" {
+			args = append(args, "--guestagent", prepared.GuestAgent)
+		}
+		if prepared.NerdctlArchiveCache != "" {
+			args = append(args, "--nerdctl-archive", prepared.NerdctlArchiveCache)
+		}
+		if showProgress {
+			args = append(args, "--progress")
+		}
+		args = append(args, inst.Name)
+		haCmd = exec.CommandContext(ctx, limactl, args...)
+
+		haCmd.SysProcAttr = executil.BackgroundSysProcAttr
+
+		haCmd.Stdout = haStdoutW
+		haCmd.Stderr = haStderrW
+
+		if launchHostAgentForeground {
+			if isRegisteredToAutoStart {
+				logrus.Warn("The instance is registered to start at login, but the --foreground option was given, so starting the instance directly")
+			}
+			haCmd.SysProcAttr = executil.ForegroundSysProcAttr
+			if err := execHostAgentForeground(limactl, haCmd); err != nil {
+				return err
+			}
+		} else if err := haCmd.Start(); err != nil {
+			return err
+		}
+	} else if err = autostart.RequestStart(ctx, inst); err != nil {
+		return fmt.Errorf("failed to request start via autostart manager: %w", err)
 	}
 
 	if err := waitHostAgentStart(ctx, haPIDPath, haStderrPath); err != nil {
@@ -238,10 +246,14 @@ func StartWithPaths(ctx context.Context, inst *limatype.Instance, launchHostAgen
 		close(watchErrCh)
 	}()
 	waitErrCh := make(chan error)
-	go func() {
-		waitErrCh <- haCmd.Wait()
-		close(waitErrCh)
-	}()
+	if haCmd != nil {
+		go func() {
+			waitErrCh <- haCmd.Wait()
+			close(waitErrCh)
+		}()
+	} else {
+		defer close(waitErrCh)
+	}
 
 	select {
 	case watchErr := <-watchErrCh:
