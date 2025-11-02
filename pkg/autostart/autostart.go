@@ -6,10 +6,8 @@ package autostart
 
 import (
 	"context"
-	"runtime"
 	"sync"
 
-	"github.com/lima-vm/lima/v2/pkg/autostart/systemd"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 )
 
@@ -59,15 +57,4 @@ type autoStartManager interface {
 	RequestStop(ctx context.Context, inst *limatype.Instance) (bool, error)
 }
 
-var manager = sync.OnceValue(func() autoStartManager {
-	switch runtime.GOOS {
-	case "darwin":
-		return Launchd
-	case "linux":
-		if systemd.IsRunningSystemd() {
-			return Systemd
-		}
-		// TODO: support other init systems
-	}
-	return &notSupportedManager{}
-})
+var manager = sync.OnceValue(Manager)

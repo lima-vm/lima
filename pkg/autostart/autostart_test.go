@@ -8,6 +8,28 @@ import (
 	"testing"
 
 	"gotest.tools/v3/assert"
+
+	"github.com/lima-vm/lima/v2/pkg/autostart/launchd"
+	"github.com/lima-vm/lima/v2/pkg/autostart/systemd"
+)
+
+var (
+	Launchd = &TemplateFileBasedManager{
+		filePath:              launchd.GetPlistPath,
+		template:              launchd.Template,
+		enabler:               launchd.EnableDisableService,
+		autoStartedIdentifier: launchd.AutoStartedServiceName,
+		requestStart:          launchd.RequestStart,
+		requestStop:           launchd.RequestStop,
+	}
+	Systemd = &TemplateFileBasedManager{
+		filePath:              systemd.GetUnitPath,
+		template:              systemd.Template,
+		enabler:               systemd.EnableDisableUnit,
+		autoStartedIdentifier: systemd.AutoStartedUnitName,
+		requestStart:          systemd.RequestStart,
+		requestStop:           systemd.RequestStop,
+	}
 )
 
 func TestRenderTemplate(t *testing.T) {

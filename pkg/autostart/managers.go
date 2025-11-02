@@ -12,13 +12,13 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/lima-vm/lima/v2/pkg/autostart/launchd"
-	"github.com/lima-vm/lima/v2/pkg/autostart/systemd"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/textutil"
 )
 
 type notSupportedManager struct{}
+
+var _ autoStartManager = (*notSupportedManager)(nil)
 
 var ErrNotSupported = fmt.Errorf("autostart is not supported on %s", runtime.GOOS)
 
@@ -46,26 +46,6 @@ func (*notSupportedManager) RequestStop(_ context.Context, _ *limatype.Instance)
 	return false, ErrNotSupported
 }
 
-// Launchd is the autostart manager for macOS.
-var Launchd = &TemplateFileBasedManager{
-	filePath:              launchd.GetPlistPath,
-	template:              launchd.Template,
-	enabler:               launchd.EnableDisableService,
-	autoStartedIdentifier: launchd.AutoStartedServiceName,
-	requestStart:          launchd.RequestStart,
-	requestStop:           launchd.RequestStop,
-}
-
-// Systemd is the autostart manager for Linux.
-var Systemd = &TemplateFileBasedManager{
-	filePath:              systemd.GetUnitPath,
-	template:              systemd.Template,
-	enabler:               systemd.EnableDisableUnit,
-	autoStartedIdentifier: systemd.AutoStartedUnitName,
-	requestStart:          systemd.RequestStart,
-	requestStop:           systemd.RequestStop,
-}
-
 // TemplateFileBasedManager is an autostart manager that uses a template file to create the autostart entry.
 type TemplateFileBasedManager struct {
 	enabler               func(ctx context.Context, enable bool, instName string) error
@@ -75,6 +55,8 @@ type TemplateFileBasedManager struct {
 	requestStart          func(ctx context.Context, inst *limatype.Instance) error
 	requestStop           func(ctx context.Context, inst *limatype.Instance) (bool, error)
 }
+
+var _ autoStartManager = (*TemplateFileBasedManager)(nil)
 
 func (t *TemplateFileBasedManager) IsRegistered(_ context.Context, inst *limatype.Instance) (bool, error) {
 	if t.filePath == nil {
