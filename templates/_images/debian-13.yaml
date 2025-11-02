@@ -1,12 +1,12 @@
 images:
 # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
 
-- location: "https://cloud.debian.org/images/cloud/trixie/20250911-2232/debian-13-genericcloud-amd64-20250911-2232.qcow2"
+- location: "https://cloud.debian.org/images/cloud/trixie/20251006-2257/debian-13-genericcloud-amd64-20251006-2257.qcow2"
   arch: "x86_64"
-  digest: "sha512:82ca129c665d6d1d9a919aa64a1c275646755de078a4e07de83d741e28f38f506b907f46432c0368d4ab3c740cfacf9894238be7052aeb46b1933259cabecc62"
-- location: "https://cloud.debian.org/images/cloud/trixie/20250911-2232/debian-13-genericcloud-arm64-20250911-2232.qcow2"
+  digest: "sha512:aa1963a7356a7fab202e5eebc0c1954c4cbd4906e3d8e9bf993beb22e0a90cd7fe644bd5e0fb5ec4b9fbea16744c464fda34ef1be5c3532897787d16c7211f86"
+- location: "https://cloud.debian.org/images/cloud/trixie/20251006-2257/debian-13-genericcloud-arm64-20251006-2257.qcow2"
   arch: "aarch64"
-  digest: "sha512:4c9cf2f8733670ff8d56a88b6e0f04900c55f68c1a4757a257605b314062fdd6dbe37b61b8b9ecda376a16770e9f12aeddc23bd5c5f499f91443d99308790a32"
+  digest: "sha512:0e176b990f0685a03755b209f2841d391a86528a0b0ba40014ae34a170a755a45619da5b38b78d7b08770790ecfa517bef855b41feacfdc374bb22a4613383b4"
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
 
