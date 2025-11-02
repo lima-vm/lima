@@ -2,10 +2,10 @@
 # Image source: https://yum.oracle.com/oracle-linux-templates.html
 
 images:
-- location: "https://yum.oracle.com/templates/OracleLinux/OL9/u5/x86_64/OL9U5_x86_64-kvm-b259.qcow2"
+- location: "https://yum.oracle.com/templates/OracleLinux/OL9/u6/x86_64/OL9U6_x86_64-kvm-b265.qcow2"
   arch: "x86_64"
-  digest: "sha256:f1b8f0ca281570dda5e844485d6a300d1a13a629272ffdff4ec84bf56b76b1fc"
-- location: "https://yum.oracle.com/templates/OracleLinux/OL9/u5/aarch64/OL9U5_aarch64-kvm-cloud-b127.qcow2"
+  digest: "sha256:415274f04015112eeb972ed8a4e6941cb71df0318c4acba5a760931b7d7c0c69"
+- location: "https://yum.oracle.com/templates/OracleLinux/OL9/u6/aarch64/OL9U6_aarch64-kvm-cloud-b149.qcow2"
   arch: "aarch64"
-  digest: "sha256:5453d4566783af42283cb3ab34970b87b6def2691137d4f9dcc042f145510986"
+  digest: "sha256:6a9794c898f1220a6df8b59031f952d56fdb31e915a7404bbcb3df2609d89975"
 mountTypesUnsupported: [9p]
