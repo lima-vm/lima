@@ -507,6 +507,11 @@ func (a *HostAgent) startHostAgentRoutines(ctx context.Context) error {
 		logrus.Info(msg)
 	}
 	a.cleanUp(func() error {
+		// Skip ExitMaster when the control socket does not exist.
+		// On Windows, the ControlMaster is used only for SSH port forwarding.
+		if !sshutil.IsControlMasterExisting(a.instDir) {
+			return nil
+		}
 		logrus.Debugf("shutting down the SSH master")
 		if exitMasterErr := ssh.ExitMaster(a.instSSHAddress, a.sshLocalPort, a.sshConfig); exitMasterErr != nil {
 			logrus.WithError(exitMasterErr).Warn("failed to exit SSH master")

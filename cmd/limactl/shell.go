@@ -127,7 +127,7 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	if restart {
+	if restart && sshutil.IsControlMasterExisting(inst.Dir) {
 		logrus.Infof("Exiting ssh session for the instance %q", instName)
 
 		sshConfig := &ssh.SSHConfig{
