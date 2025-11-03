@@ -63,11 +63,13 @@ func newShellCommand() *cobra.Command {
 	shellCmd.Flags().String("workdir", "", "Working directory")
 	shellCmd.Flags().Bool("reconnect", false, "Reconnect to the SSH session")
 	shellCmd.Flags().Bool("preserve-env", false, "Propagate environment variables to the shell")
+	shellCmd.Flags().Bool("start", false, "Start the instance if it is not already running")
 	return shellCmd
 }
 
 func shellAction(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
+	flags := cmd.Flags()
 	// simulate the behavior of double dash
 	newArg := []string{}
 	if len(args) >= 2 && args[1] == "--" {
@@ -93,9 +95,16 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	if inst.Status == limatype.StatusStopped {
-		startNow, err := askWhetherToStart()
+		startNow, err := flags.GetBool("start")
 		if err != nil {
 			return err
+		}
+
+		if !flags.Changed("start") {
+			startNow, err = askWhetherToStart()
+			if err != nil {
+				return err
+			}
 		}
 
 		if !startNow {
