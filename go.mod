@@ -11,7 +11,7 @@ require (
 	github.com/apparentlymart/go-cidr v1.1.0
 	github.com/balajiv113/fd v0.0.0-20230330094840-143eec500f3e
 	github.com/cheggaaa/pb/v3 v3.1.7 // gomodjail:unconfined
-	github.com/cilium/ebpf v0.19.0 // gomodjail:unconfined
+	github.com/cilium/ebpf v0.20.0 // gomodjail:unconfined
 	github.com/containerd/continuity v0.4.5
 	github.com/containers/gvisor-tap-vsock v0.8.7 // gomodjail:unconfined
 	github.com/coreos/go-semver v0.3.1
@@ -118,11 +118,11 @@ require (
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	github.com/yuin/gopher-lua v1.1.1 // indirect
 	golang.org/x/crypto v0.43.0 // indirect
-	golang.org/x/mod v0.28.0 // indirect
+	golang.org/x/mod v0.29.0 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
 	golang.org/x/term v0.36.0 // indirect
 	golang.org/x/time v0.9.0 // indirect
-	golang.org/x/tools v0.37.0 // indirect
+	golang.org/x/tools v0.38.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250804133106-a7a43d27e69b // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
