@@ -42,9 +42,6 @@ type LimaKrunkitDriver struct {
 var (
 	_      driver.Driver   = (*LimaKrunkitDriver)(nil)
 	vmType limatype.VMType = "krunkit"
-
-	//go:embed hack/install-vulkan-gpu.sh
-	gpuProvisionScript string
 )
 
 func New() *LimaKrunkitDriver {
@@ -206,25 +203,6 @@ func (l *LimaKrunkitDriver) FillConfig(_ context.Context, cfg *limatype.LimaYAML
 	}
 
 	cfg.VMType = ptr.Of(vmType)
-
-	if isFedoraConfigured(cfg) {
-		gpuInstallScript := limatype.Provision{
-			Mode:   limatype.ProvisionModeData,
-			Script: ptr.Of(gpuProvisionScript),
-			ProvisionData: limatype.ProvisionData{
-				Content:     ptr.Of(gpuProvisionScript),
-				Path:        ptr.Of("/usr/local/bin/install-vulkan-gpu.sh"),
-				Permissions: ptr.Of("0755"),
-				Overwrite:   ptr.Of(false),
-				Owner:       cfg.User.Name,
-			},
-		}
-
-		cfg.Provision = append(cfg.Provision, gpuInstallScript)
-		cfg.Message = `To enable GPU support (Vulkan) for Krunkit to use AI models without containers, run the following command inside the VM:
-    ` + "\x1b[32m" + `sudo install-vulkan-gpu.sh` + "\x1b[0m" + `
-` + "\x1b[31m" + `Ignore this if already done` + "\x1b[0m" + "\n"
-	}
 
 	return validateConfig(cfg)
 }
