@@ -66,8 +66,9 @@ func transformGitHubURL(ctx context.Context, input string) (string, error) {
 		}
 	}
 
-	// If filename is .lima.yaml, check if it's a symlink/redirect to another file
-	if path.Base(filePath) == defaultFilename {
+	// If filename has a .yaml/.yml extension, check if it's a symlink/redirect to another file
+	ext := strings.ToLower(path.Ext(filePath))
+	if ext == ".yaml" || ext == ".yml" {
 		return resolveGitHubSymlink(ctx, org, repo, branch, filePath, origBranch)
 	}
 	return githubUserContentURL(org, repo, branch, filePath), nil

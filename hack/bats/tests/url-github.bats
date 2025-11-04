@@ -20,6 +20,7 @@ load "../helpers/load"
 #   │   └── .lima.yaml     -> github:jandubois//loop/
 #   ├── docs
 #   │   └── .lima.yaml     -> ../templates/demo.yaml
+#   ├── example.yaml       -> templates/demo.yaml
 #   ├── invalid
 #   │   ├── org
 #   │   │   └── .lima.yaml -> github:lima-vm
@@ -35,9 +36,12 @@ load "../helpers/load"
 #       └── .lima.yaml     "{}"
 #
 # Both the `main` branch and the `v0.0.0` tag have this layout.
-
+#
 # All these URLs should redirect to the same template URL (either on "main" or at "v0.0.0"):
 # "https://raw.githubusercontent.com/jandubois/jandubois/${tag}/templates/demo.yaml"
+#
+# Additional tests rely on jandubois/lima existing and containing the v1.2.1 tag.
+
 URLS=(
 	github:jandubois/jandubois/templates/demo.yaml@main
 	github:jandubois/jandubois/templates/demo.yaml
@@ -54,6 +58,10 @@ URLS=(
 	github:jandubois/
 	github:jandubois@v0.0.0
 	github:jandubois
+	github:jandubois/jandubois/example.yaml
+	github:jandubois/jandubois/example@main
+	github:jandubois//example.yaml@v0.0.0
+	github:jandubois//example
 	github:jandubois/jandubois/docs/.lima.yaml@main
 	github:jandubois/jandubois/docs/.lima.yaml
 	github:jandubois/jandubois/docs/.lima
@@ -96,11 +104,12 @@ done
 }
 
 @test 'hidden files without an extension get a .yaml extension' {
-	url -0 'github:jandubois//test/.hidden'
-	assert_output 'https://raw.githubusercontent.com/jandubois/jandubois/main/test/.hidden.yaml'
+	url -1 'github:jandubois//test/.hidden'
+	assert_fatal 'file "https://raw.githubusercontent.com/jandubois/jandubois/main/test/.hidden.yaml" not found or inaccessible: status 404'
 }
 
 @test 'files that have an extension do not get a .yaml extension' {
+	# This command doesn't fail because only *.yaml files are checked for redirects/symlinks, and therefore fail right away if they don't exist.
 	url -0 'github:jandubois//test/.script.sh'
 	assert_output 'https://raw.githubusercontent.com/jandubois/jandubois/main/test/.script.sh'
 }
