@@ -1,7 +1,10 @@
 ---
-title: CLI plugins (Experimental)
+title: CLI plugins
 weight: 2
 ---
+
+> **Warning**
+> Support for CLI plugins is experimental
 
  | ⚡ Requirement | Lima >= 2.0 |
  |----------------|-------------|

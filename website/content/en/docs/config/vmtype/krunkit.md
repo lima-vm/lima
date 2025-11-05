@@ -3,7 +3,7 @@ title: Krunkit
 weight: 4
 ---
 
-> Warning
+> **Warning**
 > "krunkit" is experimental
 
 | ⚡ Requirement | Lima >= 2.0, macOS >= 14 (Sonoma+), Apple Silicon (arm64) |
