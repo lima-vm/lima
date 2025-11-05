@@ -31,7 +31,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/registry"
 	"github.com/lima-vm/lima/v2/pkg/store"
-	"github.com/lima-vm/lima/v2/pkg/usrlocalsharelima"
+	"github.com/lima-vm/lima/v2/pkg/usrlocal"
 )
 
 // DefaultWatchHostAgentEventsTimeout is the duration to wait for the instance
@@ -48,7 +48,7 @@ type Prepared struct {
 func Prepare(ctx context.Context, inst *limatype.Instance, guestAgent string) (*Prepared, error) {
 	if !*inst.Config.Plain && guestAgent == "" {
 		var err error
-		guestAgent, err = usrlocalsharelima.GuestAgentBinary(*inst.Config.OS, *inst.Config.Arch)
+		guestAgent, err = usrlocal.GuestAgentBinary(*inst.Config.OS, *inst.Config.Arch)
 		if err != nil {
 			return nil, err
 		}

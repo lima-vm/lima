@@ -21,7 +21,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/store"
-	"github.com/lima-vm/lima/v2/pkg/usrlocalsharelima"
+	"github.com/lima-vm/lima/v2/pkg/usrlocal"
 )
 
 func newGuestInstallCommand() *cobra.Command {
@@ -81,7 +81,7 @@ func guestInstallAction(cmd *cobra.Command, args []string) error {
 	prefix := *inst.Config.GuestInstallPrefix
 
 	// lima-guestagent
-	guestAgentBinary, err := usrlocalsharelima.GuestAgentBinary(*inst.Config.OS, *inst.Config.Arch)
+	guestAgentBinary, err := usrlocal.GuestAgentBinary(*inst.Config.OS, *inst.Config.Arch)
 	if err != nil {
 		return err
 	}

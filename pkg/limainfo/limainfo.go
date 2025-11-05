@@ -20,7 +20,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/plugins"
 	"github.com/lima-vm/lima/v2/pkg/registry"
 	"github.com/lima-vm/lima/v2/pkg/templatestore"
-	"github.com/lima-vm/lima/v2/pkg/usrlocalsharelima"
+	"github.com/lima-vm/lima/v2/pkg/usrlocal"
 	"github.com/lima-vm/lima/v2/pkg/version"
 )
 
@@ -97,7 +97,7 @@ func New(ctx context.Context) (*LimaInfo, error) {
 	}
 	info.IdentityFile = filepath.Join(configDir, filenames.UserPrivateKey)
 	for _, arch := range limatype.ArchTypes {
-		bin, err := usrlocalsharelima.GuestAgentBinary(limatype.LINUX, arch)
+		bin, err := usrlocal.GuestAgentBinary(limatype.LINUX, arch)
 		if err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
 				logrus.WithError(err).Debugf("Failed to resolve the guest agent binary for %q", arch)
