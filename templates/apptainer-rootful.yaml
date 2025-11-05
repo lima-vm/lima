@@ -2,11 +2,11 @@
 # $ limactl start ./apptainer-rootful.yaml
 # $ limactl shell apptainer-rootful apptainer run -u -B $HOME:$HOME docker://alpine
 
-minimumLimaVersion: 1.1.0
+minimumLimaVersion: 2.0.0
 
 base:
-- template://_images/ubuntu-lts
-- template://_default/mounts
+- template:_images/ubuntu-lts
+- template:_default/mounts
 
 containerd:
   system: false

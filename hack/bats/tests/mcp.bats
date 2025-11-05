@@ -25,7 +25,7 @@ local_setup_file() {
     limactl delete --force "$NAME" || :
     # Make sure that the host agent doesn't inherit file handles 3 or 4.
     # Otherwise bats will not finish until the host agent exits.
-    limactl start --yes --name "$NAME" template://default 3>&- 4>&-
+    limactl start --yes --name "$NAME" template:default 3>&- 4>&-
 }
 
 local_teardown_file() {

@@ -16,7 +16,7 @@ NAME=nginx
 
 local_setup_file() {
     limactl delete --force "$NAME" || :
-    limactl start --yes --name "$NAME" --mount "$BATS_TMPDIR" "template://${TEMPLATE}" 3>&- 4>&-
+    limactl start --yes --name "$NAME" --mount "$BATS_TMPDIR" "template:${TEMPLATE}" 3>&- 4>&-
 }
 
 local_teardown_file() {
