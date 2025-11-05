@@ -23,7 +23,7 @@
 
 minimumLimaVersion: 2.0.0
 
-base: template://_images/ubuntu-lts
+base: template:_images/ubuntu-lts
 
 # Mounts are disabled in this template, but can be enabled optionally.
 mounts: []

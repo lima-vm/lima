@@ -319,7 +319,7 @@ containerd:
 # It should not be set if the minimum version is less than 1.0.0
 # 🟢 Builtin default: not set
 # 🔵 This file: "1.1.0" to use the `base` templating mechanism
-minimumLimaVersion: 1.1.0
+minimumLimaVersion: 2.0.0
 
 # EXPERIMENTAL
 # Default settings can be imported from base templates. These will be merged in when the instance
@@ -332,8 +332,8 @@ minimumLimaVersion: 1.1.0
 # 🟢 Builtin default: no base template
 # 🔵 This file: Ubuntu images and default mount points
 base:
-- template://_images/ubuntu
-- template://_default/mounts
+- template:_images/ubuntu
+- template:_default/mounts
 
 # User to be used inside the VM
 user:

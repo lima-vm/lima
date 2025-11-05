@@ -12,9 +12,9 @@
 #
 # For more details of RKE2, please refer to https://docs.rke2.io/
 
-minimumLimaVersion: 1.1.0
+minimumLimaVersion: 2.0.0
 
-base: template://_images/ubuntu-lts
+base: template:_images/ubuntu-lts
 
 # Mounts are disabled in this template, but can be enabled optionally.
 mounts: []

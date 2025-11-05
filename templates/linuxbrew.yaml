@@ -5,12 +5,12 @@
 # This template does not use macOS as the guest OS, because it seems hard to automate
 # provisioning macOS instances (accept EULA, skip enabling iCloud, set up SSH...).
 
-minimumLimaVersion: 1.1.0
+minimumLimaVersion: 2.0.0
 
 base:
-- template://_images/ubuntu-lts
+- template:_images/ubuntu-lts
 # Remove this line to disable the mounts
-- template://_default/mounts
+- template:_default/mounts
 
 # containerd should be installed via Homebrew when Homebrew supports it
 containerd:
