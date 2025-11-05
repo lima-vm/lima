@@ -175,20 +175,31 @@ func chooseGABinary(candidates []string) (string, error) {
 	}
 }
 
-// Prefix returns the <PREFIX> directory, which is two levels above the lima share directory.
-func Prefix() (string, error) {
-	dir, err := Dir()
-	if err != nil {
-		return "", err
+// LibexecLima returns the <PREFIX>/libexec/lima directories.
+// For Homebrew compatibility, it also checks <PREFIX>/lib/lima.
+func LibexecLima() ([]string, error) {
+	var candidates []string
+	selfDirs := SelfDirs()
+	for _, selfDir := range selfDirs {
+		// selfDir:  /usr/local/bin
+		// prefix: /usr/local
+		// candidate: /usr/local/libexec/lima
+		prefix := filepath.Dir(selfDir)
+		candidate := filepath.Join(prefix, "libexec", "lima")
+		if ents, err := os.ReadDir(candidate); err == nil && len(ents) > 0 {
+			candidates = append(candidates, candidate)
+		}
+		// selfDir: /opt/homebrew/bin
+		// prefix: /opt/homebrew
+		// candidate: /opt/homebrew/lib/lima
+		//
+		// Note that there is no /opt/homebrew/libexec directory,
+		// as Homebrew preserves libexec for private use.
+		// https://github.com/lima-vm/lima/issues/4295#issuecomment-3490680651
+		candidate = filepath.Join(prefix, "lib", "lima")
+		if ents, err := os.ReadDir(candidate); err == nil && len(ents) > 0 {
+			candidates = append(candidates, candidate)
+		}
 	}
-	return filepath.Dir(filepath.Dir(dir)), nil
-}
-
-// LibexecLima returns the <PREFIX>/libexec/lima directory.
-func LibexecLima() (string, error) {
-	prefix, err := Prefix()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(prefix, "libexec", "lima"), nil
+	return candidates, nil
 }
