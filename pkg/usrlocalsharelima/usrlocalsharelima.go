@@ -194,7 +194,7 @@ func LibexecLima() ([]string, error) {
 		// candidate: /opt/homebrew/lib/lima
 		//
 		// Note that there is no /opt/homebrew/libexec directory,
-		// as Homebrew preserves libexec for private use.
+		// as Homebrew reserves libexec for private use.
 		// https://github.com/lima-vm/lima/issues/4295#issuecomment-3490680651
 		candidate = filepath.Join(prefix, "lib", "lima")
 		if ents, err := os.ReadDir(candidate); err == nil && len(ents) > 0 {
