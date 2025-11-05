@@ -119,3 +119,4 @@ See also <https://github.com/github/copilot-cli>.
 ## See also
 
 - [Config » AI](../config/ai/)
+- [Config » GPU](../config/gpu.md)
