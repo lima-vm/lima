@@ -205,5 +205,13 @@ func LibexecLima() ([]string, error) {
 			candidates = append(candidates, candidate)
 		}
 	}
+	if debugutil.Debug {
+		if workspace := delveWorkspace(); workspace != "" {
+			candidate := filepath.Join(workspace, "_output", "libexec", "lima")
+			if ents, err := os.ReadDir(candidate); err == nil && len(ents) > 0 {
+				candidates = append(candidates, candidate)
+			}
+		}
+	}
 	return candidates, nil
 }
