@@ -561,7 +561,8 @@ uninstall:
 		"$(DEST)/libexec/lima/limactl-mcp$(exe)" \
 		"$(DEST)/libexec/lima/lima-driver-qemu$(exe)" \
 		"$(DEST)/libexec/lima/lima-driver-vz$(exe)" \
-		"$(DEST)/libexec/lima/lima-driver-wsl2$(exe)"
+		"$(DEST)/libexec/lima/lima-driver-wsl2$(exe)" \
+		"$(DEST)/libexec/lima/lima-driver-krunkit$(exe)"
 	if [ "$$(readlink "$(DEST)/bin/nerdctl")" = "nerdctl.lima" ]; then rm "$(DEST)/bin/nerdctl"; fi
 	if [ "$$(readlink "$(DEST)/bin/apptainer")" = "apptainer.lima" ]; then rm "$(DEST)/bin/apptainer"; fi
 
