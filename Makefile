@@ -18,9 +18,28 @@ bat = .bat
 exe = .exe
 endif
 
-GO_BUILDTAGS ?=
 ifeq ($(GOOS),darwin)
 MACOS_SDK_VERSION = $(shell xcrun --show-sdk-version | cut -d . -f 1)
+# xcrun command seems to fail even when the SDK is available:
+# > xcrun: error: unable to lookup item 'SDKVersion' in SDK '/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk'
+ifeq ($(MACOS_SDK_VERSION),)
+MACOS_SDK_VERSION = $(shell readlink /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk | sed -E -e "s/^MacOSX//" -e "s/\.[0-9]+\.sdk//")
+endif
+endif
+
+DEFAULT_ADDITIONAL_DRIVERS :=
+ifeq ($(GOOS),darwin)
+ifeq ($(GOARCH),arm64)
+ifeq ($(shell test $(MACOS_SDK_VERSION) -ge 14; echo $$?),0)
+# krunkit needs macOS 14 or later: https://github.com/containers/libkrun/blob/main/README.md#macos-efi-variant
+DEFAULT_ADDITIONAL_DRIVERS += krunkit
+endif
+endif
+endif
+ADDITIONAL_DRIVERS ?= $(DEFAULT_ADDITIONAL_DRIVERS)
+
+GO_BUILDTAGS ?=
+ifeq ($(GOOS),darwin)
 ifeq ($(shell test $(MACOS_SDK_VERSION) -lt 13; echo $$?),0)
 # The "vz" mode needs macOS 13 SDK or later
 GO_BUILDTAGS += no_vz
