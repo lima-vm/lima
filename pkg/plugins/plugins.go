@@ -59,10 +59,9 @@ var getPluginDirectories = sync.OnceValue(func() []string {
 		dirs = append(dirs, pathDirs...)
 	}
 
-	if libexecDir, err := usrlocalsharelima.LibexecLima(); err == nil {
-		if _, err := os.Stat(libexecDir); err == nil {
-			dirs = append(dirs, libexecDir)
-		}
+	libexecDirs, err := usrlocalsharelima.LibexecLima()
+	if err == nil {
+		dirs = append(dirs, libexecDirs...)
 	}
 
 	return dirs
