@@ -181,7 +181,7 @@ exe: _output/bin/limactl$(exe)
 
 .PHONY: minimal native
 minimal: clean limactl native-guestagent default_template
-native: clean limactl helpers native-guestagent templates template_experimentals
+native: clean limactl limactl-plugins helpers native-guestagent templates template_experimentals additional-drivers
 
 ################################################################################
 # These configs were once customizable but should no longer be changed.
@@ -641,9 +641,10 @@ ARTIFACT_ADDITIONAL_GUESTAGENTS_PATH_COMMON = _artifacts/lima-additional-guestag
 artifact: $(addprefix $(ARTIFACT_PATH_COMMON),$(ARTIFACT_FILE_EXTENSIONS)) \
 	$(addprefix $(ARTIFACT_ADDITIONAL_GUESTAGENTS_PATH_COMMON),$(ARTIFACT_FILE_EXTENSIONS))
 
-ARTIFACT_DES =  _output/bin/limactl$(exe) $(LIMA_DEPS) $(HELPERS_DEPS) \
+ARTIFACT_DES =  _output/bin/limactl$(exe) limactl-plugins $(LIMA_DEPS) $(HELPERS_DEPS) \
 	$(NATIVE_GUESTAGENT) \
 	$(TEMPLATES) $(TEMPLATE_EXPERIMENTALS) \
+	additional-drivers \
 	$(DOCUMENTATION) _output/share/doc/lima/templates \
 	_output/share/man/man1/limactl.1
 
