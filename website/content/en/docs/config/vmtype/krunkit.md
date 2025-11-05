@@ -145,11 +145,7 @@ dnf install -y git cmake clang curl-devel glslc vulkan-devel virglrenderer
   git clone https://github.com/ggml-org/llama.cpp
   (
     cd llama.cpp
-    git reset --hard 97340b4c9924be86704dbf155e97c8319849ee19
-    cmake -B build -DGGML_VULKAN=ON -DGGML_CCACHE=OFF -DCMAKE_INSTALL_PREFIX=/usr
-    # FIXME: the build seems to fail on Apple M4 Max (and probably on other processors too).
-    # Error:
-    #   cc1: sorry, unimplemented: no support for ‘sme’ without ‘sve2’
+    cmake -B build -DGGML_VULKAN=ON -DGGML_CCACHE=OFF -DGGML_NATIVE=OFF -DCMAKE_INSTALL_PREFIX=/usr
     cmake --build build --config Release -j8
     cmake --install build
   )
