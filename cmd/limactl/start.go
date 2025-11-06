@@ -584,7 +584,7 @@ func startAction(cmd *cobra.Command, args []string) error {
 	// Network reconciliation will be performed by the process launched by the autostart manager
 	if registered, err := autostart.IsRegistered(ctx, inst); err != nil && !errors.Is(err, autostart.ErrNotSupported) {
 		return fmt.Errorf("failed to check if the autostart entry for instance %q is registered: %w", inst.Name, err)
-	} else if !registered {
+	} else if (registered && autostart.AutoStartedIdentifier() != "") || !registered {
 		err = reconcile.Reconcile(ctx, inst.Name)
 		if err != nil {
 			return err
