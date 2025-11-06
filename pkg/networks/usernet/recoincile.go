@@ -4,7 +4,6 @@
 package usernet
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -21,6 +20,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/executil"
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/lockutil"
+	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/store"
 )
 
@@ -143,14 +143,9 @@ func Stop(ctx context.Context, name string) error {
 			return err
 		}
 
-		var stdout, stderr bytes.Buffer
-		cmd := exec.CommandContext(ctx, "/usr/bin/pkill", "-F", pidFile)
-		cmd.Stdout = &stdout
-		cmd.Stderr = &stderr
-		logrus.Debugf("Running: %v", cmd.Args)
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("failed to run %v: stdout=%q, stderr=%q: %w",
-				cmd.Args, stdout.String(), stderr.String(), err)
+		if err := osutil.SysKill(pid, osutil.SigKill); err != nil {
+			logrus.Error(err)
+			return fmt.Errorf("failed to kill process with pid %d: %w", pid, err)
 		}
 	}
 
