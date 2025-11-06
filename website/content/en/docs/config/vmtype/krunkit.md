@@ -3,10 +3,10 @@ title: Krunkit
 weight: 4
 ---
 
-> Warning
+> **Warning**
 > "krunkit" is experimental
 
-| ⚡ Requirement | Lima >= 2.0, macOS >= 13 (Ventura+), Apple Silicon (arm64) |
+| ⚡ Requirement | Lima >= 2.0, macOS >= 14 (Sonoma+), Apple Silicon (arm64) |
 | ------------- | ----------------------------------------------------------- |
 
 Krunkit runs super‑light VMs on macOS/ARM64 with a focus on GPU access. It builds on [libkrun](https://github.com/containers/libkrun), a library that embeds a VMM so apps can launch processes in a hardware‑isolated VM (HVF on macOS, KVM on Linux). The standout feature is GPU support in the guest via Mesa’s Venus Vulkan driver ([venus](https://docs.mesa3d.org/drivers/venus.html)), enabling Vulkan workloads inside the VM. See the project: [containers/krunkit](https://github.com/containers/krunkit).

@@ -13,6 +13,7 @@ The following features are experimental and subject to change:
 - `audio.device`
 - `mountInotify: true`
 - `External drivers`: building and using drivers as separate executables (see [Virtual Machine Drivers](../dev/drivers))
+- [`vmType: krunkit`](../config/vmtype/krunkit.md)
 
 The following commands are experimental and subject to change:
 
