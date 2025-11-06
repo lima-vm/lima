@@ -143,7 +143,7 @@ func Stop(ctx context.Context, name string) error {
 			return err
 		}
 
-		if err := osutil.SysKill(pid, osutil.SigKill); err != nil {
+		if err := osutil.SysKill(pid, osutil.SigInt); err != nil {
 			logrus.Error(err)
 			return fmt.Errorf("failed to kill process with pid %d: %w", pid, err)
 		}
