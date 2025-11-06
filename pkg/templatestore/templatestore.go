@@ -15,7 +15,7 @@ import (
 	"unicode"
 
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
-	"github.com/lima-vm/lima/v2/pkg/usrlocalsharelima"
+	"github.com/lima-vm/lima/v2/pkg/usrlocal"
 )
 
 type Template struct {
@@ -31,14 +31,15 @@ func templatesPaths() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	shareDir, err := usrlocalsharelima.Dir()
+	shareLimaDirs, err := usrlocal.ShareLima()
 	if err != nil {
 		return nil, err
 	}
-	return []string{
-		limaTemplatesDir,
-		filepath.Join(shareDir, "templates"),
-	}, nil
+	res := []string{limaTemplatesDir}
+	for _, shareLimaDir := range shareLimaDirs {
+		res = append(res, filepath.Join(shareLimaDir, "templates"))
+	}
+	return res, nil
 }
 
 // Read searches for template `name` in all template directories and returns the

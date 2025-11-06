@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright The Lima Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package usrlocalsharelima
+package usrlocal
 
 import (
 	"errors"
@@ -10,7 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
+	"strings"
 	"sync"
 
 	"github.com/sirupsen/logrus"
@@ -73,61 +73,57 @@ func SelfDirs() []string {
 	return selfPaths
 }
 
-// Dir returns the location of the <PREFIX>/lima/share directory, relative to the location
-// of the current executable. It checks for multiple possible filesystem layouts and returns
-// the first candidate that contains the native guest agent binary.
-func Dir() (string, error) {
-	selfDirs := SelfDirs()
-
-	ostype := limatype.NewOS("linux")
-	arch := limatype.NewArch(runtime.GOARCH)
-	if arch == "" {
-		return "", fmt.Errorf("failed to get arch for %q", runtime.GOARCH)
+func delveDebugExe() string {
+	exe, err := os.Executable()
+	if err != nil {
+		return ""
 	}
+	exeBase := filepath.Base(exe)
+	if strings.HasPrefix(exeBase, "__debug_bin") {
+		return exe
+	}
+	return ""
+}
 
-	gaCandidates := []string{}
+func delveWorkspace() string {
+	self := delveDebugExe()
+	if self == "" {
+		return ""
+	}
+	// https://github.com/lima-vm/lima/pull/2651/commits/644c11373cb79aaebd8520706f7d51bd3ee5fbe4
+	// launched by `~/go/bin/dlv dap`
+	// - self: ${workspaceFolder}/cmd/limactl/__debug_bin_XXXXXX
+	return filepath.Dir(filepath.Dir(filepath.Dir(self)))
+}
+
+// ShareLima returns the <PREFIX>/share/lima directories.
+func ShareLima() ([]string, error) {
+	var candidates []string
+	selfDirs := SelfDirs()
 	for _, selfDir := range selfDirs {
 		// selfDir:  /usr/local/bin
-		selfDirDir := filepath.Dir(selfDir)
-		gaCandidates = append(gaCandidates,
-			// candidate 0:
-			// - self:  /Applications/Lima.app/Contents/MacOS/limactl
-			// - agent: /Applications/Lima.app/Contents/MacOS/lima-guestagent.Linux-x86_64
-			// - dir:   /Applications/Lima.app/Contents/MacOS
-			filepath.Join(selfDir, "lima-guestagent."+ostype+"-"+arch),
-			// candidate 1:
-			// - self:  /usr/local/bin/limactl
-			// - agent: /usr/local/share/lima/lima-guestagent.Linux-x86_64
-			// - dir:   /usr/local/share/lima
-			filepath.Join(selfDirDir, "share/lima/lima-guestagent."+ostype+"-"+arch),
-			// TODO: support custom path
-		)
-		if debugutil.Debug {
-			// candidate 2: launched by `~/go/bin/dlv dap`
+		// prefix: /usr/local
+		// candidate: /usr/local/share/lima
+		prefix := filepath.Dir(selfDir)
+		candidate := filepath.Join(prefix, "share", "lima")
+		if ents, err := os.ReadDir(candidate); err == nil && len(ents) > 0 {
+			candidates = append(candidates, candidate)
+		}
+	}
+	if debugutil.Debug {
+		if workspace := delveWorkspace(); workspace != "" {
+			// https://github.com/lima-vm/lima/pull/2651/commits/644c11373cb79aaebd8520706f7d51bd3ee5fbe4
+			// launched by `~/go/bin/dlv dap`
 			// - self: ${workspaceFolder}/cmd/limactl/__debug_bin_XXXXXX
 			// - agent: ${workspaceFolder}/_output/share/lima/lima-guestagent.Linux-x86_64
 			// - dir:  ${workspaceFolder}/_output/share/lima
-			candidateForDebugBuild := filepath.Join(filepath.Dir(selfDirDir), "_output/share/lima/lima-guestagent."+ostype+"-"+arch)
-			gaCandidates = append(gaCandidates, candidateForDebugBuild)
-			logrus.Infof("debug mode detected, adding more guest agent candidates: %v", candidateForDebugBuild)
+			candidate := filepath.Join(workspace, "_output", "share", "lima")
+			if ents, err := os.ReadDir(candidate); err == nil && len(ents) > 0 {
+				candidates = append(candidates, candidate)
+			}
 		}
 	}
-
-	for _, gaCandidate := range gaCandidates {
-		if _, err := os.Stat(gaCandidate); err == nil {
-			return filepath.Dir(gaCandidate), nil
-		} else if !errors.Is(err, os.ErrNotExist) {
-			return "", err
-		}
-		if _, err := os.Stat(gaCandidate + ".gz"); err == nil {
-			return filepath.Dir(gaCandidate), nil
-		} else if !errors.Is(err, os.ErrNotExist) {
-			return "", err
-		}
-	}
-
-	return "", fmt.Errorf("failed to find \"lima-guestagent.%s-%s\" binary for %v, attempted %v",
-		ostype, arch, selfDirs, gaCandidates)
+	return candidates, nil
 }
 
 // GuestAgentBinary returns the absolute path of the guest agent binary, possibly with ".gz" suffix.
@@ -138,18 +134,26 @@ func GuestAgentBinary(ostype limatype.OS, arch limatype.Arch) (string, error) {
 	if arch == "" {
 		return "", errors.New("arch must be set")
 	}
-	dir, err := Dir()
+	shareLimaDirs, err := ShareLima()
 	if err != nil {
 		return "", err
 	}
-	uncomp := filepath.Join(dir, "lima-guestagent."+ostype+"-"+arch)
-	comp := uncomp + ".gz"
-	res, err := chooseGABinary([]string{comp, uncomp})
-	if err != nil {
-		logrus.Debug(err)
-		return "", fmt.Errorf("guest agent binary could not be found for %s-%s: %w (Hint: try installing `lima-additional-guestagents` package)", ostype, arch, err)
+	for _, dir := range shareLimaDirs {
+		uncomp := filepath.Join(dir, "lima-guestagent."+ostype+"-"+arch)
+		comp := uncomp + ".gz"
+		var res string
+		res, err = chooseGABinary([]string{comp, uncomp})
+		if err != nil {
+			logrus.Debug(err)
+			continue
+		}
+		return res, nil
 	}
-	return res, nil
+	if err == nil {
+		// caller expects err to be comparable to fs.ErrNotExist
+		err = fs.ErrNotExist
+	}
+	return "", fmt.Errorf("guest agent binary could not be found for %s-%s: %w (Hint: try installing `lima-additional-guestagents` package)", ostype, arch, err)
 }
 
 func chooseGABinary(candidates []string) (string, error) {
@@ -194,11 +198,19 @@ func LibexecLima() ([]string, error) {
 		// candidate: /opt/homebrew/lib/lima
 		//
 		// Note that there is no /opt/homebrew/libexec directory,
-		// as Homebrew preserves libexec for private use.
+		// as Homebrew reserves libexec for private use.
 		// https://github.com/lima-vm/lima/issues/4295#issuecomment-3490680651
 		candidate = filepath.Join(prefix, "lib", "lima")
 		if ents, err := os.ReadDir(candidate); err == nil && len(ents) > 0 {
 			candidates = append(candidates, candidate)
+		}
+	}
+	if debugutil.Debug {
+		if workspace := delveWorkspace(); workspace != "" {
+			candidate := filepath.Join(workspace, "_output", "libexec", "lima")
+			if ents, err := os.ReadDir(candidate); err == nil && len(ents) > 0 {
+				candidates = append(candidates, candidate)
+			}
 		}
 	}
 	return candidates, nil

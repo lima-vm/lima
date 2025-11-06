@@ -18,7 +18,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/osutil"
-	"github.com/lima-vm/lima/v2/pkg/usrlocalsharelima"
+	"github.com/lima-vm/lima/v2/pkg/usrlocal"
 )
 
 const defaultPathExt = ".COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC;.CPL"
@@ -51,7 +51,7 @@ var Discover = sync.OnceValues(func() ([]Plugin, error) {
 })
 
 var getPluginDirectories = sync.OnceValue(func() []string {
-	dirs := usrlocalsharelima.SelfDirs()
+	dirs := usrlocal.SelfDirs()
 
 	pathEnv := os.Getenv("PATH")
 	if pathEnv != "" {
@@ -59,7 +59,7 @@ var getPluginDirectories = sync.OnceValue(func() []string {
 		dirs = append(dirs, pathDirs...)
 	}
 
-	libexecDirs, err := usrlocalsharelima.LibexecLima()
+	libexecDirs, err := usrlocal.LibexecLima()
 	if err == nil {
 		dirs = append(dirs, libexecDirs...)
 	}
