@@ -105,7 +105,7 @@ For example assume the `lima-vm` projects wants to support this URL:
 github:lima-vm//fedora
 ```
 
-Then it would have to create a `lima-vm/lima` repo with a `fedora.yaml` file (in the default branch) that contains:
+Then it would have to create a `lima-vm/lima-vm` repo with a `fedora.yaml` file (in the default branch) that contains:
 
 ```
 github:lima-vm/lima/templates/fedora
