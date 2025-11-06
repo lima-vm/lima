@@ -157,7 +157,10 @@ func Stop(ctx context.Context, name string) error {
 			break
 		}
 		if time.Since(startWaiting) > 5*time.Second {
-			logrus.Infof("usernet network still running after 5 seconds")
+			logrus.Infof("usernet network still running after 5 seconds. Attempting to forcibly kill")
+			if err := osutil.SysKill(pid, osutil.SigKill); err != nil {
+				logrus.Error(err)
+			}
 			break
 		}
 		time.Sleep(500 * time.Millisecond)
