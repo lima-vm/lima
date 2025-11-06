@@ -644,7 +644,7 @@ artifact: $(addprefix $(ARTIFACT_PATH_COMMON),$(ARTIFACT_FILE_EXTENSIONS)) \
 
 ARTIFACT_DES =  _output/bin/limactl$(exe) limactl-plugins $(LIMA_DEPS) $(HELPERS_DEPS) \
 	$(NATIVE_GUESTAGENT) \
-	$(TEMPLATES) $(TEMPLATE_EXPERIMENTALS) \
+	$(TEMPLATES) $(TEMPLATE_IMAGES) $(TEMPLATE_EXPERIMENTALS) \
 	additional-drivers \
 	$(DOCUMENTATION) _output/share/doc/lima/templates \
 	_output/share/man/man1/limactl.1
