@@ -282,10 +282,11 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	if olderSSH {
 		logLevel = "QUIET"
 	}
+	sshAddress, sshPort := inst.SSHAddressPort()
 	sshArgs = append(sshArgs, []string{
 		"-o", fmt.Sprintf("LogLevel=%s", logLevel),
-		"-p", strconv.Itoa(inst.SSHLocalPort),
-		inst.SSHAddress,
+		"-p", strconv.Itoa(sshPort),
+		sshAddress,
 		"--",
 		script,
 	}...)

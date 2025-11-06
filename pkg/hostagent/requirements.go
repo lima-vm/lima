@@ -4,8 +4,11 @@
 package hostagent
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"runtime"
 	"strings"
 	"time"
@@ -122,20 +125,25 @@ func (a *HostAgent) waitForRequirement(r requirement) error {
 			AdditionalArgs: sshutil.DisableControlMasterOptsFromSSHArgs(sshConfig.AdditionalArgs),
 		}
 	}
-	stdout, stderr, err := ssh.ExecuteScript(a.instSSHAddress, a.sshLocalPort, sshConfig, script, r.description)
+	sshAddress, sshPort := a.sshAddressPort()
+	stdout, stderr, err := ssh.ExecuteScript(sshAddress, sshPort, sshConfig, script, r.description)
 	logrus.Debugf("stdout=%q, stderr=%q, err=%v", stdout, stderr, err)
 	if err != nil {
 		return fmt.Errorf("stdout=%q, stderr=%q: %w", stdout, stderr, err)
+	}
+	if r.stdoutParser != nil {
+		return r.stdoutParser(stdout)
 	}
 	return nil
 }
 
 type requirement struct {
-	description string
-	script      string
-	debugHint   string
-	fatal       bool
-	noMaster    bool
+	description  string
+	script       string
+	debugHint    string
+	fatal        bool
+	noMaster     bool
+	stdoutParser func(string) error
 }
 
 func (a *HostAgent) essentialRequirements() []requirement {
@@ -151,7 +159,27 @@ Make sure that the YAML field "ssh.localPort" is not used by other processes on 
 If any private key under ~/.ssh is protected with a passphrase, you need to have ssh-agent to be running.
 `,
 			noMaster: true,
-		})
+		},
+	)
+
+	if runtime.GOOS == "darwin" {
+		// Limit the Guest IP address detection only to macOS for now.
+		req = append(req,
+			requirement{
+				description: "detect guest IP address",
+				script: `#!/bin/bash
+ip -j addr
+`,
+				debugHint: `Detecting the guest IP address on the interface in same subnet on the host.
+This is only supported on macOS for now.
+If the interface does not have IPv4 address, SSH connection against the guest OS will be made via the localhost port forwarding.`,
+				noMaster:     true,
+				stdoutParser: a.detectGuestIPAddress,
+			},
+		)
+	} else {
+		logrus.Info("Skipping the guest IP address detection because it is only tested on macOS for now")
+	}
 	startControlMasterReq := requirement{
 		description: "Explicitly start ssh ControlMaster",
 		script: `#!/bin/bash
@@ -279,4 +307,83 @@ Check "/var/log/cloud-init-output.log" in the guest to see where the process is 
 `,
 		})
 	return req
+}
+
+// detectGuestIPAddress detects the guest IP address on the interface in same subnet on the host
+// by parsing the output of "ip -j addr" command in the guest.
+func (a *HostAgent) detectGuestIPAddress(stdout string) error {
+	var guestIfs []struct {
+		IFNAME string `json:"ifname"`
+		ADDRS  []struct {
+			Family string `json:"family"`
+			Local  net.IP `json:"local"`
+			Scope  string `json:"scope"`
+		} `json:"addr_info"`
+	}
+	if err := json.Unmarshal([]byte(stdout), &guestIfs); err != nil {
+		return fmt.Errorf("failed to parse ip addr output %q: %w", stdout, err)
+	}
+	var (
+		guestIPv4 net.IP
+		guestIPv6 net.IP
+	)
+	hostIfs, err := net.Interfaces()
+	if err != nil {
+		return fmt.Errorf("failed to get network interfaces: %w", err)
+	}
+	for _, hostIf := range hostIfs {
+		if hostIf.Flags&net.FlagUp == 0 {
+			continue
+		}
+		hostAddrs, err := hostIf.Addrs()
+		if err != nil {
+			return fmt.Errorf("failed to get addresses for interface %q: %w", hostIf.Name, err)
+		}
+		for _, hostAddr := range hostAddrs {
+			hostIPNet, ok := hostAddr.(*net.IPNet)
+			if !ok {
+				continue
+			}
+			for _, guestIf := range guestIfs {
+				if hostIPv4 := hostIPNet.IP.To4(); hostIPv4 != nil {
+					for _, guestAddr := range guestIf.ADDRS {
+						if guestAddr.Scope != "global" {
+							continue
+						} else if guestAddr.Family != "inet" {
+							continue
+						} else if hostIPNet.Contains(guestAddr.Local) {
+							guestIPv4 = guestAddr.Local
+						}
+					}
+				} else if hostIPv6 := hostIPNet.IP.To16(); hostIPv6 != nil {
+					for _, guestAddr := range guestIf.ADDRS {
+						if guestAddr.Scope != "global" {
+							continue
+						} else if guestAddr.Family != "inet6" {
+							continue
+						} else if hostIPNet.Contains(guestAddr.Local) {
+							guestIPv6 = guestAddr.Local
+						}
+					}
+				}
+			}
+		}
+	}
+	if guestIPv4 == nil && guestIPv6 == nil {
+		logrus.Infof("The guest IPv4/IPv6 address is not found")
+		return nil
+	}
+	if guestIPv4 != nil {
+		logrus.Infof("The guest IPv4 address is %q", guestIPv4)
+	}
+	if guestIPv6 != nil {
+		logrus.Infof("The guest IPv6 address is %q", guestIPv6)
+	}
+	a.guestIPMu.Lock()
+	a.guestIPv4 = guestIPv4
+	a.guestIPv6 = guestIPv6
+	a.guestIPMu.Unlock()
+	ctx := context.Background()
+	a.emitGuestIPEvent(ctx, a.GuestIP().String())
+	return a.WriteSSHConfigFile(ctx)
 }

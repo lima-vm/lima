@@ -191,6 +191,7 @@ foreach my $id (0..@test-1) {
 
     my $sudo = $test->{guest_port} < 1024 ? "sudo " : "";
     print $lima "${sudo}${cmd} >$listener.${id} 2>/dev/null &\n";
+    print "Running in guest: ${sudo}${cmd} >$listener.${id} 2>/dev/null &\n";
 }
 
 # Make sure the guest- and hostagents had enough time to set up the forwards
@@ -211,7 +212,7 @@ foreach my $test (@test) {
         my $tcp_dest = $test->{host_ip} =~ /:/ ? "TCP6:[$test->{host_ip}]:$test->{host_port}" : "TCP:$test->{host_ip}:$test->{host_port}";
         $cmd = $test->{host_socket} eq "" ? "socat -u STDIN $tcp_dest,connect-timeout=$connectionTimeout" : "socat -u STDIN UNIX-CONNECT:$test->{host_socket}";
     }
-    print "Running: $cmd\n";
+    print "Running in host: $cmd\n";
     open(my $netcat, "| $cmd") or die "Can't run '$cmd': $!";
     print $netcat "$test->{log_msg}\n";
     # Don't check for errors on close; macOS nc seems to return non-zero exit code even on success

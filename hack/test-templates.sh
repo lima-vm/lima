@@ -336,30 +336,20 @@ if [[ -n ${CHECKS["ssh-over-vsock"]} ]]; then
 	if [[ "$(limactl ls "${NAME}" --yq .vmType)" == "vz" ]]; then
 		INFO "Testing SSH over vsock"
 		set -x
-		INFO "Testing LIMA_SSH_OVER_VSOCK=true environment"
-		limactl stop "${NAME}"
-		# Detection of the SSH server on VSOCK may fail; however, a failing log indicates that controlling detection via the environment variable works as expected.
-		if ! LIMA_SSH_OVER_VSOCK=true limactl start "${NAME}" 2>&1 | grep -i -E "(started vsock forwarder|Failed to detect SSH server on vsock)"; then
-			set +x
-			diagnose "${NAME}"
-			ERROR "LIMA_SSH_OVER_VSOCK=true did not enable vsock forwarder"
-			exit 1
-		fi
-		INFO 'Testing LIMA_SSH_OVER_VSOCK="" environment'
-		limactl stop "${NAME}"
-		# Detection of the SSH server on VSOCK may fail; however, a failing log indicates that controlling detection via the environment variable works as expected.
-		if ! LIMA_SSH_OVER_VSOCK="" limactl start "${NAME}" 2>&1 | grep -i -E "(started vsock forwarder|Failed to detect SSH server on vsock)"; then
-			set +x
-			diagnose "${NAME}"
-			ERROR "LIMA_SSH_OVER_VSOCK= did not enable vsock forwarder"
-			exit 1
-		fi
 		INFO "Testing LIMA_SSH_OVER_VSOCK=false environment"
 		limactl stop "${NAME}"
 		if ! LIMA_SSH_OVER_VSOCK=false limactl start "${NAME}" 2>&1 | grep -i "skipping detection of SSH server on vsock port"; then
 			set +x
 			diagnose "${NAME}"
 			ERROR "LIMA_SSH_OVER_VSOCK=false did not disable vsock forwarder"
+			exit 1
+		fi
+		INFO "Testing LIMA_SSH_OVER_VSOCK=true environment"
+		limactl stop "${NAME}"
+		if ! LIMA_SSH_OVER_VSOCK=true limactl start "${NAME}" 2>&1 | grep -i -E "(started vsock forwarder|Failed to detect SSH server on vsock)"; then
+			set +x
+			diagnose "${NAME}"
+			ERROR "LIMA_SSH_OVER_VSOCK=true did not enable vsock forwarder"
 			exit 1
 		fi
 		set +x
@@ -445,6 +435,13 @@ if [[ -n ${CHECKS["port-forwards"]} ]]; then
 	if limactl shell "${NAME}" command -v dnf; then
 		limactl shell "${NAME}" sudo dnf install -y nc socat
 	fi
+	# print routing table for debugging
+	case "${OS_HOST}" in
+	"Darwin") netstat -rn ;;
+	"GNU/Linux") ip route show ;;
+	"Msys") route print ;;
+	*) ;;
+	esac
 	if "${scriptdir}/test-port-forwarding.pl" "${NAME}" socat $PORT_FORWARDING_CONNECTION_TIMEOUT; then
 		INFO "Port forwarding rules work"
 	else
