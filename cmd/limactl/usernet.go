@@ -11,9 +11,11 @@ import (
 	"strconv"
 	"syscall"
 
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	"github.com/lima-vm/lima/v2/pkg/networks/usernet"
+	"github.com/lima-vm/lima/v2/pkg/networks/usernet/filter"
 )
 
 func newUsernetCommand() *cobra.Command {
@@ -31,6 +33,7 @@ func newUsernetCommand() *cobra.Command {
 	hostagentCommand.Flags().String("subnet", "192.168.5.0/24", "Sets subnet value for the usernet network")
 	hostagentCommand.Flags().Int("mtu", 1500, "mtu")
 	hostagentCommand.Flags().StringToString("leases", nil, "Pass default static leases for startup. Eg: '192.168.104.1=52:55:55:b3:bc:d9,192.168.104.2=5a:94:ef:e4:0c:df' ")
+	hostagentCommand.Flags().String("policy", "", "Path to policy JSON file")
 	return hostagentCommand
 }
 
@@ -75,6 +78,22 @@ func usernetAction(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
+	policyPath, err := cmd.Flags().GetString("policy")
+	if err != nil {
+		return err
+	}
+
+	// Parse the policy at the CLI boundary (fail fast on invalid policy)
+	var policy *filter.Policy
+	if policyPath != "" {
+		logrus.Debugf("Loading policy from: %s", policyPath)
+		policy, err = filter.LoadPolicy(policyPath)
+		if err != nil {
+			return fmt.Errorf("failed to load policy: %w", err)
+		}
+		logrus.Debugf("Loaded policy with %d rules", len(policy.Rules))
+	}
+
 	os.RemoveAll(endpoint)
 	os.RemoveAll(qemuSocket)
 	os.RemoveAll(fdSocket)
@@ -92,5 +111,6 @@ func usernetAction(cmd *cobra.Command, _ []string) error {
 		FdSocket:      fdSocket,
 		Subnet:        subnet,
 		DefaultLeases: leases,
+		Policy:        policy,
 	})
 }

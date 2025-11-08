@@ -112,6 +112,16 @@ func Leases(name string) (string, error) {
 	return sockPath, nil
 }
 
+// PolicyFile returns the path to the policy JSON file for the given network name.
+// For usernet, this is stored in ~/.lima/_networks/<name>/policy.json (not VarRun).
+func PolicyFile(name string) (string, error) {
+	dir, err := dirnames.LimaNetworksDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, name, "policy.json"), nil
+}
+
 func netmaskToCidr(baseIP, netMask net.IP) (net.IP, *net.IPNet, error) {
 	size, _ := net.IPMask(netMask.To4()).Size()
 	return net.ParseCIDR(fmt.Sprintf("%s/%d", baseIP.String(), size))
