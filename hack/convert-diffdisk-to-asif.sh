@@ -3,6 +3,10 @@
 # SPDX-FileCopyrightText: Copyright The Lima Authors
 # SPDX-License-Identifier: Apache-2.0
 
+# This script converts the diffdisk of a Lima instance to ASIF format.
+# It requires that the instance is stopped before conversion.
+# Usage: hack/convert-diffdisk-to-asif.sh [instance-name]
+
 set -eux -o pipefail
 
 instance="${1:-asif-test}"
