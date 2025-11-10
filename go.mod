@@ -25,7 +25,7 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/google/yamlfmt v0.20.0
 	github.com/invopop/jsonschema v0.13.0
-	github.com/lima-vm/go-qcow2reader v0.6.0
+	github.com/lima-vm/go-qcow2reader v0.7.0
 	github.com/lima-vm/sshocker v0.3.8 // gomodjail:unconfined
 	github.com/mattn/go-isatty v0.0.20
 	github.com/mattn/go-shellwords v1.0.12
@@ -146,5 +146,3 @@ require (
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.0 // indirect
 )
-
-replace github.com/lima-vm/go-qcow2reader => github.com/norio-nomura/go-qcow2reader v0.6.1-0.20251110085027-73026bc16b7b
