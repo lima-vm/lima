@@ -22,6 +22,7 @@ import (
 	"github.com/coreos/go-semver/semver"
 	"github.com/docker/go-units"
 	"github.com/lima-vm/go-qcow2reader"
+	"github.com/lima-vm/go-qcow2reader/image/asif"
 	"github.com/lima-vm/go-qcow2reader/image/raw"
 	"github.com/sirupsen/logrus"
 
@@ -451,7 +452,7 @@ func validateDiskFormat(diskPath string) error {
 	if err != nil {
 		return fmt.Errorf("failed to detect the format of %q: %w", diskPath, err)
 	}
-	if t := img.Type(); t != raw.Type {
+	if t := img.Type(); t != raw.Type && t != asif.Type {
 		return fmt.Errorf("expected the format of %q to be %q, got %q", diskPath, raw.Type, t)
 	}
 	// TODO: ensure that the disk is formatted with GPT or ISO9660
