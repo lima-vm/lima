@@ -21,4 +21,7 @@ type ImageDiskManager interface {
 
 	// MakeSparse makes a file sparse, starting from the specified offset.
 	MakeSparse(ctx context.Context, f *os.File, offset int64) error
+
+	// ConvertToASIF converts a disk image to ASIF format.
+	ConvertToASIF(ctx context.Context, source, dest string, size *int64, allowSourceWithBackingFile bool) error
 }
