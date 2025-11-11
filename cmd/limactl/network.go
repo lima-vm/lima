@@ -10,6 +10,7 @@ import (
 	"maps"
 	"net"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"text/tabwriter"
@@ -18,11 +19,16 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/lima-vm/lima/v2/pkg/networks"
+	"github.com/lima-vm/lima/v2/pkg/networks/usernet"
+	"github.com/lima-vm/lima/v2/pkg/networks/usernet/filter"
 	"github.com/lima-vm/lima/v2/pkg/yqutil"
 )
 
 const networkCreateExample = `  Create a network:
   $ limactl network create foo --gateway 192.168.42.1/24
+
+  Create a network with policy filtering:
+  $ limactl network create secure --gateway 192.168.42.1/24 --policy ~/policy.yaml
 
   Connect VM instances to the newly created network:
   $ limactl create --network lima:foo --name vm1
@@ -144,6 +150,7 @@ func newNetworkCreateCommand() *cobra.Command {
 	flags.String("gateway", "", "gateway, e.g., \"192.168.42.1/24\"")
 	flags.String("interface", "", "interface for bridged mode")
 	_ = cmd.RegisterFlagCompletionFunc("interface", bashFlagCompleteNetworkInterfaceNames)
+	flags.String("policy", "", "path to policy file (YAML or JSON, user-v2 mode only)")
 	return cmd
 }
 
@@ -172,6 +179,38 @@ func networkCreateAction(cmd *cobra.Command, args []string) error {
 	intf, err := flags.GetString("interface")
 	if err != nil {
 		return err
+	}
+
+	policyPath, err := flags.GetString("policy")
+	if err != nil {
+		return err
+	}
+
+	// Handle policy file if provided
+	if policyPath != "" {
+		// Only user-v2 mode supports filtering
+		if mode != networks.ModeUserV2 {
+			logrus.Warnf("Policy filtering is only supported for mode 'user-v2', ignoring --policy flag")
+		} else {
+			// Load the policy to validate it
+			pol, err := filter.LoadPolicy(policyPath)
+			if err != nil {
+				return fmt.Errorf("failed to load policy: %w", err)
+			}
+
+			// Save as JSON in the network directory (~/.lima/_networks/<name>/policy.json)
+			policyJSONPath, err := usernet.PolicyFile(name)
+			if err != nil {
+				return fmt.Errorf("failed to get policy path: %w", err)
+			}
+			// Ensure network directory exists (follows usernet convention)
+			if err := os.MkdirAll(filepath.Dir(policyJSONPath), 0o755); err != nil {
+				return fmt.Errorf("failed to create network directory: %w", err)
+			}
+			if err := filter.SavePolicyJSON(pol, policyJSONPath); err != nil {
+				return fmt.Errorf("failed to save policy: %w", err)
+			}
+		}
 	}
 
 	switch mode {
