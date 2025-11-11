@@ -65,7 +65,7 @@ func TestConvertToRaw(t *testing.T) {
 	t.Run("qcow without backing file", func(t *testing.T) {
 		resultImage := filepath.Join(tmpDir, strings.ReplaceAll(strings.ReplaceAll(t.Name(), string(os.PathSeparator), "_"), "/", "_"))
 
-		err = convertToRaw(qcowImage.Name(), resultImage, nil, false)
+		err = convertTo(imageRaw, qcowImage.Name(), resultImage, nil, false)
 		assert.NilError(t, err)
 		assertFileEquals(t, rawImage.Name(), resultImage)
 	})
@@ -73,7 +73,7 @@ func TestConvertToRaw(t *testing.T) {
 	t.Run("qcow with backing file", func(t *testing.T) {
 		resultImage := filepath.Join(tmpDir, strings.ReplaceAll(strings.ReplaceAll(t.Name(), string(os.PathSeparator), "_"), "/", "_"))
 
-		err = convertToRaw(qcowImage.Name(), resultImage, nil, true)
+		err = convertTo(imageRaw, qcowImage.Name(), resultImage, nil, true)
 		assert.NilError(t, err)
 		assertFileEquals(t, rawImage.Name(), resultImage)
 	})
@@ -82,7 +82,7 @@ func TestConvertToRaw(t *testing.T) {
 		resultImage := filepath.Join(tmpDir, strings.ReplaceAll(strings.ReplaceAll(t.Name(), string(os.PathSeparator), "_"), "/", "_"))
 
 		size := int64(2_097_152) // 2mb
-		err = convertToRaw(qcowImage.Name(), resultImage, &size, false)
+		err = convertTo(imageRaw, qcowImage.Name(), resultImage, &size, false)
 		assert.NilError(t, err)
 		assertFileEquals(t, rawImageExtended.Name(), resultImage)
 	})
@@ -90,7 +90,7 @@ func TestConvertToRaw(t *testing.T) {
 	t.Run("raw", func(t *testing.T) {
 		resultImage := filepath.Join(tmpDir, strings.ReplaceAll(strings.ReplaceAll(t.Name(), string(os.PathSeparator), "_"), "/", "_"))
 
-		err = convertToRaw(rawImage.Name(), resultImage, nil, false)
+		err = convertTo(imageRaw, rawImage.Name(), resultImage, nil, false)
 		assert.NilError(t, err)
 		assertFileEquals(t, rawImage.Name(), resultImage)
 	})
