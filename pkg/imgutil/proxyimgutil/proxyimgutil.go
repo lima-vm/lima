@@ -74,3 +74,8 @@ func (p *ImageDiskManager) MakeSparse(ctx context.Context, f *os.File, offset in
 	}
 	return err
 }
+
+func (p *ImageDiskManager) ConvertToASIF(ctx context.Context, source, dest string, size *int64, allowSourceWithBackingFile bool) error {
+	// ASIF conversion is only supported by the native image utility.
+	return p.native.ConvertToASIF(ctx, source, dest, size, allowSourceWithBackingFile)
+}
