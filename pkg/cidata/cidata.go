@@ -275,11 +275,11 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 		for _, addr := range instConfig.DNS {
 			args.DNSAddresses = append(args.DNSAddresses, addr.String())
 		}
-	case firstUsernetIndex != -1 || *instConfig.VMType == limatype.VZ:
-		args.DNSAddresses = append(args.DNSAddresses, args.SlirpDNS)
 	case *instConfig.HostResolver.Enabled:
 		args.UDPDNSLocalPort = udpDNSLocalPort
 		args.TCPDNSLocalPort = tcpDNSLocalPort
+		args.DNSAddresses = append(args.DNSAddresses, args.SlirpDNS)
+	case firstUsernetIndex != -1 || *instConfig.VMType == limatype.VZ:
 		args.DNSAddresses = append(args.DNSAddresses, args.SlirpDNS)
 	default:
 		args.DNSAddresses, err = osutil.DNSAddresses()
