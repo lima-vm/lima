@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -84,6 +85,11 @@ func (ts *ToolSet) WriteFile(_ context.Context,
 		return nil, nil, errors.New("instance not registered")
 	}
 	guestPath, err := ts.TranslateHostPath(args.Path)
+	if err != nil {
+		return nil, nil, err
+	}
+	dir := filepath.Dir(guestPath)
+	err = ts.sftp.MkdirAll(dir)
 	if err != nil {
 		return nil, nil, err
 	}
