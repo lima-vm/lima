@@ -253,8 +253,6 @@ tools_call() {
 }
 
 @test 'write_file creates the directory if it does not yet exist' {
-    skip "see https://github.com/lima-vm/lima/issues/4174"
-
     limactl shell "$NAME" rm -rf /tmp/tmp
     tools_call write_file '{"path":"/tmp/tmp/tmp","content":"tmp"}'
     json=$output
