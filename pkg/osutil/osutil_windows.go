@@ -57,3 +57,7 @@ func SignalName(sig os.Signal) string {
 func Sysctl(_ context.Context, _ string) (string, error) {
 	return "", errors.New("sysctl: unimplemented on Windows")
 }
+
+func IsConnectionResetError(err error) bool {
+	return errors.Is(err, syscall.WSAECONNRESET)
+}

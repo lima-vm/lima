@@ -12,17 +12,14 @@ import (
 
 	"github.com/containers/gvisor-tap-vsock/pkg/tcpproxy"
 	"github.com/sirupsen/logrus"
+
+	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/sshutil"
 )
 
 func (m *virtualMachineWrapper) startVsockForwarder(ctx context.Context, vsockPort uint32, hostAddress string) error {
-	// Test if the vsock port is open
-	conn, err := m.dialVsock(ctx, vsockPort)
-	if err != nil {
-		return err
-	}
-	conn.Close()
 	// Start listening on localhost:hostPort and forward to vsock:vsockPort
-	_, _, err = net.SplitHostPort(hostAddress)
+	_, _, err := net.SplitHostPort(hostAddress)
 	if err != nil {
 		return err
 	}
@@ -72,4 +69,10 @@ func (m *virtualMachineWrapper) dialVsock(_ context.Context, port uint32) (conn 
 		}
 	}
 	return nil, err
+}
+
+func (m *virtualMachineWrapper) checkSSHOverVsockAvailable(ctx context.Context, inst *limatype.Instance) error {
+	return sshutil.WaitSSHReady(ctx, func(ctx context.Context) (net.Conn, error) {
+		return m.dialVsock(ctx, uint32(22))
+	}, "vsock:22", *inst.Config.User.Name, 1)
 }

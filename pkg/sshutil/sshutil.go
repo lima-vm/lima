@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -24,6 +25,7 @@ import (
 	"github.com/coreos/go-semver/semver"
 	"github.com/mattn/go-shellwords"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/crypto/ssh"
 	"golang.org/x/sys/cpu"
 
 	"github.com/lima-vm/lima/v2/pkg/ioutilx"
@@ -508,4 +510,74 @@ func detectAESAcceleration() bool {
 		return false
 	}
 	return cpu.ARM.HasAES || cpu.ARM64.HasAES || cpu.PPC64.IsPOWER8 || cpu.S390X.HasAES || cpu.X86.HasAES
+}
+
+// WaitSSHReady waits until the SSH server is ready to accept connections.
+// The dialContext function is used to create a connection to the SSH server.
+// The addr, user, parameter is used for ssh.ClientConn creation.
+// The timeoutSeconds parameter specifies the maximum number of seconds to wait.
+func WaitSSHReady(ctx context.Context, dialContext func(context.Context) (net.Conn, error), addr, user string, timeoutSeconds int) error {
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(timeoutSeconds)*time.Second)
+	defer cancel()
+
+	// Prepare signer
+	signer, err := userPrivateKeySigner()
+	if err != nil {
+		return err
+	}
+	// Prepare ssh client config
+	sshConfig := &ssh.ClientConfig{
+		User:            user,
+		Auth:            []ssh.AuthMethod{ssh.PublicKeys(signer)},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		Timeout:         10 * time.Second,
+	}
+	// Wait until the SSH server is available.
+	for {
+		conn, err := dialContext(ctx)
+		if err == nil {
+			sshConn, chans, reqs, err := ssh.NewClientConn(conn, addr, sshConfig)
+			if err == nil {
+				sshClient := ssh.NewClient(sshConn, chans, reqs)
+				return sshClient.Close()
+			}
+			conn.Close()
+			if !isRetryableError(err) {
+				return fmt.Errorf("failed to create ssh.Conn to %q: %w", addr, err)
+			}
+		}
+		logrus.Debugf("Waiting for SSH port to accept connections on %s", addr)
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("failed to waiting for SSH port to become available on %s: %w", addr, ctx.Err())
+		case <-time.After(1 * time.Second):
+			continue
+		}
+	}
+}
+
+func isRetryableError(err error) bool {
+	// Port forwarder accepted the connection, but the destination is not ready yet.
+	return osutil.IsConnectionResetError(err) ||
+		// SSH server not ready yet (e.g. host key not generated on initial boot).
+		strings.HasSuffix(err.Error(), "no supported methods remain")
+}
+
+// userPrivateKeySigner returns the user's private key signer.
+// The public key is always installed in the VM.
+func userPrivateKeySigner() (ssh.Signer, error) {
+	configDir, err := dirnames.LimaConfigDir()
+	if err != nil {
+		return nil, err
+	}
+	privateKeyPath := filepath.Join(configDir, filenames.UserPrivateKey)
+	key, err := os.ReadFile(privateKeyPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read private key %q: %w", privateKeyPath, err)
+	}
+	signer, err := ssh.ParsePrivateKey(key)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse private key %q: %w", privateKeyPath, err)
+	}
+	return signer, nil
 }
