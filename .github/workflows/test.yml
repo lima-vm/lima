@@ -235,6 +235,11 @@ jobs:
       run: go test -v ./...
     - name: Make
       run: make
+    - name: "Inject `no_timer_check` to kernel cmdline"
+      # workaround to https://github.com/lima-vm/lima/issues/84
+      run: |
+        export PATH="$PWD/_output/bin:$PATH"
+        ./hack/inject-cmdline-to-template.sh _output/share/lima/templates/_images/ubuntu.yaml no_timer_check
     - name: Install
       run: sudo make install
     - name: Validate jsonschema
@@ -259,9 +264,6 @@ jobs:
       run: brew install bash coreutils w3m socat
     - name: "Adjust LIMACTL_CREATE_ARGS"
       run: echo "LIMACTL_CREATE_ARGS=${LIMACTL_CREATE_ARGS} --vm-type=qemu" >>$GITHUB_ENV
-    - name: "Inject `no_timer_check` to kernel cmdline"
-      # workaround to https://github.com/lima-vm/lima/issues/84
-      run: ./hack/inject-cmdline-to-template.sh templates/_images/ubuntu.yaml no_timer_check
     - name: Cache image used by default.yaml
       uses: ./.github/actions/setup_cache_for_template
       with:
@@ -450,13 +452,15 @@ jobs:
         go-version: 1.25.x
     - name: Make
       run: make
+    - name: "Inject `no_timer_check` to kernel cmdline"
+      # workaround to https://github.com/lima-vm/lima/issues/84
+      run: |
+        export PATH="$PWD/_output/bin:$PATH"
+        ./hack/inject-cmdline-to-template.sh _output/share/lima/templates/_images/ubuntu.yaml no_timer_check
     - name: Install
       run: sudo make install
     - name: "Adjust LIMACTL_CREATE_ARGS"
       run: echo "LIMACTL_CREATE_ARGS=${LIMACTL_CREATE_ARGS} --vm-type=qemu --network=lima:shared" >>$GITHUB_ENV
-    - name: "Inject `no_timer_check` to kernel cmdline"
-      # workaround to https://github.com/lima-vm/lima/issues/84
-      run: ./hack/inject-cmdline-to-template.sh templates/_images/ubuntu.yaml no_timer_check
     - name: Cache image used by default .yaml
       uses: ./.github/actions/setup_cache_for_template
       with:
