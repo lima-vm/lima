@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/coreos/go-semver/semver"
+	sshocker "github.com/lima-vm/sshocker/pkg/ssh"
 	"github.com/mattn/go-shellwords"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
@@ -687,4 +688,69 @@ func GenerateSSHHostKeys(instDir, hostname string) (map[string]string, error) {
 		return nil, fmt.Errorf("failed to write known_hosts file at %s: %w", knownHostsPath, err)
 	}
 	return res, nil
+}
+
+// ExecuteScriptViaInProcessClient executes the given script on the remote host via in-process SSH client.
+func ExecuteScriptViaInProcessClient(host string, port int, user, instanceName, script, scriptName string) (stdout, stderr string, err error) {
+	// Prepare signer
+	signer, err := UserPrivateKey()
+	if err != nil {
+		return "", "", err
+	}
+	// Prepare HostKeyCallback
+	hostKeyChecker, err := HostKeyCheckerWithKeysInKnownHosts(instanceName)
+	if err != nil {
+		return "", "", err
+	}
+
+	// Prepare ssh client config
+	sshConfig := &ssh.ClientConfig{
+		User:            user,
+		Auth:            []ssh.AuthMethod{ssh.PublicKeys(signer)},
+		HostKeyCallback: hostKeyChecker,
+		Timeout:         10 * time.Second,
+	}
+
+	// Connect to SSH server
+	addr := net.JoinHostPort(host, fmt.Sprintf("%d", port))
+	var dialer net.Dialer
+	dialer.Timeout = sshConfig.Timeout
+	conn, err := dialer.DialContext(context.Background(), "tcp", addr)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to dial %q: %w", addr, err)
+	}
+	sshConn, chans, reqs, err := ssh.NewClientConn(conn, addr, sshConfig)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to create ssh.Conn to %q: %w", addr, err)
+	}
+	client := ssh.NewClient(sshConn, chans, reqs)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to create SSH client to %q: %w", addr, err)
+	}
+	defer client.Close()
+
+	// Create session
+	session, err := client.NewSession()
+	if err != nil {
+		return "", "", fmt.Errorf("failed to create SSH session to %q: %w", addr, err)
+	}
+	defer session.Close()
+
+	// Execute script
+	interpreter, err := sshocker.ParseScriptInterpreter(script)
+	if err != nil {
+		return "", "", err
+	}
+	// Provide the script via stdin
+	session.Stdin = strings.NewReader(strings.TrimPrefix(script, "#!"+interpreter+"\n"))
+	// Capture stdout and stderr
+	var stdoutBuf, stderrBuf bytes.Buffer
+	session.Stdout = &stdoutBuf
+	session.Stderr = &stderrBuf
+	logrus.Debugf("executing ssh for script %q", scriptName)
+	err = session.Run(interpreter)
+	if err != nil {
+		return stdoutBuf.String(), stderrBuf.String(), fmt.Errorf("failed to execute script %q: stdout=%q, stderr=%q: %w", scriptName, stdoutBuf.String(), stderrBuf.String(), err)
+	}
+	return stdoutBuf.String(), stderrBuf.String(), nil
 }
