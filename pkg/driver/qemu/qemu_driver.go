@@ -31,12 +31,14 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/driver/qemu/entitlementutil"
 	"github.com/lima-vm/lima/v2/pkg/executil"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	"github.com/lima-vm/lima/v2/pkg/networks/usernet"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/ptr"
 	"github.com/lima-vm/lima/v2/pkg/reflectutil"
+	"github.com/lima-vm/lima/v2/pkg/sshutil"
 	"github.com/lima-vm/lima/v2/pkg/version/versionutil"
 )
 
@@ -721,6 +723,21 @@ func (l *LimaQemuDriver) ForwardGuestAgent() bool {
 	return l.vSockPort == 0 && l.virtioPort == ""
 }
 
-func (l *LimaQemuDriver) AdditionalSetupForSSH(_ context.Context) error {
+func (l *LimaQemuDriver) AdditionalSetupForSSH(ctx context.Context) error {
+	// Wait until the port is available.
+	addr := net.JoinHostPort("127.0.0.1", fmt.Sprintf("%d", l.SSHLocalPort))
+	dialContext := func(ctx context.Context) (net.Conn, error) {
+		dialer := net.Dialer{Timeout: 1 * time.Second}
+		return dialer.DialContext(ctx, "tcp", addr)
+	}
+	user := *l.Instance.Config.User.Name
+	configDir, err := dirnames.LimaConfigDir()
+	if err != nil {
+		return err
+	}
+	privateKeyPath := filepath.Join(configDir, filenames.UserPrivateKey)
+	if err := sshutil.WaitSSHReady(ctx, dialContext, addr, user, privateKeyPath, 600); err != nil {
+		return err
+	}
 	return nil
 }
