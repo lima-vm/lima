@@ -290,6 +290,14 @@ type features struct {
 }
 
 func inspectFeatures(ctx context.Context, exe, machine string) (*features, error) {
+	// Validate executable path to prevent command injection
+	if !filepath.IsAbs(exe) {
+		return nil, fmt.Errorf("executable path must be absolute: %q", exe)
+	}
+	if _, err := os.Stat(exe); err != nil {
+		return nil, fmt.Errorf("executable path does not exist or is not accessible: %q", exe)
+	}
+	
 	var (
 		f      features
 		stdout bytes.Buffer
