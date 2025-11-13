@@ -137,8 +137,7 @@ func ParsePortForward(spec string) (hostPort, guestPort string, isStatic bool, e
 
 	if len(parts) == 2 {
 		staticPart := strings.TrimSpace(parts[1])
-		if strings.HasPrefix(staticPart, "static=") {
-			staticValue := strings.TrimPrefix(staticPart, "static=")
+		if staticValue, ok := strings.CutPrefix(staticPart, "static="); ok {
 			isStatic, err = strconv.ParseBool(staticValue)
 			if err != nil {
 				return "", "", false, fmt.Errorf("invalid value for static parameter: %q", staticValue)

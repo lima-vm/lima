@@ -437,8 +437,7 @@ func canonicalLocalPath(s string) (string, error) {
 	if !IsLocal(s) {
 		return "", fmt.Errorf("got non-local path: %q", s)
 	}
-	if strings.HasPrefix(s, "file://") {
-		res := strings.TrimPrefix(s, "file://")
+	if res, ok := strings.CutPrefix(s, "file://"); ok {
 		if !filepath.IsAbs(res) {
 			return "", fmt.Errorf("got non-absolute path %q", res)
 		}

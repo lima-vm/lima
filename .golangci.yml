@@ -19,6 +19,7 @@ linters:
   - ineffassign
   - intrange
   - misspell
+  - modernize
   - nakedret
   - noctx
   - nolintlint
@@ -71,6 +72,10 @@ linters:
         ifElseChain:
           # Min number of if-else blocks that makes the warning trigger.
           minThreshold: 3
+    modernize:
+      disable:
+      - omitzero
+      - stringsbuilder
     perfsprint:
       int-conversion: false
       err-error: false

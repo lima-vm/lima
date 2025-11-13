@@ -475,7 +475,7 @@ func GenerateISO9660(ctx context.Context, drv driver.Driver, instDir, name strin
 
 func getCert(content string) Cert {
 	lines := []string{}
-	for _, line := range strings.Split(content, "\n") {
+	for line := range strings.SplitSeq(content, "\n") {
 		if line == "" {
 			continue
 		}
@@ -490,7 +490,7 @@ func getBootCmds(p []limatype.Provision) []BootCmds {
 	for _, f := range p {
 		if f.Mode == limatype.ProvisionModeBoot {
 			lines := []string{}
-			for _, line := range strings.Split(*f.Script, "\n") {
+			for line := range strings.SplitSeq(*f.Script, "\n") {
 				if line == "" {
 					continue
 				}

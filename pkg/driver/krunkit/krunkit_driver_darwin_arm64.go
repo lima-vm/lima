@@ -91,7 +91,7 @@ func (l *LimaKrunkitDriver) Start(ctx context.Context) (chan error, error) {
 	}
 
 	pidPath := filepath.Join(l.Instance.Dir, filenames.PIDFile(*l.Instance.Config.VMType))
-	if err := os.WriteFile(pidPath, []byte(fmt.Sprintf("%d\n", krunkitCmd.Process.Pid)), 0o644); err != nil {
+	if err := os.WriteFile(pidPath, fmt.Appendf(nil, "%d\n", krunkitCmd.Process.Pid), 0o644); err != nil {
 		logrus.WithError(err).Warn("Failed to write PID file")
 	}
 
