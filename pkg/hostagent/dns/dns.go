@@ -7,7 +7,6 @@ package dns
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"runtime"
 	"strconv"
@@ -69,12 +68,8 @@ func (s *Server) Shutdown() {
 
 func newStaticClientConfig(ips []string) (*dns.ClientConfig, error) {
 	logrus.Tracef("newStaticClientConfig creating config for the following IPs: %v", ips)
-	s := ``
-	for _, ip := range ips {
-		s += fmt.Sprintf("nameserver %s\n", ip)
-	}
-	r := strings.NewReader(s)
-	return dns.ClientConfigFromReader(r)
+	config := "nameserver " + strings.Join(ips, "\nnameserver ") + "\n"
+	return dns.ClientConfigFromReader(strings.NewReader(config))
 }
 
 func (h *Handler) lookupCnameToHost(cname string) string {
