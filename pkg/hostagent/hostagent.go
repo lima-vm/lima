@@ -1063,8 +1063,7 @@ func (a *HostAgent) watchCloudInitProgress(ctx context.Context) {
 
 		finalCmd := exec.CommandContext(ctx, a.sshConfig.Binary(), finalArgs...)
 		if finalOutput, err := finalCmd.Output(); err == nil {
-			lines := strings.Split(string(finalOutput), "\n")
-			for _, line := range lines {
+			for line := range strings.SplitSeq(string(finalOutput), "\n") {
 				if strings.TrimSpace(line) != "" {
 					if !cloudInitFinished {
 						cloudInitFinished = isCloudInitFinished(line)
