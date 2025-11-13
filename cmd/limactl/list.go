@@ -25,8 +25,7 @@ import (
 
 func fieldNames() []string {
 	names := []string{}
-	var data store.FormatData
-	t := reflect.TypeOf(data)
+	t := reflect.TypeFor[store.FormatData]()
 	for i := range t.NumField() {
 		f := t.Field(i)
 		if f.Anonymous {

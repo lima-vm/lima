@@ -27,7 +27,7 @@ func fileWarning(filename string) string {
 	s := "# WARNING: " + filename + " includes the following settings,\n"
 	s += "# which are applied before applying this YAML:\n"
 	s += "# -----------\n"
-	for _, line := range strings.Split(strings.TrimSuffix(string(b), "\n"), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSuffix(string(b), "\n"), "\n") {
 		s += "#"
 		if line != "" {
 			s += " " + line
