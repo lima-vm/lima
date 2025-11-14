@@ -16,7 +16,7 @@ import (
 
 // ExecuteTemplate executes a text/template template.
 func ExecuteTemplate(tmpl string, args any) ([]byte, error) {
-	x, err := template.New("").Parse(tmpl)
+	x, err := template.New("").Funcs(TemplateFuncMap).Parse(tmpl)
 	if err != nil {
 		return nil, err
 	}

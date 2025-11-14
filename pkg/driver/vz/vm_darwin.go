@@ -113,18 +113,18 @@ func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int) (vm
 								useSSHOverVsock = b
 							}
 						}
+						hostAddress := net.JoinHostPort(inst.SSHAddress, strconv.Itoa(usernetSSHLocalPort))
 						if !useSSHOverVsock {
 							logrus.Info("LIMA_SSH_OVER_VSOCK is false, skipping detection of SSH server on vsock port")
-						} else if err := usernetClient.WaitOpeningSSHPort(ctx, inst); err == nil {
-							hostAddress := net.JoinHostPort(inst.SSHAddress, strconv.Itoa(usernetSSHLocalPort))
-							if err := wrapper.startVsockForwarder(ctx, 22, hostAddress); err == nil {
-								logrus.Infof("Detected SSH server is listening on the vsock port; changed %s to proxy for the vsock port", hostAddress)
-								usernetSSHLocalPort = 0 // disable gvisor ssh port forwarding
-							} else {
-								logrus.WithError(err).Warn("Failed to detect SSH server on vsock port, falling back to usernet forwarder")
-							}
+						} else if err := usernetClient.WaitOpeningSSHPort(ctx, inst); err != nil {
+							logrus.WithError(err).Info("Failed to wait for the guest SSH server to become available, falling back to usernet forwarder")
+						} else if err := wrapper.checkSSHOverVsockAvailable(ctx, inst); err != nil {
+							logrus.WithError(err).Info("Failed to detect SSH server on vsock port, falling back to usernet forwarder")
+						} else if err := wrapper.startVsockForwarder(ctx, 22, hostAddress); err != nil {
+							logrus.WithError(err).Info("Failed to start SSH server forwarder on vsock port, falling back to usernet forwarder")
 						} else {
-							logrus.WithError(err).Warn("Failed to wait for the guest SSH server to become available, falling back to usernet forwarder")
+							logrus.Infof("Detected SSH server is listening on the vsock port; changed %s to proxy for the vsock port", hostAddress)
+							usernetSSHLocalPort = 0 // disable gvisor ssh port forwarding
 						}
 						err := usernetClient.ConfigureDriver(ctx, inst, usernetSSHLocalPort)
 						if err != nil {

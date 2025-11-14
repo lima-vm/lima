@@ -104,3 +104,11 @@ bootcmd:
     {{- end }}
   {{- end }}
 {{- end }}
+
+{{- if .SSHHostKeys }}
+ssh_keys:
+  {{- range $type, $key := .SSHHostKeys }}
+  {{ $type }}: |
+{{ indent 4 $key }}
+  {{- end }}
+{{- end }}
