@@ -245,7 +245,7 @@ func httpServe(ctx context.Context, g *errgroup.Group, ln net.Listener, mux http
 
 func muxWithExtension(n *virtualnetwork.VirtualNetwork) *http.ServeMux {
 	m := n.Mux()
-	m.HandleFunc("/extension/wait_ssh_server", func(w http.ResponseWriter, r *http.Request) {
+	m.HandleFunc("/extension/wait-ssh-server", func(w http.ResponseWriter, r *http.Request) {
 		ip := r.URL.Query().Get("ip")
 		if net.ParseIP(ip) == nil {
 			msg := fmt.Sprintf("invalid ip address: %s", ip)
@@ -260,9 +260,9 @@ func muxWithExtension(n *virtualnetwork.VirtualNetwork) *http.ServeMux {
 		addr := net.JoinHostPort(ip, fmt.Sprintf("%d", uint16(port16)))
 
 		user := r.URL.Query().Get("user")
-		privateKeyPath := r.URL.Query().Get("privateKeyPath")
-		if user == "" || privateKeyPath == "" {
-			msg := "user and privateKeyPath query parameters are required"
+		instanceName := r.URL.Query().Get("instance-name")
+		if user == "" || instanceName == "" {
+			msg := "user and instanceName query parameters are required"
 			http.Error(w, msg, http.StatusBadRequest)
 			return
 		}
@@ -280,7 +280,7 @@ func muxWithExtension(n *virtualnetwork.VirtualNetwork) *http.ServeMux {
 			return n.DialContextTCP(ctx, addr)
 		}
 		// Wait until the port is available.
-		if err = sshutil.WaitSSHReady(r.Context(), dialContext, addr, user, privateKeyPath, timeoutSeconds); err != nil {
+		if err = sshutil.WaitSSHReady(r.Context(), dialContext, addr, user, instanceName, timeoutSeconds); err != nil {
 			http.Error(w, err.Error(), http.StatusRequestTimeout)
 		} else {
 			w.WriteHeader(http.StatusOK)

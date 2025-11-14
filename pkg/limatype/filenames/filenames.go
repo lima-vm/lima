@@ -50,6 +50,7 @@ const (
 	SerialVirtioSock        = "serialv.sock"
 	SSHSock                 = "ssh.sock"
 	SSHConfig               = "ssh.config"
+	SSHKnownHosts           = "ssh_known_hosts"
 	VhostSock               = "virtiofsd-%d.sock"
 	VNCDisplayFile          = "vncdisplay"
 	VNCPasswordFile         = "vncpassword"

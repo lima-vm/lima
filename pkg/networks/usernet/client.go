@@ -11,7 +11,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strconv"
 	"time"
 
@@ -20,8 +19,6 @@ import (
 
 	"github.com/lima-vm/lima/v2/pkg/httpclientutil"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
-	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
-	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	"github.com/lima-vm/lima/v2/pkg/networks/usernet/dnshosts"
 )
@@ -144,13 +141,9 @@ func (c *Client) WaitOpeningSSHPort(ctx context.Context, inst *limatype.Instance
 		return err
 	}
 	user := *inst.Config.User.Name
-	configDir, err := dirnames.LimaConfigDir()
-	if err != nil {
-		return err
-	}
-	privateKeyPath := filepath.Join(configDir, filenames.UserPrivateKey)
+	instanceName := inst.Name
 	// -1 avoids both sides timing out simultaneously.
-	u := fmt.Sprintf("%s/extension/wait_ssh_server?ip=%s&port=22&timeout=%d&user=%s&privateKeyPath=%s", c.base, ipAddr, timeoutSeconds-1, user, privateKeyPath)
+	u := fmt.Sprintf("%s/extension/wait-ssh-server?ip=%s&port=22&timeout=%d&user=%s&instance-name=%s", c.base, ipAddr, timeoutSeconds-1, user, instanceName)
 	res, err := httpclientutil.Get(ctx, c.client, u)
 	if err != nil {
 		return err

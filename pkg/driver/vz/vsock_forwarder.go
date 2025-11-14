@@ -9,14 +9,11 @@ import (
 	"context"
 	"errors"
 	"net"
-	"path/filepath"
 
 	"github.com/containers/gvisor-tap-vsock/pkg/tcpproxy"
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/limatype"
-	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
-	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/sshutil"
 )
 
@@ -75,15 +72,7 @@ func (m *virtualMachineWrapper) dialVsock(_ context.Context, port uint32) (conn 
 }
 
 func (m *virtualMachineWrapper) checkSSHOverVsockAvailable(ctx context.Context, inst *limatype.Instance) error {
-	user := *inst.Config.User.Name
-	configDir, err := dirnames.LimaConfigDir()
-	if err != nil {
-		return err
-	}
-	privateKeyPath := filepath.Join(configDir, filenames.UserPrivateKey)
-	vsockPort := uint32(22)
-	addr := "vsock:22"
 	return sshutil.WaitSSHReady(ctx, func(ctx context.Context) (net.Conn, error) {
-		return m.dialVsock(ctx, vsockPort)
-	}, addr, user, privateKeyPath, 1)
+		return m.dialVsock(ctx, uint32(22))
+	}, "vsock:22", *inst.Config.User.Name, inst.Name, 1)
 }
