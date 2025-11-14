@@ -39,14 +39,14 @@ lima nerdctl run --rm hello-world
 
 To run containers with Docker:
 ```bash
-limactl start template://docker
+limactl start template:docker
 export DOCKER_HOST=$(limactl list docker --format 'unix://{{.Dir}}/sock/docker.sock')
 docker run --rm hello-world
 ```
 
 To run containers with Kubernetes:
 ```bash
-limactl start template://k8s
+limactl start template:k8s
 export KUBECONFIG=$(limactl list k8s --format 'unix://{{.Dir}}/copied-from-guest/kubeconfig.yaml')
 kubectl apply -f ...
 ```

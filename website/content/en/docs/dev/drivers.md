@@ -89,7 +89,7 @@ func main() {
 4. **Use the driver**: Explicitly specify the driver when creating instances:
 
 ```bash
-limactl create myinstance --vm-type=mydriver template://default
+limactl create myinstance --vm-type=mydriver template:default
 ```
 
 ## Examples

@@ -23,8 +23,8 @@ limactl start --vm-type=qemu
 vmType: "qemu"
 
 base:
-- template://_images/ubuntu
-- template://_default/mounts
+- template:_images/ubuntu
+- template:_default/mounts
 ```
 {{% /tab %}}
 {{< /tabpane >}}
