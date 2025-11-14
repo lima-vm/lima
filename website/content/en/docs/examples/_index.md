@@ -36,7 +36,7 @@ nerdctl.lima run -d --name nginx -p 127.0.0.1:8080:80 nginx:alpine
 
 {{% tab header="Docker" %}}
 ```bash
-limactl start template://docker
+limactl start template:docker
 export DOCKER_HOST=$(limactl list docker --format 'unix://{{.Dir}}/sock/docker.sock')
 docker run -d --name nginx -p 127.0.0.1:8080:80 nginx:alpine
 ```
@@ -44,7 +44,7 @@ docker run -d --name nginx -p 127.0.0.1:8080:80 nginx:alpine
 
 {{% tab header="Podman" %}}
 ```bash
-limactl start template://podman
+limactl start template:podman
 export DOCKER_HOST=$(limactl list podman --format 'unix://{{.Dir}}/sock/podman.sock')
 docker run -d --name nginx -p 127.0.0.1:8080:80 nginx:alpine
 ```
@@ -52,7 +52,7 @@ docker run -d --name nginx -p 127.0.0.1:8080:80 nginx:alpine
 
 {{% tab header="Kubernetes" %}}
 ```bash
-limactl start template://k8s
+limactl start template:k8s
 export KUBECONFIG=$(limactl list k8s --format 'unix://{{.Dir}}/copied-from-guest/kubeconfig.yaml')
 kubectl create deployment nginx --image nginx:alpine
 kubectl create service nodeport nginx --node-port=31080 --tcp=80:80
@@ -76,7 +76,7 @@ limactl start \
   --rosetta \
   --mount-writable \
   --network=vzNAT \
-  template://fedora
+  template:fedora
 ```
 
 - `--name=default`: Set the instance name to "default"
@@ -86,4 +86,4 @@ limactl start \
 - `--rosetta`: Allow running Intel (AMD) binaries on ARM
 - `--mount-writable`: Make the home mount (`/Users/<USERNAME>`) writable
 - `--network=vzNAT`: Make the VM reachable from the host by its IP address
-- `template://fedora`: Use Fedora
+- `template:fedora`: Use Fedora

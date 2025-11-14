@@ -22,8 +22,8 @@ limactl start --vm-type=vz
 vmType: "vz"
 
 base:
-- template://_images/ubuntu
-- template://_default/mounts
+- template:_images/ubuntu
+- template:_default/mounts
 ```
 {{% /tab %}}
 {{< /tabpane >}}
