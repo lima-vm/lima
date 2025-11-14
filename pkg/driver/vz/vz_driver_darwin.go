@@ -440,7 +440,24 @@ func (l *LimaVzDriver) ForwardGuestAgent() bool {
 	return l.vSockPort == 0 && l.virtioPort == ""
 }
 
-func (l *LimaVzDriver) AdditionalSetupForSSH(_ context.Context) error {
-	<-l.waitSSHLocalPortAccessible
-	return nil
+func (l *LimaVzDriver) AdditionalSetupForSSH(ctx context.Context) error {
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+
+	timeout := time.After(60 * time.Second)
+
+	for {
+		if l.waitSSHLocalPortAccessible != nil {
+			<-l.waitSSHLocalPortAccessible
+			return nil
+		}
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-timeout:
+			return errors.New("timeout waiting for Start() to initialize")
+		case <-ticker.C:
+		}
+	}
 }
