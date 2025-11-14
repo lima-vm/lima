@@ -554,7 +554,7 @@ sudo chown -R "${USER}" /run/host-services`
 		a.cleanUp(func() error {
 			var unlockErrs []error
 			for _, d := range a.instConfig.AdditionalDisks {
-				disk, inspectErr := store.InspectDisk(d.Name)
+				disk, inspectErr := store.InspectDisk(d.Name, d.FSType)
 				if inspectErr != nil {
 					unlockErrs = append(unlockErrs, inspectErr)
 					continue

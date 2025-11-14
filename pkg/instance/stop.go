@@ -118,7 +118,7 @@ func StopForcibly(inst *limatype.Instance) {
 
 	for _, d := range inst.AdditionalDisks {
 		diskName := d.Name
-		disk, err := store.InspectDisk(diskName)
+		disk, err := store.InspectDisk(diskName, d.FSType)
 		if err != nil {
 			logrus.Warnf("Disk %q does not exist", diskName)
 			continue
