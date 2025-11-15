@@ -140,8 +140,10 @@ func (c *Client) WaitOpeningSSHPort(ctx context.Context, inst *limatype.Instance
 	if err != nil {
 		return err
 	}
+	user := *inst.Config.User.Name
+	instanceName := inst.Name
 	// -1 avoids both sides timing out simultaneously.
-	u := fmt.Sprintf("%s/extension/wait_port?ip=%s&port=22&timeout=%d", c.base, ipAddr, timeoutSeconds-1)
+	u := fmt.Sprintf("%s/extension/wait-ssh-server?ip=%s&port=22&timeout=%d&user=%s&instance-name=%s", c.base, ipAddr, timeoutSeconds-1, user, instanceName)
 	res, err := httpclientutil.Get(ctx, c.client, u)
 	if err != nil {
 		return err

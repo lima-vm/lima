@@ -17,6 +17,11 @@ chmod 700 "${LIMA_CIDATA_HOME}"/.ssh/
 cp "${LIMA_CIDATA_MNT}"/ssh_authorized_keys "${LIMA_CIDATA_HOME}"/.ssh/authorized_keys
 chown "${LIMA_CIDATA_UID}:${LIMA_CIDATA_GID}" "${LIMA_CIDATA_HOME}"/.ssh/authorized_keys
 chmod 600 "${LIMA_CIDATA_HOME}"/.ssh/authorized_keys
+# copy SSH host keys
+mkdir -p /etc/ssh/
+cp "${LIMA_CIDATA_MNT}"/ssh_host_* /etc/ssh/
+chmod 600 /etc/ssh/ssh_host_*
+chmod 644 /etc/ssh/ssh_host_*.pub
 
 # add $LIMA_CIDATA_USER to sudoers
 echo "${LIMA_CIDATA_USER} ALL=(ALL) NOPASSWD:ALL" | tee -a /etc/sudoers.d/99_lima_sudoers

@@ -8,6 +8,7 @@ package osutil
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -35,4 +36,8 @@ func Sysctl(ctx context.Context, name string) (string, error) {
 			string(stdout), stderrBuf.String())
 	}
 	return strings.TrimSuffix(string(stdout), "\n"), nil
+}
+
+func IsConnectionResetError(err error) bool {
+	return errors.Is(err, syscall.ECONNRESET)
 }

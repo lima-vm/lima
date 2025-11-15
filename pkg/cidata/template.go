@@ -115,6 +115,7 @@ type TemplateArgs struct {
 	Plain                           bool
 	TimeZone                        string
 	NoCloudInit                     bool
+	SSHHostKeys                     map[string]string // `ssh_keys` field in cloud-init SSH module
 }
 
 func ValidateTemplateArgs(args *TemplateArgs) error {

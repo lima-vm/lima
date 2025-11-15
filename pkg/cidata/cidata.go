@@ -118,7 +118,7 @@ func setupEnv(instConfigEnv map[string]string, propagateProxyEnv bool, slirpGate
 	return env, nil
 }
 
-func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, instConfig *limatype.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort, vsockPort int, virtioPort string, noCloudInit, rosettaEnabled, rosettaBinFmt bool) (*TemplateArgs, error) {
+func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, instConfig *limatype.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort, vsockPort int, virtioPort string, noCloudInit, rosettaEnabled, rosettaBinFmt, hostKeys bool) (*TemplateArgs, error) {
 	if err := limayaml.Validate(instConfig, false); err != nil {
 		return nil, err
 	}
@@ -342,11 +342,19 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 		}
 	}
 
+	if hostKeys {
+		sshHostKeys, err := sshutil.GenerateSSHHostKeys(instDir, args.Hostname)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate SSH host keys: %w", err)
+		}
+		args.SSHHostKeys = sshHostKeys
+	}
+
 	return &args, nil
 }
 
 func GenerateCloudConfig(ctx context.Context, instDir, name string, instConfig *limatype.LimaYAML) error {
-	args, err := templateArgs(ctx, false, instDir, name, instConfig, 0, 0, 0, "", false, false, false)
+	args, err := templateArgs(ctx, false, instDir, name, instConfig, 0, 0, 0, "", false, false, false, false)
 	if err != nil {
 		return err
 	}
@@ -369,7 +377,7 @@ func GenerateCloudConfig(ctx context.Context, instDir, name string, instConfig *
 }
 
 func GenerateISO9660(ctx context.Context, drv driver.Driver, instDir, name string, instConfig *limatype.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort int, guestAgentBinary, nerdctlArchive string, vsockPort int, virtioPort string, noCloudInit, rosettaEnabled, rosettaBinFmt bool) error {
-	args, err := templateArgs(ctx, true, instDir, name, instConfig, udpDNSLocalPort, tcpDNSLocalPort, vsockPort, virtioPort, noCloudInit, rosettaEnabled, rosettaBinFmt)
+	args, err := templateArgs(ctx, true, instDir, name, instConfig, udpDNSLocalPort, tcpDNSLocalPort, vsockPort, virtioPort, noCloudInit, rosettaEnabled, rosettaBinFmt, true)
 	if err != nil {
 		return err
 	}
@@ -467,6 +475,13 @@ func GenerateISO9660(ctx context.Context, drv driver.Driver, instDir, name strin
 			Path:   "ssh_authorized_keys",
 			Reader: strings.NewReader(strings.Join(args.SSHPubKeys, "\n")),
 		})
+		for keyType, keyContent := range args.SSHHostKeys {
+			suffix := strings.Replace(strings.Replace(keyType, "_public", "_key.pub", 1), "_private", "_key", 1)
+			layout = append(layout, iso9660util.Entry{
+				Path:   "ssh_host_" + suffix,
+				Reader: strings.NewReader(keyContent),
+			})
+		}
 		return writeCIDataDir(filepath.Join(instDir, filenames.CIDataISODir), layout)
 	}
 

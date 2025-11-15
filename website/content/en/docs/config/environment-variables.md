@@ -106,6 +106,14 @@ This page documents the environment variables used in Lima.
   lima
   ```
 
+### `LIMA_EXTERNAL_SSH_REQUIREMENT`
+- **Description**: Specifies whether to use an external SSH client for checking requirements instead of the built-in SSH client.
+- **Default**: `false`
+- **Usage**: 
+  ```sh
+  export LIMA_EXTERNAL_SSH_REQUIREMENT=true
+  ```
+
 ### `LIMA_SSH_OVER_VSOCK`
 - **Description**: Specifies to use vsock for SSH connection instead of port forwarding.
 - **Default**: `true` (since v2.0.0)
