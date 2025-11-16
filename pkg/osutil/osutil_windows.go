@@ -55,5 +55,5 @@ func SignalName(sig os.Signal) string {
 }
 
 func Sysctl(_ context.Context, _ string) (string, error) {
-	return "", errors.New("sysctl: unimplemented on Windows")
+	return "", errors.New("unimplemented")
 }

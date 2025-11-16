@@ -5,4 +5,4 @@ package krunkit
 
 import "errors"
 
-var errUnimplemented = errors.New("unimplemented by the krunkit driver")
+var errUnimplemented = errors.New("unimplemented")
