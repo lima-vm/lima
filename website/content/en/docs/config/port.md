@@ -88,6 +88,22 @@ lima ip addr show lima0
 
 See [Config » Network » VMNet networks](./network/vmnet.md) for the further information.
 
+### Direct IP Port Forwarding
+
+To enable direct IP port forwarding, set the `_LIMA_DIRECT_IP_PORT_FORWARDER` environment variable to `true`:
+
+```bash
+export _LIMA_DIRECT_IP_PORT_FORWARDER=true
+```
+This feature makes Lima to use direct IP port forwarding instead of gRPC port forwarding.
+When this feature is enabled, Lima tries to connect to the guest's IP address directly for port forwarding.
+
+#### Fallback to gRPC Port Forwarding
+Lima may fall back to gRPC port forwarding in the following cases:
+- If the guest's IP address is not available, Lima falls back to gRPC port forwarding.
+- If the guest's IP address is available but the connection to the guest's IP address fails, Lima also falls back to gRPC port forwarding.
+- If the guest's IP address is not accessible from the host (e.g. localhost on guest), Lima falls back to gRPC port forwarding as well.
+
 ## Benchmarks
 
 <!-- When updating the benchmark result, make sure to update the benchmarking environment too -->

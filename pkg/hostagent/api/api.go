@@ -3,9 +3,13 @@
 
 package api
 
+import "net"
+
 type Info struct {
 	// indicate instance is started by launchd or systemd if not empty
 	AutoStartedIdentifier string `json:"autoStartedIdentifier,omitempty"`
-	// SSHLocalPort is the local port on the host for SSH access to the VM.
+	// Guest IP address directly accessible from the host.
+	GuestIP net.IP `json:"guestIP,omitempty"`
+	// SSH local port on the host forwarded to the guest's port 22.
 	SSHLocalPort int `json:"sshLocalPort,omitempty"`
 }

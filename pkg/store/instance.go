@@ -82,6 +82,7 @@ func Inspect(ctx context.Context, instName string) (*limatype.Instance, error) {
 				inst.Status = limatype.StatusBroken
 				inst.Errors = append(inst.Errors, fmt.Errorf("failed to get Info from %q: %w", haSock, err))
 			} else {
+				inst.GuestIP = info.GuestIP
 				inst.SSHLocalPort = info.SSHLocalPort
 				inst.AutoStartedIdentifier = info.AutoStartedIdentifier
 			}
@@ -347,10 +348,11 @@ func PrintInstances(w io.Writer, instances []*limatype.Instance, format string, 
 			if strings.HasPrefix(dir, homeDir) {
 				dir = strings.Replace(dir, homeDir, "~", 1)
 			}
+			sshAddress, sshPort := instance.SSHAddressPort()
 			fmt.Fprintf(w, "%s\t%s\t%s",
 				instance.Name,
 				instance.Status,
-				fmt.Sprintf("%s:%d", instance.SSHAddress, instance.SSHLocalPort),
+				fmt.Sprintf("%s:%d", sshAddress, sshPort),
 			)
 			if !hideType {
 				fmt.Fprintf(w, "\t%s",
