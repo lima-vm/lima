@@ -809,3 +809,35 @@ func TestStaticPortForwarding(t *testing.T) {
 		})
 	}
 }
+
+func TestRelativeImagePathResolution(t *testing.T) {
+	instDir := filepath.Join(t.TempDir(), "test-instance")
+	assert.NilError(t, os.MkdirAll(instDir, 0o755))
+	filePath := filepath.Join(instDir, "lima.yaml")
+
+	tests := []struct {
+		in, want string
+	}{
+		{"./images/test.img", filepath.Join(instDir, "./images/test.img")},
+		{"images/test.img", filepath.Join(instDir, "images/test.img")},
+		{"/absolute/test.img", "/absolute/test.img"},
+		{"https://example.com/test.img", "https://example.com/test.img"},
+	}
+
+	for _, tt := range tests {
+		y := limatype.LimaYAML{Images: []limatype.Image{{File: limatype.File{Location: tt.in}}}}
+		FillDefault(t.Context(), &y, &limatype.LimaYAML{}, &limatype.LimaYAML{}, filePath, false)
+		assert.Equal(t, tt.want, y.Images[0].Location)
+	}
+
+	// Test kernel and initrd paths
+	y := limatype.LimaYAML{Images: []limatype.Image{{
+		File:   limatype.File{Location: "./test.img"},
+		Kernel: &limatype.Kernel{File: limatype.File{Location: "./vmlinux"}},
+		Initrd: &limatype.File{Location: "./initrd.img"},
+	}}}
+	FillDefault(t.Context(), &y, &limatype.LimaYAML{}, &limatype.LimaYAML{}, filePath, false)
+	assert.Equal(t, filepath.Join(instDir, "./test.img"), y.Images[0].Location)
+	assert.Equal(t, filepath.Join(instDir, "./vmlinux"), y.Images[0].Kernel.Location)
+	assert.Equal(t, filepath.Join(instDir, "./initrd.img"), y.Images[0].Initrd.Location)
+}

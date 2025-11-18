@@ -121,6 +121,29 @@ func defaultGuestInstallPrefix() string {
 	return "/usr/local"
 }
 
+// resolveLocationPath resolves a file location relative to instDir if it's a relative path.
+// URLs and absolute paths are left unchanged. Tilde paths are expanded.
+func resolveLocationPath(location, instDir string) string {
+	// Don't modify URLs
+	if strings.Contains(location, "://") {
+		return location
+	}
+	// Expand tilde paths
+	if localpathutil.IsTildePath(location) {
+		if expanded, err := localpathutil.Expand(location); err == nil {
+			return expanded
+		} else {
+			logrus.WithError(err).Warnf("Couldn't expand location %q", location)
+			return location
+		}
+	}
+	// Resolve relative paths relative to template directory
+	if !filepath.IsAbs(location) {
+		return filepath.Join(instDir, location)
+	}
+	return location
+}
+
 // FillDefault updates undefined fields in y with defaults from d (or built-in default), and overwrites with values from o.
 // Both d and o may be empty.
 //
@@ -230,11 +253,18 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		if img.Arch == "" {
 			img.Arch = *y.Arch
 		}
-		if img.Kernel != nil && img.Kernel.Arch == "" {
-			img.Kernel.Arch = img.Arch
+		img.Location = resolveLocationPath(img.Location, instDir)
+		if img.Kernel != nil {
+			if img.Kernel.Arch == "" {
+				img.Kernel.Arch = img.Arch
+			}
+			img.Kernel.Location = resolveLocationPath(img.Kernel.Location, instDir)
 		}
-		if img.Initrd != nil && img.Initrd.Arch == "" {
-			img.Initrd.Arch = img.Arch
+		if img.Initrd != nil {
+			if img.Initrd.Arch == "" {
+				img.Initrd.Arch = img.Arch
+			}
+			img.Initrd.Location = resolveLocationPath(img.Initrd.Location, instDir)
 		}
 	}
 
