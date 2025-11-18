@@ -52,7 +52,7 @@ Read the [slides](https://github.com/AkihiroSuda/AkihiroSuda/blob/master/slides/
 
 He also mentioned Lima in the presentation "What’s Going on in the Containerd Neighborhood?" in the context of case study of nerdctl.
 
-Read the [slides](https://static.sched.com/hosted_files/kccncna2024/74/KCCNC-SLC-24-Containerd-session.pdf)or watch the [video](https://www.youtube.com/watch?v=kCNhgNXVdxw).
+Read the [slides](https://static.sched.com/hosted_files/kccncna2024/74/KCCNC-SLC-24-Containerd-session.pdf) or watch the [video](https://www.youtube.com/watch?v=kCNhgNXVdxw).
 
 ## 2025
 ### KubeCon + CloudNativeCon Europe 2025
