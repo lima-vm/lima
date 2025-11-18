@@ -110,10 +110,6 @@ func TestTemplate(t *testing.T) {
 		SSHPubKeys: []string{
 			"ssh-rsa dummy foo@example.com",
 		},
-		Mounts: []Mount{
-			{MountPoint: "/Users/dummy"},
-			{MountPoint: "/Users/dummy/lima"},
-		},
 		MountType: "reverse-sshfs",
 		CACerts: CACerts{
 			RemoveDefaults: &defaultRemoveDefaults,
@@ -128,7 +124,6 @@ func TestTemplate(t *testing.T) {
 		assert.NilError(t, err)
 		t.Log(string(b))
 		if f.Path == "user-data" {
-			// mounted later
 			assert.Assert(t, !strings.Contains(string(b), "mounts:"))
 			// ca_certs:
 			assert.Assert(t, !strings.Contains(string(b), "trusted:"))
