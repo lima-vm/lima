@@ -139,14 +139,6 @@ This page documents the environment variables used in Lima.
   ```sh
   export LIMA_USERNET_RESOLVE_IP_ADDRESS_TIMEOUT=5
   ```
-### `LIMA_VZ_ASIF`
-
-- **Description**: Specifies whether to use ASIF disk image format for VZ driver on macOS 26.0 or later.
-- **Default**: `false`
-- **Usage**: 
-  ```sh
-  export LIMA_VZ_ASIF=true
-  ```
 
 ### `_LIMA_QEMU_UEFI_IN_BIOS`
 

@@ -108,6 +108,7 @@ func TestVZOpts(t *testing.T) {
 vmType: "vz"
 vmOpts:
   vz:
+    diskImageFormat: null
     rosetta:
       enabled: null
       binfmt: null
@@ -148,6 +149,7 @@ func TestVZOptsRosettaMessage(t *testing.T) {
 vmType: "vz"
 vmOpts:
   vz:
+    diskImageFormat: "raw"
     rosetta:
       enabled: true
       binfmt: false
@@ -160,6 +162,7 @@ message: |
 	want := `vmType: vz
 vmOpts:
   vz:
+    diskImageFormat: raw
     rosetta:
       binfmt: false
       enabled: true

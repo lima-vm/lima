@@ -272,5 +272,5 @@ func AcceptableAsBaseDisk(info *Info) error {
 
 func (q *QemuImageUtil) ConvertToASIF(_ context.Context, _, _ string, _ *int64, _ bool) error {
 	// Should never be called because ASIF is not supported by qemu-img.
-	return nil
+	return errors.New("unimplemented")
 }

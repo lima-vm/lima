@@ -370,6 +370,11 @@ vmOpts:
     #   riscv64: "max" # (or "host" when running on riscv64 host)
     #   x86_64:  "max" # (or "host" when running on x86_64 host; additional options are appended on Intel Mac)
   vz:
+    diskImageFormat: null
+    # Specify the disk image format: "raw" or "asif".
+    # Currently only applies to the primary disk image.
+    # "asif" requires macOS 26+, and does not support converting back to "raw".
+    # 🟢 Builtin default: "raw"
     rosetta:
       # Enable Rosetta inside the VM; needs `vmType: vz`
       # Hint: try `softwareupdate --install-rosetta` if Lima gets stuck at `Installing rosetta...`

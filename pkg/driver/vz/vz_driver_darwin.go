@@ -17,6 +17,9 @@ import (
 
 	"github.com/Code-Hex/vz/v3"
 	"github.com/coreos/go-semver/semver"
+	"github.com/lima-vm/go-qcow2reader/image"
+	"github.com/lima-vm/go-qcow2reader/image/asif"
+	"github.com/lima-vm/go-qcow2reader/image/raw"
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/driver"
@@ -75,11 +78,12 @@ const Enabled = true
 type LimaVzDriver struct {
 	Instance *limatype.Instance
 
-	SSHLocalPort   int
-	vSockPort      int
-	virtioPort     string
-	rosettaEnabled bool
-	rosettaBinFmt  bool
+	SSHLocalPort    int
+	vSockPort       int
+	virtioPort      string
+	rosettaEnabled  bool
+	rosettaBinFmt   bool
+	diskImageFormat image.Type
 
 	machine                    *virtualMachineWrapper
 	waitSSHLocalPortAccessible <-chan any
@@ -125,6 +129,11 @@ func (l *LimaVzDriver) Configure(inst *limatype.Instance) *driver.ConfiguredDriv
 	if vzOpts.Rosetta.BinFmt != nil {
 		l.rosettaBinFmt = *vzOpts.Rosetta.BinFmt
 	}
+	if vzOpts.DiskImageFormat != nil {
+		l.diskImageFormat = *vzOpts.DiskImageFormat
+	} else {
+		l.diskImageFormat = raw.Type
+	}
 
 	return &driver.ConfiguredDriver{
 		Driver: l,
@@ -160,6 +169,9 @@ func (l *LimaVzDriver) FillConfig(ctx context.Context, cfg *limatype.LimaYAML, _
 	}
 	if vzOpts.Rosetta.BinFmt == nil {
 		vzOpts.Rosetta.BinFmt = ptr.Of(false)
+	}
+	if vzOpts.DiskImageFormat == nil {
+		vzOpts.DiskImageFormat = ptr.Of(raw.Type)
 	}
 
 	var opts any
@@ -286,6 +298,19 @@ func validateConfig(_ context.Context, cfg *limatype.LimaYAML) error {
 	default:
 		logrus.Warnf("field `video.display` must be \"vz\", \"default\", or \"none\" for VZ driver , got %q", videoDisplay)
 	}
+	var vzOpts limatype.VZOpts
+	if err := limayaml.Convert(cfg.VMOpts[limatype.VZ], &vzOpts, "vmOpts.vz"); err != nil {
+		logrus.WithError(err).Warnf("Couldn't convert %q", cfg.VMOpts[limatype.VZ])
+	}
+	switch *vzOpts.DiskImageFormat {
+	case raw.Type:
+	case asif.Type:
+		if macOSProductVersion.LessThan(*semver.New("26.0.0")) {
+			return fmt.Errorf("vmOpts.vz.diskImageFormat=%q requires macOS 26 or higher to run, got %q", asif.Type, macOSProductVersion)
+		}
+	default:
+		return fmt.Errorf("field `vmOpts.vz.diskImageFormat` must be %q or %q, got %q", raw.Type, asif.Type, *vzOpts.DiskImageFormat)
+	}
 	return nil
 }
 
@@ -295,7 +320,7 @@ func (l *LimaVzDriver) Create(_ context.Context) error {
 }
 
 func (l *LimaVzDriver) CreateDisk(ctx context.Context) error {
-	return driverutil.EnsureDiskRaw(ctx, l.Instance)
+	return driverutil.EnsureDisk(ctx, l.Instance.Dir, *l.Instance.Config.Disk, l.diskImageFormat)
 }
 
 func (l *LimaVzDriver) Start(ctx context.Context) (chan error, error) {

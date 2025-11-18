@@ -19,6 +19,7 @@ import (
 	"github.com/docker/go-units"
 	"github.com/lima-vm/go-qcow2reader"
 	"github.com/lima-vm/go-qcow2reader/convert"
+	"github.com/lima-vm/go-qcow2reader/image"
 	"github.com/lima-vm/go-qcow2reader/image/asif"
 	"github.com/lima-vm/go-qcow2reader/image/qcow2"
 	"github.com/lima-vm/go-qcow2reader/image/raw"
@@ -42,17 +43,10 @@ func roundUp(size int64) int64 {
 	return sectors * sectorSize
 }
 
-type targetImageType string
-
-const (
-	imageRaw  targetImageType = "raw"
-	imageASIF targetImageType = "ASIF"
-)
-
 // convertTo converts a source disk into a raw or ASIF disk.
 // source and dest may be same.
 // convertTo is a NOP if source == dest, and no resizing is needed.
-func convertTo(destType targetImageType, source, dest string, size *int64, allowSourceWithBackingFile bool) error {
+func convertTo(destType image.Type, source, dest string, size *int64, allowSourceWithBackingFile bool) error {
 	srcF, err := os.Open(source)
 	if err != nil {
 		return err
@@ -71,7 +65,7 @@ func convertTo(destType targetImageType, source, dest string, size *int64, allow
 		if err = srcF.Close(); err != nil {
 			return err
 		}
-		if destType == imageRaw {
+		if destType == raw.Type {
 			return convertRawToRaw(source, dest, size)
 		}
 	case qcow2.Type:
@@ -85,7 +79,7 @@ func convertTo(destType targetImageType, source, dest string, size *int64, allow
 			}
 		}
 	case asif.Type:
-		if destType == imageASIF {
+		if destType == asif.Type {
 			return convertASIFToASIF(source, dest, size)
 		}
 		return fmt.Errorf("conversion from ASIF to %q is not supported", destType)
@@ -103,10 +97,10 @@ func convertTo(destType targetImageType, source, dest string, size *int64, allow
 		attachedDevice string
 	)
 	switch destType {
-	case imageRaw:
+	case raw.Type:
 		destTmpF, err = os.CreateTemp(filepath.Dir(dest), filepath.Base(dest)+".lima-*.tmp")
 		destTmp = destTmpF.Name()
-	case imageASIF:
+	case asif.Type:
 		// destTmp != destTmpF.Name() because destTmpF is mounted ASIF device file.
 		randomBase := fmt.Sprintf("%s.lima-%d.tmp.asif", filepath.Base(dest), rand.UintN(math.MaxUint))
 		destTmp = filepath.Join(filepath.Dir(dest), randomBase)
@@ -150,7 +144,7 @@ func convertTo(destType targetImageType, source, dest string, size *int64, allow
 		return err
 	}
 	// Detach ASIF device
-	if destType == imageASIF {
+	if destType == asif.Type {
 		err := asifutil.DetachASIF(attachedDevice)
 		if err != nil {
 			return fmt.Errorf("failed to detach ASIF image %q: %w", attachedDevice, err)
@@ -230,7 +224,7 @@ func (n *NativeImageUtil) CreateDisk(_ context.Context, disk string, size int64)
 
 // ConvertToRaw converts a disk image to raw format.
 func (n *NativeImageUtil) ConvertToRaw(_ context.Context, source, dest string, size *int64, allowSourceWithBackingFile bool) error {
-	return convertTo(imageRaw, source, dest, size, allowSourceWithBackingFile)
+	return convertTo(raw.Type, source, dest, size, allowSourceWithBackingFile)
 }
 
 // ResizeDisk resizes an existing disk image to the specified size.
@@ -246,5 +240,5 @@ func (n *NativeImageUtil) MakeSparse(_ context.Context, f *os.File, offset int64
 
 // ConvertToASIF converts a disk image to ASIF format.
 func (n *NativeImageUtil) ConvertToASIF(_ context.Context, source, dest string, size *int64, allowSourceWithBackingFile bool) error {
-	return convertTo(imageASIF, source, dest, size, allowSourceWithBackingFile)
+	return convertTo(asif.Type, source, dest, size, allowSourceWithBackingFile)
 }

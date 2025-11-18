@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/lima-vm/go-qcow2reader/image/raw"
 	"gotest.tools/v3/assert"
 )
 
@@ -17,6 +18,6 @@ func FuzzConvertToRaw(f *testing.F) {
 		destPath := filepath.Join(t.TempDir(), "dest.img")
 		err := os.WriteFile(srcPath, imgData, 0o600)
 		assert.NilError(t, err)
-		_ = convertTo(imageRaw, srcPath, destPath, &size, withBacking)
+		_ = convertTo(raw.Type, srcPath, destPath, &size, withBacking)
 	})
 }
