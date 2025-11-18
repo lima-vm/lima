@@ -66,3 +66,9 @@ Read the [slides](https://github.com/AkihiroSuda/AkihiroSuda/blob/master/slides/
 [Leonardo Taccari](https://github.com/iamleot) presented Lima in the NetBSD devsummit at EuroBSDCon 2025.
 
 Read the [slides](https://www.NetBSD.org/gallery/presentations/leot/eurobsdcon2025-devsummit-lima/lima.pdf).
+
+### KubeCon + CloudNativeCon North America 2025
+
+[Akihiro Suda](https://github.com/AkihiroSuda) presented Lima in the CNCF project pavilion.
+
+Read the [slides](https://github.com/AkihiroSuda/AkihiroSuda/blob/master/slides/2025/20251113%20%5BKubeCon%20NA%20Pavilion%5D%20Lima.pdf).
