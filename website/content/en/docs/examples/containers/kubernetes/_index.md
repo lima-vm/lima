@@ -39,6 +39,16 @@ kubectl create service nodeport nginx --node-port=31080 --tcp=80:80
 
 See also <https://docs.k0sproject.io/>.
 {{% /tab %}}
+{{% tab header="RKE2" %}}
+```bash
+limactl start template://experimental/rke2
+export KUBECONFIG=$(limactl list rke2 --format 'unix://{{.Dir}}/copied-from-guest/kubeconfig.yaml')
+kubectl create deployment nginx --image nginx:alpine
+kubectl create service nodeport nginx --node-port=31080 --tcp=80:80
+```
+
+See also <https://docs.rke2.io/>.
+{{% /tab %}}
 {{% tab header="Usernetes" %}}
 ```bash
 limactl start template://experimental/u7s
