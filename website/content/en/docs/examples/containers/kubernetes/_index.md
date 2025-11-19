@@ -56,10 +56,16 @@ See also <https://github.com/rootless-containers/usernetes>.
 
 A multi-node cluster can be created by creating multiple VMs connected via the [`lima:user-v2`](../../../config/network/user-v2.md) network.
 
+As of Lima v2.0, the built-in `k8s` template is designed to support multi-node mode.
+
 ```bash
-limactl create --name k8s-0 --network lima:user-v2
-limactl create --name k8s-1 --network lima:user-v2
+limactl start --name k8s-0 --network lima:user-v2 template:k8s
+limactl shell k8s-0 sudo kubeadm token create --print-join-command
+# (The join command printed here)
 ```
 
-The cluster has to be set up manually, as the built-in templates do not support multi-node mode yet.
-Support for multi-node template is tracked in <https://github.com/lima-vm/lima/issues/4100>.
+```bash
+limactl start --name k8s-1 --network lima:user-v2 template:k8s
+limactl shell k8s-1 sudo bash -euxc "kubeadm reset --force ; ip link delete cni0 ; ip link delete flannel.1 ; rm -rf /var/lib/cni /etc/cni"
+limactl shell k8s-1 sudo <JOIN_COMMAND_FROM_ABOVE>
+```
