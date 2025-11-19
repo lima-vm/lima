@@ -292,7 +292,7 @@ func Stop(extDriver *registry.ExternalDriver) error {
 	if extDriver.CancelFunc != nil {
 		extDriver.CancelFunc()
 	}
-	if err := extDriver.Command.Process.Kill(); err != nil {
+	if err := extDriver.Command.Process.Signal(syscall.SIGTERM); err != nil {
 		extDriver.Logger.Errorf("Failed to kill external driver process: %v", err)
 	}
 	if err := os.Remove(extDriver.SocketPath); err != nil && !os.IsNotExist(err) {
