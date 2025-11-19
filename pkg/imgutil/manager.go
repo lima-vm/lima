@@ -19,7 +19,6 @@ type ImageDiskManager interface {
 	ResizeDisk(ctx context.Context, disk string, size int64) error
 
 	// Convert converts a disk image to the specified format.
-	// Currently supported formats are raw.Type and asif.Type.
 	Convert(ctx context.Context, imageType image.Type, source, dest string, size *int64, allowSourceWithBackingFile bool) error
 
 	// MakeSparse makes a file sparse, starting from the specified offset.

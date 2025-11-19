@@ -15,6 +15,7 @@ import (
 	"strconv"
 
 	"github.com/lima-vm/go-qcow2reader/image"
+	"github.com/lima-vm/go-qcow2reader/image/raw"
 	"github.com/sirupsen/logrus"
 )
 
@@ -201,8 +202,11 @@ func GetInfo(ctx context.Context, path string) (*Info, error) {
 }
 
 // Convert converts a disk image to raw format.
-// Specified imageType is ignored.
-func (q *QemuImageUtil) Convert(ctx context.Context, _ image.Type, source, dest string, size *int64, allowSourceWithBackingFile bool) error {
+// Currently only raw.Type is supported.
+func (q *QemuImageUtil) Convert(ctx context.Context, imageType image.Type, source, dest string, size *int64, allowSourceWithBackingFile bool) error {
+	if imageType != raw.Type {
+		return fmt.Errorf("QemuImageUtil.Convert only supports raw.Type, got %q", imageType)
+	}
 	if !allowSourceWithBackingFile {
 		info, err := getInfo(ctx, source)
 		if err != nil {
