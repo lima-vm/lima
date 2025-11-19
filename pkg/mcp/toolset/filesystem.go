@@ -130,6 +130,9 @@ func (ts *ToolSet) Glob(_ context.Context,
 	}
 	pattern := path.Join(guestPath, args.Pattern)
 	matches, err := ts.sftp.Glob(pattern)
+	if matches == nil {
+		matches = []string{}
+	}
 	if err != nil {
 		return nil, nil, err
 	}
