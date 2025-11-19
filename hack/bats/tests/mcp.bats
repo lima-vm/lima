@@ -296,8 +296,7 @@ tools_call() {
 }
 
 @test 'glob returns an empty list when the pattern does not match' {
-    skip "see https://github.com/lima-vm/lima/issues/4173"
-
+   
     tools_call glob '{"pattern":"nothing.to.see"}'
 
     run_yq '.structuredContent.matches[]' <<<"$output"
