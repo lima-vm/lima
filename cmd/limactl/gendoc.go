@@ -105,7 +105,7 @@ func escapeMarkdown(text string) string {
 	lines := strings.Split(text, "\n")
 	for i := range lines {
 		// Need to escape backticks first, before adding more
-		for _, c := range strings.Split("\\`*_[]()#+-.|", "") {
+		for c := range strings.SplitSeq("\\`*_[]()#+-.|", "") {
 			lines[i] = strings.ReplaceAll(lines[i], c, "\\"+c)
 		}
 		if i < len(lines)-1 {

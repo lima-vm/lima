@@ -599,10 +599,7 @@ func binaryString(s string) string {
 	builder.Grow(len(encoded) + lineCount)
 
 	for i := 0; i < len(encoded); i += base64ChunkLength {
-		end := i + base64ChunkLength
-		if end > len(encoded) {
-			end = len(encoded)
-		}
+		end := min(i+base64ChunkLength, len(encoded))
 		builder.WriteString(encoded[i:end])
 		builder.WriteByte('\n')
 	}

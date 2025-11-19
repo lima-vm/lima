@@ -310,8 +310,8 @@ func resolveSearchDomain(file string) []string {
 	sc := bufio.NewScanner(f)
 	searchPrefix := "search "
 	for sc.Scan() {
-		if strings.HasPrefix(sc.Text(), searchPrefix) {
-			searchDomains := strings.Split(strings.TrimPrefix(sc.Text(), searchPrefix), " ")
+		if after, ok := strings.CutPrefix(sc.Text(), searchPrefix); ok {
+			searchDomains := strings.Split(after, " ")
 			logrus.Debugf("Using search domains: %v", searchDomains)
 			return searchDomains
 		}
