@@ -14,6 +14,7 @@ import (
 	"os/exec"
 	"strconv"
 
+	"github.com/lima-vm/go-qcow2reader/image"
 	"github.com/sirupsen/logrus"
 )
 
@@ -199,8 +200,9 @@ func GetInfo(ctx context.Context, path string) (*Info, error) {
 	return qemuInfo, nil
 }
 
-// ConvertToRaw converts a disk image to raw format.
-func (q *QemuImageUtil) ConvertToRaw(ctx context.Context, source, dest string, size *int64, allowSourceWithBackingFile bool) error {
+// Convert converts a disk image to raw format.
+// Specified imageType is ignored.
+func (q *QemuImageUtil) Convert(ctx context.Context, _ image.Type, source, dest string, size *int64, allowSourceWithBackingFile bool) error {
 	if !allowSourceWithBackingFile {
 		info, err := getInfo(ctx, source)
 		if err != nil {
@@ -268,9 +270,4 @@ func AcceptableAsBaseDisk(info *Info) error {
 		return fmt.Errorf("base disk (%q) must not have multiple children: %+v", info.Filename, info.Children)
 	}
 	return nil
-}
-
-func (q *QemuImageUtil) ConvertToASIF(_ context.Context, _, _ string, _ *int64, _ bool) error {
-	// Should never be called because ASIF is not supported by qemu-img.
-	return errors.New("unimplemented")
 }

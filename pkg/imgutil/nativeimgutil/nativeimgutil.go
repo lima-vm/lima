@@ -230,9 +230,10 @@ func (n *NativeImageUtil) CreateDisk(_ context.Context, disk string, size int64)
 	return f.Truncate(roundedSize)
 }
 
-// ConvertToRaw converts a disk image to raw format.
-func (n *NativeImageUtil) ConvertToRaw(_ context.Context, source, dest string, size *int64, allowSourceWithBackingFile bool) error {
-	return convertTo(raw.Type, source, dest, size, allowSourceWithBackingFile)
+// Convert converts a disk image to the specified format.
+// Currently supported formats are raw.Type and asif.Type.
+func (n *NativeImageUtil) Convert(_ context.Context, imageType image.Type, source, dest string, size *int64, allowSourceWithBackingFile bool) error {
+	return convertTo(imageType, source, dest, size, allowSourceWithBackingFile)
 }
 
 // ResizeDisk resizes an existing disk image to the specified size.
@@ -244,9 +245,4 @@ func (n *NativeImageUtil) ResizeDisk(_ context.Context, disk string, size int64)
 // MakeSparse makes a file sparse, starting from the specified offset.
 func (n *NativeImageUtil) MakeSparse(_ context.Context, f *os.File, offset int64) error {
 	return makeSparse(f, offset)
-}
-
-// ConvertToASIF converts a disk image to ASIF format.
-func (n *NativeImageUtil) ConvertToASIF(_ context.Context, source, dest string, size *int64, allowSourceWithBackingFile bool) error {
-	return convertTo(asif.Type, source, dest, size, allowSourceWithBackingFile)
 }

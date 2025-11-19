@@ -12,7 +12,6 @@ import (
 
 	"github.com/docker/go-units"
 	"github.com/lima-vm/go-qcow2reader/image"
-	"github.com/lima-vm/go-qcow2reader/image/asif"
 
 	"github.com/lima-vm/lima/v2/pkg/imgutil/proxyimgutil"
 	"github.com/lima-vm/lima/v2/pkg/iso9660util"
@@ -55,11 +54,7 @@ func EnsureDisk(ctx context.Context, instDir, diskSize string, diskImageFormat i
 	}
 	// Check whether to use ASIF format
 
-	converter := diskUtil.ConvertToASIF
-	if diskImageFormat != asif.Type {
-		converter = diskUtil.ConvertToRaw
-	}
-	if err = converter(ctx, baseDisk, diffDisk, &diskSizeInBytes, false); err != nil {
+	if err = diskUtil.Convert(ctx, diskImageFormat, baseDisk, diffDisk, &diskSizeInBytes, false); err != nil {
 		return fmt.Errorf("failed to convert %q to a disk %q: %w", baseDisk, diffDisk, err)
 	}
 	return err

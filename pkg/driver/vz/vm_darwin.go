@@ -520,7 +520,7 @@ func attachDisks(ctx context.Context, inst *limatype.Instance, vmConfig *vz.Virt
 		// ConvertToRaw is a NOP if no conversion is needed
 		logrus.Debugf("Converting extra disk %q to a raw disk (if it is not a raw)", extraDiskPath)
 
-		if err = diskUtil.ConvertToRaw(ctx, extraDiskPath, extraDiskPath, nil, true); err != nil {
+		if err = diskUtil.Convert(ctx, raw.Type, extraDiskPath, extraDiskPath, nil, true); err != nil {
 			return fmt.Errorf("failed to convert extra disk %q to a raw disk: %w", extraDiskPath, err)
 		}
 		extraDiskPathAttachment, err := vz.NewDiskImageStorageDeviceAttachmentWithCacheAndSync(extraDiskPath, false, diskImageCachingMode, vz.DiskImageSynchronizationModeFsync)

@@ -9,6 +9,9 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/lima-vm/go-qcow2reader/image"
+	"github.com/lima-vm/go-qcow2reader/image/raw"
+
 	"github.com/lima-vm/lima/v2/pkg/imgutil"
 	"github.com/lima-vm/lima/v2/pkg/imgutil/nativeimgutil"
 	"github.com/lima-vm/lima/v2/pkg/qemuimgutil"
@@ -52,16 +55,20 @@ func (p *ImageDiskManager) ResizeDisk(ctx context.Context, disk string, size int
 	return err
 }
 
-// ConvertToRaw converts a disk image to raw format.
-func (p *ImageDiskManager) ConvertToRaw(ctx context.Context, source, dest string, size *int64, allowSourceWithBackingFile bool) error {
-	err := p.qemu.ConvertToRaw(ctx, source, dest, size, allowSourceWithBackingFile)
-	if err == nil {
-		return nil
+// Convert converts a disk image to the specified format.
+// Currently supported formats are raw.Type and asif.Type.
+func (p *ImageDiskManager) Convert(ctx context.Context, imageType image.Type, source, dest string, size *int64, allowSourceWithBackingFile bool) error {
+	if imageType == raw.Type {
+		err := p.qemu.Convert(ctx, imageType, source, dest, size, allowSourceWithBackingFile)
+		if err == nil {
+			return nil
+		}
+		if errors.Is(err, exec.ErrNotFound) {
+			return p.native.Convert(ctx, imageType, source, dest, size, allowSourceWithBackingFile)
+		}
+		return err
 	}
-	if errors.Is(err, exec.ErrNotFound) {
-		return p.native.ConvertToRaw(ctx, source, dest, size, allowSourceWithBackingFile)
-	}
-	return err
+	return p.native.Convert(ctx, imageType, source, dest, size, allowSourceWithBackingFile)
 }
 
 func (p *ImageDiskManager) MakeSparse(ctx context.Context, f *os.File, offset int64) error {
@@ -73,9 +80,4 @@ func (p *ImageDiskManager) MakeSparse(ctx context.Context, f *os.File, offset in
 		return p.native.MakeSparse(ctx, f, offset)
 	}
 	return err
-}
-
-func (p *ImageDiskManager) ConvertToASIF(ctx context.Context, source, dest string, size *int64, allowSourceWithBackingFile bool) error {
-	// ASIF conversion is only supported by the native image utility.
-	return p.native.ConvertToASIF(ctx, source, dest, size, allowSourceWithBackingFile)
 }
