@@ -104,7 +104,15 @@ func convertTo(destType image.Type, source, dest string, size *int64, allowSourc
 		// destTmp != destTmpF.Name() because destTmpF is mounted ASIF device file.
 		randomBase := fmt.Sprintf("%s.lima-%d.tmp.asif", filepath.Base(dest), rand.UintN(math.MaxUint))
 		destTmp = filepath.Join(filepath.Dir(dest), randomBase)
-		attachedDevice, destTmpF, err = asifutil.NewAttachedASIF(destTmp, srcImg.Size())
+		// Since qcow2 image is smaller than expected size, we need to specify expected size to avoid resize later.
+		// Resizing ASIF image is not supported by qemu-img which recognizes ASIF format as raw.
+		var newSize int64
+		if size != nil {
+			newSize = *size
+		} else {
+			newSize = srcImg.Size()
+		}
+		attachedDevice, destTmpF, err = asifutil.NewAttachedASIF(destTmp, newSize)
 	default:
 		return fmt.Errorf("unsupported target image type: %q", destType)
 	}
