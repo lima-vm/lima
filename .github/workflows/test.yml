@@ -477,7 +477,7 @@ jobs:
       run: brew install bash coreutils w3m socat
     - name: Install socket_vmnet
       env:
-        SOCKET_VMNET_VERSION: v1.2.0
+        SOCKET_VMNET_VERSION: v1.2.2
       run: |
         (
           cd ~
