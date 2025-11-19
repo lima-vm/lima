@@ -75,7 +75,6 @@ linters:
     modernize:
       disable:
       - omitzero
-      - stringsbuilder
     perfsprint:
       int-conversion: false
       err-error: false

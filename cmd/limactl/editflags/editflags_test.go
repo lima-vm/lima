@@ -195,6 +195,36 @@ func TestYQExpressions(t *testing.T) {
 			newInstance: false,
 			expectError: "flag `--mount` conflicts with `--mount-only`",
 		},
+		{
+			name:        "dns",
+			args:        []string{"--dns", "8.8.8.8", "--dns", "8.8.4.4", "--dns", "1.1.1.1"},
+			newInstance: false,
+			expected:    []string{`.dns += ["8.8.8.8","8.8.4.4","1.1.1.1"] | .dns |= unique | .hostResolver.enabled=false`},
+		},
+		{
+			name:        "network vzNAT",
+			args:        []string{"--network", "vzNAT"},
+			newInstance: true,
+			expected:    []string{`.networks += [{"vzNAT": true}] | .networks |= unique_by(.lima)`},
+		},
+		{
+			name:        "network lima:shared",
+			args:        []string{"--network", "lima:shared"},
+			newInstance: true,
+			expected:    []string{`.networks += [{"lima": "shared"}] | .networks |= unique_by(.lima)`},
+		},
+		{
+			name:        "multiple networks",
+			args:        []string{"--network", "vzNAT", "--network", "lima:shared", "--network", "lima:bridged"},
+			newInstance: true,
+			expected:    []string{`.networks += [{"vzNAT": true},{"lima": "shared"},{"lima": "bridged"}] | .networks |= unique_by(.lima)`},
+		},
+		{
+			name:        "invalid network",
+			args:        []string{"--network", "invalid"},
+			newInstance: true,
+			expectError: `network name must be "vzNAT" or "lima:*", got "invalid"`,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

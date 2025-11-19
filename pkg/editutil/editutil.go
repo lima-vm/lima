@@ -24,19 +24,19 @@ func fileWarning(filename string) string {
 	if err != nil || len(b) == 0 {
 		return ""
 	}
-	s := "# WARNING: " + filename + " includes the following settings,\n"
-	s += "# which are applied before applying this YAML:\n"
-	s += "# -----------\n"
+	var sb strings.Builder
+	sb.WriteString("# WARNING: " + filename + " includes the following settings,\n")
+	sb.WriteString("# which are applied before applying this YAML:\n")
+	sb.WriteString("# -----------\n")
 	for line := range strings.SplitSeq(strings.TrimSuffix(string(b), "\n"), "\n") {
-		s += "#"
+		sb.WriteByte('#')
 		if line != "" {
-			s += " " + line
+			sb.WriteString(" " + line)
 		}
-		s += "\n"
+		sb.WriteByte('\n')
 	}
-	s += "# -----------\n"
-	s += "\n"
-	return s
+	sb.WriteString("# -----------\n\n")
+	return sb.String()
 }
 
 // GenerateEditorWarningHeader generates the editor warning header.

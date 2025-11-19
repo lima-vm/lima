@@ -256,13 +256,11 @@ func networkDeleteAction(cmd *cobra.Command, args []string) error {
 		// Because the command currently does not check whether the network being removed is in use
 	}
 
-	var yq string
+	networks := make([]string, len(args))
 	for i, name := range args {
-		yq += fmt.Sprintf("del(.networks.%q)", name)
-		if i < len(args)-1 {
-			yq += " | "
-		}
+		networks[i] = fmt.Sprintf("del(.networks.%q)", name)
 	}
+	yq := strings.Join(networks, " | ")
 	return networkApplyYQ(yq)
 }
 

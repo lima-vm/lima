@@ -155,36 +155,29 @@ func BuildPortForwardExpression(portForwards []string) (string, error) {
 		return "", nil
 	}
 
-	expr := `.portForwards += [`
+	ports := make([]string, len(portForwards))
 	for i, spec := range portForwards {
 		hostPort, guestPort, isStatic, err := ParsePortForward(spec)
 		if err != nil {
 			return "", err
 		}
-		expr += fmt.Sprintf(`{"guestPort": %q, "hostPort": %q, "static": %v}`, guestPort, hostPort, isStatic)
-		if i < len(portForwards)-1 {
-			expr += ","
-		}
+		ports[i] = fmt.Sprintf(`{"guestPort": %q, "hostPort": %q, "static": %v}`, guestPort, hostPort, isStatic)
 	}
-	expr += `]`
+	expr := fmt.Sprintf(".portForwards += [%s]", strings.Join(ports, ","))
 	return expr, nil
 }
 
 func buildMountListExpression(ss []string) (string, error) {
-	expr := `[`
+	mounts := make([]string, len(ss))
 	for i, s := range ss {
 		writable := strings.HasSuffix(s, ":w")
-		loc := strings.TrimSuffix(s, ":w")
-		loc, err := localpathutil.Expand(loc)
+		loc, err := localpathutil.Expand(strings.TrimSuffix(s, ":w"))
 		if err != nil {
 			return "", err
 		}
-		expr += fmt.Sprintf(`{"location": %q, "mountPoint": %q, "writable": %v}`, loc, loc, writable)
-		if i < len(ss)-1 {
-			expr += ","
-		}
+		mounts[i] = fmt.Sprintf(`{"location": %q, "mountPoint": %q, "writable": %v}`, loc, loc, writable)
 	}
-	expr += `]`
+	expr := fmt.Sprintf("[%s]", strings.Join(mounts, ","))
 	return expr, nil
 }
 
@@ -206,14 +199,11 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 				if err != nil {
 					return nil, err
 				}
-				expr := `.dns += [`
+				ips := make([]string, len(ipSlice))
 				for i, ip := range ipSlice {
-					expr += fmt.Sprintf("%q", ip)
-					if i < len(ipSlice)-1 {
-						expr += ","
-					}
+					ips[i] = `"` + ip.String() + `"`
 				}
-				expr += `] | .dns |= unique | .hostResolver.enabled=false`
+				expr := fmt.Sprintf(".dns += [%s] | .dns |= unique | .hostResolver.enabled=false", strings.Join(ips, ","))
 				logrus.Warnf("Disabling HostResolver, as custom DNS addresses (%v) are specified", ipSlice)
 				return []string{expr}, nil
 			},
@@ -293,23 +283,20 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 				if err != nil {
 					return nil, err
 				}
-				expr := `.networks += [`
+				networks := make([]string, len(ss))
 				for i, s := range ss {
 					// CLI syntax is still experimental (YAML syntax is out of experimental)
 					switch {
 					case s == "vzNAT":
-						expr += `{"vzNAT": true}`
+						networks[i] = `{"vzNAT": true}`
 					case strings.HasPrefix(s, "lima:"):
 						network := strings.TrimPrefix(s, "lima:")
-						expr += fmt.Sprintf(`{"lima": %q}`, network)
+						networks[i] = fmt.Sprintf(`{"lima": %q}`, network)
 					default:
-						return nil, fmt.Errorf("network name must be \"vzNAT\" or \"lima:*\", got %q", s)
-					}
-					if i < len(ss)-1 {
-						expr += ","
+						return nil, fmt.Errorf(`network name must be "vzNAT" or "lima:*", got %q`, s)
 					}
 				}
-				expr += `] | .networks |= unique_by(.lima)`
+				expr := fmt.Sprintf(`.networks += [%s] | .networks |= unique_by(.lima)`, strings.Join(networks, ","))
 				return []string{expr}, nil
 			},
 			false,
