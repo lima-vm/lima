@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright The Lima Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package vz
+package driverutil
 
 import (
 	"context"
@@ -18,7 +18,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 )
 
-func EnsureDisk(ctx context.Context, inst *limatype.Instance) error {
+func EnsureDiskRaw(ctx context.Context, inst *limatype.Instance) error {
 	diffDisk := filepath.Join(inst.Dir, filenames.DiffDisk)
 	if _, err := os.Stat(diffDisk); err == nil || !errors.Is(err, os.ErrNotExist) {
 		// disk is already ensured

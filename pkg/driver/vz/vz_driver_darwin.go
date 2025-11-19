@@ -20,6 +20,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/driver"
+	"github.com/lima-vm/lima/v2/pkg/driverutil"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
@@ -294,7 +295,7 @@ func (l *LimaVzDriver) Create(_ context.Context) error {
 }
 
 func (l *LimaVzDriver) CreateDisk(ctx context.Context) error {
-	return EnsureDisk(ctx, l.Instance)
+	return driverutil.EnsureDiskRaw(ctx, l.Instance)
 }
 
 func (l *LimaVzDriver) Start(ctx context.Context) (chan error, error) {

@@ -20,6 +20,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/driver"
+	"github.com/lima-vm/lima/v2/pkg/driverutil"
 	"github.com/lima-vm/lima/v2/pkg/executil"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
@@ -58,7 +59,8 @@ func (l *LimaKrunkitDriver) Configure(inst *limatype.Instance) *driver.Configure
 }
 
 func (l *LimaKrunkitDriver) CreateDisk(ctx context.Context) error {
-	return EnsureDisk(ctx, l.Instance)
+	// Krunkit also supports qcow2 disks but raw is faster to create and use.
+	return driverutil.EnsureDiskRaw(ctx, l.Instance)
 }
 
 func (l *LimaKrunkitDriver) Start(ctx context.Context) (chan error, error) {
