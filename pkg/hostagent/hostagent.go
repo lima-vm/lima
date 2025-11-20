@@ -500,7 +500,7 @@ func (a *HostAgent) startHostAgentRoutines(ctx context.Context) error {
 		msg := "Running in plain mode. Mounts, dynamic port forwarding, containerd, etc. will be ignored. Guest agent will not be running."
 		for _, port := range a.instConfig.PortForwards {
 			if port.Static {
-				msg += " Static port forwarding is allowed."
+				msg += " Static port forwarding is allowed." //nolint:modernize // stringsbuilder is not needed
 				break
 			}
 		}
