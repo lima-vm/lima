@@ -489,14 +489,7 @@ func getBootCmds(p []limatype.Provision) []BootCmds {
 	var bootCmds []BootCmds
 	for _, f := range p {
 		if f.Mode == limatype.ProvisionModeBoot {
-			lines := []string{}
-			for line := range strings.SplitSeq(*f.Script, "\n") {
-				if line == "" {
-					continue
-				}
-				lines = append(lines, strings.TrimSpace(line))
-			}
-			bootCmds = append(bootCmds, BootCmds{Lines: lines})
+			bootCmds = append(bootCmds, BootCmds{Lines: strings.Split(*f.Script, "\n")})
 		}
 	}
 	return bootCmds
