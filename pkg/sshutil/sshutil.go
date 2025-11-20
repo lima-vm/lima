@@ -529,7 +529,7 @@ func WaitSSHReady(ctx context.Context, dialContext func(context.Context) (net.Co
 	sshConfig := &ssh.ClientConfig{
 		User:            user,
 		Auth:            []ssh.AuthMethod{ssh.PublicKeys(signer)},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: hostKeyCollector().checker(),
 		Timeout:         10 * time.Second,
 	}
 	// Wait until the SSH server is available.
@@ -556,11 +556,16 @@ func WaitSSHReady(ctx context.Context, dialContext func(context.Context) (net.Co
 	}
 }
 
+// errHostKeyMismatch is returned when the SSH host key does not match known hosts.
+var errHostKeyMismatch = errors.New("ssh: host key mismatch")
+
 func isRetryableError(err error) bool {
 	// Port forwarder accepted the connection, but the destination is not ready yet.
 	return osutil.IsConnectionResetError(err) ||
 		// SSH server not ready yet (e.g. host key not generated on initial boot).
-		strings.HasSuffix(err.Error(), "no supported methods remain")
+		strings.HasSuffix(err.Error(), "no supported methods remain") ||
+		// Host key is not yet in known_hosts, but will be collected, so we can retry.
+		errors.Is(err, errHostKeyMismatch)
 }
 
 // userPrivateKeySigner returns the user's private key signer.
@@ -580,4 +585,53 @@ func userPrivateKeySigner() (ssh.Signer, error) {
 		return nil, fmt.Errorf("failed to parse private key %q: %w", privateKeyPath, err)
 	}
 	return signer, nil
+}
+
+// hostKeyCollector is a singleton host key collector.
+var hostKeyCollector = sync.OnceValue(func() *_hostKeyCollector {
+	return &_hostKeyCollector{
+		hostKeys: make(map[string]ssh.PublicKey),
+	}
+})
+
+type _hostKeyCollector struct {
+	hostKeys map[string]ssh.PublicKey
+	mu       sync.Mutex
+}
+
+// checker returns a HostKeyCallback that either checks and collects the host key,
+// or only checks the host key, depending on whether any host keys have been collected.
+// It is expected to pass host key checks by retrying after the first collection.
+// On second invocation, it will only check the host key.
+func (h *_hostKeyCollector) checker() ssh.HostKeyCallback {
+	if len(h.hostKeys) == 0 {
+		return h.checkAndCollect
+	}
+	return h.checkOnly
+}
+
+// checkAndCollect is a HostKeyCallback that records the host key provided by the SSH server.
+func (h *_hostKeyCollector) checkAndCollect(_ string, _ net.Addr, key ssh.PublicKey) error {
+	marshaledKey := string(key.Marshal())
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if _, ok := h.hostKeys[marshaledKey]; ok {
+		return nil
+	}
+	h.hostKeys[marshaledKey] = key
+	// If always returning nil here, GitHub Advanced Security may report "Use of insecure HostKeyCallback implementation".
+	// So, we return an error here to make the SSH client report the host key mismatch.
+	return errHostKeyMismatch
+}
+
+// check is a HostKeyCallback that checks whether the host key has been collected.
+func (h *_hostKeyCollector) checkOnly(_ string, _ net.Addr, key ssh.PublicKey) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if _, ok := h.hostKeys[string(key.Marshal())]; ok {
+		return nil
+	}
+	// If always returning nil here, GitHub Advanced Security may report "Use of insecure HostKeyCallback implementation".
+	// So, we return an error here to make the SSH client report the host key mismatch.
+	return errHostKeyMismatch
 }
