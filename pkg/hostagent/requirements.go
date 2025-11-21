@@ -6,8 +6,11 @@ package hostagent
 import (
 	"errors"
 	"fmt"
+	"os"
 	"runtime"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/lima-vm/sshocker/pkg/ssh"
@@ -103,26 +106,31 @@ func (a *HostAgent) waitForRequirement(r requirement) error {
 	if err != nil {
 		return err
 	}
+	var stdout, stderr string
 	sshConfig := a.sshConfig
-	if r.noMaster || runtime.GOOS == "windows" {
-		// Remove ControlMaster, ControlPath, and ControlPersist options,
-		// because Cygwin-based SSH clients do not support multiplexing when executing commands.
-		// References:
-		//   https://inbox.sourceware.org/cygwin/c98988a5-7e65-4282-b2a1-bb8e350d5fab@acm.org/T/
-		//   https://stackoverflow.com/questions/20959792/is-ssh-controlmaster-with-cygwin-on-windows-actually-possible
-		// By removing these options:
-		//   - Avoids execution failures when the control master is not yet available.
-		//   - Prevents error messages such as:
-		//     > mux_client_request_session: read from master failed: Connection reset by peer
-		//     > ControlSocket ....sock already exists, disabling multiplexing
-		//     > mm_send_fd: sendmsg(2): Connection reset by peer\\r\\nmux_client_request_session: send fds failed\\r\\n
-		sshConfig = &ssh.SSHConfig{
-			ConfigFile:     sshConfig.ConfigFile,
-			Persist:        false,
-			AdditionalArgs: sshutil.DisableControlMasterOptsFromSSHArgs(sshConfig.AdditionalArgs),
+	if r.external || determineUseExternalSSH() {
+		if r.noMaster || runtime.GOOS == "windows" {
+			// Remove ControlMaster, ControlPath, and ControlPersist options,
+			// because Cygwin-based SSH clients do not support multiplexing when executing commands.
+			// References:
+			//   https://inbox.sourceware.org/cygwin/c98988a5-7e65-4282-b2a1-bb8e350d5fab@acm.org/T/
+			//   https://stackoverflow.com/questions/20959792/is-ssh-controlmaster-with-cygwin-on-windows-actually-possible
+			// By removing these options:
+			//   - Avoids execution failures when the control master is not yet available.
+			//   - Prevents error messages such as:
+			//     > mux_client_request_session: read from master failed: Connection reset by peer
+			//     > ControlSocket ....sock already exists, disabling multiplexing
+			//     > mm_send_fd: sendmsg(2): Connection reset by peer\\r\\nmux_client_request_session: send fds failed\\r\\n
+			sshConfig = &ssh.SSHConfig{
+				ConfigFile:     sshConfig.ConfigFile,
+				Persist:        false,
+				AdditionalArgs: sshutil.DisableControlMasterOptsFromSSHArgs(sshConfig.AdditionalArgs),
+			}
 		}
+		stdout, stderr, err = ssh.ExecuteScript(a.instSSHAddress, a.sshLocalPort, sshConfig, script, r.description)
+	} else {
+		stdout, stderr, err = sshutil.ExecuteScriptViaInProcessClient(a.instSSHAddress, a.sshLocalPort, *a.instConfig.User.Name, script, r.description)
 	}
-	stdout, stderr, err := ssh.ExecuteScript(a.instSSHAddress, a.sshLocalPort, sshConfig, script, r.description)
 	logrus.Debugf("stdout=%q, stderr=%q, err=%v", stdout, stderr, err)
 	if err != nil {
 		return fmt.Errorf("stdout=%q, stderr=%q: %w", stdout, stderr, err)
@@ -130,12 +138,33 @@ func (a *HostAgent) waitForRequirement(r requirement) error {
 	return nil
 }
 
+var determineUseExternalSSH = sync.OnceValue(func() bool {
+	var useExternalSSH bool
+	// allow overriding via LIMA_EXTERNAL_SSH_REQUIREMENT environment variable
+	if envVar := os.Getenv("LIMA_EXTERNAL_SSH_REQUIREMENT"); envVar != "" {
+		if b, err := strconv.ParseBool(envVar); err != nil {
+			logrus.WithError(err).Warnf("invalid LIMA_EXTERNAL_SSH_REQUIREMENT value %q", envVar)
+		} else {
+			useExternalSSH = b
+		}
+	}
+	if useExternalSSH {
+		logrus.Info("using external ssh command for executing requirement scripts")
+	} else {
+		logrus.Info("using in-process ssh client for executing requirement scripts")
+	}
+	return useExternalSSH
+})
+
 type requirement struct {
 	description string
 	script      string
 	debugHint   string
 	fatal       bool
 	noMaster    bool
+	// Execute the script externally via the ssh command instead of using the in-process client.
+	// noMaster will be ignored if external is false.
+	external bool
 }
 
 func (a *HostAgent) essentialRequirements() []requirement {
@@ -158,6 +187,7 @@ If any private key under ~/.ssh is protected with a passphrase, you need to have
 true
 `,
 		debugHint: `The persistent ssh ControlMaster should be started immediately.`,
+		external:  true,
 	}
 	if *a.instConfig.Plain {
 		req = append(req, startControlMasterReq)

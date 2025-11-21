@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -22,8 +23,10 @@ import (
 	"time"
 
 	"github.com/coreos/go-semver/semver"
+	sshocker "github.com/lima-vm/sshocker/pkg/ssh"
 	"github.com/mattn/go-shellwords"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/crypto/ssh"
 	"golang.org/x/sys/cpu"
 
 	"github.com/lima-vm/lima/v2/pkg/ioutilx"
@@ -508,4 +511,188 @@ func detectAESAcceleration() bool {
 		return false
 	}
 	return cpu.ARM.HasAES || cpu.ARM64.HasAES || cpu.PPC64.IsPOWER8 || cpu.S390X.HasAES || cpu.X86.HasAES
+}
+
+// WaitSSHReady waits until the SSH server is ready to accept connections.
+// The dialContext function is used to create a connection to the SSH server.
+// The addr, user, parameter is used for ssh.ClientConn creation.
+// The timeoutSeconds parameter specifies the maximum number of seconds to wait.
+func WaitSSHReady(ctx context.Context, dialContext func(context.Context) (net.Conn, error), addr, user string, timeoutSeconds int) error {
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(timeoutSeconds)*time.Second)
+	defer cancel()
+
+	// Prepare signer
+	signer, err := userPrivateKeySigner()
+	if err != nil {
+		return err
+	}
+	// Prepare ssh client config
+	sshConfig := &ssh.ClientConfig{
+		User:            user,
+		Auth:            []ssh.AuthMethod{ssh.PublicKeys(signer)},
+		HostKeyCallback: hostKeyCollector().checker(),
+		Timeout:         10 * time.Second,
+	}
+	// Wait until the SSH server is available.
+	for {
+		conn, err := dialContext(ctx)
+		if err == nil {
+			sshConn, chans, reqs, err := ssh.NewClientConn(conn, addr, sshConfig)
+			if err == nil {
+				sshClient := ssh.NewClient(sshConn, chans, reqs)
+				return sshClient.Close()
+			}
+			conn.Close()
+			if !isRetryableError(err) {
+				return fmt.Errorf("failed to create ssh.Conn to %q: %w", addr, err)
+			}
+		}
+		logrus.Debugf("Waiting for SSH port to accept connections on %s", addr)
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("failed to waiting for SSH port to become available on %s: %w", addr, ctx.Err())
+		case <-time.After(1 * time.Second):
+			continue
+		}
+	}
+}
+
+// errHostKeyMismatch is returned when the SSH host key does not match known hosts.
+var errHostKeyMismatch = errors.New("ssh: host key mismatch")
+
+func isRetryableError(err error) bool {
+	// Port forwarder accepted the connection, but the destination is not ready yet.
+	return osutil.IsConnectionResetError(err) ||
+		// SSH server not ready yet (e.g. host key not generated on initial boot).
+		strings.HasSuffix(err.Error(), "no supported methods remain") ||
+		// Host key is not yet in known_hosts, but will be collected, so we can retry.
+		errors.Is(err, errHostKeyMismatch)
+}
+
+// userPrivateKeySigner returns the user's private key signer.
+// The public key is always installed in the VM.
+func userPrivateKeySigner() (ssh.Signer, error) {
+	configDir, err := dirnames.LimaConfigDir()
+	if err != nil {
+		return nil, err
+	}
+	privateKeyPath := filepath.Join(configDir, filenames.UserPrivateKey)
+	key, err := os.ReadFile(privateKeyPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read private key %q: %w", privateKeyPath, err)
+	}
+	signer, err := ssh.ParsePrivateKey(key)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse private key %q: %w", privateKeyPath, err)
+	}
+	return signer, nil
+}
+
+// hostKeyCollector is a singleton host key collector.
+var hostKeyCollector = sync.OnceValue(func() *_hostKeyCollector {
+	return &_hostKeyCollector{
+		hostKeys: make(map[string]ssh.PublicKey),
+	}
+})
+
+type _hostKeyCollector struct {
+	hostKeys map[string]ssh.PublicKey
+	mu       sync.Mutex
+}
+
+// checker returns a HostKeyCallback that either checks and collects the host key,
+// or only checks the host key, depending on whether any host keys have been collected.
+// It is expected to pass host key checks by retrying after the first collection.
+// On second invocation, it will only check the host key.
+func (h *_hostKeyCollector) checker() ssh.HostKeyCallback {
+	if len(h.hostKeys) == 0 {
+		return h.checkAndCollect
+	}
+	return h.checkOnly
+}
+
+// checkAndCollect is a HostKeyCallback that records the host key provided by the SSH server.
+func (h *_hostKeyCollector) checkAndCollect(_ string, _ net.Addr, key ssh.PublicKey) error {
+	marshaledKey := string(key.Marshal())
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if _, ok := h.hostKeys[marshaledKey]; ok {
+		return nil
+	}
+	h.hostKeys[marshaledKey] = key
+	// If always returning nil here, GitHub Advanced Security may report "Use of insecure HostKeyCallback implementation".
+	// So, we return an error here to make the SSH client report the host key mismatch.
+	return errHostKeyMismatch
+}
+
+// check is a HostKeyCallback that checks whether the host key has been collected.
+func (h *_hostKeyCollector) checkOnly(_ string, _ net.Addr, key ssh.PublicKey) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if _, ok := h.hostKeys[string(key.Marshal())]; ok {
+		return nil
+	}
+	// If always returning nil here, GitHub Advanced Security may report "Use of insecure HostKeyCallback implementation".
+	// So, we return an error here to make the SSH client report the host key mismatch.
+	return errHostKeyMismatch
+}
+
+// ExecuteScriptViaInProcessClient executes the given script on the remote host via in-process SSH client.
+func ExecuteScriptViaInProcessClient(host string, port int, user, script, scriptName string) (stdout, stderr string, err error) {
+	// Prepare signer
+	signer, err := userPrivateKeySigner()
+	if err != nil {
+		return "", "", err
+	}
+
+	// Prepare ssh client config
+	sshConfig := &ssh.ClientConfig{
+		User:            user,
+		Auth:            []ssh.AuthMethod{ssh.PublicKeys(signer)},
+		HostKeyCallback: hostKeyCollector().checker(),
+		Timeout:         10 * time.Second,
+	}
+
+	// Connect to SSH server
+	addr := net.JoinHostPort(host, fmt.Sprintf("%d", port))
+	var dialer net.Dialer
+	dialer.Timeout = sshConfig.Timeout
+	conn, err := dialer.DialContext(context.Background(), "tcp", addr)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to dial %q: %w", addr, err)
+	}
+	sshConn, chans, reqs, err := ssh.NewClientConn(conn, addr, sshConfig)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to create ssh.Conn to %q: %w", addr, err)
+	}
+	client := ssh.NewClient(sshConn, chans, reqs)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to create SSH client to %q: %w", addr, err)
+	}
+	defer client.Close()
+
+	// Create session
+	session, err := client.NewSession()
+	if err != nil {
+		return "", "", fmt.Errorf("failed to create SSH session to %q: %w", addr, err)
+	}
+	defer session.Close()
+
+	// Execute script
+	interpreter, err := sshocker.ParseScriptInterpreter(script)
+	if err != nil {
+		return "", "", err
+	}
+	// Provide the script via stdin
+	session.Stdin = strings.NewReader(strings.TrimPrefix(script, "#!"+interpreter+"\n"))
+	// Capture stdout and stderr
+	var stdoutBuf, stderrBuf bytes.Buffer
+	session.Stdout = &stdoutBuf
+	session.Stderr = &stderrBuf
+	logrus.Debugf("executing ssh for script %q", scriptName)
+	err = session.Run(interpreter)
+	if err != nil {
+		return stdoutBuf.String(), stderrBuf.String(), fmt.Errorf("failed to execute script %q: stdout=%q, stderr=%q: %w", scriptName, stdoutBuf.String(), stderrBuf.String(), err)
+	}
+	return stdoutBuf.String(), stderrBuf.String(), nil
 }
