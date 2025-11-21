@@ -9,8 +9,6 @@ import (
 	"context"
 	"net"
 	"path/filepath"
-
-	"github.com/sirupsen/logrus"
 )
 
 func Listen(ctx context.Context, listenConfig net.ListenConfig, hostAddress string) (net.Listener, error) {
@@ -22,7 +20,7 @@ func Listen(ctx context.Context, listenConfig net.ListenConfig, hostAddress stri
 		var lc net.ListenConfig
 		unixLis, err := lc.Listen(ctx, "unix", hostAddress)
 		if err != nil {
-			logrus.WithError(err).Errorf("failed to listen unix: %v", hostAddress)
+			logListenError(err, "unix", hostAddress)
 			return nil, err
 		}
 		return unixLis, nil

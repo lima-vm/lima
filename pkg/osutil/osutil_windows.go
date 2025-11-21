@@ -57,3 +57,7 @@ func SignalName(sig os.Signal) string {
 func Sysctl(_ context.Context, _ string) (string, error) {
 	return "", errors.New("sysctl: unimplemented on Windows")
 }
+
+func IsEACCES(err error) bool {
+	return errors.Is(err, syscall.ERROR_ACCESS_DENIED) || errors.Is(err, syscall.WSAEACCES)
+}

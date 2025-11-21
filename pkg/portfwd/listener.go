@@ -14,6 +14,8 @@ import (
 	"sync"
 
 	"github.com/sirupsen/logrus"
+
+	"github.com/lima-vm/lima/v2/pkg/osutil"
 )
 
 type ClosableListeners struct {
@@ -102,7 +104,7 @@ func (p *ClosableListeners) forwardTCP(ctx context.Context, dialContext func(ctx
 	}
 	tcpLis, err := Listen(ctx, p.listenConfig, hostAddress)
 	if err != nil {
-		logrus.Errorf("failed to listen to TCP connection: %v", err)
+		logListenError(err, "tcp", hostAddress)
 		p.listenersRW.Unlock()
 		return
 	}
@@ -139,7 +141,7 @@ func (p *ClosableListeners) forwardUDP(ctx context.Context, dialContext func(ctx
 
 	udpConn, err := ListenPacket(ctx, p.listenConfig, hostAddress)
 	if err != nil {
-		logrus.Errorf("failed to listen udp: %v", err)
+		logListenError(err, "udp", hostAddress)
 		p.udpListenersRW.Unlock()
 		return
 	}
@@ -161,4 +163,42 @@ func prepareUnixSocket(hostSocket string) error {
 		return fmt.Errorf("can't create directory for local socket %q: %w", hostSocket, err)
 	}
 	return nil
+}
+
+func logListenError(err error, proto, hostAddress string) {
+	var negligibleReason string
+	if proto != "unix" {
+		if _, portStr, err := net.SplitHostPort(hostAddress); err == nil {
+			switch proto {
+			case "tcp":
+				//nolint:gocritic // singleCaseSwitch: should rewrite switch statement to if statement
+				switch portStr {
+				case "53":
+					negligibleReason = "DNS port (often conflicts with the system resolver)"
+				}
+			case "udp":
+				switch portStr {
+				case "53":
+					negligibleReason = "DNS port (often conflicts with the system resolver)"
+				case "323":
+					negligibleReason = "NTP port (often conflicts with the system NTP server)"
+				case "5353":
+					negligibleReason = "mDNS port (often conflicts with the system mDNS responder)"
+				case "5355":
+					negligibleReason = "LLMNR port (often conflicts with the system LLMNR responder)"
+				}
+			}
+		}
+		if osutil.IsEACCES(err) {
+			negligibleReason = "privileged port"
+		}
+	}
+
+	if negligibleReason != "" {
+		logrus.WithError(err).WithField("negligible-reason", negligibleReason).Debugf("failed to listen %s: %s", proto, hostAddress)
+		logrus.Infof("Not forwarding %s %s", strings.ToUpper(proto), hostAddress)
+		return
+	}
+
+	logrus.WithError(err).Warnf("failed to listen %s: %s", proto, hostAddress)
 }
