@@ -336,30 +336,30 @@ if [[ -n ${CHECKS["ssh-over-vsock"]} ]]; then
 	if [[ "$(limactl ls "${NAME}" --yq .vmType)" == "vz" ]]; then
 		INFO "Testing SSH over vsock"
 		set -x
-		INFO "Testing LIMA_SSH_OVER_VSOCK=true environment"
+		INFO "Testing .ssh.overVsock=true configuration"
 		limactl stop "${NAME}"
 		# Detection of the SSH server on VSOCK may fail; however, a failing log indicates that controlling detection via the environment variable works as expected.
-		if ! LIMA_SSH_OVER_VSOCK=true limactl start "${NAME}" 2>&1 | grep -i -E "(started vsock forwarder|Failed to detect SSH server on vsock)"; then
+		if ! limactl start --set '.ssh.overVsock=true' "${NAME}" 2>&1 | grep -i -E "(started vsock forwarder|Failed to detect SSH server on vsock)"; then
 			set +x
 			diagnose "${NAME}"
-			ERROR "LIMA_SSH_OVER_VSOCK=true did not enable vsock forwarder"
+			ERROR ".ssh.overVsock=true did not enable vsock forwarder"
 			exit 1
 		fi
-		INFO 'Testing LIMA_SSH_OVER_VSOCK="" environment'
+		INFO 'Testing .ssh.overVsock=null configuration'
 		limactl stop "${NAME}"
 		# Detection of the SSH server on VSOCK may fail; however, a failing log indicates that controlling detection via the environment variable works as expected.
-		if ! LIMA_SSH_OVER_VSOCK="" limactl start "${NAME}" 2>&1 | grep -i -E "(started vsock forwarder|Failed to detect SSH server on vsock)"; then
+		if ! limactl start --set '.ssh.overVsock=null' "${NAME}" 2>&1 | grep -i -E "(started vsock forwarder|Failed to detect SSH server on vsock)"; then
 			set +x
 			diagnose "${NAME}"
-			ERROR "LIMA_SSH_OVER_VSOCK= did not enable vsock forwarder"
+			ERROR ".ssh.overVsock=null did not enable vsock forwarder"
 			exit 1
 		fi
-		INFO "Testing LIMA_SSH_OVER_VSOCK=false environment"
+		INFO "Testing .ssh.overVsock=false configuration"
 		limactl stop "${NAME}"
-		if ! LIMA_SSH_OVER_VSOCK=false limactl start "${NAME}" 2>&1 | grep -i "skipping detection of SSH server on vsock port"; then
+		if ! limactl start --set '.ssh.overVsock=false' "${NAME}" 2>&1 | grep -i "skipping detection of SSH server on vsock port"; then
 			set +x
 			diagnose "${NAME}"
-			ERROR "LIMA_SSH_OVER_VSOCK=false did not disable vsock forwarder"
+			ERROR ".ssh.overVsock=false did not disable vsock forwarder"
 			exit 1
 		fi
 		set +x

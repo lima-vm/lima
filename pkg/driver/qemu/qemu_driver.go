@@ -247,6 +247,10 @@ func (l *LimaQemuDriver) Start(_ context.Context) (chan error, error) {
 		}
 	}()
 
+	if l.Instance.Config.SSH.OverVsock != nil && *l.Instance.Config.SSH.OverVsock {
+		logrus.Warn(".ssh.overVsock is not implemented yet for QEMU driver")
+	}
+
 	qCfg := Config{
 		Name:         l.Instance.Name,
 		InstanceDir:  l.Instance.Dir,

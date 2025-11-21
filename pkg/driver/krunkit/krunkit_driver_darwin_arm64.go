@@ -64,6 +64,10 @@ func (l *LimaKrunkitDriver) CreateDisk(ctx context.Context) error {
 }
 
 func (l *LimaKrunkitDriver) Start(ctx context.Context) (chan error, error) {
+	if l.Instance.Config.SSH.OverVsock != nil && *l.Instance.Config.SSH.OverVsock {
+		logrus.Warn(".ssh.overVsock is not implemented yet for krunkit driver")
+	}
+
 	var err error
 	l.usernetClient, l.stopUsernet, err = startUsernet(ctx, l.Instance)
 	if err != nil {

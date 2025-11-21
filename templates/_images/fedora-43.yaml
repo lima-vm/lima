@@ -9,6 +9,12 @@ images:
 
 # No RISC-V release yet for Fedora 43: https://download.fedoraproject.org/pub/alt/risc-v/release/
 
+ssh:
+  # ssh.overVsock does not work with Fedora 43 due to a SELinux policy issue
+  # https://github.com/lima-vm/lima/issues/4334#issuecomment-3561294333
+  # avc:  denied  { getattr } for  pid=1355 comm="sshd-auth" scontext=system_u:system_r:sshd_auth_t:s0-s0:c0.c1023 tcontext=system_u:system_r:sshd_t:s0-s0:c0.c1023 tclass=vsock_socket permissive=1
+  overVsock: false
+
 # # NOTE: Intel Mac with macOS prior to 15.5 requires setting vmType to qemu
 # # https://github.com/lima-vm/lima/issues/3334
 # vmType: qemu

@@ -105,16 +105,11 @@ func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int) (vm
 						defer close(notifySSHLocalPortAccessible)
 						usernetSSHLocalPort := sshLocalPort
 						useSSHOverVsock := true
-						if envVar := os.Getenv("LIMA_SSH_OVER_VSOCK"); envVar != "" {
-							b, err := strconv.ParseBool(envVar)
-							if err != nil {
-								logrus.WithError(err).Warnf("invalid LIMA_SSH_OVER_VSOCK value %q", envVar)
-							} else {
-								useSSHOverVsock = b
-							}
+						if inst.Config.SSH.OverVsock != nil {
+							useSSHOverVsock = *inst.Config.SSH.OverVsock
 						}
 						if !useSSHOverVsock {
-							logrus.Info("LIMA_SSH_OVER_VSOCK is false, skipping detection of SSH server on vsock port")
+							logrus.Info("ssh.overVsock is false, skipping detection of SSH server on vsock port")
 						} else if err := usernetClient.WaitOpeningSSHPort(ctx, inst); err == nil {
 							hostAddress := net.JoinHostPort(inst.SSHAddress, strconv.Itoa(usernetSSHLocalPort))
 							if err := wrapper.startVsockForwarder(ctx, 22, hostAddress); err == nil {

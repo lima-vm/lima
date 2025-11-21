@@ -375,6 +375,26 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		y.SSH.ForwardX11Trusted = ptr.Of(false)
 	}
 
+	if y.SSH.OverVsock == nil {
+		y.SSH.OverVsock = d.SSH.OverVsock
+	}
+	if o.SSH.OverVsock != nil {
+		y.SSH.OverVsock = o.SSH.OverVsock
+	}
+	// y.SSH.OverVsock default value depends on the driver; filled in driver-specific FillDefault()
+
+	// The deprecated environment variable LIMA_SSH_OVER_VSOCK takes precedence over .ssh.overVsock
+	if envVar := os.Getenv("LIMA_SSH_OVER_VSOCK"); envVar != "" {
+		logrus.Warn("The environment variable LIMA_SSH_OVER_VSOCK is deprecated in favor of the YAML field .ssh.overVsock")
+		b, err := strconv.ParseBool(envVar)
+		if err != nil {
+			logrus.WithError(err).Warnf("invalid LIMA_SSH_OVER_VSOCK value %q", envVar)
+		} else {
+			logrus.Debugf("Overriding ssh.overVsock from %v to %v via LIMA_SSH_OVER_VSOCK", y.SSH.OverVsock, &b)
+			y.SSH.OverVsock = ptr.Of(b)
+		}
+	}
+
 	hosts := make(map[string]string)
 	// Values can be either names or IP addresses. Name values are canonicalized in the hostResolver.
 	maps.Copy(hosts, d.HostResolver.Hosts)

@@ -48,10 +48,10 @@ LIMA_SSH_PORT_FORWARDER=true limactl start
 If VM is VZ based and systemd is v256 or later (e.g. Ubuntu 24.10+), Lima uses AF_VSOCK for communication between host and guest.
 SSH based port forwarding is much faster when using AF_VSOCK compared to traditional virtual network based port forwarding.
 
-To disable this feature, set `LIMA_SSH_OVER_VSOCK` to `false`:
+To disable this feature, set `.ssh.overVsock` to `false`:
 
 ```bash
-export LIMA_SSH_OVER_VSOCK=false
+limactl start --set '.ssh.overVsock=false'
 ```
 
 ### Using GRPC
