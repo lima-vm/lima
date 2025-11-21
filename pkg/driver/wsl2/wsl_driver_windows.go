@@ -220,6 +220,11 @@ func (l *LimaWslDriver) Delete(ctx context.Context) error {
 }
 
 func (l *LimaWslDriver) Start(ctx context.Context) (chan error, error) {
+	if l.Instance.Config.SSH.OverVsock != nil && *l.Instance.Config.SSH.OverVsock {
+		// Probably never supportable for WSL2
+		logrus.Warn(".ssh.overVsock is not supported for WSL2 driver")
+	}
+
 	logrus.Infof("Starting WSL VM")
 	status, err := getWslStatus(ctx, l.Instance.Name)
 	if err != nil {

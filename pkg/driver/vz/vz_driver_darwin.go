@@ -140,6 +140,10 @@ func (l *LimaVzDriver) FillConfig(ctx context.Context, cfg *limatype.LimaYAML, _
 		cfg.MountType = ptr.Of(limatype.VIRTIOFS)
 	}
 
+	if cfg.SSH.OverVsock == nil {
+		cfg.SSH.OverVsock = ptr.Of(true)
+	}
+
 	var vzOpts limatype.VZOpts
 	if err := limayaml.Convert(cfg.VMOpts[limatype.VZ], &vzOpts, "vmOpts.vz"); err != nil {
 		logrus.WithError(err).Warnf("Couldn't convert %q", cfg.VMOpts[limatype.VZ])

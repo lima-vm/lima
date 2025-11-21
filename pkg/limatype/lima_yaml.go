@@ -196,6 +196,8 @@ type SSH struct {
 	ForwardAgent      *bool `yaml:"forwardAgent,omitempty" json:"forwardAgent,omitempty" jsonschema:"nullable"`           // default: false
 	ForwardX11        *bool `yaml:"forwardX11,omitempty" json:"forwardX11,omitempty" jsonschema:"nullable"`               // default: false
 	ForwardX11Trusted *bool `yaml:"forwardX11Trusted,omitempty" json:"forwardX11Trusted,omitempty" jsonschema:"nullable"` // default: false
+
+	OverVsock *bool `yaml:"overVsock,omitempty" json:"overVsock,omitempty" jsonschema:"nullable"` // default: depends on VMType
 }
 
 type Firmware struct {

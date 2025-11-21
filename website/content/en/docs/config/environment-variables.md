@@ -114,6 +114,7 @@ This page documents the environment variables used in Lima.
   export LIMA_SSH_OVER_VSOCK=true
   ```
 - **Note**: This variable is effective only if the VM is VZ based and systemd is v256 or later (e.g. Ubuntu 24.10+).
+- **Deprecated**: This variable is deprecated in favor of the YAML field `.ssh.overVsock` (since v2.0.2).
 
 ### `LIMA_SSH_PORT_FORWARDER`
 

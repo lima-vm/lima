@@ -138,6 +138,9 @@ ssh:
   # Trust forwarded X11 clients
   # 🟢 Builtin default: false
   forwardX11Trusted: null
+  # Enable SSH over vsock.
+  # 🟢 Builtin default: true for vz, false for other vmTypes
+  overVsock: null
 
 caCerts:
   # If set to `true`, this will remove all the default trusted CA certificates that
