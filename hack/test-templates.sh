@@ -41,7 +41,6 @@ CONTAINER_ENGINE="nerdctl"
 declare -A CHECKS=(
 	["proxy-settings"]="1"
 	["systemd"]="1"
-	["systemd-strict"]="1"
 	["mount-home"]="1"
 	["container-engine"]="1"
 	["restart"]="1"
@@ -79,12 +78,6 @@ case "$NAME" in
 "k3s")
 	ERROR "File \"$FILE\" is not testable with this script"
 	exit 1
-	;;
-"fedora")
-	WARNING "Relaxing systemd tests for fedora (For avoiding CI failure)"
-	# CI failure:
-	# ● run-r2b459797f5b04262bfa79984077a65c7.service                                       loaded failed failed    /usr/bin/systemctl start man-db-cache-update
-	CHECKS["systemd-strict"]=
 	;;
 "test-misc")
 	CHECKS["disk"]=1
@@ -319,11 +312,7 @@ if [[ -n ${CHECKS["systemd"]} ]]; then
 	if ! limactl shell "$NAME" systemctl is-system-running --wait; then
 		ERROR '"systemctl is-system-running" failed'
 		diagnose "$NAME"
-		if [[ -z ${CHECKS["systemd-strict"]} ]]; then
-			INFO 'Ignoring "systemctl is-system-running" failure'
-		else
-			exit 1
-		fi
+		exit 1
 	fi
 	set +x
 fi
