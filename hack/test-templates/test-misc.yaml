@@ -98,10 +98,14 @@ probes:
     #!/bin/sh
     touch /tmp/param-$PARAM_PROBE
 
-# in order to use this example, you must first create the disk "data". run:
+# in order to use this example, you must first create the disks. run:
 # $ limactl disk create data --size 10G
+# $ limactl disk create swap --size 2G
 additionalDisks:
 - "data"
+- name: "swap"
+  format: true
+  fsType: swap
 
 user:
   name: john
