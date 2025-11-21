@@ -395,27 +395,23 @@ jobs:
     - name: Install
       run: sudo make install
     - name: Install colima
+    - name: "Install colima"
+      id: install-colima
       run: |
         git clone https://github.com/abiosoft/colima
         cd colima
-        git checkout ${{ matrix.colima-version }}
+        latest="$(git tag --sort=-v:refname | head -n1)"
+        git checkout "$latest"
         make
         sudo make install
-    - name: Install test dependencies
-      run: |
-        sudo apt-get update
-        sudo ./hack/install-qemu.sh
-    - name: "Show cache"
-      run: ./hack/debug-cache.sh
-    - name: "Test"
-      uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08  # v3.0.2
+        echo "version=$latest" >>$GITHUB_OUTPUT
+    - name: "Cache colima"
+      uses: actions/cache@9255dc7a253b0ccc959486e2bca901246202afeb  # v5.0.1
       with:
-        timeout_minutes: 30
-        retry_on: error
-        max_attempts: 3
-        command: ./hack/test-colima.sh
-    - name: "Show cache"
-      run: ./hack/debug-cache.sh
+        path: ~/.cache/colima
+        key: colima-${{ steps.install-colima.outputs.version }}
+    - name: "Run BATS colima tests"
+      run: ./hack/bats/lib/bats-core/bin/bats --timing ./hack/bats/extras/colima.bats
 
   vmnet:
     name: "VMNet tests (QEMU)"
