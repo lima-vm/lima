@@ -77,6 +77,7 @@ linters:
       - omitzero
     perfsprint:
       int-conversion: false
+      integer-format: false
       err-error: false
       errorf: true
       sprintf1: false
@@ -147,10 +148,6 @@ linters:
     - linters:
       - godot
       path: _test\.go
-    # Disable perfsprint for fmt.Sprint until https://github.com/catenacyber/perfsprint/issues/39 gets fixed.
-    - linters:
-      - perfsprint
-      text: fmt.Sprint.* can be replaced with faster
 issues:
   # Maximum issues count per one linter.
   max-issues-per-linter: 0
