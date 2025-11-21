@@ -27,7 +27,9 @@ func (a *HostAgent) waitForRequirements(label string, requirements []requirement
 	for i, req := range requirements {
 	retryLoop:
 		for j := range retries {
-			logrus.Infof("Waiting for the %s requirement %d of %d: %q", label, i+1, len(requirements), req.description)
+			if j%10 == 0 {
+				logrus.Infof("Waiting for the %s requirement %d of %d: %q", label, i+1, len(requirements), req.description)
+			}
 			err := a.waitForRequirement(req)
 			if err == nil {
 				logrus.Infof("The %s requirement %d of %d is satisfied", label, i+1, len(requirements))
@@ -42,7 +44,7 @@ func (a *HostAgent) waitForRequirements(label string, requirements []requirement
 				errs = append(errs, fmt.Errorf("failed to satisfy the %s requirement %d of %d %q: %s: %w", label, i+1, len(requirements), req.description, req.debugHint, err))
 				break retryLoop
 			}
-			time.Sleep(10 * time.Second)
+			time.Sleep(time.Second)
 		}
 	}
 	return errors.Join(errs...)
