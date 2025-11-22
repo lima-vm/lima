@@ -87,7 +87,8 @@ func minimumQemuVersion() (hardMin, softMin semver.Version) {
 	return hardMin, softMin
 }
 
-// EnsureDisk also ensures the kernel and the initrd.
+// EnsureDisk just renames baseDisk to diffDisk, unless baseDisk is an ISO9660 image.
+// Note that "diffDisk" is a misnomer, it is actually created as a full disk since Lima v2.1.
 func EnsureDisk(ctx context.Context, cfg Config) error {
 	diffDisk := filepath.Join(cfg.InstanceDir, filenames.DiffDisk)
 	if _, err := os.Stat(diffDisk); err == nil || !errors.Is(err, os.ErrNotExist) {
@@ -115,10 +116,14 @@ func EnsureDisk(ctx context.Context, cfg Config) error {
 	if baseDiskInfo.Format == "" {
 		return fmt.Errorf("failed to inspect the format of %q", baseDisk)
 	}
-	args := []string{"create", "-f", "qcow2"}
 	if !isBaseDiskISO {
-		args = append(args, "-F", baseDiskInfo.Format, "-b", baseDisk)
+		// "diffdisk" is a misnomer, it is actually created as a full disk since Lima v2.1.
+		if err = os.Rename(baseDisk, diffDisk); err != nil {
+			return err
+		}
+		return nil
 	}
+	args := []string{"create", "-f", "qcow2"}
 	args = append(args, diffDisk, strconv.Itoa(int(diskSize)))
 	cmd := exec.CommandContext(ctx, "qemu-img", args...)
 	if out, err := cmd.CombinedOutput(); err != nil {
@@ -719,9 +724,15 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 		extraDisks = append(extraDisks, dataDisk)
 	}
 
-	isBaseDiskCDROM, err := iso9660util.IsISO9660(baseDisk)
-	if err != nil {
-		return "", nil, err
+	var baseDiskExists, isBaseDiskCDROM bool
+	if _, err := os.Stat(baseDisk); !errors.Is(err, os.ErrNotExist) {
+		baseDiskExists = true
+	}
+	if baseDiskExists {
+		isBaseDiskCDROM, err = iso9660util.IsISO9660(baseDisk)
+		if err != nil {
+			return "", nil, err
+		}
 	}
 	if isBaseDiskCDROM {
 		args = appendArgsIfNoConflict(args, "-boot", "order=d,splash-time=0,menu=on")
@@ -731,7 +742,8 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	}
 	if diskSize, _ := units.RAMInBytes(*cfg.LimaYAML.Disk); diskSize > 0 {
 		args = append(args, "-drive", fmt.Sprintf("file=%s,if=virtio,discard=on", diffDisk))
-	} else if !isBaseDiskCDROM {
+	} else if baseDiskExists && !isBaseDiskCDROM { // FIXME: How does this happen? Is this even a valid case?
+		logrus.Errorf("weird configuration, how does this happen?: diskSize /* %d */ <= 0 && baseDiskExists && !isBaseDiskCDROM", diskSize)
 		baseDiskInfo, err := qemuimgutil.GetInfo(ctx, baseDisk)
 		if err != nil {
 			return "", nil, fmt.Errorf("failed to get the information of %q: %w", baseDisk, err)
