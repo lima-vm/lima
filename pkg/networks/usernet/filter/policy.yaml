@@ -1,0 +1,73 @@
+# Example network policy for Lima user-v2 networking
+#
+# This policy demonstrates egress (outbound) traffic filtering with:
+# - Domain-based rules (with wildcard support)
+# - Protocol and port filtering
+# - IP/CIDR-based rules
+# - Rule priority and precedence
+#
+# Rules are evaluated in priority order (lower priority number = higher precedence).
+# First matching rule determines the action (allow/deny).
+# If no rules match, traffic is denied by default.
+#
+# See: https://lima-vm.io/docs/config/network/policy/
+
+version: "1.0"
+rules:
+# Block access to cloud provider metadata services (AWS/Azure/GCP IMDSv1)
+- name: deny-cloud-metadata
+  action: deny
+  priority: 10
+  egress:
+    ips:
+    - 169.254.169.254/32
+    - fd00:ec2::254/128
+
+# Prevent VM from accessing the host machine
+- name: deny-lima-host
+  action: deny
+  priority: 10
+  egress:
+    domains:
+    - host.lima.internal
+
+# Allow VM-to-VM communication within the Lima network
+- name: allow-lima-subnet
+  action: allow
+  priority: 20
+  egress:
+    domains:
+    - subnet.lima.internal
+
+# Block RFC 1918 private networks to isolate VM from host's local networks
+- name: deny-private-subnets
+  action: deny
+  priority: 30
+  egress:
+    ips:
+    - 10.0.0.0/8
+    - 172.16.0.0/12
+    - 192.168.0.0/16
+
+# Allow DNS queries (UDP) and zone transfers (TCP)
+- name: allow-dns
+  action: allow
+  priority: 50
+  egress:
+    protocols:
+    - tcp
+    - udp
+    ports:
+    - "53"
+
+# Allow common outbound services (SSH, HTTP, HTTPS)
+- name: allow-http-https-ssh
+  action: allow
+  priority: 50
+  egress:
+    protocols:
+    - tcp
+    ports:
+    - "22"
+    - "80"
+    - "443"
