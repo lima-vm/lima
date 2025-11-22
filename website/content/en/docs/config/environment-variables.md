@@ -39,12 +39,12 @@ This page documents the environment variables used in Lima.
 
 ### `LIMA_TEMPLATES_PATH`
 
-- **Description**: Specifies the directories used to resolve `template://` URLs.
+- **Description**: Specifies the directories used to resolve `template:` URLs.
 - **Default**: `$LIMA_HOME/_templates:/usr/local/share/lima/templates`
 - **Usage**:
   ```sh
   export LIMA_TEMPLATES_PATH="$HOME/.config/lima/templates:/usr/local/share/lima/templates"
-  limactl create --name my-vm template://my-distro
+  limactl create --name my-vm template:my-distro
   ```
 
 ### `LIMA_WORKDIR`

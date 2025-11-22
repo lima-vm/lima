@@ -7,7 +7,7 @@ weight: 3
 {{% tab header="Rootless" %}}
 To use `podman` command in the VM:
 ```bash
-limactl start template://podman
+limactl start template:podman
 limactl shell podman podman run -d --name nginx -p 127.0.0.1:8080:80 docker.io/library/nginx:alpine
 ```
 
@@ -26,7 +26,7 @@ docker run -d --name nginx -p 127.0.0.1:8080:80 docker.io/library/nginx:alpine
 {{% tab header="Rootful" %}}
 To use `podman` command in the VM:
 ```bash
-limactl start template://podman-rootful
+limactl start template:podman-rootful
 limactl shell podman-rootful sudo podman run -d --name nginx -p 127.0.0.1:8080:80 docker.io/library/nginx:alpine
 ```
 
