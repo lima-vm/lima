@@ -189,47 +189,46 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 		args.SSHPubKeys = append(args.SSHPubKeys, f.Content)
 	}
 
-	var fstype string
-	switch *instConfig.MountType {
-	case limatype.REVSSHFS:
-		fstype = "sshfs"
-	case limatype.NINEP:
-		fstype = "9p"
-	case limatype.VIRTIOFS:
-		fstype = "virtiofs"
-	}
-	hostHome, err := localpathutil.Expand("~")
-	if err != nil {
-		return nil, err
-	}
-	for i, f := range instConfig.Mounts {
-		tag := fmt.Sprintf("mount%d", i)
-		options := "defaults"
-		switch fstype {
-		case "9p", "virtiofs":
-			options = "ro"
-			if *f.Writable {
-				options = "rw"
-			}
-			if fstype == "9p" {
-				options += ",trans=virtio"
-				options += fmt.Sprintf(",version=%s", *f.NineP.ProtocolVersion)
-				msize, err := units.RAMInBytes(*f.NineP.Msize)
-				if err != nil {
-					return nil, fmt.Errorf("failed to parse msize for %q: %w", f.Location, err)
+	if *instConfig.MountType != limatype.REVSSHFS {
+		var fstype string
+		switch *instConfig.MountType {
+		case limatype.NINEP:
+			fstype = "9p"
+		case limatype.VIRTIOFS:
+			fstype = "virtiofs"
+		}
+		hostHome, err := localpathutil.Expand("~")
+		if err != nil {
+			return nil, err
+		}
+		for i, f := range instConfig.Mounts {
+			tag := fmt.Sprintf("mount%d", i)
+			options := "defaults"
+			switch fstype {
+			case "9p", "virtiofs":
+				options = "ro"
+				if *f.Writable {
+					options = "rw"
 				}
-				options += fmt.Sprintf(",msize=%d", msize)
-				options += fmt.Sprintf(",cache=%s", *f.NineP.Cache)
+				if fstype == "9p" {
+					options += ",trans=virtio"
+					options += fmt.Sprintf(",version=%s", *f.NineP.ProtocolVersion)
+					msize, err := units.RAMInBytes(*f.NineP.Msize)
+					if err != nil {
+						return nil, fmt.Errorf("failed to parse msize for %q: %w", f.Location, err)
+					}
+					options += fmt.Sprintf(",msize=%d", msize)
+					options += fmt.Sprintf(",cache=%s", *f.NineP.Cache)
+				}
+				// don't fail the boot, if virtfs is not available
+				options += ",nofail"
 			}
-			// don't fail the boot, if virtfs is not available
-			options += ",nofail"
-		}
-		args.Mounts = append(args.Mounts, Mount{Tag: tag, MountPoint: *f.MountPoint, Type: fstype, Options: options})
-		if f.Location == hostHome {
-			args.HostHomeMountPoint = *f.MountPoint
+			args.Mounts = append(args.Mounts, Mount{Tag: tag, MountPoint: *f.MountPoint, Type: fstype, Options: options})
+			if f.Location == hostHome {
+				args.HostHomeMountPoint = *f.MountPoint
+			}
 		}
 	}
-
 	switch *instConfig.MountType {
 	case limatype.REVSSHFS:
 		args.MountType = "reverse-sshfs"
