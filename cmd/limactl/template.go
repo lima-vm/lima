@@ -262,7 +262,6 @@ func templateValidateAction(cmd *cobra.Command, args []string) error {
 		}
 		if err := driverutil.ResolveVMType(ctx, y, filePath); err != nil {
 			logrus.Warnf("failed to resolve VM type for %q: %v", filePath, err)
-			continue
 		}
 		if err := limayaml.Validate(y, false); err != nil {
 			return fmt.Errorf("failed to validate YAML file %q: %w", arg, err)
