@@ -154,6 +154,11 @@ func (x *InfoResponse) GetInfoJson() []byte {
 	return nil
 }
 
+// StartResponse is a streamed response for Start() RPC. It tries to mimic
+// errChan from pkg/driver/driver.go. The server sends an initial response
+// with success=true when Start() is initiated. If errors occur, they are
+// sent as success=false with the error field populated. When the error channel
+// closes, a final success=true message is sent.
 type StartResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
