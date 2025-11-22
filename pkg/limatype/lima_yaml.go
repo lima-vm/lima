@@ -7,6 +7,7 @@ import (
 	"net"
 	"runtime"
 
+	"github.com/lima-vm/go-qcow2reader/image"
 	"github.com/opencontainers/go-digest"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/cpu"
@@ -118,7 +119,8 @@ type QEMUOpts struct {
 }
 
 type VZOpts struct {
-	Rosetta Rosetta `yaml:"rosetta,omitempty" json:"rosetta,omitempty"`
+	Rosetta         Rosetta     `yaml:"rosetta,omitempty" json:"rosetta,omitempty"`
+	DiskImageFormat *image.Type `yaml:"diskImageFormat,omitempty" json:"diskImageFormat,omitempty" jsonschema:"nullable"`
 }
 
 type Rosetta struct {

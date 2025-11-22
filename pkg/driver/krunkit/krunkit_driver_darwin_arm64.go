@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/coreos/go-semver/semver"
+	"github.com/lima-vm/go-qcow2reader/image/raw"
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/driver"
@@ -60,7 +61,7 @@ func (l *LimaKrunkitDriver) Configure(inst *limatype.Instance) *driver.Configure
 
 func (l *LimaKrunkitDriver) CreateDisk(ctx context.Context) error {
 	// Krunkit also supports qcow2 disks but raw is faster to create and use.
-	return driverutil.EnsureDiskRaw(ctx, l.Instance)
+	return driverutil.EnsureDisk(ctx, l.Instance.Dir, *l.Instance.Config.Disk, raw.Type)
 }
 
 func (l *LimaKrunkitDriver) Start(ctx context.Context) (chan error, error) {
