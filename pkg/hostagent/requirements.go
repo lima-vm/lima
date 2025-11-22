@@ -42,7 +42,7 @@ func (a *HostAgent) waitForRequirements(label string, requirements []requirement
 				errs = append(errs, fmt.Errorf("failed to satisfy the %s requirement %d of %d %q: %s: %w", label, i+1, len(requirements), req.description, req.debugHint, err))
 				break retryLoop
 			}
-			time.Sleep(10 * time.Second)
+			time.Sleep(sleepDuration)
 		}
 	}
 	return errors.Join(errs...)
