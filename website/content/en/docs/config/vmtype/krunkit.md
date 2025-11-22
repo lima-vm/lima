@@ -20,16 +20,37 @@ For reference: https://github.com/slp/homebrew-krun
 
 
 ## Using the driver with Lima
-Build the driver binary and point Lima to it. See also [Virtual Machine Drivers](../../dev/drivers).
+
+The `krunkit` driver is usually bundled with Lima as an external driver:
+
+```console
+$ limactl info | jq .vmTypesEx
+{
+  "krunkit": {
+    "location": "/opt/homebrew/Cellar/lima/2.0.1/libexec/lima/lima-driver-krunkit"
+  },
+  "qemu": {
+    "location": "internal"
+  },
+  "vz": {
+    "location": "internal"
+  }
+}
+```
+
+If the driver is not installed, build and install the driver as follows:
 
 ```bash
-git clone https://github.com/lima-vm/lima && cd lima
-
-# From the Lima source tree
-# <PREFIX> is your installation prefix. With Homebrew, use: $(brew --prefix)
-go build -o <PREFIX>/libexec/lima/lima-driver-krunkit ./cmd/lima-driver-krunkit/main_darwin_arm64.go
-limactl info   # "vmTypes" should include "krunkit"
+git clone https://github.com/lima-vm/lima
+cd lima
+# Replace vX.Y.Z with the actual version
+git checkout vX.Y.Z
+make ADDITIONAL_DRIVERS=krunkit additional-drivers
+# Replace /usr/local with the actual installation prefix
+cp -a _output/libexec/lima/lima-driver-krunkit /usr/local/libexec/lima/
 ```
+
+See also [Developers' guide » Virtual Machine Drivers](../../dev/drivers.md).
 
 ## Quick start
 
