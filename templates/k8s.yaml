@@ -18,7 +18,7 @@
 # (The join command printed here)
 #
 # $ limactl start --name k8s-1 --network lima:user-v2 template:k8s
-# $ limactl shell k8s-1 sudo kubeadm reset --force
+# $ limactl shell k8s-1 sudo bash -euxc "kubeadm reset --force ; ip link delete cni0 ; ip link delete flannel.1 ; rm -rf /var/lib/cni /etc/cni"
 # $ limactl shell k8s-1 sudo <JOIN_COMMAND_FROM_ABOVE>
 
 minimumLimaVersion: 2.0.0
