@@ -291,6 +291,8 @@ func validateConfig(_ context.Context, cfg *limatype.LimaYAML) error {
 
 	for i, nw := range cfg.Networks {
 		if unknown := reflectutil.UnknownNonEmptyFields(nw, "VZNAT",
+			"VZShared",
+			"VZHost",
 			"Lima",
 			"Socket",
 			"MACAddress",
@@ -298,6 +300,11 @@ func validateConfig(_ context.Context, cfg *limatype.LimaYAML) error {
 			"Interface",
 		); len(unknown) > 0 {
 			logrus.Warnf("vmType %s: ignoring networks[%d]: %+v", *cfg.VMType, i, unknown)
+		}
+		if (nw.VZShared != nil && *nw.VZShared) || (nw.VZHost != nil && *nw.VZHost) {
+			if macOSProductVersion.LessThan(*semver.New("26.0.0")) {
+				return fmt.Errorf("networks[%d]: VZShared and VZHost require macOS 26.0 or later", i)
+			}
 		}
 	}
 

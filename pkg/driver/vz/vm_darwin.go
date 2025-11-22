@@ -399,6 +399,42 @@ func attachNetwork(ctx context.Context, inst *limatype.Instance, vmConfig *vz.Vi
 				return err
 			}
 			configurations = append(configurations, networkConfig)
+		} else if nw.VZShared != nil && *nw.VZShared {
+			config, err := vz.NewVmnetNetworkConfiguration(vz.SharedMode)
+			if err != nil {
+				return err
+			}
+			network, err := vz.NewVmnetNetwork(config)
+			if err != nil {
+				return err
+			}
+			attachment, err := vz.NewVmnetNetworkDeviceAttachment(network)
+			if err != nil {
+				return err
+			}
+			networkConfig, err := newVirtioNetworkDeviceConfiguration(attachment, nw.MACAddress)
+			if err != nil {
+				return err
+			}
+			configurations = append(configurations, networkConfig)
+		} else if nw.VZHost != nil && *nw.VZHost {
+			config, err := vz.NewVmnetNetworkConfiguration(vz.HostMode)
+			if err != nil {
+				return err
+			}
+			network, err := vz.NewVmnetNetwork(config)
+			if err != nil {
+				return err
+			}
+			attachment, err := vz.NewVmnetNetworkDeviceAttachment(network)
+			if err != nil {
+				return err
+			}
+			networkConfig, err := newVirtioNetworkDeviceConfiguration(attachment, nw.MACAddress)
+			if err != nil {
+				return err
+			}
+			configurations = append(configurations, networkConfig)
 		} else if nw.Lima != "" {
 			nwCfg, err := networks.LoadConfig()
 			if err != nil {
