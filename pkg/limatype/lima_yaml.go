@@ -93,13 +93,14 @@ const (
 	QEMU VMType = "qemu"
 	VZ   VMType = "vz"
 	WSL2 VMType = "wsl2"
+	EXT  VMType = "ext"
 )
 
 var (
 	OSTypes    = []OS{LINUX}
 	ArchTypes  = []Arch{X8664, AARCH64, ARMV7L, PPC64LE, RISCV64, S390X}
 	MountTypes = []MountType{REVSSHFS, NINEP, VIRTIOFS, WSLMount}
-	VMTypes    = []VMType{QEMU, VZ, WSL2}
+	VMTypes    = []VMType{QEMU, VZ, WSL2, EXT}
 )
 
 type User struct {
@@ -189,7 +190,8 @@ type Virtiofs struct {
 }
 
 type SSH struct {
-	LocalPort *int `yaml:"localPort,omitempty" json:"localPort,omitempty" jsonschema:"nullable"`
+	Address   *string `yaml:"address,omitempty" json:"address,omitempty" jsonschema:"nullable"`
+	LocalPort *int    `yaml:"localPort,omitempty" json:"localPort,omitempty" jsonschema:"nullable"`
 
 	// LoadDotSSHPubKeys loads ~/.ssh/*.pub in addition to $LIMA_HOME/_config/user.pub .
 	LoadDotSSHPubKeys *bool `yaml:"loadDotSSHPubKeys,omitempty" json:"loadDotSSHPubKeys,omitempty" jsonschema:"nullable"` // default: false
