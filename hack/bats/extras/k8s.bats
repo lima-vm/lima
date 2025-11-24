@@ -26,11 +26,30 @@ get_num_nodes() {
 
 local_setup() {
     local nodes=$(get_num_nodes)
+    local join_command=""
     for ((i=0; i<nodes; i++)); do
         limactl delete --force "${NAME}-$i" || :
-        limactl start --tty=false --name "${NAME}-$i" "template:${TEMPLATE}" 3>&- 4>&-
-        # NOTE: No support for multi-node clusters yet.
+        local limactl_start_flags="--tty=false --name "${NAME}-$i""
+        # Multi-node setup requires user-v2 network for VM-to-VM communication
+        if [[ $nodes -gt 1 ]]; then
+            limactl_start_flags+=" --network lima:user-v2"
+        fi
+        limactl start ${limactl_start_flags} "template:${TEMPLATE}" 3>&- 4>&- &
     done
+    wait $(jobs -p)
+    # Multi-node setup
+    if [[ $nodes -gt 1 ]]; then
+        for ((i=0; i<nodes; i++)); do
+            if [[ $i -eq 0 ]]; then
+                # Get the join command from the first node
+                join_command=$(limactl shell "${NAME}-0" sudo kubeadm token create --print-join-command)
+            else
+                # Execute the join command on worker nodes
+                limactl shell "${NAME}-$i" sudo bash -euxc "kubeadm reset --force ; ip link delete cni0 ; ip link delete flannel.1 ; rm -rf /var/lib/cni /etc/cni"
+                limactl shell "${NAME}-$i" sudo ${join_command}
+            fi
+        done
+    fi
     for node in $(k get node -o name); do
 	    k wait --timeout=5m --for=condition=ready "${node}"
     done
@@ -81,4 +100,54 @@ k() {
     done
 }
 
-# TODO: add a test for multi-node
+# bats test_tags=nodes:3
+@test 'Multi-node' {
+    # Based on https://github.com/rootless-containers/usernetes/blob/gen2-v20250828.0/hack/test-smoke.sh
+    k apply -f - <<EOF
+apiVersion: v1
+kind: Service
+metadata:
+  name: dnstest
+  labels:
+    run: dnstest
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - name: http
+    protocol: TCP
+    port: 80
+    targetPort: 80
+  selector:
+    run: dnstest
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: dnstest
+spec:
+  serviceName: dnstest
+  selector:
+    matchLabels:
+      run: dnstest
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        run: dnstest
+    spec:
+      containers:
+      - name: dnstest
+        image: ${TEST_CONTAINER_IMAGES[nginx]}
+        ports:
+        - containerPort: 80
+EOF
+    k rollout status --timeout=5m statefulset/dnstest || {
+        k describe pods -l run=dnstest
+        false
+    }
+    # --rm requires -i
+    k run -i --rm --image=${TEST_CONTAINER_IMAGES[nginx]} --restart=Never dnstest-shell -- sh -exc 'for f in $(seq 0 2); do wget -O- http://dnstest-${f}.dnstest.default.svc.cluster.local; done'
+    k delete service dnstest
+    k delete statefulset dnstest
+}
