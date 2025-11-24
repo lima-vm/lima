@@ -22,7 +22,7 @@ func Listen(ctx context.Context, listenConfig net.ListenConfig, hostAddress stri
 		var lc net.ListenConfig
 		unixLis, err := lc.Listen(ctx, "unix", hostAddress)
 		if err != nil {
-			logrus.WithError(err).Errorf("failed to listen unix: %v", hostAddress)
+			logListenError(err, "unix", hostAddress)
 			return nil, err
 		}
 		return unixLis, nil
@@ -34,14 +34,15 @@ func Listen(ctx context.Context, listenConfig net.ListenConfig, hostAddress stri
 	if !localIP.Equal(IPv4loopback1) || localPort >= 1024 {
 		tcpLis, err := listenConfig.Listen(ctx, "tcp", hostAddress)
 		if err != nil {
-			logrus.Errorf("failed to listen tcp: %v", err)
+			logListenError(err, "tcp", hostAddress)
 			return nil, err
 		}
 		return tcpLis, nil
 	}
-	tcpLis, err := listenConfig.Listen(ctx, "tcp", fmt.Sprintf("0.0.0.0:%d", localPort))
+	hostAddressPseudo := net.JoinHostPort("0.0.0.0", localPortStr)
+	tcpLis, err := listenConfig.Listen(ctx, "tcp", hostAddressPseudo)
 	if err != nil {
-		logrus.Errorf("failed to listen tcp: %v", err)
+		logListenError(err, "tcp", hostAddressPseudo)
 		return nil, err
 	}
 	return &pseudoLoopbackListener{tcpLis}, nil
@@ -55,14 +56,15 @@ func ListenPacket(ctx context.Context, listenConfig net.ListenConfig, hostAddres
 	if !localIP.Equal(IPv4loopback1) || localPort >= 1024 {
 		udpConn, err := listenConfig.ListenPacket(ctx, "udp", hostAddress)
 		if err != nil {
-			logrus.Errorf("failed to listen udp: %v", err)
+			logListenError(err, "udp", hostAddress)
 			return nil, err
 		}
 		return udpConn, nil
 	}
-	udpConn, err := listenConfig.ListenPacket(ctx, "udp", fmt.Sprintf("0.0.0.0:%d", localPort))
+	hostAddressPseudo := net.JoinHostPort("0.0.0.0", localPortStr)
+	udpConn, err := listenConfig.ListenPacket(ctx, "udp", hostAddressPseudo)
 	if err != nil {
-		logrus.Errorf("failed to listen udp: %v", err)
+		logListenError(err, "udp", hostAddressPseudo)
 		return nil, err
 	}
 	return &pseudoLoopbackPacketConn{udpConn}, nil

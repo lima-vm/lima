@@ -116,7 +116,9 @@ func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int) (vm
 								logrus.Infof("Detected SSH server is listening on the vsock port; changed %s to proxy for the vsock port", hostAddress)
 								usernetSSHLocalPort = 0 // disable gvisor ssh port forwarding
 							} else {
-								logrus.WithError(err).Warn("Failed to detect SSH server on vsock port, falling back to usernet forwarder")
+								logrus.WithError(err).WithField("hostAddress", hostAddress).
+									Debugf("Failed to start vsock forwarder (systemd is older than v256?)")
+								logrus.Info("SSH server does not seem to be running on vsock port, using usernet forwarder")
 							}
 						} else {
 							logrus.WithError(err).Warn("Failed to wait for the guest SSH server to become available, falling back to usernet forwarder")
