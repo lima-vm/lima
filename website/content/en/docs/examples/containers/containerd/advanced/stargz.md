@@ -10,7 +10,7 @@ that reduces start-up latency using lazy-pulling technique.
 The support for eStargz is available by default for `ubuntu-24.04` instances:
 
 ```bash
-limactl start --name=default template://ubuntu-24.04
+limactl start --name=default template:ubuntu-24.04
 ```
 
 The latest Ubuntu will be supported too in [a future release](https://github.com/containerd/stargz-snapshotter/issues/2144).

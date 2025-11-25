@@ -109,7 +109,7 @@ When using `vmType: vz` (Virtualization.framework), on boot, any qcow2 (default)
 
 ## Templates directory (`${LIMA_HOME}/_templates`)
 
-The templates directory can store additional template files that can be referenced with the `template://` schema.
+The templates directory can store additional template files that can be referenced with the `template:` schema.
 
 If the template directory exists (and `$LIMA_TEMPLATES_PATH` is not set), then this directory will be searched before the `/usr/local/share/lima/templates` default directory that contains all the templates bundled with Lima itself.
 
