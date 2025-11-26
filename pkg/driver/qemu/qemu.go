@@ -751,7 +751,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	// cloud-init
 	args = append(args,
 		"-drive", "id=cdrom0,if=none,format=raw,readonly=on,file="+filepath.Join(cfg.InstanceDir, filenames.CIDataISO),
-		"-device", "virtio-scsi-pci,id=scsi0",
+		"-device", "virtio-scsi,id=scsi0",
 		"-device", "scsi-cd,bus=scsi0.0,drive=cdrom0")
 
 	// Kernel
