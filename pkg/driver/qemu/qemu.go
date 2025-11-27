@@ -692,7 +692,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	extraDisks := []string{}
 	for _, d := range y.AdditionalDisks {
 		diskName := d.Name
-		disk, err := store.InspectDisk(diskName)
+		disk, err := store.InspectDisk(diskName, d.FSType)
 		if err != nil {
 			logrus.Errorf("could not load disk %q: %q", diskName, err)
 			return "", nil, err
