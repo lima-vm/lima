@@ -7,13 +7,7 @@ weight: 3
 [eStargz](https://github.com/containerd/stargz-snapshotter) is an OCI-compatible container image format
 that reduces start-up latency using lazy-pulling technique.
 
-The support for eStargz is available by default for `ubuntu-24.04` instances:
-
-```bash
-limactl start --name=default template://ubuntu-24.04
-```
-
-The latest Ubuntu will be supported too in [a future release](https://github.com/containerd/stargz-snapshotter/issues/2144).
+The support for eStargz is available by default in Lima.
 
 {{% alert title="Hint" color=success %}}
 ARM Mac users need to run `limactl start` with `--rosetta` to allow [running AMD64 binaries](../../../../config/multi-arch.md).
