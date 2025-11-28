@@ -69,6 +69,11 @@ func Start(ctx context.Context, name string) error {
 			return err
 		}
 
+		policyPath, err := PolicyFile(name)
+		if err != nil {
+			return err
+		}
+
 		err = lockutil.WithDirLock(usernetDir, func() error {
 			self, err := os.Executable()
 			if err != nil {
@@ -84,6 +89,10 @@ func Start(ctx context.Context, name string) error {
 			}
 			if leasesString != "" {
 				args = append(args, "--leases", leasesString)
+			}
+			// Add policy path if policy.json exists
+			if _, err := os.Stat(policyPath); err == nil {
+				args = append(args, "--policy", policyPath)
 			}
 			cmd := exec.CommandContext(ctx, self, args...)
 			cmd.SysProcAttr = executil.BackgroundSysProcAttr

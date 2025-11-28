@@ -22,6 +22,8 @@ import (
 	"github.com/containers/gvisor-tap-vsock/pkg/virtualnetwork"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/lima-vm/lima/v2/pkg/networks/usernet/filter"
 )
 
 type GVisorNetstackOpts struct {
@@ -36,6 +38,7 @@ type GVisorNetstackOpts struct {
 	Async bool
 
 	DefaultLeases map[string]string
+	Policy        *filter.Policy // Pre-parsed policy (nil = no filtering)
 }
 
 var opts *GVisorNetstackOpts
@@ -98,6 +101,16 @@ func run(ctx context.Context, g *errgroup.Group, configuration *types.Configurat
 	vn, err := virtualnetwork.New(configuration)
 	if err != nil {
 		return err
+	}
+
+	// Optionally wrap with policy filtering
+	if opts.Policy != nil {
+		logrus.Debugf("Applying policy with %d rules", len(opts.Policy.Rules))
+		fvn, err := filter.Filter(vn, configuration, opts.Policy)
+		if err != nil {
+			return fmt.Errorf("failed to apply policy: %w", err)
+		}
+		vn = fvn.VirtualNetwork()
 	}
 
 	ln, err := transport.Listen(fmt.Sprintf("unix://%s", opts.Endpoint))
