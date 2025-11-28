@@ -327,7 +327,7 @@ minimumLimaVersion: 2.0.0
 # EXPERIMENTAL
 # Default settings can be imported from base templates. These will be merged in when the instance
 # is created, and the combined template is stored in the instance directory.
-# This setting can be either a single string (URL), or a list of locators.
+# This setting ca be either a single string (URL), or a list of locators.
 # A locator is again either a string (URL), or an object with "url" and "digest" properties, e.g.
 # base: [{url: ./base.yaml, digest: decafbad}, …]
 # The "digest" property is currently unused.
@@ -489,9 +489,13 @@ networks:
 # # default: guestPortRange: [1, 65535]
 # # default: hostPortRange: [1, 65535]
 #
-# - guestIP: 0.0.0.0 # otherwise defaults to 127.0.0.1
-#   proto: any       # tcp and udp
-#   ignore: true     # don't forward these ports (guestPortRange, in this case 1-65535)
+# To disable all dynamic TCP/UDP forwarding (while keeping SSH available via `limactl shell`),
+# use a single ignore rule.
+# portForwards:
+# - guestIP: 0.0.0.0
+#   guestIPMustBeZero: false  # ensures 0.0.0.0 matches any guest interface
+#   proto: any
+#   ignore: true
 #
 # - guestPort: 7443
 #   guestIP: "0.0.0.0"        # Will match *any* interface
