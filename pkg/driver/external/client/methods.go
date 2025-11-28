@@ -58,6 +58,9 @@ func (d *DriverClient) CreateDisk(ctx context.Context) error {
 	return nil
 }
 
+// Start initiates the driver instance and receives streaming responses. It blocks until
+// receiving the initial success response, then spawns a goroutine to consume subsequent
+// error messages from the stream. Any errors from the driver are sent to the channel.
 func (d *DriverClient) Start(ctx context.Context) (chan error, error) {
 	d.logger.Debug("Starting driver instance")
 
@@ -67,19 +70,37 @@ func (d *DriverClient) Start(ctx context.Context) (chan error, error) {
 		return nil, err
 	}
 
+	// Blocking to receive an initial response to ensure Start() is initiated
+	// at the server-side.
+	initialResp, err := stream.Recv()
+	if err != nil {
+		d.logger.WithError(err).Error("Error receiving initial response from driver start")
+		return nil, err
+	}
+	if !initialResp.Success {
+		return nil, errors.New(initialResp.Error)
+	}
+
+	go func() {
+		<-ctx.Done()
+		if closeErr := stream.CloseSend(); closeErr != nil {
+			d.logger.WithError(closeErr).Warn("Failed to close stream")
+		}
+	}()
+
 	errCh := make(chan error, 1)
 	go func() {
 		for {
-			errorStream, err := stream.Recv()
+			respStream, err := stream.Recv()
 			if err != nil {
-				d.logger.Errorf("Error receiving response from driver: %v", err)
+				d.logger.Infof("Error receiving response from driver: %v", err)
 				return
 			}
-			d.logger.Debugf("Received response: %v", errorStream)
-			if !errorStream.Success {
-				errCh <- errors.New(errorStream.Error)
+			d.logger.Debugf("Received response: %v", respStream)
+			if !respStream.Success {
+				errCh <- errors.New(respStream.Error)
 			} else {
-				errCh <- nil
+				close(errCh)
 				return
 			}
 		}
