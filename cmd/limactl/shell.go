@@ -70,6 +70,10 @@ func newShellCommand() *cobra.Command {
 func shellAction(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	flags := cmd.Flags()
+	tty, err := flags.GetBool("tty")
+	if err != nil {
+		return err
+	}
 	// simulate the behavior of double dash
 	newArg := []string{}
 	if len(args) >= 2 && args[1] == "--" {
@@ -106,8 +110,8 @@ func shellAction(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
-		if !flags.Changed("start") {
-			startNow, err = askWhetherToStart()
+		if tty && !flags.Changed("start") {
+			startNow, err = askWhetherToStart(cmd)
 			if err != nil {
 				return err
 			}
