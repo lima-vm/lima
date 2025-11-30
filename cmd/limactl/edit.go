@@ -153,7 +153,7 @@ func editAction(cmd *cobra.Command, args []string) error {
 	}
 
 	if tty && !flags.Changed("start") {
-		start, err = askWhetherToStart()
+		start, err = askWhetherToStart(cmd)
 		if err != nil {
 			return err
 		}
@@ -180,9 +180,13 @@ func editAction(cmd *cobra.Command, args []string) error {
 	return instance.Start(ctx, inst, false, false)
 }
 
-func askWhetherToStart() (bool, error) {
-	message := "Do you want to start the instance now? "
-	return uiutil.Confirm(message, true)
+func askWhetherToStart(cmd *cobra.Command) (bool, error) {
+	isTTY := uiutil.InputIsTTY(cmd.InOrStdin())
+	if isTTY {
+		message := "Do you want to start the instance now? "
+		return uiutil.Confirm(message, true)
+	}
+	return false, nil
 }
 
 func editBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
