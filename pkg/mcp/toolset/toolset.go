@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/pkg/sftp"
@@ -109,6 +110,25 @@ func (ts *ToolSet) TranslateHostPath(hostPath string) (string, error) {
 	if !filepath.IsAbs(hostPath) {
 		return "", fmt.Errorf("expected an absolute path, got a relative path: %q", hostPath)
 	}
-	// TODO: make sure that hostPath is mounted
+	if !ts.isMounted(hostPath) {
+		return "", fmt.Errorf("path %q is not mounted", hostPath)
+	}
 	return hostPath, nil
+}
+
+func (ts *ToolSet) isMounted(hostPath string) bool {
+	for _, mount := range ts.inst.Config.Mounts {
+		location := filepath.Clean(mount.Location)
+		cleanPath := filepath.Clean(hostPath)
+
+		if cleanPath == location {
+			return true
+		}
+
+		rel, err := filepath.Rel(location, cleanPath)
+		if err == nil && !strings.HasPrefix(rel, "..") && rel != ".." {
+			return true
+		}
+	}
+	return false
 }
