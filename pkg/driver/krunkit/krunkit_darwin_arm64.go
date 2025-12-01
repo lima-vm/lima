@@ -14,6 +14,7 @@ import (
 	"strconv"
 
 	"github.com/docker/go-units"
+	"github.com/lima-vm/go-qcow2reader/image/raw"
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/driver/vz"
@@ -65,7 +66,7 @@ func Cmdline(inst *limatype.Instance) (*exec.Cmd, error) {
 			}
 			extraDiskPath := filepath.Join(disk.Dir, filenames.DataDisk)
 			logrus.Infof("Mounting disk %q on %q", disk.Name, disk.MountPoint)
-			if cerr := diskUtil.ConvertToRaw(ctx, extraDiskPath, extraDiskPath, nil, true); cerr != nil {
+			if cerr := diskUtil.Convert(ctx, raw.Type, extraDiskPath, extraDiskPath, nil, true); cerr != nil {
 				return nil, fmt.Errorf("failed to convert extra disk %q to raw: %w", extraDiskPath, cerr)
 			}
 			args = append(args, "--device", fmt.Sprintf("virtio-blk,path=%s,format=raw", extraDiskPath))

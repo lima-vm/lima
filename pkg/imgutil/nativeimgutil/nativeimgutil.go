@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"math"
+	"math/rand/v2"
 	"os"
 	"path/filepath"
 
@@ -17,10 +19,13 @@ import (
 	"github.com/docker/go-units"
 	"github.com/lima-vm/go-qcow2reader"
 	"github.com/lima-vm/go-qcow2reader/convert"
+	"github.com/lima-vm/go-qcow2reader/image"
+	"github.com/lima-vm/go-qcow2reader/image/asif"
 	"github.com/lima-vm/go-qcow2reader/image/qcow2"
 	"github.com/lima-vm/go-qcow2reader/image/raw"
 	"github.com/sirupsen/logrus"
 
+	"github.com/lima-vm/lima/v2/pkg/imgutil/nativeimgutil/asifutil"
 	"github.com/lima-vm/lima/v2/pkg/progressbar"
 )
 
@@ -38,10 +43,10 @@ func roundUp(size int64) int64 {
 	return sectors * sectorSize
 }
 
-// convertToRaw converts a source disk into a raw disk.
+// convertTo converts a source disk into a raw or ASIF disk.
 // source and dest may be same.
-// convertToRaw is a NOP if source == dest, and no resizing is needed.
-func convertToRaw(source, dest string, size *int64, allowSourceWithBackingFile bool) error {
+// convertTo is a NOP if source == dest, and no resizing is needed.
+func convertTo(destType image.Type, source, dest string, size *int64, allowSourceWithBackingFile bool) error {
 	srcF, err := os.Open(source)
 	if err != nil {
 		return err
@@ -54,13 +59,15 @@ func convertToRaw(source, dest string, size *int64, allowSourceWithBackingFile b
 	if size != nil && *size < srcImg.Size() {
 		return fmt.Errorf("specified size %d is smaller than the original image size (%d) of %q", *size, srcImg.Size(), source)
 	}
-	logrus.Infof("Converting %q (%s) to a raw disk %q", source, srcImg.Type(), dest)
+	logrus.Infof("Converting %q (%s) to a %s disk %q", source, srcImg.Type(), destType, dest)
 	switch t := srcImg.Type(); t {
 	case raw.Type:
 		if err = srcF.Close(); err != nil {
 			return err
 		}
-		return convertRawToRaw(source, dest, size)
+		if destType == raw.Type {
+			return convertRawToRaw(source, dest, size)
+		}
 	case qcow2.Type:
 		if !allowSourceWithBackingFile {
 			q, ok := srcImg.(*qcow2.Qcow2)
@@ -71,6 +78,11 @@ func convertToRaw(source, dest string, size *int64, allowSourceWithBackingFile b
 				return fmt.Errorf("qcow2 image %q has an unexpected backing file: %q", source, q.BackingFile)
 			}
 		}
+	case asif.Type:
+		if destType == asif.Type {
+			return convertASIFToASIF(source, dest, size)
+		}
+		return fmt.Errorf("conversion from ASIF to %q is not supported", destType)
 	default:
 		logrus.Warnf("image %q has an unexpected format: %q", source, t)
 	}
@@ -79,11 +91,34 @@ func convertToRaw(source, dest string, size *int64, allowSourceWithBackingFile b
 	}
 
 	// Create a tmp file because source and dest can be same.
-	destTmpF, err := os.CreateTemp(filepath.Dir(dest), filepath.Base(dest)+".lima-*.tmp")
+	var (
+		destTmpF       *os.File
+		destTmp        string
+		attachedDevice string
+	)
+	switch destType {
+	case raw.Type:
+		destTmpF, err = os.CreateTemp(filepath.Dir(dest), filepath.Base(dest)+".lima-*.tmp")
+		destTmp = destTmpF.Name()
+	case asif.Type:
+		// destTmp != destTmpF.Name() because destTmpF is mounted ASIF device file.
+		randomBase := fmt.Sprintf("%s.lima-%d.tmp.asif", filepath.Base(dest), rand.UintN(math.MaxUint))
+		destTmp = filepath.Join(filepath.Dir(dest), randomBase)
+		// Since qcow2 image is smaller than expected size, we need to specify expected size to avoid resize later.
+		// Resizing ASIF image is not supported by qemu-img which recognizes ASIF format as raw.
+		var newSize int64
+		if size != nil {
+			newSize = *size
+		} else {
+			newSize = srcImg.Size()
+		}
+		attachedDevice, destTmpF, err = asifutil.NewAttachedASIF(destTmp, newSize)
+	default:
+		return fmt.Errorf("unsupported target image type: %q", destType)
+	}
 	if err != nil {
 		return err
 	}
-	destTmp := destTmpF.Name()
 	defer os.RemoveAll(destTmp)
 	defer destTmpF.Close()
 
@@ -115,6 +150,13 @@ func convertToRaw(source, dest string, size *int64, allowSourceWithBackingFile b
 	}
 	if err = destTmpF.Close(); err != nil {
 		return err
+	}
+	// Detach ASIF device
+	if destType == asif.Type {
+		err := asifutil.DetachASIF(attachedDevice)
+		if err != nil {
+			return fmt.Errorf("failed to detach ASIF image %q: %w", attachedDevice, err)
+		}
 	}
 
 	// Rename destTmp into dest
@@ -149,6 +191,24 @@ func convertRawToRaw(source, dest string, size *int64) error {
 	return nil
 }
 
+func convertASIFToASIF(source, dest string, size *int64) error {
+	if source != dest {
+		if err := containerdfs.CopyFile(dest, source); err != nil {
+			return fmt.Errorf("failed to copy %q into %q: %w", source, dest, err)
+		}
+		if err := os.Chmod(dest, 0o644); err != nil {
+			return fmt.Errorf("failed to set permissions on %q: %w", dest, err)
+		}
+	}
+	if size != nil {
+		logrus.Infof("Resizing to %s", units.BytesSize(float64(*size)))
+		if err := asifutil.ResizeASIF(dest, *size); err != nil {
+			return fmt.Errorf("failed to resize ASIF image %q: %w", dest, err)
+		}
+	}
+	return nil
+}
+
 func makeSparse(f *os.File, offset int64) error {
 	if _, err := f.Seek(offset, io.SeekStart); err != nil {
 		return err
@@ -170,9 +230,10 @@ func (n *NativeImageUtil) CreateDisk(_ context.Context, disk string, size int64)
 	return f.Truncate(roundedSize)
 }
 
-// ConvertToRaw converts a disk image to raw format.
-func (n *NativeImageUtil) ConvertToRaw(_ context.Context, source, dest string, size *int64, allowSourceWithBackingFile bool) error {
-	return convertToRaw(source, dest, size, allowSourceWithBackingFile)
+// Convert converts a disk image to the specified format.
+// Currently supported formats are raw.Type and asif.Type.
+func (n *NativeImageUtil) Convert(_ context.Context, imageType image.Type, source, dest string, size *int64, allowSourceWithBackingFile bool) error {
+	return convertTo(imageType, source, dest, size, allowSourceWithBackingFile)
 }
 
 // ResizeDisk resizes an existing disk image to the specified size.

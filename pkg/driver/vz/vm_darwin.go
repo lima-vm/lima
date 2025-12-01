@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
 	"sync"
 	"syscall"
@@ -22,6 +23,8 @@ import (
 	"github.com/coreos/go-semver/semver"
 	"github.com/docker/go-units"
 	"github.com/lima-vm/go-qcow2reader"
+	"github.com/lima-vm/go-qcow2reader/image"
+	"github.com/lima-vm/go-qcow2reader/image/asif"
 	"github.com/lima-vm/go-qcow2reader/image/raw"
 	"github.com/sirupsen/logrus"
 
@@ -448,8 +451,9 @@ func validateDiskFormat(diskPath string) error {
 	if err != nil {
 		return fmt.Errorf("failed to detect the format of %q: %w", diskPath, err)
 	}
-	if t := img.Type(); t != raw.Type {
-		return fmt.Errorf("expected the format of %q to be %q, got %q", diskPath, raw.Type, t)
+	supportedDiskTypes := []image.Type{raw.Type, asif.Type}
+	if t := img.Type(); !slices.Contains(supportedDiskTypes, t) {
+		return fmt.Errorf("expected the format of %q to be one of %v, got %q", diskPath, supportedDiskTypes, t)
 	}
 	// TODO: ensure that the disk is formatted with GPT or ISO9660
 	return nil
@@ -513,7 +517,7 @@ func attachDisks(ctx context.Context, inst *limatype.Instance, vmConfig *vz.Virt
 		// ConvertToRaw is a NOP if no conversion is needed
 		logrus.Debugf("Converting extra disk %q to a raw disk (if it is not a raw)", extraDiskPath)
 
-		if err = diskUtil.ConvertToRaw(ctx, extraDiskPath, extraDiskPath, nil, true); err != nil {
+		if err = diskUtil.Convert(ctx, raw.Type, extraDiskPath, extraDiskPath, nil, true); err != nil {
 			return fmt.Errorf("failed to convert extra disk %q to a raw disk: %w", extraDiskPath, err)
 		}
 		extraDiskPathAttachment, err := vz.NewDiskImageStorageDeviceAttachmentWithCacheAndSync(extraDiskPath, false, diskImageCachingMode, vz.DiskImageSynchronizationModeFsync)

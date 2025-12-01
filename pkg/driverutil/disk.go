@@ -11,15 +11,16 @@ import (
 	"path/filepath"
 
 	"github.com/docker/go-units"
+	"github.com/lima-vm/go-qcow2reader/image"
 
 	"github.com/lima-vm/lima/v2/pkg/imgutil/proxyimgutil"
 	"github.com/lima-vm/lima/v2/pkg/iso9660util"
-	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 )
 
-func EnsureDiskRaw(ctx context.Context, inst *limatype.Instance) error {
-	diffDisk := filepath.Join(inst.Dir, filenames.DiffDisk)
+// EnsureDisk ensures that the diff disk exists with the specified size and format.
+func EnsureDisk(ctx context.Context, instDir, diskSize string, diskImageFormat image.Type) error {
+	diffDisk := filepath.Join(instDir, filenames.DiffDisk)
 	if _, err := os.Stat(diffDisk); err == nil || !errors.Is(err, os.ErrNotExist) {
 		// disk is already ensured
 		return err
@@ -27,10 +28,10 @@ func EnsureDiskRaw(ctx context.Context, inst *limatype.Instance) error {
 
 	diskUtil := proxyimgutil.NewDiskUtil(ctx)
 
-	baseDisk := filepath.Join(inst.Dir, filenames.BaseDisk)
+	baseDisk := filepath.Join(instDir, filenames.BaseDisk)
 
-	diskSize, _ := units.RAMInBytes(*inst.Config.Disk)
-	if diskSize == 0 {
+	diskSizeInBytes, _ := units.RAMInBytes(diskSize)
+	if diskSizeInBytes == 0 {
 		return nil
 	}
 	isBaseDiskISO, err := iso9660util.IsISO9660(baseDisk)
@@ -51,8 +52,10 @@ func EnsureDiskRaw(ctx context.Context, inst *limatype.Instance) error {
 		}
 		return diffDiskF.Close()
 	}
-	if err = diskUtil.ConvertToRaw(ctx, baseDisk, diffDisk, &diskSize, false); err != nil {
-		return fmt.Errorf("failed to convert %q to a raw disk %q: %w", baseDisk, diffDisk, err)
+	// Check whether to use ASIF format
+
+	if err = diskUtil.Convert(ctx, diskImageFormat, baseDisk, diffDisk, &diskSizeInBytes, false); err != nil {
+		return fmt.Errorf("failed to convert %q to a disk %q: %w", baseDisk, diffDisk, err)
 	}
 	return err
 }
