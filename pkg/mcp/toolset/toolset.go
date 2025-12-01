@@ -110,25 +110,29 @@ func (ts *ToolSet) TranslateHostPath(hostPath string) (string, error) {
 	if !filepath.IsAbs(hostPath) {
 		return "", fmt.Errorf("expected an absolute path, got a relative path: %q", hostPath)
 	}
-	if !ts.isMounted(hostPath) {
-		return "", fmt.Errorf("path %q is not mounted", hostPath)
+
+	guestPath, isMounted := ts.translateToGuestPath(hostPath)
+	if !isMounted {
+		logrus.Warnf("path %q is not under any mounted directory, using as guest path", hostPath)
 	}
-	return hostPath, nil
+	return guestPath, nil
 }
 
-func (ts *ToolSet) isMounted(hostPath string) bool {
+func (ts *ToolSet) translateToGuestPath(hostPath string) (string, bool) {
 	for _, mount := range ts.inst.Config.Mounts {
 		location := filepath.Clean(mount.Location)
 		cleanPath := filepath.Clean(hostPath)
 
 		if cleanPath == location {
-			return true
+			return *mount.MountPoint, true
 		}
 
 		rel, err := filepath.Rel(location, cleanPath)
 		if err == nil && !strings.HasPrefix(rel, "..") && rel != ".." {
-			return true
+			guestPath := filepath.Join(*mount.MountPoint, rel)
+			return guestPath, true
 		}
 	}
-	return false
+
+	return hostPath, false
 }
