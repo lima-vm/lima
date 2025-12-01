@@ -28,7 +28,7 @@ ensure_instance() {
     limactl unprotect "$instance" || :
     limactl delete --force "$instance" || :
     case "$instance" in
-        bats)          limactl start --yes --name "$instance" template:default 3>&- 4>&- ;;
+        bats)          limactl start --yes --name "$instance" --mount "$HOME:w" template:default 3>&- 4>&- ;;
         bats-nomount)  limactl start --yes --name "$instance" --mount-none template:default 3>&- 4>&- ;;
         bats-dummy)    create_dummy_instance "$instance" '.disk = "1M"' ;;
         *)
