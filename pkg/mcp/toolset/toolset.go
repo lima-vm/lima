@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"slices"
 
@@ -102,13 +103,43 @@ func (ts *ToolSet) Close() error {
 	return err
 }
 
-func (ts *ToolSet) TranslateHostPath(hostPath string) (string, error) {
+func (ts *ToolSet) TranslateHostPath(hostPath string) (guestPath string, err error) {
 	if hostPath == "" {
 		return "", errors.New("path is empty")
 	}
 	if !filepath.IsAbs(hostPath) {
 		return "", fmt.Errorf("expected an absolute path, got a relative path: %q", hostPath)
 	}
-	// TODO: make sure that hostPath is mounted
-	return hostPath, nil
+
+	guestPath, isMounted := ts.translateToGuestPath(hostPath)
+	if !isMounted {
+		return "", fmt.Errorf("path %q is not under any mounted directory", hostPath)
+	}
+	return guestPath, nil
+}
+
+func (ts *ToolSet) translateToGuestPath(hostPath string) (string, bool) {
+	cleanPath := filepath.Clean(hostPath)
+	bestGuestPath := ""
+	bestLen := -1
+	for _, mount := range ts.inst.Config.Mounts {
+		if mount.MountPoint == nil {
+			continue
+		}
+		location := filepath.Clean(mount.Location)
+		rel, err := filepath.Rel(location, cleanPath)
+		if err == nil && filepath.IsLocal(rel) {
+			candidate := *mount.MountPoint
+			if rel != "." {
+				candidate = path.Join(candidate, filepath.ToSlash(rel))
+			}
+			if len(location) > bestLen {
+				bestGuestPath, bestLen = candidate, len(location)
+			}
+		}
+	}
+	if bestLen >= 0 {
+		return bestGuestPath, true
+	}
+	return "", false
 }
