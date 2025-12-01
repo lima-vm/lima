@@ -207,6 +207,9 @@ func handlePreConfiguredDriverAction(ctx context.Context, driver driver.Driver) 
 	}
 }
 
+// Start begins the driver startup process. It sends an initial response to unblock
+// the client and then streams subsequent errors(if any), as the driver initializes.
+// A final success message is streamed upon successful completion.
 func Start(extDriver *registry.ExternalDriver, instName string) error {
 	extDriver.Logger.Debugf("Starting external driver at %s", extDriver.Path)
 	if instName == "" {

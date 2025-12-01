@@ -26,7 +26,18 @@ func (s *DriverServer) Start(_ *emptypb.Empty, stream pb.Driver_StartServer) err
 	errChan, err := s.driver.Start(stream.Context())
 	if err != nil {
 		s.logger.Errorf("Start failed: %v", err)
+		if sendErr := stream.Send(&pb.StartResponse{Success: false, Error: err.Error()}); sendErr != nil {
+			s.logger.Errorf("Failed to send error response: %v", sendErr)
+			return status.Errorf(codes.Internal, "failed to send error response: %v", sendErr)
+		}
 		return status.Errorf(codes.Internal, "failed to start driver: %v", err)
+	}
+
+	// First send a success response upon receiving the errChan to unblock the client
+	// and start receiving errors (if any).
+	if err := stream.Send(&pb.StartResponse{Success: true}); err != nil {
+		s.logger.Errorf("Failed to send success response: %v", err)
+		return status.Errorf(codes.Internal, "failed to send success response: %v", err)
 	}
 
 	for {
