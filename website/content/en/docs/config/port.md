@@ -130,3 +130,17 @@ The benchmark result, especially the throughput of vzNAT, highly depends on the 
 
 </p>
 </details>
+
+## Disable all port forwarding
+
+To disable all dynamic TCP and UDP port forwarding, add a single ignore rule to your instance configuration. SSH access via `limactl shell` continues to work.
+
+```yaml
+portForwards:
+- guestIP: 0.0.0.0
+  guestIPMustBeZero: false
+  proto: any
+  ignore: true
+```
+
+On Lima versions prior to 2.0, omit the `guestIPMustBeZero` field (the rule still works without it).
