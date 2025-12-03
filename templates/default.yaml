@@ -472,9 +472,11 @@ networks:
 # The "vzNAT" IP address is accessible from the host, but not from other guests.
 # Needs `vmType: vz`
 # - vzNAT: true
-# requires `vmType: vz` and macOS 26.0 or later.
-# - vzShared: true
-# - vzHost: true
+
+# The vmnet network interfaces "shared" and "host" can be used with `vmType: vz` or `vmType: QEMU`.
+# Requires macOS 26.0 or later.
+# - vmnet: shared
+# - vmnet: host
 
 # Port forwarding rules. Forwarding between ports 22 and ssh.localPort cannot be overridden.
 # Rules are checked sequentially until the first one matches.

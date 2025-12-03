@@ -63,6 +63,8 @@ func TestRenderTemplate(t *testing.T) {
 	</array>
 	<key>RunAtLoad</key>
 	<true/>
+	<key>ExitTimeOut</key>
+	<integer>20</integer>
 	<key>StandardErrorPath</key>
 	<string>launchd.stderr.log</string>
 	<key>StandardOutPath</key>
