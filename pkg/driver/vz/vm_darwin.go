@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io/fs"
 	"net"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -37,6 +38,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/networks/usernet"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/store"
+	"github.com/lima-vm/lima/v2/pkg/vzvmnetshared"
 )
 
 // diskImageCachingMode is set to DiskImageCachingModeCached so as to avoid disk corruption on ARM:
@@ -374,11 +376,8 @@ func attachNetwork(ctx context.Context, inst *limatype.Instance, vmConfig *vz.Vi
 			}
 			configurations = append(configurations, networkConfig)
 		} else if nw.VZShared != nil && *nw.VZShared {
-			config, err := vz.NewVmnetNetworkConfiguration(vz.SharedMode)
-			if err != nil {
-				return err
-			}
-			network, err := vz.NewVmnetNetwork(config)
+			subnet := netip.MustParsePrefix("192.168.107.0/24")
+			network, err := vzvmnetshared.RequestSharedVmnetNetwork(ctx, subnet)
 			if err != nil {
 				return err
 			}
