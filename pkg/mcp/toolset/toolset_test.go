@@ -20,6 +20,7 @@ func TestTranslateHostPath(t *testing.T) {
 		hostPath      string
 		toolSet       ToolSet
 		wantGuestPath string
+		wantLogs      bool
 		wantErr       bool
 	}{
 		{
@@ -35,6 +36,7 @@ func TestTranslateHostPath(t *testing.T) {
 				},
 			},
 			wantGuestPath: "/mnt/home-user/documents/file.txt",
+			wantLogs:      false,
 			wantErr:       false,
 		},
 		{
@@ -50,6 +52,7 @@ func TestTranslateHostPath(t *testing.T) {
 				},
 			},
 			wantGuestPath: "/other/path/file.txt",
+			wantLogs:      true,
 			wantErr:       false,
 		},
 		{
@@ -65,6 +68,7 @@ func TestTranslateHostPath(t *testing.T) {
 				},
 			},
 			wantGuestPath: "/home/user2/file.txt",
+			wantLogs:      true,
 			wantErr:       false,
 		},
 		{
@@ -81,18 +85,24 @@ func TestTranslateHostPath(t *testing.T) {
 				},
 			},
 			wantGuestPath: "/mnt/tmp/myfile",
+			wantLogs:      false,
 			wantErr:       false,
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, err := test.toolSet.TranslateHostPath(test.hostPath)
+			got, logs, err := test.toolSet.TranslateHostPath(test.hostPath)
 			if test.wantErr {
 				assert.Assert(t, err != nil)
 			} else {
 				assert.NilError(t, err)
 				assert.Equal(t, test.wantGuestPath, got)
+				if test.wantLogs {
+					assert.Assert(t, logs != "")
+				} else {
+					assert.Equal(t, "", logs)
+				}
 			}
 		})
 	}

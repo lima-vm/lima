@@ -103,19 +103,20 @@ func (ts *ToolSet) Close() error {
 	return err
 }
 
-func (ts *ToolSet) TranslateHostPath(hostPath string) (string, error) {
+func (ts *ToolSet) TranslateHostPath(hostPath string) (guestPath, logs string, err error) {
 	if hostPath == "" {
-		return "", errors.New("path is empty")
+		return "", "", errors.New("path is empty")
 	}
 	if !filepath.IsAbs(hostPath) {
-		return "", fmt.Errorf("expected an absolute path, got a relative path: %q", hostPath)
+		return "", "", fmt.Errorf("expected an absolute path, got a relative path: %q", hostPath)
 	}
 
 	guestPath, isMounted := ts.translateToGuestPath(hostPath)
 	if !isMounted {
-		logrus.Warnf("path %q is not under any mounted directory, using as guest path", hostPath)
+		logs = fmt.Sprintf("path %q is not under any mounted directory, using as guest path", hostPath)
+		logrus.Info(logs)
 	}
-	return guestPath, nil
+	return guestPath, logs, nil
 }
 
 func (ts *ToolSet) translateToGuestPath(hostPath string) (string, bool) {

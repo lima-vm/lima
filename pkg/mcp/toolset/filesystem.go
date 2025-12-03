@@ -23,7 +23,7 @@ func (ts *ToolSet) ListDirectory(ctx context.Context,
 	if ts.inst == nil {
 		return nil, nil, errors.New("instance not registered")
 	}
-	guestPath, err := ts.TranslateHostPath(args.Path)
+	guestPath, logs, err := ts.TranslateHostPath(args.Path)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -41,9 +41,15 @@ func (ts *ToolSet) ListDirectory(ctx context.Context,
 		res.Entries[i].ModTime = ptr.Of(f.ModTime())
 		res.Entries[i].IsDir = ptr.Of(f.IsDir())
 	}
-	return &mcp.CallToolResult{
+	callToolRes := &mcp.CallToolResult{
 		StructuredContent: res,
-	}, res, nil
+	}
+	if logs != "" {
+		callToolRes.Meta = map[string]any{
+			"io.lima-vm/logs": []string{logs},
+		}
+	}
+	return callToolRes, res, nil
 }
 
 func (ts *ToolSet) ReadFile(_ context.Context,
@@ -52,7 +58,7 @@ func (ts *ToolSet) ReadFile(_ context.Context,
 	if ts.inst == nil {
 		return nil, nil, errors.New("instance not registered")
 	}
-	guestPath, err := ts.TranslateHostPath(args.Path)
+	guestPath, logs, err := ts.TranslateHostPath(args.Path)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -70,12 +76,18 @@ func (ts *ToolSet) ReadFile(_ context.Context,
 	res := &msi.ReadFileResult{
 		Content: string(b),
 	}
-	return &mcp.CallToolResult{
+	callToolRes := &mcp.CallToolResult{
 		// Gemini:
 		// For text files: The file content, potentially prefixed with a truncation message
 		// (e.g., [File content truncated: showing lines 1-100 of 500 total lines...]\nActual file content...).
 		StructuredContent: res,
-	}, res, nil
+	}
+	if logs != "" {
+		callToolRes.Meta = map[string]any{
+			"io.lima-vm/logs": []string{logs},
+		}
+	}
+	return callToolRes, res, nil
 }
 
 func (ts *ToolSet) WriteFile(_ context.Context,
@@ -84,7 +96,7 @@ func (ts *ToolSet) WriteFile(_ context.Context,
 	if ts.inst == nil {
 		return nil, nil, errors.New("instance not registered")
 	}
-	guestPath, err := ts.TranslateHostPath(args.Path)
+	guestPath, logs, err := ts.TranslateHostPath(args.Path)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -103,12 +115,18 @@ func (ts *ToolSet) WriteFile(_ context.Context,
 		return nil, nil, err
 	}
 	res := &msi.WriteFileResult{}
-	return &mcp.CallToolResult{
+	callToolRes := &mcp.CallToolResult{
 		// Gemini:
 		// A success message, e.g., `Successfully overwrote file: /path/to/your/file.txt`
 		// or `Successfully created and wrote to new file: /path/to/new/file.txt.`
 		StructuredContent: res,
-	}, res, nil
+	}
+	if logs != "" {
+		callToolRes.Meta = map[string]any{
+			"io.lima-vm/logs": []string{logs},
+		}
+	}
+	return callToolRes, res, nil
 }
 
 func (ts *ToolSet) Glob(_ context.Context,
@@ -124,7 +142,7 @@ func (ts *ToolSet) Glob(_ context.Context,
 	if args.Path != nil && *args.Path != "" {
 		pathStr = *args.Path
 	}
-	guestPath, err := ts.TranslateHostPath(pathStr)
+	guestPath, logs, err := ts.TranslateHostPath(pathStr)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -139,11 +157,17 @@ func (ts *ToolSet) Glob(_ context.Context,
 	res := &msi.GlobResult{
 		Matches: matches,
 	}
-	return &mcp.CallToolResult{
+	callToolRes := &mcp.CallToolResult{
 		// Gemini:
 		// A message like: Found 5 file(s) matching "*.ts" within src, sorted by modification time (newest first):\nsrc/file1.ts\nsrc/subdir/file2.ts...
 		StructuredContent: res,
-	}, res, nil
+	}
+	if logs != "" {
+		callToolRes.Meta = map[string]any{
+			"io.lima-vm/logs": []string{logs},
+		}
+	}
+	return callToolRes, res, nil
 }
 
 func (ts *ToolSet) SearchFileContent(ctx context.Context,
@@ -159,7 +183,7 @@ func (ts *ToolSet) SearchFileContent(ctx context.Context,
 	if args.Path != nil && *args.Path != "" {
 		pathStr = *args.Path
 	}
-	guestPath, err := ts.TranslateHostPath(pathStr)
+	guestPath, logs, err := ts.TranslateHostPath(pathStr)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -176,9 +200,15 @@ func (ts *ToolSet) SearchFileContent(ctx context.Context,
 	res := &msi.SearchFileContentResult{
 		GitGrepOutput: cmdRes.Stdout,
 	}
-	return &mcp.CallToolResult{
+	callToolRes := &mcp.CallToolResult{
 		// Gemini:
 		// A message like: Found 10 matching lines for regex "function\\s+myFunction" in directory src:\nsrc/file1.js:10:function myFunction() {...}\nsrc/subdir/file2.ts:45:    function myFunction(param) {...}...
 		StructuredContent: res,
-	}, res, nil
+	}
+	if logs != "" {
+		callToolRes.Meta = map[string]any{
+			"io.lima-vm/logs": []string{logs},
+		}
+	}
+	return callToolRes, res, nil
 }
