@@ -466,21 +466,15 @@ func validateNetwork(y *limatype.LimaYAML) error {
 			if nw.VZNAT != nil && *nw.VZNAT {
 				errs = errors.Join(errs, fmt.Errorf("field `%s.lima` and field `%s.vzNAT` are mutually exclusive", field, field))
 			}
-			if nw.VZShared != nil && *nw.VZShared {
-				errs = errors.Join(errs, fmt.Errorf("field `%s.lima` and field `%s.vzShared` are mutually exclusive", field, field))
-			}
-			if nw.VZHost != nil && *nw.VZHost {
-				errs = errors.Join(errs, fmt.Errorf("field `%s.lima` and field `%s.vzHost` are mutually exclusive", field, field))
+			if nw.Vmnet != "" {
+				errs = errors.Join(errs, fmt.Errorf("field `%s.lima` and field `%s.vmnet` are mutually exclusive", field, field))
 			}
 		case nw.Socket != "":
 			if nw.VZNAT != nil && *nw.VZNAT {
 				errs = errors.Join(errs, fmt.Errorf("field `%s.socket` and field `%s.vzNAT` are mutually exclusive", field, field))
 			}
-			if nw.VZShared != nil && *nw.VZShared {
-				errs = errors.Join(errs, fmt.Errorf("field `%s.socket` and field `%s.vzShared` are mutually exclusive", field, field))
-			}
-			if nw.VZHost != nil && *nw.VZHost {
-				errs = errors.Join(errs, fmt.Errorf("field `%s.socket` and field `%s.vzHost` are mutually exclusive", field, field))
+			if nw.Vmnet != "" {
+				errs = errors.Join(errs, fmt.Errorf("field `%s.socket` and field `%s.vmnet` are mutually exclusive", field, field))
 			}
 			if fi, err := os.Stat(nw.Socket); err != nil && !errors.Is(err, os.ErrNotExist) {
 				errs = errors.Join(errs, err)
@@ -488,11 +482,8 @@ func validateNetwork(y *limatype.LimaYAML) error {
 				errs = errors.Join(errs, fmt.Errorf("field `%s.socket` %q points to a non-socket file", field, nw.Socket))
 			}
 		case nw.VZNAT != nil && *nw.VZNAT:
-			if nw.VZShared != nil && *nw.VZShared {
-				errs = errors.Join(errs, fmt.Errorf("field `%s.vzNAT` and field `%s.vzShared` are mutually exclusive", field, field))
-			}
-			if nw.VZHost != nil && *nw.VZHost {
-				errs = errors.Join(errs, fmt.Errorf("field `%s.vzNAT` and field `%s.vzHost` are mutually exclusive", field, field))
+			if nw.Vmnet != "" {
+				errs = errors.Join(errs, fmt.Errorf("field `%s.vzNAT` and field `%s.vmnet` are mutually exclusive", field, field))
 			}
 			if nw.Lima != "" {
 				errs = errors.Join(errs, fmt.Errorf("field `%s.vzNAT` and field `%s.lima` are mutually exclusive", field, field))
@@ -500,31 +491,15 @@ func validateNetwork(y *limatype.LimaYAML) error {
 			if nw.Socket != "" {
 				errs = errors.Join(errs, fmt.Errorf("field `%s.vzNAT` and field `%s.socket` are mutually exclusive", field, field))
 			}
-		case nw.VZShared != nil && *nw.VZShared:
+		case nw.Vmnet != "":
 			if nw.VZNAT != nil && *nw.VZNAT {
-				errs = errors.Join(errs, fmt.Errorf("field `%s.vzShared` and field `%s.vzNAT` are mutually exclusive", field, field))
-			}
-			if nw.VZHost != nil && *nw.VZHost {
-				errs = errors.Join(errs, fmt.Errorf("field `%s.vzShared` and field `%s.vzHost` are mutually exclusive", field, field))
+				errs = errors.Join(errs, fmt.Errorf("field `%s.vmnet` and field `%s.vzNAT` are mutually exclusive", field, field))
 			}
 			if nw.Lima != "" {
-				errs = errors.Join(errs, fmt.Errorf("field `%s.vzShared` and field `%s.lima` are mutually exclusive", field, field))
+				errs = errors.Join(errs, fmt.Errorf("field `%s.vmnet` and field `%s.lima` are mutually exclusive", field, field))
 			}
 			if nw.Socket != "" {
-				errs = errors.Join(errs, fmt.Errorf("field `%s.vzShared` and field `%s.socket` are mutually exclusive", field, field))
-			}
-		case nw.VZHost != nil && *nw.VZHost:
-			if nw.VZNAT != nil && *nw.VZNAT {
-				errs = errors.Join(errs, fmt.Errorf("field `%s.vzHost` and field `%s.vzNAT` are mutually exclusive", field, field))
-			}
-			if nw.VZShared != nil && *nw.VZShared {
-				errs = errors.Join(errs, fmt.Errorf("field `%s.vzHost` and field `%s.vzShared` are mutually exclusive", field, field))
-			}
-			if nw.Lima != "" {
-				errs = errors.Join(errs, fmt.Errorf("field `%s.vzHost` and field `%s.lima` are mutually exclusive", field, field))
-			}
-			if nw.Socket != "" {
-				errs = errors.Join(errs, fmt.Errorf("field `%s.vzHost` and field `%s.socket` are mutually exclusive", field, field))
+				errs = errors.Join(errs, fmt.Errorf("field `%s.vmnet` and field `%s.socket` are mutually exclusive", field, field))
 			}
 		default:
 			errs = errors.Join(errs, fmt.Errorf("field `%s.lima` or  field `%s.socket must be set", field, field))
