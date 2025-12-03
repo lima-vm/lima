@@ -473,8 +473,8 @@ networks:
 # Needs `vmType: vz`
 # - vzNAT: true
 # requires `vmType: vz` and macOS 26.0 or later.
-# - vzShared: true
-# - vzHost: true
+# - vz: shared
+# - vz: host
 
 # Port forwarding rules. Forwarding between ports 22 and ssh.localPort cannot be overridden.
 # Rules are checked sequentially until the first one matches.
