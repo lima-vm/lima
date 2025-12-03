@@ -209,6 +209,7 @@ func newApp() *cobra.Command {
 		newCloneCommand(),
 		newRenameCommand(),
 		newWatchCommand(),
+		newVmnetCommand(),
 	)
 	addPluginCommands(rootCmd)
 

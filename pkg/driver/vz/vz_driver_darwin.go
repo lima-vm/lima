@@ -291,19 +291,18 @@ func validateConfig(_ context.Context, cfg *limatype.LimaYAML) error {
 
 	for i, nw := range cfg.Networks {
 		if unknown := reflectutil.UnknownNonEmptyFields(nw, "VZNAT",
-			"VZShared",
-			"VZHost",
 			"Lima",
 			"Socket",
 			"MACAddress",
 			"Metric",
 			"Interface",
+			"Vmnet",
 		); len(unknown) > 0 {
 			logrus.Warnf("vmType %s: ignoring networks[%d]: %+v", *cfg.VMType, i, unknown)
 		}
-		if (nw.VZShared != nil && *nw.VZShared) || (nw.VZHost != nil && *nw.VZHost) {
+		if nw.Vmnet != "" {
 			if macOSProductVersion.LessThan(*semver.New("26.0.0")) {
-				return fmt.Errorf("networks[%d]: VZShared and VZHost require macOS 26.0 or later", i)
+				return fmt.Errorf("networks[%d]: 'vmnet: %s' require macOS 26.0 or later", i, nw.Vmnet)
 			}
 		}
 	}
@@ -386,9 +385,10 @@ func (l *LimaVzDriver) Stop(_ context.Context) error {
 			return err
 		}
 
-		timeout := time.After(5 * time.Second)
+		timeout := time.After(15 * time.Second)
 		ticker := time.NewTicker(500 * time.Millisecond)
 		for {
+			logrus.Debug("Waiting for VZ to stop...")
 			select {
 			case <-timeout:
 				return errors.New("vz timeout while waiting for stop status")

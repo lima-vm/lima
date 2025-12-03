@@ -7,6 +7,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"net/netip"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -17,6 +18,7 @@ import (
 
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
+	"github.com/lima-vm/lima/v2/pkg/ptr"
 	"github.com/lima-vm/lima/v2/pkg/textutil"
 )
 
@@ -71,6 +73,45 @@ func fillDefaults(cfg Config) (Config, error) {
 			return cfg, err
 		}
 		cfg.Networks[ModeUserV2] = defaultCfg.Networks[ModeUserV2]
+	}
+	if len(cfg.Vmnet) == 0 {
+		defaultCfg, err := DefaultConfig()
+		if err != nil {
+			return cfg, err
+		}
+		cfg.Vmnet = defaultCfg.Vmnet
+	}
+	// Fill default values for VmnetConfig
+	for id, vmnetCfg := range cfg.Vmnet {
+		if vmnetCfg.Mode == "" {
+			vmnetCfg.Mode = VmnetModeShared
+		}
+		if vmnetCfg.Dhcp == nil {
+			vmnetCfg.Dhcp = ptr.Of(true)
+		}
+		if vmnetCfg.DNSProxy == nil {
+			vmnetCfg.DNSProxy = ptr.Of(true)
+		}
+		if vmnetCfg.Mtu == 0 {
+			vmnetCfg.Mtu = 1500
+		}
+		if vmnetCfg.Nat44 == nil {
+			vmnetCfg.Nat44 = ptr.Of(true)
+		}
+		if vmnetCfg.Nat66 == nil {
+			vmnetCfg.Nat66 = ptr.Of(true)
+		}
+		if vmnetCfg.RouterAdvertisement == nil {
+			vmnetCfg.RouterAdvertisement = ptr.Of(true)
+		}
+		if vmnetCfg.Subnet.IsValid() {
+			vmnetCfg.Subnet = netip.PrefixFrom(
+				// VmnetConfig.SetIPv4Subnet ensures that the first address is the network address.
+				vmnetCfg.Subnet.Masked().Addr().Next(),
+				vmnetCfg.Subnet.Bits(),
+			)
+		}
+		cfg.Vmnet[id] = vmnetCfg
 	}
 	return cfg, nil
 }
@@ -187,4 +228,20 @@ func IsUsernet(name string) bool {
 		return false
 	}
 	return isUsernet
+}
+
+// Identifiers returns all network identifiers defined in the networks config.
+func Identifiers() ([]string, error) {
+	loadCache()
+	if cache.err != nil {
+		return nil, cache.err
+	}
+	ids := make([]string, 0, len(cache.cfg.Networks)+len(cache.cfg.Vmnet))
+	for id := range cache.cfg.Networks {
+		ids = append(ids, "lima:"+id)
+	}
+	for id := range cache.cfg.Vmnet {
+		ids = append(ids, "vmnet:"+id)
+	}
+	return ids, nil
 }

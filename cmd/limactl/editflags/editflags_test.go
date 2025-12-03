@@ -205,25 +205,31 @@ func TestYQExpressions(t *testing.T) {
 			name:        "network vzNAT",
 			args:        []string{"--network", "vzNAT"},
 			newInstance: true,
-			expected:    []string{`.networks += [{"vzNAT": true}] | .networks |= unique_by(.lima)`},
+			expected:    []string{`.networks += [{"vzNAT": true}] | .networks |= unique_by(.lima) | .networks |= unique_by(.vmnet)`},
 		},
 		{
 			name:        "network lima:shared",
 			args:        []string{"--network", "lima:shared"},
 			newInstance: true,
-			expected:    []string{`.networks += [{"lima": "shared"}] | .networks |= unique_by(.lima)`},
+			expected:    []string{`.networks += [{"lima": "shared"}] | .networks |= unique_by(.lima) | .networks |= unique_by(.vmnet)`},
+		},
+		{
+			name:        "network vmnet:shared",
+			args:        []string{"--network", "vmnet:shared"},
+			newInstance: true,
+			expected:    []string{`.networks += [{"vmnet": "shared"}] | .networks |= unique_by(.lima) | .networks |= unique_by(.vmnet)`},
 		},
 		{
 			name:        "multiple networks",
-			args:        []string{"--network", "vzNAT", "--network", "lima:shared", "--network", "lima:bridged"},
+			args:        []string{"--network", "vzNAT", "--network", "lima:shared", "--network", "lima:bridged", "--network", "vmnet:shared", "--network", "lima:host"},
 			newInstance: true,
-			expected:    []string{`.networks += [{"vzNAT": true},{"lima": "shared"},{"lima": "bridged"}] | .networks |= unique_by(.lima)`},
+			expected:    []string{`.networks += [{"vzNAT": true},{"lima": "shared"},{"lima": "bridged"},{"vmnet": "shared"},{"lima": "host"}] | .networks |= unique_by(.lima) | .networks |= unique_by(.vmnet)`},
 		},
 		{
 			name:        "invalid network",
 			args:        []string{"--network", "invalid"},
 			newInstance: true,
-			expectError: `network name must be "vzNAT" or "lima:*", got "invalid"`,
+			expectError: `network name must be "vzNAT", "vmnet:*", or "lima:*", got "invalid"`,
 		},
 	}
 	for _, tt := range tests {

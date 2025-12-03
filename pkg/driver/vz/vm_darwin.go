@@ -38,6 +38,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/networks/usernet"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/store"
+	"github.com/lima-vm/lima/v2/pkg/vmnet"
 )
 
 // diskImageCachingMode is set to DiskImageCachingModeCached so as to avoid disk corruption on ARM:
@@ -389,7 +390,8 @@ func attachNetwork(ctx context.Context, inst *limatype.Instance, vmConfig *vz.Vi
 	}
 
 	for i, nw := range inst.Networks {
-		if nw.VZNAT != nil && *nw.VZNAT {
+		switch {
+		case nw.VZNAT != nil && *nw.VZNAT:
 			attachment, err := vz.NewNATNetworkDeviceAttachment()
 			if err != nil {
 				return err
@@ -399,34 +401,20 @@ func attachNetwork(ctx context.Context, inst *limatype.Instance, vmConfig *vz.Vi
 				return err
 			}
 			configurations = append(configurations, networkConfig)
-		} else if nw.VZShared != nil && *nw.VZShared {
-			config, err := vz.NewVmnetNetworkConfiguration(vz.SharedMode)
+		case nw.Vmnet != "":
+			nwCfg, err := networks.LoadConfig()
 			if err != nil {
 				return err
 			}
-			network, err := vz.NewVmnetNetwork(config)
+			vmnetCfg, ok := nwCfg.Vmnet[nw.Vmnet]
+			if !ok {
+				return fmt.Errorf("networks.yaml: 'vmnet: %s' is not defined", nw.Vmnet)
+			}
+			network, err := vmnet.RequestNetwork(ctx, nw.Vmnet, vmnetCfg)
 			if err != nil {
 				return err
 			}
-			attachment, err := vz.NewVmnetNetworkDeviceAttachment(network)
-			if err != nil {
-				return err
-			}
-			networkConfig, err := newVirtioNetworkDeviceConfiguration(attachment, nw.MACAddress)
-			if err != nil {
-				return err
-			}
-			configurations = append(configurations, networkConfig)
-		} else if nw.VZHost != nil && *nw.VZHost {
-			config, err := vz.NewVmnetNetworkConfiguration(vz.HostMode)
-			if err != nil {
-				return err
-			}
-			network, err := vz.NewVmnetNetwork(config)
-			if err != nil {
-				return err
-			}
-			attachment, err := vz.NewVmnetNetworkDeviceAttachment(network)
+			attachment, err := vz.NewVmnetNetworkDeviceAttachment(network.Raw())
 			if err != nil {
 				return err
 			}
@@ -435,7 +423,7 @@ func attachNetwork(ctx context.Context, inst *limatype.Instance, vmConfig *vz.Vi
 				return err
 			}
 			configurations = append(configurations, networkConfig)
-		} else if nw.Lima != "" {
+		case nw.Lima != "":
 			nwCfg, err := networks.LoadConfig()
 			if err != nil {
 				return err
@@ -487,7 +475,7 @@ func attachNetwork(ctx context.Context, inst *limatype.Instance, vmConfig *vz.Vi
 					configurations = append(configurations, networkConfig)
 				}
 			}
-		} else if nw.Socket != "" {
+		case nw.Socket != "":
 			clientFile, err := DialQemu(ctx, nw.Socket)
 			if err != nil {
 				return err

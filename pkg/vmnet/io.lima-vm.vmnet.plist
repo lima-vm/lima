@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+    <dict>
+        <key>Label</key>
+        <string>{{.Label}}</string>
+        <key>ProgramArguments</key>
+        <array>
+            {{- range $arg := .ProgramArguments}}
+            <string>{{$arg}}</string>
+            {{- end}}
+        </array>
+        <key>WorkingDirectory</key>
+        <string>{{ .WorkingDirectory }}</string>
+        <key>StandardErrorPath</key>
+        <string>{{ .WorkingDirectory }}/stderr.log</string>
+        <key>StandardOutPath</key>
+        <string>{{ .WorkingDirectory }}/stdout.log</string>
+        <key>MachServices</key>
+        <dict>
+            {{- range $service := .MachServices}}
+            <key>{{$service}}</key>
+            <true/>
+            {{- end}}
+        </dict>
+    </dict>
+</plist>
