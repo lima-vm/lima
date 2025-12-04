@@ -116,6 +116,56 @@ See also <https://github.com/github/copilot-cli>.
 {{% /tab %}}
 {{< /tabpane >}}
 
+
+# Syncing Working Directory
+
+The `--sync` flag for `limactl shell` enables bidirectional synchronization of your host working directory with the guest VM. This is particularly useful when running AI agents (like Claude, Copilot, or Gemini) inside VMs to prevent them from accidentally modifying or breaking files on your host system.
+
+### Usecase - Running AI Code Assistants Safely
+
+1. Create an isolated instance for AI agents which must be started without host mounts for `--sync` to work:
+
+```bash
+limactl start --name=ai-sandbox --mount-none template://default
+```
+
+2. Navigate to your project
+
+```bash
+cd ~/my-project
+```
+
+3. Run an AI agent that modifies code:
+
+```bash
+limactl shell --sync ai-sandbox claude "Add error handling to all functions"
+```
+
+Or simply shell into the instance and make changes:
+```bash
+limactl shell --sync ai-sandbox
+```
+
+4. After running commands, you'll see an interactive prompt:
+
+```
+⚠️ Accept the changes?
+→ Yes
+  No
+  View the changed contents
+```
+
+- **Yes**: Syncs changes back to your host and cleans up guest directory
+- **No**: Discards changes and cleans up guest directory  
+- **View the changed contents**: Shows a diff of changes made by the agent
+
+### Requirements
+
+- **rsync** must be installed on both host and guest
+- The host working directory must be at least 4 levels deep (e.g., `/Users/username/projects/myproject`)
+- The instance must not have any host mounts configured (use `--mount-none` when creating)
+
+
 ## See also
 
 - [Config » AI](../config/ai/)
