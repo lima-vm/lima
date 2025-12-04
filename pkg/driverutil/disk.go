@@ -50,7 +50,7 @@ func EnsureDisk(ctx context.Context, instDir, diskSize string, diskImageFormat i
 			diffDiskF.Close()
 			return fmt.Errorf("failed to create sparse diff disk %q: %w", diffDisk, err)
 		}
-		return diffDiskF.Close()
+		diffDiskF.Close()
 	}
 	// Check whether to use ASIF format
 
