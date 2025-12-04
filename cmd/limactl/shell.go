@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -28,6 +30,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/networks/reconcile"
 	"github.com/lima-vm/lima/v2/pkg/sshutil"
 	"github.com/lima-vm/lima/v2/pkg/store"
+	"github.com/lima-vm/lima/v2/pkg/uiutil"
 )
 
 const shellHelp = `Execute shell in Lima
@@ -65,8 +68,13 @@ func newShellCommand() *cobra.Command {
 	shellCmd.Flags().Bool("reconnect", false, "Reconnect to the SSH session")
 	shellCmd.Flags().Bool("preserve-env", false, "Propagate environment variables to the shell")
 	shellCmd.Flags().Bool("start", false, "Start the instance if it is not already running")
+	shellCmd.Flags().String("sync", "", "Copy a host directory to the guest and vice-versa upon exit")
+
 	return shellCmd
 }
+
+// Depth of "/Users/USER" is 3.
+const rsyncMinimumSrcDirDepth = 4
 
 func shellAction(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
@@ -161,29 +169,57 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	syncDirVal, err := flags.GetString("sync")
+	if err != nil {
+		return fmt.Errorf("failed to get sync flag: %w", err)
+	}
+	syncHostWorkdir := syncDirVal != ""
+	if syncHostWorkdir && len(inst.Config.Mounts) > 0 {
+		return errors.New("cannot use `--sync` when the instance has host mounts configured, start the instance with `--mount-none` to disable mounts")
+	}
+
 	// When workDir is explicitly set, the shell MUST have workDir as the cwd, or exit with an error.
 	//
 	// changeDirCmd := "cd workDir || exit 1"                  if workDir != ""
 	//              := "cd hostCurrentDir || cd hostHomeDir"   if workDir == ""
 	var changeDirCmd string
+	var hostCurrentDir string
+	if syncDirVal != "" {
+		hostCurrentDir, err = filepath.Abs(syncDirVal)
+		if err == nil && runtime.GOOS == "windows" {
+			hostCurrentDir, err = mountDirFromWindowsDir(ctx, inst, hostCurrentDir)
+		}
+	} else {
+		hostCurrentDir, err = hostCurrentDirectory(ctx, inst)
+	}
+
+	if err != nil {
+		changeDirCmd = "false"
+		logrus.WithError(err).Warn("failed to get the current directory")
+	}
+	if syncHostWorkdir {
+		if _, err := exec.LookPath("rsync"); err != nil {
+			return fmt.Errorf("rsync is required for `--sync` but not found: %w", err)
+		}
+
+		srcWdDepth := len(strings.Split(hostCurrentDir, string(os.PathSeparator)))
+		if srcWdDepth < rsyncMinimumSrcDirDepth {
+			return fmt.Errorf("expected the depth of the host working directory (%q) to be more than %d, only got %d (Hint: %s)",
+				hostCurrentDir, rsyncMinimumSrcDirDepth, srcWdDepth, "cd to a deeper directory")
+		}
+	}
+
+	var destRsyncDir string
 	workDir, err := cmd.Flags().GetString("workdir")
 	if err != nil {
 		return err
 	}
-	if workDir != "" {
+	switch {
+	case workDir != "":
 		changeDirCmd = fmt.Sprintf("cd %s || exit 1", shellescape.Quote(workDir))
 		// FIXME: check whether y.Mounts contains the home, not just len > 0
-	} else if len(inst.Config.Mounts) > 0 || inst.VMType == limatype.WSL2 {
-		hostCurrentDir, err := os.Getwd()
-		if err == nil && runtime.GOOS == "windows" {
-			hostCurrentDir, err = mountDirFromWindowsDir(ctx, inst, hostCurrentDir)
-		}
-		if err == nil {
-			changeDirCmd = fmt.Sprintf("cd %s", shellescape.Quote(hostCurrentDir))
-		} else {
-			changeDirCmd = "false"
-			logrus.WithError(err).Warn("failed to get the current directory")
-		}
+	case len(inst.Config.Mounts) > 0 || inst.VMType == limatype.WSL2:
+		changeDirCmd = fmt.Sprintf("cd %s", shellescape.Quote(hostCurrentDir))
 		hostHomeDir, err := os.UserHomeDir()
 		if err == nil && runtime.GOOS == "windows" {
 			hostHomeDir, err = mountDirFromWindowsDir(ctx, inst, hostHomeDir)
@@ -193,7 +229,10 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		} else {
 			logrus.WithError(err).Warn("failed to get the home directory")
 		}
-	} else {
+	case syncHostWorkdir:
+		destRsyncDir = *inst.Config.User.Home + hostCurrentDir
+		changeDirCmd = fmt.Sprintf("cd %s", shellescape.Quote(destRsyncDir))
+	default:
 		logrus.Debug("the host home does not seem mounted, so the guest shell will have a different cwd")
 	}
 
@@ -278,6 +317,34 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	}
 	sshArgs := append([]string{}, sshExe.Args...)
 	sshArgs = append(sshArgs, sshutil.SSHArgsFromOpts(sshOpts)...)
+
+	var sshExecForRsync *exec.Cmd
+	if syncHostWorkdir {
+		logrus.Infof("Syncing host current directory(%s) to guest instance...", hostCurrentDir)
+		sshExecForRsync = exec.CommandContext(ctx, sshExe.Exe, sshArgs...)
+
+		// Create the destination directory in the guest instance,
+		// we could have done this by using `--rsync-path` but it's more
+		// complex to quote properly.
+		if err := executeSSHForRsync(ctx, *sshExecForRsync, inst.SSHLocalPort, inst.SSHAddress, fmt.Sprintf("mkdir -p %s", shellescape.Quote(destRsyncDir))); err != nil {
+			return fmt.Errorf("failed to create the synced workdir in guest instance: %w", err)
+		}
+
+		// The macOS release of rsync (the latest being 2.6.9) does not support shell escaping of destination path but other versions do.
+		rsyncVer, err := rsyncVersion(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to get rsync version: %w", err)
+		}
+		if rsyncVer.LessThan(*semver.New("3.0.0")) {
+			destRsyncDir = shellescape.Quote(destRsyncDir)
+		}
+
+		if err := rsyncDirectory(ctx, cmd, sshExecForRsync, hostCurrentDir+"/", fmt.Sprintf("%s:%s", *inst.Config.User.Name+"@"+inst.SSHAddress, destRsyncDir)); err != nil {
+			return fmt.Errorf("failed to sync host working directory to guest instance: %w", err)
+		}
+		logrus.Infof("Successfully synced host current directory to guest(%s) instance.", destRsyncDir)
+	}
+
 	if isatty.IsTerminal(os.Stdout.Fd()) || isatty.IsCygwinTerminal(os.Stdout.Fd()) {
 		// required for showing the shell prompt: https://stackoverflow.com/a/626574
 		sshArgs = append(sshArgs, "-t")
@@ -307,7 +374,189 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	logrus.Debugf("executing ssh (may take a long)): %+v", sshCmd.Args)
 
 	// TODO: use syscall.Exec directly (results in losing tty?)
-	return sshCmd.Run()
+	if err := sshCmd.Run(); err != nil {
+		return err
+	}
+
+	// Once the shell command finishes, rsync back the changes from guest workdir
+	// to the host and delete the guest synced workdir only if the user
+	// confirms the changes.
+	if syncHostWorkdir {
+		tty, err := flags.GetBool("tty")
+		if err != nil {
+			return err
+		}
+		return askUserForRsyncBack(ctx, cmd, inst, sshExecForRsync, hostCurrentDir, destRsyncDir, tty)
+	}
+	return nil
+}
+
+func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype.Instance, sshCmd *exec.Cmd, hostCurrentDir, destRsyncDir string, tty bool) error {
+	remoteSource := fmt.Sprintf("%s:%s", *inst.Config.User.Name+"@"+inst.SSHAddress, destRsyncDir)
+	clean := filepath.Clean(hostCurrentDir)
+	parts := strings.Split(clean, string(filepath.Separator))
+	if len(parts) < 2 {
+		return fmt.Errorf("invalid host current directory: %s", hostCurrentDir)
+	}
+	dirForCleanup := shellescape.Quote(fmt.Sprintf("%s/", *inst.Config.User.Home) + parts[1])
+
+	rsyncBackAndCleanup := func() error {
+		if err := rsyncDirectory(ctx, cmd, sshCmd, remoteSource, filepath.Dir(hostCurrentDir)); err != nil {
+			return fmt.Errorf("failed to sync back the changes from guest instance to host: %w", err)
+		}
+
+		// Clean up the guest synced workdir
+		if err := executeSSHForRsync(ctx, *sshCmd, inst.SSHLocalPort, inst.SSHAddress, fmt.Sprintf("rm -rf %s", dirForCleanup)); err != nil {
+			logrus.WithError(err).Warn("Failed to clean up guest synced workdir")
+		}
+		logrus.Info("Successfully synced back the changes to host.")
+
+		return nil
+	}
+
+	if !tty {
+		return rsyncBackAndCleanup()
+	}
+
+	message := "⚠️ Accept the changes?"
+	options := []string{
+		"Yes",
+		"No",
+		"View the changed contents",
+	}
+
+	hostTmpDest, err := os.MkdirTemp("", "lima-guest-synced-*")
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := os.RemoveAll(hostTmpDest); err != nil {
+			logrus.WithError(err).Warnf("Failed to clean up temporary directory %s", hostTmpDest)
+		}
+	}()
+	rsyncToTempDir := false
+
+	for {
+		ans, err := uiutil.Select(message, options)
+		if err != nil {
+			return fmt.Errorf("failed to open TUI: %w", err)
+		}
+
+		switch ans {
+		case 0: // Yes
+			return rsyncBackAndCleanup()
+		case 1: // No
+			// Clean up the guest synced workdir
+			if err := executeSSHForRsync(ctx, *sshCmd, inst.SSHLocalPort, inst.SSHAddress, fmt.Sprintf("rm -rf %s", dirForCleanup)); err != nil {
+				logrus.WithError(err).Warn("Failed to clean up guest synced workdir")
+			}
+			logrus.Info("Skipping syncing back the changes to host.")
+			return nil
+		case 2: // View the changed contents
+			if !rsyncToTempDir {
+				if err := rsyncDirectory(ctx, cmd, sshCmd, remoteSource, hostTmpDest); err != nil {
+					return fmt.Errorf("failed to sync back the changes from guest instance to host temporary directory: %w", err)
+				}
+				rsyncToTempDir = true
+			}
+			diffCmd := exec.CommandContext(ctx, "diff", "-ru", "--color=always", hostCurrentDir, filepath.Join(hostTmpDest, filepath.Base(hostCurrentDir)))
+			pager := os.Getenv("PAGER")
+			pager = strings.TrimSpace(pager)
+			if pager == "" {
+				pager = "less"
+			}
+			pagerArgs := strings.Fields(pager)
+			lessCmd := exec.CommandContext(ctx, pagerArgs[0], pagerArgs[1:]...)
+
+			pipeIn, err := lessCmd.StdinPipe()
+			if err != nil {
+				return fmt.Errorf("failed to create pipe for less: %w", err)
+			}
+			diffCmd.Stdout = pipeIn
+			lessCmd.Stdout = cmd.OutOrStdout()
+			lessCmd.Stderr = cmd.OutOrStderr()
+
+			if err := lessCmd.Start(); err != nil {
+				return fmt.Errorf("failed to start less: %w", err)
+			}
+			if err := diffCmd.Run(); err != nil {
+				// Command `diff` returns exit code 1 when files differ.
+				var exitErr *exec.ExitError
+				if errors.As(err, &exitErr) && exitErr.ExitCode() >= 2 {
+					_ = pipeIn.Close()
+					return fmt.Errorf("failed to run diff command: %w", err)
+				}
+			}
+
+			_ = pipeIn.Close()
+
+			if err := lessCmd.Wait(); err != nil {
+				return fmt.Errorf("failed to wait for less command: %w", err)
+			}
+		}
+	}
+}
+
+func executeSSHForRsync(ctx context.Context, sshCmd exec.Cmd, sshLocalPort int, sshAddress, command string) error {
+	sshCmd.Args = append(sshCmd.Args,
+		"-p", strconv.Itoa(sshLocalPort),
+		sshAddress,
+	)
+
+	// Skip Args[0] (program name) to avoid duplication
+	sshRmCmd := exec.CommandContext(ctx, sshCmd.Path, append(sshCmd.Args[1:], command)...)
+	if err := sshRmCmd.Run(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func hostCurrentDirectory(ctx context.Context, inst *limatype.Instance) (string, error) {
+	hostCurrentDir, err := os.Getwd()
+	if err == nil && runtime.GOOS == "windows" {
+		hostCurrentDir, err = mountDirFromWindowsDir(ctx, inst, hostCurrentDir)
+	}
+	return hostCurrentDir, err
+}
+
+func rsyncVersion(ctx context.Context) (*semver.Version, error) {
+	out, err := exec.CommandContext(ctx, "rsync", "--version").Output()
+	if err != nil {
+		return nil, err
+	}
+
+	// `rsync  version 3.2.7  protocol version 31`
+	re := regexp.MustCompile(`version (\d+\.\d+\.\d+)`)
+	matches := re.FindSubmatch(out)
+	if len(matches) < 2 {
+		return nil, errors.New("failed to parse rsync version")
+	}
+	return semver.NewVersion(string(matches[1]))
+}
+
+// Syncs a directory from host to guest and vice-versa. It creates a directory
+// named "synced-workdir" in the guest's home directory and copies the contents
+// of the host's current working directory into it. SSHArgs should not contain
+// the port and address, rsync handles it separately.
+func rsyncDirectory(ctx context.Context, cmd *cobra.Command, sshCmd *exec.Cmd, source, destination string) error {
+	sshCmdParts := make([]string, len(sshCmd.Args))
+	for i, arg := range sshCmd.Args {
+		sshCmdParts[i] = shellescape.Quote(arg)
+	}
+	sshCmdStr := strings.Join(sshCmdParts, " ")
+
+	rsyncArgs := []string{
+		"-ah",
+		"--delete",
+		"-e", sshCmdStr,
+		source,
+		destination,
+	}
+	rsyncCmd := exec.CommandContext(ctx, "rsync", rsyncArgs...)
+	rsyncCmd.Stdout = cmd.OutOrStdout()
+	rsyncCmd.Stderr = cmd.OutOrStderr()
+	logrus.Debugf("executing rsync: %+v", rsyncCmd.Args)
+	return rsyncCmd.Run()
 }
 
 func mountDirFromWindowsDir(ctx context.Context, inst *limatype.Instance, dir string) (string, error) {
