@@ -50,6 +50,10 @@ func EvaluateExpressionWithEncoder(expression, content string, encoder yqlib.Enc
 	logging.SetBackend(backend)
 	yqlib.InitExpressionParser()
 
+	// Disable access to environment variables and file loading functions
+	yqlib.ConfiguredSecurityPreferences.DisableEnvOps = true
+	yqlib.ConfiguredSecurityPreferences.DisableFileOps = true
+
 	decoder := yqlib.NewYamlDecoder(yqlib.ConfiguredYamlPreferences)
 	out, err := yqlib.NewStringEvaluator().EvaluateAll(expression, content, encoder, decoder)
 	if err != nil {
