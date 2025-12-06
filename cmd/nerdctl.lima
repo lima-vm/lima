@@ -1,4 +1,10 @@
 #!/bin/sh
 set -eu
+
+# Environment Variables
+# LIMA_INSTANCE: Specifies the name of the Lima instance to use. Default is "default".
+
+: "${LIMA_INSTANCE:=default}"
+
 # Use --preserve-env to pass through environment variables from host machine into guest instance
-exec limactl shell --preserve-env default nerdctl "$@"
+exec limactl shell --preserve-env "$LIMA_INSTANCE" nerdctl "$@"
