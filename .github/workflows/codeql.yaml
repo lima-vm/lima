@@ -35,10 +35,15 @@ jobs:
       matrix:
         include:
         - language: go
-          build-mode: autobuild
+          build-mode: manual
     steps:
     - name: Checkout repository
       uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.24'
 
     - name: Initialize CodeQL
       uses: github/codeql-action/init@fe4161a26a8629af62121b670040955b330f9af2  # v4.31.6
@@ -46,15 +51,10 @@ jobs:
         languages: ${{ matrix.language }}
         build-mode: ${{ matrix.build-mode }}
 
-    - if: matrix.build-mode == 'manual'
+    - name: Build Go code for CodeQL analysis
       shell: bash
       run: |
-        echo 'If you are using a "manual" build mode for one or more of the' \
-          'languages you are analyzing, replace this with the commands to build' \
-          'your code, for example:'
-        echo '  make bootstrap'
-        echo '  make release'
-        exit 1
+        go build ./...
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@fe4161a26a8629af62121b670040955b330f9af2  # v4.31.6
