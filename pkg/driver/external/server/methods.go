@@ -10,7 +10,6 @@ import (
 	"net"
 	"path/filepath"
 
-	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -25,9 +24,9 @@ func (s *DriverServer) Start(_ *emptypb.Empty, stream pb.Driver_StartServer) err
 	s.logger.Debug("Received Start request")
 	errChan, err := s.driver.Start(stream.Context())
 	if err != nil {
-		s.logger.Errorf("Start failed: %v", err)
+		s.logger.WithError(err).Error("Start failed")
 		if sendErr := stream.Send(&pb.StartResponse{Success: false, Error: err.Error()}); sendErr != nil {
-			s.logger.Errorf("Failed to send error response: %v", sendErr)
+			s.logger.WithError(sendErr).Error("Failed to send error response")
 			return status.Errorf(codes.Internal, "failed to send error response: %v", sendErr)
 		}
 		return status.Errorf(codes.Internal, "failed to start driver: %v", err)
@@ -36,7 +35,7 @@ func (s *DriverServer) Start(_ *emptypb.Empty, stream pb.Driver_StartServer) err
 	// First send a success response upon receiving the errChan to unblock the client
 	// and start receiving errors (if any).
 	if err := stream.Send(&pb.StartResponse{Success: true}); err != nil {
-		s.logger.Errorf("Failed to send success response: %v", err)
+		s.logger.WithError(err).Error("Failed to send success response")
 		return status.Errorf(codes.Internal, "failed to send success response: %v", err)
 	}
 
@@ -46,15 +45,15 @@ func (s *DriverServer) Start(_ *emptypb.Empty, stream pb.Driver_StartServer) err
 			if !ok {
 				s.logger.Debug("Start error channel closed")
 				if err := stream.Send(&pb.StartResponse{Success: true}); err != nil {
-					s.logger.Errorf("Failed to send success response: %v", err)
+					s.logger.WithError(err).Error("Failed to send success response")
 					return status.Errorf(codes.Internal, "failed to send success response: %v", err)
 				}
 				return nil
 			}
 			if err != nil {
-				s.logger.Errorf("Error during Start: %v", err)
+				s.logger.WithError(err).Error("Error during Start")
 				if err := stream.Send(&pb.StartResponse{Error: err.Error(), Success: false}); err != nil {
-					s.logger.Errorf("Failed to send error response: %v", err)
+					s.logger.WithError(err).Error("Failed to send response")
 					return status.Errorf(codes.Internal, "failed to send error response: %v", err)
 				}
 			}
@@ -70,7 +69,7 @@ func (s *DriverServer) Configure(_ context.Context, req *pb.SetConfigRequest) (*
 	var inst limatype.Instance
 
 	if err := inst.UnmarshalJSON(req.InstanceConfigJson); err != nil {
-		s.logger.Errorf("Failed to unmarshal InstanceConfigJson: %v", err)
+		s.logger.WithError(err).Error("Failed to unmarshal InstanceConfigJson")
 		return &emptypb.Empty{}, err
 	}
 
@@ -83,7 +82,7 @@ func (s *DriverServer) GuestAgentConn(ctx context.Context, _ *emptypb.Empty) (*e
 	s.logger.Debug("Received GuestAgentConn request")
 	conn, connType, err := s.driver.GuestAgentConn(ctx)
 	if err != nil {
-		s.logger.Errorf("GuestAgentConn failed: %v", err)
+		s.logger.WithError(err).Error("GuestAgentConn failed")
 		return nil, err
 	}
 
@@ -93,7 +92,7 @@ func (s *DriverServer) GuestAgentConn(ctx context.Context, _ *emptypb.Empty) (*e
 		var lc net.ListenConfig
 		listener, err := lc.Listen(ctx, "unix", proxySocketPath)
 		if err != nil {
-			logrus.Errorf("Failed to create proxy socket: %v", err)
+			s.logger.WithError(err).Error("Failed to create proxy socket")
 			return nil, err
 		}
 
@@ -103,7 +102,7 @@ func (s *DriverServer) GuestAgentConn(ctx context.Context, _ *emptypb.Empty) (*e
 
 			proxyConn, err := listener.Accept()
 			if err != nil {
-				logrus.Errorf("Failed to accept proxy connection: %v", err)
+				s.logger.WithError(err).Error("Failed to accept proxy connection")
 				return
 			}
 
@@ -120,7 +119,7 @@ func (s *DriverServer) Info(_ context.Context, _ *emptypb.Empty) (*pb.InfoRespon
 
 	infoJSON, err := json.Marshal(info)
 	if err != nil {
-		s.logger.Errorf("Failed to marshal driver info: %v", err)
+		s.logger.WithError(err).Error("Failed to marshal driver info")
 		return nil, status.Errorf(codes.Internal, "failed to marshal driver info: %v", err)
 	}
 
@@ -133,7 +132,7 @@ func (s *DriverServer) Validate(ctx context.Context, empty *emptypb.Empty) (*emp
 	s.logger.Debugf("Received Validate request")
 	err := s.driver.Validate(ctx)
 	if err != nil {
-		s.logger.Errorf("Validation failed: %v", err)
+		s.logger.WithError(err).Error("Validation failed")
 		return empty, err
 	}
 	s.logger.Debug("Validation succeeded")
@@ -144,7 +143,7 @@ func (s *DriverServer) Create(ctx context.Context, empty *emptypb.Empty) (*empty
 	s.logger.Debug("Received Initialize request")
 	err := s.driver.Create(ctx)
 	if err != nil {
-		s.logger.Errorf("Initialization failed: %v", err)
+		s.logger.WithError(err).Error("Initialization failed")
 		return empty, err
 	}
 	s.logger.Debug("Initialization succeeded")
@@ -155,7 +154,7 @@ func (s *DriverServer) CreateDisk(ctx context.Context, empty *emptypb.Empty) (*e
 	s.logger.Debug("Received CreateDisk request")
 	err := s.driver.CreateDisk(ctx)
 	if err != nil {
-		s.logger.Errorf("CreateDisk failed: %v", err)
+		s.logger.WithError(err).Error("CreateDisk failed")
 		return empty, err
 	}
 	s.logger.Debug("CreateDisk succeeded")
@@ -166,7 +165,7 @@ func (s *DriverServer) Stop(ctx context.Context, empty *emptypb.Empty) (*emptypb
 	s.logger.Debug("Received Stop request")
 	err := s.driver.Stop(ctx)
 	if err != nil {
-		s.logger.Errorf("Stop failed: %v", err)
+		s.logger.WithError(err).Error("Stop failed")
 		return empty, err
 	}
 	s.logger.Debug("Stop succeeded")
@@ -177,7 +176,7 @@ func (s *DriverServer) RunGUI(_ context.Context, empty *emptypb.Empty) (*emptypb
 	s.logger.Debug("Received RunGUI request")
 	err := s.driver.RunGUI()
 	if err != nil {
-		s.logger.Errorf("RunGUI failed: %v", err)
+		s.logger.WithError(err).Error("RunGUI failed")
 		return empty, err
 	}
 	s.logger.Debug("RunGUI succeeded")
@@ -188,7 +187,7 @@ func (s *DriverServer) Delete(ctx context.Context, empty *emptypb.Empty) (*empty
 	s.logger.Debug("Received Delete request")
 	err := s.driver.Delete(ctx)
 	if err != nil {
-		s.logger.Errorf("Delete failed: %v", err)
+		s.logger.WithError(err).Error("Delete failed")
 		return empty, err
 	}
 	s.logger.Debug("Delete succeeded")
@@ -199,7 +198,7 @@ func (s *DriverServer) BootScripts(_ context.Context, _ *emptypb.Empty) (*pb.Boo
 	s.logger.Debug("Received BootScripts request")
 	scripts, err := s.driver.BootScripts()
 	if err != nil {
-		s.logger.Errorf("BootScripts failed: %v", err)
+		s.logger.WithError(err).Error("BootScripts failed")
 		return nil, err
 	}
 
@@ -217,7 +216,7 @@ func (s *DriverServer) SSHAddress(ctx context.Context, _ *emptypb.Empty) (*pb.SS
 	s.logger.Debug("Received SSHAddress request")
 	address, err := s.driver.SSHAddress(ctx)
 	if err != nil {
-		s.logger.Errorf("SSHAddress failed: %v", err)
+		s.logger.WithError(err).Error("SSHAddress failed")
 		return nil, err
 	}
 
@@ -229,7 +228,7 @@ func (s *DriverServer) ChangeDisplayPassword(ctx context.Context, req *pb.Change
 	s.logger.Debug("Received ChangeDisplayPassword request")
 	err := s.driver.ChangeDisplayPassword(ctx, req.Password)
 	if err != nil {
-		s.logger.Errorf("ChangeDisplayPassword failed: %v", err)
+		s.logger.WithError(err).Error("ChangeDisplayPassword failed")
 		return &emptypb.Empty{}, err
 	}
 	s.logger.Debug("ChangeDisplayPassword succeeded")
@@ -240,7 +239,7 @@ func (s *DriverServer) GetDisplayConnection(ctx context.Context, _ *emptypb.Empt
 	s.logger.Debug("Received GetDisplayConnection request")
 	conn, err := s.driver.DisplayConnection(ctx)
 	if err != nil {
-		s.logger.Errorf("GetDisplayConnection failed: %v", err)
+		s.logger.WithError(err).Error("GetDisplayConnection failed")
 		return nil, err
 	}
 	s.logger.Debug("GetDisplayConnection succeeded")
@@ -251,7 +250,7 @@ func (s *DriverServer) CreateSnapshot(ctx context.Context, req *pb.CreateSnapsho
 	s.logger.Debugf("Received CreateSnapshot request with tag: %s", req.Tag)
 	err := s.driver.CreateSnapshot(ctx, req.Tag)
 	if err != nil {
-		s.logger.Errorf("CreateSnapshot failed: %v", err)
+		s.logger.WithError(err).Error("CreateSnapshot failed")
 		return &emptypb.Empty{}, err
 	}
 	s.logger.Debug("CreateSnapshot succeeded")
@@ -262,7 +261,7 @@ func (s *DriverServer) ApplySnapshot(ctx context.Context, req *pb.ApplySnapshotR
 	s.logger.Debugf("Received ApplySnapshot request with tag: %s", req.Tag)
 	err := s.driver.ApplySnapshot(ctx, req.Tag)
 	if err != nil {
-		s.logger.Errorf("ApplySnapshot failed: %v", err)
+		s.logger.WithError(err).Error("ApplySnapshot failed")
 		return &emptypb.Empty{}, err
 	}
 	s.logger.Debug("ApplySnapshot succeeded")
@@ -273,7 +272,7 @@ func (s *DriverServer) DeleteSnapshot(ctx context.Context, req *pb.DeleteSnapsho
 	s.logger.Debugf("Received DeleteSnapshot request with tag: %s", req.Tag)
 	err := s.driver.DeleteSnapshot(ctx, req.Tag)
 	if err != nil {
-		s.logger.Errorf("DeleteSnapshot failed: %v", err)
+		s.logger.WithError(err).Error("DeleteSnapshot failed")
 		return &emptypb.Empty{}, err
 	}
 	s.logger.Debug("DeleteSnapshot succeeded")
@@ -284,7 +283,7 @@ func (s *DriverServer) ListSnapshots(ctx context.Context, _ *emptypb.Empty) (*pb
 	s.logger.Debug("Received ListSnapshots request")
 	snapshots, err := s.driver.ListSnapshots(ctx)
 	if err != nil {
-		s.logger.Errorf("ListSnapshots failed: %v", err)
+		s.logger.WithError(err).Error("ListSnapshots failed")
 		return nil, err
 	}
 	s.logger.Debug("ListSnapshots succeeded")
@@ -300,7 +299,7 @@ func (s *DriverServer) AdditionalSetupForSSH(ctx context.Context, _ *emptypb.Emp
 	s.logger.Debug("Received AdditionalSetupForSSH request")
 	err := s.driver.AdditionalSetupForSSH(ctx)
 	if err != nil {
-		s.logger.Errorf("AdditionalSetupForSSH failed: %v", err)
+		s.logger.WithError(err).Error("AdditionalSetupForSSH failed")
 		return &emptypb.Empty{}, err
 	}
 	s.logger.Debug("AdditionalSetupForSSH succeeded")
