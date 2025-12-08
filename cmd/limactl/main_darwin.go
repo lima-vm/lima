@@ -1,4 +1,4 @@
-//go:build !external_vz
+//go:build !external_vz && !no_vz
 
 // SPDX-FileCopyrightText: Copyright The Lima Authors
 // SPDX-License-Identifier: Apache-2.0
