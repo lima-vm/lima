@@ -24,7 +24,7 @@ func (d *DriverClient) Validate(ctx context.Context) error {
 	defer cancel()
 	_, err := d.DriverSvc.Validate(ctx, &emptypb.Empty{})
 	if err != nil {
-		d.logger.Errorf("Validation failed: %v", err)
+		d.logger.WithError(err).Error("Validation failed")
 		return err
 	}
 
@@ -37,7 +37,7 @@ func (d *DriverClient) Create(ctx context.Context) error {
 
 	_, err := d.DriverSvc.Create(ctx, &emptypb.Empty{})
 	if err != nil {
-		d.logger.Errorf("Initialization failed: %v", err)
+		d.logger.WithError(err).Error("Initialization failed")
 		return err
 	}
 
@@ -50,7 +50,7 @@ func (d *DriverClient) CreateDisk(ctx context.Context) error {
 
 	_, err := d.DriverSvc.CreateDisk(ctx, &emptypb.Empty{})
 	if err != nil {
-		d.logger.Errorf("Disk creation failed: %v", err)
+		d.logger.WithError(err).Error("Disk creation failed")
 		return err
 	}
 
@@ -66,7 +66,7 @@ func (d *DriverClient) Start(ctx context.Context) (chan error, error) {
 
 	stream, err := d.DriverSvc.Start(ctx, &emptypb.Empty{})
 	if err != nil {
-		d.logger.Errorf("Failed to start driver instance: %v", err)
+		d.logger.WithError(err).Error("Failed to start driver instance")
 		return nil, err
 	}
 
@@ -115,7 +115,7 @@ func (d *DriverClient) Stop(ctx context.Context) error {
 
 	_, err := d.DriverSvc.Stop(ctx, &emptypb.Empty{})
 	if err != nil {
-		d.logger.Errorf("Failed to stop driver instance: %v", err)
+		d.logger.WithError(err).Error("Failed to stop driver instance")
 		return err
 	}
 
@@ -128,7 +128,7 @@ func (d *DriverClient) Delete(ctx context.Context) error {
 
 	_, err := d.DriverSvc.Delete(ctx, &emptypb.Empty{})
 	if err != nil {
-		d.logger.Errorf("Failed to delete driver instance: %v", err)
+		d.logger.WithError(err).Error("Failed to deleted driver instance")
 		return err
 	}
 
@@ -148,7 +148,7 @@ func (d *DriverClient) RunGUI() error {
 
 	_, err := d.DriverSvc.RunGUI(ctx, &emptypb.Empty{})
 	if err != nil {
-		d.logger.Errorf("Failed to run GUI: %v", err)
+		d.logger.WithError(err).Error("Failed to run GUI")
 		return err
 	}
 
@@ -163,7 +163,7 @@ func (d *DriverClient) ChangeDisplayPassword(ctx context.Context, password strin
 		Password: password,
 	})
 	if err != nil {
-		d.logger.Errorf("Failed to change display password: %v", err)
+		d.logger.WithError(err).Error("Failed to change display password")
 		return err
 	}
 
@@ -176,7 +176,7 @@ func (d *DriverClient) DisplayConnection(ctx context.Context) (string, error) {
 
 	resp, err := d.DriverSvc.GetDisplayConnection(ctx, &emptypb.Empty{})
 	if err != nil {
-		d.logger.Errorf("Failed to get display connection: %v", err)
+		d.logger.WithError(err).Error("Failed to get display connection")
 		return "", err
 	}
 
@@ -191,7 +191,7 @@ func (d *DriverClient) CreateSnapshot(ctx context.Context, tag string) error {
 		Tag: tag,
 	})
 	if err != nil {
-		d.logger.Errorf("Failed to create snapshot: %v", err)
+		d.logger.WithError(err).Error("Failed to create snapshot")
 		return err
 	}
 
@@ -206,7 +206,7 @@ func (d *DriverClient) ApplySnapshot(ctx context.Context, tag string) error {
 		Tag: tag,
 	})
 	if err != nil {
-		d.logger.Errorf("Failed to apply snapshot: %v", err)
+		d.logger.WithError(err).Error("Failed to apply snapshot")
 		return err
 	}
 
@@ -221,7 +221,7 @@ func (d *DriverClient) DeleteSnapshot(ctx context.Context, tag string) error {
 		Tag: tag,
 	})
 	if err != nil {
-		d.logger.Errorf("Failed to delete snapshot: %v", err)
+		d.logger.WithError(err).Error("Failed to delete snapshot")
 		return err
 	}
 
@@ -234,7 +234,7 @@ func (d *DriverClient) ListSnapshots(ctx context.Context) (string, error) {
 
 	resp, err := d.DriverSvc.ListSnapshots(ctx, &emptypb.Empty{})
 	if err != nil {
-		d.logger.Errorf("Failed to list snapshots: %v", err)
+		d.logger.WithError(err).Error("Failed to list snapshots")
 		return "", err
 	}
 
@@ -250,7 +250,7 @@ func (d *DriverClient) ForwardGuestAgent() bool {
 
 	resp, err := d.DriverSvc.ForwardGuestAgent(ctx, &emptypb.Empty{})
 	if err != nil {
-		d.logger.Errorf("Failed to check guest agent forwarding: %v", err)
+		d.logger.WithError(err).Error("Failed to check guest agent forwarding")
 		return false
 	}
 
@@ -261,7 +261,7 @@ func (d *DriverClient) GuestAgentConn(ctx context.Context) (net.Conn, string, er
 	d.logger.Info("Getting guest agent connection")
 	_, err := d.DriverSvc.GuestAgentConn(ctx, &emptypb.Empty{})
 	if err != nil {
-		d.logger.Errorf("Failed to get guest agent connection: %v", err)
+		d.logger.WithError(err).Error("Failed to get guest agent connection")
 		return nil, "", err
 	}
 
@@ -276,13 +276,13 @@ func (d *DriverClient) Info() driver.Info {
 
 	resp, err := d.DriverSvc.Info(ctx, &emptypb.Empty{})
 	if err != nil {
-		d.logger.Errorf("Failed to get driver info: %v", err)
+		d.logger.WithError(err).Error("Failed to get driver info")
 		return driver.Info{}
 	}
 
 	var info driver.Info
 	if err := json.Unmarshal(resp.InfoJson, &info); err != nil {
-		d.logger.Errorf("Failed to unmarshal driver info: %v", err)
+		d.logger.WithError(err).Error("Failed to unmarshal driver info")
 		return driver.Info{}
 	}
 
@@ -295,7 +295,7 @@ func (d *DriverClient) Configure(inst *limatype.Instance) *driver.ConfiguredDriv
 
 	instJSON, err := inst.MarshalJSON()
 	if err != nil {
-		d.logger.Errorf("Failed to marshal instance config: %v", err)
+		d.logger.WithError(err).Error("Failed to marshal instance config")
 		return nil
 	}
 
@@ -306,7 +306,7 @@ func (d *DriverClient) Configure(inst *limatype.Instance) *driver.ConfiguredDriv
 		InstanceConfigJson: instJSON,
 	})
 	if err != nil {
-		d.logger.Errorf("Failed to set config: %v", err)
+		d.logger.WithError(err).Error("Failed to set config")
 		return nil
 	}
 
@@ -325,7 +325,7 @@ func (d *DriverClient) SSHAddress(ctx context.Context) (string, error) {
 
 	resp, err := d.DriverSvc.SSHAddress(ctx, &emptypb.Empty{})
 	if err != nil {
-		d.logger.Errorf("Failed to get SSH address: %v", err)
+		d.logger.WithError(err).Error("Failed to get SSH address")
 		return "", err
 	}
 
@@ -337,7 +337,7 @@ func (d *DriverClient) BootScripts() (map[string][]byte, error) {
 	d.logger.Debug("Getting boot scripts for the driver instance")
 	resp, err := d.DriverSvc.BootScripts(context.Background(), &emptypb.Empty{})
 	if err != nil {
-		d.logger.Errorf("Failed to get boot scripts: %v", err)
+		d.logger.WithError(err).Error("Failed to get boot scripts")
 		return nil, err
 	}
 
@@ -350,7 +350,7 @@ func (d *DriverClient) AdditionalSetupForSSH(ctx context.Context) error {
 
 	_, err := d.DriverSvc.AdditionalSetupForSSH(ctx, &emptypb.Empty{})
 	if err != nil {
-		d.logger.Errorf("Failed to perform additional setup for SSH: %v", err)
+		d.logger.WithError(err).Error("Failed to perform additional setup for SSH")
 		return err
 	}
 
