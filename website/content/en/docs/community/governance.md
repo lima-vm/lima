@@ -21,7 +21,7 @@ Maintainers consist of two roles:
   Committers must enable 2FA for their GitHub accounts.
   Committers are also recognized as Maintainers in <https://github.com/cncf/foundation/blob/main/project-maintainers.csv>.
 
-- **Reviewer** (Limited maintainership): Reviewers may moderate GitHub issues and pull requests (such as adding labels and cleaning up spams),
+- **Reviewer** (Limited maintainership): Reviewers may moderate GitHub issues and pull requests (such as adding labels and cleaning up spams), and make posts on [social accounts](./_index.md#social-accounts),
   but they do not have any access to merge pull requests nor push commits.
   A Reviewer is considered as a candidate to become a Committer.
   Reviewers are not recognized as Maintainers in <https://github.com/cncf/foundation/blob/main/project-maintainers.csv>.
