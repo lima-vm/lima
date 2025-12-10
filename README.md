@@ -84,6 +84,13 @@ GUI:
   - Meeting notes & agenda proposals: https://github.com/lima-vm/lima/discussions/categories/meetings
   - Calendar: https://zoom-lfx.platform.linuxfoundation.org/meetings/lima
 
+### Social media accounts
+
+Follow us for project updates, release announcements, and community news:
+
+- https://x.com/@TheLimaProject
+- https://mastodon.social/@TheLimaProject
+
 ### Code of Conduct
 Lima follows the [CNCF Code of Conduct](https://github.com/cncf/foundation/blob/main/code-of-conduct.md).
 

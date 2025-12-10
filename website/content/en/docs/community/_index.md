@@ -19,6 +19,13 @@ The GitHub repo of Lima can be found at <https://github.com/lima-vm/lima>.
 
 - See <https://github.com/lima-vm/.github/blob/main/SECURITY.md> for how to report security issues.
 
+## Social media accounts
+
+Follow us for project updates, release announcements, and community news:
+
+- https://x.com/@TheLimaProject
+- https://mastodon.social/@TheLimaProject
+
 ## Projects using Lima
 
 ### Container environments

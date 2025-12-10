@@ -150,6 +150,7 @@ enable = false
 enable = false
 
 [params.links]
+# TODO: unify developer and user links
 [[params.links.developer]]
   name = "GitHub"
   url = "https://github.com/lima-vm/lima"
@@ -160,6 +161,16 @@ enable = false
   url = "https://slack.cncf.io/"
   icon = "fab fa-slack"
   desc = "Chat with other project developers"
+[[params.links.developer]]
+  name = "X (Twitter)"
+  url = "https://x.com/@TheLimaProject"
+  icon = "fab fa-x-twitter"
+  desc = "Follow for updates"
+[[params.links.developer]]
+  name = "Mastodon"
+  url = "https://mastodon.social/@TheLimaProject"
+  icon = "fab fa-mastodon"
+  desc = "Follow for updates"
 [[params.links.user]]
   name = "Discussion"
   url = "https://github.com/lima-vm/lima/discussions"
@@ -170,6 +181,16 @@ enable = false
   url = "https://slack.cncf.io/"
   icon = "fab fa-slack"
   desc = "Chat with other project users"
+[[params.links.user]]
+  name = "X (Twitter)"
+  url = "https://x.com/@TheLimaProject"
+  icon = "fab fa-x-twitter"
+  desc = "Follow for updates"
+[[params.links.user]]
+  name = "Mastodon"
+  url = "https://mastodon.social/@TheLimaProject"
+  icon = "fab fa-mastodon"
+  desc = "Follow for updates"
 
 [params.mermaid]
   enable = true
