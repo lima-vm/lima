@@ -46,7 +46,7 @@ See also the [Contributing](../contributing) page.
 | Oleksandr Redko    | Individual   | Reviewer  | [@alexandear](https://github.com/alexandear)     | [50F8 9811 D8D8 3E79 3E7E  0680 A947 E3F1 1A61 2A57](https://github.com/alexandear.gpg)   |
 | Norio Nomura       | Individual   | Reviewer  | [@norio-nomura](https://github.com/norio-nomura) | [0010 36FA 2504 DBFF 37BA  2EF8 D4A7 318E B7F7 138D](https://github.com/norio-nomura.gpg) |
 | Nir Soffer         | IBM          | Reviewer  | [@nirs](https://github.com/nirs)                 | [6F81 B717 51A1 4171 4C09  AF19 4C67 29D7 B2DD 8AFF](https://github.com/nirs.gpg)         |
-| Ansuman Sahoo      | Individual   | Reviewer  | [@unsuman](https://github.com/unsuman)           | [7753 6182 4CCC 2C4F DEFF  EF84 7431 C698 09A1 4C8D](https://github.com/unsuman.gpg)      |
+| Ansuman Sahoo      | Individual   | Reviewer  | [@unsuman](https://github.com/unsuman)           | [0AA6 D4D0 E084 D8B9 36B7  68D8 FF58 56B9 C216 D800](https://github.com/unsuman.gpg)      |
 
 ### Emeritus maintainers
 (No emeritus maintainers yet)
