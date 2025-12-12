@@ -121,7 +121,7 @@ func cloneOrRenameAction(cmd *cobra.Command, args []string) error {
 	}
 
 	if tty && !flags.Changed("start") {
-		start, err = askWhetherToStart()
+		start, err = askWhetherToStart(cmd)
 		if err != nil {
 			return err
 		}
