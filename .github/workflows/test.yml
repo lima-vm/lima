@@ -220,14 +220,6 @@ jobs:
     timeout-minutes: 120
     steps:
     - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
-    - name: Fetch homebrew-core commit messages
-      uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
-      with:
-        # needed by ./hack/brew-install-version.sh
-        repository: homebrew/homebrew-core
-        path: homebrew-core
-        fetch-depth: 0
-        filter: tree:0
     - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c  # v6.1.0
       with:
         go-version: 1.25.x
@@ -247,21 +239,13 @@ jobs:
     - name: Validate templates
       # Can't validate base templates in `_default` because they have no images
       run: find -L templates -name '*.yaml' ! -path '*/_default/*' | xargs limactl validate
-    - name: Install test dependencies (QEMU 10.1.1)
-      run: |
-        brew install bash coreutils
-        # QEMU 10.1.2 seems to break on GitHub runners
-        # We revert back to 10.1.1, which seems to work fine
-        git config --global user.name "GitHub Actions Bot"
-        git config --global user.email "nobody@localhost"
-        ./hack/brew-install-version.sh qemu 10.1.1
     - name: Install test dependencies
       # QEMU:      required by Lima itself
       # bash:      required by test-templates.sh (OS version of bash is too old)
       # coreutils: required by test-templates.sh for the "timeout" command
       # w3m :      required by test-templates.sh for port forwarding tests
       # socat:     required by test-templates.sh for port forwarding tests
-      run: brew install bash coreutils w3m socat
+      run: brew install qemu bash coreutils w3m socat
     - name: "Adjust LIMACTL_CREATE_ARGS"
       run: echo "LIMACTL_CREATE_ARGS=${LIMACTL_CREATE_ARGS} --vm-type=qemu" >>$GITHUB_ENV
     - name: Cache image used by default.yaml
@@ -439,14 +423,6 @@ jobs:
     timeout-minutes: 120
     steps:
     - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
-    - name: Fetch homebrew-core commit messages
-      uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
-      with:
-        # needed by ./hack/brew-install-version.sh
-        repository: homebrew/homebrew-core
-        path: homebrew-core
-        fetch-depth: 0
-        filter: tree:0
     - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c  # v6.1.0
       with:
         go-version: 1.25.x
@@ -465,16 +441,8 @@ jobs:
       uses: ./.github/actions/setup_cache_for_template
       with:
         template: templates/default.yaml
-    - name: Install test dependencies (QEMU 10.1.1)
-      run: |
-        brew install bash coreutils
-        # QEMU 10.1.2 seems to break on GitHub runners
-        # We revert back to 10.1.1, which seems to work fine
-        git config --global user.name "GitHub Actions Bot"
-        git config --global user.email "nobody@localhost"
-        ./hack/brew-install-version.sh qemu 10.1.1
     - name: Install test dependencies
-      run: brew install bash coreutils w3m socat
+      run: brew install qemu bash coreutils w3m socat
     - name: Install socket_vmnet
       env:
         SOCKET_VMNET_VERSION: v1.2.2
