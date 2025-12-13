@@ -25,14 +25,24 @@ for i in $(seq 0 $((LIMA_CIDATA_DISKS - 1))); do
 	# first time setup
 	if [[ ! -b "/dev/disk/by-label/lima-${DISK_NAME}" ]]; then
 		if $FORMAT_DISK; then
-			echo 'type=linux' | sfdisk --label gpt "/dev/${DEVICE_NAME}"
-			# shellcheck disable=SC2086
-			mkfs.$FORMAT_FSTYPE $FORMAT_FSARGS -L "lima-${DISK_NAME}" "/dev/${DEVICE_NAME}1"
+			if [ "$FORMAT_FSTYPE" == "swap" ]; then
+				echo 'type=swap' | sfdisk --label gpt "/dev/${DEVICE_NAME}"
+				# shellcheck disable=SC2086
+				mkswap $FORMAT_FSARGS -L "lima-${DISK_NAME}" "/dev/${DEVICE_NAME}1"
+			else
+				echo 'type=linux' | sfdisk --label gpt "/dev/${DEVICE_NAME}"
+				# shellcheck disable=SC2086
+				mkfs.$FORMAT_FSTYPE $FORMAT_FSARGS -L "lima-${DISK_NAME}" "/dev/${DEVICE_NAME}1"
+			fi
 		fi
 	fi
 
-	mkdir -p "/mnt/lima-${DISK_NAME}"
-	mount -t "$FORMAT_FSTYPE" "/dev/${DEVICE_NAME}1" "/mnt/lima-${DISK_NAME}"
+	if [ "$FORMAT_FSTYPE" == "swap" ]; then
+		swapon "/dev/${DEVICE_NAME}1"
+	else
+		mkdir -p "/mnt/lima-${DISK_NAME}"
+		mount -t "$FORMAT_FSTYPE" "/dev/${DEVICE_NAME}1" "/mnt/lima-${DISK_NAME}"
+	fi
 	if command -v growpart >/dev/null 2>&1 && command -v resize2fs >/dev/null 2>&1; then
 		growpart "/dev/${DEVICE_NAME}" 1 || true
 		# Only resize when filesystem is in a healthy state
