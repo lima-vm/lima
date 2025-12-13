@@ -62,10 +62,10 @@ func convertTo(destType image.Type, source, dest string, size *int64, allowSourc
 	logrus.Infof("Converting %q (%s) to a %s disk %q", source, srcImg.Type(), destType, dest)
 	switch t := srcImg.Type(); t {
 	case raw.Type:
-		if err = srcF.Close(); err != nil {
-			return err
-		}
 		if destType == raw.Type {
+			if err = srcF.Close(); err != nil {
+				return err
+			}
 			return convertRawToRaw(source, dest, size)
 		}
 	case qcow2.Type:
