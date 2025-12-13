@@ -94,6 +94,12 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		}
 		return err
 	}
+	if inst.Config == nil {
+		if len(inst.Errors) > 0 {
+			return fmt.Errorf("instance %q has configuration errors: %w", instName, errors.Join(inst.Errors...))
+		}
+		return fmt.Errorf("instance %q has no configuration", instName)
+	}
 	if inst.Status == limatype.StatusStopped {
 		startNow, err := flags.GetBool("start")
 		if err != nil {
@@ -155,14 +161,14 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	// changeDirCmd := "cd workDir || exit 1"                  if workDir != ""
 	//              := "cd hostCurrentDir || cd hostHomeDir"   if workDir == ""
 	var changeDirCmd string
-	workDir, err := cmd.Flags().GetString("workdir")
+	workDir, err := flags.GetString("workdir")
 	if err != nil {
 		return err
 	}
 	if workDir != "" {
 		changeDirCmd = fmt.Sprintf("cd %s || exit 1", shellescape.Quote(workDir))
 		// FIXME: check whether y.Mounts contains the home, not just len > 0
-	} else if len(inst.Config.Mounts) > 0 || inst.VMType == limatype.WSL2 {
+	} else if inst.Config != nil && (len(inst.Config.Mounts) > 0 || inst.VMType == limatype.WSL2) {
 		hostCurrentDir, err := os.Getwd()
 		if err == nil && runtime.GOOS == "windows" {
 			hostCurrentDir, err = mountDirFromWindowsDir(ctx, inst, hostCurrentDir)
@@ -191,7 +197,7 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	}
 	logrus.Debugf("changeDirCmd=%q", changeDirCmd)
 
-	shell, err := cmd.Flags().GetString("shell")
+	shell, err := flags.GetString("shell")
 	if err != nil {
 		return err
 	}
@@ -202,7 +208,7 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	}
 	// Handle environment variable propagation
 	var envPrefix string
-	preserveEnv, err := cmd.Flags().GetBool("preserve-env")
+	preserveEnv, err := flags.GetBool("preserve-env")
 	if err != nil {
 		return err
 	}
