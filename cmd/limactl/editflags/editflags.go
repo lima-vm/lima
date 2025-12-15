@@ -191,7 +191,21 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 	}
 	d := defaultExprFunc
 	defs := []def{
-		{"cpus", d(".cpus = %s"), false, false},
+		{
+			"cpus",
+			func(_ *flag.Flag) ([]string, error) {
+				numCpus, err := flags.GetInt("cpus")
+				if err != nil {
+					return nil, err
+				}
+				if numCpus < 0 {
+					return nil, errors.New("invalid value for number of cpus, must be >= 0")
+				}
+				return []string{fmt.Sprintf(".cpus = %d", numCpus)}, nil
+			},
+			false,
+			false,
+		},
 		{
 			"dns",
 			func(_ *flag.Flag) ([]string, error) {
