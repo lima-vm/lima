@@ -50,7 +50,7 @@ require (
 	golang.org/x/sys v0.39.0 // gomodjail:unconfined
 	golang.org/x/text v0.32.0
 	google.golang.org/grpc v1.77.0
-	google.golang.org/protobuf v1.36.10 // gomodjail:unconfined
+	google.golang.org/protobuf v1.36.11 // gomodjail:unconfined
 	gopkg.in/op/go-logging.v1 v1.0.0-20160211212156-b2cb9fa56473
 	gotest.tools/v3 v3.5.2
 	k8s.io/api v0.34.3
