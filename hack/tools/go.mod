@@ -17,7 +17,7 @@ require (
 	github.com/golangci/golangci-lint/v2 v2.6.2
 	github.com/yoheimuta/protolint v0.56.4
 	google.golang.org/grpc v1.77.0
-	google.golang.org/protobuf v1.36.10
+	google.golang.org/protobuf v1.36.11
 	mvdan.cc/sh/v3 v3.12.0
 )
 
