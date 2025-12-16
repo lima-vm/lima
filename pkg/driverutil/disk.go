@@ -38,23 +38,23 @@ func EnsureDisk(ctx context.Context, instDir, diskSize string, diskImageFormat i
 	if err != nil {
 		return err
 	}
+	destDisk := baseDisk
 	if isBaseDiskISO {
-		// Create an empty data volume (sparse)
+		destDisk = diffDisk
+
+		// Create an empty data volume for the diff disk
 		diffDiskF, err := os.Create(diffDisk)
 		if err != nil {
 			return err
 		}
 
-		err = diskUtil.MakeSparse(ctx, diffDiskF, 0)
-		if err != nil {
-			diffDiskF.Close()
-			return fmt.Errorf("failed to create sparse diff disk %q: %w", diffDisk, err)
+		if err = diffDiskF.Close(); err != nil {
+			return err
 		}
-		return diffDiskF.Close()
 	}
 	// Check whether to use ASIF format
 
-	if err = diskUtil.Convert(ctx, diskImageFormat, baseDisk, diffDisk, &diskSizeInBytes, false); err != nil {
+	if err = diskUtil.Convert(ctx, diskImageFormat, destDisk, diffDisk, &diskSizeInBytes, false); err != nil {
 		return fmt.Errorf("failed to convert %q to a disk %q: %w", baseDisk, diffDisk, err)
 	}
 	return err
