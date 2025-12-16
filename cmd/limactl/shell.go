@@ -94,6 +94,12 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		}
 		return err
 	}
+	if inst.Config == nil {
+		if len(inst.Errors) > 0 {
+			return fmt.Errorf("instance %q has configuration errors: %w", instName, errors.Join(inst.Errors...))
+		}
+		return fmt.Errorf("instance %q has no configuration", instName)
+	}
 	if inst.Status == limatype.StatusStopped {
 		startNow, err := flags.GetBool("start")
 		if err != nil {
