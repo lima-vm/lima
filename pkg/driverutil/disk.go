@@ -38,9 +38,9 @@ func EnsureDisk(ctx context.Context, instDir, diskSize string, diskImageFormat i
 	if err != nil {
 		return err
 	}
-	destDisk := baseDisk
+	srcDisk := baseDisk
 	if isBaseDiskISO {
-		destDisk = diffDisk
+		srcDisk = diffDisk
 
 		// Create an empty data volume for the diff disk
 		diffDiskF, err := os.Create(diffDisk)
@@ -54,8 +54,8 @@ func EnsureDisk(ctx context.Context, instDir, diskSize string, diskImageFormat i
 	}
 	// Check whether to use ASIF format
 
-	if err = diskUtil.Convert(ctx, diskImageFormat, destDisk, diffDisk, &diskSizeInBytes, false); err != nil {
-		return fmt.Errorf("failed to convert %q to a disk %q: %w", baseDisk, diffDisk, err)
+	if err = diskUtil.Convert(ctx, diskImageFormat, srcDisk, diffDisk, &diskSizeInBytes, false); err != nil {
+		return fmt.Errorf("failed to convert %q to a disk %q: %w", srcDisk, diffDisk, err)
 	}
 	return err
 }
