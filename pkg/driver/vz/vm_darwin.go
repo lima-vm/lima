@@ -500,7 +500,7 @@ func attachDisks(ctx context.Context, inst *limatype.Instance, vmConfig *vz.Virt
 
 	for _, d := range inst.Config.AdditionalDisks {
 		diskName := d.Name
-		disk, err := store.InspectDisk(diskName)
+		disk, err := store.InspectDisk(diskName, d.FSType)
 		if err != nil {
 			return fmt.Errorf("failed to run load disk %q: %w", diskName, err)
 		}
