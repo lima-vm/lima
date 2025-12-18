@@ -41,6 +41,12 @@ func Select(message string, options []string) (int, error) {
 	return ans, nil
 }
 
+// InputIsTTY returns true if reader is coming from stdin, and stdin is a terminal device,
+// not a regular file, stream, or pipe etc.
+func InputIsTTY(reader io.Reader) bool {
+	return reader == os.Stdin && (isatty.IsTerminal(os.Stdin.Fd()) || isatty.IsCygwinTerminal(os.Stdin.Fd()))
+}
+
 // OutputIsTTY returns true if writer is going to stdout, and stdout is a terminal device,
 // not a regular file, stream, or pipe etc.
 func OutputIsTTY(writer io.Writer) bool {
