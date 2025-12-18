@@ -40,7 +40,7 @@ provision:
     set -eux -o pipefail
     test -d ~/usernetes && exit 0
     cd ~
-    git clone --branch=gen2-v20240814.0 https://github.com/rootless-containers/usernetes
+    git clone --branch=gen2-v20251218.0 https://github.com/rootless-containers/usernetes
 - mode: user
   script: |
     #!/bin/bash
@@ -55,18 +55,6 @@ provision:
     test -e ~/usernetes/kubeconfig && exit 0
     cd ~/usernetes
     export KUBECONFIG="$(pwd)/kubeconfig"
-    patch --forward -r - kubeadm-config.yaml <<EOF
-    @@ -7,6 +7,9 @@
-     ---
-     apiVersion: kubeadm.k8s.io/v1beta3
-     kind: ClusterConfiguration
-    +apiServer:
-    +  certSANs:
-    +  - "127.0.0.1"
-     networking:
-       serviceSubnet: "10.96.0.0/16"
-       podSubnet: "10.244.0.0/16"
-    EOF
     make up
     sleep 5
     make kubeadm-init
