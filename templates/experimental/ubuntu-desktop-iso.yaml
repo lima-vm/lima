@@ -1,0 +1,56 @@
+# Ubuntu Desktop (Xubuntu) with SPICE Display
+# Uses the actual Ubuntu Desktop ISO
+
+vmType: qemu
+
+# SPICE display with audio
+video:
+  display: "spice,port=5930,addr=127.0.0.1,disable-ticketing=on"
+
+audio:
+  device: "default"
+
+# Use Ubuntu Desktop ISO (Xubuntu is lighter than full Ubuntu Desktop)
+images:
+- location: "https://cdimage.ubuntu.com/xubuntu/releases/24.04/release/xubuntu-24.04.1-desktop-amd64.iso"
+  arch: "x86_64"
+- location: "https://cdimage.ubuntu.com/xubuntu/releases/24.04/release/xubuntu-24.04.1-desktop-arm64.iso"
+  arch: "aarch64"
+
+cpus: 4
+memory: "8GiB"
+disk: "50GiB"
+
+# Don't mount host directories for a desktop install
+mounts: []
+
+ssh:
+  localPort: 0
+  # Desktop ISO won't have cloud-init, so no automatic SSH setup
+  loadDotSSHPubKeys: false
+
+firmware:
+  legacyBIOS: false
+
+message: |
+  ======================================================================
+  Xubuntu Desktop ISO Booted - Manual Installation Required
+  ======================================================================
+
+  This boots the Xubuntu Desktop installer ISO.
+
+  1. Connect to the SPICE display:
+     remote-viewer spice://127.0.0.1:5930
+
+  2. Follow the graphical installer in the window
+     - Choose "Install Xubuntu"
+     - Set username/password during installation
+     - Complete the installation process
+
+  Note: This is a manual desktop installation, not automated.
+
+  Required: Install SPICE viewer first
+    brew install virt-viewer
+
+  After installation, the desktop will boot into the GUI.
+  ======================================================================
