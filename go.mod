@@ -21,7 +21,7 @@ require (
 	github.com/diskfs/go-diskfs v1.7.0 // gomodjail:unconfined
 	github.com/docker/go-units v0.5.0
 	github.com/foxcpp/go-mockdns v1.1.0
-	github.com/goccy/go-yaml v1.19.0
+	github.com/goccy/go-yaml v1.19.1
 	github.com/google/go-cmp v0.7.0
 	github.com/google/yamlfmt v0.20.0
 	github.com/invopop/jsonschema v0.13.0
