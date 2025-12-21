@@ -64,6 +64,8 @@ func newShellCommand() *cobra.Command {
 	shellCmd.Flags().Bool("reconnect", false, "Reconnect to the SSH session")
 	shellCmd.Flags().Bool("preserve-env", false, "Propagate environment variables to the shell")
 	shellCmd.Flags().Bool("start", false, "Start the instance if it is not already running")
+	shellCmd.Flags().StringSlice("allow-env", []string{}, "Comma-separated list of environment variable patterns to allow when --preserve-env is set (overrides LIMA_SHELLENV_ALLOW)")
+	shellCmd.Flags().StringSlice("block-env", []string{}, "Comma-separated list of environment variable patterns to allow when --preserve-env is set (overrides LIMA_SHELLENV_BLOCK)")
 	return shellCmd
 }
 
@@ -216,8 +218,16 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	allowListRaw, err := cmd.Flags().GetStringSlice("allow-env")
+	if err != nil {
+		return err
+	}
+	blockListRaw, err := cmd.Flags().GetStringSlice("block-env")
+	if err != nil {
+		return err
+	}
 	if preserveEnv {
-		filteredEnv := envutil.FilterEnvironment()
+		filteredEnv := envutil.FilterEnvironment(allowListRaw, blockListRaw)
 		if len(filteredEnv) > 0 {
 			envPrefix = "env "
 			for _, envVar := range filteredEnv {
