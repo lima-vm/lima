@@ -790,7 +790,8 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	args = append(args, "-device", virtioNet+",netdev=net0,mac="+limayaml.MACAddress(cfg.InstanceDir))
 
 	for i, nw := range y.Networks {
-		if nw.Lima != "" {
+		switch {
+		case nw.Lima != "":
 			nwCfg, err := networks.LoadConfig()
 			if err != nil {
 				return "", nil, err
@@ -821,15 +822,22 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 					return "", nil, err
 				}
 				args = append(args, "-netdev", fmt.Sprintf("socket,id=net%d,fd={{ fd_connect %q }}", i+1, sock))
+				args = append(args, "-device", fmt.Sprintf("%s,netdev=net%d,mac=%s", virtioNet, i+1, nw.MACAddress))
 				// TODO: should we also validate that the socket exists, or do we rely on the
 				// networks reconciler to throw an error when the network cannot start?
 			}
-		} else if nw.Socket != "" {
+		case nw.Socket != "":
 			args = append(args, "-netdev", fmt.Sprintf("socket,id=net%d,fd={{ fd_connect %q }}", i+1, nw.Socket))
-		} else {
+			args = append(args, "-device", fmt.Sprintf("%s,netdev=net%d,mac=%s", virtioNet, i+1, nw.MACAddress))
+		case nw.Vmnet != "":
+			if runtime.GOOS != "darwin" {
+				return "", nil, fmt.Errorf("%+v is only supported on macOS", nw)
+			}
+			args = append(args, "-netdev", fmt.Sprintf("socket,id=net%d,fd={{ fd_connect_vmnet %q }}", i+1, nw.Vmnet))
+			args = append(args, "-device", fmt.Sprintf("%s,netdev=net%d,mac=%s", virtioNet, i+1, nw.MACAddress))
+		default:
 			return "", nil, fmt.Errorf("invalid network spec %+v", nw)
 		}
-		args = append(args, "-device", fmt.Sprintf("%s,netdev=net%d,mac=%s", virtioNet, i+1, nw.MACAddress))
 	}
 
 	// virtio-rng-pci accelerates starting up the OS, according to https://wiki.gentoo.org/wiki/QEMU/Options
