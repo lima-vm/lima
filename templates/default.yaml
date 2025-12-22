@@ -473,7 +473,7 @@ networks:
 # Needs `vmType: vz`
 # - vzNAT: true
 
-# The vmnet network interfaces "shared" and "host" can be used with `vmType: vz` or `vmType: QEMU`.
+# The vmnet network interfaces "shared" and "host" can be used with `vmType: vz`, `vmType: qemu`, or `vmType: krunkit`.
 # Requires macOS 26.0 or later.
 # - vmnet: shared
 # - vmnet: host

@@ -75,16 +75,22 @@ func (l *LimaKrunkitDriver) Start(ctx context.Context) (chan error, error) {
 		return nil, fmt.Errorf("failed to start usernet: %w", err)
 	}
 
-	krunkitCmd, err := Cmdline(l.Instance)
+	ctx, cancel := context.WithCancel(context.Background())
+
+	krunkitCmd, err := Cmdline(ctx, l.Instance)
 	if err != nil {
+		cancel()
 		return nil, fmt.Errorf("failed to construct krunkit command line: %w", err)
 	}
 	// Detach krunkit process from parent Lima process
 	krunkitCmd.SysProcAttr = executil.BackgroundSysProcAttr
 
+	logrus.Debugf("krunkitCmd: %v", krunkitCmd)
+
 	logPath := filepath.Join(l.Instance.Dir, "krunkit.log")
 	logfile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
 	if err != nil {
+		cancel()
 		return nil, fmt.Errorf("failed to open krunkit logfile: %w", err)
 	}
 	krunkitCmd.Stderr = logfile
@@ -93,6 +99,7 @@ func (l *LimaKrunkitDriver) Start(ctx context.Context) (chan error, error) {
 	logrus.Infof("krunkitCmd.Args: %v", krunkitCmd.Args)
 
 	if err := krunkitCmd.Start(); err != nil {
+		cancel()
 		logfile.Close()
 		return nil, errors.New("failed to start krunkitCmd")
 	}
@@ -106,6 +113,7 @@ func (l *LimaKrunkitDriver) Start(ctx context.Context) (chan error, error) {
 	l.krunkitWaitCh = make(chan error, 1)
 	go func() {
 		defer func() {
+			cancel()
 			logfile.Close()
 			os.RemoveAll(pidPath)
 			close(l.krunkitWaitCh)

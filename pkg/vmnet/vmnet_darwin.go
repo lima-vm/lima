@@ -10,26 +10,30 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"sync"
 	"syscall"
 	"text/template"
 	"time"
-	"unsafe"
 
-	vzvmnet "github.com/Code-Hex/vz/v3/pkg/vmnet"
-	"github.com/Code-Hex/vz/v3/pkg/xpc"
+	vzvmnet "github.com/Code-Hex/vz/v3/vmnet"
+	"github.com/Code-Hex/vz/v3/xpc"
+	"github.com/coreos/go-semver/semver"
 	"github.com/sirupsen/logrus"
 
+	"github.com/lima-vm/lima/v2/pkg/debugutil"
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/networks"
+	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/vmnet/csops"
 	"github.com/lima-vm/lima/v2/pkg/vmnet/networkchange"
 )
+
+// MARK: - Launchd Mach Service
 
 //go:embed io.lima-vm.vmnet.plist
 var launchdTemplate string
@@ -63,7 +67,11 @@ func RegisterMachService(ctx context.Context) error {
 	}
 
 	// Create a shell script that runs "limactl vmnet"
-	scriptContent := "#!/bin/sh\ntest -x " + executablePath + " && exec " + executablePath + " vmnet --mach-service='" + MachServiceName + "' \"$@\""
+	debugArg := ""
+	if debugutil.Debug {
+		debugArg = "--debug "
+	}
+	scriptContent := "#!/bin/sh\ntest -x " + executablePath + " && exec " + executablePath + " vmnet " + debugArg + "--mach-service='" + MachServiceName + "' \"$@\""
 	if err := os.WriteFile(scriptPath, []byte(scriptContent), 0o755); err != nil {
 		return fmt.Errorf("failed to write %q launch script: %w", scriptPath, err)
 	}
@@ -109,7 +117,7 @@ func UnregisterMachService(ctx context.Context) error {
 	serviceTarget := launchdServiceTarget(launchdLabel)
 	cmd := exec.CommandContext(ctx, "launchctl", "bootout", serviceTarget)
 	if err := cmd.Run(); err != nil {
-		logrus.WithError(err).Infof("failed to execute bootout: %v", cmd.Args)
+		logrus.WithError(err).Infof("[vmnet] failed to execute bootout: %v", cmd.Args)
 	}
 	_, _, scriptPath, launchdPlistPath, err := relatedPaths(launchdLabel)
 	if err != nil {
@@ -164,29 +172,49 @@ func launchdServiceTarget(launchdLabel string) string {
 // and returns the serialized network object via mach XPC.
 func RunMachService(ctx context.Context, serviceName string) (err error) {
 	// Create peer requirement to restrict clients to the same executable.
-	peerRequirement, err := peerRequirementForRestrictToSameExecutable()
+	var peerRequirement *xpc.PeerRequirement
+	macOSProductVersion, err := osutil.ProductVersion()
 	if err != nil {
-		return fmt.Errorf("failed to create peer requirement: %w", err)
+		return err
+	}
+	// Until macOS 26.1, VZVmnetNetworkDeviceAttachment could not connect to vmnet networks created by different executables.
+	// From macOS 26.2, this restriction seems lifted.
+	// Check the OS version to decide whether to set the peer requirement.
+	if macOSProductVersion.LessThan(*semver.New("26.2.0")) {
+		peerRequirement, err = peerRequirementForRestrictToSameExecutable()
+		if err != nil {
+			return fmt.Errorf("failed to create peer requirement: %w", err)
+		}
 	}
 	networkEntries := make(map[string]*Entry)
 	var mu sync.RWMutex
+	var adaptorWG sync.WaitGroup
+	defer adaptorWG.Wait() // Wait for all adaptors to finish
 	listener, err := xpc.NewListener(serviceName,
 		xpc.Accept(
 			xpc.MessageHandler(func(dic *xpc.Dictionary) *xpc.Dictionary {
 				errorReply := func(errMsg string, args ...any) *xpc.Dictionary {
+					logrus.Errorf("[vmnet] "+errMsg, args...)
 					return dic.CreateReply(
 						xpc.KeyValue("Error", xpc.NewString(fmt.Sprintf(errMsg, args...))),
 					)
 				}
 
-				// Verify that the sender satisfies the peer requirement.
-				// This ensures that only clients from the same executable can request networks.
-				// This is necessary because VZVmnetNetwork cannot be shared across different executables.
-				// The requests from external VZ drivers will be rejected here.
-				if ok, err := dic.SenderSatisfies(peerRequirement); err != nil {
-					return errorReply("failed to verify sender requirement: %v", err)
-				} else if !ok {
-					return errorReply("sender does not satisfy peer requirement")
+				// Verify peer requirement on macOS 26.0 and 26.1
+				if peerRequirement != nil {
+					// If client did not specify FdType, they are likely using VZVmnetNetworkDeviceAttachment.
+					// In that case, enforce the peer requirement.
+					if fdType := dic.GetString("FdType"); fdType == "" {
+						// Verify that the sender satisfies the peer requirement.
+						// This ensures that only clients from the same executable can request networks.
+						// This is necessary because vzvmnet.Network cannot be shared across different executables.
+						// The requests from external VZ drivers will be rejected here.
+						if ok, err := dic.SenderSatisfies(peerRequirement); err != nil {
+							return errorReply("failed to verify sender requirement: %v", err)
+						} else if !ok {
+							return errorReply("sender does not satisfy peer requirement")
+						}
+					}
 				}
 
 				// Handle the message
@@ -199,20 +227,39 @@ func RunMachService(ctx context.Context, serviceName string) (err error) {
 				entry, ok := networkEntries[vmnetNetwork]
 				mu.RUnlock()
 				if ok {
-					logrus.Infof("Provided existing VmnetNetwork for 'vmnet: %q'", vmnetNetwork)
-					return dic.CreateReply(entry.replyEntries...)
+					mu.Lock()
+					entry.lastRequestAt = time.Now()
+					mu.Unlock()
+				} else {
+					entry, err = newEntry(dic)
+					if err != nil {
+						return errorReply("failed to create Entry for 'vmnet: %s': %v", vmnetNetwork, err)
+					}
+					mu.Lock()
+					networkEntries[vmnetNetwork] = entry
+					mu.Unlock()
+					logrus.Infof("[vmnet] created new subnet %v for 'vmnet: %q'", entry.config.Subnet, vmnetNetwork)
+				}
+				replyEntries := slices.Clone(entry.replyEntries)
+
+				// If the FdType is specified in the message, create file adaptor and include it's file descriptor in the reply.
+				file, startAdaptor, err := newFileAdaptorForNetwork(ctx, entry.network, dic)
+				if err != nil {
+					return errorReply("failed to create file adaptor for 'vmnet: %s': %v", vmnetNetwork, err)
+				} else if file != nil {
+					replyEntries = append(replyEntries, xpc.KeyValue("FileDescriptor", xpc.NewFd(file.Fd())))
+					_ = file.Close() // The file descriptor is duplicated when creating xpc.NewFd
 				}
 
-				logrus.Infof("No existing VmnetNetwork for 'vmnet: %q'", vmnetNetwork)
-				entry, err := newEntry(dic)
-				if err != nil {
-					return errorReply("failed to create Entry for 'vmnet: %s': %v", vmnetNetwork, err)
+				if startAdaptor != nil {
+					adaptorWG.Add(1)
+					go func() {
+						defer adaptorWG.Done()
+						startAdaptor()
+					}()
 				}
-				mu.Lock()
-				networkEntries[vmnetNetwork] = entry
-				mu.Unlock()
-				logrus.Infof("Created new VmnetNetwork for 'vmnet: %q'", vmnetNetwork)
-				return dic.CreateReply(entry.replyEntries...)
+
+				return dic.CreateReply(replyEntries...)
 			}),
 		),
 	)
@@ -236,30 +283,18 @@ func RunMachService(ctx context.Context, serviceName string) (err error) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	go func() {
-		// Use a timer to avoid flooding logs on rapid network changes since
-		// multiple notifications may be received on a VM start or stop.
-		const distantFutureDuration time.Duration = math.MaxInt64
-		const timeoutToNextNotification time.Duration = 3 * time.Second
-		timer := time.NewTimer(distantFutureDuration)
-		defer timer.Stop()
 		for {
 			select {
 			case <-ctx.Done():
 				return
 			case <-notifyCh:
-				// Avoid flooding logs by resetting the timer to timeoutToNextNotification
-				timer.Reset(timeoutToNextNotification)
-				continue
-			case <-timer.C:
-				// Reset the timer to distantFutureDuration
-				timer.Reset(distantFutureDuration)
 			}
 
 			// Handle network change notification here
-			logrus.Info("Network change detected; clearing cached VmnetNetworks")
+			logrus.Debug("[vmnet] network change detected; clearing cached VmnetNetworks")
 			ifaces, err := NewInterfaces()
 			if err != nil {
-				logrus.Errorf("Failed to list interfaces on network change: %v", err)
+				logrus.Errorf("[vmnet] failed to list interfaces on network change: %v", err)
 				// Hopefully the next notification will succeed
 				continue
 			}
@@ -267,23 +302,31 @@ func RunMachService(ctx context.Context, serviceName string) (err error) {
 			mu.Lock()
 			for vzNetwork, entry := range networkEntries {
 				if iface := ifaces.LookupInterface(entry.config.Subnet); iface != nil {
+					if entry.existenceObserved {
+						continue
+					}
 					if iface.Type == syscall.IFT_BRIDGE {
-						logrus.Infof("Interface for subnet %v of 'vmnet: %q' exists; keeping cached VmnetNetwork", entry.config.Subnet, vzNetwork)
+						logrus.Debugf("[vmnet] interface for subnet %v of 'vmnet: %q' exists; keeping cached VmnetNetwork", entry.config.Subnet, vzNetwork)
 						entry.existenceObserved = true
 					} else {
-						logrus.Infof("Interface for subnet %v of 'vmnet: %q' is found but not a bridge (type=%d); removing cached VmnetNetwork since it cannot be used", entry.config.Subnet, vzNetwork, iface.Type)
+						logrus.Debugf("[vmnet] interface for subnet %v of 'vmnet: %q' is found but not a bridge (type=%d); removing cached VmnetNetwork since it cannot be used", entry.config.Subnet, vzNetwork, iface.Type)
 						delete(networkEntries, vzNetwork)
 					}
 				} else if !entry.existenceObserved {
-					logrus.Infof("Interface for subnet %v of 'vmnet: %q' is not found yet; keeping cached VmnetNetwork", entry.config.Subnet, vzNetwork)
+					if time.Since(entry.lastRequestAt) < 1*time.Minute {
+						logrus.Debugf("[vmnet] interface for subnet %v of 'vmnet: %q' is not found yet; keeping cached VmnetNetwork", entry.config.Subnet, vzNetwork)
+					} else {
+						logrus.Infof("[vmnet] interface for subnet %v of 'vmnet: %q' is not found for more than 1 minute; removing cached VmnetNetwork", entry.config.Subnet, vzNetwork)
+						delete(networkEntries, vzNetwork)
+					}
 				} else {
-					logrus.Infof("Interface for subnet %v of 'vmnet: %q' is gone; removing cached VmnetNetwork", entry.config.Subnet, vzNetwork)
+					logrus.Infof("[vmnet] interface for subnet %v of 'vmnet: %q' is gone; removing cached VmnetNetwork", entry.config.Subnet, vzNetwork)
 					delete(networkEntries, vzNetwork)
 				}
 			}
 			mu.Unlock()
 			if len(networkEntries) == 0 {
-				logrus.Info("No cached VmnetNetworks remain, stopping mach service")
+				logrus.Info("[vmnet] no cached VmnetNetworks remain, stopping mach service")
 				cancel()
 			}
 		}
@@ -316,6 +359,7 @@ type Entry struct {
 	network           *vzvmnet.Network
 	replyEntries      []xpc.DictionaryEntry
 	existenceObserved bool
+	lastRequestAt     time.Time
 }
 
 // newEntry creates a new Entry from the given xpc.Dictionary.
@@ -323,16 +367,16 @@ func newEntry(dic *xpc.Dictionary) (*Entry, error) {
 	// The Configuration key must be provided in the message to create the VmnetNetwork.
 	var vmnetConfig networks.VmnetConfig
 	var vmnetNetwork *vzvmnet.Network
-	var serialization unsafe.Pointer
+	var serialization xpc.Object
 	config := dic.GetData("Configuration")
 	if config == nil {
 		return nil, errors.New("missing Configuration key")
 	} else if err := json.Unmarshal(config, &vmnetConfig); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal VzVmnetConfig: %w", err)
 	} else if vmnetNetwork, err = newVmnetNetwork(vmnetConfig); err != nil {
-		return nil, fmt.Errorf("failed to create VmnetNetwork: %w", err)
+		return nil, err
 	} else if serialization, err = vmnetNetwork.CopySerialization(); err != nil {
-		return nil, fmt.Errorf("failed to copy VmnetNetwork serialization: %w", err)
+		return nil, err
 	}
 	// If the Subnet is not set in the config, retrieve it from the created VmnetNetwork.
 	// This ensures that the Subnet is always set in the Entry.
@@ -348,8 +392,9 @@ func newEntry(dic *xpc.Dictionary) (*Entry, error) {
 		network: vmnetNetwork,
 		replyEntries: []xpc.DictionaryEntry{
 			xpc.KeyValue("Configuration", xpc.NewData(config)),
-			xpc.KeyValue("Serialization", xpc.NewObject(serialization)),
+			xpc.KeyValue("Serialization", serialization),
 		},
+		lastRequestAt: time.Now(),
 	}, nil
 }
 
@@ -393,34 +438,243 @@ func newVmnetNetwork(vmnetConfig networks.VmnetConfig) (*vzvmnet.Network, error)
 			return nil, fmt.Errorf("failed to set IPv4 subnet to %s: %w", vmnetConfig.Subnet, err)
 		}
 	}
+	return vzvmnet.NewNetwork(config)
+}
 
-	network, err := vzvmnet.NewNetwork(config)
+// newFileAdaptorForNetwork creates a file adaptor for the created interface of the network cloned from the given network.
+// The file adaptor type is determined by the "FdType" key in the given xpc.Dictionary.
+// If no FdType is specified, nil is returned without error.
+// The returned file can be used as a file descriptor for QEMU's netdev or krunkit's virtio-net.
+func newFileAdaptorForNetwork(ctx context.Context, network *vzvmnet.Network, dic *xpc.Dictionary) (*os.File, func(), error) {
+	fdType := dic.GetString("FdType")
+	if fdType == "" {
+		return nil, nil, nil
+	}
+	interfaceDesc := dic.GetDictionary("InterfaceDesc")
+	var fileAdaptorFunc func(context.Context, *vzvmnet.Interface, ...vzvmnet.Sockopt) (*os.File, func(), error)
+	switch FdType(fdType) {
+	case FdTypeStream:
+		fileAdaptorFunc = streamFileAdaptorForInterface
+	case FdTypeDatagram:
+		fileAdaptorFunc = datagramFileAdaptorForInterface
+	case FdTypeDatagramNext:
+		fileAdaptorFunc = datagramNextFileAdaptorForInterface
+	default:
+		return nil, nil, fmt.Errorf("unknown FdType: %q", fdType)
+	}
+	subnet, err := network.IPv4Subnet()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create VmnetNetwork: %w", err)
+		return nil, nil, fmt.Errorf("failed to get IPv4 subnet from interface: %w", err)
+	}
+	// Create New Network from serialization to avoid releasing the original network on stopping the interface.
+	var iface *vzvmnet.Interface
+	if s, err := network.CopySerialization(); err != nil {
+		return nil, nil, fmt.Errorf("failed to copy network serialization: %w", err)
+	} else if n, err := vzvmnet.NewNetworkWithSerialization(s); err != nil {
+		return nil, nil, fmt.Errorf("failed to create network from serialization %+v: %w", s, err)
+	} else if iface, err = vzvmnet.StartInterfaceWithNetwork(n, interfaceDesc); err != nil {
+		return nil, nil, fmt.Errorf("failed to start interface with network %+v: %w", n, err)
+	}
+	logrus.Infof("[vmnet] created %s file adaptor for subnet: %v", fdType, subnet)
+	logrus.Debugf("[vmnet] started vmnet.Interface with maxPacketSize=%d, maxReadPacketCount=%d, maxWritePacketCount=%d, param=%+v",
+		iface.MaxPacketSize, iface.MaxReadPacketCount, iface.MaxWritePacketCount, iface.Param)
+	return fileAdaptorFunc(ctx, iface)
+}
+
+// MARK: - Request Network
+
+// RequestNetwork requests the [vzvmnet.Network] for the given vmnetNetwork name.
+func RequestNetwork(ctx context.Context, vmnetNetwork string) (*vzvmnet.Network, error) {
+	reply, err := RequestNetworkWithEntries(ctx, vmnetNetwork)
+	if err != nil {
+		return nil, err
+	}
+	// Extract Serialization from reply
+	serialization := reply.GetValue("Serialization")
+	if serialization == nil {
+		return nil, fmt.Errorf("no Serialization object in reply from %q", MachServiceName)
+	}
+	network, err := vzvmnet.NewNetworkWithSerialization(serialization)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create 'vmnet: %s' from serialization: %w", vmnetNetwork, err)
 	}
 	return network, nil
 }
 
-// RequestNetwork requests the [vzvmnet.Network] serialization
-// for the given vmnetNetwork from the mach service "io.lima-vm.vmnet".
+// MARK: - Request File Descriptors
+
+// RequestQEMUDatagramFileDescriptorForNetwork requests a datagram file descriptor for the given vmnetNetwork name.
+// This can be used with QEMU's netdev of type "datagram" or "tap".
+func RequestQEMUDatagramFileDescriptorForNetwork(ctx context.Context, vmnetNetwork string) (*os.File, error) {
+	// Use DatagramNext for better performance
+	return RequestFileDescriptorForNetwork(ctx, vmnetNetwork, FdTypeDatagram,
+		xpc.KeyValue("InterfaceDesc", xpc.NewDictionary(
+			xpc.KeyValue(vzvmnet.EnableChecksumOffloadKey, xpc.BoolTrue),
+			// QEMU does not support TSO, but TSO disabled interfaces cause performance regression on another interfaces.
+			// So, enable TSO here to avoid performance regression on other interfaces.
+			xpc.KeyValue(vzvmnet.EnableTSOKey, xpc.BoolTrue),
+		)),
+	)
+}
+
+// RequestQEMUDatagramNextFileDescriptorForNetwork requests a datagram file descriptor for the given vmnetNetwork name.
+// This can be used with QEMU's netdev of type "datagram" or "tap".
+func RequestQEMUDatagramNextFileDescriptorForNetwork(ctx context.Context, vmnetNetwork string) (*os.File, error) {
+	// Use DatagramNext for better performance
+	return RequestFileDescriptorForNetwork(ctx, vmnetNetwork, FdTypeDatagramNext,
+		xpc.KeyValue("InterfaceDesc", xpc.NewDictionary(
+			xpc.KeyValue(vzvmnet.EnableChecksumOffloadKey, xpc.BoolTrue),
+			// QEMU does not support TSO, but TSO disabled interfaces cause performance regression on another interfaces.
+			// So, enable TSO here to avoid performance regression on other interfaces.
+			xpc.KeyValue(vzvmnet.EnableTSOKey, xpc.BoolTrue),
+		)),
+	)
+}
+
+// RequestQEMUStreamFileDescriptorForNetwork requests a stream file descriptor for the given vmnetNetwork name.
+// This can be used with QEMU's netdev of type "socket" or "stream".
+func RequestQEMUStreamFileDescriptorForNetwork(ctx context.Context, vmnetNetwork string) (*os.File, error) {
+	return RequestFileDescriptorForNetwork(ctx, vmnetNetwork, FdTypeStream,
+		xpc.KeyValue("InterfaceDesc", xpc.NewDictionary(
+			xpc.KeyValue(vzvmnet.EnableChecksumOffloadKey, xpc.BoolTrue),
+			// QEMU does not support TSO, but TSO disabled interfaces cause performance regression on another interfaces.
+			// So, enable TSO here to avoid performance regression on other interfaces.
+			xpc.KeyValue(vzvmnet.EnableTSOKey, xpc.BoolTrue),
+		)),
+	)
+}
+
+// RequestKrunkitDatagramFileDescriptorForNetwork requests a datagram file descriptor for the given vmnetNetwork name.
+// This can be used with Krunkit's virtio-net device as a unix datagram socket.
+// Enabled checksum offload and TSO for krunkit, as krunkit can handle them.
+// Use "offloading=on" in the virtio-net device options to enable them in krunkit.
+func RequestKrunkitDatagramFileDescriptorForNetwork(ctx context.Context, vmnetNetwork string) (*os.File, error) {
+	return RequestFileDescriptorForNetwork(ctx, vmnetNetwork, FdTypeDatagram,
+		xpc.KeyValue("InterfaceDesc", xpc.NewDictionary(
+			xpc.KeyValue(vzvmnet.EnableChecksumOffloadKey, xpc.BoolTrue),
+			xpc.KeyValue(vzvmnet.EnableTSOKey, xpc.BoolTrue),
+		)),
+	)
+}
+
+// RequestKrunkitDatagramNextFileDescriptorForNetwork requests a datagram_next file descriptor for the given vmnetNetwork name.
+// This can be used with Krunkit's virtio-net device as a unix datagram socket.
+// Enabled checksum offload and TSO for krunkit, as krunkit can handle them.
+// Use "offloading=on" in the virtio-net device options to enable them in krunkit.
+func RequestKrunkitDatagramNextFileDescriptorForNetwork(ctx context.Context, vmnetNetwork string) (*os.File, error) {
+	return RequestFileDescriptorForNetwork(ctx, vmnetNetwork, FdTypeDatagramNext,
+		xpc.KeyValue("InterfaceDesc", xpc.NewDictionary(
+			xpc.KeyValue(vzvmnet.EnableChecksumOffloadKey, xpc.BoolTrue),
+			xpc.KeyValue(vzvmnet.EnableTSOKey, xpc.BoolTrue),
+		)),
+	)
+}
+
+// RequestKrunkitStreamFileDescriptorForNetwork requests a stream file descriptor for the given vmnetNetwork name.
+// This can be used with Krunkit's virtio-net device as a unix stream socket.
+// Enabled checksum offload and TSO for krunkit, as krunkit can handle them.
+// Use "offloading=on" in the virtio-net device options to enable them in krunkit.
+func RequestKrunkitStreamFileDescriptorForNetwork(ctx context.Context, vmnetNetwork string) (*os.File, error) {
+	return RequestFileDescriptorForNetwork(ctx, vmnetNetwork, FdTypeStream,
+		xpc.KeyValue("InterfaceDesc", xpc.NewDictionary(
+			xpc.KeyValue(vzvmnet.EnableChecksumOffloadKey, xpc.BoolTrue),
+			xpc.KeyValue(vzvmnet.EnableTSOKey, xpc.BoolTrue),
+		)),
+	)
+}
+
+// RequestVZDatagramFileDescriptorForNetwork requests a datagram file descriptor for the given vmnetNetwork name.
+// This can be used with [vz.NewFileHandleNetworkDeviceAttachment].
+// This API is used when VZ is external driver and macOS version is 26.1 or earlier,
+// as VZVmnetNetworkDeviceAttachment cannot connect to vmnet networks created by different executables on those macOS versions.
+func RequestVZDatagramFileDescriptorForNetwork(ctx context.Context, vmnetNetwork string) (*os.File, error) {
+	return RequestFileDescriptorForNetwork(ctx, vmnetNetwork, FdTypeDatagramNext,
+		xpc.KeyValue("InterfaceDesc", xpc.NewDictionary(
+			xpc.KeyValue(vzvmnet.EnableChecksumOffloadKey, xpc.BoolTrue),
+			// VZVmnetNetworkDeviceAttachment does not support TSO, but TSO disabled interfaces cause performance regression on another interfaces.
+			// So, enable TSO here to avoid performance regression on other interfaces.
+			// By enabling TSO here, performance of this interface becomes much worse.
+			xpc.KeyValue(vzvmnet.EnableTSOKey, xpc.BoolTrue),
+		)),
+	)
+}
+
+// FdType represents the type of file descriptor to request.
+type FdType string
+
+const (
+	FdTypeStream       FdType = "stream"
+	FdTypeDatagram     FdType = "datagram"
+	FdTypeDatagramNext FdType = "datagram_next"
+)
+
+// RequestFileDescriptorForNetwork requests the file descriptor for the given vmnetNetwork name.
+func RequestFileDescriptorForNetwork(ctx context.Context, vmnetNetwork string, fdType FdType, entries ...xpc.DictionaryEntry) (*os.File, error) {
+	reply, err := RequestNetworkWithEntries(ctx,
+		vmnetNetwork,
+		slices.Concat([]xpc.DictionaryEntry{
+			xpc.KeyValue("FdType", xpc.NewString(string(fdType))),
+		}, entries)...,
+	)
+	if err != nil {
+		return nil, err
+	}
+	// Extract FileDescriptor from reply
+	fd := reply.DupFd("FileDescriptor")
+	if fd <= 0 {
+		return nil, fmt.Errorf("no FileDescriptor object in reply from %q", MachServiceName)
+	}
+
+	name := fmt.Sprintf("vmnet:%s:%s:%d", vmnetNetwork, fdType, fd)
+	if v, err := syscall.GetsockoptInt(int(fd), syscall.SOL_SOCKET, syscall.SO_RCVBUF); err != nil {
+		logrus.WithError(err).Debugf("[vmnet] failed to get SO_RCVBUF for %s", name)
+	} else {
+		logrus.Debugf("[vmnet] got SO_RCVBUF=%d for %s", v, name)
+	}
+	if v, err := syscall.GetsockoptInt(int(fd), syscall.SOL_SOCKET, syscall.SO_SNDBUF); err != nil {
+		logrus.WithError(err).Debugf("[vmnet] failed to get SO_SNDBUF for %s", name)
+	} else {
+		logrus.Debugf("[vmnet] got SO_SNDBUF=%d for %s", v, name)
+	}
+	if v, err := syscall.GetsockoptInt(int(fd), syscall.SOL_SOCKET, syscall.SO_RCVLOWAT); err != nil {
+		logrus.WithError(err).Debugf("[vmnet] failed to get SO_RCVLOWAT for %s", name)
+	} else {
+		logrus.Debugf("[vmnet] got SO_RCVLOWAT=%d for %s", v, name)
+	}
+	if v, err := syscall.GetsockoptInt(int(fd), syscall.SOL_SOCKET, syscall.SO_SNDLOWAT); err != nil {
+		logrus.WithError(err).Debugf("[vmnet] failed to get SO_SNDLOWAT for %s", name)
+	} else {
+		logrus.Debugf("[vmnet] got SO_SNDLOWAT=%d for %s", v, name)
+	}
+	file := os.NewFile(fd, name)
+	return file, nil
+}
+
+// MARK: - Base Request Function
+
+// RequestNetworkWithEntries requests the [vzvmnet.Network] entry for the given vmnetNetwork
 //
 // Payload to the mach service:
 //
-//	{`Network`: <vmnetNetwork>, `Configuration`: <configuration>}
+//	{`Network`: <vmnetNetwork>, `Configuration`: <configuration>, ...entries}
 //
 // Reply from the mach service:
 //
-//	{`Configuration`: <configuration>, `Serialization`: <serialization>}
+//	{`Configuration`: <configuration>, (`Serialization`: <serialization> | `FileDescriptor`: <file descriptor>) }
 //
 // If an error occurs, the reply contains:
 //
 //	{`Error`: <error message>}
-func RequestNetwork(ctx context.Context, vmnetNetwork string, vmnetConfig networks.VmnetConfig) (*vzvmnet.Network, error) {
-	// Ensure that the mach service is registered
-	if err := RegisterMachService(ctx); err != nil {
+func RequestNetworkWithEntries(ctx context.Context, vmnetNetwork string, entries ...xpc.DictionaryEntry) (*xpc.Dictionary, error) {
+	// Load network configuration
+	nwCfg, err := networks.LoadConfig()
+	if err != nil {
 		return nil, err
 	}
-
+	vmnetConfig, ok := nwCfg.Vmnet[vmnetNetwork]
+	if !ok {
+		return nil, fmt.Errorf("networks.yaml: 'vmnet: %s' is not defined", vmnetNetwork)
+	}
 	ourConfigBytes, err := json.Marshal(vmnetConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal our 'vmnet: %s' config: %w", vmnetNetwork, err)
@@ -431,11 +685,11 @@ func RequestNetwork(ctx context.Context, vmnetNetwork string, vmnetConfig networ
 		return nil, fmt.Errorf("failed to create xpc session to %q: %w", MachServiceName, err)
 	}
 	defer session.Cancel()
-	reply, err := session.SendDictionaryWithReply(
-		ctx,
+	request := slices.Concat([]xpc.DictionaryEntry{
 		xpc.KeyValue("Network", xpc.NewString(vmnetNetwork)),
 		xpc.KeyValue("Configuration", xpc.NewData(ourConfigBytes)),
-	)
+	}, entries)
+	reply, err := session.SendDictionaryWithReply(ctx, request...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send xpc message to %q: %w", MachServiceName, err)
 	}
@@ -462,16 +716,7 @@ func RequestNetwork(ctx context.Context, vmnetNetwork string, vmnetConfig networ
 
 	// Warn if the provided configuration does not match our expected configuration.
 	if !reflect.DeepEqual(providedConfig, vmnetConfig) {
-		logrus.Warnf("Existing 'vmnet: %s' has different configuration; our config: %v, existing config: %v", vmnetNetwork, vmnetConfig, providedConfig)
+		logrus.Warnf("[vmnet] existing 'vmnet: %s' has different configuration; our config: %v, existing config: %v", vmnetNetwork, vmnetConfig, providedConfig)
 	}
-
-	serialization := reply.GetValue("Serialization")
-	if serialization == nil {
-		return nil, fmt.Errorf("no Serialization object in reply from %q", MachServiceName)
-	}
-	network, err := vzvmnet.NewNetworkWithSerialization(serialization.Raw())
-	if err != nil {
-		return nil, fmt.Errorf("failed to create 'vmnet: %s' from serialization: %w", vmnetNetwork, err)
-	}
-	return network, nil
+	return reply, nil
 }

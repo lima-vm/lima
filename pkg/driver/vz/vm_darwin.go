@@ -58,18 +58,22 @@ type virtualMachineWrapper struct {
 var vmNetworkFiles = make([]*os.File, 1)
 
 func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int, onVsockEvent func(*events.VsockEvent)) (vm *virtualMachineWrapper, waitSSHLocalPortAccessible <-chan any, errCh chan error, err error) {
+	ctx, cancel := context.WithCancel(ctx)
 	usernetClient, stopUsernet, err := startUsernet(ctx, inst)
 	if err != nil {
+		cancel()
 		return nil, nil, nil, err
 	}
 
 	machine, err := createVM(ctx, inst)
 	if err != nil {
+		cancel()
 		return nil, nil, nil, err
 	}
 
 	err = machine.Start()
 	if err != nil {
+		cancel()
 		return nil, nil, nil, err
 	}
 
@@ -167,6 +171,7 @@ func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int, onV
 					if stopUsernet != nil {
 						stopUsernet()
 					}
+					cancel()
 					sendErrCh <- errors.New("vz driver state stopped")
 				default:
 					logrus.Debugf("[VZ] - vm state change: %q", newState)
@@ -402,19 +407,39 @@ func attachNetwork(ctx context.Context, inst *limatype.Instance, vmConfig *vz.Vi
 			}
 			configurations = append(configurations, networkConfig)
 		case nw.Vmnet != "":
-			nwCfg, err := networks.LoadConfig()
+			macOSProductVersion, err := osutil.ProductVersion()
 			if err != nil {
 				return err
 			}
-			vmnetCfg, ok := nwCfg.Vmnet[nw.Vmnet]
-			if !ok {
-				return fmt.Errorf("networks.yaml: 'vmnet: %s' is not defined", nw.Vmnet)
+			// Until macOS 26.1, VZVmnetNetworkDeviceAttachment could not connect to vmnet networks created by different executables.
+			// So, if current process is external driver (not limactl), use VZFileHandleNetworkDeviceAttachment instead.
+			if macOSProductVersion.LessThan(*semver.New("26.2.0")) {
+				executable, err := os.Executable()
+				if err != nil {
+					return err
+				}
+				if filepath.Base(executable) != "limactl" {
+					logrus.Info("Using VZFileHandleNetworkDeviceAttachment instead of VZVmnetNetworkDeviceAttachment due to macOS version and executable name")
+					// VZFileHandleNetworkDeviceAttachment does not seem to support checksum offload and TSO.
+					// But, TSO is enabled here, so performance of this interface becomes much worse.
+					// See the comments in pkg/vmnet/vmnet_darwin.go for details.
+					file, err := vmnet.RequestVZDatagramFileDescriptorForNetwork(ctx, nw.Vmnet)
+					if err != nil {
+						return err
+					}
+					networkConfig, err := newVirtioFileNetworkDeviceConfiguration(file, nw.MACAddress)
+					if err != nil {
+						return err
+					}
+					configurations = append(configurations, networkConfig)
+					continue
+				}
 			}
-			network, err := vmnet.RequestNetwork(ctx, nw.Vmnet, vmnetCfg)
+			network, err := vmnet.RequestNetwork(ctx, nw.Vmnet)
 			if err != nil {
 				return err
 			}
-			attachment, err := vz.NewVmnetNetworkDeviceAttachment(network.Raw())
+			attachment, err := vz.NewVmnetNetworkDeviceAttachment(network)
 			if err != nil {
 				return err
 			}
