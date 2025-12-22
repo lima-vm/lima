@@ -100,7 +100,7 @@ case "$NAME" in
 	;;
 esac
 
-if limactl ls -q | grep -q "$NAME"; then
+if limactl ls -q "$NAME" 2>/dev/null; then
 	ERROR "Instance $NAME already exists"
 	exit 1
 fi
@@ -155,7 +155,7 @@ INFO "Creating \"$NAME\" from \"$FILE_HOST\""
 defer "limactl delete -f \"$NAME\""
 
 if [[ -n ${CHECKS["disk"]} ]]; then
-	if ! limactl disk ls | grep -q "^data\s"; then
+	if [[ -z "$(limactl disk ls data --json 2>/dev/null)" ]]; then
 		defer "limactl disk delete data"
 		limactl disk create data --size 10G
 	fi
@@ -325,10 +325,27 @@ if [[ -n ${CHECKS["ssh-over-vsock"]} ]]; then
 	if [[ "$(limactl ls "${NAME}" --yq .vmType)" == "vz" ]]; then
 		INFO "Testing SSH over vsock"
 		set -x
+		log_file="$HOME_HOST/.lima/${NAME}/ha.stdout.log"
+
+		# Helper function to check vsock events in new log lines only
+		# $1: event_type to check for
+		# $2: line number to start checking from
+		check_vsock_event() {
+			local event_type="$1"
+			local start_line="$2"
+			# Check only lines added after start_line
+			if tail -n +"$start_line" "$log_file" | jq -e --arg type "$event_type" 'select(.status.vsock.type == $type)' >/dev/null 2>&1; then
+				return 0
+			fi
+			return 1
+		}
+
 		INFO "Testing .ssh.overVsock=true configuration"
 		limactl stop "${NAME}"
+		log_lines_before=$(($(wc -l <"$log_file")))
 		# Detection of the SSH server on VSOCK may fail; however, a failing log indicates that controlling detection via the environment variable works as expected.
-		if ! limactl start --set '.ssh.overVsock=true' "${NAME}" 2>&1 | grep -i -E "(started vsock forwarder|SSH server does not seem to be running on vsock port)"; then
+		limactl start --set '.ssh.overVsock=true' "${NAME}"
+		if ! check_vsock_event "started" "$log_lines_before" && ! check_vsock_event "failed" "$log_lines_before"; then
 			set +x
 			diagnose "${NAME}"
 			ERROR ".ssh.overVsock=true did not enable vsock forwarder"
@@ -336,8 +353,10 @@ if [[ -n ${CHECKS["ssh-over-vsock"]} ]]; then
 		fi
 		INFO 'Testing .ssh.overVsock=null configuration'
 		limactl stop "${NAME}"
+		log_lines_before=$(($(wc -l <"$log_file")))
 		# Detection of the SSH server on VSOCK may fail; however, a failing log indicates that controlling detection via the environment variable works as expected.
-		if ! limactl start --set '.ssh.overVsock=null' "${NAME}" 2>&1 | grep -i -E "(started vsock forwarder|SSH server does not seem to be running on vsock port)"; then
+		limactl start --set '.ssh.overVsock=null' "${NAME}"
+		if ! check_vsock_event "started" "$log_lines_before" && ! check_vsock_event "failed" "$log_lines_before"; then
 			set +x
 			diagnose "${NAME}"
 			ERROR ".ssh.overVsock=null did not enable vsock forwarder"
@@ -345,7 +364,9 @@ if [[ -n ${CHECKS["ssh-over-vsock"]} ]]; then
 		fi
 		INFO "Testing .ssh.overVsock=false configuration"
 		limactl stop "${NAME}"
-		if ! limactl start --set '.ssh.overVsock=false' "${NAME}" 2>&1 | grep -i "skipping detection of SSH server on vsock port"; then
+		log_lines_before=$(($(wc -l <"$log_file")))
+		limactl start --set '.ssh.overVsock=false' "${NAME}"
+		if ! check_vsock_event "skipped" "$log_lines_before"; then
 			set +x
 			diagnose "${NAME}"
 			ERROR ".ssh.overVsock=false did not disable vsock forwarder"

@@ -18,6 +18,7 @@ use warnings;
 use Config qw(%Config);
 use File::Spec::Functions qw(catfile);
 use IO::Handle qw();
+use JSON::PP;
 use Socket qw(inet_ntoa);
 use Sys::Hostname qw(hostname);
 
@@ -172,8 +173,10 @@ sleep 5;
 # Record current log size, so we can skip prior output
 $ENV{HOME_HOST} ||= "$ENV{HOME}";
 $ENV{LIMA_HOME} ||= "$ENV{HOME_HOST}/.lima";
-my $ha_log = "$ENV{LIMA_HOME}/$instance/ha.stderr.log";
-my $ha_log_size = -s $ha_log or die;
+my $ha_stdout_log = "$ENV{LIMA_HOME}/$instance/ha.stdout.log";
+my $ha_stderr_log = "$ENV{LIMA_HOME}/$instance/ha.stderr.log";
+my $ha_stdout_log_size = -s $ha_stdout_log or die;
+my $ha_stderr_log_size = -s $ha_stderr_log or die;
 
 # Setup a netcat listener on the guest for each test
 foreach my $id (0..@test-1) {
@@ -218,17 +221,53 @@ foreach my $test (@test) {
     close($netcat);
 }
 
-# Extract forwarding log messages from hostagent log
-open(my $log, "< $ha_log") or die "Can't read $ha_log: $!";
-seek($log, $ha_log_size, 0) or die "Can't seek $ha_log to $ha_log_size: $!";
+# Extract forwarding log messages from hostagent JSON event log
+my $json_parser = JSON::PP->new->utf8->relaxed;
+
+open(my $log, "< $ha_stdout_log") or die "Can't read $ha_stdout_log: $!";
+seek($log, $ha_stdout_log_size, 0) or die "Can't seek $ha_stdout_log to $ha_stdout_log_size: $!";
 my %seen;
 my %failed_to_listen_tcp;
+
 while (<$log>) {
-    $seen{$1}++ if /(Forwarding TCP from .*? to ((\d.*?|\[.*?\]):\d+|\/[^"]+))/;
-    $seen{$1}++ if /(Not forwarding TCP .*?:\d+)/;
-    $failed_to_listen_tcp{$2}=$1 if /(failed to listen tcp: listen tcp (.*?:\d+):[^"]+)/;
+    chomp;
+    next unless /^\s*\{/; # Skip non-JSON lines
+
+    my $event = eval { $json_parser->decode($_) };
+    next unless $event;
+
+    my $pf = $event->{status}{portForward};
+    next unless $pf && $pf->{type};
+
+    my $type = $pf->{type};
+    my $protocol = uc($pf->{protocol} || "tcp");
+    my $guest_addr = $pf->{guestAddr} || "";
+    my $host_addr = $pf->{hostAddr} || "";
+    my $error = $pf->{error} || "";
+
+    if ($type eq "forwarding") {
+        my $msg = "Forwarding $protocol from $guest_addr to $host_addr";
+        $seen{$msg}++;
+    } elsif ($type eq "not-forwarding") {
+        my $msg = "Not forwarding $protocol $guest_addr";
+        $seen{$msg}++;
+    } elsif ($type eq "failed" && $error =~ /listen tcp/) {
+        # Extract the address from the error message
+        if ($error =~ /listen tcp (.*?:\d+):/) {
+            my $addr = $1;
+            $failed_to_listen_tcp{$addr} = "failed to listen tcp: $error";
+        }
+    }
 }
 close $log or die;
+
+# Also check stderr log for failed_to_listen_tcp messages (these may not be in JSON events)
+open(my $stderr_log, "< $ha_stderr_log") or die "Can't read $ha_stderr_log: $!";
+seek($stderr_log, $ha_stderr_log_size, 0) or die "Can't seek $ha_stderr_log to $ha_stderr_log_size: $!";
+while (<$stderr_log>) {
+    $failed_to_listen_tcp{$2}=$1 if /(failed to listen tcp: listen tcp (.*?:\d+):[^"]+)/;
+}
+close $stderr_log or die;
 
 my $rc = 0;
 my %expected;
@@ -237,7 +276,7 @@ foreach my $id (0..@test-1) {
     my $err = "";
     $expected{$test->{log_msg}}++;
     unless ($seen{$test->{log_msg}}) {
-        $err .= "\n   Message missing from ha.stderr.log";
+        $err .= "\n   Message missing from ha.stdout.log (JSON events)";
     }
     my $log = qx(limactl shell --workdir / $instance sh -c "cd; cat $listener.$id");
     chomp $log;
