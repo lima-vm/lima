@@ -4,6 +4,7 @@
 package networkchange
 
 /*
+#cgo darwin CFLAGS: -mmacosx-version-min=11 -x objective-c -fno-objc-arc
 #include "networkchange_darwin.h"
 */
 import "C"

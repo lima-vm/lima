@@ -4,8 +4,9 @@
 package vmnet
 
 /*
-   #include <ifaddrs.h>
-   #include <net/if.h>
+#cgo darwin CFLAGS: -mmacosx-version-min=11 -x objective-c -fno-objc-arc
+#include <ifaddrs.h>
+#include <net/if.h>
 */
 import (
 	"C" //nolint:gocritic // false positive: dupImport: package is imported 2 times under different aliases on... (gocritic)

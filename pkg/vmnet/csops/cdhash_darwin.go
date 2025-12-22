@@ -4,6 +4,7 @@
 package csops
 
 /*
+#cgo darwin CFLAGS: -mmacosx-version-min=11 -x objective-c -fno-objc-arc
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
