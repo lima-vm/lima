@@ -280,12 +280,12 @@ func validateConfig(_ context.Context, cfg *limatype.LimaYAML) error {
 
 	for i, nw := range cfg.Networks {
 		if unknown := reflectutil.UnknownNonEmptyFields(nw, "VZNAT",
-			"Vz",
 			"Lima",
 			"Socket",
 			"MACAddress",
 			"Metric",
 			"Interface",
+			"Vz",
 		); len(unknown) > 0 {
 			logrus.Warnf("vmType %s: ignoring networks[%d]: %+v", *cfg.VMType, i, unknown)
 		}
