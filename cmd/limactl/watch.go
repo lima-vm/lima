@@ -48,10 +48,15 @@ The command will continue watching until interrupted (Ctrl+C).`,
 	return watchCommand
 }
 
-// watchEvent wraps an event with its instance name for JSON output.
 type watchEvent struct {
 	Instance string       `json:"instance"`
 	Event    events.Event `json:"event"`
+}
+
+type instanceInfo struct {
+	name         string
+	haStdoutPath string
+	haStderrPath string
 }
 
 func watchAction(cmd *cobra.Command, args []string) error {
@@ -79,12 +84,6 @@ func watchAction(cmd *cobra.Command, args []string) error {
 		instNames = allInstances
 	}
 
-	// Validate instances and collect their log paths
-	type instanceInfo struct {
-		name         string
-		haStdoutPath string
-		haStderrPath string
-	}
 	var instances []instanceInfo
 
 	for _, instName := range instNames {
@@ -124,19 +123,14 @@ func watchAction(cmd *cobra.Command, args []string) error {
 		})
 	}
 
-	// Watch multiple instances concurrently
-	type eventWithInstance struct {
-		instance string
-		event    events.Event
-	}
-	eventCh := make(chan eventWithInstance)
+	eventCh := make(chan watchEvent)
 	errCh := make(chan error, len(instances))
 
 	for _, inst := range instances {
 		go func() {
 			err := events.Watch(ctx, inst.haStdoutPath, inst.haStderrPath, time.Now(), !jsonFormat, func(ev events.Event) bool {
 				select {
-				case eventCh <- eventWithInstance{instance: inst.name, event: ev}:
+				case eventCh <- watchEvent{Instance: inst.name, Event: ev}:
 				case <-ctx.Done():
 					return true
 				}
@@ -157,15 +151,14 @@ func watchAction(cmd *cobra.Command, args []string) error {
 			return err
 		case ev := <-eventCh:
 			if jsonFormat {
-				we := watchEvent{Instance: ev.instance, Event: ev.event}
-				j, err := json.Marshal(we)
+				j, err := json.Marshal(ev)
 				if err != nil {
 					fmt.Fprintf(stderr, "error marshaling event: %v\n", err)
 					continue
 				}
 				fmt.Fprintln(stdout, string(j))
 			} else {
-				printHumanReadableEvent(stdout, ev.instance, ev.event)
+				printHumanReadableEvent(stdout, ev.Instance, ev.Event)
 			}
 		}
 	}
@@ -178,7 +171,6 @@ func printHumanReadableEvent(out io.Writer, instName string, ev events.Event) {
 		fmt.Fprintf(out, "%s %s | %s\n", timestamp, instName, msg)
 	}
 
-	// Status changes
 	if ev.Status.Running {
 		if ev.Status.Degraded {
 			printEvent("running (degraded)")
@@ -189,18 +181,12 @@ func printHumanReadableEvent(out io.Writer, instName string, ev events.Event) {
 	if ev.Status.Exiting {
 		printEvent("exiting")
 	}
-
-	// SSH port
 	if ev.Status.SSHLocalPort != 0 {
 		printEvent(fmt.Sprintf("ssh available on port %d", ev.Status.SSHLocalPort))
 	}
-
-	// Errors
 	for _, e := range ev.Status.Errors {
 		printEvent(fmt.Sprintf("error: %s", e))
 	}
-
-	// Cloud-init progress
 	if ev.Status.CloudInitProgress != nil {
 		if ev.Status.CloudInitProgress.Completed {
 			printEvent("cloud-init completed")
@@ -208,8 +194,6 @@ func printHumanReadableEvent(out io.Writer, instName string, ev events.Event) {
 			printEvent(fmt.Sprintf("cloud-init: %s", ev.Status.CloudInitProgress.LogLine))
 		}
 	}
-
-	// Port forwarding events
 	if ev.Status.PortForward != nil {
 		pf := ev.Status.PortForward
 		switch pf.Type {
@@ -223,8 +207,6 @@ func printHumanReadableEvent(out io.Writer, instName string, ev events.Event) {
 			printEvent(fmt.Sprintf("failed to forward %s %s: %s", pf.Protocol, pf.GuestAddr, pf.Error))
 		}
 	}
-
-	// Vsock events
 	if ev.Status.Vsock != nil {
 		vs := ev.Status.Vsock
 		switch vs.Type {
