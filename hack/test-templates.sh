@@ -327,14 +327,11 @@ if [[ -n ${CHECKS["ssh-over-vsock"]} ]]; then
 		set -x
 		log_file="$HOME_HOST/.lima/${NAME}/ha.stdout.log"
 
-		# Helper function to check vsock events in new log lines only
+		# Helper function to check vsock events in the log file
 		# $1: event_type to check for
-		# $2: line number to start checking from
 		check_vsock_event() {
 			local event_type="$1"
-			local start_line="$2"
-			# Check only lines added after start_line
-			if tail -n +"$start_line" "$log_file" | jq -e --arg type "$event_type" 'select(.status.vsock.type == $type)' >/dev/null 2>&1; then
+			if jq -e --arg type "$event_type" 'select(.status.vsock.type == $type)' "$log_file" >/dev/null 2>&1; then
 				return 0
 			fi
 			return 1
@@ -342,10 +339,9 @@ if [[ -n ${CHECKS["ssh-over-vsock"]} ]]; then
 
 		INFO "Testing .ssh.overVsock=true configuration"
 		limactl stop "${NAME}"
-		log_lines_before=$(($(wc -l <"$log_file")))
 		# Detection of the SSH server on VSOCK may fail; however, a failing log indicates that controlling detection via the environment variable works as expected.
 		limactl start --set '.ssh.overVsock=true' "${NAME}"
-		if ! check_vsock_event "started" "$log_lines_before" && ! check_vsock_event "failed" "$log_lines_before"; then
+		if ! check_vsock_event "started" && ! check_vsock_event "failed"; then
 			set +x
 			diagnose "${NAME}"
 			ERROR ".ssh.overVsock=true did not enable vsock forwarder"
@@ -353,10 +349,9 @@ if [[ -n ${CHECKS["ssh-over-vsock"]} ]]; then
 		fi
 		INFO 'Testing .ssh.overVsock=null configuration'
 		limactl stop "${NAME}"
-		log_lines_before=$(($(wc -l <"$log_file")))
 		# Detection of the SSH server on VSOCK may fail; however, a failing log indicates that controlling detection via the environment variable works as expected.
 		limactl start --set '.ssh.overVsock=null' "${NAME}"
-		if ! check_vsock_event "started" "$log_lines_before" && ! check_vsock_event "failed" "$log_lines_before"; then
+		if ! check_vsock_event "started" && ! check_vsock_event "failed"; then
 			set +x
 			diagnose "${NAME}"
 			ERROR ".ssh.overVsock=null did not enable vsock forwarder"
@@ -364,9 +359,8 @@ if [[ -n ${CHECKS["ssh-over-vsock"]} ]]; then
 		fi
 		INFO "Testing .ssh.overVsock=false configuration"
 		limactl stop "${NAME}"
-		log_lines_before=$(($(wc -l <"$log_file")))
 		limactl start --set '.ssh.overVsock=false' "${NAME}"
-		if ! check_vsock_event "skipped" "$log_lines_before"; then
+		if ! check_vsock_event "skipped"; then
 			set +x
 			diagnose "${NAME}"
 			ERROR ".ssh.overVsock=false did not disable vsock forwarder"
