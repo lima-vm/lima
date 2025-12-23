@@ -6,6 +6,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"path/filepath"
 	"time"
 
@@ -101,6 +102,9 @@ func watchAction(cmd *cobra.Command, args []string) error {
 		})
 	}
 
+	stdout := cmd.OutOrStdout()
+	stderr := cmd.ErrOrStderr()
+
 	// If only one instance, watch it directly
 	if len(instances) == 1 {
 		inst := instances[0]
@@ -109,12 +113,12 @@ func watchAction(cmd *cobra.Command, args []string) error {
 				we := watchEvent{Instance: inst.name, Event: ev}
 				j, err := json.Marshal(we)
 				if err != nil {
-					fmt.Fprintf(cmd.ErrOrStderr(), "error marshaling event: %v\n", err)
+					fmt.Fprintf(stderr, "error marshaling event: %v\n", err)
 					return false
 				}
-				fmt.Fprintln(cmd.OutOrStdout(), string(j))
+				fmt.Fprintln(stdout, string(j))
 			} else {
-				printHumanReadableEvent(cmd, inst.name, ev)
+				printHumanReadableEvent(stdout, inst.name, ev)
 			}
 			return false
 		})
@@ -156,20 +160,19 @@ func watchAction(cmd *cobra.Command, args []string) error {
 				we := watchEvent{Instance: ev.instance, Event: ev.event}
 				j, err := json.Marshal(we)
 				if err != nil {
-					fmt.Fprintf(cmd.ErrOrStderr(), "error marshaling event: %v\n", err)
+					fmt.Fprintf(stderr, "error marshaling event: %v\n", err)
 					continue
 				}
-				fmt.Fprintln(cmd.OutOrStdout(), string(j))
+				fmt.Fprintln(stdout, string(j))
 			} else {
-				printHumanReadableEvent(cmd, ev.instance, ev.event)
+				printHumanReadableEvent(stdout, ev.instance, ev.event)
 			}
 		}
 	}
 }
 
-func printHumanReadableEvent(cmd *cobra.Command, instName string, ev events.Event) {
+func printHumanReadableEvent(out io.Writer, instName string, ev events.Event) {
 	timestamp := ev.Time.Format("2006-01-02 15:04:05")
-	out := cmd.OutOrStdout()
 
 	printEvent := func(msg string) {
 		fmt.Fprintf(out, "%s %s | %s\n", timestamp, instName, msg)
