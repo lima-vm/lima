@@ -392,6 +392,28 @@ func rsyncCommand(ctx context.Context, command string, copyPaths []*copyPath, ve
 		rsyncArgs = append(rsyncArgs, "-e", sshCmd)
 	}
 
+	// Handle trailing slash for directory copies to keep consistent behavior with scp,
+	// which was the original implementation of `limactl copy -r`.
+	// https://github.com/lima-vm/lima/issues/4468
+	if recursive {
+		for i, cp := range copyPaths {
+			//nolint:modernize // stringscutprefix: HasSuffix + TrimSuffix can be simplified to CutSuffix
+			if strings.HasSuffix(cp.path, "/") {
+				if cp.isRemote {
+					for j, cp2 := range copyPaths {
+						if i != j {
+							cp2.path = strings.TrimSuffix(cp2.path, "/")
+						}
+					}
+				} else {
+					cp.path = strings.TrimSuffix(cp.path, "/")
+				}
+			} else {
+				cp.path += "/"
+			}
+		}
+	}
+
 	for _, cp := range copyPaths {
 		if cp.isRemote {
 			rsyncArgs = append(rsyncArgs, fmt.Sprintf("%s@127.0.0.1:%s", *cp.instance.Config.User.Name, cp.path))
