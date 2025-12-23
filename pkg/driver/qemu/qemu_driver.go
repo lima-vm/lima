@@ -370,6 +370,7 @@ func (l *LimaQemuDriver) Start(_ context.Context) (chan error, error) {
 	l.qWaitCh = make(chan error, 1)
 	go func() {
 		defer close(l.qWaitCh)
+		defer cancel()
 		l.qWaitCh <- qCmd.Wait()
 	}()
 	l.vhostCmds = vhostCmds
