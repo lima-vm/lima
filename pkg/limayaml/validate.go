@@ -466,9 +466,15 @@ func validateNetwork(y *limatype.LimaYAML) error {
 			if nw.VZNAT != nil && *nw.VZNAT {
 				errs = errors.Join(errs, fmt.Errorf("field `%s.lima` and field `%s.vzNAT` are mutually exclusive", field, field))
 			}
+			if nw.Vz != "" {
+				errs = errors.Join(errs, fmt.Errorf("field `%s.lima` and field `%s.vz` are mutually exclusive", field, field))
+			}
 		case nw.Socket != "":
 			if nw.VZNAT != nil && *nw.VZNAT {
 				errs = errors.Join(errs, fmt.Errorf("field `%s.socket` and field `%s.vzNAT` are mutually exclusive", field, field))
+			}
+			if nw.Vz != "" {
+				errs = errors.Join(errs, fmt.Errorf("field `%s.socket` and field `%s.vz` are mutually exclusive", field, field))
 			}
 			if fi, err := os.Stat(nw.Socket); err != nil && !errors.Is(err, os.ErrNotExist) {
 				errs = errors.Join(errs, err)
@@ -476,11 +482,24 @@ func validateNetwork(y *limatype.LimaYAML) error {
 				errs = errors.Join(errs, fmt.Errorf("field `%s.socket` %q points to a non-socket file", field, nw.Socket))
 			}
 		case nw.VZNAT != nil && *nw.VZNAT:
+			if nw.Vz != "" {
+				errs = errors.Join(errs, fmt.Errorf("field `%s.vzNAT` and field `%s.vz` are mutually exclusive", field, field))
+			}
 			if nw.Lima != "" {
 				errs = errors.Join(errs, fmt.Errorf("field `%s.vzNAT` and field `%s.lima` are mutually exclusive", field, field))
 			}
 			if nw.Socket != "" {
 				errs = errors.Join(errs, fmt.Errorf("field `%s.vzNAT` and field `%s.socket` are mutually exclusive", field, field))
+			}
+		case nw.Vz != "":
+			if nw.VZNAT != nil && *nw.VZNAT {
+				errs = errors.Join(errs, fmt.Errorf("field `%s.vz` and field `%s.vzNAT` are mutually exclusive", field, field))
+			}
+			if nw.Lima != "" {
+				errs = errors.Join(errs, fmt.Errorf("field `%s.vz` and field `%s.lima` are mutually exclusive", field, field))
+			}
+			if nw.Socket != "" {
+				errs = errors.Join(errs, fmt.Errorf("field `%s.vz` and field `%s.socket` are mutually exclusive", field, field))
 			}
 		default:
 			errs = errors.Join(errs, fmt.Errorf("field `%s.lima` or  field `%s.socket must be set", field, field))

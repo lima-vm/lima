@@ -37,6 +37,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/networks/usernet"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/store"
+	"github.com/lima-vm/lima/v2/pkg/vzvmnet"
 )
 
 // diskImageCachingMode is set to DiskImageCachingModeCached so as to avoid disk corruption on ARM:
@@ -363,7 +364,8 @@ func attachNetwork(ctx context.Context, inst *limatype.Instance, vmConfig *vz.Vi
 	}
 
 	for i, nw := range inst.Networks {
-		if nw.VZNAT != nil && *nw.VZNAT {
+		switch {
+		case nw.VZNAT != nil && *nw.VZNAT:
 			attachment, err := vz.NewNATNetworkDeviceAttachment()
 			if err != nil {
 				return err
@@ -373,7 +375,29 @@ func attachNetwork(ctx context.Context, inst *limatype.Instance, vmConfig *vz.Vi
 				return err
 			}
 			configurations = append(configurations, networkConfig)
-		} else if nw.Lima != "" {
+		case nw.Vz != "":
+			nwCfg, err := networks.LoadConfig()
+			if err != nil {
+				return err
+			}
+			vzCfg, ok := nwCfg.Vz[nw.Vz]
+			if !ok {
+				return fmt.Errorf("networks.yaml: 'vz: %s' is not defined", nw.Vz)
+			}
+			network, err := vzvmnet.RequestVmnetNetwork(ctx, nw.Vz, vzCfg)
+			if err != nil {
+				return err
+			}
+			attachment, err := vz.NewVmnetNetworkDeviceAttachment(network.Raw())
+			if err != nil {
+				return err
+			}
+			networkConfig, err := newVirtioNetworkDeviceConfiguration(attachment, nw.MACAddress)
+			if err != nil {
+				return err
+			}
+			configurations = append(configurations, networkConfig)
+		case nw.Lima != "":
 			nwCfg, err := networks.LoadConfig()
 			if err != nil {
 				return err
@@ -425,7 +449,7 @@ func attachNetwork(ctx context.Context, inst *limatype.Instance, vmConfig *vz.Vi
 					configurations = append(configurations, networkConfig)
 				}
 			}
-		} else if nw.Socket != "" {
+		case nw.Socket != "":
 			clientFile, err := DialQemu(ctx, nw.Socket)
 			if err != nil {
 				return err

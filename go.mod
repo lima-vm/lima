@@ -147,3 +147,5 @@ require (
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.0 // indirect
 )
+
+replace github.com/Code-Hex/vz/v3 => github.com/norio-nomura/vz/v3 v3.7.2-0.20251222044054-ebc8b3654abc

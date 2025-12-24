@@ -72,6 +72,13 @@ func fillDefaults(cfg Config) (Config, error) {
 		}
 		cfg.Networks[ModeUserV2] = defaultCfg.Networks[ModeUserV2]
 	}
+	if len(cfg.Vz) == 0 {
+		defaultCfg, err := DefaultConfig()
+		if err != nil {
+			return cfg, err
+		}
+		cfg.Vz = defaultCfg.Vz
+	}
 	return cfg, nil
 }
 
