@@ -142,6 +142,9 @@ func New(ctx context.Context, instName string, stdout io.Writer, signalCh chan o
 	if err != nil {
 		return nil, err
 	}
+	if *inst.Config.VMType == limatype.WSL2 || *inst.Config.VMType == limatype.AC {
+		sshLocalPort = inst.SSHLocalPort
+	}
 
 	var udpDNSLocalPort, tcpDNSLocalPort int
 	if *inst.Config.HostResolver.Enabled {
