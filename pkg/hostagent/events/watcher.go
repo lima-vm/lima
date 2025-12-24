@@ -15,7 +15,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/logrusutil"
 )
 
-func Watch(ctx context.Context, haStdoutPath, haStderrPath string, begin time.Time, onEvent func(Event) bool) error {
+func Watch(ctx context.Context, haStdoutPath, haStderrPath string, begin time.Time, propagateStderr bool, onEvent func(Event) bool) error {
 	haStdoutTail, err := tail.TailFile(haStdoutPath,
 		tail.Config{
 			Follow:    true,
@@ -69,7 +69,9 @@ loop:
 			if line.Err != nil {
 				logrus.Error(line.Err)
 			}
-			logrusutil.PropagateJSON(logrus.StandardLogger(), []byte(line.Text), "[hostagent] ", begin)
+			if propagateStderr {
+				logrusutil.PropagateJSON(logrus.StandardLogger(), []byte(line.Text), "[hostagent] ", begin)
+			}
 		}
 	}
 

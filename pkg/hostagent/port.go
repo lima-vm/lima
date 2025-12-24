@@ -11,6 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/guestagent/api"
+	"github.com/lima-vm/lima/v2/pkg/hostagent/events"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 )
@@ -21,19 +22,27 @@ type portForwarder struct {
 	rules          []limatype.PortForward
 	ignore         bool
 	vmType         limatype.VMType
+	onEvent        func(*events.PortForwardEvent)
 }
 
 const sshGuestPort = 22
 
 var IPv4loopback1 = limayaml.IPv4loopback1
 
-func newPortForwarder(sshConfig *ssh.SSHConfig, sshAddressPort func() (string, int), rules []limatype.PortForward, ignore bool, vmType limatype.VMType) *portForwarder {
+func newPortForwarder(sshConfig *ssh.SSHConfig, sshAddressPort func() (string, int), rules []limatype.PortForward, ignore bool, vmType limatype.VMType, onEvent func(*events.PortForwardEvent)) *portForwarder {
 	return &portForwarder{
 		sshConfig:      sshConfig,
 		sshAddressPort: sshAddressPort,
 		rules:          rules,
 		ignore:         ignore,
 		vmType:         vmType,
+		onEvent:        onEvent,
+	}
+}
+
+func (pf *portForwarder) emitEvent(ev *events.PortForwardEvent) {
+	if pf.onEvent != nil {
+		pf.onEvent(ev)
 	}
 }
 
@@ -97,6 +106,12 @@ func (pf *portForwarder) OnEvent(ctx context.Context, ev *api.Event) {
 			continue
 		}
 		logrus.Infof("Stopping forwarding TCP from %s to %s", remote, local)
+		pf.emitEvent(&events.PortForwardEvent{
+			Type:      events.PortForwardEventStopping,
+			Protocol:  "tcp",
+			GuestAddr: remote,
+			HostAddr:  local,
+		})
 		if err := forwardTCP(ctx, pf.sshConfig, sshAddress, sshPort, local, remote, verbCancel); err != nil {
 			logrus.WithError(err).Warnf("failed to stop forwarding tcp port %d", f.Port)
 		}
@@ -109,10 +124,21 @@ func (pf *portForwarder) OnEvent(ctx context.Context, ev *api.Event) {
 		if local == "" {
 			if !pf.ignore {
 				logrus.Infof("Not forwarding TCP %s", remote)
+				pf.emitEvent(&events.PortForwardEvent{
+					Type:      events.PortForwardEventNotForwarding,
+					Protocol:  "tcp",
+					GuestAddr: remote,
+				})
 			}
 			continue
 		}
 		logrus.Infof("Forwarding TCP from %s to %s", remote, local)
+		pf.emitEvent(&events.PortForwardEvent{
+			Type:      events.PortForwardEventForwarding,
+			Protocol:  "tcp",
+			GuestAddr: remote,
+			HostAddr:  local,
+		})
 		if err := forwardTCP(ctx, pf.sshConfig, sshAddress, sshPort, local, remote, verbForward); err != nil {
 			logrus.WithError(err).Warnf("failed to set up forwarding tcp port %d (negligible if already forwarded)", f.Port)
 		}

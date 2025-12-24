@@ -354,7 +354,7 @@ func watchHostAgentEvents(ctx context.Context, inst *limatype.Instance, haStdout
 		return false
 	}
 
-	if xerr := hostagentevents.Watch(ctx, haStdoutPath, haStderrPath, begin, onEvent); xerr != nil {
+	if xerr := hostagentevents.Watch(ctx, haStdoutPath, haStderrPath, begin, true, onEvent); xerr != nil {
 		return xerr
 	}
 
