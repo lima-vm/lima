@@ -549,11 +549,34 @@ func createAction(cmd *cobra.Command, args []string) error {
 	if len(inst.Errors) > 0 {
 		return fmt.Errorf("errors inspecting instance: %+v", inst.Errors)
 	}
-	if _, err = instance.Prepare(cmd.Context(), inst, ""); err != nil {
+	ctx := cmd.Context()
+	if _, err = instance.Prepare(ctx, inst, ""); err != nil {
 		return err
 	}
-	logrus.Infof("Run `limactl start %s` to start the instance.", inst.Name)
+	tty, err := cmd.Flags().GetBool("tty")
+	if err != nil {
+		return err
+	}
+
+	startNow := false
+	if tty {
+		startNow, err = askWhetherToStart()
+		if err != nil {
+			return err
+		}
+	}
+
+	if !startNow {
+		logrus.Infof("Run `limactl start %s` to start the instance.", inst.Name)
+		return nil
+	}
+
+	if err := instance.Start(ctx, inst, false, false); err != nil {
+		return err
+	}
+
 	return nil
+
 }
 
 func startAction(cmd *cobra.Command, args []string) error {
