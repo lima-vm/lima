@@ -3,12 +3,16 @@
 
 package networks
 
-import "net"
+import (
+	"net"
+	"net/netip"
+)
 
 type Config struct {
-	Paths    Paths              `yaml:"paths" json:"paths"`
-	Group    string             `yaml:"group,omitempty" json:"group,omitempty"` // default: "everyone"
-	Networks map[string]Network `yaml:"networks" json:"networks"`
+	Paths    Paths                    `yaml:"paths" json:"paths"`
+	Group    string                   `yaml:"group,omitempty" json:"group,omitempty"` // default: "everyone"
+	Networks map[string]Network       `yaml:"networks" json:"networks"`
+	Vz       map[string]VzVmnetConfig `yaml:"vz" json:"vz"`
 }
 
 type Paths struct {
@@ -37,4 +41,22 @@ type Network struct {
 	Gateway   net.IP `yaml:"gateway,omitempty" json:"gateway,omitempty"`     // only used by "user-v2", "host" and "shared" networks
 	DHCPEnd   net.IP `yaml:"dhcpEnd,omitempty" json:"dhcpEnd,omitempty"`     // default: same as Gateway, last byte is 254
 	NetMask   net.IP `yaml:"netmask,omitempty" json:"netmask,omitempty"`     // default: 255.255.255.0
+}
+
+type VzVmnetMode string
+
+const (
+	VzModeShared VzVmnetMode = "shared"
+	VzModeHost   VzVmnetMode = "host"
+)
+
+type VzVmnetConfig struct {
+	Mode                VzVmnetMode  `yaml:"mode" json:"mode"` // "shared" or "host"
+	Dhcp                bool         `yaml:"dhcp,omitempty" json:"dhcp,omitempty"`
+	DNSProxy            bool         `yaml:"dnsProxy,omitempty" json:"dnsProxy,omitempty"`
+	Mtu                 uint32       `yaml:"mtu,omitempty" json:"mtu,omitempty"`
+	Nat44               bool         `yaml:"nat44,omitempty" json:"nat44,omitempty"`
+	Nat66               bool         `yaml:"nat66,omitempty" json:"nat66,omitempty"`
+	RouterAdvertisement bool         `yaml:"routerAdvertisement,omitempty" json:"routerAdvertisement,omitempty"`
+	Subnet              netip.Prefix `yaml:"subnet,omitempty" json:"subnet,omitempty"`
 }
