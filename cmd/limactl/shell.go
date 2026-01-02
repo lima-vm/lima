@@ -48,6 +48,7 @@ Hint: try --debug to show the detailed logs, if it seems hanging (mostly due to 
 func newShellCommand() *cobra.Command {
 	shellCmd := &cobra.Command{
 		Use:               "shell [flags] INSTANCE [COMMAND...]",
+		SuggestFor:        []string{"ssh"},
 		Short:             "Execute shell in Lima",
 		Long:              shellHelp,
 		Args:              WrapArgsError(cobra.MinimumNArgs(1)),
