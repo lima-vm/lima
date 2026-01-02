@@ -21,6 +21,20 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/yqutil"
 )
 
+const networkExample = `  List all networks:
+  $ limactl network list
+
+  Create a network:
+  $ limactl network create foo --gateway 192.168.42.1/24
+
+  Connect VM instances to the newly created network:
+  $ limactl create --network lima:foo --name vm1
+  $ limactl create --network lima:foo --name vm2
+
+  Delete a network:
+  $ limactl network delete --force foo
+`
+
 const networkCreateExample = `  Create a network:
   $ limactl network create foo --gateway 192.168.42.1/24
 
@@ -33,7 +47,7 @@ func newNetworkCommand() *cobra.Command {
 	networkCommand := &cobra.Command{
 		Use:     "network",
 		Short:   "Lima network management",
-		Example: networkCreateExample,
+		Example: networkExample,
 		GroupID: advancedCommand,
 	}
 	networkCommand.AddCommand(
@@ -46,8 +60,14 @@ func newNetworkCommand() *cobra.Command {
 
 func newNetworkListCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:               "list",
-		Short:             "List networks",
+		Use:   "list",
+		Short: "List networks",
+		Example: `  List all networks:
+  $ limactl network list
+
+  List networks in JSON format:
+  $ limactl network list --json
+`,
 		Aliases:           []string{"ls"},
 		Args:              WrapArgsError(cobra.ArbitraryArgs),
 		RunE:              networkListAction,
@@ -233,8 +253,14 @@ func networkApplyYQ(yq string) error {
 
 func newNetworkDeleteCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:               "delete NETWORK [NETWORK, ...]",
-		Short:             "Delete one or more Lima networks",
+		Use:   "delete NETWORK [NETWORK, ...]",
+		Short: "Delete one or more Lima networks",
+		Example: `  Delete a network:
+  $ limactl network delete --force foo
+
+  Delete multiple networks:
+  $ limactl network delete --force foo bar
+`,
 		Aliases:           []string{"remove", "rm"},
 		Args:              WrapArgsError(cobra.MinimumNArgs(1)),
 		RunE:              networkDeleteAction,
