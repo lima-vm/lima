@@ -11,6 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/guestagent/api"
+	"github.com/lima-vm/lima/v2/pkg/hostagent/events"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 )
@@ -22,14 +23,22 @@ type Forwarder struct {
 	ignoreTCP         bool
 	ignoreUDP         bool
 	closableListeners *ClosableListeners
+	onEvent           func(*events.PortForwardEvent)
 }
 
-func NewPortForwarder(rules []limatype.PortForward, ignoreTCP, ignoreUDP bool) *Forwarder {
+func NewPortForwarder(rules []limatype.PortForward, ignoreTCP, ignoreUDP bool, onEvent func(*events.PortForwardEvent)) *Forwarder {
 	return &Forwarder{
 		rules:             rules,
 		ignoreTCP:         ignoreTCP,
 		ignoreUDP:         ignoreUDP,
 		closableListeners: NewClosableListener(),
+		onEvent:           onEvent,
+	}
+}
+
+func (fw *Forwarder) emitEvent(ev *events.PortForwardEvent) {
+	if fw.onEvent != nil {
+		fw.onEvent(ev)
 	}
 }
 
@@ -47,13 +56,29 @@ func (fw *Forwarder) OnEvent(ctx context.Context, dialContext func(ctx context.C
 		if local == "" {
 			if !fw.ignoreTCP && f.Protocol == "tcp" {
 				logrus.Infof("Not forwarding TCP %s", remote)
+				fw.emitEvent(&events.PortForwardEvent{
+					Type:      events.PortForwardEventNotForwarding,
+					Protocol:  f.Protocol,
+					GuestAddr: remote,
+				})
 			}
 			if !fw.ignoreUDP && f.Protocol == "udp" {
 				logrus.Infof("Not forwarding UDP %s", remote)
+				fw.emitEvent(&events.PortForwardEvent{
+					Type:      events.PortForwardEventNotForwarding,
+					Protocol:  f.Protocol,
+					GuestAddr: remote,
+				})
 			}
 			continue
 		}
 		logrus.Infof("Forwarding %s from %s to %s", strings.ToUpper(f.Protocol), remote, local)
+		fw.emitEvent(&events.PortForwardEvent{
+			Type:      events.PortForwardEventForwarding,
+			Protocol:  f.Protocol,
+			GuestAddr: remote,
+			HostAddr:  local,
+		})
 		fw.closableListeners.Forward(ctx, dialContext, f.Protocol, local, remote)
 	}
 	for _, f := range ev.RemovedLocalPorts {
@@ -61,6 +86,12 @@ func (fw *Forwarder) OnEvent(ctx context.Context, dialContext func(ctx context.C
 		if local == "" {
 			continue
 		}
+		fw.emitEvent(&events.PortForwardEvent{
+			Type:      events.PortForwardEventStopping,
+			Protocol:  f.Protocol,
+			GuestAddr: remote,
+			HostAddr:  local,
+		})
 		fw.closableListeners.Remove(ctx, f.Protocol, local, remote)
 		logrus.Debugf("Port forwarding closed proto:%s host:%s guest:%s", f.Protocol, local, remote)
 	}
