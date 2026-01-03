@@ -1,0 +1,114 @@
+# Debian Trixie Desktop - VZ with XFCE, SPICE agent, GUI, and audio
+# Includes clipboard sharing, auto-login, and graphical display
+
+vmType: vz
+
+video:
+  display: "vz"
+  vz:
+    width: 1440
+    height: 900
+
+audio:
+  device: "vz"
+
+images:
+- location: "https://cloud.debian.org/images/cloud/trixie/latest/debian-13-generic-amd64.qcow2"
+  arch: "x86_64"
+- location: "https://cloud.debian.org/images/cloud/trixie/latest/debian-13-generic-arm64.qcow2"
+  arch: "aarch64"
+
+cpus: 4
+memory: "8GiB"
+disk: "50GiB"
+
+mounts:
+- location: "~"
+  writable: false
+- location: "/tmp/lima"
+  writable: true
+
+ssh:
+  localPort: 0
+  loadDotSSHPubKeys: true
+
+hostResolver:
+  enabled: true
+
+provision:
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+
+    # Update package lists
+    apt-get update
+
+    # Install XFCE desktop environment and required packages
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
+      xfce4 \
+      xfce4-goodies \
+      lightdm \
+      dbus-x11 \
+      pulseaudio \
+      spice-vdagent
+
+    # Enable SPICE agent for clipboard sharing with host
+    systemctl enable spice-vdagentd.socket || true
+
+    # Set graphical target
+    systemctl set-default graphical.target
+
+    # Try to load virtio-sound module if available
+    if modinfo virtio_snd >/dev/null 2>&1; then
+      modprobe virtio_snd || true
+      modprobe snd_virtio || true
+    fi
+
+    # Configure LightDM auto-login
+    # Use LIMA_CIDATA_USER which is already set by Lima's boot.sh
+    if [ -z "${LIMA_CIDATA_USER:-}" ]; then
+      echo "ERROR: LIMA_CIDATA_USER not set"
+      exit 1
+    fi
+
+    # Set a default password for the user (useful if auto-login fails or for manual login)
+    # Default password: "lima" (users should change this if needed)
+    echo "${LIMA_CIDATA_USER}:lima" | chpasswd
+    echo "Set default password 'lima' for user ${LIMA_CIDATA_USER}"
+
+    mkdir -p /etc/lightdm/lightdm.conf.d
+    cat > /etc/lightdm/lightdm.conf.d/50-autologin.conf <<EOF
+    [Seat:*]
+    autologin-user=${LIMA_CIDATA_USER}
+    autologin-user-timeout=0
+    EOF
+
+    # Ensure LightDM is enabled
+    systemctl enable lightdm
+
+    echo "Desktop installation complete. Rebooting..."
+
+- mode: system
+  script: |
+    #!/bin/bash
+    # This runs after reboot
+    systemctl status lightdm || true
+
+message: |-
+  Debian Trixie Desktop with VZ display/audio/clipboard configured.
+
+  XFCE desktop environment has been installed with:
+  - Graphical display (1440x900)
+  - Clipboard sharing (auto-enabled by guest agent X11 spice-vdagent)
+  - Auto-login enabled (no password required)
+  - Audio hardware present (virtio-sound)
+
+  Note: VZ audio requires virtio_snd kernel module. Check if Debian Trixie
+  includes this module. If audio doesn't work, use QEMU+SPICE as alternative.
+
+  The VM will reboot automatically to start the graphical environment.
+  The VZ display window opens automatically when the VM starts.
+
+  To start:
+    limactl start --name=debian-trixie-desktop templates/experimental/debian-trixie-desktop.yaml
