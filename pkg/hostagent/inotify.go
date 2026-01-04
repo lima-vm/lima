@@ -20,8 +20,9 @@ import (
 const CacheSize = 10000
 
 var (
-	inotifyCache  = make(map[string]int64)
-	mountSymlinks = make(map[string]string)
+	inotifyCache   = make(map[string]int64)
+	mountSymlinks  = make(map[string]string)
+	mountLocations = make(map[string]string)
 )
 
 func (a *HostAgent) startInotify(ctx context.Context) error {
@@ -54,11 +55,8 @@ func (a *HostAgent) startInotify(ctx context.Context) error {
 				continue
 			}
 
-			for k, v := range mountSymlinks {
-				if strings.HasPrefix(watchPath, k) {
-					watchPath = strings.ReplaceAll(watchPath, k, v)
-				}
-			}
+			watchPath = translateToGuestPath(watchPath, mountSymlinks, mountLocations)
+
 			utcTimestamp := timestamppb.New(stat.ModTime().UTC())
 			event := &guestagentapi.Inotify{MountPath: watchPath, Time: utcTimestamp}
 			err = inotifyClient.Send(event)
@@ -81,6 +79,9 @@ func (a *HostAgent) setupWatchers(events chan notify.EventInfo) error {
 		if m.Location != symlink {
 			mountSymlinks[symlink] = m.Location
 		}
+		if m.MountPoint != nil && m.Location != *m.MountPoint {
+			mountLocations[m.Location] = *m.MountPoint
+		}
 
 		logrus.Infof("enable inotify for writable mount: %s", m.Location)
 		err = notify.Watch(path.Join(m.Location, "..."), events, GetNotifyEvent())
@@ -89,6 +90,24 @@ func (a *HostAgent) setupWatchers(events chan notify.EventInfo) error {
 		}
 	}
 	return nil
+}
+
+func translateToGuestPath(hostPath string, symlinks, locations map[string]string) string {
+	result := hostPath
+
+	for symlink, original := range symlinks {
+		if strings.HasPrefix(result, symlink) {
+			result = strings.ReplaceAll(result, symlink, original)
+		}
+	}
+
+	for location, mountPoint := range locations {
+		if suffix, ok := strings.CutPrefix(result, location); ok {
+			return mountPoint + suffix
+		}
+	}
+
+	return result
 }
 
 func filterEvents(event notify.EventInfo, stat os.FileInfo) bool {
