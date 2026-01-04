@@ -777,6 +777,12 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 	maps.Copy(param, o.Param)
 	y.Param = param
 
+	vmOpts := make(limatype.VMOpts)
+	maps.Copy(vmOpts, d.VMOpts)
+	maps.Copy(vmOpts, y.VMOpts)
+	maps.Copy(vmOpts, o.VMOpts)
+	y.VMOpts = vmOpts
+
 	if y.CACertificates.RemoveDefaults == nil {
 		y.CACertificates.RemoveDefaults = d.CACertificates.RemoveDefaults
 	}
