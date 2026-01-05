@@ -26,8 +26,8 @@ get_num_nodes() {
 
 local_setup() {
     local nodes=$(get_num_nodes)
-    local join_command=""
-    for ((i=0; i<nodes; i++)); do
+    local params=""
+    for ((i=0; i<1; i++)); do
         limactl delete --force "${NAME}-$i" || :
         local limactl_start_flags="--tty=false --name "${NAME}-$i""
         # Multi-node setup requires user-v2 network for VM-to-VM communication
@@ -40,15 +40,26 @@ local_setup() {
     # Multi-node setup
     if [[ $nodes -gt 1 ]]; then
         for ((i=0; i<nodes; i++)); do
-            if [[ $i -eq 0 ]]; then
+            if [[ $i -eq 0 && "${TEMPLATE}" == "k8s" ]]; then
                 # Get the join command from the first node
                 join_command=$(limactl shell "${NAME}-0" sudo kubeadm token create --print-join-command)
+                # kubeadm join ADDRESS --token TOKEN --discovery-token-ca-cert-hash DISCOVERY_TOKEN_CA_CERT_HASH
+                read -ra words <<< "$join_command"
+                assert_equal "${words[1]} ${words[3]} ${words[5]}" "join --token --discovery-token-ca-cert-hash"
+                params=".param.url=\"https://${words[2]}\"|.param.token=\"${words[4]}\"|.param.discoveryTokenCaCertHash=\"${words[6]}\""
+            elif [[ $i -eq 0 && "${TEMPLATE}" == "k3s" ]]; then
+                url=$(printf "https://lima-%s.internal:6443\n" "${NAME}-0")
+                token=$(limactl shell "${NAME}-0" sudo cat /var/lib/rancher/k3s/server/node-token)
+                params=".param.url=\"${url}\"|.param.token=\"${token}\""
             else
                 # Execute the join command on worker nodes
-                limactl shell "${NAME}-$i" sudo bash -euxc "kubeadm reset --force ; ip link delete cni0 ; ip link delete flannel.1 ; rm -rf /var/lib/cni /etc/cni"
-                limactl shell "${NAME}-$i" sudo ${join_command}
+                limactl delete --force "${NAME}-$i" || :
+                local limactl_start_flags="--tty=false --name "${NAME}-$i""
+                limactl_start_flags+=" --network lima:user-v2 --set $params"
+                limactl start ${limactl_start_flags} "template:${TEMPLATE}" 3>&- 4>&- &
             fi
         done
+        wait $(jobs -p)
     fi
     for node in $(k get node -o name); do
 	    k wait --timeout=5m --for=condition=ready "${node}"

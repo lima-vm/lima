@@ -15,11 +15,11 @@
 #
 # $ limactl start --name k8s-0 --network lima:user-v2 template:k8s
 # $ limactl shell k8s-0 sudo kubeadm token create --print-join-command
-# (The join command printed here)
+# (The parameters for the start command printed here)
 #
-# $ limactl start --name k8s-1 --network lima:user-v2 template:k8s
-# $ limactl shell k8s-1 sudo bash -euxc "kubeadm reset --force ; ip link delete cni0 ; ip link delete flannel.1 ; rm -rf /var/lib/cni /etc/cni"
-# $ limactl shell k8s-1 sudo <JOIN_COMMAND_FROM_ABOVE>
+# $ limactl start --name k8s-1 --network lima:user-v2 template:k8s \
+#                 --set '.param.url="https://<ADDRESS_FROM_ABOVE>" | .param.token="<TOKEN_FROM_ABOVE>" | \
+#                        .param.discoveryTokenCaCertHash="<DISCOVERY_TOKEN_CA_CERT_HASH_FROM_ABOVE>"'
 
 minimumLimaVersion: 2.0.0
 
@@ -93,6 +93,7 @@ provision:
     set -eux -o pipefail
     test -e /etc/kubernetes/admin.conf && exit 0
     export KUBECONFIG=/etc/kubernetes/admin.conf
+    {{if not ( and .Param.url .Param.token )}}
     systemctl stop kubelet
     kubeadm config images list
     kubeadm config images pull --cri-socket=unix:///run/containerd/containerd.sock
@@ -117,6 +118,18 @@ provision:
     cgroupDriver: systemd
     EOF
     kubeadm init --config kubeadm-config.yaml
+    {{else}}
+    cat <<EOF >kubeadm-config.yaml
+    kind: JoinConfiguration
+    apiVersion: kubeadm.k8s.io/v1beta4
+    nodeRegistration:
+      criSocket: unix:///run/containerd/containerd.sock
+    EOF
+    kubeadm join --config kubeadm-config.yaml {{.Param.url}} --token {{.Param.token}} \
+        --discovery-token-ca-cert-hash {{.Param.discoveryTokenCaCertHash}}
+    {{end}}
+
+    {{if not ( and .Param.url .Param.token )}}
     # Installing a Pod network add-on
     kubectl apply -f https://github.com/flannel-io/flannel/releases/download/v0.27.4/kube-flannel.yml
     # Control plane node isolation
@@ -127,6 +140,7 @@ provision:
     # The original kubeconfig is kept unmodified, so that `kubeadm token create --print-join-command`
     # can still print the reachable address.
     sed -e "/server:/ s|https://.*:\([0-9]*\)$|https://127.0.0.1:\1|" $KUBECONFIG >/root/.kube/config.localhost
+    {{end}}
 - mode: system
   script: |
     #!/bin/bash
@@ -150,40 +164,57 @@ probes:
   script: |
     #!/bin/bash
     set -eux -o pipefail
+    {{if not ( and .Param.url .Param.token )}}
     if ! timeout 30s bash -c "images=\"$(kubeadm config images list)\"; until for image in \$images; do sudo ctr -n k8s.io image inspect \$image >/dev/null; done; do sleep 3; done"; then
       echo >&2 "k8s images are not pulled yet"
       exit 1
     fi
+    {{end}}
 - description: "kubeadm to be completed"
   script: |
     #!/bin/bash
     set -eux -o pipefail
+    {{if not ( and .Param.url .Param.token )}}
     if ! timeout 300s bash -c "until test -f /etc/kubernetes/admin.conf; do sleep 3; done"; then
       echo >&2 "k8s is not running yet"
       exit 1
     fi
+    {{else}}
+    # create an empty file so that the "copyToHost" does not fail
+    sudo mkdir -p /root/.kube && sudo touch /root/.kube/config.localhost
+    {{end}}
   hint: |
     The k8s kubeconfig file has not yet been created.
 - description: "kubernetes cluster to be running"
   script: |
     #!/bin/bash
     set -eux -o pipefail
+    {{if not ( and .Param.url .Param.token )}}
     if ! timeout 300s bash -c "until kubectl version >/dev/null 2>&1; do sleep 3; done"; then
       echo >&2 "kubernetes cluster is not up and running yet"
       exit 1
     fi
+    {{end}}
 - description: "coredns deployment to be running"
   script: |
     #!/bin/bash
     set -eux -o pipefail
+    {{if not ( and .Param.url .Param.token )}}
     kubectl wait -n kube-system --timeout=180s --for=condition=available deploy coredns
+    {{end}}
 copyToHost:
 - guest: "/root/.kube/config.localhost"
   host: "{{.Dir}}/copied-from-guest/kubeconfig.yaml"
   deleteOnStop: true
 message: |
+  {{- if not ( and .Param.url .Param.token )}}
   To run `kubectl` on the host (assumes kubectl is installed), run the following commands:
   ------
   export KUBECONFIG="{{.Dir}}/copied-from-guest/kubeconfig.yaml"
   kubectl ...
   ------
+  {{end -}}
+param:
+  url: ""
+  token: ""
+  discoveryTokenCaCertHash: ""
