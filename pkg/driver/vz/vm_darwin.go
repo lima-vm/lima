@@ -575,7 +575,7 @@ func attachDisplay(inst *limatype.Instance, vmConfig *vz.VirtualMachineConfigura
 func attachFolderMounts(inst *limatype.Instance, vmConfig *vz.VirtualMachineConfiguration) error {
 	var mounts []vz.DirectorySharingDeviceConfiguration
 	if *inst.Config.MountType == limatype.VIRTIOFS {
-		for i, mount := range inst.Config.Mounts {
+		for _, mount := range inst.Config.Mounts {
 			if _, err := os.Stat(mount.Location); errors.Is(err, os.ErrNotExist) {
 				err := os.MkdirAll(mount.Location, 0o750)
 				if err != nil {
@@ -592,7 +592,7 @@ func attachFolderMounts(inst *limatype.Instance, vmConfig *vz.VirtualMachineConf
 				return err
 			}
 
-			tag := fmt.Sprintf("mount%d", i)
+			tag := limayaml.MountTag(mount.Location, *mount.MountPoint)
 			config, err := vz.NewVirtioFileSystemDeviceConfiguration(tag)
 			if err != nil {
 				return err

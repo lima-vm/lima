@@ -842,3 +842,48 @@ func TestStaticPortForwarding(t *testing.T) {
 		})
 	}
 }
+
+func TestMountTag(t *testing.T) {
+	tests := []struct {
+		name       string
+		location   string
+		mountPoint string
+	}{
+		{"home directory", "/Users/testuser", "/Users/testuser"},
+		{"nested path", "/Users/testuser/Development/project", "/mnt/project"},
+		{"root path", "/", "/mnt/root"},
+		{"tmp directory", "/tmp/lima", "/tmp/lima"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tag := MountTag(tt.location, tt.mountPoint)
+			assert.Assert(t, len(tag) > 5 && tag[:5] == "lima-")
+			assert.Assert(t, len(tag) <= 36)
+			assert.Equal(t, tag, MountTag(tt.location, tt.mountPoint))
+		})
+	}
+}
+
+func TestMountTagUniqueness(t *testing.T) {
+	mounts := []struct{ location, mountPoint string }{
+		{"/Users/user1", "/Users/user1"},
+		{"/Users/user2", "/Users/user2"},
+		{"/home/user1", "/home/user1"},
+		{"/mnt/data", "/mnt/data"},
+		{"/tmp/lima", "/tmp/lima"},
+	}
+	tags := make(map[string]bool)
+	for _, m := range mounts {
+		tag := MountTag(m.location, m.mountPoint)
+		assert.Assert(t, !tags[tag], "tag collision: %s", tag)
+		tags[tag] = true
+	}
+}
+
+func TestMountTagDuplicateLocation(t *testing.T) {
+	location := "/Users/testuser"
+	tag1 := MountTag(location, "/home/user")
+	tag2 := MountTag(location, "/mnt/home-writable")
+	assert.Assert(t, tag1 != tag2)
+}
