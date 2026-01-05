@@ -864,7 +864,8 @@ func executeGuestTemplate(format, instDir string, user limatype.User, param map[
 			"Param":    param,
 		}
 		var out bytes.Buffer
-		if err := tmpl.Execute(&out, data); err == nil {
+		err = tmpl.Execute(&out, data)
+		if err == nil {
 			return out, nil
 		}
 	}
@@ -896,7 +897,8 @@ func executeHostTemplate(format, instDir string, param map[string]string) (bytes
 			"LimaHome": limaHome,               // DEPRECATED, use `{{.Dir}}` instead of `{{.LimaHome}}/{{.Instance}}`
 		}
 		var out bytes.Buffer
-		if err := tmpl.Execute(&out, data); err == nil {
+		err = tmpl.Execute(&out, data)
+		if err == nil {
 			return out, nil
 		}
 	}
