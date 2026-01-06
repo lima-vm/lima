@@ -19,6 +19,18 @@ func newSnapshotCommand() *cobra.Command {
 	snapshotCmd := &cobra.Command{
 		Use:   "snapshot",
 		Short: "Manage instance snapshots",
+		Example: `  List all snapshots of an instance:
+  $ limactl snapshot list default
+
+  Create a snapshot:
+  $ limactl snapshot create default --tag snap1
+
+  Apply (restore) a snapshot:
+  $ limactl snapshot apply default --tag snap1
+
+  Delete a snapshot:
+  $ limactl snapshot delete default --tag snap1
+`,
 		PersistentPreRun: func(*cobra.Command, []string) {
 			logrus.Warn("`limactl snapshot` is experimental")
 		},
@@ -34,9 +46,12 @@ func newSnapshotCommand() *cobra.Command {
 
 func newSnapshotCreateCommand() *cobra.Command {
 	createCmd := &cobra.Command{
-		Use:               "create INSTANCE",
-		Aliases:           []string{"save"},
-		Short:             "Create (save) a snapshot",
+		Use:     "create INSTANCE",
+		Aliases: []string{"save"},
+		Short:   "Create (save) a snapshot",
+		Example: `  Create a snapshot of an instance:
+  $ limactl snapshot create default --tag snap1
+`,
 		Args:              cobra.MinimumNArgs(1),
 		RunE:              snapshotCreateAction,
 		ValidArgsFunction: snapshotBashComplete,
@@ -69,9 +84,12 @@ func snapshotCreateAction(cmd *cobra.Command, args []string) error {
 
 func newSnapshotDeleteCommand() *cobra.Command {
 	deleteCmd := &cobra.Command{
-		Use:               "delete INSTANCE",
-		Aliases:           []string{"del"},
-		Short:             "Delete (del) a snapshot",
+		Use:     "delete INSTANCE",
+		Aliases: []string{"del"},
+		Short:   "Delete (del) a snapshot",
+		Example: `  Delete a snapshot:
+  $ limactl snapshot delete default --tag snap1
+`,
 		Args:              cobra.MinimumNArgs(1),
 		RunE:              snapshotDeleteAction,
 		ValidArgsFunction: snapshotBashComplete,
@@ -104,9 +122,12 @@ func snapshotDeleteAction(cmd *cobra.Command, args []string) error {
 
 func newSnapshotApplyCommand() *cobra.Command {
 	applyCmd := &cobra.Command{
-		Use:               "apply INSTANCE",
-		Aliases:           []string{"load"},
-		Short:             "Apply (load) a snapshot",
+		Use:     "apply INSTANCE",
+		Aliases: []string{"load"},
+		Short:   "Apply (load) a snapshot",
+		Example: `  Apply (restore) a snapshot:
+  $ limactl snapshot apply default --tag snap1
+`,
 		Args:              cobra.MinimumNArgs(1),
 		RunE:              snapshotApplyAction,
 		ValidArgsFunction: snapshotBashComplete,
@@ -139,9 +160,15 @@ func snapshotApplyAction(cmd *cobra.Command, args []string) error {
 
 func newSnapshotListCommand() *cobra.Command {
 	listCmd := &cobra.Command{
-		Use:               "list INSTANCE",
-		Aliases:           []string{"ls"},
-		Short:             "List existing snapshots",
+		Use:     "list INSTANCE",
+		Aliases: []string{"ls"},
+		Short:   "List existing snapshots",
+		Example: `  List all snapshots of an instance:
+  $ limactl snapshot list default
+
+  List only snapshot tags:
+  $ limactl snapshot list default --quiet
+`,
 		Args:              cobra.MinimumNArgs(1),
 		RunE:              snapshotListAction,
 		ValidArgsFunction: snapshotBashComplete,
