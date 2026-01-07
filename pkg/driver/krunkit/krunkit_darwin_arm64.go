@@ -25,12 +25,13 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/networks"
 	"github.com/lima-vm/lima/v2/pkg/networks/usernet"
 	"github.com/lima-vm/lima/v2/pkg/store"
+	"github.com/lima-vm/lima/v2/pkg/vmnet"
 )
 
 const logLevelInfo = "3"
 
 // Cmdline constructs the command line arguments for krunkit based on the instance configuration.
-func Cmdline(inst *limatype.Instance) (*exec.Cmd, error) {
+func Cmdline(ctx context.Context, inst *limatype.Instance) (*exec.Cmd, error) {
 	memBytes, err := units.RAMInBytes(*inst.Config.Memory)
 	if err != nil {
 		return nil, err
@@ -74,7 +75,7 @@ func Cmdline(inst *limatype.Instance) (*exec.Cmd, error) {
 	}
 
 	// Network commands
-	networkArgs, err := buildNetworkArgs(inst)
+	networkArgs, networkFiles, err := buildNetworkArgs(ctx, inst)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build network arguments: %w", err)
 	}
@@ -95,12 +96,14 @@ func Cmdline(inst *limatype.Instance) (*exec.Cmd, error) {
 
 	args = append(args, networkArgs...)
 	cmd := exec.CommandContext(context.Background(), vmType, args...)
+	cmd.ExtraFiles = networkFiles
 
 	return cmd, nil
 }
 
-func buildNetworkArgs(inst *limatype.Instance) ([]string, error) {
+func buildNetworkArgs(ctx context.Context, inst *limatype.Instance) ([]string, []*os.File, error) {
 	var args []string
+	files := make([]*os.File, 0)
 
 	// Configure default usernetwork with limayaml.MACAddress(inst.Dir) for eth0 interface
 	firstUsernetIndex := limayaml.FirstUsernetIndex(inst.Config)
@@ -108,63 +111,72 @@ func buildNetworkArgs(inst *limatype.Instance) ([]string, error) {
 		// slirp network using gvisor netstack
 		krunkitSock, err := usernet.SockWithDirectory(inst.Dir, "", usernet.FDSock)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		client, err := vz.PassFDToUnix(krunkitSock)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		args = append(args, "--device", fmt.Sprintf("virtio-net,type=unixgram,fd=%d,mac=%s", client.Fd(), limayaml.MACAddress(inst.Dir)))
 	}
 
 	for _, nw := range inst.Networks {
-		var sock string
-		var mac string
-		if nw.Lima != "" {
+		switch {
+		case nw.Lima != "":
+			var sock string
+			var mac string
 			nwCfg, err := networks.LoadConfig()
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			switch nw.Lima {
 			case networks.ModeUserV2:
 				sock, err = usernet.Sock(nw.Lima, usernet.QEMUSock)
 				if err != nil {
-					return nil, err
+					return nil, nil, err
 				}
 				mac = limayaml.MACAddress(inst.Dir)
 			case networks.ModeShared, networks.ModeBridged:
 				socketVMNetInstalled, err := nwCfg.IsDaemonInstalled(networks.SocketVMNet)
 				if err != nil {
-					return nil, err
+					return nil, nil, err
 				}
 				if !socketVMNetInstalled {
-					return nil, errors.New("socket_vmnet is not installed")
+					return nil, nil, errors.New("socket_vmnet is not installed")
 				}
 				sock, err = networks.Sock(nw.Lima)
 				if err != nil {
-					return nil, err
+					return nil, nil, err
 				}
 				mac = nw.MACAddress
 			default:
-				return nil, fmt.Errorf("invalid network spec %+v", nw)
+				return nil, nil, fmt.Errorf("invalid network spec %+v", nw)
 			}
-		} else if nw.Socket != "" {
-			sock = nw.Socket
-			mac = nw.MACAddress
-		} else {
-			return nil, fmt.Errorf("invalid network spec %+v", nw)
+			device := fmt.Sprintf("virtio-net,type=unixstream,path=%s,mac=%s", sock, mac)
+			args = append(args, "--device", device)
+		case nw.Socket != "":
+			device := fmt.Sprintf("virtio-net,type=unixstream,path=%s,mac=%s", nw.Socket, nw.MACAddress)
+			args = append(args, "--device", device)
+		case nw.Vmnet != "":
+			file, err := vmnet.RequestKrunkitDatagramFileDescriptorForNetwork(ctx, nw.Vmnet)
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed RequestKrunkitDatagramNextFileDescriptorForNetwork: %w", err)
+			}
+			files = append(files, file)
+			fd := len(files) + 2 // the first FD is 3
+			device := fmt.Sprintf("virtio-net,type=unixgram,fd=%d,mac=%s,offloading=on", fd, nw.MACAddress)
+			args = append(args, "--device", device)
+		default:
+			return nil, nil, fmt.Errorf("invalid network spec %+v", nw)
 		}
-
-		device := fmt.Sprintf("virtio-net,type=unixstream,path=%s,mac=%s", sock, mac)
-		args = append(args, "--device", device)
 	}
 
 	if len(args) == 0 {
-		return args, errors.New("no socket_vmnet networks defined")
+		return args, files, errors.New("no socket_vmnet networks defined")
 	}
 
-	return args, nil
+	return args, files, nil
 }
 
 func startUsernet(ctx context.Context, inst *limatype.Instance) (*usernet.Client, context.CancelFunc, error) {

@@ -79,6 +79,11 @@ func FirstUsernetIndex(l *limatype.LimaYAML) int {
 	return slices.IndexFunc(l.Networks, func(network limatype.Network) bool { return networks.IsUsernet(network.Lima) })
 }
 
+// IsVmnetUsed returns true if any of the networks in l.Networks uses vmnet.
+func IsVmnetUsed(l *limatype.LimaYAML) bool {
+	return slices.ContainsFunc(l.Networks, func(network limatype.Network) bool { return network.Vmnet != "" })
+}
+
 func MACAddress(uniqueID string) string {
 	sha := sha256.Sum256([]byte(osutil.MachineID() + uniqueID))
 	// "5" is the magic number in the Lima ecosystem.
