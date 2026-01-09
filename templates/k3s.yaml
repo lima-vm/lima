@@ -10,6 +10,18 @@
 # NAME       STATUS   ROLES                  AGE   VERSION
 # lima-k3s   Ready    control-plane,master   69s   v1.21.1+k3s1
 
+# A multi-node cluster can be created by starting multiple instances of this template
+# connected via the `lima:user-v2` network.
+#
+# $ limactl start --name k3s-0 --network lima:user-v2 template:k3s
+# $ printf "https://lima-%s.internal:6443\n" k3s-0
+# (The url for the start command printed here)
+# $ limactl shell k3s-0 sudo cat /var/lib/rancher/k3s/server/node-token
+# (The token for the start command printed here)
+#
+# $ limactl start --name k3s-1 --network lima:user-v2 template:k3s \
+#                 --set '.param.url="<URL_FROM_ABOVE>" | .param.token="<TOKEN_FROM_ABOVE>"'
+
 minimumLimaVersion: 2.0.0
 
 base: template:_images/ubuntu-lts
@@ -25,16 +37,25 @@ provision:
   script: |
     #!/bin/sh
     if [ ! -d /var/lib/rancher/k3s ]; then
+    {{if not ( and .Param.url .Param.token )}}
             curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --write-kubeconfig-mode 644" sh -
+    {{else}}
+            curl -sfL https://get.k3s.io | K3S_URL={{.Param.url}} K3S_TOKEN={{.Param.token}} sh -
+    {{end}}
     fi
 probes:
 - script: |
     #!/bin/bash
     set -eux -o pipefail
+    {{if not ( and .Param.url .Param.token )}}
     if ! timeout 30s bash -c "until test -f /etc/rancher/k3s/k3s.yaml; do sleep 3; done"; then
             echo >&2 "k3s is not running yet"
             exit 1
     fi
+    {{else}}
+    # create an empty file so that the "copyToHost" does not fail
+    sudo mkdir -p /etc/rancher/k3s && sudo touch /etc/rancher/k3s/k3s.yaml
+    {{end}}
   hint: |
     The k3s kubeconfig file has not yet been created.
     Run "limactl shell k3s sudo journalctl -u k3s" to check the log.
@@ -44,8 +65,13 @@ copyToHost:
   host: "{{.Dir}}/copied-from-guest/kubeconfig.yaml"
   deleteOnStop: true
 message: |
+  {{- if not ( and .Param.url .Param.token ) -}}
   To run `kubectl` on the host (assumes kubectl is installed), run the following commands:
   ------
   export KUBECONFIG="{{.Dir}}/copied-from-guest/kubeconfig.yaml"
   kubectl ...
   ------
+  {{end}}
+param:
+  url: ""
+  token: ""

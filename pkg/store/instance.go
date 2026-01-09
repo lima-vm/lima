@@ -124,6 +124,7 @@ func Inspect(ctx context.Context, instName string) (*limatype.Instance, error) {
 			inst.Errors = append(inst.Errors, fmt.Errorf("cannot add global fields to instance data: %w", err))
 			inst.Status = limatype.StatusBroken
 		} else {
+			data.Param = y.Param
 			var message strings.Builder
 			err = tmpl.Execute(&message, data)
 			if err != nil {
