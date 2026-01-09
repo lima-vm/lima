@@ -47,7 +47,7 @@ require (
 	github.com/wk8/go-ordered-map/v2 v2.1.8
 	golang.org/x/net v0.48.0
 	golang.org/x/sync v0.19.0
-	golang.org/x/sys v0.39.0 // gomodjail:unconfined
+	golang.org/x/sys v0.40.0 // gomodjail:unconfined
 	golang.org/x/text v0.32.0
 	google.golang.org/grpc v1.78.0
 	google.golang.org/protobuf v1.36.11 // gomodjail:unconfined
