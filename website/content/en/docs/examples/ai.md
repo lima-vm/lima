@@ -114,6 +114,19 @@ lima vi "/home/${USER}.linux/.bash_profile"
 
 See also <https://github.com/github/copilot-cli>.
 {{% /tab %}}
+{{% tab header="OpenCode" %}}
+```
+lima sudo snap install node --classic
+lima sudo npm install -g opencode-ai
+lima opencode
+```
+
+Type `/connect` in the first session for authentication.
+Unlike other agents, this step is not necessary for OpenCode.
+
+See also <https://github.com/anomalyco/opencode>.
+{{% /tab %}}
+
 {{< /tabpane >}}
 
 ## See also
