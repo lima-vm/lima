@@ -57,8 +57,12 @@ jobs:
       # TODO: move to `go tool` after upgrading to v2
       run: go install github.com/google/go-licenses@v1.6.0
     - name: Check licenses
-      # the allow list corresponds to https://github.com/cncf/foundation/blob/e5db022a0009f4db52b89d9875640cf3137153fe/allowed-third-party-license-policy.md
-      run: go-licenses check --include_tests  ./... --allowed_licenses=$(cat ./hack/allowed-licenses.txt)
+      run: |
+        # go-licenses doesn't use go.mod and doesn't see the `replace` directives
+        go mod vendor
+        # the allow list corresponds to https://github.com/cncf/foundation/blob/e5db022a0009f4db52b89d9875640cf3137153fe/allowed-third-party-license-policy.md
+        GOFLAGS="-mod=vendor" go-licenses check --include_tests  ./... --allowed_licenses=$(cat ./hack/allowed-licenses.txt)
+        rm -rf vendor/
     - name: Check license boilerplates
       run: go tool -modfile=./hack/tools/go.mod ltag -t ./hack/ltag --check -v
     - name: Check protobuf files
@@ -92,14 +96,19 @@ jobs:
       uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20  # v9.2.0
       with:
         version: ${{ steps.golangci-lint-version.outputs.GOLANGCI_LINT_VERSION }}
-        args: --verbose
+        args: --verbose --build-tags yq_nohcl
 
   security:
     name: "Vulncheck"
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-    - uses: golang/govulncheck-action@b625fbe08f3bccbe446d94fbf87fcc875a4f50ee  # v1.0.4
+    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+    - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c  # v6.1.0
+      with:
+        go-version: 1.25.x
+    - name: Run govulncheck
+      run: go tool -modfile=./hack/tools/go.mod govulncheck -tags yq_nohcl ./...
 
   unit:
     name: "Unit tests"
@@ -120,7 +129,7 @@ jobs:
       with:
         go-version: ${{ matrix.go-version }}
     - name: Unit tests
-      run: go test -v ./...
+      run: go test -v -tags yq_nohcl ./...
     - name: Make
       run: make
     - name: Install
@@ -171,7 +180,7 @@ jobs:
       with:
         go-version: 1.25.x
     - name: Unit tests
-      run: go test -v ./...
+      run: go test -v -tags yq_nohcl ./...
     - name: Make
       run: make
     - name: Integration tests (WSL2, Windows host)
@@ -224,7 +233,7 @@ jobs:
       with:
         go-version: 1.25.x
     - name: Unit tests
-      run: go test -v ./...
+      run: go test -v -tags yq_nohcl ./...
     - name: Make
       run: make
     - name: "Inject `no_timer_check` to kernel cmdline"
@@ -458,7 +467,7 @@ jobs:
         limactl sudoers | sudo tee /etc/sudoers.d/lima
     - name: Unit test (pkg/networks) with socket_vmnet
       # Set -count=1 to disable cache
-      run: go test -v -count=1 ./pkg/networks/...
+      run: go test -v -tags yq_nohcl -count=1 ./pkg/networks/...
     - name: Test socket_vmnet
       uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08  # v3.0.2
       with:
@@ -588,8 +597,8 @@ jobs:
     - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c  # v6.1.0
       with:
         go-version: 1.25.x
-    - run: GOOS=netbsd go build ./...
-    - run: GOOS=dragonfly go build ./...
+    - run: GOOS=netbsd go build -tags yq_nohcl ./...
+    - run: GOOS=dragonfly go build -tags yq_nohcl ./...
 
   qemu-linux-old:
     name: "Smoke tests (QEMU, old Linux host)"

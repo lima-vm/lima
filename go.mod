@@ -3,6 +3,14 @@ module github.com/lima-vm/lima/v2
 
 go 1.24.0
 
+// Avoid pulling in the real HCL module, which depends on github.com/apparentlymart/go-textseg/v15
+// which uses a nonstandard license and therefore cannot be used by CNCF projects.
+replace github.com/hashicorp/hcl/v2 => ./internal/hclstub
+
+// go-cty is only used in files that are excluded when building with yq_nohcl.
+// It also depends on github.com/apparentlymart/go-textseg/v15.
+replace github.com/zclconf/go-cty => ./internal/ctystub
+
 require (
 	al.essio.dev/pkg/shellescape v1.6.0
 	github.com/AlecAivazis/survey/v2 v2.3.7
@@ -138,12 +146,9 @@ require (
 )
 
 require (
-	github.com/agext/levenshtein v1.2.1 // indirect
-	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/google/jsonschema-go v0.3.0 // indirect
 	github.com/hashicorp/hcl/v2 v2.24.0 // indirect
-	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/zclconf/go-cty v1.17.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
