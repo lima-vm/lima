@@ -195,8 +195,8 @@ github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b/go.mod h1:01TrycV0kFyex
 github.com/miekg/dns v1.1.57/go.mod h1:uqRjCRUuEAA6qsOiJvDd+CFo/vW+y5WR6SNmHE55hZk=
 github.com/miekg/dns v1.1.70 h1:DZ4u2AV35VJxdD9Fo9fIWm119BsQL5cZU1cQ9s0LkqA=
 github.com/miekg/dns v1.1.70/go.mod h1:+EuEPhdHOsfk6Wk5TT2CzssZdqkmFhf8r+aVyDEToIs=
-github.com/mikefarah/yq/v4 v4.49.2 h1:GdMcAvlogQqV1IwW7ivoXjZBMVGA44L9X1yytzAkK2Y=
-github.com/mikefarah/yq/v4 v4.49.2/go.mod h1:iHgYxHyqA6VqQfre+TocMnqnk7e2+pNzAHusH8y95Wk=
+github.com/mikefarah/yq/v4 v4.50.1 h1:u7pnei4FIv4HGL5ZBuNVDhDBe9et1YRFnoTmKZw6zOY=
+github.com/mikefarah/yq/v4 v4.50.1/go.mod h1:L4Z8NywrquZ+PVMz6IFFeGIp64eBC2mGC0nMryygCnI=
 github.com/mitchellh/mapstructure v1.5.0 h1:jeMsZIYE/09sWLaz43PL7Gy6RuMjD2eJVyuac5Z2hdY=
 github.com/mitchellh/mapstructure v1.5.0/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RRV2QTWOzhPopBRo=
 github.com/modelcontextprotocol/go-sdk v1.1.0 h1:Qjayg53dnKC4UZ+792W21e4BpwEZBzwgRW6LrjLWSwA=

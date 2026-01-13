@@ -39,6 +39,8 @@ endif
 ADDITIONAL_DRIVERS ?= $(DEFAULT_ADDITIONAL_DRIVERS)
 
 GO_BUILDTAGS ?=
+# HCL depends on modules with incompatible license
+GO_BUILDTAGS += yq_nohcl
 ifeq ($(GOOS),darwin)
 ifeq ($(shell test $(MACOS_SDK_VERSION) -lt 13; echo $$?),0)
 # The "vz" mode needs macOS 13 SDK or later

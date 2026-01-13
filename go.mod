@@ -3,6 +3,14 @@ module github.com/lima-vm/lima/v2
 
 go 1.24.0
 
+// Avoid pulling in the real HCL module, which depends on github.com/apparentlymart/go-textseg/v15
+// which uses a nonstandard license and therefore cannot be used by CNCF projects.
+replace github.com/hashicorp/hcl/v2 => ./internal/hclstub
+
+// go-cty is only used in files that are excluded when building with yq_nohcl.
+// It also depends on github.com/apparentlymart/go-textseg/v15.
+replace github.com/zclconf/go-cty => ./internal/ctystub
+
 require (
 	al.essio.dev/pkg/shellescape v1.6.0
 	github.com/AlecAivazis/survey/v2 v2.3.7
@@ -32,7 +40,7 @@ require (
 	github.com/mdlayher/netlink v1.8.0
 	github.com/mdlayher/vsock v1.2.1 // gomodjail:unconfined
 	github.com/miekg/dns v1.1.70 // gomodjail:unconfined
-	github.com/mikefarah/yq/v4 v4.49.2
+	github.com/mikefarah/yq/v4 v4.50.1
 	github.com/modelcontextprotocol/go-sdk v1.1.0
 	github.com/nxadm/tail v1.4.11 // gomodjail:unconfined
 	github.com/opencontainers/go-digest v1.0.0
@@ -140,7 +148,9 @@ require (
 require (
 	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/google/jsonschema-go v0.3.0 // indirect
+	github.com/hashicorp/hcl/v2 v2.24.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/zclconf/go-cty v1.17.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.3 // indirect
