@@ -10,7 +10,6 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"time"
 
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -19,7 +18,6 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/guestagent/kubernetesservice"
 	"github.com/lima-vm/lima/v2/pkg/guestagent/sockets"
 	"github.com/lima-vm/lima/v2/pkg/guestagent/ticker"
-	"github.com/lima-vm/lima/v2/pkg/guestagent/timesync"
 )
 
 func New(ctx context.Context, ticker ticker.Ticker, runtimeDir string) (Agent, error) {
@@ -35,7 +33,6 @@ func New(ctx context.Context, ticker ticker.Ticker, runtimeDir string) (Agent, e
 	}
 
 	go a.kubernetesServiceWatcher.Start(ctx)
-	go a.fixSystemTimeSkew(ctx)
 
 	go func() {
 		<-ctx.Done()
@@ -210,47 +207,6 @@ func (a *agent) Info(ctx context.Context) (*api.Info, error) {
 		return nil, err
 	}
 	return &info, nil
-}
-
-const deltaLimit = 2 * time.Second
-
-func (a *agent) fixSystemTimeSkew(ctx context.Context) {
-	logrus.Info("fixSystemTimeSkew(): monitoring system time skew")
-	for {
-		ok, err := timesync.HasRTC()
-		if !ok {
-			logrus.Warnf("fixSystemTimeSkew: error: %s", err.Error())
-			break
-		}
-		ticker := time.NewTicker(10 * time.Second)
-		for now := range ticker.C {
-			rtc, err := timesync.GetRTCTime()
-			if err != nil {
-				logrus.Warnf("fixSystemTimeSkew: lookup error: %s", err.Error())
-				continue
-			}
-			d := rtc.Sub(now)
-			logrus.Debugf("fixSystemTimeSkew: rtc=%s systime=%s delta=%s",
-				rtc.Format(time.RFC3339), now.Format(time.RFC3339), d)
-			if d > deltaLimit || d < -deltaLimit {
-				err = timesync.SetSystemTime(rtc)
-				if err != nil {
-					logrus.Warnf("fixSystemTimeSkew: set system clock error: %s", err.Error())
-					continue
-				}
-				logrus.Infof("fixSystemTimeSkew: system time synchronized with rtc")
-				break
-			}
-			select {
-			case <-ctx.Done():
-				logrus.Debug("fixSystemTimeSkew: context done, exiting")
-				ticker.Stop()
-				return
-			default:
-			}
-		}
-		ticker.Stop()
-	}
 }
 
 func (a *agent) HandleInotify(event *api.Inotify) {

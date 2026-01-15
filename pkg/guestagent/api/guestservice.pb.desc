@@ -1,5 +1,5 @@
 
-…
+ã
 guestservice.protogoogle/protobuf/empty.protogoogle/protobuf/timestamp.proto"0
 Info(
 local_ports (2.IPPortR
@@ -23,9 +23,16 @@ mount_path (	R	mountPath.
 data (Rdata
 
 guest_addr (	R	guestAddr&
-udp_target_addr (	RudpTargetAddr2È
+udp_target_addr (	RudpTargetAddr"J
+TimeSyncRequest7
+	host_time (2.google.protobuf.TimestampRhostTime"_
+TimeSyncResponse
+adjusted (Radjusted
+drift_ms (RdriftMs
+error (	Rerror2ù
 GuestService(
 GetInfo.google.protobuf.Empty.Info-
 	GetEvents.google.protobuf.Empty.Event01
 PostInotify.Inotify.google.protobuf.Empty(,
-Tunnel.TunnelMessage.TunnelMessage(0B/Z-github.com/lima-vm/lima/v2/pkg/guestagent/apibproto3
+Tunnel.TunnelMessage.TunnelMessage(0/
+SyncTime.TimeSyncRequest.TimeSyncResponseB/Z-github.com/lima-vm/lima/v2/pkg/guestagent/apibproto3
