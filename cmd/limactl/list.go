@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/cheggaaa/pb/v3/termutil"
+	"github.com/containerd/containerd/v2/pkg/filters"
 	"github.com/mikefarah/yq/v4/pkg/yqlib"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -68,6 +69,7 @@ The output can be presented in one of several formats, using the --format <forma
 	listCommand.Flags().Bool("json", false, "Same as --format=json")
 	listCommand.Flags().BoolP("quiet", "q", false, "Only show names")
 	listCommand.Flags().Bool("all-fields", false, "Show all fields")
+	listCommand.Flags().String("filter", "", "Filter instances using containerd filters (e.g. 'name==default', 'status==Running')")
 	listCommand.Flags().StringArray("yq", nil, "Apply yq expression to each instance")
 
 	return listCommand
@@ -115,6 +117,10 @@ func listAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	yq, err := cmd.Flags().GetStringArray("yq")
+	if err != nil {
+		return err
+	}
+	filter, err := cmd.Flags().GetString("filter")
 	if err != nil {
 		return err
 	}
@@ -179,7 +185,7 @@ func listAction(cmd *cobra.Command, args []string) error {
 		instanceNames = allInstances
 	}
 
-	if quiet && len(yq) == 0 {
+	if quiet && len(yq) == 0 && filter == "" {
 		for _, instName := range instanceNames {
 			fmt.Fprintln(cmd.OutOrStdout(), instName)
 		}
@@ -199,10 +205,34 @@ func listAction(cmd *cobra.Command, args []string) error {
 		instances = append(instances, instance)
 	}
 
+	if filter != "" {
+		filterFunc, err := filters.Parse(filter)
+		if err != nil {
+			return err
+		}
+		var filteredInstances []*limatype.Instance
+		for _, instance := range instances {
+			if filterFunc.Match(instanceAdapter{i: instance}) {
+				filteredInstances = append(filteredInstances, instance)
+			}
+		}
+		instances = filteredInstances
+	}
+
 	for _, instance := range instances {
 		if len(instance.Errors) > 0 {
 			logrus.WithField("errors", instance.Errors).Warnf("instance %q has errors", instance.Name)
 		}
+	}
+
+	if quiet && len(yq) == 0 {
+		for _, instance := range instances {
+			fmt.Fprintln(cmd.OutOrStdout(), instance.Name)
+		}
+		if unmatchedInstances {
+			return unmatchedInstancesError{}
+		}
+		return nil
 	}
 
 	allFields, err := cmd.Flags().GetBool("all-fields")

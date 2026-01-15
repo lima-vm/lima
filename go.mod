@@ -1,7 +1,7 @@
 // gomodjail:confined
 module github.com/lima-vm/lima/v2
 
-go 1.24.0
+go 1.24.3
 
 require (
 	al.essio.dev/pkg/shellescape v1.6.0
@@ -12,6 +12,7 @@ require (
 	github.com/balajiv113/fd v0.0.0-20230330094840-143eec500f3e
 	github.com/cheggaaa/pb/v3 v3.1.7 // gomodjail:unconfined
 	github.com/cilium/ebpf v0.20.0 // gomodjail:unconfined
+	github.com/containerd/containerd/v2 v2.2.1
 	github.com/containerd/continuity v0.4.5
 	github.com/containers/gvisor-tap-vsock v0.8.7 // gomodjail:unconfined
 	github.com/coreos/go-semver v0.3.1
@@ -73,7 +74,7 @@ require (
 	github.com/elliotchance/orderedmap v1.8.0 // indirect
 	github.com/fatih/color v1.18.0 // indirect
 	// gomodjail:unconfined
-	github.com/fsnotify/fsnotify v1.8.0 // indirect
+	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/goccy/go-json v0.10.5 // indirect
@@ -112,7 +113,7 @@ require (
 	golang.org/x/mod v0.31.0 // indirect
 	golang.org/x/oauth2 v0.32.0 // indirect
 	golang.org/x/term v0.39.0 // indirect
-	golang.org/x/time v0.9.0 // indirect
+	golang.org/x/time v0.14.0 // indirect
 	golang.org/x/tools v0.40.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251029180050-ab9386a59fda // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
@@ -126,6 +127,7 @@ require (
 )
 
 require (
+	github.com/containerd/errdefs v1.0.0 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/google/jsonschema-go v0.3.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
