@@ -23,11 +23,15 @@ type Disk struct {
 	Instance    string `json:"instance"`
 	InstanceDir string `json:"instanceDir"`
 	MountPoint  string `json:"mountPoint"`
+
+	// if the Disk is in use and the FSType is specified
+	FSType *string `json:"fsType,omitempty"`
 }
 
-func InspectDisk(diskName string) (*Disk, error) {
+func InspectDisk(diskName string, fsType *string) (*Disk, error) {
 	disk := &Disk{
-		Name: diskName,
+		Name:   diskName,
+		FSType: fsType,
 	}
 
 	diskDir, err := DiskDir(diskName)
@@ -56,7 +60,11 @@ func InspectDisk(diskName string) (*Disk, error) {
 		disk.InstanceDir = instDir
 	}
 
-	disk.MountPoint = fmt.Sprintf("/mnt/lima-%s", diskName)
+	if disk.FSType != nil && *disk.FSType == "swap" {
+		disk.MountPoint = "[SWAP]" // only used for log message
+	} else {
+		disk.MountPoint = fmt.Sprintf("/mnt/lima-%s", diskName)
+	}
 
 	return disk, nil
 }
