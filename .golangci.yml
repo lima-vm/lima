@@ -148,6 +148,11 @@ linters:
     - linters:
       - godot
       path: _test\.go
+    # Allow "api" package names in hostagent and guestagent.
+    - linters:
+      - revive
+      path: pkg/(hostagent|guestagent)/api/
+      text: avoid meaningless package names
 issues:
   # Maximum issues count per one linter.
   max-issues-per-linter: 0
