@@ -264,3 +264,13 @@ local_setup() {
     run -0 limactl ls --quiet --yq 'select(.name == "foo")'
     assert_output "foo"
 }
+
+@test '--yq cannot access environment variables' {
+    run_e -1 limactl ls --yq 'env(HOME)'
+    assert_fatal "env operations have been disabled"
+}
+
+@test '--yq cannot load files' {
+    run_e -1 limactl ls --yq "load(\"${BASH_SOURCE[0]}\")"
+    assert_fatal "file operations have been disabled"
+}

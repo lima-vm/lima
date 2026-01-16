@@ -35,3 +35,15 @@ load "../helpers/load"
     run -0 "$YQ" -n -o json -I 0 .foo=42
     assert_output '{"foo":42}'
 }
+
+@test 'yq multi-call command has support for env access' {
+    export FOO=bar
+    run -0 limactl yq -n 'env(FOO)'
+    assert_output "bar"
+}
+
+@test 'yq multi-call command has support for --security-disable-env-ops' {
+    export FOO=bar
+    run_e -1 limactl yq -n --security-disable-env-ops 'env(FOO)'
+    assert_stderr "Error: env operations have been disabled"
+}
