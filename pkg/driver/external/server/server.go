@@ -55,7 +55,7 @@ func (t *listenerTracker) Accept() (net.Conn, error) {
 func Serve(ctx context.Context, driver driver.Driver) {
 	preConfiguredDriverAction := flag.Bool("pre-driver-action", false, "Run pre-driver action before starting the gRPC server")
 	inspectStatus := flag.Bool("inspect-status", false, "Inspect status of the driver")
-	flag.Parse()
+	flag.Parse() //nolint:revive // Serve is intended to be called from external driver's main()
 	if *preConfiguredDriverAction {
 		handlePreConfiguredDriverAction(ctx, driver)
 		return
