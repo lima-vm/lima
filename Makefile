@@ -101,86 +101,57 @@ GO_BUILD := $(strip $(GO) build $(GO_BUILD_GCFLAGS) $(GO_BUILD_LDFLAGS) $(GO_BUI
 .SECONDEXPANSION:
 
 ################################################################################
+# Build binaries and manpages
 .PHONY: all
 all: binaries manpages
 
 ################################################################################
-# Help
+##@ Core
+# Show this help message
 .PHONY: help
 help:
-	@echo  '  binaries        - Build all binaries'
-	@echo  '  manpages        - Build manual pages'
-	@echo
-	@echo  '  help-variables  - Show Makefile variables'
-	@echo  '  help-targets    - Show additional Makefile targets'
-
-.PHONY: help-variables
-help-variables:
-	@echo  '# Variables that can be overridden.'
-	@echo
-	@echo  '- PREFIX       (directory)  : Installation prefix (default: /usr/local)'
-	@echo  '- KEEP_DWARF   (1 or 0)     : Whether to keep DWARF information (default: 0)'
-	@echo  '- KEEP_SYMBOLS (1 or 0)     : Whether to keep symbols (default: 0)'
-	@echo  '- DEBUG        (1 or 0)     : Whether to build with debug information (default: 0)'
-
-.PHONY: help-targets
-help-targets:
-	@echo  '# Targets can be categorized by their location.'
-	@echo
-	@echo  'Targets for files in _output/bin/:'
-	@echo  '- limactl                   : Build limactl, and lima'
-	@echo  '- lima                      : Copy lima, and lima.bat'
-	@echo  '- helpers                   : Copy nerdctl.lima, apptainer.lima, docker.lima, podman.lima, and kubectl.lima'
-	@echo
-	@echo  'Targets for files in _output/libexec/lima/:'
-	@echo  '- limactl-plugins           : Build limactl-* CLI plugins'
-	@echo
-	@echo  'Targets for files in _output/share/lima/:'
-	@echo  '- guestagents               : Build guestagents'
-	@echo  '- native-guestagent         : Build guestagent for native arch'
-	@echo  '- additional-guestagents    : Build guestagents for archs other than native arch'
-	@echo  '- <arch>-guestagent         : Build guestagent for <arch>: $(sort $(LINUX_GUESTAGENT_ARCHS))'
-	@echo
-	@echo  'Targets for files in _output/share/lima/templates/:'
-	@echo  '- templates                 : Copy templates'
-	@echo  '- template_experimentals    : Copy experimental templates to experimental/'
-	@echo  '- default_template          : Copy default.yaml template'
-	@echo  '- update-templates          : Update templates'
-	@echo
-	@echo  'Targets for files in _output/share/doc/lima:'
-	@echo  '- documentation             : Copy documentation to _output/share/doc/lima'
-	@echo  '- create-links-in-doc-dir   : Create some symlinks pointing ../../lima/templates'
-	@echo
-	@echo  '# e.g. to install limactl, helpers, native guestagent, and templates:'
-	@echo  '#   make native install'
-
-.PHONY: help-artifact
-help-artifact:
-	@echo  '# Targets for building artifacts to _artifacts/'
-	@echo
-	@echo  'Targets to building multiple archs artifacts for GOOS:'
-	@echo  '- artifacts                 : Build artifacts for current OS and supported archs'
-	@echo  '- artifacts-<GOOS>          : Build artifacts for supported archs and <GOOS>: darwin, linux, or windows'
-	@echo
-	@echo  'Targets to building GOOS and ARCH (GOARCH, or uname -m) specific artifacts:'
-	@echo  '- artifact                  : Build artifacts for current GOOS and GOARCH'
-	@echo  '- artifact-<GOOS>           : Build artifacts for current GOARCH and <GOOS>: darwin, linux, or windows'
-	@echo  '- artifact-<ARCH>           : Build artifacts for current GOOS with <ARCH>: amd64, arm64, x86_64, or aarch64'
-	@echo  '- artifact-<GOOS>-<ARCH>    : Build artifacts for <GOOS> and <ARCH>'
-	@echo
-	@echo  '# GOOS and GOARCH can be specified with make parameters or environment variables.'
-	@echo  '# e.g. to build artifact for linux and arm64:'
-	@echo  '#   make GOOS=linux GOARCH=arm64 artifact'
-	@echo
-	@echo  'Targets for miscellaneous artifacts:'
-	@echo  '- artifacts-misc            : Build artifacts for go.mod, go.sum, and vendor'
-
+	@echo 'Usage: make [target]'
+	@echo ''
+	@echo 'Variables (can be overridden):'
+	@echo '  PREFIX        Installation prefix (default: /usr/local)'
+	@echo '  KEEP_DWARF    Keep DWARF information (1 or 0, default: 0)'
+	@echo '  KEEP_SYMBOLS  Keep symbols (1 or 0, default: 0)'
+	@echo '  DEBUG         Build with debug information (1 or 0, default: 0)'
+	@echo ''
+	@awk '\
+	BEGIN { desc="" } \
+	/^##@/ { \
+		printf "\n\033[1m%s\033[0m\n", substr($$0, 5); \
+		next \
+	} \
+	/^# *@nohelp/ { \
+		skip=1; \
+		next \
+	} \
+	/^# / { \
+		desc = substr($$0, 3); \
+		next \
+	} \
+	/^[a-zA-Z_0-9\/-]+:/ { \
+		target = $$1; \
+		sub(/:.*/, "", target); \
+		if (!skip && !seen[target]++) { \
+			printf "  \033[36m%-40s\033[0m %s\n", target, (desc ? desc : "(no description)"); \
+		} \
+		desc = ""; skip=0; \
+	} \
+	' $(MAKEFILE_LIST)
 ################################################################################
 # convenience targets
 exe: _output/bin/limactl$(exe)
 
+##@ Build Presets
 .PHONY: minimal native
+
+# Predefined minimal build
 minimal: clean limactl native-guestagent default_template
+
+# Build using native configuration
 native: clean limactl limactl-plugins helpers native-guestagent templates template_experimentals additional-drivers
 
 ################################################################################
@@ -195,13 +166,15 @@ CONFIG_GUESTAGENT_ARCH_S390X=y
 CONFIG_GUESTAGENT_COMPRESS=y
 
 ################################################################################
+# Legacy binary build configuration (do not modify)
 .PHONY: binaries
 binaries: limactl helpers limactl-plugins guestagents \
 	templates template_experimentals \
 	documentation create-links-in-doc-dir
 
 ################################################################################
-# _output/bin
+##@ Binaries
+# Build limactl binary (_output/bin)
 .PHONY: limactl lima helpers
 limactl: _output/bin/limactl$(exe) lima
 
@@ -260,6 +233,8 @@ gunzip_if_exists = $(shell f=$(1); f=$${f%.gz}; test -f "$${f}.gz" && (set -x; g
 # $(1): target file
 force_build_with_gunzip = $(call force_build,$(call gunzip_if_exists,$(1)))
 
+#$(1): target file
+.PHONY: force
 force: # placeholder for force build
 
 ################################################################################
@@ -304,12 +279,15 @@ endif
 
 LIBEXEC_LIMA := _output/libexec/lima
 
+# Build limactl plugins
 limactl-plugins: $(LIBEXEC_LIMA)/limactl-mcp$(exe)
 
 $(LIBEXEC_LIMA)/limactl-mcp$(exe): $(call dependencies_for_cmd,limactl-mcp) $$(call force_build,$$@)
 	@mkdir -p $(LIBEXEC_LIMA)
 	$(ENVS_$@) $(GO_BUILD) -o $@ ./cmd/limactl-mcp
 
+##@ Drivers
+# Build additional drivers
 .PHONY: additional-drivers
 additional-drivers:
 	@mkdir -p $(LIBEXEC_LIMA)
@@ -327,10 +305,15 @@ additional-drivers:
 
 LIMA_CMDS = $(sort lima lima$(bat)) # $(sort ...) deduplicates the list
 LIMA_DEPS = $(addprefix _output/bin/,$(LIMA_CMDS))
+
+##@ Lima
+# Build core lima components
 lima: $(LIMA_DEPS)
 
 HELPER_CMDS = nerdctl.lima apptainer.lima docker.lima podman.lima kubectl.lima
 HELPERS_DEPS = $(addprefix _output/bin/,$(HELPER_CMDS))
+
+# Build helper utilities
 helpers: $(HELPERS_DEPS)
 
 _output/bin/%: ./cmd/% | _output/bin
@@ -351,7 +334,7 @@ ifeq ($(CONFIG_GUESTAGENT_OS_LINUX),y)
 ALL_GUESTAGENTS_NOT_COMPRESSED += $(addprefix $(LINUX_GUESTAGENT_PATH_COMMON),$(LINUX_GUESTAGENT_ARCHS))
 endif
 ifeq ($(CONFIG_GUESTAGENT_COMPRESS),y)
-$(info Guestagents are unzipped each time to check the build configuration; they may be gunzipped afterward.)
+$(info Guestagents are unzipped each time to check the build configuration; they may be zipped afterward.)
 gz=.gz
 endif
 
@@ -383,9 +366,13 @@ ifeq ($(CONFIG_GUESTAGENT_OS_LINUX),y)
 GUESTAGENTS += $(foreach arch,$(LINUX_GUESTAGENT_ARCHS),$(call guestagent_path_enabled_by_config,LINUX,$(arch)))
 endif
 
+##@ Guest Agents
+# Build guest agents (apply CONFIG_GUESTAGENT_ARCH_*)
 .PHONY: guestagents native-guestagent additional-guestagents
 guestagents: $(GUESTAGENTS)
+# Build native guest agent
 native-guestagent: $(NATIVE_GUESTAGENT)
+# Build additional guest agents
 additional-guestagents: $(ADDITIONAL_GUESTAGENTS)
 %-guestagent:
 	@[ "$(findstring $(*),$(LINUX_GUESTAGENT_ARCHS))" == "$(*)" ] && make $(call guestagent_path,LINUX,$*)
@@ -412,9 +399,15 @@ TEMPLATE_DEFAULTS = ${addprefix _output/share/lima/templates/_default/,$(notdir 
 TEMPLATE_IMAGES = $(addprefix _output/share/lima/templates/_images/,$(notdir $(wildcard templates/_images/*)))
 TEMPLATE_EXPERIMENTALS = $(addprefix _output/share/lima/templates/experimental/,$(notdir $(wildcard templates/experimental/*)))
 
+##@ Templates
 .PHONY: default_template templates template_experimentals
+# Install default templates
 default_template: _output/share/lima/templates/default.yaml
+
+# Install all templates
 templates: $(TEMPLATES) $(TEMPLATE_DEFAULTS) $(TEMPLATE_IMAGES)
+
+# Install experimental templates
 template_experimentals: $(TEMPLATE_EXPERIMENTALS)
 
 $(TEMPLATES): | _output/share/lima/templates
@@ -437,6 +430,7 @@ force_link = $(if $(filter windows,$(GOOS)),force,$(shell test ! -L $(1) && echo
 # fedora-N.yaml should not be updated to refer to Fedora N+1 images
 TEMPLATES_TO_BE_UPDATED = $(filter-out $(wildcard templates/_images/fedora*.yaml),$(wildcard templates/_images/*.yaml))
 
+# Update template images (fedora-N.yaml guarded)
 .PHONY: update-templates
 update-templates: $(TEMPLATES_TO_BE_UPDATED)
 	./hack/update-template.sh $^
@@ -445,22 +439,31 @@ update-templates: $(TEMPLATES_TO_BE_UPDATED)
 # _output/share/doc/lima
 DOCUMENTATION = $(addprefix _output/share/doc/lima/,$(wildcard *.md) LICENSE SECURITY.md VERSION)
 
+##@ Documentation
+# Generate and install documentation files under _output/share/doc/lima
 .PHONY: documentation
 documentation: $(DOCUMENTATION)
 
+# Internal: SECURITY.md placeholder redirect
 _output/share/doc/lima/SECURITY.md: | _output/share/doc/lima
 	echo "Moved to https://github.com/lima-vm/.github/blob/main/SECURITY.md" > $@
 
+# Internal: write version file for documentation
+# @nohelp
 _output/share/doc/lima/VERSION: | _output/share/doc/lima
 	echo $(VERSION) > $@
 
+# Internal: copy documentation assets into output directory
+# @nohelp
 _output/share/doc/lima/%: % | _output/share/doc/lima
 	cp -aL $< $@
 
 MKDIR_TARGETS += _output/share/doc/lima
 
+# Create symlinks (or copies on Windows) for templates inside documentation directory
 .PHONY: create-links-in-doc-dir
 create-links-in-doc-dir: _output/share/doc/lima/templates
+# @nohelp
 _output/share/doc/lima/templates: _output/share/lima/templates $$(call force_link,$$@)
 # remove the existing directory or symlink
 	rm -rf $@
@@ -478,11 +481,8 @@ cross_compiling = $(call diff,$(GOOS) $(GOARCH),$(GOHOSTOS) $(GOHOSTARCH))
 native_compiling = $(if $(cross_compiling),,true)
 
 ################################################################################
-# _output/share/man/man1
+# Generate manpages using limactl (native binary required)
 .PHONY: manpages
-# Set limactl.1 as explicit dependency.
-# It's uncertain how many manpages will be generated by `make`,
-# because `limactl` generates them without corresponding source code for the manpages.
 manpages: _output/share/man/man1/limactl.1
 _output/share/man/man1/limactl.1: _output/bin/limactl$(exe)
 	@mkdir -p _output/share/man/man1
@@ -493,10 +493,8 @@ ifeq ($(native_compiling),true)
 endif
 
 ################################################################################
+# Generate Docsy documentation pages using limactl
 .PHONY: docsy
-# Set limactl.md as explicit dependency.
-# It's uncertain how many docsy pages will be generated by `make`,
-# because `limactl` generates them without corresponding source code for the docsy pages.
 docsy: website/_output/docsy/limactl.md website/_output/docsy-mcp/mcp.md
 website/_output/docsy/limactl.md: _output/bin/limactl$(exe)
 	@mkdir -p website/_output/docsy
@@ -512,11 +510,13 @@ ifeq ($(native_compiling),true)
 endif
 
 ################################################################################
+# Internal: generate embedded default template
 default-template.yaml: _output/bin/limactl$(exe)
 ifeq ($(native_compiling),true)
 	$< tmpl copy --embed-all templates/default.yaml $@
 endif
 
+# Internal: generate JSON schema for lima YAML templates
 schema-limayaml.json: _output/bin/limactl$(exe) templates/default.yaml default-template.yaml
 ifeq ($(native_compiling),true)
 	# validate both the original template (with the "base" etc), and the embedded template
@@ -528,12 +528,15 @@ check-jsonschema: schema-limayaml.json templates/default.yaml default-template.y
 	check-jsonschema --schemafile schema-limayaml.json templates/default.yaml default-template.yaml
 
 ################################################################################
+# Generate project diagrams (PlantUML)
 .PHONY: diagrams
 diagrams: docs/lima-sequence-diagram.png
 docs/lima-sequence-diagram.png: docs/images/lima-sequence-diagram.puml
 	$(PLANTUML) ./docs/images/lima-sequence-diagram.puml
 
 ################################################################################
+##@ Install
+# Install lima binaries, documentation, and supporting files
 .PHONY: install
 install: uninstall
 	mkdir -p "$(DEST)"
@@ -542,6 +545,7 @@ install: uninstall
 	if [ "$(shell uname -s )" != "Linux" -a ! -e "$(DEST)/bin/nerdctl" ]; then ln -sf nerdctl.lima "$(DEST)/bin/nerdctl"; fi
 	if [ "$(shell uname -s )" != "Linux" -a ! -e "$(DEST)/bin/apptainer" ]; then ln -sf apptainer.lima "$(DEST)/bin/apptainer"; fi
 
+# Uninstall lima binaries, documentation, and supporting files
 .PHONY: uninstall
 uninstall:
 	@test -f "$(DEST)/bin/lima" || echo "lima not found in $(DEST) prefix"
@@ -566,15 +570,19 @@ uninstall:
 	if [ "$$(readlink "$(DEST)/bin/nerdctl")" = "nerdctl.lima" ]; then rm "$(DEST)/bin/nerdctl"; fi
 	if [ "$$(readlink "$(DEST)/bin/apptainer")" = "apptainer.lima" ]; then rm "$(DEST)/bin/apptainer"; fi
 
+##@ Validation & CI
+# Verify generated files are committed and up to date
 .PHONY: check-generated
 check-generated:
 	git diff --exit-code || \
 		(echo "Please run 'make generate' when making changes to proto files and check-in the generated file changes" && false)
 
+# Run BATS test suite
 .PHONY: bats
 bats: native limactl-plugins
 	PATH=$$PWD/_output/bin:$$PATH ./hack/bats/lib/bats-core/bin/bats --timing ./hack/bats/tests
 
+# Run linters and license checks
 .PHONY: lint
 lint: check-generated
 	golangci-lint run ./...
@@ -586,22 +594,26 @@ lint: check-generated
 	ltag -t ./hack/ltag --check -v
 	protolint .
 
+##@ Maintenance
+# Remove build artifacts and vendor directory
 .PHONY: clean
 clean:
 	rm -rf _output vendor
 
+# Install protoc and gRPC code generation tools
 .PHONY: install-protoc-tools
 install-protoc-tools:
 	go install -modfile=./hack/tools/go.mod google.golang.org/protobuf/cmd/protoc-gen-go
 	go install -modfile=./hack/tools/go.mod google.golang.org/grpc/cmd/protoc-gen-go-grpc
 
+# Run go generate across the repository
 .PHONY: generate
 generate:
 	go generate ./...
 
 ################################################################################
-# _artifacts/lima-$(VERSION_TRIMMED)-$(ARTIFACT_OS)-$(ARTIFACT_UNAME_M)
-# _artifacts/lima-additional-guestagents-$(VERSION_TRIMMED)-$(ARTIFACT_OS)-$(ARTIFACT_UNAME_M)
+##@ Artifacts
+# Build release artifact for current GOOS and GOARCH
 .PHONY: artifact
 
 # returns the capitalized string of $(1).
@@ -629,7 +641,7 @@ CC := $(shell \
 		echo gcc; \
 	fi)
 else ifeq ($(GOOS),windows)
-# artifact in zip format also provided for Windows.
+# Artifact in zip format is also provided for Windows
 ARTIFACT_FILE_EXTENSIONS += .zip
 endif
 
@@ -639,9 +651,11 @@ ARTIFACT_UNAME_M = $(call to_uname_m,$(GOARCH))
 ARTIFACT_PATH_COMMON = _artifacts/lima-$(VERSION_TRIMMED)-$(ARTIFACT_OS)-$(ARTIFACT_UNAME_M)
 ARTIFACT_ADDITIONAL_GUESTAGENTS_PATH_COMMON = _artifacts/lima-additional-guestagents-$(VERSION_TRIMMED)-$(ARTIFACT_OS)-$(ARTIFACT_UNAME_M)
 
+# Build release artifacts (alias: artifacts-$(GOOS))
 artifact: $(addprefix $(ARTIFACT_PATH_COMMON),$(ARTIFACT_FILE_EXTENSIONS)) \
 	$(addprefix $(ARTIFACT_ADDITIONAL_GUESTAGENTS_PATH_COMMON),$(ARTIFACT_FILE_EXTENSIONS))
 
+# Files included in release artifacts
 ARTIFACT_DES =  _output/bin/limactl$(exe) limactl-plugins $(LIMA_DEPS) $(HELPERS_DEPS) \
 	$(NATIVE_GUESTAGENT) \
 	$(TEMPLATES) $(TEMPLATE_IMAGES) $(TEMPLATE_DEFAULTS) $(TEMPLATE_EXPERIMENTALS) \
@@ -649,23 +663,26 @@ ARTIFACT_DES =  _output/bin/limactl$(exe) limactl-plugins $(LIMA_DEPS) $(HELPERS
 	$(DOCUMENTATION) _output/share/doc/lima/templates \
 	_output/share/man/man1/limactl.1
 
-# file targets
+# Internal: create tar.gz artifact bundle
 $(ARTIFACT_PATH_COMMON).tar.gz: $(ARTIFACT_DES) | _artifacts
 	$(TAR) -C _output/ --no-xattrs -czvf $@ ./
 
+# Internal: create tar.gz artifact for additional guest agents
 $(ARTIFACT_ADDITIONAL_GUESTAGENTS_PATH_COMMON).tar.gz:
 	# FIXME: do not exec make from make
 	make clean additional-guestagents
 	$(TAR) -C _output/ --no-xattrs -czvf $@ ./
 
+# Internal: create zip artifact bundle (Windows)
 $(ARTIFACT_PATH_COMMON).zip: $(ARTIFACT_DES) | _artifacts
 	cd _output && $(ZIP) -r ../$@ *
 
+# Internal: create zip artifact for additional guest agents (Windows)
 $(ARTIFACT_ADDITIONAL_GUESTAGENTS_PATH_COMMON).zip:
 	make clean additional-guestagents
 	cd _output && $(ZIP) -r ../$@ *
 
-# generate manpages using native limactl.
+# Generate manpages using native limactl regardless of target GOOS
 manpages-using-native-limactl: GOOS = $(GOHOSTOS)
 manpages-using-native-limactl: GOARCH = $(GOHOSTARCH)
 manpages-using-native-limactl: manpages
@@ -682,9 +699,17 @@ goarchs_native_and_others = $(GOHOSTARCH) $(filter-out $(GOHOSTARCH),$(artifact_
 # if target GOOS is native, build native arch first, generate manpages, then build other archs.
 # if target GOOS is not native, build native limactl, generate manpages, then build the target GOOS with archs.
 .PHONY: artifacts artifacts-darwin artifacts-linux artifacts-windows
+
+# Build artifacts for the current GOOS across all supported architectures
 artifacts: $$(addprefix artifact-$$(GOOS)-,$$(goarchs_native_and_others))
+
+# Build macOS (darwin) artifacts for all supported architectures
 artifacts-darwin: $$(call generate_manpages_if_needed,darwin) $$(addprefix artifact-darwin-,$$(goarchs_native_and_others))
+
+# Build Linux artifacts for all supported architectures
 artifacts-linux: $$(call generate_manpages_if_needed,linux) $$(addprefix artifact-linux-,$$(goarchs_native_and_others))
+
+# Build Windows artifacts for all supported architectures
 artifacts-windows: $$(call generate_manpages_if_needed,windows) $$(addprefix artifact-windows-,$$(goarchs_native_and_others))
 
 # set variables for artifact variant targets.
