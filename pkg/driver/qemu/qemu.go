@@ -846,12 +846,28 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 		if audiodev == "default" {
 			audiodev = audioDevice()
 		}
+
+		// Check if SPICE is configured with audio
+		var usingSPICEAudio bool
+		if *y.Video.Display != "" && strings.HasPrefix(*y.Video.Display, "spice") {
+			// Check if SPICE audio is enabled in config
+			if y.Video.SPICE.Audio != nil && *y.Video.SPICE.Audio {
+				usingSPICEAudio = true
+				audiodev = "spice"
+			}
+		}
+
 		audiodev += fmt.Sprintf(",id=%s", id)
 		args = append(args, "-audiodev", audiodev)
-		// audio controller
-		args = append(args, "-device", "ich9-intel-hda")
-		// audio codec
-		args = append(args, "-device", fmt.Sprintf("hda-output,audiodev=%s", id))
+
+		// Only add HDA controller/codec if not using SPICE audio
+		// SPICE handles audio streaming differently
+		if !usingSPICEAudio {
+			// audio controller
+			args = append(args, "-device", "ich9-intel-hda")
+			// audio codec
+			args = append(args, "-device", fmt.Sprintf("hda-output,audiodev=%s", id))
+		}
 	}
 	// Graphics
 	if *y.Video.Display != "" {
