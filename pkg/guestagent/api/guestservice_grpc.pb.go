@@ -24,6 +24,7 @@ const (
 	GuestService_GetEvents_FullMethodName   = "/GuestService/GetEvents"
 	GuestService_PostInotify_FullMethodName = "/GuestService/PostInotify"
 	GuestService_Tunnel_FullMethodName      = "/GuestService/Tunnel"
+	GuestService_SyncTime_FullMethodName    = "/GuestService/SyncTime"
 )
 
 // GuestServiceClient is the client API for GuestService service.
@@ -34,6 +35,7 @@ type GuestServiceClient interface {
 	GetEvents(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (grpc.ServerStreamingClient[Event], error)
 	PostInotify(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[Inotify, emptypb.Empty], error)
 	Tunnel(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[TunnelMessage, TunnelMessage], error)
+	SyncTime(ctx context.Context, in *TimeSyncRequest, opts ...grpc.CallOption) (*TimeSyncResponse, error)
 }
 
 type guestServiceClient struct {
@@ -99,6 +101,16 @@ func (c *guestServiceClient) Tunnel(ctx context.Context, opts ...grpc.CallOption
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type GuestService_TunnelClient = grpc.BidiStreamingClient[TunnelMessage, TunnelMessage]
 
+func (c *guestServiceClient) SyncTime(ctx context.Context, in *TimeSyncRequest, opts ...grpc.CallOption) (*TimeSyncResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(TimeSyncResponse)
+	err := c.cc.Invoke(ctx, GuestService_SyncTime_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // GuestServiceServer is the server API for GuestService service.
 // All implementations must embed UnimplementedGuestServiceServer
 // for forward compatibility.
@@ -107,6 +119,7 @@ type GuestServiceServer interface {
 	GetEvents(*emptypb.Empty, grpc.ServerStreamingServer[Event]) error
 	PostInotify(grpc.ClientStreamingServer[Inotify, emptypb.Empty]) error
 	Tunnel(grpc.BidiStreamingServer[TunnelMessage, TunnelMessage]) error
+	SyncTime(context.Context, *TimeSyncRequest) (*TimeSyncResponse, error)
 	mustEmbedUnimplementedGuestServiceServer()
 }
 
@@ -128,6 +141,9 @@ func (UnimplementedGuestServiceServer) PostInotify(grpc.ClientStreamingServer[In
 }
 func (UnimplementedGuestServiceServer) Tunnel(grpc.BidiStreamingServer[TunnelMessage, TunnelMessage]) error {
 	return status.Errorf(codes.Unimplemented, "method Tunnel not implemented")
+}
+func (UnimplementedGuestServiceServer) SyncTime(context.Context, *TimeSyncRequest) (*TimeSyncResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SyncTime not implemented")
 }
 func (UnimplementedGuestServiceServer) mustEmbedUnimplementedGuestServiceServer() {}
 func (UnimplementedGuestServiceServer) testEmbeddedByValue()                      {}
@@ -193,6 +209,24 @@ func _GuestService_Tunnel_Handler(srv interface{}, stream grpc.ServerStream) err
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type GuestService_TunnelServer = grpc.BidiStreamingServer[TunnelMessage, TunnelMessage]
 
+func _GuestService_SyncTime_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TimeSyncRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GuestServiceServer).SyncTime(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: GuestService_SyncTime_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GuestServiceServer).SyncTime(ctx, req.(*TimeSyncRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // GuestService_ServiceDesc is the grpc.ServiceDesc for GuestService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -203,6 +237,10 @@ var GuestService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetInfo",
 			Handler:    _GuestService_GetInfo_Handler,
+		},
+		{
+			MethodName: "SyncTime",
+			Handler:    _GuestService_SyncTime_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
