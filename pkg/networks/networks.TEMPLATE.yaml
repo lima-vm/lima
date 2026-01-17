@@ -36,3 +36,33 @@ networks:
     gateway: 192.168.106.1
     dhcpEnd: 192.168.106.254
     netmask: 255.255.255.0
+
+vmnet:  # vmnet configurations require macOS 26.0+
+  shared:
+    mode: shared
+    dhcp: true
+    dnsProxy: true
+    mtu: 1500
+    nat44: true
+    nat66: true
+    routerAdvertisement: true
+    subnet: 192.168.107.0/24
+  host:
+    mode: host
+    dhcp: true
+    dnsProxy: true
+    mtu: 1500
+    nat44: true
+    nat66: true
+    # host mode ignores routerAdvertisement setting
+    routerAdvertisement: false
+    subnet: 192.168.108.0/24
+  debug:  # debug is used for testing purposes. It also indicates all default values.
+    # mode: shared
+    # dhcp: true
+    # dnsProxy: true
+    # mtu: 1500
+    # nat44: true
+    # nat66: true
+    # routerAdvertisement: true
+    # subnet:  # not set, meaning let vmnet pick an appropriate subnet
