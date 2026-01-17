@@ -19,7 +19,9 @@ func Watch(ctx context.Context, haStdoutPath, haStderrPath string, begin time.Ti
 	haStdoutTail, err := tail.TailFile(haStdoutPath,
 		tail.Config{
 			Follow:    true,
-			MustExist: true,
+			ReOpen:    true,
+			MustExist: false,
+			Logger:    logrus.StandardLogger(),
 		})
 	if err != nil {
 		return err
@@ -32,7 +34,9 @@ func Watch(ctx context.Context, haStdoutPath, haStderrPath string, begin time.Ti
 	haStderrTail, err := tail.TailFile(haStderrPath,
 		tail.Config{
 			Follow:    true,
-			MustExist: true,
+			ReOpen:    true,
+			MustExist: false,
+			Logger:    logrus.StandardLogger(),
 		})
 	if err != nil {
 		return err
@@ -69,6 +73,9 @@ loop:
 				return nil
 			}
 		case line := <-haStderrTail.Lines:
+			if line == nil {
+				break loop
+			}
 			if line.Err != nil {
 				logrus.Error(line.Err)
 			}
