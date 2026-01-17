@@ -45,6 +45,7 @@ The command will continue watching until interrupted (Ctrl+C).`,
 		GroupID:           advancedCommand,
 	}
 	watchCommand.Flags().Bool("json", false, "Output events as newline-delimited JSON")
+	watchCommand.Flags().Bool("history", false, "Include historical events from before watch started")
 	return watchCommand
 }
 
@@ -65,6 +66,15 @@ func watchAction(cmd *cobra.Command, args []string) error {
 	jsonFormat, err := cmd.Flags().GetBool("json")
 	if err != nil {
 		return err
+	}
+	history, err := cmd.Flags().GetBool("history")
+	if err != nil {
+		return err
+	}
+
+	var begin time.Time
+	if !history {
+		begin = time.Now()
 	}
 
 	// Determine which instances to watch
@@ -107,7 +117,7 @@ func watchAction(cmd *cobra.Command, args []string) error {
 	// If only one instance, watch it directly
 	if len(instances) == 1 {
 		inst := instances[0]
-		return events.Watch(ctx, inst.haStdoutPath, inst.haStderrPath, time.Now(), !jsonFormat, func(ev events.Event) bool {
+		return events.Watch(ctx, inst.haStdoutPath, inst.haStderrPath, begin, !jsonFormat, func(ev events.Event) bool {
 			if jsonFormat {
 				we := watchEvent{Instance: inst.name, Event: ev}
 				j, err := json.Marshal(we)
@@ -128,7 +138,7 @@ func watchAction(cmd *cobra.Command, args []string) error {
 
 	for _, inst := range instances {
 		go func() {
-			err := events.Watch(ctx, inst.haStdoutPath, inst.haStderrPath, time.Now(), !jsonFormat, func(ev events.Event) bool {
+			err := events.Watch(ctx, inst.haStdoutPath, inst.haStderrPath, begin, !jsonFormat, func(ev events.Event) bool {
 				select {
 				case eventCh <- watchEvent{Instance: inst.name, Event: ev}:
 				case <-ctx.Done():

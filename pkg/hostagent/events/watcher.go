@@ -62,6 +62,9 @@ loop:
 				return fmt.Errorf("failed to unmarshal %q as %T: %w", line.Text, ev, err)
 			}
 			logrus.WithField("event", ev).Debugf("received an event")
+			if !begin.IsZero() && ev.Time.Before(begin) {
+				continue
+			}
 			if stop := onEvent(ev); stop {
 				return nil
 			}
