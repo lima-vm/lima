@@ -67,7 +67,15 @@ mcp() {
 
     # read response from MCP server stdout with 5s timeout
     local json
-    read -t 5 -r json <&"${MCP[0]}"
+    while true; do
+        if ! read -t 5 -r json <&"${MCP[0]}"; then
+            break
+        fi
+        # If it has no "method" field, it's a response, not a notification
+        if ! jq -e 'has("method")' <<<"$json" >/dev/null 2>&1; then
+            break
+        fi
+    done
 
     # verify that the response matches the request; also validates the output is valid JSON
     run_yq .id <<<"$json"
@@ -253,6 +261,8 @@ tools_call() {
 }
 
 @test 'write_file creates the directory if it does not yet exist' {
+    # Make sure /tmp/tmp is deletable even if we run the tests multiple times against the same Lima instance
+    limactl shell "$NAME" chmod -R 777 /tmp/tmp || true
     limactl shell "$NAME" rm -rf /tmp/tmp
     tools_call write_file '{"path":"/tmp/tmp/tmp","content":"tmp"}'
     json=$output
