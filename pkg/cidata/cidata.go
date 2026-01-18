@@ -19,6 +19,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/docker/go-units"
 	"github.com/sirupsen/logrus"
@@ -129,7 +130,7 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 		Name:               name,
 		Hostname:           hostname.FromInstName(name), // TODO: support customization
 		User:               *instConfig.User.Name,
-		Comment:            *instConfig.User.Comment,
+		Comment:            removeControlChars(*instConfig.User.Comment),
 		Home:               *instConfig.User.Home,
 		Shell:              *instConfig.User.Shell,
 		UID:                *instConfig.User.UID,
@@ -471,6 +472,16 @@ func GenerateISO9660(ctx context.Context, drv driver.Driver, instDir, name strin
 	}
 
 	return iso9660util.Write(filepath.Join(instDir, filenames.CIDataISO), "cidata", layout)
+}
+
+func removeControlChars(s string) string {
+	out := make([]rune, 0, len(s))
+	for _, r := range s {
+		if unicode.IsPrint(r) {
+			out = append(out, r)
+		}
+	}
+	return string(out)
 }
 
 func getCert(content string) Cert {
