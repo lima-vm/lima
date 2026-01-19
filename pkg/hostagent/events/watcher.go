@@ -15,11 +15,13 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/logrusutil"
 )
 
-func Watch(ctx context.Context, haStdoutPath, haStderrPath string, begin time.Time, onEvent func(Event) bool) error {
+func Watch(ctx context.Context, haStdoutPath, haStderrPath string, begin time.Time, propagateStderr bool, onEvent func(Event) bool) error {
 	haStdoutTail, err := tail.TailFile(haStdoutPath,
 		tail.Config{
 			Follow:    true,
-			MustExist: true,
+			ReOpen:    true,
+			MustExist: false,
+			Logger:    logrus.StandardLogger(),
 		})
 	if err != nil {
 		return err
@@ -32,7 +34,9 @@ func Watch(ctx context.Context, haStdoutPath, haStderrPath string, begin time.Ti
 	haStderrTail, err := tail.TailFile(haStderrPath,
 		tail.Config{
 			Follow:    true,
-			MustExist: true,
+			ReOpen:    true,
+			MustExist: false,
+			Logger:    logrus.StandardLogger(),
 		})
 	if err != nil {
 		return err
@@ -62,14 +66,22 @@ loop:
 				return fmt.Errorf("failed to unmarshal %q as %T: %w", line.Text, ev, err)
 			}
 			logrus.WithField("event", ev).Debugf("received an event")
+			if !begin.IsZero() && ev.Time.Before(begin) {
+				continue
+			}
 			if stop := onEvent(ev); stop {
 				return nil
 			}
 		case line := <-haStderrTail.Lines:
+			if line == nil {
+				break loop
+			}
 			if line.Err != nil {
 				logrus.Error(line.Err)
 			}
-			logrusutil.PropagateJSON(logrus.StandardLogger(), []byte(line.Text), "[hostagent] ", begin)
+			if propagateStderr {
+				logrusutil.PropagateJSON(logrus.StandardLogger(), []byte(line.Text), "[hostagent] ", begin)
+			}
 		}
 	}
 

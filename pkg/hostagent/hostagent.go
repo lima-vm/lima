@@ -245,7 +245,6 @@ func New(ctx context.Context, instName string, stdout io.Writer, signalCh chan o
 		instName:          instName,
 		instSSHAddress:    inst.SSHAddress,
 		sshConfig:         sshConfig,
-		grpcPortForwarder: portfwd.NewPortForwarder(rules, ignoreTCP, ignoreUDP),
 		driver:            limaDriver,
 		signalCh:          signalCh,
 		eventEnc:          json.NewEncoder(stdout),
@@ -254,7 +253,20 @@ func New(ctx context.Context, instName string, stdout io.Writer, signalCh chan o
 		guestAgentAliveCh: make(chan struct{}),
 		showProgress:      o.showProgress,
 	}
-	a.portForwarder = newPortForwarder(sshConfig, a.sshAddressPort, rules, ignoreTCP, inst.VMType)
+	a.grpcPortForwarder = portfwd.NewPortForwarder(rules, ignoreTCP, ignoreUDP, func(ev *events.PortForwardEvent) {
+		a.emitPortForwardEvent(context.Background(), ev)
+	})
+	a.portForwarder = newPortForwarder(sshConfig, a.sshAddressPort, rules, ignoreTCP, inst.VMType, func(ev *events.PortForwardEvent) {
+		a.emitPortForwardEvent(context.Background(), ev)
+	})
+
+	// Set up vsock event callback if the driver supports it
+	if vsockEmitter, ok := limaDriver.Driver.(driver.VsockEventEmitter); ok {
+		vsockEmitter.SetVsockEventCallback(func(ev *events.VsockEvent) {
+			a.emitVsockEvent(context.Background(), ev)
+		})
+	}
+
 	return a, nil
 }
 
@@ -331,6 +343,28 @@ func (a *HostAgent) emitCloudInitProgressEvent(ctx context.Context, progress *ev
 	a.statusMu.RUnlock()
 
 	currentStatus.CloudInitProgress = progress
+
+	ev := events.Event{Status: currentStatus}
+	a.emitEvent(ctx, ev)
+}
+
+func (a *HostAgent) emitPortForwardEvent(ctx context.Context, pfEvent *events.PortForwardEvent) {
+	a.statusMu.RLock()
+	currentStatus := a.currentStatus
+	a.statusMu.RUnlock()
+
+	currentStatus.PortForward = pfEvent
+
+	ev := events.Event{Status: currentStatus}
+	a.emitEvent(ctx, ev)
+}
+
+func (a *HostAgent) emitVsockEvent(ctx context.Context, vsockEvent *events.VsockEvent) {
+	a.statusMu.RLock()
+	currentStatus := a.currentStatus
+	a.statusMu.RUnlock()
+
+	currentStatus.Vsock = vsockEvent
 
 	ev := events.Event{Status: currentStatus}
 	a.emitEvent(ctx, ev)

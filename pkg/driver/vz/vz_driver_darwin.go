@@ -24,6 +24,7 @@ import (
 
 	"github.com/lima-vm/lima/v2/pkg/driver"
 	"github.com/lima-vm/lima/v2/pkg/driverutil"
+	"github.com/lima-vm/lima/v2/pkg/hostagent/events"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
@@ -87,9 +88,19 @@ type LimaVzDriver struct {
 
 	machine                    *virtualMachineWrapper
 	waitSSHLocalPortAccessible <-chan any
+
+	onVsockEvent func(*events.VsockEvent)
 }
 
-var _ driver.Driver = (*LimaVzDriver)(nil)
+var (
+	_ driver.Driver            = (*LimaVzDriver)(nil)
+	_ driver.VsockEventEmitter = (*LimaVzDriver)(nil)
+)
+
+// SetVsockEventCallback implements driver.VsockEventEmitter.
+func (l *LimaVzDriver) SetVsockEventCallback(callback func(*events.VsockEvent)) {
+	l.onVsockEvent = callback
+}
 
 func New() *LimaVzDriver {
 	return &LimaVzDriver{
@@ -329,7 +340,7 @@ func (l *LimaVzDriver) CreateDisk(ctx context.Context) error {
 
 func (l *LimaVzDriver) Start(ctx context.Context) (chan error, error) {
 	logrus.Infof("Starting VZ (hint: to watch the boot progress, see %q)", filepath.Join(l.Instance.Dir, "serial*.log"))
-	vm, waitSSHLocalPortAccessible, errCh, err := startVM(ctx, l.Instance, l.SSHLocalPort)
+	vm, waitSSHLocalPortAccessible, errCh, err := startVM(ctx, l.Instance, l.SSHLocalPort, l.onVsockEvent)
 	if err != nil {
 		if errors.Is(err, vz.ErrUnsupportedOSVersion) {
 			return nil, fmt.Errorf("vz driver requires macOS 13 or higher to run: %w", err)
