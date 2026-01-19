@@ -351,7 +351,6 @@ ifeq ($(CONFIG_GUESTAGENT_OS_LINUX),y)
 ALL_GUESTAGENTS_NOT_COMPRESSED += $(addprefix $(LINUX_GUESTAGENT_PATH_COMMON),$(LINUX_GUESTAGENT_ARCHS))
 endif
 ifeq ($(CONFIG_GUESTAGENT_COMPRESS),y)
-$(info Guestagents are unzipped each time to check the build configuration; they may be gunzipped afterward.)
 gz=.gz
 endif
 
