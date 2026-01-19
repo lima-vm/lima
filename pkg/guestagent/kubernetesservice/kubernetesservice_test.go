@@ -9,9 +9,6 @@ import (
 	"testing"
 
 	"gotest.tools/v3/assert"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 func TestGetPorts(t *testing.T) {
@@ -19,29 +16,29 @@ func TestGetPorts(t *testing.T) {
 
 	type testCase struct {
 		name    string
-		service corev1.Service
+		service service
 		want    []Entry
 	}
 	cases := []testCase{
 		{
 			name: "nodePort service",
-			service: corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{Name: "nodeport"},
-				Spec: corev1.ServiceSpec{
-					Type: corev1.ServiceTypeNodePort,
-					Ports: []corev1.ServicePort{
+			service: service{
+				Metadata: objectMeta{Name: "nodeport"},
+				Spec: serviceSpec{
+					Type: serviceTypeNodePort,
+					Ports: []servicePort{
 						{
 							Name:       "http",
-							Protocol:   corev1.ProtocolTCP,
+							Protocol:   protocolTCP,
 							Port:       80,
-							TargetPort: intstr.FromInt(80),
+							TargetPort: 80,
 							NodePort:   8080,
 						},
 						{
 							Name:       "dns",
-							Protocol:   corev1.ProtocolUDP,
+							Protocol:   protocolUDP,
 							Port:       53,
-							TargetPort: intstr.FromInt(53),
+							TargetPort: 53,
 							NodePort:   5353,
 						},
 					},
@@ -59,16 +56,16 @@ func TestGetPorts(t *testing.T) {
 		},
 		{
 			name: "loadBalancer service",
-			service: corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{Name: "loadbalancer"},
-				Spec: corev1.ServiceSpec{
-					Type: corev1.ServiceTypeLoadBalancer,
-					Ports: []corev1.ServicePort{
+			service: service{
+				Metadata: objectMeta{Name: "loadbalancer"},
+				Spec: serviceSpec{
+					Type: serviceTypeLoadBalancer,
+					Ports: []servicePort{
 						{
 							Name:       "http",
-							Protocol:   corev1.ProtocolTCP,
+							Protocol:   protocolTCP,
 							Port:       8081,
-							TargetPort: intstr.FromInt(80),
+							TargetPort: 80,
 						},
 					},
 				},
@@ -81,16 +78,16 @@ func TestGetPorts(t *testing.T) {
 		},
 		{
 			name: "clusterIP service",
-			service: corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{Name: "clusterip"},
-				Spec: corev1.ServiceSpec{
-					Type: corev1.ServiceTypeClusterIP,
-					Ports: []corev1.ServicePort{
+			service: service{
+				Metadata: objectMeta{Name: "clusterip"},
+				Spec: serviceSpec{
+					Type: "ClusterIP", // Explicit string or define constant if needed. Using literal as in original implicit check.
+					Ports: []servicePort{
 						{
 							Name:       "http",
-							Protocol:   corev1.ProtocolTCP,
+							Protocol:   protocolTCP,
 							Port:       80,
-							TargetPort: intstr.FromInt(80),
+							TargetPort: 80,
 						},
 					},
 				},
@@ -102,8 +99,8 @@ func TestGetPorts(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			const ns = "default"
 			service := c.service
-			service.Namespace = ns
-			key := ns + "/" + c.service.Name
+			service.Metadata.Namespace = ns
+			key := ns + "/" + c.service.Metadata.Name
 
 			serviceWatcher.rwMutex.Lock()
 			serviceWatcher.serviceSpecs[key] = &service.Spec
