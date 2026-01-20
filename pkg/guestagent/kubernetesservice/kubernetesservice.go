@@ -20,8 +20,6 @@ import (
 
 	"github.com/docker/go-units"
 	"github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/watch"
 )
 
 type Protocol string
@@ -40,11 +38,11 @@ type Entry struct {
 type ServiceWatcher struct {
 	rwMutex sync.RWMutex
 	// key: namespace/name
-	serviceSpecs map[string]*corev1.ServiceSpec
+	serviceSpecs map[string]*serviceSpec
 }
 
 func NewServiceWatcher() *ServiceWatcher {
-	return &ServiceWatcher{serviceSpecs: make(map[string]*corev1.ServiceSpec)}
+	return &ServiceWatcher{serviceSpecs: make(map[string]*serviceSpec)}
 }
 
 func (s *ServiceWatcher) Start(ctx context.Context) {
@@ -163,24 +161,24 @@ func (s *ServiceWatcher) readKubectlStream(r io.Reader) error {
 		}
 
 		var ev struct {
-			Type   watch.EventType `json:"type"`
+			Type   eventType       `json:"type"`
 			Object json.RawMessage `json:"object"`
 		}
 		if err := json.Unmarshal(line, &ev); err != nil {
 			return fmt.Errorf("failed to unmarshal line %q: %w", string(line), err)
 		}
 
-		var svc corev1.Service
+		var svc service
 		if err := json.Unmarshal(ev.Object, &svc); err != nil {
 			return fmt.Errorf("failed to unmarshal service object: %w (line=%q)", err, line)
 		}
 
-		key := svc.Namespace + "/" + svc.Name
+		key := svc.Metadata.Namespace + "/" + svc.Metadata.Name
 		s.rwMutex.Lock()
 		switch ev.Type {
-		case watch.Added, watch.Modified:
+		case added, modified:
 			s.serviceSpecs[key] = &svc.Spec
-		case watch.Deleted:
+		case deleted:
 			delete(s.serviceSpecs, key)
 		default:
 			// NOP
@@ -200,14 +198,14 @@ func (s *ServiceWatcher) GetPorts() []Entry {
 
 	var entries []Entry
 	for key, spec := range s.serviceSpecs {
-		if spec.Type != corev1.ServiceTypeNodePort &&
-			spec.Type != corev1.ServiceTypeLoadBalancer {
+		if spec.Type != serviceTypeNodePort &&
+			spec.Type != serviceTypeLoadBalancer {
 			continue
 		}
 
 		for _, portEntry := range spec.Ports {
 			switch portEntry.Protocol {
-			case corev1.ProtocolTCP, corev1.ProtocolUDP:
+			case protocolTCP, protocolUDP:
 				// NOP
 			default:
 				logrus.Debugf("unsupported protocol %s for service %q, skipping",
@@ -217,9 +215,9 @@ func (s *ServiceWatcher) GetPorts() []Entry {
 
 			var port int32
 			switch spec.Type {
-			case corev1.ServiceTypeNodePort:
+			case serviceTypeNodePort:
 				port = portEntry.NodePort
-			case corev1.ServiceTypeLoadBalancer:
+			case serviceTypeLoadBalancer:
 				port = portEntry.Port
 			}
 
