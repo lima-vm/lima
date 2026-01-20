@@ -342,10 +342,12 @@ func watchHostAgentEvents(ctx context.Context, inst *limatype.Instance, haStdout
 				return false
 			}
 
-			if *inst.Config.Plain {
-				logrus.Infof("READY. Run `ssh -F %q %s` to open the shell.", inst.SSHConfigFile, inst.Hostname)
-			} else {
-				logrus.Infof("READY. Run `%s` to open the shell.", LimactlShellCmd(inst.Name))
+			if !isLaunchingShell(ctx) {
+				if *inst.Config.Plain {
+					logrus.Infof("READY. Run `ssh -F %q %s` to open the shell.", inst.SSHConfigFile, inst.Hostname)
+				} else {
+					logrus.Infof("READY. Run `%s` to open the shell.", LimactlShellCmd(inst.Name))
+				}
 			}
 			_ = ShowMessage(inst)
 			err = nil
@@ -375,6 +377,19 @@ type watchHostAgentEventsTimeoutKey = struct{}
 // watchHostAgentEvents in the given Context.
 func WithWatchHostAgentTimeout(ctx context.Context, timeout time.Duration) context.Context {
 	return context.WithValue(ctx, watchHostAgentEventsTimeoutKey{}, timeout)
+}
+
+type launchingShellKey = struct{}
+
+// WithLaunchingShell marks the context as launching a shell after start,
+// suppressing the "READY. Run ... to open the shell" message.
+func WithLaunchingShell(ctx context.Context) context.Context {
+	return context.WithValue(ctx, launchingShellKey{}, true)
+}
+
+func isLaunchingShell(ctx context.Context) bool {
+	v, _ := ctx.Value(launchingShellKey{}).(bool)
+	return v
 }
 
 // watchHostAgentTimeout returns the value of the timeout to use for
