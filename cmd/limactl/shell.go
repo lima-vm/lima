@@ -132,7 +132,7 @@ func shellAction(cmd *cobra.Command, args []string) error {
 			}
 		}
 
-		err = instance.Start(ctx, inst, false, false)
+		err = instance.Start(instance.WithLaunchingShell(ctx), inst, false, false)
 		if err != nil {
 			return err
 		}
