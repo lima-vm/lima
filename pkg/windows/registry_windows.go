@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"slices"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -162,7 +161,7 @@ func GetRandomFreeVSockPort(minPort, maxPort int) (int, error) {
 	tree := make([]pair, 1, len(used)+1)
 	tree[0] = pair{0, minPort}
 
-	sort.Ints(used)
+	slices.Sort(used)
 	for i, v := range used {
 		if tree[len(tree)-1].v+tree[len(tree)-1].offset == v {
 			tree[len(tree)-1].offset++

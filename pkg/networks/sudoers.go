@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -32,7 +32,7 @@ func Sudoers() (string, error) {
 		}
 		names = append(names, name)
 	}
-	sort.Strings(names)
+	slices.Sort(names)
 
 	for _, name := range names {
 		sb.WriteRune('\n')

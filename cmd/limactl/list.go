@@ -9,7 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/cheggaaa/pb/v3/termutil"
@@ -145,7 +145,7 @@ func listAction(cmd *cobra.Command, args []string) error {
 
 	if listFields {
 		names := fieldNames()
-		sort.Strings(names)
+		slices.Sort(names)
 		fmt.Fprintln(cmd.OutOrStdout(), strings.Join(names, "\n"))
 		return nil
 	}

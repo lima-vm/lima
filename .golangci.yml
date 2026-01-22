@@ -49,6 +49,8 @@ linters:
         msg: Do not use fmt.Print statements.
       - pattern: ^testing.T.Fatal.*$
         msg: Use assert functions from the gotest.tools/v3/assert package instead.
+      - pattern: ^sort.*$
+        msg: Use sorting functions from the slices package instead.
       analyze-types: true
     gocritic:
       disabled-checks:
