@@ -59,7 +59,7 @@ func Inspect(ctx context.Context, instName string) (*limatype.Instance, error) {
 	inst.Config = y
 	inst.Arch = *y.Arch
 	inst.VMType = *y.VMType
-	inst.SSHAddress = "127.0.0.1"
+	inst.SSHAddress = *y.SSH.Address
 	inst.SSHLocalPort = *y.SSH.LocalPort // maybe 0
 	inst.SSHConfigFile = filepath.Join(instDir, filenames.SSHConfig)
 	inst.HostAgentPID, err = ReadPIDFile(filepath.Join(instDir, filenames.HostAgentPID))
@@ -171,6 +171,14 @@ func inspectStatusWithPIDFiles(instDir string, inst *limatype.Instance, y *limat
 	if err != nil {
 		inst.Status = limatype.StatusBroken
 		inst.Errors = append(inst.Errors, err)
+	}
+	if *y.VMType == limatype.EXT {
+		if inst.HostAgentPID > 0 {
+			inst.Status = limatype.StatusRunning
+		} else if inst.HostAgentPID == 0 {
+			inst.Status = limatype.StatusStopped
+		}
+		return
 	}
 
 	if inst.Status == limatype.StatusUnknown {

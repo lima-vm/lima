@@ -39,7 +39,8 @@ import (
 )
 
 var netLookupIP = func(host string) []net.IP {
-	ips, err := net.LookupIP(host)
+	ctx := context.Background()
+	ips, err := net.DefaultResolver.LookupIP(ctx, "ip", host)
 	if err != nil {
 		logrus.Debugf("net.LookupIP %s: %s", host, err)
 		return nil
