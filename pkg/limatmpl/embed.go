@@ -543,6 +543,10 @@ func (tmpl *Template) combineNetworks() {
 				tmpl.copyListEntryField(networks, dst, src, "vzNAT")
 				dest.VZNAT = nw.VZNAT
 			}
+			if dest.Vmnet == "" && nw.Vmnet != "" {
+				tmpl.copyListEntryField(networks, dst, src, "vmnet")
+				dest.Vmnet = nw.Vmnet
+			}
 			if dest.Metric == nil && nw.Metric != nil {
 				tmpl.copyListEntryField(networks, dst, src, "metric")
 				dest.Metric = nw.Metric
