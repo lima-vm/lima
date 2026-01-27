@@ -9,7 +9,7 @@ load "../helpers/load"
 }
 
 @test 'yq can evaluate yq expressions' {
-    run -0 limactl yq .foo=42 <<<""
+    run -0 limactl yq -n .foo=42
     assert_output 'foo: 42'
 }
 
