@@ -936,7 +936,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 
 	if *y.MountType == limatype.NINEP || *y.MountType == limatype.VIRTIOFS {
 		for i, f := range y.Mounts {
-			tag := fmt.Sprintf("mount%d", i)
+			tag := limayaml.MountTag(f.Location, *f.MountPoint)
 			if err := os.MkdirAll(f.Location, 0o755); err != nil {
 				return "", nil, err
 			}

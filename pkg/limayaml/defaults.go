@@ -92,6 +92,13 @@ func MACAddress(uniqueID string) string {
 	return hw.String()
 }
 
+// MountTag generates a stable mount tag from location and mountPoint.
+// Both paths are hashed to handle the same location mounted to multiple mount points.
+func MountTag(location, mountPoint string) string {
+	sha := sha256.Sum256([]byte(location + "\x00" + mountPoint))
+	return fmt.Sprintf("lima-%x", sha[0:8])
+}
+
 func defaultCPUs() int {
 	const x = 4
 	if hostCPUs := runtime.NumCPU(); hostCPUs < x {
