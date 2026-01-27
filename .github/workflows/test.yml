@@ -372,9 +372,6 @@ jobs:
     name: "Colima tests (QEMU, Linux host)"
     runs-on: ubuntu-24.04
     timeout-minutes: 120
-    strategy:
-      matrix:
-        colima-version: ["v0.6.5"]
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       with:
@@ -383,39 +380,35 @@ jobs:
         # checks Lima's version and requires proper semantic version format
         fetch-depth: 0
         ref: ${{ github.event.pull_request.head.sha }}
+        submodules: true
     - uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5  # v6.2.0
       with:
         go-version: 1.25.x
-    - uses: actions/cache@8b402f58fbc84540c8b491a91e594a4576fec3d7  # v5.0.2
-      with:
-        path: ~/.cache/lima/download
-        key: ${{ runner.os }}-colima-${{ matrix.colima-version }}
     - name: Make
       run: make
     - name: Install
       run: sudo make install
     - name: Install colima
+      id: install-colima
       run: |
         git clone https://github.com/abiosoft/colima
         cd colima
-        git checkout ${{ matrix.colima-version }}
+        latest="$(git tag --sort=-v:refname | head -n1)"
+        git checkout "$latest"
         make
         sudo make install
+        echo "version=$latest" >>$GITHUB_OUTPUT
     - name: Install test dependencies
       run: |
         sudo apt-get update
         sudo ./hack/install-qemu.sh
-    - name: "Show cache"
-      run: ./hack/debug-cache.sh
-    - name: "Test"
-      uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08  # v3.0.2
+    - name: Cache colima
+      uses: actions/cache@8b402f58fbc84540c8b491a91e594a4576fec3d7  # v5.0.2
       with:
-        timeout_minutes: 30
-        retry_on: error
-        max_attempts: 3
-        command: ./hack/test-colima.sh
-    - name: "Show cache"
-      run: ./hack/debug-cache.sh
+        path: ~/.cache/colima
+        key: colima-${{ steps.install-colima.outputs.version }}
+    - name: Run BATS colima tests
+      run: ./hack/bats/lib/bats-core/bin/bats --timing ./hack/bats/extras/colima.bats
 
   vmnet:
     name: "VMNet tests (QEMU)"
