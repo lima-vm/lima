@@ -70,7 +70,7 @@ func waitForHostAgentTermination(ctx context.Context, inst *limatype.Instance, b
 	haStdoutPath := filepath.Join(inst.Dir, filenames.HostAgentStdoutLog)
 	haStderrPath := filepath.Join(inst.Dir, filenames.HostAgentStderrLog)
 
-	if err := hostagentevents.Watch(ctx, haStdoutPath, haStderrPath, begin, onEvent); err != nil {
+	if err := hostagentevents.Watch(ctx, haStdoutPath, haStderrPath, begin, true, onEvent); err != nil {
 		return err
 	}
 

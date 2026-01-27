@@ -28,6 +28,7 @@ import (
 	"github.com/lima-vm/go-qcow2reader/image/raw"
 	"github.com/sirupsen/logrus"
 
+	"github.com/lima-vm/lima/v2/pkg/hostagent/events"
 	"github.com/lima-vm/lima/v2/pkg/imgutil/proxyimgutil"
 	"github.com/lima-vm/lima/v2/pkg/iso9660util"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
@@ -55,7 +56,7 @@ type virtualMachineWrapper struct {
 // Hold all *os.File created via socketpair() so that they won't get garbage collected. f.FD() gets invalid if f gets garbage collected.
 var vmNetworkFiles = make([]*os.File, 1)
 
-func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int) (vm *virtualMachineWrapper, waitSSHLocalPortAccessible <-chan any, errCh chan error, err error) {
+func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int, onVsockEvent func(*events.VsockEvent)) (vm *virtualMachineWrapper, waitSSHLocalPortAccessible <-chan any, errCh chan error, err error) {
 	usernetClient, stopUsernet, err := startUsernet(ctx, inst)
 	if err != nil {
 		return nil, nil, nil, err
@@ -113,18 +114,43 @@ func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int) (vm
 						}
 						if !useSSHOverVsock {
 							logrus.Info("ssh.overVsock is false, skipping detection of SSH server on vsock port")
+							if onVsockEvent != nil {
+								onVsockEvent(&events.VsockEvent{
+									Type:   events.VsockEventSkipped,
+									Reason: "ssh.overVsock is false",
+								})
+							}
 						} else if err := usernetClient.WaitOpeningSSHPort(ctx, inst); err == nil {
 							hostAddress := net.JoinHostPort(inst.SSHAddress, strconv.Itoa(usernetSSHLocalPort))
 							if err := wrapper.startVsockForwarder(ctx, 22, hostAddress); err == nil {
 								logrus.Infof("Detected SSH server is listening on the vsock port; changed %s to proxy for the vsock port", hostAddress)
+								if onVsockEvent != nil {
+									onVsockEvent(&events.VsockEvent{
+										Type:      events.VsockEventStarted,
+										HostAddr:  hostAddress,
+										VsockPort: 22,
+									})
+								}
 								usernetSSHLocalPort = 0 // disable gvisor ssh port forwarding
 							} else {
 								logrus.WithError(err).WithField("hostAddress", hostAddress).
 									Debugf("Failed to start vsock forwarder (systemd is older than v256?)")
 								logrus.Info("SSH server does not seem to be running on vsock port, using usernet forwarder")
+								if onVsockEvent != nil {
+									onVsockEvent(&events.VsockEvent{
+										Type:   events.VsockEventFailed,
+										Reason: "SSH server does not seem to be running on vsock port",
+									})
+								}
 							}
 						} else {
 							logrus.WithError(err).Warn("Failed to wait for the guest SSH server to become available, falling back to usernet forwarder")
+							if onVsockEvent != nil {
+								onVsockEvent(&events.VsockEvent{
+									Type:   events.VsockEventFailed,
+									Reason: "Failed to wait for guest SSH server",
+								})
+							}
 						}
 						err := usernetClient.ConfigureDriver(ctx, inst, usernetSSHLocalPort)
 						if err != nil {

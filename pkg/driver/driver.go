@@ -7,8 +7,14 @@ import (
 	"context"
 	"net"
 
+	"github.com/lima-vm/lima/v2/pkg/hostagent/events"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 )
+
+// VsockEventEmitter is an optional interface for drivers to emit vsock events.
+type VsockEventEmitter interface {
+	SetVsockEventCallback(callback func(*events.VsockEvent))
+}
 
 // Lifecycle defines basic lifecycle operations.
 type Lifecycle interface {
