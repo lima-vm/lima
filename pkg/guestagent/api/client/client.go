@@ -7,10 +7,12 @@ import (
 	"context"
 	"math"
 	"net"
+	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/resolver"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/lima-vm/lima/v2/pkg/guestagent/api"
 )
@@ -79,4 +81,11 @@ func (c *GuestAgentClient) Tunnel(ctx context.Context) (api.GuestService_TunnelC
 		return nil, err
 	}
 	return stream, nil
+}
+
+func (c *GuestAgentClient) SyncTime(ctx context.Context, hostTime time.Time) (*api.TimeSyncResponse, error) {
+	req := &api.TimeSyncRequest{
+		HostTime: timestamppb.New(hostTime),
+	}
+	return c.cli.SyncTime(ctx, req)
 }

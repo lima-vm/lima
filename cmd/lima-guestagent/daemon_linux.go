@@ -22,6 +22,31 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/portfwdserver"
 )
 
+const hostCID = 2
+
+type cidFilteredListener struct {
+	*vsock.Listener
+}
+
+func (l *cidFilteredListener) Accept() (net.Conn, error) {
+	for {
+		conn, err := l.Listener.Accept()
+		if err != nil {
+			return nil, err
+		}
+		if vsockConn, ok := conn.(*vsock.Conn); ok {
+			if addr, ok := vsockConn.RemoteAddr().(*vsock.Addr); ok {
+				if addr.ContextID != hostCID {
+					logrus.Warnf("rejected vsock connection from unauthorized CID %d", addr.ContextID)
+					conn.Close()
+					continue
+				}
+			}
+		}
+		return conn, nil
+	}
+}
+
 func newDaemonCommand() *cobra.Command {
 	daemonCommand := &cobra.Command{
 		Use:   "daemon",
@@ -105,8 +130,8 @@ func daemonAction(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			return err
 		}
-		l = vsockL
-		logrus.Infof("serving the guest agent on vsock port: %d", vSockPort)
+		l = &cidFilteredListener{Listener: vsockL}
+		logrus.Infof("serving the guest agent on vsock port: %d (host CID only)", vSockPort)
 	} else {
 		var lc net.ListenConfig
 		socketL, err := lc.Listen(ctx, "unix", socket)

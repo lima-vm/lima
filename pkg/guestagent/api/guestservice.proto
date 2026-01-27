@@ -11,6 +11,7 @@ service GuestService {
   rpc PostInotify(stream Inotify) returns (google.protobuf.Empty);
 
   rpc Tunnel(stream TunnelMessage) returns (stream TunnelMessage);
+  rpc SyncTime(TimeSyncRequest) returns (TimeSyncResponse);
 }
 
 message Info {
@@ -41,4 +42,14 @@ message TunnelMessage {
   bytes data = 3;
   string guest_addr = 4;
   string udp_target_addr = 5;
+}
+
+message TimeSyncRequest {
+  google.protobuf.Timestamp host_time = 1;
+}
+
+message TimeSyncResponse {
+  bool adjusted = 1;
+  int64 drift_ms = 2;
+  string error = 3;
 }

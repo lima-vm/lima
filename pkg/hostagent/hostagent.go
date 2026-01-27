@@ -573,6 +573,7 @@ sudo chown -R "${USER}" /run/host-services`
 
 	if !*a.instConfig.Plain {
 		go a.watchGuestAgentEvents(ctx)
+		go a.startTimeSync(ctx)
 		if a.showProgress {
 			cloudInitDone := make(chan struct{})
 			go func() {

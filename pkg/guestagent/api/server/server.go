@@ -6,6 +6,7 @@ package server
 import (
 	"context"
 	"net"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/lima-vm/lima/v2/pkg/guestagent"
 	"github.com/lima-vm/lima/v2/pkg/guestagent/api"
+	"github.com/lima-vm/lima/v2/pkg/guestagent/timesync"
 	"github.com/lima-vm/lima/v2/pkg/portfwdserver"
 )
 
@@ -77,4 +79,30 @@ func (s *GuestServer) PostInotify(server api.GuestService_PostInotifyServer) err
 
 func (s *GuestServer) Tunnel(stream api.GuestService_TunnelServer) error {
 	return s.TunnelS.Start(stream)
+}
+
+func (s *GuestServer) SyncTime(_ context.Context, req *api.TimeSyncRequest) (*api.TimeSyncResponse, error) {
+	hostTime := req.HostTime.AsTime()
+	now := time.Now()
+	drift := now.Sub(hostTime)
+
+	resp := &api.TimeSyncResponse{
+		Adjusted: false,
+		DriftMs:  drift.Milliseconds(),
+	}
+
+	const driftThreshold = 100 * time.Millisecond
+	if drift > driftThreshold || drift < -driftThreshold {
+		if err := timesync.SetSystemTime(hostTime); err != nil {
+			logrus.WithError(err).Warn("SyncTime: failed to set system time")
+			resp.Error = err.Error()
+			return resp, nil
+		}
+		resp.Adjusted = true
+		logrus.Infof("SyncTime: system time synchronized with host (drift was %v)", drift)
+	} else {
+		logrus.Debugf("SyncTime: drift %v within threshold, no adjustment needed", drift)
+	}
+
+	return resp, nil
 }
