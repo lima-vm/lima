@@ -575,7 +575,7 @@ bats: native limactl-plugins
 	PATH=$$PWD/_output/bin:$$PATH ./hack/bats/lib/bats-core/bin/bats --timing ./hack/bats/tests
 
 .PHONY: lint
-lint: check-generated
+lint:
 	golangci-lint run ./...
 	yamllint .
 	ls-lint
@@ -584,6 +584,9 @@ lint: check-generated
 	go-licenses check --include_tests ./... --allowed_licenses=$$(cat ./hack/allowed-licenses.txt)
 	ltag -t ./hack/ltag --check -v
 	protolint .
+
+.PHONY: lint-ci
+lint-ci: check-generated lint
 
 .PHONY: clean
 clean:
