@@ -159,6 +159,10 @@ if [[ -n ${CHECKS["disk"]} ]]; then
 		defer "limactl disk delete data"
 		limactl disk create data --size 10G
 	fi
+	if ! limactl disk ls | grep -q "^swap\s"; then
+		defer "limactl disk delete swap"
+		limactl disk create swap --size 2G
+	fi
 fi
 
 set -x
@@ -513,6 +517,10 @@ if [[ -n ${CHECKS["disk"]} ]]; then
 	INFO "Testing disk is attached"
 	set -x
 	if ! limactl shell "$NAME" lsblk --output NAME,MOUNTPOINT | grep -q "/mnt/lima-data"; then
+		ERROR "Disk is not mounted"
+		exit 1
+	fi
+	if ! limactl shell "$NAME" lsblk --output NAME,MOUNTPOINT | grep -q "\[SWAP\]"; then
 		ERROR "Disk is not mounted"
 		exit 1
 	fi

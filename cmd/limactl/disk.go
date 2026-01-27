@@ -180,7 +180,7 @@ func diskListAction(cmd *cobra.Command, args []string) error {
 
 	if jsonFormat {
 		for _, diskName := range disks {
-			disk, err := store.InspectDisk(diskName)
+			disk, err := store.InspectDisk(diskName, nil)
 			if err != nil {
 				logrus.WithError(err).Errorf("disk %q does not exist?", diskName)
 				continue
@@ -202,7 +202,7 @@ func diskListAction(cmd *cobra.Command, args []string) error {
 	}
 
 	for _, diskName := range disks {
-		disk, err := store.InspectDisk(diskName)
+		disk, err := store.InspectDisk(diskName, nil)
 		if err != nil {
 			logrus.WithError(err).Errorf("disk %q does not exist?", diskName)
 			continue
@@ -254,7 +254,7 @@ func diskDeleteAction(cmd *cobra.Command, args []string) error {
 	}
 
 	for _, diskName := range args {
-		disk, err := store.InspectDisk(diskName)
+		disk, err := store.InspectDisk(diskName, nil)
 		if err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
 				logrus.Warnf("Ignoring non-existent disk %q", diskName)
@@ -325,7 +325,7 @@ $ limactl disk unlock DISK1 DISK2 ...
 func diskUnlockAction(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	for _, diskName := range args {
-		disk, err := store.InspectDisk(diskName)
+		disk, err := store.InspectDisk(diskName, nil)
 		if err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
 				logrus.Warnf("Ignoring non-existent disk %q", diskName)
@@ -387,7 +387,7 @@ func diskResizeAction(cmd *cobra.Command, args []string) error {
 	}
 
 	diskName := args[0]
-	disk, err := store.InspectDisk(diskName)
+	disk, err := store.InspectDisk(diskName, nil)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return fmt.Errorf("disk %q does not exists", diskName)

@@ -54,7 +54,7 @@ func Cmdline(inst *limatype.Instance) (*exec.Cmd, error) {
 		ctx := context.Background()
 		diskUtil := proxyimgutil.NewDiskUtil(ctx)
 		for _, d := range inst.Config.AdditionalDisks {
-			disk, derr := store.InspectDisk(d.Name)
+			disk, derr := store.InspectDisk(d.Name, d.FSType)
 			if derr != nil {
 				return nil, fmt.Errorf("failed to load disk %q: %w", d.Name, derr)
 			}
