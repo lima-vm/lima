@@ -56,14 +56,19 @@ func validatePattern(pattern string) error {
 }
 
 // getBlockList returns the list of environment variable patterns to be blocked.
-func getBlockList() []string {
-	blockEnv := os.Getenv("LIMA_SHELLENV_BLOCK")
-	if blockEnv == "" {
-		return defaultBlockList
+func getBlockList(blockListRaw []string) []string {
+	var shouldAppend bool
+	patterns := blockListRaw
+	if len(patterns) == 0 {
+		blockEnv := os.Getenv("LIMA_SHELLENV_BLOCK")
+		if blockEnv == "" {
+			return defaultBlockList
+		}
+		shouldAppend = strings.HasPrefix(blockEnv, "+")
+		patterns = parseEnvList(strings.TrimPrefix(blockEnv, "+"))
+	} else {
+		shouldAppend = strings.HasPrefix(patterns[0], "+")
 	}
-
-	shouldAppend := strings.HasPrefix(blockEnv, "+")
-	patterns := parseEnvList(strings.TrimPrefix(blockEnv, "+"))
 
 	for _, pattern := range patterns {
 		if err := validatePattern(pattern); err != nil {
@@ -78,13 +83,15 @@ func getBlockList() []string {
 }
 
 // getAllowList returns the list of environment variable patterns to be allowed.
-func getAllowList() []string {
-	allowEnv := os.Getenv("LIMA_SHELLENV_ALLOW")
-	if allowEnv == "" {
-		return nil
+func getAllowList(allowListRaw []string) []string {
+	patterns := allowListRaw
+	if len(patterns) == 0 {
+		allowEnv := os.Getenv("LIMA_SHELLENV_ALLOW")
+		if allowEnv == "" {
+			return nil
+		}
+		patterns = parseEnvList(allowEnv)
 	}
-
-	patterns := parseEnvList(allowEnv)
 
 	for _, pattern := range patterns {
 		if err := validatePattern(pattern); err != nil {
@@ -131,11 +138,11 @@ func matchesAnyPattern(name string, patterns []string) bool {
 // FilterEnvironment filters environment variables based on configuration from environment variables.
 // It returns a slice of environment variables that are not blocked by the current configuration.
 // The filtering is controlled by LIMA_SHELLENV_BLOCK and LIMA_SHELLENV_ALLOW environment variables.
-func FilterEnvironment() []string {
+func FilterEnvironment(allowListRaw, blockListRaw []string) []string {
 	return filterEnvironmentWithLists(
 		os.Environ(),
-		getAllowList(),
-		getBlockList(),
+		getAllowList(allowListRaw),
+		getBlockList(blockListRaw),
 	)
 }
 
