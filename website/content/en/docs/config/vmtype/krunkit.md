@@ -146,14 +146,15 @@ dnf install -y \
   glslc
 
 # Enable COPR repo with patched Mesa for Venus support
-dnf copr enable -y slp/mesa-krunkit fedora-40-aarch64
+dnf copr enable -y slp/mesa-libkrun-vulkan
 
 # Downgrade to patched Mesa version from COPR
-dnf downgrade -y mesa-vulkan-drivers.aarch64 \
-  --repo=copr:copr.fedorainfracloud.org:slp:mesa-krunkit
+REPOID="copr:copr.fedorainfracloud.org:slp:mesa-libkrun-vulkan"
+MESA_VERSION=$(dnf repoquery -q --available --repoid="$REPOID" --latest-limit=1 --qf '%{evr}' mesa-vulkan-drivers 2>/dev/null)
+dnf downgrade -y "mesa-vulkan-drivers-${MESA_VERSION}"
 
 # Lock Mesa version to prevent automatic upgrades
-dnf versionlock add mesa-vulkan-drivers
+dnf versionlock add "mesa-vulkan-drivers-${MESA_VERSION}"
 
 # Clean up
 dnf clean all
