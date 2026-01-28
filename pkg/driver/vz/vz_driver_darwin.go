@@ -363,40 +363,76 @@ func (l *LimaVzDriver) canRunGUI() bool {
 }
 
 func (l *LimaVzDriver) RunGUI() error {
-	if l.canRunGUI() {
-		return l.machine.StartGraphicApplication(1920, 1200)
+	if !l.canRunGUI() {
+		return fmt.Errorf("RunGUI is not supported for the given driver '%s' and display '%s'", "vz", *l.Instance.Config.Video.Display)
 	}
-	return fmt.Errorf("RunGUI is not supported for the given driver '%s' and display '%s'", "vz", *l.Instance.Config.Video.Display)
+
+	if l.machine == nil {
+		return fmt.Errorf("cannot show GUI: VM is not running (machine not initialized). Start the VM first with 'limactl start %s'", l.Instance.Name)
+	}
+
+	// Default to a reasonable window size if not specified
+	width := 1440
+	height := 900
+
+	if l.Instance.Config.Video.VZ.Width != nil {
+		width = *l.Instance.Config.Video.VZ.Width
+	}
+	if l.Instance.Config.Video.VZ.Height != nil {
+		height = *l.Instance.Config.Video.VZ.Height
+	}
+
+	title := fmt.Sprintf("Lima: %s", l.Instance.Name)
+
+	return l.machine.StartGraphicApplication(
+		float64(width),
+		float64(height),
+		vz.WithWindowTitle(title),
+		vz.WithController(true),
+	)
 }
 
 func (l *LimaVzDriver) Stop(_ context.Context) error {
-	logrus.Info("Shutting down VZ")
-	canStop := l.machine.CanRequestStop()
+	logrus.Info("Shutting down VZ with graceful stop request")
 
-	if canStop {
-		_, err := l.machine.RequestStop()
-		if err != nil {
-			return err
-		}
+	if !l.machine.CanRequestStop() {
+		logrus.Warn("VZ: CanRequestStop is not supported, forcing immediate stop")
+		return l.machine.Stop()
+	}
 
-		timeout := time.After(5 * time.Second)
-		ticker := time.NewTicker(500 * time.Millisecond)
-		for {
-			select {
-			case <-timeout:
-				return errors.New("vz timeout while waiting for stop status")
-			case <-ticker.C:
-				l.machine.mu.Lock()
-				stopped := l.machine.stopped
-				l.machine.mu.Unlock()
-				if stopped {
-					return nil
-				}
+	// Request graceful shutdown (similar to ACPI power button)
+	result, err := l.machine.RequestStop()
+	if err != nil {
+		logrus.WithError(err).Warn("Failed to send stop request, forcing immediate stop")
+		return l.machine.Stop()
+	}
+
+	if !result {
+		logrus.Warn("VZ: RequestStop returned false, forcing immediate stop")
+		return l.machine.Stop()
+	}
+
+	// Wait for graceful shutdown with timeout (30 seconds like QEMU)
+	timeout := time.After(30 * time.Second)
+	ticker := time.NewTicker(500 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-timeout:
+			logrus.Warn("VZ timeout while waiting for graceful shutdown, forcing stop")
+			return l.machine.Stop()
+
+		case <-ticker.C:
+			l.machine.mu.Lock()
+			stopped := l.machine.stopped
+			l.machine.mu.Unlock()
+			if stopped {
+				logrus.Info("VZ has shut down gracefully")
+				return nil
 			}
 		}
 	}
-
-	return errors.New("vz: CanRequestStop is not supported")
 }
 
 func (l *LimaVzDriver) GuestAgentConn(_ context.Context) (net.Conn, string, error) {
