@@ -15,7 +15,7 @@ require (
 	github.com/containerd/continuity v0.4.5
 	github.com/containers/gvisor-tap-vsock v0.8.7 // gomodjail:unconfined
 	github.com/coreos/go-semver v0.3.1
-	github.com/coreos/go-systemd/v22 v22.6.0
+	github.com/coreos/go-systemd/v22 v22.7.0
 	github.com/cpuguy83/go-md2man/v2 v2.0.7
 	github.com/digitalocean/go-qemu v0.0.0-20221209210016-f035778c97f7
 	github.com/diskfs/go-diskfs v1.7.0 // gomodjail:unconfined
