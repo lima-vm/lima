@@ -44,8 +44,11 @@ Ansible:
 - `ansible-inventory.yaml`: the Ansible node inventory. See [ansible](#ansible).
 
 disk:
-- `basedisk`: the base image
-- `diffdisk`: the diff image (QCOW2)
+- `basedisk`: the historical base image. Can be missing since Lima v2.1.
+  - The main `limactl` process prepares this `basedisk`, however, a [VM driver](./drivers.md) may convert and rename `basedisk` to `diffdisk` immediately.
+- `diffdisk`: the image, historically a QCOW2 diff from `basedisk`.
+  - `diffdisk` is a misnomer; it does not necessarily have a reference to `basedisk`.
+    Notably, when a `basedisk` is an ISO9660 image, or the VM driver does not support differencing, `diffdisk` is an independent image.
 
 kernel:
 - `kernel`: the kernel
