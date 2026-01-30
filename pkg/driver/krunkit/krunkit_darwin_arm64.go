@@ -81,13 +81,13 @@ func Cmdline(inst *limatype.Instance) (*exec.Cmd, error) {
 
 	// File sharing commands
 	if *inst.Config.MountType == limatype.VIRTIOFS {
-		for i, mount := range inst.Config.Mounts {
+		for _, mount := range inst.Config.Mounts {
 			if _, err := os.Stat(mount.Location); errors.Is(err, os.ErrNotExist) {
 				if err := os.MkdirAll(mount.Location, 0o750); err != nil {
 					return nil, err
 				}
 			}
-			tag := fmt.Sprintf("mount%d", i)
+			tag := limayaml.MountTag(mount.Location, *mount.MountPoint)
 			mountArg := fmt.Sprintf("virtio-fs,sharedDir=%s,mountTag=%s", mount.Location, tag)
 			args = append(args, "--device", mountArg)
 		}

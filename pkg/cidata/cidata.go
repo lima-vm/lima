@@ -203,8 +203,8 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 	if err != nil {
 		return nil, err
 	}
-	for i, f := range instConfig.Mounts {
-		tag := fmt.Sprintf("mount%d", i)
+	for _, f := range instConfig.Mounts {
+		tag := limayaml.MountTag(f.Location, *f.MountPoint)
 		options := "defaults"
 		switch fstype {
 		case "9p", "virtiofs":
