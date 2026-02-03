@@ -21,11 +21,11 @@ import (
 	"time"
 
 	vzvmnet "github.com/Code-Hex/vz/v3/vmnet"
+	vzfileadapter "github.com/Code-Hex/vz/v3/vmnet/fileadapter"
 	"github.com/Code-Hex/vz/v3/xpc"
 	"github.com/coreos/go-semver/semver"
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/v2/pkg/debugutil"
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/networks"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
@@ -68,9 +68,9 @@ func RegisterMachService(ctx context.Context) error {
 
 	// Create a shell script that runs "limactl vmnet"
 	debugArg := ""
-	if debugutil.Debug {
-		debugArg = "--debug "
-	}
+	// if debugutil.Debug {
+	debugArg = "--debug "
+	// }
 	scriptContent := "#!/bin/sh\ntest -x " + executablePath + " && exec " + executablePath + " vmnet " + debugArg + "--mach-service='" + MachServiceName + "' \"$@\""
 	if err := os.WriteFile(scriptPath, []byte(scriptContent), 0o755); err != nil {
 		return fmt.Errorf("failed to write %q launch script: %w", scriptPath, err)
@@ -188,8 +188,8 @@ func RunMachService(ctx context.Context, serviceName string) (err error) {
 	}
 	networkEntries := make(map[string]*Entry)
 	var mu sync.RWMutex
-	var adaptorWG sync.WaitGroup
-	defer adaptorWG.Wait() // Wait for all adaptors to finish
+	var adapterWG sync.WaitGroup
+	defer adapterWG.Wait() // Wait for all adapters to finish
 	listener, err := xpc.NewListener(serviceName,
 		xpc.Accept(
 			xpc.MessageHandler(func(dic *xpc.Dictionary) *xpc.Dictionary {
@@ -242,20 +242,21 @@ func RunMachService(ctx context.Context, serviceName string) (err error) {
 				}
 				replyEntries := slices.Clone(entry.replyEntries)
 
-				// If the FdType is specified in the message, create file adaptor and include it's file descriptor in the reply.
-				file, startAdaptor, err := newFileAdaptorForNetwork(ctx, entry.network, dic)
+				// If the FdType is specified in the message, create file adapter and include it's file descriptor in the reply.
+				file, startAdapter, err := newFileAdapterForNetwork(ctx, entry.network, dic)
 				if err != nil {
-					return errorReply("failed to create file adaptor for 'vmnet: %s': %v", vmnetNetwork, err)
+					return errorReply("failed to create file adapter for 'vmnet: %s': %v", vmnetNetwork, err)
 				} else if file != nil {
 					replyEntries = append(replyEntries, xpc.KeyValue("FileDescriptor", xpc.NewFd(file.Fd())))
 					_ = file.Close() // The file descriptor is duplicated when creating xpc.NewFd
 				}
 
-				if startAdaptor != nil {
-					adaptorWG.Add(1)
+				if startAdapter != nil {
+					adapterWG.Add(1)
 					go func() {
-						defer adaptorWG.Done()
-						startAdaptor()
+						defer adapterWG.Done()
+						time.Sleep(1 * time.Second) // Give some time for the caller to be ready to receive packets
+						startAdapter()
 					}()
 				}
 
@@ -441,24 +442,24 @@ func newVmnetNetwork(vmnetConfig networks.VmnetConfig) (*vzvmnet.Network, error)
 	return vzvmnet.NewNetwork(config)
 }
 
-// newFileAdaptorForNetwork creates a file adaptor for the created interface of the network cloned from the given network.
-// The file adaptor type is determined by the "FdType" key in the given xpc.Dictionary.
+// newFileAdapterForNetwork creates a file adapter for the created interface of the network cloned from the given network.
+// The file adapter type is determined by the "FdType" key in the given xpc.Dictionary.
 // If no FdType is specified, nil is returned without error.
 // The returned file can be used as a file descriptor for QEMU's netdev or krunkit's virtio-net.
-func newFileAdaptorForNetwork(ctx context.Context, network *vzvmnet.Network, dic *xpc.Dictionary) (*os.File, func(), error) {
+func newFileAdapterForNetwork(ctx context.Context, network *vzvmnet.Network, dic *xpc.Dictionary) (*os.File, func(), error) {
 	fdType := dic.GetString("FdType")
 	if fdType == "" {
 		return nil, nil, nil
 	}
 	interfaceDesc := dic.GetDictionary("InterfaceDesc")
-	var fileAdaptorFunc func(context.Context, *vzvmnet.Interface, ...vzvmnet.Sockopt) (*os.File, func(), error)
+	var fileAdapterFunc func(context.Context, *vzvmnet.Interface, ...vzfileadapter.Sockopt) (*os.File, func(), error)
 	switch FdType(fdType) {
-	case FdTypeStream:
-		fileAdaptorFunc = streamFileAdaptorForInterface
 	case FdTypeDatagram:
-		fileAdaptorFunc = datagramFileAdaptorForInterface
+		fileAdapterFunc = datagramFileAdapterForInterface
 	case FdTypeDatagramNext:
-		fileAdaptorFunc = datagramNextFileAdaptorForInterface
+		fileAdapterFunc = datagramNextFileAdapterForInterface
+	case FdTypeStream:
+		fileAdapterFunc = streamFileAdapterForInterface
 	default:
 		return nil, nil, fmt.Errorf("unknown FdType: %q", fdType)
 	}
@@ -475,10 +476,10 @@ func newFileAdaptorForNetwork(ctx context.Context, network *vzvmnet.Network, dic
 	} else if iface, err = vzvmnet.StartInterfaceWithNetwork(n, interfaceDesc); err != nil {
 		return nil, nil, fmt.Errorf("failed to start interface with network %+v: %w", n, err)
 	}
-	logrus.Infof("[vmnet] created %s file adaptor for subnet: %v", fdType, subnet)
+	logrus.Infof("[vmnet] created %s file adapter for subnet: %v", fdType, subnet)
 	logrus.Debugf("[vmnet] started vmnet.Interface with maxPacketSize=%d, maxReadPacketCount=%d, maxWritePacketCount=%d, param=%+v",
 		iface.MaxPacketSize, iface.MaxReadPacketCount, iface.MaxWritePacketCount, iface.Param)
-	return fileAdaptorFunc(ctx, iface)
+	return fileAdapterFunc(ctx, iface)
 }
 
 // MARK: - Request Network
@@ -588,6 +589,22 @@ func RequestKrunkitStreamFileDescriptorForNetwork(ctx context.Context, vmnetNetw
 // This API is used when VZ is external driver and macOS version is 26.1 or earlier,
 // as VZVmnetNetworkDeviceAttachment cannot connect to vmnet networks created by different executables on those macOS versions.
 func RequestVZDatagramFileDescriptorForNetwork(ctx context.Context, vmnetNetwork string) (*os.File, error) {
+	return RequestFileDescriptorForNetwork(ctx, vmnetNetwork, FdTypeDatagram,
+		xpc.KeyValue("InterfaceDesc", xpc.NewDictionary(
+			xpc.KeyValue(vzvmnet.EnableChecksumOffloadKey, xpc.BoolTrue),
+			// VZVmnetNetworkDeviceAttachment does not support TSO, but TSO disabled interfaces cause performance regression on another interfaces.
+			// So, enable TSO here to avoid performance regression on other interfaces.
+			// By enabling TSO here, performance of this interface becomes much worse.
+			xpc.KeyValue(vzvmnet.EnableTSOKey, xpc.BoolTrue),
+		)),
+	)
+}
+
+// RequestVZDatagramNextFileDescriptorForNetwork requests a datagram file descriptor for the given vmnetNetwork name.
+// This can be used with [vz.NewFileHandleNetworkDeviceAttachment].
+// This API is used when VZ is external driver and macOS version is 26.1 or earlier,
+// as VZVmnetNetworkDeviceAttachment cannot connect to vmnet networks created by different executables on those macOS versions.
+func RequestVZDatagramNextFileDescriptorForNetwork(ctx context.Context, vmnetNetwork string) (*os.File, error) {
 	return RequestFileDescriptorForNetwork(ctx, vmnetNetwork, FdTypeDatagramNext,
 		xpc.KeyValue("InterfaceDesc", xpc.NewDictionary(
 			xpc.KeyValue(vzvmnet.EnableChecksumOffloadKey, xpc.BoolTrue),
@@ -603,9 +620,9 @@ func RequestVZDatagramFileDescriptorForNetwork(ctx context.Context, vmnetNetwork
 type FdType string
 
 const (
-	FdTypeStream       FdType = "stream"
 	FdTypeDatagram     FdType = "datagram"
 	FdTypeDatagramNext FdType = "datagram_next"
+	FdTypeStream       FdType = "stream"
 )
 
 // RequestFileDescriptorForNetwork requests the file descriptor for the given vmnetNetwork name.

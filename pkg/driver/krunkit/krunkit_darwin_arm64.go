@@ -169,7 +169,7 @@ func buildNetworkArgs(ctx context.Context, inst *limatype.Instance) ([]string, [
 				methodName = "RequestKrunkitDatagramFileDescriptorForNetwork"
 				format = "virtio-net,type=unixgram,fd=%d,mac=%s,offloading=on"
 				file, err = vmnet.RequestKrunkitDatagramFileDescriptorForNetwork(ctx, nw.Vmnet)
-			case "datagram_next", "dgram_next":
+			case "datagram_next", "dgram_next", "datagram_x", "dgram_x":
 				methodName = "RequestKrunkitDatagramNextFileDescriptorForNetwork"
 				format = "virtio-net,type=unixgram,fd=%d,mac=%s,offloading=on"
 				file, err = vmnet.RequestKrunkitDatagramNextFileDescriptorForNetwork(ctx, nw.Vmnet)
@@ -178,9 +178,8 @@ func buildNetworkArgs(ctx context.Context, inst *limatype.Instance) ([]string, [
 				format = "virtio-net,type=unixstream,fd=%d,mac=%s,offloading=on"
 				file, err = vmnet.RequestKrunkitStreamFileDescriptorForNetwork(ctx, nw.Vmnet)
 			default:
-				methodName = "RequestKrunkitStreamFileDescriptorForNetwork"
-				format = "virtio-net,type=unixstream,fd=%d,mac=%s,offloading=on"
-				file, err = vmnet.RequestKrunkitStreamFileDescriptorForNetwork(ctx, nw.Vmnet)
+				logrus.Warn("vmnet on krunkit driver is experimental. To use vmnet, please set _LIMA_KRUNKIT_VMNET_BACKEND to one of datagram, datagram_next, or stream")
+				continue
 			}
 			if err != nil {
 				return nil, nil, fmt.Errorf("failed %s: %w", methodName, err)

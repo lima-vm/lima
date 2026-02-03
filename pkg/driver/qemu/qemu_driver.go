@@ -666,26 +666,6 @@ func (a *qArgTemplateApplier) applyTemplate(ctx context.Context, qArg string) (s
 			}
 			return res
 		},
-		"fd_connect_vmnet_stream": func(v any) string {
-			fn := func(v any) (string, error) {
-				vmnetNetwork, ok := v.(string)
-				if !ok {
-					return "", fmt.Errorf("non-string argument %+v", v)
-				}
-				file, err := vmnet.RequestQEMUStreamFileDescriptorForNetwork(ctx, vmnetNetwork)
-				if err != nil {
-					return "", fmt.Errorf("failed to get file descriptor for 'vmnet: %s': %w", vmnetNetwork, err)
-				}
-				a.files = append(a.files, file)
-				fd := len(a.files) + 2 // the first FD is 3
-				return strconv.Itoa(fd), nil
-			}
-			res, err := fn(v)
-			if err != nil {
-				panic(fmt.Errorf("fd_connect_vmnet_stream: %w", err))
-			}
-			return res
-		},
 		"fd_connect_vmnet_datagram": func(v any) string {
 			fn := func(v any) (string, error) {
 				vmnetNetwork, ok := v.(string)
@@ -722,7 +702,27 @@ func (a *qArgTemplateApplier) applyTemplate(ctx context.Context, qArg string) (s
 			}
 			res, err := fn(v)
 			if err != nil {
-				panic(fmt.Errorf("fd_connect_vmnet_datagram: %w", err))
+				panic(fmt.Errorf("fd_connect_vmnet_datagram_next: %w", err))
+			}
+			return res
+		},
+		"fd_connect_vmnet_stream": func(v any) string {
+			fn := func(v any) (string, error) {
+				vmnetNetwork, ok := v.(string)
+				if !ok {
+					return "", fmt.Errorf("non-string argument %+v", v)
+				}
+				file, err := vmnet.RequestQEMUStreamFileDescriptorForNetwork(ctx, vmnetNetwork)
+				if err != nil {
+					return "", fmt.Errorf("failed to get file descriptor for 'vmnet: %s': %w", vmnetNetwork, err)
+				}
+				a.files = append(a.files, file)
+				fd := len(a.files) + 2 // the first FD is 3
+				return strconv.Itoa(fd), nil
+			}
+			res, err := fn(v)
+			if err != nil {
+				panic(fmt.Errorf("fd_connect_vmnet_stream: %w", err))
 			}
 			return res
 		},

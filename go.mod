@@ -119,4 +119,4 @@ require (
 	go.yaml.in/yaml/v4 v4.0.0-rc.3 // indirect
 )
 
-replace github.com/Code-Hex/vz/v3 => github.com/norio-nomura/vz/v3 v3.7.2-0.20260121042104-007de93043a4
+replace github.com/Code-Hex/vz/v3 => github.com/norio-nomura/vz/v3 v3.7.2-0.20260210033012-e27a5fb55e59

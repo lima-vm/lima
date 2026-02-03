@@ -16,6 +16,7 @@ import (
 	"runtime"
 	"slices"
 	"strconv"
+	"strings"
 	"sync"
 	"syscall"
 
@@ -407,6 +408,34 @@ func attachNetwork(ctx context.Context, inst *limatype.Instance, vmConfig *vz.Vi
 			}
 			configurations = append(configurations, networkConfig)
 		case nw.Vmnet != "":
+			switch strings.ToLower(os.Getenv("_LIMA_VZ_VMNET_USE_FILEHANDLE")) {
+			case "next":
+				logrus.Info("Using VZFileHandleNetworkDeviceAttachment due to _LIMA_VZ_VMNET_USE_FILEHANDLE is set to 'next'")
+				file, err := vmnet.RequestVZDatagramNextFileDescriptorForNetwork(ctx, nw.Vmnet)
+				if err != nil {
+					return err
+				}
+				networkConfig, err := newVirtioFileNetworkDeviceConfiguration(file, nw.MACAddress)
+				if err != nil {
+					return err
+				}
+				configurations = append(configurations, networkConfig)
+				continue
+			case "":
+				// Do not use VZFileHandleNetworkDeviceAttachment by default
+			default:
+				logrus.Info("Using VZFileHandleNetworkDeviceAttachment due to _LIMA_VZ_VMNET_USE_FILEHANDLE is set to non-empty value")
+				file, err := vmnet.RequestVZDatagramFileDescriptorForNetwork(ctx, nw.Vmnet)
+				if err != nil {
+					return err
+				}
+				networkConfig, err := newVirtioFileNetworkDeviceConfiguration(file, nw.MACAddress)
+				if err != nil {
+					return err
+				}
+				configurations = append(configurations, networkConfig)
+				continue
+			}
 			macOSProductVersion, err := osutil.ProductVersion()
 			if err != nil {
 				return err

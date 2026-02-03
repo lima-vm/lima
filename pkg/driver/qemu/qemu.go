@@ -841,7 +841,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 			switch strings.ToLower(os.Getenv("_LIMA_QEMU_VMNET_BACKEND")) {
 			case "datagram", "dgram":
 				format = "dgram,id=net%d,local.type=fd,local.str={{ fd_connect_vmnet_datagram %q }}"
-			case "datagram_next", "dgram_next":
+			case "datagram_next", "dgram_next", "datagram_x", "dgram_x":
 				format = "dgram,id=net%d,local.type=fd,local.str={{ fd_connect_vmnet_datagram_next %q }}"
 			case "socket":
 				format = "socket,id=net%d,fd={{ fd_connect_vmnet_stream %q }}"
@@ -849,7 +849,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 				format = "stream,id=net%d,addr.type=fd,addr.str={{ fd_connect_vmnet_stream %q }}"
 			case "tap":
 				format = "tap,id=net%d,fd={{ fd_connect_vmnet_datagram %q }}"
-			case "tap_next":
+			case "tap_next", "tap_x":
 				format = "tap,id=net%d,fd={{ fd_connect_vmnet_datagram_next %q }}"
 			default:
 				// default to tap backend
