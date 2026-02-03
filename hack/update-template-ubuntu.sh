@@ -56,8 +56,10 @@ HELP
 }
 
 readonly -A ubuntu_base_urls=(
-	[minimal]=https://cloud-images.ubuntu.com/minimal/releases/
-	[server]=https://cloud-images.ubuntu.com/releases/
+	["minimal"]=https://cloud-images.ubuntu.com/minimal/releases/
+	["server"]=https://cloud-images.ubuntu.com/releases/
+	["daily"]=https://cloud-images.ubuntu.com/daily/
+	["daily:minimal"]=https://cloud-images.ubuntu.com/daily/server/minimal/daily/
 )
 
 # ubuntu_base_url prints the base URL for the given flavor.
@@ -79,7 +81,14 @@ function ubuntu_base_url() {
 # ```
 function ubuntu_downloaded_json() {
 	local flavor=$1 base_url json_url
-	json_url=$(ubuntu_base_url "${flavor}")streams/v1/com.ubuntu.cloud:released:download.json
+	case "${flavor}" in
+	daily*)
+		json_url=$(ubuntu_base_url "${flavor}")streams/v1/com.ubuntu.cloud:daily:download.json
+		;;
+	*)
+		json_url=$(ubuntu_base_url "${flavor}")streams/v1/com.ubuntu.cloud:released:download.json
+		;;
+	esac
 	download_to_cache "${json_url}"
 }
 # ubuntu_image_url_try_replace_release_with_version tries to replace the release with the version in the URL.
@@ -126,7 +135,7 @@ function ubuntu_image_url_latest() {
 
 # ubuntu_image_url_release prints the release image URL for the given flavor, version, arch, and path suffix.
 function ubuntu_image_url_release() {
-	local flavor=$1 version=$2 arch=$3 path_suffix=$4 base_url
+	local flavor=$1 version=$2 arch=$3 path_suffix=$4 base_url ubuntu_downloaded_json
 	base_url=$(ubuntu_base_url "${flavor}")
 	ubuntu_downloaded_json=$(ubuntu_downloaded_json "${flavor}")
 	local jq_filter release location
@@ -142,6 +151,67 @@ function ubuntu_image_url_release() {
 		error_exit "The URL for ubuntu-${version}-${flavor}-cloudimg-${arch}${path_suffix} is not provided at ${ubuntu_base_urls[${flavor}]}."
 	location=$(validate_url "${base_url}${release}/release/ubuntu-${version}-${flavor}-cloudimg-${arch}${path_suffix}")
 	location=$(ubuntu_image_url_try_replace_release_with_version "${location}" "${release}" "${version}")
+	arch=$(limayaml_arch "${arch}")
+	json_vars location arch
+}
+
+# ubuntu_image_url_daily prints the daily image URL and its digest for the given flavor, codename, arch, and path suffix.
+function ubuntu_image_url_daily() {
+	local flavor=$1 codename=$2 arch=$3 path_suffix=$4 base_url ubuntu_downloaded_json products_flavor jq_filter location_digest_version
+	base_url=$(ubuntu_base_url "${flavor}")
+	ubuntu_downloaded_json=$(ubuntu_downloaded_json "${flavor}")
+	case "${flavor}" in
+	daily:minimal) products_flavor="minimal" ;;
+	*) products_flavor="server" ;;
+	esac
+	jq_filter="
+        [
+            .products | to_entries[] as \$product_entry |
+            \$product_entry.value| select(.release == \"${codename}\" and .arch == \"${arch}\") |
+            .version as \$version |
+            .versions[]?.items[] | select(.path | endswith(\"${path_suffix}\")) |
+            [\"${base_url}\"+.path, \"sha256:\"+.sha256, \$version] | @tsv
+        ] | last
+    "
+	location_digest_version=$(jq -r "${jq_filter}" "${ubuntu_downloaded_json}")
+	[[ ${location_digest_version} != "null" ]] ||
+		error_exit "The URL for ${codename}-${products_flavor}-cloudimg-${arch}${path_suffix} is not provided at ${ubuntu_base_urls[${flavor}]}."
+	local location digest version location_using_version
+	read -r location digest version <<<"${location_digest_version}"
+	location=$(validate_url "${location}")
+	location=$(ubuntu_image_url_try_replace_release_with_version "${location}" "${codename}" "${version}")
+	arch=$(limayaml_arch "${arch}")
+	json_vars location arch digest
+}
+
+# ubuntu_image_url_current prints the daily current image URL for the given flavor, codename, arch, and path suffix.
+function ubuntu_image_url_current() {
+	local flavor=$1 codename=$2 arch=$3 path_suffix=$4 base_url ubuntu_downloaded_json path_prefix products_flavor
+	base_url=$(ubuntu_base_url "${flavor}")
+	ubuntu_downloaded_json=$(ubuntu_downloaded_json "${flavor}")
+	case "${flavor}" in
+	daily:minimal)
+		path_prefix=""
+		products_flavor="minimal"
+		;;
+	*)
+		path_prefix="server/"
+		products_flavor="server"
+		;;
+	esac
+	local jq_filter version location
+	jq_filter="
+		[
+            .products | to_entries[] as \$product_entry |
+            \$product_entry.value| select(.release == \"${codename}\" and .arch == \"${arch}\") |
+            .version
+		] | first
+    "
+	version=$(jq -r "${jq_filter}" "${ubuntu_downloaded_json}")
+	[[ ${version} != "null" ]] ||
+		error_exit "The URL for ubuntu-${version}-${products_flavor}-cloudimg-${arch}${path_suffix} is not provided at ${ubuntu_base_urls[${flavor}]}."
+	location=$(validate_url "${base_url}${path_prefix}${codename}/current/${codename}-${products_flavor}-cloudimg-${arch}${path_suffix}")
+	location=$(ubuntu_image_url_try_replace_release_with_version "${location}" "${codename}" "${version}")
 	arch=$(limayaml_arch "${arch}")
 	json_vars location arch
 }
@@ -170,8 +240,12 @@ function ubuntu_image_entry_with_kernel_info() {
 	location=$(jq -e -r '.location' <<<"${image_entry}")
 	local location_dirname location_basename location_prefix
 	location_dirname=$(dirname "${location}")/unpacked
-	location_basename="$(basename "${location}" | cut -d- -f1-5 | cut -d. -f1-2)"
-	location_prefix="${location_dirname}/${location_basename}"
+	location_basename=$(basename "${location}")
+	case "${location_basename}" in
+	ubuntu*) location_prefix="${location_dirname}/$(echo "${location_basename}" | cut -d- -f1-5 | cut -d. -f1-2)" ;;
+	*) location_prefix="${location_dirname}/$(echo "${location_basename}" | cut -d- -f1-4 | cut -d. -f1)" ;;
+	esac
+
 	local kernel initrd
 	set +e # Disable 'set -e' to avoid exiting on error for the next assignment.
 	kernel=$(
@@ -191,15 +265,29 @@ function ubuntu_image_entry_with_kernel_info() {
 function ubuntu_flavor_from_location_basename() {
 	local location=$1 location_basename flavor
 	location_basename=$(basename "${location}")
-	flavor=$(echo "${location_basename}" | cut -d- -f3)
+	case "${location_basename}" in
+	ubuntu*) flavor=$(echo "${location_basename}" | cut -d- -f3) ;;
+	*)
+		flavor=$(echo "${location_basename}" | cut -d- -f2)
+		case "${flavor}" in
+		minimal) flavor="daily:minimal" ;;
+		*) flavor="daily" ;;
+		esac
+		;;
+	esac
 	[[ -n ${flavor} ]] || error_exit "Failed to get flavor from ${location}"
 	echo "${flavor}"
 }
 
+# ubuntu_version_from_location_basename prints the version from the location basename.
+# On daily images, it prints the codename.
 function ubuntu_version_from_location_basename() {
 	local location=$1 location_basename version
 	location_basename=$(basename "${location}")
-	version=$(echo "${location_basename}" | cut -d- -f2)
+	case "${location_basename}" in
+	ubuntu*) version=$(echo "${location_basename}" | cut -d- -f2) ;;
+	*) version=$(echo "${location_basename}" | cut -d- -f1) ;;
+	esac
 	[[ -n ${version} ]] || error_exit "Failed to get version from ${location}"
 	echo "${version}"
 }
@@ -252,7 +340,10 @@ function ubuntu_version_resolve_aliases() {
 function ubuntu_arch_from_location_basename() {
 	local location=$1 location_basename arch
 	location_basename=$(basename "${location}")
-	arch=$(echo "${location_basename}" | cut -d- -f5 | cut -d. -f1)
+	case "${location_basename}" in
+	ubuntu*) arch=$(echo "${location_basename}" | cut -d- -f5 | cut -d. -f1) ;;
+	*) arch=$(echo "${location_basename}" | cut -d- -f4 | cut -d. -f1) ;;
+	esac
 	[[ -n ${arch} ]] || error_exit "Failed to get arch from ${location}"
 	echo "${arch}"
 }
@@ -281,6 +372,10 @@ function ubuntu_location_url_spec() {
 	https://cloud-images.ubuntu.com/minimal/releases/*/release-*/*) url_spec=latest ;;
 	https://cloud-images.ubuntu.com/releases/*/release/*) url_spec=release ;;
 	https://cloud-images.ubuntu.com/releases/*/release-*/*) url_spec=latest ;;
+	https://cloud-images.ubuntu.com/daily/server/minimal/daily/*/current/*) url_spec=current ;;
+	https://cloud-images.ubuntu.com/daily/server/minimal/daily/*/*/*) url_spec=daily ;;
+	https://cloud-images.ubuntu.com/daily/server/*/current/*) url_spec=current ;;
+	https://cloud-images.ubuntu.com/daily/server/*/*/*) url_spec=daily ;;
 	*)
 		# echo "Unsupported image location: ${location}" >&2
 		return 1

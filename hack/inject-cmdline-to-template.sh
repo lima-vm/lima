@@ -60,17 +60,18 @@ for ((i = 0; i < ${#locations[@]}; i++)); do
 done
 
 # 4. check the image location is supported
-if [[ -z ${location} ]]; then
-	echo "Failed to get the image location for ${template}" >&2
-	exit 1
-elif [[ ${location} == https://cloud-images.ubuntu.com/minimal/* ]]; then
+case "${location:-}" in
+https://cloud-images.ubuntu.com/minimal/* | https://cloud-images.ubuntu.com/daily/server/minimal/*)
 	readonly default_cmdline="root=/dev/vda1 ro console=tty1 console=ttyAMA0"
-elif [[ ${location} == https://cloud-images.ubuntu.com/* ]]; then
+	;;
+https://cloud-images.ubuntu.com/*)
 	readonly default_cmdline="root=LABEL=cloudimg-rootfs ro console=tty1 console=ttyAMA0"
-else
+	;;
+*)
 	echo "Unsupported image location: ${location}" >&2
 	exit 1
-fi
+	;;
+esac
 
 # 5. build the kernel and initrd location, digest, and cmdline
 location_dirname=$(dirname "${location}")/unpacked
