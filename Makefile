@@ -400,7 +400,7 @@ $(ALL_GUESTAGENTS_NOT_COMPRESSED): $(call dependencies_for_cmd,lima-guestagent) 
 	$(ENVS_$@) $(GO_BUILD) -o $@ ./cmd/lima-guestagent
 	chmod 644 $@
 $(LINUX_GUESTAGENT_PATH_COMMON)%.gz: $(LINUX_GUESTAGENT_PATH_COMMON)% $$(call force_build_with_gunzip,$$@)
-	@set -x; gzip $<
+	@set -x; gzip -n $<
 
 MKDIR_TARGETS += _output/share/lima
 
