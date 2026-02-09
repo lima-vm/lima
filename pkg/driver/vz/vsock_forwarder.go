@@ -10,7 +10,7 @@ import (
 	"errors"
 	"net"
 
-	"github.com/containers/gvisor-tap-vsock/pkg/tcpproxy"
+	"github.com/inetaf/tcpproxy"
 	"github.com/sirupsen/logrus"
 )
 

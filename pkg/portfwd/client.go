@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/containers/gvisor-tap-vsock/pkg/services/forwarder"
-	"github.com/containers/gvisor-tap-vsock/pkg/tcpproxy"
+	"github.com/inetaf/tcpproxy"
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/guestagent/api"
