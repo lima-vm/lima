@@ -190,6 +190,8 @@ llama-cli -m models/Qwen3-1.7B-Q8_0.gguf -b 512 -ngl 99 -p "Introduce yourself"
 
 and enjoy chatting with the AI model.
 
+💡 **Tip:** If the model takes too long to load or experiences performance issues, try reducing the `-ngl` (number of GPU layers) value.
+
 ## Notes and caveats
 - macOS Ventura or later on Apple Silicon is required.
 - To verify GPU/Vulkan in the guest container or VM, use tools like `vulkaninfo --summary`.
