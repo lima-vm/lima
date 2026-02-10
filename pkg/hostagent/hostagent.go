@@ -47,6 +47,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/sshutil"
 	"github.com/lima-vm/lima/v2/pkg/store"
 	"github.com/lima-vm/lima/v2/pkg/version/versionutil"
+	"github.com/lima-vm/lima/v2/pkg/vmnet"
 )
 
 type HostAgent struct {
@@ -408,6 +409,14 @@ func (a *HostAgent) Run(ctx context.Context) error {
 			return fmt.Errorf("cannot start DNS server: %w", err)
 		}
 		defer dnsServer.Shutdown()
+	}
+
+	// Register vmnet mach service if any vmnet network is used
+	if runtime.GOOS == "darwin" && limayaml.IsVmnetUsed(a.instConfig) {
+		logrus.Info("Registering vmnet mach service")
+		if err := vmnet.RegisterMachService(ctx); err != nil {
+			return err
+		}
 	}
 
 	errCh, err := a.driver.Start(ctx)

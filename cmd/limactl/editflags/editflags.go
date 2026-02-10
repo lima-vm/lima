@@ -18,6 +18,7 @@ import (
 	flag "github.com/spf13/pflag"
 
 	"github.com/lima-vm/lima/v2/pkg/localpathutil"
+	"github.com/lima-vm/lima/v2/pkg/networks"
 	"github.com/lima-vm/lima/v2/pkg/registry"
 )
 
@@ -60,8 +61,12 @@ func RegisterEdit(cmd *cobra.Command, commentPrefix string) {
 
 	flags.StringSlice("network", nil, commentPrefix+"Additional networks, e.g., \"vzNAT\" or \"lima:shared\" to assign vmnet IP")
 	_ = cmd.RegisterFlagCompletionFunc("network", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
-		// TODO: retrieve the lima:* network list from networks.yaml
-		return []string{"lima:shared", "lima:bridged", "lima:host", "lima:user-v2", "vzNAT"}, cobra.ShellCompDirectiveNoFileComp
+		identifiers, err := networks.Identifiers()
+		if err != nil {
+			return []string{"lima:shared", "lima:bridged", "lima:host", "lima:user-v2", "vzNAT", "vmnet:shared", "vmnet:host"}, cobra.ShellCompDirectiveNoFileComp
+		}
+		// "vzNAT" is not included in networks.Identifiers().
+		return append(identifiers, "vzNAT"), cobra.ShellCompDirectiveNoFileComp
 	})
 
 	flags.Bool("rosetta", false, commentPrefix+"Enable Rosetta (for vz instances)")
@@ -306,11 +311,14 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 					case strings.HasPrefix(s, "lima:"):
 						network := strings.TrimPrefix(s, "lima:")
 						networks[i] = fmt.Sprintf(`{"lima": %q}`, network)
+					case strings.HasPrefix(s, "vmnet:"):
+						network := strings.TrimPrefix(s, "vmnet:")
+						networks[i] = fmt.Sprintf(`{"vmnet": %q}`, network)
 					default:
-						return nil, fmt.Errorf(`network name must be "vzNAT" or "lima:*", got %q`, s)
+						return nil, fmt.Errorf(`network name must be "vzNAT", "vmnet:*", or "lima:*", got %q`, s)
 					}
 				}
-				expr := fmt.Sprintf(`.networks += [%s] | .networks |= unique_by(.lima)`, strings.Join(networks, ","))
+				expr := fmt.Sprintf(`.networks += [%s] | .networks |= unique_by(.lima) | .networks |= unique_by(.vmnet)`, strings.Join(networks, ","))
 				return []string{expr}, nil
 			},
 			false,

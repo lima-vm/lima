@@ -38,6 +38,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/ptr"
 	"github.com/lima-vm/lima/v2/pkg/reflectutil"
 	"github.com/lima-vm/lima/v2/pkg/version/versionutil"
+	"github.com/lima-vm/lima/v2/pkg/vmnet"
 )
 
 type LimaQemuDriver struct {
@@ -99,6 +100,7 @@ func validateConfig(cfg *limatype.LimaYAML) error {
 			"MACAddress",
 			"Metric",
 			"Interface",
+			"Vmnet",
 		); len(unknown) > 0 {
 			logrus.Warnf("vmType %s: ignoring networks[%d]: %+v", *cfg.VMType, i, unknown)
 		}
@@ -284,7 +286,7 @@ func (l *LimaQemuDriver) Start(_ context.Context) (chan error, error) {
 	var qArgsFinal []string
 	applier := &qArgTemplateApplier{}
 	for _, unapplied := range qArgs {
-		applied, err := applier.applyTemplate(unapplied)
+		applied, err := applier.applyTemplate(ctx, unapplied)
 		if err != nil {
 			return nil, err
 		}
@@ -628,7 +630,7 @@ type qArgTemplateApplier struct {
 	files []*os.File
 }
 
-func (a *qArgTemplateApplier) applyTemplate(qArg string) (string, error) {
+func (a *qArgTemplateApplier) applyTemplate(ctx context.Context, qArg string) (string, error) {
 	if !strings.Contains(qArg, "{{") {
 		return qArg, nil
 	}
@@ -661,6 +663,66 @@ func (a *qArgTemplateApplier) applyTemplate(qArg string) (string, error) {
 			res, err := fn(v)
 			if err != nil {
 				panic(fmt.Errorf("fd_connect: %w", err))
+			}
+			return res
+		},
+		"fd_connect_vmnet_datagram": func(v any) string {
+			fn := func(v any) (string, error) {
+				vmnetNetwork, ok := v.(string)
+				if !ok {
+					return "", fmt.Errorf("non-string argument %+v", v)
+				}
+				file, err := vmnet.RequestQEMUDatagramFileDescriptorForNetwork(ctx, vmnetNetwork)
+				if err != nil {
+					return "", fmt.Errorf("failed to get file descriptor for 'vmnet: %s': %w", vmnetNetwork, err)
+				}
+				a.files = append(a.files, file)
+				fd := len(a.files) + 2 // the first FD is 3
+				return strconv.Itoa(fd), nil
+			}
+			res, err := fn(v)
+			if err != nil {
+				panic(fmt.Errorf("fd_connect_vmnet_datagram: %w", err))
+			}
+			return res
+		},
+		"fd_connect_vmnet_datagram_next": func(v any) string {
+			fn := func(v any) (string, error) {
+				vmnetNetwork, ok := v.(string)
+				if !ok {
+					return "", fmt.Errorf("non-string argument %+v", v)
+				}
+				file, err := vmnet.RequestQEMUDatagramNextFileDescriptorForNetwork(ctx, vmnetNetwork)
+				if err != nil {
+					return "", fmt.Errorf("failed to get file descriptor for 'vmnet: %s': %w", vmnetNetwork, err)
+				}
+				a.files = append(a.files, file)
+				fd := len(a.files) + 2 // the first FD is 3
+				return strconv.Itoa(fd), nil
+			}
+			res, err := fn(v)
+			if err != nil {
+				panic(fmt.Errorf("fd_connect_vmnet_datagram_next: %w", err))
+			}
+			return res
+		},
+		"fd_connect_vmnet_stream": func(v any) string {
+			fn := func(v any) (string, error) {
+				vmnetNetwork, ok := v.(string)
+				if !ok {
+					return "", fmt.Errorf("non-string argument %+v", v)
+				}
+				file, err := vmnet.RequestQEMUStreamFileDescriptorForNetwork(ctx, vmnetNetwork)
+				if err != nil {
+					return "", fmt.Errorf("failed to get file descriptor for 'vmnet: %s': %w", vmnetNetwork, err)
+				}
+				a.files = append(a.files, file)
+				fd := len(a.files) + 2 // the first FD is 3
+				return strconv.Itoa(fd), nil
+			}
+			res, err := fn(v)
+			if err != nil {
+				panic(fmt.Errorf("fd_connect_vmnet_stream: %w", err))
 			}
 			return res
 		},

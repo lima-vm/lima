@@ -317,6 +317,9 @@ type Network struct {
 	Socket string `yaml:"socket,omitempty" json:"socket,omitempty"`
 	// VZNAT uses VZNATNetworkDeviceAttachment. Needs VZ. No root privilege is required.
 	VZNAT *bool `yaml:"vzNAT,omitempty" json:"vzNAT,omitempty"`
+	// `Vmnet` uses `vmnet_network_ref`. No root privilege is required.
+	// Requires macOS 26.0 or later.
+	Vmnet string `yaml:"vmnet,omitempty" json:"vmnet,omitempty"`
 
 	MACAddress string  `yaml:"macAddress,omitempty" json:"macAddress,omitempty"`
 	Interface  string  `yaml:"interface,omitempty" json:"interface,omitempty"`
