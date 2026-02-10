@@ -33,7 +33,7 @@ require (
 	github.com/mdlayher/vsock v1.2.1 // gomodjail:unconfined
 	github.com/miekg/dns v1.1.72 // gomodjail:unconfined
 	github.com/mikefarah/yq/v4 v4.49.2
-	github.com/modelcontextprotocol/go-sdk v1.2.0
+	github.com/modelcontextprotocol/go-sdk v1.3.0
 	github.com/nxadm/tail v1.4.11 // gomodjail:unconfined
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58
@@ -114,7 +114,7 @@ require (
 
 require (
 	github.com/go-ini/ini v1.67.0 // indirect
-	github.com/google/jsonschema-go v0.3.0 // indirect
+	github.com/google/jsonschema-go v0.4.2 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.3 // indirect
 )
