@@ -33,7 +33,8 @@ const (
 
 func main() {
 	if os.Geteuid() == 0 && (len(os.Args) < 2 || os.Args[1] != "generate-doc") {
-		panic("must not run as the root user")
+		fmt.Fprint(os.Stderr, "limactl: must not run as the root user\n")
+		os.Exit(1)
 	}
 
 	yq.MaybeRunYQ()
