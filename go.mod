@@ -13,7 +13,7 @@ require (
 	github.com/cheggaaa/pb/v3 v3.1.7 // gomodjail:unconfined
 	github.com/cilium/ebpf v0.20.0 // gomodjail:unconfined
 	github.com/containerd/continuity v0.4.5
-	github.com/containers/gvisor-tap-vsock v0.8.7 // gomodjail:unconfined
+	github.com/containers/gvisor-tap-vsock v0.8.8 // gomodjail:unconfined
 	github.com/coreos/go-semver v0.3.1
 	github.com/coreos/go-systemd/v22 v22.7.0
 	github.com/cpuguy83/go-md2man/v2 v2.0.7
@@ -24,6 +24,7 @@ require (
 	github.com/goccy/go-yaml v1.19.2
 	github.com/google/go-cmp v0.7.0
 	github.com/google/yamlfmt v0.21.0
+	github.com/inetaf/tcpproxy v0.0.0-20250222171855-c4b9df066048
 	github.com/invopop/jsonschema v0.13.0
 	github.com/lima-vm/go-qcow2reader v0.7.1
 	github.com/lima-vm/sshocker v0.3.9 // gomodjail:unconfined
