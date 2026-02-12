@@ -418,7 +418,18 @@ func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype
 		return rsyncBackAndCleanup()
 	}
 
-	message := "⚠️ Accept the changes?"
+	stats, err := getRsyncStats(ctx, sshCmd, remoteSource, filepath.Dir(hostCurrentDir))
+	if err != nil {
+		logrus.WithError(err).Warn("failed to get rsync stats")
+	}
+	statsMsg := ""
+	if stats != nil {
+		if s := stats.String(); s != "" {
+			statsMsg = fmt.Sprintf(" (%s)", s)
+		}
+	}
+
+	message := fmt.Sprintf("⚠️ Accept the changes?%s", statsMsg)
 	options := []string{
 		"Yes",
 		"No",
@@ -579,4 +590,85 @@ func quoteEnv(arg string) string {
 	env := strings.SplitN(arg, "=", 2)
 	env[1] = shellescape.Quote(env[1])
 	return strings.Join(env, "=")
+}
+
+type rsyncStats struct {
+	Added    int
+	Deleted  int
+	Modified int
+}
+
+func (s *rsyncStats) String() string {
+	if s.Added == 0 && s.Deleted == 0 && s.Modified == 0 {
+		return ""
+	}
+	return fmt.Sprintf("added: %d, deleted: %d, modified: %d", s.Added, s.Deleted, s.Modified)
+}
+
+func getRsyncStats(ctx context.Context, sshCmd *exec.Cmd, source, destination string) (*rsyncStats, error) {
+	sshCmdParts := make([]string, len(sshCmd.Args))
+	for i, arg := range sshCmd.Args {
+		sshCmdParts[i] = shellescape.Quote(arg)
+	}
+	sshCmdStr := strings.Join(sshCmdParts, " ")
+
+	rsyncArgs := []string{
+		"--dry-run",
+		"--itemize-changes",
+		"-ah",
+		"--delete",
+		"-e",
+		sshCmdStr,
+		source,
+		destination,
+	}
+	rsyncCmd := exec.CommandContext(ctx, "rsync", rsyncArgs...)
+	out, err := rsyncCmd.Output()
+	if err != nil {
+		return nil, err
+	}
+	return parseRsyncStats(string(out)), nil
+}
+
+// parseRsyncStats parses the output of `rsync --itemize-changes` to extract file operation statistics.
+//
+// Rsync itemized format: YXcstpoguax  path/to/file
+// Where Y=update type, X=file type, c=checksum status, and positions 3-10 are other attributes.
+//
+// Examples:
+//
+//	>f+++++++++ file.txt    → Added (new file received)
+//	>f.st...... file.txt    → Modified (existing file updated)
+//	*deleting   file.txt    → Deleted
+//
+// Logic:
+//
+// - `*deleting`: Count as Deleted.
+// - Update type `<` (sent), `>` (received), or `c` (local change):
+//   - If checksum is `+` (created): Count as Added.
+//   - Otherwise: Count as Modified.
+func parseRsyncStats(output string) *rsyncStats {
+	var s rsyncStats
+	for line := range strings.SplitSeq(output, "\n") {
+		if len(line) < 12 {
+			continue
+		}
+
+		if strings.HasPrefix(line, "*deleting") {
+			s.Deleted++
+			continue
+		}
+
+		updateType := line[0]
+		checksum := line[2]
+
+		if updateType == '<' || updateType == '>' || updateType == 'c' {
+			if checksum == '+' {
+				s.Added++
+			} else {
+				s.Modified++
+			}
+		}
+	}
+	return &s
 }
