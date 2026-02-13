@@ -111,7 +111,6 @@ func LimaUser(ctx context.Context, limaVersion string, warn bool) *user.User {
 			warnings = append(warnings, warning)
 			limaUser.Username = fallbackUser
 		}
-		limaUser.HomeDir = "/home/{{.User}}.linux"
 		if runtime.GOOS == "windows" {
 			idu, err := call(ctx, []string{"id", "-u"})
 			if err != nil {
@@ -150,6 +149,14 @@ func LimaUser(ctx context.Context, limaVersion string, warn bool) *user.User {
 	}
 	// Make sure we return a pointer to a COPY of limaUser
 	u := *limaUser
+	limaVersionUnknown := limaVersion == "" || limaVersion == "<unknown>"
+	if limaVersionUnknown || versionutil.GreaterEqual(limaVersion, "2.1.0") {
+		u.HomeDir = "/home/{{.User}}.guest"
+		// boot script symlinks "/home/{{.User}}.linux" to "{{.User}}.guest" for compatibility
+	} else {
+		u.HomeDir = "/home/{{.User}}.linux"
+		// boot script symlinks "/home/{{.User}}.guest" to "{{.User}}.linux" for compatibility
+	}
 	if versionutil.GreaterEqual(limaVersion, "1.0.0") {
 		if u.Username == "admin" {
 			if warn {

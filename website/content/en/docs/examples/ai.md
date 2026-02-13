@@ -44,6 +44,7 @@ lima aider
 Follow the guide shown in the first session for authentication.
 
 Alternatively, you can set environmental variables via:
+<!-- TODO: change ${USER}.linux to ${USER}.guest after releasing v2.1 GA -->
 ```
 lima vi "/home/${USER}.linux/.bash_profile"
 ```

@@ -351,7 +351,7 @@ user:
   uid: null
   # Home directory inside the VM, NOT the mounted home directory of the host.
   # It can use the following template variables: {{.Name}}, {{.Hostname}}, {{.UID}}, {{.User}}, and {{.Param.Key}}.
-  # 🟢 Builtin default: "/home/{{.User}}.linux"
+  # 🟢 Builtin default: "/home/{{.User}}.guest" (Also accessible as "/home/{{.User}}.linux")
   home: null
   # Shell. Needs to be an absolute path.
   # 🟢 Builtin default: "/bin/bash"
