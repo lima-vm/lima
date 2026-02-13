@@ -60,8 +60,9 @@ To make the host mount writable, run `limactl start` with `--mount-writable`.
 To disable the mount, `limactl start` with `--mount-none` or `--plain`.
 
 The guest home directory exists independently on the following path:
-- `/home/${USER}.guest` (since Lima v2.1)
-- `/home/${USER}.linux` (prior to Lima v2.1)
+- `/Users/${USER}.guest` (on macOS guests)
+- `/home/${USER}.guest`  (on other guests, since Lima v2.1)
+- `/home/${USER}.linux`  (prior to Lima v2.1)
 
 ### Shell completion
 - To enable bash completion, add `source <(limactl completion bash)` to `~/.bash_profile`.

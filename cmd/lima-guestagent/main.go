@@ -38,9 +38,6 @@ func newApp() *cobra.Command {
 		}
 		return nil
 	}
-	rootCmd.AddCommand(
-		newDaemonCommand(),
-		newInstallSystemdCommand(),
-	)
+	addRootCommands(rootCmd)
 	return rootCmd
 }

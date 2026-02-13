@@ -18,7 +18,7 @@ const limaVersion = "1.0.0"
 func TestLimaUserAdminNew(t *testing.T) {
 	currentUser.Username = "admin"
 	once = new(sync.Once)
-	user := LimaUser(t.Context(), limaVersion, false)
+	user := LimaUser(t.Context(), limaVersion, false, nil)
 	assert.Equal(t, user.Username, fallbackUser)
 }
 
@@ -26,21 +26,21 @@ func TestLimaUserAdminNew(t *testing.T) {
 func TestLimaUserAdminOld(t *testing.T) {
 	currentUser.Username = "admin"
 	once = new(sync.Once)
-	user := LimaUser(t.Context(), "0.23.0", false)
+	user := LimaUser(t.Context(), "0.23.0", false, nil)
 	assert.Equal(t, user.Username, "admin")
 }
 
 func TestLimaUserInvalid(t *testing.T) {
 	currentUser.Username = "use@example.com"
 	once = new(sync.Once)
-	user := LimaUser(t.Context(), limaVersion, false)
+	user := LimaUser(t.Context(), limaVersion, false, nil)
 	assert.Equal(t, user.Username, fallbackUser)
 }
 
 func TestLimaUserUid(t *testing.T) {
 	currentUser.Username = fallbackUser
 	once = new(sync.Once)
-	user := LimaUser(t.Context(), limaVersion, false)
+	user := LimaUser(t.Context(), limaVersion, false, nil)
 	_, err := strconv.Atoi(user.Uid)
 	assert.NilError(t, err)
 }
@@ -48,7 +48,7 @@ func TestLimaUserUid(t *testing.T) {
 func TestLimaUserGid(t *testing.T) {
 	currentUser.Username = fallbackUser
 	once = new(sync.Once)
-	user := LimaUser(t.Context(), limaVersion, false)
+	user := LimaUser(t.Context(), limaVersion, false, nil)
 	_, err := strconv.Atoi(user.Gid)
 	assert.NilError(t, err)
 }
@@ -56,7 +56,7 @@ func TestLimaUserGid(t *testing.T) {
 func TestLimaHomeDir(t *testing.T) {
 	currentUser.Username = fallbackUser
 	once = new(sync.Once)
-	user := LimaUser(t.Context(), limaVersion, false)
+	user := LimaUser(t.Context(), limaVersion, false, nil)
 	// check for absolute unix path (/home)
 	assert.Assert(t, path.IsAbs(user.HomeDir), user.HomeDir)
 }

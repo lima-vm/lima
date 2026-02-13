@@ -15,6 +15,7 @@ const (
 	DisksDir     = "_disks"     // disks are stored here
 	NetworksDir  = "_networks"  // network log files are stored here
 	TemplatesDir = "_templates" // user templates are stored here
+	MntDir       = "_mnt"       // mount points ("0", "1", ...). May need root access.
 )
 
 // Filenames used inside the ConfigDir
@@ -36,11 +37,12 @@ const (
 	CIDataISO               = "cidata.iso"
 	CIDataISODir            = "cidata"
 	CloudConfig             = "cloud-config.yaml"
-	Image                   = "image"    // downloaded VM image; renamed to Disk or ISO during setup
-	Disk                    = "disk"     // VM disk (or symlink to DiffDiskLegacy for migrated instances)
-	ISO                     = "iso"      // optional CDROM image (or symlink to BaseDiskLegacy for migrated instances)
-	BaseDiskLegacy          = "basedisk" // legacy name for Image; may remain as qcow2 backing file
-	DiffDiskLegacy          = "diffdisk" // legacy name for Disk
+	Image                   = "image"      // downloaded VM image; renamed to Disk or ISO during setup
+	ImageIPSW               = "image.ipsw" // hardlink to Image for macOS guests
+	Disk                    = "disk"       // VM disk (or symlink to DiffDiskLegacy for migrated instances)
+	ISO                     = "iso"        // optional CDROM image (or symlink to BaseDiskLegacy for migrated instances)
+	BaseDiskLegacy          = "basedisk"   // legacy name for Image; may remain as qcow2 backing file
+	DiffDiskLegacy          = "diffdisk"   // legacy name for Disk
 	Kernel                  = "kernel"
 	KernelCmdline           = "kernel.cmdline"
 	Initrd                  = "initrd"
@@ -64,6 +66,8 @@ const (
 	HostAgentStderrLog      = "ha.stderr.log"
 	ExternalDriverStderrLog = "driver.stderr.log"
 	VzIdentifier            = "vz-identifier"
+	VzHwModel               = "vz-hwmodel"       // macOS guests only
+	VzAux                   = "vz-aux"           // macOS guests only
 	VzEfi                   = "vz-efi"           // efi variable store
 	QemuEfiCodeFD           = "qemu-efi-code.fd" // efi code; not always created
 	QemuEfiFullFD           = "qemu-efi-full.fd" // concatenated efi vars and code; not always created

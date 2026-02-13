@@ -47,8 +47,10 @@ weight: 6
 - Port forwarding: [`ssh -L`](../config/port), automated by watching `/proc/net/tcp` and `iptables` events in the guest
 
 #### "What's my login password?"
-Password is disabled and locked by default.
+For Linux guests, the password is disabled and locked by default.
 You have to use `limactl shell bash` (or `lima bash`) to open a shell.
+
+For macOS guests, the password is randomly generated and stored as `~/password` in the guest.
 
 {{% fixlinks %}}
 Try virtiofs. See [`Usage » SSH`]({{< ref "/docs/usage/ssh" >}})
@@ -63,7 +65,9 @@ AlmaLinux, Alpine, Arch Linux, Debian, Fedora, openSUSE, Oracle Linux, and Rocky
 See [`./templates/`](./templates/).
 {{% /fixlinks %}}
 
-An image has to satisfy the following requirements:
+Starting with Lima v2.1, [macOS guests](../usage/guests/macos.md) are experimentally supported too.
+
+An image for Linux guests has to satisfy the following requirements:
 - systemd or OpenRC
 - cloud-init
 - The following binaries to be preinstalled:

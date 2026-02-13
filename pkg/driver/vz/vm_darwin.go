@@ -256,6 +256,47 @@ func createVM(ctx context.Context, inst *limatype.Instance) (*vz.VirtualMachine,
 	return vz.NewVirtualMachine(vmConfig)
 }
 
+// createVMForMacInstaller is similar to createVM but only used for VZMacOSInstaller.
+// - Only the primary disk is attached.
+// - No network.
+func createVMForMacInstaller(_ context.Context, inst *limatype.Instance) (*vz.VirtualMachine, error) {
+	vmConfig, err := createInitialConfig(inst)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = attachPlatformConfig(inst, vmConfig); err != nil {
+		return nil, err
+	}
+
+	// Only attach the primary disk here. cidata.iso is not existent at this point.
+	disk := filepath.Join(inst.Dir, filenames.Disk)
+	diffDiskAttachment, err := vz.NewDiskImageStorageDeviceAttachmentWithCacheAndSync(disk, false, diskImageCachingMode, vz.DiskImageSynchronizationModeFsync)
+	if err != nil {
+		return nil, err
+	}
+	diskConfig, err := vz.NewVirtioBlockDeviceConfiguration(diffDiskAttachment)
+	if err != nil {
+		return nil, err
+	}
+	vmConfig.SetStorageDevicesVirtualMachineConfiguration([]vz.StorageDeviceConfiguration{diskConfig})
+
+	if err = attachDisplay(inst, vmConfig); err != nil {
+		return nil, err
+	}
+
+	if err = attachOtherDevices(inst, vmConfig); err != nil {
+		return nil, err
+	}
+
+	validated, err := vmConfig.Validate()
+	if !validated || err != nil {
+		return nil, err
+	}
+
+	return vz.NewVirtualMachine(vmConfig)
+}
+
 func createInitialConfig(inst *limatype.Instance) (*vz.VirtualMachineConfiguration, error) {
 	bootLoader, err := bootLoader(inst)
 	if err != nil {
@@ -278,13 +319,27 @@ func createInitialConfig(inst *limatype.Instance) (*vz.VirtualMachineConfigurati
 	return vmConfig, nil
 }
 
-func attachPlatformConfig(inst *limatype.Instance, vmConfig *vz.VirtualMachineConfiguration) error {
-	machineIdentifier, err := getMachineIdentifier(inst)
+func newPlatformConfiguration(inst *limatype.Instance) (vz.PlatformConfiguration, error) {
+	if *inst.Config.OS == limatype.DARWIN {
+		return newMacPlatformConfiguration(inst)
+	}
+
+	identifierFile := filepath.Join(inst.Dir, filenames.VzIdentifier)
+
+	machineIdentifier, err := getGenericMachineIdentifier(identifierFile)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	platformConfig, err := vz.NewGenericPlatformConfiguration(vz.WithGenericMachineIdentifier(machineIdentifier))
+	if err != nil {
+		return nil, err
+	}
+	return platformConfig, nil
+}
+
+func attachPlatformConfig(inst *limatype.Instance, vmConfig *vz.VirtualMachineConfiguration) error {
+	platformConfig, err := newPlatformConfiguration(inst)
 	if err != nil {
 		return err
 	}
@@ -304,7 +359,12 @@ func attachPlatformConfig(inst *limatype.Instance, vmConfig *vz.VirtualMachineCo
 			return errors.New("nested virtualization is not supported on this device")
 		}
 
-		if err := platformConfig.SetNestedVirtualizationEnabled(true); err != nil {
+		genericPlatformConfig, ok := platformConfig.(*vz.GenericPlatformConfiguration)
+		if !ok {
+			return errors.New("failed to cast platform configuration to generic platform configuration")
+		}
+
+		if err := genericPlatformConfig.SetNestedVirtualizationEnabled(true); err != nil {
 			return fmt.Errorf("cannot enable nested virtualization: %w", err)
 		}
 	}
@@ -574,15 +634,25 @@ func attachDisks(ctx context.Context, inst *limatype.Instance, vmConfig *vz.Virt
 func attachDisplay(inst *limatype.Instance, vmConfig *vz.VirtualMachineConfiguration) error {
 	switch *inst.Config.Video.Display {
 	case "vz", "default":
-		graphicsDeviceConfiguration, err := vz.NewVirtioGraphicsDeviceConfiguration()
-		if err != nil {
-			return err
+		var graphicsDeviceConfiguration vz.GraphicsDeviceConfiguration
+		if *inst.Config.OS == limatype.DARWIN {
+			var err error
+			graphicsDeviceConfiguration, err = newMacGraphicsDeviceConfiguration(1920, 1200, 80)
+			if err != nil {
+				return err
+			}
+		} else {
+			var err error
+			graphicsDeviceConfiguration, err = vz.NewVirtioGraphicsDeviceConfiguration()
+			if err != nil {
+				return err
+			}
+			scanoutConfiguration, err := vz.NewVirtioGraphicsScanoutConfiguration(1920, 1200)
+			if err != nil {
+				return err
+			}
+			graphicsDeviceConfiguration.(*vz.VirtioGraphicsDeviceConfiguration).SetScanouts(scanoutConfiguration)
 		}
-		scanoutConfiguration, err := vz.NewVirtioGraphicsScanoutConfiguration(1920, 1200)
-		if err != nil {
-			return err
-		}
-		graphicsDeviceConfiguration.SetScanouts(scanoutConfiguration)
 
 		vmConfig.SetGraphicsDevicesVirtualMachineConfiguration([]vz.GraphicsDeviceConfiguration{
 			graphicsDeviceConfiguration,
@@ -669,7 +739,7 @@ func attachAudio(inst *limatype.Instance, config *vz.VirtualMachineConfiguration
 	}
 }
 
-func attachOtherDevices(_ *limatype.Instance, vmConfig *vz.VirtualMachineConfiguration) error {
+func attachOtherDevices(inst *limatype.Instance, vmConfig *vz.VirtualMachineConfiguration) error {
 	entropyConfig, err := vz.NewVirtioEntropyDeviceConfiguration()
 	if err != nil {
 		return err
@@ -724,7 +794,12 @@ func attachOtherDevices(_ *limatype.Instance, vmConfig *vz.VirtualMachineConfigu
 	})
 
 	// Set pointing device
-	pointingDeviceConfig, err := vz.NewUSBScreenCoordinatePointingDeviceConfiguration()
+	var pointingDeviceConfig vz.PointingDeviceConfiguration
+	if *inst.Config.OS == limatype.DARWIN {
+		pointingDeviceConfig, err = newMacPointingDeviceConfiguration()
+	} else {
+		pointingDeviceConfig, err = vz.NewUSBScreenCoordinatePointingDeviceConfiguration()
+	}
 	if err != nil {
 		return err
 	}
@@ -733,7 +808,12 @@ func attachOtherDevices(_ *limatype.Instance, vmConfig *vz.VirtualMachineConfigu
 	})
 
 	// Set keyboard device
-	keyboardDeviceConfig, err := vz.NewUSBKeyboardConfiguration()
+	var keyboardDeviceConfig vz.KeyboardConfiguration
+	if *inst.Config.OS == limatype.DARWIN {
+		keyboardDeviceConfig, err = newMacKeyboardConfiguration()
+	} else {
+		keyboardDeviceConfig, err = vz.NewUSBKeyboardConfiguration()
+	}
 	if err != nil {
 		return err
 	}
@@ -743,8 +823,11 @@ func attachOtherDevices(_ *limatype.Instance, vmConfig *vz.VirtualMachineConfigu
 	return nil
 }
 
-func getMachineIdentifier(inst *limatype.Instance) (*vz.GenericMachineIdentifier, error) {
-	identifier := filepath.Join(inst.Dir, filenames.VzIdentifier)
+type machineIdentifier interface {
+	DataRepresentation() []byte
+}
+
+func getGenericMachineIdentifier(identifier string) (*vz.GenericMachineIdentifier, error) {
 	// Empty VzIdentifier can be created on cloning an instance.
 	if st, err := os.Stat(identifier); err != nil || (st != nil && st.Size() == 0) {
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
@@ -764,6 +847,9 @@ func getMachineIdentifier(inst *limatype.Instance) (*vz.GenericMachineIdentifier
 }
 
 func bootLoader(inst *limatype.Instance) (vz.BootLoader, error) {
+	if *inst.Config.OS == limatype.DARWIN {
+		return newMacOSBootLoader()
+	}
 	linuxBootLoader, err := linuxBootLoader(inst)
 	if linuxBootLoader != nil {
 		return linuxBootLoader, nil
@@ -842,4 +928,21 @@ func createSockPair() (server, client *os.File, _ error) {
 	})
 	vmNetworkFiles = append(vmNetworkFiles, server, client)
 	return server, client, nil
+}
+
+func ensureIPSW(instDir string) error {
+	ipsw := filepath.Join(instDir, filenames.ImageIPSW)
+	if osutil.FileExists(ipsw) {
+		return nil
+	}
+	ipswBase := filepath.Join(instDir, filenames.Image)
+	if _, err := os.Stat(ipswBase); err != nil {
+		return err
+	}
+	// The installer wants the file to have ".ipsw" suffix.
+	// The link is created as a hard link, as the installer does not accept symlinks.
+	if err := os.Link(ipswBase, ipsw); err != nil {
+		return fmt.Errorf("failed to create hard link from %q to %q: %w", ipswBase, ipsw, err)
+	}
+	return nil
 }

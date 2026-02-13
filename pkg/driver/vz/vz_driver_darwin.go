@@ -11,12 +11,14 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"os"
 	"path/filepath"
 	"runtime"
 	"time"
 
 	"github.com/Code-Hex/vz/v3"
 	"github.com/coreos/go-semver/semver"
+	"github.com/docker/go-units"
 	"github.com/lima-vm/go-qcow2reader/image"
 	"github.com/lima-vm/go-qcow2reader/image/asif"
 	"github.com/lima-vm/go-qcow2reader/image/raw"
@@ -24,8 +26,11 @@ import (
 
 	"github.com/lima-vm/lima/v2/pkg/driver"
 	"github.com/lima-vm/lima/v2/pkg/driverutil"
+	"github.com/lima-vm/lima/v2/pkg/guestpatch/macos"
 	"github.com/lima-vm/lima/v2/pkg/hostagent/events"
+	"github.com/lima-vm/lima/v2/pkg/imgutil/nativeimgutil/asifutil"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/ptr"
@@ -330,12 +335,75 @@ func validateConfig(_ context.Context, cfg *limatype.LimaYAML) error {
 }
 
 func (l *LimaVzDriver) Create(_ context.Context) error {
-	_, err := getMachineIdentifier(l.Instance)
+	identifierFile := filepath.Join(l.Instance.Dir, filenames.VzIdentifier)
+	if *l.Instance.Config.OS == limatype.DARWIN {
+		_, err := getMacMachineIdentifier(identifierFile)
+		return err
+	}
+	_, err := getGenericMachineIdentifier(identifierFile)
 	return err
 }
 
 func (l *LimaVzDriver) CreateDisk(ctx context.Context) error {
+	if *l.Instance.Config.OS == limatype.DARWIN {
+		disk := filepath.Join(l.Instance.Dir, filenames.Disk)
+		if !osutil.FileExists(disk) {
+			if err := l.createDiskMacOSGuest(ctx); err != nil {
+				return err
+			}
+		}
+
+		patchedMarker := disk + ".patched" // empty file
+		if !osutil.FileExists(patchedMarker) {
+			logrus.Infof("Patching macOS disk %q", disk)
+			if err := macos.Patch(ctx, disk); err != nil {
+				return err
+			}
+			if err := os.WriteFile(patchedMarker, []byte{}, 0o644); err != nil {
+				return err
+			}
+		}
+	}
 	return driverutil.EnsureDisk(ctx, l.Instance.Dir, *l.Instance.Config.Disk, l.diskImageFormat)
+}
+
+// createDiskMacOSGuest creates `disk` and installs macOS from `image` on it.
+// The function must not be called if `disk` already exists.
+//
+// The function creates the following files:
+// - `image.ipsw`: hardlink to `image` (".ipsw" suffix is required by VZMacOSInstaller)
+// - `disk`: ASIF disk
+//
+// TODO: consider removing IPSW after successful installation.
+func (l *LimaVzDriver) createDiskMacOSGuest(ctx context.Context) error {
+	disk := filepath.Join(l.Instance.Dir, filenames.Disk)
+
+	diskSize, err := units.RAMInBytes(*l.Instance.Config.Disk)
+	if err != nil {
+		return fmt.Errorf("invalid disk size %q: %w", *l.Instance.Config.Disk, err)
+	}
+	if err := asifutil.NewASIF(disk, diskSize); err != nil {
+		return err
+	}
+
+	if err = ensureIPSW(l.Instance.Dir); err != nil {
+		return err
+	}
+	ipsw := filepath.Join(l.Instance.Dir, filenames.ImageIPSW)
+
+	vm, err := createVMForMacInstaller(ctx, l.Instance)
+	if err != nil {
+		return err
+	}
+
+	logrus.Info("Running macOS installer (takes a few minutes)")
+	// FIXME: do we need to run the installer for every new instance,
+	// or can we safely reuse the installed disk image?
+	if err := installMacOS(ctx, vm, ipsw); err != nil {
+		return fmt.Errorf("failed to install macOS: %w", err)
+	}
+
+	return nil
 }
 
 func (l *LimaVzDriver) Start(ctx context.Context) (chan error, error) {

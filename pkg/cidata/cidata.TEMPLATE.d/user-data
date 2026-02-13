@@ -35,8 +35,11 @@ users:
 {{- end }}
     homedir: "{{.Home}}"
     shell: {{.Shell}}
+{{- if ne .OS "Darwin" }}
+{{/* On macOS, the password is not locked so as to allow GUI login */}}
     sudo: ALL=(ALL) NOPASSWD:ALL
     lock_passwd: true
+{{- end }}
     ssh-authorized-keys:
     {{- range $val := .SSHPubKeys }}
       - {{ printf "%q" $val }}
@@ -48,12 +51,25 @@ write_files:
       #!/bin/sh
       set -eux
       LIMA_CIDATA_MNT="/mnt/lima-cidata"
-      LIMA_CIDATA_DEV="/dev/disk/by-label/cidata"
-      mkdir -p -m 700 "${LIMA_CIDATA_MNT}"
-      mount -o ro,mode=0700,dmode=0700,overriderockperm,exec,uid=0 "${LIMA_CIDATA_DEV}" "${LIMA_CIDATA_MNT}"
+      UNAME="$(uname -s)"
+      if [ "${UNAME}" = "Darwin" ]; then
+        LIMA_CIDATA_MNT="/Volumes/cidata"
+        # Should have been mounted automatically
+      elif [ "${UNAME}" = "Linux" ]; then
+        LIMA_CIDATA_DEV="/dev/disk/by-label/cidata"
+        mkdir -p -m 700 "${LIMA_CIDATA_MNT}"
+        mount -o ro,mode=0700,dmode=0700,overriderockperm,exec,uid=0 "${LIMA_CIDATA_DEV}" "${LIMA_CIDATA_MNT}"
+      else
+        echo "Unsupported OS: ${UNAME}" >&2
+        exit 1
+      fi
       export LIMA_CIDATA_MNT
       exec "${LIMA_CIDATA_MNT}"/boot.sh
+{{- if eq .OS "Darwin" }}
+   owner: root:wheel
+{{- else }}
    owner: root:root
+{{- end }}
    path: /var/lib/cloud/scripts/per-boot/00-lima.boot.sh
    permissions: '0755'
 {{- end }}

@@ -77,7 +77,8 @@ type (
 type CPUType = map[Arch]string
 
 const (
-	LINUX OS = "Linux"
+	LINUX  OS = "Linux"
+	DARWIN OS = "Darwin"
 
 	X8664   Arch = "x86_64"
 	AARCH64 Arch = "aarch64"
@@ -97,7 +98,7 @@ const (
 )
 
 var (
-	OSTypes    = []OS{LINUX}
+	OSTypes    = []OS{LINUX, DARWIN}
 	ArchTypes  = []Arch{X8664, AARCH64, ARMV7L, PPC64LE, RISCV64, S390X}
 	MountTypes = []MountType{REVSSHFS, NINEP, VIRTIOFS, WSLMount}
 	VMTypes    = []VMType{QEMU, VZ, WSL2}
@@ -255,7 +256,7 @@ type Provision struct {
 type ProvisionData struct {
 	Content     *string `yaml:"content,omitempty" json:"content,omitempty" jsonschema:"nullable"`
 	Overwrite   *bool   `yaml:"overwrite,omitempty" json:"overwrite,omitempty" jsonschema:"nullable"`
-	Owner       *string `yaml:"owner,omitempty" json:"owner,omitempty"` // any owner string supported by `chown`, defaults to "root:root"
+	Owner       *string `yaml:"owner,omitempty" json:"owner,omitempty"` // any owner string supported by `chown`, defaults to "root:root" on Linux
 	Path        *string `yaml:"path,omitempty" json:"path,omitempty"`
 	Permissions *string `yaml:"permissions,omitempty" json:"permissions,omitempty"`
 }
@@ -344,6 +345,8 @@ func NewOS(osname string) OS {
 	switch osname {
 	case "linux":
 		return LINUX
+	case "darwin":
+		return DARWIN
 	default:
 		logrus.Warnf("Unknown os: %s", osname)
 		return osname

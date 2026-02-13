@@ -15,6 +15,7 @@ The following features are experimental and subject to change:
 - `External drivers`: building and using drivers as separate executables (see [Virtual Machine Drivers](../dev/drivers))
 - [`vmType: krunkit`](../config/vmtype/krunkit.md)
 - [`github` URL scheme](../templates/github.md): referencing templates on GitHub with `github:` URLs
+- [macOS guests](../usage/guests/macos.md)
 
 The following commands are experimental and subject to change:
 
