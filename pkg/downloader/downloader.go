@@ -230,7 +230,7 @@ func Download(ctx context.Context, local, remote string, opts ...Opt) (*Result, 
 		return res, nil
 	}
 
-	shad := cacheDirectoryPath(o.cacheDir, remote)
+	shad := cacheDirectoryPath(o.cacheDir, remote, o.decompress)
 	if err := os.MkdirAll(shad, 0o700); err != nil {
 		return nil, err
 	}
@@ -255,7 +255,7 @@ func Download(ctx context.Context, local, remote string, opts ...Opt) (*Result, 
 // nil if the file was copied, nil, nil if the file is not in the cache or the
 // cache needs update, or nil, error on fatal error.
 func getCached(ctx context.Context, localPath, remote string, o options) (*Result, error) {
-	shad := cacheDirectoryPath(o.cacheDir, remote)
+	shad := cacheDirectoryPath(o.cacheDir, remote, o.decompress)
 	shadData := filepath.Join(shad, "data")
 	shadTime := filepath.Join(shad, "time")
 	shadType := filepath.Join(shad, "type")
@@ -301,7 +301,7 @@ func getCached(ctx context.Context, localPath, remote string, o options) (*Resul
 
 // fetch downloads remote to the cache and copy the cached file to local path.
 func fetch(ctx context.Context, localPath, remote string, o options) (*Result, error) {
-	shad := cacheDirectoryPath(o.cacheDir, remote)
+	shad := cacheDirectoryPath(o.cacheDir, remote, o.decompress)
 	shadData := filepath.Join(shad, "data")
 	shadTime := filepath.Join(shad, "time")
 	shadType := filepath.Join(shad, "type")
@@ -354,7 +354,7 @@ func Cached(remote string, opts ...Opt) (*Result, error) {
 		return nil, errors.New("local files are not cached")
 	}
 
-	shad := cacheDirectoryPath(o.cacheDir, remote)
+	shad := cacheDirectoryPath(o.cacheDir, remote, o.decompress)
 	shadData := filepath.Join(shad, "data")
 	shadTime := filepath.Join(shad, "time")
 	shadType := filepath.Join(shad, "type")
@@ -404,8 +404,8 @@ func Cached(remote string, opts ...Opt) (*Result, error) {
 //   - "data" file contains the data
 //   - "time" file contains the time (Last-Modified header)
 //   - "type" file contains the type (Content-Type header)
-func cacheDirectoryPath(cacheDir, remote string) string {
-	return filepath.Join(cacheDir, "download", "by-url-sha256", CacheKey(remote))
+func cacheDirectoryPath(cacheDir, remote string, decompress bool) string {
+	return filepath.Join(cacheDir, "download", "by-url-sha256", CacheKey(remote, decompress))
 }
 
 // cacheDigestPath returns the cache digest file path.
@@ -775,8 +775,12 @@ func CacheEntries(opts ...Opt) (map[string]string, error) {
 }
 
 // CacheKey returns the key for a cache entry of the remote URL.
-func CacheKey(remote string) string {
-	return fmt.Sprintf("%x", sha256.Sum256([]byte(remote)))
+func CacheKey(remote string, decompress bool) string {
+	k := fmt.Sprintf("%x", sha256.Sum256([]byte(remote)))
+	if decompress && decompressor(remote) != "" {
+		k += "+decomp"
+	}
+	return k
 }
 
 // RemoveAllCacheDir removes the cache directory.
