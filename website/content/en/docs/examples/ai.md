@@ -181,7 +181,7 @@ limactl shell --sync . default
 ```
 
 - **Yes**: Syncs changes back to your host and cleans up guest directory
-- **No**: Discards changes and cleans up guest directory  
+- **No**: Discards changes and cleans up guest directory
 - **View the changed contents**: Shows a diff of changes made by the agent
 
 ### Requirements

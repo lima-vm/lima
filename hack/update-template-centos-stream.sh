@@ -29,7 +29,7 @@ Description:
 
     https://cloud.centos.org/centos/<major version>-stream/<arch>/images/
 
-  To parsing html, this script requires 'htmlq' or 'pup' command.      
+  To parsing html, this script requires 'htmlq' or 'pup' command.
   The downloaded files will be cached in the Lima cache directory.
 
 Examples:
@@ -104,7 +104,7 @@ function centos_latest_image_entry_for_url_spec() {
 	fi
 	latest_info=$(jq -e -Rrs --argjson spec "${url_spec}" '
 		[
-			split("\n").[] | 
+			split("\n").[] |
 			capture(
 				"^CentOS-Stream-\($spec.target_vendor)-\($spec.version)-(?<date_and_ci_job_id>\\d{8}\\.\\d+)\\.\($spec.arch)\\.\($spec.file_extension)$"
 				;"x"

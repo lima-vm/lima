@@ -576,6 +576,16 @@ bats: native limactl-plugins
 
 .PHONY: lint
 lint: check-generated
+	# Check for trailing whitespace. -I skips binary files (images, etc.)
+	! git grep -rn -I '[[:space:]]$$' -- . || \
+		(echo "Please remove trailing whitespace from the lines listed above" && false)
+	# Check that all text files end with a newline. -I skips most binary
+	# files, but not .pb.desc (protobuf descriptors), which contain enough
+	# text-like content to appear as text to git.
+	@result=$$(git grep -rIl '' -- . ':!*.pb.desc' | while IFS= read -r f; do \
+		test "$$(tail -c 1 "$$f")" && echo "$$f: missing newline at end of file"; \
+	done); \
+	if [ -n "$$result" ]; then echo "$$result"; echo "Please ensure all text files end with a newline"; false; fi
 	golangci-lint run ./...
 	yamllint .
 	ls-lint

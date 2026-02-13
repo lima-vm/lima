@@ -32,7 +32,7 @@ Description:
 
     https://dl.rockylinux.org/pub/rocky/<major version>/images/<arch>/
 
-  To parsing html, this script requires 'htmlq' or 'pup' command.      
+  To parsing html, this script requires 'htmlq' or 'pup' command.
   The downloaded files will be cached in the Lima cache directory.
 
 Examples:
