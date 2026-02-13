@@ -50,9 +50,9 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 	}
 
 	switch *y.OS {
-	case limatype.LINUX:
+	case limatype.LINUX, limatype.DARWIN:
 	default:
-		errs = errors.Join(errs, fmt.Errorf("field `os` must be %q; got %q", limatype.LINUX, *y.OS))
+		errs = errors.Join(errs, fmt.Errorf("field `os` must be one of %q; got %q", limatype.OSTypes, *y.OS))
 	}
 	if !slices.Contains(limatype.ArchTypes, *y.Arch) {
 		errs = errors.Join(errs, fmt.Errorf("field `arch` must be one of %v; got %q", limatype.ArchTypes, *y.Arch))

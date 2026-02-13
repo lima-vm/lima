@@ -64,7 +64,7 @@ func TestFillDefault(t *testing.T) {
 	assert.NilError(t, err)
 	limaHome, err := dirnames.LimaDir()
 	assert.NilError(t, err)
-	user := osutil.LimaUser(t.Context(), "0.0.0", false)
+	user := osutil.LimaUser(t.Context(), "0.0.0", false, nil)
 	user.HomeDir = fmt.Sprintf("/home/%s.guest", user.Username)
 	uid, err := strconv.ParseUint(user.Uid, 10, 32)
 	assert.NilError(t, err)

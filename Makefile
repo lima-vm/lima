@@ -186,6 +186,12 @@ native: clean limactl limactl-plugins helpers native-guestagent templates templa
 ################################################################################
 # These configs were once customizable but should no longer be changed.
 CONFIG_GUESTAGENT_OS_LINUX=y
+CONFIG_GUESTAGENT_OS_DARWIN=
+ifeq ($(GOOS),darwin)
+ifeq ($(GOARCH),arm64)
+CONFIG_GUESTAGENT_OS_DARWIN=y
+endif
+endif
 CONFIG_GUESTAGENT_ARCH_X8664=y
 CONFIG_GUESTAGENT_ARCH_AARCH64=y
 CONFIG_GUESTAGENT_ARCH_ARMV7L=y
@@ -341,14 +347,19 @@ MKDIR_TARGETS += _output/bin
 ################################################################################
 # _output/share/lima/lima-guestagent
 LINUX_GUESTAGENT_PATH_COMMON = _output/share/lima/lima-guestagent.Linux-
+DARWIN_GUESTAGENT_PATH_COMMON = _output/share/lima/lima-guestagent.Darwin-
 
 # How to add architecture specific guestagent:
 # 1. Add the architecture to GUESTAGENT_ARCHS
 # 2. Add ENVS_$(*_GUESTAGENT_PATH_COMMON)<arch> to set GOOS, GOARCH, and other necessary environment variables
 LINUX_GUESTAGENT_ARCHS = aarch64 armv7l ppc64le riscv64 s390x x86_64
+DARWIN_GUESTAGENT_ARCHS = aarch64
 
 ifeq ($(CONFIG_GUESTAGENT_OS_LINUX),y)
 ALL_GUESTAGENTS_NOT_COMPRESSED += $(addprefix $(LINUX_GUESTAGENT_PATH_COMMON),$(LINUX_GUESTAGENT_ARCHS))
+endif
+ifeq ($(CONFIG_GUESTAGENT_OS_DARWIN),y)
+ALL_GUESTAGENTS_NOT_COMPRESSED += $(addprefix $(DARWIN_GUESTAGENT_PATH_COMMON),$(DARWIN_GUESTAGENT_ARCHS))
 endif
 ifeq ($(CONFIG_GUESTAGENT_COMPRESS),y)
 gz=.gz
@@ -367,6 +378,13 @@ NATIVE_GUESTAGENT = $(call guestagent_path,LINUX,$(NATIVE_GUESTAGENT_ARCH))
 ADDITIONAL_GUESTAGENT_ARCHS = $(filter-out $(NATIVE_GUESTAGENT_ARCH),$(LINUX_GUESTAGENT_ARCHS))
 ADDITIONAL_GUESTAGENTS = $(call guestagent_path,LINUX,$(ADDITIONAL_GUESTAGENT_ARCHS))
 endif
+ifeq ($(CONFIG_GUESTAGENT_OS_DARWIN),y)
+ifeq ($(GOARCH),arm64)
+NATIVE_GUESTAGENT_ARCH = aarch64
+NATIVE_GUESTAGENT += $(call guestagent_path,DARWIN,$(NATIVE_GUESTAGENT_ARCH))
+endif
+endif
+# No ADDITIONAL_GUESTAGENTS for Darwin, as only one architecture is supported.
 
 # config_guestagent_arch returns expanded value of CONFIG_GUESTAGENT_ARCH_<arch>
 # $(1): architecture
@@ -381,6 +399,9 @@ ifeq ($(CONFIG_GUESTAGENT_OS_LINUX),y)
 # apply CONFIG_GUESTAGENT_ARCH_*
 GUESTAGENTS += $(foreach arch,$(LINUX_GUESTAGENT_ARCHS),$(call guestagent_path_enabled_by_config,LINUX,$(arch)))
 endif
+ifeq ($(CONFIG_GUESTAGENT_OS_DARWIN),y)
+GUESTAGENTS += $(call guestagent_path,DARWIN,aarch64)
+endif
 
 .PHONY: guestagents native-guestagent additional-guestagents
 guestagents: $(GUESTAGENTS)
@@ -388,6 +409,7 @@ native-guestagent: $(NATIVE_GUESTAGENT)
 additional-guestagents: $(ADDITIONAL_GUESTAGENTS)
 %-guestagent:
 	@[ "$(findstring $(*),$(LINUX_GUESTAGENT_ARCHS))" == "$(*)" ] && make $(call guestagent_path,LINUX,$*)
+	@[ "$(findstring $(*),$(DARWIN_GUESTAGENT_ARCHS))" == "$(*)" ] && make $(call guestagent_path,DARWIN,$*)
 
 # environment variables for linux-guestagent. these variable are used for checking force build.
 ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)aarch64 = CGO_ENABLED=0 GOOS=linux GOARCH=arm64
@@ -396,10 +418,13 @@ ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)ppc64le = CGO_ENABLED=0 GOOS=linux GOARCH=pp
 ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)riscv64 = CGO_ENABLED=0 GOOS=linux GOARCH=riscv64
 ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)s390x = CGO_ENABLED=0 GOOS=linux GOARCH=s390x
 ENVS_$(LINUX_GUESTAGENT_PATH_COMMON)x86_64 = CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+ENVS_$(DARWIN_GUESTAGENT_PATH_COMMON)aarch64 = CGO_ENABLED=0 GOOS=darwin GOARCH=arm64
 $(ALL_GUESTAGENTS_NOT_COMPRESSED): $(call dependencies_for_cmd,lima-guestagent) $$(call force_build_with_gunzip,$$@) | _output/share/lima
 	$(ENVS_$@) $(GO_BUILD) -o $@ ./cmd/lima-guestagent
 	chmod 644 $@
 $(LINUX_GUESTAGENT_PATH_COMMON)%.gz: $(LINUX_GUESTAGENT_PATH_COMMON)% $$(call force_build_with_gunzip,$$@)
+	@set -x; gzip -n $<
+$(DARWIN_GUESTAGENT_PATH_COMMON)%.gz: $(DARWIN_GUESTAGENT_PATH_COMMON)% $$(call force_build_with_gunzip,$$@)
 	@set -x; gzip -n $<
 
 MKDIR_TARGETS += _output/share/lima

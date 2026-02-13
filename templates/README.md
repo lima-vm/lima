@@ -12,7 +12,7 @@ To open a shell, run `limactl shell fedora bash` or `LIMA_INSTANCE=fedora lima b
 
 Default: [`default`](./default.yaml) (⭐Ubuntu, with containerd/nerdctl)
 
-Distro:
+Linux distributions:
 - [`almalinux-8`](./almalinux-8.yaml): AlmaLinux 8
 - [`almalinux-9`](./almalinux-9.yaml): AlmaLinux 9
 - [`almalinux-10`](./almalinux-10.yaml), `almalinux.yaml`: AlmaLinux 10
@@ -42,6 +42,9 @@ Distro:
 - [`experimental/gentoo`](./experimental/gentoo.yaml): [experimental] Gentoo
 - [`experimental/opensuse-tumbleweed`](./experimental/opensuse-tumbleweed.yaml): [experimental] openSUSE Tumbleweed
 - [`experimental/debian-sid`](./experimental/debian-sid.yaml): [experimental] Debian Sid
+
+Non-Linux:
+- [`macos-26`](./macos-26.yaml), `macos.yaml`: macOS 26 (Tahoe)
 
 Alternative package managers:
 - [`linuxbrew.yaml`](./linuxbrew.yaml): [Homebrew](https://brew.sh) on Linux (Ubuntu)

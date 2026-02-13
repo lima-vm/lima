@@ -12,6 +12,10 @@ import (
 
 var ErrASIFNotSupported = errors.New("ASIF is only supported on macOS")
 
+func NewASIF(_ string, _ int64) error {
+	return ErrASIFNotSupported
+}
+
 func NewAttachedASIF(_ string, _ int64) (string, *os.File, error) {
 	return "", nil, ErrASIFNotSupported
 }

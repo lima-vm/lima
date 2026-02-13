@@ -13,6 +13,14 @@ WARNING() {
 	echo "LIMA $(date -Iseconds)| WARNING: $*"
 }
 
+UNAME="$(uname -s)"
+
+RUN="/run"
+if [ "${UNAME}" != "Linux" ]; then
+	RUN="/var/run"
+fi
+rm -f "${RUN}/lima-boot-done"
+
 # shellcheck disable=SC2163
 while read -r line; do [ -n "$line" ] && export "$line"; done <"${LIMA_CIDATA_MNT}"/lima.env
 # shellcheck disable=SC2163
@@ -43,13 +51,20 @@ CODE=0
 if [ "$LIMA_CIDATA_PLAIN" = "1" ]; then
 	INFO "Plain mode. Skipping to run boot scripts. Provisioning scripts will be still executed. Guest agent will not be running."
 else
-	for f in "${LIMA_CIDATA_MNT}"/boot/*; do
-		INFO "Executing $f"
-		if ! "$f"; then
-			WARNING "Failed to execute $f"
-			CODE=1
-		fi
-	done
+	boot="${LIMA_CIDATA_MNT}/boot"
+	if [ "${UNAME}" != "Linux" ]; then
+		# TODO: rename boot to boot.Linux
+		boot="${boot}.${UNAME}"
+	fi
+	if [ -e "${boot}" ]; then
+		for f in "${boot}"/*; do
+			INFO "Executing $f"
+			if ! "$f"; then
+				WARNING "Failed to execute $f"
+				CODE=1
+			fi
+		done
+	fi
 fi
 
 # indirect variable lookup, like ${!var} in bash
@@ -172,7 +187,10 @@ if [ -d "${LIMA_CIDATA_MNT}"/provision.user ]; then
 		cp "$f" "${USER_SCRIPT}"
 		chown "${LIMA_CIDATA_USER}" "${USER_SCRIPT}"
 		chmod 755 "${USER_SCRIPT}"
-		if ! sudo -iu "${LIMA_CIDATA_USER}" "--preserve-env=${params}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "${USER_SCRIPT}"; then
+		if [ "${UNAME}" != "Linux" ]; then
+			WARNING "Provisioning user scripts are not supported on non-Linux platforms"
+			CODE=1
+		elif ! sudo -iu "${LIMA_CIDATA_USER}" "--preserve-env=${params}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "${USER_SCRIPT}"; then
 			WARNING "Failed to execute $f (as user ${LIMA_CIDATA_USER})"
 			CODE=1
 		fi
@@ -182,7 +200,7 @@ fi
 
 # Signal that provisioning is done. The instance-id in the meta-data file changes on every boot,
 # so any copy from a previous boot cycle will have different content.
-cp "${LIMA_CIDATA_MNT}"/meta-data /run/lima-boot-done
+cp "${LIMA_CIDATA_MNT}"/meta-data "${RUN}/lima-boot-done"
 
 INFO "Exiting with code $CODE"
 exit "$CODE"

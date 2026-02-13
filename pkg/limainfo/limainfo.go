@@ -107,17 +107,24 @@ func New(ctx context.Context) (*LimaInfo, error) {
 	}
 	info.IdentityFile = filepath.Join(configDir, filenames.UserPrivateKey)
 	for _, arch := range limatype.ArchTypes {
-		bin, err := usrlocal.GuestAgentBinary(limatype.LINUX, arch)
-		if err != nil {
-			if errors.Is(err, fs.ErrNotExist) {
-				logrus.WithError(err).Debugf("Failed to resolve the guest agent binary for %q", arch)
-			} else {
-				logrus.WithError(err).Warnf("Failed to resolve the guest agent binary for %q", arch)
+		for _, os := range limatype.OSTypes {
+			bin, err := usrlocal.GuestAgentBinary(os, arch)
+			if err != nil {
+				if errors.Is(err, fs.ErrNotExist) {
+					logrus.WithError(err).Debugf("Failed to resolve the guest agent binary for %q-%q", os, arch)
+				} else {
+					logrus.WithError(err).Warnf("Failed to resolve the guest agent binary for %q-%q", os, arch)
+				}
+				continue
 			}
-			continue
-		}
-		info.GuestAgents[arch] = GuestAgent{
-			Location: bin,
+			key := arch
+			// For the historical reason, the key does not have "Linux-" prefix
+			if os != limatype.LINUX {
+				key = os + "-" + arch
+			}
+			info.GuestAgents[key] = GuestAgent{
+				Location: bin,
+			}
 		}
 	}
 
