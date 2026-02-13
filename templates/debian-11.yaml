@@ -1,0 +1,5 @@
+minimumLimaVersion: 2.0.0
+
+base:
+- template:_images/debian-11
+- template:_default/mounts
