@@ -6,6 +6,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -56,7 +57,17 @@ The output can be presented in one of several formats, using the --format <forma
   --format yaml  - Output in YAML format
   --format table - Output in table format
   --format '{{ <go template> }}' - If the format begins and ends with '{{ }}', then it is used as a go template.
-` + store.FormatHelp,
+
+Filtering instances:
+  --filter EXPR  - Filter instances using yq expression (this is equivalent to --yq 'select(EXPR)')
+                   Can be specified multiple times (combined with AND logic) and it works with all output formats.
+                   Examples:
+                     --filter '.status == "Running"'
+                     --filter '.vmType == "vz"'
+                     --filter '.status == "Running"' --filter '.vmType == "vz"' (Same as AND)
+` + store.FormatHelp + `
+The following legacy flags continue to function:
+  --json - equal to '--format json'`,
 		Args:              WrapArgsError(cobra.ArbitraryArgs),
 		RunE:              listAction,
 		ValidArgsFunction: listBashComplete,
@@ -69,6 +80,7 @@ The output can be presented in one of several formats, using the --format <forma
 	listCommand.Flags().BoolP("quiet", "q", false, "Only show names")
 	listCommand.Flags().Bool("all-fields", false, "Show all fields")
 	listCommand.Flags().StringArray("yq", nil, "Apply yq expression to each instance")
+	listCommand.Flags().StringArrayP("filter", "l", nil, "Filter instances using yq expression (equivalent to --yq 'select(EXPR)')")
 
 	return listCommand
 }
@@ -118,6 +130,10 @@ func listAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	filter, err := cmd.Flags().GetStringArray("filter")
+	if err != nil {
+		return err
+	}
 
 	if jsonFormat {
 		format = "json"
@@ -136,6 +152,11 @@ func listAction(cmd *cobra.Command, args []string) error {
 		}
 		if listFields {
 			return errors.New("option --list-fields conflicts with option --yq")
+		}
+	}
+	if len(filter) != 0 {
+		if listFields {
+			return errors.New("option --list-fields conflicts with option --filter")
 		}
 	}
 
@@ -179,7 +200,7 @@ func listAction(cmd *cobra.Command, args []string) error {
 		instanceNames = allInstances
 	}
 
-	if quiet && len(yq) == 0 {
+	if quiet && len(yq) == 0 && len(filter) == 0 {
 		for _, instName := range instanceNames {
 			fmt.Fprintln(cmd.OutOrStdout(), instName)
 		}
@@ -197,6 +218,27 @@ func listAction(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("unable to load instance %s: %w", instanceName, err)
 		}
 		instances = append(instances, instance)
+	}
+
+	if len(filter) > 0 {
+		var filterExprs []string
+		for _, f := range filter {
+			filterExprs = append(filterExprs, "select("+f+")")
+		}
+		instances, err = filterInstances(instances, filterExprs)
+		if err != nil {
+			return err
+		}
+	}
+
+	if quiet && len(yq) == 0 {
+		for _, instance := range instances {
+			fmt.Fprintln(cmd.OutOrStdout(), instance.Name)
+		}
+		if unmatchedInstances {
+			return unmatchedInstancesError{}
+		}
+		return nil
 	}
 
 	for _, instance := range instances {
@@ -217,10 +259,12 @@ func listAction(cmd *cobra.Command, args []string) error {
 			options.TerminalWidth = w
 		}
 	}
-	// --yq implies --format json unless --format yaml has been explicitly specified
+
+	// --yq implies --format json unless --format has been explicitly specified
 	if len(yq) != 0 && !cmd.Flags().Changed("format") {
 		format = "json"
 	}
+
 	// Always pipe JSON and YAML through yq to colorize it if isTTY
 	if len(yq) == 0 && (format == "json" || format == "yaml") {
 		yq = append(yq, ".")
@@ -316,4 +360,35 @@ func listAction(cmd *cobra.Command, args []string) error {
 
 func listBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 	return bashCompleteInstanceNames(cmd)
+}
+
+// filterInstances applies yq expressions to instances and returns the filtered results.
+func filterInstances(instances []*limatype.Instance, yqExprs []string) ([]*limatype.Instance, error) {
+	if len(yqExprs) == 0 {
+		return instances, nil
+	}
+
+	// the yq expression is evaluated with yqutil.EvaluateExpression, which disables environment variable access
+	// and file operations, mitigating injection attacks like ".name=strenv(SOME_SECRET_ENV)" which could
+	// trick Lima into exposing environment variables.
+	yqExpr := strings.Join(yqExprs, " | ")
+
+	var filteredInstances []*limatype.Instance
+	for _, instance := range instances {
+		jsonBytes, err := json.Marshal(instance)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal instance %q: %w", instance.Name, err)
+		}
+
+		result, err := yqutil.EvaluateExpression(yqExpr, jsonBytes)
+		if err != nil {
+			return nil, fmt.Errorf("failed to apply filter %q: %w", yqExpr, err)
+		}
+
+		if len(bytes.TrimSpace(result)) > 0 {
+			filteredInstances = append(filteredInstances, instance)
+		}
+	}
+
+	return filteredInstances, nil
 }
