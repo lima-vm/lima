@@ -379,3 +379,27 @@ func TestDownloadCompressed(t *testing.T) {
 		assert.Equal(t, string(got), string(testDownloadCompressedContents))
 	})
 }
+
+func TestCacheKey(t *testing.T) {
+	t.Run(".txt, decompress=false", func(t *testing.T) {
+		key := CacheKey("https://example.com/file.txt", false)
+		assert.Assert(t, !strings.Contains(key, "+decomp"))
+	})
+
+	t.Run(".txt, decompress=true", func(t *testing.T) {
+		key := CacheKey("https://example.com/file.txt", true)
+		// decompress=true is ignored for non-compressed files,
+		// so the cache key should not contain "+decomp".
+		assert.Assert(t, !strings.Contains(key, "+decomp"))
+	})
+
+	t.Run(".gz, decompress=false", func(t *testing.T) {
+		key := CacheKey("https://example.com/file.gz", false)
+		assert.Assert(t, !strings.Contains(key, "+decomp"))
+	})
+
+	t.Run(".gz, decompress=true", func(t *testing.T) {
+		key := CacheKey("https://example.com/file.gz", true)
+		assert.Assert(t, strings.HasSuffix(key, "+decomp"))
+	})
+}

@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path"
@@ -777,8 +778,13 @@ func CacheEntries(opts ...Opt) (map[string]string, error) {
 // CacheKey returns the key for a cache entry of the remote URL.
 func CacheKey(remote string, decompress bool) string {
 	k := fmt.Sprintf("%x", sha256.Sum256([]byte(remote)))
-	if decompress && decompressor(remote) != "" {
-		k += "+decomp"
+	if decompress {
+		if remoteURL, err := url.Parse(remote); err == nil {
+			ext := filepath.Ext(remoteURL.Path)
+			if decompressor(ext) != "" {
+				k += "+decomp"
+			}
+		}
 	}
 	return k
 }
