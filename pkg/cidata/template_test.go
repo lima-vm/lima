@@ -19,7 +19,7 @@ func TestConfig(t *testing.T) {
 		User:    "foo",
 		UID:     501,
 		Comment: "Foo",
-		Home:    "/home/foo.linux",
+		Home:    "/home/foo.guest",
 		Shell:   "/bin/bash",
 		SSHPubKeys: []string{
 			"ssh-rsa dummy foo@example.com",
@@ -39,7 +39,7 @@ func TestConfigCACerts(t *testing.T) {
 		User:    "foo",
 		UID:     501,
 		Comment: "Foo",
-		Home:    "/home/foo.linux",
+		Home:    "/home/foo.guest",
 		Shell:   "/bin/bash",
 		SSHPubKeys: []string{
 			"ssh-rsa dummy foo@example.com",
@@ -56,7 +56,7 @@ func TestConfigCACerts(t *testing.T) {
 }
 
 var defaultMounts = []Mount{
-	{MountPoint: "/home/foo.linux", Tag: "mount0", Type: "virtiofs", Options: "ro"},
+	{MountPoint: "/home/foo.guest", Tag: "mount0", Type: "virtiofs", Options: "ro"},
 	{MountPoint: "/tmp/lima", Tag: "mount1", Type: "virtiofs"},
 }
 
@@ -66,7 +66,7 @@ func TestConfigMounts(t *testing.T) {
 		User:    "foo",
 		UID:     501,
 		Comment: "Foo",
-		Home:    "/home/foo.linux",
+		Home:    "/home/foo.guest",
 		Shell:   "/bin/bash",
 		SSHPubKeys: []string{
 			"ssh-rsa dummy foo@example.com",
@@ -86,7 +86,7 @@ func TestConfigMountsNone(t *testing.T) {
 		User:    "foo",
 		UID:     501,
 		Comment: "Foo",
-		Home:    "/home/foo.linux",
+		Home:    "/home/foo.guest",
 		Shell:   "/bin/bash",
 		SSHPubKeys: []string{
 			"ssh-rsa dummy foo@example.com",
@@ -105,7 +105,7 @@ func TestTemplate(t *testing.T) {
 		Name:  "default",
 		User:  "foo",
 		UID:   501,
-		Home:  "/home/foo.linux",
+		Home:  "/home/foo.guest",
 		Shell: "/bin/bash",
 		SSHPubKeys: []string{
 			"ssh-rsa dummy foo@example.com",
@@ -141,7 +141,7 @@ func TestTemplate9p(t *testing.T) {
 		Name:  "default",
 		User:  "foo",
 		UID:   501,
-		Home:  "/home/foo.linux",
+		Home:  "/home/foo.guest",
 		Shell: "/bin/bash",
 		SSHPubKeys: []string{
 			"ssh-rsa dummy foo@example.com",
