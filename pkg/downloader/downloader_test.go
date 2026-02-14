@@ -4,6 +4,8 @@
 package downloader
 
 import (
+	"compress/gzip"
+	"io/fs"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -402,4 +404,45 @@ func TestCacheKey(t *testing.T) {
 		key := CacheKey("https://example.com/file.gz", true)
 		assert.Assert(t, strings.HasSuffix(key, "+decomp"))
 	})
+}
+
+func TestCached(t *testing.T) {
+	ctx := t.Context()
+
+	const decompressedContent = "decompressed-content"
+
+	remoteDir := t.TempDir()
+	gzPath := filepath.Join(remoteDir, "foo.gz")
+	f, err := os.Create(gzPath)
+	assert.NilError(t, err)
+	gw := gzip.NewWriter(f)
+	_, err = gw.Write([]byte(decompressedContent))
+	assert.NilError(t, err)
+	assert.NilError(t, gw.Close())
+	assert.NilError(t, f.Close())
+
+	srv := httptest.NewServer(http.FileServer(http.Dir(remoteDir)))
+	t.Cleanup(srv.Close)
+	remote := srv.URL + "/foo.gz"
+
+	cacheDir := t.TempDir()
+	// Create only decompressed cache
+	local := filepath.Join(t.TempDir(), "foo")
+	cache, err := Download(ctx, local, remote, WithCacheDir(cacheDir), WithDecompress(true))
+	assert.NilError(t, err)
+
+	// Asssert that the downloaded content is decompressed
+	localContent, err := os.ReadFile(local)
+	assert.NilError(t, err)
+	assert.Equal(t, string(localContent), decompressedContent)
+
+	// Assert that the cached data is decompressed
+	cachedContent, err := os.ReadFile(cache.CachePath)
+	assert.NilError(t, err)
+	assert.Equal(t, string(cachedContent), decompressedContent)
+
+	// Request compressed content, and assert that it is not cached
+	// as the cache key differs.
+	_, err = Cached(remote, WithCacheDir(cacheDir))
+	assert.ErrorIs(t, err, fs.ErrNotExist)
 }
