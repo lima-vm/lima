@@ -107,10 +107,10 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		}
 		return err
 	}
+	if len(inst.Errors) > 0 {
+		logrus.WithError(errors.Join(inst.Errors...)).Errorf("Instance %q has configuration errors", instName)
+	}
 	if inst.Config == nil {
-		if len(inst.Errors) > 0 {
-			return fmt.Errorf("instance %q has configuration errors: %w", instName, errors.Join(inst.Errors...))
-		}
 		return fmt.Errorf("instance %q has no configuration", instName)
 	}
 	if inst.Status == limatype.StatusStopped {
