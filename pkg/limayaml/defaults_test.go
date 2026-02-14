@@ -140,6 +140,7 @@ func TestFillDefault(t *testing.T) {
 	// their values are retained and defaults for their fields are applied correctly.
 	y = limatype.LimaYAML{
 		HostResolver: limatype.HostResolver{
+			Enabled: ptr.Of(true),
 			Hosts: map[string]string{
 				"MY.Host": "host.lima.internal",
 			},

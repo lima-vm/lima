@@ -191,6 +191,10 @@ func (l *LimaQemuDriver) FillConfig(_ context.Context, cfg *limatype.LimaYAML, f
 		cfg.VMOpts[limatype.QEMU] = opts
 	}
 
+	if cfg.HostResolver.Enabled == nil {
+		cfg.HostResolver.Enabled = ptr.Of(true)
+	}
+
 	mountTypesUnsupported := make(map[string]struct{})
 	for _, f := range cfg.MountTypesUnsupported {
 		mountTypesUnsupported[f] = struct{}{}
