@@ -1,0 +1,328 @@
+# Debian Trixie KDE Plasma Desktop - High-performance VZ configuration
+# Full-featured desktop with clipboard, audio, auto-login, and premium UX
+
+vmType: vz
+
+video:
+  display: "vz"
+  vz:
+    # Set logical resolution, not physical pixels
+    # VZ will apply the appropriate backing scale factor (1.5x on Retina)
+    width: 1920
+    height: 1080
+
+audio:
+  device: "vz"
+
+images:
+- location: "https://cloud.debian.org/images/cloud/trixie/latest/debian-13-generic-amd64.qcow2"
+  arch: "x86_64"
+- location: "https://cloud.debian.org/images/cloud/trixie/latest/debian-13-generic-arm64.qcow2"
+  arch: "aarch64"
+
+cpus: 6
+memory: "12GiB"
+disk: "80GiB"
+
+mounts:
+- location: "~"
+  writable: false
+- location: "/tmp/lima"
+  writable: true
+
+ssh:
+  localPort: 0
+  loadDotSSHPubKeys: true
+
+hostResolver:
+  enabled: true
+
+provision:
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+
+    # Retry logic for network operations
+    retry_command() {
+      local max_attempts=3
+      local attempt=1
+      local delay=5
+
+      while [ $attempt -le $max_attempts ]; do
+        if "$@"; then
+          return 0
+        fi
+        echo "Command failed (attempt $attempt/$max_attempts). Retrying in ${delay}s..."
+        sleep $delay
+        attempt=$((attempt + 1))
+        delay=$((delay * 2))
+      done
+
+      echo "Command failed after $max_attempts attempts: $*"
+      return 1
+    }
+
+    # Update package lists with retry
+    retry_command apt-get update
+
+    # Install critical development tools (must succeed)
+    retry_command env DEBIAN_FRONTEND=noninteractive apt-get install -y \
+      ca-certificates \
+      git \
+      curl \
+      wget \
+      gnupg
+
+    # Install core desktop using task metapackage
+    # This pulls in kde-plasma-desktop, plasma-workspace, sddm, and essential components
+    retry_command env DEBIAN_FRONTEND=noninteractive apt-get install -y \
+      task-kde-desktop
+
+    # Install desktop essentials (important but less critical)
+    retry_command env DEBIAN_FRONTEND=noninteractive apt-get install -y \
+      dbus-x11 \
+      pulseaudio \
+      chromium \
+      fonts-noto \
+      fonts-noto-color-emoji \
+      spice-vdagent
+
+    # Enable SPICE agent for clipboard sharing with host
+    systemctl enable spice-vdagentd.socket || true
+
+    # Install standard KDE applications metapackage (best-effort)
+    # Includes ark, kcalc, gwenview, okular, and other utilities
+    # If this fails, desktop still works but with fewer apps
+    env DEBIAN_FRONTEND=noninteractive apt-get install -y kde-standard || \
+      echo "⚠️  kde-standard metapackage unavailable, installing apps individually..."
+
+    # Install system monitor (useful GUI for less technical users)
+    env DEBIAN_FRONTEND=noninteractive apt-get install -y plasma-systemmonitor || \
+      echo "⚠️  plasma-systemmonitor unavailable"
+
+    # Fallback: install essential apps individually if metapackage failed
+    for pkg in konsole dolphin kate ark gwenview okular; do
+      dpkg -l | grep -q "^ii  $pkg " || \
+        env DEBIAN_FRONTEND=noninteractive apt-get install -y "$pkg" || \
+        echo "⚠️  Failed to install $pkg"
+    done
+
+    # Set graphical target
+    systemctl set-default graphical.target
+
+    # Try to load virtio-sound module if available (best-effort)
+    if modinfo virtio_snd >/dev/null 2>&1; then
+      modprobe virtio_snd || echo "virtio_snd module not available"
+      modprobe snd_virtio || echo "snd_virtio module not available"
+    else
+      echo "virtio_snd module not found in kernel"
+    fi
+
+    # Configure SDDM for auto-login (no password)
+    # Use LIMA_CIDATA_USER which is already set by Lima's boot.sh
+    if [ -z "${LIMA_CIDATA_USER:-}" ]; then
+      echo "ERROR: LIMA_CIDATA_USER not set"
+      exit 1
+    fi
+
+    echo "Configuring auto-login for user: ${LIMA_CIDATA_USER}"
+
+    # Enable passwordless sudo for the user (should already be configured, but ensure it)
+    echo "${LIMA_CIDATA_USER} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/90-${LIMA_CIDATA_USER}
+    chmod 0440 /etc/sudoers.d/90-${LIMA_CIDATA_USER}
+
+    # Set a default password for the user (useful if auto-login fails or for manual login)
+    # Default password: "lima" (users should change this if needed)
+    echo "${LIMA_CIDATA_USER}:lima" | chpasswd
+    echo "Set default password 'lima' for user ${LIMA_CIDATA_USER}"
+
+    mkdir -p /etc/sddm.conf.d
+
+    # Create SDDM autologin config
+    # Use X11 session for SPICE clipboard compatibility (Wayland clipboard not yet supported by spice-vdagent)
+    echo "[Autologin]" > /etc/sddm.conf.d/autologin.conf
+    echo "User=${LIMA_CIDATA_USER}" >> /etc/sddm.conf.d/autologin.conf
+    echo "Session=plasmax11" >> /etc/sddm.conf.d/autologin.conf
+    echo "Relogin=false" >> /etc/sddm.conf.d/autologin.conf
+    echo "" >> /etc/sddm.conf.d/autologin.conf
+    echo "[General]" >> /etc/sddm.conf.d/autologin.conf
+    echo "HaltCommand=/usr/bin/systemctl poweroff" >> /etc/sddm.conf.d/autologin.conf
+    echo "RebootCommand=/usr/bin/systemctl reboot" >> /etc/sddm.conf.d/autologin.conf
+    echo "" >> /etc/sddm.conf.d/autologin.conf
+    echo "[Theme]" >> /etc/sddm.conf.d/autologin.conf
+    echo "Current=breeze" >> /etc/sddm.conf.d/autologin.conf
+    echo "CursorTheme=breeze_cursors" >> /etc/sddm.conf.d/autologin.conf
+
+    # Configure PulseAudio for optimal performance
+    mkdir -p /etc/pulse/daemon.conf.d
+    cat > /etc/pulse/daemon.conf.d/50-optimize.conf <<EOF
+    # Optimized for VZ/virtualization
+    default-sample-format = float32le
+    default-sample-rate = 48000
+    alternate-sample-rate = 44100
+    default-sample-channels = 2
+    default-fragments = 4
+    default-fragment-size-msec = 10
+    resample-method = speex-float-5
+    enable-remixing = yes
+    enable-lfe-remixing = no
+    flat-volumes = no
+    EOF
+
+    # Enable SDDM
+    systemctl enable sddm
+
+    # Start SDDM immediately (don't wait for reboot)
+    systemctl start sddm
+
+    # Verify critical packages are installed
+    echo "=== Verifying installation ==="
+    dpkg -l | grep -E 'kde-plasma-desktop|sddm' || echo "Some packages may not be installed"
+
+    echo "KDE Plasma desktop installation complete. Desktop should now be available!"
+
+- mode: user
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+
+    # Configure user PulseAudio settings for auto-start
+    mkdir -p ~/.config/pulse
+    cat > ~/.config/pulse/client.conf <<'EOF'
+    autospawn = yes
+    daemon-binary = /usr/bin/pulseaudio
+    enable-shm = yes
+    EOF
+
+    # Configure KDE for optimal performance
+    mkdir -p ~/.config
+
+    # Disable screen locking and power management (VM use case)
+    cat > ~/.config/kscreenlockerrc <<'KDEEOF'
+    [Daemon]
+    Autolock=false
+    LockOnResume=false
+    Timeout=0
+    KDEEOF
+
+    # Disable screen saver
+    cat > ~/.config/kscreensaverrc <<'KDEEOF'
+    [ScreenSaver]
+    Enabled=false
+    Timeout=0
+    KDEEOF
+
+    # Disable power management suspend/hibernate
+    cat > ~/.config/powermanagementprofilesrc <<'KDEEOF'
+    [AC]
+    icon=battery-charging
+
+    [AC][DimDisplay]
+    idleTime=300000
+
+    [AC][SuspendSession]
+    idleTime=0
+    suspendThenHibernate=false
+    suspendType=0
+    KDEEOF
+
+    # Optimize KDE compositor settings
+    cat > ~/.config/kwinrc <<'KDEEOF'
+    [Compositing]
+    Enabled=true
+    OpenGLIsUnsafe=false
+    AnimationSpeed=2
+
+    [Plugins]
+    blurEnabled=true
+    contrastEnabled=true
+
+    [Windows]
+    FocusPolicy=ClickToFocus
+
+    [Wayland]
+    InputMethod[$e]=
+    KDEEOF
+
+    # Disable unwanted KDE background services
+    cat > ~/.config/kded5rc <<'KDEEOF'
+    [Module-kwrited]
+    autoload=false
+
+    [Module-networkmanagement]
+    autoload=true
+
+    [Module-bluedevil]
+    autoload=false
+    KDEEOF
+
+    # Disable desktop effects that can cause issues in VMs
+    cat > ~/.config/kwinrulesrc <<'KDEEOF'
+    [General]
+    count=0
+    KDEEOF
+
+    # Disable Baloo file indexing (not needed in VM, saves CPU/disk)
+    cat > ~/.config/baloofilerc <<'KDEEOF'
+    [Basic Settings]
+    Indexing-Enabled=false
+    KDEEOF
+
+    # Configure KDE wallet for passwordless operation
+    # Keep wallet enabled for browser SSO/OAuth tokens (GitHub, VS Code, etc.)
+    # but make it auto-unlock without prompting
+    cat > ~/.config/kwalletrc <<'KDEEOF'
+    [Wallet]
+    Enabled=true
+    First Use=false
+    Prompt on Open=false
+    Prompt on Close=false
+    Close When Idle=false
+    Use One Wallet=true
+
+    [Auto Allow]
+    kdewallet=true
+    KDEEOF
+
+
+- mode: system
+  script: |
+    #!/bin/bash
+    # Post-reboot verification
+    echo "=== Service Status ==="
+    systemctl status sddm --no-pager || true
+
+    echo "=== Display Manager ==="
+    systemctl get-default
+
+    echo "=== Audio Devices ==="
+    aplay -l || echo "Run as user to see audio devices"
+
+message: |
+  🚀 Debian Trixie KDE Plasma Desktop (X11) - VZ Configuration
+
+  ✨ Installed Features:
+  - ✅ KDE Plasma Desktop (X11 session for clipboard compatibility)
+  - ✅ 1920x1080 High-Resolution Display
+  - ✅ Auto-login (No Password Required)
+  - ✅ Clipboard Sharing (via SPICE agent)
+  - ✅ Audio Support (PulseAudio + VirtIO-Sound)
+  - ✅ Chromium Browser
+  - ✅ Essential Apps: Konsole, Dolphin, Kate
+  - ⚙️  Optional Apps: Ark, Gwenview, Okular (via kde-standard)
+
+  🎨 Desktop Configuration:
+  - Breeze theme
+  - 6 CPUs, 12GB RAM
+  - 80GB disk space
+
+  🔧 Optimizations:
+  - Screen lock and power management disabled
+  - Baloo file indexing disabled
+  - KDE Wallet auto-unlock enabled
+
+  ⚠️  Note: Uses X11 instead of Wayland for SPICE clipboard compatibility.
+
+  🚀 Launch: limactl start --name=plasma templates/experimental/debian-trixie-plasma.yaml
+  💻 Shell:  limactl shell plasma
