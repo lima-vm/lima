@@ -173,9 +173,9 @@ mountType: "wsl2"
 
 The `mountInotify` support enables inotify support for all different mountTypes like 9p, virtiofs etc.
 
-When mountInotify is enabled, 
-- hostagent will listen and send inotify events from host machine to guest. 
-- Guest will modify the file to trigger inotify on guest side 
+When mountInotify is enabled,
+- hostagent will listen and send inotify events from host machine to guest.
+- Guest will modify the file to trigger inotify on guest side
 
 This support will be enabled only for writable mounts because only for writable mount guest will be able to trigger inotify
 

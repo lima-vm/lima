@@ -30,7 +30,7 @@ You can build existing internal drivers as external drivers using the `ADDITIONA
 # Build QEMU as external driver
 make ADDITIONAL_DRIVERS=qemu limactl additional-drivers
 
-# Build multiple drivers as external  
+# Build multiple drivers as external
 make ADDITIONAL_DRIVERS="qemu vz wsl2" limactl additional-drivers
 ```
 
@@ -81,7 +81,7 @@ func main() {
 }
 ```
 
-3. **Build and deploy**: 
+3. **Build and deploy**:
    - Build your driver: `go build -o lima-driver-mydriver main.go`
    - Place the binary in a directory accessible via `LIMA_DRIVERS_PATH`
    - Ensure the binary is executable
@@ -96,5 +96,5 @@ limactl create myinstance --vm-type=mydriver template://default
 
 See existing external driver implementations:
 - [`cmd/lima-driver-qemu/main.go`](https://github.com/lima-vm/lima/blob/master/cmd/lima-driver-qemu/main.go)
-- [`cmd/lima-driver-vz/main_darwin.go`](https://github.com/lima-vm/lima/blob/master/cmd/lima-driver-vz/main_darwin.go)  
+- [`cmd/lima-driver-vz/main_darwin.go`](https://github.com/lima-vm/lima/blob/master/cmd/lima-driver-vz/main_darwin.go)
 - [`cmd/lima-driver-wsl2/main_windows.go`](https://github.com/lima-vm/lima/blob/master/cmd/lima-driver-wsl2/main_windows.go)

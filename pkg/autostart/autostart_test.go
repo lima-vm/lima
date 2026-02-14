@@ -72,7 +72,8 @@ func TestRenderTemplate(t *testing.T) {
 	<key>ProcessType</key>
 	<string>Background</string>
 </dict>
-</plist>`,
+</plist>
+`,
 			GetExecutable: func() (string, error) {
 				return "/limactl", nil
 			},
@@ -94,7 +95,8 @@ TimeoutSec=10
 Restart=on-failure
 
 [Install]
-WantedBy=default.target`,
+WantedBy=default.target
+`,
 			GetExecutable: func() (string, error) {
 				return "/limactl", nil
 			},

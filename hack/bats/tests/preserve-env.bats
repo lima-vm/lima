@@ -123,12 +123,12 @@ local_setup() {
     export BARBAZ=barbaz
     export LD_UID=randomuid
     run -0 limactl shell --preserve-env "$NAME" printenv
-    
+
     assert_line SSH_FOO=ssh_foo
     assert_line BAR=bar
     assert_line BARBAZ=barbaz
     assert_line LD_UID=randomuid
-    
+
     refute_line --regexp '^SSH_BAR='
     refute_line --regexp '^SSH_BLOCK='
 }
@@ -145,11 +145,11 @@ local_setup() {
     export NORMAL_VAR=normal_var
     export UNRELATED=unrelated
     run -0 limactl shell --preserve-env "$NAME" printenv
-    
+
     refute_line --regexp '^FOOBAR='
-    refute_line --regexp '^FOOXYZBAR='    
+    refute_line --regexp '^FOOXYZBAR='
     refute_line --regexp '^XFOOYBARZDOTCOM='
-    
+
     assert_line FOOBAZ=foobaz
     assert_line NORMAL_VAR=normal_var
     assert_line UNRELATED=unrelated
@@ -167,7 +167,7 @@ local_setup() {
     export MY_TOKEN=my_token
     export UNRELATED=unrelated
     run -0 limactl shell --preserve-env "$NAME" printenv
-    
+
     assert_line SSH_AUTH_SOCK=ssh_auth_sock
     assert_line SSH_CONNECTION=ssh_connection
     assert_line CUSTOM_VAR=custom_var
