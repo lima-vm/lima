@@ -16,7 +16,7 @@ require (
 	github.com/containerd/ltag v0.3.0
 	github.com/golangci/golangci-lint/v2 v2.9.0
 	github.com/yoheimuta/protolint v0.56.4
-	google.golang.org/grpc v1.79.0
+	google.golang.org/grpc v1.79.1
 	google.golang.org/protobuf v1.36.11
 	mvdan.cc/sh/v3 v3.12.0
 )
