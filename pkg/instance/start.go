@@ -29,6 +29,8 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/imgutil/proxyimgutil"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
+	"github.com/lima-vm/lima/v2/pkg/limayaml"
+	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/registry"
 	"github.com/lima-vm/lima/v2/pkg/store"
 	"github.com/lima-vm/lima/v2/pkg/usrlocal"
@@ -66,19 +68,23 @@ func Prepare(ctx context.Context, inst *limatype.Instance, guestAgent string) (*
 		return nil, err
 	}
 
-	// Check if the instance has been created (the base disk already exists)
-	baseDisk := filepath.Join(inst.Dir, filenames.BaseDisk)
-	_, err = os.Stat(baseDisk)
-	created := err == nil
+	// Migrate legacy disk layout (diffdisk → disk, ISO basedisk → iso)
+	if err := driverutil.MigrateDiskLayout(inst.Dir); err != nil {
+		return nil, err
+	}
 
+	created := limayaml.IsExistingInstanceDir(inst.Dir)
+
+	imagePath := filepath.Join(inst.Dir, filenames.Image)
+	disk := filepath.Join(inst.Dir, filenames.Disk)
 	kernel := filepath.Join(inst.Dir, filenames.Kernel)
 	kernelCmdline := filepath.Join(inst.Dir, filenames.KernelCmdline)
 	initrd := filepath.Join(inst.Dir, filenames.Initrd)
-	if _, err := os.Stat(baseDisk); errors.Is(err, os.ErrNotExist) {
-		var ensuredBaseDisk bool
+	if !osutil.FileExists(imagePath) && !osutil.FileExists(disk) {
+		var ensuredImage bool
 		errs := make([]error, len(inst.Config.Images))
 		for i, f := range inst.Config.Images {
-			if _, err := fileutils.DownloadFile(ctx, baseDisk, f.File, true, "the image", *inst.Config.Arch); err != nil {
+			if _, err := fileutils.DownloadFile(ctx, imagePath, f.File, true, "the image", *inst.Config.Arch); err != nil {
 				errs[i] = err
 				continue
 			}
@@ -102,10 +108,10 @@ func Prepare(ctx context.Context, inst *limatype.Instance, guestAgent string) (*
 					continue
 				}
 			}
-			ensuredBaseDisk = true
+			ensuredImage = true
 			break
 		}
-		if !ensuredBaseDisk {
+		if !ensuredImage {
 			return nil, fileutils.Errors(errs)
 		}
 	}
@@ -114,8 +120,8 @@ func Prepare(ctx context.Context, inst *limatype.Instance, guestAgent string) (*
 		return nil, err
 	}
 
-	// Ensure diffDisk size matches the store
-	if err := prepareDiffDisk(ctx, inst); err != nil {
+	// Ensure disk size matches the configured value
+	if err := prepareDisk(ctx, inst); err != nil {
 		return nil, err
 	}
 
@@ -435,13 +441,12 @@ func ShowMessage(inst *limatype.Instance) error {
 	return scanner.Err()
 }
 
-// prepareDiffDisk checks the disk size difference between inst.Disk and yaml.Disk.
-// If there is no diffDisk, return nil (the instance has not been initialized or started yet).
-func prepareDiffDisk(ctx context.Context, inst *limatype.Instance) error {
-	diffDisk := filepath.Join(inst.Dir, filenames.DiffDisk)
+// prepareDisk resizes the VM disk if its size differs from the configured size.
+// Returns nil if the disk does not yet exist (instance not yet initialized).
+func prepareDisk(ctx context.Context, inst *limatype.Instance) error {
+	disk := filepath.Join(inst.Dir, filenames.Disk)
 
-	// Handle the instance initialization
-	_, err := os.Stat(diffDisk)
+	_, err := os.Stat(disk)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil
@@ -449,7 +454,7 @@ func prepareDiffDisk(ctx context.Context, inst *limatype.Instance) error {
 		return err
 	}
 
-	f, err := os.Open(diffDisk)
+	f, err := os.Open(disk)
 	if err != nil {
 		return err
 	}
@@ -470,15 +475,10 @@ func prepareDiffDisk(ctx context.Context, inst *limatype.Instance) error {
 
 	if inst.Disk < diskSize {
 		inst.Disk = diskSize
-		return errors.New("diffDisk: Shrinking is currently unavailable")
+		return errors.New("disk shrinking is not supported")
 	}
 
 	diskUtil := proxyimgutil.NewDiskUtil(ctx)
 
-	err = diskUtil.ResizeDisk(ctx, diffDisk, inst.Disk)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return diskUtil.ResizeDisk(ctx, disk, inst.Disk)
 }

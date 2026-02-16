@@ -87,42 +87,46 @@ func minimumQemuVersion() (hardMin, softMin semver.Version) {
 	return hardMin, softMin
 }
 
-// EnsureDisk also ensures the kernel and the initrd.
+// EnsureDisk creates the VM disk from the downloaded image.
+// For ISO images, it renames the image to "iso" and creates an empty qcow2 disk.
+// For non-ISO images, it validates and renames the image to "disk".
 func EnsureDisk(ctx context.Context, cfg Config) error {
-	diffDisk := filepath.Join(cfg.InstanceDir, filenames.DiffDisk)
-	if _, err := os.Stat(diffDisk); err == nil || !errors.Is(err, os.ErrNotExist) {
-		// disk is already ensured
+	diskPath := filepath.Join(cfg.InstanceDir, filenames.Disk)
+	if _, err := os.Stat(diskPath); err == nil || !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
 
-	baseDisk := filepath.Join(cfg.InstanceDir, filenames.BaseDisk)
-
-	diskSize, _ := units.RAMInBytes(*cfg.LimaYAML.Disk)
-	if diskSize == 0 {
-		return nil
-	}
-	isBaseDiskISO, err := iso9660util.IsISO9660(baseDisk)
+	imagePath := filepath.Join(cfg.InstanceDir, filenames.Image)
+	isISO, err := iso9660util.IsISO9660(imagePath)
 	if err != nil {
 		return err
 	}
-	baseDiskInfo, err := qemuimgutil.GetInfo(ctx, baseDisk)
+	imageInfo, err := qemuimgutil.GetInfo(ctx, imagePath)
 	if err != nil {
-		return fmt.Errorf("failed to get the information of base disk %q: %w", baseDisk, err)
+		return fmt.Errorf("failed to get the information of %q: %w", imagePath, err)
 	}
-	if err = qemuimgutil.AcceptableAsBaseDisk(baseDiskInfo); err != nil {
-		return fmt.Errorf("file %q is not acceptable as the base disk: %w", baseDisk, err)
+	if err = qemuimgutil.AcceptableAsBaseDisk(imageInfo); err != nil {
+		return fmt.Errorf("file %q is not acceptable as a disk image: %w", imagePath, err)
 	}
-	if baseDiskInfo.Format == "" {
-		return fmt.Errorf("failed to inspect the format of %q", baseDisk)
+	if imageInfo.Format == "" {
+		return fmt.Errorf("failed to inspect the format of %q", imagePath)
 	}
-	args := []string{"create", "-f", "qcow2"}
-	if !isBaseDiskISO {
-		args = append(args, "-F", baseDiskInfo.Format, "-b", baseDisk)
-	}
-	args = append(args, diffDisk, strconv.Itoa(int(diskSize)))
-	cmd := exec.CommandContext(ctx, "qemu-img", args...)
-	if out, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("failed to run %v: %q: %w", cmd.Args, string(out), err)
+	if isISO {
+		isoPath := filepath.Join(cfg.InstanceDir, filenames.ISO)
+		if err = os.Rename(imagePath, isoPath); err != nil {
+			return err
+		}
+		diskSize, _ := units.RAMInBytes(*cfg.LimaYAML.Disk)
+		args := []string{"create", "-f", "qcow2", diskPath, strconv.Itoa(int(diskSize))}
+		cmd := exec.CommandContext(ctx, "qemu-img", args...)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			_ = os.Rename(isoPath, imagePath)
+			return fmt.Errorf("failed to run %v: %q: %w", cmd.Args, string(out), err)
+		}
+	} else {
+		if err = os.Rename(imagePath, diskPath); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -152,8 +156,8 @@ func sendHmpCommand(cfg Config, cmd, tag string) (string, error) {
 }
 
 func execImgCommand(ctx context.Context, cfg Config, args ...string) (string, error) {
-	diffDisk := filepath.Join(cfg.InstanceDir, filenames.DiffDisk)
-	args = append(args, diffDisk)
+	diskPath := filepath.Join(cfg.InstanceDir, filenames.Disk)
+	args = append(args, diskPath)
 	logrus.Debugf("Running qemu-img %v command", args)
 	cmd := exec.CommandContext(ctx, "qemu-img", args...)
 	b, err := cmd.Output()
@@ -687,8 +691,8 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	}
 
 	// Disk
-	baseDisk := filepath.Join(cfg.InstanceDir, filenames.BaseDisk)
-	diffDisk := filepath.Join(cfg.InstanceDir, filenames.DiffDisk)
+	diskPath := filepath.Join(cfg.InstanceDir, filenames.Disk)
+	isoPath := filepath.Join(cfg.InstanceDir, filenames.ISO)
 	extraDisks := []string{}
 	for _, d := range y.AdditionalDisks {
 		diskName := d.Name
@@ -719,30 +723,14 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 		extraDisks = append(extraDisks, dataDisk)
 	}
 
-	isBaseDiskCDROM, err := iso9660util.IsISO9660(baseDisk)
-	if err != nil {
-		return "", nil, err
+	if osutil.FileExists(diskPath) {
+		args = append(args, "-drive", fmt.Sprintf("file=%s,if=virtio,discard=on", diskPath))
 	}
-	if isBaseDiskCDROM {
+	if osutil.FileExists(isoPath) {
 		args = appendArgsIfNoConflict(args, "-boot", "order=d,splash-time=0,menu=on")
-		args = append(args, "-drive", fmt.Sprintf("file=%s,format=raw,media=cdrom,readonly=on", baseDisk))
+		args = append(args, "-drive", fmt.Sprintf("file=%s,format=raw,media=cdrom,readonly=on", isoPath))
 	} else {
 		args = appendArgsIfNoConflict(args, "-boot", "order=c,splash-time=0,menu=on")
-	}
-	if diskSize, _ := units.RAMInBytes(*cfg.LimaYAML.Disk); diskSize > 0 {
-		args = append(args, "-drive", fmt.Sprintf("file=%s,if=virtio,discard=on", diffDisk))
-	} else if !isBaseDiskCDROM {
-		baseDiskInfo, err := qemuimgutil.GetInfo(ctx, baseDisk)
-		if err != nil {
-			return "", nil, fmt.Errorf("failed to get the information of %q: %w", baseDisk, err)
-		}
-		if err = qemuimgutil.AcceptableAsBaseDisk(baseDiskInfo); err != nil {
-			return "", nil, fmt.Errorf("file %q is not acceptable as the base disk: %w", baseDisk, err)
-		}
-		if baseDiskInfo.Format == "" {
-			return "", nil, fmt.Errorf("failed to inspect the format of %q", baseDisk)
-		}
-		args = append(args, "-drive", fmt.Sprintf("file=%s,format=%s,if=virtio,discard=on", baseDisk, baseDiskInfo.Format))
 	}
 	for _, extraDisk := range extraDisks {
 		args = append(args, "-drive", fmt.Sprintf("file=%s,if=virtio,discard=on", extraDisk))

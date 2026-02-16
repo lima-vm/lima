@@ -36,8 +36,11 @@ const (
 	CIDataISO               = "cidata.iso"
 	CIDataISODir            = "cidata"
 	CloudConfig             = "cloud-config.yaml"
-	BaseDisk                = "basedisk"
-	DiffDisk                = "diffdisk"
+	Image                   = "image"    // downloaded VM image; renamed to Disk or ISO during setup
+	Disk                    = "disk"     // VM disk (or symlink to DiffDiskLegacy for migrated instances)
+	ISO                     = "iso"      // optional CDROM image (or symlink to BaseDiskLegacy for migrated instances)
+	BaseDiskLegacy          = "basedisk" // legacy name for Image; may remain as qcow2 backing file
+	DiffDiskLegacy          = "diffdisk" // legacy name for Disk
 	Kernel                  = "kernel"
 	KernelCmdline           = "kernel.cmdline"
 	Initrd                  = "initrd"

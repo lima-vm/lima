@@ -30,7 +30,6 @@ import (
 
 	"github.com/lima-vm/lima/v2/pkg/hostagent/events"
 	"github.com/lima-vm/lima/v2/pkg/imgutil/proxyimgutil"
-	"github.com/lima-vm/lima/v2/pkg/iso9660util"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
@@ -486,41 +485,39 @@ func validateDiskFormat(diskPath string) error {
 }
 
 func attachDisks(ctx context.Context, inst *limatype.Instance, vmConfig *vz.VirtualMachineConfiguration) error {
-	baseDiskPath := filepath.Join(inst.Dir, filenames.BaseDisk)
-	diffDiskPath := filepath.Join(inst.Dir, filenames.DiffDisk)
+	diskPath := filepath.Join(inst.Dir, filenames.Disk)
+	isoPath := filepath.Join(inst.Dir, filenames.ISO)
 	ciDataPath := filepath.Join(inst.Dir, filenames.CIDataISO)
-	isBaseDiskCDROM, err := iso9660util.IsISO9660(baseDiskPath)
-	if err != nil {
-		return err
-	}
 	var configurations []vz.StorageDeviceConfiguration
 
-	if isBaseDiskCDROM {
-		if err = validateDiskFormat(baseDiskPath); err != nil {
+	if osutil.FileExists(diskPath) {
+		if err := validateDiskFormat(diskPath); err != nil {
 			return err
 		}
-		baseDiskAttachment, err := vz.NewDiskImageStorageDeviceAttachment(baseDiskPath, true)
+		diskAttachment, err := vz.NewDiskImageStorageDeviceAttachmentWithCacheAndSync(diskPath, false, diskImageCachingMode, vz.DiskImageSynchronizationModeFsync)
 		if err != nil {
 			return err
 		}
-		baseDisk, err := vz.NewUSBMassStorageDeviceConfiguration(baseDiskAttachment)
+		diskDev, err := vz.NewVirtioBlockDeviceConfiguration(diskAttachment)
 		if err != nil {
 			return err
 		}
-		configurations = append(configurations, baseDisk)
+		configurations = append(configurations, diskDev)
 	}
-	if err = validateDiskFormat(diffDiskPath); err != nil {
-		return err
+	if osutil.FileExists(isoPath) {
+		if err := validateDiskFormat(isoPath); err != nil {
+			return err
+		}
+		isoAttachment, err := vz.NewDiskImageStorageDeviceAttachment(isoPath, true)
+		if err != nil {
+			return err
+		}
+		isoDev, err := vz.NewUSBMassStorageDeviceConfiguration(isoAttachment)
+		if err != nil {
+			return err
+		}
+		configurations = append(configurations, isoDev)
 	}
-	diffDiskAttachment, err := vz.NewDiskImageStorageDeviceAttachmentWithCacheAndSync(diffDiskPath, false, diskImageCachingMode, vz.DiskImageSynchronizationModeFsync)
-	if err != nil {
-		return err
-	}
-	diffDisk, err := vz.NewVirtioBlockDeviceConfiguration(diffDiskAttachment)
-	if err != nil {
-		return err
-	}
-	configurations = append(configurations, diffDisk)
 
 	diskUtil := proxyimgutil.NewDiskUtil(ctx)
 
@@ -557,7 +554,7 @@ func attachDisks(ctx context.Context, inst *limatype.Instance, vmConfig *vz.Virt
 		configurations = append(configurations, extraDisk)
 	}
 
-	if err = validateDiskFormat(ciDataPath); err != nil {
+	if err := validateDiskFormat(ciDataPath); err != nil {
 		return err
 	}
 	ciDataAttachment, err := vz.NewDiskImageStorageDeviceAttachment(ciDataPath, true)
