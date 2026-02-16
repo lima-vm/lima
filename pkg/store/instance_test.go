@@ -66,6 +66,33 @@ var tableTwo = "NAME    STATUS     SSH            VMTYPE    ARCH       CPUS    M
 	"foo     Stopped    127.0.0.1:0    qemu      x86_64     0       0B        0B\n" +
 	"bar     Stopped    127.0.0.1:0    vz        aarch64    0       0B        0B\n"
 
+func TestSSHPortFromConfig(t *testing.T) {
+	t.Run("valid", func(t *testing.T) {
+		f := filepath.Join(t.TempDir(), "ssh.config")
+		content := "Host lima-default\n  Hostname 127.0.0.1\n  Port 58786\n  User foo\n"
+		assert.NilError(t, os.WriteFile(f, []byte(content), 0o644))
+		port, err := sshPortFromConfig(f)
+		assert.NilError(t, err)
+		assert.Equal(t, 58786, port)
+	})
+	t.Run("missing file", func(t *testing.T) {
+		_, err := sshPortFromConfig(filepath.Join(t.TempDir(), "nonexistent"))
+		assert.ErrorIs(t, err, os.ErrNotExist)
+	})
+	t.Run("no port line", func(t *testing.T) {
+		f := filepath.Join(t.TempDir(), "ssh.config")
+		assert.NilError(t, os.WriteFile(f, []byte("Host lima-default\n  Hostname 127.0.0.1\n"), 0o644))
+		_, err := sshPortFromConfig(f)
+		assert.ErrorContains(t, err, "port not found")
+	})
+	t.Run("invalid port", func(t *testing.T) {
+		f := filepath.Join(t.TempDir(), "ssh.config")
+		assert.NilError(t, os.WriteFile(f, []byte("Host lima-default\n  Port abc\n"), 0o644))
+		_, err := sshPortFromConfig(f)
+		assert.ErrorContains(t, err, "invalid syntax")
+	})
+}
+
 func TestPrintInstanceTable(t *testing.T) {
 	var buf bytes.Buffer
 	instances := []*limatype.Instance{&instance}

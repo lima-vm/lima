@@ -87,6 +87,14 @@ func Inspect(ctx context.Context, instName string) (*limatype.Instance, error) {
 			}
 		}
 	}
+	if inst.SSHLocalPort == 0 {
+		sshConfigPath := filepath.Join(instDir, filenames.SSHConfig)
+		if port, err := sshPortFromConfig(sshConfigPath); err == nil {
+			inst.SSHLocalPort = port
+		} else if !errors.Is(err, os.ErrNotExist) {
+			inst.Errors = append(inst.Errors, fmt.Errorf("failed to extract SSH local port from %q: %w", sshConfigPath, err))
+		}
+	}
 
 	inst.CPUs = *y.CPUs
 	memory, err := units.RAMInBytes(*y.Memory)
@@ -224,6 +232,21 @@ func ReadPIDFile(path string) (int, error) {
 		}
 	}
 	return pid, nil
+}
+
+// sshPortFromConfig extracts the SSH port from an ssh config file.
+func sshPortFromConfig(configPath string) (int, error) {
+	b, err := os.ReadFile(configPath)
+	if err != nil {
+		return 0, err
+	}
+	for line := range strings.SplitSeq(string(b), "\n") {
+		line = strings.TrimSpace(line)
+		if port, ok := strings.CutPrefix(line, "Port "); ok {
+			return strconv.Atoi(port)
+		}
+	}
+	return 0, fmt.Errorf("port not found in %q", configPath)
 }
 
 type FormatData struct {
