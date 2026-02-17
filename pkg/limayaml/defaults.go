@@ -992,7 +992,7 @@ func IsExistingInstanceDir(dir string) bool {
 	// because the file is created during the initialization of the instance.
 	for _, f := range []string{
 		filenames.HostAgentStdoutLog, filenames.HostAgentStderrLog,
-		filenames.VzIdentifier, filenames.BaseDisk, filenames.DiffDisk, filenames.CIDataISO,
+		filenames.VzIdentifier, filenames.Image, filenames.Disk, filenames.BaseDiskLegacy, filenames.DiffDiskLegacy, filenames.CIDataISO,
 	} {
 		file := filepath.Join(dir, f)
 		if _, err := os.Lstat(file); !errors.Is(err, os.ErrNotExist) {

@@ -60,12 +60,19 @@ func detectImageType(t *testing.T, path string) image.Type {
 	return img.Type()
 }
 
-func checkDisk(t *testing.T, diff string, expectedType image.Type) {
+func checkDisk(t *testing.T, diskPath string, expectedType image.Type) {
 	t.Helper()
-	fi, err := os.Stat(diff)
+	fi, err := os.Stat(diskPath)
 	assert.NilError(t, err)
 	assert.Assert(t, fi.Size() > 0)
-	assert.Equal(t, detectImageType(t, diff), expectedType)
+	assert.Equal(t, detectImageType(t, diskPath), expectedType)
+}
+
+func assertSymlink(t *testing.T, path, expectedTarget string) {
+	t.Helper()
+	target, err := os.Readlink(path)
+	assert.NilError(t, err)
+	assert.Equal(t, target, expectedTarget)
 }
 
 func isMacOS26OrHigher() bool {
@@ -79,16 +86,11 @@ func isMacOS26OrHigher() bool {
 	return version.Major >= 26
 }
 
-func TestEnsureDisk_WithISOBaseImage(t *testing.T) {
+func TestEnsureDisk_WithISOImage(t *testing.T) {
 	instDir := t.TempDir()
-	base := filepath.Join(instDir, filenames.BaseDisk)
-	diff := filepath.Join(instDir, filenames.DiffDisk)
-
-	writeMinimalISO(t, base)
-	isISO, err := iso9660util.IsISO9660(base)
-	assert.NilError(t, err)
-	assert.Assert(t, isISO)
-	baseHashBefore := sha256File(t, base)
+	imagePath := filepath.Join(instDir, filenames.Image)
+	diskPath := filepath.Join(instDir, filenames.Disk)
+	isoPath := filepath.Join(instDir, filenames.ISO)
 
 	formats := []image.Type{typeRAW}
 	if isMacOS26OrHigher() {
@@ -96,25 +98,30 @@ func TestEnsureDisk_WithISOBaseImage(t *testing.T) {
 	}
 
 	for _, format := range formats {
+		writeMinimalISO(t, imagePath)
+		imageHashBefore := sha256File(t, imagePath)
+
 		assert.NilError(t, EnsureDisk(t.Context(), instDir, "2MiB", format))
-		isISO, err = iso9660util.IsISO9660(base)
+
+		// image should have been renamed to iso
+		assert.Assert(t, !osutil.FileExists(imagePath))
+		assert.Equal(t, imageHashBefore, sha256File(t, isoPath))
+		isISO, err := iso9660util.IsISO9660(isoPath)
 		assert.NilError(t, err)
 		assert.Assert(t, isISO)
-		assert.Equal(t, baseHashBefore, sha256File(t, base))
-		checkDisk(t, diff, format)
-		assert.NilError(t, os.Remove(diff))
+
+		// disk should be a real file (empty data disk)
+		checkDisk(t, diskPath, format)
+
+		assert.NilError(t, os.Remove(diskPath))
+		assert.NilError(t, os.Remove(isoPath))
 	}
 }
 
-func TestEnsureDisk_WithNonISOBaseImage(t *testing.T) {
+func TestEnsureDisk_WithNonISOImage(t *testing.T) {
 	instDir := t.TempDir()
-	base := filepath.Join(instDir, filenames.BaseDisk)
-	diff := filepath.Join(instDir, filenames.DiffDisk)
-
-	writeNonISO(t, base)
-	isISO, err := iso9660util.IsISO9660(base)
-	assert.NilError(t, err)
-	assert.Assert(t, !isISO)
+	imagePath := filepath.Join(instDir, filenames.Image)
+	diskPath := filepath.Join(instDir, filenames.Disk)
 
 	formats := []image.Type{typeRAW}
 	if isMacOS26OrHigher() {
@@ -122,18 +129,26 @@ func TestEnsureDisk_WithNonISOBaseImage(t *testing.T) {
 	}
 
 	for _, format := range formats {
+		writeNonISO(t, imagePath)
+
 		assert.NilError(t, EnsureDisk(t.Context(), instDir, "2MiB", format))
-		checkDisk(t, diff, format)
-		assert.NilError(t, os.Remove(diff))
+
+		// image should have been consumed
+		assert.Assert(t, !osutil.FileExists(imagePath))
+
+		// disk should be the converted image
+		checkDisk(t, diskPath, format)
+
+		assert.NilError(t, os.Remove(diskPath))
 	}
 }
 
-func TestEnsureDisk_ExistingDiffDisk(t *testing.T) {
+func TestEnsureDisk_ExistingDisk(t *testing.T) {
 	instDir := t.TempDir()
-	base := filepath.Join(instDir, filenames.BaseDisk)
-	diff := filepath.Join(instDir, filenames.DiffDisk)
+	imagePath := filepath.Join(instDir, filenames.Image)
+	diskPath := filepath.Join(instDir, filenames.Disk)
 
-	writeNonISO(t, base)
+	writeNonISO(t, imagePath)
 
 	formats := []image.Type{typeRAW}
 	if isMacOS26OrHigher() {
@@ -141,10 +156,92 @@ func TestEnsureDisk_ExistingDiffDisk(t *testing.T) {
 	}
 
 	for _, format := range formats {
-		assert.NilError(t, os.WriteFile(diff, []byte("preexisting"), 0o644))
-		origHash := sha256File(t, diff)
+		assert.NilError(t, os.WriteFile(diskPath, []byte("preexisting"), 0o644))
+		origHash := sha256File(t, diskPath)
 		assert.NilError(t, EnsureDisk(t.Context(), instDir, "2MiB", format))
-		assert.Equal(t, sha256File(t, diff), origHash)
-		assert.NilError(t, os.Remove(diff))
+		assert.Equal(t, sha256File(t, diskPath), origHash)
+		assert.NilError(t, os.Remove(diskPath))
 	}
+}
+
+func TestMigrateDiskLayout_LegacyDiffDisk(t *testing.T) {
+	instDir := t.TempDir()
+	diffDiskPath := filepath.Join(instDir, filenames.DiffDiskLegacy)
+
+	assert.NilError(t, os.WriteFile(diffDiskPath, []byte("legacy-disk"), 0o644))
+	origHash := sha256File(t, diffDiskPath)
+
+	assert.NilError(t, MigrateDiskLayout(instDir))
+
+	// disk should be a symlink to diffdisk
+	diskPath := filepath.Join(instDir, filenames.Disk)
+	assertSymlink(t, diskPath, filenames.DiffDiskLegacy)
+	assert.Equal(t, sha256File(t, diskPath), origHash)
+
+	// diffdisk should still exist (untouched)
+	assert.Assert(t, osutil.FileExists(diffDiskPath))
+}
+
+func TestMigrateDiskLayout_LegacyISOBaseDisk(t *testing.T) {
+	instDir := t.TempDir()
+	baseDiskPath := filepath.Join(instDir, filenames.BaseDiskLegacy)
+	diffDiskPath := filepath.Join(instDir, filenames.DiffDiskLegacy)
+
+	writeMinimalISO(t, baseDiskPath)
+	baseHash := sha256File(t, baseDiskPath)
+	assert.NilError(t, os.WriteFile(diffDiskPath, []byte("legacy-disk"), 0o644))
+	diffHash := sha256File(t, diffDiskPath)
+
+	assert.NilError(t, MigrateDiskLayout(instDir))
+
+	// disk should be a symlink to diffdisk
+	diskPath := filepath.Join(instDir, filenames.Disk)
+	assertSymlink(t, diskPath, filenames.DiffDiskLegacy)
+	assert.Equal(t, sha256File(t, diskPath), diffHash)
+
+	// iso should be a symlink to basedisk
+	isoPath := filepath.Join(instDir, filenames.ISO)
+	assertSymlink(t, isoPath, filenames.BaseDiskLegacy)
+	assert.Equal(t, sha256File(t, isoPath), baseHash)
+
+	// original files should still exist
+	assert.Assert(t, osutil.FileExists(diffDiskPath))
+	assert.Assert(t, osutil.FileExists(baseDiskPath))
+}
+
+func TestMigrateDiskLayout_LegacyNonISOBaseDisk(t *testing.T) {
+	instDir := t.TempDir()
+	baseDiskPath := filepath.Join(instDir, filenames.BaseDiskLegacy)
+	diffDiskPath := filepath.Join(instDir, filenames.DiffDiskLegacy)
+
+	writeNonISO(t, baseDiskPath)
+	baseHash := sha256File(t, baseDiskPath)
+	assert.NilError(t, os.WriteFile(diffDiskPath, []byte("legacy-disk"), 0o644))
+
+	assert.NilError(t, MigrateDiskLayout(instDir))
+
+	// disk should be a symlink to diffdisk
+	diskPath := filepath.Join(instDir, filenames.Disk)
+	assertSymlink(t, diskPath, filenames.DiffDiskLegacy)
+
+	// non-ISO basedisk should remain unchanged (qcow2 backing file)
+	assert.Equal(t, sha256File(t, baseDiskPath), baseHash)
+
+	// no iso symlink should be created
+	isoPath := filepath.Join(instDir, filenames.ISO)
+	_, err := os.Lstat(isoPath)
+	assert.Assert(t, os.IsNotExist(err))
+}
+
+func TestMigrateDiskLayout_AlreadyMigrated(t *testing.T) {
+	instDir := t.TempDir()
+	diskPath := filepath.Join(instDir, filenames.Disk)
+
+	assert.NilError(t, os.WriteFile(diskPath, []byte("current-disk"), 0o644))
+	origHash := sha256File(t, diskPath)
+
+	assert.NilError(t, MigrateDiskLayout(instDir))
+
+	// disk should be unchanged
+	assert.Equal(t, sha256File(t, diskPath), origHash)
 }

@@ -18,7 +18,7 @@ import (
 
 // EnsureFs downloads the root fs.
 func EnsureFs(ctx context.Context, inst *limatype.Instance) error {
-	baseDisk := filepath.Join(inst.Dir, filenames.BaseDisk)
+	baseDisk := filepath.Join(inst.Dir, filenames.BaseDiskLegacy)
 	if _, err := os.Stat(baseDisk); errors.Is(err, os.ErrNotExist) {
 		var ensuredBaseDisk bool
 		errs := make([]error, len(inst.Config.Images))

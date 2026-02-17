@@ -45,7 +45,7 @@ func Cmdline(inst *limatype.Instance) (*exec.Cmd, error) {
 		"--restful-uri", "none://",
 
 		// First virtio-blk device is the boot disk
-		"--device", fmt.Sprintf("virtio-blk,path=%s,format=raw", filepath.Join(inst.Dir, filenames.DiffDisk)),
+		"--device", fmt.Sprintf("virtio-blk,path=%s,format=raw", filepath.Join(inst.Dir, filenames.Disk)),
 		"--device", fmt.Sprintf("virtio-blk,path=%s", filepath.Join(inst.Dir, filenames.CIDataISO)),
 	}
 

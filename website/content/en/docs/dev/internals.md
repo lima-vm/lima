@@ -44,8 +44,11 @@ Ansible:
 - `ansible-inventory.yaml`: the Ansible node inventory. See [ansible](#ansible).
 
 disk:
-- `basedisk`: the base image
-- `diffdisk`: the diff image (QCOW2)
+- `image`: the downloaded VM image; renamed to `disk` or `iso` during setup
+- `disk`: the VM disk (can be a symlink to legacy `diffdisk`)
+- `iso`: optional CDROM image for ISO-based installations (can be a symlink to legacy `basedisk`)
+- `basedisk`: legacy name for the downloaded image (pre-v2.1 instances; may remain as a qcow2 backing file)
+- `diffdisk`: legacy name for `disk` (pre-v2.1 instances)
 
 kernel:
 - `kernel`: the kernel
