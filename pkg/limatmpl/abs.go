@@ -37,13 +37,13 @@ func (tmpl *Template) useAbsLocators() error {
 		}
 		if i == 0 {
 			// base can be either a single string (URL), or a single locator object, or a list whose first element can be either a string or an object
-			tmpl.expr.WriteString(fmt.Sprintf("| ($a.base | select(type == \"!!str\")) |= %q\n", absLocator))
-			tmpl.expr.WriteString(fmt.Sprintf("| ($a.base | select(type == \"!!map\") | .url) |= %q\n", absLocator))
-			tmpl.expr.WriteString(fmt.Sprintf("| ($a.base | select(type == \"!!seq\" and (.[0] | type) == \"!!str\") | .[0]) |= %q\n", absLocator))
-			tmpl.expr.WriteString(fmt.Sprintf("| ($a.base | select(type == \"!!seq\" and (.[0] | type) == \"!!map\") | .[0].url) |= %q\n", absLocator))
+			fmt.Fprintf(&tmpl.expr, "| ($a.base | select(type == \"!!str\")) |= %q\n", absLocator)
+			fmt.Fprintf(&tmpl.expr, "| ($a.base | select(type == \"!!map\") | .url) |= %q\n", absLocator)
+			fmt.Fprintf(&tmpl.expr, "| ($a.base | select(type == \"!!seq\" and (.[0] | type) == \"!!str\") | .[0]) |= %q\n", absLocator)
+			fmt.Fprintf(&tmpl.expr, "| ($a.base | select(type == \"!!seq\" and (.[0] | type) == \"!!map\") | .[0].url) |= %q\n", absLocator)
 		} else {
-			tmpl.expr.WriteString(fmt.Sprintf("| ($a.base[%d] | select(type == \"!!str\")) |= %q\n", i, absLocator))
-			tmpl.expr.WriteString(fmt.Sprintf("| ($a.base[%d] | select(type == \"!!map\") | .url) |= %q\n", i, absLocator))
+			fmt.Fprintf(&tmpl.expr, "| ($a.base[%d] | select(type == \"!!str\")) |= %q\n", i, absLocator)
+			fmt.Fprintf(&tmpl.expr, "| ($a.base[%d] | select(type == \"!!map\") | .url) |= %q\n", i, absLocator)
 		}
 	}
 	for i, p := range tmpl.Config.Probes {
@@ -52,8 +52,8 @@ func (tmpl *Template) useAbsLocators() error {
 			if err != nil {
 				return err
 			}
-			tmpl.expr.WriteString(fmt.Sprintf("| ($a.probes[%d].file | select(type == \"!!str\")) = %q\n", i, absLocator))
-			tmpl.expr.WriteString(fmt.Sprintf("| ($a.probes[%d].file | select(type == \"!!map\") | .url) = %q\n", i, absLocator))
+			fmt.Fprintf(&tmpl.expr, "| ($a.probes[%d].file | select(type == \"!!str\")) = %q\n", i, absLocator)
+			fmt.Fprintf(&tmpl.expr, "| ($a.probes[%d].file | select(type == \"!!map\") | .url) = %q\n", i, absLocator)
 		}
 	}
 	for i, p := range tmpl.Config.Provision {
@@ -62,8 +62,8 @@ func (tmpl *Template) useAbsLocators() error {
 			if err != nil {
 				return err
 			}
-			tmpl.expr.WriteString(fmt.Sprintf("| ($a.provision[%d].file | select(type == \"!!str\")) = %q\n", i, absLocator))
-			tmpl.expr.WriteString(fmt.Sprintf("| ($a.provision[%d].file | select(type == \"!!map\") | .url) = %q\n", i, absLocator))
+			fmt.Fprintf(&tmpl.expr, "| ($a.provision[%d].file | select(type == \"!!str\")) = %q\n", i, absLocator)
+			fmt.Fprintf(&tmpl.expr, "| ($a.provision[%d].file | select(type == \"!!map\") | .url) = %q\n", i, absLocator)
 		}
 	}
 	return tmpl.evalExpr()
