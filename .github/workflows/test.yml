@@ -58,7 +58,9 @@ jobs:
       run: go install github.com/google/go-licenses@v1.6.0
     - name: Check licenses
       # the allow list corresponds to https://github.com/cncf/foundation/blob/e5db022a0009f4db52b89d9875640cf3137153fe/allowed-third-party-license-policy.md
-      run: go-licenses check --include_tests  ./... --allowed_licenses=$(cat ./hack/allowed-licenses.txt)
+      # hashicorp/hcl/v2 is MPL-2.0; covered by the CNCF license exception for hashicorp/hcl
+      # see also https://github.com/cncf/foundation/issues/1242
+      run: go-licenses check --include_tests --ignore github.com/hashicorp/hcl/v2 ./... --allowed_licenses=$(cat ./hack/allowed-licenses.txt)
     - name: Check license boilerplates
       run: go tool -modfile=./hack/tools/go.mod ltag -t ./hack/ltag --check -v
     - name: Check protobuf files

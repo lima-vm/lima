@@ -581,7 +581,10 @@ lint: check-generated
 	ls-lint
 	find . -name '*.sh' ! -path "./.git/*" | xargs shellcheck
 	find . -name '*.sh' ! -path "./.git/*" | xargs shfmt -s -d
-	go-licenses check --include_tests ./... --allowed_licenses=$$(cat ./hack/allowed-licenses.txt)
+	# the allow list corresponds to https://github.com/cncf/foundation/blob/e5db022a0009f4db52b89d9875640cf3137153fe/allowed-third-party-license-policy.md
+	# hashicorp/hcl/v2 is MPL-2.0; covered by the CNCF license exception for hashicorp/hcl
+	# see also https://github.com/cncf/foundation/issues/1242
+	go-licenses check --include_tests --ignore github.com/hashicorp/hcl/v2 ./... --allowed_licenses=$$(cat ./hack/allowed-licenses.txt)
 	ltag -t ./hack/ltag --check -v
 	protolint .
 
