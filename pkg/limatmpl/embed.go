@@ -58,7 +58,7 @@ func (tmpl *Template) embedAllBases(ctx context.Context, embedAll, defaultBase b
 			tmpl.expr.WriteString("| ($a.base | select(type == \"!!str\")) |= [\"\" + .]\n")
 			tmpl.expr.WriteString("| ($a.base | select(type == \"!!map\")) |= [[] + .]\n")
 			// prepend base template at the beginning of the list
-			tmpl.expr.WriteString(fmt.Sprintf("| $a.base = [%q, $a.base[]]\n", defaultBaseFilename))
+			fmt.Fprintf(&tmpl.expr, "| $a.base = [%q, $a.base[]]\n", defaultBaseFilename)
 			if err := tmpl.evalExpr(); err != nil {
 				return err
 			}
@@ -274,10 +274,10 @@ func listFields(list string, dstIdx, srcIdx int, field string) (dst, src string)
 
 // copyField copies value and comments from $b.src to $a.dst.
 func (tmpl *Template) copyField(dst, src string) {
-	tmpl.expr.WriteString(fmt.Sprintf("| ($a.%s) = $b.%s\n", dst, src))
+	fmt.Fprintf(&tmpl.expr, "| ($a.%s) = $b.%s\n", dst, src)
 	// The head_comment is on the key and not the value, so needs to be copied explicitly.
 	// Surprisingly the line_comment seems to be copied with the value already even though it is also on the key.
-	tmpl.expr.WriteString(fmt.Sprintf("| ($a.%s | key) head_comment = ($b.%s | key | head_comment)\n", dst, src))
+	fmt.Fprintf(&tmpl.expr, "| ($a.%s | key) head_comment = ($b.%s | key | head_comment)\n", dst, src)
 }
 
 // copyListEntryField copies $b.list[srcIdx].field to $a.list[dstIdx].field (including comments).
@@ -301,8 +301,8 @@ func (tmpl *Template) copyComment(dst, src string, commentType commentType, isMa
 	}
 	// The expression is careful not to create a null $a.dst entry if $b.src has no comments and $a.dst didn't already exist.
 	// e.g.: `| $a | (select(.foo) | .foo | key | select(head_comment == "" and ($b.bar | key | head_comment != ""))) head_comment |= ($b.bar | key | head_comment)`
-	tmpl.expr.WriteString(fmt.Sprintf("| $a | (select(.%s) | .%s%s | select(%s_comment == \"\" and ($b.%s%s | %s_comment != \"\"))) %s_comment |= ($b.%s%s | %s_comment)\n",
-		dst, dst, onKey, commentType, src, onKey, commentType, commentType, src, onKey, commentType))
+	fmt.Fprintf(&tmpl.expr, "| $a | (select(.%s) | .%s%s | select(%s_comment == \"\" and ($b.%s%s | %s_comment != \"\"))) %s_comment |= ($b.%s%s | %s_comment)\n",
+		dst, dst, onKey, commentType, src, onKey, commentType, commentType, src, onKey, commentType)
 }
 
 // copyComments copies all non-empty comments from $b.src to $a.dst.
@@ -320,13 +320,13 @@ func (tmpl *Template) copyListEntryComments(list string, dstIdx, srcIdx int, fie
 }
 
 func (tmpl *Template) deleteListEntry(list string, idx int) {
-	tmpl.expr.WriteString(fmt.Sprintf("| del($a.%s[%d], $b.%s[%d])\n", list, idx, list, idx))
+	fmt.Fprintf(&tmpl.expr, "| del($a.%s[%d], $b.%s[%d])\n", list, idx, list, idx)
 }
 
 // upgradeListEntryStringToMapField turns list[idx] from a string to a {field: list[idx]} map.
 func (tmpl *Template) upgradeListEntryStringToMapField(list string, idx int, field string) {
 	// TODO the head_comment on the string becomes duplicated as a foot_comment on the new field; could be a yq bug?
-	tmpl.expr.WriteString(fmt.Sprintf("| ($a.%s[%d] | select(type == \"!!str\")) |= {\"%s\": .}\n", list, idx, field))
+	fmt.Fprintf(&tmpl.expr, "| ($a.%s[%d] | select(type == \"!!str\")) |= {\"%s\": .}\n", list, idx, field)
 }
 
 // combineListEntries combines entries based on a shared unique key.
@@ -617,8 +617,8 @@ func (tmpl *Template) updateScript(field string, idx int, newName, script, file 
 	}
 	entry := fmt.Sprintf("$a.%s[%d].file", field, idx)
 	// Assign script to the "file" field and then rename it to "script" or "content".
-	tmpl.expr.WriteString(fmt.Sprintf("| (%s) = %q | (%s) tag = %q | (%s | key) = %q\n",
-		entry, script, entry, tag, entry, newName))
+	fmt.Fprintf(&tmpl.expr, "| (%s) = %q | (%s) tag = %q | (%s | key) = %q\n",
+		entry, script, entry, tag, entry, newName)
 }
 
 // embedAllScripts replaces all "provision" and "probes" file references with the actual script.

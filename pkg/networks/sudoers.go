@@ -22,7 +22,7 @@ func Sudoers() (string, error) {
 	}
 
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("%%%s ALL=(root:wheel) NOPASSWD:NOSETENV: %s\n", cfg.Group, cfg.MkdirCmd()))
+	fmt.Fprintf(&sb, "%%%s ALL=(root:wheel) NOPASSWD:NOSETENV: %s\n", cfg.Group, cfg.MkdirCmd())
 
 	// names must be in stable order to be able to check if sudoers file needs updating
 	names := make([]string, 0, len(cfg.Networks))
@@ -36,7 +36,7 @@ func Sudoers() (string, error) {
 
 	for _, name := range names {
 		sb.WriteRune('\n')
-		sb.WriteString(fmt.Sprintf("# Manage %q network daemons\n", name))
+		fmt.Fprintf(&sb, "# Manage %q network daemons\n", name)
 		for _, daemon := range []string{SocketVMNet} {
 			if ok, err := cfg.IsDaemonInstalled(daemon); err != nil {
 				return "", err
@@ -48,10 +48,9 @@ func Sudoers() (string, error) {
 				return "", err
 			}
 			sb.WriteRune('\n')
-			sb.WriteString(fmt.Sprintf("%%%s ALL=(%s:%s) NOPASSWD:NOSETENV: \\\n",
-				cfg.Group, user.User, user.Group))
-			sb.WriteString(fmt.Sprintf("    %s, \\\n", cfg.StartCmd(name, daemon)))
-			sb.WriteString(fmt.Sprintf("    %s\n", cfg.StopCmd(name, daemon)))
+			fmt.Fprintf(&sb, "%%%s ALL=(%s:%s) NOPASSWD:NOSETENV: \\\n", cfg.Group, user.User, user.Group)
+			fmt.Fprintf(&sb, "    %s, \\\n", cfg.StartCmd(name, daemon))
+			fmt.Fprintf(&sb, "    %s\n", cfg.StopCmd(name, daemon))
 		}
 	}
 	return sb.String(), nil
