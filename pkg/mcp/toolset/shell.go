@@ -21,7 +21,7 @@ func (ts *ToolSet) RunShellCommand(ctx context.Context,
 	if ts.inst == nil {
 		return nil, nil, errors.New("instance not registered")
 	}
-	guestPath, err := ts.TranslateHostPath(args.Directory)
+	guestPath, warnings, err := ts.TranslateHostPath(args.Directory)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -36,6 +36,7 @@ func (ts *ToolSet) RunShellCommand(ctx context.Context,
 		Stdout: stdout.String(),
 		Stderr: stderr.String(),
 	}
+
 	if cmdErr == nil {
 		res.ExitCode = ptr.Of(0)
 	} else {
@@ -44,7 +45,11 @@ func (ts *ToolSet) RunShellCommand(ctx context.Context,
 			res.ExitCode = ptr.Of(st.ExitCode())
 		}
 	}
-	return &mcp.CallToolResult{
+	callToolRes := &mcp.CallToolResult{
 		StructuredContent: res,
-	}, res, nil
+	}
+	if warnings != "" {
+		callToolRes.Meta[MetaWarnings] = warnings
+	}
+	return callToolRes, res, nil
 }
