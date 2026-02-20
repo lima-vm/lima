@@ -126,6 +126,7 @@ func newApp() *cobra.Command {
 	// TODO: "survey" does not support using cygwin terminal on windows yet
 	rootCmd.PersistentFlags().Bool("tty", isatty.IsTerminal(os.Stdout.Fd()), "Enable TUI interactions such as opening an editor. Defaults to true when stdout is a terminal. Set to false for automation.")
 	rootCmd.PersistentFlags().BoolP("yes", "y", false, "Alias of --tty=false")
+	rootCmd.MarkFlagsMutuallyExclusive("tty", "yes")
 	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, _ []string) error {
 		if err := processGlobalFlags(rootCmd); err != nil {
 			return err
@@ -149,10 +150,6 @@ func newApp() *cobra.Command {
 		}
 		if nfs {
 			return errors.New("must not run on NFS dir")
-		}
-
-		if cmd.Flags().Changed("yes") && cmd.Flags().Changed("tty") {
-			return errors.New("cannot use both --tty and --yes flags at the same time")
 		}
 
 		if cmd.Flags().Changed("yes") {
