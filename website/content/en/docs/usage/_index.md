@@ -26,7 +26,7 @@ For automation,  `--tty=false` flag can be used for disabling the interactive us
 ### Customization
 To create an instance "default" from a template "docker":
 ```bash
-limactl create --name=default template://docker
+limactl create --name=default template:docker
 limactl start default
 ```
 

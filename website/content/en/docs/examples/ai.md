@@ -152,7 +152,7 @@ The `--sync` flag for [`limactl shell`](../reference/limactl_shell) enables bidi
 1. Create an isolated instance for AI agents which must be started without host mounts for `--sync` to work:
 
 ```bash
-limactl start --mount-none template://default
+limactl start --mount-none template:default
 ```
 
 2. Navigate to your project

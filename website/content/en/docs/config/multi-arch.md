@@ -42,7 +42,7 @@ arch: "x86_64"
 plain: true
 
 base:
-- template://_images/ubuntu
+- template:_images/ubuntu
 ```
 {{% /tab %}}
 {{< /tabpane >}}

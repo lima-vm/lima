@@ -1,4 +1,6 @@
-Run `limactl start template://fedora` to create a Lima instance named "fedora".
+Run `limactl start template:fedora` to create a Lima instance named "fedora".
+
+Note: In Lima 1.x template URLs included leading slashes, e.g. `template://fedora`.
 
 To open a shell, run `limactl shell fedora bash` or `LIMA_INSTANCE=fedora lima bash`.
 
@@ -80,12 +82,12 @@ Lost+found:
 - ~`centos-stream-8`~: Remove in Lima v0.23.0, as CentOS Stream 8 reached [EOL](https://blog.centos.org/2023/04/end-dates-are-coming-for-centos-stream-8-and-centos-linux-7/).
 - ~`deprecated/centos-7`~: Remove in Lima v0.23.0, as CentOS 7 reached [EOL](https://blog.centos.org/2023/04/end-dates-are-coming-for-centos-stream-8-and-centos-linux-7/).
 - ~`experimental/vz`~: Merged into the default template in Lima v1.0. See also <https://lima-vm.io/docs/config/vmtype/>.
-- ~`experimental/armv7l`~: Merged into the `default` template in Lima v1.0. Use `limactl create --arch=armv7l template://default`.
-- ~`experimental/riscv64`~: Merged into the `default` template in Lima v1.0. Use `limactl create --arch=riscv64 template://default`.
-- ~`vmnet`~: Removed in Lima v1.0. Use `limactl create --network=lima:shared template://default` instead. See also <https://lima-vm.io/docs/config/network/>.
-- ~`experimental/net-user-v2`~: Removed in Lima v1.0. Use `limactl create --network=lima:user-v2 template://default` instead. See also <https://lima-vm.io/docs/config/network/>.
-- ~`experimental/9p`~: Removed in Lima v1.0. Use `limactl create --vm-type=qemu --mount-type=9p template://default` instead. See also <https://lima-vm.io/docs/config/mount/>.
-- ~`experimental/virtiofs-linux`~: Removed in Lima v1.0. Use `limactl create --mount-type=virtiofs-linux template://default` instead. See also <https://lima-vm.io/docs/config/mount/>.
+- ~`experimental/armv7l`~: Merged into the `default` template in Lima v1.0. Use `limactl create --arch=armv7l template:default`.
+- ~`experimental/riscv64`~: Merged into the `default` template in Lima v1.0. Use `limactl create --arch=riscv64 template:default`.
+- ~`vmnet`~: Removed in Lima v1.0. Use `limactl create --network=lima:shared template:default` instead. See also <https://lima-vm.io/docs/config/network/>.
+- ~`experimental/net-user-v2`~: Removed in Lima v1.0. Use `limactl create --network=lima:user-v2 template:default` instead. See also <https://lima-vm.io/docs/config/network/>.
+- ~`experimental/9p`~: Removed in Lima v1.0. Use `limactl create --vm-type=qemu --mount-type=9p template:default` instead. See also <https://lima-vm.io/docs/config/mount/>.
+- ~`experimental/virtiofs-linux`~: Removed in Lima v1.0. Use `limactl create --mount-type=virtiofs-linux template:default` instead. See also <https://lima-vm.io/docs/config/mount/>.
 
 ## Tier
 

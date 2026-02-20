@@ -43,14 +43,14 @@ jobs:
     - name: "Start an instance of Fedora"
       run: |
         set -eux
-        limactl start --name=default --cpus=1 --memory=1 --network=lima:user-v2 template://fedora
+        limactl start --name=default --cpus=1 --memory=1 --network=lima:user-v2 template:fedora
         lima sudo dnf install -y httpd
         lima sudo systemctl enable --now httpd
 
     - name: "Start another instance of Fedora"
       run: |
         set -eux
-        limactl start --name=another --cpus=1 --memory=1 --network=lima:user-v2 template://fedora
+        limactl start --name=another --cpus=1 --memory=1 --network=lima:user-v2 template:fedora
         limactl shell another curl http://lima-default.internal
 ```
 
@@ -63,7 +63,7 @@ The `--plain` mode is useful when you want the VM instance to be as close as pos
 ```yaml
     - name: "Start Fedora"
       # --plain is set to disable file sharing, port forwarding, built-in containerd, etc.
-      run: limactl start --plain --name=default --cpus=1 --memory=1 --network=lima:user-v2 template://fedora
+      run: limactl start --plain --name=default --cpus=1 --memory=1 --network=lima:user-v2 template:fedora
 
     - name: "Initialize Fedora"
       # plain old rsync and ssh are used for the initialization of the guest,
