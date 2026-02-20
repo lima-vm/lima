@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -16,6 +17,8 @@ import (
 	"sync"
 
 	"github.com/sirupsen/logrus"
+
+	"github.com/lima-vm/lima/v2/pkg/plist"
 )
 
 var MachineID = sync.OnceValue(func() string {
@@ -56,31 +59,28 @@ func machineID(ctx context.Context) (string, error) {
 }
 
 func parseIOPlatformUUIDFromIOPlatformExpertDevice(r io.Reader) (string, error) {
-	d := xml.NewDecoder(r)
-	var (
-		elem            string
-		elemKeyCharData string
-	)
-	for {
-		tok, err := d.Token()
-		if err != nil {
-			return "", err
-		}
-		switch v := tok.(type) {
-		case xml.StartElement:
-			elem = v.Name.Local
-		case xml.EndElement:
-			elem = ""
-			if v.Name.Local != "key" {
-				elemKeyCharData = ""
-			}
-		case xml.CharData:
-			if elem == "string" && elemKeyCharData == "IOPlatformUUID" {
-				return string(v), nil
-			}
-			if elem == "key" {
-				elemKeyCharData = string(v)
-			}
-		}
+	var p plist.Plist
+	dec := xml.NewDecoder(r)
+	if err := dec.Decode(&p); err != nil {
+		return "", err
 	}
+	if p.Value.Dict == nil {
+		return "", errors.New("invalid plist: top-level value is not a dict")
+	}
+	ioRegistryEntryChildren, ok := p.Value.Dict["IORegistryEntryChildren"]
+	if !ok || ioRegistryEntryChildren.Array == nil || len(ioRegistryEntryChildren.Array) == 0 {
+		return "", errors.New("invalid plist: IORegistryEntryChildren not found or empty")
+	}
+	for _, child := range ioRegistryEntryChildren.Array {
+		if child.Dict == nil {
+			continue
+		}
+		ioPlatformUUID, ok := child.Dict["IOPlatformUUID"]
+		if !ok || ioPlatformUUID.String == nil {
+			continue
+		}
+		return *ioPlatformUUID.String, nil
+	}
+
+	return "", errors.New("invalid plist: IOPlatformUUID not found in any child of IORegistryEntryChildren")
 }
