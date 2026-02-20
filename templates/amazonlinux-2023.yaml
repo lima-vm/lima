@@ -1,0 +1,15 @@
+minimumLimaVersion: 2.0.0
+
+base:
+- template:_images/amazonlinux-2023
+- template:_default/mounts
+
+provision:
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    # Update to the latest release on the first boot
+    if [ ! -f /etc/lima-al2023-updated ]; then
+      dnf upgrade -y --releasever=latest
+    fi
