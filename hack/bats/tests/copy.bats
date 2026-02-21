@@ -3,34 +3,14 @@
 
 load "../helpers/load"
 
-NAME=bats
-
-# TODO The reusable Lima instance setup is copied from preserve-env.bats
-# TODO and should be factored out into helper functions.
-local_setup_file() {
-    if [[ -n "${LIMA_BATS_REUSE_INSTANCE:-}" ]]; then
-        run limactl list --format '{{.Status}}' "$NAME"
-        [[ $status == 0 ]] && [[ $output == "Running" ]] && return
-    fi
-    limactl unprotect "$NAME" || :
-    limactl delete --force "$NAME" || :
-    # Make sure that the host agent doesn't inherit file handles 3 or 4.
-    # Otherwise bats will not finish until the host agent exits.
-    limactl start --yes --name "$NAME" template:default 3>&- 4>&-
-}
-
-local_teardown_file() {
-    if [[ -z "${LIMA_BATS_REUSE_INSTANCE:-}" ]]; then
-        limactl delete --force "$NAME"
-    fi
-}
+INSTANCE=bats
 
 setup() {
-    limactl shell "$NAME" -- mkdir -p /tmp/test_limactl_copy
+    limactl shell "$INSTANCE" -- mkdir -p /tmp/test_limactl_copy
 }
 
 teardown() {
-    limactl shell "$NAME" -- rm -rf /tmp/test_limactl_copy
+    limactl shell "$INSTANCE" -- rm -rf /tmp/test_limactl_copy
 }
 
 test_copy_dir_from_host_to_instance() {
@@ -38,41 +18,41 @@ test_copy_dir_from_host_to_instance() {
     mkdir -p "$BATS_TEST_TMPDIR/foo/bar"
 
     # SRC DST
-    run limactl copy --backend="$backend" -r "$BATS_TEST_TMPDIR/foo" "$NAME":/tmp/test_limactl_copy/foo
+    run limactl copy --backend="$backend" -r "$BATS_TEST_TMPDIR/foo" "$INSTANCE":/tmp/test_limactl_copy/foo
     [[ $status == 0 ]]
-    run limactl shell "$NAME" -- test -d /tmp/test_limactl_copy/foo/bar
+    run limactl shell "$INSTANCE" -- test -d /tmp/test_limactl_copy/foo/bar
     [[ $status == 0 ]]
-    run limactl shell "$NAME" -- rm -rf /tmp/test_limactl_copy/foo
+    run limactl shell "$INSTANCE" -- rm -rf /tmp/test_limactl_copy/foo
     [[ $status == 0 ]]
 
     # SRC/ DST
-    run limactl shell "$NAME" -- mkdir -p /tmp/test_limactl_copy/foo_src_with_slash/
+    run limactl shell "$INSTANCE" -- mkdir -p /tmp/test_limactl_copy/foo_src_with_slash/
     [[ $status == 0 ]]
-    run limactl copy --backend="$backend" -r "$BATS_TEST_TMPDIR/foo/" "$NAME":/tmp/test_limactl_copy/foo_src_with_slash
+    run limactl copy --backend="$backend" -r "$BATS_TEST_TMPDIR/foo/" "$INSTANCE":/tmp/test_limactl_copy/foo_src_with_slash
     [[ $status == 0 ]]
-    run limactl shell "$NAME" -- test -d /tmp/test_limactl_copy/foo_src_with_slash/foo
+    run limactl shell "$INSTANCE" -- test -d /tmp/test_limactl_copy/foo_src_with_slash/foo
     [[ $status == 0 ]]
-    run limactl shell "$NAME" -- rm -rf /tmp/test_limactl_copy/foo_src_with_slash
+    run limactl shell "$INSTANCE" -- rm -rf /tmp/test_limactl_copy/foo_src_with_slash
     [[ $status == 0 ]]
 
     # SRC DST/
-    run limactl shell "$NAME" -- mkdir -p /tmp/test_limactl_copy/foo_dst_with_slash/
+    run limactl shell "$INSTANCE" -- mkdir -p /tmp/test_limactl_copy/foo_dst_with_slash/
     [[ $status == 0 ]]
-    run limactl copy --backend="$backend" -r "$BATS_TEST_TMPDIR/foo" "$NAME":/tmp/test_limactl_copy/foo_dst_with_slash/
+    run limactl copy --backend="$backend" -r "$BATS_TEST_TMPDIR/foo" "$INSTANCE":/tmp/test_limactl_copy/foo_dst_with_slash/
     [[ $status == 0 ]]
-    run limactl shell "$NAME" -- test -d /tmp/test_limactl_copy/foo_dst_with_slash/foo
+    run limactl shell "$INSTANCE" -- test -d /tmp/test_limactl_copy/foo_dst_with_slash/foo
     [[ $status == 0 ]]
-    run limactl shell "$NAME" -- rm -rf /tmp/test_limactl_copy/foo_dst_with_slash
+    run limactl shell "$INSTANCE" -- rm -rf /tmp/test_limactl_copy/foo_dst_with_slash
     [[ $status == 0 ]]
 
     # SRC/ DST/
-    run limactl shell "$NAME" -- mkdir -p /tmp/test_limactl_copy/foo_src_dst_with_slash/
+    run limactl shell "$INSTANCE" -- mkdir -p /tmp/test_limactl_copy/foo_src_dst_with_slash/
     [[ $status == 0 ]]
-    run limactl copy --backend="$backend" -r "$BATS_TEST_TMPDIR/foo/" "$NAME":/tmp/test_limactl_copy/foo_src_dst_with_slash/
+    run limactl copy --backend="$backend" -r "$BATS_TEST_TMPDIR/foo/" "$INSTANCE":/tmp/test_limactl_copy/foo_src_dst_with_slash/
     [[ $status == 0 ]]
-    run limactl shell "$NAME" -- test -d /tmp/test_limactl_copy/foo_src_dst_with_slash/foo
+    run limactl shell "$INSTANCE" -- test -d /tmp/test_limactl_copy/foo_src_dst_with_slash/foo
     [[ $status == 0 ]]
-    run limactl shell "$NAME" -- rm -rf /tmp/test_limactl_copy/foo_src_dst_with_slash
+    run limactl shell "$INSTANCE" -- rm -rf /tmp/test_limactl_copy/foo_src_dst_with_slash
     [[ $status == 0 ]]
 }
 
@@ -88,26 +68,26 @@ test_copy_dir_from_host_to_instance() {
 test_copy_dir_from_instance_to_host() {
     backend="$1"
 
-    run limactl shell "$NAME" -- mkdir -p /tmp/test_limactl_copy/foo/bar
+    run limactl shell "$INSTANCE" -- mkdir -p /tmp/test_limactl_copy/foo/bar
     [[ $status == 0 ]]
 
     # SRC DST
-    run limactl copy --backend="$backend" -r "$NAME":/tmp/test_limactl_copy/foo "$BATS_TEST_TMPDIR/foo"
+    run limactl copy --backend="$backend" -r "$INSTANCE":/tmp/test_limactl_copy/foo "$BATS_TEST_TMPDIR/foo"
     [[ $status == 0 ]]
     [[ -d "$BATS_TEST_TMPDIR/foo/bar" ]]
 
     # SRC/ DST
-    run limactl copy --backend="$backend" -r "$NAME":/tmp/test_limactl_copy/foo/ "$BATS_TEST_TMPDIR/foo_src_with_slash"
+    run limactl copy --backend="$backend" -r "$INSTANCE":/tmp/test_limactl_copy/foo/ "$BATS_TEST_TMPDIR/foo_src_with_slash"
     [[ $status == 0 ]]
     [[ -d "$BATS_TEST_TMPDIR/foo_src_with_slash/bar" ]]
 
     # SRC DST/
-    run limactl copy --backend="$backend" -r "$NAME":/tmp/test_limactl_copy/foo "$BATS_TEST_TMPDIR/foo_dst_with_slash/"
+    run limactl copy --backend="$backend" -r "$INSTANCE":/tmp/test_limactl_copy/foo "$BATS_TEST_TMPDIR/foo_dst_with_slash/"
     [[ $status == 0 ]]
     [[ -d "$BATS_TEST_TMPDIR/foo_dst_with_slash/bar" ]]
 
     # SRC/ DST/
-    run limactl copy --backend="$backend" -r "$NAME":/tmp/test_limactl_copy/foo/ "$BATS_TEST_TMPDIR/foo_src_dst_with_slash/"
+    run limactl copy --backend="$backend" -r "$INSTANCE":/tmp/test_limactl_copy/foo/ "$BATS_TEST_TMPDIR/foo_src_dst_with_slash/"
     [[ $status == 0 ]]
     [[ -d "$BATS_TEST_TMPDIR/foo_src_dst_with_slash/bar" ]]
 }
@@ -124,14 +104,14 @@ test_copy_file_from_host_to_instance() {
     backend="$1"
     echo "hello" > "$BATS_TEST_TMPDIR/hello.txt"
 
-    run limactl copy --backend="$backend" "$BATS_TEST_TMPDIR/hello.txt" "$NAME":/tmp/test_limactl_copy/hello.txt
+    run limactl copy --backend="$backend" "$BATS_TEST_TMPDIR/hello.txt" "$INSTANCE":/tmp/test_limactl_copy/hello.txt
     [[ $status == 0 ]]
 
-    run limactl shell "$NAME" -- cat /tmp/test_limactl_copy/hello.txt
+    run limactl shell "$INSTANCE" -- cat /tmp/test_limactl_copy/hello.txt
     [[ $status == 0 ]]
     [[ $output == "hello" ]]
 
-    run limactl shell "$NAME" -- rm -f /tmp/test_limactl_copy/hello.txt
+    run limactl shell "$INSTANCE" -- rm -f /tmp/test_limactl_copy/hello.txt
     [[ $status == 0 ]]
 }
 
@@ -145,17 +125,17 @@ test_copy_file_from_host_to_instance() {
 
 test_copy_file_from_instance_to_host() {
     backend="$1"
-    run limactl shell "$NAME" -- bash -c 'echo "hello" > /tmp/test_limactl_copy/hello.txt'
+    run limactl shell "$INSTANCE" -- bash -c 'echo "hello" > /tmp/test_limactl_copy/hello.txt'
     [[ $status == 0 ]]
 
-    run limactl copy --backend="$backend" "$NAME":/tmp/test_limactl_copy/hello.txt "$BATS_TEST_TMPDIR/hello.txt"
+    run limactl copy --backend="$backend" "$INSTANCE":/tmp/test_limactl_copy/hello.txt "$BATS_TEST_TMPDIR/hello.txt"
     [[ $status == 0 ]]
 
     run cat "$BATS_TEST_TMPDIR/hello.txt"
     [[ $status == 0 ]]
     [[ $output == "hello" ]]
 
-    run limactl shell "$NAME" -- rm -f /tmp/hello.txt
+    run limactl shell "$INSTANCE" -- rm -f /tmp/hello.txt
     [[ $status == 0 ]]
 }
 

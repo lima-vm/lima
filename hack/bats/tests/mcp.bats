@@ -3,7 +3,7 @@
 
 load "../helpers/load"
 
-NAME=bats
+INSTANCE=bats
 
 # TODO Move helper functions to shared location
 run_yq() {
@@ -14,29 +14,9 @@ json_edit() {
     limactl yq --input-format json --output-format json --indent 0 "$@"
 }
 
-# TODO The reusable Lima instance setup is copied from preserve-env.bats
-# TODO and should be factored out into helper functions.
-local_setup_file() {
-    if [[ -n "${LIMA_BATS_REUSE_INSTANCE:-}" ]]; then
-        run limactl list --format '{{.Status}}' "$NAME"
-        [[ $status == 0 ]] && [[ $output == "Running" ]] && return
-    fi
-    limactl unprotect "$NAME" || :
-    limactl delete --force "$NAME" || :
-    # Make sure that the host agent doesn't inherit file handles 3 or 4.
-    # Otherwise bats will not finish until the host agent exits.
-    limactl start --yes --name "$NAME" template:default 3>&- 4>&-
-}
-
-local_teardown_file() {
-    if [[ -z "${LIMA_BATS_REUSE_INSTANCE:-}" ]]; then
-        limactl delete --force "$NAME"
-    fi
-}
-
 local_setup() {
     cd "$PATH_BATS_ROOT"
-    coproc MCP { limactl mcp serve "$NAME"; }
+    coproc MCP { limactl mcp serve "$INSTANCE"; }
 
     ID=0
     mcp initialize '{"protocolVersion":"2025-06-18"}'
@@ -142,7 +122,7 @@ tools_call() {
 }
 
 @test 'run shell command returns command output' {
-    run -0 limactl shell "$NAME" cat /etc/os-release
+    run -0 limactl shell "$INSTANCE" cat /etc/os-release
     assert_output
     expected=$output
 
@@ -204,7 +184,7 @@ tools_call() {
 }
 
 @test 'read_file reads a file' {
-    run -0 limactl shell "$NAME" cat /etc/os-release
+    run -0 limactl shell "$INSTANCE" cat /etc/os-release
     assert_output
     expected=$output
 
@@ -242,13 +222,13 @@ tools_call() {
 }
 
 @test 'write_file creates new file and overwrites existing file' {
-    limactl shell "$NAME" rm -f /tmp/mcp.test
+    limactl shell "$INSTANCE" rm -f /tmp/mcp.test
     tools_call write_file '{"path":"/tmp/mcp.test","content":"foo"}'
 
     run_yq '.content[0].text' <<<"$output"
     assert_output "{}"
 
-    run -0 limactl shell "$NAME" cat /tmp/mcp.test
+    run -0 limactl shell "$INSTANCE" cat /tmp/mcp.test
     assert_output "foo"
 
     tools_call write_file '{"path":"/tmp/mcp.test","content":"bar"}'
@@ -256,27 +236,27 @@ tools_call() {
     run_yq '.content[0].text' <<<"$output"
     assert_output "{}"
 
-    run -0 limactl shell "$NAME" cat /tmp/mcp.test
+    run -0 limactl shell "$INSTANCE" cat /tmp/mcp.test
     assert_output "bar"
 }
 
 @test 'write_file creates the directory if it does not yet exist' {
     # Make sure /tmp/tmp is deletable even if we run the tests multiple times against the same Lima instance
-    limactl shell "$NAME" chmod -R 777 /tmp/tmp || true
-    limactl shell "$NAME" rm -rf /tmp/tmp
+    limactl shell "$INSTANCE" chmod -R 777 /tmp/tmp || true
+    limactl shell "$INSTANCE" rm -rf /tmp/tmp
     tools_call write_file '{"path":"/tmp/tmp/tmp","content":"tmp"}'
     json=$output
 
     run_yq '.isError' <<<"$json"
     assert_output "null"
 
-    run -0 limactl shell "$NAME" cat /tmp/tmp/tmp
+    run -0 limactl shell "$INSTANCE" cat /tmp/tmp/tmp
     assert_output "tmp"
 }
 
 @test 'write_file returns an error when the directory is not writable' {
-    limactl shell "$NAME" mkdir -p /tmp/tmp
-    limactl shell "$NAME" chmod 444 /tmp/tmp
+    limactl shell "$INSTANCE" mkdir -p /tmp/tmp
+    limactl shell "$INSTANCE" chmod 444 /tmp/tmp
     tools_call write_file '{"path":"/tmp/tmp/tmp","content":"tmp"}'
     json=$output
 
