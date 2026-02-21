@@ -60,10 +60,16 @@ setup_file() {
         TEST_FILENAME=${TEST_FILENAME%.bats}
         echo "# ===== ${TEST_FILENAME} =====" >&3
     fi
+    if [[ -n "${INSTANCE:-}" ]]; then
+        ensure_instance "$INSTANCE"
+    fi
     call_local_function
 }
 teardown_file() {
     call_local_function
+    if [[ -n "${INSTANCE:-}" ]]; then
+        delete_instance "$INSTANCE"
+    fi
 }
 setup() {
     call_local_function
