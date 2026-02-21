@@ -23,6 +23,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/lima-vm/lima/v2/pkg/autostart"
+	"github.com/lima-vm/lima/v2/pkg/copytool"
 	"github.com/lima-vm/lima/v2/pkg/envutil"
 	"github.com/lima-vm/lima/v2/pkg/instance"
 	"github.com/lima-vm/lima/v2/pkg/ioutilx"
@@ -198,7 +199,7 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		logrus.WithError(err).Warn("failed to get the current directory")
 	}
 	if syncHostWorkdir {
-		if _, err := exec.LookPath("rsync"); err != nil {
+		if _, err := exec.LookPath(string(copytool.BackendRsync)); err != nil {
 			return fmt.Errorf("rsync is required for `--sync` but not found: %w", err)
 		}
 
@@ -318,7 +319,10 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	sshArgs := append([]string{}, sshExe.Args...)
 	sshArgs = append(sshArgs, sshutil.SSHArgsFromOpts(sshOpts)...)
 
-	var sshExecForRsync *exec.Cmd
+	var (
+		sshExecForRsync *exec.Cmd
+		rsync           copytool.CopyTool
+	)
 	if syncHostWorkdir {
 		logrus.Infof("Syncing host current directory(%s) to guest instance...", hostCurrentDir)
 		sshExecForRsync = exec.CommandContext(ctx, sshExe.Exe, sshArgs...)
@@ -339,8 +343,24 @@ func shellAction(cmd *cobra.Command, args []string) error {
 			destRsyncDir = shellescape.Quote(destRsyncDir)
 		}
 
-		if err := rsyncDirectory(ctx, cmd, sshExecForRsync, hostCurrentDir+"/", fmt.Sprintf("%s:%s", *inst.Config.User.Name+"@"+inst.SSHAddress, destRsyncDir)); err != nil {
-			return fmt.Errorf("failed to sync host working directory to guest instance: %w", err)
+		paths := []string{
+			hostCurrentDir,
+			fmt.Sprintf("%s:%s", inst.Name, destRsyncDir),
+		}
+		rsync, err = copytool.New(ctx, string(copytool.BackendRsync), paths, &copytool.Options{
+			Recursive: true,
+			Verbose:   false,
+			AdditionalArgs: []string{
+				"--delete",
+			},
+		})
+		if err != nil {
+			return err
+		}
+		logrus.Debugf("using copy tool %q", rsync.Name())
+
+		if err := rsyncDirectory(ctx, cmd, rsync, paths); err != nil {
+			return fmt.Errorf("failed to rsync to the guest %w", err)
 		}
 		logrus.Infof("Successfully synced host current directory to guest(%s) instance.", destRsyncDir)
 	}
@@ -386,13 +406,13 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		return askUserForRsyncBack(ctx, cmd, inst, sshExecForRsync, hostCurrentDir, destRsyncDir, tty)
+		return askUserForRsyncBack(ctx, cmd, inst, sshExecForRsync, hostCurrentDir, destRsyncDir, rsync, tty)
 	}
 	return nil
 }
 
-func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype.Instance, sshCmd *exec.Cmd, hostCurrentDir, destRsyncDir string, tty bool) error {
-	remoteSource := fmt.Sprintf("%s:%s", *inst.Config.User.Name+"@"+inst.SSHAddress, destRsyncDir)
+func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype.Instance, sshCmd *exec.Cmd, hostCurrentDir, destRsyncDir string, rsync copytool.CopyTool, tty bool) error {
+	remoteSource := fmt.Sprintf("%s:%s", inst.Name, destRsyncDir)
 	clean := filepath.Clean(hostCurrentDir)
 	parts := strings.Split(clean, string(filepath.Separator))
 	if len(parts) < 2 {
@@ -401,7 +421,12 @@ func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype
 	dirForCleanup := shellescape.Quote(fmt.Sprintf("%s/", *inst.Config.User.Home) + parts[1])
 
 	rsyncBackAndCleanup := func() error {
-		if err := rsyncDirectory(ctx, cmd, sshCmd, remoteSource, filepath.Dir(hostCurrentDir)); err != nil {
+		paths := []string{
+			remoteSource,
+			hostCurrentDir,
+		}
+
+		if err := rsyncDirectory(ctx, cmd, rsync, paths); err != nil {
 			return fmt.Errorf("failed to sync back the changes from guest instance to host: %w", err)
 		}
 
@@ -418,7 +443,7 @@ func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype
 		return rsyncBackAndCleanup()
 	}
 
-	stats, err := getRsyncStats(ctx, sshCmd, remoteSource, filepath.Dir(hostCurrentDir))
+	stats, err := getRsyncStats(ctx, remoteSource, filepath.Dir(hostCurrentDir))
 	if err != nil {
 		logrus.WithError(err).Warn("failed to get rsync stats")
 	}
@@ -436,15 +461,21 @@ func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype
 		"View the changed contents",
 	}
 
-	hostTmpDest, err := os.MkdirTemp("", "lima-guest-synced-*")
+	baseDir, err := os.MkdirTemp("", "lima-guest-synced-*")
 	if err != nil {
 		return err
 	}
 	defer func() {
-		if err := os.RemoveAll(hostTmpDest); err != nil {
-			logrus.WithError(err).Warnf("Failed to clean up temporary directory %s", hostTmpDest)
+		if err := os.RemoveAll(baseDir); err != nil {
+			logrus.WithError(err).Warnf("Failed to clean up temporary directory %s", baseDir)
 		}
 	}()
+	hostTmpDest := filepath.Join(baseDir, filepath.Base(hostCurrentDir))
+	err = os.MkdirAll(hostTmpDest, 0o755)
+	if err != nil {
+		return err
+	}
+
 	rsyncToTempDir := false
 
 	for {
@@ -465,12 +496,17 @@ func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype
 			return nil
 		case 2: // View the changed contents
 			if !rsyncToTempDir {
-				if err := rsyncDirectory(ctx, cmd, sshCmd, remoteSource, hostTmpDest); err != nil {
+				paths := []string{
+					remoteSource,
+					hostTmpDest,
+				}
+
+				if err := rsyncDirectory(ctx, cmd, rsync, paths); err != nil {
 					return fmt.Errorf("failed to sync back the changes from guest instance to host temporary directory: %w", err)
 				}
 				rsyncToTempDir = true
 			}
-			diffCmd := exec.CommandContext(ctx, "diff", "-ruN", "--color=always", hostCurrentDir, filepath.Join(hostTmpDest, filepath.Base(hostCurrentDir)))
+			diffCmd := exec.CommandContext(ctx, "diff", "-ruN", "--color=always", hostCurrentDir, hostTmpDest)
 			pager := os.Getenv("PAGER")
 			pager = strings.TrimSpace(pager)
 			if pager == "" {
@@ -531,7 +567,7 @@ func hostCurrentDirectory(ctx context.Context, inst *limatype.Instance) (string,
 }
 
 func rsyncVersion(ctx context.Context) (*semver.Version, error) {
-	out, err := exec.CommandContext(ctx, "rsync", "--version").Output()
+	out, err := exec.CommandContext(ctx, string(copytool.BackendRsync), "--version").Output()
 	if err != nil {
 		return nil, err
 	}
@@ -545,25 +581,13 @@ func rsyncVersion(ctx context.Context) (*semver.Version, error) {
 	return semver.NewVersion(string(matches[1]))
 }
 
-// Syncs a directory from host to guest and vice-versa. It creates a directory
-// named "synced-workdir" in the guest's home directory and copies the contents
-// of the host's current working directory into it. SSHArgs should not contain
-// the port and address, rsync handles it separately.
-func rsyncDirectory(ctx context.Context, cmd *cobra.Command, sshCmd *exec.Cmd, source, destination string) error {
-	sshCmdParts := make([]string, len(sshCmd.Args))
-	for i, arg := range sshCmd.Args {
-		sshCmdParts[i] = shellescape.Quote(arg)
+// Syncs a directory from host to guest and vice-versa. It creates a directory in the guest's home directory and copies the contents of the host's
+// current working directory into it. The guest directory paths should be prefixed with `<InstanceName>:` followed by the path.
+func rsyncDirectory(ctx context.Context, cmd *cobra.Command, rsync copytool.CopyTool, paths []string) error {
+	rsyncCmd, err := rsync.Command(ctx, paths, nil)
+	if err != nil {
+		return err
 	}
-	sshCmdStr := strings.Join(sshCmdParts, " ")
-
-	rsyncArgs := []string{
-		"-ah",
-		"--delete",
-		"-e", sshCmdStr,
-		source,
-		destination,
-	}
-	rsyncCmd := exec.CommandContext(ctx, "rsync", rsyncArgs...)
 	rsyncCmd.Stdout = cmd.OutOrStdout()
 	rsyncCmd.Stderr = cmd.OutOrStderr()
 	logrus.Debugf("executing rsync: %+v", rsyncCmd.Args)
@@ -605,24 +629,27 @@ func (s *rsyncStats) String() string {
 	return fmt.Sprintf("added: %d, deleted: %d, modified: %d", s.Added, s.Deleted, s.Modified)
 }
 
-func getRsyncStats(ctx context.Context, sshCmd *exec.Cmd, source, destination string) (*rsyncStats, error) {
-	sshCmdParts := make([]string, len(sshCmd.Args))
-	for i, arg := range sshCmd.Args {
-		sshCmdParts[i] = shellescape.Quote(arg)
+func getRsyncStats(ctx context.Context, source, destination string) (*rsyncStats, error) {
+	paths := []string{source, destination}
+	rsync, err := copytool.New(ctx, string(copytool.BackendRsync), paths, &copytool.Options{
+		Verbose: true,
+		AdditionalArgs: []string{
+			"--dry-run",
+			"--itemize-changes",
+			"-ah",
+			"--delete",
+		},
+	})
+	if err != nil {
+		return nil, err
 	}
-	sshCmdStr := strings.Join(sshCmdParts, " ")
 
-	rsyncArgs := []string{
-		"--dry-run",
-		"--itemize-changes",
-		"-ah",
-		"--delete",
-		"-e",
-		sshCmdStr,
-		source,
-		destination,
+	rsyncCmd, err := rsync.Command(ctx, paths, nil)
+	if err != nil {
+		return nil, err
 	}
-	rsyncCmd := exec.CommandContext(ctx, "rsync", rsyncArgs...)
+	logrus.Debugf("executing rsync for stats: %+v", rsyncCmd.Args)
+
 	out, err := rsyncCmd.Output()
 	if err != nil {
 		return nil, err
