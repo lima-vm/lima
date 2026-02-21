@@ -166,9 +166,8 @@ vmOpts:
     rosetta:
       binfmt: false
       enabled: true
-message: |
-  
-  Rosetta is enabled in this VM, so you can run x86_64 containers on Apple Silicon.
+message: |` + "\n  \n" + // goccy/go-yaml indents blank lines in block scalars
+		`  Rosetta is enabled in this VM, so you can run x86_64 containers on Apple Silicon.
 `
 	var y limatype.LimaYAML
 	err := Unmarshal([]byte(text), &y, "lima.yaml")

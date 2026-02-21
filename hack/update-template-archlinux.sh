@@ -30,10 +30,10 @@ Description:
     x86_64:
       listing: https://gitlab.archlinux.org/api/v4/projects/archlinux%2Farch-boxes/packages
       details: https://gitlab.archlinux.org/api/v4/projects/archlinux%2Farch-boxes/packages/:package_id/package_files
-    
+
     aarch64:
       https://github.com/mcginty/arch-boxes-arm/releases/
-      
+
   Using 'gh' CLI tool for fetching the latest release from GitHub.
 
 Examples:

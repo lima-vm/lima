@@ -43,8 +43,8 @@ Nix file: <https://github.com/NixOS/nixpkgs/blob/master/pkgs/by-name/li/lima/pac
 {{% /tab %}}
 
 {{% tab header="Binary" %}}
-Download the binary archive of Lima from <https://github.com/lima-vm/lima/releases>, 
-and extract it under `/usr/local` (or somewhere else). 
+Download the binary archive of Lima from <https://github.com/lima-vm/lima/releases>,
+and extract it under `/usr/local` (or somewhere else).
 
 ```bash
 VERSION=$(curl -fsSL https://api.github.com/repos/lima-vm/lima/releases/latest | jq -r .tag_name)

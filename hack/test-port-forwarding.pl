@@ -123,7 +123,7 @@ while (<DATA>) {
     /^(forward|ignore):\s+([0-9.:]+)\s+(\d+)(?:\s+→)?(?:\s+(?:([0-9.:]+)(?:\s+(\d+))|(\S+))?)?/;
     die "Cannot parse test '$_'" unless $1;
     my %test; @test{qw(mode guest_ip guest_port host_ip host_port host_socket)} = ($1, $2, $3, $4, $5, $6);
-     
+
     $test{host_ip} ||= "127.0.0.1";
     $test{host_port} ||= $test{guest_port};
     $test{host_socket} ||= "";
@@ -300,7 +300,7 @@ if (%failed_to_listen_tcp) {
     foreach (keys %failed_to_listen_tcp) {
         print "⚠️  $failed_to_listen_tcp{$_}\n";
     }
-    my @tcp_list = keys %failed_to_listen_tcp; 
+    my @tcp_list = keys %failed_to_listen_tcp;
     if ($Config{osname} eq "darwin") {
         my @lsof_args = map { "-iTCP\@$_" } @tcp_list;
         print `lsof -P @lsof_args`;

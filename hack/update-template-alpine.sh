@@ -30,7 +30,7 @@ Description:
     latest-stable: https://dl-cdn.alpinelinux.org/alpine/latest-stable/releases/cloud
     <major>.<minor>: https://dl-cdn.alpinelinux.org/alpine/v<major>.<minor>/releases/cloud
 
-  To parsing html, this script requires 'htmlq' or 'pup' command.      
+  To parsing html, this script requires 'htmlq' or 'pup' command.
   The downloaded files will be cached in the Lima cache directory.
 
 Examples:

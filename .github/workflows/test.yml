@@ -37,6 +37,8 @@ jobs:
         make install-protoc-tools
     - name: Verify generated files
       run: make generate check-generated
+    - name: Run editorconfig-checker
+      run: go tool -modfile=./hack/tools/go.mod editorconfig-checker
     - name: Run yamllint
       run: yamllint .
     - name: Install shellcheck

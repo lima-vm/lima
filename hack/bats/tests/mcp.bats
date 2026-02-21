@@ -306,7 +306,7 @@ tools_call() {
 }
 
 @test 'glob returns an empty list when the pattern does not match' {
-   
+
     tools_call glob '{"pattern":"nothing.to.see"}'
 
     run_yq '.structuredContent.matches[]' <<<"$output"
