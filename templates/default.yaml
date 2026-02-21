@@ -259,7 +259,7 @@ containerd:
 # # The file and directory creation will be performed as the specified owner.
 # # If the existing file is not writable by the specified owner, the operation will fail.
 # # `path` and `expression` are required.
-# # `owner` and `permissions` are optional. Defaults to "root:root" and 644.
+# # `owner` and `permissions` are optional. Defaults to "root:root" (on Linux) and 644.
 # - mode: yq
 #   path: "{{.Home}}/.config/docker/daemon.json"
 #   expression: ".features.containerd-snapshotter = {{.Param.containerdSnapshotter}}"

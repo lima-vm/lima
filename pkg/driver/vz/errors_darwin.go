@@ -7,8 +7,9 @@ package vz
 
 import "errors"
 
-//nolint:revive,staticcheck // false positives with proper nouns
+//nolint:revive,staticcheck,unused // false positives with proper nouns and GOARCH check
 var (
-	errRosettaUnsupported = errors.New("Rosetta is unsupported on non-ARM64 hosts")
-	errUnimplemented      = errors.New("unimplemented")
+	errRosettaUnsupported    = errors.New("Rosetta is unsupported on non-ARM64 hosts")
+	errMacOSGuestUnsupported = errors.New("macOS guest is unsupported on non-ARM64 hosts")
+	errUnimplemented         = errors.New("unimplemented")
 )

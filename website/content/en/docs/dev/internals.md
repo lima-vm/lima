@@ -45,6 +45,7 @@ Ansible:
 
 disk:
 - `image`: the downloaded VM image; renamed to `disk` or `iso` during setup
+- `image.ipsw`: hardlink to `image`, created for running `VZMacOSInstaller` that requires the image file to have the `.ipsw` suffix
 - `disk`: the VM disk (can be a symlink to legacy `diffdisk`)
 - `iso`: optional CDROM image for ISO-based installations (can be a symlink to legacy `basedisk`)
 - `basedisk`: legacy name for the downloaded image (pre-v2.1 instances; may remain as a qcow2 backing file)
@@ -63,6 +64,8 @@ QEMU:
 VZ:
 - `vz.pid`: VZ PID
 - `vz-identifier`: Unique machine identifier file for a VM
+- `vz-hwmodel`: Hardware model information for a Mac VM
+- `vz-aux`: Auxiliary storage for a Mac VM
 - `vz-efi`: EFIVariable store file for a VM
 
 Serial:

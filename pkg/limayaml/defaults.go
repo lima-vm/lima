@@ -147,6 +147,15 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 
 	existingLimaVersion := ExistingLimaVersion(instDir)
 
+	// OS has to be resolved before User
+	if y.OS == nil {
+		y.OS = d.OS
+	}
+	if o.OS != nil {
+		y.OS = o.OS
+	}
+	y.OS = ptr.Of(ResolveOS(y.OS))
+
 	if y.User.Name == nil {
 		y.User.Name = d.User.Name
 	}
@@ -178,22 +187,26 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		y.User.UID = o.User.UID
 	}
 	if y.User.Name == nil {
-		y.User.Name = ptr.Of(osutil.LimaUser(ctx, existingLimaVersion, warn).Username)
+		y.User.Name = ptr.Of(osutil.LimaUser(ctx, existingLimaVersion, warn, y.OS).Username)
 		warn = false
 	}
 	if y.User.Comment == nil {
-		y.User.Comment = ptr.Of(osutil.LimaUser(ctx, existingLimaVersion, warn).Name)
+		y.User.Comment = ptr.Of(osutil.LimaUser(ctx, existingLimaVersion, warn, y.OS).Name)
 		warn = false
 	}
 	if y.User.Home == nil {
-		y.User.Home = ptr.Of(osutil.LimaUser(ctx, existingLimaVersion, warn).HomeDir)
+		y.User.Home = ptr.Of(osutil.LimaUser(ctx, existingLimaVersion, warn, y.OS).HomeDir)
 		warn = false
 	}
 	if y.User.Shell == nil {
-		y.User.Shell = ptr.Of("/bin/bash")
+		if *y.OS == limatype.DARWIN {
+			y.User.Shell = ptr.Of("/bin/zsh")
+		} else {
+			y.User.Shell = ptr.Of("/bin/bash")
+		}
 	}
 	if y.User.UID == nil {
-		uidString := osutil.LimaUser(ctx, existingLimaVersion, warn).Uid
+		uidString := osutil.LimaUser(ctx, existingLimaVersion, warn, y.OS).Uid
 		if uid, err := strconv.ParseUint(uidString, 10, 32); err == nil {
 			y.User.UID = ptr.Of(uint32(uid))
 		} else {
@@ -216,13 +229,6 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		y.VMType = o.VMType
 	}
 
-	if y.OS == nil {
-		y.OS = d.OS
-	}
-	if o.OS != nil {
-		y.OS = o.OS
-	}
-	y.OS = ptr.Of(ResolveOS(y.OS))
 	if y.Arch == nil {
 		y.Arch = d.Arch
 	}
@@ -447,6 +453,9 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		if provision.Mode == limatype.ProvisionModeData || provision.Mode == limatype.ProvisionModeYQ {
 			if provision.Owner == nil {
 				provision.Owner = ptr.Of("root:root")
+				if *y.OS == limatype.DARWIN {
+					provision.Owner = ptr.Of("root:wheel")
+				}
 			} else {
 				if out, err := executeGuestTemplate(*provision.Owner, instDir, y.User, y.Param); err == nil {
 					provision.Owner = ptr.Of(out.String())

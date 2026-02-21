@@ -13,6 +13,7 @@ import (
 
 	"github.com/lima-vm/lima/v2/pkg/identifiers"
 	"github.com/lima-vm/lima/v2/pkg/iso9660util"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/textutil"
 )
 
@@ -75,6 +76,7 @@ type Disk struct {
 }
 type TemplateArgs struct {
 	Debug                           bool
+	OS                              limatype.OS
 	Name                            string // instance name
 	Hostname                        string // instance hostname
 	IID                             string // instance id

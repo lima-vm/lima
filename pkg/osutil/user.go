@@ -16,6 +16,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 	. "github.com/lima-vm/lima/v2/pkg/must"
 	"github.com/lima-vm/lima/v2/pkg/version/versionutil"
 )
@@ -102,7 +103,7 @@ var (
 	warnings []string
 )
 
-func LimaUser(ctx context.Context, limaVersion string, warn bool) *user.User {
+func LimaUser(ctx context.Context, limaVersion string, warn bool, guestOS *limatype.OS) *user.User {
 	once.Do(func() {
 		limaUser = currentUser
 		if !regexUsername.MatchString(limaUser.Username) {
@@ -150,7 +151,9 @@ func LimaUser(ctx context.Context, limaVersion string, warn bool) *user.User {
 	// Make sure we return a pointer to a COPY of limaUser
 	u := *limaUser
 	limaVersionUnknown := limaVersion == "" || limaVersion == "<unknown>"
-	if limaVersionUnknown || versionutil.GreaterEqual(limaVersion, "2.1.0") {
+	if guestOS != nil && *guestOS == limatype.DARWIN {
+		u.HomeDir = "/Users/{{.User}}.guest"
+	} else if limaVersionUnknown || versionutil.GreaterEqual(limaVersion, "2.1.0") {
 		u.HomeDir = "/home/{{.User}}.guest"
 		// boot script symlinks "/home/{{.User}}.linux" to "{{.User}}.guest" for compatibility
 	} else {

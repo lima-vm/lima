@@ -79,14 +79,22 @@ func (a *HostAgent) waitForRequirements(label string, requirements []requirement
 //
 // An earlier implementation used $'…' for quoting, but that isn't supported if the
 // user switched the default shell to fish.
-func prefixExportParam(script string) (string, error) {
+func prefixExportParam(script string, guestOS *limatype.OS) (string, error) {
 	interpreter, err := ssh.ParseScriptInterpreter(script)
 	if err != nil {
 		return "", err
 	}
 
 	// TODO we should have a symbolic constant for `/mnt/lima-cidata`
-	exportParam := `param_env="$(sudo cat /mnt/lima-cidata/param.env)"; while read -r line; do [ -n "$line" ] && export "$line"; done<<EOF\n${param_env}\nEOF\n`
+	cidata := "/mnt/lima-cidata"
+	sudo := "sudo"
+	if guestOS != nil && *guestOS == limatype.DARWIN {
+		cidata = "/Volumes/cidata"
+		// On macOS, /Volumes/cidata is not mounted as "root access only".
+		// FIXME: The cidata does not need to be root-only on Linux, either?
+		sudo = ""
+	}
+	exportParam := `param_env="$(` + sudo + ` cat ` + cidata + `/param.env)"; while read -r line; do [ -n "$line" ] && export "$line"; done<<EOF\n${param_env}\nEOF\n`
 
 	// double up all '%' characters so we can pass them through unchanged in the format string of printf
 	interpreter = strings.ReplaceAll(interpreter, "%", "%%")
@@ -99,7 +107,7 @@ func prefixExportParam(script string) (string, error) {
 
 func (a *HostAgent) waitForRequirement(r requirement) error {
 	logrus.Debugf("executing script %q", r.description)
-	script, err := prefixExportParam(r.script)
+	script, err := prefixExportParam(r.script, a.instConfig.OS)
 	if err != nil {
 		return err
 	}
@@ -159,7 +167,7 @@ true
 `,
 		debugHint: `The persistent ssh ControlMaster should be started immediately.`,
 	}
-	if *a.instConfig.Plain {
+	if *a.instConfig.Plain || *a.instConfig.OS == limatype.DARWIN {
 		req = append(req, startControlMasterReq)
 		return req
 	}
@@ -216,7 +224,8 @@ fi
 
 func (a *HostAgent) optionalRequirements() []requirement {
 	req := make([]requirement, 0)
-	if (*a.instConfig.Containerd.System || *a.instConfig.Containerd.User) && !*a.instConfig.Plain {
+	isLinuxGuest := a.instConfig.OS == nil || *a.instConfig.OS == limatype.LINUX
+	if isLinuxGuest && (*a.instConfig.Containerd.System || *a.instConfig.Containerd.User) && !*a.instConfig.Plain {
 		req = append(req,
 			requirement{
 				description: "systemd must be available",
@@ -263,19 +272,35 @@ Also see "/var/log/cloud-init-output.log" in the guest.
 
 func (a *HostAgent) finalRequirements() []requirement {
 	req := make([]requirement, 0)
+	logLocation := "/var/log/cloud-init-output.log in the guest"
+	if *a.instConfig.OS == limatype.DARWIN {
+		logLocation = "serialv.log in the host"
+	}
 	req = append(req,
 		requirement{
 			description: "boot scripts must have finished",
 			script: `#!/bin/bash
 set -eux -o pipefail
-if ! timeout 30s bash -c "until sudo diff -q /run/lima-boot-done /mnt/lima-cidata/meta-data 2>/dev/null; do sleep 3; done"; then
+timeout=timeout
+sudo=sudo
+A=/run/lima-boot-done
+B=/mnt/lima-cidata/meta-data
+if [ "$(uname)" = "Darwin" ]; then
+	timeout=/Volumes/cidata/util/timeout.sh
+	# On macOS, /Volumes/cidata is not mounted as "root access only"
+	# FIXME: The cidata does not need to be root-only on Linux, either?
+	sudo=
+	A=/var/run/lima-boot-done
+	B=/Volumes/cidata/meta-data
+fi
+if ! "$timeout" 30s bash -c "until $sudo diff -q $A $B 2>/dev/null; do sleep 3; done"; then
 	echo >&2 "boot scripts have not finished"
 	exit 1
 fi
 `,
 			debugHint: `All boot scripts, provisioning scripts, and readiness probes must
 finish before the instance is considered "ready".
-Check "/var/log/cloud-init-output.log" in the guest to see where the process is blocked!
+Check "` + logLocation + `" to see where the process is blocked!
 `,
 		})
 	return req

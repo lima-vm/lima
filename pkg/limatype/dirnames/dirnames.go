@@ -77,6 +77,15 @@ func LimaTemplatesDir() (string, error) {
 	return filepath.Join(limaDir, filenames.TemplatesDir), nil
 }
 
+// LimaMntDir returns the path of the mount points directory, $LIMA_HOME/_mnt.
+func LimaMntDir() (string, error) {
+	limaDir, err := LimaDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(limaDir, filenames.MntDir), nil
+}
+
 // InstanceDir returns the instance dir.
 // InstanceDir does not check whether the instance exists.
 func InstanceDir(name string) (string, error) {
