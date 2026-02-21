@@ -32,7 +32,7 @@ Description:
 
     https://kitten.repo.almalinux.org/<major version>-kitten/cloud/<arch>/images/
 
-  To parsing html, this script requires 'htmlq' or 'pup' command.      
+  To parsing html, this script requires 'htmlq' or 'pup' command.
   The downloaded files will be cached in the Lima cache directory.
 
 Examples:

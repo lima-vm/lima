@@ -133,7 +133,7 @@ function ubuntu_image_url_release() {
 	jq_filter="
 		[
             .products | to_entries[] as \$product_entry |
-            \$product_entry.value| select(.version == \"${version}\") | 
+            \$product_entry.value| select(.version == \"${version}\") |
             .release
 		] | first
     "

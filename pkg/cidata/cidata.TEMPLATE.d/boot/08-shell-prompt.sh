@@ -15,7 +15,7 @@ if [ "${LIMA_CIDATA_NAME}" = "default" ] && command -v patch >/dev/null 2>&1 && 
 
 	patch --forward -r - "${LIMA_CIDATA_HOME}/.bashrc" <<'EOF'
 @@ -37,7 +37,11 @@
- 
+
  # set a fancy prompt (non-color, unless we know we "want" color)
  case "$TERM" in
 -    xterm-color|*-256color) color_prompt=yes;;
@@ -25,12 +25,12 @@ if [ "${LIMA_CIDATA_NAME}" = "default" ] && command -v patch >/dev/null 2>&1 && 
 +case "$COLORTERM" in
 +    truecolor) color_prompt=true;;
  esac
- 
+
  # uncomment for a colored prompt, if the terminal has the capability; turned
 @@ -56,7 +60,12 @@
      fi
  fi
- 
+
 -if [ "$color_prompt" = yes ]; then
 +# Lima PS1: set color to lime green
 +if [ "$color_prompt" = true ]; then

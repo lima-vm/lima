@@ -204,7 +204,7 @@ enable = false
   url = "/docs/community"
 [[menus.main]]
   name = "Releases"
-  url = "https://github.com/lima-vm/lima/releases"  
+  url = "https://github.com/lima-vm/lima/releases"
 
 [module]
   # uncomment line below for temporary local development of module
