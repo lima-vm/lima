@@ -1,5 +1,5 @@
 ---
-title: "Lima: Linux Machines" 
+title: "Lima: Linux Machines"
 linkTitle: Documentation
 menu: {main: {weight: 20}}
 weight: 20

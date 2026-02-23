@@ -21,7 +21,7 @@ This page documents the environment variables used in Lima.
 
 - **Description**: Specifies the name of the Lima instance to use.
 - **Default**: `default`
-- **Usage**: 
+- **Usage**:
   ```sh
   export LIMA_INSTANCE=my-instance
   lima uname -a
@@ -31,7 +31,7 @@ This page documents the environment variables used in Lima.
 
 - **Description**: Specifies the shell interpreter to use inside the Lima instance.
 - **Default**: User's shell configured inside the instance
-- **Usage**: 
+- **Usage**:
   ```sh
   export LIMA_SHELL=/bin/bash
   lima
@@ -51,7 +51,7 @@ This page documents the environment variables used in Lima.
 
 - **Description**: Specifies the initial working directory inside the Lima instance.
 - **Default**: Current directory from the host
-- **Usage**: 
+- **Usage**:
   ```sh
   export LIMA_WORKDIR=/home/user/project
   lima
@@ -83,13 +83,13 @@ This page documents the environment variables used in Lima.
   - SSH/security: `SSH_*`
   - Dynamic linker: `DYLD_*`, `LD_*`
   - Internal variables: `_*` (variables starting with underscore)
-  
+
   See [`GetDefaultBlockList()`](https://github.com/lima-vm/lima/blob/master/pkg/envutil/envutil.go#L133) for the complete list.
 - **Usage**:
   ```sh
   # Replace default block list entirely (not recommended)
   export LIMA_SHELLENV_BLOCK="SECRET_*,PRIVATE_*"
-  
+
   # Extend default block list (recommended)
   export LIMA_SHELLENV_BLOCK="+SECRET_*,PRIVATE_*"
   limactl shell --preserve-env default
@@ -100,7 +100,7 @@ This page documents the environment variables used in Lima.
 
 - **Description**: Specifies the path to the `limactl` binary.
 - **Default**: `limactl` in `$PATH`
-- **Usage**: 
+- **Usage**:
   ```sh
   export LIMACTL=/usr/local/bin/limactl
   lima
@@ -109,7 +109,7 @@ This page documents the environment variables used in Lima.
 ### `LIMA_SSH_OVER_VSOCK`
 - **Description**: Specifies to use vsock for SSH connection instead of port forwarding.
 - **Default**: `true` (since v2.0.0)
-- **Usage**: 
+- **Usage**:
   ```sh
   export LIMA_SSH_OVER_VSOCK=true
   ```
@@ -120,7 +120,7 @@ This page documents the environment variables used in Lima.
 
 - **Description**: Specifies to use the SSH port forwarder (slow) instead of gRPC (fast, previously unstable)
 - **Default**: `false` (since v1.1.0)
-- **Usage**: 
+- **Usage**:
   ```sh
   export LIMA_SSH_PORT_FORWARDER=false
   ```
@@ -136,7 +136,7 @@ This page documents the environment variables used in Lima.
 
 - **Description**: Specifies the timeout duration for resolving the IP address in usernet.
 - **Default**: 2 minutes
-- **Usage**: 
+- **Usage**:
   ```sh
   export LIMA_USERNET_RESOLVE_IP_ADDRESS_TIMEOUT=5
   ```
@@ -145,7 +145,7 @@ This page documents the environment variables used in Lima.
 
 - **Description**: Commands QEMU to load x86_64 UEFI images using `-bios` instead of `pflash` drives.
 - **Default**: `false` on Unix like hosts and `true` on Windows hosts
-- **Usage**: 
+- **Usage**:
   ```sh
   export _LIMA_QEMU_UEFI_IN_BIOS=true
   ```
@@ -186,8 +186,8 @@ This page documents the environment variables used in Lima.
 
 ### `QEMU_SYSTEM_PPC64`
 
-- **Description**: Path to the `qemu-system-ppc64` binary.  
-- **Default**: `qemu-system-ppc64` found in `$PATH`  
+- **Description**: Path to the `qemu-system-ppc64` binary.
+- **Default**: `qemu-system-ppc64` found in `$PATH`
 - **Usage**:
   ```sh
   export QEMU_SYSTEM_PPC64=/usr/local/bin/qemu-system-ppc64
@@ -195,8 +195,8 @@ This page documents the environment variables used in Lima.
 
 ### `QEMU_SYSTEM_RISCV64`
 
-- **Description**: Path to the `qemu-system-riscv64` binary.  
-- **Default**: `qemu-system-riscv64` found in `$PATH`  
+- **Description**: Path to the `qemu-system-riscv64` binary.
+- **Default**: `qemu-system-riscv64` found in `$PATH`
 - **Usage**:
   ```sh
   export QEMU_SYSTEM_RISCV64=/usr/local/bin/qemu-system-riscv64
@@ -204,8 +204,8 @@ This page documents the environment variables used in Lima.
 
 ### `QEMU_SYSTEM_S390X`
 
-- **Description**: Path to the `qemu-system-s390x` binary.  
-- **Default**: `qemu-system-s390x` found in `$PATH`  
+- **Description**: Path to the `qemu-system-s390x` binary.
+- **Default**: `qemu-system-s390x` found in `$PATH`
 - **Usage**:
   ```sh
   export QEMU_SYSTEM_S390X=/usr/local/bin/qemu-system-s390x

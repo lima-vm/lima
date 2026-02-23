@@ -31,7 +31,7 @@ Description:
 	  <major>.<minor>: https://download.opensuse.org/distribution/leap/<major>.<minor>/appliances/?jsontable
 	  current: https://download.opensuse.org/distribution/openSUSE-current/appliances/?jsontable
 	  stable: https://download.opensuse.org/distribution/openSUSE-stable/appliances/?jsontable
-	
+
     Tumbleweed:
       x86_64: https://download.opensuse.org/tumbleweed/appliances/?jsontable
 	  not x86_64: https://download.opensuse.org/ports/<arch>/tumbleweed/appliances/?jsontable
@@ -51,7 +51,7 @@ Examples:
   $ limactl factory-reset opensuse
 
 Flags:
-  --version-major-minor (<major>.<minor>|current|stable|tumbleweed) Use the specified <major>.<minor> version or 
+  --version-major-minor (<major>.<minor>|current|stable|tumbleweed) Use the specified <major>.<minor> version or
                                                                     aliases "current", "stable", or "tumbleweed".
                                                                     The <major>.<minor> version must be 15.0 or later.
   --version-major <major> --version-minor <minor>                   Use the specified <major> and <minor> version.
@@ -72,7 +72,7 @@ function opensuse_url_spec_from_location() {
 		)/appliances/
 		openSUSE-(?<version>Leap-\\d+\\.\\d+|Tumbleweed)-Minimal-VM
 		\\.(?<arch>[^-]+)(?<major_minor_patch>-\\d+\\.\\d+\\.\\d+)?-(?<target_vendor>.*)(?<build_info>-Build\\d+\\.\\d+)?\\.(?<file_extension>.*)$
-	";"x") | 
+	";"x") |
 	.path_version = (.path_version_leap // .path_version_leap_alias // .path_version_tumbleweed)
 	'
 	url_spec=$(jq -e -r "${jq_filter}" <<<"\"${location}\"")

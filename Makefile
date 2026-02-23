@@ -576,6 +576,7 @@ bats: native limactl-plugins
 
 .PHONY: lint
 lint: check-generated
+	editorconfig-checker
 	golangci-lint run ./...
 	yamllint .
 	ls-lint

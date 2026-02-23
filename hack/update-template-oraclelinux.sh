@@ -30,7 +30,7 @@ Description:
 	OL8:
 	  x86_64: https://yum.oracle.com/templates/OracleLinux/ol8-template.json
 	  aarch64: https://yum.oracle.com/templates/OracleLinux/ol8_aarch64-cloud-template.json
-	  
+
 	OL9:
 	  x86_64: https://yum.oracle.com/templates/OracleLinux/ol9-template.json
 	  aarch64: https://yum.oracle.com/templates/OracleLinux/ol9_aarch64-cloud-template.json
