@@ -236,6 +236,11 @@ func createVM(ctx context.Context, inst *limatype.Instance) (*vz.VirtualMachine,
 		return nil, err
 	}
 
+	// Attach SPICE agent for clipboard sharing (requires macOS 13+)
+	if err = attachSpiceAgent(inst, vmConfig); err != nil {
+		return nil, err
+	}
+
 	if err = attachFolderMounts(inst, vmConfig); err != nil {
 		return nil, err
 	}
@@ -574,14 +579,28 @@ func attachDisks(ctx context.Context, inst *limatype.Instance, vmConfig *vz.Virt
 func attachDisplay(inst *limatype.Instance, vmConfig *vz.VirtualMachineConfiguration) error {
 	switch *inst.Config.Video.Display {
 	case "vz", "default":
+		width := 1920
+		height := 1200
+
+		if inst.Config.Video.VZ.Width != nil {
+			width = *inst.Config.Video.VZ.Width
+		}
+		if inst.Config.Video.VZ.Height != nil {
+			height = *inst.Config.Video.VZ.Height
+		}
+		if inst.Config.Video.VZ.PixelsPerInch != nil {
+			logrus.Warnf("video.vz.pixelsPerInch is not yet supported by Apple Virtualization.framework")
+		}
+
 		graphicsDeviceConfiguration, err := vz.NewVirtioGraphicsDeviceConfiguration()
 		if err != nil {
 			return err
 		}
-		scanoutConfiguration, err := vz.NewVirtioGraphicsScanoutConfiguration(1920, 1200)
+		scanoutConfiguration, err := vz.NewVirtioGraphicsScanoutConfiguration(int64(width), int64(height))
 		if err != nil {
 			return err
 		}
+
 		graphicsDeviceConfiguration.SetScanouts(scanoutConfiguration)
 
 		vmConfig.SetGraphicsDevicesVirtualMachineConfiguration([]vz.GraphicsDeviceConfiguration{
@@ -649,18 +668,49 @@ func attachFolderMounts(inst *limatype.Instance, vmConfig *vz.VirtualMachineConf
 func attachAudio(inst *limatype.Instance, config *vz.VirtualMachineConfiguration) error {
 	switch *inst.Config.Audio.Device {
 	case "vz", "default":
-		outputStream, err := vz.NewVirtioSoundDeviceHostOutputStreamConfiguration()
-		if err != nil {
-			return err
+		// Check what's enabled (default: output only, no input/microphone)
+		inputEnabled := false
+		outputEnabled := true
+
+		if inst.Config.Audio.VZ.InputEnabled != nil {
+			inputEnabled = *inst.Config.Audio.VZ.InputEnabled
 		}
+		if inst.Config.Audio.VZ.OutputEnabled != nil {
+			outputEnabled = *inst.Config.Audio.VZ.OutputEnabled
+		}
+
 		soundDeviceConfiguration, err := vz.NewVirtioSoundDeviceConfiguration()
 		if err != nil {
 			return err
 		}
-		soundDeviceConfiguration.SetStreams(outputStream)
-		config.SetAudioDevicesVirtualMachineConfiguration([]vz.AudioDeviceConfiguration{
-			soundDeviceConfiguration,
-		})
+
+		var streams []vz.VirtioSoundDeviceStreamConfiguration
+
+		if outputEnabled {
+			outputStream, err := vz.NewVirtioSoundDeviceHostOutputStreamConfiguration()
+			if err != nil {
+				return err
+			}
+			streams = append(streams, outputStream)
+			logrus.Debug("VZ audio output enabled")
+		}
+
+		if inputEnabled {
+			inputStream, err := vz.NewVirtioSoundDeviceHostInputStreamConfiguration()
+			if err != nil {
+				return err
+			}
+			streams = append(streams, inputStream)
+			logrus.Info("VZ audio input (microphone) enabled")
+		}
+
+		if len(streams) > 0 {
+			soundDeviceConfiguration.SetStreams(streams...)
+			config.SetAudioDevicesVirtualMachineConfiguration([]vz.AudioDeviceConfiguration{
+				soundDeviceConfiguration,
+			})
+		}
+
 		return nil
 	case "", "none":
 		return nil

@@ -212,19 +212,43 @@ type Firmware struct {
 	Images []FileWithVMType `yaml:"images,omitempty" json:"images,omitempty"`
 }
 
+type VZAudioOptions struct {
+	// InputEnabled enables audio input (microphone) from host to guest (default: false)
+	InputEnabled *bool `yaml:"inputEnabled,omitempty" json:"inputEnabled,omitempty" jsonschema:"nullable"`
+	// OutputEnabled enables audio output (speakers) from guest to host (default: true)
+	OutputEnabled *bool `yaml:"outputEnabled,omitempty" json:"outputEnabled,omitempty" jsonschema:"nullable"`
+}
+
 type Audio struct {
-	// Device is a QEMU audiodev string
-	Device *string `yaml:"device,omitempty" json:"device,omitempty" jsonschema:"nullable"`
+	// Device is a QEMU audiodev string, or "vz" for VZ driver
+	Device *string        `yaml:"device,omitempty" json:"device,omitempty" jsonschema:"nullable"`
+	VZ     VZAudioOptions `yaml:"vz,omitempty" json:"vz,omitempty"`
 }
 
 type VNCOptions struct {
 	Display *string `yaml:"display,omitempty" json:"display,omitempty" jsonschema:"nullable"`
 }
 
+type VZOptions struct {
+	// Width is the display width in pixels (default: 1920)
+	Width *int `yaml:"width,omitempty" json:"width,omitempty" jsonschema:"nullable"`
+	// Height is the display height in pixels (default: 1200)
+	Height *int `yaml:"height,omitempty" json:"height,omitempty" jsonschema:"nullable"`
+	// PixelsPerInch configures display density (reserved for future use, not yet supported by Apple Virtualization.framework)
+	// Intended for Retina/HiDPI support: standard ~80-100, Retina 144+
+	PixelsPerInch *int `yaml:"pixelsPerInch,omitempty" json:"pixelsPerInch,omitempty" jsonschema:"nullable"`
+}
+
 type Video struct {
 	// Display is a QEMU display string
 	Display *string    `yaml:"display,omitempty" json:"display,omitempty" jsonschema:"nullable"`
 	VNC     VNCOptions `yaml:"vnc,omitempty" json:"vnc,omitempty"`
+	VZ      VZOptions  `yaml:"vz,omitempty" json:"vz,omitempty"`
+	// Clipboard enables clipboard sharing between host and guest (default: true when display is enabled)
+	// For VZ: Uses SPICE agent protocol via virtio console. Requires display and spice-vdagent in guest.
+	// For QEMU: Depends on the display backend capabilities.
+	// Note: Clipboard requires a graphical display to be configured.
+	Clipboard *bool `yaml:"clipboard,omitempty" json:"clipboard,omitempty" jsonschema:"nullable"`
 }
 
 type ProvisionMode = string

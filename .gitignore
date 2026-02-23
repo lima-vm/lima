@@ -4,3 +4,4 @@ lima.REJECTED.yaml
 default-template.yaml
 schema-limayaml.json
 .config
+.DS_Store
