@@ -28,8 +28,6 @@ limactl shell macos cat /Users/${USER}.guest/password
 - No support for graceful `limactl stop`.
   Shutdown the VM from the GUI, or use `limactl stop -f` with caution.
 - No support for turning off the video display.
-- No support for mounting host directories.
-  Use `limactl cp` or `limactl shell --sync` to share files with the host.
 - No support for automatic port forwarding.
   Use `ssh -L` to manually set up port forwarding, or,
   use the [`vzNAT`](../../config/network/vmnet.md#vznat) network to access the guest by its IP.

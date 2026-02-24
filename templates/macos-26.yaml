@@ -2,10 +2,7 @@ minimumLimaVersion: 2.1.0
 
 base:
 - template:_images/macos-26
-# - template:_default/mounts
-
-# No support for mounts, port forwards, etc. yet
-plain: true
+- template:_default/mounts
 
 # The installer seems to require the display device to be present.
 video:

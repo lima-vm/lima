@@ -105,8 +105,10 @@ func processUserData(ctx context.Context, mnt string) error {
 	if userData.PackageRebootIfRequired {
 		logrus.Warn("package_reboot_if_required is not implemented")
 	}
-	if len(userData.Mounts) > 0 {
-		logrus.Warn("mounts is not implemented")
+	for _, m := range userData.Mounts {
+		if err = mountFSTabEntry(m); err != nil {
+			errs = append(errs, fmt.Errorf("failed to mount fstab entry %v: %w", m, err))
+		}
 	}
 	if userData.Timezone != "" {
 		if err = setTimezone(ctx, userData.Timezone); err != nil {
@@ -135,6 +137,50 @@ func processUserData(ctx context.Context, mnt string) error {
 		logrus.Warn("bootcmd is not implemented")
 	}
 	return errors.Join(errs...)
+}
+
+// mountFSTabEntry mounts a filesystem based on the given fstab entry.
+// The format mimics Linux's convention.
+// The entries are not written to /etc/fstab.
+func mountFSTabEntry(m []string) error {
+	if len(m) != 6 {
+		return fmt.Errorf("invalid fstab entry: expected 6 fields, got %d: %v", len(m), m)
+	}
+	src, dst, fsType := m[0], m[1], m[2]
+	switch fsType {
+	case "virtiofs":
+		return mountVirtiofs(src, dst)
+	default:
+		return fmt.Errorf("unsupported filesystem type %q for fstab entry: %v", fsType, m)
+	}
+}
+
+// mountVirtiofs symlinks `/Volumes/My Shared Files/<pseudoTag>` (automatically mounted by macOS) to dir.
+// dir must not exist, or, must be a symlink to the expected source.
+func mountVirtiofs(pseudoTag, dir string) error {
+	if strings.Contains(pseudoTag, string(filepath.Separator)) {
+		return fmt.Errorf("invalid pseudo tag for virtiofs: %q", pseudoTag)
+	}
+	lnSrc := filepath.Join("/Volumes/My Shared Files", pseudoTag)
+
+	// FIXME: verify that the filesystem of lnSrc is indeed read-only when user-data contains the "ro" option.
+	// unix.Statfs() could be used, but unix.Statfs_t.Flags & unix.MNT_RDONLY seems always 0 for virtiofs.
+	// `mount -v` does not show "ro" flag either.
+
+	lnExisting, err := os.Readlink(dir)
+	if err == nil {
+		if lnExisting == lnSrc {
+			return nil // already symlinked
+		}
+		return fmt.Errorf("unexpected symlink target for virtiofs mount source %q: expected %q, got %q", lnSrc, lnSrc, lnExisting)
+	}
+	if !errors.Is(err, os.ErrNotExist) {
+		logrus.WithError(err).Warnf("Failed to read existing symlink for virtiofs mount source %q", lnSrc)
+	}
+	if err := os.Symlink(lnSrc, dir); err != nil {
+		return fmt.Errorf("failed to create symlink from %q to %q: %w", lnSrc, dir, err)
+	}
+	return nil
 }
 
 func setTimezone(ctx context.Context, timezone string) error {
