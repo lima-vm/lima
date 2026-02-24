@@ -1,12 +1,12 @@
 images:
 # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
 
-- location: "https://cloud.debian.org/images/cloud/bookworm/20251112-2294/debian-12-genericcloud-amd64-20251112-2294.qcow2"
+- location: "https://cloud.debian.org/images/cloud/bookworm/20260210-2384/debian-12-genericcloud-amd64-20260210-2384.qcow2"
   arch: "x86_64"
-  digest: "sha512:650a0c89c906707134b8b418004d42ea57556fbbe255e9071fbb78537704085328765d1a396bca1b5cca4540f4f12cadfff53b87f978a9b982e6e59356ddfdde"
-- location: "https://cloud.debian.org/images/cloud/bookworm/20251112-2294/debian-12-genericcloud-arm64-20251112-2294.qcow2"
+  digest: "sha512:e5d776b9de352c89fbad4baec8bfd38a35c5905114a5f3b108946348cb44d869396d22e4a837a43afee4b11363d4759c358fb3e8a7cd07fa743ed6b663784fed"
+- location: "https://cloud.debian.org/images/cloud/bookworm/20260210-2384/debian-12-genericcloud-arm64-20260210-2384.qcow2"
   arch: "aarch64"
-  digest: "sha512:1b7086f0cae5ca855e15f18de8dabf3980db87ffccc1b8f3045e0803cb2f0979928b83cdc3761bf46ed557f859c3bc3298c2f53751f3e49ea7a08f2585a7e546"
+  digest: "sha512:b524402dfe66a7e7000af03415052ddc6fdfbde898562325b8f8e05fb39d600ce8eb3902dee027df691b0e8f4e5147c9513e75496f09591e7816f37354939ea5"
 - location: "https://cloud.debian.org/images/cloud/bookworm/20250703-2162/debian-12-genericcloud-ppc64el-20250703-2162.qcow2"
   arch: "ppc64le"
   digest: "sha512:fcf25e5d0e6a76e93c3abaecb8109a931380af29658586f51e30baec0f699a2f17de8a14de57acec80b13ab125fd165140893d814800144505a4982492256f19"
