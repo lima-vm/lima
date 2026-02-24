@@ -3,36 +3,7 @@
 
 load "../helpers/load"
 
-NAME=bats
-
-local_setup_file() {
-    if [[ -n "${LIMA_BATS_REUSE_INSTANCE:-}" ]]; then
-        run limactl list --yq '.status' "$NAME"
-        if [[ $status == 0 && $output == "Running" ]]; then
-            run limactl list --yq '.config.mounts' "$NAME"
-            if [[ $status == 0 && $output == "null" ]]; then
-                return
-            else
-                # Instance is running but mounts are configured, now stop
-                # it and clear mounts by editing with `--mount-none`.
-                limactl stop --force "$NAME"
-                limactl edit --yes --mount-none "$NAME"
-                return
-            fi
-        fi
-    fi
-    limactl unprotect "$NAME" || :
-    limactl delete --force "$NAME" || :
-    # Make sure that the host agent doesn't inherit file handles 3 or 4.
-    # Otherwise bats will not finish until the host agent exits.
-    limactl start --yes --mount-none --name "$NAME" template:default 3>&- 4>&-
-}
-
-local_teardown_file() {
-    if [[ -z "${LIMA_BATS_REUSE_INSTANCE:-}" ]]; then
-        limactl delete --force "$NAME"
-    fi
-}
+INSTANCE=bats-nomount
 
 setup() {
     # Create a temporary test directory and files
@@ -65,7 +36,7 @@ teardown() {
     local path_test_dir
     path_test_dir="$PWD"
 
-    run -0 bash -c "limactl shell --sync . --yes '$NAME' pwd && ./modify.sh"
+    run -0 bash -c "limactl shell --sync . --yes '$INSTANCE' pwd && ./modify.sh"
 
     # Verify the guest working directory matches the host path structure
     assert_output --regexp ".*${path_test_dir#/}"
@@ -88,7 +59,7 @@ teardown() {
     local files_before
     files_before=$(find . -type f | wc -l)
 
-    run -0 bash -c "limactl shell --sync . --yes '$NAME' ./modify.sh"
+    run -0 bash -c "limactl shell --sync . --yes '$INSTANCE' ./modify.sh"
 
     # Verify files were modified
     run cat "$special_dir/sync-test/foo.txt"
@@ -108,7 +79,7 @@ teardown() {
 @test 'shell --sync reflects file deletion from guest to host' {
     cd "$TEST_SYNC_DIR"
 
-    run -0 bash -c "limactl shell --sync . --yes '$NAME' rm -f foo.txt"
+    run -0 bash -c "limactl shell --sync . --yes '$INSTANCE' rm -f foo.txt"
 
     assert_file_not_exists "$TEST_SYNC_DIR/foo.txt"
 }
@@ -125,7 +96,7 @@ echo "foo bar baz" > new_directory/new_file.txt
 EOF
     chmod +x "$TEST_SYNC_DIR/create_new.sh"
 
-    run -0 bash -c "limactl shell --sync . --yes '$NAME' ./create_new.sh && ./modify.sh"
+    run -0 bash -c "limactl shell --sync . --yes '$INSTANCE' ./create_new.sh && ./modify.sh"
 
     # Verify new directory was created on host
     assert_dir_exists "$TEST_SYNC_DIR/new_directory"
@@ -148,7 +119,7 @@ EOF
     chmod 755 "$TEST_SYNC_DIR/executable.sh"
 
     # Modify the file in guest
-    run -0 bash -c "limactl shell --sync . --yes '$NAME' ./modify.sh"
+    run -0 bash -c "limactl shell --sync . --yes '$INSTANCE' ./modify.sh"
 
     # Verify file is still executable on host
     if [[ "$OSTYPE" == darwin* ]]; then
@@ -169,12 +140,12 @@ EOF
     cd "$TEST_SYNC_DIR"
 
     # Remove the ControlMaster socket
-    local sock_path="$LIMA_HOME/$NAME/ssh.sock"
+    local sock_path="$LIMA_HOME/$INSTANCE/ssh.sock"
     if [[ -S "$sock_path" ]]; then
         rm "$sock_path"
     fi
 
-    run -0 bash -c "limactl shell --sync . --yes '$NAME' ./modify.sh"
+    run -0 bash -c "limactl shell --sync . --yes '$INSTANCE' ./modify.sh"
 
     # Verify files were modified
     run cat "$TEST_SYNC_DIR/foo.txt"
