@@ -44,18 +44,14 @@ export PATH
 
 CODE=0
 
-# Don't make any changes to /etc or /var/lib until boot/04-persistent-data-volume.sh
+# Don't make any changes to /etc or /var/lib until boot.Linux/04-persistent-data-volume.sh
 # has run because it might move the directories to /mnt/data on first boot. In that
 # case changes made on restart would be lost.
 
 if [ "$LIMA_CIDATA_PLAIN" = "1" ]; then
 	INFO "Plain mode. Skipping to run boot scripts. Provisioning scripts will be still executed. Guest agent will not be running."
 else
-	boot="${LIMA_CIDATA_MNT}/boot"
-	if [ "${UNAME}" != "Linux" ]; then
-		# TODO: rename boot to boot.Linux
-		boot="${boot}.${UNAME}"
-	fi
+	boot="${LIMA_CIDATA_MNT}/boot.${UNAME}"
 	if [ -e "${boot}" ]; then
 		for f in "${boot}"/*; do
 			INFO "Executing $f"

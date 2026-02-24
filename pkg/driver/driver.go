@@ -46,6 +46,8 @@ type Lifecycle interface {
 
 	InspectStatus(_ context.Context, inst *limatype.Instance) string
 
+	// BootScripts returns the content of boot scripts to be injected into the vm.
+	// The key must be "boot.<OS>/<SCRIPT>" or "<SCRIPT>" (deprecated alias for "boot.Linux/<SCRIPT>").
 	BootScripts() (map[string][]byte, error)
 }
 
