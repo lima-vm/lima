@@ -4,12 +4,12 @@
 # Unlike AlmaLinux 8 and Rocky Linux 8, Oracle Linux 8 is known to work on Apple M1.
 
 images:
-- location: "https://yum.oracle.com/templates/OracleLinux/OL8/u10/x86_64/OL8U10_x86_64-kvm-b258.qcow2"
+- location: "https://yum.oracle.com/templates/OracleLinux/OL8/u10/x86_64/OL8U10_x86_64-kvm-b271.qcow2"
   arch: "x86_64"
-  digest: "sha256:9b1f8a4eadc3f6094422674ec0794b292a28ee247593e74fe7310f77ecb8b9b9"
-- location: "https://yum.oracle.com/templates/OracleLinux/OL8/u10/aarch64/OL8U10_aarch64-kvm-cloud-b123.qcow2"
+  digest: "sha256:23c72a22201b80c98195212e205c2ec0e2a641dfd5f37374dfe6e4f0639ef311"
+- location: "https://yum.oracle.com/templates/OracleLinux/OL8/u10/aarch64/OL8U10_aarch64-kvm-cloud-b162.qcow2"
   arch: "aarch64"
-  digest: "sha256:ae5dc67391af5e70d06730a1313a290771e9ad0f217c99d6e355bd4844cdda16"
+  digest: "sha256:7894656f52b81a32ca3e8de31b69f40fc149b5630a9fff592bab6cc708a837af"
 mountTypesUnsupported: [9p]
 
 firmware:

@@ -1,18 +1,18 @@
 images:
 # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
 
-- location: "https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-9-20251215.0.x86_64.qcow2"
+- location: "https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-9-20260223.0.x86_64.qcow2"
   arch: "x86_64"
-  digest: "sha256:3d1a0b220b64e8c1c4a5db897dcaac223382c87b0bfd43bd366249de3e20ef2d"
-- location: "https://cloud.centos.org/centos/9-stream/aarch64/images/CentOS-Stream-GenericCloud-9-20251215.0.aarch64.qcow2"
+  digest: "sha256:54f5b6c013c678441ba0db4e471c516d5e63470687fc465661471afa1593ef46"
+- location: "https://cloud.centos.org/centos/9-stream/aarch64/images/CentOS-Stream-GenericCloud-9-20260223.0.aarch64.qcow2"
   arch: "aarch64"
-  digest: "sha256:5357601957f5212e1400953f27a59476684e65a0e9f182612b09f7de2708910b"
-- location: "https://cloud.centos.org/centos/9-stream/s390x/images/CentOS-Stream-GenericCloud-9-20251215.0.s390x.qcow2"
+  digest: "sha256:77b18065aa4f81103c81db61782fb25ad8a3e75a78699cb2fbc9947e275b71e1"
+- location: "https://cloud.centos.org/centos/9-stream/s390x/images/CentOS-Stream-GenericCloud-9-20260223.0.s390x.qcow2"
   arch: "s390x"
-  digest: "sha256:8b4d9cf8b9a6877cc1cb3c739f2bfbf8c7d9b4cdc9c69f306756c0c7c70e0541"
-- location: "https://cloud.centos.org/centos/9-stream/ppc64le/images/CentOS-Stream-GenericCloud-9-20251215.0.ppc64le.qcow2"
+  digest: "sha256:3cf80db58115089651f6114a5a2879c1b59fd82f7b893ced96a2de0f76b6152d"
+- location: "https://cloud.centos.org/centos/9-stream/ppc64le/images/CentOS-Stream-GenericCloud-9-20260223.0.ppc64le.qcow2"
   arch: "ppc64le"
-  digest: "sha256:f49f43cb701ebf239d622a7a6e41f7c03670ae987589f777d1f32bc63c63902c"
+  digest: "sha256:c80a96b827d6aeb8f9dac9c74cab296373de706213a0f50edcf04cf410326634"
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
 
