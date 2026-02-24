@@ -372,6 +372,12 @@ vmOpts:
     #   armv7l:  "max" # (or "host" when running on armv7l host)
     #   riscv64: "max" # (or "host" when running on riscv64 host)
     #   x86_64:  "max" # (or "host" when running on x86_64 host; additional options are appended on Intel Mac)
+
+    # Extra arguments to pass to QEMU.
+    # Each list entry is one CLI token (no shell parsing).
+    # 🟢 Builtin default: []
+    # extraArgs:
+    # - "-usb"
   vz:
     # Specify the disk image format: "raw" or "asif".
     # Currently only applies to the primary disk image.

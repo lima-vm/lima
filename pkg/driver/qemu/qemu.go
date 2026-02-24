@@ -479,6 +479,14 @@ func resolveCPUType(y *limatype.LimaYAML) string {
 	return cpuType[*y.Arch]
 }
 
+func qemuExtraArgs(y *limatype.LimaYAML) ([]string, error) {
+	var qemuOpts limatype.QEMUOpts
+	if err := limayaml.Convert(y.VMOpts[limatype.QEMU], &qemuOpts, "vmOpts.qemu"); err != nil {
+		return nil, fmt.Errorf("failed to convert `vmOpts.qemu.extraArgs`: %w", err)
+	}
+	return qemuOpts.ExtraArgs, nil
+}
+
 func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err error) {
 	y := cfg.LimaYAML
 	exe, args, err = Exe(*y.Arch)
@@ -975,6 +983,11 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	// QEMU process
 	args = append(args, "-name", "lima-"+cfg.Name)
 	args = append(args, "-pidfile", filepath.Join(cfg.InstanceDir, filenames.PIDFile(*y.VMType)))
+	extraArgs, err := qemuExtraArgs(y)
+	if err != nil {
+		return "", nil, err
+	}
+	args = append(args, extraArgs...)
 
 	return exe, args, nil
 }
