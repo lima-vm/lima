@@ -200,7 +200,9 @@ images:
   arch: %q
 `
 	tmpl.Bytes = fmt.Appendf(nil, template, imageArch, locator, imageArch)
-	tmpl.Name = InstNameFromImageURL(locator, imageArch)
+	if tmpl.Name == "" {
+		tmpl.Name = InstNameFromImageURL(locator, imageArch)
+	}
 	return true
 }
 
