@@ -63,6 +63,21 @@ func TestInstNameFromImageURL(t *testing.T) {
 	})
 }
 
+func TestReadImageURLRespectsName(t *testing.T) {
+	imageURL := "https://download.freebsd.org/releases/VM-IMAGES/15.0-RELEASE/aarch64/Latest/FreeBSD-15.0-RELEASE-arm64-aarch64-BASIC-CLOUDINIT-zfs.raw.xz"
+	t.Run("--name flag overrides image-derived name", func(t *testing.T) {
+		tmpl, err := limatmpl.Read(t.Context(), "freebsd", imageURL)
+		assert.NilError(t, err)
+		assert.Equal(t, tmpl.Name, "freebsd")
+	})
+	t.Run("name is derived from image URL when --name is empty", func(t *testing.T) {
+		tmpl, err := limatmpl.Read(t.Context(), "", imageURL)
+		assert.NilError(t, err)
+		assert.Assert(t, tmpl.Name != "")
+		assert.Assert(t, tmpl.Name != "freebsd")
+	})
+}
+
 func TestSeemsTemplateURL(t *testing.T) {
 	arg := "template:foo/bar"
 	t.Run(arg, func(t *testing.T) {
