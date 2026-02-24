@@ -23,7 +23,7 @@ Lima launches Linux virtual machines with automatic file sharing and port forwar
 
 ✅ Various guest Linux distributions: [AlmaLinux](./templates/almalinux.yaml), [Alpine](./templates/alpine.yaml), [Arch Linux](./templates/archlinux.yaml), [Debian](./templates/debian.yaml), [Fedora](./templates/fedora.yaml), [openSUSE](./templates/opensuse.yaml), [Oracle Linux](./templates/oraclelinux.yaml), [Rocky](./templates/rocky.yaml), [Ubuntu](./templates/ubuntu.yaml) (default), ...
 
-✅ Experimental support for non-Linux guests: [macOS](./usage/guests/macos.md)
+✅ Experimental support for non-Linux guests: [macOS]({{< ref "/docs/usage/guests/macos" >}})
 
 Related project: [sshocker (ssh with file sharing and port forwarding)](https://github.com/lima-vm/sshocker)
 
