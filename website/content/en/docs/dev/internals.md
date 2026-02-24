@@ -153,6 +153,7 @@ See [Building Ansible inventories](https://docs.ansible.com/ansible/latest/inven
 - `nerdctl-full.tgz`: [`nerdctl-full-<VERSION>-<OS>-<ARCH>.tar.gz`](https://github.com/containerd/nerdctl/releases)
 - `boot.sh`: Boot script
 - `boot.<OS>/*`: Boot script modules
+- `boot.essential.<OS>/*`: Essential boot script modules, executed in plain mode too.
 - `util/*`: Utility command scripts, executed in the boot script modules
 - `provision.data/*`: Custom provision files (data)
 - `provision.dependency/*`: Custom provision scripts (dependency)

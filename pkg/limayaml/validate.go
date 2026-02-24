@@ -50,7 +50,7 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 	}
 
 	switch *y.OS {
-	case limatype.LINUX, limatype.DARWIN:
+	case limatype.LINUX, limatype.DARWIN, limatype.FREEBSD:
 	default:
 		errs = errors.Join(errs, fmt.Errorf("field `os` must be one of %q; got %q", limatype.OSTypes, *y.OS))
 	}

@@ -197,6 +197,9 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 		fstype = "sshfs"
 	case limatype.NINEP:
 		fstype = "9p"
+		if *instConfig.OS == limatype.FREEBSD {
+			fstype = "p9fs"
+		}
 	case limatype.VIRTIOFS:
 		fstype = "virtiofs"
 	}
@@ -206,9 +209,12 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 	}
 	for _, f := range instConfig.Mounts {
 		tag := limayaml.MountTag(f.Location, *f.MountPoint)
-		options := "defaults"
+		options := "rw"
+		if *instConfig.OS == limatype.LINUX {
+			options = "defaults"
+		}
 		switch fstype {
-		case "9p", "virtiofs":
+		case "9p", "p9fs", "virtiofs":
 			options = "ro"
 			if *f.Writable {
 				options = "rw"
@@ -224,7 +230,12 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 				options += fmt.Sprintf(",cache=%s", *f.NineP.Cache)
 			}
 			// don't fail the boot, if virtfs is not available
-			options += ",nofail"
+			switch *instConfig.OS {
+			case limatype.LINUX:
+				options += ",nofail"
+			case limatype.FREEBSD:
+				options += ",failok"
+			}
 		}
 		args.Mounts = append(args.Mounts, Mount{Tag: tag, MountPoint: *f.MountPoint, Type: fstype, Options: options})
 		if f.Location == hostHome {
@@ -483,8 +494,10 @@ func GenerateISO9660(ctx context.Context, drv driver.Driver, instDir, name strin
 	}
 
 	var iso9660Options []iso9660util.WriteOpt
-	if *instConfig.OS == limatype.DARWIN {
-		// Without Joliet, all the file names will be in upper case, and the hiphen will be replaced with underscore
+	switch *instConfig.OS {
+	case limatype.DARWIN, limatype.FREEBSD:
+		// Darwin: Without Joliet, all the file names will be in upper case, and the hiphen will be replaced with underscore
+		// FreeBSD: Without Joliet, the files are not executable
 		iso9660Options = append(iso9660Options, iso9660util.WithJoliet())
 	}
 	return iso9660util.Write(filepath.Join(instDir, filenames.CIDataISO), "cidata", layout, iso9660Options...)

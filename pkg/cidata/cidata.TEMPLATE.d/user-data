@@ -5,6 +5,15 @@ growpart:
   mode: auto
   devices: ['/']
 
+{{- if eq .OS "FreeBSD" }}
+packages:
+  # boot.sh depends on sudo.
+  # TODO: consider replacing sudo with doas.
+  # FIXME: The hostagent script depends on sudo too.
+  # https://github.com/lima-vm/lima/issues/4594
+  - sudo
+{{- end }}
+
 {{- if .UpgradePackages }}
 package_update: true
 package_upgrade: true
@@ -29,7 +38,11 @@ timezone: {{.TimeZone}}
 
 users:
   - name: "{{.User}}"
+{{- if ne .OS "FreeBSD" }}
+    # nuageinit does not support specifying the UID.
+    # The UID is fixed up in boot.essential.FreeBSD/00-freebsd-user-group.sh
     uid: "{{.UID}}"
+{{- end }}
 {{- if .Comment }}
     gecos: {{ printf "%q" .Comment }}
 {{- end }}
@@ -38,9 +51,18 @@ users:
 {{- if ne .OS "Darwin" }}
 {{/* On macOS, the password is not locked so as to allow GUI login */}}
     sudo: ALL=(ALL) NOPASSWD:ALL
+    {{- if eq .OS "FreeBSD" }}
+    groups:
+    - wheel
+    doas: permit nopass :wheel
+    {{- end}}
     lock_passwd: true
 {{- end }}
+{{- if eq .OS "FreeBSD" }}
+    ssh_authorized_keys:
+{{- else }}
     ssh-authorized-keys:
+{{- end }}
     {{- range $val := .SSHPubKeys }}
       - {{ printf "%q" $val }}
     {{- end }}
@@ -55,6 +77,15 @@ write_files:
       if [ "${UNAME}" = "Darwin" ]; then
         LIMA_CIDATA_MNT="/Volumes/cidata"
         # Should have been mounted automatically
+      elif [ "${UNAME}" = "FreeBSD" ]; then
+        LIMA_CIDATA_DEV="/dev/iso9660/cidata"
+        if [ ! -e "${LIMA_CIDATA_DEV}" ]; then
+          # When the iso is created with `hdiutil` on macOS,
+          # apparently the volume name becomes "CIDATA" not "cidata"
+          LIMA_CIDATA_DEV="/dev/iso9660/CIDATA"
+        fi
+        mkdir -p -m 700 "${LIMA_CIDATA_MNT}"
+        mount_cd9660 -G wheel -U root -m 0700 -o ro,exec "${LIMA_CIDATA_DEV}" "${LIMA_CIDATA_MNT}"
       elif [ "${UNAME}" = "Linux" ]; then
         LIMA_CIDATA_DEV="/dev/disk/by-label/cidata"
         mkdir -p -m 700 "${LIMA_CIDATA_MNT}"
@@ -65,13 +96,44 @@ write_files:
       fi
       export LIMA_CIDATA_MNT
       exec "${LIMA_CIDATA_MNT}"/boot.sh
-{{- if eq .OS "Darwin" }}
+{{- if or (eq .OS "Darwin") (eq .OS "FreeBSD") }}
    owner: root:wheel
 {{- else }}
    owner: root:root
 {{- end }}
+{{- if eq .OS "FreeBSD" }}
+   # nuageinit requires the path to be under an existing directory
+   path: /usr/sbin/lima-freebsd-init.sh
+{{- else }}
    path: /var/lib/cloud/scripts/per-boot/00-lima.boot.sh
+{{- end }}
    permissions: '0755'
+{{- if eq .OS "FreeBSD" }}
+  # nuageinit does not run /var/lib/cloud/scripts/per-boot/* scripts
+ - content: |
+      #!/bin/sh
+
+      # PROVIDE: lima_freebsd_init
+      # REQUIRE: DAEMON
+      # BEFORE: LOGIN
+
+      . /etc/rc.subr
+
+      name="lima_freebsd_init"
+      rcvar="lima_freebsd_init_enable"
+      command="/usr/sbin/lima-freebsd-init.sh"
+
+      load_rc_config "$name"
+      run_rc_command "$1"
+   owner: root:wheel
+   path: /etc/rc.d/lima_freebsd_init
+   permissions: '0755'
+ - content: |
+      lima_freebsd_init_enable="YES"
+   owner: root:wheel
+   path: /etc/rc.conf.d/lima_freebsd_init
+   permissions: '0644'
+{{- end }}
 {{- end }}
 
 {{- if .DNSAddresses }}

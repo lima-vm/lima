@@ -371,6 +371,16 @@ jobs:
       run: ./hack/bats/lib/bats-core/bin/bats --timing ./hack/bats/extras/k8s.bats
       env:
         LIMA_BATS_ALL_TESTS_RETRIES: 3
+    - name: Cache image used by templates/freebsd.yaml
+      uses: ./.github/actions/setup_cache_for_template
+      with:
+        template: templates/freebsd.yaml
+    - name: "Run BATS freebsd tests"
+      run: |
+        set -eux -o pipefail
+        # xorriso is required for creating Joliet filesystem
+        sudo apt-get install -y xorriso
+        ./hack/bats/lib/bats-core/bin/bats --timing ./hack/bats/extras/freebsd.bats
 
   colima:
     name: "Colima tests (QEMU, Linux host)"

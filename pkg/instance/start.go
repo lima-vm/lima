@@ -48,8 +48,17 @@ type Prepared struct {
 
 // Prepare ensures the disk, the nerdctl archive, etc.
 func Prepare(ctx context.Context, inst *limatype.Instance, guestAgent string) (*Prepared, error) {
-	// macOS guests always need the guest agent for running fake-cloud-init
-	needsGuestAgent := !*inst.Config.Plain || *inst.Config.OS == limatype.DARWIN
+	var needsGuestAgent bool
+	switch *inst.Config.OS {
+	case limatype.DARWIN:
+		// macOS guests always need the guest agent for running fake-cloud-init
+		needsGuestAgent = true
+	case limatype.FREEBSD:
+		// guest agent is not implemented for FreeBSD yet
+		needsGuestAgent = false
+	default:
+		needsGuestAgent = !*inst.Config.Plain
+	}
 	if needsGuestAgent && guestAgent == "" {
 		var err error
 		guestAgent, err = usrlocal.GuestAgentBinary(*inst.Config.OS, *inst.Config.Arch)

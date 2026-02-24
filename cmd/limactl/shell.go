@@ -267,7 +267,9 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	script := fmt.Sprintf("%s ; exec %s%s --login", changeDirCmd, envPrefix, shell)
+	// -l is known to be available in bash, zsh, and FreeBSD sh.
+	// Note that --login is not available in FreeBSD sh.
+	script := fmt.Sprintf("%s ; exec %s%s -l", changeDirCmd, envPrefix, shell)
 	if len(args) > 1 {
 		quotedArgs := make([]string, len(args[1:]))
 		parsingEnv := true

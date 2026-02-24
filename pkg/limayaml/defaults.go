@@ -199,9 +199,12 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		warn = false
 	}
 	if y.User.Shell == nil {
-		if *y.OS == limatype.DARWIN {
+		switch *y.OS {
+		case limatype.FREEBSD:
+			y.User.Shell = ptr.Of("/bin/sh")
+		case limatype.DARWIN:
 			y.User.Shell = ptr.Of("/bin/zsh")
-		} else {
+		default:
 			y.User.Shell = ptr.Of("/bin/bash")
 		}
 	}
@@ -452,9 +455,11 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		}
 		if provision.Mode == limatype.ProvisionModeData || provision.Mode == limatype.ProvisionModeYQ {
 			if provision.Owner == nil {
-				provision.Owner = ptr.Of("root:root")
-				if *y.OS == limatype.DARWIN {
+				switch *y.OS {
+				case limatype.DARWIN, limatype.FREEBSD:
 					provision.Owner = ptr.Of("root:wheel")
+				default:
+					provision.Owner = ptr.Of("root:root")
 				}
 			} else {
 				if out, err := executeGuestTemplate(*provision.Owner, instDir, y.User, y.Param); err == nil {

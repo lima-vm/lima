@@ -77,8 +77,9 @@ type (
 type CPUType = map[Arch]string
 
 const (
-	LINUX  OS = "Linux"
-	DARWIN OS = "Darwin"
+	LINUX   OS = "Linux"
+	DARWIN  OS = "Darwin"
+	FREEBSD OS = "FreeBSD"
 
 	X8664   Arch = "x86_64"
 	AARCH64 Arch = "aarch64"
@@ -98,7 +99,7 @@ const (
 )
 
 var (
-	OSTypes    = []OS{LINUX, DARWIN}
+	OSTypes    = []OS{LINUX, DARWIN, FREEBSD}
 	ArchTypes  = []Arch{X8664, AARCH64, ARMV7L, PPC64LE, RISCV64, S390X}
 	MountTypes = []MountType{REVSSHFS, NINEP, VIRTIOFS, WSLMount}
 	VMTypes    = []VMType{QEMU, VZ, WSL2}
