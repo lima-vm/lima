@@ -19,7 +19,27 @@ type Entry struct {
 	Reader io.Reader
 }
 
-func Write(isoPath, label string, layout []Entry) error {
+type WriteOptions struct {
+	Joliet bool
+}
+
+type WriteOpt func(*WriteOptions)
+
+func WithJoliet() WriteOpt {
+	return func(opts *WriteOptions) {
+		opts.Joliet = true
+	}
+}
+
+func Write(isoPath, label string, layout []Entry, opts ...WriteOpt) error {
+	options := &WriteOptions{}
+	for _, opt := range opts {
+		opt(options)
+	}
+	if options.Joliet {
+		return writeJoliet(isoPath, label, layout)
+	}
+
 	if err := os.RemoveAll(isoPath); err != nil {
 		return err
 	}

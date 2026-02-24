@@ -126,6 +126,7 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 	archive := "nerdctl-full.tgz"
 	args := TemplateArgs{
 		Debug:              debugutil.Debug,
+		OS:                 *instConfig.OS,
 		BootScripts:        bootScripts,
 		Name:               name,
 		Hostname:           hostname.FromInstName(name), // TODO: support customization
@@ -471,7 +472,12 @@ func GenerateISO9660(ctx context.Context, drv driver.Driver, instDir, name strin
 		return writeCIDataDir(filepath.Join(instDir, filenames.CIDataISODir), layout)
 	}
 
-	return iso9660util.Write(filepath.Join(instDir, filenames.CIDataISO), "cidata", layout)
+	var iso9660Options []iso9660util.WriteOpt
+	if *instConfig.OS == limatype.DARWIN {
+		// Without Joliet, all the file names will be in upper case, and the hiphen will be replaced with underscore
+		iso9660Options = append(iso9660Options, iso9660util.WithJoliet())
+	}
+	return iso9660util.Write(filepath.Join(instDir, filenames.CIDataISO), "cidata", layout, iso9660Options...)
 }
 
 func removeControlChars(s string) string {

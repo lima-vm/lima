@@ -1,0 +1,16 @@
+minimumLimaVersion: 2.1.0
+
+base:
+- template:_images/macos-26
+# - template:_default/mounts
+
+# No support for mounts, port forwards, etc. yet
+plain: true
+
+# The installer seems to require the display device to be present.
+video:
+  display: "default"
+
+message: |
+  The user password for GUI session is stored in the `~/password` file in the guest.
+  Consider changing it after the first login.
