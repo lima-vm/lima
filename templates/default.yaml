@@ -214,9 +214,9 @@ containerd:
 #   script: |
 #     systemctl disable NetworkManager-wait-online.service
 # # `dependency` is executed before the regular dependency resolution workflow in
-# # pkg/cidata/cidata.TEMPLATE.d/boot/30-install-packages.sh
+# # pkg/cidata/cidata.TEMPLATE.d/boot.Linux/30-install-packages.sh
 # # If skipDefaultDependencyResolution is set on at least one `dependency` mode provisioning script, the regular
-# # dependency resolution workflow in pkg/cidata/cidata.TEMPLATE.d/boot/30-install-packages.sh will be skipped.
+# # dependency resolution workflow in pkg/cidata/cidata.TEMPLATE.d/boot.Linux/30-install-packages.sh will be skipped.
 # - mode: dependency
 #   skipDefaultDependencyResolution: false
 #   script: |
@@ -281,10 +281,10 @@ containerd:
 #     scripts_per_boot:
 #     - `00-lima.boot.sh` is executed; remaining provisions are processed in the following order:
 #       - LIMA pre-defined boot scripts:
-#         - `boot/{00-..., ..., 25-...}`
-#         - `boot/30-install-packages.sh`
+#         - `boot.Linux/{00-..., ..., 25-...}`
+#         - `boot.Linux/30-install-packages.sh`
 #           - `mode: dependency` scripts are executed
-#         - `boot/{35-..., ...}`
+#         - `boot.Linux/{35-..., ...}`
 #       - `mode: data` files are copied
 #       - `mode: yq` files are processed
 #       - `mode: system` scripts are executed

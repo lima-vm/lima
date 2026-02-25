@@ -391,8 +391,18 @@ func GenerateISO9660(ctx context.Context, drv driver.Driver, instDir, name strin
 	}
 
 	for filename, content := range driverScripts {
+		layoutPath := path.Join("boot.Linux", filename)
+		if strings.Contains(filename, "/") {
+			// When the filename contains a slash, it must be in the format of "boot.<OS>/<SCRIPT>"
+			if !strings.HasPrefix(filename, "boot.") || strings.Count(filename, "/") != 1 {
+				return fmt.Errorf("invalid boot script filename %q: must be in format 'boot.<OS>/<SCRIPT>'", filename)
+			}
+			layoutPath = filename
+		} else {
+			logrus.Warnf("Boot script filename %q does not contain '/', treating it as a script for Linux and prefixing with 'boot.Linux/'", filename)
+		}
 		layout = append(layout, iso9660util.Entry{
-			Path:   fmt.Sprintf("boot/%s", filename),
+			Path:   layoutPath,
 			Reader: strings.NewReader(string(content)),
 		})
 	}

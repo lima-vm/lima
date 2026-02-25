@@ -35,3 +35,5 @@ ignore:
 - website
 # "ubuntu-24.04" does not follow the kebab-case
 - '**/ubuntu-*\.yaml'
+# "boot.<OS>" does not follow the kebab-case
+- '**/boot.*'

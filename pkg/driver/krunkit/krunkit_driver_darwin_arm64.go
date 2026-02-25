@@ -214,31 +214,32 @@ func (l *LimaKrunkitDriver) FillConfig(_ context.Context, cfg *limatype.LimaYAML
 	return validateConfig(cfg)
 }
 
-//go:embed boot/*.sh
-var bootFS embed.FS
+//go:embed boot.Linux/*.sh
+var bootLinuxFS embed.FS
 
 func (l *LimaKrunkitDriver) BootScripts() (map[string][]byte, error) {
 	scripts := make(map[string][]byte)
 
-	entries, err := bootFS.ReadDir("boot")
+	entries, err := bootLinuxFS.ReadDir("boot.Linux")
 	if err == nil && !isFedoraConfigured(l.Instance.Config) {
 		for _, entry := range entries {
 			if entry.IsDir() {
 				continue
 			}
+			entryPath := "boot.Linux/" + entry.Name()
 
-			content, err := bootFS.ReadFile("boot/" + entry.Name())
+			content, err := bootLinuxFS.ReadFile(entryPath)
 			if err != nil {
 				return nil, err
 			}
 
-			scripts[entry.Name()] = content
+			scripts[entryPath] = content
 		}
 	}
 
 	// Disabled by krunkit driver for Fedora to make boot time faster
 	if isFedoraConfigured(l.Instance.Config) {
-		scripts["00-reboot-if-required.sh"] = []byte(`#!/bin/sh
+		scripts["boot.Linux/00-reboot-if-required.sh"] = []byte(`#!/bin/sh
 set -eu
 exit 0
 `)
