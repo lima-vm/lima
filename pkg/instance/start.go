@@ -73,6 +73,8 @@ func Prepare(ctx context.Context, inst *limatype.Instance, guestAgent string) (*
 		return nil, err
 	}
 
+	supportedImageFormats := limaDriver.Info().Features.SupportedImageFormats
+
 	created := limayaml.IsExistingInstanceDir(inst.Dir)
 
 	imagePath := filepath.Join(inst.Dir, filenames.Image)
@@ -84,13 +86,13 @@ func Prepare(ctx context.Context, inst *limatype.Instance, guestAgent string) (*
 		var ensuredImage bool
 		errs := make([]error, len(inst.Config.Images))
 		for i, f := range inst.Config.Images {
-			if _, err := fileutils.DownloadFile(ctx, imagePath, f.File, true, "the image", *inst.Config.Arch); err != nil {
+			if _, err := fileutils.DownloadFile(ctx, imagePath, f.File, true, "the image", *inst.Config.Arch, supportedImageFormats); err != nil {
 				errs[i] = err
 				continue
 			}
 			if f.Kernel != nil {
 				// ensure decompress kernel because vz expects it to be decompressed
-				if _, err := fileutils.DownloadFile(ctx, kernel, f.Kernel.File, true, "the kernel", *inst.Config.Arch); err != nil {
+				if _, err := fileutils.DownloadFile(ctx, kernel, f.Kernel.File, true, "the kernel", *inst.Config.Arch, nil); err != nil {
 					errs[i] = err
 					continue
 				}
@@ -103,7 +105,7 @@ func Prepare(ctx context.Context, inst *limatype.Instance, guestAgent string) (*
 			}
 			if f.Initrd != nil {
 				// vz does not need initrd to be decompressed
-				if _, err := fileutils.DownloadFile(ctx, initrd, *f.Initrd, false, "the initrd", *inst.Config.Arch); err != nil {
+				if _, err := fileutils.DownloadFile(ctx, initrd, *f.Initrd, false, "the initrd", *inst.Config.Arch, nil); err != nil {
 					errs[i] = err
 					continue
 				}

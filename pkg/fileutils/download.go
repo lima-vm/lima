@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"path"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 
@@ -19,18 +20,23 @@ import (
 var ErrSkipped = errors.New("skipped to download")
 
 // DownloadFile downloads a file to the cache, optionally copying it to the destination. Returns path in cache.
-func DownloadFile(ctx context.Context, dest string, f limatype.File, decompress bool, description string, expectedArch limatype.Arch) (string, error) {
+func DownloadFile(ctx context.Context, dest string, f limatype.File, decompress bool, description string, expectedArch limatype.Arch, supportedImageFormats []string) (string, error) {
 	if f.Arch != expectedArch {
 		return "", fmt.Errorf("%w: %q: unsupported arch: %q", ErrSkipped, f.Location, f.Arch)
 	}
 	fields := logrus.Fields{"location": f.Location, "arch": f.Arch, "digest": f.Digest}
 	logrus.WithFields(fields).Infof("Attempting to download %s", description)
-	res, err := downloader.Download(ctx, dest, f.Location,
+	opts := []downloader.Opt{
 		downloader.WithCache(),
 		downloader.WithDecompress(decompress),
 		downloader.WithDescription(fmt.Sprintf("%s (%s)", description, path.Base(f.Location))),
 		downloader.WithExpectedDigest(f.Digest),
-	)
+	}
+	if strings.Contains(description, "image") && supportedImageFormats != nil {
+		opts = append(opts, downloader.WithImageFormats(supportedImageFormats))
+	}
+
+	res, err := downloader.Download(ctx, dest, f.Location, opts...)
 	if err != nil {
 		return "", fmt.Errorf("failed to download %q: %w", f.Location, err)
 	}
