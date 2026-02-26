@@ -216,6 +216,22 @@ func makeSparse(f *os.File, offset int64) error {
 	return f.Truncate(offset)
 }
 
+func DetectFormat(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	img, err := qcow2reader.Open(f)
+	if err != nil {
+		return "", err
+	}
+	defer img.Close()
+
+	return string(img.Type()), nil
+}
+
 // CreateDisk creates a new disk image with the specified size.
 func (n *NativeImageUtil) CreateDisk(_ context.Context, disk string, size int64) error {
 	if _, err := os.Stat(disk); err == nil || !errors.Is(err, fs.ErrNotExist) {

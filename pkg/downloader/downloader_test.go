@@ -379,3 +379,129 @@ func TestDownloadCompressed(t *testing.T) {
 		assert.Equal(t, string(got), string(testDownloadCompressedContents))
 	})
 }
+
+// This test simulates the end-to-end flow of downloading a remote image and converting it.
+func TestDownloadImageConversion(t *testing.T) {
+	_, err := exec.LookPath("qemu-img")
+	if err != nil {
+		t.Skipf("qemu-img does not seem installed: %v", err)
+	}
+
+	remoteDir := t.TempDir()
+	ts := httptest.NewServer(http.FileServer(http.Dir(remoteDir)))
+	t.Cleanup(ts.Close)
+
+	qcow2Path := filepath.Join(remoteDir, "test.qcow2")
+	assert.NilError(t, exec.CommandContext(t.Context(), "qemu-img", "create", "-f", "qcow2", qcow2Path, "64K").Run())
+
+	t.Run("without-digest", func(t *testing.T) {
+		ctx := t.Context()
+		cacheDir := t.TempDir()
+		localPath := filepath.Join(t.TempDir(), "local")
+		remoteURL := ts.URL + "/test.qcow2"
+
+		// 1. First download, should convert to raw
+		r, err := Download(ctx, localPath, remoteURL,
+			WithCacheDir(cacheDir),
+			WithDescription("image"),
+			WithImageFormats([]string{"raw"}),
+		)
+		assert.NilError(t, err)
+		assert.Equal(t, StatusDownloaded, r.Status)
+
+		shad := cacheDirectoryPath(cacheDir, remoteURL)
+		rawPath := filepath.Join(shad, "imgconv", "raw")
+		_, err = os.Stat(rawPath)
+		assert.NilError(t, err)
+
+		// 2. Second download, should use cached raw
+		localPath2 := filepath.Join(t.TempDir(), "local2")
+		r, err = Download(ctx, localPath2, remoteURL,
+			WithCacheDir(cacheDir),
+			WithDescription("image"),
+			WithImageFormats([]string{"raw"}),
+		)
+		assert.NilError(t, err)
+		assert.Equal(t, StatusUsedCache, r.Status)
+		assert.Equal(t, rawPath, r.CachePath)
+	})
+
+	t.Run("with-digest", func(t *testing.T) {
+		ctx := t.Context()
+		cacheDir := t.TempDir()
+		localPath := filepath.Join(t.TempDir(), "local")
+		remoteURL := ts.URL + "/test.qcow2"
+
+		content, err := os.ReadFile(qcow2Path)
+		assert.NilError(t, err)
+		originalDigest := digest.SHA256.FromBytes(content)
+
+		// 1. First download, should convert to raw
+		r, err := Download(ctx, localPath, remoteURL,
+			WithCacheDir(cacheDir),
+			WithDescription("image"),
+			WithImageFormats([]string{"raw"}),
+			WithExpectedDigest(originalDigest),
+		)
+		assert.NilError(t, err)
+		assert.Equal(t, StatusDownloaded, r.Status)
+
+		shad := cacheDirectoryPath(cacheDir, remoteURL)
+		rawPath := filepath.Join(shad, "imgconv", "raw")
+		_, err = os.Stat(rawPath)
+		assert.NilError(t, err)
+
+		// 2. Second download, should use cached raw
+		localPath2 := filepath.Join(t.TempDir(), "local2")
+		r, err = Download(ctx, localPath2, remoteURL,
+			WithCacheDir(cacheDir),
+			WithDescription("image"),
+			WithImageFormats([]string{"raw"}),
+			WithExpectedDigest(originalDigest),
+		)
+		assert.NilError(t, err)
+		assert.Equal(t, StatusUsedCache, r.Status)
+		assert.Equal(t, rawPath, r.CachePath)
+	})
+}
+
+// This test focuses specifically on the scenario where the source image
+// is already in the Lima cache but the converted version does not exist yet.
+func TestDownloadImageConversionCached(t *testing.T) {
+	_, err := exec.LookPath("qemu-img")
+	if err != nil {
+		t.Skipf("qemu-img does not seem installed: %v", err)
+	}
+
+	ctx := t.Context()
+	tmpDir := t.TempDir()
+	cacheDir := filepath.Join(tmpDir, "cache")
+	remoteURL := "https://example.com/test.qcow2"
+
+	// Pre-populate cache with a qcow2 file
+	shad := cacheDirectoryPath(cacheDir, remoteURL)
+	assert.NilError(t, os.MkdirAll(shad, 0o700))
+	shadData := filepath.Join(shad, "data")
+	assert.NilError(t, exec.CommandContext(t.Context(), "qemu-img", "create", "-f", "qcow2", shadData, "64K").Run())
+
+	// We need to provide either a digest or a valid shadTime file to avoid re-download
+	shadTime := filepath.Join(shad, "time")
+	assert.NilError(t, os.WriteFile(shadTime, []byte(time.Now().Format(http.TimeFormat)), 0o644))
+
+	localPath := filepath.Join(tmpDir, "local")
+
+	// Call Download, it should find qcow2 in cache, see it's not supported, and convert it
+	r, err := Download(ctx, localPath, remoteURL,
+		WithCacheDir(cacheDir),
+		WithDescription("image"),
+		WithImageFormats([]string{"raw"}),
+	)
+	assert.NilError(t, err)
+	assert.Equal(t, StatusUsedCache, r.Status)
+
+	// Verify conversion happened
+	rawPath := filepath.Join(shad, "imgconv", "raw")
+	_, err = os.Stat(rawPath)
+	assert.NilError(t, err)
+	assert.Equal(t, rawPath, r.CachePath)
+}
