@@ -21,10 +21,13 @@ import (
 
 	"github.com/cheggaaa/pb/v3"
 	"github.com/containerd/continuity/fs"
+	"github.com/lima-vm/go-qcow2reader"
+	"github.com/lima-vm/go-qcow2reader/image/raw"
 	"github.com/opencontainers/go-digest"
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/httpclientutil"
+	"github.com/lima-vm/lima/v2/pkg/imgutil/proxyimgutil"
 	"github.com/lima-vm/lima/v2/pkg/localpathutil"
 	"github.com/lima-vm/lima/v2/pkg/lockutil"
 	"github.com/lima-vm/lima/v2/pkg/progressbar"
@@ -263,6 +266,21 @@ func getCached(ctx context.Context, localPath, remote string, o options) (*Resul
 	if err != nil {
 		return nil, err
 	}
+	// Check if this cache entry was converted to raw
+	originalDigestPath := filepath.Join(shad, "original.digest")
+	if data, err := os.ReadFile(originalDigestPath); err == nil {
+		storedOriginal := strings.TrimSpace(string(data))
+		if storedOriginal == o.expectedDigest.String() {
+			logrus.Debugf("Using cached raw conversion for %q (original digest: %s)", remote, storedOriginal)
+			if shadDigest != "" {
+				if currentDigestData, err := os.ReadFile(shadDigest); err == nil {
+					currentDigest := strings.TrimSpace(string(currentDigestData))
+					o.expectedDigest, _ = digest.Parse(currentDigest)
+				}
+			}
+		}
+	}
+
 	if _, err := os.Stat(shadData); err != nil {
 		return nil, nil
 	}
@@ -321,7 +339,29 @@ func fetch(ctx context.Context, localPath, remote string, o options) (*Result, e
 		if err := os.WriteFile(shadDigest, []byte(o.expectedDigest.String()), 0o644); err != nil {
 			return nil, err
 		}
+
+		// Also write to original.digest for tracking
+		originalDigestPath := filepath.Join(shad, "original.digest")
+		if err := os.WriteFile(originalDigestPath, []byte(o.expectedDigest.String()), 0o644); err != nil {
+			logrus.WithError(err).Warn("Failed to write original digest file")
+		}
 	}
+
+	// Try to convert to raw if it's an non-ISO image
+	if strings.Contains(o.description, "image") && path.Ext(remote) != ".iso" {
+		converted, rawDigest, err := ensureRawInCache(ctx, shadData, o.expectedDigest)
+		if err != nil {
+			logrus.WithError(err).Warnf("Failed to convert cached image to raw, will use original format")
+		} else if converted {
+			// Update sha256.digest to point to the raw digest for future cache validation
+			if shadDigest != "" && rawDigest != "" {
+				if err := os.WriteFile(shadDigest, []byte(rawDigest.String()), 0o644); err != nil {
+					logrus.WithError(err).Warn("Failed to update digest file with raw digest")
+				}
+			}
+		}
+	}
+
 	// no need to pass the digest to copyLocal(), as we already verified the digest
 	if err := copyLocal(ctx, localPath, shadData, ext, o.decompress, "", ""); err != nil {
 		return nil, err
@@ -334,6 +374,81 @@ func fetch(ctx context.Context, localPath, remote string, o options) (*Result, e
 		ValidatedDigest: o.expectedDigest != "",
 	}
 	return res, nil
+}
+
+// ensureRawInCache converts the image to raw. It replaces the original
+// image file with the raw version to save space. Returns whether conversion
+// happened, the raw digest, and any error.
+func ensureRawInCache(ctx context.Context, imagePath string, originalDigest digest.Digest) (bool, digest.Digest, error) {
+	if IsRawImage(imagePath) {
+		return false, "", nil
+	}
+
+	logrus.Infof("Converting qcow2 image to raw sparse format in cache: %q", imagePath)
+	rawPathTmp := imagePath + ".raw.tmp"
+	defer os.Remove(rawPathTmp)
+	diskUtil := proxyimgutil.NewDiskUtil(ctx)
+	if err := diskUtil.Convert(ctx, raw.Type, imagePath, rawPathTmp, nil, false); err != nil {
+		return false, "", fmt.Errorf("failed to convert %q to raw: %w", imagePath, err)
+	}
+
+	// Ensure the image is sparse to save cache space.
+	rawTmpF, err := os.OpenFile(rawPathTmp, os.O_RDWR, 0o644)
+	if err != nil {
+		return false, "", fmt.Errorf("failed to open raw tmp file %q: %w", rawPathTmp, err)
+	}
+	fi, err := rawTmpF.Stat()
+	if err != nil {
+		_ = rawTmpF.Close()
+		return false, "", fmt.Errorf("failed to stat raw tmp file %q: %w", rawPathTmp, err)
+	}
+	if err := diskUtil.MakeSparse(ctx, rawTmpF, fi.Size()); err != nil {
+		logrus.WithError(err).Warnf("Failed to make %q sparse (non-fatal)", rawPathTmp)
+	}
+	if err := rawTmpF.Close(); err != nil {
+		return false, "", fmt.Errorf("failed to close raw tmp file %q: %w", rawPathTmp, err)
+	}
+
+	rawDigest, err := calculateFileDigest(rawPathTmp, originalDigest.Algorithm())
+	if err != nil {
+		return false, "", fmt.Errorf("failed to calculate digest of raw image: %w", err)
+	}
+
+	if err := os.Rename(rawPathTmp, imagePath); err != nil {
+		return false, "", fmt.Errorf("failed to replace original with raw image: %w", err)
+	}
+
+	return true, rawDigest, nil
+}
+
+func IsRawImage(path string) bool {
+	f, err := os.Open(path)
+	if err != nil {
+		return false
+	}
+	defer f.Close()
+
+	img, err := qcow2reader.Open(f)
+	if err != nil {
+		return false
+	}
+
+	return img.Type() == raw.Type
+}
+
+func calculateFileDigest(path string, algo digest.Algorithm) (digest.Digest, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	digester := algo.Digester()
+	if _, err := io.Copy(digester.Hash(), f); err != nil {
+		return "", err
+	}
+
+	return digester.Digest(), nil
 }
 
 // Cached checks if the remote resource is in the cache.
