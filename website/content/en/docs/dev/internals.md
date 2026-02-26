@@ -145,6 +145,9 @@ The directory contains the following files:
 - `data`: data
 - `<ALGO>.digest`: digest of the data, in OCI format.
    e.g., file name `sha256.digest`, with content `sha256:5ba3d476707d510fe3ca3928e9cda5d0b4ce527d42b343404c92d563f82ba967`
+- `imgconv/`: (Optional) a converted copy of the image, in a format the current driver can use. The downloader creates this on demand when the driver reports its `SupportedImageFormats` and the cached `data` is not one of them (for example, a `qcow2` image requested by the `vz` driver, which only boots raw). The original `data` and its digest file are left as-is, so another driver can still use them.
+  - `raw`: the converted raw image. If `data` is newer than `raw`, the raw copy is treated as stale and rebuilt.
+  - `raw.digest`: digest of the raw image. Uses the same algorithm as the digest the caller passed in, and is only read back when the caller passes an expected digest.
 
 
 ## Ansible

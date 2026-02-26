@@ -16,16 +16,21 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync/atomic"
 	"time"
 
 	"github.com/cheggaaa/pb/v3"
 	"github.com/containerd/continuity/fs"
+	"github.com/lima-vm/go-qcow2reader/image/raw"
 	"github.com/opencontainers/go-digest"
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/httpclientutil"
+	"github.com/lima-vm/lima/v2/pkg/imgutil/nativeimgutil"
+	"github.com/lima-vm/lima/v2/pkg/imgutil/proxyimgutil"
+	"github.com/lima-vm/lima/v2/pkg/iso9660util"
 	"github.com/lima-vm/lima/v2/pkg/localpathutil"
 	"github.com/lima-vm/lima/v2/pkg/lockutil"
 	"github.com/lima-vm/lima/v2/pkg/progressbar"
@@ -57,10 +62,11 @@ type Result struct {
 }
 
 type options struct {
-	cacheDir       string // default: empty (disables caching)
-	decompress     bool   // default: false (keep compression)
-	description    string // default: url
-	expectedDigest digest.Digest
+	cacheDir              string // default: empty (disables caching)
+	decompress            bool   // default: false (keep compression)
+	description           string // default: url
+	expectedDigest        digest.Digest
+	supportedImageFormats []string
 }
 
 func (o *options) apply(opts []Opt) error {
@@ -107,6 +113,13 @@ func WithDescription(description string) Opt {
 func WithDecompress(decompress bool) Opt {
 	return func(o *options) error {
 		o.decompress = decompress
+		return nil
+	}
+}
+
+func WithImageFormats(supportedImageFormats []string) Opt {
+	return func(o *options) error {
+		o.supportedImageFormats = supportedImageFormats
 		return nil
 	}
 }
@@ -267,6 +280,81 @@ func getCached(ctx context.Context, localPath, remote string, o options) (*Resul
 	if _, err := os.Stat(shadData); err != nil {
 		return nil, nil
 	}
+	if _, err := os.Stat(shadDigest); err == nil {
+		if err := validateCachedDigest(shadDigest, o.expectedDigest); err != nil {
+			return nil, err
+		}
+	} else if match, lmCached, lmRemote, err := matchLastModified(ctx, shadTime, remote); err != nil {
+		logrus.WithError(err).Info("Failed to retrieve last-modified for cached digest-less image; using cached image.")
+	} else if !match {
+		logrus.Infof("Re-downloading digest-less image: last-modified mismatch (cached: %#q, remote: %#q)", lmCached, lmRemote)
+		return nil, nil
+	}
+
+	// Some drivers (e.g. vz) can only boot raw images. When the driver tells us
+	// which formats it supports and the cached image is not one of them, we save
+	// a converted raw copy next to the original at <shad>/imgconv/raw. See
+	// website/content/en/docs/dev/internals.md for the layout.
+	if len(o.supportedImageFormats) > 0 {
+		isISO, err := iso9660util.IsISO9660(shadData)
+		if err != nil {
+			logrus.WithError(err).Debugf("Skipping cache image conversion for %q (unable to check ISO9660)", shadData)
+		} else if !isISO {
+			imageFormat, err := nativeimgutil.DetectFormat(shadData)
+			if err != nil {
+				logrus.WithError(err).Debugf("Skipping cache image conversion for %q (unable to detect format)", shadData)
+			} else if !slices.Contains(o.supportedImageFormats, imageFormat) {
+				rawImgConvPath := filepath.Join(shad, "imgconv", "raw")
+				rawImgConvDigestPath := filepath.Join(shad, "imgconv", "raw.digest")
+
+				needConvert := false
+				if rawStat, err := os.Stat(rawImgConvPath); err != nil {
+					if errors.Is(err, os.ErrNotExist) {
+						needConvert = true
+					} else {
+						return nil, err
+					}
+				} else {
+					origStat, err := os.Stat(shadData)
+					if err != nil {
+						return nil, err
+					}
+					if origStat.ModTime().After(rawStat.ModTime()) {
+						needConvert = true
+					}
+				}
+
+				if needConvert {
+					logrus.Infof("Converted raw image is missing or stale; (re)converting now.")
+					converted, rawDigest, err := ensureRawInCache(ctx, shadData, imageFormat, o.expectedDigest)
+					if err != nil {
+						return nil, err
+					}
+					shadData = converted
+					if o.expectedDigest != "" {
+						o.expectedDigest = rawDigest
+						shadDigest = rawImgConvDigestPath
+					}
+				} else {
+					shadData = rawImgConvPath
+					if o.expectedDigest != "" {
+						if currentDigestData, err := os.ReadFile(rawImgConvDigestPath); err == nil {
+							currentDigest := strings.TrimSpace(string(currentDigestData))
+							if d, err := digest.Parse(currentDigest); err == nil {
+								o.expectedDigest = d
+								shadDigest = rawImgConvDigestPath
+							} else {
+								return nil, fmt.Errorf("invalid digest in raw digest file %q: %w", rawImgConvDigestPath, err)
+							}
+						} else {
+							return nil, fmt.Errorf("failed to read raw digest file %q: %w", rawImgConvDigestPath, err)
+						}
+					}
+				}
+			}
+		}
+	}
+
 	ext := path.Ext(remote)
 	logrus.Debugf("file %#q is cached as %#q", localPath, shadData)
 	if _, err := os.Stat(shadDigest); err == nil {
@@ -279,15 +367,8 @@ func getCached(ctx context.Context, localPath, remote string, o options) (*Resul
 			return nil, err
 		}
 	} else {
-		if match, lmCached, lmRemote, err := matchLastModified(ctx, shadTime, remote); err != nil {
-			logrus.WithError(err).Info("Failed to retrieve last-modified for cached digest-less image; using cached image.")
-		} else if match {
-			if err := copyLocal(ctx, localPath, shadData, ext, o.decompress, o.description, o.expectedDigest); err != nil {
-				return nil, err
-			}
-		} else {
-			logrus.Infof("Re-downloading digest-less image: last-modified mismatch (cached: %#q, remote: %#q)", lmCached, lmRemote)
-			return nil, nil
+		if err := copyLocal(ctx, localPath, shadData, ext, o.decompress, o.description, o.expectedDigest); err != nil {
+			return nil, err
 		}
 	}
 	res := &Result{
@@ -323,6 +404,34 @@ func fetch(ctx context.Context, localPath, remote string, o options) (*Result, e
 			return nil, err
 		}
 	}
+
+	// If the driver cannot use the format we just downloaded, save a converted
+	// raw copy at <shad>/imgconv/raw, keeping the original <shad>/data as-is.
+	//
+	// Gated on WithImageFormats() (the caller's signal that this is a VM disk
+	// image) and on the file not being an ISO 9660 image.
+	if len(o.supportedImageFormats) > 0 {
+		isISO, err := iso9660util.IsISO9660(shadData)
+		if err != nil {
+			logrus.WithError(err).Debugf("Skipping cache image conversion for %q (unable to check ISO9660)", shadData)
+		} else if !isISO {
+			format, err := nativeimgutil.DetectFormat(shadData)
+			if err != nil {
+				logrus.WithError(err).Debugf("Skipping cache image conversion for %q (unable to detect format)", shadData)
+			} else if !slices.Contains(o.supportedImageFormats, format) {
+				converted, rawDigest, err := ensureRawInCache(ctx, shadData, format, o.expectedDigest)
+				if err != nil {
+					return nil, fmt.Errorf("failed to convert image to raw: %w", err)
+				} else if converted != "" {
+					shadData = converted
+					if o.expectedDigest != "" {
+						o.expectedDigest = rawDigest
+					}
+				}
+			}
+		}
+	}
+
 	// no need to pass the digest to copyLocal(), as we already verified the digest
 	if err := copyLocal(ctx, localPath, shadData, ext, o.decompress, "", ""); err != nil {
 		return nil, err
@@ -335,6 +444,82 @@ func fetch(ctx context.Context, localPath, remote string, o options) (*Result, e
 		ValidatedDigest: o.expectedDigest != "",
 	}
 	return res, nil
+}
+
+// ensureRawInCache converts any image to raw and places it in the cache(imgconv/raw). It also creates a
+// digest file for the raw image(imgconv/raw.digest). Returns the converted image path, the raw digest, and any error.
+func ensureRawInCache(ctx context.Context, imagePath, format string, originalDigest digest.Digest) (string, digest.Digest, error) {
+	imgConvPath := filepath.Join(filepath.Dir(imagePath), "imgconv")
+	if err := os.MkdirAll(imgConvPath, 0o700); err != nil {
+		return "", "", err
+	}
+	rawImgConvPath := filepath.Join(imgConvPath, "raw")
+
+	logrus.Infof("Converting %s image to raw sparse format in cache: %q", format, rawImgConvPath)
+	rawPathTmp := filepath.Join(imgConvPath, "raw.tmp")
+	defer os.Remove(rawPathTmp)
+	diskUtil := proxyimgutil.NewDiskUtil(ctx)
+	if err := diskUtil.Convert(ctx, raw.Type, imagePath, rawPathTmp, nil, false); err != nil {
+		return "", "", fmt.Errorf("failed to convert %q to raw: %w", imagePath, err)
+	}
+
+	// Ensure the image is sparse to save cache space.
+	rawTmpF, err := os.OpenFile(rawPathTmp, os.O_RDWR, 0o644)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to open raw tmp file %q: %w", rawPathTmp, err)
+	}
+	fi, err := rawTmpF.Stat()
+	if err != nil {
+		_ = rawTmpF.Close()
+		return "", "", fmt.Errorf("failed to stat raw tmp file %q: %w", rawPathTmp, err)
+	}
+	if err := diskUtil.MakeSparse(ctx, rawTmpF, fi.Size()); err != nil {
+		logrus.WithError(err).Warnf("Failed to make %q sparse (non-fatal)", rawPathTmp)
+	}
+	if err := rawTmpF.Close(); err != nil {
+		return "", "", fmt.Errorf("failed to close raw tmp file %q: %w", rawPathTmp, err)
+	}
+
+	if err := os.Remove(rawImgConvPath); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return "", "", fmt.Errorf("failed to remove stale raw image %q: %w", rawImgConvPath, err)
+	}
+	if err := os.Rename(rawPathTmp, rawImgConvPath); err != nil {
+		return "", "", fmt.Errorf("failed to replace original with raw image: %w", err)
+	}
+
+	algo := digest.Canonical
+	if originalDigest != "" {
+		algo = originalDigest.Algorithm()
+	}
+	rawDigest, err := calculateFileDigest(rawImgConvPath, algo)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to calculate digest of raw image: %w", err)
+	}
+
+	rawDigestPath := filepath.Join(imgConvPath, "raw.digest")
+	rawDigestPathTmp := rawDigestPath + ".tmp"
+	defer os.Remove(rawDigestPathTmp)
+	if err := os.WriteFile(rawDigestPathTmp, []byte(rawDigest.String()), 0o644); err != nil {
+		return "", "", fmt.Errorf("failed to write raw digest file: %w", err)
+	}
+	if err := os.Remove(rawDigestPath); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return "", "", fmt.Errorf("failed to remove stale raw digest file %q: %w", rawDigestPath, err)
+	}
+	if err := os.Rename(rawDigestPathTmp, rawDigestPath); err != nil {
+		return "", "", fmt.Errorf("failed to rename raw digest file: %w", err)
+	}
+
+	return rawImgConvPath, rawDigest, nil
+}
+
+func calculateFileDigest(path string, algo digest.Algorithm) (digest.Digest, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	return algo.FromReader(f)
 }
 
 // Cached checks if the remote resource is in the cache.

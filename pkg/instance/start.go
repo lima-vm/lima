@@ -84,6 +84,8 @@ func Prepare(ctx context.Context, inst *limatype.Instance, guestAgent string) (*
 		return nil, err
 	}
 
+	supportedImageFormats := limaDriver.Info(ctx).Features.SupportedImageFormats
+
 	created := limayaml.IsExistingInstanceDir(inst.Dir)
 
 	imagePath := filepath.Join(inst.Dir, filenames.Image)
@@ -112,13 +114,13 @@ func Prepare(ctx context.Context, inst *limatype.Instance, guestAgent string) (*
 				errs[i] = fmt.Errorf("%w: variant mismatch (expected %q, got %q)", fileutils.ErrSkipped, targetVariant, f.Variant)
 				continue
 			}
-			if _, err := fileutils.DownloadFile(ctx, imagePath, f.File, true, "the image", *inst.Config.Arch); err != nil {
+			if _, err := fileutils.DownloadFile(ctx, imagePath, f.File, true, "the image", *inst.Config.Arch, supportedImageFormats); err != nil {
 				errs[i] = err
 				continue
 			}
 			if f.Kernel != nil {
 				// ensure decompress kernel because vz expects it to be decompressed
-				if _, err := fileutils.DownloadFile(ctx, kernel, f.Kernel.File, true, "the kernel", *inst.Config.Arch); err != nil {
+				if _, err := fileutils.DownloadFile(ctx, kernel, f.Kernel.File, true, "the kernel", *inst.Config.Arch, nil); err != nil {
 					errs[i] = err
 					continue
 				}
@@ -131,7 +133,7 @@ func Prepare(ctx context.Context, inst *limatype.Instance, guestAgent string) (*
 			}
 			if f.Initrd != nil {
 				// vz does not need initrd to be decompressed
-				if _, err := fileutils.DownloadFile(ctx, initrd, *f.Initrd, false, "the initrd", *inst.Config.Arch); err != nil {
+				if _, err := fileutils.DownloadFile(ctx, initrd, *f.Initrd, false, "the initrd", *inst.Config.Arch, nil); err != nil {
 					errs[i] = err
 					continue
 				}
@@ -155,7 +157,7 @@ func Prepare(ctx context.Context, inst *limatype.Instance, guestAgent string) (*
 			errs := make([]error, len(winOpts.VirtioWin))
 			virtioWin := filepath.Join(inst.Dir, filenames.VirtioWin)
 			for i, f := range winOpts.VirtioWin {
-				if _, err := fileutils.DownloadFile(ctx, virtioWin, f, true, "virtio-win", *inst.Config.Arch); err != nil {
+				if _, err := fileutils.DownloadFile(ctx, virtioWin, f, true, "virtio-win", *inst.Config.Arch, nil); err != nil {
 					errs[i] = err
 					continue
 				}
