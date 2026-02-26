@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"time"
@@ -35,6 +36,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/ptr"
 	"github.com/lima-vm/lima/v2/pkg/reflectutil"
+	"github.com/lima-vm/lima/v2/pkg/sshutil"
 )
 
 var knownYamlProperties = []string{
@@ -438,7 +440,22 @@ func (l *LimaVzDriver) RunGUI() error {
 	return fmt.Errorf("RunGUI is not supported for the given driver '%s' and display '%s'", "vz", *l.Instance.Config.Video.Display)
 }
 
-func (l *LimaVzDriver) Stop(_ context.Context) error {
+func (l *LimaVzDriver) requestStopViaSSH(ctx context.Context) error {
+	sshExe, err := sshutil.NewSSHExe()
+	if err != nil {
+		return err
+	}
+	cmd := exec.CommandContext(ctx, sshExe.Exe,
+		append(sshExe.Args, "-F", l.Instance.SSHConfigFile, l.Instance.Hostname, "--",
+			"sudo", "/sbin/shutdown", "-h", "now")...)
+	logrus.Infof("Running shutdown command in the VM: %v", cmd.Args)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to run %v: %w (output=%s)", cmd.Args, err, string(out))
+	}
+	return nil
+}
+
+func (l *LimaVzDriver) Stop(ctx context.Context) error {
 	logrus.Info("Shutting down VZ")
 	canStop := l.machine.CanRequestStop()
 
@@ -448,7 +465,16 @@ func (l *LimaVzDriver) Stop(_ context.Context) error {
 			return err
 		}
 
-		timeout := time.After(5 * time.Second)
+		if *l.Instance.Config.OS == limatype.DARWIN {
+			// macOS VM does not respond to l.machine.RequestStop(),
+			// so we need to run `shutdown -h now` in the VM via SSH for graceful shutdown.
+			if err := l.requestStopViaSSH(ctx); err != nil {
+				logrus.WithError(err).Warn("Failed to request shutdown via SSH")
+			}
+		}
+
+		// Most Linux machines shutdown within 5 seconds, but macOS machines can take longer.
+		timeout := time.After(30 * time.Second)
 		ticker := time.NewTicker(500 * time.Millisecond)
 		for {
 			select {

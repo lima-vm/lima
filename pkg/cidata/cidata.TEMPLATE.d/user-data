@@ -35,8 +35,13 @@ users:
 {{- end }}
     homedir: "{{.Home}}"
     shell: {{.Shell}}
-{{- if ne .OS "Darwin" }}
-{{/* On macOS, the password is not locked so as to allow GUI login */}}
+{{- if eq .OS "Darwin" }}
+    {{/* On macOS, the password is not locked so as to allow GUI login. */}}
+    {{/* Since the user can run sudo with their own password, basically we don't need to set up passwordless sudo. */}}
+    {{/* However, it is still configured to allow `/sbin/shutdown -h now` without password, as it is invoked by `limactl stop` for graceful shutdown. */}}
+    {{/* (Why doesn't macOS VM support graceful shutdown?) */}}
+    sudo: ALL=(ALL) NOPASSWD:/sbin/shutdown -h now
+{{- else }}
     sudo: ALL=(ALL) NOPASSWD:ALL
     lock_passwd: true
 {{- end }}
