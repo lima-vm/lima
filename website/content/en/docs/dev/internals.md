@@ -138,6 +138,9 @@ The directory contains the following files:
 - `data`: data
 - `<ALGO>.digest`: digest of the data, in OCI format.
    e.g., file name `sha256.digest`, with content `sha256:5ba3d476707d510fe3ca3928e9cda5d0b4ce527d42b343404c92d563f82ba967`
+- `imgconv/`: (Optional) converted image directory
+  - `raw`: converted raw image
+  - `raw.digest`: digest of the raw image
 
 
 ## Ansible
