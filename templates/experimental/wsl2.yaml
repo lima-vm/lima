@@ -4,9 +4,9 @@ vmType: wsl2
 
 images:
 # Source: https://github.com/runfinch/finch-core/blob/main/rootfs/Dockerfile (image based on fedora)
-- location: "https://deps.runfinch.com/common/x86-64/finch-rootfs-production-amd64-1741837119.tar.gz"
+- location: "https://deps.runfinch.com/common/x86-64/finch-rootfs-production-amd64-1771357941.tar.gz"
   arch: "x86_64"
-  digest: "sha256:1ebee4c785fc4d31fd514365694a7d4d50a95093526c051f76dc63d8ba9fafe6"
+  digest: "sha256:423d1a0f1cabeaea6801995c90ed896dccc091180068626430f19fd87853fdf3"
 
 mountType: wsl2
 
