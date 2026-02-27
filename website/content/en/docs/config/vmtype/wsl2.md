@@ -23,10 +23,10 @@ limactl start --vm-type=wsl2 --mount-type=wsl2 --containerd=system
 # Example to run Fedora using vmType: wsl2
 vmType: wsl2
 images:
-# Source: https://github.com/runfinch/finch-core/blob/main/Dockerfile
-- location: "https://deps.runfinch.com/common/x86-64/finch-rootfs-production-amd64-1690920103.tar.zst"
+# Source: https://github.com/runfinch/finch-core/blob/main/rootfs/Dockerfile
+- location: "https://deps.runfinch.com/common/x86-64/finch-rootfs-production-amd64-1771357941.tar.gz"
   arch: "x86_64"
-  digest: "sha256:53f2e329b8da0f6a25e025d1f6cc262ae228402ba615ad095739b2f0ec6babc9"
+  digest: "sha256:423d1a0f1cabeaea6801995c90ed896dccc091180068626430f19fd87853fdf3"
 mountType: wsl2
 containerd:
   system: true
