@@ -12,10 +12,6 @@ Running macOS guests is experimentally supported since Lima v2.1.
 limactl start template:macos
 ```
 
-A password prompt is shown during creating an instance, so as to run
-the `chown root:wheel ~/.lima/_mnt/0/...` command on the host.
-This password is not used for setting up the user account in the VM.
-
 The user password is randomly generated and stored in the `~/password` file in the VM.
 Consider changing it after the first login.
 

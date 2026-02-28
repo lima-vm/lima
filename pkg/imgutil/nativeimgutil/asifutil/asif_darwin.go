@@ -73,7 +73,9 @@ func ResizeASIF(path string, size int64) error {
 }
 
 type AttachedDisk struct {
-	Data string // e.g. "disk7s5"
+	Disk      string // whole disk device, e.g. "disk4" (GUID_partition_scheme)
+	Container string // APFS container partition, e.g. "disk4s2" (Apple_APFS)
+	Data      string // data volume device, e.g. "disk7s5"
 }
 
 // parseDiskutilImageAttachOutput parses the output of `diskutil image attach -plist -nomount <disk>`
@@ -93,19 +95,33 @@ func parseDiskutilImageAttachOutput(xmlStr string) (*AttachedDisk, error) {
 		return nil, errors.New("unexpected plist format: missing system-entities array")
 	}
 
+	result := &AttachedDisk{}
 	for _, devEnt := range seVal.Array {
 		devDict := devEnt.Dict
 		if devDict == nil {
 			continue
 		}
-		if role, ok := devDict["role"]; ok && role.String != nil && *role.String == "Data" {
-			if devEntry, ok := devDict["dev-entry"]; ok && devEntry.String != nil && *devEntry.String != "" {
-				return &AttachedDisk{Data: *devEntry.String}, nil
+		devEntry, hasDevEntry := devDict["dev-entry"]
+		if !hasDevEntry || devEntry.String == nil || *devEntry.String == "" {
+			continue
+		}
+		if hint, ok := devDict["content-hint"]; ok && hint.String != nil {
+			switch *hint.String {
+			case "GUID_partition_scheme":
+				result.Disk = *devEntry.String
+			case "Apple_APFS":
+				result.Container = *devEntry.String
 			}
 		}
+		if role, ok := devDict["role"]; ok && role.String != nil && *role.String == "Data" {
+			result.Data = *devEntry.String
+		}
+	}
+	if result.Data == "" {
+		return nil, errors.New("no data device found in diskutil output")
 	}
 
-	return nil, errors.New("no data device found in diskutil output")
+	return result, nil
 }
 
 var ErrResourceTemporarilyUnavailable = errors.New("resource temporarily unavailable")
