@@ -61,11 +61,11 @@ var templateCopyExample = `  Template locators are local files, file://, https:/
 
 func newTemplateCopyCommand() *cobra.Command {
 	templateCopyCommand := &cobra.Command{
-		Use:     "copy [OPTIONS] TEMPLATE DEST",
+		Use:     "copy [OPTIONS] TEMPLATE [DEST]",
 		Short:   "Copy template",
-		Long:    "Copy a template via locator to a local file",
+		Long:    "Copy a template via locator to a local file or stdout (default)",
 		Example: templateCopyExample,
-		Args:    WrapArgsError(cobra.ExactArgs(2)),
+		Args:    WrapArgsError(cobra.RangeArgs(1, 2)),
 		RunE:    templateCopyAction,
 	}
 	templateCopyCommand.Flags().Bool("embed", false, "Embed external dependencies into template")
@@ -97,7 +97,10 @@ func fillDefaults(ctx context.Context, tmpl *limatmpl.Template) error {
 func templateCopyAction(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	source := args[0]
-	target := args[1]
+	target := "-"
+	if len(args) > 1 {
+		target = args[1]
+	}
 	embed, err := cmd.Flags().GetBool("embed")
 	if err != nil {
 		return err
