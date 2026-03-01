@@ -48,12 +48,10 @@ CODE=0
 # has run because it might move the directories to /mnt/data on first boot. In that
 # case changes made on restart would be lost.
 
-if [ "$LIMA_CIDATA_PLAIN" = "1" ]; then
-	INFO "Plain mode. Skipping to run boot scripts. Provisioning scripts will be still executed. Guest agent will not be running."
-else
-	boot="${LIMA_CIDATA_MNT}/boot.${UNAME}"
+run_boot_scripts() {
+	boot="$1"
 	if [ -e "${boot}" ]; then
-		for f in "${boot}"/*; do
+		for f in "${boot}"/*.sh; do
 			INFO "Executing $f"
 			if ! "$f"; then
 				WARNING "Failed to execute $f"
@@ -61,6 +59,15 @@ else
 			fi
 		done
 	fi
+}
+
+# The boot.essential.${UNAME} scripts are executed in plain mode too.
+run_boot_scripts "${LIMA_CIDATA_MNT}/boot.essential.${UNAME}"
+
+if [ "$LIMA_CIDATA_PLAIN" = "1" ]; then
+	INFO "Plain mode. Skipping to run non-essential boot scripts. Provisioning scripts will be still executed. Guest agent will not be running."
+else
+	run_boot_scripts "${LIMA_CIDATA_MNT}/boot.${UNAME}"
 fi
 
 # indirect variable lookup, like ${!var} in bash

@@ -105,11 +105,20 @@ func prefixExportParam(script string, guestOS *limatype.OS) (string, error) {
 	return fmt.Sprintf("#!/bin/bash -c \"$(printf '%s%s')\"\n%s", exportParam, interpreter, script), nil
 }
 
+func (a *HostAgent) bashAvailable() bool {
+	return *a.instConfig.OS != limatype.FREEBSD
+}
+
 func (a *HostAgent) waitForRequirement(r requirement) error {
 	logrus.Debugf("executing script %q", r.description)
-	script, err := prefixExportParam(r.script, a.instConfig.OS)
-	if err != nil {
-		return err
+	script := r.script
+	if a.bashAvailable() {
+		var err error
+		// FIXME: prefixExportParam depends on bash
+		script, err = prefixExportParam(r.script, a.instConfig.OS)
+		if err != nil {
+			return err
+		}
 	}
 	sshConfig := a.sshConfig
 	if r.noMaster || runtime.GOOS == "windows" {
@@ -151,7 +160,7 @@ func (a *HostAgent) essentialRequirements() []requirement {
 	req = append(req,
 		requirement{
 			description: "ssh",
-			script: `#!/bin/bash
+			script: `#!/bin/sh
 true
 `,
 			debugHint: `Failed to SSH into the guest.
@@ -162,12 +171,12 @@ If any private key under ~/.ssh is protected with a passphrase, you need to have
 		})
 	startControlMasterReq := requirement{
 		description: "Explicitly start ssh ControlMaster",
-		script: `#!/bin/bash
+		script: `#!/bin/sh
 true
 `,
 		debugHint: `The persistent ssh ControlMaster should be started immediately.`,
 	}
-	if *a.instConfig.Plain || *a.instConfig.OS == limatype.DARWIN {
+	if *a.instConfig.Plain || *a.instConfig.OS != limatype.LINUX {
 		req = append(req, startControlMasterReq)
 		return req
 	}
@@ -279,21 +288,24 @@ func (a *HostAgent) finalRequirements() []requirement {
 	req = append(req,
 		requirement{
 			description: "boot scripts must have finished",
-			script: `#!/bin/bash
-set -eux -o pipefail
+			script: `#!/bin/sh
+set -eux
 timeout=timeout
 sudo=sudo
 A=/run/lima-boot-done
 B=/mnt/lima-cidata/meta-data
-if [ "$(uname)" = "Darwin" ]; then
+UNAME="$(uname)"
+if [ "$UNAME" = "Darwin" ]; then
 	timeout=/Volumes/cidata/util/timeout.sh
 	# On macOS, /Volumes/cidata is not mounted as "root access only"
 	# FIXME: The cidata does not need to be root-only on Linux, either?
 	sudo=
 	A=/var/run/lima-boot-done
 	B=/Volumes/cidata/meta-data
+elif [ "$UNAME" = "FreeBSD" ]; then
+	A=/var/run/lima-boot-done
 fi
-if ! "$timeout" 30s bash -c "until $sudo diff -q $A $B 2>/dev/null; do sleep 3; done"; then
+if ! "$timeout" 30s sh -c "until $sudo diff -q $A $B 2>/dev/null; do sleep 3; done"; then
 	echo >&2 "boot scripts have not finished"
 	exit 1
 fi

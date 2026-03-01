@@ -605,7 +605,8 @@ sudo chown -R "${USER}" /run/host-services`
 	staticPortForwards := a.separateStaticPortForwards()
 	a.addStaticPortForwardsFromList(ctx, staticPortForwards)
 
-	if !*a.instConfig.Plain {
+	hasGuestAgentDaemon := !*a.instConfig.Plain && *a.instConfig.OS == limatype.LINUX
+	if hasGuestAgentDaemon {
 		go a.watchGuestAgentEvents(ctx)
 		go a.startTimeSync(ctx)
 		if a.showProgress {
@@ -627,7 +628,7 @@ sudo chown -R "${USER}" /run/host-services`
 	if err := a.waitForRequirements("optional", a.optionalRequirements()); err != nil {
 		errs = append(errs, err)
 	}
-	if !*a.instConfig.Plain {
+	if hasGuestAgentDaemon {
 		logrus.Info("Waiting for the guest agent to be running")
 		select {
 		case <-a.guestAgentAliveCh:

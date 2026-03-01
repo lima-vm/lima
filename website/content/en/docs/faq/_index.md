@@ -65,7 +65,7 @@ AlmaLinux, Alpine, Arch Linux, Debian, Fedora, openSUSE, Oracle Linux, and Rocky
 See [`./templates/`](./templates/).
 {{% /fixlinks %}}
 
-Starting with Lima v2.1, [macOS guests](../usage/guests/macos.md) are experimentally supported too.
+Starting with Lima v2.1, non-Linux guests such as [macOS guests](../usage/guests/macos.md) are experimentally supported too.
 
 An image for Linux guests has to satisfy the following requirements:
 - systemd or OpenRC

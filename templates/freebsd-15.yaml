@@ -1,0 +1,8 @@
+minimumLimaVersion: 2.1.0
+
+base:
+- template:_images/freebsd-15
+# - template:_default/mounts
+
+# Mounts are not functional in freebsd-15.
+# Seems to be working in experimental/freebsd-16.

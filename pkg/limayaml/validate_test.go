@@ -369,7 +369,7 @@ provision:
 	err = Validate(y, false)
 	t.Logf("Validation errors: %v", err)
 
-	assert.Error(t, err, "field `os` must be one of [\"Linux\" \"Darwin\"]; got \"windows\"\n"+
+	assert.Error(t, err, "field `os` must be one of [\"Linux\" \"Darwin\" \"FreeBSD\"]; got \"windows\"\n"+
 		"field `arch` must be one of [x86_64 aarch64 armv7l ppc64le riscv64 s390x]; got \"unsupported_arch\"\n"+
 		"field `images` must be set\n"+
 		"field `provision[0].mode` must one of \"system\", \"user\", \"boot\", \"data\", \"dependency\", \"ansible\", or \"yq\"\n"+

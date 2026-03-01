@@ -16,6 +16,7 @@ The following features are experimental and subject to change:
 - [`vmType: krunkit`](../config/vmtype/krunkit.md)
 - [`github` URL scheme](../templates/github.md): referencing templates on GitHub with `github:` URLs
 - [macOS guests](../usage/guests/macos.md)
+- [FreeBSD guests](../usage/guests/freebsd.md)
 
 The following commands are experimental and subject to change:
 

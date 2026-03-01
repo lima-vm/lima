@@ -45,6 +45,8 @@ Linux distributions:
 
 Non-Linux:
 - [`macos-26`](./macos-26.yaml), `macos.yaml`: macOS 26 (Tahoe)
+- [`freebsd-15`](./freebsd-15.yaml), `freebsd.yaml`: FreeBSD 15
+- [`experimental/freebsd-current`](./experimental/freebsd-current.yaml): [experimental] FreeBSD CURRENT
 
 Alternative package managers:
 - [`linuxbrew.yaml`](./linuxbrew.yaml): [Homebrew](https://brew.sh) on Linux (Ubuntu)
