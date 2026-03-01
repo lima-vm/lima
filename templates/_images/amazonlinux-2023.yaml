@@ -1,0 +1,7 @@
+images:
+- location: "https://cdn.amazonlinux.com/al2023/os-images/2023.9.20251208.0/kvm/al2023-kvm-2023.9.20251208.0-kernel-6.1-x86_64.xfs.gpt.qcow2"
+  arch: "x86_64"
+  digest: "sha256:c91f244483d9a460869738f7fcfb5e37eb402aec8582d10456cf0c108e1a4d4c"
+- location: "https://cdn.amazonlinux.com/al2023/os-images/2023.9.20251208.0/kvm-arm64/al2023-kvm-2023.9.20251208.0-kernel-6.1-arm64.xfs.gpt.qcow2"
+  arch: "aarch64"
+  digest: "sha256:7aef1f189076a0416cd16062bbf7e0928d81061e68411cab8904447e1bd5eafd"
