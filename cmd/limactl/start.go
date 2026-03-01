@@ -26,6 +26,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
+	"github.com/lima-vm/lima/v2/pkg/localpathutil"
 	"github.com/lima-vm/lima/v2/pkg/networks/reconcile"
 	"github.com/lima-vm/lima/v2/pkg/registry"
 	"github.com/lima-vm/lima/v2/pkg/store"
@@ -44,7 +45,7 @@ func registerCreateFlags(cmd *cobra.Command, commentPrefix string) {
 
 func newCreateCommand() *cobra.Command {
 	createCommand := &cobra.Command{
-		Use: "create FILE.yaml|URL",
+		Use: "create [FILE.yaml|URL...]",
 		Example: `
   To create an instance "default" from the default Ubuntu template:
   $ limactl create
@@ -69,9 +70,15 @@ func newCreateCommand() *cobra.Command {
 
   To create an instance "local" from a template passed to stdin (--name parameter is required):
   $ cat template.yaml | limactl create --name=local -
+
+  To create an instance from a template with local overrides:
+  $ limactl create template:docker my-overrides.yaml
+
+  To create an instance from multiple templates (merged in order):
+  $ limactl create https://example.com/base.yaml secrets.yaml
 `,
 		Short:             "Create an instance of Lima",
-		Args:              WrapArgsError(cobra.MaximumNArgs(1)),
+		Args:              WrapArgsError(cobra.ArbitraryArgs),
 		ValidArgsFunction: createBashComplete,
 		RunE:              createAction,
 		GroupID:           basicCommand,
@@ -82,16 +89,19 @@ func newCreateCommand() *cobra.Command {
 
 func newStartCommand() *cobra.Command {
 	startCommand := &cobra.Command{
-		Use: "start NAME|FILE.yaml|URL",
+		Use: "start [NAME|FILE.yaml|URL...]",
 		Example: `
   To create an instance "default" (if not created yet) from the default Ubuntu template, and start it:
   $ limactl start
 
   To create an instance "default" from a template "docker", and start it:
   $ limactl start --name=default template:docker
+
+  To create an instance from a template with local overrides, and start it:
+  $ limactl start template:docker my-overrides.yaml
 `,
 		Short:             "Start an instance of Lima",
-		Args:              WrapArgsError(cobra.MaximumNArgs(1)),
+		Args:              WrapArgsError(cobra.ArbitraryArgs),
 		ValidArgsFunction: startBashComplete,
 		RunE:              startAction,
 		GroupID:           basicCommand,
@@ -232,6 +242,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 			return nil, err
 		}
 	}
+
 	if isTemplateURL, templateName := limatmpl.SeemsTemplateURL(arg); isTemplateURL {
 		switch templateName {
 		case "experimental/vz":
@@ -281,6 +292,9 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 			if createOnly {
 				return nil, fmt.Errorf("instance %q already exists", tmpl.Name)
 			}
+			if len(args) > 1 {
+				return nil, fmt.Errorf("cannot specify additional templates when starting an existing instance %q", tmpl.Name)
+			}
 			logrus.Infof("Using the existing instance %q", tmpl.Name)
 			yqExprs, err := editflags.YQExpressions(flags, false)
 			if err != nil {
@@ -308,7 +322,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 			return nil, err
 		}
 	} else {
-		tmpl, err = limatmpl.Read(cmd.Context(), name, arg)
+		tmpl, err = loadMultipleTemplates(ctx, name, args)
 		if err != nil {
 			return nil, err
 		}
@@ -613,6 +627,60 @@ func startAction(cmd *cobra.Command, args []string) error {
 	}
 
 	return instance.Start(ctx, inst, launchHostAgentForeground, progress)
+}
+
+// loadMultipleTemplates creates a template from multiple CLI arguments.
+// All arguments are treated as base templates and merged in order.
+// Relative and tilde paths are expanded to absolute paths.
+func loadMultipleTemplates(_ context.Context, name string, args []string) (*limatmpl.Template, error) {
+	bases := make(limatype.BaseTemplates, 0, len(args))
+	for _, a := range args {
+		absLocator := a
+		// Expand relative and tilde paths to absolute
+		// "-" (stdin), URLs, and template: locators are kept as-is
+		if a != "-" && !limatmpl.SeemsHTTPURL(a) && !limatmpl.SeemsFileURL(a) {
+			if isTemplate, _ := limatmpl.SeemsTemplateURL(a); !isTemplate {
+				var err error
+				absLocator, err = localpathutil.Expand(a)
+				if err != nil {
+					return nil, fmt.Errorf("failed to expand path %q: %w", a, err)
+				}
+			}
+		}
+		bases = append(bases, limatype.LocatorWithDigest{URL: absLocator})
+	}
+
+	// Create a minimal config with just the base templates
+	config := &limatype.LimaYAML{Base: bases}
+	bytes, err := limayaml.Marshal(config, false)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal template: %w", err)
+	}
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get working directory: %w", err)
+	}
+
+	tmpl := &limatmpl.Template{
+		Bytes:   bytes,
+		Name:    name,
+		Locator: cwd,
+	}
+
+	// Derive instance name from first template if not specified
+	if tmpl.Name == "" {
+		tmpl.Name, err = limatmpl.InstNameFromURL(args[0])
+		if err != nil {
+			// fallback to InstNameFromYAMLPath if URL parsing fails
+			tmpl.Name, err = limatmpl.InstNameFromYAMLPath(args[0])
+			if err != nil {
+				return nil, fmt.Errorf("cannot derive instance name from %q: %w", args[0], err)
+			}
+		}
+	}
+
+	return tmpl, nil
 }
 
 func createBashComplete(cmd *cobra.Command, _ []string, toComplete string) ([]string, cobra.ShellCompDirective) {
