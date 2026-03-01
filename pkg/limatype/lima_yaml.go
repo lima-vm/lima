@@ -115,8 +115,9 @@ type User struct {
 type VMOpts map[VMType]any
 
 type QEMUOpts struct {
-	MinimumVersion *string `yaml:"minimumVersion,omitempty" json:"minimumVersion,omitempty" jsonschema:"nullable"`
-	CPUType        CPUType `yaml:"cpuType,omitempty" json:"cpuType,omitempty" jsonschema:"nullable"`
+	MinimumVersion *string  `yaml:"minimumVersion,omitempty" json:"minimumVersion,omitempty" jsonschema:"nullable"`
+	CPUType        CPUType  `yaml:"cpuType,omitempty" json:"cpuType,omitempty" jsonschema:"nullable"`
+	ExtraArgs      []string `yaml:"extraArgs,omitempty" json:"extraArgs,omitempty" jsonschema:"nullable"`
 }
 
 type VZOpts struct {
