@@ -8,18 +8,20 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"time"
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/lima-vm/lima/v2/pkg/apfs"
 	"github.com/lima-vm/lima/v2/pkg/imgutil/nativeimgutil/asifutil"
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/lockutil/mntlockutil"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 )
 
+// attachImageWithRetry retries `diskutil image attach` because the
+// command occasionally returns "Resource temporarily unavailable".
 func attachImageWithRetry(ctx context.Context, disk string, retry int) (*asifutil.AttachedDisk, error) {
 	var (
 		attached *asifutil.AttachedDisk
@@ -35,9 +37,20 @@ func attachImageWithRetry(ctx context.Context, disk string, retry int) (*asifuti
 	return attached, err
 }
 
+// Patch prepares a macOS guest disk for first boot. It writes the
+// LaunchDaemon plist, init script, and setup markers via a noowners
+// mount, then fixes file ownership by patching APFS inode records
+// directly on the raw disk image. No sudo required.
 func Patch(ctx context.Context, disk string) error {
-	// Retry `diskutil image attach -plist -nomount` a few times because
-	// the command occasionally returns "Resource temporarily unavailable".
+	if err := patchWriteGuestFiles(ctx, disk); err != nil {
+		return err
+	}
+	return patchFixOwnership(ctx, disk)
+}
+
+// patchWriteGuestFiles attaches the disk image, mounts the Data
+// volume with noowners, writes guest files, then detaches.
+func patchWriteGuestFiles(ctx context.Context, disk string) error {
 	attached, err := attachImageWithRetry(ctx, disk, 3)
 	if err != nil {
 		return fmt.Errorf("failed to attach disk: %w", err)
@@ -47,7 +60,7 @@ func Patch(ctx context.Context, disk string) error {
 	}
 	dataDevPath := "/dev/" + attached.Data
 	defer func() {
-		// Just detaching the data slice is enough to let the system detach the whole ASIF.
+		// Detaching the data slice is enough to detach the whole ASIF.
 		if err := asifutil.DetachASIF(dataDevPath); err != nil {
 			logrus.WithError(err).Warnf("failed to detach %q (%q)", dataDevPath, disk)
 		}
@@ -68,22 +81,52 @@ func Patch(ctx context.Context, disk string) error {
 		}
 	}()
 
-	if err = patchDiskRegularPhase(ctx, dataDevPath, mnt); err != nil {
-		return fmt.Errorf("failed to patch macOS disk (phase 1/2): %w", err)
+	return writeGuestFiles(ctx, dataDevPath, mnt)
+}
+
+// patchFixOwnership attaches the disk image and patches APFS inode
+// records on the raw container device to set root:wheel ownership.
+func patchFixOwnership(ctx context.Context, disk string) error {
+	attached, err := attachImageWithRetry(ctx, disk, 3)
+	if err != nil {
+		return fmt.Errorf("failed to attach disk for ownership fix: %w", err)
+	}
+	if attached == nil || attached.Data == "" {
+		return errors.New("failed to find data slice in attached disk")
+	}
+	dataDevPath := "/dev/" + attached.Data
+	defer func() {
+		if err := asifutil.DetachASIF(dataDevPath); err != nil {
+			logrus.WithError(err).Warnf("failed to detach %q (%q)", dataDevPath, disk)
+		}
+	}()
+
+	if attached.Container == "" {
+		return errors.New("diskutil did not report an APFS container device")
 	}
 
-	// Fix up the file ownership inside the disk.
-	// Invokes sudo.
-	if err = patchDiskPrivilegedPhase(ctx, dataDevPath, mnt); err != nil {
-		return fmt.Errorf("failed to patch macOS disk (phase 2/2): %w", err)
+	// Patch APFS inode records via the raw container device.
+	// The noowners mount stores files with uid=99 (nobody);
+	// LaunchDaemon plists must be owned by root:wheel for launchd
+	// to load them, so we patch them to UID 0 / GID 0 directly.
+	containerDev := "/dev/r" + attached.Container
+	if err = apfs.Chown(containerDev, apfs.VolRoleData, 0, 0,
+		"private/var/db/.AppleSetupDone",
+		"Library/User Template/.skipbuddy",
+		"usr/local/sbin",
+		"usr/local/sbin/lima-macos-init.sh",
+		"Library/LaunchDaemons/io.lima-vm.lima-macos-init.plist",
+	); err != nil {
+		return fmt.Errorf("failed to fix file ownership on disk: %w", err)
 	}
 
 	return nil
 }
 
-func patchDiskRegularPhase(ctx context.Context, dataSliceDevice, mnt string) error {
-	// Enable "noowners" to allow non-root users to write to the mounted volume.
-	// The ownership is fixed up in patchDiskPrivilegedPhase.
+// writeGuestFiles mounts the data volume with noowners and writes the
+// LaunchDaemon plist, init script, and setup markers.
+func writeGuestFiles(ctx context.Context, dataSliceDevice, mnt string) error {
+	// Mount with "noowners" so non-root users can write to the volume.
 	if err := osutil.Mount(ctx, "apfs", dataSliceDevice, mnt, []string{"noowners"}); err != nil {
 		return err
 	}
@@ -142,50 +185,4 @@ exec /Volumes/cidata/lima-guestagent fake-cloud-init
 		return err
 	}
 	return nil
-}
-
-func patchDiskPrivilegedPhase(ctx context.Context, dataSliceDevice, mnt string) error {
-	if err := osutil.Mount(ctx, "apfs", dataSliceDevice, mnt, nil); err != nil {
-		return err
-	}
-	defer func() {
-		if err := osutil.Umount(ctx, mnt); err != nil {
-			logrus.WithError(err).Warnf("failed to unmount %q", mnt)
-		}
-	}()
-	chownCmd := chownCommand(mnt)
-	cmd := exec.CommandContext(ctx, "sudo", chownCmd...)
-	logrus.Infof("Executing command (chowning the newly installed files to root:wheel, the host password may be required): \n%v", cmd.Args)
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("failed to execute command %v: %w (output=%q)", cmd.Args, err, output)
-	}
-	return nil
-}
-
-func chownCommand(mnt string) []string {
-	return []string{
-		"/usr/sbin/chown",
-		"root:wheel",
-		filepath.Join(mnt, "private/var/db/.AppleSetupDone"),
-		filepath.Join(mnt, "Library/User Template/.skipbuddy"),
-		filepath.Join(mnt, "usr/local/sbin"),
-		filepath.Join(mnt, "usr/local/sbin/lima-macos-init.sh"),
-		filepath.Join(mnt, "Library/LaunchDaemons/io.lima-vm.lima-macos-init.plist"),
-	}
-}
-
-// PrivilegedCommands returns a list of possible privileged commands to be executed on the host to patch the macOS disk.
-// To be used by `limactl sudoers`.
-func PrivilegedCommands() ([][]string, error) {
-	limaMntDir, err := dirnames.LimaMntDir()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get Lima mount directory: %w", err)
-	}
-	var res [][]string
-	slotIDs := mntlockutil.PossibleSlotIDs()
-	for _, slotID := range slotIDs {
-		mnt := filepath.Join(limaMntDir, slotID)
-		res = append(res, chownCommand(mnt))
-	}
-	return res, nil
 }

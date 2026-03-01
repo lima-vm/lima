@@ -273,7 +273,9 @@ func TestParseDiskutilImageAttachOutput(t *testing.T) {
 </plist>
 `
 	expected := &AttachedDisk{
-		Data: "disk7s5",
+		Disk:      "disk4",
+		Container: "disk4s2",
+		Data:      "disk7s5",
 	}
 	res, err := parseDiskutilImageAttachOutput(input)
 	assert.NilError(t, err)
