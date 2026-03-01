@@ -66,6 +66,7 @@ if head -c 4 "$(command -v apt-get)" | grep -qP '\x7fELF' >/dev/null 2>&1; then
 elif command -v dnf >/dev/null 2>&1; then
 	pkgs=""
 	extrapkgs=""
+	INSTALL_SPAL_RELEASE=0
 	if ! command -v tar >/dev/null 2>&1; then
 		pkgs="${pkgs} tar"
 	fi
@@ -73,6 +74,10 @@ elif command -v dnf >/dev/null 2>&1; then
 		if [ "${LIMA_CIDATA_MOUNTS}" -gt 0 ] && ! command -v sshfs >/dev/null 2>&1; then
 			# fuse-sshfs is not included in EL
 			extrapkgs="${extrapkgs} fuse-sshfs"
+			# Amazon Linux 2023 (AL2023) needs 'spal-release' to provide fuse-sshfs
+			if grep -q "Amazon Linux.*2023" /etc/system-release; then
+				INSTALL_SPAL_RELEASE=1
+			fi
 		fi
 	fi
 	if [ "${INSTALL_IPTABLES}" = 1 ] && [ ! -e /usr/sbin/iptables ]; then
@@ -131,6 +136,10 @@ elif command -v dnf >/dev/null 2>&1; then
 			dnf install ${dnf_install_flags} ${pkgs}
 		fi
 		if [ -n "${extrapkgs}" ]; then
+			if [ "${INSTALL_SPAL_RELEASE}" = 1 ]; then
+				# shellcheck disable=SC2086
+				dnf install ${dnf_install_flags} spal-release
+			fi
 			# shellcheck disable=SC2086
 			dnf install ${dnf_install_flags} ${epel_install_flags} ${extrapkgs}
 		fi

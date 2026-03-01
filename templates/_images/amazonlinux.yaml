@@ -1,0 +1,15 @@
+# Amazon Linux 2023 (AL2023) on-prem (KVM) images.
+#
+# To update versions, browse:
+#   https://cdn.amazonlinux.com/al2023/os-images/latest/
+# and then update the URLs + digests from the per-arch SHA256SUMS files.
+images:
+- location: "https://cdn.amazonlinux.com/al2023/os-images/2023.10.20260216.1/kvm/al2023-kvm-2023.10.20260216.1-kernel-6.1-x86_64.xfs.gpt.qcow2"
+  arch: "x86_64"
+  digest: "sha256:058b3a3c4aec5ba8474e7306359a83dd8b1c63f5038da1565855b2157c53d214"
+
+- location: "https://cdn.amazonlinux.com/al2023/os-images/2023.10.20260216.1/kvm-arm64/al2023-kvm-2023.10.20260216.1-kernel-6.1-arm64.xfs.gpt.qcow2"
+  arch: "aarch64"
+  digest: "sha256:c3b224e130d5065e54ce57fe56793e641e8dbce84a0a8e0dfb8ae81531f5a220"
+
+mountTypesUnsupported: [9p]
