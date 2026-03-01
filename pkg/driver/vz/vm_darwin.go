@@ -665,33 +665,85 @@ func attachDisplay(inst *limatype.Instance, vmConfig *vz.VirtualMachineConfigura
 	}
 }
 
+func directorySharingDevicesGeneric(origMounts []limatype.Mount) ([]vz.DirectorySharingDeviceConfiguration, error) {
+	var mounts []vz.DirectorySharingDeviceConfiguration
+	for _, mount := range origMounts {
+		if _, err := os.Stat(mount.Location); errors.Is(err, os.ErrNotExist) {
+			err := os.MkdirAll(mount.Location, 0o750)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		directory, err := vz.NewSharedDirectory(mount.Location, !*mount.Writable)
+		if err != nil {
+			return nil, err
+		}
+		share, err := vz.NewSingleDirectoryShare(directory)
+		if err != nil {
+			return nil, err
+		}
+
+		tag := limayaml.MountTag(mount.Location, *mount.MountPoint)
+		config, err := vz.NewVirtioFileSystemDeviceConfiguration(tag)
+		if err != nil {
+			return nil, err
+		}
+		config.SetDirectoryShare(share)
+		mounts = append(mounts, config)
+	}
+	return mounts, nil
+}
+
+func directorySharingDevicesMacOS(origMounts []limatype.Mount) ([]vz.DirectorySharingDeviceConfiguration, error) {
+	directories := make(map[string]*vz.SharedDirectory)
+	for _, mount := range origMounts {
+		if _, err := os.Stat(mount.Location); errors.Is(err, os.ErrNotExist) {
+			err := os.MkdirAll(mount.Location, 0o750)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		directory, err := vz.NewSharedDirectory(mount.Location, !*mount.Writable)
+		if err != nil {
+			return nil, err
+		}
+		// The directory is mounted on `/Volumes/My Shared Files/<pseudoTag>`.
+		// The actual virtiofs tag is allocated by vz.MacOSGuestAutomountTag().
+		// https://developer.apple.com/documentation/virtualization/vzvirtiofilesystemdeviceconfiguration?language=objc#Automounting-shared-directories-in-macOS-VMs
+		pseudoTag := limayaml.MountTag(mount.Location, *mount.MountPoint)
+		directories[pseudoTag] = directory
+	}
+	share, err := vz.NewMultipleDirectoryShare(directories)
+	if err != nil {
+		return nil, err
+	}
+	tag, err := vz.MacOSGuestAutomountTag()
+	if err != nil {
+		return nil, err
+	}
+	config, err := vz.NewVirtioFileSystemDeviceConfiguration(tag)
+	if err != nil {
+		return nil, err
+	}
+	config.SetDirectoryShare(share)
+	return []vz.DirectorySharingDeviceConfiguration{config}, nil
+}
+
 func attachFolderMounts(inst *limatype.Instance, vmConfig *vz.VirtualMachineConfiguration) error {
 	var mounts []vz.DirectorySharingDeviceConfiguration
 	if *inst.Config.MountType == limatype.VIRTIOFS {
-		for _, mount := range inst.Config.Mounts {
-			if _, err := os.Stat(mount.Location); errors.Is(err, os.ErrNotExist) {
-				err := os.MkdirAll(mount.Location, 0o750)
-				if err != nil {
-					return err
-				}
-			}
-
-			directory, err := vz.NewSharedDirectory(mount.Location, !*mount.Writable)
-			if err != nil {
-				return err
-			}
-			share, err := vz.NewSingleDirectoryShare(directory)
-			if err != nil {
-				return err
-			}
-
-			tag := limayaml.MountTag(mount.Location, *mount.MountPoint)
-			config, err := vz.NewVirtioFileSystemDeviceConfiguration(tag)
-			if err != nil {
-				return err
-			}
-			config.SetDirectoryShare(share)
-			mounts = append(mounts, config)
+		var err error
+		// "generic" sharing devices are still mountable on macOS, but such mounts are
+		// not accessible due to Operation not permitted" errors.
+		if *inst.Config.OS == limatype.DARWIN {
+			mounts, err = directorySharingDevicesMacOS(inst.Config.Mounts)
+		} else {
+			mounts, err = directorySharingDevicesGeneric(inst.Config.Mounts)
+		}
+		if err != nil {
+			return err
 		}
 	}
 
