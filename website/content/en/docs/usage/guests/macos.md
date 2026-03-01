@@ -21,12 +21,10 @@ limactl shell macos cat /Users/${USER}.guest/password
 
 ## Difference from Linux guests
 - Password login is enabled
-- Password-less sudo is disabled
+- Password-less sudo is disabled, except for `/sbin/shutdown -h now`
 - Several features are not implemented yet. See [Caveats](#caveats) below.
 
 ## Caveats
-- No support for graceful `limactl stop`.
-  Shutdown the VM from the GUI, or use `limactl stop -f` with caution.
 - No support for turning off the video display.
 - No support for mounting host directories.
   Use `limactl cp` or `limactl shell --sync` to share files with the host.

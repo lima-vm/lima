@@ -37,7 +37,7 @@ type User struct {
 	UID               string   `yaml:"uid,omitempty"` // TODO: check if int is allowed too
 	Homedir           string   `yaml:"homedir,omitempty"`
 	Shell             string   `yaml:"shell,omitempty"`
-	Sudo              string   `yaml:"sudo,omitempty"`
+	Sudo              string   `yaml:"sudo,omitempty"` // TODO: allow []string as well
 	LockPasswd        string   `yaml:"lock_passwd,omitempty"`
 	SSHAuthorizedKeys []string `yaml:"ssh-authorized-keys,omitempty"`
 }

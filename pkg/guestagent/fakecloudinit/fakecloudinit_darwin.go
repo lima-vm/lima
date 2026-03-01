@@ -205,9 +205,6 @@ func createUser(ctx context.Context, u *cloudinittypes.User) error {
 	if u.Shell != "" {
 		args = append(args, "-shell", u.Shell)
 	}
-	if u.Sudo != "" {
-		logrus.Warn("sudo field is not implemented")
-	}
 	if u.LockPasswd != "" {
 		logrus.Warn("lock_passwd field is not implemented")
 	}
@@ -251,7 +248,33 @@ func createUser(ctx context.Context, u *cloudinittypes.User) error {
 			return fmt.Errorf("failed to chown %q for user %q: %w", f, u.Name, err)
 		}
 	}
+	if u.Sudo != "" {
+		if err := writeSudoers(u.Name, u.Sudo); err != nil {
+			return fmt.Errorf("failed to write sudoers file for user %q: %w", u.Name, err)
+		}
+	}
 	return nil
+}
+
+// writeSudoers appends a sudoers entry for the given user.
+// writeSudoers is expected be called only once on creating the user account.
+func writeSudoers(userName, sudo string) error {
+	if strings.Contains(sudo, "\n") {
+		return errors.New("sudo field must not contain newline characters")
+	}
+	if err := os.MkdirAll("/etc/sudoers.d", 0o700); err != nil {
+		return fmt.Errorf("failed to create /etc/sudoers.d directory: %w", err)
+	}
+	sudoersPath := "/etc/sudoers.d/90-cloud-init-users"
+	f, err := os.OpenFile(sudoersPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o400)
+	if err != nil {
+		return fmt.Errorf("failed to open sudoers file %q: %w", sudoersPath, err)
+	}
+	if _, err = fmt.Fprintf(f, "%s %s\n", userName, sudo); err != nil {
+		_ = f.Close()
+		return fmt.Errorf("failed to write to sudoers file %q for user %q: %w", sudoersPath, userName, err)
+	}
+	return f.Close()
 }
 
 func writeFiles(ctx context.Context, entry cloudinittypes.WriteFile) error {
