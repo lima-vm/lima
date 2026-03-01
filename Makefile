@@ -614,6 +614,18 @@ lint: check-generated
 	ltag -t ./hack/ltag --check -v
 	protolint .
 
+.PHONY: lint-local
+lint-local:
+	golangci-lint run ./...
+	yamllint .
+	ls-lint
+	find . -name '*.sh' ! -path "./.git/*" | xargs shellcheck
+	find . -name '*.sh' ! -path "./.git/*" | xargs shfmt -s -d
+	go-licenses check --include_tests ./... --allowed_licenses=$$(cat ./hack/allowed-licenses.txt)
+	ltag -t ./hack/ltag --check -v
+	protolint .
+
+
 .PHONY: clean
 clean:
 	rm -rf _output vendor
