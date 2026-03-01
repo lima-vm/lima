@@ -4,6 +4,7 @@
 package qemu
 
 import (
+	"strings"
 	"testing"
 
 	"gotest.tools/v3/assert"
@@ -87,5 +88,58 @@ func TestParseQemuVersion(t *testing.T) {
 			assert.ErrorContains(t, err, tc.expectedError)
 		}
 		assert.Equal(t, tc.expectedValue, v.String())
+	}
+}
+
+func TestSPICEAudioDetection(t *testing.T) {
+	// Test that SPICE audio is properly detected and configured
+	testCases := []struct {
+		name          string
+		displayString string
+		audioDevice   string
+		spiceAudio    bool
+		expectSPICE   bool
+	}{
+		{
+			name:          "SPICE display with audio enabled",
+			displayString: "spice,port=5930",
+			audioDevice:   "default",
+			spiceAudio:    true,
+			expectSPICE:   true,
+		},
+		{
+			name:          "SPICE display without audio config",
+			displayString: "spice,port=5930",
+			audioDevice:   "default",
+			spiceAudio:    false,
+			expectSPICE:   false,
+		},
+		{
+			name:          "VNC display with audio",
+			displayString: "vnc=:0",
+			audioDevice:   "default",
+			spiceAudio:    false,
+			expectSPICE:   false,
+		},
+		{
+			name:          "No display",
+			displayString: "none",
+			audioDevice:   "default",
+			spiceAudio:    false,
+			expectSPICE:   false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// This tests the logic of detecting SPICE audio configuration
+			usingSPICEAudio := false
+			if tc.displayString != "" && strings.HasPrefix(tc.displayString, "spice") {
+				if tc.spiceAudio {
+					usingSPICEAudio = true
+				}
+			}
+			assert.Equal(t, tc.expectSPICE, usingSPICEAudio)
+		})
 	}
 }

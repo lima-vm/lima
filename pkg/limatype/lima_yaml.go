@@ -222,10 +222,22 @@ type VNCOptions struct {
 	Display *string `yaml:"display,omitempty" json:"display,omitempty" jsonschema:"nullable"`
 }
 
+type SPICEOptions struct {
+	// Enable SPICE GL (OpenGL acceleration)
+	GL *bool `yaml:"gl,omitempty" json:"gl,omitempty" jsonschema:"nullable"`
+	// Enable SPICE streaming video
+	StreamingVideo *string `yaml:"streamingVideo,omitempty" json:"streamingVideo,omitempty" jsonschema:"nullable"`
+	// Enable SPICE agent
+	Agent *bool `yaml:"agent,omitempty" json:"agent,omitempty" jsonschema:"nullable"`
+	// Enable SPICE audio streaming
+	Audio *bool `yaml:"audio,omitempty" json:"audio,omitempty" jsonschema:"nullable"`
+}
+
 type Video struct {
 	// Display is a QEMU display string
-	Display *string    `yaml:"display,omitempty" json:"display,omitempty" jsonschema:"nullable"`
-	VNC     VNCOptions `yaml:"vnc,omitempty" json:"vnc,omitempty"`
+	Display *string      `yaml:"display,omitempty" json:"display,omitempty" jsonschema:"nullable"`
+	VNC     VNCOptions   `yaml:"vnc,omitempty" json:"vnc,omitempty"`
+	SPICE   SPICEOptions `yaml:"spice,omitempty" json:"spice,omitempty"`
 }
 
 type ProvisionMode = string

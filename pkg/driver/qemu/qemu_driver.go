@@ -7,6 +7,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -391,10 +392,18 @@ func (l *LimaQemuDriver) Stop(ctx context.Context) error {
 }
 
 func (l *LimaQemuDriver) ChangeDisplayPassword(_ context.Context, password string) error {
+	// Determine if we're using SPICE or VNC based on the display configuration
+	if l.Instance.Config.Video.Display != nil && strings.HasPrefix(*l.Instance.Config.Video.Display, "spice") {
+		return l.changeSPICEPassword(password)
+	}
 	return l.changeVNCPassword(password)
 }
 
 func (l *LimaQemuDriver) DisplayConnection(_ context.Context) (string, error) {
+	// Check if SPICE is configured
+	if l.Instance.Config.Video.Display != nil && strings.HasPrefix(*l.Instance.Config.Video.Display, "spice") {
+		return l.getSPICEDisplayPort()
+	}
 	return l.getVNCDisplayPort()
 }
 
@@ -459,6 +468,46 @@ func (l *LimaQemuDriver) changeVNCPassword(password string) error {
 	return nil
 }
 
+func (l *LimaQemuDriver) changeSPICEPassword(password string) error {
+	qmpSockPath := filepath.Join(l.Instance.Dir, filenames.QMPSock)
+	err := waitFileExists(qmpSockPath, 30*time.Second)
+	if err != nil {
+		return err
+	}
+	qmpClient, err := qmp.NewSocketMonitor("unix", qmpSockPath, 5*time.Second)
+	if err != nil {
+		return err
+	}
+	if err := qmpClient.Connect(); err != nil {
+		return err
+	}
+	defer func() { _ = qmpClient.Disconnect() }()
+
+	// Execute set_password command for SPICE
+	cmd := struct {
+		Execute   string         `json:"execute"`
+		Arguments map[string]any `json:"arguments"`
+	}{
+		Execute: "set_password",
+		Arguments: map[string]any{
+			"protocol": "spice",
+			"password": password,
+		},
+	}
+
+	cmdBytes, err := json.Marshal(cmd)
+	if err != nil {
+		return fmt.Errorf("failed to marshal QMP command: %w", err)
+	}
+
+	// Use qmpClient.Run directly
+	_, err = qmpClient.Run(cmdBytes)
+	if err != nil {
+		return fmt.Errorf("failed to set SPICE password: %w", err)
+	}
+	return nil
+}
+
 func (l *LimaQemuDriver) getVNCDisplayPort() (string, error) {
 	qmpSockPath := filepath.Join(l.Instance.Dir, filenames.QMPSock)
 	qmpClient, err := qmp.NewSocketMonitor("unix", qmpSockPath, 5*time.Second)
@@ -475,6 +524,36 @@ func (l *LimaQemuDriver) getVNCDisplayPort() (string, error) {
 		return "", err
 	}
 	return *info.Service, nil
+}
+
+func (l *LimaQemuDriver) getSPICEDisplayPort() (string, error) {
+	qmpSockPath := filepath.Join(l.Instance.Dir, filenames.QMPSock)
+	qmpClient, err := qmp.NewSocketMonitor("unix", qmpSockPath, 5*time.Second)
+	if err != nil {
+		return "", err
+	}
+	if err := qmpClient.Connect(); err != nil {
+		return "", err
+	}
+	defer func() { _ = qmpClient.Disconnect() }()
+	rawClient := raw.NewMonitor(qmpClient)
+
+	// Query SPICE info using raw monitor
+	info, err := rawClient.QuerySpice()
+	if err != nil {
+		return "", fmt.Errorf("failed to query SPICE: %w", err)
+	}
+
+	if info.Port == nil || *info.Port == 0 {
+		return "", errors.New("SPICE port not available")
+	}
+
+	host := "127.0.0.1"
+	if info.Host != nil && *info.Host != "" {
+		host = *info.Host
+	}
+
+	return fmt.Sprintf("%s:%d", host, *info.Port), nil
 }
 
 func (l *LimaQemuDriver) removeVNCFiles() error {
