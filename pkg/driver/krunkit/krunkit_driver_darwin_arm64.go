@@ -179,6 +179,12 @@ func validateConfig(cfg *limatype.LimaYAML) error {
 		return fmt.Errorf("field `mountType` must be %q or %q for krunkit driver, got %q", limatype.VIRTIOFS, limatype.REVSSHFS, *cfg.MountType)
 	}
 
+	if cfg.NestedVirtualization != nil && *cfg.NestedVirtualization {
+		if macOSProductVersion.LessThan(*semver.New("15.0.0")) {
+			return errors.New("nested virtualization requires macOS 15 or newer")
+		}
+	}
+
 	return nil
 }
 
