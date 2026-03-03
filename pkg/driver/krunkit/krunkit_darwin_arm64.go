@@ -94,6 +94,11 @@ func Cmdline(inst *limatype.Instance) (*exec.Cmd, error) {
 	}
 
 	args = append(args, networkArgs...)
+
+	if inst.Config.NestedVirtualization != nil && *inst.Config.NestedVirtualization {
+		args = append(args, "--nested")
+	}
+
 	cmd := exec.CommandContext(context.Background(), vmType, args...)
 
 	return cmd, nil
