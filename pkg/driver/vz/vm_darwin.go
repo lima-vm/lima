@@ -361,7 +361,7 @@ func attachPlatformConfig(inst *limatype.Instance, vmConfig *vz.VirtualMachineCo
 
 		genericPlatformConfig, ok := platformConfig.(*vz.GenericPlatformConfiguration)
 		if !ok {
-			return errors.New("failed to cast platform configuration to generic platform configuration")
+			return fmt.Errorf("nested virtualization is not supported on %T", platformConfig)
 		}
 
 		if err := genericPlatformConfig.SetNestedVirtualizationEnabled(true); err != nil {
