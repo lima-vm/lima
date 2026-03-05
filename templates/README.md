@@ -44,6 +44,7 @@ Linux distributions:
 - [`experimental/debian-sid`](./experimental/debian-sid.yaml): [experimental] Debian Sid
 
 Non-Linux:
+- [`macos-15`](./macos-15.yaml): macOS 15 (Sequoia)
 - [`macos-26`](./macos-26.yaml), `macos.yaml`: macOS 26 (Tahoe)
 - [`freebsd-15`](./freebsd-15.yaml), `freebsd.yaml`: FreeBSD 15
 - [`experimental/freebsd-current`](./experimental/freebsd-current.yaml): [experimental] FreeBSD CURRENT
