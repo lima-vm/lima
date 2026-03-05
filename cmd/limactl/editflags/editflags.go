@@ -64,6 +64,8 @@ func RegisterEdit(cmd *cobra.Command, commentPrefix string) {
 		return []string{"lima:shared", "lima:bridged", "lima:host", "lima:user-v2", "vzNAT"}, cobra.ShellCompDirectiveNoFileComp
 	})
 
+	flags.Bool("nested-virt", false, commentPrefix+"Enable nested virtualization")
+
 	flags.Bool("rosetta", false, commentPrefix+"Enable Rosetta (for vz instances)")
 
 	flags.StringArray("set", []string{}, commentPrefix+"Modify the template inplace, using yq syntax. Can be passed multiple times.")
@@ -317,6 +319,7 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 			false,
 		},
 
+		{"nested-virt", d(".nestedVirtualization = %s"), false, false},
 		{
 			"rosetta",
 			func(_ *flag.Flag) ([]string, error) {
