@@ -19,13 +19,16 @@ set -eu
 if [ "$#" -eq 1 ]; then
   if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
     base="$(basename "$0")"
-    echo "Usage: ${base} [COMMAND...]"
+    echo "Usage: ${base} [SHELL_FLAGS...] [COMMAND...]"
     echo
     echo "${base} is an alias for \"${LIMACTL} shell ${LIMA_INSTANCE}\"."
     echo "The instance name (\"${LIMA_INSTANCE}\") can be changed by specifying \$LIMA_INSTANCE."
     echo
     echo "The shell and initial workdir inside the instance can be specified via \$LIMA_SHELL"
     echo "and \$LIMA_WORKDIR."
+    echo
+    echo "Additional flags accepted by \`${LIMACTL} shell\` can be passed directly:"
+    echo "  --sync DIR, --preserve-env, --start, --workdir DIR, --shell SHELL, --reconnect"
     echo
     echo "See \`${LIMACTL} shell --help\` for further information."
     exit 0
@@ -34,12 +37,45 @@ if [ "$#" -eq 1 ]; then
   fi
 fi
 
+shell_flags=()
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --sync|--workdir|--shell)
+      shell_flags+=( "$1" "$2")
+      shift 2
+      ;;
+    --sync=*|--workdir=*|--shell=*)
+      shell_flags+=( "$1")
+      shift
+      ;;
+    --preserve-env|--start|--reconnect)
+      shell_flags+=( "$1")
+      shift
+      ;;
+    --preserve-env=*|--start=*|--reconnect=*)
+      shell_flags+=( "$1")
+      shift
+      ;;
+    --)
+      shift
+      break
+      ;;
+    *)
+      # Not a shell flag; stop parsing
+      break
+      ;;
+  esac
+done
+
 set - "$LIMA_INSTANCE" "$@"
 if [ -n "${LIMA_SHELL}" ]; then
   set - --shell "$LIMA_SHELL" "$@"
 fi
 if [ -n "${LIMA_WORKDIR}" ]; then
   set - --workdir "$LIMA_WORKDIR" "$@"
+fi
+if [ ${#shell_flags[@]} -gt 0 ]; then
+  set - "${shell_flags[@]}" "$@"
 fi
 # Avoid converting paths with MSYS2
 MSYS2_ARG_CONV_EXCL="*"
