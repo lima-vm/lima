@@ -220,6 +220,12 @@ func TestYQExpressions(t *testing.T) {
 			expected:    []string{`.networks += [{"vzNAT": true},{"lima": "shared"},{"lima": "bridged"}] | .networks |= unique_by(.lima)`},
 		},
 		{
+			name:        "nested-virt",
+			args:        []string{"--nested-virt"},
+			newInstance: false,
+			expected:    []string{`.nestedVirtualization = true`},
+		},
+		{
 			name:        "invalid network",
 			args:        []string{"--network", "invalid"},
 			newInstance: true,
