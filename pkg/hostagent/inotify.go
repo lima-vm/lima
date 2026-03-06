@@ -9,6 +9,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/rjeczalik/notify"
 	"github.com/sirupsen/logrus"
@@ -40,6 +41,21 @@ func (a *HostAgent) startInotify(ctx context.Context) error {
 		return err
 	}
 
+	const cooldown = 100 * time.Millisecond
+	timer := time.NewTimer(cooldown)
+	timer.Stop()
+	pending := make(map[string]os.FileInfo)
+	idle := true
+
+	sendEvent := func(watchPath string, stat os.FileInfo) {
+		guestPath := translateToGuestPath(watchPath, mountSymlinks, mountLocations)
+		utcTimestamp := timestamppb.New(stat.ModTime().UTC())
+		event := &guestagentapi.Inotify{MountPath: guestPath, Time: utcTimestamp}
+		if err := inotifyClient.Send(event); err != nil {
+			logrus.WithError(err).Warn("failed to send inotify")
+		}
+	}
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -50,19 +66,28 @@ func (a *HostAgent) startInotify(ctx context.Context) error {
 			if err != nil {
 				continue
 			}
-
+			if stat.IsDir() {
+				continue
+			}
 			if filterEvents(watchEvent, stat) {
 				continue
 			}
 
-			watchPath = translateToGuestPath(watchPath, mountSymlinks, mountLocations)
-
-			utcTimestamp := timestamppb.New(stat.ModTime().UTC())
-			event := &guestagentapi.Inotify{MountPath: watchPath, Time: utcTimestamp}
-			err = inotifyClient.Send(event)
-			if err != nil {
-				logrus.WithError(err).Warn("failed to send inotify")
+			if idle {
+				sendEvent(watchPath, stat)
+				idle = false
+				timer.Reset(cooldown)
+			} else {
+				pending[watchPath] = stat
+				timer.Reset(cooldown)
 			}
+
+		case <-timer.C:
+			for wp, st := range pending {
+				sendEvent(wp, st)
+			}
+			pending = make(map[string]os.FileInfo)
+			idle = true
 		}
 	}
 }
