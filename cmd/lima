@@ -21,7 +21,7 @@ if [ "$#" -eq 1 ]; then
     base="$(basename "$0")"
     echo "Usage: ${base} [COMMAND...]"
     echo
-    echo "${base} is an alias for \"${LIMACTL} shell ${LIMA_INSTANCE}\"."
+    echo "${base} is an alias for \"${LIMACTL} shell --instance=${LIMA_INSTANCE}\"."
     echo "The instance name (\"${LIMA_INSTANCE}\") can be changed by specifying \$LIMA_INSTANCE."
     echo
     echo "The shell and initial workdir inside the instance can be specified via \$LIMA_SHELL"
@@ -34,7 +34,6 @@ if [ "$#" -eq 1 ]; then
   fi
 fi
 
-set - "$LIMA_INSTANCE" "$@"
 if [ -n "${LIMA_SHELL}" ]; then
   set - --shell "$LIMA_SHELL" "$@"
 fi
@@ -44,4 +43,4 @@ fi
 # Avoid converting paths with MSYS2
 MSYS2_ARG_CONV_EXCL="*"
 export MSYS2_ARG_CONV_EXCL
-exec "$LIMACTL" shell "$@"
+exec "$LIMACTL" shell --instance="$LIMA_INSTANCE" "$@"

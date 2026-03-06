@@ -55,7 +55,7 @@ func newShellCommand() *cobra.Command {
 		SuggestFor:        []string{"ssh"},
 		Short:             "Execute shell in Lima",
 		Long:              shellHelp,
-		Args:              WrapArgsError(cobra.MinimumNArgs(1)),
+		Args:              WrapArgsError(cobra.ArbitraryArgs),
 		RunE:              shellAction,
 		ValidArgsFunction: shellBashComplete,
 		SilenceErrors:     true,
@@ -64,6 +64,7 @@ func newShellCommand() *cobra.Command {
 
 	shellCmd.Flags().SetInterspersed(false)
 
+	shellCmd.Flags().String("instance", "", "Override the instance name. If set, all positional arguments are treated as the command")
 	shellCmd.Flags().String("shell", "", "Shell interpreter, e.g. /bin/bash")
 	shellCmd.Flags().String("workdir", "", "Working directory")
 	shellCmd.Flags().Bool("reconnect", false, "Reconnect to the SSH session")
@@ -84,20 +85,33 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	// simulate the behavior of double dash
-	newArg := []string{}
-	if len(args) >= 2 && args[1] == "--" {
-		newArg = append(newArg, args[:1]...)
-		newArg = append(newArg, args[2:]...)
-		args = newArg
+	instanceFlag, err := flags.GetString("instance")
+	if err != nil {
+		return err
 	}
-	instName := args[0]
+	var instName string
+	if instanceFlag != "" {
+		instName = instanceFlag
+	} else {
+		if len(args) == 0 {
+			return fmt.Errorf("requires at least 1 arg(s), only received 0")
+		}
+		// simulate the behavior of double dash
+		newArg := []string{}
+		if len(args) >= 2 && args[1] == "--" {
+			newArg = append(newArg, args[:1]...)
+			newArg = append(newArg, args[2:]...)
+			args = newArg
+		}
+		instName = args[0]
+		args = args[1:]
+	}
 
-	if len(args) >= 2 {
-		switch args[1] {
+	if len(args) >= 1 {
+		switch args[0] {
 		case "create", "start", "delete", "shell":
 			// `lima start` (alias of `limactl $LIMA_INSTANCE start`) is probably a typo of `limactl start`
-			logrus.Warnf("Perhaps you meant `limactl %s`?", strings.Join(args[1:], " "))
+			logrus.Warnf("Perhaps you meant `limactl %s`?", strings.Join(args, " "))
 		}
 	}
 
@@ -270,10 +284,10 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	// -l is known to be available in bash, zsh, and FreeBSD sh.
 	// Note that --login is not available in FreeBSD sh.
 	script := fmt.Sprintf("%s ; exec %s%s -l", changeDirCmd, envPrefix, shell)
-	if len(args) > 1 {
-		quotedArgs := make([]string, len(args[1:]))
+	if len(args) > 0 {
+		quotedArgs := make([]string, len(args))
 		parsingEnv := true
-		for i, arg := range args[1:] {
+		for i, arg := range args {
 			if parsingEnv && isEnv(arg) {
 				quotedArgs[i] = quoteEnv(arg)
 			} else {
