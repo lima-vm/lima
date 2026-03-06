@@ -14,6 +14,7 @@ import (
 	"github.com/lima-vm/go-qcow2reader/image"
 	"github.com/sirupsen/logrus"
 
+	"github.com/lima-vm/lima/v2/pkg/downloader"
 	"github.com/lima-vm/lima/v2/pkg/imgutil/proxyimgutil"
 	"github.com/lima-vm/lima/v2/pkg/iso9660util"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
@@ -95,10 +96,16 @@ func EnsureDisk(ctx context.Context, instDir, diskSize string, diskImageFormat i
 			return fmt.Errorf("failed to create disk %q: %w", diskPath, err)
 		}
 	} else {
-		if err := diskUtil.Convert(ctx, diskImageFormat, imagePath, diskPath, &diskSizeInBytes, false); err != nil {
-			return fmt.Errorf("failed to convert %q to %q: %w", imagePath, diskPath, err)
+		if downloader.IsRawImage(imagePath) {
+			if err = os.Rename(imagePath, diskPath); err != nil {
+				return err
+			}
+		} else {
+			if err := diskUtil.Convert(ctx, diskImageFormat, imagePath, diskPath, &diskSizeInBytes, false); err != nil {
+				return fmt.Errorf("failed to convert %q to %q: %w", imagePath, diskPath, err)
+			}
+			os.Remove(imagePath)
 		}
-		os.Remove(imagePath)
 	}
 	return nil
 }
