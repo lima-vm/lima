@@ -148,7 +148,7 @@ func newApp() *cobra.Command {
 			return err
 		}
 		if nfs {
-			return errors.New("must not run on NFS dir")
+			logrus.Warn("LIMA_HOME should not be on an NFS mount")
 		}
 
 		if cmd.Flags().Changed("yes") && cmd.Flags().Changed("tty") {
