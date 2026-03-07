@@ -9,8 +9,10 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/pkg/sftp"
@@ -102,13 +104,38 @@ func (ts *ToolSet) Close() error {
 	return err
 }
 
-func (ts *ToolSet) TranslateHostPath(hostPath string) (string, error) {
+func (ts *ToolSet) TranslateHostPath(hostPath string) (guestPath, warnings string, err error) {
 	if hostPath == "" {
-		return "", errors.New("path is empty")
+		return "", "", errors.New("path is empty")
 	}
-	if !filepath.IsAbs(hostPath) {
-		return "", fmt.Errorf("expected an absolute path, got a relative path: %q", hostPath)
+	if !filepath.IsAbs(hostPath) && !strings.HasPrefix(hostPath, "/") {
+		return "", "", fmt.Errorf("expected an absolute path, got a relative path: %q", hostPath)
 	}
-	// TODO: make sure that hostPath is mounted
-	return hostPath, nil
+
+	guestPath, isMounted := ts.translateToGuestPath(hostPath)
+	if !isMounted {
+		warnings = fmt.Sprintf("path %q is not under any mounted directory, using as guest path", hostPath)
+		logrus.Info(warnings)
+	}
+	return guestPath, warnings, nil
+}
+
+func (ts *ToolSet) translateToGuestPath(hostPath string) (string, bool) {
+	for _, mount := range ts.inst.Config.Mounts {
+		location := filepath.Clean(mount.Location)
+		cleanPath := filepath.Clean(hostPath)
+
+		if cleanPath == location {
+			return *mount.MountPoint, true
+		}
+
+		rel, err := filepath.Rel(location, cleanPath)
+		if err == nil && !strings.HasPrefix(rel, "..") && rel != ".." {
+			rel = filepath.ToSlash(rel)
+			guestPath := path.Join(*mount.MountPoint, rel)
+			return guestPath, true
+		}
+	}
+
+	return hostPath, false
 }
