@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -48,13 +49,11 @@ func New(ctx context.Context, ticker ticker.Ticker, runtimeDir string) (Agent, e
 var _ Agent = (*agent)(nil)
 
 type agent struct {
-	// Ticker is like time.Ticker.
-	// We can't use inotify for /proc/net/tcp, so we need this ticker to
-	// reload /proc/net/tcp.
 	ticker                   ticker.Ticker
 	socketLister             *sockets.Lister
 	kubernetesServiceWatcher *kubernetesservice.ServiceWatcher
 	runtimeDir               string
+	recentChtimes            map[string]time.Time
 }
 
 type eventState struct {
@@ -211,12 +210,38 @@ func (a *agent) Info(ctx context.Context) (*api.Info, error) {
 
 func (a *agent) HandleInotify(event *api.Inotify) {
 	location := event.MountPath
-	if _, err := os.Stat(location); err == nil {
-		local := event.Time.AsTime().Local()
-		err := os.Chtimes(location, local, local)
-		if err != nil {
-			logrus.Errorf("error in inotify handle. Event: %s, Error: %s", event, err)
+	fi, err := os.Stat(location)
+	if err != nil {
+		return
+	}
+	if fi.IsDir() {
+		return
+	}
+
+	now := time.Now()
+
+	// If we called Chtimes on this path recently, this is an echo:
+	// our Chtimes → virtiofs → macOS FSEvents → host agent → back here.
+	// Skip to prevent reload loops and reduce virtiofs traffic.
+	if lastTouch, ok := a.recentChtimes[location]; ok {
+		if now.Sub(lastTouch) < time.Second {
+			return
 		}
+	}
+
+	local := event.Time.AsTime().Local()
+	if err := os.Chtimes(location, local, local); err != nil {
+		logrus.Errorf("error in inotify handle. Event: %s, Error: %s", event, err)
+	}
+
+	if a.recentChtimes == nil {
+		a.recentChtimes = make(map[string]time.Time)
+	}
+	a.recentChtimes[location] = now
+
+	// Prevent unbounded growth during bulk operations
+	if len(a.recentChtimes) > 10000 {
+		a.recentChtimes = make(map[string]time.Time)
 	}
 }
 
