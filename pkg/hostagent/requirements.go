@@ -185,7 +185,7 @@ true
 			description: "user session is ready for ssh",
 			script: `#!/bin/bash
 set -eux -o pipefail
-if ! timeout 30s bash -c "until sudo diff -q /run/lima-ssh-ready /mnt/lima-cidata/meta-data 2>/dev/null; do sleep 3; done"; then
+if ! timeout 30s bash -c "until sudo cmp -s /run/lima-ssh-ready /mnt/lima-cidata/meta-data 2>/dev/null; do sleep 3; done"; then
 	echo >&2 "not ready to start persistent ssh session"
 	exit 1
 fi
@@ -305,7 +305,7 @@ if [ "$UNAME" = "Darwin" ]; then
 elif [ "$UNAME" = "FreeBSD" ]; then
 	A=/var/run/lima-boot-done
 fi
-if ! "$timeout" 30s sh -c "until $sudo diff -q $A $B 2>/dev/null; do sleep 3; done"; then
+if ! "$timeout" 30s sh -c "until $sudo cmp -s $A $B 2>/dev/null; do sleep 3; done"; then
 	echo >&2 "boot scripts have not finished"
 	exit 1
 fi
