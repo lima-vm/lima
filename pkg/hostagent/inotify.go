@@ -41,20 +41,14 @@ func (a *HostAgent) startInotify(ctx context.Context) error {
 		return err
 	}
 
-	const cooldown = 100 * time.Millisecond
-	timer := time.NewTimer(cooldown)
+	// Trailing-edge debounce: accumulate events and only flush after
+	// a quiet period. During bulk operations (yarn install, nuxt build)
+	// the timer keeps resetting so no events are forwarded until the
+	// burst settles — preventing virtiofs virtqueue contention.
+	const quietPeriod = 200 * time.Millisecond
+	timer := time.NewTimer(quietPeriod)
 	timer.Stop()
 	pending := make(map[string]os.FileInfo)
-	idle := true
-
-	sendEvent := func(watchPath string, stat os.FileInfo) {
-		guestPath := translateToGuestPath(watchPath, mountSymlinks, mountLocations)
-		utcTimestamp := timestamppb.New(stat.ModTime().UTC())
-		event := &guestagentapi.Inotify{MountPath: guestPath, Time: utcTimestamp}
-		if err := inotifyClient.Send(event); err != nil {
-			logrus.WithError(err).Warn("failed to send inotify")
-		}
-	}
 
 	for {
 		select {
@@ -72,22 +66,19 @@ func (a *HostAgent) startInotify(ctx context.Context) error {
 			if filterEvents(watchEvent, stat) {
 				continue
 			}
-
-			if idle {
-				sendEvent(watchPath, stat)
-				idle = false
-				timer.Reset(cooldown)
-			} else {
-				pending[watchPath] = stat
-				timer.Reset(cooldown)
-			}
+			pending[watchPath] = stat
+			timer.Reset(quietPeriod)
 
 		case <-timer.C:
 			for wp, st := range pending {
-				sendEvent(wp, st)
+				guestPath := translateToGuestPath(wp, mountSymlinks, mountLocations)
+				utcTimestamp := timestamppb.New(st.ModTime().UTC())
+				event := &guestagentapi.Inotify{MountPath: guestPath, Time: utcTimestamp}
+				if err := inotifyClient.Send(event); err != nil {
+					logrus.WithError(err).Warn("failed to send inotify")
+				}
 			}
 			pending = make(map[string]os.FileInfo)
-			idle = true
 		}
 	}
 }
