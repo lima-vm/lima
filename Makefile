@@ -59,8 +59,12 @@ endif
 
 PACKAGE := github.com/lima-vm/lima/v2
 
-VERSION := $(shell git describe --match 'v[0-9]*' --dirty='.m' --always --tags)
+VERSION ?= $(shell git describe --match 'v[0-9]*' --dirty='.m' --always --tags 2>/dev/null)
 VERSION_TRIMMED := $(VERSION:v%=%)
+
+ifeq ($(VERSION),)
+$(error VERSION could not be determined. Build from a git repo or run: make VERSION=vX.Y.Z)
+endif
 
 # `DEBUG` flag to build binaries with debug information for use by `dlv exec`.
 # This implies KEEP_DWARF=1 and KEEP_SYMBOLS=1.
