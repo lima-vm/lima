@@ -31,6 +31,24 @@ ensure_instance() {
         bats)          limactl start --yes --name "$instance" template:default 3>&- 4>&- ;;
         bats-nomount)  limactl start --yes --name "$instance" --mount-none template:default 3>&- 4>&- ;;
         bats-dummy)    create_dummy_instance "$instance" '.disk = "1M"' ;;
+        bats-portfwd)
+            local tmpconfig="$BATS_FILE_TMPDIR/config"
+            mkdir -p "$tmpconfig"
+            local tmpfile="$tmpconfig/bats-portfwd.yaml"
+            limactl tmpl copy "template:default" "$tmpfile"
+            # Remove existing portForwards section: skip from "portForwards:" until the next top-level key
+            local cleaned
+            cleaned=$(awk '
+                /^portForwards:/ { skip=1; next }
+                skip && /^[a-z]/ { skip=0 }
+                !skip { print }
+            ' "$tmpfile")
+            echo "$cleaned" >"$tmpfile"
+            # shellcheck source=../tests/port-forwarding-config.bash
+            source "$PATH_BATS_ROOT/tests/port-forwarding-config.bash"
+            generate_port_forwards_yaml "$(get_host_ipv4)" >>"$tmpfile"
+            limactl start --yes --name "$instance" "$tmpfile" 3>&- 4>&-
+            ;;
         *)
             echo "ensure_instance: unknown instance name '$instance'" >&2
             return 1
