@@ -52,9 +52,16 @@ jobs:
     - name: Run shfmt
       run: find . -name '*.sh' | xargs go tool -modfile=./hack/tools/go.mod shfmt -s -d
     - name: Check hyperlinks
-      uses: docker://dkhamsing/awesome_bot:latest@sha256:a8adaeb3b3bd5745304743e4d8a6d512127646e420544a6d22d9f58a07f35884
+      uses: lycheeverse/lychee-action@8646ba30535128ac92d33dfc9133794bfdd9b411  # v2.8.0
       with:
-        args: /github/workspace/README.md --allow-dupe --allow-redirect --request-delay 1 --white-list https://img.shields.io,http://127.0.0.1:8080,https://github.com/lima-vm/lima/releases/download,https://xbarapp.com,https://api.github.com
+        args: >-
+          --exclude https://img.shields.io
+          --exclude http://127.0.0.1:8080
+          --exclude https://github.com/lima-vm/lima/releases/download
+          --exclude https://xbarapp.com
+          --exclude https://api.github.com
+          README.md
+        token: ${{ secrets.GITHUB_TOKEN }}
     - name: Install go-licenses
       # TODO: move to `go tool` after upgrading to v2
       run: go install github.com/google/go-licenses@v1.6.0
