@@ -51,6 +51,9 @@ disk:
 - `basedisk`: legacy name for the downloaded image (pre-v2.1 instances; may remain as a qcow2 backing file)
 - `diffdisk`: legacy name for `disk` (pre-v2.1 instances)
 
+disk mount:
+- `mnt`: the mount point directory for the `disk`, used for macOS guests
+
 kernel:
 - `kernel`: the kernel
 - `kernel.cmdline`: the kernel cmdline
