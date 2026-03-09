@@ -508,7 +508,7 @@ func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype
 				}
 				rsyncToTempDir = true
 			}
-			diffCmd := exec.CommandContext(ctx, "diff", "-ruN", "--color=always", hostCurrentDir, hostTmpDest)
+			diffCmd := exec.CommandContext(ctx, "diff", "-ru", "--color=always", hostCurrentDir, hostTmpDest)
 			pager := os.Getenv("PAGER")
 			pager = strings.TrimSpace(pager)
 			if pager == "" {
