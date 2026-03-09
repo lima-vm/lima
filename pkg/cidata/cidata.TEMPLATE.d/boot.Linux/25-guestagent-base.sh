@@ -20,7 +20,7 @@ fi
 # Install or update the guestagent binary
 mkdir -p "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin
 guestagent_updated=false
-if diff -q "${LIMA_CIDATA_MNT}"/lima-guestagent "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/lima-guestagent 2>/dev/null; then
+if [ "$(sha256sum <"${LIMA_CIDATA_MNT}"/lima-guestagent)" = "$(sha256sum <"${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/lima-guestagent 2>/dev/null)" ]; then
 	echo "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}/bin/lima-guestagent is up-to-date"
 else
 	install -m 755 "${LIMA_CIDATA_MNT}"/lima-guestagent "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/lima-guestagent
@@ -57,8 +57,8 @@ if [ -f /sbin/openrc-run ]; then
 		EOF
 	}
 	if [ "${guestagent_updated}" = "false" ] &&
-		diff -q <(print_config) /etc/conf.d/lima-guestagent 2>/dev/null &&
-		diff -q <(print_script) /etc/init.d/lima-guestagent 2>/dev/null; then
+		[ "$(print_config | sha256sum)" = "$(sha256sum </etc/conf.d/lima-guestagent 2>/dev/null)" ] &&
+		[ "$(print_script | sha256sum)" = "$(sha256sum </etc/init.d/lima-guestagent 2>/dev/null)" ]; then
 		echo "lima-guestagent service already up-to-date"
 		exit 0
 	fi
