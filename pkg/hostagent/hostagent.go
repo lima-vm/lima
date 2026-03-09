@@ -72,6 +72,7 @@ type HostAgent struct {
 
 	vSockPort  int
 	virtioPort string
+	iid        string // instance ID, changes on every boot
 
 	clientMu sync.RWMutex
 	client   *guestagentclient.GuestAgentClient
@@ -176,7 +177,8 @@ func New(ctx context.Context, instName string, stdout io.Writer, signalCh chan o
 	if err := cidata.GenerateCloudConfig(ctx, inst.Dir, instName, inst.Config); err != nil {
 		return nil, err
 	}
-	if err := cidata.GenerateISO9660(ctx, limaDriver, inst.Dir, instName, inst.Config, udpDNSLocalPort, tcpDNSLocalPort, o.guestAgentBinary, o.nerdctlArchive, vSockPort, virtioPort, noCloudInit, rosettaEnabled, rosettaBinFmt); err != nil {
+	iid, err := cidata.GenerateISO9660(ctx, limaDriver, inst.Dir, instName, inst.Config, udpDNSLocalPort, tcpDNSLocalPort, o.guestAgentBinary, o.nerdctlArchive, vSockPort, virtioPort, noCloudInit, rosettaEnabled, rosettaBinFmt)
+	if err != nil {
 		return nil, err
 	}
 
@@ -250,6 +252,7 @@ func New(ctx context.Context, instName string, stdout io.Writer, signalCh chan o
 		eventEnc:          json.NewEncoder(stdout),
 		vSockPort:         vSockPort,
 		virtioPort:        virtioPort,
+		iid:               iid,
 		guestAgentAliveCh: make(chan struct{}),
 		showProgress:      o.showProgress,
 	}

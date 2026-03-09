@@ -381,24 +381,26 @@ func GenerateCloudConfig(ctx context.Context, instDir, name string, instConfig *
 	return os.WriteFile(filepath.Join(instDir, filenames.CloudConfig), config, 0o444)
 }
 
-func GenerateISO9660(ctx context.Context, drv driver.Driver, instDir, name string, instConfig *limatype.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort int, guestAgentBinary, nerdctlArchive string, vsockPort int, virtioPort string, noCloudInit, rosettaEnabled, rosettaBinFmt bool) error {
+// GenerateISO9660 generates the cidata ISO9660 image (or directory, for noCloudInit)
+// in instDir. It returns the instance ID, which changes on every boot.
+func GenerateISO9660(ctx context.Context, drv driver.Driver, instDir, name string, instConfig *limatype.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort int, guestAgentBinary, nerdctlArchive string, vsockPort int, virtioPort string, noCloudInit, rosettaEnabled, rosettaBinFmt bool) (string, error) {
 	args, err := templateArgs(ctx, true, instDir, name, instConfig, udpDNSLocalPort, tcpDNSLocalPort, vsockPort, virtioPort, noCloudInit, rosettaEnabled, rosettaBinFmt)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if err := ValidateTemplateArgs(args); err != nil {
-		return err
+		return "", err
 	}
 
 	layout, err := ExecuteTemplateCIDataISO(args)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	driverScripts, err := drv.BootScripts()
 	if err != nil {
-		return fmt.Errorf("failed to get boot scripts: %w", err)
+		return "", fmt.Errorf("failed to get boot scripts: %w", err)
 	}
 
 	for filename, content := range driverScripts {
@@ -406,7 +408,7 @@ func GenerateISO9660(ctx context.Context, drv driver.Driver, instDir, name strin
 		if strings.Contains(filename, "/") {
 			// When the filename contains a slash, it must be in the format of "boot.<OS>/<SCRIPT>"
 			if !strings.HasPrefix(filename, "boot.") || strings.Count(filename, "/") != 1 {
-				return fmt.Errorf("invalid boot script filename %q: must be in format 'boot.<OS>/<SCRIPT>'", filename)
+				return "", fmt.Errorf("invalid boot script filename %q: must be in format 'boot.<OS>/<SCRIPT>'", filename)
 			}
 			layoutPath = filename
 		} else {
@@ -440,7 +442,7 @@ func GenerateISO9660(ctx context.Context, drv driver.Driver, instDir, name strin
 		case limatype.ProvisionModeAnsible:
 			continue
 		default:
-			return fmt.Errorf("unknown provision mode %q", f.Mode)
+			return "", fmt.Errorf("unknown provision mode %q", f.Mode)
 		}
 	}
 
@@ -450,17 +452,17 @@ func GenerateISO9660(ctx context.Context, drv driver.Driver, instDir, name strin
 			logrus.Debugf("Decompressing %s", guestAgentBinary)
 			guestAgentGz, err := os.Open(guestAgentBinary)
 			if err != nil {
-				return err
+				return "", err
 			}
 			defer guestAgentGz.Close()
 			guestAgent, err = gzip.NewReader(guestAgentGz)
 			if err != nil {
-				return err
+				return "", err
 			}
 		} else {
 			guestAgent, err = os.Open(guestAgentBinary)
 			if err != nil {
-				return err
+				return "", err
 			}
 		}
 
@@ -475,7 +477,7 @@ func GenerateISO9660(ctx context.Context, drv driver.Driver, instDir, name strin
 		nftgz := args.Containerd.Archive
 		nftgzR, err := os.Open(nerdctlArchive)
 		if err != nil {
-			return err
+			return "", err
 		}
 		defer nftgzR.Close()
 		layout = append(layout, iso9660util.Entry{
@@ -490,7 +492,7 @@ func GenerateISO9660(ctx context.Context, drv driver.Driver, instDir, name strin
 			Path:   "ssh_authorized_keys",
 			Reader: strings.NewReader(strings.Join(args.SSHPubKeys, "\n")),
 		})
-		return writeCIDataDir(filepath.Join(instDir, filenames.CIDataISODir), layout)
+		return args.IID, writeCIDataDir(filepath.Join(instDir, filenames.CIDataISODir), layout)
 	}
 
 	var iso9660Options []iso9660util.WriteOpt
@@ -500,7 +502,7 @@ func GenerateISO9660(ctx context.Context, drv driver.Driver, instDir, name strin
 		// FreeBSD: Without Joliet, the files are not executable
 		iso9660Options = append(iso9660Options, iso9660util.WithJoliet())
 	}
-	return iso9660util.Write(filepath.Join(instDir, filenames.CIDataISO), "cidata", layout, iso9660Options...)
+	return args.IID, iso9660util.Write(filepath.Join(instDir, filenames.CIDataISO), "cidata", layout, iso9660Options...)
 }
 
 func removeControlChars(s string) string {
