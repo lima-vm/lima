@@ -55,7 +55,7 @@ func newShellCommand() *cobra.Command {
 		SuggestFor:        []string{"ssh"},
 		Short:             "Execute shell in Lima",
 		Long:              shellHelp,
-		Args:              WrapArgsError(cobra.MinimumNArgs(1)),
+		Args:              WrapArgsError(cobra.ArbitraryArgs),
 		RunE:              shellAction,
 		ValidArgsFunction: shellBashComplete,
 		SilenceErrors:     true,
@@ -64,6 +64,8 @@ func newShellCommand() *cobra.Command {
 
 	shellCmd.Flags().SetInterspersed(false)
 
+	shellCmd.Flags().String("instance", "", "Instance name (used by the lima wrapper script)")
+	_ = shellCmd.Flags().MarkHidden("instance")
 	shellCmd.Flags().String("shell", "", "Shell interpreter, e.g. /bin/bash")
 	shellCmd.Flags().String("workdir", "", "Working directory")
 	shellCmd.Flags().Bool("reconnect", false, "Reconnect to the SSH session")
@@ -84,14 +86,29 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	// simulate the behavior of double dash
-	newArg := []string{}
-	if len(args) >= 2 && args[1] == "--" {
-		newArg = append(newArg, args[:1]...)
-		newArg = append(newArg, args[2:]...)
-		args = newArg
+
+	// When --instance is specified, all positional args are treated as COMMAND.
+	// Otherwise, the first positional arg is the instance name (backward compatible).
+	instName, err := flags.GetString("instance")
+	if err != nil {
+		return err
 	}
-	instName := args[0]
+	if instName != "" {
+		// All args are COMMAND; prepend a placeholder instance name so the rest of the code works unchanged.
+		args = append([]string{instName}, args...)
+	} else {
+		if len(args) == 0 {
+			return errors.New("requires at least 1 arg(s), only received 0")
+		}
+		// simulate the behavior of double dash
+		newArg := []string{}
+		if len(args) >= 2 && args[1] == "--" {
+			newArg = append(newArg, args[:1]...)
+			newArg = append(newArg, args[2:]...)
+			args = newArg
+		}
+		instName = args[0]
+	}
 
 	if len(args) >= 2 {
 		switch args[1] {

@@ -34,7 +34,7 @@ if [ "$#" -eq 1 ]; then
   fi
 fi
 
-set - "$LIMA_INSTANCE" "$@"
+set - --instance "$LIMA_INSTANCE" "$@"
 if [ -n "${LIMA_SHELL}" ]; then
   set - --shell "$LIMA_SHELL" "$@"
 fi
