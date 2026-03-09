@@ -20,7 +20,7 @@ enable_mdns_conf_content="[Resolve]
 MulticastDNS=yes
 "
 # Create /etc/systemd/resolved.conf.d/00-lima-enable-mdns.conf if its content is different
-if ! diff -q <(echo "${enable_mdns_conf_content}") "${enable_mdns_conf_path}" >/dev/null 2>&1; then
+if [ "$(echo "${enable_mdns_conf_content}" | sha256sum)" != "$(sha256sum <"${enable_mdns_conf_path}" 2>/dev/null)" ]; then
 	mkdir -p "$(dirname "${enable_mdns_conf_path}")"
 	echo "${enable_mdns_conf_content}" >"${enable_mdns_conf_path}"
 	systemctl daemon-reload
