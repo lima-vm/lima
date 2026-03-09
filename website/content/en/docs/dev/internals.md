@@ -169,6 +169,7 @@ The volume label is "cidata", as defined by [cloud-init NoCloud](https://docs.cl
 
 ### Environment variables
 - `LIMA_CIDATA_DEBUG`: the value of the `--debug` flag of the `limactl start` command.
+- `LIMA_CIDATA_IID`: the instance ID, regenerated on every boot.
 - `LIMA_CIDATA_NAME`: the lima instance name
 - `LIMA_CIDATA_MNT`: the mount point of the disk. `/mnt/lima-cidata`.
 - `LIMA_CIDATA_USER`: the username string

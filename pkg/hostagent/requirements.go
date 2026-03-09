@@ -183,13 +183,13 @@ true
 	req = append(req,
 		requirement{
 			description: "user session is ready for ssh",
-			script: `#!/bin/bash
+			script: fmt.Sprintf(`#!/bin/bash
 set -eux -o pipefail
-if ! timeout 30s bash -c "until sudo diff -q /run/lima-ssh-ready /mnt/lima-cidata/meta-data 2>/dev/null; do sleep 3; done"; then
+if ! timeout 30s bash -c "until [ \"\$(cat /run/lima-ssh-ready 2>/dev/null)\" = \"%s\" ]; do sleep 3; done"; then
 	echo >&2 "not ready to start persistent ssh session"
 	exit 1
 fi
-`,
+`, a.iid),
 			debugHint: `The boot sequence will terminate any existing user session after updating
 /etc/environment to make sure the session includes the new values.
 Terminating the session will break the persistent SSH tunnel, so
@@ -288,28 +288,22 @@ func (a *HostAgent) finalRequirements() []requirement {
 	req = append(req,
 		requirement{
 			description: "boot scripts must have finished",
-			script: `#!/bin/sh
+			script: fmt.Sprintf(`#!/bin/sh
 set -eux
 timeout=timeout
-sudo=sudo
-A=/run/lima-boot-done
-B=/mnt/lima-cidata/meta-data
+BOOT_DONE=/run/lima-boot-done
 UNAME="$(uname)"
 if [ "$UNAME" = "Darwin" ]; then
 	timeout=/Volumes/cidata/util/timeout.sh
-	# On macOS, /Volumes/cidata is not mounted as "root access only"
-	# FIXME: The cidata does not need to be root-only on Linux, either?
-	sudo=
-	A=/var/run/lima-boot-done
-	B=/Volumes/cidata/meta-data
+	BOOT_DONE=/var/run/lima-boot-done
 elif [ "$UNAME" = "FreeBSD" ]; then
-	A=/var/run/lima-boot-done
+	BOOT_DONE=/var/run/lima-boot-done
 fi
-if ! "$timeout" 30s sh -c "until $sudo diff -q $A $B 2>/dev/null; do sleep 3; done"; then
+if ! "$timeout" 30s sh -c "until [ \"\$(cat $BOOT_DONE 2>/dev/null)\" = \"%s\" ]; do sleep 3; done"; then
 	echo >&2 "boot scripts have not finished"
 	exit 1
 fi
-`,
+`, a.iid),
 			debugHint: `All boot scripts, provisioning scripts, and readiness probes must
 finish before the instance is considered "ready".
 Check "` + logLocation + `" to see where the process is blocked!

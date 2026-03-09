@@ -22,6 +22,6 @@ if command -v loginctl >/dev/null 2>&1 && [ "${orig}" != "$(cat /etc/environment
 	loginctl terminate-user "${LIMA_CIDATA_USER}" || true
 fi
 
-# Signal that provisioning is done. The instance-id in the meta-data file changes on every boot,
-# so any copy from a previous boot cycle will have different content.
-cp "${LIMA_CIDATA_MNT}"/meta-data /run/lima-ssh-ready
+# Signal that provisioning is done. The instance ID changes on every boot,
+# so any value from a previous boot cycle will be different.
+echo "${LIMA_CIDATA_IID}" >/run/lima-ssh-ready
