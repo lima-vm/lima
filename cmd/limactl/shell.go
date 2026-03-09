@@ -74,8 +74,11 @@ func newShellCommand() *cobra.Command {
 	return shellCmd
 }
 
-// Depth of "/Users/USER" is 3.
-const rsyncMinimumSrcDirDepth = 4
+const (
+	rsyncMinimumSrcDirDepth = 4 // Depth of "/Users/USER" is 3.
+	colorGray               = "\033[0;90m"
+	colorNone               = "\033[0m"
+)
 
 func shellAction(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
@@ -422,7 +425,7 @@ func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype
 	}
 	dirForCleanup := shellescape.Quote(fmt.Sprintf("%s/", *inst.Config.User.Home) + parts[1])
 
-	rsyncBackAndCleanup := func() error {
+	rsyncBack := func() error {
 		paths := []string{
 			remoteSource,
 			hostCurrentDir,
@@ -431,23 +434,28 @@ func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype
 		if err := rsyncDirectory(ctx, cmd, rsync, paths); err != nil {
 			return fmt.Errorf("failed to sync back the changes from guest instance to host: %w", err)
 		}
+		logrus.Info("Successfully synced back the changes to host.")
+		return nil
+	}
 
+	defer func() {
 		// Clean up the guest synced workdir
 		if err := executeSSHForRsync(ctx, *sshCmd, inst.SSHLocalPort, inst.SSHAddress, fmt.Sprintf("rm -rf %s", dirForCleanup)); err != nil {
 			logrus.WithError(err).Warn("Failed to clean up guest synced workdir")
 		}
-		logrus.Info("Successfully synced back the changes to host.")
-
-		return nil
-	}
+	}()
 
 	if !tty {
-		return rsyncBackAndCleanup()
+		return rsyncBack()
 	}
 
-	stats, err := getRsyncStats(ctx, remoteSource, filepath.Dir(hostCurrentDir))
+	rawOutput, stats, err := getRsyncStats(ctx, remoteSource, filepath.Dir(hostCurrentDir))
 	if err != nil {
 		logrus.WithError(err).Warn("failed to get rsync stats")
+	}
+	if stats != nil && stats.String() == "" {
+		logrus.Info("No changes detected")
+		return nil
 	}
 	statsMsg := ""
 	if stats != nil {
@@ -488,12 +496,8 @@ func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype
 
 		switch ans {
 		case 0: // Yes
-			return rsyncBackAndCleanup()
+			return rsyncBack()
 		case 1: // No
-			// Clean up the guest synced workdir
-			if err := executeSSHForRsync(ctx, *sshCmd, inst.SSHLocalPort, inst.SSHAddress, fmt.Sprintf("rm -rf %s", dirForCleanup)); err != nil {
-				logrus.WithError(err).Warn("Failed to clean up guest synced workdir")
-			}
 			logrus.Info("Skipping syncing back the changes to host.")
 			return nil
 		case 2: // View the changed contents
@@ -528,6 +532,25 @@ func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype
 			if err := lessCmd.Start(); err != nil {
 				return fmt.Errorf("failed to start less: %w", err)
 			}
+
+			// Write rsync dry-run output first
+			if stats != nil {
+				rsyncHead := fmt.Sprintf("%s--- rsync dry-run statistics ---%s", colorGray, colorNone)
+				diffHead := fmt.Sprintf("%s--- detailed diff --- %s", colorGray, colorNone)
+				combinedOutput := fmt.Sprintf(
+					"%s\n%s\n\n%s\n\n\n%s\n",
+					rsyncHead,
+					stats.String(),
+					rawOutput,
+					diffHead,
+				)
+
+				if _, err := fmt.Fprint(pipeIn, combinedOutput); err != nil {
+					_ = pipeIn.Close()
+					return fmt.Errorf("failed to write rsync stats to pager: %w", err)
+				}
+			}
+
 			if err := diffCmd.Run(); err != nil {
 				// Command `diff` returns exit code 1 when files differ.
 				var exitErr *exec.ExitError
@@ -631,7 +654,7 @@ func (s *rsyncStats) String() string {
 	return fmt.Sprintf("added: %d, deleted: %d, modified: %d", s.Added, s.Deleted, s.Modified)
 }
 
-func getRsyncStats(ctx context.Context, source, destination string) (*rsyncStats, error) {
+func getRsyncStats(ctx context.Context, source, destination string) (string, *rsyncStats, error) {
 	paths := []string{source, destination}
 	rsync, err := copytool.New(ctx, string(copytool.BackendRsync), paths, &copytool.Options{
 		Verbose: true,
@@ -643,20 +666,21 @@ func getRsyncStats(ctx context.Context, source, destination string) (*rsyncStats
 		},
 	})
 	if err != nil {
-		return nil, err
+		return "", nil, err
 	}
 
 	rsyncCmd, err := rsync.Command(ctx, paths, nil)
 	if err != nil {
-		return nil, err
+		return "", nil, err
 	}
 	logrus.Debugf("executing rsync for stats: %+v", rsyncCmd.Args)
 
 	out, err := rsyncCmd.Output()
 	if err != nil {
-		return nil, err
+		return "", nil, err
 	}
-	return parseRsyncStats(string(out)), nil
+	output := string(out)
+	return output, parseRsyncStats(output), nil
 }
 
 // parseRsyncStats parses the output of `rsync --itemize-changes` to extract file operation statistics.
