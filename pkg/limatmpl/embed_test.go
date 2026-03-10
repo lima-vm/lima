@@ -392,7 +392,7 @@ provision:
 		"Image URLs will be converted into a template",
 		"",
 		"base: https://example.com/lima-linux-riscv64.img",
-		"{arch: riscv64, images: [{location: https://example.com/lima-linux-riscv64.img, arch: riscv64}]}",
+		"{arch: riscv64, os: Linux, images: [{location: https://example.com/lima-linux-riscv64.img, arch: riscv64}]}",
 	},
 	{
 		"Binary files are base64 encoded",
