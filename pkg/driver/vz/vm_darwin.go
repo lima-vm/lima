@@ -107,7 +107,7 @@ func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int, onV
 					go func() {
 						defer close(notifySSHLocalPortAccessible)
 						usernetSSHLocalPort := sshLocalPort
-						useSSHOverVsock := true
+						useSSHOverVsock := *inst.Config.OS == limatype.LINUX
 						if inst.Config.SSH.OverVsock != nil {
 							useSSHOverVsock = *inst.Config.SSH.OverVsock
 						}

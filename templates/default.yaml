@@ -139,7 +139,7 @@ ssh:
   # 🟢 Builtin default: false
   forwardX11Trusted: null
   # Enable SSH over vsock.
-  # 🟢 Builtin default: true for vz, false for other vmTypes
+  # 🟢 Builtin default: true for vz with Linux guests, false otherwise
   overVsock: null
 
 caCerts:
