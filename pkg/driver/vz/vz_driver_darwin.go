@@ -168,7 +168,7 @@ func (l *LimaVzDriver) FillConfig(ctx context.Context, cfg *limatype.LimaYAML, _
 	}
 
 	if cfg.SSH.OverVsock == nil {
-		cfg.SSH.OverVsock = ptr.Of(true)
+		cfg.SSH.OverVsock = ptr.Of(*cfg.OS == limatype.LINUX)
 	}
 
 	var vzOpts limatype.VZOpts
