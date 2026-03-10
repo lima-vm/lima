@@ -15,7 +15,6 @@ const (
 	DisksDir     = "_disks"     // disks are stored here
 	NetworksDir  = "_networks"  // network log files are stored here
 	TemplatesDir = "_templates" // user templates are stored here
-	MntDir       = "_mnt"       // mount points ("0", "1", ...). May need root access.
 )
 
 // Filenames used inside the ConfigDir
@@ -75,6 +74,7 @@ const (
 
 	// SocketDir is the default location for forwarded sockets with a relative paths in HostSocket.
 	SocketDir = "sock"
+	MntDir    = "mnt" // mount point (macOS guests only)
 
 	Protected = "protected" // empty file; used by `limactl protect`
 )

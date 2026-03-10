@@ -15,8 +15,7 @@ import (
 
 	"github.com/lima-vm/lima/v2/pkg/apfs"
 	"github.com/lima-vm/lima/v2/pkg/imgutil/nativeimgutil/asifutil"
-	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
-	"github.com/lima-vm/lima/v2/pkg/lockutil/mntlockutil"
+	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 )
 
@@ -66,21 +65,16 @@ func patchWriteGuestFiles(ctx context.Context, disk string) error {
 		}
 	}()
 
-	limaMntDir, err := dirnames.LimaMntDir()
-	if err != nil {
-		return fmt.Errorf("failed to get Lima mount directory: %w", err)
-	}
-
-	mnt, mntRelease, err := mntlockutil.AcquireSlot(limaMntDir)
-	if err != nil {
-		return fmt.Errorf("failed to acquire mount slot: %w", err)
+	instDir := filepath.Dir(disk)
+	mnt := filepath.Join(instDir, filenames.MntDir)
+	if err := os.MkdirAll(mnt, 0o755); err != nil {
+		return fmt.Errorf("failed to create mount point %q: %w", mnt, err)
 	}
 	defer func() {
-		if mntReleaseErr := mntRelease(); mntReleaseErr != nil {
-			logrus.WithError(mntReleaseErr).Warnf("failed to release mount slot %q", mnt)
+		if err := os.Remove(mnt); err != nil {
+			logrus.WithError(err).Warnf("failed to remove mount point %q", mnt)
 		}
 	}()
-
 	return writeGuestFiles(ctx, dataDevPath, mnt)
 }
 
