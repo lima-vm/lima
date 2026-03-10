@@ -136,7 +136,7 @@ func Read(ctx context.Context, name, locator string) (*Template, error) {
 
 // Locators with an image file format extension, optionally followed by a compression method.
 // This regex is also used to remove the file format suffix from the instance name.
-var imageURLRegex = regexp.MustCompile(`\.(img|qcow2|raw|iso)(\.(gz|xz|bz2|zstd))?$`)
+var imageURLRegex = regexp.MustCompile(`\.(img|qcow2|raw|iso|ipsw)(\.(gz|xz|bz2|zstd))?$`)
 
 // Image architecture will be guessed based on the presence of arch keywords.
 var archKeywords = map[string]limatype.Arch{
@@ -152,12 +152,21 @@ var archKeywords = map[string]limatype.Arch{
 	"x86_64":  limatype.X8664,
 }
 
+// OS will be guessed based on the presence of OS keywords.
+var osKeywords = map[string]limatype.OS{
+	"FreeBSD": limatype.FREEBSD,
+	"macOS":   limatype.DARWIN,
+	".ipsw":   limatype.DARWIN,
+}
+
 // These generic tags will be stripped from an image name before turning it into an instance name.
 var genericTags = []string{
 	"base",         // Fedora, Rocky
+	"basic",        // FreeBSD
 	"cloud",        // Fedora, openSUSE
 	"cloudimg",     // Ubuntu, Arch
 	"cloudinit",    // Alpine
+	"current",      // FreeBSD
 	"daily",        // Debian
 	"default",      // Gentoo
 	"generic",      // Fedora
@@ -167,6 +176,8 @@ var genericTags = []string{
 	"linux",        // Arch
 	"minimal",      // openSUSE
 	"openstack",    // Gentoo
+	"release",      // FreeBSD
+	"restore",      // macOS
 	"server",       // Ubuntu
 	"std",          // Alpine-Lima
 	"stream",       // CentOS
@@ -182,6 +193,19 @@ func imageTemplate(tmpl *Template, locator string) bool {
 		return false
 	}
 
+	var imageOS limatype.OS
+	for keyword, os := range osKeywords {
+		pattern := fmt.Sprintf(`(?i)\b%s\b`, keyword)
+		if regexp.MustCompile(pattern).MatchString(locator) {
+			imageOS = os
+			break
+		}
+	}
+	if imageOS == "" {
+		imageOS = limatype.LINUX
+		logrus.Debugf("cannot determine image OS from URL %q; assuming %q", locator, imageOS)
+	}
+
 	var imageArch limatype.Arch
 	for keyword, arch := range archKeywords {
 		pattern := fmt.Sprintf(`\b%s\b`, keyword)
@@ -191,15 +215,22 @@ func imageTemplate(tmpl *Template, locator string) bool {
 		}
 	}
 	if imageArch == "" {
-		imageArch = limatype.NewArch(runtime.GOARCH)
-		logrus.Warnf("cannot determine image arch from URL %q; assuming %q", locator, imageArch)
+		if imageOS == limatype.DARWIN {
+			imageArch = limatype.AARCH64
+			// Other architectures were never supported for macOS guests
+		} else {
+			imageArch = limatype.NewArch(runtime.GOARCH)
+			logrus.Warnf("cannot determine image arch from URL %q; assuming %q", locator, imageArch)
+		}
 	}
-	template := `arch: %q
+
+	template := `os: %q
+arch: %q
 images:
 - location: %q
   arch: %q
 `
-	tmpl.Bytes = fmt.Appendf(nil, template, imageArch, locator, imageArch)
+	tmpl.Bytes = fmt.Appendf(nil, template, imageOS, imageArch, locator, imageArch)
 	if tmpl.Name == "" {
 		tmpl.Name = InstNameFromImageURL(locator, imageArch)
 	}
@@ -217,6 +248,12 @@ func InstNameFromImageURL(locator, imageArch string) string {
 		re := regexp.MustCompile(fmt.Sprintf(`[-_.]%s\b`, tag))
 		name = re.ReplaceAllString(name, "")
 	}
+	// The "UniversalMac" prefix does not fit the genericTags pattern and also should be normalized to "macos".
+	// "UniversalMac_15.6.1_24G90_Restore.ipsw"
+	name = strings.Replace(name, "universalmac_", "macos-", 1)
+	// ARM64 FreeBSD images have both "arm64" and "aarch64" in their names.
+	// "FreeBSD-16.0-CURRENT-arm64-aarch64-BASIC-CLOUDINIT-ufs.qcow2.xz"
+	name = strings.Replace(name, "arm64-aarch64", "arm64", 1)
 	// Remove imageArch as well if it is the native arch.
 	if limayaml.IsNativeArch(imageArch) {
 		re := regexp.MustCompile(fmt.Sprintf(`[-_.]%s\b`, imageArch))
@@ -239,6 +276,8 @@ func InstNameFromImageURL(locator, imageArch string) string {
 		}
 		return match
 	})
+	// Normalize "macos-15.6.1_24g90" to "macos-15.6.1"
+	name = regexp.MustCompile(`^(macos-[\d.]+)[-_].*$`).ReplaceAllString(name, "$1")
 	return name
 }
 
