@@ -377,7 +377,7 @@ func (l *LimaVzDriver) CreateDisk(ctx context.Context) error {
 // - `image.ipsw`: hardlink to `image` (".ipsw" suffix is required by VZMacOSInstaller)
 // - `disk`: ASIF disk
 //
-// TODO: consider removing IPSW after successful installation.
+// After successful installation, `image.ipsw` and `image` are removed.
 func (l *LimaVzDriver) createDiskMacOSGuest(ctx context.Context) error {
 	disk := filepath.Join(l.Instance.Dir, filenames.Disk)
 
@@ -404,6 +404,16 @@ func (l *LimaVzDriver) createDiskMacOSGuest(ctx context.Context) error {
 	// or can we safely reuse the installed disk image?
 	if err := installMacOS(ctx, vm, ipsw); err != nil {
 		return fmt.Errorf("failed to install macOS: %w", err)
+	}
+
+	filesToClean := []string{
+		ipsw,
+		filepath.Join(l.Instance.Dir, filenames.Image),
+	}
+	for _, file := range filesToClean {
+		if err := os.RemoveAll(file); err != nil {
+			logrus.WithError(err).Warnf("Failed to remove %q", file)
+		}
 	}
 
 	return nil
