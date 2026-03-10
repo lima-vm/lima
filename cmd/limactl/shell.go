@@ -145,7 +145,7 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		}
 
 		if !startNow {
-			return nil
+			return fmt.Errorf("instance %q is stopped, run `limactl start %s` to start the instance", instName, instName)
 		}
 
 		// Network reconciliation will be performed by the process launched by the autostart manager
