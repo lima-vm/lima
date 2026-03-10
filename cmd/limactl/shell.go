@@ -98,7 +98,7 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		args = append([]string{instName}, args...)
 	} else {
 		if len(args) == 0 {
-			return errors.New("requires at least 1 arg(s), only received 0")
+			return errors.New("requires instance name as first argument")
 		}
 		// simulate the behavior of double dash
 		newArg := []string{}
