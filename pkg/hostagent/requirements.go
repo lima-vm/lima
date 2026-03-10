@@ -19,15 +19,15 @@ import (
 
 func (a *HostAgent) waitForRequirements(label string, requirements []requirement) error {
 	const (
-		retries       = 60
-		sleepDuration = 10 * time.Second
+		retries       = 200
+		sleepDuration = 3 * time.Second
 	)
 	var errs []error
 
 	for i, req := range requirements {
+		logrus.Infof("Waiting for the %s requirement %d of %d: %q", label, i+1, len(requirements), req.description)
 	retryLoop:
 		for j := range retries {
-			logrus.Infof("Waiting for the %s requirement %d of %d: %q", label, i+1, len(requirements), req.description)
 			err := a.waitForRequirement(req)
 			if err == nil {
 				logrus.Infof("The %s requirement %d of %d is satisfied", label, i+1, len(requirements))
@@ -183,12 +183,9 @@ true
 	req = append(req,
 		requirement{
 			description: "user session is ready for ssh",
-			script: fmt.Sprintf(`#!/bin/bash
-set -eux -o pipefail
-if ! timeout 30s bash -c "until [ \"\$(cat /run/lima-ssh-ready 2>/dev/null)\" = \"%s\" ]; do sleep 3; done"; then
-	echo >&2 "not ready to start persistent ssh session"
-	exit 1
-fi
+			script: fmt.Sprintf(`#!/bin/sh
+set -eux
+[ "$(cat /run/lima-ssh-ready 2>/dev/null)" = "%s" ]
 `, a.iid),
 			debugHint: `The boot sequence will terminate any existing user session after updating
 /etc/environment to make sure the session includes the new values.
@@ -201,12 +198,9 @@ it must not be created until the session reset is done.
 	if *a.instConfig.MountType == limatype.REVSSHFS && len(a.instConfig.Mounts) > 0 {
 		req = append(req, requirement{
 			description: "sshfs binary to be installed",
-			script: `#!/bin/bash
-set -eux -o pipefail
-if ! timeout 30s bash -c "until command -v sshfs; do sleep 3; done"; then
-	echo >&2 "sshfs is not installed yet"
-	exit 1
-fi
+			script: `#!/bin/sh
+set -eux
+command -v sshfs
 `,
 			debugHint: `The sshfs binary was not installed in the guest.
 Make sure that you are using an officially supported image.
@@ -216,12 +210,9 @@ A possible workaround is to run "apt-get install sshfs" in the guest.
 		})
 		req = append(req, requirement{
 			description: "fuse to \"allow_other\" as user",
-			script: `#!/bin/bash
-set -eux -o pipefail
-if ! timeout 30s bash -c "until sudo grep -q ^user_allow_other /etc/fuse*.conf; do sleep 3; done"; then
-	echo >&2 "/etc/fuse.conf (/etc/fuse3.conf) is not updated to contain \"user_allow_other\""
-	exit 1
-fi
+			script: `#!/bin/sh
+set -eux
+sudo grep -q ^user_allow_other /etc/fuse*.conf
 `,
 			debugHint: `Append "user_allow_other" to /etc/fuse.conf (/etc/fuse3.conf) in the guest`,
 		})
@@ -254,12 +245,9 @@ are set to 'false' in the config file.
 			},
 			requirement{
 				description: "containerd binaries to be installed",
-				script: `#!/bin/bash
-set -eux -o pipefail
-if ! timeout 30s bash -c "until command -v nerdctl || test -x ` + *a.instConfig.GuestInstallPrefix + `/bin/nerdctl; do sleep 3; done"; then
-	echo >&2 "nerdctl is not installed yet"
-	exit 1
-fi
+				script: `#!/bin/sh
+set -eux
+command -v nerdctl || test -x ` + *a.instConfig.GuestInstallPrefix + `/bin/nerdctl
 `,
 				debugHint: `The nerdctl binary was not installed in the guest.
 Make sure that you are using an officially supported image.
@@ -290,19 +278,12 @@ func (a *HostAgent) finalRequirements() []requirement {
 			description: "boot scripts must have finished",
 			script: fmt.Sprintf(`#!/bin/sh
 set -eux
-timeout=timeout
 BOOT_DONE=/run/lima-boot-done
 UNAME="$(uname)"
-if [ "$UNAME" = "Darwin" ]; then
-	timeout=/Volumes/cidata/util/timeout.sh
-	BOOT_DONE=/var/run/lima-boot-done
-elif [ "$UNAME" = "FreeBSD" ]; then
+if [ "$UNAME" = "Darwin" ] || [ "$UNAME" = "FreeBSD" ]; then
 	BOOT_DONE=/var/run/lima-boot-done
 fi
-if ! "$timeout" 30s sh -c "until [ \"\$(cat $BOOT_DONE 2>/dev/null)\" = \"%s\" ]; do sleep 3; done"; then
-	echo >&2 "boot scripts have not finished"
-	exit 1
-fi
+[ "$(cat "$BOOT_DONE" 2>/dev/null)" = "%s" ]
 `, a.iid),
 			debugHint: `All boot scripts, provisioning scripts, and readiness probes must
 finish before the instance is considered "ready".
