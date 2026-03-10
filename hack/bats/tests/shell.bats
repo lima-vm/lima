@@ -15,9 +15,9 @@ INSTANCE=bats-dummy
     bash -c "yes | limactl shell --tty=true $INSTANCE true"
 }
 
-@test 'limactl shell without --instance requires positional arg' {
+@test 'limactl shell without --instance requires instance name as first argument' {
     run_e -1 limactl shell --tty=false
-    assert_stderr --partial "requires at least 1 arg"
+    assert_stderr --partial "requires instance name as first argument"
 }
 
 @test 'limactl shell nonexistent instance' {
