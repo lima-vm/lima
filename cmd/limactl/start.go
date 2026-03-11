@@ -325,6 +325,12 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 	if err := tmpl.Embed(cmd.Context(), true, true); err != nil {
 		return nil, err
 	}
+	if err := tmpl.Unmarshal(); err != nil {
+		return nil, err
+	}
+	if tmpl.Config != nil && tmpl.Config.OS != nil && *tmpl.Config.OS != limatype.LINUX {
+		logrus.Warn("Support for non-Linux guests is experimental")
+	}
 	yqExprs, err := editflags.YQExpressions(flags, true)
 	if err != nil {
 		return nil, err
