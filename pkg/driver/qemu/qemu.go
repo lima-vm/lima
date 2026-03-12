@@ -628,7 +628,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 					switch f.VMType {
 					case "", limatype.QEMU:
 						if f.Arch == *y.Arch {
-							if _, err = fileutils.DownloadFile(ctx, downloadedFirmware, f.File, true, "UEFI code "+f.Location, *y.Arch); err != nil {
+							if _, err = fileutils.DownloadFile(ctx, downloadedFirmware, f.File, true, "UEFI code "+f.Location, *y.Arch, nil); err != nil {
 								logrus.WithError(err).Warnf("failed to download %q", f.Location)
 								continue loop
 							}

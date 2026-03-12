@@ -528,11 +528,12 @@ func (l *LimaVzDriver) Info() driver.Info {
 		guiFlag = l.canRunGUI()
 	}
 	info.Features = driver.DriverFeatures{
-		DynamicSSHAddress:    false,
-		SkipSocketForwarding: false,
-		CanRunGUI:            guiFlag,
-		RosettaEnabled:       l.rosettaEnabled,
-		RosettaBinFmt:        l.rosettaBinFmt,
+		DynamicSSHAddress:     false,
+		SkipSocketForwarding:  false,
+		CanRunGUI:             guiFlag,
+		RosettaEnabled:        l.rosettaEnabled,
+		RosettaBinFmt:         l.rosettaBinFmt,
+		SupportedImageFormats: []string{string(raw.Type), string(asif.Type)},
 	}
 	return info
 }
