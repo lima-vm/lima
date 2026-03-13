@@ -106,6 +106,10 @@ func absPath(locator, basePath string) (string, error) {
 	if locator == "" {
 		return "", errors.New("locator is empty")
 	}
+	// "-" means stdin, return as-is
+	if locator == "-" {
+		return locator, nil
+	}
 	u, err := url.Parse(locator)
 	if err == nil && len(u.Scheme) > 1 {
 		return locator, nil
