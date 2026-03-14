@@ -23,7 +23,6 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/identifiers"
 	"github.com/lima-vm/lima/v2/pkg/ioutilx"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
-	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	"github.com/lima-vm/lima/v2/pkg/plugins"
 	"github.com/lima-vm/lima/v2/pkg/templatestore"
 )
@@ -255,7 +254,7 @@ func InstNameFromImageURL(locator, imageArch string) string {
 	// "FreeBSD-16.0-CURRENT-arm64-aarch64-BASIC-CLOUDINIT-ufs.qcow2.xz"
 	name = strings.Replace(name, "arm64-aarch64", "arm64", 1)
 	// Remove imageArch as well if it is the native arch.
-	if limayaml.IsNativeArch(imageArch) {
+	if limatype.IsNativeArch(imageArch) {
 		re := regexp.MustCompile(fmt.Sprintf(`[-_.]%s\b`, imageArch))
 		name = re.ReplaceAllString(name, "")
 	}

@@ -25,7 +25,6 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/executil"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
-	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	"github.com/lima-vm/lima/v2/pkg/networks/usernet"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/ptr"
@@ -168,7 +167,7 @@ func validateConfig(cfg *limatype.LimaYAML) error {
 	if macOSProductVersion.LessThan(*semver.New("13.0.0")) {
 		return errors.New("krunkit driver requires macOS 13 or higher to run")
 	}
-	if cfg.Arch != nil && !limayaml.IsNativeArch(*cfg.Arch) {
+	if cfg.Arch != nil && !limatype.IsNativeArch(*cfg.Arch) {
 		return fmt.Errorf("unsupported arch: %q (krunkit requires native arch)", *cfg.Arch)
 	}
 	if _, err := exec.LookPath(vmType); err != nil {

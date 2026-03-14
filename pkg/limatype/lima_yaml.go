@@ -395,6 +395,16 @@ func NewArch(arch string) Arch {
 	}
 }
 
+func IsNativeArch(arch Arch) bool {
+	nativeX8664 := arch == X8664 && runtime.GOARCH == "amd64"
+	nativeAARCH64 := arch == AARCH64 && runtime.GOARCH == "arm64"
+	nativeARMV7L := arch == ARMV7L && runtime.GOARCH == "arm" && Goarm() == 7
+	nativePPC64LE := arch == PPC64LE && runtime.GOARCH == "ppc64le"
+	nativeRISCV64 := arch == RISCV64 && runtime.GOARCH == "riscv64"
+	nativeS390X := arch == S390X && runtime.GOARCH == "s390x"
+	return nativeX8664 || nativeAARCH64 || nativeARMV7L || nativePPC64LE || nativeRISCV64 || nativeS390X
+}
+
 func DefaultDriver() VMType {
 	switch runtime.GOOS {
 	case "darwin":
@@ -404,4 +414,8 @@ func DefaultDriver() VMType {
 	default:
 		return QEMU
 	}
+}
+
+func DefaultNonNativeArchDriver() VMType {
+	return QEMU
 }

@@ -18,7 +18,6 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/driver"
 	"github.com/lima-vm/lima/v2/pkg/freeport"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
-	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	"github.com/lima-vm/lima/v2/pkg/ptr"
 	"github.com/lima-vm/lima/v2/pkg/reflectutil"
 	"github.com/lima-vm/lima/v2/pkg/windows"
@@ -108,7 +107,7 @@ func validateConfig(_ context.Context, cfg *limatype.LimaYAML) error {
 		}
 	}
 
-	if !limayaml.IsNativeArch(*cfg.Arch) {
+	if !limatype.IsNativeArch(*cfg.Arch) {
 		return fmt.Errorf("unsupported arch: %q", *cfg.Arch)
 	}
 

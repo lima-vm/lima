@@ -139,7 +139,7 @@ func (l *LimaVzDriver) Configure(inst *limatype.Instance) *driver.ConfiguredDriv
 		}
 	}
 
-	if runtime.GOOS == "darwin" && limayaml.IsNativeArch(limatype.AARCH64) {
+	if runtime.GOOS == "darwin" && limatype.IsNativeArch(limatype.AARCH64) {
 		if vzOpts.Rosetta.Enabled != nil {
 			l.rosettaEnabled = *vzOpts.Rosetta.Enabled
 		}
@@ -276,7 +276,7 @@ func validateConfig(_ context.Context, cfg *limatype.LimaYAML) error {
 		logrus.Warnf("vmType %s: ignoring %+v", *cfg.VMType, unknown)
 	}
 
-	if !limayaml.IsNativeArch(*cfg.Arch) {
+	if !limatype.IsNativeArch(*cfg.Arch) {
 		return fmt.Errorf("unsupported arch: %q", *cfg.Arch)
 	}
 
