@@ -235,6 +235,12 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	if workDir != "" && syncHostWorkdir {
+		return errors.New("cannot use `--workdir` and `--sync` at the same time")
+	}
+	if syncHostWorkdir {
+		destRsyncDir = *inst.Config.User.Home + hostCurrentDir
+	}
 	switch {
 	case workDir != "":
 		changeDirCmd = fmt.Sprintf("cd %s || exit 1", shellescape.Quote(workDir))
@@ -251,7 +257,6 @@ func shellAction(cmd *cobra.Command, args []string) error {
 			logrus.WithError(err).Warn("failed to get the home directory")
 		}
 	case syncHostWorkdir:
-		destRsyncDir = *inst.Config.User.Home + hostCurrentDir
 		changeDirCmd = fmt.Sprintf("cd %s", shellescape.Quote(destRsyncDir))
 	default:
 		logrus.Debug("the host home does not seem mounted, so the guest shell will have a different cwd")
@@ -436,11 +441,7 @@ func shellAction(cmd *cobra.Command, args []string) error {
 func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype.Instance, sshCmd *exec.Cmd, hostCurrentDir, destRsyncDir string, rsync copytool.CopyTool, tty bool) error {
 	remoteSource := fmt.Sprintf("%s:%s", inst.Name, destRsyncDir)
 	clean := filepath.Clean(hostCurrentDir)
-	parts := strings.Split(clean, string(filepath.Separator))
-	if len(parts) < 2 {
-		return fmt.Errorf("invalid host current directory: %s", hostCurrentDir)
-	}
-	dirForCleanup := shellescape.Quote(fmt.Sprintf("%s/", *inst.Config.User.Home) + parts[1])
+	dirForCleanup := shellescape.Quote(filepath.Join(*inst.Config.User.Home, clean))
 
 	rsyncBack := func() error {
 		paths := []string{
@@ -518,18 +519,23 @@ func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype
 			logrus.Info("Skipping syncing back the changes to host.")
 			return nil
 		case 2: // View the changed contents
-			if !rsyncToTempDir {
-				paths := []string{
-					remoteSource,
-					hostTmpDest,
-				}
+			var diffCmd *exec.Cmd
+			if _, err := exec.LookPath("diff"); err != nil {
+				logrus.WithError(err).Warn("`diff` not found; showing rsync dry-run output only")
+			} else {
+				diffCmd = exec.CommandContext(ctx, "diff", "-ruN", "--color=always", hostCurrentDir, hostTmpDest)
+				if !rsyncToTempDir {
+					paths := []string{
+						remoteSource,
+						hostTmpDest,
+					}
 
-				if err := rsyncDirectory(ctx, cmd, rsync, paths); err != nil {
-					return fmt.Errorf("failed to sync back the changes from guest instance to host temporary directory: %w", err)
+					if err := rsyncDirectory(ctx, cmd, rsync, paths); err != nil {
+						return fmt.Errorf("failed to sync back the changes from guest instance to host temporary directory: %w", err)
+					}
+					rsyncToTempDir = true
 				}
-				rsyncToTempDir = true
 			}
-			diffCmd := exec.CommandContext(ctx, "diff", "-ruN", "--color=always", hostCurrentDir, hostTmpDest)
 			pager := os.Getenv("PAGER")
 			pager = strings.TrimSpace(pager)
 			if pager == "" {
@@ -542,7 +548,9 @@ func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype
 			if err != nil {
 				return fmt.Errorf("failed to create pipe for less: %w", err)
 			}
-			diffCmd.Stdout = pipeIn
+			if diffCmd != nil {
+				diffCmd.Stdout = pipeIn
+			}
 			lessCmd.Stdout = cmd.OutOrStdout()
 			lessCmd.Stderr = cmd.OutOrStderr()
 
@@ -554,6 +562,9 @@ func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype
 			if stats != nil {
 				rsyncHead := fmt.Sprintf("%s--- rsync dry-run statistics ---%s", colorGray, colorNone)
 				diffHead := fmt.Sprintf("%s--- detailed diff --- %s", colorGray, colorNone)
+				if diffCmd == nil {
+					diffHead = fmt.Sprintf("%s--- detailed diff unavailable (`diff` not found) --- %s", colorGray, colorNone)
+				}
 				combinedOutput := fmt.Sprintf(
 					"%s\n%s\n\n%s\n\n\n%s\n",
 					rsyncHead,
@@ -568,12 +579,14 @@ func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype
 				}
 			}
 
-			if err := diffCmd.Run(); err != nil {
-				// Command `diff` returns exit code 1 when files differ.
-				var exitErr *exec.ExitError
-				if errors.As(err, &exitErr) && exitErr.ExitCode() >= 2 {
-					_ = pipeIn.Close()
-					return fmt.Errorf("failed to run diff command: %w", err)
+			if diffCmd != nil {
+				if err := diffCmd.Run(); err != nil {
+					// Command `diff` returns exit code 1 when files differ.
+					var exitErr *exec.ExitError
+					if errors.As(err, &exitErr) && exitErr.ExitCode() >= 2 {
+						_ = pipeIn.Close()
+						return fmt.Errorf("failed to run diff command: %w", err)
+					}
 				}
 			}
 
@@ -662,13 +675,14 @@ type rsyncStats struct {
 	Added    int
 	Deleted  int
 	Modified int
+	Metadata int
 }
 
 func (s *rsyncStats) String() string {
-	if s.Added == 0 && s.Deleted == 0 && s.Modified == 0 {
+	if s.Added == 0 && s.Deleted == 0 && s.Modified == 0 && s.Metadata == 0 {
 		return ""
 	}
-	return fmt.Sprintf("added: %d, deleted: %d, modified: %d", s.Added, s.Deleted, s.Modified)
+	return fmt.Sprintf("added: %d, deleted: %d, modified: %d, metadata: %d", s.Added, s.Deleted, s.Modified, s.Metadata)
 }
 
 func getRsyncStats(ctx context.Context, source, destination string) (string, *rsyncStats, error) {
@@ -717,6 +731,9 @@ func getRsyncStats(ctx context.Context, source, destination string) (string, *rs
 // - Update type `<` (sent), `>` (received), or `c` (local change):
 //   - If checksum is `+` (created): Count as Added.
 //   - Otherwise: Count as Modified.
+//
+// - Update type `.` with non-`.` metadata attributes (positions 3-10):
+//   - Count as Metadata.
 func parseRsyncStats(output string) *rsyncStats {
 	var s rsyncStats
 	for line := range strings.SplitSeq(output, "\n") {
@@ -738,7 +755,21 @@ func parseRsyncStats(output string) *rsyncStats {
 			} else {
 				s.Modified++
 			}
+			continue
+		}
+
+		if updateType == '.' && hasMetadataDelta(line[2:11]) {
+			s.Metadata++
 		}
 	}
 	return &s
+}
+
+func hasMetadataDelta(attrs string) bool {
+	for _, ch := range attrs {
+		if ch != '.' {
+			return true
+		}
+	}
+	return false
 }
