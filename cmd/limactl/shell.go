@@ -235,6 +235,9 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	if workDir != "" && syncHostWorkdir {
+		return errors.New("cannot use `--workdir` and `--sync` at the same time")
+	}
 	switch {
 	case workDir != "":
 		changeDirCmd = fmt.Sprintf("cd %s || exit 1", shellescape.Quote(workDir))
