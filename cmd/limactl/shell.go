@@ -238,6 +238,9 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	if workDir != "" && syncHostWorkdir {
 		return errors.New("cannot use `--workdir` and `--sync` at the same time")
 	}
+	if syncHostWorkdir {
+		destRsyncDir = *inst.Config.User.Home + hostCurrentDir
+	}
 	switch {
 	case workDir != "":
 		changeDirCmd = fmt.Sprintf("cd %s || exit 1", shellescape.Quote(workDir))
@@ -254,7 +257,6 @@ func shellAction(cmd *cobra.Command, args []string) error {
 			logrus.WithError(err).Warn("failed to get the home directory")
 		}
 	case syncHostWorkdir:
-		destRsyncDir = *inst.Config.User.Home + hostCurrentDir
 		changeDirCmd = fmt.Sprintf("cd %s", shellescape.Quote(destRsyncDir))
 	default:
 		logrus.Debug("the host home does not seem mounted, so the guest shell will have a different cwd")
