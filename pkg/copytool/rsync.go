@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"al.essio.dev/pkg/shellescape"
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/limatype"
@@ -68,9 +69,9 @@ func checkRsyncOnGuest(ctx context.Context, inst *limatype.Instance) bool {
 		return false
 	}
 
-	sshArgs := sshutil.SSHArgsFromOpts(sshOpts)
-	checkCmd := exec.CommandContext(ctx, "ssh")
-	checkCmd.Args = append(checkCmd.Args, sshArgs...)
+	sshArgs := append([]string{}, sshExe.Args...)
+	sshArgs = append(sshArgs, sshutil.SSHArgsFromOpts(sshOpts)...)
+	checkCmd := exec.CommandContext(ctx, sshExe.Exe, sshArgs...)
 	checkCmd.Args = append(checkCmd.Args,
 		"-p", fmt.Sprintf("%d", inst.SSHLocalPort),
 		*inst.Config.User.Name+"@"+inst.SSHAddress,
@@ -126,8 +127,16 @@ func (t *rsyncTool) Command(ctx context.Context, paths []string, opts *Options) 
 					return nil, err
 				}
 
-				sshArgs := sshutil.SSHArgsFromOpts(sshOpts)
-				sshCmd = fmt.Sprintf("ssh -p %d %s", cp.Instance.SSHLocalPort, strings.Join(sshArgs, " "))
+				sshArgs := []string{sshExe.Exe}
+				sshArgs = append(sshArgs, sshExe.Args...)
+				sshArgs = append(sshArgs, sshutil.SSHArgsFromOpts(sshOpts)...)
+				sshArgs = append(sshArgs, "-p", fmt.Sprintf("%d", cp.Instance.SSHLocalPort))
+
+				quotedSSHArgs := make([]string, len(sshArgs))
+				for i, arg := range sshArgs {
+					quotedSSHArgs[i] = shellescape.Quote(arg)
+				}
+				sshCmd = strings.Join(quotedSSHArgs, " ")
 			}
 		}
 	}
