@@ -153,3 +153,17 @@ EOF
     run cat "$TEST_SYNC_DIR/bar.txt"
     assert_output "modified bar"
 }
+
+@test 'shell --sync should preserve top-level subtree after clean up' {
+    local foo_dir="$TEST_SYNC_DIR/foo"
+    mkdir -p "$foo_dir"
+
+    cd "$foo_dir"
+    run -0 bash -c "limactl shell --sync . --yes '$INSTANCE' sh -c 'pwd > pwd.txt'"
+    assert_file_exists "$foo_dir/pwd.txt"
+
+    local guest_pwd
+    guest_pwd=$(cat "$foo_dir/pwd.txt")
+
+    run -0 bash -c "limactl shell '$INSTANCE' test -d ${guest_pwd%/*}"
+}
