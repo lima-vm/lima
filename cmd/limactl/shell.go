@@ -663,13 +663,14 @@ type rsyncStats struct {
 	Added    int
 	Deleted  int
 	Modified int
+	Metadata int
 }
 
 func (s *rsyncStats) String() string {
-	if s.Added == 0 && s.Deleted == 0 && s.Modified == 0 {
+	if s.Added == 0 && s.Deleted == 0 && s.Modified == 0 && s.Metadata == 0 {
 		return ""
 	}
-	return fmt.Sprintf("added: %d, deleted: %d, modified: %d", s.Added, s.Deleted, s.Modified)
+	return fmt.Sprintf("added: %d, deleted: %d, modified: %d, metadata: %d", s.Added, s.Deleted, s.Modified, s.Metadata)
 }
 
 func getRsyncStats(ctx context.Context, source, destination string) (string, *rsyncStats, error) {
@@ -718,6 +719,9 @@ func getRsyncStats(ctx context.Context, source, destination string) (string, *rs
 // - Update type `<` (sent), `>` (received), or `c` (local change):
 //   - If checksum is `+` (created): Count as Added.
 //   - Otherwise: Count as Modified.
+//
+// - Update type `.` with non-`.` metadata attributes (positions 3-10):
+//   - Count as Metadata.
 func parseRsyncStats(output string) *rsyncStats {
 	var s rsyncStats
 	for line := range strings.SplitSeq(output, "\n") {
@@ -739,7 +743,21 @@ func parseRsyncStats(output string) *rsyncStats {
 			} else {
 				s.Modified++
 			}
+			continue
+		}
+
+		if updateType == '.' && hasMetadataDelta(line[2:11]) {
+			s.Metadata++
 		}
 	}
 	return &s
+}
+
+func hasMetadataDelta(attrs string) bool {
+	for _, ch := range attrs {
+		if ch != '.' {
+			return true
+		}
+	}
+	return false
 }
