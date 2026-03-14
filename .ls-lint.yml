@@ -1,0 +1,39 @@
+# ls-lint configuration file.
+# https://ls-lint.org/2.2/configuration/the-basics.html
+ls:
+  .dir: kebab-case
+  .go: snake_case
+  .lima: snake_case
+  .sh: kebab-case
+  .TEMPLATE.yaml: kebab-case
+  .yaml: kebab-case
+  .yml: kebab-case
+
+  .github:
+    .yaml: snake_case
+
+  cmd/limactl:
+    # valid names are `show-ssh.go`, `show-ssh_windows.go` or `show-ssh_test.go`
+    .go: lowercase
+
+  templates:
+    # _default and _images have leading underscores
+    .dir: lowercase
+
+  website/content:
+    .dir: lowercase
+
+ignore:
+- .git
+- .golangci.yml
+- .ls-lint.yml
+- '_output'
+- '**/*.pb\.go'
+- hack/common.inc.sh
+- pkg/cidata/cidata.TEMPLATE.d
+- pkg/cidata/cidata.TEMPLATE.d/util/compare_version.sh
+- website
+# "ubuntu-24.04" does not follow the kebab-case
+- '**/ubuntu-*\.yaml'
+# "boot.<OS>" does not follow the kebab-case
+- '**/boot.*'

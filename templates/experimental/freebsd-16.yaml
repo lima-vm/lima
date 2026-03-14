@@ -1,0 +1,10 @@
+minimumLimaVersion: 2.1.0
+images:
+- location: "https://download.freebsd.org/ftp/snapshots/VM-IMAGES/16.0-CURRENT/amd64/Latest/FreeBSD-16.0-CURRENT-amd64-BASIC-CLOUDINIT-zfs.raw.xz"
+  arch: x86_64
+- location: "https://download.freebsd.org/ftp/snapshots/VM-IMAGES/16.0-CURRENT/aarch64/Latest/FreeBSD-16.0-CURRENT-arm64-aarch64-BASIC-CLOUDINIT-zfs.raw.xz"
+  arch: aarch64
+os: FreeBSD
+vmType: qemu
+mountType: 9p
+base: template:_default/mounts

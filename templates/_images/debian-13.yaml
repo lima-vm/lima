@@ -1,0 +1,22 @@
+images:
+# Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
+
+- location: "https://cloud.debian.org/images/cloud/trixie/20260220-2394/debian-13-genericcloud-amd64-20260220-2394.qcow2"
+  arch: "x86_64"
+  digest: "sha512:6da628d0f44ddcc8641d5ed1c7a1b4841ccf6608810a8f7aae860db51e9975e76b3c230728560337b615f8b610a34a760cf9d18e8ddb55c48608a06724ea0892"
+- location: "https://cloud.debian.org/images/cloud/trixie/20260220-2394/debian-13-genericcloud-arm64-20260220-2394.qcow2"
+  arch: "aarch64"
+  digest: "sha512:a8d385547785558bbe51558f5ab01d051534758c8cb4e5fe79b95487c48045b5a851f683deac8897c2b28aece7619ac1377b677483ae1102c093abe9e9b6078f"
+# Fallback to the latest release image.
+# Hint: run `limactl prune` to invalidate the cache
+
+- location: https://cloud.debian.org/images/cloud/trixie/daily/latest/debian-13-genericcloud-amd64-daily.qcow2
+  arch: x86_64
+
+- location: https://cloud.debian.org/images/cloud/trixie/daily/latest/debian-13-genericcloud-arm64-daily.qcow2
+  arch: aarch64
+
+- location: https://cloud.debian.org/images/cloud/trixie/daily/latest/debian-13-genericcloud-ppc64el-daily.qcow2
+  arch: ppc64le
+
+mountTypesUnsupported: [9p]

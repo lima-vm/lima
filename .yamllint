@@ -1,0 +1,16 @@
+---
+
+extends: default
+
+ignore: |
+  # this is a yaml template, needs to be executed
+  pkg/cidata/cloud-config.yaml
+
+rules:
+  indentation:
+    indent-sequences: false
+  truthy:
+    allowed-values: ['true', 'false', 'on', 'off']
+  comments-indentation: disable
+  document-start: disable
+  line-length: disable

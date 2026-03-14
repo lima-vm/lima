@@ -1,0 +1,24 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package usernet
+
+import (
+	"errors"
+	"net"
+	"time"
+)
+
+type UDPFileConn struct {
+	net.Conn
+}
+
+func (conn *UDPFileConn) Read(b []byte) (n int, err error) {
+	// Check if the connection has been closed
+	if err := conn.SetReadDeadline(time.Time{}); err != nil {
+		if errors.Is(err, net.ErrClosed) {
+			return 0, errors.New("UDPFileConn connection closed")
+		}
+	}
+	return conn.Conn.Read(b)
+}

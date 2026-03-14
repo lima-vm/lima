@@ -1,0 +1,25 @@
+# split from test.yml so as to run spell checks for doc-only PRs too
+name: spell
+
+on:
+  push:
+    branches:
+    - master
+    - 'release/**'
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  spell:
+    name: "Spell check"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+    - uses: codespell-project/actions-codespell@8f01853be192eb0f849a5c7d721450e7a467c579  # v2.2
+      with:
+        check_filenames: true
+        check_hidden: true
+        # by default, codespell uses configuration from the .codespellrc

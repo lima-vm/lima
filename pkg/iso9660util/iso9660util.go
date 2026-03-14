@@ -1,0 +1,111 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package iso9660util
+
+import (
+	"io"
+	"os"
+	"path"
+
+	"github.com/diskfs/go-diskfs/backend/file"
+	"github.com/diskfs/go-diskfs/filesystem"
+	"github.com/diskfs/go-diskfs/filesystem/iso9660"
+	"github.com/sirupsen/logrus"
+)
+
+type Entry struct {
+	Path   string
+	Reader io.Reader
+}
+
+type WriteOptions struct {
+	Joliet bool
+}
+
+type WriteOpt func(*WriteOptions)
+
+func WithJoliet() WriteOpt {
+	return func(opts *WriteOptions) {
+		opts.Joliet = true
+	}
+}
+
+func Write(isoPath, label string, layout []Entry, opts ...WriteOpt) error {
+	options := &WriteOptions{}
+	for _, opt := range opts {
+		opt(options)
+	}
+	if options.Joliet {
+		return writeJoliet(isoPath, label, layout)
+	}
+
+	if err := os.RemoveAll(isoPath); err != nil {
+		return err
+	}
+
+	isoFile, err := os.Create(isoPath)
+	if err != nil {
+		return err
+	}
+
+	backendFile := file.New(isoFile, false)
+	defer isoFile.Close()
+
+	workdir, err := os.MkdirTemp("", "diskfs_iso")
+	if err != nil {
+		return err
+	}
+	logrus.Debugf("Creating iso file %s", isoFile.Name())
+	logrus.Debugf("Using %s as workspace", workdir)
+	fs, err := iso9660.Create(backendFile, 0, 0, 0, workdir)
+	if err != nil {
+		return err
+	}
+
+	for _, f := range layout {
+		if _, err := WriteFile(fs, f.Path, f.Reader); err != nil {
+			return err
+		}
+	}
+
+	finalizeOptions := iso9660.FinalizeOptions{
+		RockRidge:        true,
+		VolumeIdentifier: label,
+	}
+	if err := fs.Finalize(finalizeOptions); err != nil {
+		return err
+	}
+
+	return isoFile.Close()
+}
+
+func WriteFile(fs filesystem.FileSystem, pathStr string, r io.Reader) (int64, error) {
+	if dir := path.Dir(pathStr); dir != "" && dir != "/" {
+		if err := fs.Mkdir(dir); err != nil {
+			return 0, err
+		}
+	}
+	f, err := fs.OpenFile(pathStr, os.O_CREATE|os.O_RDWR)
+	if err != nil {
+		return 0, err
+	}
+	defer f.Close()
+	return io.Copy(f, r)
+}
+
+func IsISO9660(imagePath string) (bool, error) {
+	imageFile, err := os.Open(imagePath)
+	if err != nil {
+		return false, err
+	}
+	defer imageFile.Close()
+	backendFile := file.New(imageFile, true)
+
+	fileInfo, err := imageFile.Stat()
+	if err != nil {
+		return false, err
+	}
+	_, err = iso9660.Read(backendFile, fileInfo.Size(), 0, 0)
+	return err == nil, nil
+}

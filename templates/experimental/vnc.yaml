@@ -1,0 +1,47 @@
+# A template to run ubuntu using display: vnc
+
+minimumLimaVersion: 2.0.0
+
+base:
+- template:_images/ubuntu-lts
+- template:_default/mounts
+
+vmType: "qemu"
+video:
+  display: "vnc"
+
+provision:
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    command -v Xorg >/dev/null 2>&1 && exit 0
+    export DEBIAN_FRONTEND=noninteractive
+    # x-terminal-emulator x-session-manager x-window-manager
+    apt-get install -y xorg xterm openbox hsetroot tint2 slim
+    printf "auto_login yes\ndefault_user {{.User}}\n" >>/etc/slim.conf
+    # configure some nice lima green, set up panel and apps
+    printf "hsetroot -solid \"#32CD32\" &\ntint2 &\n" >>/etc/xdg/openbox/autostart
+    sed -i 's/Clearlooks/Clearlooks-Olive/' /etc/xdg/openbox/rc.xml # go for green
+    apt-get install -y --no-install-recommends dillo xfe # x-www-browser +explorer
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    systemctl set-default graphical.target
+    systemctl isolate graphical.target
+probes:
+- description: "Xorg to be installed"
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    if ! timeout 30s bash -c "until command -v Xorg >/dev/null 2>&1; do sleep 3; done"; then
+      echo >&2 "Xorg is not installed yet"
+      exit 1
+    fi
+  hint: See "/var/log/cloud-init-output.log" in the guest
+message: |
+  Use a VNC viewer or noVNC, to connect to the display:
+
+  * VNC Display:    see <file://{{.Dir}}/vncdisplay>
+  * VNC Password:   see <file://{{.Dir}}/vncpassword>

@@ -1,0 +1,22 @@
+# Oracle image license: https://www.oracle.com/downloads/licenses/oracle-linux-license.html
+# Image source: https://yum.oracle.com/oracle-linux-templates.html
+
+# Unlike AlmaLinux 8 and Rocky Linux 8, Oracle Linux 8 is known to work on Apple M1.
+
+images:
+- location: "https://yum.oracle.com/templates/OracleLinux/OL8/u10/x86_64/OL8U10_x86_64-kvm-b271.qcow2"
+  arch: "x86_64"
+  digest: "sha256:23c72a22201b80c98195212e205c2ec0e2a641dfd5f37374dfe6e4f0639ef311"
+- location: "https://yum.oracle.com/templates/OracleLinux/OL8/u10/aarch64/OL8U10_aarch64-kvm-cloud-b162.qcow2"
+  arch: "aarch64"
+  digest: "sha256:7894656f52b81a32ca3e8de31b69f40fc149b5630a9fff592bab6cc708a837af"
+mountTypesUnsupported: [9p]
+
+firmware:
+  # Oracle Linux 8 still requires legacyBIOS, while AlmaLinux 8 and Rocky Linux 8 do not.
+  legacyBIOS: true
+
+cpuType:
+  # Workaround for vmx_write_mem: mmu_gva_to_gpa XXXXXXXXXXXXXXXX failed on Intel Mac
+  # https://bugs.launchpad.net/qemu/+bug/1838390
+  x86_64: Haswell-v4

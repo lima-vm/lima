@@ -1,0 +1,63 @@
+# A template to use Podman instead of containerd & nerdctl
+# $ limactl start ./podman-rootful.yaml
+# $ limactl shell podman-rootful sudo podman run -it -v $HOME:$HOME --rm docker.io/library/alpine
+
+# To run `podman` on the host (assumes podman-remote is installed):
+# $ export CONTAINER_HOST=$(limactl list podman-rootful --format 'unix://{{.Dir}}/sock/podman.sock')
+# $ podman --remote ...
+
+# To run `docker` on the host (assumes docker-cli is installed):
+# $ export DOCKER_HOST=$(limactl list podman-rootful --format 'unix://{{.Dir}}/sock/podman.sock')
+# $ docker ...
+
+minimumLimaVersion: 2.0.0
+
+base:
+- template:_images/fedora
+- template:_default/mounts
+
+containerd:
+  system: false
+  user: false
+provision:
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    command -v podman >/dev/null 2>&1 && test -e /etc/lima-podman && exit 0
+    if [ ! -e /etc/systemd/system/podman.socket.d/override.conf ]; then
+      mkdir -p /etc/systemd/system/podman.socket.d
+      cat <<-EOF >/etc/systemd/system/podman.socket.d/override.conf
+      [Socket]
+      SocketUser={{.User}}
+    EOF
+    fi
+    if [ ! -e /etc/tmpfiles.d/podman.conf ]; then
+      mkdir -p /etc/tmpfiles.d
+      echo "d /run/podman 0700 {{.User}} -" > /etc/tmpfiles.d/podman.conf
+    fi
+    dnf -y install --best podman && touch /etc/lima-podman
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    systemctl --system enable --now podman.socket
+probes:
+- script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    if ! timeout 30s bash -c "until command -v podman >/dev/null 2>&1; do sleep 3; done"; then
+      echo >&2 "podman is not installed yet"
+      exit 1
+    fi
+  hint: See "/var/log/cloud-init-output.log" in the guest
+portForwards:
+- guestSocket: "/run/podman/podman.sock"
+  hostSocket: "{{.Dir}}/sock/podman.sock"
+message: |
+  To run `podman` on the host (assumes podman-remote is installed), run the following commands:
+  ------
+  podman system connection add lima-{{.Name}} "unix://{{.Dir}}/sock/podman.sock"
+  podman system connection default lima-{{.Name}}
+  podman{{if eq .HostOS "linux"}} --remote{{end}} run quay.io/podman/hello
+  ------

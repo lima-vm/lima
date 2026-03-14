@@ -1,0 +1,416 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package limatmpl
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"os"
+	"os/exec"
+	"path"
+	"path/filepath"
+	"regexp"
+	"runtime"
+	"strings"
+
+	"github.com/sirupsen/logrus"
+
+	"github.com/lima-vm/lima/v2/pkg/identifiers"
+	"github.com/lima-vm/lima/v2/pkg/ioutilx"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/limayaml"
+	"github.com/lima-vm/lima/v2/pkg/plugins"
+	"github.com/lima-vm/lima/v2/pkg/templatestore"
+)
+
+const yBytesLimit = 4 * 1024 * 1024 // 4MiB
+
+func Read(ctx context.Context, name, locator string) (*Template, error) {
+	tmpl := &Template{
+		Name:    name,
+		Locator: locator,
+	}
+
+	locator, err := TransformCustomURL(ctx, locator)
+	if err != nil {
+		return nil, err
+	}
+
+	if imageTemplate(tmpl, locator) {
+		return tmpl, nil
+	}
+
+	isTemplateURL, templateName := SeemsTemplateURL(locator)
+	switch {
+	case isTemplateURL:
+		logrus.Debugf("interpreting argument %q as a template name %q", locator, templateName)
+		if tmpl.Name == "" {
+			// e.g., templateName = "deprecated/centos-7.yaml" , tmpl.Name = "centos-7"
+			tmpl.Name, err = InstNameFromYAMLPath(templateName)
+			if err != nil {
+				return nil, err
+			}
+		}
+		tmpl.Bytes, err = templatestore.Read(templateName)
+		if err != nil {
+			return nil, err
+		}
+	case SeemsHTTPURL(locator):
+		if tmpl.Name == "" {
+			tmpl.Name, err = InstNameFromURL(locator)
+			if err != nil {
+				return nil, err
+			}
+		}
+		logrus.Debugf("interpreting argument %q as a http url for instance %q", locator, tmpl.Name)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, locator, http.NoBody)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
+		tmpl.Bytes, err = ioutilx.ReadAtMaximum(resp.Body, yBytesLimit)
+		if err != nil {
+			return nil, err
+		}
+	case SeemsFileURL(locator):
+		if tmpl.Name == "" {
+			tmpl.Name, err = InstNameFromURL(locator)
+			if err != nil {
+				return nil, err
+			}
+		}
+		logrus.Debugf("interpreting argument %q as a file URL for instance %q", locator, tmpl.Name)
+		filePath := strings.TrimPrefix(locator, "file://")
+		if !filepath.IsAbs(filePath) {
+			return nil, fmt.Errorf("file URL %q is not an absolute path", locator)
+		}
+		r, err := os.Open(filePath)
+		if err != nil {
+			return nil, err
+		}
+		defer r.Close()
+		tmpl.Bytes, err = ioutilx.ReadAtMaximum(r, yBytesLimit)
+		if err != nil {
+			return nil, err
+		}
+	case locator == "-":
+		tmpl.Bytes, err = io.ReadAll(os.Stdin)
+		if err != nil {
+			return nil, fmt.Errorf("unexpected error reading stdin: %w", err)
+		}
+	default:
+		if tmpl.Name == "" {
+			tmpl.Name, err = InstNameFromYAMLPath(locator)
+			if err != nil {
+				return nil, err
+			}
+		}
+		logrus.Debugf("interpreting argument %q as a file path for instance %q", locator, tmpl.Name)
+		if locator, err = filepath.Abs(locator); err != nil {
+			return nil, err
+		}
+		tmpl.Locator = locator
+		r, err := os.Open(locator)
+		if err != nil {
+			return nil, err
+		}
+		defer r.Close()
+		tmpl.Bytes, err = ioutilx.ReadAtMaximum(r, yBytesLimit)
+		if err != nil {
+			return nil, err
+		}
+	}
+	// The only reason not to call tmpl.UseAbsLocators() here is that `limactl tmpl copy --verbatim …`
+	// should create an unmodified copy of the template.
+	return tmpl, nil
+}
+
+// Locators with an image file format extension, optionally followed by a compression method.
+// This regex is also used to remove the file format suffix from the instance name.
+var imageURLRegex = regexp.MustCompile(`\.(img|qcow2|raw|iso|ipsw)(\.(gz|xz|bz2|zstd))?$`)
+
+// Image architecture will be guessed based on the presence of arch keywords.
+var archKeywords = map[string]limatype.Arch{
+	"aarch64": limatype.AARCH64,
+	"amd64":   limatype.X8664,
+	"arm64":   limatype.AARCH64,
+	"armhf":   limatype.ARMV7L,
+	"armv7l":  limatype.ARMV7L,
+	"ppc64el": limatype.PPC64LE,
+	"ppc64le": limatype.PPC64LE,
+	"riscv64": limatype.RISCV64,
+	"s390x":   limatype.S390X,
+	"x86_64":  limatype.X8664,
+}
+
+// OS will be guessed based on the presence of OS keywords.
+var osKeywords = map[string]limatype.OS{
+	"FreeBSD": limatype.FREEBSD,
+	"macOS":   limatype.DARWIN,
+	".ipsw":   limatype.DARWIN,
+}
+
+// These generic tags will be stripped from an image name before turning it into an instance name.
+var genericTags = []string{
+	"base",         // Fedora, Rocky
+	"basic",        // FreeBSD
+	"cloud",        // Fedora, openSUSE
+	"cloudimg",     // Ubuntu, Arch
+	"cloudinit",    // Alpine
+	"current",      // FreeBSD
+	"daily",        // Debian
+	"default",      // Gentoo
+	"generic",      // Fedora
+	"genericcloud", // CentOS, Debian, Rocky, Alma
+	"kvm",          // Oracle
+	"latest",       // Gentoo, CentOS, Rocky, Alma
+	"linux",        // Arch
+	"minimal",      // openSUSE
+	"openstack",    // Gentoo
+	"release",      // FreeBSD
+	"restore",      // macOS
+	"server",       // Ubuntu
+	"std",          // Alpine-Lima
+	"stream",       // CentOS
+	"uefi",         // Alpine
+	"vm",           // openSUSE
+}
+
+// imageTemplate checks if the locator specifies an image URL.
+// It will create a minimal template with the image URL and arch derived from the image name
+// and also set the default instance name to the image name, but stripped of generic tags.
+func imageTemplate(tmpl *Template, locator string) bool {
+	if !imageURLRegex.MatchString(locator) {
+		return false
+	}
+
+	var imageOS limatype.OS
+	for keyword, os := range osKeywords {
+		pattern := fmt.Sprintf(`(?i)\b%s\b`, keyword)
+		if regexp.MustCompile(pattern).MatchString(locator) {
+			imageOS = os
+			break
+		}
+	}
+	if imageOS == "" {
+		imageOS = limatype.LINUX
+		logrus.Debugf("cannot determine image OS from URL %q; assuming %q", locator, imageOS)
+	}
+
+	var imageArch limatype.Arch
+	for keyword, arch := range archKeywords {
+		pattern := fmt.Sprintf(`\b%s\b`, keyword)
+		if regexp.MustCompile(pattern).MatchString(locator) {
+			imageArch = arch
+			break
+		}
+	}
+	if imageArch == "" {
+		if imageOS == limatype.DARWIN {
+			imageArch = limatype.AARCH64
+			// Other architectures were never supported for macOS guests
+		} else {
+			imageArch = limatype.NewArch(runtime.GOARCH)
+			logrus.Warnf("cannot determine image arch from URL %q; assuming %q", locator, imageArch)
+		}
+	}
+
+	template := `os: %q
+arch: %q
+images:
+- location: %q
+  arch: %q
+`
+	tmpl.Bytes = fmt.Appendf(nil, template, imageOS, imageArch, locator, imageArch)
+	if tmpl.Name == "" {
+		tmpl.Name = InstNameFromImageURL(locator, imageArch)
+	}
+	return true
+}
+
+func InstNameFromImageURL(locator, imageArch string) string {
+	// We intentionally call both path.Base and filepath.Base in case we are running on Windows.
+	name := strings.ToLower(filepath.Base(path.Base(locator)))
+	// Remove file format and compression file types.
+	name = imageURLRegex.ReplaceAllString(name, "")
+	// The Alpine "nocloud_" prefix does not fit the genericTags pattern.
+	name = strings.TrimPrefix(name, "nocloud_")
+	for _, tag := range genericTags {
+		re := regexp.MustCompile(fmt.Sprintf(`[-_.]%s\b`, tag))
+		name = re.ReplaceAllString(name, "")
+	}
+	// The "UniversalMac" prefix does not fit the genericTags pattern and also should be normalized to "macos".
+	// "UniversalMac_15.6.1_24G90_Restore.ipsw"
+	name = strings.Replace(name, "universalmac_", "macos-", 1)
+	// ARM64 FreeBSD images have both "arm64" and "aarch64" in their names.
+	// "FreeBSD-16.0-CURRENT-arm64-aarch64-BASIC-CLOUDINIT-ufs.qcow2.xz"
+	name = strings.Replace(name, "arm64-aarch64", "arm64", 1)
+	// Remove imageArch as well if it is the native arch.
+	if limayaml.IsNativeArch(imageArch) {
+		re := regexp.MustCompile(fmt.Sprintf(`[-_.]%s\b`, imageArch))
+		name = re.ReplaceAllString(name, "")
+	}
+	// Remove timestamps from name: 8 digit date, optionally followed by
+	// a delimiter and one or more digits before a word boundary.
+	name = regexp.MustCompile(`[-_.]20\d{6}([-_.]\d+)?\b`).ReplaceAllString(name, "")
+	// Normalize archlinux name
+	name = regexp.MustCompile(`^arch\b`).ReplaceAllString(name, "archlinux")
+	// Remove redundant major version, e.g. "rocky-8-8.10" becomes "rocky-8.10".
+	// Unfortunately regexp doesn't support back references, so we have to
+	// check manually if both numbers are the same.
+	re := regexp.MustCompile(`-(\d+)-(\d+)\.`)
+	name = re.ReplaceAllStringFunc(name, func(match string) string {
+		submatch := re.FindStringSubmatch(match)
+		if submatch[1] == submatch[2] {
+			// Replace -X-X. with -X.
+			return "-" + submatch[1] + "."
+		}
+		return match
+	})
+	// Normalize "macos-15.6.1_24g90" to "macos-15.6.1"
+	name = regexp.MustCompile(`^(macos-[\d.]+)[-_].*$`).ReplaceAllString(name, "$1")
+	return name
+}
+
+// SeemsTemplateURL returns true if the arg is a URL using the template scheme.
+// When it returns true, it also returns the template name.
+func SeemsTemplateURL(arg string) (isTemplate bool, templateName string) {
+	u, err := url.Parse(arg)
+	if err != nil {
+		return false, ""
+	}
+	if u.Scheme == "template" {
+		if u.Opaque == "" {
+			return true, path.Join(u.Host, u.Path)
+		}
+		return true, u.Opaque
+	}
+	return false, ""
+}
+
+// SeemsHTTPURL returns true if the arg is a URL using the http or https scheme.
+func SeemsHTTPURL(arg string) bool {
+	u, err := url.Parse(arg)
+	if err != nil {
+		return false
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return false
+	}
+	return true
+}
+
+// SeemsFileURL returns true if the arg is a URL using the file scheme.
+func SeemsFileURL(arg string) bool {
+	u, err := url.Parse(arg)
+	if err != nil {
+		return false
+	}
+	return u.Scheme == "file"
+}
+
+func InstNameFromURL(urlStr string) (string, error) {
+	u, err := url.Parse(urlStr)
+	if err != nil {
+		return "", err
+	}
+	return InstNameFromYAMLPath(path.Base(u.Path))
+}
+
+func InstNameFromYAMLPath(yamlPath string) (string, error) {
+	s := strings.ToLower(filepath.Base(yamlPath))
+	s = strings.TrimSuffix(strings.TrimSuffix(s, ".yml"), ".yaml")
+	// "." is allowed in instance names, but replaced to "-" for hostnames.
+	// e.g., yaml: "ubuntu-24.04.yaml" , instance name: "ubuntu-24.04", hostname: "lima-ubuntu-24-04"
+	if err := identifiers.Validate(s); err != nil {
+		return "", fmt.Errorf("filename %q is invalid: %w", yamlPath, err)
+	}
+	return s, nil
+}
+
+func transformCustomURL(ctx context.Context, locator string) (string, error) {
+	u, err := url.Parse(locator)
+	if err != nil || len(u.Scheme) <= 1 {
+		return locator, nil
+	}
+
+	if u.Scheme == "template" {
+		if u.Opaque != "" {
+			return locator, nil
+		}
+		// Fix malformed "template:" URLs.
+		newLocator := "template:" + path.Join(u.Host, u.Path)
+		logrus.Warnf("Template locator %q should be written %q since Lima v2.0", locator, newLocator)
+		return newLocator, nil
+	}
+
+	if u.Scheme == "github" {
+		return transformGitHubURL(ctx, u.Opaque)
+	}
+
+	plugin, err := plugins.Find("url-" + u.Scheme)
+	if err != nil {
+		return "", err
+	}
+	if plugin == nil {
+		return locator, nil
+	}
+
+	currentPath := os.Getenv("PATH")
+	defer os.Setenv("PATH", currentPath)
+	err = plugins.UpdatePath()
+	if err != nil {
+		return "", err
+	}
+
+	cmd := exec.CommandContext(ctx, plugin.Path, strings.TrimPrefix(u.String(), u.Scheme+":"))
+	cmd.Env = os.Environ()
+
+	stdout, err := cmd.Output()
+	if err != nil {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			stderrMsg := string(exitErr.Stderr)
+			if stderrMsg != "" {
+				return "", fmt.Errorf("command %q failed: %s", cmd.String(), strings.TrimSpace(stderrMsg))
+			}
+		}
+		return "", fmt.Errorf("command %q failed: %w", cmd.String(), err)
+	}
+	return strings.TrimSpace(string(stdout)), nil
+}
+
+func TransformCustomURL(ctx context.Context, locator string) (string, error) {
+	seen := make(map[string]bool)
+	origLocator := locator
+	githubSchemeDetected := false
+
+	for !seen[locator] {
+		seen[locator] = true
+		if strings.HasPrefix(locator, "github:") {
+			githubSchemeDetected = true
+		}
+		newLocator, err := transformCustomURL(ctx, locator)
+		if err != nil {
+			return "", err
+		}
+		if newLocator == locator {
+			if githubSchemeDetected {
+				logrus.Warn("The github: scheme is still EXPERIMENTAL")
+			}
+			return newLocator, nil
+		}
+		logrus.Debugf("Locator %q replaced with %q", locator, newLocator)
+		locator = newLocator
+	}
+	return "", fmt.Errorf("custom locator %q has a redirect loop", origLocator)
+}

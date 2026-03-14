@@ -1,0 +1,22 @@
+# Background: https://github.com/lima-vm/lima/pull/2234
+# Should be tested on a Linux host
+images:
+- location: "https://github.com/lima-vm/alpine-lima/releases/download/v0.2.37/alpine-lima-std-3.19.0-x86_64.iso"
+  arch: "x86_64"
+  digest: "sha512:568852df405e6b9858e678171a9894c058f483df0b0570c22cf33fc75f349ba6cc5bb3d50188180d8c31faaf53400fe884ca3e5f949961b03b2bf53e65de88d7"
+- location: "https://github.com/lima-vm/alpine-lima/releases/download/v0.2.37/alpine-lima-std-3.19.0-aarch64.iso"
+  arch: "aarch64"
+  digest: "sha512:3a4bd5ad0201f503e9bb9f3b812aa0df292e2e099148c0323d23244046ad199a2946ef9e0619fec28726bfdcc528233f43c3b4b036c9e06e92ac730d579f0ca3"
+
+mountType: "9p"
+mounts:
+- location: "~"
+  writable: true
+- location: "/tmp/lima test dir with spaces"
+  writable: true
+- location: "/tmp/lima"
+  writable: true
+
+containerd:
+  system: false
+  user: false

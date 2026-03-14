@@ -1,0 +1,200 @@
+---
+title: Krunkit
+weight: 4
+---
+
+> **Warning**
+> "krunkit" is experimental
+
+| ⚡ Requirement | Lima >= 2.0, macOS >= 14 (Sonoma+), Apple Silicon (arm64) |
+| ------------- | ----------------------------------------------------------- |
+
+Krunkit runs super‑light VMs on macOS/ARM64 with a focus on GPU access. It builds on [libkrun](https://github.com/containers/libkrun), a library that embeds a VMM so apps can launch processes in a hardware‑isolated VM (HVF on macOS, KVM on Linux). The standout feature is GPU support in the guest via Mesa’s Venus Vulkan driver ([venus](https://docs.mesa3d.org/drivers/venus.html)), enabling Vulkan workloads inside the VM. See the project: [containers/krunkit](https://github.com/containers/krunkit).
+
+## Install krunkit (host)
+```bash
+brew tap slp/krunkit
+brew install krunkit
+```
+For reference: https://github.com/slp/homebrew-krun
+
+
+## Using the driver with Lima
+
+The `krunkit` driver is usually bundled with Lima as an external driver:
+
+```console
+$ limactl info | jq .vmTypesEx
+{
+  "krunkit": {
+    "location": "/opt/homebrew/Cellar/lima/2.0.1/libexec/lima/lima-driver-krunkit"
+  },
+  "qemu": {
+    "location": "internal"
+  },
+  "vz": {
+    "location": "internal"
+  }
+}
+```
+
+If the driver is not installed, build and install the driver as follows:
+
+```bash
+git clone https://github.com/lima-vm/lima
+cd lima
+# Replace vX.Y.Z with the actual version
+git checkout vX.Y.Z
+make ADDITIONAL_DRIVERS=krunkit additional-drivers
+# Replace /usr/local with the actual installation prefix
+cp -a _output/libexec/lima/lima-driver-krunkit /usr/local/libexec/lima/
+```
+
+See also [Developers' guide » Virtual Machine Drivers](../../dev/drivers.md).
+
+## Quick start
+
+You can run AI models either:
+- With containers (fast to get started; any distro works), or
+- Without containers (choose Fedora; build `llama.cpp` from source).
+
+Before running, install a small model on the host so examples can run quickly. We’ll use `Qwen3‑1.7B GGUF`:
+
+```bash
+mkdir -p models
+curl -LO --output-dir models 'https://huggingface.co/Qwen/Qwen3-1.7B-GGUF/resolve/main/Qwen3-1.7B-Q8_0.gguf'
+```
+
+### 1) Run models using containers (easiest)
+
+Start a krunkit VM with the default Lima template:
+
+{{< tabpane text=true >}}
+{{% tab header="CLI" %}}
+```bash
+limactl start --vm-type=krunkit
+limactl shell default
+```
+{{% /tab %}}
+{{< /tabpane >}}
+
+Then inside the VM:
+
+```bash
+nerdctl run --rm -ti \
+  --device /dev/dri \
+  -v $(pwd)/models:/models \
+  quay.io/slopezpa/fedora-vgpu-llama
+```
+For reference: https://sinrega.org/2024-03-06-enabling-containers-gpu-macos/
+
+Once inside the container:
+
+```bash
+llama-cli -m /models/Qwen3-1.7B-Q8_0.gguf -b 512 -ngl 99 -p "Introduce yourself"
+```
+
+You can now chat with the model.
+
+### 2) Run models without containers (hard way)
+
+This path builds and installs dependencies (which can take some time. For faster builds, allocate more CPUs and memory to the VM. See [`options`](../../reference/limactl_start/#options)). Use Fedora as the image.
+
+{{< tabpane text=true >}}
+{{% tab header="CLI" %}}
+```bash
+limactl start --vm-type=krunkit template:fedora
+limactl shell fedora
+```
+{{% /tab %}}
+{{% tab header="YAML" %}}
+```yaml
+vmType: krunkit
+
+base:
+- template:_images/fedora
+- template:_default/mounts
+
+mountType: virtiofs
+```
+{{% /tab %}}
+{{< /tabpane >}}
+
+Once inside the VM, install GPU/Vulkan support:
+
+<p>
+<details>
+<summary>Click to expand script</summary>
+
+```bash
+#!/bin/bash
+# SPDX-FileCopyrightText: Copyright The Lima Authors
+# SPDX-License-Identifier: Apache-2.0
+
+set -eu -o pipefail
+
+# Install required packages
+dnf install -y dnf-plugins-core dnf-plugin-versionlock llvm18-libs
+
+# Install Vulkan and Mesa base packages
+dnf install -y \
+  mesa-vulkan-drivers \
+  vulkan-loader-devel \
+  vulkan-headers \
+  vulkan-tools \
+  vulkan-loader \
+  glslc
+
+# Enable COPR repo with patched Mesa for Venus support
+dnf copr enable -y slp/mesa-libkrun-vulkan
+
+# Downgrade to patched Mesa version from COPR
+REPOID="copr:copr.fedorainfracloud.org:slp:mesa-libkrun-vulkan"
+MESA_VERSION=$(dnf repoquery -q --available --repoid="$REPOID" --latest-limit=1 --qf '%{evr}' mesa-vulkan-drivers 2>/dev/null)
+dnf downgrade -y "mesa-vulkan-drivers-${MESA_VERSION}"
+
+# Lock Mesa version to prevent automatic upgrades
+dnf versionlock add "mesa-vulkan-drivers-${MESA_VERSION}"
+
+# Clean up
+dnf clean all
+
+echo "Installing llama.cpp with Vulkan support..."
+# Build and install llama.cpp with Vulkan support
+dnf install -y git cmake clang curl-devel glslc vulkan-devel virglrenderer
+(
+  cd ~
+  git clone https://github.com/ggml-org/llama.cpp
+  (
+    cd llama.cpp
+    cmake -B build -DGGML_VULKAN=ON -DGGML_CCACHE=OFF -DGGML_NATIVE=OFF -DCMAKE_INSTALL_PREFIX=/usr
+    cmake --build build --config Release -j8
+    cmake --install build
+  )
+  rm -fr llama.cpp
+)
+
+echo "Successfully installed llama.cpp with Vulkan support. Use 'llama-cli' app with .gguf models."
+```
+
+</details>
+</p>
+
+The script will prompt to build and install `llama.cpp` with Venus support from source.
+
+After installation, run:
+
+```bash
+llama-cli -m models/Qwen3-1.7B-Q8_0.gguf -b 512 -ngl 99 -p "Introduce yourself"
+```
+
+and enjoy chatting with the AI model.
+
+💡 **Tip:** If the model takes too long to load or experiences performance issues, try reducing the `-ngl` (number of GPU layers) value.
+
+## Notes and caveats
+- macOS Ventura or later on Apple Silicon is required.
+- To verify GPU/Vulkan in the guest container or VM, use tools like `vulkaninfo --summary`.
+- AI models on containers can run on any Linux distribution but without containers Fedora is required.
+- For more information about usage of `llama-cli`. See [llama.cpp](https://github.com/ggml-org/llama.cpp) `README.md`.
+- Driver architecture details: see [Virtual Machine Drivers](../../dev/drivers).

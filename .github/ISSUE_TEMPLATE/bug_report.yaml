@@ -1,0 +1,7 @@
+name: Bug report
+description: Report a potential bug
+body:
+- type: textarea
+  attributes:
+    label: Description
+    description: Please make sure to include the version of Lima and the host OS

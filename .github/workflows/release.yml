@@ -1,0 +1,129 @@
+# Forked from https://github.com/containerd/nerdctl/blob/v0.8.1/.github/workflows/release.yml
+# Apache License 2.0
+
+name: Release
+on:
+  # paths-ignore should be kept in sync with test.yml
+  push:
+    branches:
+    - 'master'
+    tags:
+    - 'v*'
+    paths-ignore:
+    - "docs/**"
+    - "website/**"
+    - "**.md"
+  pull_request:
+    branches:
+    - 'master'
+    paths-ignore:
+    - "docs/**"
+    - "website/**"
+    - "**.md"
+env:
+  GO111MODULE: on
+  GOTOOLCHAIN: local
+permissions:
+  contents: read
+
+jobs:
+  artifacts-darwin:
+    name: Artifacts Darwin
+    # The latest release of macOS is used to enable new features.
+    # https://github.com/lima-vm/lima/issues/2767
+    #
+    # Apparently, a binary built on a newer version of macOS can still run on
+    # an older release of macOS without an error.
+    # This is quite different from Linux and glibc.
+    runs-on: macos-26
+    timeout-minutes: 20
+    steps:
+    - name: "Show xcode and SDK version"
+      run: |
+        # Xcode version
+        xcodebuild -version
+        # macOS SDK version
+        xcrun --show-sdk-version || true
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417  # v6.3.0
+      with:
+        go-version: stable
+    - name: Make darwin artifacts
+      run: make artifacts-darwin
+    - name: "Upload artifacts"
+      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+      with:
+        name: artifacts-darwin
+        path: _artifacts/
+  release:
+    # An old release of Ubuntu is chosen for glibc compatibility
+    runs-on: ubuntu-22.04
+    needs: artifacts-darwin
+    timeout-minutes: 20
+    # The maximum access is "read" for PRs from public forked repos
+    # https://docs.github.com/en/actions/security-guides/automatic-token-authentication#permissions-for-the-github_token
+    permissions:
+      contents: write  # for releases
+      id-token: write  # for provenances
+      attestations: write  # for provenances
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+    - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
+      with:
+        name: artifacts-darwin
+        path: _artifacts/
+    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417  # v6.3.0
+      with:
+        go-version: stable
+    - name: Install gcc
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-x86-64-linux-gnu gcc-aarch64-linux-gnu
+    - name: "Compile binaries"
+      run: make artifacts-linux
+    - name: "Make misc artifacts"
+      run: make artifacts-misc
+    - name: "Validate artifactts"
+      run: ./hack/validate-artifact.sh ./_artifacts/*.tar.gz
+    - name: "SHA256SUMS"
+      run: |
+        ( cd _artifacts; sha256sum *.tar.gz ) | tee /tmp/SHA256SUMS
+        mv /tmp/SHA256SUMS _artifacts/SHA256SUMS
+    - name: "The sha256sum of the SHA256SUMS file"
+      run: (cd _artifacts; sha256sum SHA256SUMS)
+    - name: "Prepare the release note"
+      run: |
+        shasha=$(sha256sum _artifacts/SHA256SUMS | awk '{print $1}')
+        cat <<-EOF | tee /tmp/release-note.txt
+        (Changes to be documented)
+
+        ## Usage
+        \`\`\`console
+        $ limactl create
+        $ limactl start
+        ...
+        INFO[0029] READY. Run \`lima\` to open the shell.
+
+        $ lima uname
+        Linux
+        \`\`\`
+
+        - - -
+        The binaries were built automatically on GitHub Actions.
+        The build log is available for 90 days: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+        The sha256sum of the SHA256SUMS file itself is \`${shasha}\` .
+        - - -
+        Release manager: [ADD YOUR NAME HERE] (@[ADD YOUR GITHUB ID HERE])
+        EOF
+    - uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32  # v4.1.0
+      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+      with:
+        subject-path: _artifacts/*
+    - name: "Create release"
+      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        tag="${GITHUB_REF##*/}"
+        gh release create -F /tmp/release-note.txt --draft --title "${tag}" "${tag}" _artifacts/*

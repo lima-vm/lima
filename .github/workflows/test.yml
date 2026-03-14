@@ -1,0 +1,630 @@
+name: test
+
+on:
+  push:
+    branches:
+    - master
+    - 'release/**'
+    paths-ignore:
+    - "docs/**"
+    - "website/**"
+    - "**.md"
+  pull_request:
+    paths-ignore:
+    - "docs/**"
+    - "website/**"
+    - "**.md"
+env:
+  LIMACTL_CREATE_ARGS: ""
+  GOTOOLCHAIN: local
+
+permissions: read-all
+
+jobs:
+  lints:
+    name: "Lints"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417  # v6.3.0
+      with:
+        go-version: stable
+    - name: Install protoc and Go plugins
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y protobuf-compiler
+        make install-protoc-tools
+    - name: Verify generated files
+      run: make generate check-generated
+    - name: Run editorconfig-checker
+      run: go tool -modfile=./hack/tools/go.mod editorconfig-checker
+    - name: Run yamllint
+      run: yamllint .
+    - name: Install shellcheck
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y shellcheck
+    - name: Run file and directory name linter
+      uses: ls-lint/action@02e380fe8733d499cbfc9e22276de5085508a5bd  # v2.3.1
+    - name: Run shellcheck
+      run: find . -name '*.sh' | xargs shellcheck
+    - name: Run shfmt
+      run: find . -name '*.sh' | xargs go tool -modfile=./hack/tools/go.mod shfmt -s -d
+    - name: Check hyperlinks
+      uses: lycheeverse/lychee-action@8646ba30535128ac92d33dfc9133794bfdd9b411  # v2.8.0
+      with:
+        args: >-
+          --exclude https://img.shields.io
+          --exclude http://127.0.0.1:8080
+          --exclude https://github.com/lima-vm/lima/releases/download
+          --exclude https://xbarapp.com
+          --exclude https://api.github.com
+          README.md
+        token: ${{ secrets.GITHUB_TOKEN }}
+    - name: Install go-licenses
+      # TODO: move to `go tool` after upgrading to v2
+      run: go install github.com/google/go-licenses@v1.6.0
+    - name: Check licenses
+      # the allow list corresponds to https://github.com/cncf/foundation/blob/e5db022a0009f4db52b89d9875640cf3137153fe/allowed-third-party-license-policy.md
+      # hashicorp/hcl/v2 is MPL-2.0; covered by the CNCF license exception for hashicorp/hcl
+      # see also https://github.com/cncf/foundation/issues/1242
+      run: go-licenses check --include_tests --ignore github.com/hashicorp/hcl/v2 ./... --allowed_licenses=$(cat ./hack/allowed-licenses.txt)
+    - name: Check license boilerplates
+      run: go tool -modfile=./hack/tools/go.mod ltag -t ./hack/ltag --check -v
+    - name: Check protobuf files
+      run: go tool -modfile=./hack/tools/go.mod protolint .
+
+  lint-go:
+    name: "Lint Go"
+    timeout-minutes: 30
+    strategy:
+      matrix:
+        runs-on: [ubuntu-24.04, macos-26, windows-2025]
+    runs-on: ${{ matrix.runs-on }}
+    steps:
+    - name: Force git to use LF
+      # This step is required on Windows to work around golangci-lint issues with formatters. See https://github.com/golangci/golangci-lint/discussions/5840
+      # TODO: replace with a checkout option when https://github.com/actions/checkout/issues/226 is implemented
+      if: runner.os == 'Windows'
+      run: |
+        git config --global core.autocrlf false
+        git config --global core.eol lf
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417  # v6.3.0
+      with:
+        go-version: stable
+    - id: golangci-lint-version
+      shell: bash
+      working-directory: hack/tools
+      run: |
+        echo "GOLANGCI_LINT_VERSION=$(go list -m -f '{{.Version}}' github.com/golangci/golangci-lint/v2)" >> $GITHUB_OUTPUT
+    - name: Run golangci-lint
+      uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20  # v9.2.0
+      with:
+        version: ${{ steps.golangci-lint-version.outputs.GOLANGCI_LINT_VERSION }}
+        args: --verbose
+
+  security:
+    name: "Vulncheck"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+    - uses: golang/govulncheck-action@b625fbe08f3bccbe446d94fbf87fcc875a4f50ee  # v1.0.4
+
+  unit:
+    name: "Unit tests"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        # For non-Homebrew we have to support an old release of Go
+        go-version: ["oldstable", "stable"]
+    steps:
+    - name: Install test dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends qemu-utils
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417  # v6.3.0
+      with:
+        go-version: ${{ matrix.go-version }}
+    - name: Unit tests
+      run: go test -v ./...
+    - name: Make
+      run: make
+    - name: Install
+      run: sudo make install
+    - name: Verify templates match `limactl edit` format
+      run: |
+        find templates -name '*.yaml' -exec limactl edit --set 'del(.nothing)' {} \;
+        git diff-index --exit-code HEAD
+    - name: Uninstall
+      run: sudo make uninstall
+
+  windows:
+    name: "Windows tests (WSL2)"
+    runs-on: windows-2025
+    timeout-minutes: 30
+    steps:
+    - name: Enable WSL2
+      run: |
+        wsl --set-default-version 2
+        wsl --shutdown
+        wsl --update
+        wsl --status
+        wsl --version
+        wsl --list --online
+    - name: Install WSL2 distro
+      timeout-minutes: 1
+      run: |
+        # FIXME: At least one distro has to be installed here,
+        # otherwise `wsl --list --verbose` (called from Lima) fails:
+        # https://github.com/lima-vm/lima/pull/1826#issuecomment-1729993334
+        # The distro image itself is not consumed by Lima.
+        # Starting with WSL2 version 2.5.7.0 the distro will be rejected
+        # if it doesn't contain /bin/sh and /etc.
+        # ------------------------------------------------------------------
+        mkdir dummy
+        mkdir dummy\bin
+        mkdir dummy\etc
+        echo "" >dummy\bin\sh
+        tar -cf dummy.tar --format ustar -C dummy .
+        wsl --import dummy $env:TEMP dummy.tar
+        wsl --list --verbose
+    - name: Set gitconfig
+      run: |
+        git config --global core.autocrlf false
+        git config --global core.eol lf
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417  # v6.3.0
+      with:
+        go-version: stable
+    - name: Unit tests
+      run: go test -v ./...
+    - name: Make
+      run: make
+    - name: Integration tests (WSL2, Windows host)
+      run: |
+        $env:PATH = "$pwd\_output\bin;" + 'C:\msys64\usr\bin;' + $env:PATH
+        pacman -Sy --noconfirm openbsd-netcat diffutils socat w3m
+        $env:MSYS2_ENV_CONV_EXCL = 'HOME_HOST;HOME_GUEST;_LIMA_WINDOWS_EXTRA_PATH'
+        $env:HOME_HOST = $(cygpath.exe "$env:USERPROFILE")
+        $env:HOME_GUEST = "/mnt$env:HOME_HOST"
+        $env:LIMACTL_CREATE_ARGS = '--vm-type=wsl2 --mount-type=wsl2 --containerd=system'
+        $env:_LIMA_WINDOWS_EXTRA_PATH = 'C:\Program Files\Git\usr\bin'
+        bash.exe -c "./hack/test-templates.sh templates/experimental/wsl2.yaml"
+
+  windows-qemu:
+    name: "Windows tests (QEMU)"
+    runs-on: windows-2025
+    timeout-minutes: 30
+    steps:
+    - name: Set gitconfig
+      run: |
+        git config --global core.autocrlf false
+        git config --global core.eol lf
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417  # v6.3.0
+      with:
+        go-version: stable
+    - name: Make
+      run: make
+    - name: Install QEMU
+      run: |
+        winget install --silent --accept-source-agreements --accept-package-agreements --disable-interactivity SoftwareFreedomConservancy.QEMU
+    - name: Integration tests (QEMU, Windows host)
+      run: |
+        $env:PATH = "$pwd\_output\bin;" + 'C:\msys64\usr\bin;' + 'C:\Program Files\QEMU;' + $env:PATH
+        pacman -Sy --noconfirm openbsd-netcat diffutils socat w3m
+        $env:MSYS2_ENV_CONV_EXCL = 'HOME_HOST;HOME_GUEST;_LIMA_WINDOWS_EXTRA_PATH'
+        $env:HOME_HOST = $(cygpath.exe "$env:USERPROFILE")
+        $env:HOME_GUEST = "$env:HOME_HOST"
+        $env:LIMACTL_CREATE_ARGS = '--vm-type=qemu'
+        $env:_LIMA_WINDOWS_EXTRA_PATH = 'C:\Program Files\Git\usr\bin'
+        bash.exe -c "./hack/test-templates.sh templates/default.yaml"
+
+  qemu:
+    name: "Integration tests (QEMU, macOS host)"
+    runs-on: macos-15-large  # Intel
+    timeout-minutes: 120
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417  # v6.3.0
+      with:
+        go-version: stable
+    - name: Unit tests
+      run: go test -v ./...
+    - name: Make
+      run: make
+    - name: "Inject `no_timer_check` to kernel cmdline"
+      # workaround to https://github.com/lima-vm/lima/issues/84
+      run: |
+        export PATH="$PWD/_output/bin:$PATH"
+        ./hack/inject-cmdline-to-template.sh _output/share/lima/templates/_images/ubuntu.yaml no_timer_check
+    - name: Install
+      run: sudo make install
+    - name: Validate jsonschema
+      run: make schema-limayaml.json
+    - name: Validate templates
+      # Can't validate base templates in `_default` because they have no images
+      run: find -L templates -name '*.yaml' ! -path '*/_default/*' | xargs limactl validate
+    - name: Install test dependencies
+      # QEMU:      required by Lima itself
+      # bash:      required by test-templates.sh (OS version of bash is too old)
+      # coreutils: required by test-templates.sh for the "timeout" command
+      # w3m :      required by test-templates.sh for port forwarding tests
+      # socat:     required by test-templates.sh for port forwarding tests
+      run: brew install qemu bash coreutils w3m socat
+    - name: "Adjust LIMACTL_CREATE_ARGS"
+      run: echo "LIMACTL_CREATE_ARGS=${LIMACTL_CREATE_ARGS} --vm-type=qemu" >>$GITHUB_ENV
+    - name: Cache image used by default.yaml
+      uses: ./.github/actions/setup_cache_for_template
+      with:
+        template: templates/default.yaml
+    - name: "Show cache"
+      run: ./hack/debug-cache.sh
+    - name: "Test default.yaml"
+      uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08  # v3.0.2
+      with:
+        timeout_minutes: 30
+        retry_on: error
+        max_attempts: 3
+        command: ./hack/test-templates.sh templates/default.yaml
+    # GHA macOS is slow and flaky, so we only test default.yaml here.
+    # Other yamls are tested on Linux instances.
+    #
+    - if: always()
+      uses: ./.github/actions/upload_failure_logs_if_exists
+    - name: "Show cache"
+      if: always()
+      run: ./hack/debug-cache.sh
+
+  # Non-default templates are tested on Linux instances of GHA,
+  # as they seem more stable than macOS instances.
+  qemu-linux:
+    name: "Integration tests (QEMU, Linux host)"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        # Most templates use 9p as the mount type
+        template:
+        - alpine.yaml
+        - debian.yaml  # reverse-sshfs
+        - fedora.yaml
+        - archlinux.yaml
+        - opensuse.yaml
+        - docker.yaml
+        - ../hack/test-templates/alpine-iso-9p-writable.yaml  # Covers alpine-iso.yaml
+        - ../hack/test-templates/net-user-v2.yaml
+        - ../hack/test-templates/test-misc.yaml  # TODO: merge net-user-v2 into test-misc
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417  # v6.3.0
+      with:
+        go-version: stable
+    - name: Make
+      run: make
+    - name: Install
+      run: sudo make install
+    - name: Cache image used by templates/${{ matrix.template }}
+      uses: ./.github/actions/setup_cache_for_template
+      with:
+        template: templates/${{ matrix.template }}
+    - name: Install test dependencies
+      run: |
+        sudo apt-get update
+        sudo ./hack/install-qemu.sh
+        sudo apt-get install -y --no-install-recommends socat w3m
+    - name: Install ansible-playbook
+      run: |
+        sudo apt-get install -y --no-install-recommends ansible
+      if: matrix.template == '../hack/test-templates/test-misc.yaml'
+    - name: "Show cache"
+      run: ./hack/debug-cache.sh
+    - name: "Test"
+      uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08  # v3.0.2
+      with:
+        timeout_minutes: 30
+        retry_on: error
+        max_attempts: 3
+        command: ./hack/test-templates.sh templates/${{ matrix.template }}
+    - if: always()
+      uses: ./.github/actions/upload_failure_logs_if_exists
+      with:
+        suffix: ${{ matrix.template }}
+    - name: "Show cache"
+      run: ./hack/debug-cache.sh
+
+  bats:
+    name: "Integration tests (BATS)"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      with:
+        # BATS tests don't expect lima version warnings like:
+        # msg="treating lima version \"ea336ae\" from \"/Users/runner/.lima-bats/dummy/lima-version\" as very latest release"
+        fetch-depth: 0
+        submodules: true
+    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417  # v6.3.0
+      with:
+        go-version: stable
+    - name: Make
+      run: make
+    - name: Install
+      run: sudo make install
+    - name: Install test dependencies
+      run: |
+        sudo apt-get update
+        sudo ./hack/install-qemu.sh
+    - name: Cache image used by templates/default.yaml
+      uses: ./.github/actions/setup_cache_for_template
+      with:
+        template: templates/default.yaml
+    - name: "Run BATS integration tests"
+      run: make bats
+      env:
+        # The url-github.bats tests makes GitHub API requests
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Cache image used by templates/k8s.yaml
+      uses: ./.github/actions/setup_cache_for_template
+      with:
+        template: templates/k8s.yaml
+    - name: "Run BATS k8s tests"
+      run: ./hack/bats/lib/bats-core/bin/bats --timing ./hack/bats/extras/k8s.bats
+      env:
+        LIMA_BATS_ALL_TESTS_RETRIES: 3
+    - name: Cache image used by templates/freebsd.yaml
+      uses: ./.github/actions/setup_cache_for_template
+      with:
+        template: templates/freebsd.yaml
+    - name: "Run BATS freebsd tests"
+      run: |
+        set -eux -o pipefail
+        # xorriso is required for creating Joliet filesystem
+        sudo apt-get install -y xorriso
+        ./hack/bats/lib/bats-core/bin/bats --timing ./hack/bats/extras/freebsd.bats
+
+  colima:
+    name: "Colima tests (QEMU, Linux host)"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      with:
+        # fetch-depth is set to 0 to let `limactl --version` print semver-ish version
+        # fetch-depth: 0 is required for Colima integration test because Colima
+        # checks Lima's version and requires proper semantic version format
+        fetch-depth: 0
+        ref: ${{ github.event.pull_request.head.sha }}
+        submodules: true
+    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417  # v6.3.0
+      with:
+        go-version: stable
+    - name: Make
+      run: make
+    - name: Install
+      run: sudo make install
+    - name: Install colima
+      id: install-colima
+      run: |
+        git clone https://github.com/abiosoft/colima
+        cd colima
+        latest="$(git tag --sort=-v:refname | head -n1)"
+        git checkout "$latest"
+        make
+        sudo make install
+        echo "version=$latest" >>$GITHUB_OUTPUT
+    - name: Install test dependencies
+      run: |
+        sudo apt-get update
+        sudo ./hack/install-qemu.sh
+    - name: Cache colima
+      uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306  # v5.0.3
+      with:
+        path: ~/.cache/colima
+        key: colima-${{ steps.install-colima.outputs.version }}
+    - name: Run BATS colima tests
+      run: ./hack/bats/lib/bats-core/bin/bats --timing ./hack/bats/extras/colima.bats
+
+  vmnet:
+    name: "VMNet tests (QEMU)"
+    runs-on: macos-15-large  # Intel
+    timeout-minutes: 120
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417  # v6.3.0
+      with:
+        go-version: stable
+    - name: Make
+      run: make
+    - name: "Inject `no_timer_check` to kernel cmdline"
+      # workaround to https://github.com/lima-vm/lima/issues/84
+      run: |
+        export PATH="$PWD/_output/bin:$PATH"
+        ./hack/inject-cmdline-to-template.sh _output/share/lima/templates/_images/ubuntu.yaml no_timer_check
+    - name: Install
+      run: sudo make install
+    - name: "Adjust LIMACTL_CREATE_ARGS"
+      run: echo "LIMACTL_CREATE_ARGS=${LIMACTL_CREATE_ARGS} --vm-type=qemu --network=lima:shared" >>$GITHUB_ENV
+    - name: Cache image used by default .yaml
+      uses: ./.github/actions/setup_cache_for_template
+      with:
+        template: templates/default.yaml
+    - name: Install test dependencies
+      run: brew install qemu bash coreutils w3m socat
+    - name: Install socket_vmnet
+      env:
+        SOCKET_VMNET_VERSION: v1.2.2
+      run: |
+        (
+          cd ~
+          git clone https://github.com/lima-vm/socket_vmnet
+          cd socket_vmnet
+          git checkout $SOCKET_VMNET_VERSION
+          sudo git config --global --add safe.directory /Users/runner/socket_vmnet
+          sudo make PREFIX=/opt/socket_vmnet install
+        )
+        limactl sudoers | sudo tee /etc/sudoers.d/lima
+    - name: Unit test (pkg/networks) with socket_vmnet
+      # Set -count=1 to disable cache
+      run: go test -v -count=1 ./pkg/networks/...
+    - name: Test socket_vmnet
+      uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08  # v3.0.2
+      with:
+        timeout_minutes: 30
+        retry_on: error
+        max_attempts: 3
+        command: ./hack/test-templates.sh templates/default.yaml
+    - if: always()
+      uses: ./.github/actions/upload_failure_logs_if_exists
+
+  upgrade:
+    name: "Upgrade tests (QEMU, macOS host)"
+    runs-on: macos-15-large  # Intel
+    timeout-minutes: 120
+    strategy:
+      matrix:
+        oldver: ["v0.15.1"]  # The default VM type was always QEMU until Lima v1.0
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+    - name: Fetch homebrew-core commit messages
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      with:
+        # needed by ./hack/brew-install-version.sh
+        repository: homebrew/homebrew-core
+        path: homebrew-core
+        fetch-depth: 0
+        filter: tree:0
+    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417  # v6.3.0
+      with:
+        go-version: stable
+    - name: Cache image used by ${{ matrix.oldver }}/examples/ubuntu-lts.yaml
+      uses: ./.github/actions/setup_cache_for_template
+      with:
+        template: https://raw.githubusercontent.com/lima-vm/lima/${{ matrix.oldver }}/examples/ubuntu-lts.yaml
+    - name: Install test dependencies
+      run: |
+        brew install bash coreutils
+        # QEMU 9.1.0 seems to break on GitHub runners, both on Monterey and Ventura
+        # We revert back to 8.2.1, which seems to work fine
+        git config --global user.name "GitHub Actions Bot"
+        git config --global user.email "nobody@localhost"
+        ./hack/brew-install-version.sh qemu 8.2.1
+    - name: Test
+      uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08  # v3.0.2
+      with:
+        timeout_minutes: 30
+        retry_on: error
+        max_attempts: 3
+        command: ./hack/test-upgrade.sh ${{ matrix.oldver }} ${{ github.sha }}
+    - if: always()
+      uses: ./.github/actions/upload_failure_logs_if_exists
+
+  vz:
+    name: "Integration tests (vz)"
+    runs-on: macos-15-large  # Intel
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        template:
+        - default.yaml
+    steps:
+    - name: "Adjust LIMACTL_CREATE_ARGS"
+      # --cpus=1 is needed for running vz on GHA: https://github.com/lima-vm/lima/pull/1511#issuecomment-1574937888
+      run: echo "LIMACTL_CREATE_ARGS=${LIMACTL_CREATE_ARGS} --cpus 1 --memory 1" >>$GITHUB_ENV
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417  # v6.3.0
+      with:
+        go-version: stable
+    - name: Make
+      run: make
+    - name: Install
+      run: sudo make install
+    - name: Cache image used by templates/${{ matrix.template }}
+      uses: ./.github/actions/setup_cache_for_template
+      with:
+        template: templates/${{ matrix.template }}
+    - name: Install test dependencies
+      run: brew install bash coreutils w3m socat
+    - name: Uninstall qemu
+      run: brew uninstall --ignore-dependencies --force qemu
+    - name: Test
+      run: ./hack/test-templates.sh templates/${{ matrix.template }}
+    - if: failure()
+      uses: ./.github/actions/upload_failure_logs_if_exists
+      with:
+        suffix: ${{ matrix.template }}
+
+  # gomodjail is a library sandbox for Go
+  # https://github.com/AkihiroSuda/gomodjail
+  #
+  # This is an early experiment.
+  # CI failures that only occurs with gomodjail shall not block merging PRs.
+  gomodjail:
+    name: "gomodjail (experimental; failures shall not block merging PRs)"
+    runs-on: macos-15-large  # Intel
+    timeout-minutes: 30
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417  # v6.3.0
+      with:
+        go-version: stable
+    - name: Install gomodjail
+      run: |
+        set -eux -o pipefail
+        git clone https://github.com/AkihiroSuda/gomodjail
+        cd gomodjail
+        make binaries install
+    - name: Install Lima
+      # gomodjail depends on symbols
+      run: |
+        make KEEP_SYMBOLS=1 binaries
+        sudo make install
+    - name: Cache image used by templates/default.yaml
+      uses: ./.github/actions/setup_cache_for_template
+      with:
+        template: templates/default.yaml
+    - name: Smoke test
+      run: gomodjail run --go-mod=./go.mod -- limactl start --tty=false
+
+  cross:
+    name: "Cross-compile (NetBSD, DragonFlyBSD)"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417  # v6.3.0
+      with:
+        go-version: stable
+    - run: GOOS=netbsd go build ./...
+    - run: GOOS=dragonfly go build ./...
+
+  qemu-linux-old:
+    name: "Smoke tests (QEMU, old Linux host)"
+    runs-on: ubuntu-22.04  # QEMU 6.2
+    timeout-minutes: 30
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417  # v6.3.0
+      with:
+        go-version: stable
+    - name: Make
+      run: make
+    - name: Install
+      run: sudo make install
+    - name: Cache image used by templates/default.yaml
+      uses: ./.github/actions/setup_cache_for_template
+      with:
+        template: templates/default.yaml
+    - name: Install test dependencies
+      run: |
+        sudo apt-get update
+        sudo ./hack/install-qemu.sh
+    - name: Smoke test
+      run: limactl start --tty=false

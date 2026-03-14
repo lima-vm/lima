@@ -1,0 +1,15 @@
+minimumLimaVersion: 2.0.0
+
+base:
+- template:_images/alpine-iso
+- template:_default/mounts
+
+# The built-in containerd installer does not support Alpine currently.
+# Use a provisioning script to install containerd, buildkit, and nerdctl.
+#
+# NOTE: Starting with Lima v2.0, nerdctl version must be v2.1.6 or later to
+# enable port forwarding in rootful mode.
+# Available in apk since Alpine 3.22.
+containerd:
+  system: false
+  user: false
