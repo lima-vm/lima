@@ -2,8 +2,8 @@
 #
 # Useful for sandboxing `brew` in an isolated environment.
 #
-# This template does not use macOS as the guest OS, because it seems hard to automate
-# provisioning macOS instances (accept EULA, skip enabling iCloud, set up SSH...).
+# This template does not use macOS as the guest OS, because installation of
+# Xcode Command Line Tools (`xcode-select --install`) requires GUI desktop session.
 
 minimumLimaVersion: 2.0.0
 
