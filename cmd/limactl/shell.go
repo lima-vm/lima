@@ -519,18 +519,23 @@ func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype
 			logrus.Info("Skipping syncing back the changes to host.")
 			return nil
 		case 2: // View the changed contents
-			if !rsyncToTempDir {
-				paths := []string{
-					remoteSource,
-					hostTmpDest,
-				}
+			var diffCmd *exec.Cmd
+			if _, err := exec.LookPath("diff"); err != nil {
+				logrus.WithError(err).Warn("`diff` not found; showing rsync dry-run output only")
+			} else {
+				diffCmd = exec.CommandContext(ctx, "diff", "-ruN", "--color=always", hostCurrentDir, hostTmpDest)
+				if !rsyncToTempDir {
+					paths := []string{
+						remoteSource,
+						hostTmpDest,
+					}
 
-				if err := rsyncDirectory(ctx, cmd, rsync, paths); err != nil {
-					return fmt.Errorf("failed to sync back the changes from guest instance to host temporary directory: %w", err)
+					if err := rsyncDirectory(ctx, cmd, rsync, paths); err != nil {
+						return fmt.Errorf("failed to sync back the changes from guest instance to host temporary directory: %w", err)
+					}
+					rsyncToTempDir = true
 				}
-				rsyncToTempDir = true
 			}
-			diffCmd := exec.CommandContext(ctx, "diff", "-ruN", "--color=always", hostCurrentDir, hostTmpDest)
 			pager := os.Getenv("PAGER")
 			pager = strings.TrimSpace(pager)
 			if pager == "" {
@@ -543,7 +548,9 @@ func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype
 			if err != nil {
 				return fmt.Errorf("failed to create pipe for less: %w", err)
 			}
-			diffCmd.Stdout = pipeIn
+			if diffCmd != nil {
+				diffCmd.Stdout = pipeIn
+			}
 			lessCmd.Stdout = cmd.OutOrStdout()
 			lessCmd.Stderr = cmd.OutOrStderr()
 
@@ -555,6 +562,9 @@ func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype
 			if stats != nil {
 				rsyncHead := fmt.Sprintf("%s--- rsync dry-run statistics ---%s", colorGray, colorNone)
 				diffHead := fmt.Sprintf("%s--- detailed diff --- %s", colorGray, colorNone)
+				if diffCmd == nil {
+					diffHead = fmt.Sprintf("%s--- detailed diff unavailable (`diff` not found) --- %s", colorGray, colorNone)
+				}
 				combinedOutput := fmt.Sprintf(
 					"%s\n%s\n\n%s\n\n\n%s\n",
 					rsyncHead,
@@ -569,12 +579,14 @@ func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype
 				}
 			}
 
-			if err := diffCmd.Run(); err != nil {
-				// Command `diff` returns exit code 1 when files differ.
-				var exitErr *exec.ExitError
-				if errors.As(err, &exitErr) && exitErr.ExitCode() >= 2 {
-					_ = pipeIn.Close()
-					return fmt.Errorf("failed to run diff command: %w", err)
+			if diffCmd != nil {
+				if err := diffCmd.Run(); err != nil {
+					// Command `diff` returns exit code 1 when files differ.
+					var exitErr *exec.ExitError
+					if errors.As(err, &exitErr) && exitErr.ExitCode() >= 2 {
+						_ = pipeIn.Close()
+						return fmt.Errorf("failed to run diff command: %w", err)
+					}
 				}
 			}
 
