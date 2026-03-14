@@ -46,7 +46,7 @@ type Options struct {
 type CopyTool interface {
 	// Name returns the name of the copy tool.
 	Name() string
-	// Command builds and returns the exec.Cmd for the copy operation. If opts is set, it completely overrides the tool's Options which were set during initialization.
+	// Command builds and returns the exec.Cmd for the copy operation. If opts is set, it is used for this invocation instead of the tool's Options set during initialization, without modifying the stored Options.
 	Command(ctx context.Context, paths []string, opts *Options) (*exec.Cmd, error)
 	// IsAvailableOnGuest checks if the tool is available on the specified guest instance.
 	IsAvailableOnGuest(ctx context.Context, paths []string) bool
