@@ -436,11 +436,7 @@ func shellAction(cmd *cobra.Command, args []string) error {
 func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype.Instance, sshCmd *exec.Cmd, hostCurrentDir, destRsyncDir string, rsync copytool.CopyTool, tty bool) error {
 	remoteSource := fmt.Sprintf("%s:%s", inst.Name, destRsyncDir)
 	clean := filepath.Clean(hostCurrentDir)
-	parts := strings.Split(clean, string(filepath.Separator))
-	if len(parts) < 2 {
-		return fmt.Errorf("invalid host current directory: %s", hostCurrentDir)
-	}
-	dirForCleanup := shellescape.Quote(fmt.Sprintf("%s/", *inst.Config.User.Home) + parts[1])
+	dirForCleanup := shellescape.Quote(filepath.Join(*inst.Config.User.Home, clean))
 
 	rsyncBack := func() error {
 		paths := []string{
