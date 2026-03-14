@@ -432,7 +432,7 @@ func defaultCPUType() limatype.CPUType {
 		limatype.S390X:   "max",
 	}
 	for arch := range cpuType {
-		if limayaml.IsNativeArch(arch) && Accel(arch) != "tcg" {
+		if limatype.IsNativeArch(arch) && Accel(arch) != "tcg" {
 			if hasHostCPU() {
 				cpuType[arch] = "host"
 			}
@@ -1109,7 +1109,7 @@ func Exe(arch limatype.Arch) (exe string, args []string, err error) {
 }
 
 func Accel(arch limatype.Arch) string {
-	if limayaml.IsNativeArch(arch) {
+	if limatype.IsNativeArch(arch) {
 		switch runtime.GOOS {
 		case "darwin":
 			// TODO: return "tcg" if HVF is not available

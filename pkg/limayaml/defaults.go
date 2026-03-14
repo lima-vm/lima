@@ -1030,16 +1030,6 @@ func ResolveArch(s *string) limatype.Arch {
 	return *s
 }
 
-func IsNativeArch(arch limatype.Arch) bool {
-	nativeX8664 := arch == limatype.X8664 && runtime.GOARCH == "amd64"
-	nativeAARCH64 := arch == limatype.AARCH64 && runtime.GOARCH == "arm64"
-	nativeARMV7L := arch == limatype.ARMV7L && runtime.GOARCH == "arm" && limatype.Goarm() == 7
-	nativePPC64LE := arch == limatype.PPC64LE && runtime.GOARCH == "ppc64le"
-	nativeRISCV64 := arch == limatype.RISCV64 && runtime.GOARCH == "riscv64"
-	nativeS390X := arch == limatype.S390X && runtime.GOARCH == "s390x"
-	return nativeX8664 || nativeAARCH64 || nativeARMV7L || nativePPC64LE || nativeRISCV64 || nativeS390X
-}
-
 func unique(s []string) []string {
 	keys := make(map[string]bool)
 	list := []string{}
