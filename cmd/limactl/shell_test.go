@@ -30,7 +30,7 @@ cL+++++++++ new-symlink -> target
 			},
 		},
 		{
-			name: "no changes only file list",
+			name: "metadata-only changes",
 			output: `
 .d..t...... ./
 .f...p..... existing.txt
@@ -39,6 +39,7 @@ cL+++++++++ new-symlink -> target
 				Added:    0,
 				Deleted:  0,
 				Modified: 0,
+				Metadata: 2,
 			},
 		},
 		{
@@ -84,8 +85,9 @@ func TestRsyncStatsString(t *testing.T) {
 				Added:    1,
 				Deleted:  2,
 				Modified: 3,
+				Metadata: 4,
 			},
-			expected: "added: 1, deleted: 2, modified: 3",
+			expected: "added: 1, deleted: 2, modified: 3, metadata: 4",
 		},
 	}
 
