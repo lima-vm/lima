@@ -25,4 +25,4 @@ flowchart
 
 The default vmType is QEMU in Lima prior to v1.0.
 Starting with Lima v1.0, Lima will use VZ by default on macOS (>= 13.5) for new instances,
-unless the config is incompatible with VZ. (e.g., legacyBIOS or 9p is enabled)
+unless the config is incompatible with VZ. (e.g., non-native arch is specified)

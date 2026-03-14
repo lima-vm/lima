@@ -415,3 +415,7 @@ func DefaultDriver() VMType {
 		return QEMU
 	}
 }
+
+func DefaultNonNativeArchDriver() VMType {
+	return QEMU
+}

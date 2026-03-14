@@ -30,6 +30,9 @@ func ResolveVMType(ctx context.Context, y *limatype.LimaYAML, filePath string) e
 
 	// If VMType is not specified, we go with the default platform driver.
 	vmType := limatype.DefaultDriver()
+	if y.Arch != nil && !limatype.IsNativeArch(*y.Arch) {
+		vmType = limatype.DefaultNonNativeArchDriver()
+	}
 	return validateConfigAgainstDriver(ctx, y, filePath, vmType)
 }
 
