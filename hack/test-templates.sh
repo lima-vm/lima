@@ -128,7 +128,21 @@ if [[ -n ${CHECKS["port-forwards"]} ]]; then
 	fi
 
 	INFO "Setup port forwarding rules for testing in \"${FILE}\""
-	"${scriptdir}/test-port-forwarding.pl" "${FILE}"
+	# shellcheck source=port-forwarding-config.sh
+	source "${scriptdir}/port-forwarding-config.sh"
+
+	_host_ipv4=$(get_host_ipv4)
+	_yaml=$(generate_port_forwards_yaml "$_host_ipv4")
+
+	# Strip existing portForwards section and append our rules
+	_cleaned=$(awk '
+		/^portForwards:/ { skip=1; next }
+		skip && /^[a-z]/ { skip=0 }
+		!skip { print }
+	' "$FILE")
+	echo "$_cleaned" >"$FILE"
+	echo "$_yaml" >>"$FILE"
+
 	INFO "Validating \"$FILE_HOST\""
 	limactl validate "$FILE_HOST"
 fi
@@ -453,22 +467,17 @@ if [[ -n ${CHECKS["port-forwards"]} ]]; then
 	if limactl shell "${NAME}" command -v dnf; then
 		limactl shell "${NAME}" sudo dnf install -y nc socat
 	fi
-	if "${scriptdir}/test-port-forwarding.pl" "${NAME}" socat $PORT_FORWARDING_CONNECTION_TIMEOUT; then
+	if LIMA_BATS_LIMA_HOME="${LIMA_HOME:-$HOME_HOST/.lima}" LIMA_BATS_PORTFWD_INSTANCE="$NAME" LIMA_BATS_PORTFWD_TIMEOUT=$PORT_FORWARDING_CONNECTION_TIMEOUT "${scriptdir}/bats/lib/bats-core/bin/bats" --formatter tap "${scriptdir}/bats/tests/port-forwarding.bats"; then
 		INFO "Port forwarding rules work"
 	else
-		ERROR "Port forwarding rules do not work with socat"
+		ERROR "Port forwarding rules do not work"
 		diagnose "$NAME"
 		exit 1
 	fi
 
 	if [[ -n ${CHECKS["container-engine"]} || ${NAME} == "alpine"* ]]; then
-		INFO "Testing that \"${CONTAINER_ENGINE} run\" binds to 0.0.0.0 and is forwarded to the host (non-default behavior, configured via test-port-forwarding.pl)"
-		if [ "$(uname)" = "Darwin" ]; then
-			# macOS runners seem to use `localhost` as the hostname, so the perl lookup just returns `127.0.0.1`
-			hostip=$(system_profiler SPNetworkDataType -json | jq -r 'first(.SPNetworkDataType[] | select(.ip_address) | .ip_address) | first')
-		else
-			hostip=$(perl -MSocket -MSys::Hostname -E 'say inet_ntoa(scalar gethostbyname(hostname()))')
-		fi
+		INFO "Testing that \"${CONTAINER_ENGINE} run\" binds to 0.0.0.0 and is forwarded to the host (non-default behavior, configured via port-forwarding.bats)"
+		hostip=$(get_host_ipv4)
 		if [ -n "${hostip}" ]; then
 			sudo=""
 			if [[ ${NAME} == "alpine"* ]]; then
