@@ -43,26 +43,27 @@ func (t *scpTool) Command(ctx context.Context, paths []string, opts *Options) (*
 		return nil, err
 	}
 
+	effectiveOpts := t.Options
 	if opts != nil {
-		t.Options = opts
+		effectiveOpts = opts
 	}
 
 	instances := make(map[string]*limatype.Instance)
 	scpFlags := []string{}
 	scpArgs := []string{}
 
-	if t.Options.Verbose {
+	if effectiveOpts.Verbose {
 		scpFlags = append(scpFlags, "-v")
 	} else {
 		scpFlags = append(scpFlags, "-q")
 	}
 
-	if t.Options.Recursive {
+	if effectiveOpts.Recursive {
 		scpFlags = append(scpFlags, "-r")
 	}
 
-	if t.Options.AdditionalArgs != nil {
-		scpFlags = append(scpFlags, t.Options.AdditionalArgs...)
+	if effectiveOpts.AdditionalArgs != nil {
+		scpFlags = append(scpFlags, effectiveOpts.AdditionalArgs...)
 	}
 
 	// this assumes that ssh and scp come from the same place, but scp has no -V

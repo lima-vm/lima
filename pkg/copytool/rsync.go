@@ -88,24 +88,25 @@ func (t *rsyncTool) Command(ctx context.Context, paths []string, opts *Options) 
 		return nil, err
 	}
 
+	effectiveOpts := t.Options
 	if opts != nil {
-		t.Options = opts
+		effectiveOpts = opts
 	}
 
 	rsyncFlags := []string{"-a"}
 
-	if t.Options.Verbose {
+	if effectiveOpts.Verbose {
 		rsyncFlags = append(rsyncFlags, "-v", "--progress")
 	} else {
 		rsyncFlags = append(rsyncFlags, "-q")
 	}
 
-	if t.Options.Recursive {
+	if effectiveOpts.Recursive {
 		rsyncFlags = append(rsyncFlags, "-r")
 	}
 
-	if t.Options.AdditionalArgs != nil {
-		rsyncFlags = append(rsyncFlags, t.Options.AdditionalArgs...)
+	if effectiveOpts.AdditionalArgs != nil {
+		rsyncFlags = append(rsyncFlags, effectiveOpts.AdditionalArgs...)
 	}
 
 	rsyncArgs := make([]string, 0, len(rsyncFlags)+len(copyPaths))
@@ -148,7 +149,7 @@ func (t *rsyncTool) Command(ctx context.Context, paths []string, opts *Options) 
 	// Handle trailing slash for directory copies to keep consistent behavior with scp,
 	// which was the original implementation of `limactl copy -r`.
 	// https://github.com/lima-vm/lima/issues/4468
-	if t.Options.Recursive {
+	if effectiveOpts.Recursive {
 		for i, cp := range copyPaths {
 			//nolint:modernize // stringscutprefix: HasSuffix + TrimSuffix can be simplified to CutSuffix
 			if strings.HasSuffix(cp.Path, "/") {
