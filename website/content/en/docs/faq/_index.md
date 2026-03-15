@@ -47,14 +47,14 @@ weight: 6
 - Port forwarding: [`ssh -L`](../config/port), automated by watching `/proc/net/tcp` and `iptables` events in the guest
 
 #### "What's my login password?"
-For Linux guests, the password is disabled and locked by default.
-You have to use `limactl shell bash` (or `lima bash`) to open a shell.
-
-For macOS guests, the password is randomly generated and stored as `~/password` in the guest.
+For Linux and FreeBSD guests, the password is disabled and locked by default.
+You have to use `limactl shell <INSTANCE>` (or `lima`) instead of the video console to open a shell.
 
 {{% fixlinks %}}
-Try virtiofs. See [`Usage » SSH`]({{< ref "/docs/usage/ssh" >}})
+See also [`Usage » SSH`]({{< ref "/docs/usage/ssh" >}}) for SSH with publickey authentication.
 {{% /fixlinks %}}
+
+For macOS guests, the password is randomly generated and stored as `~/password` in the guest.
 
 #### "Does Lima work on ARM Mac?"
 Yes
