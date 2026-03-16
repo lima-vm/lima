@@ -10,6 +10,7 @@ package tools
 import (
 	_ "github.com/containerd/ltag"
 	_ "github.com/golangci/golangci-lint/v2/pkg/exitcodes"
+	_ "github.com/jandubois/nobin/version"
 	_ "github.com/yoheimuta/protolint/lib"
 	_ "google.golang.org/grpc"
 	_ "google.golang.org/protobuf/proto"
