@@ -7,6 +7,7 @@ tool (
 	github.com/containerd/ltag
 	github.com/editorconfig-checker/editorconfig-checker/v3/cmd/editorconfig-checker
 	github.com/golangci/golangci-lint/v2/cmd/golangci-lint
+	github.com/jandubois/nobin
 	github.com/yoheimuta/protolint/cmd/protolint
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc
 	google.golang.org/protobuf/cmd/protoc-gen-go
@@ -16,6 +17,7 @@ tool (
 require (
 	github.com/containerd/ltag v0.3.0
 	github.com/golangci/golangci-lint/v2 v2.11.3
+	github.com/jandubois/nobin v0.8.0
 	github.com/yoheimuta/protolint v0.56.4
 	google.golang.org/grpc v1.79.2
 	google.golang.org/protobuf v1.36.11
@@ -54,6 +56,7 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bkielbasa/cyclop v1.2.3 // indirect
 	github.com/blizzy78/varnamelen v0.8.0 // indirect
+	github.com/bmatcuk/doublestar/v4 v4.10.0 // indirect
 	github.com/bombsimon/wsl/v4 v4.7.0 // indirect
 	github.com/bombsimon/wsl/v5 v5.6.0 // indirect
 	github.com/breml/bidichk v0.3.3 // indirect

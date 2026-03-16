@@ -605,6 +605,7 @@ bats: native limactl-plugins
 
 .PHONY: lint
 lint: check-generated
+	nobin --allow-emoji --allow-escape --gitignore --skip-ext pb.desc --skip 'website/static/images/**/*.{gif,png}' --skip 'docs/reports/**/*.pdf'
 	editorconfig-checker
 	golangci-lint run ./...
 	yamllint .
