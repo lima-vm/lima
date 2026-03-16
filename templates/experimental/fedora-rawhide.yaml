@@ -1,0 +1,5 @@
+minimumLimaVersion: 2.0.0
+
+base:
+- fedora-rawhide:_images/fedora-rawhide
+- template:_default/mounts

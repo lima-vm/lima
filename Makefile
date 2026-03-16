@@ -314,11 +314,14 @@ endif
 
 LIBEXEC_LIMA := _output/libexec/lima
 
-limactl-plugins: $(LIBEXEC_LIMA)/limactl-mcp$(exe)
+limactl-plugins: $(LIBEXEC_LIMA)/limactl-mcp$(exe) $(LIBEXEC_LIMA)/limactl-url-fedora-rawhide
 
 $(LIBEXEC_LIMA)/limactl-mcp$(exe): $(call dependencies_for_cmd,limactl-mcp) $$(call force_build,$$@)
 	@mkdir -p $(LIBEXEC_LIMA)
 	$(ENVS_$@) $(GO_BUILD) -o $@ ./cmd/limactl-mcp
+
+$(LIBEXEC_LIMA)/limactl-url-fedora-rawhide: cmd/limactl-url-fedora-rawhide
+	cp -aL $< $@
 
 .PHONY: additional-drivers
 additional-drivers:
@@ -587,6 +590,7 @@ uninstall:
 		"$(DEST)/share/lima" \
 		"$(DEST)/share/doc/lima" \
 		"$(DEST)/libexec/lima/limactl-mcp$(exe)" \
+		"$(DEST)/libexec/lima/limactl-url-fedora-rawhide" \
 		"$(DEST)/libexec/lima/lima-driver-qemu$(exe)" \
 		"$(DEST)/libexec/lima/lima-driver-vz$(exe)" \
 		"$(DEST)/libexec/lima/lima-driver-wsl2$(exe)" \
