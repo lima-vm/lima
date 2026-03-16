@@ -184,7 +184,7 @@ if [ -d "${LIMA_CIDATA_MNT}"/provision.user ]; then
 	if [ ! -f /sbin/openrc-run ]; then
 		until [ -e "/run/user/${LIMA_CIDATA_UID}/systemd/private" ]; do sleep 3; done
 	fi
-	params=$(grep -o '^PARAM_[^=]*' "${LIMA_CIDATA_MNT}"/param.env | paste -sd ,)
+	params=$(grep -o '^PARAM_[^=]*' "${LIMA_CIDATA_MNT}"/param.env | paste -sd , -)
 	for f in "${LIMA_CIDATA_MNT}"/provision.user/*; do
 		INFO "Executing $f (as user ${LIMA_CIDATA_USER})"
 		cp "$f" "${USER_SCRIPT}"
