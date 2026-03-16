@@ -80,7 +80,8 @@ NOTE: support for non-Linux OSes is [experimental](https://lima-vm.io/docs/relea
 
 ### Alternative package managers
 
-- [`linuxbrew`](./linuxbrew.yaml): [Homebrew](https://brew.sh) on Linux (Ubuntu)
+- [`linuxbrew`](./linuxbrew.yaml), `homebrew-linux`: [Homebrew](https://brew.sh) on Linux (Ubuntu)
+- [`homebrew-macos`](./homebrew-macos.yaml): [Homebrew](https://brew.sh) on macOS
 
 ### Containers
 

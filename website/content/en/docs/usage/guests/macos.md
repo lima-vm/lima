@@ -8,9 +8,18 @@ weight: 2
 
 Running macOS guests is experimentally supported since Lima v2.1.
 
+{{< tabpane text=true >}}
+{{% tab header="macOS only" %}}
 ```bash
 limactl start template:macos
 ```
+{{% /tab %}}
+{{% tab header="With Homebrew" %}}
+```bash
+limactl start template:homebrew-macos
+```
+{{% /tab %}}
+{{< /tabpane >}}
 
 The user password is randomly generated and stored in the `~/password` file in the VM.
 Consider changing it after the first login.
