@@ -15,8 +15,20 @@ vmType: null
 # 🟢 Builtin default: "default" (corresponds to the host architecture)
 arch: null
 
+
 # OpenStack-compatible disk image.
 # Each image has a `location` URL for the disk image, an `arch` setting, and an optional `digest`.
+# To specify a custom kernel and initial RAM disk, nest `kernel` and `initrd` under an image entry:
+#   - location: "https://example.com/image.qcow2"
+#     # kernel specifies a custom kernel to boot.
+#     kernel:
+#       location: "https://example.com/vmlinuz"
+#       digest: "sha256:..."
+#       cmdline: "console=ttyS0 root=/dev/sda1"
+#     # initrd specifies a custom initial RAM disk.
+#     initrd:
+#       location: "https://example.com/initrd.img"
+#       digest: "sha256:..."
 # 🟢 Builtin default: none (must be specified)
 # 🔵 This file: Ubuntu images (inherited via the `base` mechanism later in this file)
 images: []
