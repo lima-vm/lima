@@ -181,7 +181,7 @@ fi
 
 USER_SCRIPT="${LIMA_CIDATA_HOME}/.lima-user-script"
 if [ -d "${LIMA_CIDATA_MNT}"/provision.user ]; then
-	if [ ! -f /sbin/openrc-run ]; then
+	if [ "$UNAME" = "Linux" ] && [ ! -f /sbin/openrc-run ]; then
 		until [ -e "/run/user/${LIMA_CIDATA_UID}/systemd/private" ]; do sleep 3; done
 	fi
 	params=$(grep -o '^PARAM_[^=]*' "${LIMA_CIDATA_MNT}"/param.env | paste -sd , -)
@@ -190,10 +190,12 @@ if [ -d "${LIMA_CIDATA_MNT}"/provision.user ]; then
 		cp "$f" "${USER_SCRIPT}"
 		chown "${LIMA_CIDATA_USER}" "${USER_SCRIPT}"
 		chmod 755 "${USER_SCRIPT}"
-		if [ "${UNAME}" != "Linux" ]; then
-			WARNING "Provisioning user scripts are not supported on non-Linux platforms"
-			CODE=1
-		elif ! sudo -iu "${LIMA_CIDATA_USER}" "--preserve-env=${params}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "${USER_SCRIPT}"; then
+		XDG_RUNTIME_DIR_ENV=
+		if [ "${UNAME}" = "Linux" ]; then
+			XDG_RUNTIME_DIR_ENV="XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}"
+		fi
+		# shellcheck disable=SC2086
+		if ! sudo -iu "${LIMA_CIDATA_USER}" "--preserve-env=${params}" $XDG_RUNTIME_DIR_ENV "${USER_SCRIPT}"; then
 			WARNING "Failed to execute $f (as user ${LIMA_CIDATA_USER})"
 			CODE=1
 		fi
