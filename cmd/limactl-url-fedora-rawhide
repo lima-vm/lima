@@ -1,0 +1,40 @@
+#!/bin/sh
+
+# SPDX-FileCopyrightText: Copyright The Lima Authors
+# SPDX-License-Identifier: Apache-2.0
+
+set -eu
+
+if [ "$#" -ne 1 ]; then
+	echo >&2 "Usage: $0 _images/fedora-rawhide"
+	exit 1
+fi
+if [ "$1" != "_images/fedora-rawhide" ]; then
+	echo >&2 "Expected argument to be '_images/fedora-rawhide', but got '$1'"
+	exit 1
+fi
+
+CACHE_HOME_DEFAULT="${HOME}/.cache"
+if [ "$(uname -s)" = "Darwin" ]; then
+	CACHE_HOME_DEFAULT="${HOME}/Library/Caches"
+fi
+: "${XDG_CACHE_HOME:=${CACHE_HOME_DEFAULT}}"
+CACHE_DIR="${XDG_CACHE_HOME}/lima/limactl-url-fedora-rawhide"
+
+# COMPOSE_ID is like "Fedora-Rawhide-20260316.n.0"
+COMPOSE_ID="$(curl -fsSL https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/COMPOSE_ID)"
+# COMPOSE_ID_TRIMMED is like "20260316.n.0"
+COMPOSE_ID_TRIMMED="${COMPOSE_ID#Fedora-Rawhide-}"
+
+mkdir -p "${CACHE_DIR}"
+FILE="${CACHE_DIR}/fedora-rawhide.yaml"
+
+cat <<EOF >"${FILE}"
+images:
+- location: "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-Rawhide-${COMPOSE_ID_TRIMMED}.x86_64.qcow2"
+  arch: "x86_64"
+- location: "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Cloud/aarch64/images/Fedora-Cloud-Base-Generic-Rawhide-${COMPOSE_ID_TRIMMED}.aarch64.qcow2"
+  arch: "aarch64"
+EOF
+
+echo "$FILE"

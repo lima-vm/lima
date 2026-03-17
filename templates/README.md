@@ -68,6 +68,7 @@ lima
 - [`experimental/gentoo`](./experimental/gentoo.yaml): Gentoo
 - [`experimental/opensuse-tumbleweed`](./experimental/opensuse-tumbleweed.yaml): openSUSE Tumbleweed
 - [`experimental/debian-sid`](./experimental/debian-sid.yaml): Debian Sid
+- [`experimental/fedora-rawhide`](./experimental/fedora-rawhide.yaml): Fedora Rawhide
 
 ### Non-Linux
 
