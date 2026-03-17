@@ -182,9 +182,9 @@ else
 	if ! command -v htmlq >/dev/null && ! command -v pup >/dev/null; then
 		echo "Please install 'htmlq' or 'pup' to list images from https://kitten.repo.almalinux.org/<version>-kitten/cloud/<arch>/images/" >&2
 	elif [[ -v SUPPORTED_DISTRIBUTIONS ]]; then
-		SUPPORTED_DISTRIBUTIONS+=("almalinux-kitten")
+		SUPPORTED_DISTRIBUTIONS+=("almalinux_kitten")
 	else
-		declare -a SUPPORTED_DISTRIBUTIONS=("almalinux-kitten")
+		declare -a SUPPORTED_DISTRIBUTIONS=("almalinux_kitten")
 	fi
 	return 0
 fi
