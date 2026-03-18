@@ -11,6 +11,9 @@ images:
 - location: "https://kitten.repo.almalinux.org/10-kitten/cloud/ppc64le/images/AlmaLinux-Kitten-GenericCloud-10-20251215.0.ppc64le.qcow2"
   arch: "ppc64le"
   digest: "sha256:5ea5dc019a2dcb37edff42b39fa6597f6e9f72d7dbc579564b0badeaf1770727"
+- location: "https://kitten.repo.almalinux.org/10-kitten/cloud/riscv64/images/AlmaLinux-Kitten-GenericCloud-10-20260302.0.riscv64.qcow2"
+  arch: "riscv64"
+  digest: "sha256:857a43a08016731b2c84483ebac862a0ad327394fd6687f0f04c3b7c547b00d2"
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
 - location: "https://kitten.repo.almalinux.org/10-kitten/cloud/x86_64/images/AlmaLinux-Kitten-GenericCloud-10-latest.x86_64.qcow2"
@@ -21,4 +24,6 @@ images:
   arch: "s390x"
 - location: "https://kitten.repo.almalinux.org/10-kitten/cloud/ppc64le/images/AlmaLinux-Kitten-GenericCloud-10-latest.ppc64le.qcow2"
   arch: "ppc64le"
+- location: "https://kitten.repo.almalinux.org/10-kitten/cloud/riscv64/images/AlmaLinux-Kitten-GenericCloud-10-latest.riscv64.qcow2"
+  arch: "riscv64"
 mountTypesUnsupported: ["9p"]
