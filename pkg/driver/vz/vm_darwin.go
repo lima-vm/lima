@@ -588,13 +588,9 @@ func attachDisks(ctx context.Context, inst *limatype.Instance, vmConfig *vz.Virt
 			return fmt.Errorf("failed to run load disk %q: %w", diskName, err)
 		}
 
-		if disk.Instance != "" {
-			return fmt.Errorf("failed to run attach disk %q, in use by instance %q", diskName, disk.Instance)
-		}
 		logrus.Infof("Mounting disk %q on %q", diskName, disk.MountPoint)
-		err = disk.Lock(inst.Dir)
-		if err != nil {
-			return fmt.Errorf("failed to run lock disk %q: %w", diskName, err)
+		if err = disk.LockForInstance(inst.Dir); err != nil {
+			return fmt.Errorf("failed to attach disk %q: %w", diskName, err)
 		}
 		extraDiskPath := filepath.Join(disk.Dir, filenames.DataDisk)
 		// ConvertToRaw is a NOP if no conversion is needed
