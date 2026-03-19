@@ -97,3 +97,15 @@ func (d *Disk) Unlock() error {
 	inUseBy := filepath.Join(d.Dir, filenames.InUseBy)
 	return os.Remove(inUseBy)
 }
+
+func (d *Disk) LockForInstance(instanceDir string) error {
+	if d.Instance != "" {
+		if d.InstanceDir != instanceDir {
+			return fmt.Errorf("in use by instance %q", d.Instance)
+		}
+		if err := d.Unlock(); err != nil {
+			return fmt.Errorf("failed to unlock for reuse in the same instance: %w", err)
+		}
+	}
+	return d.Lock(instanceDir)
+}
