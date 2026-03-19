@@ -19,6 +19,8 @@ import (
 type HostAgentClient interface {
 	HTTPClient() *http.Client
 	Info(context.Context) (*api.Info, error)
+	Resume(context.Context) (bool, error)
+	Pause(context.Context) error
 }
 
 // NewHostAgentClient creates a client.
@@ -64,4 +66,39 @@ func (c *client) Info(ctx context.Context) (*api.Info, error) {
 		return nil, err
 	}
 	return &info, nil
+}
+
+func (c *client) Resume(ctx context.Context) (bool, error) {
+	u := fmt.Sprintf("http://%s/%s/resume", c.dummyHost, c.version)
+	resp, err := httpclientutil.Post(ctx, c.HTTPClient(), u, nil)
+	if err != nil {
+		return false, err
+	}
+	defer resp.Body.Close()
+	var result struct {
+		Resumed bool `json:"resumed"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return false, err
+	}
+	return result.Resumed, nil
+}
+
+func (c *client) Pause(ctx context.Context) error {
+	u := fmt.Sprintf("http://%s/%s/pause", c.dummyHost, c.version)
+	resp, err := httpclientutil.Post(ctx, c.HTTPClient(), u, nil)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		var errResp struct {
+			Message string `json:"Message"`
+		}
+		if decErr := json.NewDecoder(resp.Body).Decode(&errResp); decErr == nil && errResp.Message != "" {
+			return fmt.Errorf("%s", errResp.Message)
+		}
+		return fmt.Errorf("pause failed with status %d", resp.StatusCode)
+	}
+	return nil
 }

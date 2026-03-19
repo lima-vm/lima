@@ -135,7 +135,7 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	if inst.Config == nil {
 		return fmt.Errorf("instance %q has no configuration", instName)
 	}
-	if inst.Status == limatype.StatusStopped {
+	if inst.Status == limatype.StatusStopped || inst.Status == limatype.StatusPaused {
 		startNow, err := flags.GetBool("start")
 		if err != nil {
 			return err
@@ -149,7 +149,7 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		}
 
 		if !startNow {
-			return fmt.Errorf("instance %q is stopped, run `limactl start %s` to start the instance", instName, instName)
+			return fmt.Errorf("instance %q is not running (status: %s), run `limactl start %s` to start the instance", instName, inst.Status, instName)
 		}
 
 		// Network reconciliation will be performed by the process launched by the autostart manager

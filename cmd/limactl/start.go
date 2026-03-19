@@ -581,6 +581,9 @@ func startAction(cmd *cobra.Command, args []string) error {
 			inst.Name, instance.LimactlShellCmd(inst.Name))
 		// Not an error
 		return nil
+	case limatype.StatusPaused:
+		logrus.Infof("The instance %q is paused and will be resumed by the host agent on activity.", inst.Name)
+		return nil
 	case limatype.StatusStopped:
 		// NOP
 	default:

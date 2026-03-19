@@ -33,7 +33,7 @@ func CloneOrRename(ctx context.Context, oldInst *limatype.Instance, newInstName 
 	if oldInst.Name == newInstName {
 		return nil, fmt.Errorf("new instance name %q must be different from %q", newInstName, oldInst.Name)
 	}
-	if oldInst.Status == limatype.StatusRunning {
+	if oldInst.Status == limatype.StatusRunning || oldInst.Status == limatype.StatusPaused {
 		return nil, errors.New("cannot " + verb + " a running instance")
 	}
 

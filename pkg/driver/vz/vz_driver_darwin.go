@@ -207,6 +207,132 @@ func (l *LimaVzDriver) FillConfig(ctx context.Context, cfg *limatype.LimaYAML, _
 		}
 	}
 
+	// Memory balloon defaults — only set when enabled.
+	if vzOpts.MemoryBalloon.Enabled == nil {
+		vzOpts.MemoryBalloon.Enabled = ptr.Of(false)
+	}
+	if *vzOpts.MemoryBalloon.Enabled {
+		if vzOpts.MemoryBalloon.Min == nil {
+			// 25% of configured memory.
+			if cfg.Memory != nil {
+				if memBytes, err := units.RAMInBytes(*cfg.Memory); err == nil {
+					vzOpts.MemoryBalloon.Min = ptr.Of(units.BytesSize(float64(memBytes) * 0.25))
+				}
+			}
+		}
+		if vzOpts.MemoryBalloon.IdleTarget == nil {
+			// 33% of configured memory.
+			if cfg.Memory != nil {
+				if memBytes, err := units.RAMInBytes(*cfg.Memory); err == nil {
+					vzOpts.MemoryBalloon.IdleTarget = ptr.Of(units.BytesSize(float64(memBytes) * 0.33))
+				}
+			}
+		}
+		if vzOpts.MemoryBalloon.GrowStepPercent == nil {
+			vzOpts.MemoryBalloon.GrowStepPercent = ptr.Of(25)
+		}
+		if vzOpts.MemoryBalloon.ShrinkStepPercent == nil {
+			vzOpts.MemoryBalloon.ShrinkStepPercent = ptr.Of(10)
+		}
+		if vzOpts.MemoryBalloon.HighPressureThreshold == nil {
+			vzOpts.MemoryBalloon.HighPressureThreshold = ptr.Of(0.88)
+		}
+		if vzOpts.MemoryBalloon.LowPressureThreshold == nil {
+			vzOpts.MemoryBalloon.LowPressureThreshold = ptr.Of(0.35)
+		}
+		if vzOpts.MemoryBalloon.Cooldown == nil {
+			vzOpts.MemoryBalloon.Cooldown = ptr.Of("30s")
+		}
+		if vzOpts.MemoryBalloon.IdleGracePeriod == nil {
+			vzOpts.MemoryBalloon.IdleGracePeriod = ptr.Of("5m")
+		}
+		if vzOpts.MemoryBalloon.MaxSwapInPerSec == nil {
+			vzOpts.MemoryBalloon.MaxSwapInPerSec = ptr.Of("64MiB")
+		}
+		if vzOpts.MemoryBalloon.MaxContainerCPU == nil {
+			vzOpts.MemoryBalloon.MaxContainerCPU = ptr.Of(10.0)
+		}
+		if vzOpts.MemoryBalloon.MaxContainerIO == nil {
+			vzOpts.MemoryBalloon.MaxContainerIO = ptr.Of("10MiB")
+		}
+	}
+
+	// Auto-pause defaults — only set when enabled.
+	if vzOpts.AutoPause.Enabled == nil {
+		vzOpts.AutoPause.Enabled = ptr.Of(false)
+	}
+	if *vzOpts.AutoPause.Enabled {
+		if vzOpts.AutoPause.IdleTimeout == nil {
+			vzOpts.AutoPause.IdleTimeout = ptr.Of("15m")
+		}
+		if vzOpts.AutoPause.ResumeTimeout == nil {
+			vzOpts.AutoPause.ResumeTimeout = ptr.Of("30s")
+		}
+	}
+
+	// Memory balloon defaults — only set when enabled.
+	if vzOpts.MemoryBalloon.Enabled == nil {
+		vzOpts.MemoryBalloon.Enabled = ptr.Of(false)
+	}
+	if *vzOpts.MemoryBalloon.Enabled {
+		if vzOpts.MemoryBalloon.Min == nil {
+			// 25% of configured memory.
+			if cfg.Memory != nil {
+				if memBytes, err := units.RAMInBytes(*cfg.Memory); err == nil {
+					vzOpts.MemoryBalloon.Min = ptr.Of(units.BytesSize(float64(memBytes) * 0.25))
+				}
+			}
+		}
+		if vzOpts.MemoryBalloon.IdleTarget == nil {
+			// 33% of configured memory.
+			if cfg.Memory != nil {
+				if memBytes, err := units.RAMInBytes(*cfg.Memory); err == nil {
+					vzOpts.MemoryBalloon.IdleTarget = ptr.Of(units.BytesSize(float64(memBytes) * 0.33))
+				}
+			}
+		}
+		if vzOpts.MemoryBalloon.GrowStepPercent == nil {
+			vzOpts.MemoryBalloon.GrowStepPercent = ptr.Of(25)
+		}
+		if vzOpts.MemoryBalloon.ShrinkStepPercent == nil {
+			vzOpts.MemoryBalloon.ShrinkStepPercent = ptr.Of(10)
+		}
+		if vzOpts.MemoryBalloon.HighPressureThreshold == nil {
+			vzOpts.MemoryBalloon.HighPressureThreshold = ptr.Of(0.88)
+		}
+		if vzOpts.MemoryBalloon.LowPressureThreshold == nil {
+			vzOpts.MemoryBalloon.LowPressureThreshold = ptr.Of(0.35)
+		}
+		if vzOpts.MemoryBalloon.Cooldown == nil {
+			vzOpts.MemoryBalloon.Cooldown = ptr.Of("30s")
+		}
+		if vzOpts.MemoryBalloon.IdleGracePeriod == nil {
+			vzOpts.MemoryBalloon.IdleGracePeriod = ptr.Of("5m")
+		}
+		if vzOpts.MemoryBalloon.MaxSwapInPerSec == nil {
+			vzOpts.MemoryBalloon.MaxSwapInPerSec = ptr.Of("64MiB")
+		}
+		if vzOpts.MemoryBalloon.MaxContainerCPU == nil {
+			vzOpts.MemoryBalloon.MaxContainerCPU = ptr.Of(10.0)
+		}
+		if vzOpts.MemoryBalloon.MaxContainerIO == nil {
+			vzOpts.MemoryBalloon.MaxContainerIO = ptr.Of("10MiB")
+		}
+	}
+
+	// Auto-pause defaults — only set when enabled.
+	if vzOpts.AutoPause.Enabled == nil {
+		vzOpts.AutoPause.Enabled = ptr.Of(false)
+	}
+	if *vzOpts.AutoPause.Enabled {
+		if vzOpts.AutoPause.IdleTimeout == nil {
+			vzOpts.AutoPause.IdleTimeout = ptr.Of("15m")
+		}
+		if vzOpts.AutoPause.ResumeTimeout == nil {
+			vzOpts.AutoPause.ResumeTimeout = ptr.Of("30s")
+		}
+	}
+
 	var opts any
 	if err := limayaml.Convert(vzOpts, &opts, ""); err != nil {
 		logrus.WithError(err).Warnf("Couldn't convert %+v", vzOpts)
@@ -534,6 +660,78 @@ func (l *LimaVzDriver) GuestAgentConn(_ context.Context) (net.Conn, string, erro
 	}
 
 	return nil, "", errors.New("unable to connect to guest agent via vsock port 2222")
+}
+
+// SetBalloonTarget adjusts the balloon device to set the target memory size in bytes.
+// The balloon inflates or deflates to control memory available to the guest.
+func (l *LimaVzDriver) SetBalloonTarget(targetBytes uint64) error {
+	if l.machine == nil {
+		return errors.New("vz: VM is not running")
+	}
+	l.machine.mu.Lock()
+	defer l.machine.mu.Unlock()
+	if l.machine.balloonDevice == nil {
+		return errors.New("vz: no balloon device available")
+	}
+	l.machine.balloonDevice.SetTargetVirtualMachineMemorySize(targetBytes)
+	return nil
+}
+
+// GetBalloonTarget returns the current balloon target memory size in bytes.
+func (l *LimaVzDriver) GetBalloonTarget() (uint64, error) {
+	if l.machine == nil {
+		return 0, errors.New("vz: VM is not running")
+	}
+	l.machine.mu.Lock()
+	defer l.machine.mu.Unlock()
+	if l.machine.balloonDevice == nil {
+		return 0, errors.New("vz: no balloon device available")
+	}
+	return l.machine.balloonDevice.GetTargetVirtualMachineMemorySize(), nil
+}
+
+// Pause pauses the virtual machine. The VM must be in the Running state.
+func (l *LimaVzDriver) Pause(_ context.Context) error {
+	if l.machine == nil {
+		return errors.New("vz: VM is not running")
+	}
+	l.machine.mu.Lock()
+	defer l.machine.mu.Unlock()
+	if !l.machine.CanPause() {
+		return errors.New("vz: VM cannot be paused in its current state")
+	}
+	logrus.Info("Pausing VZ VM")
+	if err := l.machine.Pause(); err != nil {
+		return fmt.Errorf("vz: failed to pause VM: %w", err)
+	}
+	return nil
+}
+
+// Resume resumes a paused virtual machine.
+func (l *LimaVzDriver) Resume(_ context.Context) error {
+	if l.machine == nil {
+		return errors.New("vz: VM is not running")
+	}
+	l.machine.mu.Lock()
+	defer l.machine.mu.Unlock()
+	if !l.machine.CanResume() {
+		return errors.New("vz: VM cannot be resumed in its current state")
+	}
+	logrus.Info("Resuming VZ VM")
+	if err := l.machine.Resume(); err != nil {
+		return fmt.Errorf("vz: failed to resume VM: %w", err)
+	}
+	return nil
+}
+
+// IsPaused returns true if the VM is currently paused.
+func (l *LimaVzDriver) IsPaused() bool {
+	if l.machine == nil {
+		return false
+	}
+	l.machine.mu.Lock()
+	defer l.machine.mu.Unlock()
+	return l.machine.paused
 }
 
 func (l *LimaVzDriver) Info() driver.Info {

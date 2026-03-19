@@ -15,6 +15,7 @@ import (
 
 	"github.com/lima-vm/lima/v2/pkg/guestagent"
 	"github.com/lima-vm/lima/v2/pkg/guestagent/api"
+	"github.com/lima-vm/lima/v2/pkg/guestagent/metrics"
 	"github.com/lima-vm/lima/v2/pkg/guestagent/timesync"
 	"github.com/lima-vm/lima/v2/pkg/portfwdserver"
 )
@@ -46,8 +47,9 @@ func StartServer(ctx context.Context, lis net.Listener, guest *GuestServer) erro
 
 type GuestServer struct {
 	api.UnimplementedGuestServiceServer
-	Agent   guestagent.Agent
-	TunnelS *portfwdserver.TunnelServer
+	Agent     guestagent.Agent
+	TunnelS   *portfwdserver.TunnelServer
+	Collector *metrics.Collector
 }
 
 func (s *GuestServer) GetInfo(ctx context.Context, _ *emptypb.Empty) (*api.Info, error) {
@@ -105,4 +107,11 @@ func (s *GuestServer) SyncTime(_ context.Context, req *api.TimeSyncRequest) (*ap
 	}
 
 	return resp, nil
+}
+
+func (s *GuestServer) GetMemoryMetrics(_ context.Context, _ *emptypb.Empty) (*api.MemoryMetrics, error) {
+	if s.Collector != nil {
+		return s.Collector.Collect()
+	}
+	return metrics.CollectMemoryMetrics()
 }

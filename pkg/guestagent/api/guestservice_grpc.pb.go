@@ -20,11 +20,12 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	GuestService_GetInfo_FullMethodName     = "/GuestService/GetInfo"
-	GuestService_GetEvents_FullMethodName   = "/GuestService/GetEvents"
-	GuestService_PostInotify_FullMethodName = "/GuestService/PostInotify"
-	GuestService_Tunnel_FullMethodName      = "/GuestService/Tunnel"
-	GuestService_SyncTime_FullMethodName    = "/GuestService/SyncTime"
+	GuestService_GetInfo_FullMethodName          = "/GuestService/GetInfo"
+	GuestService_GetEvents_FullMethodName        = "/GuestService/GetEvents"
+	GuestService_PostInotify_FullMethodName      = "/GuestService/PostInotify"
+	GuestService_Tunnel_FullMethodName           = "/GuestService/Tunnel"
+	GuestService_SyncTime_FullMethodName         = "/GuestService/SyncTime"
+	GuestService_GetMemoryMetrics_FullMethodName = "/GuestService/GetMemoryMetrics"
 )
 
 // GuestServiceClient is the client API for GuestService service.
@@ -36,6 +37,8 @@ type GuestServiceClient interface {
 	PostInotify(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[Inotify, emptypb.Empty], error)
 	Tunnel(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[TunnelMessage, TunnelMessage], error)
 	SyncTime(ctx context.Context, in *TimeSyncRequest, opts ...grpc.CallOption) (*TimeSyncResponse, error)
+	// GetMemoryMetrics returns current guest memory metrics for the balloon controller.
+	GetMemoryMetrics(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*MemoryMetrics, error)
 }
 
 type guestServiceClient struct {
@@ -111,6 +114,16 @@ func (c *guestServiceClient) SyncTime(ctx context.Context, in *TimeSyncRequest, 
 	return out, nil
 }
 
+func (c *guestServiceClient) GetMemoryMetrics(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*MemoryMetrics, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MemoryMetrics)
+	err := c.cc.Invoke(ctx, GuestService_GetMemoryMetrics_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // GuestServiceServer is the server API for GuestService service.
 // All implementations must embed UnimplementedGuestServiceServer
 // for forward compatibility.
@@ -120,6 +133,8 @@ type GuestServiceServer interface {
 	PostInotify(grpc.ClientStreamingServer[Inotify, emptypb.Empty]) error
 	Tunnel(grpc.BidiStreamingServer[TunnelMessage, TunnelMessage]) error
 	SyncTime(context.Context, *TimeSyncRequest) (*TimeSyncResponse, error)
+	// GetMemoryMetrics returns current guest memory metrics for the balloon controller.
+	GetMemoryMetrics(context.Context, *emptypb.Empty) (*MemoryMetrics, error)
 	mustEmbedUnimplementedGuestServiceServer()
 }
 
@@ -144,6 +159,9 @@ func (UnimplementedGuestServiceServer) Tunnel(grpc.BidiStreamingServer[TunnelMes
 }
 func (UnimplementedGuestServiceServer) SyncTime(context.Context, *TimeSyncRequest) (*TimeSyncResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SyncTime not implemented")
+}
+func (UnimplementedGuestServiceServer) GetMemoryMetrics(context.Context, *emptypb.Empty) (*MemoryMetrics, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetMemoryMetrics not implemented")
 }
 func (UnimplementedGuestServiceServer) mustEmbedUnimplementedGuestServiceServer() {}
 func (UnimplementedGuestServiceServer) testEmbeddedByValue()                      {}
@@ -227,6 +245,24 @@ func _GuestService_SyncTime_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _GuestService_GetMemoryMetrics_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GuestServiceServer).GetMemoryMetrics(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: GuestService_GetMemoryMetrics_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GuestServiceServer).GetMemoryMetrics(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // GuestService_ServiceDesc is the grpc.ServiceDesc for GuestService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -241,6 +277,10 @@ var GuestService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SyncTime",
 			Handler:    _GuestService_SyncTime_Handler,
+		},
+		{
+			MethodName: "GetMemoryMetrics",
+			Handler:    _GuestService_GetMemoryMetrics_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

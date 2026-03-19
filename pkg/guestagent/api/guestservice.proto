@@ -12,6 +12,9 @@ service GuestService {
 
   rpc Tunnel(stream TunnelMessage) returns (stream TunnelMessage);
   rpc SyncTime(TimeSyncRequest) returns (TimeSyncResponse);
+
+  // GetMemoryMetrics returns current guest memory metrics for the balloon controller.
+  rpc GetMemoryMetrics(google.protobuf.Empty) returns (MemoryMetrics);
 }
 
 message Info {
@@ -52,4 +55,33 @@ message TimeSyncResponse {
   bool adjusted = 1;
   int64 drift_ms = 2;
   string error = 3;
+}
+
+// MemoryMetrics contains guest memory statistics for the balloon controller.
+message MemoryMetrics {
+  // /proc/meminfo fields (bytes).
+  uint64 mem_total_bytes = 1;
+  uint64 mem_available_bytes = 2;
+  uint64 mem_cached_bytes = 3;
+  uint64 swap_total_bytes = 4;
+  uint64 swap_free_bytes = 5;
+  uint64 anon_rss_bytes = 6;
+
+  // /proc/pressure/memory PSI values (percentage 0.0-100.0 over 10s window).
+  double psi_memory_some_10 = 7;
+  double psi_memory_full_10 = 8;
+
+  // /proc/vmstat deltas (bytes/sec, computed by agent between polls).
+  double swap_in_bytes_per_sec = 9;
+  double swap_out_bytes_per_sec = 10;
+  double page_fault_rate = 11;
+
+  // Container activity.
+  int32 container_count = 12;
+  double container_cpu_percent = 13;
+  // Cumulative IO bytes across all containers (not a rate; name kept for wire compat).
+  double container_io_bytes_per_sec = 14;
+
+  // OOM detection (edge-triggered: set once, cleared after reporting).
+  bool oom_detected = 15;
 }

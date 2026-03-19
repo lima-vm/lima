@@ -1,0 +1,346 @@
+# Memory-optimized rootful Docker VM for Apple Silicon (VZ backend)
+#
+# Uses Alpine Linux for minimal footprint (~200 MB base image vs 5 GiB NixOS).
+# All configuration is done via provisioning scripts — no custom image build needed.
+#
+# Features:
+#   - Rootful Docker with CDI, overlay2, bounded logging
+#   - Rosetta for transparent AMD64 container support
+#   - Memory tuning: 4 GiB swap, zswap (lz4), aggressive page reclaim
+#   - Memory ballooning: dynamically reclaims idle guest memory
+#   - Auto-pause: pauses VM when idle to save energy
+#   - Post-install cleanup strips ~80 MB of unnecessary packages
+#
+# Requirements:
+#   - macOS on Apple Silicon (aarch64)
+#   - Lima >= 2.0.0 with VZ backend
+#   - Docker CLI on host (for docker context)
+#
+# Usage:
+#   limactl create --name=docker-vz templates/experimental/alpine-docker-vz.yaml
+#   limactl start docker-vz
+#   docker context create lima-docker-vz --docker "host=unix://$HOME/.lima/docker-vz/sock/docker.sock"
+#   docker context use lima-docker-vz
+
+minimumLimaVersion: "2.0.0"
+
+base:
+- template:_images/alpine
+- template:_default/mounts
+- template:_default/memory-tuning
+- template:_default/docker-tuning
+
+# VZ backend with virtiofs for high-performance file sharing
+vmType: vz
+mountType: virtiofs
+
+vmOpts:
+  vz:
+    rosetta:
+      enabled: true
+      binfmt: true
+    # Memory ballooning — dynamically reclaim idle guest memory.
+    memoryBalloon:
+      enabled: true
+      min: "3GiB"
+      idleTarget: "4GiB"
+      growStepPercent: 25
+      shrinkStepPercent: 10
+      highPressureThreshold: 0.88
+      lowPressureThreshold: 0.35
+      cooldown: "30s"
+      idleGracePeriod: "5m"
+    # Auto-pause — pause the VM when idle to save energy.
+    autoPause:
+      enabled: true
+      idleTimeout: "15m"
+      resumeTimeout: "30s"
+
+# Resource allocation — sized for Docker dev workloads
+cpus: 8
+memory: "12GiB"
+disk: "80GiB"
+
+# Docker is managed by provisioning, not by Lima's containerd
+containerd:
+  system: false
+  user: false
+
+provision:
+- mode: system
+  script: |
+    #!/bin/sh
+    sed -i 's/host.lima.internal.*/host.lima.internal host.docker.internal/' /etc/hosts
+- mode: system
+  script: |
+    #!/bin/sh
+    set -eux
+    # Skip if Docker is already installed
+    command -v docker >/dev/null 2>&1 && exit 0
+
+    # Install Docker components individually (skip docker metapackage to avoid buildx)
+    # procps: vmstat, slabtop, better free/ps (memory monitoring)
+    # inotify-tools: file watching for dev tools on virtiofs mounts
+    # curl: ubiquitous in Docker workflows
+    apk add --no-cache docker-engine docker-cli docker-openrc docker-compose \
+      bash procps inotify-tools curl
+
+    # Configure Docker daemon
+    mkdir -p /etc/docker
+    cat > /etc/docker/daemon.json <<'DAEMON'
+    {
+      "features": { "cdi": true },
+      "storage-driver": "overlay2",
+      "default-address-pools": [
+        { "base": "172.20.0.0/14", "size": 24 },
+        { "base": "172.24.0.0/14", "size": 24 }
+      ],
+      "log-driver": "json-file",
+      "log-opts": { "max-size": "{{.Param.dockerLogMaxSize}}", "max-file": "{{.Param.dockerLogMaxFiles}}" },
+      "max-concurrent-downloads": {{.Param.dockerMaxDownloads}},
+      "max-concurrent-uploads": 5,
+      "live-restore": {{.Param.dockerLiveRestore}},
+      "shutdown-timeout": 15
+    }
+    DAEMON
+
+    # Enable and start Docker (Alpine uses OpenRC)
+    rc-update add docker default
+    service docker start
+
+    # Protect Docker infrastructure from OOM killer.
+    # OOM score -900 means only init-level processes are more protected.
+    # Containers get the default (0), so they are killed first.
+    DOCKERD_PID=$(pgrep -x dockerd) && \
+      echo -900 > /proc/$DOCKERD_PID/oom_score_adj 2>/dev/null || true
+    CONTAINERD_PID=$(pgrep -x containerd) && \
+      echo -900 > /proc/$CONTAINERD_PID/oom_score_adj 2>/dev/null || true
+- mode: system
+  script: |
+    #!/bin/sh
+    set -eux
+    # Add Lima user to docker group
+    USER="{{.User}}"
+    for group in docker wheel kvm; do
+      addgroup "$USER" "$group" 2>/dev/null || true
+    done
+- mode: system
+  script: |
+    #!/bin/sh
+    set -eux
+    # --- Swap (sized via param.swapSizeGB, compressed with zswap) ---
+    SWAP_MB=$(({{.Param.swapSizeGB}} * 1024))
+    if [ ! -f /swapfile ]; then
+      dd if=/dev/zero of=/swapfile bs=1M count=$SWAP_MB status=none
+      chmod 600 /swapfile
+      mkswap /swapfile >/dev/null 2>&1
+    fi
+    swapon /swapfile 2>/dev/null || true
+    grep -q '/swapfile' /etc/fstab || echo '/swapfile swap swap defaults 0 0' >> /etc/fstab
+
+    # --- zswap (lz4 compression — fastest decompression; zstd unavailable in virt kernel) ---
+    if [ -d /sys/module/zswap/parameters ]; then
+      modprobe lz4 2>/dev/null || true
+      echo lz4 > /sys/module/zswap/parameters/compressor 2>/dev/null || true
+      echo 25 > /sys/module/zswap/parameters/max_pool_percent 2>/dev/null || true
+      echo 1 > /sys/module/zswap/parameters/enabled 2>/dev/null || true
+      # Enable zswap shrinker — proactively evicts cold compressed entries
+      # back to the swap device, freeing the zswap pool for new compressions.
+      echo Y > /sys/module/zswap/parameters/shrinker_enabled 2>/dev/null || true
+    fi
+
+    # --- PSI (Pressure Stall Information) ---
+    # Alpine virt kernel has CONFIG_PSI=y but CONFIG_PSI_DEFAULT_DISABLED=y.
+    # Enable via GRUB boot parameter so the balloon controller can read
+    # /proc/pressure/memory for informed grow/shrink decisions.
+    # NOTE: PSI takes effect after VM restart (limactl stop && limactl start).
+    # On first boot, the balloon controller degrades gracefully — it uses OOM
+    # detection only and treats missing PSI data as low pressure (allows shrinking).
+    if [ ! -f /proc/pressure/memory ]; then
+      if ! grep -q 'psi=1' /etc/default/grub 2>/dev/null; then
+        sed -i 's/^GRUB_CMDLINE_LINUX_DEFAULT="\(.*\)"/GRUB_CMDLINE_LINUX_DEFAULT="\1 psi=1"/' \
+          /etc/default/grub 2>/dev/null || true
+        if grep -q '^GRUB_CMDLINE_LINUX=' /etc/default/grub; then
+          sed -i 's/^GRUB_CMDLINE_LINUX="\(.*\)"/GRUB_CMDLINE_LINUX="\1 psi=1"/' /etc/default/grub
+        fi
+        grub-mkconfig -o /boot/grub/grub.cfg 2>/dev/null || true
+        echo "NOTE: PSI enabled in GRUB config. It will be active after VM restart."
+      fi
+    fi
+
+    # --- MGLRU (Multi-Generational LRU) ---
+    # Alpine virt kernel 6.12 supports 0 (off) / 1 (on) only.
+    # Ensure MGLRU is enabled for better cold page identification.
+    if [ -f /sys/kernel/mm/lru_gen/enabled ]; then
+      echo 1 > /sys/kernel/mm/lru_gen/enabled
+    fi
+
+    # --- KSM (Kernel Same-page Merging) ---
+    # Deduplicates identical memory pages across containers sharing base images.
+    if [ "{{.Param.ksmEnabled}}" = "true" ] && [ -f /sys/kernel/mm/ksm/run ]; then
+      echo 1 > /sys/kernel/mm/ksm/run
+      echo 100 > /sys/kernel/mm/ksm/sleep_millisecs
+    fi
+
+    # --- THP (Transparent Huge Pages) ---
+    # Options: always, madvise, never.
+    if [ -f /sys/kernel/mm/transparent_hugepage/enabled ]; then
+      echo {{.Param.thpMode}} > /sys/kernel/mm/transparent_hugepage/enabled
+    fi
+
+    # --- Memory sysctls ---
+    sysctl -w vm.swappiness={{.Param.swappiness}}
+    sysctl -w vm.vfs_cache_pressure=150
+    sysctl -w vm.dirty_ratio=10
+    sysctl -w vm.dirty_background_ratio=5
+    sysctl -w vm.watermark_boost_factor=15000
+    sysctl -w vm.watermark_scale_factor=200
+    sysctl -w vm.compaction_proactiveness=20
+    # page-cluster=0: read single pages from swap (not 8). Better for
+    # Docker's random access patterns; avoids wasting I/O on unneeded pages.
+    sysctl -w vm.page-cluster=0
+    sysctl -w vm.min_free_kbytes={{.Param.minFreeKB}}
+
+    # Persist sysctls across reboots
+    mkdir -p /etc/sysctl.d
+    cat > /etc/sysctl.d/99-memory-tuning.conf <<EOF
+    vm.swappiness={{.Param.swappiness}}
+    vm.vfs_cache_pressure=150
+    vm.dirty_ratio=10
+    vm.dirty_background_ratio=5
+    vm.watermark_boost_factor=15000
+    vm.watermark_scale_factor=200
+    vm.compaction_proactiveness=20
+    vm.page-cluster=0
+    vm.min_free_kbytes={{.Param.minFreeKB}}
+    EOF
+- mode: system
+  script: |
+    #!/bin/sh
+    set -eux
+    # --- Periodic memory maintenance ---
+    # Every 5 minutes: compact memory and drop reclaimable slab caches.
+    # This keeps free memory high so the balloon controller can reclaim it
+    # from the guest, and reduces fragmentation for transparent huge pages.
+    #
+    # drop_caches=2 drops reclaimable slab (dentries/inodes) without dropping
+    # page cache (which would hurt Docker layer I/O performance).
+    mkdir -p /etc/periodic/5min
+    cat > /etc/periodic/5min/memory-reclaim <<'CRON'
+    #!/bin/sh
+    # Compact memory to reduce fragmentation.
+    echo 1 > /proc/sys/vm/compact_memory 2>/dev/null || true
+    # Drop reclaimable slab caches (dentries/inodes, not page cache).
+    echo 2 > /proc/sys/vm/drop_caches 2>/dev/null || true
+    # Re-enable MGLRU (sysfs settings are volatile).
+    echo 1 > /sys/kernel/mm/lru_gen/enabled 2>/dev/null || true
+    # Re-enable KSM if configured.
+    [ "{{.Param.ksmEnabled}}" = "true" ] && echo 1 > /sys/kernel/mm/ksm/run 2>/dev/null || true
+    CRON
+    chmod 755 /etc/periodic/5min/memory-reclaim
+
+    # Add 5min schedule to root crontab (Alpine only has 15min+ by default).
+    if ! grep -q '/5min' /etc/crontabs/root 2>/dev/null; then
+      echo '*/5	*	*	*	*	run-parts /etc/periodic/5min' >> /etc/crontabs/root
+    fi
+
+    # --- Boot-time sysfs restore ---
+    # sysfs settings (MGLRU, KSM, THP, zswap shrinker) are volatile.
+    # Use Alpine local.d to re-apply them on every boot.
+    mkdir -p /etc/local.d
+    cat > /etc/local.d/memory-tuning.start <<'BOOT'
+    #!/bin/sh
+    # MGLRU
+    echo 1 > /sys/kernel/mm/lru_gen/enabled 2>/dev/null || true
+    # KSM
+    [ "{{.Param.ksmEnabled}}" = "true" ] && echo 1 > /sys/kernel/mm/ksm/run 2>/dev/null || true
+    echo 100 > /sys/kernel/mm/ksm/sleep_millisecs 2>/dev/null || true
+    # THP
+    echo {{.Param.thpMode}} > /sys/kernel/mm/transparent_hugepage/enabled 2>/dev/null || true
+    # zswap
+    modprobe lz4 2>/dev/null || true
+    echo lz4 > /sys/module/zswap/parameters/compressor 2>/dev/null || true
+    echo 25 > /sys/module/zswap/parameters/max_pool_percent 2>/dev/null || true
+    echo Y > /sys/module/zswap/parameters/shrinker_enabled 2>/dev/null || true
+    echo 1 > /sys/module/zswap/parameters/enabled 2>/dev/null || true
+    # Protect Docker daemons from OOM killer after reboot.
+    sleep 5  # wait for dockerd/containerd to start
+    DOCKERD_PID=$(pgrep -x dockerd) && \
+      echo -900 > /proc/$DOCKERD_PID/oom_score_adj 2>/dev/null || true
+    CONTAINERD_PID=$(pgrep -x containerd) && \
+      echo -900 > /proc/$CONTAINERD_PID/oom_score_adj 2>/dev/null || true
+    BOOT
+    chmod 755 /etc/local.d/memory-tuning.start
+    rc-update add local default 2>/dev/null || true
+
+    # Ensure crond is running for periodic jobs.
+    rc-update add crond default 2>/dev/null || true
+    service crond start 2>/dev/null || true
+
+    # --- Docker prune cron ---
+    if [ "{{.Param.dockerAutoPrune}}" = "true" ]; then
+      cat > /etc/periodic/hourly/docker-prune <<'PRUNE'
+      #!/bin/sh
+      # Prune stopped containers older than 1h, dangling images, unused networks.
+      docker system prune --force --filter "until=1h" >/dev/null 2>&1 || true
+    PRUNE
+      chmod 755 /etc/periodic/hourly/docker-prune
+    fi
+- mode: system
+  script: |
+    #!/bin/sh
+    set -eux
+    # Strip packages not needed for Docker workloads
+    apk del --no-cache nvme-cli rsync mkinitfs e2fsprogs-extra dosfstools \
+      chrony chrony-openrc 2>/dev/null || true
+
+    # Remove docs, man pages, and caches
+    rm -rf /usr/share/doc /usr/share/man /usr/share/grub/themes \
+      /var/cache/apk/* /tmp/* 2>/dev/null || true
+
+    # Strip Python bytecode caches (cloud-init keeps .py source)
+    find /usr/lib/python3* -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+probes:
+- script: |
+    #!/bin/sh
+    set -eux
+    if ! timeout 30 sh -c "until command -v docker >/dev/null 2>&1; do sleep 3; done"; then
+      echo >&2 "docker is not installed yet"
+      exit 1
+    fi
+    if ! timeout 30 sh -c "until pgrep dockerd >/dev/null 2>&1; do sleep 3; done"; then
+      echo >&2 "dockerd is not running"
+      exit 1
+    fi
+  hint: See "/var/log/cloud-init-output.log" in the guest
+
+hostResolver:
+  hosts:
+    host.docker.internal: host.lima.internal
+
+# Parameters inherited from base templates:
+#   memory-tuning: swapSizeGB, swappiness, minFreeKB, ksmEnabled, thpMode
+#   docker-tuning: dockerLogMaxSize, dockerLogMaxFiles, dockerMaxDownloads, dockerLiveRestore, dockerAutoPrune
+# Override at create time: limactl create --set .param.swapSizeGB=2 ...
+# Or in ~/.lima/default.yaml under param: to apply to all instances.
+
+portForwards:
+- guestSocket: "/var/run/docker.sock"
+  hostSocket: "{{.Dir}}/sock/docker.sock"
+
+message: |
+  Alpine Docker VM is ready!
+
+  To use Docker from the host (assumes docker-cli is installed):
+  ------
+  docker context create lima-{{.Name}} --docker "host=unix://{{.Dir}}/sock/docker.sock"
+  docker context use lima-{{.Name}}
+  docker run hello-world
+  ------
+
+  Rosetta is enabled — run x86_64 containers on Apple Silicon:
+    docker run --platform=linux/amd64 --device=lima-vm.io/rosetta=cached alpine uname -m
+
+  Memory tuning active: {{.Param.swapSizeGB}} GiB swap, zswap (lz4), swappiness={{.Param.swappiness}}.
+  Memory ballooning: idle target 4 GiB, min 3 GiB, auto-pause after 15 min.
+  Override defaults: limactl create --set .param.swapSizeGB=2 --set .param.swappiness=60 ...
