@@ -1,7 +1,7 @@
 // gomodjail:confined
 module github.com/lima-vm/lima/v2
 
-go 1.25.0
+go 1.25.7
 
 require (
 	al.essio.dev/pkg/shellescape v1.6.0
@@ -18,7 +18,7 @@ require (
 	github.com/coreos/go-systemd/v22 v22.7.0
 	github.com/cpuguy83/go-md2man/v2 v2.0.7
 	github.com/digitalocean/go-qemu v0.0.0-20221209210016-f035778c97f7
-	github.com/diskfs/go-diskfs v1.7.0 // gomodjail:unconfined
+	github.com/diskfs/go-diskfs v1.8.0 // gomodjail:unconfined
 	github.com/docker/go-units v0.5.0
 	github.com/foxcpp/go-mockdns v1.2.0
 	github.com/goccy/go-yaml v1.19.2
