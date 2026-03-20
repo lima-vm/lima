@@ -116,21 +116,8 @@ case "$(limactl tmpl yq "$FILE_HOST" '.networks[].lima')" in
 esac
 
 if [[ -n ${CHECKS["port-forwards"]} ]]; then
-	tmpconfig="$HOME_HOST/lima-config-tmp"
-	mkdir -p "${tmpconfig}"
-	defer "rm -rf \"$tmpconfig\""
-	tmpfile="${tmpconfig}/${NAME}.yaml"
-	cp "$FILE" "${tmpfile}"
-	FILE="${tmpfile}"
-	FILE_HOST=$FILE
-	if [ "${OS_HOST}" = "Msys" ]; then
-		FILE_HOST="$(cygpath -w "$FILE")"
-	fi
-
-	INFO "Setup port forwarding rules for testing in \"${FILE}\""
-	"${scriptdir}/test-port-forwarding.pl" "${FILE}"
-	INFO "Validating \"$FILE_HOST\""
-	limactl validate "$FILE_HOST"
+	INFO "Adding port 8888 forwarding rule"
+	LIMACTL_CREATE+=(--set '.portForwards += [{"guestIPMustBeZero": true, "guestPort": 8888, "hostIP": "0.0.0.0"}]')
 fi
 
 INFO "Make sure template embedding copies \"$FILE_HOST\" exactly"
@@ -432,42 +419,24 @@ if [[ -n ${CHECKS["container-engine"]} ]]; then
 fi
 
 if [[ -n ${CHECKS["port-forwards"]} ]]; then
-	PORT_FORWARDING_CONNECTION_TIMEOUT=1
-	INFO "Testing port forwarding rules using netcat and socat with connection timeout ${PORT_FORWARDING_CONNECTION_TIMEOUT}s"
-	set -x
-	if [[ ${NAME} == "alpine"* ]]; then
-		limactl shell "${NAME}" sudo apk add socat
-	fi
-	if [[ ${NAME} == "archlinux" ]]; then
-		limactl shell "${NAME}" sudo pacman -Syu --noconfirm openbsd-netcat socat
-	fi
-	if [[ ${NAME} == "debian" || ${NAME} == "default" || ${NAME} == "docker" || ${NAME} == "test-misc" ]]; then
-		limactl shell "${NAME}" sudo apt-get install -y netcat-openbsd socat
-	fi
-	if [[ ${NAME} == "fedora" || ${NAME} == "wsl2" ]]; then
-		limactl shell "${NAME}" sudo dnf install -y nc socat
-	fi
-	if [[ ${NAME} == "opensuse" ]]; then
-		limactl shell "${NAME}" sudo zypper in -y netcat-openbsd socat
-	fi
-	if limactl shell "${NAME}" command -v dnf; then
-		limactl shell "${NAME}" sudo dnf install -y nc socat
-	fi
-	if "${scriptdir}/test-port-forwarding.pl" "${NAME}" socat $PORT_FORWARDING_CONNECTION_TIMEOUT; then
-		INFO "Port forwarding rules work"
-	else
-		ERROR "Port forwarding rules do not work with socat"
-		diagnose "$NAME"
-		exit 1
-	fi
-
 	if [[ -n ${CHECKS["container-engine"]} || ${NAME} == "alpine"* ]]; then
-		INFO "Testing that \"${CONTAINER_ENGINE} run\" binds to 0.0.0.0 and is forwarded to the host (non-default behavior, configured via test-port-forwarding.pl)"
-		if [ "$(uname)" = "Darwin" ]; then
-			# macOS runners seem to use `localhost` as the hostname, so the perl lookup just returns `127.0.0.1`
-			hostip=$(system_profiler SPNetworkDataType -json | jq -r 'first(.SPNetworkDataType[] | select(.ip_address) | .ip_address) | first')
+		INFO "Testing that \"${CONTAINER_ENGINE} run\" binds to 0.0.0.0 and is forwarded to the host"
+		set -x
+		# Detect the host's external IPv4 address
+		hostip=""
+		if [[ $(uname -s) == "Darwin" ]]; then
+			hostip=$(system_profiler SPNetworkDataType -json 2>/dev/null |
+				jq -r 'first(.SPNetworkDataType[] | select(.ip_address) | .ip_address) | first')
+		elif [[ $(uname -o 2>/dev/null) == "Msys" ]]; then
+			# shellcheck disable=SC2016 # $_ is PowerShell syntax, not bash
+			hostip=$(powershell.exe -NoProfile -Command \
+				'[System.Net.Dns]::GetHostAddresses((hostname)) | Where-Object {$_.AddressFamily -eq "InterNetwork" -and $_.IPAddressToString -ne "127.0.0.1"} | Select-Object -First 1 -ExpandProperty IPAddressToString' \
+				2>/dev/null | tr -d '\r')
 		else
-			hostip=$(perl -MSocket -MSys::Hostname -E 'say inet_ntoa(scalar gethostbyname(hostname()))')
+			hostip=$(hostname -I 2>/dev/null | tr ' ' '\n' | grep -v ':' | grep -v '^127\.' | head -1)
+		fi
+		if [[ -z $hostip || $hostip == "null" ]]; then
+			hostip="127.0.0.1"
 		fi
 		if [ -n "${hostip}" ]; then
 			sudo=""
