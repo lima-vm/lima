@@ -812,35 +812,6 @@ func attachOtherDevices(inst *limatype.Instance, vmConfig *vz.VirtualMachineConf
 		return err
 	}
 
-	// Set audio device
-	inputAudioDeviceConfig, err := vz.NewVirtioSoundDeviceConfiguration()
-	if err != nil {
-		return err
-	}
-	inputStream, err := vz.NewVirtioSoundDeviceHostInputStreamConfiguration()
-	if err != nil {
-		return err
-	}
-	inputAudioDeviceConfig.SetStreams(
-		inputStream,
-	)
-
-	outputAudioDeviceConfig, err := vz.NewVirtioSoundDeviceConfiguration()
-	if err != nil {
-		return err
-	}
-	outputStream, err := vz.NewVirtioSoundDeviceHostOutputStreamConfiguration()
-	if err != nil {
-		return err
-	}
-	outputAudioDeviceConfig.SetStreams(
-		outputStream,
-	)
-	vmConfig.SetAudioDevicesVirtualMachineConfiguration([]vz.AudioDeviceConfiguration{
-		inputAudioDeviceConfig,
-		outputAudioDeviceConfig,
-	})
-
 	// Set pointing device
 	var pointingDeviceConfig vz.PointingDeviceConfiguration
 	if *inst.Config.OS == limatype.DARWIN {
