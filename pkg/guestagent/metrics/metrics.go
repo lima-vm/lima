@@ -28,12 +28,14 @@ func CollectMemoryMetrics() (*api.MemoryMetrics, error) {
 	}
 
 	pressure, _ := os.ReadFile("/proc/pressure/memory")
-	some10, full10, err := parseProcPressureMemory(pressure)
+	psi, err := parseProcPressureMemory(pressure)
 	if err != nil {
 		return nil, err
 	}
-	m.PsiMemorySome_10 = some10
-	m.PsiMemoryFull_10 = full10
+	m.PsiMemorySome_10 = psi.Some10
+	m.PsiMemoryFull_10 = psi.Full10
+	m.PsiMemorySome_60 = psi.Some60
+	m.PsiMemoryFull_60 = psi.Full60
 
 	return m, nil
 }
@@ -72,9 +74,16 @@ func parseProcMeminfo(data []byte) (*api.MemoryMetrics, error) {
 	return m, scanner.Err()
 }
 
-func parseProcPressureMemory(data []byte) (some10, full10 float64, err error) {
+// PressureStats holds parsed PSI values from /proc/pressure/memory.
+type PressureStats struct {
+	Some10, Full10 float64
+	Some60, Full60 float64
+}
+
+func parseProcPressureMemory(data []byte) (PressureStats, error) {
+	var ps PressureStats
 	if len(data) == 0 {
-		return 0, 0, nil
+		return ps, nil
 	}
 	scanner := bufio.NewScanner(bytes.NewReader(data))
 	for scanner.Scan() {
@@ -92,12 +101,24 @@ func parseProcPressureMemory(data []byte) (some10, full10 float64, err error) {
 				}
 				switch kind {
 				case "some":
-					some10 = val
+					ps.Some10 = val
 				case "full":
-					full10 = val
+					ps.Full10 = val
+				}
+			}
+			if after, ok := strings.CutPrefix(field, "avg60="); ok {
+				val, parseErr := strconv.ParseFloat(after, 64)
+				if parseErr != nil {
+					continue
+				}
+				switch kind {
+				case "some":
+					ps.Some60 = val
+				case "full":
+					ps.Full60 = val
 				}
 			}
 		}
 	}
-	return some10, full10, scanner.Err()
+	return ps, scanner.Err()
 }

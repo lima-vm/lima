@@ -41,15 +41,17 @@ func TestParseProcPressureMemory(t *testing.T) {
 	data := `some avg10=5.50 avg60=3.20 avg300=1.10 total=123456
 full avg10=1.25 avg60=0.80 avg300=0.30 total=789012
 `
-	some10, full10, err := parseProcPressureMemory([]byte(data))
+	ps, err := parseProcPressureMemory([]byte(data))
 	assert.NilError(t, err)
-	assert.Equal(t, some10, 5.50)
-	assert.Equal(t, full10, 1.25)
+	assert.Equal(t, ps.Some10, 5.50)
+	assert.Equal(t, ps.Full10, 1.25)
+	assert.Equal(t, ps.Some60, 3.20)
+	assert.Equal(t, ps.Full60, 0.80)
 }
 
 func TestParseProcPressureMemory_NoPSI(t *testing.T) {
 	// When PSI is not available, return zeros.
-	_, _, err := parseProcPressureMemory(nil)
+	_, err := parseProcPressureMemory(nil)
 	assert.NilError(t, err)
 }
 
@@ -99,20 +101,21 @@ AnonPages:         2000000 kB
 }
 
 func TestParseProcPressureMemory_Empty(t *testing.T) {
-	some10, full10, err := parseProcPressureMemory([]byte(""))
+	ps, err := parseProcPressureMemory([]byte(""))
 	assert.NilError(t, err)
-	assert.Equal(t, some10, 0.0)
-	assert.Equal(t, full10, 0.0)
+	assert.Equal(t, ps.Some10, 0.0)
+	assert.Equal(t, ps.Full10, 0.0)
 }
 
 func TestParseProcPressureMemory_PartialData(t *testing.T) {
 	// Only "some" line, no "full" line.
 	data := `some avg10=3.14 avg60=2.00 avg300=1.00 total=99999
 `
-	some10, full10, err := parseProcPressureMemory([]byte(data))
+	ps, err := parseProcPressureMemory([]byte(data))
 	assert.NilError(t, err)
-	assert.Equal(t, some10, 3.14)
-	assert.Equal(t, full10, 0.0) // Not present.
+	assert.Equal(t, ps.Some10, 3.14)
+	assert.Equal(t, ps.Full10, 0.0) // Not present.
+	assert.Equal(t, ps.Some60, 2.00)
 }
 
 func TestParseProcPressureMemory_MalformedAvg(t *testing.T) {
@@ -120,10 +123,10 @@ func TestParseProcPressureMemory_MalformedAvg(t *testing.T) {
 	data := `some avg10=notfloat avg60=2.00 avg300=1.00 total=99999
 full avg10=1.50 avg60=0.80 avg300=0.30 total=789012
 `
-	some10, full10, err := parseProcPressureMemory([]byte(data))
+	ps, err := parseProcPressureMemory([]byte(data))
 	assert.NilError(t, err)
-	assert.Equal(t, some10, 0.0) // Could not parse.
-	assert.Equal(t, full10, 1.50)
+	assert.Equal(t, ps.Some10, 0.0) // Could not parse.
+	assert.Equal(t, ps.Full10, 1.50)
 }
 
 func TestParseProcPressureMemory_NoAvg10Field(t *testing.T) {
@@ -131,20 +134,20 @@ func TestParseProcPressureMemory_NoAvg10Field(t *testing.T) {
 	data := `some avg60=2.00 avg300=1.00 total=99999
 full avg60=0.80 avg300=0.30 total=789012
 `
-	some10, full10, err := parseProcPressureMemory([]byte(data))
+	ps, err := parseProcPressureMemory([]byte(data))
 	assert.NilError(t, err)
-	assert.Equal(t, some10, 0.0)
-	assert.Equal(t, full10, 0.0)
+	assert.Equal(t, ps.Some10, 0.0)
+	assert.Equal(t, ps.Full10, 0.0)
 }
 
 func TestParseProcPressureMemory_ShortLine(t *testing.T) {
 	// Line with only one field.
 	data := `some
 `
-	some10, full10, err := parseProcPressureMemory([]byte(data))
+	ps, err := parseProcPressureMemory([]byte(data))
 	assert.NilError(t, err)
-	assert.Equal(t, some10, 0.0)
-	assert.Equal(t, full10, 0.0)
+	assert.Equal(t, ps.Some10, 0.0)
+	assert.Equal(t, ps.Full10, 0.0)
 }
 
 func TestParseProcMeminfo_AllFieldsPopulated(t *testing.T) {
@@ -170,26 +173,26 @@ AnonPages:       2048000 kB
 func TestParseProcPressureMemory_BothMissing(t *testing.T) {
 	// Data with neither "some" nor "full" lines.
 	data := []byte("random_type avg10=1.23 avg60=0.50 avg300=0.25 total=12345\n")
-	some10, full10, err := parseProcPressureMemory(data)
+	ps, err := parseProcPressureMemory(data)
 	assert.NilError(t, err)
-	assert.Equal(t, some10, 0.0)
-	assert.Equal(t, full10, 0.0)
+	assert.Equal(t, ps.Some10, 0.0)
+	assert.Equal(t, ps.Full10, 0.0)
 }
 
 func TestParseProcPressureMemory_OnlySome(t *testing.T) {
 	data := []byte("some avg10=5.50 avg60=3.20 avg300=1.10 total=999\n")
-	some10, full10, err := parseProcPressureMemory(data)
+	ps, err := parseProcPressureMemory(data)
 	assert.NilError(t, err)
-	assert.Equal(t, some10, 5.50)
-	assert.Equal(t, full10, 0.0)
+	assert.Equal(t, ps.Some10, 5.50)
+	assert.Equal(t, ps.Full10, 0.0)
 }
 
 func TestParseProcPressureMemory_OnlyFull(t *testing.T) {
 	data := []byte("full avg10=2.30 avg60=1.50 avg300=0.80 total=555\n")
-	some10, full10, err := parseProcPressureMemory(data)
+	ps, err := parseProcPressureMemory(data)
 	assert.NilError(t, err)
-	assert.Equal(t, some10, 0.0)
-	assert.Equal(t, full10, 2.30)
+	assert.Equal(t, ps.Some10, 0.0)
+	assert.Equal(t, ps.Full10, 2.30)
 }
 
 // --- /proc/vmstat parsing tests ---

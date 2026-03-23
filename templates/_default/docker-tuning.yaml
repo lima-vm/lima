@@ -9,3 +9,4 @@ param:
   dockerMaxDownloads: "3"
   dockerLiveRestore: "true"
   dockerAutoPrune: "true"
+  cgroupMemoryHighPercent: "85"

@@ -54,7 +54,7 @@ func NewCollector(dockerSocket *string) *Collector {
 					return (&net.Dialer{}).DialContext(ctx, "unix", c.dockerSocket)
 				},
 			},
-			Timeout: 5 * time.Second,
+			// No client-level timeout — per-request context deadlines control timeouts.
 		}
 	}
 	return c
@@ -119,7 +119,7 @@ func safeDelta(curr, prev uint64) uint64 {
 
 // Collect gathers all memory metrics and returns a MemoryMetrics protobuf.
 // This is the main entry point called by the guest agent gRPC server.
-func (c *Collector) Collect() (*api.MemoryMetrics, error) {
+func (c *Collector) Collect(ctx context.Context) (*api.MemoryMetrics, error) {
 	// 1. /proc/meminfo + /proc/pressure/memory (no lock needed — pure reads).
 	meminfo, err := os.ReadFile("/proc/meminfo")
 	if err != nil {
@@ -131,12 +131,14 @@ func (c *Collector) Collect() (*api.MemoryMetrics, error) {
 	}
 
 	pressure, _ := os.ReadFile("/proc/pressure/memory")
-	some10, full10, parseErr := parseProcPressureMemory(pressure)
+	psi, parseErr := parseProcPressureMemory(pressure)
 	if parseErr != nil {
 		return nil, parseErr
 	}
-	m.PsiMemorySome_10 = some10
-	m.PsiMemoryFull_10 = full10
+	m.PsiMemorySome_10 = psi.Some10
+	m.PsiMemoryFull_10 = psi.Full10
+	m.PsiMemorySome_60 = psi.Some60
+	m.PsiMemoryFull_60 = psi.Full60
 
 	// 2. /proc/vmstat for swap rates, page faults, OOM.
 	vmstatData, vmstatErr := os.ReadFile("/proc/vmstat")
@@ -145,7 +147,7 @@ func (c *Collector) Collect() (*api.MemoryMetrics, error) {
 	var dockerCount int
 	var dockerCPU, dockerIO float64
 	if c.httpClient != nil {
-		dockerCount, dockerCPU, dockerIO = c.collectDockerStats()
+		dockerCount, dockerCPU, dockerIO = c.collectDockerStats(ctx)
 	}
 
 	// Hold lock only for internal state updates and reads.
@@ -171,10 +173,15 @@ func (c *Collector) Collect() (*api.MemoryMetrics, error) {
 }
 
 // collectDockerStats queries the Docker socket for container count,
-// aggregate CPU%, and aggregate IO bytes/sec. Returns zeros on error.
-func (c *Collector) collectDockerStats() (count int, cpuPercent, ioBytesPerSec float64) {
+// aggregate CPU%, and aggregate IO bytes/sec. Containers are polled
+// in parallel with a 3-second overall timeout. Returns zeros on error.
+func (c *Collector) collectDockerStats(ctx context.Context) (count int, cpuPercent, ioBytesPerSec float64) {
+	// Overall timeout: 3 seconds fits within the 10-second balloon poll interval.
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+
 	// List running containers.
-	listReq, err := http.NewRequestWithContext(context.Background(), http.MethodGet,
+	listReq, err := http.NewRequestWithContext(ctx, http.MethodGet,
 		"http://localhost/containers/json?filters=%7B%22status%22%3A%5B%22running%22%5D%7D", http.NoBody)
 	if err != nil {
 		logrus.Debugf("Docker stats: failed to create list request: %v", err)
@@ -201,30 +208,53 @@ func (c *Collector) collectDockerStats() (count int, cpuPercent, ioBytesPerSec f
 		return 0, 0, 0
 	}
 
-	// Aggregate stats from each container (best-effort, skip failures).
+	// Poll all containers in parallel with per-container 1-second timeout.
+	type result struct {
+		cpuPct  float64
+		ioBytes uint64
+	}
+	results := make(chan result, len(ids))
+	for _, id := range ids {
+		go func(cid string) {
+			cctx, ccancel := context.WithTimeout(ctx, 1*time.Second)
+			defer ccancel()
+			statsReq, reqErr := http.NewRequestWithContext(cctx, http.MethodGet,
+				"http://localhost/containers/"+cid+"/stats?stream=false&one-shot=true", http.NoBody)
+			if reqErr != nil {
+				results <- result{}
+				return
+			}
+			statsResp, doErr := c.httpClient.Do(statsReq)
+			if doErr != nil {
+				results <- result{}
+				return
+			}
+			statsBody, readErr := io.ReadAll(statsResp.Body)
+			statsResp.Body.Close()
+			if readErr != nil {
+				results <- result{}
+				return
+			}
+			cpuPct, ioBytes, parseErr := parseDockerStats(statsBody)
+			if parseErr != nil {
+				results <- result{}
+				return
+			}
+			results <- result{cpuPct, ioBytes}
+		}(id)
+	}
+
+	// Collect results, using partial data if overall timeout hits.
 	var totalCPU float64
 	var totalIO uint64
-	for _, id := range ids {
-		statsReq, reqErr := http.NewRequestWithContext(context.Background(), http.MethodGet,
-			"http://localhost/containers/"+id+"/stats?stream=false&one-shot=true", http.NoBody)
-		if reqErr != nil {
-			continue
+	for range ids {
+		select {
+		case r := <-results:
+			totalCPU += r.cpuPct
+			totalIO += r.ioBytes
+		case <-ctx.Done():
+			return count, totalCPU, float64(totalIO)
 		}
-		statsResp, doErr := c.httpClient.Do(statsReq)
-		if doErr != nil {
-			continue
-		}
-		statsBody, readErr := io.ReadAll(statsResp.Body)
-		statsResp.Body.Close()
-		if readErr != nil {
-			continue
-		}
-		cpuPct, ioBytes, parseErr := parseDockerStats(statsBody)
-		if parseErr != nil {
-			continue
-		}
-		totalCPU += cpuPct
-		totalIO += ioBytes
 	}
 
 	return count, totalCPU, float64(totalIO)

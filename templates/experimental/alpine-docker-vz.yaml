@@ -25,7 +25,7 @@
 minimumLimaVersion: "2.0.0"
 
 base:
-- template:_images/alpine
+- template:_images/alpine-iso
 - template:_default/mounts
 - template:_default/memory-tuning
 - template:_default/docker-tuning
@@ -50,6 +50,11 @@ vmOpts:
       lowPressureThreshold: 0.35
       cooldown: "30s"
       idleGracePeriod: "5m"
+      maxSwapOutPerSec: "32MiB"
+      maxPageFaultRate: 5000
+      shrinkReserveBytes: "128MiB"
+      settleWindow: "30s"
+      enableTrendDetection: true
     # Auto-pause — pause the VM when idle to save energy.
     autoPause:
       enabled: true
@@ -67,10 +72,29 @@ containerd:
   user: false
 
 provision:
+# E10-1: PSI availability check. On Alpine with CONFIG_PSI_DEFAULT_DISABLED=y,
+# the GRUB psi=1 parameter (set in the memory tuning script below) requires a
+# VM restart to take effect. The host-side balloon controller has a MemAvailable
+# fallback guard so ballooning works even without PSI on first boot. PSI becomes
+# active after `limactl stop && limactl start`.
 - mode: system
   script: |
     #!/bin/sh
     sed -i 's/host.lima.internal.*/host.lima.internal host.docker.internal/' /etc/hosts
+- mode: system
+  script: |
+    #!/bin/sh
+    set -eux
+    # The alpine-lima-std ISO boots with HTTPS repos but the TLS handshake
+    # can fail if the network interface or NTP sync is not yet ready.
+    # Wait for network, then refresh the package index before installing.
+    for i in $(seq 1 10); do
+      if apk update 2>/dev/null; then
+        break
+      fi
+      echo "Waiting for network (attempt $i/10)..."
+      sleep 3
+    done
 - mode: system
   script: |
     #!/bin/sh
@@ -82,7 +106,7 @@ provision:
     # procps: vmstat, slabtop, better free/ps (memory monitoring)
     # inotify-tools: file watching for dev tools on virtiofs mounts
     # curl: ubiquitous in Docker workflows
-    apk add --no-cache docker-engine docker-cli docker-openrc docker-compose \
+    apk add docker-engine docker-cli docker-openrc docker-compose \
       bash procps inotify-tools curl
 
     # Configure Docker daemon
@@ -127,16 +151,53 @@ provision:
 - mode: system
   script: |
     #!/bin/sh
+    # Configure cgroup v2 memory.high for Docker containers.
+    # Throttles containers approaching the memory limit rather than killing them,
+    # giving the balloon controller time to grow guest memory.
+    set -eu
+
+    CGROUP_MEM_PCT={{.Param.cgroupMemoryHighPercent}}
+
+    # Only configure if cgroup v2 is active.
+    if [ ! -f /sys/fs/cgroup/cgroup.controllers ]; then
+        echo "cgroup v2 not active, skipping memory.high configuration"
+        exit 0
+    fi
+
+    # Ensure memory controller is available.
+    if ! grep -q memory /sys/fs/cgroup/cgroup.controllers; then
+        echo "memory controller not available in cgroup v2"
+        exit 0
+    fi
+
+    # Calculate memory.high as percentage of current guest memory.
+    TOTAL_MEM_KB=$(awk '/MemTotal/ {print $2}' /proc/meminfo)
+    HIGH_BYTES=$(( TOTAL_MEM_KB * 1024 * CGROUP_MEM_PCT / 100 ))
+
+    # Set memory.high on the Docker cgroupfs path.
+    # Alpine + OpenRC uses cgroupfs (not systemd), so the path is /sys/fs/cgroup/docker/.
+    DOCKER_CGROUP="/sys/fs/cgroup/docker"
+    if [ -d "$DOCKER_CGROUP" ]; then
+        echo "$HIGH_BYTES" > "$DOCKER_CGROUP/memory.high" 2>/dev/null || true
+        echo "Set Docker cgroup memory.high to $(( HIGH_BYTES / 1024 / 1024 )) MiB (${CGROUP_MEM_PCT}%)"
+    else
+        echo "Docker cgroup not found at $DOCKER_CGROUP — Docker may not be running yet"
+    fi
+- mode: system
+  script: |
+    #!/bin/sh
     set -eux
     # --- Swap (sized via param.swapSizeGB, compressed with zswap) ---
+    # Alpine ISO boots with tmpfs root — swap must be on the persistent data volume.
     SWAP_MB=$(({{.Param.swapSizeGB}} * 1024))
-    if [ ! -f /swapfile ]; then
-      dd if=/dev/zero of=/swapfile bs=1M count=$SWAP_MB status=none
-      chmod 600 /swapfile
-      mkswap /swapfile >/dev/null 2>&1
+    SWAP_PATH="/mnt/data/swapfile"
+    if [ ! -f "$SWAP_PATH" ]; then
+      dd if=/dev/zero of="$SWAP_PATH" bs=1M count=$SWAP_MB
+      chmod 600 "$SWAP_PATH"
+      mkswap "$SWAP_PATH" >/dev/null 2>&1
     fi
-    swapon /swapfile 2>/dev/null || true
-    grep -q '/swapfile' /etc/fstab || echo '/swapfile swap swap defaults 0 0' >> /etc/fstab
+    swapon "$SWAP_PATH" 2>/dev/null || true
+    grep -q "$SWAP_PATH" /etc/fstab || echo "$SWAP_PATH swap swap defaults 0 0" >> /etc/fstab
 
     # --- zswap (lz4 compression — fastest decompression; zstd unavailable in virt kernel) ---
     if [ -d /sys/module/zswap/parameters ]; then
@@ -153,9 +214,9 @@ provision:
     # Alpine virt kernel has CONFIG_PSI=y but CONFIG_PSI_DEFAULT_DISABLED=y.
     # Enable via GRUB boot parameter so the balloon controller can read
     # /proc/pressure/memory for informed grow/shrink decisions.
-    # NOTE: PSI takes effect after VM restart (limactl stop && limactl start).
-    # On first boot, the balloon controller degrades gracefully — it uses OOM
-    # detection only and treats missing PSI data as low pressure (allows shrinking).
+    # The mode: boot script above triggers a one-time reboot to activate PSI.
+    # The host-side balloon controller also has a MemAvailable fallback guard
+    # (psiAvailable flag) to handle the case where PSI returns all zeros.
     if [ ! -f /proc/pressure/memory ]; then
       if ! grep -q 'psi=1' /etc/default/grub 2>/dev/null; then
         sed -i 's/^GRUB_CMDLINE_LINUX_DEFAULT="\(.*\)"/GRUB_CMDLINE_LINUX_DEFAULT="\1 psi=1"/' \
@@ -228,14 +289,36 @@ provision:
     mkdir -p /etc/periodic/5min
     cat > /etc/periodic/5min/memory-reclaim <<'CRON'
     #!/bin/sh
-    # Compact memory to reduce fragmentation.
-    echo 1 > /proc/sys/vm/compact_memory 2>/dev/null || true
-    # Drop reclaimable slab caches (dentries/inodes, not page cache).
-    echo 2 > /proc/sys/vm/drop_caches 2>/dev/null || true
-    # Re-enable MGLRU (sysfs settings are volatile).
-    echo 1 > /sys/kernel/mm/lru_gen/enabled 2>/dev/null || true
+    # Demand-driven memory compaction — only compact when fragmentation is high.
+    if [ -f /proc/buddyinfo ]; then
+        HIGH_ORDER=$(awk '{for(i=7;i<=NF;i++) s+=$i} END{print s+0}' /proc/buddyinfo)
+        [ "$HIGH_ORDER" -lt 256 ] && echo 1 > /proc/sys/vm/compact_memory 2>/dev/null || true
+    fi
+    # Drop slab caches only if reclaimable slab > 10% of MemAvailable.
+    SRECLAIMABLE_KB=$(awk '/SReclaimable/ {print $2}' /proc/meminfo)
+    MEMAVAIL_KB=$(awk '/MemAvailable/ {print $2}' /proc/meminfo)
+    if [ "$SRECLAIMABLE_KB" -gt "$((MEMAVAIL_KB / 10))" ]; then
+        echo 2 > /proc/sys/vm/drop_caches 2>/dev/null || true
+    fi
+    # Re-enable volatile sysfs settings only if not already set.
+    [ "$(cat /sys/kernel/mm/lru_gen/enabled 2>/dev/null)" != "1" ] && \
+        echo 1 > /sys/kernel/mm/lru_gen/enabled 2>/dev/null || true
     # Re-enable KSM if configured.
-    [ "{{.Param.ksmEnabled}}" = "true" ] && echo 1 > /sys/kernel/mm/ksm/run 2>/dev/null || true
+    [ "{{.Param.ksmEnabled}}" = "true" ] && \
+        [ "$(cat /sys/kernel/mm/ksm/run 2>/dev/null)" != "1" ] && \
+        echo 1 > /sys/kernel/mm/ksm/run 2>/dev/null || true
+    # Recalculate Docker cgroup memory.high based on current usable memory.
+    # MemAvailable + AnonPages approximates usable guest memory after balloon adjustment.
+    DOCKER_CGROUP="/sys/fs/cgroup/docker"
+    if [ -d "$DOCKER_CGROUP" ] && [ -f "$DOCKER_CGROUP/memory.high" ]; then
+        AVAIL_KB=$(awk '/MemAvailable/ {print $2}' /proc/meminfo)
+        ANON_KB=$(awk '/AnonPages/ {print $2}' /proc/meminfo)
+        USABLE_KB=$((AVAIL_KB + ANON_KB))
+        HIGH_BYTES=$((USABLE_KB * 1024 * {{.Param.cgroupMemoryHighPercent}} / 100))
+        MIN_HIGH=$((512 * 1024 * 1024))
+        [ "$HIGH_BYTES" -lt "$MIN_HIGH" ] && HIGH_BYTES=$MIN_HIGH
+        echo "$HIGH_BYTES" > "$DOCKER_CGROUP/memory.high" 2>/dev/null || true
+    fi
     CRON
     chmod 755 /etc/periodic/5min/memory-reclaim
 
@@ -269,6 +352,14 @@ provision:
       echo -900 > /proc/$DOCKERD_PID/oom_score_adj 2>/dev/null || true
     CONTAINERD_PID=$(pgrep -x containerd) && \
       echo -900 > /proc/$CONTAINERD_PID/oom_score_adj 2>/dev/null || true
+    # Restore Docker cgroup memory.high (volatile, recalculate from current MemTotal).
+    CGROUP_MEM_PCT={{.Param.cgroupMemoryHighPercent}}
+    TOTAL_MEM_KB=$(awk '/MemTotal/ {print $2}' /proc/meminfo)
+    HIGH_BYTES=$(( TOTAL_MEM_KB * 1024 * CGROUP_MEM_PCT / 100 ))
+    DOCKER_CGROUP="/sys/fs/cgroup/docker"
+    if [ -d "$DOCKER_CGROUP" ]; then
+        echo "$HIGH_BYTES" > "$DOCKER_CGROUP/memory.high" 2>/dev/null || true
+    fi
     BOOT
     chmod 755 /etc/local.d/memory-tuning.start
     rc-update add local default 2>/dev/null || true

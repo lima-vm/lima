@@ -84,4 +84,8 @@ message MemoryMetrics {
 
   // OOM detection (edge-triggered: set once, cleared after reporting).
   bool oom_detected = 15;
+
+  // /proc/pressure/memory PSI values (percentage 0.0-100.0 over 60s window).
+  double psi_memory_some_60 = 16;
+  double psi_memory_full_60 = 17;
 }

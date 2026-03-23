@@ -450,9 +450,12 @@ type MemoryMetrics struct {
 	// Cumulative IO bytes across all containers (not a rate; name kept for wire compat).
 	ContainerIoBytesPerSec float64 `protobuf:"fixed64,14,opt,name=container_io_bytes_per_sec,json=containerIoBytesPerSec,proto3" json:"container_io_bytes_per_sec,omitempty"`
 	// OOM detection (edge-triggered: set once, cleared after reporting).
-	OomDetected   bool `protobuf:"varint,15,opt,name=oom_detected,json=oomDetected,proto3" json:"oom_detected,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	OomDetected bool `protobuf:"varint,15,opt,name=oom_detected,json=oomDetected,proto3" json:"oom_detected,omitempty"`
+	// /proc/pressure/memory PSI values (percentage 0.0-100.0 over 60s window).
+	PsiMemorySome_60 float64 `protobuf:"fixed64,16,opt,name=psi_memory_some_60,json=psiMemorySome60,proto3" json:"psi_memory_some_60,omitempty"`
+	PsiMemoryFull_60 float64 `protobuf:"fixed64,17,opt,name=psi_memory_full_60,json=psiMemoryFull60,proto3" json:"psi_memory_full_60,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *MemoryMetrics) Reset() {
@@ -590,6 +593,20 @@ func (x *MemoryMetrics) GetOomDetected() bool {
 	return false
 }
 
+func (x *MemoryMetrics) GetPsiMemorySome_60() float64 {
+	if x != nil {
+		return x.PsiMemorySome_60
+	}
+	return 0
+}
+
+func (x *MemoryMetrics) GetPsiMemoryFull_60() float64 {
+	if x != nil {
+		return x.PsiMemoryFull_60
+	}
+	return 0
+}
+
 var File_guestservice_proto protoreflect.FileDescriptor
 
 const file_guestservice_proto_rawDesc = "" +
@@ -623,7 +640,7 @@ const file_guestservice_proto_rawDesc = "" +
 	"\x10TimeSyncResponse\x12\x1a\n" +
 	"\badjusted\x18\x01 \x01(\bR\badjusted\x12\x19\n" +
 	"\bdrift_ms\x18\x02 \x01(\x03R\adriftMs\x12\x14\n" +
-	"\x05error\x18\x03 \x01(\tR\x05error\"\xad\x05\n" +
+	"\x05error\x18\x03 \x01(\tR\x05error\"\x87\x06\n" +
 	"\rMemoryMetrics\x12&\n" +
 	"\x0fmem_total_bytes\x18\x01 \x01(\x04R\rmemTotalBytes\x12.\n" +
 	"\x13mem_available_bytes\x18\x02 \x01(\x04R\x11memAvailableBytes\x12(\n" +
@@ -640,7 +657,9 @@ const file_guestservice_proto_rawDesc = "" +
 	"\x0fcontainer_count\x18\f \x01(\x05R\x0econtainerCount\x122\n" +
 	"\x15container_cpu_percent\x18\r \x01(\x01R\x13containerCpuPercent\x12:\n" +
 	"\x1acontainer_io_bytes_per_sec\x18\x0e \x01(\x01R\x16containerIoBytesPerSec\x12!\n" +
-	"\foom_detected\x18\x0f \x01(\bR\voomDetected2\xb5\x02\n" +
+	"\foom_detected\x18\x0f \x01(\bR\voomDetected\x12+\n" +
+	"\x12psi_memory_some_60\x18\x10 \x01(\x01R\x0fpsiMemorySome60\x12+\n" +
+	"\x12psi_memory_full_60\x18\x11 \x01(\x01R\x0fpsiMemoryFull602\xb5\x02\n" +
 	"\fGuestService\x12(\n" +
 	"\aGetInfo\x12\x16.google.protobuf.Empty\x1a\x05.Info\x12-\n" +
 	"\tGetEvents\x12\x16.google.protobuf.Empty\x1a\x06.Event0\x01\x121\n" +

@@ -736,6 +736,12 @@ sudo chown -R "${USER}" /run/host-services`
 			a.autoPauseMgr.AddBusyCheck("container-io", a.autoPauseMgr.hasContainerIOActivity)
 		}
 
+		// Reset the idle timer now that provisioning is complete. The idle
+		// tracker was created earlier (before optional/final requirements),
+		// so without this reset, the idle duration would include provisioning
+		// time and could trigger an immediate pause on slow first boots.
+		a.autoPauseMgr.Touch()
+
 		mgr := a.autoPauseMgr
 		go func() {
 			defer func() {
@@ -763,14 +769,30 @@ sudo chown -R "${USER}" /run/host-services`
 						logrus.WithError(cfgErr).Warn("Failed to parse balloon config, ballooning disabled")
 					} else {
 						ctrl := NewBalloonController(cfg)
+						ctrl.instDir = a.instDir
+						// Load persisted learned floor with timestamp.
+						floor, learnedAt, floorErr := store.ReadLearnedFloor(a.instDir)
+						if floorErr != nil {
+							logrus.Warnf("balloon: failed to read learned floor: %v", floorErr)
+						}
+						if floor > 0 && (floor > cfg.IdleTargetBytes || floor < cfg.MinBytes) {
+							logrus.Infof("balloon: discarding out-of-range learned floor %d (min=%d, idle=%d)",
+								floor, cfg.MinBytes, cfg.IdleTargetBytes)
+							floor = 0
+							learnedAt = time.Time{}
+						}
+						ctrl.learnedFloor = floor
+						ctrl.learnedAt = learnedAt
 						a.balloonCtrl = ctrl
+						monitor := NewHostPressureMonitor()
+						go monitor.Run(ctx)
 						go func() {
 							defer func() {
 								if r := recover(); r != nil {
 									logrus.Errorf("Balloon controller panicked: %v", r)
 								}
 							}()
-							a.runBalloonLoop(ctx, ctrl, ballooner)
+							a.runBalloonLoop(ctx, ctrl, ballooner, monitor)
 						}()
 						minStr, idleStr := "0", "0"
 						if vzOpts.MemoryBalloon.Min != nil {
@@ -855,6 +877,10 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 					refreshCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 					defer cancel()
 					a.socketProxy.RefreshTunnels(refreshCtx)
+					// E10-4: Reset balloon poll failures on resume.
+					if a.balloonCtrl != nil {
+						a.balloonCtrl.RecordPollSuccess()
+					}
 				}
 				a.autoPauseMgr.onWake = func() {
 					refreshCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
@@ -863,6 +889,10 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 				}
 				a.autoPauseMgr.socketProxy = proxy
 				a.autoPauseMgr.callbackMu.Unlock()
+				// E10-4: Wire connection awareness to balloon controller.
+				if a.balloonCtrl != nil {
+					a.balloonCtrl.activeConnectionsFn = proxy.ActiveConnectionCount
+				}
 
 				// Register active-connections busy-check if signal is enabled.
 				if a.autoPauseMgr.signalConfig.ActiveConnections {
@@ -1436,6 +1466,30 @@ func parseBalloonConfig(instConfig *limatype.LimaYAML, balloon *limatype.MemoryB
 		}
 		cfg.MaxSwapInPerSec = uint64(b)
 	}
+	if balloon.MaxSwapOutPerSec != nil {
+		b, err := units.RAMInBytes(*balloon.MaxSwapOutPerSec)
+		if err != nil {
+			return cfg, fmt.Errorf("invalid balloon maxSwapOutPerSec: %w", err)
+		}
+		cfg.MaxSwapOutPerSec = uint64(b)
+	}
+	if balloon.MaxPageFaultRate != nil {
+		cfg.MaxPageFaultRate = *balloon.MaxPageFaultRate
+	}
+	if balloon.ShrinkReserveBytes != nil {
+		b, err := units.RAMInBytes(*balloon.ShrinkReserveBytes)
+		if err != nil {
+			return cfg, fmt.Errorf("invalid balloon shrinkReserveBytes: %w", err)
+		}
+		cfg.ShrinkReserveBytes = uint64(b)
+	}
+	if balloon.SettleWindow != nil {
+		d, err := time.ParseDuration(*balloon.SettleWindow)
+		if err != nil {
+			return cfg, fmt.Errorf("invalid balloon settleWindow: %w", err)
+		}
+		cfg.SettleWindow = d
+	}
 	if balloon.MaxContainerCPU != nil {
 		cfg.MaxContainerCPU = *balloon.MaxContainerCPU
 	}
@@ -1446,11 +1500,21 @@ func parseBalloonConfig(instConfig *limatype.LimaYAML, balloon *limatype.MemoryB
 		}
 		cfg.MaxContainerIO = uint64(b)
 	}
+	if balloon.FloorStaleness != nil {
+		d, err := time.ParseDuration(*balloon.FloorStaleness)
+		if err != nil {
+			return cfg, fmt.Errorf("invalid balloon floorStaleness: %w", err)
+		}
+		cfg.FloorStaleness = d
+	}
+	if balloon.EnableTrendDetection != nil {
+		cfg.EnableTrendDetection = *balloon.EnableTrendDetection
+	}
 	return cfg, nil
 }
 
 // runBalloonLoop periodically polls guest memory metrics and adjusts the balloon.
-func (a *HostAgent) runBalloonLoop(ctx context.Context, ctrl *BalloonController, ballooner driver.Ballooner) {
+func (a *HostAgent) runBalloonLoop(ctx context.Context, ctrl *BalloonController, ballooner driver.Ballooner, monitor *HostPressureMonitor) {
 	// Wait for guest agent to be ready.
 	select {
 	case <-a.guestAgentAliveCh:
@@ -1477,6 +1541,10 @@ func (a *HostAgent) runBalloonLoop(ctx context.Context, ctrl *BalloonController,
 			return
 
 		case <-ticker.C:
+			// E10-4: Skip balloon evaluation while VM is paused.
+			if a.autoPauseMgr != nil && a.autoPauseMgr.IsPaused() {
+				continue
+			}
 			client, err := a.getOrCreateClient(ctx)
 			if err != nil {
 				ctrl.RecordPollFailure()
@@ -1496,6 +1564,7 @@ func (a *HostAgent) runBalloonLoop(ctx context.Context, ctrl *BalloonController,
 				a.autoPauseMgr.UpdateGuestMetrics(metrics)
 			}
 
+			ctrl.SetHostPressure(monitor.Current())
 			action := ctrl.Evaluate(metrics, bootTime)
 			if action.Type != BalloonActionNone {
 				logrus.Infof("Balloon controller: %s -> %s (%s)",

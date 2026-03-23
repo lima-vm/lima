@@ -109,9 +109,9 @@ func (s *GuestServer) SyncTime(_ context.Context, req *api.TimeSyncRequest) (*ap
 	return resp, nil
 }
 
-func (s *GuestServer) GetMemoryMetrics(_ context.Context, _ *emptypb.Empty) (*api.MemoryMetrics, error) {
+func (s *GuestServer) GetMemoryMetrics(ctx context.Context, _ *emptypb.Empty) (*api.MemoryMetrics, error) {
 	if s.Collector != nil {
-		return s.Collector.Collect()
+		return s.Collector.Collect(ctx)
 	}
 	return metrics.CollectMemoryMetrics()
 }

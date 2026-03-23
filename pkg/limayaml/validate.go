@@ -525,11 +525,26 @@ func validateMemoryBalloon(y *limatype.LimaYAML) error {
 			errs = errors.Join(errs, fmt.Errorf("field `%s.idleGracePeriod` must be a valid duration: %w", field, err))
 		}
 	}
+	if balloon.SettleWindow != nil {
+		if _, err := parseDuration(*balloon.SettleWindow); err != nil {
+			errs = errors.Join(errs, fmt.Errorf("field `%s.settleWindow` must be a valid duration: %w", field, err))
+		}
+	}
 
 	// Rule 7: byte sizes must be parseable.
 	if balloon.MaxSwapInPerSec != nil {
 		if _, err := units.RAMInBytes(*balloon.MaxSwapInPerSec); err != nil {
 			errs = errors.Join(errs, fmt.Errorf("field `%s.maxSwapInPerSec` must be a valid byte size: %w", field, err))
+		}
+	}
+	if balloon.MaxSwapOutPerSec != nil {
+		if _, err := units.RAMInBytes(*balloon.MaxSwapOutPerSec); err != nil {
+			errs = errors.Join(errs, fmt.Errorf("field `%s.maxSwapOutPerSec` must be a valid byte size: %w", field, err))
+		}
+	}
+	if balloon.ShrinkReserveBytes != nil {
+		if _, err := units.RAMInBytes(*balloon.ShrinkReserveBytes); err != nil {
+			errs = errors.Join(errs, fmt.Errorf("field `%s.shrinkReserveBytes` must be a valid byte size: %w", field, err))
 		}
 	}
 	if balloon.MaxContainerIO != nil {

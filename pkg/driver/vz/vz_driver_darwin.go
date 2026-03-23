@@ -312,11 +312,29 @@ func (l *LimaVzDriver) FillConfig(ctx context.Context, cfg *limatype.LimaYAML, _
 		if vzOpts.MemoryBalloon.MaxSwapInPerSec == nil {
 			vzOpts.MemoryBalloon.MaxSwapInPerSec = ptr.Of("64MiB")
 		}
+		if vzOpts.MemoryBalloon.MaxSwapOutPerSec == nil {
+			vzOpts.MemoryBalloon.MaxSwapOutPerSec = ptr.Of("32MiB")
+		}
+		if vzOpts.MemoryBalloon.MaxPageFaultRate == nil {
+			vzOpts.MemoryBalloon.MaxPageFaultRate = ptr.Of(uint64(5000))
+		}
+		if vzOpts.MemoryBalloon.ShrinkReserveBytes == nil {
+			vzOpts.MemoryBalloon.ShrinkReserveBytes = ptr.Of("128MiB")
+		}
+		if vzOpts.MemoryBalloon.SettleWindow == nil {
+			vzOpts.MemoryBalloon.SettleWindow = ptr.Of("30s")
+		}
 		if vzOpts.MemoryBalloon.MaxContainerCPU == nil {
 			vzOpts.MemoryBalloon.MaxContainerCPU = ptr.Of(10.0)
 		}
 		if vzOpts.MemoryBalloon.MaxContainerIO == nil {
 			vzOpts.MemoryBalloon.MaxContainerIO = ptr.Of("10MiB")
+		}
+		if vzOpts.MemoryBalloon.FloorStaleness == nil {
+			vzOpts.MemoryBalloon.FloorStaleness = ptr.Of("24h")
+		}
+		if vzOpts.MemoryBalloon.EnableTrendDetection == nil {
+			vzOpts.MemoryBalloon.EnableTrendDetection = ptr.Of(false)
 		}
 	}
 

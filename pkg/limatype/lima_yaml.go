@@ -152,10 +152,22 @@ type MemoryBalloon struct {
 	IdleGracePeriod *string `yaml:"idleGracePeriod,omitempty" json:"idleGracePeriod,omitempty" jsonschema:"nullable"`
 	// MaxSwapInPerSec is the swap-in rate threshold that blocks shrinking (e.g., "50MiB").
 	MaxSwapInPerSec *string `yaml:"maxSwapInPerSec,omitempty" json:"maxSwapInPerSec,omitempty" jsonschema:"nullable"`
+	// MaxSwapOutPerSec is the swap-out rate threshold that blocks shrinking (e.g., "32MiB").
+	MaxSwapOutPerSec *string `yaml:"maxSwapOutPerSec,omitempty" json:"maxSwapOutPerSec,omitempty" jsonschema:"nullable"`
+	// MaxPageFaultRate is the page-fault rate (faults/sec) threshold that blocks shrinking.
+	MaxPageFaultRate *uint64 `yaml:"maxPageFaultRate,omitempty" json:"maxPageFaultRate,omitempty" jsonschema:"nullable"`
+	// ShrinkReserveBytes is the minimum MemAvailable margin required before shrinking (e.g., "128MiB").
+	ShrinkReserveBytes *string `yaml:"shrinkReserveBytes,omitempty" json:"shrinkReserveBytes,omitempty" jsonschema:"nullable"`
+	// SettleWindow is how long low pressure must persist before shrinking (e.g., "30s").
+	SettleWindow *string `yaml:"settleWindow,omitempty" json:"settleWindow,omitempty" jsonschema:"nullable"`
 	// MaxContainerCPU is the container CPU usage threshold that blocks shrinking (percentage, e.g., 10.0).
 	MaxContainerCPU *float64 `yaml:"maxContainerCPU,omitempty" json:"maxContainerCPU,omitempty" jsonschema:"nullable"`
 	// MaxContainerIO is the container I/O rate threshold that blocks shrinking (e.g., "100MiB").
 	MaxContainerIO *string `yaml:"maxContainerIO,omitempty" json:"maxContainerIO,omitempty" jsonschema:"nullable"`
+	// FloorStaleness is how long a learned floor stays valid before re-learning (e.g., "24h"). 0 = never stale.
+	FloorStaleness *string `yaml:"floorStaleness,omitempty" json:"floorStaleness,omitempty" jsonschema:"nullable"`
+	// EnableTrendDetection enables pre-emptive grow on rising PSI trend (avg10 > 1.5*avg60).
+	EnableTrendDetection *bool `yaml:"enableTrendDetection,omitempty" json:"enableTrendDetection,omitempty" jsonschema:"nullable"`
 }
 
 // AutoPause configures automatic VM pausing when idle for the VZ backend.
