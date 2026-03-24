@@ -122,3 +122,5 @@ require (
 	// gomodjail:unconfined
 	gvisor.dev/gvisor v0.0.0-20240916094835-a174eb65023f // indirect
 )
+
+replace github.com/mdlayher/vsock => github.com/Fred78290/vsock v0.0.1

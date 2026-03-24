@@ -10,5 +10,7 @@ import (
 func addRootCommands(rootCmd *cobra.Command) {
 	rootCmd.AddCommand(
 		newFakeCloudInitCommand(),
+		newDaemonCommand(),
+		newInstallLaunchdCommand(),
 	)
 }

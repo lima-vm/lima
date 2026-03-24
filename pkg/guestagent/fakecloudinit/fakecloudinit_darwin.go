@@ -7,9 +7,12 @@
 package fakecloudinit
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -38,6 +41,9 @@ func Run(ctx context.Context) error {
 	}
 	if err := runBootScripts(ctx); err != nil {
 		errs = append(errs, fmt.Errorf("failed to run boot scripts: %w", err))
+	}
+	if err := installGuestAgent(ctx, mnt); err != nil {
+		errs = append(errs, fmt.Errorf("failed to install guest agent: %w", err))
 	}
 	return errors.Join(errs...)
 }
@@ -360,6 +366,106 @@ func setResolvConf(ctx context.Context, resolvConf *cloudinittypes.ResolvConf) e
 		return fmt.Errorf("failed to execute command %v: %w (output=%q)", cmd.Args, err, output)
 	}
 	return nil
+}
+
+// installGuestAgent installs the guest agent binary from cidata and sets up
+// a launchd LaunchDaemon so the agent runs persistently inside the macOS guest.
+func installGuestAgent(ctx context.Context, mnt string) error {
+	envPath := filepath.Join(mnt, "lima.env")
+	env, err := loadEnvFile(envPath)
+	if err != nil {
+		return fmt.Errorf("failed to load %q: %w", envPath, err)
+	}
+
+	installPrefix := env["LIMA_CIDATA_GUEST_INSTALL_PREFIX"]
+	if installPrefix == "" {
+		installPrefix = "/usr/local"
+	}
+
+	binDir := filepath.Join(installPrefix, "bin")
+	if err := os.MkdirAll(binDir, 0o755); err != nil {
+		return fmt.Errorf("failed to create %q: %w", binDir, err)
+	}
+
+	src := filepath.Join(mnt, "lima-guestagent")
+	dst := filepath.Join(binDir, "lima-guestagent")
+
+	srcHash, err := fileSHA256(src)
+	if err != nil {
+		return fmt.Errorf("failed to hash %q: %w", src, err)
+	}
+	dstHash, _ := fileSHA256(dst)
+	guestAgentUpdated := !bytes.Equal(srcHash, dstHash)
+	if guestAgentUpdated {
+		srcData, err := os.ReadFile(src)
+		if err != nil {
+			return fmt.Errorf("failed to read %q: %w", src, err)
+		}
+		if err := os.WriteFile(dst, srcData, 0o755); err != nil {
+			return fmt.Errorf("failed to write %q: %w", dst, err)
+		}
+		logrus.Infof("Installed %q", dst)
+	} else {
+		logrus.Infof("%q is up-to-date", dst)
+	}
+
+	vsockPort := env["LIMA_CIDATA_VSOCK_PORT"]
+	if vsockPort == "" || vsockPort == "0" {
+		logrus.Info("LIMA_CIDATA_VSOCK_PORT is not set, skipping guest agent daemon installation")
+		return nil
+	}
+
+	debug := env["LIMA_CIDATA_DEBUG"]
+	args := []string{"install-launchd",
+		"--vsock-port", vsockPort,
+		fmt.Sprintf("--debug=%s", debug),
+	}
+	if guestAgentUpdated {
+		args = append(args, "--guestagent-updated")
+	}
+	cmd := exec.CommandContext(ctx, dst, args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	logrus.Infof("Executing command: %v", cmd.Args)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to execute command %v: %w", cmd.Args, err)
+	}
+	return nil
+}
+
+// fileSHA256 returns the SHA-256 digest of the file at path.
+func fileSHA256(path string) ([]byte, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return nil, err
+	}
+	return h.Sum(nil), nil
+}
+
+// loadEnvFile reads a KEY=VALUE file (one per line) and returns a map.
+func loadEnvFile(path string) (map[string]string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	env := make(map[string]string)
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		k, v, ok := strings.Cut(line, "=")
+		if !ok {
+			continue
+		}
+		env[k] = v
+	}
+	return env, nil
 }
 
 func runBootScripts(ctx context.Context) error {
