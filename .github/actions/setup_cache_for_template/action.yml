@@ -32,7 +32,7 @@ runs:
   - name: "Cache ${{ steps.cache-params-from-template.outputs.image-path }}"
     if: ${{ steps.cache-params-from-template.outputs.image-key != '' }}
     # avoid using `~` in path that will be expanded to platform specific home directory
-    uses: actions/cache@v4
+    uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7  # v5.0.4
     with:
       path: ${{ steps.cache-params-from-template.outputs.image-path }}
       key: ${{ steps.cache-params-from-template.outputs.image-key }}
@@ -41,7 +41,7 @@ runs:
   - name: "Cache ${{ steps.cache-params-from-template.outputs.kernel-path }}"
     if: ${{ steps.cache-params-from-template.outputs.kernel-key != '' }}
     # avoid using `~` in path that will be expanded to platform specific home directory
-    uses: actions/cache@v4
+    uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7  # v5.0.4
     with:
       path: ${{ steps.cache-params-from-template.outputs.kernel-path }}
       key: ${{ steps.cache-params-from-template.outputs.kernel-key }}
@@ -50,7 +50,7 @@ runs:
   - name: "Cache ${{ steps.cache-params-from-template.outputs.initrd-path }}"
     if: ${{ steps.cache-params-from-template.outputs.initrd-key != '' }}
     # avoid using `~` in path that will be expanded to platform specific home directory
-    uses: actions/cache@v4
+    uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7  # v5.0.4
     with:
       path: ${{ steps.cache-params-from-template.outputs.initrd-path }}
       key: ${{ steps.cache-params-from-template.outputs.initrd-key }}
@@ -58,7 +58,7 @@ runs:
 
   - name: "Cache ${{ steps.cache-params-from-template.outputs.containerd-key }}"
     if: ${{ steps.cache-params-from-template.outputs.containerd-key != '' }}
-    uses: actions/cache@v4
+    uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7  # v5.0.4
     with:
       path: ${{ steps.cache-params-from-template.outputs.containerd-path }}
       key: ${{ steps.cache-params-from-template.outputs.containerd-key }}
