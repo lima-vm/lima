@@ -44,9 +44,9 @@ See also the [Contributing](../contributing) page.
 | Anders F Björklund | Individual   | Committer | [@afbjorklund](https://github.com/afbjorklund)   | [5981 D2E8 4E4B 9197 95B3  2174 DC05 CAD2 E73B 0C92](https://github.com/afbjorklund.gpg)  |
 | Balaji Vijayakumar | Thoughtworks | Committer | [@balajiv113](https://github.com/balajiv113)     | [80E1 01FE 5C89 FCF6 6171  72C8 377C 6A63 934B 8E6E](https://github.com/balajiv113.gpg)   |
 | Norio Nomura       | Individual   | Committer | [@norio-nomura](https://github.com/norio-nomura) | [0010 36FA 2504 DBFF 37BA  2EF8 D4A7 318E B7F7 138D](https://github.com/norio-nomura.gpg) |
+| Ansuman Sahoo      | Individual   | Committer | [@unsuman](https://github.com/unsuman)           | [0AA6 D4D0 E084 D8B9 36B7  68D8 FF58 56B9 C216 D800](https://github.com/unsuman.gpg)      |
 | Oleksandr Redko    | Individual   | Reviewer  | [@alexandear](https://github.com/alexandear)     | [50F8 9811 D8D8 3E79 3E7E  0680 A947 E3F1 1A61 2A57](https://github.com/alexandear.gpg)   |
 | Nir Soffer         | IBM          | Reviewer  | [@nirs](https://github.com/nirs)                 | [6F81 B717 51A1 4171 4C09  AF19 4C67 29D7 B2DD 8AFF](https://github.com/nirs.gpg)         |
-| Ansuman Sahoo      | Individual   | Reviewer  | [@unsuman](https://github.com/unsuman)           | [0AA6 D4D0 E084 D8B9 36B7  68D8 FF58 56B9 C216 D800](https://github.com/unsuman.gpg)      |
 
 ### Emeritus maintainers
 (No emeritus maintainers yet)
