@@ -187,6 +187,8 @@ jobs:
         git config --global core.autocrlf false
         git config --global core.eol lf
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      with:
+        submodules: true
     - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417  # v6.3.0
       with:
         go-version: stable
@@ -215,6 +217,8 @@ jobs:
         git config --global core.autocrlf false
         git config --global core.eol lf
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      with:
+        submodules: true
     - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417  # v6.3.0
       with:
         go-version: stable
@@ -240,6 +244,8 @@ jobs:
     timeout-minutes: 120
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      with:
+        submodules: true
     - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417  # v6.3.0
       with:
         go-version: stable
@@ -312,6 +318,8 @@ jobs:
         - ../hack/test-templates/test-misc.yaml  # TODO: merge net-user-v2 into test-misc
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      with:
+        submodules: true
     - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417  # v6.3.0
       with:
         go-version: stable
@@ -446,6 +454,8 @@ jobs:
     timeout-minutes: 120
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      with:
+        submodules: true
     - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417  # v6.3.0
       with:
         go-version: stable
@@ -548,6 +558,8 @@ jobs:
       # --cpus=1 is needed for running vz on GHA: https://github.com/lima-vm/lima/pull/1511#issuecomment-1574937888
       run: echo "LIMACTL_CREATE_ARGS=${LIMACTL_CREATE_ARGS} --cpus 1 --memory 1" >>$GITHUB_ENV
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      with:
+        submodules: true
     - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417  # v6.3.0
       with:
         go-version: stable
