@@ -378,8 +378,8 @@ github.com/hexops/gotextdiff v1.0.3/go.mod h1:pSWU5MAI3yDq+fZBTazCSJysOMbxWL1BSo
 github.com/ianlancetaylor/demangle v0.0.0-20181102032728-5e5cf60278f6/go.mod h1:aSSvb/t6k1mPoxDqO4vJh6VOCGPwU4O0C2/Eqndh1Sc=
 github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2s0bqwp9tc8=
 github.com/inconshreveable/mousetrap v1.1.0/go.mod h1:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
-github.com/jandubois/nobin v0.8.0 h1:nJ4UDkh14goFC19EqayuH5DtdqjWI0QugZss262HXus=
-github.com/jandubois/nobin v0.8.0/go.mod h1:qRcr5FDrIKDLCS6TFd7LzH6j+SDRjElpmmhVQeZLTWM=
+github.com/jandubois/nobin v0.9.0 h1:pR1raZ3nxL6G3ISM2tyeJj8sDKB7PtEBqXDiZ4+Z2mk=
+github.com/jandubois/nobin v0.9.0/go.mod h1:wQdjSToe3ziBcIX2u81FdUHUNHvCYz2HOazlNFnkl1I=
 github.com/jgautheron/goconst v1.8.2 h1:y0XF7X8CikZ93fSNT6WBTb/NElBu9IjaY7CCYQrCMX4=
 github.com/jgautheron/goconst v1.8.2/go.mod h1:A0oxgBCHy55NQn6sYpO7UdnA9p+h7cPtoOZUmvNIako=
 github.com/jhump/protoreflect v1.15.1 h1:HUMERORf3I3ZdX05WaQ6MIpd/NJ434hTp5YiKgfCL6c=
