@@ -27,7 +27,7 @@ jobs:
     timeout-minutes: 30
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
-    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417  # v6.3.0
+    - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c  # v6.4.0
       with:
         go-version: stable
     - name: Install protoc and Go plugins
@@ -100,7 +100,7 @@ jobs:
         git config --global core.autocrlf false
         git config --global core.eol lf
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
-    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417  # v6.3.0
+    - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c  # v6.4.0
       with:
         go-version: stable
     - id: golangci-lint-version
@@ -136,7 +136,7 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y --no-install-recommends qemu-utils
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
-    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417  # v6.3.0
+    - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c  # v6.4.0
       with:
         go-version: ${{ matrix.go-version }}
     - name: Unit tests
@@ -187,7 +187,7 @@ jobs:
         git config --global core.autocrlf false
         git config --global core.eol lf
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
-    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417  # v6.3.0
+    - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c  # v6.4.0
       with:
         go-version: stable
     - name: Unit tests
@@ -215,7 +215,7 @@ jobs:
         git config --global core.autocrlf false
         git config --global core.eol lf
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
-    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417  # v6.3.0
+    - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c  # v6.4.0
       with:
         go-version: stable
     - name: Make
@@ -240,7 +240,7 @@ jobs:
     timeout-minutes: 120
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
-    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417  # v6.3.0
+    - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c  # v6.4.0
       with:
         go-version: stable
     - name: Unit tests
@@ -312,7 +312,7 @@ jobs:
         - ../hack/test-templates/test-misc.yaml  # TODO: merge net-user-v2 into test-misc
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
-    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417  # v6.3.0
+    - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c  # v6.4.0
       with:
         go-version: stable
     - name: Make
@@ -359,7 +359,7 @@ jobs:
         # msg="treating lima version \"ea336ae\" from \"/Users/runner/.lima-bats/dummy/lima-version\" as very latest release"
         fetch-depth: 0
         submodules: true
-    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417  # v6.3.0
+    - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c  # v6.4.0
       with:
         go-version: stable
     - name: Make
@@ -411,7 +411,7 @@ jobs:
         fetch-depth: 0
         ref: ${{ github.event.pull_request.head.sha }}
         submodules: true
-    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417  # v6.3.0
+    - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c  # v6.4.0
       with:
         go-version: stable
     - name: Make
@@ -446,7 +446,7 @@ jobs:
     timeout-minutes: 120
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
-    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417  # v6.3.0
+    - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c  # v6.4.0
       with:
         go-version: stable
     - name: Make
@@ -509,7 +509,7 @@ jobs:
         path: homebrew-core
         fetch-depth: 0
         filter: tree:0
-    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417  # v6.3.0
+    - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c  # v6.4.0
       with:
         go-version: stable
     - name: Cache image used by ${{ matrix.oldver }}/examples/ubuntu-lts.yaml
@@ -548,7 +548,7 @@ jobs:
       # --cpus=1 is needed for running vz on GHA: https://github.com/lima-vm/lima/pull/1511#issuecomment-1574937888
       run: echo "LIMACTL_CREATE_ARGS=${LIMACTL_CREATE_ARGS} --cpus 1 --memory 1" >>$GITHUB_ENV
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
-    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417  # v6.3.0
+    - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c  # v6.4.0
       with:
         go-version: stable
     - name: Make
@@ -581,7 +581,7 @@ jobs:
     timeout-minutes: 30
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
-    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417  # v6.3.0
+    - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c  # v6.4.0
       with:
         go-version: stable
     - name: Install gomodjail
@@ -608,7 +608,7 @@ jobs:
     timeout-minutes: 30
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
-    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417  # v6.3.0
+    - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c  # v6.4.0
       with:
         go-version: stable
     - run: GOOS=netbsd go build ./...
@@ -620,7 +620,7 @@ jobs:
     timeout-minutes: 30
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
-    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417  # v6.3.0
+    - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c  # v6.4.0
       with:
         go-version: stable
     - name: Make
