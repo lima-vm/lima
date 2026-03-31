@@ -3,15 +3,23 @@
 # SPDX-FileCopyrightText: Copyright The Lima Authors
 # SPDX-License-Identifier: Apache-2.0
 #
-# This script validates that lima-<VERSION>-Darwin-arm64.tar.gz
+# This script validates that lima-<VERSION>-Darwin-arm64.tar.gz (or .zip)
 # contains lima-guestagent.Linux-aarch64
 # but does not contain share/lima/lima-guestagent.Linux-x86_64
 
 set -eu -o pipefail
 
+list_archive() {
+	if [[ $1 == *.zip ]]; then
+		zipinfo -1 "$1"
+	else
+		tar tzf "$1"
+	fi
+}
+
 must_contain() {
 	tmp="$(mktemp)"
-	tar tzf "$1" >"$tmp"
+	list_archive "$1" >"$tmp"
 	if ! grep -q "$2" "$tmp"; then
 		echo >&2 "ERROR: $1 must contain $2"
 		cat "$tmp"
@@ -23,7 +31,7 @@ must_contain() {
 
 must_not_contain() {
 	tmp="$(mktemp)"
-	tar tzf "$1" >"$tmp"
+	list_archive "$1" >"$tmp"
 	if grep -q "$2" "$tmp"; then
 		echo >&2 "ERROR: $1 must not contain $2"
 		cat "$tmp"
@@ -37,16 +45,16 @@ validate_artifact() {
 	FILE="$1"
 	MYARCH="x86_64"
 	OTHERARCH="aarch64"
-	if [[ $FILE == *"aarch64"* || $FILE == *"arm64"* ]]; then
+	if [[ $FILE == *"aarch64"* || $FILE == *"arm64"* || $FILE == *"ARM64"* ]]; then
 		MYARCH="aarch64"
 		OTHERARCH="x86_64"
 	fi
 	if [[ $FILE == *"go-mod-vendor.tar.gz" ]]; then
 		: NOP
-	elif [[ $FILE == *"lima-additional-guestagents"*".tar.gz" ]]; then
+	elif [[ $FILE == *"lima-additional-guestagents"*".tar.gz" || $FILE == *"lima-additional-guestagents"*".zip" ]]; then
 		must_not_contain "$FILE" "lima-guestagent.Linux-$MYARCH"
 		must_contain "$FILE" "lima-guestagent.Linux-$OTHERARCH"
-	elif [[ $FILE == *"lima-"*".tar.gz" ]]; then
+	elif [[ $FILE == *"lima-"*".tar.gz" || $FILE == *"lima-"*".zip" ]]; then
 		must_not_contain "$FILE" "lima-guestagent.Linux-$OTHERARCH"
 		must_contain "$FILE" "lima-guestagent.Linux-$MYARCH"
 	else
