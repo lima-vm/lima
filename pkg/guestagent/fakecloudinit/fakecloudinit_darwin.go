@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -261,6 +262,18 @@ func createUser(ctx context.Context, u *cloudinittypes.User) error {
 	logrus.Infof("Executing command: %v", cmd.Args)
 	if err = cmd.Run(); err != nil {
 		return fmt.Errorf("failed to execute command %v: %w", cmd.Args, err)
+	}
+
+	// Look up the actual UID assigned by the system, as it may differ from
+	// the requested UID (e.g., when macOS Setup Assistant already created
+	// the user with a different UID).
+	if sysUser, err := user.Lookup(u.Name); err != nil {
+		logrus.WithError(err).Warnf("Failed to look up user %q, using requested UID %d", u.Name, uid)
+	} else if actualUID, err := strconv.Atoi(sysUser.Uid); err != nil {
+		logrus.WithError(err).Warnf("Failed to parse actual UID %q for user %q, using requested UID %d", sysUser.Uid, u.Name, uid)
+	} else if actualUID != uid {
+		logrus.Warnf("Requested UID %d for user %q, but the system assigned UID %d; using the actual UID", uid, u.Name, actualUID)
+		uid = actualUID
 	}
 
 	// sysadminctl does not create the custom home directory
