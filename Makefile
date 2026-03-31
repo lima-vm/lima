@@ -652,6 +652,11 @@ ARTIFACT_FILE_EXTENSIONS := .tar.gz
 ifeq ($(GOOS),darwin)
 # returns the architecture name converted from GOARCH to macOS's uname -m.
 to_uname_m = $(foreach arch,$(1),$(shell echo $(arch) | sed 's/amd64/x86_64/'))
+else ifeq ($(GOOS),windows)
+# Conforms to %PROCESSOR_ARCHITECTURE%
+to_uname_m = $(foreach arch,$(1),$(shell echo $(arch) | sed 's/amd64/AMD64/' | sed 's/arm64/ARM64/'))
+# Windows artifacts use zip instead of tar.gz.
+ARTIFACT_FILE_EXTENSIONS := .zip
 else ifeq ($(GOOS),linux)
 # CC is required for cross-compiling on Linux.
 # On Debian, Ubuntu, and related distributions, compilers are named like x86_64-linux-gnu-gcc
@@ -665,9 +670,6 @@ CC := $(shell \
 	else \
 		echo gcc; \
 	fi)
-else ifeq ($(GOOS),windows)
-# artifact in zip format also provided for Windows.
-ARTIFACT_FILE_EXTENSIONS += .zip
 endif
 
 # artifacts: artifacts-$(GOOS)
@@ -722,6 +724,7 @@ goarchs_native_and_others = $(GOHOSTARCH) $(filter-out $(GOHOSTARCH),$(artifact_
 artifacts: $$(addprefix artifact-$$(GOOS)-,$$(goarchs_native_and_others))
 artifacts-darwin: $$(call generate_manpages_if_needed,darwin) $$(addprefix artifact-darwin-,$$(goarchs_native_and_others))
 artifacts-linux: $$(call generate_manpages_if_needed,linux) $$(addprefix artifact-linux-,$$(goarchs_native_and_others))
+# FIXME: remove shell scripts from Windows artifacts?
 artifacts-windows: $$(call generate_manpages_if_needed,windows) $$(addprefix artifact-windows-,$$(goarchs_native_and_others))
 
 # set variables for artifact variant targets.

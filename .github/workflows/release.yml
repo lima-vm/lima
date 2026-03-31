@@ -79,15 +79,17 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y gcc-x86-64-linux-gnu gcc-aarch64-linux-gnu
-    - name: "Compile binaries"
+    - name: "Compile binaries (Linux)"
       run: make artifacts-linux
+    - name: "Compile binaries (Windows)"
+      run: make artifacts-windows
     - name: "Make misc artifacts"
       run: make artifacts-misc
-    - name: "Validate artifactts"
-      run: ./hack/validate-artifact.sh ./_artifacts/*.tar.gz
+    - name: "Validate artifacts"
+      run: ./hack/validate-artifact.sh ./_artifacts/*.tar.gz ./_artifacts/*.zip
     - name: "SHA256SUMS"
       run: |
-        ( cd _artifacts; sha256sum *.tar.gz ) | tee /tmp/SHA256SUMS
+        ( cd _artifacts; sha256sum *.tar.gz *.zip ) | tee /tmp/SHA256SUMS
         mv /tmp/SHA256SUMS _artifacts/SHA256SUMS
     - name: "The sha256sum of the SHA256SUMS file"
       run: (cd _artifacts; sha256sum SHA256SUMS)
