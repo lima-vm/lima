@@ -2,12 +2,12 @@
 images:
 # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
 
-- location: "https://cloud.debian.org/images/cloud/bullseye/20260224-2398/debian-11-genericcloud-amd64-20260224-2398.qcow2"
+- location: "https://cloud.debian.org/images/cloud/bullseye/20260317-2419/debian-11-genericcloud-amd64-20260317-2419.qcow2"
   arch: "x86_64"
-  digest: "sha512:72ea2b99c912b1c01aae342945d61065de797d39a4f7c6cf252fe80a83cb54eae36ec8afe7b6a2eb77317a481a17ebf13e26939dba673e90f7cc551f93108866"
-- location: "https://cloud.debian.org/images/cloud/bullseye/20260224-2398/debian-11-genericcloud-arm64-20260224-2398.qcow2"
+  digest: "sha512:5854633e64b6fbd5d237a5104e6faad6ca608465c5ec2902d9387315e780a605e76dfa8074a713d2490d8618aea50ad38607445634f8661a3f08d7357b5274a8"
+- location: "https://cloud.debian.org/images/cloud/bullseye/20260317-2419/debian-11-genericcloud-arm64-20260317-2419.qcow2"
   arch: "aarch64"
-  digest: "sha512:39551bc6b64b44a64933ee5073748fecd0f6ac7e6cbbcf33d3bb2a5aefc687beaf6cb2ebc4bdc004f440a8f2a2746fb750707f461f85d388bdc65b21b92b624b"
+  digest: "sha512:483d9e6865a8534fe93aeb484df353c3eebcaadd54813abb1e8cb4f1baa6312cd3a3e0d5e01c4d310a5e466759557355e1c6b62112dcebb8f0b0ce7662c05df6"
 - location: "https://cloud.debian.org/images/cloud/bullseye/20250703-2162/debian-11-genericcloud-ppc64el-20250703-2162.qcow2"
   arch: "ppc64le"
   digest: "sha512:71f0039d3ae46504d189f009f91fb9fa9873153d250969b56a4656d75caec17356705237d7926153e2c10d9251dc4909ec34a2afa7256a9359df279cbde8d679"
