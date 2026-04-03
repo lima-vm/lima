@@ -111,20 +111,33 @@ function rocky_image_filename_from_url_spec() {
 function rocky_latest_image_entry_for_url_spec() {
 	local url_spec=$1 arch major_version_url_spec major_version_image_directory downloaded_page links_in_page latest_minor_version_info
 	arch=$(jq -r '.arch' <<<"${url_spec}")
-	# to detect minor version updates, we need to get the major version URL
-	major_version_url_spec=$(jq -e -r '.path_version = .major_version' <<<"${url_spec}")
+	# to detect minor version updates, find the latest minor version directory on the mirror root.
+	# Rocky 10 requires explicit minor version paths (e.g., 10.1) as the major version path (10) is unreliable.
+	local major_version latest_minor
+	major_version=$(jq -r '.major_version' <<<"${url_spec}")
+	latest_minor=$(curl -s "https://dl.rockylinux.org/pub/rocky/" | grep -oP "(?<=href=[\"'])${major_version}\.[0-9]+(?=/[\"'])" | sort -V | tail -1)
+	# Use the discovered minor version, falling back to the major version if discovery fails
+	major_version_url_spec=$(jq -e -r --arg v "${latest_minor:-$major_version}" '.path_version = $v' <<<"${url_spec}")
 	major_version_image_directory=$(rocky_image_directory_from_url_spec "${major_version_url_spec}")
 	downloaded_page=$(download_to_cache "${major_version_image_directory}")
 	if command -v htmlq >/dev/null; then
 		links_in_page=$(htmlq 'pre a' --attribute href <"${downloaded_page}")
 	elif command -v pup >/dev/null; then
 		links_in_page=$(pup 'pre a attr{href}' <"${downloaded_page}")
-	else
-		error_exit "Please install 'htmlq' or 'pup' to list images from ${major_version_image_directory}"
+	fi
+
+	# Fallback: If pup/htmlq failed to find links (e.g. mirror HTML structure changed),
+	# use grep to extract all href targets from the page.
+	if [[ -z ${links_in_page} ]]; then
+		links_in_page=$(grep -oE 'href="[^"]+"' "${downloaded_page}" | sed -E 's/href="([^"]+)"/\1/')
+	fi
+
+	if [[ -z ${links_in_page} ]]; then
+		error_exit "Failed to list images from ${major_version_image_directory}"
 	fi
 	latest_minor_version_info=$(jq -e -Rrs --argjson spec "${url_spec}" '
 		[
-			split("\n").[] |
+			split("\n")[] |
 			capture(
 				"^Rocky-\($spec.major_version)-\($spec.target_vendor)-\($spec.type)" +
 				"-(?<major_minor_version>\($spec.major_version)\\.\\d+)" +
@@ -132,7 +145,7 @@ function rocky_latest_image_entry_for_url_spec() {
 				;"x"
 			) |
 			.version_number_array = ([.major_minor_version | scan("\\d+") | tonumber])
-		] | sort_by(.version_number_array, .date_and_ci_job_id) | last
+		] | sort_by([.version_number_array, .date_and_ci_job_id]) | last
 	' <<<"${links_in_page}")
 	[[ -n ${latest_minor_version_info} ]] || return
 	local newer_url_spec location sha256sum_location downloaded_sha256sum filename digest
@@ -142,7 +155,8 @@ function rocky_latest_image_entry_for_url_spec() {
 	sha256sum_location="${location}.CHECKSUM"
 	downloaded_sha256sum=$(download_to_cache "${sha256sum_location}")
 	filename=$(rocky_image_filename_from_url_spec "${newer_url_spec}")
-	digest="sha256:$(awk "/SHA256 \(${filename}\) =/{print \$4}" "${downloaded_sha256sum}")"
+	# We use 'head -n 1' to ensure we only get one hash if the checksum file has duplicates
+	digest="sha256:$(awk "/SHA256 \(${filename}\) =/{print \$4}" "${downloaded_sha256sum}" | head -n 1)"
 	[[ -n ${digest} ]] || error_exit "Failed to get the SHA256 digest for ${filename}"
 	json_vars location arch digest
 }
