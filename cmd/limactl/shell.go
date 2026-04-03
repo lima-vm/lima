@@ -536,12 +536,8 @@ func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype
 					rsyncToTempDir = true
 				}
 			}
-			pager := os.Getenv("PAGER")
-			pager = strings.TrimSpace(pager)
-			if pager == "" {
-				pager = "less"
-			}
-			pagerArgs := strings.Fields(pager)
+
+			pagerArgs := pagerCommand()
 			lessCmd := exec.CommandContext(ctx, pagerArgs[0], pagerArgs[1:]...)
 
 			pipeIn, err := lessCmd.StdinPipe()
@@ -597,6 +593,40 @@ func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype
 			}
 		}
 	}
+}
+
+// pagerCommand returns the pager command and arguments to use for viewing colored diff output.
+func pagerCommand() []string {
+	pager := strings.TrimSpace(os.Getenv("PAGER"))
+	if pager == "" {
+		return []string{"less", "-R"}
+	}
+	args := strings.Fields(pager)
+	if filepath.Base(args[0]) != "less" {
+		return args
+	}
+	if lessHasRawColorFlag(args[1:]) {
+		return args
+	}
+	if lessHasRawColorFlag(strings.Fields(os.Getenv("LESS"))) {
+		return args
+	}
+	return append(args, "-R")
+}
+
+func lessHasRawColorFlag(flags []string) bool {
+	for _, f := range flags {
+		switch f {
+		case "-R", "-r", "--RAW-CONTROL-CHARS", "--raw-control-chars":
+			return true
+		}
+		if strings.HasPrefix(f, "-") && !strings.HasPrefix(f, "--") {
+			if strings.ContainsAny(f, "Rr") {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func executeSSHForRsync(ctx context.Context, sshCmd exec.Cmd, sshLocalPort int, sshAddress, command string) error {
