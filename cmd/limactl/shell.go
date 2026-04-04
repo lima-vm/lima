@@ -630,13 +630,12 @@ func lessHasRawColorFlag(flags []string) bool {
 }
 
 func executeSSHForRsync(ctx context.Context, sshCmd exec.Cmd, sshLocalPort int, sshAddress, command string) error {
-	sshCmd.Args = append(sshCmd.Args,
-		"-p", strconv.Itoa(sshLocalPort),
-		sshAddress,
-	)
+	args := make([]string, len(sshCmd.Args), len(sshCmd.Args)+3)
+	copy(args, sshCmd.Args)
+	args = append(args, "-p", strconv.Itoa(sshLocalPort), sshAddress)
 
 	// Skip Args[0] (program name) to avoid duplication
-	sshRmCmd := exec.CommandContext(ctx, sshCmd.Path, append(sshCmd.Args[1:], command)...)
+	sshRmCmd := exec.CommandContext(ctx, sshCmd.Path, append(args[1:], command)...)
 	if err := sshRmCmd.Run(); err != nil {
 		return err
 	}
