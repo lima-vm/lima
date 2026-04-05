@@ -28,6 +28,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/instance"
 	"github.com/lima-vm/lima/v2/pkg/ioutilx"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/localpathutil"
 	"github.com/lima-vm/lima/v2/pkg/networks/reconcile"
 	"github.com/lima-vm/lima/v2/pkg/sshutil"
 	"github.com/lima-vm/lima/v2/pkg/store"
@@ -241,23 +242,27 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	if syncHostWorkdir {
 		destRsyncDir = *inst.Config.User.Home + hostCurrentDir
 	}
+	hostHomeDir, err := os.UserHomeDir()
+	if err == nil && runtime.GOOS == "windows" {
+		hostHomeDir, err = mountDirFromWindowsDir(ctx, inst, hostHomeDir)
+	}
+	if err != nil {
+		logrus.WithError(err).Warn("failed to get the home directory")
+		hostHomeDir = ""
+	}
+
 	switch {
 	case workDir != "":
 		changeDirCmd = fmt.Sprintf("cd %s || exit 1", shellescape.Quote(workDir))
-		// FIXME: check whether y.Mounts contains the home, not just len > 0
-	case len(inst.Config.Mounts) > 0 || inst.VMType == limatype.WSL2:
+	case mountsContainPath(inst.Config.Mounts, hostCurrentDir) || inst.VMType == limatype.WSL2:
 		changeDirCmd = fmt.Sprintf("cd %s", shellescape.Quote(hostCurrentDir))
-		hostHomeDir, err := os.UserHomeDir()
-		if err == nil && runtime.GOOS == "windows" {
-			hostHomeDir, err = mountDirFromWindowsDir(ctx, inst, hostHomeDir)
-		}
-		if err == nil {
+		if hostHomeDir != "" {
 			changeDirCmd = fmt.Sprintf("%s || cd %s", changeDirCmd, shellescape.Quote(hostHomeDir))
-		} else {
-			logrus.WithError(err).Warn("failed to get the home directory")
 		}
 	case syncHostWorkdir:
 		changeDirCmd = fmt.Sprintf("cd %s", shellescape.Quote(destRsyncDir))
+	case hostHomeDir != "" && mountsContainPath(inst.Config.Mounts, hostHomeDir):
+		changeDirCmd = fmt.Sprintf("cd %s", shellescape.Quote(hostHomeDir))
 	default:
 		logrus.Debug("the host home does not seem mounted, so the guest shell will have a different cwd")
 	}
@@ -624,6 +629,28 @@ func lessHasRawColorFlag(flags []string) bool {
 			if strings.ContainsAny(f, "Rr") {
 				return true
 			}
+		}
+	}
+	return false
+}
+
+func mountsContainPath(mounts []limatype.Mount, path string) bool {
+	resolvedPath, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		resolvedPath = path
+	}
+	for _, m := range mounts {
+		loc, err := localpathutil.Expand(m.Location)
+		if err != nil {
+			continue
+		}
+		resolvedLoc, err := filepath.EvalSymlinks(loc)
+		if err != nil {
+			resolvedLoc = loc
+		}
+		if resolvedPath == resolvedLoc ||
+			resolvedLoc == string(os.PathSeparator) || strings.HasPrefix(resolvedPath, resolvedLoc+string(os.PathSeparator)) {
+			return true
 		}
 	}
 	return false
