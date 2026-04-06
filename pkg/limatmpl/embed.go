@@ -225,7 +225,8 @@ const mergeDocuments = `
 | $b | select((.base | tag == "!!str") and ($a.base | tag == "!!seq")) | .base = [ "" + .base ]
 
 # Delete base DNS entries if the template list is not empty.
-| $a | select(.dns) | del($b.dns, $c.dns)
+| $b | select($a.dns | length > 0) | del(.dns)
+| $c | select($a.dns | length > 0) | del(.dns)
 
 # Mark all new list fields with a custom tag. This is needed to avoid appending
 # newly copied lists to themselves again when we merge lists.
