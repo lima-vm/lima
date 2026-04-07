@@ -29,6 +29,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/driverutil"
 	"github.com/lima-vm/lima/v2/pkg/guestpatch/macos"
 	"github.com/lima-vm/lima/v2/pkg/hostagent/events"
+	"github.com/lima-vm/lima/v2/pkg/imgutil/nativeimgutil"
 	"github.com/lima-vm/lima/v2/pkg/imgutil/nativeimgutil/asifutil"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
@@ -193,7 +194,17 @@ func (l *LimaVzDriver) FillConfig(ctx context.Context, cfg *limatype.LimaYAML, _
 		vzOpts.Rosetta.BinFmt = ptr.Of(false)
 	}
 	if vzOpts.DiskImageFormat == nil {
-		vzOpts.DiskImageFormat = ptr.Of(raw.Type)
+		// Default to ASIF for macOS guests on macOS 26+, raw otherwise.
+		if cfg.OS != nil && *cfg.OS == limatype.DARWIN {
+			macOSProductVersion, err := osutil.ProductVersion()
+			if err == nil && !macOSProductVersion.LessThan(*semver.New("26.0.0")) {
+				vzOpts.DiskImageFormat = ptr.Of(asif.Type)
+			} else {
+				vzOpts.DiskImageFormat = ptr.Of(raw.Type)
+			}
+		} else {
+			vzOpts.DiskImageFormat = ptr.Of(raw.Type)
+		}
 	}
 
 	var opts any
@@ -375,7 +386,7 @@ func (l *LimaVzDriver) CreateDisk(ctx context.Context) error {
 //
 // The function creates the following files:
 // - `image.ipsw`: hardlink to `image` (".ipsw" suffix is required by VZMacOSInstaller)
-// - `disk`: ASIF disk
+// - `disk`: raw or ASIF disk (ASIF requires macOS 26+)
 //
 // After successful installation, `image.ipsw` and `image` are removed.
 func (l *LimaVzDriver) createDiskMacOSGuest(ctx context.Context) error {
@@ -385,8 +396,20 @@ func (l *LimaVzDriver) createDiskMacOSGuest(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("invalid disk size %q: %w", *l.Instance.Config.Disk, err)
 	}
-	if err := asifutil.NewASIF(disk, diskSize); err != nil {
-		return err
+
+	switch l.diskImageFormat {
+	case asif.Type:
+		if err := asifutil.NewASIF(disk, diskSize); err != nil {
+			return err
+		}
+	case raw.Type:
+		logrus.Debugf("Using %s disk image for macOS guest", l.diskImageFormat)
+		diskUtil := &nativeimgutil.NativeImageUtil{}
+		if err := diskUtil.CreateDisk(ctx, disk, diskSize); err != nil {
+			return fmt.Errorf("failed to create %s disk %q: %w", l.diskImageFormat, disk, err)
+		}
+	default:
+		return fmt.Errorf("unsupported disk format for macOS guest: %s", l.diskImageFormat)
 	}
 
 	if err = ensureIPSW(l.Instance.Dir); err != nil {
