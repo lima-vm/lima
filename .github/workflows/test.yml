@@ -334,6 +334,9 @@ jobs:
       if: matrix.template == '../hack/test-templates/test-misc.yaml'
     - name: "Show cache"
       run: ./hack/debug-cache.sh
+    - name: "Patch archlinux.yaml (workaround for https://github.com/lima-vm/lima/issues/4805)"
+      run: yq -i .upgradePackages=true templates/${{ matrix.template }
+      if: matrix.template == 'archlinux.yaml'
     - name: "Test"
       uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60  # v4.0.0
       with:
