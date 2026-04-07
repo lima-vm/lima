@@ -101,6 +101,18 @@ minimumLimaVersion: 1.0.2  # or later
 		"dns: [1.1.1.1]",
 	},
 	{
+		"dns is copied from base when template has no dns",
+		"",
+		"dns: [1.1.1.1, 8.8.8.8]",
+		"dns: [1.1.1.1, 8.8.8.8]",
+	},
+	{
+		"dns is copied from base when template has empty list",
+		"dns: []",
+		"dns: [1.1.1.1, 8.8.8.8]",
+		"dns: [1.1.1.1, 8.8.8.8]",
+	},
+	{
 		"Update comments on existing maps and lists that don't have comments yet",
 		`#
 additionalDisks:
