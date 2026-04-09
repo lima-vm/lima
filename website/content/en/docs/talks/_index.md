@@ -81,3 +81,14 @@ Read the [slides](https://www.NetBSD.org/gallery/presentations/leot/eurobsdcon20
 [Akihiro Suda](https://github.com/AkihiroSuda) presented Lima in the CNCF project pavilion.
 
 Read the [slides](https://github.com/AkihiroSuda/AkihiroSuda/blob/master/slides/2025/20251113%20%5BKubeCon%20NA%20Pavilion%5D%20Lima.pdf).
+
+## 2026
+### KubeCon + CloudNativeCon Europe 2026
+
+[Akihiro Suda](https://github.com/AkihiroSuda) and [Ansuman Sahoo](https://github.com/unsuman) presented "Lima Project Updates: Expanding the Focus To Hardening AI".
+
+Read the [slides](https://github.com/AkihiroSuda/AkihiroSuda/blob/master/slides/2026/20260325%20%5BKubeCon%20EU%5D%20Lima%20Project%20Updates.pdf) or watch the [video](https://www.youtube.com/watch?v=Cb5gGTFS5M0).
+
+They also presented Lima in the CNCF project pavilion.
+
+Read the [slides](https://github.com/AkihiroSuda/AkihiroSuda/blob/master/slides/2026/20260325%20%5BKubeCon%20EU%20Pavilion%5D%20Lima.pdf).
