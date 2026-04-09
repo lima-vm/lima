@@ -14,6 +14,7 @@ import (
 	"strconv"
 
 	"github.com/docker/go-units"
+	"github.com/inetaf/tcpproxy"
 	"github.com/lima-vm/go-qcow2reader/image/raw"
 	"github.com/sirupsen/logrus"
 
@@ -47,6 +48,12 @@ func Cmdline(inst *limatype.Instance) (*exec.Cmd, error) {
 		// First virtio-blk device is the boot disk
 		"--device", fmt.Sprintf("virtio-blk,path=%s,format=raw", filepath.Join(inst.Dir, filenames.Disk)),
 		"--device", fmt.Sprintf("virtio-blk,path=%s", filepath.Join(inst.Dir, filenames.CIDataISO)),
+		"--device", fmt.Sprintf("virtio-vsock,port=%d,socketURL=%s,connect", vSockPort, filepath.Join(inst.Dir, filenames.GuestAgentSock)),
+	}
+
+	if inst.Config.SSH.OverVsock != nil && *inst.Config.SSH.OverVsock {
+		sshVsockPath := filepath.Join(inst.Dir, sshVsockSock)
+		args = append(args, "--device", fmt.Sprintf("virtio-vsock,port=22,socketURL=%s,connect", sshVsockPath))
 	}
 
 	// Add additional disks
@@ -204,4 +211,51 @@ func startUsernet(ctx context.Context, inst *limatype.Instance) (*usernet.Client
 	}
 	subnetIP, _, err := net.ParseCIDR(networks.SlirpNetwork)
 	return usernet.NewClient(endpointSock, subnetIP), cancel, err
+}
+
+func startVsockForwarder(ctx context.Context, unixSockPath, hostAddress string) error {
+	// Test if the vsock port is open
+	var d net.Dialer
+	conn, err := d.DialContext(ctx, "unix", unixSockPath)
+	if err != nil {
+		return err
+	}
+	conn.Close()
+
+	var lc net.ListenConfig
+	l, err := lc.Listen(ctx, "tcp", hostAddress)
+	if err != nil {
+		return err
+	}
+	go func() {
+		<-ctx.Done()
+		l.Close()
+	}()
+	logrus.Infof("Started krunkit vsock forwarder: %s -> %s", hostAddress, unixSockPath)
+	go func() {
+		defer l.Close()
+		for {
+			conn, err := l.Accept()
+			if err != nil {
+				if errors.Is(err, net.ErrClosed) {
+					return
+				}
+				logrus.WithError(err).Errorf("krunkit vsock forwarder accept error: %v", err)
+			} else {
+				p := tcpproxy.DialProxy{
+					DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+						return d.DialContext(ctx, "unix", unixSockPath)
+					},
+				}
+				go p.HandleConn(conn)
+			}
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				continue
+			}
+		}
+	}()
+	return nil
 }
