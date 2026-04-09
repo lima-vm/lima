@@ -47,6 +47,7 @@ func Cmdline(inst *limatype.Instance) (*exec.Cmd, error) {
 		// First virtio-blk device is the boot disk
 		"--device", fmt.Sprintf("virtio-blk,path=%s,format=raw", filepath.Join(inst.Dir, filenames.Disk)),
 		"--device", fmt.Sprintf("virtio-blk,path=%s", filepath.Join(inst.Dir, filenames.CIDataISO)),
+		"--device", fmt.Sprintf("virtio-vsock,port=%d,socketURL=%s,connect", vSockPort, filepath.Join(inst.Dir, filenames.GuestAgentSock)),
 	}
 
 	// Add additional disks
