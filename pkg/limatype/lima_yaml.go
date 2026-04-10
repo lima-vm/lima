@@ -35,6 +35,7 @@ type LimaYAML struct {
 	Firmware              Firmware      `yaml:"firmware,omitempty" json:"firmware,omitempty"`
 	Audio                 Audio         `yaml:"audio,omitempty" json:"audio,omitempty"`
 	Video                 Video         `yaml:"video,omitempty" json:"video,omitempty"`
+	USB                   *bool         `yaml:"usb,omitempty" json:"usb,omitempty" jsonschema:"nullable"`
 	Provision             []Provision   `yaml:"provision,omitempty" json:"provision,omitempty"`
 	UpgradePackages       *bool         `yaml:"upgradePackages,omitempty" json:"upgradePackages,omitempty" jsonschema:"nullable"`
 	Containerd            Containerd    `yaml:"containerd,omitempty" json:"containerd,omitempty"`
