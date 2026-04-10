@@ -121,6 +121,7 @@ See <https://lima-vm.io/docs/examples/ai/>.
 ### Lost+found
 
 <details>
+<summary>Details</summary>
 <p>
 
 - `centos`: Removed in Lima v0.8.0, as CentOS 8 reached [EOL](https://www.centos.org/centos-linux-eol/).
