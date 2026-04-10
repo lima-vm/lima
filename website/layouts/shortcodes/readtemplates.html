@@ -39,7 +39,7 @@ safeHTML ) (.Get "lang") "" -}}
 {{ else }}
 {{ $file_content := ($.Scratch.Get "filepath" | os.ReadFile) }}
 {{ $file_content = replace $file_content "../docs/" $gh_docs }}
-{{- replace $file_content "./" $gh_templates -}}
+{{- replace $file_content "./" $gh_templates | markdownify -}}
 {{ end }}
 {{ else if eq (.Get "draft") "true" }}
 
