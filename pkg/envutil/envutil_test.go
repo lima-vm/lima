@@ -170,9 +170,8 @@ func TestFilterEnvironment(t *testing.T) {
 		result := filterEnvironmentWithLists(testEnv, []string{"FOO", "USER"}, nil)
 		expected := []string{"FOO=bar", "USER=testuser"}
 
-		// since FOO and USER are included in testEnv, the filtered result should not differ
-		// from what is in the testEnv
-		assert.Equal(t, len(result), len(testEnv))
+		// Only FOO and USER should be allowed through
+		assert.Equal(t, len(result), len(expected))
 		assert.Assert(t, containsAll(result, expected))
 	})
 

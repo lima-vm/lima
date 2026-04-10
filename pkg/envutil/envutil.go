@@ -141,6 +141,12 @@ func FilterEnvironment() []string {
 
 func filterEnvironmentWithLists(env, allowList, blockList []string) []string {
 	var filtered []string
+	allowed := func(name string) bool {
+		if len(allowList) > 0 {
+			return matchesAnyPattern(name, allowList)
+		}
+		return !matchesAnyPattern(name, blockList)
+	}
 
 	for _, envVar := range env {
 		parts := strings.SplitN(envVar, "=", 2)
@@ -150,17 +156,11 @@ func filterEnvironmentWithLists(env, allowList, blockList []string) []string {
 
 		name := parts[0]
 
-		if len(allowList) > 0 && matchesAnyPattern(name, allowList) {
+		if allowed(name) {
 			filtered = append(filtered, envVar)
-			continue
-		}
-
-		if matchesAnyPattern(name, blockList) {
+		} else {
 			logrus.Debugf("Blocked env variable %q", name)
-			continue
 		}
-
-		filtered = append(filtered, envVar)
 	}
 
 	return filtered
