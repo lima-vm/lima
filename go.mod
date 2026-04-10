@@ -34,7 +34,7 @@ require (
 	github.com/mdlayher/vsock v1.2.1 // gomodjail:unconfined
 	github.com/miekg/dns v1.1.72 // gomodjail:unconfined
 	github.com/mikefarah/yq/v4 v4.52.5
-	github.com/modelcontextprotocol/go-sdk v1.4.1
+	github.com/modelcontextprotocol/go-sdk v1.5.0
 	github.com/nxadm/tail v1.4.11 // gomodjail:unconfined
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58
@@ -112,7 +112,7 @@ require (
 	go.yaml.in/yaml/v4 v4.0.0-rc.3 // indirect
 	golang.org/x/crypto v0.50.0 // indirect
 	golang.org/x/mod v0.34.0 // indirect
-	golang.org/x/oauth2 v0.34.0 // indirect
+	golang.org/x/oauth2 v0.35.0 // indirect
 	golang.org/x/term v0.42.0 // indirect
 	golang.org/x/time v0.9.0 // indirect
 	golang.org/x/tools v0.43.0 // indirect
