@@ -30,6 +30,8 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/ptr"
 )
 
+const vSockPort = 2222
+
 type LimaKrunkitDriver struct {
 	Instance     *limatype.Instance
 	SSHLocalPort int
@@ -260,6 +262,7 @@ func (l *LimaKrunkitDriver) Create(_ context.Context) error {
 func (l *LimaKrunkitDriver) Info() driver.Info {
 	var info driver.Info
 	info.Name = vmType
+	info.VsockPort = vSockPort
 	if l.Instance != nil && l.Instance.Dir != "" {
 		info.InstanceDir = l.Instance.Dir
 	}
@@ -277,7 +280,7 @@ func (l *LimaKrunkitDriver) SSHAddress(_ context.Context) (string, error) {
 }
 
 func (l *LimaKrunkitDriver) ForwardGuestAgent() bool {
-	return true
+	return false
 }
 
 func (l *LimaKrunkitDriver) Delete(_ context.Context) error {
@@ -324,8 +327,10 @@ func (l *LimaKrunkitDriver) Unregister(_ context.Context) error {
 	return nil
 }
 
-func (l *LimaKrunkitDriver) GuestAgentConn(_ context.Context) (net.Conn, string, error) {
-	return nil, "unix", nil
+func (l *LimaKrunkitDriver) GuestAgentConn(ctx context.Context) (net.Conn, string, error) {
+	var d net.Dialer
+	conn, err := d.DialContext(ctx, "unix", filepath.Join(l.Instance.Dir, filenames.GuestAgentSock))
+	return conn, "unix", err
 }
 
 func (l *LimaKrunkitDriver) AdditionalSetupForSSH(_ context.Context) error {
