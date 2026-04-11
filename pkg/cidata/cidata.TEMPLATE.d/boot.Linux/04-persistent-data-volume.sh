@@ -51,20 +51,31 @@ done
 chmod +x /mnt.sh
 
 mkdir -p /mnt/data
-if [ -e /dev/disk/by-label/data-volume ]; then
-	# Find which disk is data volume on
-	DATA_DISK=$(blkid | grep "data-volume" | awk '{split($0,s,":"); sub(/\d$/, "", s[1]); print s[1]};')
+
+# Resolve the data volume device via blkid, not the udev symlink.
+# The /dev/disk/by-label/ symlink depends on udev having probed the device.
+# A race between growpart (which triggers a partition table re-read and thus
+# a udev re-probe) and e2fsck (which modifies the superblock) can cause the
+# re-probe to see an inconsistent ext4 checksum and delete the symlink.
+# BusyBox blkid doesn't support --label, so we parse the output instead.
+DATA_VOLUME=$(blkid | sed -n 's/^\([^:]*\):.*LABEL="data-volume".*/\1/p')
+
+if [ -n "${DATA_VOLUME}" ]; then
+	DATA_DISK="${DATA_VOLUME%[0-9]}"
 	# growpart command may be missing in older VMs
 	if command -v growpart >/dev/null 2>&1 && command -v resize2fs >/dev/null 2>&1; then
 		# Automatically expand the data volume filesystem
 		growpart "$DATA_DISK" 1 || true
+		# growpart triggers a partition table re-read; settle udev before
+		# touching the device to avoid racing with the re-probe.
+		udevadm settle
 		# Only resize when filesystem is in a healthy state
-		if e2fsck -f -p /dev/disk/by-label/data-volume; then
-			resize2fs /dev/disk/by-label/data-volume || true
+		if e2fsck -f -p "${DATA_VOLUME}"; then
+			resize2fs "${DATA_VOLUME}" || true
 		fi
 	fi
 	# Mount data volume
-	mount -t ext4 /dev/disk/by-label/data-volume /mnt/data
+	mount -t ext4 "${DATA_VOLUME}" /mnt/data
 	# Update /etc files that might have changed during this boot
 	cp /etc/network/interfaces /mnt/data/etc/network/
 	cp /etc/resolv.conf /mnt/data/etc/
@@ -85,34 +96,37 @@ else
 	# Find an unpartitioned disk and create data-volume
 	DISKS=$(lsblk --list --noheadings --output name,type | awk '$2 == "disk" {print $1}')
 	for DISK in ${DISKS}; do
-		IN_USE=false
-		# Looking for a disk that is not mounted or partitioned
-		# shellcheck disable=SC2013
-		for PART in $(awk '/^\/dev\// {gsub("/dev/", ""); print $1}' /proc/mounts); do
-			if [ "${DISK}" == "${PART}" ] || [ -e /sys/block/"${DISK}"/"${PART}" ]; then
-				IN_USE=true
-				break
-			fi
-		done
-		if [ "${IN_USE}" == "false" ]; then
-			echo 'type=83' | sfdisk --label dos /dev/"${DISK}"
-			PART=$(lsblk --list /dev/"${DISK}" --noheadings --output name,type | awk '$2 == "part" {print $1}')
-			mkfs.ext4 -L data-volume /dev/"${PART}"
-			mount -t ext4 /dev/disk/by-label/data-volume /mnt/data
-			# setup apk package cache
-			mkdir -p /mnt/data/apk/cache
-			mkdir -p /etc/apk
-			ln -s /mnt/data/apk/cache /etc/apk/cache
-			# Move all persisted directories to the data volume
-			for DIR in ${DATADIRS}; do
-				DEST="/mnt/data$(dirname "${DIR}")"
-				mkdir -p "${DIR}" "${DEST}"
-				mv "${DIR}" "${DEST}"
-			done
-			# Make sure all data moved to the persistent volume has been committed to disk
-			sync
-			break
+		# A disk is in use if it has any partitions or is mounted directly.
+		# Check lsblk for partitions, not just /proc/mounts; an unmounted
+		# but partitioned disk (e.g. the data volume after a failed boot)
+		# must not be reformatted.
+		if lsblk --list --noheadings --output type /dev/"${DISK}" | grep --quiet "part"; then
+			continue
 		fi
+		if awk '/^\/dev\// {gsub("/dev/", ""); print $1}' /proc/mounts | grep --quiet "^${DISK}$"; then
+			continue
+		fi
+		echo 'type=83' | sfdisk --label dos /dev/"${DISK}"
+		PART=$(lsblk --list /dev/"${DISK}" --noheadings --output name,type | awk '$2 == "part" {print $1}')
+		mkfs.ext4 -L data-volume /dev/"${PART}"
+		# Let udev process the new filesystem before continuing; mount
+		# uses the device path directly, but later boot scripts or
+		# services may depend on the /dev/disk/by-label/ symlink.
+		udevadm settle
+		mount -t ext4 /dev/"${PART}" /mnt/data
+		# setup apk package cache
+		mkdir -p /mnt/data/apk/cache
+		mkdir -p /etc/apk
+		ln -s /mnt/data/apk/cache /etc/apk/cache
+		# Move all persisted directories to the data volume
+		for DIR in ${DATADIRS}; do
+			DEST="/mnt/data$(dirname "${DIR}")"
+			mkdir -p "${DIR}" "${DEST}"
+			mv "${DIR}" "${DEST}"
+		done
+		# Make sure all data moved to the persistent volume has been committed to disk
+		sync
+		break
 	done
 fi
 for DIR in ${DATADIRS}; do
