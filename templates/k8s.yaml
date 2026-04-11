@@ -122,9 +122,14 @@ provision:
     apiVersion: kubeadm.k8s.io/v1beta4
     nodeRegistration:
       criSocket: unix:///run/containerd/containerd.sock
+    discovery:
+      bootstrapToken:
+        apiServerEndpoint: "{{.Param.url}}"
+        token: "{{.Param.token}}"
+        caCertHashes:
+        - "{{.Param.discoveryTokenCaCertHash}}"
     EOF
-    kubeadm join --config kubeadm-config.yaml {{.Param.url}} --token {{.Param.token}} \
-        --discovery-token-ca-cert-hash {{.Param.discoveryTokenCaCertHash}}
+    kubeadm join --config kubeadm-config.yaml
     {{end}}
 
     {{if not ( and .Param.url .Param.token )}}
