@@ -44,8 +44,8 @@ A custom ssh alias can be used instead by setting the $` + sshutil.EnvShellSSH +
 
 Environment Variables:
   --preserve-env: Propagates host environment variables to the guest instance.
-                  Use LIMA_SHELLENV_ALLOW to specify which variables to allow.
-                  Use LIMA_SHELLENV_BLOCK to specify which variables to block (extends default blocklist with +).
+                  Use LIMA_SHELLENV_BLOCK to specify variables to block (prefix with + to extend the default blocklist).
+                  Use LIMA_SHELLENV_ALLOW to exempt specific variables from the blocklist.
 
 Hint: try --debug to show the detailed logs, if it seems hanging (mostly due to some SSH issue).
 `

@@ -59,18 +59,24 @@ This page documents the environment variables used in Lima.
 
 ### `LIMA_SHELLENV_ALLOW`
 
-- **Description**: Specifies a comma-separated list of environment variable patterns to allow when propagating environment variables to the Lima instance with `--preserve-env`. When set, **only** variables matching these patterns will be passed through, completely overriding the default block list behavior. This feature only applies to Lima v2.0.0 or later.
+- **Description**: Specifies a comma-separated list of environment variable patterns to exempt from the block list when propagating environment variables to the Lima instance with `--preserve-env`. Variables matching the allow list pass through even if they also match the block list. Variables that match neither list pass through as well. This feature only applies to Lima v2.0.0 or later.
 - **Default**: unset (when using `--preserve-env`, all variables are propagated except those matching the block list patterns)
 - **Usage**:
   ```sh
+  # Pass FPATH and XAUTHORITY even though they are on the default block list
   export LIMA_SHELLENV_ALLOW="FPATH,XAUTHORITY,CUSTOM_*"
+  limactl shell --preserve-env default
+
+  # To propagate ONLY specific variables, block everything else first
+  export LIMA_SHELLENV_BLOCK="*"
+  export LIMA_SHELLENV_ALLOW="GITHUB_TOKEN,MY_*"
   limactl shell --preserve-env default
   ```
 - **Behavior**:
   - **Without `--preserve-env`**: No environment variables are propagated (regardless of this setting)
   - **With `--preserve-env` and `LIMA_SHELLENV_ALLOW` unset**: All variables are propagated except those in the block list
-  - **With `--preserve-env` and `LIMA_SHELLENV_ALLOW` set**: Only variables matching the allow patterns are propagated (block list is ignored)
-- **Note**: Patterns support wildcards using `*` at the end (e.g., `CUSTOM_*` matches `CUSTOM_VAR`, `CUSTOM_PATH`, etc.).
+  - **With `--preserve-env` and `LIMA_SHELLENV_ALLOW` set**: Variables matching the allow list are propagated even if they also match the block list. Variables matching neither list are still propagated. Only variables that match the block list without a corresponding allow list match are blocked.
+- **Note**: Patterns support `*` wildcards anywhere in the pattern (e.g., `CUSTOM_*` matches `CUSTOM_VAR`; `*TOKEN*` matches `GITHUB_TOKEN`).
 
 ### `LIMA_SHELLENV_BLOCK`
 
@@ -84,7 +90,7 @@ This page documents the environment variables used in Lima.
   - Dynamic linker: `DYLD_*`, `LD_*`
   - Internal variables: `_*` (variables starting with underscore)
 
-  See [`GetDefaultBlockList()`](https://github.com/lima-vm/lima/blob/master/pkg/envutil/envutil.go#L133) for the complete list.
+  See [`GetDefaultBlockList()`](https://github.com/lima-vm/lima/blob/master/pkg/envutil/envutil.go) for the complete list.
 - **Usage**:
   ```sh
   # Replace default block list entirely (not recommended)
@@ -94,7 +100,7 @@ This page documents the environment variables used in Lima.
   export LIMA_SHELLENV_BLOCK="+SECRET_*,PRIVATE_*"
   limactl shell --preserve-env default
   ```
-- **Note**: Patterns support wildcards using `*` at the end (e.g., `SSH_*` matches `SSH_AUTH_SOCK`, `SSH_AGENT_PID`). Use the `+` prefix to add to the default block list rather than replacing it entirely. This variable only affects the `--preserve-env` flag behavior.
+- **Note**: Patterns support `*` wildcards anywhere in the pattern (e.g., `SSH_*` matches `SSH_AUTH_SOCK`; `*TOKEN*` matches `GITHUB_TOKEN`). Use the `+` prefix to add to the default block list rather than replacing it entirely. This variable only affects the `--preserve-env` flag behavior.
 
 ### `LIMACTL`
 
