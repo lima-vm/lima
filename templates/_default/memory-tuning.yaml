@@ -1,0 +1,11 @@
+# Default memory tuning parameters for VZ-backed VMs.
+#
+# Inherited by templates via: base: template:_default/memory-tuning
+# Override per-instance: limactl create --set .param.swapSizeGB=2 ...
+# Override globally: add param: block to ~/.lima/default.yaml
+param:
+  swapSizeGB: "4"
+  swappiness: "80"
+  minFreeKB: "131072"
+  ksmEnabled: "true"
+  thpMode: "madvise"

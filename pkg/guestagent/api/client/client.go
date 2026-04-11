@@ -89,3 +89,8 @@ func (c *GuestAgentClient) SyncTime(ctx context.Context, hostTime time.Time) (*a
 	}
 	return c.cli.SyncTime(ctx, req)
 }
+
+// GetMemoryMetrics retrieves guest memory statistics for the balloon controller.
+func (c *GuestAgentClient) GetMemoryMetrics(ctx context.Context) (*api.MemoryMetrics, error) {
+	return c.cli.GetMemoryMetrics(ctx, &emptypb.Empty{})
+}

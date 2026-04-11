@@ -73,8 +73,8 @@ func tunnelAction(cmd *cobra.Command, args []string) error {
 		}
 		return err
 	}
-	if inst.Status == limatype.StatusStopped {
-		return fmt.Errorf("instance %q is stopped, run `limactl start %s` to start the instance", instName, instName)
+	if inst.Status == limatype.StatusStopped || inst.Status == limatype.StatusPaused {
+		return fmt.Errorf("instance %q is not running (status: %s), run `limactl start %s` to start the instance", instName, inst.Status, instName)
 	}
 
 	if port == 0 {

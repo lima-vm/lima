@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/docker/go-units"
 	"github.com/lima-vm/sshocker/pkg/ssh"
 	"github.com/sethvargo/go-password/password"
 	"github.com/sirupsen/logrus"
@@ -81,6 +82,10 @@ type HostAgent struct {
 	guestAgentAliveChOnce sync.Once
 
 	showProgress bool // whether to show cloud-init progress
+
+	autoPauseMgr *AutoPauseManager   // nil when auto-pause is not enabled
+	socketProxy  *SocketForwardProxy // nil when auto-pause is not enabled or no socket rules
+	balloonCtrl  *BalloonController  // nil when memory ballooning is not enabled
 
 	statusMu      sync.RWMutex
 	currentStatus events.Status
@@ -523,7 +528,30 @@ func (a *HostAgent) Info(_ context.Context) (*hostagentapi.Info, error) {
 		AutoStartedIdentifier: autostart.AutoStartedIdentifier(),
 		SSHLocalPort:          a.sshLocalPort,
 	}
+	// Report VZ pause state so limactl ls can show "Paused" status.
+	if a.autoPauseMgr != nil {
+		info.VMPaused = a.autoPauseMgr.IsPaused()
+	}
 	return info, nil
+}
+
+// Resume triggers auto-pause resume if the VM is currently paused.
+// Returns true if a resume was triggered, false if the VM was not paused.
+func (a *HostAgent) Resume() bool {
+	if a.autoPauseMgr == nil {
+		return false
+	}
+	a.autoPauseMgr.Touch()
+	return true
+}
+
+// Pause requests an immediate pause of the VM via the auto-pause manager.
+// Returns an error if auto-pause is not configured or the pause fails.
+func (a *HostAgent) Pause(ctx context.Context) error {
+	if a.autoPauseMgr == nil {
+		return errors.New("auto-pause is not configured; enable vmOpts.vz.autoPause to use manual pause")
+	}
+	return a.autoPauseMgr.ForcePause(ctx)
 }
 
 func (a *HostAgent) sshAddressPort() (sshAddress string, sshPort int) {
@@ -608,6 +636,57 @@ sudo chown -R "${USER}" /run/host-services`
 	staticPortForwards := a.separateStaticPortForwards()
 	a.addStaticPortForwardsFromList(ctx, staticPortForwards)
 
+	// Start auto-pause manager early so watchGuestAgentEvents can use it for
+	// socket proxy creation. The autoPauseMgr creation only reads a.instConfig
+	// and a.driver — it doesn't depend on SSH, guest agent, or any blocking
+	// requirement. The Run() loop is started separately below.
+	pauseDriver := a.driver
+	if cd, ok := a.driver.(*driver.ConfiguredDriver); ok {
+		pauseDriver = cd.Driver
+	}
+	if pausable, ok := pauseDriver.(driver.Pausable); ok {
+		if a.instConfig.VMOpts != nil {
+			var vzOpts limatype.VZOpts
+			if convErr := limayaml.Convert(a.instConfig.VMOpts[limatype.VZ], &vzOpts, ""); convErr == nil {
+				if vzOpts.AutoPause.Enabled != nil && *vzOpts.AutoPause.Enabled {
+					idleTimeout := 15 * time.Minute
+					resumeTimeout := 30 * time.Second
+					if vzOpts.AutoPause.IdleTimeout != nil {
+						if d, parseErr := time.ParseDuration(*vzOpts.AutoPause.IdleTimeout); parseErr == nil {
+							idleTimeout = d
+						}
+					}
+					if vzOpts.AutoPause.ResumeTimeout != nil {
+						if d, parseErr := time.ParseDuration(*vzOpts.AutoPause.ResumeTimeout); parseErr == nil {
+							resumeTimeout = d
+						}
+					}
+					// Resolve idle signal configuration from YAML (nil = default).
+					signalConfig := DefaultIdleSignalConfig()
+					if vzOpts.AutoPause.IdleSignals.ActiveConnections != nil {
+						signalConfig.ActiveConnections = *vzOpts.AutoPause.IdleSignals.ActiveConnections
+					}
+					if vzOpts.AutoPause.IdleSignals.ContainerCPU != nil {
+						signalConfig.ContainerCPU = *vzOpts.AutoPause.IdleSignals.ContainerCPU
+					}
+					if vzOpts.AutoPause.IdleSignals.ContainerCPUThreshold != nil {
+						signalConfig.ContainerCPUThreshold = *vzOpts.AutoPause.IdleSignals.ContainerCPUThreshold
+					}
+					if vzOpts.AutoPause.IdleSignals.ContainerIO != nil {
+						signalConfig.ContainerIO = *vzOpts.AutoPause.IdleSignals.ContainerIO
+					}
+
+					mgr := NewAutoPauseManager(pausable, idleTimeout, resumeTimeout, signalConfig)
+					a.autoPauseMgr = mgr
+					logrus.Infof("Auto-pause enabled: idle timeout %s, resume timeout %s", idleTimeout, resumeTimeout)
+					logrus.Infof("Auto-pause idle signals: connections=%t, cpu=%t (threshold=%.1f%%), io=%t",
+						signalConfig.ActiveConnections, signalConfig.ContainerCPU,
+						signalConfig.ContainerCPUThreshold, signalConfig.ContainerIO)
+				}
+			}
+		}
+	}
+
 	hasGuestAgentDaemon := !*a.instConfig.Plain && *a.instConfig.OS == limatype.LINUX
 	if hasGuestAgentDaemon {
 		go a.watchGuestAgentEvents(ctx)
@@ -643,6 +722,92 @@ sudo chown -R "${USER}" /run/host-services`
 	if err := a.waitForRequirements("final", a.finalRequirements()); err != nil {
 		errs = append(errs, err)
 	}
+
+	// Start auto-pause manager Run() loop. The manager was created above
+	// (before watchGuestAgentEvents goroutine) so socket proxy can use it.
+	if a.autoPauseMgr != nil {
+		// Register container busy-checks conditionally based on signal config.
+		// The active-connections busy-check is registered in watchGuestAgentEvents()
+		// where the socket proxy is created.
+		if a.autoPauseMgr.signalConfig.ContainerCPU {
+			a.autoPauseMgr.AddBusyCheck("container-cpu", a.autoPauseMgr.hasContainerCPUActivity)
+		}
+		if a.autoPauseMgr.signalConfig.ContainerIO {
+			a.autoPauseMgr.AddBusyCheck("container-io", a.autoPauseMgr.hasContainerIOActivity)
+		}
+
+		// Reset the idle timer now that provisioning is complete. The idle
+		// tracker was created earlier (before optional/final requirements),
+		// so without this reset, the idle duration would include provisioning
+		// time and could trigger an immediate pause on slow first boots.
+		a.autoPauseMgr.Touch()
+
+		mgr := a.autoPauseMgr
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					logrus.Errorf("Auto-pause manager panicked: %v", r)
+				}
+			}()
+			mgr.Run(ctx)
+		}()
+	}
+
+	// Start balloon controller if the driver supports ballooning and memoryBalloon is enabled.
+	// Unwrap ConfiguredDriver to access the underlying driver's Ballooner interface.
+	balloonDriver := a.driver
+	if cd, ok := a.driver.(*driver.ConfiguredDriver); ok {
+		balloonDriver = cd.Driver
+	}
+	if ballooner, ok := balloonDriver.(driver.Ballooner); ok {
+		if a.instConfig.VMOpts != nil {
+			var vzOpts limatype.VZOpts
+			if convErr := limayaml.Convert(a.instConfig.VMOpts[limatype.VZ], &vzOpts, ""); convErr == nil {
+				if vzOpts.MemoryBalloon.Enabled != nil && *vzOpts.MemoryBalloon.Enabled {
+					cfg, cfgErr := parseBalloonConfig(a.instConfig, &vzOpts.MemoryBalloon)
+					if cfgErr != nil {
+						logrus.WithError(cfgErr).Warn("Failed to parse balloon config, ballooning disabled")
+					} else {
+						ctrl := NewBalloonController(cfg)
+						ctrl.instDir = a.instDir
+						// Load persisted learned floor with timestamp.
+						floor, learnedAt, floorErr := store.ReadLearnedFloor(a.instDir)
+						if floorErr != nil {
+							logrus.Warnf("balloon: failed to read learned floor: %v", floorErr)
+						}
+						if floor > 0 && (floor > cfg.IdleTargetBytes || floor < cfg.MinBytes) {
+							logrus.Infof("balloon: discarding out-of-range learned floor %d (min=%d, idle=%d)",
+								floor, cfg.MinBytes, cfg.IdleTargetBytes)
+							floor = 0
+							learnedAt = time.Time{}
+						}
+						ctrl.learnedFloor = floor
+						ctrl.learnedAt = learnedAt
+						a.balloonCtrl = ctrl
+						monitor := NewHostPressureMonitor()
+						go monitor.Run(ctx)
+						go func() {
+							defer func() {
+								if r := recover(); r != nil {
+									logrus.Errorf("Balloon controller panicked: %v", r)
+								}
+							}()
+							a.runBalloonLoop(ctx, ctrl, ballooner, monitor)
+						}()
+						minStr, idleStr := "0", "0"
+						if vzOpts.MemoryBalloon.Min != nil {
+							minStr = *vzOpts.MemoryBalloon.Min
+						}
+						if vzOpts.MemoryBalloon.IdleTarget != nil {
+							idleStr = *vzOpts.MemoryBalloon.IdleTarget
+						}
+						logrus.Infof("Memory ballooning enabled: min %s, idle target %s", minStr, idleStr)
+					}
+				}
+			}
+		}
+	}
+
 	// Copy all config files _after_ the requirements are done
 	for _, rule := range a.instConfig.CopyToHost {
 		sshAddress, sshPort := a.sshAddressPort()
@@ -690,15 +855,52 @@ func (a *HostAgent) close() error {
 func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 	// TODO: use vSock (when QEMU for macOS gets support for vSock)
 
-	// Setup all socket forwards and defer their teardown
+	// Setup socket forwards. When auto-pause is enabled, use the socket forward
+	// proxy to intercept connections and auto-resume the VM. Otherwise, use
+	// direct SSH -L forwarding (current behavior).
 	if !(a.driver.Info().Features.SkipSocketForwarding) {
-		logrus.Debugf("Forwarding unix sockets")
-		sshAddress, sshPort := a.sshAddressPort()
-		for _, rule := range a.instConfig.PortForwards {
-			if rule.GuestSocket != "" {
-				local := hostAddress(rule, &guestagentapi.IPPort{})
-				_ = forwardSSH(ctx, a.sshConfig, sshAddress, sshPort, local, rule.GuestSocket, verbForward, rule.Reverse)
+		socketRules := filterSocketRules(a.instConfig.PortForwards)
+		if a.autoPauseMgr != nil && len(socketRules) > 0 {
+			proxy := NewSocketForwardProxy(socketRules, a.autoPauseMgr,
+				a.sshConfig, a.sshAddressPort)
+			if err := proxy.Start(ctx); err != nil {
+				logrus.WithError(err).Warn("Failed to start socket forward proxy, falling back to direct SSH")
+				a.setupDirectSocketForwarding(ctx, socketRules)
+			} else {
+				a.socketProxy = proxy
+				a.cleanUp(func() error { return proxy.Close() })
+				a.setupReverseSocketForwarding(ctx, socketRules)
+				// Wire callbacks so tunnel refresh happens on resume and wake.
+				// Lock protects against concurrent reads in Run() goroutine.
+				a.autoPauseMgr.callbackMu.Lock()
+				a.autoPauseMgr.onResume = func() {
+					refreshCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+					defer cancel()
+					a.socketProxy.RefreshTunnels(refreshCtx)
+					// E10-4: Reset balloon poll failures on resume.
+					if a.balloonCtrl != nil {
+						a.balloonCtrl.RecordPollSuccess()
+					}
+				}
+				a.autoPauseMgr.onWake = func() {
+					refreshCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+					defer cancel()
+					a.socketProxy.RefreshTunnels(refreshCtx)
+				}
+				a.autoPauseMgr.socketProxy = proxy
+				a.autoPauseMgr.callbackMu.Unlock()
+				// E10-4: Wire connection awareness to balloon controller.
+				if a.balloonCtrl != nil {
+					a.balloonCtrl.activeConnectionsFn = proxy.ActiveConnectionCount
+				}
+
+				// Register active-connections busy-check if signal is enabled.
+				if a.autoPauseMgr.signalConfig.ActiveConnections {
+					a.autoPauseMgr.AddBusyCheck("active-connections", proxy.HasActiveConnections)
+				}
 			}
+		} else {
+			a.setupDirectSocketForwarding(ctx, socketRules)
 		}
 	}
 
@@ -711,6 +913,10 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 		sshAddress, sshPort := a.sshAddressPort()
 		for _, rule := range a.instConfig.PortForwards {
 			if rule.GuestSocket != "" {
+				// Skip rules managed by the socket proxy — it handles its own cleanup.
+				if a.socketProxy != nil && !rule.Reverse {
+					continue
+				}
 				local := hostAddress(rule, &guestagentapi.IPPort{})
 				// using ctx.Background() because ctx has already been cancelled
 				if err := forwardSSH(context.Background(), a.sshConfig, sshAddress, sshPort, local, rule.GuestSocket, verbCancel, rule.Reverse); err != nil {
@@ -767,6 +973,43 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-time.After(10 * time.Second):
+		}
+	}
+}
+
+// filterSocketRules returns only PortForward rules that have a GuestSocket set.
+func filterSocketRules(rules []limatype.PortForward) []limatype.PortForward {
+	var result []limatype.PortForward
+	for _, rule := range rules {
+		if rule.GuestSocket != "" {
+			result = append(result, rule)
+		}
+	}
+	return result
+}
+
+// setupDirectSocketForwarding forwards all socket rules via direct SSH tunneling.
+// Rules are pre-filtered by filterSocketRules (GuestSocket != "").
+func (a *HostAgent) setupDirectSocketForwarding(ctx context.Context, rules []limatype.PortForward) {
+	logrus.Debugf("Forwarding unix sockets")
+	sshAddress, sshPort := a.sshAddressPort()
+	for _, rule := range rules {
+		local := hostAddress(rule, &guestagentapi.IPPort{})
+		_ = forwardSSH(ctx, a.sshConfig, sshAddress, sshPort,
+			local, rule.GuestSocket, verbForward, rule.Reverse)
+	}
+}
+
+// setupReverseSocketForwarding forwards only reverse socket rules via direct
+// SSH -R. Called when the proxy is active — the proxy handles forward rules,
+// but reverse rules (guest creates listener) must bypass the proxy.
+func (a *HostAgent) setupReverseSocketForwarding(ctx context.Context, rules []limatype.PortForward) {
+	sshAddress, sshPort := a.sshAddressPort()
+	for _, rule := range rules {
+		if rule.Reverse && rule.GuestSocket != "" {
+			local := hostAddress(rule, &guestagentapi.IPPort{})
+			_ = forwardSSH(ctx, a.sshConfig, sshAddress, sshPort,
+				local, rule.GuestSocket, verbForward, true)
 		}
 	}
 }
@@ -855,6 +1098,9 @@ func (a *HostAgent) processGuestAgentEvents(ctx context.Context, client *guestag
 
 	onEvent := func(ev *guestagentapi.Event) {
 		logrus.Debugf("guest agent event: %+v", ev)
+		if a.autoPauseMgr != nil {
+			a.autoPauseMgr.Touch()
+		}
 		for _, f := range ev.Errors {
 			logrus.Warnf("received error from the guest: %q", f)
 		}
@@ -1160,4 +1406,176 @@ func copyToHost(ctx context.Context, sshConfig *ssh.SSHConfig, sshAddress string
 		return fmt.Errorf("can't write to local file %q: %w", local, err)
 	}
 	return nil
+}
+
+// parseBalloonConfig converts the YAML MemoryBalloon config into a BalloonConfig.
+func parseBalloonConfig(instConfig *limatype.LimaYAML, balloon *limatype.MemoryBalloon) (BalloonConfig, error) {
+	var cfg BalloonConfig
+
+	if instConfig.Memory != nil {
+		memBytes, err := units.RAMInBytes(*instConfig.Memory)
+		if err != nil {
+			return cfg, fmt.Errorf("invalid memory value: %w", err)
+		}
+		cfg.MaxMemoryBytes = uint64(memBytes)
+	}
+	if balloon.Min != nil {
+		minBytes, err := units.RAMInBytes(*balloon.Min)
+		if err != nil {
+			return cfg, fmt.Errorf("invalid balloon min: %w", err)
+		}
+		cfg.MinBytes = uint64(minBytes)
+	}
+	if balloon.IdleTarget != nil {
+		idleBytes, err := units.RAMInBytes(*balloon.IdleTarget)
+		if err != nil {
+			return cfg, fmt.Errorf("invalid balloon idleTarget: %w", err)
+		}
+		cfg.IdleTargetBytes = uint64(idleBytes)
+	}
+	if balloon.GrowStepPercent != nil {
+		cfg.GrowStepPercent = *balloon.GrowStepPercent
+	}
+	if balloon.ShrinkStepPercent != nil {
+		cfg.ShrinkStepPercent = *balloon.ShrinkStepPercent
+	}
+	if balloon.HighPressureThreshold != nil {
+		cfg.HighPressureThreshold = *balloon.HighPressureThreshold
+	}
+	if balloon.LowPressureThreshold != nil {
+		cfg.LowPressureThreshold = *balloon.LowPressureThreshold
+	}
+	if balloon.Cooldown != nil {
+		d, err := time.ParseDuration(*balloon.Cooldown)
+		if err != nil {
+			return cfg, fmt.Errorf("invalid balloon cooldown: %w", err)
+		}
+		cfg.Cooldown = d
+	}
+	if balloon.IdleGracePeriod != nil {
+		d, err := time.ParseDuration(*balloon.IdleGracePeriod)
+		if err != nil {
+			return cfg, fmt.Errorf("invalid balloon idleGracePeriod: %w", err)
+		}
+		cfg.IdleGracePeriod = d
+	}
+	if balloon.MaxSwapInPerSec != nil {
+		b, err := units.RAMInBytes(*balloon.MaxSwapInPerSec)
+		if err != nil {
+			return cfg, fmt.Errorf("invalid balloon maxSwapInPerSec: %w", err)
+		}
+		cfg.MaxSwapInPerSec = uint64(b)
+	}
+	if balloon.MaxSwapOutPerSec != nil {
+		b, err := units.RAMInBytes(*balloon.MaxSwapOutPerSec)
+		if err != nil {
+			return cfg, fmt.Errorf("invalid balloon maxSwapOutPerSec: %w", err)
+		}
+		cfg.MaxSwapOutPerSec = uint64(b)
+	}
+	if balloon.MaxPageFaultRate != nil {
+		cfg.MaxPageFaultRate = *balloon.MaxPageFaultRate
+	}
+	if balloon.ShrinkReserveBytes != nil {
+		b, err := units.RAMInBytes(*balloon.ShrinkReserveBytes)
+		if err != nil {
+			return cfg, fmt.Errorf("invalid balloon shrinkReserveBytes: %w", err)
+		}
+		cfg.ShrinkReserveBytes = uint64(b)
+	}
+	if balloon.SettleWindow != nil {
+		d, err := time.ParseDuration(*balloon.SettleWindow)
+		if err != nil {
+			return cfg, fmt.Errorf("invalid balloon settleWindow: %w", err)
+		}
+		cfg.SettleWindow = d
+	}
+	if balloon.MaxContainerCPU != nil {
+		cfg.MaxContainerCPU = *balloon.MaxContainerCPU
+	}
+	if balloon.MaxContainerIO != nil {
+		b, err := units.RAMInBytes(*balloon.MaxContainerIO)
+		if err != nil {
+			return cfg, fmt.Errorf("invalid balloon maxContainerIO: %w", err)
+		}
+		cfg.MaxContainerIO = uint64(b)
+	}
+	if balloon.FloorStaleness != nil {
+		d, err := time.ParseDuration(*balloon.FloorStaleness)
+		if err != nil {
+			return cfg, fmt.Errorf("invalid balloon floorStaleness: %w", err)
+		}
+		cfg.FloorStaleness = d
+	}
+	if balloon.EnableTrendDetection != nil {
+		cfg.EnableTrendDetection = *balloon.EnableTrendDetection
+	}
+	return cfg, nil
+}
+
+// runBalloonLoop periodically polls guest memory metrics and adjusts the balloon.
+func (a *HostAgent) runBalloonLoop(ctx context.Context, ctrl *BalloonController, ballooner driver.Ballooner, monitor *HostPressureMonitor) {
+	// Wait for guest agent to be ready.
+	select {
+	case <-a.guestAgentAliveCh:
+	case <-ctx.Done():
+		return
+	}
+
+	bootTime := time.Now()
+	ctrl.TransitionTo(BalloonStateSteady)
+	logrus.Info("Balloon controller: transitioned to steady state")
+
+	// 10s poll interval balances responsiveness with guest agent overhead.
+	// Each poll fetches /proc/pressure/memory + container stats via gRPC.
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			action := ctrl.PrepareShutdown()
+			if err := ballooner.SetBalloonTarget(action.TargetBytes); err != nil {
+				logrus.WithError(err).Warn("Balloon controller: failed to grow on shutdown")
+			}
+			return
+
+		case <-ticker.C:
+			// E10-4: Skip balloon evaluation while VM is paused.
+			if a.autoPauseMgr != nil && a.autoPauseMgr.IsPaused() {
+				continue
+			}
+			client, err := a.getOrCreateClient(ctx)
+			if err != nil {
+				ctrl.RecordPollFailure()
+				logrus.WithError(err).Debug("Balloon controller: failed to get guest agent client")
+				continue
+			}
+			metrics, err := client.GetMemoryMetrics(ctx)
+			if err != nil {
+				ctrl.RecordPollFailure()
+				logrus.WithError(err).Debug("Balloon controller: failed to get memory metrics")
+				continue
+			}
+			ctrl.RecordPollSuccess()
+
+			// Publish metrics to auto-pause manager for container-activity detection.
+			if a.autoPauseMgr != nil {
+				a.autoPauseMgr.UpdateGuestMetrics(metrics)
+			}
+
+			ctrl.SetHostPressure(monitor.Current())
+			action := ctrl.Evaluate(metrics, bootTime)
+			if action.Type != BalloonActionNone {
+				logrus.Infof("Balloon controller: %s -> %s (%s)",
+					action.Type, units.BytesSize(float64(action.TargetBytes)), action.Reason)
+				if err := ballooner.SetBalloonTarget(action.TargetBytes); err != nil {
+					logrus.WithError(err).Warnf("Balloon controller: failed to set target to %s",
+						units.BytesSize(float64(action.TargetBytes)))
+				} else {
+					ctrl.RecordAction(action, time.Now())
+				}
+			}
+		}
+	}
 }

@@ -345,7 +345,7 @@ func diskUnlockAction(cmd *cobra.Command, args []string) error {
 					diskName, disk.Instance, inst.Errors)
 				continue
 			}
-			if inst.Status == limatype.StatusRunning {
+			if inst.Status == limatype.StatusRunning || inst.Status == limatype.StatusPaused {
 				logrus.Warnf("Cannot unlock disk %q used by running instance %q", diskName, disk.Instance)
 				continue
 			}
@@ -403,7 +403,7 @@ func diskResizeAction(cmd *cobra.Command, args []string) error {
 	if disk.Instance != "" {
 		inst, err := store.Inspect(ctx, disk.Instance)
 		if err == nil {
-			if inst.Status == limatype.StatusRunning {
+			if inst.Status == limatype.StatusRunning || inst.Status == limatype.StatusPaused {
 				return fmt.Errorf("cannot resize disk %q used by running instance %q. Please stop the VM instance", diskName, disk.Instance)
 			}
 		}

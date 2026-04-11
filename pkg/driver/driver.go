@@ -77,6 +77,21 @@ type GuestAgent interface {
 	GuestAgentConn(_ context.Context) (net.Conn, string, error)
 }
 
+// Pausable is an optional interface for drivers that support pausing and resuming the VM.
+// Use type assertion to check if a driver implements this interface.
+type Pausable interface {
+	Pause(ctx context.Context) error
+	Resume(ctx context.Context) error
+	IsPaused() bool
+}
+
+// Ballooner is an optional interface for drivers that support memory ballooning.
+// Use type assertion to check if a driver implements this interface.
+type Ballooner interface {
+	SetBalloonTarget(targetBytes uint64) error
+	GetBalloonTarget() (uint64, error)
+}
+
 // Driver interface is used by hostagent for managing vm.
 type Driver interface {
 	Lifecycle

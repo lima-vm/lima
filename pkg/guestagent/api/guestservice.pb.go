@@ -427,6 +427,186 @@ func (x *TimeSyncResponse) GetError() string {
 	return ""
 }
 
+// MemoryMetrics contains guest memory statistics for the balloon controller.
+type MemoryMetrics struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// /proc/meminfo fields (bytes).
+	MemTotalBytes     uint64 `protobuf:"varint,1,opt,name=mem_total_bytes,json=memTotalBytes,proto3" json:"mem_total_bytes,omitempty"`
+	MemAvailableBytes uint64 `protobuf:"varint,2,opt,name=mem_available_bytes,json=memAvailableBytes,proto3" json:"mem_available_bytes,omitempty"`
+	MemCachedBytes    uint64 `protobuf:"varint,3,opt,name=mem_cached_bytes,json=memCachedBytes,proto3" json:"mem_cached_bytes,omitempty"`
+	SwapTotalBytes    uint64 `protobuf:"varint,4,opt,name=swap_total_bytes,json=swapTotalBytes,proto3" json:"swap_total_bytes,omitempty"`
+	SwapFreeBytes     uint64 `protobuf:"varint,5,opt,name=swap_free_bytes,json=swapFreeBytes,proto3" json:"swap_free_bytes,omitempty"`
+	AnonRssBytes      uint64 `protobuf:"varint,6,opt,name=anon_rss_bytes,json=anonRssBytes,proto3" json:"anon_rss_bytes,omitempty"`
+	// /proc/pressure/memory PSI values (percentage 0.0-100.0 over 10s window).
+	PsiMemorySome_10 float64 `protobuf:"fixed64,7,opt,name=psi_memory_some_10,json=psiMemorySome10,proto3" json:"psi_memory_some_10,omitempty"`
+	PsiMemoryFull_10 float64 `protobuf:"fixed64,8,opt,name=psi_memory_full_10,json=psiMemoryFull10,proto3" json:"psi_memory_full_10,omitempty"`
+	// /proc/vmstat deltas (bytes/sec, computed by agent between polls).
+	SwapInBytesPerSec  float64 `protobuf:"fixed64,9,opt,name=swap_in_bytes_per_sec,json=swapInBytesPerSec,proto3" json:"swap_in_bytes_per_sec,omitempty"`
+	SwapOutBytesPerSec float64 `protobuf:"fixed64,10,opt,name=swap_out_bytes_per_sec,json=swapOutBytesPerSec,proto3" json:"swap_out_bytes_per_sec,omitempty"`
+	PageFaultRate      float64 `protobuf:"fixed64,11,opt,name=page_fault_rate,json=pageFaultRate,proto3" json:"page_fault_rate,omitempty"`
+	// Container activity.
+	ContainerCount      int32   `protobuf:"varint,12,opt,name=container_count,json=containerCount,proto3" json:"container_count,omitempty"`
+	ContainerCpuPercent float64 `protobuf:"fixed64,13,opt,name=container_cpu_percent,json=containerCpuPercent,proto3" json:"container_cpu_percent,omitempty"`
+	// Cumulative IO bytes across all containers (not a rate; name kept for wire compat).
+	ContainerIoBytesPerSec float64 `protobuf:"fixed64,14,opt,name=container_io_bytes_per_sec,json=containerIoBytesPerSec,proto3" json:"container_io_bytes_per_sec,omitempty"`
+	// OOM detection (edge-triggered: set once, cleared after reporting).
+	OomDetected bool `protobuf:"varint,15,opt,name=oom_detected,json=oomDetected,proto3" json:"oom_detected,omitempty"`
+	// /proc/pressure/memory PSI values (percentage 0.0-100.0 over 60s window).
+	PsiMemorySome_60 float64 `protobuf:"fixed64,16,opt,name=psi_memory_some_60,json=psiMemorySome60,proto3" json:"psi_memory_some_60,omitempty"`
+	PsiMemoryFull_60 float64 `protobuf:"fixed64,17,opt,name=psi_memory_full_60,json=psiMemoryFull60,proto3" json:"psi_memory_full_60,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *MemoryMetrics) Reset() {
+	*x = MemoryMetrics{}
+	mi := &file_guestservice_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MemoryMetrics) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MemoryMetrics) ProtoMessage() {}
+
+func (x *MemoryMetrics) ProtoReflect() protoreflect.Message {
+	mi := &file_guestservice_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MemoryMetrics.ProtoReflect.Descriptor instead.
+func (*MemoryMetrics) Descriptor() ([]byte, []int) {
+	return file_guestservice_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *MemoryMetrics) GetMemTotalBytes() uint64 {
+	if x != nil {
+		return x.MemTotalBytes
+	}
+	return 0
+}
+
+func (x *MemoryMetrics) GetMemAvailableBytes() uint64 {
+	if x != nil {
+		return x.MemAvailableBytes
+	}
+	return 0
+}
+
+func (x *MemoryMetrics) GetMemCachedBytes() uint64 {
+	if x != nil {
+		return x.MemCachedBytes
+	}
+	return 0
+}
+
+func (x *MemoryMetrics) GetSwapTotalBytes() uint64 {
+	if x != nil {
+		return x.SwapTotalBytes
+	}
+	return 0
+}
+
+func (x *MemoryMetrics) GetSwapFreeBytes() uint64 {
+	if x != nil {
+		return x.SwapFreeBytes
+	}
+	return 0
+}
+
+func (x *MemoryMetrics) GetAnonRssBytes() uint64 {
+	if x != nil {
+		return x.AnonRssBytes
+	}
+	return 0
+}
+
+func (x *MemoryMetrics) GetPsiMemorySome_10() float64 {
+	if x != nil {
+		return x.PsiMemorySome_10
+	}
+	return 0
+}
+
+func (x *MemoryMetrics) GetPsiMemoryFull_10() float64 {
+	if x != nil {
+		return x.PsiMemoryFull_10
+	}
+	return 0
+}
+
+func (x *MemoryMetrics) GetSwapInBytesPerSec() float64 {
+	if x != nil {
+		return x.SwapInBytesPerSec
+	}
+	return 0
+}
+
+func (x *MemoryMetrics) GetSwapOutBytesPerSec() float64 {
+	if x != nil {
+		return x.SwapOutBytesPerSec
+	}
+	return 0
+}
+
+func (x *MemoryMetrics) GetPageFaultRate() float64 {
+	if x != nil {
+		return x.PageFaultRate
+	}
+	return 0
+}
+
+func (x *MemoryMetrics) GetContainerCount() int32 {
+	if x != nil {
+		return x.ContainerCount
+	}
+	return 0
+}
+
+func (x *MemoryMetrics) GetContainerCpuPercent() float64 {
+	if x != nil {
+		return x.ContainerCpuPercent
+	}
+	return 0
+}
+
+func (x *MemoryMetrics) GetContainerIoBytesPerSec() float64 {
+	if x != nil {
+		return x.ContainerIoBytesPerSec
+	}
+	return 0
+}
+
+func (x *MemoryMetrics) GetOomDetected() bool {
+	if x != nil {
+		return x.OomDetected
+	}
+	return false
+}
+
+func (x *MemoryMetrics) GetPsiMemorySome_60() float64 {
+	if x != nil {
+		return x.PsiMemorySome_60
+	}
+	return 0
+}
+
+func (x *MemoryMetrics) GetPsiMemoryFull_60() float64 {
+	if x != nil {
+		return x.PsiMemoryFull_60
+	}
+	return 0
+}
+
 var File_guestservice_proto protoreflect.FileDescriptor
 
 const file_guestservice_proto_rawDesc = "" +
@@ -460,13 +640,33 @@ const file_guestservice_proto_rawDesc = "" +
 	"\x10TimeSyncResponse\x12\x1a\n" +
 	"\badjusted\x18\x01 \x01(\bR\badjusted\x12\x19\n" +
 	"\bdrift_ms\x18\x02 \x01(\x03R\adriftMs\x12\x14\n" +
-	"\x05error\x18\x03 \x01(\tR\x05error2\xf9\x01\n" +
+	"\x05error\x18\x03 \x01(\tR\x05error\"\x87\x06\n" +
+	"\rMemoryMetrics\x12&\n" +
+	"\x0fmem_total_bytes\x18\x01 \x01(\x04R\rmemTotalBytes\x12.\n" +
+	"\x13mem_available_bytes\x18\x02 \x01(\x04R\x11memAvailableBytes\x12(\n" +
+	"\x10mem_cached_bytes\x18\x03 \x01(\x04R\x0ememCachedBytes\x12(\n" +
+	"\x10swap_total_bytes\x18\x04 \x01(\x04R\x0eswapTotalBytes\x12&\n" +
+	"\x0fswap_free_bytes\x18\x05 \x01(\x04R\rswapFreeBytes\x12$\n" +
+	"\x0eanon_rss_bytes\x18\x06 \x01(\x04R\fanonRssBytes\x12+\n" +
+	"\x12psi_memory_some_10\x18\a \x01(\x01R\x0fpsiMemorySome10\x12+\n" +
+	"\x12psi_memory_full_10\x18\b \x01(\x01R\x0fpsiMemoryFull10\x120\n" +
+	"\x15swap_in_bytes_per_sec\x18\t \x01(\x01R\x11swapInBytesPerSec\x122\n" +
+	"\x16swap_out_bytes_per_sec\x18\n" +
+	" \x01(\x01R\x12swapOutBytesPerSec\x12&\n" +
+	"\x0fpage_fault_rate\x18\v \x01(\x01R\rpageFaultRate\x12'\n" +
+	"\x0fcontainer_count\x18\f \x01(\x05R\x0econtainerCount\x122\n" +
+	"\x15container_cpu_percent\x18\r \x01(\x01R\x13containerCpuPercent\x12:\n" +
+	"\x1acontainer_io_bytes_per_sec\x18\x0e \x01(\x01R\x16containerIoBytesPerSec\x12!\n" +
+	"\foom_detected\x18\x0f \x01(\bR\voomDetected\x12+\n" +
+	"\x12psi_memory_some_60\x18\x10 \x01(\x01R\x0fpsiMemorySome60\x12+\n" +
+	"\x12psi_memory_full_60\x18\x11 \x01(\x01R\x0fpsiMemoryFull602\xb5\x02\n" +
 	"\fGuestService\x12(\n" +
 	"\aGetInfo\x12\x16.google.protobuf.Empty\x1a\x05.Info\x12-\n" +
 	"\tGetEvents\x12\x16.google.protobuf.Empty\x1a\x06.Event0\x01\x121\n" +
 	"\vPostInotify\x12\b.Inotify\x1a\x16.google.protobuf.Empty(\x01\x12,\n" +
 	"\x06Tunnel\x12\x0e.TunnelMessage\x1a\x0e.TunnelMessage(\x010\x01\x12/\n" +
-	"\bSyncTime\x12\x10.TimeSyncRequest\x1a\x11.TimeSyncResponseB/Z-github.com/lima-vm/lima/v2/pkg/guestagent/apib\x06proto3"
+	"\bSyncTime\x12\x10.TimeSyncRequest\x1a\x11.TimeSyncResponse\x12:\n" +
+	"\x10GetMemoryMetrics\x12\x16.google.protobuf.Empty\x1a\x0e.MemoryMetricsB/Z-github.com/lima-vm/lima/v2/pkg/guestagent/apib\x06proto3"
 
 var (
 	file_guestservice_proto_rawDescOnce sync.Once
@@ -480,7 +680,7 @@ func file_guestservice_proto_rawDescGZIP() []byte {
 	return file_guestservice_proto_rawDescData
 }
 
-var file_guestservice_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_guestservice_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_guestservice_proto_goTypes = []any{
 	(*Info)(nil),                  // 0: Info
 	(*Event)(nil),                 // 1: Event
@@ -489,28 +689,31 @@ var file_guestservice_proto_goTypes = []any{
 	(*TunnelMessage)(nil),         // 4: TunnelMessage
 	(*TimeSyncRequest)(nil),       // 5: TimeSyncRequest
 	(*TimeSyncResponse)(nil),      // 6: TimeSyncResponse
-	(*timestamppb.Timestamp)(nil), // 7: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),         // 8: google.protobuf.Empty
+	(*MemoryMetrics)(nil),         // 7: MemoryMetrics
+	(*timestamppb.Timestamp)(nil), // 8: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),         // 9: google.protobuf.Empty
 }
 var file_guestservice_proto_depIdxs = []int32{
 	2,  // 0: Info.local_ports:type_name -> IPPort
-	7,  // 1: Event.time:type_name -> google.protobuf.Timestamp
+	8,  // 1: Event.time:type_name -> google.protobuf.Timestamp
 	2,  // 2: Event.added_local_ports:type_name -> IPPort
 	2,  // 3: Event.removed_local_ports:type_name -> IPPort
-	7,  // 4: Inotify.time:type_name -> google.protobuf.Timestamp
-	7,  // 5: TimeSyncRequest.host_time:type_name -> google.protobuf.Timestamp
-	8,  // 6: GuestService.GetInfo:input_type -> google.protobuf.Empty
-	8,  // 7: GuestService.GetEvents:input_type -> google.protobuf.Empty
+	8,  // 4: Inotify.time:type_name -> google.protobuf.Timestamp
+	8,  // 5: TimeSyncRequest.host_time:type_name -> google.protobuf.Timestamp
+	9,  // 6: GuestService.GetInfo:input_type -> google.protobuf.Empty
+	9,  // 7: GuestService.GetEvents:input_type -> google.protobuf.Empty
 	3,  // 8: GuestService.PostInotify:input_type -> Inotify
 	4,  // 9: GuestService.Tunnel:input_type -> TunnelMessage
 	5,  // 10: GuestService.SyncTime:input_type -> TimeSyncRequest
-	0,  // 11: GuestService.GetInfo:output_type -> Info
-	1,  // 12: GuestService.GetEvents:output_type -> Event
-	8,  // 13: GuestService.PostInotify:output_type -> google.protobuf.Empty
-	4,  // 14: GuestService.Tunnel:output_type -> TunnelMessage
-	6,  // 15: GuestService.SyncTime:output_type -> TimeSyncResponse
-	11, // [11:16] is the sub-list for method output_type
-	6,  // [6:11] is the sub-list for method input_type
+	9,  // 11: GuestService.GetMemoryMetrics:input_type -> google.protobuf.Empty
+	0,  // 12: GuestService.GetInfo:output_type -> Info
+	1,  // 13: GuestService.GetEvents:output_type -> Event
+	9,  // 14: GuestService.PostInotify:output_type -> google.protobuf.Empty
+	4,  // 15: GuestService.Tunnel:output_type -> TunnelMessage
+	6,  // 16: GuestService.SyncTime:output_type -> TimeSyncResponse
+	7,  // 17: GuestService.GetMemoryMetrics:output_type -> MemoryMetrics
+	12, // [12:18] is the sub-list for method output_type
+	6,  // [6:12] is the sub-list for method input_type
 	6,  // [6:6] is the sub-list for extension type_name
 	6,  // [6:6] is the sub-list for extension extendee
 	0,  // [0:6] is the sub-list for field type_name
@@ -527,7 +730,7 @@ func file_guestservice_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_guestservice_proto_rawDesc), len(file_guestservice_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

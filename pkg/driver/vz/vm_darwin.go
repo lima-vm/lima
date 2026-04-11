@@ -48,8 +48,10 @@ const diskImageCachingMode = vz.DiskImageCachingModeCached
 
 type virtualMachineWrapper struct {
 	*vz.VirtualMachine
-	mu      sync.Mutex
-	stopped bool
+	mu            sync.Mutex
+	stopped       bool
+	paused        bool
+	balloonDevice *vz.VirtioTraditionalMemoryBalloonDevice
 }
 
 // Hold all *os.File created via socketpair() so that they won't get garbage collected. f.FD() gets invalid if f gets garbage collected.
@@ -72,7 +74,17 @@ func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int, onV
 	}
 
 	wrapper := &virtualMachineWrapper{VirtualMachine: machine, stopped: false}
+
+	// Capture the balloon device reference for runtime memory control.
+	for _, dev := range machine.MemoryBalloonDevices() {
+		if bd := vz.AsVirtioTraditionalMemoryBalloonDevice(dev); bd != nil {
+			wrapper.balloonDevice = bd
+			break
+		}
+	}
+
 	notifySSHLocalPortAccessible := make(chan any)
+	var notifyOnce sync.Once // guards close(notifySSHLocalPortAccessible) across resume cycles
 	sendErrCh := make(chan error)
 
 	go func() {
@@ -95,77 +107,95 @@ func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int, onV
 				case vz.VirtualMachineStateRunning:
 					pidFile := filepath.Join(inst.Dir, filenames.PIDFile(*inst.Config.VMType))
 					if _, err := os.Stat(pidFile); !errors.Is(err, os.ErrNotExist) {
-						logrus.Errorf("pidfile %q already exists", pidFile)
-						sendErrCh <- err
+						// Pidfile already exists — expected after resume (Paused → Running).
+						// Don't send to errCh; that would kill the hostagent.
+						logrus.Debugf("pidfile %q already exists (expected after resume)", pidFile)
 					}
 					if err := os.WriteFile(pidFile, []byte(strconv.Itoa(os.Getpid())+"\n"), 0o644); err != nil {
-						logrus.Errorf("error writing to pid fil %q", pidFile)
+						logrus.Errorf("error writing to pidfile %q", pidFile)
 						sendErrCh <- err
 					}
 					logrus.Info("[VZ] - vm state change: running")
 
-					go func() {
-						defer close(notifySSHLocalPortAccessible)
-						usernetSSHLocalPort := sshLocalPort
-						useSSHOverVsock := *inst.Config.OS == limatype.LINUX
-						if inst.Config.SSH.OverVsock != nil {
-							useSSHOverVsock = *inst.Config.SSH.OverVsock
-						}
-						if !useSSHOverVsock {
-							logrus.Info("ssh.overVsock is false, skipping detection of SSH server on vsock port")
-							if onVsockEvent != nil {
-								onVsockEvent(&events.VsockEvent{
-									Type:   events.VsockEventSkipped,
-									Reason: "ssh.overVsock is false",
-								})
+					// SSH/vsock setup only runs on initial start.
+					// On resume (Paused → Running), this is a no-op.
+					notifyOnce.Do(func() {
+						go func() {
+							defer close(notifySSHLocalPortAccessible)
+							usernetSSHLocalPort := sshLocalPort
+							useSSHOverVsock := *inst.Config.OS == limatype.LINUX
+							if inst.Config.SSH.OverVsock != nil {
+								useSSHOverVsock = *inst.Config.SSH.OverVsock
 							}
-						} else if err := usernetClient.WaitOpeningSSHPort(ctx, inst); err == nil {
-							hostAddress := net.JoinHostPort(inst.SSHAddress, strconv.Itoa(usernetSSHLocalPort))
-							if err := wrapper.startVsockForwarder(ctx, 22, hostAddress); err == nil {
-								logrus.Infof("Detected SSH server is listening on the vsock port; changed %s to proxy for the vsock port", hostAddress)
+							if !useSSHOverVsock {
+								logrus.Info("ssh.overVsock is false, skipping detection of SSH server on vsock port")
 								if onVsockEvent != nil {
 									onVsockEvent(&events.VsockEvent{
-										Type:      events.VsockEventStarted,
-										HostAddr:  hostAddress,
-										VsockPort: 22,
+										Type:   events.VsockEventSkipped,
+										Reason: "ssh.overVsock is false",
 									})
 								}
-								usernetSSHLocalPort = 0 // disable gvisor ssh port forwarding
+							} else if err := usernetClient.WaitOpeningSSHPort(ctx, inst); err == nil {
+								hostAddress := net.JoinHostPort(inst.SSHAddress, strconv.Itoa(usernetSSHLocalPort))
+								if err := wrapper.startVsockForwarder(ctx, 22, hostAddress); err == nil {
+									logrus.Infof("Detected SSH server is listening on the vsock port; changed %s to proxy for the vsock port", hostAddress)
+									if onVsockEvent != nil {
+										onVsockEvent(&events.VsockEvent{
+											Type:      events.VsockEventStarted,
+											HostAddr:  hostAddress,
+											VsockPort: 22,
+										})
+									}
+									usernetSSHLocalPort = 0 // disable gvisor ssh port forwarding
+								} else {
+									logrus.WithError(err).WithField("hostAddress", hostAddress).
+										Debugf("Failed to start vsock forwarder (systemd is older than v256?)")
+									logrus.Info("SSH server does not seem to be running on vsock port, using usernet forwarder")
+									if onVsockEvent != nil {
+										onVsockEvent(&events.VsockEvent{
+											Type:   events.VsockEventFailed,
+											Reason: "SSH server does not seem to be running on vsock port",
+										})
+									}
+								}
 							} else {
-								logrus.WithError(err).WithField("hostAddress", hostAddress).
-									Debugf("Failed to start vsock forwarder (systemd is older than v256?)")
-								logrus.Info("SSH server does not seem to be running on vsock port, using usernet forwarder")
+								logrus.WithError(err).Warn("Failed to wait for the guest SSH server to become available, falling back to usernet forwarder")
 								if onVsockEvent != nil {
 									onVsockEvent(&events.VsockEvent{
 										Type:   events.VsockEventFailed,
-										Reason: "SSH server does not seem to be running on vsock port",
+										Reason: "Failed to wait for guest SSH server",
 									})
 								}
 							}
-						} else {
-							logrus.WithError(err).Warn("Failed to wait for the guest SSH server to become available, falling back to usernet forwarder")
-							if onVsockEvent != nil {
-								onVsockEvent(&events.VsockEvent{
-									Type:   events.VsockEventFailed,
-									Reason: "Failed to wait for guest SSH server",
-								})
+							err := usernetClient.ConfigureDriver(ctx, inst, usernetSSHLocalPort)
+							if err != nil {
+								sendErrCh <- err
 							}
-						}
-						err := usernetClient.ConfigureDriver(ctx, inst, usernetSSHLocalPort)
-						if err != nil {
-							sendErrCh <- err
-						}
-					}()
+						}()
+					})
 				case vz.VirtualMachineStateStopped:
 					logrus.Info("[VZ] - vm state change: stopped")
 					wrapper.mu.Lock()
 					wrapper.stopped = true
+					wrapper.paused = false
 					wrapper.mu.Unlock()
 					_ = usernetClient.UnExposeSSH(inst.SSHLocalPort)
 					if stopUsernet != nil {
 						stopUsernet()
 					}
 					sendErrCh <- errors.New("vz driver state stopped")
+				case vz.VirtualMachineStatePaused:
+					logrus.Info("[VZ] - vm state change: paused")
+					wrapper.mu.Lock()
+					wrapper.paused = true
+					wrapper.mu.Unlock()
+				case vz.VirtualMachineStatePausing:
+					logrus.Debug("[VZ] - vm state change: pausing")
+				case vz.VirtualMachineStateResuming:
+					logrus.Debug("[VZ] - vm state change: resuming")
+					wrapper.mu.Lock()
+					wrapper.paused = false
+					wrapper.mu.Unlock()
 				default:
 					logrus.Debugf("[VZ] - vm state change: %q", newState)
 				}

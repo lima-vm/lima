@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"net"
 	"os"
 	"path"
@@ -16,6 +17,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/docker/go-units"
@@ -90,11 +92,15 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 		errs = errors.Join(errs, errors.New("field `cpus` must be set"))
 	}
 
-	if _, err := units.RAMInBytes(*y.Memory); err != nil {
+	if y.Memory == nil {
+		errs = errors.Join(errs, errors.New("field `memory` must be set"))
+	} else if _, err := units.RAMInBytes(*y.Memory); err != nil {
 		errs = errors.Join(errs, fmt.Errorf("field `memory` has an invalid value: %w", err))
 	}
 
-	if _, err := units.RAMInBytes(*y.Disk); err != nil {
+	if y.Disk == nil {
+		errs = errors.Join(errs, errors.New("field `disk` must be set"))
+	} else if _, err := units.RAMInBytes(*y.Disk); err != nil {
 		errs = errors.Join(errs, fmt.Errorf("field `disk` has an invalid value: %w", err))
 	}
 
@@ -415,6 +421,210 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 				logrus.Warnf("[plain mode] portForwards[%d] covers a range of more than %d ports (guest: %d, host: %d). All ports will be forwarded unconditionally, which may be inefficient.", i, portRangeWarnThreshold, guestRange, hostRange)
 			}
 		}
+	}
+
+	errs = errors.Join(errs, validateMemoryBalloon(y))
+	errs = errors.Join(errs, validateAutoPause(y))
+
+	return errs
+}
+
+func parseDuration(s string) (time.Duration, error) {
+	return time.ParseDuration(s)
+}
+
+func validateMemoryBalloon(y *limatype.LimaYAML) error {
+	if y.VMOpts == nil {
+		return nil
+	}
+	var vzOpts limatype.VZOpts
+	if err := Convert(y.VMOpts[limatype.VZ], &vzOpts, "vmOpts.vz"); err != nil {
+		return nil // No VZ opts to validate.
+	}
+	balloon := vzOpts.MemoryBalloon
+
+	// If balloon is not enabled, skip all validation.
+	if balloon.Enabled == nil || !*balloon.Enabled {
+		return nil
+	}
+
+	var errs error
+	const field = "vmOpts.vz.memoryBalloon"
+
+	// Rule 1: balloon requires vmType "vz".
+	if y.VMType != nil && *y.VMType != limatype.VZ {
+		errs = errors.Join(errs, fmt.Errorf("field `%s` requires vmType %q, got %q", field, limatype.VZ, *y.VMType))
+	}
+
+	// Parse min and idleTarget for comparison.
+	var minBytes, idleTargetBytes int64
+	if balloon.Min != nil {
+		var err error
+		minBytes, err = units.RAMInBytes(*balloon.Min)
+		if err != nil {
+			errs = errors.Join(errs, fmt.Errorf("field `%s.min` must be a valid byte size: %w", field, err))
+		}
+		if minBytes <= 0 {
+			errs = errors.Join(errs, fmt.Errorf("field `%s.min` must be greater than 0", field))
+		}
+	}
+	if balloon.IdleTarget != nil {
+		var err error
+		idleTargetBytes, err = units.RAMInBytes(*balloon.IdleTarget)
+		if err != nil {
+			errs = errors.Join(errs, fmt.Errorf("field `%s.idleTarget` must be a valid byte size: %w", field, err))
+		}
+	}
+
+	// Rule 2: min < idleTarget.
+	if minBytes > 0 && idleTargetBytes > 0 && minBytes >= idleTargetBytes {
+		errs = errors.Join(errs, fmt.Errorf("field `%s.min` must be less than `idleTarget`", field))
+	}
+
+	// Rule 2b: idleTarget must not exceed VM memory.
+	if y.Memory != nil && idleTargetBytes > 0 {
+		memoryBytes, memErr := units.RAMInBytes(*y.Memory)
+		if memErr == nil && idleTargetBytes > memoryBytes {
+			errs = errors.Join(errs, fmt.Errorf("field `%s.idleTarget` must not exceed `memory` (%s)", field, *y.Memory))
+		}
+	}
+
+	// Rule 3: step percents 1-100.
+	if balloon.GrowStepPercent != nil && (*balloon.GrowStepPercent < 1 || *balloon.GrowStepPercent > 100) {
+		errs = errors.Join(errs, fmt.Errorf("field `%s.growStepPercent` must be between 1 and 100", field))
+	}
+	if balloon.ShrinkStepPercent != nil && (*balloon.ShrinkStepPercent < 1 || *balloon.ShrinkStepPercent > 100) {
+		errs = errors.Join(errs, fmt.Errorf("field `%s.shrinkStepPercent` must be between 1 and 100", field))
+	}
+
+	// Rule 4: thresholds 0.0-1.0 (NaN check required because NaN fails both < and > comparisons).
+	if balloon.HighPressureThreshold != nil &&
+		(math.IsNaN(*balloon.HighPressureThreshold) || *balloon.HighPressureThreshold < 0.0 || *balloon.HighPressureThreshold > 1.0) {
+		errs = errors.Join(errs, fmt.Errorf("field `%s.highPressureThreshold` must be between 0.0 and 1.0", field))
+	}
+	if balloon.LowPressureThreshold != nil &&
+		(math.IsNaN(*balloon.LowPressureThreshold) || *balloon.LowPressureThreshold < 0.0 || *balloon.LowPressureThreshold > 1.0) {
+		errs = errors.Join(errs, fmt.Errorf("field `%s.lowPressureThreshold` must be between 0.0 and 1.0", field))
+	}
+
+	// Rule 5: high > low.
+	if balloon.HighPressureThreshold != nil && balloon.LowPressureThreshold != nil &&
+		*balloon.HighPressureThreshold <= *balloon.LowPressureThreshold {
+		errs = errors.Join(errs, fmt.Errorf("field `%s.highPressureThreshold` (%.2f) must be greater than `lowPressureThreshold` (%.2f)",
+			field, *balloon.HighPressureThreshold, *balloon.LowPressureThreshold))
+	}
+
+	// Rule 6: durations must be parseable.
+	if balloon.Cooldown != nil {
+		if _, err := parseDuration(*balloon.Cooldown); err != nil {
+			errs = errors.Join(errs, fmt.Errorf("field `%s.cooldown` must be a valid duration: %w", field, err))
+		}
+	}
+	if balloon.IdleGracePeriod != nil {
+		if _, err := parseDuration(*balloon.IdleGracePeriod); err != nil {
+			errs = errors.Join(errs, fmt.Errorf("field `%s.idleGracePeriod` must be a valid duration: %w", field, err))
+		}
+	}
+	if balloon.SettleWindow != nil {
+		if _, err := parseDuration(*balloon.SettleWindow); err != nil {
+			errs = errors.Join(errs, fmt.Errorf("field `%s.settleWindow` must be a valid duration: %w", field, err))
+		}
+	}
+
+	// Rule 7: byte sizes must be parseable.
+	if balloon.MaxSwapInPerSec != nil {
+		if _, err := units.RAMInBytes(*balloon.MaxSwapInPerSec); err != nil {
+			errs = errors.Join(errs, fmt.Errorf("field `%s.maxSwapInPerSec` must be a valid byte size: %w", field, err))
+		}
+	}
+	if balloon.MaxSwapOutPerSec != nil {
+		if _, err := units.RAMInBytes(*balloon.MaxSwapOutPerSec); err != nil {
+			errs = errors.Join(errs, fmt.Errorf("field `%s.maxSwapOutPerSec` must be a valid byte size: %w", field, err))
+		}
+	}
+	if balloon.ShrinkReserveBytes != nil {
+		if _, err := units.RAMInBytes(*balloon.ShrinkReserveBytes); err != nil {
+			errs = errors.Join(errs, fmt.Errorf("field `%s.shrinkReserveBytes` must be a valid byte size: %w", field, err))
+		}
+	}
+	if balloon.MaxContainerIO != nil {
+		if _, err := units.RAMInBytes(*balloon.MaxContainerIO); err != nil {
+			errs = errors.Join(errs, fmt.Errorf("field `%s.maxContainerIO` must be a valid byte size: %w", field, err))
+		}
+	}
+
+	// Rule 8: maxContainerCPU > 0.
+	if balloon.MaxContainerCPU != nil && *balloon.MaxContainerCPU <= 0.0 {
+		errs = errors.Join(errs, fmt.Errorf("field `%s.maxContainerCPU` must be greater than 0.0", field))
+	}
+
+	return errs
+}
+
+func validateAutoPause(y *limatype.LimaYAML) error {
+	if y.VMOpts == nil {
+		return nil
+	}
+	var vzOpts limatype.VZOpts
+	if err := Convert(y.VMOpts[limatype.VZ], &vzOpts, "vmOpts.vz"); err != nil {
+		return nil // No VZ opts to validate.
+	}
+	ap := vzOpts.AutoPause
+
+	// If auto-pause is not enabled, skip all validation.
+	if ap.Enabled == nil || !*ap.Enabled {
+		return nil
+	}
+
+	var errs error
+	const field = "vmOpts.vz.autoPause"
+
+	// Rule 1: autoPause requires vmType "vz".
+	if y.VMType != nil && *y.VMType != limatype.VZ {
+		errs = errors.Join(errs, fmt.Errorf("field `%s` requires vmType %q, got %q", field, limatype.VZ, *y.VMType))
+	}
+
+	// Rule 2: idleTimeout must be a valid duration >= 1m.
+	if ap.IdleTimeout != nil {
+		d, err := parseDuration(*ap.IdleTimeout)
+		if err != nil {
+			errs = errors.Join(errs, fmt.Errorf("field `%s.idleTimeout` must be a valid duration: %w", field, err))
+		} else if d < time.Minute {
+			errs = errors.Join(errs, fmt.Errorf("field `%s.idleTimeout` must be at least 1m, got %s", field, d))
+		}
+	}
+
+	// Rule 3: resumeTimeout must be a valid duration >= 5s.
+	if ap.ResumeTimeout != nil {
+		d, err := parseDuration(*ap.ResumeTimeout)
+		if err != nil {
+			errs = errors.Join(errs, fmt.Errorf("field `%s.resumeTimeout` must be a valid duration: %w", field, err))
+		} else if d < 5*time.Second {
+			errs = errors.Join(errs, fmt.Errorf("field `%s.resumeTimeout` must be at least 5s, got %s", field, d))
+		}
+	}
+
+	// Rule 4: autoPause requires memoryBalloon to be enabled.
+	balloon := vzOpts.MemoryBalloon
+	if balloon.Enabled == nil || !*balloon.Enabled {
+		errs = errors.Join(errs, fmt.Errorf("field `%s` requires `vmOpts.vz.memoryBalloon.enabled` to be true", field))
+	}
+
+	// Rule 5: containerCPUThreshold must be in range [0.0, 100.0] if specified.
+	if ap.IdleSignals.ContainerCPUThreshold != nil {
+		threshold := *ap.IdleSignals.ContainerCPUThreshold
+		if math.IsNaN(threshold) || threshold < 0.0 || threshold > 100.0 {
+			errs = errors.Join(errs, fmt.Errorf(
+				"field `%s.idleSignals.containerCPUThreshold` must be between 0.0 and 100.0, got %g",
+				field, threshold))
+		}
+	}
+
+	// Rule 6: warn if containerCPU is disabled but containerCPUThreshold is set.
+	if ap.IdleSignals.ContainerCPU != nil && !*ap.IdleSignals.ContainerCPU &&
+		ap.IdleSignals.ContainerCPUThreshold != nil {
+		logrus.Warnf("field `%s.idleSignals.containerCPUThreshold` is set but "+
+			"`containerCPU` is disabled; threshold will be ignored", field)
 	}
 
 	return errs
