@@ -28,7 +28,7 @@ require (
 	github.com/invopop/jsonschema v0.13.0
 	github.com/lima-vm/go-qcow2reader v0.7.1
 	github.com/lima-vm/sshocker v0.3.9 // gomodjail:unconfined
-	github.com/mattn/go-isatty v0.0.20
+	github.com/mattn/go-isatty v0.0.21
 	github.com/mattn/go-shellwords v1.0.12
 	github.com/mdlayher/netlink v1.10.0
 	github.com/mdlayher/vsock v1.2.1 // gomodjail:unconfined
