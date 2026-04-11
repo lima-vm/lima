@@ -313,6 +313,16 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		y.Video.VNC.Display = o.Video.VNC.Display
 	}
 
+	if y.USB == nil {
+		y.USB = d.USB
+	}
+	if o.USB != nil {
+		y.USB = o.USB
+	}
+	if y.USB == nil {
+		y.USB = ptr.Of(false)
+	}
+
 	if y.Firmware.LegacyBIOS == nil {
 		y.Firmware.LegacyBIOS = d.Firmware.LegacyBIOS
 	}
