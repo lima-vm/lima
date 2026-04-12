@@ -46,7 +46,7 @@ local_setup() {
                 # kubeadm join ADDRESS --token TOKEN --discovery-token-ca-cert-hash DISCOVERY_TOKEN_CA_CERT_HASH
                 read -ra words <<< "$join_command"
                 assert_equal "${words[1]} ${words[3]} ${words[5]}" "join --token --discovery-token-ca-cert-hash"
-                params=".param.url=\"https://${words[2]}\"|.param.token=\"${words[4]}\"|.param.discoveryTokenCaCertHash=\"${words[6]}\""
+                params=".param.url=\"${words[2]}\"|.param.token=\"${words[4]}\"|.param.discoveryTokenCaCertHash=\"${words[6]}\""
             elif [[ $i -eq 0 && "${TEMPLATE}" == "k3s" ]]; then
                 url=$(printf "https://lima-%s.internal:6443\n" "${NAME}-0")
                 token=$(limactl shell "${NAME}-0" sudo cat /var/lib/rancher/k3s/server/node-token)
@@ -113,6 +113,7 @@ k() {
 
 # bats test_tags=nodes:3
 @test 'Multi-node' {
+    [ $(k get nodes -o jsonpath='{range .items[*]}{.status.conditions[?(@.type=="Ready")].status}{"\n"}{end}' | grep -c True) -eq 3 ]
     # Based on https://github.com/rootless-containers/usernetes/blob/gen2-v20250828.0/hack/test-smoke.sh
     k apply -f - <<EOF
 apiVersion: v1
@@ -147,6 +148,13 @@ spec:
       labels:
         run: dnstest
     spec:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              run: dnstest
       containers:
       - name: dnstest
         image: ${TEST_CONTAINER_IMAGES[nginx]}
