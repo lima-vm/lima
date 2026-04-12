@@ -608,7 +608,7 @@ sudo chown -R "${USER}" /run/host-services`
 	staticPortForwards := a.separateStaticPortForwards()
 	a.addStaticPortForwardsFromList(ctx, staticPortForwards)
 
-	hasGuestAgentDaemon := !*a.instConfig.Plain && *a.instConfig.OS == limatype.LINUX
+	hasGuestAgentDaemon := !*a.instConfig.Plain
 	if hasGuestAgentDaemon {
 		go a.watchGuestAgentEvents(ctx)
 		go a.startTimeSync(ctx)
