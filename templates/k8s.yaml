@@ -18,7 +18,7 @@
 # (The parameters for the start command printed here)
 #
 # $ limactl start --name k8s-1 --network lima:user-v2 template:k8s \
-#                 --set '.param.url="https://<ADDRESS_FROM_ABOVE>" | .param.token="<TOKEN_FROM_ABOVE>" | \
+#                 --set '.param.url="<ADDRESS_FROM_ABOVE>" | .param.token="<TOKEN_FROM_ABOVE>" | \
 #                        .param.discoveryTokenCaCertHash="<DISCOVERY_TOKEN_CA_CERT_HASH_FROM_ABOVE>"'
 
 minimumLimaVersion: 2.0.0
