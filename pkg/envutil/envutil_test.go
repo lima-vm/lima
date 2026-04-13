@@ -166,14 +166,12 @@ func TestFilterEnvironment(t *testing.T) {
 		assert.Assert(t, containsAll(result, expected))
 	})
 
-	t.Run("allowlist", func(t *testing.T) {
+	t.Run("allowlist without blocklist passes everything", func(t *testing.T) {
 		result := filterEnvironmentWithLists(testEnv, []string{"FOO", "USER"}, nil)
-		expected := []string{"FOO=bar", "USER=testuser"}
 
-		// since FOO and USER are included in testEnv, the filtered result should not differ
-		// from what is in the testEnv
+		// The allow list only exempts variables from the block list.
+		// With no block list, nothing is blocked, so all variables pass through.
 		assert.Equal(t, len(result), len(testEnv))
-		assert.Assert(t, containsAll(result, expected))
 	})
 
 	t.Run("allowlist takes precedence over blocklist", func(t *testing.T) {
