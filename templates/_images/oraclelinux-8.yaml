@@ -16,7 +16,9 @@ firmware:
   # Oracle Linux 8 still requires legacyBIOS, while AlmaLinux 8 and Rocky Linux 8 do not.
   legacyBIOS: true
 
-cpuType:
-  # Workaround for vmx_write_mem: mmu_gva_to_gpa XXXXXXXXXXXXXXXX failed on Intel Mac
-  # https://bugs.launchpad.net/qemu/+bug/1838390
-  x86_64: Haswell-v4
+vmOpts:
+  qemu:
+    cpuType:
+      # Workaround for vmx_write_mem: mmu_gva_to_gpa XXXXXXXXXXXXXXXX failed on Intel Mac
+      # https://bugs.launchpad.net/qemu/+bug/1838390
+      x86_64: Haswell-v4
