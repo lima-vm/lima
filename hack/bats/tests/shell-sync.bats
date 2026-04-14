@@ -29,6 +29,24 @@ teardown() {
     fi
 }
 
+file_uid() {
+    local path="$1"
+    if [[ "$OSTYPE" == darwin* ]]; then
+        stat -f '%u' "$path"
+    else
+        stat -c '%u' "$path"
+    fi
+}
+
+file_perm_octal() {
+    local path="$1"
+    if [[ "$OSTYPE" == darwin* ]]; then
+        stat -f '%A' "$path"
+    else
+        stat -c '%a' "$path"
+    fi
+}
+
 @test 'shell --sync preserves working directory path from host to guest' {
     cd "$TEST_SYNC_DIR"
 
@@ -122,11 +140,7 @@ EOF
     run -0 bash -c "limactl shell --sync . --yes '$INSTANCE' ./modify.sh"
 
     # Verify file is still executable on host
-    if [[ "$OSTYPE" == darwin* ]]; then
-        run stat -f '%A' "$TEST_SYNC_DIR/executable.sh"
-    else
-        run stat -c '%a' "$TEST_SYNC_DIR/executable.sh"
-    fi
+    run file_perm_octal "$TEST_SYNC_DIR/executable.sh"
     assert_output "755"
 
     # Verify files were modified
@@ -134,6 +148,42 @@ EOF
     assert_output "modified foo"
     run cat "$TEST_SYNC_DIR/bar.txt"
     assert_output "modified bar"
+}
+
+@test 'shell --sync reflects chmod metadata changes from guest to host' {
+    cd "$TEST_SYNC_DIR"
+
+    touch "$TEST_SYNC_DIR/metadata-perms.sh"
+    chmod 644 "$TEST_SYNC_DIR/metadata-perms.sh"
+
+    run -0 bash -c "limactl shell --sync . --yes '$INSTANCE' sh -ceu 'chmod 744 metadata-perms.sh'"
+
+    run file_perm_octal "$TEST_SYNC_DIR/metadata-perms.sh"
+    assert_output "744"
+}
+
+@test 'shell --sync reflects symlink target updates from guest to host' {
+    cd "$TEST_SYNC_DIR"
+
+    echo "a" > "$TEST_SYNC_DIR/target_a.txt"
+    echo "b" > "$TEST_SYNC_DIR/target_b.txt"
+    ln -s target_a.txt "$TEST_SYNC_DIR/current_link.txt"
+
+    run -0 bash -c "limactl shell --sync . --yes '$INSTANCE' ln -snf target_b.txt current_link.txt"
+
+    assert_symlink_to "$TEST_SYNC_DIR/target_b.txt" "$TEST_SYNC_DIR/current_link.txt"
+}
+
+@test 'shell --sync preserves host ownership after guest modification' {
+    cd "$TEST_SYNC_DIR"
+
+    touch "$TEST_SYNC_DIR/ownership-test.txt"
+    orig_uid=$(file_uid "$TEST_SYNC_DIR/ownership-test.txt")
+
+    run -0 bash -c "limactl shell --sync . --yes '$INSTANCE' sh -ceu 'sudo chown root ownership-test.txt'"
+
+    new_uid=$(file_uid "$TEST_SYNC_DIR/ownership-test.txt")
+    assert_equal "$orig_uid" "$new_uid"
 }
 
 @test 'shell --sync works without existing ControlMaster socket' {
