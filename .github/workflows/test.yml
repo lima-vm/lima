@@ -83,6 +83,13 @@ jobs:
       run: go tool -modfile=./hack/tools/go.mod ltag -t ./hack/ltag --check -v
     - name: Check protobuf files
       run: go tool -modfile=./hack/tools/go.mod protolint .
+    - name: Run zizmor
+      uses: zizmorcore/zizmor-action@b1d7e1fb5de872772f31590499237e7cce841e8e  # v0.5.3
+      with:
+        # No need to hide the result in https://github.com/lima-vm/lima/security (private),
+        # as anybody can already run zizmor locally to find vulnerabilities.
+        # https://github.com/lima-vm/lima/pull/4846#pullrequestreview-4135088525
+        advanced-security: false
 
   lint-go:
     name: "Lint Go"
