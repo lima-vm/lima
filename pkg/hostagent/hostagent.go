@@ -1305,6 +1305,8 @@ func (a *HostAgent) runBalloonLoop(ctx context.Context, ctrl *BalloonController,
 				if action := ctrl.RecordPollFailure(); action != nil {
 					if err := ballooner.SetBalloonTarget(action.TargetBytes); err != nil {
 						logrus.WithError(err).Warnf("Balloon controller: failed to grow on poll failure")
+					} else {
+						ctrl.RecordAction(*action, time.Now())
 					}
 				}
 				logrus.WithError(err).Debug("Balloon controller: failed to get guest agent client")
@@ -1315,6 +1317,8 @@ func (a *HostAgent) runBalloonLoop(ctx context.Context, ctrl *BalloonController,
 				if action := ctrl.RecordPollFailure(); action != nil {
 					if err := ballooner.SetBalloonTarget(action.TargetBytes); err != nil {
 						logrus.WithError(err).Warnf("Balloon controller: failed to grow on poll failure")
+					} else {
+						ctrl.RecordAction(*action, time.Now())
 					}
 				}
 				logrus.WithError(err).Debug("Balloon controller: failed to get memory metrics")
