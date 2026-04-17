@@ -1,1 +1,189 @@
-cidata.TEMPLATE.d/user-data
+#cloud-config
+# vim:syntax=yaml
+
+growpart:
+  mode: auto
+  devices: ['/']
+
+{{- if eq .OS "FreeBSD" }}
+packages:
+  # boot.sh depends on sudo.
+  # TODO: consider replacing sudo with doas.
+  # FIXME: The hostagent script depends on sudo too.
+  # https://github.com/lima-vm/lima/issues/4594
+  - sudo
+{{- end }}
+
+{{- if .UpgradePackages }}
+package_update: true
+package_upgrade: true
+package_reboot_if_required: true
+{{- end }}
+
+{{- if or .RosettaEnabled (and .Mounts (or (eq .MountType "9p") (eq .MountType "virtiofs"))) }}
+mounts:
+  {{- if .RosettaEnabled }}{{/* Mount the rosetta volume before systemd-binfmt.service(8) starts */}}
+- [vz-rosetta, /mnt/lima-rosetta, virtiofs, defaults, "0", "0"]
+  {{- end }}
+  {{- if and .Mounts (or (eq .MountType "9p") (eq .MountType "virtiofs")) }}
+    {{- range $m := $.Mounts}}
+- [{{$m.Tag}}, {{$m.MountPoint}}, {{$m.Type}}, "{{$m.Options}}", "0", "0"]
+    {{- end }}
+  {{- end }}
+{{- end }}
+
+{{- if .TimeZone }}
+timezone: {{.TimeZone}}
+{{- end }}
+
+users:
+  - name: "{{.User}}"
+{{- if ne .OS "FreeBSD" }}
+    # nuageinit does not support specifying the UID.
+    # The UID is fixed up in boot.essential.FreeBSD/00-freebsd-user-group.sh
+    uid: "{{.UID}}"
+{{- end }}
+{{- if .Comment }}
+    gecos: {{ printf "%q" .Comment }}
+{{- end }}
+    homedir: "{{.Home}}"
+    shell: {{.Shell}}
+{{- if eq .OS "Darwin" }}
+    {{/* On macOS, the password is not locked so as to allow GUI login. */}}
+    {{/* Since the user can run sudo with their own password, basically we don't need to set up passwordless sudo. */}}
+    {{/* However, it is still configured to allow `/sbin/shutdown -h now` without password, as it is invoked by `limactl stop` for graceful shutdown. */}}
+    {{/* (Why doesn't macOS VM support graceful shutdown?) */}}
+    sudo: ALL=(ALL) NOPASSWD:/sbin/shutdown -h now
+{{- else }}
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    {{- if eq .OS "FreeBSD" }}
+    groups:
+    - wheel
+    doas: permit nopass :wheel
+    {{- end}}
+    lock_passwd: true
+{{- end }}
+{{- if eq .OS "FreeBSD" }}
+    ssh_authorized_keys:
+{{- else }}
+    ssh-authorized-keys:
+{{- end }}
+    {{- range $val := .SSHPubKeys }}
+      - {{ printf "%q" $val }}
+    {{- end }}
+
+{{- if .BootScripts }}
+write_files:
+ - content: |
+      #!/bin/sh
+      set -eux
+      LIMA_CIDATA_MNT="/mnt/lima-cidata"
+      UNAME="$(uname -s)"
+      if [ "${UNAME}" = "Darwin" ]; then
+        LIMA_CIDATA_MNT="/Volumes/cidata"
+        # Should have been mounted automatically
+      elif [ "${UNAME}" = "FreeBSD" ]; then
+        LIMA_CIDATA_DEV="/dev/iso9660/cidata"
+        if [ ! -e "${LIMA_CIDATA_DEV}" ]; then
+          # When the iso is created with `hdiutil` on macOS,
+          # apparently the volume name becomes "CIDATA" not "cidata"
+          LIMA_CIDATA_DEV="/dev/iso9660/CIDATA"
+        fi
+        mkdir -p -m 700 "${LIMA_CIDATA_MNT}"
+        mount_cd9660 -G wheel -U root -m 0700 -o ro,exec "${LIMA_CIDATA_DEV}" "${LIMA_CIDATA_MNT}"
+      elif [ "${UNAME}" = "Linux" ]; then
+        LIMA_CIDATA_DEV="/dev/disk/by-label/cidata"
+        mkdir -p -m 700 "${LIMA_CIDATA_MNT}"
+        mount -o ro,mode=0700,dmode=0700,overriderockperm,exec,uid=0 "${LIMA_CIDATA_DEV}" "${LIMA_CIDATA_MNT}"
+      else
+        echo "Unsupported OS: ${UNAME}" >&2
+        exit 1
+      fi
+      export LIMA_CIDATA_MNT
+      exec "${LIMA_CIDATA_MNT}"/boot.sh
+{{- if or (eq .OS "Darwin") (eq .OS "FreeBSD") }}
+   owner: root:wheel
+{{- else }}
+   owner: root:root
+{{- end }}
+{{- if eq .OS "FreeBSD" }}
+   # nuageinit requires the path to be under an existing directory
+   path: /usr/sbin/lima-freebsd-init.sh
+{{- else }}
+   path: /var/lib/cloud/scripts/per-boot/00-lima.boot.sh
+{{- end }}
+   permissions: '0755'
+{{- if eq .OS "FreeBSD" }}
+  # nuageinit does not run /var/lib/cloud/scripts/per-boot/* scripts
+ - content: |
+      #!/bin/sh
+
+      # PROVIDE: lima_freebsd_init
+      # REQUIRE: DAEMON
+      # BEFORE: LOGIN
+
+      . /etc/rc.subr
+
+      name="lima_freebsd_init"
+      rcvar="lima_freebsd_init_enable"
+      command="/usr/sbin/lima-freebsd-init.sh"
+
+      load_rc_config "$name"
+      run_rc_command "$1"
+   owner: root:wheel
+   path: /etc/rc.d/lima_freebsd_init
+   permissions: '0755'
+ - content: |
+      lima_freebsd_init_enable="YES"
+   owner: root:wheel
+   path: /etc/rc.conf.d/lima_freebsd_init
+   permissions: '0644'
+{{- end }}
+{{- end }}
+
+{{- if .DNSAddresses }}
+# This has no effect on systems using systemd-resolved, but is used
+# on e.g. Alpine to set up /etc/resolv.conf on first boot.
+
+manage_resolv_conf: true
+
+resolv_conf:
+  nameservers:
+  {{- range $ns := $.DNSAddresses }}
+  - {{$ns}}
+  {{- end }}
+{{- end }}
+
+{{- if or .CACerts.RemoveDefaults .CACerts.Trusted }}
+{{ with .CACerts }}
+ca_certs:
+  {{- if .RemoveDefaults }}
+  remove_defaults: {{ .RemoveDefaults }}
+  {{- end }}
+  {{- if .Trusted}}
+  trusted:
+  {{- range $cert := .Trusted }}
+  - |
+    {{- range $line := $cert.Lines }}
+    {{ $line }}
+    {{- end }}
+    {{- end }}
+  {{- end }}
+  {{- end }}
+{{- end }}
+
+{{- if .BootCmds }}
+bootcmd:
+  {{- range $cmd := $.BootCmds }}
+- |
+  # We need to embed the params.env as a here-doc because /mnt/lima-cidata is not yet mounted
+  while read -r line; do [ -n "$line" ] && export "$line"; done <<'EOF'
+    {{- range $key, $val := $.Param }}
+  PARAM_{{ $key }}={{ $val }}
+    {{- end }}
+  EOF
+    {{- range $line := $cmd.Lines }}
+  {{ $line }}
+    {{- end }}
+  {{- end }}
+{{- end }}
