@@ -10,6 +10,7 @@ import (
 	"gotest.tools/v3/assert"
 
 	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/ptr"
 	"github.com/lima-vm/lima/v2/pkg/version"
 )
 
@@ -428,4 +429,250 @@ func TestValidateAgainstLatestConfig(t *testing.T) {
 			assert.Error(t, err, tt.wantErr)
 		})
 	}
+}
+
+func TestValidate_BalloonVZOnly(t *testing.T) {
+	// MemoryBalloon should be rejected when vmType is not "vz".
+	y, err := Load(t.Context(), []byte(`images: [{"location": "/"}]`), "lima.yaml")
+	assert.NilError(t, err)
+	y.VMType = ptr.Of(limatype.QEMU)
+	y.Memory = ptr.Of("12GiB")
+
+	var vzOpts limatype.VZOpts
+	vzOpts.MemoryBalloon.Enabled = ptr.Of(true)
+	vzOpts.MemoryBalloon.Min = ptr.Of("3GiB")
+	vzOpts.MemoryBalloon.IdleTarget = ptr.Of("4GiB")
+	var opts any
+	_ = Convert(vzOpts, &opts, "")
+	y.VMOpts = limatype.VMOpts{limatype.VZ: opts}
+
+	err = Validate(y, false)
+	assert.ErrorContains(t, err, "field `vmOpts.vz.memoryBalloon` requires vmType \"vz\"")
+}
+
+func TestValidate_BalloonThresholds(t *testing.T) {
+	images := `images: [{"location": "/"}]`
+
+	tests := []struct {
+		name    string
+		balloon limatype.MemoryBalloon
+		wantErr string
+	}{
+		{
+			name: "valid balloon config",
+			balloon: limatype.MemoryBalloon{
+				Enabled:    ptr.Of(true),
+				Min:        ptr.Of("3GiB"),
+				IdleTarget: ptr.Of("4GiB"),
+				Cooldown:   ptr.Of("30s"),
+			},
+			wantErr: "",
+		},
+		{
+			name: "invalid cooldown duration",
+			balloon: limatype.MemoryBalloon{
+				Enabled:    ptr.Of(true),
+				Min:        ptr.Of("3GiB"),
+				IdleTarget: ptr.Of("4GiB"),
+				Cooldown:   ptr.Of("not-a-duration"),
+			},
+			wantErr: "field `vmOpts.vz.memoryBalloon.cooldown` must be a valid duration",
+		},
+		{
+			name: "min greater than idleTarget",
+			balloon: limatype.MemoryBalloon{
+				Enabled:    ptr.Of(true),
+				Min:        ptr.Of("8GiB"),
+				IdleTarget: ptr.Of("4GiB"),
+			},
+			wantErr: "field `vmOpts.vz.memoryBalloon.min` must be less than `idleTarget`",
+		},
+		{
+			name: "disabled balloon skips validation",
+			balloon: limatype.MemoryBalloon{
+				Enabled: ptr.Of(false),
+			},
+			wantErr: "",
+		},
+		{
+			name: "invalid min byte size",
+			balloon: limatype.MemoryBalloon{
+				Enabled:    ptr.Of(true),
+				Min:        ptr.Of("not-a-size"),
+				IdleTarget: ptr.Of("4GiB"),
+			},
+			wantErr: "field `vmOpts.vz.memoryBalloon.min` must be a valid byte size",
+		},
+		{
+			name: "invalid idleTarget byte size",
+			balloon: limatype.MemoryBalloon{
+				Enabled:    ptr.Of(true),
+				Min:        ptr.Of("2GiB"),
+				IdleTarget: ptr.Of("xyz"),
+			},
+			wantErr: "field `vmOpts.vz.memoryBalloon.idleTarget` must be a valid byte size",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			y, err := Load(t.Context(), []byte(images), "lima.yaml")
+			assert.NilError(t, err)
+			y.VMType = ptr.Of(limatype.VZ)
+			y.Memory = ptr.Of("12GiB")
+
+			var vzOpts limatype.VZOpts
+			vzOpts.MemoryBalloon = tt.balloon
+			var opts any
+			_ = Convert(vzOpts, &opts, "")
+			y.VMOpts = limatype.VMOpts{limatype.VZ: opts}
+
+			err = Validate(y, false)
+			if tt.wantErr == "" {
+				assert.NilError(t, err)
+			} else {
+				assert.ErrorContains(t, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// --- Validation edge case tests ---
+
+func TestValidate_BalloonWithNilMemory(t *testing.T) {
+	// Balloon enabled but Memory is nil — should not panic.
+	y, err := Load(t.Context(), []byte(`images: [{"location": "/"}]`), "lima.yaml")
+	assert.NilError(t, err)
+	y.VMType = ptr.Of(limatype.VZ)
+	y.Memory = nil // No memory set.
+
+	var vzOpts limatype.VZOpts
+	vzOpts.MemoryBalloon = limatype.MemoryBalloon{
+		Enabled:    ptr.Of(true),
+		Min:        ptr.Of("2GiB"),
+		IdleTarget: ptr.Of("4GiB"),
+	}
+	var opts any
+	_ = Convert(vzOpts, &opts, "")
+	y.VMOpts = limatype.VMOpts{limatype.VZ: opts}
+
+	// Should not panic; validation may succeed or fail but not crash.
+	_ = Validate(y, false)
+}
+
+func TestValidate_BalloonMinEqualsIdleTarget(t *testing.T) {
+	// min == idleTarget should fail (must be less than).
+	y, err := Load(t.Context(), []byte(`images: [{"location": "/"}]`), "lima.yaml")
+	assert.NilError(t, err)
+	y.VMType = ptr.Of(limatype.VZ)
+	y.Memory = ptr.Of("12GiB")
+
+	var vzOpts limatype.VZOpts
+	vzOpts.MemoryBalloon = limatype.MemoryBalloon{
+		Enabled:    ptr.Of(true),
+		Min:        ptr.Of("4GiB"),
+		IdleTarget: ptr.Of("4GiB"),
+	}
+	var opts any
+	_ = Convert(vzOpts, &opts, "")
+	y.VMOpts = limatype.VMOpts{limatype.VZ: opts}
+
+	err = Validate(y, false)
+	assert.ErrorContains(t, err, "must be less than")
+}
+
+func TestValidate_BalloonEmptyDuration(t *testing.T) {
+	// Empty string for cooldown should fail.
+	y, err := Load(t.Context(), []byte(`images: [{"location": "/"}]`), "lima.yaml")
+	assert.NilError(t, err)
+	y.VMType = ptr.Of(limatype.VZ)
+	y.Memory = ptr.Of("12GiB")
+
+	var vzOpts limatype.VZOpts
+	vzOpts.MemoryBalloon = limatype.MemoryBalloon{
+		Enabled:    ptr.Of(true),
+		Min:        ptr.Of("2GiB"),
+		IdleTarget: ptr.Of("4GiB"),
+		Cooldown:   ptr.Of(""),
+	}
+	var opts any
+	_ = Convert(vzOpts, &opts, "")
+	y.VMOpts = limatype.VMOpts{limatype.VZ: opts}
+
+	err = Validate(y, false)
+	assert.ErrorContains(t, err, "cooldown")
+}
+
+func TestValidate_NilVMOptsDoesNotPanic(t *testing.T) {
+	// VMOpts is nil — validation should not panic.
+	y, err := Load(t.Context(), []byte(`images: [{"location": "/"}]`), "lima.yaml")
+	assert.NilError(t, err)
+	y.VMType = ptr.Of(limatype.VZ)
+	y.VMOpts = nil
+
+	// Should not panic.
+	_ = Validate(y, false)
+}
+
+func TestValidate_BalloonIdleTargetExceedsMemory(t *testing.T) {
+	// idleTarget > Memory should fail.
+	y, err := Load(t.Context(), []byte(`images: [{"location": "/"}]`), "lima.yaml")
+	assert.NilError(t, err)
+	y.VMType = ptr.Of(limatype.VZ)
+	y.Memory = ptr.Of("8GiB")
+
+	var vzOpts limatype.VZOpts
+	vzOpts.MemoryBalloon = limatype.MemoryBalloon{
+		Enabled:    ptr.Of(true),
+		Min:        ptr.Of("2GiB"),
+		IdleTarget: ptr.Of("16GiB"),
+	}
+	var opts any
+	_ = Convert(vzOpts, &opts, "")
+	y.VMOpts = limatype.VMOpts{limatype.VZ: opts}
+
+	err = Validate(y, false)
+	assert.ErrorContains(t, err, "must not exceed")
+}
+
+func TestValidate_BalloonIdleTargetEqualsMemory(t *testing.T) {
+	// idleTarget == Memory should pass.
+	y, err := Load(t.Context(), []byte(`images: [{"location": "/"}]`), "lima.yaml")
+	assert.NilError(t, err)
+	y.VMType = ptr.Of(limatype.VZ)
+	y.Memory = ptr.Of("8GiB")
+
+	var vzOpts limatype.VZOpts
+	vzOpts.MemoryBalloon = limatype.MemoryBalloon{
+		Enabled:    ptr.Of(true),
+		Min:        ptr.Of("2GiB"),
+		IdleTarget: ptr.Of("8GiB"),
+	}
+	var opts any
+	_ = Convert(vzOpts, &opts, "")
+	y.VMOpts = limatype.VMOpts{limatype.VZ: opts}
+
+	err = Validate(y, false)
+	assert.NilError(t, err)
+}
+
+func TestValidate_BalloonMinZero(t *testing.T) {
+	// min = "0" should fail (must be > 0).
+	y, err := Load(t.Context(), []byte(`images: [{"location": "/"}]`), "lima.yaml")
+	assert.NilError(t, err)
+	y.VMType = ptr.Of(limatype.VZ)
+	y.Memory = ptr.Of("12GiB")
+
+	var vzOpts limatype.VZOpts
+	vzOpts.MemoryBalloon = limatype.MemoryBalloon{
+		Enabled:    ptr.Of(true),
+		Min:        ptr.Of("0"),
+		IdleTarget: ptr.Of("4GiB"),
+	}
+	var opts any
+	_ = Convert(vzOpts, &opts, "")
+	y.VMOpts = limatype.VMOpts{limatype.VZ: opts}
+
+	err = Validate(y, false)
+	assert.ErrorContains(t, err, "greater than 0")
 }

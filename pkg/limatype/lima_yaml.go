@@ -121,8 +121,24 @@ type QEMUOpts struct {
 }
 
 type VZOpts struct {
-	Rosetta         Rosetta     `yaml:"rosetta,omitempty" json:"rosetta,omitempty"`
-	DiskImageFormat *image.Type `yaml:"diskImageFormat,omitempty" json:"diskImageFormat,omitempty" jsonschema:"nullable"`
+	Rosetta         Rosetta       `yaml:"rosetta,omitempty" json:"rosetta,omitempty"`
+	DiskImageFormat *image.Type   `yaml:"diskImageFormat,omitempty" json:"diskImageFormat,omitempty" jsonschema:"nullable"`
+	MemoryBalloon   MemoryBalloon `yaml:"memoryBalloon,omitempty" json:"memoryBalloon,omitempty"`
+}
+
+// MemoryBalloon configures dynamic memory ballooning for the VZ backend.
+// When enabled, the balloon controller automatically shrinks guest memory
+// when idle and grows it under pressure, returning unused RAM to the host.
+// All fields are pointers to distinguish "not specified" (nil) from explicit values.
+type MemoryBalloon struct {
+	// Enabled enables/disables memory ballooning.
+	Enabled *bool `yaml:"enabled,omitempty" json:"enabled,omitempty" jsonschema:"nullable"`
+	// Min is the minimum guest memory size (e.g., "3GiB"). The balloon will never shrink below this.
+	Min *string `yaml:"min,omitempty" json:"min,omitempty" jsonschema:"nullable"`
+	// IdleTarget is the target memory when the VM is idle (e.g., "4GiB"). Must be > Min and <= Memory.
+	IdleTarget *string `yaml:"idleTarget,omitempty" json:"idleTarget,omitempty" jsonschema:"nullable"`
+	// Cooldown is the minimum time between balloon actions (e.g., "30s").
+	Cooldown *string `yaml:"cooldown,omitempty" json:"cooldown,omitempty" jsonschema:"nullable"`
 }
 
 type Rosetta struct {

@@ -27,6 +27,39 @@ base:
 ```
 {{% /tab %}}
 {{< /tabpane >}}
+
+### Memory Ballooning
+
+| ⚡ Requirement | Lima >= 2.1.0, macOS >= 13.0, VZ backend only |
+|-------------------|--------------------------------------------|
+
+Memory ballooning dynamically adjusts the guest VM's memory allocation based on actual
+usage. When the guest is idle, unused memory is returned to the host. When the guest
+needs more memory (detected via PSI — Pressure Stall Information), the balloon grows
+automatically.
+
+This is configured under `vmOpts.vz.memoryBalloon`:
+
+```yaml
+vmType: "vz"
+memory: "8GiB"
+
+vmOpts:
+  vz:
+    memoryBalloon:
+      enabled: true
+      min: "2GiB"              # Floor — balloon never shrinks below this
+      idleTarget: "3GiB"       # Target when VM is idle
+      cooldown: "30s"          # Minimum time between balloon actions
+```
+
+When `enabled` is not specified, memory ballooning defaults to disabled. When enabled
+with no other fields specified, sensible defaults are derived from the configured
+`memory` value (e.g., `min` defaults to 25% of `memory`, `idleTarget` to 33%).
+
+The balloon controller also monitors container CPU/IO activity and swap-in rates to
+avoid shrinking memory during active workloads.
+
 ### Caveats
 - "vz" option is only supported on macOS 13 or above
 - Virtualization.framework doesn't support running "intel guest on arm" and vice versa

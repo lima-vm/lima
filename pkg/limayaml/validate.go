@@ -16,6 +16,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/docker/go-units"
@@ -90,11 +91,15 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 		errs = errors.Join(errs, errors.New("field `cpus` must be set"))
 	}
 
-	if _, err := units.RAMInBytes(*y.Memory); err != nil {
+	if y.Memory == nil {
+		errs = errors.Join(errs, errors.New("field `memory` must be set"))
+	} else if _, err := units.RAMInBytes(*y.Memory); err != nil {
 		errs = errors.Join(errs, fmt.Errorf("field `memory` has an invalid value: %w", err))
 	}
 
-	if _, err := units.RAMInBytes(*y.Disk); err != nil {
+	if y.Disk == nil {
+		errs = errors.Join(errs, errors.New("field `disk` must be set"))
+	} else if _, err := units.RAMInBytes(*y.Disk); err != nil {
 		errs = errors.Join(errs, fmt.Errorf("field `disk` has an invalid value: %w", err))
 	}
 
@@ -414,6 +419,73 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 			if guestRange > portRangeWarnThreshold || hostRange > portRangeWarnThreshold {
 				logrus.Warnf("[plain mode] portForwards[%d] covers a range of more than %d ports (guest: %d, host: %d). All ports will be forwarded unconditionally, which may be inefficient.", i, portRangeWarnThreshold, guestRange, hostRange)
 			}
+		}
+	}
+
+	errs = errors.Join(errs, validateMemoryBalloon(y))
+
+	return errs
+}
+
+func validateMemoryBalloon(y *limatype.LimaYAML) error {
+	if y.VMOpts == nil {
+		return nil
+	}
+	var vzOpts limatype.VZOpts
+	if err := Convert(y.VMOpts[limatype.VZ], &vzOpts, "vmOpts.vz"); err != nil {
+		return nil // No VZ opts to validate.
+	}
+	balloon := vzOpts.MemoryBalloon
+
+	// If balloon is not enabled, skip all validation.
+	if balloon.Enabled == nil || !*balloon.Enabled {
+		return nil
+	}
+
+	var errs error
+	const field = "vmOpts.vz.memoryBalloon"
+
+	// Rule 1: balloon requires vmType "vz".
+	if y.VMType != nil && *y.VMType != limatype.VZ {
+		errs = errors.Join(errs, fmt.Errorf("field `%s` requires vmType %q, got %q", field, limatype.VZ, *y.VMType))
+	}
+
+	// Parse min and idleTarget for comparison.
+	var minBytes, idleTargetBytes int64
+	if balloon.Min != nil {
+		var err error
+		minBytes, err = units.RAMInBytes(*balloon.Min)
+		if err != nil {
+			errs = errors.Join(errs, fmt.Errorf("field `%s.min` must be a valid byte size: %w", field, err))
+		} else if minBytes <= 0 {
+			errs = errors.Join(errs, fmt.Errorf("field `%s.min` must be greater than 0", field))
+		}
+	}
+	if balloon.IdleTarget != nil {
+		var err error
+		idleTargetBytes, err = units.RAMInBytes(*balloon.IdleTarget)
+		if err != nil {
+			errs = errors.Join(errs, fmt.Errorf("field `%s.idleTarget` must be a valid byte size: %w", field, err))
+		}
+	}
+
+	// Rule 2: min < idleTarget.
+	if minBytes > 0 && idleTargetBytes > 0 && minBytes >= idleTargetBytes {
+		errs = errors.Join(errs, fmt.Errorf("field `%s.min` must be less than `idleTarget`", field))
+	}
+
+	// Rule 2b: idleTarget must not exceed VM memory.
+	if y.Memory != nil && idleTargetBytes > 0 {
+		memoryBytes, memErr := units.RAMInBytes(*y.Memory)
+		if memErr == nil && idleTargetBytes > memoryBytes {
+			errs = errors.Join(errs, fmt.Errorf("field `%s.idleTarget` must not exceed `memory` (%s)", field, *y.Memory))
+		}
+	}
+
+	// Rule 3: durations must be parseable.
+	if balloon.Cooldown != nil {
+		if _, err := time.ParseDuration(*balloon.Cooldown); err != nil {
+			errs = errors.Join(errs, fmt.Errorf("field `%s.cooldown` must be a valid duration: %w", field, err))
 		}
 	}
 
