@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -28,6 +29,11 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/networks/usernet"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/ptr"
+)
+
+const (
+	vSockPort    = 2222
+	sshVsockSock = "ssh-vsock.sock"
 )
 
 type LimaKrunkitDriver struct {
@@ -64,8 +70,8 @@ func (l *LimaKrunkitDriver) CreateDisk(ctx context.Context) error {
 }
 
 func (l *LimaKrunkitDriver) Start(ctx context.Context) (chan error, error) {
-	if l.Instance.Config.SSH.OverVsock != nil && *l.Instance.Config.SSH.OverVsock {
-		logrus.Warn(".ssh.overVsock is not implemented yet for krunkit driver")
+	if err := l.cleanupStaleSockets(); err != nil {
+		logrus.WithError(err).Warn("Failed to clean up stale krunkit sockets before start")
 	}
 
 	var err error
@@ -112,7 +118,27 @@ func (l *LimaKrunkitDriver) Start(ctx context.Context) (chan error, error) {
 		l.krunkitWaitCh <- krunkitCmd.Wait()
 	}()
 
-	err = l.usernetClient.ConfigureDriver(ctx, l.Instance, l.SSHLocalPort)
+	usernetSSHLocalPort := l.SSHLocalPort
+	useSSHOverVsock := l.Instance.Config.SSH.OverVsock != nil && *l.Instance.Config.SSH.OverVsock
+
+	if !useSSHOverVsock {
+		logrus.Info("ssh.overVsock is false, using usernet forwarder for SSH")
+	} else if err := l.usernetClient.WaitOpeningSSHPort(ctx, l.Instance); err == nil {
+		hostAddress := net.JoinHostPort(l.Instance.SSHAddress, strconv.Itoa(usernetSSHLocalPort))
+		sshVsockPath := filepath.Join(l.Instance.Dir, sshVsockSock)
+		if err := startVsockForwarder(ctx, sshVsockPath, hostAddress); err == nil {
+			logrus.Infof("Detected SSH server is listening on the vsock port; changed %s to proxy for the vsock port", hostAddress)
+			usernetSSHLocalPort = 0 // disable gvisor ssh port forwarding
+		} else {
+			logrus.WithError(err).WithField("hostAddress", hostAddress).
+				Debugf("Failed to start vsock forwarder (systemd is older than v256?)")
+			logrus.Info("SSH server does not seem to be running on vsock port, using usernet forwarder")
+		}
+	} else {
+		logrus.WithError(err).Warn("Failed to wait for the guest SSH server to become available, falling back to usernet forwarder")
+	}
+
+	err = l.usernetClient.ConfigureDriver(ctx, l.Instance, usernetSSHLocalPort)
 	if err != nil {
 		l.krunkitWaitCh <- fmt.Errorf("failed to configure usernet: %w", err)
 	}
@@ -216,6 +242,10 @@ func (l *LimaKrunkitDriver) FillConfig(_ context.Context, cfg *limatype.LimaYAML
 
 	cfg.VMType = ptr.Of(vmType)
 
+	if cfg.SSH.OverVsock == nil {
+		cfg.SSH.OverVsock = ptr.Of(cfg.OS != nil && *cfg.OS == limatype.LINUX)
+	}
+
 	return validateConfig(cfg)
 }
 
@@ -260,6 +290,7 @@ func (l *LimaKrunkitDriver) Create(_ context.Context) error {
 func (l *LimaKrunkitDriver) Info() driver.Info {
 	var info driver.Info
 	info.Name = vmType
+	info.VsockPort = vSockPort
 	if l.Instance != nil && l.Instance.Dir != "" {
 		info.InstanceDir = l.Instance.Dir
 	}
@@ -277,7 +308,7 @@ func (l *LimaKrunkitDriver) SSHAddress(_ context.Context) (string, error) {
 }
 
 func (l *LimaKrunkitDriver) ForwardGuestAgent() bool {
-	return true
+	return false
 }
 
 func (l *LimaKrunkitDriver) Delete(_ context.Context) error {
@@ -324,10 +355,32 @@ func (l *LimaKrunkitDriver) Unregister(_ context.Context) error {
 	return nil
 }
 
-func (l *LimaKrunkitDriver) GuestAgentConn(_ context.Context) (net.Conn, string, error) {
-	return nil, "unix", nil
+func (l *LimaKrunkitDriver) GuestAgentConn(ctx context.Context) (net.Conn, string, error) {
+	var d net.Dialer
+	conn, err := d.DialContext(ctx, "unix", filepath.Join(l.Instance.Dir, filenames.GuestAgentSock))
+	return conn, "unix", err
 }
 
 func (l *LimaKrunkitDriver) AdditionalSetupForSSH(_ context.Context) error {
 	return nil
+}
+
+// Currently, Krunkit does not clean-up the vsock unix socket when the VM stops
+// Issue: https://github.com/containers/krunkit/issues/101
+func (l *LimaKrunkitDriver) cleanupStaleSockets() error {
+	if l.Instance == nil || l.Instance.Dir == "" {
+		return nil
+	}
+
+	var errs []error
+	for _, sock := range []string{
+		filepath.Join(l.Instance.Dir, filenames.GuestAgentSock),
+		filepath.Join(l.Instance.Dir, sshVsockSock),
+	} {
+		if err := os.RemoveAll(sock); err != nil {
+			errs = append(errs, fmt.Errorf("failed to remove socket %q: %w", sock, err))
+		}
+	}
+
+	return errors.Join(errs...)
 }
