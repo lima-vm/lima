@@ -9,6 +9,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/rjeczalik/notify"
 	"github.com/sirupsen/logrus"
@@ -40,6 +41,15 @@ func (a *HostAgent) startInotify(ctx context.Context) error {
 		return err
 	}
 
+	// Trailing-edge debounce: accumulate events and only flush after
+	// a quiet period. During bulk operations (yarn install, nuxt build)
+	// the timer keeps resetting so no events are forwarded until the
+	// burst settles — preventing virtiofs virtqueue contention.
+	const quietPeriod = 200 * time.Millisecond
+	timer := time.NewTimer(quietPeriod)
+	timer.Stop()
+	pending := make(map[string]os.FileInfo)
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -50,19 +60,25 @@ func (a *HostAgent) startInotify(ctx context.Context) error {
 			if err != nil {
 				continue
 			}
-
+			if stat.IsDir() {
+				continue
+			}
 			if filterEvents(watchEvent, stat) {
 				continue
 			}
+			pending[watchPath] = stat
+			timer.Reset(quietPeriod)
 
-			watchPath = translateToGuestPath(watchPath, mountSymlinks, mountLocations)
-
-			utcTimestamp := timestamppb.New(stat.ModTime().UTC())
-			event := &guestagentapi.Inotify{MountPath: watchPath, Time: utcTimestamp}
-			err = inotifyClient.Send(event)
-			if err != nil {
-				logrus.WithError(err).Warn("failed to send inotify")
+		case <-timer.C:
+			for wp, st := range pending {
+				guestPath := translateToGuestPath(wp, mountSymlinks, mountLocations)
+				utcTimestamp := timestamppb.New(st.ModTime().UTC())
+				event := &guestagentapi.Inotify{MountPath: guestPath, Time: utcTimestamp}
+				if err := inotifyClient.Send(event); err != nil {
+					logrus.WithError(err).Warn("failed to send inotify")
+				}
 			}
+			pending = make(map[string]os.FileInfo)
 		}
 	}
 }
