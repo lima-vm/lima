@@ -21,6 +21,7 @@ const (
 	StatusBroken        Status = "Broken"
 	StatusStopped       Status = "Stopped"
 	StatusRunning       Status = "Running"
+	StatusPaused        Status = "Paused"
 )
 
 type Instance struct {
@@ -32,8 +33,9 @@ type Instance struct {
 	VMType                VMType            `json:"vmType"`
 	Arch                  Arch              `json:"arch"`
 	CPUs                  int               `json:"cpus,omitempty"`
-	Memory                int64             `json:"memory,omitempty"` // bytes
-	Disk                  int64             `json:"disk,omitempty"`   // bytes
+	Memory                int64             `json:"memory,omitempty"`         // bytes (configured)
+	PhysicalMemory        int64             `json:"physicalMemory,omitempty"` // bytes (actual host footprint)
+	Disk                  int64             `json:"disk,omitempty"`           // bytes
 	Message               string            `json:"message,omitempty"`
 	AdditionalDisks       []Disk            `json:"additionalDisks,omitempty"`
 	Networks              []Network         `json:"network,omitempty"`

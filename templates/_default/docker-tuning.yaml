@@ -1,0 +1,12 @@
+# Default Docker daemon tuning parameters.
+#
+# Inherited by templates via: base: template:_default/docker-tuning
+# Override per-instance: limactl create --set .param.dockerLogMaxSize=20m ...
+# Override globally: add param: block to ~/.lima/default.yaml
+param:
+  dockerLogMaxSize: "10m"
+  dockerLogMaxFiles: "3"
+  dockerMaxDownloads: "3"
+  dockerLiveRestore: "true"
+  dockerAutoPrune: "true"
+  cgroupMemoryHighPercent: "85"

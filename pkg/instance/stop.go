@@ -23,7 +23,7 @@ import (
 )
 
 func StopGracefully(ctx context.Context, inst *limatype.Instance, isRestart bool) error {
-	if inst.Status != limatype.StatusRunning {
+	if inst.Status != limatype.StatusRunning && inst.Status != limatype.StatusPaused {
 		if isRestart {
 			logrus.Warn("The instance is not running, continuing with the restart")
 			return nil

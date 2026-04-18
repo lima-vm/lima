@@ -8,4 +8,6 @@ type Info struct {
 	AutoStartedIdentifier string `json:"autoStartedIdentifier,omitempty"`
 	// SSHLocalPort is the local port on the host for SSH access to the VM.
 	SSHLocalPort int `json:"sshLocalPort,omitempty"`
+	// VMPaused indicates the VM is currently paused by auto-pause.
+	VMPaused bool `json:"vmPaused,omitempty"`
 }

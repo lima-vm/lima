@@ -64,7 +64,7 @@ func editAction(cmd *cobra.Command, args []string) error {
 			}
 			return err
 		}
-		if inst.Status == limatype.StatusRunning {
+		if inst.Status == limatype.StatusRunning || inst.Status == limatype.StatusPaused {
 			return errors.New("cannot edit a running instance")
 		}
 		filePath = filepath.Join(inst.Dir, filenames.LimaYAML)

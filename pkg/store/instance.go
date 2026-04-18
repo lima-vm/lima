@@ -84,6 +84,9 @@ func Inspect(ctx context.Context, instName string) (*limatype.Instance, error) {
 			} else {
 				inst.SSHLocalPort = info.SSHLocalPort
 				inst.AutoStartedIdentifier = info.AutoStartedIdentifier
+				if info.VMPaused {
+					inst.Status = limatype.StatusPaused
+				}
 			}
 		}
 	}
@@ -107,6 +110,11 @@ func Inspect(ctx context.Context, instName string) (*limatype.Instance, error) {
 	}
 	inst.AdditionalDisks = y.AdditionalDisks
 	inst.Networks = y.Networks
+
+	// Get physical memory footprint for VZ instances that are running or paused.
+	if inst.VMType == limatype.VZ && (inst.Status == limatype.StatusRunning || inst.Status == limatype.StatusPaused) {
+		inst.PhysicalMemory = getInstancePhysicalMemory(instDir)
+	}
 
 	// 0 out values since not configurable on WSL2
 	if inst.VMType == limatype.WSL2 {
@@ -388,7 +396,7 @@ func PrintInstances(w io.Writer, instances []*limatype.Instance, format string, 
 			}
 			fmt.Fprintf(w, "\t%d\t%s\t%s",
 				instance.CPUs,
-				units.BytesSize(float64(instance.Memory)),
+				FormatMemoryColumn(instance.Memory, instance.PhysicalMemory),
 				units.BytesSize(float64(instance.Disk)),
 			)
 			if !hideDir {
