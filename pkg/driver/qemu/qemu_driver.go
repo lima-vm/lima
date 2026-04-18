@@ -25,6 +25,10 @@ import (
 	"github.com/coreos/go-semver/semver"
 	"github.com/digitalocean/go-qemu/qmp"
 	"github.com/digitalocean/go-qemu/qmp/raw"
+	"github.com/lima-vm/go-qcow2reader/image/qcow2"
+	rawImage "github.com/lima-vm/go-qcow2reader/image/raw"
+	"github.com/lima-vm/go-qcow2reader/image/vhdx"
+	"github.com/lima-vm/go-qcow2reader/image/vmdk"
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/driver"
@@ -686,9 +690,10 @@ func (l *LimaQemuDriver) Info() driver.Info {
 	info.VsockPort = l.vSockPort
 
 	info.Features = driver.DriverFeatures{
-		DynamicSSHAddress:    false,
-		SkipSocketForwarding: false,
-		CanRunGUI:            false,
+		DynamicSSHAddress:     false,
+		SkipSocketForwarding:  false,
+		CanRunGUI:             false,
+		SupportedImageFormats: []string{string(qcow2.Type), string(rawImage.Type), string(vmdk.Type), string(vhdx.Type)}, // Not a comprehensive list of supported formats
 	}
 	return info
 }
