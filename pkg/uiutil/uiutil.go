@@ -4,25 +4,35 @@
 package uiutil
 
 import (
+	"errors"
 	"io"
 	"os"
 
-	"github.com/AlecAivazis/survey/v2"
-	"github.com/AlecAivazis/survey/v2/terminal"
 	"github.com/mattn/go-isatty"
+	"github.com/pterm/pterm"
 )
 
-var InterruptErr = terminal.InterruptErr
+var (
+	ErrInterrupt = errors.New("interrupt")
+	InterruptErr = ErrInterrupt // deprecated
+)
 
 // Confirm is a regular text input that accept yes/no answers.
 func Confirm(message string, defaultParam bool) (bool, error) {
 	var ans bool
-	prompt := &survey.Confirm{
-		Message: message,
-		Default: defaultParam,
-	}
-	if err := survey.AskOne(prompt, &ans); err != nil {
+	var err error
+	interrupted := false
+	prompt := pterm.DefaultInteractiveConfirm.
+		WithDefaultText(message).
+		WithDefaultValue(defaultParam).
+		WithOnInterruptFunc(func() {
+			interrupted = true
+		})
+	if ans, err = prompt.Show(); err != nil {
 		return false, err
+	}
+	if interrupted {
+		return false, ErrInterrupt
 	}
 	return ans, nil
 }
@@ -31,12 +41,26 @@ func Confirm(message string, defaultParam bool) (bool, error) {
 // to the user for them to select using the arrow keys and enter.
 func Select(message string, options []string) (int, error) {
 	var ans int
-	prompt := &survey.Select{
-		Message: message,
-		Options: options,
-	}
-	if err := survey.AskOne(prompt, &ans); err != nil {
+	var sel string
+	var err error
+	interrupted := false
+	prompt := pterm.DefaultInteractiveSelect.
+		WithDefaultText(message).
+		WithOptions(options).
+		WithOnInterruptFunc(func() {
+			interrupted = true
+		})
+	if sel, err = prompt.Show(); err != nil {
 		return -1, err
+	}
+	if interrupted {
+		return -1, ErrInterrupt
+	}
+	for i, option := range options {
+		if sel == option {
+			ans = i
+			break
+		}
 	}
 	return ans, nil
 }
