@@ -17,12 +17,22 @@ var (
 	InterruptErr = ErrInterrupt // deprecated
 )
 
+// use the same colors as the previous "survey/v2".
+var (
+	primaryStyle   = pterm.Style{pterm.FgDefault}
+	secondaryStyle = pterm.Style{pterm.FgCyan}
+)
+
 // Confirm is a regular text input that accept yes/no answers.
 func Confirm(message string, defaultParam bool) (bool, error) {
 	var ans bool
 	var err error
+	interactiveConfirm := pterm.DefaultInteractiveConfirm
+	// override the default theme colors (cyan/magenta)
+	interactiveConfirm.TextStyle = &primaryStyle
+	interactiveConfirm.SuffixStyle = &secondaryStyle
 	interrupted := false
-	prompt := pterm.DefaultInteractiveConfirm.
+	prompt := interactiveConfirm.
 		WithDefaultText(message).
 		WithDefaultValue(defaultParam).
 		WithOnInterruptFunc(func() {
@@ -43,8 +53,12 @@ func Select(message string, options []string) (int, error) {
 	var ans int
 	var sel string
 	var err error
+	interactiveSelect := pterm.DefaultInteractiveSelect
+	// override the default theme colors (cyan/magenta)
+	interactiveSelect.TextStyle = &primaryStyle
+	interactiveSelect.SelectorStyle = &secondaryStyle
 	interrupted := false
-	prompt := pterm.DefaultInteractiveSelect.
+	prompt := interactiveSelect.
 		WithDefaultText(message).
 		WithOptions(options).
 		WithOnInterruptFunc(func() {
