@@ -38,14 +38,7 @@ jobs:
     - name: Verify generated files
       run: make generate check-generated
     - name: Run nobin
-      run: >-
-        go tool -modfile=./hack/tools/go.mod nobin
-        --allow-emoji
-        --allow-escape
-        --gitignore
-        --skip-ext pb.desc
-        --skip 'website/static/images/**/*.{gif,png}'
-        --skip 'docs/reports/**/*.pdf'
+      run: go tool -modfile=./hack/tools/go.mod nobin
     - name: Run editorconfig-checker
       run: go tool -modfile=./hack/tools/go.mod editorconfig-checker
     - name: Run yamllint

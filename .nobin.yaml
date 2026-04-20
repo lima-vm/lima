@@ -1,0 +1,31 @@
+all: false
+gitignore: true
+skip:
+- docs/reports/**/*.pdf
+- pkg/**/*.pb.desc
+- website/static/images/**/*.{gif,png}
+skip-ext: []
+
+# Allowed characters
+allow: []
+allow-bell: false
+allow-bom: false
+allow-emoji: true
+allow-escape: true
+
+# Additional checks (opt-in)
+block-base64: 32          # 0 = disabled, N = minimum run length
+skip-base64:
+- go.sum
+- package-lock.json
+- hack/bats/lib/**/*.gpg
+- pkg/limatmpl/embed_test.go
+- pkg/sshutil/sshutil_test.go
+
+block-confusables: alphanum   # "" = disabled, "alphanum" / "url" / "strict"
+skip-confusables: []
+
+# Output
+quiet: false
+verbose: false
+hide-skipped: false
