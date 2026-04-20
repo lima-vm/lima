@@ -17,7 +17,7 @@ tool (
 require (
 	github.com/containerd/ltag v0.3.0
 	github.com/golangci/golangci-lint/v2 v2.11.4
-	github.com/jandubois/nobin v0.9.0
+	github.com/jandubois/nobin v0.12.0
 	github.com/yoheimuta/protolint v0.56.4
 	google.golang.org/grpc v1.80.0
 	google.golang.org/protobuf v1.36.11
