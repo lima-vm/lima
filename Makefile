@@ -654,7 +654,7 @@ bats: native limactl-plugins
 # Linting targets - individual stages
 .PHONY: nobin
 nobin:
-	$(GO) run -modfile=./hack/tools/go.mod github.com/jandubois/nobin --allow-emoji --allow-escape --gitignore --skip-ext pb.desc --skip 'website/static/images/**/*.{gif,png}' --skip 'docs/reports/**/*.pdf'
+	$(GO) run -modfile=./hack/tools/go.mod github.com/jandubois/nobin
 
 .PHONY: editorconfig-checker
 editorconfig-checker:

@@ -41,8 +41,6 @@ jobs:
         make install-protoc-tools
     - name: Verify generated files
       run: make generate check-generated
-    - name: Run nobin
-      run: make nobin
     - name: Install shellcheck
       run: |
         sudo apt-get update

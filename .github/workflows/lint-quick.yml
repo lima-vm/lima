@@ -25,6 +25,8 @@ jobs:
       with:
         go-version: stable
         cache: false
+    - name: Run nobin
+      run: make nobin
     - name: Run editorconfig-checker
       run: make editorconfig-checker
     - name: Run yamllint
