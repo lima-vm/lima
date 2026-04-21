@@ -17,11 +17,13 @@ runs:
     # To avoid using special characters in artifact name, normalize the suffix
     if: steps.check-if-failure-logs-exists.outputs.exists == 'true'
     run: |
-      suffix="${{ inputs.suffix }}"
+      suffix="${INPUTS_SUFFIX}"
       suffix="${suffix//[^a-zA-Z0-9_]/_}"
       suffix="${suffix:+-$suffix}"
       echo "result=$suffix" >> "$GITHUB_OUTPUT"
     shell: bash
+    env:
+      INPUTS_SUFFIX: ${{ inputs.suffix }}
   - name: "Upload failure-logs"
     if: steps.check-if-failure-logs-exists.outputs.exists == 'true'
     uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0

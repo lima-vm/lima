@@ -26,8 +26,11 @@ runs:
     run: |
       set -eux
       source hack/cache-common-inc.sh
-      print_cache_informations_from_template "${{ inputs.template }}" "${{ inputs.arch }}" >> "$GITHUB_OUTPUT"
+      print_cache_informations_from_template "${INPUTS_TEMPLATE}" "${INPUTS_ARCH}" >> "$GITHUB_OUTPUT"
     shell: bash
+    env:
+      INPUTS_TEMPLATE: ${{ inputs.template }}
+      INPUTS_ARCH: ${{ inputs.arch }}
 
   - name: "Cache ${{ steps.cache-params-from-template.outputs.image-path }}"
     if: ${{ steps.cache-params-from-template.outputs.image-key != '' }}
@@ -68,7 +71,9 @@ runs:
     run: |
       set -eux
       [ -d .download ] || mkdir -p .download
-      path_to_cache=${{ steps.detect-platform.outputs.download-dir }}
+      path_to_cache=${STEPS_DETECT_PLATFORM_OUTPUTS_DOWNLOAD_DIR}
       mkdir -p "$(dirname "$path_to_cache")"
       ln -sfn "$PWD/.download" "$path_to_cache"
     shell: bash
+    env:
+      STEPS_DETECT_PLATFORM_OUTPUTS_DOWNLOAD_DIR: ${{ steps.detect-platform.outputs.download-dir }}
