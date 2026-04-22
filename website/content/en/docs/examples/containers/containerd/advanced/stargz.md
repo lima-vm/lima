@@ -10,9 +10,10 @@ that reduces start-up latency using lazy-pulling technique.
 The support for eStargz is available by default in Lima.
 
 {{% alert title="Hint" color=success %}}
-ARM Mac users need to run `limactl start` with `--rosetta` to allow [running AMD64 binaries](../../../../config/multi-arch.md).
-This is not an architectural limitation of eStargz, however, Rosetta is needed because the example Python image below
-is currently [only available for AMD64](https://github.com/containerd/stargz-snapshotter/issues/2143).
+The example images used below are available for both `amd64` and `arm64`
+(see [containerd/stargz-snapshotter#2143](https://github.com/containerd/stargz-snapshotter/issues/2143)).
+Rosetta and `--platform=amd64` are not required on ARM Macs; the `--platform=amd64` flag is retained
+in the commands below purely so the benchmark numbers remain comparable to earlier measurements.
 {{% /alert %}}
 
 Without eStargz:
