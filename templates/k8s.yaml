@@ -54,9 +54,14 @@ provision:
     export DEBIAN_FRONTEND=noninteractive
     apt-get update
     apt-get install -y apt-transport-https ca-certificates curl
-    VERSION=$(curl -L -s https://dl.k8s.io/release/stable.txt | sed -e 's/v//' | cut -d'.' -f1-2)
-    echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v${VERSION}/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
-    curl -fsSL https://pkgs.k8s.io/core:/stable:/v${VERSION}/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+    STABILITY="{{.Param.stability}}"
+    {{if eq .Param.release "stable" }}
+    VERSION=$(curl -L -s https://dl.k8s.io/release/stable.txt | cut -d'.' -f1-2)
+    {{else}}
+    VERSION="{{.Param.release}}"
+    {{end}}
+    echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/${STABILITY}:/${VERSION}/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+    curl -fsSL https://pkgs.k8s.io/core:/${STABILITY}:/${VERSION}/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
     apt-get update
     apt-get install -y kubelet kubeadm kubectl && apt-mark hold kubelet kubeadm kubectl
     systemctl enable --now kubelet
@@ -93,8 +98,9 @@ provision:
     export KUBECONFIG=/etc/kubernetes/admin.conf
     {{if not ( and .Param.url .Param.token )}}
     systemctl stop kubelet
-    kubeadm config images list
-    kubeadm config images pull --cri-socket=unix:///run/containerd/containerd.sock
+    VERSION="{{.Param.version}}"
+    kubeadm config images list --kubernetes-version="${VERSION}"
+    kubeadm config images pull --kubernetes-version="${VERSION}" --cri-socket=unix:///run/containerd/containerd.sock
     systemctl start kubelet
     # Initializing your control-plane node
     cat <<EOF >kubeadm-config.yaml
@@ -105,6 +111,7 @@ provision:
     ---
     kind: ClusterConfiguration
     apiVersion: kubeadm.k8s.io/v1beta4
+    kubernetesVersion: "${VERSION}"
     apiServer:
       certSANs: # --apiserver-cert-extra-sans
       - "127.0.0.1"
@@ -134,7 +141,11 @@ provision:
 
     {{if not ( and .Param.url .Param.token )}}
     # Installing a Pod network add-on
-    kubectl apply -f https://github.com/flannel-io/flannel/releases/download/v0.27.4/kube-flannel.yml
+    {{if eq .Param.flannelVersion "latest" }}
+    kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
+    {{else}}
+    kubectl apply -f https://github.com/flannel-io/flannel/releases/download/{{.Param.flannelVersion}}/kube-flannel.yml
+    {{end}}
     # Control plane node isolation
     kubectl taint nodes --all node-role.kubernetes.io/control-plane-
     # Symlink the kubeconfig file to the default location for kubectl
@@ -218,6 +229,10 @@ message: |
   ------
   {{end -}}
 param:
+  release: "stable" # "v1.xx"
+  stability: "stable" # "prerelease"
+  version: "stable" # "v1.xx.y"
+  flannelVersion: "v0.27.4" # "latest"
   url: ""
   token: ""
   discoveryTokenCaCertHash: ""
