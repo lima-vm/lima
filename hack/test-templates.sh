@@ -38,8 +38,6 @@ LIMACTL_CREATE=(limactl --tty=false create)
 
 CONTAINER_ENGINE="nerdctl"
 
-WORKAROUND_UPDATE_REBOOT=
-
 declare -A CHECKS=(
 	["proxy-settings"]="1"
 	["systemd"]="1"
@@ -101,8 +99,6 @@ case "$NAME" in
 	CHECKS["proxy-settings"]=
 	;;
 "archlinux")
-	# https://github.com/lima-vm/lima/issues/4805
-	WORKAROUND_UPDATE_REBOOT=1
 	;;
 esac
 
@@ -193,12 +189,6 @@ limactl shell "$NAME" uname -a
 
 limactl shell "$NAME" cat /etc/os-release
 set +x
-
-if [ "$WORKAROUND_UPDATE_REBOOT" = "1" ]; then
-	limactl shell "$NAME" sudo pacman -Syu --noconfirm
-	limactl shell "$NAME" sudo reboot
-	sleep 30
-fi
 
 INFO "Testing that host home is not wiped out"
 [ -e "$HOME_HOST/.lima" ]
