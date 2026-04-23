@@ -1,14 +1,12 @@
 # NOTE: EL8-based distros are known not to work on M1 chips: https://github.com/lima-vm/lima/issues/841
 # EL9-based distros are known to work.
 images:
-- location: https://repo.almalinux.org/almalinux/8.10/cloud/x86_64/images/AlmaLinux-8-GenericCloud-8.10-20240819.x86_64.qcow2
-  arch: x86_64
-  digest: sha256:669bd580dcef5491d4dfd5724d252cce7cde1b2b33a3ca951e688d71386875e3
-
-- location: https://repo.almalinux.org/almalinux/8.10/cloud/aarch64/images/AlmaLinux-8-GenericCloud-8.10-20240819.aarch64.qcow2
-  arch: aarch64
-  digest: sha256:cec6736cbc562d06895e218b6f022621343c553bfa79192ca491381b4636c7b8
-
+- location: "https://repo.almalinux.org/almalinux/8.10/cloud/x86_64/images/AlmaLinux-8-GenericCloud-8.10-20260414.x86_64.qcow2"
+  arch: "x86_64"
+  digest: "sha256:b62d842e19409f7b6c82345be732b0b8597d6428a45d8b9ec9a61a9745163214"
+- location: "https://repo.almalinux.org/almalinux/8.10/cloud/aarch64/images/AlmaLinux-8-GenericCloud-8.10-20260414.aarch64.qcow2"
+  arch: "aarch64"
+  digest: "sha256:aa8e0739976009a0d8f7ccbb24499a4f97b7ff9e37e800bc7eb98b95b9f65427"
 - location: https://repo.almalinux.org/almalinux/8.10/cloud/s390x/images/AlmaLinux-8-GenericCloud-8.10-20240819.s390x.qcow2
   arch: s390x
   digest: sha256:7f8866a4247ad57c81f5d2c5a0fa64940691f9df1e858a1510d34a0de008eb16
