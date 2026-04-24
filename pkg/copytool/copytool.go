@@ -15,8 +15,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/v2/pkg/ioutilx"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/sshutil"
 	"github.com/lima-vm/lima/v2/pkg/store"
 )
 
@@ -97,16 +97,27 @@ func parseCopyPaths(ctx context.Context, paths []string) ([]*Path, error) {
 
 	for _, path := range paths {
 		cp := &Path{}
-		if runtime.GOOS == "windows" {
-			if filepath.IsAbs(path) {
-				var err error
-				path, err = ioutilx.WindowsSubsystemPath(ctx, path)
-				if err != nil {
-					return nil, err
-				}
-			} else {
-				path = filepath.ToSlash(path)
+		// On Windows, detect local drive-letter paths (e.g. C:\...) before
+		// splitting on ":" so the drive letter is not mistaken for an instance
+		// name. filepath.VolumeName returns "C:" for local drive paths and ""
+		// for instance:path forms like "nat:/tmp/file".
+		isLocalAbs := runtime.GOOS == "windows" && filepath.VolumeName(path) != ""
+		if isLocalAbs {
+			sshExe, err := sshutil.NewSSHExe()
+			if err != nil {
+				return nil, err
 			}
+			path, err = sshutil.PathForSSH(ctx, sshExe, path)
+			if err != nil {
+				return nil, err
+			}
+			cp.Path = path
+			cp.IsRemote = false
+			copyPaths = append(copyPaths, cp)
+			continue
+		}
+		if runtime.GOOS == "windows" {
+			path = filepath.ToSlash(path)
 		}
 
 		parts := strings.SplitN(path, ":", 2)

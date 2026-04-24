@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"runtime"
 
 	"github.com/coreos/go-semver/semver"
 
@@ -119,6 +120,15 @@ func (t *scpTool) Command(ctx context.Context, paths []string, opts *Options) (*
 		if err != nil {
 			return nil, err
 		}
+	}
+	if runtime.GOOS == "windows" {
+		// Strip ControlMaster/ControlPath/ControlPersist so that scp invokes
+		// ssh without trying to use SSH connection multiplexing. Native
+		// Windows OpenSSH does not support multiplexing (Unix-domain mux
+		// socket), and Cygwin-based ssh has known reliability issues with
+		// sftp over a mux socket. See also the equivalent handling in
+		// hostagent and limactl shell.
+		sshOpts = sshutil.SSHOptsRemovingControlPath(sshOpts)
 	}
 	sshArgs := sshutil.SSHArgsFromOpts(sshOpts)
 
