@@ -69,6 +69,44 @@ func NewSSHExe() (SSHExe, error) {
 	return sshExe, nil
 }
 
+// IsSSHCygwin reports whether sshExe is a Cygwin-based build of OpenSSH
+// (e.g. Git for Windows, MSYS2, or Cygwin itself), as opposed to native
+// Windows OpenSSH. The detection is based on whether cygpath.exe lives in
+// the same directory as ssh.exe, which is the layout used by Git for Windows
+// and MSYS2. Always returns false on non-Windows.
+func IsSSHCygwin(sshExe SSHExe) bool {
+	if runtime.GOOS != "windows" || sshExe.Exe == "" {
+		return false
+	}
+	path := sshExe.Exe
+	if !filepath.IsAbs(path) {
+		resolved, err := exec.LookPath(path)
+		if err != nil {
+			return false
+		}
+		path = resolved
+	}
+	_, err := os.Stat(filepath.Join(filepath.Dir(path), "cygpath.exe"))
+	return err == nil
+}
+
+// pathForSSH converts orig to the path form expected by the ssh and ssh-keygen
+// binaries that Lima will invoke. On non-Windows the path is returned unchanged.
+// On Windows:
+//   - For Cygwin-based ssh (Git for Windows, MSYS2): runs cygpath to produce a
+//     Cygwin-style path like /c/Users/...
+//   - For native Windows OpenSSH: returns the path with forward slashes
+//     (e.g. C:/Users/...), which native ssh-keygen and ssh accept.
+func pathForSSH(ctx context.Context, sshExe SSHExe, orig string) (string, error) {
+	if runtime.GOOS != "windows" {
+		return orig, nil
+	}
+	if IsSSHCygwin(sshExe) {
+		return ioutilx.WindowsSubsystemPath(ctx, orig)
+	}
+	return filepath.ToSlash(orig), nil
+}
+
 type PubKey struct {
 	Filename string
 	Content  string
@@ -110,7 +148,11 @@ func DefaultPubKeys(ctx context.Context, loadDotSSH bool) ([]PubKey, error) {
 			// no passphrase, no user@host comment
 			privPath := filepath.Join(configDir, filenames.UserPrivateKey)
 			if runtime.GOOS == "windows" {
-				privPath, err = ioutilx.WindowsSubsystemPath(ctx, privPath)
+				sshExe, sshErr := NewSSHExe()
+				if sshErr != nil {
+					return sshErr
+				}
+				privPath, err = pathForSSH(ctx, sshExe, privPath)
 				if err != nil {
 					return err
 				}
@@ -197,7 +239,7 @@ func CommonOpts(ctx context.Context, sshExe SSHExe, useDotSSH bool) ([]string, e
 		return nil, err
 	}
 	var opts []string
-	idf, err := identityFileEntry(ctx, privateKeyPath)
+	idf, err := identityFileEntry(ctx, sshExe, privateKeyPath)
 	if err != nil {
 		return nil, err
 	}
@@ -232,7 +274,7 @@ func CommonOpts(ctx context.Context, sshExe SSHExe, useDotSSH bool) ([]string, e
 				// Fail on permission-related and other path errors
 				return nil, err
 			}
-			idf, err = identityFileEntry(ctx, privateKeyPath)
+			idf, err = identityFileEntry(ctx, sshExe, privateKeyPath)
 			if err != nil {
 				return nil, err
 			}
@@ -284,9 +326,9 @@ func CommonOpts(ctx context.Context, sshExe SSHExe, useDotSSH bool) ([]string, e
 	return opts, nil
 }
 
-func identityFileEntry(ctx context.Context, privateKeyPath string) (string, error) {
+func identityFileEntry(ctx context.Context, sshExe SSHExe, privateKeyPath string) (string, error) {
 	if runtime.GOOS == "windows" {
-		privateKeyPath, err := ioutilx.WindowsSubsystemPath(ctx, privateKeyPath)
+		privateKeyPath, err := pathForSSH(ctx, sshExe, privateKeyPath)
 		if err != nil {
 			return "", err
 		}
@@ -344,7 +386,7 @@ func SSHOpts(ctx context.Context, sshExe SSHExe, instDir, username string, useDo
 	}
 	controlPath := fmt.Sprintf(`ControlPath="%s"`, controlSock)
 	if runtime.GOOS == "windows" {
-		controlSock, err = ioutilx.WindowsSubsystemPath(ctx, controlSock)
+		controlSock, err = pathForSSH(ctx, sshExe, controlSock)
 		if err != nil {
 			return nil, err
 		}
