@@ -90,14 +90,14 @@ func IsSSHCygwin(sshExe SSHExe) bool {
 	return err == nil
 }
 
-// pathForSSH converts orig to the path form expected by the ssh and ssh-keygen
-// binaries that Lima will invoke. On non-Windows the path is returned unchanged.
-// On Windows:
+// PathForSSH converts orig to the path form expected by the ssh family of
+// binaries (ssh, ssh-keygen, scp, sftp, rsync-over-ssh) that Lima will invoke.
+// On non-Windows the path is returned unchanged. On Windows:
 //   - For Cygwin-based ssh (Git for Windows, MSYS2): runs cygpath to produce a
 //     Cygwin-style path like /c/Users/...
 //   - For native Windows OpenSSH: returns the path with forward slashes
-//     (e.g. C:/Users/...), which native ssh-keygen and ssh accept.
-func pathForSSH(ctx context.Context, sshExe SSHExe, orig string) (string, error) {
+//     (e.g. C:/Users/...), which native ssh, ssh-keygen, and scp accept.
+func PathForSSH(ctx context.Context, sshExe SSHExe, orig string) (string, error) {
 	if runtime.GOOS != "windows" {
 		return orig, nil
 	}
@@ -152,7 +152,7 @@ func DefaultPubKeys(ctx context.Context, loadDotSSH bool) ([]PubKey, error) {
 				if sshErr != nil {
 					return sshErr
 				}
-				privPath, err = pathForSSH(ctx, sshExe, privPath)
+				privPath, err = PathForSSH(ctx, sshExe, privPath)
 				if err != nil {
 					return err
 				}
@@ -328,7 +328,7 @@ func CommonOpts(ctx context.Context, sshExe SSHExe, useDotSSH bool) ([]string, e
 
 func identityFileEntry(ctx context.Context, sshExe SSHExe, privateKeyPath string) (string, error) {
 	if runtime.GOOS == "windows" {
-		privateKeyPath, err := pathForSSH(ctx, sshExe, privateKeyPath)
+		privateKeyPath, err := PathForSSH(ctx, sshExe, privateKeyPath)
 		if err != nil {
 			return "", err
 		}
@@ -386,7 +386,7 @@ func SSHOpts(ctx context.Context, sshExe SSHExe, instDir, username string, useDo
 	}
 	controlPath := fmt.Sprintf(`ControlPath="%s"`, controlSock)
 	if runtime.GOOS == "windows" {
-		controlSock, err = pathForSSH(ctx, sshExe, controlSock)
+		controlSock, err = PathForSSH(ctx, sshExe, controlSock)
 		if err != nil {
 			return nil, err
 		}
@@ -430,7 +430,10 @@ func SSHOptsRemovingControlPath(opts []string) []string {
 }
 
 func ParseOpenSSHVersion(version []byte) *semver.Version {
-	regex := regexp.MustCompile(`(?m)^OpenSSH_(\d+\.\d+)(?:p(\d+))?\b`)
+	// Matches "OpenSSH_8.4p1 ..." (upstream) and "OpenSSH_for_Windows_9.5p2 ..."
+	// (Win32-OpenSSH). The optional "_for_Windows" prefix is recognized so native
+	// Windows OpenSSH is not misdetected as version 0.0.0.
+	regex := regexp.MustCompile(`(?m)^OpenSSH(?:_for_Windows)?_(\d+\.\d+)(?:p(\d+))?\b`)
 	matches := regex.FindSubmatch(version)
 	if len(matches) == 3 {
 		if len(matches[2]) == 0 {
