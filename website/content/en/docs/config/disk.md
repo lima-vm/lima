@@ -26,7 +26,7 @@ limactl edit default --disk 20
 ## Attach host block devices
 
 | ⚡ Requirement | Lima >= 2.2, macOS >= 14.0, vmType: vz |
-| ------------- | --------------------------------------- |
+| ------------- | -------------------------------------- |
 
 Lima can attach a host block device directly to the guest.
 
