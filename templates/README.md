@@ -64,6 +64,7 @@ lima
 - [`ubuntu-25.04`](./ubuntu-25.04.yaml): Ubuntu 25.04 (Plucky Puffin)
 - [`ubuntu-25.10`](./ubuntu-25.10.yaml), `ubuntu`: Ubuntu 25.10 (Questing Quokka)
   - Same as `default` but comment lines are omitted from the YAML
+- [`ubuntu-26.04`](./ubuntu-26.04.yaml): Ubuntu 26.04 (Resolute Raccoon)
 - [`experimental/ubuntu-next`](./experimental/ubuntu-next.yaml): Ubuntu vNext
 - [`experimental/gentoo`](./experimental/gentoo.yaml): Gentoo
 - [`experimental/opensuse-tumbleweed`](./experimental/opensuse-tumbleweed.yaml): openSUSE Tumbleweed
