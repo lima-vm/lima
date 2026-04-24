@@ -8,8 +8,10 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"runtime"
 
 	"github.com/coreos/go-semver/semver"
+	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/sshutil"
@@ -119,6 +121,14 @@ func (t *scpTool) Command(ctx context.Context, paths []string, opts *Options) (*
 		if err != nil {
 			return nil, err
 		}
+	}
+	if runtime.GOOS == "windows" {
+		// Strip ControlMaster/ControlPath/ControlPersist so scp's ssh runs
+		// without multiplexing — native Windows OpenSSH has no mux support,
+		// and Cygwin ssh's mux is unreliable for sftp. Same as hostagent
+		// and limactl shell.
+		logrus.Debug("scp: stripping ControlMaster/ControlPath/ControlPersist (Windows)")
+		sshOpts = sshutil.SSHOptsRemovingControlPath(sshOpts)
 	}
 	sshArgs := sshutil.SSHArgsFromOpts(sshOpts)
 

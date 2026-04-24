@@ -15,8 +15,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/v2/pkg/ioutilx"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/sshutil"
 	"github.com/lima-vm/lima/v2/pkg/store"
 )
 
@@ -119,18 +119,46 @@ func hasRemoteSourceAndDestination(ctx context.Context, paths []string) bool {
 func parseCopyPaths(ctx context.Context, paths []string) ([]*Path, error) {
 	var copyPaths []*Path
 
+	// Resolve sshExe lazily, once per call — NewSSHExe is uncached and may
+	// exec.LookPath each time.
+	var (
+		sshExe       sshutil.SSHExe
+		sshExeErr    error
+		sshExeLoaded bool
+	)
+	ensureSSHExe := func() (sshutil.SSHExe, error) {
+		if !sshExeLoaded {
+			sshExe, sshExeErr = sshutil.NewSSHExe()
+			sshExeLoaded = true
+		}
+		return sshExe, sshExeErr
+	}
+
 	for _, path := range paths {
 		cp := &Path{}
 		if runtime.GOOS == "windows" {
+			// Detect local absolute paths (C:\, C:/, UNC) before the ":"
+			// split so a drive letter is not read as an instance name.
+			// IsAbs is deliberate: a drive-relative "C:foo" is not absolute,
+			// so it still splits as instance "C" path "foo", preserving
+			// single-letter instance names. UNC passes IsAbs and flows
+			// through PathForSSH as //server/share/... (untested; no CI
+			// sends scp a UNC path).
 			if filepath.IsAbs(path) {
-				var err error
-				path, err = ioutilx.WindowsSubsystemPath(ctx, path)
+				sshExe, err := ensureSSHExe()
 				if err != nil {
 					return nil, err
 				}
-			} else {
-				path = filepath.ToSlash(path)
+				path, err = sshutil.PathForSSH(ctx, sshExe, path)
+				if err != nil {
+					return nil, err
+				}
+				cp.Path = path
+				cp.IsRemote = false
+				copyPaths = append(copyPaths, cp)
+				continue
 			}
+			path = filepath.ToSlash(path)
 		}
 
 		parts := strings.SplitN(path, ":", 2)
