@@ -366,12 +366,13 @@ func shellAction(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("failed to create the synced workdir in guest instance: %w", err)
 		}
 
-		// The macOS release of rsync (the latest being 2.6.9) does not support shell escaping of destination path but other versions do.
+		// Quote the destination path for rsync versions before 3.2.4, where --protect-args is not the default
+		// and the remote shell would split paths containing spaces.
 		rsyncVer, err := rsyncVersion(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to get rsync version: %w", err)
 		}
-		if rsyncVer.LessThan(*semver.New("3.0.0")) {
+		if rsyncVer.LessThan(*semver.New("3.2.4")) {
 			destRsyncDir = shellescape.Quote(destRsyncDir)
 		}
 
