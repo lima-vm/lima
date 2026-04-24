@@ -77,7 +77,7 @@ func cloneOrRenameAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	yqExprs, err := editflags.YQExpressions(flags, false)
+	yqExprs, err := editflags.YQExpressions(flags, false, newInst.Config.Param)
 	if err != nil {
 		return err
 	}

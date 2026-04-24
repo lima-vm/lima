@@ -162,6 +162,53 @@ func TestParsePortForward(t *testing.T) {
 	}
 }
 
+func TestBuildParamExpressions(t *testing.T) {
+	tests := []struct {
+		name          string
+		params        []string
+		allowedParams map[string]string
+		expected      []string
+		expectError   string
+	}{
+		{
+			name:          "single param",
+			params:        []string{"version=v1.35"},
+			allowedParams: map[string]string{"version": ""},
+			expected:      []string{`.param["version"] = "v1.35"`},
+		},
+		{
+			name:          "value contains equals",
+			params:        []string{"token=a=b"},
+			allowedParams: map[string]string{"token": ""},
+			expected:      []string{`.param["token"] = "a=b"`},
+		},
+		{
+			name:          "invalid format",
+			params:        []string{"version"},
+			allowedParams: map[string]string{"version": ""},
+			expectError:   `invalid parameter "version", expected NAME=VALUE`,
+		},
+		{
+			name:          "undefined param",
+			params:        []string{"missing=value"},
+			allowedParams: map[string]string{"version": ""},
+			expectError:   `template does not define param "missing"`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := BuildParamExpressions(tt.params, tt.allowedParams)
+			if tt.expectError != "" {
+				assert.ErrorContains(t, err, tt.expectError)
+			} else {
+				assert.NilError(t, err)
+				assert.DeepEqual(t, tt.expected, result)
+			}
+		})
+	}
+}
+
 func TestYQExpressions(t *testing.T) {
 	expand := func(s string) string {
 		s, err := localpathutil.Expand(s)
@@ -226,6 +273,18 @@ func TestYQExpressions(t *testing.T) {
 			expected:    []string{`.nestedVirtualization = true`},
 		},
 		{
+			name:        "param",
+			args:        []string{"--param", "version=v1.35"},
+			newInstance: false,
+			expected:    []string{`.param["version"] = "v1.35"`},
+		},
+		{
+			name:        "undefined param",
+			args:        []string{"--param", "missing=value"},
+			newInstance: false,
+			expectError: `template does not define param "missing"`,
+		},
+		{
 			name:        "invalid network",
 			args:        []string{"--network", "invalid"},
 			newInstance: true,
@@ -237,7 +296,7 @@ func TestYQExpressions(t *testing.T) {
 			cmd := &cobra.Command{}
 			RegisterEdit(cmd, "")
 			assert.NilError(t, cmd.ParseFlags(tt.args))
-			expr, err := YQExpressions(cmd.Flags(), tt.newInstance)
+			expr, err := YQExpressions(cmd.Flags(), tt.newInstance, map[string]string{"version": ""})
 			if tt.expectError != "" {
 				assert.ErrorContains(t, err, tt.expectError)
 			} else {
