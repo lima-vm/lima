@@ -15,8 +15,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/v2/pkg/fsutil"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/sshutil"
 	"github.com/lima-vm/lima/v2/pkg/store"
 )
 
@@ -119,18 +119,42 @@ func hasRemoteSourceAndDestination(ctx context.Context, paths []string) bool {
 func parseCopyPaths(ctx context.Context, paths []string) ([]*Path, error) {
 	var copyPaths []*Path
 
+	// Resolve sshExe lazily, once per call. NewSSHExe is uncached and may
+	// exec.LookPath each time.
+	var (
+		sshExe       sshutil.SSHExe
+		sshExeErr    error
+		sshExeLoaded bool
+	)
+	ensureSSHExe := func() (sshutil.SSHExe, error) {
+		if !sshExeLoaded {
+			sshExe, sshExeErr = sshutil.NewSSHExe()
+			sshExeLoaded = true
+		}
+		return sshExe, sshExeErr
+	}
+
 	for _, path := range paths {
 		cp := &Path{}
 		if runtime.GOOS == "windows" {
+			// Classify absolute paths before the ":" split, so a drive letter
+			// is not read as an instance name. Drive-relative "C:foo" is not
+			// absolute, so single-letter instance names still work.
 			if filepath.IsAbs(path) {
-				var err error
-				path, err = fsutil.WindowsSubsystemPath(ctx, path)
+				sshExe, err := ensureSSHExe()
 				if err != nil {
 					return nil, err
 				}
-			} else {
-				path = filepath.ToSlash(path)
+				path, err = sshutil.PathForSSH(ctx, sshExe, path)
+				if err != nil {
+					return nil, err
+				}
+				cp.Path = path
+				cp.IsRemote = false
+				copyPaths = append(copyPaths, cp)
+				continue
 			}
+			path = filepath.ToSlash(path)
 		}
 
 		parts := strings.SplitN(path, ":", 2)
