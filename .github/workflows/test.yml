@@ -245,7 +245,10 @@ jobs:
       run: make
     - name: Install QEMU
       run: |
-        winget install --silent --accept-source-agreements --accept-package-agreements --disable-interactivity SoftwareFreedomConservancy.QEMU
+        # Pin to 10.2.0: QEMU 11.0.0 TCG breaks systemd boot on the Windows
+        # runner with "Failed to fork off sandboxing environment: Protocol
+        # error", blocking SSH.
+        winget install --silent --accept-source-agreements --accept-package-agreements --disable-interactivity SoftwareFreedomConservancy.QEMU --version 10.2.0
     - name: Integration tests (QEMU, Windows host)
       run: |
         $env:PATH = "$pwd\_output\bin;" + 'C:\msys64\usr\bin;' + 'C:\Program Files\QEMU;' + $env:PATH
