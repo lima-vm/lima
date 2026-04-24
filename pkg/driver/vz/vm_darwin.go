@@ -52,8 +52,10 @@ type virtualMachineWrapper struct {
 	stopped bool
 }
 
-// Hold all *os.File created via socketpair() so that they won't get garbage collected. f.FD() gets invalid if f gets garbage collected.
-var vmNetworkFiles = make([]*os.File, 1)
+// Hold all *os.File retained by VZ for the VM lifetime so they won't get garbage collected.
+// VZ keeps using the underlying descriptors after configuration is created.
+// For example, block device attachments and network device attachments.
+var vmRetainedFileDescriptors []*os.File
 
 func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int, onVsockEvent func(*events.VsockEvent)) (vm *virtualMachineWrapper, waitSSHLocalPortAccessible <-chan any, errCh chan error, err error) {
 	usernetClient, stopUsernet, err := startUsernet(ctx, inst)
@@ -78,8 +80,8 @@ func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int, onV
 	go func() {
 		// Handle errors via errCh and handle stop vm during context close
 		defer func() {
-			for i := range vmNetworkFiles {
-				vmNetworkFiles[i].Close()
+			for i := range vmRetainedFileDescriptors {
+				_ = vmRetainedFileDescriptors[i].Close()
 			}
 		}()
 		for {
@@ -610,6 +612,11 @@ func attachDisks(ctx context.Context, inst *limatype.Instance, vmConfig *vz.Virt
 		configurations = append(configurations, extraDisk)
 	}
 
+	configurations, err := attachHostBlockDevices(ctx, inst, configurations)
+	if err != nil {
+		return err
+	}
+
 	if err := validateDiskFormat(ciDataPath); err != nil {
 		return err
 	}
@@ -945,7 +952,7 @@ func createSockPair() (server, client *os.File, _ error) {
 	runtime.SetFinalizer(client, func(*os.File) {
 		logrus.Debugf("Client network file GC'ed")
 	})
-	vmNetworkFiles = append(vmNetworkFiles, server, client)
+	vmRetainedFileDescriptors = append(vmRetainedFileDescriptors, server, client)
 	return server, client, nil
 }
 

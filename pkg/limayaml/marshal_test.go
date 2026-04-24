@@ -122,6 +122,18 @@ vmOpts:
 	t.Log(dumpYAML(t, o))
 }
 
+func TestBlockDevices(t *testing.T) {
+	text := `
+blockDevices:
+  - /dev/disk4
+  - /dev/rdisk5
+`
+	var y limatype.LimaYAML
+	err := Unmarshal([]byte(text), &y, "lima.yaml")
+	assert.NilError(t, err)
+	assert.DeepEqual(t, y.BlockDevices, []string{"/dev/disk4", "/dev/rdisk5"})
+}
+
 func TestVMOptsNull(t *testing.T) {
 	text := `
 vmOpts: null

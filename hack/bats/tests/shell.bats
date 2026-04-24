@@ -5,6 +5,10 @@ load "../helpers/load"
 
 INSTANCE=bats-dummy
 
+normalize_stderr_log() {
+    printf '%s\n' "$1" | sed -E 's/^time="[^"]+" //'
+}
+
 @test 'lima stopped lima instance' {
     # check that the "tty" flag is used, also for stdin
     run_e -1 limactl shell --tty=false "$INSTANCE" true </dev/null
@@ -35,10 +39,10 @@ INSTANCE=bats-dummy
 @test 'limactl shell --instance resolves instance name' {
     # --instance should resolve the instance name the same way as the positional arg
     run_e -1 limactl shell --tty=false --instance nonexistent
-    inst_output=$stderr
+    inst_output=$(normalize_stderr_log "$stderr")
 
     run_e -1 limactl shell --tty=false nonexistent
-    assert_stderr "$inst_output"
+    assert_equal "$inst_output" "$(normalize_stderr_log "$stderr")"
 }
 
 @test 'limactl shell --instance with unknown flag errors' {

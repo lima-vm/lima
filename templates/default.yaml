@@ -128,6 +128,13 @@ additionalDisks:
 #   format: true
 #   fsType: "ext4"
 
+# Attach host block devices directly to supported backends.
+# This is currently supported on macOS with `vmType: vz`.
+# Each entry must be an absolute host path, typically under /dev.
+# This requires limactl sudoers to allow the hidden block-device helper.
+# 🟢 Builtin default: []
+blockDevices: []
+
 ssh:
   # A localhost port of the host. Forwarded to port 22 of the guest.
   # 🟢 Builtin default: 0 (automatically assigned to a free port)

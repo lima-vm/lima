@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"gotest.tools/v3/assert"
+
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 )
 
 func TestArgValue(t *testing.T) {
@@ -88,4 +90,11 @@ func TestParseQemuVersion(t *testing.T) {
 		}
 		assert.Equal(t, tc.expectedValue, v.String())
 	}
+}
+
+func TestValidateConfigRejectsBlockDevices(t *testing.T) {
+	err := validateConfig(&limatype.LimaYAML{
+		BlockDevices: []string{"/dev/disk4"},
+	})
+	assert.ErrorContains(t, err, "field `blockDevices` is not supported for vmType: qemu")
 }

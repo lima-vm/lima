@@ -226,6 +226,12 @@ func TestYQExpressions(t *testing.T) {
 			expected:    []string{`.nestedVirtualization = true`},
 		},
 		{
+			name:        "block-device",
+			args:        []string{"--block-device", "/dev/disk4", "--block-device", "/dev/rdisk5"},
+			newInstance: false,
+			expected:    []string{`.blockDevices += ["/dev/disk4","/dev/rdisk5"] | .blockDevices |= unique`},
+		},
+		{
 			name:        "invalid network",
 			args:        []string{"--network", "invalid"},
 			newInstance: true,

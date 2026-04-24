@@ -67,6 +67,7 @@ func RegisterEdit(cmd *cobra.Command, commentPrefix string) {
 	flags.Bool("nested-virt", false, commentPrefix+"Enable nested virtualization")
 
 	flags.Bool("rosetta", false, commentPrefix+"Enable Rosetta (for vz instances)")
+	flags.StringSlice("block-device", nil, commentPrefix+"Host block devices to attach on supported backends, e.g. /dev/disk4")
 
 	flags.StringArray("set", []string{}, commentPrefix+"Modify the template inplace, using yq syntax. Can be passed multiple times.")
 
@@ -328,6 +329,25 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 					return nil, err
 				}
 				return []string{fmt.Sprintf(".vmOpts.vz.rosetta.enabled = %v | .vmOpts.vz.rosetta.binfmt = %v", b, b)}, nil
+			},
+			false,
+			false,
+		},
+		{
+			"block-device",
+			func(_ *flag.Flag) ([]string, error) {
+				paths, err := flags.GetStringSlice("block-device")
+				if err != nil {
+					return nil, err
+				}
+				devices := make([]string, len(paths))
+				for i, path := range paths {
+					if path == "" {
+						return nil, errors.New("block device path must not be empty")
+					}
+					devices[i] = strconv.Quote(path)
+				}
+				return []string{fmt.Sprintf(".blockDevices += [%s] | .blockDevices |= unique", strings.Join(devices, ","))}, nil
 			},
 			false,
 			false,

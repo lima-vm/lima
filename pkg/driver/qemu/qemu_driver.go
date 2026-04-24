@@ -91,6 +91,9 @@ func validateConfig(cfg *limatype.LimaYAML) error {
 	if err := validateMountType(cfg); err != nil {
 		return err
 	}
+	if len(cfg.BlockDevices) > 0 {
+		return fmt.Errorf("field `blockDevices` is not supported for vmType: %s", limatype.QEMU)
+	}
 
 	for i, nw := range cfg.Networks {
 		if unknown := reflectutil.UnknownNonEmptyFields(nw,

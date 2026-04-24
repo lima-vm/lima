@@ -591,6 +591,7 @@ jobs:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       with:
         persist-credentials: false
+        submodules: true
     - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c  # v6.4.0
       with:
         go-version: stable
@@ -609,6 +610,8 @@ jobs:
       run: brew uninstall --ignore-dependencies --force qemu
     - name: Test
       run: ./hack/test-templates.sh templates/${{ matrix.template }}
+    - name: Run BATS VZ block-device tests
+      run: ./hack/bats/lib/bats-core/bin/bats --timing ./hack/bats/extras/vz-block-device.bats
     - if: failure()
       uses: ./.github/actions/upload_failure_logs_if_exists
       with:

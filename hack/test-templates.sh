@@ -610,7 +610,9 @@ fi
 if [[ -n ${CHECKS["user-v2"]} ]]; then
 	INFO "Testing user-v2 network"
 	secondvm="$NAME-1"
+	limactl delete -f "$secondvm" >/dev/null 2>&1 || true
 	"${LIMACTL_CREATE[@]}" --set ".additionalDisks=null" "$FILE_HOST" --name "$secondvm"
+	defer "limactl delete -f \"$secondvm\" >/dev/null 2>&1 || true"
 	if ! limactl start "$secondvm"; then
 		ERROR "Failed to start \"$secondvm\""
 		diagnose "$secondvm"
