@@ -4,6 +4,7 @@
 package downloader
 
 import (
+	"compress/gzip"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -320,19 +321,20 @@ func TestDownloadLocal(t *testing.T) {
 }
 
 func TestDownloadCompressed(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		// FIXME: `assertion failed: error is not nil: exec: "gzip": executable file not found in %PATH%`
-		t.Skip("Skipping on windows")
-	}
-
 	t.Run("gzip", func(t *testing.T) {
+		// Build the fixture in-process so the test covers the
+		// pure-Go decompression path on every platform.
 		ctx := t.Context()
 		localPath := filepath.Join(t.TempDir(), t.Name())
-		localFile := filepath.Join(t.TempDir(), "test-file")
+		localFile := filepath.Join(t.TempDir(), "test-file.gz")
 		testDownloadCompressedContents := []byte("TestDownloadCompressed")
-		assert.NilError(t, os.WriteFile(localFile, testDownloadCompressedContents, 0o644))
-		assert.NilError(t, exec.CommandContext(ctx, "gzip", localFile).Run())
-		localFile += ".gz"
+		f, err := os.Create(localFile)
+		assert.NilError(t, err)
+		gz := gzip.NewWriter(f)
+		_, err = gz.Write(testDownloadCompressedContents)
+		assert.NilError(t, err)
+		assert.NilError(t, gz.Close())
+		assert.NilError(t, f.Close())
 		testLocalFileURL := "file://" + localFile
 
 		r, err := Download(ctx, localPath, testLocalFileURL, WithDecompress(true))
@@ -345,6 +347,12 @@ func TestDownloadCompressed(t *testing.T) {
 	})
 
 	t.Run("bzip2", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			// External bzip2 ships with MSYS2/Git for Windows but not
+			// vanilla Windows, and there is no in-process equivalent
+			// in the standard library.
+			t.Skip("bzip2 binary required to build the fixture")
+		}
 		ctx := t.Context()
 		localPath := filepath.Join(t.TempDir(), t.Name())
 		localFile := filepath.Join(t.TempDir(), "test-file")
