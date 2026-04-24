@@ -13,7 +13,6 @@ import (
 	"github.com/lima-vm/sshocker/pkg/reversesshfs"
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/v2/pkg/ioutilx"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/sshutil"
 )
@@ -53,12 +52,33 @@ func (a *HostAgent) setupMount(ctx context.Context, m limatype.Mount) (*mount, e
 	logrus.Infof("Mounting %q on %q", m.Location, *m.MountPoint)
 
 	resolvedLocation := m.Location
+	var sftpServerBinary string
 	if runtime.GOOS == "windows" {
-		var err error
-		resolvedLocation, err = ioutilx.WindowsSubsystemPath(ctx, m.Location)
+		// LocalPath and the locally-spawned sftp-server must agree on
+		// the Windows path form. Anchor both to the selected ssh.exe:
+		// PathForSSH yields the matching path (Cygwin-style /c/Users/...
+		// for Git for Windows / MSYS2, native C:/Users/... for native
+		// Windows OpenSSH), and SftpServerForSSH selects an sftp-server
+		// from the same toolchain so sshocker does not auto-detect a
+		// mismatched one off PATH.
+		sshExe, err := sshutil.NewSSHExe()
 		if err != nil {
 			return nil, err
 		}
+		resolvedLocation, err = sshutil.PathForSSH(ctx, sshExe, m.Location)
+		if err != nil {
+			return nil, err
+		}
+		sftpServerBinary = sshutil.SftpServerForSSH(ctx, sshExe)
+		if sftpServerBinary == "" {
+			// sshocker will fall back to PATH-based detection, which can
+			// pick an sftp-server from a different toolchain than sshExe.
+			// On plain Windows, the OpenSSH.Server optional feature must
+			// be installed for QEMU reverse-sshfs; surface that here so a
+			// missing install does not present as a silent mount failure.
+			logrus.Warnf("reverse-sshfs: no sftp-server matching %q found; sshocker will auto-detect from PATH (Windows OpenSSH.Server may be missing)", sshExe.Exe)
+		}
+		logrus.Debugf("reverse-sshfs: host path %q resolved to %q for sftp-server %q", m.Location, resolvedLocation, sftpServerBinary)
 	}
 
 	sshAddress, sshPort := a.sshAddressPort()
@@ -66,14 +86,15 @@ func (a *HostAgent) setupMount(ctx context.Context, m limatype.Mount) (*mount, e
 	// modifying HostAgent's sshConfig in case of Windows
 	sshConfig := *a.sshConfig
 	rsf := &reversesshfs.ReverseSSHFS{
-		Driver:              *m.SSHFS.SFTPDriver,
-		SSHConfig:           &sshConfig,
-		LocalPath:           resolvedLocation,
-		Host:                sshAddress,
-		Port:                sshPort,
-		RemotePath:          *m.MountPoint,
-		Readonly:            !(*m.Writable),
-		SSHFSAdditionalArgs: []string{"-o", sshfsOptions},
+		Driver:                  *m.SSHFS.SFTPDriver,
+		OpensshSftpServerBinary: sftpServerBinary,
+		SSHConfig:               &sshConfig,
+		LocalPath:               resolvedLocation,
+		Host:                    sshAddress,
+		Port:                    sshPort,
+		RemotePath:              *m.MountPoint,
+		Readonly:                !(*m.Writable),
+		SSHFSAdditionalArgs:     []string{"-o", sshfsOptions},
 	}
 	if runtime.GOOS == "windows" {
 		// cygwin/msys2 doesn't support full feature set over mux socket, this has at least 2 side effects:
