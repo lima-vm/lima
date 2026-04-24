@@ -31,6 +31,8 @@ func CreateConfiguredDriver(ctx context.Context, inst *limatype.Instance, sshLoc
 	if pidFileOwner == "" {
 		pidFileOwner = OwnerCLI
 	}
+	var driverInfo driver.Info
+
 	if extDriver != nil {
 		extDriver.PIDFileOwner = pidFileOwner
 		extDriver.Logger.Debugf("Using external driver %#q", extDriver.Name)
@@ -45,16 +47,16 @@ func CreateConfiguredDriver(ctx context.Context, inst *limatype.Instance, sshLoc
 			extDriver.InstanceName = inst.Name
 		}
 
-		info := extDriver.Client.Info(ctx)
-		if !info.Features.StaticSSHPort {
+		driverInfo = extDriver.Client.Info(ctx)
+		if !driverInfo.Features.StaticSSHPort {
 			inst.SSHLocalPort = sshLocalPort
 		}
 		return extDriver.Client.Configure(ctx, inst), nil
 	}
 
-	info := intDriver.Info(ctx)
-	logrus.Debugf("Using internal driver %#q", info.Name)
-	if !info.Features.StaticSSHPort {
+	driverInfo = intDriver.Info(ctx)
+	logrus.Debugf("Using internal driver %q", driverInfo.Name)
+	if !driverInfo.Features.StaticSSHPort {
 		inst.SSHLocalPort = sshLocalPort
 	}
 	return intDriver.Configure(ctx, inst), nil
