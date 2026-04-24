@@ -301,45 +301,135 @@ jobs:
     - name: Build limactl
       # Avoid `make` so the build does not require MSYS2 make / bash.
       run: go build -o _output\bin\limactl.exe .\cmd\limactl
-    - name: Smoke test (create / start / shell / copy / stop / delete)
+    - name: Scrub PATH and verify only native Windows toolchain is reachable
       run: |
         $ErrorActionPreference = 'Stop'
+        Write-Host "PATH before scrub:"
+        $env:PATH -split ';' | ForEach-Object { Write-Host "  $_" }
         # Scrub PATH of Cygwin/MSYS2/Git-for-Windows toolchains so that
         # limactl is forced to use native Windows binaries only. The
         # GitHub runner image has these pre-installed and on PATH by
         # default; we want to simulate a vanilla Windows host where
         # users have not installed Git for Windows or MSYS2.
-        $env:PATH = ($env:PATH -split ';' | Where-Object {
+        $scrubbed = ($env:PATH -split ';' | Where-Object {
           $_ -notmatch '\\msys(64|2)\\' -and
           $_ -notmatch '\\Git\\(usr|mingw\d+)\\bin' -and
           $_ -notmatch '\\Git\\cmd' -and
-          $_ -notmatch '\\Git\\bin'
+          $_ -notmatch '\\Git\\bin' -and
+          $_ -notmatch '\\cygwin\d*\\'
         }) -join ';'
+        # Persist the scrubbed PATH into subsequent steps so the smoke test
+        # and any post-step diagnostics see the same environment.
+        Add-Content -Path $env:GITHUB_ENV -Value "PATH=$scrubbed"
+        $env:PATH = $scrubbed
+        Write-Host ""
+        Write-Host "PATH after scrub:"
+        $env:PATH -split ';' | ForEach-Object { Write-Host "  $_" }
+        Write-Host ""
+        # Required: ssh must be the native Windows OpenSSH binary, since
+        # that is the toolchain we are exercising.
         $sshSrc = (Get-Command ssh).Source
         Write-Host "ssh resolves to: $sshSrc"
         if ($sshSrc -notlike 'C:\Windows\System32\OpenSSH\ssh.exe') {
           Write-Error "Expected native Windows OpenSSH; got $sshSrc"
           exit 1
         }
-        if (Get-Command cygpath -ErrorAction SilentlyContinue) {
-          $cyg = (Get-Command cygpath).Source
-          Write-Error "cygpath is still on PATH at $cyg; PATH scrub did not catch it"
+        # Tool inventory: print the resolved location of every external binary
+        # Lima might shell out to on Windows, so the workflow log captures the
+        # exact toolchain layout the test ran against. Tools split into:
+        #   required-native: must come from C:\Windows or be a built-in like wsl.
+        #   forbidden: must NOT resolve at all on a "plain Windows" host.
+        #   optional: may or may not be present; logged for context. Lima has
+        #             graceful fallbacks (id, rsync) or only needs them for
+        #             non-default code paths (qemu-img, decompressors).
+        $required = @('ssh','scp','ssh-keygen','sftp-server','wsl','tar')
+        $forbidden = @{
+          'cygpath' = 'cygpath comes from MSYS2/Git-for-Windows/Cygwin only'
+          'pacman'  = 'pacman comes from MSYS2 only'
+        }
+        # bash.exe is interesting but ambiguous: Windows 10/11 ship a WSL
+        # launcher named bash.exe in System32, which is fine. Git for Windows
+        # also ships a bash.exe in usr/bin. Log it but do not fail on it.
+        $optional = @('bash','sh','gzip','bzip2','xz','zstd','rsync','id','make','awk','sed','qemu-img')
+
+        Write-Host ""
+        Write-Host "=== Required tools (must resolve) ==="
+        $missingRequired = @()
+        foreach ($cmd in $required) {
+          $found = Get-Command $cmd -ErrorAction SilentlyContinue
+          if ($found) { Write-Host ("  {0,-15} -> {1}" -f $cmd, $found.Source) }
+          else { Write-Host ("  {0,-15} -> NOT FOUND" -f $cmd); $missingRequired += $cmd }
+        }
+        Write-Host ""
+        Write-Host "=== Forbidden tools (must not resolve on plain Windows) ==="
+        $foundForbidden = @()
+        foreach ($cmd in $forbidden.Keys) {
+          $found = Get-Command $cmd -ErrorAction SilentlyContinue
+          if ($found) {
+            Write-Host ("  {0,-15} -> {1}    (FORBIDDEN: {2})" -f $cmd, $found.Source, $forbidden[$cmd])
+            $foundForbidden += $cmd
+          } else {
+            Write-Host ("  {0,-15} -> not found (good)" -f $cmd)
+          }
+        }
+        Write-Host ""
+        Write-Host "=== Optional tools (logged for context, not asserted) ==="
+        foreach ($cmd in $optional) {
+          $found = Get-Command $cmd -ErrorAction SilentlyContinue
+          if ($found) { Write-Host ("  {0,-15} -> {1}" -f $cmd, $found.Source) }
+          else { Write-Host ("  {0,-15} -> not found" -f $cmd) }
+        }
+        Write-Host ""
+        if ($missingRequired.Count -gt 0) {
+          Write-Error ("Required tools not on PATH: " + ($missingRequired -join ', '))
           exit 1
         }
-        $env:LIMA_HOME = "$env:TEMP\lima-plain"
+        if ($foundForbidden.Count -gt 0) {
+          Write-Error ("Forbidden tools still on PATH: " + ($foundForbidden -join ', ') + ". Update the scrub regex in this step.")
+          exit 1
+        }
+    - name: Smoke test (create / start / shell / copy / stop / delete)
+      env:
+        # Surface decisions in path-translation, ssh-args, mux-stripping, etc.
+        # The Debug-level logging is only useful when this job fails, but the
+        # success-case noise is small and CI logs are kept for a long time.
+        LIMA_HOME: ${{ runner.temp }}\lima-plain
+      run: |
+        $ErrorActionPreference = 'Stop'
         if (Test-Path $env:LIMA_HOME) { Remove-Item $env:LIMA_HOME -Recurse -Force }
         New-Item -ItemType Directory -Path $env:LIMA_HOME | Out-Null
         # Use the same WSL2 rootfs template that windows-wsl2 uses, so this
         # job exercises a real boot rather than the smallest synthetic config.
-        & .\_output\bin\limactl.exe create --tty=false --name=plain `
+        & .\_output\bin\limactl.exe --debug create --tty=false --name=plain `
           .\templates\experimental\wsl2.yaml
-        & .\_output\bin\limactl.exe start plain
-        & .\_output\bin\limactl.exe shell --tty=false plain -- uname -srm
+        & .\_output\bin\limactl.exe --debug start plain
+        & .\_output\bin\limactl.exe --debug shell --tty=false plain -- uname -srm
         'roundtrip' | Out-File -Encoding ascii "$env:LIMA_HOME\rt.txt"
-        & .\_output\bin\limactl.exe copy "$env:LIMA_HOME\rt.txt" plain:/tmp/rt.txt
-        & .\_output\bin\limactl.exe shell --tty=false plain -- cat /tmp/rt.txt
-        & .\_output\bin\limactl.exe stop plain
-        & .\_output\bin\limactl.exe delete --force plain
+        & .\_output\bin\limactl.exe --debug copy "$env:LIMA_HOME\rt.txt" plain:/tmp/rt.txt
+        & .\_output\bin\limactl.exe --debug shell --tty=false plain -- cat /tmp/rt.txt
+        & .\_output\bin\limactl.exe --debug stop plain
+        & .\_output\bin\limactl.exe --debug delete --force plain
+    - name: Dump Lima logs on failure
+      if: failure()
+      env:
+        LIMA_HOME: ${{ runner.temp }}\lima-plain
+      run: |
+        # Hostagent logs are the most useful artefact when start fails.
+        # Print everything Lima wrote about the instance so failures show up
+        # in the workflow run instead of being lost when the runner is gone.
+        $instDir = "$env:LIMA_HOME\plain"
+        if (-not (Test-Path $instDir)) {
+          Write-Host "No instance directory at $instDir, nothing to dump."
+          exit 0
+        }
+        Get-ChildItem $instDir | Format-Table Name, Length, LastWriteTime
+        foreach ($name in 'ha.stdout.log','ha.stderr.log','serial.log','lima.yaml','ssh.config') {
+          $p = Join-Path $instDir $name
+          if (Test-Path $p) {
+            Write-Host ("===== {0} =====" -f $p)
+            Get-Content $p
+          }
+        }
 
   qemu:
     name: "Integration tests (QEMU, macOS host)"

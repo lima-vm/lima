@@ -66,6 +66,7 @@ func (a *HostAgent) setupMount(ctx context.Context, m limatype.Mount) (*mount, e
 		if err != nil {
 			return nil, err
 		}
+		logrus.Debugf("reverse-sshfs: host path %q resolved to %q for sftp-server", m.Location, resolvedLocation)
 	}
 
 	sshAddress, sshPort := a.sshAddressPort()

@@ -526,7 +526,11 @@ func decompressorByMagic(file string) string {
 }
 
 func decompressLocal(ctx context.Context, decompressCmd, dst, src, ext, description string) error {
-	logrus.Infof("decompressing %s with %v", ext, decompressCmd)
+	if decompressCmd == "gzip" {
+		logrus.Infof("decompressing %s with in-process gzip", ext)
+	} else {
+		logrus.Infof("decompressing %s with external %q", ext, decompressCmd)
+	}
 
 	st, err := os.Stat(src)
 	if err != nil {

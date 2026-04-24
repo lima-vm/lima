@@ -64,7 +64,9 @@ func WindowsSubsystemPath(ctx context.Context, orig string) (string, error) {
 		logrus.WithError(err).Debugf("cygpath unavailable for %q, attempting native conversion", orig)
 	}
 	if vol := filepath.VolumeName(orig); len(vol) == 2 && vol[1] == ':' {
-		return "/" + strings.ToLower(vol[:1]) + filepath.ToSlash(orig[2:]), nil
+		out := "/" + strings.ToLower(vol[:1]) + filepath.ToSlash(orig[2:])
+		logrus.Debugf("native cygpath fallback: %q -> %q", orig, out)
+		return out, nil
 	}
 	return "", fmt.Errorf("cannot convert %q to a Cygwin-style path: cygpath unavailable and input is not a drive-letter path", orig)
 }

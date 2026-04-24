@@ -133,6 +133,7 @@ func (t *rsyncTool) Command(ctx context.Context, paths []string, opts *Options) 
 					// so rsync's ssh transport does not try to use a
 					// ControlMaster socket that is unavailable or unreliable
 					// on Windows.
+					logrus.Debug("rsync: stripping ControlMaster/ControlPath/ControlPersist (Windows)")
 					sshOpts = sshutil.SSHOptsRemovingControlPath(sshOpts)
 				}
 

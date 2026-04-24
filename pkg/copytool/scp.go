@@ -11,6 +11,7 @@ import (
 	"runtime"
 
 	"github.com/coreos/go-semver/semver"
+	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/sshutil"
@@ -128,6 +129,7 @@ func (t *scpTool) Command(ctx context.Context, paths []string, opts *Options) (*
 		// socket), and Cygwin-based ssh has known reliability issues with
 		// sftp over a mux socket. See also the equivalent handling in
 		// hostagent and limactl shell.
+		logrus.Debug("scp: stripping ControlMaster/ControlPath/ControlPersist (Windows)")
 		sshOpts = sshutil.SSHOptsRemovingControlPath(sshOpts)
 	}
 	sshArgs := sshutil.SSHArgsFromOpts(sshOpts)
