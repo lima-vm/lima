@@ -25,37 +25,37 @@ limactl edit default --disk 20
 
 ## Attach host block devices
 
+| ⚡ Requirement | Lima >= 2.2, macOS >= 14.0, `vmType: vz` |
+|-------------------|------------------------------------------|
+
 Lima can attach a host block device directly to the guest.
 
-This is currently supported only on macOS hosts with `vmType: vz`.
-The current implementation requires macOS 14 or later.
-
-### CLI
-
-```sh
-# hdiutil attach -nomount ram://65536   # create a ramdisk to test without a usb key/real drive
+Example configuration:
+{{< tabpane text=true >}}
+{{% tab header="CLI" %}}
+```bash
+# hdiutil attach -nomount ram://65536   # create a ramdisk to test without a USB key or real drive
 limactl start --vm-type=vz --block-device /dev/disk4 template:default
 ```
 
 `/dev/rdiskN` also works:
 
-```sh
-# hdiutil attach -nomount ram://65536   # create a ramdisk to test without a usb key/real drive
+```bash
+# hdiutil attach -nomount ram://65536   # create a ramdisk to test without a USB key or real drive
 limactl start --vm-type=vz --block-device /dev/rdisk4 template:default
 ```
-
-The flag can be specified multiple times to attach multiple host block devices.
-
-### YAML
-
-The YAML field is top-level:
-
+{{% /tab %}}
+{{% tab header="YAML" %}}
 ```yaml
-vmType: vz
+vmType: "vz"
 blockDevices:
-  - /dev/disk4
-  - /dev/rdisk5
+- /dev/disk4
+- /dev/rdisk5
 ```
+{{% /tab %}}
+{{< /tabpane >}}
+
+The `--block-device` flag can be specified multiple times to attach multiple host block devices.
 
 ### Sudoers setup
 
