@@ -218,11 +218,10 @@ jobs:
       run: |
         $env:PATH = "$pwd\_output\bin;" + 'C:\msys64\usr\bin;' + $env:PATH
         pacman -Sy --noconfirm openbsd-netcat diffutils socat w3m
-        $env:MSYS2_ENV_CONV_EXCL = 'HOME_HOST;HOME_GUEST;_LIMA_WINDOWS_EXTRA_PATH'
+        $env:MSYS2_ENV_CONV_EXCL = 'HOME_HOST;HOME_GUEST'
         $env:HOME_HOST = $(cygpath.exe "$env:USERPROFILE")
         $env:HOME_GUEST = "/mnt$env:HOME_HOST"
         $env:LIMACTL_CREATE_ARGS = '--vm-type=wsl2 --mount-type=wsl2 --containerd=system'
-        $env:_LIMA_WINDOWS_EXTRA_PATH = 'C:\Program Files\Git\usr\bin'
         bash.exe -c "./hack/test-templates.sh templates/experimental/wsl2.yaml"
 
   windows-qemu:
@@ -253,12 +252,94 @@ jobs:
       run: |
         $env:PATH = "$pwd\_output\bin;" + 'C:\msys64\usr\bin;' + 'C:\Program Files\QEMU;' + $env:PATH
         pacman -Sy --noconfirm openbsd-netcat diffutils socat w3m
-        $env:MSYS2_ENV_CONV_EXCL = 'HOME_HOST;HOME_GUEST;_LIMA_WINDOWS_EXTRA_PATH'
+        $env:MSYS2_ENV_CONV_EXCL = 'HOME_HOST;HOME_GUEST'
         $env:HOME_HOST = $(cygpath.exe "$env:USERPROFILE")
         $env:HOME_GUEST = "$env:HOME_HOST"
         $env:LIMACTL_CREATE_ARGS = '--vm-type=qemu'
-        $env:_LIMA_WINDOWS_EXTRA_PATH = 'C:\Program Files\Git\usr\bin'
         bash.exe -c "./hack/test-templates.sh templates/default.yaml"
+
+  windows-plain:
+    # Smoke test that Lima works on a Windows host with only the bits that
+    # ship in a default Windows 10/11 install (native OpenSSH, wsl.exe, tar).
+    # Notably: no Git for Windows, no MSYS2, no cygpath, no Cygwin/MSYS2 ssh.
+    # Builds with `go build` (instead of `make`) and exercises the main
+    # commands in PowerShell. If this job ever needs to add MSYS2 / Git for
+    # Windows back to make a step pass, that means a new external-binary
+    # dependency was introduced and should be evaluated.
+    name: "Windows tests (plain, no MSYS2 / Git for Windows)"
+    runs-on: windows-2025
+    timeout-minutes: 30
+    steps:
+    - name: Enable WSL2
+      run: |
+        wsl --set-default-version 2
+        wsl --shutdown
+        wsl --update
+        wsl --status
+    - name: Install WSL2 distro
+      timeout-minutes: 1
+      run: |
+        # See the windows-wsl2 job for why this dummy distro exists.
+        mkdir dummy
+        mkdir dummy\bin
+        mkdir dummy\etc
+        echo "" >dummy\bin\sh
+        tar -cf dummy.tar --format ustar -C dummy .
+        wsl --import dummy $env:TEMP dummy.tar
+        wsl --list --verbose
+    - name: Set gitconfig
+      run: |
+        git config --global core.autocrlf false
+        git config --global core.eol lf
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      with:
+        persist-credentials: false
+    - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c  # v6.4.0
+      with:
+        go-version: stable
+        cache: false
+    - name: Build limactl
+      # Avoid `make` so the build does not require MSYS2 make / bash.
+      run: go build -o _output\bin\limactl.exe .\cmd\limactl
+    - name: Smoke test (create / start / shell / copy / stop / delete)
+      run: |
+        $ErrorActionPreference = 'Stop'
+        # Scrub PATH of Cygwin/MSYS2/Git-for-Windows toolchains so that
+        # limactl is forced to use native Windows binaries only. The
+        # GitHub runner image has these pre-installed and on PATH by
+        # default; we want to simulate a vanilla Windows host where
+        # users have not installed Git for Windows or MSYS2.
+        $env:PATH = ($env:PATH -split ';' | Where-Object {
+          $_ -notmatch '\\msys(64|2)\\' -and
+          $_ -notmatch '\\Git\\(usr|mingw\d+)\\bin' -and
+          $_ -notmatch '\\Git\\cmd' -and
+          $_ -notmatch '\\Git\\bin'
+        }) -join ';'
+        $sshSrc = (Get-Command ssh).Source
+        Write-Host "ssh resolves to: $sshSrc"
+        if ($sshSrc -notlike 'C:\Windows\System32\OpenSSH\ssh.exe') {
+          Write-Error "Expected native Windows OpenSSH; got $sshSrc"
+          exit 1
+        }
+        if (Get-Command cygpath -ErrorAction SilentlyContinue) {
+          $cyg = (Get-Command cygpath).Source
+          Write-Error "cygpath is still on PATH at $cyg; PATH scrub did not catch it"
+          exit 1
+        }
+        $env:LIMA_HOME = "$env:TEMP\lima-plain"
+        if (Test-Path $env:LIMA_HOME) { Remove-Item $env:LIMA_HOME -Recurse -Force }
+        New-Item -ItemType Directory -Path $env:LIMA_HOME | Out-Null
+        # Use the same WSL2 rootfs template that windows-wsl2 uses, so this
+        # job exercises a real boot rather than the smallest synthetic config.
+        & .\_output\bin\limactl.exe create --tty=false --name=plain `
+          .\templates\experimental\wsl2.yaml
+        & .\_output\bin\limactl.exe start plain
+        & .\_output\bin\limactl.exe shell --tty=false plain -- uname -srm
+        'roundtrip' | Out-File -Encoding ascii "$env:LIMA_HOME\rt.txt"
+        & .\_output\bin\limactl.exe copy "$env:LIMA_HOME\rt.txt" plain:/tmp/rt.txt
+        & .\_output\bin\limactl.exe shell --tty=false plain -- cat /tmp/rt.txt
+        & .\_output\bin\limactl.exe stop plain
+        & .\_output\bin\limactl.exe delete --force plain
 
   qemu:
     name: "Integration tests (QEMU, macOS host)"
