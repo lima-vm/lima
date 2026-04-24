@@ -13,7 +13,6 @@ import (
 	"github.com/lima-vm/sshocker/pkg/reversesshfs"
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/v2/pkg/ioutilx"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/sshutil"
 )
@@ -54,8 +53,16 @@ func (a *HostAgent) setupMount(ctx context.Context, m limatype.Mount) (*mount, e
 
 	resolvedLocation := m.Location
 	if runtime.GOOS == "windows" {
-		var err error
-		resolvedLocation, err = ioutilx.WindowsSubsystemPath(ctx, m.Location)
+		// Convert the host path to the form the sftp-server invoked by sshocker
+		// expects. PathForSSH tracks the toolchain Lima is using: Cygwin-style
+		// (e.g. /c/Users/jan) when ssh comes from Git for Windows / MSYS2 (where
+		// sftp-server is also Cygwin-based), and native forward-slash form
+		// (e.g. C:/Users/jan) when ssh is native Windows OpenSSH.
+		sshExe, err := sshutil.NewSSHExe()
+		if err != nil {
+			return nil, err
+		}
+		resolvedLocation, err = sshutil.PathForSSH(ctx, sshExe, m.Location)
 		if err != nil {
 			return nil, err
 		}
