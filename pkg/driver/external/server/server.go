@@ -69,7 +69,8 @@ func Serve(ctx context.Context, driver driver.Driver) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 
-	socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("lima-driver-%s-%d.sock", driver.Info(ctx).Name, os.Getpid()))
+	driverInfo := driver.Info(ctx)
+	socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("lima-driver-%s-%d.sock", driverInfo.Name, os.Getpid()))
 
 	defer func() {
 		if err := os.Remove(socketPath); err != nil && !os.IsNotExist(err) {
@@ -146,8 +147,8 @@ func Serve(ctx context.Context, driver driver.Driver) {
 		}
 	}()
 
-	go func(ctx context.Context) {
-		logger.Infof("Starting external driver server for %s", driver.Info(ctx).Name)
+	go func() {
+		logger.Infof("Starting external driver server for %s", driverInfo.Name)
 		logger.Infof("Server starting on Unix socket: %s", socketPath)
 		if err := server.Serve(tListener); err != nil {
 			if errors.Is(err, grpc.ErrServerStopped) {
@@ -156,7 +157,7 @@ func Serve(ctx context.Context, driver driver.Driver) {
 				logger.Errorf("Failed to serve: %v", err)
 			}
 		}
-	}(ctx)
+	}()
 
 	<-shutdownCh
 	server.GracefulStop()
