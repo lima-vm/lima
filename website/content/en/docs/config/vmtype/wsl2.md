@@ -42,4 +42,16 @@ containerd:
 - "wsl2" currently doesn't support many of Lima's options. See [this file](https://github.com/lima-vm/lima/blob/master/pkg/wsl2/wsl_driver_windows.go#L19) for the latest supported options.
 - When running lima using "wsl2", `${LIMA_HOME}/<INSTANCE>/serial.log` will not contain kernel boot logs
 - WSL2 requires a `tar` formatted rootfs archive instead of a VM image
-- Windows doesn't ship with ssh.exe, gzip.exe, etc. which are used by Lima at various points. The easiest way around this is to run `winget install -e --id Git.MinGit` (winget is now built in to Windows as well), and add the resulting `C:\Program Files\Git\usr\bin\` directory to your path.
+
+### External tools
+
+Lima uses native Windows OpenSSH (`C:\Windows\System32\OpenSSH\`, included in
+Windows 10 build 1803 and later) for `ssh`, `scp`, `ssh-keygen`, and `sftp-server`.
+No additional Cygwin-style toolchain is required.
+
+Installing [Git for Windows](https://gitforwindows.org/) (`winget install -e --id Git.MinGit`)
+remains supported. Lima detects when ssh is a Cygwin-based build and uses
+`cygpath` for path translation in that case, which respects any custom MSYS2
+fstab the user has configured. On a vanilla Windows install with neither Git
+for Windows nor MSYS2, Lima falls back to a native conversion that handles
+the common drive-letter case (e.g. `C:\Users\jan` → `/c/Users/jan`).

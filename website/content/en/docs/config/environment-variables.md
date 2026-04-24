@@ -171,6 +171,11 @@ This page documents the environment variables used in Lima.
   ```
 - **Note**: It is an experimental setting and has no guarantees being ever promoted to stable. It may be removed
   or changed at any stage of project development.
+- **Historical context**: This variable was introduced when Lima required a Cygwin-style toolchain
+  (Git for Windows or MSYS2) on `PATH` for `ssh`, `scp`, `ssh-keygen`, and `cygpath`. Recent Lima
+  versions detect and work directly with native Windows OpenSSH, so injecting
+  `C:\Program Files\Git\usr\bin` is no longer required for the core flow. The variable still works
+  if you want `limactl` to find specific binaries without altering the user shell's `PATH`.
 
 ### `QEMU_SYSTEM_AARCH64`
 
