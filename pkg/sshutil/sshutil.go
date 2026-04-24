@@ -202,16 +202,17 @@ func cygpathForSSH(sshExe SSHExe) (string, bool) {
 // PathForSSH converts orig to the path form Lima's ssh-family invocations
 // expect (ssh, ssh-keygen, scp, sftp, rsync-over-ssh). On non-Windows,
 // returns orig unchanged. On Windows:
-//   - Cygwin-based ssh (Git for Windows, MSYS2): runs cygpath to produce
-//     a Cygwin-style path like /c/Users/...
+//   - Cygwin-based ssh (Git for Windows, MSYS2): runs the sibling cygpath
+//     to produce a Cygwin-style path like /c/Users/..., so the
+//     conversion respects the same MSYS2 fstab the toolchain itself uses.
 //   - Native Windows OpenSSH: returns the path with forward slashes
 //     (e.g. C:/Users/...), which native ssh, ssh-keygen, and scp accept.
 func PathForSSH(ctx context.Context, sshExe SSHExe, orig string) (string, error) {
 	if runtime.GOOS != "windows" {
 		return orig, nil
 	}
-	if IsSSHCygwin(sshExe) {
-		return ioutilx.WindowsSubsystemPath(ctx, orig)
+	if cygpathExe, ok := cygpathForSSH(sshExe); ok {
+		return ioutilx.WindowsSubsystemPathWithCygpath(ctx, cygpathExe, orig)
 	}
 	return filepath.ToSlash(orig), nil
 }
