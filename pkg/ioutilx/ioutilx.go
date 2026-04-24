@@ -58,15 +58,15 @@ func FromUTF16leToString(r io.Reader) (string, error) {
 // drive-letter case. UNC paths and other inputs without a drive letter return
 // an error.
 func WindowsSubsystemPath(ctx context.Context, orig string) (string, error) {
-	if out, err := exec.CommandContext(ctx, "cygpath", filepath.ToSlash(orig)).CombinedOutput(); err == nil {
+	out, err := exec.CommandContext(ctx, "cygpath", filepath.ToSlash(orig)).CombinedOutput()
+	if err == nil {
 		return strings.TrimSpace(string(out)), nil
-	} else {
-		logrus.WithError(err).Debugf("cygpath unavailable for %q, attempting native conversion", orig)
 	}
+	logrus.WithError(err).Debugf("cygpath unavailable for %q, attempting native conversion", orig)
 	if vol := filepath.VolumeName(orig); len(vol) == 2 && vol[1] == ':' {
-		out := "/" + strings.ToLower(vol[:1]) + filepath.ToSlash(orig[2:])
-		logrus.Debugf("native cygpath fallback: %q -> %q", orig, out)
-		return out, nil
+		converted := "/" + strings.ToLower(vol[:1]) + filepath.ToSlash(orig[2:])
+		logrus.Debugf("native cygpath fallback: %q -> %q", orig, converted)
+		return converted, nil
 	}
 	return "", fmt.Errorf("cannot convert %q to a Cygwin-style path: cygpath unavailable and input is not a drive-letter path", orig)
 }
