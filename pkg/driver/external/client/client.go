@@ -32,13 +32,7 @@ func NewDriverClient(socketPath string, logger *logrus.Logger) (*DriverClient, e
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
 
-	// grpc.Dial (deprecated in favour of grpc.NewClient) is intentional here
-	// for compatibility. Suppress both the staticcheck SA1019 deprecation and
-	// nolintlint's unused-directive check: which staticcheck issues survive
-	// past golangci-lint's filter pipeline depends on cache state, so the
-	// SA1019 finding can be either kept or dropped before nolintlint inspects
-	// it. Silencing nolintlint avoids a flaky lint failure across platforms.
-	//nolint:staticcheck,nolintlint // grpc.Dial used for compatibility reasons
+	//nolint:staticcheck // grpc.Dial is used for compatibility reasons
 	conn, err := grpc.Dial("unix://"+socketPath, opts...)
 	if err != nil {
 		logger.Errorf("failed to dial gRPC driver client connection: %v", err)
