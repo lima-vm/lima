@@ -496,11 +496,14 @@ jobs:
       # so we copy templates/ to _output/share/lima/templates/ ourselves.
       #
       # Wrinkle: several files under templates/ are git symlinks
-      # (mode 120000) pointing at sibling files. The Windows checkout writes
-      # them as plaintext stubs containing just the target filename, because
-      # core.symlinks defaults to false on Windows. Some symlinks chain
-      # (opensuse.yaml -> opensuse-leap.yaml -> opensuse-leap-16.yaml), so
-      # the resolver follows the chain until it lands on a real blob.
+      # (mode 120000) pointing at sibling files, and some chain
+      # (opensuse.yaml -> opensuse-leap.yaml -> opensuse-leap-16.yaml).
+      # The working-tree representation varies: the GitHub Windows runner
+      # preserves them as NTFS symlinks, while a plain Windows checkout
+      # with core.symlinks=false writes 17-byte plaintext stubs. We read
+      # symlink targets directly from git's object store so the resolution
+      # is independent of either representation, then overwrite each
+      # destination with the final resolved blob.
       run: |
         $ErrorActionPreference = 'Stop'
         $srcRoot = 'templates'
@@ -509,35 +512,44 @@ jobs:
         New-Item -ItemType Directory -Force -Path $dstRoot | Out-Null
         Copy-Item -Path "$srcRoot\*" -Destination $dstRoot -Recurse -Force
 
-        # Build a set of paths git tracks as symlinks, keyed by Windows-style path.
-        $stubPaths = @{}
+        # Build {posix-path -> target} for every entry tracked as a symlink,
+        # reading the target from git's object store.
+        $linkTargets = @{}
         foreach ($line in (git ls-tree -r HEAD $srcRoot)) {
-          if ($line -match '^120000\s') {
-            $relPath = ($line -split "`t", 2)[1]
-            $stubPaths[$relPath -replace '/', '\'] = $true
-          }
+          if ($line -notmatch '^120000\s') { continue }
+          $parts = $line -split "`t", 2
+          $sha = ($parts[0] -split '\s+')[2]
+          $posixPath = $parts[1]
+          $target = (git cat-file blob $sha).Trim()
+          if ($LASTEXITCODE -ne 0) { throw "git cat-file $sha failed: $LASTEXITCODE" }
+          $linkTargets[$posixPath] = $target
         }
         if ($LASTEXITCODE -ne 0) { throw "git ls-tree failed: $LASTEXITCODE" }
 
-        function Resolve-StubChain($path) {
+        # Walk each chain in path space, then overwrite the destination.
+        foreach ($posixPath in $linkTargets.Keys) {
+          $resolved = $posixPath
           $depth = 0
-          while ($stubPaths[$path]) {
-            if ($depth++ -gt 16) { throw "Symlink chain too deep starting from $path" }
-            $target = (Get-Content -Raw $path).Trim()
-            $next = Join-Path (Split-Path $path) $target
-            if (-not (Test-Path $next)) {
-              throw "Stub $path points at $target which does not exist at $next"
+          while ($linkTargets.ContainsKey($resolved)) {
+            if ($depth++ -gt 16) { throw "Symlink chain too deep starting from $posixPath" }
+            $target = $linkTargets[$resolved]
+            $slash = $resolved.LastIndexOf('/')
+            $resolved = if ($slash -ge 0) { "$($resolved.Substring(0, $slash))/$target" } else { $target }
+            $segs = New-Object System.Collections.ArrayList
+            foreach ($s in ($resolved -split '/')) {
+              if ($s -eq '' -or $s -eq '.') { continue }
+              if ($s -eq '..') {
+                if ($segs.Count -gt 0) { $segs.RemoveAt($segs.Count - 1) | Out-Null }
+                continue
+              }
+              $segs.Add($s) | Out-Null
             }
-            $path = $next
+            $resolved = $segs -join '/'
           }
-          return $path
-        }
-
-        foreach ($stub in $stubPaths.Keys) {
-          $real = Resolve-StubChain $stub
-          $dstPath = Join-Path '_output\share\lima' $stub
-          Write-Host "Resolving symlink: $stub -> $real"
-          Copy-Item -Force -Path $real -Destination $dstPath
+          $srcFile = $resolved -replace '/', '\'
+          $dstFile = Join-Path '_output\share\lima' ($posixPath -replace '/', '\')
+          Write-Host "Resolving symlink: $posixPath -> $resolved"
+          Copy-Item -Force -Path $srcFile -Destination $dstFile
         }
     - name: Scrub PATH and verify only native Windows toolchain is reachable
       run: |
