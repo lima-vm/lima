@@ -38,16 +38,6 @@ func main() {
 	}
 
 	yq.MaybeRunYQ()
-	if runtime.GOOS == "windows" {
-		extras, hasExtra := os.LookupEnv("_LIMA_WINDOWS_EXTRA_PATH")
-		if hasExtra && strings.TrimSpace(extras) != "" {
-			p := os.Getenv("PATH")
-			err := os.Setenv("PATH", strings.TrimSpace(extras)+string(filepath.ListSeparator)+p)
-			if err != nil {
-				logrus.Warning("Can't add extras to PATH, relying entirely on system PATH")
-			}
-		}
-	}
 	err := newApp().Execute()
 	server.StopAllExternalDrivers()
 	osutil.HandleExitError(err)
