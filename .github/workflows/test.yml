@@ -258,15 +258,15 @@ jobs:
         $env:LIMACTL_CREATE_ARGS = '--vm-type=qemu'
         bash.exe -c "./hack/test-templates.sh templates/default.yaml"
 
-  windows-plain:
-    # Smoke test that Lima works on a Windows host with only the bits that
-    # ship in a default Windows 10/11 install (native OpenSSH, wsl.exe, tar).
-    # Notably: no Git for Windows, no MSYS2, no cygpath, no Cygwin/MSYS2 ssh.
-    # Builds with `go build` (instead of `make`) and exercises the main
-    # commands in PowerShell. If this job ever needs to add MSYS2 / Git for
-    # Windows back to make a step pass, that means a new external-binary
-    # dependency was introduced and should be evaluated.
-    name: "Windows tests (plain, no MSYS2 / Git for Windows)"
+  windows-plain-wsl2:
+    # Smoke test that Lima's WSL2 driver works on a Windows host with only
+    # the bits that ship in a default Windows 10/11 install (native OpenSSH,
+    # wsl.exe, tar). Notably: no Git for Windows, no MSYS2, no cygpath, no
+    # Cygwin/MSYS2 ssh. Builds with `go build` (instead of `make`) and
+    # exercises the main commands in PowerShell. If this job ever needs to
+    # add MSYS2 / Git for Windows back to make a step pass, that means a new
+    # external-binary dependency was introduced and should be evaluated.
+    name: "Windows tests (plain WSL2, no MSYS2 / Git for Windows)"
     runs-on: windows-2025
     timeout-minutes: 30
     steps:
@@ -405,7 +405,7 @@ jobs:
         # Surface decisions in path-translation, ssh-args, mux-stripping, etc.
         # The Debug-level logging is only useful when this job fails, but the
         # success-case noise is small and CI logs are kept for a long time.
-        LIMA_HOME: ${{ runner.temp }}\lima-plain
+        LIMA_HOME: ${{ runner.temp }}\lima-plain-wsl2
       run: |
         $ErrorActionPreference = 'Stop'
         # Wrap each limactl invocation so a non-zero exit aborts the whole
@@ -430,11 +430,189 @@ jobs:
     - name: Dump Lima logs on failure
       if: failure()
       env:
-        LIMA_HOME: ${{ runner.temp }}\lima-plain
+        LIMA_HOME: ${{ runner.temp }}\lima-plain-wsl2
       run: |
         # Hostagent logs are the most useful artefact when start fails.
         # Print everything Lima wrote about the instance so failures show up
         # in the workflow run instead of being lost when the runner is gone.
+        $instDir = "$env:LIMA_HOME\plain"
+        if (-not (Test-Path $instDir)) {
+          Write-Host "No instance directory at $instDir, nothing to dump."
+          exit 0
+        }
+        Get-ChildItem $instDir | Format-Table Name, Length, LastWriteTime
+        foreach ($name in 'ha.stdout.log','ha.stderr.log','serial.log','lima.yaml','ssh.config') {
+          $p = Join-Path $instDir $name
+          if (Test-Path $p) {
+            Write-Host ("===== {0} =====" -f $p)
+            Get-Content $p
+          }
+        }
+
+  windows-plain-qemu:
+    # Same shape as windows-plain-wsl2 but exercises the QEMU driver, which
+    # uses reverse-sshfs for host mounts. With the host's PATH scrubbed of
+    # Cygwin/MSYS2/Git-for-Windows entries, sshocker auto-detects the
+    # native Windows sftp-server (C:\Windows\System32\OpenSSH\sftp-server.exe)
+    # and Lima feeds it forward-slash native paths. The smoke test verifies
+    # the mount actually works end-to-end (write on host, read in guest) so
+    # we know that the test-templates.sh "mount-home" check, which now also
+    # runs in windows-qemu via the MSYS2 toolchain, has a parallel test on
+    # the plain-Windows side.
+    name: "Windows tests (plain QEMU, no MSYS2 / Git for Windows)"
+    runs-on: windows-2025
+    timeout-minutes: 30
+    steps:
+    - name: Set gitconfig
+      run: |
+        git config --global core.autocrlf false
+        git config --global core.eol lf
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      with:
+        persist-credentials: false
+    - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c  # v6.4.0
+      with:
+        go-version: stable
+        cache: false
+    - name: Install QEMU
+      run: |
+        # Pin to 10.2.0; see windows-qemu for the rationale.
+        winget install --silent --accept-source-agreements --accept-package-agreements --disable-interactivity SoftwareFreedomConservancy.QEMU --version 10.2.0
+    - name: Build limactl and Linux/amd64 guest agent
+      run: |
+        $ErrorActionPreference = 'Stop'
+        go build -o _output\bin\limactl.exe .\cmd\limactl
+        if ($LASTEXITCODE -ne 0) { throw "limactl build failed: $LASTEXITCODE" }
+        New-Item -ItemType Directory -Force -Path _output\share\lima | Out-Null
+        $env:CGO_ENABLED = '0'
+        $env:GOOS = 'linux'
+        $env:GOARCH = 'amd64'
+        go build -o _output\share\lima\lima-guestagent.Linux-x86_64 .\cmd\lima-guestagent
+        if ($LASTEXITCODE -ne 0) { throw "lima-guestagent build failed: $LASTEXITCODE" }
+    - name: Scrub PATH and verify only native Windows toolchain is reachable
+      run: |
+        $ErrorActionPreference = 'Stop'
+        Write-Host "PATH before scrub:"
+        $env:PATH -split ';' | ForEach-Object { Write-Host "  $_" }
+        $scrubbed = ($env:PATH -split ';' | Where-Object {
+          $_ -notmatch '\\msys(64|2)\\' -and
+          $_ -notmatch '\\Git\\(usr|mingw\d+)\\bin' -and
+          $_ -notmatch '\\Git\\cmd' -and
+          $_ -notmatch '\\Git\\bin' -and
+          $_ -notmatch '\\cygwin\d*\\'
+        }) -join ';'
+        # QEMU is required for this job; ensure it stays on PATH after the scrub.
+        if ($scrubbed -notmatch '(?i)\\qemu') {
+          $scrubbed = 'C:\Program Files\QEMU;' + $scrubbed
+        }
+        Add-Content -Path $env:GITHUB_ENV -Value "PATH=$scrubbed"
+        $env:PATH = $scrubbed
+        Write-Host ""
+        Write-Host "PATH after scrub:"
+        $env:PATH -split ';' | ForEach-Object { Write-Host "  $_" }
+        Write-Host ""
+        $sshSrc = (Get-Command ssh).Source
+        Write-Host "ssh resolves to: $sshSrc"
+        if ($sshSrc -notlike 'C:\Windows\System32\OpenSSH\ssh.exe') {
+          Write-Error "Expected native Windows OpenSSH; got $sshSrc"
+          exit 1
+        }
+        # Same inventory as windows-plain-wsl2 but with QEMU binaries promoted
+        # from "optional" to "required" since they are necessary here.
+        $required = @('ssh','scp','ssh-keygen','sftp-server','wsl','tar','qemu-img','qemu-system-x86_64')
+        $forbidden = @{
+          'cygpath' = 'cygpath comes from MSYS2/Git-for-Windows/Cygwin only'
+          'pacman'  = 'pacman comes from MSYS2 only'
+        }
+        $optional = @('bash','sh','gzip','bzip2','xz','zstd','rsync','id','make','awk','sed')
+
+        Write-Host ""
+        Write-Host "=== Required tools (must resolve) ==="
+        $missingRequired = @()
+        foreach ($cmd in $required) {
+          $found = Get-Command $cmd -ErrorAction SilentlyContinue
+          if ($found) { Write-Host ("  {0,-20} -> {1}" -f $cmd, $found.Source) }
+          else { Write-Host ("  {0,-20} -> NOT FOUND" -f $cmd); $missingRequired += $cmd }
+        }
+        Write-Host ""
+        Write-Host "=== Forbidden tools (must not resolve on plain Windows) ==="
+        $foundForbidden = @()
+        foreach ($cmd in $forbidden.Keys) {
+          $found = Get-Command $cmd -ErrorAction SilentlyContinue
+          if ($found) {
+            Write-Host ("  {0,-20} -> {1}    (FORBIDDEN: {2})" -f $cmd, $found.Source, $forbidden[$cmd])
+            $foundForbidden += $cmd
+          } else {
+            Write-Host ("  {0,-20} -> not found (good)" -f $cmd)
+          }
+        }
+        Write-Host ""
+        Write-Host "=== Optional tools (logged for context, not asserted) ==="
+        foreach ($cmd in $optional) {
+          $found = Get-Command $cmd -ErrorAction SilentlyContinue
+          if ($found) { Write-Host ("  {0,-20} -> {1}" -f $cmd, $found.Source) }
+          else { Write-Host ("  {0,-20} -> not found" -f $cmd) }
+        }
+        Write-Host ""
+        if ($missingRequired.Count -gt 0) {
+          Write-Error ("Required tools not on PATH: " + ($missingRequired -join ', '))
+          exit 1
+        }
+        if ($foundForbidden.Count -gt 0) {
+          Write-Error ("Forbidden tools still on PATH: " + ($foundForbidden -join ', ') + ". Update the scrub regex in this step.")
+          exit 1
+        }
+    - name: Smoke test (create / start / shell / copy / mount / stop / delete)
+      env:
+        LIMA_HOME: ${{ runner.temp }}\lima-plain-qemu
+      run: |
+        $ErrorActionPreference = 'Stop'
+        function Invoke-Limactl {
+          & .\_output\bin\limactl.exe --debug @args
+          if ($LASTEXITCODE -ne 0) { throw "limactl $($args -join ' ') exited $LASTEXITCODE" }
+        }
+        if (Test-Path $env:LIMA_HOME) { Remove-Item $env:LIMA_HOME -Recurse -Force }
+        New-Item -ItemType Directory -Path $env:LIMA_HOME | Out-Null
+        # Use the same default template that windows-qemu uses, so the only
+        # axis varying between the two QEMU jobs is the host toolchain.
+        Invoke-Limactl create --tty=false --name=plain --vm-type=qemu .\templates\default.yaml
+        Invoke-Limactl start plain
+        Invoke-Limactl shell --tty=false plain -- uname -srm
+
+        # Reverse-sshfs round-trip: the mount-home check from
+        # hack/test-mount-home.sh, but in PowerShell. Verifies the host-side
+        # native sftp-server is usable to the guest via sshfs.
+        $shareDir = Join-Path $env:USERPROFILE 'lima-test-tmp'
+        if (Test-Path $shareDir) { Remove-Item $shareDir -Recurse -Force }
+        New-Item -ItemType Directory -Path $shareDir | Out-Null
+        $expected = "random-content-$(Get-Random)"
+        Set-Content -Path (Join-Path $shareDir 'random') -Value $expected -NoNewline -Encoding ASCII
+        # The default template uses cygpath-style mount points (/c/Users/...).
+        # filepath.VolumeName-style native cygpath fallback in ioutilx produces
+        # the same convention, so the guest path is deterministic regardless
+        # of toolchain.
+        $userProfileGuest = '/' + $env:USERPROFILE.Substring(0,1).ToLower() + ($env:USERPROFILE.Substring(2) -replace '\\','/')
+        $guestRandom = "$userProfileGuest/lima-test-tmp/random"
+        $got = & .\_output\bin\limactl.exe shell --tty=false plain cat $guestRandom
+        if ($LASTEXITCODE -ne 0) { throw "guest cat $guestRandom failed: $LASTEXITCODE" }
+        Write-Host "mount-home: expected=$expected, got=$got"
+        if ($got -ne $expected) {
+          throw "Reverse-sshfs round-trip failed: expected '$expected', got '$got'"
+        }
+        Remove-Item $shareDir -Recurse -Force
+
+        # Plain copy round-trip via scp (independent of the mount).
+        'roundtrip' | Out-File -Encoding ascii "$env:LIMA_HOME\rt.txt"
+        Invoke-Limactl copy "$env:LIMA_HOME\rt.txt" plain:/tmp/rt.txt
+        Invoke-Limactl shell --tty=false plain -- cat /tmp/rt.txt
+
+        Invoke-Limactl stop plain
+        Invoke-Limactl delete --force plain
+    - name: Dump Lima logs on failure
+      if: failure()
+      env:
+        LIMA_HOME: ${{ runner.temp }}\lima-plain-qemu
+      run: |
         $instDir = "$env:LIMA_HOME\plain"
         if (-not (Test-Path $instDir)) {
           Write-Host "No instance directory at $instDir, nothing to dump."
