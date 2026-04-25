@@ -45,8 +45,15 @@ containerd:
 
 ### External tools
 
-Lima uses native Windows OpenSSH (`C:\Windows\System32\OpenSSH\`, included in
-Windows 10 build 1803 and later) for `ssh`, `scp`, `ssh-keygen`, and `sftp-server`.
+Lima uses the native Windows OpenSSH binaries in `C:\Windows\System32\OpenSSH\`:
+
+- **OpenSSH Client** (`ssh.exe`, `scp.exe`, `ssh-keygen.exe`) ships by default
+  on Windows 10 build 1803 and later, and covers the WSL2 driver.
+- **`sftp-server.exe`** is part of OpenSSH Server, an [optional Feature on Demand](https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse).
+  It is only needed for the QEMU driver's reverse-sshfs mounts. Install via
+  `Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0` from an
+  elevated PowerShell, or via Settings → Apps → Optional features.
+
 No additional Cygwin-style toolchain is required.
 
 Installing [Git for Windows](https://gitforwindows.org/) (`winget install -e --id Git.MinGit`)
@@ -55,3 +62,11 @@ remains supported. Lima detects when ssh is a Cygwin-based build and uses
 fstab the user has configured. On a vanilla Windows install with neither Git
 for Windows nor MSYS2, Lima falls back to a native conversion that handles
 the common drive-letter case (e.g. `C:\Users\jan` → `/c/Users/jan`).
+
+Note: the ssh toolchain in use is detected at every `limactl start`. Do not
+swap between native Windows OpenSSH and Cygwin-based ssh (by adding or
+removing Git for Windows / MSYS2 from `PATH`) between `limactl create` and
+`limactl start` on a QEMU instance with a reverse-sshfs mount: the
+`LocalPath` passed to sftp-server is recomputed on each start and would
+change shape across the swap. Sticking with one toolchain for an instance's
+lifetime avoids the mismatch.
