@@ -489,6 +489,56 @@ jobs:
         $env:GOARCH = 'amd64'
         go build -o _output\share\lima\lima-guestagent.Linux-x86_64 .\cmd\lima-guestagent
         if ($LASTEXITCODE -ne 0) { throw "lima-guestagent build failed: $LASTEXITCODE" }
+    - name: Install templates (replicating make's TEMPLATES target)
+      # The default.yaml template uses `base: template:_images/ubuntu` and
+      # `base: template:_default/mounts`, which Lima resolves via
+      # <prefix>/share/lima/templates/. We avoid `make` to stay free of MSYS2,
+      # so we copy templates/ to _output/share/lima/templates/ ourselves.
+      #
+      # Wrinkle: several files under templates/ are git symlinks
+      # (mode 120000) pointing at sibling files. The Windows checkout writes
+      # them as plaintext stubs containing just the target filename, because
+      # core.symlinks defaults to false on Windows. Some symlinks chain
+      # (opensuse.yaml -> opensuse-leap.yaml -> opensuse-leap-16.yaml), so
+      # the resolver follows the chain until it lands on a real blob.
+      run: |
+        $ErrorActionPreference = 'Stop'
+        $srcRoot = 'templates'
+        $dstRoot = '_output\share\lima\templates'
+        if (Test-Path $dstRoot) { Remove-Item $dstRoot -Recurse -Force }
+        New-Item -ItemType Directory -Force -Path $dstRoot | Out-Null
+        Copy-Item -Path "$srcRoot\*" -Destination $dstRoot -Recurse -Force
+
+        # Build a set of paths git tracks as symlinks, keyed by Windows-style path.
+        $stubPaths = @{}
+        foreach ($line in (git ls-tree -r HEAD $srcRoot)) {
+          if ($line -match '^120000\s') {
+            $relPath = ($line -split "`t", 2)[1]
+            $stubPaths[$relPath -replace '/', '\'] = $true
+          }
+        }
+        if ($LASTEXITCODE -ne 0) { throw "git ls-tree failed: $LASTEXITCODE" }
+
+        function Resolve-StubChain($path) {
+          $depth = 0
+          while ($stubPaths[$path]) {
+            if ($depth++ -gt 16) { throw "Symlink chain too deep starting from $path" }
+            $target = (Get-Content -Raw $path).Trim()
+            $next = Join-Path (Split-Path $path) $target
+            if (-not (Test-Path $next)) {
+              throw "Stub $path points at $target which does not exist at $next"
+            }
+            $path = $next
+          }
+          return $path
+        }
+
+        foreach ($stub in $stubPaths.Keys) {
+          $real = Resolve-StubChain $stub
+          $dstPath = Join-Path '_output\share\lima' $stub
+          Write-Host "Resolving symlink: $stub -> $real"
+          Copy-Item -Force -Path $real -Destination $dstPath
+        }
     - name: Scrub PATH and verify only native Windows toolchain is reachable
       run: |
         $ErrorActionPreference = 'Stop'
