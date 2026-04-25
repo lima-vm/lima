@@ -70,6 +70,7 @@ func RegisterEdit(cmd *cobra.Command, commentPrefix string) {
 	flags.StringSlice("block-device", nil, commentPrefix+"Host block devices to attach on supported backends, e.g. /dev/disk4")
 
 	flags.StringArray("set", []string{}, commentPrefix+"Modify the template inplace, using yq syntax. Can be passed multiple times.")
+	flags.StringArray("param", []string{}, commentPrefix+"Set a template parameter, e.g. name=value. Can be passed multiple times.")
 
 	flags.Uint16("ssh-port", 0, commentPrefix+"SSH port (0 for random)") // colima-compatible
 	_ = cmd.RegisterFlagCompletionFunc("ssh-port", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
@@ -170,6 +171,21 @@ func BuildPortForwardExpression(portForwards []string) (string, error) {
 	return expr, nil
 }
 
+func BuildParamExpressions(params []string, allowedParams map[string]string) ([]string, error) {
+	exprs := make([]string, len(params))
+	for i, param := range params {
+		key, value, ok := strings.Cut(param, "=")
+		if !ok {
+			return nil, fmt.Errorf("invalid parameter %q, expected NAME=VALUE", param)
+		}
+		if _, ok := allowedParams[key]; !ok {
+			return nil, fmt.Errorf("template does not define param %q", key)
+		}
+		exprs[i] = fmt.Sprintf(".param[%q] = %q", key, value)
+	}
+	return exprs, nil
+}
+
 func buildMountListExpression(ss []string) (string, error) {
 	mounts := make([]string, len(ss))
 	for i, s := range ss {
@@ -185,7 +201,7 @@ func buildMountListExpression(ss []string) (string, error) {
 }
 
 // YQExpressions returns YQ expressions.
-func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
+func YQExpressions(flags *flag.FlagSet, newInstance bool, params map[string]string) ([]string, error) {
 	type def struct {
 		flagName                 string
 		exprFunc                 func(*flag.Flag) ([]string, error)
@@ -354,6 +370,13 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 		},
 		{"set", func(v *flag.Flag) ([]string, error) {
 			return v.Value.(flag.SliceValue).GetSlice(), nil
+		}, false, false},
+		{"param", func(_ *flag.Flag) ([]string, error) {
+			ss, err := flags.GetStringArray("param")
+			if err != nil {
+				return nil, err
+			}
+			return BuildParamExpressions(ss, params)
 		}, false, false},
 		{
 			"video",

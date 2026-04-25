@@ -85,7 +85,15 @@ func editAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	yqExprs, err := editflags.YQExpressions(flags, false)
+	var params map[string]string
+	if flags.Changed("param") {
+		var y limatype.LimaYAML
+		if err := limayaml.Unmarshal(yContent, &y, filePath); err != nil {
+			return err
+		}
+		params = y.Param
+	}
+	yqExprs, err := editflags.YQExpressions(flags, false, params)
 	if err != nil {
 		return err
 	}

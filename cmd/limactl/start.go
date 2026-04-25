@@ -58,6 +58,9 @@ func newCreateCommand() *cobra.Command {
   To create an instance "default" with yq expressions:
   $ limactl create --set='.cpus = 2 | .memory = "2GiB"'
 
+  To create an instance "default" with a template parameter:
+  $ limactl create --name=default --param containerdSnapshotter=false template:docker
+
   To see the template list:
   $ limactl create --list-templates
 
@@ -282,7 +285,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 				return nil, fmt.Errorf("instance %q already exists", tmpl.Name)
 			}
 			logrus.Infof("Using the existing instance %q", tmpl.Name)
-			yqExprs, err := editflags.YQExpressions(flags, false)
+			yqExprs, err := editflags.YQExpressions(flags, false, inst.Config.Param)
 			if err != nil {
 				return nil, err
 			}
@@ -331,7 +334,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 	if tmpl.Config != nil && tmpl.Config.OS != nil && *tmpl.Config.OS != limatype.LINUX {
 		logrus.Warn("Support for non-Linux guests is experimental")
 	}
-	yqExprs, err := editflags.YQExpressions(flags, true)
+	yqExprs, err := editflags.YQExpressions(flags, true, tmpl.Config.Param)
 	if err != nil {
 		return nil, err
 	}
