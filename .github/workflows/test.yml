@@ -545,6 +545,13 @@ jobs:
             }
             $resolved = $segs -join '/'
           }
+          # Defensive: guard against a future symlink edit that resolves
+          # outside templates/ (e.g. via a chain with enough '..' segments).
+          # Lima's current templates don't do this, but the loop above
+          # silently swallows '..' underflow, so assert the end state.
+          if (-not $resolved.StartsWith("$srcRoot/")) {
+            throw "Symlink $posixPath resolved to $resolved, which escapes $srcRoot/"
+          }
           $srcFile = $resolved -replace '/', '\'
           $dstFile = Join-Path '_output\share\lima' ($posixPath -replace '/', '\')
           Write-Host "Resolving symlink: $posixPath -> $resolved"
