@@ -298,9 +298,21 @@ jobs:
       with:
         go-version: stable
         cache: false
-    - name: Build limactl
-      # Avoid `make` so the build does not require MSYS2 make / bash.
-      run: go build -o _output\bin\limactl.exe .\cmd\limactl
+    - name: Build limactl and Linux/amd64 guest agent
+      # Avoid `make` so the build does not require MSYS2 make / bash. The
+      # guest agent must be built separately because limactl looks it up at
+      # the path _output/share/lima/lima-guestagent.<OS>-<arch> when starting
+      # an instance, and `go build ./cmd/limactl` does not produce that file.
+      run: |
+        $ErrorActionPreference = 'Stop'
+        go build -o _output\bin\limactl.exe .\cmd\limactl
+        if ($LASTEXITCODE -ne 0) { throw "limactl build failed: $LASTEXITCODE" }
+        New-Item -ItemType Directory -Force -Path _output\share\lima | Out-Null
+        $env:CGO_ENABLED = '0'
+        $env:GOOS = 'linux'
+        $env:GOARCH = 'amd64'
+        go build -o _output\share\lima\lima-guestagent.Linux-x86_64 .\cmd\lima-guestagent
+        if ($LASTEXITCODE -ne 0) { throw "lima-guestagent build failed: $LASTEXITCODE" }
     - name: Scrub PATH and verify only native Windows toolchain is reachable
       run: |
         $ErrorActionPreference = 'Stop'
@@ -396,19 +408,25 @@ jobs:
         LIMA_HOME: ${{ runner.temp }}\lima-plain
       run: |
         $ErrorActionPreference = 'Stop'
+        # Wrap each limactl invocation so a non-zero exit aborts the whole
+        # script. Without this, $ErrorActionPreference does not catch native
+        # command failures and the script silently continues past errors.
+        function Invoke-Limactl {
+          & .\_output\bin\limactl.exe --debug @args
+          if ($LASTEXITCODE -ne 0) { throw "limactl $($args -join ' ') exited $LASTEXITCODE" }
+        }
         if (Test-Path $env:LIMA_HOME) { Remove-Item $env:LIMA_HOME -Recurse -Force }
         New-Item -ItemType Directory -Path $env:LIMA_HOME | Out-Null
         # Use the same WSL2 rootfs template that windows-wsl2 uses, so this
         # job exercises a real boot rather than the smallest synthetic config.
-        & .\_output\bin\limactl.exe --debug create --tty=false --name=plain `
-          .\templates\experimental\wsl2.yaml
-        & .\_output\bin\limactl.exe --debug start plain
-        & .\_output\bin\limactl.exe --debug shell --tty=false plain -- uname -srm
+        Invoke-Limactl create --tty=false --name=plain .\templates\experimental\wsl2.yaml
+        Invoke-Limactl start plain
+        Invoke-Limactl shell --tty=false plain -- uname -srm
         'roundtrip' | Out-File -Encoding ascii "$env:LIMA_HOME\rt.txt"
-        & .\_output\bin\limactl.exe --debug copy "$env:LIMA_HOME\rt.txt" plain:/tmp/rt.txt
-        & .\_output\bin\limactl.exe --debug shell --tty=false plain -- cat /tmp/rt.txt
-        & .\_output\bin\limactl.exe --debug stop plain
-        & .\_output\bin\limactl.exe --debug delete --force plain
+        Invoke-Limactl copy "$env:LIMA_HOME\rt.txt" plain:/tmp/rt.txt
+        Invoke-Limactl shell --tty=false plain -- cat /tmp/rt.txt
+        Invoke-Limactl stop plain
+        Invoke-Limactl delete --force plain
     - name: Dump Lima logs on failure
       if: failure()
       env:
