@@ -99,8 +99,8 @@ func IsSSHCygwin(sshExe SSHExe) bool {
 		}
 		path = resolved
 	}
-	if real, err := filepath.EvalSymlinks(path); err == nil {
-		path = real
+	if resolved, err := filepath.EvalSymlinks(path); err == nil {
+		path = resolved
 	}
 	cygwinDetectCacheRW.RLock()
 	cached, ok := cygwinDetectCache[path]
