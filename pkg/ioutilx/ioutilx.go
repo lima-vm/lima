@@ -64,7 +64,11 @@ func WindowsSubsystemPath(ctx context.Context, orig string) (string, error) {
 	}
 	logrus.WithError(err).Debugf("cygpath unavailable for %q, attempting native conversion", orig)
 	if vol := filepath.VolumeName(orig); len(vol) == 2 && vol[1] == ':' {
-		converted := "/" + strings.ToLower(vol[:1]) + filepath.ToSlash(orig[2:])
+		// orig[2:] is expected to begin with a separator for absolute drive
+		// paths (C:\foo, C:/foo). Insert the slash explicitly so a
+		// drive-relative input like "C:foo" does not collapse to "/cfoo".
+		tail := strings.TrimPrefix(filepath.ToSlash(orig[2:]), "/")
+		converted := "/" + strings.ToLower(vol[:1]) + "/" + tail
 		logrus.Debugf("native cygpath fallback: %q -> %q", orig, converted)
 		return converted, nil
 	}

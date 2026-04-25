@@ -69,6 +69,12 @@ func checkRsyncOnGuest(ctx context.Context, inst *limatype.Instance) bool {
 		logrus.Debugf("failed to get SSH options for rsync check: %v", err)
 		return false
 	}
+	if runtime.GOOS == "windows" {
+		// Mirror rsyncTool.Command: native Windows OpenSSH has no mux support,
+		// and Cygwin ssh's mux is unreliable. Strip the mux options so the
+		// probe does not falsely reject a working rsync install.
+		sshOpts = sshutil.SSHOptsRemovingControlPath(sshOpts)
+	}
 
 	sshArgs := append([]string{}, sshExe.Args...)
 	sshArgs = append(sshArgs, sshutil.SSHArgsFromOpts(sshOpts)...)

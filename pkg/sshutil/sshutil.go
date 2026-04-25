@@ -69,44 +69,57 @@ func NewSSHExe() (SSHExe, error) {
 	return sshExe, nil
 }
 
-var cygwinDetect struct {
-	sync.Once
-	isCygwin bool
-}
+var (
+	// cygwinDetectCache maps a resolved absolute ssh path (with symlinks
+	// evaluated) to whether that ssh is a Cygwin-based build. Each distinct
+	// path is probed and logged once.
+	cygwinDetectCache   = map[string]bool{}
+	cygwinDetectCacheRW sync.RWMutex
+)
 
 // IsSSHCygwin reports whether sshExe is a Cygwin-based build of OpenSSH
 // (e.g. Git for Windows, MSYS2, or Cygwin itself), as opposed to native
 // Windows OpenSSH. The detection is based on whether cygpath.exe lives in
-// the same directory as ssh.exe, which is the layout used by Git for Windows
-// and MSYS2. Always returns false on non-Windows.
+// the same directory as ssh.exe (the layout used by Git for Windows and
+// MSYS2) after resolving symlinks, so shims from chocolatey/scoop/etc. do
+// not throw the directory check off. Always returns false on non-Windows.
 //
-// The first call's result is cached and logged at Debug level. Subsequent
-// calls return the same answer regardless of the sshExe passed; in practice
-// limactl uses a single ssh binary throughout a process, so this is fine
-// and avoids spamming the log when toolchain-aware code paths run repeatedly.
+// Results are cached per resolved absolute path and logged once per path
+// at Debug level.
 func IsSSHCygwin(sshExe SSHExe) bool {
 	if runtime.GOOS != "windows" || sshExe.Exe == "" {
 		return false
 	}
-	cygwinDetect.Do(func() {
-		path := sshExe.Exe
-		if !filepath.IsAbs(path) {
-			resolved, err := exec.LookPath(path)
-			if err != nil {
-				logrus.WithError(err).Debugf("IsSSHCygwin: cannot resolve %q via PATH; assuming native", sshExe.Exe)
-				return
-			}
-			path = resolved
+	path := sshExe.Exe
+	if !filepath.IsAbs(path) {
+		resolved, err := exec.LookPath(path)
+		if err != nil {
+			logrus.WithError(err).Debugf("IsSSHCygwin: cannot resolve %q via PATH; assuming native", sshExe.Exe)
+			return false
 		}
-		cygpathPath := filepath.Join(filepath.Dir(path), "cygpath.exe")
-		if _, err := os.Stat(cygpathPath); err == nil {
-			cygwinDetect.isCygwin = true
-			logrus.Debugf("ssh at %q detected as Cygwin-based (found %q alongside)", path, cygpathPath)
-		} else {
-			logrus.Debugf("ssh at %q detected as native Windows OpenSSH (no cygpath.exe alongside)", path)
-		}
-	})
-	return cygwinDetect.isCygwin
+		path = resolved
+	}
+	if real, err := filepath.EvalSymlinks(path); err == nil {
+		path = real
+	}
+	cygwinDetectCacheRW.RLock()
+	cached, ok := cygwinDetectCache[path]
+	cygwinDetectCacheRW.RUnlock()
+	if ok {
+		return cached
+	}
+	cygpathPath := filepath.Join(filepath.Dir(path), "cygpath.exe")
+	_, err := os.Stat(cygpathPath)
+	isCygwin := err == nil
+	if isCygwin {
+		logrus.Debugf("ssh at %q detected as Cygwin-based (found %q alongside)", path, cygpathPath)
+	} else {
+		logrus.Debugf("ssh at %q detected as native Windows OpenSSH (no cygpath.exe alongside)", path)
+	}
+	cygwinDetectCacheRW.Lock()
+	cygwinDetectCache[path] = isCygwin
+	cygwinDetectCacheRW.Unlock()
+	return isCygwin
 }
 
 // PathForSSH converts orig to the path form expected by the ssh family of
@@ -460,6 +473,10 @@ func ParseOpenSSHVersion(version []byte) *semver.Version {
 		}
 		return semver.New(fmt.Sprintf("%s.%s", matches[1], matches[2]))
 	}
+	// Version-gated behaviour (cipher selection, scp URL form) silently
+	// downgrades when we return 0.0.0, so log the unparsed banner to make
+	// the cause traceable in --debug output.
+	logrus.Debugf("ParseOpenSSHVersion: no match in %q; returning 0.0.0", string(version))
 	return &semver.Version{}
 }
 
