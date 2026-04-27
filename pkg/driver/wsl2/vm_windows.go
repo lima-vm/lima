@@ -132,13 +132,11 @@ func provisionVM(ctx context.Context, instanceDir, instanceName, distroName stri
 					"check /var/log/lima-init.log for more details (out=%q)", cmd.Args, err, string(out))
 		}
 
-		for {
-			<-ctx.Done()
-			logrus.Info("Context closed, stopping vm")
-			if status, err := getWslStatus(ctx, instanceName); err == nil &&
-				status == limatype.StatusRunning {
-				_ = stopVM(ctx, distroName)
-			}
+		<-ctx.Done()
+		logrus.Info("Context closed, stopping vm")
+		if status, err := getWslStatus(ctx, instanceName); err == nil &&
+			status == limatype.StatusRunning {
+			_ = stopVM(ctx, distroName)
 		}
 	}()
 
