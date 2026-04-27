@@ -18,7 +18,8 @@ import (
 )
 
 type GuestAgentClient struct {
-	cli api.GuestServiceClient
+	cli  api.GuestServiceClient
+	conn *grpc.ClientConn
 }
 
 func NewGuestAgentClient(dialFn func(ctx context.Context) (net.Conn, error)) (*GuestAgentClient, error) {
@@ -44,8 +45,18 @@ func NewGuestAgentClient(dialFn func(ctx context.Context) (net.Conn, error)) (*G
 	}
 	client := api.NewGuestServiceClient(clientConn)
 	return &GuestAgentClient{
-		cli: client,
+		cli:  client,
+		conn: clientConn,
 	}, nil
+}
+
+// Close releases the underlying gRPC connection. It is safe to call on a nil
+// receiver or a client whose connection has already been closed.
+func (c *GuestAgentClient) Close() error {
+	if c == nil || c.conn == nil {
+		return nil
+	}
+	return c.conn.Close()
 }
 
 func (c *GuestAgentClient) Info(ctx context.Context) (*api.Info, error) {
