@@ -728,7 +728,8 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 
 	go func() {
 		if a.instConfig.MountInotify != nil && *a.instConfig.MountInotify {
-			if a.client == nil || !isGuestAgentSocketAccessible(ctx, a.client) {
+			client := a.getClient()
+			if client == nil || !isGuestAgentSocketAccessible(ctx, client) {
 				if a.driver.ForwardGuestAgent() {
 					sshAddress, sshPort := a.sshAddressPort()
 					_ = forwardSSH(ctx, a.sshConfig, sshAddress, sshPort, localUnix, remoteUnix, verbForward, false)
@@ -743,9 +744,20 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 
 	// ensure close before ctx is cancelled
 	a.cleanUp(a.grpcPortForwarder.Close)
+	a.cleanUp(func() error {
+		a.clientMu.Lock()
+		defer a.clientMu.Unlock()
+		if a.client == nil {
+			return nil
+		}
+		err := a.client.Close()
+		a.client = nil
+		return err
+	})
 
 	for {
-		if a.client == nil || !isGuestAgentSocketAccessible(ctx, a.client) {
+		client := a.getClient()
+		if client == nil || !isGuestAgentSocketAccessible(ctx, client) {
 			if a.driver.ForwardGuestAgent() {
 				sshAddress, sshPort := a.sshAddressPort()
 				_ = forwardSSH(ctx, a.sshConfig, sshAddress, sshPort, localUnix, remoteUnix, verbForward, false)
@@ -820,11 +832,29 @@ func isGuestAgentSocketAccessible(ctx context.Context, client *guestagentclient.
 	return err == nil
 }
 
+// getClient returns the current guest agent client under the clientMu lock,
+// so callers observe a consistent (non-mid-transition) snapshot.
+func (a *HostAgent) getClient() *guestagentclient.GuestAgentClient {
+	a.clientMu.Lock()
+	defer a.clientMu.Unlock()
+	return a.client
+}
+
 func (a *HostAgent) getOrCreateClient(ctx context.Context) (*guestagentclient.GuestAgentClient, error) {
 	a.clientMu.Lock()
 	defer a.clientMu.Unlock()
 	if a.client != nil && isGuestAgentSocketAccessible(ctx, a.client) {
 		return a.client, nil
+	}
+	// The previous client (if any) is unreachable: close its underlying gRPC
+	// ClientConn before replacing it, otherwise the resolver/transport
+	// goroutines and the dialed net.Conn (e.g. forwarded ga.sock) leak across
+	// every guest agent restart or VM reboot.
+	if a.client != nil {
+		if err := a.client.Close(); err != nil {
+			logrus.WithError(err).Debug("failed to close stale guest agent client")
+		}
+		a.client = nil
 	}
 	var err error
 	a.client, err = guestagentclient.NewGuestAgentClient(a.createConnection)
