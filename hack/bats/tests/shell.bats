@@ -37,12 +37,15 @@ normalize_stderr_log() {
 }
 
 @test 'limactl shell --instance resolves instance name' {
-    # --instance should resolve the instance name the same way as the positional arg
+    # --instance should resolve the instance name the same way as the positional arg.
+    # Normalize the logrus timestamp because the two invocations may land in different seconds.
     run_e -1 limactl shell --tty=false --instance nonexistent
-    inst_output=$(normalize_stderr_log "$stderr")
+    inst_output=$(sed 's/^time="[^"]*"/time="TIMESTAMP"/' <<<"$stderr")
 
     run_e -1 limactl shell --tty=false nonexistent
-    assert_equal "$inst_output" "$(normalize_stderr_log "$stderr")"
+    pos_output=$(sed 's/^time="[^"]*"/time="TIMESTAMP"/' <<<"$stderr")
+
+    assert_equal "$pos_output" "$inst_output"
 }
 
 @test 'limactl shell --instance with unknown flag errors' {
