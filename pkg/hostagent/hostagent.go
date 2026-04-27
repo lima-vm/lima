@@ -727,17 +727,27 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 	})
 
 	go func() {
-		if a.instConfig.MountInotify != nil && *a.instConfig.MountInotify {
-			client := a.getClient()
-			if client == nil || !isGuestAgentSocketAccessible(ctx, client) {
-				if a.driver.ForwardGuestAgent() {
-					sshAddress, sshPort := a.sshAddressPort()
-					_ = forwardSSH(ctx, a.sshConfig, sshAddress, sshPort, localUnix, remoteUnix, verbForward, false)
-				}
+		if a.instConfig.MountInotify == nil || !*a.instConfig.MountInotify {
+			return
+		}
+		client := a.getClient()
+		if client == nil || !isGuestAgentSocketAccessible(ctx, client) {
+			if a.driver.ForwardGuestAgent() {
+				sshAddress, sshPort := a.sshAddressPort()
+				_ = forwardSSH(ctx, a.sshConfig, sshAddress, sshPort, localUnix, remoteUnix, verbForward, false)
 			}
-			err := a.startInotify(ctx)
-			if err != nil {
-				logrus.WithError(err).Warn("failed to start inotify")
+		}
+		// Re-spawn startInotify when its gRPC stream dies (typically because
+		// the guest agent restarted). Without this, host-side file changes
+		// silently stop propagating into the guest after the first reconnect.
+		for {
+			if err := a.startInotify(ctx); err != nil && !errors.Is(err, context.Canceled) {
+				logrus.WithError(err).Warn("inotify stream ended; will retry")
+			}
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(10 * time.Second):
 			}
 		}
 	}()

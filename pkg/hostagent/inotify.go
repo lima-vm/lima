@@ -5,6 +5,7 @@ package hostagent
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path"
 	"path/filepath"
@@ -27,18 +28,24 @@ var (
 
 func (a *HostAgent) startInotify(ctx context.Context) error {
 	mountWatchCh := make(chan notify.EventInfo, 128)
-	err := a.setupWatchers(mountWatchCh)
-	if err != nil {
+	if err := a.setupWatchers(mountWatchCh); err != nil {
 		return err
 	}
+	// notify.Watch allocates per-call kernel watchers and an internal reader
+	// goroutine; without notify.Stop they leak for the lifetime of the process.
+	defer notify.Stop(mountWatchCh)
+
 	client, err := a.getOrCreateClient(ctx)
 	if err != nil {
-		logrus.WithError(err).Error("failed to create client for inotify")
+		return fmt.Errorf("inotify: failed to obtain guest agent client: %w", err)
 	}
 	inotifyClient, err := client.Inotify(ctx)
 	if err != nil {
 		return err
 	}
+	// Finalize the gRPC client-stream so the guest agent's PostInotify handler
+	// can return instead of staying parked on a half-open stream.
+	defer func() { _ = inotifyClient.CloseSend() }()
 
 	for {
 		select {
@@ -59,9 +66,11 @@ func (a *HostAgent) startInotify(ctx context.Context) error {
 
 			utcTimestamp := timestamppb.New(stat.ModTime().UTC())
 			event := &guestagentapi.Inotify{MountPath: watchPath, Time: utcTimestamp}
-			err = inotifyClient.Send(event)
-			if err != nil {
-				logrus.WithError(err).Warn("failed to send inotify")
+			if err := inotifyClient.Send(event); err != nil {
+				// Stream is gone (typically a guest-agent reconnect). Return so
+				// the caller can re-spawn against the new client instead of
+				// looping silently with a dead stream.
+				return fmt.Errorf("inotify stream closed: %w", err)
 			}
 		}
 	}
