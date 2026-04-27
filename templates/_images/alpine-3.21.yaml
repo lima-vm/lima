@@ -1,0 +1,7 @@
+images:
+- location: "https://dl-cdn.alpinelinux.org/alpine/v3.21/releases/cloud/nocloud_alpine-3.21.7-x86_64-uefi-cloudinit-r0.qcow2"
+  arch: "x86_64"
+  digest: "sha512:779afcc0bfdd4074ca620bb67c2f70f3d6cad4cdaf4fd91a9fd8a127feb159d9407be18cd8f778ed1adf950799cd93b2692d49ad7ee2221ed6a52d8e895d4c37"
+- location: "https://dl-cdn.alpinelinux.org/alpine/v3.21/releases/cloud/nocloud_alpine-3.21.7-aarch64-uefi-cloudinit-r0.qcow2"
+  arch: "aarch64"
+  digest: "sha512:9837b968763c2f620aa81cab3dc26b7f914ffa935245c9e929e339559f0f2fecdfd281e5cf82457ecfd6a9b6726a8a8ec40fb35d99dd8fd9b27d3b76c304dac7"

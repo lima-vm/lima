@@ -1,7 +1,7 @@
 minimumLimaVersion: 2.0.0
 
 base:
-- template:_images/alpine-3.23
+- template:_images/alpine-3.21
 - template:_default/mounts
 
 # The built-in containerd installer does not support Alpine currently.
