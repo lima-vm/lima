@@ -134,7 +134,7 @@ function alpine_cache_key_for_image_kernel() {
 }
 
 function alpine_image_entry_for_image_kernel() {
-	local location=$1 kernel_is_not_supported=$2 overriding=${3:-'{"path_version":"latest-stable"}'} url_spec image_entry=''
+	local location=$1 kernel_is_not_supported=$2 overriding=${3:-'{}'} url_spec image_entry=''
 	[[ ${kernel_is_not_supported} == "null" ]] || echo "Updating kernel information is not supported on Alpine Linux" >&2
 	url_spec=$(alpine_url_spec_from_location "${location}" | jq -r ". + ${overriding}")
 	image_entry=$(alpine_latest_image_entry_for_url_spec "${url_spec}")
@@ -253,7 +253,8 @@ if ! jq -e '.path_version' <<<"${overriding}" >/dev/null; then # --version-major
 elif [[ -n ${version_major} || -n ${version_minor} ]]; then # --version-major-minor is specified
 	echo "Ignoring --version-major and --version-minor because --version-major-minor is specified" >&2
 fi
-[[ ${overriding} == "{}" ]] && overriding='{"path_version":"latest-stable"}'
+# When no version is specified, the script preserves the minor version from the template URL.
+# This ensures only the patch release is updated, not the minor release.
 
 if [[ ${#templates[@]} -eq 0 ]]; then
 	alpine_print_help
