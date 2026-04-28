@@ -106,15 +106,11 @@ func DefaultPubKeys(ctx context.Context, loadDotSSH bool) ([]PubKey, error) {
 		if err := os.MkdirAll(configDir, 0o700); err != nil {
 			return nil, fmt.Errorf("could not create %q directory: %w", configDir, err)
 		}
+
 		if err := lockutil.WithDirLock(configDir, func() error {
 			// no passphrase, no user@host comment
 			privPath := filepath.Join(configDir, filenames.UserPrivateKey)
-			if runtime.GOOS == "windows" {
-				privPath, err = ioutilx.WindowsSubsystemPath(ctx, privPath)
-				if err != nil {
-					return err
-				}
-			}
+
 			keygenCmd := exec.CommandContext(ctx, "ssh-keygen", "-t", "ed25519", "-q", "-N", "",
 				"-C", "lima", "-f", privPath)
 			logrus.Debugf("executing %v", keygenCmd.Args)
@@ -125,7 +121,8 @@ func DefaultPubKeys(ctx context.Context, loadDotSSH bool) ([]PubKey, error) {
 		}); err != nil {
 			return nil, err
 		}
-	}
+        }
+
 	entry, err := readPublicKey(filepath.Join(configDir, filenames.UserPublicKey))
 	if err != nil {
 		return nil, err
