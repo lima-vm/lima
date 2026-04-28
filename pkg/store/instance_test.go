@@ -33,38 +33,42 @@ var instance = limatype.Instance{
 	SSHAddress: "127.0.0.1",
 }
 
-var table = "NAME    STATUS     SSH            CPUS    MEMORY    DISK    DIR\n" +
-	"foo     Stopped    127.0.0.1:0    0       0B        0B      dir\n"
+var table = "NAME    STATUS     IP           CPUS    MEMORY    DISK    DIR\n" +
+	"foo     Stopped    127.0.0.1    0       0B        0B      dir\n"
 
-var tableEmu = "NAME    STATUS     SSH            ARCH       CPUS    MEMORY    DISK    DIR\n" +
-	"foo     Stopped    127.0.0.1:0    unknown    0       0B        0B      dir\n"
+var tableEmu = "NAME    STATUS     IP           ARCH       CPUS    MEMORY    DISK    DIR\n" +
+	"foo     Stopped    127.0.0.1    unknown    0       0B        0B      dir\n"
 
-var tableHome = "NAME    STATUS     SSH            CPUS    MEMORY    DISK    DIR\n" +
-	"foo     Stopped    127.0.0.1:0    0       0B        0B      ~" + separator + "dir\n"
+var tableHome = "NAME    STATUS     IP           CPUS    MEMORY    DISK    DIR\n" +
+	"foo     Stopped    127.0.0.1    0       0B        0B      ~" + separator + "dir\n"
 
-var tableAll = "NAME    STATUS     SSH            VMTYPE    ARCH" + space + "    CPUS    MEMORY    DISK    DIR\n" +
-	"foo     Stopped    127.0.0.1:0    " + vmtype + "      " + goarch + "    0       0B        0B      dir\n"
+var tableAll = "NAME    STATUS     IP           VMTYPE    ARCH" + space + "    CPUS    MEMORY    DISK    DIR\n" +
+	"foo     Stopped    127.0.0.1    " + vmtype + "      " + goarch + "    0       0B        0B      dir\n"
 
-// for width 60, everything is hidden
-var table60 = "NAME    STATUS     SSH            CPUS    MEMORY    DISK\n" +
-	"foo     Stopped    127.0.0.1:0    0       0B        0B\n"
+// for width 60, IP is hidden (all loopback) along with everything else
+var table60 = "NAME    STATUS     CPUS    MEMORY    DISK\n" +
+	"foo     Stopped    0       0B        0B\n"
 
-// for width 80, identical is hidden (type/arch)
-var table80i = "NAME    STATUS     SSH            CPUS    MEMORY    DISK    DIR\n" +
-	"foo     Stopped    127.0.0.1:0    0       0B        0B      dir\n"
+// for width 80, IP is hidden (all loopback); type/arch can fit so they show
+var table80i = "NAME    STATUS     VMTYPE    ARCH" + space + "    CPUS    MEMORY    DISK    DIR\n" +
+	"foo     Stopped    " + vmtype + "      " + goarch + "    0       0B        0B      dir\n"
 
-// for width 80, different arch is still shown (not dir)
-var table80d = "NAME    STATUS     SSH            ARCH       CPUS    MEMORY    DISK\n" +
-	"foo     Stopped    127.0.0.1:0    unknown    0       0B        0B\n"
+// for width 80, IP is hidden (all loopback); type/arch and dir all fit
+var table80d = "NAME    STATUS     VMTYPE    ARCH       CPUS    MEMORY    DISK    DIR\n" +
+	"foo     Stopped    " + vmtype + "      unknown    0       0B        0B      dir\n"
 
 // for width 100, nothing is hidden
-var table100 = "NAME    STATUS     SSH            VMTYPE    ARCH" + space + "    CPUS    MEMORY    DISK    DIR\n" +
-	"foo     Stopped    127.0.0.1:0    " + vmtype + "      " + goarch + "    0       0B        0B      dir\n"
+var table100 = "NAME    STATUS     IP           VMTYPE    ARCH" + space + "    CPUS    MEMORY    DISK    DIR\n" +
+	"foo     Stopped    127.0.0.1    " + vmtype + "      " + goarch + "    0       0B        0B      dir\n"
 
-// for width 80, directory is hidden (if not identical)
-var tableTwo = "NAME    STATUS     SSH            VMTYPE    ARCH       CPUS    MEMORY    DISK\n" +
-	"foo     Stopped    127.0.0.1:0    qemu      x86_64     0       0B        0B\n" +
-	"bar     Stopped    127.0.0.1:0    vz        aarch64    0       0B        0B\n"
+// for width 80, IP hidden (all loopback), directory shown as everything fits
+var tableTwo = "NAME    STATUS     VMTYPE    ARCH       CPUS    MEMORY    DISK    DIR\n" +
+	"foo     Stopped    qemu      x86_64     0       0B        0B      dir\n" +
+	"bar     Stopped    vz        aarch64    0       0B        0B      dir\n"
+
+// for width 80, with non-loopback IP the IP column stays, hiding others to fit
+var table80nonloop = "NAME    STATUS     IP              CPUS    MEMORY    DISK    DIR\n" +
+	"foo     Stopped    192.168.64.2    0       0B        0B      dir\n"
 
 func TestSSHPortFromConfig(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
@@ -168,6 +172,17 @@ func TestPrintInstanceTableAll(t *testing.T) {
 	err := PrintInstances(&buf, instances, "table", &options)
 	assert.NilError(t, err)
 	assert.Equal(t, tableAll, buf.String())
+}
+
+func TestPrintInstanceTable80NonLoopback(t *testing.T) {
+	var buf bytes.Buffer
+	instance1 := instance
+	instance1.SSHAddress = "192.168.64.2"
+	instances := []*limatype.Instance{&instance1}
+	options := PrintOptions{TerminalWidth: 80}
+	err := PrintInstances(&buf, instances, "table", &options)
+	assert.NilError(t, err)
+	assert.Equal(t, table80nonloop, buf.String())
 }
 
 func TestPrintInstanceTableTwo(t *testing.T) {

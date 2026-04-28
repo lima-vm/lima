@@ -31,6 +31,11 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/version/versionutil"
 )
 
+// defaultSSHAddress is the loopback address assigned to an instance's SSHAddress
+// when no other host-reachable IP is known. It is also used by the table printer
+// to decide when the IP column can be hidden on narrow screens.
+const defaultSSHAddress = "127.0.0.1"
+
 // Inspect returns err only when the instance does not exist (os.ErrNotExist).
 // Other errors are returned as *Instance.Errors.
 func Inspect(ctx context.Context, instName string) (*limatype.Instance, error) {
@@ -59,7 +64,7 @@ func Inspect(ctx context.Context, instName string) (*limatype.Instance, error) {
 	inst.Config = y
 	inst.Arch = *y.Arch
 	inst.VMType = *y.VMType
-	inst.SSHAddress = "127.0.0.1"
+	inst.SSHAddress = defaultSSHAddress
 	inst.SSHLocalPort = *y.SSH.LocalPort // maybe 0
 	inst.SSHConfigFile = filepath.Join(instDir, filenames.SSHConfig)
 	inst.HostAgentPID, err = ReadPIDFile(filepath.Join(instDir, filenames.HostAgentPID))
@@ -302,9 +307,11 @@ func PrintInstances(w io.Writer, instances []*limatype.Instance, format string, 
 	case "table":
 		types := map[string]int{}
 		archs := map[string]int{}
+		ips := map[string]int{}
 		for _, instance := range instances {
 			types[instance.VMType]++
 			archs[instance.Arch]++
+			ips[instance.SSHAddress]++
 		}
 		all := options != nil && options.AllFields
 		width := 0
@@ -314,11 +321,19 @@ func PrintInstances(w io.Writer, instances []*limatype.Instance, format string, 
 		columnWidth := 8
 		hideType := false
 		hideArch := false
+		hideIP := false
 		hideDir := false
 
 		columns := 1 // NAME
 		columns += 2 // STATUS
-		columns += 2 // SSH
+		// can we still fit the remaining columns (7) when IP is shown
+		if width != 0 && (columns+2+7)*columnWidth > width && !all {
+			// only hide IP if all instances share the default loopback address
+			hideIP = len(ips) == 1 && instances[0].SSHAddress == defaultSSHAddress
+		}
+		if !hideIP {
+			columns += 2 // IP
+		}
 		// can we still fit the remaining columns (7)
 		if width == 0 || (columns+7)*columnWidth > width && !all {
 			hideType = len(types) == 1
@@ -348,7 +363,10 @@ func PrintInstances(w io.Writer, instances []*limatype.Instance, format string, 
 		_ = columns
 
 		w := tabwriter.NewWriter(w, 4, 8, 4, ' ', 0)
-		fmt.Fprint(w, "NAME\tSTATUS\tSSH")
+		fmt.Fprint(w, "NAME\tSTATUS")
+		if !hideIP {
+			fmt.Fprint(w, "\tIP")
+		}
 		if !hideType {
 			fmt.Fprint(w, "\tVMTYPE")
 		}
@@ -371,11 +389,15 @@ func PrintInstances(w io.Writer, instances []*limatype.Instance, format string, 
 			if strings.HasPrefix(dir, homeDir) {
 				dir = strings.Replace(dir, homeDir, "~", 1)
 			}
-			fmt.Fprintf(w, "%s\t%s\t%s",
+			fmt.Fprintf(w, "%s\t%s",
 				instance.Name,
 				instance.Status,
-				fmt.Sprintf("%s:%d", instance.SSHAddress, instance.SSHLocalPort),
 			)
+			if !hideIP {
+				fmt.Fprintf(w, "\t%s",
+					instance.SSHAddress,
+				)
+			}
 			if !hideType {
 				fmt.Fprintf(w, "\t%s",
 					instance.VMType,
