@@ -40,7 +40,7 @@ func factoryResetAction(cmd *cobra.Command, args []string) error {
 	inst, err := store.Inspect(ctx, instName)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			logrus.Infof("Instance %q not found", instName)
+			logrus.Infof("Instance %#q not found", instName)
 			return nil
 		}
 		return err
@@ -63,7 +63,7 @@ func factoryResetAction(cmd *cobra.Command, args []string) error {
 	for _, f := range fi {
 		path := filepath.Join(inst.Dir, f.Name())
 		if _, ok := retain[f.Name()]; !ok && !strings.HasSuffix(path, ".yaml") && !strings.HasSuffix(path, ".yml") {
-			logrus.Infof("Removing %q", path)
+			logrus.Infof("Removing %#q", path)
 			if err := os.Remove(path); err != nil {
 				logrus.Error(err)
 			}
@@ -74,7 +74,7 @@ func factoryResetAction(cmd *cobra.Command, args []string) error {
 		logrus.Error(err)
 	}
 
-	logrus.Infof("Instance %q has been factory reset", instName)
+	logrus.Infof("Instance %#q has been factory reset", instName)
 	return nil
 }
 

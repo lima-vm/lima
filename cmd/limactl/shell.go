@@ -125,15 +125,15 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	inst, err := store.Inspect(ctx, instName)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("instance %q does not exist, run `limactl create %s` to create a new instance", instName, instName)
+			return fmt.Errorf("instance %#q does not exist, run `limactl create %s` to create a new instance", instName, instName)
 		}
 		return err
 	}
 	if len(inst.Errors) > 0 {
-		logrus.WithError(errors.Join(inst.Errors...)).Errorf("Instance %q has configuration errors", instName)
+		logrus.WithError(errors.Join(inst.Errors...)).Errorf("Instance %#q has configuration errors", instName)
 	}
 	if inst.Config == nil {
-		return fmt.Errorf("instance %q has no configuration", instName)
+		return fmt.Errorf("instance %#q has no configuration", instName)
 	}
 	if inst.Status == limatype.StatusStopped {
 		startNow, err := flags.GetBool("start")
@@ -149,12 +149,12 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		}
 
 		if !startNow {
-			return fmt.Errorf("instance %q is stopped, run `limactl start %s` to start the instance", instName, instName)
+			return fmt.Errorf("instance %#q is stopped, run `limactl start %s` to start the instance", instName, instName)
 		}
 
 		// Network reconciliation will be performed by the process launched by the autostart manager
 		if registered, err := autostart.IsRegistered(ctx, inst); err != nil && !errors.Is(err, autostart.ErrNotSupported) {
-			return fmt.Errorf("failed to check if the autostart entry for instance %q is registered: %w", inst.Name, err)
+			return fmt.Errorf("failed to check if the autostart entry for instance %#q is registered: %w", inst.Name, err)
 		} else if !registered {
 			err = reconcile.Reconcile(ctx, inst.Name)
 			if err != nil {
@@ -178,7 +178,7 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	if restart && sshutil.IsControlMasterExisting(inst.Dir) {
-		logrus.Infof("Exiting ssh session for the instance %q", instName)
+		logrus.Infof("Exiting ssh session for the instance %#q", instName)
 
 		sshConfig := &ssh.SSHConfig{
 			ConfigFile:     inst.SSHConfigFile,
@@ -226,7 +226,7 @@ func shellAction(cmd *cobra.Command, args []string) error {
 
 		srcWdDepth := len(strings.Split(hostCurrentDir, string(os.PathSeparator)))
 		if srcWdDepth < rsyncMinimumSrcDirDepth {
-			return fmt.Errorf("expected the depth of the host working directory (%q) to be more than %d, only got %d (Hint: %s)",
+			return fmt.Errorf("expected the depth of the host working directory (%#q) to be more than %d, only got %d (Hint: %s)",
 				hostCurrentDir, rsyncMinimumSrcDirDepth, srcWdDepth, "cd to a deeper directory")
 		}
 	}
@@ -270,7 +270,7 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	if changeDirCmd == "" {
 		changeDirCmd = "false"
 	}
-	logrus.Debugf("changeDirCmd=%q", changeDirCmd)
+	logrus.Debugf("changeDirCmd=%#q", changeDirCmd)
 
 	shell, err := cmd.Flags().GetString("shell")
 	if err != nil {
@@ -390,7 +390,7 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		logrus.Debugf("using copy tool %q", rsync.Name())
+		logrus.Debugf("using copy tool %#q", rsync.Name())
 
 		if err := rsyncDirectory(ctx, cmd, rsync, paths); err != nil {
 			return fmt.Errorf("failed to rsync to the guest %w", err)

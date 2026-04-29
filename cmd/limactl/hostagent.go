@@ -48,7 +48,7 @@ func hostagentAction(cmd *cobra.Command, args []string) error {
 	}
 	if pidfile != "" {
 		if existingPID, err := store.ReadPIDFile(pidfile); existingPID != 0 {
-			return fmt.Errorf("another hostagent may already be running with pid %d (pidfile %q)", existingPID, pidfile)
+			return fmt.Errorf("another hostagent may already be running with pid %d (pidfile %#q)", existingPID, pidfile)
 		} else if err != nil {
 			return fmt.Errorf("failed to determine if another hostagent is running: %w", err)
 		}

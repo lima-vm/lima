@@ -33,18 +33,18 @@ func protectAction(cmd *cobra.Command, args []string) error {
 	for _, instName := range args {
 		inst, err := store.Inspect(ctx, instName)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("failed to inspect instance %q: %w", instName, err))
+			errs = append(errs, fmt.Errorf("failed to inspect instance %#q: %w", instName, err))
 			continue
 		}
 		if inst.Protected {
-			logrus.Warnf("Instance %q is already protected. Skipping.", instName)
+			logrus.Warnf("Instance %#q is already protected. Skipping.", instName)
 			continue
 		}
 		if err := inst.Protect(); err != nil {
-			errs = append(errs, fmt.Errorf("failed to protect instance %q: %w", instName, err))
+			errs = append(errs, fmt.Errorf("failed to protect instance %#q: %w", instName, err))
 			continue
 		}
-		logrus.Infof("Protected %q", instName)
+		logrus.Infof("Protected %#q", instName)
 	}
 	return errors.Join(errs...)
 }

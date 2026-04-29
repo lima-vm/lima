@@ -111,7 +111,7 @@ func networkListAction(cmd *cobra.Command, args []string) error {
 		for _, name := range networks {
 			nw, ok := config.Networks[name]
 			if !ok {
-				logrus.Errorf("network %q does not exist", nw)
+				logrus.Errorf("network %#q does not exist", nw)
 				continue
 			}
 			j, err := json.Marshal(nw)
@@ -128,7 +128,7 @@ func networkListAction(cmd *cobra.Command, args []string) error {
 	for _, name := range networks {
 		nw, ok := config.Networks[name]
 		if !ok {
-			logrus.Errorf("network %q does not exist", nw)
+			logrus.Errorf("network %#q does not exist", nw)
 			continue
 		}
 		gwStr := "-"
@@ -175,7 +175,7 @@ func networkCreateAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	if _, ok := config.Networks[name]; ok {
-		return fmt.Errorf("network %q already exists", name)
+		return fmt.Errorf("network %#q already exists", name)
 	}
 
 	flags := cmd.Flags()
@@ -197,26 +197,26 @@ func networkCreateAction(cmd *cobra.Command, args []string) error {
 	switch mode {
 	case networks.ModeBridged:
 		if gateway != "" {
-			return fmt.Errorf("network mode %q does not support specifying gateway", mode)
+			return fmt.Errorf("network mode %#q does not support specifying gateway", mode)
 		}
 		if intf == "" {
-			return fmt.Errorf("network mode %q requires specifying interface", mode)
+			return fmt.Errorf("network mode %#q requires specifying interface", mode)
 		}
 		yq := fmt.Sprintf(`.networks.%q = {"mode":%q,"interface":%q}`, name, mode, intf)
 		return networkApplyYQ(yq)
 	default:
 		if gateway == "" {
-			return fmt.Errorf("network mode %q requires specifying gateway", mode)
+			return fmt.Errorf("network mode %#q requires specifying gateway", mode)
 		}
 		if intf != "" {
-			return fmt.Errorf("network mode %q does not support specifying interface", mode)
+			return fmt.Errorf("network mode %#q does not support specifying interface", mode)
 		}
 		if !strings.Contains(gateway, "/") {
 			gateway += "/24"
 		}
 		gwIP, gwMask, err := net.ParseCIDR(gateway)
 		if err != nil {
-			return fmt.Errorf("failed to parse CIDR %q: %w", gateway, err)
+			return fmt.Errorf("failed to parse CIDR %#q: %w", gateway, err)
 		}
 		if gwIP.IsUnspecified() || gwIP.IsLoopback() {
 			return fmt.Errorf("invalid IP address: %v", gwIP)

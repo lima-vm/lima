@@ -8,13 +8,13 @@ INSTANCE=bats-dummy
 @test 'lima stopped lima instance' {
     # check that the "tty" flag is used, also for stdin
     run_e -1 limactl shell --tty=false "$INSTANCE" true </dev/null
-    assert_stderr --partial "instance \\\"$INSTANCE\\\" is stopped"
+    assert_stderr --partial "instance \`$INSTANCE\` is stopped"
 }
 
 @test 'yes | stopped lima instance' {
     # check that stdin is verified and not just crashing
     run_e -1 bash -c "yes | limactl shell --tty=true $INSTANCE true"
-    assert_stderr --partial "instance \\\"$INSTANCE\\\" is stopped"
+    assert_stderr --partial "instance \`$INSTANCE\` is stopped"
 }
 
 @test 'limactl shell without --instance requires instance name as first argument' {

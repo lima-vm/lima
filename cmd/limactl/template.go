@@ -88,7 +88,7 @@ func fillDefaults(ctx context.Context, tmpl *limatmpl.Template) error {
 		tmpl.Bytes, err = limayaml.Marshal(tmpl.Config, false)
 	}
 	if err := driverutil.ResolveVMType(ctx, tmpl.Config, filePath); err != nil {
-		logrus.Warnf("failed to resolve VM type for %q: %v", filePath, err)
+		logrus.Warnf("failed to resolve VM type for %#q: %v", filePath, err)
 		return nil
 	}
 	return err
@@ -131,7 +131,7 @@ func templateCopyAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	if len(tmpl.Bytes) == 0 {
-		return fmt.Errorf("don't know how to interpret %q as a template locator", source)
+		return fmt.Errorf("don't know how to interpret %#q as a template locator", source)
 	}
 	if !verbatim {
 		if embed {
@@ -203,7 +203,7 @@ func templateYQAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	if len(tmpl.Bytes) == 0 {
-		return fmt.Errorf("don't know how to interpret %q as a template locator", locator)
+		return fmt.Errorf("don't know how to interpret %#q as a template locator", locator)
 	}
 	if err := tmpl.Embed(cmd.Context(), true, true); err != nil {
 		return err
@@ -247,10 +247,10 @@ func templateValidateAction(cmd *cobra.Command, args []string) error {
 			return err
 		}
 		if len(tmpl.Bytes) == 0 {
-			return fmt.Errorf("don't know how to interpret %q as a template locator", arg)
+			return fmt.Errorf("don't know how to interpret %#q as a template locator", arg)
 		}
 		if tmpl.Name == "" {
-			return fmt.Errorf("can't determine instance name from template locator %q", arg)
+			return fmt.Errorf("can't determine instance name from template locator %#q", arg)
 		}
 		// Embed default base.yaml only when fill is true.
 		if err := tmpl.Embed(cmd.Context(), true, fill); err != nil {
@@ -264,16 +264,16 @@ func templateValidateAction(cmd *cobra.Command, args []string) error {
 			return err
 		}
 		if err := driverutil.ResolveVMType(ctx, y, filePath); err != nil {
-			logrus.Warnf("failed to resolve VM type for %q: %v", filePath, err)
+			logrus.Warnf("failed to resolve VM type for %#q: %v", filePath, err)
 		}
 		if err := limayaml.Validate(y, false); err != nil {
-			return fmt.Errorf("failed to validate YAML file %q: %w", arg, err)
+			return fmt.Errorf("failed to validate YAML file %#q: %w", arg, err)
 		}
-		logrus.Infof("%q: OK", arg)
+		logrus.Infof("%#q: OK", arg)
 		if fill {
 			b, err := limayaml.Marshal(y, len(args) > 1)
 			if err != nil {
-				return fmt.Errorf("failed to marshal template %q again after filling defaults: %w", arg, err)
+				return fmt.Errorf("failed to marshal template %#q again after filling defaults: %w", arg, err)
 			}
 			fmt.Fprint(cmd.OutOrStdout(), string(b))
 		}

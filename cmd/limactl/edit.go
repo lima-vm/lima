@@ -60,7 +60,7 @@ func editAction(cmd *cobra.Command, args []string) error {
 		inst, err = store.Inspect(ctx, arg)
 		if err != nil {
 			if errors.Is(err, os.ErrNotExist) {
-				return fmt.Errorf("instance %q not found", arg)
+				return fmt.Errorf("instance %#q not found", arg)
 			}
 			return err
 		}
@@ -107,9 +107,9 @@ func editAction(cmd *cobra.Command, args []string) error {
 	} else if tty {
 		var hdr string
 		if inst != nil {
-			hdr = fmt.Sprintf("# Please edit the following configuration for Lima instance %q\n", inst.Name)
+			hdr = fmt.Sprintf("# Please edit the following configuration for Lima instance %#q\n", inst.Name)
 		} else {
-			hdr = fmt.Sprintf("# Please edit the following configuration %q\n", filePath)
+			hdr = fmt.Sprintf("# Please edit the following configuration %#q\n", filePath)
 		}
 		hdr += "# and an empty file will abort the edit.\n"
 		hdr += "\n"
@@ -132,7 +132,7 @@ func editAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	if err := driverutil.ResolveVMType(ctx, y, filePath); err != nil {
-		return fmt.Errorf("failed to resolve vm for %q: %w", filePath, err)
+		return fmt.Errorf("failed to resolve vm for %#q: %w", filePath, err)
 	}
 	if err := limayaml.Validate(y, true); err != nil {
 		return saveRejectedYAML(yBytes, err)
@@ -147,7 +147,7 @@ func editAction(cmd *cobra.Command, args []string) error {
 	}
 
 	if inst != nil {
-		logrus.Infof("Instance %q configuration edited", inst.Name)
+		logrus.Infof("Instance %#q configuration edited", inst.Name)
 	}
 
 	if inst == nil {
@@ -171,7 +171,7 @@ func editAction(cmd *cobra.Command, args []string) error {
 	}
 	// Network reconciliation will be performed by the process launched by the autostart manager
 	if registered, err := autostart.IsRegistered(ctx, inst); err != nil && !errors.Is(err, autostart.ErrNotSupported) {
-		return fmt.Errorf("failed to check if the autostart entry for instance %q is registered: %w", inst.Name, err)
+		return fmt.Errorf("failed to check if the autostart entry for instance %#q is registered: %w", inst.Name, err)
 	} else if !registered {
 		err = reconcile.Reconcile(ctx, inst.Name)
 		if err != nil {
@@ -205,8 +205,8 @@ func editBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra
 func saveRejectedYAML(y []byte, origErr error) error {
 	rejectedYAML := "lima.REJECTED.yaml"
 	if writeErr := os.WriteFile(rejectedYAML, y, 0o644); writeErr != nil {
-		return fmt.Errorf("the YAML is invalid, attempted to save the buffer as %q but failed: %w", rejectedYAML, errors.Join(writeErr, origErr))
+		return fmt.Errorf("the YAML is invalid, attempted to save the buffer as %#q but failed: %w", rejectedYAML, errors.Join(writeErr, origErr))
 	}
 	// TODO: may need to support editing the rejected YAML
-	return fmt.Errorf("the YAML is invalid, saved the buffer as %q: %w", rejectedYAML, origErr)
+	return fmt.Errorf("the YAML is invalid, saved the buffer as %#q: %w", rejectedYAML, origErr)
 }

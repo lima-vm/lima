@@ -65,7 +65,7 @@ func guestInstallAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	if inst.Status == limatype.StatusStopped {
-		return fmt.Errorf("instance %q is stopped, run `limactl start %s` to start the instance", instName, instName)
+		return fmt.Errorf("instance %#q is stopped, run `limactl start %s` to start the instance", instName, instName)
 	}
 
 	ctx := cmd.Context()
@@ -117,7 +117,7 @@ func guestInstallAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	bin := prefix + "/bin/lima-guestagent"
-	logrus.Infof("Copying %q to %s:%s", guestAgentFilename, inst.Name, tmpname)
+	logrus.Infof("Copying %#q to %s:%s", guestAgentFilename, inst.Name, tmpname)
 	scpArgs := []string{guestAgentBinary, hostname + ":" + tmp}
 	if err := runCmd(ctx, scpExe, scpFlags, scpArgs...); err != nil {
 		return nil
@@ -141,7 +141,7 @@ func guestInstallAction(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		logrus.Infof("Copying %q to %s:%s", nerdctlFilename, inst.Name, tmpname)
+		logrus.Infof("Copying %#q to %s:%s", nerdctlFilename, inst.Name, tmpname)
 		scpArgs := []string{nerdctlArchive, hostname + ":" + tmp}
 		if err := runCmd(ctx, scpExe, scpFlags, scpArgs...); err != nil {
 			return nil
