@@ -4,6 +4,9 @@
 package main
 
 import (
+	"os"
+	"os/exec"
+	"path/filepath"
 	"testing"
 
 	"gotest.tools/v3/assert"
@@ -67,6 +70,58 @@ func TestPathDepth(t *testing.T) {
 	}
 }
 
+func TestBuildSyncExcludeArgs(t *testing.T) {
+	// rsyncDir stands in for the converted form a Windows host passes to rsync,
+	// so the ignore file must be found through the native dir yet named by it.
+	const rsyncDir = "/cygdrive/c/Users/jan/proj"
+	tests := []struct {
+		name      string
+		excludes  []string
+		hasIgnore bool
+		expected  []string
+	}{
+		{
+			name:     "empty excludes, no ignore file",
+			excludes: nil,
+			expected: nil,
+		},
+		{
+			name:     "single exclude",
+			excludes: []string{"node_modules"},
+			expected: []string{"--exclude", "node_modules"},
+		},
+		{
+			name:     "multiple excludes",
+			excludes: []string{"node_modules", ".git", "vendor"},
+			expected: []string{"--exclude", "node_modules", "--exclude", ".git", "--exclude", "vendor"},
+		},
+		{
+			name:      "ignore file only",
+			excludes:  nil,
+			hasIgnore: true,
+			expected:  []string{"--exclude-from", rsyncDir + "/.limasyncignore"},
+		},
+		{
+			name:      "excludes and ignore file",
+			excludes:  []string{".git"},
+			hasIgnore: true,
+			expected:  []string{"--exclude", ".git", "--exclude-from", rsyncDir + "/.limasyncignore"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			if tt.hasIgnore {
+				err := os.WriteFile(filepath.Join(dir, ".limasyncignore"), []byte("build\ndist\n"), 0o644)
+				assert.NilError(t, err)
+			}
+			got := buildSyncExcludeArgs(tt.excludes, dir, rsyncDir)
+			assert.DeepEqual(t, got, tt.expected)
+		})
+	}
+}
+
 func TestParseRsyncStats(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -123,6 +178,17 @@ cL+++++++++ new-symlink -> target
 			got := parseRsyncStats(tt.output)
 			assert.DeepEqual(t, got, tt.expected)
 		})
+	}
+}
+
+func TestValidateSyncFlagValue(t *testing.T) {
+	flags := newShellCommand().Flags()
+	for _, val := range []string{"--sync-exclude=.git", "--sync-exclude", "--workdir"} {
+		assert.ErrorContains(t, validateSyncFlagValue(flags, val), "requires a directory argument", val)
+	}
+	// Directories, including ones whose names merely look like flags, are accepted.
+	for _, val := range []string{".", "/tmp/proj", "./--sync-exclude", "--data", "-"} {
+		assert.NilError(t, validateSyncFlagValue(flags, val), val)
 	}
 }
 
@@ -189,6 +255,40 @@ func TestWindowsQuoteShell(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.shell, func(t *testing.T) {
 			assert.Equal(t, tt.want, windowsQuoteShell(tt.shell))
+		})
+	}
+}
+
+// TestGetRsyncStatsMatchesSyncBack checks that the dry run behind the sync-back
+// prompt counts what the sync-back copies, for patterns that rsync anchors at the
+// top of the transfer.
+func TestGetRsyncStatsMatchesSyncBack(t *testing.T) {
+	if _, err := exec.LookPath("rsync"); err != nil {
+		t.Skip("rsync not found:", err)
+	}
+	// The guest copy changed bar.txt and lacks foo.txt.
+	tests := []struct {
+		exclude  string
+		expected rsyncStats
+	}{
+		{"foo.txt", rsyncStats{Modified: 1}},
+		{"/foo.txt", rsyncStats{Modified: 1}},
+		{"proj", rsyncStats{Deleted: 1, Modified: 1}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.exclude, func(t *testing.T) {
+			base := t.TempDir()
+			host := filepath.Join(base, "host", "proj")
+			guest := filepath.Join(base, "guest", "proj")
+			assert.NilError(t, os.MkdirAll(host, 0o755))
+			assert.NilError(t, os.MkdirAll(guest, 0o755))
+			assert.NilError(t, os.WriteFile(filepath.Join(host, "foo.txt"), []byte("host foo\n"), 0o644))
+			assert.NilError(t, os.WriteFile(filepath.Join(host, "bar.txt"), []byte("host bar\n"), 0o644))
+			assert.NilError(t, os.WriteFile(filepath.Join(guest, "bar.txt"), []byte("modified bar\n"), 0o644))
+			_, got, err := getRsyncStats(t.Context(), guest, host, buildSyncExcludeArgs([]string{tt.exclude}, host, host))
+			assert.NilError(t, err)
+			got.Metadata = 0 // the directory timestamps depend on when the test wrote them
+			assert.DeepEqual(t, *got, tt.expected)
 		})
 	}
 }
