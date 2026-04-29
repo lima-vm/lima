@@ -95,9 +95,9 @@ func genschemaAction(cmd *cobra.Command, args []string) error {
 	for _, f := range args {
 		err = jsonschemautil.Validate(file, f)
 		if err != nil {
-			return fmt.Errorf("%q: %w", f, err)
+			return fmt.Errorf("%#q: %w", f, err)
 		}
-		logrus.Infof("%q: OK", f)
+		logrus.Infof("%#q: OK", f)
 	}
 
 	return err

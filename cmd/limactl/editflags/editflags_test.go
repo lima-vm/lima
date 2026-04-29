@@ -186,13 +186,13 @@ func TestBuildParamExpressions(t *testing.T) {
 			name:          "invalid format",
 			params:        []string{"version"},
 			allowedParams: map[string]string{"version": ""},
-			expectError:   `invalid parameter "version", expected NAME=VALUE`,
+			expectError:   "invalid parameter `version`, expected NAME=VALUE",
 		},
 		{
 			name:          "undefined param",
 			params:        []string{"missing=value"},
 			allowedParams: map[string]string{"version": ""},
-			expectError:   `template does not define param "missing"`,
+			expectError:   "template does not define param `missing`",
 		},
 	}
 
@@ -282,13 +282,13 @@ func TestYQExpressions(t *testing.T) {
 			name:        "undefined param",
 			args:        []string{"--param", "missing=value"},
 			newInstance: false,
-			expectError: `template does not define param "missing"`,
+			expectError: "template does not define param `missing`",
 		},
 		{
 			name:        "invalid network",
 			args:        []string{"--network", "invalid"},
 			newInstance: true,
-			expectError: `network name must be "vzNAT" or "lima:*", got "invalid"`,
+			expectError: "network name must be `vzNAT` or `lima:*`, got `invalid`",
 		},
 	}
 	for _, tt := range tests {

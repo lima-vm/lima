@@ -273,9 +273,9 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 				tmpl.Name = DefaultInstanceName
 			}
 		} else {
-			logrus.Debugf("interpreting argument %q as an instance name", arg)
+			logrus.Debugf("interpreting argument %#q as an instance name", arg)
 			if name != "" && name != arg {
-				return nil, fmt.Errorf("instance name %q and CLI flag --name=%q cannot be specified together", arg, tmpl.Name)
+				return nil, fmt.Errorf("instance name %#q and CLI flag --name=%#q cannot be specified together", arg, tmpl.Name)
 			}
 			tmpl.Name = arg
 		}
@@ -283,9 +283,9 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 		inst, err := store.Inspect(ctx, tmpl.Name)
 		if err == nil {
 			if createOnly {
-				return nil, fmt.Errorf("instance %q already exists", tmpl.Name)
+				return nil, fmt.Errorf("instance %#q already exists", tmpl.Name)
 			}
-			logrus.Infof("Using the existing instance %q", tmpl.Name)
+			logrus.Infof("Using the existing instance %#q", tmpl.Name)
 			yqExprs, err := editflags.YQExpressions(flags, false, inst.Config.Param)
 			if err != nil {
 				return nil, err
@@ -294,7 +294,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 				yq := yqutil.Join(yqExprs)
 				inst, err = applyYQExpressionToExistingInstance(ctx, inst, yq)
 				if err != nil {
-					return nil, fmt.Errorf("failed to apply yq expression %q to instance %q: %w", yq, tmpl.Name, err)
+					return nil, fmt.Errorf("failed to apply yq expression %#q to instance %#q: %w", yq, tmpl.Name, err)
 				}
 			}
 			return inst, nil
@@ -303,7 +303,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 			return nil, err
 		}
 		if arg != "" && arg != DefaultInstanceName {
-			logrus.Infof("Creating an instance %q from template:default (Not from template:%s)", tmpl.Name, tmpl.Name)
+			logrus.Infof("Creating an instance %#q from template:default (Not from template:%s)", tmpl.Name, tmpl.Name)
 			logrus.Warnf("This form is deprecated. Use `limactl create --name=%s template:default` instead", tmpl.Name)
 		}
 		// Read the default template for creating a new instance
@@ -319,7 +319,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 		if createOnly {
 			// store.Inspect() will also validate the instance name
 			if _, err := store.Inspect(ctx, tmpl.Name); err == nil {
-				return nil, fmt.Errorf("instance %q already exists", tmpl.Name)
+				return nil, fmt.Errorf("instance %#q already exists", tmpl.Name)
 			}
 		} else if err := dirnames.ValidateInstName(tmpl.Name); err != nil {
 			return nil, err
@@ -365,7 +365,7 @@ func applyYQExpressionToExistingInstance(ctx context.Context, inst *limatype.Ins
 	if err != nil {
 		return nil, err
 	}
-	logrus.Debugf("Applying yq expression %q to an existing instance %q", yq, inst.Name)
+	logrus.Debugf("Applying yq expression %#q to an existing instance %#q", yq, inst.Name)
 	yBytes, err := yqutil.EvaluateExpression(yq, yContent)
 	if err != nil {
 		return nil, err
@@ -375,15 +375,15 @@ func applyYQExpressionToExistingInstance(ctx context.Context, inst *limatype.Ins
 		return nil, err
 	}
 	if err := driverutil.ResolveVMType(ctx, y, filePath); err != nil {
-		return nil, fmt.Errorf("failed to resolve vm for %q: %w", filePath, err)
+		return nil, fmt.Errorf("failed to resolve vm for %#q: %w", filePath, err)
 	}
 	if err := limayaml.Validate(y, true); err != nil {
 		rejectedYAML := "lima.REJECTED.yaml"
 		if writeErr := os.WriteFile(rejectedYAML, yBytes, 0o644); writeErr != nil {
-			return nil, fmt.Errorf("the YAML is invalid, attempted to save the buffer as %q but failed: %w: %w", rejectedYAML, writeErr, err)
+			return nil, fmt.Errorf("the YAML is invalid, attempted to save the buffer as %#q but failed: %w: %w", rejectedYAML, writeErr, err)
 		}
 		// TODO: may need to support editing the rejected YAML
-		return nil, fmt.Errorf("the YAML is invalid, saved the buffer as %q: %w", rejectedYAML, err)
+		return nil, fmt.Errorf("the YAML is invalid, saved the buffer as %#q: %w", rejectedYAML, err)
 	}
 	if err := os.WriteFile(filePath, yBytes, 0o644); err != nil {
 		return nil, err
@@ -422,7 +422,7 @@ func chooseNextCreatorState(ctx context.Context, tmpl *limatmpl.Template, yq str
 			logrus.WithError(err).Warn("Failed to evaluate yq expression")
 			return tmpl, err
 		}
-		message := fmt.Sprintf("Creating an instance %q", tmpl.Name)
+		message := fmt.Sprintf("Creating an instance %#q", tmpl.Name)
 		options := []string{
 			"Proceed with the current configuration",
 			"Open an editor to review or modify the current configuration",
@@ -441,7 +441,7 @@ func chooseNextCreatorState(ctx context.Context, tmpl *limatmpl.Template, yq str
 		case 0: // "Proceed with the current configuration"
 			return tmpl, nil
 		case 1: // "Open an editor ..."
-			hdr := fmt.Sprintf("# Review and modify the following configuration for Lima instance %q.\n", tmpl.Name)
+			hdr := fmt.Sprintf("# Review and modify the following configuration for Lima instance %#q.\n", tmpl.Name)
 			if tmpl.Name == DefaultInstanceName {
 				hdr += "# - In most cases, you do not need to modify this file.\n"
 			}
@@ -500,7 +500,7 @@ func chooseNextCreatorState(ctx context.Context, tmpl *limatmpl.Template, yq str
 		case 3: // "Exit"
 			return nil, exitSuccessError{Msg: "Choosing to exit"}
 		default:
-			return tmpl, fmt.Errorf("unexpected answer %q", ans)
+			return tmpl, fmt.Errorf("unexpected answer %#q", ans)
 		}
 	}
 }
@@ -581,19 +581,19 @@ func startAction(cmd *cobra.Command, args []string) error {
 	}
 	switch inst.Status {
 	case limatype.StatusRunning:
-		logrus.Infof("The instance %q is already running. Run `%s` to open the shell.",
+		logrus.Infof("The instance %#q is already running. Run `%s` to open the shell.",
 			inst.Name, instance.LimactlShellCmd(inst.Name))
 		// Not an error
 		return nil
 	case limatype.StatusStopped:
 		// NOP
 	default:
-		logrus.Warnf("expected status %q, got %q", limatype.StatusStopped, inst.Status)
+		logrus.Warnf("expected status %#q, got %#q", limatype.StatusStopped, inst.Status)
 	}
 	ctx := cmd.Context()
 	// Network reconciliation will be performed by the process launched by the autostart manager
 	if registered, err := autostart.IsRegistered(ctx, inst); err != nil && !errors.Is(err, autostart.ErrNotSupported) {
-		return fmt.Errorf("failed to check if the autostart entry for instance %q is registered: %w", inst.Name, err)
+		return fmt.Errorf("failed to check if the autostart entry for instance %#q is registered: %w", inst.Name, err)
 	} else if (registered && autostart.AutoStartedIdentifier() != "") || !registered {
 		err = reconcile.Reconcile(ctx, inst.Name)
 		if err != nil {

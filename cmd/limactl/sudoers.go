@@ -37,6 +37,6 @@ See %s for the usage.`, socketVMNetURL),
 	}
 	cfgFile, _ := networks.ConfigFile()
 	sudoersCommand.Flags().Bool("check", false,
-		fmt.Sprintf("check that the sudoers file is up-to-date with %q", cfgFile))
+		fmt.Sprintf("check that the sudoers file is up-to-date with %#q", cfgFile))
 	return sudoersCommand
 }

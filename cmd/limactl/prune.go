@@ -55,11 +55,11 @@ func pruneAction(cmd *cobra.Command, _ []string) error {
 	}
 	for cacheKey, cachePath := range cacheEntries {
 		if file, exists := knownLocations[cacheKey]; exists {
-			logrus.Debugf("Keep %q caching %q", cacheKey, file.Location)
+			logrus.Debugf("Keep %#q caching %#q", cacheKey, file.Location)
 		} else {
 			logrus.Debug("Deleting ", cacheKey)
 			if err := os.RemoveAll(cachePath); err != nil {
-				logrus.Warnf("Failed to delete %q: %v", cacheKey, err)
+				logrus.Warnf("Failed to delete %#q: %v", cacheKey, err)
 				return err
 			}
 		}
@@ -81,7 +81,7 @@ func knownLocations(ctx context.Context) (map[string]limatype.File, error) {
 			return nil, err
 		}
 		if instance.Errors != nil {
-			logrus.Warnf("skipping instance %q because it has errors: %v", instanceName, instance.Errors)
+			logrus.Warnf("skipping instance %#q because it has errors: %v", instanceName, instance.Errors)
 			continue
 		}
 		maps.Copy(locations, locationsFromLimaYAML(instance.Config))
@@ -105,7 +105,7 @@ func knownLocations(ctx context.Context) (map[string]limatype.File, error) {
 			return nil, err
 		}
 		if err := driverutil.ResolveVMType(ctx, y, t.Name); err != nil {
-			logrus.Warnf("failed to resolve vmType for %q: %v", t.Name, err)
+			logrus.Warnf("failed to resolve vmType for %#q: %v", t.Name, err)
 		}
 		maps.Copy(locations, locationsFromLimaYAML(y))
 	}

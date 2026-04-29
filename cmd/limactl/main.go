@@ -86,7 +86,7 @@ func processGlobalFlags(rootCmd *cobra.Command) error {
 			logrus.StandardLogger().SetFormatter(formatter)
 		}
 	default:
-		return fmt.Errorf("unsupported log-format: %q", logFormat)
+		return fmt.Errorf("unsupported log-format: %#q", logFormat)
 	}
 	return nil
 }
@@ -279,7 +279,7 @@ func WrapArgsError(argFn cobra.PositionalArgs) cobra.PositionalArgs {
 			return nil
 		}
 
-		return fmt.Errorf("%q %s.\nSee '%s --help'.\n\nUsage:  %s\n\n%s",
+		return fmt.Errorf("%#q %s.\nSee '%s --help'.\n\nUsage:  %s\n\n%s",
 			cmd.CommandPath(), err.Error(),
 			cmd.CommandPath(),
 			cmd.UseLine(), cmd.Short,

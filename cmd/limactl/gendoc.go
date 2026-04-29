@@ -72,7 +72,7 @@ func gendocAction(cmd *cobra.Command, args []string) error {
 }
 
 func genMan(cmd *cobra.Command, dir string) error {
-	logrus.Infof("Generating man %q", dir)
+	logrus.Infof("Generating man %#q", dir)
 	// lima(1)
 	filePath := filepath.Join(dir, "lima.1")
 	md := "LIMA 1\n======" + `
@@ -140,7 +140,7 @@ weight: 3
 
 // replaceAll replaces all occurrences of text with replacement, for all files in dir.
 func replaceAll(dir, text, replacement string) error {
-	logrus.Infof("Replacing %q with %q", text, replacement)
+	logrus.Infof("Replacing %#q with %#q", text, replacement)
 	return filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
 			return err

@@ -56,7 +56,7 @@ func verifySudoAccess(ctx context.Context, nwCfg networks.Config, args []string,
 		file = nwCfg.Paths.Sudoers
 		if file == "" {
 			cfgFile, _ := networks.ConfigFile()
-			return fmt.Errorf("no sudoers file defined in %q", cfgFile)
+			return fmt.Errorf("no sudoers file defined in %#q", cfgFile)
 		}
 	case 1:
 		file = args[0]
@@ -66,6 +66,6 @@ func verifySudoAccess(ctx context.Context, nwCfg networks.Config, args []string,
 	if err := nwCfg.VerifySudoAccess(ctx, file); err != nil {
 		return err
 	}
-	fmt.Fprintf(stdout, "%q is up-to-date (or sudo doesn't require a password)\n", file)
+	fmt.Fprintf(stdout, "%#q is up-to-date (or sudo doesn't require a password)\n", file)
 	return nil
 }

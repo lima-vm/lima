@@ -172,7 +172,7 @@ func listAction(cmd *cobra.Command, args []string) error {
 	}
 
 	if err := store.Validate(); err != nil {
-		logrus.Warnf("The directory %q does not look like a valid Lima directory: %v", store.Directory(), err)
+		logrus.Warnf("The directory %#q does not look like a valid Lima directory: %v", store.Directory(), err)
 	}
 
 	allInstances, err := store.Instances()
@@ -243,7 +243,7 @@ func listAction(cmd *cobra.Command, args []string) error {
 
 	for _, instance := range instances {
 		if len(instance.Errors) > 0 {
-			logrus.WithField("errors", instance.Errors).Warnf("instance %q has errors", instance.Name)
+			logrus.WithField("errors", instance.Errors).Warnf("instance %#q has errors", instance.Name)
 		}
 	}
 
@@ -377,12 +377,12 @@ func filterInstances(instances []*limatype.Instance, yqExprs []string) ([]*limat
 	for _, instance := range instances {
 		jsonBytes, err := json.Marshal(instance)
 		if err != nil {
-			return nil, fmt.Errorf("failed to marshal instance %q: %w", instance.Name, err)
+			return nil, fmt.Errorf("failed to marshal instance %#q: %w", instance.Name, err)
 		}
 
 		result, err := yqutil.EvaluateExpression(yqExpr, jsonBytes)
 		if err != nil {
-			return nil, fmt.Errorf("failed to apply filter %q: %w", yqExpr, err)
+			return nil, fmt.Errorf("failed to apply filter %#q: %w", yqExpr, err)
 		}
 
 		if len(bytes.TrimSpace(result)) > 0 {

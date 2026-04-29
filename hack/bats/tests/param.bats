@@ -37,7 +37,7 @@ EOF
 
 @test 'create rejects undefined --param' {
     run_e -1 limactl create --name param-create-invalid --param missing=value - <<<"$(param_template)"
-    assert_fatal 'error while processing flag "param": template does not define param "missing"'
+    assert_fatal "error while processing flag \`param\`: template does not define param \`missing\`"
 }
 
 @test 'edit accepts --param shortcut' {

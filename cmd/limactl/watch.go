@@ -81,7 +81,7 @@ func (w *eventWatcher) startInstance(instName string) {
 
 	inst, err := store.Inspect(w.ctx, instName)
 	if err != nil {
-		logrus.WithError(err).Warnf("Failed to inspect instance %q", instName)
+		logrus.WithError(err).Warnf("Failed to inspect instance %#q", instName)
 		w.watching.Delete(instName)
 		return
 	}
@@ -102,7 +102,7 @@ func (w *eventWatcher) watchInstance(instName, haStdoutPath, haStderrPath string
 		return false
 	})
 	if err != nil && w.ctx.Err() == nil {
-		logrus.WithError(err).Warnf("Watcher for instance %q stopped", instName)
+		logrus.WithError(err).Warnf("Watcher for instance %#q stopped", instName)
 	}
 }
 
