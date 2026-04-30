@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -28,6 +29,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/instance"
 	"github.com/lima-vm/lima/v2/pkg/ioutilx"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/localpathutil"
 	"github.com/lima-vm/lima/v2/pkg/networks/reconcile"
 	"github.com/lima-vm/lima/v2/pkg/sshutil"
@@ -186,9 +188,30 @@ func shellAction(cmd *cobra.Command, args []string) error {
 			AdditionalArgs: []string{},
 		}
 
+		// IsControlMasterExisting only checks that the control socket file is
+		// present; it does not verify that the master process is alive. After
+		// an unclean hostagent shutdown the file can outlive the master, in
+		// which case `ssh -O exit` fails. Treating that failure as fatal
+		// defeats the purpose of --reconnect (the user is asking us to reset
+		// a broken state).
+		//
+		// However, ExitMaster can also fail for reasons other than a dead
+		// master (transient ssh errors, missing binary, etc.); blindly
+		// removing the socket in those cases would rip it out from under a
+		// still-live multiplexed connection. Disambiguate by running
+		// `ssh -O check` after a failed exit, and only remove the stale
+		// socket when the master is confirmed dead.
 		if err := ssh.ExitMaster(inst.Hostname, inst.SSHLocalPort, sshConfig); err != nil {
-			return err
+			if isControlMasterAlive(inst.Hostname, inst.SSHLocalPort, sshConfig) {
+				return fmt.Errorf("ssh master is still alive but `ssh -O exit` failed: %w", err)
+			}
+			logrus.WithError(err).Warn("ssh master is not responding; removing stale control socket")
+			controlSock := filepath.Join(inst.Dir, filenames.SSHSock)
+			if rmErr := os.Remove(controlSock); rmErr != nil && !errors.Is(rmErr, fs.ErrNotExist) {
+				return fmt.Errorf("failed to remove stale ssh control socket %q: %w", controlSock, rmErr)
+			}
 		}
+		// Success path: `ssh -O exit` already unlinked the control socket.
 	}
 
 	syncDirVal, err := flags.GetString("sync")
@@ -726,6 +749,22 @@ func quoteEnv(arg string) string {
 	env := strings.SplitN(arg, "=", 2)
 	env[1] = shellescape.Quote(env[1])
 	return strings.Join(env, "=")
+}
+
+// isControlMasterAlive runs `ssh -O check` against the multiplex control
+// socket in c. It returns true if the master process behind the socket is
+// still running (the check command exits 0), and false otherwise (master
+// is dead, socket is stale, or the check itself failed). Used to decide
+// whether a failed `ssh -O exit` indicates a dead master that we can clean
+// up after, or a still-live master we should leave alone.
+func isControlMasterAlive(host string, port int, c *ssh.SSHConfig) bool {
+	args := c.Args()
+	args = append(args, "-O", "check")
+	if port != 0 {
+		args = append(args, "-p", strconv.Itoa(port))
+	}
+	args = append(args, host)
+	return exec.Command(c.Binary(), args...).Run() == nil
 }
 
 type rsyncStats struct {
