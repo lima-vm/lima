@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -28,6 +29,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/instance"
 	"github.com/lima-vm/lima/v2/pkg/ioutilx"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/localpathutil"
 	"github.com/lima-vm/lima/v2/pkg/networks/reconcile"
 	"github.com/lima-vm/lima/v2/pkg/sshutil"
@@ -186,8 +188,20 @@ func shellAction(cmd *cobra.Command, args []string) error {
 			AdditionalArgs: []string{},
 		}
 
+		// IsControlMasterExisting only checks that the control socket file is present;
+		// it does not verify that the master process is alive. After an unclean
+		// hostagent shutdown the file can outlive the master, in which case
+		// `ssh -O exit` fails. Treating that failure as fatal defeats the whole
+		// purpose of --reconnect (the user is asking us to reset a broken state),
+		// so log the failure and fall through to forcibly removing the stale socket
+		// instead. ssh -O exit also unlinks the socket on success, so the cleanup
+		// is a no-op in the happy path.
 		if err := ssh.ExitMaster(inst.Hostname, inst.SSHLocalPort, sshConfig); err != nil {
-			return err
+			logrus.WithError(err).Warn("failed to exit ssh master cleanly; the master may already be dead — removing the stale control socket")
+		}
+		controlSock := filepath.Join(inst.Dir, filenames.SSHSock)
+		if err := os.Remove(controlSock); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("failed to remove stale ssh control socket %q: %w", controlSock, err)
 		}
 	}
 
