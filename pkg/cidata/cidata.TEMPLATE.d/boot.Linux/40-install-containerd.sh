@@ -120,20 +120,20 @@ EOF
 			setenforce 0
 		fi
 		if [ "$(sudo -iu "${LIMA_CIDATA_USER}" sh -ec 'systemctl --user show --property=RefuseManualStart --value dbus')" != "yes" ]; then
-			sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" systemctl --user enable --now dbus
+			sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" systemctl --user enable --now dbus.socket
 		fi
-		sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "PATH=${PATH}" containerd-rootless-setuptool.sh install
-		sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "PATH=${PATH}" \
+		sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "PATH=${PATH}" "TERM=${TERM}" containerd-rootless-setuptool.sh install
+		sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "PATH=${PATH}" "TERM=${TERM}" \
 			"CONTAINERD_NAMESPACE=${CONTAINERD_NAMESPACE}" "CONTAINERD_SNAPSHOTTER=${CONTAINERD_SNAPSHOTTER}" \
 			containerd-rootless-setuptool.sh install-buildkit-containerd
 
 		# $CONTAINERD_SNAPSHOTTER is configured in 20-rootless-base.sh, when the guest kernel is < 5.13, or the instance was created with Lima < 0.9.0.
 		if [ "$(sudo -iu "${LIMA_CIDATA_USER}" sh -ec 'echo $CONTAINERD_SNAPSHOTTER')" = "fuse-overlayfs" ]; then
-			sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "PATH=${PATH}" containerd-rootless-setuptool.sh install-fuse-overlayfs
+			sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "PATH=${PATH}" "TERM=${TERM}" containerd-rootless-setuptool.sh install-fuse-overlayfs
 		fi
 
 		if compare_version.sh "$(uname -r)" -ge "5.13"; then
-			sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "PATH=${PATH}" containerd-rootless-setuptool.sh install-stargz
+			sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "PATH=${PATH}" "TERM=${TERM}" containerd-rootless-setuptool.sh install-stargz
 		else
 			echo >&2 "WARNING: the guest kernel seems older than 5.13. Skipping installing rootless stargz."
 		fi
