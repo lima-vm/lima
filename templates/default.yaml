@@ -585,7 +585,7 @@ propagateProxyEnv: null
 # can only work when using a vmnet network interface and the host has working
 # IPv6 configured as well.
 hostResolver:
-  # 🟢 Builtin default: true
+  # 🟢 Builtin default: false (except for vmType: qemu, where it is true)
   enabled: null
   # 🟢 Builtin default: false
   ipv6: null
