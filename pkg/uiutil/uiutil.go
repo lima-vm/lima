@@ -4,25 +4,45 @@
 package uiutil
 
 import (
+	"errors"
 	"io"
 	"os"
 
-	"github.com/AlecAivazis/survey/v2"
-	"github.com/AlecAivazis/survey/v2/terminal"
 	"github.com/mattn/go-isatty"
+	"github.com/pterm/pterm"
 )
 
-var InterruptErr = terminal.InterruptErr
+var (
+	ErrInterrupt = errors.New("interrupt")
+	InterruptErr = ErrInterrupt // deprecated
+)
+
+// use the same colors as the previous "survey/v2".
+var (
+	primaryStyle   = pterm.Style{pterm.FgDefault}
+	secondaryStyle = pterm.Style{pterm.FgCyan}
+)
 
 // Confirm is a regular text input that accept yes/no answers.
 func Confirm(message string, defaultParam bool) (bool, error) {
 	var ans bool
-	prompt := &survey.Confirm{
-		Message: message,
-		Default: defaultParam,
-	}
-	if err := survey.AskOne(prompt, &ans); err != nil {
+	var err error
+	interactiveConfirm := pterm.DefaultInteractiveConfirm
+	// override the default theme colors (cyan/magenta)
+	interactiveConfirm.TextStyle = &primaryStyle
+	interactiveConfirm.SuffixStyle = &secondaryStyle
+	interrupted := false
+	prompt := interactiveConfirm.
+		WithDefaultText(message).
+		WithDefaultValue(defaultParam).
+		WithOnInterruptFunc(func() {
+			interrupted = true
+		})
+	if ans, err = prompt.Show(); err != nil {
 		return false, err
+	}
+	if interrupted {
+		return false, ErrInterrupt
 	}
 	return ans, nil
 }
@@ -31,12 +51,30 @@ func Confirm(message string, defaultParam bool) (bool, error) {
 // to the user for them to select using the arrow keys and enter.
 func Select(message string, options []string) (int, error) {
 	var ans int
-	prompt := &survey.Select{
-		Message: message,
-		Options: options,
-	}
-	if err := survey.AskOne(prompt, &ans); err != nil {
+	var sel string
+	var err error
+	interactiveSelect := pterm.DefaultInteractiveSelect
+	// override the default theme colors (cyan/magenta)
+	interactiveSelect.TextStyle = &primaryStyle
+	interactiveSelect.SelectorStyle = &secondaryStyle
+	interrupted := false
+	prompt := interactiveSelect.
+		WithDefaultText(message).
+		WithOptions(options).
+		WithOnInterruptFunc(func() {
+			interrupted = true
+		})
+	if sel, err = prompt.Show(); err != nil {
 		return -1, err
+	}
+	if interrupted {
+		return -1, ErrInterrupt
+	}
+	for i, option := range options {
+		if sel == option {
+			ans = i
+			break
+		}
 	}
 	return ans, nil
 }
