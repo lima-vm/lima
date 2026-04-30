@@ -107,13 +107,13 @@ else
 		# and filesystem types, not just /proc/mounts; an unmounted but
 		# partitioned or raw-formatted disk (e.g. the data volume after
 		# a failed boot) must not be reformatted.
-		if lsblk --list --noheadings --output fstype /dev/"${DISK}" | grep --quiet "[^[:space:]]"; then
+		if lsblk --list --noheadings --output fstype /dev/"${DISK}" | grep -q "[^[:space:]]"; then
 			continue
 		fi
-		if lsblk --list --noheadings --output type /dev/"${DISK}" | grep --quiet "part"; then
+		if lsblk --list --noheadings --output type /dev/"${DISK}" | grep -q "part"; then
 			continue
 		fi
-		if awk '/^\/dev\// {sub("^/dev/", "", $1); print $1}' /proc/mounts | grep --quiet "^${DISK}$"; then
+		if awk '/^\/dev\// {sub("^/dev/", "", $1); print $1}' /proc/mounts | grep -q "^${DISK}$"; then
 			continue
 		fi
 		echo 'type=83' | sfdisk --label dos /dev/"${DISK}"
