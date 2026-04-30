@@ -1,0 +1,14 @@
+images:
+- location: "https://download.fedoraproject.org/pub/fedora/linux/releases/44/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-44-1.7.x86_64.qcow2"
+  arch: "x86_64"
+  digest: "sha256:28680fe5b371a5a82ebf43a31926e086a168e59949d03969c5093e7071f90b7f"
+
+- location: "https://download.fedoraproject.org/pub/fedora/linux/releases/44/Cloud/aarch64/images/Fedora-Cloud-Base-Generic-44-1.7.aarch64.qcow2"
+  arch: aarch64
+  digest: "sha256:55c60a3b80d3616a08705afd0459e75fe9f03c54aba7a46e4002a41a72fa0d5b"
+
+# No RISC-V release yet for Fedora 44: https://download.fedoraproject.org/pub/alt/risc-v/release/
+
+# # NOTE: Intel Mac with macOS prior to 15.5 requires setting vmType to qemu
+# # https://github.com/lima-vm/lima/issues/3334
+# vmType: qemu

@@ -36,8 +36,8 @@ Examples:
   Update the Fedora Linux image location in templates/**.yaml:
   $ $(basename "${BASH_SOURCE[0]}") templates/**.yaml
 
-  Update the Fedora Linux image location to version 41 in ~/.lima/fedora/lima.yaml:
-  $ $(basename "${BASH_SOURCE[0]}") --version 41 ~/.lima/fedora/lima.yaml
+  Update the Fedora Linux image location to version 44 in ~/.lima/fedora/lima.yaml:
+  $ $(basename "${BASH_SOURCE[0]}") --version 44 ~/.lima/fedora/lima.yaml
   $ limactl factory-reset fedora
 
 Flags:
