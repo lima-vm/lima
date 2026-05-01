@@ -57,6 +57,7 @@ func newCreateCommand() *cobra.Command {
 
   To create an instance "default" with yq expressions:
   $ limactl create --set='.cpus = 2 | .memory = "2GiB"'
+  Note: Some yq operators are restricted. See 'limactl help yq-restrictions'.
 
   To create an instance "default" with a template parameter:
   $ limactl create --name=default --param containerdSnapshotter=false template:docker

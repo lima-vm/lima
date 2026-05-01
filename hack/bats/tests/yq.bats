@@ -47,3 +47,8 @@ load "../helpers/load"
     run_e -1 limactl yq -n --security-disable-env-ops 'env(FOO)'
     assert_stderr "Error: env operations have been disabled"
 }
+
+@test 'yq multi-call command has system operations disabled by default' {
+    run -1 limactl yq -n 'system("echo hello")'
+    assert_output --partial "system operations are disabled"
+}
