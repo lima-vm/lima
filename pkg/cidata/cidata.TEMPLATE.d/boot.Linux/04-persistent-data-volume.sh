@@ -69,11 +69,11 @@ if [ -n "${DATA_VOLUME}" ]; then
 	if command -v growpart >/dev/null 2>&1 && command -v resize2fs >/dev/null 2>&1; then
 		# Automatically expand the data volume filesystem
 		growpart "$DATA_DISK" 1 || true
-		# growpart triggers a partition table re-read; settle udev before
-		# touching the device to avoid racing with the re-probe. The
-		# settle is defense-in-depth (blkid above eliminates the core
-		# udev dependency), so tolerate its failure rather than crashing
-		# the boot under set -e if udevadm is missing or stuck.
+		# growpart re-reads the partition table; settle before e2fsck so
+		# the resulting udev re-probe doesn't race with fsck. Tolerate
+		# failure: the blkid above already bypasses udev, so this is
+		# defense-in-depth, and a missing udevadm must not kill boot
+		# under set -e.
 		udevadm settle || true
 		# Only resize when filesystem is in a healthy state
 		if e2fsck -f -p "${DATA_VOLUME}"; then
@@ -117,13 +117,15 @@ else
 			continue
 		fi
 		echo 'type=83' | sfdisk --label dos /dev/"${DISK}"
+		# sfdisk's BLKRRPART emits a uevent for the new partition; settle
+		# before lsblk so its libudev query sees that partition rather
+		# than stale pre-sfdisk state. Tolerate failure as above.
+		udevadm settle || true
 		PART=$(lsblk --list /dev/"${DISK}" --noheadings --output name,type | awk '$2 == "part" {print $1}')
 		mkfs.ext4 -L data-volume /dev/"${PART}"
-		# Let udev process the new filesystem before continuing; mount
-		# uses the device path directly, but later boot scripts or
-		# services may depend on the /dev/disk/by-label/ symlink.
-		# Tolerate failure so a missing or stuck udevadm does not crash
-		# the boot under set -e.
+		# Let udev create /dev/disk/by-label/data-volume; mount uses the
+		# device path directly, but later scripts may depend on the
+		# symlink. Tolerate failure as above.
 		udevadm settle || true
 		mount -t ext4 /dev/"${PART}" /mnt/data
 		# setup apk package cache
