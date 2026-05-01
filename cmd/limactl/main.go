@@ -210,6 +210,7 @@ func newApp() *cobra.Command {
 		newCloneCommand(),
 		newRenameCommand(),
 		newWatchCommand(),
+		newYQRestrictionsHelpCommand(),
 	)
 	addPluginCommands(rootCmd)
 
