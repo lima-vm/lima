@@ -25,7 +25,7 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/google/yamlfmt v0.21.0
 	github.com/inetaf/tcpproxy v0.0.0-20250222171855-c4b9df066048
-	github.com/invopop/jsonschema v0.13.0
+	github.com/invopop/jsonschema v0.14.0
 	github.com/lima-vm/go-qcow2reader v0.7.1
 	github.com/lima-vm/sshocker v0.3.9 // gomodjail:unconfined
 	github.com/mattn/go-isatty v0.0.21
@@ -37,6 +37,7 @@ require (
 	github.com/modelcontextprotocol/go-sdk v1.5.0
 	github.com/nxadm/tail v1.4.11 // gomodjail:unconfined
 	github.com/opencontainers/go-digest v1.0.0
+	github.com/pb33f/ordered-map/v2 v2.3.1
 	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58
 	github.com/pkg/sftp v1.13.10
 	github.com/rjeczalik/notify v0.9.3
@@ -45,7 +46,6 @@ require (
 	github.com/sirupsen/logrus v1.9.4
 	github.com/spf13/cobra v1.10.2 // gomodjail:unconfined
 	github.com/spf13/pflag v1.0.10
-	github.com/wk8/go-ordered-map/v2 v2.1.8
 	golang.org/x/net v0.53.0
 	golang.org/x/sync v0.20.0
 	golang.org/x/sys v0.43.0 // gomodjail:unconfined
@@ -88,7 +88,6 @@ require (
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/linuxkit/virtsock v0.0.0-20220523201153-1a23e78aa7a2 // indirect
 	github.com/magiconair/properties v1.8.10 // indirect
-	github.com/mailru/easyjson v0.9.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/mdlayher/socket v0.6.0 // indirect
@@ -118,7 +117,6 @@ require (
 	golang.org/x/tools v0.43.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260120221211-b8f7ae30c516 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 	// gomodjail:unconfined
 	gvisor.dev/gvisor v0.0.0-20240916094835-a174eb65023f // indirect
 )
