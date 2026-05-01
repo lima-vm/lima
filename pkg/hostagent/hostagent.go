@@ -162,11 +162,12 @@ func New(ctx context.Context, instName string, stdout io.Writer, signalCh chan o
 	}
 	sshLocalPort = inst.SSHLocalPort
 
-	vSockPort := limaDriver.Info().VsockPort
-	virtioPort := limaDriver.Info().VirtioPort
-	noCloudInit := limaDriver.Info().Features.NoCloudInit
-	rosettaEnabled := limaDriver.Info().Features.RosettaEnabled
-	rosettaBinFmt := limaDriver.Info().Features.RosettaBinFmt
+	driverInfo := limaDriver.Info()
+	vSockPort := driverInfo.VsockPort
+	virtioPort := driverInfo.VirtioPort
+	noCloudInit := driverInfo.Features.NoCloudInit
+	rosettaEnabled := driverInfo.Features.RosettaEnabled
+	rosettaBinFmt := driverInfo.Features.RosettaBinFmt
 
 	// Disable Rosetta in Plain mode
 	if *inst.Config.Plain {
