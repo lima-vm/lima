@@ -25,7 +25,7 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/google/yamlfmt v0.21.0
 	github.com/inetaf/tcpproxy v0.0.0-20250222171855-c4b9df066048
-	github.com/invopop/jsonschema v0.13.0
+	github.com/invopop/jsonschema v0.14.0
 	github.com/lima-vm/go-qcow2reader v0.7.1
 	github.com/lima-vm/sshocker v0.3.9 // gomodjail:unconfined
 	github.com/mattn/go-isatty v0.0.21
@@ -122,3 +122,5 @@ require (
 	// gomodjail:unconfined
 	gvisor.dev/gvisor v0.0.0-20240916094835-a174eb65023f // indirect
 )
+
+require github.com/pb33f/ordered-map/v2 v2.3.1 // indirect
