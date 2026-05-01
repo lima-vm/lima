@@ -40,6 +40,7 @@ lima
 - [`almalinux-kitten-10`](./almalinux-kitten-10.yaml), `almalinux-kitten`: AlmaLinux Kitten 10
 - [`alpine`](./alpine.yaml): ☆Alpine Linux
 - [`alpine-iso`](./alpine-iso.yaml): ☆Alpine Linux (ISO9660 image). Compatible with the `alpine` template used in Lima prior to v1.0.
+- [`amazonlinux-2023`](./amazonlinux-2023.yaml): Amazon Linux 2023
 - [`archlinux`](./archlinux.yaml): ☆Arch Linux
 - [`centos-stream-9`](./centos-stream-9.yaml), `centos-stream`: CentOS Stream 9
 - [`centos-stream-10`](./centos-stream-10.yaml): CentOS Stream 10
