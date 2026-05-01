@@ -316,11 +316,13 @@ func PrintInstances(w io.Writer, instances []*limatype.Instance, format string, 
 		hideArch := false
 		hideDir := false
 
+		// width == 0 means the terminal width is unknown (e.g. stdout is not a TTY),
+		// in which case we treat it as unlimited and never hide any column.
 		columns := 1 // NAME
 		columns += 2 // STATUS
 		columns += 2 // SSH
 		// can we still fit the remaining columns (7)
-		if width == 0 || (columns+7)*columnWidth > width && !all {
+		if width != 0 && (columns+7)*columnWidth > width && !all {
 			hideType = len(types) == 1
 		}
 		if !hideType {
@@ -329,7 +331,7 @@ func PrintInstances(w io.Writer, instances []*limatype.Instance, format string, 
 		// only hide arch if it is the same as the host arch
 		goarch := limatype.NewArch(runtime.GOARCH)
 		// can we still fit the remaining columns (6)
-		if width == 0 || (columns+6)*columnWidth > width && !all {
+		if width != 0 && (columns+6)*columnWidth > width && !all {
 			hideArch = len(archs) == 1 && instances[0].Arch == goarch
 		}
 		if !hideArch {

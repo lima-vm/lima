@@ -33,14 +33,15 @@ var instance = limatype.Instance{
 	SSHAddress: "127.0.0.1",
 }
 
-var table = "NAME    STATUS     SSH            CPUS    MEMORY    DISK    DIR\n" +
-	"foo     Stopped    127.0.0.1:0    0       0B        0B      dir\n"
+// width 0 means the terminal width is unknown (stdout is not a TTY), so all columns are shown.
+var table = "NAME    STATUS     SSH            VMTYPE    ARCH" + space + "    CPUS    MEMORY    DISK    DIR\n" +
+	"foo     Stopped    127.0.0.1:0    " + vmtype + "      " + goarch + "    0       0B        0B      dir\n"
 
-var tableEmu = "NAME    STATUS     SSH            ARCH       CPUS    MEMORY    DISK    DIR\n" +
-	"foo     Stopped    127.0.0.1:0    unknown    0       0B        0B      dir\n"
+var tableEmu = "NAME    STATUS     SSH            VMTYPE    ARCH       CPUS    MEMORY    DISK    DIR\n" +
+	"foo     Stopped    127.0.0.1:0    " + vmtype + "      unknown    0       0B        0B      dir\n"
 
-var tableHome = "NAME    STATUS     SSH            CPUS    MEMORY    DISK    DIR\n" +
-	"foo     Stopped    127.0.0.1:0    0       0B        0B      ~" + separator + "dir\n"
+var tableHome = "NAME    STATUS     SSH            VMTYPE    ARCH" + space + "    CPUS    MEMORY    DISK    DIR\n" +
+	"foo     Stopped    127.0.0.1:0    " + vmtype + "      " + goarch + "    0       0B        0B      ~" + separator + "dir\n"
 
 var tableAll = "NAME    STATUS     SSH            VMTYPE    ARCH" + space + "    CPUS    MEMORY    DISK    DIR\n" +
 	"foo     Stopped    127.0.0.1:0    " + vmtype + "      " + goarch + "    0       0B        0B      dir\n"
@@ -168,6 +169,27 @@ func TestPrintInstanceTableAll(t *testing.T) {
 	err := PrintInstances(&buf, instances, "table", &options)
 	assert.NilError(t, err)
 	assert.Equal(t, tableAll, buf.String())
+}
+
+// Regression test for https://github.com/lima-vm/lima/issues/3986:
+// when stdout is not a TTY (TerminalWidth == 0), all columns must be shown,
+// regardless of whether --all-fields was passed.
+func TestPrintInstanceTableNonTTY(t *testing.T) {
+	instances := []*limatype.Instance{&instance}
+	t.Run("AllFields", func(t *testing.T) {
+		var buf bytes.Buffer
+		options := PrintOptions{AllFields: true}
+		err := PrintInstances(&buf, instances, "table", &options)
+		assert.NilError(t, err)
+		assert.Equal(t, tableAll, buf.String())
+	})
+	t.Run("Default", func(t *testing.T) {
+		var buf bytes.Buffer
+		options := PrintOptions{}
+		err := PrintInstances(&buf, instances, "table", &options)
+		assert.NilError(t, err)
+		assert.Equal(t, tableAll, buf.String())
+	})
 }
 
 func TestPrintInstanceTableTwo(t *testing.T) {
