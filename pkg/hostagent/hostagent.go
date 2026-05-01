@@ -362,6 +362,17 @@ func (a *HostAgent) emitPortForwardEvent(ctx context.Context, pfEvent *events.Po
 	a.emitEvent(ctx, ev)
 }
 
+func (a *HostAgent) emitRequirementProgress(ctx context.Context, prog *events.RequirementProgress) {
+	a.statusMu.RLock()
+	currentStatus := a.currentStatus
+	a.statusMu.RUnlock()
+
+	currentStatus.RequirementProgress = prog
+
+	ev := events.Event{Status: currentStatus}
+	a.emitEvent(ctx, ev)
+}
+
 func (a *HostAgent) emitVsockEvent(ctx context.Context, vsockEvent *events.VsockEvent) {
 	a.statusMu.RLock()
 	currentStatus := a.currentStatus
@@ -556,7 +567,16 @@ func (a *HostAgent) startHostAgentRoutines(ctx context.Context) error {
 		return nil
 	})
 	var errs []error
-	if err := a.waitForRequirements("essential", a.essentialRequirements()); err != nil {
+	hasGuestAgentDaemon := !*a.instConfig.Plain && *a.instConfig.OS == limatype.LINUX
+	essentialReqs := a.essentialRequirements()
+	optionalReqs := a.optionalRequirements()
+	finalReqs := a.finalRequirements()
+	totalSteps := len(essentialReqs) + len(optionalReqs) + len(finalReqs)
+	if hasGuestAgentDaemon {
+		totalSteps++ // for the explicit "guest agent is running" wait
+	}
+	step := 0
+	if err := a.waitForRequirements(ctx, "essential", essentialReqs, &step, totalSteps); err != nil {
 		errs = append(errs, err)
 	}
 	if *a.instConfig.SSH.ForwardAgent {
@@ -608,7 +628,6 @@ sudo chown -R "${USER}" /run/host-services`
 	staticPortForwards := a.separateStaticPortForwards()
 	a.addStaticPortForwardsFromList(ctx, staticPortForwards)
 
-	hasGuestAgentDaemon := !*a.instConfig.Plain && *a.instConfig.OS == limatype.LINUX
 	if hasGuestAgentDaemon {
 		go a.watchGuestAgentEvents(ctx)
 		go a.startTimeSync(ctx)
@@ -628,19 +647,29 @@ sudo chown -R "${USER}" /run/host-services`
 			}()
 		}
 	}
-	if err := a.waitForRequirements("optional", a.optionalRequirements()); err != nil {
+	if err := a.waitForRequirements(ctx, "optional", optionalReqs, &step, totalSteps); err != nil {
 		errs = append(errs, err)
 	}
 	if hasGuestAgentDaemon {
-		logrus.Info("Waiting for the guest agent to be running")
+		step++
+		a.emitRequirementProgress(ctx, &events.RequirementProgress{
+			Step:        step,
+			Total:       totalSteps,
+			Description: "Guest agent is running",
+		})
 		select {
 		case <-a.guestAgentAliveCh:
-			// NOP
+			a.emitRequirementProgress(ctx, &events.RequirementProgress{
+				Step:        step,
+				Total:       totalSteps,
+				Description: "Guest agent is running",
+				Done:        true,
+			})
 		case <-time.After(time.Minute):
 			errs = append(errs, errors.New("guest agent does not seem to be running; port forwards will not work"))
 		}
 	}
-	if err := a.waitForRequirements("final", a.finalRequirements()); err != nil {
+	if err := a.waitForRequirements(ctx, "final", finalReqs, &step, totalSteps); err != nil {
 		errs = append(errs, err)
 	}
 	// Copy all config files _after_ the requirements are done
