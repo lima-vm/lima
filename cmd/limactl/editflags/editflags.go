@@ -392,7 +392,7 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool, params map[string]stri
 				case "none":
 					return []string{`.containerd.user = false | .containerd.system = false`}, nil
 				default:
-					return nil, fmt.Errorf(`expected one of ["user", "system", "user+system", "none"], got %#q`, s)
+					return nil, fmt.Errorf("expected one of [`user`, `system`, `user+system`, `none`], got %#q", s)
 				}
 			},
 			true,
