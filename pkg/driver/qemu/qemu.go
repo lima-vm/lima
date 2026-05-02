@@ -852,6 +852,9 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 		args = append(args, "-device", "virtio-keyboard-pci")
 		args = append(args, "-device", "virtio-"+input+"-pci")
 		args = append(args, "-device", "qemu-xhci,id=usb-bus")
+	} else if *y.USB {
+		// Add USB controller without display for USB device passthrough
+		args = append(args, "-device", "qemu-xhci,id=usb-bus")
 	}
 
 	// Parallel
