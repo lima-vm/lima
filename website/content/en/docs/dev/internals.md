@@ -184,10 +184,22 @@ The volume label is "cidata", as defined by [cloud-init NoCloud](https://docs.cl
 - `LIMA_CIDATA_MOUNTS`: the number of the Lima mounts
 - `LIMA_CIDATA_MOUNTS_%d_MOUNTPOINT`: the N-th mount point of Lima mounts (N=0, 1, ...)
 - `LIMA_CIDATA_MOUNTTYPE`: the type of the Lima mounts ("reverse-sshfs", "9p", ...)
+- `LIMA_CIDATA_DISKS`: the number of additional disks attached to the instance
+- `LIMA_CIDATA_DISK_%d_NAME`: the name of the N-th additional disk (N=0, 1, ...)
+- `LIMA_CIDATA_DISK_%d_DEVICE`: the guest block device path of the N-th additional disk
+- `LIMA_CIDATA_DISK_%d_FORMAT`: set to "true" when the N-th additional disk should be formatted on first boot
+- `LIMA_CIDATA_DISK_%d_FSTYPE`: the filesystem type to format the N-th additional disk with (e.g. `ext4`)
+- `LIMA_CIDATA_DISK_%d_FSARGS`: extra arguments passed to mkfs for the N-th additional disk (space-separated)
 - `LIMA_CIDATA_DATAFILE_%08d_OVERWRITE`: set to "true" if the datafile should be overwritten if it already exists.
 - `LIMA_CIDATA_DATAFILE_%08d_OWNER`: set to the owner of the datafile.
 - `LIMA_CIDATA_DATAFILE_%08d_PATH`: set to the path the datafile should be copied to.
 - `LIMA_CIDATA_DATAFILE_%08d_PERMISSIONS`: set to the file permissions (in octal) for the datafile.
+- `LIMA_CIDATA_YQ_PROVISION_%08d_FORMAT`: the input format ("yaml" or "json") for the N-th yq provision step.
+- `LIMA_CIDATA_YQ_PROVISION_%08d_OWNER`: the owner (user[:group]) for the file produced by the N-th yq provision step.
+- `LIMA_CIDATA_YQ_PROVISION_%08d_PATH`: the destination path for the N-th yq provision step.
+- `LIMA_CIDATA_YQ_PROVISION_%08d_PERMISSIONS`: the file permissions (in octal) for the N-th yq provision step.
+- `LIMA_CIDATA_GUEST_INSTALL_PREFIX`: the install prefix used for guest tools (e.g. `/usr/local`).
+- `LIMA_CIDATA_UPGRADE_PACKAGES`: set to "1" if `upgradePackages` is enabled in `lima.yaml`, empty otherwise.
 - `LIMA_CIDATA_CONTAINERD_USER`: set to "1" if rootless containerd to be set up
 - `LIMA_CIDATA_CONTAINERD_SYSTEM`: set to "1" if system-wide containerd to be set up
 - `LIMA_CIDATA_CONTAINERD_ARCHIVE`: the name of the containerd archive. `nerdctl-full.tgz`
@@ -196,6 +208,14 @@ The volume label is "cidata", as defined by [cloud-init NoCloud](https://docs.cl
 - `LIMA_CIDATA_SLIRP_IP_ADDRESS`: set to the IP address of the guest on the SLIRP network. `192.168.5.15`.
 - `LIMA_CIDATA_UDP_DNS_LOCAL_PORT`: set to the udp port number of the hostagent dns server (or 0 when not enabled).
 - `LIMA_CIDATA_TCP_DNS_LOCAL_PORT`: set to the tcp port number of the hostagent dns server (or 0 when not enabled).
+- `LIMA_CIDATA_ROSETTA_ENABLED`: set to "true" if Rosetta x86_64 emulation is enabled in the guest (Apple Silicon, `vz` driver).
+- `LIMA_CIDATA_ROSETTA_BINFMT`: set to "true" if the guest should register the Rosetta binfmt_misc handler at boot.
+- `LIMA_CIDATA_SKIP_DEFAULT_DEPENDENCY_RESOLUTION`: set to "1" to skip Lima's built-in package dependency resolution during provisioning, empty otherwise.
+- `LIMA_CIDATA_VMTYPE`: the VM driver type ("qemu", "vz", "wsl2", ...).
+- `LIMA_CIDATA_VSOCK_PORT`: the vsock port used by the guest agent (0 when vsock is not used).
+- `LIMA_CIDATA_VIRTIO_PORT`: the virtio-serial port name used by the guest agent (empty when virtio-serial is not used).
+- `LIMA_CIDATA_PLAIN`: set to "1" when the instance is in plain mode (no mounts, port forwarding, or containerd), empty otherwise.
+- `LIMA_CIDATA_NO_CLOUD_INIT`: set to "1" if cloud-init should be skipped on this boot, empty otherwise.
 
 # VM lifecycle
 
