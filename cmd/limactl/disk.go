@@ -91,7 +91,7 @@ func diskCreateAction(cmd *cobra.Command, args []string) error {
 	switch format {
 	case "qcow2", "raw":
 	default:
-		return fmt.Errorf(`disk format %#q not supported, use "qcow2" or "raw" instead`, format)
+		return fmt.Errorf("disk format %#q not supported, use `qcow2` or `raw` instead", format)
 	}
 
 	// only exactly one arg is allowed
@@ -470,7 +470,7 @@ func diskImportAction(_ *cobra.Command, args []string) error {
 	switch format {
 	case "qcow2", "raw":
 	default:
-		return fmt.Errorf(`disk format %#q not supported, use "qcow2" or "raw" instead`, format)
+		return fmt.Errorf("disk format %#q not supported, use `qcow2` or `raw` instead", format)
 	}
 
 	if err := os.MkdirAll(diskDir, 0o755); err != nil {

@@ -17,7 +17,7 @@ local_setup_file() {
 
 @test 'protecting a non-existing instance fails' {
     run_e -1 limactl protect "${NOTEXIST}"
-    assert_fatal "failed to inspect instance `${NOTEXIST}`…"
+    assert_fatal "failed to inspect instance \`${NOTEXIST}\`…"
 }
 
 @test 'protecting the dummy instance succeeds' {
@@ -41,7 +41,7 @@ local_setup_file() {
 
 @test 'deleting the unprotected clone instance succeeds' {
     run_e -0 limactl delete --force "$CLONE"
-    assert_info "Deleted `${CLONE}`…"
+    assert_info "Deleted \`${CLONE}\`…"
 }
 
 @test 'deleting protected dummy instance fails' {
@@ -64,5 +64,5 @@ local_setup_file() {
 
 @test 'deleting unprotected dummy instance succeeds' {
     run_e -0 limactl delete --force "$INSTANCE"
-    assert_info "Deleted `${INSTANCE}`…"
+    assert_info "Deleted \`${INSTANCE}\`…"
 }
