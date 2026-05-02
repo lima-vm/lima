@@ -14,6 +14,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -134,9 +135,22 @@ func provisionVM(ctx context.Context, instanceDir, instanceName, distroName stri
 
 		<-ctx.Done()
 		logrus.Info("Context closed, stopping vm")
-		if status, err := getWslStatus(ctx, instanceName); err == nil &&
-			status == limatype.StatusRunning {
-			_ = stopVM(ctx, distroName)
+		// ctx is already canceled at this point, so passing it to wsl.exe
+		// would make the cleanup commands fail with "context canceled"
+		// before they even run. Detach from the cancellation but keep a
+		// short timeout so we don't block forever on a wedged wsl.exe.
+		cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
+		defer cancel()
+		status, err := getWslStatus(cleanupCtx, instanceName)
+		if err != nil {
+			logrus.WithError(err).Warn("Failed to query WSL status during shutdown; skipping terminate")
+			return
+		}
+		if status != limatype.StatusRunning {
+			return
+		}
+		if err := stopVM(cleanupCtx, distroName); err != nil {
+			logrus.WithError(err).Warn("Failed to terminate WSL distro during shutdown")
 		}
 	}()
 
