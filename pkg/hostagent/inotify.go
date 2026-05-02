@@ -35,6 +35,14 @@ func (a *HostAgent) startInotify(ctx context.Context) error {
 	// goroutine; without notify.Stop they leak for the lifetime of the process.
 	defer notify.Stop(mountWatchCh)
 
+	// PostInotify returns a usable stream wrapper before the server-side
+	// handler is installed, so Sends issued during the gap fail with EOF.
+	select {
+	case <-a.guestAgentAliveCh:
+	case <-ctx.Done():
+		return nil
+	}
+
 	client, err := a.getOrCreateClient(ctx)
 	if err != nil {
 		return fmt.Errorf("inotify: failed to obtain guest agent client: %w", err)
