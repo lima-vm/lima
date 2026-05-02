@@ -31,18 +31,18 @@ func unprotectAction(cmd *cobra.Command, args []string) error {
 	for _, instName := range args {
 		inst, err := store.Inspect(ctx, instName)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("failed to inspect instance %q: %w", instName, err))
+			errs = append(errs, fmt.Errorf("failed to inspect instance %#q: %w", instName, err))
 			continue
 		}
 		if !inst.Protected {
-			logrus.Warnf("Instance %q isn't protected. Skipping.", instName)
+			logrus.Warnf("Instance %#q isn't protected. Skipping.", instName)
 			continue
 		}
 		if err := inst.Unprotect(); err != nil {
-			errs = append(errs, fmt.Errorf("failed to unprotect instance %q: %w", instName, err))
+			errs = append(errs, fmt.Errorf("failed to unprotect instance %#q: %w", instName, err))
 			continue
 		}
-		logrus.Infof("Unprotected %q", instName)
+		logrus.Infof("Unprotected %#q", instName)
 	}
 	return errors.Join(errs...)
 }

@@ -127,12 +127,12 @@ func defaultExprFunc(expr string) func(v *flag.Flag) ([]string, error) {
 func ParsePortForward(spec string) (hostPort, guestPort string, isStatic bool, err error) {
 	parts := strings.Split(spec, ",")
 	if len(parts) > 2 {
-		return "", "", false, fmt.Errorf("invalid port forward format %q, expected HOST:GUEST or HOST:GUEST,static=true", spec)
+		return "", "", false, fmt.Errorf("invalid port forward format %#q, expected HOST:GUEST or HOST:GUEST,static=true", spec)
 	}
 
 	portParts := strings.Split(strings.TrimSpace(parts[0]), ":")
 	if len(portParts) != 2 {
-		return "", "", false, fmt.Errorf("invalid port forward format %q, expected HOST:GUEST", parts[0])
+		return "", "", false, fmt.Errorf("invalid port forward format %#q, expected HOST:GUEST", parts[0])
 	}
 
 	hostPort = strings.TrimSpace(portParts[0])
@@ -143,10 +143,10 @@ func ParsePortForward(spec string) (hostPort, guestPort string, isStatic bool, e
 		if staticValue, ok := strings.CutPrefix(staticPart, "static="); ok {
 			isStatic, err = strconv.ParseBool(staticValue)
 			if err != nil {
-				return "", "", false, fmt.Errorf("invalid value for static parameter: %q", staticValue)
+				return "", "", false, fmt.Errorf("invalid value for static parameter: %#q", staticValue)
 			}
 		} else {
-			return "", "", false, fmt.Errorf("invalid parameter %q, expected 'static=' followed by a boolean value", staticPart)
+			return "", "", false, fmt.Errorf("invalid parameter %#q, expected 'static=' followed by a boolean value", staticPart)
 		}
 	}
 
@@ -175,10 +175,10 @@ func BuildParamExpressions(params []string, allowedParams map[string]string) ([]
 	for i, param := range params {
 		key, value, ok := strings.Cut(param, "=")
 		if !ok {
-			return nil, fmt.Errorf("invalid parameter %q, expected NAME=VALUE", param)
+			return nil, fmt.Errorf("invalid parameter %#q, expected NAME=VALUE", param)
 		}
 		if _, ok := allowedParams[key]; !ok {
-			return nil, fmt.Errorf("template does not define param %q", key)
+			return nil, fmt.Errorf("template does not define param %#q", key)
 		}
 		exprs[i] = fmt.Sprintf(".param[%q] = %q", key, value)
 	}
@@ -325,7 +325,7 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool, params map[string]stri
 						network := strings.TrimPrefix(s, "lima:")
 						networks[i] = fmt.Sprintf(`{"lima": %q}`, network)
 					default:
-						return nil, fmt.Errorf(`network name must be "vzNAT" or "lima:*", got %q`, s)
+						return nil, fmt.Errorf("network name must be `vzNAT` or `lima:*`, got %#q", s)
 					}
 				}
 				expr := fmt.Sprintf(`.networks += [%s] | .networks |= unique_by(.lima)`, strings.Join(networks, ","))
@@ -392,7 +392,7 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool, params map[string]stri
 				case "none":
 					return []string{`.containerd.user = false | .containerd.system = false`}, nil
 				default:
-					return nil, fmt.Errorf(`expected one of ["user", "system", "user+system", "none"], got %q`, s)
+					return nil, fmt.Errorf("expected one of [`user`, `system`, `user+system`, `none`], got %#q", s)
 				}
 			},
 			true,
@@ -431,7 +431,7 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool, params map[string]stri
 			}
 			newExprs, err := def.exprFunc(v)
 			if err != nil {
-				return exprs, fmt.Errorf("error while processing flag %q: %w", def.flagName, err)
+				return exprs, fmt.Errorf("error while processing flag %#q: %w", def.flagName, err)
 			}
 			exprs = append(exprs, newExprs...)
 		}

@@ -67,7 +67,7 @@ func cloneOrRenameAction(cmd *cobra.Command, args []string) error {
 	oldInst, err := store.Inspect(ctx, oldInstName)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("instance %q not found", oldInstName)
+			return fmt.Errorf("instance %#q not found", oldInstName)
 		}
 		return err
 	}
@@ -98,7 +98,7 @@ func cloneOrRenameAction(cmd *cobra.Command, args []string) error {
 			return err
 		}
 		if err := driverutil.ResolveVMType(ctx, y, filePath); err != nil {
-			return fmt.Errorf("failed to resolve vm for %q: %w", filePath, err)
+			return fmt.Errorf("failed to resolve vm for %#q: %w", filePath, err)
 		}
 		if err := limayaml.Validate(y, true); err != nil {
 			return saveRejectedYAML(yBytes, err)

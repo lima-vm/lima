@@ -27,7 +27,7 @@ func startAtLoginAction(cmd *cobra.Command, args []string) error {
 	inst, err := store.Inspect(ctx, instName)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			logrus.Infof("Instance %q not found", instName)
+			logrus.Infof("Instance %#q not found", instName)
 			return nil
 		}
 		return err
@@ -39,23 +39,23 @@ func startAtLoginAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	if registered, err := autostart.IsRegistered(ctx, inst); err != nil {
-		return fmt.Errorf("failed to check if the autostart entry for instance %q is registered: %w", inst.Name, err)
+		return fmt.Errorf("failed to check if the autostart entry for instance %#q is registered: %w", inst.Name, err)
 	} else if startAtLogin {
 		verb := "create"
 		if registered {
 			verb = "update"
 		}
 		if err := autostart.RegisterToStartAtLogin(ctx, inst); err != nil {
-			return fmt.Errorf("failed to %s the autostart entry for instance %q: %w", verb, inst.Name, err)
+			return fmt.Errorf("failed to %s the autostart entry for instance %#q: %w", verb, inst.Name, err)
 		}
-		logrus.Infof("The autostart entry for instance %q has been %sd", inst.Name, verb)
+		logrus.Infof("The autostart entry for instance %#q has been %sd", inst.Name, verb)
 	} else {
 		if !registered {
-			logrus.Infof("The autostart entry for instance %q is not registered", inst.Name)
+			logrus.Infof("The autostart entry for instance %#q is not registered", inst.Name)
 		} else if err := autostart.UnregisterFromStartAtLogin(ctx, inst); err != nil {
-			return fmt.Errorf("failed to unregister the autostart entry for instance %q: %w", inst.Name, err)
+			return fmt.Errorf("failed to unregister the autostart entry for instance %#q: %w", inst.Name, err)
 		} else {
-			logrus.Infof("The autostart entry for instance %q has been unregistered", inst.Name)
+			logrus.Infof("The autostart entry for instance %#q has been unregistered", inst.Name)
 		}
 	}
 

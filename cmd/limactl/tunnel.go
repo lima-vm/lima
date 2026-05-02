@@ -55,7 +55,7 @@ func tunnelAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	if tunnelType != "socks" {
-		return fmt.Errorf("unknown tunnel type: %q", tunnelType)
+		return fmt.Errorf("unknown tunnel type: %#q", tunnelType)
 	}
 	port, err := flags.GetInt("socks-port")
 	if err != nil {
@@ -69,12 +69,12 @@ func tunnelAction(cmd *cobra.Command, args []string) error {
 	inst, err := store.Inspect(ctx, instName)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("instance %q does not exist, run `limactl create %s` to create a new instance", instName, instName)
+			return fmt.Errorf("instance %#q does not exist, run `limactl create %s` to create a new instance", instName, instName)
 		}
 		return err
 	}
 	if inst.Status == limatype.StatusStopped {
-		return fmt.Errorf("instance %q is stopped, run `limactl start %s` to start the instance", instName, instName)
+		return fmt.Errorf("instance %#q is stopped, run `limactl start %s` to start the instance", instName, instName)
 	}
 
 	if port == 0 {

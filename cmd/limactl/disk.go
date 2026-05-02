@@ -91,7 +91,7 @@ func diskCreateAction(cmd *cobra.Command, args []string) error {
 	switch format {
 	case "qcow2", "raw":
 	default:
-		return fmt.Errorf(`disk format %q not supported, use "qcow2" or "raw" instead`, format)
+		return fmt.Errorf("disk format %#q not supported, use `qcow2` or `raw` instead", format)
 	}
 
 	// only exactly one arg is allowed
@@ -103,10 +103,10 @@ func diskCreateAction(cmd *cobra.Command, args []string) error {
 	}
 
 	if _, err := os.Stat(diskDir); !errors.Is(err, fs.ErrNotExist) {
-		return fmt.Errorf("disk %q already exists (%q)", name, diskDir)
+		return fmt.Errorf("disk %#q already exists (%#q)", name, diskDir)
 	}
 
-	logrus.Infof("Creating %s disk %q with size %s", format, name, units.BytesSize(float64(diskSize)))
+	logrus.Infof("Creating %s disk %#q with size %s", format, name, units.BytesSize(float64(diskSize)))
 
 	if err := os.MkdirAll(diskDir, 0o700); err != nil {
 		return err
@@ -119,9 +119,9 @@ func diskCreateAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		rerr := os.RemoveAll(diskDir)
 		if rerr != nil {
-			err = errors.Join(err, fmt.Errorf("failed to remove a directory %q: %w", diskDir, rerr))
+			err = errors.Join(err, fmt.Errorf("failed to remove a directory %#q: %w", diskDir, rerr))
 		}
-		return fmt.Errorf("failed to create %s disk in %q: %w", format, diskDir, err)
+		return fmt.Errorf("failed to create %s disk in %#q: %w", format, diskDir, err)
 	}
 
 	return nil
@@ -182,7 +182,7 @@ func diskListAction(cmd *cobra.Command, args []string) error {
 		for _, diskName := range disks {
 			disk, err := store.InspectDisk(diskName, nil)
 			if err != nil {
-				logrus.WithError(err).Errorf("disk %q does not exist?", diskName)
+				logrus.WithError(err).Errorf("disk %#q does not exist?", diskName)
 				continue
 			}
 			j, err := json.Marshal(disk)
@@ -204,7 +204,7 @@ func diskListAction(cmd *cobra.Command, args []string) error {
 	for _, diskName := range disks {
 		disk, err := store.InspectDisk(diskName, nil)
 		if err != nil {
-			logrus.WithError(err).Errorf("disk %q does not exist?", diskName)
+			logrus.WithError(err).Errorf("disk %#q does not exist?", diskName)
 			continue
 		}
 		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", disk.Name, units.BytesSize(float64(disk.Size)), disk.Format, disk.Dir, disk.Instance)
@@ -257,7 +257,7 @@ func diskDeleteAction(cmd *cobra.Command, args []string) error {
 		disk, err := store.InspectDisk(diskName, nil)
 		if err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
-				logrus.Warnf("Ignoring non-existent disk %q", diskName)
+				logrus.Warnf("Ignoring non-existent disk %#q", diskName)
 				continue
 			}
 			return err
@@ -265,7 +265,7 @@ func diskDeleteAction(cmd *cobra.Command, args []string) error {
 
 		if !force {
 			if disk.Instance != "" {
-				return fmt.Errorf("cannot delete disk %q in use by instance %q", disk.Name, disk.Instance)
+				return fmt.Errorf("cannot delete disk %#q in use by instance %#q", disk.Name, disk.Instance)
 			}
 			var refInstances []string
 			for _, inst := range instances {
@@ -276,24 +276,24 @@ func diskDeleteAction(cmd *cobra.Command, args []string) error {
 				}
 			}
 			if len(refInstances) > 0 {
-				logrus.Warnf("Skipping deleting disk %q, disk is referenced by one or more non-running instances: %q",
+				logrus.Warnf("Skipping deleting disk %#q, disk is referenced by one or more non-running instances: %#q",
 					diskName, refInstances)
-				logrus.Warnf("To delete anyway, run %q", forceDeleteCommand(diskName))
+				logrus.Warnf("To delete anyway, run %#q", forceDeleteCommand(diskName))
 				continue
 			}
 		}
 
 		if err := deleteDisk(disk); err != nil {
-			return fmt.Errorf("failed to delete disk %q: %w", diskName, err)
+			return fmt.Errorf("failed to delete disk %#q: %w", diskName, err)
 		}
-		logrus.Infof("Deleted %q (%q)", diskName, disk.Dir)
+		logrus.Infof("Deleted %#q (%#q)", diskName, disk.Dir)
 	}
 	return nil
 }
 
 func deleteDisk(disk *store.Disk) error {
 	if err := os.RemoveAll(disk.Dir); err != nil {
-		return fmt.Errorf("failed to remove %q: %w", disk.Dir, err)
+		return fmt.Errorf("failed to remove %#q: %w", disk.Dir, err)
 	}
 	return nil
 }
@@ -328,32 +328,32 @@ func diskUnlockAction(cmd *cobra.Command, args []string) error {
 		disk, err := store.InspectDisk(diskName, nil)
 		if err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
-				logrus.Warnf("Ignoring non-existent disk %q", diskName)
+				logrus.Warnf("Ignoring non-existent disk %#q", diskName)
 				continue
 			}
 			return err
 		}
 		if disk.Instance == "" {
-			logrus.Warnf("Ignoring unlocked disk %q", diskName)
+			logrus.Warnf("Ignoring unlocked disk %#q", diskName)
 			continue
 		}
 		// if store.Inspect throws an error, the instance does not exist, and it is safe to unlock
 		inst, err := store.Inspect(ctx, disk.Instance)
 		if err == nil {
 			if len(inst.Errors) > 0 {
-				logrus.Warnf("Cannot unlock disk %q, attached instance %q has errors: %+v",
+				logrus.Warnf("Cannot unlock disk %#q, attached instance %#q has errors: %+v",
 					diskName, disk.Instance, inst.Errors)
 				continue
 			}
 			if inst.Status == limatype.StatusRunning {
-				logrus.Warnf("Cannot unlock disk %q used by running instance %q", diskName, disk.Instance)
+				logrus.Warnf("Cannot unlock disk %#q used by running instance %#q", diskName, disk.Instance)
 				continue
 			}
 		}
 		if err := disk.Unlock(); err != nil {
-			return fmt.Errorf("failed to unlock disk %q: %w", diskName, err)
+			return fmt.Errorf("failed to unlock disk %#q: %w", diskName, err)
 		}
-		logrus.Infof("Unlocked disk %q (%q)", diskName, disk.Dir)
+		logrus.Infof("Unlocked disk %#q (%#q)", diskName, disk.Dir)
 	}
 	return nil
 }
@@ -390,21 +390,21 @@ func diskResizeAction(cmd *cobra.Command, args []string) error {
 	disk, err := store.InspectDisk(diskName, nil)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			return fmt.Errorf("disk %q does not exists", diskName)
+			return fmt.Errorf("disk %#q does not exists", diskName)
 		}
 		return err
 	}
 
 	// Shrinking can cause a disk failure
 	if diskSize < disk.Size {
-		return fmt.Errorf("specified size %q is less than the current disk size %q. Disk shrinking is currently unavailable", units.BytesSize(float64(diskSize)), units.BytesSize(float64(disk.Size)))
+		return fmt.Errorf("specified size %#q is less than the current disk size %#q. Disk shrinking is currently unavailable", units.BytesSize(float64(diskSize)), units.BytesSize(float64(disk.Size)))
 	}
 
 	if disk.Instance != "" {
 		inst, err := store.Inspect(ctx, disk.Instance)
 		if err == nil {
 			if inst.Status == limatype.StatusRunning {
-				return fmt.Errorf("cannot resize disk %q used by running instance %q. Please stop the VM instance", diskName, disk.Instance)
+				return fmt.Errorf("cannot resize disk %#q used by running instance %#q. Please stop the VM instance", diskName, disk.Instance)
 			}
 		}
 	}
@@ -414,10 +414,10 @@ func diskResizeAction(cmd *cobra.Command, args []string) error {
 	diskUtil := proxyimgutil.NewDiskUtil(ctx)
 	err = diskUtil.ResizeDisk(ctx, dataDisk, diskSize)
 	if err != nil {
-		return fmt.Errorf("failed to resize disk %q: %w", diskName, err)
+		return fmt.Errorf("failed to resize disk %#q: %w", diskName, err)
 	}
 
-	logrus.Infof("Resized disk %q (%q)", diskName, disk.Dir)
+	logrus.Infof("Resized disk %#q (%#q)", diskName, disk.Dir)
 	return nil
 }
 
@@ -450,7 +450,7 @@ func diskImportAction(_ *cobra.Command, args []string) error {
 	}
 
 	if _, err := os.Stat(diskDir); !errors.Is(err, fs.ErrNotExist) {
-		return fmt.Errorf("disk %q already exists (%q)", diskName, diskDir)
+		return fmt.Errorf("disk %#q already exists (%#q)", diskName, diskDir)
 	}
 
 	f, err := os.Open(fName)
@@ -470,7 +470,7 @@ func diskImportAction(_ *cobra.Command, args []string) error {
 	switch format {
 	case "qcow2", "raw":
 	default:
-		return fmt.Errorf(`disk format %q not supported, use "qcow2" or "raw" instead`, format)
+		return fmt.Errorf("disk format %#q not supported, use `qcow2` or `raw` instead", format)
 	}
 
 	if err := os.MkdirAll(diskDir, 0o755); err != nil {

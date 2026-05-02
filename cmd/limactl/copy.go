@@ -91,7 +91,7 @@ func copyAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	logrus.Debugf("using copy tool %q", cpTool.Name())
+	logrus.Debugf("using copy tool %#q", cpTool.Name())
 
 	copyCmd, err := cpTool.Command(ctx, args, nil)
 	if err != nil {

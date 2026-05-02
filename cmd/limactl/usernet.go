@@ -41,7 +41,7 @@ func usernetAction(cmd *cobra.Command, _ []string) error {
 	}
 	if pidfile != "" {
 		if _, err := os.Stat(pidfile); !errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("pidfile %q already exists", pidfile)
+			return fmt.Errorf("pidfile %#q already exists", pidfile)
 		}
 		if err := os.WriteFile(pidfile, []byte(strconv.Itoa(os.Getpid())+"\n"), 0o644); err != nil {
 			return err
