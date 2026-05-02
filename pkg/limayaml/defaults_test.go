@@ -721,6 +721,26 @@ func TestFillDefault(t *testing.T) {
 	assert.DeepEqual(t, &y, &expect, opts...)
 }
 
+func TestMemoryBalloonStruct(t *testing.T) {
+	// Verify that MemoryBalloon struct exists on VZOpts and has all expected fields.
+	balloon := limatype.MemoryBalloon{
+		Enabled:    ptr.Of(true),
+		Min:        ptr.Of("3GiB"),
+		IdleTarget: ptr.Of("4GiB"),
+		Cooldown:   ptr.Of("30s"),
+	}
+	assert.Equal(t, *balloon.Enabled, true)
+	assert.Equal(t, *balloon.Min, "3GiB")
+	assert.Equal(t, *balloon.IdleTarget, "4GiB")
+	assert.Equal(t, *balloon.Cooldown, "30s")
+
+	// Verify MemoryBalloon is a field on VZOpts.
+	vzOpts := limatype.VZOpts{
+		MemoryBalloon: balloon,
+	}
+	assert.Equal(t, *vzOpts.MemoryBalloon.Enabled, true)
+}
+
 func TestContainerdDefault(t *testing.T) {
 	archives := defaultContainerdArchives()
 	assert.Assert(t, len(archives) > 0)

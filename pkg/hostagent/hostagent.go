@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/docker/go-units"
 	"github.com/lima-vm/sshocker/pkg/ssh"
 	"github.com/sethvargo/go-password/password"
 	"github.com/sirupsen/logrus"
@@ -81,6 +82,8 @@ type HostAgent struct {
 	guestAgentAliveChOnce sync.Once
 
 	showProgress bool // whether to show cloud-init progress
+
+	balloonCtrl *BalloonController // nil when memory ballooning is not enabled
 
 	statusMu      sync.RWMutex
 	currentStatus events.Status
@@ -643,6 +646,62 @@ sudo chown -R "${USER}" /run/host-services`
 	if err := a.waitForRequirements("final", a.finalRequirements()); err != nil {
 		errs = append(errs, err)
 	}
+
+	// Start balloon controller if the driver supports ballooning and memoryBalloon is enabled.
+	// Unwrap ConfiguredDriver to access the underlying driver's Ballooner interface.
+	balloonDriver := a.driver
+	if cd, ok := a.driver.(*driver.ConfiguredDriver); ok {
+		balloonDriver = cd.Driver
+	}
+	if ballooner, ok := balloonDriver.(driver.Ballooner); ok {
+		if a.instConfig.VMOpts != nil {
+			var vzOpts limatype.VZOpts
+			if convErr := limayaml.Convert(a.instConfig.VMOpts[limatype.VZ], &vzOpts, ""); convErr == nil {
+				if vzOpts.MemoryBalloon.Enabled != nil && *vzOpts.MemoryBalloon.Enabled {
+					cfg, cfgErr := parseBalloonConfig(a.instConfig, &vzOpts.MemoryBalloon)
+					if cfgErr != nil {
+						logrus.WithError(cfgErr).Warn("Failed to parse balloon config, ballooning disabled")
+					} else {
+						ctrl := NewBalloonController(cfg)
+						ctrl.instDir = a.instDir
+						// Load persisted learned floor with timestamp.
+						floor, learnedAt, floorErr := store.ReadLearnedFloor(a.instDir)
+						if floorErr != nil {
+							logrus.Warnf("balloon: failed to read learned floor: %v", floorErr)
+						}
+						if floor > 0 && (floor > cfg.IdleTargetBytes || floor < cfg.MinBytes) {
+							logrus.Infof("balloon: discarding out-of-range learned floor %d (min=%d, idle=%d)",
+								floor, cfg.MinBytes, cfg.IdleTargetBytes)
+							floor = 0
+							learnedAt = time.Time{}
+						}
+						ctrl.learnedFloor = floor
+						ctrl.learnedAt = learnedAt
+						a.balloonCtrl = ctrl
+						monitor := NewHostPressureMonitor()
+						go monitor.Run(ctx)
+						go func() {
+							defer func() {
+								if r := recover(); r != nil {
+									logrus.Errorf("Balloon controller panicked: %v", r)
+								}
+							}()
+							a.runBalloonLoop(ctx, ctrl, ballooner, monitor)
+						}()
+						minStr, idleStr := "0", "0"
+						if vzOpts.MemoryBalloon.Min != nil {
+							minStr = *vzOpts.MemoryBalloon.Min
+						}
+						if vzOpts.MemoryBalloon.IdleTarget != nil {
+							idleStr = *vzOpts.MemoryBalloon.IdleTarget
+						}
+						logrus.Infof("Memory ballooning enabled: min %s, idle target %s", minStr, idleStr)
+					}
+				}
+			}
+		}
+	}
+
 	// Copy all config files _after_ the requirements are done
 	for _, rule := range a.instConfig.CopyToHost {
 		sshAddress, sshPort := a.sshAddressPort()
@@ -1200,4 +1259,125 @@ func copyToHost(ctx context.Context, sshConfig *ssh.SSHConfig, sshAddress string
 		return fmt.Errorf("can't write to local file %q: %w", local, err)
 	}
 	return nil
+}
+
+// parseBalloonConfig converts the YAML MemoryBalloon config into a BalloonConfig.
+func parseBalloonConfig(instConfig *limatype.LimaYAML, balloon *limatype.MemoryBalloon) (BalloonConfig, error) {
+	var cfg BalloonConfig
+
+	if instConfig.Memory != nil {
+		memBytes, err := units.RAMInBytes(*instConfig.Memory)
+		if err != nil {
+			return cfg, fmt.Errorf("invalid memory value: %w", err)
+		}
+		cfg.MaxMemoryBytes = uint64(memBytes)
+	}
+	if balloon.Min != nil {
+		minBytes, err := units.RAMInBytes(*balloon.Min)
+		if err != nil {
+			return cfg, fmt.Errorf("invalid balloon min: %w", err)
+		}
+		cfg.MinBytes = uint64(minBytes)
+	}
+	if balloon.IdleTarget != nil {
+		idleBytes, err := units.RAMInBytes(*balloon.IdleTarget)
+		if err != nil {
+			return cfg, fmt.Errorf("invalid balloon idleTarget: %w", err)
+		}
+		cfg.IdleTargetBytes = uint64(idleBytes)
+	}
+	if balloon.Cooldown != nil {
+		d, err := time.ParseDuration(*balloon.Cooldown)
+		if err != nil {
+			return cfg, fmt.Errorf("invalid balloon cooldown: %w", err)
+		}
+		cfg.Cooldown = d
+	}
+
+	// Hardcoded internal defaults for tuning knobs.
+	cfg.GrowStepPercent = 25
+	cfg.ShrinkStepPercent = 20
+	cfg.HighPressureThreshold = 5.0
+	cfg.LowPressureThreshold = 0.5
+	cfg.IdleGracePeriod = 5 * time.Minute
+	cfg.MaxSwapInPerSec = 64 * 1024 * 1024  // 64 MiB/s.
+	cfg.MaxSwapOutPerSec = 32 * 1024 * 1024 // 32 MiB/s.
+	cfg.MaxPageFaultRate = 5000
+	cfg.ShrinkReserveBytes = 128 * 1024 * 1024 // 128 MiB.
+	cfg.SettleWindow = 30 * time.Second
+	cfg.MaxContainerCPU = 10.0
+	cfg.MaxContainerIO = 10 * 1024 * 1024 // 10 MiB/s.
+	cfg.FloorStaleness = 24 * time.Hour
+
+	return cfg, nil
+}
+
+// runBalloonLoop periodically polls guest memory metrics and adjusts the balloon.
+func (a *HostAgent) runBalloonLoop(ctx context.Context, ctrl *BalloonController, ballooner driver.Ballooner, monitor *HostPressureMonitor) {
+	// Wait for guest agent to be ready.
+	select {
+	case <-a.guestAgentAliveCh:
+	case <-ctx.Done():
+		return
+	}
+
+	bootTime := time.Now()
+	ctrl.TransitionTo(BalloonStateSteady)
+	logrus.Info("Balloon controller: transitioned to steady state")
+
+	// 10s poll interval balances responsiveness with guest agent overhead.
+	// Each poll fetches /proc/pressure/memory + container stats via gRPC.
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			action := ctrl.PrepareShutdown()
+			if err := ballooner.SetBalloonTarget(action.TargetBytes); err != nil {
+				logrus.WithError(err).Warn("Balloon controller: failed to grow on shutdown")
+			}
+			return
+
+		case <-ticker.C:
+			client, err := a.getOrCreateClient(ctx)
+			if err != nil {
+				if action := ctrl.RecordPollFailure(); action != nil {
+					if err := ballooner.SetBalloonTarget(action.TargetBytes); err != nil {
+						logrus.WithError(err).Warnf("Balloon controller: failed to grow on poll failure")
+					} else {
+						ctrl.RecordAction(*action, time.Now())
+					}
+				}
+				logrus.WithError(err).Debug("Balloon controller: failed to get guest agent client")
+				continue
+			}
+			metrics, err := client.GetMemoryMetrics(ctx)
+			if err != nil {
+				if action := ctrl.RecordPollFailure(); action != nil {
+					if err := ballooner.SetBalloonTarget(action.TargetBytes); err != nil {
+						logrus.WithError(err).Warnf("Balloon controller: failed to grow on poll failure")
+					} else {
+						ctrl.RecordAction(*action, time.Now())
+					}
+				}
+				logrus.WithError(err).Debug("Balloon controller: failed to get memory metrics")
+				continue
+			}
+			ctrl.RecordPollSuccess()
+
+			ctrl.SetHostPressure(monitor.Current())
+			action := ctrl.Evaluate(metrics, bootTime)
+			if action.Type != BalloonActionNone {
+				logrus.Infof("Balloon controller: %s -> %s (%s)",
+					action.Type, units.BytesSize(float64(action.TargetBytes)), action.Reason)
+				if err := ballooner.SetBalloonTarget(action.TargetBytes); err != nil {
+					logrus.WithError(err).Warnf("Balloon controller: failed to set target to %s",
+						units.BytesSize(float64(action.TargetBytes)))
+				} else {
+					ctrl.RecordAction(action, time.Now())
+				}
+			}
+		}
+	}
 }

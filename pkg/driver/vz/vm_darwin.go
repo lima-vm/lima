@@ -48,8 +48,9 @@ const diskImageCachingMode = vz.DiskImageCachingModeCached
 
 type virtualMachineWrapper struct {
 	*vz.VirtualMachine
-	mu      sync.Mutex
-	stopped bool
+	mu            sync.Mutex
+	stopped       bool
+	balloonDevice *vz.VirtioTraditionalMemoryBalloonDevice
 }
 
 // Hold all *os.File created via socketpair() so that they won't get garbage collected. f.FD() gets invalid if f gets garbage collected.
@@ -72,6 +73,15 @@ func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int, onV
 	}
 
 	wrapper := &virtualMachineWrapper{VirtualMachine: machine, stopped: false}
+
+	// Capture the balloon device reference for runtime memory control.
+	for _, dev := range machine.MemoryBalloonDevices() {
+		if bd := vz.AsVirtioTraditionalMemoryBalloonDevice(dev); bd != nil {
+			wrapper.balloonDevice = bd
+			break
+		}
+	}
+
 	notifySSHLocalPortAccessible := make(chan any)
 	sendErrCh := make(chan error)
 

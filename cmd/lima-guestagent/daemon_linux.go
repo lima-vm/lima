@@ -17,6 +17,7 @@ import (
 
 	"github.com/lima-vm/lima/v2/pkg/guestagent"
 	"github.com/lima-vm/lima/v2/pkg/guestagent/api/server"
+	"github.com/lima-vm/lima/v2/pkg/guestagent/metrics"
 	"github.com/lima-vm/lima/v2/pkg/guestagent/serialport"
 	"github.com/lima-vm/lima/v2/pkg/guestagent/ticker"
 	"github.com/lima-vm/lima/v2/pkg/portfwdserver"
@@ -145,5 +146,6 @@ func daemonAction(cmd *cobra.Command, _ []string) error {
 		logrus.Infof("serving the guest agent on %q", socket)
 	}
 	defer logrus.Debug("exiting lima-guestagent daemon")
-	return server.StartServer(ctx, l, &server.GuestServer{Agent: agent, TunnelS: portfwdserver.NewTunnelServer()})
+	collector := metrics.NewCollector()
+	return server.StartServer(ctx, l, &server.GuestServer{Agent: agent, TunnelS: portfwdserver.NewTunnelServer(), Collector: collector})
 }

@@ -207,6 +207,32 @@ func (l *LimaVzDriver) FillConfig(ctx context.Context, cfg *limatype.LimaYAML, _
 		}
 	}
 
+	// Memory balloon defaults — only set when enabled.
+	if vzOpts.MemoryBalloon.Enabled == nil {
+		vzOpts.MemoryBalloon.Enabled = ptr.Of(false)
+	}
+	if *vzOpts.MemoryBalloon.Enabled {
+		if vzOpts.MemoryBalloon.Min == nil {
+			// 25% of configured memory.
+			if cfg.Memory != nil {
+				if memBytes, err := units.RAMInBytes(*cfg.Memory); err == nil {
+					vzOpts.MemoryBalloon.Min = ptr.Of(units.BytesSize(float64(memBytes) * 0.25))
+				}
+			}
+		}
+		if vzOpts.MemoryBalloon.IdleTarget == nil {
+			// 33% of configured memory.
+			if cfg.Memory != nil {
+				if memBytes, err := units.RAMInBytes(*cfg.Memory); err == nil {
+					vzOpts.MemoryBalloon.IdleTarget = ptr.Of(units.BytesSize(float64(memBytes) * 0.33))
+				}
+			}
+		}
+		if vzOpts.MemoryBalloon.Cooldown == nil {
+			vzOpts.MemoryBalloon.Cooldown = ptr.Of("30s")
+		}
+	}
+
 	var opts any
 	if err := limayaml.Convert(vzOpts, &opts, ""); err != nil {
 		logrus.WithError(err).Warnf("Couldn't convert %+v", vzOpts)
@@ -534,6 +560,21 @@ func (l *LimaVzDriver) GuestAgentConn(_ context.Context) (net.Conn, string, erro
 	}
 
 	return nil, "", errors.New("unable to connect to guest agent via vsock port 2222")
+}
+
+// SetBalloonTarget adjusts the balloon device to set the target memory size in bytes.
+// The balloon inflates or deflates to control memory available to the guest.
+func (l *LimaVzDriver) SetBalloonTarget(targetBytes uint64) error {
+	if l.machine == nil {
+		return errors.New("vz: VM is not running")
+	}
+	l.machine.mu.Lock()
+	defer l.machine.mu.Unlock()
+	if l.machine.balloonDevice == nil {
+		return errors.New("vz: no balloon device available")
+	}
+	l.machine.balloonDevice.SetTargetVirtualMachineMemorySize(targetBytes)
+	return nil
 }
 
 func (l *LimaVzDriver) Info() driver.Info {
