@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/coreos/go-semver/semver"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/sirupsen/logrus"
@@ -297,6 +298,11 @@ func TestFillDefault(t *testing.T) {
 	}
 
 	expect.NestedVirtualization = ptr.Of(false)
+	if runtime.GOOS == "darwin" && runtime.GOARCH == "arm64" && osutil.IsAppleSiliconM4OrNewer() {
+		if v, err := osutil.ProductVersion(); err == nil && !v.LessThan(*semver.New("15.0.0")) {
+			expect.NestedVirtualization = ptr.Of(true)
+		}
+	}
 
 	FillDefault(t.Context(), &y, &limatype.LimaYAML{}, &limatype.LimaYAML{}, filePath, false)
 	assert.DeepEqual(t, &y, &expect, opts...)

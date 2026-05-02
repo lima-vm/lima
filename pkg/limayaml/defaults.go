@@ -21,6 +21,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/coreos/go-semver/semver"
 	"github.com/docker/go-units"
 	"github.com/goccy/go-yaml"
 	"github.com/pbnjay/memory"
@@ -822,6 +823,13 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 	}
 	if o.NestedVirtualization != nil {
 		y.NestedVirtualization = o.NestedVirtualization
+	}
+	if y.NestedVirtualization == nil {
+		if runtime.GOOS == "darwin" && runtime.GOARCH == "arm64" && osutil.IsAppleSiliconM4OrNewer() {
+			if v, err := osutil.ProductVersion(); err == nil && !v.LessThan(*semver.New("15.0.0")) {
+				y.NestedVirtualization = ptr.Of(true)
+			}
+		}
 	}
 	if y.NestedVirtualization == nil {
 		y.NestedVirtualization = ptr.Of(false)
