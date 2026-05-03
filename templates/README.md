@@ -48,7 +48,8 @@ lima
 - [`debian-13`](./debian-13.yaml), `debian`: ⭐Debian GNU/Linux 13 (Trixie)
 - [`fedora-41`](./fedora-41.yaml): Fedora 41
 - [`fedora-42`](./fedora-42.yaml): Fedora 42
-- [`fedora-43`](./fedora-43.yaml), `fedora`: ⭐Fedora 43
+- [`fedora-43`](./fedora-43.yaml), Fedora 43
+- [`fedora-44`](./fedora-44.yaml), `fedora`: ⭐Fedora 44
 - [`opensuse-leap-15`](./opensuse-leap-15.yaml): openSUSE Leap 15
 - [`opensuse-leap-16`](./opensuse-leap-16.yaml), `opensuse-leap`, `opensuse`: ⭐openSUSE Leap 16
 - [`oraclelinux-8`](./oraclelinux-8.yaml): Oracle Linux 8
