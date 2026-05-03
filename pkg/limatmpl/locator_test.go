@@ -53,6 +53,14 @@ func TestInstNameFromImageURL(t *testing.T) {
 		name := limatmpl.InstNameFromImageURL(image, arch)
 		assert.Equal(t, name, "linux")
 	})
+	t.Run("deduplicates arch aliases", func(t *testing.T) {
+		name := limatmpl.InstNameFromImageURL("FreeBSD-15.0-RELEASE-arm64-aarch64-BASIC-CLOUDINIT-zfs.raw.xz", limatype.AARCH64)
+		if limatype.IsNativeArch(limatype.AARCH64) {
+			assert.Equal(t, name, "freebsd-15.0-zfs")
+		} else {
+			assert.Equal(t, name, "freebsd-15.0-arm64-zfs")
+		}
+	})
 	t.Run("removes redundant major version", func(t *testing.T) {
 		name := limatmpl.InstNameFromImageURL("rocky-8-8.10.raw", "unknown")
 		assert.Equal(t, name, "rocky-8.10")
@@ -145,18 +153,28 @@ func TestRead(t *testing.T) {
 		name         string
 		locator      string
 		expectedName string
+		nativeName   string // expectedName when expectedArch is native
 		expectedOS   limatype.OS
 		expectedArch limatype.Arch
 	}{
 		{
 			locator:      "http://ftp-archive.freebsd.org/pub/FreeBSD-Archive/old-releases/VM-IMAGES/15.0-RELEASE/amd64/Latest/FreeBSD-15.0-RELEASE-amd64-BASIC-CLOUDINIT-zfs.raw.xz",
 			expectedName: "freebsd-15.0-amd64-zfs",
+			nativeName:   "freebsd-15.0-zfs",
 			expectedOS:   limatype.FREEBSD,
 			expectedArch: limatype.X8664,
 		},
 		{
+			locator:      "https://download.freebsd.org/releases/VM-IMAGES/15.0-RELEASE/aarch64/Latest/FreeBSD-15.0-RELEASE-arm64-aarch64-BASIC-CLOUDINIT-zfs.raw.xz",
+			expectedName: "freebsd-15.0-arm64-zfs",
+			nativeName:   "freebsd-15.0-zfs",
+			expectedOS:   limatype.FREEBSD,
+			expectedArch: limatype.AARCH64,
+		},
+		{
 			locator:      "https://download.freebsd.org/ftp/snapshots/VM-IMAGES/16.0-CURRENT/aarch64/Latest/FreeBSD-16.0-CURRENT-arm64-aarch64-BASIC-CLOUDINIT-ufs.qcow2.xz",
 			expectedName: "freebsd-16.0-arm64-ufs",
+			nativeName:   "freebsd-16.0-ufs",
 			expectedOS:   limatype.FREEBSD,
 			expectedArch: limatype.AARCH64,
 		},
@@ -193,12 +211,14 @@ func TestRead(t *testing.T) {
 		{
 			locator:      "https://cloud-images.ubuntu.com/releases/noble/release-20260209/ubuntu-24.04-server-cloudimg-amd64.img",
 			expectedName: "ubuntu-24.04-amd64",
+			nativeName:   "ubuntu-24.04",
 			expectedOS:   limatype.LINUX,
 			expectedArch: limatype.X8664,
 		},
 		{
 			locator:      "https://cloud-images.ubuntu.com/releases/noble/release-20260209/ubuntu-24.04-server-cloudimg-arm64.img",
 			expectedName: "ubuntu-24.04-arm64",
+			nativeName:   "ubuntu-24.04",
 			expectedOS:   limatype.LINUX,
 			expectedArch: limatype.AARCH64,
 		},
@@ -207,7 +227,11 @@ func TestRead(t *testing.T) {
 		t.Run(tt.locator, func(t *testing.T) {
 			tmpl, err := limatmpl.Read(t.Context(), "", tt.locator)
 			assert.NilError(t, err)
-			assert.Equal(t, tmpl.Name, tt.expectedName)
+			wantName := tt.expectedName
+			if tt.nativeName != "" && limatype.IsNativeArch(tt.expectedArch) {
+				wantName = tt.nativeName
+			}
+			assert.Equal(t, tmpl.Name, wantName)
 			err = tmpl.Unmarshal()
 			assert.NilError(t, err)
 			assert.Assert(t, tmpl.Config.OS != nil, "os must be set")
