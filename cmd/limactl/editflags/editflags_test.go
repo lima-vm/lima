@@ -273,10 +273,10 @@ func TestYQExpressions(t *testing.T) {
 			expected:    []string{`.nestedVirtualization = true`},
 		},
 		{
-			name:        "param",
-			args:        []string{"--param", "version=v1.35"},
+			name:        "block-device",
+			args:        []string{"--block-device", "/dev/disk4", "--block-device", "/dev/rdisk5"},
 			newInstance: false,
-			expected:    []string{`.param["version"] = "v1.35"`},
+			expected:    []string{`.blockDevices += ["/dev/disk4","/dev/rdisk5"] | .blockDevices |= unique`},
 		},
 		{
 			name:        "undefined param",

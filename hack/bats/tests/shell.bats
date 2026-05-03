@@ -5,6 +5,10 @@ load "../helpers/load"
 
 INSTANCE=bats-dummy
 
+normalize_stderr_log() {
+    printf '%s\n' "$1" | sed -E 's/^time="[^"]+" //'
+}
+
 @test 'lima stopped lima instance' {
     # check that the "tty" flag is used, also for stdin
     run_e -1 limactl shell --tty=false "$INSTANCE" true </dev/null
