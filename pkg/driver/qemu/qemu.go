@@ -564,8 +564,13 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 			args = append(args, "-global", "ICH9-LPC.disable_s3=1")
 			args = append(args, "-global", "ICH9-LPC.disable_s4=1")
 		case "whpx":
-			// whpx: injection failed, MSI (0, 0) delivery: 0, dest_mode: 0, trigger mode: 0, vector: 0
-			args = appendArgsIfNoConflict(args, "-machine", "q35,accel="+accel+",kernel-irqchip=off")
+			if version.LessThan(*semver.New("11.0.0")) {
+				// Older versions of QEMU required disabling `kernel-irqchip` explicitly.
+				// It is not recommended to keep using this with QEMU 11.0.0 and newer.
+				args = appendArgsIfNoConflict(args, "-machine", "q35,accel="+accel+",kernel-irqchip=off")
+			} else {
+				args = appendArgsIfNoConflict(args, "-machine", "q35,accel="+accel)
+			}
 		default:
 			args = appendArgsIfNoConflict(args, "-machine", "q35,accel="+accel)
 		}
