@@ -50,13 +50,29 @@ func FromUTF16leToString(r io.Reader) (string, error) {
 	return string(out), nil
 }
 
+// WindowsSubsystemPath converts a Windows path to a Cygwin/MSYS-style path
+// (e.g. C:\Users\jan -> /c/Users/jan). It prefers cygpath, since that respects
+// any custom fstab the user has configured for MSYS2 / Git for Windows. When
+// cygpath is unavailable (plain Windows install with neither Git for Windows
+// nor MSYS2), it falls back to a native conversion that handles the common
+// drive-letter case. UNC paths and other inputs without a drive letter return
+// an error.
 func WindowsSubsystemPath(ctx context.Context, orig string) (string, error) {
 	out, err := exec.CommandContext(ctx, "cygpath", filepath.ToSlash(orig)).CombinedOutput()
-	if err != nil {
-		logrus.WithError(err).Errorf("failed to convert path to mingw, maybe not using Git ssh?")
-		return "", err
+	if err == nil {
+		return strings.TrimSpace(string(out)), nil
 	}
-	return strings.TrimSpace(string(out)), nil
+	logrus.WithError(err).Debugf("cygpath unavailable for %q, attempting native conversion", orig)
+	if vol := filepath.VolumeName(orig); len(vol) == 2 && vol[1] == ':' {
+		// orig[2:] is expected to begin with a separator for absolute drive
+		// paths (C:\foo, C:/foo). Insert the slash explicitly so a
+		// drive-relative input like "C:foo" does not collapse to "/cfoo".
+		tail := strings.TrimPrefix(filepath.ToSlash(orig[2:]), "/")
+		converted := "/" + strings.ToLower(vol[:1]) + "/" + tail
+		logrus.Debugf("native cygpath fallback: %q -> %q", orig, converted)
+		return converted, nil
+	}
+	return "", fmt.Errorf("cannot convert %q to a Cygwin-style path: cygpath unavailable and input is not a drive-letter path", orig)
 }
 
 func WindowsSubsystemPathForLinux(ctx context.Context, orig, distro string) (string, error) {

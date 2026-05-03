@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"runtime"
 	"strings"
 
 	"al.essio.dev/pkg/shellescape"
@@ -68,6 +69,12 @@ func checkRsyncOnGuest(ctx context.Context, inst *limatype.Instance) bool {
 		logrus.Debugf("failed to get SSH options for rsync check: %v", err)
 		return false
 	}
+	if runtime.GOOS == "windows" {
+		// Mirror rsyncTool.Command: native Windows OpenSSH has no mux support,
+		// and Cygwin ssh's mux is unreliable. Strip the mux options so the
+		// probe does not falsely reject a working rsync install.
+		sshOpts = sshutil.SSHOptsRemovingControlPath(sshOpts)
+	}
 
 	sshArgs := append([]string{}, sshExe.Args...)
 	sshArgs = append(sshArgs, sshutil.SSHArgsFromOpts(sshOpts)...)
@@ -126,6 +133,14 @@ func (t *rsyncTool) Command(ctx context.Context, paths []string, opts *Options) 
 				sshOpts, err := sshutil.SSHOpts(ctx, sshExe, cp.Instance.Dir, *cp.Instance.Config.User.Name, false, false, false, false)
 				if err != nil {
 					return nil, err
+				}
+				if runtime.GOOS == "windows" {
+					// See the equivalent comment in scp.go. Strip mux options
+					// so rsync's ssh transport does not try to use a
+					// ControlMaster socket that is unavailable or unreliable
+					// on Windows.
+					logrus.Debug("rsync: stripping ControlMaster/ControlPath/ControlPersist (Windows)")
+					sshOpts = sshutil.SSHOptsRemovingControlPath(sshOpts)
 				}
 
 				sshArgs := []string{sshExe.Exe}

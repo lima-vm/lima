@@ -15,8 +15,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/v2/pkg/ioutilx"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/sshutil"
 	"github.com/lima-vm/lima/v2/pkg/store"
 )
 
@@ -97,16 +97,34 @@ func parseCopyPaths(ctx context.Context, paths []string) ([]*Path, error) {
 
 	for _, path := range paths {
 		cp := &Path{}
-		if runtime.GOOS == "windows" {
-			if filepath.IsAbs(path) {
-				var err error
-				path, err = ioutilx.WindowsSubsystemPath(ctx, path)
-				if err != nil {
-					return nil, err
-				}
-			} else {
-				path = filepath.ToSlash(path)
+		// On Windows, detect local absolute paths (e.g. C:\..., C:/..., UNC
+		// paths) before splitting on ":" so a drive letter is not mistaken
+		// for an instance name. filepath.IsAbs is deliberate here: a
+		// drive-relative path like "C:foo.txt" is not absolute, so it still
+		// flows through the colon-split below and is interpreted as
+		// instance "C" path "foo.txt". This preserves pre-PR behaviour for
+		// single-letter instance names, at the cost of "C:foo" as a
+		// local-cwd-relative path no longer being recognized — an obscure
+		// form not supported by the pre-PR code either. UNC paths pass
+		// IsAbs and flow through PathForSSH; native ssh accepts the
+		// //server/share/... form produced by filepath.ToSlash.
+		isLocalAbs := runtime.GOOS == "windows" && filepath.IsAbs(path)
+		if isLocalAbs {
+			sshExe, err := sshutil.NewSSHExe()
+			if err != nil {
+				return nil, err
 			}
+			path, err = sshutil.PathForSSH(ctx, sshExe, path)
+			if err != nil {
+				return nil, err
+			}
+			cp.Path = path
+			cp.IsRemote = false
+			copyPaths = append(copyPaths, cp)
+			continue
+		}
+		if runtime.GOOS == "windows" {
+			path = filepath.ToSlash(path)
 		}
 
 		parts := strings.SplitN(path, ":", 2)

@@ -5,6 +5,7 @@ package downloader
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"crypto/sha256"
 	"errors"
@@ -525,7 +526,11 @@ func decompressorByMagic(file string) string {
 }
 
 func decompressLocal(ctx context.Context, decompressCmd, dst, src, ext, description string) error {
-	logrus.Infof("decompressing %s with %v", ext, decompressCmd)
+	if decompressCmd == "gzip" {
+		logrus.Infof("decompressing %s with in-process gzip", ext)
+	} else {
+		logrus.Infof("decompressing %s with external %q", ext, decompressCmd)
+	}
 
 	st, err := os.Stat(src)
 	if err != nil {
@@ -549,11 +554,6 @@ func decompressLocal(ctx context.Context, decompressCmd, dst, src, ext, descript
 		return err
 	}
 	defer out.Close()
-	buf := new(bytes.Buffer)
-	cmd := exec.CommandContext(ctx, decompressCmd, "-d") // -d --decompress
-	cmd.Stdin = bar.NewProxyReader(in)
-	cmd.Stdout = out
-	cmd.Stderr = buf
 	if !HideProgress {
 		if description == "" {
 			description = filepath.Base(src)
@@ -561,6 +561,24 @@ func decompressLocal(ctx context.Context, decompressCmd, dst, src, ext, descript
 		logrus.Infof("Decompressing %s\n", description)
 	}
 	bar.Start()
+	defer bar.Finish()
+	// Prefer a pure-Go path for gzip so the host does not need an external
+	// gzip binary. This matters on Windows where gzip is not part of the
+	// base system.
+	if decompressCmd == "gzip" {
+		gz, err := gzip.NewReader(bar.NewProxyReader(in))
+		if err != nil {
+			return err
+		}
+		defer gz.Close()
+		_, err = io.Copy(out, gz)
+		return err
+	}
+	buf := new(bytes.Buffer)
+	cmd := exec.CommandContext(ctx, decompressCmd, "-d") // -d --decompress
+	cmd.Stdin = bar.NewProxyReader(in)
+	cmd.Stdout = out
+	cmd.Stderr = buf
 	err = cmd.Run()
 	if err != nil {
 		var exitErr *exec.ExitError
@@ -568,7 +586,6 @@ func decompressLocal(ctx context.Context, decompressCmd, dst, src, ext, descript
 			exitErr.Stderr = buf.Bytes()
 		}
 	}
-	bar.Finish()
 	return err
 }
 

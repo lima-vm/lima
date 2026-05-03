@@ -33,6 +33,9 @@ func TestParseOpenSSHVersion(t *testing.T) {
 	// NixOS 25.05
 	assert.Check(t, ParseOpenSSHVersion([]byte(`command-line line 0: Unsupported option "gssapiauthentication"
 OpenSSH_10.0p2, OpenSSL 3.4.1 11 Feb 2025`)).Equal(*semver.New("10.0.2")))
+
+	// Native Windows OpenSSH (Win32-OpenSSH)
+	assert.Check(t, ParseOpenSSHVersion([]byte("OpenSSH_for_Windows_9.5p2, LibreSSL 3.8.2")).Equal(*semver.New("9.5.2")))
 }
 
 func TestParseOpenSSHGSSAPISupported(t *testing.T) {
