@@ -4,7 +4,7 @@
 package reflectutil
 
 import (
-	"sort"
+	"slices"
 	"testing"
 
 	"gotest.tools/v3/assert"
@@ -123,7 +123,7 @@ func TestUnknownNonEmptyFields(t *testing.T) {
 				// Verify panic cases without crashing the whole test run.
 				defer func() {
 					if r := recover(); r == nil {
-						t.Errorf("expected panic but did not panic")
+						t.Error("expected panic but did not panic")
 					}
 				}()
 				UnknownNonEmptyFields(tt.input, tt.knownFields...)
@@ -134,8 +134,8 @@ func TestUnknownNonEmptyFields(t *testing.T) {
 
 			// Sort both slices before comparing so order doesn't matter.
 			// Reviewer asked for DeepEqual instead of cmp.Contains.
-			sort.Strings(result)
-			sort.Strings(tt.expected)
+			slices.Sort(result)
+			slices.Sort(tt.expected)
 			assert.DeepEqual(t, tt.expected, result)
 		})
 	}
