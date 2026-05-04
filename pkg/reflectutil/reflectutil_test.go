@@ -11,7 +11,6 @@ import (
 )
 
 // testStruct is used as the input type for all test cases.
-// Count field removed — it was unused in any test case (reviewer feedback).
 type testStruct struct {
 	Known   string
 	Unknown string
@@ -19,8 +18,6 @@ type testStruct struct {
 	Meta    map[string]string
 }
 
-// Rewritten as a table-driven test per reviewer feedback.
-// Lima's other test files use a slice of test cases iterated by a single function.
 func TestUnknownNonEmptyFields(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -35,13 +32,6 @@ func TestUnknownNonEmptyFields(t *testing.T) {
 			input:       testStruct{Known: "hello", Unknown: "world"},
 			knownFields: []string{"Known", "Unknown"},
 			expected:    nil,
-		},
-		{
-			// Unknown is non-empty and not in known list — must be reported.
-			name:        "one unknown field",
-			input:       testStruct{Known: "hello", Unknown: "world"},
-			knownFields: []string{"Known"},
-			expected:    []string{"Unknown"},
 		},
 		{
 			// All fields are zero value — isEmpty() must filter all of them out.
@@ -86,16 +76,12 @@ func TestUnknownNonEmptyFields(t *testing.T) {
 			expected:    []string{"Meta"},
 		},
 		{
-			// Reviewer suggestion: multiple unknown fields at once.
-			// Using DeepEqual against sorted result catches order regressions
-			// that cmp.Contains would miss.
 			name:        "multiple unknown fields",
 			input:       testStruct{Known: "hello", Unknown: "world", Tags: []string{"a"}},
 			knownFields: []string{"Known"},
 			expected:    []string{"Tags", "Unknown"},
 		},
 		{
-			// Reviewer suggestion: mix of known non-empty + unknown non-empty fields.
 			// Realistic usage — only the unknown ones must appear.
 			name:        "mixed known and unknown",
 			input:       testStruct{Known: "hello", Unknown: "world"},
@@ -103,7 +89,6 @@ func TestUnknownNonEmptyFields(t *testing.T) {
 			expected:    []string{"Unknown"},
 		},
 		{
-			// Reviewer suggestion: nil pointer — origVal.Elem() on nil panics.
 			// Documenting this as expected panic behaviour.
 			name:      "nil pointer panics",
 			input:     (*testStruct)(nil),
@@ -123,7 +108,9 @@ func TestUnknownNonEmptyFields(t *testing.T) {
 				// Verify panic cases without crashing the whole test run.
 				defer func() {
 					if r := recover(); r == nil {
-						t.Error("expected panic but did not panic")
+						t.Errorf("expected panic but did not panic")
+					} else if msg, ok := r.(string); !ok || msg == "" {
+						t.Errorf("unexpected panic value: %v", r)
 					}
 				}()
 				UnknownNonEmptyFields(tt.input, tt.knownFields...)
@@ -133,7 +120,6 @@ func TestUnknownNonEmptyFields(t *testing.T) {
 			result := UnknownNonEmptyFields(tt.input, tt.knownFields...)
 
 			// Sort both slices before comparing so order doesn't matter.
-			// Reviewer asked for DeepEqual instead of cmp.Contains.
 			slices.Sort(result)
 			slices.Sort(tt.expected)
 			assert.DeepEqual(t, tt.expected, result)
