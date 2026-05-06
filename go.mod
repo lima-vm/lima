@@ -12,7 +12,7 @@ require (
 	github.com/balajiv113/fd v0.0.0-20230330094840-143eec500f3e
 	github.com/cheggaaa/pb/v3 v3.1.7 // gomodjail:unconfined
 	github.com/cilium/ebpf v0.21.0 // gomodjail:unconfined
-	github.com/containerd/continuity v0.4.5
+	github.com/containerd/continuity v0.5.0
 	github.com/containers/gvisor-tap-vsock v0.8.8 // gomodjail:unconfined
 	github.com/coreos/go-semver v0.3.1
 	github.com/coreos/go-systemd/v22 v22.7.0
