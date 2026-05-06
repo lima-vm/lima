@@ -30,13 +30,13 @@ func UnknownNonEmptyFields(structOrStructPtr any, knownNames ...string) []string
 	}
 	origVal := reflect.ValueOf(structOrStructPtr)
 	var val reflect.Value
-	switch kind := origVal.Kind(); kind {
-	case reflect.Ptr:
+	switch origVal.Kind() {
+	case reflect.Pointer:
 		val = origVal.Elem()
 	case reflect.Struct:
 		val = origVal
 	default:
-		panic(fmt.Errorf("expected Ptr or Struct, got %+v", kind))
+		panic(fmt.Errorf("expected pointer or struct, got %v", origVal.Kind()))
 	}
 	for i := 0; i < val.NumField(); i++ {
 		iField := val.Field(i)

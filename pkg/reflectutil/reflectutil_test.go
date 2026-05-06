@@ -5,7 +5,7 @@ package reflectutil
 
 import (
 	"fmt"
-	"slices"
+	"sort"
 	"strings"
 	"testing"
 
@@ -115,7 +115,7 @@ func TestUnknownNonEmptyFields(t *testing.T) {
 						return
 					}
 					msg := fmt.Sprint(r)
-					if !strings.Contains(msg, "expected Ptr or Struct") && !strings.Contains(msg, "reflect") {
+					if !strings.Contains(msg, "expected pointer or struct") && !strings.Contains(msg, "reflect") {
 						t.Errorf("unexpected panic message: %v", msg)
 					}
 				}()
@@ -126,8 +126,8 @@ func TestUnknownNonEmptyFields(t *testing.T) {
 			result := UnknownNonEmptyFields(tt.input, tt.knownFields...)
 
 			// Sort both slices before comparing so order does not matter.
-			slices.Sort(result)
-			slices.Sort(tt.expected)
+			sort.Strings(result)
+			sort.Strings(tt.expected)
 			assert.DeepEqual(t, tt.expected, result)
 		})
 	}
