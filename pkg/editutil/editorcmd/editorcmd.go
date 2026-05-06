@@ -23,6 +23,7 @@ package editorcmd
 import (
 	"os"
 	"os/exec"
+	"strings"
 )
 
 // Detect detects a text editor command.
@@ -40,9 +41,11 @@ func Detect() string {
 		if f == "" {
 			continue
 		}
-		x, err := exec.LookPath(f)
-		if err == nil {
-			return x
+		// Split on whitespace so that values like "code -w" are handled:
+		// only the first token (the binary name) is looked up.
+		bin, _, _ := strings.Cut(f, " ")
+		if _, err := exec.LookPath(bin); err == nil {
+			return f
 		}
 	}
 	return ""
