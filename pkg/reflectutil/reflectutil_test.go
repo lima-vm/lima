@@ -5,7 +5,7 @@ package reflectutil
 
 import (
 	"fmt"
-	"sort"
+	"slices"
 	"strings"
 	"testing"
 
@@ -125,9 +125,8 @@ func TestUnknownNonEmptyFields(t *testing.T) {
 
 			result := UnknownNonEmptyFields(tt.input, tt.knownFields...)
 
-			// Sort both slices before comparing so order does not matter.
-			sort.Strings(result)
-			sort.Strings(tt.expected)
+			slices.Sort(result)
+			slices.Sort(tt.expected)
 			assert.DeepEqual(t, tt.expected, result)
 		})
 	}
