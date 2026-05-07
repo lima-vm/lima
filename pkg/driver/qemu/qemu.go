@@ -724,7 +724,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 		args = appendArgsIfNoConflict(args, "-boot", "splash-time=0,menu=on")
 		args = append(args, "-drive", fmt.Sprintf("file=%s,format=raw,if=none,id=drive-cdrom-0,media=cdrom,readonly=on", isoPath))
 		args = append(args, "-device", "virtio-scsi,id=scsi0")
-		args = append(args, "-device", "scsi-cd,bus=scsi0.0,drive=drive-cdrom-0,bootindex=0")
+		args = append(args, "-device", "scsi-cd,bus=scsi0.0,unit=0,drive=drive-cdrom-0,bootindex=0")
 	} else {
 		args = appendArgsIfNoConflict(args, "-boot", "splash-time=0,menu=on")
 	}
@@ -737,7 +737,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	if !osutil.FileExists(isoPath) {
 		args = append(args, "-device", "virtio-scsi,id=scsi0")
 	}
-	args = append(args, "-device", "scsi-cd,bus=scsi0.0,drive=cdrom1")
+	args = append(args, "-device", "scsi-cd,bus=scsi0.0,unit=1,drive=cdrom1")
 
 	// Kernel
 	kernel := filepath.Join(cfg.InstanceDir, filenames.Kernel)
