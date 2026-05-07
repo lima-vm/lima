@@ -711,24 +711,33 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 		extraDisks = append(extraDisks, dataDisk)
 	}
 
+	virtioBlk := "virtio-blk-pci"
+	if *y.Arch == limatype.S390X {
+		virtioBlk = "virtio-blk-ccw"
+	}
+
 	if osutil.FileExists(diskPath) {
-		args = append(args, "-drive", fmt.Sprintf("file=%s,if=virtio,discard=on", diskPath))
+		args = append(args, "-drive", fmt.Sprintf("file=%s,if=none,id=drive-virtio-0,discard=on", diskPath))
+		args = append(args, "-device", fmt.Sprintf("%s,drive=drive-virtio-0,bootindex=1", virtioBlk))
 	}
 	if osutil.FileExists(isoPath) {
-		args = appendArgsIfNoConflict(args, "-boot", "order=d,splash-time=0,menu=on")
-		args = append(args, "-drive", fmt.Sprintf("file=%s,format=raw,media=cdrom,readonly=on", isoPath))
+		args = appendArgsIfNoConflict(args, "-boot", "splash-time=0,menu=on")
+		args = append(args, "-drive", fmt.Sprintf("file=%s,format=raw,if=none,id=drive-cdrom-0,media=cdrom,readonly=on", isoPath))
+		args = append(args, "-device", "virtio-scsi,id=scsi0")
+		args = append(args, "-device", "scsi-cd,bus=scsi0.0,drive=drive-cdrom-0,bootindex=0")
 	} else {
-		args = appendArgsIfNoConflict(args, "-boot", "order=c,splash-time=0,menu=on")
+		args = appendArgsIfNoConflict(args, "-boot", "splash-time=0,menu=on")
 	}
 	for _, extraDisk := range extraDisks {
 		args = append(args, "-drive", fmt.Sprintf("file=%s,if=virtio,discard=on", extraDisk))
 	}
 
 	// cloud-init
-	args = append(args,
-		"-drive", "id=cdrom0,if=none,format=raw,readonly=on,file="+filepath.Join(cfg.InstanceDir, filenames.CIDataISO),
-		"-device", "virtio-scsi,id=scsi0",
-		"-device", "scsi-cd,bus=scsi0.0,drive=cdrom0")
+	args = append(args, "-drive", "id=cdrom1,if=none,format=raw,readonly=on,file="+filepath.Join(cfg.InstanceDir, filenames.CIDataISO))
+	if !osutil.FileExists(isoPath) {
+		args = append(args, "-device", "virtio-scsi,id=scsi0")
+	}
+	args = append(args, "-device", "scsi-cd,bus=scsi0.0,drive=cdrom1")
 
 	// Kernel
 	kernel := filepath.Join(cfg.InstanceDir, filenames.Kernel)
