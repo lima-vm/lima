@@ -711,10 +711,23 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 		extraDisks = append(extraDisks, dataDisk)
 	}
 
-	if osutil.FileExists(diskPath) {
-		args = append(args, "-drive", fmt.Sprintf("file=%s,if=virtio,discard=on", diskPath))
+	virtioBlk := "virtio-blk-pci"
+	if *y.Arch == limatype.S390X {
+		// s390x uses CCW bus, not PCI
+		virtioBlk = "virtio-blk-ccw"
 	}
-	if osutil.FileExists(isoPath) {
+
+	isoPresent := osutil.FileExists(isoPath)
+	if osutil.FileExists(diskPath) {
+		if isoPresent {
+			args = append(args, "-drive", fmt.Sprintf("file=%s,if=virtio,discard=on", diskPath))
+		} else {
+			// bootindex=1 fixes non-deterministic boot order when extra disks are present (#4936)
+			args = append(args, "-drive", fmt.Sprintf("file=%s,if=none,discard=on,id=boot-disk", diskPath))
+			args = append(args, "-device", fmt.Sprintf("%s,drive=boot-disk,bootindex=1", virtioBlk))
+		}
+	}
+	if isoPresent {
 		args = appendArgsIfNoConflict(args, "-boot", "order=d,splash-time=0,menu=on")
 		args = append(args, "-drive", fmt.Sprintf("file=%s,format=raw,media=cdrom,readonly=on", isoPath))
 	} else {
