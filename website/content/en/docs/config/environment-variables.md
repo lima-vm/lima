@@ -19,12 +19,14 @@ This page documents the environment variables used in Lima.
 
 ### `LIMA_INSTANCE`
 
-- **Description**: Specifies the name of the Lima instance to use.
+- **Description**: Specifies the name of the Lima instance to use. Both the `lima` wrapper and `limactl` subcommands
+  (e.g. `start`, `stop`, `restart`, `edit`) respect this variable when no instance name is given explicitly.
 - **Default**: `default`
 - **Usage**:
   ```sh
   export LIMA_INSTANCE=my-instance
   lima uname -a
+  limactl start
   ```
 
 ### `LIMA_SHELL`

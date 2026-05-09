@@ -27,7 +27,7 @@ func newRestartCommand() *cobra.Command {
 
 func restartAction(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
-	instName := DefaultInstanceName
+	instName := defaultInstanceName()
 	if len(args) > 0 {
 		instName = args[0]
 	}
