@@ -270,7 +270,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 		tmpl = &limatmpl.Template{Name: name}
 		if arg == "" {
 			if name == "" {
-				tmpl.Name = DefaultInstanceName
+				tmpl.Name = defaultInstanceName()
 			}
 		} else {
 			logrus.Debugf("interpreting argument %q as an instance name", arg)
@@ -302,7 +302,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 		if !errors.Is(err, os.ErrNotExist) {
 			return nil, err
 		}
-		if arg != "" && arg != DefaultInstanceName {
+		if arg != "" && arg != defaultInstanceNameConst {
 			logrus.Infof("Creating an instance %q from template:default (Not from template:%s)", tmpl.Name, tmpl.Name)
 			logrus.Warnf("This form is deprecated. Use `limactl create --name=%s template:default` instead", tmpl.Name)
 		}
@@ -442,7 +442,7 @@ func chooseNextCreatorState(ctx context.Context, tmpl *limatmpl.Template, yq str
 			return tmpl, nil
 		case 1: // "Open an editor ..."
 			hdr := fmt.Sprintf("# Review and modify the following configuration for Lima instance %q.\n", tmpl.Name)
-			if tmpl.Name == DefaultInstanceName {
+			if tmpl.Name == defaultInstanceNameConst {
 				hdr += "# - In most cases, you do not need to modify this file.\n"
 			}
 			hdr += "# - To cancel starting Lima, just save this file as an empty file.\n"

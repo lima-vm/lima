@@ -54,7 +54,7 @@ func editAction(cmd *cobra.Command, args []string) error {
 	var inst *limatype.Instance
 
 	if arg == "" {
-		arg = DefaultInstanceName
+		arg = defaultInstanceName()
 	}
 	if err := dirnames.ValidateInstName(arg); err == nil {
 		inst, err = store.Inspect(ctx, arg)

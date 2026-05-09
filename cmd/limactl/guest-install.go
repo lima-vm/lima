@@ -55,7 +55,7 @@ func shell(ctx context.Context, name string, flags []string, args ...string) (st
 }
 
 func guestInstallAction(cmd *cobra.Command, args []string) error {
-	instName := DefaultInstanceName
+	instName := defaultInstanceName()
 	if len(args) > 0 {
 		instName = args[0]
 	}

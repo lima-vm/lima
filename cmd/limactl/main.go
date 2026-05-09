@@ -26,10 +26,18 @@ import (
 )
 
 const (
-	DefaultInstanceName = "default"
-	basicCommand        = "basic"
-	advancedCommand     = "advanced"
+	defaultInstanceNameConst = "default"
+	basicCommand             = "basic"
+	advancedCommand          = "advanced"
 )
+
+func defaultInstanceName() string {
+	if v := os.Getenv("LIMA_INSTANCE"); v != "" {
+		logrus.Debugf("Using instance name %q from $LIMA_INSTANCE", v)
+		return v
+	}
+	return defaultInstanceNameConst
+}
 
 func main() {
 	if os.Geteuid() == 0 && (len(os.Args) < 2 || os.Args[1] != "generate-doc") {

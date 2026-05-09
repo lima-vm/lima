@@ -37,7 +37,7 @@ import (
 
 const shellHelp = `Execute shell in Lima
 
-lima command is provided as an alias for limactl shell $LIMA_INSTANCE. $LIMA_INSTANCE defaults to "` + DefaultInstanceName + `".
+lima command is provided as an alias for limactl shell $LIMA_INSTANCE. $LIMA_INSTANCE defaults to "` + defaultInstanceNameConst + `".
 
 By default, the first 'ssh' executable found in the host's PATH is used to connect to the Lima instance.
 A custom ssh alias can be used instead by setting the $` + sshutil.EnvShellSSH + ` environment variable.
