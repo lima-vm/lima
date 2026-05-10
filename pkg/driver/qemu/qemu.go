@@ -609,8 +609,9 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	noFirmware := *y.Arch == limatype.PPC64LE || *y.Arch == limatype.S390X || legacyBIOS
 	if !noFirmware {
 		var firmware string
-		firmwareInBios := runtime.GOOS == "windows"
+		firmwareInBios := runtime.GOOS == "windows" && version.LessThan(*semver.New("11.0.0"))
 		if envVar := os.Getenv("_LIMA_QEMU_UEFI_IN_BIOS"); envVar != "" {
+			logrus.Warn("use of deprecated _LIMA_QEMU_UEFI_IN_BIOS")
 			b, err := strconv.ParseBool(envVar)
 			if err != nil {
 				logrus.WithError(err).Warnf("invalid _LIMA_QEMU_UEFI_IN_BIOS value %q", envVar)
@@ -688,6 +689,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 		}
 		if firmware != "" {
 			if firmwareInBios {
+				logrus.Warn("firmware in `-bios` is deprecated, consider upgrading to QEMU supporting `-drive if=pflash`")
 				args = append(args, "-bios", firmware)
 			} else {
 				args = append(args, "-drive", fmt.Sprintf("if=pflash,format=raw,readonly=on,file=%s", firmware))
