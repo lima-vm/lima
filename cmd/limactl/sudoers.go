@@ -27,7 +27,8 @@ To validate the existing /etc/sudoers.d/lima file:
 $ limactl sudoers --check /etc/sudoers.d/lima
 `,
 		Short: "Generate the content of the /etc/sudoers.d/lima file",
-		Long: fmt.Sprintf(`Generate the content of the /etc/sudoers.d/lima file for enabling vmnet.framework support (socket_vmnet) on macOS.
+		Long: fmt.Sprintf(`Generate the content of the /etc/sudoers.d/lima file for macOS host helpers that require privilege escalation.
+This includes vmnet.framework support (socket_vmnet) and host block-device attachment with --block-device on supported backends.
 The content is written to stdout, NOT to the file.
 This command must not run as the root user.
 See %s for the usage.`, socketVMNetURL),

@@ -230,6 +230,9 @@ func validateConfig(cfg *limatype.LimaYAML) error {
 	if cfg.MountType != nil && (*cfg.MountType != limatype.VIRTIOFS && *cfg.MountType != limatype.REVSSHFS) {
 		return fmt.Errorf("field `mountType` must be %q or %q for krunkit driver, got %q", limatype.VIRTIOFS, limatype.REVSSHFS, *cfg.MountType)
 	}
+	if len(cfg.BlockDevices) > 0 {
+		return fmt.Errorf("field `blockDevices` is not supported for vmType: %s", vmType)
+	}
 
 	if cfg.NestedVirtualization != nil && *cfg.NestedVirtualization {
 		if macOSProductVersion.LessThan(*semver.New("15.0.0")) {
