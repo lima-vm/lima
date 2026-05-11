@@ -237,6 +237,14 @@ func Start(extDriver *registry.ExternalDriver, instName string) error {
 		cancel()
 		return fmt.Errorf("failed to open external driver log file: %w", err)
 	}
+	// Close logFile on any failure path. Ownership is transferred to
+	// extDriver on the success path below; setting logFile to nil disarms
+	// the defer.
+	defer func() {
+		if logFile != nil {
+			_ = logFile.Close()
+		}
+	}()
 
 	cmd.Stderr = logFile
 
@@ -281,6 +289,8 @@ func Start(extDriver *registry.ExternalDriver, instName string) error {
 	extDriver.Client = driverClient
 	extDriver.Ctx = ctx
 	extDriver.CancelFunc = cancel
+	extDriver.LogFile = logFile
+	logFile = nil // ownership transferred to extDriver; disarm the defer
 
 	driverLogger.Debugf("External driver %s started successfully", extDriver.Name)
 	return nil
@@ -298,6 +308,20 @@ func Stop(extDriver *registry.ExternalDriver) error {
 	if err := extDriver.Command.Process.Signal(syscall.SIGTERM); err != nil {
 		extDriver.Logger.Errorf("Failed to kill external driver process: %v", err)
 	}
+	// Reap the subprocess before releasing any resources it inherits from us
+	// (notably the stderr log file). Without this Wait the child can survive
+	// briefly past Stop and on Windows the parent's handle on
+	// driver.stderr.log keeps `limactl rm --force` from deleting the file
+	// with "The process cannot access the file because it is being used by
+	// another process" (lima-vm/lima#3736).
+	if err := extDriver.Command.Wait(); err != nil {
+		extDriver.Logger.Debugf("External driver %s exited with error: %v", extDriver.Name, err)
+	}
+	if extDriver.LogFile != nil {
+		if err := extDriver.LogFile.Close(); err != nil {
+			extDriver.Logger.Warnf("Failed to close driver stderr log file: %v", err)
+		}
+	}
 	if err := os.Remove(extDriver.SocketPath); err != nil && !os.IsNotExist(err) {
 		extDriver.Logger.Warnf("Failed to remove socket file: %v", err)
 	}
@@ -306,6 +330,7 @@ func Stop(extDriver *registry.ExternalDriver) error {
 	extDriver.Client = nil
 	extDriver.Ctx = nil
 	extDriver.CancelFunc = nil
+	extDriver.LogFile = nil
 
 	extDriver.Logger.Debugf("External driver %s stopped successfully", extDriver.Name)
 	return nil
