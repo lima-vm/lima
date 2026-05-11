@@ -16,6 +16,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -678,8 +679,7 @@ func (a *HostAgent) close() error {
 	defer a.onCloseMu.Unlock()
 	logrus.Infof("Shutting down the host agent")
 	var errs []error
-	for i := len(a.onClose) - 1; i >= 0; i-- {
-		f := a.onClose[i]
+	for _, f := range slices.Backward(a.onClose) {
 		if err := f(); err != nil {
 			errs = append(errs, err)
 		}
