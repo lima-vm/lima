@@ -4,14 +4,13 @@
 package executil
 
 import (
-	"context"
 	"testing"
 
 	"gotest.tools/v3/assert"
 )
 
 func TestWithContext(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	var o options
 	opt := WithContext(ctx)
 	err := opt(&o)
