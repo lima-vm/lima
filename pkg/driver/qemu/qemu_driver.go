@@ -134,6 +134,12 @@ func validateArch(ctx context.Context, cfg *limatype.LimaYAML) error {
 // Helper method for mount type validation.
 func validateMountType(cfg *limatype.LimaYAML) error {
 	if cfg.MountType != nil && *cfg.MountType == limatype.VIRTIOFS && runtime.GOOS != "linux" {
+		// Windows explicitly does not support 9p, so we should not suggest it.
+		if runtime.GOOS == "windows" {
+			return fmt.Errorf("field `mountType` must be %q for QEMU driver on Windows, got %q",
+				limatype.REVSSHFS, *cfg.MountType)
+		}
+		// For macOS/Darwin, 9p remains a valid suggestion.
 		return fmt.Errorf("field `mountType` must be %q or %q for QEMU driver on non-Linux, got %q",
 			limatype.REVSSHFS, limatype.NINEP, *cfg.MountType)
 	}
