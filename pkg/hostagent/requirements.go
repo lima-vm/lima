@@ -221,7 +221,7 @@ true
 	}
 	req = append(req,
 		requirement{
-			description: "User session is ready for SSH",
+			description: "user session to be ready for SSH",
 			script: fmt.Sprintf(`#!/bin/sh
 set -eux
 [ "$(cat /run/lima-ssh-ready 2>/dev/null)" = "%s" ]
@@ -236,7 +236,7 @@ it must not be created until the session reset is done.
 
 	if *a.instConfig.MountType == limatype.REVSSHFS && len(a.instConfig.Mounts) > 0 {
 		req = append(req, requirement{
-			description: "sshfs binary is installed",
+			description: "sshfs binary to be installed",
 			script: `#!/bin/sh
 set -eux
 command -v sshfs
@@ -248,7 +248,7 @@ A possible workaround is to run "apt-get install sshfs" in the guest.
 `,
 		})
 		req = append(req, requirement{
-			description: "fuse \"allow_other\" is enabled for the user",
+			description: "fuse \"allow_other\" to be enabled for the user",
 			script: `#!/bin/sh
 set -eux
 sudo grep -q ^user_allow_other /etc/fuse*.conf
@@ -267,7 +267,7 @@ func (a *HostAgent) optionalRequirements() []requirement {
 	if isLinuxGuest && (*a.instConfig.Containerd.System || *a.instConfig.Containerd.User) && !*a.instConfig.Plain {
 		req = append(req,
 			requirement{
-				description: "systemd is available",
+				description: "systemd to be available",
 				fatal:       true,
 				script: `#!/bin/bash
 set -eux -o pipefail
@@ -283,7 +283,7 @@ are set to 'false' in the config file.
 `,
 			},
 			requirement{
-				description: "containerd binaries are installed",
+				description: "containerd binaries to be installed",
 				script: `#!/bin/sh
 set -eux
 command -v nerdctl || test -x ` + *a.instConfig.GuestInstallPrefix + `/bin/nerdctl
@@ -314,7 +314,7 @@ func (a *HostAgent) finalRequirements() []requirement {
 	}
 	req = append(req,
 		requirement{
-			description: "Boot scripts have finished",
+			description: "boot scripts to be finished",
 			script: fmt.Sprintf(`#!/bin/sh
 set -eux
 BOOT_DONE=/run/lima-boot-done

@@ -317,13 +317,14 @@ func watchHostAgentEvents(ctx context.Context, inst *limatype.Instance, haStdout
 	// requirement progress with an in-place 🕐 -> ✅ flip; otherwise we
 	// fall back to two log lines per step.
 	progressTTY := isatty.IsTerminal(os.Stderr.Fd()) || isatty.IsCygwinTerminal(os.Stderr.Fd())
-	// pendingProgressLine remembers the in-progress step printed without a
-	// newline so the completion event can overwrite it with `\r`.
-	var pendingProgressLine string
+	// lastProgressKey is the "step/total:done" of the most recently
+	// rendered RequirementProgress, used to suppress duplicate renders
+	// when the same event is observed more than once.
+	var lastProgressKey string
 
 	onEvent := func(ev hostagentevents.Event) bool {
 		if p := ev.Status.RequirementProgress; p != nil {
-			renderRequirementProgress(p, progressTTY, &pendingProgressLine)
+			renderRequirementProgress(p, progressTTY, &lastProgressKey)
 			return false
 		}
 		if !printedSSHLocalPort && ev.Status.SSHLocalPort != 0 {
@@ -410,6 +411,18 @@ func watchHostAgentEvents(ctx context.Context, inst *limatype.Instance, haStdout
 // `pending` carries the text of the currently-displayed pending line across
 // calls so the completion event can clear it with `\r` + clear-EOL.
 func renderRequirementProgress(p *hostagentevents.RequirementProgress, tty bool, pending *string) {
+	// Dedup identical consecutive renders. The hostagent should only emit
+	// one event per state transition, but if the same RequirementProgress
+	// gets replayed (e.g. carried along on an unrelated status event) we
+	// must not redraw, otherwise the pending line would be reprinted on
+	// every unrelated event and either spam the log (non-TTY) or fight
+	// with interleaved logrus output (TTY).
+	key := fmt.Sprintf("%d/%d:%t", p.Step, p.Total, p.Done)
+	if key == *pending {
+		return
+	}
+	*pending = key
+
 	if !tty {
 		if p.Done {
 			logrus.Infof("(%2d/%d) ✅ %s", p.Step, p.Total, p.Description)
@@ -421,12 +434,9 @@ func renderRequirementProgress(p *hostagentevents.RequirementProgress, tty bool,
 	const clearEOL = "\033[K"
 	if p.Done {
 		fmt.Fprintf(os.Stderr, "\r%s(%2d/%d) ✅ %s\n", clearEOL, p.Step, p.Total, p.Description)
-		*pending = ""
 		return
 	}
-	line := fmt.Sprintf("(%2d/%d) 🕐 %s%s", p.Step, p.Total, p.Description, p.Suffix)
-	fmt.Fprintf(os.Stderr, "\r%s%s", clearEOL, line)
-	*pending = line
+	fmt.Fprintf(os.Stderr, "\r%s(%2d/%d) 🕐 %s%s", clearEOL, p.Step, p.Total, p.Description, p.Suffix)
 }
 
 type watchHostAgentEventsTimeoutKey = struct{}

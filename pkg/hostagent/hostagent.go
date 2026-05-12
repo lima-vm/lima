@@ -330,6 +330,11 @@ func (a *HostAgent) emitEvent(_ context.Context, ev events.Event) {
 
 	a.statusMu.Lock()
 	a.currentStatus = ev.Status
+	// RequirementProgress is a one-shot transition signal: it must not be
+	// replayed on subsequent unrelated events (port forwards, vsock, etc.),
+	// otherwise the limactl-side renderer would re-emit the pending "🕐 …"
+	// line every time some other event fires while a check is in progress.
+	a.currentStatus.RequirementProgress = nil
 	a.statusMu.Unlock()
 
 	if ev.Time.IsZero() {
@@ -655,14 +660,14 @@ sudo chown -R "${USER}" /run/host-services`
 		a.emitRequirementProgress(ctx, &events.RequirementProgress{
 			Step:        step,
 			Total:       totalSteps,
-			Description: "Guest agent is running",
+			Description: "Guest agent to be running",
 		})
 		select {
 		case <-a.guestAgentAliveCh:
 			a.emitRequirementProgress(ctx, &events.RequirementProgress{
 				Step:        step,
 				Total:       totalSteps,
-				Description: "Guest agent is running",
+				Description: "Guest agent to be running",
 				Done:        true,
 			})
 		case <-time.After(time.Minute):
