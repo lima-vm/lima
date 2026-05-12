@@ -4,8 +4,11 @@
 package hostagent
 
 import (
+	"bufio"
+	"context"
 	"errors"
 	"fmt"
+	"net"
 	"runtime"
 	"strings"
 	"time"
@@ -17,7 +20,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/sshutil"
 )
 
-func (a *HostAgent) waitForRequirements(label string, requirements []requirement) error {
+func (a *HostAgent) waitForRequirements(ctx context.Context, label string, requirements []requirement) error {
 	const (
 		retries       = 200
 		sleepDuration = 3 * time.Second
@@ -28,7 +31,7 @@ func (a *HostAgent) waitForRequirements(label string, requirements []requirement
 		logrus.Infof("Waiting for the %s requirement %d of %d: %q", label, i+1, len(requirements), req.description)
 	retryLoop:
 		for j := range retries {
-			err := a.waitForRequirement(req)
+			err := a.waitForRequirement(ctx, req)
 			if err == nil {
 				logrus.Infof("The %s requirement %d of %d is satisfied", label, i+1, len(requirements))
 				break retryLoop
@@ -42,7 +45,12 @@ func (a *HostAgent) waitForRequirements(label string, requirements []requirement
 				errs = append(errs, fmt.Errorf("failed to satisfy the %s requirement %d of %d %q: %s: %w", label, i+1, len(requirements), req.description, req.debugHint, err))
 				break retryLoop
 			}
-			time.Sleep(sleepDuration)
+			select {
+			case <-ctx.Done():
+				errs = append(errs, fmt.Errorf("failed to satisfy the %s requirement %d of %d %q: %s: %w", label, i+1, len(requirements), req.description, req.debugHint, ctx.Err()))
+				return errors.Join(errs...)
+			case <-time.After(sleepDuration):
+			}
 		}
 	}
 	return errors.Join(errs...)
@@ -109,7 +117,11 @@ func (a *HostAgent) bashAvailable() bool {
 	return *a.instConfig.OS != limatype.FREEBSD
 }
 
-func (a *HostAgent) waitForRequirement(r requirement) error {
+func (a *HostAgent) waitForRequirement(ctx context.Context, r requirement) error {
+	if r.check != nil {
+		logrus.Debugf("checking requirement %q", r.description)
+		return r.check(ctx)
+	}
 	logrus.Debugf("executing script %q", r.description)
 	script := r.script
 	if a.bashAvailable() {
@@ -147,9 +159,14 @@ func (a *HostAgent) waitForRequirement(r requirement) error {
 	return nil
 }
 
+// requirement describes a single readiness check performed by the host agent
+// before firing the Ready event. Exactly one of script and check must be set:
+//   - script: a shell script executed inside the guest via ssh.ExecuteScript.
+//   - check:  a host-side Go probe that returns nil when the requirement is satisfied.
 type requirement struct {
 	description string
 	script      string
+	check       func(ctx context.Context) error
 	debugHint   string
 	fatal       bool
 	noMaster    bool
@@ -157,6 +174,25 @@ type requirement struct {
 
 func (a *HostAgent) essentialRequirements() []requirement {
 	req := make([]requirement, 0)
+	// Probe the host-facing forwarded SSH port with a raw TCP connection before
+	// running the script-based "ssh" requirement below. The script path uses
+	// Lima's own SSH client, which has internal retry behavior that can mask a
+	// race where the hostagent accepts a TCP connection on 127.0.0.1:sshLocalPort
+	// before guest sshd has bound :22. External clients (ssh-keyscan, sftp,
+	// rsync, ...) that connect during that window get EPIPE on the first write.
+	// This native probe proves the public-facing path is end-to-end usable.
+	port := a.sshLocalPort
+	req = append(req,
+		requirement{
+			description: "sshLocalPort serves an SSH banner",
+			check: func(ctx context.Context) error {
+				return probeSSHBannerOnLocalPort(ctx, port)
+			},
+			debugHint: `The host agent is listening on 127.0.0.1:<sshLocalPort> but the
+proxied connection into the guest is failing. Most commonly this means
+guest sshd has not yet bound :22. Check the serial log for sshd startup.
+`,
+		})
 	req = append(req,
 		requirement{
 			description: "ssh",
@@ -291,4 +327,42 @@ Check "` + logLocation + `" to see where the process is blocked!
 `,
 		})
 	return req
+}
+
+// probeSSHBannerTimeout bounds a single attempt of probeSSHBannerOnLocalPort.
+// waitForRequirements wraps the probe in its own retry loop (3s backoff), so
+// the per-attempt deadline only needs to be long enough to distinguish a
+// healthy SSH server from a hung TCP proxy.
+const probeSSHBannerTimeout = 5 * time.Second
+
+// probeSSHBannerOnLocalPort confirms that the host agent's TCP forwarder on
+// 127.0.0.1:port is serving an SSH banner end-to-end. The hostagent starts
+// accepting connections on 127.0.0.1:sshLocalPort before guest sshd is
+// necessarily ready on :22, so a fresh external connect+read may fail with
+// EPIPE during the bring-up window. This probe verifies the public-facing
+// path is healthy without using Lima's own SSH client (which can mask the
+// race via internal retries).
+func probeSSHBannerOnLocalPort(ctx context.Context, port int) error {
+	addr := fmt.Sprintf("127.0.0.1:%d", port)
+	d := net.Dialer{Timeout: probeSSHBannerTimeout}
+	conn, err := d.DialContext(ctx, "tcp", addr)
+	if err != nil {
+		return fmt.Errorf("dial %s: %w", addr, err)
+	}
+	defer conn.Close()
+	if err := conn.SetReadDeadline(time.Now().Add(probeSSHBannerTimeout)); err != nil {
+		return fmt.Errorf("set read deadline on %s: %w", addr, err)
+	}
+	// RFC4253 §4.2: an SSH server sends an identification string ending in CR
+	// LF (or just LF historically) before the version exchange. If the proxied
+	// connection inside the guest has no live peer, the host side will close
+	// and ReadString returns EOF.
+	banner, err := bufio.NewReader(conn).ReadString('\n')
+	if err != nil {
+		return fmt.Errorf("read SSH banner from %s: %w", addr, err)
+	}
+	if !strings.HasPrefix(banner, "SSH-2.0-") && !strings.HasPrefix(banner, "SSH-1.99-") {
+		return fmt.Errorf("unexpected banner from %s: %q", addr, strings.TrimRight(banner, "\r\n"))
+	}
+	return nil
 }
