@@ -79,10 +79,10 @@ func Test_zoneHost(t *testing.T) {
 	}{
 		{}, // test for empty value as well
 		{host: "sample", want: val{name: "sample"}},
-		{host: "another.sample", want: val{name: "sample.", recordName: "another"}},
-		{host: "another.sample.com", want: val{name: "com.", recordName: "another.sample"}},
-		{host: "a.c", want: val{name: "c.", recordName: "a"}},
-		{host: "a.b.c.d", want: val{name: "d.", recordName: "a.b.c"}},
+		{host: "another.sample", want: val{name: "another.sample."}},
+		{host: "another.sample.com", want: val{name: "sample.com.", recordName: "another"}},
+		{host: "a.c", want: val{name: "a.c."}},
+		{host: "a.b.c.d", want: val{name: "c.d.", recordName: "a.b"}},
 	}
 	for i, tt := range tests {
 		t.Run(fmt.Sprint(i), func(t *testing.T) {
@@ -148,23 +148,26 @@ func TestExtractZones(t *testing.T) {
 		{
 			wantZones: []types.Zone{
 				{
-					Name: "ae.",
+					Name:      "google.ae.",
+					DefaultIP: net.ParseIP("8.8.4.4"),
+				},
+				{
+					Name:      "google.com.",
+					DefaultIP: net.ParseIP("8.8.4.4"),
 					Records: []types.Record{
-						{Name: "google", IP: net.ParseIP("8.8.4.4")},
+						{Name: "local", IP: net.ParseIP("8.8.8.8")},
 					},
 				},
 				{
-					Name: "com.",
+					Name: "docker.internal.",
 					Records: []types.Record{
-						{Name: "google", IP: net.ParseIP("8.8.4.4")},
-						{Name: "local.google", IP: net.ParseIP("8.8.8.8")},
+						{Name: "host", IP: net.ParseIP("192.168.5.2")},
 					},
 				},
 				{
-					Name: "internal.",
+					Name: "lima.internal.",
 					Records: []types.Record{
-						{Name: "host.docker", IP: net.ParseIP("192.168.5.2")},
-						{Name: "host.lima", IP: net.ParseIP("192.168.5.2")},
+						{Name: "host", IP: net.ParseIP("192.168.5.2")},
 					},
 				},
 				{
