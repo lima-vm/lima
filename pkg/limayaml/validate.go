@@ -90,6 +90,10 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 		errs = errors.Join(errs, errors.New("field `cpus` must be set"))
 	}
 
+	if *y.CPUs > runtime.NumCPU() {
+		return fmt.Errorf("field `cpus` is set to %d, which is greater than the number of CPUs available (%d)", *y.CPUs, runtime.NumCPU())
+	}
+
 	if _, err := units.RAMInBytes(*y.Memory); err != nil {
 		errs = errors.Join(errs, fmt.Errorf("field `memory` has an invalid value: %w", err))
 	}
