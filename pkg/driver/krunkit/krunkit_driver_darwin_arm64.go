@@ -323,9 +323,10 @@ func (l *LimaKrunkitDriver) Info() driver.Info {
 	}
 
 	info.Features = driver.DriverFeatures{
-		DynamicSSHAddress:    false,
-		SkipSocketForwarding: false,
-		CanRunGUI:            false,
+		DynamicSSHAddress:     false,
+		SkipSocketForwarding:  false,
+		CanRunGUI:             false,
+		SupportedImageFormats: []string{string(raw.Type)},
 	}
 	return info
 }

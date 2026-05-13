@@ -23,7 +23,7 @@ func EnsureFs(ctx context.Context, inst *limatype.Instance) error {
 		var ensuredBaseDisk bool
 		errs := make([]error, len(inst.Config.Images))
 		for i, f := range inst.Config.Images {
-			if _, err := fileutils.DownloadFile(ctx, baseDisk, f.File, true, "the image", *inst.Config.Arch); err != nil {
+			if _, err := fileutils.DownloadFile(ctx, baseDisk, f.File, true, "the image", *inst.Config.Arch, nil); err != nil {
 				errs[i] = err
 				continue
 			}
