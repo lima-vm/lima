@@ -57,7 +57,17 @@ HELP
 
 readonly debian_base_url=https://cloud.debian.org/images/cloud/
 
-readonly debian_target_vendor=genericcloud
+function debian_target_vendor_from_arch() {
+	local arch=$1
+	case "$arch" in
+	amd64 | arm64)
+		echo "genericcloud"
+		;;
+	*)
+		echo "generic"
+		;;
+	esac
+}
 
 readonly -A debian_version_to_codename=(
 	[10]=buster
@@ -270,8 +280,9 @@ function debian_location_from_url_spec() {
 	timestamp=$(jq -r 'if .timestamp then .timestamp else empty end' <<<"${url_spec}")
 	base_url+=${timestamp:-latest}/
 	arch=$(jq -e -r '.arch' <<<"${url_spec}")
+	target_vendor=$(debian_target_vendor_from_arch "${arch}")
 	file_extension=$(jq -e -r '.file_extension' <<<"${url_spec}")
-	base_url+=debian-${version}${backports}-${debian_target_vendor}-${arch}${daily:+-${daily}}${timestamp:+-${timestamp}}.${file_extension}
+	base_url+=debian-${version}${backports}-${target_vendor}-${arch}${daily:+-${daily}}${timestamp:+-${timestamp}}.${file_extension}
 	echo "${base_url}"
 }
 
@@ -294,10 +305,11 @@ function debian_cache_key_for_image_kernel_overriding() {
 	version=$(jq -r '.version|if . then "-\(.)" else empty end' <<<"${url_spec}")
 	backports=$(jq -r 'if .backports then "-backports" else empty end' <<<"${url_spec}")
 	arch=$(jq -e -r '.arch' <<<"${url_spec}")
+	target_vendor=$(debian_target_vendor_from_arch "${arch}")
 	daily=$(jq -r 'if .daily then "-daily" else empty end' <<<"${url_spec}")
 	timestamped=$(jq -r 'if .timestamp then "-timestamped" else empty end' <<<"${url_spec}")
 	file_extension=$(jq -e -r '.file_extension' <<<"${url_spec}")
-	echo "debian${with_kernel}${version}${backports}-${debian_target_vendor}-${arch}${daily}${timestamped}.${file_extension}"
+	echo "debian${with_kernel}${version}${backports}-${target_vendor}-${arch}${daily}${timestamped}.${file_extension}"
 }
 
 function debian_image_entry_for_image_kernel_overriding() {
