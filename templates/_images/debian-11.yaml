@@ -20,7 +20,7 @@ images:
 - location: https://cloud.debian.org/images/cloud/bullseye/latest/debian-11-genericcloud-arm64.qcow2
   arch: aarch64
 
-- location: https://cloud.debian.org/images/cloud/bullseye/latest/debian-11-genericcloud-ppc64el.qcow2
+- location: https://cloud.debian.org/images/cloud/bullseye/latest/debian-11-generic-ppc64el.qcow2
   arch: ppc64le
 
 mountTypesUnsupported: [9p]
