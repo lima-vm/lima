@@ -937,14 +937,26 @@ func FillPortForwardDefaults(rule *limatype.PortForward, instDir string, user li
 		rule.Proto = limatype.ProtoAny
 	}
 	if rule.GuestIP == nil {
+		// Determine if the host agent should default to IPv6 based on the HostIP
+		isHostIPv6 := rule.HostIP != nil && rule.HostIP.To4() == nil
 		if rule.GuestIPMustBeZero != nil && *rule.GuestIPMustBeZero {
-			rule.GuestIP = net.IPv4zero
+			if isHostIPv6 {
+				rule.GuestIP = net.IPv6unspecified // "::"
+			} else {
+				rule.GuestIP = net.IPv4zero        
+			}
 		} else {
-			rule.GuestIP = IPv4loopback1
+			if isHostIPv6 {
+				rule.GuestIP = net.IPv6loopback    // "::1"
+			} else {
+				rule.GuestIP = IPv4loopback1       
+			}
 		}
 	}
 	if rule.GuestIPMustBeZero == nil {
-		rule.GuestIPMustBeZero = ptr.Of(rule.GuestIP.Equal(net.IPv4zero))
+		// Recognize both IPv4 and IPv6 unspecified addresses as "Zero" 
+		isZero := rule.GuestIP.Equal(net.IPv4zero) || rule.GuestIP.Equal(net.IPv6unspecified)
+		rule.GuestIPMustBeZero = ptr.Of(isZero)
 	}
 	if rule.HostIP == nil {
 		rule.HostIP = IPv4loopback1
