@@ -112,7 +112,7 @@ function debian_digest_from_upload_entry() {
 	debian_digest=$(jq -e -r '.metadata.annotations."cloud.debian.org/digest"' <<<"${upload_entry}") ||
 		error_exit "Failed to get the digest from ${upload_entry}"
 	case "${debian_digest%:*}" in
-	sha512) digest=$(echo "${debian_digest#*:}==" | base64 -d | xxd -p -c -) ||
+	sha512) digest=$(echo "${debian_digest#*:}==" | base64 -d | xxd -p -c 128) ||
 		error_exit "Failed to decode the digest from ${debian_digest}" ;;
 	*) error_exit "Unsupported digest type: ${debian_digest%:*}" ;;
 	esac
