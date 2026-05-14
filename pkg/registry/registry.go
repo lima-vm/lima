@@ -34,6 +34,13 @@ type ExternalDriver struct {
 	Ctx          context.Context
 	Logger       *logrus.Logger
 	CancelFunc   context.CancelFunc
+	// LogFile is the *os.File the external-driver subprocess inherits as
+	// stderr. The parent (limactl) opens it in server.Start and must close
+	// it in server.Stop, otherwise on Windows the file handle stays open
+	// in the parent and `limactl rm --force` fails with "The process
+	// cannot access the file because it is being used by another process"
+	// when trying to delete driver.stderr.log. See lima-vm/lima#3736.
+	LogFile *os.File
 }
 
 var (
