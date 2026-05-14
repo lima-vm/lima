@@ -25,6 +25,7 @@ import (
 
 var knownYamlProperties = []string{
 	"Arch",
+	"BlockDevices",
 	"Containerd",
 	"CopyToHost",
 	"CPUType",
@@ -99,6 +100,9 @@ func validateConfig(_ context.Context, cfg *limatype.LimaYAML) error {
 	}
 	if cfg.MountType != nil && *cfg.MountType != limatype.WSLMount {
 		return fmt.Errorf("field `mountType` must be %q for WSL2 driver, got %q", limatype.WSLMount, *cfg.MountType)
+	}
+	if len(cfg.BlockDevices) > 0 {
+		return fmt.Errorf("field `blockDevices` is not supported for vmType: %s", limatype.WSL2)
 	}
 	// TODO: revise this list for WSL2
 	if cfg.VMType != nil {
