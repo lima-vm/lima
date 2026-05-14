@@ -21,6 +21,7 @@ func CreateConfiguredDriver(inst *limatype.Instance, sshLocalPort int) (*driver.
 	if !exists {
 		return nil, fmt.Errorf("unknown or unsupported VM type: %s", *limaDriver)
 	}
+	var driverInfo driver.Info
 
 	if extDriver != nil {
 		extDriver.Logger.Debugf("Using external driver %q", extDriver.Name)
@@ -35,14 +36,16 @@ func CreateConfiguredDriver(inst *limatype.Instance, sshLocalPort int) (*driver.
 			extDriver.InstanceName = inst.Name
 		}
 
-		if !extDriver.Client.Info().Features.StaticSSHPort {
+		driverInfo = extDriver.Client.Info()
+		if !driverInfo.Features.StaticSSHPort {
 			inst.SSHLocalPort = sshLocalPort
 		}
 		return extDriver.Client.Configure(inst), nil
 	}
 
-	logrus.Debugf("Using internal driver %q", intDriver.Info().Name)
-	if !intDriver.Info().Features.StaticSSHPort {
+	driverInfo = intDriver.Info()
+	logrus.Debugf("Using internal driver %q", driverInfo.Name)
+	if !driverInfo.Features.StaticSSHPort {
 		inst.SSHLocalPort = sshLocalPort
 	}
 	return intDriver.Configure(inst), nil
