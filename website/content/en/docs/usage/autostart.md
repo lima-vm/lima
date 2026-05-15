@@ -42,3 +42,15 @@ limactl autostart disable k3s
 The `--user` flag specifies which macOS user the instance runs as (default:
 `$USER`). The plist is installed to
 `/Library/LaunchDaemons/io.lima-vm.daemon.<instance>.plist`.
+
+## Lima < 2.2
+
+Use `limactl start-at-login` (equivalent to `limactl autostart enable --condition=login`):
+
+```bash
+# Register
+limactl start-at-login default
+
+# Unregister
+limactl start-at-login --enabled=false default
+```

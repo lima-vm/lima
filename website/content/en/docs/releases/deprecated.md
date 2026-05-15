@@ -5,6 +5,7 @@ weight: 10
 
 The following features are deprecated:
 
+- `limactl start-at-login` command: deprecated in v2.2.0 (Use `limactl autostart` instead)
 - `limactl show-ssh` command: deprecated in v0.18.0 (Use `ssh -F ~/.lima/default/ssh.config lima-default` instead)
 - Ansible provisioning mode: deprecated in Lima v1.1.0 (Use `ansible-playbook playbook.yaml` after the start instead)
 - `limactl --yes` flag: deprecated in Lima v2.0.0 (Use `limactl (clone|rename|edit|shell) --start` instead)
