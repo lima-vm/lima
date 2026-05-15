@@ -6,6 +6,11 @@ weight: 4
 | ⚡ Requirement | Lima >= 2.2 |
 |----------------|-------------|
 
+Lima instances can be registered to start automatically using `limactl autostart`.
+Two conditions are supported: `login` (start when the user logs in) and `boot`
+(start at system boot, before any user session). This replaces the older
+`limactl start-at-login` command, which is deprecated as of Lima v2.2.
+
 ## Starting instances automatically
 
 Use `limactl autostart enable` to register a Lima instance to start automatically.
