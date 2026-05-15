@@ -206,6 +206,7 @@ func newApp() *cobra.Command {
 		newRestartCommand(),
 		newSudoersCommand(),
 		newStartAtLoginCommand(),
+		newDaemonCommand(),
 		newNetworkCommand(),
 		newCloneCommand(),
 		newRenameCommand(),
