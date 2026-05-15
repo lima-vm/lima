@@ -25,11 +25,12 @@ func newAutostartEnableCommand() *cobra.Command {
 		RunE:              autostartEnableAction,
 		ValidArgsFunction: autostartComplete,
 	}
-	cmd.Flags().String(
+	flags := cmd.Flags()
+	flags.String(
 		"condition", "login",
 		"When to start the instance: \"login\" (user session) or \"boot\" (system boot, macOS only)",
 	)
-	cmd.Flags().String(
+	flags.String(
 		"user", "",
 		"macOS username to run the instance as when --condition=boot (default: $USER)",
 	)

@@ -3,6 +3,9 @@ title: Automatic Startup
 weight: 4
 ---
 
+| ⚡ Requirement | Lima >= 2.2 |
+|----------------|-------------|
+
 ## Starting instances automatically
 
 Use `limactl autostart enable` to register a Lima instance to start automatically.
