@@ -67,3 +67,39 @@ The guest home directory exists independently on the following path:
 ### Shell completion
 - To enable bash completion, add `source <(limactl completion bash)` to `~/.bash_profile`.
 - To enable zsh completion, see `limactl completion zsh --help`
+
+## Starting instances automatically
+
+### At user login (macOS and Linux)
+
+`limactl start-at-login` registers a Lima instance to start automatically when
+the user logs in. On macOS this installs a LaunchAgent; on Linux a systemd user
+service.
+
+```bash
+# Register
+limactl start-at-login default
+
+# Unregister
+limactl start-at-login --enabled=false default
+```
+
+The instance starts in the background on next login and on subsequent logins.
+
+### At system boot, without a user session (macOS only)
+
+For headless macOS servers where no user session is expected, use
+`limactl daemon install` instead. This installs a system LaunchDaemon that
+starts the instance at boot, before any user logs in.
+
+```bash
+# Install (prompts for sudo once)
+limactl daemon install k3s
+
+# Uninstall
+limactl daemon uninstall k3s
+```
+
+The daemon runs the instance as the current user (or pass `--user <username>`
+to specify one). The plist is installed to
+`/Library/LaunchDaemons/io.lima-vm.daemon.<instance>.plist`.
