@@ -4,42 +4,81 @@
 package hostagent
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"runtime"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/lima-vm/sshocker/pkg/ssh"
 	"github.com/sirupsen/logrus"
 
+	"github.com/lima-vm/lima/v2/pkg/hostagent/events"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/sshutil"
 )
 
-func (a *HostAgent) waitForRequirements(label string, requirements []requirement) error {
+// capitalizeFirst returns s with its first letter upper-cased, using rune
+// semantics so non-ASCII inputs are handled correctly.
+func capitalizeFirst(s string) string {
+	if s == "" {
+		return s
+	}
+	r, size := utf8.DecodeRuneInString(s)
+	return string(unicode.ToUpper(r)) + s[size:]
+}
+
+// waitForRequirements iterates through requirements, advancing *step (a unified
+// counter shared across the essential / optional / final groups, plus the
+// guest-agent step) and emits a RequirementProgress event for each state
+// transition. The limactl-side event watcher renders these as either an
+// in-place 🕐 -> ✅ flip (when stdout is a TTY) or two log lines (otherwise).
+func (a *HostAgent) waitForRequirements(ctx context.Context, label string, requirements []requirement, step *int, total int) error {
 	const (
 		retries       = 200
 		sleepDuration = 3 * time.Second
 	)
 	var errs []error
 
-	for i, req := range requirements {
-		logrus.Infof("Waiting for the %s requirement %d of %d: %q", label, i+1, len(requirements), req.description)
+	for _, req := range requirements {
+		*step++
+		stepNum := *step
+		suffix := ""
+		if label == "essential" {
+			suffix = " (essential)"
+		}
+		// capitalizeFirst is applied so user-supplied probe descriptions render
+		// uniformly with the built-in ones; built-in descriptions are already in
+		// sentence case so it is a no-op for them.
+		desc := capitalizeFirst(req.description)
+		a.emitRequirementProgress(ctx, &events.RequirementProgress{
+			Step:        stepNum,
+			Total:       total,
+			Description: desc,
+			Suffix:      suffix,
+		})
 	retryLoop:
 		for j := range retries {
 			err := a.waitForRequirement(req)
 			if err == nil {
-				logrus.Infof("The %s requirement %d of %d is satisfied", label, i+1, len(requirements))
+				a.emitRequirementProgress(ctx, &events.RequirementProgress{
+					Step:        stepNum,
+					Total:       total,
+					Description: desc,
+					Done:        true,
+				})
 				break retryLoop
 			}
 			if req.fatal {
 				logrus.Infof("No further %s requirements will be checked", label)
-				errs = append(errs, fmt.Errorf("failed to satisfy the %s requirement %d of %d %q: %s; skipping further checks: %w", label, i+1, len(requirements), req.description, req.debugHint, err))
+				errs = append(errs, fmt.Errorf("failed to satisfy the %s requirement (%d/%d) %q: %s; skipping further checks: %w", label, stepNum, total, req.description, req.debugHint, err))
 				return errors.Join(errs...)
 			}
 			if j == retries-1 {
-				errs = append(errs, fmt.Errorf("failed to satisfy the %s requirement %d of %d %q: %s: %w", label, i+1, len(requirements), req.description, req.debugHint, err))
+				errs = append(errs, fmt.Errorf("failed to satisfy the %s requirement (%d/%d) %q: %s: %w", label, stepNum, total, req.description, req.debugHint, err))
 				break retryLoop
 			}
 			time.Sleep(sleepDuration)
@@ -159,7 +198,7 @@ func (a *HostAgent) essentialRequirements() []requirement {
 	req := make([]requirement, 0)
 	req = append(req,
 		requirement{
-			description: "ssh",
+			description: "SSH connection",
 			script: `#!/bin/sh
 true
 `,
@@ -170,7 +209,7 @@ If any private key under ~/.ssh is protected with a passphrase, you need to have
 			noMaster: true,
 		})
 	startControlMasterReq := requirement{
-		description: "Explicitly start ssh ControlMaster",
+		description: "Persistent SSH ControlMaster",
 		script: `#!/bin/sh
 true
 `,
@@ -182,7 +221,7 @@ true
 	}
 	req = append(req,
 		requirement{
-			description: "user session is ready for ssh",
+			description: "user session to be ready for SSH",
 			script: fmt.Sprintf(`#!/bin/sh
 set -eux
 [ "$(cat /run/lima-ssh-ready 2>/dev/null)" = "%s" ]
@@ -209,7 +248,7 @@ A possible workaround is to run "apt-get install sshfs" in the guest.
 `,
 		})
 		req = append(req, requirement{
-			description: "fuse to \"allow_other\" as user",
+			description: "fuse \"allow_other\" to be enabled for the user",
 			script: `#!/bin/sh
 set -eux
 sudo grep -q ^user_allow_other /etc/fuse*.conf
@@ -228,7 +267,7 @@ func (a *HostAgent) optionalRequirements() []requirement {
 	if isLinuxGuest && (*a.instConfig.Containerd.System || *a.instConfig.Containerd.User) && !*a.instConfig.Plain {
 		req = append(req,
 			requirement{
-				description: "systemd must be available",
+				description: "systemd to be available",
 				fatal:       true,
 				script: `#!/bin/bash
 set -eux -o pipefail
@@ -275,7 +314,7 @@ func (a *HostAgent) finalRequirements() []requirement {
 	}
 	req = append(req,
 		requirement{
-			description: "boot scripts must have finished",
+			description: "boot scripts to be finished",
 			script: fmt.Sprintf(`#!/bin/sh
 set -eux
 BOOT_DONE=/run/lima-boot-done
