@@ -15,4 +15,7 @@ images:
 - location: https://cloud.debian.org/images/cloud/sid/daily/latest/debian-sid-generic-ppc64el-daily.qcow2
   arch: ppc64le
 
+- location: https://cloud.debian.org/images/cloud/sid/daily/latest/debian-sid-generic-s390x-daily.qcow2
+  arch: s390x
+
 mountTypesUnsupported: [9p]
