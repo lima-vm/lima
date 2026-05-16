@@ -127,9 +127,9 @@ func provisionVM(ctx context.Context, instanceDir, instanceName, distroName stri
 		os.RemoveAll(limaBootFileWinPath)
 		logrus.Debugf("%v: %q", cmd.Args, string(out))
 		if err != nil {
-			errCh <- fmt.Errorf(
+			trySendErr(ctx, errCh, fmt.Errorf(
 				"error running wslCommand that executes boot.sh (%v): %w, "+
-					"check /var/log/lima-init.log for more details (out=%q)", cmd.Args, err, string(out))
+					"check /var/log/lima-init.log for more details (out=%q)", cmd.Args, err, string(out)))
 		}
 
 		<-ctx.Done()
@@ -157,10 +157,23 @@ func keepAlive(ctx context.Context, distroName string, errCh chan<- error) {
 
 	go func() {
 		if err := keepAliveCmd.Run(); err != nil {
-			errCh <- fmt.Errorf(
-				"error running wsl keepAlive command: %w", err)
+			trySendErr(ctx, errCh, fmt.Errorf(
+				"error running wsl keepAlive command: %w", err))
 		}
 	}()
+}
+
+// trySendErr is a non-blocking send that drops the error once ctx has been
+// cancelled. Without this guard, writers spawned from Start() block forever
+// when the hostagent abandons errCh during shutdown (after the signal
+// handler in startRoutinesAndWait exits its outer select), leaving a
+// non-terminating goroutine parked on `chan send` for the rest of the
+// process lifetime. Same shape of fix as #4922 for the VZ driver.
+func trySendErr(ctx context.Context, errCh chan<- error, err error) {
+	select {
+	case errCh <- err:
+	case <-ctx.Done():
+	}
 }
 
 // unregisterVM calls WSL to unregister a VM.

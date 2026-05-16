@@ -242,7 +242,11 @@ func (l *LimaWslDriver) Start(ctx context.Context) (chan error, error) {
 		}
 	}
 
-	errCh := make(chan error)
+	// Buffered so that the first shutdown-time error from provisionVM /
+	// keepAlive does not block the writer if the hostagent has already
+	// stopped draining errCh (the trySendErr helper guards subsequent
+	// sends).
+	errCh := make(chan error, 2)
 
 	if err := startVM(ctx, distroName); err != nil {
 		return nil, err
