@@ -1,5 +1,6 @@
 _output/
 _artifacts/
+AUTHORS
 lima.REJECTED.yaml
 default-template.yaml
 schema-limayaml.json
