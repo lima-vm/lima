@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -73,6 +72,8 @@ func minimumQemuVersion() (hardMin, softMin semver.Version) {
 			// was removed in https://github.com/lima-vm/lima/pull/3491
 			h, s = "7.0.0", "8.2.1"
 		}
+	case "windows":
+		h, s = "11.0.0", "11.0.0"
 	default:
 		// hardMin: Untested and maybe does not even work.
 		// softMin: Ubuntu 22.04's QEMU. The oldest version that can be easily tested on GitHub Actions.
@@ -563,14 +564,6 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 			// This will disable CPU S3/S4 state.
 			args = append(args, "-global", "ICH9-LPC.disable_s3=1")
 			args = append(args, "-global", "ICH9-LPC.disable_s4=1")
-		case "whpx":
-			if version.LessThan(*semver.New("11.0.0")) {
-				// Older versions of QEMU required disabling `kernel-irqchip` explicitly.
-				// It is not recommended to keep using this with QEMU 11.0.0 and newer.
-				args = appendArgsIfNoConflict(args, "-machine", "q35,accel="+accel+",kernel-irqchip=off")
-			} else {
-				args = appendArgsIfNoConflict(args, "-machine", "q35,accel="+accel)
-			}
 		default:
 			args = appendArgsIfNoConflict(args, "-machine", "q35,accel="+accel)
 		}
@@ -609,45 +602,26 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	noFirmware := *y.Arch == limatype.PPC64LE || *y.Arch == limatype.S390X || legacyBIOS
 	if !noFirmware {
 		var firmware string
-		firmwareInBios := runtime.GOOS == "windows" && version.LessThan(*semver.New("11.0.0"))
-		if envVar := os.Getenv("_LIMA_QEMU_UEFI_IN_BIOS"); envVar != "" {
-			logrus.Warn("use of deprecated _LIMA_QEMU_UEFI_IN_BIOS")
-			b, err := strconv.ParseBool(envVar)
-			if err != nil {
-				logrus.WithError(err).Warnf("invalid _LIMA_QEMU_UEFI_IN_BIOS value %q", envVar)
-			} else {
-				firmwareInBios = b
-			}
-		}
-		firmwareInBios = firmwareInBios && *y.Arch == limatype.X8664
 		downloadedFirmware := filepath.Join(cfg.InstanceDir, filenames.QemuEfiCodeFD)
-		firmwareWithVars := filepath.Join(cfg.InstanceDir, filenames.QemuEfiFullFD)
-		if firmwareInBios {
-			if _, stErr := os.Stat(firmwareWithVars); stErr == nil {
-				firmware = firmwareWithVars
-				logrus.Infof("Using existing firmware (%q)", firmware)
-			}
-		} else {
-			if _, stErr := os.Stat(downloadedFirmware); errors.Is(stErr, os.ErrNotExist) {
-			loop:
-				for _, f := range y.Firmware.Images {
-					switch f.VMType {
-					case "", limatype.QEMU:
-						if f.Arch == *y.Arch {
-							if _, err = fileutils.DownloadFile(ctx, downloadedFirmware, f.File, true, "UEFI code "+f.Location, *y.Arch); err != nil {
-								logrus.WithError(err).Warnf("failed to download %q", f.Location)
-								continue loop
-							}
-							firmware = downloadedFirmware
-							logrus.Infof("Using firmware %q (downloaded from %q)", firmware, f.Location)
-							break loop
+		if _, stErr := os.Stat(downloadedFirmware); errors.Is(stErr, os.ErrNotExist) {
+		loop:
+			for _, f := range y.Firmware.Images {
+				switch f.VMType {
+				case "", limatype.QEMU:
+					if f.Arch == *y.Arch {
+						if _, err = fileutils.DownloadFile(ctx, downloadedFirmware, f.File, true, "UEFI code "+f.Location, *y.Arch); err != nil {
+							logrus.WithError(err).Warnf("failed to download %q", f.Location)
+							continue loop
 						}
+						firmware = downloadedFirmware
+						logrus.Infof("Using firmware %q (downloaded from %q)", firmware, f.Location)
+						break loop
 					}
 				}
-			} else {
-				firmware = downloadedFirmware
-				logrus.Infof("Using existing firmware (%q)", firmware)
 			}
+		} else {
+			firmware = downloadedFirmware
+			logrus.Infof("Using existing firmware (%q)", firmware)
 		}
 		if firmware == "" {
 			firmware, err = getFirmware(exe, *y.Arch)
@@ -655,45 +629,9 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 				return "", nil, err
 			}
 			logrus.Infof("Using system firmware (%q)", firmware)
-			if firmwareInBios {
-				firmwareVars, err := getFirmwareVars(exe, *y.Arch)
-				if err != nil {
-					return "", nil, err
-				}
-				logrus.Infof("Using system firmware vars (%q)", firmwareVars)
-				varsFile, err := os.Open(firmwareVars)
-				if err != nil {
-					return "", nil, err
-				}
-				defer varsFile.Close()
-				codeFile, err := os.Open(firmware)
-				if err != nil {
-					return "", nil, err
-				}
-				defer codeFile.Close()
-				resultFile, err := os.OpenFile(firmwareWithVars, os.O_CREATE|os.O_WRONLY, 0o644)
-				if err != nil {
-					return "", nil, err
-				}
-				defer resultFile.Close()
-				_, err = io.Copy(resultFile, varsFile)
-				if err != nil {
-					return "", nil, err
-				}
-				_, err = io.Copy(resultFile, codeFile)
-				if err != nil {
-					return "", nil, err
-				}
-				firmware = firmwareWithVars
-			}
 		}
 		if firmware != "" {
-			if firmwareInBios {
-				logrus.Warn("firmware in `-bios` is deprecated, consider upgrading to QEMU supporting `-drive if=pflash`")
-				args = append(args, "-bios", firmware)
-			} else {
-				args = append(args, "-drive", fmt.Sprintf("if=pflash,format=raw,readonly=on,file=%s", firmware))
-			}
+			args = append(args, "-drive", fmt.Sprintf("if=pflash,format=raw,readonly=on,file=%s", firmware))
 		}
 	}
 
