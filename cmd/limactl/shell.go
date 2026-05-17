@@ -73,6 +73,7 @@ func newShellCommand() *cobra.Command {
 	shellCmd.Flags().Bool("preserve-env", false, "Propagate environment variables to the shell")
 	shellCmd.Flags().Bool("start", false, "Start the instance if it is not already running")
 	shellCmd.Flags().String("sync", "", "Copy a host directory to the guest and vice-versa upon exit")
+	shellCmd.Flags().StringArray("sync-exclude", nil, "Exclude pattern for --sync (can be specified multiple times)")
 
 	return shellCmd
 }
@@ -196,8 +197,20 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to get sync flag: %w", err)
 	}
 	syncHostWorkdir := syncDirVal != ""
+	// Validate that --sync has a proper directory value, not another flag
+	if err := validateSyncFlagValue(syncDirVal); err != nil {
+		return err
+	}
 	if syncHostWorkdir && len(inst.Config.Mounts) > 0 {
 		return errors.New("cannot use `--sync` when the instance has host mounts configured, start the instance with `--mount-none` to disable mounts")
+	}
+
+	syncExcludes, err := flags.GetStringArray("sync-exclude")
+	if err != nil {
+		return fmt.Errorf("failed to get sync-exclude flag: %w", err)
+	}
+	if len(syncExcludes) > 0 && !syncHostWorkdir {
+		return errors.New("cannot use `--sync-exclude` without `--sync`")
 	}
 
 	// When workDir is explicitly set, the shell MUST have workDir as the cwd, or exit with an error.
@@ -354,6 +367,7 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	var (
 		sshExecForRsync *exec.Cmd
 		rsync           copytool.CopyTool
+		excludeArgs     []string
 	)
 	if syncHostWorkdir {
 		logrus.Infof("Syncing host current directory(%s) to guest instance...", hostCurrentDir)
@@ -380,12 +394,13 @@ func shellAction(cmd *cobra.Command, args []string) error {
 			hostCurrentDir,
 			fmt.Sprintf("%s:%s", inst.Name, destRsyncDir),
 		}
+		excludeArgs = buildSyncExcludeArgs(syncExcludes, hostCurrentDir)
 		rsync, err = copytool.New(ctx, string(copytool.BackendRsync), paths, &copytool.Options{
 			Recursive: true,
 			Verbose:   false,
-			AdditionalArgs: []string{
+			AdditionalArgs: append([]string{
 				"--delete",
-			},
+			}, excludeArgs...),
 		})
 		if err != nil {
 			return err
@@ -439,12 +454,12 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		return askUserForRsyncBack(ctx, cmd, inst, sshExecForRsync, hostCurrentDir, destRsyncDir, rsync, tty)
+		return askUserForRsyncBack(ctx, cmd, inst, sshExecForRsync, hostCurrentDir, destRsyncDir, rsync, tty, excludeArgs)
 	}
 	return nil
 }
 
-func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype.Instance, sshCmd *exec.Cmd, hostCurrentDir, destRsyncDir string, rsync copytool.CopyTool, tty bool) error {
+func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype.Instance, sshCmd *exec.Cmd, hostCurrentDir, destRsyncDir string, rsync copytool.CopyTool, tty bool, excludeArgs []string) error {
 	remoteSource := fmt.Sprintf("%s:%s", inst.Name, destRsyncDir)
 	clean := filepath.Clean(hostCurrentDir)
 	dirForCleanup := shellescape.Quote(filepath.Join(*inst.Config.User.Home, clean))
@@ -473,7 +488,7 @@ func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype
 		return rsyncBack()
 	}
 
-	rawOutput, stats, err := getRsyncStats(ctx, remoteSource, filepath.Dir(hostCurrentDir))
+	rawOutput, stats, err := getRsyncStats(ctx, remoteSource, filepath.Dir(hostCurrentDir), excludeArgs)
 	if err != nil {
 		logrus.WithError(err).Warn("failed to get rsync stats")
 	}
@@ -742,16 +757,16 @@ func (s *rsyncStats) String() string {
 	return fmt.Sprintf("added: %d, deleted: %d, modified: %d, metadata: %d", s.Added, s.Deleted, s.Modified, s.Metadata)
 }
 
-func getRsyncStats(ctx context.Context, source, destination string) (string, *rsyncStats, error) {
+func getRsyncStats(ctx context.Context, source, destination string, excludeArgs []string) (string, *rsyncStats, error) {
 	paths := []string{source, destination}
 	rsync, err := copytool.New(ctx, string(copytool.BackendRsync), paths, &copytool.Options{
 		Verbose: true,
-		AdditionalArgs: []string{
+		AdditionalArgs: append([]string{
 			"--dry-run",
 			"--itemize-changes",
 			"-ah",
 			"--delete",
-		},
+		}, excludeArgs...),
 	})
 	if err != nil {
 		return "", nil, err
@@ -820,6 +835,29 @@ func parseRsyncStats(output string) *rsyncStats {
 		}
 	}
 	return &s
+}
+
+// buildSyncExcludeArgs converts --sync-exclude flag values and an optional
+// .limasyncignore file into rsync --exclude / --exclude-from arguments.
+func buildSyncExcludeArgs(excludes []string, syncDir string) []string {
+	var args []string
+	for _, pattern := range excludes {
+		args = append(args, "--exclude", pattern)
+	}
+	ignoreFile := filepath.Join(syncDir, ".limasyncignore")
+	if _, err := os.Stat(ignoreFile); err == nil {
+		args = append(args, "--exclude-from", ignoreFile)
+	}
+	return args
+}
+
+// validateSyncFlagValue ensures the value passed to --sync is a directory
+// path and not another flag token like "--sync-exclude=...".
+func validateSyncFlagValue(syncDirVal string) error {
+	if syncDirVal != "" && strings.HasPrefix(syncDirVal, "--") {
+		return fmt.Errorf("--sync flag requires a directory path argument, got %q instead\nUsage: limactl shell --sync <DIR> [--sync-exclude <PATTERN>...] <INSTANCE> [COMMAND...]", syncDirVal)
+	}
+	return nil
 }
 
 func hasMetadataDelta(attrs string) bool {
