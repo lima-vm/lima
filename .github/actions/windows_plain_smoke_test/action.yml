@@ -1,0 +1,87 @@
+name: 'windows plain smoke test'
+description: >
+  Runs Lima's create / start / shell / copy / stop / delete cycle against a
+  given template on a plain Windows host. Each limactl invocation runs with
+  --debug so traces land in the workflow log, and on failure the workflow
+  dumps the instance's hostagent / serial logs so the run carries enough
+  context to diagnose without re-running.
+inputs:
+  template:
+    description: Path to the Lima template (e.g. .\templates\experimental\wsl2.yaml).
+    required: true
+  instance-name:
+    description: Name to use for the test instance.
+    required: false
+    default: plain
+  lima-home-suffix:
+    description: >
+      Suffix appended to runner.temp for LIMA_HOME (e.g. "plain-wsl2"). Must be
+      unique per job sharing a runner so concurrent jobs cannot collide.
+    required: true
+  vm-type:
+    description: >
+      Lima vmType to force via `--vm-type` (e.g. "qemu" or "wsl2"). When empty,
+      `limactl create` auto-selects, which on Windows prefers wsl2 over qemu
+      even when the template ships a disk image incompatible with wsl2.
+    required: false
+    default: ''
+runs:
+  using: composite
+  steps:
+  - name: Smoke test (create / start / shell / copy / stop / delete)
+    shell: pwsh
+    env:
+      LIMA_HOME: ${{ runner.temp }}\lima-${{ inputs.lima-home-suffix }}
+      INSTANCE: ${{ inputs.instance-name }}
+      TEMPLATE: ${{ inputs.template }}
+      VM_TYPE: ${{ inputs.vm-type }}
+    run: |
+      $ErrorActionPreference = 'Stop'
+      # $ErrorActionPreference does not propagate to native commands; wrap
+      # limactl so a non-zero exit aborts the whole script instead of
+      # silently continuing past the failure.
+      function Invoke-Limactl {
+        & .\_output\bin\limactl.exe --debug @args
+        if ($LASTEXITCODE -ne 0) { throw "limactl $($args -join ' ') exited $LASTEXITCODE" }
+      }
+      if (Test-Path $env:LIMA_HOME) { Remove-Item $env:LIMA_HOME -Recurse -Force }
+      New-Item -ItemType Directory -Path $env:LIMA_HOME | Out-Null
+      $createArgs = @('--tty=false', "--name=$env:INSTANCE")
+      if ($env:VM_TYPE) { $createArgs += "--vm-type=$env:VM_TYPE" }
+      $createArgs += $env:TEMPLATE
+      Invoke-Limactl create @createArgs
+      Invoke-Limactl start $env:INSTANCE
+      Invoke-Limactl shell --tty=false $env:INSTANCE -- uname -srm
+      'roundtrip' | Out-File -Encoding ascii "$env:LIMA_HOME\rt.txt"
+      Invoke-Limactl copy "$env:LIMA_HOME\rt.txt" "${env:INSTANCE}:/tmp/rt.txt"
+      Invoke-Limactl shell --tty=false $env:INSTANCE -- cat /tmp/rt.txt
+      # Cover the guest -> host direction too: it runs through different
+      # parseCopyPaths plumbing than the upload above.
+      Invoke-Limactl copy "${env:INSTANCE}:/tmp/rt.txt" "$env:LIMA_HOME\rt-back.txt"
+      $back = (Get-Content "$env:LIMA_HOME\rt-back.txt" -Raw).Trim()
+      if ($back -ne 'roundtrip') {
+        throw "round-trip mismatch: expected 'roundtrip', got '$back'"
+      }
+      Invoke-Limactl stop $env:INSTANCE
+      Invoke-Limactl delete --force $env:INSTANCE
+
+  - name: Dump Lima logs on failure
+    if: failure()
+    shell: pwsh
+    env:
+      LIMA_HOME: ${{ runner.temp }}\lima-${{ inputs.lima-home-suffix }}
+      INSTANCE: ${{ inputs.instance-name }}
+    run: |
+      $instDir = Join-Path $env:LIMA_HOME $env:INSTANCE
+      if (-not (Test-Path $instDir)) {
+        Write-Host "No instance directory at $instDir, nothing to dump."
+        exit 0
+      }
+      Get-ChildItem $instDir | Format-Table Name, Length, LastWriteTime
+      foreach ($name in 'ha.stdout.log','ha.stderr.log','serial.log','lima.yaml','ssh.config') {
+        $p = Join-Path $instDir $name
+        if (Test-Path $p) {
+          Write-Host ("===== {0} =====" -f $p)
+          Get-Content $p
+        }
+      }
