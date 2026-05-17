@@ -1,0 +1,70 @@
+name: 'windows plain templates'
+description: >
+  Resolves Lima's template symlinks and copies templates/ to
+  _output/share/lima/templates/, replicating `make`'s TEMPLATES target without
+  needing MSYS2 / Git for Windows.
+
+  Several files under templates/ are git symlinks (mode 120000) pointing at
+  sibling files, and some chain (opensuse.yaml -> opensuse-leap.yaml ->
+  opensuse-leap-16.yaml). The working-tree representation varies: a runner
+  with Developer Mode (or admin) preserves them as NTFS symlinks; a plain
+  Windows checkout with core.symlinks=false writes 17-byte plaintext stubs.
+  Reading targets directly from git's object store makes resolution
+  independent of which representation the checkout used.
+
+  This action MUST run before windows_plain_host (which uninstalls Git for
+  Windows), because it shells out to `git ls-tree` and `git cat-file`.
+runs:
+  using: composite
+  steps:
+  - name: Install templates (replicating make's TEMPLATES target)
+    shell: pwsh
+    run: |
+      $ErrorActionPreference = 'Stop'
+      $srcRoot = 'templates'
+      $dstRoot = '_output\share\lima\templates'
+      if (Test-Path $dstRoot) { Remove-Item $dstRoot -Recurse -Force }
+      New-Item -ItemType Directory -Force -Path $dstRoot | Out-Null
+      Copy-Item -Path "$srcRoot\*" -Destination $dstRoot -Recurse -Force
+
+      $linkTargets = @{}
+      foreach ($line in (git ls-tree -r HEAD $srcRoot)) {
+        if ($line -notmatch '^120000\s') { continue }
+        $parts = $line -split "`t", 2
+        $sha = ($parts[0] -split '\s+')[2]
+        $posixPath = $parts[1]
+        $target = (git cat-file blob $sha).Trim()
+        if ($LASTEXITCODE -ne 0) { throw "git cat-file $sha failed: $LASTEXITCODE" }
+        $linkTargets[$posixPath] = $target
+      }
+      if ($LASTEXITCODE -ne 0) { throw "git ls-tree failed: $LASTEXITCODE" }
+
+      foreach ($posixPath in $linkTargets.Keys) {
+        $resolved = $posixPath
+        $depth = 0
+        while ($linkTargets.ContainsKey($resolved)) {
+          if ($depth++ -gt 16) { throw "Symlink chain too deep starting from $posixPath" }
+          $target = $linkTargets[$resolved]
+          $slash = $resolved.LastIndexOf('/')
+          $resolved = if ($slash -ge 0) { "$($resolved.Substring(0, $slash))/$target" } else { $target }
+          $segs = New-Object System.Collections.ArrayList
+          foreach ($s in ($resolved -split '/')) {
+            if ($s -eq '' -or $s -eq '.') { continue }
+            if ($s -eq '..') {
+              if ($segs.Count -gt 0) { $segs.RemoveAt($segs.Count - 1) | Out-Null }
+              continue
+            }
+            $segs.Add($s) | Out-Null
+          }
+          $resolved = $segs -join '/'
+        }
+        # Defensive: the '..' handling above silently underflows. Guard against
+        # a future symlink edit whose chain resolves outside templates/.
+        if (-not $resolved.StartsWith("$srcRoot/")) {
+          throw "Symlink $posixPath resolved to $resolved, which escapes $srcRoot/"
+        }
+        $srcFile = $resolved -replace '/', '\'
+        $dstFile = Join-Path '_output\share\lima' ($posixPath -replace '/', '\')
+        Write-Host "Resolving symlink: $posixPath -> $resolved"
+        Copy-Item -Force -Path $srcFile -Destination $dstFile
+      }

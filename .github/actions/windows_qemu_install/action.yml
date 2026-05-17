@@ -1,0 +1,11 @@
+name: 'windows qemu install'
+description: Installs QEMU on the Windows runner via winget.
+runs:
+  using: composite
+  steps:
+  - name: Install QEMU
+    shell: pwsh
+    run: |
+      $ErrorActionPreference = 'Stop'
+      winget install --silent --accept-source-agreements --accept-package-agreements --disable-interactivity SoftwareFreedomConservancy.QEMU
+      if ($LASTEXITCODE -ne 0) { throw "winget install QEMU failed: $LASTEXITCODE" }
