@@ -1,0 +1,161 @@
+name: 'windows plain host'
+description: >
+  Uninstalls MSYS2 and Git for Windows from the windows-2025 runner so the
+  job runs against a vanilla Windows toolchain: native OpenSSH from
+  %SystemRoot%\System32\OpenSSH, wsl.exe, and tar. Then verifies they are
+  gone across four layers (filesystem, PATH, binaries, registry) so a
+  runner-image change that reinstalls them fails the job loudly.
+
+  Run AFTER steps that need git CLI (checkout, windows_plain_templates) and
+  BEFORE the build / smoke test steps.
+runs:
+  using: composite
+  steps:
+  - name: Uninstall Git for Windows
+    shell: pwsh
+    run: |
+      $ErrorActionPreference = 'Stop'
+      $uninstaller = 'C:\Program Files\Git\unins000.exe'
+      if (Test-Path $uninstaller) {
+        Write-Host "Running Git for Windows Inno Setup uninstaller..."
+        & $uninstaller /VERYSILENT /NORESTART /SUPPRESSMSGBOXES
+        # The uninstaller forks and the parent exits immediately; wait for
+        # the worker process to finish before we wipe the leftover dir.
+        Wait-Process -Name unins000 -Timeout 120 -ErrorAction SilentlyContinue
+      } else {
+        Write-Host "No Git for Windows uninstaller at $uninstaller; skipping."
+      }
+      foreach ($d in 'C:\Program Files\Git', 'C:\Program Files (x86)\Git') {
+        if (Test-Path $d) {
+          Write-Host "Removing leftover $d"
+          Remove-Item $d -Recurse -Force -ErrorAction SilentlyContinue
+        }
+      }
+
+  - name: Uninstall MSYS2 and standalone mingw
+    shell: pwsh
+    run: |
+      $ErrorActionPreference = 'Stop'
+      # MSYS2 on this runner image is an extracted tree, not a package, so
+      # "uninstall" means killing any process still mapping msys-2.0.dll
+      # then removing the dir. C:\mingw64 and C:\mingw32 are the same shape.
+      $procs = Get-Process | Where-Object {
+        try { $_.Modules.ModuleName -contains 'msys-2.0.dll' } catch { $false }
+      }
+      if ($procs) {
+        Write-Host "Stopping $($procs.Count) process(es) still mapping msys-2.0.dll"
+        $procs | Stop-Process -Force -ErrorAction SilentlyContinue
+        Start-Sleep -Seconds 1
+      }
+      foreach ($d in 'C:\msys64', 'C:\tools\msys64', 'C:\msys32',
+                     'C:\mingw64', 'C:\mingw32') {
+        if (Test-Path $d) {
+          Write-Host "Removing $d"
+          Remove-Item $d -Recurse -Force -ErrorAction SilentlyContinue
+        }
+      }
+
+  - name: Scrub forbidden entries from Machine + User PATH
+    shell: pwsh
+    # The PATH= we publish here is the runner's own Machine + User PATH
+    # with a static deny-list of toolchain prefixes removed — no
+    # PR-controlled data reaches the env file.
+    run: | # zizmor: ignore[github-env]
+      # The uninstall removes the dirs, but the Machine/User PATH still has
+      # stale entries (C:\mingw64\bin stays registered). Rewrite both scopes
+      # so the verify step sees a clean host, then publish the combined PATH
+      # via $GITHUB_ENV — registry changes do not reach the running runner
+      # process. Later steps adding entries (QEMU) must also write PATH= via
+      # $GITHUB_ENV; $GITHUB_PATH is suppressed once $GITHUB_ENV sets PATH.
+      $forbidden = '(?i)(msys|mingw|cygwin|\\Git\\(cmd|bin|usr))'
+      foreach ($scope in @('Machine','User')) {
+        $orig = [Environment]::GetEnvironmentVariable('Path', $scope)
+        if (-not $orig) { continue }
+        $cleaned = ($orig -split ';' | Where-Object { $_ -and ($_ -notmatch $forbidden) }) -join ';'
+        if ($cleaned -ne $orig) {
+          Write-Host "Scrubbing $scope PATH"
+          [Environment]::SetEnvironmentVariable('Path', $cleaned, $scope)
+        }
+      }
+      $machine = [Environment]::GetEnvironmentVariable('Path','Machine')
+      $user = [Environment]::GetEnvironmentVariable('Path','User')
+      $combined = (@($machine, $user) | Where-Object { $_ }) -join ';'
+      Add-Content -Path $env:GITHUB_ENV -Value "PATH=$combined"
+
+  - name: Verify host is vanilla Windows (no MSYS2 / Git for Windows / Cygwin)
+    shell: pwsh
+    run: |
+      $ErrorActionPreference = 'Stop'
+      # This process inherited PATH before the scrub above; refresh it from
+      # the scrubbed Machine + User values so Layer 2 reflects what later
+      # steps inherit.
+      $machine = [Environment]::GetEnvironmentVariable('Path','Machine')
+      $user = [Environment]::GetEnvironmentVariable('Path','User')
+      $env:PATH = (@($machine, $user) | Where-Object { $_ }) -join ';'
+      $fail = @()
+
+      # --- Layer 1: filesystem ---
+      $fsForbidden = @(
+        'C:\msys64', 'C:\tools\msys64', 'C:\msys32',
+        'C:\Program Files\Git', 'C:\Program Files (x86)\Git',
+        'C:\mingw64', 'C:\mingw32',
+        'C:\cygwin', 'C:\cygwin64', 'C:\tools\cygwin'
+      )
+      foreach ($d in $fsForbidden) {
+        if (Test-Path $d) { $fail += "filesystem: $d still exists" }
+      }
+
+      # --- Layer 2: PATH (process + machine + user) ---
+      $pathRegex = '(?i)(msys|mingw|cygwin|\\Git\\(cmd|bin|usr))'
+      foreach ($scope in @('Process','Machine','User')) {
+        $p = [Environment]::GetEnvironmentVariable('Path', $scope)
+        if (-not $p) { continue }
+        foreach ($entry in $p -split ';') {
+          if ($entry -and ($entry -match $pathRegex)) {
+            $fail += ("PATH ({0}): {1}" -f $scope, $entry)
+          }
+        }
+      }
+
+      # --- Layer 3: smoking-gun binaries ---
+      # Any of these resolving on PATH means a toolchain is still reachable.
+      # bash is special: WSL ships %SystemRoot%\System32\bash.exe which is
+      # legitimately present on the wsl2 plain job, so allow only that path.
+      $forbiddenCmds = @('cygpath','pacman','mintty','git','git-bash','git-cmd')
+      foreach ($cmd in $forbiddenCmds) {
+        $g = Get-Command $cmd -ErrorAction SilentlyContinue
+        if ($g) { $fail += ("binary: {0} -> {1}" -f $cmd, $g.Source) }
+      }
+      $allowedBash = Join-Path $env:SystemRoot 'System32\bash.exe'
+      $bash = Get-Command bash -ErrorAction SilentlyContinue
+      if ($bash -and ($bash.Source -ne $allowedBash)) {
+        $fail += "binary: bash -> $($bash.Source) (only $allowedBash is allowed)"
+      }
+      $sh = Get-Command sh -ErrorAction SilentlyContinue
+      if ($sh) { $fail += "binary: sh -> $($sh.Source)" }
+
+      # --- Layer 4: registry uninstall keys ---
+      $uninstallRoots = @(
+        'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall',
+        'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall',
+        'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall'
+      )
+      foreach ($root in $uninstallRoots) {
+        if (-not (Test-Path $root)) { continue }
+        $keys = Get-ChildItem $root -ErrorAction SilentlyContinue
+        foreach ($k in $keys) {
+          $props = Get-ItemProperty $k.PSPath -ErrorAction SilentlyContinue
+          if ($props -and $props.DisplayName -and
+              ($props.DisplayName -match '(?i)(msys|git for windows|cygwin|mingw)')) {
+            $fail += ("registry: {0} -> DisplayName='{1}'" -f $k.PSPath, $props.DisplayName)
+          }
+        }
+      }
+
+      if ($fail.Count -gt 0) {
+        Write-Host "Plain-Windows verification FAILED:" -ForegroundColor Red
+        $fail | ForEach-Object { Write-Host "  $_" }
+        Write-Error "Toolchain remnants detected; this runner is not in plain-Windows state."
+        exit 1
+      }
+      Write-Host "Plain-Windows verification PASSED."
