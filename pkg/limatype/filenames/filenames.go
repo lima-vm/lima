@@ -36,6 +36,7 @@ const (
 	CIDataISO               = "cidata.iso"
 	CIDataISODir            = "cidata"
 	CloudConfig             = "cloud-config.yaml"
+	AutounattendXML         = "autounattend.xml"
 	Image                   = "image"      // downloaded VM image; renamed to Disk or ISO during setup
 	ImageIPSW               = "image.ipsw" // hardlink to Image for macOS guests
 	Disk                    = "disk"       // VM disk (or symlink to DiffDiskLegacy for migrated instances)
