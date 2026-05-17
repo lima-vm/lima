@@ -42,7 +42,6 @@ containerd:
 - "wsl2" currently doesn't support many of Lima's options. See [this file](https://github.com/lima-vm/lima/blob/master/pkg/wsl2/wsl_driver_windows.go#L19) for the latest supported options.
 - When running lima using "wsl2", `${LIMA_HOME}/<INSTANCE>/serial.log` will not contain kernel boot logs
 - WSL2 requires a `tar` formatted rootfs archive instead of a VM image. Standard VM disk images (like `.qcow2`, `.raw`, etc.) or `.squashfs` images cannot be natively imported by WSL2.
-- Windows doesn't ship with ssh.exe, gzip.exe, etc. which are used by Lima at various points. The easiest way around this is to run `winget install -e --id Git.MinGit` (winget is now built in to Windows as well), and add the resulting `C:\Program Files\Git\usr\bin\` directory to your path.
 
 ### Rootfs Image Requirements & Building Custom Images
 
@@ -76,3 +75,44 @@ If you want to build and use your own custom rootfs, you can build it from a sta
    docker build -o type=tar,dest=custom-rootfs.tar .
    ```
 
+### Windows toolchain
+
+Lima uses an OpenSSH installation on the host. On a default Windows
+install that is the native binaries in `C:\Windows\System32\OpenSSH\`:
+
+- **OpenSSH Client** (`ssh.exe`, `scp.exe`, `ssh-keygen.exe`) ships by default
+  on Windows 10 build 1803 and later, and covers the WSL2 driver.
+- **`sftp-server.exe`** is part of OpenSSH Server, an [optional Feature on Demand](https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse).
+  Only the QEMU driver's reverse-sshfs mounts need it. Install via
+  `Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0` from an
+  elevated PowerShell, or via Settings → Apps → Optional features.
+
+Installing [Git for Windows](https://gitforwindows.org/)
+(`winget install -e --id Git.Git`) remains supported as an alternative
+to the native binaries. Use the full Git for Windows installer, not
+MinGit — MinGit omits `scp.exe`, `ssh-keygen.exe`, and `cygpath.exe`,
+all of which Lima needs.
+
+Lima detects which ssh toolchain is in use on each `limactl start` and
+picks both the path form and the matching `sftp-server` binary so both
+sides consume the same shape:
+
+- **Cygwin-based ssh** (Git for Windows, MSYS2): paths are converted by
+  `cygpath` to a POSIX form like `/c/Users/USER`, respecting any custom
+  MSYS2 fstab the user has configured. `sftp-server` is resolved from
+  the same toolchain.
+- **Native Windows OpenSSH**: paths are returned with forward slashes,
+  like `C:/Users/USER` — native `ssh`, `ssh-keygen`, and `scp` accept
+  this form directly. `sftp-server.exe` is picked from the sibling
+  directory of `ssh.exe`.
+
+When no matching `sftp-server` is found, the hostagent logs a warning at
+start and lets `sshocker` auto-detect from `PATH`; a missing
+OpenSSH.Server install on a native-only host typically shows up there.
+
+Note: a custom MSYS2 `fstab` that remaps drive prefixes (rare) makes
+Cygwin's `/c/...` and native's `C:/...` resolve to different directories
+on disk. On such a host, do not swap toolchains between `limactl create`
+and `limactl start` on a QEMU instance with a reverse-sshfs mount —
+the mount would point at a different directory across the swap. Default
+installs without `fstab` overrides are unaffected.
