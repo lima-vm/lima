@@ -37,12 +37,13 @@ containerd:
 
 ### Caveats
 - "wsl2" option is only supported on newer versions of Windows (roughly anything since 2019)
+- Windows installs an OpenSSH client in `C:\Windows\System32\OpenSSH\`, and the WSL2 driver needs no other SSH binaries
 
 ### Known Issues
 - "wsl2" currently doesn't support many of Lima's options. See [this file](https://github.com/lima-vm/lima/blob/master/pkg/wsl2/wsl_driver_windows.go#L19) for the latest supported options.
 - When running lima using "wsl2", `${LIMA_HOME}/<INSTANCE>/serial.log` will not contain kernel boot logs
 - WSL2 requires a `tar` formatted rootfs archive instead of a VM image. Standard VM disk images (like `.qcow2`, `.raw`, etc.) or `.squashfs` images cannot be natively imported by WSL2.
-- Windows doesn't ship with ssh.exe, gzip.exe, etc. which are used by Lima at various points. The easiest way around this is to run `winget install -e --id Git.MinGit` (winget is now built in to Windows as well), and add the resulting `C:\Program Files\Git\usr\bin\` directory to your path.
+- Lima unpacks a `.tar.gz` rootfs on its own, but a `.tar.xz`, `.tar.bz2`, or `.tar.zst` one needs the matching `xz`, `bzip2`, or `zstd` binary on your `PATH`, and Windows ships none of them.
 
 ### Rootfs Image Requirements & Building Custom Images
 
