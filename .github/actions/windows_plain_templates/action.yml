@@ -28,7 +28,12 @@ runs:
       Copy-Item -Path "$srcRoot\*" -Destination $dstRoot -Recurse -Force
 
       $linkTargets = @{}
-      foreach ($line in (git ls-tree -r HEAD $srcRoot)) {
+      # Capture before iterating: a partial `git ls-tree` failure would let
+      # foreach run on truncated data, and later `git cat-file` calls would
+      # overwrite $LASTEXITCODE before the failure could be seen.
+      $lsTreeOutput = git ls-tree -r HEAD $srcRoot
+      if ($LASTEXITCODE -ne 0) { throw "git ls-tree failed: $LASTEXITCODE" }
+      foreach ($line in $lsTreeOutput) {
         if ($line -notmatch '^120000\s') { continue }
         $parts = $line -split "`t", 2
         $sha = ($parts[0] -split '\s+')[2]
@@ -37,7 +42,6 @@ runs:
         if ($LASTEXITCODE -ne 0) { throw "git cat-file $sha failed: $LASTEXITCODE" }
         $linkTargets[$posixPath] = $target
       }
-      if ($LASTEXITCODE -ne 0) { throw "git ls-tree failed: $LASTEXITCODE" }
 
       foreach ($posixPath in $linkTargets.Keys) {
         $resolved = $posixPath

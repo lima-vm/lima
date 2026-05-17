@@ -248,46 +248,10 @@ jobs:
     - uses: ./.github/actions/windows_wsl2_setup
     - uses: ./.github/actions/windows_plain_host
     - uses: ./.github/actions/windows_plain_build
-    - name: Smoke test (create / start / shell / copy / stop / delete)
-      env:
-        LIMA_HOME: ${{ runner.temp }}\lima-plain-wsl2
-      run: |
-        $ErrorActionPreference = 'Stop'
-        # Wrap each limactl invocation so a non-zero exit aborts the whole
-        # script. Without this, $ErrorActionPreference does not catch native
-        # command failures and the script silently continues past errors.
-        function Invoke-Limactl {
-          & .\_output\bin\limactl.exe --debug @args
-          if ($LASTEXITCODE -ne 0) { throw "limactl $($args -join ' ') exited $LASTEXITCODE" }
-        }
-        if (Test-Path $env:LIMA_HOME) { Remove-Item $env:LIMA_HOME -Recurse -Force }
-        New-Item -ItemType Directory -Path $env:LIMA_HOME | Out-Null
-        Invoke-Limactl create --tty=false --name=plain .\templates\experimental\wsl2.yaml
-        Invoke-Limactl start plain
-        Invoke-Limactl shell --tty=false plain -- uname -srm
-        'roundtrip' | Out-File -Encoding ascii "$env:LIMA_HOME\rt.txt"
-        Invoke-Limactl copy "$env:LIMA_HOME\rt.txt" plain:/tmp/rt.txt
-        Invoke-Limactl shell --tty=false plain -- cat /tmp/rt.txt
-        Invoke-Limactl stop plain
-        Invoke-Limactl delete --force plain
-    - name: Dump Lima logs on failure
-      if: failure()
-      env:
-        LIMA_HOME: ${{ runner.temp }}\lima-plain-wsl2
-      run: |
-        $instDir = "$env:LIMA_HOME\plain"
-        if (-not (Test-Path $instDir)) {
-          Write-Host "No instance directory at $instDir, nothing to dump."
-          exit 0
-        }
-        Get-ChildItem $instDir | Format-Table Name, Length, LastWriteTime
-        foreach ($name in 'ha.stdout.log','ha.stderr.log','serial.log','lima.yaml','ssh.config') {
-          $p = Join-Path $instDir $name
-          if (Test-Path $p) {
-            Write-Host ("===== {0} =====" -f $p)
-            Get-Content $p
-          }
-        }
+    - uses: ./.github/actions/windows_plain_smoke_test
+      with:
+        template: .\templates\experimental\wsl2.yaml
+        lima-home-suffix: plain-wsl2
 
   windows-plain-qemu:
     # Same shape as windows-plain-wsl2 but exercises the QEMU driver. Covers
@@ -327,6 +291,10 @@ jobs:
       with:
         template: .\templates\default.yaml
         lima-home-suffix: plain-qemu
+        # Force qemu: on Windows, `limactl create` auto-selects wsl2
+        # over qemu, and templates/default.yaml ships a cloud disk
+        # image that the wsl2 driver rejects.
+        vm-type: qemu
 
   qemu:
     name: "Integration tests (QEMU, macOS host)"
