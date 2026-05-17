@@ -1,0 +1,44 @@
+name: 'windows wsl2 setup'
+description: >
+  Enables WSL2 on the Windows runner and imports a dummy distro. The dummy
+  distro is required because `wsl --list --verbose` (called from Lima) fails
+  when no distro is installed -- see lima-vm/lima#1826. Starting with WSL2
+  2.5.7.0 the imported tarball must contain /bin/sh and /etc, hence the
+  scaffolding here.
+runs:
+  using: composite
+  steps:
+  - name: Enable WSL2
+    shell: pwsh
+    run: |
+      $ErrorActionPreference = 'Stop'
+      # PowerShell's $ErrorActionPreference does not propagate to native
+      # commands; check $LASTEXITCODE after every wsl invocation that
+      # gates the runner state.
+      wsl --set-default-version 2
+      if ($LASTEXITCODE -ne 0) { throw "wsl --set-default-version failed: $LASTEXITCODE" }
+      wsl --shutdown
+      if ($LASTEXITCODE -ne 0) { throw "wsl --shutdown failed: $LASTEXITCODE" }
+      # --update reaches a Microsoft update service that returns
+      # transient 403s; treat it as informational, like --status /
+      # --version / --list --online below.
+      wsl --update
+      wsl --status
+      wsl --version
+      wsl --list --online
+  - name: Install dummy WSL2 distro
+    shell: pwsh
+    run: |
+      $ErrorActionPreference = 'Stop'
+      # Write the scratch tarball under $RUNNER_TEMP so the action stays
+      # idempotent for local re-runs and leaves no untracked files in
+      # the checked-out workspace.
+      $scratch = Join-Path $env:RUNNER_TEMP 'wsl2-dummy'
+      New-Item -ItemType Directory -Force -Path "$scratch\bin","$scratch\etc" | Out-Null
+      Set-Content -Path "$scratch\bin\sh" -Value ''
+      $tarball = Join-Path $env:RUNNER_TEMP 'wsl2-dummy.tar'
+      tar -cf $tarball --format ustar -C $scratch .
+      if ($LASTEXITCODE -ne 0) { throw "tar -cf $tarball failed: $LASTEXITCODE" }
+      wsl --import dummy $env:TEMP $tarball
+      if ($LASTEXITCODE -ne 0) { throw "wsl --import dummy failed: $LASTEXITCODE" }
+      wsl --list --verbose
