@@ -24,6 +24,9 @@ containerd:
   system: false
   user: false
 
+video:
+  display: default
+
 firmware:
   secureBoot: true
   preEnrollSecureBootKeys: true
