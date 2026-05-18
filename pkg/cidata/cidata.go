@@ -4,11 +4,13 @@
 package cidata
 
 import (
+	"bytes"
 	"compress/gzip"
 	"context"
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"maps"
 	"net"
 	"net/url"
@@ -21,6 +23,8 @@ import (
 	"time"
 	"unicode"
 
+	backendfile "github.com/diskfs/go-diskfs/backend/file"
+	"github.com/diskfs/go-diskfs/filesystem/iso9660"
 	"github.com/docker/go-units"
 	"github.com/sirupsen/logrus"
 
@@ -359,6 +363,10 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 }
 
 func GenerateCloudConfig(ctx context.Context, instDir, name string, instConfig *limatype.LimaYAML) error {
+	if *instConfig.OS == limatype.WINDOWS {
+		os.RemoveAll(filepath.Join(instDir, filenames.CloudConfig)) // delete existing
+		return nil
+	}
 	args, err := templateArgs(ctx, false, instDir, name, instConfig, 0, 0, 0, "", false, false, false)
 	if err != nil {
 		return err
@@ -384,6 +392,27 @@ func GenerateCloudConfig(ctx context.Context, instDir, name string, instConfig *
 // GenerateISO9660 generates the cidata ISO9660 image (or directory, for noCloudInit)
 // in instDir. It returns the instance ID, which changes on every boot.
 func GenerateISO9660(ctx context.Context, drv driver.Driver, instDir, name string, instConfig *limatype.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort int, guestAgentBinary, nerdctlArchive string, vsockPort int, virtioPort string, noCloudInit, rosettaEnabled, rosettaBinFmt bool) (string, error) {
+	if *instConfig.OS == limatype.WINDOWS {
+		args, err := TemplateArgsForWindows(ctx, instDir, instConfig)
+		if err != nil {
+			return "", err
+		}
+		layout, err := ExecuteTemplateWindowsCIDataISO(args)
+		if err != nil {
+			return "", err
+		}
+		driverEntries, err := virtioDriverEntries(instConfig)
+		if err != nil {
+			return "", err
+		}
+		layout = append(layout, driverEntries...)
+		iid := fmt.Sprintf("iid-%d", time.Now().Unix())
+		if noCloudInit {
+			return iid, writeCIDataDir(filepath.Join(instDir, filenames.CIDataISODir), layout)
+		}
+		return iid, iso9660util.Write(filepath.Join(instDir, filenames.CIDataISO), "cidata", layout, iso9660util.WithJoliet())
+	}
+
 	args, err := templateArgs(ctx, true, instDir, name, instConfig, udpDNSLocalPort, tcpDNSLocalPort, vsockPort, virtioPort, noCloudInit, rosettaEnabled, rosettaBinFmt)
 	if err != nil {
 		return "", err
@@ -539,6 +568,152 @@ func getBootCmds(p []limatype.Provision) []BootCmds {
 
 func diskDeviceNameFromOrder(order int) string {
 	return fmt.Sprintf("vd%c", int('b')+order)
+}
+
+func virtioDriverEntries(instConfig *limatype.LimaYAML) ([]iso9660util.Entry, error) {
+	virtioDriverISO, err := guestDriverISO(instConfig)
+	if err != nil {
+		return nil, err
+	}
+	driverVersion := windowsVirtioVersion(instConfig)
+	driverArch, err := windowsVirtioArch(*instConfig.Arch)
+	if err != nil {
+		return nil, err
+	}
+
+	isoFile, err := os.Open(virtioDriverISO)
+	if err != nil {
+		return nil, err
+	}
+	defer isoFile.Close()
+	fileInfo, err := isoFile.Stat()
+	if err != nil {
+		return nil, err
+	}
+	fsys, err := iso9660.Read(backendfile.New(isoFile, true), fileInfo.Size(), 0, 0)
+	if err != nil {
+		return nil, err
+	}
+	defer fsys.Close()
+
+	var layout []iso9660util.Entry
+	for _, driverName := range windowsVirtioDriverNames() {
+		srcDir := path.Join(driverName, driverVersion, driverArch)
+		dstDir := path.Join(windowsPEDriverRoot, srcDir)
+		entries, err := copyISOFilesUnder(fsys, srcDir, dstDir)
+		if err != nil {
+			return nil, err
+		}
+		if len(entries) == 0 {
+			return nil, fmt.Errorf("could not find Windows virtio driver directory %q in %q", srcDir, virtioDriverISO)
+		}
+		layout = append(layout, entries...)
+	}
+	return layout, nil
+}
+
+func guestDriverISO(instConfig *limatype.LimaYAML) (string, error) {
+	for _, image := range instConfig.GuestDrivers.Images {
+		if image.VMType != "" && image.VMType != limatype.QEMU {
+			continue
+		}
+		if image.Arch != "" && image.Arch != *instConfig.Arch {
+			continue
+		}
+		return localpathutil.Expand(image.Location)
+	}
+	return "", fmt.Errorf("field `guestDrivers.images` must contain a QEMU driver image for %q", *instConfig.Arch)
+}
+
+func windowsVirtioVersion(instConfig *limatype.LimaYAML) string {
+	if instConfig.GuestDrivers.Version != nil && strings.TrimSpace(*instConfig.GuestDrivers.Version) != "" {
+		return normalizeWindowsVirtioVersion(*instConfig.GuestDrivers.Version)
+	}
+	return "w11"
+}
+
+func normalizeWindowsVirtioVersion(version string) string {
+	v := strings.ToLower(strings.TrimSpace(version))
+	v = strings.NewReplacer(" ", "", "-", "", "_", "").Replace(v)
+	switch v {
+	case "windows11", "win11", "11":
+		return "w11"
+	case "windows10", "win10", "10":
+		return "w10"
+	case "windows8.1", "win8.1", "8.1":
+		return "w8.1"
+	case "windows8", "win8", "8":
+		return "w8"
+	case "windows7", "win7", "7":
+		return "w7"
+	case "windowsserver2025", "server2025", "2025":
+		return "2k25"
+	case "windowsserver2022", "server2022", "2022":
+		return "2k22"
+	case "windowsserver2019", "server2019", "2019":
+		return "2k19"
+	case "windowsserver2016", "server2016", "2016":
+		return "2k16"
+	case "windowsserver2012r2", "server2012r2", "2012r2":
+		return "2k12R2"
+	case "windowsserver2012", "server2012", "2012":
+		return "2k12"
+	default:
+		return strings.TrimSpace(version)
+	}
+}
+
+func windowsVirtioArch(arch limatype.Arch) (string, error) {
+	switch arch {
+	case limatype.X8664:
+		return "amd64", nil
+	default:
+		return "", fmt.Errorf("windows virtio drivers support is currently implemented only for %q guests, got %q", limatype.X8664, arch)
+	}
+}
+
+func windowsVirtioDriverNames() []string {
+	return []string{"viostor", "vioscsi", "NetKVM"}
+}
+
+const windowsPEDriverRoot = "$WinPEDriver$"
+
+func windowsVirtioDriverPaths(version, arch string) []string {
+	names := windowsVirtioDriverNames()
+	paths := make([]string, 0, len(names))
+	for _, name := range names {
+		paths = append(paths, strings.ReplaceAll(path.Join(windowsPEDriverRoot, name, version, arch), "/", `\`))
+	}
+	return paths
+}
+
+func copyISOFilesUnder(fsys fs.FS, srcDir, dstDir string) ([]iso9660util.Entry, error) {
+	var layout []iso9660util.Entry
+	srcDirLower := strings.ToLower(srcDir)
+	err := fs.WalkDir(fsys, ".", func(p string, d fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if d.IsDir() {
+			return nil
+		}
+		p = strings.TrimPrefix(p, "./")
+		pLower := strings.ToLower(p)
+		if !strings.HasPrefix(pLower, srcDirLower+"/") {
+			return nil
+		}
+		b, err := fs.ReadFile(fsys, p)
+		if err != nil {
+			return err
+		}
+		rel := p[len(srcDir)+1:]
+		layout = append(layout, iso9660util.Entry{
+			Path:   path.Join(dstDir, rel),
+			Reader: bytes.NewReader(b),
+		})
+		return nil
+	})
+	return layout, err
 }
 
 func writeCIDataDir(rootPath string, layout []iso9660util.Entry) error {

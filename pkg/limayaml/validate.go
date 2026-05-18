@@ -50,7 +50,7 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 	}
 
 	switch *y.OS {
-	case limatype.LINUX, limatype.DARWIN, limatype.FREEBSD:
+	case limatype.LINUX, limatype.DARWIN, limatype.FREEBSD, limatype.WINDOWS:
 	default:
 		errs = errors.Join(errs, fmt.Errorf("field `os` must be one of %q; got %q", limatype.OSTypes, *y.OS))
 	}
@@ -190,6 +190,12 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 		}
 		if *y.Arch != limatype.X8664 {
 			errs = errors.Join(errs, fmt.Errorf("field `firmware.tpm2` is currently implemented only for arch %q, got %q", limatype.X8664, *y.Arch))
+		}
+	}
+	for i, f := range y.GuestDrivers.Images {
+		err := validateFileObject(f.File, fmt.Sprintf("guestDrivers.images[%d]", i))
+		if err != nil {
+			errs = errors.Join(errs, err)
 		}
 	}
 

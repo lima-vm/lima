@@ -40,6 +40,9 @@ import (
 // to be running before timing out.
 const DefaultWatchHostAgentEventsTimeout = 10 * time.Minute
 
+// DefaultWindowsWatchHostAgentEventsTimeout is longer because the first boot may install Windows from ISO.
+const DefaultWindowsWatchHostAgentEventsTimeout = 60 * time.Minute
+
 type Prepared struct {
 	Driver              driver.Driver
 	GuestAgent          string
@@ -55,6 +58,9 @@ func Prepare(ctx context.Context, inst *limatype.Instance, guestAgent string) (*
 		needsGuestAgent = true
 	case limatype.FREEBSD:
 		// guest agent is not implemented for FreeBSD yet
+		needsGuestAgent = false
+	case limatype.WINDOWS:
+		// guest agent is not implemented for Windows yet
 		needsGuestAgent = false
 	default:
 		needsGuestAgent = !*inst.Config.Plain
@@ -257,9 +263,14 @@ func StartWithPaths(ctx context.Context, inst *limatype.Instance, launchHostAgen
 		return err
 	}
 
+	watchCtx := ctx
+	if inst.Config.OS != nil && *inst.Config.OS == limatype.WINDOWS {
+		watchCtx = WithWatchHostAgentTimeout(watchCtx, DefaultWindowsWatchHostAgentEventsTimeout)
+	}
+
 	watchErrCh := make(chan error)
 	go func() {
-		watchErrCh <- watchHostAgentEvents(ctx, inst, haStdoutPath, haStderrPath, begin, showProgress)
+		watchErrCh <- watchHostAgentEvents(watchCtx, inst, haStdoutPath, haStderrPath, begin, showProgress)
 		close(watchErrCh)
 	}()
 	waitErrCh := make(chan error)
@@ -360,7 +371,7 @@ func watchHostAgentEvents(ctx context.Context, inst *limatype.Instance, haStdout
 			}
 
 			if !isLaunchingShell(ctx) {
-				if *inst.Config.Plain {
+				if *inst.Config.Plain || *inst.Config.OS == limatype.WINDOWS {
 					logrus.Infof("READY. Run `ssh -F %q %s` to open the shell.", inst.SSHConfigFile, inst.Hostname)
 				} else {
 					logrus.Infof("READY. Run `%s` to open the shell.", LimactlShellCmd(inst.Name))

@@ -1,0 +1,36 @@
+# This template expects a Windows installer ISO.
+# Replace the image location with the path to your Windows ISO.
+minimumLimaVersion: 2.0.0
+
+os: "Windows"
+arch: "x86_64"
+vmType: "qemu"
+
+images:
+- location: "~/Downloads/Win11.iso"
+  arch: "x86_64"
+
+cpus: 4
+memory: "4GiB"
+disk: "80GiB"
+
+mounts: []
+mountType: "reverse-sshfs"
+provision: []
+probes: []
+portForwards: []
+
+containerd:
+  system: false
+  user: false
+
+firmware:
+  secureBoot: true
+  preEnrollSecureBootKeys: true
+  tpm2: true
+
+guestDrivers:
+  version: "w11"
+  images:
+  - location: "/usr/share/virtio-win/virtio-win.iso"
+    arch: "x86_64"

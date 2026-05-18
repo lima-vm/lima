@@ -75,6 +75,8 @@ const (
 	QemuEfiVarsFD           = "qemu-efi-vars.fd"    // efi variable store; not always created
 	QemuEfiVarsQCOW2        = "qemu-efi-vars.qcow2" // efi variable store; not always created
 	QemuEfiFullFD           = "qemu-efi-full.fd"    // concatenated efi vars and code; not always created
+	WindowsISOBootKeySent   = "windows-iso-boot-key-sent"
+	WindowsUserPassword     = "windows-user-password"
 	AnsibleInventoryYAML    = "ansible-inventory.yaml"
 
 	// SocketDir is the default location for forwarded sockets with a relative paths in HostSocket.

@@ -106,7 +106,7 @@ func prefixExportParam(script string, guestOS *limatype.OS) (string, error) {
 }
 
 func (a *HostAgent) bashAvailable() bool {
-	return *a.instConfig.OS != limatype.FREEBSD
+	return *a.instConfig.OS != limatype.FREEBSD && *a.instConfig.OS != limatype.WINDOWS
 }
 
 func (a *HostAgent) waitForRequirement(r requirement) error {
@@ -156,6 +156,50 @@ type requirement struct {
 }
 
 func (a *HostAgent) essentialRequirements() []requirement {
+	if *a.instConfig.OS == limatype.WINDOWS {
+		return []requirement{
+			{
+				description: "ssh",
+				script: `#!powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -Command -
+$ErrorActionPreference = 'Stop'
+exit 0
+`,
+				debugHint: `Failed to SSH into the guest.
+Make sure that the YAML field "ssh.localPort" is not used by other processes on the host.
+If any private key under ~/.ssh is protected with a passphrase, you need to have ssh-agent to be running.
+`,
+				noMaster: true,
+			},
+			{
+				description: "Windows setup script to complete",
+				script: `#!powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -Command -
+$ErrorActionPreference = 'Stop'
+if (!(Test-Path 'C:\ProgramData\Lima\setup.done')) {
+    throw 'C:\ProgramData\Lima\setup.done does not exist'
+}
+`,
+				debugHint: `The Windows setup script did not finish yet.
+Check "C:\ProgramData\Lima\windows-setup.ps1" and Windows event logs in the guest.
+`,
+				noMaster: true,
+			},
+			{
+				description: "sshd service to be running",
+				script: `#!powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -Command -
+$ErrorActionPreference = 'Stop'
+$service = Get-Service -Name sshd
+if ($service.Status -ne 'Running') {
+    throw "sshd status is $($service.Status)"
+}
+`,
+				debugHint: `The Windows OpenSSH Server service is not running.
+Check "C:\ProgramData\ssh\logs" and the sshd service status in the guest.
+`,
+				noMaster: true,
+			},
+		}
+	}
+
 	req := make([]requirement, 0)
 	req = append(req,
 		requirement{
@@ -268,6 +312,10 @@ Also see "/var/log/cloud-init-output.log" in the guest.
 }
 
 func (a *HostAgent) finalRequirements() []requirement {
+	if *a.instConfig.OS == limatype.WINDOWS {
+		return nil
+	}
+
 	req := make([]requirement, 0)
 	logLocation := "/var/log/cloud-init-output.log in the guest"
 	if *a.instConfig.OS == limatype.DARWIN {

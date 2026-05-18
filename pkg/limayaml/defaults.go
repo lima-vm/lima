@@ -171,6 +171,9 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 	if y.User.UID == nil {
 		y.User.UID = d.User.UID
 	}
+	if y.User.Password == nil {
+		y.User.Password = d.User.Password
+	}
 	if o.User.Name != nil {
 		y.User.Name = o.User.Name
 	}
@@ -185,6 +188,9 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 	}
 	if o.User.UID != nil {
 		y.User.UID = o.User.UID
+	}
+	if o.User.Password != nil {
+		y.User.Password = o.User.Password
 	}
 	if y.User.Name == nil {
 		y.User.Name = ptr.Of(osutil.LimaUser(ctx, existingLimaVersion, warn, y.OS).Username)
@@ -355,6 +361,29 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 	y.Firmware.Images = slices.Concat(o.Firmware.Images, y.Firmware.Images, d.Firmware.Images)
 	for i := range y.Firmware.Images {
 		f := &y.Firmware.Images[i]
+		if f.Arch == "" {
+			f.Arch = *y.Arch
+		}
+	}
+
+	if y.GuestDrivers.Version == nil {
+		y.GuestDrivers.Version = d.GuestDrivers.Version
+	}
+	if o.GuestDrivers.Version != nil {
+		y.GuestDrivers.Version = o.GuestDrivers.Version
+	}
+	y.GuestDrivers.Images = slices.Concat(o.GuestDrivers.Images, y.GuestDrivers.Images, d.GuestDrivers.Images)
+	if runtime.GOOS == "linux" && *y.OS == limatype.WINDOWS && len(y.GuestDrivers.Images) == 0 {
+		y.GuestDrivers.Images = append(y.GuestDrivers.Images, limatype.FileWithVMType{
+			File: limatype.File{
+				Location: "/usr/share/virtio-win/virtio-win.iso",
+				Arch:     *y.Arch,
+			},
+			VMType: limatype.QEMU,
+		})
+	}
+	for i := range y.GuestDrivers.Images {
+		f := &y.GuestDrivers.Images[i]
 		if f.Arch == "" {
 			f.Arch = *y.Arch
 		}

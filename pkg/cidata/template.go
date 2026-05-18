@@ -5,22 +5,37 @@ package cidata
 
 import (
 	"bytes"
+	"context"
+	"crypto/rand"
 	"embed"
 	"errors"
 	"fmt"
+	"html"
 	"io/fs"
+	"math/big"
+	"os"
 	"path"
+	"path/filepath"
+	"strings"
 
 	"github.com/lima-vm/lima/v2/pkg/identifiers"
 	"github.com/lima-vm/lima/v2/pkg/iso9660util"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
+	"github.com/lima-vm/lima/v2/pkg/sshutil"
 	"github.com/lima-vm/lima/v2/pkg/textutil"
+	"github.com/sirupsen/logrus"
 )
 
 //go:embed cidata.TEMPLATE.d
 var templateFS embed.FS
 
 const templateFSRoot = "cidata.TEMPLATE.d"
+
+//go:embed windows.TEMPLATE.d
+var windowsTemplateFS embed.FS
+
+const windowsTemplateFSRoot = "windows.TEMPLATE.d"
 
 type CACerts struct {
 	RemoveDefaults *bool
@@ -117,6 +132,10 @@ type TemplateArgs struct {
 	Plain                           bool
 	TimeZone                        string
 	NoCloudInit                     bool
+	WindowsUser                     string
+	WindowsPassword                 string
+	WindowsImageIndex               string
+	WindowsDriverPaths              []string
 }
 
 func ValidateTemplateArgs(args *TemplateArgs) error {
@@ -167,14 +186,24 @@ func ExecuteTemplateCIDataISO(args *TemplateArgs) ([]iso9660util.Entry, error) {
 	if err := ValidateTemplateArgs(args); err != nil {
 		return nil, err
 	}
-
 	fsys, err := fs.Sub(templateFS, templateFSRoot)
 	if err != nil {
 		return nil, err
 	}
+	return executeTemplateCIDataFS(fsys, args, func(p string) string { return p })
+}
 
+func ExecuteTemplateWindowsCIDataISO(args *TemplateArgs) ([]iso9660util.Entry, error) {
+	fsys, err := fs.Sub(windowsTemplateFS, windowsTemplateFSRoot)
+	if err != nil {
+		return nil, err
+	}
+	return executeTemplateCIDataFS(fsys, args, windowsTemplatePath)
+}
+
+func executeTemplateCIDataFS(fsys fs.FS, args *TemplateArgs, mapPath func(string) string) ([]iso9660util.Entry, error) {
 	var layout []iso9660util.Entry
-	walkFn := func(path string, d fs.DirEntry, walkErr error) error {
+	walkFn := func(p string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}
@@ -182,9 +211,9 @@ func ExecuteTemplateCIDataISO(args *TemplateArgs) ([]iso9660util.Entry, error) {
 			return nil
 		}
 		if !d.Type().IsRegular() {
-			return fmt.Errorf("got non-regular file %q", path)
+			return fmt.Errorf("got non-regular file %q", p)
 		}
-		templateB, err := fs.ReadFile(fsys, path)
+		templateB, err := fs.ReadFile(fsys, p)
 		if err != nil {
 			return err
 		}
@@ -193,15 +222,120 @@ func ExecuteTemplateCIDataISO(args *TemplateArgs) ([]iso9660util.Entry, error) {
 			return err
 		}
 		layout = append(layout, iso9660util.Entry{
-			Path:   path,
+			Path:   mapPath(p),
 			Reader: bytes.NewReader(b),
 		})
 		return nil
 	}
-
 	if err := fs.WalkDir(fsys, ".", walkFn); err != nil {
 		return nil, err
 	}
-
 	return layout, nil
+}
+
+func windowsTemplatePath(p string) string {
+	switch {
+	case strings.HasPrefix(p, "oem/SystemRoot/"):
+		return path.Join("$OEM$", "$$", strings.TrimPrefix(p, "oem/SystemRoot/"))
+	case strings.HasPrefix(p, "oem/SystemDrive/"):
+		return path.Join("$OEM$", "$1", strings.TrimPrefix(p, "oem/SystemDrive/"))
+	default:
+		return p
+	}
+}
+
+func TemplateArgsForWindows(ctx context.Context, instDir string, instConfig *limatype.LimaYAML) (*TemplateArgs, error) {
+	loadDotSSHPubKeys := false
+	if instConfig.SSH.LoadDotSSHPubKeys != nil {
+		loadDotSSHPubKeys = *instConfig.SSH.LoadDotSSHPubKeys
+	}
+	pubKeys, err := sshutil.DefaultPubKeys(ctx, loadDotSSHPubKeys)
+	if err != nil {
+		return nil, err
+	}
+	if len(pubKeys) == 0 {
+		return nil, errors.New("no SSH key was found, run `ssh-keygen`")
+	}
+	sshPubKeys := make([]string, 0, len(pubKeys))
+	for _, f := range pubKeys {
+		sshPubKeys = append(sshPubKeys, f.Content)
+	}
+	return templateArgsForWindows(instDir, instConfig, sshPubKeys)
+}
+
+func templateArgsForWindows(instDir string, instConfig *limatype.LimaYAML, sshPubKeys []string) (*TemplateArgs, error) {
+	driverArch, err := windowsVirtioArch(*instConfig.Arch)
+	if err != nil {
+		return nil, err
+	}
+	windowsPassword, err := windowsUserPassword(instDir, instConfig)
+	if err != nil {
+		return nil, err
+	}
+	args := &TemplateArgs{
+		WindowsUser:        "lima",
+		WindowsPassword:    windowsPassword,
+		WindowsImageIndex:  "1",
+		WindowsDriverPaths: windowsVirtioDriverPaths(windowsVirtioVersion(instConfig), driverArch),
+		SSHPubKeys:         sshPubKeys,
+	}
+	if instConfig.User.Name != nil && *instConfig.User.Name != "" {
+		args.WindowsUser = *instConfig.User.Name
+	}
+	args.WindowsUser = html.EscapeString(args.WindowsUser)
+	args.WindowsPassword = html.EscapeString(args.WindowsPassword)
+	args.WindowsImageIndex = html.EscapeString(args.WindowsImageIndex)
+	for i := range args.WindowsDriverPaths {
+		args.WindowsDriverPaths[i] = html.EscapeString(args.WindowsDriverPaths[i])
+	}
+	return args, nil
+}
+
+func windowsUserPassword(instDir string, instConfig *limatype.LimaYAML) (string, error) {
+	if instConfig.User.Password != nil && *instConfig.User.Password != "" {
+		return *instConfig.User.Password, nil
+	}
+	passwordPath := filepath.Join(instDir, filenames.WindowsUserPassword)
+	if b, err := os.ReadFile(passwordPath); err == nil {
+		if password := strings.TrimSpace(string(b)); password != "" {
+			if isAlphaNumeric(password) {
+				return password, nil
+			}
+			logrus.Infof("Replacing generated Windows user password in %q because it contains non-alphanumeric characters", passwordPath)
+		}
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return "", err
+	}
+	generated, err := generateAlphaNumericPassword(24)
+	if err != nil {
+		return "", err
+	}
+	if err := os.WriteFile(passwordPath, []byte(generated+"\n"), 0o600); err != nil {
+		return "", err
+	}
+	logrus.Infof("Generated Windows user password and stored it in %q", passwordPath)
+	return generated, nil
+}
+
+func generateAlphaNumericPassword(length int) (string, error) {
+	const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+	b := make([]byte, length)
+	for i := range b {
+		n, err := rand.Int(rand.Reader, big.NewInt(int64(len(alphabet))))
+		if err != nil {
+			return "", err
+		}
+		b[i] = alphabet[n.Int64()]
+	}
+	return string(b), nil
+}
+
+func isAlphaNumeric(s string) bool {
+	for _, r := range s {
+		if r >= '0' && r <= '9' || r >= 'A' && r <= 'Z' || r >= 'a' && r <= 'z' {
+			continue
+		}
+		return false
+	}
+	return s != ""
 }

@@ -422,6 +422,9 @@ func (l *LimaQemuDriver) Start(_ context.Context) (chan error, error) {
 	l.vhostCmds = vhostCmds
 	l.tpmCmd = swtpmCmd
 	l.tpmWaitCh = swtpmWaitCh
+	if shouldSendWindowsInstallerBootKey(l.Instance.Config, qCfg.InstanceDir) {
+		go sendWindowsInstallerBootKey(qCfg)
+	}
 	go func() {
 		if usernetIndex := limayaml.FirstUsernetIndex(l.Instance.Config); usernetIndex != -1 {
 			client := usernet.NewClientByName(l.Instance.Config.Networks[usernetIndex].Lima)
@@ -432,6 +435,36 @@ func (l *LimaQemuDriver) Start(_ context.Context) (chan error, error) {
 		}
 	}()
 	return l.qWaitCh, nil
+}
+
+func shouldSendWindowsInstallerBootKey(cfg *limatype.LimaYAML, instanceDir string) bool {
+	if cfg == nil || cfg.OS == nil || *cfg.OS != limatype.WINDOWS {
+		return false
+	}
+	if !osutil.FileExists(filepath.Join(instanceDir, filenames.ISO)) {
+		return false
+	}
+	return !osutil.FileExists(filepath.Join(instanceDir, filenames.WindowsISOBootKeySent))
+}
+
+func sendWindowsInstallerBootKey(cfg Config) {
+	markerPath := filepath.Join(cfg.InstanceDir, filenames.WindowsISOBootKeySent)
+	qmpSockPath := filepath.Join(cfg.InstanceDir, filenames.QMPSock)
+	if err := waitFileExists(qmpSockPath, 5*time.Second); err != nil {
+		logrus.WithError(err).Warn("failed to wait for QMP socket before sending Windows installer boot key")
+		return
+	}
+	// Wait for the prompt.
+	time.Sleep(1500 * time.Millisecond)
+	if _, err := sendHmpCommand(cfg, "sendkey", "ret"); err != nil {
+		logrus.WithError(err).Warn("failed to send Windows installer boot key")
+		return
+	}
+	if err := os.WriteFile(markerPath, []byte("sent\n"), 0o644); err != nil {
+		logrus.WithError(err).Warnf("failed to write %q", markerPath)
+		return
+	}
+	logrus.Infof("Sent Windows installer boot key and recorded %q", markerPath)
 }
 
 func (l *LimaQemuDriver) Stop(ctx context.Context) error {

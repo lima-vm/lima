@@ -358,6 +358,10 @@ user:
   # Full name or display name of the user.
   # 🟢 Builtin default: user information from the host
   comment: null
+  # Password for the user. Currently used only for Windows guests.
+  # When unset or empty for Windows guests, Lima generates a per-instance password in the instance directory.
+  # 🟢 Builtin default: null
+  password: null
   # Numeric user id. It is not currently possible to specify a group id.
   # 🟢 Builtin default: same as the host user id of the current user (NOT a lookup of the specified "username").
   uid: null
@@ -440,6 +444,14 @@ firmware:
 #    arch: "aarch64"
 #    digest: "sha256:..."
 #    vmType: "qemu"
+
+guestDrivers:
+  # Guest driver media version. For virtio-win this is typically "w11", "w10", "2k25", or "2k22".
+  # 🟢 Builtin default: "w11" for Windows guests
+  version: null
+  # Guest driver media images, such as virtio-win.iso for Windows guests.
+  # 🟢 Builtin default: /usr/share/virtio-win/virtio-win.iso for Windows guests on Linux hosts
+  images: []
 
 audio:
   # EXPERIMENTAL

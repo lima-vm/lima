@@ -53,11 +53,12 @@ type LimaYAML struct {
 	PropagateProxyEnv *bool          `yaml:"propagateProxyEnv,omitempty" json:"propagateProxyEnv,omitempty" jsonschema:"nullable"`
 	CACertificates    CACertificates `yaml:"caCerts,omitempty" json:"caCerts,omitempty"`
 	// Deprecated: Use vmOpts.vz.rosetta instead.
-	Rosetta              Rosetta `yaml:"rosetta,omitempty" json:"rosetta,omitempty"`
-	Plain                *bool   `yaml:"plain,omitempty" json:"plain,omitempty" jsonschema:"nullable"`
-	TimeZone             *string `yaml:"timezone,omitempty" json:"timezone,omitempty" jsonschema:"nullable"`
-	NestedVirtualization *bool   `yaml:"nestedVirtualization,omitempty" json:"nestedVirtualization,omitempty" jsonschema:"nullable"`
-	User                 User    `yaml:"user,omitempty" json:"user,omitempty"`
+	Rosetta              Rosetta      `yaml:"rosetta,omitempty" json:"rosetta,omitempty"`
+	Plain                *bool        `yaml:"plain,omitempty" json:"plain,omitempty" jsonschema:"nullable"`
+	TimeZone             *string      `yaml:"timezone,omitempty" json:"timezone,omitempty" jsonschema:"nullable"`
+	NestedVirtualization *bool        `yaml:"nestedVirtualization,omitempty" json:"nestedVirtualization,omitempty" jsonschema:"nullable"`
+	User                 User         `yaml:"user,omitempty" json:"user,omitempty"`
+	GuestDrivers         GuestDrivers `yaml:"guestDrivers,omitempty" json:"guestDrivers,omitempty"`
 }
 
 type BaseTemplates []LocatorWithDigest
@@ -80,6 +81,7 @@ const (
 	LINUX   OS = "Linux"
 	DARWIN  OS = "Darwin"
 	FREEBSD OS = "FreeBSD"
+	WINDOWS OS = "Windows"
 
 	X8664   Arch = "x86_64"
 	AARCH64 Arch = "aarch64"
@@ -99,7 +101,7 @@ const (
 )
 
 var (
-	OSTypes    = []OS{LINUX, DARWIN, FREEBSD}
+	OSTypes    = []OS{LINUX, DARWIN, FREEBSD, WINDOWS}
 	ArchTypes  = []Arch{X8664, AARCH64, ARMV7L, PPC64LE, RISCV64, S390X}
 	MountTypes = []MountType{REVSSHFS, NINEP, VIRTIOFS, WSLMount}
 	VMTypes    = []VMType{QEMU, VZ, WSL2}
@@ -111,6 +113,8 @@ type User struct {
 	Home    *string `yaml:"home,omitempty" json:"home,omitempty" jsonschema:"nullable"`
 	Shell   *string `yaml:"shell,omitempty" json:"shell,omitempty" jsonschema:"nullable"`
 	UID     *uint32 `yaml:"uid,omitempty" json:"uid,omitempty" jsonschema:"nullable"`
+	// Password is currently used only for Windows guests.
+	Password *string `yaml:"password,omitempty" json:"password,omitempty" jsonschema:"nullable"`
 }
 
 type VMOpts map[VMType]any
@@ -118,6 +122,14 @@ type VMOpts map[VMType]any
 type QEMUOpts struct {
 	MinimumVersion *string `yaml:"minimumVersion,omitempty" json:"minimumVersion,omitempty" jsonschema:"nullable"`
 	CPUType        CPUType `yaml:"cpuType,omitempty" json:"cpuType,omitempty" jsonschema:"nullable"`
+}
+
+type GuestDrivers struct {
+	// Version identifies the guest OS version directory inside driver media.
+	// For virtio-win this is typically "w11", "w10", "2k25", or "2k22".
+	Version *string `yaml:"version,omitempty" json:"version,omitempty" jsonschema:"nullable"`
+	// Images specify driver media such as virtio-win.iso.
+	Images []FileWithVMType `yaml:"images,omitempty" json:"images,omitempty"`
 }
 
 type VZOpts struct {
@@ -360,6 +372,10 @@ func NewOS(osname string) OS {
 		return LINUX
 	case "darwin":
 		return DARWIN
+	case "freebsd":
+		return FREEBSD
+	case "windows":
+		return WINDOWS
 	default:
 		logrus.Warnf("Unknown os: %s", osname)
 		return osname
