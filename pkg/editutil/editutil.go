@@ -76,7 +76,9 @@ func OpenEditor(ctx context.Context, content []byte, hdr string) ([]byte, error)
 		return nil, err
 	}
 
-	editorCmd := exec.CommandContext(ctx, editor, tmpYAMLPath)
+	editorArgs := strings.Fields(editor)
+	editorArgs = append(editorArgs, tmpYAMLPath)
+	editorCmd := exec.CommandContext(ctx, editorArgs[0], editorArgs[1:]...)
 	editorCmd.Env = os.Environ()
 	editorCmd.Stdin = os.Stdin
 	editorCmd.Stdout = os.Stdout
