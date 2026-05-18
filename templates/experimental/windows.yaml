@@ -1,0 +1,43 @@
+# This template is experimental scaffolding for the LFX 2026 Term 2 project
+# "Improve Windows support (host and guest)" (lima-vm/lima#4907).
+#
+# It declares a Windows guest (vmType: qemu, os: Windows) and is accepted by
+# the validator after the schema additions in this PR. The image, the CD-ROM
+# generation, and the first-boot provisioning still need follow-up work:
+#
+#   1. A Lima-provided Cloudbase-Init-enabled Windows qcow2, OR a Packer
+#      recipe under hack/windows-image/ so users can build their own from
+#      the official Microsoft Eval ISO.
+#   2. pkg/cidata branching on guestOS == Windows to emit a Cloudbase-Init
+#      NoCloud data source (cidata.iso with meta-data / user-data the way
+#      Cloudbase-Init reads them on first boot).
+#   3. pkg/driver/qemu plumbing for TPM 2.0 + UEFI when os: Windows.
+#
+# Until those land, `limactl start template://experimental/windows` will not
+# boot a working guest. The template is shipped now so the validator path is
+# exercised in CI and so the schema field is reviewable in isolation.
+
+minimumLimaVersion: "1.4.0"
+
+vmType: "qemu"
+os: "Windows"
+arch: "x86_64"
+
+# Placeholder image. Replace with the real Cloudbase-Init-enabled qcow2 when
+# the image-build recipe lands. The location is intentionally a 404 so any
+# user who tries to `limactl start` this today gets a clear failure rather
+# than a partially-booted Windows VM.
+images:
+- location: "https://example.invalid/lima/windows/win11-eval-cloudbaseinit.qcow2"
+  arch: "x86_64"
+
+cpus: 4
+memory: "8GiB"
+disk: "60GiB"
+
+# Disabled until SMB share-back-to-host or virtio-9p + WinFsp-9p ships.
+mounts: []
+
+ssh:
+  loadDotSSHPubKeys: true
+  forwardAgent: false

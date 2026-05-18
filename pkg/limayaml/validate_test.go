@@ -350,7 +350,7 @@ func TestValidateParamIsUsed(t *testing.T) {
 
 func TestValidateMultipleErrors(t *testing.T) {
 	yamlWithMultipleErrors := `
-os: windows
+os: plan9
 arch: unsupported_arch
 portForwards:
   - guestPort: 22
@@ -369,11 +369,41 @@ provision:
 	err = Validate(y, false)
 	t.Logf("Validation errors: %v", err)
 
-	assert.Error(t, err, "field `os` must be one of [\"Linux\" \"Darwin\" \"FreeBSD\"]; got \"windows\"\n"+
+	assert.Error(t, err, "field `os` must be one of [\"Linux\" \"Darwin\" \"FreeBSD\" \"Windows\"]; got \"plan9\"\n"+
 		"field `arch` must be one of [x86_64 aarch64 armv7l ppc64le riscv64 s390x]; got \"unsupported_arch\"\n"+
 		"field `images` must be set\n"+
 		"field `provision[0].mode` must one of \"system\", \"user\", \"boot\", \"data\", \"dependency\", \"ansible\", or \"yq\"\n"+
 		"field `provision[1].path` must not be empty when mode is \"data\"")
+}
+
+// TestValidateWindowsGuestOS verifies the schema addition from the LFX
+// 2026 Term 2 Windows-support work: os: Windows is now an accepted value,
+// laying the groundwork for Cloudbase-Init or autounattend.xml first-boot
+// provisioning in pkg/cidata (follow-up). See lima-vm/lima#4907.
+func TestValidateWindowsGuestOS(t *testing.T) {
+	tests := []struct {
+		name    string
+		osValue string
+		wantErr string
+	}{
+		{name: "Windows accepted", osValue: "Windows", wantErr: ""},
+		{name: "Linux still accepted", osValue: "Linux", wantErr: ""},
+		{name: "Unknown OS still rejected", osValue: "plan9", wantErr: "got \"plan9\""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			y, err := Load(t.Context(),
+				[]byte("os: "+tt.osValue+"\nimages: [{\"location\": \"/\"}]\n"),
+				"windows-guest.yaml")
+			assert.NilError(t, err)
+			err = Validate(y, false)
+			if tt.wantErr == "" {
+				assert.NilError(t, err)
+			} else {
+				assert.ErrorContains(t, err, tt.wantErr)
+			}
+		})
+	}
 }
 
 func TestValidateAgainstLatestConfig(t *testing.T) {
