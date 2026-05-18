@@ -19,7 +19,7 @@ images:
 - location: https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-genericcloud-arm64.qcow2
   arch: aarch64
 
-- location: https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-genericcloud-ppc64el.qcow2
+- location: https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-generic-ppc64el.qcow2
   arch: ppc64le
 
 mountTypesUnsupported: [9p]

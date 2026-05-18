@@ -7,6 +7,12 @@ images:
 - location: "https://cloud.debian.org/images/cloud/trixie/20260413-2447/debian-13-genericcloud-arm64-20260413-2447.qcow2"
   arch: "aarch64"
   digest: "sha512:9de87e5e9739ec07fe61d40e5a6796e6e97e557ddb7d1eee5cf28619e80c21c0da76fc54713161e52c2719a38b5376e7b3bcfcd468e0b82ab9d33f702a09d601"
+- location: "https://cloud.debian.org/images/cloud/trixie/20260413-2447/debian-13-generic-ppc64el-20260413-2447.qcow2"
+  arch: "ppc64le"
+  digest: "sha512:d8d9345bfa563f95f42788218b2c18e1c7e1bbcb3c2c8a0724c2b98337280abcf9158e9e2483c40a893455669f36a20c7ea149cf1dcc6afbd9d138e96119ca8d"
+- location: "https://cloud.debian.org/images/cloud/trixie/20260413-2447/debian-13-generic-riscv64-20260413-2447.qcow2"
+  arch: "riscv64"
+  digest: "sha512:5e725cd9e1daf39c6d97ab2edd06301c566e1d0d317014ac1c3603f094dfe4ce0267370c4dc2a657eb2090cddae518e97d12e0784639cf1e417126d6cc866db2"
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
 
@@ -16,7 +22,10 @@ images:
 - location: https://cloud.debian.org/images/cloud/trixie/daily/latest/debian-13-genericcloud-arm64-daily.qcow2
   arch: aarch64
 
-- location: https://cloud.debian.org/images/cloud/trixie/daily/latest/debian-13-genericcloud-ppc64el-daily.qcow2
+- location: https://cloud.debian.org/images/cloud/trixie/daily/latest/debian-13-generic-ppc64el-daily.qcow2
   arch: ppc64le
+
+- location: https://cloud.debian.org/images/cloud/trixie/daily/latest/debian-13-generic-riscv64-daily.qcow2
+  arch: riscv64
 
 mountTypesUnsupported: [9p]
