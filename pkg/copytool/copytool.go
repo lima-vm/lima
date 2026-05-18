@@ -15,8 +15,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/v2/pkg/ioutilx"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/sshutil"
 	"github.com/lima-vm/lima/v2/pkg/store"
 )
 
@@ -95,18 +95,52 @@ func New(ctx context.Context, backend string, paths []string, opts *Options) (Co
 func parseCopyPaths(ctx context.Context, paths []string) ([]*Path, error) {
 	var copyPaths []*Path
 
+	// Resolve sshExe lazily, at most once per call. NewSSHExe is itself
+	// uncached and may exec.LookPath on every call.
+	var (
+		sshExe       sshutil.SSHExe
+		sshExeErr    error
+		sshExeLoaded bool
+	)
+	ensureSSHExe := func() (sshutil.SSHExe, error) {
+		if !sshExeLoaded {
+			sshExe, sshExeErr = sshutil.NewSSHExe()
+			sshExeLoaded = true
+		}
+		return sshExe, sshExeErr
+	}
+
 	for _, path := range paths {
 		cp := &Path{}
 		if runtime.GOOS == "windows" {
+			// Detect local absolute paths (C:\..., C:/..., UNC) before
+			// splitting on ":" so we don't parse a drive letter as an
+			// instance name. filepath.IsAbs is deliberate here: a
+			// drive-relative path like "C:foo.txt" is not absolute, so
+			// it still flows through the colon-split below as instance
+			// "C" path "foo.txt". The strict IsAbs check preserves
+			// pre-PR behaviour for single-letter instance names, at the
+			// cost of no longer recognizing "C:foo" as a
+			// local-cwd-relative path — an obscure form the pre-PR
+			// code did not support either. UNC paths pass IsAbs and
+			// flow through PathForSSH; native ssh accepts the
+			// //server/share/... form produced by filepath.ToSlash
+			// (untested — no CI run sends scp a UNC path).
 			if filepath.IsAbs(path) {
-				var err error
-				path, err = ioutilx.WindowsSubsystemPath(ctx, path)
+				sshExe, err := ensureSSHExe()
 				if err != nil {
 					return nil, err
 				}
-			} else {
-				path = filepath.ToSlash(path)
+				path, err = sshutil.PathForSSH(ctx, sshExe, path)
+				if err != nil {
+					return nil, err
+				}
+				cp.Path = path
+				cp.IsRemote = false
+				copyPaths = append(copyPaths, cp)
+				continue
 			}
+			path = filepath.ToSlash(path)
 		}
 
 		parts := strings.SplitN(path, ":", 2)

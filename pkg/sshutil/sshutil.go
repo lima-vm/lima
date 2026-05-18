@@ -60,6 +60,13 @@ func NewSSHExe() (SSHExe, error) {
 		}
 	}
 
+	if runtime.GOOS == "windows" {
+		if exe := pickCompleteSSHOnWindows(); exe != "" {
+			sshExe.Exe = exe
+			return sshExe, nil
+		}
+	}
+
 	executable, err := exec.LookPath("ssh")
 	if err != nil {
 		return SSHExe{}, err
@@ -67,6 +74,193 @@ func NewSSHExe() (SSHExe, error) {
 	sshExe.Exe = executable
 
 	return sshExe, nil
+}
+
+// pickCompleteSSHOnWindows walks $PATH for an ssh.exe whose siblings
+// also include scp.exe and ssh-keygen.exe — Lima needs all three for
+// `limactl create` and `limactl copy`. MinGit ships ssh.exe alone in
+// usr\bin\ without scp or ssh-keygen, so picking it would break those
+// commands; skip it in favour of the next ssh on PATH that has the
+// full set. Falls back to the native install at
+// %SystemRoot%\System32\OpenSSH\ssh.exe (shipped by default on
+// Windows 10 1803 and later) when nothing on PATH is complete.
+// Returns "" when neither a complete PATH install nor the native
+// install is available, leaving the caller to fall through to
+// exec.LookPath (which surfaces a downstream error rather than
+// picking the partial install silently).
+func pickCompleteSSHOnWindows() string {
+	for _, dir := range filepath.SplitList(os.Getenv("PATH")) {
+		if dir == "" {
+			continue
+		}
+		sshPath := filepath.Join(dir, "ssh.exe")
+		if _, err := os.Stat(sshPath); err != nil {
+			continue
+		}
+		if missing := missingSiblings(dir, "scp.exe", "ssh-keygen.exe"); len(missing) > 0 {
+			logrus.Debugf("skipping ssh at %q: missing %v in same directory (likely MinGit or another partial install)", sshPath, missing)
+			continue
+		}
+		return sshPath
+	}
+	nativeSSH := filepath.Join(systemRoot(), "System32", "OpenSSH", "ssh.exe")
+	if _, err := os.Stat(nativeSSH); err == nil {
+		return nativeSSH
+	}
+	return ""
+}
+
+// systemRoot returns the Windows system directory from the
+// %SystemRoot% environment variable, falling back to C:\Windows when
+// the variable is unset. Honours custom installs (Windows PE, some
+// enterprise setups) that put the system root on a non-C: drive.
+func systemRoot() string {
+	if r := os.Getenv("SystemRoot"); r != "" {
+		return r
+	}
+	return `C:\Windows`
+}
+
+func missingSiblings(dir string, siblings ...string) []string {
+	var missing []string
+	for _, s := range siblings {
+		if _, err := os.Stat(filepath.Join(dir, s)); err != nil {
+			missing = append(missing, s)
+		}
+	}
+	return missing
+}
+
+var (
+	// cygwinDetectCache maps a resolved absolute ssh path (with symlinks
+	// evaluated) to the sibling cygpath.exe path, or "" when ssh at that
+	// location is not Cygwin-based. We probe and log each distinct path
+	// once.
+	cygwinDetectCache   = map[string]string{}
+	cygwinDetectCacheRW sync.RWMutex
+)
+
+// IsSSHCygwin reports whether sshExe is a Cygwin-based build of OpenSSH
+// (Git for Windows, MSYS2, or Cygwin itself), as opposed to native
+// Windows OpenSSH. Detection looks for cygpath.exe in the same directory
+// as ssh.exe (the layout Git for Windows and MSYS2 use), after resolving
+// symlinks so shims from chocolatey, scoop, etc. do not throw the check
+// off. Always returns false on non-Windows.
+//
+// Results are cached per resolved absolute path. Detection is logged at
+// Debug level; under concurrent first-hits on the same path, the line
+// may appear more than once (the cached value is still consistent).
+func IsSSHCygwin(sshExe SSHExe) bool {
+	_, ok := cygpathForSSH(sshExe)
+	return ok
+}
+
+// cygpathForSSH locates the cygpath.exe that belongs to the same install
+// as sshExe and reports whether sshExe is Cygwin-based. The returned
+// path is the resolved sibling, so callers that pass it to exec.Command
+// invoke the toolchain's own cygpath even when $SSH points at an ssh
+// outside PATH. On non-Windows or empty input, returns ("", false).
+//
+// Results are cached per resolved absolute path. Detection is logged at
+// Debug level; under concurrent first-hits on the same path, the line
+// may appear more than once (the cached value is still consistent).
+func cygpathForSSH(sshExe SSHExe) (string, bool) {
+	if runtime.GOOS != "windows" || sshExe.Exe == "" {
+		return "", false
+	}
+	path := sshExe.Exe
+	if !filepath.IsAbs(path) {
+		resolved, err := exec.LookPath(path)
+		if err != nil {
+			logrus.WithError(err).Debugf("cygpathForSSH: cannot resolve %q via PATH; assuming native", sshExe.Exe)
+			return "", false
+		}
+		path = resolved
+	}
+	if resolved, err := filepath.EvalSymlinks(path); err == nil {
+		path = resolved
+	}
+	cygwinDetectCacheRW.RLock()
+	cached, ok := cygwinDetectCache[path]
+	cygwinDetectCacheRW.RUnlock()
+	if ok {
+		return cached, cached != ""
+	}
+	cygpathExe := filepath.Join(filepath.Dir(path), "cygpath.exe")
+	if _, err := os.Stat(cygpathExe); err != nil {
+		logrus.Debugf("ssh at %q detected as native Windows OpenSSH (no cygpath.exe alongside)", path)
+		cygpathExe = ""
+	} else {
+		logrus.Debugf("ssh at %q detected as Cygwin-based (found %q alongside)", path, cygpathExe)
+	}
+	cygwinDetectCacheRW.Lock()
+	cygwinDetectCache[path] = cygpathExe
+	cygwinDetectCacheRW.Unlock()
+	return cygpathExe, cygpathExe != ""
+}
+
+// PathForSSH converts orig to the path form Lima's ssh-family invocations
+// expect (ssh, ssh-keygen, scp, sftp, rsync-over-ssh). On non-Windows,
+// returns orig unchanged. On Windows:
+//   - Cygwin-based ssh (Git for Windows, MSYS2): runs the sibling cygpath
+//     to produce a Cygwin-style path like /c/Users/..., so the
+//     conversion respects the same MSYS2 fstab the toolchain itself uses.
+//   - Native Windows OpenSSH: returns the path with forward slashes
+//     (e.g. C:/Users/...), which native ssh, ssh-keygen, and scp accept.
+func PathForSSH(ctx context.Context, sshExe SSHExe, orig string) (string, error) {
+	if runtime.GOOS != "windows" {
+		return orig, nil
+	}
+	if cygpathExe, ok := cygpathForSSH(sshExe); ok {
+		return ioutilx.WindowsSubsystemPathWithCygpath(ctx, cygpathExe, orig)
+	}
+	return filepath.ToSlash(orig), nil
+}
+
+// SftpServerForSSH returns the sftp-server binary that matches sshExe's
+// toolchain, so a locally-spawned sftp-server (as in reverse-sshfs)
+// sees the same Windows path form that PathForSSH produces. Returns
+// "" on non-Windows, when sshExe is empty, or when no matching
+// sftp-server is found — callers can then fall back to whatever
+// auto-detection their library performs.
+//
+// For Cygwin-based ssh (Git for Windows, MSYS2), the sibling cygpath
+// resolves /usr/lib/ssh/sftp-server into the Windows path of that
+// toolchain's sftp-server. For native Windows OpenSSH, sftp-server.exe
+// lives next to ssh.exe (e.g. %SystemRoot%\System32\OpenSSH).
+func SftpServerForSSH(ctx context.Context, sshExe SSHExe) string {
+	if runtime.GOOS != "windows" || sshExe.Exe == "" {
+		return ""
+	}
+	if cygpathExe, ok := cygpathForSSH(sshExe); ok {
+		out, err := exec.CommandContext(ctx, cygpathExe, "-w", "/usr/lib/ssh/sftp-server").Output()
+		if err != nil {
+			return ""
+		}
+		candidate := strings.TrimSpace(string(out))
+		for _, p := range []string{candidate, candidate + ".exe"} {
+			if _, err := os.Stat(p); err == nil {
+				return p
+			}
+		}
+		return ""
+	}
+	path := sshExe.Exe
+	if !filepath.IsAbs(path) {
+		resolved, err := exec.LookPath(path)
+		if err != nil {
+			return ""
+		}
+		path = resolved
+	}
+	if resolved, err := filepath.EvalSymlinks(path); err == nil {
+		path = resolved
+	}
+	sftpServer := filepath.Join(filepath.Dir(path), "sftp-server.exe")
+	if _, err := os.Stat(sftpServer); err != nil {
+		return ""
+	}
+	return sftpServer
 }
 
 type PubKey struct {
@@ -110,7 +304,11 @@ func DefaultPubKeys(ctx context.Context, loadDotSSH bool) ([]PubKey, error) {
 			// no passphrase, no user@host comment
 			privPath := filepath.Join(configDir, filenames.UserPrivateKey)
 			if runtime.GOOS == "windows" {
-				privPath, err = ioutilx.WindowsSubsystemPath(ctx, privPath)
+				sshExe, sshErr := NewSSHExe()
+				if sshErr != nil {
+					return sshErr
+				}
+				privPath, err = PathForSSH(ctx, sshExe, privPath)
 				if err != nil {
 					return err
 				}
@@ -197,7 +395,7 @@ func CommonOpts(ctx context.Context, sshExe SSHExe, useDotSSH bool) ([]string, e
 		return nil, err
 	}
 	var opts []string
-	idf, err := identityFileEntry(ctx, privateKeyPath)
+	idf, err := identityFileEntry(ctx, sshExe, privateKeyPath)
 	if err != nil {
 		return nil, err
 	}
@@ -232,7 +430,7 @@ func CommonOpts(ctx context.Context, sshExe SSHExe, useDotSSH bool) ([]string, e
 				// Fail on permission-related and other path errors
 				return nil, err
 			}
-			idf, err = identityFileEntry(ctx, privateKeyPath)
+			idf, err = identityFileEntry(ctx, sshExe, privateKeyPath)
 			if err != nil {
 				return nil, err
 			}
@@ -284,9 +482,9 @@ func CommonOpts(ctx context.Context, sshExe SSHExe, useDotSSH bool) ([]string, e
 	return opts, nil
 }
 
-func identityFileEntry(ctx context.Context, privateKeyPath string) (string, error) {
+func identityFileEntry(ctx context.Context, sshExe SSHExe, privateKeyPath string) (string, error) {
 	if runtime.GOOS == "windows" {
-		privateKeyPath, err := ioutilx.WindowsSubsystemPath(ctx, privateKeyPath)
+		privateKeyPath, err := PathForSSH(ctx, sshExe, privateKeyPath)
 		if err != nil {
 			return "", err
 		}
@@ -344,7 +542,7 @@ func SSHOpts(ctx context.Context, sshExe SSHExe, instDir, username string, useDo
 	}
 	controlPath := fmt.Sprintf(`ControlPath="%s"`, controlSock)
 	if runtime.GOOS == "windows" {
-		controlSock, err = ioutilx.WindowsSubsystemPath(ctx, controlSock)
+		controlSock, err = PathForSSH(ctx, sshExe, controlSock)
 		if err != nil {
 			return nil, err
 		}
@@ -388,7 +586,11 @@ func SSHOptsRemovingControlPath(opts []string) []string {
 }
 
 func ParseOpenSSHVersion(version []byte) *semver.Version {
-	regex := regexp.MustCompile(`(?m)^OpenSSH_(\d+\.\d+)(?:p(\d+))?\b`)
+	// Matches "OpenSSH_8.4p1 ..." (upstream) and "OpenSSH_for_Windows_9.5p2 ..."
+	// (Win32-OpenSSH). Older Win32-OpenSSH releases use a space between
+	// "Windows" and the version ("OpenSSH_for_Windows 9.5p2"), so the
+	// separator after "_for_Windows" accepts either "_" or " ".
+	regex := regexp.MustCompile(`(?m)^OpenSSH(?:_for_Windows[_ ]|_)(\d+\.\d+)(?:p(\d+))?\b`)
 	matches := regex.FindSubmatch(version)
 	if len(matches) == 3 {
 		if len(matches[2]) == 0 {
@@ -396,6 +598,10 @@ func ParseOpenSSHVersion(version []byte) *semver.Version {
 		}
 		return semver.New(fmt.Sprintf("%s.%s", matches[1], matches[2]))
 	}
+	// Version-gated behaviour (cipher selection, scp URL form) silently
+	// downgrades when we return 0.0.0, so log the unparsed banner to make
+	// the cause traceable in --debug output.
+	logrus.Debugf("ParseOpenSSHVersion: no match in %q; returning 0.0.0", string(version))
 	return &semver.Version{}
 }
 

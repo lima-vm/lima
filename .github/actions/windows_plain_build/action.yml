@@ -1,0 +1,22 @@
+name: 'windows plain build'
+description: >
+  Builds limactl.exe and the Linux/amd64 guest agent with `go build` on a
+  vanilla Windows host (no MSYS2 make / bash). The guest agent must be built
+  separately because limactl looks it up at
+  _output/share/lima/lima-guestagent.Linux-x86_64 when starting an instance,
+  and `go build ./cmd/limactl` does not produce that file.
+runs:
+  using: composite
+  steps:
+  - name: Build limactl and Linux/amd64 guest agent
+    shell: pwsh
+    run: |
+      $ErrorActionPreference = 'Stop'
+      go build -o _output\bin\limactl.exe .\cmd\limactl
+      if ($LASTEXITCODE -ne 0) { throw "limactl build failed: $LASTEXITCODE" }
+      New-Item -ItemType Directory -Force -Path _output\share\lima | Out-Null
+      $env:CGO_ENABLED = '0'
+      $env:GOOS = 'linux'
+      $env:GOARCH = 'amd64'
+      go build -o _output\share\lima\lima-guestagent.Linux-x86_64 .\cmd\lima-guestagent
+      if ($LASTEXITCODE -ne 0) { throw "lima-guestagent build failed: $LASTEXITCODE" }
