@@ -110,7 +110,9 @@ all: binaries manpages
 
 ################################################################################
 AUTHORS: .mailmap .git/HEAD
-	git shortlog --summary --email --group=Author --group=trailer:Co-Authored-By | cut -f2 | sort -fu > $@
+	git shortlog --summary --email --group=Author --group=trailer:Co-Authored-By | \
+		grep -vE '\[bot\]|<(bot|noreply)@' | \
+		cut -f2 | sort -fu > $@
 
 ################################################################################
 # Help
