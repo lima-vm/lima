@@ -80,6 +80,7 @@ const (
 	LINUX   OS = "Linux"
 	DARWIN  OS = "Darwin"
 	FREEBSD OS = "FreeBSD"
+	WINDOWS OS = "Windows"
 
 	X8664   Arch = "x86_64"
 	AARCH64 Arch = "aarch64"
@@ -99,7 +100,7 @@ const (
 )
 
 var (
-	OSTypes    = []OS{LINUX, DARWIN, FREEBSD}
+	OSTypes    = []OS{LINUX, DARWIN, FREEBSD, WINDOWS}
 	ArchTypes  = []Arch{X8664, AARCH64, ARMV7L, PPC64LE, RISCV64, S390X}
 	MountTypes = []MountType{REVSSHFS, NINEP, VIRTIOFS, WSLMount}
 	VMTypes    = []VMType{QEMU, VZ, WSL2}

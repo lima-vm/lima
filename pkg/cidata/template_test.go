@@ -4,6 +4,7 @@
 package cidata
 
 import (
+	"encoding/xml"
 	"io"
 	"strings"
 	"testing"
@@ -167,4 +168,27 @@ func TestTemplate9p(t *testing.T) {
 			assert.Assert(t, strings.Contains(string(b), "mounts:"))
 		}
 	}
+}
+
+func TestAutounattend(t *testing.T) {
+	args := &TemplateArgs{
+		Name: "default",
+	}
+	output, err := ExecuteTemplateAutounattend(args, "amd64")
+	assert.NilError(t, err)
+	t.Log(string(output))
+
+	// Verify the output is well-formed XML
+	assert.Assert(t, xml.Unmarshal(output, new(any)) == nil, "output is not valid XML")
+
+	// Verify key sections are present
+	s := string(output)
+	assert.Assert(t, strings.Contains(s, "Microsoft-Windows-Setup"), "missing disk/install component")
+	assert.Assert(t, strings.Contains(s, "Microsoft-Windows-Shell-Setup"), "missing shell setup component")
+	assert.Assert(t, strings.Contains(s, "OpenSSH.Server"), "missing OpenSSH server capability")
+	assert.Assert(t, strings.Contains(s, "administrators_authorized_keys"), "missing SSH authorized_keys setup")
+	assert.Assert(t, strings.Contains(s, "<ComputerName>"), "missing ComputerName element")
+	assert.Assert(t, strings.Contains(s, "pass=\"windowsPE\""), "missing windowsPE pass")
+	assert.Assert(t, strings.Contains(s, "pass=\"specialize\""), "missing specialize pass")
+	assert.Assert(t, strings.Contains(s, "pass=\"oobeSystem\""), "missing oobeSystem pass")
 }

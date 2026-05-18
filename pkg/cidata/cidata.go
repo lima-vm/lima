@@ -4,6 +4,7 @@
 package cidata
 
 import (
+	"bytes"
 	"compress/gzip"
 	"context"
 	"errors"
@@ -389,6 +390,17 @@ func GenerateISO9660(ctx context.Context, drv driver.Driver, instDir, name strin
 		return "", err
 	}
 
+	// Windows guests use autounattend.xml instead of cloud-init.
+	if *instConfig.OS == limatype.WINDOWS {
+		var winArch string
+		if instConfig.Arch != nil && *instConfig.Arch == limatype.AARCH64 {
+			winArch = "arm64"
+		} else {
+			winArch = "amd64"
+		}
+		return generateWindowsISO(args, instDir, winArch)
+	}
+
 	if err := ValidateTemplateArgs(args); err != nil {
 		return "", err
 	}
@@ -503,6 +515,26 @@ func GenerateISO9660(ctx context.Context, drv driver.Driver, instDir, name strin
 		iso9660Options = append(iso9660Options, iso9660util.WithJoliet())
 	}
 	return args.IID, iso9660util.Write(filepath.Join(instDir, filenames.CIDataISO), "cidata", layout, iso9660Options...)
+}
+
+// generateWindowsISO produces a Joliet ISO containing autounattend.xml.
+// Joliet is required because ISO9660 Level 1 truncates to 8.3 ("AUTOUNAT.XML")
+// which Windows Setup does not recognize.
+func generateWindowsISO(args *TemplateArgs, instDir, arch string) (string, error) {
+	xmlBytes, err := ExecuteTemplateAutounattend(args, arch)
+	if err != nil {
+		return "", fmt.Errorf("failed to render autounattend.xml: %w", err)
+	}
+
+	layout := []iso9660util.Entry{
+		{
+			Path:   "autounattend.xml",
+			Reader: bytes.NewReader(xmlBytes),
+		},
+	}
+
+	isoPath := filepath.Join(instDir, filenames.CIDataISO)
+	return args.IID, iso9660util.Write(isoPath, "autounattend", layout, iso9660util.WithJoliet())
 }
 
 func removeControlChars(s string) string {
