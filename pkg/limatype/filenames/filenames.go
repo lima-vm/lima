@@ -65,11 +65,14 @@ const (
 	HostAgentStderrLog      = "ha.stderr.log"
 	ExternalDriverStderrLog = "driver.stderr.log"
 	VzIdentifier            = "vz-identifier"
-	VzHwModel               = "vz-hwmodel"       // macOS guests only
-	VzAux                   = "vz-aux"           // macOS guests only
-	VzEfi                   = "vz-efi"           // efi variable store
-	QemuEfiCodeFD           = "qemu-efi-code.fd" // efi code; not always created
-	QemuEfiFullFD           = "qemu-efi-full.fd" // concatenated efi vars and code; not always created
+	VzHwModel               = "vz-hwmodel"          // macOS guests only
+	VzAux                   = "vz-aux"              // macOS guests only
+	VzEfi                   = "vz-efi"              // efi variable store
+	QemuEfiCodeFD           = "qemu-efi-code.fd"    // efi code; not always created
+	QemuEfiCodeQCOW2        = "qemu-efi-code.qcow2" // efi code; not always created
+	QemuEfiVarsFD           = "qemu-efi-vars.fd"    // efi variable store; not always created
+	QemuEfiVarsQCOW2        = "qemu-efi-vars.qcow2" // efi variable store; not always created
+	QemuEfiFullFD           = "qemu-efi-full.fd"    // concatenated efi vars and code; not always created
 	AnsibleInventoryYAML    = "ansible-inventory.yaml"
 
 	// SocketDir is the default location for forwarded sockets with a relative paths in HostSocket.

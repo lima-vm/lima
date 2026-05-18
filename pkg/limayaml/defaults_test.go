@@ -96,7 +96,9 @@ func TestFillDefault(t *testing.T) {
 		},
 		TimeZone: ptr.Of(hostTimeZone()),
 		Firmware: limatype.Firmware{
-			LegacyBIOS: ptr.Of(false),
+			LegacyBIOS:              ptr.Of(false),
+			SecureBoot:              ptr.Of(false),
+			PreEnrollSecureBootKeys: ptr.Of(false),
 		},
 		Audio: limatype.Audio{
 			Device: ptr.Of(""),
@@ -292,8 +294,10 @@ func TestFillDefault(t *testing.T) {
 	// Set firmware expectations to match what FillDefault actually does
 	// FillDefault uses the builtin default values, which include LegacyBIOS: ptr.Of(false)
 	expect.Firmware = limatype.Firmware{
-		LegacyBIOS: ptr.Of(false), // This matches what FillDefault actually sets
-		Images:     nil,
+		LegacyBIOS:              ptr.Of(false), // This matches what FillDefault actually sets
+		SecureBoot:              ptr.Of(false),
+		PreEnrollSecureBootKeys: ptr.Of(false),
+		Images:                  nil,
 	}
 
 	expect.NestedVirtualization = ptr.Of(false)
@@ -338,7 +342,9 @@ func TestFillDefault(t *testing.T) {
 		},
 		TimeZone: ptr.Of("Zulu"),
 		Firmware: limatype.Firmware{
-			LegacyBIOS: ptr.Of(true),
+			LegacyBIOS:              ptr.Of(true),
+			SecureBoot:              ptr.Of(false),
+			PreEnrollSecureBootKeys: ptr.Of(false),
 			// Remove driver-specific firmware images from defaults
 		},
 		Audio: limatype.Audio{
@@ -549,7 +555,9 @@ func TestFillDefault(t *testing.T) {
 		},
 		TimeZone: ptr.Of("Universal"),
 		Firmware: limatype.Firmware{
-			LegacyBIOS: ptr.Of(true),
+			LegacyBIOS:              ptr.Of(true),
+			SecureBoot:              ptr.Of(false),
+			PreEnrollSecureBootKeys: ptr.Of(false),
 		},
 		Audio: limatype.Audio{
 			Device: ptr.Of("coreaudio"),

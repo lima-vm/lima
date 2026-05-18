@@ -323,6 +323,26 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		y.Firmware.LegacyBIOS = ptr.Of(false)
 	}
 
+	if y.Firmware.SecureBoot == nil {
+		y.Firmware.SecureBoot = d.Firmware.SecureBoot
+	}
+	if o.Firmware.SecureBoot != nil {
+		y.Firmware.SecureBoot = o.Firmware.SecureBoot
+	}
+	if y.Firmware.SecureBoot == nil {
+		y.Firmware.SecureBoot = ptr.Of(false)
+	}
+	if y.Firmware.PreEnrollSecureBootKeys == nil {
+		y.Firmware.PreEnrollSecureBootKeys = d.Firmware.PreEnrollSecureBootKeys
+	}
+	if o.Firmware.PreEnrollSecureBootKeys != nil {
+		y.Firmware.PreEnrollSecureBootKeys = o.Firmware.PreEnrollSecureBootKeys
+	}
+	if y.Firmware.PreEnrollSecureBootKeys == nil {
+		y.Firmware.PreEnrollSecureBootKeys = ptr.Of(*y.Firmware.SecureBoot)
+	}
+	y.Firmware.Descriptors = slices.Concat(o.Firmware.Descriptors, y.Firmware.Descriptors, d.Firmware.Descriptors)
+
 	y.Firmware.Images = slices.Concat(o.Firmware.Images, y.Firmware.Images, d.Firmware.Images)
 	for i := range y.Firmware.Images {
 		f := &y.Firmware.Images[i]

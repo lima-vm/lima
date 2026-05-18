@@ -420,6 +420,15 @@ firmware:
   # Use legacy BIOS instead of UEFI. Ignored for aarch64 and vz.
   # 🟢 Builtin default: false
   legacyBIOS: null
+  # Enable UEFI Secure Boot. Currently implemented for qemu + x86_64.
+  # 🟢 Builtin default: false
+  secureBoot: null
+  # Require pre-enrolled Secure Boot keys in the firmware variable store.
+  # 🟢 Builtin default: same as firmware.secureBoot
+  preEnrollSecureBootKeys: null
+  # QEMU firmware descriptor JSON files.
+  # 🟢 Builtin default: []
+  descriptors: []
 #  # Override UEFI images
 #  # 🟢 Builtin default: uses VM's default UEFI, except for qemu + aarch64.
 #  # See <https://lists.gnu.org/archive/html/qemu-devel/2023-12/msg01694.html>

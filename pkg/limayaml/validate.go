@@ -170,6 +170,17 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 	}
 
 	// y.Firmware.LegacyBIOS is ignored for aarch64, but not a fatal error.
+	if y.Firmware.LegacyBIOS != nil && *y.Firmware.LegacyBIOS && y.Firmware.SecureBoot != nil && *y.Firmware.SecureBoot {
+		errs = errors.Join(errs, errors.New("field `firmware.secureBoot` requires UEFI, but `firmware.legacyBIOS` is true"))
+	}
+	if y.Firmware.SecureBoot != nil && *y.Firmware.SecureBoot {
+		if *y.VMType != limatype.QEMU {
+			errs = errors.Join(errs, fmt.Errorf("field `firmware.secureBoot` is currently implemented only for vmType %q, got %q", limatype.QEMU, *y.VMType))
+		}
+		if *y.Arch != limatype.X8664 {
+			errs = errors.Join(errs, fmt.Errorf("field `firmware.secureBoot` is currently implemented only for arch %q, got %q", limatype.X8664, *y.Arch))
+		}
+	}
 
 	for i, p := range y.Provision {
 		if p.File != nil {

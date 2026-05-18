@@ -209,6 +209,15 @@ type Firmware struct {
 	// LegacyBIOS is ignored for aarch64.
 	LegacyBIOS *bool `yaml:"legacyBIOS,omitempty" json:"legacyBIOS,omitempty" jsonschema:"nullable"`
 
+	// SecureBoot enables UEFI Secure Boot.
+	SecureBoot *bool `yaml:"secureBoot,omitempty" json:"secureBoot,omitempty" jsonschema:"nullable"`
+
+	// PreEnrollSecureBootKeys requires pre-enrolled Secure Boot keys in the firmware variable store.
+	PreEnrollSecureBootKeys *bool `yaml:"preEnrollSecureBootKeys,omitempty" json:"preEnrollSecureBootKeys,omitempty" jsonschema:"nullable"`
+
+	// Descriptors specifies QEMU firmware descriptor JSON files.
+	Descriptors []string `yaml:"descriptors,omitempty" json:"descriptors,omitempty"`
+
 	// Images specify UEFI images (edk2-aarch64-code.fd.gz).
 	// Defaults to built-in UEFI.
 	Images []FileWithVMType `yaml:"images,omitempty" json:"images,omitempty"`

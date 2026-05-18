@@ -548,13 +548,21 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	}
 	args = appendArgsIfNoConflict(args, "-cpu", cpu)
 
+	// Secure boot
+	secureBoot := y.Firmware.SecureBoot != nil && *y.Firmware.SecureBoot
+	preEnrollSecureBootKeys := y.Firmware.PreEnrollSecureBootKeys != nil && *y.Firmware.PreEnrollSecureBootKeys
+
 	// Machine
 	switch *y.Arch {
 	case limatype.X8664:
+		q35 := "q35"
+		if secureBoot {
+			q35 += ",smm=on"
+		}
 		switch accel {
 		case "tcg":
 			// use q35 machine with vmware io port disabled.
-			args = appendArgsIfNoConflict(args, "-machine", "q35,vmport=off")
+			args = appendArgsIfNoConflict(args, "-machine", q35+",vmport=off")
 			// use tcg accelerator with multi threading with 512MB translation block size
 			// https://qemu-project.gitlab.io/qemu/devel/multi-thread-tcg.html?highlight=tcg
 			// https://qemu-project.gitlab.io/qemu/system/invocation.html?highlight=tcg%20opts
@@ -567,12 +575,12 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 			if version.LessThan(*semver.New("11.0.0")) {
 				// Older versions of QEMU required disabling `kernel-irqchip` explicitly.
 				// It is not recommended to keep using this with QEMU 11.0.0 and newer.
-				args = appendArgsIfNoConflict(args, "-machine", "q35,accel="+accel+",kernel-irqchip=off")
+				args = appendArgsIfNoConflict(args, "-machine", q35+",accel="+accel+",kernel-irqchip=off")
 			} else {
-				args = appendArgsIfNoConflict(args, "-machine", "q35,accel="+accel)
+				args = appendArgsIfNoConflict(args, "-machine", q35+",accel="+accel)
 			}
 		default:
-			args = appendArgsIfNoConflict(args, "-machine", "q35,accel="+accel)
+			args = appendArgsIfNoConflict(args, "-machine", q35+",accel="+accel)
 		}
 	case limatype.AARCH64:
 		machine := "virt,accel=" + accel
@@ -609,6 +617,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	noFirmware := *y.Arch == limatype.PPC64LE || *y.Arch == limatype.S390X || legacyBIOS
 	if !noFirmware {
 		var firmware string
+		var firmwareVars string
 		firmwareInBios := runtime.GOOS == "windows" && version.LessThan(*semver.New("11.0.0"))
 		if envVar := os.Getenv("_LIMA_QEMU_UEFI_IN_BIOS"); envVar != "" {
 			logrus.Warn("use of deprecated _LIMA_QEMU_UEFI_IN_BIOS")
@@ -620,12 +629,38 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 			}
 		}
 		firmwareInBios = firmwareInBios && *y.Arch == limatype.X8664
+		if secureBoot && firmwareInBios {
+			return "", nil, errors.New("field `firmware.secureBoot` requires pflash firmware; -bios firmware is not supported")
+		}
 		downloadedFirmware := filepath.Join(cfg.InstanceDir, filenames.QemuEfiCodeFD)
 		firmwareWithVars := filepath.Join(cfg.InstanceDir, filenames.QemuEfiFullFD)
+		firmwareFormat := qemuFirmwareFormatRaw
+		firmwareVarsFormat := qemuFirmwareFormatRaw
 		if firmwareInBios {
 			if _, stErr := os.Stat(firmwareWithVars); stErr == nil {
 				firmware = firmwareWithVars
 				logrus.Infof("Using existing firmware (%q)", firmware)
+			}
+		} else if secureBoot {
+			firmwareTemplate, err := getFirmwareTemplate(exe, *y.Arch, true, preEnrollSecureBootKeys, y.Firmware.Descriptors)
+			if err != nil {
+				return "", nil, err
+			}
+			if len(y.Firmware.Images) > 0 {
+				logrus.Warn("field `firmware.images` is ignored when `firmware.secureBoot` is true; use `firmware.descriptors` instead")
+			}
+			firmware, firmwareVars, firmwareFormat, firmwareVarsFormat, err = prepareFirmwareTemplate(cfg.InstanceDir, firmwareTemplate, secureBoot)
+			if err != nil {
+				return "", nil, err
+			}
+		} else if len(y.Firmware.Descriptors) > 0 {
+			firmwareTemplate, err := getFirmwareTemplate(exe, *y.Arch, false, false, y.Firmware.Descriptors)
+			if err != nil {
+				return "", nil, err
+			}
+			firmware, firmwareVars, firmwareFormat, firmwareVarsFormat, err = prepareFirmwareTemplate(cfg.InstanceDir, firmwareTemplate, secureBoot)
+			if err != nil {
+				return "", nil, err
 			}
 		} else {
 			if _, stErr := os.Stat(downloadedFirmware); errors.Is(stErr, os.ErrNotExist) {
@@ -650,12 +685,12 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 			}
 		}
 		if firmware == "" {
-			firmware, err = getFirmware(exe, *y.Arch)
-			if err != nil {
-				return "", nil, err
-			}
-			logrus.Infof("Using system firmware (%q)", firmware)
 			if firmwareInBios {
+				firmware, err = getFirmwareCode(exe, *y.Arch)
+				if err != nil {
+					return "", nil, err
+				}
+				logrus.Infof("Using system firmware (%q)", firmware)
 				firmwareVars, err := getFirmwareVars(exe, *y.Arch)
 				if err != nil {
 					return "", nil, err
@@ -685,6 +720,15 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 					return "", nil, err
 				}
 				firmware = firmwareWithVars
+			} else {
+				firmwareTemplate, err := getFirmwareTemplate(exe, *y.Arch, false, false, y.Firmware.Descriptors)
+				if err != nil {
+					return "", nil, err
+				}
+				firmware, firmwareVars, firmwareFormat, firmwareVarsFormat, err = prepareFirmwareTemplate(cfg.InstanceDir, firmwareTemplate, secureBoot)
+				if err != nil {
+					return "", nil, err
+				}
 			}
 		}
 		if firmware != "" {
@@ -692,7 +736,13 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 				logrus.Warn("firmware in `-bios` is deprecated, consider upgrading to QEMU supporting `-drive if=pflash`")
 				args = append(args, "-bios", firmware)
 			} else {
-				args = append(args, "-drive", fmt.Sprintf("if=pflash,format=raw,readonly=on,file=%s", firmware))
+				if secureBoot {
+					args = append(args, "-global", "driver=cfi.pflash01,property=secure,value=on")
+				}
+				args = append(args, "-drive", fmt.Sprintf("if=pflash,unit=0,format=%s,readonly=on,file=%s", firmwareFormat, firmware))
+				if firmwareVars != "" {
+					args = append(args, "-drive", fmt.Sprintf("if=pflash,unit=1,format=%s,file=%s", firmwareVarsFormat, firmwareVars))
+				}
 			}
 		}
 	}
@@ -1169,7 +1219,7 @@ func getQemuVersion(ctx context.Context, qemuExe string) (*semver.Version, error
 	return parseQemuVersion(stdout.String())
 }
 
-func getFirmware(qemuExe string, arch limatype.Arch) (string, error) {
+func getFirmwareCode(qemuExe string, arch limatype.Arch) (string, error) {
 	switch arch {
 	case limatype.X8664, limatype.AARCH64, limatype.ARMV7L, limatype.RISCV64:
 	default:
