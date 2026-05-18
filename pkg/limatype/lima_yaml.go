@@ -215,6 +215,9 @@ type Firmware struct {
 	// PreEnrollSecureBootKeys requires pre-enrolled Secure Boot keys in the firmware variable store.
 	PreEnrollSecureBootKeys *bool `yaml:"preEnrollSecureBootKeys,omitempty" json:"preEnrollSecureBootKeys,omitempty" jsonschema:"nullable"`
 
+	// TPM2 enables a software TPM 2.0 device.
+	TPM2 *bool `yaml:"tpm2,omitempty" json:"tpm2,omitempty" jsonschema:"nullable"`
+
 	// Descriptors specifies QEMU firmware descriptor JSON files.
 	Descriptors []string `yaml:"descriptors,omitempty" json:"descriptors,omitempty"`
 

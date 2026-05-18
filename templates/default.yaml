@@ -426,6 +426,9 @@ firmware:
   # Require pre-enrolled Secure Boot keys in the firmware variable store.
   # 🟢 Builtin default: same as firmware.secureBoot
   preEnrollSecureBootKeys: null
+  # Enable a software TPM 2.0 device. Requires UEFI.
+  # 🟢 Builtin default: false
+  tpm2: null
   # QEMU firmware descriptor JSON files.
   # 🟢 Builtin default: []
   descriptors: []

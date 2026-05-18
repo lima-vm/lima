@@ -341,6 +341,15 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 	if y.Firmware.PreEnrollSecureBootKeys == nil {
 		y.Firmware.PreEnrollSecureBootKeys = ptr.Of(*y.Firmware.SecureBoot)
 	}
+	if y.Firmware.TPM2 == nil {
+		y.Firmware.TPM2 = d.Firmware.TPM2
+	}
+	if o.Firmware.TPM2 != nil {
+		y.Firmware.TPM2 = o.Firmware.TPM2
+	}
+	if y.Firmware.TPM2 == nil {
+		y.Firmware.TPM2 = ptr.Of(false)
+	}
 	y.Firmware.Descriptors = slices.Concat(o.Firmware.Descriptors, y.Firmware.Descriptors, d.Firmware.Descriptors)
 
 	y.Firmware.Images = slices.Concat(o.Firmware.Images, y.Firmware.Images, d.Firmware.Images)

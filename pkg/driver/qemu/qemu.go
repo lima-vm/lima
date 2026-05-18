@@ -551,6 +551,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	// Secure boot
 	secureBoot := y.Firmware.SecureBoot != nil && *y.Firmware.SecureBoot
 	preEnrollSecureBootKeys := y.Firmware.PreEnrollSecureBootKeys != nil && *y.Firmware.PreEnrollSecureBootKeys
+	tpm2 := y.Firmware.TPM2 != nil && *y.Firmware.TPM2
 
 	// Machine
 	switch *y.Arch {
@@ -608,8 +609,23 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	args = appendArgsIfNoConflict(args, "-smp",
 		fmt.Sprintf("%d,sockets=1,cores=%d,threads=1", *y.CPUs, *y.CPUs))
 
+	// TPM
+	if tpm2 {
+		if *y.Arch != limatype.X8664 {
+			return "", nil, fmt.Errorf("field `firmware.tpm2` is currently implemented only for arch %q, got %q", limatype.X8664, *y.Arch)
+		}
+		tpmSock := filepath.Join(cfg.InstanceDir, filenames.SwtpmSock)
+		args = append(args,
+			"-chardev", "socket,id=chrtpm,path="+tpmSock,
+			"-tpmdev", "emulator,id=tpm0,chardev=chrtpm",
+			"-device", "tpm-crb,tpmdev=tpm0")
+	}
+
 	// Firmware
 	legacyBIOS := *y.Firmware.LegacyBIOS
+	if legacyBIOS && tpm2 {
+		return "", nil, errors.New("field `firmware.tpm2` requires UEFI firmware, but firmware.legacyBIOS is true")
+	}
 	if legacyBIOS && *y.Arch != limatype.X8664 && *y.Arch != limatype.ARMV7L {
 		logrus.Warnf("field `firmware.legacyBIOS` is not supported for architecture %q, ignoring", *y.Arch)
 		legacyBIOS = false

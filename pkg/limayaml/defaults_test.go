@@ -99,6 +99,7 @@ func TestFillDefault(t *testing.T) {
 			LegacyBIOS:              ptr.Of(false),
 			SecureBoot:              ptr.Of(false),
 			PreEnrollSecureBootKeys: ptr.Of(false),
+			TPM2:                    ptr.Of(false),
 		},
 		Audio: limatype.Audio{
 			Device: ptr.Of(""),
@@ -297,6 +298,7 @@ func TestFillDefault(t *testing.T) {
 		LegacyBIOS:              ptr.Of(false), // This matches what FillDefault actually sets
 		SecureBoot:              ptr.Of(false),
 		PreEnrollSecureBootKeys: ptr.Of(false),
+		TPM2:                    ptr.Of(false),
 		Images:                  nil,
 	}
 
@@ -345,6 +347,7 @@ func TestFillDefault(t *testing.T) {
 			LegacyBIOS:              ptr.Of(true),
 			SecureBoot:              ptr.Of(false),
 			PreEnrollSecureBootKeys: ptr.Of(false),
+			TPM2:                    ptr.Of(false),
 			// Remove driver-specific firmware images from defaults
 		},
 		Audio: limatype.Audio{
@@ -558,6 +561,7 @@ func TestFillDefault(t *testing.T) {
 			LegacyBIOS:              ptr.Of(true),
 			SecureBoot:              ptr.Of(false),
 			PreEnrollSecureBootKeys: ptr.Of(false),
+			TPM2:                    ptr.Of(false),
 		},
 		Audio: limatype.Audio{
 			Device: ptr.Of("coreaudio"),
