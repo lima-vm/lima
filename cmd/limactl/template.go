@@ -126,7 +126,7 @@ func templateCopyAction(cmd *cobra.Command, args []string) error {
 	if embed && verbatim {
 		return errors.New("--verbatim cannot be used with any of --embed, --embed-all, or --fill")
 	}
-	tmpl, err := limatmpl.Read(cmd.Context(), "", source)
+	tmpl, err := limatmpl.Read(ctx, "", source)
 	if err != nil {
 		return err
 	}
@@ -136,11 +136,11 @@ func templateCopyAction(cmd *cobra.Command, args []string) error {
 	if !verbatim {
 		if embed {
 			// Embed default base.yaml only when fill is true.
-			if err := tmpl.Embed(cmd.Context(), embedAll, fill); err != nil {
+			if err := tmpl.Embed(ctx, embedAll, fill); err != nil {
 				return err
 			}
 		} else {
-			if err := tmpl.UseAbsLocators(); err != nil {
+			if err := tmpl.UseAbsLocators(ctx); err != nil {
 				return err
 			}
 		}
@@ -198,7 +198,7 @@ func templateYQAction(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	locator := args[0]
 	expr := args[1]
-	tmpl, err := limatmpl.Read(cmd.Context(), "", locator)
+	tmpl, err := limatmpl.Read(ctx, "", locator)
 	if err != nil {
 		return err
 	}
@@ -242,7 +242,7 @@ func templateValidateAction(cmd *cobra.Command, args []string) error {
 	}
 
 	for _, arg := range args {
-		tmpl, err := limatmpl.Read(cmd.Context(), "", arg)
+		tmpl, err := limatmpl.Read(ctx, "", arg)
 		if err != nil {
 			return err
 		}

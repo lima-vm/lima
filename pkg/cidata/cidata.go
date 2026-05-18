@@ -398,7 +398,7 @@ func GenerateISO9660(ctx context.Context, drv driver.Driver, instDir, name strin
 		return "", err
 	}
 
-	driverScripts, err := drv.BootScripts()
+	driverScripts, err := drv.BootScripts(ctx)
 	if err != nil {
 		return "", fmt.Errorf("failed to get boot scripts: %w", err)
 	}
