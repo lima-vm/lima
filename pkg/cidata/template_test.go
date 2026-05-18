@@ -168,3 +168,22 @@ func TestTemplate9p(t *testing.T) {
 		}
 	}
 }
+
+func TestAutounattendTemplate(t *testing.T) {
+	args := &TemplateArgs{
+		Name:     "default",
+		Hostname: "lima-win",
+		User:     "foo",
+		UID:      501,
+		Comment:  "Foo",
+		Home:     "/home/foo.guest",
+		Shell:    "/bin/bash",
+		SSHPubKeys: []string{
+			"ssh-rsa dummy foo@example.com",
+		},
+	}
+	config, err := ExecuteTemplateAutounattendXML(args)
+	assert.NilError(t, err)
+	assert.Assert(t, strings.Contains(string(config), "<ComputerName>lima-win</ComputerName>"))
+	assert.Assert(t, strings.Contains(string(config), "ssh-rsa dummy"))
+}

@@ -359,6 +359,10 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 }
 
 func GenerateCloudConfig(ctx context.Context, instDir, name string, instConfig *limatype.LimaYAML) error {
+	if instConfig.OS != nil && *instConfig.OS == limatype.WINDOWS {
+		return GenerateAutounattendXML(ctx, instDir, name, instConfig)
+	}
+
 	args, err := templateArgs(ctx, false, instDir, name, instConfig, 0, 0, 0, "", false, false, false)
 	if err != nil {
 		return err
@@ -379,6 +383,25 @@ func GenerateCloudConfig(ctx context.Context, instDir, name string, instConfig *
 
 	os.RemoveAll(filepath.Join(instDir, filenames.CloudConfig)) // delete existing
 	return os.WriteFile(filepath.Join(instDir, filenames.CloudConfig), config, 0o444)
+}
+
+func GenerateAutounattendXML(ctx context.Context, instDir, name string, instConfig *limatype.LimaYAML) error {
+	args, err := templateArgs(ctx, false, instDir, name, instConfig, 0, 0, 0, "", false, false, false)
+	if err != nil {
+		return err
+	}
+
+	if err := ValidateTemplateArgs(args); err != nil {
+		return err
+	}
+
+	config, err := ExecuteTemplateAutounattendXML(args)
+	if err != nil {
+		return err
+	}
+
+	os.RemoveAll(filepath.Join(instDir, filenames.AutounattendXML))
+	return os.WriteFile(filepath.Join(instDir, filenames.AutounattendXML), config, 0o444)
 }
 
 // GenerateISO9660 generates the cidata ISO9660 image (or directory, for noCloudInit)

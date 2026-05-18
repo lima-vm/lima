@@ -20,6 +20,9 @@ import (
 //go:embed cidata.TEMPLATE.d
 var templateFS embed.FS
 
+//go:embed autounattend.xml.tmpl
+var autounattendTemplate []byte
+
 const templateFSRoot = "cidata.TEMPLATE.d"
 
 type CACerts struct {
@@ -204,4 +207,12 @@ func ExecuteTemplateCIDataISO(args *TemplateArgs) ([]iso9660util.Entry, error) {
 	}
 
 	return layout, nil
+}
+
+func ExecuteTemplateAutounattendXML(args *TemplateArgs) ([]byte, error) {
+	if err := ValidateTemplateArgs(args); err != nil {
+		return nil, err
+	}
+
+	return textutil.ExecuteTemplate(string(autounattendTemplate), args)
 }
