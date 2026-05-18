@@ -6,6 +6,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -225,7 +226,7 @@ func listAction(cmd *cobra.Command, args []string) error {
 		for _, f := range filter {
 			filterExprs = append(filterExprs, "select("+f+")")
 		}
-		instances, err = filterInstances(instances, filterExprs)
+		instances, err = filterInstances(ctx, instances, filterExprs)
 		if err != nil {
 			return err
 		}
@@ -346,7 +347,7 @@ func listAction(cmd *cobra.Command, args []string) error {
 		}
 	} else {
 		var res []byte
-		if res, err = yqutil.EvaluateExpression(yqExpr, buf.Bytes()); err != nil {
+		if res, err = yqutil.EvaluateExpression(ctx, yqExpr, buf.Bytes()); err != nil {
 			return err
 		}
 		str = string(res)
@@ -363,7 +364,7 @@ func listBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra
 }
 
 // filterInstances applies yq expressions to instances and returns the filtered results.
-func filterInstances(instances []*limatype.Instance, yqExprs []string) ([]*limatype.Instance, error) {
+func filterInstances(ctx context.Context, instances []*limatype.Instance, yqExprs []string) ([]*limatype.Instance, error) {
 	if len(yqExprs) == 0 {
 		return instances, nil
 	}
@@ -380,7 +381,7 @@ func filterInstances(instances []*limatype.Instance, yqExprs []string) ([]*limat
 			return nil, fmt.Errorf("failed to marshal instance %#q: %w", instance.Name, err)
 		}
 
-		result, err := yqutil.EvaluateExpression(yqExpr, jsonBytes)
+		result, err := yqutil.EvaluateExpression(ctx, yqExpr, jsonBytes)
 		if err != nil {
 			return nil, fmt.Errorf("failed to apply filter %#q: %w", yqExpr, err)
 		}

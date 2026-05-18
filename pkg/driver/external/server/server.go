@@ -62,14 +62,14 @@ func Serve(ctx context.Context, driver driver.Driver) {
 		return
 	}
 	if *inspectStatus {
-		handleInspectStatus(driver)
+		handleInspectStatus(ctx, driver)
 		return
 	}
 
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 
-	socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("lima-driver-%s-%d.sock", driver.Info().Name, os.Getpid()))
+	socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("lima-driver-%s-%d.sock", driver.Info(ctx).Name, os.Getpid()))
 
 	defer func() {
 		if err := os.Remove(socketPath); err != nil && !os.IsNotExist(err) {
@@ -146,8 +146,8 @@ func Serve(ctx context.Context, driver driver.Driver) {
 		}
 	}()
 
-	go func() {
-		logger.Infof("Starting external driver server for %s", driver.Info().Name)
+	go func(ctx context.Context) {
+		logger.Infof("Starting external driver server for %s", driver.Info(ctx).Name)
 		logger.Infof("Server starting on Unix socket: %s", socketPath)
 		if err := server.Serve(tListener); err != nil {
 			if errors.Is(err, grpc.ErrServerStopped) {
@@ -156,13 +156,13 @@ func Serve(ctx context.Context, driver driver.Driver) {
 				logger.Errorf("Failed to serve: %v", err)
 			}
 		}
-	}()
+	}(ctx)
 
 	<-shutdownCh
 	server.GracefulStop()
 }
 
-func handleInspectStatus(driver driver.Driver) {
+func handleInspectStatus(ctx context.Context, driver driver.Driver) {
 	decoder := json.NewDecoder(os.Stdin)
 	encoder := json.NewEncoder(os.Stdout)
 
@@ -176,7 +176,7 @@ func handleInspectStatus(driver driver.Driver) {
 		fmt.Fprintf(os.Stderr, "Failed to unmarshal instance: %v", err)
 	}
 
-	status := driver.InspectStatus(context.Background(), &inst)
+	status := driver.InspectStatus(ctx, &inst)
 	inst.Status = status
 
 	resp, err := inst.MarshalJSON()
@@ -215,14 +215,14 @@ func driverPIDFilePath(instanceDir, driverName, pidFileOwner string) string {
 // Start begins the driver startup process. It sends an initial response to unblock
 // the client and then streams subsequent errors(if any), as the driver initializes.
 // A final success message is streamed upon successful completion.
-func Start(extDriver *registry.ExternalDriver, instName string) error {
+func Start(ctx context.Context, extDriver *registry.ExternalDriver, instName string) error {
 	extDriver.Logger.Debugf("Starting external driver at %s", extDriver.Path)
 	if instName == "" {
 		return errors.New("instance name cannot be empty")
 	}
 	extDriver.InstanceName = instName
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 	cmd := exec.CommandContext(ctx, extDriver.Path)
 
 	stdout, err := cmd.StdoutPipe()
