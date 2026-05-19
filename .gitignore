@@ -4,3 +4,5 @@ lima.REJECTED.yaml
 default-template.yaml
 schema-limayaml.json
 .config
+poc-windows-guest/images/
+poc-windows-guest/tmp/
