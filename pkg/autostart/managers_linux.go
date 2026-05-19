@@ -10,6 +10,13 @@ func DaemonManager(_ string) autoStartManager {
 	return &notSupportedManager{}
 }
 
+// ManagerWith returns the autostart manager for Linux.
+// The keepAlive parameter is accepted for API compatibility but ignored;
+// systemd restart behavior is configured separately via the unit file.
+func ManagerWith(_ bool) autoStartManager {
+	return Manager()
+}
+
 // Manager returns the autostart manager for Linux.
 func Manager() autoStartManager {
 	if systemd.IsRunningSystemd() {
