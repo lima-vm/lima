@@ -140,10 +140,10 @@ func (d *DriverClient) FillConfig(_ context.Context, _ *limatype.LimaYAML, _ str
 	return errors.New("pre-configured driver action not implemented in client driver")
 }
 
-func (d *DriverClient) RunGUI() error {
+func (d *DriverClient) RunGUI(ctx context.Context) error {
 	d.logger.Debug("Running GUI for the driver instance")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	_, err := d.DriverSvc.RunGUI(ctx, &emptypb.Empty{})
@@ -242,10 +242,10 @@ func (d *DriverClient) ListSnapshots(ctx context.Context) (string, error) {
 	return resp.Snapshots, nil
 }
 
-func (d *DriverClient) ForwardGuestAgent() bool {
+func (d *DriverClient) ForwardGuestAgent(ctx context.Context) bool {
 	d.logger.Debug("Checking if guest agent needs to be forwarded")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	resp, err := d.DriverSvc.ForwardGuestAgent(ctx, &emptypb.Empty{})
@@ -268,10 +268,10 @@ func (d *DriverClient) GuestAgentConn(ctx context.Context) (net.Conn, string, er
 	return nil, "", nil
 }
 
-func (d *DriverClient) Info() driver.Info {
+func (d *DriverClient) Info(ctx context.Context) driver.Info {
 	d.logger.Debug("Getting driver info")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	resp, err := d.DriverSvc.Info(ctx, &emptypb.Empty{})
@@ -290,7 +290,7 @@ func (d *DriverClient) Info() driver.Info {
 	return info
 }
 
-func (d *DriverClient) Configure(inst *limatype.Instance) *driver.ConfiguredDriver {
+func (d *DriverClient) Configure(ctx context.Context, inst *limatype.Instance) *driver.ConfiguredDriver {
 	d.logger.Debugf("Setting config for instance %s with SSH local port %d", inst.Name, inst.SSHLocalPort)
 
 	instJSON, err := inst.MarshalJSON()
@@ -299,7 +299,7 @@ func (d *DriverClient) Configure(inst *limatype.Instance) *driver.ConfiguredDriv
 		return nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	_, err = d.DriverSvc.Configure(ctx, &pb.SetConfigRequest{
@@ -333,9 +333,9 @@ func (d *DriverClient) SSHAddress(ctx context.Context) (string, error) {
 	return resp.Address, nil
 }
 
-func (d *DriverClient) BootScripts() (map[string][]byte, error) {
+func (d *DriverClient) BootScripts(ctx context.Context) (map[string][]byte, error) {
 	d.logger.Debug("Getting boot scripts for the driver instance")
-	resp, err := d.DriverSvc.BootScripts(context.Background(), &emptypb.Empty{})
+	resp, err := d.DriverSvc.BootScripts(ctx, &emptypb.Empty{})
 	if err != nil {
 		d.logger.WithError(err).Error("Failed to get boot scripts")
 		return nil, err

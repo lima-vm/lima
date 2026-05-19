@@ -47,14 +47,14 @@ type Lifecycle interface {
 
 	// BootScripts returns the content of boot scripts to be injected into the vm.
 	// The key must be "boot.<OS>/<SCRIPT>" or "<SCRIPT>" (deprecated alias for "boot.Linux/<SCRIPT>").
-	BootScripts() (map[string][]byte, error)
+	BootScripts(ctx context.Context) (map[string][]byte, error)
 }
 
 // GUI defines GUI-related operations.
 type GUI interface {
 	// RunGUI is for starting GUI synchronously by hostagent. This method should be wait and return only after vm terminates
 	// It returns error if there are any failures
-	RunGUI() error
+	RunGUI(context.Context) error
 
 	ChangeDisplayPassword(ctx context.Context, password string) error
 	DisplayConnection(ctx context.Context) (string, error)
@@ -71,7 +71,7 @@ type SnapshotManager interface {
 // GuestAgent defines operations for the guest agent.
 type GuestAgent interface {
 	// ForwardGuestAgent returns if the guest agent sock needs forwarding by host agent.
-	ForwardGuestAgent() bool
+	ForwardGuestAgent(context.Context) bool
 
 	// GuestAgentConn returns the guest agent connection, or nil (if forwarded by ssh).
 	GuestAgentConn(_ context.Context) (net.Conn, string, error)
@@ -84,12 +84,12 @@ type Driver interface {
 	SnapshotManager
 	GuestAgent
 
-	Info() Info
+	Info(context.Context) Info
 
 	// Configure sets the configuration for the instance.
 	// TODO: merge Configure and FillConfig?
 	// Or come up with a better name to clarify the difference.
-	Configure(inst *limatype.Instance) *ConfiguredDriver
+	Configure(_ context.Context, inst *limatype.Instance) *ConfiguredDriver
 
 	// FillConfig fills and validates the configuration for the instance.
 	// The config is not set to the instance.

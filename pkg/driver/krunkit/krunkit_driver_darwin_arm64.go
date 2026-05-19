@@ -55,7 +55,7 @@ func New() *LimaKrunkitDriver {
 	return &LimaKrunkitDriver{}
 }
 
-func (l *LimaKrunkitDriver) Configure(inst *limatype.Instance) *driver.ConfiguredDriver {
+func (l *LimaKrunkitDriver) Configure(_ context.Context, inst *limatype.Instance) *driver.ConfiguredDriver {
 	l.Instance = inst
 	l.SSHLocalPort = inst.SSHLocalPort
 
@@ -279,7 +279,7 @@ func (l *LimaKrunkitDriver) FillConfig(_ context.Context, cfg *limatype.LimaYAML
 //go:embed boot.Linux/*.sh
 var bootLinuxFS embed.FS
 
-func (l *LimaKrunkitDriver) BootScripts() (map[string][]byte, error) {
+func (l *LimaKrunkitDriver) BootScripts(_ context.Context) (map[string][]byte, error) {
 	scripts := make(map[string][]byte)
 
 	entries, err := bootLinuxFS.ReadDir("boot.Linux")
@@ -314,7 +314,7 @@ func (l *LimaKrunkitDriver) Create(_ context.Context) error {
 	return nil
 }
 
-func (l *LimaKrunkitDriver) Info() driver.Info {
+func (l *LimaKrunkitDriver) Info(_ context.Context) driver.Info {
 	var info driver.Info
 	info.Name = vmType
 	info.VsockPort = vSockPort
@@ -334,7 +334,7 @@ func (l *LimaKrunkitDriver) SSHAddress(_ context.Context) (string, error) {
 	return "127.0.0.1", nil
 }
 
-func (l *LimaKrunkitDriver) ForwardGuestAgent() bool {
+func (l *LimaKrunkitDriver) ForwardGuestAgent(_ context.Context) bool {
 	return false
 }
 
@@ -346,7 +346,7 @@ func (l *LimaKrunkitDriver) InspectStatus(_ context.Context, _ *limatype.Instanc
 	return ""
 }
 
-func (l *LimaKrunkitDriver) RunGUI() error {
+func (l *LimaKrunkitDriver) RunGUI(_ context.Context) error {
 	return nil
 }
 

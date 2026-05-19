@@ -157,17 +157,18 @@ func New(ctx context.Context, instName string, stdout io.Writer, signalCh chan o
 		}
 	}
 
-	limaDriver, err := driverutil.CreateConfiguredDriver(inst, sshLocalPort, driverutil.OwnerHostAgent)
+	limaDriver, err := driverutil.CreateConfiguredDriver(ctx, inst, sshLocalPort, driverutil.OwnerHostAgent)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create driver instance: %w", err)
 	}
 	sshLocalPort = inst.SSHLocalPort
 
-	vSockPort := limaDriver.Info().VsockPort
-	virtioPort := limaDriver.Info().VirtioPort
-	noCloudInit := limaDriver.Info().Features.NoCloudInit
-	rosettaEnabled := limaDriver.Info().Features.RosettaEnabled
-	rosettaBinFmt := limaDriver.Info().Features.RosettaBinFmt
+	info := limaDriver.Info(ctx)
+	vSockPort := info.VsockPort
+	virtioPort := info.VirtioPort
+	noCloudInit := info.Features.NoCloudInit
+	rosettaEnabled := info.Features.RosettaEnabled
+	rosettaBinFmt := info.Features.RosettaBinFmt
 
 	// Disable Rosetta in Plain mode
 	if *inst.Config.Plain {
@@ -424,7 +425,7 @@ func (a *HostAgent) Run(ctx context.Context) error {
 	}
 
 	// WSL instance SSH address isn't known until after VM start
-	if a.driver.Info().Features.DynamicSSHAddress {
+	if a.driver.Info(ctx).Features.DynamicSSHAddress {
 		sshAddr, err := a.driver.SSHAddress(ctx)
 		if err != nil {
 			return err
@@ -476,14 +477,14 @@ func (a *HostAgent) Run(ctx context.Context) error {
 		logrus.Infof("VNC Password: `%s`", vncpwdfile)
 	}
 
-	if a.driver.Info().Features.CanRunGUI {
+	if a.driver.Info(ctx).Features.CanRunGUI {
 		go func() {
 			err = a.startRoutinesAndWait(ctx, errCh)
 			if err != nil {
 				logrus.Error(err)
 			}
 		}()
-		return a.driver.RunGUI()
+		return a.driver.RunGUI(ctx)
 	}
 	return a.startRoutinesAndWait(ctx, errCh)
 }
@@ -691,7 +692,7 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 	// TODO: use vSock (when QEMU for macOS gets support for vSock)
 
 	// Setup all socket forwards and defer their teardown
-	if !(a.driver.Info().Features.SkipSocketForwarding) {
+	if !(a.driver.Info(ctx).Features.SkipSocketForwarding) {
 		logrus.Debugf("Forwarding unix sockets")
 		sshAddress, sshPort := a.sshAddressPort()
 		for _, rule := range a.instConfig.PortForwards {
@@ -712,14 +713,13 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 		for _, rule := range a.instConfig.PortForwards {
 			if rule.GuestSocket != "" {
 				local := hostAddress(rule, &guestagentapi.IPPort{})
-				// using ctx.Background() because ctx has already been cancelled
-				if err := forwardSSH(context.Background(), a.sshConfig, sshAddress, sshPort, local, rule.GuestSocket, verbCancel, rule.Reverse); err != nil {
+				if err := forwardSSH(ctx, a.sshConfig, sshAddress, sshPort, local, rule.GuestSocket, verbCancel, rule.Reverse); err != nil {
 					errs = append(errs, err)
 				}
 			}
 		}
-		if a.driver.ForwardGuestAgent() {
-			if err := forwardSSH(context.Background(), a.sshConfig, sshAddress, sshPort, localUnix, remoteUnix, verbCancel, false); err != nil {
+		if a.driver.ForwardGuestAgent(ctx) {
+			if err := forwardSSH(ctx, a.sshConfig, sshAddress, sshPort, localUnix, remoteUnix, verbCancel, false); err != nil {
 				errs = append(errs, err)
 			}
 		}
@@ -732,7 +732,7 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 		}
 		client := a.getClient()
 		if client == nil || !isGuestAgentSocketAccessible(ctx, client) {
-			if a.driver.ForwardGuestAgent() {
+			if a.driver.ForwardGuestAgent(ctx) {
 				sshAddress, sshPort := a.sshAddressPort()
 				_ = forwardSSH(ctx, a.sshConfig, sshAddress, sshPort, localUnix, remoteUnix, verbForward, false)
 			}
@@ -768,7 +768,7 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 	for {
 		client := a.getClient()
 		if client == nil || !isGuestAgentSocketAccessible(ctx, client) {
-			if a.driver.ForwardGuestAgent() {
+			if a.driver.ForwardGuestAgent(ctx) {
 				sshAddress, sshPort := a.sshAddressPort()
 				_ = forwardSSH(ctx, a.sshConfig, sshAddress, sshPort, localUnix, remoteUnix, verbForward, false)
 			}
