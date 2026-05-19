@@ -48,6 +48,19 @@ The `--user` flag specifies which macOS user the instance runs as (default:
 `$USER`). The plist is installed to
 `/Library/LaunchDaemons/io.lima-vm.daemon.<instance>.plist`.
 
+## Keep-alive behavior
+
+By default (`--keep-alive=true`), launchd will automatically restart the Lima
+host agent if it exits unexpectedly. To disable this:
+
+```bash
+limactl autostart enable --keep-alive=false default
+```
+
+This applies to both `--condition=login` (macOS LaunchAgent) and
+`--condition=boot` (macOS LaunchDaemon). On Linux, restart behavior is
+configured separately in the systemd unit file.
+
 ## Lima < 2.2
 
 Use `limactl start-at-login` (equivalent to `limactl autostart enable --condition=login`):

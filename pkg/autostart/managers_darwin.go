@@ -7,6 +7,15 @@ import "github.com/lima-vm/lima/v2/pkg/autostart/launchd"
 
 // Manager returns the autostart manager for Darwin.
 func Manager() autoStartManager {
+	return ManagerWith(true)
+}
+
+// ManagerWith returns the autostart manager for Darwin with the given options.
+func ManagerWith(keepAlive bool) autoStartManager {
+	extra := map[string]string{}
+	if keepAlive {
+		extra["KeepAlive"] = "true"
+	}
 	return &TemplateFileBasedManager{
 		filePath:              launchd.GetPlistPath,
 		template:              launchd.Template,
@@ -14,6 +23,7 @@ func Manager() autoStartManager {
 		autoStartedIdentifier: launchd.AutoStartedServiceName,
 		requestStart:          launchd.RequestStart,
 		requestStop:           launchd.RequestStop,
+		extraTemplateVars:     extra,
 	}
 }
 
