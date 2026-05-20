@@ -220,6 +220,8 @@ type Firmware struct {
 type Audio struct {
 	// Device is a QEMU audiodev string
 	Device *string `yaml:"device,omitempty" json:"device,omitempty" jsonschema:"nullable"`
+	// Interface is the virtual hardware presentation
+	Interface *string `yaml:"interface,omitempty" json:"interface,omitempty" jsonschema:"nullable"`
 }
 
 type VNCOptions struct {
