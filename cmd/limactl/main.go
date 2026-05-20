@@ -279,7 +279,7 @@ func WrapArgsError(argFn cobra.PositionalArgs) cobra.PositionalArgs {
 			return nil
 		}
 
-		return fmt.Errorf("%#q %s.\nSee '%s --help'.\n\nUsage:  %s\n\n%s",
+		return fmt.Errorf("%#q %s.\nSee `%s --help`.\n\nUsage:  %s\n\n%s",
 			cmd.CommandPath(), err.Error(),
 			cmd.CommandPath(),
 			cmd.UseLine(), cmd.Short,

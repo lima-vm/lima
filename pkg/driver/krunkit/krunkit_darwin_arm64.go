@@ -63,18 +63,18 @@ func Cmdline(inst *limatype.Instance) (*exec.Cmd, error) {
 		for _, d := range inst.Config.AdditionalDisks {
 			disk, derr := store.InspectDisk(d.Name, d.FSType)
 			if derr != nil {
-				return nil, fmt.Errorf("failed to load disk %q: %w", d.Name, derr)
+				return nil, fmt.Errorf("failed to load disk %#q: %w", d.Name, derr)
 			}
 			if disk.Instance != "" {
-				return nil, fmt.Errorf("failed to run attach disk %q, in use by instance %q", disk.Name, disk.Instance)
+				return nil, fmt.Errorf("failed to run attach disk %#q, in use by instance %#q", disk.Name, disk.Instance)
 			}
 			if lerr := disk.Lock(inst.Dir); lerr != nil {
-				return nil, fmt.Errorf("failed to lock disk %q: %w", d.Name, lerr)
+				return nil, fmt.Errorf("failed to lock disk %#q: %w", d.Name, lerr)
 			}
 			extraDiskPath := filepath.Join(disk.Dir, filenames.DataDisk)
-			logrus.Infof("Mounting disk %q on %q", disk.Name, disk.MountPoint)
+			logrus.Infof("Mounting disk %#q on %#q", disk.Name, disk.MountPoint)
 			if cerr := diskUtil.Convert(ctx, raw.Type, extraDiskPath, extraDiskPath, nil, true); cerr != nil {
-				return nil, fmt.Errorf("failed to convert extra disk %q to raw: %w", extraDiskPath, cerr)
+				return nil, fmt.Errorf("failed to convert extra disk %#q to raw: %w", extraDiskPath, cerr)
 			}
 			args = append(args, "--device", fmt.Sprintf("virtio-blk,path=%s,format=raw", extraDiskPath))
 		}

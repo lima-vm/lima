@@ -58,10 +58,10 @@ func installSystemdAction(cmd *cobra.Command, _ []string) error {
 	unitFileChanged := true
 	if _, err := os.Stat(unitPath); !errors.Is(err, os.ErrNotExist) {
 		if existingUnit, err := os.ReadFile(unitPath); err == nil && bytes.Equal(unit, existingUnit) {
-			logrus.Infof("File %q is up-to-date", unitPath)
+			logrus.Infof("File %#q is up-to-date", unitPath)
 			unitFileChanged = false
 		} else {
-			logrus.Infof("File %q needs update", unitPath)
+			logrus.Infof("File %#q needs update", unitPath)
 		}
 	} else {
 		unitDir := filepath.Dir(unitPath)
@@ -73,7 +73,7 @@ func installSystemdAction(cmd *cobra.Command, _ []string) error {
 		if err := os.WriteFile(unitPath, unit, 0o644); err != nil {
 			return err
 		}
-		logrus.Infof("Written file %q", unitPath)
+		logrus.Infof("Written file %#q", unitPath)
 	} else if !guestAgentUpdated {
 		logrus.Info("lima-guestagent.service already up-to-date")
 		return nil

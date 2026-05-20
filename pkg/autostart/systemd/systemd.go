@@ -59,16 +59,16 @@ func AutoStartedUnitName() string {
 
 func RequestStart(ctx context.Context, inst *limatype.Instance) error {
 	if err := systemctl(ctx, "--user", "start", UnitNameFrom(inst.Name)); err != nil {
-		return fmt.Errorf("failed to start the instance %q via systemctl: %w", inst.Name, err)
+		return fmt.Errorf("failed to start the instance %#q via systemctl: %w", inst.Name, err)
 	}
 	return nil
 }
 
 func RequestStop(ctx context.Context, inst *limatype.Instance) (bool, error) {
 	if inst.AutoStartedIdentifier == UnitNameFrom(inst.Name) {
-		logrus.Infof("Stopping the instance %q started by systemd", inst.Name)
+		logrus.Infof("Stopping the instance %#q started by systemd", inst.Name)
 		if err := systemctl(ctx, "--user", "stop", inst.AutoStartedIdentifier); err != nil {
-			return false, fmt.Errorf("failed to stop the instance %q via systemctl: %w", inst.Name, err)
+			return false, fmt.Errorf("failed to stop the instance %#q via systemctl: %w", inst.Name, err)
 		}
 		return true, nil
 	}

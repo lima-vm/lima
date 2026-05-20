@@ -49,7 +49,7 @@ func (t *rsyncTool) IsAvailableOnGuest(ctx context.Context, paths []string) bool
 
 	for instName, inst := range instances {
 		if !checkRsyncOnGuest(ctx, inst) {
-			logrus.Debugf("rsync not available on instance %q", instName)
+			logrus.Debugf("rsync not available on instance %#q", instName)
 			return false
 		}
 	}

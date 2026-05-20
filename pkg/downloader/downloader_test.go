@@ -199,7 +199,7 @@ func countResults(t *testing.T, results chan downloadResult) (downloaded, cached
 			case StatusUsedCache:
 				cached++
 			default:
-				t.Errorf("Unexpected download status %q", result.r.Status)
+				t.Errorf("Unexpected download status %#q", result.r.Status)
 			}
 		}
 	}

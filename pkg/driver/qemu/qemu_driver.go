@@ -110,7 +110,7 @@ func validateConfig(cfg *limatype.LimaYAML) error {
 	}
 	if qemuOpts.MinimumVersion != nil {
 		if _, err := semver.NewVersion(*qemuOpts.MinimumVersion); err != nil {
-			return fmt.Errorf("field `vmOpts.qemu.minimumVersion` must be a semvar value, got %q: %w", *qemuOpts.MinimumVersion, err)
+			return fmt.Errorf("field `vmOpts.qemu.minimumVersion` must be a semvar value, got %#q: %w", *qemuOpts.MinimumVersion, err)
 		}
 	}
 
@@ -135,7 +135,7 @@ func validateArch(ctx context.Context, cfg *limatype.LimaYAML) error {
 func validateMountType(cfg *limatype.LimaYAML) error {
 	// 1. First, check if the user explicitly blocked this mount type in their config.
 	if cfg.MountTypesUnsupported != nil && cfg.MountType != nil && slices.Contains(cfg.MountTypesUnsupported, *cfg.MountType) {
-		return fmt.Errorf("mount type %q is explicitly unsupported", *cfg.MountType)
+		return fmt.Errorf("mount type %#q is explicitly unsupported", *cfg.MountType)
 	}
 
 	// 2. Then, check if the mount type is valid for the current Operating System.
@@ -146,14 +146,14 @@ func validateMountType(cfg *limatype.LimaYAML) error {
 			case limatype.REVSSHFS, limatype.NINEP, limatype.VIRTIOFS:
 				return nil
 			default:
-				return fmt.Errorf("field `mountType` must be one of %v for QEMU driver on Linux, got %q", []string{limatype.REVSSHFS, limatype.NINEP, limatype.VIRTIOFS}, *cfg.MountType)
+				return fmt.Errorf("field `mountType` must be one of %v for QEMU driver on Linux, got %#q", []string{limatype.REVSSHFS, limatype.NINEP, limatype.VIRTIOFS}, *cfg.MountType)
 			}
 		case "darwin":
 			switch *cfg.MountType {
 			case limatype.REVSSHFS, limatype.NINEP:
 				return nil
 			default:
-				return fmt.Errorf("field `mountType` must be %q or %q for QEMU driver on macOS, got %q", limatype.REVSSHFS, limatype.NINEP, *cfg.MountType)
+				return fmt.Errorf("field `mountType` must be %#q or %#q for QEMU driver on macOS, got %#q", limatype.REVSSHFS, limatype.NINEP, *cfg.MountType)
 			}
 		case "windows":
 			// Windows version of QEMU does not support 9p yet, so we should not suggest it.
@@ -162,14 +162,14 @@ func validateMountType(cfg *limatype.LimaYAML) error {
 			case limatype.REVSSHFS:
 				return nil
 			default:
-				return fmt.Errorf("field `mountType` must be %q for QEMU driver on Windows, got %q", limatype.REVSSHFS, *cfg.MountType)
+				return fmt.Errorf("field `mountType` must be %#q for QEMU driver on Windows, got %#q", limatype.REVSSHFS, *cfg.MountType)
 			}
 		default:
 			switch *cfg.MountType {
 			case limatype.REVSSHFS, limatype.NINEP:
 				return nil
 			default:
-				return fmt.Errorf("field `mountType` must be %q or %q for QEMU driver on %s, got %q", limatype.REVSSHFS, limatype.NINEP, runtime.GOOS, *cfg.MountType)
+				return fmt.Errorf("field `mountType` must be %#q or %#q for QEMU driver on %s, got %#q", limatype.REVSSHFS, limatype.NINEP, runtime.GOOS, *cfg.MountType)
 			}
 		}
 	}
@@ -190,7 +190,7 @@ func (l *LimaQemuDriver) FillConfig(_ context.Context, cfg *limatype.LimaYAML, f
 
 	var qemuOpts limatype.QEMUOpts
 	if err := limayaml.Convert(cfg.VMOpts[limatype.QEMU], &qemuOpts, "vmOpts.qemu"); err != nil {
-		logrus.WithError(err).Warnf("Couldn't convert %q", cfg.VMOpts[limatype.QEMU])
+		logrus.WithError(err).Warnf("Couldn't convert %#q", cfg.VMOpts[limatype.QEMU])
 	}
 	if qemuOpts.CPUType == nil {
 		qemuOpts.CPUType = limatype.CPUType{}
@@ -204,7 +204,7 @@ func (l *LimaQemuDriver) FillConfig(_ context.Context, cfg *limatype.LimaYAML, f
 				continue
 			}
 			if existing, ok := qemuOpts.CPUType[arch]; ok && existing != "" && existing != v {
-				logrus.Warnf("Conflicting cpuType for arch %q: top-level=%q, vmOpts.qemu=%q; using vmOpts.qemu value", arch, v, existing)
+				logrus.Warnf("Conflicting cpuType for arch %#q: top-level=%#q, vmOpts.qemu=%#q; using vmOpts.qemu value", arch, v, existing)
 				continue
 			}
 			qemuOpts.CPUType[arch] = v
@@ -250,7 +250,7 @@ func (l *LimaQemuDriver) FillConfig(_ context.Context, cfg *limatype.LimaYAML, f
 	}
 
 	if _, ok := mountTypesUnsupported[*cfg.MountType]; ok {
-		return fmt.Errorf("mount type %q is explicitly unsupported", *cfg.MountType)
+		return fmt.Errorf("mount type %#q is explicitly unsupported", *cfg.MountType)
 	}
 
 	return validateConfig(cfg)
@@ -391,7 +391,7 @@ func (l *LimaQemuDriver) Start(ctx context.Context) (chan error, error) {
 		}()
 	}
 
-	logrus.Infof("Starting QEMU (hint: to watch the boot progress, see %q)", filepath.Join(qCfg.InstanceDir, "serial*.log"))
+	logrus.Infof("Starting QEMU (hint: to watch the boot progress, see %#q)", filepath.Join(qCfg.InstanceDir, "serial*.log"))
 	logrus.Debugf("qCmd.Args: %v", qCmd.Args)
 	if err := qCmd.Start(); err != nil {
 		return nil, err
@@ -457,7 +457,7 @@ func checkBinarySignature(ctx context.Context, vmArch string) error {
 	if !macOSProductVersion.LessThan(*semver.New("12.0.0")) && vmArch != "" {
 		qExe, _, err := Exe(vmArch)
 		if err != nil {
-			return fmt.Errorf("failed to find the QEMU binary for the architecture %q: %w", vmArch, err)
+			return fmt.Errorf("failed to find the QEMU binary for the architecture %#q: %w", vmArch, err)
 		}
 		if accel := Accel(vmArch); accel == "hvf" {
 			entitlementutil.AskToSignIfNotSignedProperly(ctx, qExe)
@@ -545,18 +545,18 @@ func (l *LimaQemuDriver) shutdownQEMU(ctx context.Context, timeout time.Duration
 	qmpSockPath := filepath.Join(l.Instance.Dir, filenames.QMPSock)
 	qmpClient, err := qmp.NewSocketMonitor("unix", qmpSockPath, 5*time.Second)
 	if err != nil {
-		logrus.WithError(err).Warnf("failed to open the QMP socket %q, forcibly killing QEMU", qmpSockPath)
+		logrus.WithError(err).Warnf("failed to open the QMP socket %#q, forcibly killing QEMU", qmpSockPath)
 		return l.killQEMU(ctx, timeout, qCmd, qWaitCh)
 	}
 	if err := qmpClient.Connect(); err != nil {
-		logrus.WithError(err).Warnf("failed to connect to the QMP socket %q, forcibly killing QEMU", qmpSockPath)
+		logrus.WithError(err).Warnf("failed to connect to the QMP socket %#q, forcibly killing QEMU", qmpSockPath)
 		return l.killQEMU(ctx, timeout, qCmd, qWaitCh)
 	}
 	defer func() { _ = qmpClient.Disconnect() }()
 	rawClient := raw.NewMonitor(qmpClient)
 	logrus.Info("Sending QMP system_powerdown command")
 	if err := rawClient.SystemPowerdown(); err != nil {
-		logrus.WithError(err).Warnf("failed to send system_powerdown command via the QMP socket %q, forcibly killing QEMU", qmpSockPath)
+		logrus.WithError(err).Warnf("failed to send system_powerdown command via the QMP socket %#q, forcibly killing QEMU", qmpSockPath)
 		return l.killQEMU(ctx, timeout, qCmd, qWaitCh)
 	}
 	timeoutCtx, timeoutCancel := context.WithTimeout(ctx, timeout)
