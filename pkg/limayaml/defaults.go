@@ -296,6 +296,16 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		y.Audio.Device = ptr.Of("")
 	}
 
+	if y.Audio.Interface == nil {
+		y.Audio.Interface = d.Audio.Interface
+	}
+	if o.Audio.Interface != nil {
+		y.Audio.Interface = o.Audio.Interface
+	}
+	if y.Audio.Interface == nil {
+		y.Audio.Interface = ptr.Of("hda")
+	}
+
 	if y.Video.Display == nil {
 		y.Video.Display = d.Video.Display
 	}
