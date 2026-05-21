@@ -117,6 +117,7 @@ jobs:
       with:
         version: ${{ steps.golangci-lint-version.outputs.GOLANGCI_LINT_VERSION }}
         args: --verbose
+        skip-cache: true
 
   security:
     name: "Vulncheck"
