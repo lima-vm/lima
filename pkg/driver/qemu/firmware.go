@@ -84,13 +84,14 @@ func getFirmwareTemplate(qemuExe string, arch limatype.Arch, secureBoot, preEnro
 		return qemuFirmware{}, err
 	}
 	descriptorPaths = append(slices.Clone(descriptorPaths), descriptors...)
-	if firmware, err := getFirmwareFromDescriptorFiles(descriptorPaths, arch, secureBoot, preEnrollSecureBootKeys); err == nil {
+	firmware, err := getFirmwareFromDescriptorFiles(descriptorPaths, arch, secureBoot, preEnrollSecureBootKeys)
+	if err == nil {
 		return firmware, nil
-	} else if secureBoot {
-		return qemuFirmware{}, err
-	} else {
-		logrus.WithError(err).Debug("failed to find firmware via QEMU descriptors")
 	}
+	if secureBoot {
+		return qemuFirmware{}, err
+	}
+	logrus.WithError(err).Debug("failed to find firmware via QEMU descriptors")
 
 	code, err := getFirmwareCode(qemuExe, arch)
 	if err != nil {
@@ -267,10 +268,13 @@ func firmwareFromDescriptor(descriptor qemuFirmwareDescriptor, descriptorPath st
 	return firmware, true
 }
 
-func firmwareTargetsQ35(targets []struct {
-	Architecture string   `json:"architecture"`
-	Machines     []string `json:"machines"`
-}, arch limatype.Arch) bool {
+func firmwareTargetsQ35(
+	targets []struct {
+		Architecture string   `json:"architecture"`
+		Machines     []string `json:"machines"`
+	},
+	arch limatype.Arch,
+) bool {
 	for _, target := range targets {
 		if target.Architecture != "x86_64" || arch != limatype.X8664 {
 			continue

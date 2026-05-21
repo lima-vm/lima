@@ -652,12 +652,13 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 		firmwareWithVars := filepath.Join(cfg.InstanceDir, filenames.QemuEfiFullFD)
 		firmwareFormat := qemuFirmwareFormatRaw
 		firmwareVarsFormat := qemuFirmwareFormatRaw
-		if firmwareInBios {
+		switch {
+		case firmwareInBios:
 			if _, stErr := os.Stat(firmwareWithVars); stErr == nil {
 				firmware = firmwareWithVars
 				logrus.Infof("Using existing firmware (%q)", firmware)
 			}
-		} else if secureBoot {
+		case secureBoot:
 			firmwareTemplate, err := getFirmwareTemplate(exe, *y.Arch, true, preEnrollSecureBootKeys, y.Firmware.Descriptors)
 			if err != nil {
 				return "", nil, err
@@ -669,7 +670,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 			if err != nil {
 				return "", nil, err
 			}
-		} else if len(y.Firmware.Descriptors) > 0 {
+		case len(y.Firmware.Descriptors) > 0:
 			firmwareTemplate, err := getFirmwareTemplate(exe, *y.Arch, false, false, y.Firmware.Descriptors)
 			if err != nil {
 				return "", nil, err
@@ -678,7 +679,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 			if err != nil {
 				return "", nil, err
 			}
-		} else {
+		default:
 			if _, stErr := os.Stat(downloadedFirmware); errors.Is(stErr, os.ErrNotExist) {
 			loop:
 				for _, f := range y.Firmware.Images {
