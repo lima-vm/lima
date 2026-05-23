@@ -816,9 +816,17 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 				if err != nil {
 					return "", nil, err
 				}
-				args = append(args, "-netdev", fmt.Sprintf("socket,id=net%d,fd={{ fd_connect %q }}", i+1, sock))
-				// TODO: should we also validate that the socket exists, or do we rely on the
-				// networks reconciler to throw an error when the network cannot start?
+				if strings.Contains(string(features.NetdevHelp), "stream") {
+					netdev := fmt.Sprintf("stream,id=net%d,server=off,addr.type=unix,addr.path=%s", i+1, sock)
+					if !version.LessThan(*semver.New("9.2.0")) {
+						netdev += ",reconnect-ms=500"
+					} else if !version.LessThan(*semver.New("8.0.0")) {
+						netdev += ",reconnect=1"
+					}
+					args = append(args, "-netdev", netdev)
+				} else {
+					args = append(args, "-netdev", fmt.Sprintf("socket,id=net%d,fd={{ fd_connect %q }}", i+1, sock))
+				}
 			}
 		} else if nw.Socket != "" {
 			args = append(args, "-netdev", fmt.Sprintf("socket,id=net%d,fd={{ fd_connect %q }}", i+1, nw.Socket))
