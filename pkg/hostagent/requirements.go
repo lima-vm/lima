@@ -25,7 +25,7 @@ func (a *HostAgent) waitForRequirements(label string, requirements []requirement
 	var errs []error
 
 	for i, req := range requirements {
-		logrus.Infof("Waiting for the %s requirement %d of %d: %q", label, i+1, len(requirements), req.description)
+		logrus.Infof("Waiting for the %s requirement %d of %d: %#q", label, i+1, len(requirements), req.description)
 	retryLoop:
 		for j := range retries {
 			err := a.waitForRequirement(req)
@@ -35,11 +35,11 @@ func (a *HostAgent) waitForRequirements(label string, requirements []requirement
 			}
 			if req.fatal {
 				logrus.Infof("No further %s requirements will be checked", label)
-				errs = append(errs, fmt.Errorf("failed to satisfy the %s requirement %d of %d %q: %s; skipping further checks: %w", label, i+1, len(requirements), req.description, req.debugHint, err))
+				errs = append(errs, fmt.Errorf("failed to satisfy the %s requirement %d of %d %#q: %s; skipping further checks: %w", label, i+1, len(requirements), req.description, req.debugHint, err))
 				return errors.Join(errs...)
 			}
 			if j == retries-1 {
-				errs = append(errs, fmt.Errorf("failed to satisfy the %s requirement %d of %d %q: %s: %w", label, i+1, len(requirements), req.description, req.debugHint, err))
+				errs = append(errs, fmt.Errorf("failed to satisfy the %s requirement %d of %d %#q: %s: %w", label, i+1, len(requirements), req.description, req.debugHint, err))
 				break retryLoop
 			}
 			time.Sleep(sleepDuration)
@@ -110,7 +110,7 @@ func (a *HostAgent) bashAvailable() bool {
 }
 
 func (a *HostAgent) waitForRequirement(r requirement) error {
-	logrus.Debugf("executing script %q", r.description)
+	logrus.Debugf("executing script %#q", r.description)
 	script := r.script
 	if a.bashAvailable() {
 		var err error
@@ -140,9 +140,9 @@ func (a *HostAgent) waitForRequirement(r requirement) error {
 		}
 	}
 	stdout, stderr, err := ssh.ExecuteScript(a.instSSHAddress, a.sshLocalPort, sshConfig, script, r.description)
-	logrus.Debugf("stdout=%q, stderr=%q, err=%v", stdout, stderr, err)
+	logrus.Debugf("stdout=%#q, stderr=%#q, err=%v", stdout, stderr, err)
 	if err != nil {
-		return fmt.Errorf("stdout=%q, stderr=%q: %w", stdout, stderr, err)
+		return fmt.Errorf("stdout=%#q, stderr=%#q: %w", stdout, stderr, err)
 	}
 	return nil
 }
@@ -209,7 +209,7 @@ A possible workaround is to run "apt-get install sshfs" in the guest.
 `,
 		})
 		req = append(req, requirement{
-			description: "fuse to \"allow_other\" as user",
+			description: "fuse to allow_other as user",
 			script: `#!/bin/sh
 set -eux
 sudo grep -q ^user_allow_other /etc/fuse*.conf

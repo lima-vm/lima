@@ -111,9 +111,9 @@ func New(ctx context.Context) (*LimaInfo, error) {
 			bin, err := usrlocal.GuestAgentBinary(os, arch)
 			if err != nil {
 				if errors.Is(err, fs.ErrNotExist) {
-					logrus.WithError(err).Debugf("Failed to resolve the guest agent binary for %q-%q", os, arch)
+					logrus.WithError(err).Debugf("Failed to resolve the guest agent binary for %#q-%#q", os, arch)
 				} else {
-					logrus.WithError(err).Warnf("Failed to resolve the guest agent binary for %q-%q", os, arch)
+					logrus.WithError(err).Warnf("Failed to resolve the guest agent binary for %#q-%#q", os, arch)
 				}
 				continue
 			}

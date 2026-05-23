@@ -63,7 +63,7 @@ loop:
 			}
 			var ev Event
 			if err := json.Unmarshal([]byte(line.Text), &ev); err != nil {
-				return fmt.Errorf("failed to unmarshal %q as %T: %w", line.Text, ev, err)
+				return fmt.Errorf("failed to unmarshal %#q as %T: %w", line.Text, ev, err)
 			}
 			logrus.WithField("event", ev).Debugf("received an event")
 			if !begin.IsZero() && ev.Time.Before(begin) {

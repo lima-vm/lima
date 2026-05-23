@@ -50,7 +50,7 @@ func (a *HostAgent) setupMount(ctx context.Context, m limatype.Mount) (*mount, e
 	if *m.SSHFS.FollowSymlinks {
 		sshfsOptions += ",follow_symlinks"
 	}
-	logrus.Infof("Mounting %q on %q", m.Location, *m.MountPoint)
+	logrus.Infof("Mounting %#q on %#q", m.Location, *m.MountPoint)
 
 	resolvedLocation := m.Location
 	if runtime.GOOS == "windows" {
@@ -87,22 +87,22 @@ func (a *HostAgent) setupMount(ctx context.Context, m limatype.Mount) (*mount, e
 		rsf.SSHConfig.AdditionalArgs = sshutil.DisableControlMasterOptsFromSSHArgs(rsf.SSHConfig.AdditionalArgs)
 	}
 	if err := rsf.Prepare(); err != nil {
-		return nil, fmt.Errorf("failed to prepare reverse sshfs for %q on %q: %w", resolvedLocation, *m.MountPoint, err)
+		return nil, fmt.Errorf("failed to prepare reverse sshfs for %#q on %#q: %w", resolvedLocation, *m.MountPoint, err)
 	}
 	if err := rsf.Start(); err != nil {
-		logrus.WithError(err).Warnf("failed to mount reverse sshfs for %q on %q, retrying with `-o nonempty`", resolvedLocation, *m.MountPoint)
+		logrus.WithError(err).Warnf("failed to mount reverse sshfs for %#q on %#q, retrying with `-o nonempty`", resolvedLocation, *m.MountPoint)
 		// NOTE: nonempty is not supported for libfuse3: https://github.com/canonical/multipass/issues/1381
 		rsf.SSHFSAdditionalArgs = []string{"-o", "nonempty"}
 		if err := rsf.Start(); err != nil {
-			return nil, fmt.Errorf("failed to mount reverse sshfs for %q on %q: %w", resolvedLocation, *m.MountPoint, err)
+			return nil, fmt.Errorf("failed to mount reverse sshfs for %#q on %#q: %w", resolvedLocation, *m.MountPoint, err)
 		}
 	}
 
 	res := &mount{
 		close: func() error {
-			logrus.Infof("Unmounting %q", resolvedLocation)
+			logrus.Infof("Unmounting %#q", resolvedLocation)
 			if err := rsf.Close(); err != nil {
-				return fmt.Errorf("failed to unmount reverse sshfs for %q on %q: %w", resolvedLocation, *m.MountPoint, err)
+				return fmt.Errorf("failed to unmount reverse sshfs for %#q on %#q: %w", resolvedLocation, *m.MountPoint, err)
 			}
 			return nil
 		},

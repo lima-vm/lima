@@ -18,18 +18,18 @@ func Delete(ctx context.Context, inst *limatype.Instance, force bool) error {
 		return errors.New("instance is protected to prohibit accidental removal (Hint: use `limactl unprotect`)")
 	}
 	if !force && inst.Status != limatype.StatusStopped {
-		return fmt.Errorf("expected status %q, got %q", limatype.StatusStopped, inst.Status)
+		return fmt.Errorf("expected status %#q, got %#q", limatype.StatusStopped, inst.Status)
 	}
 
 	StopForcibly(inst)
 
 	if len(inst.Errors) == 0 {
 		if err := unregister(ctx, inst); err != nil {
-			return fmt.Errorf("failed to unregister %q: %w", inst.Dir, err)
+			return fmt.Errorf("failed to unregister %#q: %w", inst.Dir, err)
 		}
 	}
 	if err := os.RemoveAll(inst.Dir); err != nil {
-		return fmt.Errorf("failed to remove %q: %w", inst.Dir, err)
+		return fmt.Errorf("failed to remove %#q: %w", inst.Dir, err)
 	}
 
 	return nil

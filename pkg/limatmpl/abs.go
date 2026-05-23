@@ -127,9 +127,9 @@ func absPath(locator, basePath string) (string, error) {
 		case basePath == "-":
 			return "", errors.New("can't use relative paths when reading template from STDIN")
 		case strings.Contains(locator, "../"):
-			return "", fmt.Errorf("relative locator path %q must not contain '../' segments", locator)
+			return "", fmt.Errorf("relative locator path %#q must not contain '../' segments", locator)
 		case volumeLen != 0:
-			return "", fmt.Errorf("relative locator path %q must not include a volume name", locator)
+			return "", fmt.Errorf("relative locator path %#q must not include a volume name", locator)
 		}
 		u, err = url.Parse(basePath)
 		if err != nil {
