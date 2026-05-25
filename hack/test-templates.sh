@@ -397,20 +397,7 @@ if [[ -n ${CHECKS["container-engine"]} ]]; then
 	limactl shell "$NAME" $sudo $CONTAINER_ENGINE pull --quiet ${nginx_image}
 	limactl shell "$NAME" $sudo $CONTAINER_ENGINE run -d --name nginx -p 127.0.0.1:8080:80 ${nginx_image}
 
-	sleep 3
-	if ! limactl shell "$NAME" $sudo $CONTAINER_ENGINE inspect nginx --format '{{.State.Running}}' 2>/dev/null | grep -q "true"; then
-		INFO "Container exited immediately (broken stdout pipe with detach-netns), retrying with redirected output"
-		limactl shell "$NAME" $sudo $CONTAINER_ENGINE rm -f nginx 2>/dev/null || true
-		limactl shell "$NAME" $sudo $CONTAINER_ENGINE run -d --name nginx -p 127.0.0.1:8080:80 \
-			--entrypoint sh ${nginx_image} -c 'exec >/dev/null 2>&1; exec /docker-entrypoint.sh nginx -g "daemon off;"'
-	fi
-
-	if ! timeout 3m bash -euxc "until curl -f --retry 30 --retry-connrefused http://127.0.0.1:8080; do sleep 3; done"; then
-		limactl shell "$NAME" $sudo $CONTAINER_ENGINE inspect nginx 2>&1 | head -40 || true
-		limactl shell "$NAME" $sudo $CONTAINER_ENGINE logs nginx 2>&1 || true
-		ERROR "Port forwarding to nginx container on 127.0.0.1:8080 failed"
-		exit 1
-	fi
+	timeout 3m bash -euxc "until curl -f --retry 30 --retry-connrefused http://127.0.0.1:8080; do sleep 3; done"
 
 	limactl shell "$NAME" $sudo $CONTAINER_ENGINE rm -f nginx
 

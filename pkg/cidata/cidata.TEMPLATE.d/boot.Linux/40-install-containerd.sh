@@ -122,6 +122,29 @@ EOF
 		if [ "$(sudo -iu "${LIMA_CIDATA_USER}" sh -ec 'systemctl --user show --property=RefuseManualStart --value dbus')" != "yes" ]; then
 			sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" systemctl --user enable --now dbus.socket
 		fi
+		# newuidmap is required by rootlesskit for user namespace UID/GID mapping.
+		# 30-install-packages.sh installs uidmap if newuidmap is not found, but on
+		# some distro versions the binary may be present yet not reachable via the
+		# PATH used by the rootlesskit self-check.  Install defensively here too.
+		if ! command -v newuidmap >/dev/null 2>&1; then
+			if command -v apt-get >/dev/null 2>&1; then
+				DEBIAN_FRONTEND=noninteractive apt-get install -y --no-upgrade --no-install-recommends uidmap
+			elif command -v dnf >/dev/null 2>&1; then
+				dnf install -y --setopt=install_weak_deps=False shadow-utils
+			elif command -v apk >/dev/null 2>&1; then
+				apk add --no-cache shadow-uidmap
+			fi
+		fi
+		# Workaround for https://github.com/lima-vm/lima/issues/5030
+		# RootlessKit v3 (bundled in nerdctl >= 2.3.0) defaults --source-ip-transparent=true,
+		# which installs mangle/fwmark iptables rules that break loopback port forwarding
+		# on macOS VZ. Disable via systemd drop-in before containerd is installed.
+		mkdir -p "${LIMA_CIDATA_HOME}/.config/systemd/user/containerd.service.d"
+		cat >"${LIMA_CIDATA_HOME}/.config/systemd/user/containerd.service.d/lima-rootlesskit-flags.conf" <<'EOF'
+[Service]
+Environment=CONTAINERD_ROOTLESS_ROOTLESSKIT_FLAGS=--source-ip-transparent=false
+EOF
+		chown -R "${LIMA_CIDATA_USER}" "${LIMA_CIDATA_HOME}/.config/systemd/user/containerd.service.d"
 		sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "PATH=${PATH}" "TERM=${TERM}" containerd-rootless-setuptool.sh install
 		sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "PATH=${PATH}" "TERM=${TERM}" \
 			"CONTAINERD_NAMESPACE=${CONTAINERD_NAMESPACE}" "CONTAINERD_SNAPSHOTTER=${CONTAINERD_SNAPSHOTTER}" \
