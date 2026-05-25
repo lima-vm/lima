@@ -397,142 +397,17 @@ if [[ -n ${CHECKS["container-engine"]} ]]; then
 	limactl shell "$NAME" $sudo $CONTAINER_ENGINE pull --quiet ${nginx_image}
 	limactl shell "$NAME" $sudo $CONTAINER_ENGINE run -d --name nginx -p 127.0.0.1:8080:80 ${nginx_image}
 
-	if ! timeout 3m bash -euxc "until curl -f --retry 15 --retry-connrefused http://127.0.0.1:8080; do sleep 3; done"; then
-		INFO "=== DEBUG: port forwarding failed (#5030) - FINAL diagnostic run ==="
+	sleep 3
+	if ! limactl shell "$NAME" $sudo $CONTAINER_ENGINE inspect nginx --format '{{.State.Running}}' 2>/dev/null | grep -q "true"; then
+		INFO "Container exited immediately (broken stdout pipe with detach-netns), retrying with redirected output"
+		limactl shell "$NAME" $sudo $CONTAINER_ENGINE rm -f nginx 2>/dev/null || true
+		limactl shell "$NAME" $sudo $CONTAINER_ENGINE run -d --name nginx -p 127.0.0.1:8080:80 \
+			--entrypoint sh ${nginx_image} -c 'exec >/dev/null 2>&1; exec /docker-entrypoint.sh nginx -g "daemon off;"'
+	fi
 
-		# 1. Full container inspect (not truncated)
-		INFO "[1/12] nerdctl inspect nginx"
-		limactl shell "$NAME" $sudo $CONTAINER_ENGINE inspect nginx 2>&1 || true
-
-		# 2. Container logs
-		INFO "[2/12] nerdctl logs nginx"
+	if ! timeout 3m bash -euxc "until curl -f --retry 30 --retry-connrefused http://127.0.0.1:8080; do sleep 3; done"; then
+		limactl shell "$NAME" $sudo $CONTAINER_ENGINE inspect nginx 2>&1 | head -40 || true
 		limactl shell "$NAME" $sudo $CONTAINER_ENGINE logs nginx 2>&1 || true
-
-		# 3. Read json-log file directly from LogPath
-		INFO "[3/12] Direct json-log file read"
-		# shellcheck disable=SC2016
-		limactl shell "$NAME" bash -c '
-			LOGPATH=$('"$sudo"' '"$CONTAINER_ENGINE"' inspect nginx --format "{{.LogPath}}" 2>/dev/null)
-			echo "LogPath=$LOGPATH"
-			if [ -f "$LOGPATH" ]; then
-				echo "=== json-log contents ($(wc -c <"$LOGPATH") bytes) ==="
-				cat "$LOGPATH"
-			else
-				echo "json-log file NOT FOUND"
-			fi
-			# Also check the nerdctl data dir for any logs
-			CID=$('"$sudo"' '"$CONTAINER_ENGINE"' inspect nginx --format "{{.Id}}" 2>/dev/null)
-			echo "CID=$CID"
-			CDIR="$HOME/.local/share/nerdctl/*/containers/default/$CID"
-			echo "=== container dir listing ==="
-			ls -la $CDIR/ 2>/dev/null || echo "dir not found"
-			for f in $CDIR/*-json.log $CDIR/*.log; do
-				[ -f "$f" ] && echo "=== $f ($(wc -c <"$f") bytes) ===" && cat "$f"
-			done
-		' || true
-
-		# 4. Sanity: can we run ANYTHING in this image?
-		INFO "[4/12] Container sanity: echo test"
-		limactl shell "$NAME" $sudo $CONTAINER_ENGINE run --rm ${nginx_image} echo "CONTAINER_ECHO_OK" 2>&1 || true
-
-		# 5. Sanity: run sh in the image (verify filesystem)
-		INFO "[5/12] Container sanity: filesystem check"
-		limactl shell "$NAME" $sudo $CONTAINER_ENGINE run --rm ${nginx_image} sh -c '
-			echo "uid=$(id)";
-			echo "--- /docker-entrypoint.sh exists: $(test -f /docker-entrypoint.sh && echo YES || echo NO)";
-			echo "--- nginx binary: $(which nginx 2>/dev/null || echo NOT_FOUND)";
-			ls -la /docker-entrypoint.sh /usr/sbin/nginx /etc/nginx/nginx.conf 2>&1;
-			head -5 /docker-entrypoint.sh
-		' 2>&1 || true
-
-		# 6. Network isolation test: --network none (if this works, CNI is the problem)
-		INFO "[6/12] nginx with --network none"
-		# shellcheck disable=SC2016
-		limactl shell "$NAME" $sudo $CONTAINER_ENGINE run --rm --network none ${nginx_image} sh -c '
-			echo "STARTED_NET_NONE";
-			nginx -g "daemon off;" 2>&1 &
-			PID=$!; sleep 2;
-			echo "nginx_pid=$PID alive=$(kill -0 $PID 2>/dev/null && echo yes || echo no)";
-			kill $PID 2>/dev/null; wait $PID 2>/dev/null;
-			echo "EXIT=$?"
-		' 2>&1 || true
-
-		# 7. Network host test: bypass CNI entirely
-		INFO "[7/12] nginx with --network host"
-		# shellcheck disable=SC2016
-		timeout 10 limactl shell "$NAME" $sudo $CONTAINER_ENGINE run --rm --network host ${nginx_image} sh -c '
-			echo "STARTED_NET_HOST";
-			nginx -g "daemon off;" 2>&1 &
-			PID=$!; sleep 2;
-			echo "nginx_pid=$PID alive=$(kill -0 $PID 2>/dev/null && echo yes || echo no)";
-			kill $PID 2>/dev/null; wait $PID 2>/dev/null;
-			echo "EXIT=$?"
-		' 2>&1 || true
-
-		# 8. Run the ACTUAL entrypoint manually and capture output
-		INFO "[8/12] Manual entrypoint run (foreground, bridge network)"
-		# shellcheck disable=SC2016
-		timeout 15 limactl shell "$NAME" $sudo $CONTAINER_ENGINE run --rm --name nginx-manual -p 127.0.0.1:8082:80 ${nginx_image} sh -c '
-			echo "=== ENTRYPOINT START ===";
-			exec 2>&1;
-			/docker-entrypoint.sh nginx -g "daemon off;" &
-			PID=$!; sleep 3;
-			echo "=== nginx alive=$(kill -0 $PID 2>/dev/null && echo yes || echo no) ===";
-			ss -tlnp 2>/dev/null || netstat -tlnp 2>/dev/null;
-			kill $PID 2>/dev/null; wait $PID 2>/dev/null;
-			echo "=== ENTRYPOINT EXIT=$? ==="
-		' 2>&1 || true
-
-		# 9. nerdctl info + rootlesskit + CNI config
-		INFO "[9/12] Runtime info (nerdctl info, rootlesskit, CNI)"
-		# shellcheck disable=SC2016
-		limactl shell "$NAME" bash -c '
-			echo "=== rootlesskit ===" ;
-			pgrep -a rootlesskit 2>/dev/null | head -3;
-			echo "=== CNI config ===" ;
-			cat ~/.config/cni/net.d/*.conflist 2>/dev/null || cat /etc/cni/net.d/*.conflist 2>/dev/null || echo "no CNI conflist found";
-			echo "=== containerd config ===" ;
-			cat ~/.config/containerd/config.toml 2>/dev/null || echo "no user config.toml";
-			echo "=== overlayfs mounts ===" ;
-			mount | grep overlay | tail -5;
-			echo "=== disk space ===" ;
-			df -h / /home 2>/dev/null | head -5;
-			echo "=== memory ===" ;
-			free -m 2>/dev/null | head -3;
-			echo "=== uname ===" ;
-			uname -a
-		' 2>&1 || true
-
-		# 10. dmesg (seccomp kills, OOM, namespace errors)
-		INFO "[10/12] Kernel messages (dmesg)"
-		limactl shell "$NAME" sudo dmesg 2>/dev/null | grep -iE "oom|kill|seccomp|denied|error|audit|runc|container" | tail -30 || true
-		limactl shell "$NAME" sudo dmesg 2>/dev/null | tail -20 || true
-
-		# 11. System journal (containerd, runc, shim as root for visibility)
-		INFO "[11/12] System journal (filtered for container stack)"
-		# shellcheck disable=SC2016
-		limactl shell "$NAME" sudo bash -c '
-			echo "=== journalctl for user processes (last 5min) ===";
-			UID_VAL=$(id -u "$(logname)" 2>/dev/null || echo 1000);
-			journalctl _UID="$UID_VAL" --no-pager -n 200 --since "10 min ago" 2>/dev/null | grep -iE "containerd|runc|shim|rootlesskit|error|fail|exit" | tail -100;
-			echo "=== full journal tail (last 50 lines for all users) ===";
-			journalctl --no-pager -n 50 2>/dev/null
-		' || true
-
-		# 12. Try a completely different (non-stargz) image to rule out image issues
-		INFO "[12/12] Alternate image test (busybox httpd)"
-		# shellcheck disable=SC2016
-		limactl shell "$NAME" $sudo $CONTAINER_ENGINE run --rm -d --name httpd-test -p 127.0.0.1:8083:80 busybox sh -c '
-			echo "BUSYBOX_HTTPD_STARTING";
-			mkdir -p /www; echo ok > /www/index.html;
-			httpd -f -p 80 -h /www 2>&1
-		' 2>&1 || true
-		sleep 3
-		curl -sf http://127.0.0.1:8083 && echo "BUSYBOX_HTTPD_OK" || echo "BUSYBOX_HTTPD_FAILED"
-		limactl shell "$NAME" $sudo $CONTAINER_ENGINE logs httpd-test 2>&1 || true
-		limactl shell "$NAME" $sudo $CONTAINER_ENGINE rm -f httpd-test 2>/dev/null || true
-
-		INFO "=== END DEBUG ==="
 		ERROR "Port forwarding to nginx container on 127.0.0.1:8080 failed"
 		exit 1
 	fi
