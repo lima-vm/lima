@@ -135,6 +135,18 @@ mounts:
 - For macOS, the "virtiofs" mount type is supported only on macOS 13 or above with `vmType: vz` config. See also [`vmtype`](../vmtype/).
 - For Linux, the "virtiofs" mount type requires the [Rust version of virtiofsd](https://gitlab.com/virtio-fs/virtiofsd).
   Using the version from QEMU (usually packaged as `qemu-virtiofsd`) will *not* work, as it requires root access to run.
+- On macOS, atomically creating a file with mode `0000` on a virtiofs mount
+  — for example `open(O_CREAT|O_EXCL|O_RDONLY, 0000)` in C, or
+  `os.OpenFile(path, os.O_CREATE|os.O_EXCL, 0)` in Go — is affected by a bug in
+  the virtiofs implementation shipped inside `Virtualization.framework`: the file
+  is created on the host but the syscall returns `EACCES`, and the resulting
+  orphan cannot be stat'd, opened, or removed from inside the guest, even as
+  root. Programs that use this pattern for lock files are most affected.
+  Workarounds: create with a non-zero mode (e.g. `0o600`) and `chmod` afterwards;
+  use the two-step `install -m 000 /dev/null <file>` form; or switch to
+  `vmType: qemu`. Orphans can still be removed from the macOS host directly,
+  outside the VM. See [issue #5039](https://github.com/lima-vm/lima/issues/5039)
+  for the full reproduction.
 
 ### wsl2
 > **Warning**
