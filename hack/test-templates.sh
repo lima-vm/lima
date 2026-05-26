@@ -394,6 +394,8 @@ if [[ -n ${CHECKS["container-engine"]} ]]; then
 		ERROR "\"${CONTAINER_ENGINE} info\" failed"
 		exit 1
 	fi
+	limactl shell "$NAME" $sudo $CONTAINER_ENGINE version
+	limactl shell "$NAME" rootlesskit --version || true
 	limactl shell "$NAME" $sudo $CONTAINER_ENGINE pull --quiet ${nginx_image}
 	limactl shell "$NAME" $sudo $CONTAINER_ENGINE run -d --name nginx -p 127.0.0.1:8080:80 ${nginx_image}
 
@@ -488,6 +490,8 @@ if [[ -n ${CHECKS["port-forwards"]} ]]; then
 				sudo="sudo"
 			fi
 			limactl shell "$NAME" $sudo $CONTAINER_ENGINE info
+			limactl shell "$NAME" $sudo $CONTAINER_ENGINE version
+			limactl shell "$NAME" rootlesskit --version || true
 			limactl shell "$NAME" $sudo $CONTAINER_ENGINE pull --quiet ${nginx_image}
 
 			limactl shell "$NAME" $sudo $CONTAINER_ENGINE run -d --name nginx -p 8888:80 ${nginx_image}

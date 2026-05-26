@@ -56,6 +56,7 @@ if head -c 4 "$(command -v apt-get)" | grep -qP '\x7fELF' >/dev/null 2>&1; then
 	if ! command -v rsync >/dev/null 2>&1; then
 		pkgs="${pkgs} rsync"
 	fi
+	pkgs="${pkgs} slirp4netns"
 	if [ -n "${pkgs}" ]; then
 		DEBIAN_FRONTEND=noninteractive
 		export DEBIAN_FRONTEND
@@ -89,6 +90,7 @@ elif command -v dnf >/dev/null 2>&1; then
 	if ! command -v rsync >/dev/null 2>&1; then
 		pkgs="${pkgs} rsync"
 	fi
+	pkgs="${pkgs} slirp4netns"
 	if [ -n "${pkgs}" ] || [ -n "${extrapkgs}" ]; then
 		dnf_install_flags="-y --setopt=install_weak_deps=False"
 		epel_install_flags=""
@@ -166,6 +168,7 @@ elif command -v yum >/dev/null 2>&1; then
 	if ! command -v rsync >/dev/null 2>&1; then
 		pkgs="${pkgs} rsync"
 	fi
+	pkgs="${pkgs} slirp4netns"
 	if [ -n "${pkgs}" ]; then
 		# shellcheck disable=SC2086
 		yum install ${yum_install_flags} ${pkgs}
@@ -181,6 +184,7 @@ elif command -v pacman >/dev/null 2>&1; then
 	if ! command -v rsync >/dev/null 2>&1; then
 		pkgs="${pkgs} rsync"
 	fi
+	pkgs="${pkgs} slirp4netns"
 	# other dependencies are preinstalled on Arch Linux
 	if [ -n "${pkgs}" ]; then
 		# shellcheck disable=SC2086
@@ -202,6 +206,7 @@ elif command -v zypper >/dev/null 2>&1; then
 	if ! command -v rsync >/dev/null 2>&1; then
 		pkgs="${pkgs} rsync"
 	fi
+	pkgs="${pkgs} slirp4netns"
 	if [ -n "${pkgs}" ]; then
 		# shellcheck disable=SC2086
 		zypper --non-interactive install -y --no-recommends ${pkgs}
@@ -219,6 +224,7 @@ elif command -v apk >/dev/null 2>&1; then
 	if ! command -v rsync >/dev/null 2>&1; then
 		pkgs="${pkgs} rsync"
 	fi
+	pkgs="${pkgs} slirp4netns"
 	if [ -n "${pkgs}" ]; then
 		apk update
 		# shellcheck disable=SC2086

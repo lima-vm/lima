@@ -41,6 +41,11 @@ fi
 
 rm -rf "${tmp_extract_nerdctl}"
 
+# <DEBUG>
+# Downgrade RootlessKit for analyzing https://github.com/lima-vm/lima/issues/5030
+curl -sSL "https://github.com/rootless-containers/rootlesskit/releases/download/v2.3.6/rootlesskit-$(uname -m).tar.gz" | tar Cxzv /usr/local/bin
+# </DEBUG>
+
 if [ "${LIMA_CIDATA_CONTAINERD_SYSTEM}" = 1 ]; then
 	if [ ! -e /etc/containerd/config.toml ]; then
 		mkdir -p /etc/containerd
