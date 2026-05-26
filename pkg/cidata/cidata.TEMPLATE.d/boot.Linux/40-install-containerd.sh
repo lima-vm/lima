@@ -41,27 +41,6 @@ fi
 
 rm -rf "${tmp_extract_nerdctl}"
 
-# <DEBUG: bisect containerd regression lima-vm/lima#5030>
-# Range: v2.2.4 ✅ ... v2.3.0-beta.0 ❌
-# Testing midpoint of containerd main branch (commit 89/178 from merge-base)
-containerd_commit=218ef1613b35d9a58e4d55543e60e1dbdf6d3b8d  # midpoint: "Removed the circular dependency"
-go_version=1.24.3
-goarch="amd64"
-[ "$(uname -m)" = "aarch64" ] && goarch="arm64"
-
-tmp_debug="$(mktemp -d)"
-curl -fsSL "https://go.dev/dl/go${go_version}.linux-${goarch}.tar.gz" | tar Cxz "${tmp_debug}"
-curl -fsSL "https://github.com/containerd/containerd/archive/${containerd_commit}.tar.gz" | tar Cxz "${tmp_debug}"
-debug_src="${tmp_debug}/containerd-${containerd_commit}"
-HOME=/root CGO_ENABLED=0 make -C "${debug_src}" GO="${tmp_debug}/go/bin/go" \
-	VERSION="v2.3.0-dev+bisect-${containerd_commit:0:10}" REVISION="${containerd_commit}" \
-	bin/containerd bin/containerd-shim-runc-v2 bin/ctr
-install -m 0755 "${debug_src}"/bin/containerd "${debug_src}"/bin/containerd-shim-runc-v2 "${debug_src}"/bin/ctr /usr/local/bin/
-rm -rf "${tmp_debug}"
-echo "DEBUG: installed containerd from bisect commit ${containerd_commit}"
-/usr/local/bin/containerd --version
-# </DEBUG>
-
 if [ "${LIMA_CIDATA_CONTAINERD_SYSTEM}" = 1 ]; then
 	if [ ! -e /etc/containerd/config.toml ]; then
 		mkdir -p /etc/containerd

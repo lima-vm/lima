@@ -567,14 +567,40 @@ jobs:
       uses: ./.github/actions/upload_failure_logs_if_exists
 
   vz:
-    name: "Integration tests (vz)"
+    name: "Integration tests (vz) (${{ matrix.containerd_short }})"
     runs-on: macos-15-large  # Intel
     timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
-        template:
-        - default.yaml
+        # Bisect containerd regression (#5030): 8 evenly spaced merge commits
+        # from merge-base(v2.2.4, main) to v2.3.0-beta.0 (206 total)
+        # Known bounds: merge-base (1c4457e00f) ✅ ... v2.3.0-beta.0 ❌
+        include:
+        - containerd_commit: "ddad4a8c4e1155ce51f37b947fe3ae6181dc4ab6"
+          containerd_short: "ddad4a8c4"
+          desc: "commit 26/206 - PR #12528 selinux bump"
+        - containerd_commit: "505478250fa0b1683028d91c1859409d97f0b5c7"
+          containerd_short: "505478250"
+          desc: "commit 52/206 - PR #12663 bump-cdi-deps"
+        - containerd_commit: "7d1514ab172624a2690e087554e5040d1a5e3947"
+          containerd_short: "7d1514ab1"
+          desc: "commit 77/206 - PR #12709 cni-load-fix"
+        - containerd_commit: "fb805016c4a181dc537c7f1d55ba6998141f8136"
+          containerd_short: "fb805016c"
+          desc: "commit 103/206 - PR #12773 podsandbox"
+        - containerd_commit: "b8a1501e2d842e42591bb5af7d098d8467f3611a"
+          containerd_short: "b8a1501e2"
+          desc: "commit 129/206 - PR #12847 cri-withvolume-use-mount-manager"
+        - containerd_commit: "be50f8f1b23e359e65e066740097e089c275929b"
+          containerd_short: "be50f8f1b"
+          desc: "commit 155/206 - PR #12923 fixcnidelissuev2"
+        - containerd_commit: "e0afc2d58f4dcca4235a760a759bf8d0710e0202"
+          containerd_short: "e0afc2d58"
+          desc: "commit 180/206 - PR #13009 deprecation-2.4"
+        - containerd_commit: "b0d7bba94f0bfe45de68fc7d98b4d203ae72d30a"
+          containerd_short: "b0d7bba94"
+          desc: "commit 206/206 - PR #13048 prepare-2.3.0-beta"
     steps:
     - name: "Adjust LIMACTL_CREATE_ARGS"
       # --cpus=1 is needed for running vz on GHA: https://github.com/lima-vm/lima/pull/1511#issuecomment-1574937888
@@ -590,20 +616,73 @@ jobs:
       run: make
     - name: Install
       run: sudo make install
-    - name: Cache image used by templates/${{ matrix.template }}
+    - name: "Cross-compile containerd at ${{ matrix.containerd_short }}"
+      env:
+        CONTAINERD_COMMIT: ${{ matrix.containerd_commit }}
+      run: |
+        set -eux
+        curl -fsSL "https://github.com/containerd/containerd/archive/${CONTAINERD_COMMIT}.tar.gz" | tar xz
+        cd "containerd-${CONTAINERD_COMMIT}"
+        GOOS=linux GOARCH=amd64 CGO_ENABLED=0 make \
+          VERSION="v2.3.0-dev+bisect-${CONTAINERD_COMMIT:0:10}" \
+          REVISION="${CONTAINERD_COMMIT}" \
+          bin/containerd bin/containerd-shim-runc-v2 bin/ctr
+        file bin/containerd bin/containerd-shim-runc-v2 bin/ctr
+    - name: "Patch nerdctl-full archive"
+      env:
+        CONTAINERD_COMMIT: ${{ matrix.containerd_commit }}
+      run: |
+        set -eux
+        curl -fsSL -o /tmp/nerdctl-full-orig.tar.gz \
+          "https://github.com/containerd/nerdctl/releases/download/v2.3.1/nerdctl-full-2.3.1-linux-amd64.tar.gz"
+        mkdir -p /tmp/nerdctl-full
+        tar -xzf /tmp/nerdctl-full-orig.tar.gz -C /tmp/nerdctl-full
+        cp "containerd-${CONTAINERD_COMMIT}/bin/containerd" /tmp/nerdctl-full/bin/containerd
+        cp "containerd-${CONTAINERD_COMMIT}/bin/containerd-shim-runc-v2" /tmp/nerdctl-full/bin/containerd-shim-runc-v2
+        cp "containerd-${CONTAINERD_COMMIT}/bin/ctr" /tmp/nerdctl-full/bin/ctr
+        # Sanity-check that the original layout (with bin/nerdctl) is preserved.
+        # Lima's containerd install script runs `tar Cxaf nerdctl-full.tgz bin/nerdctl`
+        # inside the guest and requires an exact entry-name match.
+        test -f /tmp/nerdctl-full/bin/nerdctl
+        # Pack from inside the directory so entries are `bin/nerdctl` (not `./bin/nerdctl`).
+        # BSD tar on macOS prefixes `./` when given `-C dir .`, which breaks GNU tar's
+        # exact name matching inside the Linux guest.
+        ( cd /tmp/nerdctl-full && tar -czf "${HOME}/nerdctl-full-patched.tar.gz" bin lib libexec share )
+        echo "Patched archive: $(du -h "${HOME}/nerdctl-full-patched.tar.gz" | cut -f1)"
+        echo "First entries in patched archive:"
+        tar -tzf "${HOME}/nerdctl-full-patched.tar.gz" | head -5
+    - name: "Update template to use patched archive"
+      run: |
+        set -eux
+        yq -i '.containerd.archives = [{"location": strenv(HOME) + "/nerdctl-full-patched.tar.gz", "arch": "x86_64"}]' templates/default.yaml
+        # Re-emit through limactl's canonical YAML writer so the indent matches
+        # the indentless sequence style expected by test-templates.sh.
+        # (`limactl edit` cannot be used here because it rejects templates with a `base` field.)
+        tmp=$(mktemp)
+        echo -n "base: $PWD/templates/default.yaml" | limactl tmpl copy --embed - "$tmp"
+        mv "$tmp" templates/default.yaml
+        grep -A3 'archives' templates/default.yaml
+    - name: Cache image used by templates/default.yaml
       uses: ./.github/actions/setup_cache_for_template
       with:
-        template: templates/${{ matrix.template }}
+        template: templates/default.yaml
     - name: Install test dependencies
       run: brew install bash coreutils w3m socat
     - name: Uninstall qemu
       run: brew uninstall --ignore-dependencies --force qemu
-    - name: Test
-      run: ./hack/test-templates.sh templates/${{ matrix.template }}
+    - name: "Test (bisect: ${{ matrix.desc }})"
+      run: ./hack/test-templates.sh templates/default.yaml
+    - name: "Diagnostics on failure"
+      if: failure()
+      run: |
+        set -x
+        limactl shell default -- containerd --version || true
+        limactl shell default -- systemctl --user status containerd || true
+        limactl shell default -- journalctl --user -u containerd --no-pager -n 50 || true
     - if: failure()
       uses: ./.github/actions/upload_failure_logs_if_exists
       with:
-        suffix: ${{ matrix.template }}
+        suffix: bisect-${{ matrix.containerd_short }}
 
   # gomodjail is a library sandbox for Go
   # https://github.com/AkihiroSuda/gomodjail
