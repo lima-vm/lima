@@ -40,6 +40,12 @@ if [ ! -f "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/nerdctl ] || [[ "${tmp_extra
 fi
 
 rm -rf "${tmp_extract_nerdctl}"
+# <DEBUG>
+# Partially upgrade nerdctl for analyzing https://github.com/lima-vm/lima/issues/5030
+nerdctl_arch="amd64"
+[ "$(uname -m)" = "aarch64" ] && nerdctl_arch="arm64"
+curl -fsSL "https://github.com/containerd/nerdctl/releases/download/v2.3.1/nerdctl-2.3.1-linux-${nerdctl_arch}.tar.gz" | tar Cxzv /usr/local/bin nerdctl
+# </DEBUG>
 
 if [ "${LIMA_CIDATA_CONTAINERD_SYSTEM}" = 1 ]; then
 	if [ ! -e /etc/containerd/config.toml ]; then
