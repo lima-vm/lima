@@ -12,6 +12,14 @@ scriptdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=common.inc.sh
 source "${scriptdir}/common.inc.sh"
 
+# Check required prerequisites before doing anything else
+for _cmd in limactl jq curl timeout diff perl; do
+	if ! command -v "$_cmd" &>/dev/null; then
+		ERROR "Required prerequisite not found: $_cmd"
+		exit 1
+	fi
+done
+
 if [ "$#" -ne 1 ]; then
 	ERROR "Usage: $0 FILE.yaml"
 	exit 1
