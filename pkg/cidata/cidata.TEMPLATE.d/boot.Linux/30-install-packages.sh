@@ -56,6 +56,7 @@ if head -c 4 "$(command -v apt-get)" | grep -qP '\x7fELF' >/dev/null 2>&1; then
 	if ! command -v rsync >/dev/null 2>&1; then
 		pkgs="${pkgs} rsync"
 	fi
+	pkgs="${pkgs} make git"
 	if [ -n "${pkgs}" ]; then
 		DEBIAN_FRONTEND=noninteractive
 		export DEBIAN_FRONTEND
