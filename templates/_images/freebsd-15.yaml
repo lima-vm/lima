@@ -1,0 +1,11 @@
+# The FreeBSD-Archive URLs are used for permanence. They don't seem to support HTTPS though.
+images:
+- location: "http://ftp-archive.freebsd.org/pub/FreeBSD-Archive/old-releases/VM-IMAGES/15.0-RELEASE/amd64/Latest/FreeBSD-15.0-RELEASE-amd64-BASIC-CLOUDINIT-zfs.raw.xz"
+  digest: sha256:45febaec571bc9f5917ecd7833d8cff3f7cb049c1d13ad99ce3067a6c9a17b25
+  arch: x86_64
+- location: "http://ftp-archive.freebsd.org/pub/FreeBSD-Archive/old-releases/VM-IMAGES/15.0-RELEASE/aarch64/Latest/FreeBSD-15.0-RELEASE-arm64-aarch64-BASIC-CLOUDINIT-zfs.raw.xz"
+  digest: sha256:1490d8f5071a146e75154cf7177570a59c2964d81224b90a162ceaa6f459aabf
+  arch: aarch64
+os: FreeBSD
+# Apparently does not boot with vz
+vmType: qemu

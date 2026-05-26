@@ -1,0 +1,173 @@
+# golangci-lint configuration file.
+# https://golangci-lint.run/usage/configuration/
+version: "2"
+run:
+  concurrency: 6
+linters:
+  default: none
+  enable:
+  - bodyclose
+  - copyloopvar
+  - depguard
+  - dupword
+  - errcheck
+  - errorlint
+  - forbidigo
+  - gocritic
+  - godot
+  - govet
+  - ineffassign
+  - intrange
+  - misspell
+  - modernize
+  - nakedret
+  - noctx
+  - nolintlint
+  - perfsprint
+  - revive
+  - staticcheck
+  - unconvert
+  - unused
+  - usetesting
+  - whitespace
+  settings:
+    depguard:
+      rules:
+        main:
+          deny:
+          - pkg: golang.org/x/net/context
+            desc: use the 'context' package from the standard library
+          - pkg: math/rand$
+            desc: use the 'math/rand/v2' package
+    errorlint:
+      asserts: false
+    forbidigo:
+      forbid:
+      - pattern: ^print(ln)?$
+        msg: Do not use builtin print functions. It's for bootstrapping only and may be removed in the future.
+      - pattern: ^fmt\.Print.*$
+        msg: Do not use fmt.Print statements.
+      - pattern: ^testing.T.Fatal.*$
+        msg: Use assert functions from the gotest.tools/v3/assert package instead.
+      - pattern: ^sort.*$
+        msg: Use sorting functions from the slices package instead.
+      analyze-types: true
+    gocritic:
+      disabled-checks:
+      - appendCombine
+      - sloppyReassign
+      - unlabelStmt
+      - rangeValCopy
+      - hugeParam
+      - importShadow
+      - sprintfQuotedString
+      - builtinShadow
+      - filepathJoin
+      # See "Tags" section in https://github.com/go-critic/go-critic#usage
+      enabled-tags:
+      - diagnostic
+      - performance
+      - style
+      - opinionated
+      - experimental
+      settings:
+        ifElseChain:
+          # Min number of if-else blocks that makes the warning trigger.
+          minThreshold: 3
+    modernize:
+      disable:
+      - omitzero
+    perfsprint:
+      int-conversion: false
+      integer-format: false
+      err-error: false
+      errorf: true
+      sprintf1: false
+      strconcat: false
+      concat-loop: false
+    revive:
+      # Set below 0.8 to enable error-strings
+      confidence: 0.6
+      # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md
+      rules:
+      - name: bare-return
+      - name: blank-imports
+      - name: context-as-argument
+      - name: context-keys-type
+      - name: deep-exit
+      - name: dot-imports
+        arguments:
+        - allowedPackages:
+          - github.com/lima-vm/lima/v2/pkg/must
+      - name: empty-block
+      - name: error-naming
+      - name: error-return
+      - name: error-strings
+      - name: errorf
+      - name: exported
+        disabled: true
+      - name: increment-decrement
+      - name: indent-error-flow
+      - name: package-comments
+        disabled: true
+      - name: package-directory-mismatch
+      - name: range
+      - name: receiver-naming
+      - name: redefines-builtin-id
+      - name: superfluous-else
+      - name: time-naming
+      - name: unexported-return
+      - name: unnecessary-format
+      - name: unreachable-code
+      - name: unused-parameter
+      - name: use-any
+      - name: var-declaration
+      - name: var-naming
+    staticcheck:
+      # https://staticcheck.dev/docs/configuration/options/#checks
+      checks:
+      - all
+      - -QF1001  # apply De Morgan's law
+      - -QF1008  # remove embedded field from selector
+      - -SA3000  # false positive for Go 1.15+. See https://github.com/golang/go/issues/34129
+      - -ST1000
+      - -ST1001  # duplicates revive.dot-imports
+      - -ST1022
+    usetesting:
+      os-temp-dir: true
+      context-background: true
+      context-todo: true
+  exclusions:
+    presets:
+    - common-false-positives
+    - legacy
+    - std-error-handling
+    rules:
+    # Allow using Uid, Gid in pkg/osutil.
+    - path: pkg/osutil/
+      text: '(?i)(uid)|(gid)'
+    # Disable some linters for test files.
+    - linters:
+      - godot
+      path: _test\.go
+    # Allow "api" package names in hostagent and guestagent.
+    - linters:
+      - revive
+      path: pkg/(hostagent|guestagent)/api/
+      text: avoid meaningless package names
+issues:
+  # Maximum issues count per one linter.
+  max-issues-per-linter: 0
+  # Maximum count of issues with the same text.
+  max-same-issues: 0
+formatters:
+  enable:
+  - gci
+  - gofmt
+  - gofumpt
+  settings:
+    gci:
+      sections:
+      - standard
+      - default
+      - localmodule

@@ -1,0 +1,47 @@
+#!/bin/sh
+
+# SPDX-FileCopyrightText: Copyright The Lima Authors
+# SPDX-License-Identifier: Apache-2.0
+
+set -eu
+
+# Environment Variables
+# LIMA_INSTANCE: Specifies the name of the Lima instance to use. Default is "default".
+# LIMA_SHELL: Specifies the shell interpreter to use inside the Lima instance. Default is the user's shell configured inside the instance.
+# LIMA_WORKDIR: Specifies the initial working directory inside the Lima instance. Default is the current directory from the host.
+# LIMACTL: Specifies the path to the limactl binary. Default is "limactl" in $PATH.
+
+: "${LIMA_INSTANCE:=default}"
+: "${LIMA_SHELL:=}"
+: "${LIMA_WORKDIR:=}"
+: "${LIMACTL:=limactl}"
+
+if [ "$#" -eq 1 ]; then
+  if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+    base="$(basename "$0")"
+    echo "Usage: ${base} [COMMAND...]"
+    echo
+    echo "${base} is an alias for \"${LIMACTL} shell ${LIMA_INSTANCE}\"."
+    echo "The instance name (\"${LIMA_INSTANCE}\") can be changed by specifying \$LIMA_INSTANCE."
+    echo
+    echo "The shell and initial workdir inside the instance can be specified via \$LIMA_SHELL"
+    echo "and \$LIMA_WORKDIR."
+    echo
+    echo "See \`${LIMACTL} shell --help\` for further information."
+    exit 0
+  elif [ "$1" = "-v" ] || [ "$1" = "--version" ]; then
+    exec "$LIMACTL" "$@"
+  fi
+fi
+
+set - --instance "$LIMA_INSTANCE" "$@"
+if [ -n "${LIMA_SHELL}" ]; then
+  set - --shell "$LIMA_SHELL" "$@"
+fi
+if [ -n "${LIMA_WORKDIR}" ]; then
+  set - --workdir "$LIMA_WORKDIR" "$@"
+fi
+# Avoid converting paths with MSYS2
+MSYS2_ARG_CONV_EXCL="*"
+export MSYS2_ARG_CONV_EXCL
+exec "$LIMACTL" shell "$@"

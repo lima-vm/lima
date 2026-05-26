@@ -1,0 +1,15 @@
+# Hugo build configuration for Netlify
+# (https://gohugo.io/hosting-and-deployment/hosting-on-netlify/#configure-hugo-version-in-netlify)
+
+[build]
+command = "make -C .. docsy && npm run build:preview"
+publish = "public"
+
+[context.production]
+command = "make -C .. docsy && npm run build:production"
+
+[[redirects]]
+from = "/community"
+to = "/docs/community"
+status = 301
+force = true

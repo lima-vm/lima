@@ -1,0 +1,38 @@
+# Path to socket_vmnet executable. Because socket_vmnet is invoked via sudo it should be
+# installed where only root can modify/replace it. This means also none of the
+# parent directories can be writable by the user.
+#
+# The varRun directory also must not be writable by the user because it will
+# include the socket_vmnet pid file. Those will be terminated via sudo, so replacing
+# the pid file would allow killing of arbitrary privileged processes. varRun
+# however MUST be writable by the daemon user.
+#
+# None of the paths segments may be symlinks, why it has to be /private/var
+# instead of /var etc.
+paths:
+# socketVMNet requires Lima >= 0.12 .
+  socketVMNet: "{{.SocketVMNet}}"
+  varRun: /private/var/run/lima
+  sudoers: /private/etc/sudoers.d/lima
+
+group: everyone
+
+networks:
+  user-v2:
+    mode: user-v2
+    gateway: 192.168.104.1
+    netmask: 255.255.255.0
+  shared:
+    mode: shared
+    gateway: 192.168.105.1
+    dhcpEnd: 192.168.105.254
+    netmask: 255.255.255.0
+  bridged:
+    mode: bridged
+    interface: en0
+    # bridged mode doesn't have a gateway; dhcp is managed by outside network
+  host:
+    mode: host
+    gateway: 192.168.106.1
+    dhcpEnd: 192.168.106.254
+    netmask: 255.255.255.0

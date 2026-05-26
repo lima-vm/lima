@@ -1,0 +1,413 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package krunkit
+
+import (
+	"context"
+	"embed"
+	"errors"
+	"fmt"
+	"net"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"syscall"
+	"time"
+
+	"github.com/coreos/go-semver/semver"
+	"github.com/lima-vm/go-qcow2reader/image/raw"
+	"github.com/sirupsen/logrus"
+
+	"github.com/lima-vm/lima/v2/pkg/driver"
+	"github.com/lima-vm/lima/v2/pkg/driverutil"
+	"github.com/lima-vm/lima/v2/pkg/executil"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
+	"github.com/lima-vm/lima/v2/pkg/networks/usernet"
+	"github.com/lima-vm/lima/v2/pkg/osutil"
+	"github.com/lima-vm/lima/v2/pkg/ptr"
+)
+
+const (
+	vSockPort    = 2222
+	sshVsockSock = "ssh-vsock.sock"
+)
+
+type LimaKrunkitDriver struct {
+	Instance     *limatype.Instance
+	SSHLocalPort int
+
+	usernetClient *usernet.Client
+	stopUsernet   context.CancelFunc
+	krunkitCmd    *exec.Cmd
+	krunkitWaitCh chan error
+}
+
+var (
+	_      driver.Driver   = (*LimaKrunkitDriver)(nil)
+	vmType limatype.VMType = "krunkit"
+)
+
+func New() *LimaKrunkitDriver {
+	return &LimaKrunkitDriver{}
+}
+
+func (l *LimaKrunkitDriver) Configure(_ context.Context, inst *limatype.Instance) *driver.ConfiguredDriver {
+	l.Instance = inst
+	l.SSHLocalPort = inst.SSHLocalPort
+
+	return &driver.ConfiguredDriver{
+		Driver: l,
+	}
+}
+
+func (l *LimaKrunkitDriver) CreateDisk(ctx context.Context) error {
+	// Krunkit also supports qcow2 disks but raw is faster to create and use.
+	return driverutil.EnsureDisk(ctx, l.Instance.Dir, *l.Instance.Config.Disk, raw.Type)
+}
+
+func (l *LimaKrunkitDriver) Start(ctx context.Context) (chan error, error) {
+	if err := l.cleanupStaleSockets(); err != nil {
+		logrus.WithError(err).Warn("Failed to clean up stale krunkit sockets before start")
+	}
+
+	var err error
+	l.usernetClient, l.stopUsernet, err = startUsernet(ctx, l.Instance)
+	if err != nil {
+		return nil, fmt.Errorf("failed to start usernet: %w", err)
+	}
+
+	krunkitCmd, err := Cmdline(l.Instance)
+	if err != nil {
+		return nil, fmt.Errorf("failed to construct krunkit command line: %w", err)
+	}
+	// Detach krunkit process from parent Lima process
+	krunkitCmd.SysProcAttr = executil.BackgroundSysProcAttr
+
+	logPath := filepath.Join(l.Instance.Dir, "krunkit.log")
+	logfile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open krunkit logfile: %w", err)
+	}
+	krunkitCmd.Stderr = logfile
+
+	logrus.Infof("Starting krun VM (hint: to watch the progress, see %q)", logPath)
+	logrus.Infof("krunkitCmd.Args: %v", krunkitCmd.Args)
+
+	if err := krunkitCmd.Start(); err != nil {
+		logfile.Close()
+		return nil, errors.New("failed to start krunkitCmd")
+	}
+
+	pidPath := filepath.Join(l.Instance.Dir, filenames.PIDFile(*l.Instance.Config.VMType))
+	if err := os.WriteFile(pidPath, fmt.Appendf(nil, "%d\n", krunkitCmd.Process.Pid), 0o644); err != nil {
+		logrus.WithError(err).Warn("Failed to write PID file")
+	}
+
+	l.krunkitCmd = krunkitCmd
+	l.krunkitWaitCh = make(chan error, 1)
+	go func() {
+		defer func() {
+			logfile.Close()
+			os.RemoveAll(pidPath)
+			close(l.krunkitWaitCh)
+		}()
+		l.krunkitWaitCh <- krunkitCmd.Wait()
+	}()
+
+	usernetSSHLocalPort := l.SSHLocalPort
+	useSSHOverVsock := l.Instance.Config.SSH.OverVsock != nil && *l.Instance.Config.SSH.OverVsock
+
+	if !useSSHOverVsock {
+		logrus.Info("ssh.overVsock is false, using usernet forwarder for SSH")
+	} else if err := l.usernetClient.WaitOpeningSSHPort(ctx, l.Instance); err == nil {
+		hostAddress := net.JoinHostPort(l.Instance.SSHAddress, strconv.Itoa(usernetSSHLocalPort))
+		sshVsockPath := filepath.Join(l.Instance.Dir, sshVsockSock)
+		if err := startVsockForwarder(ctx, sshVsockPath, hostAddress); err == nil {
+			logrus.Infof("Detected SSH server is listening on the vsock port; changed %s to proxy for the vsock port", hostAddress)
+			usernetSSHLocalPort = 0 // disable gvisor ssh port forwarding
+		} else {
+			logrus.WithError(err).WithField("hostAddress", hostAddress).
+				Debugf("Failed to start vsock forwarder (systemd is older than v256?)")
+			logrus.Info("SSH server does not seem to be running on vsock port, using usernet forwarder")
+		}
+	} else {
+		logrus.WithError(err).Warn("Failed to wait for the guest SSH server to become available, falling back to usernet forwarder")
+	}
+
+	err = l.usernetClient.ConfigureDriver(ctx, l.Instance, usernetSSHLocalPort)
+	if err != nil {
+		l.krunkitWaitCh <- fmt.Errorf("failed to configure usernet: %w", err)
+	}
+
+	return l.krunkitWaitCh, nil
+}
+
+func (l *LimaKrunkitDriver) Stop(_ context.Context) error {
+	if l.krunkitCmd == nil {
+		return nil
+	}
+
+	if err := l.krunkitCmd.Process.Signal(syscall.SIGTERM); err != nil {
+		logrus.WithError(err).Warn("Failed to send interrupt signal")
+	}
+
+	go func() {
+		if l.usernetClient != nil {
+			_ = l.usernetClient.UnExposeSSH(l.Instance.SSHLocalPort)
+		}
+		if l.stopUsernet != nil {
+			l.stopUsernet()
+		}
+	}()
+
+	timeout := time.After(30 * time.Second)
+	select {
+	case <-l.krunkitWaitCh:
+		return nil
+	case <-timeout:
+		if err := l.krunkitCmd.Process.Kill(); err != nil {
+			return err
+		}
+
+		<-l.krunkitWaitCh
+		return nil
+	}
+}
+
+func (l *LimaKrunkitDriver) Validate(_ context.Context) error {
+	return validateConfig(l.Instance.Config)
+}
+
+func checkKrunkitVersion() error {
+	cmd := exec.CommandContext(context.Background(), vmType, "--version")
+	output, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("failed to check krunkit version: %w", err)
+	}
+	versionStr := strings.TrimSpace(string(output))
+	versionStr = strings.TrimPrefix(versionStr, "krunkit ")
+
+	minVersion := semver.New("1.2.1")
+	currentVersion, err := semver.NewVersion(versionStr)
+	if err != nil {
+		logrus.WithError(err).Warnf("Failed to parse krunkit version %q, skipping version check", versionStr)
+		return nil
+	}
+
+	if currentVersion.LessThan(*minVersion) {
+		return fmt.Errorf("krunkit version %q is older than required minimum 1.2.1 (needed for vsock forwarder feature)", currentVersion)
+	}
+
+	return nil
+}
+
+func validateConfig(cfg *limatype.LimaYAML) error {
+	if cfg == nil {
+		return errors.New("configuration is nil")
+	}
+	macOSProductVersion, err := osutil.ProductVersion()
+	if err != nil {
+		return err
+	}
+	if macOSProductVersion.LessThan(*semver.New("13.0.0")) {
+		return errors.New("krunkit driver requires macOS 13 or higher to run")
+	}
+	if cfg.Arch != nil && !limatype.IsNativeArch(*cfg.Arch) {
+		return fmt.Errorf("unsupported arch: %q (krunkit requires native arch)", *cfg.Arch)
+	}
+	if _, err := exec.LookPath(vmType); err != nil {
+		return errors.New("krunkit CLI not found in PATH. Install it via:\nbrew tap slp/krun\nbrew install krunkit")
+	}
+	// Also check if krunkit version >= 1.2.1 because of the vsock forwarder feature
+	if err := checkKrunkitVersion(); err != nil {
+		return err
+	}
+
+	if cfg.MountType != nil && (*cfg.MountType != limatype.VIRTIOFS && *cfg.MountType != limatype.REVSSHFS) {
+		return fmt.Errorf("field `mountType` must be %q or %q for krunkit driver, got %q", limatype.VIRTIOFS, limatype.REVSSHFS, *cfg.MountType)
+	}
+
+	if cfg.NestedVirtualization != nil && *cfg.NestedVirtualization {
+		if macOSProductVersion.LessThan(*semver.New("15.0.0")) {
+			return errors.New("nested virtualization requires macOS 15 or newer")
+		}
+	}
+
+	return nil
+}
+
+func isFedoraConfigured(cfg *limatype.LimaYAML) bool {
+	for _, b := range cfg.Base {
+		if strings.Contains(strings.ToLower(b.URL), "fedora") {
+			return true
+		}
+	}
+	for _, img := range cfg.Images {
+		if strings.Contains(strings.ToLower(img.Location), "fedora") {
+			return true
+		}
+	}
+	return false
+}
+
+func (l *LimaKrunkitDriver) FillConfig(_ context.Context, cfg *limatype.LimaYAML, _ string) error {
+	if cfg.MountType == nil {
+		cfg.MountType = ptr.Of(limatype.VIRTIOFS)
+	} else {
+		*cfg.MountType = limatype.VIRTIOFS
+	}
+
+	if cfg.Arch == nil {
+		cfg.Arch = ptr.Of(limatype.AARCH64)
+	} else {
+		*cfg.Arch = limatype.AARCH64
+	}
+
+	cfg.VMType = ptr.Of(vmType)
+
+	if cfg.SSH.OverVsock == nil {
+		cfg.SSH.OverVsock = ptr.Of(cfg.OS != nil && *cfg.OS == limatype.LINUX)
+	}
+
+	return validateConfig(cfg)
+}
+
+//go:embed boot.Linux/*.sh
+var bootLinuxFS embed.FS
+
+func (l *LimaKrunkitDriver) BootScripts(_ context.Context) (map[string][]byte, error) {
+	scripts := make(map[string][]byte)
+
+	entries, err := bootLinuxFS.ReadDir("boot.Linux")
+	if err == nil && !isFedoraConfigured(l.Instance.Config) {
+		for _, entry := range entries {
+			if entry.IsDir() {
+				continue
+			}
+			entryPath := "boot.Linux/" + entry.Name()
+
+			content, err := bootLinuxFS.ReadFile(entryPath)
+			if err != nil {
+				return nil, err
+			}
+
+			scripts[entryPath] = content
+		}
+	}
+
+	// Disabled by krunkit driver for Fedora to make boot time faster
+	if isFedoraConfigured(l.Instance.Config) {
+		scripts["boot.Linux/00-reboot-if-required.sh"] = []byte(`#!/bin/sh
+set -eu
+exit 0
+`)
+	}
+
+	return scripts, nil
+}
+
+func (l *LimaKrunkitDriver) Create(_ context.Context) error {
+	return nil
+}
+
+func (l *LimaKrunkitDriver) Info(_ context.Context) driver.Info {
+	var info driver.Info
+	info.Name = vmType
+	info.VsockPort = vSockPort
+	if l.Instance != nil && l.Instance.Dir != "" {
+		info.InstanceDir = l.Instance.Dir
+	}
+
+	info.Features = driver.DriverFeatures{
+		DynamicSSHAddress:    false,
+		SkipSocketForwarding: false,
+		CanRunGUI:            false,
+	}
+	return info
+}
+
+func (l *LimaKrunkitDriver) SSHAddress(_ context.Context) (string, error) {
+	return "127.0.0.1", nil
+}
+
+func (l *LimaKrunkitDriver) ForwardGuestAgent(_ context.Context) bool {
+	return false
+}
+
+func (l *LimaKrunkitDriver) Delete(_ context.Context) error {
+	return nil
+}
+
+func (l *LimaKrunkitDriver) InspectStatus(_ context.Context, _ *limatype.Instance) string {
+	return ""
+}
+
+func (l *LimaKrunkitDriver) RunGUI(_ context.Context) error {
+	return nil
+}
+
+func (l *LimaKrunkitDriver) ChangeDisplayPassword(_ context.Context, _ string) error {
+	return errUnimplemented
+}
+
+func (l *LimaKrunkitDriver) DisplayConnection(_ context.Context) (string, error) {
+	return "", errUnimplemented
+}
+
+func (l *LimaKrunkitDriver) CreateSnapshot(_ context.Context, _ string) error {
+	return errUnimplemented
+}
+
+func (l *LimaKrunkitDriver) ApplySnapshot(_ context.Context, _ string) error {
+	return errUnimplemented
+}
+
+func (l *LimaKrunkitDriver) DeleteSnapshot(_ context.Context, _ string) error {
+	return errUnimplemented
+}
+
+func (l *LimaKrunkitDriver) ListSnapshots(_ context.Context) (string, error) {
+	return "", errUnimplemented
+}
+
+func (l *LimaKrunkitDriver) Register(_ context.Context) error {
+	return nil
+}
+
+func (l *LimaKrunkitDriver) Unregister(_ context.Context) error {
+	return nil
+}
+
+func (l *LimaKrunkitDriver) GuestAgentConn(ctx context.Context) (net.Conn, string, error) {
+	var d net.Dialer
+	conn, err := d.DialContext(ctx, "unix", filepath.Join(l.Instance.Dir, filenames.GuestAgentSock))
+	return conn, "unix", err
+}
+
+func (l *LimaKrunkitDriver) AdditionalSetupForSSH(_ context.Context) error {
+	return nil
+}
+
+// Currently, Krunkit does not clean-up the vsock unix socket when the VM stops
+// Issue: https://github.com/containers/krunkit/issues/101
+func (l *LimaKrunkitDriver) cleanupStaleSockets() error {
+	if l.Instance == nil || l.Instance.Dir == "" {
+		return nil
+	}
+
+	var errs []error
+	for _, sock := range []string{
+		filepath.Join(l.Instance.Dir, filenames.GuestAgentSock),
+		filepath.Join(l.Instance.Dir, sshVsockSock),
+	} {
+		if err := os.RemoveAll(sock); err != nil {
+			errs = append(errs, fmt.Errorf("failed to remove socket %q: %w", sock, err))
+		}
+	}
+
+	return errors.Join(errs...)
+}

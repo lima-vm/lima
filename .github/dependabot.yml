@@ -1,0 +1,25 @@
+version: 2
+updates:
+- package-ecosystem: gomod
+  directories:
+  - "/"
+  - "/hack/tools"
+  schedule:
+    interval: daily
+  open-pull-requests-limit: 10
+  groups:
+    golang-x:
+      patterns:
+      - "golang.org/x/*"
+    k8s:
+      patterns:
+      - "k8s.io/*"
+  cooldown:
+    default-days: 7
+- package-ecosystem: github-actions
+  directory: "/"
+  schedule:
+    interval: daily
+  open-pull-requests-limit: 10
+  cooldown:
+    default-days: 7
