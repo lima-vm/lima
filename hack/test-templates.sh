@@ -394,8 +394,18 @@ if [[ -n ${CHECKS["container-engine"]} ]]; then
 		ERROR "\"${CONTAINER_ENGINE} info\" failed"
 		exit 1
 	fi
+	limactl shell "$NAME" $sudo $CONTAINER_ENGINE version
 	limactl shell "$NAME" $sudo $CONTAINER_ENGINE pull --quiet ${nginx_image}
 	limactl shell "$NAME" $sudo $CONTAINER_ENGINE run -d --name nginx -p 127.0.0.1:8080:80 ${nginx_image}
+	sleep 5
+	limactl shell "$NAME" $sudo $CONTAINER_ENGINE ps -a
+	limactl shell "$NAME" $sudo $CONTAINER_ENGINE logs nginx 2>&1 || true
+	if [[ -z "$sudo" ]]; then
+		limactl shell "$NAME" journalctl --user -u containerd || true
+	else
+		limactl shell "$NAME" sudo journalctl -u containerd || true
+	fi
+	limactl shell "$NAME" sudo dmesg | tail -n 100
 
 	timeout 3m bash -euxc "until curl -f --retry 30 --retry-connrefused http://127.0.0.1:8080; do sleep 3; done"
 
