@@ -9,8 +9,8 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
-	"math"
 	"net"
 	"os"
 	"sync"
@@ -75,21 +75,15 @@ func DialQemu(ctx context.Context, unixSock string) (*os.File, error) {
 }
 
 // forwardPackets relays packets between vzConn and qemuConn, reconnecting the
-// qemuConn (socket_vmnet) side on failure. vzConn is the local end of a DGRAM
-// socketpair whose other end is bound to Virtualization.framework at VM creation
-// and cannot be changed. Only qemuConn is replaced on reconnect.
-//
-// During reconnect, packets from the guest buffer in the socketpair kernel buffer
-// (4MB). If the buffer fills, the guest gets ENOBUFS (packet drops), which is
-// normal for a brief network interruption and recovered by TCP retransmit / ARP
-// retry. Packets from the network side are lost while disconnected.
+// qemuConn (socket_vmnet) side on failure. vzConn is bound to
+// Virtualization.framework at VM creation and cannot be replaced; only qemuConn
+// is re-dialed on reconnect.
 func forwardPackets(ctx context.Context, unixSock string, qemuConn *qemuPacketConn, vzConn *packetConn) {
 	defer vzConn.Close()
 
 	const (
 		initialBackoff = 100 * time.Millisecond
-		maxBackoff     = 30 * time.Second
-		backoffFactor  = 2.0
+		maxBackoff     = 2 * time.Second
 	)
 
 	for {
@@ -99,15 +93,13 @@ func forwardPackets(ctx context.Context, unixSock string, qemuConn *qemuPacketCo
 			return
 		}
 
+		logrus.Warn("VMNET connection lost, reconnecting")
+
 		backoff := initialBackoff
 		for {
-			select {
-			case <-ctx.Done():
+			if ctx.Err() != nil {
 				return
-			default:
 			}
-
-			logrus.Warnf("VMNET connection lost, reconnecting in %v", backoff)
 
 			select {
 			case <-ctx.Done():
@@ -118,8 +110,11 @@ func forwardPackets(ctx context.Context, unixSock string, qemuConn *qemuPacketCo
 			var err error
 			qemuConn, err = dialQemuConn(ctx, unixSock)
 			if err != nil {
-				logrus.WithError(err).Warn("Failed to reconnect to VMNET")
-				backoff = time.Duration(math.Min(float64(backoff)*backoffFactor, float64(maxBackoff)))
+				logrus.WithError(err).Debug("Failed to reconnect to VMNET")
+				backoff *= 2
+				if backoff > maxBackoff {
+					backoff = maxBackoff
+				}
 				continue
 			}
 
@@ -132,16 +127,8 @@ func forwardPackets(ctx context.Context, unixSock string, qemuConn *qemuPacketCo
 // forwardUntilError forwards packets between qemuConn and vzConn until an error
 // occurs. Returns true if the error is fatal (vzConn failure), false if
 // recoverable (qemuConn failure). Always closes qemuConn before returning.
-//
-// Teardown: closing qemuConn forces the goroutine blocked on qemuConn I/O to
-// exit immediately. The goroutine blocked on vzConn.Read may not unblock until
-// the guest sends its next packet, since vzConn must stay open for reuse across
-// reconnects. In practice guests generate periodic traffic (ARP, NDP, DHCP)
-// within seconds. An interruptible copy or read-deadline approach was considered
-// but rejected: SetReadDeadline on the DGRAM vzConn would need to be armed and
-// disarmed on every reconnect cycle and risks false-positive timeouts during
-// normal forwarding. Waiting for the next guest packet is simpler and adds no
-// overhead to the normal forwarding path.
+// The goroutine blocked on vzConn.Read may not unblock until the guest sends
+// its next packet (ARP, NDP, DHCP — typically within seconds).
 func forwardUntilError(qemuConn *qemuPacketConn, vzConn *packetConn) bool {
 	errCh := make(chan bool, 2)
 
@@ -170,15 +157,15 @@ func forwardUntilError(qemuConn *qemuPacketConn, vzConn *packetConn) bool {
 	return first || second
 }
 
-// copyPackets copies packets from src to dst, returning whether the error was a
-// read error (true) or write error (false). This is used instead of io.Copy
-// because io.Copy does not distinguish read errors from write errors, and the
-// reconnect logic needs that distinction: a qemuConn (socket_vmnet) error is
-// recoverable via reconnect, while a vzConn (VZ socketpair) error is fatal.
-// The copy loop is the same read-buf-write-buf loop io.Copy uses (neither
-// qemuPacketConn nor packetConn implements ReaderFrom/WriterTo).
+// maxPacketSize is the maximum Ethernet frame (1514) plus 4-byte QEMU length
+// prefix. Used for relay buffers and as a sanity check on incoming frames.
+const maxPacketSize = 1518
+
+// copyPackets is like io.Copy but reports whether the error was a read error
+// (true) or write error (false), so the caller can distinguish fatal (vzConn)
+// from recoverable (qemuConn) failures.
 func copyPackets(dst io.Writer, src io.Reader) (readErr bool, err error) {
-	buf := make([]byte, 32*1024)
+	buf := make([]byte, maxPacketSize)
 	for {
 		nr, er := src.Read(buf)
 		if nr > 0 {
@@ -205,6 +192,9 @@ func (c *qemuPacketConn) Read(b []byte) (n int, err error) {
 	if err := binary.Read(c.Conn, binary.BigEndian, &size); err != nil {
 		// Likely connection closed by peer.
 		return 0, err
+	}
+	if size > uint32(len(b)) {
+		return 0, fmt.Errorf("packet size %d exceeds buffer %d", size, len(b))
 	}
 	return io.ReadFull(c.Conn, b[:size])
 }

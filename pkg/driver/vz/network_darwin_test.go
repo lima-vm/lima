@@ -158,12 +158,10 @@ func TestForwardPacketsReconnect(t *testing.T) {
 		server2Done <- serveOneClient(listener)
 	}()
 
-	// Send a sacrificial packet to unblock the VZ→VMNET goroutine that may
-	// be blocked reading from vzConn. This packet will be lost during the
-	// reconnect window — expected behavior.
-	sacrificial := make([]byte, 4)
-	binary.BigEndian.PutUint32(sacrificial, 0xFFFFFFFF)
-	_, err = vzClient.Write(sacrificial)
+	// Dummy packet to unblock the VZ→VMNET goroutine blocked on vzConn.Read.
+	dummy := make([]byte, 4)
+	binary.BigEndian.PutUint32(dummy, 0xFFFFFFFF)
+	_, err = vzClient.Write(dummy)
 	assert.NilError(t, err)
 
 	// Wait for reconnect (100ms backoff + dial).
