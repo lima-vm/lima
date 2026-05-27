@@ -6,11 +6,13 @@
 package vz
 
 import (
+	"context"
 	"encoding/binary"
 	"fmt"
 	"net"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"gotest.tools/v3/assert"
 )
@@ -100,6 +102,83 @@ func TestDialQemu(t *testing.T) {
 		err := <-errc
 		assert.NilError(t, err)
 	}
+}
+
+func TestForwardPacketsReconnect(t *testing.T) {
+	listener, err := listenUnix(t.TempDir())
+	assert.NilError(t, err)
+	defer listener.Close()
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	// Start first fake vmnet server.
+	server1Done := make(chan error, 1)
+	go func() {
+		server1Done <- serveOneClient(listener)
+	}()
+
+	client, err := DialQemu(ctx, listener.Addr().String())
+	assert.NilError(t, err)
+
+	dgramConn, err := net.FileConn(client)
+	assert.NilError(t, err)
+	vzClient := packetConn{Conn: dgramConn}
+	defer vzClient.Close()
+
+	sendRecv := func(seq uint32) {
+		t.Helper()
+		buf := make([]byte, vmnetMaxPacketSize)
+		binary.BigEndian.PutUint32(buf, seq)
+		_, err := vzClient.Write(buf)
+		assert.NilError(t, err)
+		n, err := vzClient.Read(buf)
+		assert.NilError(t, err)
+		assert.Assert(t, n >= 4)
+		assert.Equal(t, binary.BigEndian.Uint32(buf[:4]), seq)
+	}
+
+	// Verify packets through first connection.
+	for i := range 10 {
+		sendRecv(uint32(i))
+	}
+	t.Log("First connection: 10 packets verified")
+
+	// Tell first server to quit, closing its connection.
+	quit := make([]byte, 4)
+	copy(quit, "quit")
+	_, err = vzClient.Write(quit)
+	assert.NilError(t, err)
+	assert.NilError(t, <-server1Done)
+	t.Log("First server closed")
+
+	// Start second fake vmnet server for the reconnect.
+	server2Done := make(chan error, 1)
+	go func() {
+		server2Done <- serveOneClient(listener)
+	}()
+
+	// Send a sacrificial packet to unblock the VZ→VMNET goroutine that may
+	// be blocked reading from vzConn. This packet will be lost during the
+	// reconnect window — expected behavior.
+	sacrificial := make([]byte, 4)
+	binary.BigEndian.PutUint32(sacrificial, 0xFFFFFFFF)
+	_, err = vzClient.Write(sacrificial)
+	assert.NilError(t, err)
+
+	// Wait for reconnect (100ms backoff + dial).
+	time.Sleep(300 * time.Millisecond)
+
+	// Verify packets through second connection.
+	for i := 10; i < 20; i++ {
+		sendRecv(uint32(i))
+	}
+	t.Log("Second connection: 10 packets verified after reconnect")
+
+	// Clean up second server.
+	_, err = vzClient.Write(quit)
+	assert.NilError(t, err)
+	assert.NilError(t, <-server2Done)
 }
 
 // serveOneClient accepts one client and echo back received packets until a
