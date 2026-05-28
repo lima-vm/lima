@@ -78,12 +78,12 @@ func forwardPackets(cancel context.CancelFunc, qemuConn *qemuPacketConn, vzConn 
 	done := make(chan struct{}, 2)
 
 	go func() {
-		io.Copy(qemuConn, vzConn)
+		_, _ = io.Copy(qemuConn, vzConn)
 		done <- struct{}{}
 	}()
 
 	go func() {
-		io.Copy(vzConn, qemuConn)
+		_, _ = io.Copy(vzConn, qemuConn)
 		done <- struct{}{}
 	}()
 
