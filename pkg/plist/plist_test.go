@@ -73,7 +73,7 @@ func TestUnmarshalPlist(t *testing.T) {
 								" intKey with\n\t\t\tspaces": {Integer: ptr.Of(int64(43))},
 								"intKeyZero":                 {Integer: ptr.Of(int64(0))},
 								"dataKey":                    {Data: []byte("hello")},
-								"dateKey":                    {Date: ptr.Of(time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC))},
+								"dateKey":                    {Date: ptr.Of(time.Date(2020, time.January, 2, 3, 4, 5, 0, time.UTC))},
 								"trueKey":                    {Boolean: ptr.Of(true)},
 								"falseKey":                   {Boolean: ptr.Of(false)},
 								"realKey":                    {Real: ptr.Of(3.14)},
