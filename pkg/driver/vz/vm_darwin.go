@@ -73,7 +73,20 @@ func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int, onV
 
 	wrapper := &virtualMachineWrapper{VirtualMachine: machine, stopped: false}
 	notifySSHLocalPortAccessible := make(chan any)
-	sendErrCh := make(chan error)
+	// Buffered so that simultaneous writers (state-change handlers and the
+	// inner usernet goroutine below) cannot deadlock if the consumer has
+	// already exited the receive loop, e.g. during shutdown.
+	sendErrCh := make(chan error, 4)
+
+	// trySendErr is a non-blocking send that drops the error once ctx has
+	// been cancelled. This prevents writers from leaking after the consumer
+	// has stopped draining sendErrCh.
+	trySendErr := func(err error) {
+		select {
+		case sendErrCh <- err:
+		case <-ctx.Done():
+		}
+	}
 
 	go func() {
 		// Handle errors via errCh and handle stop vm during context close
@@ -82,25 +95,34 @@ func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int, onV
 				vmNetworkFiles[i].Close()
 			}
 		}()
+		done := ctx.Done()
 		for {
 			select {
-			case <-ctx.Done():
+			case <-done:
+				// Nil out so this case is never selected again, preventing
+				// the hot-loop that occurred when <-ctx.Done() was used
+				// directly (a closed channel is always ready).
+				done = nil
 				logrus.Info("Context closed, stopping vm")
 				if machine.CanStop() {
-					_, err := machine.RequestStop()
-					logrus.Errorf("Error while stopping the VM %q", err)
+					if _, err := machine.RequestStop(); err != nil {
+						logrus.WithError(err).Warn("Failed to request VM stop")
+					}
 				}
+				// Do NOT return here: let the loop continue so we can still
+				// process VirtualMachineStateStopped and run its cleanup
+				// (UnExposeSSH, stopUsernet, etc.).
 			case newState := <-machine.StateChangedNotify():
 				switch newState {
 				case vz.VirtualMachineStateRunning:
 					pidFile := filepath.Join(inst.Dir, filenames.PIDFile(*inst.Config.VMType))
 					if _, err := os.Stat(pidFile); !errors.Is(err, os.ErrNotExist) {
 						logrus.Errorf("pidfile %q already exists", pidFile)
-						sendErrCh <- err
+						trySendErr(err)
 					}
 					if err := os.WriteFile(pidFile, []byte(strconv.Itoa(os.Getpid())+"\n"), 0o644); err != nil {
 						logrus.Errorf("error writing to pid fil %q", pidFile)
-						sendErrCh <- err
+						trySendErr(err)
 					}
 					logrus.Info("[VZ] - vm state change: running")
 
@@ -153,7 +175,7 @@ func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int, onV
 						}
 						err := usernetClient.ConfigureDriver(ctx, inst, usernetSSHLocalPort)
 						if err != nil {
-							sendErrCh <- err
+							trySendErr(err)
 						}
 					}()
 				case vz.VirtualMachineStateStopped:
@@ -165,7 +187,8 @@ func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int, onV
 					if stopUsernet != nil {
 						stopUsernet()
 					}
-					sendErrCh <- errors.New("vz driver state stopped")
+					trySendErr(errors.New("vz driver state stopped"))
+					return
 				default:
 					logrus.Debugf("[VZ] - vm state change: %q", newState)
 				}
