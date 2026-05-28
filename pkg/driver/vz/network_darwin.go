@@ -42,181 +42,268 @@ func PassFDToUnix(unixSock string) (*os.File, error) {
 	return client, nil
 }
 
-func dialQemuConn(ctx context.Context, unixSock string) (*qemuPacketConn, error) {
-	var dialer net.Dialer
-	conn, err := dialer.DialContext(ctx, "unix", unixSock)
-	if err != nil {
-		return nil, err
-	}
-	return &qemuPacketConn{Conn: conn}, nil
-}
-
 // DialQemu support connecting to QEMU supported network stack via unix socket.
 // Returns os.File, connected dgram connection to be used for vz.
 func DialQemu(ctx context.Context, unixSock string) (*os.File, error) {
-	qemuConn, err := dialQemuConn(ctx, unixSock)
+	var dialer net.Dialer
+	conn, err := dialer.DialContext(ctx, "unix", unixSock)
 	if err != nil {
 		return nil, err
 	}
 
 	server, client, err := createSockPair()
 	if err != nil {
+		conn.Close()
 		return nil, err
 	}
 	dgramConn, err := net.FileConn(server)
 	if err != nil {
+		conn.Close()
 		return nil, err
 	}
 	vzConn := &packetConn{Conn: dgramConn}
 
-	go forwardPackets(ctx, unixSock, qemuConn, vzConn)
+	fwdCtx, fwdCancel := context.WithCancel(ctx)
+	qemuConn := newQemuPacketConn(fwdCtx, unixSock, conn)
+
+	go forwardPackets(fwdCancel, qemuConn, vzConn)
 
 	return client, nil
 }
 
-// forwardPackets relays packets between vzConn and qemuConn, reconnecting the
-// qemuConn (socket_vmnet) side on failure. vzConn is bound to
-// Virtualization.framework at VM creation and cannot be replaced; only qemuConn
-// is re-dialed on reconnect.
-func forwardPackets(ctx context.Context, unixSock string, qemuConn *qemuPacketConn, vzConn *packetConn) {
-	defer vzConn.Close()
+// forwardPackets relays packets between vzConn and qemuConn. Reconnection of
+// the qemuConn side is handled internally by qemuPacketConn; this function
+// just runs io.Copy in both directions until a fatal error occurs.
+func forwardPackets(cancel context.CancelFunc, qemuConn *qemuPacketConn, vzConn *packetConn) {
+	done := make(chan struct{}, 2)
 
+	go func() {
+		io.Copy(qemuConn, vzConn)
+		done <- struct{}{}
+	}()
+
+	go func() {
+		io.Copy(vzConn, qemuConn)
+		done <- struct{}{}
+	}()
+
+	<-done
+	if !qemuConn.done() {
+		logrus.Error("VZ network socket error, packet forwarding stopped permanently")
+	}
+	cancel()
+	vzConn.Close()
+	qemuConn.Close()
+	<-done
+}
+
+// qemuPacketConn relays length-prefixed Ethernet frames over a unix stream
+// socket to socket_vmnet, reconnecting automatically on connection failure.
+type qemuPacketConn struct {
+	mu        sync.Mutex
+	cond      *sync.Cond
+	conn      net.Conn
+	gen       uint64
+	reconnect chan uint64
+	ctx       context.Context
+	sock      string
+}
+
+func newQemuPacketConn(ctx context.Context, sock string, conn net.Conn) *qemuPacketConn {
+	c := &qemuPacketConn{
+		conn:      conn,
+		reconnect: make(chan uint64, 1),
+		ctx:       ctx,
+		sock:      sock,
+	}
+	c.cond = sync.NewCond(&c.mu)
+	go c.reconnectLoop()
+	go func() {
+		<-ctx.Done()
+		c.cond.Broadcast()
+	}()
+	return c
+}
+
+// getConn returns the current connection and its generation. Blocks while a
+// reconnect is in progress. Returns ok=false on shutdown.
+func (c *qemuPacketConn) getConn() (conn net.Conn, gen uint64, ok bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	for c.conn == nil {
+		if c.ctx.Err() != nil {
+			return nil, c.gen, false
+		}
+		c.cond.Wait()
+	}
+	return c.conn, c.gen, true
+}
+
+// waitReconnect signals the reconnect goroutine and blocks until a new
+// connection is available. Returns false on shutdown.
+func (c *qemuPacketConn) waitReconnect(gen uint64) bool {
+	select {
+	case c.reconnect <- gen:
+	default:
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	for c.gen == gen {
+		if c.ctx.Err() != nil {
+			return false
+		}
+		c.cond.Wait()
+	}
+	return c.conn != nil
+}
+
+func (c *qemuPacketConn) reconnectLoop() {
 	const (
 		initialBackoff = 100 * time.Millisecond
 		maxBackoff     = 2 * time.Second
 	)
 
 	for {
-		fatal := forwardUntilError(qemuConn, vzConn)
-		if fatal {
-			logrus.Error("VZ network socket error, packet forwarding stopped permanently")
+		select {
+		case <-c.ctx.Done():
+			c.shutdown()
 			return
-		}
-
-		logrus.Warn("VMNET connection lost, reconnecting")
-
-		backoff := initialBackoff
-		for {
-			if ctx.Err() != nil {
-				return
-			}
-
-			select {
-			case <-ctx.Done():
-				return
-			case <-time.After(backoff):
-			}
-
-			var err error
-			qemuConn, err = dialQemuConn(ctx, unixSock)
-			if err != nil {
-				logrus.WithError(err).Debug("Failed to reconnect to VMNET")
-				backoff *= 2
-				if backoff > maxBackoff {
-					backoff = maxBackoff
-				}
+		case failedGen := <-c.reconnect:
+			c.mu.Lock()
+			if c.gen != failedGen {
+				c.mu.Unlock()
 				continue
 			}
+			old := c.conn
+			c.conn = nil
+			c.mu.Unlock()
 
-			logrus.Info("VMNET connection re-established, resuming packet forwarding")
-			break
-		}
-	}
-}
+			if old != nil {
+				old.Close()
+			}
 
-// forwardUntilError forwards packets between qemuConn and vzConn until an error
-// occurs. Returns true if the error is fatal (vzConn failure), false if
-// recoverable (qemuConn failure). Always closes qemuConn before returning.
-// The goroutine blocked on vzConn.Read may not unblock until the guest sends
-// its next packet (ARP, NDP, DHCP — typically within seconds).
-func forwardUntilError(qemuConn *qemuPacketConn, vzConn *packetConn) bool {
-	errCh := make(chan bool, 2)
+			logrus.Warn("VMNET connection lost, reconnecting")
 
-	var wg sync.WaitGroup
-	wg.Add(2)
+			var dialer net.Dialer
+			backoff := initialBackoff
+			for {
+				select {
+				case <-c.ctx.Done():
+					c.shutdown()
+					return
+				case <-time.After(backoff):
+				}
 
-	// VZ → VMNET: reads vzConn, writes qemuConn
-	go func() {
-		defer wg.Done()
-		readErr, _ := copyPackets(qemuConn, vzConn)
-		errCh <- readErr // readErr=true → vzConn read failed (fatal)
-	}()
+				conn, err := dialer.DialContext(c.ctx, "unix", c.sock)
+				if err != nil {
+					logrus.WithError(err).Debug("Failed to reconnect to VMNET")
+					backoff *= 2
+					if backoff > maxBackoff {
+						backoff = maxBackoff
+					}
+					continue
+				}
 
-	// VMNET → VZ: reads qemuConn, writes vzConn
-	go func() {
-		defer wg.Done()
-		readErr, _ := copyPackets(vzConn, qemuConn)
-		errCh <- !readErr // !readErr → vzConn write failed (fatal)
-	}()
+				if c.ctx.Err() != nil {
+					conn.Close()
+					c.shutdown()
+					return
+				}
 
-	first := <-errCh
-	qemuConn.Close()
-	wg.Wait()
-	second := <-errCh
+				c.mu.Lock()
+				c.conn = conn
+				c.gen++
+				c.cond.Broadcast()
+				c.mu.Unlock()
 
-	return first || second
-}
-
-// maxPacketSize is the maximum Ethernet frame (1514) plus 4-byte QEMU length
-// prefix. Used for relay buffers and as a sanity check on incoming frames.
-const maxPacketSize = 1518
-
-// copyPackets is like io.Copy but reports whether the error was a read error
-// (true) or write error (false), so the caller can distinguish fatal (vzConn)
-// from recoverable (qemuConn) failures.
-func copyPackets(dst io.Writer, src io.Reader) (readErr bool, err error) {
-	buf := make([]byte, maxPacketSize)
-	for {
-		nr, er := src.Read(buf)
-		if nr > 0 {
-			if _, ew := dst.Write(buf[:nr]); ew != nil {
-				return false, ew
+				logrus.Info("VMNET connection re-established")
+				break
 			}
 		}
-		if er != nil {
-			return true, er
+	}
+}
+
+func (c *qemuPacketConn) done() bool {
+	return c.ctx.Err() != nil
+}
+
+func (c *qemuPacketConn) shutdown() {
+	c.mu.Lock()
+	if c.conn != nil {
+		c.conn.Close()
+	}
+	c.conn = nil
+	c.gen++
+	c.cond.Broadcast()
+	c.mu.Unlock()
+}
+
+func (c *qemuPacketConn) Read(b []byte) (int, error) {
+	for {
+		conn, gen, ok := c.getConn()
+		if !ok {
+			return 0, c.ctx.Err()
+		}
+		n, err := readPacket(conn, b)
+		if err == nil {
+			return n, nil
+		}
+		if !c.waitReconnect(gen) {
+			return 0, err
 		}
 	}
 }
 
-// qemuPacketConn converts raw network packet to a QEMU supported network packet.
-type qemuPacketConn struct {
-	net.Conn
+func (c *qemuPacketConn) Write(b []byte) (int, error) {
+	for {
+		conn, gen, ok := c.getConn()
+		if !ok {
+			return 0, c.ctx.Err()
+		}
+		err := writePacket(conn, b)
+		if err == nil {
+			return len(b), nil
+		}
+		if !c.waitReconnect(gen) {
+			return 0, err
+		}
+	}
 }
 
-// Read reads a QEMU packet and returns the contained raw packet.  Returns (len,
-// nil) if a packet was read, and (0, err) on error. Errors means the protocol
-// is broken and the socket must be closed.
-func (c *qemuPacketConn) Read(b []byte) (n int, err error) {
+func (c *qemuPacketConn) Close() error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.conn != nil {
+		err := c.conn.Close()
+		c.conn = nil
+		return err
+	}
+	return nil
+}
+
+func readPacket(conn net.Conn, b []byte) (int, error) {
 	var size uint32
-	if err := binary.Read(c.Conn, binary.BigEndian, &size); err != nil {
-		// Likely connection closed by peer.
+	if err := binary.Read(conn, binary.BigEndian, &size); err != nil {
 		return 0, err
 	}
 	if size > uint32(len(b)) {
 		return 0, fmt.Errorf("packet size %d exceeds buffer %d", size, len(b))
 	}
-	return io.ReadFull(c.Conn, b[:size])
+	return io.ReadFull(conn, b[:size])
 }
 
-// Write writes a QEMU packet containing the raw packet. Returns (len(b), nil)
-// if a packet was written, and (0, err) if a packet was not fully written.
-// Errors means the protocol is broken and the socket must be closed.
-func (c *qemuPacketConn) Write(b []byte) (int, error) {
-	size := len(b)
-	header := uint32(size)
-	if err := binary.Write(c.Conn, binary.BigEndian, header); err != nil {
-		return 0, err
+func writePacket(conn net.Conn, b []byte) error {
+	if err := binary.Write(conn, binary.BigEndian, uint32(len(b))); err != nil {
+		return err
 	}
-
 	for len(b) != 0 {
-		n, err := c.Conn.Write(b)
+		n, err := conn.Write(b)
 		if err != nil {
-			return 0, err
+			return err
 		}
 		b = b[n:]
 	}
-	return size, nil
+	return nil
 }
 
 // Testing show that retries are very rare (e.g 24 of 62,499,008 packets) and
