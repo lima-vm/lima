@@ -40,22 +40,22 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 
 	if y.MinimumLimaVersion != nil {
 		if _, err := versionutil.Parse(*y.MinimumLimaVersion); err != nil {
-			errs = errors.Join(errs, fmt.Errorf("field `minimumLimaVersion` must be a semvar value, got %q: %w", *y.MinimumLimaVersion, err))
+			errs = errors.Join(errs, fmt.Errorf("field `minimumLimaVersion` must be a semvar value, got %#q: %w", *y.MinimumLimaVersion, err))
 		}
 		// Unparsable version.Version (like commit hashes or "<unknown>") is treated as "latest/greatest"
 		// and will pass all version comparisons, allowing development builds to work.
 		if !versionutil.GreaterEqual(version.Version, *y.MinimumLimaVersion) {
-			errs = errors.Join(errs, fmt.Errorf("template requires Lima version %q; this is only %q", *y.MinimumLimaVersion, version.Version))
+			errs = errors.Join(errs, fmt.Errorf("template requires Lima version %#q; this is only %#q", *y.MinimumLimaVersion, version.Version))
 		}
 	}
 
 	switch *y.OS {
 	case limatype.LINUX, limatype.DARWIN, limatype.FREEBSD:
 	default:
-		errs = errors.Join(errs, fmt.Errorf("field `os` must be one of %q; got %q", limatype.OSTypes, *y.OS))
+		errs = errors.Join(errs, fmt.Errorf("field `os` must be one of %#q; got %#q", limatype.OSTypes, *y.OS))
 	}
 	if !slices.Contains(limatype.ArchTypes, *y.Arch) {
-		errs = errors.Join(errs, fmt.Errorf("field `arch` must be one of %v; got %q", limatype.ArchTypes, *y.Arch))
+		errs = errors.Join(errs, fmt.Errorf("field `arch` must be one of %v; got %#q", limatype.ArchTypes, *y.Arch))
 	}
 
 	if len(y.Images) == 0 {
@@ -72,7 +72,7 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 				errs = errors.Join(errs, err)
 			}
 			if f.Kernel.Arch != f.Arch {
-				errs = errors.Join(errs, fmt.Errorf("images[%d].kernel has unexpected architecture %q, must be %q", i, f.Kernel.Arch, f.Arch))
+				errs = errors.Join(errs, fmt.Errorf("images[%d].kernel has unexpected architecture %#q, must be %#q", i, f.Kernel.Arch, f.Arch))
 			}
 		}
 		if f.Initrd != nil {
@@ -81,7 +81,7 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 				errs = errors.Join(errs, err)
 			}
 			if f.Initrd.Arch != f.Arch {
-				errs = errors.Join(errs, fmt.Errorf("images[%d].initrd has unexpected architecture %q, must be %q", i, f.Initrd.Arch, f.Arch))
+				errs = errors.Join(errs, fmt.Errorf("images[%d].initrd has unexpected architecture %#q, must be %#q", i, f.Initrd.Arch, f.Arch))
 			}
 		}
 	}
@@ -106,24 +106,24 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 
 	for i, f := range y.Mounts {
 		if !filepath.IsAbs(f.Location) && !strings.HasPrefix(f.Location, "~") {
-			errs = errors.Join(errs, fmt.Errorf("field `mounts[%d].location` must be an absolute path, got %q",
+			errs = errors.Join(errs, fmt.Errorf("field `mounts[%d].location` must be an absolute path, got %#q",
 				i, f.Location))
 		}
 		// f.Location has already been expanded in FillDefaults(), but that function cannot return errors.
 		loc, err := localpathutil.Expand(f.Location)
 		if err != nil {
-			errs = errors.Join(errs, fmt.Errorf("field `mounts[%d].location` refers to an unexpandable path: %q: %w", i, f.Location, err))
+			errs = errors.Join(errs, fmt.Errorf("field `mounts[%d].location` refers to an unexpandable path: %#q: %w", i, f.Location, err))
 		}
 		st, err := os.Stat(loc)
 		if err != nil {
 			if !errors.Is(err, os.ErrNotExist) {
-				errs = errors.Join(errs, fmt.Errorf("field `mounts[%d].location` refers to an inaccessible path: %q: %w", i, f.Location, err))
+				errs = errors.Join(errs, fmt.Errorf("field `mounts[%d].location` refers to an inaccessible path: %#q: %w", i, f.Location, err))
 			}
 			if warn {
-				logrus.Warnf("field `mounts[%d].location` refers to a non-existent directory: %q:", i, f.Location)
+				logrus.Warnf("field `mounts[%d].location` refers to a non-existent directory: %#q:", i, f.Location)
 			}
 		} else if !st.IsDir() {
-			errs = errors.Join(errs, fmt.Errorf("field `mounts[%d].location` refers to a non-directory path: %q: %w", i, f.Location, err))
+			errs = errors.Join(errs, fmt.Errorf("field `mounts[%d].location` refers to a non-directory path: %#q: %w", i, f.Location, err))
 		}
 
 		switch *f.MountPoint {
@@ -131,7 +131,7 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 			errs = errors.Join(errs, fmt.Errorf("field `mounts[%d].mountPoint` must not be a system path such as /etc or /usr", i))
 		// home directory defined in "cidata.iso:/user-data"
 		case *y.User.Home:
-			errs = errors.Join(errs, fmt.Errorf("field `mounts[%d].mountPoint` is the reserved internal home directory %q", i, *y.User.Home))
+			errs = errors.Join(errs, fmt.Errorf("field `mounts[%d].mountPoint` is the reserved internal home directory %#q", i, *y.User.Home))
 		}
 		// There is no tilde-expansion for guest filenames
 		if strings.HasPrefix(*f.MountPoint, "~") {
@@ -153,11 +153,11 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 		switch *y.MountType {
 		case limatype.REVSSHFS, limatype.NINEP, limatype.VIRTIOFS, limatype.WSLMount:
 		default:
-			errs = errors.Join(errs, fmt.Errorf("field `mountType` must be %q or %q or %q, or %q, got %q", limatype.REVSSHFS, limatype.NINEP, limatype.VIRTIOFS, limatype.WSLMount, *y.MountType))
+			errs = errors.Join(errs, fmt.Errorf("field `mountType` must be %#q or %#q or %#q, or %#q, got %#q", limatype.REVSSHFS, limatype.NINEP, limatype.VIRTIOFS, limatype.WSLMount, *y.MountType))
 		}
 
 		if slices.Contains(y.MountTypesUnsupported, *y.MountType) {
-			errs = errors.Join(errs, fmt.Errorf("field `mountType` must not be one of %v (`mountTypesUnsupported`), got %q", y.MountTypesUnsupported, *y.MountType))
+			errs = errors.Join(errs, fmt.Errorf("field `mountType` must not be one of %v (`mountTypesUnsupported`), got %#q", y.MountTypesUnsupported, *y.MountType))
 		}
 	}
 
@@ -183,11 +183,11 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 		switch p.Mode {
 		case limatype.ProvisionModeSystem, limatype.ProvisionModeUser, limatype.ProvisionModeBoot, limatype.ProvisionModeData, limatype.ProvisionModeDependency, limatype.ProvisionModeAnsible, limatype.ProvisionModeYQ:
 		default:
-			errs = errors.Join(errs, fmt.Errorf("field `provision[%d].mode` must one of %q, %q, %q, %q, %q, %q, or %q",
+			errs = errors.Join(errs, fmt.Errorf("field `provision[%d].mode` must one of %#q, %#q, %#q, %#q, %#q, %#q, or %#q",
 				i, limatype.ProvisionModeSystem, limatype.ProvisionModeUser, limatype.ProvisionModeBoot, limatype.ProvisionModeData, limatype.ProvisionModeDependency, limatype.ProvisionModeAnsible, limatype.ProvisionModeYQ))
 		}
 		if p.Mode != limatype.ProvisionModeDependency && p.SkipDefaultDependencyResolution != nil {
-			errs = errors.Join(errs, fmt.Errorf("field `provision[%d].mode` cannot set skipDefaultDependencyResolution, only valid on scripts of type %q",
+			errs = errors.Join(errs, fmt.Errorf("field `provision[%d].mode` cannot set skipDefaultDependencyResolution, only valid on scripts of type %#q",
 				i, limatype.ProvisionModeDependency))
 		}
 
@@ -195,17 +195,17 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 		switch p.Mode {
 		case limatype.ProvisionModeData, limatype.ProvisionModeYQ:
 			if p.Path == nil {
-				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].path` must not be empty when mode is %q", i, p.Mode))
+				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].path` must not be empty when mode is %#q", i, p.Mode))
 				return errs
 			}
 			if !path.IsAbs(*p.Path) {
 				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].path` must be an absolute path", i))
 			}
 			if p.Mode == limatype.ProvisionModeData && p.Content == nil {
-				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].content` must not be empty when mode is %q", i, p.Mode))
+				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].content` must not be empty when mode is %#q", i, p.Mode))
 			}
 			if p.Mode == limatype.ProvisionModeYQ && p.Expression == nil {
-				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].expression` must not be empty when mode is %q", i, p.Mode))
+				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].expression` must not be empty when mode is %#q", i, p.Mode))
 			}
 			// FillDefaults makes sure that p.Permissions is not nil
 			if _, err := strconv.ParseInt(*p.Permissions, 8, 64); err != nil {
@@ -216,36 +216,36 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].script` must not be empty", i))
 			}
 			if p.Content != nil {
-				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].content` can only be set when mode is %q", i, limatype.ProvisionModeData))
+				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].content` can only be set when mode is %#q", i, limatype.ProvisionModeData))
 			}
 			if p.Overwrite != nil {
-				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].overwrite` can only be set when mode is %q", i, limatype.ProvisionModeData))
+				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].overwrite` can only be set when mode is %#q", i, limatype.ProvisionModeData))
 			}
 			if p.Owner != nil {
-				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].owner` can only be set when mode is %q", i, limatype.ProvisionModeData))
+				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].owner` can only be set when mode is %#q", i, limatype.ProvisionModeData))
 			}
 			if p.Path != nil {
-				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].path` can only be set when mode is %q, or %q", i, limatype.ProvisionModeData, limatype.ProvisionModeYQ))
+				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].path` can only be set when mode is %#q, or %#q", i, limatype.ProvisionModeData, limatype.ProvisionModeYQ))
 			}
 			if p.Permissions != nil {
-				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].permissions` can only be set when mode is %q, or %q", i, limatype.ProvisionModeData, limatype.ProvisionModeYQ))
+				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].permissions` can only be set when mode is %#q, or %#q", i, limatype.ProvisionModeData, limatype.ProvisionModeYQ))
 			}
 			if p.Format != nil {
-				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].format` can only be set when mode is %q", i, limatype.ProvisionModeYQ))
+				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].format` can only be set when mode is %#q", i, limatype.ProvisionModeYQ))
 			}
 		}
 		if p.Playbook != "" {
 			if p.Mode != limatype.ProvisionModeAnsible {
-				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].playbook can only be set when mode is %q", i, limatype.ProvisionModeAnsible))
+				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].playbook can only be set when mode is %#q", i, limatype.ProvisionModeAnsible))
 			}
 			if p.Script != nil && *p.Script != "" {
 				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].script must be empty if playbook is set", i))
 			}
 			playbook := p.Playbook
 			if _, err := os.Stat(playbook); err != nil {
-				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].playbook` refers to an inaccessible path: %q: %w", i, playbook, err))
+				errs = errors.Join(errs, fmt.Errorf("field `provision[%d].playbook` refers to an inaccessible path: %#q: %w", i, playbook, err))
 			}
-			logrus.Warnf("provision mode %q is deprecated, use `ansible-playbook %q` instead", limatype.ProvisionModeAnsible, playbook)
+			logrus.Warnf("provision mode %#q is deprecated, use `ansible-playbook %#q` instead", limatype.ProvisionModeAnsible, playbook)
 		}
 		if p.Script != nil {
 			if strings.Contains(*p.Script, "LIMA_CIDATA") {
@@ -280,7 +280,7 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 		switch p.Mode {
 		case limatype.ProbeModeReadiness:
 		default:
-			errs = errors.Join(errs, fmt.Errorf("field `probe[%d].mode` can only be %q", i, limatype.ProbeModeReadiness))
+			errs = errors.Join(errs, fmt.Errorf("field `probe[%d].mode` can only be %#q", i, limatype.ProbeModeReadiness))
 		}
 	}
 	for i, rule := range y.PortForwards {
@@ -330,7 +330,7 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 		}
 		if rule.GuestSocket != "" {
 			if !path.IsAbs(rule.GuestSocket) {
-				errs = errors.Join(errs, fmt.Errorf("field `%s.guestSocket` must be an absolute path, but is %q", field, rule.GuestSocket))
+				errs = errors.Join(errs, fmt.Errorf("field `%s.guestSocket` must be an absolute path, but is %#q", field, rule.GuestSocket))
 			}
 			if rule.HostSocket == "" && rule.HostPortRange[1]-rule.HostPortRange[0] > 0 {
 				errs = errors.Join(errs, fmt.Errorf("field `%s.guestSocket` can only be mapped to a single port or socket. not a range", field))
@@ -339,7 +339,7 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 		if rule.HostSocket != "" {
 			if !filepath.IsAbs(rule.HostSocket) {
 				// should be unreachable because FillDefault() will prepend the instance directory to relative names
-				errs = errors.Join(errs, fmt.Errorf("field `%s.hostSocket` must be an absolute path, but is %q", field, rule.HostSocket))
+				errs = errors.Join(errs, fmt.Errorf("field `%s.hostSocket` must be an absolute path, but is %#q", field, rule.HostSocket))
 			}
 			if rule.GuestSocket == "" && rule.GuestPortRange[1]-rule.GuestPortRange[0] > 0 {
 				errs = errors.Join(errs, fmt.Errorf("field `%s.hostSocket` can only be mapped from a single port or socket. not a range", field))
@@ -355,7 +355,7 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 		switch rule.Proto {
 		case limatype.ProtoTCP, limatype.ProtoUDP, limatype.ProtoAny:
 		default:
-			errs = errors.Join(errs, fmt.Errorf("field `%s.proto` must be %q, %q, or %q", field, limatype.ProtoTCP, limatype.ProtoUDP, limatype.ProtoAny))
+			errs = errors.Join(errs, fmt.Errorf("field `%s.proto` must be %#q, %#q, or %#q", field, limatype.ProtoTCP, limatype.ProtoUDP, limatype.ProtoAny))
 		}
 		if rule.Reverse && rule.GuestSocket == "" {
 			errs = errors.Join(errs, fmt.Errorf("field `%s.reverse` must be %t", field, false))
@@ -370,12 +370,12 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 		field := fmt.Sprintf("CopyToHost[%d]", i)
 		if rule.GuestFile != "" {
 			if !path.IsAbs(rule.GuestFile) {
-				errs = errors.Join(errs, fmt.Errorf("field `%s.guest` must be an absolute path, but is %q", field, rule.GuestFile))
+				errs = errors.Join(errs, fmt.Errorf("field `%s.guest` must be an absolute path, but is %#q", field, rule.GuestFile))
 			}
 		}
 		if rule.HostFile != "" {
 			if !filepath.IsAbs(rule.HostFile) {
-				errs = errors.Join(errs, fmt.Errorf("field `%s.host` must be an absolute path, but is %q", field, rule.HostFile))
+				errs = errors.Join(errs, fmt.Errorf("field `%s.host` must be an absolute path, but is %#q", field, rule.HostFile))
 			}
 		}
 	}
@@ -398,11 +398,11 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 	validParamName := regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_]*$`)
 	for param, value := range y.Param {
 		if !validParamName.MatchString(param) {
-			errs = errors.Join(errs, fmt.Errorf("param %q name does not match regex %q", param, validParamName.String()))
+			errs = errors.Join(errs, fmt.Errorf("param %#q name does not match regex %#q", param, validParamName.String()))
 		}
 		for _, r := range value {
 			if !unicode.IsPrint(r) && r != '\t' && r != ' ' {
-				errs = errors.Join(errs, fmt.Errorf("param %q value contains unprintable character %q", param, r))
+				errs = errors.Join(errs, fmt.Errorf("param %#q value contains unprintable character %#q", param, r))
 			}
 		}
 	}
@@ -424,12 +424,12 @@ func validateFileObject(f limatype.File, fieldName string) error {
 	var errs error
 	if !strings.Contains(f.Location, "://") {
 		if _, err := localpathutil.Expand(f.Location); err != nil {
-			errs = errors.Join(errs, fmt.Errorf("field `%s.location` refers to an invalid local file path: %q: %w", fieldName, f.Location, err))
+			errs = errors.Join(errs, fmt.Errorf("field `%s.location` refers to an invalid local file path: %#q: %w", fieldName, f.Location, err))
 		}
 		// f.Location does NOT need to be accessible, so we do NOT check os.Stat(f.Location)
 	}
 	if !slices.Contains(limatype.ArchTypes, f.Arch) {
-		errs = errors.Join(errs, fmt.Errorf("field `arch` must be one of %v; got %q", limatype.ArchTypes, f.Arch))
+		errs = errors.Join(errs, fmt.Errorf("field `arch` must be one of %v; got %#q", limatype.ArchTypes, f.Arch))
 	}
 	if f.Digest != "" {
 		if err := f.Digest.Validate(); err != nil {
@@ -451,7 +451,7 @@ func validateNetwork(y *limatype.LimaYAML) error {
 				return err
 			}
 			if nwCfg.Check(nw.Lima) != nil {
-				errs = errors.Join(errs, fmt.Errorf("field `%s.lima` references network %q which is not defined in networks.yaml", field, nw.Lima))
+				errs = errors.Join(errs, fmt.Errorf("field `%s.lima` references network %#q which is not defined in networks.yaml", field, nw.Lima))
 			}
 			usernet, err := nwCfg.Usernet(nw.Lima)
 			if err != nil {
@@ -473,7 +473,7 @@ func validateNetwork(y *limatype.LimaYAML) error {
 			if fi, err := os.Stat(nw.Socket); err != nil && !errors.Is(err, os.ErrNotExist) {
 				errs = errors.Join(errs, err)
 			} else if err == nil && fi.Mode()&os.ModeSocket == 0 {
-				errs = errors.Join(errs, fmt.Errorf("field `%s.socket` %q points to a non-socket file", field, nw.Socket))
+				errs = errors.Join(errs, fmt.Errorf("field `%s.socket` %#q points to a non-socket file", field, nw.Socket))
 			}
 		case nw.VZNAT != nil && *nw.VZNAT:
 			if nw.Lima != "" {
@@ -491,21 +491,21 @@ func validateNetwork(y *limatype.LimaYAML) error {
 				errs = errors.Join(errs, fmt.Errorf("field `vmnet.mac` invalid: %w", err))
 			}
 			if len(hw) != 6 {
-				errs = errors.Join(errs, fmt.Errorf("field `%s.macAddress` must be a 48 bit (6 bytes) MAC address; actual length of %q is %d bytes", field, nw.MACAddress, len(hw)))
+				errs = errors.Join(errs, fmt.Errorf("field `%s.macAddress` must be a 48 bit (6 bytes) MAC address; actual length of %#q is %d bytes", field, nw.MACAddress, len(hw)))
 			}
 		}
 		// FillDefault() will make sure that nw.Interface is not the empty string
 		if len(nw.Interface) >= 16 {
-			errs = errors.Join(errs, fmt.Errorf("field `%s.interface` must be less than 16 bytes, but is %d bytes: %q", field, len(nw.Interface), nw.Interface))
+			errs = errors.Join(errs, fmt.Errorf("field `%s.interface` must be less than 16 bytes, but is %d bytes: %#q", field, len(nw.Interface), nw.Interface))
 		}
 		if strings.ContainsAny(nw.Interface, " \t\n/") {
 			errs = errors.Join(errs, fmt.Errorf("field `%s.interface` must not contain whitespace or slashes", field))
 		}
 		if nw.Interface == networks.SlirpNICName {
-			errs = errors.Join(errs, fmt.Errorf("field `%s.interface` must not be set to %q because it is reserved for slirp", field, networks.SlirpNICName))
+			errs = errors.Join(errs, fmt.Errorf("field `%s.interface` must not be set to %#q because it is reserved for slirp", field, networks.SlirpNICName))
 		}
 		if prev, ok := interfaceName[nw.Interface]; ok {
-			errs = errors.Join(errs, fmt.Errorf("field `%s.interface` value %q has already been used by field `networks[%d].interface`", field, nw.Interface, prev))
+			errs = errors.Join(errs, fmt.Errorf("field `%s.interface` value %#q has already been used by field `networks[%d].interface`", field, nw.Interface, prev))
 		}
 		interfaceName[nw.Interface] = i
 	}
@@ -519,7 +519,7 @@ func validateParamIsUsed(y *limatype.LimaYAML) error {
 	for key := range y.Param {
 		re, err := regexp.Compile(`{{[^}]*\.Param\.` + key + `[^}]*}}|\bPARAM_` + key + `\b`)
 		if err != nil {
-			return fmt.Errorf("field to compile regexp for key %q: %w", key, err)
+			return fmt.Errorf("field to compile regexp for key %#q: %w", key, err)
 		}
 		keyIsUsed := false
 		for _, p := range y.Provision {
@@ -569,7 +569,7 @@ func validateParamIsUsed(y *limatype.LimaYAML) error {
 			}
 		}
 		if !keyIsUsed {
-			return fmt.Errorf("field `param` key %q is not used in any provision, probe, copyToHost, or portForward", key)
+			return fmt.Errorf("field `param` key %#q is not used in any provision, probe, copyToHost, or portForward", key)
 		}
 	}
 	return nil
@@ -620,7 +620,7 @@ func ValidateAgainstLatestConfig(ctx context.Context, yNew, yLatest []byte) erro
 		errs = errors.Join(errs, err)
 	}
 	if err := driverutil.ResolveVMType(ctx, l, ""); err != nil {
-		errs = errors.Join(errs, fmt.Errorf("failed to resolve vm for %q: %w", "", err))
+		errs = errors.Join(errs, fmt.Errorf("failed to resolve vm for %#q: %w", "", err))
 	}
 	if err := Unmarshal(yNew, &n, "Unmarshal new YAML bytes"); err != nil {
 		errs = errors.Join(errs, err)

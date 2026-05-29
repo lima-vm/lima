@@ -146,7 +146,7 @@ func ParsePortForward(spec string) (hostPort, guestPort string, isStatic bool, e
 				return "", "", false, fmt.Errorf("invalid value for static parameter: %#q", staticValue)
 			}
 		} else {
-			return "", "", false, fmt.Errorf("invalid parameter %#q, expected 'static=' followed by a boolean value", staticPart)
+			return "", "", false, fmt.Errorf("invalid parameter %#q, expected `static=` followed by a boolean value", staticPart)
 		}
 	}
 

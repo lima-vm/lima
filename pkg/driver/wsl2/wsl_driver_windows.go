@@ -98,7 +98,7 @@ func validateConfig(_ context.Context, cfg *limatype.LimaYAML) error {
 		return errors.New("configuration is nil")
 	}
 	if cfg.MountType != nil && *cfg.MountType != limatype.WSLMount {
-		return fmt.Errorf("field `mountType` must be %q for WSL2 driver, got %q", limatype.WSLMount, *cfg.MountType)
+		return fmt.Errorf("field `mountType` must be %#q for WSL2 driver, got %#q", limatype.WSLMount, *cfg.MountType)
 	}
 	// TODO: revise this list for WSL2
 	if cfg.VMType != nil {
@@ -108,7 +108,7 @@ func validateConfig(_ context.Context, cfg *limatype.LimaYAML) error {
 	}
 
 	if !limatype.IsNativeArch(*cfg.Arch) {
-		return fmt.Errorf("unsupported arch: %q", *cfg.Arch)
+		return fmt.Errorf("unsupported arch: %#q", *cfg.Arch)
 	}
 
 	if cfg.VMType != nil {
@@ -121,7 +121,7 @@ func validateConfig(_ context.Context, cfg *limatype.LimaYAML) error {
 				}
 				match := tarFileRegex.MatchString(image.Location)
 				if image.Arch == *cfg.Arch && !match {
-					return fmt.Errorf("unsupported image type for vmType: %s, tarball root file system required: %q", *cfg.VMType, image.Location)
+					return fmt.Errorf("unsupported image type for vmType: %s, tarball root file system required: %#q", *cfg.VMType, image.Location)
 				}
 			}
 		}

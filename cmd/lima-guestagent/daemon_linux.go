@@ -142,7 +142,7 @@ func daemonAction(cmd *cobra.Command, _ []string) error {
 			return err
 		}
 		l = socketL
-		logrus.Infof("serving the guest agent on %q", socket)
+		logrus.Infof("serving the guest agent on %#q", socket)
 	}
 	defer logrus.Debug("exiting lima-guestagent daemon")
 	return server.StartServer(ctx, l, &server.GuestServer{Agent: agent, TunnelS: portfwdserver.NewTunnelServer()})

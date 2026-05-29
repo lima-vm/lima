@@ -214,7 +214,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 			y.User.UID = ptr.Of(uint32(uid))
 		} else {
 			// This should never happen; LimaUser() makes sure that .Uid is numeric
-			logrus.WithError(err).Warnf("Can't parse `user.uid` %q", uidString)
+			logrus.WithError(err).Warnf("Can't parse `user.uid` %#q", uidString)
 			y.User.UID = ptr.Of(uint32(1000))
 		}
 		// warn = false
@@ -222,7 +222,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 	if out, err := executeGuestTemplate(*y.User.Home, instDir, y.User, y.Param); err == nil {
 		y.User.Home = ptr.Of(out.String())
 	} else {
-		logrus.WithError(err).Warnf("Couldn't process `user.home` value %q as a template", *y.User.Home)
+		logrus.WithError(err).Warnf("Couldn't process `user.home` value %#q as a template", *y.User.Home)
 	}
 
 	if y.VMType == nil {
@@ -404,7 +404,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		logrus.Warn("The environment variable LIMA_SSH_OVER_VSOCK is deprecated in favor of the YAML field .ssh.overVsock")
 		b, err := strconv.ParseBool(envVar)
 		if err != nil {
-			logrus.WithError(err).Warnf("invalid LIMA_SSH_OVER_VSOCK value %q", envVar)
+			logrus.WithError(err).Warnf("invalid LIMA_SSH_OVER_VSOCK value %#q", envVar)
 		} else {
 			logrus.Debugf("Overriding ssh.overVsock from %v to %v via LIMA_SSH_OVER_VSOCK", y.SSH.OverVsock, &b)
 			y.SSH.OverVsock = ptr.Of(b)
@@ -434,7 +434,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 				if out, err := executeGuestTemplate(*provision.Content, instDir, y.User, y.Param); err == nil {
 					provision.Content = ptr.Of(out.String())
 				} else {
-					logrus.WithError(err).Warnf("Couldn't process data content %q as a template", *provision.Content)
+					logrus.WithError(err).Warnf("Couldn't process data content %#q as a template", *provision.Content)
 				}
 			}
 			if provision.Overwrite == nil {
@@ -446,7 +446,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 				if out, err := executeGuestTemplate(*provision.Expression, instDir, y.User, y.Param); err == nil {
 					provision.Expression = ptr.Of(out.String())
 				} else {
-					logrus.WithError(err).Warnf("Couldn't process expression %q as a template", *provision.Expression)
+					logrus.WithError(err).Warnf("Couldn't process expression %#q as a template", *provision.Expression)
 				}
 			}
 			if provision.Format == nil {
@@ -465,7 +465,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 				if out, err := executeGuestTemplate(*provision.Owner, instDir, y.User, y.Param); err == nil {
 					provision.Owner = ptr.Of(out.String())
 				} else {
-					logrus.WithError(err).Warnf("Couldn't process owner %q as a template", *provision.Owner)
+					logrus.WithError(err).Warnf("Couldn't process owner %#q as a template", *provision.Owner)
 				}
 			}
 			// Path is required; validation will throw an error when it is nil
@@ -473,7 +473,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 				if out, err := executeGuestTemplate(*provision.Path, instDir, y.User, y.Param); err == nil {
 					provision.Path = ptr.Of(out.String())
 				} else {
-					logrus.WithError(err).Warnf("Couldn't process path %q as a template", *provision.Path)
+					logrus.WithError(err).Warnf("Couldn't process path %#q as a template", *provision.Path)
 				}
 			}
 			if provision.Permissions == nil {
@@ -487,7 +487,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 			if out, err := executeGuestTemplate(*provision.Script, instDir, y.User, y.Param); err == nil {
 				*provision.Script = out.String()
 			} else {
-				logrus.WithError(err).Warnf("Couldn't process provisioning script %q as a template", *provision.Script)
+				logrus.WithError(err).Warnf("Couldn't process provisioning script %#q as a template", *provision.Script)
 			}
 		}
 	}
@@ -562,7 +562,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		if out, err := executeGuestTemplate(*probe.Script, instDir, y.User, y.Param); err == nil {
 			probe.Script = ptr.Of(out.String())
 		} else {
-			logrus.WithError(err).Warnf("Couldn't process probing script %q as a template", *probe.Script)
+			logrus.WithError(err).Warnf("Couldn't process probing script %#q as a template", *probe.Script)
 		}
 	}
 
@@ -618,7 +618,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 			if nw.Lima != "" {
 				if nw.Socket != "" {
 					// We can't return an error, so just log it, and prefer `lima` over `socket`
-					logrus.Errorf("Network %q has both socket=%q and lima=%q fields; ignoring socket",
+					logrus.Errorf("Network %#q has both socket=%#q and lima=%#q fields; ignoring socket",
 						nw.Interface, nw.Socket, nw.Lima)
 				}
 				networks[i].Lima = nw.Lima
@@ -681,14 +681,14 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		if out, err := executeHostTemplate(mount.Location, instDir, y.Param); err == nil {
 			mount.Location = filepath.Clean(out.String())
 		} else {
-			logrus.WithError(err).Warnf("Couldn't process mount location %q as a template", mount.Location)
+			logrus.WithError(err).Warnf("Couldn't process mount location %#q as a template", mount.Location)
 		}
 		// Expand a path that begins with `~`. Relative paths are not modified, and rejected by Validate() later.
 		if localpathutil.IsTildePath(mount.Location) {
 			if location, err := localpathutil.Expand(mount.Location); err == nil {
 				mount.Location = location
 			} else {
-				logrus.WithError(err).Warnf("Couldn't expand location %q", mount.Location)
+				logrus.WithError(err).Warnf("Couldn't expand location %#q", mount.Location)
 			}
 		}
 		if mount.MountPoint == nil {
@@ -697,7 +697,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 				var err error
 				mountLocation, err = ioutilx.WindowsSubsystemPath(ctx, mountLocation)
 				if err != nil {
-					logrus.WithError(err).Warnf("Couldn't convert location %q into mount target", mount.Location)
+					logrus.WithError(err).Warnf("Couldn't convert location %#q into mount target", mount.Location)
 				}
 			}
 			mount.MountPoint = ptr.Of(mountLocation)
@@ -705,7 +705,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 			if out, err := executeGuestTemplate(*mount.MountPoint, instDir, y.User, y.Param); err == nil {
 				mount.MountPoint = ptr.Of(out.String())
 			} else {
-				logrus.WithError(err).Warnf("Couldn't process mount point %q as a template", *mount.MountPoint)
+				logrus.WithError(err).Warnf("Couldn't process mount point %#q as a template", *mount.MountPoint)
 			}
 		}
 		if i, ok := mountPoint[*mount.MountPoint]; ok {
@@ -850,7 +850,7 @@ func ExistingLimaVersion(instDir string) string {
 	if b, err := os.ReadFile(limaVersionFile); err == nil {
 		return strings.TrimSpace(string(b))
 	} else if !errors.Is(err, os.ErrNotExist) {
-		logrus.WithError(err).Warnf("Failed to read %q", limaVersionFile)
+		logrus.WithError(err).Warnf("Failed to read %#q", limaVersionFile)
 	}
 
 	return version.Version
@@ -962,14 +962,14 @@ func FillPortForwardDefaults(rule *limatype.PortForward, instDir string, user li
 		if out, err := executeGuestTemplate(rule.GuestSocket, instDir, user, param); err == nil {
 			rule.GuestSocket = out.String()
 		} else {
-			logrus.WithError(err).Warnf("Couldn't process guestSocket %q as a template", rule.GuestSocket)
+			logrus.WithError(err).Warnf("Couldn't process guestSocket %#q as a template", rule.GuestSocket)
 		}
 	}
 	if rule.HostSocket != "" {
 		if out, err := executeHostTemplate(rule.HostSocket, instDir, param); err == nil {
 			rule.HostSocket = out.String()
 		} else {
-			logrus.WithError(err).Warnf("Couldn't process hostSocket %q as a template", rule.HostSocket)
+			logrus.WithError(err).Warnf("Couldn't process hostSocket %#q as a template", rule.HostSocket)
 		}
 		if !filepath.IsAbs(rule.HostSocket) {
 			rule.HostSocket = filepath.Join(instDir, filenames.SocketDir, rule.HostSocket)
@@ -989,14 +989,14 @@ func FillCopyToHostDefaults(rule *limatype.CopyToHost, instDir string, user lima
 		if out, err := executeGuestTemplate(rule.GuestFile, instDir, user, param); err == nil {
 			rule.GuestFile = out.String()
 		} else {
-			logrus.WithError(err).Warnf("Couldn't process guest %q as a template", rule.GuestFile)
+			logrus.WithError(err).Warnf("Couldn't process guest %#q as a template", rule.GuestFile)
 		}
 	}
 	if rule.HostFile != "" {
 		if out, err := executeHostTemplate(rule.HostFile, instDir, param); err == nil {
 			rule.HostFile = out.String()
 		} else {
-			logrus.WithError(err).Warnf("Couldn't process host %q as a template", rule.HostFile)
+			logrus.WithError(err).Warnf("Couldn't process host %#q as a template", rule.HostFile)
 		}
 	}
 }

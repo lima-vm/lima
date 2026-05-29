@@ -88,7 +88,7 @@ func New(ctx context.Context, backend string, paths []string, opts *Options) (Co
 		}
 		return tool, nil
 	default:
-		return nil, fmt.Errorf("invalid backend %q, must be one of: scp, rsync, auto", backend)
+		return nil, fmt.Errorf("invalid backend %#q, must be one of: scp, rsync, auto", backend)
 	}
 }
 
@@ -122,16 +122,16 @@ func parseCopyPaths(ctx context.Context, paths []string) ([]*Path, error) {
 			inst, err := store.Inspect(ctx, cp.InstanceName)
 			if err != nil {
 				if errors.Is(err, os.ErrNotExist) {
-					return nil, fmt.Errorf("instance %q does not exist, run `limactl create %s` to create a new instance", cp.InstanceName, cp.InstanceName)
+					return nil, fmt.Errorf("instance %#q does not exist, run `limactl create %s` to create a new instance", cp.InstanceName, cp.InstanceName)
 				}
 				return nil, err
 			}
 			if inst.Status == limatype.StatusStopped {
-				return nil, fmt.Errorf("instance %q is stopped, run `limactl start %s` to start the instance", cp.InstanceName, cp.InstanceName)
+				return nil, fmt.Errorf("instance %#q is stopped, run `limactl start %s` to start the instance", cp.InstanceName, cp.InstanceName)
 			}
 			cp.Instance = inst
 		default:
-			return nil, fmt.Errorf("path %q contains multiple colons", path)
+			return nil, fmt.Errorf("path %#q contains multiple colons", path)
 		}
 
 		copyPaths = append(copyPaths, cp)
