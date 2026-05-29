@@ -558,7 +558,7 @@ func decompressLocal(ctx context.Context, decompressCmd, dst, src, ext, descript
 		if description == "" {
 			description = filepath.Base(src)
 		}
-		logrus.Infof("Decompressing %s\n", description)
+		logrus.Infof("Decompressing %s", description)
 	}
 	bar.Start()
 	err = cmd.Run()
