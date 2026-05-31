@@ -78,6 +78,12 @@ type HostAgent struct {
 	clientMu sync.RWMutex
 	client   *guestagentclient.GuestAgentClient
 
+	// gaSockForwardMu serializes (re-)establishment of the SSH forward for
+	// the guest-agent unix socket. The reconnect loop in watchGuestAgentEvents
+	// and the inotify goroutine both touch the same local socket path; without
+	// this lock they can race on os.RemoveAll/bind and leave ga.sock missing.
+	gaSockForwardMu sync.Mutex
+
 	guestAgentAliveCh     chan struct{} // closed on establishing the connection
 	guestAgentAliveChOnce sync.Once
 
@@ -719,7 +725,7 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 			}
 		}
 		if a.driver.ForwardGuestAgent(ctx) {
-			if err := forwardSSH(ctx, a.sshConfig, sshAddress, sshPort, localUnix, remoteUnix, verbCancel, false); err != nil {
+			if err := a.cancelGuestAgentSockForward(ctx, localUnix, remoteUnix); err != nil {
 				errs = append(errs, err)
 			}
 		}
@@ -733,8 +739,7 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 		client := a.getClient()
 		if client == nil || !isGuestAgentSocketAccessible(ctx, client) {
 			if a.driver.ForwardGuestAgent(ctx) {
-				sshAddress, sshPort := a.sshAddressPort()
-				_ = forwardSSH(ctx, a.sshConfig, sshAddress, sshPort, localUnix, remoteUnix, verbForward, false)
+				a.forwardGuestAgentSock(ctx, localUnix, remoteUnix)
 			}
 		}
 		// Re-spawn startInotify when its gRPC stream dies (typically because
@@ -769,8 +774,7 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 		client := a.getClient()
 		if client == nil || !isGuestAgentSocketAccessible(ctx, client) {
 			if a.driver.ForwardGuestAgent(ctx) {
-				sshAddress, sshPort := a.sshAddressPort()
-				_ = forwardSSH(ctx, a.sshConfig, sshAddress, sshPort, localUnix, remoteUnix, verbForward, false)
+				a.forwardGuestAgentSock(ctx, localUnix, remoteUnix)
 			}
 		}
 		client, err := a.getOrCreateClient(ctx)
@@ -949,7 +953,52 @@ func executeSSH(ctx context.Context, sshConfig *ssh.SSHConfig, sshAddress string
 	return nil
 }
 
-func forwardSSH(ctx context.Context, sshConfig *ssh.SSHConfig, sshAddress string, sshPort int, local, remote, verb string, reverse bool) error {
+// forwardGuestAgentSock establishes (or re-establishes) the SSH local forward
+// of the guest-agent unix socket. It is used both for the initial setup and
+// to bring the forward back up after the guest agent has been restarted, the
+// VM has been rebooted, or the gRPC stream has otherwise become unhealthy.
+//
+// The previous behavior was to call forwardSSH(verbForward) directly on every
+// reconnect tick. forwardSSH unlinks the local socket file as its first step
+// (so a fresh listener can bind), and the SSH ControlMaster still has the
+// previous forward registered for the same listen path. The duplicate
+// registration causes ssh -O forward to exit non-zero and forwardSSH to unlink
+// the socket a second time on its failure branch — leaving ga.sock permanently
+// missing on disk and breaking host↔guest gRPC, dynamic port forwarding, and
+// inotify mount invalidation until limactl stop && limactl start. See #2227.
+//
+// The fix is twofold:
+//  1. Best-effort verbCancel before verbForward, so the ControlMaster releases
+//     the prior registration and the new bind succeeds cleanly.
+//  2. Serialize via gaSockForwardMu, so the reconnect loop in
+//     watchGuestAgentEvents, the inotify setup goroutine, and the cleanup
+//     path cannot race on os.RemoveAll/bind of the same path.
+func (a *HostAgent) forwardGuestAgentSock(ctx context.Context, localUnix, remoteUnix string) {
+	a.gaSockForwardMu.Lock()
+	defer a.gaSockForwardMu.Unlock()
+	sshAddress, sshPort := a.sshAddressPort()
+	// Best-effort teardown of any prior forward registered with the
+	// ControlMaster. Errors are expected (e.g. on the very first call when
+	// no forward exists yet) and intentionally ignored. Use ctx so shutdown
+	// can unblock this call if the ControlMaster is unresponsive.
+	_ = forwardSSH(ctx, a.sshConfig, sshAddress, sshPort, localUnix, remoteUnix, verbCancel, false)
+	if err := forwardSSH(ctx, a.sshConfig, sshAddress, sshPort, localUnix, remoteUnix, verbForward, false); err != nil {
+		logrus.WithError(err).Warn("failed to (re-)establish forward for the guest agent socket; will retry")
+	}
+}
+
+// cancelGuestAgentSockForward tears down the SSH forward for the guest-agent
+// unix socket. Serialized via gaSockForwardMu so it cannot race with the
+// reconnect path in forwardGuestAgentSock.
+func (a *HostAgent) cancelGuestAgentSockForward(ctx context.Context, localUnix, remoteUnix string) error {
+	a.gaSockForwardMu.Lock()
+	defer a.gaSockForwardMu.Unlock()
+	sshAddress, sshPort := a.sshAddressPort()
+	return forwardSSH(ctx, a.sshConfig, sshAddress, sshPort, localUnix, remoteUnix, verbCancel, false)
+}
+
+// forwardSSH is a var (not a func) so tests can stub it without touching real ssh.
+var forwardSSH = func(ctx context.Context, sshConfig *ssh.SSHConfig, sshAddress string, sshPort int, local, remote, verb string, reverse bool) error {
 	args := sshConfig.Args()
 	args = append(args,
 		"-T",
