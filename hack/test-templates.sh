@@ -229,7 +229,7 @@ if [[ -n ${CHECKS["proxy-settings"]} ]]; then
 	got=$(limactl shell "$NAME" env | grep FTP_PROXY)
 	# Expected: FTP_PROXY is set in addition to ftp_proxy, localhost is replaced
 	# by the gateway address, and the value is set immediately without a restart
-	gatewayIp=$(limactl shell "$NAME" ip route show 0.0.0.0/0 dev eth0 | cut -d\  -f3)
+	gatewayIp=$(limactl shell "$NAME" ip route show 0.0.0.0/0 | awk '{print $3; exit}')
 	expected="FTP_PROXY=http://${gatewayIp}:2121"
 	INFO "FTP_PROXY: expected=${expected} got=${got}"
 	if [ "$got" != "$expected" ]; then
