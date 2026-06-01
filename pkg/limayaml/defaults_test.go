@@ -726,6 +726,35 @@ func TestContainerdDefault(t *testing.T) {
 	assert.Assert(t, len(archives) > 0)
 }
 
+func TestContainerdUserDefaultDependsOnGuestOS(t *testing.T) {
+	tests := []struct {
+		name string
+		os   limatype.OS
+		arch limatype.Arch
+		want bool
+	}{
+		{name: "linux x86_64", os: limatype.LINUX, arch: limatype.X8664, want: true},
+		{name: "linux aarch64", os: limatype.LINUX, arch: limatype.AARCH64, want: true},
+		{name: "linux riscv64", os: limatype.LINUX, arch: limatype.RISCV64, want: false},
+		{name: "darwin x86_64", os: limatype.DARWIN, arch: limatype.X8664, want: false},
+		{name: "darwin aarch64", os: limatype.DARWIN, arch: limatype.AARCH64, want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			y := limatype.LimaYAML{
+				OS:   ptr.Of(tt.os),
+				Arch: ptr.Of(tt.arch),
+			}
+
+			FillDefault(t.Context(), &y, &limatype.LimaYAML{}, &limatype.LimaYAML{}, "", false)
+
+			assert.Assert(t, y.Containerd.User != nil)
+			assert.Equal(t, *y.Containerd.User, tt.want)
+		})
+	}
+}
+
 func TestStaticPortForwarding(t *testing.T) {
 	tests := []struct {
 		name     string

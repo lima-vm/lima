@@ -528,10 +528,9 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		y.Containerd.User = o.Containerd.User
 	}
 	if y.Containerd.User == nil {
-		switch *y.Arch {
-		case limatype.X8664, limatype.AARCH64:
+		if *y.OS == limatype.LINUX && (*y.Arch == limatype.X8664 || *y.Arch == limatype.AARCH64) {
 			y.Containerd.User = ptr.Of(true)
-		default:
+		} else {
 			y.Containerd.User = ptr.Of(false)
 		}
 	}
