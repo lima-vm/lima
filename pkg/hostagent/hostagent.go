@@ -343,6 +343,11 @@ func (a *HostAgent) emitEvent(_ context.Context, ev events.Event) {
 
 	a.statusMu.Lock()
 	a.currentStatus = ev.Status
+	// RequirementProgress is a one-shot transition signal: it must not be
+	// replayed on subsequent unrelated events (port forwards, vsock, etc.),
+	// otherwise the limactl-side renderer would re-emit the pending "🕐 …"
+	// line every time some other event fires while a check is in progress.
+	a.currentStatus.RequirementProgress = nil
 	a.statusMu.Unlock()
 
 	if ev.Time.IsZero() {
@@ -376,6 +381,17 @@ func (a *HostAgent) emitPortForwardEvent(ctx context.Context, pfEvent *events.Po
 	a.statusMu.RUnlock()
 
 	currentStatus.PortForward = pfEvent
+
+	ev := events.Event{Status: currentStatus}
+	a.emitEvent(ctx, ev)
+}
+
+func (a *HostAgent) emitRequirementProgress(ctx context.Context, prog *events.RequirementProgress) {
+	a.statusMu.RLock()
+	currentStatus := a.currentStatus
+	a.statusMu.RUnlock()
+
+	currentStatus.RequirementProgress = prog
 
 	ev := events.Event{Status: currentStatus}
 	a.emitEvent(ctx, ev)
@@ -590,13 +606,21 @@ func (a *HostAgent) startHostAgentRoutines(ctx context.Context) error {
 		return nil
 	})
 	var errs []error
-
-	essentialRequirements := a.essentialRequirements()
+	hasGuestAgentDaemon := !*a.instConfig.Plain && *a.instConfig.OS == limatype.LINUX
+	essentialReqs := a.essentialRequirements()
+	optionalReqs := a.optionalRequirements()
+	finalReqs := a.finalRequirements()
 	if *a.instConfig.OS == limatype.WINDOWS {
-		essentialRequirements = a.essentialWinRequirements()
+		essentialReqs = a.essentialWinRequirements()
+		optionalReqs = a.optionalWinRequirements()
+		finalReqs = a.finalWinRequirements()
 	}
-
-	if err := a.waitForRequirements("essential", essentialRequirements); err != nil {
+	totalSteps := len(essentialReqs) + len(optionalReqs) + len(finalReqs)
+	if hasGuestAgentDaemon {
+		totalSteps++ // for the explicit "guest agent is running" wait
+	}
+	step := 0
+	if err := a.waitForRequirements(ctx, "essential", essentialReqs, &step, totalSteps); err != nil {
 		errs = append(errs, err)
 	}
 
@@ -659,7 +683,6 @@ ln -sf "${SSH_AUTH_SOCK}" /run/host-services/ssh-auth.sock`
 	staticPortForwards := a.separateStaticPortForwards()
 	a.addStaticPortForwardsFromList(ctx, staticPortForwards)
 
-	hasGuestAgentDaemon := !*a.instConfig.Plain && *a.instConfig.OS == limatype.LINUX
 	if hasGuestAgentDaemon {
 		go a.watchGuestAgentEvents(ctx)
 		go a.startTimeSync(ctx)
@@ -679,31 +702,35 @@ ln -sf "${SSH_AUTH_SOCK}" /run/host-services/ssh-auth.sock`
 			}()
 		}
 	}
-
-	optionalRequirements := a.optionalRequirements()
-	if *a.instConfig.OS == limatype.WINDOWS {
-		optionalRequirements = a.optionalWinRequirements()
-	}
-
-	if err := a.waitForRequirements("optional", optionalRequirements); err != nil {
+	if err := a.waitForRequirements(ctx, "optional", optionalReqs, &step, totalSteps); err != nil {
 		errs = append(errs, err)
 	}
 	if hasGuestAgentDaemon {
-		logrus.Info("Waiting for the guest agent to be running")
+		step++
+		a.emitRequirementProgress(ctx, &events.RequirementProgress{
+			Step:        step,
+			Total:       totalSteps,
+			Description: "Guest agent to be running",
+		})
 		select {
 		case <-a.guestAgentAliveCh:
-			// NOP
+			a.emitRequirementProgress(ctx, &events.RequirementProgress{
+				Step:        step,
+				Total:       totalSteps,
+				Description: "Guest agent to be running",
+				Done:        true,
+			})
 		case <-time.After(time.Minute):
+			a.emitRequirementProgress(ctx, &events.RequirementProgress{
+				Step:        step,
+				Total:       totalSteps,
+				Description: "Guest agent to be running",
+				Failed:      true,
+			})
 			errs = append(errs, errors.New("guest agent does not seem to be running; port forwards will not work"))
 		}
 	}
-
-	finalRequirements := a.finalRequirements()
-	if *a.instConfig.OS == limatype.WINDOWS {
-		finalRequirements = a.finalWinRequirements()
-	}
-
-	if err := a.waitForRequirements("final", finalRequirements); err != nil {
+	if err := a.waitForRequirements(ctx, "final", finalReqs, &step, totalSteps); err != nil {
 		errs = append(errs, err)
 	}
 	// Copy all config files _after_ the requirements are done

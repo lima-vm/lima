@@ -18,6 +18,7 @@ import (
 	"github.com/docker/go-units"
 	"github.com/lima-vm/go-qcow2reader"
 	"github.com/lima-vm/go-qcow2reader/image/vhdx"
+	"github.com/mattn/go-isatty"
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/autostart"
@@ -372,7 +373,20 @@ func watchHostAgentEvents(ctx context.Context, inst *limatype.Instance, haStdout
 		err                  error
 	)
 
+	// progressTTY is true when stderr is a real terminal, so we can render
+	// requirement progress with an in-place 🕐 -> ✅ flip; otherwise we
+	// fall back to two log lines per step.
+	progressTTY := isatty.IsTerminal(os.Stderr.Fd()) || isatty.IsCygwinTerminal(os.Stderr.Fd())
+	// lastProgressKey is the "step/total:done:failed" of the most recently
+	// rendered RequirementProgress, used to suppress duplicate renders
+	// when the same event is observed more than once.
+	var lastProgressKey string
+
 	onEvent := func(ev hostagentevents.Event) bool {
+		if p := ev.Status.RequirementProgress; p != nil {
+			renderRequirementProgress(p, progressTTY, &lastProgressKey)
+			return false
+		}
 		if !printedSSHLocalPort && ev.Status.SSHLocalPort != 0 {
 			logrus.Infof("SSH Local Port: %d", ev.Status.SSHLocalPort)
 			printedSSHLocalPort = true
@@ -446,6 +460,50 @@ func watchHostAgentEvents(ctx context.Context, inst *limatype.Instance, haStdout
 	}
 
 	return nil
+}
+
+// renderRequirementProgress prints a RequirementProgress event. On a TTY it
+// keeps the pending "🕐" line on the current row and overwrites it in place
+// with "✅" (or "❌") when the step completes, so each step occupies a single
+// line. On a non-TTY (piped output, log file) each transition becomes a
+// regular log line via logrus.
+//
+// `lastKey` holds the "step/total:done:failed" key of the previously rendered
+// event so identical consecutive renders can be deduplicated.
+func renderRequirementProgress(p *hostagentevents.RequirementProgress, tty bool, lastKey *string) {
+	// Dedup identical consecutive renders. The hostagent should only emit
+	// one event per state transition, but if the same RequirementProgress
+	// gets replayed (e.g. carried along on an unrelated status event) we
+	// must not redraw, otherwise the pending line would be reprinted on
+	// every unrelated event and either spam the log (non-TTY) or fight
+	// with interleaved logrus output (TTY).
+	key := fmt.Sprintf("%d/%d:%t:%t", p.Step, p.Total, p.Done, p.Failed)
+	if key == *lastKey {
+		return
+	}
+	*lastKey = key
+
+	if !tty {
+		switch {
+		case p.Failed:
+			logrus.Infof("(%2d/%d) ❌ %s", p.Step, p.Total, p.Description)
+		case p.Done:
+			logrus.Infof("(%2d/%d) ✅ %s", p.Step, p.Total, p.Description)
+		default:
+			logrus.Infof("(%2d/%d) 🕐 %s%s", p.Step, p.Total, p.Description, p.Suffix)
+		}
+		return
+	}
+	const clearEOL = "\033[K"
+	if p.Failed {
+		fmt.Fprintf(os.Stderr, "\r%s(%2d/%d) ❌ %s\n", clearEOL, p.Step, p.Total, p.Description)
+		return
+	}
+	if p.Done {
+		fmt.Fprintf(os.Stderr, "\r%s(%2d/%d) ✅ %s\n", clearEOL, p.Step, p.Total, p.Description)
+		return
+	}
+	fmt.Fprintf(os.Stderr, "\r%s(%2d/%d) 🕐 %s%s", clearEOL, p.Step, p.Total, p.Description, p.Suffix)
 }
 
 type watchHostAgentEventsTimeoutKey = struct{}
