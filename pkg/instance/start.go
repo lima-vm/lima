@@ -17,6 +17,7 @@ import (
 
 	"github.com/docker/go-units"
 	"github.com/lima-vm/go-qcow2reader"
+	"github.com/mattn/go-isatty"
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/autostart"
@@ -312,7 +313,20 @@ func watchHostAgentEvents(ctx context.Context, inst *limatype.Instance, haStdout
 		err                  error
 	)
 
+	// progressTTY is true when stderr is a real terminal, so we can render
+	// requirement progress with an in-place 🕐 -> ✅ flip; otherwise we
+	// fall back to two log lines per step.
+	progressTTY := isatty.IsTerminal(os.Stderr.Fd()) || isatty.IsCygwinTerminal(os.Stderr.Fd())
+	// lastProgressKey is the "step/total:done" of the most recently
+	// rendered RequirementProgress, used to suppress duplicate renders
+	// when the same event is observed more than once.
+	var lastProgressKey string
+
 	onEvent := func(ev hostagentevents.Event) bool {
+		if p := ev.Status.RequirementProgress; p != nil {
+			renderRequirementProgress(p, progressTTY, &lastProgressKey)
+			return false
+		}
 		if !printedSSHLocalPort && ev.Status.SSHLocalPort != 0 {
 			logrus.Infof("SSH Local Port: %d", ev.Status.SSHLocalPort)
 			printedSSHLocalPort = true
@@ -386,6 +400,43 @@ func watchHostAgentEvents(ctx context.Context, inst *limatype.Instance, haStdout
 	}
 
 	return nil
+}
+
+// renderRequirementProgress prints a RequirementProgress event. On a TTY it
+// keeps the pending "🕐" line on the current row and overwrites it in place
+// with "✅" when the step completes, so each step occupies a single line that
+// flips from waiting to satisfied. On a non-TTY (piped output, log file)
+// each transition becomes a regular log line via logrus.
+//
+// `pending` carries the text of the currently-displayed pending line across
+// calls so the completion event can clear it with `\r` + clear-EOL.
+func renderRequirementProgress(p *hostagentevents.RequirementProgress, tty bool, pending *string) {
+	// Dedup identical consecutive renders. The hostagent should only emit
+	// one event per state transition, but if the same RequirementProgress
+	// gets replayed (e.g. carried along on an unrelated status event) we
+	// must not redraw, otherwise the pending line would be reprinted on
+	// every unrelated event and either spam the log (non-TTY) or fight
+	// with interleaved logrus output (TTY).
+	key := fmt.Sprintf("%d/%d:%t", p.Step, p.Total, p.Done)
+	if key == *pending {
+		return
+	}
+	*pending = key
+
+	if !tty {
+		if p.Done {
+			logrus.Infof("(%2d/%d) ✅ %s", p.Step, p.Total, p.Description)
+		} else {
+			logrus.Infof("(%2d/%d) 🕐 %s%s", p.Step, p.Total, p.Description, p.Suffix)
+		}
+		return
+	}
+	const clearEOL = "\033[K"
+	if p.Done {
+		fmt.Fprintf(os.Stderr, "\r%s(%2d/%d) ✅ %s\n", clearEOL, p.Step, p.Total, p.Description)
+		return
+	}
+	fmt.Fprintf(os.Stderr, "\r%s(%2d/%d) 🕐 %s%s", clearEOL, p.Step, p.Total, p.Description, p.Suffix)
 }
 
 type watchHostAgentEventsTimeoutKey = struct{}

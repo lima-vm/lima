@@ -26,6 +26,32 @@ type Status struct {
 
 	// Vsock forwarder event
 	Vsock *VsockEvent `json:"vsock,omitempty"`
+
+	// Requirement progress update — one event per state transition, see
+	// RequirementProgress for fields.
+	RequirementProgress *RequirementProgress `json:"requirementProgress,omitempty"`
+}
+
+// RequirementProgress is emitted by the hostagent on every state transition
+// of a startup-requirement check, so the limactl-side watcher can render
+// progress with a TTY-aware in-place flip (🕐 -> ✅) when stdout is a
+// terminal, and fall back to two log lines otherwise.
+type RequirementProgress struct {
+	// Step is the 1-based index of this requirement across the unified
+	// essential / optional / guest-agent / final groups.
+	Step int `json:"step"`
+	// Total is the total number of steps across all groups for this boot.
+	Total int `json:"total"`
+	// Description is the human-readable name of the requirement, already
+	// capitalized for display.
+	Description string `json:"description"`
+	// Suffix is an optional trailing annotation shown only while the step
+	// is pending (e.g. " (essential)").
+	Suffix string `json:"suffix,omitempty"`
+	// Done is true when the requirement has been satisfied. The first
+	// event for each step is emitted with Done=false; the second with
+	// Done=true.
+	Done bool `json:"done,omitempty"`
 }
 
 type CloudInitProgress struct {
