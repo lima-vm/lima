@@ -1,0 +1,47 @@
+# Experimental: Windows guest VM
+# Requires: swtpm, Windows 11 ISO, QEMU with UEFI firmware
+# See: https://github.com/lima-vm/lima/issues/4852
+#
+# Usage:
+#   1. Download a Windows 11 ISO from https://www.microsoft.com/software-download/windows11
+#   2. Create the instance, pointing to your local ISO:
+#        limactl create --name=windows --vm-type=qemu \
+#          --set='.images[0].location = "/path/to/Win11_24H2_English_x64.iso"' \
+#          template://experimental/windows
+#   3. Start the instance:
+#        limactl start windows
+#   4. Connect to the VNC display to run the Windows installer:
+#        The VNC display port is logged by QEMU at startup. Check:
+#          $HOME/.lima/windows/serial*.log
+#        Default VNC display is typically :0 (port 5900).
+#        Use any VNC client (e.g. "open vnc://localhost:5900" on macOS).
+#
+# NOTE: This template is a starting point. Lima does not yet have full
+# Windows guest agent support; SSH provisioning, port forwarding, and
+# mount sharing will not work until a Windows-compatible guest agent is
+# implemented.
+
+# The placeholder URL must be overridden at create time via --set (see above).
+images:
+- location: "https://example.com/REPLACE_WITH_YOUR_WINDOWS_ISO_URL"
+  arch: "x86_64"
+
+cpus: 4
+memory: "8GiB"
+disk: "64GiB"
+
+firmware:
+  legacyBIOS: false
+
+video:
+  display: "vnc"
+  vnc:
+    display: ":0"
+
+audio:
+  device: "none"
+
+mountType: "reverse-sshfs"
+
+tpm:
+  enabled: true
