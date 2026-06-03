@@ -5,9 +5,6 @@ ethernets:
     match:
       macaddress: '{{$nw.MACAddress}}'
     dhcp4: true
-    {{- if eq $nw.Interface $.SlirpNICName }}
-    optional: true
-    {{- end }}
     set-name: {{$nw.Interface}}
     dhcp4-overrides:
       route-metric: {{$nw.Metric}}
