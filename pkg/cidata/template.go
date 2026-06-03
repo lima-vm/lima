@@ -22,6 +22,16 @@ var templateFS embed.FS
 
 const templateFSRoot = "cidata.TEMPLATE.d"
 
+//go:embed cidata.TEMPLATE.d.Windows.amd64
+var windowsAmd64TemplateFS embed.FS
+
+const windowsAmd64TemplateFSRoot = "cidata.TEMPLATE.d.Windows.amd64"
+
+//go:embed cidata.TEMPLATE.d.Windows.arm64
+var windowsArm64TemplateFS embed.FS
+
+const windowsArm64TemplateFSRoot = "cidata.TEMPLATE.d.Windows.arm64"
+
 type CACerts struct {
 	RemoveDefaults *bool
 	Trusted        []Cert
@@ -117,6 +127,8 @@ type TemplateArgs struct {
 	Plain                           bool
 	TimeZone                        string
 	NoCloudInit                     bool
+	WindowsComputerName             string
+	WindowsSSHPubKeysBase64         string
 }
 
 func ValidateTemplateArgs(args *TemplateArgs) error {
@@ -204,4 +216,27 @@ func ExecuteTemplateCIDataISO(args *TemplateArgs) ([]iso9660util.Entry, error) {
 	}
 
 	return layout, nil
+}
+
+// ExecuteTemplateAutounattend renders the Windows autounattend.xml template.
+func ExecuteTemplateAutounattend(args *TemplateArgs, arch string) ([]byte, error) {
+	var templateFS embed.FS
+	var root string
+	switch arch {
+	case "amd64":
+		templateFS = windowsAmd64TemplateFS
+		root = windowsAmd64TemplateFSRoot
+	case "arm64":
+		templateFS = windowsArm64TemplateFS
+		root = windowsArm64TemplateFSRoot
+	default:
+		return nil, fmt.Errorf("unsupported Windows arch %q", arch)
+	}
+
+	xmlTemplate, err := templateFS.ReadFile(path.Join(root, "autounattend.xml"))
+	if err != nil {
+		return nil, err
+	}
+
+	return textutil.ExecuteTemplate(string(xmlTemplate), args)
 }

@@ -694,9 +694,9 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		if mount.MountPoint == nil {
 			mountLocation := mount.Location
 			if runtime.GOOS == "windows" {
-				var err error
-				mountLocation, err = ioutilx.WindowsSubsystemPath(ctx, mountLocation)
-				if err != nil {
+				if mountLocationSub, err := ioutilx.WindowsSubsystemPath(ctx, mountLocation); err == nil {
+					mountLocation = mountLocationSub
+				} else {
 					logrus.WithError(err).Warnf("Couldn't convert location %#q into mount target", mount.Location)
 				}
 			}

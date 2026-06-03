@@ -85,7 +85,7 @@ var setFlagEnumValues = map[string][]string{
 		limatype.QEMU, limatype.VZ, limatype.WSL2,
 	},
 	".os": {
-		limatype.LINUX, limatype.DARWIN, limatype.FREEBSD,
+		limatype.LINUX, limatype.DARWIN, limatype.FREEBSD, limatype.WINDOWS,
 	},
 	".arch": {
 		limatype.X8664, limatype.AARCH64, limatype.ARMV7L,

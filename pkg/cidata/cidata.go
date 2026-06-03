@@ -4,8 +4,10 @@
 package cidata
 
 import (
+	"bytes"
 	"compress/gzip"
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
@@ -150,6 +152,9 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 		NoCloudInit:    noCloudInit,
 		Param:          instConfig.Param,
 	}
+	if args.OS == limatype.WINDOWS {
+		args.WindowsComputerName = windowsComputerName(args.Hostname)
+	}
 
 	firstUsernetIndex := limayaml.FirstUsernetIndex(instConfig)
 	var subnet net.IP
@@ -189,6 +194,9 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 	}
 	for _, f := range pubKeys {
 		args.SSHPubKeys = append(args.SSHPubKeys, f.Content)
+	}
+	if args.OS == limatype.WINDOWS {
+		args.WindowsSSHPubKeysBase64 = base64.StdEncoding.EncodeToString([]byte(strings.Join(args.SSHPubKeys, "\r\n")))
 	}
 
 	var fstype string
@@ -359,6 +367,10 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 }
 
 func GenerateCloudConfig(ctx context.Context, instDir, name string, instConfig *limatype.LimaYAML) error {
+	if instConfig.OS != nil && *instConfig.OS == limatype.WINDOWS {
+		os.Remove(filepath.Join(instDir, filenames.CloudConfig)) // delete existing
+		return nil
+	}
 	args, err := templateArgs(ctx, false, instDir, name, instConfig, 0, 0, 0, "", false, false, false)
 	if err != nil {
 		return err
@@ -387,6 +399,14 @@ func GenerateISO9660(ctx context.Context, drv driver.Driver, instDir, name strin
 	args, err := templateArgs(ctx, true, instDir, name, instConfig, udpDNSLocalPort, tcpDNSLocalPort, vsockPort, virtioPort, noCloudInit, rosettaEnabled, rosettaBinFmt)
 	if err != nil {
 		return "", err
+	}
+
+	if *instConfig.OS == limatype.WINDOWS {
+		winArch := "amd64"
+		if instConfig.Arch != nil && *instConfig.Arch == limatype.AARCH64 {
+			winArch = "arm64"
+		}
+		return generateWindowsISO(args, instDir, winArch)
 	}
 
 	if err := ValidateTemplateArgs(args); err != nil {
@@ -503,6 +523,54 @@ func GenerateISO9660(ctx context.Context, drv driver.Driver, instDir, name strin
 		iso9660Options = append(iso9660Options, iso9660util.WithJoliet())
 	}
 	return args.IID, iso9660util.Write(filepath.Join(instDir, filenames.CIDataISO), "cidata", layout, iso9660Options...)
+}
+
+func generateWindowsISO(args *TemplateArgs, instDir, arch string) (string, error) {
+	xmlBytes, err := ExecuteTemplateAutounattend(args, arch)
+	if err != nil {
+		return "", fmt.Errorf("failed to render autounattend.xml: %w", err)
+	}
+
+	layout := []iso9660util.Entry{
+		{
+			Path:   "autounattend.xml",
+			Reader: bytes.NewReader(xmlBytes),
+		},
+	}
+
+	isoPath := filepath.Join(instDir, filenames.CIDataISO)
+	return args.IID, iso9660util.Write(isoPath, "autounattend", layout, iso9660util.WithJoliet())
+}
+
+func windowsComputerName(hostname string) string {
+	name := strings.Builder{}
+	for _, r := range strings.ToUpper(hostname) {
+		switch {
+		case r >= 'A' && r <= 'Z', r >= '0' && r <= '9', r == '-':
+			name.WriteRune(r)
+		}
+		if name.Len() == 15 {
+			break
+		}
+	}
+	s := strings.Trim(name.String(), "-")
+	if s == "" {
+		return "LIMA-WINDOWS"
+	}
+	allDigits := true
+	for _, r := range s {
+		if r < '0' || r > '9' {
+			allDigits = false
+			break
+		}
+	}
+	if allDigits {
+		s = "LIMA-" + s
+		if len(s) > 15 {
+			s = s[:15]
+		}
+	}
+	return s
 }
 
 func removeControlChars(s string) string {

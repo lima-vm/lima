@@ -397,6 +397,51 @@ func qemuMachine(arch limatype.Arch) string {
 	return "virt"
 }
 
+func appendWindowsDrives(args []string, arch limatype.Arch, diskPath, isoPath, cidataISOPath string, isoPresent bool) []string {
+	switch arch {
+	case limatype.AARCH64:
+		args = append(args, "-device", "qemu-xhci,id=usb-win")
+		if osutil.FileExists(diskPath) {
+			args = append(args,
+				"-drive", fmt.Sprintf("file=%s,if=none,discard=on,id=boot-disk", diskPath),
+				"-device", "nvme,serial=lima0,drive=boot-disk,bootindex=1")
+		}
+		if isoPresent {
+			args = appendArgsIfNoConflict(args, "-boot", "order=d,splash-time=0,menu=on")
+			args = append(args,
+				"-drive", fmt.Sprintf("file=%s,if=none,format=raw,media=cdrom,readonly=on,id=install-cdrom", isoPath),
+				"-device", "usb-storage,bus=usb-win.0,drive=install-cdrom,bootindex=2")
+		} else {
+			args = appendArgsIfNoConflict(args, "-boot", "order=c,splash-time=0,menu=on")
+		}
+		args = append(args,
+			"-drive", "id=autounattend,if=none,format=raw,readonly=on,file="+cidataISOPath,
+			"-device", "usb-storage,bus=usb-win.0,drive=autounattend",
+			"-device", "usb-kbd,bus=usb-win.0",
+			"-device", "usb-tablet,bus=usb-win.0",
+			"-device", "ramfb")
+	default:
+		args = append(args, "-device", "ich9-ahci,id=sata")
+		if osutil.FileExists(diskPath) {
+			args = append(args,
+				"-drive", fmt.Sprintf("file=%s,if=none,discard=on,id=boot-disk", diskPath),
+				"-device", "ide-hd,bus=sata.0,drive=boot-disk,bootindex=1")
+		}
+		if isoPresent {
+			args = appendArgsIfNoConflict(args, "-boot", "order=d,splash-time=0,menu=on")
+			args = append(args,
+				"-drive", fmt.Sprintf("file=%s,if=none,format=raw,media=cdrom,readonly=on,id=install-cdrom", isoPath),
+				"-device", "ide-cd,bus=sata.1,drive=install-cdrom,bootindex=2")
+		} else {
+			args = appendArgsIfNoConflict(args, "-boot", "order=c,splash-time=0,menu=on")
+		}
+		args = append(args,
+			"-drive", "id=autounattend,if=none,format=raw,readonly=on,file="+cidataISOPath,
+			"-device", "ide-cd,bus=sata.2,drive=autounattend")
+	}
+	return args
+}
+
 // audioDevice returns the default audio device.
 func audioDevice() string {
 	switch runtime.GOOS {
@@ -725,7 +770,9 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	}
 
 	isoPresent := osutil.FileExists(isoPath)
-	if osutil.FileExists(diskPath) {
+	if *y.OS == limatype.WINDOWS {
+		args = appendWindowsDrives(args, *y.Arch, diskPath, isoPath, filepath.Join(cfg.InstanceDir, filenames.CIDataISO), isoPresent)
+	} else if osutil.FileExists(diskPath) {
 		if isoPresent {
 			args = append(args, "-drive", fmt.Sprintf("file=%s,if=virtio,discard=on", diskPath))
 		} else {
@@ -734,7 +781,8 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 			args = append(args, "-device", fmt.Sprintf("%s,drive=boot-disk,bootindex=1", virtioBlk))
 		}
 	}
-	if isoPresent {
+	if *y.OS == limatype.WINDOWS {
+	} else if isoPresent {
 		args = appendArgsIfNoConflict(args, "-boot", "order=d,splash-time=0,menu=on")
 		args = append(args, "-drive", fmt.Sprintf("file=%s,format=raw,media=cdrom,readonly=on", isoPath))
 	} else {
@@ -744,11 +792,12 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 		args = append(args, "-drive", fmt.Sprintf("file=%s,if=virtio,discard=on", extraDisk))
 	}
 
-	// cloud-init
-	args = append(args,
-		"-drive", "id=cdrom0,if=none,format=raw,readonly=on,file="+filepath.Join(cfg.InstanceDir, filenames.CIDataISO),
-		"-device", "virtio-scsi,id=scsi0",
-		"-device", "scsi-cd,bus=scsi0.0,drive=cdrom0")
+	if *y.OS != limatype.WINDOWS {
+		args = append(args,
+			"-drive", "id=cdrom0,if=none,format=raw,readonly=on,file="+filepath.Join(cfg.InstanceDir, filenames.CIDataISO),
+			"-device", "virtio-scsi,id=scsi0",
+			"-device", "scsi-cd,bus=scsi0.0,drive=cdrom0")
+	}
 
 	// Kernel
 	kernel := filepath.Join(cfg.InstanceDir, filenames.Kernel)

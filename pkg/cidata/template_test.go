@@ -4,6 +4,8 @@
 package cidata
 
 import (
+	"encoding/base64"
+	"encoding/xml"
 	"io"
 	"strings"
 	"testing"
@@ -166,5 +168,33 @@ func TestTemplate9p(t *testing.T) {
 			// mounted at boot
 			assert.Assert(t, strings.Contains(string(b), "mounts:"))
 		}
+	}
+}
+
+func TestAutounattend(t *testing.T) {
+	key := "ssh-rsa dummy foo@example.com"
+	args := &TemplateArgs{
+		Name:                    "default",
+		User:                    "lima",
+		TimeZone:                "UTC",
+		WindowsComputerName:     "LIMA-DEFAULT",
+		SSHPubKeys:              []string{key},
+		WindowsSSHPubKeysBase64: base64.StdEncoding.EncodeToString([]byte(key)),
+	}
+	for _, arch := range []string{"amd64", "arm64"} {
+		t.Run(arch, func(t *testing.T) {
+			output, err := ExecuteTemplateAutounattend(args, arch)
+			assert.NilError(t, err)
+
+			assert.Assert(t, xml.Unmarshal(output, new(any)) == nil, "output is not valid XML")
+			s := string(output)
+			assert.Assert(t, strings.Contains(s, "Microsoft-Windows-Setup"), "missing disk/install component")
+			assert.Assert(t, strings.Contains(s, "Microsoft-Windows-Shell-Setup"), "missing shell setup component")
+			assert.Assert(t, strings.Contains(s, "OpenSSH.Server"), "missing OpenSSH server capability")
+			assert.Assert(t, strings.Contains(s, "administrators_authorized_keys"), "missing SSH authorized_keys setup")
+			assert.Assert(t, strings.Contains(s, args.WindowsSSHPubKeysBase64), "missing SSH public key payload")
+			assert.Assert(t, !strings.Contains(s, "PLACEHOLDER"), "must not contain placeholder SSH keys")
+			assert.Assert(t, !strings.Contains(s, "ProductKey>VK7JG"), "must not contain generic product keys")
+		})
 	}
 }
