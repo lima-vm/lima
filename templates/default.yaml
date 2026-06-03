@@ -631,6 +631,16 @@ plain: null
 # 🟢 Builtin default: false
 nestedVirtualization: null
 
+# EXPERIMENTAL
+# When enabled, an emulated TPM 2.0 device is provided to the guest via swtpm.
+# This is required for Windows 11 guests and useful for measured boot or disk
+# encryption (LUKS2+TPM) in Linux guests.
+# Requires swtpm to be installed on the host. Only supported with vmType: qemu.
+# Currently not supported on Windows hosts (requires Unix domain sockets).
+# 🟢 Builtin default: false
+tpm:
+  enabled: null
+
 # ===================================================================== #
 # GLOBAL DEFAULTS AND OVERRIDES
 # ===================================================================== #

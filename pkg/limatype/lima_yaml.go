@@ -35,6 +35,7 @@ type LimaYAML struct {
 	Firmware              Firmware      `yaml:"firmware,omitempty" json:"firmware,omitempty"`
 	Audio                 Audio         `yaml:"audio,omitempty" json:"audio,omitempty"`
 	Video                 Video         `yaml:"video,omitempty" json:"video,omitempty"`
+	TPM                   TPM           `yaml:"tpm,omitempty" json:"tpm,omitempty"`
 	Provision             []Provision   `yaml:"provision,omitempty" json:"provision,omitempty"`
 	UpgradePackages       *bool         `yaml:"upgradePackages,omitempty" json:"upgradePackages,omitempty" jsonschema:"nullable"`
 	Containerd            Containerd    `yaml:"containerd,omitempty" json:"containerd,omitempty"`
@@ -227,6 +228,14 @@ type Video struct {
 	// Display is a QEMU display string
 	Display *string    `yaml:"display,omitempty" json:"display,omitempty" jsonschema:"nullable"`
 	VNC     VNCOptions `yaml:"vnc,omitempty" json:"vnc,omitempty"`
+}
+
+// TPM configures an emulated TPM 2.0 device.
+// Currently only supported with vmType: qemu.
+type TPM struct {
+	// Enabled enables an emulated TPM device via swtpm.
+	// Requires swtpm to be installed on the host.
+	Enabled *bool `yaml:"enabled,omitempty" json:"enabled,omitempty" jsonschema:"nullable"`
 }
 
 type ProvisionMode = string

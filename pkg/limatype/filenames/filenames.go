@@ -77,6 +77,9 @@ const (
 	MntDir    = "mnt" // mount point (macOS guests only)
 
 	Protected = "protected" // empty file; used by `limactl protect`
+
+	SwtpmSock = "swtpm.sock" // swtpm socket for QEMU chardev
+	SwtpmDir  = "swtpm"      // directory for swtpm state files
 )
 
 // Filenames used under a disk directory
@@ -103,6 +106,7 @@ func PIDFile(name string) string {
 // SkipOnClone files should be skipped on cloning an instance.
 var SkipOnClone = []string{
 	Protected,
+	SwtpmDir, // TPM state must not be shared between instances
 }
 
 // NullifyOnClone files should be nullified on cloning an instance.

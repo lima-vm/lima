@@ -58,6 +58,20 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 		errs = errors.Join(errs, fmt.Errorf("field `arch` must be one of %v; got %q", limatype.ArchTypes, *y.Arch))
 	}
 
+	// TPM validation: must be gated at validation time so errors surface before
+	// Cmdline() acquires disk locks or other persistent state.
+	if y.TPM.Enabled != nil && *y.TPM.Enabled {
+		if *y.VMType != limatype.QEMU {
+			errs = errors.Join(errs, fmt.Errorf("`tpm.enabled` is only supported with `vmType: qemu`"))
+		}
+		switch *y.Arch {
+		case limatype.X8664, limatype.AARCH64, limatype.ARMV7L:
+			// supported
+		default:
+			errs = errors.Join(errs, fmt.Errorf("`tpm.enabled` is not supported on architecture %q", *y.Arch))
+		}
+	}
+
 	if len(y.Images) == 0 {
 		errs = errors.Join(errs, errors.New("field `images` must be set"))
 	}
