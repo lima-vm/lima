@@ -160,9 +160,7 @@ func (a *HostAgent) waitForRequirement(ctx context.Context, r requirement) error
 	return nil
 }
 
-// requirement describes one readiness check performed before Ready fires.
-// If check is non-nil, it is invoked directly and script is ignored;
-// otherwise script is executed in the guest via ssh.ExecuteScript.
+// requirement is one readiness check; check takes precedence over script.
 type requirement struct {
 	description string
 	script      string
@@ -174,12 +172,6 @@ type requirement struct {
 
 func (a *HostAgent) essentialRequirements() []requirement {
 	req := make([]requirement, 0)
-	// Run a host-side TCP probe before the script-based "ssh" requirement
-	// below. The script path uses Lima's own SSH client, which retries
-	// internally and so can mask a race where the host agent accepts on the
-	// forwarded port before guest sshd has bound :22. External clients
-	// (ssh-keyscan, sftp, rsync, ...) that connect during that window get
-	// EPIPE on their first write.
 	logLocation := "/var/log/cloud-init-output.log in the guest"
 	if a.instConfig.OS != nil && *a.instConfig.OS == limatype.DARWIN {
 		logLocation = "serialv.log in the host"
@@ -335,13 +327,12 @@ Check "` + logLocation + `" to see where the process is blocked!
 
 const (
 	probeSSHBannerTimeout = 5 * time.Second
-	// RFC 4253 §4.2 allows the server to emit lines before the identification
-	// string. Cap the read so a misbehaving peer can't loop forever.
+	// RFC 4253 §4.2: server may emit lines before the identification string.
 	probeSSHBannerMaxLines = 50
 )
 
-// probeSSHBannerOnLocalPort dials <address>:<port> and returns nil when a
-// line starting with "SSH-" is read within probeSSHBannerMaxLines.
+// probeSSHBannerOnLocalPort returns nil when a line starting with "SSH-" is
+// read from address:port within probeSSHBannerMaxLines.
 func probeSSHBannerOnLocalPort(ctx context.Context, address string, port int) error {
 	addr := net.JoinHostPort(address, strconv.Itoa(port))
 	d := net.Dialer{Timeout: probeSSHBannerTimeout}
@@ -350,7 +341,6 @@ func probeSSHBannerOnLocalPort(ctx context.Context, address string, port int) er
 		return fmt.Errorf("dial %s: %w", addr, err)
 	}
 	defer conn.Close()
-	// Propagate ctx cancellation to the in-flight read.
 	stop := context.AfterFunc(ctx, func() { _ = conn.Close() })
 	defer stop()
 	if err := conn.SetReadDeadline(time.Now().Add(probeSSHBannerTimeout)); err != nil {
