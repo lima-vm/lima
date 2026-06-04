@@ -329,19 +329,10 @@ Check "` + logLocation + `" to see where the process is blocked!
 	return req
 }
 
-// probeSSHBannerTimeout bounds a single attempt of probeSSHBannerOnLocalPort.
-// waitForRequirements wraps the probe in its own retry loop (3s backoff), so
-// the per-attempt deadline only needs to be long enough to distinguish a
-// healthy SSH server from a hung TCP proxy.
 const probeSSHBannerTimeout = 5 * time.Second
 
-// probeSSHBannerOnLocalPort confirms that the host agent's TCP forwarder on
-// 127.0.0.1:port is serving an SSH banner end-to-end. The hostagent starts
-// accepting connections on 127.0.0.1:sshLocalPort before guest sshd is
-// necessarily ready on :22, so a fresh external connect+read may fail with
-// EPIPE during the bring-up window. This probe verifies the public-facing
-// path is healthy without using Lima's own SSH client (which can mask the
-// race via internal retries).
+// probeSSHBannerOnLocalPort reads the SSH server identification line from
+// 127.0.0.1:port and verifies it starts with "SSH-".
 func probeSSHBannerOnLocalPort(ctx context.Context, port int) error {
 	addr := fmt.Sprintf("127.0.0.1:%d", port)
 	d := net.Dialer{Timeout: probeSSHBannerTimeout}
@@ -353,15 +344,11 @@ func probeSSHBannerOnLocalPort(ctx context.Context, port int) error {
 	if err := conn.SetReadDeadline(time.Now().Add(probeSSHBannerTimeout)); err != nil {
 		return fmt.Errorf("set read deadline on %s: %w", addr, err)
 	}
-	// RFC4253 §4.2: an SSH server sends an identification string ending in CR
-	// LF (or just LF historically) before the version exchange. If the proxied
-	// connection inside the guest has no live peer, the host side will close
-	// and ReadString returns EOF.
 	banner, err := bufio.NewReader(conn).ReadString('\n')
 	if err != nil {
 		return fmt.Errorf("read SSH banner from %s: %w", addr, err)
 	}
-	if !strings.HasPrefix(banner, "SSH-2.0-") && !strings.HasPrefix(banner, "SSH-1.99-") {
+	if !strings.HasPrefix(banner, "SSH-") {
 		return fmt.Errorf("unexpected banner from %s: %q", addr, strings.TrimRight(banner, "\r\n"))
 	}
 	return nil

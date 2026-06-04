@@ -50,10 +50,15 @@ func TestProbeSSHBannerOnLocalPort_OK(t *testing.T) {
 	assert.NilError(t, probeSSHBannerOnLocalPort(t.Context(), port))
 }
 
-func TestProbeSSHBannerOnLocalPort_LegacyBanner(t *testing.T) {
-	// RFC4253 §5.1 reserves "SSH-1.99-" for servers that support both v1 and v2.
-	port := startBannerServer(t, "SSH-1.99-OpenSSH_old\r\n")
-	assert.NilError(t, probeSSHBannerOnLocalPort(t.Context(), port))
+func TestProbeSSHBannerOnLocalPort_AnySSHPrefix(t *testing.T) {
+	for _, banner := range []string{
+		"SSH-1.99-OpenSSH_old\r\n",
+		"SSH-2.5-FutureSSH\r\n",
+		"SSH-3.0-Hypothetical\r\n",
+	} {
+		port := startBannerServer(t, banner)
+		assert.NilError(t, probeSSHBannerOnLocalPort(t.Context(), port), banner)
+	}
 }
 
 func TestProbeSSHBannerOnLocalPort_AcceptThenClose(t *testing.T) {
