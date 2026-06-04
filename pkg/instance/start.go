@@ -66,7 +66,7 @@ func Prepare(ctx context.Context, inst *limatype.Instance, guestAgent string) (*
 			return nil, err
 		}
 	}
-	limaDriver, err := driverutil.CreateConfiguredDriver(inst, 0)
+	limaDriver, err := driverutil.CreateConfiguredDriver(ctx, inst, 0, "")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create driver instance: %w", err)
 	}
@@ -218,7 +218,7 @@ func StartWithPaths(ctx context.Context, inst *limatype.Instance, launchHostAgen
 			"hostagent",
 			"--pidfile", haPIDPath,
 			"--socket", haSockPath)
-		if prepared.Driver.Info().Features.CanRunGUI {
+		if prepared.Driver.Info(ctx).Features.CanRunGUI {
 			args = append(args, "--run-gui")
 		}
 		if prepared.GuestAgent != "" {

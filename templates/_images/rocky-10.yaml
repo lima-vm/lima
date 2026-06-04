@@ -1,16 +1,16 @@
 images:
-- location: "https://dl.rockylinux.org/pub/rocky/10.1/images/x86_64/Rocky-10-GenericCloud-Base-10.1-20251116.0.x86_64.qcow2"
+- location: "https://dl.rockylinux.org/pub/rocky/10.2/images/x86_64/Rocky-10-GenericCloud-Base-10.2-20260525.0.x86_64.qcow2"
   arch: "x86_64"
-  digest: "sha256:28628abf08a134c6f9e1eccbcac3f2898715919a6da294ae2c6cd66d6bc347ad"
-- location: "https://dl.rockylinux.org/pub/rocky/10.1/images/aarch64/Rocky-10-GenericCloud-Base-10.1-20251116.0.aarch64.qcow2"
+  digest: "sha256:9fc9e9ff16888bb68ac39b0392e25c9c92684d50c85f1cce6ab549363bbc4b48"
+- location: "https://dl.rockylinux.org/pub/rocky/10.2/images/aarch64/Rocky-10-GenericCloud-Base-10.2-20260525.0.aarch64.qcow2"
   arch: "aarch64"
-  digest: "sha256:abc0023cf8fb415532138fa735a79bc254ba0d13f4d79b032a09431d438ee36d"
-- location: "https://dl.rockylinux.org/pub/rocky/10.1/images/ppc64le/Rocky-10-GenericCloud-Base-10.1-20251116.0.ppc64le.qcow2"
+  digest: "sha256:457c8375e19496f43a25c4a6169fa11237536c53cef6f85a20ea3c5a751aa0f5"
+- location: "https://dl.rockylinux.org/pub/rocky/10.2/images/ppc64le/Rocky-10-GenericCloud-Base-10.2-20260525.0.ppc64le.qcow2"
   arch: "ppc64le"
-  digest: "sha256:00aeb70b1689a9aae219f103d91d659b04d3a079591749de36d978db753df8dd"
-- location: "https://dl.rockylinux.org/pub/rocky/10.1/images/s390x/Rocky-10-GenericCloud-Base-10.1-20251116.0.s390x.qcow2"
+  digest: "sha256:06ab97a625392776028dde8ef5d663550ca6e6e162efc5993fd398f59477bd42"
+- location: "https://dl.rockylinux.org/pub/rocky/10.2/images/s390x/Rocky-10-GenericCloud-Base-10.2-20260525.0.s390x.qcow2"
   arch: "s390x"
-  digest: "sha256:ec4a9f97282953211b917ed722499ade48bdf73ac2deea5c6672298b845b68e3"
+  digest: "sha256:b76fb9f16340919ef1c3258e2aad36c32a1bb9ac4d360b09044dcb187fd9a928"
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
 

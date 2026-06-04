@@ -607,21 +607,53 @@ check-generated:
 bats: native limactl-plugins
 	PATH=$$PWD/_output/bin:$$PATH ./hack/bats/lib/bats-core/bin/bats --timing ./hack/bats/tests
 
-.PHONY: lint
-lint: check-generated
-	nobin --allow-emoji --allow-escape --gitignore --skip-ext pb.desc --skip 'website/static/images/**/*.{gif,png}' --skip 'docs/reports/**/*.pdf'
-	editorconfig-checker
-	golangci-lint run ./...
+# Linting targets - individual stages
+.PHONY: nobin
+nobin:
+	$(GO) run -modfile=./hack/tools/go.mod github.com/jandubois/nobin --allow-emoji --allow-escape --gitignore --skip-ext pb.desc --skip 'website/static/images/**/*.{gif,png}' --skip 'docs/reports/**/*.pdf'
+
+.PHONY: editorconfig-checker
+editorconfig-checker:
+	$(GO) run -modfile=./hack/tools/go.mod github.com/editorconfig-checker/editorconfig-checker/v3/cmd/editorconfig-checker
+
+.PHONY: golangci-lint
+golangci-lint:
+	$(GO) run -modfile=./hack/tools/go.mod github.com/golangci/golangci-lint/v2/cmd/golangci-lint run ./...
+
+.PHONY: yamllint
+yamllint:
 	yamllint .
+
+.PHONY: ls-lint
+ls-lint:
 	ls-lint
+
+.PHONY: shellcheck
+shellcheck:
 	find . -name '*.sh' ! -path "./.git/*" | xargs shellcheck
-	find . -name '*.sh' ! -path "./.git/*" | xargs shfmt -s -d
+
+.PHONY: shfmt
+shfmt:
+	find . -name '*.sh' ! -path "./.git/*" | xargs $(GO) run -modfile=./hack/tools/go.mod mvdan.cc/sh/v3/cmd/shfmt -s -d
+
+.PHONY: go-licenses
+go-licenses:
 	# the allow list corresponds to https://github.com/cncf/foundation/blob/e5db022a0009f4db52b89d9875640cf3137153fe/allowed-third-party-license-policy.md
 	# hashicorp/hcl/v2 is MPL-2.0; covered by the CNCF license exception for hashicorp/hcl
 	# see also https://github.com/cncf/foundation/issues/1242
 	go-licenses check --include_tests --ignore github.com/hashicorp/hcl/v2 ./... --allowed_licenses=$$(cat ./hack/allowed-licenses.txt)
-	ltag -t ./hack/ltag --check -v
-	protolint .
+
+.PHONY: ltag
+ltag:
+	$(GO) run -modfile=./hack/tools/go.mod github.com/containerd/ltag -t ./hack/ltag --check -v
+
+.PHONY: protolint
+protolint:
+	$(GO) run -modfile=./hack/tools/go.mod github.com/yoheimuta/protolint/cmd/protolint .
+
+# Main lint target - runs all linting stages
+.PHONY: lint
+lint: check-generated nobin editorconfig-checker golangci-lint yamllint ls-lint shellcheck shfmt go-licenses ltag protolint
 
 .PHONY: clean
 clean:

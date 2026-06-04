@@ -37,10 +37,10 @@ func Chown(diskPath string, volumeRole uint16, uid, gid uint32, paths ...string)
 	for _, path := range paths {
 		inodeNum, err := c.resolvePath(fsRootPhys, vol.omapTreeAddr, vol.latestXID, path)
 		if err != nil {
-			return fmt.Errorf("resolving path %q: %w", path, err)
+			return fmt.Errorf("resolving path %#q: %w", path, err)
 		}
 		if err := c.chownInode(fsRootPhys, vol.omapTreeAddr, vol.latestXID, inodeNum, uid, gid); err != nil {
-			return fmt.Errorf("chown inode %d (%q): %w", inodeNum, path, err)
+			return fmt.Errorf("chown inode %d (%#q): %w", inodeNum, path, err)
 		}
 	}
 	return nil
@@ -130,7 +130,7 @@ func findAPFSPartitionGPT(f *os.File) (int64, error) {
 		return 0, fmt.Errorf("reading GPT header: %w", err)
 	}
 	if string(gptHdr[0:8]) != gptHeaderSignature {
-		return 0, fmt.Errorf("no GPT header found (expected %q)", gptHeaderSignature)
+		return 0, fmt.Errorf("no GPT header found (expected %#q)", gptHeaderSignature)
 	}
 
 	partEntryLBA := le.Uint64(gptHdr[72:])
@@ -496,7 +496,7 @@ func (c *container) resolvePath(fsRootPhys, omapTreeAddr, maxXID uint64, path st
 		}
 		fileID, err := c.lookupDirEntry(fsRootPhys, omapTreeAddr, maxXID, cnid, name)
 		if err != nil {
-			return 0, fmt.Errorf("looking up %q in directory (cnid %d): %w", name, cnid, err)
+			return 0, fmt.Errorf("looking up %#q in directory (cnid %d): %w", name, cnid, err)
 		}
 		cnid = fileID
 	}
@@ -558,7 +558,7 @@ func (c *container) lookupDirEntry(fsRootPhys, omapTreeAddr, maxXID, parentCNID 
 				valStart := valueAreaEnd - vOff
 				return le.Uint64(blk[valStart:]), nil
 			}
-			return 0, fmt.Errorf("directory entry %q not found", name)
+			return 0, fmt.Errorf("directory entry %#q not found", name)
 		}
 
 		// Internal node: find the child to descend into.

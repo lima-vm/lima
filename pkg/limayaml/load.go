@@ -34,7 +34,7 @@ func LoadWithWarnings(ctx context.Context, b []byte, filePath string) (*limatype
 func load(ctx context.Context, b []byte, filePath string, warn bool) (*limatype.LimaYAML, error) {
 	var y, d, o limatype.LimaYAML
 
-	if err := Unmarshal(b, &y, fmt.Sprintf("main file %q", filePath)); err != nil {
+	if err := Unmarshal(b, &y, fmt.Sprintf("main file %#q", filePath)); err != nil {
 		return nil, err
 	}
 	configDir, err := dirnames.LimaConfigDir()
@@ -45,8 +45,8 @@ func load(ctx context.Context, b []byte, filePath string, warn bool) (*limatype.
 	defaultPath := filepath.Join(configDir, filenames.Default)
 	bytes, err := os.ReadFile(defaultPath)
 	if err == nil {
-		logrus.Debugf("Mixing %q into %q", defaultPath, filePath)
-		if err := Unmarshal(bytes, &d, fmt.Sprintf("default file %q", defaultPath)); err != nil {
+		logrus.Debugf("Mixing %#q into %#q", defaultPath, filePath)
+		if err := Unmarshal(bytes, &d, fmt.Sprintf("default file %#q", defaultPath)); err != nil {
 			return nil, err
 		}
 	} else if !errors.Is(err, os.ErrNotExist) {
@@ -56,8 +56,8 @@ func load(ctx context.Context, b []byte, filePath string, warn bool) (*limatype.
 	overridePath := filepath.Join(configDir, filenames.Override)
 	bytes, err = os.ReadFile(overridePath)
 	if err == nil {
-		logrus.Debugf("Mixing %q into %q", overridePath, filePath)
-		if err := Unmarshal(bytes, &o, fmt.Sprintf("override file %q", overridePath)); err != nil {
+		logrus.Debugf("Mixing %#q into %#q", overridePath, filePath)
+		if err := Unmarshal(bytes, &o, fmt.Sprintf("override file %#q", overridePath)); err != nil {
 			return nil, err
 		}
 	} else if !errors.Is(err, os.ErrNotExist) {

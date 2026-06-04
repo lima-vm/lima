@@ -126,7 +126,7 @@ func ValidateTemplateArgs(args *TemplateArgs) error {
 	// args.User is intentionally not validated here; the user can override with any name they want
 	// limayaml.FillDefault will validate the default (local) username, but not an explicit setting
 	if args.User == "root" {
-		return errors.New("field User must not be \"root\"")
+		return errors.New("field User must not be `root`")
 	}
 	if args.UID == 0 {
 		return errors.New("field UID must not be 0")
@@ -143,7 +143,7 @@ func ValidateTemplateArgs(args *TemplateArgs) error {
 	for i, m := range args.Mounts {
 		f := m.MountPoint
 		if !path.IsAbs(f) {
-			return fmt.Errorf("field mounts[%d] must be absolute, got %q", i, f)
+			return fmt.Errorf("field mounts[%d] must be absolute, got %#q", i, f)
 		}
 	}
 	return nil
@@ -182,7 +182,7 @@ func ExecuteTemplateCIDataISO(args *TemplateArgs) ([]iso9660util.Entry, error) {
 			return nil
 		}
 		if !d.Type().IsRegular() {
-			return fmt.Errorf("got non-regular file %q", path)
+			return fmt.Errorf("got non-regular file %#q", path)
 		}
 		templateB, err := fs.ReadFile(fsys, path)
 		if err != nil {

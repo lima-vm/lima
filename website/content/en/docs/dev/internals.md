@@ -102,6 +102,9 @@ Host agent:
 - `ha.stdout.log`: hostagent stdout (JSON lines, see `pkg/hostagent/events.Event`)
 - `ha.stderr.log`: hostagent stderr (human-readable messages)
 
+External drivers:
+- `lima-driver-<driver-name>-<owner>.pid`: external driver process PID, where `<owner>` is either `ha` (written by the hostagent) or `cli` (written by the CLI process). Used by `limactl stop --force` and `limactl rm --force` to discover and kill orphaned external driver processes. Each process only removes its own PID file on graceful exit; force stop globs all matching files and kills them.
+
 ## Disk directory (`${LIMA_HOME}/_disk/<DISK>`)
 
 A disk directory contains the following files:

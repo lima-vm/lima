@@ -39,7 +39,7 @@ func TestValidateMinimumLimaVersion(t *testing.T) {
 			name:               "minimumLimaVersion greater than current version",
 			currentVersion:     "1.1.1-114-g5bf5e513",
 			minimumLimaVersion: "1.1.2",
-			wantErr:            `template requires Lima version "1.1.2"; this is only "1.1.1-114-g5bf5e513"`,
+			wantErr:            "template requires Lima version `1.1.2`; this is only `1.1.1-114-g5bf5e513`",
 		},
 		{
 			name:               "invalid current version",
@@ -51,7 +51,7 @@ func TestValidateMinimumLimaVersion(t *testing.T) {
 			name:               "invalid minimumLimaVersion",
 			currentVersion:     "1.1.1-114-g5bf5e513",
 			minimumLimaVersion: "invalid",
-			wantErr:            "field `minimumLimaVersion` must be a semvar value, got \"invalid\": invalid is not in dotted-tri format", // Only parse error, no comparison error
+			wantErr:            "field `minimumLimaVersion` must be a semvar value, got `invalid`: invalid is not in dotted-tri format", // Only parse error, no comparison error
 		},
 	}
 
@@ -142,7 +142,7 @@ func TestValidateProvisionMode(t *testing.T) {
 	assert.NilError(t, err)
 
 	err = Validate(y, false)
-	assert.Error(t, err, "field `provision[0].mode` must one of \"system\", \"user\", \"boot\", \"data\", \"dependency\", \"ansible\", or \"yq\"\n"+
+	assert.Error(t, err, "field `provision[0].mode` must one of `system`, `user`, `boot`, `data`, `dependency`, `ansible`, or `yq`\n"+
 		"field `provision[0].script` must not be empty")
 }
 
@@ -160,7 +160,7 @@ func TestValidateProvisionData(t *testing.T) {
 	assert.NilError(t, err)
 
 	err = Validate(y, false)
-	assert.Error(t, err, "field `provision[0].path` must not be empty when mode is \"data\"")
+	assert.Error(t, err, "field `provision[0].path` must not be empty when mode is `data`")
 
 	invalidData = `provision: [{mode: data, path: /tmp, content: hello, permissions: 9}]`
 	y, err = Load(t.Context(), []byte(invalidData+"\n"+images), "lima.yaml")
@@ -185,7 +185,7 @@ func TestValidateProvisionYQ(t *testing.T) {
 	y, err = Load(t.Context(), []byte(param+"\n"+invalidYQProvision+"\n"+images), "lima.yaml")
 	assert.NilError(t, err)
 	err = Validate(y, false)
-	assert.ErrorContains(t, err, "field `provision[0].path` must not be empty when mode is \"yq\"")
+	assert.ErrorContains(t, err, "field `provision[0].path` must not be empty when mode is `yq`")
 
 	// non-absolute path
 	invalidYQProvision = `provision: [{mode: yq, expression: ".features.cdi={{.Param.cdi}}", path: tmp}]`
@@ -199,7 +199,7 @@ func TestValidateProvisionYQ(t *testing.T) {
 	y, err = Load(t.Context(), []byte(param+"\n"+invalidYQProvision+"\n"+images), "lima.yaml")
 	assert.NilError(t, err)
 	err = Validate(y, false)
-	assert.ErrorContains(t, err, "field `provision[0].expression` must not be empty when mode is \"yq\"")
+	assert.ErrorContains(t, err, "field `provision[0].expression` must not be empty when mode is `yq`")
 
 	// Invalid permissions
 	invalidYQProvision = `provision: [{mode: yq, expression: ".features.cdi={{.Param.cdi}}", path: /tmp, permissions: 9}]`
@@ -299,7 +299,7 @@ func TestValidateParamIsUsed(t *testing.T) {
 	paramYaml := `param:
   name: value`
 	_, err := Load(t.Context(), []byte(paramYaml), "paramIsNotUsed.yaml")
-	assert.Error(t, err, "field `param` key \"name\" is not used in any provision, probe, copyToHost, or portForward")
+	assert.Error(t, err, "field `param` key `name` is not used in any provision, probe, copyToHost, or portForward")
 
 	fieldsUsingParam := []string{
 		`mounts: [{"location": "/tmp/{{ .Param.name }}"}]`,
@@ -344,7 +344,7 @@ func TestValidateParamIsUsed(t *testing.T) {
 	for _, fieldUsingIfParamRootfulTrue := range fieldsUsingIfParamRootfulTrue {
 		_, err = Load(t.Context(), []byte(fieldUsingIfParamRootfulTrue+"\n"+rootFulYaml), "paramIsUsed.yaml")
 		//
-		assert.Error(t, err, "field `param` key \"rootFul\" is not used in any provision, probe, copyToHost, or portForward")
+		assert.Error(t, err, "field `param` key `rootFul` is not used in any provision, probe, copyToHost, or portForward")
 	}
 }
 
@@ -369,11 +369,11 @@ provision:
 	err = Validate(y, false)
 	t.Logf("Validation errors: %v", err)
 
-	assert.Error(t, err, "field `os` must be one of [\"Linux\" \"Darwin\" \"FreeBSD\"]; got \"windows\"\n"+
-		"field `arch` must be one of [x86_64 aarch64 armv7l ppc64le riscv64 s390x]; got \"unsupported_arch\"\n"+
+	assert.Error(t, err, "field `os` must be one of [`Linux` `Darwin` `FreeBSD`]; got `windows`\n"+
+		"field `arch` must be one of [x86_64 aarch64 armv7l ppc64le riscv64 s390x]; got `unsupported_arch`\n"+
 		"field `images` must be set\n"+
-		"field `provision[0].mode` must one of \"system\", \"user\", \"boot\", \"data\", \"dependency\", \"ansible\", or \"yq\"\n"+
-		"field `provision[1].path` must not be empty when mode is \"data\"")
+		"field `provision[0].mode` must one of `system`, `user`, `boot`, `data`, `dependency`, `ansible`, or `yq`\n"+
+		"field `provision[1].path` must not be empty when mode is `data`")
 }
 
 func TestValidateAgainstLatestConfig(t *testing.T) {
@@ -387,37 +387,37 @@ func TestValidateAgainstLatestConfig(t *testing.T) {
 			name:    "Valid disk size unchanged",
 			yNew:    `disk: 100GiB`,
 			yLatest: `disk: 100GiB`,
-			wantErr: fmt.Sprintf("failed to resolve vm for \"\": vmType %q is not a registered driver", limatype.DefaultDriver()),
+			wantErr: fmt.Sprintf("failed to resolve vm for ``: vmType %#q is not a registered driver", limatype.DefaultDriver()),
 		},
 		{
 			name:    "Valid disk size increased",
 			yNew:    `disk: 200GiB`,
 			yLatest: `disk: 100GiB`,
-			wantErr: fmt.Sprintf("failed to resolve vm for \"\": vmType %q is not a registered driver", limatype.DefaultDriver()),
+			wantErr: fmt.Sprintf("failed to resolve vm for ``: vmType %#q is not a registered driver", limatype.DefaultDriver()),
 		},
 		{
 			name:    "No disk field in both YAMLs",
 			yNew:    ``,
 			yLatest: ``,
-			wantErr: fmt.Sprintf("failed to resolve vm for \"\": vmType %q is not a registered driver", limatype.DefaultDriver()),
+			wantErr: fmt.Sprintf("failed to resolve vm for ``: vmType %#q is not a registered driver", limatype.DefaultDriver()),
 		},
 		{
 			name:    "No disk field in new YAMLs",
 			yNew:    ``,
 			yLatest: `disk: 100GiB`,
-			wantErr: fmt.Sprintf("failed to resolve vm for \"\": vmType %q is not a registered driver", limatype.DefaultDriver()),
+			wantErr: fmt.Sprintf("failed to resolve vm for ``: vmType %#q is not a registered driver", limatype.DefaultDriver()),
 		},
 		{
 			name:    "No disk field in latest YAMLs",
 			yNew:    `disk: 100GiB`,
 			yLatest: ``,
-			wantErr: fmt.Sprintf("failed to resolve vm for \"\": vmType %q is not a registered driver", limatype.DefaultDriver()),
+			wantErr: fmt.Sprintf("failed to resolve vm for ``: vmType %#q is not a registered driver", limatype.DefaultDriver()),
 		},
 		{
 			name:    "Disk size shrunk",
 			yNew:    `disk: 50GiB`,
 			yLatest: `disk: 100GiB`,
-			wantErr: fmt.Sprintf("failed to resolve vm for \"\": vmType %q is not a registered driver\n", limatype.DefaultDriver()) +
+			wantErr: fmt.Sprintf("failed to resolve vm for ``: vmType %#q is not a registered driver\n", limatype.DefaultDriver()) +
 				"field `disk`: shrinking the disk (100GiB --> 50GiB) is not supported",
 		},
 	}

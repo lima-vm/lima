@@ -34,6 +34,7 @@ type ExternalDriver struct {
 	Ctx          context.Context
 	Logger       *logrus.Logger
 	CancelFunc   context.CancelFunc
+	PIDFileOwner string
 }
 
 var (
@@ -193,8 +194,8 @@ func isExecutable(mode os.FileMode) bool {
 	return mode&0o111 != 0
 }
 
-func Register(driver driver.Driver) {
-	name := driver.Info().Name
+func Register(ctx context.Context, driver driver.Driver) {
+	name := driver.Info(ctx).Name
 	if _, exists := internalDrivers[name]; exists {
 		return
 	}

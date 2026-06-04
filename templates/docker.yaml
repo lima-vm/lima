@@ -33,7 +33,8 @@ provision:
     export DEBIAN_FRONTEND=noninteractive
     curl -fsSL https://get.docker.com | sh
     # NOTE: you may remove the lines below, if you prefer to use rootful docker, not rootless
-    systemctl disable --now docker
+    systemctl disable --now docker.service docker.socket containerd.service containerd.socket || true
+    systemctl mask docker.service docker.socket containerd.service containerd.socket || true
     apt-get install -y uidmap dbus-user-session
 - mode: yq
   path: "{{.Home}}/.config/docker/daemon.json"

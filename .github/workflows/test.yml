@@ -42,18 +42,11 @@ jobs:
     - name: Verify generated files
       run: make generate check-generated
     - name: Run nobin
-      run: >-
-        go tool -modfile=./hack/tools/go.mod nobin
-        --allow-emoji
-        --allow-escape
-        --gitignore
-        --skip-ext pb.desc
-        --skip 'website/static/images/**/*.{gif,png}'
-        --skip 'docs/reports/**/*.pdf'
+      run: make nobin
     - name: Run editorconfig-checker
-      run: go tool -modfile=./hack/tools/go.mod editorconfig-checker
+      run: make editorconfig-checker
     - name: Run yamllint
-      run: yamllint .
+      run: make yamllint
     - name: Install shellcheck
       run: |
         sudo apt-get update
@@ -61,9 +54,9 @@ jobs:
     - name: Run file and directory name linter
       uses: ls-lint/action@02e380fe8733d499cbfc9e22276de5085508a5bd  # v2.3.1
     - name: Run shellcheck
-      run: find . -name '*.sh' | xargs shellcheck
+      run: make shellcheck
     - name: Run shfmt
-      run: find . -name '*.sh' | xargs go tool -modfile=./hack/tools/go.mod shfmt -s -d
+      run: make shfmt
     - name: Check hyperlinks
       uses: lycheeverse/lychee-action@8646ba30535128ac92d33dfc9133794bfdd9b411  # v2.8.0
       with:
@@ -79,16 +72,13 @@ jobs:
       # TODO: move to `go tool` after upgrading to v2
       run: go install github.com/google/go-licenses@v1.6.0
     - name: Check licenses
-      # the allow list corresponds to https://github.com/cncf/foundation/blob/e5db022a0009f4db52b89d9875640cf3137153fe/allowed-third-party-license-policy.md
-      # hashicorp/hcl/v2 is MPL-2.0; covered by the CNCF license exception for hashicorp/hcl
-      # see also https://github.com/cncf/foundation/issues/1242
-      run: go-licenses check --include_tests --ignore github.com/hashicorp/hcl/v2 ./... --allowed_licenses=$(cat ./hack/allowed-licenses.txt)
+      run: make go-licenses
     - name: Check license boilerplates
-      run: go tool -modfile=./hack/tools/go.mod ltag -t ./hack/ltag --check -v
+      run: make ltag
     - name: Check protobuf files
-      run: go tool -modfile=./hack/tools/go.mod protolint .
+      run: make protolint
     - name: Run zizmor
-      uses: zizmorcore/zizmor-action@b1d7e1fb5de872772f31590499237e7cce841e8e  # v0.5.3
+      uses: zizmorcore/zizmor-action@5f14fd08f7cf1cb1609c1e344975f152c7ee938d  # v0.5.6
       with:
         # No need to hide the result in https://github.com/lima-vm/lima/security (private),
         # as anybody can already run zizmor locally to find vulnerabilities.
@@ -123,10 +113,11 @@ jobs:
       run: |
         echo "GOLANGCI_LINT_VERSION=$(go list -m -f '{{.Version}}' github.com/golangci/golangci-lint/v2)" >> $GITHUB_OUTPUT
     - name: Run golangci-lint
-      uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20  # v9.2.0
+      uses: golangci/golangci-lint-action@82606bf257cbaff209d206a39f5134f0cfbfd2ee  # v9.2.1
       with:
         version: ${{ steps.golangci-lint-version.outputs.GOLANGCI_LINT_VERSION }}
         args: --verbose
+        skip-cache: true
 
   security:
     name: "Vulncheck"
@@ -245,10 +236,7 @@ jobs:
       run: make
     - name: Install QEMU
       run: |
-        # Pin to 10.2.0: QEMU 11.0.0 TCG breaks systemd boot on the Windows
-        # runner with "Failed to fork off sandboxing environment: Protocol
-        # error", blocking SSH.
-        winget install --silent --accept-source-agreements --accept-package-agreements --disable-interactivity SoftwareFreedomConservancy.QEMU --version 10.2.0
+        winget install --silent --accept-source-agreements --accept-package-agreements --disable-interactivity SoftwareFreedomConservancy.QEMU
     - name: Integration tests (QEMU, Windows host)
       run: |
         $env:PATH = "$pwd\_output\bin;" + 'C:\msys64\usr\bin;' + 'C:\Program Files\QEMU;' + $env:PATH

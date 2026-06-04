@@ -70,7 +70,7 @@ func New() *LimaWslDriver {
 	}
 }
 
-func (l *LimaWslDriver) Configure(inst *limatype.Instance) *driver.ConfiguredDriver {
+func (l *LimaWslDriver) Configure(_ context.Context, inst *limatype.Instance) *driver.ConfiguredDriver {
 	l.Instance = inst
 	l.SSHLocalPort = inst.SSHLocalPort
 
@@ -98,7 +98,7 @@ func validateConfig(_ context.Context, cfg *limatype.LimaYAML) error {
 		return errors.New("configuration is nil")
 	}
 	if cfg.MountType != nil && *cfg.MountType != limatype.WSLMount {
-		return fmt.Errorf("field `mountType` must be %q for WSL2 driver, got %q", limatype.WSLMount, *cfg.MountType)
+		return fmt.Errorf("field `mountType` must be %#q for WSL2 driver, got %#q", limatype.WSLMount, *cfg.MountType)
 	}
 	// TODO: revise this list for WSL2
 	if cfg.VMType != nil {
@@ -108,7 +108,7 @@ func validateConfig(_ context.Context, cfg *limatype.LimaYAML) error {
 	}
 
 	if !limatype.IsNativeArch(*cfg.Arch) {
-		return fmt.Errorf("unsupported arch: %q", *cfg.Arch)
+		return fmt.Errorf("unsupported arch: %#q", *cfg.Arch)
 	}
 
 	if cfg.VMType != nil {
@@ -121,7 +121,7 @@ func validateConfig(_ context.Context, cfg *limatype.LimaYAML) error {
 				}
 				match := tarFileRegex.MatchString(image.Location)
 				if image.Arch == *cfg.Arch && !match {
-					return fmt.Errorf("unsupported image type for vmType: %s, tarball root file system required: %q", *cfg.VMType, image.Location)
+					return fmt.Errorf("unsupported image type for vmType: %s, tarball root file system required: %#q", *cfg.VMType, image.Location)
 				}
 			}
 		}
@@ -156,7 +156,7 @@ func validateConfig(_ context.Context, cfg *limatype.LimaYAML) error {
 //go:embed boot.Linux/*.sh
 var bootLinuxFS embed.FS
 
-func (l *LimaWslDriver) BootScripts() (map[string][]byte, error) {
+func (l *LimaWslDriver) BootScripts(_ context.Context) (map[string][]byte, error) {
 	scripts := make(map[string][]byte)
 
 	entries, err := bootLinuxFS.ReadDir("boot.Linux")
@@ -269,7 +269,7 @@ func (l *LimaWslDriver) canRunGUI() bool {
 	return false
 }
 
-func (l *LimaWslDriver) RunGUI() error {
+func (l *LimaWslDriver) RunGUI(_ context.Context) error {
 	return fmt.Errorf("RunGUI is not supported for the given driver '%s' and display '%s'", "wsl", *l.Instance.Config.Video.Display)
 }
 
@@ -303,7 +303,7 @@ func (l *LimaWslDriver) GuestAgentConn(ctx context.Context) (net.Conn, string, e
 	return conn, "vsock", nil
 }
 
-func (l *LimaWslDriver) Info() driver.Info {
+func (l *LimaWslDriver) Info(_ context.Context) driver.Info {
 	var info driver.Info
 	info.Name = "wsl2"
 	if l.Instance != nil {
@@ -358,7 +358,7 @@ func (l *LimaWslDriver) ListSnapshots(_ context.Context) (string, error) {
 	return "", errUnimplemented
 }
 
-func (l *LimaWslDriver) ForwardGuestAgent() bool {
+func (l *LimaWslDriver) ForwardGuestAgent(_ context.Context) bool {
 	// If driver is not providing, use host agent
 	return l.vSockPort == 0 && l.virtioPort == ""
 }

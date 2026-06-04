@@ -448,6 +448,7 @@ func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype
 	remoteSource := fmt.Sprintf("%s:%s", inst.Name, destRsyncDir)
 	clean := filepath.Clean(hostCurrentDir)
 	dirForCleanup := shellescape.Quote(filepath.Join(*inst.Config.User.Home, clean))
+	cleanupGuestWorkdir := false
 
 	rsyncBack := func() error {
 		paths := []string{
@@ -459,10 +460,14 @@ func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype
 			return fmt.Errorf("failed to sync back the changes from guest instance to host: %w", err)
 		}
 		logrus.Info("Successfully synced back the changes to host.")
+		cleanupGuestWorkdir = true
 		return nil
 	}
 
 	defer func() {
+		if !cleanupGuestWorkdir {
+			return
+		}
 		// Clean up the guest synced workdir
 		if err := executeSSHForRsync(ctx, *sshCmd, inst.SSHLocalPort, inst.SSHAddress, fmt.Sprintf("rm -rf %s", dirForCleanup)); err != nil {
 			logrus.WithError(err).Warn("Failed to clean up guest synced workdir")
@@ -479,6 +484,7 @@ func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype
 	}
 	if stats != nil && stats.String() == "" {
 		logrus.Info("No changes detected")
+		cleanupGuestWorkdir = true
 		return nil
 	}
 	statsMsg := ""
@@ -497,7 +503,7 @@ func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype
 
 	baseDir, err := os.MkdirTemp("", "lima-guest-synced-*")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create temporary directory: %w; preserving guest synced workdir at %s", err, destRsyncDir)
 	}
 	defer func() {
 		if err := os.RemoveAll(baseDir); err != nil {
@@ -507,7 +513,7 @@ func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype
 	hostTmpDest := filepath.Join(baseDir, filepath.Base(hostCurrentDir))
 	err = os.MkdirAll(hostTmpDest, 0o755)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create temporary directory: %w; preserving guest synced workdir at %s", err, destRsyncDir)
 	}
 
 	rsyncToTempDir := false
@@ -515,13 +521,14 @@ func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype
 	for {
 		ans, err := uiutil.Select(message, options)
 		if err != nil {
-			return fmt.Errorf("failed to open TUI: %w", err)
+			return fmt.Errorf("failed to open TUI: %w; preserving guest synced workdir at %s", err, destRsyncDir)
 		}
 
 		switch ans {
 		case 0: // Yes
 			return rsyncBack()
 		case 1: // No
+			cleanupGuestWorkdir = true
 			logrus.Info("Skipping syncing back the changes to host.")
 			return nil
 		case 2: // View the changed contents

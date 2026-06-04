@@ -117,7 +117,7 @@ func New() *LimaVzDriver {
 	}
 }
 
-func (l *LimaVzDriver) Configure(inst *limatype.Instance) *driver.ConfiguredDriver {
+func (l *LimaVzDriver) Configure(_ context.Context, inst *limatype.Instance) *driver.ConfiguredDriver {
 	l.Instance = inst
 	l.SSHLocalPort = inst.SSHLocalPort
 
@@ -129,14 +129,14 @@ func (l *LimaVzDriver) Configure(inst *limatype.Instance) *driver.ConfiguredDriv
 
 		if _, ok := mountTypesUnsupported[*l.Instance.Config.MountType]; ok {
 			// We cannot return an error here, but Validate() will return it.
-			logrus.Warnf("Unsupported mount type: %q", *l.Instance.Config.MountType)
+			logrus.Warnf("Unsupported mount type: %#q", *l.Instance.Config.MountType)
 		}
 	}
 
 	var vzOpts limatype.VZOpts
 	if l.Instance.Config.VMOpts[limatype.VZ] != nil {
 		if err := limayaml.Convert(l.Instance.Config.VMOpts[limatype.VZ], &vzOpts, "vmOpts.vz"); err != nil {
-			logrus.WithError(err).Warnf("Couldn't convert %q", l.Instance.Config.VMOpts[limatype.VZ])
+			logrus.WithError(err).Warnf("Couldn't convert %#q", l.Instance.Config.VMOpts[limatype.VZ])
 		}
 	}
 
@@ -174,7 +174,7 @@ func (l *LimaVzDriver) FillConfig(ctx context.Context, cfg *limatype.LimaYAML, _
 
 	var vzOpts limatype.VZOpts
 	if err := limayaml.Convert(cfg.VMOpts[limatype.VZ], &vzOpts, "vmOpts.vz"); err != nil {
-		logrus.WithError(err).Warnf("Couldn't convert %q", cfg.VMOpts[limatype.VZ])
+		logrus.WithError(err).Warnf("Couldn't convert %#q", cfg.VMOpts[limatype.VZ])
 	}
 
 	//nolint:staticcheck // Migration of top-level Rosetta if specified
@@ -226,7 +226,7 @@ func isEmpty(r limatype.Rosetta) bool {
 //go:embed boot.Linux/*.sh
 var bootLinuxFS embed.FS
 
-func (l *LimaVzDriver) BootScripts() (map[string][]byte, error) {
+func (l *LimaVzDriver) BootScripts(_ context.Context) (map[string][]byte, error) {
 	scripts := make(map[string][]byte)
 
 	entries, err := bootLinuxFS.ReadDir("boot.Linux")
@@ -266,11 +266,11 @@ func validateConfig(_ context.Context, cfg *limatype.LimaYAML) error {
 	}
 	if runtime.GOARCH == "amd64" && macOSProductVersion.LessThan(*semver.New("15.5.0")) {
 		logrus.Warnf("vmType %s: On Intel Mac, macOS 15.5 or later is required to run Linux 6.12 or later. "+
-			"Update macOS, or change vmType to \"qemu\" if the VM does not start up. (https://github.com/lima-vm/lima/issues/3334)",
+			"Update macOS, or change vmType to `qemu` if the VM does not start up. (https://github.com/lima-vm/lima/issues/3334)",
 			*cfg.VMType)
 	}
 	if cfg.MountType != nil && *cfg.MountType == limatype.NINEP {
-		return fmt.Errorf("field `mountType` must be %q or %q for VZ driver , got %q", limatype.REVSSHFS, limatype.VIRTIOFS, *cfg.MountType)
+		return fmt.Errorf("field `mountType` must be %#q or %#q for VZ driver , got %#q", limatype.REVSSHFS, limatype.VIRTIOFS, *cfg.MountType)
 	}
 	if *cfg.Firmware.LegacyBIOS {
 		logrus.Warnf("vmType %s: ignoring `firmware.legacyBIOS`", *cfg.VMType)
@@ -288,7 +288,7 @@ func validateConfig(_ context.Context, cfg *limatype.LimaYAML) error {
 	}
 
 	if !limatype.IsNativeArch(*cfg.Arch) {
-		return fmt.Errorf("unsupported arch: %q", *cfg.Arch)
+		return fmt.Errorf("unsupported arch: %#q", *cfg.Arch)
 	}
 
 	for i, image := range cfg.Images {
@@ -324,26 +324,26 @@ func validateConfig(_ context.Context, cfg *limatype.LimaYAML) error {
 	case "":
 	case "vz", "default", "none":
 	default:
-		logrus.Warnf("field `audio.device` must be \"vz\", \"default\", or \"none\" for VZ driver, got %q", audioDevice)
+		logrus.Warnf("field `audio.device` must be `vz`, `default`, or `none` for VZ driver, got %#q", audioDevice)
 	}
 
 	switch videoDisplay := *cfg.Video.Display; videoDisplay {
 	case "vz", "default", "none":
 	default:
-		logrus.Warnf("field `video.display` must be \"vz\", \"default\", or \"none\" for VZ driver , got %q", videoDisplay)
+		logrus.Warnf("field `video.display` must be `vz`, `default`, or `none` for VZ driver , got %#q", videoDisplay)
 	}
 	var vzOpts limatype.VZOpts
 	if err := limayaml.Convert(cfg.VMOpts[limatype.VZ], &vzOpts, "vmOpts.vz"); err != nil {
-		logrus.WithError(err).Warnf("Couldn't convert %q", cfg.VMOpts[limatype.VZ])
+		logrus.WithError(err).Warnf("Couldn't convert %#q", cfg.VMOpts[limatype.VZ])
 	}
 	switch *vzOpts.DiskImageFormat {
 	case raw.Type:
 	case asif.Type:
 		if macOSProductVersion.LessThan(*semver.New("26.0.0")) {
-			return fmt.Errorf("vmOpts.vz.diskImageFormat=%q requires macOS 26 or higher to run, got %q", asif.Type, macOSProductVersion)
+			return fmt.Errorf("vmOpts.vz.diskImageFormat=%#q requires macOS 26 or higher to run, got %#q", asif.Type, macOSProductVersion)
 		}
 	default:
-		return fmt.Errorf("field `vmOpts.vz.diskImageFormat` must be %q or %q, got %q", raw.Type, asif.Type, *vzOpts.DiskImageFormat)
+		return fmt.Errorf("field `vmOpts.vz.diskImageFormat` must be %#q or %#q, got %#q", raw.Type, asif.Type, *vzOpts.DiskImageFormat)
 	}
 	return nil
 }
@@ -369,7 +369,7 @@ func (l *LimaVzDriver) CreateDisk(ctx context.Context) error {
 
 		patchedMarker := disk + ".patched" // empty file
 		if !osutil.FileExists(patchedMarker) {
-			logrus.Infof("Patching macOS disk %q", disk)
+			logrus.Infof("Patching macOS disk %#q", disk)
 			if err := macos.Patch(ctx, disk); err != nil {
 				return err
 			}
@@ -394,7 +394,7 @@ func (l *LimaVzDriver) createDiskMacOSGuest(ctx context.Context) error {
 
 	diskSize, err := units.RAMInBytes(*l.Instance.Config.Disk)
 	if err != nil {
-		return fmt.Errorf("invalid disk size %q: %w", *l.Instance.Config.Disk, err)
+		return fmt.Errorf("invalid disk size %#q: %w", *l.Instance.Config.Disk, err)
 	}
 
 	switch l.diskImageFormat {
@@ -406,7 +406,7 @@ func (l *LimaVzDriver) createDiskMacOSGuest(ctx context.Context) error {
 		logrus.Debugf("Using %s disk image for macOS guest", l.diskImageFormat)
 		diskUtil := &nativeimgutil.NativeImageUtil{}
 		if err := diskUtil.CreateDisk(ctx, disk, diskSize); err != nil {
-			return fmt.Errorf("failed to create %s disk %q: %w", l.diskImageFormat, disk, err)
+			return fmt.Errorf("failed to create %s disk %#q: %w", l.diskImageFormat, disk, err)
 		}
 	default:
 		return fmt.Errorf("unsupported disk format for macOS guest: %s", l.diskImageFormat)
@@ -435,7 +435,7 @@ func (l *LimaVzDriver) createDiskMacOSGuest(ctx context.Context) error {
 	}
 	for _, file := range filesToClean {
 		if err := os.RemoveAll(file); err != nil {
-			logrus.WithError(err).Warnf("Failed to remove %q", file)
+			logrus.WithError(err).Warnf("Failed to remove %#q", file)
 		}
 	}
 
@@ -443,7 +443,7 @@ func (l *LimaVzDriver) createDiskMacOSGuest(ctx context.Context) error {
 }
 
 func (l *LimaVzDriver) Start(ctx context.Context) (chan error, error) {
-	logrus.Infof("Starting VZ (hint: to watch the boot progress, see %q)", filepath.Join(l.Instance.Dir, "serial*.log"))
+	logrus.Infof("Starting VZ (hint: to watch the boot progress, see %#q)", filepath.Join(l.Instance.Dir, "serial*.log"))
 	vm, waitSSHLocalPortAccessible, errCh, err := startVM(ctx, l.Instance, l.SSHLocalPort, l.onVsockEvent)
 	if err != nil {
 		if errors.Is(err, vz.ErrUnsupportedOSVersion) {
@@ -466,7 +466,7 @@ func (l *LimaVzDriver) canRunGUI() bool {
 	}
 }
 
-func (l *LimaVzDriver) RunGUI() error {
+func (l *LimaVzDriver) RunGUI(_ context.Context) error {
 	if l.canRunGUI() {
 		return l.machine.StartGraphicApplication(1920, 1200)
 	}
@@ -536,7 +536,7 @@ func (l *LimaVzDriver) GuestAgentConn(_ context.Context) (net.Conn, string, erro
 	return nil, "", errors.New("unable to connect to guest agent via vsock port 2222")
 }
 
-func (l *LimaVzDriver) Info() driver.Info {
+func (l *LimaVzDriver) Info(_ context.Context) driver.Info {
 	var info driver.Info
 
 	info.Name = "vz"
@@ -604,7 +604,7 @@ func (l *LimaVzDriver) ListSnapshots(_ context.Context) (string, error) {
 	return "", errUnimplemented
 }
 
-func (l *LimaVzDriver) ForwardGuestAgent() bool {
+func (l *LimaVzDriver) ForwardGuestAgent(_ context.Context) bool {
 	// If driver is not providing, use host agent
 	return l.vSockPort == 0 && l.virtioPort == ""
 }

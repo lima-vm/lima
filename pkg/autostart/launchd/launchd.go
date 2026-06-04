@@ -79,17 +79,17 @@ func RequestStart(ctx context.Context, inst *limatype.Instance) error {
 	// If disabled, `launchctl bootstrap` will fail.
 	_ = EnableDisableService(ctx, true, inst.Name)
 	if err := launchctl(ctx, "bootstrap", domainTarget(), GetPlistPath(inst.Name)); err != nil {
-		return fmt.Errorf("failed to start the instance %q via launchctl: %w", inst.Name, err)
+		return fmt.Errorf("failed to start the instance %#q via launchctl: %w", inst.Name, err)
 	}
 	return nil
 }
 
 func RequestStop(ctx context.Context, inst *limatype.Instance) (bool, error) {
-	logrus.Debugf("AutoStartedIdentifier=%q, ServiceNameFrom=%q", inst.AutoStartedIdentifier, ServiceNameFrom(inst.Name))
+	logrus.Debugf("AutoStartedIdentifier=%#q, ServiceNameFrom=%#q", inst.AutoStartedIdentifier, ServiceNameFrom(inst.Name))
 	if inst.AutoStartedIdentifier == ServiceNameFrom(inst.Name) {
-		logrus.Infof("Stopping the instance %q started by launchd", inst.Name)
+		logrus.Infof("Stopping the instance %#q started by launchd", inst.Name)
 		if err := launchctl(ctx, "bootout", serviceTarget(inst.Name)); err != nil {
-			return false, fmt.Errorf("failed to stop the instance %q via launchctl: %w", inst.Name, err)
+			return false, fmt.Errorf("failed to stop the instance %#q via launchctl: %w", inst.Name, err)
 		}
 		return true, nil
 	}

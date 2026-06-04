@@ -16,6 +16,18 @@ update_fuse_conf() {
 			echo "user_allow_other" >>"${fuse_conf}"
 		fi
 	fi
+
+	# Some distribution (since Ubuntu-25.04) has an apparmor rule for fusermount3. It causes SSHFS mount failed.
+	# Related Issue: https://github.com/lima-vm/lima/issues/4908
+	# Therefore, define a custom rule to loosen the apparmor rule.
+	if [ -e "/etc/apparmor.d/fusermount3" ] && [ ! -e "/etc/apparmor.d/local/fusermount3" ]; then
+		cat >"/etc/apparmor.d/local/fusermount3" <<EOF
+# The following two lines allow VM to be mounted to / unmounted from home directly.
+mount fstype=@{fuse_types} options=(nosuid,nodev) options in (ro,rw,noatime,dirsync,nodiratime,noexec,sync) -> @{HOME},
+umount @{HOME},
+EOF
+		apparmor_parser -r /etc/apparmor.d/fusermount3
+	fi
 }
 
 # update_fuse_conf has to be called after installing all the packages,

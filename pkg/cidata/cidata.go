@@ -66,7 +66,7 @@ func setupEnv(instConfigEnv map[string]string, propagateProxyEnv bool, slirpGate
 		for _, name := range append(lowerVars, upperVars...) {
 			if value, ok := os.LookupEnv(name); ok {
 				if _, ok := env[name]; ok && value != env[name] {
-					logrus.Infof("Overriding %q value %q with %q from limactl process environment",
+					logrus.Infof("Overriding %#q value %#q with %#q from limactl process environment",
 						name, env[name], value)
 				}
 				env[name] = value
@@ -82,7 +82,7 @@ func setupEnv(instConfigEnv map[string]string, propagateProxyEnv bool, slirpGate
 		} else if ok && !strings.EqualFold(name, "no_proxy") {
 			u, err := url.Parse(value)
 			if err != nil {
-				logrus.Warnf("Ignoring invalid proxy %q=%v: %s", name, value, err)
+				logrus.Warnf("Ignoring invalid proxy %#q=%v: %s", name, value, err)
 				continue
 			}
 
@@ -97,7 +97,7 @@ func setupEnv(instConfigEnv map[string]string, propagateProxyEnv bool, slirpGate
 				}
 			}
 			if value != env[name] {
-				logrus.Infof("Replacing %q value %q with %q", name, env[name], value)
+				logrus.Infof("Replacing %#q value %#q with %#q", name, env[name], value)
 				env[name] = value
 			}
 		}
@@ -108,7 +108,7 @@ func setupEnv(instConfigEnv map[string]string, propagateProxyEnv bool, slirpGate
 		upperName := strings.ToUpper(lowerName)
 		if _, ok := env[lowerName]; ok {
 			if _, ok := env[upperName]; ok && env[lowerName] != env[upperName] {
-				logrus.Warnf("Changing %q value from %q to %q to match %q",
+				logrus.Warnf("Changing %#q value from %#q to %#q to match %#q",
 					upperName, env[upperName], env[lowerName], lowerName)
 			}
 			env[upperName] = env[lowerName]
@@ -224,7 +224,7 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 				options += fmt.Sprintf(",version=%s", *f.NineP.ProtocolVersion)
 				msize, err := units.RAMInBytes(*f.NineP.Msize)
 				if err != nil {
-					return nil, fmt.Errorf("failed to parse msize for %q: %w", f.Location, err)
+					return nil, fmt.Errorf("failed to parse msize for %#q: %w", f.Location, err)
 				}
 				options += fmt.Sprintf(",msize=%d", msize)
 				options += fmt.Sprintf(",cache=%s", *f.NineP.Cache)
@@ -398,7 +398,7 @@ func GenerateISO9660(ctx context.Context, drv driver.Driver, instDir, name strin
 		return "", err
 	}
 
-	driverScripts, err := drv.BootScripts()
+	driverScripts, err := drv.BootScripts(ctx)
 	if err != nil {
 		return "", fmt.Errorf("failed to get boot scripts: %w", err)
 	}
@@ -408,11 +408,11 @@ func GenerateISO9660(ctx context.Context, drv driver.Driver, instDir, name strin
 		if strings.Contains(filename, "/") {
 			// When the filename contains a slash, it must be in the format of "boot.<OS>/<SCRIPT>"
 			if !strings.HasPrefix(filename, "boot.") || strings.Count(filename, "/") != 1 {
-				return "", fmt.Errorf("invalid boot script filename %q: must be in format 'boot.<OS>/<SCRIPT>'", filename)
+				return "", fmt.Errorf("invalid boot script filename %#q: must be in format 'boot.<OS>/<SCRIPT>'", filename)
 			}
 			layoutPath = filename
 		} else {
-			logrus.Warnf("Boot script filename %q does not contain '/', treating it as a script for Linux and prefixing with 'boot.Linux/'", filename)
+			logrus.Warnf("Boot script filename %#q does not contain '/', treating it as a script for Linux and prefixing with 'boot.Linux/'", filename)
 		}
 		layout = append(layout, iso9660util.Entry{
 			Path:   layoutPath,
@@ -442,7 +442,7 @@ func GenerateISO9660(ctx context.Context, drv driver.Driver, instDir, name strin
 		case limatype.ProvisionModeAnsible:
 			continue
 		default:
-			return "", fmt.Errorf("unknown provision mode %q", f.Mode)
+			return "", fmt.Errorf("unknown provision mode %#q", f.Mode)
 		}
 	}
 

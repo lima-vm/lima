@@ -9,7 +9,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -114,6 +116,20 @@ func StopForcibly(inst *limatype.Instance) {
 		}
 	} else {
 		logrus.Infof("The %s driver process seems already stopped", inst.VMType)
+	}
+
+	driverPIDPattern := filepath.Join(inst.Dir, "lima-driver-*.pid")
+	files, _ := filepath.Glob(driverPIDPattern)
+	for _, pidFile := range files {
+		if b, readErr := os.ReadFile(pidFile); readErr == nil {
+			if pid, convErr := strconv.Atoi(strings.TrimSpace(string(b))); convErr == nil && pid > 0 {
+				logrus.Infof("Sending SIGKILL to external driver process %d (from %s)", pid, filepath.Base(pidFile))
+				if err := osutil.SysKill(pid, osutil.SigKill); err != nil && !errors.Is(err, os.ErrProcessDone) && !errors.Is(err, syscall.ESRCH) {
+					logrus.Warnf("Failed to kill external driver process %d: %v", pid, err)
+				}
+			}
+		}
+		_ = os.Remove(pidFile) // Clean up the orphaned pid file
 	}
 
 	for _, d := range inst.AdditionalDisks {

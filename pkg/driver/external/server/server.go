@@ -15,6 +15,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -61,14 +62,14 @@ func Serve(ctx context.Context, driver driver.Driver) {
 		return
 	}
 	if *inspectStatus {
-		handleInspectStatus(driver)
+		handleInspectStatus(ctx, driver)
 		return
 	}
 
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 
-	socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("lima-driver-%s-%d.sock", driver.Info().Name, os.Getpid()))
+	socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("lima-driver-%s-%d.sock", driver.Info(ctx).Name, os.Getpid()))
 
 	defer func() {
 		if err := os.Remove(socketPath); err != nil && !os.IsNotExist(err) {
@@ -145,8 +146,8 @@ func Serve(ctx context.Context, driver driver.Driver) {
 		}
 	}()
 
-	go func() {
-		logger.Infof("Starting external driver server for %s", driver.Info().Name)
+	go func(ctx context.Context) {
+		logger.Infof("Starting external driver server for %s", driver.Info(ctx).Name)
 		logger.Infof("Server starting on Unix socket: %s", socketPath)
 		if err := server.Serve(tListener); err != nil {
 			if errors.Is(err, grpc.ErrServerStopped) {
@@ -155,13 +156,13 @@ func Serve(ctx context.Context, driver driver.Driver) {
 				logger.Errorf("Failed to serve: %v", err)
 			}
 		}
-	}()
+	}(ctx)
 
 	<-shutdownCh
 	server.GracefulStop()
 }
 
-func handleInspectStatus(driver driver.Driver) {
+func handleInspectStatus(ctx context.Context, driver driver.Driver) {
 	decoder := json.NewDecoder(os.Stdin)
 	encoder := json.NewEncoder(os.Stdout)
 
@@ -175,7 +176,7 @@ func handleInspectStatus(driver driver.Driver) {
 		fmt.Fprintf(os.Stderr, "Failed to unmarshal instance: %v", err)
 	}
 
-	status := driver.InspectStatus(context.Background(), &inst)
+	status := driver.InspectStatus(ctx, &inst)
 	inst.Status = status
 
 	resp, err := inst.MarshalJSON()
@@ -207,17 +208,21 @@ func handlePreConfiguredDriverAction(ctx context.Context, driver driver.Driver) 
 	}
 }
 
+func driverPIDFilePath(instanceDir, driverName, pidFileOwner string) string {
+	return filepath.Join(instanceDir, fmt.Sprintf("lima-driver-%s-%s.pid", driverName, pidFileOwner))
+}
+
 // Start begins the driver startup process. It sends an initial response to unblock
 // the client and then streams subsequent errors(if any), as the driver initializes.
 // A final success message is streamed upon successful completion.
-func Start(extDriver *registry.ExternalDriver, instName string) error {
+func Start(ctx context.Context, extDriver *registry.ExternalDriver, instName string) error {
 	extDriver.Logger.Debugf("Starting external driver at %s", extDriver.Path)
 	if instName == "" {
 		return errors.New("instance name cannot be empty")
 	}
 	extDriver.InstanceName = instName
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 	cmd := exec.CommandContext(ctx, extDriver.Path)
 
 	stdout, err := cmd.StdoutPipe()
@@ -245,6 +250,15 @@ func Start(extDriver *registry.ExternalDriver, instName string) error {
 		return fmt.Errorf("failed to start external driver: %w", err)
 	}
 
+	pid := cmd.Process.Pid
+	pidFilePath := driverPIDFilePath(instanceDir, extDriver.Name, extDriver.PIDFileOwner)
+	// If the driver crashes immediately, the cleanup paths below will remove this file.
+	if err := os.WriteFile(pidFilePath, []byte(strconv.Itoa(pid)), 0o644); err != nil {
+		cancel()
+		_ = cmd.Process.Kill()
+		return fmt.Errorf("failed to write driver PID file: %w", err)
+	}
+
 	driverLogger := extDriver.Logger.WithField("driver", extDriver.Name)
 
 	scanner := bufio.NewScanner(stdout)
@@ -256,6 +270,8 @@ func Start(extDriver *registry.ExternalDriver, instName string) error {
 			if err := cmd.Process.Kill(); err != nil {
 				driverLogger.Errorf("Failed to kill external driver process: %v", err)
 			}
+			// TODO: reap process (e.g. cmd.Wait()) to avoid temporary zombies
+			_ = os.Remove(pidFilePath)
 			return fmt.Errorf("failed to parse socket path JSON: %w", err)
 		}
 		socketPath = output["socketPath"]
@@ -264,6 +280,7 @@ func Start(extDriver *registry.ExternalDriver, instName string) error {
 		if err := cmd.Process.Kill(); err != nil {
 			driverLogger.Errorf("Failed to kill external driver process: %v", err)
 		}
+		_ = os.Remove(pidFilePath)
 		return errors.New("failed to read socket path from driver")
 	}
 	extDriver.SocketPath = socketPath
@@ -274,6 +291,7 @@ func Start(extDriver *registry.ExternalDriver, instName string) error {
 		if err := cmd.Process.Kill(); err != nil {
 			driverLogger.Errorf("Failed to kill external driver process after client creation failure: %v", err)
 		}
+		_ = os.Remove(pidFilePath)
 		return fmt.Errorf("failed to create driver client: %w", err)
 	}
 
@@ -292,14 +310,52 @@ func Stop(extDriver *registry.ExternalDriver) error {
 	}
 
 	extDriver.Logger.Debugf("Stopping external driver %s", extDriver.Name)
-	if extDriver.CancelFunc != nil {
-		extDriver.CancelFunc()
-	}
-	if err := extDriver.Command.Process.Signal(syscall.SIGTERM); err != nil {
-		extDriver.Logger.Errorf("Failed to kill external driver process: %v", err)
+
+	if extDriver.Command.Process != nil {
+		err := extDriver.Command.Process.Signal(syscall.SIGTERM)
+		if err != nil && !errors.Is(err, os.ErrProcessDone) {
+			extDriver.Logger.Errorf("Failed to send SIGTERM to external driver process: %v", err)
+		}
+
+		done := make(chan error, 1)
+		const stopTimeout = 10 * time.Second
+		cmd := extDriver.Command
+		go func() {
+			done <- cmd.Wait()
+		}()
+
+		select {
+		case waitErr := <-done:
+			if waitErr != nil {
+				extDriver.Logger.Debugf("External driver %s exited with: %v", extDriver.Name, waitErr)
+			} else {
+				extDriver.Logger.Debugf("External driver %s exited gracefully", extDriver.Name)
+			}
+		case <-time.After(stopTimeout):
+			extDriver.Logger.Warnf("External driver %s did not exit in time, forcing cancellation (SIGKILL)", extDriver.Name)
+
+			if extDriver.CancelFunc != nil {
+				extDriver.CancelFunc()
+			}
+
+			// Protect against processes stuck in uninterruptible sleep (D-state)
+			select {
+			case <-done: // reaped successfully after CancelFunc
+			case <-time.After(2 * time.Second):
+				extDriver.Logger.Errorf("External driver %s is stuck in D-state; giving up on reaping", extDriver.Name)
+			}
+		}
 	}
 	if err := os.Remove(extDriver.SocketPath); err != nil && !os.IsNotExist(err) {
 		extDriver.Logger.Warnf("Failed to remove socket file: %v", err)
+	}
+	if instanceDir, err := dirnames.InstanceDir(extDriver.InstanceName); err == nil {
+		pidFilePath := driverPIDFilePath(instanceDir, extDriver.Name, extDriver.PIDFileOwner)
+		if err := os.Remove(pidFilePath); err != nil && !errors.Is(err, os.ErrNotExist) {
+			extDriver.Logger.Errorf("Failed to remove driver PID file: %v", err)
+		}
+	} else {
+		extDriver.Logger.Errorf("Failed to determine instance dir for PID cleanup: %v", err)
 	}
 
 	extDriver.Command = nil

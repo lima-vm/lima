@@ -103,13 +103,13 @@ func EnsureDisk(ctx context.Context, cfg Config) error {
 	}
 	imageInfo, err := qemuimgutil.GetInfo(ctx, imagePath)
 	if err != nil {
-		return fmt.Errorf("failed to get the information of %q: %w", imagePath, err)
+		return fmt.Errorf("failed to get the information of %#q: %w", imagePath, err)
 	}
 	if err = qemuimgutil.AcceptableAsBaseDisk(imageInfo); err != nil {
-		return fmt.Errorf("file %q is not acceptable as a disk image: %w", imagePath, err)
+		return fmt.Errorf("file %#q is not acceptable as a disk image: %w", imagePath, err)
 	}
 	if imageInfo.Format == "" {
-		return fmt.Errorf("failed to inspect the format of %q", imagePath)
+		return fmt.Errorf("failed to inspect the format of %#q", imagePath)
 	}
 	if isISO {
 		isoPath := filepath.Join(cfg.InstanceDir, filenames.ISO)
@@ -121,7 +121,7 @@ func EnsureDisk(ctx context.Context, cfg Config) error {
 		cmd := exec.CommandContext(ctx, "qemu-img", args...)
 		if out, err := cmd.CombinedOutput(); err != nil {
 			_ = os.Rename(isoPath, imagePath)
-			return fmt.Errorf("failed to run %v: %q: %w", cmd.Args, string(out), err)
+			return fmt.Errorf("failed to run %v: %#q: %w", cmd.Args, string(out), err)
 		}
 	} else {
 		if err = os.Rename(imagePath, diskPath); err != nil {
@@ -232,7 +232,7 @@ func List(ctx context.Context, cfg Config, run bool) (string, error) {
 
 func argValue(args []string, key string) (string, bool) {
 	if !strings.HasPrefix(key, "-") {
-		panic(fmt.Errorf("got unexpected key %q", key))
+		panic(fmt.Errorf("got unexpected key %#q", key))
 	}
 	for i, s := range args {
 		if s == key {
@@ -253,11 +253,11 @@ func argValue(args []string, key string) (string, bool) {
 // appendArgsIfNoConflict cannot be used for: -drive, -cdrom, ...
 func appendArgsIfNoConflict(args []string, k, v string) []string {
 	if !strings.HasPrefix(k, "-") {
-		panic(fmt.Errorf("got unexpected key %q", k))
+		panic(fmt.Errorf("got unexpected key %#q", k))
 	}
 	switch k {
 	case "-drive", "-cdrom", "-chardev", "-blockdev", "-netdev", "-device":
-		panic(fmt.Errorf("appendArgsIfNoConflict() must not be called with k=%q", k))
+		panic(fmt.Errorf("appendArgsIfNoConflict() must not be called with k=%#q", k))
 	}
 
 	if v == "" {
@@ -268,7 +268,7 @@ func appendArgsIfNoConflict(args []string, k, v string) []string {
 	}
 
 	if origV, ok := argValue(args, k); ok {
-		logrus.Warnf("Not adding QEMU argument %q %q, as it conflicts with %q %q", k, v, k, origV)
+		logrus.Warnf("Not adding QEMU argument %#q %#q, as it conflicts with %#q %#q", k, v, k, origV)
 		return args
 	}
 	return append(args, k, v)
@@ -303,7 +303,7 @@ func inspectFeatures(ctx context.Context, exe, machine string) (*features, error
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("failed to run %v: stdout=%q, stderr=%q", cmd.Args, stdout.String(), stderr.String())
+		return nil, fmt.Errorf("failed to run %v: stdout=%#q, stderr=%#q", cmd.Args, stdout.String(), stderr.String())
 	}
 	f.AccelHelp = stdout.Bytes()
 	// on older versions qemu will write "help" output to stderr
@@ -315,7 +315,7 @@ func inspectFeatures(ctx context.Context, exe, machine string) (*features, error
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		logrus.Warnf("failed to run %v: stdout=%q, stderr=%q", cmd.Args, stdout.String(), stderr.String())
+		logrus.Warnf("failed to run %v: stdout=%#q, stderr=%#q", cmd.Args, stdout.String(), stderr.String())
 	} else {
 		f.NetdevHelp = stdout.Bytes()
 		if len(f.NetdevHelp) == 0 {
@@ -327,7 +327,7 @@ func inspectFeatures(ctx context.Context, exe, machine string) (*features, error
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		logrus.Warnf("failed to run %v: stdout=%q, stderr=%q", cmd.Args, stdout.String(), stderr.String())
+		logrus.Warnf("failed to run %v: stdout=%#q, stderr=%#q", cmd.Args, stdout.String(), stderr.String())
 	} else {
 		f.MachineHelp = stdout.Bytes()
 		if len(f.MachineHelp) == 0 {
@@ -340,7 +340,7 @@ func inspectFeatures(ctx context.Context, exe, machine string) (*features, error
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		logrus.Warnf("failed to run %v: stdout=%q, stderr=%q", cmd.Args, stdout.String(), stderr.String())
+		logrus.Warnf("failed to run %v: stdout=%#q, stderr=%#q", cmd.Args, stdout.String(), stderr.String())
 	} else {
 		f.CPUHelp = stdout.Bytes()
 		if len(f.CPUHelp) == 0 {
@@ -456,11 +456,11 @@ func resolveCPUType(y *limatype.LimaYAML) string {
 	var overrideCPUType bool
 	var qemuOpts limatype.QEMUOpts
 	if err := limayaml.Convert(y.VMOpts[limatype.QEMU], &qemuOpts, "vmOpts.qemu"); err != nil {
-		logrus.WithError(err).Warnf("Couldn't convert %q", y.VMOpts[limatype.QEMU])
+		logrus.WithError(err).Warnf("Couldn't convert %#q", y.VMOpts[limatype.QEMU])
 	}
 	for k, v := range qemuOpts.CPUType {
 		if !slices.Contains(limatype.ArchTypes, *y.Arch) {
-			logrus.Warnf("field `vmOpts.qemu.cpuType` uses unsupported arch %q", k)
+			logrus.Warnf("field `vmOpts.qemu.cpuType` uses unsupported arch %#q", k)
 			continue
 		}
 		if v != "" {
@@ -505,17 +505,17 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 		}
 		var qemuOpts limatype.QEMUOpts
 		if err := limayaml.Convert(y.VMOpts[limatype.QEMU], &qemuOpts, "vmOpts.qemu"); err != nil {
-			logrus.WithError(err).Warnf("Couldn't convert %q", y.VMOpts[limatype.QEMU])
+			logrus.WithError(err).Warnf("Couldn't convert %#q", y.VMOpts[limatype.QEMU])
 		}
 		if qemuOpts.MinimumVersion != nil && version.LessThan(*semver.New(*qemuOpts.MinimumVersion)) {
-			logrus.Fatalf("QEMU %v is too old, template requires %q or later", version, *qemuOpts.MinimumVersion)
+			logrus.Fatalf("QEMU %v is too old, template requires %#q or later", version, *qemuOpts.MinimumVersion)
 		}
 	}
 
 	// Architecture
 	accel := Accel(*y.Arch)
 	if !strings.Contains(string(features.AccelHelp), accel) {
-		return "", nil, fmt.Errorf("accelerator %q is not supported by %s", accel, exe)
+		return "", nil, fmt.Errorf("accelerator %#q is not supported by %s", accel, exe)
 	}
 
 	// Memory
@@ -538,13 +538,13 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 		switch {
 		case strings.HasPrefix(cpu, "host"), strings.HasPrefix(cpu, "max"):
 			if !strings.Contains(cpu, ",-pdpe1gb") {
-				logrus.Warnf("On Intel Mac, CPU type %q typically needs \",-pdpe1gb\" option (https://stackoverflow.com/a/72863744/5167443)", cpu)
+				logrus.Warnf("On Intel Mac, CPU type %#q typically needs `,-pdpe1gb` option (https://stackoverflow.com/a/72863744/5167443)", cpu)
 			}
 		}
 	}
 	// `qemu-system-ppc64 -help` does not show "max", but it is actually accepted
 	if cpu != "max" && !strings.Contains(string(features.CPUHelp), strings.Split(cpu, ",")[0]) {
-		return "", nil, fmt.Errorf("cpu %q is not supported by %s", cpu, exe)
+		return "", nil, fmt.Errorf("cpu %#q is not supported by %s", cpu, exe)
 	}
 	args = appendArgsIfNoConflict(args, "-cpu", cpu)
 
@@ -603,7 +603,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	// Firmware
 	legacyBIOS := *y.Firmware.LegacyBIOS
 	if legacyBIOS && *y.Arch != limatype.X8664 && *y.Arch != limatype.ARMV7L {
-		logrus.Warnf("field `firmware.legacyBIOS` is not supported for architecture %q, ignoring", *y.Arch)
+		logrus.Warnf("field `firmware.legacyBIOS` is not supported for architecture %#q, ignoring", *y.Arch)
 		legacyBIOS = false
 	}
 	noFirmware := *y.Arch == limatype.PPC64LE || *y.Arch == limatype.S390X || legacyBIOS
@@ -614,7 +614,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 			logrus.Warn("use of deprecated _LIMA_QEMU_UEFI_IN_BIOS")
 			b, err := strconv.ParseBool(envVar)
 			if err != nil {
-				logrus.WithError(err).Warnf("invalid _LIMA_QEMU_UEFI_IN_BIOS value %q", envVar)
+				logrus.WithError(err).Warnf("invalid _LIMA_QEMU_UEFI_IN_BIOS value %#q", envVar)
 			} else {
 				firmwareInBios = b
 			}
@@ -625,7 +625,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 		if firmwareInBios {
 			if _, stErr := os.Stat(firmwareWithVars); stErr == nil {
 				firmware = firmwareWithVars
-				logrus.Infof("Using existing firmware (%q)", firmware)
+				logrus.Infof("Using existing firmware (%#q)", firmware)
 			}
 		} else {
 			if _, stErr := os.Stat(downloadedFirmware); errors.Is(stErr, os.ErrNotExist) {
@@ -635,18 +635,18 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 					case "", limatype.QEMU:
 						if f.Arch == *y.Arch {
 							if _, err = fileutils.DownloadFile(ctx, downloadedFirmware, f.File, true, "UEFI code "+f.Location, *y.Arch); err != nil {
-								logrus.WithError(err).Warnf("failed to download %q", f.Location)
+								logrus.WithError(err).Warnf("failed to download %#q", f.Location)
 								continue loop
 							}
 							firmware = downloadedFirmware
-							logrus.Infof("Using firmware %q (downloaded from %q)", firmware, f.Location)
+							logrus.Infof("Using firmware %#q (downloaded from %#q)", firmware, f.Location)
 							break loop
 						}
 					}
 				}
 			} else {
 				firmware = downloadedFirmware
-				logrus.Infof("Using existing firmware (%q)", firmware)
+				logrus.Infof("Using existing firmware (%#q)", firmware)
 			}
 		}
 		if firmware == "" {
@@ -654,13 +654,13 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 			if err != nil {
 				return "", nil, err
 			}
-			logrus.Infof("Using system firmware (%q)", firmware)
+			logrus.Infof("Using system firmware (%#q)", firmware)
 			if firmwareInBios {
 				firmwareVars, err := getFirmwareVars(exe, *y.Arch)
 				if err != nil {
 					return "", nil, err
 				}
-				logrus.Infof("Using system firmware vars (%q)", firmwareVars)
+				logrus.Infof("Using system firmware vars (%#q)", firmwareVars)
 				varsFile, err := os.Open(firmwareVars)
 				if err != nil {
 					return "", nil, err
@@ -705,13 +705,13 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 		diskName := d.Name
 		disk, err := store.InspectDisk(diskName, d.FSType)
 		if err != nil {
-			logrus.Errorf("could not load disk %q: %q", diskName, err)
+			logrus.Errorf("could not load disk %#q: %#q", diskName, err)
 			return "", nil, err
 		}
 
-		logrus.Infof("Mounting disk %q on %q", diskName, disk.MountPoint)
+		logrus.Infof("Mounting disk %#q on %#q", diskName, disk.MountPoint)
 		if err = disk.LockForInstance(cfg.InstanceDir); err != nil {
-			logrus.Errorf("could not attach disk %q: %s", diskName, err)
+			logrus.Errorf("could not attach disk %#q: %s", diskName, err)
 			return "", nil, err
 		}
 		dataDisk := filepath.Join(disk.Dir, filenames.DataDisk)
@@ -811,7 +811,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 				if runtime.GOOS != "darwin" {
 					return "", nil, fmt.Errorf("networks.yaml '%s' configuration is only supported on macOS right now", nw.Lima)
 				}
-				logrus.Debugf("Using socketVMNet (%q)", nwCfg.Paths.SocketVMNet)
+				logrus.Debugf("Using socketVMNet (%#q)", nwCfg.Paths.SocketVMNet)
 				sock, err := networks.Sock(nw.Lima)
 				if err != nil {
 					return "", nil, err
@@ -872,6 +872,11 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 		args = append(args, "-device", "virtio-keyboard-pci")
 		args = append(args, "-device", "virtio-"+input+"-pci")
 		args = append(args, "-device", "qemu-xhci,id=usb-bus")
+	} else {
+		// Suppress any machine-default VGA adapter so the guest needs no VGA
+		// ROM. Only x86_64's q35/pc attach one (a std-vga needing
+		// vgabios-stdvga.bin); on other architectures this is a no-op.
+		args = append(args, "-vga", "none")
 	}
 
 	// Parallel
@@ -1102,7 +1107,7 @@ func Exe(arch limatype.Arch) (exe string, args []string, err error) {
 	if envV := os.Getenv(envK); envV != "" {
 		ss, err := shellwords.Parse(envV)
 		if err != nil {
-			return "", nil, fmt.Errorf("failed to parse %s value %q: %w", envK, envV, err)
+			return "", nil, fmt.Errorf("failed to parse %s value %#q: %w", envK, envV, err)
 		}
 		exeBase, args = ss[0], ss[1:]
 		if len(args) != 0 {
@@ -1158,7 +1163,7 @@ func getQemuVersion(ctx context.Context, qemuExe string) (*semver.Version, error
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("failed to run %v: stdout=%q, stderr=%q", cmd.Args, stdout.String(), stderr.String())
+		return nil, fmt.Errorf("failed to run %v: stdout=%#q, stderr=%#q", cmd.Args, stdout.String(), stderr.String())
 	}
 
 	return parseQemuVersion(stdout.String())
@@ -1168,7 +1173,7 @@ func getFirmware(qemuExe string, arch limatype.Arch) (string, error) {
 	switch arch {
 	case limatype.X8664, limatype.AARCH64, limatype.ARMV7L, limatype.RISCV64:
 	default:
-		return "", fmt.Errorf("unexpected architecture: %q", arch)
+		return "", fmt.Errorf("unexpected architecture: %#q", arch)
 	}
 
 	homeDir, err := os.UserHomeDir()
@@ -1233,10 +1238,10 @@ func getFirmware(qemuExe string, arch limatype.Arch) (string, error) {
 	}
 
 	if arch == limatype.X8664 {
-		return "", fmt.Errorf("could not find firmware for %q (hint: try setting `firmware.legacyBIOS` to `true`)", arch)
+		return "", fmt.Errorf("could not find firmware for %#q (hint: try setting `firmware.legacyBIOS` to `true`)", arch)
 	}
 	qemuArch := strings.TrimPrefix(filepath.Base(qemuExe), "qemu-system-")
-	return "", fmt.Errorf("could not find firmware for %q (hint: try copying the \"edk-%s-code.fd\" firmware to $HOME/.local/share/qemu/)", arch, qemuArch)
+	return "", fmt.Errorf("could not find firmware for %#q (hint: try copying the `edk-%s-code.fd` firmware to $HOME/.local/share/qemu/)", arch, qemuArch)
 }
 
 func getFirmwareVars(qemuExe string, arch limatype.Arch) (string, error) {
@@ -1245,7 +1250,7 @@ func getFirmwareVars(qemuExe string, arch limatype.Arch) (string, error) {
 	case limatype.X8664:
 		targetArch = "i386" // vars are unified between i386 and x86_64 and normally only former is bundled
 	default:
-		return "", fmt.Errorf("unexpected architecture: %q", arch)
+		return "", fmt.Errorf("unexpected architecture: %#q", arch)
 	}
 
 	homeDir, err := os.UserHomeDir()
@@ -1273,7 +1278,7 @@ func getFirmwareVars(qemuExe string, arch limatype.Arch) (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("could not find firmware vars for %q", arch)
+	return "", fmt.Errorf("could not find firmware vars for %#q", arch)
 }
 
 var hasSMEDarwin = sync.OnceValue(func() bool {

@@ -24,7 +24,7 @@ func TestDialQemu(t *testing.T) {
 	listener, err := listenUnix(t.TempDir())
 	assert.NilError(t, err)
 	defer listener.Close()
-	t.Logf("Listening at %q", listener.Addr())
+	t.Logf("Listening at %#q", listener.Addr())
 
 	errc := make(chan error, 2)
 

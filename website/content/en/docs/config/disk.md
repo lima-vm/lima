@@ -2,9 +2,73 @@
 title: Disks
 ---
 
-This guide explains how to increase the disk size of a Lima VM when you've run out of space, as well as how to edit the disk size using the `limactl` CLI.
+This guide explains how to manage Lima disks: standalone raw/qcow2 block devices that persist independently of any instance.
 
-## Resize Disk Using limactl
+## Additional Disks (limactl disk)
+
+Lima disks can be shared across instances and survive instance deletion.
+
+### Listing disks
+
+```sh
+limactl disk list
+# or the short alias:
+limactl disk ls
+```
+
+### Creating a disk
+
+```sh
+limactl disk create NAME --size SIZE [--format qcow2|raw]
+```
+
+The supported formats are `qcow2` (default) and `raw`.
+
+Example – create a 20 GiB disk named `data`:
+
+```sh
+limactl disk create data --size 20GiB
+```
+
+### Attaching a disk to an instance
+
+{{< tabpane text=true >}}
+{{% tab header="YAML" %}}
+Add the disk name under `additionalDisks` before starting the instance:
+
+```yaml
+additionalDisks:
+- name: data
+  format: true     # format the disk on first use
+  fsType: ext4     # filesystem to create when format is true
+```
+{{% /tab %}}
+{{% tab header="CLI" %}}
+Use `limactl edit` to attach while the instance is stopped:
+
+```sh
+limactl edit <instance> --set '.additionalDisks += [{"name":"data"}]'
+```
+{{% /tab %}}
+{{< /tabpane >}}
+
+### Resizing an additional disk
+
+```sh
+limactl disk resize NAME --size NEW-SIZE
+```
+
+### Deleting a disk
+
+```sh
+limactl disk delete NAME [NAME...]
+```
+
+> **Note:** A disk cannot be deleted while attached to a running instance. Stop the instance first or use `--force`.
+
+---
+
+## Resizing the VM's primary disk
 
 Starting with v1.1, Lima supports editing the disk size of an existing instance using the `--disk` flag with the `limactl edit` command.
 This is the recommended and simplest way to resize your VM disk.
