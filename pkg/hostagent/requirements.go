@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -159,10 +160,9 @@ func (a *HostAgent) waitForRequirement(ctx context.Context, r requirement) error
 	return nil
 }
 
-// requirement describes a single readiness check performed by the host agent
-// before firing the Ready event. Exactly one of script and check must be set:
-//   - script: a shell script executed inside the guest via ssh.ExecuteScript.
-//   - check:  a host-side Go probe that returns nil when the requirement is satisfied.
+// requirement describes one readiness check performed before Ready fires.
+// If check is non-nil, it is invoked directly and script is ignored;
+// otherwise script is executed in the guest via ssh.ExecuteScript.
 type requirement struct {
 	description string
 	script      string
@@ -174,24 +174,28 @@ type requirement struct {
 
 func (a *HostAgent) essentialRequirements() []requirement {
 	req := make([]requirement, 0)
-	// Probe the host-facing forwarded SSH port with a raw TCP connection before
-	// running the script-based "ssh" requirement below. The script path uses
-	// Lima's own SSH client, which has internal retry behavior that can mask a
-	// race where the hostagent accepts a TCP connection on 127.0.0.1:sshLocalPort
-	// before guest sshd has bound :22. External clients (ssh-keyscan, sftp,
-	// rsync, ...) that connect during that window get EPIPE on the first write.
-	// This native probe proves the public-facing path is end-to-end usable.
+	// Run a host-side TCP probe before the script-based "ssh" requirement
+	// below. The script path uses Lima's own SSH client, which retries
+	// internally and so can mask a race where the host agent accepts on the
+	// forwarded port before guest sshd has bound :22. External clients
+	// (ssh-keyscan, sftp, rsync, ...) that connect during that window get
+	// EPIPE on their first write.
+	logLocation := "/var/log/cloud-init-output.log in the guest"
+	if a.instConfig.OS != nil && *a.instConfig.OS == limatype.DARWIN {
+		logLocation = "serialv.log in the host"
+	}
+	addr := a.instSSHAddress
 	port := a.sshLocalPort
 	req = append(req,
 		requirement{
 			description: "sshLocalPort serves an SSH banner",
 			check: func(ctx context.Context) error {
-				return probeSSHBannerOnLocalPort(ctx, port)
+				return probeSSHBannerOnLocalPort(ctx, addr, port)
 			},
-			debugHint: `The host agent is listening on 127.0.0.1:<sshLocalPort> but the
-proxied connection into the guest is failing. Most commonly this means
-guest sshd has not yet bound :22. Check the serial log for sshd startup.
-`,
+			debugHint: fmt.Sprintf(`The host agent is listening on %s but the proxied
+connection into the guest is failing. Most commonly this means guest
+sshd has not yet bound :22. Check %s for sshd startup.
+`, net.JoinHostPort(addr, strconv.Itoa(port)), logLocation),
 		})
 	req = append(req,
 		requirement{
@@ -329,27 +333,38 @@ Check "` + logLocation + `" to see where the process is blocked!
 	return req
 }
 
-const probeSSHBannerTimeout = 5 * time.Second
+const (
+	probeSSHBannerTimeout = 5 * time.Second
+	// RFC 4253 §4.2 allows the server to emit lines before the identification
+	// string. Cap the read so a misbehaving peer can't loop forever.
+	probeSSHBannerMaxLines = 50
+)
 
-// probeSSHBannerOnLocalPort reads the SSH server identification line from
-// 127.0.0.1:port and verifies it starts with "SSH-".
-func probeSSHBannerOnLocalPort(ctx context.Context, port int) error {
-	addr := fmt.Sprintf("127.0.0.1:%d", port)
+// probeSSHBannerOnLocalPort dials <address>:<port> and returns nil when a
+// line starting with "SSH-" is read within probeSSHBannerMaxLines.
+func probeSSHBannerOnLocalPort(ctx context.Context, address string, port int) error {
+	addr := net.JoinHostPort(address, strconv.Itoa(port))
 	d := net.Dialer{Timeout: probeSSHBannerTimeout}
 	conn, err := d.DialContext(ctx, "tcp", addr)
 	if err != nil {
 		return fmt.Errorf("dial %s: %w", addr, err)
 	}
 	defer conn.Close()
+	// Propagate ctx cancellation to the in-flight read.
+	stop := context.AfterFunc(ctx, func() { _ = conn.Close() })
+	defer stop()
 	if err := conn.SetReadDeadline(time.Now().Add(probeSSHBannerTimeout)); err != nil {
 		return fmt.Errorf("set read deadline on %s: %w", addr, err)
 	}
-	banner, err := bufio.NewReader(conn).ReadString('\n')
-	if err != nil {
-		return fmt.Errorf("read SSH banner from %s: %w", addr, err)
+	r := bufio.NewReader(conn)
+	for range probeSSHBannerMaxLines {
+		line, err := r.ReadString('\n')
+		if err != nil {
+			return fmt.Errorf("read SSH banner from %s: %w", addr, err)
+		}
+		if strings.HasPrefix(line, "SSH-") {
+			return nil
+		}
 	}
-	if !strings.HasPrefix(banner, "SSH-") {
-		return fmt.Errorf("unexpected banner from %s: %q", addr, strings.TrimRight(banner, "\r\n"))
-	}
-	return nil
+	return fmt.Errorf("no SSH identification line from %s within %d lines", addr, probeSSHBannerMaxLines)
 }
