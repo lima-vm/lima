@@ -5,6 +5,11 @@ package autostart
 
 import "github.com/lima-vm/lima/v2/pkg/autostart/systemd"
 
+// DaemonManager is not supported on Linux; use systemd user services instead.
+func DaemonManager(_ string) autoStartManager {
+	return &notSupportedManager{}
+}
+
 // Manager returns the autostart manager for Linux.
 func Manager() autoStartManager {
 	if systemd.IsRunningSystemd() {

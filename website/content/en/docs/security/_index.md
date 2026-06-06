@@ -28,7 +28,7 @@ sudo softwareupdate --install "Name of the Update"
 Alternatively , you can set the [`upgradePackages`](https://github.com/lima-vm/lima/blob/a28905cb1bd332cc7178c30f4e42d4c6bf1b2a34/templates/default.yaml#L181) in your template to `true` for most Linux distributions (except `alpine-iso`, for example).
 
 
-> ⚠️ Rapidly updating can reduce exposure to known CVEs, but it can also increase exposure to upstream supply chain compromises (for example, [the XZ backdoor](https://en.wikipedia.org/wiki/XZ_Utils_backdoor)). 
+> ⚠️ Rapidly updating can reduce exposure to known CVEs, but it can also increase exposure to upstream supply chain compromises (for example, [the XZ backdoor](https://en.wikipedia.org/wiki/XZ_Utils_backdoor)).
 
 
 ## Security model
