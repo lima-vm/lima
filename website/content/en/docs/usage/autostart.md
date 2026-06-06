@@ -64,15 +64,26 @@ This applies to both `--condition=login` (macOS LaunchAgent) and
 ## Unclean shutdown recovery
 
 When Lima runs as a LaunchDaemon with `KeepAlive` enabled, launchd sends `SIGTERM` to the host
-agent during system shutdown. If the host agent exits before it can cleanly stop the VM driver,
-the instance enters a broken state on the next boot: the VZ driver process is running but no
-host agent is attached.
+agent during system shutdown. Depending on how far shutdown progresses before the host agent
+exits, the instance can enter one of two broken states on the next boot:
 
-Lima detects and recovers from this automatically. When `limactl start` finds an instance with
-an orphaned driver process, it force-stops the driver and then starts cleanly. No manual
-intervention is required when using `--keep-alive` (the default).
+- **Orphaned VZ driver** — the host agent exits before it can stop the VM driver, leaving the
+  driver process running with no host agent attached. Caused by launchd killing the host agent
+  before it finishes its shutdown sequence.
+- **Stale host agent socket** — the host agent exits cleanly but its `ha.pid` file is not
+  removed before the system halts. On the next boot, the PID in `ha.pid` may be reused by an
+  unrelated process, making the `ha.sock` unreachable. Caused by macOS halting the process
+  before its deferred cleanup runs.
 
-If you encounter this state manually (e.g. after `kill -9` on the host agent), you can recover with:
+Lima detects and recovers from both states automatically on the next `limactl start`:
+
+- For an orphaned driver, `limactl start` force-stops the driver process and starts cleanly.
+- For a stale socket, `limactl start` removes the stale `ha.pid` and `ha.sock` files (without
+  signaling the unrelated process) and starts cleanly.
+
+No manual intervention is required when using `--keep-alive` (the default).
+
+If you encounter either state manually (e.g. after `kill -9` on the host agent), you can recover with:
 
 ```bash
 limactl stop --force <instance>
