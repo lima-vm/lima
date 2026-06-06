@@ -468,7 +468,8 @@ func (l *LimaVzDriver) canRunGUI() bool {
 
 func (l *LimaVzDriver) RunGUI(_ context.Context) error {
 	if l.canRunGUI() {
-		return l.machine.StartGraphicApplication(1920, 1200)
+		title := fmt.Sprintf("Lima: %s", l.Instance.Name)
+		return l.machine.StartGraphicApplication(1920, 1200, vz.WithWindowTitle(title))
 	}
 	return fmt.Errorf("RunGUI is not supported for the given driver '%s' and display '%s'", "vz", *l.Instance.Config.Video.Display)
 }
