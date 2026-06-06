@@ -65,7 +65,9 @@ This applies to both `--condition=login` (macOS LaunchAgent) and
 
 When Lima runs as a LaunchDaemon with `KeepAlive` enabled, launchd sends `SIGTERM` to the host
 agent during system shutdown. Depending on how far shutdown progresses before the host agent
-exits, the instance can enter one of two broken states on the next boot:
+exits, the instance can enter one of two broken states on the next boot. These are most likely
+after a hard reboot, power loss, or a fast `sudo shutdown` where launchd's process timeout
+expires before Lima finishes stopping the VM — not a sign of misconfiguration.
 
 - **Orphaned VZ driver** — the host agent exits before it can stop the VM driver, leaving the
   driver process running with no host agent attached. Caused by launchd killing the host agent
