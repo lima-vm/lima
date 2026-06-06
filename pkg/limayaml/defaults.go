@@ -528,10 +528,17 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		y.Containerd.User = o.Containerd.User
 	}
 	if y.Containerd.User == nil {
-		switch *y.Arch {
-		case limatype.X8664, limatype.AARCH64:
-			y.Containerd.User = ptr.Of(true)
-		default:
+		// nerdctl is a Linux-only container runtime; only default
+		// containerd.user=true when the guest OS is Linux. Otherwise
+		// downloading the nerdctl archive (~250 MiB) is wasted I/O.
+		if *y.OS == limatype.LINUX {
+			switch *y.Arch {
+			case limatype.X8664, limatype.AARCH64:
+				y.Containerd.User = ptr.Of(true)
+			default:
+				y.Containerd.User = ptr.Of(false)
+			}
+		} else {
 			y.Containerd.User = ptr.Of(false)
 		}
 	}
