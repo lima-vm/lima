@@ -578,7 +578,22 @@ func startAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	if len(inst.Errors) > 0 {
-		return fmt.Errorf("errors inspecting instance: %+v", inst.Errors)
+		if isOrphanedDriverError(inst.Errors) {
+			// The VM driver process is running but the host agent is not — this happens when
+			// the host agent exits uncleanly (e.g. launchd SIGTERM at shutdown). Force-stop
+			// to clean up the orphaned driver so we can start fresh.
+			logrus.Warnf("Instance %q has an orphaned driver process; attempting force stop to recover", inst.Name)
+			instance.StopForcibly(inst)
+			inst, err = store.Inspect(cmd.Context(), inst.Name)
+			if err != nil {
+				return err
+			}
+			if len(inst.Errors) > 0 {
+				return fmt.Errorf("errors inspecting instance after force stop: %+v", inst.Errors)
+			}
+		} else {
+			return fmt.Errorf("errors inspecting instance: %+v", inst.Errors)
+		}
 	}
 	switch inst.Status {
 	case limatype.StatusRunning:
@@ -624,6 +639,18 @@ func startAction(cmd *cobra.Command, args []string) error {
 	}
 
 	return instance.Start(ctx, inst, launchHostAgentForeground, progress)
+}
+
+// isOrphanedDriverError returns true when the instance errors indicate that the VM driver
+// process is running but the host agent is not — the recoverable broken state that occurs
+// after an unclean shutdown (e.g. launchd SIGTERM before the host agent could stop the VM).
+func isOrphanedDriverError(errs []error) bool {
+	for _, err := range errs {
+		if strings.Contains(err.Error(), "driver is running but host agent is not") {
+			return true
+		}
+	}
+	return false
 }
 
 func createBashComplete(cmd *cobra.Command, _ []string, toComplete string) ([]string, cobra.ShellCompDirective) {
