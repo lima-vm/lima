@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -51,6 +52,7 @@ type TemplateFileBasedManager struct {
 	enabler               func(ctx context.Context, enable bool, instName string) error
 	filePath              func(instName string) string
 	template              string
+	extraTemplateVars     map[string]string
 	autoStartedIdentifier func() string
 	requestStart          func(ctx context.Context, inst *limatype.Instance) error
 	requestStop           func(ctx context.Context, inst *limatype.Instance) (bool, error)
@@ -118,13 +120,13 @@ func (t *TemplateFileBasedManager) renderTemplate(instName, workDir string, getE
 	if err != nil {
 		return nil, err
 	}
-	return textutil.ExecuteTemplate(
-		t.template,
-		map[string]string{
-			"Binary":   selfExeAbs,
-			"Instance": instName,
-			"WorkDir":  workDir,
-		})
+	data := map[string]string{
+		"Binary":   selfExeAbs,
+		"Instance": instName,
+		"WorkDir":  workDir,
+	}
+	maps.Copy(data, t.extraTemplateVars)
+	return textutil.ExecuteTemplate(t.template, data)
 }
 
 func (t *TemplateFileBasedManager) AutoStartedIdentifier() string {

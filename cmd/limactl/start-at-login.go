@@ -11,6 +11,7 @@ func newStartAtLoginCommand() *cobra.Command {
 	startAtLoginCommand := &cobra.Command{
 		Use:               "start-at-login INSTANCE",
 		Short:             "Register/Unregister an autostart file for the instance",
+		Deprecated:        "use \"limactl autostart\" instead",
 		Args:              WrapArgsError(cobra.MaximumNArgs(1)),
 		RunE:              startAtLoginAction,
 		ValidArgsFunction: startAtLoginComplete,

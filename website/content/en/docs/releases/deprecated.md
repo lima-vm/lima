@@ -11,6 +11,7 @@ The following features are deprecated:
 - Environment variable `LIMA_SSH_OVER_VSOCK`: deprecated in Lima v2.0.2 (Use the YAML property `.ssh.overVsock`)
 - YAML property `cpuType`: deprecated in Lima v2.0.0 (Use `vmOpts.qemu.cpuType` instead)
 - YAML property `rosetta`: deprecated in Lima v2.0.0 (Use `vmOpts.vz.rosetta` instead)
+- `limactl start-at-login` command: deprecated in Lima v2.2.0 (Use `limactl autostart` instead, which also adds support for starting instances at system boot via `--condition=boot`)
 
 ## Removed features
 - YAML property `network`: deprecated in [Lima v0.7.0](https://github.com/lima-vm/lima/commit/07e68230e70b21108d2db3ca5e0efd0e43842fbd)

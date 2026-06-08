@@ -19,6 +19,9 @@ import (
 //go:embed io.lima-vm.autostart.INSTANCE.plist
 var Template string
 
+//go:embed io.lima-vm.daemon.INSTANCE.plist
+var DaemonTemplate string
+
 // GetPlistPath returns the path to the launchd plist file for the given instance name.
 func GetPlistPath(instName string) string {
 	return fmt.Sprintf("%s/Library/LaunchAgents/%s.plist", os.Getenv("HOME"), ServiceNameFrom(instName))
@@ -94,4 +97,14 @@ func RequestStop(ctx context.Context, inst *limatype.Instance) (bool, error) {
 		return true, nil
 	}
 	return false, nil
+}
+
+// GetDaemonPlistPath returns the path to the system LaunchDaemon plist for the given instance.
+func GetDaemonPlistPath(instName string) string {
+	return fmt.Sprintf("/Library/LaunchDaemons/%s.plist", DaemonServiceNameFrom(instName))
+}
+
+// DaemonServiceNameFrom returns the launchd daemon service name for the given instance name.
+func DaemonServiceNameFrom(instName string) string {
+	return fmt.Sprintf("io.lima-vm.daemon.%s", instName)
 }

@@ -22,6 +22,11 @@ var (
 		requestStart:          launchd.RequestStart,
 		requestStop:           launchd.RequestStop,
 	}
+	LaunchdDaemon = &TemplateFileBasedManager{
+		filePath:          launchd.GetDaemonPlistPath,
+		template:          launchd.DaemonTemplate,
+		extraTemplateVars: map[string]string{"UserName": "alice"},
+	}
 	Systemd = &TemplateFileBasedManager{
 		filePath:              systemd.GetUnitPath,
 		template:              systemd.Template,
@@ -59,6 +64,43 @@ func TestRenderTemplate(t *testing.T) {
 		<string>/limactl</string>
 		<string>start</string>
 		<string>default</string>
+		<string>--foreground</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>StandardErrorPath</key>
+	<string>launchd.stderr.log</string>
+	<key>StandardOutPath</key>
+	<string>launchd.stdout.log</string>
+	<key>WorkingDirectory</key>
+	<string>/some/path</string>
+	<key>ProcessType</key>
+	<string>Background</string>
+</dict>
+</plist>
+`,
+			GetExecutable: func() (string, error) {
+				return "/limactl", nil
+			},
+			WorkDir: "/some/path",
+		},
+		{
+			Manager:      LaunchdDaemon,
+			Name:         "render darwin launchd daemon plist",
+			InstanceName: "k3s",
+			Expected: `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>io.lima-vm.daemon.k3s</string>
+	<key>UserName</key>
+	<string>alice</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/limactl</string>
+		<string>start</string>
+		<string>k3s</string>
 		<string>--foreground</string>
 	</array>
 	<key>RunAtLoad</key>
