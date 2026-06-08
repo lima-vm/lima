@@ -72,14 +72,18 @@ func New(ctx context.Context, backend string, paths []string, opts *Options) (Co
 			tool CopyTool
 			err  error
 		)
-		tool, err = newRsyncTool(opts)
-		if err == nil {
-			if tool.IsAvailableOnGuest(ctx, paths) {
-				return tool, nil
+
+		// For rsync, the source and destination cannot both be remote
+		if !hasRemoteSourceAndDestination(ctx, paths) {
+			tool, err = newRsyncTool(opts)
+			if err == nil {
+				if tool.IsAvailableOnGuest(ctx, paths) {
+					return tool, nil
+				}
+				logrus.Debugf("rsync not available on guest(s), falling back to scp")
+			} else {
+				logrus.Debugf("rsync not found on host, falling back to scp: %v", err)
 			}
-			logrus.Debugf("rsync not available on guest(s), falling back to scp")
-		} else {
-			logrus.Debugf("rsync not found on host, falling back to scp: %v", err)
 		}
 
 		tool, err = newSCPTool(opts)
@@ -90,6 +94,26 @@ func New(ctx context.Context, backend string, paths []string, opts *Options) (Co
 	default:
 		return nil, fmt.Errorf("invalid backend %#q, must be one of: scp, rsync, auto", backend)
 	}
+}
+
+func hasRemoteSourceAndDestination(ctx context.Context, paths []string) bool {
+	copyPaths, err := parseCopyPaths(ctx, paths)
+	if err != nil {
+		return true
+	}
+
+	var hasRemoteSource, hasRemoteDestination bool
+	for _, cp := range copyPaths {
+		if cp.IsRemote {
+			if hasRemoteSource {
+				hasRemoteDestination = true
+			} else {
+				hasRemoteSource = true
+			}
+		}
+	}
+
+	return hasRemoteSource && hasRemoteDestination
 }
 
 func parseCopyPaths(ctx context.Context, paths []string) ([]*Path, error) {
