@@ -4,7 +4,6 @@
 package server
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
@@ -56,6 +55,7 @@ func (t *listenerTracker) Accept() (net.Conn, error) {
 func Serve(ctx context.Context, driver driver.Driver) {
 	preConfiguredDriverAction := flag.Bool("pre-driver-action", false, "Run pre-driver action before starting the gRPC server")
 	inspectStatus := flag.Bool("inspect-status", false, "Inspect status of the driver")
+	instDir := flag.String("inst-dir", "", "Instance directory for the driver to store the gRPC server socket path")
 	flag.Parse() //nolint:revive // Serve is intended to be called from external driver's main()
 	if *preConfiguredDriverAction {
 		handlePreConfiguredDriverAction(ctx, driver)
@@ -65,12 +65,16 @@ func Serve(ctx context.Context, driver driver.Driver) {
 		handleInspectStatus(ctx, driver)
 		return
 	}
+	if *instDir == "" {
+		logrus.Errorf("Instance directory is required")
+		return
+	}
 
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 
 	driverInfo := driver.Info(ctx)
-	socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("lima-driver-%s-%d.sock", driverInfo.Name, os.Getpid()))
+	socketPath := filepath.Join(*instDir, fmt.Sprintf("lima-driver-%s.sock", driverInfo.Name))
 
 	defer func() {
 		if err := os.Remove(socketPath); err != nil && !os.IsNotExist(err) {
@@ -92,11 +96,6 @@ func Serve(ctx context.Context, driver driver.Driver) {
 	tListener := &listenerTracker{
 		Listener:  listener,
 		connected: make(chan struct{}),
-	}
-
-	output := map[string]string{"socketPath": socketPath}
-	if err := json.NewEncoder(os.Stdout).Encode(output); err != nil {
-		logger.Fatalf("Failed to encode socket path as JSON: %v", err)
 	}
 
 	kaProps := keepalive.ServerParameters{
@@ -223,29 +222,19 @@ func Start(ctx context.Context, extDriver *registry.ExternalDriver, instName str
 	}
 	extDriver.InstanceName = instName
 
-	ctx, cancel := context.WithCancel(ctx)
-	cmd := exec.CommandContext(ctx, extDriver.Path)
-
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		cancel()
-		return fmt.Errorf("failed to create stdout pipe for external driver: %w", err)
-	}
-
 	instanceDir, err := dirnames.InstanceDir(extDriver.InstanceName)
 	if err != nil {
-		cancel()
 		return fmt.Errorf("failed to determine instance directory: %w", err)
 	}
 	logPath := filepath.Join(instanceDir, filenames.ExternalDriverStderrLog)
 	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
 	if err != nil {
-		cancel()
 		return fmt.Errorf("failed to open external driver log file: %w", err)
 	}
 
+	ctx, cancel := context.WithCancel(ctx)
+	cmd := exec.CommandContext(ctx, extDriver.Path, "--inst-dir", instanceDir)
 	cmd.Stderr = logFile
-
 	if err := cmd.Start(); err != nil {
 		cancel()
 		return fmt.Errorf("failed to start external driver: %w", err)
@@ -262,47 +251,40 @@ func Start(ctx context.Context, extDriver *registry.ExternalDriver, instName str
 
 	driverLogger := extDriver.Logger.WithField("driver", extDriver.Name)
 
-	scanner := bufio.NewScanner(stdout)
-	var socketPath string
-	if scanner.Scan() {
-		var output map[string]string
-		if err := json.Unmarshal(scanner.Bytes(), &output); err != nil {
+	// Wait for the socket file to be created by the external driver, indicating it's ready to accept connections.
+	socketWaitCtx, socketWaitCancel := context.WithTimeout(ctx, 10*time.Second)
+	defer socketWaitCancel()
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+	extDriver.SocketPath = filepath.Join(instanceDir, fmt.Sprintf("lima-driver-%s.sock", extDriver.Name))
+	for {
+		select {
+		case <-ticker.C:
+			if _, err := os.Stat(extDriver.SocketPath); err == nil {
+				driverLogger.Debugf("Detected socket file at %s", extDriver.SocketPath)
+				extDriver.Client, err = client.NewDriverClient(extDriver.SocketPath, extDriver.Logger)
+				if err != nil {
+					cancel()
+					if err := cmd.Process.Kill(); err != nil {
+						driverLogger.Errorf("Failed to kill external driver process after client creation failure: %v", err)
+					}
+					_ = os.Remove(pidFilePath)
+					return fmt.Errorf("failed to create driver client: %w", err)
+				}
+				extDriver.Command = cmd
+				extDriver.Ctx = ctx
+				extDriver.CancelFunc = cancel
+				driverLogger.Debugf("External driver %s started successfully", extDriver.Name)
+				return nil
+			}
+		case <-socketWaitCtx.Done():
 			cancel()
 			if err := cmd.Process.Kill(); err != nil {
-				driverLogger.Errorf("Failed to kill external driver process: %v", err)
+				driverLogger.Errorf("Failed to kill external driver process after socket wait timeout: %v", err)
 			}
-			// TODO: reap process (e.g. cmd.Wait()) to avoid temporary zombies
-			_ = os.Remove(pidFilePath)
-			return fmt.Errorf("failed to parse socket path JSON: %w", err)
+			return errors.New("timed out waiting for external driver to create socket file")
 		}
-		socketPath = output["socketPath"]
-	} else {
-		cancel()
-		if err := cmd.Process.Kill(); err != nil {
-			driverLogger.Errorf("Failed to kill external driver process: %v", err)
-		}
-		_ = os.Remove(pidFilePath)
-		return errors.New("failed to read socket path from driver")
 	}
-	extDriver.SocketPath = socketPath
-
-	driverClient, err := client.NewDriverClient(extDriver.SocketPath, extDriver.Logger)
-	if err != nil {
-		cancel()
-		if err := cmd.Process.Kill(); err != nil {
-			driverLogger.Errorf("Failed to kill external driver process after client creation failure: %v", err)
-		}
-		_ = os.Remove(pidFilePath)
-		return fmt.Errorf("failed to create driver client: %w", err)
-	}
-
-	extDriver.Command = cmd
-	extDriver.Client = driverClient
-	extDriver.Ctx = ctx
-	extDriver.CancelFunc = cancel
-
-	driverLogger.Debugf("External driver %s started successfully", extDriver.Name)
-	return nil
 }
 
 func Stop(extDriver *registry.ExternalDriver) error {
