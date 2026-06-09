@@ -27,6 +27,9 @@ func SysStat(fi fs.FileInfo) (Stat, bool) {
 // SigInt is the value of SIGINT.
 const SigInt = Signal(syscall.SIGINT)
 
+// SigTerm is the value of SIGTERM.
+const SigTerm = Signal(syscall.SIGTERM)
+
 // SigKill is the value of SIGKILL.
 const SigKill = Signal(syscall.SIGKILL)
 

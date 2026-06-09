@@ -107,7 +107,8 @@ Host agent:
 - `ha.stderr.log`: hostagent stderr (human-readable messages)
 
 External drivers:
-- `lima-driver-<driver-name>-<owner>.pid`: external driver process PID, where `<owner>` is either `ha` (written by the hostagent) or `cli` (written by the CLI process). Used by `limactl stop --force` and `limactl rm --force` to discover and kill orphaned external driver processes. Each process only removes its own PID file on graceful exit; force stop globs all matching files and kills them.
+- `<driver-name>.drv.pid`: external driver gRPC server process PID. A single server instance runs per Lima instance and is shared by all callers (CLI, hostagent, inspect). The server is started on first use and stopped only when the instance shuts down.
+- `<driver-name>.drv.sock`: Unix socket for gRPC communication with the external driver server.
 
 ## Disk directory (`${LIMA_HOME}/_disk/<DISK>`)
 

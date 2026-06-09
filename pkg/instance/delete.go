@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/lima-vm/lima/v2/pkg/driver/external/server"
 	"github.com/lima-vm/lima/v2/pkg/driverutil"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 )
@@ -36,10 +37,15 @@ func Delete(ctx context.Context, inst *limatype.Instance, force bool) error {
 }
 
 func unregister(ctx context.Context, inst *limatype.Instance) error {
-	limaDriver, err := driverutil.CreateConfiguredDriver(ctx, inst, 0, "")
+	limaDriver, err := driverutil.CreateConfiguredDriver(ctx, inst, 0)
 	if err != nil {
 		return fmt.Errorf("failed to create driver instance: %w", err)
 	}
 
-	return limaDriver.Delete(ctx)
+	if err := limaDriver.Delete(ctx); err != nil {
+		return fmt.Errorf("failed to delete driver instance: %w", err)
+	}
+	server.Stop(inst.Dir, true)
+
+	return nil
 }

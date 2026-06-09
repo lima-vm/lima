@@ -49,7 +49,7 @@ func main() {
 		}
 	}
 	err := newApp().Execute()
-	server.StopAllExternalDrivers()
+	server.Disconnect()
 	osutil.HandleExitError(err)
 	if err != nil {
 		logrus.Fatal(err)
