@@ -28,6 +28,7 @@ import (
 	"github.com/mattn/go-shellwords"
 	"github.com/sirupsen/logrus"
 
+	"github.com/lima-vm/lima/v2/pkg/blockdevice"
 	"github.com/lima-vm/lima/v2/pkg/fileutils"
 	"github.com/lima-vm/lima/v2/pkg/iso9660util"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
@@ -680,6 +681,15 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	}
 	for _, extraDisk := range extraDisks {
 		args = append(args, "-drive", fmt.Sprintf("file=%s,if=virtio,discard=on", extraDisk))
+	}
+
+	// Host block devices: the per-OS access mechanism is owned by
+	// pkg/blockdevice and applied through its cmdline templates at process
+	// start (descriptor passing on Linux and the BSDs, a device node
+	// ownership grant on macOS), escalating through the privileged helper
+	// only when the user cannot access the device directly.
+	for i, devicePath := range y.BlockDevices {
+		args = append(args, blockdevice.QEMUDriveArgs(devicePath, i, virtioBlk)...)
 	}
 
 	// cloud-init

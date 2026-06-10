@@ -18,6 +18,7 @@ import (
 	"github.com/lima-vm/go-qcow2reader/image/raw"
 	"github.com/sirupsen/logrus"
 
+	"github.com/lima-vm/lima/v2/pkg/blockdevice"
 	"github.com/lima-vm/lima/v2/pkg/driver/vz"
 	"github.com/lima-vm/lima/v2/pkg/imgutil/proxyimgutil"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
@@ -78,6 +79,18 @@ func Cmdline(inst *limatype.Instance) (*exec.Cmd, error) {
 			}
 			args = append(args, "--device", fmt.Sprintf("virtio-blk,path=%s,format=raw", extraDiskPath))
 		}
+	}
+
+	// Attach host block devices. The device access mechanics are owned by
+	// pkg/blockdevice; krunkit opens the device node by path with the user's
+	// own privileges, since its virtio-blk device supports no fd passing and
+	// macOS offers no permission-free descriptor handoff to a separate
+	// process.
+	for _, devicePath := range inst.Config.BlockDevices {
+		if err := blockdevice.EnsureDeviceAccessible(context.Background(), devicePath); err != nil {
+			return nil, err
+		}
+		args = append(args, "--device", fmt.Sprintf("virtio-blk,path=%s,format=raw", devicePath))
 	}
 
 	// Network commands

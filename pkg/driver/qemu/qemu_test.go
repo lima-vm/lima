@@ -92,9 +92,10 @@ func TestParseQemuVersion(t *testing.T) {
 	}
 }
 
-func TestValidateConfigRejectsBlockDevices(t *testing.T) {
+func TestValidateConfigBlockDevices(t *testing.T) {
+	// blockDevices is supported on every host OS for the QEMU driver.
 	err := validateConfig(&limatype.LimaYAML{
 		BlockDevices: []string{"/dev/disk4"},
 	})
-	assert.ErrorContains(t, err, "field `blockDevices` is not supported for vmType: qemu")
+	assert.NilError(t, err)
 }

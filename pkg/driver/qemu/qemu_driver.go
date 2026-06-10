@@ -27,6 +27,7 @@ import (
 	"github.com/digitalocean/go-qemu/qmp/raw"
 	"github.com/sirupsen/logrus"
 
+	"github.com/lima-vm/lima/v2/pkg/blockdevice"
 	"github.com/lima-vm/lima/v2/pkg/driver"
 	"github.com/lima-vm/lima/v2/pkg/driver/qemu/entitlementutil"
 	"github.com/lima-vm/lima/v2/pkg/executil"
@@ -91,10 +92,6 @@ func validateConfig(cfg *limatype.LimaYAML) error {
 	if err := validateMountType(cfg); err != nil {
 		return err
 	}
-	if len(cfg.BlockDevices) > 0 {
-		return fmt.Errorf("field `blockDevices` is not supported for vmType: %s", limatype.QEMU)
-	}
-
 	for i, nw := range cfg.Networks {
 		if unknown := reflectutil.UnknownNonEmptyFields(nw,
 			"Lima",
@@ -315,9 +312,9 @@ func (l *LimaQemuDriver) Start(ctx context.Context) (chan error, error) {
 	}
 
 	var qArgsFinal []string
-	applier := &qArgTemplateApplier{}
+	applier := &qArgTemplateApplier{instanceDir: l.Instance.Dir}
 	for _, unapplied := range qArgs {
-		applied, err := applier.applyTemplate(unapplied)
+		applied, err := applier.applyTemplate(ctx, unapplied)
 		if err != nil {
 			return nil, err
 		}
@@ -658,10 +655,11 @@ func (l *LimaQemuDriver) GuestAgentConn(ctx context.Context) (net.Conn, string, 
 }
 
 type qArgTemplateApplier struct {
-	files []*os.File
+	instanceDir string
+	files       []*os.File
 }
 
-func (a *qArgTemplateApplier) applyTemplate(qArg string) (string, error) {
+func (a *qArgTemplateApplier) applyTemplate(ctx context.Context, qArg string) (string, error) {
 	if !strings.Contains(qArg, "{{") {
 		return qArg, nil
 	}
@@ -696,6 +694,32 @@ func (a *qArgTemplateApplier) applyTemplate(qArg string) (string, error) {
 				panic(fmt.Errorf("fd_connect: %w", err))
 			}
 			return res
+		},
+		// blockdevice.QEMUFDTemplateFunc opens the host block device (through
+		// the privileged helper when direct access is denied) and exposes the
+		// retained descriptor to QEMU via ExtraFiles, returning the QEMU-side
+		// fd number. The template indirection exists because descriptors must
+		// be created in the process that is about to spawn QEMU and only when
+		// it actually spawns; rendering the cmdline for any other purpose must
+		// stay free of privilege prompts and other side effects.
+		blockdevice.QEMUFDTemplateFunc: func(devicePath string, index int) (string, error) {
+			socketPath := filepath.Join(a.instanceDir, fmt.Sprintf("qemu-block-device.%d.sock", index))
+			deviceFile, err := blockdevice.Open(ctx, devicePath, socketPath)
+			if err != nil {
+				return "", fmt.Errorf("%s: %w", blockdevice.QEMUFDTemplateFunc, err)
+			}
+			a.files = append(a.files, deviceFile)
+			fd := len(a.files) + 2 // the first FD is 3
+			return strconv.Itoa(fd), nil
+		},
+		// blockdevice.QEMUPathTemplateFunc makes the host block device node
+		// accessible to the user (through the privileged helper when needed)
+		// and returns the device path for QEMU to open itself.
+		blockdevice.QEMUPathTemplateFunc: func(devicePath string, _ int) (string, error) {
+			if err := blockdevice.EnsureDeviceAccessible(ctx, devicePath); err != nil {
+				return "", fmt.Errorf("%s: %w", blockdevice.QEMUPathTemplateFunc, err)
+			}
+			return devicePath, nil
 		},
 	}
 	tmpl, err := template.New("").Funcs(funcMap).Parse(qArg)

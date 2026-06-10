@@ -1,4 +1,4 @@
-//go:build darwin
+//go:build unix
 
 // SPDX-FileCopyrightText: Copyright The Lima Authors
 // SPDX-License-Identifier: Apache-2.0
@@ -11,14 +11,16 @@ import (
 	"testing"
 
 	"gotest.tools/v3/assert"
+
+	"github.com/lima-vm/lima/v2/pkg/sudoers"
 )
 
 func TestSudoers(t *testing.T) {
-	sudoers, err := Sudoers("everyone")
+	fragment, err := Sudoers("%everyone")
 	assert.NilError(t, err)
 	exe, err := os.Executable()
 	assert.NilError(t, err)
-	assert.Equal(t, sudoers, "%everyone ALL=(root:wheel) NOPASSWD:NOSETENV: "+filepath.Clean(exe)+" "+SudoOpenBlockDeviceCommand+"\n")
+	assert.Equal(t, fragment, "%everyone ALL=(root:"+sudoers.RootGroup()+") NOPASSWD:NOSETENV: "+filepath.Clean(exe)+" "+SudoOpenBlockDeviceCommand+"\n")
 }
 
 func TestSudoOpenBlockDeviceRequestValidate(t *testing.T) {

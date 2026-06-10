@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	vzapi "github.com/Code-Hex/vz/v3"
 
@@ -41,7 +40,7 @@ func attachHostBlockDevices(ctx context.Context, inst *limatype.Instance, config
 		if err != nil {
 			return nil, fmt.Errorf("failed to create virtio block device for %q: %w", devicePath, err)
 		}
-		if err := device.SetBlockDeviceIdentifier(guestBlockDeviceIdentifier(devicePath)); err != nil {
+		if err := device.SetBlockDeviceIdentifier(blockdevice.GuestDeviceIdentifier(devicePath)); err != nil {
 			return nil, fmt.Errorf("failed to set block device identifier for %q: %w", devicePath, err)
 		}
 		configurations = append(configurations, device)
@@ -60,37 +59,4 @@ func openHostBlockDevice(ctx context.Context, inst *limatype.Instance, devicePat
 	}
 	vmRetainedFileDescriptors = append(vmRetainedFileDescriptors, deviceFile)
 	return deviceFile, nil
-}
-
-// guestBlockDeviceIdentifier derives the VZ block device identifier from the
-// host device basename. This does not force the guest kernel to use a specific
-// /dev node like "/dev/vdb", but it does give the guest a stable identifier
-// value that Linux exposes in predictable places such as /dev/disk/by-id and
-// lsblk SERIAL output.
-func guestBlockDeviceIdentifier(devicePath string) string {
-	base := filepath.Base(devicePath)
-	var b strings.Builder
-	b.Grow(len(base))
-	for _, r := range base {
-		switch {
-		case r >= 'a' && r <= 'z':
-			b.WriteRune(r)
-		case r >= 'A' && r <= 'Z':
-			b.WriteRune(r)
-		case r >= '0' && r <= '9':
-			b.WriteRune(r)
-		case r == '-', r == '_', r == '.':
-			b.WriteRune(r)
-		default:
-			b.WriteByte('-')
-		}
-	}
-	id := b.String()
-	if id == "" {
-		id = "block-device"
-	}
-	if len(id) > 20 {
-		id = id[:20]
-	}
-	return id
 }

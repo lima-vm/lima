@@ -102,7 +102,7 @@ func validateConfig(_ context.Context, cfg *limatype.LimaYAML) error {
 		return fmt.Errorf("field `mountType` must be %#q for WSL2 driver, got %#q", limatype.WSLMount, *cfg.MountType)
 	}
 	if len(cfg.BlockDevices) > 0 {
-		return fmt.Errorf("field `blockDevices` is not supported for vmType: %s", limatype.WSL2)
+		return fmt.Errorf("field `blockDevices` is not supported for vmType %s, because WSL2 attaches disks globally to all distros; use vmType %s to attach block devices on Windows", limatype.WSL2, limatype.QEMU)
 	}
 	// TODO: revise this list for WSL2
 	if cfg.VMType != nil {

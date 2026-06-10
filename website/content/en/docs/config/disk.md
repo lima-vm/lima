@@ -89,10 +89,23 @@ limactl edit default --disk 20
 
 ## Attach host block devices
 
-| ⚡ Requirement | Lima >= 2.2, macOS >= 14.0, vmType: vz |
-| ------------- | -------------------------------------- |
+| ⚡ Requirement | Lima >= 2.2 |
+| ------------- | ----------- |
 
 Lima can attach a host block device directly to the guest.
+
+Supported backends:
+
+| Host        | vmType            | Requirement                  |
+| ----------- | ----------------- | ---------------------------- |
+| macOS       | `vz`              | macOS >= 14.0                |
+| macOS       | `qemu`, `krunkit` |                              |
+| Linux, BSDs | `qemu`            |                              |
+| Windows     | `qemu`            | elevated (Administrator) run |
+
+WSL2 is not supported, because `wsl --mount` attaches disks globally to all
+distros rather than to a single instance; use `vmType: qemu` on Windows
+instead.
 
 Example configuration:
 {{< tabpane text=true >}}
@@ -121,10 +134,35 @@ blockDevices:
 
 The `--block-device` flag can be specified multiple times to attach multiple host block devices.
 
-### Sudoers setup
+### Device access
 
-Opening a host block device requires a privileged helper on macOS.
-Generate and install the Lima sudoers file before using `--block-device`:
+No setup is required. On Unix hosts (macOS, Linux, BSDs) Lima resolves device
+access in order:
+
+1. **Direct open**: when the current user already has read-write access to
+   the device node (e.g. user-created ramdisks on macOS, or membership in the
+   `disk` group on Linux), the device is opened directly and no privilege
+   escalation happens at all.
+2. **Cached or passwordless sudo**: when a NOPASSWD sudoers rule (see below)
+   or a still-valid cached sudo timestamp exists, the privileged helper runs
+   without prompting.
+3. **Password prompt**: otherwise `limactl start` asks for the sudo password
+   once on the terminal before booting the VM.
+
+The privileged helper (`limactl sudo-open-block-device`) only ever touches
+the requested device node, and the VM itself never runs as root. With `vz`
+and with `qemu` on Linux/BSD hosts, the helper opens the device as root and
+passes the file descriptor back to the unprivileged Lima process. With `qemu`
+and `krunkit` on macOS the descriptor handoff is impossible (opening
+`/dev/fd/N` re-checks the device permissions, and QEMU's fd sets are broken
+by an `fcntl` quirk for disk descriptors), so the helper instead changes the
+ownership of the device node to the current user — the same thing an
+administrator would do by hand with `sudo chown` — and the backend opens it
+directly. devfs ownership reverts when the device is detached or the host
+reboots.
+
+To avoid the password prompt entirely (e.g. for headless or autostarted
+instances), install the Lima sudoers file once:
 
 ```sh
 limactl sudoers >etc_sudoers.d_lima
@@ -133,10 +171,24 @@ sudo install -o root etc_sudoers.d_lima /etc/sudoers.d/lima
 rm etc_sudoers.d_lima
 ```
 
-`limactl sudoers` emits the entries needed for both vmnet helpers and block-device helpers.
+On macOS `limactl sudoers` emits the entries for both the vmnet helpers and
+the block-device helper; on other Unix hosts it emits only the block-device
+helper entry, scoped to the current user.
+
+On Linux, adding the user to the group owning the device node also avoids
+any prompting, via the direct-open path:
+
+```sh
+sudo usermod -aG disk "$USER"
+```
+
+On Windows there is no helper: QEMU opens the raw device path directly, so
+`limactl start` must run from an elevated (Administrator) prompt, and the
+disk should be taken offline first (e.g. `diskpart` > `select disk 2` >
+`offline disk`) so Windows and the guest do not use it at the same time.
 
 ### Notes
 
-- The configured path must be an absolute host path under `/dev`, e.g. `/dev/disk4`, `/dev/rdisk4`, `/dev/sdc`, etc.
-- The guest will see a corresponding virtio `/dev/disk/by-id/virtio-disk4` block device attached, you are responsible for partitioning, formatting, and mounting any filesystems on the block devices
+- On Unix hosts the configured path must be an absolute host path under `/dev`, e.g. `/dev/disk4`, `/dev/rdisk4`, `/dev/sdc`, etc. On Windows it is a raw device path such as `\\.\PhysicalDrive2` (use the equivalent `//./PhysicalDrive2` form in MSYS2/Git-Bash shells, which mangle leading backslashes in arguments).
+- With `vz` and `qemu`, the guest will see a corresponding virtio `/dev/disk/by-id/virtio-disk4` block device attached. krunkit does not support setting the device identifier, so the device only shows up as a plain `/dev/vdX` device. You are responsible for partitioning, formatting, and mounting any filesystems on the block devices.
 - Avoid mounting filesystems on shared block devices on both host and guest at the same time, it will cause corruption as most filesystems are not designed to be shared by multiple live kernels at once.

@@ -51,6 +51,7 @@ declare -A CHECKS=(
 	["port-forwards"]="1"
 	["vmnet"]=""
 	["disk"]=""
+	["block-device"]=""
 	["user-v2"]=""
 	["mount-path-with-spaces"]=""
 	["provision-data"]=""
@@ -68,6 +69,11 @@ case "$NAME" in
 	# "[hostagent] failed to confirm whether /c/Users/runneradmin [remote] is successfully mounted"
 	[ "${OS_HOST}" = "Msys" ] && CHECKS["mount-home"]=
 	[ "${OS_HOST}" = "Darwin" ] && CHECKS["ssh-over-vsock"]="1"
+	CHECKS["block-device"]=1
+	;;
+"debian")
+	# debian.yaml is the designated template for the block-device test on Linux hosts.
+	CHECKS["block-device"]=1
 	;;
 "alpine"*)
 	WARNING "Alpine does not support systemd"
@@ -167,6 +173,61 @@ if [[ -n ${CHECKS["disk"]} ]]; then
 	fi
 fi
 
+BLOCK_DEVICE=""
+if [[ -n ${CHECKS["block-device"]} ]]; then
+	INFO "Creating a host block device for the block-device test"
+	case "${OS_HOST}" in
+	Darwin)
+		# The ramdisk is created with sudo so the device node is owned by
+		# root, which exercises the privileged helper path instead of the
+		# direct open.
+		BLOCK_DEVICE="$(sudo hdiutil attach -nomount ram://65536 | awk 'NR==1 {print $1}')"
+		defer "sudo hdiutil detach \"${BLOCK_DEVICE}\" -force"
+		;;
+	"GNU/Linux")
+		blockdevice_img="$HOME_HOST/lima-block-device.img"
+		rm -f "${blockdevice_img}"
+		truncate -s 32M "${blockdevice_img}"
+		# The loop device is owned by root, so this exercises the privileged sudo helper.
+		BLOCK_DEVICE="$(sudo losetup --find --show "${blockdevice_img}")"
+		defer "sudo losetup -d \"${BLOCK_DEVICE}\""
+		defer "rm -f \"${blockdevice_img}\""
+		;;
+	Msys)
+		# A VHD attached with diskpart is the one way to conjure a real raw
+		# \\.\PhysicalDriveN disk on a stock Windows host: it needs no spare
+		# hardware and no Hyper-V PowerShell module. diskpart's /s switch must
+		# be shielded from the MSYS2 argument conversion, which would rewrite
+		# it as a path. diskpart does not report the new disk number, so it is
+		# derived by diffing Get-Disk before and after the attach.
+		blockdevice_vhd="$(cygpath -w "$HOME_HOST/lima-block-device.vhd")"
+		blockdevice_diskpart="$HOME_HOST/lima-block-device.diskpart.txt"
+		printf 'create vdisk file=%s maximum=32 type=fixed\nattach vdisk\n' "${blockdevice_vhd}" >"${blockdevice_diskpart}"
+		blockdevice_disks_before="$(powershell.exe -NoProfile -Command '(Get-Disk).Number' | tr -d '\r')"
+		MSYS2_ARG_CONV_EXCL='*' diskpart /s "$(cygpath -w "${blockdevice_diskpart}")"
+		blockdevice_disks_after="$(powershell.exe -NoProfile -Command '(Get-Disk).Number' | tr -d '\r')"
+		blockdevice_number="$(comm -13 <(echo "${blockdevice_disks_before}" | sort) <(echo "${blockdevice_disks_after}" | sort) | head -n1)"
+		[ -n "${blockdevice_number}" ]
+		printf 'select vdisk file=%s\ndetach vdisk\n' "${blockdevice_vhd}" >"${blockdevice_diskpart}.detach"
+		defer "MSYS2_ARG_CONV_EXCL='*' diskpart /s \"$(cygpath -w "${blockdevice_diskpart}.detach")\""
+		# Keep the raw disk offline so Windows never uses it concurrently with the guest.
+		powershell.exe -NoProfile -Command "Set-Disk -Number ${blockdevice_number} -IsOffline \$true -ErrorAction SilentlyContinue" || true
+		# Use the forward-slash DOS device path form: it is equivalent to
+		# \\.\PhysicalDriveN for the Windows APIs, but survives the MSYS2
+		# argument conversion that mangles leading backslashes.
+		BLOCK_DEVICE='//./PhysicalDrive'"${blockdevice_number}"
+		;;
+	*)
+		WARNING "Skipping the block-device test on unsupported host ${OS_HOST}"
+		CHECKS["block-device"]=
+		;;
+	esac
+	if [[ -n ${CHECKS["block-device"]} ]]; then
+		INFO "Created host block device ${BLOCK_DEVICE}"
+		LIMACTL_CREATE_ARGS="${LIMACTL_CREATE_ARGS:-} --block-device=${BLOCK_DEVICE}"
+	fi
+fi
+
 set -x
 # shellcheck disable=SC2086
 "${LIMACTL_CREATE[@]}" ${LIMACTL_CREATE_ARGS:-} "$FILE_HOST"
@@ -192,6 +253,47 @@ set +x
 
 INFO "Testing that host home is not wiped out"
 [ -e "$HOME_HOST/.lima" ]
+
+if [[ -n ${CHECKS["block-device"]} ]]; then
+	# The roundtrip is verified on a raw sector instead of through a
+	# filesystem: it proves the guest write reached the actual host device
+	# without depending on any filesystem driver being available in the host
+	# kernel (CI kernels routinely lack uncommon ones), and without a
+	# mount/unmount handoff, which would be unsafe to perform while the
+	# instance still holds the device open.
+	INFO "Testing that the host block device ${BLOCK_DEVICE} is attached and writable"
+	blockdevice_id="$(basename "${BLOCK_DEVICE}")"
+	# The virtio-blk serial is derived from the host device basename, so the
+	# device shows up under a deterministic /dev/disk/by-id path.
+	guest_block_device="/dev/disk/by-id/virtio-${blockdevice_id}"
+	if ! limactl shell "$NAME" test -e "${guest_block_device}"; then
+		# krunkit cannot set a virtio-blk serial, so locate the device by its size.
+		guest_block_device="$(limactl shell "$NAME" lsblk -bdnro PATH,SIZE,TYPE | awk '$3 == "disk" && $2 == 33554432 {print $1; exit}')"
+	fi
+	INFO "Guest block device: ${guest_block_device}"
+	blockdevice_marker="lima-block-device-test-$$"
+	limactl shell "$NAME" sudo sh -c "printf '%s' '${blockdevice_marker}' | dd of='${guest_block_device}' bs=512 count=1 conv=sync && sync"
+	# Verify the guest write by reading the raw device back on the host.
+	case "${OS_HOST}" in
+	Darwin | "GNU/Linux")
+		# The device node is owned by root on both hosts.
+		got="$(sudo dd if="${BLOCK_DEVICE}" bs=512 count=1 2>/dev/null | head -c "${#blockdevice_marker}")"
+		;;
+	Msys)
+		# Reading through MSYS2's /dev/sd<letter> view of \\.\PhysicalDriveN
+		# (0 -> a, 1 -> b, ...) keeps the verification in plain dd, identical
+		# to the other hosts; Windows itself ships no raw-read tool, and the
+		# elevated shell this script requires can read raw disks directly.
+		blockdevice_sd="/dev/sd$(echo abcdefghijklmnopqrstuvwxyz | cut -c"$((${BLOCK_DEVICE##*PhysicalDrive} + 1))")"
+		got="$(dd if="${blockdevice_sd}" bs=512 count=1 2>/dev/null | head -c "${#blockdevice_marker}")"
+		;;
+	esac
+	INFO "Block device marker: expected=${blockdevice_marker}, got=${got}"
+	if [ "${got}" != "${blockdevice_marker}" ]; then
+		ERROR "The guest write to ${guest_block_device} did not reach the host device ${BLOCK_DEVICE}"
+		exit 1
+	fi
+fi
 
 if [[ -n ${CHECKS["mount-path-with-spaces"]} ]]; then
 	INFO 'Testing that "/tmp/lima test dir with spaces" is not wiped out'

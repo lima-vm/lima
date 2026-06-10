@@ -129,9 +129,14 @@ additionalDisks:
 #   fsType: "ext4"
 
 # Attach host block devices directly to supported backends.
-# This is currently supported on macOS with `vmType: vz`.
-# Each entry must be an absolute host path, typically under /dev.
-# This requires limactl sudoers to allow the hidden block-device helper.
+# This is supported with `vmType: vz`, `qemu`, and `krunkit` on macOS,
+# and with `vmType: qemu` on Linux, the BSDs, and Windows (elevated).
+# Each entry must be an absolute host path, typically under /dev
+# (or \\.\PhysicalDriveN on Windows).
+# On Unix hosts Lima opens the device directly when the user already has
+# access to it (e.g. the device is user-owned, or the user is in the "disk"
+# group on Linux), and otherwise asks for the sudo password once per start;
+# install the optional sudoers file via `limactl sudoers` to skip the prompt.
 # 🟢 Builtin default: []
 blockDevices: []
 

@@ -20,6 +20,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/autostart"
+	"github.com/lima-vm/lima/v2/pkg/blockdevice"
 	"github.com/lima-vm/lima/v2/pkg/cacheutil"
 	"github.com/lima-vm/lima/v2/pkg/driver"
 	"github.com/lima-vm/lima/v2/pkg/driverutil"
@@ -176,6 +177,13 @@ func StartWithPaths(ctx context.Context, inst *limatype.Instance, launchHostAgen
 
 	prepared, err := Prepare(ctx, inst, guestAgent)
 	if err != nil {
+		return err
+	}
+
+	// Pre-authorize access to host block devices while this process still
+	// owns the terminal; the hostagent runs in a background process group
+	// where sudo cannot prompt for a password.
+	if err := blockdevice.EnsureAccess(ctx, inst.Config.BlockDevices); err != nil {
 		return err
 	}
 

@@ -430,7 +430,10 @@ func validateBlockDevices(blockDevices []string) error {
 			errs = errors.Join(errs, fmt.Errorf("field `%s` must not be empty", field))
 			continue
 		}
-		if !filepath.IsAbs(blockDevice) && !path.IsAbs(blockDevice) {
+		// Windows raw devices use DOS device paths like \\.\PhysicalDrive2,
+		// which filepath.IsAbs does not recognize as absolute.
+		isWindowsDevicePath := strings.HasPrefix(blockDevice, `\\.\`)
+		if !filepath.IsAbs(blockDevice) && !path.IsAbs(blockDevice) && !isWindowsDevicePath {
 			errs = errors.Join(errs, fmt.Errorf("field `%s` must be an absolute path, got %q", field, blockDevice))
 		}
 	}
