@@ -272,6 +272,9 @@ func validateConfig(_ context.Context, cfg *limatype.LimaYAML) error {
 	if cfg.MountType != nil && *cfg.MountType == limatype.NINEP {
 		return fmt.Errorf("field `mountType` must be %#q or %#q for VZ driver , got %#q", limatype.REVSSHFS, limatype.VIRTIOFS, *cfg.MountType)
 	}
+	if cfg.OS != nil && *cfg.OS == limatype.WINDOWS {
+		return errors.New("currently Windows guest OS is only supported on QEMU")
+	}
 	if *cfg.Firmware.LegacyBIOS {
 		logrus.Warnf("vmType %s: ignoring `firmware.legacyBIOS`", *cfg.VMType)
 	}

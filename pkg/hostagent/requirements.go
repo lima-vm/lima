@@ -4,9 +4,13 @@
 package hostagent
 
 import (
+	"bytes"
+	"context"
 	"errors"
 	"fmt"
+	"os/exec"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -24,11 +28,16 @@ func (a *HostAgent) waitForRequirements(label string, requirements []requirement
 	)
 	var errs []error
 
+	fn := a.waitForRequirement
+	if *a.instConfig.OS == limatype.WINDOWS {
+		fn = a.waitForWinRequirement
+	}
+
 	for i, req := range requirements {
 		logrus.Infof("Waiting for the %s requirement %d of %d: %#q", label, i+1, len(requirements), req.description)
 	retryLoop:
 		for j := range retries {
-			err := a.waitForRequirement(req)
+			err := fn(req)
 			if err == nil {
 				logrus.Infof("The %s requirement %d of %d is satisfied", label, i+1, len(requirements))
 				break retryLoop
@@ -106,7 +115,7 @@ func prefixExportParam(script string, guestOS *limatype.OS) (string, error) {
 }
 
 func (a *HostAgent) bashAvailable() bool {
-	return *a.instConfig.OS != limatype.FREEBSD
+	return *a.instConfig.OS != limatype.FREEBSD && *a.instConfig.OS != limatype.WINDOWS
 }
 
 func (a *HostAgent) waitForRequirement(r requirement) error {
@@ -143,6 +152,52 @@ func (a *HostAgent) waitForRequirement(r requirement) error {
 	logrus.Debugf("stdout=%#q, stderr=%#q, err=%v", stdout, stderr, err)
 	if err != nil {
 		return fmt.Errorf("stdout=%#q, stderr=%#q: %w", stdout, stderr, err)
+	}
+	return nil
+}
+
+// This function is copied from sshocker's ExecuteScript, because
+// the function doesn't support Windows commands.
+// TODO: Support Windows on sshocker, and replace this function.
+func (a *HostAgent) waitForWinRequirement(r requirement) error {
+	logrus.Debugf("executing script for windows %q", r.description)
+	script := r.script
+	sshConfig := a.sshConfig
+	if r.noMaster || runtime.GOOS == "windows" {
+		// Remove ControlMaster, ControlPath, and ControlPersist options,
+		// because Cygwin-based SSH clients do not support multiplexing when executing commands.
+		// References:
+		//   https://inbox.sourceware.org/cygwin/c98988a5-7e65-4282-b2a1-bb8e350d5fab@acm.org/T/
+		//   https://stackoverflow.com/questions/20959792/is-ssh-controlmaster-with-cygwin-on-windows-actually-possible
+		// By removing these options:
+		//   - Avoids execution failures when the control master is not yet available.
+		//   - Prevents error messages such as:
+		//     > mux_client_request_session: read from master failed: Connection reset by peer
+		//     > ControlSocket ....sock already exists, disabling multiplexing
+		//     > mm_send_fd: sendmsg(2): Connection reset by peer\\r\\nmux_client_request_session: send fds failed\\r\\n
+		sshConfig = &ssh.SSHConfig{
+			ConfigFile:     sshConfig.ConfigFile,
+			Persist:        false,
+			AdditionalArgs: sshutil.DisableControlMasterOptsFromSSHArgs(sshConfig.AdditionalArgs),
+		}
+	}
+	if sshConfig == nil {
+		return errors.New("got nil SSHConfig")
+	}
+	sshBinary := sshConfig.Binary()
+	sshArgs := sshConfig.Args()
+	if a.sshLocalPort != 0 {
+		sshArgs = append(sshArgs, "-p", strconv.Itoa(a.sshLocalPort))
+	}
+	sshArgs = append(sshArgs, a.instSSHAddress, "--", script)
+	sshCmd := exec.CommandContext(context.Background(), sshBinary, sshArgs...)
+	sshCmd.Stdin = strings.NewReader(script)
+	var stderr bytes.Buffer
+	sshCmd.Stderr = &stderr
+	logrus.Debugf("executing ssh for script :%s %v", sshCmd.Path, sshCmd.Args)
+	out, err := sshCmd.Output()
+	if err != nil {
+		return fmt.Errorf("failed to execute script: stdout=%q, stderr=%q: %w", string(out), stderr.String(), err)
 	}
 	return nil
 }
@@ -222,6 +277,23 @@ sudo grep -q ^user_allow_other /etc/fuse*.conf
 	return req
 }
 
+func (a *HostAgent) essentialWinRequirements() []requirement {
+	req := make([]requirement, 0)
+	req = append(req,
+		requirement{
+			description: "ssh",
+			script:      `PowerShell.exe -c "echo 'ssh login succeeds.'"`,
+			debugHint: `Failed to SSH into the guest.
+Make sure that the YAML field "ssh.localPort" is not used by other processes on the host.
+If any private key under ~/.ssh is protected with a passphrase, you need to have ssh-agent to be running.
+`,
+			noMaster: true,
+		},
+	)
+
+	return req
+}
+
 func (a *HostAgent) optionalRequirements() []requirement {
 	req := make([]requirement, 0)
 	isLinuxGuest := a.instConfig.OS == nil || *a.instConfig.OS == limatype.LINUX
@@ -267,6 +339,11 @@ Also see "/var/log/cloud-init-output.log" in the guest.
 	return req
 }
 
+func (a *HostAgent) optionalWinRequirements() []requirement {
+	req := make([]requirement, 0)
+	return req
+}
+
 func (a *HostAgent) finalRequirements() []requirement {
 	req := make([]requirement, 0)
 	logLocation := "/var/log/cloud-init-output.log in the guest"
@@ -290,5 +367,10 @@ finish before the instance is considered "ready".
 Check "` + logLocation + `" to see where the process is blocked!
 `,
 		})
+	return req
+}
+
+func (a *HostAgent) finalWinRequirements() []requirement {
+	req := make([]requirement, 0)
 	return req
 }

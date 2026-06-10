@@ -53,8 +53,8 @@ func Prepare(ctx context.Context, inst *limatype.Instance, guestAgent string) (*
 	case limatype.DARWIN:
 		// macOS guests always need the guest agent for running fake-cloud-init
 		needsGuestAgent = true
-	case limatype.FREEBSD:
-		// guest agent is not implemented for FreeBSD yet
+	case limatype.FREEBSD, limatype.WINDOWS:
+		// guest agent is not implemented for FreeBSD and Windows yet
 		needsGuestAgent = false
 	default:
 		needsGuestAgent = !*inst.Config.Plain
@@ -124,6 +124,30 @@ func Prepare(ctx context.Context, inst *limatype.Instance, guestAgent string) (*
 		}
 		if !ensuredImage {
 			return nil, fileutils.Errors(errs)
+		}
+	}
+
+	if *inst.Config.OS == limatype.WINDOWS {
+		var winOpts limatype.WindowsOpts
+		if err := limayaml.Convert(inst.Config.OsOpts[limatype.WINDOWS], &winOpts, "osOpts.Windows"); err != nil {
+			return nil, err
+		}
+
+		if len(winOpts.VirtioWin) > 0 {
+			ensuredImage := false
+			errs := make([]error, len(winOpts.VirtioWin))
+			virtioWin := filepath.Join(inst.Dir, filenames.VirtioWin)
+			for i, f := range winOpts.VirtioWin {
+				if _, err := fileutils.DownloadFile(ctx, virtioWin, f, true, "virtio-win", *inst.Config.Arch); err != nil {
+					errs[i] = err
+					continue
+				}
+				ensuredImage = true
+				break
+			}
+			if !ensuredImage {
+				return nil, fileutils.Errors(errs)
+			}
 		}
 	}
 

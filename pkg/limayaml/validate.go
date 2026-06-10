@@ -51,6 +51,13 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 
 	switch *y.OS {
 	case limatype.LINUX, limatype.DARWIN, limatype.FREEBSD:
+	case limatype.WINDOWS:
+		if *y.VMType != limatype.QEMU {
+			errs = errors.Join(errs, fmt.Errorf("currently Windows guest is only supported on %#q; got %#q", limatype.QEMU, *y.VMType))
+		}
+		if !slices.Contains([]limatype.Arch{limatype.X8664, limatype.AARCH64}, *y.Arch) {
+			errs = errors.Join(errs, fmt.Errorf("currently Windows guest is only supported on [%#q %#q]; got %#q", limatype.X8664, limatype.AARCH64, *y.Arch))
+		}
 	default:
 		errs = errors.Join(errs, fmt.Errorf("field `os` must be one of %#q; got %#q", limatype.OSTypes, *y.OS))
 	}
@@ -593,6 +600,9 @@ func validatePort(field string, port int) error {
 }
 
 func warnExperimental(y *limatype.LimaYAML) {
+	if *y.OS == limatype.WINDOWS {
+		logrus.Warnf("`os: %s` is experimental", limatype.WINDOWS)
+	}
 	if *y.MountType == limatype.VIRTIOFS && runtime.GOOS == "linux" {
 		logrus.Warn("`mountType: virtiofs` on Linux is experimental")
 	}

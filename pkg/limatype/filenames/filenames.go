@@ -59,6 +59,7 @@ const (
 	VNCPasswordFile         = "vncpassword"
 	GuestAgentSock          = "ga.sock"
 	VirtioPort              = "io.lima-vm.guest_agent.0"
+	VirtioWin               = "virtio-win"
 	HostAgentPID            = "ha.pid"
 	HostAgentSock           = "ha.sock"
 	HostAgentStdoutLog      = "ha.stdout.log"
