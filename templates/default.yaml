@@ -194,7 +194,7 @@ containerd:
   # 🟢 Builtin default: false
   system: null
   # Enable user-scoped (aka rootless) containerd and its dependencies
-  # 🟢 Builtin default: true (for x86_64 and aarch64)
+  # 🟢 Builtin default: true for Linux x86_64 and aarch64 guests, false otherwise
   user: null
 #  # Override containerd archive
 #  # 🟢 Builtin default: hard-coded URL with hard-coded digest (see the output of `limactl info | jq .defaultTemplate.containerd.archives`)
