@@ -209,3 +209,45 @@ func TestTemplateNICRename(t *testing.T) {
 		assert.Equal(t, strings.Contains(files["network-config"], "optional: true"), optional)
 	}
 }
+
+func TestExecuteTemplateWindowsISO(t *testing.T) {
+	args := &TemplateArgs{
+		Name:                   "windows",
+		User:                   "windows-user",
+		WindowsInitialPassword: "dummy-password",
+	}
+
+	layout, err := ExecuteTemplateWindowsISO(args)
+	assert.NilError(t, err)
+	for _, f := range layout {
+		b, err := io.ReadAll(f.Reader)
+		assert.NilError(t, err)
+		switch f.Path {
+		case "autounattend.xml":
+			t.Log(string(b))
+			assert.Assert(t, strings.Contains(
+				string(b),
+				`<Username>windows-user</Username>`,
+			))
+			assert.Assert(t, strings.Contains(
+				string(b),
+				`<Value>dummy-password</Value>`,
+			))
+			// It confirms the file has UEFI setting.
+			assert.Assert(t, strings.Contains(
+				string(b),
+				`<Type>EFI</Type>`,
+			))
+			// It confirms the file doesn't have BIOS setting.
+			assert.Assert(t, !strings.Contains(
+				string(b),
+				`<Label>BIOS</Label>`,
+			))
+		case "first_logon.ps1":
+			assert.Assert(t, strings.Contains(
+				string(b),
+				`$logfile = "C:\Users\windows-user\lima-setup.log"`,
+			))
+		}
+	}
+}

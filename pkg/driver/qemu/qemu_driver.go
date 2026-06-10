@@ -424,6 +424,16 @@ func (l *LimaQemuDriver) Start(ctx context.Context) (chan error, error) {
 			}
 		}
 	}()
+
+	// QEMU's UEFI boot order doesn't work well for Windows guest OS.
+	// We send a key periodically to proceed from "Press any key to boot from CD or DVD...".
+	if *qCfg.LimaYAML.OS == limatype.WINDOWS && !*qCfg.LimaYAML.Firmware.LegacyBIOS {
+		logrus.Debug("send a key to QEMU to boot Windows ISO...")
+		if err := l.sendEnter(); err != nil {
+			logrus.WithError(err).Error("failed to send a keypress event")
+		}
+	}
+
 	return l.qWaitCh, nil
 }
 
@@ -534,6 +544,41 @@ func checkBinarySignature(ctx context.Context, vmArch string) error {
 		if accel := Accel(vmArch); accel == "hvf" {
 			entitlementutil.AskToSignIfNotSignedProperly(ctx, qExe)
 		}
+	}
+
+	return nil
+}
+
+// sendEnter sends a Return (Enter) key to QEMU through QMP.
+// This method is for proceeding UEFI boot forcefully.
+func (l *LimaQemuDriver) sendEnter() error {
+	qmpSockPath := filepath.Join(l.Instance.Dir, filenames.QMPSock)
+	err := waitFileExists(qmpSockPath, 30*time.Second)
+	if err != nil {
+		return err
+	}
+	qmpClient, err := qmp.NewSocketMonitor("unix", qmpSockPath, 5*time.Second)
+	if err != nil {
+		return err
+	}
+	if err := qmpClient.Connect(); err != nil {
+		return err
+	}
+	defer func() { _ = qmpClient.Disconnect() }()
+	rawClient := raw.NewMonitor(qmpClient)
+
+	inputs := []raw.InputEvent{
+		raw.InputEventKey{Key: raw.KeyValueQcode(raw.QKeyCodeRet), Down: true},
+		raw.InputEventKey{Key: raw.KeyValueQcode(raw.QKeyCodeRet), Down: false},
+	}
+
+	// TODO: Ideally, we should check the boot status and break earlier.
+	for range 5 {
+		err = rawClient.InputSendEvent(nil, nil, inputs)
+		if err != nil {
+			return err
+		}
+		time.Sleep(time.Second)
 	}
 
 	return nil

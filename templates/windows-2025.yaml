@@ -1,0 +1,27 @@
+# Windows guest is currently experimental. It only runs on QEMU, and it requires plain: true.
+os: "Windows"
+vmType: "qemu"
+arch: "x86_64"
+
+images:
+# Windows server 2025 licensing guidance: https://www.microsoft.com/licensing/guidance/Windows-Server-2025
+# Windows server 2025 is only for x86-64.
+- location: "https://aka.ms/WinServ2025iso-enus"
+  arch: "x86_64"
+
+# Windows server does not require TPM by default. If you turn TPM on, you can use some security features like BitLocker disk encryption.
+tpm: null
+
+osOpts:
+  Windows:
+    # Virtio-win ISO contains virtio drivers for windows. It is necessary for lots of QEMU options which use virtio (virtio interface for mounting qcow2 disk, virtio-net, virtio-serial, virtio-rng, virtio-keyboard, and virtio-mouse)
+    # In addition, the driver for virtio-fs will be used in the future.
+    virtioWin:
+    - location: https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/archive-virtio/virtio-win-0.1.271-1/virtio-win-0.1.271.iso
+      arch: "x86_64"
+
+plain: true
+
+video:
+  # This is for development purpose. You can set `none`.
+  display: default

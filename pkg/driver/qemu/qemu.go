@@ -678,15 +678,34 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	} else {
 		args = appendArgsIfNoConflict(args, "-boot", "order=c,splash-time=0,menu=on")
 	}
+
+	var winOpts limatype.WindowsOpts
+	if err := limayaml.Convert(y.OsOpts[limatype.WINDOWS], &winOpts, "osOpts.Windows"); err != nil {
+		return "", nil, err
+	}
+
+	// virtio-win must be mounted before cidata.iso otherwise
+	// autounattend.xml can't find virtio drivers.
+	if *y.OS == limatype.WINDOWS && len(winOpts.VirtioWin) > 0 {
+		args = append(args, "-drive", fmt.Sprintf("file=%s,format=raw,media=cdrom,readonly=on", filepath.Join(cfg.InstanceDir, filenames.VirtioWin)))
+	}
+
 	for _, extraDisk := range extraDisks {
 		args = append(args, "-drive", fmt.Sprintf("file=%s,if=virtio,discard=on", extraDisk))
 	}
 
 	// cloud-init
-	args = append(args,
-		"-drive", "id=cdrom0,if=none,format=raw,readonly=on,file="+filepath.Join(cfg.InstanceDir, filenames.CIDataISO),
-		"-device", "virtio-scsi,id=scsi0",
-		"-device", "scsi-cd,bus=scsi0.0,drive=cdrom0")
+	switch *y.OS {
+	case limatype.WINDOWS:
+		// We can't use virtio-scsi for Windows's cidata, because autounattend in cidata installs virtio-win drivers.
+		// Until then, the VM can't detect virtio.
+		args = append(args, "-drive", fmt.Sprintf("file=%s,format=raw,media=cdrom,readonly=on", filepath.Join(cfg.InstanceDir, filenames.CIDataISO)))
+	default:
+		args = append(args,
+			"-drive", "id=cdrom0,if=none,format=raw,readonly=on,file="+filepath.Join(cfg.InstanceDir, filenames.CIDataISO),
+			"-device", "virtio-scsi,id=scsi0",
+			"-device", "scsi-cd,bus=scsi0.0,drive=cdrom0")
+	}
 
 	// Kernel
 	kernel := filepath.Join(cfg.InstanceDir, filenames.Kernel)
@@ -879,23 +898,26 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	}
 
 	// Serial (virtio)
-	serialvSock := filepath.Join(cfg.InstanceDir, filenames.SerialVirtioSock)
-	if err := os.RemoveAll(serialvSock); err != nil {
-		return "", nil, err
+	// Skip it for Windows guest because we encountered a problem around vioser.sys.
+	if *y.OS != limatype.WINDOWS {
+		serialvSock := filepath.Join(cfg.InstanceDir, filenames.SerialVirtioSock)
+		if err := os.RemoveAll(serialvSock); err != nil {
+			return "", nil, err
+		}
+		serialvLog := filepath.Join(cfg.InstanceDir, filenames.SerialVirtioLog)
+		if err := os.RemoveAll(serialvLog); err != nil {
+			return "", nil, err
+		}
+		const serialvChardev = "char-serial-virtio"
+		args = append(args, "-chardev", fmt.Sprintf("socket,id=%s,path=%s,server=on,wait=off,logfile=%s", serialvChardev, serialvSock, serialvLog))
+		// max_ports=1 is required for https://github.com/lima-vm/lima/issues/1689 https://github.com/lima-vm/lima/issues/1691
+		serialvMaxPorts := 1
+		if *y.Arch == limatype.S390X {
+			serialvMaxPorts++ // needed to avoid `virtio-serial-bus: Out-of-range port id specified, max. allowed: 0`
+		}
+		args = append(args, "-device", fmt.Sprintf("virtio-serial-pci,id=virtio-serial0,max_ports=%d", serialvMaxPorts))
+		args = append(args, "-device", fmt.Sprintf("virtconsole,chardev=%s,id=console0", serialvChardev))
 	}
-	serialvLog := filepath.Join(cfg.InstanceDir, filenames.SerialVirtioLog)
-	if err := os.RemoveAll(serialvLog); err != nil {
-		return "", nil, err
-	}
-	const serialvChardev = "char-serial-virtio"
-	args = append(args, "-chardev", fmt.Sprintf("socket,id=%s,path=%s,server=on,wait=off,logfile=%s", serialvChardev, serialvSock, serialvLog))
-	// max_ports=1 is required for https://github.com/lima-vm/lima/issues/1689 https://github.com/lima-vm/lima/issues/1691
-	serialvMaxPorts := 1
-	if *y.Arch == limatype.S390X {
-		serialvMaxPorts++ // needed to avoid `virtio-serial-bus: Out-of-range port id specified, max. allowed: 0`
-	}
-	args = append(args, "-device", fmt.Sprintf("virtio-serial-pci,id=virtio-serial0,max_ports=%d", serialvMaxPorts))
-	args = append(args, "-device", fmt.Sprintf("virtconsole,chardev=%s,id=console0", serialvChardev))
 
 	// We also want to enable vsock here, but QEMU does not support vsock for macOS hosts
 
