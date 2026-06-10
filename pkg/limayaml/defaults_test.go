@@ -889,7 +889,7 @@ func TestMountTagDuplicateLocation(t *testing.T) {
 }
 
 // TestContainerdUserDefaultPerOS verifies that FillDefault only enables
-// containerd.user=true on Linux guests. nerdctl is a Linux-only runtime,
+// containerd.user=true on Linux guests for x86_64 and aarch64. nerdctl is a Linux-only runtime,
 // so non-Linux guests (Darwin, FreeBSD) must default to false regardless
 // of the host architecture. Regression test for issue #5037.
 func TestContainerdUserDefaultPerOS(t *testing.T) {
