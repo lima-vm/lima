@@ -37,7 +37,7 @@ lima
 - [`almalinux-8`](./almalinux-8.yaml): AlmaLinux 8
 - [`almalinux-9`](./almalinux-9.yaml): AlmaLinux 9
 - [`almalinux-10`](./almalinux-10.yaml), `almalinux`: AlmaLinux 10
-- [`almalinux-kitten-10`](./almalinux-kitten-10.yaml), `almalinux-kitten`: AlmaLinux Kitten 10
+- [`experimental/almalinux-kitten-10`](./experimental/almalinux-kitten-10.yaml), `experimental/almalinux-kitten`: AlmaLinux Kitten 10
 - [`alpine-3.21`](./alpine-3.21.yaml): Alpine Linux 3.21
 - [`alpine-3.22`](./alpine-3.22.yaml): Alpine Linux 3.22
 - [`alpine-3.23`](./alpine-3.23.yaml), `alpine`: ☆Alpine Linux 3.23
