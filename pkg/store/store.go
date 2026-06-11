@@ -6,7 +6,6 @@ package store
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -121,8 +120,9 @@ func LoadYAMLByFilePath(ctx context.Context, filePath string) (*limatype.LimaYAM
 	if err != nil {
 		return nil, err
 	}
-	if err := driverutil.ResolveVMType(ctx, y, filePath); err != nil {
-		return nil, fmt.Errorf("failed to resolve vm for %#q: %w", filePath, err)
+	// If VMType is not specified, we go with the default platform driver.
+	if err := driverutil.ResolveVMType(y); err != nil {
+		return nil, errors.Join(errors.New("failed to resolve vm for "+absPath), err)
 	}
 	if err := limayaml.Validate(y, false); err != nil {
 		return nil, err

@@ -10,96 +10,37 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"slices"
 
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/ptr"
 	"github.com/lima-vm/lima/v2/pkg/registry"
 )
 
-// ResolveVMType sets the VMType field in the given LimaYAML if not already set.
-// It validates the configuration against the specified or default VMType.
-func ResolveVMType(ctx context.Context, y *limatype.LimaYAML, filePath string) error {
-	if y.VMType != nil && *y.VMType != "" {
-		if err := validateConfigAgainstDriver(ctx, y, filePath, *y.VMType); err != nil {
-			return err
+// ResolveVMType sets y.VMType to the appropriate default if it is nil.
+// It validates the VMType is a known type (built-in or discovered external driver)
+// but does NOT require the driver to be available on the current platform.
+func ResolveVMType(y *limatype.LimaYAML) error {
+	if y.VMType == nil {
+		y.VMType = ptr.Of(limatype.DefaultDriver())
+		if y.Arch != nil && !limatype.IsNativeArch(*y.Arch) {
+			y.VMType = ptr.Of(limatype.DefaultNonNativeArchDriver())
 		}
-		logrus.Debugf("Using specified vmType %#q for %#q", *y.VMType, filePath)
+	}
+
+	// Accept built-in VMType regardless of current platform.
+	if slices.Contains(limatype.VMTypes, *y.VMType) {
 		return nil
 	}
 
-	// If VMType is not specified, we go with the default platform driver.
-	vmType := limatype.DefaultDriver()
-	if y.Arch != nil && !limatype.IsNativeArch(*y.Arch) {
-		vmType = limatype.DefaultNonNativeArchDriver()
-	}
-	return validateConfigAgainstDriver(ctx, y, filePath, vmType)
-}
-
-func validateConfigAgainstDriver(ctx context.Context, y *limatype.LimaYAML, filePath, vmType string) error {
-	extDriver, intDriver, exists := registry.Get(vmType)
+	// Also accept external drivers discovered in the registry.
+	_, _, exists := registry.Get(*y.VMType)
 	if !exists {
-		return fmt.Errorf("vmType %#q is not a registered driver", vmType)
+		return fmt.Errorf("vmType %#q is not a registered driver", *y.VMType)
 	}
 
-	if extDriver != nil {
-		return handlePreConfiguredDriverAction(ctx, y, extDriver.Path, filePath)
-	}
-
-	if err := intDriver.FillConfig(ctx, y, filePath); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func handlePreConfiguredDriverAction(ctx context.Context, y *limatype.LimaYAML, extDriverPath, filePath string) error {
-	cmd := exec.CommandContext(ctx, extDriverPath, "--pre-driver-action")
-
-	var stderrBuf bytes.Buffer
-	cmd.Stderr = &stderrBuf
-
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return fmt.Errorf("failed to get stdout pipe: %w", err)
-	}
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		return fmt.Errorf("failed to get stdin pipe: %w", err)
-	}
-	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("failed to start external driver: %w", err)
-	}
-
-	encoder := json.NewEncoder(stdin)
-	if err := encoder.Encode(limatype.PreConfiguredDriverPayload{
-		Config:   *y,
-		FilePath: filePath,
-	}); err != nil {
-		stdin.Close()
-		return fmt.Errorf("failed to encode pre-configured driver payload: %w", err)
-	}
-	stdin.Close()
-
-	decoder := json.NewDecoder(stdout)
-	var res limatype.LimaYAML
-	if err := decoder.Decode(&res); err != nil {
-		return fmt.Errorf("failed to decode pre-configured driver response: %w", err)
-	}
-
-	if err := cmd.Wait(); err != nil {
-		if stderrBuf.Len() > 0 {
-			return fmt.Errorf("pre-configured driver command failed: %w; stderr: %s", err, stderrBuf.String())
-		}
-		return fmt.Errorf("pre-configured driver command failed: %w", err)
-	}
-
-	if stderrBuf.Len() > 0 {
-		logrus.Debugf("external driver stderr: %s", stderrBuf.String())
-	}
-
-	*y = res
-	logrus.Debugf("Pre-configured driver action completed successfully for %#q", extDriverPath)
 	return nil
 }
 

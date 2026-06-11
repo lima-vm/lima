@@ -18,6 +18,7 @@ import (
 
 	"github.com/lima-vm/lima/v2/cmd/limactl/editflags"
 	"github.com/lima-vm/lima/v2/pkg/autostart"
+	"github.com/lima-vm/lima/v2/pkg/driver/external/server"
 	"github.com/lima-vm/lima/v2/pkg/driverutil"
 	"github.com/lima-vm/lima/v2/pkg/editutil"
 	"github.com/lima-vm/lima/v2/pkg/instance"
@@ -375,16 +376,20 @@ func applyYQExpressionToExistingInstance(ctx context.Context, inst *limatype.Ins
 	if err != nil {
 		return nil, err
 	}
-	if err := driverutil.ResolveVMType(ctx, y, filePath); err != nil {
-		return nil, fmt.Errorf("failed to resolve vm for %#q: %w", filePath, err)
+	// If VMType is not specified, we go with the default platform driver.
+	if err := driverutil.ResolveVMType(y); err != nil {
+		return nil, err
 	}
-	if err := limayaml.Validate(y, true); err != nil {
-		rejectedYAML := "lima.REJECTED.yaml"
-		if writeErr := os.WriteFile(rejectedYAML, yBytes, 0o644); writeErr != nil {
-			return nil, fmt.Errorf("the YAML is invalid, attempted to save the buffer as %#q but failed: %w: %w", rejectedYAML, writeErr, err)
-		}
-		// TODO: may need to support editing the rejected YAML
-		return nil, fmt.Errorf("the YAML is invalid, saved the buffer as %#q: %w", rejectedYAML, err)
+	inst.Config = y
+	limaDriver, err := driverutil.CreateConfiguredDriver(ctx, inst, 0)
+	if err != nil {
+		return nil, err
+	}
+	if err := limaDriver.Validate(ctx); err != nil {
+		return nil, saveRejectedYAML(yBytes, err)
+	}
+	if err := limayaml.Validate(inst.Config, true); err != nil {
+		return nil, saveRejectedYAML(yBytes, err)
 	}
 	if err := os.WriteFile(filePath, yBytes, 0o644); err != nil {
 		return nil, err
@@ -563,6 +568,7 @@ func createAction(cmd *cobra.Command, args []string) error {
 	if _, err = instance.Prepare(cmd.Context(), inst, ""); err != nil {
 		return err
 	}
+	server.Stop(inst.Dir, true)
 	logrus.Infof("Run `limactl start %s` to start the instance.", inst.Name)
 	return nil
 }

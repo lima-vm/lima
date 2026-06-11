@@ -104,8 +104,9 @@ func knownLocations(ctx context.Context) (map[string]limatype.File, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err := driverutil.ResolveVMType(ctx, y, t.Name); err != nil {
-			logrus.Warnf("failed to resolve vmType for %#q: %v", t.Name, err)
+		// If VMType is not specified, we go with the default platform driver.
+		if err := driverutil.ResolveVMType(y); err != nil {
+			return nil, err
 		}
 		maps.Copy(locations, locationsFromLimaYAML(y))
 	}

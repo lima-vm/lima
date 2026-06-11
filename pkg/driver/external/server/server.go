@@ -40,14 +40,9 @@ type DriverServer struct {
 }
 
 func Serve(ctx context.Context, driver driver.Driver) {
-	preConfiguredDriverAction := flag.Bool("pre-driver-action", false, "Run pre-driver action before starting the gRPC server")
 	inspectStatus := flag.Bool("inspect-status", false, "Inspect status of the driver")
 	instDir := flag.String("inst-dir", "", "Instance directory for the driver to store the gRPC server socket path")
 	flag.Parse() //nolint:revive // Serve is intended to be called from external driver's main()
-	if *preConfiguredDriverAction {
-		handlePreConfiguredDriverAction(ctx, driver)
-		return
-	}
 	if *inspectStatus {
 		handleInspectStatus(ctx, driver)
 		return
@@ -154,25 +149,6 @@ func handleInspectStatus(ctx context.Context, driver driver.Driver) {
 	}
 }
 
-func handlePreConfiguredDriverAction(ctx context.Context, driver driver.Driver) {
-	decoder := json.NewDecoder(os.Stdin)
-	encoder := json.NewEncoder(os.Stdout)
-
-	var payload limatype.PreConfiguredDriverPayload
-	if err := decoder.Decode(&payload); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to decode pre-configured driver payload from stdin: %v", err)
-	}
-
-	config := &payload.Config
-	if err := driver.FillConfig(ctx, config, payload.FilePath); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to fill config: %v", err)
-	}
-
-	if err := encoder.Encode(*config); err != nil {
-		fmt.Fprintf(os.Stderr, "Error encoding response: %v", err)
-	}
-}
-
 func driverPIDFilePath(instanceDir, driverName string) string {
 	return filepath.Join(instanceDir, fmt.Sprintf("%s.drv.pid", driverName))
 }
@@ -211,9 +187,14 @@ func Start(ctx context.Context, extDriver *registry.ExternalDriver, instName str
 	}
 	socketPath := driverSocketPath(instanceDir, extDriver.Name)
 
+	if extDriver.Client != nil && extDriver.Client.Conn != nil {
+		_ = extDriver.Client.Conn.Close()
+		extDriver.Client = nil
+	}
+
 	// If the socket already exists and is connectable, reuse the existing server.
 	if isServerRunning(socketPath) {
-		extDriver.Logger.Debugf("Reusing existing external driver server for %#q at %s", extDriver.Name, socketPath)
+		extDriver.Logger.Debugf("Reusing already-running external driver server for %#q at %s", extDriver.Name, socketPath)
 		extDriver.Client, err = client.NewDriverClient(socketPath, extDriver.Logger)
 		if err != nil {
 			return fmt.Errorf("failed to create driver client for existing server: %w", err)
@@ -222,6 +203,7 @@ func Start(ctx context.Context, extDriver *registry.ExternalDriver, instName str
 	}
 
 	// No running server found; start a new one.
+	extDriver.Logger.Debugf("Starting new external driver server process for %#q", extDriver.Name)
 	logPath := filepath.Join(instanceDir, filenames.ExternalDriverStderrLog)
 	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
 	if err != nil {
@@ -295,7 +277,7 @@ func Start(ctx context.Context, extDriver *registry.ExternalDriver, instName str
 // otherwise SIGTERM is sent and we wait for the process to exit.
 // Also cleans up PID files and socket files.
 func Stop(instDir string, force bool) {
-	logrus.Infof("Stopping external driver server in instance directory %s", instDir)
+	logrus.Debugf("Stopping external driver server in instance directory %s", instDir)
 	pidPattern := filepath.Join(instDir, "*.drv.pid")
 	files, _ := filepath.Glob(pidPattern)
 	for _, pidFile := range files {
@@ -315,10 +297,10 @@ func Stop(instDir string, force bool) {
 			continue
 		}
 		if force {
-			logrus.Infof("Sending SIGKILL to external driver process %d", pid)
+			logrus.Debugf("Sending SIGKILL to external driver process %d", pid)
 			_ = osutil.SysKill(pid, osutil.SigKill)
 		} else {
-			logrus.Infof("Sending SIGTERM to external driver process %d", pid)
+			logrus.Debugf("Sending SIGTERM to external driver process %d", pid)
 			_ = osutil.SysKill(pid, osutil.SigTerm)
 			deadline := time.Now().Add(10 * time.Second)
 			for time.Now().Before(deadline) {

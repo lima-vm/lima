@@ -168,6 +168,9 @@ func New(ctx context.Context, instName string, stdout io.Writer, signalCh chan o
 	if err != nil {
 		return nil, fmt.Errorf("failed to create driver instance: %w", err)
 	}
+	if err := limayaml.Validate(inst.Config, true); err != nil {
+		return nil, fmt.Errorf("failed to validate the instance YAML after filling defaults: %w", err)
+	}
 	sshLocalPort = inst.SSHLocalPort
 
 	info := limaDriver.Info(ctx)

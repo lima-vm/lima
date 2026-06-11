@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/lima-vm/lima/v2/cmd/limactl/editflags"
+	"github.com/lima-vm/lima/v2/pkg/driver/external/server"
 	"github.com/lima-vm/lima/v2/pkg/driverutil"
 	"github.com/lima-vm/lima/v2/pkg/instance"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
@@ -81,6 +82,7 @@ func cloneOrRenameAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	var start bool
 	if len(yqExprs) > 0 {
 		// TODO: reduce duplicated codes across cloneAction and editAction
 		yq := yqutil.Join(yqExprs)
@@ -97,10 +99,24 @@ func cloneOrRenameAction(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		if err := driverutil.ResolveVMType(ctx, y, filePath); err != nil {
-			return fmt.Errorf("failed to resolve vm for %#q: %w", filePath, err)
+		// If VMType is not specified, we go with the default platform driver.
+		if err := driverutil.ResolveVMType(y); err != nil {
+			return err
 		}
-		if err := limayaml.Validate(y, true); err != nil {
+		newInst.Config = y
+		limaDriver, err := driverutil.CreateConfiguredDriver(ctx, newInst, 0)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			if !start {
+				server.Stop(newInst.Dir, true)
+			}
+		}()
+		if err := limaDriver.Validate(ctx); err != nil {
+			return saveRejectedYAML(yBytes, err)
+		}
+		if err := limayaml.Validate(newInst.Config, true); err != nil {
 			return saveRejectedYAML(yBytes, err)
 		}
 		if err := limayaml.ValidateAgainstLatestConfig(ctx, yBytes, yContent); err != nil {
@@ -115,7 +131,7 @@ func cloneOrRenameAction(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	start, err := flags.GetBool("start")
+	start, err = flags.GetBool("start")
 	if err != nil {
 		return err
 	}

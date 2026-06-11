@@ -340,11 +340,6 @@ type CACertificates struct {
 	Certs          []string `yaml:"certs,omitempty" json:"certs,omitempty" jsonschema:"nullable"`
 }
 
-type PreConfiguredDriverPayload struct {
-	Config   LimaYAML `json:"config"`
-	FilePath string   `json:"filePath"`
-}
-
 type OsOpts map[OS]any
 
 type WindowsOpts struct {

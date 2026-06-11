@@ -15,6 +15,7 @@ import (
 
 	"github.com/lima-vm/lima/v2/cmd/limactl/editflags"
 	"github.com/lima-vm/lima/v2/pkg/autostart"
+	"github.com/lima-vm/lima/v2/pkg/driver/external/server"
 	"github.com/lima-vm/lima/v2/pkg/driverutil"
 	"github.com/lima-vm/lima/v2/pkg/editutil"
 	"github.com/lima-vm/lima/v2/pkg/instance"
@@ -131,11 +132,31 @@ func editAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	if err := driverutil.ResolveVMType(ctx, y, filePath); err != nil {
-		return fmt.Errorf("failed to resolve vm for %#q: %w", filePath, err)
+	// If VMType is not specified, we go with the default platform driver.
+	if err := driverutil.ResolveVMType(y); err != nil {
+		return err
 	}
-	if err := limayaml.Validate(y, true); err != nil {
+	if err := limayaml.Validate(y, false); err != nil {
 		return saveRejectedYAML(yBytes, err)
+	}
+	var start bool
+	if inst != nil {
+		inst.Config = y
+		limaDriver, err := driverutil.CreateConfiguredDriver(ctx, inst, 0)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			if !start {
+				server.Stop(inst.Dir, true)
+			}
+		}()
+		if err := limaDriver.Validate(ctx); err != nil {
+			return saveRejectedYAML(yBytes, err)
+		}
+		if err := limayaml.Validate(inst.Config, true); err != nil {
+			return saveRejectedYAML(yBytes, err)
+		}
 	}
 
 	if err := limayaml.ValidateAgainstLatestConfig(ctx, yBytes, yContent); err != nil {
@@ -155,7 +176,7 @@ func editAction(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	start, err := flags.GetBool("start")
+	start, err = flags.GetBool("start")
 	if err != nil {
 		return err
 	}

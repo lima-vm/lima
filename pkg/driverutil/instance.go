@@ -26,22 +26,17 @@ func CreateConfiguredDriver(ctx context.Context, inst *limatype.Instance, sshLoc
 	}
 	var driverInfo driver.Info
 	if extDriver != nil {
-		extDriver.Logger.Debugf("Using external driver %#q", extDriver.Name)
-		if extDriver.Client == nil || extDriver.InstanceName != inst.Name {
-			logrus.Debugf("Starting new instance of external driver %#q for %#q", extDriver.Name, inst.Name)
-			if err := server.Start(ctx, extDriver, inst.Name); err != nil {
-				extDriver.Logger.Errorf("Failed to start external driver %#q: %v", extDriver.Name, err)
-				return nil, err
-			}
-		} else {
-			logrus.Debugf("Reusing existing external driver %#q instance", extDriver.Name)
+		extDriver.Logger.Debugf("Connecting to external driver %#q for %#q", extDriver.Name, inst.Name)
+		if err := server.Start(ctx, extDriver, inst.Name); err != nil {
+			extDriver.Logger.Errorf("Failed to start external driver %#q: %v", extDriver.Name, err)
+			return nil, err
 		}
 
 		driverInfo = extDriver.Client.Info(ctx)
 		if !driverInfo.Features.StaticSSHPort {
 			inst.SSHLocalPort = sshLocalPort
 		}
-		return extDriver.Client.Configure(ctx, inst), nil
+		return extDriver.Client.Configure(ctx, inst)
 	}
 
 	driverInfo = intDriver.Info(ctx)
@@ -49,5 +44,5 @@ func CreateConfiguredDriver(ctx context.Context, inst *limatype.Instance, sshLoc
 	if !driverInfo.Features.StaticSSHPort {
 		inst.SSHLocalPort = sshLocalPort
 	}
-	return intDriver.Configure(ctx, inst), nil
+	return intDriver.Configure(ctx, inst)
 }

@@ -59,7 +59,7 @@ type Driver interface {
 	GuestAgent
 
 	Info() Info
-	Configure(inst *limatype.Instance) *ConfiguredDriver
+	Configure(ctx context.Context, inst *limatype.Instance) (*ConfiguredDriver, error)
 	FillConfig(ctx context.Context, cfg *limatype.LimaYAML, filePath string) error
 	SSHAddress(ctx context.Context) (string, error)
 }
