@@ -249,6 +249,11 @@ func TestAbsPath(t *testing.T) {
 		assert.ErrorContains(t, err, "'../'")
 	})
 
+	t.Run("Relative parent directory locator must be underneath the basePath", func(t *testing.T) {
+		_, err = absPath("..", volume+"/root")
+		assert.ErrorContains(t, err, "'../'")
+	})
+
 	t.Run("locator must not be empty", func(t *testing.T) {
 		_, err = absPath("", "foo")
 		assert.ErrorContains(t, err, "locator is empty")
