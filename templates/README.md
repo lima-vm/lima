@@ -62,12 +62,12 @@ lima
 - [`rocky-10`](./rocky-10.yaml), `rocky`: Rocky Linux 10
 - [`ubuntu-20.04`](./ubuntu-20.04.yaml): Ubuntu 20.04 LTS (Focal Fossa)
 - [`ubuntu-22.04`](./ubuntu-22.04.yaml): Ubuntu 22.04 LTS (Jammy Jellyfish)
-- [`ubuntu-24.04`](./ubuntu-24.04.yaml), `ubuntu-lts`: Ubuntu 24.04 LTS (Noble Numbat)
+- [`ubuntu-24.04`](./ubuntu-24.04.yaml): Ubuntu 24.04 LTS (Noble Numbat)
 - [`ubuntu-24.10`](./ubuntu-24.10.yaml): Ubuntu 24.10 (Oracular Oriole)
 - [`ubuntu-25.04`](./ubuntu-25.04.yaml): Ubuntu 25.04 (Plucky Puffin)
-- [`ubuntu-25.10`](./ubuntu-25.10.yaml), `ubuntu`: Ubuntu 25.10 (Questing Quokka)
+- [`ubuntu-25.10`](./ubuntu-25.10.yaml): Ubuntu 25.10 (Questing Quokka)
+- [`ubuntu-26.04`](./ubuntu-26.04.yaml), `ubuntu`, `ubuntu-lts`: Ubuntu 26.04 (Resolute Raccoon)
   - Same as `default` but comment lines are omitted from the YAML
-- [`ubuntu-26.04`](./ubuntu-26.04.yaml): Ubuntu 26.04 (Resolute Raccoon)
 - [`experimental/ubuntu-next`](./experimental/ubuntu-next.yaml): Ubuntu vNext
 - [`experimental/gentoo`](./experimental/gentoo.yaml): Gentoo
 - [`experimental/opensuse-tumbleweed`](./experimental/opensuse-tumbleweed.yaml): openSUSE Tumbleweed
