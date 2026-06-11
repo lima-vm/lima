@@ -568,6 +568,9 @@ func validateParamIsUsed(y *limatype.LimaYAML) error {
 				break
 			}
 		}
+		if key == "internal_netplanOptional" { // consumed by the cidata network-config template
+			keyIsUsed = true
+		}
 		if !keyIsUsed {
 			return fmt.Errorf("field `param` key %#q is not used in any provision, probe, copyToHost, or portForward", key)
 		}
