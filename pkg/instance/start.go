@@ -70,6 +70,9 @@ func Prepare(ctx context.Context, inst *limatype.Instance, guestAgent string) (*
 	if err != nil {
 		return nil, fmt.Errorf("failed to create driver instance: %w", err)
 	}
+	if err := limayaml.Validate(inst.Config, true); err != nil {
+		return nil, fmt.Errorf("failed to validate the instance YAML after filling defaults: %w", err)
+	}
 
 	if err := limaDriver.Validate(ctx); err != nil {
 		return nil, err

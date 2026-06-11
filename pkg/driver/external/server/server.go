@@ -39,14 +39,9 @@ type DriverServer struct {
 }
 
 func Serve(ctx context.Context, driver driver.Driver) {
-	preConfiguredDriverAction := flag.Bool("pre-driver-action", false, "Run pre-driver action before starting the gRPC server")
 	inspectStatus := flag.Bool("inspect-status", false, "Inspect status of the driver")
 	instDir := flag.String("inst-dir", "", "Instance directory for the driver to store the gRPC server socket path")
 	flag.Parse() //nolint:revive // Serve is intended to be called from external driver's main()
-	if *preConfiguredDriverAction {
-		handlePreConfiguredDriverAction(ctx, driver)
-		return
-	}
 	if *inspectStatus {
 		handleInspectStatus(ctx, driver)
 		return
@@ -142,25 +137,6 @@ func handleInspectStatus(ctx context.Context, driver driver.Driver) {
 
 	if err := encoder.Encode(resp); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to encode instance response: %v", err)
-	}
-}
-
-func handlePreConfiguredDriverAction(ctx context.Context, driver driver.Driver) {
-	decoder := json.NewDecoder(os.Stdin)
-	encoder := json.NewEncoder(os.Stdout)
-
-	var payload limatype.PreConfiguredDriverPayload
-	if err := decoder.Decode(&payload); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to decode pre-configured driver payload from stdin: %v", err)
-	}
-
-	config := &payload.Config
-	if err := driver.FillConfig(ctx, config, payload.FilePath); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to fill config: %v", err)
-	}
-
-	if err := encoder.Encode(*config); err != nil {
-		fmt.Fprintf(os.Stderr, "Error encoding response: %v", err)
 	}
 }
 

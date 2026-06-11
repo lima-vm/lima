@@ -62,7 +62,7 @@ type DriverClient interface {
 	ListSnapshots(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ListSnapshotsResponse, error)
 	ForwardGuestAgent(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ForwardGuestAgentResponse, error)
 	GuestAgentConn(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	Configure(ctx context.Context, in *SetConfigRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	Configure(ctx context.Context, in *SetConfigRequest, opts ...grpc.CallOption) (*SetConfigResponse, error)
 	Info(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*InfoResponse, error)
 	SSHAddress(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*SSHAddressResponse, error)
 	// AdditionalSetupForSSH provides additional setup required for SSH connection.
@@ -247,9 +247,9 @@ func (c *driverClient) GuestAgentConn(ctx context.Context, in *emptypb.Empty, op
 	return out, nil
 }
 
-func (c *driverClient) Configure(ctx context.Context, in *SetConfigRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (c *driverClient) Configure(ctx context.Context, in *SetConfigRequest, opts ...grpc.CallOption) (*SetConfigResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(emptypb.Empty)
+	out := new(SetConfigResponse)
 	err := c.cc.Invoke(ctx, Driver_Configure_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -307,7 +307,7 @@ type DriverServer interface {
 	ListSnapshots(context.Context, *emptypb.Empty) (*ListSnapshotsResponse, error)
 	ForwardGuestAgent(context.Context, *emptypb.Empty) (*ForwardGuestAgentResponse, error)
 	GuestAgentConn(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
-	Configure(context.Context, *SetConfigRequest) (*emptypb.Empty, error)
+	Configure(context.Context, *SetConfigRequest) (*SetConfigResponse, error)
 	Info(context.Context, *emptypb.Empty) (*InfoResponse, error)
 	SSHAddress(context.Context, *emptypb.Empty) (*SSHAddressResponse, error)
 	// AdditionalSetupForSSH provides additional setup required for SSH connection.
@@ -371,7 +371,7 @@ func (UnimplementedDriverServer) ForwardGuestAgent(context.Context, *emptypb.Emp
 func (UnimplementedDriverServer) GuestAgentConn(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GuestAgentConn not implemented")
 }
-func (UnimplementedDriverServer) Configure(context.Context, *SetConfigRequest) (*emptypb.Empty, error) {
+func (UnimplementedDriverServer) Configure(context.Context, *SetConfigRequest) (*SetConfigResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Configure not implemented")
 }
 func (UnimplementedDriverServer) Info(context.Context, *emptypb.Empty) (*InfoResponse, error) {

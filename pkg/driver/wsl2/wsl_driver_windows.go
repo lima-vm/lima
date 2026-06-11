@@ -70,23 +70,24 @@ func New() *LimaWslDriver {
 	}
 }
 
-func (l *LimaWslDriver) Configure(_ context.Context, inst *limatype.Instance) *driver.ConfiguredDriver {
-	l.Instance = inst
-	l.SSHLocalPort = inst.SSHLocalPort
-
-	return &driver.ConfiguredDriver{
-		Driver: l,
-	}
-}
-
-func (l *LimaWslDriver) FillConfig(ctx context.Context, cfg *limatype.LimaYAML, _ string) error {
+func (l *LimaWslDriver) Configure(ctx context.Context, inst *limatype.Instance) (*driver.ConfiguredDriver, error) {
+	cfg := inst.Config
 	if cfg.VMType == nil {
 		cfg.VMType = ptr.Of(limatype.WSL2)
 	}
 	if cfg.MountType == nil {
 		cfg.MountType = ptr.Of(limatype.WSLMount)
 	}
-	return validateConfig(ctx, cfg)
+	if err := validateConfig(ctx, cfg); err != nil {
+		return nil, err
+	}
+
+	l.Instance = inst
+	l.SSHLocalPort = inst.SSHLocalPort
+
+	return &driver.ConfiguredDriver{
+		Driver: l,
+	}, nil
 }
 
 func (l *LimaWslDriver) Validate(ctx context.Context) error {

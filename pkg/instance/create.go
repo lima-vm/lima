@@ -49,8 +49,9 @@ func Create(ctx context.Context, instName string, instConfig []byte, saveBrokenY
 	if err != nil {
 		return nil, err
 	}
-	if err := driverutil.ResolveVMType(ctx, loadedInstConfig, filePath); err != nil {
-		return nil, fmt.Errorf("failed to resolve vm for %#q: %w", filePath, err)
+	// If VMType is not specified, we go with the default platform driver.
+	if err := driverutil.ResolveVMType(loadedInstConfig); err != nil {
+		return nil, err
 	}
 	if err := limayaml.Validate(loadedInstConfig, true); err != nil {
 		if !saveBrokenYAML {
@@ -65,10 +66,14 @@ func Create(ctx context.Context, instName string, instConfig []byte, saveBrokenY
 	if err := os.MkdirAll(instDir, 0o700); err != nil {
 		return nil, err
 	}
+	var createSucceeded bool
+	defer func() {
+		if !createSucceeded {
+			_ = os.RemoveAll(instDir)
+		}
+	}()
+
 	if err := os.WriteFile(filePath, instConfig, 0o644); err != nil {
-		return nil, err
-	}
-	if err := cidata.GenerateCloudConfig(ctx, instDir, instName, loadedInstConfig); err != nil {
 		return nil, err
 	}
 	if err := os.WriteFile(filepath.Join(instDir, filenames.LimaVersion), []byte(version.Version), 0o444); err != nil {
@@ -84,10 +89,17 @@ func Create(ctx context.Context, instName string, instConfig []byte, saveBrokenY
 	if err != nil {
 		return nil, fmt.Errorf("failed to create driver instance: %w", err)
 	}
+	if err := limayaml.Validate(inst.Config, true); err != nil {
+		return nil, fmt.Errorf("failed to validate the instance YAML after filling defaults: %w", err)
+	}
+	if err := cidata.GenerateCloudConfig(ctx, instDir, instName, inst.Config); err != nil {
+		return nil, err
+	}
 
 	if err := limaDriver.Create(ctx); err != nil {
 		return nil, err
 	}
 
+	createSucceeded = true
 	return inst, nil
 }
