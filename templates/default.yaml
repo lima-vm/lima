@@ -375,6 +375,12 @@ user:
   # Shell. Needs to be an absolute path.
   # 🟢 Builtin default: "/bin/bash"
   shell: null
+  # Enable or disable passwordless sudo for the default user.
+  # If false, a secure 16-character random password will be generated and saved
+  # to `<instance_dir>/password` on the host machine (with 0600 permissions).
+  # The user should manually rotate this password after the initial login.
+  # 🟢 Builtin default: true
+  passwordlessSudo: null
 
 vmOpts:
   qemu:

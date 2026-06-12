@@ -85,6 +85,8 @@ type TemplateArgs struct {
 	Home                            string // home directory
 	Shell                           string // login shell
 	UID                             uint32
+	PasswordlessSudo                bool
+	SudoPassword                    string // The randomly generated password
 	SSHPubKeys                      []string
 	Mounts                          []Mount
 	MountType                       string

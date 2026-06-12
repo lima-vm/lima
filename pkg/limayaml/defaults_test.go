@@ -115,11 +115,12 @@ func TestFillDefault(t *testing.T) {
 		NestedVirtualization: ptr.Of(false),
 		Plain:                ptr.Of(false),
 		User: limatype.User{
-			Name:    ptr.Of(user.Username),
-			Comment: ptr.Of(user.Name),
-			Home:    ptr.Of(user.HomeDir),
-			Shell:   ptr.Of("/bin/bash"),
-			UID:     ptr.Of(uint32(uid)),
+			Name:             ptr.Of(user.Username),
+			Comment:          ptr.Of(user.Name),
+			Home:             ptr.Of(user.HomeDir),
+			Shell:            ptr.Of("/bin/bash"),
+			UID:              ptr.Of(uint32(uid)),
+			PasswordlessSudo: ptr.Of(true),
 		},
 	}
 
@@ -413,11 +414,12 @@ func TestFillDefault(t *testing.T) {
 		},
 		NestedVirtualization: ptr.Of(true),
 		User: limatype.User{
-			Name:    ptr.Of("xxx"),
-			Comment: ptr.Of("Foo Bar"),
-			Home:    ptr.Of("/tmp"),
-			Shell:   ptr.Of("/bin/tcsh"),
-			UID:     ptr.Of(uint32(8080)),
+			Name:             ptr.Of("xxx"),
+			Comment:          ptr.Of("Foo Bar"),
+			Home:             ptr.Of("/tmp"),
+			Shell:            ptr.Of("/bin/tcsh"),
+			UID:              ptr.Of(uint32(8080)),
+			PasswordlessSudo: ptr.Of(false),
 		},
 		VMOpts: limatype.VMOpts{
 			"qemu": map[string]any{
@@ -639,11 +641,12 @@ func TestFillDefault(t *testing.T) {
 		},
 		NestedVirtualization: ptr.Of(false),
 		User: limatype.User{
-			Name:    ptr.Of("foo"),
-			Comment: ptr.Of("foo bar baz"),
-			Home:    ptr.Of("/override"),
-			Shell:   ptr.Of("/bin/sh"),
-			UID:     ptr.Of(uint32(1122)),
+			Name:             ptr.Of("foo"),
+			Comment:          ptr.Of("foo bar baz"),
+			Home:             ptr.Of("/override"),
+			Shell:            ptr.Of("/bin/sh"),
+			UID:              ptr.Of(uint32(1122)),
+			PasswordlessSudo: ptr.Of(true),
 		},
 		VMOpts: limatype.VMOpts{
 			"vz": map[string]any{
@@ -937,4 +940,41 @@ func TestContainerdUserExplicitOverride(t *testing.T) {
 	assert.Assert(t, y.Containerd.User != nil)
 	assert.Equal(t, *y.Containerd.User, true,
 		"explicit Containerd.User=true must be preserved on non-Linux guests")
+}
+
+func TestFillDefaultUserPasswordlessSudo(t *testing.T) {
+	// Base configuration to prevent deep equal panics in OS/Arch checking
+	baseY := func() *limatype.LimaYAML {
+		return &limatype.LimaYAML{
+			OS:   ptr.Of(limatype.LINUX),
+			Arch: ptr.Of(limatype.X8664),
+		}
+	}
+
+	t.Run("fallback to true", func(t *testing.T) {
+		y, d, o := baseY(), &limatype.LimaYAML{}, &limatype.LimaYAML{}
+		FillDefault(t.Context(), y, d, o, "test.yaml", false)
+		assert.Assert(t, y.User.PasswordlessSudo != nil)
+		assert.Equal(t, *y.User.PasswordlessSudo, true)
+	})
+
+	t.Run("default propagates", func(t *testing.T) {
+		y, d, o := baseY(), &limatype.LimaYAML{User: limatype.User{PasswordlessSudo: ptr.Of(false)}}, &limatype.LimaYAML{}
+		FillDefault(t.Context(), y, d, o, "test.yaml", false)
+		assert.Equal(t, *y.User.PasswordlessSudo, false)
+	})
+
+	t.Run("yaml wins over default", func(t *testing.T) {
+		y, d, o := baseY(), &limatype.LimaYAML{User: limatype.User{PasswordlessSudo: ptr.Of(true)}}, &limatype.LimaYAML{}
+		y.User.PasswordlessSudo = ptr.Of(false)
+		FillDefault(t.Context(), y, d, o, "test.yaml", false)
+		assert.Equal(t, *y.User.PasswordlessSudo, false)
+	})
+
+	t.Run("override wins", func(t *testing.T) {
+		y, d, o := baseY(), &limatype.LimaYAML{}, &limatype.LimaYAML{User: limatype.User{PasswordlessSudo: ptr.Of(false)}}
+		y.User.PasswordlessSudo = ptr.Of(true)
+		FillDefault(t.Context(), y, d, o, "test.yaml", false)
+		assert.Equal(t, *y.User.PasswordlessSudo, false)
+	})
 }

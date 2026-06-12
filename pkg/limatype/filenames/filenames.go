@@ -76,6 +76,7 @@ const (
 	MntDir    = "mnt" // mount point (macOS guests only)
 
 	Protected = "protected" // empty file; used by `limactl protect`
+	Password  = "password"
 )
 
 // Filenames used under a disk directory
