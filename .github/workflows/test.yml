@@ -73,6 +73,8 @@ jobs:
       run: go install github.com/google/go-licenses@v1.6.0
     - name: Check licenses
       run: make go-licenses
+    - name: Check social reputation of Go dependencies
+      run: make gosocialcheck
     - name: Check license boilerplates
       run: make ltag
     - name: Check protobuf files
