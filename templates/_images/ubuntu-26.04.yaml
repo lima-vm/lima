@@ -43,3 +43,9 @@ images:
 # # NOTE: Intel Mac with macOS prior to 15.5 requires setting vmType to qemu
 # # https://github.com/lima-vm/lima/issues/3334
 # vmType: qemu
+
+# Do not require Lima NICs for systemd-networkd-wait-online: the first-boot
+# rename to eth0 fails on 26.04 (LP: #2136392) and would block boot for 120s.
+# Lima's cidata bootcmd renames the NIC and waits for it instead.
+param:
+  internal_netplanOptional: "true"
