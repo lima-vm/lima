@@ -36,7 +36,7 @@ func LimaDir() (string, error) {
 	}
 	realdir, err := filepath.EvalSymlinks(dir)
 	if err != nil {
-		return "", fmt.Errorf("cannot evaluate symlinks in %q: %w", dir, err)
+		return "", fmt.Errorf("cannot evaluate symlinks in %#q: %w", dir, err)
 	}
 	return realdir, nil
 }
@@ -95,11 +95,11 @@ func InstanceDir(name string) (string, error) {
 // be a valid identifier, and not end in .yml or .yaml (case insensitively).
 func ValidateInstName(name string) error {
 	if err := identifiers.Validate(name); err != nil {
-		return fmt.Errorf("instance name %q is not a valid identifier: %w", name, err)
+		return fmt.Errorf("instance name %#q is not a valid identifier: %w", name, err)
 	}
 	lower := strings.ToLower(name)
 	if strings.HasSuffix(lower, ".yml") || strings.HasSuffix(lower, ".yaml") {
-		return fmt.Errorf("instance name %q must not end with .yml or .yaml suffix", name)
+		return fmt.Errorf("instance name %#q must not end with .yml or .yaml suffix", name)
 	}
 	return nil
 }

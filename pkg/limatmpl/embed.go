@@ -45,7 +45,7 @@ func (tmpl *Template) Embed(ctx context.Context, embedAll, defaultBase bool) err
 }
 
 func (tmpl *Template) embedAllBases(ctx context.Context, embedAll, defaultBase bool, seen map[string]bool) error {
-	logrus.Debugf("Embedding templates into %q", tmpl.Locator)
+	logrus.Debugf("Embedding templates into %#q", tmpl.Locator)
 	if defaultBase {
 		configDir, err := dirnames.LimaConfigDir()
 		if err != nil {
@@ -73,7 +73,7 @@ func (tmpl *Template) embedAllBases(ctx context.Context, embedAll, defaultBase b
 		}
 		baseLocator := tmpl.Config.Base[0]
 		if baseLocator.Digest != nil {
-			return fmt.Errorf("base %q in %q has specified a digest; digest support is not yet implemented", baseLocator.URL, tmpl.Locator)
+			return fmt.Errorf("base %#q in %#q has specified a digest; digest support is not yet implemented", baseLocator.URL, tmpl.Locator)
 		}
 		isTemplate, _ := SeemsTemplateURL(baseLocator.URL)
 		if isTemplate && !embedAll {
@@ -81,7 +81,7 @@ func (tmpl *Template) embedAllBases(ctx context.Context, embedAll, defaultBase b
 			for i := 1; i < len(tmpl.Config.Base); i++ {
 				isTemplate, _ = SeemsTemplateURL(tmpl.Config.Base[i].URL)
 				if !isTemplate {
-					return fmt.Errorf("cannot embed template %q after not embedding %q", tmpl.Config.Base[i].URL, baseLocator.URL)
+					return fmt.Errorf("cannot embed template %#q after not embedding %#q", tmpl.Config.Base[i].URL, baseLocator.URL)
 				}
 			}
 			break
@@ -89,7 +89,7 @@ func (tmpl *Template) embedAllBases(ctx context.Context, embedAll, defaultBase b
 		}
 
 		if seen[baseLocator.URL] {
-			return fmt.Errorf("base template loop detected: template %q already included", baseLocator.URL)
+			return fmt.Errorf("base template loop detected: template %#q already included", baseLocator.URL)
 		}
 		seen[baseLocator.URL] = true
 
@@ -102,13 +102,13 @@ func (tmpl *Template) embedAllBases(ctx context.Context, embedAll, defaultBase b
 		return err
 	}
 	if len(tmpl.Bytes) > yBytesLimit {
-		return fmt.Errorf("template %q embedding exceeded the size limit (%d bytes)", tmpl.Locator, yBytesLimit)
+		return fmt.Errorf("template %#q embedding exceeded the size limit (%d bytes)", tmpl.Locator, yBytesLimit)
 	}
 	return nil
 }
 
 func (tmpl *Template) embedBase(ctx context.Context, baseLocator limatype.LocatorWithDigest, embedAll bool, seen map[string]bool) error {
-	logrus.Debugf("Embedding base %q in template %q", baseLocator.URL, tmpl.Locator)
+	logrus.Debugf("Embedding base %#q in template %#q", baseLocator.URL, tmpl.Locator)
 	if err := tmpl.Unmarshal(); err != nil {
 		return err
 	}
@@ -126,7 +126,7 @@ func (tmpl *Template) embedBase(ctx context.Context, baseLocator limatype.Locato
 		return err
 	}
 	if len(tmpl.Bytes) > yBytesLimit {
-		return fmt.Errorf("template %q embedding exceeded the size limit (%d bytes)", tmpl.Locator, yBytesLimit)
+		return fmt.Errorf("template %#q embedding exceeded the size limit (%d bytes)", tmpl.Locator, yBytesLimit)
 	}
 	return nil
 }
@@ -568,7 +568,7 @@ func encodeScriptReason(script string) string {
 	line := 1
 	for i, r := range script {
 		if !(unicode.IsPrint(r) || r == '\n') {
-			return fmt.Sprintf("unprintable character %q at offset %d", r, i)
+			return fmt.Sprintf("unprintable character %#q at offset %d", r, i)
 		}
 		// maxLineLength includes final newline
 		if i-start >= maxLineLength {
@@ -612,7 +612,7 @@ func binaryString(s string) string {
 func (tmpl *Template) updateScript(field string, idx int, newName, script, file string) {
 	tag := ""
 	if reason := encodeScriptReason(script); reason != "" {
-		logrus.Infof("File %q is being base64 encoded: %s", file, reason)
+		logrus.Infof("File %#q is being base64 encoded: %s", file, reason)
 		script = binaryString(script)
 		tag = "!!binary"
 	}

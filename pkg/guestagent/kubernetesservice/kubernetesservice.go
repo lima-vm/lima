@@ -115,10 +115,10 @@ func canGetServices(ctx context.Context, kubectl, kubeconfig string) error {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to run %v: %w; stdout=%q, stderr=%q", cmd.Args, err, stdout.String(), stderr.String())
+		return fmt.Errorf("failed to run %v: %w; stdout=%#q, stderr=%#q", cmd.Args, err, stdout.String(), stderr.String())
 	}
 	if strings.TrimSpace(stdout.String()) != "yes" {
-		return fmt.Errorf("failed to run %v: expected \"yes\", got %q", cmd.Args, stdout.String())
+		return fmt.Errorf("failed to run %v: expected `yes`, got %#q", cmd.Args, stdout.String())
 	}
 	return nil
 }
@@ -133,13 +133,13 @@ func (s *ServiceWatcher) startAndStreamKubectl(cmd *exec.Cmd) error {
 	cmd.Stderr = &stderr
 
 	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("failed to run %v: %w; stderr=%q", cmd.Args, err, stderr.String())
+		return fmt.Errorf("failed to run %v: %w; stderr=%#q", cmd.Args, err, stderr.String())
 	}
 
 	readErr := s.readKubectlStream(stdout)
 	waitErr := cmd.Wait()
 	if waitErr != nil {
-		waitErr = fmt.Errorf("failed to run %v: %w; stderr=%q", cmd.Args, waitErr, stderr.String())
+		waitErr = fmt.Errorf("failed to run %v: %w; stderr=%#q", cmd.Args, waitErr, stderr.String())
 	}
 	return errors.Join(readErr, waitErr)
 }
@@ -165,12 +165,12 @@ func (s *ServiceWatcher) readKubectlStream(r io.Reader) error {
 			Object json.RawMessage `json:"object"`
 		}
 		if err := json.Unmarshal(line, &ev); err != nil {
-			return fmt.Errorf("failed to unmarshal line %q: %w", string(line), err)
+			return fmt.Errorf("failed to unmarshal line %#q: %w", string(line), err)
 		}
 
 		var svc service
 		if err := json.Unmarshal(ev.Object, &svc); err != nil {
-			return fmt.Errorf("failed to unmarshal service object: %w (line=%q)", err, line)
+			return fmt.Errorf("failed to unmarshal service object: %w (line=%#q)", err, line)
 		}
 
 		key := svc.Metadata.Namespace + "/" + svc.Metadata.Name
@@ -208,7 +208,7 @@ func (s *ServiceWatcher) GetPorts() []Entry {
 			case protocolTCP, protocolUDP:
 				// NOP
 			default:
-				logrus.Debugf("unsupported protocol %s for service %q, skipping",
+				logrus.Debugf("unsupported protocol %s for service %#q, skipping",
 					portEntry.Protocol, key)
 				continue
 			}

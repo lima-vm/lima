@@ -49,7 +49,7 @@ func writeJoliet(isoPath, label string, layout []Entry) error {
 	logrus.Debugf("Executing %v", cmd.Args)
 	b, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("failed to run %v: %w (output=%q)", cmd.Args, err, string(b))
+		return fmt.Errorf("failed to run %v: %w (output=%#q)", cmd.Args, err, string(b))
 	}
 	return nil
 }

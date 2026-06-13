@@ -61,7 +61,7 @@ func TestParseMessages_TCPv4(t *testing.T) {
 	assert.Equal(t, len(socks), 1, "unexpected number of sockets")
 	s := socks[0]
 	if s.Kind != "tcp" {
-		t.Errorf("Kind = %q want tcp", s.Kind)
+		t.Errorf("Kind = %#q want tcp", s.Kind)
 	}
 	if !s.IP.Equal(ip) {
 		t.Errorf("IP = %v want %v", s.IP, ip)
@@ -83,7 +83,7 @@ func TestParseMessages_UDPv6(t *testing.T) {
 	assert.Equal(t, len(socks), 1, "unexpected number of sockets")
 	s := socks[0]
 	if s.Kind != "udp6" {
-		t.Errorf("Kind = %q want udp6", s.Kind)
+		t.Errorf("Kind = %#q want udp6", s.Kind)
 	}
 	if !s.IP.Equal(ip) {
 		t.Errorf("IP = %v want %v", s.IP, ip)

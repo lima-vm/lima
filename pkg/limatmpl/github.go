@@ -35,7 +35,7 @@ func transformGitHubURL(ctx context.Context, input string) (string, error) {
 	}
 	org := parts[0]
 	if org == "" {
-		return "", fmt.Errorf("github: URL must contain at least an ORG, got %q", input)
+		return "", fmt.Errorf("github: URL must contain at least an ORG, got %#q", input)
 	}
 	// If REPO is omitted (github:ORG or github:ORG//PATH), default it to ORG
 	repo := cmp.Or(parts[1], org)
@@ -150,14 +150,14 @@ func resolveGitHubSymlink(ctx context.Context, org, repo, branch, filePath, orig
 		}
 	}
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("file %q not found or inaccessible: status %d", resp.Request.URL, resp.StatusCode)
+		return "", fmt.Errorf("file %#q not found or inaccessible: status %d", resp.Request.URL, resp.StatusCode)
 	}
 
 	// Read first 1KB to check the file content
 	buf := make([]byte, 1024)
 	n, err := resp.Body.Read(buf)
 	if err != nil && !errors.Is(err, io.EOF) {
-		return "", fmt.Errorf("failed to read %q content: %w", resp.Request.URL, err)
+		return "", fmt.Errorf("failed to read %#q content: %w", resp.Request.URL, err)
 	}
 	content := string(buf[:n])
 
@@ -184,11 +184,11 @@ func resolveGitHubRedirect(ctx context.Context, org, repo, defaultBranch, filePa
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("file %q not found or inaccessible: status %d", resp.Request.URL, resp.StatusCode)
+		return "", fmt.Errorf("file %#q not found or inaccessible: status %d", resp.Request.URL, resp.StatusCode)
 	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", fmt.Errorf("failed to read %q content: %w", resp.Request.URL, err)
+		return "", fmt.Errorf("failed to read %#q content: %w", resp.Request.URL, err)
 	}
 	return validateGitHubRedirect(string(body), org, origBranch, resp.Request.URL.String())
 }
@@ -198,10 +198,10 @@ func validateGitHubRedirect(body, org, origBranch, url string) (string, error) {
 	redirect = strings.TrimSpace(redirect)
 
 	if !strings.HasPrefix(redirect, "github:"+org+"/") {
-		return "", fmt.Errorf(`redirect %q is not a "github:%s" URL (from %q)`, redirect, org, url)
+		return "", fmt.Errorf("redirect %#q is not a `github:%s` URL (from %#q)", redirect, org, url)
 	}
 	if strings.ContainsRune(redirect, '@') {
-		return "", fmt.Errorf("redirect %q must not include a branch/tag/sha (from %q)", redirect, url)
+		return "", fmt.Errorf("redirect %#q must not include a branch/tag/sha (from %#q)", redirect, url)
 	}
 	// If the origBranch is empty, then we need to look up the default branch in the redirect
 	if origBranch != "" {

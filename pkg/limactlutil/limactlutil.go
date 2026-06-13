@@ -28,7 +28,7 @@ func Inspect(ctx context.Context, limactl, instName string) (*limatype.Instance,
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("failed to run %v: stdout=%q, stderr=%q: %w", cmd.Args, stdout.String(), stderr.String(), err)
+		return nil, fmt.Errorf("failed to run %v: stdout=%#q, stderr=%#q: %w", cmd.Args, stdout.String(), stderr.String(), err)
 	}
 	var inst limatype.Instance
 	if err := json.Unmarshal(stdout.Bytes(), &inst); err != nil {

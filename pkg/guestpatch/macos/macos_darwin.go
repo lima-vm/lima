@@ -61,18 +61,18 @@ func patchWriteGuestFiles(ctx context.Context, disk string) error {
 	defer func() {
 		// Detaching the data slice is enough to detach the whole ASIF.
 		if err := asifutil.DetachASIF(dataDevPath); err != nil {
-			logrus.WithError(err).Warnf("failed to detach %q (%q)", dataDevPath, disk)
+			logrus.WithError(err).Warnf("failed to detach %#q (%#q)", dataDevPath, disk)
 		}
 	}()
 
 	instDir := filepath.Dir(disk)
 	mnt := filepath.Join(instDir, filenames.MntDir)
 	if err := os.MkdirAll(mnt, 0o755); err != nil {
-		return fmt.Errorf("failed to create mount point %q: %w", mnt, err)
+		return fmt.Errorf("failed to create mount point %#q: %w", mnt, err)
 	}
 	defer func() {
 		if err := os.Remove(mnt); err != nil {
-			logrus.WithError(err).Warnf("failed to remove mount point %q", mnt)
+			logrus.WithError(err).Warnf("failed to remove mount point %#q", mnt)
 		}
 	}()
 	return writeGuestFiles(ctx, dataDevPath, mnt)
@@ -91,7 +91,7 @@ func patchFixOwnership(ctx context.Context, disk string) error {
 	dataDevPath := "/dev/" + attached.Data
 	defer func() {
 		if err := asifutil.DetachASIF(dataDevPath); err != nil {
-			logrus.WithError(err).Warnf("failed to detach %q (%q)", dataDevPath, disk)
+			logrus.WithError(err).Warnf("failed to detach %#q (%#q)", dataDevPath, disk)
 		}
 	}()
 
@@ -126,7 +126,7 @@ func writeGuestFiles(ctx context.Context, dataSliceDevice, mnt string) error {
 	}
 	defer func() {
 		if err := osutil.Umount(ctx, mnt); err != nil {
-			logrus.WithError(err).Warnf("failed to unmount %q", mnt)
+			logrus.WithError(err).Warnf("failed to unmount %#q", mnt)
 		}
 	}()
 
@@ -136,7 +136,7 @@ func writeGuestFiles(ctx context.Context, dataSliceDevice, mnt string) error {
 	}
 	for _, file := range filesToTouch {
 		if err := osutil.Touch(file); err != nil {
-			return fmt.Errorf("failed to touch %q: %w", file, err)
+			return fmt.Errorf("failed to touch %#q: %w", file, err)
 		}
 	}
 

@@ -142,7 +142,7 @@ func New(ctx context.Context, instName string, stdout io.Writer, signalCh chan o
 	if b, err := os.ReadFile(limaVersionFile); err == nil {
 		limaVersion = strings.TrimSpace(string(b))
 	} else if !errors.Is(err, os.ErrNotExist) {
-		logrus.WithError(err).Warnf("Failed to read %q", limaVersionFile)
+		logrus.WithError(err).Warnf("Failed to read %#q", limaVersionFile)
 	}
 
 	// inst.Config is loaded with FillDefault() already, so no need to care about nil pointers.
@@ -283,7 +283,7 @@ func New(ctx context.Context, instName string, stdout io.Writer, signalCh chan o
 
 func writeSSHConfigFile(sshPath, instName, instDir, instSSHAddress string, sshLocalPort int, sshOpts []string) error {
 	if instDir == "" {
-		return fmt.Errorf("directory is unknown for the instance %q", instName)
+		return fmt.Errorf("directory is unknown for the instance %#q", instName)
 	}
 	b := bytes.NewBufferString(`# This SSH config file can be passed to 'ssh -F'.
 # This file is created by Lima, but not used by Lima itself currently.
@@ -514,7 +514,7 @@ func (a *HostAgent) startRoutinesAndWait(ctx context.Context, errCh <-chan error
 	// wait for either the driver to stop or a signal to shut down
 	select {
 	case driverErr := <-errCh:
-		logrus.Infof("Driver stopped due to error: %q", driverErr)
+		logrus.Infof("Driver stopped due to error: %#q", driverErr)
 	case sig := <-a.signalCh:
 		logrus.Infof("Received %s, shutting down the host agent", osutil.SignalName(sig))
 	}
@@ -575,9 +575,9 @@ sudo ln -sf "${SSH_AUTH_SOCK}" /run/host-services/ssh-auth.sock
 sudo chown -R "${USER}" /run/host-services`
 		faDesc := "linking ssh auth socket to static location /run/host-services/ssh-auth.sock"
 		stdout, stderr, err := ssh.ExecuteScript(a.instSSHAddress, a.sshLocalPort, a.sshConfig, faScript, faDesc)
-		logrus.Debugf("stdout=%q, stderr=%q, err=%v", stdout, stderr, err)
+		logrus.Debugf("stdout=%#q, stderr=%#q, err=%v", stdout, stderr, err)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("stdout=%q, stderr=%q: %w", stdout, stderr, err))
+			errs = append(errs, fmt.Errorf("stdout=%#q, stderr=%#q: %w", stdout, stderr, err))
 		}
 	}
 	if *a.instConfig.MountType == limatype.REVSSHFS && !*a.instConfig.Plain {
@@ -604,7 +604,7 @@ sudo chown -R "${USER}" /run/host-services`
 					unlockErrs = append(unlockErrs, inspectErr)
 					continue
 				}
-				logrus.Infof("Unmounting disk %q", disk.Name)
+				logrus.Infof("Unmounting disk %#q", disk.Name)
 				if unlockErr := disk.Unlock(); unlockErr != nil {
 					unlockErrs = append(unlockErrs, unlockErr)
 				}
@@ -900,7 +900,7 @@ func (a *HostAgent) processGuestAgentEvents(ctx context.Context, client *guestag
 	onEvent := func(ev *guestagentapi.Event) {
 		logrus.Debugf("guest agent event: %+v", ev)
 		for _, f := range ev.Errors {
-			logrus.Warnf("received error from the guest: %q", f)
+			logrus.Warnf("received error from the guest: %#q", f)
 		}
 		// History of the default value of useSSHFwd:
 		// - v0.1.0:        true  (effectively)
@@ -911,7 +911,7 @@ func (a *HostAgent) processGuestAgentEvents(ctx context.Context, client *guestag
 		if envVar := os.Getenv("LIMA_SSH_PORT_FORWARDER"); envVar != "" {
 			b, err := strconv.ParseBool(envVar)
 			if err != nil {
-				logrus.WithError(err).Warnf("invalid LIMA_SSH_PORT_FORWARDER value %q", envVar)
+				logrus.WithError(err).Warnf("invalid LIMA_SSH_PORT_FORWARDER value %#q", envVar)
 			} else {
 				useSSHFwd = b
 			}
@@ -948,7 +948,7 @@ func executeSSH(ctx context.Context, sshConfig *ssh.SSHConfig, sshAddress string
 	args = append(args, command...)
 	cmd := exec.CommandContext(ctx, sshConfig.Binary(), args...)
 	if out, err := cmd.Output(); err != nil {
-		return fmt.Errorf("failed to run %v: %q: %w", cmd.Args, string(out), err)
+		return fmt.Errorf("failed to run %v: %#q: %w", cmd.Args, string(out), err)
 	}
 	return nil
 }
@@ -1024,54 +1024,54 @@ var forwardSSH = func(ctx context.Context, sshConfig *ssh.SSHConfig, sshAddress 
 		switch verb {
 		case verbForward:
 			if reverse {
-				logrus.Infof("Forwarding %q (host) to %q (guest)", local, remote)
+				logrus.Infof("Forwarding %#q (host) to %#q (guest)", local, remote)
 				if err := executeSSH(ctx, sshConfig, sshAddress, sshPort, "rm", "-f", remote); err != nil {
-					logrus.WithError(err).Warnf("Failed to clean up %q (guest) before setting up forwarding", remote)
+					logrus.WithError(err).Warnf("Failed to clean up %#q (guest) before setting up forwarding", remote)
 				}
 			} else {
-				logrus.Infof("Forwarding %q (guest) to %q (host)", remote, local)
+				logrus.Infof("Forwarding %#q (guest) to %#q (host)", remote, local)
 				if err := os.RemoveAll(local); err != nil {
-					logrus.WithError(err).Warnf("Failed to clean up %q (host) before setting up forwarding", local)
+					logrus.WithError(err).Warnf("Failed to clean up %#q (host) before setting up forwarding", local)
 				}
 			}
 			if err := os.MkdirAll(filepath.Dir(local), 0o750); err != nil {
-				return fmt.Errorf("can't create directory for local socket %q: %w", local, err)
+				return fmt.Errorf("can't create directory for local socket %#q: %w", local, err)
 			}
 		case verbCancel:
 			if reverse {
-				logrus.Infof("Stopping forwarding %q (host) to %q (guest)", local, remote)
+				logrus.Infof("Stopping forwarding %#q (host) to %#q (guest)", local, remote)
 				if err := executeSSH(ctx, sshConfig, sshAddress, sshPort, "rm", "-f", remote); err != nil {
-					logrus.WithError(err).Warnf("Failed to clean up %q (guest) after stopping forwarding", remote)
+					logrus.WithError(err).Warnf("Failed to clean up %#q (guest) after stopping forwarding", remote)
 				}
 			} else {
-				logrus.Infof("Stopping forwarding %q (guest) to %q (host)", remote, local)
+				logrus.Infof("Stopping forwarding %#q (guest) to %#q (host)", remote, local)
 				defer func() {
 					if err := os.RemoveAll(local); err != nil {
-						logrus.WithError(err).Warnf("Failed to clean up %q (host) after stopping forwarding", local)
+						logrus.WithError(err).Warnf("Failed to clean up %#q (host) after stopping forwarding", local)
 					}
 				}()
 			}
 		default:
-			panic(fmt.Errorf("invalid verb %q", verb))
+			panic(fmt.Errorf("invalid verb %#q", verb))
 		}
 	}
 	cmd := exec.CommandContext(ctx, sshConfig.Binary(), args...)
-	logrus.Debugf("Running %q", cmd)
+	logrus.Debugf("Running %#q", cmd)
 	if out, err := cmd.Output(); err != nil {
 		if verb == verbForward && strings.HasPrefix(local, "/") {
 			if reverse {
-				logrus.WithError(err).Warnf("Failed to set up forward from %q (host) to %q (guest)", local, remote)
+				logrus.WithError(err).Warnf("Failed to set up forward from %#q (host) to %#q (guest)", local, remote)
 				if err := executeSSH(ctx, sshConfig, sshAddress, sshPort, "rm", "-f", remote); err != nil {
-					logrus.WithError(err).Warnf("Failed to clean up %q (guest) after forwarding failed", remote)
+					logrus.WithError(err).Warnf("Failed to clean up %#q (guest) after forwarding failed", remote)
 				}
 			} else {
-				logrus.WithError(err).Warnf("Failed to set up forward from %q (guest) to %q (host)", remote, local)
+				logrus.WithError(err).Warnf("Failed to set up forward from %#q (guest) to %#q (host)", remote, local)
 				if removeErr := os.RemoveAll(local); removeErr != nil {
-					logrus.WithError(removeErr).Warnf("Failed to clean up %q (host) after forwarding failed", local)
+					logrus.WithError(removeErr).Warnf("Failed to clean up %#q (host) after forwarding failed", local)
 				}
 			}
 		}
-		return fmt.Errorf("failed to run %v: %q: %w", cmd.Args, string(out), err)
+		return fmt.Errorf("failed to run %v: %#q: %w", cmd.Args, string(out), err)
 	}
 	return nil
 }
@@ -1238,15 +1238,15 @@ func copyToHost(ctx context.Context, sshConfig *ssh.SSHConfig, sshAddress string
 	)
 	logrus.Infof("Copying config from %s to %s", remote, local)
 	if err := os.MkdirAll(filepath.Dir(local), 0o700); err != nil {
-		return fmt.Errorf("can't create directory for local file %q: %w", local, err)
+		return fmt.Errorf("can't create directory for local file %#q: %w", local, err)
 	}
 	cmd := exec.CommandContext(ctx, sshConfig.Binary(), args...)
 	out, err := cmd.Output()
 	if err != nil {
-		return fmt.Errorf("failed to run %v: %q: %w", cmd.Args, string(out), err)
+		return fmt.Errorf("failed to run %v: %#q: %w", cmd.Args, string(out), err)
 	}
 	if err := os.WriteFile(local, out, 0o600); err != nil {
-		return fmt.Errorf("can't write to local file %q: %w", local, err)
+		return fmt.Errorf("can't write to local file %#q: %w", local, err)
 	}
 	return nil
 }

@@ -30,7 +30,7 @@ func StopGracefully(ctx context.Context, inst *limatype.Instance, isRestart bool
 			logrus.Warn("The instance is not running, continuing with the restart")
 			return nil
 		}
-		return fmt.Errorf("expected status %q, got %q (maybe use `limactl stop -f`?)", limatype.StatusRunning, inst.Status)
+		return fmt.Errorf("expected status %#q, got %#q (maybe use `limactl stop -f`?)", limatype.StatusRunning, inst.Status)
 	}
 
 	begin := time.Now() // used for logrus propagation
@@ -77,7 +77,7 @@ func waitForHostAgentTermination(ctx context.Context, inst *limatype.Instance, b
 	}
 
 	if !receivedExitingEvent {
-		return errors.New("did not receive an event with the \"exiting\" status")
+		return errors.New("did not receive an event with the `exiting` status")
 	}
 
 	return nil
@@ -136,11 +136,11 @@ func StopForcibly(inst *limatype.Instance) {
 		diskName := d.Name
 		disk, err := store.InspectDisk(diskName, d.FSType)
 		if err != nil {
-			logrus.Warnf("Disk %q does not exist", diskName)
+			logrus.Warnf("Disk %#q does not exist", diskName)
 			continue
 		}
 		if err := disk.Unlock(); err != nil {
-			logrus.Warnf("Failed to unlock disk %q. To use, run `limactl disk unlock %v`", diskName, diskName)
+			logrus.Warnf("Failed to unlock disk %#q. To use, run `limactl disk unlock %v`", diskName, diskName)
 		}
 	}
 
@@ -154,7 +154,7 @@ func StopForcibly(inst *limatype.Instance) {
 	}
 
 	globPatterns := strings.ReplaceAll(strings.Join(filenames.TmpFileSuffixes, " "), ".", "*.")
-	logrus.Infof("Removing %s under %q", globPatterns, inst.Dir)
+	logrus.Infof("Removing %s under %#q", globPatterns, inst.Dir)
 
 	fi, err := os.ReadDir(inst.Dir)
 	if err != nil {
@@ -165,7 +165,7 @@ func StopForcibly(inst *limatype.Instance) {
 		path := filepath.Join(inst.Dir, f.Name())
 		for _, suffix := range filenames.TmpFileSuffixes {
 			if strings.HasSuffix(path, suffix) {
-				logrus.Infof("Removing %q", path)
+				logrus.Infof("Removing %#q", path)
 				if err := os.Remove(path); err != nil {
 					if errors.Is(err, os.ErrNotExist) {
 						logrus.Debug(err.Error())

@@ -47,7 +47,7 @@ func Read(ctx context.Context, name, locator string) (*Template, error) {
 	isTemplateURL, templateName := SeemsTemplateURL(locator)
 	switch {
 	case isTemplateURL:
-		logrus.Debugf("interpreting argument %q as a template name %q", locator, templateName)
+		logrus.Debugf("interpreting argument %#q as a template name %#q", locator, templateName)
 		if tmpl.Name == "" {
 			// e.g., templateName = "deprecated/centos-7.yaml" , tmpl.Name = "centos-7"
 			tmpl.Name, err = InstNameFromYAMLPath(templateName)
@@ -66,7 +66,7 @@ func Read(ctx context.Context, name, locator string) (*Template, error) {
 				return nil, err
 			}
 		}
-		logrus.Debugf("interpreting argument %q as a http url for instance %q", locator, tmpl.Name)
+		logrus.Debugf("interpreting argument %#q as a http url for instance %#q", locator, tmpl.Name)
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, locator, http.NoBody)
 		if err != nil {
 			return nil, err
@@ -87,10 +87,10 @@ func Read(ctx context.Context, name, locator string) (*Template, error) {
 				return nil, err
 			}
 		}
-		logrus.Debugf("interpreting argument %q as a file URL for instance %q", locator, tmpl.Name)
+		logrus.Debugf("interpreting argument %#q as a file URL for instance %#q", locator, tmpl.Name)
 		filePath := strings.TrimPrefix(locator, "file://")
 		if !filepath.IsAbs(filePath) {
-			return nil, fmt.Errorf("file URL %q is not an absolute path", locator)
+			return nil, fmt.Errorf("file URL %#q is not an absolute path", locator)
 		}
 		r, err := os.Open(filePath)
 		if err != nil {
@@ -113,7 +113,7 @@ func Read(ctx context.Context, name, locator string) (*Template, error) {
 				return nil, err
 			}
 		}
-		logrus.Debugf("interpreting argument %q as a file path for instance %q", locator, tmpl.Name)
+		logrus.Debugf("interpreting argument %#q as a file path for instance %#q", locator, tmpl.Name)
 		if locator, err = filepath.Abs(locator); err != nil {
 			return nil, err
 		}
@@ -202,7 +202,7 @@ func imageTemplate(tmpl *Template, locator string) bool {
 	}
 	if imageOS == "" {
 		imageOS = limatype.LINUX
-		logrus.Debugf("cannot determine image OS from URL %q; assuming %q", locator, imageOS)
+		logrus.Debugf("cannot determine image OS from URL %#q; assuming %#q", locator, imageOS)
 	}
 
 	var imageArch limatype.Arch
@@ -219,7 +219,7 @@ func imageTemplate(tmpl *Template, locator string) bool {
 			// Other architectures were never supported for macOS guests
 		} else {
 			imageArch = limatype.NewArch(runtime.GOARCH)
-			logrus.Warnf("cannot determine image arch from URL %q; assuming %q", locator, imageArch)
+			logrus.Warnf("cannot determine image arch from URL %#q; assuming %#q", locator, imageArch)
 		}
 	}
 
@@ -331,7 +331,7 @@ func InstNameFromYAMLPath(yamlPath string) (string, error) {
 	// "." is allowed in instance names, but replaced to "-" for hostnames.
 	// e.g., yaml: "ubuntu-24.04.yaml" , instance name: "ubuntu-24.04", hostname: "lima-ubuntu-24-04"
 	if err := identifiers.Validate(s); err != nil {
-		return "", fmt.Errorf("filename %q is invalid: %w", yamlPath, err)
+		return "", fmt.Errorf("filename %#q is invalid: %w", yamlPath, err)
 	}
 	return s, nil
 }
@@ -348,7 +348,7 @@ func transformCustomURL(ctx context.Context, locator string) (string, error) {
 		}
 		// Fix malformed "template:" URLs.
 		newLocator := "template:" + path.Join(u.Host, u.Path)
-		logrus.Warnf("Template locator %q should be written %q since Lima v2.0", locator, newLocator)
+		logrus.Warnf("Template locator %#q should be written %#q since Lima v2.0", locator, newLocator)
 		return newLocator, nil
 	}
 
@@ -380,10 +380,10 @@ func transformCustomURL(ctx context.Context, locator string) (string, error) {
 		if errors.As(err, &exitErr) {
 			stderrMsg := string(exitErr.Stderr)
 			if stderrMsg != "" {
-				return "", fmt.Errorf("command %q failed: %s", cmd.String(), strings.TrimSpace(stderrMsg))
+				return "", fmt.Errorf("command %#q failed: %s", cmd.String(), strings.TrimSpace(stderrMsg))
 			}
 		}
-		return "", fmt.Errorf("command %q failed: %w", cmd.String(), err)
+		return "", fmt.Errorf("command %#q failed: %w", cmd.String(), err)
 	}
 	return strings.TrimSpace(string(stdout)), nil
 }
@@ -408,8 +408,8 @@ func TransformCustomURL(ctx context.Context, locator string) (string, error) {
 			}
 			return newLocator, nil
 		}
-		logrus.Debugf("Locator %q replaced with %q", locator, newLocator)
+		logrus.Debugf("Locator %#q replaced with %#q", locator, newLocator)
 		locator = newLocator
 	}
-	return "", fmt.Errorf("custom locator %q has a redirect loop", origLocator)
+	return "", fmt.Errorf("custom locator %#q has a redirect loop", origLocator)
 }
