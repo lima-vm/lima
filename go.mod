@@ -30,11 +30,11 @@ require (
 	github.com/lima-vm/sshocker v0.3.9 // gomodjail:unconfined
 	github.com/mattn/go-isatty v0.0.22
 	github.com/mattn/go-shellwords v1.0.13
-	github.com/mdlayher/netlink v1.11.2
-	github.com/mdlayher/vsock v1.3.0 // gomodjail:unconfined
+	github.com/mdlayher/netlink v1.11.1
+	github.com/mdlayher/vsock v1.2.1 // gomodjail:unconfined
 	github.com/miekg/dns v1.1.72 // gomodjail:unconfined
 	github.com/mikefarah/yq/v4 v4.53.2
-	github.com/modelcontextprotocol/go-sdk v1.6.1
+	github.com/modelcontextprotocol/go-sdk v1.6.0
 	github.com/nxadm/tail v1.4.11 // gomodjail:unconfined
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/pb33f/ordered-map/v2 v2.3.1
@@ -46,9 +46,9 @@ require (
 	github.com/sirupsen/logrus v1.9.4
 	github.com/spf13/cobra v1.10.2 // gomodjail:unconfined
 	github.com/spf13/pflag v1.0.10
-	golang.org/x/net v0.55.0
-	golang.org/x/sync v0.21.0
-	golang.org/x/sys v0.46.0 // gomodjail:unconfined
+	golang.org/x/net v0.54.0
+	golang.org/x/sync v0.20.0
+	golang.org/x/sys v0.45.0 // gomodjail:unconfined
 	golang.org/x/text v0.37.0
 	google.golang.org/grpc v1.81.1
 	google.golang.org/protobuf v1.36.11 // gomodjail:unconfined

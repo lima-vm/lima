@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"runtime"
 	"strings"
 	"sync"
@@ -21,7 +22,6 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/networks/usernet"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/store"
-	pkgsudoers "github.com/lima-vm/lima/v2/pkg/sudoers"
 )
 
 func Reconcile(ctx context.Context, newInst string) error {
@@ -69,8 +69,12 @@ func Reconcile(ctx context.Context, newInst string) error {
 }
 
 func sudo(ctx context.Context, user, group, command string) error {
+	args := []string{"--user", user, "--group", group, "--non-interactive"}
+	args = append(args, strings.Split(command, " ")...)
 	var stdout, stderr bytes.Buffer
-	cmd := pkgsudoers.NewCommand(ctx, user, group, nil, &stdout, &stderr, "", strings.Split(command, " ")...)
+	cmd := exec.CommandContext(ctx, "sudo", args...)
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
 	logrus.Debugf("Running: %v", cmd.Args)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to run %v: stdout=%q, stderr=%q: %w",
@@ -124,7 +128,9 @@ func startDaemon(ctx context.Context, cfg *networks.Config, name, daemon string)
 		return err
 	}
 
-	cmd := pkgsudoers.NewCommand(ctx, user.User, user.Group, nil, nil, nil, "", strings.Split(cfg.StartCmd(name, daemon), " ")...)
+	args := []string{"--user", user.User, "--group", user.Group, "--non-interactive"}
+	args = append(args, strings.Split(cfg.StartCmd(name, daemon), " ")...)
+	cmd := exec.CommandContext(ctx, "sudo", args...)
 	// set directory to a path the daemon user has read access to because vde_switch calls getcwd() which
 	// can fail when called from directories like ~/Downloads, which has 700 permissions
 	cmd.Dir = cfg.Paths.VarRun

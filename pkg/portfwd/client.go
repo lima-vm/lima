@@ -5,7 +5,6 @@ package portfwd
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"sync/atomic"
@@ -52,20 +51,17 @@ func DialContextToGRPCTunnel(client *guestagentclient.GuestAgentClient) func(ctx
 	var connectionCounter atomic.Uint32
 	return func(_ context.Context, network, addr string) (net.Conn, error) {
 		// Passed context.Context is used for timeout on initiate connection, not for the lifetime of the connection.
-		// Use a dedicated context so CloseRead can unblock a goroutine waiting in stream.Recv().
-		streamCtx, cancel := context.WithCancel(context.Background())
-		stream, err := client.Tunnel(streamCtx)
+		// We use context.Background() here to avoid unexpected cancellation.
+		stream, err := client.Tunnel(context.Background())
 		if err != nil {
-			cancel()
 			return nil, fmt.Errorf("could not open tunnel for addr: %s error:%w", addr, err)
 		}
 		// Handshake message to start tunnel
 		id := fmt.Sprintf("%s-%s-%d", network, addr, connectionCounter.Add(1))
 		if err := stream.Send(&api.TunnelMessage{Id: id, Protocol: network, GuestAddr: addr}); err != nil {
-			cancel()
 			return nil, fmt.Errorf("could not start tunnel for id: %s addr: %s error:%w", id, addr, err)
 		}
-		rw := &GrpcClientRW{stream: stream, cancel: cancel, id: id, addr: addr, protocol: network}
+		rw := &GrpcClientRW{stream: stream, id: id, addr: addr, protocol: network}
 		return rw, nil
 	}
 }
@@ -76,7 +72,6 @@ type GrpcClientRW struct {
 
 	protocol string
 	stream   api.GuestService_TunnelClient
-	cancel   context.CancelFunc
 }
 
 var _ net.Conn = (*GrpcClientRW)(nil)
@@ -105,24 +100,7 @@ func (g *GrpcClientRW) Read(p []byte) (n int, err error) {
 
 func (g *GrpcClientRW) Close() error {
 	logrus.Debugf("closing GrpcClientRW for id: %s", g.id)
-	err := g.stream.CloseSend()
-	g.cancel()
-	return err
-}
-
-func (g *GrpcClientRW) CloseRead() error {
-	logrus.Debugf("closing read GrpcClientRW for id: %s", g.id)
-	g.cancel()
-	return nil
-}
-
-func (g *GrpcClientRW) CloseWrite() error {
-	logrus.Debugf("closing write GrpcClientRW for id: %s", g.id)
-	err := g.stream.CloseSend()
-	if errors.Is(err, context.Canceled) {
-		return nil
-	}
-	return err
+	return g.stream.CloseSend()
 }
 
 func (g *GrpcClientRW) LocalAddr() net.Addr {

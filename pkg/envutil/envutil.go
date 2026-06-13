@@ -49,7 +49,7 @@ func validatePattern(pattern string) error {
 	if matches := invalidChar.FindStringSubmatch(pattern); matches != nil {
 		invalidCharacter := matches[1]
 		pos := strings.Index(pattern, invalidCharacter)
-		return fmt.Errorf("pattern %#q contains invalid character %#q at position %d",
+		return fmt.Errorf("pattern %q contains invalid character %q at position %d",
 			pattern, invalidCharacter, pos)
 	}
 	return nil
@@ -156,7 +156,7 @@ func filterEnvironmentWithLists(env, allowList, blockList []string) []string {
 		}
 
 		if matchesAnyPattern(name, blockList) {
-			logrus.Debugf("Blocked env variable %#q", name)
+			logrus.Debugf("Blocked env variable %q", name)
 			continue
 		}
 

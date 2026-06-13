@@ -191,7 +191,7 @@ func Download(ctx context.Context, local, remote string, opts ...Opt) (*Result, 
 			return nil, err
 		}
 		if _, err := os.Stat(localPath); err == nil {
-			logrus.Debugf("file %#q already exists, skipping downloading from %#q (and skipping digest validation)", localPath, remote)
+			logrus.Debugf("file %q already exists, skipping downloading from %q (and skipping digest validation)", localPath, remote)
 			res := &Result{
 				Status:          StatusSkipped,
 				ValidatedDigest: false,
@@ -267,9 +267,9 @@ func getCached(ctx context.Context, localPath, remote string, o options) (*Resul
 		return nil, nil
 	}
 	ext := path.Ext(remote)
-	logrus.Debugf("file %#q is cached as %#q", localPath, shadData)
+	logrus.Debugf("file %q is cached as %q", localPath, shadData)
 	if _, err := os.Stat(shadDigest); err == nil {
-		logrus.Debugf("Comparing digest %#q with the cached digest file %#q, not computing the actual digest of %#q",
+		logrus.Debugf("Comparing digest %q with the cached digest file %q, not computing the actual digest of %q",
 			o.expectedDigest, shadDigest, shadData)
 		if err := validateCachedDigest(shadDigest, o.expectedDigest); err != nil {
 			return nil, err
@@ -285,7 +285,7 @@ func getCached(ctx context.Context, localPath, remote string, o options) (*Resul
 				return nil, err
 			}
 		} else {
-			logrus.Infof("Re-downloading digest-less image: last-modified mismatch (cached: %#q, remote: %#q)", lmCached, lmRemote)
+			logrus.Infof("Re-downloading digest-less image: last-modified mismatch (cached: %q, remote: %q)", lmCached, lmRemote)
 			return nil, nil
 		}
 	}
@@ -415,7 +415,7 @@ func cacheDigestPath(shad string, expectedDigest digest.Digest) (string, error) 
 	if expectedDigest != "" {
 		algo := expectedDigest.Algorithm().String()
 		if strings.Contains(algo, "/") || strings.Contains(algo, "\\") {
-			return "", fmt.Errorf("invalid digest algorithm %#q", algo)
+			return "", fmt.Errorf("invalid digest algorithm %q", algo)
 		}
 		shadDigest = filepath.Join(shad, algo+".digest")
 	}
@@ -435,11 +435,11 @@ func canonicalLocalPath(s string) (string, error) {
 		return "", errors.New("got empty path")
 	}
 	if !IsLocal(s) {
-		return "", fmt.Errorf("got non-local path: %#q", s)
+		return "", fmt.Errorf("got non-local path: %q", s)
 	}
 	if res, ok := strings.CutPrefix(s, "file://"); ok {
 		if !filepath.IsAbs(res) {
-			return "", fmt.Errorf("got non-absolute path %#q", res)
+			return "", fmt.Errorf("got non-absolute path %q", res)
 		}
 		return res, nil
 	}
@@ -453,7 +453,7 @@ func copyLocal(ctx context.Context, dst, src, ext string, decompress bool, descr
 	}
 
 	if expectedDigest != "" {
-		logrus.Debugf("verifying digest of local file %#q (%s)", srcPath, expectedDigest)
+		logrus.Debugf("verifying digest of local file %q (%s)", srcPath, expectedDigest)
 	}
 	if err := validateLocalFileDigest(srcPath, expectedDigest); err != nil {
 		return err
@@ -558,7 +558,7 @@ func decompressLocal(ctx context.Context, decompressCmd, dst, src, ext, descript
 		if description == "" {
 			description = filepath.Base(src)
 		}
-		logrus.Infof("Decompressing %s", description)
+		logrus.Infof("Decompressing %s\n", description)
 	}
 	bar.Start()
 	err = cmd.Run()
@@ -582,7 +582,7 @@ func validateCachedDigest(shadDigest string, expectedDigest digest.Digest) error
 	}
 	shadDigestS := strings.TrimSpace(string(shadDigestB))
 	if shadDigestS != expectedDigest.String() {
-		return fmt.Errorf("expected digest %#q, got %#q", expectedDigest, shadDigestS)
+		return fmt.Errorf("expected digest %q, got %q", expectedDigest, shadDigestS)
 	}
 	return nil
 }
@@ -596,7 +596,7 @@ func validateLocalFileDigest(localPath string, expectedDigest digest.Digest) err
 	}
 	algo := expectedDigest.Algorithm()
 	if !algo.Available() {
-		return fmt.Errorf("expected digest algorithm %#q is not available", algo)
+		return fmt.Errorf("expected digest algorithm %q is not available", algo)
 	}
 	r, err := os.Open(localPath)
 	if err != nil {
@@ -608,7 +608,7 @@ func validateLocalFileDigest(localPath string, expectedDigest digest.Digest) err
 		return err
 	}
 	if actualDigest != expectedDigest {
-		return fmt.Errorf("expected digest %#q, got %#q", expectedDigest, actualDigest)
+		return fmt.Errorf("expected digest %q, got %q", expectedDigest, actualDigest)
 	}
 	return nil
 }
@@ -654,7 +654,7 @@ func downloadHTTP(ctx context.Context, localPath, lastModified, contentType, url
 	if localPath == "" {
 		return errors.New("downloadHTTP: got empty localPath")
 	}
-	logrus.Debugf("downloading %#q into %#q", url, localPath)
+	logrus.Debugf("downloading %q into %q", url, localPath)
 
 	resp, err := httpclientutil.Get(ctx, http.DefaultClient, url)
 	if err != nil {
@@ -694,7 +694,7 @@ func downloadHTTP(ctx context.Context, localPath, lastModified, contentType, url
 	if expectedDigest != "" {
 		algo := expectedDigest.Algorithm()
 		if !algo.Available() {
-			return fmt.Errorf("unsupported digest algorithm %#q", algo)
+			return fmt.Errorf("unsupported digest algorithm %q", algo)
 		}
 		digester = algo.Digester()
 		hasher := digester.Hash()
@@ -718,7 +718,7 @@ func downloadHTTP(ctx context.Context, localPath, lastModified, contentType, url
 	if digester != nil {
 		actualDigest := digester.Digest()
 		if actualDigest != expectedDigest {
-			return fmt.Errorf("expected digest %#q, got %#q", expectedDigest, actualDigest)
+			return fmt.Errorf("expected digest %q, got %q", expectedDigest, actualDigest)
 		}
 	}
 
@@ -788,6 +788,6 @@ func RemoveAllCacheDir(opts ...Opt) error {
 	if o.cacheDir == "" {
 		return nil
 	}
-	logrus.Infof("Pruning %#q", o.cacheDir)
+	logrus.Infof("Pruning %q", o.cacheDir)
 	return os.RemoveAll(o.cacheDir)
 }

@@ -31,7 +31,7 @@ func startVM(ctx context.Context, distroName string) error {
 		distroName,
 	}, executil.WithContext(ctx))
 	if err != nil {
-		return fmt.Errorf("failed to run `wsl.exe --distribution %s`: %w (out=%#q)",
+		return fmt.Errorf("failed to run `wsl.exe --distribution %s`: %w (out=%q)",
 			distroName, err, out)
 	}
 	return nil
@@ -40,7 +40,7 @@ func startVM(ctx context.Context, distroName string) error {
 // initVM calls WSL to import a new VM specifically for Lima.
 func initVM(ctx context.Context, instanceDir, distroName string) error {
 	baseDisk := filepath.Join(instanceDir, filenames.BaseDiskLegacy)
-	logrus.Infof("Importing distro from %#q to %#q", baseDisk, instanceDir)
+	logrus.Infof("Importing distro from %q to %q", baseDisk, instanceDir)
 	out, err := executil.RunUTF16leCommand([]string{
 		"wsl.exe",
 		"--import",
@@ -49,7 +49,7 @@ func initVM(ctx context.Context, instanceDir, distroName string) error {
 		baseDisk,
 	}, executil.WithContext(ctx))
 	if err != nil {
-		return fmt.Errorf("failed to run `wsl.exe --import %s %s %s`: %w (out=%#q)",
+		return fmt.Errorf("failed to run `wsl.exe --import %s %s %s`: %w (out=%q)",
 			distroName, instanceDir, baseDisk, err, out)
 	}
 	return nil
@@ -63,7 +63,7 @@ func stopVM(ctx context.Context, distroName string) error {
 		distroName,
 	}, executil.WithContext(ctx))
 	if err != nil {
-		return fmt.Errorf("failed to run `wsl.exe --terminate %s`: %w (out=%#q)",
+		return fmt.Errorf("failed to run `wsl.exe --terminate %s`: %w (out=%q)",
 			distroName, err, out)
 	}
 	return nil
@@ -125,11 +125,11 @@ func provisionVM(ctx context.Context, instanceDir, instanceName, distroName stri
 		)
 		out, err := cmd.CombinedOutput()
 		os.RemoveAll(limaBootFileWinPath)
-		logrus.Debugf("%v: %#q", cmd.Args, string(out))
+		logrus.Debugf("%v: %q", cmd.Args, string(out))
 		if err != nil {
 			errCh <- fmt.Errorf(
 				"error running wslCommand that executes boot.sh (%v): %w, "+
-					"check /var/log/lima-init.log for more details (out=%#q)", cmd.Args, err, string(out))
+					"check /var/log/lima-init.log for more details (out=%q)", cmd.Args, err, string(out))
 		}
 
 		<-ctx.Done()
@@ -172,7 +172,7 @@ func unregisterVM(ctx context.Context, distroName string) error {
 		distroName,
 	}, executil.WithContext(ctx))
 	if err != nil {
-		return fmt.Errorf("failed to run `wsl.exe --unregister %s`: %w (out=%#q)",
+		return fmt.Errorf("failed to run `wsl.exe --unregister %s`: %w (out=%q)",
 			distroName, err, out)
 	}
 	return nil
@@ -213,22 +213,22 @@ func getWslStatus(ctx context.Context, instName string) (string, error) {
 		"--verbose",
 	}, executil.WithContext(ctx))
 	if err != nil {
-		return "", fmt.Errorf("failed to run `wsl --list --verbose`, err: %w (out=%#q)", err, out)
+		return "", fmt.Errorf("failed to run `wsl --list --verbose`, err: %w (out=%q)", err, out)
 	}
 
 	if out == "" {
-		return limatype.StatusBroken, fmt.Errorf("failed to read instance state for instance %#q, try running `wsl --list --verbose` to debug, err: %w", instName, err)
+		return limatype.StatusBroken, fmt.Errorf("failed to read instance state for instance %q, try running `wsl --list --verbose` to debug, err: %w", instName, err)
 	}
 
 	// Check for edge cases first
 	if strings.Contains(out, "Windows Subsystem for Linux has no installed distributions.") {
 		if strings.Contains(out, "Wsl/WSL_E_DEFAULT_DISTRO_NOT_FOUND") {
 			return limatype.StatusBroken, fmt.Errorf(
-				"failed to read instance state for instance %#q because no distro is installed,"+
+				"failed to read instance state for instance %q because no distro is installed,"+
 					"try running `wsl --install -d Ubuntu` and then re-running Lima", instName)
 		}
 		return limatype.StatusBroken, fmt.Errorf(
-			"failed to read instance state for instance %#q because there is no WSL kernel installed,"+
+			"failed to read instance state for instance %q because there is no WSL kernel installed,"+
 				"this usually happens when WSL was installed for another user, but never for your user."+
 				"Try running `wsl --install -d Ubuntu` and `wsl --update`, and then re-running Lima", instName)
 	}
@@ -287,5 +287,5 @@ func getSSHAddress(ctx context.Context, instName string) (string, error) {
 			return strings.TrimSpace(string(out)), nil
 		}
 	}
-	return "", fmt.Errorf("failed to get hostname for instance %#q, err: %w (out=%#q)", instName, err, string(out))
+	return "", fmt.Errorf("failed to get hostname for instance %q, err: %w (out=%q)", instName, err, string(out))
 }

@@ -119,15 +119,3 @@ test_copy_file_from_instance_to_host() {
 @test "copy file from Lima instance to host (rsync)" {
     test_copy_file_from_instance_to_host rsync
 }
-
-@test "copy file from Lima instance to Lima instance (auto)" {
-    limactl shell "$INSTANCE" -- bash -c 'echo "hello" > /tmp/test_limactl_copy/hello.txt'
-
-    limactl copy --backend=auto \
-        "$INSTANCE":/tmp/test_limactl_copy/hello.txt \
-        "$INSTANCE":/tmp
-
-    run -0 limactl shell "$INSTANCE" -- cat /tmp/hello.txt
-    assert_output "hello"
-    run -0 limactl shell "$INSTANCE" -- rm -f /tmp/hello.txt
-}

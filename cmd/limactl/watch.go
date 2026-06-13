@@ -238,11 +238,11 @@ func isInstanceDir(path string) bool {
 }
 
 func printStatus(out io.Writer, msg string) {
-	fmt.Fprintf(out, "%s %s\n", time.Now().Format(time.DateTime), msg)
+	fmt.Fprintf(out, "%s %s\n", time.Now().Format("2006-01-02 15:04:05"), msg)
 }
 
 func printHumanReadableEvent(out io.Writer, instName string, ev events.Event) {
-	timestamp := ev.Time.Format(time.DateTime)
+	timestamp := ev.Time.Format("2006-01-02 15:04:05")
 
 	printEvent := func(msg string) {
 		fmt.Fprintf(out, "%s %s | %s\n", timestamp, instName, msg)

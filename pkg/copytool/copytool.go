@@ -72,18 +72,14 @@ func New(ctx context.Context, backend string, paths []string, opts *Options) (Co
 			tool CopyTool
 			err  error
 		)
-
-		// For rsync, the source and destination cannot both be remote
-		if !hasRemoteSourceAndDestination(ctx, paths) {
-			tool, err = newRsyncTool(opts)
-			if err == nil {
-				if tool.IsAvailableOnGuest(ctx, paths) {
-					return tool, nil
-				}
-				logrus.Debugf("rsync not available on guest(s), falling back to scp")
-			} else {
-				logrus.Debugf("rsync not found on host, falling back to scp: %v", err)
+		tool, err = newRsyncTool(opts)
+		if err == nil {
+			if tool.IsAvailableOnGuest(ctx, paths) {
+				return tool, nil
 			}
+			logrus.Debugf("rsync not available on guest(s), falling back to scp")
+		} else {
+			logrus.Debugf("rsync not found on host, falling back to scp: %v", err)
 		}
 
 		tool, err = newSCPTool(opts)
@@ -92,28 +88,8 @@ func New(ctx context.Context, backend string, paths []string, opts *Options) (Co
 		}
 		return tool, nil
 	default:
-		return nil, fmt.Errorf("invalid backend %#q, must be one of: scp, rsync, auto", backend)
+		return nil, fmt.Errorf("invalid backend %q, must be one of: scp, rsync, auto", backend)
 	}
-}
-
-func hasRemoteSourceAndDestination(ctx context.Context, paths []string) bool {
-	copyPaths, err := parseCopyPaths(ctx, paths)
-	if err != nil {
-		return true
-	}
-
-	var hasRemoteSource, hasRemoteDestination bool
-	for _, cp := range copyPaths {
-		if cp.IsRemote {
-			if hasRemoteSource {
-				hasRemoteDestination = true
-			} else {
-				hasRemoteSource = true
-			}
-		}
-	}
-
-	return hasRemoteSource && hasRemoteDestination
 }
 
 func parseCopyPaths(ctx context.Context, paths []string) ([]*Path, error) {
@@ -146,16 +122,16 @@ func parseCopyPaths(ctx context.Context, paths []string) ([]*Path, error) {
 			inst, err := store.Inspect(ctx, cp.InstanceName)
 			if err != nil {
 				if errors.Is(err, os.ErrNotExist) {
-					return nil, fmt.Errorf("instance %#q does not exist, run `limactl create %s` to create a new instance", cp.InstanceName, cp.InstanceName)
+					return nil, fmt.Errorf("instance %q does not exist, run `limactl create %s` to create a new instance", cp.InstanceName, cp.InstanceName)
 				}
 				return nil, err
 			}
 			if inst.Status == limatype.StatusStopped {
-				return nil, fmt.Errorf("instance %#q is stopped, run `limactl start %s` to start the instance", cp.InstanceName, cp.InstanceName)
+				return nil, fmt.Errorf("instance %q is stopped, run `limactl start %s` to start the instance", cp.InstanceName, cp.InstanceName)
 			}
 			cp.Instance = inst
 		default:
-			return nil, fmt.Errorf("path %#q contains multiple colons", path)
+			return nil, fmt.Errorf("path %q contains multiple colons", path)
 		}
 
 		copyPaths = append(copyPaths, cp)

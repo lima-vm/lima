@@ -52,10 +52,8 @@ type virtualMachineWrapper struct {
 	stopped bool
 }
 
-// Hold all *os.File retained by VZ for the VM lifetime so they won't get garbage collected.
-// VZ keeps using the underlying descriptors after configuration is created.
-// For example, block device attachments and network device attachments.
-var vmRetainedFileDescriptors []*os.File
+// Hold all *os.File created via socketpair() so that they won't get garbage collected. f.FD() gets invalid if f gets garbage collected.
+var vmNetworkFiles = make([]*os.File, 1)
 
 func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int, onVsockEvent func(*events.VsockEvent)) (vm *virtualMachineWrapper, waitSSHLocalPortAccessible <-chan any, errCh chan error, err error) {
 	usernetClient, stopUsernet, err := startUsernet(ctx, inst)
@@ -80,8 +78,8 @@ func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int, onV
 	go func() {
 		// Handle errors via errCh and handle stop vm during context close
 		defer func() {
-			for i := range vmRetainedFileDescriptors {
-				_ = vmRetainedFileDescriptors[i].Close()
+			for i := range vmNetworkFiles {
+				vmNetworkFiles[i].Close()
 			}
 		}()
 		for {
@@ -90,18 +88,18 @@ func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int, onV
 				logrus.Info("Context closed, stopping vm")
 				if machine.CanStop() {
 					_, err := machine.RequestStop()
-					logrus.Errorf("Error while stopping the VM %#q", err)
+					logrus.Errorf("Error while stopping the VM %q", err)
 				}
 			case newState := <-machine.StateChangedNotify():
 				switch newState {
 				case vz.VirtualMachineStateRunning:
 					pidFile := filepath.Join(inst.Dir, filenames.PIDFile(*inst.Config.VMType))
 					if _, err := os.Stat(pidFile); !errors.Is(err, os.ErrNotExist) {
-						logrus.Errorf("pidfile %#q already exists", pidFile)
+						logrus.Errorf("pidfile %q already exists", pidFile)
 						sendErrCh <- err
 					}
 					if err := os.WriteFile(pidFile, []byte(strconv.Itoa(os.Getpid())+"\n"), 0o644); err != nil {
-						logrus.Errorf("error writing to pid fil %#q", pidFile)
+						logrus.Errorf("error writing to pid fil %q", pidFile)
 						sendErrCh <- err
 					}
 					logrus.Info("[VZ] - vm state change: running")
@@ -169,7 +167,7 @@ func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int, onV
 					}
 					sendErrCh <- errors.New("vz driver state stopped")
 				default:
-					logrus.Debugf("[VZ] - vm state change: %#q", newState)
+					logrus.Debugf("[VZ] - vm state change: %q", newState)
 				}
 			}
 		}
@@ -495,7 +493,7 @@ func attachNetwork(ctx context.Context, inst *limatype.Instance, vmConfig *vz.Vi
 					return err
 				}
 				if socketVMNetOk {
-					logrus.Debugf("Using socketVMNet (%#q)", nwCfg.Paths.SocketVMNet)
+					logrus.Debugf("Using socketVMNet (%q)", nwCfg.Paths.SocketVMNet)
 					sock, err := networks.Sock(nw.Lima)
 					if err != nil {
 						return err
@@ -536,11 +534,11 @@ func validateDiskFormat(diskPath string) error {
 	defer f.Close()
 	img, err := qcow2reader.Open(f)
 	if err != nil {
-		return fmt.Errorf("failed to detect the format of %#q: %w", diskPath, err)
+		return fmt.Errorf("failed to detect the format of %q: %w", diskPath, err)
 	}
 	supportedDiskTypes := []image.Type{raw.Type, asif.Type}
 	if t := img.Type(); !slices.Contains(supportedDiskTypes, t) {
-		return fmt.Errorf("expected the format of %#q to be one of %v, got %#q", diskPath, supportedDiskTypes, t)
+		return fmt.Errorf("expected the format of %q to be one of %v, got %q", diskPath, supportedDiskTypes, t)
 	}
 	// TODO: ensure that the disk is formatted with GPT or ISO9660
 	return nil
@@ -587,34 +585,29 @@ func attachDisks(ctx context.Context, inst *limatype.Instance, vmConfig *vz.Virt
 		diskName := d.Name
 		disk, err := store.InspectDisk(diskName, d.FSType)
 		if err != nil {
-			return fmt.Errorf("failed to run load disk %#q: %w", diskName, err)
+			return fmt.Errorf("failed to run load disk %q: %w", diskName, err)
 		}
 
-		logrus.Infof("Mounting disk %#q on %#q", diskName, disk.MountPoint)
+		logrus.Infof("Mounting disk %q on %q", diskName, disk.MountPoint)
 		if err = disk.LockForInstance(inst.Dir); err != nil {
-			return fmt.Errorf("failed to attach disk %#q: %w", diskName, err)
+			return fmt.Errorf("failed to attach disk %q: %w", diskName, err)
 		}
 		extraDiskPath := filepath.Join(disk.Dir, filenames.DataDisk)
 		// ConvertToRaw is a NOP if no conversion is needed
-		logrus.Debugf("Converting extra disk %#q to a raw disk (if it is not a raw)", extraDiskPath)
+		logrus.Debugf("Converting extra disk %q to a raw disk (if it is not a raw)", extraDiskPath)
 
 		if err = diskUtil.Convert(ctx, raw.Type, extraDiskPath, extraDiskPath, nil, true); err != nil {
-			return fmt.Errorf("failed to convert extra disk %#q to a raw disk: %w", extraDiskPath, err)
+			return fmt.Errorf("failed to convert extra disk %q to a raw disk: %w", extraDiskPath, err)
 		}
 		extraDiskPathAttachment, err := vz.NewDiskImageStorageDeviceAttachmentWithCacheAndSync(extraDiskPath, false, diskImageCachingMode, vz.DiskImageSynchronizationModeFsync)
 		if err != nil {
-			return fmt.Errorf("failed to create disk attachment for extra disk %#q: %w", extraDiskPath, err)
+			return fmt.Errorf("failed to create disk attachment for extra disk %q: %w", extraDiskPath, err)
 		}
 		extraDisk, err := vz.NewVirtioBlockDeviceConfiguration(extraDiskPathAttachment)
 		if err != nil {
-			return fmt.Errorf("failed to create new virtio block device config for extra disk %#q: %w", extraDiskPath, err)
+			return fmt.Errorf("failed to create new virtio block device config for extra disk %q: %w", extraDiskPath, err)
 		}
 		configurations = append(configurations, extraDisk)
-	}
-
-	configurations, err := attachHostBlockDevices(ctx, inst, configurations)
-	if err != nil {
-		return err
 	}
 
 	if err := validateDiskFormat(ciDataPath); err != nil {
@@ -664,7 +657,7 @@ func attachDisplay(inst *limatype.Instance, vmConfig *vz.VirtualMachineConfigura
 	case "none":
 		return nil
 	default:
-		return fmt.Errorf("unexpected video display %#q", *inst.Config.Video.Display)
+		return fmt.Errorf("unexpected video display %q", *inst.Config.Video.Display)
 	}
 }
 
@@ -752,7 +745,7 @@ func attachFolderMounts(inst *limatype.Instance, vmConfig *vz.VirtualMachineConf
 
 	var vzOpts limatype.VZOpts
 	if err := limayaml.Convert(inst.Config.VMOpts[limatype.VZ], &vzOpts, "vmOpts.vz"); err != nil {
-		logrus.WithError(err).Warnf("Couldn't convert %#q", inst.Config.VMOpts[limatype.VZ])
+		logrus.WithError(err).Warnf("Couldn't convert %q", inst.Config.VMOpts[limatype.VZ])
 	}
 
 	if vzOpts.Rosetta.Enabled != nil && *vzOpts.Rosetta.Enabled {
@@ -790,7 +783,7 @@ func attachAudio(inst *limatype.Instance, config *vz.VirtualMachineConfiguration
 	case "", "none":
 		return nil
 	default:
-		return fmt.Errorf("unexpected audio device %#q", *inst.Config.Audio.Device)
+		return fmt.Errorf("unexpected audio device %q", *inst.Config.Audio.Device)
 	}
 }
 
@@ -897,22 +890,22 @@ func linuxBootLoader(inst *limatype.Instance) (*vz.LinuxBootLoader, error) {
 	initrd := filepath.Join(inst.Dir, filenames.Initrd)
 	if _, err := os.Stat(kernel); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			logrus.Debugf("Kernel file %#q not found", kernel)
+			logrus.Debugf("Kernel file %q not found", kernel)
 		} else {
-			logrus.WithError(err).Debugf("Error while checking kernel file %#q", kernel)
+			logrus.WithError(err).Debugf("Error while checking kernel file %q", kernel)
 		}
 		return nil, err
 	}
 	var opt []vz.LinuxBootLoaderOption
 	if b, err := os.ReadFile(kernelCmdline); err == nil {
-		logrus.Debugf("Using kernel command line %#q", string(b))
+		logrus.Debugf("Using kernel command line %q", string(b))
 		opt = append(opt, vz.WithCommandLine(string(b)))
 	}
 	if _, err := os.Stat(initrd); err == nil {
-		logrus.Debugf("Using initrd %#q", initrd)
+		logrus.Debugf("Using initrd %q", initrd)
 		opt = append(opt, vz.WithInitrd(initrd))
 	}
-	logrus.Debugf("Using Linux Boot Loader with kernel %#q", kernel)
+	logrus.Debugf("Using Linux Boot Loader with kernel %q", kernel)
 	return vz.NewLinuxBootLoader(kernel, opt...)
 }
 
@@ -952,7 +945,7 @@ func createSockPair() (server, client *os.File, _ error) {
 	runtime.SetFinalizer(client, func(*os.File) {
 		logrus.Debugf("Client network file GC'ed")
 	})
-	vmRetainedFileDescriptors = append(vmRetainedFileDescriptors, server, client)
+	vmNetworkFiles = append(vmNetworkFiles, server, client)
 	return server, client, nil
 }
 
@@ -968,7 +961,7 @@ func ensureIPSW(instDir string) error {
 	// The installer wants the file to have ".ipsw" suffix.
 	// The link is created as a hard link, as the installer does not accept symlinks.
 	if err := os.Link(ipswBase, ipsw); err != nil {
-		return fmt.Errorf("failed to create hard link from %#q to %#q: %w", ipswBase, ipsw, err)
+		return fmt.Errorf("failed to create hard link from %q to %q: %w", ipswBase, ipsw, err)
 	}
 	return nil
 }

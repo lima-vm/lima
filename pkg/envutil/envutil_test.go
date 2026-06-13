@@ -205,7 +205,7 @@ func TestGetDefaultBlockList(t *testing.T) {
 	expectedItems := []string{"PATH", "HOME", "SSH_*", "USER"}
 	for _, item := range expectedItems {
 		found := slices.Contains(blocklist, item)
-		assert.Assert(t, found, "Expected builtin blocklist to contain %#q", item)
+		assert.Assert(t, found, "Expected builtin blocklist to contain %q", item)
 	}
 }
 
@@ -233,9 +233,9 @@ func TestValidatePattern(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := validatePattern(tt.pattern)
 			if tt.valid {
-				assert.NilError(t, err, "Expected pattern %#q to be valid", tt.pattern)
+				assert.NilError(t, err, "Expected pattern %q to be valid", tt.pattern)
 			} else {
-				assert.Assert(t, err != nil, "Expected pattern %#q to be invalid", tt.pattern)
+				assert.Assert(t, err != nil, "Expected pattern %q to be invalid", tt.pattern)
 			}
 		})
 	}
@@ -244,6 +244,6 @@ func TestValidatePattern(t *testing.T) {
 func TestValidatePatternErrorMessage(t *testing.T) {
 	err := validatePattern("FOO-BAR")
 	assert.Assert(t, err != nil, "Expected pattern with dash to be invalid")
-	expectedMsg := "pattern `FOO-BAR` contains invalid character `-` at position 3"
+	expectedMsg := `pattern "FOO-BAR" contains invalid character "-" at position 3`
 	assert.Equal(t, err.Error(), expectedMsg)
 }

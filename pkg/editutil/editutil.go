@@ -81,9 +81,9 @@ func OpenEditor(ctx context.Context, content []byte, hdr string) ([]byte, error)
 	editorCmd.Stdin = os.Stdin
 	editorCmd.Stdout = os.Stdout
 	editorCmd.Stderr = os.Stderr
-	logrus.Debugf("opening editor %#q for a file %#q", editor, tmpYAMLPath)
+	logrus.Debugf("opening editor %q for a file %q", editor, tmpYAMLPath)
 	if err := editorCmd.Run(); err != nil {
-		return nil, fmt.Errorf("could not execute editor %#q for a file %#q: %w", editor, tmpYAMLPath, err)
+		return nil, fmt.Errorf("could not execute editor %q for a file %q: %w", editor, tmpYAMLPath, err)
 	}
 	b, err := os.ReadFile(tmpYAMLPath)
 	if err != nil {

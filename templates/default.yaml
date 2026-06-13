@@ -128,13 +128,6 @@ additionalDisks:
 #   format: true
 #   fsType: "ext4"
 
-# Attach host block devices directly to supported backends.
-# This is currently supported on macOS with `vmType: vz`.
-# Each entry must be an absolute host path, typically under /dev.
-# This requires limactl sudoers to allow the hidden block-device helper.
-# 🟢 Builtin default: []
-blockDevices: []
-
 ssh:
   # A localhost port of the host. Forwarded to port 22 of the guest.
   # 🟢 Builtin default: 0 (automatically assigned to a free port)
@@ -194,7 +187,7 @@ containerd:
   # 🟢 Builtin default: false
   system: null
   # Enable user-scoped (aka rootless) containerd and its dependencies
-  # 🟢 Builtin default: true for Linux x86_64 and aarch64 guests, false otherwise
+  # 🟢 Builtin default: true (for x86_64 and aarch64)
   user: null
 #  # Override containerd archive
 #  # 🟢 Builtin default: hard-coded URL with hard-coded digest (see the output of `limactl info | jq .defaultTemplate.containerd.archives`)

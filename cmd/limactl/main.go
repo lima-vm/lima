@@ -32,7 +32,7 @@ const (
 )
 
 func main() {
-	if os.Geteuid() == 0 && (len(os.Args) < 2 || (os.Args[1] != "generate-doc" && !isPrivilegedHelperCommand(os.Args[1]))) {
+	if os.Geteuid() == 0 && (len(os.Args) < 2 || os.Args[1] != "generate-doc") {
 		fmt.Fprint(os.Stderr, "limactl: must not run as the root user\n")
 		os.Exit(1)
 	}
@@ -136,9 +136,6 @@ func newApp() *cobra.Command {
 			// allow commands that are used for packaging to run under rosetta to allow cross-architecture builds
 			return errors.New("limactl is running under rosetta, please reinstall lima with native arch")
 		}
-		if isPrivilegedHelperCommand(cmd.Name()) {
-			return nil
-		}
 
 		// Make sure either $HOME or $LIMA_HOME is defined, so we don't need
 		// to check for errors later
@@ -208,7 +205,6 @@ func newApp() *cobra.Command {
 		newTemplateCommand(),
 		newRestartCommand(),
 		newSudoersCommand(),
-		newAutostartCommand(),
 		newStartAtLoginCommand(),
 		newNetworkCommand(),
 		newCloneCommand(),
@@ -216,7 +212,6 @@ func newApp() *cobra.Command {
 		newWatchCommand(),
 		newYQRestrictionsHelpCommand(),
 	)
-	registerHiddenCommands(rootCmd)
 	addPluginCommands(rootCmd)
 
 	return rootCmd
@@ -284,7 +279,7 @@ func WrapArgsError(argFn cobra.PositionalArgs) cobra.PositionalArgs {
 			return nil
 		}
 
-		return fmt.Errorf("%#q %s.\nSee `%s --help`.\n\nUsage:  %s\n\n%s",
+		return fmt.Errorf("%#q %s.\nSee '%s --help'.\n\nUsage:  %s\n\n%s",
 			cmd.CommandPath(), err.Error(),
 			cmd.CommandPath(),
 			cmd.UseLine(), cmd.Short,

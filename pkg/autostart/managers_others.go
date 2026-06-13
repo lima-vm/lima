@@ -9,8 +9,3 @@ package autostart
 func Manager() autoStartManager {
 	return &notSupportedManager{}
 }
-
-// DaemonManager is not supported on this OS.
-func DaemonManager(_ string) autoStartManager {
-	return &notSupportedManager{}
-}

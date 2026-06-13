@@ -115,7 +115,7 @@ function rocky_latest_image_entry_for_url_spec() {
 	# Rocky 10 requires explicit minor version paths (e.g., 10.1) as the major version path (10) is unreliable.
 	local major_version latest_minor
 	major_version=$(jq -r '.major_version' <<<"${url_spec}")
-	latest_minor=$(curl -s "https://dl.rockylinux.org/pub/rocky/" | grep -oE "href=[\"']${major_version}\.[0-9]+/" | sed -E "s/href=[\"']//;s/\///" | sort -V | tail -1)
+	latest_minor=$(curl -s "https://dl.rockylinux.org/pub/rocky/" | grep -oP "(?<=href=[\"'])${major_version}\.[0-9]+(?=/[\"'])" | sort -V | tail -1)
 	# Use the discovered minor version, falling back to the major version if discovery fails
 	major_version_url_spec=$(jq -e -r --arg v "${latest_minor:-$major_version}" '.path_version = $v' <<<"${url_spec}")
 	major_version_image_directory=$(rocky_image_directory_from_url_spec "${major_version_url_spec}")

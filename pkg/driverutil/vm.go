@@ -24,7 +24,7 @@ func ResolveVMType(ctx context.Context, y *limatype.LimaYAML, filePath string) e
 		if err := validateConfigAgainstDriver(ctx, y, filePath, *y.VMType); err != nil {
 			return err
 		}
-		logrus.Debugf("Using specified vmType %#q for %#q", *y.VMType, filePath)
+		logrus.Debugf("Using specified vmType %q for %q", *y.VMType, filePath)
 		return nil
 	}
 
@@ -39,7 +39,7 @@ func ResolveVMType(ctx context.Context, y *limatype.LimaYAML, filePath string) e
 func validateConfigAgainstDriver(ctx context.Context, y *limatype.LimaYAML, filePath, vmType string) error {
 	extDriver, intDriver, exists := registry.Get(vmType)
 	if !exists {
-		return fmt.Errorf("vmType %#q is not a registered driver", vmType)
+		return fmt.Errorf("vmType %q is not a registered driver", vmType)
 	}
 
 	if extDriver != nil {
@@ -99,7 +99,7 @@ func handlePreConfiguredDriverAction(ctx context.Context, y *limatype.LimaYAML, 
 	}
 
 	*y = res
-	logrus.Debugf("Pre-configured driver action completed successfully for %#q", extDriverPath)
+	logrus.Debugf("Pre-configured driver action completed successfully for %q", extDriverPath)
 	return nil
 }
 
@@ -116,10 +116,10 @@ func InspectStatus(ctx context.Context, inst *limatype.Instance) (string, error)
 	if extDriver != nil {
 		status, err := handleInspectStatusAction(ctx, inst, extDriver.Path)
 		if err != nil {
-			extDriver.Logger.Errorf("Failed to inspect status for instance %#q: %v", inst.Name, err)
+			extDriver.Logger.Errorf("Failed to inspect status for instance %q: %v", inst.Name, err)
 			return "", err
 		}
-		extDriver.Logger.Debugf("Instance %#q inspected successfully with status: %s", inst.Name, inst.Status)
+		extDriver.Logger.Debugf("Instance %q inspected successfully with status: %s", inst.Name, inst.Status)
 		return status, nil
 	}
 
@@ -177,6 +177,6 @@ func handleInspectStatusAction(ctx context.Context, inst *limatype.Instance, ext
 	}
 
 	*inst = respInst
-	logrus.Debugf("Inspecting instance status action completed successfully for %#q", extDriverPath)
+	logrus.Debugf("Inspecting instance status action completed successfully for %q", extDriverPath)
 	return inst.Status, nil
 }

@@ -21,7 +21,7 @@ var ErrSkipped = errors.New("skipped to download")
 // DownloadFile downloads a file to the cache, optionally copying it to the destination. Returns path in cache.
 func DownloadFile(ctx context.Context, dest string, f limatype.File, decompress bool, description string, expectedArch limatype.Arch) (string, error) {
 	if f.Arch != expectedArch {
-		return "", fmt.Errorf("%w: %#q: unsupported arch: %#q", ErrSkipped, f.Location, f.Arch)
+		return "", fmt.Errorf("%w: %q: unsupported arch: %q", ErrSkipped, f.Location, f.Arch)
 	}
 	fields := logrus.Fields{"location": f.Location, "arch": f.Arch, "digest": f.Digest}
 	logrus.WithFields(fields).Infof("Attempting to download %s", description)
@@ -32,14 +32,14 @@ func DownloadFile(ctx context.Context, dest string, f limatype.File, decompress 
 		downloader.WithExpectedDigest(f.Digest),
 	)
 	if err != nil {
-		return "", fmt.Errorf("failed to download %#q: %w", f.Location, err)
+		return "", fmt.Errorf("failed to download %q: %w", f.Location, err)
 	}
 	logrus.Debugf("res.ValidatedDigest=%v", res.ValidatedDigest)
 	switch res.Status {
 	case downloader.StatusDownloaded:
-		logrus.Infof("Downloaded %s from %#q", description, f.Location)
+		logrus.Infof("Downloaded %s from %q", description, f.Location)
 	case downloader.StatusUsedCache:
-		logrus.Infof("Using cache %#q", res.CachePath)
+		logrus.Infof("Using cache %q", res.CachePath)
 	default:
 		logrus.Warnf("Unexpected result from downloader.Download(): %+v", res)
 	}
@@ -52,7 +52,7 @@ func CachedFile(f limatype.File) (string, error) {
 		downloader.WithCache(),
 		downloader.WithExpectedDigest(f.Digest))
 	if err != nil {
-		return "", fmt.Errorf("cache did not contain %#q: %w", f.Location, err)
+		return "", fmt.Errorf("cache did not contain %q: %w", f.Location, err)
 	}
 	return res.CachePath, nil
 }

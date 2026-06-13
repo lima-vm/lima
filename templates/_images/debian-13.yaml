@@ -1,18 +1,18 @@
 images:
 # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
 
-- location: "https://cloud.debian.org/images/cloud/trixie/20260525-2489/debian-13-genericcloud-amd64-20260525-2489.qcow2"
+- location: "https://cloud.debian.org/images/cloud/trixie/20260413-2447/debian-13-genericcloud-amd64-20260413-2447.qcow2"
   arch: "x86_64"
-  digest: "sha512:23999f64d896af10a8c12bc391856ffb2982d459c3e4c987c241cca920920c6d0fbdccab389fbb37aeecb2e21145f60d9d50bf317bdf47f7bc1388cd945aa1da"
-- location: "https://cloud.debian.org/images/cloud/trixie/20260525-2489/debian-13-genericcloud-arm64-20260525-2489.qcow2"
+  digest: "sha512:3d020c868339c8387f6f40f63e6b5ccb6174e6f2963510cb51cacfd6618244e96549d1b60b3d629df3963cb5350c6dfaf5cf34998301aa578b9d455a76d3c434"
+- location: "https://cloud.debian.org/images/cloud/trixie/20260413-2447/debian-13-genericcloud-arm64-20260413-2447.qcow2"
   arch: "aarch64"
-  digest: "sha512:b4f9240559da2c044953418d0632cee4d45e3d447a0ec6a9129ef7946e39ec4135ec9e085c176f8dc77af6536d7279c03487e9aa61fd6c628fb493886e23aef5"
-- location: "https://cloud.debian.org/images/cloud/trixie/20260525-2489/debian-13-generic-ppc64el-20260525-2489.qcow2"
+  digest: "sha512:9de87e5e9739ec07fe61d40e5a6796e6e97e557ddb7d1eee5cf28619e80c21c0da76fc54713161e52c2719a38b5376e7b3bcfcd468e0b82ab9d33f702a09d601"
+- location: "https://cloud.debian.org/images/cloud/trixie/20260413-2447/debian-13-generic-ppc64el-20260413-2447.qcow2"
   arch: "ppc64le"
-  digest: "sha512:a53437918e4f20965ca6b0f01b2c631eef78dac77dee984b9dd5c7f25b7b55706173a1f9ec467d2f9bfb79c64d13d37f02ba071474dbb1a9d11efe8f4b29239f"
-- location: "https://cloud.debian.org/images/cloud/trixie/20260525-2489/debian-13-generic-riscv64-20260525-2489.qcow2"
+  digest: "sha512:d8d9345bfa563f95f42788218b2c18e1c7e1bbcb3c2c8a0724c2b98337280abcf9158e9e2483c40a893455669f36a20c7ea149cf1dcc6afbd9d138e96119ca8d"
+- location: "https://cloud.debian.org/images/cloud/trixie/20260413-2447/debian-13-generic-riscv64-20260413-2447.qcow2"
   arch: "riscv64"
-  digest: "sha512:961e7c5430d7e4d55bf1911f5dc7dac7e751e65cc6a0aff04f0f96a423e31e033e26cd194d05ddbdd6218a0951f83db998c76dfbf93f0de81285e84e7c58869c"
+  digest: "sha512:5e725cd9e1daf39c6d97ab2edd06301c566e1d0d317014ac1c3603f094dfe4ce0267370c4dc2a657eb2090cddae518e97d12e0784639cf1e417126d6cc866db2"
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
 

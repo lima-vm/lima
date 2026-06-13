@@ -52,7 +52,7 @@ func EnsureNerdctlArchiveCache(ctx context.Context, y *limatype.LimaYAML, create
 			if downloader.IsLocal(f.Location) {
 				return f.Location, nil
 			}
-			return "", fmt.Errorf("cache did not contain %#q", f.Location)
+			return "", fmt.Errorf("cache did not contain %q", f.Location)
 		}
 		return path, nil
 	}

@@ -123,7 +123,7 @@ func TestTemplate(t *testing.T) {
 	layout, err := ExecuteTemplateCIDataISO(args)
 	assert.NilError(t, err)
 	for _, f := range layout {
-		t.Logf("=== %#q ===", f.Path)
+		t.Logf("=== %q ===", f.Path)
 		b, err := io.ReadAll(f.Reader)
 		assert.NilError(t, err)
 		t.Log(string(b))
@@ -158,7 +158,7 @@ func TestTemplate9p(t *testing.T) {
 	layout, err := ExecuteTemplateCIDataISO(args)
 	assert.NilError(t, err)
 	for _, f := range layout {
-		t.Logf("=== %#q ===", f.Path)
+		t.Logf("=== %q ===", f.Path)
 		b, err := io.ReadAll(f.Reader)
 		assert.NilError(t, err)
 		t.Log(string(b))

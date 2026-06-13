@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
-    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       with:
         persist-credentials: false
     - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c  # v6.4.0
@@ -100,7 +100,7 @@ jobs:
       run: |
         git config --global core.autocrlf false
         git config --global core.eol lf
-    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       with:
         persist-credentials: false
     - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c  # v6.4.0
@@ -113,7 +113,7 @@ jobs:
       run: |
         echo "GOLANGCI_LINT_VERSION=$(go list -m -f '{{.Version}}' github.com/golangci/golangci-lint/v2)" >> $GITHUB_OUTPUT
     - name: Run golangci-lint
-      uses: golangci/golangci-lint-action@82606bf257cbaff209d206a39f5134f0cfbfd2ee  # v9.2.1
+      uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20  # v9.2.0
       with:
         version: ${{ steps.golangci-lint-version.outputs.GOLANGCI_LINT_VERSION }}
         args: --verbose
@@ -140,7 +140,7 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y --no-install-recommends qemu-utils
-    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       with:
         persist-credentials: false
     - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c  # v6.4.0
@@ -194,7 +194,7 @@ jobs:
       run: |
         git config --global core.autocrlf false
         git config --global core.eol lf
-    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       with:
         persist-credentials: false
     - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c  # v6.4.0
@@ -225,7 +225,7 @@ jobs:
       run: |
         git config --global core.autocrlf false
         git config --global core.eol lf
-    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       with:
         persist-credentials: false
     - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c  # v6.4.0
@@ -253,7 +253,7 @@ jobs:
     runs-on: macos-15-large  # Intel
     timeout-minutes: 120
     steps:
-    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       with:
         persist-credentials: false
     - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c  # v6.4.0
@@ -328,7 +328,7 @@ jobs:
         - ../hack/test-templates/net-user-v2.yaml
         - ../hack/test-templates/test-misc.yaml  # TODO: merge net-user-v2 into test-misc
     steps:
-    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       with:
         persist-credentials: false
     - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c  # v6.4.0
@@ -373,7 +373,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
-    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       with:
         # BATS tests don't expect lima version warnings like:
         # msg="treating lima version \"ea336ae\" from \"/Users/runner/.lima-bats/dummy/lima-version\" as very latest release"
@@ -425,7 +425,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
-    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       with:
         # fetch-depth is set to 0 to let `limactl --version` print semver-ish version
         # fetch-depth: 0 is required for Colima integration test because Colima
@@ -470,7 +470,7 @@ jobs:
     runs-on: macos-15-large  # Intel
     timeout-minutes: 120
     steps:
-    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       with:
         persist-credentials: false
     - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c  # v6.4.0
@@ -528,11 +528,11 @@ jobs:
       matrix:
         oldver: ["v0.15.1"]  # The default VM type was always QEMU until Lima v1.0
     steps:
-    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       with:
         persist-credentials: false
     - name: Fetch homebrew-core commit messages
-      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       with:
         # needed by ./hack/brew-install-version.sh
         repository: homebrew/homebrew-core
@@ -579,10 +579,9 @@ jobs:
     - name: "Adjust LIMACTL_CREATE_ARGS"
       # --cpus=1 is needed for running vz on GHA: https://github.com/lima-vm/lima/pull/1511#issuecomment-1574937888
       run: echo "LIMACTL_CREATE_ARGS=${LIMACTL_CREATE_ARGS} --cpus 1 --memory 1" >>$GITHUB_ENV
-    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       with:
         persist-credentials: false
-        submodules: true
     - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c  # v6.4.0
       with:
         go-version: stable
@@ -601,8 +600,6 @@ jobs:
       run: brew uninstall --ignore-dependencies --force qemu
     - name: Test
       run: ./hack/test-templates.sh templates/${{ matrix.template }}
-    - name: Run BATS VZ block-device tests
-      run: ./hack/bats/lib/bats-core/bin/bats --timing ./hack/bats/extras/vz-block-device.bats
     - if: failure()
       uses: ./.github/actions/upload_failure_logs_if_exists
       with:
@@ -618,7 +615,7 @@ jobs:
     runs-on: macos-15-large  # Intel
     timeout-minutes: 30
     steps:
-    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       with:
         persist-credentials: false
     - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c  # v6.4.0
@@ -648,7 +645,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
-    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       with:
         persist-credentials: false
     - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c  # v6.4.0
@@ -663,7 +660,7 @@ jobs:
     runs-on: ubuntu-22.04  # QEMU 6.2
     timeout-minutes: 30
     steps:
-    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       with:
         persist-credentials: false
     - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c  # v6.4.0

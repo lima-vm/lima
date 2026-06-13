@@ -29,7 +29,6 @@ linters:
   - unconvert
   - unused
   - usetesting
-  - usestdlibvars
   - whitespace
   settings:
     depguard:
@@ -134,10 +133,6 @@ linters:
       - -ST1000
       - -ST1001  # duplicates revive.dot-imports
       - -ST1022
-    usestdlibvars:
-      http-method: false
-      time-date-month: true
-      time-layout: true
     usetesting:
       os-temp-dir: true
       context-background: true

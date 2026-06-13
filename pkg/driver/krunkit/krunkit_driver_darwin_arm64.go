@@ -94,7 +94,7 @@ func (l *LimaKrunkitDriver) Start(ctx context.Context) (chan error, error) {
 	}
 	krunkitCmd.Stderr = logfile
 
-	logrus.Infof("Starting krun VM (hint: to watch the progress, see %#q)", logPath)
+	logrus.Infof("Starting krun VM (hint: to watch the progress, see %q)", logPath)
 	logrus.Infof("krunkitCmd.Args: %v", krunkitCmd.Args)
 
 	if err := krunkitCmd.Start(); err != nil {
@@ -194,12 +194,12 @@ func checkKrunkitVersion() error {
 	minVersion := semver.New("1.2.1")
 	currentVersion, err := semver.NewVersion(versionStr)
 	if err != nil {
-		logrus.WithError(err).Warnf("Failed to parse krunkit version %#q, skipping version check", versionStr)
+		logrus.WithError(err).Warnf("Failed to parse krunkit version %q, skipping version check", versionStr)
 		return nil
 	}
 
 	if currentVersion.LessThan(*minVersion) {
-		return fmt.Errorf("krunkit version %#q is older than required minimum 1.2.1 (needed for vsock forwarder feature)", currentVersion)
+		return fmt.Errorf("krunkit version %q is older than required minimum 1.2.1 (needed for vsock forwarder feature)", currentVersion)
 	}
 
 	return nil
@@ -217,7 +217,7 @@ func validateConfig(cfg *limatype.LimaYAML) error {
 		return errors.New("krunkit driver requires macOS 13 or higher to run")
 	}
 	if cfg.Arch != nil && !limatype.IsNativeArch(*cfg.Arch) {
-		return fmt.Errorf("unsupported arch: %#q (krunkit requires native arch)", *cfg.Arch)
+		return fmt.Errorf("unsupported arch: %q (krunkit requires native arch)", *cfg.Arch)
 	}
 	if _, err := exec.LookPath(vmType); err != nil {
 		return errors.New("krunkit CLI not found in PATH. Install it via:\nbrew tap slp/krun\nbrew install krunkit")
@@ -228,10 +228,7 @@ func validateConfig(cfg *limatype.LimaYAML) error {
 	}
 
 	if cfg.MountType != nil && (*cfg.MountType != limatype.VIRTIOFS && *cfg.MountType != limatype.REVSSHFS) {
-		return fmt.Errorf("field `mountType` must be %#q or %#q for krunkit driver, got %#q", limatype.VIRTIOFS, limatype.REVSSHFS, *cfg.MountType)
-	}
-	if len(cfg.BlockDevices) > 0 {
-		return fmt.Errorf("field `blockDevices` is not supported for vmType: %s", vmType)
+		return fmt.Errorf("field `mountType` must be %q or %q for krunkit driver, got %q", limatype.VIRTIOFS, limatype.REVSSHFS, *cfg.MountType)
 	}
 
 	if cfg.NestedVirtualization != nil && *cfg.NestedVirtualization {
@@ -408,7 +405,7 @@ func (l *LimaKrunkitDriver) cleanupStaleSockets() error {
 		filepath.Join(l.Instance.Dir, sshVsockSock),
 	} {
 		if err := os.RemoveAll(sock); err != nil {
-			errs = append(errs, fmt.Errorf("failed to remove socket %#q: %w", sock, err))
+			errs = append(errs, fmt.Errorf("failed to remove socket %q: %w", sock, err))
 		}
 	}
 

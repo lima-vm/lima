@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"maps"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -52,7 +51,6 @@ type TemplateFileBasedManager struct {
 	enabler               func(ctx context.Context, enable bool, instName string) error
 	filePath              func(instName string) string
 	template              string
-	extraTemplateVars     map[string]string
 	autoStartedIdentifier func() string
 	requestStart          func(ctx context.Context, inst *limatype.Instance) error
 	requestStop           func(ctx context.Context, inst *limatype.Instance) (bool, error)
@@ -76,18 +74,18 @@ func (t *TemplateFileBasedManager) IsRegistered(_ context.Context, inst *limatyp
 
 func (t *TemplateFileBasedManager) RegisterToStartAtLogin(ctx context.Context, inst *limatype.Instance) error {
 	if _, err := t.IsRegistered(ctx, inst); err != nil {
-		return fmt.Errorf("failed to check if the autostart entry for instance %#q is registered: %w", inst.Name, err)
+		return fmt.Errorf("failed to check if the autostart entry for instance %q is registered: %w", inst.Name, err)
 	}
 	content, err := t.renderTemplate(inst.Name, inst.Dir, os.Executable)
 	if err != nil {
-		return fmt.Errorf("failed to render the autostart entry for instance %#q: %w", inst.Name, err)
+		return fmt.Errorf("failed to render the autostart entry for instance %q: %w", inst.Name, err)
 	}
 	entryFilePath := t.filePath(inst.Name)
 	if err := os.MkdirAll(filepath.Dir(entryFilePath), os.ModePerm); err != nil {
-		return fmt.Errorf("failed to create the directory for the autostart entry for instance %#q: %w", inst.Name, err)
+		return fmt.Errorf("failed to create the directory for the autostart entry for instance %q: %w", inst.Name, err)
 	}
 	if err := os.WriteFile(entryFilePath, content, 0o644); err != nil {
-		return fmt.Errorf("failed to write the autostart entry for instance %#q: %w", inst.Name, err)
+		return fmt.Errorf("failed to write the autostart entry for instance %q: %w", inst.Name, err)
 	}
 	if t.enabler != nil {
 		return t.enabler(ctx, true, inst.Name)
@@ -97,17 +95,17 @@ func (t *TemplateFileBasedManager) RegisterToStartAtLogin(ctx context.Context, i
 
 func (t *TemplateFileBasedManager) UnregisterFromStartAtLogin(ctx context.Context, inst *limatype.Instance) error {
 	if registered, err := t.IsRegistered(ctx, inst); err != nil {
-		return fmt.Errorf("failed to check if the autostart entry for instance %#q is registered: %w", inst.Name, err)
+		return fmt.Errorf("failed to check if the autostart entry for instance %q is registered: %w", inst.Name, err)
 	} else if !registered {
 		return nil
 	}
 	if t.enabler != nil {
 		if err := t.enabler(ctx, false, inst.Name); err != nil {
-			return fmt.Errorf("failed to disable the autostart entry for instance %#q: %w", inst.Name, err)
+			return fmt.Errorf("failed to disable the autostart entry for instance %q: %w", inst.Name, err)
 		}
 	}
 	if err := os.Remove(t.filePath(inst.Name)); err != nil {
-		return fmt.Errorf("failed to remove the autostart entry for instance %#q: %w", inst.Name, err)
+		return fmt.Errorf("failed to remove the autostart entry for instance %q: %w", inst.Name, err)
 	}
 	return nil
 }
@@ -120,13 +118,13 @@ func (t *TemplateFileBasedManager) renderTemplate(instName, workDir string, getE
 	if err != nil {
 		return nil, err
 	}
-	data := map[string]string{
-		"Binary":   selfExeAbs,
-		"Instance": instName,
-		"WorkDir":  workDir,
-	}
-	maps.Copy(data, t.extraTemplateVars)
-	return textutil.ExecuteTemplate(t.template, data)
+	return textutil.ExecuteTemplate(
+		t.template,
+		map[string]string{
+			"Binary":   selfExeAbs,
+			"Instance": instName,
+			"WorkDir":  workDir,
+		})
 }
 
 func (t *TemplateFileBasedManager) AutoStartedIdentifier() string {

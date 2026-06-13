@@ -31,9 +31,9 @@ func MigrateDiskLayout(instDir string) error {
 
 	diffDiskPath := filepath.Join(instDir, filenames.DiffDiskLegacy)
 	if osutil.FileExists(diffDiskPath) {
-		logrus.Infof("Creating symlink %#q -> %#q", filenames.Disk, filenames.DiffDiskLegacy)
+		logrus.Infof("Creating symlink %q -> %q", filenames.Disk, filenames.DiffDiskLegacy)
 		if err := os.Symlink(filenames.DiffDiskLegacy, diskPath); err != nil {
-			return fmt.Errorf("failed to symlink %#q to %#q: %w", filenames.Disk, filenames.DiffDiskLegacy, err)
+			return fmt.Errorf("failed to symlink %q to %q: %w", filenames.Disk, filenames.DiffDiskLegacy, err)
 		}
 	}
 
@@ -45,9 +45,9 @@ func MigrateDiskLayout(instDir string) error {
 			return err
 		}
 		if isISO {
-			logrus.Infof("Creating symlink %#q -> %#q", filenames.ISO, filenames.BaseDiskLegacy)
+			logrus.Infof("Creating symlink %q -> %q", filenames.ISO, filenames.BaseDiskLegacy)
 			if err := os.Symlink(filenames.BaseDiskLegacy, isoPath); err != nil {
-				return fmt.Errorf("failed to symlink %#q to %#q: %w", filenames.ISO, filenames.BaseDiskLegacy, err)
+				return fmt.Errorf("failed to symlink %q to %q: %w", filenames.ISO, filenames.BaseDiskLegacy, err)
 			}
 		}
 		// Non-ISO basedisk is a legacy qcow2 backing file; leave it for QEMU to resolve.
@@ -92,11 +92,11 @@ func EnsureDisk(ctx context.Context, instDir, diskSize string, diskImageFormat i
 		if err := diskUtil.Convert(ctx, diskImageFormat, diskPath, diskPath, &diskSizeInBytes, false); err != nil {
 			os.Remove(diskPath)
 			_ = os.Rename(isoPath, imagePath)
-			return fmt.Errorf("failed to create disk %#q: %w", diskPath, err)
+			return fmt.Errorf("failed to create disk %q: %w", diskPath, err)
 		}
 	} else {
 		if err := diskUtil.Convert(ctx, diskImageFormat, imagePath, diskPath, &diskSizeInBytes, false); err != nil {
-			return fmt.Errorf("failed to convert %#q to %#q: %w", imagePath, diskPath, err)
+			return fmt.Errorf("failed to convert %q to %q: %w", imagePath, diskPath, err)
 		}
 		os.Remove(imagePath)
 	}

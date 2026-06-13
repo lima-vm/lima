@@ -19,9 +19,6 @@ import (
 //go:embed io.lima-vm.autostart.INSTANCE.plist
 var Template string
 
-//go:embed io.lima-vm.daemon.INSTANCE.plist
-var DaemonTemplate string
-
 // GetPlistPath returns the path to the launchd plist file for the given instance name.
 func GetPlistPath(instName string) string {
 	return fmt.Sprintf("%s/Library/LaunchAgents/%s.plist", os.Getenv("HOME"), ServiceNameFrom(instName))
@@ -82,29 +79,19 @@ func RequestStart(ctx context.Context, inst *limatype.Instance) error {
 	// If disabled, `launchctl bootstrap` will fail.
 	_ = EnableDisableService(ctx, true, inst.Name)
 	if err := launchctl(ctx, "bootstrap", domainTarget(), GetPlistPath(inst.Name)); err != nil {
-		return fmt.Errorf("failed to start the instance %#q via launchctl: %w", inst.Name, err)
+		return fmt.Errorf("failed to start the instance %q via launchctl: %w", inst.Name, err)
 	}
 	return nil
 }
 
 func RequestStop(ctx context.Context, inst *limatype.Instance) (bool, error) {
-	logrus.Debugf("AutoStartedIdentifier=%#q, ServiceNameFrom=%#q", inst.AutoStartedIdentifier, ServiceNameFrom(inst.Name))
+	logrus.Debugf("AutoStartedIdentifier=%q, ServiceNameFrom=%q", inst.AutoStartedIdentifier, ServiceNameFrom(inst.Name))
 	if inst.AutoStartedIdentifier == ServiceNameFrom(inst.Name) {
-		logrus.Infof("Stopping the instance %#q started by launchd", inst.Name)
+		logrus.Infof("Stopping the instance %q started by launchd", inst.Name)
 		if err := launchctl(ctx, "bootout", serviceTarget(inst.Name)); err != nil {
-			return false, fmt.Errorf("failed to stop the instance %#q via launchctl: %w", inst.Name, err)
+			return false, fmt.Errorf("failed to stop the instance %q via launchctl: %w", inst.Name, err)
 		}
 		return true, nil
 	}
 	return false, nil
-}
-
-// GetDaemonPlistPath returns the path to the system LaunchDaemon plist for the given instance.
-func GetDaemonPlistPath(instName string) string {
-	return fmt.Sprintf("/Library/LaunchDaemons/%s.plist", DaemonServiceNameFrom(instName))
-}
-
-// DaemonServiceNameFrom returns the launchd daemon service name for the given instance name.
-func DaemonServiceNameFrom(instName string) string {
-	return fmt.Sprintf("io.lima-vm.daemon.%s", instName)
 }
