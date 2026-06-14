@@ -373,7 +373,7 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool, params map[string]stri
 					}
 					devices[i] = strconv.Quote(path)
 				}
-				return []string{fmt.Sprintf(".blockDevices += [%s] | .blockDevices |= unique", strings.Join(devices, ","))}, nil
+				return []string{fmt.Sprintf(".blockDevices = ((.blockDevices // []) + [%s]) | .blockDevices |= unique", strings.Join(devices, ","))}, nil
 			},
 			false,
 			false,

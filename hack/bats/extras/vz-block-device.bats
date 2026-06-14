@@ -60,6 +60,10 @@ configure_block_device_path() {
 	esac
 }
 
+install_block_device_sudoers() {
+	limactl sudoers --block-device="${configured_block_device}" | sudo tee /etc/sudoers.d/lima >/dev/null
+}
+
 start_vz_instance_with_cli_flag() {
 	local extra_args=()
 	if [[ -n ${LIMACTL_CREATE_ARGS:-} ]]; then
@@ -229,6 +233,7 @@ run_roundtrip_test() {
 	instance_name="vz-block-device-${block_device_kind}"
 	create_ramdisk
 	configure_block_device_path "${block_device_kind}"
+	install_block_device_sudoers
 
 	block_device_id=$(basename "${configured_block_device}")
 	guest_block_device="/dev/disk/by-id/virtio-${block_device_id}"

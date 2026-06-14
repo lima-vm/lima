@@ -591,8 +591,24 @@ jobs:
         cache: false
     - name: Make
       run: make
+    - name: Install socket_vmnet
+      env:
+        SOCKET_VMNET_VERSION: v1.2.2
+      run: |
+        (
+          cd ~
+          git clone https://github.com/lima-vm/socket_vmnet
+          cd socket_vmnet
+          git checkout $SOCKET_VMNET_VERSION
+          sudo git config --global --add safe.directory /Users/runner/socket_vmnet
+          sudo make PREFIX=/opt/socket_vmnet install
+        )
     - name: Install
-      run: sudo make install
+      run: |
+        sudo install -d -o root -g wheel -m 0755 /opt/lima
+        sudo make PREFIX=/opt/lima install
+        echo /opt/lima/bin >>$GITHUB_PATH
+        /opt/lima/bin/limactl sudoers | sudo tee /etc/sudoers.d/lima
     - name: Cache image used by templates/${{ matrix.template }}
       uses: ./.github/actions/setup_cache_for_template
       with:

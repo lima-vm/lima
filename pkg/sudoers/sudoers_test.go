@@ -33,9 +33,20 @@ func TestNewCommand(t *testing.T) {
 }
 
 func TestNOPASSWD(t *testing.T) {
-	assert.Equal(t, NOPASSWD("%everyone", "root", "wheel", "/usr/local/bin/limactl sudo-open-block-device"),
-		"%everyone ALL=(root:wheel) NOPASSWD:NOSETENV: /usr/local/bin/limactl sudo-open-block-device\n")
+	assert.Equal(t, NOPASSWD("%everyone", "root", "wheel", "/bin/mkdir -m 775 -p /private/var/run/lima"),
+		"%everyone ALL=(root:wheel) NOPASSWD:NOSETENV: /bin/mkdir -m 775 -p /private/var/run/lima\n")
 
 	assert.Equal(t, NOPASSWD("%everyone", "daemon", "staff", "/bin/start", "/bin/stop"),
 		"%everyone ALL=(daemon:staff) NOPASSWD:NOSETENV: \\\n    /bin/start, \\\n    /bin/stop\n")
+}
+
+func TestContainsActiveFragmentIgnoresCommentsOnBothSides(t *testing.T) {
+	file := "%admin ALL=(root:wheel) NOPASSWD:NOSETENV: /bin/mkdir -m 775 -p /private/var/run/lima\n" +
+		"\n# Manage \"shared\" network daemons\n\n" +
+		"%admin ALL=(root:wheel) NOPASSWD:NOSETENV: /opt/socket_vmnet/bin/socket_vmnet ...\n"
+	fragment := "%admin ALL=(root:wheel) NOPASSWD:NOSETENV: /bin/mkdir -m 775 -p /private/var/run/lima\n" +
+		"\n# Manage \"shared\" network daemons\n"
+
+	assert.Assert(t, ContainsActiveFragment(file, fragment))
+	assert.Assert(t, !ContainsActiveFragment("# "+strings.ReplaceAll(fragment, "\n", "\n# "), fragment))
 }

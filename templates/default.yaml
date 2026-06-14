@@ -132,9 +132,9 @@ additionalDisks:
 #   fsType: "ext4"
 
 # Attach host block devices directly to supported backends.
-# This is currently supported on macOS with `vmType: vz`.
-# Each entry must be an absolute host path, typically under /dev.
-# This requires limactl sudoers to allow the hidden block-device helper.
+# Each entry is a host device path whose exact format is backend-specific.
+# The Darwin VZ helper accepts disk device paths like /dev/disk4 or /dev/rdisk4s1
+# and requires limactl sudoers --block-device=/dev/diskN.
 # 🟢 Builtin default: []
 blockDevices: []
 

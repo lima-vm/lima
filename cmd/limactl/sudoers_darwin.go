@@ -9,7 +9,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	"github.com/lima-vm/lima/v2/pkg/blockdevice"
@@ -27,8 +29,21 @@ func sudoersAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	blockDevices, err := cmd.Flags().GetStringSlice("block-device")
+	if err != nil {
+		return err
+	}
+	includeNetwork := true
+	if err := nwCfg.Validate(); err != nil {
+		if len(blockDevices) == 0 {
+			logrus.Infof("Please check %s for more information.", socketVMNetURL)
+			return err
+		}
+		logrus.WithError(err).Info("Skipping network sudoers entries")
+		includeNetwork = false
+	}
 	if check {
-		return verifySudoAccess(ctx, nwCfg, args, cmd.OutOrStdout())
+		return verifySudoAccess(ctx, nwCfg, args, blockDevices, includeNetwork, cmd.OutOrStdout())
 	}
 	switch len(args) {
 	case 0:
@@ -38,20 +53,34 @@ func sudoersAction(cmd *cobra.Command, args []string) error {
 	default:
 		return fmt.Errorf("unexpected arguments %v", args)
 	}
-	networkSudoers, err := nwCfg.Sudoers()
+	content, err := renderSudoers(nwCfg, blockDevices, includeNetwork)
 	if err != nil {
 		return err
 	}
-	blockDeviceSudoers, err := blockdevice.Sudoers(nwCfg.Group)
-	if err != nil {
-		return err
-	}
-	content := sudoers.AssembleSudoersFragments(networkSudoers, blockDeviceSudoers)
 	fmt.Fprint(cmd.OutOrStdout(), content)
 	return nil
 }
 
-func verifySudoAccess(ctx context.Context, nwCfg networks.Config, args []string, stdout io.Writer) error {
+func renderSudoers(nwCfg networks.Config, blockDevices []string, includeNetwork bool) (string, error) {
+	var networkSudoers string
+	var err error
+	if includeNetwork {
+		networkSudoers, err = nwCfg.Sudoers()
+		if err != nil {
+			return "", err
+		}
+	}
+	var blockDeviceSudoers string
+	if len(blockDevices) > 0 {
+		blockDeviceSudoers, err = blockdevice.Sudoers(blockDevices)
+		if err != nil {
+			return "", err
+		}
+	}
+	return sudoers.AssembleSudoersFragments(networkSudoers, blockDeviceSudoers), nil
+}
+
+func verifySudoAccess(ctx context.Context, nwCfg networks.Config, args, blockDevices []string, includeNetwork bool, stdout io.Writer) error {
 	var file string
 	switch len(args) {
 	case 0:
@@ -65,16 +94,15 @@ func verifySudoAccess(ctx context.Context, nwCfg networks.Config, args []string,
 	default:
 		return errors.New("can check only a single sudoers file")
 	}
-	if err := verifySudoersFile(ctx, nwCfg, file); err != nil {
+	if err := verifySudoersFile(ctx, nwCfg, file, blockDevices, includeNetwork); err != nil {
 		return err
 	}
 	fmt.Fprintf(stdout, "%#q is up-to-date (or sudo doesn't require a password)\n", file)
 	return nil
 }
 
-func verifySudoersFile(ctx context.Context, nwCfg networks.Config, file string) error {
-	hint := fmt.Sprintf("run `%s sudoers >etc_sudoers.d_lima && sudo install -o root etc_sudoers.d_lima %q`)",
-		os.Args[0], file)
+func verifySudoersFile(ctx context.Context, nwCfg networks.Config, file string, blockDevices []string, includeNetwork bool) error {
+	hint := sudoersCheckHint(os.Args[0], file, blockDevices)
 	b, err := os.ReadFile(file)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
@@ -86,17 +114,33 @@ func verifySudoersFile(ctx context.Context, nwCfg networks.Config, file string) 
 		}
 		return fmt.Errorf("can't read %q: %w: (Hint: %s)", file, err, hint)
 	}
-	networkSudoers, err := nwCfg.Sudoers()
+	content, err := renderSudoers(nwCfg, blockDevices, includeNetwork)
 	if err != nil {
 		return err
 	}
-	blockDeviceSudoers, err := blockdevice.Sudoers(nwCfg.Group)
-	if err != nil {
-		return err
+	if string(b) == content {
+		return nil
 	}
-	content := sudoers.AssembleSudoersFragments(networkSudoers, blockDeviceSudoers)
-	if string(b) != content {
-		return fmt.Errorf("sudoers file %q is out of sync and must be regenerated (Hint: %s)", file, hint)
+	if len(blockDevices) == 0 {
+		networkSudoers, err := nwCfg.Sudoers()
+		if err != nil {
+			return err
+		}
+		if sudoers.ContainsActiveFragment(string(b), networkSudoers) {
+			return nil
+		}
 	}
-	return nil
+	if len(blockDevices) == 0 {
+		hint += "; include any --block-device entries you still need"
+	}
+	return fmt.Errorf("sudoers file %q is out of sync and must be regenerated (Hint: %s)", file, hint)
+}
+
+func sudoersCheckHint(exe, file string, blockDevices []string) string {
+	sudoersArgs := "sudoers"
+	if len(blockDevices) > 0 {
+		sudoersArgs += " --block-device=" + strings.Join(blockDevices, ",")
+	}
+	return fmt.Sprintf("run `%s %s >etc_sudoers.d_lima && sudo install -o root etc_sudoers.d_lima %q`",
+		exe, sudoersArgs, file)
 }

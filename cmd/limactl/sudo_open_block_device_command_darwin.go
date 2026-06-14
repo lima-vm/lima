@@ -19,10 +19,10 @@ func registerHiddenCommands(rootCmd *cobra.Command) {
 	rootCmd.AddCommand(&cobra.Command{
 		Use:    blockdevice.SudoOpenBlockDeviceCommand,
 		Short:  "Open a host block device via privileged helper",
-		Args:   WrapArgsError(cobra.NoArgs),
+		Args:   WrapArgsError(cobra.ExactArgs(1)),
 		Hidden: true,
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			return blockdevice.ServeSudoOpenBlockDevice(cmd.InOrStdin())
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return blockdevice.ServeSudoOpenBlockDevice(args[0], cmd.InOrStdin())
 		},
 	})
 }

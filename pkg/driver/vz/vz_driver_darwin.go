@@ -263,6 +263,9 @@ func validateConfig(cfg *limatype.LimaYAML) error {
 	if cfg == nil {
 		return errors.New("configuration is nil")
 	}
+	if len(cfg.BlockDevices) > 0 && externalVZ {
+		return errors.New("field `blockDevices` is not supported for external VZ driver builds")
+	}
 	macOSProductVersion, err := osutil.ProductVersion()
 	if err != nil {
 		return err

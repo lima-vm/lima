@@ -772,6 +772,16 @@ func TestContainerdDefault(t *testing.T) {
 	assert.Assert(t, len(archives) > 0)
 }
 
+func TestFillDefaultMergesBlockDevices(t *testing.T) {
+	y := limatype.LimaYAML{BlockDevices: []string{"/dev/disk2"}}
+	d := limatype.LimaYAML{BlockDevices: []string{"/dev/disk3"}}
+	o := limatype.LimaYAML{BlockDevices: []string{"/dev/disk1"}}
+
+	FillDefault(t.Context(), &y, &d, &o, "test.yaml", false)
+
+	assert.DeepEqual(t, y.BlockDevices, []string{"/dev/disk1", "/dev/disk2", "/dev/disk3"})
+}
+
 func TestStaticPortForwarding(t *testing.T) {
 	tests := []struct {
 		name     string
