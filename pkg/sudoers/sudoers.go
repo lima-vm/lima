@@ -75,3 +75,18 @@ func AssembleSudoersFragments(fragments ...string) string {
 	}
 	return sb.String()
 }
+
+func ContainsActiveFragment(file, fragment string) bool {
+	return strings.Contains(activeFragment(file), strings.TrimSpace(activeFragment(fragment)))
+}
+
+func activeFragment(s string) string {
+	var active []string
+	for line := range strings.SplitSeq(s, "\n") {
+		if strings.HasPrefix(strings.TrimSpace(line), "#") {
+			continue
+		}
+		active = append(active, line)
+	}
+	return strings.Join(active, "\n")
+}

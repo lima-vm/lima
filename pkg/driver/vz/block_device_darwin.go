@@ -23,13 +23,13 @@ import (
 // obtains a retained descriptor from the privileged helper path, wraps that
 // descriptor in a VZ block-device attachment, and appends it to the VM's
 // storage device list alongside the normal disk image attachments.
-func attachHostBlockDevices(ctx context.Context, inst *limatype.Instance, configurations []vzapi.StorageDeviceConfiguration) ([]vzapi.StorageDeviceConfiguration, error) {
+func attachHostBlockDevices(ctx context.Context, inst *limatype.Instance, configurations []vzapi.StorageDeviceConfiguration, retainedFDs *retainedFileDescriptors) ([]vzapi.StorageDeviceConfiguration, error) {
 	if len(inst.Config.BlockDevices) == 0 {
 		return configurations, nil
 	}
 
 	for i, devicePath := range inst.Config.BlockDevices {
-		deviceFile, err := openHostBlockDevice(ctx, inst, devicePath, i)
+		deviceFile, err := openHostBlockDevice(ctx, inst, devicePath, i, retainedFDs)
 		if err != nil {
 			return nil, err
 		}
@@ -52,13 +52,15 @@ func attachHostBlockDevices(ctx context.Context, inst *limatype.Instance, config
 // openHostBlockDevice bridges the generic host helper into the VZ lifecycle by
 // choosing a VZ-local socket path and retaining the returned descriptor until
 // the VM stops.
-func openHostBlockDevice(ctx context.Context, inst *limatype.Instance, devicePath string, index int) (*os.File, error) {
+func openHostBlockDevice(ctx context.Context, inst *limatype.Instance, devicePath string, index int, retainedFDs *retainedFileDescriptors) (*os.File, error) {
 	socketPath := filepath.Join(inst.Dir, fmt.Sprintf("vz-block-device.%d.sock", index))
 	deviceFile, err := blockdevice.Open(ctx, devicePath, socketPath)
 	if err != nil {
 		return nil, err
 	}
-	vmRetainedFileDescriptors = append(vmRetainedFileDescriptors, deviceFile)
+	if retainedFDs != nil {
+		retainedFDs.Append(deviceFile)
+	}
 	return deviceFile, nil
 }
 

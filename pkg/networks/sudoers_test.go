@@ -28,7 +28,7 @@ func TestVerifySudoAccessAllowsAdditionalFragments(t *testing.T) {
 	if composed != "" && !strings.HasSuffix(composed, "\n") {
 		composed += "\n"
 	}
-	composed += "%everyone ALL=(root:wheel) NOPASSWD:NOSETENV: /usr/local/bin/limactl sudo-open-block-device\n"
+	composed += "alice ALL=(root:wheel) NOPASSWD:NOSETENV: /opt/lima/bin/limactl sudo-open-block-device /dev/rdisk2\n"
 
 	sudoersFile := filepath.Join(t.TempDir(), "lima.sudoers")
 	assert.NilError(t, os.WriteFile(sudoersFile, []byte(composed), 0o600))
@@ -52,6 +52,26 @@ func TestVerifySudoAccessRejectsOutOfSyncNetworkFragment(t *testing.T) {
 	modified := strings.Replace(networkSudoers, "NOPASSWD:NOSETENV", "NOPASSWD", 1)
 	sudoersFile := filepath.Join(t.TempDir(), "lima.sudoers")
 	assert.NilError(t, os.WriteFile(sudoersFile, []byte(modified), 0o600))
+
+	err = cfg.VerifySudoAccess(t.Context(), sudoersFile)
+	assert.ErrorContains(t, err, "out of sync")
+}
+
+func TestVerifySudoAccessRejectsCommentedNetworkFragment(t *testing.T) {
+	cfg := Config{
+		Group:    "everyone",
+		Networks: map[string]Network{},
+		Paths: Paths{
+			VarRun: "/private/var/run/lima",
+		},
+	}
+
+	networkSudoers, err := cfg.Sudoers()
+	assert.NilError(t, err)
+	commented := "# " + strings.ReplaceAll(networkSudoers, "\n", "\n# ")
+
+	sudoersFile := filepath.Join(t.TempDir(), "lima.sudoers")
+	assert.NilError(t, os.WriteFile(sudoersFile, []byte(commented), 0o600))
 
 	err = cfg.VerifySudoAccess(t.Context(), sudoersFile)
 	assert.ErrorContains(t, err, "out of sync")

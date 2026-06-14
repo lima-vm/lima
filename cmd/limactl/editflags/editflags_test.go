@@ -11,6 +11,7 @@ import (
 	"gotest.tools/v3/assert"
 
 	"github.com/lima-vm/lima/v2/pkg/localpathutil"
+	"github.com/lima-vm/lima/v2/pkg/yqutil"
 )
 
 func TestCompleteCPUs(t *testing.T) {
@@ -91,6 +92,28 @@ func TestBuildPortForwardExpression(t *testing.T) {
 				assert.NilError(t, err)
 				assert.Equal(t, tt.expected, result)
 			}
+		})
+	}
+}
+
+func TestBlockDeviceYQExpressionHandlesMissingOrNullBlockDevices(t *testing.T) {
+	cmd := &cobra.Command{}
+	RegisterEdit(cmd, "")
+	assert.NilError(t, cmd.ParseFlags([]string{"--block-device", "/dev/disk4"}))
+	exprs, err := YQExpressions(cmd.Flags(), false, nil)
+	assert.NilError(t, err)
+
+	tests := map[string]string{
+		"missing": "vmType: vz\n",
+		"null":    "vmType: vz\nblockDevices: null\n",
+	}
+	for name, input := range tests {
+		t.Run(name, func(t *testing.T) {
+			// Older instance YAML may not have blockDevices yet. Applying the edit
+			// must create a list instead of relying on yq's += behavior for null.
+			out, err := yqutil.EvaluateExpression(t.Context(), yqutil.Join(exprs), []byte(input))
+			assert.NilError(t, err)
+			assert.Equal(t, string(out), "vmType: vz\nblockDevices:\n- /dev/disk4\n")
 		})
 	}
 }
@@ -288,7 +311,7 @@ func TestYQExpressions(t *testing.T) {
 			name:        "block-device",
 			args:        []string{"--block-device", "/dev/disk4", "--block-device", "/dev/rdisk5"},
 			newInstance: false,
-			expected:    []string{`.blockDevices += ["/dev/disk4","/dev/rdisk5"] | .blockDevices |= unique`},
+			expected:    []string{`.blockDevices = ((.blockDevices // []) + ["/dev/disk4","/dev/rdisk5"]) | .blockDevices |= unique`},
 		},
 		{
 			name:        "invalid network",

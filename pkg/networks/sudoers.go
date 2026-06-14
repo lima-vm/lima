@@ -86,7 +86,7 @@ func (c *Config) VerifySudoAccess(ctx context.Context, sudoersFile string) error
 		}
 		return fmt.Errorf("passwordLessSudo error: %w", err)
 	}
-	hint := fmt.Sprintf("run `%s sudoers >etc_sudoers.d_lima && sudo install -o root etc_sudoers.d_lima %q`)",
+	hint := fmt.Sprintf("run `%s sudoers >etc_sudoers.d_lima && sudo install -o root etc_sudoers.d_lima %q`",
 		os.Args[0], sudoersFile)
 	b, err := os.ReadFile(sudoersFile)
 	if err != nil {
@@ -102,14 +102,14 @@ func (c *Config) VerifySudoAccess(ctx context.Context, sudoersFile string) error
 		}
 		return fmt.Errorf("can't read %#q: %w: (Hint: %s)", sudoersFile, err, hint)
 	}
-	sudoers, err := c.Sudoers()
+	networkSudoers, err := c.Sudoers()
 	if err != nil {
 		return err
 	}
 	// limactl sudoers writes a single file that may include additional
 	// non-network entries. Network startup only needs its own generated
 	// fragment to be present verbatim.
-	if !strings.Contains(string(b), sudoers) {
+	if !sudoers.ContainsActiveFragment(string(b), networkSudoers) {
 		// Happens on upgrading socket_vmnet with Homebrew
 		return fmt.Errorf("sudoers file %#q is out of sync and must be regenerated (Hint: %s)", sudoersFile, hint)
 	}

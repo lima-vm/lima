@@ -28,7 +28,8 @@ $ limactl sudoers --check /etc/sudoers.d/lima
 `,
 		Short: "Generate the content of the /etc/sudoers.d/lima file",
 		Long: fmt.Sprintf(`Generate the content of the /etc/sudoers.d/lima file for macOS host helpers that require privilege escalation.
-This includes vmnet.framework support (socket_vmnet) and host block-device attachment with --block-device on supported backends.
+This includes vmnet.framework support (socket_vmnet). Use --block-device=/dev/rdiskN to also emit opt-in
+host block-device helper entries for the listed devices and current user.
 The content is written to stdout, NOT to the file.
 This command must not run as the root user.
 See %s for the usage.`, socketVMNetURL),
@@ -39,5 +40,7 @@ See %s for the usage.`, socketVMNetURL),
 	cfgFile, _ := networks.ConfigFile()
 	sudoersCommand.Flags().Bool("check", false,
 		fmt.Sprintf("check that the sudoers file is up-to-date with %#q", cfgFile))
+	sudoersCommand.Flags().StringSlice("block-device", nil,
+		"include the macOS VZ host block-device helper for the current user and comma-separated devices")
 	return sudoersCommand
 }

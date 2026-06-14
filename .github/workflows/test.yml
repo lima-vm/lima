@@ -604,7 +604,10 @@ jobs:
     - name: Make
       run: make
     - name: Install
-      run: sudo make install
+      run: |
+        sudo install -d -o root -g wheel -m 0755 /opt/lima
+        sudo make PREFIX=/opt/lima install
+        echo /opt/lima/bin >>$GITHUB_PATH
     - name: Cache image used by templates/${{ matrix.template }}
       uses: $/.github/actions/setup_cache_for_template
       with:
