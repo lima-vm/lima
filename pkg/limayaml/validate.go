@@ -31,6 +31,8 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/version/versionutil"
 )
 
+var blockDevicePathRE = regexp.MustCompile(`^/dev/r?disk\d+(s\d+)*$`)
+
 func Validate(y *limatype.LimaYAML, warn bool) error {
 	var errs error
 
@@ -57,6 +59,7 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 	if !slices.Contains(limatype.ArchTypes, *y.Arch) {
 		errs = errors.Join(errs, fmt.Errorf("field `arch` must be one of %v; got %#q", limatype.ArchTypes, *y.Arch))
 	}
+	errs = errors.Join(errs, validateBlockDevices(y.BlockDevices))
 
 	if len(y.Images) == 0 {
 		errs = errors.Join(errs, errors.New("field `images` must be set"))
@@ -414,6 +417,27 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 			if guestRange > portRangeWarnThreshold || hostRange > portRangeWarnThreshold {
 				logrus.Warnf("[plain mode] portForwards[%d] covers a range of more than %d ports (guest: %d, host: %d). All ports will be forwarded unconditionally, which may be inefficient.", i, portRangeWarnThreshold, guestRange, hostRange)
 			}
+		}
+	}
+
+	return errs
+}
+
+func validateBlockDevices(blockDevices []string) error {
+	var errs error
+
+	for i, blockDevice := range blockDevices {
+		field := fmt.Sprintf("blockDevices[%d]", i)
+		if blockDevice == "" {
+			errs = errors.Join(errs, fmt.Errorf("field `%s` must not be empty", field))
+			continue
+		}
+		if !filepath.IsAbs(blockDevice) && !path.IsAbs(blockDevice) {
+			errs = errors.Join(errs, fmt.Errorf("field `%s` must be an absolute path, got %q", field, blockDevice))
+			continue
+		}
+		if !blockDevicePathRE.MatchString(blockDevice) {
+			errs = errors.Join(errs, fmt.Errorf("field `%s` must be a macOS disk device path like /dev/disk4 or /dev/rdisk4s1, got %q", field, blockDevice))
 		}
 	}
 
