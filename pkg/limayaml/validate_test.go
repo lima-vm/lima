@@ -234,6 +234,50 @@ additionalDisks:
 	assert.Error(t, err, "field `additionalDisks[0].name is invalid`: identifier must not be empty")
 }
 
+func TestValidateBlockDevices(t *testing.T) {
+	y, err := Load(t.Context(), []byte(`
+images:
+  - location: /
+vmType: qemu
+blockDevices:
+  - /dev/disk4
+`), "lima.yaml")
+	assert.NilError(t, err)
+
+	err = Validate(y, false)
+	assert.NilError(t, err)
+}
+
+func TestValidateBlockDevicesRequiresAbsolutePaths(t *testing.T) {
+	y, err := Load(t.Context(), []byte(`
+images:
+  - location: /
+blockDevices:
+  - disk4
+`), "lima.yaml")
+	assert.NilError(t, err)
+
+	err = Validate(y, false)
+	assert.ErrorContains(t, err, "field `blockDevices[0]` must be an absolute path")
+}
+
+func TestValidateBlockDevicesRequiresMacOSDiskPaths(t *testing.T) {
+	y, err := Load(t.Context(), []byte(`
+images:
+  - location: /
+blockDevices:
+  - /dev/null
+  - /dev/fd/3
+  - /tmp/disk4
+`), "lima.yaml")
+	assert.NilError(t, err)
+
+	err = Validate(y, false)
+	assert.ErrorContains(t, err, "field `blockDevices[0]` must be a macOS disk device path")
+	assert.ErrorContains(t, err, "field `blockDevices[1]` must be a macOS disk device path")
+	assert.ErrorContains(t, err, "field `blockDevices[2]` must be a macOS disk device path")
+}
+
 func TestValidateParamName(t *testing.T) {
 	images := `images: [{"location": "/"}]`
 	validProvision := `provision: [{"script": "echo $PARAM_name $PARAM_NAME $PARAM_Name_123"}]`
