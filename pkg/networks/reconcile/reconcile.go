@@ -6,6 +6,7 @@ package reconcile
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -112,20 +113,22 @@ func makeVarRun(ctx context.Context, cfg *networks.Config) error {
 	return nil
 }
 
-func startDaemon(ctx context.Context, cfg *networks.Config, name, daemon string) error {
+// startDaemon starts the daemon process and returns its running *exec.Cmd so the
+// caller can wait on the process while polling for its PID file.
+func startDaemon(ctx context.Context, cfg *networks.Config, name, daemon string) (*exec.Cmd, error) {
 	if err := makeVarRun(ctx, cfg); err != nil {
-		return err
+		return nil, err
 	}
 	networksDir, err := dirnames.LimaNetworksDir()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if err := os.MkdirAll(networksDir, 0o755); err != nil {
-		return err
+		return nil, err
 	}
 	user, err := cfg.User(daemon)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	args := []string{"--user", user.User, "--group", user.Group, "--non-interactive"}
@@ -138,26 +141,32 @@ func startDaemon(ctx context.Context, cfg *networks.Config, name, daemon string)
 	stdoutPath := cfg.LogFile(name, daemon, "stdout")
 	stderrPath := cfg.LogFile(name, daemon, "stderr")
 	if err := os.RemoveAll(stdoutPath); err != nil {
-		return err
+		return nil, err
 	}
 	if err := os.RemoveAll(stderrPath); err != nil {
-		return err
+		return nil, err
 	}
 
-	cmd.Stdout, err = os.Create(stdoutPath)
+	stdoutFile, err := os.Create(stdoutPath)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	cmd.Stderr, err = os.Create(stderrPath)
+	// The child inherits its own dup of the descriptor at Start, so we can close our
+	// copy when startDaemon returns; this avoids leaking a descriptor on every retry.
+	defer stdoutFile.Close()
+	stderrFile, err := os.Create(stderrPath)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	defer stderrFile.Close()
+	cmd.Stdout = stdoutFile
+	cmd.Stderr = stderrFile
 
 	logrus.Debugf("Starting %#q daemon for %#q network: %v", daemon, name, cmd.Args)
 	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("failed to run %v: %w (Hint: check %#q, %#q)", cmd.Args, err, stdoutPath, stderrPath)
+		return nil, fmt.Errorf("failed to run %v: %w (Hint: check %#q, %#q)", cmd.Args, err, stdoutPath, stderrPath)
 	}
-	return nil
+	return cmd, nil
 }
 
 var validation struct {
@@ -212,12 +221,138 @@ func startNetwork(ctx context.Context, cfg *networks.Config, name string) error 
 		pid, _ := store.ReadPIDFile(cfg.PIDFile(name, daemon))
 		if pid == 0 {
 			logrus.Infof("Starting %s daemon for %#q network", daemon, name)
-			if err := startDaemon(ctx, cfg, name, daemon); err != nil {
+			if err := startDaemonWithRetry(ctx, cfg, name, daemon); err != nil {
 				return err
 			}
 		}
 	}
 	return nil
+}
+
+// daemonStuckError reports that the daemon process is still running but never wrote
+// its PID file within the timeout. Unlike an early exit (the transient XPC race we
+// retry for), this points at a different problem and is not retried.
+type daemonStuckError struct {
+	timeout time.Duration
+}
+
+func (e *daemonStuckError) Error() string {
+	return fmt.Sprintf("did not write its PID file within %s but is still running", e.timeout)
+}
+
+// startDaemonWithRetry starts the daemon and waits for it to come up, retrying with
+// exponential backoff. socket_vmnet can fail transiently at boot when
+// com.apple.NetworkSharing has not yet registered its XPC endpoint (VMNET_FAILURE);
+// in that case the process exits before writing its PID file and we retry. A process
+// that keeps running without writing its PID file, or a failure from startDaemon
+// itself, is not transient and is returned immediately.
+func startDaemonWithRetry(ctx context.Context, cfg *networks.Config, name, daemon string) error {
+	const (
+		maxAttempts = 5
+		// startTimeout is deliberately generous: socket_vmnet writes its PID file
+		// promptly on success, so reaching this while the process is still alive
+		// indicates a problem other than the transient startup race.
+		startTimeout = 30 * time.Second
+	)
+	pidFile := cfg.PIDFile(name, daemon)
+	stderrLog := cfg.LogFile(name, daemon, "stderr")
+	var lastErr error
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		if attempt > 1 {
+			backoff := time.Duration(1<<uint(attempt-2)) * time.Second // 1s, 2s, 4s, 8s
+			logrus.Infof("Retrying %s daemon for %#q network (attempt %d/%d, waiting %s): %v",
+				daemon, name, attempt, maxAttempts, backoff, lastErr)
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(backoff):
+			}
+		}
+		cmd, err := startDaemon(ctx, cfg, name, daemon)
+		if err != nil {
+			return err // infrastructure failure (sudo/exec) — not transient
+		}
+		err = waitForDaemon(ctx, cmd, pidFile, startTimeout)
+		if err == nil {
+			return nil
+		}
+		// A stuck (still-running) daemon is not the transient race; stop and surface stderr.
+		var stuck *daemonStuckError
+		if errors.As(err, &stuck) {
+			return fmt.Errorf("%s daemon for %#q network %w%s", daemon, name, err, stderrHint(stderrLog))
+		}
+		lastErr = err // process exited — retry
+	}
+	return fmt.Errorf("%s daemon for %#q network failed to start after %d attempts: %w%s",
+		daemon, name, maxAttempts, lastErr, stderrHint(stderrLog))
+}
+
+// waitForDaemon waits until the daemon writes its PID file (success), exits (returns
+// the exit error so the caller can retry), or stays alive past timeout without a PID
+// file (returns *daemonStuckError). A stuck or cancelled process is killed and reaped.
+func waitForDaemon(ctx context.Context, cmd *exec.Cmd, pidFile string, timeout time.Duration) error {
+	waitCh := make(chan error, 1)
+	go func() { waitCh <- cmd.Wait() }()
+
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+	ticker := time.NewTicker(500 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		ready, err := pidFileWritten(pidFile)
+		if err != nil {
+			_ = cmd.Process.Kill()
+			<-waitCh
+			return err
+		}
+		if ready {
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			_ = cmd.Process.Kill()
+			<-waitCh
+			return ctx.Err()
+		case waitErr := <-waitCh:
+			// Process exited. If it managed to write the PID file first, treat as success;
+			// otherwise this is the transient VMNET_FAILURE case — signal a retry, keeping
+			// the exit error so the cause survives even when stderr is empty.
+			ready, err := pidFileWritten(pidFile)
+			if err != nil {
+				return err
+			}
+			if ready {
+				return nil
+			}
+			return fmt.Errorf("daemon exited before writing its PID file: %w", waitErr)
+		case <-timer.C:
+			_ = cmd.Process.Kill()
+			<-waitCh
+			return &daemonStuckError{timeout: timeout}
+		case <-ticker.C:
+			// re-check the PID file on the next loop iteration
+		}
+	}
+}
+
+// pidFileWritten reports whether the daemon has written a valid PID file. A read
+// error (e.g. a corrupt or unreadable PID file) is non-transient and is returned so
+// the caller can fail fast rather than mistake it for a daemon that is slow to start.
+func pidFileWritten(pidFile string) (bool, error) {
+	pid, err := store.ReadPIDFile(pidFile)
+	if err != nil {
+		return false, fmt.Errorf("failed to read PID file %#q: %w", pidFile, err)
+	}
+	return pid != 0, nil
+}
+
+// stderrHint returns the daemon's stderr (or a pointer to the log) to append to errors.
+func stderrHint(stderrLog string) string {
+	if b, err := os.ReadFile(stderrLog); err == nil && len(b) > 0 {
+		return fmt.Sprintf(" (stderr: %s)", strings.TrimSpace(string(b)))
+	}
+	return fmt.Sprintf(" (check %#q)", stderrLog)
 }
 
 func stopNetwork(ctx context.Context, cfg *networks.Config, name string) error {
