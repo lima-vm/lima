@@ -331,9 +331,9 @@ additional-drivers:
 	@for drv in $(ADDITIONAL_DRIVERS); do \
 		echo "Building $$drv as external"; \
 		if [ "$(GOOS)" = "windows" ]; then \
-			$(GO_BUILD) -o $(LIBEXEC_LIMA)/lima-driver-$$drv.exe ./cmd/lima-driver-$$drv; \
+			$(GO_BUILD) -o $(LIBEXEC_LIMA)/lima-driver-$$drv.exe ./cmd/lima-driver-$$drv || exit 1; \
 		else \
-			$(GO_BUILD) -o $(LIBEXEC_LIMA)/lima-driver-$$drv ./cmd/lima-driver-$$drv; \
+			$(GO_BUILD) -o $(LIBEXEC_LIMA)/lima-driver-$$drv ./cmd/lima-driver-$$drv || exit 1; \
 			fi; \
 		if [ "$$drv" = "vz" ] && [ "$(GOOS)" = "darwin" ]; then \
 			codesign -f -v --entitlements vz.entitlements -s - $(LIBEXEC_LIMA)/lima-driver-vz; \
