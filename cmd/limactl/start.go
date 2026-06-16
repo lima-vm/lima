@@ -659,7 +659,7 @@ func startAction(cmd *cobra.Command, args []string) error {
 // after an unclean shutdown (e.g. launchd SIGTERM before the host agent could stop the VM).
 func isOrphanedDriverError(errs []error) bool {
 	for _, err := range errs {
-		if strings.Contains(err.Error(), "driver is running but host agent is not") {
+		if errors.Is(err, store.ErrDriverRunningHostAgentStopped) {
 			return true
 		}
 	}
@@ -671,7 +671,7 @@ func isOrphanedDriverError(errs []error) bool {
 // occurs when the PID is reused by another process after a reboot.
 func isStaleHostAgentError(errs []error) bool {
 	for _, err := range errs {
-		if strings.Contains(err.Error(), filenames.HostAgentSock) {
+		if errors.Is(err, store.ErrHostAgentUnreachable) {
 			return true
 		}
 	}
