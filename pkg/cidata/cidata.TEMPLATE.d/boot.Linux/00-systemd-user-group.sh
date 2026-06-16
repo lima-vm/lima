@@ -11,7 +11,7 @@ set -eu
 # https://github.com/lima-vm/lima/issues/5047
 # The "systemd-journal" group only exists on systemd-based distributions,
 # so this is a no-op elsewhere.
-[ "${LIMA_CIDATA_UID}" -le 1000 ] || exit 0
+[ "${LIMA_CIDATA_UID}" -lt 1000 ] || exit 0
 getent group systemd-journal >/dev/null 2>&1 || exit 0
 
 usermod -aG systemd-journal "${LIMA_CIDATA_USER}"
