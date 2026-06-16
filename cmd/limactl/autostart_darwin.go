@@ -163,6 +163,6 @@ func runSudo(ctx context.Context, args ...string) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
-	logrus.Debugf("running: sudo %v", args)
+	logrus.Infof("Running: sudo %v (may prompt for password)", args)
 	return cmd.Run()
 }
