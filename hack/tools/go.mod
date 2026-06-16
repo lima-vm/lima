@@ -16,7 +16,7 @@ tool (
 )
 
 require (
-	github.com/AkihiroSuda/gosocialcheck v0.1.2
+	github.com/AkihiroSuda/gosocialcheck v0.1.3
 	github.com/containerd/ltag v0.3.0
 	github.com/golangci/golangci-lint/v2 v2.12.2
 	github.com/jandubois/nobin v0.12.0
