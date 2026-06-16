@@ -58,8 +58,8 @@ limactl autostart enable --keep-alive=false default
 ```
 
 This applies to both `--condition=login` (macOS LaunchAgent) and
-`--condition=boot` (macOS LaunchDaemon). On Linux, the systemd unit always
-uses `Restart=on-failure`, so keep-alive is always enabled regardless of the flag.
+`--condition=boot` (macOS LaunchDaemon). On Linux, the flag sets the systemd unit's
+`Restart=` directive: `on-failure` when enabled (the default), or `no` when disabled.
 
 ## Lima < 2.2
 
