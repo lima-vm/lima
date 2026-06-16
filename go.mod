@@ -42,7 +42,7 @@ require (
 	github.com/mdlayher/netlink v1.11.2
 	github.com/mdlayher/vsock v1.3.0 // gomodjail:unconfined
 	github.com/miekg/dns v1.1.72 // gomodjail:unconfined
-	github.com/mikefarah/yq/v4 v4.53.2
+	github.com/mikefarah/yq/v4 v4.53.3
 	github.com/modelcontextprotocol/go-sdk v1.6.1
 	github.com/nxadm/tail v1.4.11 // gomodjail:unconfined
 	github.com/opencontainers/go-digest v1.0.0
@@ -64,7 +64,7 @@ require (
 //gosocialcheck:trusted
 require (
 	golang.org/x/crypto v0.52.0 // indirect
-	golang.org/x/mod v0.35.0 // indirect
+	golang.org/x/mod v0.36.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/term v0.43.0 // indirect
 	golang.org/x/time v0.9.0 // indirect
@@ -109,7 +109,7 @@ require (
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
-	github.com/pelletier/go-toml/v2 v2.3.0 // indirect
+	github.com/pelletier/go-toml/v2 v2.3.1 // indirect
 	github.com/pierrec/lz4/v4 v4.1.26 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
@@ -121,7 +121,7 @@ require (
 	github.com/u-root/uio v0.0.0-20240224005618-d2acac8f3701 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	github.com/yuin/gopher-lua v1.1.2 // indirect
-	github.com/zclconf/go-cty v1.18.0 // indirect
+	github.com/zclconf/go-cty v1.18.1 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.4 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260226221140-a57be14db171 // indirect
