@@ -53,8 +53,8 @@ github.com/AdminBenni/iota-mixing v1.0.0 h1:Os6lpjG2dp/AE5fYBPAA1zfa2qMdCAWwPMCg
 github.com/AdminBenni/iota-mixing v1.0.0/go.mod h1:i4+tpAaB+qMVIV9OK3m4/DAynOd5bQFaOu+2AhtBCNY=
 github.com/AkihiroSuda/gomoddirectivecomments v0.1.0 h1:5sKxYIkq9GGs0DTnuPNVm2Z/LmhKdTN+8QblThzTKqg=
 github.com/AkihiroSuda/gomoddirectivecomments v0.1.0/go.mod h1:flXOhVLWfsi4FuFhFoc9F3m7wAH2RT4aM3fVyQROKt4=
-github.com/AkihiroSuda/gosocialcheck v0.1.2 h1:3hAtscdsBsiNa2QJcs7jJAW+cZ6hi5Pgs2aUKihQCUI=
-github.com/AkihiroSuda/gosocialcheck v0.1.2/go.mod h1:DcwCgmA5NmgQWE90IoosrUlyKQic3P2GmibNQ1s1F9w=
+github.com/AkihiroSuda/gosocialcheck v0.1.3 h1:WnVyuhQSrYUd/sGsPIGlpDgEHXCAZmHqQH21eY/EytY=
+github.com/AkihiroSuda/gosocialcheck v0.1.3/go.mod h1:DcwCgmA5NmgQWE90IoosrUlyKQic3P2GmibNQ1s1F9w=
 github.com/AlwxSin/noinlineerr v1.0.5 h1:RUjt63wk1AYWTXtVXbSqemlbVTb23JOSRiNsshj7TbY=
 github.com/AlwxSin/noinlineerr v1.0.5/go.mod h1:+QgkkoYrMH7RHvcdxdlI7vYYEdgeoFOVjU9sUhw/rQc=
 github.com/Antonboom/errname v1.1.1 h1:bllB7mlIbTVzO9jmSWVWLjxTEbGBVQ1Ff/ClQgtPw9Q=
