@@ -10,25 +10,29 @@ func DaemonManager(_ string) autoStartManager {
 	return &notSupportedManager{}
 }
 
-// ManagerWith returns the autostart manager for Linux.
-// The keepAlive parameter is accepted for API compatibility but ignored;
-// systemd restart behavior is configured separately via the unit file.
-func ManagerWith(_ bool) autoStartManager {
-	return Manager()
+// Manager returns the autostart manager for Linux, with keep-alive enabled by default.
+func Manager() autoStartManager {
+	return ManagerWith(true)
 }
 
-// Manager returns the autostart manager for Linux.
-func Manager() autoStartManager {
-	if systemd.IsRunningSystemd() {
-		return &TemplateFileBasedManager{
-			filePath:              systemd.GetUnitPath,
-			template:              systemd.Template,
-			enabler:               systemd.EnableDisableUnit,
-			autoStartedIdentifier: systemd.AutoStartedUnitName,
-			requestStart:          systemd.RequestStart,
-			requestStop:           systemd.RequestStop,
-		}
+// ManagerWith returns the autostart manager for Linux. keepAlive controls the systemd
+// unit's Restart= directive: on-failure when enabled, no when disabled.
+func ManagerWith(keepAlive bool) autoStartManager {
+	if !systemd.IsRunningSystemd() {
+		// TODO: add support for non-systemd Linux distros
+		return &notSupportedManager{}
 	}
-	// TODO: add support for non-systemd Linux distros
-	return &notSupportedManager{}
+	restart := "on-failure"
+	if !keepAlive {
+		restart = "no"
+	}
+	return &TemplateFileBasedManager{
+		filePath:              systemd.GetUnitPath,
+		template:              systemd.Template,
+		enabler:               systemd.EnableDisableUnit,
+		autoStartedIdentifier: systemd.AutoStartedUnitName,
+		requestStart:          systemd.RequestStart,
+		requestStop:           systemd.RequestStop,
+		extraTemplateVars:     map[string]string{"Restart": restart},
+	}
 }
