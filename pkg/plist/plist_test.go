@@ -116,9 +116,9 @@ func TestUnmarshalPlist(t *testing.T) {
 			var stderr bytes.Buffer
 			plutilCmd.Stderr = &stderr
 			plutilOutput, err := plutilCmd.Output()
-			assert.NilError(t, err, fmt.Sprintf("failed to run %v (stderr=%q)", plutilCmd.Args, stderr.String()))
+			assert.NilError(t, err, fmt.Sprintf("failed to run %v (stderr=%#q)", plutilCmd.Args, stderr.String()))
 			plutilOutputStr := string(plutilOutput)
-			assert.Equal(t, plutilExpectedValue, plutilOutputStr, "plutil output mismatch for key %q", plutilExpectedKey)
+			assert.Equal(t, plutilExpectedValue, plutilOutputStr, "plutil output mismatch for key %#q", plutilExpectedKey)
 		}
 	}
 }

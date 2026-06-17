@@ -53,7 +53,7 @@ func WithDirLock(dir string, fn func() error) error {
 		0,                            // nNumberOfBytesToLockHigh
 		&syscall.Overlapped{},        // lpOverlapped
 	); err != nil {
-		return fmt.Errorf("failed to lock %q: %w", dir, err)
+		return fmt.Errorf("failed to lock %#q: %w", dir, err)
 	}
 
 	defer func() {
@@ -64,7 +64,7 @@ func WithDirLock(dir string, fn func() error) error {
 			0,                            // nNumberOfBytesToLockHigh
 			&syscall.Overlapped{},        // lpOverlapped
 		); err != nil {
-			logrus.WithError(err).Errorf("failed to unlock %q", dir)
+			logrus.WithError(err).Errorf("failed to unlock %#q", dir)
 		}
 	}()
 	return fn()

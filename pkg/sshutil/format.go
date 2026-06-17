@@ -87,12 +87,12 @@ func Format(w io.Writer, sshPath, instName string, format FormatT, opts []string
 		for _, o := range opts {
 			kv := strings.SplitN(o, "=", 2)
 			if len(kv) != 2 {
-				return fmt.Errorf("unexpected option %q", o)
+				return fmt.Errorf("unexpected option %#q", o)
 			}
 			fmt.Fprintf(w, "  %s %s\n", kv[0], kv[1])
 		}
 	default:
-		return fmt.Errorf("unknown format: %q", format)
+		return fmt.Errorf("unknown format: %#q", format)
 	}
 	return nil
 }

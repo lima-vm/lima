@@ -50,7 +50,7 @@ func templatesPaths() ([]string, error) {
 func Read(name string) ([]byte, error) {
 	doubleDot := ".."
 	if strings.Contains(name, doubleDot) {
-		return nil, fmt.Errorf("template name %q must not contain %q", name, doubleDot)
+		return nil, fmt.Errorf("template name %#q must not contain %#q", name, doubleDot)
 	}
 	paths, err := templatesPaths()
 	if err != nil {
@@ -69,7 +69,7 @@ func Read(name string) ([]byte, error) {
 			return b, err
 		}
 	}
-	return nil, fmt.Errorf("template %q not found", name)
+	return nil, fmt.Errorf("template %#q not found", name)
 }
 
 const Default = "default"

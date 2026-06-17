@@ -36,7 +36,7 @@ func Expand(orig string) (string, error) {
 			s = strings.Replace(s, "~", homeDir, 1)
 		} else {
 			// Paths like "~foo/bar" are unsupported.
-			return "", fmt.Errorf("unexpandable path %q", orig)
+			return "", fmt.Errorf("unexpandable path %#q", orig)
 		}
 	}
 	return filepath.Abs(s)

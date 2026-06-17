@@ -39,7 +39,7 @@ func SockWithDirectory(dir, name string, sockType SockType) (string, error) {
 	}
 	sockPath := filepath.Join(dir, fmt.Sprintf("%s_%s.sock", name, sockType))
 	if len(sockPath) >= osutil.UnixPathMax {
-		return "", fmt.Errorf("usernet socket path %q too long: must be less than UNIX_PATH_MAX=%d characters, but is %d",
+		return "", fmt.Errorf("usernet socket path %#q too long: must be less than UNIX_PATH_MAX=%d characters, but is %d",
 			sockPath, osutil.UnixPathMax, len(sockPath))
 	}
 	return sockPath, nil
@@ -106,7 +106,7 @@ func Leases(name string) (string, error) {
 	}
 	sockPath := filepath.Join(filepath.Join(dir, name), "leases.json")
 	if len(sockPath) >= osutil.UnixPathMax {
-		return "", fmt.Errorf("usernet leases path %q too long: must be less than UNIX_PATH_MAX=%d characters, but is %d",
+		return "", fmt.Errorf("usernet leases path %#q too long: must be less than UNIX_PATH_MAX=%d characters, but is %d",
 			sockPath, osutil.UnixPathMax, len(sockPath))
 	}
 	return sockPath, nil

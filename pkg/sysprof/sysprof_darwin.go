@@ -42,7 +42,7 @@ func SystemProfiler(ctx context.Context, dataType string) ([]byte, error) {
 			logrus.Warn("Can't fetch system_profiler data; maybe OS is older than macOS Catalina 10.15")
 			return []byte("{}"), nil
 		}
-		return nil, fmt.Errorf("failed to run %v: stdout=%q, stderr=%q: %w",
+		return nil, fmt.Errorf("failed to run %v: stdout=%#q, stderr=%#q: %w",
 			cmd.Args, stdout.String(), stderr.String(), err)
 	}
 	return stdout.Bytes(), nil

@@ -69,11 +69,11 @@ func newSFTPClient(ctx context.Context, inst *limatype.Instance) (*sftp.Client, 
 
 func (ts *ToolSet) RegisterInstance(ctx context.Context, inst *limatype.Instance) error {
 	if inst.Status != limatype.StatusRunning {
-		return fmt.Errorf("expected status of instance %q to be %q, got %q",
+		return fmt.Errorf("expected status of instance %#q to be %#q, got %#q",
 			inst.Name, limatype.StatusRunning, inst.Status)
 	}
 	if len(inst.Config.Mounts) == 0 {
-		logrus.Warnf("instance %q has no mount", inst.Name)
+		logrus.Warnf("instance %#q has no mount", inst.Name)
 	}
 	ts.inst = inst
 	var err error
@@ -107,7 +107,7 @@ func (ts *ToolSet) TranslateHostPath(hostPath string) (string, error) {
 		return "", errors.New("path is empty")
 	}
 	if !filepath.IsAbs(hostPath) {
-		return "", fmt.Errorf("expected an absolute path, got a relative path: %q", hostPath)
+		return "", fmt.Errorf("expected an absolute path, got a relative path: %#q", hostPath)
 	}
 	// TODO: make sure that hostPath is mounted
 	return hostPath, nil
