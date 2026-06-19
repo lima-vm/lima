@@ -57,6 +57,7 @@ func newDaemonCommand() *cobra.Command {
 	daemonCommand.Flags().Duration("tick", 3*time.Second, "Tick for polling events")
 	daemonCommand.Flags().Int("vsock-port", 0, "Use vsock server instead a UNIX socket")
 	daemonCommand.Flags().String("virtio-port", "", "Use virtio server instead a UNIX socket")
+	daemonCommand.Flags().Int("socket-owner", 0, "UID of the main user that owns the UNIX socket (0 for root)")
 	return daemonCommand
 }
 
@@ -79,6 +80,10 @@ func daemonAction(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 	virtioPort, err := cmd.Flags().GetString("virtio-port")
+	if err != nil {
+		return err
+	}
+	socketOwner, err := cmd.Flags().GetInt("socket-owner")
 	if err != nil {
 		return err
 	}
@@ -138,7 +143,15 @@ func daemonAction(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			return err
 		}
-		if err := os.Chmod(socket, 0o777); err != nil {
+		// The daemon runs as root (for iptables), but the host connects to the
+		// socket as the main user over an SSH local-forward. Hand the socket to
+		// that user so 0600 restricts access to the main user rather than root.
+		if socketOwner > 0 {
+			if err := os.Chown(socket, socketOwner, -1); err != nil {
+				return err
+			}
+		}
+		if err := os.Chmod(socket, 0o600); err != nil {
 			return err
 		}
 		l = socketL
