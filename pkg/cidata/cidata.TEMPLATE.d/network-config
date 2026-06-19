@@ -6,6 +6,9 @@ ethernets:
       macaddress: '{{$nw.MACAddress}}'
     dhcp4: true
     set-name: {{$nw.Interface}}
+    {{- if eq $.Param.internal_netplanOptional "true" }}
+    optional: true
+    {{- end }}
     dhcp4-overrides:
       route-metric: {{$nw.Metric}}
     dhcp-identifier: mac

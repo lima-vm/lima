@@ -172,8 +172,30 @@ ca_certs:
   {{- end }}
 {{- end }}
 
-{{- if .BootCmds }}
+{{- $nicHeal := and (eq .OS "Linux") .Networks }}
+{{- if or .BootCmds $nicHeal }}
 bootcmd:
+{{- if $nicHeal }}
+- |
+  # Work around the NIC rename race on Ubuntu 26.04 first boot (LP: #2136392):
+  # cloud-init cannot rename an already-up NIC, leaving it unconfigured.
+  # Re-attempt the rename (requires link down), then wait for the slirp NIC
+  # to be configured. No-op when interfaces already have their expected names.
+  for pair in{{range $nw := .Networks}} {{$nw.MACAddress}}={{$nw.Interface}}{{end}}; do
+    mac="${pair%=*}"; want="${pair#*=}"
+    [ -e "/sys/class/net/$want" ] && continue
+    cur=$(grep -lix "$mac" /sys/class/net/*/address 2>/dev/null | awk -F/ 'NR==1{print $(NF-1)}')
+    [ -n "$cur" ] || continue
+    for i in 1 2 3; do
+      ip link set "$cur" down && ip link set "$cur" name "$want" && ip link set "$want" up && break
+      sleep 1
+    done
+  done
+  i=0
+  until ip -4 addr show dev {{.SlirpNICName}} 2>/dev/null | grep -q inet || [ $((i += 1)) -gt 30 ]; do
+    sleep 1
+  done
+{{- end }}
   {{- range $cmd := $.BootCmds }}
 - |
   # We need to embed the params.env as a here-doc because /mnt/lima-cidata is not yet mounted
