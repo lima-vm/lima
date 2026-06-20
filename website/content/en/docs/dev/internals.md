@@ -220,6 +220,15 @@ The volume label is "cidata", as defined by [cloud-init NoCloud](https://docs.cl
 - `LIMA_CIDATA_PLAIN`: set to "1" when the instance is in plain mode (no mounts, port forwarding, or containerd), empty otherwise.
 - `LIMA_CIDATA_NO_CLOUD_INIT`: set to "1" if cloud-init should be skipped on this boot, empty otherwise.
 
+
+## Guest runtime files
+
+Boot scripts create the following marker files inside the guest at `/run/`:
+
+- `/run/lima-boot-done`: Written by `boot.sh` when provisioning is complete. Contains `LIMA_CIDATA_IID`.
+- `/run/lima-ssh-ready`: Written by `boot.Linux/07-etc-environment.sh` when SSH is ready. Contains `LIMA_CIDATA_IID`.
+- `/run/lima-fuse-ready`: Written by `boot.Linux/35-setup-packages.sh` after fuse.conf is configured for `allow_other`. Contains `LIMA_CIDATA_IID`. Only created when `LIMA_CIDATA_MOUNTTYPE=reverse-sshfs`.
+
 # VM lifecycle
 
 ![](/images/internals/lima-sequence-diagram.png)
