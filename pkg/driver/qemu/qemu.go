@@ -1067,11 +1067,19 @@ func Exe(arch limatype.Arch) (exe string, args []string, err error) {
 	return exe, args, nil
 }
 
+var hvSupport = sync.OnceValues(func() (string, error) {
+	return osutil.Sysctl(context.TODO(), "kern.hv_support")
+})
+
 func Accel(arch limatype.Arch) string {
 	if limatype.IsNativeArch(arch) {
 		switch runtime.GOOS {
 		case "darwin":
-			// TODO: return "tcg" if HVF is not available
+			s, err := hvSupport()
+			if err != nil || s != "1" {
+				logrus.WithError(err).Warn("Hypervisor API (kern.hv_support) is not available. Disabling HVF. Expect very poor performance.")
+				return "tcg"
+			}
 			return "hvf"
 		case "linux":
 			if _, err := os.Stat("/dev/kvm"); err != nil {
