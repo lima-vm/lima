@@ -34,6 +34,10 @@ func newAutostartEnableCommand() *cobra.Command {
 		"user", "",
 		"macOS username to run the instance as when --condition=boot (default: $USER)",
 	)
+	flags.Bool(
+		"keep-alive", true,
+		"Restart the instance automatically if the host agent exits unexpectedly",
+	)
 	return cmd
 }
 

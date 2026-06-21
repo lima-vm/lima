@@ -20,7 +20,12 @@ import (
 )
 
 func autostartEnableAction(cmd *cobra.Command, args []string) error {
-	condition, err := cmd.Flags().GetString("condition")
+	flags := cmd.Flags()
+	condition, err := flags.GetString("condition")
+	if err != nil {
+		return err
+	}
+	keepAlive, err := flags.GetBool("keep-alive")
 	if err != nil {
 		return err
 	}
@@ -36,12 +41,13 @@ func autostartEnableAction(cmd *cobra.Command, args []string) error {
 
 	switch condition {
 	case "login":
-		if err := autostart.RegisterToStartAtLogin(ctx, inst); err != nil {
+		mgr := autostart.ManagerWith(keepAlive)
+		if err := mgr.RegisterToStartAtLogin(ctx, inst); err != nil {
 			return fmt.Errorf("failed to register instance %#q to start at login: %w", inst.Name, err)
 		}
 		logrus.Infof("Instance %#q registered to start at login", inst.Name)
 	case "boot":
-		userName, err := cmd.Flags().GetString("user")
+		userName, err := flags.GetString("user")
 		if err != nil {
 			return err
 		}
@@ -51,7 +57,7 @@ func autostartEnableAction(cmd *cobra.Command, args []string) error {
 		if userName == "" {
 			return errors.New("could not determine user; pass --user")
 		}
-		return daemonInstall(ctx, inst.Name, inst.Dir, userName)
+		return daemonInstall(ctx, inst.Name, inst.Dir, userName, keepAlive)
 	default:
 		return fmt.Errorf("unknown condition %q: must be \"login\" or \"boot\"", condition)
 	}
@@ -89,18 +95,22 @@ func autostartDisableAction(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func daemonInstall(ctx context.Context, instName, workDir, userName string) error {
+func daemonInstall(ctx context.Context, instName, workDir, userName string, keepAlive bool) error {
 	selfExe, err := os.Executable()
 	if err != nil {
 		return fmt.Errorf("could not determine limactl path: %w", err)
 	}
 
-	content, err := textutil.ExecuteTemplate(launchd.DaemonTemplate, map[string]string{
+	vars := map[string]string{
 		"Binary":   selfExe,
 		"Instance": instName,
 		"WorkDir":  workDir,
 		"UserName": userName,
-	})
+	}
+	if keepAlive {
+		vars["KeepAlive"] = "true"
+	}
+	content, err := textutil.ExecuteTemplate(launchd.DaemonTemplate, vars)
 	if err != nil {
 		return fmt.Errorf("failed to render daemon plist: %w", err)
 	}
@@ -153,6 +163,6 @@ func runSudo(ctx context.Context, args ...string) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
-	logrus.Debugf("running: sudo %v", args)
+	logrus.Infof("Running: sudo %v (may prompt for password)", args)
 	return cmd.Run()
 }

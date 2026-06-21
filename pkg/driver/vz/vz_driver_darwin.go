@@ -491,41 +491,43 @@ func (l *LimaVzDriver) requestStopViaSSH(ctx context.Context) error {
 
 func (l *LimaVzDriver) Stop(ctx context.Context) error {
 	logrus.Info("Shutting down VZ")
-	canStop := l.machine.CanRequestStop()
 
-	if canStop {
-		_, err := l.machine.RequestStop()
-		if err != nil {
+	if l.machine.CanRequestStop() {
+		if _, err := l.machine.RequestStop(); err != nil {
 			return err
 		}
-
 		if *l.Instance.Config.OS == limatype.DARWIN {
-			// macOS VM does not respond to l.machine.RequestStop(),
-			// so we need to run `shutdown -h now` in the VM via SSH for graceful shutdown.
+			// macOS VMs do not respond to RequestStop(); shut down via SSH instead.
 			if err := l.requestStopViaSSH(ctx); err != nil {
 				logrus.WithError(err).Warn("Failed to request shutdown via SSH")
 			}
 		}
-
-		// Most Linux machines shutdown within 5 seconds, but macOS machines can take longer.
-		timeout := time.After(30 * time.Second)
-		ticker := time.NewTicker(500 * time.Millisecond)
-		for {
-			select {
-			case <-timeout:
-				return errors.New("vz timeout while waiting for stop status")
-			case <-ticker.C:
-				l.machine.mu.Lock()
-				stopped := l.machine.stopped
-				l.machine.mu.Unlock()
-				if stopped {
-					return nil
-				}
-			}
+	} else {
+		// CanRequestStop is false when no RequestStopHandler was set on the VM configuration.
+		// Fall back to SSH shutdown so the guest can exit cleanly rather than being orphaned.
+		logrus.Warn("vz: CanRequestStop is not supported; attempting graceful shutdown via SSH")
+		if err := l.requestStopViaSSH(ctx); err != nil {
+			logrus.WithError(err).Warn("vz: SSH shutdown failed; VM process may require manual cleanup")
+			return nil
 		}
 	}
 
-	return errors.New("vz: CanRequestStop is not supported")
+	// Most Linux machines shutdown within 5 seconds, but macOS machines can take longer.
+	timeout := time.After(30 * time.Second)
+	ticker := time.NewTicker(500 * time.Millisecond)
+	for {
+		select {
+		case <-timeout:
+			return errors.New("vz: timeout waiting for VM to stop")
+		case <-ticker.C:
+			l.machine.mu.Lock()
+			stopped := l.machine.stopped
+			l.machine.mu.Unlock()
+			if stopped {
+				return nil
+			}
+		}
+	}
 }
 
 func (l *LimaVzDriver) GuestAgentConn(_ context.Context) (net.Conn, string, error) {

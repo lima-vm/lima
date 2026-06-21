@@ -7,7 +7,7 @@ ExecStart={{.Binary}} start %i --foreground
 WorkingDirectory=%h
 Type=simple
 TimeoutSec=10
-Restart=on-failure
+Restart={{.Restart}}
 
 [Install]
 WantedBy=default.target
