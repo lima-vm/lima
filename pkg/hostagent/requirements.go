@@ -210,11 +210,11 @@ A possible workaround is to run "apt-get install sshfs" in the guest.
 		})
 		req = append(req, requirement{
 			description: "fuse to allow_other as user",
-			script: `#!/bin/sh
+			script: fmt.Sprintf(`#!/bin/sh
 set -eux
-sudo grep -q ^user_allow_other /etc/fuse*.conf
-`,
-			debugHint: `Append "user_allow_other" to /etc/fuse.conf (/etc/fuse3.conf) in the guest`,
+[ "$(cat /run/lima-fuse-ready 2>/dev/null)" = "%s" ]
+`, a.iid),
+			debugHint: `Waiting for /run/lima-fuse-ready to be created by the boot scripts.`,
 		})
 	} else {
 		req = append(req, startControlMasterReq)

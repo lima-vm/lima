@@ -34,6 +34,7 @@ EOF
 # otherwise apt-get fails with conflict
 if [ "${LIMA_CIDATA_MOUNTTYPE}" = "reverse-sshfs" ]; then
 	update_fuse_conf
+	echo "${LIMA_CIDATA_IID}" >/run/lima-fuse-ready
 fi
 
 SETUP_DNS=0
