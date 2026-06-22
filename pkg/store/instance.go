@@ -73,14 +73,14 @@ func Inspect(ctx context.Context, instName string) (*limatype.Instance, error) {
 		haClient, err := hostagentclient.NewHostAgentClient(haSock)
 		if err != nil {
 			inst.Status = limatype.StatusBroken
-			inst.Errors = append(inst.Errors, fmt.Errorf("failed to connect to %q: %w", haSock, err))
+			inst.Errors = append(inst.Errors, fmt.Errorf("failed to connect to %#q: %w", haSock, err))
 		} else {
 			ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 			defer cancel()
 			info, err := haClient.Info(ctx)
 			if err != nil {
 				inst.Status = limatype.StatusBroken
-				inst.Errors = append(inst.Errors, fmt.Errorf("failed to get Info from %q: %w", haSock, err))
+				inst.Errors = append(inst.Errors, fmt.Errorf("failed to get Info from %#q: %w", haSock, err))
 			} else {
 				inst.SSHLocalPort = info.SSHLocalPort
 				inst.AutoStartedIdentifier = info.AutoStartedIdentifier
@@ -92,7 +92,7 @@ func Inspect(ctx context.Context, instName string) (*limatype.Instance, error) {
 		if port, err := sshPortFromConfig(sshConfigPath); err == nil {
 			inst.SSHLocalPort = port
 		} else if !errors.Is(err, os.ErrNotExist) {
-			inst.Errors = append(inst.Errors, fmt.Errorf("failed to extract SSH local port from %q: %w", sshConfigPath, err))
+			inst.Errors = append(inst.Errors, fmt.Errorf("failed to extract SSH local port from %#q: %w", sshConfigPath, err))
 		}
 	}
 
@@ -124,7 +124,7 @@ func Inspect(ctx context.Context, instName string) (*limatype.Instance, error) {
 
 	tmpl, err := template.New("format").Parse(y.Message)
 	if err != nil {
-		inst.Errors = append(inst.Errors, fmt.Errorf("message %q is not a valid template: %w", y.Message, err))
+		inst.Errors = append(inst.Errors, fmt.Errorf("message %#q is not a valid template: %w", y.Message, err))
 		inst.Status = limatype.StatusBroken
 	} else {
 		data, err := AddGlobalFields(inst)
@@ -136,7 +136,7 @@ func Inspect(ctx context.Context, instName string) (*limatype.Instance, error) {
 			var message strings.Builder
 			err = tmpl.Execute(&message, data)
 			if err != nil {
-				inst.Errors = append(inst.Errors, fmt.Errorf("cannot execute template %q: %w", y.Message, err))
+				inst.Errors = append(inst.Errors, fmt.Errorf("cannot execute template %#q: %w", y.Message, err))
 				inst.Status = limatype.StatusBroken
 			} else {
 				inst.Message = message.String()
@@ -148,7 +148,7 @@ func Inspect(ctx context.Context, instName string) (*limatype.Instance, error) {
 	if version, err := os.ReadFile(limaVersionFile); err == nil {
 		inst.LimaVersion = strings.TrimSpace(string(version))
 		if _, err = versionutil.Parse(inst.LimaVersion); err != nil {
-			logrus.Warnf("treating lima version %q from %q as very latest release", inst.LimaVersion, limaVersionFile)
+			logrus.Warnf("treating lima version %#q from %#q as very latest release", inst.LimaVersion, limaVersionFile)
 		}
 	} else if !errors.Is(err, os.ErrNotExist) {
 		inst.Errors = append(inst.Errors, err)
@@ -246,7 +246,7 @@ func sshPortFromConfig(configPath string) (int, error) {
 			return strconv.Atoi(port)
 		}
 	}
-	return 0, fmt.Errorf("port not found in %q", configPath)
+	return 0, fmt.Errorf("port not found in %#q", configPath)
 }
 
 type FormatData struct {

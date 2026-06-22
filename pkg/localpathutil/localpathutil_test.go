@@ -54,7 +54,7 @@ func TestExpand(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := Expand(tt.input)
 			if tt.wantErr {
-				assert.Assert(t, err != nil, "expected error for input %q", tt.input)
+				assert.Assert(t, err != nil, "expected error for input %#q", tt.input)
 				return
 			}
 			assert.NilError(t, err)

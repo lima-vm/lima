@@ -83,17 +83,17 @@ func (p pseudoLoopbackListener) Accept() (net.Conn, error) {
 	remoteAddr := conn.RemoteAddr().String() // ip:port
 	remoteAddrIP, _, err := net.SplitHostPort(remoteAddr)
 	if err != nil {
-		logrus.WithError(err).Debugf("pseudoloopback forwarder: rejecting non-loopback remoteAddr %q (unparsable)", remoteAddr)
+		logrus.WithError(err).Debugf("pseudoloopback forwarder: rejecting non-loopback remoteAddr %#q (unparsable)", remoteAddr)
 		conn.Close()
 		return nil, err
 	}
 	if !IsLoopback(remoteAddrIP) {
-		err := fmt.Errorf("pseudoloopback forwarder: rejecting non-loopback remoteAddr %q", remoteAddr)
+		err := fmt.Errorf("pseudoloopback forwarder: rejecting non-loopback remoteAddr %#q", remoteAddr)
 		logrus.Debug(err)
 		conn.Close()
 		return nil, err
 	}
-	logrus.Infof("pseudoloopback forwarder: accepting connection from %q", remoteAddr)
+	logrus.Infof("pseudoloopback forwarder: accepting connection from %#q", remoteAddr)
 	return conn, nil
 }
 
@@ -112,7 +112,7 @@ func (pk *pseudoLoopbackPacketConn) ReadFrom(bytes []byte) (n int, addr net.Addr
 		return 0, nil, err
 	}
 	if !IsLoopback(remoteAddrIP) {
-		return 0, nil, fmt.Errorf("pseudoloopback forwarder: rejecting non-loopback remoteAddr %q", remoteAddr)
+		return 0, nil, fmt.Errorf("pseudoloopback forwarder: rejecting non-loopback remoteAddr %#q", remoteAddr)
 	}
 	return n, remoteAddr, nil
 }
@@ -123,7 +123,7 @@ func (pk *pseudoLoopbackPacketConn) WriteTo(bytes []byte, remoteAddr net.Addr) (
 		return 0, err
 	}
 	if !IsLoopback(remoteAddrIP) {
-		return 0, fmt.Errorf("pseudoloopback forwarder: rejecting non-loopback remoteAddr %q", remoteAddr)
+		return 0, fmt.Errorf("pseudoloopback forwarder: rejecting non-loopback remoteAddr %#q", remoteAddr)
 	}
 	return pk.PacketConn.WriteTo(bytes, remoteAddr)
 }

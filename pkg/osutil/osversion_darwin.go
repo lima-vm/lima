@@ -27,7 +27,7 @@ var ProductVersion = sync.OnceValues(func() (*semver.Version, error) {
 	}
 	verSem, err := semver.NewVersion(verTrimmed)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse macOS version %q: %w", verTrimmed, err)
+		return nil, fmt.Errorf("failed to parse macOS version %#q: %w", verTrimmed, err)
 	}
 	return verSem, nil
 })

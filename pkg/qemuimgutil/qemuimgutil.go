@@ -55,7 +55,7 @@ func resizeDisk(ctx context.Context, disk, format string, size int64) error {
 	args := []string{"resize", "-f", format, disk, strconv.FormatInt(size, 10)}
 	cmd := exec.CommandContext(ctx, "qemu-img", args...)
 	if out, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("failed to run %v: %q: %w", cmd.Args, string(out), err)
+		return fmt.Errorf("failed to run %v: %#q: %w", cmd.Args, string(out), err)
 	}
 	return nil
 }
@@ -114,7 +114,7 @@ func convertToRaw(ctx context.Context, source, dest string) error {
 
 	info, err := getInfo(ctx, source)
 	if err != nil {
-		return fmt.Errorf("failed to get info for source disk %q: %w", source, err)
+		return fmt.Errorf("failed to get info for source disk %#q: %w", source, err)
 	}
 	if info.Format == "raw" {
 		return nil
@@ -136,7 +136,7 @@ func execQemuImgConvert(ctx context.Context, source, dest string) error {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to run %v: stdout=%q, stderr=%q: %w",
+		return fmt.Errorf("failed to run %v: stdout=%#q, stderr=%#q: %w",
 			cmd.Args, stdout.String(), stderr.String(), err)
 	}
 	return nil
@@ -156,7 +156,7 @@ func getInfo(ctx context.Context, f string) (*Info, error) {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("failed to run %v: stdout=%q, stderr=%q: %w",
+		return nil, fmt.Errorf("failed to run %v: stdout=%#q, stderr=%#q: %w",
 			cmd.Args, stdout.String(), stderr.String(), err)
 	}
 	return parseInfo(stdout.Bytes())
@@ -172,7 +172,7 @@ func (q *QemuImageUtil) CreateDisk(ctx context.Context, disk string, size int64)
 	args := []string{"create", "-f", q.DefaultFormat, disk, strconv.FormatInt(size, 10)}
 	cmd := exec.CommandContext(ctx, "qemu-img", args...)
 	if out, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("failed to run %v: %q: %w", cmd.Args, string(out), err)
+		return fmt.Errorf("failed to run %v: %#q: %w", cmd.Args, string(out), err)
 	}
 	return nil
 }
@@ -181,7 +181,7 @@ func (q *QemuImageUtil) CreateDisk(ctx context.Context, disk string, size int64)
 func (q *QemuImageUtil) ResizeDisk(ctx context.Context, disk string, size int64) error {
 	info, err := getInfo(ctx, disk)
 	if err != nil {
-		return fmt.Errorf("failed to get info for disk %q: %w", disk, err)
+		return fmt.Errorf("failed to get info for disk %#q: %w", disk, err)
 	}
 	return resizeDisk(ctx, disk, info.Format, size)
 }
@@ -205,15 +205,15 @@ func GetInfo(ctx context.Context, path string) (*Info, error) {
 // Currently only raw.Type is supported.
 func (q *QemuImageUtil) Convert(ctx context.Context, imageType image.Type, source, dest string, size *int64, allowSourceWithBackingFile bool) error {
 	if imageType != raw.Type {
-		return fmt.Errorf("QemuImageUtil.Convert only supports raw.Type, got %q", imageType)
+		return fmt.Errorf("QemuImageUtil.Convert only supports raw.Type, got %#q", imageType)
 	}
 	if !allowSourceWithBackingFile {
 		info, err := getInfo(ctx, source)
 		if err != nil {
-			return fmt.Errorf("failed to get info for source disk %q: %w", source, err)
+			return fmt.Errorf("failed to get info for source disk %#q: %w", source, err)
 		}
 		if info.BackingFilename != "" || info.FullBackingFilename != "" {
-			return fmt.Errorf("qcow2 image %q has an unexpected backing file: %q", source, info.BackingFilename)
+			return fmt.Errorf("qcow2 image %#q has an unexpected backing file: %#q", source, info.BackingFilename)
 		}
 	}
 
@@ -224,7 +224,7 @@ func (q *QemuImageUtil) Convert(ctx context.Context, imageType image.Type, sourc
 	if size != nil {
 		destInfo, err := getInfo(ctx, dest)
 		if err != nil {
-			return fmt.Errorf("failed to get info for converted disk %q: %w", dest, err)
+			return fmt.Errorf("failed to get info for converted disk %#q: %w", dest, err)
 		}
 
 		if *size > destInfo.VSize {
@@ -242,19 +242,19 @@ func AcceptableAsBaseDisk(info *Info) error {
 		// NOP
 	default:
 		logrus.WithField("filename", info.Filename).
-			Warnf("Unsupported image format %q. The image may not boot, or may have an extra privilege to access the host filesystem. Use with caution.", info.Format)
+			Warnf("Unsupported image format %#q. The image may not boot, or may have an extra privilege to access the host filesystem. Use with caution.", info.Format)
 	}
 	if info.BackingFilename != "" {
-		return fmt.Errorf("base disk (%q) must not have a backing file (%q)", info.Filename, info.BackingFilename)
+		return fmt.Errorf("base disk (%#q) must not have a backing file (%#q)", info.Filename, info.BackingFilename)
 	}
 	if info.FullBackingFilename != "" {
-		return fmt.Errorf("base disk (%q) must not have a backing file (%q)", info.Filename, info.FullBackingFilename)
+		return fmt.Errorf("base disk (%#q) must not have a backing file (%#q)", info.Filename, info.FullBackingFilename)
 	}
 	if info.FormatSpecific != nil {
 		if vmdk := info.FormatSpecific.Vmdk(); vmdk != nil {
 			for _, e := range vmdk.Extents {
 				if e.Filename != info.Filename {
-					return fmt.Errorf("base disk (%q) must not have an extent file (%q)", info.Filename, e.Filename)
+					return fmt.Errorf("base disk (%#q) must not have an extent file (%#q)", info.Filename, e.Filename)
 				}
 			}
 		}
@@ -265,13 +265,13 @@ func AcceptableAsBaseDisk(info *Info) error {
 	// NOP
 	case 1:
 		if info.Filename != info.Children[0].Info.Filename {
-			return fmt.Errorf("base disk (%q) child must not have a different filename (%q)", info.Filename, info.Children[0].Info.Filename)
+			return fmt.Errorf("base disk (%#q) child must not have a different filename (%#q)", info.Filename, info.Children[0].Info.Filename)
 		}
 		if len(info.Children[0].Info.Children) > 0 {
-			return fmt.Errorf("base disk (%q) child must not have children of its own", info.Filename)
+			return fmt.Errorf("base disk (%#q) child must not have children of its own", info.Filename)
 		}
 	default:
-		return fmt.Errorf("base disk (%q) must not have multiple children: %+v", info.Filename, info.Children)
+		return fmt.Errorf("base disk (%#q) must not have multiple children: %+v", info.Filename, info.Children)
 	}
 	return nil
 }

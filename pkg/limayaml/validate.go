@@ -135,7 +135,7 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 		}
 		// There is no tilde-expansion for guest filenames
 		if strings.HasPrefix(*f.MountPoint, "~") {
-			errs = errors.Join(errs, fmt.Errorf("field `mounts[%d].mountPoint` must not start with \"~\"", i))
+			errs = errors.Join(errs, fmt.Errorf("field `mounts[%d].mountPoint` must not start with `~`", i))
 		}
 
 		if _, err := units.RAMInBytes(*f.NineP.Msize); err != nil {

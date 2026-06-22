@@ -161,7 +161,7 @@ func chooseGABinary(candidates []string) (string, error) {
 	for _, f := range candidates {
 		if _, err := os.Stat(f); err != nil {
 			if !errors.Is(err, fs.ErrNotExist) {
-				logrus.WithError(err).Warnf("failed to stat %q", f)
+				logrus.WithError(err).Warnf("failed to stat %#q", f)
 			}
 			continue
 		}
@@ -173,7 +173,7 @@ func chooseGABinary(candidates []string) (string, error) {
 	case 1:
 		return entries[0], nil
 	default:
-		logrus.Warnf("multiple files found, choosing %q from %v; consider removing the other ones",
+		logrus.Warnf("multiple files found, choosing %#q from %v; consider removing the other ones",
 			entries[0], candidates)
 		return entries[0], nil
 	}

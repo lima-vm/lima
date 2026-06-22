@@ -82,7 +82,7 @@ func inspectDisk(fName string) (size int64, format string, _ error) {
 	}
 	sz := img.Size()
 	if sz < 0 {
-		return -1, "", fmt.Errorf("cannot determine size of %q", fName)
+		return -1, "", fmt.Errorf("cannot determine size of %#q", fName)
 	}
 
 	return sz, string(img.Type()), nil
@@ -101,7 +101,7 @@ func (d *Disk) Unlock() error {
 func (d *Disk) LockForInstance(instanceDir string) error {
 	if d.Instance != "" {
 		if d.InstanceDir != instanceDir {
-			return fmt.Errorf("in use by instance %q", d.Instance)
+			return fmt.Errorf("in use by instance %#q", d.Instance)
 		}
 		if err := d.Unlock(); err != nil {
 			return fmt.Errorf("failed to unlock for reuse in the same instance: %w", err)

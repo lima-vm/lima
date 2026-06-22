@@ -163,7 +163,7 @@ func (plugin *Plugin) Run(ctx context.Context, args []string) {
 	if err == nil {
 		os.Exit(0) //nolint:revive // it's intentional to call os.Exit in this function
 	}
-	logrus.Fatalf("external command %q failed: %v", plugin.Path, err)
+	logrus.Fatalf("external command %#q failed: %v", plugin.Path, err)
 }
 
 var descRegex = regexp.MustCompile(`<limactl-desc>(.*?)</limactl-desc>`)
@@ -187,7 +187,7 @@ func extractDescFromScript(path string) string {
 	}
 
 	desc := strings.Trim(matches[1], " ")
-	logrus.Debugf("Plugin %s: extracted description: %q", filepath.Base(path), desc)
+	logrus.Debugf("Plugin %s: extracted description: %#q", filepath.Base(path), desc)
 	return desc
 }
 
