@@ -4,9 +4,15 @@
 package qemu
 
 import (
+	"os"
+	"path/filepath"
+	"runtime"
 	"testing"
 
 	"gotest.tools/v3/assert"
+
+	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 )
 
 func TestArgValue(t *testing.T) {
@@ -88,4 +94,60 @@ func TestParseQemuVersion(t *testing.T) {
 		}
 		assert.Equal(t, tc.expectedValue, v.String())
 	}
+}
+
+func TestSwtpmCmdline(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("swtpm unix socket mode is not supported on Windows host")
+	}
+
+	tmpDir := t.TempDir()
+
+	// Create a mock swtpm binary.
+	binDir := filepath.Join(tmpDir, "bin")
+	err := os.MkdirAll(binDir, 0o755)
+	assert.NilError(t, err)
+	swtpmPath := filepath.Join(binDir, "swtpm")
+	err = os.WriteFile(swtpmPath, []byte{}, 0o755)
+	assert.NilError(t, err)
+
+	// Overwrite PATH so that the function find the mock binary.
+	t.Setenv("PATH", binDir)
+
+	// Setup configs and expected value
+	cfg := Config{
+		Name:        "tpm-test",
+		InstanceDir: tmpDir,
+		LimaYAML:    &limatype.LimaYAML{},
+	}
+
+	stateDir := filepath.Join(tmpDir, filenames.SwtpmDir)
+	swtpmSock := filepath.Join(tmpDir, filenames.SwtpmSock)
+
+	expectedArgs := []string{
+		"socket",
+		"--tpmstate", "dir=" + stateDir,
+		"--ctrl", "type=unixio,path=" + swtpmSock,
+		"--tpm2",
+		"--terminate",
+		"--log", "level=1",
+	}
+
+	exe, args, err := SwtpmCmdline(cfg)
+	assert.NilError(t, err)
+	assert.Equal(t, exe, swtpmPath)
+	assert.DeepEqual(t, args, expectedArgs)
+
+	// Verify that state directory was created.
+	_, err = os.Stat(stateDir)
+	assert.NilError(t, err)
+
+	// Verify that stale socket is removed.
+	err = os.WriteFile(swtpmSock, []byte("stale socket"), 0o644)
+	assert.NilError(t, err)
+	// Call again to clean up the stale socket.
+	_, _, err = SwtpmCmdline(cfg)
+	assert.NilError(t, err)
+	_, err = os.Stat(swtpmSock)
+	assert.ErrorIs(t, err, os.ErrNotExist)
 }

@@ -844,6 +844,16 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		y.Plain = ptr.Of(false)
 	}
 
+	if y.TPM == nil {
+		y.TPM = d.TPM
+	}
+	if o.TPM != nil {
+		y.TPM = o.TPM
+	}
+	if y.TPM == nil {
+		y.TPM = ptr.Of(false)
+	}
+
 	fixUpForPlainMode(y)
 }
 
