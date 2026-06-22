@@ -98,7 +98,7 @@ provision:
     kubeadm config images pull --cri-socket=unix:///run/containerd/containerd.sock
     systemctl start kubelet
     # Initializing your control-plane node
-    cat <<EOF >kubeadm-config.yaml
+    cat <<EOF >/etc/kubeadm-config.yaml
     kind: InitConfiguration
     apiVersion: kubeadm.k8s.io/v1beta4
     nodeRegistration:
@@ -116,9 +116,9 @@ provision:
     apiVersion: kubelet.config.k8s.io/v1beta1
     cgroupDriver: systemd
     EOF
-    kubeadm init --config kubeadm-config.yaml
+    kubeadm init --config /etc/kubeadm-config.yaml
     {{else}}
-    cat <<EOF >kubeadm-config.yaml
+    cat <<EOF >/etc/kubeadm-config.yaml
     kind: JoinConfiguration
     apiVersion: kubeadm.k8s.io/v1beta4
     nodeRegistration:
@@ -130,7 +130,7 @@ provision:
         caCertHashes:
         - "{{.Param.discoveryTokenCaCertHash}}"
     EOF
-    kubeadm join --config kubeadm-config.yaml
+    kubeadm join --config /etc/kubeadm-config.yaml
     {{end}}
 
     {{if not ( and .Param.url .Param.token )}}
