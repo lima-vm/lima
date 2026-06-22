@@ -87,6 +87,10 @@ VNC:
 - `vncdisplay`: VNC display host/port
 - `vncpassword`: VNC display password
 
+TPM:
+- `swtpm.sock`: SWTPM (Software TPM Emulator) socket.
+- `swtpm`: A directory where TPM's state will be written.
+
 Guest agent:
 
 Each drivers use their own mode of communication

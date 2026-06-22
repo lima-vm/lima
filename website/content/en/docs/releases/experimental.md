@@ -12,6 +12,7 @@ The following features are experimental and subject to change:
 - `video.display: vnc` and relevant configuration (`video.vnc.display`)
 - `audio.device`
 - `mountInotify: true`
+- `tpm: true`
 - `External drivers`: building and using drivers as separate executables (see [Virtual Machine Drivers](../dev/drivers))
 - [`vmType: krunkit`](../config/vmtype/krunkit.md)
 - [`github` URL scheme](../templates/github.md): referencing templates on GitHub with `github:` URLs

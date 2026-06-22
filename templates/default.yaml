@@ -631,6 +631,14 @@ plain: null
 # 🟢 Builtin default: false
 nestedVirtualization: null
 
+# EXPERIMENTAL
+# When enabled, an emulated TPM 2.0 device is provided to the guest via swtpm.
+# This is required for disk encryption (LUKS2+TPM) in Linux guests.
+# Requires swtpm to be installed on the host. Only supported with vmType: qemu.
+# Currently not supported on Windows hosts as swtpm doesn't support Windows.
+# 🟢 Builtin default: false
+tpm: null
+
 # ===================================================================== #
 # GLOBAL DEFAULTS AND OVERRIDES
 # ===================================================================== #

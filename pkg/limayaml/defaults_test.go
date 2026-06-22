@@ -121,6 +121,7 @@ func TestFillDefault(t *testing.T) {
 			Shell:   ptr.Of("/bin/bash"),
 			UID:     ptr.Of(uint32(uid)),
 		},
+		TPM: ptr.Of(false),
 	}
 
 	defaultPortForward := limatype.PortForward{
@@ -297,6 +298,7 @@ func TestFillDefault(t *testing.T) {
 	}
 
 	expect.NestedVirtualization = ptr.Of(false)
+	expect.TPM = ptr.Of(false)
 
 	FillDefault(t.Context(), &y, &limatype.LimaYAML{}, &limatype.LimaYAML{}, filePath, false)
 	assert.DeepEqual(t, &y, &expect, opts...)
@@ -424,6 +426,7 @@ func TestFillDefault(t *testing.T) {
 				"minimumVersion": "9.1.0",
 			},
 		},
+		TPM: ptr.Of(true),
 	}
 
 	expect = d
@@ -460,6 +463,7 @@ func TestFillDefault(t *testing.T) {
 	}
 
 	expect.Plain = ptr.Of(false)
+	expect.TPM = ptr.Of(true)
 
 	y = limatype.LimaYAML{}
 	FillDefault(t.Context(), &y, &d, &limatype.LimaYAML{}, filePath, false)
@@ -716,6 +720,7 @@ func TestFillDefault(t *testing.T) {
 			},
 		},
 	}
+	expect.TPM = ptr.Of(false)
 
 	FillDefault(t.Context(), &y, &d, &o, filePath, false)
 	assert.DeepEqual(t, &y, &expect, opts...)

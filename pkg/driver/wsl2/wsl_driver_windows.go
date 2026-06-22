@@ -43,6 +43,7 @@ var knownYamlProperties = []string{
 	"PropagateProxyEnv",
 	"Provision",
 	"SSH",
+	"TPM",
 	"VMType",
 }
 
@@ -109,6 +110,10 @@ func validateConfig(_ context.Context, cfg *limatype.LimaYAML) error {
 
 	if !limatype.IsNativeArch(*cfg.Arch) {
 		return fmt.Errorf("unsupported arch: %#q", *cfg.Arch)
+	}
+
+	if cfg.TPM != nil && *cfg.TPM {
+		return errors.New("field `tpm` is not supported on WSL2 driver")
 	}
 
 	if cfg.VMType != nil {
