@@ -10,22 +10,12 @@ if ! [[ ${LIMA_CIDATA_VMTYPE} == "vz" && ${LIMA_CIDATA_MOUNTTYPE} == "virtiofs" 
 	exit 0
 fi
 
-# cloud-init's cc_mounts writes /etc/fstab with a bare "\t".join(fields) and does NOT
-# octal-escape the mount point (canonical/cloud-init#3603); a space/tab in the path makes an
-# unparsable line that mount(8) silently skips via nofail (lima-vm/lima#5136, colima#1471).
-# cc_mounts already created the directory from the unescaped value, so only repair the fstab
-# syntax and (re)mount. -F'\t' isolates the field reliably; escaped paths have no literal
-# space/tab, so this is idempotent and safe once cloud-init is fixed (canonical/cloud-init#6911).
+# cloud-init's cc_mounts writes the mount point into /etc/fstab without octal-escaping it, so a
+# space/tab in the path makes an unparsable line that mount(8) silently skips via nofail
+# (lima-vm/lima#5136, colima#1471). cc_mounts already created the directory from the unescaped
+# value, so just repair the fstab syntax (see util/escape-fstab.sh) and (re)mount.
 if grep -q virtiofs /etc/fstab; then
-	awk -F'\t' 'BEGIN { OFS = "\t" }
-		$3 == "virtiofs" && $4 ~ /comment=cloudconfig/ && $2 ~ /[ \t]/ {
-			p = $2
-			gsub(/\\/, "\\134", p) # backslash first so introduced escapes are not re-escaped
-			gsub(/ /, "\\040", p)
-			gsub(/\t/, "\\011", p)
-			$2 = p
-		}
-		{ print }' /etc/fstab >/etc/fstab.lima.tmp &&
+	escape-fstab.sh </etc/fstab >/etc/fstab.lima.tmp &&
 		cat /etc/fstab.lima.tmp >/etc/fstab && rm -f /etc/fstab.lima.tmp
 	# Mount entries cc_mounts skipped due to the previously broken line (already-mounted ones
 	# are a no-op). On Oracle Linux the virtiofs module is installed later in
