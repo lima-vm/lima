@@ -777,11 +777,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 			mount.Writable = ptr.Of(false)
 		}
 		if mount.NineP.Cache == nil {
-			if *mount.Writable {
-				mounts[i].NineP.Cache = ptr.Of(Default9pCacheForRW)
-			} else {
-				mounts[i].NineP.Cache = ptr.Of(Default9pCacheForRO)
-			}
+			mounts[i].NineP.Cache = ptr.Of(Default9pCacheForRW)
 		}
 	}
 
