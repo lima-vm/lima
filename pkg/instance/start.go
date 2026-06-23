@@ -388,7 +388,7 @@ func watchHostAgentEvents(ctx context.Context, inst *limatype.Instance, haStdout
 	return nil
 }
 
-type watchHostAgentEventsTimeoutKey = struct{}
+type watchHostAgentEventsTimeoutKey struct{}
 
 // WithWatchHostAgentTimeout sets the value of the timeout to use for
 // watchHostAgentEvents in the given Context.
@@ -396,7 +396,7 @@ func WithWatchHostAgentTimeout(ctx context.Context, timeout time.Duration) conte
 	return context.WithValue(ctx, watchHostAgentEventsTimeoutKey{}, timeout)
 }
 
-type launchingShellKey = struct{}
+type launchingShellKey struct{}
 
 // WithLaunchingShell marks the context as launching a shell after start,
 // suppressing the "READY. Run ... to open the shell" message.

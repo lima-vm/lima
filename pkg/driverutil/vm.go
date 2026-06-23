@@ -178,5 +178,5 @@ func handleInspectStatusAction(ctx context.Context, inst *limatype.Instance, ext
 
 	*inst = respInst
 	logrus.Debugf("Inspecting instance status action completed successfully for %#q", extDriverPath)
-	return inst.Status, nil
+	return string(inst.Status), nil
 }

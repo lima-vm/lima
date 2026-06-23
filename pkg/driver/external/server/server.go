@@ -177,7 +177,7 @@ func handleInspectStatus(ctx context.Context, driver driver.Driver) {
 	}
 
 	status := driver.InspectStatus(ctx, &inst)
-	inst.Status = status
+	inst.Status = limatype.Status(status)
 
 	resp, err := inst.MarshalJSON()
 	if err != nil {

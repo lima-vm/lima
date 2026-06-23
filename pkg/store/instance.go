@@ -170,7 +170,7 @@ func inspectStatus(ctx context.Context, instDir string, inst *limatype.Instance,
 		return
 	}
 
-	inst.Status = status
+	inst.Status = limatype.Status(status)
 }
 
 func inspectStatusWithPIDFiles(instDir string, inst *limatype.Instance, y *limatype.LimaYAML) {

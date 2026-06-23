@@ -66,7 +66,7 @@ func (a *HostAgent) setupMount(ctx context.Context, m limatype.Mount) (*mount, e
 	// modifying HostAgent's sshConfig in case of Windows
 	sshConfig := *a.sshConfig
 	rsf := &reversesshfs.ReverseSSHFS{
-		Driver:              *m.SSHFS.SFTPDriver,
+		Driver:              reversesshfs.Driver(*m.SSHFS.SFTPDriver),
 		SSHConfig:           &sshConfig,
 		LocalPath:           resolvedLocation,
 		Host:                sshAddress,

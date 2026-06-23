@@ -103,7 +103,7 @@ func (fw *Forwarder) forwardingAddresses(guest *api.IPPort) (hostAddr, guestAddr
 		if rule.GuestSocket != "" {
 			continue
 		}
-		if rule.Proto != limatype.ProtoAny && rule.Proto != guest.Protocol {
+		if rule.Proto != limatype.ProtoAny && rule.Proto != limatype.Proto(guest.Protocol) {
 			continue
 		}
 		if guest.Port < int32(rule.GuestPortRange[0]) || guest.Port > int32(rule.GuestPortRange[1]) {
