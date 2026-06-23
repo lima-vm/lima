@@ -346,7 +346,7 @@ func (l *LimaKrunkitDriver) Delete(_ context.Context) error {
 	return nil
 }
 
-func (l *LimaKrunkitDriver) InspectStatus(_ context.Context, _ *limatype.Instance) string {
+func (l *LimaKrunkitDriver) InspectStatus(_ context.Context, _ *limatype.Instance) limatype.Status {
 	return ""
 }
 
