@@ -225,12 +225,20 @@ func ReadPIDFile(path string) (int, error) {
 		return 0, err
 	}
 	proc, err := os.FindProcess(pid)
+	if runtime.GOOS == "windows" {
+		// On Windows, os.FindProcess will fail if the process does not exist.
+		if err == nil {
+			return pid, nil
+		}
+		var errno syscall.Errno
+		const ErrorInvalidParameter syscall.Errno = 0x57
+		if errors.As(err, &errno) && errno == ErrorInvalidParameter {
+			_ = os.Remove(path)
+			return 0, nil
+		}
+	}
 	if err != nil {
 		return 0, err
-	}
-	// os.FindProcess will only return running processes on Windows, exit early
-	if runtime.GOOS == "windows" {
-		return pid, nil
 	}
 	err = proc.Signal(syscall.Signal(0))
 	if err != nil {
