@@ -5,6 +5,7 @@ package driver
 
 import (
 	"context"
+	"errors"
 	"net"
 
 	"github.com/lima-vm/lima/v2/pkg/hostagent/events"
@@ -14,6 +15,44 @@ import (
 // VsockEventEmitter is an optional interface for drivers to emit vsock events.
 type VsockEventEmitter interface {
 	SetVsockEventCallback(callback func(*events.VsockEvent))
+}
+
+// ErrFSHotPlugUnsupported is returned when a driver does not support hot-plugging
+// filesystem share devices (9p / virtiofs) into a running VM.
+var ErrFSHotPlugUnsupported = errors.New("driver does not support filesystem hot-plug")
+
+// HotPlugFSRequest describes a filesystem share device to attach to a running VM.
+type HotPlugFSRequest struct {
+	// Type is the share transport, limatype.NINEP or limatype.VIRTIOFS.
+	Type limatype.MountType
+	// HostPath is the host directory to share.
+	HostPath string
+	// Tag is the mount tag the guest uses to mount the share.
+	Tag string
+	// Writable enables read-write sharing.
+	Writable bool
+	// NineP carries the 9p options (protocol version, msize, cache). Nil for virtiofs.
+	NineP *limatype.NineP
+	// QueueSize is the virtiofs queue size. Nil uses the driver default.
+	QueueSize *int
+}
+
+// HotPlugFSResponse is the result of a successful HotPlugFS.
+type HotPlugFSResponse struct {
+	// DeviceID is an opaque identifier passed back to HotUnplugFS to detach the device.
+	DeviceID string
+}
+
+// HotUnplugFSRequest identifies a previously hot-plugged device to detach.
+type HotUnplugFSRequest struct {
+	DeviceID string
+}
+
+// FSHotPlugger is an optional interface implemented by drivers that can hot-plug
+// filesystem share devices (9p / virtiofs) into a running VM at runtime.
+type FSHotPlugger interface {
+	HotPlugFS(ctx context.Context, req *HotPlugFSRequest) (*HotPlugFSResponse, error)
+	HotUnplugFS(ctx context.Context, req *HotUnplugFSRequest) error
 }
 
 // Lifecycle defines basic lifecycle operations.
@@ -105,6 +144,28 @@ type Driver interface {
 
 type ConfiguredDriver struct {
 	Driver
+}
+
+var _ FSHotPlugger = (*ConfiguredDriver)(nil)
+
+// HotPlugFS delegates to the wrapped driver if it implements FSHotPlugger,
+// otherwise it returns ErrFSHotPlugUnsupported.
+func (d *ConfiguredDriver) HotPlugFS(ctx context.Context, req *HotPlugFSRequest) (*HotPlugFSResponse, error) {
+	hp, ok := d.Driver.(FSHotPlugger)
+	if !ok {
+		return nil, ErrFSHotPlugUnsupported
+	}
+	return hp.HotPlugFS(ctx, req)
+}
+
+// HotUnplugFS delegates to the wrapped driver if it implements FSHotPlugger,
+// otherwise it returns ErrFSHotPlugUnsupported.
+func (d *ConfiguredDriver) HotUnplugFS(ctx context.Context, req *HotUnplugFSRequest) error {
+	hp, ok := d.Driver.(FSHotPlugger)
+	if !ok {
+		return ErrFSHotPlugUnsupported
+	}
+	return hp.HotUnplugFS(ctx, req)
 }
 
 type Info struct {
