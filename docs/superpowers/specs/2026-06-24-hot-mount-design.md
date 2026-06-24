@@ -43,6 +43,27 @@ kernels. DAX is a possible later tuning knob.
 | Driver/host scope   | QEMU on Linux first                                                           |
 | Quality bar         | Upstream-quality: unit + integration tests, website docs, changelog          |
 
+### 2a. Implementation refinements (post-brainstorm, discovered during planning)
+
+These refine §5 and §10 after reading the exact code. They reduce risk and surface without
+changing the user-facing behavior.
+
+1. **Optional capability interface, not a core `Driver` method.** Hot-plug is exposed via an
+   optional `driver.FSHotPlugger` interface (the codebase already uses this pattern for
+   `VsockEventEmitter`). Only the QEMU driver implements it. `*driver.ConfiguredDriver` (which
+   wraps every driver) gets delegating methods that return `driver.ErrFSHotPlugUnsupported` when
+   the wrapped driver lacks the capability. **Consequence:** the VZ, WSL2, and krunkit driver
+   files are **not modified** — "unsupported" is automatic.
+2. **Linux-gated `memory-backend-memfd`.** On Linux hosts, guest memory is always backed by
+   `memory-backend-memfd,share=on` (avoids the `/dev/shm` sizing pitfall of risk 1 and enables
+   virtiofs hot-plug on any instance). On non-Linux qemu hosts, the existing `/dev/shm`
+   file-backing for static virtiofs mounts is left untouched. PCIe root ports are added only on
+   Linux for q35/virt.
+3. **External-driver gRPC hot-plug is deferred** (YAGNI). QEMU runs in-process by default and no
+   external driver implements hot-plug, so the external `driver.proto` is left unchanged for now.
+   The hostagent returns `ErrFSHotPlugUnsupported` for external/non-capable drivers. This is a
+   documented follow-up, not a v1 requirement.
+
 ## 3. Architecture
 
 ```
