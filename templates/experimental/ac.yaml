@@ -1,0 +1,23 @@
+vmType: ac
+
+arch: aarch64
+cpus: 4
+memory: 1GiB
+disk: 512GiB
+
+images:
+- location: "debian-rootfs-arm64.tar.gz"
+  arch: "aarch64"
+
+# virtiofs is broken
+mountType: reverse-sshfs
+
+mounts:
+- location: "~"
+- location: "/tmp/lima"
+  writable: true
+
+# The built-in containerd installer does not support OpenRC currently.
+containerd:
+  system: false
+  user: false
