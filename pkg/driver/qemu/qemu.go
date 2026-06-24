@@ -49,6 +49,16 @@ type Config struct {
 	VirtioGA     bool
 }
 
+// HotPlugRootPorts is the number of spare pcie-root-port controllers reserved at
+// boot (on Linux/q35+virt) so that filesystem share devices (virtio-9p-pci /
+// vhost-user-fs-pci) can be hot-plugged into the running VM for runtime mounts.
+const HotPlugRootPorts = 8
+
+// HotPlugRootPortID returns the stable id of the i-th spare pcie-root-port.
+func HotPlugRootPortID(i int) string {
+	return fmt.Sprintf("lima-hp-%d", i)
+}
+
 // minimumQemuVersion returns hardMin and softMin.
 //
 // hardMin is the hard minimum version of QEMU.
@@ -527,7 +537,16 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	memBytes = adjustMemBytesDarwinARM64HVF(memBytes, accel)
 	args = appendArgsIfNoConflict(args, "-m", strconv.Itoa(int(memBytes>>20)))
 
-	if *y.MountType == limatype.VIRTIOFS {
+	switch {
+	case runtime.GOOS == "linux":
+		// On Linux, always back guest memory with a shareable memfd so that virtiofs
+		// devices can be hot-plugged into the running VM at runtime (see hot-mount).
+		// memfd avoids the /dev/shm sizing pitfall of memory-backend-file.
+		args = appendArgsIfNoConflict(args, "-object",
+			fmt.Sprintf("memory-backend-memfd,id=virtiofs-shm,size=%s,share=on", strconv.Itoa(int(memBytes))))
+		args = appendArgsIfNoConflict(args, "-numa", "node,memdev=virtiofs-shm")
+	case *y.MountType == limatype.VIRTIOFS:
+		// On non-Linux hosts, shareable memory is only needed for static virtiofs mounts.
 		args = appendArgsIfNoConflict(args, "-object",
 			fmt.Sprintf("memory-backend-file,id=virtiofs-shm,size=%s,mem-path=/dev/shm,share=on", strconv.Itoa(int(memBytes))))
 		args = appendArgsIfNoConflict(args, "-numa", "node,memdev=virtiofs-shm")
@@ -587,6 +606,15 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	case limatype.S390X:
 		machine := "s390-ccw-virtio,accel=" + accel
 		args = appendArgsIfNoConflict(args, "-machine", machine)
+	}
+
+	// Reserve spare PCIe root ports on Linux (q35/virt) so filesystem share devices
+	// (virtio-9p-pci / vhost-user-fs-pci) can be hot-plugged at runtime for hot-mount.
+	if runtime.GOOS == "linux" && (*y.Arch == limatype.X8664 || *y.Arch == limatype.AARCH64) {
+		for i := 0; i < HotPlugRootPorts; i++ {
+			args = append(args, "-device",
+				fmt.Sprintf("pcie-root-port,id=%s,bus=pcie.0,chassis=%d", HotPlugRootPortID(i), i+1))
+		}
 	}
 
 	// SMP
