@@ -15,6 +15,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/Code-Hex/vz/v3"
@@ -98,6 +99,9 @@ type LimaVzDriver struct {
 	waitSSHLocalPortAccessible <-chan any
 
 	onVsockEvent func(*events.VsockEvent)
+
+	hotPlugOnce sync.Once
+	hotPlug     *vzHotPlugState
 }
 
 var (

@@ -727,20 +727,77 @@ func directorySharingDevicesMacOS(origMounts []limatype.Mount) ([]vz.DirectorySh
 	return []vz.DirectorySharingDeviceConfiguration{config}, nil
 }
 
+// vzHotMountSlots is the number of spare virtio-fs devices reserved at boot on Linux
+// guests so that host folders can be hot-mounted into the running VM at runtime.
+const vzHotMountSlots = 8
+
+// hotMountTag returns the fixed mount tag of the spare hot-mount device for a slot.
+func hotMountTag(slot int) string {
+	return fmt.Sprintf("lima-hotmount-%d", slot)
+}
+
+// hotMountPlaceholderDir is the empty directory a spare device shares until a real
+// folder is hot-mounted (and again after it is unmounted).
+func hotMountPlaceholderDir(inst *limatype.Instance) string {
+	return filepath.Join(inst.Dir, "hotmount-placeholder")
+}
+
+// spareHotMountDevices builds vzHotMountSlots empty virtio-fs devices (indices 0..N-1)
+// whose share is populated at runtime by the FSHotPlugger implementation.
+func spareHotMountDevices(inst *limatype.Instance) ([]vz.DirectorySharingDeviceConfiguration, error) {
+	placeholder := hotMountPlaceholderDir(inst)
+	if err := os.MkdirAll(placeholder, 0o700); err != nil {
+		return nil, err
+	}
+	var devs []vz.DirectorySharingDeviceConfiguration
+	for slot := 0; slot < vzHotMountSlots; slot++ {
+		directory, err := vz.NewSharedDirectory(placeholder, true) // read-only empty placeholder
+		if err != nil {
+			return nil, err
+		}
+		share, err := vz.NewSingleDirectoryShare(directory)
+		if err != nil {
+			return nil, err
+		}
+		config, err := vz.NewVirtioFileSystemDeviceConfiguration(hotMountTag(slot))
+		if err != nil {
+			return nil, err
+		}
+		config.SetDirectoryShare(share)
+		devs = append(devs, config)
+	}
+	return devs, nil
+}
+
 func attachFolderMounts(inst *limatype.Instance, vmConfig *vz.VirtualMachineConfiguration) error {
 	var mounts []vz.DirectorySharingDeviceConfiguration
+
+	// Reserve spare virtio-fs devices for runtime hot-mount on Linux guests. They occupy
+	// indices 0..vzHotMountSlots-1 of the directory-sharing device list, which the
+	// FSHotPlugger implementation addresses by index at runtime.
+	if *inst.Config.OS != limatype.DARWIN {
+		spares, err := spareHotMountDevices(inst)
+		if err != nil {
+			return err
+		}
+		mounts = append(mounts, spares...)
+	}
+
 	if *inst.Config.MountType == limatype.VIRTIOFS {
+		var staticMounts []vz.DirectorySharingDeviceConfiguration
 		var err error
 		// "generic" sharing devices are still mountable on macOS, but such mounts are
 		// not accessible due to Operation not permitted" errors.
 		if *inst.Config.OS == limatype.DARWIN {
-			mounts, err = directorySharingDevicesMacOS(inst.Config.Mounts)
+			staticMounts, err = directorySharingDevicesMacOS(inst.Config.Mounts)
 		} else {
-			mounts, err = directorySharingDevicesGeneric(inst.Config.Mounts)
+			staticMounts, err = directorySharingDevicesGeneric(inst.Config.Mounts)
 		}
 		if err != nil {
 			return err
 		}
+		// Append after the reserved hot-mount spares so the spare indices stay 0..N-1.
+		mounts = append(mounts, staticMounts...)
 	}
 
 	var vzOpts limatype.VZOpts

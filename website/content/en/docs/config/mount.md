@@ -168,7 +168,7 @@ mountType: "wsl2"
 > **Warning**
 > Runtime hot-mount is experimental
 
-| ⚡ Requirement | Lima >= 2.1.0, QEMU driver on a Linux host |
+| ⚡ Requirement | Lima >= 2.1.0; QEMU driver on a Linux host, or the VZ driver on macOS |
 | ----------------- |----------------|
 
 Host directories can be mounted into a **running** instance without restarting it,
@@ -191,16 +191,22 @@ The `--type` flag selects the transport:
 - `9p`: lower throughput, slower for many small files.
 - `reverse-sshfs`: works without any guest device, lowest throughput.
 
+#### Supported drivers
+- **QEMU (Linux host):** `virtiofs` (default) and `9p` are hot-plugged as PCIe devices via
+  QMP; `reverse-sshfs` works over SSH. Requires the instance to have been **started with
+  Lima >= 2.1.0**, which reserves the PCIe hot-plug slots and shareable guest memory at boot.
+- **VZ (macOS host, Linux guest):** `virtiofs` only. VZ's Virtualization.framework has no
+  device hot-plug API, so Lima reserves spare virtio-fs devices at boot and populates their
+  share at runtime — delivering full native virtiofs throughput (~5 GB/s in practice).
+  Requires the instance to have been started with Lima >= 2.1.0.
+- Other drivers (krunkit, WSL2) report an "unsupported" error.
+
 #### Caveats
-- Runtime hot-mount is currently supported only with the **QEMU driver on a Linux host**.
-  Other drivers report an "unsupported" error for `virtiofs`/`9p`. (VZ's
-  Virtualization.framework has no device hot-plug API.)
 - Runtime mounts are **ephemeral**: they are not written to `lima.yaml` and do not
   survive `limactl stop`/`start`. Add them to `mounts:` in the config for persistence.
-- `virtiofs`/`9p` hot-mount requires the instance to have been **started with Lima >= 2.1.0**,
-  which reserves the PCIe hot-plug slots and shareable guest memory at boot. Instances
-  started by older versions can still use `--type reverse-sshfs`.
-- At most **8** concurrent hot-mounts per instance (the number of reserved PCIe slots).
+- Instances started by older Lima versions lack the reserved slots/devices; on QEMU they
+  can still use `--type reverse-sshfs`.
+- At most **8** concurrent hot-mounts per instance (the number of reserved slots/devices).
 
 ## Mount Inotify
 > **Warning**

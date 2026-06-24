@@ -1,0 +1,79 @@
+--- a/shared_directory.go	2026-06-24 15:34:09
++++ b/shared_directory.go	2026-06-24 16:30:47
+@@ -9,11 +9,31 @@
+ */
+ import "C"
+ import (
++	"errors"
+ 	"os"
+ 
+ 	"github.com/Code-Hex/vz/v3/internal/objc"
+ )
+ 
++// SetVirtioFileSystemDeviceShareAtIndex sets, at runtime, the directory share of the
++// directory-sharing device at the given index. The index refers to the position in the
++// slice passed to SetDirectorySharingDevicesVirtualMachineConfiguration at VM creation,
++// and the device must be a Virtio file system device. This allows changing (or
++// populating) the shared host directory of a running VM without restarting it.
++//
++// It is the runtime counterpart of VirtioFileSystemDeviceConfiguration.SetDirectoryShare.
++// Available on macOS 12 and newer.
++func (v *VirtualMachine) SetVirtioFileSystemDeviceShareAtIndex(index int, share DirectoryShare) error {
++	if err := macOSAvailable(12); err != nil {
++		return err
++	}
++	cerr := C.setDirectorySharingDeviceShareAtIndex(objc.Ptr(v), v.dispatchQueue, C.int(index), objc.Ptr(share))
++	if cerr != nil {
++		return errors.New(C.GoString(cerr))
++	}
++	return nil
++}
++
+ // DirectorySharingDeviceConfiguration for a directory sharing device configuration.
+ type DirectorySharingDeviceConfiguration interface {
+ 	objc.NSObject
+--- a/virtualization_12.h	2026-06-24 15:34:09
++++ b/virtualization_12.h	2026-06-24 16:29:51
+@@ -45,4 +45,8 @@
+ void setAudioDevicesVZVirtualMachineConfiguration(void *config,
+     void *audioDevices);
+ 
+-void startVirtualMachineWindow(void *machine, void *queue, double width, double height, const char *title, bool enableController);
+\ No newline at end of file
++void startVirtualMachineWindow(void *machine, void *queue, double width, double height, const char *title, bool enableController);
++
++/* Runtime mutation: set the directory share of the directory-sharing device at the
++ * given index on a running VM. Returns NULL on success, or a static error string. */
++const char *setDirectorySharingDeviceShareAtIndex(void *machine, void *queue, int index, void *share);
+\ No newline at end of file
+--- a/virtualization_12.m	2026-06-24 15:34:09
++++ b/virtualization_12.m	2026-06-24 16:30:15
+@@ -364,6 +364,28 @@
+             [NSApp run];
+             return;
+         }
++    }
++    RAISE_UNSUPPORTED_MACOS_EXCEPTION();
++}
++
++const char *setDirectorySharingDeviceShareAtIndex(void *machine, void *queue, int index, void *share)
++{
++    if (@available(macOS 12, *)) {
++        __block const char *err = NULL;
++        dispatch_sync((dispatch_queue_t)queue, ^{
++            NSArray<VZDirectorySharingDevice *> *devices = [(VZVirtualMachine *)machine directorySharingDevices];
++            if (index < 0 || index >= (int)[devices count]) {
++                err = "directory sharing device index out of range";
++                return;
++            }
++            VZDirectorySharingDevice *dev = [devices objectAtIndex:index];
++            if (![dev isKindOfClass:[VZVirtioFileSystemDevice class]]) {
++                err = "device at index is not a VZVirtioFileSystemDevice";
++                return;
++            }
++            ((VZVirtioFileSystemDevice *)dev).share = (VZDirectoryShare *)share;
++        });
++        return err;
+     }
+     RAISE_UNSUPPORTED_MACOS_EXCEPTION();
+ }

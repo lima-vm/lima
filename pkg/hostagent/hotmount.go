@@ -159,6 +159,11 @@ func (a *HostAgent) hotPlugMount(ctx context.Context, m limatype.Mount, mountTyp
 		return nil, err
 	}
 	deviceID := resp.DeviceID
+	// Drivers with fixed pre-reserved device tags (VZ) return the tag to mount; drivers
+	// that create the device at runtime (QEMU) leave it empty and we use the request tag.
+	if resp.Tag != "" {
+		tag = resp.Tag
+	}
 
 	unplug := func() error {
 		return hp.HotUnplugFS(context.Background(), &driver.HotUnplugFSRequest{DeviceID: deviceID})

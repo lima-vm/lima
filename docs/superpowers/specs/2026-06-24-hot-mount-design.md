@@ -344,3 +344,28 @@ Mirror `hack/test-mount-home.sh` style:
 - `cmd/limactl/mount.go`, `cmd/limactl/main.go` — CLI.
 - `website/content/en/docs/config/mount.md`, changelog — docs.
 - `hack/` + `*_test.go` — integration + unit tests.
+
+---
+
+## Addendum: VZ (macOS) hot-mount — implemented 2026-06-24
+
+VZ's Virtualization.framework has **no device hot-plug API**, so the QEMU approach
+(hot-plug a new device per mount) cannot work. Instead VZ exploits the **mutable
+`VZVirtioFileSystemDevice.share`** property, validated on macOS 26 / Apple M-series:
+
+- **Boot-time** (`pkg/driver/vz/vm_darwin.go`): reserve **8 spare empty virtio-fs devices**
+  (tags `lima-hotmount-0..7`, indices 0..7), each sharing an empty placeholder dir — the VZ
+  analog of QEMU's reserved PCIe root ports.
+- **Runtime** (`pkg/driver/vz/hotplug_darwin.go`, implementing `driver.FSHotPlugger`):
+  `HotPlugFS` allocates a free slot and sets that device's share to the host folder via a new
+  binding method `(*vz.VirtualMachine).SetVirtioFileSystemDeviceShareAtIndex`. The guest then
+  mounts the device's fixed tag (returned via `HotPlugFSResponse.Tag`) over SSH.
+  `HotUnplugFS` clears the share back to the placeholder and frees the slot.
+- **Binding extension**: the upstream `Code-Hex/vz` binding only exposes share-setting on the
+  *configuration*, so a small runtime method was added (vendored in `third_party/Code-Hex-vz`,
+  isolated patch in `hack/patches/code-hex-vz-runtime-share.patch`, to be upstreamed).
+
+**Verified on native VZ (macOS 26, M4):** hot-mount/unmount, two concurrent mounts, slot reuse,
+writable vs read-only, and **~5 GB/s** sequential read — identical to a static virtiofs mount.
+The hostagent, `/v1/mounts` API, and `limactl mount` command were unchanged: VZ slots in purely
+by implementing the existing `FSHotPlugger` capability interface.

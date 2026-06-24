@@ -41,6 +41,11 @@ type HotPlugFSRequest struct {
 type HotPlugFSResponse struct {
 	// DeviceID is an opaque identifier passed back to HotUnplugFS to detach the device.
 	DeviceID string
+	// Tag, if non-empty, overrides the mount tag the guest must use. Drivers that
+	// allocate the device (and thus its tag) at runtime leave this empty and the
+	// request Tag is used; drivers with fixed pre-reserved device tags (e.g. VZ)
+	// return the tag to mount here.
+	Tag string
 }
 
 // HotUnplugFSRequest identifies a previously hot-plugged device to detach.
