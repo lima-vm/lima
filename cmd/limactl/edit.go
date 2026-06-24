@@ -131,8 +131,9 @@ func editAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	if err := driverutil.ResolveVMType(ctx, y, filePath); err != nil {
-		return fmt.Errorf("failed to resolve vm for %#q: %w", filePath, err)
+	// If VMType is not specified, we go with the default platform driver.
+	if err := driverutil.ResolveVMType(y); err != nil {
+		return err
 	}
 	if err := limayaml.Validate(y, true); err != nil {
 		return saveRejectedYAML(yBytes, err)

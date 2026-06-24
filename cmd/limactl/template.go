@@ -84,14 +84,18 @@ func fillDefaults(ctx context.Context, tmpl *limatmpl.Template) error {
 	// FillDefaults() needs the potential instance directory to validate host templates using {{.Dir}}.
 	filePath := filepath.Join(limaDir, tmpl.Name+".yaml")
 	tmpl.Config, err = limayaml.Load(ctx, tmpl.Bytes, filePath)
-	if err == nil {
-		tmpl.Bytes, err = limayaml.Marshal(tmpl.Config, false)
+	if err != nil {
+		return err
 	}
-	if err := driverutil.ResolveVMType(ctx, tmpl.Config, filePath); err != nil {
-		logrus.Warnf("failed to resolve VM type for %#q: %v", filePath, err)
-		return nil
+	tmpl.Bytes, err = limayaml.Marshal(tmpl.Config, false)
+	if err != nil {
+		return err
 	}
-	return err
+	// If VMType is not specified, we go with the default platform driver.
+	if err := driverutil.ResolveVMType(tmpl.Config); err != nil {
+		return err
+	}
+	return nil
 }
 
 func templateCopyAction(cmd *cobra.Command, args []string) error {
@@ -263,8 +267,9 @@ func templateValidateAction(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		if err := driverutil.ResolveVMType(ctx, y, filePath); err != nil {
-			logrus.Warnf("failed to resolve VM type for %#q: %v", filePath, err)
+		// If VMType is not specified, we go with the default platform driver.
+		if err := driverutil.ResolveVMType(y); err != nil {
+			return err
 		}
 		if err := limayaml.Validate(y, false); err != nil {
 			return fmt.Errorf("failed to validate YAML file %#q: %w", arg, err)

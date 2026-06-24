@@ -117,7 +117,11 @@ func New() *LimaVzDriver {
 	}
 }
 
-func (l *LimaVzDriver) Configure(_ context.Context, inst *limatype.Instance) *driver.ConfiguredDriver {
+func (l *LimaVzDriver) Configure(_ context.Context, inst *limatype.Instance) (*driver.ConfiguredDriver, error) {
+	if err := fillConfig(inst.Config); err != nil {
+		return nil, err
+	}
+
 	l.Instance = inst
 	l.SSHLocalPort = inst.SSHLocalPort
 
@@ -156,10 +160,10 @@ func (l *LimaVzDriver) Configure(_ context.Context, inst *limatype.Instance) *dr
 
 	return &driver.ConfiguredDriver{
 		Driver: l,
-	}
+	}, nil
 }
 
-func (l *LimaVzDriver) FillConfig(ctx context.Context, cfg *limatype.LimaYAML, _ string) error {
+func fillConfig(cfg *limatype.LimaYAML) error {
 	if cfg.VMType == nil {
 		cfg.VMType = ptr.Of(limatype.VZ)
 	}
@@ -216,7 +220,7 @@ func (l *LimaVzDriver) FillConfig(ctx context.Context, cfg *limatype.LimaYAML, _
 	}
 	cfg.VMOpts[limatype.VZ] = opts
 
-	return validateConfig(ctx, cfg)
+	return validateConfig(cfg)
 }
 
 func isEmpty(r limatype.Rosetta) bool {
@@ -249,11 +253,11 @@ func (l *LimaVzDriver) BootScripts(_ context.Context) (map[string][]byte, error)
 	return scripts, nil
 }
 
-func (l *LimaVzDriver) Validate(ctx context.Context) error {
-	return validateConfig(ctx, l.Instance.Config)
+func (l *LimaVzDriver) Validate(_ context.Context) error {
+	return validateConfig(l.Instance.Config)
 }
 
-func validateConfig(_ context.Context, cfg *limatype.LimaYAML) error {
+func validateConfig(cfg *limatype.LimaYAML) error {
 	if cfg == nil {
 		return errors.New("configuration is nil")
 	}

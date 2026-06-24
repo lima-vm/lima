@@ -337,11 +337,6 @@ type CACertificates struct {
 	Certs          []string `yaml:"certs,omitempty" json:"certs,omitempty" jsonschema:"nullable"`
 }
 
-type PreConfiguredDriverPayload struct {
-	Config   LimaYAML `json:"config"`
-	FilePath string   `json:"filePath"`
-}
-
 func NewOS(osname string) OS {
 	switch osname {
 	case "linux":

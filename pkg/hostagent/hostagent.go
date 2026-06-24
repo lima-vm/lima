@@ -31,6 +31,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/autostart"
 	"github.com/lima-vm/lima/v2/pkg/cidata"
 	"github.com/lima-vm/lima/v2/pkg/driver"
+	"github.com/lima-vm/lima/v2/pkg/driver/external/server"
 	"github.com/lima-vm/lima/v2/pkg/driverutil"
 	"github.com/lima-vm/lima/v2/pkg/freeport"
 	guestagentapi "github.com/lima-vm/lima/v2/pkg/guestagent/api"
@@ -163,9 +164,12 @@ func New(ctx context.Context, instName string, stdout io.Writer, signalCh chan o
 		}
 	}
 
-	limaDriver, err := driverutil.CreateConfiguredDriver(ctx, inst, sshLocalPort, driverutil.OwnerHostAgent)
+	limaDriver, err := driverutil.CreateConfiguredDriver(ctx, inst, sshLocalPort)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create driver instance: %w", err)
+	}
+	if err := limayaml.Validate(inst.Config, true); err != nil {
+		return nil, fmt.Errorf("failed to validate the instance YAML after filling defaults: %w", err)
 	}
 	sshLocalPort = inst.SSHLocalPort
 
@@ -523,7 +527,10 @@ func (a *HostAgent) startRoutinesAndWait(ctx context.Context, errCh <-chan error
 		logrus.WithError(closeErr).Warn("an error during shutting down the host agent")
 	}
 	cancelHA()
-	return a.driver.Stop(ctx)
+	stopErr := a.driver.Stop(ctx)
+	// Stop the external driver gRPC server now that the instance is shutting down.
+	server.Stop(a.instDir, false)
+	return stopErr
 }
 
 func (a *HostAgent) Info(_ context.Context) (*hostagentapi.Info, error) {
