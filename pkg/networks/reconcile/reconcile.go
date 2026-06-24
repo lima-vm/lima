@@ -75,7 +75,7 @@ func sudo(ctx context.Context, user, group, command string) error {
 	cmd := exec.CommandContext(ctx, "sudo", args...)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
-	logrus.Debugf("Running: %v", cmd.Args)
+	logrus.Infof("Running: %v", cmd.Args)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to run %v: stdout=%#q, stderr=%#q: %w",
 			cmd.Args, stdout.String(), stderr.String(), err)
@@ -153,7 +153,7 @@ func startDaemon(ctx context.Context, cfg *networks.Config, name, daemon string)
 		return err
 	}
 
-	logrus.Debugf("Starting %#q daemon for %#q network: %v", daemon, name, cmd.Args)
+	logrus.Infof("Starting %#q daemon for %#q network: %v", daemon, name, cmd.Args)
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("failed to run %v: %w (Hint: check %#q, %#q)", cmd.Args, err, stdoutPath, stderrPath)
 	}

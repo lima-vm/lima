@@ -59,6 +59,7 @@ func Sudoers() (string, error) {
 func (c *Config) passwordLessSudo(ctx context.Context) error {
 	// Flush cached sudo password
 	cmd := exec.CommandContext(ctx, "sudo", "-k")
+	logrus.Infof("Running: %v", cmd.Args)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to run %v: %w", cmd.Args, err)
 	}
@@ -75,6 +76,7 @@ func (c *Config) passwordLessSudo(ctx context.Context) error {
 			return err
 		}
 		cmd = exec.CommandContext(ctx, "sudo", "--user", user.User, "--group", user.Group, "--non-interactive", "true")
+		logrus.Infof("Running: %v", cmd.Args)
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("failed to run %v: %w", cmd.Args, err)
 		}
