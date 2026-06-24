@@ -316,7 +316,7 @@ func (d *DriverClient) Configure(ctx context.Context, inst *limatype.Instance) *
 	}
 }
 
-func (d *DriverClient) InspectStatus(_ context.Context, _ *limatype.Instance) string {
+func (d *DriverClient) InspectStatus(_ context.Context, _ *limatype.Instance) limatype.Status {
 	return ""
 }
 
