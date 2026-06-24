@@ -19,6 +19,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"syscall"
 	"text/template"
 	"time"
 
@@ -50,6 +51,7 @@ type LimaQemuDriver struct {
 	qWaitCh chan error
 
 	vhostCmds []*exec.Cmd
+	swtpmCmd  *exec.Cmd
 }
 
 var _ driver.Driver = (*LimaQemuDriver)(nil)
@@ -391,6 +393,13 @@ func (l *LimaQemuDriver) Start(ctx context.Context) (chan error, error) {
 		}()
 	}
 
+	// Start swtpm for TPM emulation.
+	if *l.Instance.Config.TPM {
+		if err := l.runSwtpm(ctx, qCfg); err != nil {
+			return nil, err
+		}
+	}
+
 	logrus.Infof("Starting QEMU (hint: to watch the boot progress, see %#q)", filepath.Join(qCfg.InstanceDir, "serial*.log"))
 	logrus.Debugf("qCmd.Args: %v", qCmd.Args)
 	if err := qCmd.Start(); err != nil {
@@ -426,6 +435,73 @@ func (l *LimaQemuDriver) ChangeDisplayPassword(_ context.Context, password strin
 
 func (l *LimaQemuDriver) DisplayConnection(_ context.Context) (string, error) {
 	return l.getVNCDisplayPort()
+}
+
+func (l *LimaQemuDriver) runSwtpm(ctx context.Context, qCfg Config) error {
+	var swtpmCmd *exec.Cmd
+	swtpmExe, swtpmArgs, err := SwtpmCmdline(qCfg)
+	if err != nil {
+		return err
+	}
+
+	swtpmCmd = exec.CommandContext(ctx, swtpmExe, swtpmArgs...)
+	swtpmCmd.SysProcAttr = executil.BackgroundSysProcAttr
+
+	swtpmStdout, err := swtpmCmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	go logPipeRoutine(swtpmStdout, "swtpm[stdout]")
+
+	swtpmStderr, err := swtpmCmd.StderrPipe()
+	if err != nil {
+		return err
+	}
+	go logPipeRoutine(swtpmStderr, "swtpm[stderr]")
+
+	logrus.Info("Starting swtpm for TPM emulation")
+	logrus.Debugf("swtpmCmd.Args: %v", swtpmCmd.Args)
+	if err := swtpmCmd.Start(); err != nil {
+		return fmt.Errorf("failed to start swtpm: %w", err)
+	}
+
+	swtpmSock := filepath.Join(l.Instance.Dir, filenames.SwtpmSock)
+	swtpmWaitCh := make(chan error, 1)
+	go func() {
+		swtpmWaitCh <- swtpmCmd.Wait()
+	}()
+
+	var swtpmSockExists bool
+	for attempt := range 5 {
+		logrus.Debugf("Waiting for swtpm socket %s (attempt %d)", swtpmSock, attempt)
+		if _, err := os.Stat(swtpmSock); err == nil {
+			swtpmSockExists = true
+			break
+		}
+		retry := time.NewTimer(200 * time.Millisecond)
+		select {
+		case err = <-swtpmWaitCh:
+			retry.Stop()
+			return fmt.Errorf("swtpm exited before creating socket: %w", err)
+		case <-retry.C:
+		}
+	}
+
+	if !swtpmSockExists {
+		_ = swtpmCmd.Process.Kill()
+		return fmt.Errorf("swtpm socket %s never appeared", swtpmSock)
+	}
+
+	l.swtpmCmd = swtpmCmd
+	go func() {
+		if err := <-swtpmWaitCh; err != nil {
+			logrus.Errorf("swtpm exited with error: %v", err)
+		} else {
+			logrus.Info("swtpm exited cleanly")
+		}
+	}()
+
+	return nil
 }
 
 func waitFileExists(path string, timeout time.Duration) error {
@@ -532,6 +608,35 @@ func (l *LimaQemuDriver) killVhosts() error {
 	return errors.Join(errs...)
 }
 
+func (l *LimaQemuDriver) killSwtpm() error {
+	if l.swtpmCmd == nil || l.swtpmCmd.Process == nil {
+		return nil
+	}
+
+	if err := l.swtpmCmd.Process.Signal(syscall.SIGTERM); err != nil {
+		if errors.Is(err, os.ErrProcessDone) {
+			return nil
+		}
+	}
+
+	done := make(chan struct{})
+	go func() {
+		_ = l.swtpmCmd.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+		return nil
+	case <-time.After(5 * time.Second):
+	}
+
+	if err := l.swtpmCmd.Process.Kill(); err != nil && !errors.Is(err, os.ErrProcessDone) {
+		return fmt.Errorf("failed to kill swtpm: %w", err)
+	}
+
+	return nil
+}
+
 func (l *LimaQemuDriver) shutdownQEMU(ctx context.Context, timeout time.Duration, qCmd *exec.Cmd, qWaitCh <-chan error) error {
 	// "power button" refers to ACPI on the most archs, except RISC-V
 	logrus.Info("Shutting down QEMU with the power button")
@@ -567,7 +672,7 @@ func (l *LimaQemuDriver) shutdownQEMU(ctx context.Context, timeout time.Duration
 		if !ok {
 			logrus.Info("QEMU wait channel was closed")
 			_ = l.removeVNCFiles()
-			return l.killVhosts()
+			return errors.Join(l.killVhosts(), l.killSwtpm())
 		}
 		entry := logrus.NewEntry(logrus.StandardLogger())
 		if qWaitErr != nil {
@@ -575,12 +680,12 @@ func (l *LimaQemuDriver) shutdownQEMU(ctx context.Context, timeout time.Duration
 		}
 		entry.Info("QEMU has exited")
 		_ = l.removeVNCFiles()
-		return errors.Join(qWaitErr, l.killVhosts())
+		return errors.Join(qWaitErr, l.killVhosts(), l.killSwtpm())
 	case <-timeoutCtx.Done():
 		if qCmd.ProcessState != nil {
 			logrus.Info("QEMU has already exited")
 			_ = l.removeVNCFiles()
-			return l.killVhosts()
+			return errors.Join(l.killVhosts(), l.killSwtpm())
 		}
 		logrus.Warnf("QEMU did not exit in %v, forcibly killing QEMU", timeout)
 		return l.killQEMU(ctx, timeout, qCmd, qWaitCh)
@@ -601,7 +706,7 @@ func (l *LimaQemuDriver) killQEMU(_ context.Context, _ time.Duration, qCmd *exec
 	qemuPIDPath := filepath.Join(l.Instance.Dir, filenames.PIDFile(*l.Instance.Config.VMType))
 	_ = os.RemoveAll(qemuPIDPath)
 	_ = l.removeVNCFiles()
-	return errors.Join(qWaitErr, l.killVhosts())
+	return errors.Join(qWaitErr, l.killVhosts(), l.killSwtpm())
 }
 
 func logPipeRoutine(r io.Reader, header string) {
