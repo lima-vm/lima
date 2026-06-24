@@ -7,7 +7,7 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
+	"path"
 	"slices"
 	"strings"
 
@@ -44,7 +44,9 @@ func (am *activeMount) apiMount() hostagentapi.Mount {
 var reservedGuestMountPoints = []string{"/", "/bin", "/dev", "/etc", "/home", "/opt", "/sbin", "/tmp", "/usr", "/var"}
 
 func validateHotMount(hostPath, guestPath string) error {
-	if !filepath.IsAbs(guestPath) {
+	// The guest is always Linux, so validate the guest mount point with Unix path
+	// semantics regardless of the host OS (filepath.IsAbs would reject "/mnt/x" on Windows).
+	if !path.IsAbs(guestPath) {
 		return fmt.Errorf("mount point %#q must be an absolute path", guestPath)
 	}
 	if slices.Contains(reservedGuestMountPoints, guestPath) {
