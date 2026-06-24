@@ -12,6 +12,8 @@ Ensure you have the following dependencies installed:
 - `git`
 - `go`
 - `make`
+- On **macOS**: the Xcode Command Line Tools (`xcode-select --install`), required to build
+  the VZ driver against `Virtualization.framework` (CGo).
 
 ### Build and Install
 Run the following commands:
@@ -24,6 +26,25 @@ sudo make install
 ```
 
 > **Note:** `sudo make install` is required unless you have write permissions for `/usr/local`. Otherwise, installation may fail.
+
+> **macOS / VZ:** `make` automatically codesigns `limactl` with the
+> `com.apple.security.virtualization` entitlement (from `vz.entitlements`). This signature is
+> required for the VZ driver, including runtime [hot-mount](../../config/mount#runtime-hot-mounts).
+> If you re-sign or strip the binary, re-apply the entitlement with
+> `codesign -f --entitlements vz.entitlements -s - <binary>`.
+
+### Runtime hot-mount build note
+
+[Runtime hot-mount](../../config/mount#runtime-hot-mounts) (`limactl mount add|remove|list`) needs
+no extra build steps:
+
+- **QEMU (Linux host):** built in by default.
+- **VZ (macOS host):** depends on a small runtime addition to the `Code-Hex/vz` binding
+  (`SetVirtioFileSystemDeviceShareAtIndex`). Until that is released upstream, the change is carried
+  as an in-tree vendored fork under `third_party/Code-Hex-vz`, wired up via a `replace` directive in
+  `go.mod`, so a plain `make` build is self-contained. The isolated change is also kept as
+  `hack/patches/code-hex-vz-runtime-share.patch` for upstreaming; once it lands in a released
+  `Code-Hex/vz`, drop `third_party/Code-Hex-vz`, remove the `replace` line, and bump the dependency.
 
 ### Alternative Installation (Without Sudo)
 If you prefer installing Lima in your home directory, configure the `PREFIX` and `PATH` as follows:
