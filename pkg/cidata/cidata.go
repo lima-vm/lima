@@ -21,7 +21,6 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/docker/go-units"
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/debugutil"
@@ -32,6 +31,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	"github.com/lima-vm/lima/v2/pkg/localpathutil"
+	"github.com/lima-vm/lima/v2/pkg/mountutil"
 	"github.com/lima-vm/lima/v2/pkg/networks"
 	"github.com/lima-vm/lima/v2/pkg/networks/usernet"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
@@ -191,51 +191,16 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 		args.SSHPubKeys = append(args.SSHPubKeys, f.Content)
 	}
 
-	var fstype string
-	switch *instConfig.MountType {
-	case limatype.REVSSHFS:
-		fstype = "sshfs"
-	case limatype.NINEP:
-		fstype = "9p"
-		if *instConfig.OS == limatype.FREEBSD {
-			fstype = "p9fs"
-		}
-	case limatype.VIRTIOFS:
-		fstype = "virtiofs"
-	}
+	fstype := mountutil.FSType(*instConfig.MountType, *instConfig.OS)
 	hostHome, err := localpathutil.Expand("~")
 	if err != nil {
 		return nil, err
 	}
 	for _, f := range instConfig.Mounts {
 		tag := limayaml.MountTag(f.Location, *f.MountPoint)
-		options := "rw"
-		if *instConfig.OS == limatype.LINUX {
-			options = "defaults"
-		}
-		switch fstype {
-		case "9p", "p9fs", "virtiofs":
-			options = "ro"
-			if *f.Writable {
-				options = "rw"
-			}
-			if fstype == "9p" {
-				options += ",trans=virtio"
-				options += fmt.Sprintf(",version=%s", *f.NineP.ProtocolVersion)
-				msize, err := units.RAMInBytes(*f.NineP.Msize)
-				if err != nil {
-					return nil, fmt.Errorf("failed to parse msize for %#q: %w", f.Location, err)
-				}
-				options += fmt.Sprintf(",msize=%d", msize)
-				options += fmt.Sprintf(",cache=%s", *f.NineP.Cache)
-			}
-			// don't fail the boot, if virtfs is not available
-			switch *instConfig.OS {
-			case limatype.LINUX:
-				options += ",nofail"
-			case limatype.FREEBSD:
-				options += ",failok"
-			}
+		options, err := mountutil.MountOptions(&f, *instConfig.MountType, *instConfig.OS)
+		if err != nil {
+			return nil, err
 		}
 		args.Mounts = append(args.Mounts, Mount{Tag: tag, MountPoint: *f.MountPoint, Type: fstype, Options: options})
 		if f.Location == hostHome {

@@ -7,6 +7,7 @@ package client
 // Apache License 2.0
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -19,6 +20,9 @@ import (
 type HostAgentClient interface {
 	HTTPClient() *http.Client
 	Info(context.Context) (*api.Info, error)
+	MountAdd(ctx context.Context, req *api.MountRequest) (*api.Mount, error)
+	MountRemove(ctx context.Context, mountPoint string) error
+	MountList(ctx context.Context) ([]api.Mount, error)
 }
 
 // NewHostAgentClient creates a client.
@@ -64,4 +68,51 @@ func (c *client) Info(ctx context.Context) (*api.Info, error) {
 		return nil, err
 	}
 	return &info, nil
+}
+
+func (c *client) mountsURL() string {
+	return fmt.Sprintf("http://%s/%s/mounts", c.dummyHost, c.version)
+}
+
+func (c *client) MountList(ctx context.Context) ([]api.Mount, error) {
+	resp, err := httpclientutil.Get(ctx, c.HTTPClient(), c.mountsURL())
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	var mounts []api.Mount
+	if err := json.NewDecoder(resp.Body).Decode(&mounts); err != nil {
+		return nil, err
+	}
+	return mounts, nil
+}
+
+func (c *client) MountAdd(ctx context.Context, req *api.MountRequest) (*api.Mount, error) {
+	body, err := json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := httpclientutil.Post(ctx, c.HTTPClient(), c.mountsURL(), bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	var m api.Mount
+	if err := json.NewDecoder(resp.Body).Decode(&m); err != nil {
+		return nil, err
+	}
+	return &m, nil
+}
+
+func (c *client) MountRemove(ctx context.Context, mountPoint string) error {
+	body, err := json.Marshal(api.MountRequest{MountPoint: mountPoint})
+	if err != nil {
+		return err
+	}
+	resp, err := httpclientutil.Delete(ctx, c.HTTPClient(), c.mountsURL(), bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	return nil
 }

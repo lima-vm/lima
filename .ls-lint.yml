@@ -28,6 +28,8 @@ ignore:
 - .golangci.yml
 - .ls-lint.yml
 - '_output'
+# vendored fork of github.com/Code-Hex/vz; not subject to our naming conventions
+- third_party
 - '**/*.pb\.go'
 - hack/common.inc.sh
 - pkg/cidata/cidata.TEMPLATE.d

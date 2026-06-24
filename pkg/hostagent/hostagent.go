@@ -68,6 +68,12 @@ type HostAgent struct {
 	driver   driver.Driver
 	signalCh chan os.Signal
 
+	// hotMounts is the live registry of runtime (hot) mounts, keyed by guest mount point.
+	hotMounts   map[string]*activeMount
+	hotMountsMu sync.Mutex
+	// guestExec runs a shell script in the guest over SSH. Injectable for testing.
+	guestExec func(script, description string) (stdout, stderr string, err error)
+
 	eventEnc   *json.Encoder
 	eventEncMu sync.Mutex
 
@@ -263,6 +269,11 @@ func New(ctx context.Context, instName string, stdout io.Writer, signalCh chan o
 		iid:               iid,
 		guestAgentAliveCh: make(chan struct{}),
 		showProgress:      o.showProgress,
+		hotMounts:         make(map[string]*activeMount),
+	}
+	a.guestExec = func(script, description string) (string, string, error) {
+		sshAddress, sshPort := a.sshAddressPort()
+		return ssh.ExecuteScript(sshAddress, sshPort, a.sshConfig, script, description)
 	}
 	a.grpcPortForwarder = portfwd.NewPortForwarder(rules, ignoreTCP, ignoreUDP, func(ev *events.PortForwardEvent) {
 		a.emitPortForwardEvent(context.Background(), ev)
@@ -686,6 +697,14 @@ func (a *HostAgent) close() error {
 	defer a.onCloseMu.Unlock()
 	logrus.Infof("Shutting down the host agent")
 	var errs []error
+	// Tear down runtime hot-mounts. Failures here must not block or fail shutdown
+	// (the VM is going away and its virtiofsd children are reaped by the driver Stop),
+	// so they are logged rather than propagated.
+	for _, guestPath := range a.hotMountPoints() {
+		if err := a.MountRemove(context.Background(), guestPath); err != nil {
+			logrus.WithError(err).Warnf("failed to remove hot-mount %#q during shutdown", guestPath)
+		}
+	}
 	for _, f := range slices.Backward(a.onClose) {
 		if err := f(); err != nil {
 			errs = append(errs, err)

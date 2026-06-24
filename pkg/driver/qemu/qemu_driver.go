@@ -19,6 +19,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"text/template"
 	"time"
 
@@ -50,6 +51,9 @@ type LimaQemuDriver struct {
 	qWaitCh chan error
 
 	vhostCmds []*exec.Cmd
+
+	hotPlugOnce sync.Once
+	hotPlug     *hotPlugState
 }
 
 var _ driver.Driver = (*LimaQemuDriver)(nil)
@@ -281,14 +285,7 @@ func (l *LimaQemuDriver) Start(ctx context.Context) (chan error, error) {
 		logrus.Warn(".ssh.overVsock is not implemented yet for QEMU driver")
 	}
 
-	qCfg := Config{
-		Name:         l.Instance.Name,
-		InstanceDir:  l.Instance.Dir,
-		LimaYAML:     l.Instance.Config,
-		SSHLocalPort: l.SSHLocalPort,
-		SSHAddress:   l.Instance.SSHAddress,
-		VirtioGA:     l.virtioPort != "",
-	}
+	qCfg := l.qemuConfig()
 	qExe, qArgs, err := Cmdline(ctx, qCfg)
 	if err != nil {
 		return nil, err
@@ -417,6 +414,7 @@ func (l *LimaQemuDriver) Start(ctx context.Context) (chan error, error) {
 }
 
 func (l *LimaQemuDriver) Stop(ctx context.Context) error {
+	l.closeHotPlug()
 	return l.shutdownQEMU(ctx, 3*time.Minute, l.qCmd, l.qWaitCh)
 }
 
