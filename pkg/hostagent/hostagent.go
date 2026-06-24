@@ -1230,10 +1230,7 @@ func copyToHost(ctx context.Context, sshConfig *ssh.SSHConfig, sshAddress string
 		"-p", strconv.Itoa(sshPort),
 		sshAddress,
 		"--",
-	)
-	args = append(args,
-		"sudo",
-		"cat",
+		"env", "LANG=C", "LC_ALL=C", "cat",
 		remote,
 	)
 	logrus.Infof("Copying config from %s to %s", remote, local)
@@ -1243,7 +1240,23 @@ func copyToHost(ctx context.Context, sshConfig *ssh.SSHConfig, sshAddress string
 	cmd := exec.CommandContext(ctx, sshConfig.Binary(), args...)
 	out, err := cmd.Output()
 	if err != nil {
-		return fmt.Errorf("failed to run %v: %#q: %w", cmd.Args, string(out), err)
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) && strings.Contains(string(exitErr.Stderr), "Permission denied") {
+			logrus.Infof("Retrying %s with sudo (permission denied)", remote)
+			sudoArgs := sshConfig.Args()
+			sudoArgs = append(sudoArgs,
+				"-p", strconv.Itoa(sshPort),
+				sshAddress,
+				"--",
+				"sudo", "cat",
+				remote,
+			)
+			cmd = exec.CommandContext(ctx, sshConfig.Binary(), sudoArgs...)
+			out, err = cmd.Output()
+		}
+		if err != nil {
+			return fmt.Errorf("failed to run %v: %#q: %w", cmd.Args, string(out), err)
+		}
 	}
 	if err := os.WriteFile(local, out, 0o600); err != nil {
 		return fmt.Errorf("can't write to local file %#q: %w", local, err)
