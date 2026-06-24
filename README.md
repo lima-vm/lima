@@ -53,6 +53,14 @@ kubectl apply -f ...
 
 See <https://lima-vm.io/docs/> for the further information.
 
+### Building from source / embedding
+
+This branch adds runtime [hot-mount](https://lima-vm.io/docs/config/mount/#runtime-hot-mounts)
+(`limactl mount add|remove|list`) for the QEMU (Linux) and VZ (macOS) drivers. To build it from
+source — including the macOS codesigning needed for the VZ driver — or to bundle this build inside a
+self-contained application, see the [Source Installation](https://lima-vm.io/docs/installation/source/)
+guide.
+
 ## Contributing
 
 We welcome contributions! Please see our [Contributing Guide](https://lima-vm.io/docs/community/contributing/) for details on:
