@@ -106,11 +106,12 @@ var (
 )
 
 type User struct {
-	Name    *string `yaml:"name,omitempty" json:"name,omitempty" jsonschema:"nullable"`
-	Comment *string `yaml:"comment,omitempty" json:"comment,omitempty" jsonschema:"nullable"`
-	Home    *string `yaml:"home,omitempty" json:"home,omitempty" jsonschema:"nullable"`
-	Shell   *string `yaml:"shell,omitempty" json:"shell,omitempty" jsonschema:"nullable"`
-	UID     *uint32 `yaml:"uid,omitempty" json:"uid,omitempty" jsonschema:"nullable"`
+	Name             *string `yaml:"name,omitempty" json:"name,omitempty" jsonschema:"nullable"`
+	Comment          *string `yaml:"comment,omitempty" json:"comment,omitempty" jsonschema:"nullable"`
+	Home             *string `yaml:"home,omitempty" json:"home,omitempty" jsonschema:"nullable"`
+	Shell            *string `yaml:"shell,omitempty" json:"shell,omitempty" jsonschema:"nullable"`
+	UID              *uint32 `yaml:"uid,omitempty" json:"uid,omitempty" jsonschema:"nullable"`
+	PasswordlessSudo *bool   `yaml:"passwordlessSudo,omitempty" json:"passwordlessSudo,omitempty" jsonschema:"nullable"`
 }
 
 type VMOpts map[VMType]any

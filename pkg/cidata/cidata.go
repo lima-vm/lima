@@ -6,6 +6,8 @@ package cidata
 import (
 	"compress/gzip"
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -135,6 +137,7 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 		Home:               *instConfig.User.Home,
 		Shell:              *instConfig.User.Shell,
 		UID:                *instConfig.User.UID,
+		PasswordlessSudo:   *instConfig.User.PasswordlessSudo,
 		GuestInstallPrefix: *instConfig.GuestInstallPrefix,
 		UpgradePackages:    *instConfig.UpgradePackages,
 		Containerd:         Containerd{System: *instConfig.Containerd.System, User: *instConfig.Containerd.User, Archive: archive},
@@ -241,6 +244,15 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 		if f.Location == hostHome {
 			args.HostHomeMountPoint = *f.MountPoint
 		}
+	}
+
+	if !args.PasswordlessSudo {
+		passwordPath := filepath.Join(instDir, filenames.Password)
+		password, err := readOrGeneratePassword(passwordPath)
+		if err != nil {
+			return nil, err
+		}
+		args.SudoPassword = password
 	}
 
 	switch *instConfig.MountType {
@@ -568,4 +580,34 @@ func writeCIDataDir(rootPath string, layout []iso9660util.Entry) error {
 	}
 
 	return nil
+}
+
+// readOrGeneratePassword returns the password stored at passwordPath, generating
+// and persisting a new one if it does not already exist.
+func readOrGeneratePassword(passwordPath string) (string, error) {
+	if b, err := os.ReadFile(passwordPath); err == nil {
+		return strings.TrimSpace(string(b)), nil
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return "", err
+	}
+
+	password, err := generateRandomPassword()
+	if err != nil {
+		return "", err
+	}
+
+	// Write with strict 0600 permissions so only the host user can read it
+	if err := os.WriteFile(passwordPath, []byte(password+"\n"), 0o600); err != nil {
+		return "", err
+	}
+	return password, nil
+}
+
+// Generate a 16-character random password.
+func generateRandomPassword() (string, error) {
+	bytes := make([]byte, 8) // 8 bytes = 16 hex characters
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes), nil
 }

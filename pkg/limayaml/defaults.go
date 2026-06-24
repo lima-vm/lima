@@ -171,6 +171,9 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 	if y.User.UID == nil {
 		y.User.UID = d.User.UID
 	}
+	if y.User.PasswordlessSudo == nil {
+		y.User.PasswordlessSudo = d.User.PasswordlessSudo
+	}
 	if o.User.Name != nil {
 		y.User.Name = o.User.Name
 	}
@@ -185,6 +188,9 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 	}
 	if o.User.UID != nil {
 		y.User.UID = o.User.UID
+	}
+	if o.User.PasswordlessSudo != nil {
+		y.User.PasswordlessSudo = o.User.PasswordlessSudo
 	}
 	if y.User.Name == nil {
 		y.User.Name = ptr.Of(osutil.LimaUser(ctx, existingLimaVersion, warn, y.OS).Username)
@@ -218,6 +224,10 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 			y.User.UID = ptr.Of(uint32(1000))
 		}
 		// warn = false
+	}
+	// fallback to nopasswd
+	if y.User.PasswordlessSudo == nil {
+		y.User.PasswordlessSudo = ptr.Of(true)
 	}
 	if out, err := executeGuestTemplate(*y.User.Home, instDir, y.User, y.Param); err == nil {
 		y.User.Home = ptr.Of(out.String())
