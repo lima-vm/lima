@@ -26,8 +26,8 @@ type fakeAgent struct {
 func (f *fakeAgent) Info(context.Context) (*api.Info, error) { return &api.Info{}, nil }
 
 func (f *fakeAgent) MountAdd(_ context.Context, hostPath, guestPath string, mountType limatype.MountType, writable bool) (*api.Mount, error) {
-	f.added = &api.MountRequest{HostPath: hostPath, MountPoint: guestPath, Type: string(mountType), Writable: writable}
-	return &api.Mount{ID: guestPath, HostPath: hostPath, MountPoint: guestPath, Type: string(mountType), Writable: writable}, nil
+	f.added = &api.MountRequest{HostPath: hostPath, MountPoint: guestPath, Type: mountType, Writable: writable}
+	return &api.Mount{ID: guestPath, HostPath: hostPath, MountPoint: guestPath, Type: mountType, Writable: writable}, nil
 }
 
 func (f *fakeAgent) MountRemove(_ context.Context, guestPath string) error {
@@ -49,7 +49,10 @@ func TestMountsPost(t *testing.T) {
 	defer srv.Close()
 
 	body := `{"hostPath":"/h/code","mountPoint":"/mnt/code","type":"virtiofs","writable":true}`
-	resp, err := http.Post(srv.URL+"/v1/mounts", "application/json", strings.NewReader(body))
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, srv.URL+"/v1/mounts", strings.NewReader(body))
+	assert.NilError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
 	assert.NilError(t, err)
 	defer resp.Body.Close()
 	assert.Equal(t, resp.StatusCode, http.StatusOK)
@@ -69,7 +72,9 @@ func TestMountsGet(t *testing.T) {
 	srv := newTestServer(fake)
 	defer srv.Close()
 
-	resp, err := http.Get(srv.URL + "/v1/mounts")
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, srv.URL+"/v1/mounts", http.NoBody)
+	assert.NilError(t, err)
+	resp, err := http.DefaultClient.Do(req)
 	assert.NilError(t, err)
 	defer resp.Body.Close()
 	assert.Equal(t, resp.StatusCode, http.StatusOK)
@@ -85,7 +90,7 @@ func TestMountsDelete(t *testing.T) {
 	srv := newTestServer(fake)
 	defer srv.Close()
 
-	req, err := http.NewRequest(http.MethodDelete, srv.URL+"/v1/mounts", strings.NewReader(`{"mountPoint":"/mnt/code"}`))
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodDelete, srv.URL+"/v1/mounts", strings.NewReader(`{"mountPoint":"/mnt/code"}`))
 	assert.NilError(t, err)
 	resp, err := http.DefaultClient.Do(req)
 	assert.NilError(t, err)

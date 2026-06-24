@@ -7,6 +7,7 @@ package vz
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 
@@ -76,7 +77,7 @@ func (l *LimaVzDriver) HotPlugFS(_ context.Context, req *driver.HotPlugFSRequest
 		return nil, fmt.Errorf("%w: hot-mount is not supported for macOS guests", driver.ErrFSHotPlugUnsupported)
 	}
 	if l.machine == nil {
-		return nil, fmt.Errorf("instance is not running")
+		return nil, errors.New("instance is not running")
 	}
 
 	hp := l.hotPlugStateLazy()
@@ -119,7 +120,7 @@ func (l *LimaVzDriver) HotUnplugFS(_ context.Context, req *driver.HotUnplugFSReq
 		return fmt.Errorf("hot-plug device %#q not found", req.DeviceID)
 	}
 	if l.machine == nil {
-		return fmt.Errorf("instance is not running")
+		return errors.New("instance is not running")
 	}
 
 	directory, err := vz.NewSharedDirectory(hotMountPlaceholderDir(l.Instance), true)

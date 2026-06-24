@@ -200,8 +200,9 @@ func (l *LimaQemuDriver) attachVirtiofs(ctx context.Context, qmpClient *qmp.Sock
 	if err := os.Remove(sockPath); err != nil && !errors.Is(err, fs.ErrNotExist) {
 		logrus.Warnf("Failed to remove old vhost socket: %v", err)
 	}
-	// virtiofsd must outlive the request, so it is not bound to ctx.
-	vhostCmd := exec.Command(vhostExe, "--socket-path", sockPath, "--shared-dir", req.HostPath)
+	// virtiofsd must outlive the request, so it is bound to context.Background() rather
+	// than the request context (which is cancelled when HotPlugFS returns).
+	vhostCmd := exec.CommandContext(context.Background(), vhostExe, "--socket-path", sockPath, "--shared-dir", req.HostPath)
 	if err := vhostCmd.Start(); err != nil {
 		return nil, fmt.Errorf("failed to start virtiofsd: %w", err)
 	}
@@ -335,21 +336,22 @@ func (l *LimaQemuDriver) detachDevice(ctx context.Context, qmpClient *qmp.Socket
 	if err := waitDeviceDeleted(eventCtx, events, dev.deviceID); err != nil {
 		return err
 	}
-	// Keep draining events so the monitor's listen goroutine never blocks on the
-	// (now subscribed) events channel while we issue the cleanup commands below.
-	// The channel is closed when qmpClient is disconnected by the caller.
-	go func() {
-		for range events {
-		}
-	}()
+	// Run the backend cleanup on a fresh QMP connection: the current one has an active
+	// event subscription, and issuing further commands on it could block on event
+	// delivery while nothing is draining the events channel.
+	cleanupClient, err := l.connectQMP()
+	if err != nil {
+		return err
+	}
+	defer func() { _ = cleanupClient.Disconnect() }()
 	switch dev.mountType {
 	case limatype.VIRTIOFS:
-		if _, err := qmpClient.Run(mustJSON("chardev-remove", map[string]any{"id": dev.charOrFsdev})); err != nil {
+		if _, err := cleanupClient.Run(mustJSON("chardev-remove", map[string]any{"id": dev.charOrFsdev})); err != nil {
 			logrus.Warnf("chardev-remove failed: %v", err)
 		}
 		killVirtiofsd(dev)
 	case limatype.NINEP:
-		rawClient := raw.NewMonitor(qmpClient)
+		rawClient := raw.NewMonitor(cleanupClient)
 		if _, err := rawClient.HumanMonitorCommand("fsdev_del "+dev.charOrFsdev, nil); err != nil {
 			logrus.Warnf("fsdev_del failed: %v", err)
 		}

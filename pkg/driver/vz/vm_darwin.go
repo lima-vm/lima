@@ -750,7 +750,7 @@ func spareHotMountDevices(inst *limatype.Instance) ([]vz.DirectorySharingDeviceC
 		return nil, err
 	}
 	var devs []vz.DirectorySharingDeviceConfiguration
-	for slot := 0; slot < vzHotMountSlots; slot++ {
+	for slot := range vzHotMountSlots {
 		directory, err := vz.NewSharedDirectory(placeholder, true) // read-only empty placeholder
 		if err != nil {
 			return nil, err

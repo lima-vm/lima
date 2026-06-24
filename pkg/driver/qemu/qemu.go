@@ -611,7 +611,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	// Reserve spare PCIe root ports on Linux (q35/virt) so filesystem share devices
 	// (virtio-9p-pci / vhost-user-fs-pci) can be hot-plugged at runtime for hot-mount.
 	if runtime.GOOS == "linux" && (*y.Arch == limatype.X8664 || *y.Arch == limatype.AARCH64) {
-		for i := 0; i < HotPlugRootPorts; i++ {
+		for i := range HotPlugRootPorts {
 			args = append(args, "-device",
 				fmt.Sprintf("pcie-root-port,id=%s,bus=pcie.0,chassis=%d", HotPlugRootPortID(i), i+1))
 		}

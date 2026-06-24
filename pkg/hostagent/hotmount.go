@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -34,7 +35,7 @@ func (am *activeMount) apiMount() hostagentapi.Mount {
 		ID:         am.guestPath,
 		HostPath:   am.hostPath,
 		MountPoint: am.guestPath,
-		Type:       string(am.mountType),
+		Type:       am.mountType,
 		Writable:   am.writable,
 	}
 }
@@ -46,10 +47,8 @@ func validateHotMount(hostPath, guestPath string) error {
 	if !filepath.IsAbs(guestPath) {
 		return fmt.Errorf("mount point %#q must be an absolute path", guestPath)
 	}
-	for _, reserved := range reservedGuestMountPoints {
-		if guestPath == reserved {
-			return fmt.Errorf("mount point %#q is reserved", guestPath)
-		}
+	if slices.Contains(reservedGuestMountPoints, guestPath) {
+		return fmt.Errorf("mount point %#q is reserved", guestPath)
 	}
 	st, err := os.Stat(hostPath)
 	if err != nil {

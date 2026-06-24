@@ -13,7 +13,7 @@ import (
 func TestSlotSet(t *testing.T) {
 	s := newSlotSet(8)
 	seen := map[int]bool{}
-	for i := 0; i < 8; i++ {
+	for i := range 8 {
 		slot, ok := s.allocate()
 		assert.Assert(t, ok, "allocation %d should succeed", i)
 		assert.Assert(t, !seen[slot], "slot %d allocated twice", slot)

@@ -38,7 +38,7 @@ func (f *fakeHotPlugDriver) HotUnplugFS(_ context.Context, req *driver.HotUnplug
 // nonHotPlugDriver implements driver.Driver but NOT driver.FSHotPlugger.
 type nonHotPlugDriver struct{ driver.Driver }
 
-func newTestAgent(d driver.Driver) (*HostAgent, *[]string) {
+func newTestAgent(d driver.Driver) (agent *HostAgent, execDescriptions *[]string) {
 	execs := new([]string)
 	a := &HostAgent{
 		driver:     d,
@@ -57,7 +57,7 @@ func TestMountAddRemoveVirtiofs(t *testing.T) {
 	a, execs := newTestAgent(fake)
 	hostDir := t.TempDir()
 
-	m, err := a.MountAdd(context.Background(), hostDir, "/mnt/code", limatype.VIRTIOFS, true)
+	m, err := a.MountAdd(t.Context(), hostDir, "/mnt/code", limatype.VIRTIOFS, true)
 	assert.NilError(t, err)
 	assert.Equal(t, m.Type, "virtiofs")
 	assert.Equal(t, m.MountPoint, "/mnt/code")
@@ -66,10 +66,10 @@ func TestMountAddRemoveVirtiofs(t *testing.T) {
 	assert.Equal(t, len(*execs), 1) // guest mount command ran
 	assert.Equal(t, len(a.MountList()), 1)
 
-	_, err = a.MountAdd(context.Background(), hostDir, "/mnt/code", limatype.VIRTIOFS, true)
+	_, err = a.MountAdd(t.Context(), hostDir, "/mnt/code", limatype.VIRTIOFS, true)
 	assert.ErrorContains(t, err, "already mounted")
 
-	assert.NilError(t, a.MountRemove(context.Background(), "/mnt/code"))
+	assert.NilError(t, a.MountRemove(t.Context(), "/mnt/code"))
 	assert.Equal(t, len(fake.unplugged), 1)
 	assert.Equal(t, len(a.MountList()), 0)
 }
@@ -79,7 +79,7 @@ func TestMountAdd9pSetsNinePReq(t *testing.T) {
 	a, _ := newTestAgent(fake)
 	hostDir := t.TempDir()
 
-	_, err := a.MountAdd(context.Background(), hostDir, "/mnt/9p", limatype.NINEP, false)
+	_, err := a.MountAdd(t.Context(), hostDir, "/mnt/9p", limatype.NINEP, false)
 	assert.NilError(t, err)
 	assert.Equal(t, fake.plugged[0].Type, limatype.NINEP)
 	assert.Assert(t, fake.plugged[0].NineP != nil)
@@ -90,7 +90,7 @@ func TestMountAddDefaultsToVirtiofs(t *testing.T) {
 	a, _ := newTestAgent(fake)
 	hostDir := t.TempDir()
 
-	m, err := a.MountAdd(context.Background(), hostDir, "/mnt/x", "", true)
+	m, err := a.MountAdd(t.Context(), hostDir, "/mnt/x", "", true)
 	assert.NilError(t, err)
 	assert.Equal(t, m.Type, "virtiofs")
 }
@@ -99,22 +99,22 @@ func TestMountAddUnsupportedDriver(t *testing.T) {
 	a, _ := newTestAgent(&nonHotPlugDriver{})
 	hostDir := t.TempDir()
 
-	_, err := a.MountAdd(context.Background(), hostDir, "/mnt/x", limatype.VIRTIOFS, true)
+	_, err := a.MountAdd(t.Context(), hostDir, "/mnt/x", limatype.VIRTIOFS, true)
 	assert.ErrorContains(t, err, "hot-plug")
 }
 
 func TestMountAddRejectsReservedAndMissing(t *testing.T) {
 	a, _ := newTestAgent(&fakeHotPlugDriver{})
-	_, err := a.MountAdd(context.Background(), t.TempDir(), "/etc", limatype.VIRTIOFS, true)
+	_, err := a.MountAdd(t.Context(), t.TempDir(), "/etc", limatype.VIRTIOFS, true)
 	assert.ErrorContains(t, err, "reserved")
 
-	_, err = a.MountAdd(context.Background(), "/no/such/host/dir", "/mnt/x", limatype.VIRTIOFS, true)
+	_, err = a.MountAdd(t.Context(), "/no/such/host/dir", "/mnt/x", limatype.VIRTIOFS, true)
 	assert.ErrorContains(t, err, "host path")
 }
 
 func TestMountRemoveUnknown(t *testing.T) {
 	a, _ := newTestAgent(&fakeHotPlugDriver{})
-	err := a.MountRemove(context.Background(), "/mnt/nope")
+	err := a.MountRemove(t.Context(), "/mnt/nope")
 	assert.ErrorContains(t, err, "not a hot-mount")
 }
 

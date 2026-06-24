@@ -6,6 +6,8 @@ package mountutil
 import (
 	"testing"
 
+	"gotest.tools/v3/assert"
+
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 )
 
@@ -69,9 +71,7 @@ func TestMountOptions(t *testing.T) {
 	}
 	for _, c := range cases {
 		got, err := MountOptions(&c.m, c.mt, c.os)
-		if err != nil {
-			t.Fatalf("%s: %v", c.name, err)
-		}
+		assert.NilError(t, err, c.name)
 		if got != c.want {
 			t.Errorf("%s: got %q want %q", c.name, got, c.want)
 		}

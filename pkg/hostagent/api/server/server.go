@@ -85,7 +85,7 @@ func (b *Backend) Mounts(w http.ResponseWriter, r *http.Request) {
 			b.onError(w, err, http.StatusBadRequest)
 			return
 		}
-		m, err := b.Agent.MountAdd(ctx, req.HostPath, req.MountPoint, limatype.MountType(req.Type), req.Writable)
+		m, err := b.Agent.MountAdd(ctx, req.HostPath, req.MountPoint, req.Type, req.Writable)
 		if err != nil {
 			b.onError(w, err, http.StatusInternalServerError)
 			return
