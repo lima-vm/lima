@@ -5,6 +5,7 @@ package limayaml
 
 import (
 	"fmt"
+	"runtime"
 	"testing"
 
 	"gotest.tools/v3/assert"
@@ -369,7 +370,7 @@ provision:
 	err = Validate(y, false)
 	t.Logf("Validation errors: %v", err)
 
-	assert.Error(t, err, "field `os` must be one of [`Linux` `Darwin` `FreeBSD`]; got `windows`\n"+
+	assert.Error(t, err, "field `os` must be one of [`Linux` `Darwin` `FreeBSD` `Windows`]; got `windows`\n"+
 		"field `arch` must be one of [x86_64 aarch64 armv7l ppc64le riscv64 s390x]; got `unsupported_arch`\n"+
 		"field `images` must be set\n"+
 		"field `provision[0].mode` must one of `system`, `user`, `boot`, `data`, `dependency`, `ansible`, or `yq`\n"+
@@ -426,6 +427,60 @@ func TestValidateAgainstLatestConfig(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := ValidateAgainstLatestConfig(t.Context(), []byte(tt.yNew), []byte(tt.yLatest))
 			assert.Error(t, err, tt.wantErr)
+		})
+	}
+}
+
+func TestWindowsGuest(t *testing.T) {
+	if runtime.GOOS != "linux" && runtime.GOOS != "darwin" {
+		t.Skip("this test only works on linux or darwin")
+	}
+
+	baseYaml := `
+os: Windows
+arch: %s
+vmType: %s
+images:
+  - location: /
+osOpts:
+  Windows:
+    virtioWin:
+    - location: /
+      arch: "x86_64"
+`
+
+	testCases := []struct {
+		name       string
+		yaml       string
+		wantErrMsg string
+	}{
+		{
+			name: "ok",
+			yaml: fmt.Sprintf(baseYaml, limatype.X8664, limatype.QEMU),
+		},
+		{
+			name:       "qemu only supports Windows guest",
+			yaml:       fmt.Sprintf(baseYaml, limatype.X8664, limatype.VZ),
+			wantErrMsg: "currently Windows guest is only supported on `qemu`; got `vz`",
+		},
+		{
+			name:       "x86_64 and aarch64 only support Windows guest",
+			yaml:       fmt.Sprintf(baseYaml, limatype.ARMV7L, limatype.QEMU),
+			wantErrMsg: "currently Windows guest is only supported on [`x86_64` `aarch64`]; got `armv7l`",
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			y, err := Load(t.Context(), []byte(tt.yaml), "template.yaml")
+			assert.NilError(t, err)
+			err = Validate(y, false)
+
+			if tt.wantErrMsg == "" {
+				assert.NilError(t, err)
+			} else {
+				assert.Equal(t, tt.wantErrMsg, err.Error())
+			}
 		})
 	}
 }

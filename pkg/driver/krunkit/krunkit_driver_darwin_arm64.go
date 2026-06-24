@@ -237,6 +237,10 @@ func validateConfig(cfg *limatype.LimaYAML) error {
 		}
 	}
 
+	if cfg.OS != nil && *cfg.OS == limatype.WINDOWS {
+		return errors.New("currently Windows guest OS is only supported on QEMU")
+	}
+
 	return nil
 }
 

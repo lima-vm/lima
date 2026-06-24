@@ -359,6 +359,12 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 }
 
 func GenerateCloudConfig(ctx context.Context, instDir, name string, instConfig *limatype.LimaYAML) error {
+	// if VM type is Windows, delete existing cloud config file.[TBD]
+	if instConfig.OS != nil && *instConfig.OS == limatype.WINDOWS {
+		os.Remove(filepath.Join(instDir, filenames.CloudConfig))
+		return nil
+	}
+
 	args, err := templateArgs(ctx, false, instDir, name, instConfig, 0, 0, 0, "", false, false, false)
 	if err != nil {
 		return err
@@ -568,4 +574,33 @@ func writeCIDataDir(rootPath string, layout []iso9660util.Entry) error {
 	}
 
 	return nil
+}
+
+func GenerateWindowsISO(ctx context.Context, instDir, name string, instConfig *limatype.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort, vsockPort int, virtioPort string, noCloudInit, rosettaEnabled, rosettaBinFmt bool) (string, error) {
+	args, err := templateArgs(ctx, true, instDir, name, instConfig, udpDNSLocalPort, tcpDNSLocalPort, vsockPort, virtioPort, noCloudInit, rosettaEnabled, rosettaBinFmt)
+	if err != nil {
+		return "", err
+	}
+
+	if err := ValidateTemplateArgs(args); err != nil {
+		return "", err
+	}
+
+	// The generated password is used only for an initial setup.
+	// After that, the password is opverwritten.
+	if err := args.generateWidowsInitialPassword(); err != nil {
+		return "", err
+	}
+
+	layout, err := ExecuteTemplateWindowsISO(args)
+	if err != nil {
+		return "", fmt.Errorf("failed to create Windows ISO entries: %w", err)
+	}
+
+	layout = append(layout, iso9660util.Entry{
+		Path:   "ssh_authorized_keys",
+		Reader: strings.NewReader(strings.Join(args.SSHPubKeys, "\n")),
+	})
+
+	return args.IID, iso9660util.Write(filepath.Join(instDir, filenames.CIDataISO), "autounattend", layout, iso9660util.WithJoliet())
 }

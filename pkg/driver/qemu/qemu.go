@@ -678,15 +678,34 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	} else {
 		args = appendArgsIfNoConflict(args, "-boot", "order=c,splash-time=0,menu=on")
 	}
+
+	var winOpts limatype.WindowsOpts
+	if err := limayaml.Convert(y.OsOpts[limatype.WINDOWS], &winOpts, "osOpts.Windows"); err != nil {
+		return "", nil, err
+	}
+
+	// virtio-win must be mounted before cidata.iso otherwise
+	// autounattend.xml can't find virtio drivers.
+	if *y.OS == limatype.WINDOWS && winOpts.VirtioWin != nil {
+		args = append(args, "-drive", fmt.Sprintf("file=%s,format=raw,media=cdrom,readonly=on", filepath.Join(cfg.InstanceDir, filenames.VirtioWin)))
+	}
+
 	for _, extraDisk := range extraDisks {
 		args = append(args, "-drive", fmt.Sprintf("file=%s,if=virtio,discard=on", extraDisk))
 	}
 
 	// cloud-init
-	args = append(args,
-		"-drive", "id=cdrom0,if=none,format=raw,readonly=on,file="+filepath.Join(cfg.InstanceDir, filenames.CIDataISO),
-		"-device", "virtio-scsi,id=scsi0",
-		"-device", "scsi-cd,bus=scsi0.0,drive=cdrom0")
+	switch *y.OS {
+	case limatype.WINDOWS:
+		// We can't use virtio-scsi for Windows's cidata, because autounattend in cidata installs virtio-win drivers.
+		// Until then, the VM can't detect virtio.
+		args = append(args, "-drive", fmt.Sprintf("file=%s,format=raw,media=cdrom,readonly=on", filepath.Join(cfg.InstanceDir, filenames.CIDataISO)))
+	default:
+		args = append(args,
+			"-drive", "id=cdrom0,if=none,format=raw,readonly=on,file="+filepath.Join(cfg.InstanceDir, filenames.CIDataISO),
+			"-device", "virtio-scsi,id=scsi0",
+			"-device", "scsi-cd,bus=scsi0.0,drive=cdrom0")
+	}
 
 	// Kernel
 	kernel := filepath.Join(cfg.InstanceDir, filenames.Kernel)
