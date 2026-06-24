@@ -117,3 +117,12 @@ func TestMountRemoveUnknown(t *testing.T) {
 	err := a.MountRemove(context.Background(), "/mnt/nope")
 	assert.ErrorContains(t, err, "not a hot-mount")
 }
+
+func TestShellEscape(t *testing.T) {
+	assert.Equal(t, shellEscape("/mnt/code"), "'/mnt/code'")
+	assert.Equal(t, shellEscape("/mnt/a b"), "'/mnt/a b'")
+	// command-substitution metacharacters must be neutralized by single quotes
+	assert.Equal(t, shellEscape("/mnt/$(reboot)"), "'/mnt/$(reboot)'")
+	// embedded single quote is closed, escaped, and reopened
+	assert.Equal(t, shellEscape("a'b"), `'a'\''b'`)
+}

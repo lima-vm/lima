@@ -697,9 +697,12 @@ func (a *HostAgent) close() error {
 	defer a.onCloseMu.Unlock()
 	logrus.Infof("Shutting down the host agent")
 	var errs []error
+	// Tear down runtime hot-mounts. Failures here must not block or fail shutdown
+	// (the VM is going away and its virtiofsd children are reaped by the driver Stop),
+	// so they are logged rather than propagated.
 	for _, guestPath := range a.hotMountPoints() {
 		if err := a.MountRemove(context.Background(), guestPath); err != nil {
-			errs = append(errs, err)
+			logrus.WithError(err).Warnf("failed to remove hot-mount %#q during shutdown", guestPath)
 		}
 	}
 	for _, f := range slices.Backward(a.onClose) {

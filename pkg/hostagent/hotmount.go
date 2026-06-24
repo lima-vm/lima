@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 
@@ -67,13 +68,15 @@ func buildHotMount(hostPath, guestPath string, mountType limatype.MountType, wri
 		Location:   hostPath,
 		MountPoint: ptr.Of(guestPath),
 		Writable:   ptr.Of(writable),
-		SSHFS: limatype.SSHFS{
+	}
+	switch mountType {
+	case limatype.REVSSHFS:
+		m.SSHFS = limatype.SSHFS{
 			Cache:          ptr.Of(true),
 			FollowSymlinks: ptr.Of(false),
 			SFTPDriver:     ptr.Of(""),
-		},
-	}
-	if mountType == limatype.NINEP {
+		}
+	case limatype.NINEP:
 		cache := limayaml.Default9pCacheForRO
 		if writable {
 			cache = limayaml.Default9pCacheForRW
@@ -168,21 +171,40 @@ func (a *HostAgent) hotPlugMount(ctx context.Context, m limatype.Mount, mountTyp
 		return nil, err
 	}
 	mountPoint := *m.MountPoint
-	mountScript := fmt.Sprintf("#!/bin/sh\nset -eu\nsudo mkdir -p %q\nsudo mount -t %s -o %s %q %q\n",
-		mountPoint, fstype, opts, tag, mountPoint)
+	// The guest may take a moment to enumerate the freshly hot-plugged PCI device
+	// before its mount tag becomes usable, so retry the mount for a short while.
+	// fstype and opts are generated from a fixed, safe set; mountPoint and tag are
+	// single-quote escaped because mountPoint is user-supplied.
+	mountScript := fmt.Sprintf(`#!/bin/sh
+set -eu
+sudo mkdir -p %[1]s
+i=0
+while [ "$i" -lt 30 ]; do
+	if sudo mount -t %[2]s -o %[3]s %[4]s %[1]s; then exit 0; fi
+	i=$((i + 1))
+	sleep 0.5
+done
+echo "timed out waiting for device %[4]s to appear" >&2
+exit 1
+`, shellEscape(mountPoint), fstype, opts, shellEscape(tag))
 	if _, stderr, err := a.guestExec(mountScript, "hot-mount "+mountPoint); err != nil {
 		_ = unplug()
 		return nil, fmt.Errorf("failed to mount %#q in guest: %w (stderr=%q)", mountPoint, err, stderr)
 	}
 
 	closeFn := func() error {
-		umountScript := fmt.Sprintf("#!/bin/sh\nset -eu\nsudo umount %q\n", mountPoint)
+		umountScript := fmt.Sprintf("#!/bin/sh\nset -eu\nsudo umount %s\n", shellEscape(mountPoint))
 		if _, stderr, err := a.guestExec(umountScript, "hot-unmount "+mountPoint); err != nil {
 			logrus.Warnf("failed to umount %#q in guest: %v (stderr=%q)", mountPoint, err, stderr)
 		}
 		return unplug()
 	}
 	return closeFn, nil
+}
+
+// shellEscape single-quotes s for safe interpolation into a POSIX shell script.
+func shellEscape(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
 }
 
 // MountRemove unmounts a runtime mount previously added with MountAdd.

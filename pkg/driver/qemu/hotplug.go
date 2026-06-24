@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 
@@ -205,18 +206,18 @@ func (l *LimaQemuDriver) attachVirtiofs(ctx context.Context, qmpClient *qmp.Sock
 		return nil, fmt.Errorf("failed to start virtiofsd: %w", err)
 	}
 	if err := waitFileExists(sockPath, 30*time.Second); err != nil {
-		_ = vhostCmd.Process.Kill()
+		killProcess(vhostCmd)
 		return nil, fmt.Errorf("virtiofsd socket did not appear: %w", err)
 	}
 
 	charID := fmt.Sprintf("char-fs-hp-%d", slot)
 	chardevAdd, err := buildChardevAddJSON(charID, sockPath)
 	if err != nil {
-		_ = vhostCmd.Process.Kill()
+		killProcess(vhostCmd)
 		return nil, err
 	}
 	if _, err := qmpClient.Run(chardevAdd); err != nil {
-		_ = vhostCmd.Process.Kill()
+		killProcess(vhostCmd)
 		return nil, fmt.Errorf("chardev-add failed: %w", err)
 	}
 
@@ -233,12 +234,14 @@ func (l *LimaQemuDriver) attachVirtiofs(ctx context.Context, qmpClient *qmp.Sock
 		"queue-size": queueSize,
 	})
 	if err != nil {
-		_ = vhostCmd.Process.Kill()
+		killProcess(vhostCmd)
 		return nil, err
 	}
 	if _, err := qmpClient.Run(deviceAdd); err != nil {
-		_, _ = qmpClient.Run(mustJSON("chardev-remove", map[string]any{"id": charID}))
-		_ = vhostCmd.Process.Kill()
+		if _, rmErr := qmpClient.Run(mustJSON("chardev-remove", map[string]any{"id": charID})); rmErr != nil {
+			logrus.Warnf("failed to roll back chardev %#q: %v", charID, rmErr)
+		}
+		killProcess(vhostCmd)
 		return nil, fmt.Errorf("device_add (virtiofs) failed: %w", err)
 	}
 	return &hotPlugDevice{
@@ -252,6 +255,11 @@ func (l *LimaQemuDriver) attachVirtiofs(ctx context.Context, qmpClient *qmp.Sock
 }
 
 func (l *LimaQemuDriver) attach9p(qmpClient *qmp.SocketMonitor, req *driver.HotPlugFSRequest, slot int, busID, deviceID string) (*hotPlugDevice, error) {
+	// fsdev_add is issued as an HMP command whose options are comma-separated and
+	// space-delimited, so a host path containing a comma or space would corrupt it.
+	if strings.ContainsAny(req.HostPath, ", ") {
+		return nil, fmt.Errorf("9p hot-mount does not support host paths containing spaces or commas: %q", req.HostPath)
+	}
 	securityModel := "none"
 	if req.NineP != nil && req.NineP.SecurityModel != nil {
 		securityModel = *req.NineP.SecurityModel
@@ -339,13 +347,7 @@ func (l *LimaQemuDriver) detachDevice(ctx context.Context, qmpClient *qmp.Socket
 		if _, err := qmpClient.Run(mustJSON("chardev-remove", map[string]any{"id": dev.charOrFsdev})); err != nil {
 			logrus.Warnf("chardev-remove failed: %v", err)
 		}
-		if dev.virtiofsd != nil && dev.virtiofsd.Process != nil {
-			_ = dev.virtiofsd.Process.Kill()
-			_ = dev.virtiofsd.Wait()
-		}
-		if dev.sockPath != "" {
-			_ = os.Remove(dev.sockPath)
-		}
+		killVirtiofsd(dev)
 	case limatype.NINEP:
 		rawClient := raw.NewMonitor(qmpClient)
 		if _, err := rawClient.HumanMonitorCommand("fsdev_del "+dev.charOrFsdev, nil); err != nil {
@@ -383,14 +385,25 @@ func (l *LimaQemuDriver) closeHotPlug() {
 	l.hotPlug.mu.Lock()
 	defer l.hotPlug.mu.Unlock()
 	for _, dev := range l.hotPlug.devices {
-		if dev.virtiofsd != nil && dev.virtiofsd.Process != nil {
-			_ = dev.virtiofsd.Process.Kill()
-		}
-		if dev.sockPath != "" {
-			_ = os.Remove(dev.sockPath)
-		}
+		killVirtiofsd(dev)
 	}
 	l.hotPlug.devices = map[string]*hotPlugDevice{}
+}
+
+// killProcess terminates and reaps a process, avoiding a zombie.
+func killProcess(cmd *exec.Cmd) {
+	if cmd != nil && cmd.Process != nil {
+		_ = cmd.Process.Kill()
+		_ = cmd.Wait()
+	}
+}
+
+// killVirtiofsd terminates a device's virtiofsd (if any) and removes its socket.
+func killVirtiofsd(dev *hotPlugDevice) {
+	killProcess(dev.virtiofsd)
+	if dev.sockPath != "" {
+		_ = os.Remove(dev.sockPath)
+	}
 }
 
 func mustJSON(execute string, arguments map[string]any) []byte {
