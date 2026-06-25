@@ -7,10 +7,15 @@
 # octal-escaped (per fstab(5)) for cloud-config virtiofs entries whose path
 # contains a space or tab. cloud-init's cc_mounts writes the mount point verbatim,
 # so a space/tab produces an unparsable line that mount(8) silently skips via the
-# nofail option (lima-vm/lima#5136, abiosoft/colima#1471, canonical/cloud-init#3603).
-# Fields are tab-separated, so -F'\t' isolates the mount point; already-escaped
-# paths have no literal space/tab, so the transformation is idempotent (and stays
-# correct once cloud-init escapes the field itself: canonical/cloud-init#6911).
+# nofail option. Fields are tab-separated, so -F'\t' isolates the mount point;
+# already-escaped paths have no literal space/tab, so the transformation is
+# idempotent (and stays correct once cloud-init escapes the field itself).
+#
+# See:
+# https://github.com/lima-vm/lima/issues/5136
+# https://github.com/abiosoft/colima/issues/1471
+# https://github.com/canonical/cloud-init/issues/3603 (cc_mounts does not escape)
+# https://github.com/canonical/cloud-init/issues/6911 (the upstream cloud-init fix)
 
 set -eu
 
