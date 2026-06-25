@@ -1,0 +1,19 @@
+name: 'windows msys2 prep'
+description: >
+  Adds C:\msys64\usr\bin to PATH and installs the MSYS2 packages required by
+  hack/test-templates.sh. The PATH prepend persists into subsequent job steps
+  via $GITHUB_PATH, so the test step can call cygpath / bash / pacman tools
+  directly without re-prepending.
+runs:
+  using: composite
+  steps:
+  - name: Prepend MSYS2 to PATH and install test dependencies
+    shell: pwsh
+    # The value written to $GITHUB_PATH is the static literal C:\msys64\usr\bin,
+    # which is the canonical pattern for adding a directory to subsequent
+    # steps' PATH. No PR-controlled data reaches the env file.
+    run: | # zizmor: ignore[github-env]
+      $ErrorActionPreference = 'Stop'
+      Add-Content -Path $env:GITHUB_PATH -Value 'C:\msys64\usr\bin'
+      & 'C:\msys64\usr\bin\pacman.exe' -Sy --noconfirm openbsd-netcat diffutils socat w3m
+      if ($LASTEXITCODE -ne 0) { throw "pacman failed: $LASTEXITCODE" }

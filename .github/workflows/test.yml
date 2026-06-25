@@ -162,36 +162,11 @@ jobs:
     - name: Uninstall
       run: sudo make uninstall
 
-  windows:
+  windows-wsl2:
     name: "Windows tests (WSL2)"
     runs-on: windows-2025
     timeout-minutes: 30
     steps:
-    - name: Enable WSL2
-      run: |
-        wsl --set-default-version 2
-        wsl --shutdown
-        wsl --update
-        wsl --status
-        wsl --version
-        wsl --list --online
-    - name: Install WSL2 distro
-      timeout-minutes: 1
-      run: |
-        # FIXME: At least one distro has to be installed here,
-        # otherwise `wsl --list --verbose` (called from Lima) fails:
-        # https://github.com/lima-vm/lima/pull/1826#issuecomment-1729993334
-        # The distro image itself is not consumed by Lima.
-        # Starting with WSL2 version 2.5.7.0 the distro will be rejected
-        # if it doesn't contain /bin/sh and /etc.
-        # ------------------------------------------------------------------
-        mkdir dummy
-        mkdir dummy\bin
-        mkdir dummy\etc
-        echo "" >dummy\bin\sh
-        tar -cf dummy.tar --format ustar -C dummy .
-        wsl --import dummy $env:TEMP dummy.tar
-        wsl --list --verbose
     - name: Set gitconfig
       run: |
         git config --global core.autocrlf false
@@ -203,19 +178,19 @@ jobs:
       with:
         go-version: stable
         cache: false
+    - uses: ./.github/actions/windows_wsl2_setup
+    - uses: ./.github/actions/windows_msys2_prep
     - name: Unit tests
       run: go test -v ./...
     - name: Make
       run: make
     - name: Integration tests (WSL2, Windows host)
       run: |
-        $env:PATH = "$pwd\_output\bin;" + 'C:\msys64\usr\bin;' + $env:PATH
-        pacman -Sy --noconfirm openbsd-netcat diffutils socat w3m
-        $env:MSYS2_ENV_CONV_EXCL = 'HOME_HOST;HOME_GUEST;_LIMA_WINDOWS_EXTRA_PATH'
+        $env:PATH = "$pwd\_output\bin;" + $env:PATH
+        $env:MSYS2_ENV_CONV_EXCL = 'HOME_HOST;HOME_GUEST'
         $env:HOME_HOST = $(cygpath.exe "$env:USERPROFILE")
         $env:HOME_GUEST = "/mnt$env:HOME_HOST"
         $env:LIMACTL_CREATE_ARGS = '--vm-type=wsl2 --mount-type=wsl2 --containerd=system'
-        $env:_LIMA_WINDOWS_EXTRA_PATH = 'C:\Program Files\Git\usr\bin'
         bash.exe -c "./hack/test-templates.sh templates/experimental/wsl2.yaml"
 
   windows-qemu:
@@ -234,21 +209,92 @@ jobs:
       with:
         go-version: stable
         cache: false
+    - uses: ./.github/actions/windows_qemu_install
+    - uses: ./.github/actions/windows_msys2_prep
     - name: Make
       run: make
-    - name: Install QEMU
-      run: |
-        winget install --silent --accept-source-agreements --accept-package-agreements --disable-interactivity SoftwareFreedomConservancy.QEMU
     - name: Integration tests (QEMU, Windows host)
       run: |
-        $env:PATH = "$pwd\_output\bin;" + 'C:\msys64\usr\bin;' + 'C:\Program Files\QEMU;' + $env:PATH
-        pacman -Sy --noconfirm openbsd-netcat diffutils socat w3m
-        $env:MSYS2_ENV_CONV_EXCL = 'HOME_HOST;HOME_GUEST;_LIMA_WINDOWS_EXTRA_PATH'
+        $env:PATH = "$pwd\_output\bin;" + 'C:\Program Files\QEMU;' + $env:PATH
+        $env:MSYS2_ENV_CONV_EXCL = 'HOME_HOST;HOME_GUEST'
         $env:HOME_HOST = $(cygpath.exe "$env:USERPROFILE")
         $env:HOME_GUEST = "$env:HOME_HOST"
         $env:LIMACTL_CREATE_ARGS = '--vm-type=qemu'
-        $env:_LIMA_WINDOWS_EXTRA_PATH = 'C:\Program Files\Git\usr\bin'
         bash.exe -c "./hack/test-templates.sh templates/default.yaml"
+
+  windows-plain-wsl2:
+    # Smoke test that Lima's WSL2 driver works on a Windows host with only
+    # the bits that ship in a default Windows 10/11 install (native OpenSSH,
+    # wsl.exe, tar). Notably: no Git for Windows, no MSYS2, no cygpath, no
+    # Cygwin/MSYS2 ssh. Builds with `go build` (instead of `make`) and
+    # exercises the main commands in PowerShell. If this job ever needs to
+    # add MSYS2 / Git for Windows back to make a step pass, that means a new
+    # external-binary dependency was introduced and should be evaluated.
+    name: "Windows tests (WSL2, plain Windows host)"
+    runs-on: windows-2025
+    timeout-minutes: 30
+    steps:
+    - name: Set gitconfig
+      run: |
+        git config --global core.autocrlf false
+        git config --global core.eol lf
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      with:
+        persist-credentials: false
+    - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c  # v6.4.0
+      with:
+        go-version: stable
+        cache: false
+    - uses: ./.github/actions/windows_wsl2_setup
+    - uses: ./.github/actions/windows_plain_host
+    - uses: ./.github/actions/windows_plain_build
+    - uses: ./.github/actions/windows_plain_smoke_test
+      with:
+        template: .\templates\experimental\wsl2.yaml
+        lima-home-suffix: plain-wsl2
+
+  windows-plain-qemu:
+    # Same shape as windows-plain-wsl2 but exercises the QEMU driver. Covers
+    # native OpenSSH + native sftp-server + cygpath-free path translation
+    # end-to-end without MSYS2 / Git-for-Windows on PATH.
+    name: "Windows tests (QEMU, plain Windows host)"
+    runs-on: windows-2025
+    timeout-minutes: 30
+    steps:
+    - name: Set gitconfig
+      run: |
+        git config --global core.autocrlf false
+        git config --global core.eol lf
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      with:
+        persist-credentials: false
+    - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c  # v6.4.0
+      with:
+        go-version: stable
+        cache: false
+    - uses: ./.github/actions/windows_qemu_install
+    - uses: ./.github/actions/windows_plain_templates
+    - uses: ./.github/actions/windows_plain_host
+    # winget's QEMU manifest does not register a PATH entry, and
+    # windows_plain_host has just published a scrubbed PATH= through
+    # $GITHUB_ENV. Subsequent $GITHUB_PATH prepending is suppressed
+    # once $GITHUB_ENV defines PATH, so prepend the QEMU install dir
+    # through $GITHUB_ENV too, so the smoke test resolves
+    # qemu-system-x86_64.
+    - name: Add QEMU to PATH
+      shell: pwsh
+      # zizmor: ignore[github-env]
+      run: |
+        Add-Content -Path $env:GITHUB_ENV -Value "PATH=C:\Program Files\QEMU;$env:PATH"
+    - uses: ./.github/actions/windows_plain_build
+    - uses: ./.github/actions/windows_plain_smoke_test
+      with:
+        template: .\templates\default.yaml
+        lima-home-suffix: plain-qemu
+        # Force qemu: on Windows, `limactl create` auto-selects wsl2
+        # over qemu, and templates/default.yaml ships a cloud disk
+        # image that the wsl2 driver rejects.
+        vm-type: qemu
 
   qemu:
     name: "Integration tests (QEMU, macOS host)"
