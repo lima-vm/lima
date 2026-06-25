@@ -33,6 +33,7 @@ ignore:
 - pkg/cidata/cidata.TEMPLATE.d
 - pkg/cidata/cidata.TEMPLATE.d/util/compare_version.sh
 - pkg/cidata/cidata.TEMPLATE.d/util/escape_fstab.sh
+- pkg/cidata/cidata.TEMPLATE.d/util/unescape_fstab.sh
 - website
 # "ubuntu-24.04" does not follow the kebab-case
 - '**/ubuntu-*\.yaml'

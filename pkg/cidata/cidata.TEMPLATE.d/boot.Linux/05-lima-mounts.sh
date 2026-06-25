@@ -55,11 +55,9 @@ if [ -d /sys/fs/selinux ]; then
 			fi
 			sed -i -e "$line""s/comment=cloudconfig/comment=cloudconfig,context=\"$label\"/g" /etc/fstab
 			if [[ ${MOUNT_OPTIONS} != *"$label"* ]]; then
-				# fstab stores the mount point octal-escaped (e.g. space = "\040"); decode it
-				# before passing the path to mount(8). Mirrors the unescape sed in
-				# boot.Linux/04-persistent-data-volume.sh.
-				MOUNT_POINT=$(awk -v line="$line" 'NR==line {print $2}' /etc/fstab |
-					sed -e 's/\\040/ /g; s/\\011/\t/g; s/\\012/\n/g; s/\\134/\\/g; s/\\043/#/g')
+				# fstab stores the mount point octal-escaped (e.g. space = "\040"); decode
+				# it before passing the path to mount(8).
+				MOUNT_POINT=$(awk -v line="$line" 'NR==line {print $2}' /etc/fstab | unescape_fstab.sh)
 				OPTIONS=$(awk -v line="$line" 'NR==line {print $4}' /etc/fstab)
 
 				#########################################################
