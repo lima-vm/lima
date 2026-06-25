@@ -33,29 +33,58 @@ We welcome new contributors! Here are some ways to get started and engage with t
 
 We’re glad to have you here, your contributions make Lima better!
 
-### Developer Certificate of Origin
-
-Every commit must be signed off with the `Signed-off-by: REAL NAME <email@example.com>` line.
-
-Use the `git commit -s` command to add the Signed-off-by line.
-
-See also <https://github.com/cncf/foundation/blob/main/policies-guidance/dco-guidelines.md>.
-
-### Licensing
-
-Lima is licensed under the terms of [Apache License, Version 2.0](https://github.com/lima-vm/lima/blob/master/LICENSE).
-
-See also <https://github.com/cncf/foundation/blob/main/policies-guidance/allowed-third-party-license-policy.md> for third-party dependencies.
-
 ### Sending pull requests
 
-Pull requests can be submitted to <https://github.com/lima-vm/lima/pulls>.
+Pull requests can be submitted to <https://github.com/lima-vm/lima/pulls>. Please ensure that you are familiar with the below policies before submitting pull requests.
+
+#### Talk first, code later:
+Before opening a pull request, open an issue first and explain your idea. Approval can be given as an approved comment, or by adding the `ready-to-work` label. It is okay to submit a pull request before the issue is approved, but keep in mind that unapproved work may not be merged and you risk wasting your effort.
+
+**Exceptions (issue is not required first):**
+- Pull requests from maintainers.
+- Very small fixes _(for example typos, or a pull request touching fewer than 2 files with about 10 lines of change.)_
+- Simple tool or dependency updates.
+
+#### One fix per pull request:
+Each pull request should fix one specific thing. Do not mix unrelated changes in one pull request. For large, ground-breaking work that needs many changes to test CI or integration, a draft pull request is okay first. After that, split the work into smaller pull requests that depend on each other.
 
 It is highly suggested to add [tests](../../dev/testing/) for every non-trivial pull requests.
 A test can be implemented as a unit test rather than an integration test when it is possible,
 to avoid slowing the integration test CI.
 
 For tips on squashing commits and rebasing before submitting your pull request, see [Git Tips](../dev/git.md).
+
+### AI Contribution Rules
+
+Lima welcomes help from AI tools, but we only accept high-quality pull requests. These rules help keep review time useful and fair for maintainers.
+
+#### Humans should write the pull request description
+
+A human should write the pull request description in their own words. Avoid long AI-generated text blocks, as reviewers need clear explanations directly from the contributor. When reviewers leave review comments, reply yourself without relying on AI tools.
+
+#### Legal sign-off (DCO)
+
+AI tools cannot legally sign off code. Only the human submitting the code can add a `Signed-off-by` line. See [DCO](https://github.com/lima-vm/lima/blob/master/DCO.md).
+If you use AI-generated code, you must:
+
+- Read and check all generated code before submitting.
+- Add your own `Signed-off-by` tag.
+- Take full responsibility for the submitted code.
+
+#### Mention AI usage
+
+If you used AI tools while preparing your pull request, disclose that in the pull request description using an `Assisted-by: AI_TOOL_NAME` trailer (see [Linux kernel coding assistants policy](https://docs.kernel.org/process/coding-assistants.html)).
+
+#### Enforcement
+
+Maintainers may close pull requests that do not follow these rules.
+You can always open or update an issue first and come back with a compliant pull request.
+
+### Licensing
+
+Lima is licensed under the terms of [Apache License, Version 2.0](https://github.com/lima-vm/lima/blob/master/LICENSE).
+
+See also <https://github.com/cncf/foundation/blob/main/policies-guidance/allowed-third-party-license-policy.md> for third-party dependencies.
 
 ### Merging pull requests
 
