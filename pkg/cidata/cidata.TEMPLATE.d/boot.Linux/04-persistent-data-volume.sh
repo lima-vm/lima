@@ -23,6 +23,8 @@ for DIR in ${DATADIRS}; do
 	while IFS= read -r LINE; do
 		[ -z "$LINE" ] && continue
 		MNTDEV="$(echo "${LINE}" | awk '{print $1}')"
+		# unmangle " \t\n\\#"
+		# https://github.com/torvalds/linux/blob/v6.6/fs/proc_namespace.c#L89
 		MNTPNT="$(echo "${LINE}" | awk '{print $2}' | unescape_fstab.sh)"
 		# Ignore if MNTPNT is neither DIR nor a parent directory of DIR.
 		# It is not a parent if MNTPNT doesn't start with DIR, or the first
