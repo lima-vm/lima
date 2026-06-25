@@ -95,7 +95,7 @@ func (z zoneHost) name() string {
 	if i < 0 {
 		return string(z)
 	}
-	return string(z)[i+1:] + "."
+	return string(z)[z.zoneIndex()+1:] + "."
 }
 
 func (z zoneHost) recordName() string {
@@ -103,9 +103,22 @@ func (z zoneHost) recordName() string {
 	if i < 0 {
 		return ""
 	}
-	return string(z)[:i]
+
+	j := z.zoneIndex()
+	if j < 0 {
+		return ""
+	}
+
+	return string(z)[:j]
 }
 
 func (z zoneHost) dotIndex() int {
 	return strings.LastIndex(string(z), ".")
+}
+
+func (z zoneHost) zoneIndex() int {
+	parts := strings.Split(string(z), ".")
+	host := strings.Join(parts[:len(parts)-1], ".")
+
+	return strings.LastIndex(host, ".")
 }
