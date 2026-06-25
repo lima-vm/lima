@@ -13,9 +13,9 @@ fi
 # cloud-init's cc_mounts writes the mount point into /etc/fstab without octal-escaping it, so a
 # space/tab in the path makes an unparsable line that mount(8) silently skips via nofail
 # (lima-vm/lima#5136, colima#1471). cc_mounts already created the directory from the unescaped
-# value, so just repair the fstab syntax (see util/escape-fstab.sh) and (re)mount.
+# value, so just repair the fstab syntax (see util/escape_fstab.sh) and (re)mount.
 if grep -q virtiofs /etc/fstab; then
-	escape-fstab.sh </etc/fstab >/etc/fstab.lima.tmp &&
+	escape_fstab.sh </etc/fstab >/etc/fstab.lima.tmp &&
 		cat /etc/fstab.lima.tmp >/etc/fstab && rm -f /etc/fstab.lima.tmp
 	# Mount entries cc_mounts skipped due to the previously broken line (already-mounted ones
 	# are a no-op). On Oracle Linux the virtiofs module is installed later in
