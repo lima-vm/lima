@@ -1,0 +1,84 @@
+# Ubuntu Desktop with SPICE Display
+# A full desktop environment using Xfce (Xubuntu)
+
+vmType: qemu
+
+# SPICE display - basic configuration that works now
+video:
+  display: "spice,port=5930,addr=127.0.0.1,disable-ticketing=on"
+
+# Enable audio
+audio:
+  device: "default"
+
+# Ubuntu Desktop image
+images:
+- location: "https://cloud-images.ubuntu.com/releases/24.04/release/ubuntu-24.04-server-cloudimg-amd64.img"
+  arch: "x86_64"
+- location: "https://cloud-images.ubuntu.com/releases/24.04/release/ubuntu-24.04-server-cloudimg-arm64.img"
+  arch: "aarch64"
+
+cpus: 4
+memory: "8GiB"
+disk: "50GiB"
+
+mounts:
+- location: "~"
+- location: "/tmp/lima"
+  writable: true
+
+ssh:
+  localPort: 0
+  loadDotSSHPubKeys: true
+
+firmware:
+  legacyBIOS: false
+
+# Install Xfce desktop environment
+provision:
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+
+    # Update package lists
+    apt-get update
+
+    # Install Xfce desktop environment (lightweight)
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
+      xubuntu-desktop \
+      spice-vdagent \
+      xserver-xorg-video-qxl \
+      pulseaudio
+
+    # Configure automatic login for lima user
+    mkdir -p /etc/lightdm/lightdm.conf.d
+    cat > /etc/lightdm/lightdm.conf.d/50-autologin.conf <<'EOF'
+    [Seat:*]
+    autologin-user=lima
+    autologin-user-timeout=0
+    EOF
+
+    # Enable graphical target
+    systemctl set-default graphical.target
+
+    echo "Desktop environment installed. Rebooting..."
+    sleep 2
+    systemctl reboot || true
+
+hostResolver:
+  enabled: true
+
+message: |
+  Ubuntu Desktop (Xfce) with SPICE Display is starting.
+
+  The VM is installing Xubuntu desktop (this takes 5-10 minutes).
+  The VM will reboot automatically when installation is complete.
+
+  After reboot, connect to the SPICE display:
+    remote-viewer spice://127.0.0.1:5930
+
+  Install SPICE viewer first:
+    brew install virt-viewer
+
+  Desktop will auto-login as user 'lima'
