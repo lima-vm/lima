@@ -73,6 +73,7 @@ func newShellCommand() *cobra.Command {
 	shellCmd.Flags().Bool("preserve-env", false, "Propagate environment variables to the shell")
 	shellCmd.Flags().Bool("start", false, "Start the instance if it is not already running")
 	shellCmd.Flags().String("sync", "", "Copy a host directory to the guest and vice-versa upon exit")
+	shellCmd.Flags().StringArray("sync-exclude", nil, "Exclude a path from --sync (rsync --exclude syntax); can be passed multiple times")
 
 	return shellCmd
 }
@@ -196,6 +197,18 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to get sync flag: %w", err)
 	}
 	syncHostWorkdir := syncDirVal != ""
+
+	syncExcludes, err := flags.GetStringArray("sync-exclude")
+	if err != nil {
+		return fmt.Errorf("failed to get sync-exclude flag: %w", err)
+	}
+	if len(syncExcludes) > 0 && !syncHostWorkdir {
+		return errors.New("--sync-exclude requires --sync")
+	}
+	var excludeArgs []string
+	for _, e := range syncExcludes {
+		excludeArgs = append(excludeArgs, "--exclude", e)
+	}
 	if syncHostWorkdir && len(inst.Config.Mounts) > 0 {
 		return errors.New("cannot use `--sync` when the instance has host mounts configured, start the instance with `--mount-none` to disable mounts")
 	}
@@ -381,11 +394,9 @@ func shellAction(cmd *cobra.Command, args []string) error {
 			fmt.Sprintf("%s:%s", inst.Name, destRsyncDir),
 		}
 		rsync, err = copytool.New(ctx, string(copytool.BackendRsync), paths, &copytool.Options{
-			Recursive: true,
-			Verbose:   false,
-			AdditionalArgs: []string{
-				"--delete",
-			},
+			Recursive:      true,
+			Verbose:        false,
+			AdditionalArgs: append([]string{"--delete"}, excludeArgs...),
 		})
 		if err != nil {
 			return err
@@ -439,12 +450,12 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		return askUserForRsyncBack(ctx, cmd, inst, sshExecForRsync, hostCurrentDir, destRsyncDir, rsync, tty)
+		return askUserForRsyncBack(ctx, cmd, inst, sshExecForRsync, hostCurrentDir, destRsyncDir, rsync, tty, excludeArgs)
 	}
 	return nil
 }
 
-func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype.Instance, sshCmd *exec.Cmd, hostCurrentDir, destRsyncDir string, rsync copytool.CopyTool, tty bool) error {
+func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype.Instance, sshCmd *exec.Cmd, hostCurrentDir, destRsyncDir string, rsync copytool.CopyTool, tty bool, excludeArgs []string) error {
 	remoteSource := fmt.Sprintf("%s:%s", inst.Name, destRsyncDir)
 	clean := filepath.Clean(hostCurrentDir)
 	dirForCleanup := shellescape.Quote(filepath.Join(*inst.Config.User.Home, clean))
@@ -478,7 +489,7 @@ func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype
 		return rsyncBack()
 	}
 
-	rawOutput, stats, err := getRsyncStats(ctx, remoteSource, filepath.Dir(hostCurrentDir))
+	rawOutput, stats, err := getRsyncStats(ctx, remoteSource, filepath.Dir(hostCurrentDir), excludeArgs)
 	if err != nil {
 		logrus.WithError(err).Warn("failed to get rsync stats")
 	}
@@ -749,16 +760,12 @@ func (s *rsyncStats) String() string {
 	return fmt.Sprintf("added: %d, deleted: %d, modified: %d, metadata: %d", s.Added, s.Deleted, s.Modified, s.Metadata)
 }
 
-func getRsyncStats(ctx context.Context, source, destination string) (string, *rsyncStats, error) {
+func getRsyncStats(ctx context.Context, source, destination string, excludeArgs []string) (string, *rsyncStats, error) {
 	paths := []string{source, destination}
+	addArgs := append([]string{"--dry-run", "--itemize-changes", "-ah", "--delete"}, excludeArgs...)
 	rsync, err := copytool.New(ctx, string(copytool.BackendRsync), paths, &copytool.Options{
-		Verbose: true,
-		AdditionalArgs: []string{
-			"--dry-run",
-			"--itemize-changes",
-			"-ah",
-			"--delete",
-		},
+		Verbose:        true,
+		AdditionalArgs: addArgs,
 	})
 	if err != nil {
 		return "", nil, err
