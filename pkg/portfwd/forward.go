@@ -99,6 +99,7 @@ func (fw *Forwarder) OnEvent(ctx context.Context, dialContext func(ctx context.C
 
 func (fw *Forwarder) forwardingAddresses(guest *api.IPPort) (hostAddr, guestAddr string) {
 	guestIP := net.ParseIP(guest.Ip)
+	var unspecifiedRuleFallback *limatype.PortForward
 	for _, rule := range fw.rules {
 		if rule.GuestSocket != "" {
 			continue
@@ -109,11 +110,29 @@ func (fw *Forwarder) forwardingAddresses(guest *api.IPPort) (hostAddr, guestAddr
 		if guest.Port < int32(rule.GuestPortRange[0]) || guest.Port > int32(rule.GuestPortRange[1]) {
 			continue
 		}
+		guestIPMustBeZero := rule.GuestIPMustBeZero != nil && *rule.GuestIPMustBeZero
+		mustAdjustHostIP := false
 		switch {
+		case guestIPMustBeZero && !guestIP.IsUnspecified():
+			continue
+		case rule.GuestIPWasUndefined && !guestIPMustBeZero:
+			mustAdjustHostIP = rule.HostIPWasUndefined
+		case guestIPMustBeZero && guestIP.IsUnspecified():
+			if !rule.GuestIPWasUndefined && !guestIP.Equal(rule.GuestIP) {
+				if unspecifiedRuleFallback == nil {
+					func(p limatype.PortForward) { unspecifiedRuleFallback = &p }(rule)
+				}
+				continue
+			}
+			mustAdjustHostIP = rule.HostIPWasUndefined
+		case rule.HostIPWasUndefined && guestIP.IsUnspecified():
+			mustAdjustHostIP = true
+		case rule.HostIPWasUndefined && (guestIP.Equal(net.IPv6loopback) || guestIP.Equal(IPv4loopback1)):
+			mustAdjustHostIP = true
 		case guestIP.IsUnspecified():
 		case guestIP.Equal(rule.GuestIP):
 		case guestIP.Equal(net.IPv6loopback) && rule.GuestIP.Equal(IPv4loopback1):
-		case rule.GuestIP.IsUnspecified() && !*rule.GuestIPMustBeZero:
+		case rule.GuestIP.IsUnspecified() && !guestIPMustBeZero:
 			// When GuestIPMustBeZero is true, then 0.0.0.0 must be an exact match, which is already
 			// handled above by the guestIP.IsUnspecified() condition.
 		default:
@@ -125,7 +144,17 @@ func (fw *Forwarder) forwardingAddresses(guest *api.IPPort) (hostAddr, guestAddr
 			}
 			break
 		}
+		if mustAdjustHostIP {
+			if guestIP.To4() != nil {
+				rule.HostIP = IPv4loopback1
+			} else {
+				rule.HostIP = net.IPv6loopback
+			}
+		}
 		return hostAddress(rule, guest), guest.HostString()
+	}
+	if unspecifiedRuleFallback != nil {
+		return hostAddress(*unspecifiedRuleFallback, guest), guest.HostString()
 	}
 	return "", guest.HostString()
 }

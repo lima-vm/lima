@@ -124,13 +124,15 @@ func TestFillDefault(t *testing.T) {
 	}
 
 	defaultPortForward := limatype.PortForward{
-		GuestIP:           IPv4loopback1,
-		GuestIPMustBeZero: ptr.Of(false),
-		GuestPortRange:    [2]int{1, 65535},
-		HostIP:            IPv4loopback1,
-		HostPortRange:     [2]int{1, 65535},
-		Proto:             limatype.ProtoAny,
-		Reverse:           false,
+		GuestIP:             IPv4loopback1,
+		GuestIPMustBeZero:   ptr.Of(false),
+		GuestPortRange:      [2]int{1, 65535},
+		HostIP:              IPv4loopback1,
+		HostPortRange:       [2]int{1, 65535},
+		Proto:               limatype.ProtoAny,
+		Reverse:             false,
+		HostIPWasUndefined:  true,
+		GuestIPWasUndefined: true,
 	}
 
 	// ------------------------------------------------------------------------------------

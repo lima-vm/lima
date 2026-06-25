@@ -62,8 +62,10 @@ func hostAddress(rule limatype.PortForward, guest *api.IPPort) string {
 
 func (pf *portForwarder) forwardingAddresses(guest *api.IPPort) (hostAddr, guestAddr string) {
 	guestIP := net.ParseIP(guest.Ip)
+	var unspecifiedRuleFallback *limatype.PortForward
 	for _, rule := range pf.rules {
 		if rule.GuestSocket != "" {
+			// Not TCP
 			continue
 		}
 		switch rule.Proto {
@@ -74,24 +76,79 @@ func (pf *portForwarder) forwardingAddresses(guest *api.IPPort) (hostAddr, guest
 		if guest.Port < int32(rule.GuestPortRange[0]) || guest.Port > int32(rule.GuestPortRange[1]) {
 			continue
 		}
+
+		guestIPMustBeZero := rule.GuestIPMustBeZero != nil && *rule.GuestIPMustBeZero
+		mustAdjustHostIP := false
 		switch {
+		// Early-continue in case rule's IP is not zero while it is required.
+		case guestIPMustBeZero && !guestIP.IsUnspecified():
+			continue
+
+		// Rule lacks a preferred GuestIP, so guest may be binding to wherever it wants. The rule matches the port range,
+		// so we can continue processing it. However, make sure to correct the rule to use a correct address family if
+		// not specified by the rule.
+		case rule.GuestIPWasUndefined && !guestIPMustBeZero:
+			mustAdjustHostIP = rule.HostIPWasUndefined
+
+		// if GuestIP and family matches, move along.
+		case guestIPMustBeZero && guestIP.IsUnspecified():
+			// This is a breaking change. Here we will keep a backup of the rule, so we can still reuse it
+			// in case everything fails. The idea here is to move a copy of the current rule to outside this
+			// loop, so we can reuse it in case nothing else matches.
+			if !rule.GuestIPWasUndefined && !guestIP.Equal(rule.GuestIP) {
+				if unspecifiedRuleFallback == nil {
+					// Move the rule to obtain a copy
+					func(p limatype.PortForward) { unspecifiedRuleFallback = &p }(rule)
+				}
+				continue
+			}
+
+			mustAdjustHostIP = rule.HostIPWasUndefined
+
+		// Rule lack's HostIP, and guest is binding to '0.0.0.0' or '::'. Bind to the same address family.
+		case rule.HostIPWasUndefined && guestIP.IsUnspecified():
+			mustAdjustHostIP = true
+
+		// We don't have a preferred HostIP in the rule, and guest wants to bind to a loopback
+		// address. In that case, use the same address family.
+		case rule.HostIPWasUndefined && (guestIP.Equal(net.IPv6loopback) || guestIP.Equal(IPv4loopback1)):
+			mustAdjustHostIP = true
+
 		case guestIP.IsUnspecified():
 		case guestIP.Equal(rule.GuestIP):
 		case guestIP.Equal(net.IPv6loopback) && rule.GuestIP.Equal(IPv4loopback1):
-		case rule.GuestIP.IsUnspecified() && !*rule.GuestIPMustBeZero:
+		case rule.GuestIP.IsUnspecified() && !guestIPMustBeZero:
 			// When GuestIPMustBeZero is true, then 0.0.0.0 must be an exact match, which is already
-			// handled above by the guest.IP.IsUnspecified() condition.
+			// handled above by the guestIP.IsUnspecified() condition.
 		default:
 			continue
 		}
+
 		if rule.Ignore {
 			if guestIP.IsUnspecified() && !rule.GuestIP.IsUnspecified() {
 				continue
 			}
+
 			break
 		}
+
+		if mustAdjustHostIP {
+			if guestIP.To4() != nil {
+				rule.HostIP = IPv4loopback1
+			} else {
+				rule.HostIP = net.IPv6loopback
+			}
+		}
+
 		return hostAddress(rule, guest), guest.HostString()
 	}
+
+	// At this point, no other rule matched. So check if this is being impacted by our
+	// breaking change, and return the fallback rule. Otherwise, just ignore it.
+	if unspecifiedRuleFallback != nil {
+		return hostAddress(*unspecifiedRuleFallback, guest), guest.HostString()
+	}
+
 	return "", guest.HostString()
 }
 
