@@ -185,6 +185,33 @@ limactl shell --sync . default
 - **No**: Discards changes and cleans up guest directory
 - **View the changed contents**: Shows a diff of changes made by the agent
 
+### Excluding files or directories from syncing
+
+ | ⚡ Requirement | Lima >= 2.2 |
+ |----------------|-------------|
+
+In addition to the `--sync` flag, a `--sync-exclude` flag is available, which allows you to configure directories that will not be synced to the VM. This is useful to exclude large generated directories (like `node_modules`, or `vendor`),
+or more sensitive files (like credentials, or a `.git` directory). This flag can be repeated to exclude multiple directories.
+
+The flag is passed to **rsync** as `--exclude` and must conform to its conventions.
+
+```bash
+limactl shell --sync . --sync-exclude .git default
+```
+
+Alternatively a `.limasyncignore` file can be created in the target directory, which contains a list of excludes.
+
+```
+node_modules
+.git
+vendor
+build
+dist
+*.o
+```
+
+If this file exists, it is automatically passed to **rsync** as `--exclude-from`.
+
 ### Requirements
 
 - **rsync** must be installed on both host and guest
