@@ -58,35 +58,11 @@ if [ -n "${SELFTEST}" ]; then
 fi
 
 awk -F'\t' 'BEGIN { OFS = "\t" }
-	{
-		# The mount point can itself contain tabs (in the broken cloud-init case), so
-		# don't assume fixed field positions. Find the first "virtiofs" field and
-		# treat everything between $1 and that field as the mount point.
-		fstype = 0
-		for (i = 3; i <= NF; i++) {
-			if ($i == "virtiofs") {
-				fstype = i
-				break
-			}
-		}
-		if (fstype > 0 && (fstype + 3) <= NF) {
-			src = $1
-			mp = $2
-			for (i = 3; i < fstype; i++) {
-				mp = mp FS $i
-			}
-			opts = $(fstype + 1)
-			dump = $(fstype + 2)
-			pass = $(fstype + 3)
-			if (opts ~ /comment=cloudconfig/ && mp ~ /[ \t]/) {
-				p = mp
-				gsub(/\\/, "\\134", p) # backslash first so introduced escapes are not re-escaped
-				gsub(/ /, "\\040", p)
-				gsub(/\t/, "\\011", p)
-				mp = p
-			}
-			print src, mp, "virtiofs", opts, dump, pass
-			next
-		}
-		print
-	}'
+	$3 == "virtiofs" && $4 ~ /comment=cloudconfig/ && $2 ~ /[ \t]/ {
+		p = $2
+		gsub(/\\/, "\\134", p) # backslash first so introduced escapes are not re-escaped
+		gsub(/ /, "\\040", p)
+		gsub(/\t/, "\\011", p)
+		$2 = p
+	}
+	{ print }'
