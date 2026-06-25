@@ -111,6 +111,12 @@ GO_BUILD := $(strip $(GO) build $(GO_BUILD_GCFLAGS) $(GO_BUILD_LDFLAGS) $(GO_BUI
 all: binaries manpages
 
 ################################################################################
+AUTHORS: .mailmap .git/HEAD
+	git shortlog --summary --email --group=Author --group=trailer:Co-Authored-By | \
+		grep -vE '\[bot\]|<(bot|noreply)@' | \
+		cut -f2 | sort -fu > $@
+
+################################################################################
 # Help
 .PHONY: help
 help:
