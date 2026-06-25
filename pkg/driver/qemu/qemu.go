@@ -688,6 +688,26 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 		"-device", "virtio-scsi,id=scsi0",
 		"-device", "scsi-cd,bus=scsi0.0,drive=cdrom0")
 
+	// TPM
+	if y.TPM.Enabled != nil && *y.TPM.Enabled {
+		swtpmSock := filepath.Join(cfg.InstanceDir, filenames.SwtpmSock)
+		args = append(args, "-chardev", fmt.Sprintf("socket,id=chrtpm,path=%s", swtpmSock))
+		args = append(args, "-tpmdev", "emulator,id=tpm0,chardev=chrtpm")
+		// Select TPM device model based on architecture:
+		// - x86_64: tpm-crb (Command Response Buffer, preferred for Windows 11)
+		// - aarch64/armv7l: tpm-tis-device (TIS MMIO device for ARM)
+		var tpmDevice string
+		switch *y.Arch {
+		case limatype.X8664:
+			tpmDevice = "tpm-crb"
+		case limatype.AARCH64, limatype.ARMV7L:
+			tpmDevice = "tpm-tis-device"
+		default:
+			return "", nil, fmt.Errorf("TPM is not supported for architecture %q", *y.Arch)
+		}
+		args = append(args, "-device", tpmDevice+",tpmdev=tpm0")
+	}
+
 	// Kernel
 	kernel := filepath.Join(cfg.InstanceDir, filenames.Kernel)
 	kernelCmdline := filepath.Join(cfg.InstanceDir, filenames.KernelCmdline)
@@ -1025,6 +1045,50 @@ func VirtiofsdCmdline(cfg Config, mountIndex int) ([]string, error) {
 		"--socket-path", vhostSock,
 		"--shared-dir", mount.Location,
 	}, nil
+}
+
+// FindSwtpm locates the swtpm binary on the host.
+func FindSwtpm() (string, error) {
+	exe, err := exec.LookPath("swtpm")
+	if err != nil {
+		return "", fmt.Errorf("swtpm not found in PATH: %w (hint: install swtpm)", err)
+	}
+	return exe, nil
+}
+
+// SwtpmCmdline returns the command-line arguments for running swtpm
+// in socket mode for TPM 2.0 emulation.
+// Currently only supported on Unix hosts (Linux, macOS) where Unix domain sockets are available.
+func SwtpmCmdline(cfg Config) (exe string, args []string, err error) {
+	if runtime.GOOS == "windows" {
+		return "", nil, fmt.Errorf("TPM emulation via swtpm is not yet supported on Windows hosts (Unix domain sockets required)")
+	}
+
+	swtpmExe, err := FindSwtpm()
+	if err != nil {
+		return "", nil, err
+	}
+
+	stateDir := filepath.Join(cfg.InstanceDir, filenames.SwtpmDir)
+	if err := os.MkdirAll(stateDir, 0o700); err != nil {
+		return "", nil, fmt.Errorf("failed to create swtpm state directory: %w", err)
+	}
+
+	swtpmSock := filepath.Join(cfg.InstanceDir, filenames.SwtpmSock)
+	// Remove stale socket and lock file (lock can survive host crashes)
+	_ = os.Remove(swtpmSock)
+	_ = os.Remove(filepath.Join(stateDir, ".lock"))
+
+	args = []string{
+		"socket",
+		"--tpmstate", "dir=" + stateDir,
+		"--ctrl", "type=unixio,path=" + swtpmSock,
+		"--tpm2",
+		"--terminate", // exit when QEMU disconnects; prevents orphan on force-stop
+		"--log", "level=1",
+	}
+
+	return swtpmExe, args, nil
 }
 
 // qemuArch returns the arch string used by qemu.

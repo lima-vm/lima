@@ -834,6 +834,16 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		y.NestedVirtualization = ptr.Of(false)
 	}
 
+	if y.TPM.Enabled == nil {
+		y.TPM.Enabled = d.TPM.Enabled
+	}
+	if o.TPM.Enabled != nil {
+		y.TPM.Enabled = o.TPM.Enabled
+	}
+	if y.TPM.Enabled == nil {
+		y.TPM.Enabled = ptr.Of(false)
+	}
+
 	if y.Plain == nil {
 		y.Plain = d.Plain
 	}

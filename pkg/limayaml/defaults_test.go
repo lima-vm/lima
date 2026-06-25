@@ -19,6 +19,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"gotest.tools/v3/assert"
 
+	"strings"
+
 	"github.com/lima-vm/lima/v2/pkg/ioutilx"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
@@ -27,8 +29,41 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/ptr"
 )
 
+func TestMain(m *testing.M) {
+	if os.Getenv("LIMA_TEST_MOCK_CYGPATH") == "1" {
+		if len(os.Args) > 1 {
+			val := os.Args[len(os.Args)-1]
+			s := filepath.ToSlash(val)
+			if len(s) >= 2 && s[1] == ':' {
+				drive := strings.ToLower(string(s[0]))
+				s = "/" + drive + s[2:]
+			}
+			fmt.Println(s)
+		}
+		os.Exit(0)
+	}
+	os.Exit(m.Run())
+}
+
+
 func TestFillDefault(t *testing.T) {
 	logrus.SetLevel(logrus.DebugLevel)
+
+	if runtime.GOOS == "windows" {
+		tmpBinDir := t.TempDir()
+		cygpathExe := filepath.Join(tmpBinDir, "cygpath.exe")
+		absSelf, err := filepath.Abs(os.Args[0])
+		assert.NilError(t, err)
+		selfBytes, err := os.ReadFile(absSelf)
+		assert.NilError(t, err)
+		err = os.WriteFile(cygpathExe, selfBytes, 0o755)
+		assert.NilError(t, err)
+
+		oldPath := os.Getenv("PATH")
+		t.Setenv("PATH", tmpBinDir+string(os.PathListSeparator)+oldPath)
+		t.Setenv("LIMA_TEST_MOCK_CYGPATH", "1")
+	}
+
 	var d, y, o limatype.LimaYAML
 
 	opts := []cmp.Option{
@@ -113,6 +148,9 @@ func TestFillDefault(t *testing.T) {
 			RemoveDefaults: ptr.Of(false),
 		},
 		NestedVirtualization: ptr.Of(false),
+		TPM: limatype.TPM{
+			Enabled: ptr.Of(false),
+		},
 		Plain:                ptr.Of(false),
 		User: limatype.User{
 			Name:    ptr.Of(user.Username),
@@ -205,6 +243,8 @@ func TestFillDefault(t *testing.T) {
 		mountLocation, err := ioutilx.WindowsSubsystemPath(t.Context(), expect.Mounts[0].Location)
 		if err == nil {
 			expect.Mounts[0].MountPoint = ptr.Of(mountLocation)
+		} else {
+			expect.Mounts[0].MountPoint = ptr.Of("")
 		}
 	}
 	expect.Mounts[0].Writable = ptr.Of(false)
@@ -412,6 +452,9 @@ func TestFillDefault(t *testing.T) {
 			},
 		},
 		NestedVirtualization: ptr.Of(true),
+		TPM: limatype.TPM{
+			Enabled: ptr.Of(true),
+		},
 		User: limatype.User{
 			Name:    ptr.Of("xxx"),
 			Comment: ptr.Of("Foo Bar"),
@@ -438,6 +481,8 @@ func TestFillDefault(t *testing.T) {
 		mountLocation, err := ioutilx.WindowsSubsystemPath(t.Context(), expect.Mounts[0].Location)
 		if err == nil {
 			expect.Mounts[0].MountPoint = ptr.Of(mountLocation)
+		} else {
+			expect.Mounts[0].MountPoint = ptr.Of("")
 		}
 	}
 	expect.Mounts[0].SSHFS.Cache = ptr.Of(true)
@@ -638,6 +683,9 @@ func TestFillDefault(t *testing.T) {
 			RemoveDefaults: ptr.Of(true),
 		},
 		NestedVirtualization: ptr.Of(false),
+		TPM: limatype.TPM{
+			Enabled: ptr.Of(false),
+		},
 		User: limatype.User{
 			Name:    ptr.Of("foo"),
 			Comment: ptr.Of("foo bar baz"),
@@ -706,6 +754,8 @@ func TestFillDefault(t *testing.T) {
 	expect.Plain = ptr.Of(false)
 
 	expect.NestedVirtualization = ptr.Of(false)
+
+	expect.TPM.Enabled = ptr.Of(false)
 
 	expect.VMOpts = limatype.VMOpts{
 		"qemu": dExpected.VMOpts["qemu"],
