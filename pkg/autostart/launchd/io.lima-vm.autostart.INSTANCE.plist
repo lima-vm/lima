@@ -15,7 +15,10 @@
 	<true/>
 {{- if .KeepAlive }}
 	<key>KeepAlive</key>
-	<true/>
+	<dict>
+		<key>SuccessfulExit</key>
+		<false/>
+	</dict>
 {{- end }}
 	<key>StandardErrorPath</key>
 	<string>launchd.stderr.log</string>
