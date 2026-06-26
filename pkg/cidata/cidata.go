@@ -595,6 +595,11 @@ func GenerateWindowsISO(ctx context.Context, instDir, name string, instConfig *l
 		return "", err
 	}
 
+	// Check OS version (Windows 11 or server 2025). This differentiates autounattend.xml.
+	if err := args.checkWindowsVersion(instDir); err != nil {
+		return "", err
+	}
+
 	layout, err := ExecuteTemplateWindowsISO(args)
 	if err != nil {
 		return "", fmt.Errorf("failed to create Windows ISO entries: %w", err)
