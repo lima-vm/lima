@@ -6,22 +6,22 @@
         xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
         <DriverPaths>
             <PathAndCredentials wcm:action="add" wcm:keyValue="1">
-                <Path>E:\viostor\2k25\amd64</Path>
+                <Path>E:\viostor\{{ if .IsWindowsServer }}2k25{{ else }}w11{{ end }}\amd64</Path>
             </PathAndCredentials>
             <PathAndCredentials wcm:action="add" wcm:keyValue="2">
-                <Path>E:\vioinput\2k25\amd64</Path>
+                <Path>E:\vioinput\{{ if .IsWindowsServer }}2k25{{ else }}w11{{ end }}\amd64</Path>
             </PathAndCredentials>
             <PathAndCredentials wcm:action="add" wcm:keyValue="3">
-                <Path>E:\NetKVM\2k25\amd64</Path>
+                <Path>E:\NetKVM\{{ if .IsWindowsServer }}2k25{{ else }}w11{{ end }}\amd64</Path>
             </PathAndCredentials>
             <PathAndCredentials wcm:action="add" wcm:keyValue="4">
-                <Path>E:\viofs\2k25\amd64</Path>
+                <Path>E:\viofs\{{ if .IsWindowsServer }}2k25{{ else }}w11{{ end }}\amd64</Path>
             </PathAndCredentials>
             <PathAndCredentials wcm:action="add" wcm:keyValue="5">
-                <Path>E:\Balloon\2k25\amd64</Path>
+                <Path>E:\Balloon\{{ if .IsWindowsServer }}2k25{{ else }}w11{{ end }}\amd64</Path>
             </PathAndCredentials>
             <PathAndCredentials wcm:action="add" wcm:keyValue="6">
-                <Path>E:\viorng\2k25\amd64</Path>
+                <Path>E:\viorng\{{ if .IsWindowsServer }}2k25{{ else }}w11{{ end }}\amd64</Path>
             </PathAndCredentials>
         </DriverPaths>
     </component>
@@ -33,12 +33,46 @@
       <UserLocale>en-US</UserLocale>
     </component>
     <component name="Microsoft-Windows-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      {{ if not .IsWindowsServer }}
+      <!-- Windows 11 has hardware requirements. (ref: https://www.microsoft.com/en-gb/windows/windows-11-specifications). -->
+      <!-- For flexibility, we bypass those requirements. -->
+      <RunSynchronous>
+        <RunSynchronousCommand wcm:action="add">
+          <Order>1</Order>
+          <Path>reg add "HKLM\SYSTEM\Setup\LabConfig" /v BypassSecureBootCheck /t REG_DWORD /d 1 /f</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand wcm:action="add">
+          <Order>2</Order>
+          <Path>reg add "HKLM\SYSTEM\Setup\LabConfig" /v BypassRAMCheck /t REG_DWORD /d 1 /f</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand wcm:action="add">
+          <Order>3</Order>
+          <Path>reg add "HKLM\SYSTEM\Setup\LabConfig" /v BypassCPUCheck /t REG_DWORD /d 1 /f</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand wcm:action="add">
+          <Order>4</Order>
+          <Path>reg add "HKLM\SYSTEM\Setup\LabConfig" /v BypassStorageCheck /t REG_DWORD /d 1 /f</Path>
+        </RunSynchronousCommand>
+        {{ if not .TPM }}
+        <!-- Those requirements are only bypassed when TPM is disabled. -->
+        <!-- By default, TPM is enabled for Windows 11. -->
+        <RunSynchronousCommand wcm:action="add">
+          <Order>5</Order>
+          <Path>reg add "HKLM\SYSTEM\Setup\LabConfig" /v BypassTPMCheck /t REG_DWORD /d 1 /f</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand wcm:action="add">
+          <Order>6</Order>
+          <Path>reg add "HKLM\SYSTEM\Setup\MoSetup" /v AllowUpgradesWithUnsupportedTPMOrCPU /t REG_DWORD /d 1 /f</Path>
+        </RunSynchronousCommand>
+        {{ end }}
+      </RunSynchronous>
+      {{ end }}
       <ImageInstall>
         <OSImage>
           <InstallFrom>
             <MetaData wcm:action="add">
               <Key>/IMAGE/INDEX</Key>
-              <Value>1</Value>
+              <Value>{{ if .IsWindowsServer }}1{{ else }}6{{ end }}</Value>
             </MetaData>
           </InstallFrom>
           <InstallTo>
@@ -132,6 +166,12 @@
       <UserData>
         <AcceptEula>true</AcceptEula>
         <FullName />
+        {{ if not .IsWindowsServer }}
+        <!-- This field necessary for skipping product key step on Win-11 -->
+        <ProductKey>
+          <WillShowUI>Never</WillShowUI>
+        </ProductKey>
+        {{ end }}
         <Organization />
       </UserData>
     </component>

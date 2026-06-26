@@ -150,6 +150,7 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 		NoCloudInit:    noCloudInit,
 		Param:          instConfig.Param,
 		LegacyBIOS:     *instConfig.Firmware.LegacyBIOS,
+		TPM:            *instConfig.TPM,
 	}
 
 	firstUsernetIndex := limayaml.FirstUsernetIndex(instConfig)
@@ -592,6 +593,11 @@ func GenerateWindowsISO(ctx context.Context, instDir, name string, instConfig *l
 	// The generated password is used only for an initial setup.
 	// After that, the password is overwritten.
 	if err := args.generateWindowsInitialPassword(); err != nil {
+		return "", err
+	}
+
+	// Check OS version (Windows 11 or server 2025). This differentiates autounattend.xml.
+	if err := args.checkWindowsVersion(instDir); err != nil {
 		return "", err
 	}
 
