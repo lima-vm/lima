@@ -1,0 +1,11 @@
+images:
+# Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
+
+- location: "https://cloud-images.ubuntu.com/minimal/releases/jammy/release-20260614/ubuntu-22.04-minimal-cloudimg-amd64.img"
+  arch: "x86_64"
+  digest: "sha256:9f9785a515515af562686b22315d9f2c7f3ca331166a4c1c1c419b25fb4e5132"
+# Fallback to the latest release image.
+# Hint: run `limactl prune` to invalidate the cache
+
+- location: "https://cloud-images.ubuntu.com/minimal/releases/jammy/release/ubuntu-22.04-minimal-cloudimg-amd64.img"
+  arch: "x86_64"

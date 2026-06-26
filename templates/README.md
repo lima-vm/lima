@@ -68,6 +68,9 @@ lima
 - [`ubuntu-25.10`](./ubuntu-25.10.yaml): Ubuntu 25.10 (Questing Quokka)
 - [`ubuntu-26.04`](./ubuntu-26.04.yaml), `ubuntu`, `ubuntu-lts`: Ubuntu 26.04 (Resolute Raccoon)
   - Same as `default` but comment lines are omitted from the YAML
+- [`ubuntu-22.04-minimal`](./ubuntu-22.04-minimal.yaml): Ubuntu 22.04 LTS Minimal (Jammy Jellyfish) [amd64 only]
+- [`ubuntu-24.04-minimal`](./ubuntu-24.04-minimal.yaml): Ubuntu 24.04 LTS Minimal (Noble Numbat)
+- [`ubuntu-26.04-minimal`](./ubuntu-26.04-minimal.yaml), `ubuntu-minimal`, `ubuntu-lts-minimal`: Ubuntu 26.04 LTS Minimal (Resolute Raccoon)
 - [`experimental/ubuntu-next`](./experimental/ubuntu-next.yaml): Ubuntu vNext
 - [`experimental/gentoo`](./experimental/gentoo.yaml): Gentoo
 - [`experimental/opensuse-tumbleweed`](./experimental/opensuse-tumbleweed.yaml): openSUSE Tumbleweed

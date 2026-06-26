@@ -1,0 +1,23 @@
+images:
+# Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
+
+- location: "https://cloud-images.ubuntu.com/minimal/releases/resolute/release-20260618/ubuntu-26.04-minimal-cloudimg-amd64.img"
+  arch: "x86_64"
+  digest: "sha256:67023f4652d02102ec75b6b1b9c14fb24166d892345f64f941837f96b67b4fe5"
+- location: "https://cloud-images.ubuntu.com/minimal/releases/resolute/release-20260618/ubuntu-26.04-minimal-cloudimg-arm64.img"
+  arch: "aarch64"
+  digest: "sha256:9c506f9471f09b7efe484e68fdcb9a3d25eca6a2ce74a8a116fa95d0f4cc929e"
+# Fallback to the latest release image.
+# Hint: run `limactl prune` to invalidate the cache
+
+- location: "https://cloud-images.ubuntu.com/minimal/releases/resolute/release/ubuntu-26.04-minimal-cloudimg-amd64.img"
+  arch: "x86_64"
+
+- location: "https://cloud-images.ubuntu.com/minimal/releases/resolute/release/ubuntu-26.04-minimal-cloudimg-arm64.img"
+  arch: "aarch64"
+
+# Do not require Lima NICs for systemd-networkd-wait-online: the first-boot
+# rename to eth0 fails on 26.04 (LP: #2136392) and would block boot for 120s.
+# Lima's cidata bootcmd renames the NIC and waits for it instead.
+param:
+  internal_netplanOptional: "true"

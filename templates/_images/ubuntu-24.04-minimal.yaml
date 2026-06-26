@@ -1,0 +1,17 @@
+images:
+# Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
+
+- location: "https://cloud-images.ubuntu.com/minimal/releases/noble/release-20260617/ubuntu-24.04-minimal-cloudimg-amd64.img"
+  arch: "x86_64"
+  digest: "sha256:3691863050c0b52726ab834962c5d88c47b08edb7f81ad95d7ba2b8e4cd16b36"
+- location: "https://cloud-images.ubuntu.com/minimal/releases/noble/release-20260617/ubuntu-24.04-minimal-cloudimg-arm64.img"
+  arch: "aarch64"
+  digest: "sha256:f97f6d62fbba2f33abe7fbbcc7b74e7c3463a2356ed3d22202119a6ec2a6e5ec"
+# Fallback to the latest release image.
+# Hint: run `limactl prune` to invalidate the cache
+
+- location: "https://cloud-images.ubuntu.com/minimal/releases/noble/release/ubuntu-24.04-minimal-cloudimg-amd64.img"
+  arch: "x86_64"
+
+- location: "https://cloud-images.ubuntu.com/minimal/releases/noble/release/ubuntu-24.04-minimal-cloudimg-arm64.img"
+  arch: "aarch64"
