@@ -240,12 +240,30 @@ func (e *daemonStuckError) Error() string {
 	return fmt.Sprintf("did not write its PID file within %s but is still running", e.timeout)
 }
 
+// daemonExitedError reports that the daemon process exited before writing its PID
+// file. This is the transient VMNET_FAILURE startup race that startDaemonWithRetry
+// retries for. err is the process's exit error, which may be nil when the daemon
+// exited cleanly (status 0) without writing a PID file.
+type daemonExitedError struct {
+	err error
+}
+
+func (e *daemonExitedError) Error() string {
+	if e.err == nil {
+		return "daemon exited before writing its PID file"
+	}
+	return fmt.Sprintf("daemon exited before writing its PID file: %v", e.err)
+}
+
+func (e *daemonExitedError) Unwrap() error { return e.err }
+
 // startDaemonWithRetry starts the daemon and waits for it to come up, retrying with
 // exponential backoff. socket_vmnet can fail transiently at boot when
 // com.apple.NetworkSharing has not yet registered its XPC endpoint (VMNET_FAILURE);
-// in that case the process exits before writing its PID file and we retry. A process
-// that keeps running without writing its PID file, or a failure from startDaemon
-// itself, is not transient and is returned immediately.
+// in that case the process exits before writing its PID file and we retry. Every
+// other failure — a process that keeps running without writing its PID file, a
+// failure from startDaemon itself, an unreadable PID file, or context cancellation —
+// is not transient and is returned immediately.
 func startDaemonWithRetry(ctx context.Context, cfg *networks.Config, name, daemon string) error {
 	const (
 		maxAttempts = 5
@@ -276,20 +294,28 @@ func startDaemonWithRetry(ctx context.Context, cfg *networks.Config, name, daemo
 		if err == nil {
 			return nil
 		}
-		// A stuck (still-running) daemon is not the transient race; stop and surface stderr.
-		var stuck *daemonStuckError
-		if errors.As(err, &stuck) {
-			return fmt.Errorf("%s daemon for %#q network %w%s", daemon, name, err, stderrHint(stderrLog))
+		// Only an early exit (the transient XPC race) is retried; everything else
+		// is surfaced immediately.
+		var exited *daemonExitedError
+		if !errors.As(err, &exited) {
+			// A stuck (still-running) daemon gets its stderr appended; PID-read and
+			// context errors propagate as-is.
+			var stuck *daemonStuckError
+			if errors.As(err, &stuck) {
+				return fmt.Errorf("%s daemon for %#q network %w%s", daemon, name, err, stderrHint(stderrLog))
+			}
+			return err
 		}
-		lastErr = err // process exited — retry
+		lastErr = err // process exited early — retry
 	}
 	return fmt.Errorf("%s daemon for %#q network failed to start after %d attempts: %w%s",
 		daemon, name, maxAttempts, lastErr, stderrHint(stderrLog))
 }
 
-// waitForDaemon waits until the daemon writes its PID file (success), exits (returns
-// the exit error so the caller can retry), or stays alive past timeout without a PID
-// file (returns *daemonStuckError). A stuck or cancelled process is killed and reaped.
+// waitForDaemon waits until the daemon writes its PID file (success), exits without
+// one (returns *daemonExitedError so the caller can retry), or stays alive past
+// timeout without a PID file (returns *daemonStuckError). A stuck or cancelled
+// process is killed and reaped.
 func waitForDaemon(ctx context.Context, cmd *exec.Cmd, pidFile string, timeout time.Duration) error {
 	waitCh := make(chan error, 1)
 	go func() { waitCh <- cmd.Wait() }()
@@ -317,7 +343,9 @@ func waitForDaemon(ctx context.Context, cmd *exec.Cmd, pidFile string, timeout t
 		case waitErr := <-waitCh:
 			// Process exited. If it managed to write the PID file first, treat as success;
 			// otherwise this is the transient VMNET_FAILURE case — signal a retry, keeping
-			// the exit error so the cause survives even when stderr is empty.
+			// the exit error so the cause survives even when stderr is empty. waitErr may be
+			// nil (clean exit without a PID file); daemonExitedError renders that without a
+			// dangling %!w(<nil>).
 			ready, err := pidFileWritten(pidFile)
 			if err != nil {
 				return err
@@ -325,7 +353,7 @@ func waitForDaemon(ctx context.Context, cmd *exec.Cmd, pidFile string, timeout t
 			if ready {
 				return nil
 			}
-			return fmt.Errorf("daemon exited before writing its PID file: %w", waitErr)
+			return &daemonExitedError{err: waitErr}
 		case <-timer.C:
 			_ = cmd.Process.Kill()
 			<-waitCh
