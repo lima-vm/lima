@@ -765,15 +765,30 @@ func attachFolderMounts(inst *limatype.Instance, vmConfig *vz.VirtualMachineConf
 }
 
 func attachAudio(inst *limatype.Instance, config *vz.VirtualMachineConfiguration) error {
-	switch *inst.Config.Audio.Device {
+	y := inst.Config
+
+	if y.Audio.Device == nil || y.Audio.Interface == nil {
+		return nil
+	}
+
+	audioDev := *y.Audio.Device
+	audioInterface := *y.Audio.Interface
+
+	// If the user explicitly asks for HDA, we gracefully ignore it.
+	if audioInterface == "hda" {
+		logrus.Warn("VZ driver natively uses virtio-sound. Ignoring 'hda' interface request.")
+	}
+
+	switch audioDev {
 	case "vz", "default":
 		outputStream, err := vz.NewVirtioSoundDeviceHostOutputStreamConfiguration()
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to create host audio output stream: %w", err)
 		}
+
 		soundDeviceConfiguration, err := vz.NewVirtioSoundDeviceConfiguration()
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to create virtio sound device configuration: %w", err)
 		}
 		soundDeviceConfiguration.SetStreams(outputStream)
 		config.SetAudioDevicesVirtualMachineConfiguration([]vz.AudioDeviceConfiguration{

@@ -116,6 +116,9 @@ func RegisterCreate(cmd *cobra.Command, commentPrefix string) {
 	_ = cmd.RegisterFlagCompletionFunc("port-forward", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
 		return []string{"8080:80", "3000:3000", "8080:80,static=true"}, cobra.ShellCompDirectiveNoFileComp
 	})
+
+	flags.String("audio-device", "", commentPrefix+"Audio device backend (e.g., 'pa', 'coreaudio', 'none')")
+	flags.String("audio-interface", "", commentPrefix+"Audio virtual hardware interface ('hda' or 'virtio')")
 }
 
 func defaultExprFunc(expr string) func(v *flag.Flag) ([]string, error) {
@@ -373,6 +376,8 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool, params map[string]stri
 			false,
 			false,
 		},
+		{"audio-device", d(".audio.device = %q"), false, true},
+		{"audio-interface", d(".audio.interface = %q"), false, true},
 		{"ssh-port", d(".ssh.localPort = %s"), false, false},
 		{"arch", d(".arch = %q"), true, false},
 		{

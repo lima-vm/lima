@@ -32,7 +32,7 @@ func NewDriverClient(socketPath string, logger *logrus.Logger) (*DriverClient, e
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
 
-	//nolint:staticcheck // grpc.Dial is used for compatibility reasons
+	//nolint:staticcheck,nolintlint // grpc.Dial is used for compatibility reasons
 	conn, err := grpc.Dial("unix://"+socketPath, opts...)
 	if err != nil {
 		logger.Errorf("failed to dial gRPC driver client connection: %v", err)

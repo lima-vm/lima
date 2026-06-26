@@ -439,6 +439,9 @@ audio:
   # that is still visible in the guest but not connected to the host.
   # 🟢 Builtin default: ""
   device: null
+  # The virtual hardware presentation. Options are "hda" (legacy) or "virtio" (paravirtualized).
+  # 🟢 Builtin default: "hda"
+  #interface: "hda"
 
 video:
   # QEMU display, e.g., "none", "cocoa", "sdl", "gtk", "vnc", "default".
