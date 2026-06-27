@@ -292,7 +292,7 @@ func validateConfig(_ context.Context, cfg *limatype.LimaYAML) error {
 	}
 
 	for i, image := range cfg.Images {
-		if unknown := reflectutil.UnknownNonEmptyFields(image, "File", "Kernel", "Initrd"); len(unknown) > 0 {
+		if unknown := reflectutil.UnknownNonEmptyFields(image, "File", "Kernel", "Initrd", "Variant"); len(unknown) > 0 {
 			logrus.Warnf("vmType %s: ignoring images[%d]: %+v", *cfg.VMType, i, unknown)
 		}
 	}
