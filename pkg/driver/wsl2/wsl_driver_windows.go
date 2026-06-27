@@ -43,6 +43,7 @@ var knownYamlProperties = []string{
 	"PropagateProxyEnv",
 	"Provision",
 	"SSH",
+	"Variant",
 	"VMType",
 }
 
@@ -116,7 +117,7 @@ func validateConfig(_ context.Context, cfg *limatype.LimaYAML) error {
 			// TODO: real filetype checks
 			tarFileRegex := regexp.MustCompile(`.*tar\.*`)
 			for i, image := range cfg.Images {
-				if unknown := reflectutil.UnknownNonEmptyFields(image, "File"); len(unknown) > 0 {
+				if unknown := reflectutil.UnknownNonEmptyFields(image, "File", "Variant"); len(unknown) > 0 {
 					logrus.Warnf("Ignoring: vmType %s: images[%d]: %+v", *cfg.VMType, i, unknown)
 				}
 				match := tarFileRegex.MatchString(image.Location)
