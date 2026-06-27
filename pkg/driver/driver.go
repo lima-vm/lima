@@ -5,15 +5,28 @@ package driver
 
 import (
 	"context"
+	"errors"
 	"net"
 
 	"github.com/lima-vm/lima/v2/pkg/hostagent/events"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 )
 
+// ErrDriverNotScreenshotter is returned when the active driver does not implement Screenshotter.
+var ErrDriverNotScreenshotter = errors.New("driver does not support screenshots")
+
+// ErrNoDisplay is returned when the VM has no display configured.
+var ErrNoDisplay = errors.New("no display configured")
+
 // VsockEventEmitter is an optional interface for drivers to emit vsock events.
 type VsockEventEmitter interface {
 	SetVsockEventCallback(callback func(*events.VsockEvent))
+}
+
+// Screenshotter is an optional interface for drivers that can capture the VM display.
+// format is "png" or "bmp"; an empty string defaults to "png".
+type Screenshotter interface {
+	CaptureScreenshot(format string) ([]byte, error)
 }
 
 // Lifecycle defines basic lifecycle operations.
