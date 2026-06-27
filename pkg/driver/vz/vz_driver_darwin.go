@@ -77,7 +77,6 @@ var knownYamlProperties = []string{
 	"TimeZone",
 	"UpgradePackages",
 	"User",
-	"Variant",
 	"Video",
 	"VMType",
 	"VMOpts",

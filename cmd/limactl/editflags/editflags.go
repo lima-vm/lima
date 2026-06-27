@@ -106,9 +106,6 @@ func RegisterCreate(cmd *cobra.Command, commentPrefix string) {
 	})
 
 	flags.String("image-variant", "", commentPrefix+"Image variant")
-	_ = cmd.RegisterFlagCompletionFunc("image-variant", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
-		return []string{"server", "minimal", "genericcloud", "generic", "nocloud"}, cobra.ShellCompDirectiveNoFileComp
-	})
 
 	flags.String("containerd", "", commentPrefix+"containerd mode (user, system, user+system, none)")
 	_ = cmd.RegisterFlagCompletionFunc("containerd", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
