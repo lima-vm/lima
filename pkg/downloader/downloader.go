@@ -5,6 +5,7 @@ package downloader
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"crypto/sha256"
 	"errors"
@@ -525,7 +526,11 @@ func decompressorByMagic(file string) string {
 }
 
 func decompressLocal(ctx context.Context, decompressCmd, dst, src, ext, description string) error {
-	logrus.Infof("decompressing %s with %v", ext, decompressCmd)
+	if decompressCmd == "gzip" {
+		logrus.Infof("decompressing %s with in-process gzip", ext)
+	} else {
+		logrus.Infof("decompressing %s with external %q", ext, decompressCmd)
+	}
 
 	st, err := os.Stat(src)
 	if err != nil {
@@ -549,11 +554,6 @@ func decompressLocal(ctx context.Context, decompressCmd, dst, src, ext, descript
 		return err
 	}
 	defer out.Close()
-	buf := new(bytes.Buffer)
-	cmd := exec.CommandContext(ctx, decompressCmd, "-d") // -d --decompress
-	cmd.Stdin = bar.NewProxyReader(in)
-	cmd.Stdout = out
-	cmd.Stderr = buf
 	if !HideProgress {
 		if description == "" {
 			description = filepath.Base(src)
@@ -561,6 +561,43 @@ func decompressLocal(ctx context.Context, decompressCmd, dst, src, ext, descript
 		logrus.Infof("Decompressing %s", description)
 	}
 	bar.Start()
+	defer bar.Finish()
+	// Prefer a pure-Go path for gzip so the host does not need an external
+	// gzip binary — gzip is not part of the base Windows system.
+	if decompressCmd == "gzip" {
+		gz, err := gzip.NewReader(bar.NewProxyReader(in))
+		if err != nil {
+			return err
+		}
+		defer gz.Close()
+		// Close in on ctx cancellation so io.Copy returns instead of
+		// blocking on disk reads until decompression finishes. The done
+		// channel keeps the goroutine off the outer defer in.Close() so
+		// the file is closed once, not twice.
+		done := make(chan struct{})
+		defer close(done)
+		go func() {
+			select {
+			case <-ctx.Done():
+				in.Close()
+			case <-done:
+			}
+		}()
+		_, err = io.Copy(out, gz)
+		// The goroutine's in.Close() surfaces in io.Copy as an
+		// os.ErrClosed-wrapping error. Translate only that specific
+		// error to ctx.Err() so genuine I/O faults (corrupt stream,
+		// short read) are not masked when ctx happens to be canceled.
+		if err != nil && errors.Is(err, os.ErrClosed) && ctx.Err() != nil {
+			return ctx.Err()
+		}
+		return err
+	}
+	buf := new(bytes.Buffer)
+	cmd := exec.CommandContext(ctx, decompressCmd, "-d") // -d --decompress
+	cmd.Stdin = bar.NewProxyReader(in)
+	cmd.Stdout = out
+	cmd.Stderr = buf
 	err = cmd.Run()
 	if err != nil {
 		var exitErr *exec.ExitError
@@ -568,7 +605,6 @@ func decompressLocal(ctx context.Context, decompressCmd, dst, src, ext, descript
 			exitErr.Stderr = buf.Bytes()
 		}
 	}
-	bar.Finish()
 	return err
 }
 

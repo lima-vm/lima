@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"runtime"
 	"strings"
 
 	"al.essio.dev/pkg/shellescape"
@@ -36,7 +37,11 @@ func (t *rsyncTool) Name() string {
 func (t *rsyncTool) IsAvailableOnGuest(ctx context.Context, paths []string) bool {
 	copyPaths, err := parseCopyPaths(ctx, paths)
 	if err != nil {
-		logrus.Debugf("failed to parse copy paths for rsync availability check: %v", err)
+		// Warn (not Debug): when this fires, the fallback path in New()
+		// will report "scp not found on host" instead of the actual
+		// root cause (commonly: no ssh.exe on Windows), so the user
+		// needs this line to diagnose.
+		logrus.Warnf("rsync availability check skipped: %v", err)
 		return false
 	}
 	instances := make(map[string]*limatype.Instance)
@@ -67,6 +72,12 @@ func checkRsyncOnGuest(ctx context.Context, inst *limatype.Instance) bool {
 	if err != nil {
 		logrus.Debugf("failed to get SSH options for rsync check: %v", err)
 		return false
+	}
+	if runtime.GOOS == "windows" {
+		// Mirror rsyncTool.Command: native Windows OpenSSH has no mux support,
+		// and Cygwin ssh's mux is unreliable. Strip the mux options so the
+		// probe does not falsely reject a working rsync install.
+		sshOpts = sshutil.SSHOptsRemovingControlPath(sshOpts)
 	}
 
 	sshArgs := append([]string{}, sshExe.Args...)
@@ -126,6 +137,13 @@ func (t *rsyncTool) Command(ctx context.Context, paths []string, opts *Options) 
 				sshOpts, err := sshutil.SSHOpts(ctx, sshExe, cp.Instance.Dir, *cp.Instance.Config.User.Name, false, false, false, false)
 				if err != nil {
 					return nil, err
+				}
+				if runtime.GOOS == "windows" {
+					// Strip mux options so rsync's ssh transport does not try to
+					// use a ControlMaster socket — unavailable or unreliable on
+					// Windows. See the equivalent comment in scp.go.
+					logrus.Debug("rsync: stripping ControlMaster/ControlPath/ControlPersist (Windows)")
+					sshOpts = sshutil.SSHOptsRemovingControlPath(sshOpts)
 				}
 
 				sshArgs := []string{sshExe.Exe}
