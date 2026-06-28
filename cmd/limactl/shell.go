@@ -187,7 +187,20 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		}
 
 		if err := ssh.ExitMaster(inst.Hostname, inst.SSHLocalPort, sshConfig); err != nil {
-			return err
+			// `ssh -O exit` fails when the control socket file exists but the
+			// master process is already dead (unclean hostagent exit: kill -9,
+			// OOM, host crash). That stale state is exactly what --reconnect is
+			// meant to recover from, so only surface the error when a master is
+			// still alive; otherwise drop the stale socket and continue so a
+			// fresh master can be established.
+			removed, rmErr := sshutil.RemoveStaleControlMaster(ctx, inst.Dir)
+			if rmErr != nil {
+				return rmErr
+			}
+			if !removed {
+				return err
+			}
+			logrus.WithError(err).Warnf("Removed stale ssh control socket for the instance %#q after the master had already exited", instName)
 		}
 	}
 

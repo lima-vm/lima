@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -330,6 +331,42 @@ func IsControlMasterExisting(instDir string) bool {
 	controlSock := filepath.Join(instDir, filenames.SSHSock)
 	_, err := os.Stat(controlSock)
 	return err == nil
+}
+
+// IsControlMasterRunning reports whether an SSH ControlMaster process is
+// actively listening on the instance's control socket. Unlike
+// IsControlMasterExisting, which only checks that the socket file is present,
+// this dials the socket to verify that a master is alive. A stale socket left
+// behind by an unclean master exit (kill -9, OOM, host crash, or the Cygwin
+// emulation file outliving its process) has no listener and returns false.
+func IsControlMasterRunning(ctx context.Context, instDir string) bool {
+	controlSock := filepath.Join(instDir, filenames.SSHSock)
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	var dialer net.Dialer
+	conn, err := dialer.DialContext(ctx, "unix", controlSock)
+	if err != nil {
+		return false
+	}
+	_ = conn.Close()
+	return true
+}
+
+// RemoveStaleControlMaster removes the SSH control socket only when no master
+// process is listening on it. It returns true when a stale socket was removed.
+// A live master's socket is never touched (returns false), and a missing socket
+// is treated as a no-op (returns false). This lets callers recover from a wedged
+// session without clobbering a healthy ControlMaster.
+func RemoveStaleControlMaster(ctx context.Context, instDir string) (bool, error) {
+	if IsControlMasterRunning(ctx, instDir) {
+		return false, nil
+	}
+	existed := IsControlMasterExisting(instDir)
+	controlSock := filepath.Join(instDir, filenames.SSHSock)
+	if err := os.RemoveAll(controlSock); err != nil {
+		return false, err
+	}
+	return existed, nil
 }
 
 // SSHOpts adds the following options to CommonOptions: User, ControlMaster, ControlPath, ControlPersist.
