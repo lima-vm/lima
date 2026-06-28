@@ -568,16 +568,18 @@ func (a *HostAgent) startHostAgentRoutines(ctx context.Context) error {
 		errs = append(errs, err)
 	}
 	if *a.instConfig.SSH.ForwardAgent {
-		faScript := `#!/bin/bash
+		if *a.instConfig.Plain {
+			logrus.Warn("Running in plain mode. Ignoring ssh.forwardAgent")
+		} else {
+			faScript := `#!/bin/bash
 set -eux -o pipefail
-sudo mkdir -p -m 700 /run/host-services
-sudo ln -sf "${SSH_AUTH_SOCK}" /run/host-services/ssh-auth.sock
-sudo chown -R "${USER}" /run/host-services`
-		faDesc := "linking ssh auth socket to static location /run/host-services/ssh-auth.sock"
-		stdout, stderr, err := ssh.ExecuteScript(a.instSSHAddress, a.sshLocalPort, a.sshConfig, faScript, faDesc)
-		logrus.Debugf("stdout=%#q, stderr=%#q, err=%v", stdout, stderr, err)
-		if err != nil {
-			errs = append(errs, fmt.Errorf("stdout=%#q, stderr=%#q: %w", stdout, stderr, err))
+ln -sf "${SSH_AUTH_SOCK}" /run/host-services/ssh-auth.sock`
+			faDesc := "linking ssh auth socket to static location /run/host-services/ssh-auth.sock"
+			stdout, stderr, err := ssh.ExecuteScript(a.instSSHAddress, a.sshLocalPort, a.sshConfig, faScript, faDesc)
+			logrus.Debugf("stdout=%#q, stderr=%#q, err=%v", stdout, stderr, err)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("stdout=%#q, stderr=%#q: %w", stdout, stderr, err))
+			}
 		}
 	}
 	if *a.instConfig.MountType == limatype.REVSSHFS && !*a.instConfig.Plain {
