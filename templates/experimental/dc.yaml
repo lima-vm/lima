@@ -1,0 +1,15 @@
+vmType: dc
+
+images:
+- location: "debian-rootfs-amd64.tar.gz"
+  arch: "x86_64"
+- location: "debian-rootfs-arm64.tar.gz"
+  arch: "aarch64"
+
+# no native mounts yet
+mountType: reverse-sshfs
+
+mounts:
+- location: "~"
+- location: "/tmp/lima"
+  writable: true
