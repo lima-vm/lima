@@ -100,10 +100,10 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	if instName != "" {
 		// All args are COMMAND; prepend a placeholder instance name so the rest of the code works unchanged.
 		args = append([]string{instName}, args...)
+	} else if len(args) == 0 {
+		instName = DefaultInstanceName
+		args = append([]string{instName}, args...)
 	} else {
-		if len(args) == 0 {
-			return errors.New("requires instance name as first argument")
-		}
 		// simulate the behavior of double dash
 		newArg := []string{}
 		if len(args) >= 2 && args[1] == "--" {
