@@ -9,6 +9,12 @@ import (
 	"gotest.tools/v3/assert"
 )
 
+func TestHotPlugRootPortID(t *testing.T) {
+	assert.Equal(t, HotPlugRootPortID(0), "lima-hp-0")
+	assert.Equal(t, HotPlugRootPortID(3), "lima-hp-3")
+	assert.Equal(t, HotPlugRootPorts, 8)
+}
+
 func TestArgValue(t *testing.T) {
 	type testCase struct {
 		key           string

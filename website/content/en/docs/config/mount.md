@@ -164,6 +164,50 @@ mountType: "wsl2"
 - WSL2 file permissions may not work exactly as expected when accessing files that are natively on the Windows disk ([more info](https://github.com/MicrosoftDocs/WSL/blob/mattw-wsl2-explainer/WSL/file-permissions.md))
 - WSL2's disk sharing system uses a 9P protocol server, making the performance similar to [Lima's 9p](#9p) mode ([more info](https://github.com/MicrosoftDocs/WSL/blob/mattw-wsl2-explainer/WSL/wsl2-architecture.md#wsl-2-architectural-flow))
 
+## Runtime (hot) mounts
+> **Warning**
+> Runtime hot-mount is experimental
+
+| ⚡ Requirement | Lima >= 2.1.0; QEMU driver on a Linux host, or the VZ driver on macOS |
+| ----------------- |----------------|
+
+Host directories can be mounted into a **running** instance without restarting it,
+using `limactl mount`:
+
+```bash
+# Mount a host directory (default transport: virtiofs)
+limactl mount add default ~/code /home/user.linux/code --writable
+
+# List the runtime mounts
+limactl mount list default
+
+# Unmount it
+limactl mount remove default /home/user.linux/code
+```
+
+The `--type` flag selects the transport:
+
+- `virtiofs` (default): highest throughput, recommended for I/O-heavy workloads.
+- `9p`: lower throughput, slower for many small files.
+- `reverse-sshfs`: works without any guest device, lowest throughput.
+
+#### Supported drivers
+- **QEMU (Linux host):** `virtiofs` (default) and `9p` are hot-plugged as PCIe devices via
+  QMP; `reverse-sshfs` works over SSH. Requires the instance to have been **started with
+  Lima >= 2.1.0**, which reserves the PCIe hot-plug slots and shareable guest memory at boot.
+- **VZ (macOS host, Linux guest):** `virtiofs` only. VZ's Virtualization.framework has no
+  device hot-plug API, so Lima reserves spare virtio-fs devices at boot and populates their
+  share at runtime — delivering full native virtiofs throughput (~5 GB/s in practice).
+  Requires the instance to have been started with Lima >= 2.1.0.
+- Other drivers (krunkit, WSL2) report an "unsupported" error.
+
+#### Caveats
+- Runtime mounts are **ephemeral**: they are not written to `lima.yaml` and do not
+  survive `limactl stop`/`start`. Add them to `mounts:` in the config for persistence.
+- Instances started by older Lima versions lack the reserved slots/devices; on QEMU they
+  can still use `--type reverse-sshfs`.
+- At most **8** concurrent hot-mounts per instance (the number of reserved slots/devices).
+
 ## Mount Inotify
 > **Warning**
 > "mountInotify" is experimental

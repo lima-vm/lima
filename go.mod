@@ -129,3 +129,5 @@ require (
 	// gomodjail:unconfined
 	gvisor.dev/gvisor v0.0.0-20240916094835-a174eb65023f // indirect
 )
+
+replace github.com/Code-Hex/vz/v3 => ./third_party/Code-Hex-vz
