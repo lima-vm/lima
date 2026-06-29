@@ -70,12 +70,9 @@ If you want to build and use your own custom rootfs, you can build it from a sta
    RUN echo "user_allow_other" >> /etc/fuse.conf
    ```
 
-2. **Build & Export the Clean Image:**
-   When exporting the container rootfs, remove container-specific directories to avoid import issues or unnecessary bloat:
+2. **Build & Export the Rootfs Archive:**
+   You can build the image and export its root filesystem directly as a `.tar` archive using Docker BuildKit's output option:
    ```bash
-   docker build -t custom-wsl2-image .
-   docker create --name custom-wsl2-container custom-wsl2-image
-   # Export and filter out .dockerenv and dynamic system directories
-   docker export custom-wsl2-container | tar --delete .dockerenv --delete dev --delete proc --delete sys > custom-rootfs.tar
-   docker rm custom-wsl2-container
+   docker build -o type=tar,dest=custom-rootfs.tar .
    ```
+
