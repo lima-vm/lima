@@ -4,41 +4,73 @@ images:
 - location: "https://cloud-images.ubuntu.com/releases/resolute/release-20260520/ubuntu-26.04-server-cloudimg-amd64.img"
   arch: "x86_64"
   digest: "sha256:dced94c031cc1f23dee14419a3723a5b110df9938de0ac31913a2bfd07c755b4"
+  variant: "server"
 - location: "https://cloud-images.ubuntu.com/releases/resolute/release-20260520/ubuntu-26.04-server-cloudimg-arm64.img"
   arch: "aarch64"
   digest: "sha256:5e091e27d60116efbb0c743b8dd5cb2d15618e414ef04db0817ed43c8e2d7c7b"
+  variant: "server"
 - location: "https://cloud-images.ubuntu.com/releases/resolute/release-20260520/ubuntu-26.04-server-cloudimg-riscv64.img"
   arch: "riscv64"
   digest: "sha256:353d24f14c0b48c55b67877fb5cdd0684ad79d38ed2b72161ddce50f2dfb08a4"
+  variant: "server"
 - location: "https://cloud-images.ubuntu.com/releases/resolute/release-20260520/ubuntu-26.04-server-cloudimg-armhf.img"
   arch: "armv7l"
   digest: "sha256:ba42359f8177454b9cf21a3056e5c060e97ecc80c31f59cf0dd3c6f7ab775900"
+  variant: "server"
 - location: "https://cloud-images.ubuntu.com/releases/resolute/release-20260520/ubuntu-26.04-server-cloudimg-s390x.img"
   arch: "s390x"
   digest: "sha256:8a7f5116da2f0c564a0d168361e08e7f7588507b17a25aefe7dd4a93b76f3b1f"
+  variant: "server"
 - location: "https://cloud-images.ubuntu.com/releases/resolute/release-20260520/ubuntu-26.04-server-cloudimg-ppc64el.img"
   arch: "ppc64le"
   digest: "sha256:61ecab35fe7c42a39c5a6a55717743acc62bb5ef57a9af0fd20326c75fd6cfcd"
+  variant: "server"
+
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
 
 - location: https://cloud-images.ubuntu.com/releases/resolute/release/ubuntu-26.04-server-cloudimg-amd64.img
   arch: x86_64
+  variant: "server"
 
 - location: https://cloud-images.ubuntu.com/releases/resolute/release/ubuntu-26.04-server-cloudimg-arm64.img
   arch: aarch64
+  variant: "server"
 
 - location: https://cloud-images.ubuntu.com/releases/resolute/release/ubuntu-26.04-server-cloudimg-riscv64.img
   arch: riscv64
+  variant: "server"
 
 - location: https://cloud-images.ubuntu.com/releases/resolute/release/ubuntu-26.04-server-cloudimg-armhf.img
   arch: armv7l
+  variant: "server"
 
 - location: https://cloud-images.ubuntu.com/releases/resolute/release/ubuntu-26.04-server-cloudimg-s390x.img
   arch: s390x
+  variant: "server"
 
 - location: https://cloud-images.ubuntu.com/releases/resolute/release/ubuntu-26.04-server-cloudimg-ppc64el.img
   arch: ppc64le
+  variant: "server"
+
+# Try to use release-yyyyMMdd minimal image if available.
+- location: "https://cloud-images.ubuntu.com/minimal/releases/resolute/release-20260618/ubuntu-26.04-minimal-cloudimg-amd64.img"
+  arch: "x86_64"
+  digest: "sha256:67023f4652d02102ec75b6b1b9c14fb24166d892345f64f941837f96b67b4fe5"
+  variant: "minimal"
+- location: "https://cloud-images.ubuntu.com/minimal/releases/resolute/release-20260618/ubuntu-26.04-minimal-cloudimg-arm64.img"
+  arch: "aarch64"
+  digest: "sha256:9c506f9471f09b7efe484e68fdcb9a3d25eca6a2ce74a8a116fa95d0f4cc929e"
+  variant: "minimal"
+
+# Fallback minimal images
+- location: "https://cloud-images.ubuntu.com/minimal/releases/resolute/release/ubuntu-26.04-minimal-cloudimg-amd64.img"
+  arch: "x86_64"
+  variant: "minimal"
+
+- location: "https://cloud-images.ubuntu.com/minimal/releases/resolute/release/ubuntu-26.04-minimal-cloudimg-arm64.img"
+  arch: "aarch64"
+  variant: "minimal"
 
 # # NOTE: Intel Mac with macOS prior to 15.5 requires setting vmType to qemu
 # # https://github.com/lima-vm/lima/issues/3334

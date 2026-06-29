@@ -4,28 +4,64 @@ images:
 - location: "https://cloud.debian.org/images/cloud/trixie/20260615-2510/debian-13-genericcloud-amd64-20260615-2510.qcow2"
   arch: "x86_64"
   digest: "sha512:35337a6bcd9c6a0f57fdc9a479c0328024cfa1503bb2f4176df541de4eff5c24f285a8aa357f60c8855c35e2f0190f5b7669fdf3a262aa16922acdc0729f17eb"
+  variant: "genericcloud"
 - location: "https://cloud.debian.org/images/cloud/trixie/20260615-2510/debian-13-genericcloud-arm64-20260615-2510.qcow2"
   arch: "aarch64"
   digest: "sha512:6cc5e16f7f83df57b6a4025c06e2b767a8d30baaa9cdd645055a0d62b46cd4be78cab7b034a474d40503a3e42822e051dfb4f0bb3c1a90f0ba0ee62b5a741013"
+  variant: "genericcloud"
 - location: "https://cloud.debian.org/images/cloud/trixie/20260615-2510/debian-13-generic-ppc64el-20260615-2510.qcow2"
   arch: "ppc64le"
   digest: "sha512:122aaf193c4d6d7b4a5ba2dfd274441666405cf87c4e78cc9853f13f7cb7558f729e889bf5c60f8a96858852d3a26eedd019a5d7bcd1a0e184beb1d73bf8638c"
+  variant: "generic"
 - location: "https://cloud.debian.org/images/cloud/trixie/20260615-2510/debian-13-generic-riscv64-20260615-2510.qcow2"
   arch: "riscv64"
   digest: "sha512:533a51314786b766b5239976c23bf05ca8104f926f50027986c87326cfab839d35b6d106487e8217318bd6f2a46c0a85123de7ac38128cbdd927b92ee5c1e8e7"
+  variant: "generic"
+
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
 
 - location: https://cloud.debian.org/images/cloud/trixie/daily/latest/debian-13-genericcloud-amd64-daily.qcow2
   arch: x86_64
+  variant: "genericcloud"
 
 - location: https://cloud.debian.org/images/cloud/trixie/daily/latest/debian-13-genericcloud-arm64-daily.qcow2
   arch: aarch64
+  variant: "genericcloud"
 
 - location: https://cloud.debian.org/images/cloud/trixie/daily/latest/debian-13-generic-ppc64el-daily.qcow2
   arch: ppc64le
+  variant: "generic"
 
 - location: https://cloud.debian.org/images/cloud/trixie/daily/latest/debian-13-generic-riscv64-daily.qcow2
   arch: riscv64
+  variant: "generic"
+
+# Try to use release-yyyyMMdd nocloud image if available.
+- location: "https://cloud.debian.org/images/cloud/trixie/20260615-2510/debian-13-nocloud-amd64-20260615-2510.qcow2"
+  arch: "x86_64"
+  digest: "sha512:9e2d33ba6b388df9ca3b5e82311ecb09bbad516444cb77ac8ffdc2291678c8acd555fb49c34578d0d2e268d247d47c72cc82de7729a8f6d567210bc98cdae4bd"
+  variant: "nocloud"
+- location: "https://cloud.debian.org/images/cloud/trixie/20260615-2510/debian-13-nocloud-arm64-20260615-2510.qcow2"
+  arch: "aarch64"
+  digest: "sha512:2f5642e2a0f70040cd1162eef5e8aa9360571c251a900a4316747044ecd21019d93d354ec3ce237fcac3253abb41d96789ba0c0ff80de6f53e495476380f98c4"
+  variant: "nocloud"
+- location: "https://cloud.debian.org/images/cloud/trixie/20260615-2510/debian-13-nocloud-ppc64el-20260615-2510.qcow2"
+  arch: "ppc64le"
+  digest: "sha512:249d48f8f58b00a79b4992c07197572367775be4001de94f7a8aa74fbb86225b5b88acaf4596af2d109dd5888c266db05909299e3b5186f890108be59ca46acd"
+  variant: "nocloud"
+
+# Fallback nocloud images
+- location: https://cloud.debian.org/images/cloud/trixie/daily/latest/debian-13-nocloud-amd64-daily.qcow2
+  arch: x86_64
+  variant: "nocloud"
+
+- location: https://cloud.debian.org/images/cloud/trixie/daily/latest/debian-13-nocloud-arm64-daily.qcow2
+  arch: aarch64
+  variant: "nocloud"
+
+- location: https://cloud.debian.org/images/cloud/trixie/daily/latest/debian-13-nocloud-ppc64el-daily.qcow2
+  arch: ppc64le
+  variant: "nocloud"
 
 mountTypesUnsupported: [9p]
