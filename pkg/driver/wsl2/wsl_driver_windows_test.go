@@ -4,21 +4,22 @@
 package wsl2
 
 import (
-	"context"
 	"runtime"
 	"testing"
 
-	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"gotest.tools/v3/assert"
+
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 )
 
 func TestValidateConfigImages(t *testing.T) {
 	var arch limatype.Arch
-	if runtime.GOARCH == "amd64" {
+	switch runtime.GOARCH {
+	case "amd64":
 		arch = limatype.X8664
-	} else if runtime.GOARCH == "arm64" {
+	case "arm64":
 		arch = limatype.AARCH64
-	} else {
+	default:
 		arch = runtime.GOARCH
 	}
 	vmType := limatype.WSL2
@@ -86,7 +87,7 @@ func TestValidateConfigImages(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: "unsupported image type for WSL2: \"/path/to/rootfs.qcow2\". WSL2 driver requires a tarball root filesystem, not a standard VM disk image (.qcow2, .raw, etc.)",
+			expectedErr: "unsupported image type for wsl2: \"/path/to/rootfs.qcow2\". wsl2 only supports importing tar archive root filesystems, not standard VM disk images",
 		},
 		{
 			name: "Unsupported VM image format .qcow2.gz",
@@ -98,7 +99,7 @@ func TestValidateConfigImages(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: "unsupported image type for WSL2: \"/path/to/rootfs.qcow2.gz\". WSL2 driver requires a tarball root filesystem, not a standard VM disk image (.qcow2, .raw, etc.)",
+			expectedErr: "unsupported image type for wsl2: \"/path/to/rootfs.qcow2.gz\". wsl2 only supports importing tar archive root filesystems, not standard VM disk images",
 		},
 		{
 			name: "Unsupported VM image format .raw",
@@ -110,7 +111,7 @@ func TestValidateConfigImages(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: "unsupported image type for WSL2: \"/path/to/rootfs.raw\". WSL2 driver requires a tarball root filesystem, not a standard VM disk image (.qcow2, .raw, etc.)",
+			expectedErr: "unsupported image type for wsl2: \"/path/to/rootfs.raw\". wsl2 only supports importing tar archive root filesystems, not standard VM disk images",
 		},
 		{
 			name: "Unsupported SquashFS image format",
@@ -122,7 +123,7 @@ func TestValidateConfigImages(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: "unsupported image type for WSL2: \"/path/to/rootfs.squashfs\". WSL2 cannot natively import SquashFS images (see https://github.com/microsoft/WSL/issues/4736); please convert the image to a tarball first",
+			expectedErr: "unsupported image type for wsl2: \"/path/to/rootfs.squashfs\". wsl2 does not natively support importing SquashFS images; please convert the image to a tar archive before importing",
 		},
 		{
 			name: "Generic unsupported format",
@@ -134,7 +135,43 @@ func TestValidateConfigImages(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: "unsupported image type for WSL2: \"/path/to/rootfs.zip\". A tarball root filesystem (.tar, .tar.gz, .tar.xz, etc.) is required",
+			expectedErr: "unsupported image type for wsl2: \"/path/to/rootfs.zip\". A tar archive root filesystem (.tar, .tar.gz, .tar.xz, etc.) is required",
+		},
+		{
+			name: "Unsupported VM image format .qcow2.zst",
+			images: []limatype.Image{
+				{
+					File: limatype.File{
+						Location: "/path/to/rootfs.qcow2.zst",
+						Arch:     arch,
+					},
+				},
+			},
+			expectedErr: "unsupported image type for wsl2: \"/path/to/rootfs.qcow2.zst\". wsl2 only supports importing tar archive root filesystems, not standard VM disk images",
+		},
+		{
+			name: "Unsupported VM image format .raw.bz2",
+			images: []limatype.Image{
+				{
+					File: limatype.File{
+						Location: "/path/to/rootfs.raw.bz2",
+						Arch:     arch,
+					},
+				},
+			},
+			expectedErr: "unsupported image type for wsl2: \"/path/to/rootfs.raw.bz2\". wsl2 only supports importing tar archive root filesystems, not standard VM disk images",
+		},
+		{
+			name: "Unsupported SquashFS image format .squashfs.gz",
+			images: []limatype.Image{
+				{
+					File: limatype.File{
+						Location: "/path/to/rootfs.squashfs.gz",
+						Arch:     arch,
+					},
+				},
+			},
+			expectedErr: "unsupported image type for wsl2: \"/path/to/rootfs.squashfs.gz\". wsl2 does not natively support importing SquashFS images; please convert the image to a tar archive before importing",
 		},
 		{
 			name: "Different arch is ignored",
@@ -157,7 +194,7 @@ func TestValidateConfigImages(t *testing.T) {
 				Arch:   &arch,
 				Images: tt.images,
 			}
-			err := validateConfig(context.Background(), cfg)
+			err := validateConfig(t.Context(), cfg)
 			if tt.expectedErr == "" {
 				assert.NilError(t, err)
 			} else {
