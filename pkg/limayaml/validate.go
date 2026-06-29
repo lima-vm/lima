@@ -416,6 +416,14 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 			}
 		}
 	}
+	if y.TPM != nil && *y.TPM {
+		switch *y.Arch {
+		case limatype.X8664, limatype.AARCH64, limatype.ARMV7L, limatype.RISCV64:
+			// supported
+		default:
+			errs = errors.Join(errs, fmt.Errorf("field `tpm` is not supported on architecture %#q", *y.Arch))
+		}
+	}
 
 	return errs
 }

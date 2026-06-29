@@ -702,6 +702,24 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 		args = appendArgsIfNoConflict(args, "-initrd", initrd)
 	}
 
+	// TPM emulation.
+	if *y.TPM {
+		swtpmSock := filepath.Join(cfg.InstanceDir, filenames.SwtpmSock)
+		args = append(args, "-chardev", fmt.Sprintf("socket,id=chrtpm,path=%s", swtpmSock))
+		args = append(args, "-tpmdev", "emulator,id=tpm0,chardev=chrtpm")
+
+		var tpmDevice string
+		switch *y.Arch {
+		case limatype.X8664:
+			tpmDevice = "tpm-crb"
+		case limatype.AARCH64, limatype.ARMV7L, limatype.RISCV64:
+			tpmDevice = "tpm-tis-device"
+		default:
+			return "", nil, fmt.Errorf("TPM is not supported for architecture %#q", *y.Arch)
+		}
+		args = append(args, "-device", tpmDevice+",tpmdev=tpm0")
+	}
+
 	// Network
 	// Configure default usernetwork with limayaml.MACAddress(driver.Instance.Dir) for eth0 interface
 	firstUsernetIndex := limayaml.FirstUsernetIndex(y)
@@ -1096,6 +1114,45 @@ func Accel(arch limatype.Arch) string {
 		}
 	}
 	return "tcg"
+}
+
+func findSwtpm() (string, error) {
+	exe, err := exec.LookPath("swtpm")
+	if err != nil {
+		return "", fmt.Errorf("swtpm not found in PATH: %w (hint: install swtpm)", err)
+	}
+	return exe, nil
+}
+
+func SwtpmCmdline(cfg Config) (exe string, args []string, err error) {
+	if runtime.GOOS == "windows" {
+		return "", nil, errors.New("swtpm is not supported on Windows host")
+	}
+
+	swtpmExe, err := findSwtpm()
+	if err != nil {
+		return "", nil, err
+	}
+
+	stateDir := filepath.Join(cfg.InstanceDir, filenames.SwtpmDir)
+	if err := os.MkdirAll(stateDir, 0o700); err != nil {
+		return "", nil, fmt.Errorf("failed to create swtpm state directory: %w", err)
+	}
+
+	swtpmSock := filepath.Join(cfg.InstanceDir, filenames.SwtpmSock)
+	_ = os.Remove(swtpmSock)
+	_ = os.Remove(filepath.Join(stateDir, ".lock"))
+
+	args = []string{
+		"socket",
+		"--tpmstate", "dir=" + stateDir,
+		"--ctrl", "type=unixio,path=" + swtpmSock,
+		"--tpm2",
+		"--terminate",
+		"--log", "level=1",
+	}
+
+	return swtpmExe, args, nil
 }
 
 func parseQemuVersion(output string) (*semver.Version, error) {

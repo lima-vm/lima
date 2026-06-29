@@ -75,6 +75,7 @@ var knownYamlProperties = []string{
 	"Rosetta",
 	"SSH",
 	"TimeZone",
+	"TPM",
 	"UpgradePackages",
 	"User",
 	"Video",
@@ -271,6 +272,9 @@ func validateConfig(_ context.Context, cfg *limatype.LimaYAML) error {
 	}
 	if cfg.MountType != nil && *cfg.MountType == limatype.NINEP {
 		return fmt.Errorf("field `mountType` must be %#q or %#q for VZ driver , got %#q", limatype.REVSSHFS, limatype.VIRTIOFS, *cfg.MountType)
+	}
+	if cfg.TPM != nil && *cfg.TPM {
+		return errors.New("field `tpm` is not supported on VZ driver")
 	}
 	if *cfg.Firmware.LegacyBIOS {
 		logrus.Warnf("vmType %s: ignoring `firmware.legacyBIOS`", *cfg.VMType)

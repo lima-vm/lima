@@ -58,6 +58,7 @@ type LimaYAML struct {
 	TimeZone             *string `yaml:"timezone,omitempty" json:"timezone,omitempty" jsonschema:"nullable"`
 	NestedVirtualization *bool   `yaml:"nestedVirtualization,omitempty" json:"nestedVirtualization,omitempty" jsonschema:"nullable"`
 	User                 User    `yaml:"user,omitempty" json:"user,omitempty"`
+	TPM                  *bool   `yaml:"tpm,omitempty" json:"tpm,omitempty" jsonschema:"nullable"`
 }
 
 type BaseTemplates []LocatorWithDigest
