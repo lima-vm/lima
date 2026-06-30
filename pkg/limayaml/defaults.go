@@ -46,7 +46,7 @@ const (
 	Default9pProtocolVersion string = "9p2000.L"
 	Default9pMsize           string = "128KiB"
 	Default9pCacheForRO      string = "fscache"
-	Default9pCacheForRW      string = "mmap"
+	Default9pCache           string = "mmap"
 
 	DefaultVirtiofsQueueSize int = 1024
 )
@@ -777,11 +777,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 			mount.Writable = ptr.Of(false)
 		}
 		if mount.NineP.Cache == nil {
-			if *mount.Writable {
-				mounts[i].NineP.Cache = ptr.Of(Default9pCacheForRW)
-			} else {
-				mounts[i].NineP.Cache = ptr.Of(Default9pCacheForRO)
-			}
+			mounts[i].NineP.Cache = ptr.Of(Default9pCache)
 		}
 	}
 

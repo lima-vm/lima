@@ -215,7 +215,7 @@ func TestFillDefault(t *testing.T) {
 	expect.Mounts[0].NineP.SecurityModel = ptr.Of(Default9pSecurityModel)
 	expect.Mounts[0].NineP.ProtocolVersion = ptr.Of(Default9pProtocolVersion)
 	expect.Mounts[0].NineP.Msize = ptr.Of(Default9pMsize)
-	expect.Mounts[0].NineP.Cache = ptr.Of(Default9pCacheForRO)
+	expect.Mounts[0].NineP.Cache = ptr.Of(Default9pCache)
 	expect.Mounts[0].Virtiofs.QueueSize = nil
 	// Only missing Mounts field is Writable, and the default value is also the null value: false
 	expect.Mounts[1].Location = filepath.Join(instDir, y.Param["ONE"])
@@ -227,7 +227,7 @@ func TestFillDefault(t *testing.T) {
 	expect.Mounts[1].NineP.SecurityModel = ptr.Of(Default9pSecurityModel)
 	expect.Mounts[1].NineP.ProtocolVersion = ptr.Of(Default9pProtocolVersion)
 	expect.Mounts[1].NineP.Msize = ptr.Of(Default9pMsize)
-	expect.Mounts[1].NineP.Cache = ptr.Of(Default9pCacheForRO)
+	expect.Mounts[1].NineP.Cache = ptr.Of(Default9pCache)
 	expect.Mounts[1].Virtiofs.QueueSize = nil
 
 	expect.MountType = ptr.Of(limatype.NINEP)
@@ -449,7 +449,7 @@ func TestFillDefault(t *testing.T) {
 	expect.Mounts[0].NineP.SecurityModel = ptr.Of(Default9pSecurityModel)
 	expect.Mounts[0].NineP.ProtocolVersion = ptr.Of(Default9pProtocolVersion)
 	expect.Mounts[0].NineP.Msize = ptr.Of(Default9pMsize)
-	expect.Mounts[0].NineP.Cache = ptr.Of(Default9pCacheForRO)
+	expect.Mounts[0].NineP.Cache = ptr.Of(Default9pCache)
 	expect.Mounts[0].Virtiofs.QueueSize = nil
 	expect.HostResolver.Hosts = map[string]string{
 		"default": d.HostResolver.Hosts["default"],
