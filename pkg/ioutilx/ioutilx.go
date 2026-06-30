@@ -50,13 +50,13 @@ func FromUTF16leToString(r io.Reader) (string, error) {
 	return string(out), nil
 }
 
-func WindowsSubsystemPath(ctx context.Context, orig string) (string, error) {
-	out, err := exec.CommandContext(ctx, "cygpath", filepath.ToSlash(orig)).CombinedOutput()
-	if err != nil {
-		logrus.WithError(err).Errorf("failed to convert path to mingw, maybe not using Git ssh?")
-		return "", err
+func WindowsSubsystemPath(_ context.Context, orig string) (string, error) {
+	slashed := filepath.ToSlash(orig)
+	if len(slashed) >= 2 && slashed[1] == ':' {
+		drive := strings.ToLower(string(slashed[0]))
+		slashed = "/" + drive + slashed[2:]
 	}
-	return strings.TrimSpace(string(out)), nil
+	return slashed, nil
 }
 
 func WindowsSubsystemPathForLinux(ctx context.Context, orig, distro string) (string, error) {
