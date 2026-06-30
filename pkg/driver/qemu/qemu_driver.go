@@ -522,6 +522,7 @@ func waitFileExists(path string, timeout time.Duration) error {
 // Workaround for https://github.com/lima-vm/lima/issues/1742
 func checkBinarySignature(ctx context.Context, vmArch string) error {
 	macOSProductVersion, err := osutil.ProductVersion()
+	//nolint:staticcheck,nolintlint // SA4023: always true on Linux, but valid on macOS
 	if err != nil {
 		return err
 	}
