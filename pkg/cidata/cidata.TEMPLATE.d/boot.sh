@@ -203,6 +203,21 @@ if [ -d "${LIMA_CIDATA_MNT}"/provision.user ]; then
 	done
 fi
 
+if [ "${LIMA_CIDATA_PASSWORDLESS_SUDO}" != "1" ]; then
+	if [ ! -f "${LIMA_CIDATA_HOME}/password" ]; then
+		PASSWORD=$(head -c 8 /dev/urandom | od -An -tx1 | tr -d ' \n')
+		if command -v chpasswd >/dev/null 2>&1; then
+			echo "${LIMA_CIDATA_USER}:${PASSWORD}" | chpasswd
+		elif command -v pw >/dev/null 2>&1; then
+			echo "${PASSWORD}" | pw usermod "${LIMA_CIDATA_USER}" -h 0
+		else
+			echo "lima: warning: no supported tool to set password found, skipping" >&2
+		fi
+		echo "${PASSWORD}" >"${LIMA_CIDATA_HOME}/password"
+		chown "${LIMA_CIDATA_USER}:${LIMA_CIDATA_USER}" "${LIMA_CIDATA_HOME}/password"
+		chmod 0600 "${LIMA_CIDATA_HOME}/password"
+	fi
+fi
 # Signal that provisioning is done. The instance ID changes on every boot,
 # so any value from a previous boot cycle will be different.
 echo "${LIMA_CIDATA_IID}" >"${RUN}/lima-boot-done"

@@ -368,6 +368,11 @@ user:
   # Shell. Needs to be an absolute path.
   # 🟢 Builtin default: "/bin/bash"
   shell: null
+  # If false, a secure 16-character random password will be generated inside
+  # the guest on first boot and saved to `~/password` (with 0600 permissions).
+  # The user should manually rotate this password after the initial login.
+  # 🟢 Builtin default: true (false for macOS)
+  passwordlessSudo: null
 
 vmOpts:
   qemu:
