@@ -1,0 +1,6 @@
+images/virtio-win-0.1.285.iso
+images/win-cidata.iso
+images/windows.qcow2
+images/windows_server_2025.iso
+tmp/*
+*virtiofsd.sock*
