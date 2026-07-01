@@ -1,0 +1,31 @@
+# Windows guest is currently experimental. It only runs on QEMU, and it requires plain: true.
+os: "Windows"
+vmType: "qemu"
+arch: "x86_64"
+
+images:
+# Currently there is no way to download Windows 11 ISO automatically.
+# You have to download the ISO from https://www.microsoft.com/en-us/software-download/windows11 and set the local path here.
+# Please download `English (United States)` version. Otherwise VM installation is stopped in the middle.
+- location: "./images/windows-11-us.iso"
+  arch: "x86_64"
+
+osOpts:
+  Windows:
+    # Virtio-win ISO contains virtio drivers for windows. It is necessary for lots of QEMU options which use virtio (virtio interface for mounting qcow2 disk, virtio-net, virtio-serial, virtio-rng, virtio-keyboard, and virtio-mouse)
+    # In addition, the driver for virtio-fs will be used in the future.
+    # Virtio-win ISO supports both x86_64 and aarch64 (inside the ISO it contains drivers for both archs).
+    virtioWin:
+    - location: https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/archive-virtio/virtio-win-0.1.271-1/virtio-win-0.1.271.iso
+      arch: "x86_64"
+    - location: https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/archive-virtio/virtio-win-0.1.271-1/virtio-win-0.1.271.iso
+      arch: "aarch64"
+
+plain: true
+
+firmware:
+  legacyBIOS: false
+
+video:
+  # This is for development purpose. You can set `none`.
+  display: default
