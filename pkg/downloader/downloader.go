@@ -38,7 +38,7 @@ func hideBar(bar *progressbar.ProgressBar) {
 	bar.Set(pb.Static, true)
 }
 
-type Status = string
+type Status string
 
 const (
 	StatusUnknown    Status = ""

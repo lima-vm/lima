@@ -569,7 +569,7 @@ func (l *LimaVzDriver) SSHAddress(_ context.Context) (string, error) {
 	return "127.0.0.1", nil
 }
 
-func (l *LimaVzDriver) InspectStatus(_ context.Context, _ *limatype.Instance) string {
+func (l *LimaVzDriver) InspectStatus(_ context.Context, _ *limatype.Instance) limatype.Status {
 	return ""
 }
 

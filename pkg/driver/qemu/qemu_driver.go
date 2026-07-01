@@ -832,7 +832,7 @@ func (l *LimaQemuDriver) SSHAddress(_ context.Context) (string, error) {
 	return "127.0.0.1", nil
 }
 
-func (l *LimaQemuDriver) InspectStatus(_ context.Context, _ *limatype.Instance) string {
+func (l *LimaQemuDriver) InspectStatus(_ context.Context, _ *limatype.Instance) limatype.Status {
 	return ""
 }
 

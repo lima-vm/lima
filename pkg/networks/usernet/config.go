@@ -15,7 +15,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 )
 
-type SockType = string
+type SockType string
 
 const (
 	FDSock       = "fd"

@@ -186,7 +186,7 @@ func (l *LimaWslDriver) BootScripts(_ context.Context) (map[string][]byte, error
 	return scripts, nil
 }
 
-func (l *LimaWslDriver) InspectStatus(ctx context.Context, inst *limatype.Instance) string {
+func (l *LimaWslDriver) InspectStatus(ctx context.Context, inst *limatype.Instance) limatype.Status {
 	status, err := getWslStatus(ctx, inst.Name)
 	if err != nil {
 		inst.Status = limatype.StatusBroken
