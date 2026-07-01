@@ -199,6 +199,7 @@ func newApp() *cobra.Command {
 		newGenDocCommand(),
 		newGenSchemaCommand(),
 		newSnapshotCommand(),
+		newScreenshotCommand(),
 		newProtectCommand(),
 		newUnprotectCommand(),
 		newTunnelCommand(),

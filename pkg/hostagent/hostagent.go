@@ -526,6 +526,19 @@ func (a *HostAgent) startRoutinesAndWait(ctx context.Context, errCh <-chan error
 	return a.driver.Stop(ctx)
 }
 
+func (a *HostAgent) Screenshot(ctx context.Context, format string) ([]byte, error) {
+	// ConfiguredDriver wraps the concrete driver; unwrap to reach optional interfaces.
+	inner := a.driver
+	if cd, ok := a.driver.(*driver.ConfiguredDriver); ok {
+		inner = cd.Driver
+	}
+	s, ok := inner.(driver.Screenshotter)
+	if !ok {
+		return nil, fmt.Errorf("driver %q: %w", a.driver.Info(ctx).Name, driver.ErrDriverNotScreenshotter)
+	}
+	return s.CaptureScreenshot(format)
+}
+
 func (a *HostAgent) Info(_ context.Context) (*hostagentapi.Info, error) {
 	info := &hostagentapi.Info{
 		AutoStartedIdentifier: autostart.AutoStartedIdentifier(),
