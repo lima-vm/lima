@@ -276,6 +276,9 @@ func validateConfig(_ context.Context, cfg *limatype.LimaYAML) error {
 	if cfg.TPM != nil && *cfg.TPM {
 		return errors.New("field `tpm` is not supported on VZ driver")
 	}
+	if cfg.OS != nil && *cfg.OS == limatype.WINDOWS {
+		return errors.New("currently Windows guest OS is only supported on QEMU")
+	}
 	if *cfg.Firmware.LegacyBIOS {
 		logrus.Warnf("vmType %s: ignoring `firmware.legacyBIOS`", *cfg.VMType)
 	}

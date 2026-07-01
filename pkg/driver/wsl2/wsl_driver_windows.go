@@ -108,6 +108,10 @@ func validateConfig(_ context.Context, cfg *limatype.LimaYAML) error {
 		}
 	}
 
+	if cfg.OS != nil && *cfg.OS == limatype.WINDOWS {
+		return errors.New("currently Windows guest OS is only supported on QEMU")
+	}
+
 	if !limatype.IsNativeArch(*cfg.Arch) {
 		return fmt.Errorf("unsupported arch: %#q", *cfg.Arch)
 	}

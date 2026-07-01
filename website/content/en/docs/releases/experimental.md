@@ -18,6 +18,7 @@ The following features are experimental and subject to change:
 - [`github` URL scheme](../templates/github.md): referencing templates on GitHub with `github:` URLs
 - [macOS guests](../usage/guests/macos.md)
 - [FreeBSD guests](../usage/guests/freebsd.md)
+- [Windows guests](../usage/guests/windows.md)
 
 The following commands are experimental and subject to change:
 

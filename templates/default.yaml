@@ -403,6 +403,15 @@ vmOpts:
 # 🟢 Builtin default: "Linux"
 os: null
 
+# EXPERIMENTAL
+# osOpts configures guest OS specific settings.
+# Currently Windows guest only uses this option.
+# osOpts:
+#   Windows:
+#     virtioWin:
+#     - location: /
+#       arch: "x86_64"
+
 # DEPRECATED: Use vmOpts.qemu.cpuType instead. See the vmOpts.qemu.cpuType section above for configuration.
 cpuType:
 

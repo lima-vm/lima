@@ -59,6 +59,7 @@ type LimaYAML struct {
 	NestedVirtualization *bool   `yaml:"nestedVirtualization,omitempty" json:"nestedVirtualization,omitempty" jsonschema:"nullable"`
 	User                 User    `yaml:"user,omitempty" json:"user,omitempty"`
 	TPM                  *bool   `yaml:"tpm,omitempty" json:"tpm,omitempty" jsonschema:"nullable"`
+	OsOpts               OsOpts  `yaml:"osOpts,omitempty" json:"osOpts,omitempty"`
 }
 
 type BaseTemplates []LocatorWithDigest
@@ -81,6 +82,7 @@ const (
 	LINUX   OS = "Linux"
 	DARWIN  OS = "Darwin"
 	FREEBSD OS = "FreeBSD"
+	WINDOWS OS = "Windows"
 
 	X8664   Arch = "x86_64"
 	AARCH64 Arch = "aarch64"
@@ -100,7 +102,7 @@ const (
 )
 
 var (
-	OSTypes    = []OS{LINUX, DARWIN, FREEBSD}
+	OSTypes    = []OS{LINUX, DARWIN, FREEBSD, WINDOWS}
 	ArchTypes  = []Arch{X8664, AARCH64, ARMV7L, PPC64LE, RISCV64, S390X}
 	MountTypes = []MountType{REVSSHFS, NINEP, VIRTIOFS, WSLMount}
 	VMTypes    = []VMType{QEMU, VZ, WSL2}
@@ -341,6 +343,12 @@ type CACertificates struct {
 type PreConfiguredDriverPayload struct {
 	Config   LimaYAML `json:"config"`
 	FilePath string   `json:"filePath"`
+}
+
+type OsOpts map[OS]any
+
+type WindowsOpts struct {
+	VirtioWin []File `yaml:"virtioWin,omitempty" json:"virtioWin,omitempty"`
 }
 
 func NewOS(osname string) OS {
