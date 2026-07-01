@@ -55,13 +55,17 @@ func New() *LimaKrunkitDriver {
 	return &LimaKrunkitDriver{}
 }
 
-func (l *LimaKrunkitDriver) Configure(_ context.Context, inst *limatype.Instance) *driver.ConfiguredDriver {
+func (l *LimaKrunkitDriver) Configure(_ context.Context, inst *limatype.Instance) (*driver.ConfiguredDriver, error) {
+	if err := fillConfig(inst.Config); err != nil {
+		return nil, err
+	}
+
 	l.Instance = inst
 	l.SSHLocalPort = inst.SSHLocalPort
 
 	return &driver.ConfiguredDriver{
 		Driver: l,
-	}
+	}, nil
 }
 
 func (l *LimaKrunkitDriver) CreateDisk(ctx context.Context) error {
@@ -258,7 +262,7 @@ func isFedoraConfigured(cfg *limatype.LimaYAML) bool {
 	return false
 }
 
-func (l *LimaKrunkitDriver) FillConfig(_ context.Context, cfg *limatype.LimaYAML, _ string) error {
+func fillConfig(cfg *limatype.LimaYAML) error {
 	if cfg.MountType == nil {
 		cfg.MountType = ptr.Of(limatype.VIRTIOFS)
 	} else {

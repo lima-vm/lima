@@ -21,7 +21,6 @@ import (
 	"github.com/docker/go-units"
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/v2/pkg/driverutil"
 	"github.com/lima-vm/lima/v2/pkg/identifiers"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/localpathutil"
@@ -601,12 +600,14 @@ func validatePort(field string, port int) error {
 }
 
 func warnExperimental(y *limatype.LimaYAML) {
-	if *y.MountType == limatype.VIRTIOFS && runtime.GOOS == "linux" {
+	if y.MountType != nil && *y.MountType == limatype.VIRTIOFS && runtime.GOOS == "linux" {
 		logrus.Warn("`mountType: virtiofs` on Linux is experimental")
 	}
-	switch *y.Arch {
-	case limatype.RISCV64, limatype.ARMV7L, limatype.S390X, limatype.PPC64LE:
-		logrus.Warnf("`arch: %s ` is experimental", *y.Arch)
+	if y.Arch != nil {
+		switch *y.Arch {
+		case limatype.RISCV64, limatype.ARMV7L, limatype.S390X, limatype.PPC64LE:
+			logrus.Warnf("`arch: %s ` is experimental", *y.Arch)
+		}
 	}
 	if y.Video.Display != nil && strings.Contains(*y.Video.Display, "vnc") {
 		logrus.Warn("`video.display: vnc` is experimental")
@@ -629,9 +630,6 @@ func ValidateAgainstLatestConfig(ctx context.Context, yNew, yLatest []byte) erro
 	l, err := LoadWithWarnings(ctx, yLatest, "")
 	if err != nil {
 		errs = errors.Join(errs, err)
-	}
-	if err := driverutil.ResolveVMType(ctx, l, ""); err != nil {
-		errs = errors.Join(errs, fmt.Errorf("failed to resolve vm for %#q: %w", "", err))
 	}
 	if err := Unmarshal(yNew, &n, "Unmarshal new YAML bytes"); err != nil {
 		errs = errors.Join(errs, err)

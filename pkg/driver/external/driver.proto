@@ -25,7 +25,7 @@ service Driver {
   rpc ForwardGuestAgent(google.protobuf.Empty) returns (ForwardGuestAgentResponse);
   rpc GuestAgentConn(google.protobuf.Empty) returns (google.protobuf.Empty);
 
-  rpc Configure(SetConfigRequest) returns (google.protobuf.Empty);
+  rpc Configure(SetConfigRequest) returns (SetConfigResponse);
   rpc Info(google.protobuf.Empty) returns (InfoResponse);
   rpc SSHAddress(google.protobuf.Empty) returns (SSHAddressResponse);
 
@@ -57,6 +57,10 @@ message StartResponse {
 }
 
 message SetConfigRequest {
+  bytes instance_config_json = 1;
+}
+
+message SetConfigResponse {
   bytes instance_config_json = 1;
 }
 

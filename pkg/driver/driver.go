@@ -86,14 +86,9 @@ type Driver interface {
 
 	Info(context.Context) Info
 
-	// Configure sets the configuration for the instance.
-	// TODO: merge Configure and FillConfig?
-	// Or come up with a better name to clarify the difference.
-	Configure(_ context.Context, inst *limatype.Instance) *ConfiguredDriver
-
-	// FillConfig fills and validates the configuration for the instance.
-	// The config is not set to the instance.
-	FillConfig(ctx context.Context, cfg *limatype.LimaYAML, filePath string) error
+	// Configure fills driver-specific configuration defaults, validates
+	// the configuration, and sets up the driver for the given instance.
+	Configure(ctx context.Context, inst *limatype.Instance) (*ConfiguredDriver, error)
 
 	SSHAddress(ctx context.Context) (string, error)
 
