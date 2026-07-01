@@ -117,6 +117,15 @@ case "$(limactl tmpl yq "$FILE_HOST" '.networks[].lima')" in
 	;;
 esac
 
+# Fail early (before the expensive VM create/boot) if a host command required by the
+# enabled checks is missing. Tools that are optional at runtime (guarded by `command -v`,
+# e.g. rsync, w3m) are intentionally not required here.
+required_commands=(limactl curl jq timeout diff)
+[[ -n ${CHECKS["port-forwards"]} ]] && required_commands+=(perl nc socat)
+[[ -n ${CHECKS["container-engine"]} && ${OS_HOST} != "Msys" ]] && required_commands+=(dig)
+[[ -n ${CHECKS["vmnet"]} ]] && required_commands+=("${IPERF3}")
+check_required_commands "${required_commands[@]}"
+
 if [[ -n ${CHECKS["port-forwards"]} ]]; then
 	tmpconfig="$HOME_HOST/lima-config-tmp"
 	mkdir -p "${tmpconfig}"
