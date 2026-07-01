@@ -63,6 +63,10 @@ type GRPCServerRW struct {
 	id      string
 	stream  api.GuestService_TunnelServer
 	closeCh chan any
+
+	// rxBuf holds bytes received from the stream that did not fit in the
+	// buffer passed to the previous Read call.
+	rxBuf []byte
 }
 
 var _ net.Conn = (*GRPCServerRW)(nil)
@@ -73,12 +77,16 @@ func (g *GRPCServerRW) Write(p []byte) (n int, err error) {
 }
 
 func (g *GRPCServerRW) Read(p []byte) (n int, err error) {
-	in, err := g.stream.Recv()
-	if err != nil {
-		return 0, err
+	if len(g.rxBuf) == 0 {
+		in, err := g.stream.Recv()
+		if err != nil {
+			return 0, err
+		}
+		g.rxBuf = in.Data
 	}
-	copy(p, in.Data)
-	return len(in.Data), nil
+	n = copy(p, g.rxBuf)
+	g.rxBuf = g.rxBuf[n:]
+	return n, nil
 }
 
 func (g *GRPCServerRW) Close() error {
