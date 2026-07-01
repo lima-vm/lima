@@ -22,10 +22,24 @@ var (
 		requestStart:          launchd.RequestStart,
 		requestStop:           launchd.RequestStop,
 	}
+	LaunchdKeepAlive = &TemplateFileBasedManager{
+		filePath:              launchd.GetPlistPath,
+		template:              launchd.Template,
+		enabler:               launchd.EnableDisableService,
+		autoStartedIdentifier: launchd.AutoStartedServiceName,
+		requestStart:          launchd.RequestStart,
+		requestStop:           launchd.RequestStop,
+		extraTemplateVars:     map[string]string{"KeepAlive": "true"},
+	}
 	LaunchdDaemon = &TemplateFileBasedManager{
 		filePath:          launchd.GetDaemonPlistPath,
 		template:          launchd.DaemonTemplate,
 		extraTemplateVars: map[string]string{"UserName": "alice"},
+	}
+	LaunchdDaemonKeepAlive = &TemplateFileBasedManager{
+		filePath:          launchd.GetDaemonPlistPath,
+		template:          launchd.DaemonTemplate,
+		extraTemplateVars: map[string]string{"UserName": "alice", "KeepAlive": "true"},
 	}
 	Systemd = &TemplateFileBasedManager{
 		filePath:              systemd.GetUnitPath,
@@ -34,6 +48,16 @@ var (
 		autoStartedIdentifier: systemd.AutoStartedUnitName,
 		requestStart:          systemd.RequestStart,
 		requestStop:           systemd.RequestStop,
+		extraTemplateVars:     map[string]string{"Restart": "on-failure"},
+	}
+	SystemdNoKeepAlive = &TemplateFileBasedManager{
+		filePath:              systemd.GetUnitPath,
+		template:              systemd.Template,
+		enabler:               systemd.EnableDisableUnit,
+		autoStartedIdentifier: systemd.AutoStartedUnitName,
+		requestStart:          systemd.RequestStart,
+		requestStop:           systemd.RequestStop,
+		extraTemplateVars:     map[string]string{"Restart": "no"},
 	}
 )
 
@@ -122,6 +146,88 @@ func TestRenderTemplate(t *testing.T) {
 			WorkDir: "/some/path",
 		},
 		{
+			Manager:      LaunchdKeepAlive,
+			Name:         "render darwin launchd plist with keep-alive enabled",
+			InstanceName: "default",
+			Expected: `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>io.lima-vm.autostart.default</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/limactl</string>
+		<string>start</string>
+		<string>default</string>
+		<string>--foreground</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>KeepAlive</key>
+	<dict>
+		<key>SuccessfulExit</key>
+		<false/>
+	</dict>
+	<key>StandardErrorPath</key>
+	<string>launchd.stderr.log</string>
+	<key>StandardOutPath</key>
+	<string>launchd.stdout.log</string>
+	<key>WorkingDirectory</key>
+	<string>/some/path</string>
+	<key>ProcessType</key>
+	<string>Background</string>
+</dict>
+</plist>
+`,
+			GetExecutable: func() (string, error) {
+				return "/limactl", nil
+			},
+			WorkDir: "/some/path",
+		},
+		{
+			Manager:      LaunchdDaemonKeepAlive,
+			Name:         "render darwin launchd daemon plist with keep-alive enabled",
+			InstanceName: "k3s",
+			Expected: `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>io.lima-vm.daemon.k3s</string>
+	<key>UserName</key>
+	<string>alice</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/limactl</string>
+		<string>start</string>
+		<string>k3s</string>
+		<string>--foreground</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>KeepAlive</key>
+	<dict>
+		<key>SuccessfulExit</key>
+		<false/>
+	</dict>
+	<key>StandardErrorPath</key>
+	<string>launchd.stderr.log</string>
+	<key>StandardOutPath</key>
+	<string>launchd.stdout.log</string>
+	<key>WorkingDirectory</key>
+	<string>/some/path</string>
+	<key>ProcessType</key>
+	<string>Background</string>
+</dict>
+</plist>
+`,
+			GetExecutable: func() (string, error) {
+				return "/limactl", nil
+			},
+			WorkDir: "/some/path",
+		},
+		{
 			Manager:      Systemd,
 			Name:         "render linux systemd service",
 			InstanceName: "default",
@@ -135,6 +241,29 @@ WorkingDirectory=%h
 Type=simple
 TimeoutSec=10
 Restart=on-failure
+
+[Install]
+WantedBy=default.target
+`,
+			GetExecutable: func() (string, error) {
+				return "/limactl", nil
+			},
+			WorkDir: "/some/path",
+		},
+		{
+			Manager:      SystemdNoKeepAlive,
+			Name:         "render linux systemd service with keep-alive disabled",
+			InstanceName: "default",
+			Expected: `[Unit]
+Description=Lima - Linux virtual machines, with a focus on running containers.
+Documentation=man:lima(1)
+
+[Service]
+ExecStart=/limactl start %i --foreground
+WorkingDirectory=%h
+Type=simple
+TimeoutSec=10
+Restart=no
 
 [Install]
 WantedBy=default.target
