@@ -61,7 +61,10 @@ func writeJolietCommand(isoPath, label, workDir string) ([]string, error) {
 	candidates := []string{"xorrisofs", "genisoimage", "mkisofs"}
 	for _, cmd := range candidates {
 		if cmdAbs, err := exec.LookPath(cmd); err == nil {
-			return []string{cmdAbs, "-o", isoPath, "--norock", "-J", "-V", label, workDir}, nil
+			if cmd == "xorrisofs" {
+				return []string{cmdAbs, "-o", isoPath, "--norock", "-J", "-V", label, workDir}, nil
+			}
+			return []string{cmdAbs, "-o", isoPath, "-J", "-V", label, workDir}, nil
 		}
 	}
 	return nil, fmt.Errorf("none of %v is available", candidates)

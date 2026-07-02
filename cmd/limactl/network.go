@@ -93,29 +93,32 @@ func networkListAction(cmd *cobra.Command, args []string) error {
 
 	allNetworks := slices.Sorted(maps.Keys(config.Networks))
 
-	networks := []string{}
+	networkNames := []string{}
 	if len(args) > 0 {
 		for _, arg := range args {
 			matches := nameMatches(arg, allNetworks)
 			if len(matches) > 0 {
-				networks = append(networks, matches...)
+				networkNames = append(networkNames, matches...)
 			} else {
 				logrus.Warnf("No network matching %v found.", arg)
 			}
 		}
 	} else {
-		networks = allNetworks
+		networkNames = allNetworks
 	}
 
 	if jsonFormat {
 		w := cmd.OutOrStdout()
-		for _, name := range networks {
+		for _, name := range networkNames {
 			nw, ok := config.Networks[name]
 			if !ok {
 				logrus.Errorf("network %#q does not exist", nw)
 				continue
 			}
-			j, err := json.Marshal(nw)
+			j, err := json.Marshal(struct {
+				Name string `json:"name"`
+				networks.Network
+			}{Name: name, Network: nw})
 			if err != nil {
 				return err
 			}
@@ -126,7 +129,7 @@ func networkListAction(cmd *cobra.Command, args []string) error {
 
 	w := tabwriter.NewWriter(cmd.OutOrStdout(), 4, 8, 4, ' ', 0)
 	fmt.Fprintln(w, "NAME\tMODE\tGATEWAY\tINTERFACE")
-	for _, name := range networks {
+	for _, name := range networkNames {
 		nw, ok := config.Networks[name]
 		if !ok {
 			logrus.Errorf("network %#q does not exist", nw)
