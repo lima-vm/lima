@@ -10,6 +10,8 @@ import (
 	"testing"
 
 	"gotest.tools/v3/assert"
+
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 )
 
 var defaultRemoveDefaults = false
@@ -222,6 +224,7 @@ func TestExecuteTemplateWindowsISO(t *testing.T) {
 			name: "windows server 2025",
 			args: &TemplateArgs{
 				Name:                   "windows",
+				Arch:                   limatype.X8664,
 				User:                   "windows-user",
 				WindowsInitialPassword: "dummy-password",
 				TPM:                    true,
@@ -232,15 +235,17 @@ func TestExecuteTemplateWindowsISO(t *testing.T) {
 				`<Username>windows-user</Username>`,
 				`<Value>dummy-password</Value>`,
 				`<Type>EFI</Type>`,
+				`<Value>1</Value>`,
 			},
 			expectedFirstLogonStrings: []string{
 				`$logfile = "C:\Users\windows-user\lima-setup.log"`,
 			},
 		},
 		{
-			name: "windows 11",
+			name: "windows 11 x86_64",
 			args: &TemplateArgs{
 				Name:                   "windows",
+				Arch:                   limatype.X8664,
 				User:                   "windows-user",
 				WindowsInitialPassword: "dummy-password",
 				TPM:                    true,
@@ -250,6 +255,7 @@ func TestExecuteTemplateWindowsISO(t *testing.T) {
 				`<Username>windows-user</Username>`,
 				`<Value>dummy-password</Value>`,
 				`<Type>EFI</Type>`,
+				`<Value>6</Value>`,
 			},
 			expectedFirstLogonStrings: []string{
 				`$logfile = "C:\Users\windows-user\lima-setup.log"`,
@@ -259,6 +265,7 @@ func TestExecuteTemplateWindowsISO(t *testing.T) {
 			name: "legacyBIOS",
 			args: &TemplateArgs{
 				Name:                   "windows",
+				Arch:                   limatype.X8664,
 				User:                   "windows-user",
 				WindowsInitialPassword: "dummy-password",
 				LegacyBIOS:             true,
@@ -270,6 +277,7 @@ func TestExecuteTemplateWindowsISO(t *testing.T) {
 				`<Username>windows-user</Username>`,
 				`<Value>dummy-password</Value>`,
 				`<Label>BIOS</Label>`,
+				`<Value>1</Value>`,
 			},
 			expectedFirstLogonStrings: []string{
 				`$logfile = "C:\Users\windows-user\lima-setup.log"`,
@@ -279,6 +287,7 @@ func TestExecuteTemplateWindowsISO(t *testing.T) {
 			name: "disable TPM on Windows 11",
 			args: &TemplateArgs{
 				Name:                   "windows",
+				Arch:                   limatype.X8664,
 				User:                   "windows-user",
 				WindowsInitialPassword: "dummy-password",
 				TPM:                    false,
@@ -289,6 +298,28 @@ func TestExecuteTemplateWindowsISO(t *testing.T) {
 				`<Value>dummy-password</Value>`,
 				`<Type>EFI</Type>`,
 				`BypassTPMCheck`,
+				`<Value>6</Value>`,
+			},
+			expectedFirstLogonStrings: []string{
+				`$logfile = "C:\Users\windows-user\lima-setup.log"`,
+			},
+		},
+		{
+			name: "Windows 11 arm64",
+			args: &TemplateArgs{
+				Name:                   "windows",
+				Arch:                   limatype.AARCH64,
+				User:                   "windows-user",
+				WindowsInitialPassword: "dummy-password",
+				TPM:                    false,
+			},
+			expectedAutounattendStrings: []string{
+				`<Path>E:\viostor\w11\arm64</Path>`,
+				`<Username>windows-user</Username>`,
+				`<Value>dummy-password</Value>`,
+				`<Type>EFI</Type>`,
+				`BypassTPMCheck`,
+				`<Value>3</Value>`,
 			},
 			expectedFirstLogonStrings: []string{
 				`$logfile = "C:\Users\windows-user\lima-setup.log"`,

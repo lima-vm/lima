@@ -1,38 +1,46 @@
+{{ $windowsVersionDir := "w11" -}}
+{{ if .IsWindowsServer -}}
+{{ $windowsVersionDir = "2k25" -}}
+{{ end -}}
+{{ $windowsArchDir := "arm64" -}}
+{{ if eq .Arch "x86_64" -}}
+{{ $windowsArchDir = "amd64" -}}
+{{ end -}}
 <?xml version="1.0" encoding="utf-8"?>
 <unattend xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="urn:schemas-microsoft-com:unattend">
   <settings pass="windowsPE">
     <component name="Microsoft-Windows-PnpCustomizationsWinPE" publicKeyToken="31bf3856ad364e35"
-        language="neutral" versionScope="nonSxS" processorArchitecture="amd64"
+        language="neutral" versionScope="nonSxS" processorArchitecture="{{ $windowsArchDir }}"
         xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
         <DriverPaths>
             <PathAndCredentials wcm:action="add" wcm:keyValue="1">
-                <Path>E:\viostor\{{ if .IsWindowsServer }}2k25{{ else }}w11{{ end }}\amd64</Path>
+                <Path>E:\viostor\{{ $windowsVersionDir }}\{{ $windowsArchDir }}</Path>
             </PathAndCredentials>
             <PathAndCredentials wcm:action="add" wcm:keyValue="2">
-                <Path>E:\vioinput\{{ if .IsWindowsServer }}2k25{{ else }}w11{{ end }}\amd64</Path>
+                <Path>E:\vioinput\{{ $windowsVersionDir }}\{{ $windowsArchDir }}</Path>
             </PathAndCredentials>
             <PathAndCredentials wcm:action="add" wcm:keyValue="3">
-                <Path>E:\NetKVM\{{ if .IsWindowsServer }}2k25{{ else }}w11{{ end }}\amd64</Path>
+                <Path>E:\NetKVM\{{ $windowsVersionDir }}\{{ $windowsArchDir }}</Path>
             </PathAndCredentials>
             <PathAndCredentials wcm:action="add" wcm:keyValue="4">
-                <Path>E:\viofs\{{ if .IsWindowsServer }}2k25{{ else }}w11{{ end }}\amd64</Path>
+                <Path>E:\viofs\{{ $windowsVersionDir }}\{{ $windowsArchDir }}</Path>
             </PathAndCredentials>
             <PathAndCredentials wcm:action="add" wcm:keyValue="5">
-                <Path>E:\Balloon\{{ if .IsWindowsServer }}2k25{{ else }}w11{{ end }}\amd64</Path>
+                <Path>E:\Balloon\{{ $windowsVersionDir }}\{{ $windowsArchDir }}</Path>
             </PathAndCredentials>
             <PathAndCredentials wcm:action="add" wcm:keyValue="6">
-                <Path>E:\viorng\{{ if .IsWindowsServer }}2k25{{ else }}w11{{ end }}\amd64</Path>
+                <Path>E:\viorng\{{ $windowsVersionDir }}\{{ $windowsArchDir }}</Path>
             </PathAndCredentials>
         </DriverPaths>
     </component>
 
-    <component name="Microsoft-Windows-International-Core-WinPE" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+    <component name="Microsoft-Windows-International-Core-WinPE" processorArchitecture="{{ $windowsArchDir }}" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
       <InputLocale>en-US</InputLocale>
       <SystemLocale>en-US</SystemLocale>
       <UILanguage>en-US</UILanguage>
       <UserLocale>en-US</UserLocale>
     </component>
-    <component name="Microsoft-Windows-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+    <component name="Microsoft-Windows-Setup" processorArchitecture="{{ $windowsArchDir }}" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
       {{ if not .IsWindowsServer }}
       <!-- Windows 11 has hardware requirements. (ref: https://www.microsoft.com/en-gb/windows/windows-11-specifications). -->
       <!-- For flexibility, we bypass those requirements. -->
@@ -72,7 +80,7 @@
           <InstallFrom>
             <MetaData wcm:action="add">
               <Key>/IMAGE/INDEX</Key>
-              <Value>{{ if .IsWindowsServer }}1{{ else }}6{{ end }}</Value>
+              <Value>{{ if .IsWindowsServer }}1{{ else if eq .Arch "x86_64" }}6{{ else }}3{{ end }}</Value>
             </MetaData>
           </InstallFrom>
           <InstallTo>
@@ -177,24 +185,24 @@
     </component>
   </settings>
   <settings pass="specialize">
-    <component name="Microsoft-Windows-International-Core" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+    <component name="Microsoft-Windows-International-Core" processorArchitecture="{{ $windowsArchDir }}" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
       <InputLocale>en-US</InputLocale>
       <SystemLocale>en-US</SystemLocale>
       <UILanguage>en-US</UILanguage>
       <UserLocale>en-US</UserLocale>
     </component>
-    <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+    <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="{{ $windowsArchDir }}" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
       <ComputerName>lima</ComputerName>
     </component>
   </settings>
   <settings pass="oobeSystem">
-    <component name="Microsoft-Windows-International-Core" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+    <component name="Microsoft-Windows-International-Core" processorArchitecture="{{ $windowsArchDir }}" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
       <InputLocale>en-US</InputLocale>
       <SystemLocale>en-US</SystemLocale>
       <UILanguage>en-US</UILanguage>
       <UserLocale>en-US</UserLocale>
     </component>
-    <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+    <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="{{ $windowsArchDir }}" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
       <UserAccounts>
         <LocalAccounts>
           <LocalAccount wcm:action="add">

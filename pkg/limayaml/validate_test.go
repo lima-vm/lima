@@ -464,9 +464,9 @@ osOpts:
 			wantErrMsg: "currently Windows guest is only supported on `qemu`; got `vz`",
 		},
 		{
-			name:       "x86_64 only supports Windows guest",
+			name:       "x86_64 and aarch64 only support Windows guest",
 			yaml:       fmt.Sprintf(baseYaml, limatype.ARMV7L, limatype.QEMU),
-			wantErrMsg: "currently Windows guest is only supported on [`x86_64`]; got `armv7l`",
+			wantErrMsg: "currently Windows guest is only supported on [`x86_64`, `aarch64`]; got `armv7l`",
 		},
 	}
 

@@ -55,8 +55,8 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 		if *y.VMType != limatype.QEMU {
 			errs = errors.Join(errs, fmt.Errorf("currently Windows guest is only supported on %#q; got %#q", limatype.QEMU, *y.VMType))
 		}
-		if !slices.Contains([]limatype.Arch{limatype.X8664}, *y.Arch) {
-			errs = errors.Join(errs, fmt.Errorf("currently Windows guest is only supported on [%#q]; got %#q", limatype.X8664, *y.Arch))
+		if !slices.Contains([]limatype.Arch{limatype.X8664, limatype.AARCH64}, *y.Arch) {
+			errs = errors.Join(errs, fmt.Errorf("currently Windows guest is only supported on [%#q, %#q]; got %#q", limatype.X8664, limatype.AARCH64, *y.Arch))
 		}
 	default:
 		errs = errors.Join(errs, fmt.Errorf("field `os` must be one of %#q; got %#q", limatype.OSTypes, *y.OS))

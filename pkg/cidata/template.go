@@ -91,6 +91,7 @@ type Disk struct {
 type TemplateArgs struct {
 	Debug                           bool
 	OS                              limatype.OS
+	Arch                            limatype.Arch
 	Name                            string // instance name
 	Hostname                        string // instance hostname
 	IID                             string // instance id

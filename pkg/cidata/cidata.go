@@ -127,6 +127,7 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 	args := TemplateArgs{
 		Debug:              debugutil.Debug,
 		OS:                 *instConfig.OS,
+		Arch:               *instConfig.Arch,
 		BootScripts:        bootScripts,
 		Name:               name,
 		Hostname:           hostname.FromInstName(name), // TODO: support customization

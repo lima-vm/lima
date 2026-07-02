@@ -675,7 +675,18 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	}
 	if isoPresent {
 		args = appendArgsIfNoConflict(args, "-boot", "order=d,splash-time=0,menu=on")
-		args = append(args, "-drive", fmt.Sprintf("file=%s,format=raw,media=cdrom,readonly=on", isoPath))
+		// For aarch64, QEMU uses `virt` machine type but it doesn't recognize CDROM drive.
+		// In order to attach ISO files, we need to use USB devices instead.
+		if *y.OS == limatype.WINDOWS && *y.Arch == limatype.AARCH64 {
+			// Those two lines are necessary here, otherwise QEMU raises an error `No 'usb-bus' bus found for device 'usb-storage'`.
+			args = append(args, "-device", "qemu-xhci")
+			args = append(args, "-device", "usb-kbd")
+
+			args = append(args, "-drive", fmt.Sprintf("file=%s,if=none,id=cd0,format=raw,media=cdrom,readonly=on", isoPath))
+			args = append(args, "-device", "usb-storage,drive=cd0")
+		} else {
+			args = append(args, "-drive", fmt.Sprintf("file=%s,format=raw,media=cdrom,readonly=on", isoPath))
+		}
 	} else {
 		args = appendArgsIfNoConflict(args, "-boot", "order=c,splash-time=0,menu=on")
 	}
@@ -688,7 +699,12 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	// virtio-win must be mounted before cidata.iso otherwise
 	// autounattend.xml can't find virtio drivers.
 	if *y.OS == limatype.WINDOWS && len(winOpts.VirtioWin) > 0 {
-		args = append(args, "-drive", fmt.Sprintf("file=%s,format=raw,media=cdrom,readonly=on", filepath.Join(cfg.InstanceDir, filenames.VirtioWin)))
+		if *y.Arch == limatype.AARCH64 {
+			args = append(args, "-drive", fmt.Sprintf("file=%s,if=none,id=cd1,format=raw,media=cdrom,readonly=on", filepath.Join(cfg.InstanceDir, filenames.VirtioWin)))
+			args = append(args, "-device", "usb-storage,drive=cd1")
+		} else {
+			args = append(args, "-drive", fmt.Sprintf("file=%s,format=raw,media=cdrom,readonly=on", filepath.Join(cfg.InstanceDir, filenames.VirtioWin)))
+		}
 	}
 
 	for _, extraDisk := range extraDisks {
@@ -700,7 +716,12 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	case limatype.WINDOWS:
 		// We can't use virtio-scsi for Windows's cidata, because autounattend in cidata installs virtio-win drivers.
 		// Until then, the VM can't detect virtio.
-		args = append(args, "-drive", fmt.Sprintf("file=%s,format=raw,media=cdrom,readonly=on", filepath.Join(cfg.InstanceDir, filenames.CIDataISO)))
+		if *y.Arch == limatype.AARCH64 {
+			args = append(args, "-drive", fmt.Sprintf("file=%s,if=none,id=cd2,format=raw,media=cdrom,readonly=on", filepath.Join(cfg.InstanceDir, filenames.CIDataISO)))
+			args = append(args, "-device", "usb-storage,drive=cd2")
+		} else {
+			args = append(args, "-drive", fmt.Sprintf("file=%s,format=raw,media=cdrom,readonly=on", filepath.Join(cfg.InstanceDir, filenames.CIDataISO)))
+		}
 	default:
 		args = append(args,
 			"-drive", "id=cdrom0,if=none,format=raw,readonly=on,file="+filepath.Join(cfg.InstanceDir, filenames.CIDataISO),
@@ -871,7 +892,11 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 		case limatype.X8664, limatype.RISCV64:
 			args = append(args, "-device", "virtio-vga")
 		default:
-			args = append(args, "-device", "virtio-gpu")
+			if *y.OS == limatype.WINDOWS {
+				args = append(args, "-device", "ramfb")
+			} else {
+				args = append(args, "-device", "virtio-gpu")
+			}
 		}
 		args = append(args, "-device", "virtio-keyboard-pci")
 		args = append(args, "-device", "virtio-"+input+"-pci")
