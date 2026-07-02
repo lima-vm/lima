@@ -114,14 +114,24 @@ func validateConfig(_ context.Context, cfg *limatype.LimaYAML) error {
 	if cfg.VMType != nil {
 		if cfg.Images != nil && cfg.Arch != nil {
 			// TODO: real filetype checks
-			tarFileRegex := regexp.MustCompile(`.*tar\.*`)
+			tarFileRegex := regexp.MustCompile(`\.(tar|tgz|txz|tbz2|tzst|tar\.(gz|xz|bz2|zstd|zst))$`)
+			unsupportedVMImgRegex := regexp.MustCompile(`\.(qcow2|raw|img|iso|ipsw)(\.(gz|xz|bz2|zstd|zst))?$`)
+			squashfsRegex := regexp.MustCompile(`\.squashfs(\.(gz|xz|bz2|zstd|zst))?$`)
 			for i, image := range cfg.Images {
 				if unknown := reflectutil.UnknownNonEmptyFields(image, "File"); len(unknown) > 0 {
 					logrus.Warnf("Ignoring: vmType %s: images[%d]: %+v", *cfg.VMType, i, unknown)
 				}
-				match := tarFileRegex.MatchString(image.Location)
-				if image.Arch == *cfg.Arch && !match {
-					return fmt.Errorf("unsupported image type for vmType: %s, tarball root file system required: %#q", *cfg.VMType, image.Location)
+				if image.Arch == *cfg.Arch {
+					location := image.Location
+					if !tarFileRegex.MatchString(location) {
+						if unsupportedVMImgRegex.MatchString(location) {
+							return fmt.Errorf("unsupported image type for %s: %q. %s only supports importing tar archive root filesystems, not standard VM disk images", *cfg.VMType, location, *cfg.VMType)
+						}
+						if squashfsRegex.MatchString(location) {
+							return fmt.Errorf("unsupported image type for %s: %q. %s does not natively support importing SquashFS images; please convert the image to a tar archive before importing", *cfg.VMType, location, *cfg.VMType)
+						}
+						return fmt.Errorf("unsupported image type for %s: %q. A tar archive root filesystem (.tar, .tar.gz, .tar.xz, etc.) is required", *cfg.VMType, location)
+					}
 				}
 			}
 		}
