@@ -18,6 +18,21 @@ function ERROR() {
 	echo >&2 "TEST| [ERROR] $*"
 }
 
+# check_required_commands CMD...
+# Exits 1 (listing every missing command) if any required host command is absent.
+function check_required_commands() {
+	local missing=()
+	local cmd
+	for cmd in "$@"; do
+		command -v "${cmd}" >/dev/null 2>&1 || missing+=("${cmd}")
+	done
+	if [ "${#missing[@]}" -gt 0 ]; then
+		ERROR "Missing required host command(s): ${missing[*]}"
+		ERROR "Please install them before running this test."
+		exit 1
+	fi
+}
+
 if [[ ${BASH_VERSINFO:-0} -lt 4 ]]; then
 	ERROR "Bash version is too old: ${BASH_VERSION}"
 	exit 1
