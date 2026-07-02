@@ -4,6 +4,7 @@
 package portfwd
 
 import (
+	"bytes"
 	"errors"
 	"io"
 	"net"
@@ -44,6 +45,37 @@ func TestDialContextToGRPCTunnelClosesStreamFromTCPProxy(t *testing.T) {
 	case <-time.After(time.Second):
 		assert.Assert(t, false, "timed out waiting for TCP proxy handling to finish")
 	}
+}
+
+// recvOnlyTunnelClient implements only Recv of the bidi stream; the other
+// methods are never called by GrpcClientRW.Read.
+type recvOnlyTunnelClient struct {
+	api.GuestService_TunnelClient
+	msgs []*api.TunnelMessage
+}
+
+func (s *recvOnlyTunnelClient) Recv() (*api.TunnelMessage, error) {
+	if len(s.msgs) == 0 {
+		return nil, io.EOF
+	}
+	msg := s.msgs[0]
+	s.msgs = s.msgs[1:]
+	return msg, nil
+}
+
+func TestGrpcClientRWReadShortBuffer(t *testing.T) {
+	payload := bytes.Repeat([]byte("x"), 100)
+	rw := &GrpcClientRW{stream: &recvOnlyTunnelClient{msgs: []*api.TunnelMessage{{Data: payload}}}}
+
+	var got []byte
+	buf := make([]byte, 10)
+	for len(got) < len(payload) {
+		n, err := rw.Read(buf)
+		assert.NilError(t, err)
+		assert.Assert(t, n <= len(buf), "Read returned %d, larger than the %d-byte buffer", n, len(buf))
+		got = append(got, buf[:n]...)
+	}
+	assert.DeepEqual(t, got, payload)
 }
 
 func newTestGuestAgentClient(t *testing.T, guestService api.GuestServiceServer) *guestagentclient.GuestAgentClient {
