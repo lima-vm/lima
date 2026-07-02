@@ -145,6 +145,12 @@ additionalDisks:  # comment
 		"additionalDisks: [{name: disk1, format: true},{name: disk2}]",
 	},
 	{
+		"additionalDisks merge mount and mountPoint on shared name",
+		"additionalDisks: [{name: disk1}]",
+		"additionalDisks: [{name: disk2},{name: disk1, mount: false, mountPoint: /data}]",
+		"additionalDisks: [{name: disk1, mount: false, mountPoint: /data},{name: disk2}]",
+	},
+	{
 		// This test fails because there are 2 spurious newlines in the merged output
 		"TODO mounts append, but merge fields on shared mountPoint",
 		`#
