@@ -18,9 +18,13 @@ for i in $(seq 0 $((LIMA_CIDATA_DISKS - 1))); do
 	FORMAT_DISK="$(get_disk_var "$i" "FORMAT")"
 	FORMAT_FSTYPE="$(get_disk_var "$i" "FSTYPE")"
 	FORMAT_FSARGS="$(get_disk_var "$i" "FSARGS")"
+	MOUNT_DISK="$(get_disk_var "$i" "MOUNT")"
+	MOUNT_POINT="$(get_disk_var "$i" "MOUNTPOINT")"
 
 	test -n "$FORMAT_DISK" || FORMAT_DISK=true
 	test -n "$FORMAT_FSTYPE" || FORMAT_FSTYPE=ext4
+	test -n "$MOUNT_DISK" || MOUNT_DISK=true
+	test -n "$MOUNT_POINT" || MOUNT_POINT="/mnt/lima-${DISK_NAME}"
 
 	# first time setup
 	if [[ ! -b "/dev/disk/by-label/lima-${DISK_NAME}" ]]; then
@@ -39,9 +43,9 @@ for i in $(seq 0 $((LIMA_CIDATA_DISKS - 1))); do
 
 	if [ "$FORMAT_FSTYPE" == "swap" ]; then
 		swapon "/dev/${DEVICE_NAME}1"
-	else
-		mkdir -p "/mnt/lima-${DISK_NAME}"
-		mount -t "$FORMAT_FSTYPE" "/dev/${DEVICE_NAME}1" "/mnt/lima-${DISK_NAME}"
+	elif $MOUNT_DISK; then
+		mkdir -p "$MOUNT_POINT"
+		mount -t "$FORMAT_FSTYPE" "/dev/${DEVICE_NAME}1" "$MOUNT_POINT"
 	fi
 	if command -v growpart >/dev/null 2>&1 && command -v resize2fs >/dev/null 2>&1; then
 		growpart "/dev/${DEVICE_NAME}" 1 || true

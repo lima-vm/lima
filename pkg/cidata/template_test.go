@@ -137,6 +137,45 @@ func TestTemplate(t *testing.T) {
 	}
 }
 
+func TestTemplateDisks(t *testing.T) {
+	args := &TemplateArgs{
+		Name:  "default",
+		User:  "foo",
+		UID:   501,
+		Home:  "/home/foo.guest",
+		Shell: "/bin/bash",
+		SSHPubKeys: []string{
+			"ssh-rsa dummy foo@example.com",
+		},
+		MountType: "reverse-sshfs",
+		CACerts: CACerts{
+			RemoveDefaults: &defaultRemoveDefaults,
+		},
+		Disks: []Disk{
+			{Name: "data", Device: "vdb", Format: true, FSType: "ext4", Mount: true, MountPoint: "/data"},
+			{Name: "extra", Device: "vdc", Format: false, Mount: false},
+		},
+	}
+	layout, err := ExecuteTemplateCIDataISO(args)
+	assert.NilError(t, err)
+	var found bool
+	for _, f := range layout {
+		if f.Path != "lima.env" {
+			continue
+		}
+		found = true
+		b, err := io.ReadAll(f.Reader)
+		assert.NilError(t, err)
+		env := string(b)
+		assert.Assert(t, strings.Contains(env, "LIMA_CIDATA_DISK_0_MOUNT=true"), env)
+		assert.Assert(t, strings.Contains(env, "LIMA_CIDATA_DISK_0_MOUNTPOINT=/data"), env)
+		assert.Assert(t, strings.Contains(env, "LIMA_CIDATA_DISK_1_MOUNT=false"), env)
+		// A nil MountPoint renders as empty; the guest script falls back to /mnt/lima-<name>.
+		assert.Assert(t, strings.Contains(env, "LIMA_CIDATA_DISK_1_MOUNTPOINT=\n"), env)
+	}
+	assert.Assert(t, found, "lima.env not found in layout")
+}
+
 func TestTemplate9p(t *testing.T) {
 	args := &TemplateArgs{
 		Name:  "default",

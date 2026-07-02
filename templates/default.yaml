@@ -117,8 +117,9 @@ mountInotify: null
 
 # Lima disks to attach to the instance. The disks will be accessible from inside the
 # instance, labeled by name. (e.g. if the disk is named "data", it will be labeled
-# "lima-data" inside the instance). The disk will be mounted inside the instance at
-# `/mnt/lima-${VOLUME}`.
+# "lima-data" inside the instance). By default the disk is mounted inside the instance
+# at `/mnt/lima-${VOLUME}`; use "mountPoint" to change this, or set "mount" to false to
+# attach the disk without mounting it (e.g. to manage it yourself inside the guest).
 # 🟢 Builtin default: []
 additionalDisks:
 # disks should either be a list of disk name strings, for example:
@@ -127,6 +128,12 @@ additionalDisks:
 # - name: "data"
 #   format: true
 #   fsType: "ext4"
+#   # Whether Lima should auto-mount the disk inside the guest.
+#   # 🟢 Builtin default: true
+#   mount: true
+#   # Absolute path inside the guest to mount the disk at.
+#   # 🟢 Builtin default: /mnt/lima-${name}
+#   mountPoint: "/mnt/lima-data"
 
 ssh:
   # A localhost port of the host. Forwarded to port 22 of the guest.

@@ -109,6 +109,18 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 		if err := identifiers.Validate(disk.Name); err != nil {
 			errs = errors.Join(errs, fmt.Errorf("field `additionalDisks[%d].name is invalid`: %w", i, err))
 		}
+		if disk.MountPoint != nil {
+			// This is a guest path, so use path.IsAbs (forward-slash) rather than the
+			// host-OS-dependent filepath.IsAbs. There is no tilde-expansion for guest
+			// filenames, so the mount point must be an absolute path.
+			if !path.IsAbs(*disk.MountPoint) {
+				errs = errors.Join(errs, fmt.Errorf("field `additionalDisks[%d].mountPoint` must be an absolute path, got %#q", i, *disk.MountPoint))
+			}
+			switch *disk.MountPoint {
+			case "/", "/bin", "/dev", "/etc", "/sbin", "/usr":
+				errs = errors.Join(errs, fmt.Errorf("field `additionalDisks[%d].mountPoint` must not be a critical system path such as /etc or /usr", i))
+			}
+		}
 	}
 
 	for i, f := range y.Mounts {
