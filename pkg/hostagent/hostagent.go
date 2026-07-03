@@ -696,7 +696,7 @@ ln -sf "${SSH_AUTH_SOCK}" /run/host-services/ssh-auth.sock`
 	// Copy all config files _after_ the requirements are done
 	for _, rule := range a.instConfig.CopyToHost {
 		sshAddress, sshPort := a.sshAddressPort()
-		if err := copyToHost(ctx, a.sshConfig, sshAddress, sshPort, rule.HostFile, rule.GuestFile); err != nil {
+		if err := copyToHost(ctx, a.sshConfig, sshAddress, sshPort, rule.HostFile, rule.GuestFile, rule.SkipIfMissing); err != nil {
 			errs = append(errs, err)
 		}
 	}
@@ -1266,7 +1266,7 @@ func isDeactivatedCloudInitMainService(line string) bool {
 	return strings.HasPrefix(line, "cloud-init-main.service: consumed")
 }
 
-func copyToHost(ctx context.Context, sshConfig *ssh.SSHConfig, sshAddress string, sshPort int, local, remote string) error {
+func copyToHost(ctx context.Context, sshConfig *ssh.SSHConfig, sshAddress string, sshPort int, local, remote string, skipIfMissing bool) error {
 	args := sshConfig.Args()
 	args = append(args,
 		"-p", strconv.Itoa(sshPort),
@@ -1295,6 +1295,12 @@ func copyToHost(ctx context.Context, sshConfig *ssh.SSHConfig, sshAddress string
 			)
 			cmd = exec.CommandContext(ctx, sshConfig.Binary(), sudoArgs...)
 			out, err = cmd.Output()
+		}
+		if errors.As(err, &exitErr) && strings.Contains(string(exitErr.Stderr), "No such file or directory") {
+			if skipIfMissing {
+				logrus.Infof("Skip missing %s (no such file or directory)", remote)
+				return nil
+			}
 		}
 		if err != nil {
 			return fmt.Errorf("failed to run %v: %#q: %w", cmd.Args, string(out), err)

@@ -204,9 +204,6 @@ probes:
       echo >&2 "k8s is not running yet"
       exit 1
     fi
-    {{else}}
-    # create an empty file so that the "copyToHost" does not fail
-    sudo mkdir -p /root/.kube && sudo touch /root/.kube/config.localhost
     {{end}}
   hint: |
     The k8s kubeconfig file has not yet been created.
@@ -230,6 +227,7 @@ probes:
 copyToHost:
 - guest: "/root/.kube/config.localhost"
   host: "{{.Dir}}/copied-from-guest/kubeconfig.yaml"
+  skipIfMissing: true
   deleteOnStop: true
 message: |
   {{- if not ( and .Param.url .Param.token )}}

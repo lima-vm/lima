@@ -313,9 +313,10 @@ type PortForward struct {
 }
 
 type CopyToHost struct {
-	GuestFile    string `yaml:"guest,omitempty" json:"guest,omitempty"`
-	HostFile     string `yaml:"host,omitempty" json:"host,omitempty"`
-	DeleteOnStop bool   `yaml:"deleteOnStop,omitempty" json:"deleteOnStop,omitempty"`
+	GuestFile     string `yaml:"guest,omitempty" json:"guest,omitempty"`
+	HostFile      string `yaml:"host,omitempty" json:"host,omitempty"`
+	SkipIfMissing bool   `yaml:"skipIfMissing,omitempty" json:"skipIfMissing,omitempty"`
+	DeleteOnStop  bool   `yaml:"deleteOnStop,omitempty" json:"deleteOnStop,omitempty"`
 }
 
 type Network struct {
