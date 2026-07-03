@@ -271,6 +271,59 @@ func TestRedownloadRemote(t *testing.T) {
 	})
 }
 
+func TestCachedWithoutDigestSidecar(t *testing.T) {
+	// A cache entry populated by an earlier digest-less download has no
+	// "<algo>.digest" sidecar. When the same URL is later requested with an
+	// expected digest and the remote HEAD request fails, the cached data must
+	// still be verified against the expected digest before being reused.
+	content := []byte("cached-content")
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodHead {
+			// Force matchLastModified to fail so the code cannot fall back to
+			// the last-modified comparison.
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Last-Modified", time.Now().UTC().Format(http.TimeFormat))
+		_, _ = w.Write(content)
+	})
+	ts := httptest.NewServer(handler)
+	t.Cleanup(ts.Close)
+	remote := ts.URL + "/image"
+
+	t.Run("mismatch is rejected", func(t *testing.T) {
+		ctx := t.Context()
+		cacheDir := filepath.Join(t.TempDir(), "cache")
+
+		// Prime the cache with a digest-less download (no sidecar is written).
+		r, err := Download(ctx, filepath.Join(t.TempDir(), "1"), remote, WithCacheDir(cacheDir))
+		assert.NilError(t, err)
+		assert.Equal(t, StatusDownloaded, r.Status)
+
+		// Now request the same URL with a digest that does not match the cached
+		// bytes. The stale/mismatching cache must not be reused as valid.
+		wrongDigest := digest.Digest("sha256:8313944efb4f38570c689813f288058b674ea6c487017a5a4738dc674b65f9d9")
+		_, err = Download(ctx, filepath.Join(t.TempDir(), "2"), remote,
+			WithExpectedDigest(wrongDigest), WithCacheDir(cacheDir))
+		assert.ErrorContains(t, err, "expected digest")
+	})
+
+	t.Run("match is used", func(t *testing.T) {
+		ctx := t.Context()
+		cacheDir := filepath.Join(t.TempDir(), "cache")
+
+		r, err := Download(ctx, filepath.Join(t.TempDir(), "1"), remote, WithCacheDir(cacheDir))
+		assert.NilError(t, err)
+		assert.Equal(t, StatusDownloaded, r.Status)
+
+		correctDigest := digest.SHA256.FromBytes(content)
+		r, err = Download(ctx, filepath.Join(t.TempDir(), "2"), remote,
+			WithExpectedDigest(correctDigest), WithCacheDir(cacheDir))
+		assert.NilError(t, err)
+		assert.Equal(t, StatusUsedCache, r.Status)
+	})
+}
+
 func TestDownloadLocal(t *testing.T) {
 	const emptyFileDigest = "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 	const testDownloadLocalDigest = "sha256:0c1e0fba69e8919b306d030bf491e3e0c46cf0a8140ff5d7516ba3a83cbea5b3"
