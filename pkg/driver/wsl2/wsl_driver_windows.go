@@ -243,7 +243,9 @@ func (l *LimaWslDriver) Start(ctx context.Context) (chan error, error) {
 		// Probably never supportable for WSL2
 		logrus.Warn(".ssh.overVsock is not supported for WSL2 driver")
 	}
-
+	if l.Instance.Config.Audio.Interface != nil {
+		logrus.Warn("`audio.interface` is ignored when using the WSL2 driver")
+	}
 	logrus.Infof("Starting WSL VM")
 	status, err := getWslStatus(ctx, l.Instance.Name)
 	if err != nil {
