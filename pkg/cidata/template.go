@@ -10,12 +10,15 @@ import (
 	"fmt"
 	"io/fs"
 	"path"
+	"path/filepath"
+	"strings"
 
 	"github.com/sethvargo/go-password/password"
 
 	"github.com/lima-vm/lima/v2/pkg/identifiers"
 	"github.com/lima-vm/lima/v2/pkg/iso9660util"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/textutil"
 )
 
@@ -28,6 +31,10 @@ const templateFSRoot = "cidata.TEMPLATE.d"
 var windowsTemplateFS embed.FS
 
 const windowsTemplateFSRoot = "wincidata.TEMPLATE.d"
+
+// This is for checking whether Windows OS is 11 or server 2025.
+// For example, Windows 11 x86-64's label is CCCOMA_X64FRE_EN-US_DV9.
+const windowsClientISOLabelPrefix = "CCCOMA_"
 
 type CACerts struct {
 	RemoveDefaults *bool
@@ -126,6 +133,8 @@ type TemplateArgs struct {
 	NoCloudInit                     bool
 	WindowsInitialPassword          string
 	LegacyBIOS                      bool
+	IsWindowsServer                 bool
+	TPM                             bool
 }
 
 func (t *TemplateArgs) generateWindowsInitialPassword() error {
@@ -137,6 +146,19 @@ func (t *TemplateArgs) generateWindowsInitialPassword() error {
 	}
 
 	t.WindowsInitialPassword = pw
+	return nil
+}
+
+// checkWindowsVersion checks if a guest VM is Windows 11 (true) or Windows server 2025 (false).
+func (t *TemplateArgs) checkWindowsVersion(instDir string) error {
+	imagePath := filepath.Join(instDir, filenames.ISO)
+	label, err := iso9660util.Label(imagePath)
+	if err != nil {
+		return fmt.Errorf("failed to get ISO label: %w", err)
+	}
+
+	t.IsWindowsServer = !strings.HasPrefix(label, windowsClientISOLabelPrefix)
+
 	return nil
 }
 

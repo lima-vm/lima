@@ -4,6 +4,7 @@
 package cidata
 
 import (
+	"fmt"
 	"io"
 	"strings"
 	"testing"
@@ -211,43 +212,109 @@ func TestTemplateNICRename(t *testing.T) {
 }
 
 func TestExecuteTemplateWindowsISO(t *testing.T) {
-	args := &TemplateArgs{
-		Name:                   "windows",
-		User:                   "windows-user",
-		WindowsInitialPassword: "dummy-password",
+	testCases := []struct {
+		name                        string
+		args                        *TemplateArgs
+		expectedAutounattendStrings []string
+		expectedFirstLogonStrings   []string
+	}{
+		{
+			name: "windows server 2025",
+			args: &TemplateArgs{
+				Name:                   "windows",
+				User:                   "windows-user",
+				WindowsInitialPassword: "dummy-password",
+				TPM:                    true,
+				IsWindowsServer:        true,
+			},
+			expectedAutounattendStrings: []string{
+				`<Path>E:\viostor\2k25\amd64</Path>`,
+				`<Username>windows-user</Username>`,
+				`<Value>dummy-password</Value>`,
+				`<Type>EFI</Type>`,
+			},
+			expectedFirstLogonStrings: []string{
+				`$logfile = "C:\Users\windows-user\lima-setup.log"`,
+			},
+		},
+		{
+			name: "windows 11",
+			args: &TemplateArgs{
+				Name:                   "windows",
+				User:                   "windows-user",
+				WindowsInitialPassword: "dummy-password",
+				TPM:                    true,
+			},
+			expectedAutounattendStrings: []string{
+				`<Path>E:\viostor\w11\amd64</Path>`,
+				`<Username>windows-user</Username>`,
+				`<Value>dummy-password</Value>`,
+				`<Type>EFI</Type>`,
+			},
+			expectedFirstLogonStrings: []string{
+				`$logfile = "C:\Users\windows-user\lima-setup.log"`,
+			},
+		},
+		{
+			name: "legacyBIOS",
+			args: &TemplateArgs{
+				Name:                   "windows",
+				User:                   "windows-user",
+				WindowsInitialPassword: "dummy-password",
+				LegacyBIOS:             true,
+				TPM:                    true,
+				IsWindowsServer:        true,
+			},
+			expectedAutounattendStrings: []string{
+				`<Path>E:\viostor\2k25\amd64</Path>`,
+				`<Username>windows-user</Username>`,
+				`<Value>dummy-password</Value>`,
+				`<Label>BIOS</Label>`,
+			},
+			expectedFirstLogonStrings: []string{
+				`$logfile = "C:\Users\windows-user\lima-setup.log"`,
+			},
+		},
+		{
+			name: "disable TPM on Windows 11",
+			args: &TemplateArgs{
+				Name:                   "windows",
+				User:                   "windows-user",
+				WindowsInitialPassword: "dummy-password",
+				TPM:                    false,
+			},
+			expectedAutounattendStrings: []string{
+				`<Path>E:\viostor\w11\amd64</Path>`,
+				`<Username>windows-user</Username>`,
+				`<Value>dummy-password</Value>`,
+				`<Type>EFI</Type>`,
+				`BypassTPMCheck`,
+			},
+			expectedFirstLogonStrings: []string{
+				`$logfile = "C:\Users\windows-user\lima-setup.log"`,
+			},
+		},
 	}
 
-	layout, err := ExecuteTemplateWindowsISO(args)
-	assert.NilError(t, err)
-	for _, f := range layout {
-		b, err := io.ReadAll(f.Reader)
-		assert.NilError(t, err)
-		switch f.Path {
-		case "autounattend.xml":
-			t.Log(string(b))
-			assert.Assert(t, strings.Contains(
-				string(b),
-				`<Username>windows-user</Username>`,
-			))
-			assert.Assert(t, strings.Contains(
-				string(b),
-				`<Value>dummy-password</Value>`,
-			))
-			// It confirms the file has UEFI setting.
-			assert.Assert(t, strings.Contains(
-				string(b),
-				`<Type>EFI</Type>`,
-			))
-			// It confirms the file doesn't have BIOS setting.
-			assert.Assert(t, !strings.Contains(
-				string(b),
-				`<Label>BIOS</Label>`,
-			))
-		case "first_logon.ps1":
-			assert.Assert(t, strings.Contains(
-				string(b),
-				`$logfile = "C:\Users\windows-user\lima-setup.log"`,
-			))
-		}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			layout, err := ExecuteTemplateWindowsISO(tt.args)
+			assert.NilError(t, err)
+			for _, f := range layout {
+				b, err := io.ReadAll(f.Reader)
+				s := string(b)
+				assert.NilError(t, err)
+				switch f.Path {
+				case "autounattend.xml":
+					for _, expected := range tt.expectedAutounattendStrings {
+						assert.Assert(t, strings.Contains(s, expected), fmt.Sprintf("expected: %s", expected))
+					}
+				case "first_logon.ps1":
+					for _, expected := range tt.expectedFirstLogonStrings {
+						assert.Assert(t, strings.Contains(s, expected), fmt.Sprintf("expected: %s", expected))
+					}
+				}
+			}
+		})
 	}
 }
