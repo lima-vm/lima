@@ -60,6 +60,8 @@ type Mount struct {
 	MountPoint string // abs path, accessible by the User
 	Type       string
 	Options    string
+	Location   string
+	Writable   bool
 }
 type BootCmds struct {
 	Lines []string
