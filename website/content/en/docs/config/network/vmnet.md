@@ -103,7 +103,10 @@ paths:
   varRun: /private/var/run/lima
   sudoers: /private/etc/sudoers.d/lima
 
-group: everyone
+# The group that is allowed to run socket_vmnet via sudo and to access the
+# socket_vmnet socket (macOS only; ignored on other platforms). Non-admin users
+# must set this to a group they belong to (e.g. "staff").
+group: admin
 
 networks:
   shared:
@@ -163,6 +166,20 @@ less etc_sudoers.d_lima  # verify that the file looks correct
 sudo install -o root etc_sudoers.d_lima /etc/sudoers.d/lima
 rm etc_sudoers.d_lima
 ```
+
+The `sudoers` file grants the members of the `group` configured in `networks.yaml`
+permission to run `socket_vmnet` as root. Since Lima v2.2, `group` defaults to
+`admin` instead of `everyone`, so the permission is no longer granted to non-admin
+and non-local accounts. A non-admin user must set `group` to a group they belong
+to (e.g. `staff`).
+
+{{% alert title="Note" color="warning" %}}
+Existing installations keep whatever `group` is already written in
+`$LIMA_HOME/_config/networks.yaml` (the file is never rewritten once it exists).
+To narrow an existing `group: everyone`, edit the field, make sure every user of
+the networks is a member of the new group, and regenerate the `sudoers` file with
+the command above.
+{{% /alert %}}
 
 The IP address is automatically assigned by macOS's bootpd.
 If the IP address is not assigned, try the following commands:
