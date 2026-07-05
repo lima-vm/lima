@@ -259,7 +259,14 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 				options += ",failok"
 			}
 		}
-		args.Mounts = append(args.Mounts, Mount{Tag: tag, MountPoint: *f.MountPoint, Type: fstype, Options: options})
+		args.Mounts = append(args.Mounts, Mount{
+			Tag:        tag,
+			MountPoint: *f.MountPoint,
+			Type:       fstype,
+			Options:    options,
+			Location:   f.Location,
+			Writable:   *f.Writable,
+		})
 		if f.Location == hostHome {
 			args.HostHomeMountPoint = *f.MountPoint
 		}

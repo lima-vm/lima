@@ -208,3 +208,26 @@ func TestValidateConfigImages(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateConfigMounts(t *testing.T) {
+	vmType := limatype.WSL2
+	arch := limatype.X8664
+	if runtime.GOARCH == "arm64" {
+		arch = limatype.AARCH64
+	}
+	cfg := &limatype.LimaYAML{
+		VMType: &vmType,
+		Arch:   &arch,
+		Mounts: []limatype.Mount{
+			{
+				Location:   "C:\\Users\\test",
+				MountPoint: new("/mnt/c/Users/test"),
+				Writable:   new(true),
+				SSHFS:      limatype.SSHFS{Cache: new(true)},
+				NineP:      limatype.NineP{SecurityModel: new("none")},
+			},
+		},
+	}
+	err := validateConfig(t.Context(), cfg)
+	assert.NilError(t, err)
+}
