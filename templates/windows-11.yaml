@@ -33,3 +33,28 @@ plain: true
 video:
   # This is for development purpose. You can set `none`.
   display: default
+
+# Windows VM doesn't support boot mode because there is no phase which is equivalent to Cloud-init's 'init' stage.
+# Currently Windows VM doesn't support yq mode.
+# provision:
+# - mode: system
+#   script: |
+#     Write-Output "this is system mode"
+# - mode: user
+#   script: |
+#     Write-Output "this is user mode"
+# # dependency is only run at once, when the guest is installed.
+# # Currently Windows VM does not support skipDefaultDependencyResolution.
+# - mode: dependency
+#   skipDefaultDependencyResolution: false
+#   script: |
+#     Write-Output "this is dependency mode"
+# # All data mode files are copied in `C:\ProgramData\Lima\provision\provision.data\`, and `path` is ignored.
+# - mode: data
+#   path: /this-field-is-ignored
+#   content: |
+#     FOO=bar
+# - mode: data
+#   path: /this-field-is-ignored
+#   content: |
+#     BAR=foo

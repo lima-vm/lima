@@ -432,30 +432,9 @@ func GenerateISO9660(ctx context.Context, drv driver.Driver, instDir, name strin
 		})
 	}
 
-	for i, f := range instConfig.Provision {
-		switch f.Mode {
-		case limatype.ProvisionModeSystem, limatype.ProvisionModeUser, limatype.ProvisionModeDependency:
-			layout = append(layout, iso9660util.Entry{
-				Path:   fmt.Sprintf("provision.%s/%08d", f.Mode, i),
-				Reader: strings.NewReader(*f.Script),
-			})
-		case limatype.ProvisionModeData:
-			layout = append(layout, iso9660util.Entry{
-				Path:   fmt.Sprintf("provision.%s/%08d", f.Mode, i),
-				Reader: strings.NewReader(*f.Content),
-			})
-		case limatype.ProvisionModeYQ:
-			layout = append(layout, iso9660util.Entry{
-				Path:   fmt.Sprintf("provision.%s/%08d", f.Mode, i),
-				Reader: strings.NewReader(*f.Expression),
-			})
-		case limatype.ProvisionModeBoot:
-			continue
-		case limatype.ProvisionModeAnsible:
-			continue
-		default:
-			return "", fmt.Errorf("unknown provision mode %#q", f.Mode)
-		}
+	layout, err = appendProvisionEntries(layout, instConfig.Provision, false)
+	if err != nil {
+		return "", err
 	}
 
 	if guestAgentBinary != "" {
@@ -582,6 +561,41 @@ func writeCIDataDir(rootPath string, layout []iso9660util.Entry) error {
 	return nil
 }
 
+func appendProvisionEntries(layout []iso9660util.Entry, provisions []limatype.Provision, includeBoot bool) ([]iso9660util.Entry, error) {
+	for i, f := range provisions {
+		switch f.Mode {
+		case limatype.ProvisionModeSystem, limatype.ProvisionModeUser, limatype.ProvisionModeDependency:
+			layout = append(layout, iso9660util.Entry{
+				Path:   fmt.Sprintf("provision.%s/%08d", f.Mode, i),
+				Reader: strings.NewReader(*f.Script),
+			})
+		case limatype.ProvisionModeBoot:
+			if includeBoot {
+				layout = append(layout, iso9660util.Entry{
+					Path:   fmt.Sprintf("provision.%s/%08d", f.Mode, i),
+					Reader: strings.NewReader(*f.Script),
+				})
+			}
+		case limatype.ProvisionModeData:
+			layout = append(layout, iso9660util.Entry{
+				Path:   fmt.Sprintf("provision.%s/%08d", f.Mode, i),
+				Reader: strings.NewReader(*f.Content),
+			})
+		case limatype.ProvisionModeYQ:
+			layout = append(layout, iso9660util.Entry{
+				Path:   fmt.Sprintf("provision.%s/%08d", f.Mode, i),
+				Reader: strings.NewReader(*f.Expression),
+			})
+		case limatype.ProvisionModeAnsible:
+			continue
+		default:
+			return nil, fmt.Errorf("unknown provision mode %#q", f.Mode)
+		}
+	}
+
+	return layout, nil
+}
+
 func GenerateWindowsISO(ctx context.Context, instDir, name string, instConfig *limatype.LimaYAML, udpDNSLocalPort, tcpDNSLocalPort, vsockPort int, virtioPort string, noCloudInit, rosettaEnabled, rosettaBinFmt bool) (string, error) {
 	args, err := templateArgs(ctx, true, instDir, name, instConfig, udpDNSLocalPort, tcpDNSLocalPort, vsockPort, virtioPort, noCloudInit, rosettaEnabled, rosettaBinFmt)
 	if err != nil {
@@ -606,6 +620,11 @@ func GenerateWindowsISO(ctx context.Context, instDir, name string, instConfig *l
 	layout, err := ExecuteTemplateWindowsISO(args)
 	if err != nil {
 		return "", fmt.Errorf("failed to create Windows ISO entries: %w", err)
+	}
+
+	layout, err = appendProvisionEntries(layout, instConfig.Provision, true)
+	if err != nil {
+		return "", err
 	}
 
 	layout = append(layout, iso9660util.Entry{

@@ -34,4 +34,5 @@ For Windows server 2025, TPM emulation is disabled by default. However, there ar
 ## Caveats
 - For Windows 11 guest, you need to download the installer ISO manually from [here](https://www.microsoft.com/en-us/software-download/windows11)
 - QEMU is the only VM driver that supports Windows guests
+- provision feature is limited support (no `boot`, `yq` modes, and `data` and `dependency` modes have limitations)
 - Only plain mode is supported (no file mount, no dynamic port-forwarding)
