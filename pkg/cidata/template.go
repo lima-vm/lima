@@ -208,12 +208,12 @@ func ExecuteTemplateCloudConfig(args *TemplateArgs) ([]byte, error) {
 	return textutil.ExecuteTemplate(cloudConfigYaml, args)
 }
 
-func ExecuteTemplateCIDataISO(args *TemplateArgs) ([]iso9660util.Entry, error) {
+func executeTemplateWalkDir(args *TemplateArgs, fsys fs.FS, root string) ([]iso9660util.Entry, error) {
 	if err := ValidateTemplateArgs(args); err != nil {
 		return nil, err
 	}
 
-	fsys, err := fs.Sub(templateFS, templateFSRoot)
+	fsys, err := fs.Sub(fsys, root)
 	if err != nil {
 		return nil, err
 	}
@@ -251,42 +251,10 @@ func ExecuteTemplateCIDataISO(args *TemplateArgs) ([]iso9660util.Entry, error) {
 	return layout, nil
 }
 
+func ExecuteTemplateCIDataISO(args *TemplateArgs) ([]iso9660util.Entry, error) {
+	return executeTemplateWalkDir(args, templateFS, templateFSRoot)
+}
+
 func ExecuteTemplateWindowsISO(args *TemplateArgs) ([]iso9660util.Entry, error) {
-	fs := windowsTemplateFS
-	root := windowsTemplateFSRoot
-
-	// Execute template for autounattend.xml
-	xmlTemplate, err := fs.ReadFile(path.Join(root, "autounattend.xml"))
-	if err != nil {
-		return nil, err
-	}
-
-	xmlfile, err := textutil.ExecuteTemplate(string(xmlTemplate), args)
-	if err != nil {
-		return nil, fmt.Errorf("failed to render autounattend.xml: %w", err)
-	}
-
-	// Execute template for powershell script file
-	ps1Template, err := fs.ReadFile(path.Join(root, "first_logon.ps1"))
-	if err != nil {
-		return nil, err
-	}
-
-	ps1file, err := textutil.ExecuteTemplate(string(ps1Template), args)
-	if err != nil {
-		return nil, fmt.Errorf("failed to render ps1 file: %w", err)
-	}
-
-	layout := []iso9660util.Entry{
-		{
-			Path:   "autounattend.xml",
-			Reader: bytes.NewReader(xmlfile),
-		},
-		{
-			Path:   "first_logon.ps1",
-			Reader: bytes.NewReader(ps1file),
-		},
-	}
-
-	return layout, nil
+	return executeTemplateWalkDir(args, windowsTemplateFS, windowsTemplateFSRoot)
 }

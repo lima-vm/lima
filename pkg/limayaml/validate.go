@@ -208,6 +208,10 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 				i, limatype.ProvisionModeDependency))
 		}
 
+		if *y.OS == limatype.WINDOWS && (p.Mode == limatype.ProvisionModeAnsible || p.Mode == limatype.ProvisionModeBoot || p.Mode == limatype.ProvisionModeYQ) {
+			errs = errors.Join(errs, fmt.Errorf("provision mode %#q is not supported on Windows VM", p.Mode))
+		}
+
 		// This can lead to fatal Panic if p.Path is nil, better to return an error here
 		switch p.Mode {
 		case limatype.ProvisionModeData, limatype.ProvisionModeYQ:
