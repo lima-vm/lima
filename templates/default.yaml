@@ -60,7 +60,7 @@ disk: null
 mounts: []
 # - location: "~"
 #  # Configure the mountPoint inside the guest.
-#  # 🟢 Builtin default: value of location
+#  # 🟢 Builtin default: value of location (converted to Cygwin/MSYS path or /mnt/<drive> for WSL2 on Windows)
 #  mountPoint: null
 #  # Setting `writable` to true is discouraged when mountType is set to "reverse-sshfs".
 #  # 🟢 Builtin default: false
