@@ -7,10 +7,42 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
+	"strings"
 	"testing"
 
 	"gotest.tools/v3/assert"
 )
+
+const (
+	fakeCygpathOutEnv  = "LIMA_TEST_FAKE_CYGPATH_OUT"
+	fakeCygpathFailure = "exit-non-zero"
+)
+
+// TestMain doubles as a fake cygpath.exe. With fakeCygpathOutEnv set it prints
+// that value and exits 0, or exits 1 when the value is fakeCygpathFailure, so a
+// test can copy this binary beside an ssh.exe and drive the Cygwin branch. An
+// empty value would not work as the failure signal, because Windows cannot
+// distinguish an empty environment variable from an unset one.
+//
+// It answers only the sftp-server probe and rejects any other command line. A
+// change to the arguments in SftpServerForSSH then breaks this test instead of
+// going unnoticed. A test driving a different cygpath call needs its own arm.
+func TestMain(m *testing.M) {
+	if out, ok := os.LookupEnv(fakeCygpathOutEnv); ok {
+		if want := []string{"-w", "/usr/lib/ssh/sftp-server"}; !slices.Equal(os.Args[1:], want) {
+			os.Stderr.WriteString("fake cygpath: got " + strings.Join(os.Args[1:], " ") +
+				", want " + strings.Join(want, " ") + "\n")
+			os.Exit(2)
+		}
+		if out == fakeCygpathFailure {
+			os.Exit(1)
+		}
+		os.Stdout.WriteString(out + "\n")
+		os.Exit(0)
+	}
+	os.Exit(m.Run())
+}
 
 // TestPickCompleteSSHOnWindows: an ssh.exe missing scp.exe or
 // ssh-keygen.exe (MinGit's shape) is skipped for the next complete
@@ -123,6 +155,41 @@ func TestSftpServerForSSH(t *testing.T) {
 	})
 }
 
+// TestSftpServerForSSHCygwin: the Cygwin branch reports what the sibling
+// cygpath resolves, but only once that names an executable. cygpath omits the
+// .exe suffix, so the candidate reaches LookPath without one.
+func TestSftpServerForSSHCygwin(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("Windows-only path handling")
+	}
+	ctx := t.Context()
+
+	t.Run("candidate without .exe resolves to the binary beside it", func(t *testing.T) {
+		sshExe := cygwinToolchain(t)
+		dir := filepath.Dir(sshExe)
+		sftpExe := filepath.Join(dir, "sftp-server.exe")
+		assert.NilError(t, os.WriteFile(sftpExe, nil, 0o644))
+		t.Setenv(fakeCygpathOutEnv, filepath.Join(dir, "sftp-server"))
+
+		assert.Equal(t, SftpServerForSSH(ctx, SSHExe{Exe: sshExe}), sftpExe)
+	})
+
+	t.Run("candidate that resolves to nothing returns empty", func(t *testing.T) {
+		sshExe := cygwinToolchain(t)
+		t.Setenv(fakeCygpathOutEnv, filepath.Join(filepath.Dir(sshExe), "sftp-server"))
+
+		assert.Equal(t, SftpServerForSSH(ctx, SSHExe{Exe: sshExe}), "",
+			"unresolvable candidate -> caller falls back to sshocker auto-detect")
+	})
+
+	t.Run("cygpath failure returns empty", func(t *testing.T) {
+		sshExe := cygwinToolchain(t)
+		t.Setenv(fakeCygpathOutEnv, fakeCygpathFailure)
+
+		assert.Equal(t, SftpServerForSSH(ctx, SSHExe{Exe: sshExe}), "")
+	})
+}
+
 // TestCompanionForSSH: a companion tool is resolved beside the selected
 // ssh.exe, and falls back to the bare name when no sibling exists.
 func TestCompanionForSSH(t *testing.T) {
@@ -151,6 +218,22 @@ func TestCompanionForSSH(t *testing.T) {
 	t.Run("empty input falls back to the bare name", func(t *testing.T) {
 		assert.Equal(t, CompanionForSSH(SSHExe{}, "ssh-keygen"), "ssh-keygen")
 	})
+}
+
+// cygwinToolchain writes an ssh.exe into a fresh directory, plus a cygpath.exe
+// that is a copy of this test binary, and returns the ssh.exe path.
+func cygwinToolchain(t *testing.T) string {
+	t.Helper()
+	dir := resolvedTempDir(t)
+	sshExe := filepath.Join(dir, "ssh.exe")
+	assert.NilError(t, os.WriteFile(sshExe, nil, 0o644))
+
+	self, err := os.Executable()
+	assert.NilError(t, err)
+	binary, err := os.ReadFile(self)
+	assert.NilError(t, err)
+	assert.NilError(t, os.WriteFile(filepath.Join(dir, "cygpath.exe"), binary, 0o755))
+	return sshExe
 }
 
 // resolvedTempDir is t.TempDir() run through EvalSymlinks, matching what
