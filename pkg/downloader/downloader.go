@@ -5,6 +5,7 @@ package downloader
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"crypto/sha256"
 	"errors"
@@ -525,8 +526,6 @@ func decompressorByMagic(file string) string {
 }
 
 func decompressLocal(ctx context.Context, decompressCmd, dst, src, ext, description string) error {
-	logrus.Infof("decompressing %s with %v", ext, decompressCmd)
-
 	st, err := os.Stat(src)
 	if err != nil {
 		return err
@@ -549,11 +548,6 @@ func decompressLocal(ctx context.Context, decompressCmd, dst, src, ext, descript
 		return err
 	}
 	defer out.Close()
-	buf := new(bytes.Buffer)
-	cmd := exec.CommandContext(ctx, decompressCmd, "-d") // -d --decompress
-	cmd.Stdin = bar.NewProxyReader(in)
-	cmd.Stdout = out
-	cmd.Stderr = buf
 	if !HideProgress {
 		if description == "" {
 			description = filepath.Base(src)
@@ -561,6 +555,37 @@ func decompressLocal(ctx context.Context, decompressCmd, dst, src, ext, descript
 		logrus.Infof("Decompressing %s", description)
 	}
 	bar.Start()
+	defer bar.Finish()
+	reader := bar.NewProxyReader(in)
+
+	// Prefer the external decompressor; fall back to a built-in pure-Go
+	// gzip decoder only when the binary is missing, so a plain Windows
+	// host with no gzip can still unpack a .tar.gz image. xz, bzip2, and
+	// zstd stay external-only.
+	if _, lookErr := exec.LookPath(decompressCmd); lookErr != nil {
+		var r io.Reader
+		switch decompressCmd {
+		case "gzip":
+			gz, err := gzip.NewReader(reader)
+			if err != nil {
+				return err
+			}
+			defer gz.Close()
+			r = gz
+		default:
+			return fmt.Errorf("decompressor %q not found and no built-in fallback: %w", decompressCmd, lookErr)
+		}
+		logrus.Infof("decompressing %s with built-in %s (external %q not found)", ext, decompressCmd, decompressCmd)
+		_, err = io.Copy(out, &ctxReader{ctx: ctx, r: r})
+		return err
+	}
+
+	logrus.Infof("decompressing %s with external %q", ext, decompressCmd)
+	buf := new(bytes.Buffer)
+	cmd := exec.CommandContext(ctx, decompressCmd, "-d")
+	cmd.Stdin = reader
+	cmd.Stdout = out
+	cmd.Stderr = buf
 	err = cmd.Run()
 	if err != nil {
 		var exitErr *exec.ExitError
@@ -568,8 +593,22 @@ func decompressLocal(ctx context.Context, decompressCmd, dst, src, ext, descript
 			exitErr.Stderr = buf.Bytes()
 		}
 	}
-	bar.Finish()
 	return err
+}
+
+// ctxReader makes an uninterruptible in-process decode cancellable: once ctx
+// is cancelled each Read returns its error, unwinding the io.Copy that drives
+// the decoder.
+type ctxReader struct {
+	ctx context.Context
+	r   io.Reader
+}
+
+func (c *ctxReader) Read(p []byte) (int, error) {
+	if err := c.ctx.Err(); err != nil {
+		return 0, err
+	}
+	return c.r.Read(p)
 }
 
 func validateCachedDigest(shadDigest string, expectedDigest digest.Digest) error {
