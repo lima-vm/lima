@@ -59,6 +59,7 @@ type HostAgent struct {
 	instDir           string
 	instName          string
 	instSSHAddress    string
+	sshExe            sshutil.SSHExe
 	sshConfig         *ssh.SSHConfig
 	portForwarder     *portForwarder // legacy SSH port forwarder
 	grpcPortForwarder *portfwd.Forwarder
@@ -256,6 +257,7 @@ func New(ctx context.Context, instName string, stdout io.Writer, signalCh chan o
 		instDir:           inst.Dir,
 		instName:          instName,
 		instSSHAddress:    inst.SSHAddress,
+		sshExe:            sshExe,
 		sshConfig:         sshConfig,
 		driver:            limaDriver,
 		signalCh:          signalCh,

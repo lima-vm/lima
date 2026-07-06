@@ -59,6 +59,12 @@ The default value of `sftpDriver` has been set to "openssh-sftp-server" since Li
 such as `/usr/libexec/sftp-server` is detected on the host.
 Lima prior to v0.10 had used "builtin" as the SFTP driver.
 
+On Windows, unless `sftpDriver` is "builtin", Lima first looks for an sftp-server in the toolchain of the
+`ssh.exe` it selected, either `sftp-server.exe` beside a native OpenSSH or `/usr/lib/ssh/sftp-server` for a
+Cygwin-based one. Only if that finds nothing does the generic search apply.
+This matters when a Cygwin-based OpenSSH (Git for Windows, MSYS2) and the native Windows OpenSSH are both
+installed. The host path handed to the server is always the native `C:/Users/USER` form, which both kinds resolve.
+
 #### Caveats
 - A mount is disabled when the SSH connection was shut down.
 - A compromised `sshfs` process in the guest may have access to unexposed host directories.
