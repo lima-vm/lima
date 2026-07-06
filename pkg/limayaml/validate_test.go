@@ -484,3 +484,88 @@ osOpts:
 		})
 	}
 }
+
+func TestIsSupportedWindowsShell(t *testing.T) {
+	tests := []struct {
+		shell string
+		want  bool
+	}{
+		{"cmd.exe", true},
+		{"CMD.EXE", true},
+		{"powershell.exe", true},
+		{"pwsh.exe", true},
+		{`C:\Windows\System32\cmd.exe`, true},
+		{`C:/Windows/System32/cmd.exe`, true},
+		{`C:\Program Files\PowerShell\7\pwsh.exe`, true},
+		{"bash.exe", false},
+		{"cmd", false},
+		{"/bin/bash", false},
+		{"", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.shell, func(t *testing.T) {
+			assert.Equal(t, tt.want, IsSupportedWindowsShell(tt.shell))
+		})
+	}
+}
+
+func TestValidateUserShell(t *testing.T) {
+	posixImages := `images: [{"location": "/"}]`
+	windowsBase := `
+os: Windows
+arch: x86_64
+vmType: qemu
+images:
+  - location: /
+osOpts:
+  Windows:
+    virtioWin:
+    - location: /
+      arch: "x86_64"
+`
+
+	tests := []struct {
+		name       string
+		yaml       string
+		wantErrMsg string
+	}{
+		{
+			name: "posix absolute path ok",
+			yaml: posixImages + "\nuser:\n  shell: /bin/bash\n",
+		},
+		{
+			name:       "posix relative path rejected",
+			yaml:       posixImages + "\nuser:\n  shell: bash\n",
+			wantErrMsg: "field `user.shell` must be an absolute path, got `bash`",
+		},
+		{
+			name: "windows cmd.exe ok",
+			yaml: windowsBase + "\nuser:\n  shell: cmd.exe\n",
+		},
+		{
+			name: "windows pwsh.exe ok",
+			yaml: windowsBase + "\nuser:\n  shell: pwsh.exe\n",
+		},
+		{
+			name: "windows absolute cmd.exe ok",
+			yaml: windowsBase + "\nuser:\n  shell: 'C:\\Windows\\System32\\cmd.exe'\n",
+		},
+		{
+			name:       "windows posix shell rejected",
+			yaml:       windowsBase + "\nuser:\n  shell: /bin/bash\n",
+			wantErrMsg: "field `user.shell` must be one of [cmd.exe powershell.exe pwsh.exe] for Windows guest, got `/bin/bash`",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			y, err := Load(t.Context(), []byte(tt.yaml), "template.yaml")
+			assert.NilError(t, err)
+			err = Validate(y, false)
+			if tt.wantErrMsg == "" {
+				assert.NilError(t, err)
+			} else {
+				assert.ErrorContains(t, err, tt.wantErrMsg)
+			}
+		})
+	}
+}

@@ -67,3 +67,13 @@ The guest home directory exists independently on the following path:
 ### Shell completion
 - To enable bash completion, add `source <(limactl completion bash)` to `~/.bash_profile`.
 - To enable zsh completion, see `limactl completion zsh --help`
+
+### User shell
+
+The default login shell inside the guest can be overridden via the `user.shell`
+field in the instance YAML, or with `--shell` on `limactl create` / `limactl edit`.
+The shell must already exist in the guest image.
+
+On an existing instance, `chsh` inside the guest can be used to change the login shell.
+
+To launch a different shell for a single session, use `limactl shell --shell=SHELL`.

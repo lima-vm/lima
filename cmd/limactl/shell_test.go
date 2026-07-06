@@ -97,3 +97,40 @@ func TestRsyncStatsString(t *testing.T) {
 		})
 	}
 }
+
+func TestWindowsShellCommandFlag(t *testing.T) {
+	tests := []struct {
+		shell string
+		want  string
+	}{
+		{"cmd.exe", "/c"},
+		{"CMD.EXE", "/c"},
+		{`C:\Windows\System32\cmd.exe`, "/c"},
+		{`C:/Windows/System32/cmd.exe`, "/c"},
+		{"powershell.exe", "-Command"},
+		{"pwsh.exe", "-Command"},
+		{`C:\Program Files\PowerShell\7\pwsh.exe`, "-Command"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.shell, func(t *testing.T) {
+			assert.Equal(t, tt.want, windowsShellCommandFlag(tt.shell))
+		})
+	}
+}
+
+func TestWindowsQuoteShell(t *testing.T) {
+	tests := []struct {
+		shell string
+		want  string
+	}{
+		{"cmd.exe", "cmd.exe"},
+		{`C:\Windows\System32\cmd.exe`, `C:\Windows\System32\cmd.exe`},
+		{`C:\Program Files\PowerShell\7\pwsh.exe`, `"C:\Program Files\PowerShell\7\pwsh.exe"`},
+		{`"C:\already\quoted.exe"`, `"C:\already\quoted.exe"`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.shell, func(t *testing.T) {
+			assert.Equal(t, tt.want, windowsQuoteShell(tt.shell))
+		})
+	}
+}
